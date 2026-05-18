@@ -1,0 +1,106 @@
+'use server';
+
+import { revalidatePath } from 'next/cache';
+
+import { getSessionUserId } from '@/lib/auth/session';
+import {
+  openRaid,
+  joinRaid,
+  attackRaid,
+  buyExtraAttack,
+  settleRaid,
+  RaidError,
+  type RaidBoss,
+} from '@/lib/game/raid';
+
+type Err = { status: 'error'; code: string; message: string };
+const MSG: Record<string, string> = {
+  INSUFFICIENT_DIAMOND: '다이아가 부족합니다 (개설 1,000).',
+  DAILY_CAP_REACHED: '오늘 레이드 한도(5회)를 모두 사용했습니다.',
+  CONCURRENT_LIMIT: '동시 진행 레이드는 3개까지입니다.',
+  RAID_NOT_FOUND: '레이드를 찾을 수 없습니다.',
+  RAID_CLOSED: '종료되었거나 만료된 레이드입니다.',
+  RAID_FULL: '인원이 가득 찼습니다 (최대 10명).',
+  ALREADY_JOINED: '이미 참여 중입니다.',
+  NOT_PARTICIPANT: '참여자가 아닙니다.',
+  NO_ATTACKS: '공격 횟수를 모두 사용했습니다 (추가 공격 구매 가능).',
+  UNAUTHENTICATED: '로그인이 필요합니다.',
+  UNKNOWN: '알 수 없는 오류',
+};
+const err = (c: string): Err => ({ status: 'error', code: c, message: MSG[c] ?? c });
+function rev(raidId?: string) {
+  revalidatePath('/raid');
+  revalidatePath('/');
+  if (raidId) revalidatePath(`/raid/${raidId}`);
+}
+const uid = () => getSessionUserId();
+
+export async function openRaidAction(bossCode: RaidBoss) {
+  const u = await uid();
+  if (!u) return err('UNAUTHENTICATED');
+  try {
+    const r = await openRaid({ userId: u, bossCode });
+    rev();
+    return { status: 'success' as const, raidId: r.raidId.toString(), shareCode: r.shareCode };
+  } catch (e) {
+    if (e instanceof RaidError) return err(e.code);
+    console.error('[raid.open]', e);
+    return err('UNKNOWN');
+  }
+}
+
+export async function joinRaidAction(shareCode: string) {
+  const u = await uid();
+  if (!u) return err('UNAUTHENTICATED');
+  try {
+    const r = await joinRaid({ userId: u, shareCode });
+    rev(r.raidId.toString());
+    return { status: 'success' as const, raidId: r.raidId.toString() };
+  } catch (e) {
+    if (e instanceof RaidError) return err(e.code);
+    console.error('[raid.join]', e);
+    return err('UNKNOWN');
+  }
+}
+
+export async function attackRaidAction(raidId: string) {
+  const u = await uid();
+  if (!u) return err('UNAUTHENTICATED');
+  try {
+    const r = await attackRaid({ userId: u, raidId: BigInt(raidId) });
+    rev(raidId);
+    return { status: 'success' as const, ...r };
+  } catch (e) {
+    if (e instanceof RaidError) return err(e.code);
+    console.error('[raid.attack]', e);
+    return err('UNKNOWN');
+  }
+}
+
+export async function buyExtraAttackAction(raidId: string) {
+  const u = await uid();
+  if (!u) return err('UNAUTHENTICATED');
+  try {
+    const r = await buyExtraAttack({ userId: u, raidId: BigInt(raidId) });
+    rev(raidId);
+    return { status: 'success' as const, ...r };
+  } catch (e) {
+    if (e instanceof RaidError) return err(e.code);
+    console.error('[raid.extra]', e);
+    return err('UNKNOWN');
+  }
+}
+
+/** 만료 레이드 lazy 정산 — 조회 시 호출(멱등). 보상은 우편함 적재. */
+export async function settleRaidAction(raidId: string) {
+  const u = await uid();
+  if (!u) return err('UNAUTHENTICATED');
+  try {
+    const r = await settleRaid({ raidId: BigInt(raidId) });
+    rev(raidId);
+    return { status: 'success' as const, ...r };
+  } catch (e) {
+    console.error('[raid.settle]', e);
+    return err('UNKNOWN');
+  }
+}

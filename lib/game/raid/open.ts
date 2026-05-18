@@ -14,6 +14,9 @@ import {
   RAID_WINDOW_MS,
 } from '@/lib/game/balance';
 import { kstDateString } from '@/lib/kst';
+import type { RaidBoss } from './bosses';
+
+export type { RaidBoss };
 
 /** 레이드 — GDD §3.5 / BALANCE §5 / SCHEMA §6. */
 export type RaidErrorCode =
@@ -35,12 +38,6 @@ export class RaidError extends Error {
   }
 }
 
-export type RaidBoss =
-  | 'slime_king'
-  | 'orc_chief'
-  | 'stone_golem'
-  | 'dragon_west'
-  | 'fallen_angel';
 
 function rngU32(): number {
   return crypto.getRandomValues(new Uint32Array(1))[0]!;
