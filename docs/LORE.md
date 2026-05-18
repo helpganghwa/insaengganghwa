@@ -85,7 +85,15 @@
 
 ---
 
-## 4. 다음 단계 (승인 후)
-1. 본 §1 프레임 + §2 포맷 + §3 톤 확정 → 무기 50종 1차 작성(배치)
-2. 방어구 50 → 장신구 50 (각 배치 후 검토)
-3. 완료 시 `scripts/seed-catalog` + `catalogItems.spriteKey` 마이그레이션 → Pixellab 64×64 일괄 → UI 연결
+## 4. 단일 소스 & 진행
+
+**구조 확정:** 150종은 `lib/game/equipment/catalog.ts`(`CATALOG_ITEMS`)가 단일 진실 원천 —
+DB 시드 · 스프라이트 파이프라인 · UI 표시명 · 확률공시 종수를 모두 여기서 공급.
+본 LORE.md는 세계관·톤·포맷 가이드(메타), 실제 150 엔트리는 `catalog.ts`.
+
+진행:
+1. ✅ 프레임/포맷/톤 확정 + `catalog.ts` 구조 + 무기 배치1(15종)
+2. ⏳ 무기 잔여(~35) → 방어구 50 → 장신구 50 (배치별 작성)
+3. 파이프라인 포팅: `scripts/_sprite-prompt.ts`(catalog→jobs, 등급 없음·LORE `art` 구동) +
+   `scripts/sprite-pipeline.ts`(상태/다운로드) + `catalogItems.spriteKey` 컬럼·마이그레이션
+4. Pixellab MCP(연결됨 ✓, 다음 세션부터 호출 가능) `Create M-XL image`(GDD §6) 64×64 일괄 → 큐레이션 → UI 연결
