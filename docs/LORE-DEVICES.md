@@ -180,3 +180,17 @@
 - lullaby_music_charm — 빠진 한 마디와 그날 밤 이상한 잠
 - saltworkers_ring — 그 손이 퍼 올린 소금이 낸 국 맛
 - last_breath_amulet — 안 연 채 거는 풍습, 추운 날 감싸 쥠
+
+## 장신구 배치4 (12) — 장신구 50/50 → 150/150 device-pass 완료
+- mummers_false_medal — 가짜 장군이 노병을 울리고 웃긴 술자리
+- storm_warned_bead — 아침 손등 습관이 마을을 뭍에 붙듦
+- cartographers_eye — 그에게만 보이던 지름길, 지도에만 옳게 남음
+- standardbearer_clasp — 칼로 끊어야 했던 죔쇠
+- whispering_keyring — 잠들면 속삭이는 듯한 열쇠
+- plain_iron_band — 낀 줄도 잊는, 잊힌 채 늘 거기
+- child_string_bracelet — 실 다 삭아도 안 푼 팔찌
+- lighthouse_keepers_charm — 얼굴 한 번 못 본 등대불
+- mourners_jet_brooch — 목소리 낮추게 하는 검은 점
+- grin_in_glass_pendant — 변하는 건 늘 보는 쪽
+- last_call_tavern_token — 안 갚인 외상패, 문 닫는 날 목에
+- knotted_memory_cord — 풀면 뜻도 사라지는 매듭
