@@ -40,3 +40,17 @@
 - emberforged_greatsword — 마을 건너며 한 대목씩 어긋나는 이야기
 - glass_question_scepter — 점치는 노파의 점괘 풀이
 - orc_bonk_maul — 부락 다툼 판결문 발췌
+
+## 무기 배치B (12) — 사용 장치 (폐기)
+- parted_twin_daggers — 분실물 보관소 회신문(짝 미발견)
+- tollkeeper_glaive — 통행세 영수증 묶음 여백 잔글씨
+- fallen_feather_scythe — 농사 절기표에 끼어든 경고 한 칸
+- butcher_falchion — 가게 양도 인계 목록
+- marsh_hook_sickle — 늪 출입 장부의 빈칸 한 줄
+- orc_horn_club — 어귀 하루 타종 알림판
+- rune_split_longsword — 유리장인의 일감 반려 메모
+- widow_estoc — 결투 입회인의 비망록 한 쪽
+- ember_falx — 거푸집 도면 귀퉁이의 답 없는 물음
+- ledger_quarterstaff — 세금 장부 결산 면의 곁줄
+- feather_kris — 재고 실사 불일치 보고
+- mistwood_longbow — 공덕비에 빠진 이름 + 빈 줄
