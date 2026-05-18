@@ -54,3 +54,18 @@
 - ledger_quarterstaff — 세금 장부 결산 면의 곁줄
 - feather_kris — 재고 실사 불일치 보고
 - mistwood_longbow — 공덕비에 빠진 이름 + 빈 줄
+
+## 무기 배치C (13) — 사용 장치 (폐기)
+- tunnel_war_pick — 갱 입구 안전 수칙 + 덧글
+- dream_answer_orb_staff — 끊지 않은 단 한 문장
+- bog_frog_trident — 아이들 놀이 규칙서 + 예외 한 줄
+- jester_morningstar — 장터 공연 전단 + 깨알 글씨
+- ashen_nodachi — 병참 검수 기록(표준 칸 없음)
+- unsent_letter_dagger — 유언 집행 문서 항목
+- rune_echo_maul — 소리 받아 적기(채보) 실패 종이
+- orc_junk_flail — 부락 무공 명부 한 줄(무기까지 적힘)
+- shepherd_sling — 목축 일지(양 수 안 줆)
+- scaled_guard_glaive — 생환 보고서(생환 1)
+- crossroad_crook — 길 표지석 + 절반 쪼아 지운 줄
+- last_gate_partisan — 게시판 부고 한 줄 + 주석
+- dredge_bone_pick — 준설 작업 일지(아흐레서 끊김)
