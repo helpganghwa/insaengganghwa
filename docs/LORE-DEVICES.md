@@ -97,3 +97,17 @@
 - blank_question_helm — 써 본 사람 질문지(답 칸이 다 끊김)
 - bog_hide_jerkin — 늪 사고 보고(생환 1)
 - jester_patch_armor — 곡예 소품 목록 + 사건 메모
+
+## 방어구 배치2 (12)
+- rune_hush_helm — 같은 투구 번갈아 쓴 두 사람 말수 변화 비교
+- orc_skull_cap — 자랑 자리에서 유독 건너뛰는 전리품
+- pilgrim_travel_robe — 헌 옷 자선소 장부(받아 간 사람 칸 비움)
+- ash_evac_veil — 피난 점호(표시 둘인 한 이름)
+- unbroken_line_tabard — 방패 줄 훈련 구령
+- bark_woven_armor — 숲지기 살림 인수인계 목록
+- fallen_choir_robe — 겨울옷 동네 품앗이 목록
+- tollgate_coat — 다리 통행 규정 게시 + 외투 곁말
+- dragon_scorch_shield — 흉터 견주는 술자리에 올린 방패
+- riddle_lamellar — 빈 칸 채우면 사례한다는 장터 방
+- grandmother_quilt_vest — 떠나보낸 봇짐 목록
+- rune_anchor_greaves — 차고 달리기 마을 내기
