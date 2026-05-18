@@ -104,8 +104,9 @@ DB 시드 · 스프라이트 파이프라인 · UI 표시명 · 확률공시 종
 본 LORE.md는 세계관·톤·포맷 가이드(메타), 실제 150 엔트리는 `catalog.ts`.
 
 진행:
-1. ✅ 프레임/포맷/톤 확정 + `catalog.ts` 구조 + 무기 배치1(15종)
-2. ⏳ 무기 잔여(~35) → 방어구 50 → 장신구 50 (배치별 작성)
+1. ✅ 프레임/포맷/톤 확정 + `catalog.ts` 구조
+2. ✅ 무기 50/50 (톤 8종 균등·region 42% 연결·개성/길이 확정 기준 적용)
+   ⏳ 방어구 50 → 장신구 50 (같은 기준, 배치별 작성)
 3. 파이프라인 포팅: `scripts/_sprite-prompt.ts`(catalog→jobs, 등급 없음·LORE `art` 구동) +
    `scripts/sprite-pipeline.ts`(상태/다운로드) + `catalogItems.spriteKey` 컬럼·마이그레이션
 4. Pixellab MCP(연결됨 ✓, 다음 세션부터 호출 가능) `Create M-XL image`(GDD §6) 64×64 일괄 → 큐레이션 → UI 연결
