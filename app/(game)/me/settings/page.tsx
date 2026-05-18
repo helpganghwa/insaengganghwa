@@ -1,0 +1,139 @@
+import Link from 'next/link';
+import { eq } from 'drizzle-orm';
+
+import { getSessionUserId } from '@/lib/auth/session';
+import { db } from '@/lib/db/client';
+import { profiles } from '@/lib/db/schema/profiles';
+import { signOut } from '@/lib/auth/actions';
+
+import { ThemeToggle, LocalToggle } from './SettingsControls';
+
+const APP_VERSION = '0.1.0'; // 출시 전 v0
+
+/** 설정 — WIREFRAMES §9. 화면/알림/계정/약관/로그아웃. 영수증 이메일은 의무(토글 불가). */
+export default async function SettingsPage() {
+  const userId = await getSessionUserId();
+  if (!userId) return null;
+
+  const [p] = await db
+    .select({ nickname: profiles.nickname, verifiedAt: profiles.identityVerifiedAt })
+    .from(profiles)
+    .where(eq(profiles.id, userId))
+    .limit(1);
+  const verified = p?.verifiedAt != null;
+
+  return (
+    <div className="space-y-4 px-4 py-4">
+      <header className="flex items-baseline gap-2">
+        <Link href="/me" className="text-sm text-zinc-500">
+          ←
+        </Link>
+        <h1 className="text-lg font-semibold">⚙️ 설정</h1>
+      </header>
+
+      <Section title="화면">
+        <ThemeToggle />
+      </Section>
+
+      <Section title="알림 / 사운드">
+        <LocalToggle storageKey="ig:sound" label="효과음" hint="강화 결과·연출음" />
+        <Divider />
+        <LocalToggle
+          storageKey="ig:push"
+          label="강화 완료 알림"
+          hint="기기 알림 — 브라우저 권한 필요(연동 예정)"
+          defaultOn={false}
+        />
+      </Section>
+
+      <Section title="계정">
+        <Row label="닉네임">
+          <Link href="/me" className="text-sm text-zinc-500 underline">
+            {p?.nickname ?? '플레이어'} 변경 →
+          </Link>
+        </Row>
+        <Divider />
+        <Row label="로그인 방식">
+          <span className="text-sm text-zinc-500">카카오</span>
+        </Row>
+        <Divider />
+        <Row label="본인인증">
+          <span className={`text-sm ${verified ? 'text-emerald-600' : 'text-zinc-500'}`}>
+            {verified ? '완료' : '미인증 (결제 시 진행)'}
+          </span>
+        </Row>
+      </Section>
+
+      <Section title="결제 / 영수증">
+        <p className="px-3 py-2.5 text-[11px] leading-relaxed text-zinc-500">
+          결제 영수증은 전자상거래법에 따라 가입 이메일로 자동 발송되며 끌 수 없습니다. 결제·환불
+          문의는 고객센터를 이용해 주세요.
+        </p>
+      </Section>
+
+      <Section title="약관 / 문의">
+        <DisabledRow label="이용약관" />
+        <Divider />
+        <DisabledRow label="개인정보처리방침" />
+        <Divider />
+        <DisabledRow label="고객센터 문의" />
+        <Divider />
+        <Link
+          href="/probability"
+          className="flex items-center justify-between px-3 py-2.5 text-sm"
+        >
+          <span>📜 확률 공시</span>
+          <span className="text-zinc-400">→</span>
+        </Link>
+      </Section>
+
+      <Section title="앱 정보">
+        <Row label="버전">
+          <span className="text-sm text-zinc-500">insaengganghwa v{APP_VERSION}</span>
+        </Row>
+      </Section>
+
+      <form action={signOut}>
+        <button
+          type="submit"
+          className="w-full rounded-xl border border-zinc-200 py-3 text-sm font-medium text-red-600 dark:border-zinc-800"
+        >
+          로그아웃
+        </button>
+      </form>
+    </div>
+  );
+}
+
+function Section({ title, children }: { title: string; children: React.ReactNode }) {
+  return (
+    <section>
+      <h2 className="mb-1.5 px-1 text-xs font-semibold text-zinc-500">{title}</h2>
+      <div className="overflow-hidden rounded-xl border border-zinc-200 bg-white dark:border-zinc-800 dark:bg-zinc-950">
+        {children}
+      </div>
+    </section>
+  );
+}
+
+function Row({ label, children }: { label: string; children: React.ReactNode }) {
+  return (
+    <div className="flex items-center justify-between px-3 py-2.5">
+      <span className="text-sm">{label}</span>
+      {children}
+    </div>
+  );
+}
+
+function DisabledRow({ label }: { label: string }) {
+  return (
+    <div className="flex items-center justify-between px-3 py-2.5">
+      <span className="text-sm text-zinc-400">{label}</span>
+      <span className="text-[11px] text-zinc-400">준비 중</span>
+    </div>
+  );
+}
+
+function Divider() {
+  return <div className="mx-3 border-t border-zinc-100 dark:border-zinc-900" />;
+}

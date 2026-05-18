@@ -40,13 +40,15 @@ export async function AppHeader({ userId }: { userId: string }) {
         >
           <span aria-hidden>🏆</span>
         </Link>
-        <span
-          aria-label="다이아"
+        <Link
+          href="/shop"
+          aria-label={`다이아 ${diamond} · 충전`}
           className="inline-flex items-center gap-1 rounded-full bg-zinc-100 px-2 py-0.5 text-zinc-700 dark:bg-zinc-800 dark:text-zinc-100"
         >
           <span aria-hidden>💎</span>
           <span className="font-mono tabular-nums">{formatCompactKR(diamond)}</span>
-        </span>
+          <span aria-hidden className="text-[10px] text-amber-600 dark:text-amber-400">＋</span>
+        </Link>
       </div>
     </header>
   );
