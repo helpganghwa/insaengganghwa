@@ -1,0 +1,21 @@
+@import "tailwindcss";
+
+/* next-themes의 <html class="dark"> 토글과 매칭. 시스템 테마는 ThemeProvider가 처리. */
+@custom-variant dark (&:where(.dark, .dark *));
+
+:root {
+  --background: #ffffff;
+  --foreground: #171717;
+}
+
+@theme inline {
+  --color-background: var(--background);
+  --color-foreground: var(--foreground);
+  --font-sans: var(--font-geist-sans);
+  --font-mono: var(--font-geist-mono);
+}
+
+/*
+ * 게임별 애니메이션 토큰(강화 결과/가챠/레이드/로딩/신화 연출)은
+ * 해당 화면을 구현할 때 단계적으로 이식한다. 참고: grow/app/globals.css.
+ */

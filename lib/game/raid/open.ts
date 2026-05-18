@@ -1,0 +1,128 @@
+import 'server-only';
+
+import { and, eq, sql } from 'drizzle-orm';
+
+import { db } from '@/lib/db/client';
+import { profiles } from '@/lib/db/schema/profiles';
+import { raids, raidParticipants, raidDailyCounts } from '@/lib/db/schema/raid';
+import {
+  RAID_DAILY_CAP,
+  RAID_MAX_CONCURRENT_PER_USER,
+  RAID_OPEN_COST_DIAMOND,
+  RAID_PHASE1_HP_MAX,
+  RAID_PHASE1_HP_MIN,
+  RAID_WINDOW_MS,
+} from '@/lib/game/balance';
+import { kstDateString } from '@/lib/kst';
+
+/** 레이드 — GDD §3.5 / BALANCE §5 / SCHEMA §6. */
+export type RaidErrorCode =
+  | 'INSUFFICIENT_DIAMOND'
+  | 'DAILY_CAP_REACHED'
+  | 'CONCURRENT_LIMIT'
+  | 'RAID_NOT_FOUND'
+  | 'RAID_CLOSED'
+  | 'RAID_FULL'
+  | 'ALREADY_JOINED'
+  | 'NOT_PARTICIPANT'
+  | 'NO_ATTACKS'
+  | 'NOT_SETTLEABLE';
+
+export class RaidError extends Error {
+  constructor(public code: RaidErrorCode) {
+    super(code);
+    this.name = 'RaidError';
+  }
+}
+
+export type RaidBoss =
+  | 'slime_king'
+  | 'orc_chief'
+  | 'stone_golem'
+  | 'dragon_west'
+  | 'fallen_angel';
+
+function rngU32(): number {
+  return crypto.getRandomValues(new Uint32Array(1))[0]!;
+}
+function genShareCode(): string {
+  let s = '';
+  for (let i = 0; i < 10; i++) s += (rngU32() % 36).toString(36);
+  return s;
+}
+
+type Tx = Parameters<Parameters<typeof db.transaction>[0]>[0];
+
+/** 동시 진행(active, 호스팅+참여 합산) — host도 participant로 등록되므로 한 쿼리. */
+export async function activeRaidCount(tx: Tx, userId: string) {
+  const [{ n }] = await tx
+    .select({ n: sql<number>`count(*)::int` })
+    .from(raidParticipants)
+    .innerJoin(raids, eq(raids.id, raidParticipants.raidId))
+    .where(and(eq(raidParticipants.userId, userId), eq(raids.status, 'active')));
+  return n;
+}
+
+/** 일일 한도(KST) 체크 + 증가 (open/join 공통, 호스팅+참여 합산). */
+export async function bumpDailyOrThrow(tx: Tx, userId: string) {
+  const kstDate = kstDateString();
+  const [row] = await tx
+    .select({ c: raidDailyCounts.startedCount })
+    .from(raidDailyCounts)
+    .where(and(eq(raidDailyCounts.userId, userId), eq(raidDailyCounts.kstDate, kstDate)))
+    .for('update');
+  if ((row?.c ?? 0) >= RAID_DAILY_CAP) throw new RaidError('DAILY_CAP_REACHED');
+  await tx
+    .insert(raidDailyCounts)
+    .values({ userId, kstDate, startedCount: 1 })
+    .onConflictDoUpdate({
+      target: [raidDailyCounts.userId, raidDailyCounts.kstDate],
+      set: { startedCount: sql`${raidDailyCounts.startedCount} + 1` },
+    });
+}
+
+export function openRaid(input: {
+  userId: string;
+  bossCode: RaidBoss;
+}): Promise<{ raidId: bigint; shareCode: string }> {
+  const { userId, bossCode } = input;
+
+  return db.transaction(async (tx) => {
+    if ((await activeRaidCount(tx, userId)) >= RAID_MAX_CONCURRENT_PER_USER) {
+      throw new RaidError('CONCURRENT_LIMIT');
+    }
+    await bumpDailyOrThrow(tx, userId);
+
+    const [prof] = await tx
+      .select({ diamond: profiles.diamond })
+      .from(profiles)
+      .where(eq(profiles.id, userId))
+      .for('update');
+    if (!prof || prof.diamond < BigInt(RAID_OPEN_COST_DIAMOND)) {
+      throw new RaidError('INSUFFICIENT_DIAMOND');
+    }
+    await tx
+      .update(profiles)
+      .set({ diamond: sql`${profiles.diamond} - ${BigInt(RAID_OPEN_COST_DIAMOND)}` })
+      .where(eq(profiles.id, userId));
+
+    const phase1Hp =
+      RAID_PHASE1_HP_MIN + (rngU32() % (RAID_PHASE1_HP_MAX - RAID_PHASE1_HP_MIN + 1));
+    const now = Date.now();
+    const [raid] = await tx
+      .insert(raids)
+      .values({
+        hostUserId: userId,
+        bossCode,
+        phase1Hp: BigInt(phase1Hp),
+        shareCode: genShareCode(),
+        expireAt: new Date(now + RAID_WINDOW_MS),
+        status: 'active',
+      })
+      .returning({ id: raids.id, shareCode: raids.shareCode });
+
+    await tx.insert(raidParticipants).values({ raidId: raid!.id, userId });
+
+    return { raidId: raid!.id, shareCode: raid!.shareCode };
+  });
+}
