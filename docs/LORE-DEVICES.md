@@ -152,3 +152,17 @@
 - echo_stone_earring — 한 박자 늦게, 미세하게 다르게 들림
 - carvers_last_ring — 절반 글자에 끌을 못 댄 손자리
 - surveyor_plumb_pendant — 추로 그은 선을 따라 산을 잇는 풍경
+
+## 장신구 배치2 (12) — 화산/타락천사 권역 짙게
+- ember_bead_string — 욱할 때 굴린 줄 닳음을 마을이 놀림
+- ashglass_pendant — 흔해서 줍지도 버리지도 않고 떠난 마을
+- scorch_medallion — 마을이 도로 쥐여 준 그을린 훈장
+- cinder_eye_charm — 화덕을 등지고 앉는 버릇이 생긴 화부
+- feather_locket — 닫을 때 깃이 달리 접혀 있던 그 한 번
+- fallen_bell_charm — 깨진 종의 맑은 한 음에 다툼이 식음
+- hollow_prayer_bead — 구르는 소리가 어떤 기도의 운율
+- widowers_band — 한 끈의 두 반지, 끈째 함께 묻힘
+- nameless_signet — 봉랍에 받는 쪽이 까닭 없이 자세 고침
+- grandmas_thimble_charm — 손 떠나면 골무를 다음 사람이 거는 풍습
+- first_tooth_locket — 끝내 안 연 채 함께 묻힌 로켓
+- merchants_scale_pendant — 기운 저울을 빼고 셈한 정직의 수고
