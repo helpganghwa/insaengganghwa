@@ -53,7 +53,7 @@ export interface CatalogItem {
   art: string;
 }
 
-const STYLE = 'clean readable silhouette, fantasy RPG pixel art inventory icon, transparent background';
+const STYLE = 'single hero object centered, bold clean silhouette, crisp dark outline, rich pixel shading with rim light, fantasy RPG loot inventory icon, transparent background';
 
 /** 슬롯별 묶음을 합쳐 단일 export. 배치(슬롯)별로 확장한다. */
 
@@ -68,7 +68,7 @@ const WEAPONS: CatalogItem[] = [
     region: '늪지대',
     tone: '담백',
     lore: '수선 의뢰서에는 늪 우물 바닥에서 건진 한손검 한 자루를 쓸 만하게 갈아 달라, 값은 부르는 대로 주겠다고 적혀 있었다. 대장장이는 그 검을 도로 돌려보내며 퉁명스레 한 줄을 붙였다. 갈 게 없으니 그냥 차고 다니라고. 녹을 벗겨 보니 이 나간 데가 한 군데도 없고 그 녹이 외려 날을 단단히 붙들고 있어, 손대면 멀쩡한 걸 망친다고. 값은 안 받는다고. 의뢰인은 그 말이 어찌나 시원시원한지 한참 웃고는 정말 그대로 차고 다녔다. 그 뒤로 늪 마을 사람들은 검이 좀 삭아도 그 대장장이에게 안 가져갔다 — 가 봐야 같은 말에 또 웃고 돌아올 걸 알아서다.',
-    art: `plain one-handed sword, pitted reddish-rusted iron blade, dried swamp mud, leather-wrapped grip, simple crossguard, understated, ${STYLE}`,
+    art: `ornate fantasy weapon: plain one-handed sword, pitted reddish-rusted iron blade, dried swamp mud, leather-wrapped grip, simple crossguard, crafted equippable weapon game asset, ${STYLE}`,
   },
   {
     key: 'ashfall_obsidian_dagger',
@@ -77,7 +77,7 @@ const WEAPONS: CatalogItem[] = [
     region: '서쪽 화산',
     tone: '기괴',
     lore: '같은 단검을 들여다본 두 사람의 말을 나란히 둔다. 갑: "칼날에 내 얼굴이 비쳤소. 그뿐이오." 을: "갑이 거짓말이오. 그 얼굴, 갑이 안 짓던 표정을 짓고 있었소. 내가 옆에서 똑똑히 봤소." 갑: "을이 헛것을 본 게지. 나는 멀쩡했소." 을: "그럼 왜 갑은 그날 뒤로 칼집을 열 때마다 고개를 옆으로 트시오?" 둘은 끝까지 말을 안 맞췄다. 단검은 지금 둘 다 아닌 다른 사람 손에 넘어가 있고, 그 사람은 아직 한 번도 칼날을 똑바로 들여다보지 않은 채 허리에만 차고 다닌다.',
-    art: `short dagger, glassy black obsidian blade, faint distorted reflection, fractured razor edge, charred bone handle, eerie, ${STYLE}`,
+    art: `ornate fantasy weapon: short dagger, glassy black obsidian blade, faint distorted reflection, fractured razor edge, charred bone handle, eerie, crafted equippable weapon game asset, ${STYLE}`,
   },
   {
     key: 'runescar_warhammer',
@@ -86,7 +86,7 @@ const WEAPONS: CatalogItem[] = [
     region: '고대 룬 산맥',
     tone: '장엄',
     lore: '산이 무너진 비탈, 큰 돌 하나에 글이 새겨져 있다. 여기, 산의 힘 한 줌이 떨어진 자리, 그것으로 이 망치를 벼렸다고. 그 아래로 세월 따라 사람들이 한 줄씩 보탰다. 들어 보았다, 두 발이 땅에 박히는 줄 알았다고. 내려친 자리에 한참 든든한 울림이 남더라고. 그래서 우리 마을은 무너졌어도 다시 섰다고. 망치는 지금 그 돌 곁에 서 있고, 마을 사람들은 새 일을 시작할 때면 그 앞에 들러 한 번씩 들어 본다. 들 수 있으면 길조라며 웃고, 못 들어도 산이 거기 있다는 게 어디냐며 또 웃는다.',
-    art: `massive two-handed warhammer, grey carved-stone head, vivid blue rune cracks, iron-banded oak haft, monumental, ${STYLE}`,
+    art: `ornate fantasy weapon: massive two-handed warhammer, grey carved-stone head, vivid blue rune cracks, iron-banded oak haft, monumental, crafted equippable weapon game asset, ${STYLE}`,
   },
   {
     key: 'orcfang_cleaver',
@@ -95,7 +95,7 @@ const WEAPONS: CatalogItem[] = [
     region: '오크 부락',
     tone: '위트',
     lore: '장터 스물셋 번, 오크 부락에서 나온 외날 도끼는 잘 든다는 보증이 붙었는데도 해마다 안 팔렸다. 파는 사람이 자루의 어금니를 두고 이빨이 둘이면 무는 힘도 둘이라더라 하면, 객석에서 꼭 누가 그게 무슨 소리냐 받고, 파는 사람도 답을 못 해 다 같이 웃었다. 그 문답이 어찌나 재미있던지 사람들은 그 도끼가 안 팔리길 은근히 바라며 해마다 장터에 모였다. 끝내 한 아이가 그 이야기가 좋다며 도끼를 샀고, 장터는 서운해하면서도 박수를 쳤다. 도끼는 그 집 벽에 걸려, 손님이 오면 그 아이가 똑같은 문답을 신나게 들려준다.',
-    art: `one-handed broad cleaver axe, chipped crescent iron blade, large tusk wedged into haft, crude lashings, rugged, ${STYLE}`,
+    art: `ornate fantasy weapon: one-handed broad cleaver axe, chipped crescent iron blade, large tusk wedged into haft, crude lashings, rugged, crafted equippable weapon game asset, ${STYLE}`,
   },
   {
     key: 'fallen_grace_rapier',
@@ -104,7 +104,7 @@ const WEAPONS: CatalogItem[] = [
     region: '타락천사',
     tone: '비애',
     lore: '어느 약방에 처방전 한 장이 남아 있다. 증상은 이러했다. 이 가는 검을 지닌 뒤로 잠을 설치고, 뽑을 때마다 깃털 스치는 소리가 나며, 그때 떠오르는 얼굴이 있다는 것. 처방에는 먹는 약이 없었다. 대신 하루 한 번만 뽑되, 뽑거든 그 소리를 끝까지 들을 것, 도중에 칼집에 도로 넣으면 다음 날 더 오래 들린다고 적혔다. 끝에 작게, 오래 지닌 사람일수록 점점 덜 뽑게 되는데 그게 차도라고 덧대어 있었다. 처방을 받은 이는 그 뒤로 검을 벽에 걸고, 한 달에 한 번쯤 내려 천으로 닦고는 뽑지 않은 채 도로 걸어 두었다.',
-    art: `slender thrusting rapier, pale silver blade, tarnished gold swept hilt, faint black feather etching, somber elegant, ${STYLE}`,
+    art: `ornate fantasy weapon: slender thrusting rapier, pale silver blade, tarnished gold swept hilt, faint black feather etching, somber elegant, crafted equippable weapon game asset, ${STYLE}`,
   },
   {
     key: 'iron_field_sword',
@@ -113,7 +113,7 @@ const WEAPONS: CatalogItem[] = [
     region: '일반',
     tone: '일상',
     lore: '칼과 함께 오는 종이에는 주의 넷만 적혀 있다. 이 검은 천 자루 중 하나이니 네 것이라 여기지 마라, 이가 나가면 갈고 자루가 닳으면 새로 감아라, 부러져도 슬퍼 마라 다음 걸 꺼내면 된다, 이름은 붙이지 마라. 변경 수비대에선 새내기가 첫 검을 받으면 고참이 그 넷을 익살스레 읊어 주는 게 오랜 통과의례다. 새내기가 셋째에서 피식 웃으면 합격이라며 어깨를 쳐 준다. 그 넷을 외운 병사들이 이 검으로 변경을 여러 번 지켜냈고, 지금도 보급 검 더미 앞에서는 그 익살스러운 낭독과 웃음소리가 빠지지 않는다.',
-    art: `standard-issue one-handed arming sword, straight iron blade, re-wrapped worn grip, plain pommel, utilitarian, ${STYLE}`,
+    art: `ornate fantasy weapon: standard-issue one-handed arming sword, straight iron blade, re-wrapped worn grip, plain pommel, crafted equippable weapon game asset, ${STYLE}`,
   },
   {
     key: 'wanderer_oak_staff',
@@ -122,7 +122,7 @@ const WEAPONS: CatalogItem[] = [
     region: '일반',
     tone: '수수께끼',
     lore: '길잡이가 적어 둔 거리표 줄들 사이에 글씨가 다른 한 칸이 끼어 있다. 떡갈나무 지팡이 짚은 노인과 함께 가면 그해 그 길가 마을들 농사가 잘된다고, 근거는 없지만 좋은 말이라 안 지운다고. 노인이 묵어 간 마을마다 정말 그해 보리가 그득했다는 이야기가 길을 따라 즐겁게 번졌다. 그래서 마을들은 그 노인이 오면 가장 좋은 방을 내주고, 떠날 땐 다음 마을까지 배웅했다. 노인은 갔어도 지팡이는 한 헛간에 세워져, 봄이면 누가 그걸 빌려 제 밭머리에 한 번 꽂아 보고는 올해도 잘되겠다며 웃는다.',
-    art: `tall wooden wizard staff, gnarled oak shaft, smooth hand-worn grip, dull clouded stone at crown, enigmatic, ${STYLE}`,
+    art: `ornate fantasy weapon: tall wooden wizard staff, gnarled oak shaft, smooth hand-worn grip, dull clouded stone at crown, enigmatic, crafted equippable weapon game asset, ${STYLE}`,
   },
   {
     key: 'hunter_greenwood_bow',
@@ -131,7 +131,7 @@ const WEAPONS: CatalogItem[] = [
     region: '일반',
     tone: '영웅담',
     lore: '아이들이 손뼉 치며 신나게 부르는 동요가 있다. 하나에 눈밭에 엎드린 사냥꾼, 둘에 외양간 노린 늑대, 셋에 사흘 밤, 넷에 활은 하나, 다섯에 늑대 머리 떨어지고, 여섯에 양은 다 살고, 일곱에 영웅이라 부르니, 여덟에 그는 그냥 웃네, 아홉에 운이 좋았다고, 열에 추웠을 뿐이라고. 정말 그 겨울 한 사냥꾼이 사흘을 엎드려 우두머리를 잡고 양 한 마리 안 잃었다. 활은 지금도 그 집 벽에 자랑처럼 걸려 있다. 아이들은 열을 외칠 때 누가 시키지도 않았는데 목청껏 소리 지르고, 까르르 웃으며 신나게 술래를 바꾼다.',
-    art: `curved wooden recurve shortbow, taut sinew bowstring, frost-pale wood grain, worn grip wrap, vertical, heroic, ${STYLE}`,
+    art: `ornate fantasy weapon: curved wooden recurve shortbow, taut sinew bowstring, frost-pale wood grain, worn grip wrap, vertical, heroic, crafted equippable weapon game asset, ${STYLE}`,
   },
   {
     key: 'marsh_reed_spear',
@@ -140,7 +140,7 @@ const WEAPONS: CatalogItem[] = [
     region: '늪지대',
     tone: '일상',
     lore: '늪 마을에선 집집마다 갈대창 한 자루가 문가에 서 있다. 아침엔 물뱀을 쫓고, 한낮엔 늘어진 빨랫줄을 받치고, 잔칫날엔 차일 기둥이 되었다가, 아이들 손에 들리면 그대로 깃발 장대가 된다. 점액에 절어 검푸르게 굳은 자루는 어지간해선 휘지 않아 무엇으로 써도 끄떡없다. 한 집에서 그 창으로 받친 빨랫줄에 잔치 등을 줄줄이 매단 날, 온 마을이 그 불빛 아래 모여 늦도록 떠들썩했다. 늪에선 무기와 살림의 경계가 흐릿한데, 다들 그 흐릿함을 외려 다행으로 여긴다 — 덕분에 창 한 자루가 이렇게 여러 몫을 한다.',
-    art: `long thrusting spear, dark hardened reed shaft, narrow leaf-shaped iron head, doorway-leaning wear, mundane, ${STYLE}`,
+    art: `ornate fantasy weapon: long thrusting spear, dark hardened reed shaft, narrow leaf-shaped iron head, doorway-leaning wear, crafted equippable weapon game asset, ${STYLE}`,
   },
   {
     key: 'emberforged_greatsword',
@@ -149,7 +149,7 @@ const WEAPONS: CatalogItem[] = [
     region: '서쪽 화산',
     tone: '장엄',
     lore: '이 대검 이야기는 마을을 건너며 신나게 부풀어 간다. 화산 마을에선 가장 깊은 화덕에서 보름을 두드렸다 하고, 다음 마을에선 화산 틈에 누여 식혔다가 되고, 그다음엔 용이 직접 불어 만들었다가 되며, 더 멀리 가면 휘두르면 산이 한 번 운다는 무용담까지 붙는다. 그 칼을 만진 늙은 대장장이는 다 틀렸다며 껄껄 웃고는, 다만 무거워 숨 한 번에 한 번밖에 못 휘둘렀던 건 맞다 했다. 칼은 그 대장간 벽에 걸려 있고, 사람들은 저마다 가장 부풀린 판을 들고 와 누구 이야기가 더 그럴듯한지 겨루며 한바탕 웃는다.',
-    art: `large two-handed greatsword, broad heat-grained steel blade, deep ash river streaks, long wrapped grip, imposing, ${STYLE}`,
+    art: `ornate fantasy weapon: large two-handed greatsword, broad heat-grained steel blade, deep ash river streaks, long wrapped grip, imposing, crafted equippable weapon game asset, ${STYLE}`,
   },
   {
     key: 'glass_question_scepter',
@@ -158,7 +158,7 @@ const WEAPONS: CatalogItem[] = [
     region: '일반',
     tone: '수수께끼',
     lore: '점치는 노파가 이 홀을 흔들어 보고 풀이했다. 속이 빈 유리알인데 흔들면 뭔가 또르르 구른다고, 소리는 분명한데 안엔 아무것도 없다고, 이건 답이 먼저 온 패라고. 물음이 아직 안 온 거라고. 답을 들고 다니다 보면 언젠가 딱 맞는 물음을 만난다는 말에, 사람들은 그게 무슨 보물찾기 같다며 들떠 했다. 한 젊은이는 영문 모를 답 하나를 품고 다니다 몇 해 뒤 장터에서 딱 그 답이 맞는 물음을 만나, 그 자리에서 손뼉을 치며 웃었다고 한다. 홀은 지금도 누군가의 머리맡에서, 다음 사람이 품을 답 하나를 굴리고 있다.',
-    art: `short ornate scepter, hollow clear glass orb at head, faint something-inside rattle, banded silver shaft, mysterious, ${STYLE}`,
+    art: `ornate fantasy weapon: short ornate scepter, hollow clear glass orb at head, faint something-inside rattle, banded silver shaft, mysterious, crafted equippable weapon game asset, ${STYLE}`,
   },
   {
     key: 'orc_bonk_maul',
@@ -167,7 +167,7 @@ const WEAPONS: CatalogItem[] = [
     region: '오크 부락',
     tone: '위트',
     lore: '부락 마당의 다툼 판결은 두고두고 회자되는 웃음거리다. 갑이 을의 천막을 둔기로 부쉈다는데, 을은 갑이 휘둘렀다 하고 갑은 들고만 있었는데 을이 알아서 자빠졌다 우겼다. 증거물 둔기는 흠 하나 없었다. 판결은, 둔기가 멀쩡하니 휘둘렀다 단정 못 한다, 다만 갑이 그 둔기 만든 자가 같은 날 비탈에서 굴러 죽은 일을 제 솜씨 증명이라 우겨 마당을 어지럽힌 죄로 천막을 다시 세워 주라는 것이었다. 부락은 그 판결문을 잔치 때마다 누가 큰 소리로 읽고, 마지막 줄에서 다 같이 박장대소한다. 둔기는 그 웃음의 한가운데 증거물로 또 불려 나온다.',
-    art: `crude heavy bludgeon, single huge joint-bone head, thick leather lashings, lopsided, comically brutal, ${STYLE}`,
+    art: `ornate fantasy weapon: crude heavy bludgeon, single huge joint-bone head, thick leather lashings, lopsided, comically brutal, crafted equippable weapon game asset, ${STYLE}`,
   },
   {
     key: 'parted_twin_daggers',
@@ -176,7 +176,7 @@ const WEAPONS: CatalogItem[] = [
     region: '일반',
     tone: '비애',
     lore: '분실물 보관소 회신에는 굽은 외날 단검 한 자루가 들어왔다고 적혀 있었다. 무게중심이 한쪽으로 미세하게 치우친 칼. 신고인 말로는 본래 두 자매가 한 자루씩 나눠 가졌고 다시 맞대기로 했는데, 찾는 것은 이 한 자루가 아니라 짝이 되는 다른 한 자루였다. 보관소는 그 짝을 찾지 못했고, 들어온 한 자루는 보관을 연장한다고만 회신했다. 짝 없이도 들 수 있으나 손이 자꾸 빈쪽을 더듬는다는 신고인의 말은 참고만 적혔다. 그 한 자루는 지금도 보관소 선반에 번호표를 단 채, 해마다 보관 기한이 한 줄씩 늘어 적힌다.',
-    art: `single curved dagger, faint mark where a twin once paired, dark wrapped handle, slightly off-balance, lonesome, ${STYLE}`,
+    art: `ornate fantasy weapon: single curved dagger, faint mark where a twin once paired, dark wrapped handle, slightly off-balance, lonesome, crafted equippable weapon game asset, ${STYLE}`,
   },
   {
     key: 'tollkeeper_glaive',
@@ -185,7 +185,7 @@ const WEAPONS: CatalogItem[] = [
     region: '일반',
     tone: '일상',
     lore: '다리 통행세 영수증 묶음에는 문지기가 여백에 적은 잔글씨가 영수증보다 더 많다. 소 두 마리 끌고 온 자가 시끄러웠으나 셈은 안 속였다고. 급한 전령이라 그냥 보냈다고. 오늘 비가 와 창에 먼지가 줄줄이 씻겨 내렸다고. 다음 문지기가 묶음을 물려받자 며칠 안 가 제 잔글씨를 보태기 시작했고, 그렇게 문지기마다 한 사람씩 자기 다리 이야기를 더해 묶음이 두꺼워졌다. 지금 문지기는 비 오는 날이면 그 옛 잔글씨들을 꺼내 읽으며 혼자 웃는다. 창은 여전히 초소 벽 같은 자리에 기대어, 새 잔글씨가 쌓이는 걸 지켜본다.',
-    art: `polearm glaive, long worn wooden shaft, single curved blade thick with road dust, leaning-post wear, mundane, ${STYLE}`,
+    art: `ornate fantasy weapon: polearm glaive, long worn wooden shaft, single curved blade thick with road dust, leaning-post wear, crafted equippable weapon game asset, ${STYLE}`,
   },
   {
     key: 'fallen_feather_scythe',
@@ -194,7 +194,7 @@ const WEAPONS: CatalogItem[] = [
     region: '타락천사',
     tone: '기괴',
     lore: '농사 절기표 한 장에 입춘은 씨 고르기, 곡우는 모판, 망종은 모내기, 백로는 거둠 시작이라 적혀 있다. 그 거둠 칸 옆에 글씨가 다른 한 줄이 끼어 있다. 이 낫으로 거둘 때 벤 자리에 검은 깃이 떨어져도 그날 일을 멈추지 말고 줍지도 말라고, 줍던 해에 거둠이 늦었다고. 절기표를 새로 베껴 거는 집마다 그 줄을 빼려다, 거둠이 늦을까 봐 끝내 같이 옮겨 적었다. 낫은 헛간 못에 걸려 절기표 바로 아래에 있고, 백로 무렵이면 누구든 절기표보다 그 한 줄을 먼저 본다.',
-    art: `war scythe, long curved blade, black feather-bound shaft, pale wing-bone fittings, unsettling, ${STYLE}`,
+    art: `ornate fantasy weapon: war scythe, long curved blade, black feather-bound shaft, pale wing-bone fittings, unsettling, crafted equippable weapon game asset, ${STYLE}`,
   },
   {
     key: 'butcher_falchion',
@@ -203,7 +203,7 @@ const WEAPONS: CatalogItem[] = [
     region: '일반',
     tone: '위트',
     lore: '가게를 넘길 때 적힌 인계 목록에 도마 둘, 갈고리 여섯, 그리고 뼈 끊던 넓적칼 하나가 들어 있었다. 새 주인은 그 칼을 무기랍시고 떠벌리는 손님에게 몇 번 빌려줬는데, 빌려 간 자들이 하나같이 김샌 얼굴로 돌려주는 게 어찌나 우습던지 단골들이 그 구경을 기다릴 지경이 됐다. 결국 새 주인은 그걸 가게 명물로 삼아, 객기 부리는 손님이 오면 슬쩍 그 칼을 권하고 단골들과 눈을 맞추며 웃었다. 칼은 도마 옆 같은 자리에 걸려, 다음 인계 목록에도 같은 한 줄로 또 적히고, 그 가게의 웃음거리 노릇도 그대로 물려진다.',
-    art: `wide heavy falchion, broad cleaver-like steel blade, nicked edge, plain wooden grip, butcher-tool origin, ${STYLE}`,
+    art: `ornate fantasy weapon: wide heavy falchion, broad cleaver-like steel blade, nicked edge, plain wooden grip, butcher-tool origin, crafted equippable weapon game asset, ${STYLE}`,
   },
   {
     key: 'dawn_charge_saber',
@@ -212,7 +212,7 @@ const WEAPONS: CatalogItem[] = [
     region: '일반',
     tone: '영웅담',
     lore: '군적 담당이 그날 적은 셈이 남아 있다. 출진 기병 스물, 맨 앞에 세운 칼 하나, 적은 예순 너머, 안개는 안 걷힘. 돌격이 끝나고 다시 적었다. 안장에 다시 앉은 자 열하나, 잃은 말 아홉, 땅에 닿은 깃발 없음. 그 열하나가 안개를 뚫고 줄을 살려 돌아왔을 때, 뒤에 섰던 부대 전체가 칼자루를 두드리며 함성을 질렀다. 그날 살아 온 자들은 칼을 따로 챙기는 대신 맨 앞에 섰던 이 사브르 하나를 돌아가며 닦는 풍습을 만들었고, 해마다 그날이 오면 그것을 마당 한가운데 세워 두고 둘러앉아 그 돌격을 신나게 되짚으며 잔을 부딪친다.',
-    art: `curved cavalry saber, slender single-edged blade, brass knuckle-guard, faded ribbon on hilt, heroic, ${STYLE}`,
+    art: `ornate fantasy weapon: curved cavalry saber, slender single-edged blade, brass knuckle-guard, faded ribbon on hilt, heroic, crafted equippable weapon game asset, ${STYLE}`,
   },
   {
     key: 'marsh_hook_sickle',
@@ -221,7 +221,7 @@ const WEAPONS: CatalogItem[] = [
     region: '늪지대',
     tone: '기괴',
     lore: '늪 출입 장부에는 드는 사람 이름과 든 시각, 나온 시각이 줄줄이 채워져 있다. 거의 다 같은 날 안에 나온 시각이 적혀 있는데, 한 줄만 다르다. 뱀장어잡이, 갈고리 낫 지참, 든 시각 새벽, 나온 시각 빈칸. 그 아래로는 그 사람 이름이 다시 나오지 않는다. 낫은 그가 들어간 진흙 구멍 자리에 박힌 채 발견됐고, 누가 뽑아 장부 보관함 옆에 세워 두었다. 장부는 지금도 쓰이는데, 그 빈칸 한 줄만은 누구도 채우거나 지우지 않고 그대로 둔다.',
-    art: `hooked sickle, curved barbed iron hook, mud-caked short handle, frayed pull-cord, eerie swamp, ${STYLE}`,
+    art: `ornate fantasy weapon: hooked sickle, curved barbed iron hook, mud-caked short handle, frayed pull-cord, eerie swamp, crafted equippable weapon game asset, ${STYLE}`,
   },
   {
     key: 'orc_horn_club',
@@ -230,7 +230,7 @@ const WEAPONS: CatalogItem[] = [
     region: '오크 부락',
     tone: '일상',
     lore: '부락 어귀 알림판에는 첫닭에 곤봉 한 번이면 교대, 해 오를 때 두 번이면 천막 점검, 한낮엔 알림 없음, 해 질 때 한 번이면 다시 교대, 밤엔 곤봉 자루로 헐거운 말뚝 박기라 적혀 있다. 맨 밑엔 익살스레, 부는 것보다 박는 게 먼저이니 헷갈리면 박으라고. 부락의 하루는 그 곤봉 소리에 맞춰 흥겹게 굴러간다. 첫닭의 한 번이면 다들 기지개를 켜고, 해 질 녘 한 번이면 모닥불가로 모인다. 신호병이 셋 바뀌는 동안 새 신호병마다 첫날엔 박자를 틀려 부락을 한바탕 웃겼고, 곧 능숙해져 그 소리에 부락의 하루가 또 신나게 돌아갔다.',
-    art: `crude wooden club, horn trumpet lashed to the head, stake-driving wear, leather wrap, mundane, ${STYLE}`,
+    art: `ornate fantasy weapon: crude wooden club, horn trumpet lashed to the head, stake-driving wear, leather wrap, crafted equippable weapon game asset, ${STYLE}`,
   },
   {
     key: 'rune_split_longsword',
@@ -239,7 +239,7 @@ const WEAPONS: CatalogItem[] = [
     region: '고대 룬 산맥',
     tone: '기괴',
     lore: '유리와 거울을 다듬는 장인에게 장검 날 한가운데 갈라진 틈을 메워 달라는 일감이 들어왔다. 장인은 못 한다고 답했다. 그 틈은 유리도 쇠도 아닌 것이 물려 있어, 메우려 손대면 들여다보는 쪽이 먼저 빨려 들어간다고. 시험 삼아 한 번 봤다가 하루를 멍하니 보냈고 두 번은 안 본다고, 그래서 의뢰를 반려한다고. 메모 끝에는 가져온 사람에게도 그 틈은 벽 쪽으로 두라 일러 보냈다고 한 줄 더 적혀 있었다. 장검은 결국 그 집 벽에, 정말 틈이 벽을 향하게 세워졌다.',
-    art: `long straight longsword, deep crack splitting the blade lengthwise, unnaturally deep gap, stone-grey temper, eerie, ${STYLE}`,
+    art: `ornate fantasy weapon: long straight longsword, deep crack splitting the blade lengthwise, unnaturally deep gap, stone-grey temper, eerie, crafted equippable weapon game asset, ${STYLE}`,
   },
   {
     key: 'widow_estoc',
@@ -248,7 +248,7 @@ const WEAPONS: CatalogItem[] = [
     region: '일반',
     tone: '비애',
     lore: '결투 입회를 섰던 자의 비망록 한 쪽이 남아 있다. 오늘 남편 잃은 여인의 결투에 입회했다고, 그 가는 검을 들고 나왔다고 적혀 있다. 결과를 적어야 하는데 손이 안 나간다고, 이긴 것도 진 것도 아닌 결투를 처음 봤다고. 검집 안쪽에 칼끝으로 눌러 쓴 글이 있었는데 이번이 마지막이라는 다섯 글자였고, 결투를 말한 건지 다른 걸 말한 건지 모르겠다고. 비망록은 거기서 한 장이 비고, 다음 장은 아무 일 없던 듯 다른 결투 기록으로 이어진다. 검은 한참 뒤 고물 궤짝에서 그 비망록과 함께 나왔다.',
-    art: `long rigid estoc, narrow needle-like thrusting blade, plain dark hilt, worn engraved scabbard motif, mournful, ${STYLE}`,
+    art: `ornate fantasy weapon: long rigid estoc, narrow needle-like thrusting blade, plain dark hilt, worn engraved scabbard motif, mournful, crafted equippable weapon game asset, ${STYLE}`,
   },
   {
     key: 'ember_falx',
@@ -257,7 +257,7 @@ const WEAPONS: CatalogItem[] = [
     region: '서쪽 화산',
     tone: '수수께끼',
     lore: '주물간에 남은 거푸집 도면 한 장에 칼 모양 골이 그려져 있고 치수와 쇳물 양이 또박또박 적혀 있다. 한쪽 귀퉁이엔 누가 적어 둔 물음이 있다. 이 골은 누가 팠는가, 용암이 식으며 저절로 패였다는데 하필 칼 모양으로. 답은 없고 줄만 그어져 있다. 주물간 사람들은 그 물음을 두고두고 즐겁게 우긴다. 누구는 옛 대장신의 장난이라 하고 누구는 그냥 운이 좋았던 거라 한다. 정답은 안 나왔지만 그 입씨름이 일하다 쉬는 참의 낙이 되어, 도면은 칼보다 더 자주, 더 신나게 들여다보는 물건이 되었다.',
-    art: `inward-curved falx blade, single hooked edge, fire-grained dark steel, gaze-pulling curve, mysterious, ${STYLE}`,
+    art: `ornate fantasy weapon: inward-curved falx blade, single hooked edge, fire-grained dark steel, gaze-pulling curve, mysterious, crafted equippable weapon game asset, ${STYLE}`,
   },
   {
     key: 'ledger_quarterstaff',
@@ -266,7 +266,7 @@ const WEAPONS: CatalogItem[] = [
     region: '일반',
     tone: '일상',
     lore: '세금 장부 맨 끝 결산 면, 숫자가 줄줄이 맞아떨어진 아래에 다른 글씨로 한 줄이 있다. 봉 한 자루, 값 없음, 적을 칸이 없어 여기 적는다고. 평생 그 봉을 짚고 마을을 돈 서기는 셈에 인색해도 인심은 후해, 흉년이면 제 몫을 깎아 적었다. 그 봉을 장부 위에 탁 올리면 그해 셈이 한 푼도 안 틀렸다는 말은 그가 그만큼 꼼꼼하고 공평했다는 자랑이었다. 서기가 일을 놓던 날 마을이 술을 냈고, 새 서기는 그 봉을 물려받아 같은 자리에 세워 두었다. 봉이 관아 벽에 기대 있는 한 마을은 셈 걱정을 덜었다.',
-    art: `plain ash quarterstaff, ink-stained one end, dog-chasing scuffs, smooth worn middle grip, mundane, ${STYLE}`,
+    art: `ornate fantasy weapon: plain ash quarterstaff, ink-stained one end, dog-chasing scuffs, smooth worn middle grip, crafted equippable weapon game asset, ${STYLE}`,
   },
   {
     key: 'feather_kris',
@@ -275,7 +275,7 @@ const WEAPONS: CatalogItem[] = [
     region: '타락천사',
     tone: '수수께끼',
     lore: '재고 실사 보고에는 단검에서 떨어진 검은 깃을 작은 상자에 보관한다고 적혀 있다. 1차에 백, 3차에 아흔일곱, 5차에 백둘. 비고에는 넣은 사람도 뺀 사람도 손댄 사람도 없고 상자 봉인은 그대로인데 셈이 매번 어긋나 실사를 끝내지 못한다고. 담당은 결국 상자를 봉한 채 창고 맨 안쪽으로 옮기고, 보고서에 셀수록 어긋나 보류한다고 적었다. 단검은 그 상자 위에 함께 두었는데, 칼집은 지금도 열 때마다 깃을 딱 한 올씩, 늘 한 올만 떨군다.',
-    art: `wavy-bladed kris dagger, rippling pattern-welded steel, dark bound handle, single black feather, mysterious, ${STYLE}`,
+    art: `ornate fantasy weapon: wavy-bladed kris dagger, rippling pattern-welded steel, dark bound handle, single black feather, mysterious, crafted equippable weapon game asset, ${STYLE}`,
   },
   {
     key: 'mistwood_longbow',
@@ -284,7 +284,7 @@ const WEAPONS: CatalogItem[] = [
     region: '일반',
     tone: '영웅담',
     lore: '안개숲에서 살아 돌아온 사람들의 이름을 새긴 공덕비가 마을 어귀에 섰다. 마흔에 가까운 이름이 줄줄이 새겨져 있는데, 정작 신호 화살을 쏘아 길을 알려 준 순찰자의 이름은 본인이 한사코 빼라 해서 없다. 대신 맨 아래에 빈 줄 하나가 있고, 살아 온 사람들이 그 빈 줄을 그의 자리로 친다. 안개 짙은 밤이면 누가 그 앞에 등을 하나 켜 두고 가는데, 다음 날이면 또 다른 사람이 새 등을 놓는다. 순찰자는 끝내 제 이름을 안 밝혔지만, 그 빈 줄 앞은 한 해도 어두운 적이 없다. 활은 그 비석 곁 사당에 자랑처럼 걸려 있다.',
-    art: `tall slender longbow, pale mist-grey wood, taut string, simple leather grip, vertical, heroic, ${STYLE}`,
+    art: `ornate fantasy weapon: tall slender longbow, pale mist-grey wood, taut string, simple leather grip, vertical, heroic, crafted equippable weapon game asset, ${STYLE}`,
   },
   {
     key: 'tunnel_war_pick',
@@ -293,7 +293,7 @@ const WEAPONS: CatalogItem[] = [
     region: '일반',
     tone: '일상',
     lore: '갱 입구 안전 수칙에는 혼자 깊이 들지 말 것, 받침목 흔들리면 즉시 나올 것, 갱이 무너지거든 곡괭이로 벽을 천천히 같은 박자로 칠 것, 바깥은 그 박자를 듣고 판다는 것이 적혀 있다. 셋째 수칙 옆에 누가 자랑스레 잔글씨를 보탰다. 실제로 그렇게 사흘을 두드린 사람이 살아 나왔고 그 곡괭이가 바로 이것이라고. 그 광부는 지금도 마을에서 그날 이야기를 신나게 들려주고, 새내기들은 갱에 들기 전 그 잔글씨를 한 번씩 읽고 든다. 곡괭이는 입구 못에 자랑처럼 걸려, 무너진 어둠 속에서도 박자를 잃지 말라고 매일 광부들을 배웅한다.',
-    art: `heavy war pick, single curved spike head, blunt back, rock-scarred iron, sturdy wooden haft, utilitarian, ${STYLE}`,
+    art: `ornate fantasy weapon: heavy war pick, single curved spike head, blunt back, rock-scarred iron, sturdy wooden haft, crafted equippable weapon game asset, ${STYLE}`,
   },
   {
     key: 'dream_answer_orb_staff',
@@ -302,7 +302,7 @@ const WEAPONS: CatalogItem[] = [
     region: '일반',
     tone: '수수께끼',
     lore: '머리에 탁한 구슬을 얹은 이 짧은 홀을 머리맡에 두고 잔 사람은 다음 날 아침 한 가지 답을 또렷이 알고 깨는데 그게 무슨 물음의 답인지는 알 수 없어 사람들은 그것을 무슨 보물찾기처럼 들떠 즐겼고 어떤 이는 며칠 뒤 장터에서 딱 그 답이 맞는 물음을 만나 그 자리에서 손뼉을 치며 웃었으며 또 어떤 이는 평생 그 물음을 못 만났지만 답 하나를 품고 사는 것만으로 어쩐지 든든했다고 했고 홀은 지금도 누군가의 머리맡에서 다음 사람이 품을 답 하나를 굴리고 있다 — 이 한 문장이 이 물건에 대해 전해지는 전부다.',
-    art: `tall staff, cloudy pale orb cradled at the head, twisted dark shaft, faint inner haze, mysterious, ${STYLE}`,
+    art: `ornate fantasy weapon: tall staff, cloudy pale orb cradled at the head, twisted dark shaft, faint inner haze, mysterious, crafted equippable weapon game asset, ${STYLE}`,
   },
   {
     key: 'bog_frog_trident',
@@ -311,7 +311,7 @@ const WEAPONS: CatalogItem[] = [
     region: '늪지대',
     tone: '위트',
     lore: '늪 마을 아이들 놀이 규칙은 단순하다. 해 질 녘까지 개구리를 가장 많이 찌른 아이가 다음 날 대장, 작살은 한 사람당 하나, 못 잡아도 끝까지 던질 것. 규칙 아래 다른 글씨로 한 줄이 있다. 어떤 아이가 쥔 작살은 한 마리도 못 잡아도 그 아이가 대장이라고, 왜인지는 안 적는다고, 적으면 재미없어진다고. 그 아이는 늘 첫 번째로 빗나가 모두를 웃겼고, 그 웃음이 좋아 아이들은 그 아이를 대장으로 두었다. 규칙판은 비 오면 지워졌다가 다음 날 또 똑같이 베껴졌고, 작살은 그 큰 돌 옆에 기대어 해마다 새 아이들의 깔깔거림을 받았다.',
-    art: `three-pronged fishing trident, long worn wooden shaft, simple iron tines, marsh wear, playful, ${STYLE}`,
+    art: `ornate fantasy weapon: three-pronged fishing trident, long worn wooden shaft, simple iron tines, marsh wear, playful, crafted equippable weapon game asset, ${STYLE}`,
   },
   {
     key: 'jester_morningstar',
@@ -320,7 +320,7 @@ const WEAPONS: CatalogItem[] = [
     region: '일반',
     tone: '위트',
     lore: '장터에 공연 전단이 붙었다. 오늘 밤 떠돌이 광대 한 마당, 우스운 걸음과 우스운 곤봉과 배꼽 빠지는 재담, 입장은 보고 싶은 만큼. 전단 아래 깨알 글씨로 곤봉은 소품이며 가시는 진짜지만 위험하지 않다고 단장이 보증한다 적혀 있다. 광대는 그 곤봉을 한 번도 휘두르지 않고 어깨에 걸친 채 뒤뚱대기만 했는데, 객석은 그 모습에 늘 자지러졌다. 신기하게 그가 머문 며칠은 동네 시비가 줄어 사람들은 그것까지 공연의 한 대목으로 여겼다. 곤봉은 다음 마을 전단에 또 소품이라 적혀 갔고, 광대를 본 아이들은 한참 그 뒤뚱걸음을 흉내 내며 놀았다.',
-    art: `spiked ball morningstar on a short haft, jingling tiny bells on the chain, worn grip, ironic playful menace, ${STYLE}`,
+    art: `ornate fantasy weapon: spiked ball morningstar on a short haft, jingling tiny bells on the chain, worn grip, ironic playful menace, crafted equippable weapon game asset, ${STYLE}`,
   },
   {
     key: 'ashen_nodachi',
@@ -329,7 +329,7 @@ const WEAPONS: CatalogItem[] = [
     region: '서쪽 화산',
     tone: '장엄',
     lore: '병참 검수 기록에 대태도 한 자루가 입고됐다고 적혀 있다. 길이가 사람 키를 넘어 보관대에 안 들어가고, 무게는 한 사람이 숨 한 번에 한 번 휘두름이 한계라 표준 칸을 잡지 못해 별도 한 줄로 올렸다고. 잿빛 물결무늬는 화산 틈에 며칠 누여 식힐 때 저절로 잡힌 것이라 한다. 검수병들은 검수가 끝나면 돌아가며 그 칼을 한 번씩 들어 보는 게 낙이었다. 두 손으로 간신히 들어 올린 자에게는 다 같이 환호하고, 못 든 자는 다음을 노리며 웃었다. 보관대는 이 한 자루를 위해 새로 짰고, 병참엔 그 큰 칼을 둘러싼 떠들썩한 내기가 끊이지 않는다.',
-    art: `very long two-handed nodachi, slender heat-rippled ash-grey blade, long wrapped grip, sweeping imposing, ${STYLE}`,
+    art: `ornate fantasy weapon: very long two-handed nodachi, slender heat-rippled ash-grey blade, long wrapped grip, sweeping imposing, crafted equippable weapon game asset, ${STYLE}`,
   },
   {
     key: 'unsent_letter_dagger',
@@ -338,7 +338,7 @@ const WEAPONS: CatalogItem[] = [
     region: '일반',
     tone: '비애',
     lore: '유언 집행 문서의 일곱째 항목은 책상 맨 아래 서랍의 편지칼과 봉투 한 장이었다. 봉투에는 받을 이 이름이 적혀 있고, 안의 종이는 백지로 확인됐다. 처분은 둘을 떼지 말고 함께 보관하라, 팔거나 나누지 말라는 것이었고, 사유란에는 고인이 생전 그렇게만 일러두었다고 적혀 있었다. 집행인은 그대로 따랐다. 편지칼은 빈 봉투와 한 상자에 들어가 고인의 다른 유품과 함께 보관되었고, 받을 이로 적힌 사람에게 끝내 닿지 못한 그 봉투는 지금도 칼 옆에서 백지인 채로 있다.',
-    art: `slim letter-opener dagger, thin polished blade, simple bone handle, desk-drawer patina, melancholic, ${STYLE}`,
+    art: `ornate fantasy weapon: slim letter-opener dagger, thin polished blade, simple bone handle, desk-drawer patina, melancholic, crafted equippable weapon game asset, ${STYLE}`,
   },
   {
     key: 'rune_echo_maul',
@@ -347,7 +347,7 @@ const WEAPONS: CatalogItem[] = [
     region: '고대 룬 산맥',
     tone: '수수께끼',
     lore: '한 사람이 큰망치 머리에서 새는 낮은 소리를 받아 적으려 한 종이가 망치에 끈으로 묶여 함께 전해진다. 첫 음은 길게, 다음은 더 길게, 그다음은 모르겠다고 적다 만 자국이 어지럽다. 받아 적기는 포기했는데, 묘하게도 그 소리를 따라 흥얼댄 사람들이 서로 약속도 안 했는데 똑같은 가락을 떠올렸다. 산마을에서는 그게 신기하고 정겨워, 일하다 누가 그 가락을 흥얼대면 곁의 사람이 자연스레 받아 함께 부른다. 망치는 그렇게 마을의 노래 한 자락을 품은 셈이 되어, 새로 받은 사람도 한 번 귀를 대 보고는 저도 모르게 그 가락을 흥얼거린다.',
-    art: `heavy stone-headed maul, faint resonant hum lines etched in the rock, banded haft, enigmatic ancient, ${STYLE}`,
+    art: `ornate fantasy weapon: heavy stone-headed maul, faint resonant hum lines etched in the rock, banded haft, enigmatic ancient, crafted equippable weapon game asset, ${STYLE}`,
   },
   {
     key: 'orc_junk_flail',
@@ -356,7 +356,7 @@ const WEAPONS: CatalogItem[] = [
     region: '오크 부락',
     tone: '영웅담',
     lore: '부락 무공 명부에 한 줄이 있다. 당시 가장 어린 전사가 어귀가 뚫린 날 다른 무기를 다 잃고 잡동사니 도리깨 하나로 무너진 틈을 메우고 끝까지 버텼다고. 그날 등 뒤에 섰던 일곱이 전원 같은 증언을 했다고. 명부엔 보통 무기 이름을 안 적는데 이 줄만 무기까지 적혀, 그 볼품없는 도리깨가 부락에서 더는 웃음거리가 아니게 된 까닭을 못 박아 두었다. 부락은 잔치 때면 그 줄을 큰 소리로 읽고 그 어린 전사 이름을 외친다. 도리깨는 명부가 걸린 천막 기둥에 자랑처럼 매여, 새 전사가 그 줄을 읽을 때 늘 눈높이에서 번쩍인다.',
-    art: `chain flail, mismatched pot lid and door ring and half-helmet bound at the end, battle-clattered, heroic scrappy, ${STYLE}`,
+    art: `ornate fantasy weapon: chain flail, mismatched pot lid and door ring and half-helmet bound at the end, battle-clattered, heroic scrappy, crafted equippable weapon game asset, ${STYLE}`,
   },
   {
     key: 'shepherd_sling',
@@ -365,7 +365,7 @@ const WEAPONS: CatalogItem[] = [
     region: '일반',
     tone: '일상',
     lore: '목축 일지에는 봄에 양 마흔, 여름에 마흔에 늑대가 자주 어슬렁댔고, 가을에도 마흔에 한 마리도 안 잃었으며, 겨울에도 마흔이라 적혀 있다. 한 해 내내 그 숫자가 마흔에서 한 번도 안 줄었다. 일지 끝에, 짐승을 맞힌 날은 손에 꼽고 무릿매 돌이 휙 지나가는 소리에 무리가 비탈 너머로 흩어진 날이 훨씬 많았다고 적혀 있다. 다음 해 일지 첫 줄은 전 목동의 무릿매를 물려받았다는 것이고, 그해 양 수도 마흔 그대로였다. 무릿매는 같은 못에 걸려, 봄마다 새 목동의 손에 들려 또 한 해 마흔을 지킨다.',
-    art: `simple leather sling, worn pouch, two braided cords, smooth river stone, humble pastoral, ${STYLE}`,
+    art: `ornate fantasy weapon: simple leather sling, worn pouch, two braided cords, smooth river stone, humble pastoral, crafted equippable weapon game asset, ${STYLE}`,
   },
   {
     key: 'scaled_guard_glaive',
@@ -374,7 +374,7 @@ const WEAPONS: CatalogItem[] = [
     region: '서쪽 화산',
     tone: '영웅담',
     lore: '생환 보고서에는 고룡 숨결로 강이 끓던 자리에 창병 줄 하나를 두어 줄을 유지하라는 명령이 떨어졌고, 줄은 끝까지 안 무너졌으며 생환은 한 명이라 적혀 있다. 그 한 명의 무기란에 이 언월도가, 비고에 날의 비늘 긁힌 골 셋과 자루의 그을린 손자국이 적혀 있다. 그는 그날 일을 길게 말하지 않았고, 다만 이 언월도를 늘 정성껏 손질했다. 부대는 그 손질을 거들었고, 보고서와 언월도를 같은 상자에 함께 두어 줄을 지킨 기록으로 삼았다. 새 창병들은 줄에 서기 전 그 상자를 한 번 열어, 골 셋과 손자국을 눈에 담고 제자리로 간다.',
-    art: `polearm glaive, long curved blade with three deep scale-gouges, scorched grip, sturdy shaft, heroic, ${STYLE}`,
+    art: `ornate fantasy weapon: polearm glaive, long curved blade with three deep scale-gouges, scorched grip, sturdy shaft, heroic, crafted equippable weapon game asset, ${STYLE}`,
   },
   {
     key: 'crossroad_crook',
@@ -383,7 +383,7 @@ const WEAPONS: CatalogItem[] = [
     region: '일반',
     tone: '수수께끼',
     lore: '갈림길 어귀에 선 길 표지석 한 면에는 왼쪽이 옹기점 하루, 오른쪽이 잿재울 이틀이라 새겨져 있다. 그 아래 작게 지팡이 끝이 가리키는 쪽으로 가지 말라 새겨졌다가, 누군가 정으로 절반쯤 쪼아 지운 자국이 있다. 지운 자가 안 믿어서였는지 너무 믿어서였는지는 표지석에 남지 않았다. 굽은 지팡이는 그 표지석 곁에 늘 누군가 눕혀 두고 간다. 세워 두면 한쪽을 가리키니, 다들 약속이나 한 듯 눕혀만 둔다.',
-    art: `long shepherd's crook staff, hooked curved top, pale worn wood, plain banding, quietly uncanny, ${STYLE}`,
+    art: `ornate fantasy weapon: long shepherd's crook staff, hooked curved top, pale worn wood, plain banding, quietly uncanny, crafted equippable weapon game asset, ${STYLE}`,
   },
   {
     key: 'last_gate_partisan',
@@ -392,7 +392,7 @@ const WEAPONS: CatalogItem[] = [
     region: '일반',
     tone: '비애',
     lore: '마을 게시판에 부고 한 줄이 붙었었다. 어느 날 성문 자리에서 늙은 위병 한 사람이 끝까지 안 물러섰다는 것. 그 아래 다른 손이 짧은 주석을 달았다. 물러서도 아무도 안 탓했을 자리였는데 그는 문턱을 한 발도 안 넘었고, 거둔 것은 그와 이 폭넓은 창뿐이며, 창 밑동에 눌러 쓴 네 글자는 여기까지였다고. 부고는 떼어졌지만 그 자리에 창을 세워 두기로 했고, 게시판 옆 그 자리에는 지금도 창이 서 있다. 새 위병이 그 곁에서 교대를 선다.',
-    art: `broad-bladed partisan polearm, wide leaf spearhead with side lugs, worn shaft, faint carved words, mournful, ${STYLE}`,
+    art: `ornate fantasy weapon: broad-bladed partisan polearm, wide leaf spearhead with side lugs, worn shaft, faint carved words, mournful, crafted equippable weapon game asset, ${STYLE}`,
   },
   {
     key: 'dredge_bone_pick',
@@ -401,7 +401,7 @@ const WEAPONS: CatalogItem[] = [
     region: '일반',
     tone: '기괴',
     lore: '강 준설 작업 일지에는 초하루에 상류 진흙을 걷고 닷새에 여울 바닥에 닿았다고, 이레에 갈퀴에 길고 흰 것이 딸려 와 일단 건져 두었다고 적혀 있다. 여드레에는 그것을 곡괭이 자루에 박았고 잘 든다고. 그리고 마지막 줄에서 일지가 끊긴다. 아흐레, 작업 중단, 이 강은 더 안 한다. 사유란은 다음 작업자가 인수인계 없이 도구만 남기고 떠났다고 채워 두었다. 곡괭이는 도구 보관함에 그대로 있고, 일지는 아흐레에서 더 나가지 않은 채 묶여 있다.',
-    art: `war pick, long pale bone spike as the head, riveted to a plain haft, river silt stains, unsettling, ${STYLE}`,
+    art: `ornate fantasy weapon: war pick, long pale bone spike as the head, riveted to a plain haft, river silt stains, unsettling, crafted equippable weapon game asset, ${STYLE}`,
   },
   {
     key: 'carnival_chakram',
@@ -410,7 +410,7 @@ const WEAPONS: CatalogItem[] = [
     region: '일반',
     tone: '위트',
     lore: '곡예단 공연 진행 순서표에는 광대가 뒤뚱걸음으로 입장하고, 접시 다섯을 돌리고, 둥근 고리날을 가장자리가 안 보이게 빠르게 돌리고, 박수 받아 인사한 뒤 고리 개수를 확인해 정리한다고 적혀 있다. 다섯째 칸 옆엔 매번 다른 글씨로 같은 말이 적힌다. 또 하나 모자람. 손님들은 그 한 개가 어디로 갔는지 알아맞히는 걸 공연의 숨은 재미로 삼아, 다음 마을에서 단원을 붙잡고 물어 댔다. 단장은 끝까지 셋째 줄 빠르게에 밑줄만 더 진하게 그으며 시치미를 뗐고, 그 능청에 객석은 더 크게 웃었다. 순서표는 다음 천막에 또 붙고, 다섯째 칸 옆은 또 누가 채울 자리로 비어 있다.',
-    art: `flat circular chakram throwing ring, sharpened outer edge, polished steel, small grip wrap, showy ironic, ${STYLE}`,
+    art: `ornate fantasy weapon: flat circular chakram throwing ring, sharpened outer edge, polished steel, small grip wrap, showy ironic, crafted equippable weapon game asset, ${STYLE}`,
   },
   {
     key: 'oathline_halberd',
@@ -419,7 +419,7 @@ const WEAPONS: CatalogItem[] = [
     region: '일반',
     tone: '영웅담',
     lore: '서약서 원문이 남아 있다. 우리 열둘은 어깨를 맞대 한 줄을 이루며, 줄이 무너지지 않는 한 이 할버드를 쓰러뜨리지 않고, 이 할버드가 선 한 줄도 물러서지 않으며, 둘은 서로에게 기댄다는 글이다. 그날 줄은 끝까지 무너지지 않았고 할버드도 끝내 서 있었다. 그 아래 서명 열둘이 거칠게 눌러쓰여 있는데, 셋은 글씨가 더 진하다 — 살아남은 자가 떠난 동무들 몫까지 또박또박 다시 새긴 것이다. 새로 줄을 세우는 자들은 제 서명을 보태기 전 그 진한 셋부터 손끝으로 짚으며 이름을 소리 내 부르고, 그러고 나서 줄이 한 사람 더 든든해진다.',
-    art: `tall halberd, axe blade with spike and hook, long banded shaft, frayed oath-cord tied below the head, heroic, ${STYLE}`,
+    art: `ornate fantasy weapon: tall halberd, axe blade with spike and hook, long banded shaft, frayed oath-cord tied below the head, heroic, crafted equippable weapon game asset, ${STYLE}`,
   },
   {
     key: 'woodcutter_hatchet',
@@ -428,7 +428,7 @@ const WEAPONS: CatalogItem[] = [
     region: '일반',
     tone: '담백',
     lore: '한 집안이 대를 이어 겨울 땔감을 패던 손도끼다. 날은 자주 갈려 손바닥만큼 작아졌고 자루는 세 번 갈아 끼웠다. 거창한 사연은 없다. 다만 이 도끼가 부엌 못에 걸려 있는 동안 그 집 아궁이는 어떤 모진 겨울에도 한 번 식은 적이 없었고, 식구들은 그 따뜻한 부엌에 둘러앉아 군밤을 까며 겨울을 났다. 막내가 자라 도끼를 물려받던 날, 늙은 아비는 날을 한 번 더 갈아 손에 쥐여 주고는 어깨를 툭 쳤다. 그날 저녁 아궁이는 평소보다 더 활활 탔고, 막내는 처음으로 제 손으로 그 불을 지폈다.',
-    art: `small one-handed hatchet, short worn axe head, oft-replaced wooden handle, woodchip nicks, plain, ${STYLE}`,
+    art: `ornate fantasy weapon: small one-handed hatchet, short worn axe head, oft-replaced wooden handle, woodchip nicks, crafted equippable weapon game asset, ${STYLE}`,
   },
   {
     key: 'fallen_censer_flail',
@@ -437,7 +437,7 @@ const WEAPONS: CatalogItem[] = [
     region: '타락천사',
     tone: '장엄',
     lore: '추락한 성가대가 쓰던 전례 순서서 한 대목이 그을린 채 남아 있다. 향로를 들어 세 번 흔들고, 검은 깃이 떨어지거든 줍지 말고 그대로 두며, 향이 닿은 자리에서 모두 잠시 고개를 숙이고, 후광을 본 자는 말하지 않으며, 다시 향로를 내린다는 차례다. 그 향로가 사슬 끝에 매달려 도리깨가 되었다. 휘두르면 불을 댄 적 없는데 향이 오르고, 닿은 자리에서 적이든 아군이든 잠깐 고개를 숙인다. 순서서는 다 타고 이 한 대목만 남아, 도리깨에 끈으로 묶여 함께 전해진다.',
-    art: `chain flail with a great thurible censer at the end, fireless rising incense, tarnished gilt metal, solemn imposing, ${STYLE}`,
+    art: `ornate fantasy weapon: chain flail with a great thurible censer at the end, fireless rising incense, tarnished gilt metal, solemn imposing, crafted equippable weapon game asset, ${STYLE}`,
   },
   {
     key: 'nightwatch_spear',
@@ -446,7 +446,7 @@ const WEAPONS: CatalogItem[] = [
     region: '일반',
     tone: '일상',
     lore: '밤 골목 점검표에는 초경에 동쪽 골목과 우물가와 빈집 문을 돌아 이상 없음, 이경에 같음에 개가 짖었으나 별일 아님, 삼경에 같음에 창은 어귀에 세워 둠이라 적혀 있다. 칸마다 표시뿐 큰 사건은 거의 없다. 점검표 맨 밑에 한 줄, 창이 어귀에 서 있는 한 이 골목은 문단속을 두 번 안 한다고. 그 말대로 동네 사람들은 그 창을 보고 마음 놓고 잤다. 야경꾼이 바뀌어도 표 양식은 그대로고 새 야경꾼도 첫날부터 같은 칸을 채웠다. 창은 초소 그 자리에 같은 각도로 기대어, 골목을 지나는 사람들에게 오늘 밤도 무사하다는 표시가 된다.',
-    art: `plain watchman's spear, simple leaf-shaped head, long worn shaft, leaning-wear scuff, mundane reassuring, ${STYLE}`,
+    art: `ornate fantasy weapon: plain watchman's spear, simple leaf-shaped head, long worn shaft, leaning-wear scuff, mundane reassuring, crafted equippable weapon game asset, ${STYLE}`,
   },
   {
     key: 'rune_needle_rapier',
@@ -455,7 +455,7 @@ const WEAPONS: CatalogItem[] = [
     region: '고대 룬 산맥',
     tone: '비애',
     lore: '산자락 작업장 앞에 나무 팻말이 서 있다. 여기, 평생 같은 검만 벼린 이의 자리라고. 산의 돌결을 한 올씩 따 바늘처럼 가늘게 폈고, 마지막 한 자루는 누구에게도 넘기지 못한 채 본인이 끌어안고 발견되어 손이 펴지지 않아 그대로 묻었다고. 팻말 아래 작게, 그 한 자루를 본떠 다시 벼린 것이 이 검이며 흠도 녹도 없다고 적혀 있다. 작업장은 비었고 화덕은 식었지만, 누가 팻말 앞에 가는 돌가루를 한 줌씩 놓고 간다. 산에서 캔 그 돌결의 가루다.',
-    art: `extremely slender rapier, needle-thin blade, faint hairline rune lines, fine swept guard, mournful, ${STYLE}`,
+    art: `ornate fantasy weapon: extremely slender rapier, needle-thin blade, faint hairline rune lines, fine swept guard, mournful, crafted equippable weapon game asset, ${STYLE}`,
   },
   {
     key: 'grandfather_axe',
@@ -464,7 +464,7 @@ const WEAPONS: CatalogItem[] = [
     region: '일반',
     tone: '위트',
     lore: '가족이 둘러앉아 도장을 찍은 우스운 각서가 도끼와 함께 전해진다. 이 손도끼를 막내에게 물리며, 날은 두 번 자루는 세 번 갈아 할아버지가 만진 데는 한 조각도 안 남았으나 그럼에도 이건 할아버지의 도끼임을 가족 일동이 엄숙히 합의하고 이의 있는 자는 없다는 내용이다. 끝에 손주가 한 줄 보탰다. 따질 사람은 따지든가, 나는 안 따진다. 명절이면 식구들은 그 각서를 꺼내 돌려 읽으며 또 한바탕 웃는다. 도끼는 그 웃음과 함께 부엌 못에 걸려 있고, 겨울마다 같은 자루를 쥔 손이 한 사람씩 바뀐다.',
-    art: `well-used one-handed axe, obviously newer head on a re-handled shaft, mismatched wear, homely ironic, ${STYLE}`,
+    art: `ornate fantasy weapon: well-used one-handed axe, obviously newer head on a re-handled shaft, mismatched wear, homely ironic, crafted equippable weapon game asset, ${STYLE}`,
   },
   {
     key: 'silt_anchor_flail',
@@ -473,7 +473,7 @@ const WEAPONS: CatalogItem[] = [
     region: '일반',
     tone: '기괴',
     lore: '강 수위 관측 일지에는 초하루에 무릎, 보름에 정강이, 스무날에 발목에 맑음이라 숫자가 줄줄이 이어진다. 그러다 한 줄에서 글씨가 흔들린다. 스무사흘, 닻을 끌어 올림, 함께 딸려 온 것은 잴 자가 없어 못 쟀고, 관측 자리를 강 건너로 옮김. 그 뒤 일지는 다른 강, 다른 자리에서 다시 시작한다. 작은 닻은 사슬에 매인 채 도리깨가 되어 보관함에 걸렸고, 마르지 않은 진흙을 아직 머금어 가만 둬도 가끔 흙 한 덩이가 저 혼자 툭 떨어진다. 일지의 그 흔들린 줄만 누구도 다시 안 건드렸다.',
-    art: `chain flail with a small rusted boat anchor as the head, dried river silt clumps, frayed chain, ominous, ${STYLE}`,
+    art: `ornate fantasy weapon: chain flail with a small rusted boat anchor as the head, dried river silt clumps, frayed chain, ominous, crafted equippable weapon game asset, ${STYLE}`,
   },
   {
     key: 'herald_banner_poleaxe',
@@ -482,7 +482,7 @@ const WEAPONS: CatalogItem[] = [
     region: '일반',
     tone: '영웅담',
     lore: '전령 전달 기록부에는 발신이 본진, 전할 내용은 봉인, 전령은 깃대 듦, 도착은 미도착이라 적혀 있다. 그 아래 다른 손이 비고를 채웠다. 깃발이 쓰러지면 줄도 무너지기에 전령은 소식을 전하는 대신 그 자리를 택했고, 깃대 끝에 도끼날을 박았으며, 그날 깃천은 누더기가 되었으나 깃대는 한 번도 안 기울었다고. 본진은 그 폴액스를 깃대째 마당 한가운데 세워 두었다. 새 전령들은 길을 나서기 전 그 앞을 지나며 깃대를 한 번 올려다보고, 떠날 때 들고 가는 깃이 어떤 약속인지를 새긴다.',
-    art: `poleaxe with a banner-pole haft, axe head and top spike, tattered banner remnant near the top, heroic, ${STYLE}`,
+    art: `ornate fantasy weapon: poleaxe with a banner-pole haft, axe head and top spike, tattered banner remnant near the top, heroic, crafted equippable weapon game asset, ${STYLE}`,
   },
   {
     key: 'scorched_reaping_hook',
@@ -491,7 +491,7 @@ const WEAPONS: CatalogItem[] = [
     region: '일반',
     tone: '담백',
     lore: '불난 뒤 마을 복구 분담표에는 탄 그루터기와 줄기 정리를 거둠낫 가진 사람 누구나 구역을 나눠 한 뼘씩 하고, 도구가 모자라면 돌려쓰라 적혀 있다. 표 끝에 다음 해 글씨로, 그 밭이 봄에 푸르게 돋았음을 확인함이라 한 줄 덧대어 있다. 누가 그 낫을 휘둘렀는지 이름은 없다 — 온 마을이 번갈아 잡았기 때문이다. 분담 구역과 그 한 줄 확인이 적힌 종이는 마을 창고 벽에 걸렸고, 이듬해 다시 거둠철이 오자 사람들은 그 낫을 꺼내 이번엔 불탄 자리가 아니라 그득한 곡식을 베었다.',
-    art: `one-handed reaping hook, short inward-curved blade, soot-darkened edge, plain wooden grip, understated, ${STYLE}`,
+    art: `ornate fantasy weapon: one-handed reaping hook, short inward-curved blade, soot-darkened edge, plain wooden grip, crafted equippable weapon game asset, ${STYLE}`,
   },
   {
     key: 'lullaby_war_fan',
@@ -500,7 +500,7 @@ const WEAPONS: CatalogItem[] = [
     region: '일반',
     tone: '수수께끼',
     lore: '옛 노래 채집 노트에는 무쇠 부채를 펴고 접을 때 가락이 새며 늙은이들이 입을 모아 자장가라 한다고, 가사를 받아 적겠다 적혀 있다. 그 아래 가사 칸은 비어 있고, 칸 옆엔 잔글씨만 있다. 귀 대고 받아 적다 졸았다고. 다시 해도 또 졸았다고. 두 사람을 시켜도 둘 다 졸았다고. 가사는 끝내 못 받았지만, 마을은 그걸 흠이 아니라 효험으로 친다. 보채는 아기 곁에서 그 부채를 천천히 펴고 접으면 아기가 금세 새근거리기 때문이다. 부채는 그 빈 노트와 함께 아기 있는 집을 돌며, 받은 집마다 잔글씨 한 줄씩 더 보탠다.',
-    art: `folding iron war fan, hidden blade edges on the ribs, faint humming when opened, lacquered dark, mysterious, ${STYLE}`,
+    art: `ornate fantasy weapon: folding iron war fan, hidden blade edges on the ribs, faint humming when opened, lacquered dark, mysterious, crafted equippable weapon game asset, ${STYLE}`,
   },
   {
     key: 'deserter_shortsword',
@@ -509,7 +509,7 @@ const WEAPONS: CatalogItem[] = [
     region: '일반',
     tone: '비애',
     lore: '습득물 처리 기록에는 길섶 풀숲에서 멀쩡한 짧은 검 하나를 주웠다고, 자루 끈 매듭이 급히 풀려다 만 듯 반쯤 끊겨 있다고, 임자 찾기 방을 붙였으나 임자가 안 나타났다고 적혀 있다. 처리란에는 기한이 지나 보관을 종결하고 다음 쓸 사람에게 넘긴다고. 멀쩡한 검을 버리려면 어지간한 결심이 아니고선 못 한다는 말이, 처리란 옆에 누가 작게 덧대 두었다. 검은 다음 사람 손에 넘어갔고, 그 사람은 반쯤 끊긴 매듭을 한참 만지작거리다 제 손으로 새로 묶었다.',
-    art: `plain short sword, blade half-buried look, grass-worn finish, hilt cord with a half-cut knot, sorrowful, ${STYLE}`,
+    art: `ornate fantasy weapon: plain short sword, blade half-buried look, grass-worn finish, hilt cord with a half-cut knot, sorrowful, crafted equippable weapon game asset, ${STYLE}`,
   },
 ];
 
@@ -524,7 +524,7 @@ const ARMOR: CatalogItem[] = [
     region: '일반',
     tone: '일상',
     lore: '민병대는 누비 상의 한 벌을 여럿이 돌려 입었다. 입은 사람은 빨아 말려 다음 사람에게 넘기고, 솔기가 터지면 그 자리에서 기웠다. 그래서 옷에는 봄 훈련 때 누가 쏟은 국물 자국, 가을걷이 끝의 짚 부스러기, 잔치 음식 기름까지 솔기마다 정답게 배었다. 새로 받은 사람은 으레 앞사람 몸내가 남은 그 품에 잠깐 웃었다. 누구의 것도 아니라 모두의 것이었고, 추운 보초 밤이면 그 안에 앞사람의 온기가 아직 남은 듯해 든든했다. 당번 이름이 적힌 종이는 다 차면 뒷장을 덧대 또 이어졌고, 마을은 그 두꺼워지는 종이를 자랑처럼 여겼다.',
-    art: `quilted padded gambeson coat, faded patched cloth, stitched seams, worn collar, mundane, ${STYLE}`,
+    art: `ornate fantasy armor: quilted padded gambeson coat, faded patched cloth, stitched seams, worn collar, crafted equippable armor game asset, ${STYLE}`,
   },
   {
     key: 'marsh_reed_cuirass',
@@ -533,7 +533,7 @@ const ARMOR: CatalogItem[] = [
     region: '늪지대',
     tone: '담백',
     lore: '늪에서 평생 산 노인이 손주에게 갈대 흉갑 엮는 법을 일러 주었다. 갈대는 마른 걸로, 겹은 꼭 다섯, 송진은 얇게. 멋은 안 나고 비린내도 좀 나지만 익숙해진다고. 손주가 그 말을 다 외우고 처음 늪에 들었다가 발이 가슴까지 빠진 날, 그 못난 갈대가 그를 둥실 떠올려 살렸다. 손주는 그날 저녁 노인에게 달려가 자랑처럼 그 이야기를 했고, 노인은 그것 보라며 껄껄 웃었다. 흉갑은 그 뒤로도 늪 마을 집집의 문가를 돌고, 새 손주가 또 그 다섯 겹과 얇은 송진을 같은 신난 목소리로 외운다.',
-    art: `woven hardened reed cuirass, layered dried marsh reeds, simple cord ties, light, plain, ${STYLE}`,
+    art: `ornate fantasy armor: woven hardened reed cuirass, layered dried marsh reeds, simple cord ties, light, crafted equippable armor game asset, ${STYLE}`,
   },
   {
     key: 'runefall_breastplate',
@@ -542,7 +542,7 @@ const ARMOR: CatalogItem[] = [
     region: '고대 룬 산맥',
     tone: '장엄',
     lore: '산이 스스로 일어선 해, 그 무너진 비탈에서 떨어진 바위판으로 깎은 흉갑 한 점이 보관 목록에 올랐다. 표면을 가로지른 푸른 균열은 식지 않으니 메우려 하지 말라는 단서가 붙었다. 두 발을 땅에 단단히 박고 든 사람은 어떤 충격에도 한 발짝을 안 밀린다. 마을은 그것을 산이 제 힘 한 줌을 떼어 준 거라며 자랑스러워했다. 큰 씨름판이 서는 날이면 장정들이 그 흉갑을 둘러메고 버티기를 겨뤘고, 끝까지 안 밀린 자에게 다 같이 환호했다. 흉갑은 지금도 그 비탈이 보이는 자리에 서서, 마을의 든든한 자랑거리 노릇을 한다.',
-    art: `heavy stone-slab breastplate, blue rune cracks across the chest, rough hewn edges, monumental, ${STYLE}`,
+    art: `ornate fantasy armor: heavy stone-slab breastplate, blue rune cracks across the chest, rough hewn edges, monumental, crafted equippable armor game asset, ${STYLE}`,
   },
   {
     key: 'orc_scrap_harness',
@@ -551,7 +551,7 @@ const ARMOR: CatalogItem[] = [
     region: '오크 부락',
     tone: '비애',
     lore: '오크 부락에는 돌아오지 못한 자의 갑옷에서 가장 성한 한 조각을 떼어 이 갑주에 덧대는 풍습이 있었다. 떠난 이를 다음 싸움에 함께 데려간다는 뜻이었다. 가장 어린 전사가 그 조각을 잇는 날이면 부락은 평소보다 일찍 모닥불을 껐다. 갑주가 무거워질수록 부락의 빈자리도 꼭 그만큼 늘었다. 천막 가운데 세워 둔 갑주를 새 전사들이 지날 때마다 어깨가 한 겹씩 더 두꺼워져 있었고, 가장 무거워진 해에는 그것을 들 사람이 없어 그냥 세워 둔 채 둘레에 둘러앉아 떠난 이름들을 한 번씩 불렀다.',
-    art: `patched scrap-metal harness, mismatched salvaged plates lashed with leather, dull worn, somber, ${STYLE}`,
+    art: `ornate fantasy armor: patched scrap-metal harness, mismatched salvaged plates lashed with leather, dull worn, somber, crafted equippable armor game asset, ${STYLE}`,
   },
   {
     key: 'fallen_feather_mantle',
@@ -560,7 +560,7 @@ const ARMOR: CatalogItem[] = [
     region: '타락천사',
     tone: '비애',
     lore: '추락한 자리에 검은 깃이 눈처럼 두껍게 쌓였고, 한 떠돌이가 그것을 모아 어깨망토로 엮었다. 두른 사람들은 한결같이, 추운 날이면 등 뒤에서 제 이름을 나직이 부르는 소리가 들린다고 했다. 그 소리를 글로 옮겨 보려 한 사람이 있었으나 적을 때마다 글자가 번져 끝내 한 줄도 남기지 못했다. 돌아보면 거기엔 늘 아무도 없고, 바람도 없는데 깃만 한 번 천천히 눕는다. 그게 무엇의 부름인지 어렴풋이 알고 나면 더는 무섭지만은 않다고, 오래 두른 자는 추운 밤이면 등을 벽에 붙이고 잔다.',
-    art: `shoulder mantle cloak, layered black feathers, faded gold-thread trim, pale grey sheen, draped, mournful, ${STYLE}`,
+    art: `ornate fantasy armor: shoulder mantle cloak, layered black feathers, faded gold-thread trim, pale grey sheen, draped, mournful, crafted equippable armor game asset, ${STYLE}`,
   },
   {
     key: 'ember_slag_cuirass',
@@ -569,7 +569,7 @@ const ARMOR: CatalogItem[] = [
     region: '서쪽 화산',
     tone: '장엄',
     lore: '견습에게 남긴다. 이 흉갑 만드는 법이다. 식다 만 용암 슬래그를 골라 다시 녹여 가슴판으로 부어라. 표면에 흐르던 불자국이 저절로 굳어 무늬가 잡히는데, 손대 펴려 하지 마라 — 그게 멋이다. 한 김만 식혀 두드리고 다 식기를 기다리지 마라. 한 가지 더, 이건 한 번 데워지면 잘 안 식어 한겨울 보초가 가슴팍 온기 하나로 밤을 난다. 다만 너무 따뜻해 졸기 쉬우니 그땐 옆 사람이 깨워 줘라. 글로는 여기까지다, 나머지는 모루 앞에 서면 손이 먼저 안다. 첫 한 벌을 두드려 낸 날엔 꼭 나를 부르고.',
-    art: `forged volcanic slag cuirass, swirling fire-grained dark metal, heavy riveted plates, imposing, ${STYLE}`,
+    art: `ornate fantasy armor: forged volcanic slag cuirass, swirling fire-grained dark metal, heavy riveted plates, imposing, crafted equippable armor game asset, ${STYLE}`,
   },
   {
     key: 'nightwatch_cloak',
@@ -578,7 +578,7 @@ const ARMOR: CatalogItem[] = [
     region: '일반',
     tone: '일상',
     lore: '한 야경꾼이 기름 먹인 망토를 빨래집에 맡기며 그을음만 빼 달라 했다. 빨래집은 며칠 뒤 그대로 돌려보냈다. 그을음을 빼면 기름이 같이 빠져 비를 못 막는다는 것이었다. 야경꾼은 웃으며 도로 걸쳤다. 칼을 막은 밤보다 비와 한기를 막은 밤이 천 배는 많은 물건이라, 그 그을음 냄새가 곧 누군가 깨어 골목을 지킨다는 냄새였다. 동네 사람들은 빗속에서 그 냄새가 지나가면 안심하고 돌아누워 잤다. 망토는 빨래집을 한 번 다녀온 뒤로 다시는 안 맡겨지고, 야경꾼이 바뀔 때마다 그 든든한 냄새째 다음 사람 어깨로 넘어갔다.',
-    art: `oilcloth watch cloak, dark waxed fabric, frayed wet hem, soot-stained shoulders, mundane, ${STYLE}`,
+    art: `ornate fantasy armor: oilcloth watch cloak, dark waxed fabric, frayed wet hem, soot-stained shoulders, crafted equippable armor game asset, ${STYLE}`,
   },
   {
     key: 'widow_veil_shroud',
@@ -587,7 +587,7 @@ const ARMOR: CatalogItem[] = [
     region: '일반',
     tone: '비애',
     lore: '한 상가의 조문록에 이름과 한마디가 줄줄이 적혀 있는데, 한 줄만 글씨가 떨린다. 상복 면사를 끝내 벗지 않고 갔다, 말리지 못했다. 그 여인은 남편 잃은 그 얇은 면사를 그대로 두르고 전장 한가운데 섰다. 천은 아무것도 막지 못했다. 다만 면사 너머로 흐릿하게 비치던 표정 앞에서 칼 든 자들이 하나둘 손을 멈췄다는 말이 조문록 여백에 작게 덧대어져 있다. 면사는 그 조문록과 함께 한 상자에 보관되어, 천 두께가 아니라 그 멈춘 손의 수로 기억된다. 조문록의 다음 장은 끝내 비어 있다.',
-    art: `thin layered veil-shroud over light armor, pale gauzy fabric, mourning grey, draped, sorrowful, ${STYLE}`,
+    art: `ornate fantasy armor: thin layered veil-shroud over light armor, pale gauzy fabric, mourning grey, draped, sorrowful, crafted equippable armor game asset, ${STYLE}`,
   },
   {
     key: 'graverobber_coat',
@@ -596,7 +596,7 @@ const ARMOR: CatalogItem[] = [
     region: '일반',
     tone: '기괴',
     lore: '도굴로 압수된, 안주머니가 유난히 많은 긴 외투에 보관 꼬리표가 매였다. 입회 때 주머니 수는 열하나로 적혔다. 보름 뒤 담당이 다시 세다 손을 멈췄다. 열셋이었다. 두 개가 늘어 있었고, 그 솔기는 사람 손바느질이 아니었다. 담당은 그 줄 밑에 더 적지 않고 외투를 창고 맨 안쪽으로 옮겼다. 안에 무엇이 들었는지는 본 사람마다 달랐다. 비었다는 이, 흙뿐이라는 이, 그리고 슬그머니 꼬리표를 도로 덮어 버린 이. 외투는 지금도 그 상자 안에서, 꼬리표만 바깥을 향하게 놓여 있다.',
-    art: `long many-pocketed coat, dark worn leather, uneven extra-stitched pockets, grimy, unsettling, ${STYLE}`,
+    art: `ornate fantasy armor: long many-pocketed coat, dark worn leather, uneven extra-stitched pockets, grimy, unsettling, crafted equippable armor game asset, ${STYLE}`,
   },
   {
     key: 'hero_dented_breastplate',
@@ -605,7 +605,7 @@ const ARMOR: CatalogItem[] = [
     region: '일반',
     tone: '영웅담',
     lore: '심장 바로 위가 주먹 들어갈 만큼 깊게 팬 흉갑을 펴 달라는 의뢰에 대장장이가 답을 보냈다. 못 폅니다, 안 폅니다. 이만한 한 방을 받고도 안의 사람이 끝나지 않았으니, 이건 흠이 아니라 그가 살아 돌아온 자국이오. 본인이 그대로 두라 했소. 값은 안 받았다. 그 사람은 무용담 묻는 걸 쑥스러워했지만, 동료들은 잔치 때면 그 팬 자리를 가리키며 한 잔씩 권했고 본인도 그때만은 못 이기는 척 웃었다. 그는 갑옷을 벗는 밤이면 늘 그 자국에 손바닥을 한 번 얹고서 끈을 풀었는데, 그건 두려움이 아니라 살아 있음을 확인하는 인사였다.',
-    art: `steel breastplate with a deep dent over the heart, polished elsewhere, plain straps, heroic, ${STYLE}`,
+    art: `ornate fantasy armor: steel breastplate with a deep dent over the heart, polished elsewhere, plain straps, heroic, crafted equippable armor game asset, ${STYLE}`,
   },
   {
     key: 'blank_question_helm',
@@ -614,7 +614,7 @@ const ARMOR: CatalogItem[] = [
     region: '일반',
     tone: '수수께끼',
     lore: '눈구멍도 숨구멍도 없는 매끈한 투구를 써 본 사람들에게 같은 것을 물어 모은 적이 있다. 그걸 쓰고 어떻게 앞을 봤느냐고. 답은 다들 같은 자리에서 끊겼다. 한 사람은 잘 보였습니다, 그런데… 하고 입을 닫았다. 다른 사람은 숨도 안 막혔어요, 무엇으로 봤냐면, 까지 말하고 허공을 보았다. 모은 사람은 마지막에 적었다. 물을수록 답할 칸만 늘고 채워지지 않는다고. 투구는 그 종이와 함께 잘 보이는 벽이 아니라 뚜껑 닫히는 상자에 들어갔다. 보지 않으면 없는 셈 칠 수 있다고 여긴 사람이 그렇게 넣어 두었다.',
-    art: `featureless smooth full helm, no visible eye-slit, polished blank surface, enigmatic, ${STYLE}`,
+    art: `ornate fantasy armor: featureless smooth full helm, no visible eye-slit, polished blank surface, enigmatic, crafted equippable armor game asset, ${STYLE}`,
   },
   {
     key: 'bog_hide_jerkin',
@@ -623,7 +623,7 @@ const ARMOR: CatalogItem[] = [
     region: '늪지대',
     tone: '영웅담',
     lore: '늪 가장 깊은 자리로 든 정찰대 다섯 중 넷이 그 크고 끈적한 것에게 끌려 들어갔다. 비명은 길지 않았다. 다음 날 동틀 무렵, 한 사람이 가죽 저고리만 걸친 채 손톱이 다 빠지도록 진흙 밖으로 기어 나왔다. 어떻게 살았느냐 물으니 운이 좋았다고만 했다. 저고리 등 쪽에는 길고 깊은 할퀸 자국이 나란히 셋 나 있다. 그 뒤로 늪 사람들은 이 저고리를 누구에게도 가볍게 빌려주지 않았고, 빌리려던 자도 그 등의 자국을 한 번 보면 대개 스스로 그만두고 돌아섰다.',
-    art: `short beast-hide jerkin, supple dark leather, deep claw scars, simple lacing, swamp-tanned, heroic, ${STYLE}`,
+    art: `ornate fantasy armor: short beast-hide jerkin, supple dark leather, deep claw scars, simple lacing, swamp-tanned, heroic, crafted equippable armor game asset, ${STYLE}`,
   },
   {
     key: 'jester_patch_armor',
@@ -632,7 +632,7 @@ const ARMOR: CatalogItem[] = [
     region: '일반',
     tone: '위트',
     lore: '곡예 소품 목록에 누더기 갑옷 한 벌이 위험하지 않음, 단장 보증이라 적혀 있었다. 그 옆에 나중에 다른 글씨가 끼었다. 늦은 술집에서 시비가 칼부림으로 번졌는데 그 누더기가 들어오던 칼을 진짜로 한 번 막았다는 것이다. 광대도 놀라고 칼 든 자도 놀랐고, 구경하던 술집은 박수가 터졌다. 그 뒤로 광대는 신이 나 더 크게 떠들고 더 크게 자빠졌으며, 사람들은 그 누더기를 행운의 갑옷이라 부르며 한 번씩 만져 보려 했다. 갑옷은 그만큼 더 너덜너덜해졌지만, 다음 마을 천막엔 이제 그 무용담이 단장의 호객보다 먼저 도착했다.',
-    art: `patchwork cloth armor, clashing colorful patches, jingling trim, lopsided padding, comical, ${STYLE}`,
+    art: `ornate fantasy armor: patchwork cloth armor, clashing colorful patches, jingling trim, lopsided padding, comical, crafted equippable armor game asset, ${STYLE}`,
   },
   {
     key: 'rune_hush_helm',
@@ -641,7 +641,7 @@ const ARMOR: CatalogItem[] = [
     region: '고대 룬 산맥',
     tone: '수수께끼',
     lore: '같은 막사에서 룬 침묵 투구를 번갈아 쓴 두 사람이 있었다. 입이 건 사람은 쓰면 말수가 줄었고, 원래 과묵한 사람은 더 차분해졌다. 둘 다 바깥 소리가 한 겹 멀어지고 머릿속에 아주 낮은 한 음이 깔린다고 똑같이 말했다. 막사 사람들은 그게 신기해, 시끄럽던 자가 이 투구만 쓰면 점잖아지는 걸 두고 놀리듯 웃었다. 결국 막사장은 그것을 못에 걸어 두고, 다툼이 길어질 낌새면 그자에게 잠깐 씌웠다. 그러면 신기하게 막사가 조용해졌고, 사람들은 그 투구를 다툼 끄는 마개라 부르며 또 한 번 웃었다.',
-    art: `closed helm with inner rune-etched lining, plain stone-grey exterior, muffled aura, mysterious, ${STYLE}`,
+    art: `ornate fantasy armor: closed helm with inner rune-etched lining, plain stone-grey exterior, muffled aura, mysterious, crafted equippable armor game asset, ${STYLE}`,
   },
   {
     key: 'orc_skull_cap',
@@ -650,7 +650,7 @@ const ARMOR: CatalogItem[] = [
     region: '오크 부락',
     tone: '기괴',
     lore: '오크 부락은 모닥불 가에서 전리품 자랑이 끝이 없는데, 유독 이 두개 투구만은 누구도 먼저 꺼내지 않는다. 아주 큰 무언가의 머리뼈를 깎아 만든 것이라, 누가 써도 한 치쯤 헐겁고 그 빈틈으로 추운 밤이면 낮게 으르렁대는 듯한 바람이 샌다. 자랑 자리에서 그 소리를 한 번 흉내 낸 어린 전사가 있었는데, 그날 밤 모두가 일찍 잠자리에 들었다. 다음부터 투구는 자랑 거리 무더기 맨 끝, 불빛이 잘 안 닿는 자리에 놓였고, 새 전사가 와도 부락은 그것만은 슬그머니 건너뛰고 다음 전리품으로 넘어간다.',
-    art: `helmet carved from a large pale skull, hollow eye-cavities patched, bone-grey, eerie, ${STYLE}`,
+    art: `ornate fantasy armor: helmet carved from a large pale skull, hollow eye-cavities patched, bone-grey, eerie, crafted equippable armor game asset, ${STYLE}`,
   },
   {
     key: 'pilgrim_travel_robe',
@@ -659,7 +659,7 @@ const ARMOR: CatalogItem[] = [
     region: '일반',
     tone: '일상',
     lore: '헌 옷을 모아 길손에게 나눠 주는 자선소 장부에 이 겉옷 줄만 받아 간 사람 칸이 비어 있다. 들어왔다 나갔다를 하도 여러 번 해 더는 안 적기로 했다는 것이다. 헤진 자리마다 색 다른 천이 덧대어져, 어느 마을에서 기웠는지 보면 그 옷이 어디어디를 다녀왔는지 짐작이 갔다. 자선소 사람들은 이 겉옷이 돌아올 때마다 반갑게 새 천 한 조각을 덧대 또 길손에게 내보냈다. 옷이 무거워질수록 그것을 거쳐 간 사람도 그만큼 많다는 뜻이라, 자선소는 그 두툼해진 겉옷을 제일 자랑스러운 물건으로 여겼다.',
-    art: `long traveler's robe, dust-darkened hem, mismatched cloth patches, rope belt, mundane, ${STYLE}`,
+    art: `ornate fantasy armor: long traveler's robe, dust-darkened hem, mismatched cloth patches, rope belt, crafted equippable armor game asset, ${STYLE}`,
   },
   {
     key: 'ash_evac_veil',
@@ -668,7 +668,7 @@ const ARMOR: CatalogItem[] = [
     region: '서쪽 화산',
     tone: '비애',
     lore: '서쪽 화산이 깨어나 마을을 비우던 날, 어귀에서 인원을 부르며 천 한 장씩을 나눠 줬다. 입과 어깨를 덮고 잿더미를 빠져나가라는 것이었다. 점호 종이에는 부른 이름과 받아 간 표시가 줄줄이 있는데, 한 이름 옆에만 표시가 둘이다. 받았다, 그리고 도로 두고 갔다. 그 사람은 무거워진 천을 길에 벗어 두고 잿더미 쪽으로 돌아섰고, 점호는 거기서 한 칸이 비어 끝났다. 천에 밴 잿내는 빨아도 안 빠져, 두른 사람은 바람이 불 때마다 그날 공기를 한 번씩 다시 들이쉰다.',
-    art: `scorched cloth veil-wrap over shoulders, ash-grey fabric, singed edges, draped, mournful, ${STYLE}`,
+    art: `ornate fantasy armor: scorched cloth veil-wrap over shoulders, ash-grey fabric, singed edges, draped, mournful, crafted equippable armor game asset, ${STYLE}`,
   },
   {
     key: 'unbroken_line_tabard',
@@ -677,7 +677,7 @@ const ARMOR: CatalogItem[] = [
     region: '일반',
     tone: '영웅담',
     lore: '방패 줄 훈련 때 외치던 구령이 휘장과 함께 전해진다. 어깨 붙여라, 옆이 서 있으면 네 휘장도 문장이다, 그러니 물러서지 마라. 그날 그 줄은 끝까지 끊기지 않았고 누구도 등을 보이지 않았다. 거둔 휘장은 천 끝이 다 해졌는데 한가운데 문장만 또렷했다. 마을은 그 휘장을 사당에 걸고 해마다 그날을 기려, 아이들까지 그 구령을 놀이처럼 외친다. 새로 줄을 세우는 자들은 그 구령을 다 외운 뒤 가슴에 휘장을 다는데, 외칠 때 목소리가 가장 큰 자가 그날 줄 맨 앞에 선다. 다들 그 자리를 서로 맡겠다고 나선다.',
-    art: `surcoat tabard over mail, frayed but legible heraldic emblem, battle-worn cloth, heroic, ${STYLE}`,
+    art: `ornate fantasy armor: surcoat tabard over mail, frayed but legible heraldic emblem, battle-worn cloth, heroic, crafted equippable armor game asset, ${STYLE}`,
   },
   {
     key: 'bark_woven_armor',
@@ -686,7 +686,7 @@ const ARMOR: CatalogItem[] = [
     region: '일반',
     tone: '담백',
     lore: '숲지기 자리를 넘길 때 함께 적힌 살림 목록에 도끼 둘, 밧줄 한 사리, 덫 여섯, 그리고 나무껍질 엮음갑 한 벌이 있다. 비고에, 늙은 나무 껍질로만 엮을 것, 송진 냄새 진해도 정상, 비 맞으면 잠깐 더 단단해진다고. 강철 갑옷은 아니지만 이걸 입은 사람을 숲에서 함부로 건드린 자가 없었다. 숲에서 길 아는 사람을 적으로 두는 게 어리석어서다. 다음 숲지기는 이 목록 그대로 물려받아 엮음갑을 오두막 문 옆 같은 못에 걸었고, 첫 순찰을 도는 날 송진 냄새가 코에 익으면 비로소 제 숲이 된 것 같다고들 했다.',
-    art: `woven bark body armor, layered tree-bark scales, resin sheen, cord lacing, plain forest, ${STYLE}`,
+    art: `ornate fantasy armor: woven bark body armor, layered tree-bark scales, resin sheen, cord lacing, plain forest, crafted equippable armor game asset, ${STYLE}`,
   },
   {
     key: 'fallen_choir_robe',
@@ -695,7 +695,7 @@ const ARMOR: CatalogItem[] = [
     region: '타락천사',
     tone: '담백',
     lore: '겨울이면 동네에서 두꺼운 옷을 서로 바꿔 입는 품앗이가 있었고, 그 목록에 긴 성가복 한 벌이 끼어 있다. 사연을 모르는 집들은 그냥 솜 두툼한 겨울 겉옷으로 돌려 입었다. 깊은 두건이 목덜미 바람을 잘 막고 밑단이 길어 앉아 쉴 때 무릎까지 덮여, 받은 집마다 올겨울은 이 옷 차례라며 반겼다. 안감에서 이따금 검은 깃 한 올이 떨어지면 아이들이 그걸 행운의 깃이라며 주워다 머리에 꽂고 놀았다. 봄이면 성가복은 다시 품앗이 목록 맨 위로 돌아갔고, 다음 겨울 또 누군가의 어깨에 따뜻하게 걸쳤다.',
-    art: `long thick choir robe with deep hood, faded trim, padded grey cloth, warm worn, plain, ${STYLE}`,
+    art: `ornate fantasy armor: long thick choir robe with deep hood, faded trim, padded grey cloth, warm worn, crafted equippable armor game asset, ${STYLE}`,
   },
   {
     key: 'tollgate_coat',
@@ -704,7 +704,7 @@ const ARMOR: CatalogItem[] = [
     region: '일반',
     tone: '일상',
     lore: '다리 어귀에 통행 규정이 붙어 있다. 소달구지 한 닢, 봇짐꾼 반 닢, 빈 손 그냥. 급한 전령은 문지기 판단으로 통과. 그 아래 작은 글씨로, 문지기 외투 오른쪽 주머니가 동전에 쓸려 안감이 비단처럼 닳았다는 말이 농담처럼 적혀 있다. 왼쪽 주머니는 아직 새것 같았다. 칼이나 몽둥이를 막아선 밤은 손에 꼽고 강바람을 막은 밤은 셀 수 없는 외투라, 문지기가 바뀐 뒤 새 사람도 자기도 모르게 오른쪽 주머니에만 손이 갔다. 규정판은 그 외투가 걸린 초소 벽에 그대로 있다.',
-    art: `heavy long coat, coin-worn shiny right pocket, plain dark wool, scuffed buttons, mundane, ${STYLE}`,
+    art: `ornate fantasy armor: heavy long coat, coin-worn shiny right pocket, plain dark wool, scuffed buttons, crafted equippable armor game asset, ${STYLE}`,
   },
   {
     key: 'dragon_scorch_shield',
@@ -713,7 +713,7 @@ const ARMOR: CatalogItem[] = [
     region: '서쪽 화산',
     tone: '영웅담',
     lore: '늙은 군인들이 술자리에서 흉터를 견주다 분위기가 가라앉으면, 누가 말없이 이 탑 방패를 탁자에 올렸다. 한쪽 면이 고룡 숨결에 닿아 유리처럼 매끈하게 녹은 방패다. 그 면 뒤에 웅크렸던 자도, 그 그늘에 줄지어 웅크린 자들도 다음 날을 봤다. 그러면 자리의 흉터 자랑은 견주기를 멈추고, 대신 그날 그 그늘 아래서 누가 누구 발을 밟았네 하며 왁자하게 웃기 시작했다. 살아 돌아온 이야기는 흉터보다 술이 잘 돌았다. 방패는 자리가 파할 때까지 탁자 한가운데 놓여, 다음 잔을 받는 받침이 되어 주었다.',
-    art: `large tower shield, one face melted glass-smooth by heat, scorched rim, sturdy back grip, heroic, ${STYLE}`,
+    art: `ornate fantasy armor: large tower shield, one face melted glass-smooth by heat, scorched rim, sturdy back grip, heroic, crafted equippable armor game asset, ${STYLE}`,
   },
   {
     key: 'riddle_lamellar',
@@ -722,7 +722,7 @@ const ARMOR: CatalogItem[] = [
     region: '일반',
     tone: '수수께끼',
     lore: '장터 기둥에 방이 한 장 붙었다. 작은 쇳조각마다 글자 하나씩 새겨, 줄지어 읽으면 한 줄 수수께끼가 되는 찰갑이 있는데 마지막 한 조각이 비었다. 그 칸을 옳게 채우는 자에게 사례하겠다는 것이었다. 답을 안다는 사람이 술자리마다 나와 저마다 우기는 통에, 그 수수께끼 풀이가 장터의 단골 놀이가 되었다. 아이들은 찰갑 앞에 모여 글자를 더듬어 읽고, 어른들은 내기를 걸었다. 끝내 빈 조각을 채워 온 사람은 없었지만 아무도 서운해하지 않았다 — 답이 나오면 그 신나는 입씨름도 끝날 테니, 다들 은근히 비워 두길 바랐다.',
-    art: `lamellar armor of small inscribed plates, one plate slot conspicuously empty, laced rows, enigmatic, ${STYLE}`,
+    art: `ornate fantasy armor: lamellar armor of small inscribed plates, one plate slot conspicuously empty, laced rows, enigmatic, crafted equippable armor game asset, ${STYLE}`,
   },
   {
     key: 'marsh_shell_carapace',
@@ -731,7 +731,7 @@ const ARMOR: CatalogItem[] = [
     region: '늪지대',
     tone: '기괴',
     lore: '늪을 다니던 한 박물가가 적어 둔 대목이다. 가장 깊은 자리에서 사람 몸통만 한 등딱지를 떼어 왔는데, 어느 무리에 넣어야 할지 끝내 분류표에 칸을 잡지 못했다. 다 말렸다 여겼더니 며칠 뒤 손을 대자 안쪽이 또 축축했고, 닦으면 이튿날 도로 그랬다. 그는 그것을 마당 볕에 펴 두고 잠들었다가, 새벽에 등딱지가 처음 둔 자리에서 한 뼘쯤 옮겨 가 있는 것을 보고 그날로 짐을 쌌다. 박물가의 다음 기록은 다른 늪, 다른 표본으로 훌쩍 건너뛴다. 등딱지만 그 집 헛간 구석에 그대로 남아 있다.',
-    art: `large shell carapace body armor, ridged chitinous plate, perpetually faintly damp inner side, murky green, eerie, ${STYLE}`,
+    art: `ornate fantasy armor: large shell carapace body armor, ridged chitinous plate, perpetually faintly damp inner side, murky green, eerie, crafted equippable armor game asset, ${STYLE}`,
   },
   {
     key: 'grandmother_quilt_vest',
@@ -740,7 +740,7 @@ const ARMOR: CatalogItem[] = [
     region: '일반',
     tone: '비애',
     lore: '먼 길 떠나보내며 싸 준 봇짐 목록이 한 장 남아 있다. 마른 떡 한 보따리, 갈아 신을 짚신 두 켤레, 바늘쌈지, 그리고 솜 두툼한 누비 조끼 한 벌. 조끼 줄 옆에만 글씨가 한 번 더 눌러 적혀 있다 — 춥거든 이것부터 껴입어라. 떠난 사람은 그게 멋쩍어 짐 바닥에 처박아 두었다고 한다. 그런데 그해 겨울 어느 길목에서 날아든 화살 하나가 그 두꺼운 솜 어딘가에 박혀 멈췄다. 봇짐 목록은 그 집 궤짝에 그대로 남았고, 조끼는 그 뒤로 누구도 짐 바닥에 처박지 않았다.',
-    art: `thick quilted padded vest, hand-stitched patchwork, warm worn cloth, homely, bittersweet, ${STYLE}`,
+    art: `ornate fantasy armor: thick quilted padded vest, hand-stitched patchwork, warm worn cloth, homely, bittersweet, crafted equippable armor game asset, ${STYLE}`,
   },
   {
     key: 'rune_anchor_greaves',
@@ -749,7 +749,7 @@ const ARMOR: CatalogItem[] = [
     region: '고대 룬 산맥',
     tone: '위트',
     lore: '마을에 한동안 내기가 돌았다. 산돌을 통째로 깎아 만든 이 정강이받이를 차고 어귀에서 우물까지 달려갔다 오는 것이었다. 차면 어떤 거구가 들이받아도 한 발짝을 안 밀린다 — 문제는 같은 무게 때문에 빨리 걷지도 못한다는 점이다. 도전한 자들은 하나같이 우물 못 가서 주저앉았고, 구경꾼들은 그 자리까지 몇 발짝 갔나로 술값을 나눴다. 끝내 우물을 찍고 온 사람은 없었다. 정강이받이는 어귀 큰 돌 옆에 그대로 놓여, 새 도전자가 올 때마다 둘레에 또 술자리가 섰다.',
-    art: `absurdly heavy carved-stone greaves, blue rune seams, oversized footplates, comically immovable, ${STYLE}`,
+    art: `ornate fantasy armor: absurdly heavy carved-stone greaves, blue rune seams, oversized footplates, comically immovable, crafted equippable armor game asset, ${STYLE}`,
   },
   {
     key: 'carnival_breastplate',
@@ -758,7 +758,7 @@ const ARMOR: CatalogItem[] = [
     region: '일반',
     tone: '위트',
     lore: '분장실에서 어린 단원이 그 번쩍이는 흉갑을 닦다 칠이 살짝 벗겨졌고, 그 아래 깊은 칼자국 여럿이 드러났다. 단장은 늘 그렇듯 무대 연출이라며 칠통을 들고 와 도로 덮었는데, 이번엔 어린 단원이 그 자국을 그대로 두고 금칠로 테를 둘러 더 멋지게 만들어 버렸다. 단장은 펄쩍 뛰다가, 객석이 그 번쩍이는 흉터 갑옷에 더 크게 환호하자 입을 다물었다. 그날부터 그건 곡예단의 간판이 되었고, 단장은 어린 단원에게 분장 일을 통째로 맡겼다. 흉갑은 무대마다 가장 큰 박수를 받으며 등장한다.',
-    art: `gaudy painted stage breastplate, flaking bright paint, real dents underneath, theatrical ironic, ${STYLE}`,
+    art: `ornate fantasy armor: gaudy painted stage breastplate, flaking bright paint, real dents underneath, theatrical ironic, crafted equippable armor game asset, ${STYLE}`,
   },
   {
     key: 'deserter_cloak',
@@ -767,7 +767,7 @@ const ARMOR: CatalogItem[] = [
     region: '일반',
     tone: '비애',
     lore: '장이 서는 날 그 망토를 두른 사람이 사람들 사이를 지나가면, 꼭 누군가 걸음을 멈추고 그 왼쪽 가슴께를 본다. 부대 문장이 실 한 올씩 거칠게 뜯겨 나가 그 자리에 윤곽만 또렷이 남았기 때문이다. 떼어냈는데도 무엇이 있었는지 단번에 알아본다. 알아본 사람은 대개 아무 말 없이 시선을 거두고 가던 길을 갔고, 망토 두른 이도 못 본 척 걸음을 늦추지 않았다. 그 짧은 마주침이 장날마다 몇 번씩 되풀이됐다. 윤곽은 해가 비스듬히 들 때면 떼어낸 적 없다는 듯 더 또렷이 살아났다.',
-    art: `worn travel cloak, torn-off insignia patch leaving a clear thread outline, faded fabric, sorrowful, ${STYLE}`,
+    art: `ornate fantasy armor: worn travel cloak, torn-off insignia patch leaving a clear thread outline, faded fabric, sorrowful, crafted equippable armor game asset, ${STYLE}`,
   },
   {
     key: 'hide_rain_cowl',
@@ -776,7 +776,7 @@ const ARMOR: CatalogItem[] = [
     region: '일반',
     tone: '담백',
     lore: '늙은 사냥꾼이 처음 산에 드는 새내기에게 가죽 두건 하나를 던져 주며 한마디 했다. 멋 부릴 생각 마라, 비 오면 이거 하나면 된다. 종일 맞아도 목덜미만 마르면 그날 사냥은 한다. 목덜미 젖으면 끝이고, 자칫 다음 사냥도 못 나간다. 새내기가 별것 아니라는 표정을 짓자 사냥꾼은 더 말하지 않고 앞서 걸었다. 한철을 나고 보니 그 말이 맞았다. 새내기는 이듬해 또 다른 새내기에게 같은 두건을 던지며 똑같은 한마디를 했다.',
-    art: `plain leather hood cowl, water-darkened edges, simple shoulder cape, drab, understated, ${STYLE}`,
+    art: `ornate fantasy armor: plain leather hood cowl, water-darkened edges, simple shoulder cape, crafted equippable armor game asset, ${STYLE}`,
   },
   {
     key: 'fallen_halo_circlet',
@@ -785,7 +785,7 @@ const ARMOR: CatalogItem[] = [
     region: '타락천사',
     tone: '위트',
     lore: '그 사람은 거울 앞에서 한참 비뚠 금빛 고리를 매만지다, 거울 속 자기에게 또박또박 말했다. 이건 원래 이런 모양이야. 요즘은 이게 양식이라고. 옆에서 보던 사람이 풋 웃자, 그는 더 진지한 얼굴로 같은 말을 한 번 더 했다. 추락한 자리에서 주운 금빛 테를 잘라 만든 핀이라, 누가 봐도 한쪽이 푹 눌려 후광이라 우기기 어려운데도 그랬다. 우스워서 웃던 사람도 자리를 뜰 즈음이면 어느새 제 굽은 어깨를 슬쩍 한 번 펴 보았다.',
-    art: `thin bent metal circlet, conspicuously dented out of round, dull tarnished gold, worn proudly, ironic, ${STYLE}`,
+    art: `ornate fantasy armor: thin bent metal circlet, conspicuously dented out of round, dull tarnished gold, worn proudly, ironic, crafted equippable armor game asset, ${STYLE}`,
   },
   {
     key: 'orc_wardrum_rig',
@@ -794,7 +794,7 @@ const ARMOR: CatalogItem[] = [
     region: '오크 부락',
     tone: '장엄',
     lore: '등에 멘 큰 북이 한 번 울리면 흩어져 싸우던 부락 전체가 그 박자에 맞춰 한 덩어리로 움직였다. 북을 진 자는 가장 앞에 서고 가장 늦게 물러서야 했다. 박자가 곧 줄의 목숨이었기 때문이다. 그날 그 박자는 끊기지 않았다. 화살이 빗발쳐도, 사람이 쓰러져도, 북은 같은 간격으로 땅을 두드렸고 줄은 그 두드림을 따라 한 발도 흩어지지 않았다. 싸움이 끝났을 때 북 가죽은 찢어져 있었지만 멜빵갑은 등에 그대로 메여 있었고, 다음 싸움에서 그것을 멜 자가 가장 먼저 손을 들었다.',
-    art: `harness armor with a great war drum on the back, broad leather straps, battle-worn drum, imposing, ${STYLE}`,
+    art: `ornate fantasy armor: harness armor with a great war drum on the back, broad leather straps, battle-worn drum, imposing, crafted equippable armor game asset, ${STYLE}`,
   },
   {
     key: 'forge_apron',
@@ -803,7 +803,7 @@ const ARMOR: CatalogItem[] = [
     region: '서쪽 화산',
     tone: '일상',
     lore: '화산 대장간의 하루는 늘 같았다. 새벽에 화덕을 살리고, 이 두꺼운 가죽 앞치마를 두르고 모루 앞에 선다. 불똥이 튀면 앞치마가 받고 쇳가루가 날리면 앞치마가 받는다. 수십 년 그러는 동안 그을음이 켜켜이 앉아 본래 색은 짐작도 안 되고, 그 검정이 곧 그 사람이 벼린 쇠의 양이었다. 견습들은 제 앞치마가 빨리 검어지길 은근히 자랑 삼아 다투었다. 늙은 대장장이가 일을 놓던 날, 그는 가장 검은 제 앞치마를 첫 제자에게 손수 둘러 주고 어깨를 쳐 주었다. 앞치마는 그렇게 검정째 다음 모루로 넘어갔다.',
-    art: `heavy blacksmith leather apron, layered scorch marks, soot-blackened, simple neck strap, mundane, ${STYLE}`,
+    art: `ornate fantasy armor: heavy blacksmith leather apron, layered scorch marks, soot-blackened, simple neck strap, crafted equippable armor game asset, ${STYLE}`,
   },
   {
     key: 'oath_kite_shield',
@@ -812,7 +812,7 @@ const ARMOR: CatalogItem[] = [
     region: '일반',
     tone: '영웅담',
     lore: '새로 줄에 서는 자는 이 연 방패를 받으면 먼저 안쪽으로 돌려 든다. 거기 함께 섰던 자들의 이름이 못 끝으로 거칠게 긁혀 있다. 솜씨도 깊이도 제각각인 것은 새긴 손이 여럿이어서다. 줄이 끝까지 버틴 그날을 기려, 마을은 해마다 그 방패를 꺼내 놓고 거기 새겨진 이름을 한 명씩 큰 소리로 부르며 잔을 든다. 받은 사람은 제 이름을 보태기 전 그 이름들을 손끝으로 짚으며 같이 외치고, 그러고 나면 둘러선 사람들이 한바탕 환호한다. 그렇게 줄이 한 사람 더 길어질 때마다 그날은 슬픈 날이 아니라 잔치가 된다.',
-    art: `kite shield, weathered front, names roughly scratched on the inner face, leather arm straps, heroic, ${STYLE}`,
+    art: `ornate fantasy armor: kite shield, weathered front, names roughly scratched on the inner face, leather arm straps, heroic, crafted equippable armor game asset, ${STYLE}`,
   },
   {
     key: 'hollow_visor_helm',
@@ -821,7 +821,7 @@ const ARMOR: CatalogItem[] = [
     region: '일반',
     tone: '기괴',
     lore: '그 투구는 면갑이 좀처럼 올린 채로 있지 않았다. 끝까지 젖혀 두어도 한눈을 팔면 어느새 스르르 내려와 닫혀 있었다. 그것만으로도 꺼림한데, 사람들을 더 불편하게 한 것은 따로 있었다. 아무도 쓰고 있지 않은데, 유난히 추운 날이면 닫힌 면갑의 좁은 틈으로 옅은 입김이 한 번씩 하얗게 서렸다. 닦으면 사라지고 잊을 만하면 다시 생겼다. 보초가 그 입김을 한 번 본 뒤로, 투구는 잘 보이는 벽이 아니라 뚜껑 닫히는 상자 안으로 들어갔다. 보지 않으면 없는 셈 칠 수 있다고 여겨서였다.',
-    art: `closed visored helm, visor that won't stay raised, faint breath-fog at the slit, dark steel, unsettling, ${STYLE}`,
+    art: `ornate fantasy armor: closed visored helm, visor that won't stay raised, faint breath-fog at the slit, dark steel, unsettling, crafted equippable armor game asset, ${STYLE}`,
   },
   {
     key: 'traveler_patch_coat',
@@ -830,7 +830,7 @@ const ARMOR: CatalogItem[] = [
     region: '일반',
     tone: '일상',
     lore: '외투에 덧댄 천 조각마다 받은 자리가 있었다. 하룻밤 재워 준 노파가 떼어 준 앞치마 자락, 강을 건네준 사공의 소맷단, 이름도 못 물어본 누군가의 옷깃. 외투 주인은 길에서 신세를 지면 빚을 갚는 대신 그 사람 옷의 한 조각을 받아 그 자리에 기웠다. 그래서 이 외투는 어디를 지났는가가 아니라 누구에게 빚졌는가의 기록이었다. 그는 한 조각을 짚을 때마다 그 사람 이야기를 길게 풀었고, 외투가 닳을수록 그가 풀어 놓는 이야기 목록도 함께 길어졌다.',
-    art: `long coat patched with cloth of many colors, uneven seams, well-worn, mundane, ${STYLE}`,
+    art: `ornate fantasy armor: long coat patched with cloth of many colors, uneven seams, well-worn, crafted equippable armor game asset, ${STYLE}`,
   },
   {
     key: 'marsh_root_buckler',
@@ -839,7 +839,7 @@ const ARMOR: CatalogItem[] = [
     region: '늪지대',
     tone: '비애',
     lore: '늙은이는 손주에게 늪 다니는 법을 가르치며, 그 마지막 선물로 늪 바닥 뿌리를 엮어 작은 손방패를 만들어 손에 쥐여 주었다. 못생기고 가볍지만 잘 막힌다, 늪에서 방패에 바랄 건 그게 다라고 했다. 손주는 그 가르침대로 자라 마을에서 늪을 가장 잘 아는 사람이 되었다. 정작 그것을 가르친 늙은이는 어느 안개 짙은 날 늪에 들었다가 돌아오지 못했다. 방패는 그 뒤로 늘 마른 채 문가에 걸려 있고, 손주는 늪에 나갈 때 그것만은 챙기지 않는다. 챙기면 가르친 사람이 곁에 없다는 걸 매번 손으로 확인하게 되어서다.',
-    art: `small round buckler of woven swamp roots, knotty surface, simple center grip, weathered, mournful, ${STYLE}`,
+    art: `ornate fantasy armor: small round buckler of woven swamp roots, knotty surface, simple center grip, weathered, mournful, crafted equippable armor game asset, ${STYLE}`,
   },
   {
     key: 'wailing_mail',
@@ -848,7 +848,7 @@ const ARMOR: CatalogItem[] = [
     region: '일반',
     tone: '기괴',
     lore: '그 사슬갑 곁에서 하룻밤 잔 사람이 있었다. 한밤중 고리가 닳고 벌어진 틈으로 길고 가느다란 소리가 새어 나왔다. 그는 처음엔 낡은 쇠를 지나는 바람이려니 했다. 그런데 그 소리가 바람 한 점 없는 시각에도 멎지 않자, 그는 말없이 잠자리를 챙겨 막사 반대편 끝으로 옮겨 갔다. 그 소리를 그냥 바람이라 한 사람도, 끝내 옆에서 안 잔 사람도, 둘 다 그 사슬갑을 다시 몸에 걸치지는 않았다. 사슬갑은 막사 한구석에 걸린 채, 바람이 통할 때마다 같은 소리를 낸다.',
-    art: `old chainmail hauberk, gapped rusted rings, thin whistling through the gaps, grey iron, eerie, ${STYLE}`,
+    art: `ornate fantasy armor: old chainmail hauberk, gapped rusted rings, thin whistling through the gaps, grey iron, eerie, crafted equippable armor game asset, ${STYLE}`,
   },
   {
     key: 'dusk_paladin_plate',
@@ -857,7 +857,7 @@ const ARMOR: CatalogItem[] = [
     region: '일반',
     tone: '영웅담',
     lore: '그 기사는 단 한 줄을 약속했다. 성문이 닫힐 때까지 이 자리를 비우지 않겠다. 약속이 떨어진 뒤 그는 한 발도 옮기지 않았고, 해가 뉘엿해질 무렵 성문은 정말로 무겁게 닫혔다. 사람들이 그를 안으로 들였을 때, 전신 판금은 그 하루를 받아낸 충격을 그대로 머금은 채 그 모양으로 굳어 있었다. 대장장이가 펴 주겠다 했으나 기사도 사람들도 끝내 그 자국에 손대지 않았다. 갑옷은 성문 안쪽 벽에 그대로 세워졌고, 그 앞을 지나는 사람들은 약속이나 한 듯 한 박자씩 걸음을 늦췄다.',
-    art: `full plate harness, many deep dents, dimmed steel, battered pauldrons, plain straps, heroic, ${STYLE}`,
+    art: `ornate fantasy armor: full plate harness, many deep dents, dimmed steel, battered pauldrons, plain straps, heroic, crafted equippable armor game asset, ${STYLE}`,
   },
   {
     key: 'rune_echo_shield',
@@ -866,7 +866,7 @@ const ARMOR: CatalogItem[] = [
     region: '고대 룬 산맥',
     tone: '일상',
     lore: '산사람들은 이 둥근 방패를 등에 지고 다니다, 비탈에서 다리쉼을 할 참이면 바닥에 엎어 깔고 그 위에 털썩 앉는다. 그러면 산돌을 덧댄 그 판에서 아주 낮은 울림이 엉덩이께로 잔잔히 전해진다. 산이 무너지던 그 소리가 아직 결에 남았다는데, 산사람들은 그게 의자 삼기에 제법 듣기 좋다고 별일 아니라는 듯 말한다. 그래서 이 방패가 평생 무언가를 막아 준 횟수보다 지친 다리를 받쳐 준 횟수가 압도적으로 많다. 늙은 산사람의 무릎이 성치 않을 무렵이면, 젊은이들이 말없이 그 방패부터 먼저 바닥에 내려 깔아 주었다.',
-    art: `round stone-faced shield, blue seam cracks, banded rim, sit-worn back, mundane, ${STYLE}`,
+    art: `ornate fantasy armor: round stone-faced shield, blue seam cracks, banded rim, sit-worn back, crafted equippable armor game asset, ${STYLE}`,
   },
   {
     key: 'child_practice_shield',
@@ -875,7 +875,7 @@ const ARMOR: CatalogItem[] = [
     region: '일반',
     tone: '비애',
     lore: '방패 안쪽 가장자리에 칼끝으로 그은 금이 셋. 맨 아래 「일곱 살 봄」, 그 위 「여덟 살」, 또 그 위 「아홉 살, 한 뼘 더」. 키 잴 때 그어 두는 흔한 눈금이다. 그 위로 금은 없다. 다음 금이 와야 할 자리에는 깊은 칼자국이 어지럽게 겹쳐, 그 한 칸을 통째로 메우고 있다. 지금 그 방패는 같은 집 둘째가 가지고 있다. 둘째는 제 키가 「아홉 살, 한 뼘 더」 줄을 넘긴 봄, 그 위 칼자국 자리에 차마 새 금을 긋지 못하고 방패를 도로 벽에 걸었다. 그러고는 해마다 봄이면 그 줄에 등을 대 보기만 한다.',
-    art: `small child-sized wooden practice shield, dense hack marks, scuffed paint, plain grip, sorrowful, ${STYLE}`,
+    art: `ornate fantasy armor: small child-sized wooden practice shield, dense hack marks, scuffed paint, plain grip, sorrowful, crafted equippable armor game asset, ${STYLE}`,
   },
   {
     key: 'fools_brass_cuirass',
@@ -884,7 +884,7 @@ const ARMOR: CatalogItem[] = [
     region: '일반',
     tone: '위트',
     lore: '그 흉갑의 첫 주인은 평생 그것을 진짜 황금이라 믿었다. 사실은 잘 닦은 놋쇠다. 동네에 그걸 아는 사람이 더러 있었지만 누구도 굳이 일러 주지 않았다. 알려 줘서 좋을 게 없었기 때문이다. 그는 그 믿음으로 늘 가슴을 펴고 다녔고, 놋쇠 흉갑은 금이든 놋쇠든 가리지 않고 들어오는 칼을 꼬박꼬박 잘 막아 줬다. 그가 늙어 흉갑을 물릴 때까지도 진실은 끝까지 동네의 묵계로 남았고, 물려받은 사람도 곧 같은 묵계에 자연스레 끼었다. 가끔은 잘못된 믿음이 맞는 사실보다 사람을 더 똑바로 서게 한다.',
-    art: `shiny brass cuirass mistaken for gold, bright polished finish, modest dents, ironic, ${STYLE}`,
+    art: `ornate fantasy armor: shiny brass cuirass mistaken for gold, bright polished finish, modest dents, ironic, crafted equippable armor game asset, ${STYLE}`,
   },
   {
     key: 'ash_pelt_mantle',
@@ -893,7 +893,7 @@ const ARMOR: CatalogItem[] = [
     region: '서쪽 화산',
     tone: '담백',
     lore: '서쪽 화산 비탈의, 추위에 유난히 강한 짐승 가죽으로 만든 두툼한 어깨망토다. 화산 가까이 살아온 짐승이라 가장자리가 본래부터 거뭇하게 그을린 듯하고, 아무리 바람을 쐬어도 옅은 연기 냄새가 가시지 않는다. 사연을 캐자면 거기서 끝이다. 다만 한 사람이 눈보라에 길을 잃고 비탈에 웅크렸던 밤, 이 망토 한 장의 온기로 동이 틀 때까지 버텼다는 이야기가 짧게 전한다. 그는 살아 내려와 망토를 벽에 걸어 두기만 했는데, 그 뒤로 그 집에서는 한겨울에도 그 못 아래 자리가 가장 따뜻하다고 했다.',
-    art: `thick beast-pelt shoulder mantle, singed edges, smoky brown fur, simple clasp, plain warm, ${STYLE}`,
+    art: `ornate fantasy armor: thick beast-pelt shoulder mantle, singed edges, smoky brown fur, simple clasp, plain warm, crafted equippable armor game asset, ${STYLE}`,
   },
   {
     key: 'unmarked_grave_plate',
@@ -902,7 +902,7 @@ const ARMOR: CatalogItem[] = [
     region: '일반',
     tone: '비애',
     lore: '표식도 이름도 없는 무덤에서 파낸 가슴판금이다. 흙을 털어 보니 그만큼 땅에 누워 있었다는 게 믿기지 않을 만큼 흠도 녹도 없었다. 더 마음에 걸린 것은 따로 있다. 덩치 큰 자가 입어도, 마른 자가 입어도, 이 판금은 어김없이 몸에 꼭 맞게 조여든다. 입어 본 사람들은 한결같이, 잠깐 동안 제가 아닌 다른 누군가의 자세로 어깨를 펴고 서 있는 듯한 기분이 들었다고 했다. 그 자세가 누구의 것인지는 비석이 없어 알 길이 없고, 판금은 다음 사람을 또 그 낯선 자세로 잠시 세웠다 놓는다.',
-    art: `unearthed steel breastplate, soil-stained then cleaned, oddly flawless, plain fit, melancholic, ${STYLE}`,
+    art: `ornate fantasy armor: unearthed steel breastplate, soil-stained then cleaned, oddly flawless, plain fit, melancholic, crafted equippable armor game asset, ${STYLE}`,
   },
   {
     key: 'watchlantern_rig',
@@ -911,7 +911,7 @@ const ARMOR: CatalogItem[] = [
     region: '일반',
     tone: '일상',
     lore: '가슴 한복판에 등을 거는 쇠고리가 달린 단순한 가죽 멜빵이다. 막아 주는 면적이라곤 멜빵 폭이 전부라 방어구라 부르기도 민망하다. 그런데 야경꾼들은 새 갑옷을 받으면 으레 이 멜빵부터 챙겼다. 그들 사이에 오래된 말이 있었다. 캄캄한 골목에서 사람을 살리는 건 두꺼운 쇠가 아니라 멀리서도 보이는 한 점 불빛이다. 실제로 그 흔들리는 등불을 보고 발길을 돌린 자가 그 멜빵이 막은 칼보다 훨씬 많았다. 새 야경꾼은 첫날밤, 선임이 제 가슴 고리에 등을 걸어 주는 것으로 일을 시작했다.',
-    art: `leather chest harness with a lantern hook, scuffed straps, soot near the hook, utilitarian mundane, ${STYLE}`,
+    art: `ornate fantasy armor: leather chest harness with a lantern hook, scuffed straps, soot near the hook, utilitarian mundane, crafted equippable armor game asset, ${STYLE}`,
   },
   {
     key: 'orc_trophy_pauldrons',
@@ -920,7 +920,7 @@ const ARMOR: CatalogItem[] = [
     region: '오크 부락',
     tone: '담백',
     lore: '오크 부락에는 싸움에서 무언가를 거두면 그것을 어깨에 매다는 오랜 풍습이 있다. 부러진 칼끝, 적의 투구 장식, 짐승 송곳니 같은 것이 끈에 줄줄이 늘어진다. 그러니 이 견갑은 곧 그 사람이 지나온 싸움의 수이고, 어깨가 무거운 자일수록 더 많은 싸움을 건너온 자다. 자랑하고 싶으면 매달면 되고 무거우면 떼면 된다. 다만 부락에서 스스로 떼어낸 자를 본 기억은 거의 없다. 사람은 제 어깨가 무거워지는 것을 생각보다 그리 싫어하지 않는 모양이라고, 늙은 전사들이 새 전사 어깨를 보며 한 번씩 웃었다.',
-    art: `broad shoulder pauldrons hung with trophies, heavy iron plates, rugged, plain, ${STYLE}`,
+    art: `ornate fantasy armor: broad shoulder pauldrons hung with trophies, heavy iron plates, rugged, crafted equippable armor game asset, ${STYLE}`,
   },
   {
     key: 'silent_choir_hood',
@@ -929,7 +929,7 @@ const ARMOR: CatalogItem[] = [
     region: '타락천사',
     tone: '영웅담',
     lore: '추락한 성가대가 사방으로 흩어지던 밤, 단 한 사람이 제자리를 뜨지 않고 노래를 이어 갔다. 이 깊은 두건을 쓰면 제 목소리만 한 겹 멀어져, 그는 끝내 자기 노래를 듣지 못한 채 불렀다. 들리지도 않는 노래를 마지막까지 부르는 일이 얼마나 외로운지는 그 사람만 알 것이다. 그러나 어둠 속에서 흩어지던 자들은 그 가느다란 가락을 등불 삼아 길을 찾아 나왔다. 두건 안감에는 검은 깃이 몇 올 끼어 있는데, 새로 쓴 자들은 노래를 멈추는 법만은 좀처럼 먼저 배우지 못한다.',
-    art: `deep cloth hood, faded sacred trim, pale grey, worn solemn, heroic, ${STYLE}`,
+    art: `ornate fantasy armor: deep cloth hood, faded sacred trim, pale grey, worn solemn, heroic, crafted equippable armor game asset, ${STYLE}`,
   },
   {
     key: 'bog_breath_mask',
@@ -938,7 +938,7 @@ const ARMOR: CatalogItem[] = [
     region: '늪지대',
     tone: '일상',
     lore: '늪에는 눈에 안 보이는 독한 김이 고이는 자리가 있어, 멋모르고 들어선 자는 픽 쓰러진다. 갈대 속을 채운 이 단순한 가리개를 입과 코에 대면 그 김을 한 겹 걸러, 빈손으로 돌아섰을 자리에서 한 뼘 더 깊이 들어갔다 무사히 나올 수 있었다. 늪 사람들에게 그건 영웅담이 아니라 그냥 하루 일이었다. 아침에 가리개를 적셔 매고, 한 뼘 더 들어가 건질 것을 건지고, 해 지기 전에 돌아온다. 셈해 보면 늪에서 사람을 가장 많이 살린 물건이 이 초라한 갈대 가리개인데, 정작 그걸 자랑삼아 보여 주는 사람은 없다.',
-    art: `simple reed-filled breathing mask, woven straps, marsh-stained, crude practical, mundane, ${STYLE}`,
+    art: `ornate fantasy armor: simple reed-filled breathing mask, woven straps, marsh-stained, crude practical, crafted equippable armor game asset, ${STYLE}`,
   },
   {
     key: 'herald_banner_cloak',
@@ -947,7 +947,7 @@ const ARMOR: CatalogItem[] = [
     region: '일반',
     tone: '영웅담',
     lore: '그날 끝까지 땅에 닿지 않은 깃발이 하나 있었다. 싸움이 끝나고 줄이 풀린 뒤, 살아남은 자들은 그 깃발을 천 조각으로 잘라 한 사람이 한 조각씩 어깨망토로 나눠 둘렀다. 누더기 조각이지만 펼쳐 맞대면 가운데 문장이 또렷이 이어진다. 해마다 그날이 오면 그들은 한자리에 모여 제 조각을 펼쳐 맞춰 보았고, 한 폭이 온전히 이어지면 다 같이 환호하며 잔을 들었다. 늙어 손주에게 그 조각을 넘길 때면 신이 나서, 나머지 조각을 두른 옛 동무들이 어느 마을에 사는지부터 일러 주었다. 그렇게 그 깃발은 흩어졌어도 해마다 한 번씩 다시 한 폭이 된다.',
-    art: `shoulder cloak cut from a tattered war banner, faded heraldic emblem, ragged hem, heroic, ${STYLE}`,
+    art: `ornate fantasy armor: shoulder cloak cut from a tattered war banner, faded heraldic emblem, ragged hem, heroic, crafted equippable armor game asset, ${STYLE}`,
   },
   {
     key: 'late_mirror_shield',
@@ -956,7 +956,7 @@ const ARMOR: CatalogItem[] = [
     region: '일반',
     tone: '수수께끼',
     lore: '거울처럼 닦아낸 둥근 방패다. 정면으로 들면 제 얼굴이 또렷이 비치는데, 그 얼굴이 늘 아주 미세하게 한 박자 늦게 따라 움직인다. 손을 들면 거울 속 손이 조금 뒤에 들리고, 눈을 감으면 거울 속 눈이 조금 뒤에 감긴다. 사람들이 진짜 등골이 서늘해지는 순간은 따로 있다. 그 늦은 한 박자 동안, 거울 속 얼굴이 이쪽이 안 한 입 모양을 짓는 것처럼 보일 때다. 무슨 말인지 읽어 내려 입술에 눈을 박은 자가 여럿 있었지만, 그들은 하나같이 그날 밤 방패를 엎어 두고 잤다.',
-    art: `round polished mirror-bright shield, reflection lagging a beat, plain rim, eerie enigmatic, ${STYLE}`,
+    art: `ornate fantasy armor: round polished mirror-bright shield, reflection lagging a beat, plain rim, eerie enigmatic, crafted equippable armor game asset, ${STYLE}`,
   },
   {
     key: 'worn_road_boots',
@@ -965,7 +965,7 @@ const ARMOR: CatalogItem[] = [
     region: '일반',
     tone: '담백',
     lore: '주인을 셋이나 갈아 치우고도 여전히 멀쩡한 가죽 장화다. 첫 주인은 행상이었고, 둘째는 그 행상에게 받은 짐꾼이었으며, 셋째가 누구인지는 굳이 적혀 있지 않다. 밑창은 닳아 두 번 갈아 댔고, 발등 가죽은 수천 리 길에 길이 들 대로 들어 손바닥처럼 부드럽다. 거창한 사연은 한 줄도 없다. 전장에 나간 적도, 무엇을 막은 적도 없다. 이 장화가 한 일이라곤 신은 사람을 가고 싶은 곳까지 데려다 놓은 것뿐이다. 그리고 신어 보면 안다. 발에 꼭 감기는 그 느낌이, 아직 어디로든 더 갈 셈인 장화의 것이라는 걸.',
-    art: `well-worn leather travel boots, twice-resoled, softened creased leather, plain, understated, ${STYLE}`,
+    art: `ornate fantasy armor: well-worn leather travel boots, twice-resoled, softened creased leather, crafted equippable armor game asset, ${STYLE}`,
   },
 ];
 
@@ -980,7 +980,7 @@ const ACCESSORIES: CatalogItem[] = [
     region: '늪지대',
     tone: '담백',
     lore: '늪 마을에는 아이가 처음 혼자 늪에 다녀오면, 가장 먼저 밟고 돌아온 마른 자리에서 조약돌 하나를 주워 끈에 꿰게 하는 풍습이 있다. 무슨 영험이 있다는 것도, 액을 막는다는 것도 아니다. 다만 그 돌을 목에 건 아이는 늪이 제 발을 어디까지 받아 주는지 한 번 가늠해 본 아이라는 뜻이고, 마을은 그 한 가지만으로 그 아이를 조금 다르게 대했다. 어른들은 새 부적을 받은 아이의 목보다 그 아이가 늪을 바라보는 눈을 먼저 살폈다. 눈이 늪을 무서워하지도 얕보지도 않으면, 그제야 다음 늪길에 데리고 갔다.',
-    art: `small smooth river pebble on a worn cord, plain drilled hole, mud-faded, understated, ${STYLE}`,
+    art: `ornate fantasy charm amulet: a polished teal-grey river stone set in a small worn-bronze bail and ring, wrapped by a thin braided cord, faint soft inner glow, crafted equippable trinket, ${STYLE}`,
   },
   {
     key: 'bog_tooth_pendant',
@@ -989,7 +989,7 @@ const ACCESSORIES: CatalogItem[] = [
     region: '늪지대',
     tone: '기괴',
     lore: '그 펜던트를 가진 사람은 비 오는 철이 길어질 무렵이면 한 가지 버릇이 생긴다. 처음엔 늪에서 건진 큼지막한 이빨이라며 자랑삼아 목 밖으로 꺼내 보이고 다닌다. 그러다 비가 며칠째 이어지면 슬그머니 그것을 옷깃 안쪽으로 돌려 차기 시작한다. 살갗에 닿는 자리가 미지근해진다는 것이다. 데일 정도는 아니고, 안 그런 척하기엔 분명한 그런 미지근함이다. 무슨 이빨이냐 물으면 처음엔 웃으며 큰 고기라 하다가, 해를 거듭할수록 그 웃음이 옅어진다. 펜던트가 다음 손으로 넘어가면 새 주인도 같은 버릇을, 같은 속도로 들인다.',
-    art: `long curved tooth on a leather cord, faintly yellowed, swamp-stained binding, eerie, ${STYLE}`,
+    art: `ornate fantasy pendant: long curved tooth on a leather cord, faintly yellowed, swamp-stained binding, eerie, crafted equippable trinket, ${STYLE}`,
   },
   {
     key: 'frogcall_whistle',
@@ -998,7 +998,7 @@ const ACCESSORIES: CatalogItem[] = [
     region: '늪지대',
     tone: '위트',
     lore: '늪 마을 노인이 심심풀이로 깎은, 불면 영락없이 개구리 우는 소리가 나는 작은 호각이다. 노인은 이걸로 진짜 개구리를 불러 모은다고 큰소리쳤다. 한 번은 정말 노인이 호각을 불자 늪 어귀가 개구리 떼로 한바탕 시끄러워졌고, 마을은 박장대소했다. 의심하던 젊은이가 빼앗아 불자 이번엔 오리가 우르르 나와 또 한바탕 웃었다. 노인은 그건 솜씨가 모자라 그렇다며 으스댔고, 젊은이는 분해서 매일 연습했다. 호각을 물려받은 손주는 지금도 잔치 때면 그걸 분다. 무엇이 나올지는 매번 다르고, 마을은 그게 재미라 더 청한다.',
-    art: `tiny carved wooden whistle on a cord, frog-shaped, well-handled patina, playful, ${STYLE}`,
+    art: `ornate fantasy cord talisman: tiny carved wooden whistle on a cord, frog-shaped, well-handled patina, playful, crafted equippable trinket, ${STYLE}`,
   },
   {
     key: 'drowned_ring',
@@ -1007,7 +1007,7 @@ const ACCESSORIES: CatalogItem[] = [
     region: '늪지대',
     tone: '비애',
     lore: '한 사람이 늪에 빠져 끝내 나오지 못한 자리에서, 한참 뒤 진흙을 긁다 반지 하나가 올라왔다. 안쪽에는 둘이 나눠 새겼을 법한 짧은 글자의 절반만 남아 있었다. 나머지 절반을 새긴 다른 반지가 어디 있는지 아는 사람은 없었다. 마을은 주인을 찾지 못해, 늪이 가장 잔잔한 자리에 작은 돌 하나를 세우고 그 곁에 반지를 걸어 두었다. 늪을 다니는 사람들은 그 자리를 지날 때면 걸음을 한 박자 늦췄고, 잔잔한 물 위로 제 그림자가 비치면 굳이 오래 들여다보지 않고 지나갔다.',
-    art: `simple band ring, tarnished, half of an inscription inside, silt-darkened, mournful, ${STYLE}`,
+    art: `ornate fantasy ring: simple band ring, tarnished, half of an inscription inside, silt-darkened, mournful, crafted equippable trinket, ${STYLE}`,
   },
   {
     key: 'orc_brag_torc',
@@ -1016,7 +1016,7 @@ const ACCESSORIES: CatalogItem[] = [
     region: '오크 부락',
     tone: '위트',
     lore: '그 토르크를 두른 전사는 토르크가 굵을수록 무용이 크다는 부락의 셈을 곧이곧대로 믿어, 해마다 제 손으로 고리를 한 겹씩 더 둘렀다. 끝내는 고개를 옆으로 돌리기도 버거워졌고, 그 무게 때문에 싸움에서 한 번도 제대로 뒤를 못 돌아봤다. 부락은 그를 가장 용감한 전사로 기억한다 — 사실 그는 도망칠 수가 없어 늘 앞만 봤을 뿐이다. 그가 떠난 뒤에도 부락 아이들은 그 토르크를 흉내 내며 논다. 목에 나뭇가지를 둘둘 감고 고개를 뻣뻣이 든 채 뒤뚱뒤뚱 걷다, 누가 뒤에서 부르면 온몸을 통째로 돌리고는 깔깔거린다.',
-    art: `thick layered neck torc, crude bronze coils, dented from wear, comically oversized, ${STYLE}`,
+    art: `ornate fantasy ring: thick layered neck torc, crude bronze coils, dented from wear, comically oversized, crafted equippable trinket, ${STYLE}`,
   },
   {
     key: 'warband_knuckle_charm',
@@ -1025,7 +1025,7 @@ const ACCESSORIES: CatalogItem[] = [
     region: '오크 부락',
     tone: '영웅담',
     lore: '오크 부락에는 어귀를 지키다 끝내 물러서지 않은 자의 주먹뼈를, 다음 어귀지기가 부적으로 받아 차는 의식이 있다. 모닥불을 일찍 끄고, 부락이 둥글게 둘러선다. 늙은 전사가 끈에 꿴 작은 뼈들을 새 어귀지기 목에 걸어 주며, 이제 너는 두 사람 몫의 자리를 지킨다고 짧게 이른다. 끈에 꿰인 뼈의 수가 곧 그 어귀가 지금껏 몇 번 무너지지 않았는가의 셈이다. 부적을 받은 자는 그날 밤 어귀에 가장 먼저 나가 가장 늦게 들어왔고, 부락은 그 옆자리를 비워 두지 않았다.',
-    art: `cord strung with small worn knuckle bones, bound in sinew, weathered, solemn heroic, ${STYLE}`,
+    art: `ornate fantasy charm amulet: cord strung with small worn knuckle bones, bound in sinew, weathered, solemn heroic, crafted equippable trinket, ${STYLE}`,
   },
   {
     key: 'orc_ration_tag',
@@ -1034,7 +1034,7 @@ const ACCESSORIES: CatalogItem[] = [
     region: '오크 부락',
     tone: '일상',
     lore: '부락의 아침은 배급 줄에서 시작한다. 사람들이 저마다 거칠게 깎고 제 표식을 더 거칠게 새긴 나무패를 들고 줄을 선다. 패를 내밀면 하루치 먹을 것을 받고, 받은 자리에서 패를 도로 허리춤에 끼운다. 싸움 이야기 하나 없는 물건이지만, 부락의 하루를 굴러가게 한 것은 번쩍이는 무기가 아니라 이 손바닥만 한 패다. 끼니가 한 번 어긋나면 어떤 줄도 다음 날 못 선다는 것을 부락은 오래전에 배웠다. 그래서 패를 잃은 자는 무기를 잃은 자보다 더 곤란한 하루를 보냈고, 새 패를 깎아 줄 때까지 옆 사람 몫을 나눠 먹었다.',
-    art: `small rough wooden tally tag on a cord, crude personal carving, grease-darkened, mundane, ${STYLE}`,
+    art: `ornate fantasy cord talisman: small rough wooden tally tag on a cord, crude personal carving, grease-darkened, crafted equippable trinket, ${STYLE}`,
   },
   {
     key: 'chiefs_riddle_bead',
@@ -1043,7 +1043,7 @@ const ACCESSORIES: CatalogItem[] = [
     region: '오크 부락',
     tone: '수수께끼',
     lore: '한 오크 족장이 죽기 전, 다음 족장이 될 자에게 나무 구슬 하나를 건네며 수수께끼를 냈다. 답을 맞히면 부락의 진짜 비밀을 알게 된다는 것이었다. 이후 족장이 여럿 바뀌었지만 누구도 그 답을 입 밖에 낸 적이 없다. 구슬은 족장이 바뀔 때마다 다음 목으로 옮겨 갔고, 옮겨 갈 때마다 한 자리가 조금씩 더 닳았다. 대대로 같은 자리를 굴린 손들 때문이다. 부락에는 가장 많이 닳은 그 자리가 정답에 가장 가까운 곳이라는 농담이 길게 남았고, 새 족장은 구슬을 받으면 으레 그 닳은 자리부터 엄지로 굴려 본다.',
-    art: `single dark wooden bead on a thick cord, hand-polished smooth in one spot, enigmatic, ${STYLE}`,
+    art: `ornate fantasy cord talisman: single dark wooden bead on a thick cord, hand-polished smooth in one spot, enigmatic, crafted equippable trinket, ${STYLE}`,
   },
   {
     key: 'runeshard_amulet',
@@ -1052,7 +1052,7 @@ const ACCESSORIES: CatalogItem[] = [
     region: '고대 룬 산맥',
     tone: '장엄',
     lore: '산이 무너지며 흩어진 룬돌 가운데, 글자 하나가 온전히 남은 파편을 갈아 만든 부적이다. 그 글자가 무슨 뜻인지는 산에 오르던 늙은 학자들 사이에서도 끝내 합의되지 않았다. 다만 이것을 목에 건 자는 한결같이 같은 순간을 말한다. 발밑이 갑자기 한 뼘 더 단단해진 듯한 느낌. 누가 어깨를 떠밀어도 그 한순간만은 밀리지 않더라는 것이다. 산 하나가 통째로 무너지고도 끝까지 깨지지 않은 한 글자를 지녔다는 사실이, 사람의 등을 그렇게 한 번 펴게 했다. 부적은 그 뒤로 어깨가 굽은 사람들 사이를 조용히 돌았다.',
-    art: `polished rune-stone shard pendant, one clear glyph, faint blue vein, banded setting, monumental, ${STYLE}`,
+    art: `ornate fantasy charm amulet: polished rune-stone shard pendant, one clear glyph, faint blue vein, banded setting, monumental, crafted equippable trinket, ${STYLE}`,
   },
   {
     key: 'echo_stone_earring',
@@ -1061,7 +1061,7 @@ const ACCESSORIES: CatalogItem[] = [
     region: '고대 룬 산맥',
     tone: '수수께끼',
     lore: '그 귀고리를 차고 있으면 가끔, 방금 들은 말이 한 박자 뒤에 아주 작게 한 번 더 들린다. 처음엔 제 귀를 의심한다. 그러다 곧 알게 된다. 두 번째로 들리는 그 말이 종종 처음과 미세하게 다르다는 것을. 누가 잘 가라 하면, 한 박자 뒤 같은 목소리가 잘 가라가 아닌 다른 끝을 흘리고 사라진다. 무엇이 진짜 들린 말인지 헷갈리기 시작한 사람들은 귀고리를 빼서 깊은 서랍에 넣었다. 그러고도 한동안은 남이 한 말을 두 번씩 곱씹는 버릇을 떼지 못했고, 서랍을 열 때마다 그 작은 돌이 한 번 굴렀다.',
-    art: `small carved stone earring, pale grey with a hairline seam, plain hook, mysterious, ${STYLE}`,
+    art: `ornate fantasy ring: small carved stone earring, pale grey with a hairline seam, plain hook, mysterious, crafted equippable trinket, ${STYLE}`,
   },
   {
     key: 'carvers_last_ring',
@@ -1070,7 +1070,7 @@ const ACCESSORIES: CatalogItem[] = [
     region: '고대 룬 산맥',
     tone: '비애',
     lore: '산의 룬을 평생 베껴 새기던 한 각자공이 마지막으로 만든 반지다. 산이 무너지기 전, 사라질 글자를 하나라도 더 남기려 그는 손이 굳도록 새겼다. 이 반지 안쪽에는 그가 끝내 다 못 새긴 글자가 절반에서 끊긴 채 남아 있다. 끊긴 자리의 칼끝 자국이 유난히 깊은데, 거기서 손을 멈춘 것이 아니라 멈춰진 것임을 본 사람들은 안다. 반지를 물려받은 다음 각자공은 그 절반 글자를 이어 새기려다, 끌을 댈 자리에 손을 올린 채 한참을 그대로 있다가 결국 그대로 두었다. 끊긴 글자는 지금도 절반인 채다.',
-    art: `plain stone-set ring, an unfinished glyph cut inside, deep tool-mark at the break, mournful, ${STYLE}`,
+    art: `ornate fantasy ring: plain stone-set ring, an unfinished glyph cut inside, deep tool-mark at the break, mournful, crafted equippable trinket, ${STYLE}`,
   },
   {
     key: 'surveyor_plumb_pendant',
@@ -1079,7 +1079,7 @@ const ACCESSORIES: CatalogItem[] = [
     region: '고대 룬 산맥',
     tone: '일상',
     lore: '산길을 내던 측량꾼이 목에 걸고 다니던 작은 납추다. 길을 그릴 때마다 이걸 늘어뜨려 어디가 평평하고 어디가 기울었는지를 쟀다. 영웅담 같은 건 없다. 다만 그가 이 추 하나로 그어 놓은 선을 따라, 그 뒤로 수레와 사람과 소식이 산을 넘나들었다. 산이 한 번 크게 무너져 많은 길이 끊겼을 때, 사람들이 가장 먼저 한 일은 이런 추를 다시 꺼내 늘어뜨리는 것이었다. 추는 그 뒤로도 다음 측량꾼의 목에 걸려, 끊긴 자리마다 새 선을 그으며 산을 다시 이었다.',
-    art: `small lead plumb-bob on a knotted cord, scratched measure marks, worn, mundane, ${STYLE}`,
+    art: `ornate fantasy pendant: small lead plumb-bob on a knotted cord, scratched measure marks, worn, crafted equippable trinket, ${STYLE}`,
   },
   {
     key: 'ember_bead_string',
@@ -1088,7 +1088,7 @@ const ACCESSORIES: CatalogItem[] = [
     region: '서쪽 화산',
     tone: '위트',
     lore: '화산 대장간 곁에서 식다 만 용암 방울이 저절로 둥글게 굳은 것들을 골라 꿴 염주다. 화 잘 내기로 소문난 한 대장장이가 성질을 고쳐 보겠다며 욱할 때마다 한 알씩 굴리기로 했다. 효과는 있었다. 다만 그가 워낙 자주 욱한 탓에 그 줄의 구슬만 유난히 반들반들 닳았다. 마을 사람들은 그 닳은 정도를 보고 올해는 좀 참았네 하고 놀렸고, 본인은 염주를 굴리느라 화낼 짬을 놓치는 거라며 끝까지 우겼다. 어느 쪽이든 그 대장간은 그 줄이 닳는 동안 한결 조용해졌고, 새로 들어온 견습이 그 줄을 물려받자 마을은 또 닳는 자리를 세기 시작했다.',
-    art: `string of rounded volcanic-glass beads, one stretch rubbed extra smooth, charred cord, ironic, ${STYLE}`,
+    art: `ornate fantasy cord talisman: string of rounded volcanic-glass beads, one stretch rubbed extra smooth, charred cord, ironic, crafted equippable trinket, ${STYLE}`,
   },
   {
     key: 'ashglass_pendant',
@@ -1097,7 +1097,7 @@ const ACCESSORIES: CatalogItem[] = [
     region: '서쪽 화산',
     tone: '담백',
     lore: '화산 모래가 열에 녹았다 굳으며 저절로 생긴 잿빛 유리 조각을, 구멍만 뚫어 끈에 꿴 펜던트다. 사람 손이 거의 안 닿은 물건이라 모양도 두께도 제각각이고 똑같은 것이 둘 없다. 화산 마을에서는 길에 흔해 아이 어른 없이 누구나 하나쯤 주워 찼다. 흔해서 귀할 건 없지만, 둘 없는 모양이라 사람들은 서로 제 것을 견주며 누구 게 더 별나게 생겼나로 한참 웃었다. 잃어도 서럽지 않고 길에서 또 주우면 그만이라, 아이들은 모양 좋은 걸 찾으러 일부러 비탈을 뒤졌다. 비탈에 잿빛 조각이 흔한 한, 그 마을엔 목에 걸 것이 떨어지는 날이 없었다.',
-    art: `irregular grey volcanic-glass shard pendant, raw drilled hole, plain cord, understated, ${STYLE}`,
+    art: `ornate fantasy pendant: irregular grey volcanic-glass shard pendant, raw drilled hole, plain cord, crafted equippable trinket, ${STYLE}`,
   },
   {
     key: 'scorch_medallion',
@@ -1106,7 +1106,7 @@ const ACCESSORIES: CatalogItem[] = [
     region: '서쪽 화산',
     tone: '영웅담',
     lore: '화산 마을이 비워지던 날, 끝까지 남아 사람들을 길로 밀어 보낸 자에게 마을이 뒤늦게 만들어 준 훈장이다. 번듯한 금속이 아니라 그가 그날 끝내 버리지 못한 문고리를 두드려 편 것이다. 한쪽 면은 열에 검게 그을려 무늬가 다 뭉개졌다. 본인은 받기를 한사코 사양하며, 자기는 그저 등을 떠밀었을 뿐 데리고 나온 건 사람들 제 발이라 했다. 마을은 그 사양을 한 번 듣고는, 그 그을린 면이야말로 훈장이라며 그의 손에 도로 쥐여 주었다. 그는 결국 그것을 받았고, 그을린 면이 가슴에 닿게 돌려 달았다.',
-    art: `crude hammered medallion from a door-ring, one face heat-blackened, plain ribbon, heroic, ${STYLE}`,
+    art: `ornate fantasy pendant: crude hammered medallion from a door-ring, one face heat-blackened, plain ribbon, heroic, crafted equippable trinket, ${STYLE}`,
   },
   {
     key: 'cinder_eye_charm',
@@ -1115,7 +1115,7 @@ const ACCESSORIES: CatalogItem[] = [
     region: '서쪽 화산',
     tone: '기괴',
     lore: '화산 곁에서 주운, 한가운데 붉은 점이 박힌 검은 돌을 깎은 부적이다. 그 점이 가늘게 뜬 눈을 닮았다 하여 그런 이름이 붙었다. 낮에는 그저 무늬일 뿐인데, 불 곁에서는 그 점이 정말로 불빛을 머금어 한 번씩 깜빡이는 것처럼 보인다. 이걸 차고부터 한 화부는 화덕 앞에서 늘 누가 어깨 너머로 같이 불을 들여다보는 기분이 든다고 했다. 그는 일을 그만두지는 않았다. 다만 그날 이후로 화덕을 등지고 앉는 버릇이 생겼고, 부적은 옷 안쪽으로 돌려 차 붉은 점이 제 살갗을 보게 두었다.',
-    art: `black stone charm with a red eye-like inclusion, faint glow near fire, plain cord, eerie, ${STYLE}`,
+    art: `ornate fantasy charm amulet: black stone charm with a red eye-like inclusion, faint glow near fire, plain cord, eerie, crafted equippable trinket, ${STYLE}`,
   },
   {
     key: 'feather_locket',
@@ -1124,7 +1124,7 @@ const ACCESSORIES: CatalogItem[] = [
     region: '타락천사',
     tone: '비애',
     lore: '추락한 자리에서 주운 검은 깃 한 올을, 작은 쇠 로켓 안에 접어 넣어 다니는 펜던트다. 로켓을 열면 그 깃만 들어 있고 다른 것은 없다. 그런데도 가진 자들은 그것을 좀처럼 열지 않는다. 한 번 열어 본 사람이 말하길, 닫으려 보니 깃이 처음 넣은 모양과 미세하게 다르게 접혀 있더라는 것이다. 누가 손댄 흔적은 없었다. 그는 그것을 도로 천천히 접어 넣고 로켓을 닫은 뒤, 그 뒤로 다시 열지 않았다. 로켓은 지금도 누군가의 옷깃 안에서, 그 안의 깃이 제 나름의 시간을 사는 채로 닫혀 있다.',
-    art: `small iron locket on a fine chain, a single folded black feather inside, tarnished, melancholic, ${STYLE}`,
+    art: `ornate fantasy pendant: small iron locket on a fine chain, a single folded black feather inside, tarnished, melancholic, crafted equippable trinket, ${STYLE}`,
   },
   {
     key: 'fallen_bell_charm',
@@ -1133,7 +1133,7 @@ const ACCESSORIES: CatalogItem[] = [
     region: '타락천사',
     tone: '장엄',
     lore: '추락한 성가대가 울리던 종이 깨졌을 때, 그 파편 가운데 가장 맑은 소리가 남은 한 조각을 갈아 만든 작은 부적이다. 손끝으로 가만히 튕기면, 깨진 종의 것이라곤 믿기지 않는 길고 곧은 한 음이 난다. 그 음이 울린 자리에서는 시끄럽던 사람들이 까닭 없이 한순간 입을 멈춘다. 다투던 자리에서 누가 무심코 그것을 튕겼다가, 다툼이 그 한 음에 통째로 식어 버린 일이 있은 뒤로, 사람들은 그것을 함부로 튕기지 않게 되었다. 부서진 것에서 떼어낸 한 조각이, 멀쩡하던 종보다 더 멀리까지 또렷이 울린다.',
-    art: `small ground-down bell-fragment charm, faint clear ring when struck, tarnished gilt, solemn, ${STYLE}`,
+    art: `ornate fantasy charm amulet: small ground-down bell-fragment charm, faint clear ring when struck, tarnished gilt, solemn, crafted equippable trinket, ${STYLE}`,
   },
   {
     key: 'crooked_halo_pin',
@@ -1142,7 +1142,7 @@ const ACCESSORIES: CatalogItem[] = [
     region: '타락천사',
     tone: '위트',
     lore: '한쪽이 푹 눌린, 비뚠 후광을 본뜬 옷핀이다. 주인이 바뀔 때마다 앞사람이 남긴 쪽지가 한 장씩 늘어 핀 뒤에 끼워진다. 첫 장은 그 눌린 모양을 두고 천연덕스레 원래 이런 양식이라 우긴다. 둘째 장은 그 우김을 한참 의심하다 그냥 믿기로 했다며 웃는다. 셋째 장은 믿고 나니 어쩐지 어깨가 펴진다고, 다음 사람도 그러길 바란다고 적는다. 지금 단 사람은 세 장을 다 읽고 거울 앞에서 비뚠 후광을 들여다보다, 제 굽은 어깨를 슬쩍 펴고는 픽 웃었다. 그러고 넷째 쪽지에 과연 그렇네요라고 적어 끼웠다. 다섯째 장은 다음 사람 몫으로 비워 두었다.',
-    art: `small bent gold halo-ring lapel pin, off-center curve, tarnished sheen, ironic, ${STYLE}`,
+    art: `ornate fantasy ring: small bent gold halo-ring lapel pin, off-center curve, tarnished sheen, ironic, crafted equippable trinket, ${STYLE}`,
   },
   {
     key: 'hollow_prayer_bead',
@@ -1151,7 +1151,7 @@ const ACCESSORIES: CatalogItem[] = [
     region: '타락천사',
     tone: '수수께끼',
     lore: '추락한 성가대가 손가락으로 굴리며 기도하던 염주에서 떨어져 나온 단 한 알의 구슬이다. 다른 구슬과 달리 속이 비어, 흔들면 안에서 무언가 작은 것이 또르르 구른다. 한 사람이 귀에 대고 그 구르는 소리를 오래 들었더니, 어떤 짧은 말의 운율과 꼭 같더라고 했다. 그러나 그게 무슨 기도였는지는 끝내 떠올리지 못했다. 그는 구슬을 깨 보려다 그만두고, 다시 끈에 꿰어 목에 걸었다. 그 뒤로 그는 무심코 무언가를 셀 때면 늘 그 운율을 따라 셌고, 본인은 그걸 알아채지 못했다.',
-    art: `single hollow prayer bead on a frayed cord, faint rattle inside, worn dark, mysterious, ${STYLE}`,
+    art: `ornate fantasy cord talisman: single hollow prayer bead on a frayed cord, faint rattle inside, worn dark, mysterious, crafted equippable trinket, ${STYLE}`,
   },
   {
     key: 'gamblers_lucky_coin',
@@ -1160,7 +1160,7 @@ const ACCESSORIES: CatalogItem[] = [
     region: '일반',
     tone: '위트',
     lore: '빚 받으러 다니던 자의 기록. 「대상: 노름꾼. 회수액: 0. 사망 확인. 유품: 동전 하나, 끈에 꿰어 목에 검.」 동전을 장부에 올리려 양면을 확인하다 옆에 적어 둠. 「앞뒤가 같은 그림. 어느 쪽을 불러도 그 그림이 나옴. 본인은 평생 한 판도 안 졌다고 떠들었다는데, 사실로 보임.」 빚은 끝내 못 받았다. 동전은 회수품 상자에 들어갔다가, 다음 빚쟁이가 행운이라며 제 목에 걸고 나갔다. 그자도 한 판을 안 졌고, 그자의 빚도 똑같이 늘어만 갔다.',
-    art: `worn old coin on a cord, both faces identical, rubbed-smooth edges, ironic, ${STYLE}`,
+    art: `ornate fantasy cord talisman: worn old coin on a cord, both faces identical, rubbed-smooth edges, ironic, crafted equippable trinket, ${STYLE}`,
   },
   {
     key: 'widowers_band',
@@ -1169,7 +1169,7 @@ const ACCESSORIES: CatalogItem[] = [
     region: '일반',
     tone: '비애',
     lore: '한 사람이 두 개의 반지를 한 끈에 꿰어 목에 걸고 다녔다. 하나는 제 손가락에 맞고, 다른 하나는 누가 봐도 더 가는 손의 것이었다. 가는 쪽 반지에 대해 누가 물으면 그는 말없이 그것을 한 번 만지고는 다른 이야기를 시작했다. 두 반지는 늘 같은 끈에 함께 있었지만 한 번도 같은 손가락에 끼워지지는 못했다. 그가 세상을 뜬 뒤 사람들이 반지를 둘로 나누려 하자, 누가 그러지 말자고 했다. 떼어 놓는 것이 더 잔인하다고. 그래서 두 반지는 끈째 그대로 그와 함께 묻혔다.',
-    art: `two band rings of different sizes on one cord, both tarnished, plain, sorrowful, ${STYLE}`,
+    art: `ornate fantasy cord talisman: two band rings of different sizes on one cord, both tarnished, sorrowful, crafted equippable trinket, ${STYLE}`,
   },
   {
     key: 'nameless_signet',
@@ -1178,7 +1178,7 @@ const ACCESSORIES: CatalogItem[] = [
     region: '일반',
     tone: '수수께끼',
     lore: '문장이 새겨진 인장반지인데, 그게 어느 가문의 것인지 아는 사람이 한 명도 없다. 오래된 족보를 뒤진 자도, 문장에 밝다는 노인도 고개를 저었다. 그런데 이 반지를 끼고 봉랍에 찍어 보내면, 받아 본 사람들이 하나같이 잠깐 자세를 고친다. 무슨 가문인지 모르면서도 무시하면 안 될 것 같은 기분이 든다는 것이다. 한 상인은 그 봉인이 찍힌 편지를 받고 답장의 첫 줄을 두 번 고쳐 더 정중하게 썼다고 한다. 이름이 사라진 문장이 어떻게 아직 그런 무게를 갖는지는 설명되지 않고, 반지는 다음 손에서도 같은 일을 한다.',
-    art: `signet ring with an unidentifiable crest, worn deep grooves, plain band, enigmatic, ${STYLE}`,
+    art: `ornate fantasy ring: signet ring with an unidentifiable crest, worn deep grooves, plain band, enigmatic, crafted equippable trinket, ${STYLE}`,
   },
   {
     key: 'grandmas_thimble_charm',
@@ -1187,7 +1187,7 @@ const ACCESSORIES: CatalogItem[] = [
     region: '일반',
     tone: '담백',
     lore: '한 집안에는 바느질을 쥐던 손이 떠나면 그가 쓰던 골무를 끈에 꿰어 다음 사람이 목에 거는 작은 풍습이 있었다. 영험을 바라서가 아니다. 그저 손가락 끝이 닳도록 무언가를 꿰매 준 사람이 있었다는 것을 잊지 않으려는 표식이다. 골무는 안쪽이 손가락 모양대로 반들반들 닳아 있어, 끼워 보면 그 사람 손끝 크기가 그대로 만져진다. 거창한 이야기는 없다. 다만 이걸 건 사람은 단추가 떨어졌을 때 한 번씩 손이 멈춰, 그 골무를 만지작거리다 천천히 제 손으로 단추를 단다.',
-    art: `worn metal thimble strung on thread, inside polished to a fingertip shape, plain, understated, ${STYLE}`,
+    art: `ornate fantasy charm amulet: worn metal thimble strung on thread, inside polished to a fingertip shape, crafted equippable trinket, ${STYLE}`,
   },
   {
     key: 'first_tooth_locket',
@@ -1196,7 +1196,7 @@ const ACCESSORIES: CatalogItem[] = [
     region: '일반',
     tone: '비애',
     lore: '아주 작은 쇠 로켓 안에, 더 작은 젖니 하나가 솜에 싸여 들어 있다. 어느 부모가 아이의 첫 이가 빠진 날 그것을 넣어 만들었다. 본래는 아이가 크면 웃으며 돌려줄 셈이었는데, 그 아이는 끝내 다음 이가 날 만큼 자라지 못했다. 부모는 그 로켓을 평생 목에서 풀지 않았고, 누구에게도 열어 보여 주지 않았다. 그 안에 무엇이 들었는지를 아는 사람은 손에 꼽고, 로켓은 끝내 한 번도 열리지 않은 채 그 부모가 묻히는 자리에 함께 들어갔다. 흙을 덮기 전, 누가 그 로켓을 옷깃 안으로 한 번 더 여며 주었다.',
-    art: `tiny iron locket on a fine chain, a milk tooth in cotton inside, never opened, mournful, ${STYLE}`,
+    art: `ornate fantasy pendant: tiny iron locket on a fine chain, a milk tooth in cotton inside, never opened, mournful, crafted equippable trinket, ${STYLE}`,
   },
   {
     key: 'merchants_scale_pendant',
@@ -1205,7 +1205,7 @@ const ACCESSORIES: CatalogItem[] = [
     region: '일반',
     tone: '일상',
     lore: '한 손바닥에 들어오는 작은 접시저울을 펜던트로 만든 것이다. 떠돌이 상인이 길에서 향료며 은부스러기를 잴 때 쓰다가, 쉴 참엔 그냥 목에 걸어 두었다. 양쪽 접시가 미세하게 안 맞아 늘 한쪽으로 살짝 기우는데, 상인은 그 기운 만큼을 평생 머릿속으로 빼고 셈했다. 한 번도 손님을 속인 적 없다는 그의 자부심은, 사실 이 어긋난 저울을 정직하게 셈하느라 더 들인 그 수고에서 나온 것이었다. 그가 늙어 저울을 물릴 때, 새 주인에게 가장 먼저 일러 준 것도 이건 늘 이쪽으로 기우니 그만큼 빼고 보라는 말이었다.',
-    art: `tiny balance-scale pendant, slightly uneven pans, brass worn bright, mundane, ${STYLE}`,
+    art: `ornate fantasy pendant: a finely crafted polished brass miniature balance scale, two engraved pans on a slender beam, hung from a small jeweled ring and fine chain loop, warm metallic gleam, crafted equippable trinket, ${STYLE}`,
   },
   {
     key: 'hero_ear_notch',
@@ -1214,7 +1214,7 @@ const ACCESSORIES: CatalogItem[] = [
     region: '일반',
     tone: '영웅담',
     lore: '어느 변방에서는 큰 싸움에서 사람들을 살린 자에게, 마을이 작은 쇠고리 하나를 귀에 꿰어 주었다. 가슴에 다는 훈장이 아니라 굳이 귀에 다는 데에는 까닭이 있었다. 본인은 잊고 살아도, 그를 마주 본 사람들이 먼저 그 고리를 알아보고 고개를 숙이라는 것이다. 이 고리의 주인은 제 무용담을 한 번도 입에 올리지 않았다. 올릴 일이 없었다. 장에 나가면 모르는 사람이 그를 보고 먼저 길을 비켰고, 술집에선 누가 조용히 그의 잔을 채웠다. 그가 까닭을 물으면 사람들은 그저 그 귀를 한 번 보고 웃었다.',
-    art: `simple iron ear-ring hoop, plain and small, worn smooth, quietly heroic, ${STYLE}`,
+    art: `ornate fantasy ring: simple iron ear-ring hoop, plain and small, worn smooth, quietly heroic, crafted equippable trinket, ${STYLE}`,
   },
   {
     key: 'liars_tongue_pin',
@@ -1223,7 +1223,7 @@ const ACCESSORIES: CatalogItem[] = [
     region: '일반',
     tone: '위트',
     lore: '한 이름난 허풍선이가 옷깃에 꽂고 다닌, 작은 혀 모양의 은핀이다. 그는 이걸 두고 내가 거짓말을 하면 이게 검게 변한다고 떠벌렸다. 사람들은 비웃었지만, 정작 그 핀이 검게 변한 걸 본 사람은 한 명도 없었다. 진실만 말해서가 아니라 그가 너무 천연덕스러워 무엇이 거짓인지 핀조차 헷갈렸기 때문이라는 농담이 돌았다. 그가 죽은 뒤에도 핀은 여전히 은빛이었다. 그러니 그의 평생이 다 진실이었거나, 끝까지 완벽한 거짓이었거나 둘 중 하나라는 말만, 그를 기억하는 사람들 사이에 농담처럼 남았다.',
-    art: `small silver tongue-shaped lapel pin, polished bright, never tarnished, ironic, ${STYLE}`,
+    art: `ornate fantasy brooch: small silver tongue-shaped lapel pin, polished bright, never tarnished, ironic, crafted equippable trinket, ${STYLE}`,
   },
   {
     key: 'quiet_compass_charm',
@@ -1232,7 +1232,7 @@ const ACCESSORIES: CatalogItem[] = [
     region: '일반',
     tone: '수수께끼',
     lore: '바늘이 달린 작은 나침반 부적인데, 그 바늘은 북을 가리키지 않는다. 차고 다니는 사람의 마음이 가장 어지러울 때, 바늘은 한 방향을 천천히 가리켰다가 다시 흔들린다. 그쪽으로 가 본 자들의 말은 제각각이다. 누구는 잊고 있던 사람을 만났다 했고, 누구는 아무것도 없는 들판이었다 했고, 누구는 그 길로 영영 돌아오지 않았다. 그래서 사람들은 이 바늘이 길이 아니라 다른 무언가를 가리킨다고 여긴다. 마음이 잔잔한 날에는 바늘도 가만하다. 그래서 부적을 가진 자들은 바늘이 움직이기 시작하면 대개 먼저 걸음을 멈춘다.',
-    art: `small compass charm, needle pointing nowhere fixed, dull brass case, mysterious, ${STYLE}`,
+    art: `ornate fantasy charm amulet: small compass charm, needle pointing nowhere fixed, dull brass case, mysterious, crafted equippable trinket, ${STYLE}`,
   },
   {
     key: 'beekeepers_bell',
@@ -1241,7 +1241,7 @@ const ACCESSORIES: CatalogItem[] = [
     region: '일반',
     tone: '일상',
     lore: '양봉가가 허리에 달고 다니던 아주 작은 놋종이다. 벌통을 살필 때 급한 동작 대신 이 종을 천천히 한 번 울리면 벌들이 덜 사납게 군다는 것을, 그는 평생의 경험으로 알았다. 무기도 부적도 아니다. 그저 성난 것 앞에서 서두르지 않는 법을 손목으로 익히게 해 주는 물건이다. 양봉가가 떠난 뒤 그 종을 물려받은 젊은이는, 벌이 아니라 화가 난 사람 앞에서도 그 종을 한 번 울리는 버릇이 생겼다. 그러고 나면 대개 일이 덜 사나워졌다. 종소리가 상대를 달랜 건지 제 손을 달랜 건지는, 젊은이 자신도 가리지 못했다.',
-    art: `tiny brass bell on a belt cord, soft worn sheen, faint clear ring, mundane, ${STYLE}`,
+    art: `ornate fantasy cord talisman: tiny brass bell on a belt cord, soft worn sheen, faint clear ring, crafted equippable trinket, ${STYLE}`,
   },
   {
     key: 'dueling_garter',
@@ -1250,7 +1250,7 @@ const ACCESSORIES: CatalogItem[] = [
     region: '일반',
     tone: '비애',
     lore: '결투에 나서는 자가 상대에게 받아 팔에 묶던 천 띠다. 이긴 자가 그것을 풀어 돌려주는 것이 오랜 예법이었다. 한 사람이 이 가터를 풀어 돌려줄 상대를 끝내 잃고, 그것을 평생 제 팔에 묶은 채 살았다. 이긴 것도 진 것도 아닌 결투가 세상에 있다는 것을, 그 빛바랜 천이 말없이 증언했다. 그가 죽은 뒤 누가 가터를 풀어 주려 했지만, 매듭이 너무 단단히 굳어 끝내 풀리지 않았다. 사람들은 그것을 묶인 그대로 두기로 했고, 그와 함께 묻을 때도 아무도 그 매듭 쪽으로 손을 가져가지 않았다.',
-    art: `faded cloth arm-garter, knot fused stiff with age, plain weave, sorrowful, ${STYLE}`,
+    art: `ornate fantasy cord talisman: faded cloth arm-garter, knot fused stiff with age, plain weave, sorrowful, crafted equippable trinket, ${STYLE}`,
   },
   {
     key: 'fools_crown_brooch',
@@ -1259,7 +1259,7 @@ const ACCESSORIES: CatalogItem[] = [
     region: '일반',
     tone: '위트',
     lore: '끝이 우스꽝스럽게 처진 작은 양철 왕관 모양의 브로치다. 한 광대가 나는 아무 나라도 다스리지 않는 왕이라며 가슴에 달고 다녔다. 사람들은 그 농을 웃어넘겼는데, 정작 그가 머문 곳에서는 다투던 자들이 그 앞에서 멋쩍어 화를 거두었다. 아무것도 다스리지 않는 왕이 화내는 일만큼은 제법 다스린 셈이다. 그가 떠난 뒤에도 그 브로치를 단 사람은 이상하게 시비에 잘 안 휘말렸다. 위엄이 없어 누구도 적으로 삼지 않았기 때문이다. 사람들은 그 처진 왕관을 보면 먼저 피식 웃었고, 웃고 나면 싸울 마음이 한 김 식었다.',
-    art: `small tin crown brooch with droopy points, cheap bright finish, comical, ${STYLE}`,
+    art: `ornate fantasy brooch: small tin crown brooch with droopy points, cheap bright finish, comical, crafted equippable trinket, ${STYLE}`,
   },
   {
     key: 'pilgrims_knot_cord',
@@ -1268,7 +1268,7 @@ const ACCESSORIES: CatalogItem[] = [
     region: '일반',
     tone: '담백',
     lore: '한 가닥의 거친 끈에 크기도 모양도 제각각인 매듭이 빼곡히 묶여 있다. 글을 모르던 한 순례자가 길에서 마음에 새길 만한 일이 있을 때마다 매듭을 하나씩 더 지었다. 좋은 일인지 슬픈 일인지는 매듭만 봐서는 알 수 없다. 본인도 나중에는 어느 매듭이 무엇이었는지 거의 다 잊었다고 했다. 그래도 끈을 손가락으로 천천히 훑으면, 잊은 일들이 거기 분명히 있었다는 감각만은 또렷이 만져졌다. 그는 그 끈을 풀지 않고 그대로 다음 사람에게 넘겼고, 받은 사람은 제 일이 생길 때마다 그 끝에 새 매듭을 보탰다.',
-    art: `single rough cord densely tied with mismatched knots, frayed ends, plain, understated, ${STYLE}`,
+    art: `ornate fantasy cord talisman: single rough cord densely tied with mismatched knots, frayed ends, crafted equippable trinket, ${STYLE}`,
   },
   {
     key: 'oathkeeper_token',
@@ -1277,7 +1277,7 @@ const ACCESSORIES: CatalogItem[] = [
     region: '일반',
     tone: '영웅담',
     lore: '둘로 쪼개지는 작은 나무패다. 같은 맹세를 한 두 사람이 한 조각씩 나눠 갖고, 살아 다시 만나는 날 그것을 맞춰 보기로 했다. 이 조각의 주인은 약속한 자리에 해마다 나갔다. 몇 번은 헛걸음이었고 그래도 또 갔다. 그러기를 여러 해, 어느 장날 사람들 틈에서 두 노인이 동시에 품을 뒤지더니 똑같이 닳은 나뭇조각을 꺼냈다. 맞춰 보니 결이 한 치도 어긋나지 않고 딱 들어맞았다. 둘은 한참을 그냥 웃었다고 한다. 그 뒤로 그들은 그 패를 다시 쪼개지 않고 못 하나에 같이 걸어, 약속은 지키라고 있는 것이라는 말을 보탰다.',
-    art: `half of a split wooden token on a cord, jagged broken edge, worn smooth, heroic solemn, ${STYLE}`,
+    art: `ornate fantasy cord talisman: half of a split wooden token on a cord, jagged broken edge, worn smooth, heroic solemn, crafted equippable trinket, ${STYLE}`,
   },
   {
     key: 'grave_dust_vial',
@@ -1286,7 +1286,7 @@ const ACCESSORIES: CatalogItem[] = [
     region: '일반',
     tone: '기괴',
     lore: '엄지만 한 유리병에 곱고 거뭇한 먼지가 절반쯤 담겨 목에 걸려 있다. 무엇의 먼지냐는 물음에 첫 주인은 끝내 답하지 않았다. 이상한 것은 병을 아무리 흔들어도 안의 먼지가 늘 같은 자리에 가라앉는다는 점이다. 기울여 두어도 다음 날이면 제자리다. 그것을 본 사람들은 더는 흔들지 않게 되었다. 무언가가 그 안에서 가만히 있고 싶어 한다면 굳이 깨워 좋을 일이 없다고 여겼기 때문이다. 가진 자도 대개 병을 옷 안쪽으로 돌려 차, 그 가라앉은 면이 제 살갗을 보게 두고 다닌다.',
-    art: `thumb-sized glass vial of dark fine dust on a cord, dust always settled flat, eerie, ${STYLE}`,
+    art: `ornate fantasy cord talisman: thumb-sized glass vial of dark fine dust on a cord, dust always settled flat, eerie, crafted equippable trinket, ${STYLE}`,
   },
   {
     key: 'lullaby_music_charm',
@@ -1295,7 +1295,7 @@ const ACCESSORIES: CatalogItem[] = [
     region: '일반',
     tone: '수수께끼',
     lore: '아주 작은 태엽이 달린 쇠 부적이다. 옆 손잡이를 감으면 가느다란 가락이 흘러나오는데, 누가 들어도 처음 듣는 곡인데 끝을 미리 흥얼거릴 수 있다고 한다. 마치 아주 오래전 잊은 노래를 다시 떠올리는 것처럼. 태엽을 끝까지 감아 본 사람은 없다. 어느 지점부터는 더 안 감기고, 그 자리에서 가락이 한 마디를 빼먹은 채 다음으로 넘어간다. 빠진 그 한 마디를 떠올리려 애쓴 사람들은 하나같이 그날 밤 깊고 이상한 잠을 잤고, 깨어나서는 그 마디 대신 전혀 다른 것을 또렷이 기억하고 있었다.',
-    art: `tiny wind-up music charm of iron, small crank, faint tune, missing one note, mysterious, ${STYLE}`,
+    art: `ornate fantasy charm amulet: tiny wind-up music charm of iron, small crank, faint tune, missing one note, mysterious, crafted equippable trinket, ${STYLE}`,
   },
   {
     key: 'saltworkers_ring',
@@ -1304,7 +1304,7 @@ const ACCESSORIES: CatalogItem[] = [
     region: '일반',
     tone: '일상',
     lore: '소금밭에서 평생 일한 사람의 손가락에 맞춰 닳은 무쇠 반지다. 짠물에 종일 잠겨 있던 탓에 표면이 우둘투둘 삭았고 색도 다 빠졌다. 값나가는 물건은 아니다. 다만 이 반지를 낀 손이 퍼 올린 소금이 이름 모를 수많은 부엌의 국 맛을 냈다. 화려한 무용담은 한 줄도 안 붙었지만, 그 손이 없었다면 싱거웠을 끼니가 헤아릴 수 없이 많았다. 반지를 물려받은 다음 일꾼도 짠물에 손을 담그며 같은 자리가 또 그렇게 삭아 갔고, 그동안 누군가의 국은 계속 간이 맞았다.',
-    art: `pitted salt-corroded iron band ring, color leached out, worn thin, mundane, ${STYLE}`,
+    art: `ornate fantasy ring: pitted salt-corroded iron band ring, color leached out, worn thin, crafted equippable trinket, ${STYLE}`,
   },
   {
     key: 'last_breath_amulet',
@@ -1313,7 +1313,7 @@ const ACCESSORIES: CatalogItem[] = [
     region: '일반',
     tone: '비애',
     lore: '속이 빈 작은 쇠 부적이다. 어느 마을에는 떠나는 사람의 마지막 숨을 이 안에 담아, 남는 이가 목에 거는 풍습이 있었다. 그 안에 정말 무엇이 담겼는지는 누구도 확인할 수 없고, 확인하려 열어 본 자도 없다. 열면 그 한 숨이 끝내 흩어진다고 믿었기 때문이다. 그래서 부적은 평생 닫힌 채로만 전해진다. 가진 자는 그것을 열어 무엇이 있나 보는 대신, 추운 날이면 두 손에 감싸 쥐었다. 비어 있을지도 모르는 것을 비어 있지 않다고 믿는 일이, 그 손에게는 하루를 더 살아갈 힘이 되었다.',
-    art: `small hollow sealed iron amulet, never opened, soft hand-worn sheen, mournful, ${STYLE}`,
+    art: `ornate fantasy charm amulet: small hollow sealed iron amulet, never opened, soft hand-worn sheen, mournful, crafted equippable trinket, ${STYLE}`,
   },
   {
     key: 'mummers_false_medal',
@@ -1322,7 +1322,7 @@ const ACCESSORIES: CatalogItem[] = [
     region: '일반',
     tone: '위트',
     lore: '한 떠돌이 연희패가 무대에서 위대한 장군 역을 할 때 가슴에 달던, 누가 봐도 가짜인 양철 훈장이다. 그것을 늘 달던 늙은 배우는 진짜 전장에는 한 발도 디딘 적이 없었다. 그런데 그가 그 훈장을 달고 풀어내는 무용담이 어찌나 그럴듯한지, 진짜 노병들조차 술자리에서 그 이야기에 잔을 들었다. 어떤 노병은 제가 묻어 둔 옛일을 그 가짜 장군의 입을 빌려 처음으로 소리 내 울었다고 한다. 가짜 훈장을 단 가짜 장군이 한 일이라곤 사람들을 한바탕 웃고 울린 것뿐인데, 진짜 장군 중에도 그걸 못 해낸 이가 많았다.',
-    art: `cheap tin "war medal", obviously fake, flaking paint, ribbon frayed, ironic, ${STYLE}`,
+    art: `ornate fantasy pendant: cheap tin "war medal", obviously fake, flaking paint, ribbon frayed, ironic, crafted equippable trinket, ${STYLE}`,
   },
   {
     key: 'storm_warned_bead',
@@ -1331,7 +1331,7 @@ const ACCESSORIES: CatalogItem[] = [
     region: '일반',
     tone: '일상',
     lore: '바닷가 마을 어부들이 목에 걸던, 거뭇한 돌을 굴려 만든 구슬이다. 큰 비바람이 오기 하루쯤 전이면 구슬 표면에 자잘한 물기가 맺혔다. 신통한 점이 아니라 그 돌이 습기를 잘 머금는 성질일 뿐임을 늙은 어부들도 알았다. 그래도 그들은 매일 아침 그 구슬을 손등으로 한 번 쓸어 보고 배를 띄울지 정했다. 덕분에 그 마을은 폭풍에 배를 잃는 일이 유난히 적었다. 대단한 비밀이 아니라, 매일 한 번 손등으로 확인하는 그 작은 습관이 여러 사람을 뭍에 붙들어 두었다. 새 어부도 첫 배를 받는 날 가장 먼저 이 구슬부터 목에 걸었다.',
-    art: `dark hygroscopic stone bead on a cord, faint surface beading, plain, mundane, ${STYLE}`,
+    art: `ornate fantasy cord talisman: dark hygroscopic stone bead on a cord, faint surface beading, crafted equippable trinket, ${STYLE}`,
   },
   {
     key: 'cartographers_eye',
@@ -1340,7 +1340,7 @@ const ACCESSORIES: CatalogItem[] = [
     region: '일반',
     tone: '수수께끼',
     lore: '한 지도장이가 늘 한쪽 눈에 끼고 다닌 둥근 유리알 펜던트다. 이걸 통해 들여다보면 멀쩡한 지도에 없던 가느다란 길이 하나 더 보인다고 그는 주장했다. 사람들은 노안의 헛것이라 여겼다. 그러나 그가 죽은 뒤 남긴 지도들에는 실제로 누구도 모르던 지름길이 군데군데 그어져 있었고, 그 길들은 모두 옳았다. 유리알을 들여다본 다른 이들 눈에는 끝내 아무것도 보이지 않았다. 그가 쥐었을 때만 한 겹이 더 보였고, 그가 떠나자 그 한 겹도 함께 닫혔다. 지도장이의 지도는 지금도 그 옳은 지름길을 따라 사람을 실어 나른다.',
-    art: `round glass-lens pendant on a chain, faintly clouded, brass rim, mysterious, ${STYLE}`,
+    art: `ornate fantasy pendant: round glass-lens pendant on a chain, faintly clouded, brass rim, mysterious, crafted equippable trinket, ${STYLE}`,
   },
   {
     key: 'standardbearer_clasp',
@@ -1349,7 +1349,7 @@ const ACCESSORIES: CatalogItem[] = [
     region: '일반',
     tone: '영웅담',
     lore: '깃대를 어깨에 동여매던 가죽끈의 쇠 죔쇠다. 기수는 두 손으로 싸울 수 없다. 깃을 놓는 순간 줄이 흔들리기 때문이다. 그래서 이 죔쇠는 한 번 채우면 본인 손으로는 풀 수 없게 만들어졌다. 깃과 함께 끝까지 가겠다는 뜻이었다. 한 기수가 쓰러진 뒤에도 죔쇠는 끝까지 채워져 있었고, 동료들은 깃을 내리기 위해 그것을 칼로 끊어야 했다. 끊긴 죔쇠는 그 자체로 한 사람의 약속이 어디서 멈췄는지를 보여 준다. 그래서 새 기수는 늘 새 죔쇠를 쓴다. 끊긴 것을 다시 잇는 일은 하지 않는다.',
-    art: `iron strap-clasp, cut through cleanly, leather remnant attached, heroic solemn, ${STYLE}`,
+    art: `ornate fantasy brooch: iron strap-clasp, cut through cleanly, leather remnant attached, heroic solemn, crafted equippable trinket, ${STYLE}`,
   },
   {
     key: 'whispering_keyring',
@@ -1358,7 +1358,7 @@ const ACCESSORIES: CatalogItem[] = [
     region: '일반',
     tone: '기괴',
     lore: '낡은 열쇠 여럿이 꿰인 쇠고리다. 그 열쇠들이 어느 문의 것인지는 아무도 모른다. 가진 자가 잠들면 열쇠들이 아주 작게 저희끼리 부딪는 소리를 낸다고 한다. 바람 한 점 없는 방에서도 그렇다. 한 사람이 그 소리를 흉내 내 보려다, 그게 부딪는 소리가 아니라 무언가 아주 낮게 속삭이는 소리에 더 가깝다는 걸 알아채고는 고리를 방 밖 멀리 치웠다. 그러고도 그날 밤 그는 잠결에 한 번씩, 멀리 둔 그 고리 쪽으로 귀를 기울이는 자신을 발견했다. 열쇠는 본래 무언가를 여는 물건이라, 사람들은 그 고리를 늘 잠그는 상자에 넣어 둔다.',
-    art: `iron ring of several old mismatched keys, faint clinking, rust-mottled, eerie, ${STYLE}`,
+    art: `ornate fantasy ring: iron ring of several old mismatched keys, faint clinking, rust-mottled, eerie, crafted equippable trinket, ${STYLE}`,
   },
   {
     key: 'plain_iron_band',
@@ -1367,7 +1367,7 @@ const ACCESSORIES: CatalogItem[] = [
     region: '일반',
     tone: '담백',
     lore: '아무 무늬도, 보석도, 글자도 없는 무쇠 가락지다. 누가 만들었는지, 누구의 것이었는지에 대한 기록이 하나도 없다. 값으로 치면 거의 없는 것과 같다. 그런데도 이것이 손에서 손으로 오래 전해진 이유는 단 하나, 끼면 이상하리만치 손에 잘 맞고 거추장스럽지 않다는 것뿐이다. 화려한 반지는 자랑하느라 자주 빼 두지만, 이 가락지는 낀 사람이 끼고 있다는 것조차 잊는다. 그렇게 잊힌 채 늘 손가락에 있다가, 어느 날 빼려 하면 그제야 낀 줄을 알고 잠깐 멈칫한다. 그러고는 대개 도로 끼운다.',
-    art: `utterly plain iron band ring, no markings, comfortably worn, understated, ${STYLE}`,
+    art: `ornate fantasy ring: utterly plain iron band ring, no markings, comfortably worn, crafted equippable trinket, ${STYLE}`,
   },
   {
     key: 'child_string_bracelet',
@@ -1376,7 +1376,7 @@ const ACCESSORIES: CatalogItem[] = [
     region: '일반',
     tone: '비애',
     lore: '색실을 어설프게 꼬아 만든 작은 팔찌다. 매듭이 비뚤고 색 배치도 엉망이라 솜씨라곤 찾아볼 수 없다. 한 아이가 떠나는 누군가의 손목에 직접 묶어 주며 다시 올 때까지 풀지 마, 라고 했다고 한다. 그것을 받은 사람은 그 말을 글자 그대로 지켰다. 실이 다 삭아 색이 바래고 한 가닥씩 끊어지는 동안에도 끝내 풀지 않았다. 잘 만든 보석 팔찌였다면 진작 바꿔 찼을 것이다. 못 만들어서, 오직 그 아이만 그렇게 만들 수 있어서, 그것은 영영 바꿀 수 없는 물건이 되었다. 손목에 거의 실밥만 남은 지금도 그는 그것을 풀지 않는다.',
-    art: `crude frayed colored-thread bracelet, uneven knots, faded colors, sorrowful, ${STYLE}`,
+    art: `ornate fantasy cord talisman: crude frayed colored-thread bracelet, uneven knots, faded colors, sorrowful, crafted equippable trinket, ${STYLE}`,
   },
   {
     key: 'lighthouse_keepers_charm',
@@ -1385,7 +1385,7 @@ const ACCESSORIES: CatalogItem[] = [
     region: '일반',
     tone: '영웅담',
     lore: '등대지기가 평생 목에 걸고 있던, 손톱만 한 유리 조각 부적이다. 본래는 깨진 등대 렌즈의 한 귀퉁이라고 한다. 그는 단 하룻밤도 불을 꺼뜨리지 않았다. 폭풍에 손이 찢기고 기름이 떨어진 밤에도, 이 유리 조각을 손에 꼭 쥐고 어떻게든 빛을 살려 두었다. 그 빛을 보고 살아 돌아온 배의 수는 헤아릴 수 없는데, 정작 그 배들의 사람들은 등대지기의 얼굴을 한 번도 보지 못했다. 그들이 본 것은 늘 빛뿐이었다. 등대지기가 떠난 뒤 새 지기가 그 부적을 물려받았고, 불은 그날 밤에도 꺼지지 않았다.',
-    art: `tiny chipped lighthouse-lens glass shard on a cord, sea-clouded, plain, heroic, ${STYLE}`,
+    art: `ornate fantasy charm amulet: tiny chipped lighthouse-lens glass shard on a cord, sea-clouded, heroic, crafted equippable trinket, ${STYLE}`,
   },
   {
     key: 'mourners_jet_brooch',
@@ -1394,7 +1394,7 @@ const ACCESSORIES: CatalogItem[] = [
     region: '일반',
     tone: '담백',
     lore: '윤이 죽은 검은 흑옥을 둥글게 갈아 만든 수수한 브로치다. 상을 당한 사람이 옷깃에 다는 것으로, 화려할 이유가 처음부터 없는 물건이다. 만든 장인도 일부러 빛을 죽여 깎았다. 누가 이 브로치를 단 것을 보면, 사람들은 까닭을 묻는 대신 목소리를 한 톤 낮췄다. 그 작은 검은 점 하나가 길게 설명하지 않아도 한 사람의 사정을 다 말해 주었기 때문이다. 떠들썩하던 자리도 그것을 본 누가 슬쩍 옆구리를 찌르면 한 김 가라앉았다. 빛나기 위해서가 아니라 빛나지 않기 위해 만들어진 것이 제 몫을 다하는, 드문 경우다.',
-    art: `plain round matte jet brooch, deliberately unpolished, simple pin, understated, ${STYLE}`,
+    art: `ornate fantasy brooch: plain round matte jet brooch, deliberately unpolished, simple pin, crafted equippable trinket, ${STYLE}`,
   },
   {
     key: 'grin_in_glass_pendant',
@@ -1403,7 +1403,7 @@ const ACCESSORIES: CatalogItem[] = [
     region: '일반',
     tone: '기괴',
     lore: '맑은 유리 안에 작은 무언가가 굳어 들어간 펜던트다. 빛에 비춰 들여다보면 그 안의 형체가 사람이 살짝 웃는 입매를 묘하게 닮았다. 만든 자는 그저 우연히 생긴 기포라고 했다. 그런데 이걸 오래 지닌 사람들이 입을 모으는 말이 있다. 기분이 좋은 날에는 그 웃음이 평범해 보이고, 마음이 가라앉은 날에는 그게 비웃는 것처럼 보인다는 것이다. 유리 속 형체는 변하지 않는다. 변하는 것은 늘 들여다보는 쪽이다. 그 사실을 깨닫고 나면 사람들은 그것을 멀리하기는커녕, 제 마음이 어느 쪽인지 보려고 더 자주 들여다본다.',
-    art: `clear glass pendant with a small grin-shaped inclusion, lensing the light, eerie, ${STYLE}`,
+    art: `ornate fantasy pendant: clear glass pendant with a small grin-shaped inclusion, lensing the light, eerie, crafted equippable trinket, ${STYLE}`,
   },
   {
     key: 'last_call_tavern_token',
@@ -1412,7 +1412,7 @@ const ACCESSORIES: CatalogItem[] = [
     region: '일반',
     tone: '일상',
     lore: '어느 술집에서 외상 손님에게 내주던 나무패다. 한 잔 값을 패에 달아 두고 받아 가, 갚으면 돌려주는 식이었다. 한 단골이 이 패를 받아 들곤 먼 길을 떠났는데, 다들 저건 영 못 받겠다며 웃었다. 주인은 그 패를 굳이 벽 한가운데 걸어 두고, 올 때마다 손님들에게 저 사람 한 잔 값이 우리 집에서 제일 비싼 술이라며 너스레를 떨었다. 그러길 몇 해, 머리가 허예진 그 단골이 어느 날 문을 밀고 들어와 패부터 가리키며 그 비싼 술 한 잔 갚으러 왔소 했다. 그날 술집은 외상 갚는 자리가 아니라 잔치판이 되었고, 패는 갚인 뒤에도 그 자리에 그대로 걸렸다.',
-    art: `worn wooden tavern tab token on a cord, a tally never settled, ale-stained, mundane, ${STYLE}`,
+    art: `ornate fantasy cord talisman: worn wooden tavern tab token on a cord, a tally never settled, ale-stained, crafted equippable trinket, ${STYLE}`,
   },
   {
     key: 'knotted_memory_cord',
@@ -1421,7 +1421,7 @@ const ACCESSORIES: CatalogItem[] = [
     region: '일반',
     tone: '수수께끼',
     lore: '글을 모르던 한 사람이, 잊고 싶지 않은 일이 생길 때마다 끈에 매듭을 하나씩 지어 기록 대신 삼았다. 매듭의 모양과 간격에 그만의 규칙이 있었다. 그가 떠난 뒤 끈만 남았는데, 매듭은 분명 무언가를 또렷이 적고 있으나 그것을 읽을 수 있는 사람이 더는 없다. 한 학자가 풀이를 시도했다. 그런데 한 매듭을 풀어 헤치면 그 안의 뜻도 함께 풀려 사라지는 듯했다. 두 매듭을 풀자 두 가지를 잃었다. 학자는 세 번째에서 손을 떼었고, 끈은 그 뒤로 묶인 그대로 보관된다. 읽지 못하는 기록이라도 누군가에게 분명 중요했다는 사실만은, 남은 매듭들이 끝까지 증언한다.',
-    art: `single cord tied with a deliberate sequence of knots, undeciphered, frayed, mysterious, ${STYLE}`,
+    art: `ornate fantasy cord talisman: a coiled braided leather cord bound with a neat row of decorative knots and a few small carved bone beads, tidy looped arrangement with a fastening, crafted equippable trinket, ${STYLE}`,
   },
 ];
 
