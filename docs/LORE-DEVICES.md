@@ -166,3 +166,17 @@
 - grandmas_thimble_charm — 손 떠나면 골무를 다음 사람이 거는 풍습
 - first_tooth_locket — 끝내 안 연 채 함께 묻힌 로켓
 - merchants_scale_pendant — 기운 저울을 빼고 셈한 정직의 수고
+
+## 장신구 배치3 (12) — 전부 일반(정서로 승부)
+- hero_ear_notch — 귀고리 보고 먼저 알아보는 풍습
+- liars_tongue_pin — 죽은 뒤에도 은빛인 핀 농담
+- quiet_compass_charm — 어지러울 때만 가리키는 바늘
+- beekeepers_bell — 벌통 손버릇이 화난 사람 앞에서도
+- dueling_garter — 굳어 못 푸는 매듭, 그대로 묻음
+- fools_crown_brooch — 화만은 다스린 처진 왕관
+- pilgrims_knot_cord — 잊었으나 손끝엔 남은 매듭
+- oathkeeper_token — 맞출 이 없어도 나간 자리, 못에 걸림
+- grave_dust_vial — 늘 같은 자리에 가라앉아 안 흔들게 됨
+- lullaby_music_charm — 빠진 한 마디와 그날 밤 이상한 잠
+- saltworkers_ring — 그 손이 퍼 올린 소금이 낸 국 맛
+- last_breath_amulet — 안 연 채 거는 풍습, 추운 날 감싸 쥠
