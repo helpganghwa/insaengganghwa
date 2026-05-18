@@ -111,3 +111,17 @@
 - riddle_lamellar — 빈 칸 채우면 사례한다는 장터 방
 - grandmother_quilt_vest — 떠나보낸 봇짐 목록
 - rune_anchor_greaves — 차고 달리기 마을 내기
+
+## 방어구 배치3 (12) — 비문서형 위주(계열 쏠림 방지)
+- carnival_breastplate — 분장실에서 칠 벗겨 자국 발견하는 장면
+- deserter_cloak — 장날 문장 자국을 사람들이 알아보는 장면
+- hide_rain_cowl — 사냥꾼이 새내기에게 던지며 한마디
+- fallen_halo_circlet — 거울 앞에서 우기는 1인극 장면
+- orc_wardrum_rig — 북 박자에 줄이 한 덩어리로 움직이는 장면
+- forge_apron — 대장장이의 반복되는 하루 동작
+- oath_kite_shield — 안쪽 흐린 이름들을 손끝으로 짚는 장면
+- hollow_visor_helm — 추운 날 면갑 입김을 본 보초 목격
+- traveler_patch_coat — 천 받던 순간들의 회상(누구에게)
+- marsh_root_buckler — 엮어 쥐여 주는 마지막 + 빈 문가
+- wailing_mail — 옆에서 자던 이가 자리를 옮기는 장면
+- dusk_paladin_plate — 성문 닫히던 그 순간의 장면
