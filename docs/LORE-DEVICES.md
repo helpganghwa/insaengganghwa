@@ -138,3 +138,17 @@
 - herald_banner_cloak — 깃 잘라 나눠 두른 자들이 못 내려놓는 장면
 - late_mirror_shield — 거울 속 얼굴이 안 한 입 모양을 짓는 장면
 - worn_road_boots — 주인 셋 거친, 사연 없는 사실들
+
+## 장신구 배치1 (12) — 권역 짙은 늪/오크/룬
+- marsh_pebble_charm — 첫 단독 늪길 통과의례 풍습
+- bog_tooth_pendant — 비철마다 옷깃 안으로 돌려 차는 버릇 변화
+- frogcall_whistle — 호각 한 번에 마을이 둘로 갈리는 입씨름
+- drowned_ring — 늪 가장 잔잔한 자리 돌 곁 장면
+- orc_brag_torc — 아이들이 흉내 내는 흉내놀이
+- warband_knuckle_charm — 새 어귀지기에게 부적 채워 주는 의식
+- orc_ration_tag — 배급 줄 아침 풍경
+- chiefs_riddle_bead — 대대로 같은 자리만 닳는 구슬
+- runeshard_amulet — 발밑이 단단해지는 그 한순간
+- echo_stone_earring — 한 박자 늦게, 미세하게 다르게 들림
+- carvers_last_ring — 절반 글자에 끌을 못 댄 손자리
+- surveyor_plumb_pendant — 추로 그은 선을 따라 산을 잇는 풍경
