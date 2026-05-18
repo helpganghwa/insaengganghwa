@@ -69,3 +69,17 @@
 - crossroad_crook — 길 표지석 + 절반 쪼아 지운 줄
 - last_gate_partisan — 게시판 부고 한 줄 + 주석
 - dredge_bone_pick — 준설 작업 일지(아흐레서 끊김)
+
+## 무기 배치D (12) — 무기 50/50 완료
+- carnival_chakram — 공연 진행 순서표(다섯째 칸 "또 하나 모자람")
+- oathline_halberd — 서약서 원문 + 흐린 서명 셋
+- woodcutter_hatchet — 겨울 살림 적바림(아궁이 안 꺼짐)
+- fallen_censer_flail — 성가대 전례 순서서 그을린 한 대목
+- nightwatch_spear — 밤 골목 점검표(✓만)
+- rune_needle_rapier — 작업장 앞 나무 팻말 + 돌가루 헌물
+- grandfather_axe — 가족 일동 도장 찍은 물림 각서
+- silt_anchor_flail — 강 수위 관측 일지의 흔들린 한 줄
+- herald_banner_poleaxe — 전령 전달 기록부(미도착)
+- scorched_reaping_hook — 불난 뒤 복구 분담표 + 이듬해 확인
+- lullaby_war_fan — 노래 채집 노트(가사 칸 전부 빔)
+- deserter_shortsword — 습득물 처리 기록(임자 없음)
