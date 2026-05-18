@@ -1,0 +1,172 @@
+/**
+ * 스프라이트 재개형 파이프라인 (상태관리 + 다운로드/배치).
+ *
+ *   bun run scripts/sprite-pipeline.ts init           # sprite-jobs.json 생성 (최초 1회)
+ *   bun run scripts/sprite-pipeline.ts status [N]      # 현황 + 다음 N개 프롬프트 출력
+ *   bun run scripts/sprite-pipeline.ts record <key> <url>   # Pixellab 결과 PNG URL 기록
+ *   bun run scripts/sprite-pipeline.ts download        # queued 전부 받아 배치 + done
+ *   bun run scripts/sprite-pipeline.ts manifest        # sprite-manifest.ts 재생성 (done 기준)
+ *   bun run scripts/sprite-pipeline.ts reset <key>     # 실패 작업을 pending으로 되돌림
+ *
+ * 흐름: init → (status로 프롬프트 확인 → Pixellab MCP `Create M-XL image`(GDD §6)
+ *        호출 → 반환된 PNG URL을 record) ×N → download → manifest
+ *
+ * 생성 자체는 **에이전트가 Pixellab MCP를 호출**해야 한다(스크립트는 MCP를 못 부른다).
+ * MCP가 돌려주는 다운로드 가능한 PNG URL을 `record <key> <url>`로 넣으면,
+ * `download`가 그 URL을 받아 `public/sprites/<slot>/<key>.png`로 저장한다.
+ * (Pixellab MCP는 본 세션에 연결됨 ✓ — 도구 스키마는 다음 세션부터 호출 가능.)
+ *
+ * repo 루트에서 `bun run`으로 실행 가정 — 경로는 process.cwd() 기준.
+ */
+import { mkdir, readFile, writeFile } from 'node:fs/promises';
+import { existsSync } from 'node:fs';
+import { dirname, join } from 'node:path';
+
+import { buildSpriteJobs, type SpriteJob } from './_sprite-prompt';
+
+const ROOT = process.cwd();
+const STATE = join(ROOT, 'scripts', 'sprite-jobs.json');
+const SPRITES_DIR = join(ROOT, 'public', 'sprites');
+const MANIFEST_TS = join(ROOT, 'lib', 'game', 'equipment', 'sprite-manifest.ts');
+
+type Status = 'pending' | 'queued' | 'done';
+type JobState = SpriteJob & { url: string | null; status: Status };
+
+async function loadState(): Promise<JobState[]> {
+  if (!existsSync(STATE)) throw new Error('sprite-jobs.json 없음 — 먼저 `init` 실행');
+  return JSON.parse(await readFile(STATE, 'utf8')) as JobState[];
+}
+async function saveState(jobs: JobState[]): Promise<void> {
+  await writeFile(STATE, JSON.stringify(jobs, null, 2));
+}
+function counts(jobs: JobState[]) {
+  return {
+    pending: jobs.filter((j) => j.status === 'pending').length,
+    queued: jobs.filter((j) => j.status === 'queued').length,
+    done: jobs.filter((j) => j.status === 'done').length,
+  };
+}
+
+async function cmdInit(): Promise<void> {
+  if (existsSync(STATE)) {
+    const cur = JSON.parse(await readFile(STATE, 'utf8')) as JobState[];
+    const done = cur.filter((j) => j.status === 'done').length;
+    console.error(`이미 존재 — 보존 (done ${done}/${cur.length}). 재생성하려면 파일 삭제 후 재실행.`);
+    return;
+  }
+  const jobs: JobState[] = buildSpriteJobs().map((j) => ({ ...j, url: null, status: 'pending' }));
+  await saveState(jobs);
+  console.error(`✅ init: ${jobs.length} jobs → ${STATE}`);
+}
+
+async function cmdStatus(): Promise<void> {
+  const jobs = await loadState();
+  const c = counts(jobs);
+  console.log(`📊 total ${jobs.length} | done ${c.done} | queued ${c.queued} | pending ${c.pending}`);
+  const batch = Number(process.argv[3] ?? 12);
+  const next = jobs.filter((j) => j.status === 'pending').slice(0, batch);
+  for (const j of next) console.log(`\n[${j.key}] (${j.slot})\n${j.prompt}`);
+  const stuck = jobs.filter((j) => j.status === 'queued');
+  if (stuck.length) {
+    console.log(`\nqueued(다운로드 대기) ${stuck.length}: ${stuck.map((j) => j.key).join(', ')}`);
+  }
+}
+
+async function cmdRecord(): Promise<void> {
+  const key = process.argv[3];
+  const url = process.argv[4];
+  if (!key || !url) throw new Error('usage: record <key> <png-url>');
+  const jobs = await loadState();
+  const j = jobs.find((x) => x.key === key);
+  if (!j) throw new Error(`unknown key: ${key}`);
+  j.url = url;
+  j.status = 'queued';
+  await saveState(jobs);
+  console.error(`recorded ${key}`);
+}
+
+async function cmdDownload(): Promise<void> {
+  const jobs = await loadState();
+  const queued = jobs.filter((j) => j.status === 'queued' && j.url);
+  if (!queued.length) {
+    console.error('다운로드할 queued 작업 없음');
+    return;
+  }
+  let ok = 0;
+  let fail = 0;
+  for (const j of queued) {
+    const res = await fetch(j.url as string);
+    if (!res.ok) {
+      fail++;
+      continue; // 아직 미생성/만료 — queued 유지, 다음 download에서 재시도
+    }
+    const buf = new Uint8Array(await res.arrayBuffer());
+    // PNG 시그니처 검증 (89 50 4E 47)
+    if (buf.length < 8 || buf[0] !== 0x89 || buf[1] !== 0x50 || buf[2] !== 0x4e || buf[3] !== 0x47) {
+      fail++;
+      continue;
+    }
+    const out = join(SPRITES_DIR, j.file);
+    await mkdir(dirname(out), { recursive: true });
+    await writeFile(out, buf);
+    j.status = 'done';
+    ok++;
+  }
+  await saveState(jobs);
+  await regenManifest(jobs);
+  const c = counts(jobs);
+  console.error(`download: +${ok} done, ${fail} 재시도 대상 | done ${c.done}/${jobs.length}`);
+}
+
+async function regenManifest(jobs: JobState[]): Promise<void> {
+  const done = jobs
+    .filter((j) => j.status === 'done')
+    .sort((a, b) => a.key.localeCompare(b.key));
+  const entries = done.map((j) => `  '${j.key}': '/sprites/${j.file}',`).join('\n');
+  const body = `// AUTO-GENERATED by scripts/sprite-pipeline.ts — 직접 수정 금지.
+//
+// 키 = catalog_items.code. 값 = /public 기준 스프라이트 경로.
+// 등록된 것만 실제 스프라이트 사용, 미등록은 UI에서 이모지 폴백.
+export const SPRITE_MANIFEST: Record<string, string> = {
+${entries}
+};
+
+export function spritePath(code: string): string | null {
+  return SPRITE_MANIFEST[code] ?? null;
+}
+`;
+  await writeFile(MANIFEST_TS, body);
+}
+
+async function cmdManifest(): Promise<void> {
+  const jobs = await loadState();
+  await regenManifest(jobs);
+  console.error(`manifest: 갱신 (done ${counts(jobs).done})`);
+}
+
+async function cmdReset(): Promise<void> {
+  const key = process.argv[3];
+  if (!key) throw new Error('usage: reset <key>');
+  const jobs = await loadState();
+  const j = jobs.find((x) => x.key === key);
+  if (!j) throw new Error(`unknown key: ${key}`);
+  j.url = null;
+  j.status = 'pending';
+  await saveState(jobs);
+  console.error(`reset ${key} → pending`);
+}
+
+const table: Record<string, () => Promise<void>> = {
+  init: cmdInit,
+  status: cmdStatus,
+  record: cmdRecord,
+  download: cmdDownload,
+  manifest: cmdManifest,
+  reset: cmdReset,
+};
+const fn = table[process.argv[2] ?? ''];
+if (!fn) {
+  console.error('usage: bun run scripts/sprite-pipeline.ts <init|status|record|download|manifest|reset>');
+  process.exit(1);
+}
+await fn();

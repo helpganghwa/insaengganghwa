@@ -106,11 +106,13 @@ DB 시드 · 스프라이트 파이프라인 · UI 표시명 · 확률공시 종
 
 진행:
 1. ✅ 프레임/포맷/톤 확정 + `catalog.ts` 구조
-2. ✅ 무기 50/50 · 방어구 50/50 작성 + region×tone 분산 재배치 완료
-3. ⏳ **길이 2배 확장 패스**(약 230~340자) + 완전 차별화 재검 — 무기→방어구 슬롯별 배치
-4. ⏳ 장신구 50 (처음부터 새 기준: 2배 길이·톤 분산·차별화)
-5. 서쪽 화산 장엄4 → 확장 패스 때 2종 재배치
-6. 파이프라인 포팅 + spriteKey 마이그레이션 → (다음 세션) Pixellab MCP 생성
+2. ✅ 무기 50 · 방어구 50 · 장신구 50 = **150/150 작성·2배 확장 완료**
+3. ✅ region×tone 분산(전 권역 한 톤 ≤25%) · 키 전부 유니크 · 톤 8종
+4. ✅ 파이프라인 포팅: `scripts/_sprite-prompt.ts`·`sprite-pipeline.ts`(등급 없음·CATALOG 구동)
+   + `scripts/seed-catalog.ts`(code 기반 upsert). `catalog_items.code`가 스프라이트 키 — 마이그레이션 불필요.
+   `sprite-jobs.json` init 완료(150 pending).
+5. ⏳ **로어 전체 리뷰**(`docs/LORE-REVIEW.md`) → 수정 반영
+6. (리뷰 후) Pixellab MCP `Create M-XL image` 64×64 일괄 → `manifest` → UI 연결
 3. 파이프라인 포팅: `scripts/_sprite-prompt.ts`(catalog→jobs, 등급 없음·LORE `art` 구동) +
    `scripts/sprite-pipeline.ts`(상태/다운로드) + `catalogItems.spriteKey` 컬럼·마이그레이션
 4. Pixellab MCP(연결됨 ✓, 다음 세션부터 호출 가능) `Create M-XL image`(GDD §6) 64×64 일괄 → 큐레이션 → UI 연결
