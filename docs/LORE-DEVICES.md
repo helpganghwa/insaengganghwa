@@ -26,3 +26,17 @@
 벽 낙서 모음 / 보험·서약 문서 / 사용 설명서의 경고문만 / 목격자 진술 대조표 /
 가계도 곁주석 / 압수품 보관 꼬리표 / 채무 상환 일정 / 수배 전단의 인상착의 / 부고 한 줄 …
 (이 풀도 떨어지면 새 장치를 발명 — 풀에 의존하지 말 것)
+
+## 무기 배치A (12) — 사용 장치 (폐기)
+- marsh_rusted_blade — 수선 의뢰서 + 대장장이의 짧은 답("갈 게 없다")
+- ashfall_obsidian_dagger — 두 목격자 진술을 나란히(서로 안 맞음)
+- runescar_warhammer — 돌에 새긴 글 + 후세 사람들이 한 줄씩 덧새김
+- orcfang_cleaver — 장터 떨이 목록(같은 번호로 계속 유찰)
+- fallen_grace_rapier — 약방 처방전(약 대신 "하루 한 번만 뽑을 것")
+- iron_field_sword — 〈주의〉 항목만 넷, 쓰는 법·내력 없음
+- wanderer_oak_staff — 거리표에 끼어든 글씨 다른 한 칸
+- hunter_greenwood_bow — 아이들 셈놀이 동요(열까지)
+- marsh_reed_spear — 장물 장부 한 줄(되팔다 못 팔고 제자리)
+- emberforged_greatsword — 마을 건너며 한 대목씩 어긋나는 이야기
+- glass_question_scepter — 점치는 노파의 점괘 풀이
+- orc_bonk_maul — 부락 다툼 판결문 발췌
