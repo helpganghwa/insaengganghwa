@@ -20,12 +20,18 @@
 | **서쪽 화산** | 드래곤 (잿빛 날개의 고룡) | 끓는 강, 비늘·불, 시험 |
 | **타락천사** | 타락천사 (깨진 후광의 옛 전사) | 신성과 저주, 검은 깃털, 구원 |
 
-**관통 테마 — "떠나 있어도 강화는 진행된다"(`GDD §1`).** 이 땅의 장비는 *버려진 채로도 단련된다*. 늪에 잠겨, 잿더미에 묻혀, 룬에 깎이며 — 주인이 떠난 시간조차 무기를 벼린다. 모든 로어는 **시간·인내·기다림**의 잔향을 한 줄이라도 머금는다. (강화 = 시간, 초월 = 같은 것을 거듭 바침 → 로어와 메커니즘의 은유 일치.)
+### 톤·테마 다양성 (핵심 — 가장 중요)
+아이템 하나하나가 **다른 목소리**를 가진다. 한 가지 정서로 수렴시키지 않는다.
+
+- **금지: 모티프 남발.** "버려진 시간이 벼린 / 견딘 시간이 곧 …" 류의 시간·인내 마무리를 *기본값으로 쓰지 않는다.* 시간/idle 테마는 게임 정체성이라 **가끔(전체의 1/6 이하)** 슬쩍 스칠 뿐, 의무가 아니다.
+- **톤 팔레트 — 섞어 쓴다:** 장엄/서사, 담백/무심, **위트/유머**, 비애/쓸쓸, 기괴/섬뜩, 일상/소소, 영웅담, 수수께끼. 한 배치 안에서 이 톤들이 고르게 분포해야 한다.
+- **개성:** 아이템마다 고유한 출처·사연·디테일(누가·왜·어디서·무엇을 남겼나). 템플릿 재사용 금지 — 두 아이템의 문장 구조가 닮으면 다시 쓴다.
+- 보스 스토리와 *문체의 격*은 통일(번역투·게임 카피체 금지)하되, *정서*는 자유롭다.
 
 ### 설계 제약 (어기지 말 것)
-- **등급·희소성·성능 언급 금지.** "전설의/최강의/+공격력" 같은 표현 불가 — 장비는 전부 성능 동일, 차이는 외관·도감·로어뿐(`GDD §3.1`). 로어는 *유래와 정취*만 말한다.
+- **등급·희소성·성능 언급 금지.** "전설의/최강의/+공격력" 불가 — 장비는 전부 성능 동일, 차이는 외관·도감·로어뿐(`GDD §3.1`). 로어는 *유래와 정취*만.
 - 보스를 직접 "처치 보상"으로 묶지 않는다. 권역의 *분위기*만 빌린다(스포일러·밸런스 결합 방지).
-- 한국어. 보스 스토리와 **톤 통일**: 장엄·서사·간결. 과장된 게임 카피체 금지.
+- 한국어. 과장된 카피체 금지, 문장은 또렷하게.
 
 ---
 
@@ -36,13 +42,14 @@
 - slot: weapon | armor | accessory
 - key: <영문 소문자 스네이크, 스프라이트/시드 식별자>  ex) marsh_rusted_blade
 - region: 늪지대 | 오크 부락 | 고대 룬 산맥 | 서쪽 화산 | 타락천사 | 자유(권역 무관)
-- lore: <60~120자, 한 문장~두 문장. 유래 + 시간/인내의 잔향 1조각.>
+- tone: 장엄 | 담백 | 위트 | 비애 | 기괴 | 일상 | 영웅담 | 수수께끼  (배치 내 고르게 분포)
+- lore: <약 120~260자, 2~4문장. 고유한 출처·사연·디테일. tone 에 맞춘 목소리. 시간/인내 마무리는 가뭄에 콩.>
 - art: <Pixellab 64×64 생성용 영문 키워드 6~10개 — 형태·재질·색·분위기. 등급/광원 글로우 제외(글로우는 강화 단계에서 코드가 입힘, GDD §6).>
 ```
 
 - `key`는 `catalogItems` 시드 + `public/sprites/<slot>/<key>.png` 파일명으로 직결(후속 `spriteKey` 컬럼).
 - 슬롯별 50종 목표(무기/방어구/장신구 = 총 150), 이후 가변 추가(`GDD §10`).
-- 권역 배분 가이드(슬롯 50종 기준): 세계관 연결 ~20종(5권역 ×~4종) + 자유 ~30종. 강제 아님 — 톤만 일관되면 비중은 유연.
+- 권역 배분(슬롯 50): 세계관 연결 ~20 + 자유 ~30. 톤 배분(슬롯 50): 한 톤이 ~1/4 넘지 않게.
 
 ---
 
@@ -52,36 +59,41 @@
 - slot: weapon
 - key: marsh_rusted_blade
 - region: 늪지대
-- lore: 마른 우물 바닥에서 건져 올린 한손검. 점액에 천 년을 잠겨 날이 거뭇하게 삭았으나, 녹이 오히려 칼날을 더 질기게 만들었다. 버려진 시간이 벼린 검.
-- art: one-handed sword, pitted corroded iron blade, mossy green tarnish, leather-wrapped grip, swamp grime, weathered, pixel art
+- tone: 담백
+- lore: 늪 마을 대장간에서 흔하게 찍어내던 한손검이다. 특별한 사연도, 이름난 주인도 없다. 다만 마른 우물을 치우다 한 자루가 올라왔고, 점액에 절어 날이 검붉게 변해 있었다. 닦아 보니 멀쩡히 들었다. 그뿐이다.
+- art: plain one-handed sword, pitted reddish-rusted iron blade, swamp residue, leather-wrapped grip, simple crossguard, understated, pixel art
 
-### 화산재 대거
+### 화산재 흑요석 단검
 - slot: weapon
 - key: ashfall_obsidian_dagger
 - region: 서쪽 화산
-- lore: 끓는 강가에 식은 흑요석을 깎아 만든 단검. 고룡의 숨결이 지나간 자리에서 천천히 단단해졌다. 식는 데 백 년이 걸린 칼날은 쉬이 무뎌지지 않는다.
-- art: short dagger, glassy black obsidian blade, sharp fractured edge, charred bone handle, faint ember-grey ash, volcanic, pixel art
+- tone: 기괴
+- lore: 끓는 강에서 건진 흑요석 단검. 칼날에 비친 얼굴이 잠깐, 제 것이 아닌 표정을 짓는다고들 했다. 고룡의 숨결을 너무 가까이서 쬔 유리는 무언가를 본 채로 굳어 버린 모양이다. 누구도 오래 들여다보지 않는다.
+- art: short dagger, glassy black obsidian blade, distorted faint reflection, fractured edge, charred bone handle, eerie, pixel art
 
 ### 룬각 흉갑
 - slot: armor
 - key: runescar_breastplate
 - region: 고대 룬 산맥
-- lore: 폭주한 수호 룬에 깎여 떨어진 산의 살점을 두드려 편 흉갑. 표면의 푸른 균열은 아직 식지 않았고, 부술수록 다시 단단히 뭉친다.
-- art: heavy breastplate, grey carved stone plating, glowing-blue hairline rune cracks, riveted edges, ancient, weathered, pixel art
+- tone: 장엄
+- lore: 산이 스스로 일어서던 날, 무너진 비탈에서 떨어져 나온 한 조각을 두드려 편 흉갑이다. 표면을 가로지른 푸른 균열은 식지 않았고, 두드릴수록 금이 안으로 더 깊이 뭉친다. 산의 분노를 한 줌 떼어 가슴에 두른 셈이다.
+- art: heavy breastplate, grey carved-stone plating, deep blue hairline rune cracks, riveted edges, monumental, ancient, pixel art
 
 ### 깃털 두른 망토
 - slot: armor
 - key: fallen_feather_mantle
 - region: 타락천사
-- lore: 타락천사가 흘린 검은 깃을 모아 엮은 어깨망토. 신성과 저주가 함께 짜였다. 빛을 등진 자의 온기가 아직 깃 사이에 남아 있다.
-- art: shoulder mantle cloak, layered black feathers, tarnished gold-thread trim, faint halo-grey sheen, draped fabric, somber, pixel art
+- tone: 비애
+- lore: 추락한 자리에 검은 깃이 눈처럼 쌓여 있었다. 누군가 그것을 주워 어깨망토로 엮었다. 깃 사이로 아직 옅은 온기가 돌아, 두른 이들은 종종 등 뒤에서 누가 부르는 듯한 기분이 든다고 한다. 돌아보면 아무도 없다.
+- art: shoulder mantle cloak, layered black feathers, faded gold-thread trim, pale grey sheen, draped, mournful, pixel art
 
 ### 부족 전리 목걸이
 - slot: accessory
 - key: warband_trophy_necklace
 - region: 오크 부락
-- lore: 오크 부락에서 거둔 뼈와 깨진 무기 조각을 꿰어 만든 목걸이. 족장의 포효를 견딘 자만이 그 무게를 안다. 견뎌낸 시간이 곧 장식이다.
-- art: tribal necklace, bone fragments and broken metal shards, frayed cord, dried leather beads, rugged, earthy tones, pixel art
+- tone: 위트
+- lore: 오크 족장이 평생 모은 전리품—이빨, 깨진 칼끝, 누군가의 단추—을 한 줄에 꿴 목걸이다. 본인은 위대한 무용담이라 믿었겠으나, 솔직히 잡동사니 모음에 가깝다. 그래도 절그럭거리는 소리만큼은 제법 위협적이다.
+- art: tribal necklace, mismatched bone teeth and broken blade tips and odd buttons, frayed cord, cluttered, rugged, pixel art
 
 ---
 

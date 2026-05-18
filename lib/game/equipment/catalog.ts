@@ -27,6 +27,17 @@ export type CatalogRegion =
   | '타락천사'
   | '자유';
 
+/** 로어 정서 — 배치 내 고르게 분포(한 톤이 슬롯의 ~1/4 초과 금지). docs/LORE.md §1. */
+export type CatalogTone =
+  | '장엄'
+  | '담백'
+  | '위트'
+  | '비애'
+  | '기괴'
+  | '일상'
+  | '영웅담'
+  | '수수께끼';
+
 export interface CatalogItem {
   /** 영문 snake — 스프라이트 파일/스프라이트키 식별자. 전역 유니크. */
   key: string;
@@ -34,7 +45,9 @@ export interface CatalogItem {
   /** 한국어 표시명 (도감/인벤토리/공유). */
   nameKo: string;
   region: CatalogRegion;
-  /** 보스 톤 통일 한국어 로어 (~60~120자). 등급/성능 언급 금지. */
+  /** 로어 정서(다양성 강제용). docs/LORE.md §1. */
+  tone: CatalogTone;
+  /** 한국어 로어 (~120~260자, 2~4문장). 아이템마다 고유 사연·개성. 등급/성능 언급 금지. */
   lore: string;
   /** Pixellab 64×64 생성 키워드 (영문, 글로우/등급 제외). */
   art: string;
@@ -53,120 +66,135 @@ const WEAPONS: CatalogItem[] = [
     slot: 'weapon',
     nameKo: '녹슨 늪칼',
     region: '늪지대',
-    lore: '마른 우물 바닥에서 건져 올린 한손검. 점액에 천 년을 잠겨 날이 거뭇하게 삭았으나, 녹이 오히려 칼날을 더 질기게 만들었다. 버려진 시간이 벼린 검.',
-    art: `one-handed sword, pitted corroded iron blade, mossy green tarnish, leather-wrapped grip, swamp grime, weathered, ${STYLE}`,
+    tone: '담백',
+    lore: '늪 마을 대장간이 한철에 수십 자루씩 찍어내던 평범한 한손검이다. 이름난 주인도, 전해지는 무용담도 없다. 마른 우물을 치우던 인부가 진흙 속에서 한 자루를 건져 올렸고, 점액에 절어 검붉게 변해 있었다. 닦으니 멀쩡히 들렸다. 그게 전부다.',
+    art: `plain one-handed sword, pitted reddish-rusted iron blade, dried swamp mud, leather-wrapped grip, simple crossguard, understated, ${STYLE}`,
   },
   {
     key: 'ashfall_obsidian_dagger',
     slot: 'weapon',
     nameKo: '화산재 흑요석 단검',
     region: '서쪽 화산',
-    lore: '끓는 강가에 식은 흑요석을 깎아 만든 단검. 고룡의 숨결이 지나간 자리에서 백 년에 걸쳐 천천히 단단해졌다. 쉬이 무뎌지지 않는다.',
-    art: `short dagger, glassy black obsidian blade, sharp fractured edge, charred bone handle, ember-grey ash, volcanic, ${STYLE}`,
+    tone: '기괴',
+    lore: '끓는 강에서 건진 흑요석 단검. 칼날에 비친 얼굴이 이따금 제 것이 아닌 표정을 짓는다고 사람들은 말한다. 고룡의 숨결을 너무 가까이서 쬔 유리는 무언가를 본 채로 굳어 버린 모양이다. 들여다본 자는 많지만, 오래 들여다본 자는 없다.',
+    art: `short dagger, glassy black obsidian blade, faint distorted reflection, fractured razor edge, charred bone handle, eerie, ${STYLE}`,
   },
   {
     key: 'runescar_warhammer',
     slot: 'weapon',
     nameKo: '룬흉터 전쟁망치',
     region: '고대 룬 산맥',
-    lore: '폭주한 수호 룬에 깎여 떨어진 산의 살점을 머리 삼아 박은 전쟁망치. 내려칠 때마다 푸른 균열이 잠깐 빛났다가 식는다.',
-    art: `heavy two-handed warhammer, grey carved-stone head, hairline blue rune cracks, iron-banded wooden haft, ancient, ${STYLE}`,
+    tone: '장엄',
+    lore: '산이 스스로 일어서던 날, 무너진 비탈에서 떨어져 나온 한 덩이를 머리 삼아 박은 전쟁망치다. 내려칠 때마다 푸른 균열이 결을 따라 번쩍 살아났다가 다시 잠든다. 산의 분노를 한 줌 떼어 자루에 묶어 둔 셈이라, 드는 일조차 쉽지 않다.',
+    art: `massive two-handed warhammer, grey carved-stone head, vivid blue rune cracks, iron-banded oak haft, monumental, ${STYLE}`,
   },
   {
     key: 'orcfang_cleaver',
     slot: 'weapon',
     nameKo: '오크 송곳니 도끼',
     region: '오크 부락',
-    lore: '부락에서 노획한 거대한 외날 도끼. 자루에 족장의 부러진 어금니가 박혀 있다. 그 무게를 견딘 자만이 휘두를 자격을 얻는다.',
-    art: `one-handed broad cleaver axe, chipped crescent iron blade, bone tooth embedded in haft, crude lashings, rugged, ${STYLE}`,
+    tone: '위트',
+    lore: '오크 족장이 손수 만들었다는 외날 도끼. 자루에 제 부러진 어금니를 박아 넣고 "이빨이 둘이면 더 잘 문다"는 명언을 남겼다고 한다. 도끼는 멀쩡하나 그 말은 끝내 아무도 이해하지 못했다. 잘 들기는 한다.',
+    art: `one-handed broad cleaver axe, chipped crescent iron blade, large tusk wedged into haft, crude lashings, rugged, ${STYLE}`,
   },
   {
     key: 'fallen_grace_rapier',
     slot: 'weapon',
     nameKo: '타락한 은총의 레이피어',
     region: '타락천사',
-    lore: '타락천사가 떨어뜨린 검을 다시 벼린 가느다란 찌르기검. 신성과 저주가 한 날에 함께 흐른다. 빛을 등진 손이 마지막까지 쥐었던 검.',
-    art: `slender thrusting rapier, pale silver blade, tarnished gold swept hilt, faint black feather motif, somber elegant, ${STYLE}`,
+    tone: '비애',
+    lore: '추락한 자리에서 부러진 검을 모아 다시 가늘게 벼린 찌르기검. 한 날에 신성과 저주가 함께 흐른다. 휘두르면 아주 잠깐 깃털 스치는 소리가 나는데, 베인 자보다 쥔 자가 먼저 그 소리에 멈춰 선다고 한다.',
+    art: `slender thrusting rapier, pale silver blade, tarnished gold swept hilt, faint black feather etching, somber elegant, ${STYLE}`,
   },
   {
     key: 'iron_field_sword',
     slot: 'weapon',
     nameKo: '무쇠 야전검',
     region: '자유',
-    lore: '이름 없는 병사들이 수없이 쥐었다 놓은 표준 한손검. 손때가 자루를 검게 물들였다. 특별할 것 없으나, 끝까지 부러지지 않은 검.',
-    art: `plain one-handed arming sword, straight iron blade, worn leather grip, simple crossguard, sturdy utilitarian, ${STYLE}`,
+    tone: '일상',
+    lore: '병참 창고에 천 자루씩 쌓여 있던 보급용 한손검. 이가 나가면 갈고, 자루가 닳으면 가죽을 새로 감았다. 누구의 것도 아니었기에 누구나 들었다. 끝내 이름은 붙지 않았고, 그래서 부러져도 아무도 슬퍼하지 않았다.',
+    art: `standard-issue one-handed arming sword, straight iron blade, re-wrapped worn grip, plain pommel, utilitarian, ${STYLE}`,
   },
   {
     key: 'wanderer_oak_staff',
     slot: 'weapon',
     nameKo: '방랑자의 떡갈나무 지팡이',
     region: '자유',
-    lore: '먼 길을 걷는 동안 손이 닿는 자리마다 반들반들해진 떡갈나무 지팡이. 머리에 끼운 돌은 주인이 떠난 밤에도 천천히 빛을 머금었다.',
-    art: `tall wooden wizard staff, gnarled oak shaft, smooth worn grip, small clouded focus stone at top, travelled, ${STYLE}`,
+    tone: '수수께끼',
+    lore: '어느 노인이 평생 짚고 다녔다는 떡갈나무 지팡이. 머리에 박힌 흐린 돌은 빛도, 열도, 어떤 마법도 내지 않는다. 다만 그 노인이 닿았던 마을마다 이상하리만치 그해 농사가 잘되었다는 이야기만 길 따라 남았다. 우연일 것이다. 아마도.',
+    art: `tall wooden wizard staff, gnarled oak shaft, smooth hand-worn grip, dull clouded stone at crown, enigmatic, ${STYLE}`,
   },
   {
-    key: 'hunter_recurve_bow',
+    key: 'hunter_greenwood_bow',
     slot: 'weapon',
-    nameKo: '사냥꾼의 곡궁',
+    nameKo: '푸른숲 사냥활',
     region: '자유',
-    lore: '한 계절을 통째로 숲에서 보낸 사냥꾼의 굽은 활. 시위는 수십 번 갈렸고, 활대는 그만큼 손에 길들었다. 기다림이 곧 사냥이었다.',
-    art: `curved wooden recurve shortbow, taut bowstring, sinew binding, worn grip wrap, vertical, ${STYLE}`,
+    tone: '영웅담',
+    lore: '늑대 떼가 마을 외양간을 노리던 겨울, 사냥꾼 한 사람이 사흘 밤을 눈밭에 엎드려 이 활로 우두머리를 잡았다. 마을은 그를 영웅이라 불렀고, 그는 그저 활을 손질하며 "운이 좋았다"고만 했다. 시위에는 아직 그 겨울의 송진 냄새가 밴다.',
+    art: `curved wooden recurve shortbow, taut sinew bowstring, frost-pale wood grain, worn grip wrap, vertical, heroic, ${STYLE}`,
   },
   {
     key: 'marsh_reed_spear',
     slot: 'weapon',
     nameKo: '늪 갈대창',
     region: '늪지대',
-    lore: '늪 깊은 갈대밭에서 베어 곧게 편 장창. 점액에 절어 검푸르게 굳었고, 그래서 부러지지 않는다. 마른 우물을 지키던 마지막 무기.',
-    art: `long thrusting spear, dark hardened reed shaft, narrow leaf-shaped iron head, swamp-stained, slender, ${STYLE}`,
+    tone: '담백',
+    lore: '늪지대 어부들이 깊은 갈대밭을 헤칠 때 쓰던 긴 창. 물뱀을 쫓고, 가끔은 더 큰 것도 쫓았다. 점액에 절어 검푸르게 굳은 자루는 어지간해선 휘지 않는다. 무기라기보다 늪에서 살아남는 살림 도구에 가까웠다.',
+    art: `long thrusting spear, dark hardened reed shaft, narrow leaf-shaped iron head, swamp-stained, plain, ${STYLE}`,
   },
   {
     key: 'emberforged_greatsword',
     slot: 'weapon',
     nameKo: '잉걸불 대검',
     region: '서쪽 화산',
-    lore: '화산 대장간에서 식기까지 백 일을 기다린 양손 대검. 날 안쪽에 잿빛 결이 영원히 남았다. 식는 시간이 곧 담금질이었다.',
-    art: `large two-handed greatsword, broad heat-grained steel blade, dark ember streaks, wrapped long grip, imposing, ${STYLE}`,
+    tone: '장엄',
+    lore: '화산 대장간 가장 깊은 화덕에서 벼려진 양손 대검. 식는 동안 잿빛 결이 날 안쪽에 강물처럼 굳어, 들어 올리면 그 무늬가 불길의 잔영을 닮았다. 한 번 휘두르면 공기가 갈라지며 잠시 뜨거워진다고, 본 자들은 입을 모은다.',
+    art: `large two-handed greatsword, broad heat-grained steel blade, deep ash river streaks, long wrapped grip, imposing, ${STYLE}`,
   },
   {
-    key: 'runed_short_scepter',
+    key: 'glass_question_scepter',
     slot: 'weapon',
-    nameKo: '룬각 단홀',
-    region: '고대 룬 산맥',
-    lore: '수호 룬의 파편을 깎아 손잡이에 새긴 짧은 홀. 균열은 식었지만 결을 따라 더듬으면 산이 무너지던 진동이 아직 만져진다.',
-    art: `short ornate scepter, grey rune-carved stone head, fine hairline cracks, banded metal shaft, ancient relic, ${STYLE}`,
+    nameKo: '물음의 유리홀',
+    region: '자유',
+    tone: '수수께끼',
+    lore: '머리에 속이 빈 유리구가 달린 짧은 홀. 구 안에는 아무것도 없다—그런데 흔들면 무언가 굴러다니는 소리가 난다. 만든 자도, 쥔 자도, 부순 자도 그 소리의 정체를 끝내 말하지 못했다. 질문만 남기고 답은 가져가는 물건이다.',
+    art: `short ornate scepter, hollow clear glass orb at head, faint something-inside rattle, banded silver shaft, mysterious, ${STYLE}`,
   },
   {
-    key: 'orc_bone_maul',
+    key: 'orc_bonk_maul',
     slot: 'weapon',
-    nameKo: '오크 뼈 둔기',
+    nameKo: '오크 박치기 둔기',
     region: '오크 부락',
-    lore: '부락의 천막을 무너뜨린 거구가 휘두르던 뼈 둔기. 굵은 관절뼈를 가죽끈으로 동여 만들었다. 포효를 견딘 손에만 들린다.',
-    art: `crude heavy bone bludgeon, thick joint-bone head, leather-wrapped grip, jagged, brutal primitive, ${STYLE}`,
+    tone: '위트',
+    lore: '오크 부락에서 가장 머리 나쁜 전사가 "이러면 안 깨지겠지"라며 관절뼈를 통째로 묶어 만든 둔기. 놀랍게도 안 깨졌다. 더 놀랍게도 본인은 그날 다른 일로 넘어져 기절했다. 둔기는 멀쩡히 남아 다음 주인을 기다린다.',
+    art: `crude heavy bludgeon, single huge joint-bone head, thick leather lashings, lopsided, comically brutal, ${STYLE}`,
   },
   {
-    key: 'twin_fang_daggers',
+    key: 'parted_twin_daggers',
     slot: 'weapon',
-    nameKo: '쌍 송곳니 단검',
+    nameKo: '엇갈린 쌍단검',
     region: '자유',
-    lore: '한 손에 하나씩, 늘 함께 갈려 온 한 쌍의 단검. 둘 중 하나만 남으면 균형이 어긋난다. 짝을 잃지 않고 버틴 칼.',
-    art: `pair of matched curved daggers crossed, twin narrow blades, dark wrapped handles, symmetrical, sleek, ${STYLE}`,
+    tone: '비애',
+    lore: '본래 한 쌍이었다. 두 자매가 하나씩 나눠 가졌고, 언젠가 다시 맞대기로 했다. 지금 남은 건 한 자루뿐이다. 짝을 잃은 칼은 균형이 미세하게 어긋나, 쥔 손이 자꾸 없는 다른 손을 찾는다. 나머지 하나가 어디 있는지는 아무도 모른다.',
+    art: `single curved dagger, faint mark where a twin once paired, dark wrapped handle, slightly off-balance, lonesome, ${STYLE}`,
   },
   {
-    key: 'pilgrim_walking_glaive',
+    key: 'tollkeeper_glaive',
     slot: 'weapon',
-    nameKo: '순례자의 언월도',
+    nameKo: '통행세 받던 언월도',
     region: '자유',
-    lore: '지팡이 삼아 짚고 다니던 긴 자루의 언월도. 길 위의 흙먼지가 날에 얇게 앉았다. 걸어온 거리만큼 무뎌지지 않았다.',
-    art: `polearm glaive, long worn wooden shaft, single curved blade, road dust patina, travelled, vertical, ${STYLE}`,
+    tone: '일상',
+    lore: '다리 어귀에서 통행세를 걷던 늙은 문지기의 언월도. 실제로 휘두른 적은 손에 꼽고, 대부분은 그저 비스듬히 기대 세워 두는 용도였다. 날에 앉은 흙먼지가 칼보다 두껍다. 그래도 다리를 건넌 누구도 그 앞에서 떼를 쓰지는 못했다.',
+    art: `polearm glaive, long worn wooden shaft, single curved blade thick with road dust, leaning-post wear, mundane, ${STYLE}`,
   },
   {
     key: 'fallen_feather_scythe',
     slot: 'weapon',
     nameKo: '깃 떨군 낫',
     region: '타락천사',
-    lore: '추락한 자리에 흩어진 검은 깃과 부러진 날개뼈로 자루를 감은 낫. 거두는 것이 무엇이든, 한때 그것도 빛이었음을 안다.',
-    art: `war scythe, long curved blade, black feather-bound shaft, pale bone fittings, dark solemn, ${STYLE}`,
+    tone: '기괴',
+    lore: '추락한 자리에 검은 깃이 눈처럼 쌓였고, 누군가 그 깃과 부러진 날개뼈로 낫자루를 감았다. 베어 넘긴 풀에서 가끔 깃털이 함께 떨어진다—심지 않은 자리에서도. 거두는 손은 그것이 무엇의 깃인지 묻지 않는 편이 낫다.',
+    art: `war scythe, long curved blade, black feather-bound shaft, pale wing-bone fittings, unsettling, ${STYLE}`,
   },
 ];
 
