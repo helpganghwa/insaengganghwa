@@ -125,3 +125,16 @@
 - marsh_root_buckler — 엮어 쥐여 주는 마지막 + 빈 문가
 - wailing_mail — 옆에서 자던 이가 자리를 옮기는 장면
 - dusk_paladin_plate — 성문 닫히던 그 순간의 장면
+
+## 방어구 배치4 (11) — 방어구 50/50 완료
+- rune_echo_shield — 쉴 때 깔고 앉는 풍습 장면
+- fools_brass_cuirass — 진실 안 알려 주는 동네 묵계
+- ash_pelt_mantle — 눈보라 밤 온기 하나로 버틴 짧은 이야기
+- unmarked_grave_plate — 입으면 잠깐 다른 자세가 되는 장면
+- watchlantern_rig — 야경꾼들 사이 옛말(불빛이 먼저)
+- orc_trophy_pauldrons — 풍습 + 스스로 안 떼는 관찰
+- silent_choir_hood — 흩어지던 밤 멈추지 않은 노래 장면
+- bog_breath_mask — 늪 독김에서 한 뼘 더 들어갔다 오는 하루
+- herald_banner_cloak — 깃 잘라 나눠 두른 자들이 못 내려놓는 장면
+- late_mirror_shield — 거울 속 얼굴이 안 한 입 모양을 짓는 장면
+- worn_road_boots — 주인 셋 거친, 사연 없는 사실들
