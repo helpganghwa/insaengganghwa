@@ -83,3 +83,17 @@
 - scorched_reaping_hook — 불난 뒤 복구 분담표 + 이듬해 확인
 - lullaby_war_fan — 노래 채집 노트(가사 칸 전부 빔)
 - deserter_shortsword — 습득물 처리 기록(임자 없음)
+
+## 방어구 배치1 (12)
+- militia_gambeson — 돌려 입는 옷 관리 당번표
+- marsh_reed_cuirass — 노인이 손주에게 엮는 법 구술(받아쓴 토막)
+- runefall_breastplate — 산 무너진 자리 출입 통제 포고
+- orc_scrap_harness — 부락 추모 명부(갑옷 조각 헌납)
+- fallen_feather_mantle — 사라진 이를 부르는 소리 채록 시도
+- nightwatch_cloak — 세탁·수선 맡김표 + 빨래집 회답
+- widow_veil_shroud — 상가 조문록 한 장
+- graverobber_coat — 압수품 보관 꼬리표(주머니 늘어남)
+- hero_dented_breastplate — 대장장이 수선 거절서
+- blank_question_helm — 써 본 사람 질문지(답 칸이 다 끊김)
+- bog_hide_jerkin — 늪 사고 보고(생환 1)
+- jester_patch_armor — 곡예 소품 목록 + 사건 메모
