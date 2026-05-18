@@ -1,0 +1,69 @@
+import { and, eq } from 'drizzle-orm';
+
+import { getSessionUserId } from '@/lib/auth/session';
+import { db } from '@/lib/db/client';
+import { catalogItems, equipmentInstances, type Slot } from '@/lib/db/schema/equipment';
+import { enhancementJobs } from '@/lib/db/schema/enhance';
+
+import { InventoryGrid, type InvItem } from './InventoryGrid';
+
+export default async function InventoryPage({
+  searchParams,
+}: {
+  searchParams: Promise<{ slot?: string }>;
+}) {
+  const userId = await getSessionUserId();
+  if (!userId) return null;
+  const { slot } = await searchParams;
+  const initialSlot: Slot | 'all' =
+    slot === 'weapon' || slot === 'armor' || slot === 'accessory' ? slot : 'all';
+
+  const [rows, runningJobs] = await Promise.all([
+    db
+      .select({
+        id: equipmentInstances.id,
+        catalogItemId: equipmentInstances.catalogItemId,
+        name: catalogItems.name,
+        slot: catalogItems.slot,
+        enhanceLevel: equipmentInstances.enhanceLevel,
+        transcendLevel: equipmentInstances.transcendLevel,
+        isLocked: equipmentInstances.isLocked,
+        equippedSlot: equipmentInstances.equippedSlot,
+        acquiredAt: equipmentInstances.acquiredAt,
+      })
+      .from(equipmentInstances)
+      .innerJoin(catalogItems, eq(equipmentInstances.catalogItemId, catalogItems.id))
+      .where(eq(equipmentInstances.userId, userId)),
+    db
+      .select({ instanceId: enhancementJobs.equipmentInstanceId })
+      .from(enhancementJobs)
+      .where(and(eq(enhancementJobs.userId, userId), eq(enhancementJobs.status, 'running'))),
+  ]);
+
+  const busy = new Set(runningJobs.map((r) => r.instanceId.toString()));
+  const items: InvItem[] = rows.map((r) => ({
+    id: r.id.toString(),
+    catalogItemId: r.catalogItemId,
+    name: r.name,
+    slot: r.slot,
+    enhanceLevel: r.enhanceLevel,
+    transcendLevel: r.transcendLevel,
+    isLocked: r.isLocked,
+    equipped: r.equippedSlot != null,
+    acquiredAtMs: r.acquiredAt.getTime(),
+    busy: busy.has(r.id.toString()),
+  }));
+
+  return (
+    <div className="px-4 py-4">
+      <h1 className="mb-2 text-lg font-semibold">🎒 인벤토리</h1>
+      {items.length === 0 ? (
+        <div className="rounded-2xl border-2 border-dashed border-amber-300 bg-amber-50/40 p-8 text-center text-sm dark:border-amber-800 dark:bg-amber-950/20">
+          첫 장비가 없습니다. 보급 상자를 받아보세요.
+        </div>
+      ) : (
+        <InventoryGrid items={items} initialSlot={initialSlot} />
+      )}
+    </div>
+  );
+}
