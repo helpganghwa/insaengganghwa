@@ -6,15 +6,22 @@ import { useRouter } from 'next/navigation';
 import {
   effectiveRateBp,
   diamondToFinishMs,
+  pieceCombatPower,
   SAFE_MAX_LEVEL,
   FODDER_REQUIRED_FROM_LEVEL,
 } from '@/lib/game/balance';
+import type { Slot } from '@/lib/db/schema/equipment';
+import { BoastModal } from '@/components/BoastModal';
 
 import { finalizeEnhance, reduceTimeWithGems, cancelEnhanceAction } from './actions';
+
+/** §10 자랑 자동 트리거 강화 단계(GDD §6 / 사용자 확정 델타). */
+const BOAST_LEVELS = new Set([30, 50, 99]);
 
 export type ActiveJob = {
   jobId: string;
   name: string;
+  slot: Slot;
   fromLevel: number;
   targetLevel: number;
   transcendLevel: number;
@@ -52,15 +59,18 @@ function fmtRemaining(ms: number): string {
 export function EnhanceSlotCard({
   activeJob,
   diamond,
+  nickname,
 }: {
   activeJob: ActiveJob;
   diamond: string;
+  nickname: string;
 }) {
   const router = useRouter();
   const [pending, startTransition] = useTransition();
   const [nowMs, setNowMs] = useState(0); // SSR 매칭 위해 0 → mount 후 동기화
   const [confirm, setConfirm] = useState(false);
   const [flash, setFlash] = useState<Outcome | null>(null);
+  const [boast, setBoast] = useState(false);
   const [optimisticDone, setOptimisticDone] = useState(false);
   const [confirmCancel, setConfirmCancel] = useState(false);
 
@@ -103,6 +113,10 @@ export function EnhanceSlotCard({
       const oc = r.result.outcome as Outcome;
       setFlash(oc);
       setTimeout(() => setFlash(null), 1500);
+      // §10 자랑 — +30/+50/+99 강화 성공 시 공유 모달.
+      if (oc === 'success' && BOAST_LEVELS.has(activeJob.targetLevel)) {
+        setTimeout(() => setBoast(true), 1500);
+      }
       router.refresh();
     });
   };
@@ -255,6 +269,23 @@ export function EnhanceSlotCard({
           </span>
         ) : null}
       </div>
+
+      <BoastModal
+        open={boast}
+        onClose={() => setBoast(false)}
+        nickname={nickname}
+        kind="piece"
+        headline={`✨ +${activeJob.targetLevel} 강화 달성`}
+        piece={{
+          p: {
+            slot: activeJob.slot,
+            name: activeJob.name,
+            enhanceLevel: activeJob.targetLevel,
+            transcendLevel: activeJob.transcendLevel,
+          },
+          cp: pieceCombatPower(activeJob.targetLevel, activeJob.transcendLevel),
+        }}
+      />
     </div>
   );
 }

@@ -1,0 +1,127 @@
+import Link from 'next/link';
+import { notFound } from 'next/navigation';
+import type { Metadata } from 'next';
+import { and, eq, isNotNull, sql } from 'drizzle-orm';
+
+import { db } from '@/lib/db/client';
+import { profiles } from '@/lib/db/schema/profiles';
+import { catalogItems, equipmentInstances, userCodex, type Slot } from '@/lib/db/schema/equipment';
+import { pieceCombatPower, totalCombatPower } from '@/lib/game/balance';
+import { formatCompactKR } from '@/lib/ui/format-number';
+
+const SLOT_LABEL: Record<Slot, string> = { weapon: '무기', armor: '방어구', accessory: '장신구' };
+const SLOT_EMOJI: Record<Slot, string> = { weapon: '⚔️', armor: '🛡️', accessory: '💍' };
+
+/** 닉네임 → 공개 프로필 데이터(착용 세트 + 총 전투력). 미존재 시 null. */
+async function loadProfile(nickname: string) {
+  const [prof] = await db
+    .select({ id: profiles.id, nickname: profiles.nickname })
+    .from(profiles)
+    .where(eq(profiles.nickname, nickname))
+    .limit(1);
+  if (!prof) return null;
+
+  const [equipped, codexAgg] = await Promise.all([
+    db
+      .select({
+        slot: catalogItems.slot,
+        name: catalogItems.name,
+        enhanceLevel: equipmentInstances.enhanceLevel,
+        transcendLevel: equipmentInstances.transcendLevel,
+      })
+      .from(equipmentInstances)
+      .innerJoin(catalogItems, eq(equipmentInstances.catalogItemId, catalogItems.id))
+      .where(
+        and(eq(equipmentInstances.userId, prof.id), isNotNull(equipmentInstances.equippedSlot)),
+      ),
+    db
+      .select({ s: sql<number>`coalesce(sum(${userCodex.maxEnhanceLevel}),0)::int` })
+      .from(userCodex)
+      .where(eq(userCodex.userId, prof.id)),
+  ]);
+
+  const total = totalCombatPower(
+    equipped.map((e) => pieceCombatPower(e.enhanceLevel, e.transcendLevel)),
+    Number(codexAgg[0]?.s ?? 0),
+  );
+  return { nickname: prof.nickname, equipped, total };
+}
+
+export async function generateMetadata({
+  params,
+}: {
+  params: Promise<{ nickname: string }>;
+}): Promise<Metadata> {
+  const { nickname: raw } = await params;
+  const nickname = decodeURIComponent(raw);
+  const data = await loadProfile(nickname);
+  if (!data) return { title: '인생강화' };
+  const title = `${data.nickname} — 인생강화`;
+  const description = `총 전투력 ⚔️${formatCompactKR(data.total)}. 시간기반 idle 강화 RPG.`;
+  const ogImage = `/og/${encodeURIComponent(nickname)}`;
+  return {
+    title,
+    description,
+    openGraph: { title, description, images: [ogImage] },
+    twitter: { card: 'summary_large_image', title, description, images: [ogImage] },
+  };
+}
+
+export default async function PublicProfilePage({
+  params,
+}: {
+  params: Promise<{ nickname: string }>;
+}) {
+  const { nickname: raw } = await params;
+  const data = await loadProfile(decodeURIComponent(raw));
+  if (!data) notFound();
+
+  const bySlot = new Map(data.equipped.map((e) => [e.slot, e]));
+
+  return (
+    <main className="mx-auto min-h-dvh w-full max-w-[390px] bg-white px-4 py-6 text-zinc-900 dark:bg-black dark:text-zinc-50">
+      <header className="text-center">
+        <div className="text-4xl">🏆</div>
+        <h1 className="mt-1 text-xl font-bold">{data.nickname}</h1>
+        <p className="text-xs text-zinc-500">인생강화 플레이어</p>
+      </header>
+
+      <section className="mt-5 rounded-2xl border border-zinc-200 p-3 dark:border-zinc-800">
+        <div className="mb-2 text-xs font-medium text-zinc-500">장착 세트</div>
+        <div className="space-y-1.5">
+          {(['weapon', 'armor', 'accessory'] as Slot[]).map((s) => {
+            const it = bySlot.get(s);
+            return (
+              <div key={s} className="flex items-center gap-2 text-sm">
+                <span aria-hidden>{SLOT_EMOJI[s]}</span>
+                {it ? (
+                  <span className="flex-1 truncate">
+                    {it.name}{' '}
+                    <span className="text-zinc-400">
+                      +{it.enhanceLevel} · ✦T{it.transcendLevel}
+                    </span>
+                  </span>
+                ) : (
+                  <span className="flex-1 text-zinc-400">{SLOT_LABEL[s]} 미장착</span>
+                )}
+              </div>
+            );
+          })}
+        </div>
+        <div className="mt-3 border-t border-zinc-100 pt-2 text-right text-sm font-bold dark:border-zinc-900">
+          ⚔️ 총 전투력 {formatCompactKR(data.total)}
+        </div>
+      </section>
+
+      <Link
+        href="/login"
+        className="mt-5 block rounded-full bg-amber-500 py-3 text-center text-sm font-bold text-amber-950"
+      >
+        나도 인생강화 시작하기 →
+      </Link>
+      <p className="mt-3 text-center text-[11px] text-zinc-400">
+        떠나 있어도 강화는 진행됩니다.
+      </p>
+    </main>
+  );
+}

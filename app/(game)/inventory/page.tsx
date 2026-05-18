@@ -4,6 +4,7 @@ import { getSessionUserId } from '@/lib/auth/session';
 import { db } from '@/lib/db/client';
 import { catalogItems, equipmentInstances, type Slot } from '@/lib/db/schema/equipment';
 import { enhancementJobs } from '@/lib/db/schema/enhance';
+import { profiles } from '@/lib/db/schema/profiles';
 
 import { InventoryGrid, type InvItem } from './InventoryGrid';
 
@@ -18,7 +19,7 @@ export default async function InventoryPage({
   const initialSlot: Slot | 'all' =
     slot === 'weapon' || slot === 'armor' || slot === 'accessory' ? slot : 'all';
 
-  const [rows, runningJobs] = await Promise.all([
+  const [rows, runningJobs, prof] = await Promise.all([
     db
       .select({
         id: equipmentInstances.id,
@@ -38,7 +39,13 @@ export default async function InventoryPage({
       .select({ instanceId: enhancementJobs.equipmentInstanceId })
       .from(enhancementJobs)
       .where(and(eq(enhancementJobs.userId, userId), eq(enhancementJobs.status, 'running'))),
+    db
+      .select({ nickname: profiles.nickname })
+      .from(profiles)
+      .where(eq(profiles.id, userId))
+      .limit(1),
   ]);
+  const nickname = prof[0]?.nickname ?? '플레이어';
 
   const busy = new Set(runningJobs.map((r) => r.instanceId.toString()));
   const items: InvItem[] = rows.map((r) => ({
@@ -62,7 +69,7 @@ export default async function InventoryPage({
           첫 장비가 없습니다. 보급 상자를 받아보세요.
         </div>
       ) : (
-        <InventoryGrid items={items} initialSlot={initialSlot} />
+        <InventoryGrid items={items} initialSlot={initialSlot} nickname={nickname} />
       )}
     </div>
   );

@@ -36,10 +36,15 @@ export default async function EnhancePage() {
       .innerJoin(equipmentInstances, eq(enhancementJobs.equipmentInstanceId, equipmentInstances.id))
       .innerJoin(catalogItems, eq(equipmentInstances.catalogItemId, catalogItems.id))
       .where(and(eq(enhancementJobs.userId, userId), eq(enhancementJobs.status, 'running'))),
-    db.select({ diamond: profiles.diamond }).from(profiles).where(eq(profiles.id, userId)).limit(1),
+    db
+      .select({ diamond: profiles.diamond, nickname: profiles.nickname })
+      .from(profiles)
+      .where(eq(profiles.id, userId))
+      .limit(1),
   ]);
 
   const diamond = profRow[0]?.diamond ?? 0n;
+  const nickname = profRow[0]?.nickname ?? '플레이어';
   const byLane = new Map<string, (typeof jobs)[number]>();
   for (const j of jobs) byLane.set(`${j.slot}:${j.slotLane}`, j);
 
@@ -54,6 +59,7 @@ export default async function EnhancePage() {
               ? {
                   jobId: j.jobId.toString(),
                   name: j.name,
+                  slot: j.slot,
                   fromLevel: j.fromLevel,
                   targetLevel: j.targetLevel,
                   transcendLevel: j.transcendLevel,
@@ -63,7 +69,12 @@ export default async function EnhancePage() {
                 }
               : null;
             return active ? (
-              <EnhanceSlotCard key={lane} activeJob={active} diamond={diamond.toString()} />
+              <EnhanceSlotCard
+                key={lane}
+                activeJob={active}
+                diamond={diamond.toString()}
+                nickname={nickname}
+              />
             ) : (
               <Link
                 key={lane}

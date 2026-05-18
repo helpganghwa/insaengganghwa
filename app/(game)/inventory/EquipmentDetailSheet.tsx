@@ -22,16 +22,19 @@ import {
   disenchantAction,
 } from './actions';
 import { startEnhance } from '@/app/(game)/enhance/actions';
+import { BoastModal } from '@/components/BoastModal';
 
 const SLOT_LABEL: Record<Slot, string> = { weapon: '무기', armor: '방어구', accessory: '장신구' };
 
 export function EquipmentDetailSheet({
   item,
   all,
+  nickname,
   onClose,
 }: {
   item: InvItem;
   all: InvItem[];
+  nickname: string;
   onClose: () => void;
 }) {
   const router = useRouter();
@@ -39,6 +42,7 @@ export function EquipmentDetailSheet({
   const [error, setError] = useState<string | null>(null);
   const [confirmT, setConfirmT] = useState(false);
   const [confirmD, setConfirmD] = useState(false);
+  const [boast, setBoast] = useState(false);
 
   const cp = pieceCombatPower(item.enhanceLevel, item.transcendLevel);
   const equippedInSlot = !item.equipped
@@ -156,7 +160,11 @@ export function EquipmentDetailSheet({
                     return;
                   }
                   setConfirmT(false);
-                  run(() => transcendAction(item.id), onClose);
+                  // §10 자랑 — 첫 초월(T1) / 초월 MAX 달성 시 공유 모달, 그 외엔 닫기.
+                  run(() => transcendAction(item.id), () => {
+                    if (nextT === 1 || nextT === MAX_TRANSCEND) setBoast(true);
+                    else onClose();
+                  });
                 }}
                 className={`mt-1.5 w-full rounded-full px-3 py-1.5 text-xs font-bold disabled:opacity-40 ${
                   confirmT ? 'animate-pulse bg-red-500 text-white' : 'bg-amber-500 text-amber-950'
@@ -239,6 +247,14 @@ export function EquipmentDetailSheet({
 
           <button
             type="button"
+            onClick={() => setBoast(true)}
+            className="w-full rounded-full border border-amber-300 px-3 py-1.5 text-xs font-medium text-amber-700 dark:border-amber-800 dark:text-amber-300"
+          >
+            🔗 이 장비 자랑하기
+          </button>
+
+          <button
+            type="button"
             onClick={onClose}
             className="w-full px-4 py-1.5 text-[11px] text-zinc-500"
           >
@@ -246,6 +262,29 @@ export function EquipmentDetailSheet({
           </button>
         </div>
       </div>
+
+      <BoastModal
+        open={boast}
+        onClose={() => setBoast(false)}
+        nickname={nickname}
+        kind="piece"
+        headline={
+          item.transcendLevel >= MAX_TRANSCEND
+            ? '✦ 초월 MAX 달성!'
+            : item.transcendLevel > 0
+              ? `✦ 초월 T${item.transcendLevel}`
+              : `✨ +${item.enhanceLevel} 장비`
+        }
+        piece={{
+          p: {
+            slot: item.slot,
+            name: item.name,
+            enhanceLevel: item.enhanceLevel,
+            transcendLevel: item.transcendLevel,
+          },
+          cp,
+        }}
+      />
     </div>
   );
 }

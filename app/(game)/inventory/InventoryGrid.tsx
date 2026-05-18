@@ -29,9 +29,11 @@ type SortBy = 'recent' | 'enhance' | 'transcend';
 export function InventoryGrid({
   items,
   initialSlot = 'all',
+  nickname,
 }: {
   items: InvItem[];
   initialSlot?: SlotFilter;
+  nickname: string;
 }) {
   const router = useRouter();
   const [filter, setFilter] = useState<SlotFilter>(initialSlot);
@@ -117,7 +119,12 @@ export function InventoryGrid({
       </div>
 
       {openItem ? (
-        <EquipmentDetailSheet item={openItem} all={items} onClose={() => setOpenId(null)} />
+        <EquipmentDetailSheet
+          item={openItem}
+          all={items}
+          nickname={nickname}
+          onClose={() => setOpenId(null)}
+        />
       ) : null}
     </>
   );

@@ -8,6 +8,8 @@ import { catalogItems, equipmentInstances, userCodex, type Slot } from '@/lib/db
 import { pieceCombatPower, totalCombatPower } from '@/lib/game/balance';
 import { formatCompactKR } from '@/lib/ui/format-number';
 
+import { BoastLauncher } from '@/components/BoastModal';
+
 import { NicknameEditor } from './NicknameEditor';
 
 const SLOT_LABEL: Record<Slot, string> = { weapon: '무기', armor: '방어구', accessory: '장신구' };
@@ -89,6 +91,17 @@ export default async function ProfilePage() {
           ⚔️ 총 전투력 {formatCompactKR(total)}
         </div>
       </section>
+
+      <BoastLauncher
+        nickname={nickname}
+        total={total}
+        pieces={equipped.map((e) => ({
+          slot: e.slot,
+          name: e.name,
+          enhanceLevel: e.enhanceLevel,
+          transcendLevel: e.transcendLevel,
+        }))}
+      />
 
       <nav className="space-y-2">
         {MENU.map((m) => (
