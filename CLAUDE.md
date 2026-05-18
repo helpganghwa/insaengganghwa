@@ -294,19 +294,30 @@ gemTimeReductions.conversionRate = currentRate  // 변경되어도 이 작업은
 
 ## 8. Git 워크플로 / 환경 분기
 
-3분기 전략. v1.0 실운영 전까지는 `dev`·`master-dev`만 활성. 단일 DB (분기 없음).
+3분기 전략. **현재 단일 DB**(분기 옵션은 §8.1). 
 
 | 브랜치 | 역할 | 환경 | 도메인 |
 |--------|------|------|--------|
-| `dev` | 로컬 작업 기본. feature 통합 전 단계 | 로컬 (`bun dev`) | localhost:5174 |
-| `master-dev` | 통합 + Vercel 자동 배포 (현 단계의 "production") | Vercel | Vercel 배정 URL (v1.0까지) |
-| `master` | 실운영 production (v1.0 출시 이후 활성) | Vercel | **insaengganghwa.com** (추후 연결) |
+| `dev` | 로컬 작업 기본 (feature 통합 전) | 로컬 (`bun dev`) | localhost:5174 |
+| `master-dev` | 통합·스테이징 — Vercel 자동 배포(검증용) | Vercel preview | `insaengganghwa-git-master-dev-…vercel.app` (Vercel 배정 URL) |
+| `master` | **프로덕션** (Vercel Production Branch) | Vercel production | **insaengganghwa.com** |
 
 ### 규칙
-- 기능 작업: `dev`에서 직접 (또는 `feat/<scope>` 토픽 브랜치 → `dev` 머지).
-- 통합 검증: `dev` → `master-dev` 머지 → Vercel preview 확인.
-- 커밋 메시지: Conventional Commits (`feat: ...`, `fix: ...`, `chore: ...`).
-- `master`에는 v1.0 출시 전까지 커밋·머지 금지 (잠금).
+- 기능 작업: `dev`에서 (또는 `feat/<scope>` 토픽 → `dev`).
+- 스테이징 검증: `dev` → `master-dev` push → Vercel 배정 URL 확인.
+- 프로덕션 배포: `master-dev` → `master` push → **insaengganghwa.com 자동 반영**.
+- 커밋: Conventional Commits. `master`는 검증 끝난 변경만(직접 작업 금지, master-dev 경유).
+
+### Vercel 연결
+- **Production Branch = `master`** (대시보드 → Settings → Git) → `insaengganghwa.com` 자동 매핑.
+- `master-dev`·기타 = preview(자동 URL). `master-dev` 안정 URL = 스테이징.
+- 환경변수: Vercel Production/Preview 분리 입력, 로컬 `.env.local`과 별개.
+
+### 8.1 Supabase 환경 분리 (선택)
+master/master-dev로 DB도 나눌 수 있는가 — **가능**. 두 방식:
+- **옵션 A (권장·저비용)**: Supabase 프로젝트를 **prod/staging 2개**(둘 다 서울 ap-northeast-2) 생성 → Vercel **Production env = prod DB**, **Preview env = staging DB**. master(도메인)=prod, master-dev=staging 자연 분리. 유료 기능 불필요, Drizzle 마이그레이션만 각 DB에 적용.
+- **옵션 B**: Supabase **Branching**(Pro 플랜 유료, GitHub 연동 — 브랜치별 DB 자동 생성/마이그레이션). 자동화 강하나 비용·복잡도 ↑.
+- **현재 상태**: 단일 Supabase(서울)로 마이그레이션 완료. 결정 전까지 단일 유지(스테이징=프로덕션 데이터 공유 — 실유저 전 허용 가능 리스크).
 
 ---
 

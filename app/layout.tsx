@@ -2,6 +2,8 @@ import type { Metadata } from 'next';
 import { Geist, Geist_Mono } from 'next/font/google';
 import './globals.css';
 
+import { ThemeProvider } from '@/components/ThemeProvider';
+
 const geistSans = Geist({
   variable: '--font-geist-sans',
   subsets: ['latin'],
@@ -12,7 +14,6 @@ const geistMono = Geist_Mono({
   subsets: ['latin'],
 });
 
-// 브랜드 상수(lib/brand.ts)·테마/카카오 프로바이더는 해당 기능 구현 시 도입.
 export const metadata: Metadata = {
   title: '인생강화 — insaengganghwa',
   description: '시간기반 idle + 한국식 RPG 강화. 떠나 있어도 강화는 진행된다.',
@@ -40,7 +41,7 @@ export default function RootLayout({ children }: Readonly<{ children: React.Reac
         className="flex min-h-full flex-col bg-zinc-50 text-zinc-900 dark:bg-black dark:text-zinc-50"
         suppressHydrationWarning
       >
-        {children}
+        <ThemeProvider>{children}</ThemeProvider>
       </body>
     </html>
   );
