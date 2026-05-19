@@ -173,9 +173,11 @@ export function EnhanceSlotCard({
           ready ? 'border-emerald-500' : 'border-zinc-700'
         } ${flash ? FLASH_CLASS[flash] : ''} ${pending ? 'opacity-70' : ''}`}
       >
-        {/* 진행 게이지 — 하단 바 (테두리형 SVG 게이지는 후속 비주얼 폴리시) */}
+        {/* 진행 게이지 — 하단 바. 색: <50% 빨강 / 50~<100% 주황 / 100% 초록 */}
         <div
-          className="absolute bottom-0 left-0 h-1 bg-emerald-400 transition-[width] duration-700"
+          className={`absolute bottom-0 left-0 h-1 transition-[width] duration-700 ${
+            ready ? 'bg-emerald-400' : progress >= 0.5 ? 'bg-orange-400' : 'bg-red-500'
+          }`}
           style={{ width: `${Math.max(2, Math.round(progress * 1000) / 10)}%` }}
         />
         <div className="flex h-full items-center gap-3 px-3">
