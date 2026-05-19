@@ -67,11 +67,13 @@
 | `user_id` | uuid FK→profiles | |
 | `catalog_item_id` | int FK→catalog_items | |
 | `max_enhance_level` | int NOT NULL default 0 | 해당 아이템 역대 최고 강화 |
+| `max_enhance_reached_at` | timestamptz NOT NULL default now() | 현재 `max_enhance_level`을 **최초 달성한 시각** — 아이템별 랭킹 동률 타이브레이크 |
 | `first_acquired_at` | timestamptz | 도감 해금(미획득=row 없음) |
 
 - PK `(user_id, catalog_item_id)`
 - **도감강화합** = `Σ max_enhance_level`(전 카탈로그) → 총 전투력·합산 강화 랭킹(BALANCE §3.2/3.3)
-- 강화 완료 트랜잭션에서 `GREATEST(max_enhance_level, 신규레벨)` upsert
+- 강화 완료 트랜잭션에서 `GREATEST(max_enhance_level, 신규레벨)` upsert. **신규레벨 > 기존 max**일 때만 `max_enhance_reached_at = now()` 동시 갱신(달성 시각 = 그 기록을 처음 세운 때, 이후 하락·재달성과 무관). 신규 row insert 시 default `now()`.
+- **아이템별 랭킹/챔피언**: catalog_item 단위로 `max_enhance_level` DESC, `max_enhance_reached_at` ASC, `user_id` ASC 정렬 → Top10. 1위 = 그 아이템 **챔피언**(단, `max_enhance_level > 0`). 결정적 정렬 — 확률 없음(BALANCE §3.3)
 
 ---
 

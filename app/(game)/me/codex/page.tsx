@@ -4,6 +4,8 @@ import { eq } from 'drizzle-orm';
 import { getSessionUserId } from '@/lib/auth/session';
 import { db } from '@/lib/db/client';
 import { catalogItems, userCodex, type Slot } from '@/lib/db/schema/equipment';
+import { championCatalogIds } from '@/lib/game/codex/ranking';
+import { TranscendSprite } from '@/components/TranscendSprite';
 
 const SLOT_LABEL: Record<Slot, string> = { weapon: '무기', armor: '방어구', accessory: '장신구' };
 const SLOT_EMOJI: Record<Slot, string> = { weapon: '⚔️', armor: '🛡️', accessory: '💍' };
@@ -14,15 +16,21 @@ export default async function CodexPage() {
   const userId = await getSessionUserId();
   if (!userId) return null;
 
-  const [catalog, codex] = await Promise.all([
+  const [catalog, codex, champSet] = await Promise.all([
     db
-      .select({ id: catalogItems.id, name: catalogItems.name, slot: catalogItems.slot })
+      .select({
+        id: catalogItems.id,
+        code: catalogItems.code,
+        name: catalogItems.name,
+        slot: catalogItems.slot,
+      })
       .from(catalogItems)
       .where(eq(catalogItems.active, true)),
     db
       .select({ catalogItemId: userCodex.catalogItemId, max: userCodex.maxEnhanceLevel })
       .from(userCodex)
       .where(eq(userCodex.userId, userId)),
+    championCatalogIds(userId),
   ]);
 
   const codexMap = new Map(codex.map((c) => [c.catalogItemId, c.max]));
@@ -52,27 +60,42 @@ export default async function CodexPage() {
             <div className="grid grid-cols-3 gap-2">
               {items.map((c) => {
                 const got = codexMap.has(c.id);
-                return (
-                  <div
-                    key={c.id}
-                    className={`flex aspect-square flex-col items-center justify-center gap-0.5 rounded-xl border-2 p-1 text-center ${
-                      got
-                        ? 'border-zinc-200 bg-white dark:border-zinc-800 dark:bg-zinc-950'
-                        : 'border-dashed border-zinc-200 bg-zinc-50 opacity-40 dark:border-zinc-800 dark:bg-zinc-900'
-                    }`}
-                  >
-                    <span className="text-2xl grayscale" style={{ filter: got ? 'none' : 'grayscale(1)' }}>
-                      {SLOT_EMOJI[s]}
-                    </span>
-                    <span className="line-clamp-1 px-0.5 text-[9px] text-zinc-600 dark:text-zinc-400">
-                      {got ? c.name : '미획득'}
-                    </span>
-                    {got ? (
-                      <span className="text-[10px] font-semibold text-amber-600 dark:text-amber-400">
-                        최고 +{codexMap.get(c.id)}
+                if (!got) {
+                  return (
+                    <div
+                      key={c.id}
+                      className="flex aspect-square flex-col items-center justify-center gap-0.5 rounded-xl border-2 border-dashed border-zinc-200 bg-zinc-50 p-1 text-center opacity-40 dark:border-zinc-800 dark:bg-zinc-900"
+                    >
+                      <span className="text-2xl" style={{ filter: 'grayscale(1)' }}>
+                        {SLOT_EMOJI[s]}
                       </span>
-                    ) : null}
-                  </div>
+                      <span className="line-clamp-1 px-0.5 text-[9px] text-zinc-600 dark:text-zinc-400">
+                        미획득
+                      </span>
+                    </div>
+                  );
+                }
+                const champ = champSet.has(c.id);
+                return (
+                  <Link
+                    key={c.id}
+                    href={`/me/codex/${c.id}`}
+                    className="flex aspect-square flex-col items-center justify-center gap-0.5 rounded-xl border-2 border-zinc-200 bg-white p-1 text-center dark:border-zinc-800 dark:bg-zinc-950"
+                  >
+                    <TranscendSprite
+                      code={c.code}
+                      slot={c.slot}
+                      level={0}
+                      isChampion={champ}
+                      size={40}
+                    />
+                    <span className="line-clamp-1 px-0.5 text-[9px] text-zinc-600 dark:text-zinc-400">
+                      {champ ? `👑 ${c.name}` : c.name}
+                    </span>
+                    <span className="text-[10px] font-semibold text-amber-600 dark:text-amber-400">
+                      최고 +{codexMap.get(c.id)}
+                    </span>
+                  </Link>
                 );
               })}
             </div>

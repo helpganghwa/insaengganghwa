@@ -5,6 +5,7 @@ import { db } from '@/lib/db/client';
 import { catalogItems, equipmentInstances, type Slot } from '@/lib/db/schema/equipment';
 import { enhancementJobs } from '@/lib/db/schema/enhance';
 import { profiles } from '@/lib/db/schema/profiles';
+import { championCatalogIds } from '@/lib/game/codex/ranking';
 
 import { InventoryGrid, type InvItem } from './InventoryGrid';
 
@@ -19,7 +20,7 @@ export default async function InventoryPage({
   const initialSlot: Slot | 'all' =
     slot === 'weapon' || slot === 'armor' || slot === 'accessory' ? slot : 'all';
 
-  const [rows, runningJobs, prof] = await Promise.all([
+  const [rows, runningJobs, prof, champSet] = await Promise.all([
     db
       .select({
         id: equipmentInstances.id,
@@ -45,6 +46,7 @@ export default async function InventoryPage({
       .from(profiles)
       .where(eq(profiles.id, userId))
       .limit(1),
+    championCatalogIds(userId),
   ]);
   const nickname = prof[0]?.nickname ?? '플레이어';
 
@@ -61,6 +63,7 @@ export default async function InventoryPage({
     equipped: r.equippedSlot != null,
     acquiredAtMs: r.acquiredAt.getTime(),
     busy: busy.has(r.id.toString()),
+    isChampion: champSet.has(r.catalogItemId),
   }));
 
   return (

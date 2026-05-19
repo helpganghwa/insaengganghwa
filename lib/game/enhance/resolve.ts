@@ -108,12 +108,19 @@ export function resolveEnhance(input: ResolveInput): Promise<ResolveResult> {
     }
 
     // 도감강화합 소스 — 카탈로그 아이템별 최고 강화(GREATEST) upsert.
+    // 신기록(toLevel > 기존 max)일 때만 max_enhance_reached_at = now()
+    // (아이템별 랭킹 동률 타이브레이크, SCHEMA §2.3 / BALANCE §3.3). SET 식은
+    // 모두 OLD 행 기준 평가 → reached_at CASE가 갱신 전 max를 정확히 비교.
+    // 신규 insert는 컬럼 default now()로 자동(그 레벨 최초 달성 = 지금).
     await tx
       .insert(userCodex)
       .values({ userId: job.userId, catalogItemId, maxEnhanceLevel: toLevel })
       .onConflictDoUpdate({
         target: [userCodex.userId, userCodex.catalogItemId],
-        set: { maxEnhanceLevel: sql`greatest(${userCodex.maxEnhanceLevel}, ${toLevel})` },
+        set: {
+          maxEnhanceLevel: sql`greatest(${userCodex.maxEnhanceLevel}, ${toLevel})`,
+          maxEnhanceReachedAt: sql`case when ${toLevel} > ${userCodex.maxEnhanceLevel} then now() else ${userCodex.maxEnhanceReachedAt} end`,
+        },
       });
 
     await tx.insert(enhancementLogs).values({

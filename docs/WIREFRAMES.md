@@ -451,7 +451,8 @@ grow `me/page.tsx` · `HubEquipmentSet` · `CodexGrid` · `me/codex/*` 이식.
 - 항목: 미획득=disable 스프라이트, 획득=활성 + **최고 강화 레벨** 표기(GDD §5, SCHEMA §2.3 `user_codex.max_enhance_level`)
 - **합산 강화 합** = Σ max enhance(전 카탈로그) — 랭킹 합산·총 전투력 도감 보너스 소스(BALANCE §3.2/3.3)
 - **도감 보상(claim/claimAll/rewardByGrade) 제거**: grow의 등급별 보석 claim 폐기. 도감의 가치는 **전투력 도감 보너스(×(1+도감강화합×0.005))**로 이미 반영 — 별도 수령 보상 없음(순수 수집 + 전투력 보너스)
-- 상세 모달(openEntry): 아이템 정보 — 등급 라벨 제거, 최고 강화/획득 여부
+- 상세 모달(openEntry): 아이템 정보 — 등급 라벨 제거, 최고 강화/획득 여부, **그 아이템 강화 Top10**(🥇🥈🥉/#순위 · 닉네임→`/u/{nickname}` · `+레벨`, 본인 행 하이라이트, 동률은 먼저 달성 순) + **내 순위**(미획득/미기록=안내). 1위=**챔피언** 표식(👑). 빈 랭킹="아직 기록 없음". 소스 SCHEMA §2.3·BALANCE §3.3
+- **챔피언 스프라이트**: 어떤 아이템의 챔피언 유저는 자신의 그 카탈로그 아이템 전 인스턴스가 인벤토리·강화소·자랑(BoastModal)·공개프로필(`/u`)·OG에서 `TranscendSprite isChampion` 변형으로 렌더. 페이지당 챔피언 catalog_item 집합 1쿼리 일괄 조회(N+1 금지, CLAUDE §11.4)
 
 ### 7.3 정리표 (프로필+도감)
 

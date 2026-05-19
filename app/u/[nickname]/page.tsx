@@ -7,7 +7,9 @@ import { db } from '@/lib/db/client';
 import { profiles } from '@/lib/db/schema/profiles';
 import { catalogItems, equipmentInstances, userCodex, type Slot } from '@/lib/db/schema/equipment';
 import { pieceCombatPower, totalCombatPower } from '@/lib/game/balance';
+import { championCatalogIds } from '@/lib/game/codex/ranking';
 import { formatCompactKR } from '@/lib/ui/format-number';
+import { TranscendSprite } from '@/components/TranscendSprite';
 
 const SLOT_LABEL: Record<Slot, string> = { weapon: '무기', armor: '방어구', accessory: '장신구' };
 const SLOT_EMOJI: Record<Slot, string> = { weapon: '⚔️', armor: '🛡️', accessory: '💍' };
@@ -21,10 +23,12 @@ async function loadProfile(nickname: string) {
     .limit(1);
   if (!prof) return null;
 
-  const [equipped, codexAgg] = await Promise.all([
+  const [equipped, codexAgg, champSet] = await Promise.all([
     db
       .select({
         slot: catalogItems.slot,
+        catalogItemId: catalogItems.id,
+        code: catalogItems.code,
         name: catalogItems.name,
         enhanceLevel: equipmentInstances.enhanceLevel,
         transcendLevel: equipmentInstances.transcendLevel,
@@ -38,13 +42,15 @@ async function loadProfile(nickname: string) {
       .select({ s: sql<number>`coalesce(sum(${userCodex.maxEnhanceLevel}),0)::int` })
       .from(userCodex)
       .where(eq(userCodex.userId, prof.id)),
+    championCatalogIds(prof.id),
   ]);
 
   const total = totalCombatPower(
     equipped.map((e) => pieceCombatPower(e.enhanceLevel, e.transcendLevel)),
     Number(codexAgg[0]?.s ?? 0),
   );
-  return { nickname: prof.nickname, equipped, total };
+  const pieces = equipped.map((e) => ({ ...e, isChampion: champSet.has(e.catalogItemId) }));
+  return { nickname: prof.nickname, equipped: pieces, total };
 }
 
 export async function generateMetadata({
@@ -93,16 +99,28 @@ export default async function PublicProfilePage({
             const it = bySlot.get(s);
             return (
               <div key={s} className="flex items-center gap-2 text-sm">
-                <span aria-hidden>{SLOT_EMOJI[s]}</span>
                 {it ? (
-                  <span className="flex-1 truncate">
-                    {it.name}{' '}
-                    <span className="text-zinc-400">
-                      +{it.enhanceLevel} · ✦T{it.transcendLevel}
+                  <>
+                    <TranscendSprite
+                      code={it.code}
+                      slot={s}
+                      level={it.transcendLevel}
+                      isChampion={it.isChampion}
+                      size={32}
+                    />
+                    <span className="flex-1 truncate">
+                      {it.isChampion ? '👑 ' : ''}
+                      {it.name}{' '}
+                      <span className="text-zinc-400">
+                        +{it.enhanceLevel} · ✦T{it.transcendLevel}
+                      </span>
                     </span>
-                  </span>
+                  </>
                 ) : (
-                  <span className="flex-1 text-zinc-400">{SLOT_LABEL[s]} 미장착</span>
+                  <>
+                    <span aria-hidden>{SLOT_EMOJI[s]}</span>
+                    <span className="flex-1 text-zinc-400">{SLOT_LABEL[s]} 미장착</span>
+                  </>
                 )}
               </div>
             );

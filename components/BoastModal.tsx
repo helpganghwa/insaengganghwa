@@ -13,6 +13,8 @@ export type BoastPiece = {
   name: string;
   enhanceLevel: number;
   transcendLevel: number;
+  /** 이 유저가 그 카탈로그 아이템의 챔피언(아이템별 1위) — BALANCE §3.3. */
+  isChampion: boolean;
 };
 
 /**
@@ -101,7 +103,13 @@ export function BoastModal({
                     <div key={s} className="flex items-center gap-2 text-xs">
                       {it ? (
                         <>
-                          <TranscendSprite code={it.code} slot={s} level={it.transcendLevel} size={28} />
+                          <TranscendSprite
+                            code={it.code}
+                            slot={s}
+                            level={it.transcendLevel}
+                            isChampion={it.isChampion}
+                            size={28}
+                          />
                           <span className="truncate">
                             {it.name} +{it.enhanceLevel} ✦T{it.transcendLevel}
                           </span>
@@ -128,6 +136,7 @@ export function BoastModal({
                 code={piece.p.code}
                 slot={piece.p.slot}
                 level={piece.p.transcendLevel}
+                isChampion={piece.p.isChampion}
                 size={52}
               />
               <div>

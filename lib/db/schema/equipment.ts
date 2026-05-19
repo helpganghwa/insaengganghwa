@@ -85,6 +85,14 @@ export const userCodex = pgTable(
       .references(() => catalogItems.id),
     /** 해당 아이템 역대 최고 강화. 총 전투력·합산 강화 랭킹 소스(BALANCE §3.2/3.3). */
     maxEnhanceLevel: integer('max_enhance_level').notNull().default(0),
+    /**
+     * 현재 max_enhance_level을 **최초 달성한 시각**. 아이템별 랭킹 동률 타이브레이크
+     * (먼저 달성한 유저 우선, BALANCE §3.3 / SCHEMA §2.3). 신규레벨 > 기존 max일
+     * 때만 now()로 갱신(이후 하락·재달성과 무관). 신규 row insert 시 default now().
+     */
+    maxEnhanceReachedAt: timestamp('max_enhance_reached_at', { withTimezone: true })
+      .notNull()
+      .defaultNow(),
     /** 도감 해금(미획득 = row 없음). */
     firstAcquiredAt: timestamp('first_acquired_at', { withTimezone: true })
       .notNull()

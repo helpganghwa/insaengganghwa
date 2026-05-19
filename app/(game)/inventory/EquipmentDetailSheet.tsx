@@ -282,6 +282,7 @@ export function EquipmentDetailSheet({
             name: item.name,
             enhanceLevel: item.enhanceLevel,
             transcendLevel: item.transcendLevel,
+            isChampion: item.isChampion,
           },
           cp,
         }}

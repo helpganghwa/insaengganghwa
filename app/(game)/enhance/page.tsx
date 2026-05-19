@@ -6,6 +6,7 @@ import { db } from '@/lib/db/client';
 import { profiles } from '@/lib/db/schema/profiles';
 import { catalogItems, equipmentInstances, type Slot } from '@/lib/db/schema/equipment';
 import { enhancementJobs } from '@/lib/db/schema/enhance';
+import { championCatalogIds } from '@/lib/game/codex/ranking';
 
 import { EnhanceSlotCard, type ActiveJob } from './EnhanceSlotCard';
 
@@ -17,7 +18,7 @@ export default async function EnhancePage() {
   const userId = await getSessionUserId();
   if (!userId) return null; // (game) layout이 가드
 
-  const [jobs, profRow] = await Promise.all([
+  const [jobs, profRow, champSet] = await Promise.all([
     db
       .select({
         jobId: enhancementJobs.id,
@@ -30,6 +31,7 @@ export default async function EnhancePage() {
         startedAt: enhancementJobs.startedAt,
         completeAt: enhancementJobs.completeAt,
         transcendLevel: equipmentInstances.transcendLevel,
+        catalogItemId: equipmentInstances.catalogItemId,
         code: catalogItems.code,
         name: catalogItems.name,
       })
@@ -42,6 +44,7 @@ export default async function EnhancePage() {
       .from(profiles)
       .where(eq(profiles.id, userId))
       .limit(1),
+    championCatalogIds(userId),
   ]);
 
   const diamond = profRow[0]?.diamond ?? 0n;
@@ -65,6 +68,7 @@ export default async function EnhancePage() {
                   fromLevel: j.fromLevel,
                   targetLevel: j.targetLevel,
                   transcendLevel: j.transcendLevel,
+                  isChampion: champSet.has(j.catalogItemId),
                   baseRateBp: j.baseRateBp,
                   startedAtIso: j.startedAt.toISOString(),
                   completeAtIso: j.completeAt.toISOString(),

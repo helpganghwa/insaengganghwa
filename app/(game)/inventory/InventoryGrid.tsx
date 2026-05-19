@@ -22,6 +22,7 @@ export type InvItem = {
   equipped: boolean;
   acquiredAtMs: number;
   busy: boolean;
+  isChampion: boolean;
 };
 
 const SLOT_EMOJI: Record<Slot, string> = { weapon: '⚔️', armor: '🛡️', accessory: '💍' };
@@ -157,6 +158,7 @@ function Tile({ item, onOpen }: { item: InvItem; onOpen: () => void }) {
         code={item.code}
         slot={item.slot}
         level={item.transcendLevel}
+        isChampion={item.isChampion}
         size={52}
       />
       <span className="line-clamp-1 px-0.5 text-[10px] text-zinc-600 dark:text-zinc-400">

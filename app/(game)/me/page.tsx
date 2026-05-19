@@ -6,6 +6,7 @@ import { db } from '@/lib/db/client';
 import { profiles } from '@/lib/db/schema/profiles';
 import { catalogItems, equipmentInstances, userCodex, type Slot } from '@/lib/db/schema/equipment';
 import { pieceCombatPower, totalCombatPower } from '@/lib/game/balance';
+import { championCatalogIds } from '@/lib/game/codex/ranking';
 import { formatCompactKR } from '@/lib/ui/format-number';
 
 import { BoastLauncher } from '@/components/BoastModal';
@@ -25,11 +26,12 @@ export default async function ProfilePage() {
   const userId = await getSessionUserId();
   if (!userId) return null;
 
-  const [prof, equipped, codexAgg] = await Promise.all([
+  const [prof, equipped, codexAgg, champSet] = await Promise.all([
     db.select({ nickname: profiles.nickname }).from(profiles).where(eq(profiles.id, userId)).limit(1),
     db
       .select({
         slot: catalogItems.slot,
+        catalogItemId: catalogItems.id,
         code: catalogItems.code,
         name: catalogItems.name,
         enhanceLevel: equipmentInstances.enhanceLevel,
@@ -44,6 +46,7 @@ export default async function ProfilePage() {
       .select({ s: sql<number>`coalesce(sum(${userCodex.maxEnhanceLevel}),0)::int` })
       .from(userCodex)
       .where(eq(userCodex.userId, userId)),
+    championCatalogIds(userId),
   ]);
 
   const nickname = prof[0]?.nickname ?? '플레이어';
@@ -102,6 +105,7 @@ export default async function ProfilePage() {
           name: e.name,
           enhanceLevel: e.enhanceLevel,
           transcendLevel: e.transcendLevel,
+          isChampion: champSet.has(e.catalogItemId),
         }))}
       />
 
