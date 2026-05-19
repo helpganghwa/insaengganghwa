@@ -30,6 +30,7 @@ export default async function EnhancePage() {
         startedAt: enhancementJobs.startedAt,
         completeAt: enhancementJobs.completeAt,
         transcendLevel: equipmentInstances.transcendLevel,
+        code: catalogItems.code,
         name: catalogItems.name,
       })
       .from(enhancementJobs)
@@ -58,6 +59,7 @@ export default async function EnhancePage() {
             const active: ActiveJob | null = j
               ? {
                   jobId: j.jobId.toString(),
+                  code: j.code,
                   name: j.name,
                   slot: j.slot,
                   fromLevel: j.fromLevel,

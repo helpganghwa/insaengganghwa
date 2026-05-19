@@ -12,6 +12,7 @@ import {
 } from '@/lib/game/balance';
 import type { Slot } from '@/lib/db/schema/equipment';
 import { BoastModal } from '@/components/BoastModal';
+import { TranscendSprite } from '@/components/TranscendSprite';
 
 import { finalizeEnhance, reduceTimeWithGems, cancelEnhanceAction } from './actions';
 
@@ -20,6 +21,7 @@ const BOAST_LEVELS = new Set([30, 50, 99]);
 
 export type ActiveJob = {
   jobId: string;
+  code: string;
   name: string;
   slot: Slot;
   fromLevel: number;
@@ -171,8 +173,13 @@ export function EnhanceSlotCard({
           style={{ width: `${Math.max(2, Math.round(progress * 1000) / 10)}%` }}
         />
         <div className="flex h-full items-center gap-3 px-3">
-          <span className="flex h-12 w-12 shrink-0 items-center justify-center rounded-lg border border-zinc-700 bg-black/40 text-xl">
-            ⚒️
+          <span className="flex h-12 w-12 shrink-0 items-center justify-center rounded-lg border border-zinc-700 bg-black/40">
+            <TranscendSprite
+              code={activeJob.code}
+              slot={activeJob.slot}
+              level={activeJob.transcendLevel}
+              size={44}
+            />
           </span>
           <div className="flex min-w-0 flex-1 flex-col gap-0.5">
             <div className="flex items-center gap-1.5 whitespace-nowrap text-sm font-bold">
