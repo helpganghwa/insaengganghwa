@@ -278,6 +278,7 @@ export function EquipmentDetailSheet({
         piece={{
           p: {
             slot: item.slot,
+            code: item.code,
             name: item.name,
             enhanceLevel: item.enhanceLevel,
             transcendLevel: item.transcendLevel,

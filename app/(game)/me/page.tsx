@@ -30,6 +30,7 @@ export default async function ProfilePage() {
     db
       .select({
         slot: catalogItems.slot,
+        code: catalogItems.code,
         name: catalogItems.name,
         enhanceLevel: equipmentInstances.enhanceLevel,
         transcendLevel: equipmentInstances.transcendLevel,
@@ -97,6 +98,7 @@ export default async function ProfilePage() {
         total={total}
         pieces={equipped.map((e) => ({
           slot: e.slot,
+          code: e.code,
           name: e.name,
           enhanceLevel: e.enhanceLevel,
           transcendLevel: e.transcendLevel,

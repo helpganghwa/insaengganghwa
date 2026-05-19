@@ -286,6 +286,7 @@ export function EnhanceSlotCard({
         piece={{
           p: {
             slot: activeJob.slot,
+            code: activeJob.code,
             name: activeJob.name,
             enhanceLevel: activeJob.targetLevel,
             transcendLevel: activeJob.transcendLevel,

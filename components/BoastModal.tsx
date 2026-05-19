@@ -3,11 +3,13 @@
 import { useEffect, useState } from 'react';
 
 import { formatCompactKR } from '@/lib/ui/format-number';
+import { TranscendSprite } from '@/components/TranscendSprite';
 
 const SLOT_EMOJI = { weapon: '⚔️', armor: '🛡️', accessory: '💍' } as const;
 
 export type BoastPiece = {
   slot: 'weapon' | 'armor' | 'accessory';
+  code: string;
   name: string;
   enhanceLevel: number;
   transcendLevel: number;
@@ -97,13 +99,18 @@ export function BoastModal({
                   const it = set.pieces.find((x) => x.slot === s);
                   return (
                     <div key={s} className="flex items-center gap-2 text-xs">
-                      <span aria-hidden>{SLOT_EMOJI[s]}</span>
                       {it ? (
-                        <span className="truncate">
-                          {it.name} +{it.enhanceLevel} ✦T{it.transcendLevel}
-                        </span>
+                        <>
+                          <TranscendSprite code={it.code} slot={s} level={it.transcendLevel} size={28} />
+                          <span className="truncate">
+                            {it.name} +{it.enhanceLevel} ✦T{it.transcendLevel}
+                          </span>
+                        </>
                       ) : (
-                        <span className="opacity-60">미장착</span>
+                        <>
+                          <span aria-hidden>{SLOT_EMOJI[s]}</span>
+                          <span className="opacity-60">미장착</span>
+                        </>
                       )}
                     </div>
                   );
@@ -117,7 +124,12 @@ export function BoastModal({
 
           {kind === 'piece' && piece ? (
             <div className="mt-3 flex items-center gap-3">
-              <span className="text-3xl">{SLOT_EMOJI[piece.p.slot]}</span>
+              <TranscendSprite
+                code={piece.p.code}
+                slot={piece.p.slot}
+                level={piece.p.transcendLevel}
+                size={52}
+              />
               <div>
                 <div className="text-sm font-bold">
                   {piece.p.name}{' '}
