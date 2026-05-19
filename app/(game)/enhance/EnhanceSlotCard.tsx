@@ -251,15 +251,6 @@ export function EnhanceSlotCard({
                 ? '강화하시겠습니까?'
                 : '아직 최대 확률이 아닙니다. 그래도 강화하시겠습니까?'}
             </p>
-            <div className="flex gap-2 text-[11px] font-semibold tabular-nums">
-              <span className="text-emerald-300">성공 {(effBp / 100).toFixed(1)}%</span>
-              <span className="text-zinc-400">
-                최대 {(activeJob.baseRateBp / 100).toFixed(0)}%
-              </span>
-              {isRiskZone ? (
-                <span className="text-amber-300">하락 {downPct.toFixed(1)}%</span>
-              ) : null}
-            </div>
             <div className="flex gap-2">
               <button
                 type="button"

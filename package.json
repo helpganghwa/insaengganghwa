@@ -24,6 +24,8 @@
   "dependencies": {
     "@supabase/ssr": "^0.10.3",
     "@supabase/supabase-js": "^2.105.4",
+    "@upstash/ratelimit": "^2.0.8",
+    "@upstash/redis": "^1.38.0",
     "drizzle-orm": "^0.45.2",
     "es-hangul": "^2.3.8",
     "next": "16.2.6",
