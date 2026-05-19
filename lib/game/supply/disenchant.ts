@@ -10,7 +10,7 @@ import { disenchantLogs } from '@/lib/db/schema/supply';
 import { DIAMOND_PER_DISENCHANT } from '@/lib/game/balance';
 
 /**
- * 분해 — GDD §3.4 / BALANCE §4.4 / SCHEMA §5.3. **고정 2다이아/개**(강화·초월 무관).
+ * 분해 — GDD §3.4 / BALANCE §4.3 / SCHEMA §5.3. **고정 10다이아/개**(강화·초월 무관).
  * 미장착·미잠금·강화중 아님·강화 제물 예약 아님인 개체만. 부적격은 건너뜀(배치 비실패).
  * 개체 삭제 + 다이아 지급 + 로그 = 단일 트랜잭션. 단일 분해 = ids 길이 1.
  */

@@ -231,13 +231,8 @@ export function supplyItemProbability(slotActiveCatalogCount: number): number {
   return 1 / slotActiveCatalogCount;
 }
 
-/** §4.3 박스 1회 개봉 시 보석 추가 드롭: 20% 확률, 1~3개. */
-export const GEM_DROP_ON_OPEN_RATE_BP = 2000; // 20%
-export const GEM_DROP_MIN = 1;
-export const GEM_DROP_MAX = 3;
-
-/** §4.4 분해 보상 = 고정 다이아 (강화·초월 레벨 무관). */
-export const DIAMOND_PER_DISENCHANT = 2;
+/** §4.3 분해 보상 = 고정 다이아 (강화·초월 레벨 무관). 보급 개봉 보석 드롭 폐기(확률형 제거). */
+export const DIAMOND_PER_DISENCHANT = 10;
 
 // ─────────────────────────────────────────────────────────────────────────────
 // §5. 레이드 (플레이어 호스팅 co-op)

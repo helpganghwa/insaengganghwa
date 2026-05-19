@@ -3,20 +3,14 @@ import 'server-only';
 import { and, eq, sql } from 'drizzle-orm';
 
 import { db } from '@/lib/db/client';
-import { profiles } from '@/lib/db/schema/profiles';
 import { catalogItems, equipmentInstances, userCodex, type Slot } from '@/lib/db/schema/equipment';
 import { userSupplyBoxes, supplyOpenLogs } from '@/lib/db/schema/supply';
-import {
-  GEM_DROP_MAX,
-  GEM_DROP_MIN,
-  GEM_DROP_ON_OPEN_RATE_BP,
-} from '@/lib/game/balance';
 
 /**
  * 보급 상자 개봉 — GDD §3.4 / BALANCE §4 / SCHEMA §5.
  * 슬롯 일치 박스 → 해당 슬롯 활성 카탈로그 **균등 랜덤** 1개(+0·초월0) 획득.
- * 천장 없음. 개봉마다 20% 확률 보석 1~3 추가. 중복=별도 개체(초월/+100 제물).
- * count 차감 + 개체 생성 + 보석 + 도감 + 로그 = 단일 트랜잭션.
+ * 천장 없음. 개봉 보석 드롭 폐기(확률형 제거 — gemDrop 항상 0). 중복=별도 개체(초월/+100 제물).
+ * count 차감 + 개체 생성 + 도감 + 로그 = 단일 트랜잭션.
  */
 export type SupplyErrorCode = 'NO_BOX' | 'NO_CATALOG';
 export class SupplyError extends Error {
@@ -60,7 +54,6 @@ export function openSupplyBoxes(input: {
     if (pool.length === 0) throw new SupplyError('NO_CATALOG');
 
     const results: OpenResult[] = [];
-    let gemTotal = 0;
 
     for (let i = 0; i < n; i++) {
       // 슬롯 내 균등 (BALANCE §4.2).
@@ -85,12 +78,8 @@ export function openSupplyBoxes(input: {
           .onConflictDoNothing();
       }
 
-      // 보석 드롭 — 20% 확률, 1~3 (BALANCE §4.3).
-      let gemDrop = 0;
-      if (rngU32() % 10000 < GEM_DROP_ON_OPEN_RATE_BP) {
-        gemDrop = GEM_DROP_MIN + (rngU32() % (GEM_DROP_MAX - GEM_DROP_MIN + 1));
-        gemTotal += gemDrop;
-      }
+      // 개봉 보석 드롭 폐기(확률형 제거) — 로그·결과는 0 고정.
+      const gemDrop = 0;
 
       await tx.insert(supplyOpenLogs).values({
         userId,
@@ -107,13 +96,6 @@ export function openSupplyBoxes(input: {
       .update(userSupplyBoxes)
       .set({ count: sql`${userSupplyBoxes.count} - ${BigInt(n)}` })
       .where(and(eq(userSupplyBoxes.userId, userId), eq(userSupplyBoxes.slot, slot)));
-
-    if (gemTotal > 0) {
-      await tx
-        .update(profiles)
-        .set({ diamond: sql`${profiles.diamond} + ${BigInt(gemTotal)}` })
-        .where(eq(profiles.id, userId));
-    }
 
     return results;
   });
