@@ -7,6 +7,7 @@ import { enhancementJobs } from '@/lib/db/schema/enhance';
 import { AppHeader } from '@/components/AppHeader';
 import { BottomNav } from '@/components/BottomNav';
 import { SpritePreloader } from '@/components/SpritePreloader';
+import { RouteTransitionOverlay } from '@/components/RouteTransitionOverlay';
 
 /**
  * 인증 필요 라우트 그룹 — WIREFRAMES §0 셸.
@@ -34,6 +35,7 @@ export default async function GameLayout({ children }: { children: React.ReactNo
   return (
     <div className="mx-auto flex min-h-dvh w-full max-w-[390px] flex-1 flex-col shadow-sm">
       <SpritePreloader />
+      <RouteTransitionOverlay />
       <AppHeader userId={userId} />
       <main className="flex-1 overflow-y-auto">{children}</main>
       <BottomNav hasCompletedEnhance={hasCompletedEnhance} />
