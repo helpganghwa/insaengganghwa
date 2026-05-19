@@ -106,14 +106,12 @@ export default async function PublicProfilePage({
                       slot={s}
                       level={it.transcendLevel}
                       isChampion={it.isChampion}
-                      size={32}
+                      size={48}
                     />
                     <span className="flex-1 truncate">
                       {it.isChampion ? '👑 ' : ''}
                       {it.name}{' '}
-                      <span className="text-zinc-400">
-                        +{it.enhanceLevel} · ✦T{it.transcendLevel}
-                      </span>
+                      <span className="text-zinc-400">+{it.enhanceLevel}</span>
                     </span>
                   </>
                 ) : (

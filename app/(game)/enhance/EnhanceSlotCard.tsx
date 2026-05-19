@@ -174,21 +174,18 @@ export function EnhanceSlotCard({
           style={{ width: `${Math.max(2, Math.round(progress * 1000) / 10)}%` }}
         />
         <div className="flex h-full items-center gap-3 px-3">
-          <span className="flex h-12 w-12 shrink-0 items-center justify-center rounded-lg border border-zinc-700 bg-black/40">
+          <span className="flex h-16 w-16 shrink-0 items-center justify-center rounded-lg border border-zinc-700 bg-black/40">
             <TranscendSprite
               code={activeJob.code}
               slot={activeJob.slot}
               level={activeJob.transcendLevel}
               isChampion={activeJob.isChampion}
-              size={44}
+              size={60}
             />
           </span>
           <div className="flex min-w-0 flex-1 flex-col gap-0.5">
             <div className="flex items-center gap-1.5 whitespace-nowrap text-sm font-bold">
               <span className="truncate">{activeJob.name}</span>
-              <span className="shrink-0 rounded bg-amber-900/60 px-1 text-[10px] text-amber-200">
-                ✦T{activeJob.transcendLevel}
-              </span>
               <span className="shrink-0 text-[11px] text-zinc-400 tabular-nums">
                 +{activeJob.fromLevel}→+{activeJob.targetLevel}
               </span>

@@ -23,6 +23,7 @@ import {
 } from './actions';
 import { startEnhance } from '@/app/(game)/enhance/actions';
 import { BoastModal } from '@/components/BoastModal';
+import { TranscendSprite } from '@/components/TranscendSprite';
 
 const SLOT_LABEL: Record<Slot, string> = { weapon: '무기', armor: '방어구', accessory: '장신구' };
 
@@ -92,7 +93,8 @@ export function EquipmentDetailSheet({
       >
         <header className="text-center">
           <div className="text-[10px] font-medium text-amber-600 dark:text-amber-400">
-            ✦T{item.transcendLevel} · {SLOT_LABEL[item.slot]}
+            {item.isChampion ? '👑 챔피언 · ' : ''}
+            {SLOT_LABEL[item.slot]}
           </div>
           <h2 className="mt-0.5 text-sm font-semibold">
             {item.name} <span className="text-zinc-400">+{item.enhanceLevel}</span>
@@ -104,9 +106,13 @@ export function EquipmentDetailSheet({
         </header>
 
         <section className="mt-2 flex items-center gap-3 rounded-lg border border-zinc-200 p-2.5 dark:border-zinc-800">
-          <span className="text-3xl">
-            {item.slot === 'weapon' ? '⚔️' : item.slot === 'armor' ? '🛡️' : '💍'}
-          </span>
+          <TranscendSprite
+            code={item.code}
+            slot={item.slot}
+            level={item.transcendLevel}
+            isChampion={item.isChampion}
+            size={64}
+          />
           <div>
             <div className="text-[10px] text-zinc-500">⚔️ 전투력</div>
             <div className="text-sm font-semibold tabular-nums">{formatCompactKR(cp)}</div>

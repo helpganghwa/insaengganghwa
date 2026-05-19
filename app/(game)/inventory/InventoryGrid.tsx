@@ -160,15 +160,12 @@ function Tile({ item, onOpen }: { item: InvItem; onOpen: () => void }) {
         slot={item.slot}
         level={item.transcendLevel}
         isChampion={item.isChampion}
-        size={52}
+        size={64}
       />
       <span className="line-clamp-1 px-0.5 text-[10px] text-zinc-600 dark:text-zinc-400">
         {item.name}
       </span>
       <span className="text-xs font-semibold">+{item.enhanceLevel}</span>
-      <span className="text-[10px] text-amber-600 dark:text-amber-400">
-        ✦T{item.transcendLevel}
-      </span>
       {isNew ? (
         <span className="absolute left-1 top-1 rounded-full bg-emerald-500 px-1 text-[8px] font-bold text-white">
           NEW

@@ -108,10 +108,11 @@ export function BoastModal({
                             slot={s}
                             level={it.transcendLevel}
                             isChampion={it.isChampion}
-                            size={28}
+                            size={40}
                           />
                           <span className="truncate">
-                            {it.name} +{it.enhanceLevel} ✦T{it.transcendLevel}
+                            {it.isChampion ? '👑 ' : ''}
+                            {it.name} +{it.enhanceLevel}
                           </span>
                         </>
                       ) : (
@@ -137,14 +138,13 @@ export function BoastModal({
                 slot={piece.p.slot}
                 level={piece.p.transcendLevel}
                 isChampion={piece.p.isChampion}
-                size={52}
+                size={68}
               />
               <div>
                 <div className="text-sm font-bold">
+                  {piece.p.isChampion ? '👑 ' : ''}
                   {piece.p.name}{' '}
-                  <span className="opacity-80">
-                    +{piece.p.enhanceLevel} ✦T{piece.p.transcendLevel}
-                  </span>
+                  <span className="opacity-80">+{piece.p.enhanceLevel}</span>
                 </div>
                 <div className="text-xs opacity-90">⚔️ 전투력 {formatCompactKR(piece.cp)}</div>
               </div>

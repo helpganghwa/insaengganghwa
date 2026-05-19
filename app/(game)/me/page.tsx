@@ -10,6 +10,7 @@ import { championCatalogIds } from '@/lib/game/codex/ranking';
 import { formatCompactKR } from '@/lib/ui/format-number';
 
 import { BoastLauncher } from '@/components/BoastModal';
+import { TranscendSprite } from '@/components/TranscendSprite';
 
 import { NicknameEditor } from './NicknameEditor';
 
@@ -71,21 +72,31 @@ export default async function ProfilePage() {
             const it = bySlot.get(s);
             return (
               <div key={s} className="flex items-center gap-2 text-sm">
-                <span aria-hidden>{SLOT_EMOJI[s]}</span>
                 {it ? (
-                  <span className="flex-1">
-                    {it.name}{' '}
-                    <span className="text-zinc-400">
-                      +{it.enhanceLevel} · ✦T{it.transcendLevel}
+                  <>
+                    <TranscendSprite
+                      code={it.code}
+                      slot={s}
+                      level={it.transcendLevel}
+                      isChampion={champSet.has(it.catalogItemId)}
+                      size={40}
+                    />
+                    <span className="flex-1">
+                      {champSet.has(it.catalogItemId) ? '👑 ' : ''}
+                      {it.name}{' '}
+                      <span className="text-zinc-400">+{it.enhanceLevel}</span>
                     </span>
-                  </span>
+                  </>
                 ) : (
-                  <span className="flex-1 text-zinc-400">
-                    {SLOT_LABEL[s]} 미장착 —{' '}
-                    <Link href={`/inventory?slot=${s}`} className="underline">
-                      장착
-                    </Link>
-                  </span>
+                  <>
+                    <span aria-hidden>{SLOT_EMOJI[s]}</span>
+                    <span className="flex-1 text-zinc-400">
+                      {SLOT_LABEL[s]} 미장착 —{' '}
+                      <Link href={`/inventory?slot=${s}`} className="underline">
+                        장착
+                      </Link>
+                    </span>
+                  </>
                 )}
               </div>
             );
