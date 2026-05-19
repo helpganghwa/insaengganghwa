@@ -20,9 +20,6 @@ export default async function LoginPage({
             ⚒️
           </div>
           <h1 className="mt-4 text-3xl font-semibold tracking-tight">인생강화</h1>
-          <p className="mt-2 text-sm text-zinc-600 dark:text-zinc-400">
-            시간기반 idle + 한국식 RPG 강화
-          </p>
         </div>
 
         <form action={signInWithKakao} className="w-full">

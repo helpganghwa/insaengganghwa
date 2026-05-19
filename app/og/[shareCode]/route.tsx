@@ -7,6 +7,7 @@ import { catalogItems, equipmentInstances, userCodex } from '@/lib/db/schema/equ
 import { pieceCombatPower, totalCombatPower } from '@/lib/game/balance';
 import { championCatalogIds } from '@/lib/game/codex/ranking';
 import { spritePath } from '@/lib/game/equipment/sprite-manifest';
+import { transcendStyle } from '@/lib/game/equipment/transcend';
 import { formatCompactKR } from '@/lib/ui/format-number';
 
 export const size = { width: 1200, height: 630 };
@@ -91,9 +92,7 @@ export async function GET(_req: Request, { params }: { params: Promise<{ shareCo
   const display = prof ? prof.nickname : '인생강화';
 
   // 배경: 요청마다 진한 랜덤(no-store) — 풀 1개 시도, 부재면 그라데이션.
-  const bgUri = await dataUri(
-    `${origin}/og/og-${1 + Math.floor(Math.random() * BG_POOL)}.png`,
-  );
+  const bgUri = await dataUri(`${origin}/og/og-${1 + Math.floor(Math.random() * BG_POOL)}.png`);
   // 슬롯 스프라이트 data URI 선해결(Satori는 동기 렌더).
   const sprite = new Map<string, string | null>();
   await Promise.all(
@@ -115,97 +114,110 @@ export async function GET(_req: Request, { params }: { params: Promise<{ shareCo
   };
 
   return new ImageResponse(
-    (
-      <div
-        style={
-          bgUri
-            ? { ...rootBase, background: '#120c08' }
-            : {
-                ...rootBase,
-                background: 'linear-gradient(135deg,#1c1410 0%,#3a2a14 60%,#7a5a1e 100%)',
-              }
-        }
-      >
-        {bgUri ? (
-          <>
-            <img
-              src={bgUri}
-              width={1200}
-              height={630}
-              style={{ position: 'absolute', top: 0, left: 0, width: 1200, height: 630, objectFit: 'cover' }}
-            />
-            {/* 가독성 스크림 */}
-            <div
-              style={{
-                position: 'absolute',
-                top: 0,
-                left: 0,
-                width: 1200,
-                height: 630,
-                background:
-                  'linear-gradient(105deg,rgba(8,6,4,0.86) 0%,rgba(10,7,4,0.66) 48%,rgba(10,7,4,0.30) 100%)',
-                display: 'flex',
-              }}
-            />
-          </>
-        ) : null}
+    <div
+      style={
+        bgUri
+          ? { ...rootBase, background: '#120c08' }
+          : {
+              ...rootBase,
+              background: 'linear-gradient(135deg,#1c1410 0%,#3a2a14 60%,#7a5a1e 100%)',
+            }
+      }
+    >
+      {bgUri ? (
+        <>
+          <img
+            src={bgUri}
+            width={1200}
+            height={630}
+            style={{
+              position: 'absolute',
+              top: 0,
+              left: 0,
+              width: 1200,
+              height: 630,
+              objectFit: 'cover',
+            }}
+          />
+          {/* 가독성 스크림 */}
+          <div
+            style={{
+              position: 'absolute',
+              top: 0,
+              left: 0,
+              width: 1200,
+              height: 630,
+              background:
+                'linear-gradient(105deg,rgba(8,6,4,0.86) 0%,rgba(10,7,4,0.66) 48%,rgba(10,7,4,0.30) 100%)',
+              display: 'flex',
+            }}
+          />
+        </>
+      ) : null}
 
-        <div style={{ display: 'flex', fontSize: 30, opacity: 0.9, letterSpacing: 2, zIndex: 1 }}>
-          ⚒️ 인생강화 — 시간기반 강화 RPG
-        </div>
-        <div style={{ display: 'flex', marginTop: 18, fontSize: 78, fontWeight: 800, zIndex: 1 }}>
-          {display}
-        </div>
+      <div style={{ display: 'flex', fontSize: 30, opacity: 0.9, letterSpacing: 2, zIndex: 1 }}>
+        ⚒️ 인생강화
+      </div>
+      <div style={{ display: 'flex', marginTop: 18, fontSize: 78, fontWeight: 800, zIndex: 1 }}>
+        {display}
+      </div>
 
-        <div style={{ display: 'flex', flexDirection: 'column', gap: 16, marginTop: 40, zIndex: 1 }}>
-          {SLOTS.map((s) => {
-            const it = bySlot.get(s);
-            const spr = it ? sprite.get(s) : null;
-            const isChamp = it ? champ.has(it.catalogItemId) : false;
-            return (
-              <div key={s} style={{ display: 'flex', alignItems: 'center', fontSize: 38 }}>
-                <div
-                  style={{
-                    width: 64,
-                    height: 64,
-                    display: 'flex',
-                    alignItems: 'center',
-                    justifyContent: 'center',
-                    marginRight: 18,
-                  }}
-                >
-                  {spr ? (
-                    <img src={spr} width={60} height={60} style={{ width: 60, height: 60 }} />
-                  ) : (
-                    <span style={{ fontSize: 46, opacity: it ? 1 : 0.4 }}>{EMOJI[s]}</span>
-                  )}
-                </div>
-                <span style={{ opacity: it ? 1 : 0.4 }}>
-                  {it
-                    ? `${isChamp ? '👑 ' : ''}${it.name}  +${it.enhanceLevel}  ✦T${it.transcendLevel}`
-                    : '미장착'}
-                </span>
+      <div style={{ display: 'flex', flexDirection: 'column', gap: 18, marginTop: 34, zIndex: 1 }}>
+        {SLOTS.map((s) => {
+          const it = bySlot.get(s);
+          const spr = it ? sprite.get(s) : null;
+          const isChamp = it ? champ.has(it.catalogItemId) : false;
+          // 초월은 등급색 정적 테두리로 표현(✦T 텍스트 제거). OG는 절차적 프레임
+          // 불가 → transcendStyle 색. T0=테두리 없음. [[transcend-no-text-label]]
+          const ts = it && it.transcendLevel > 0 ? transcendStyle(it.transcendLevel) : null;
+          const [tr, tg, tb] = ts?.colorRgb ?? [0, 0, 0];
+          return (
+            <div key={s} style={{ display: 'flex', alignItems: 'center', fontSize: 42 }}>
+              <div
+                style={{
+                  width: 116,
+                  height: 116,
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  marginRight: 26,
+                  borderRadius: 18,
+                  background: 'rgba(0,0,0,0.32)',
+                  border: ts
+                    ? `5px solid rgb(${tr},${tg},${tb})`
+                    : '2px solid rgba(255,255,255,0.10)',
+                  boxShadow: ts ? `0 0 22px rgba(${tr},${tg},${tb},0.55)` : 'none',
+                }}
+              >
+                {spr ? (
+                  <img src={spr} width={104} height={104} style={{ width: 104, height: 104 }} />
+                ) : (
+                  <span style={{ fontSize: 64, opacity: it ? 1 : 0.4 }}>{EMOJI[s]}</span>
+                )}
               </div>
-            );
-          })}
-        </div>
+              <span style={{ opacity: it ? 1 : 0.4 }}>
+                {it ? `${isChamp ? '👑 ' : ''}${it.name}  +${it.enhanceLevel}` : '미장착'}
+              </span>
+            </div>
+          );
+        })}
+      </div>
 
-        <div
-          style={{
-            display: 'flex',
-            marginTop: 'auto',
-            alignItems: 'flex-end',
-            justifyContent: 'space-between',
-            zIndex: 1,
-          }}
-        >
-          <div style={{ display: 'flex', fontSize: 30, opacity: 0.75 }}>insaengganghwa.com</div>
-          <div style={{ display: 'flex', fontSize: 64, fontWeight: 800, color: '#ffd47a' }}>
-            ⚔️ {formatCompactKR(total)}
-          </div>
+      <div
+        style={{
+          display: 'flex',
+          marginTop: 'auto',
+          alignItems: 'flex-end',
+          justifyContent: 'space-between',
+          zIndex: 1,
+        }}
+      >
+        <div style={{ display: 'flex', fontSize: 30, opacity: 0.75 }}>insaengganghwa.com</div>
+        <div style={{ display: 'flex', fontSize: 64, fontWeight: 800, color: '#ffd47a' }}>
+          ⚔️ {formatCompactKR(total)}
         </div>
       </div>
-    ),
+    </div>,
     { ...size, headers: { 'cache-control': 'no-store, max-age=0, must-revalidate' } },
   );
 }

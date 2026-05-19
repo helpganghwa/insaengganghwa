@@ -16,7 +16,7 @@ const geistMono = Geist_Mono({
 
 export const metadata: Metadata = {
   title: '인생강화 — insaengganghwa',
-  description: '시간기반 idle + 한국식 RPG 강화. 떠나 있어도 강화는 진행된다.',
+  description: '강화는 인생이다.',
   applicationName: 'insaengganghwa',
   formatDetection: { telephone: false },
 };

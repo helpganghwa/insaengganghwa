@@ -63,7 +63,7 @@ export async function generateMetadata({
   const data = await loadProfile(nickname);
   if (!data) return { title: '인생강화' };
   const title = `${data.nickname} — 인생강화`;
-  const description = `총 전투력 ⚔️${formatCompactKR(data.total)}. 시간기반 idle 강화 RPG.`;
+  const description = `총 전투력 ⚔️${formatCompactKR(data.total)}.`;
   const ogImage = `/og/${encodeURIComponent(nickname)}`;
   return {
     title,
@@ -137,9 +137,7 @@ export default async function PublicProfilePage({
       >
         나도 인생강화 시작하기 →
       </Link>
-      <p className="mt-3 text-center text-[11px] text-zinc-400">
-        떠나 있어도 강화는 진행됩니다.
-      </p>
+      <p className="mt-3 text-center text-[11px] text-zinc-400">떠나 있어도 강화는 진행됩니다.</p>
     </main>
   );
 }
