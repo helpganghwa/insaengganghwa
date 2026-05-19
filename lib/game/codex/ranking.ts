@@ -46,27 +46,29 @@ export async function getMyItemRank(
   userId: string,
 ): Promise<{ rank: number; maxLevel: number } | null> {
   const [me] = await db
-    .select({ maxLevel: userCodex.maxEnhanceLevel, reachedAt: userCodex.maxEnhanceReachedAt })
+    .select({ maxLevel: userCodex.maxEnhanceLevel })
     .from(userCodex)
     .where(and(eq(userCodex.userId, userId), eq(userCodex.catalogItemId, catalogItemId)))
     .limit(1);
   if (!me || me.maxLevel <= 0) return null;
 
-  const [{ ahead }] = await db
-    .select({ ahead: sql<number>`count(*)::int` })
-    .from(userCodex)
-    .where(
-      and(
-        eq(userCodex.catalogItemId, catalogItemId),
-        sql`${userCodex.maxEnhanceLevel} > 0`,
-        sql`(
-          ${userCodex.maxEnhanceLevel} > ${me.maxLevel}
-          or (${userCodex.maxEnhanceLevel} = ${me.maxLevel} and ${userCodex.maxEnhanceReachedAt} < ${me.reachedAt})
-          or (${userCodex.maxEnhanceLevel} = ${me.maxLevel} and ${userCodex.maxEnhanceReachedAt} = ${me.reachedAt} and ${userCodex.userId} < ${userId})
-        )`,
-      ),
-    );
-  return { rank: Number(ahead) + 1, maxLevel: me.maxLevel };
+  // me 값(레벨·달성시각·user_id)을 JS로 왕복시키지 않고 self-join으로 컬럼-대-컬럼
+  // 비교 — raw sql 파라미터에 JS Date를 넣으면 postgres.js 직렬화 실패(ERR_INVALID_
+  // ARG_TYPE), text→uuid 비교도 연산자 없음. 파라미터는 ${userId}::uuid·int만.
+  const rows = (await db.execute(sql`
+    select count(*)::int as ahead
+    from user_codex o
+    join user_codex me
+      on me.user_id = ${userId}::uuid and me.catalog_item_id = ${catalogItemId}
+    where o.catalog_item_id = ${catalogItemId}
+      and o.max_enhance_level > 0
+      and (
+        o.max_enhance_level > me.max_enhance_level
+        or (o.max_enhance_level = me.max_enhance_level and o.max_enhance_reached_at < me.max_enhance_reached_at)
+        or (o.max_enhance_level = me.max_enhance_level and o.max_enhance_reached_at = me.max_enhance_reached_at and o.user_id < me.user_id)
+      )
+  `)) as unknown as { ahead: number }[];
+  return { rank: Number(rows[0]?.ahead ?? 0) + 1, maxLevel: me.maxLevel };
 }
 
 /**
@@ -77,7 +79,7 @@ export async function championCatalogIds(userId: string): Promise<Set<number>> {
   const rows = (await db.execute(sql`
     select uc.catalog_item_id as cid
     from user_codex uc
-    where uc.user_id = ${userId}
+    where uc.user_id = ${userId}::uuid
       and uc.max_enhance_level > 0
       and not exists (
         select 1 from user_codex o

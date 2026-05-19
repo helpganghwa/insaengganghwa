@@ -8,8 +8,16 @@ import { db } from '@/lib/db/client';
 import { catalogItems, type Slot } from '@/lib/db/schema/equipment';
 import { userSupplyBoxes } from '@/lib/db/schema/supply';
 import { openSupplyBoxes, SupplyError } from '@/lib/game/supply';
+import { championCatalogIds } from '@/lib/game/codex/ranking';
 
-export type OpenedItem = { catalogItemId: number; name: string; isNew: boolean; gemDrop: number };
+export type OpenedItem = {
+  catalogItemId: number;
+  code: string;
+  name: string;
+  isNew: boolean;
+  isChampion: boolean;
+  gemDrop: number;
+};
 export type OpenActionResult =
   | { status: 'success'; results: OpenedItem[]; remaining: number; gemTotal: number }
   | { status: 'error'; code: string; message: string };
@@ -27,18 +35,22 @@ export async function openAction(slot: Slot, count: 1 | 10): Promise<OpenActionR
   try {
     const opened = await openSupplyBoxes({ userId, slot, count });
     const ids = [...new Set(opened.map((o) => o.catalogItemId))];
-    const names = ids.length
-      ? await db
-          .select({ id: catalogItems.id, name: catalogItems.name })
-          .from(catalogItems)
-          .where(inArray(catalogItems.id, ids))
-      : [];
-    const nameMap = new Map(names.map((n) => [n.id, n.name]));
-    const [boxRow] = await db
-      .select({ c: userSupplyBoxes.count })
-      .from(userSupplyBoxes)
-      .where(and(eq(userSupplyBoxes.userId, userId), eq(userSupplyBoxes.slot, slot)))
-      .limit(1);
+    const [meta, champSet, boxRows] = await Promise.all([
+      ids.length
+        ? db
+            .select({ id: catalogItems.id, code: catalogItems.code, name: catalogItems.name })
+            .from(catalogItems)
+            .where(inArray(catalogItems.id, ids))
+        : Promise.resolve([] as { id: number; code: string; name: string }[]),
+      championCatalogIds(userId),
+      db
+        .select({ c: userSupplyBoxes.count })
+        .from(userSupplyBoxes)
+        .where(and(eq(userSupplyBoxes.userId, userId), eq(userSupplyBoxes.slot, slot)))
+        .limit(1),
+    ]);
+    const metaMap = new Map(meta.map((m) => [m.id, m]));
+    const boxRow = boxRows[0];
 
     revalidatePath('/gacha');
     revalidatePath('/inventory');
@@ -47,8 +59,10 @@ export async function openAction(slot: Slot, count: 1 | 10): Promise<OpenActionR
       status: 'success',
       results: opened.map((o) => ({
         catalogItemId: o.catalogItemId,
-        name: nameMap.get(o.catalogItemId) ?? `#${o.catalogItemId}`,
+        code: metaMap.get(o.catalogItemId)?.code ?? '',
+        name: metaMap.get(o.catalogItemId)?.name ?? `#${o.catalogItemId}`,
         isNew: o.isNew,
+        isChampion: champSet.has(o.catalogItemId),
         gemDrop: o.gemDrop,
       })),
       remaining: Number(boxRow?.c ?? 0n),

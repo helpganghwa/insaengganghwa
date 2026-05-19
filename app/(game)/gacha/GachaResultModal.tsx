@@ -2,10 +2,13 @@
 
 import Link from 'next/link';
 
+import type { Slot } from '@/lib/db/schema/equipment';
+import { TranscendSprite } from '@/components/TranscendSprite';
+
 import type { OpenedItem } from './actions';
 
 export function GachaResultModal({
-  emoji,
+  slot,
   results,
   remaining,
   gemTotal,
@@ -13,7 +16,7 @@ export function GachaResultModal({
   onAgain,
   onClose,
 }: {
-  emoji: string;
+  slot: Slot;
   results: OpenedItem[];
   remaining: number;
   gemTotal: number;
@@ -42,9 +45,18 @@ export function GachaResultModal({
                 <span className="text-zinc-500">획득!</span>
               )}
             </p>
-            <div className="mt-2 rounded-xl border-2 border-zinc-200 p-4 dark:border-zinc-800">
-              <div className="text-5xl">{emoji}</div>
-              <div className="mt-1 text-base font-semibold">{single.name}</div>
+            <div className="mt-2 flex flex-col items-center rounded-xl border-2 border-zinc-200 p-4 dark:border-zinc-800">
+              <TranscendSprite
+                code={single.code}
+                slot={slot}
+                level={0}
+                isChampion={single.isChampion}
+                size={64}
+              />
+              <div className="mt-1 text-base font-semibold">
+                {single.isChampion ? '👑 ' : ''}
+                {single.name}
+              </div>
               <div className="mt-0.5 text-[11px] text-zinc-500">+0 · ✦T0</div>
               {!single.isNew ? (
                 <div className="mt-1 text-[11px] text-amber-600 dark:text-amber-400">
@@ -71,7 +83,16 @@ export function GachaResultModal({
                       N
                     </span>
                   ) : null}
-                  <span className="text-2xl">{emoji}</span>
+                  {r.isChampion ? (
+                    <span className="absolute right-1 top-1 text-[10px]">👑</span>
+                  ) : null}
+                  <TranscendSprite
+                    code={r.code}
+                    slot={slot}
+                    level={0}
+                    isChampion={r.isChampion}
+                    size={36}
+                  />
                   <span className="line-clamp-1 px-0.5 text-[9px] text-zinc-600 dark:text-zinc-400">
                     {r.name}
                   </span>

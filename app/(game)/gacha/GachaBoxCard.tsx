@@ -73,7 +73,7 @@ export function GachaBoxCard({
 
       {result ? (
         <GachaResultModal
-          emoji={emoji}
+          slot={slot}
           results={result.results}
           remaining={result.remaining}
           gemTotal={result.gemTotal}
