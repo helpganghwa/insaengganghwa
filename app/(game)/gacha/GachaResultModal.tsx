@@ -57,13 +57,29 @@ export function GachaResultModal({
                 {single.isChampion ? '👑 ' : ''}
                 {single.name}
               </div>
-              <div className="mt-0.5 text-[11px] text-zinc-500">+0 · ✦T0</div>
+              <div className="mt-0.5 text-[11px] text-zinc-500">+0</div>
               {!single.isNew ? (
                 <div className="mt-1 text-[11px] text-amber-600 dark:text-amber-400">
                   중복 — 초월/+100 제물로 활용
                 </div>
               ) : null}
             </div>
+            {single.isNew && single.loreTeaser ? (
+              <div className="mt-3 rounded-xl border border-zinc-200 bg-zinc-50 px-3.5 py-3 text-left dark:border-zinc-800 dark:bg-zinc-900">
+                <div className="mb-1 text-[10px] font-semibold tracking-wide text-zinc-400">
+                  📖 이야기
+                </div>
+                <p className="text-[12px] leading-relaxed text-zinc-600 dark:text-zinc-300">
+                  {single.loreTeaser}
+                </p>
+                <Link
+                  href={`/me/codex/${single.catalogItemId}`}
+                  className="mt-1.5 inline-block text-[11px] font-medium text-amber-600 dark:text-amber-400"
+                >
+                  도감에서 전체 이야기 ›
+                </Link>
+              </div>
+            ) : null}
           </div>
         ) : (
           <>

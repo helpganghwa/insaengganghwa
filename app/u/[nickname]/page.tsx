@@ -137,7 +137,6 @@ export default async function PublicProfilePage({
       >
         나도 인생강화 시작하기 →
       </Link>
-      <p className="mt-3 text-center text-[11px] text-zinc-400">떠나 있어도 강화는 진행됩니다.</p>
     </main>
   );
 }

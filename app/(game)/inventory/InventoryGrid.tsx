@@ -23,6 +23,7 @@ export type InvItem = {
   acquiredAtMs: number;
   busy: boolean;
   isChampion: boolean;
+  lore: string | null;
 };
 
 const SLOT_EMOJI: Record<Slot, string> = { weapon: '⚔️', armor: '🛡️', accessory: '💍' };

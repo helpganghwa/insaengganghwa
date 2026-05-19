@@ -9,6 +9,7 @@ import { catalogItems, type Slot } from '@/lib/db/schema/equipment';
 import { userSupplyBoxes } from '@/lib/db/schema/supply';
 import { openSupplyBoxes, SupplyError } from '@/lib/game/supply';
 import { championCatalogIds } from '@/lib/game/codex/ranking';
+import { loreTeaser } from '@/lib/game/equipment/lore';
 
 export type OpenedItem = {
   catalogItemId: number;
@@ -16,6 +17,8 @@ export type OpenedItem = {
   name: string;
   isNew: boolean;
   isChampion: boolean;
+  /** 신규 해금 시 보여줄 로어 티저(1~2문장). 중복/없음=null. */
+  loreTeaser: string | null;
   gemDrop: number;
 };
 export type OpenActionResult =
@@ -57,14 +60,18 @@ export async function openAction(slot: Slot, count: 1 | 10): Promise<OpenActionR
     revalidatePath('/');
     return {
       status: 'success',
-      results: opened.map((o) => ({
-        catalogItemId: o.catalogItemId,
-        code: metaMap.get(o.catalogItemId)?.code ?? '',
-        name: metaMap.get(o.catalogItemId)?.name ?? `#${o.catalogItemId}`,
-        isNew: o.isNew,
-        isChampion: champSet.has(o.catalogItemId),
-        gemDrop: o.gemDrop,
-      })),
+      results: opened.map((o) => {
+        const code = metaMap.get(o.catalogItemId)?.code ?? '';
+        return {
+          catalogItemId: o.catalogItemId,
+          code,
+          name: metaMap.get(o.catalogItemId)?.name ?? `#${o.catalogItemId}`,
+          isNew: o.isNew,
+          isChampion: champSet.has(o.catalogItemId),
+          loreTeaser: o.isNew && code ? loreTeaser(code) : null,
+          gemDrop: o.gemDrop,
+        };
+      }),
       remaining: Number(boxRow?.c ?? 0n),
       gemTotal: opened.reduce((s, o) => s + o.gemDrop, 0),
     };

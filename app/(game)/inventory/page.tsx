@@ -6,6 +6,7 @@ import { catalogItems, equipmentInstances, type Slot } from '@/lib/db/schema/equ
 import { enhancementJobs } from '@/lib/db/schema/enhance';
 import { profiles } from '@/lib/db/schema/profiles';
 import { championCatalogIds } from '@/lib/game/codex/ranking';
+import { loreByCode } from '@/lib/game/equipment/lore';
 
 import { InventoryGrid, type InvItem } from './InventoryGrid';
 
@@ -64,6 +65,7 @@ export default async function InventoryPage({
     acquiredAtMs: r.acquiredAt.getTime(),
     busy: busy.has(r.id.toString()),
     isChampion: champSet.has(r.catalogItemId),
+    lore: loreByCode(r.code),
   }));
 
   return (

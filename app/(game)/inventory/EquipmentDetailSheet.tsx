@@ -113,6 +113,17 @@ export function EquipmentDetailSheet({
           </div>
         </section>
 
+        {item.lore ? (
+          <section className="mt-2 rounded-lg border border-zinc-200 p-2.5 dark:border-zinc-800">
+            <div className="mb-1 text-[10px] font-semibold tracking-wide text-zinc-400">
+              📖 이야기
+            </div>
+            <p className="whitespace-pre-line text-[11px] leading-relaxed text-zinc-600 dark:text-zinc-300">
+              {item.lore}
+            </p>
+          </section>
+        ) : null}
+
         {equippedInSlot && eqCp != null ? (
           <div className="mt-2 grid grid-cols-2 gap-2 rounded-lg border border-dashed border-zinc-300 p-2 text-[11px] dark:border-zinc-700">
             <div>

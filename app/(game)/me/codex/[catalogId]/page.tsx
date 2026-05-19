@@ -6,6 +6,7 @@ import { getSessionUserId } from '@/lib/auth/session';
 import { db } from '@/lib/db/client';
 import { catalogItems, type Slot } from '@/lib/db/schema/equipment';
 import { getItemTop10, getMyItemRank } from '@/lib/game/codex/ranking';
+import { loreByCode } from '@/lib/game/equipment/lore';
 import { TranscendSprite } from '@/components/TranscendSprite';
 
 const SLOT_LABEL: Record<Slot, string> = { weapon: '무기', armor: '방어구', accessory: '장신구' };
@@ -37,6 +38,7 @@ export default async function CodexItemPage({
     getMyItemRank(item.id, userId),
   ]);
   const iAmChampion = mine?.rank === 1;
+  const lore = loreByCode(item.code);
 
   return (
     <div className="space-y-4 px-4 py-4">
@@ -60,6 +62,17 @@ export default async function CodexItemPage({
           내 최고 {mine ? `+${mine.maxLevel}` : '기록 없음'}
         </span>
       </div>
+
+      {lore ? (
+        <section className="rounded-xl border border-zinc-200 bg-white px-4 py-3.5 dark:border-zinc-800 dark:bg-zinc-950">
+          <div className="mb-1.5 text-[11px] font-semibold tracking-wide text-zinc-400">
+            📖 이야기
+          </div>
+          <p className="whitespace-pre-line text-[13px] leading-[1.75] text-zinc-700 dark:text-zinc-300">
+            {lore}
+          </p>
+        </section>
+      ) : null}
 
       <section className="rounded-xl border-2 border-amber-300 bg-amber-50 px-4 py-3 dark:border-amber-700 dark:bg-amber-950/50">
         <div className="flex items-baseline justify-between">
