@@ -216,7 +216,7 @@ bun run scripts/seed-catalog.ts
 - Server Actions로 폼 처리 (가급적 Route Handler보다 우선)
 - `Image` 컴포넌트는 픽셀아트엔 부적합 → 자체 픽셀 렌더러 (`<PixelSprite>`) 사용
 - Cache Components (`use cache`) 명시적 사용 — 자동 캐시 의존 X
-- **고정 390 스케일**: viewport는 **`width=390`만 지정**(initialScale·maximumScale·userScalable 절대 금지) → 브라우저가 initial-scale=기기폭/390 자동 계산해 390 레이아웃을 화면에 꽉 맞춤(작은 폰 축소·큰 폰 확대, **모든 화면 동일 비율·좌우 여백0·가로 스크롤0**). 앱 셸 `w-full max-w-[390px] mx-auto`(safe-area) + html/body `overflow-x-hidden`. 모든 화면을 390 컬럼으로 구현. ⚠ **`initialScale:1`/`maximumScale:1`/`userScalable:false` 중 하나라도 주면 자동 핏이 무력화되어 375서 15px 가로 스크롤** 발생(검증됨) — 스케일 잠금 금지(핀치줌 허용 감수). WIREFRAMES §0 참조
+- **고정 390 스케일**: 출력 메타는 정확히 `<meta name="viewport" content="width=390">` (initial-scale 없음). `app/layout.tsx`의 `export const viewport = { themeColor, width: 390, initialScale: undefined }`로 지정. ⚠ **`initialScale: undefined` 절대 제거 금지** — Next는 viewport export를 기본값 `{width:'device-width',initialScale:1}`과 스프레드 병합 후 non-null 필드만 직렬화하므로, `{width:390}`만 두면 기본값 `initialScale:1`이 살아남아 출력이 `width=390, initial-scale=1`이 되고 **375서 15px 가로 스크롤 재발**(검증됨). `initialScale: undefined`가 기본값 1을 덮어써 출력에서 제거됨 — 이것이 metadata API로 순수 width=390을 내는 유일한 방법(리터럴 `<meta>`는 Next 자동 주입분과 **중복**되어 불가, 검증됨). `width=390`만 있으면 브라우저가 initial-scale=기기폭/390 자동 계산해 390 레이아웃을 화면에 꽉 맞춤(작은 폰 축소·큰 폰 확대, **모든 화면 동일 비율·좌우 여백0·가로 스크롤0**). 앱 셸 `w-full max-w-[390px] mx-auto`(safe-area) + html/body `overflow-x-hidden`. 모든 화면을 390 컬럼으로 구현. ⚠ `initial-scale`/`maximum-scale`/`user-scalable=no` 중 하나라도 들어가면 자동 핏 무력화 — 스케일 잠금 금지(핀치줌 허용 감수). WIREFRAMES §0 참조
 
 ### 5.3 컴포넌트
 
