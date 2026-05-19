@@ -16,8 +16,13 @@ export default async function GameLayout({ children }: { children: React.ReactNo
   const userId = await getSessionUserId();
   if (!userId) redirect('/login');
 
-  // 신규 유저 부트스트랩(프로필+스타터, 멱등) — 소프트락 방지. 첫 1회만 실제 쓰기.
-  await ensureUserBootstrap(userId);
+  // 신규/미수령 유저 부트스트랩(프로필+스타터, 멱등). **fail-safe**: 실패해도 게임 렌더는
+  // 계속(최악=원래 소프트락, 무한로딩 아님). 부트스트랩이 전 화면을 막으면 안 됨.
+  try {
+    await ensureUserBootstrap(userId);
+  } catch (e) {
+    console.error('[bootstrap] failed (non-fatal):', e);
+  }
 
   // BottomNav 알림 dot — 완료 시점 도달한 강화 작업 존재 여부(서버 시계).
   const [row] = await db
