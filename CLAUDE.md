@@ -216,7 +216,7 @@ bun run scripts/seed-catalog.ts
 - Server Actions로 폼 처리 (가급적 Route Handler보다 우선)
 - `Image` 컴포넌트는 픽셀아트엔 부적합 → 자체 픽셀 렌더러 (`<PixelSprite>`) 사용
 - Cache Components (`use cache`) 명시적 사용 — 자동 캐시 의존 X
-- **반응형 ≤390 컬럼**: viewport `width=device-width`(레이아웃 폭=기기 실제 폭) + 앱 셸 `w-full max-w-[390px] mx-auto`(safe-area) + html/body `overflow-x-hidden`. **≤390 기기는 기기폭으로 반응(예 375 → 375폭), ≥390은 390 중앙 고정.** 모든 화면을 ≤390 컬럼 안에서 구현 — 콘텐츠·fixed/모달 요소 모두 ≤기기폭 유지가 원칙(가로 스크롤 0). ⚠ `width=390`+`user-scalable=no`는 일부 브라우저가 자동 핏을 무시해 375서 15px 오버플로(fixed inset-x-0 요소는 overflow-x-hidden로도 안 잘림) — 그래서 device-width 반응형 채택. WIREFRAMES §0 참조
+- **고정 390 스케일**: viewport는 **`width=390`만 지정**(initialScale·maximumScale·userScalable 절대 금지) → 브라우저가 initial-scale=기기폭/390 자동 계산해 390 레이아웃을 화면에 꽉 맞춤(작은 폰 축소·큰 폰 확대, **모든 화면 동일 비율·좌우 여백0·가로 스크롤0**). 앱 셸 `w-full max-w-[390px] mx-auto`(safe-area) + html/body `overflow-x-hidden`. 모든 화면을 390 컬럼으로 구현. ⚠ **`initialScale:1`/`maximumScale:1`/`userScalable:false` 중 하나라도 주면 자동 핏이 무력화되어 375서 15px 가로 스크롤** 발생(검증됨) — 스케일 잠금 금지(핀치줌 허용 감수). WIREFRAMES §0 참조
 
 ### 5.3 컴포넌트
 

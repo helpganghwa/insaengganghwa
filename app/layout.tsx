@@ -23,14 +23,11 @@ export const metadata: Metadata = {
 
 export const viewport = {
   themeColor: '#0a0a0a',
-  // width=device-width: 레이아웃 폭 = 기기 실제 폭(375 등). 셸이 w-full max-w-[390px]라
-  // ≤390 기기는 기기폭으로 반응(가로 스크롤 0), ≥390은 390 중앙 고정.
-  // (width=390 + user-scalable=no 조합은 일부 브라우저가 자동 핏을 무시 → 375서 15px
-  //  오버플로·fixed inset-x-0 요소가 body overflow-x-hidden로도 안 잘림 → 반응형으로 전환. CLAUDE §5.2)
-  width: 'device-width' as const,
-  initialScale: 1,
-  maximumScale: 1,
-  userScalable: false,
+  // 고정 390 강제 — width=390만 지정하면 브라우저가 initial-scale을 기기폭/390으로
+  // 자동 계산해 390 레이아웃을 화면에 꽉 맞춤(작은 폰 축소·큰 폰 확대, 동일 비율·여백0·스크롤0).
+  // ⚠ initial-scale/maximum-scale/user-scalable=no 를 주면 이 자동 핏이 무력화되어
+  //   375서 15px 가로 스크롤이 났음 → 스케일 잠금 전부 제거(핀치줌 허용은 감수). CLAUDE §5.2.
+  width: 390,
   viewportFit: 'cover' as const, // env(safe-area-inset-*) 활성 — 노치/홈인디케이터 회피
 };
 
