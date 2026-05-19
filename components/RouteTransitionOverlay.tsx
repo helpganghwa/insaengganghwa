@@ -5,7 +5,7 @@ import { usePathname } from 'next/navigation';
 
 import { LOADING_SPRITES } from '@/lib/game/equipment/loading-sprites';
 
-const CYCLE_MS = 100; // grow식 — 표시 동안 여러 이미지 랜덤 순환 주기
+const CYCLE_MS = 200; // grow식 — 표시 동안 여러 이미지 랜덤 순환 주기
 const SAFETY_MS = 8000; // 멈춤 방지 자동 해제
 
 function pick(prev?: string | null): string | null {
