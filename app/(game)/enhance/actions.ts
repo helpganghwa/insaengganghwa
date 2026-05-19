@@ -1,5 +1,6 @@
 'use server';
 
+import { after } from 'next/server';
 import { revalidatePath } from 'next/cache';
 
 import { getSessionUserId } from '@/lib/auth/session';
@@ -63,18 +64,23 @@ export async function finalizeEnhance(jobId: string): Promise<
   const userId = await uid();
   if (!userId) return err('UNAUTHENTICATED');
   try {
+    // 결과 판정·저장은 원자적 단일 트랜잭션(CLAUDE §3.1/§3.3/§3.4) — 이것만 await.
     const r = await resolveEnhance({ jobId: BigInt(jobId), userId, requireComplete: false });
-    // 자동 재등록 — 성공 시 다음 레벨 큐잉 (실패/하락 시 중단, GDD §3.2). best-effort.
-    let requeued = false;
+
+    // 후처리(다음 레벨 자동 재등록, GDD §3.2)는 응답을 막지 않는다 — 결과 커밋
+    // 이후 서버에서 백그라운드 실행(after). best-effort·멱등(SLOT_BUSY 등은 무시).
     if (r.outcome === 'success') {
-      try {
-        await queueEnhance({ userId, equipmentInstanceId: r.equipmentInstanceId });
-        requeued = true;
-      } catch (re) {
-        if (!(re instanceof EnhanceError)) console.error('[enhance.requeue]', re);
-      }
+      after(async () => {
+        try {
+          await queueEnhance({ userId, equipmentInstanceId: r.equipmentInstanceId });
+        } catch (re) {
+          if (!(re instanceof EnhanceError)) console.error('[enhance.requeue]', re);
+        }
+      });
     }
-    revalidateAll();
+    // 변경 데이터만 무효화(홈 '/'은 다음 방문 시 자연 갱신 — 핫패스 축소).
+    revalidatePath('/enhance');
+    revalidatePath('/inventory');
     return {
       status: 'success',
       result: {
@@ -83,7 +89,9 @@ export async function finalizeEnhance(jobId: string): Promise<
         toLevel: r.toLevel,
         effectiveRateBp: r.effectiveRateBp,
       },
-      requeued,
+      // 성공 시 재등록은 백그라운드 — 클라는 낙관적으로 다음 잡 진행 표시,
+      // 실제 상태는 다음 reconcile에서 정합.
+      requeued: r.outcome === 'success',
     };
   } catch (e) {
     if (e instanceof EnhanceError) return err(e.code);

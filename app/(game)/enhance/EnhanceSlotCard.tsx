@@ -108,19 +108,24 @@ export function EnhanceSlotCard({
     if (pending) return;
     setConfirm(false);
     startTransition(async () => {
+      // 결과 트랜잭션 커밋 즉시 반환(후처리는 서버 after). 이 await만 pending.
       const r = await finalizeEnhance(activeJob.jobId);
       if (r.status === 'error') {
         alert(r.message);
         return;
       }
       const oc = r.result.outcome as Outcome;
-      setFlash(oc);
-      setTimeout(() => setFlash(null), 1500);
+      setFlash(oc); // 결과 즉시 표시
       // §10 자랑 — +30/+50/+99 강화 성공 시 공유 모달.
       if (oc === 'success' && BOAST_LEVELS.has(activeJob.targetLevel)) {
-        setTimeout(() => setBoast(true), 1500);
+        setTimeout(() => setBoast(true), 1600);
       }
-      router.refresh();
+      // 새 잡/소진 반영은 축하 연출(1.5s) 후 비차단 reconcile —
+      // setTimeout 콜백은 transition 밖이라 pending을 잡지 않음(결과가 빨리 보임).
+      setTimeout(() => {
+        setFlash(null);
+        router.refresh();
+      }, 1500);
     });
   };
 
