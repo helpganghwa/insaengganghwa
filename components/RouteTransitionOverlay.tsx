@@ -5,7 +5,7 @@ import { usePathname } from 'next/navigation';
 
 import { LOADING_SPRITES } from '@/lib/game/equipment/loading-sprites';
 
-const CYCLE_MS = 400; // grow식 — 표시 동안 여러 이미지 랜덤 순환 주기
+const CYCLE_MS = 100; // grow식 — 표시 동안 여러 이미지 랜덤 순환 주기
 const SAFETY_MS = 8000; // 멈춤 방지 자동 해제
 
 function pick(prev?: string | null): string | null {
@@ -98,7 +98,7 @@ export function RouteTransitionOverlay() {
         alt=""
         width={72}
         height={72}
-        className="h-[72px] w-[72px] drop-shadow-[0_4px_16px_rgba(0,0,0,0.55)]"
+        className="h-[72px] w-[72px]"
         style={{ imageRendering: 'pixelated' }}
         decoding="sync"
       />
