@@ -156,10 +156,116 @@ interface Props {
   className?: string;
 }
 
-export function TranscendSprite({
+/** 8각 별 SVG path (정적 II 코너용 — 캔버스 drawStar와 동일 형태). */
+function starPoints(R: number): string {
+  const pts: string[] = [];
+  for (let i = 0; i < 8; i++) {
+    const rr = i % 2 === 0 ? R : R * 0.4;
+    const a = (i * 45 - 90) * (Math.PI / 180);
+    pts.push(`${(R + Math.cos(a) * rr).toFixed(2)},${(R + Math.sin(a) * rr).toFixed(2)}`);
+  }
+  return pts.join(' ');
+}
+
+const EmojiFallback = ({ size, slot, code, className }: { size: number; slot?: Props['slot']; code: string; className?: string }) => (
+  <div
+    className={className}
+    style={{
+      width: size, height: size, display: 'flex', alignItems: 'center',
+      justifyContent: 'center', fontSize: size * 0.5,
+    }}
+    aria-label={code}
+  >
+    {slot ? SLOT_EMOJI[slot] : '❔'}
+  </div>
+);
+
+/**
+ * 정적 경량 렌더 (캔버스/rAF/effect 없음 — 큰 인벤 부하 최소화).
+ * 베이스 <img> + CSS 마스크 프레임(등급색) + II 코너 SVG 별.
+ * 글로우/배경 없음(확정안). +10/챔피언이 아닌 모든 등급이 이 경로.
+ */
+function TranscendStatic({
+  base, st, size, code, className,
+}: {
+  base: string;
+  st: ReturnType<typeof transcendStyle>;
+  size: number;
+  code: string;
+  className?: string;
+}) {
+  const [r, g, b] = st.colorRgb;
+  const frameCol = `rgb(${r},${g},${b})`;
+  const starCol = `rgb(${Math.round(r + (255 - r) * 0.3)},${Math.round(g + (255 - g) * 0.3)},${Math.round(b + (255 - b) * 0.3)})`;
+  const sw = size * 0.52;
+  const inset = size * 0.115;
+  const starBox = size * 0.16;
+  return (
+    <div
+      className={className}
+      style={{ width: size, height: size, position: 'relative' }}
+      aria-label={`${code} +${st.level}${st.labelKo ? ` ${st.labelKo}` : ''}`}
+    >
+      {/* 픽셀아트 — next/image 최적화는 리샘플로 오히려 깨짐(CLAUDE §5.2). raw img 의도. */}
+      {/* eslint-disable-next-line @next/next/no-img-element */}
+      <img
+        src={base}
+        alt=""
+        draggable={false}
+        style={{
+          position: 'absolute', left: (size - sw) / 2, top: (size - sw) / 2,
+          width: sw, height: sw, imageRendering: 'pixelated',
+        }}
+      />
+      {st.hasFrame ? (
+        <div
+          aria-hidden
+          style={{
+            position: 'absolute', inset: 0, backgroundColor: frameCol,
+            WebkitMaskImage: `url(${TRANSCEND_TUNING.frameAsset})`,
+            maskImage: `url(${TRANSCEND_TUNING.frameAsset})`,
+            WebkitMaskSize: '100% 100%', maskSize: '100% 100%',
+            WebkitMaskRepeat: 'no-repeat', maskRepeat: 'no-repeat',
+          }}
+        />
+      ) : null}
+      {st.hasFrame && st.sub === 1
+        ? ([[inset, inset], [size - inset, inset], [inset, size - inset], [size - inset, size - inset]] as const).map(
+            ([cx, cy], i) => (
+              <svg
+                key={i}
+                aria-hidden
+                width={starBox}
+                height={starBox}
+                viewBox={`0 0 ${starBox} ${starBox}`}
+                style={{ position: 'absolute', left: cx - starBox / 2, top: cy - starBox / 2 }}
+              >
+                <polygon points={starPoints(starBox / 2)} fill={starCol} />
+                <circle cx={starBox / 2} cy={starBox / 2} r={starBox * 0.09} fill="rgba(255,255,255,0.92)" />
+              </svg>
+            ),
+          )
+        : null}
+    </div>
+  );
+}
+
+export function TranscendSprite(props: Props) {
+  const { code, level, slot, isChampion = false, size = 64, animate = true, className } = props;
+  const base = spritePath(code);
+  const st = transcendStyle(level);
+  if (!base) return <EmojiFallback size={size} slot={slot} code={code} className={className} />;
+  // 동적(캔버스+rAF) = 광택(+10) 또는 챔피언 발광. 그 외 전부 정적 경량 경로.
+  const dynamic = animate && (isChampion || st.isMax);
+  if (!dynamic) {
+    return <TranscendStatic base={base} st={st} size={size} code={code} className={className} />;
+  }
+  return <TranscendCanvas {...props} />;
+}
+
+function TranscendCanvas({
   code,
   level,
-  slot,
   isChampion = false,
   size = 64,
   animate = true,
@@ -346,28 +452,7 @@ export function TranscendSprite({
     };
   }, [base, st.level, st.tier, st.sub, st.hasFrame, st.hasGlow, st.isMax, scr, scg, scb, isChampion, championMode, animate]);
 
-  // 스프라이트 미등록 → 이모지 폴백 (기존 동작 유지).
-  if (!base) {
-    return (
-      <div
-        className={className}
-        style={{
-          width: size,
-          height: size,
-          display: 'flex',
-          alignItems: 'center',
-          justifyContent: 'center',
-          fontSize: size * 0.5,
-          borderRadius: 12,
-          background: '#1c1c22',
-        }}
-        aria-label={code}
-      >
-        {slot ? SLOT_EMOJI[slot] : '❔'}
-      </div>
-    );
-  }
-
+  // base 없음/이모지 폴백은 디스패처(TranscendSprite)가 처리 — 여기 도달 시 base 보장.
   const px = Math.round(size * (typeof window !== 'undefined' ? Math.min(window.devicePixelRatio || 1, 3) : 2));
   return (
     <canvas
