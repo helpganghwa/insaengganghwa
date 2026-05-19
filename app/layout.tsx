@@ -23,8 +23,10 @@ export const metadata: Metadata = {
 
 export const viewport = {
   themeColor: '#0a0a0a',
+  // width=390만 지정(initialScale 미지정) → 브라우저가 390 레이아웃을 기기폭에 자동 맞춤.
+  // 375 등 <390 기기에서 ~0.96배로 축소되어 동일 비율·가로 스크롤 0 (CLAUDE §5.2).
+  // initialScale:1을 주면 자동 핏이 꺼져 375서 15px 오버플로(가로 스크롤) 발생 — 제거함.
   width: 390,
-  initialScale: 1,
   maximumScale: 1,
   userScalable: false,
   viewportFit: 'cover' as const, // env(safe-area-inset-*) 활성 — 노치/홈인디케이터 회피
@@ -34,11 +36,11 @@ export default function RootLayout({ children }: Readonly<{ children: React.Reac
   return (
     <html
       lang="ko"
-      className={`${geistSans.variable} ${geistMono.variable} h-full antialiased`}
+      className={`${geistSans.variable} ${geistMono.variable} h-full overflow-x-hidden antialiased`}
       suppressHydrationWarning
     >
       <body
-        className="flex min-h-full flex-col bg-zinc-50 text-zinc-900 dark:bg-black dark:text-zinc-50"
+        className="flex min-h-full flex-col overflow-x-hidden bg-zinc-50 text-zinc-900 dark:bg-black dark:text-zinc-50"
         suppressHydrationWarning
       >
         <ThemeProvider>{children}</ThemeProvider>

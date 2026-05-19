@@ -216,7 +216,7 @@ bun run scripts/seed-catalog.ts
 - Server Actions로 폼 처리 (가급적 Route Handler보다 우선)
 - `Image` 컴포넌트는 픽셀아트엔 부적합 → 자체 픽셀 렌더러 (`<PixelSprite>`) 사용
 - Cache Components (`use cache`) 명시적 사용 — 자동 캐시 의존 X
-- **고정 390 스케일**: viewport `width=390`(layout.tsx) + 앱 셸 고정 `w-[390px] mx-auto`(safe-area). 모든 화면을 390 컬럼 안에서 구현 — 모바일 동일 레이아웃·데스크톱 중앙 정렬. WIREFRAMES §0 참조
+- **고정 390 스케일**: viewport `width=390` **(initialScale 미지정 — 브라우저가 기기폭에 자동 맞춤; <390 기기는 ~0.96배 축소되어 동일 비율·가로 스크롤 0. `initialScale:1`을 주면 375서 15px 오버플로 발생하므로 금지)** + 앱 셸 `w-full max-w-[390px] mx-auto`(safe-area) + html/body `overflow-x-hidden`(잔여 오버플로 클립 — 콘텐츠는 ≤390 유지가 원칙). 모든 화면을 390 컬럼 안에서 구현 — 모바일 동일 레이아웃·데스크톱 중앙 정렬. WIREFRAMES §0 참조
 
 ### 5.3 컴포넌트
 
