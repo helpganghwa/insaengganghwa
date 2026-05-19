@@ -5,12 +5,15 @@ import { useRouter } from 'next/navigation';
 
 import type { Slot } from '@/lib/db/schema/equipment';
 
+import { TranscendSprite } from '@/components/TranscendSprite';
+
 import { toggleLockAction, equipBestSetAction } from './actions';
 import { EquipmentDetailSheet } from './EquipmentDetailSheet';
 
 export type InvItem = {
   id: string;
   catalogItemId: number;
+  code: string;
   name: string;
   slot: Slot;
   enhanceLevel: number;
@@ -150,9 +153,12 @@ function Tile({ item, onOpen }: { item: InvItem; onOpen: () => void }) {
       disabled={pending}
       className="relative flex aspect-square flex-col items-center justify-center gap-0.5 rounded-xl border-2 border-zinc-200 bg-white px-1 text-center dark:border-zinc-800 dark:bg-zinc-950"
     >
-      <span aria-hidden className="text-2xl">
-        {SLOT_EMOJI[item.slot]}
-      </span>
+      <TranscendSprite
+        code={item.code}
+        slot={item.slot}
+        level={item.transcendLevel}
+        size={52}
+      />
       <span className="line-clamp-1 px-0.5 text-[10px] text-zinc-600 dark:text-zinc-400">
         {item.name}
       </span>

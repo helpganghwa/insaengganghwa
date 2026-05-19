@@ -24,6 +24,7 @@ export default async function InventoryPage({
       .select({
         id: equipmentInstances.id,
         catalogItemId: equipmentInstances.catalogItemId,
+        code: catalogItems.code,
         name: catalogItems.name,
         slot: catalogItems.slot,
         enhanceLevel: equipmentInstances.enhanceLevel,
@@ -51,6 +52,7 @@ export default async function InventoryPage({
   const items: InvItem[] = rows.map((r) => ({
     id: r.id.toString(),
     catalogItemId: r.catalogItemId,
+    code: r.code,
     name: r.name,
     slot: r.slot,
     enhanceLevel: r.enhanceLevel,
