@@ -3,6 +3,7 @@ import { and, eq, lte, sql } from 'drizzle-orm';
 
 import { getSessionUserId } from '@/lib/auth/session';
 import { db } from '@/lib/db/client';
+import { ensureUserBootstrap } from '@/lib/game/onboarding/bootstrap';
 import { enhancementJobs } from '@/lib/db/schema/enhance';
 import { AppHeader } from '@/components/AppHeader';
 import { BottomNav } from '@/components/BottomNav';
@@ -14,6 +15,9 @@ import { BottomNav } from '@/components/BottomNav';
 export default async function GameLayout({ children }: { children: React.ReactNode }) {
   const userId = await getSessionUserId();
   if (!userId) redirect('/login');
+
+  // 신규 유저 부트스트랩(프로필+스타터, 멱등) — 소프트락 방지. 첫 1회만 실제 쓰기.
+  await ensureUserBootstrap(userId);
 
   // BottomNav 알림 dot — 완료 시점 도달한 강화 작업 존재 여부(서버 시계).
   const [row] = await db
