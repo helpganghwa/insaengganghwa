@@ -3,7 +3,6 @@ import { and, eq, lte, sql } from 'drizzle-orm';
 
 import { getSessionUserId } from '@/lib/auth/session';
 import { db } from '@/lib/db/client';
-import { ensureUserBootstrap } from '@/lib/game/onboarding/bootstrap';
 import { enhancementJobs } from '@/lib/db/schema/enhance';
 import { AppHeader } from '@/components/AppHeader';
 import { BottomNav } from '@/components/BottomNav';
@@ -15,14 +14,8 @@ import { BottomNav } from '@/components/BottomNav';
 export default async function GameLayout({ children }: { children: React.ReactNode }) {
   const userId = await getSessionUserId();
   if (!userId) redirect('/login');
-
-  // 신규/미수령 유저 부트스트랩(프로필+스타터, 멱등). **fail-safe**: 실패해도 게임 렌더는
-  // 계속(최악=원래 소프트락, 무한로딩 아님). 부트스트랩이 전 화면을 막으면 안 됨.
-  try {
-    await ensureUserBootstrap(userId);
-  } catch (e) {
-    console.error('[bootstrap] failed (non-fatal):', e);
-  }
+  // 프로필/스타터 지급은 DB 트리거(auth.users INSERT → handle_new_user) + 기존 유저
+  // 백필 마이그레이션이 담당 — 앱 렌더 핫패스에 부트스트랩 없음(hang 위험 제거).
 
   // BottomNav 알림 dot — 완료 시점 도달한 강화 작업 존재 여부(서버 시계).
   const [row] = await db
