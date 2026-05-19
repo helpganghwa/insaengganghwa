@@ -93,7 +93,6 @@ export function EquipmentDetailSheet({
       >
         <header className="text-center">
           <div className="text-[10px] font-medium text-amber-600 dark:text-amber-400">
-            {item.isChampion ? '👑 챔피언 · ' : ''}
             {SLOT_LABEL[item.slot]}
           </div>
           <h2 className="mt-0.5 text-sm font-semibold">

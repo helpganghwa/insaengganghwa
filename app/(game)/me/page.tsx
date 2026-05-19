@@ -82,7 +82,6 @@ export default async function ProfilePage() {
                       size={40}
                     />
                     <span className="flex-1">
-                      {champSet.has(it.catalogItemId) ? '👑 ' : ''}
                       {it.name}{' '}
                       <span className="text-zinc-400">+{it.enhanceLevel}</span>
                     </span>

@@ -53,10 +53,7 @@ export function GachaResultModal({
                 isChampion={single.isChampion}
                 size={64}
               />
-              <div className="mt-1 text-base font-semibold">
-                {single.isChampion ? '👑 ' : ''}
-                {single.name}
-              </div>
+              <div className="mt-1 text-base font-semibold">{single.name}</div>
               <div className="mt-0.5 text-[11px] text-zinc-500">+0</div>
               {!single.isNew ? (
                 <div className="mt-1 text-[11px] text-amber-600 dark:text-amber-400">
@@ -98,9 +95,6 @@ export function GachaResultModal({
                     <span className="absolute left-1 top-1 rounded-full bg-emerald-500 px-1 text-[8px] font-bold text-white">
                       N
                     </span>
-                  ) : null}
-                  {r.isChampion ? (
-                    <span className="absolute right-1 top-1 text-[10px]">👑</span>
                   ) : null}
                   <TranscendSprite
                     code={r.code}

@@ -21,7 +21,8 @@
 └───────────────────────────────┘  ← safe-area bottom
 ```
 
-- **고정 390 스케일 (필수)**: `<meta viewport width=390, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover>`(layout.tsx 반영됨) — 모바일은 390 레이아웃을 기기 폭에 자동 스케일 → 폰 너비 무관 **동일 레이아웃/비율**. 데스크톱은 메타 무시되므로 **앱 셸을 고정 390 중앙 컬럼**(`w-[390px] mx-auto`, safe-area 패딩)으로 감싼다. 전 화면을 이 390 컬럼 안에서 설계. (트레이드오프: 핀치줌 비활성 — 게임 관례)
+- **고정 390 스케일 (필수)**: 출력 메타는 정확히 `<meta name="viewport" content="width=390">`(스케일 잠금 없음 — 상세·이유는 **CLAUDE §5.2 권위**). 모바일은 390 레이아웃을 기기 폭에 자동 스케일 → 폰 너비 무관 **동일 레이아웃/비율**. 앱 셸 `w-full max-w-[390px] mx-auto`(safe-area). 전 화면을 이 390 컬럼 안에서 설계. html/body에 overflow-x 금지(sticky 깨짐, CLAUDE §5.2)
+- **화면 이동 로딩 (grow식)**: `(game)` 라우트 그룹 세그먼트 전환 시 `app/(game)/loading.tsx` — 셸(헤더/하단탭)은 유지, 본문 영역만 **랜덤 아이템 스프라이트 1장(매 전환 새 추첨) + 점 인디케이터**로 대체
 - **AppHeader 좌**: 아이콘(⚒️) + `인생강화`
 - **AppHeader 우**: `닉네임` · `🏆 내 랭킹(#순위)` · `💎 다이아 잔액`(=보석, BALANCE §6.1)
   - 랭킹 표기는 대표 지표(최고 강화) 기준 압축 표시 — 탭 시 랭킹 화면
@@ -453,8 +454,8 @@ grow `me/page.tsx` · `HubEquipmentSet` · `CodexGrid` · `me/codex/*` 이식.
 - 항목: 미획득=disable 스프라이트, 획득=활성 + **최고 강화 레벨** 표기(GDD §5, SCHEMA §2.3 `user_codex.max_enhance_level`)
 - **합산 강화 합** = Σ max enhance(전 카탈로그) — 랭킹 합산·총 전투력 도감 보너스 소스(BALANCE §3.2/3.3)
 - **도감 보상(claim/claimAll/rewardByGrade) 제거**: grow의 등급별 보석 claim 폐기. 도감의 가치는 **전투력 도감 보너스(×(1+도감강화합×0.005))**로 이미 반영 — 별도 수령 보상 없음(순수 수집 + 전투력 보너스)
-- 상세 모달(openEntry): 아이템 정보 — 등급 라벨 제거, 최고 강화/획득 여부, **그 아이템 강화 Top10**(🥇🥈🥉/#순위 · 닉네임→`/u/{nickname}` · `+레벨`, 본인 행 하이라이트, 동률은 먼저 달성 순) + **내 순위**(미획득/미기록=안내). 1위=**챔피언** 표식(👑). 빈 랭킹="아직 기록 없음". 소스 SCHEMA §2.3·BALANCE §3.3. **그 아이템 로어 전문**(catalog `lore`)을 함께 노출 — 도감 상세 = 그 아이템의 "이야기 집"(게임 핵심, GDD §3.1)
-- **챔피언 스프라이트**: 어떤 아이템의 챔피언 유저는 자신의 그 카탈로그 아이템 전 인스턴스가 인벤토리·강화소·자랑(BoastModal)·공개프로필(`/u`)·OG에서 `TranscendSprite isChampion` 변형으로 렌더. 페이지당 챔피언 catalog_item 집합 1쿼리 일괄 조회(N+1 금지, CLAUDE §11.4)
+- 상세(/me/codex/[id]): **담백** — 아이템명·슬롯, 스프라이트, **로어 전문**(catalog `lore`, 도감 상세 = 그 아이템의 "이야기 집", 게임 핵심 GDD §3.1), **강화 Top10**(🥇🥈🥉/#순위 · 닉네임→`/u/{nickname}` · `+레벨`, 본인 행 하이라이트, 동률은 먼저 달성 순, 빈=안내). **개인 순위/내 최고 표기 없음**(요청). 소스 SCHEMA §2.3·BALANCE §3.3
+- **챔피언 스프라이트**: 어떤 아이템의 챔피언 유저는 자신의 그 카탈로그 아이템 전 인스턴스가 인벤토리·강화소·자랑(BoastModal)·공개프로필(`/u`)·`/me`에서 `TranscendSprite isChampion` **시각 변형으로만** 표현. **👑 이모지·"챔피언" 텍스트 일절 없음**(시각이 표현 — ✦T 텍스트 제거와 동일 원칙, 메모리 transcend-no-text-label). 페이지당 챔피언 catalog_item 집합 1쿼리 일괄(N+1 금지, CLAUDE §11.4). OG는 raw PNG(절차적 변형 불가)라 챔피언 미표기
 
 ### 7.3 정리표 (프로필+도감)
 
@@ -582,7 +583,7 @@ grow 모달 골격 그대로(중앙·a11y·Kakao 카드 → navigator.share → 
 - TITLE/BODY/EMOJI: 트리거별 신규 카피. "메이플식 위험 구간"/"신화 등급"/"가장 희귀한 등급" 문구 **삭제** → 강화/초월 마일스톤 카피
 - **공유 단위 2종**(GDD §3.6): `장비 단위`(기본, 해당 장비 1개) / `장비 전체`(3슬롯 세트+프로필). 선택 토글
 - 공유 흐름: grow `createMyMilestoneShareLink` → `sendShareCard`(title/desc/`/og/{shareCode}`/linkUrl/cta) → 폴백 동일. `dismissBoast` 그대로
-- **OG 이미지**(`/og/[shareCode]`, 1200×630): 등급 표기 **삭제**. 3슬롯+닉네임·총 전투력 카드. 슬롯은 **실제 아이템 스프라이트**(이모지 아님), 챔피언(아이템별 1위, BALANCE §3.3)은 **👑** 표식 — §7.2 "모든 표시처"에 OG 포함 완결. 배경은 **Pixellab 전용 배경 아트 8장 풀에서 요청마다 진한 랜덤**(매 fetch 재추첨 위해 `cache-control: no-store`) + 가독성 스크림. 배경 PNG 부재 시 기존 그라데이션으로 안전 폴백(점진 배포 가능). 공유 단위 2종은 동일(장비 단위/장비 전체, GDD §3.6, SCHEMA §8.1 `snapshot`)
+- **OG 이미지**(`/og/[shareCode]`, 1200×630): 등급 표기 **삭제**. 3슬롯+닉네임·총 전투력 카드. 슬롯은 **실제 아이템 스프라이트**(이모지 아님)·**초월 등급색 정적 테두리**(✦T 텍스트 없음, OG는 절차적 프레임 불가→색 테두리로 표현). 챔피언 미표기(👑·텍스트 없음 — raw PNG라 시각 변형 불가). 배경은 **Pixellab 전용 배경 아트 8장 풀에서 요청마다 진한 랜덤**(매 fetch 재추첨 위해 `cache-control: no-store`) + 가독성 스크림. 배경 PNG 부재 시 기존 그라데이션으로 안전 폴백(점진 배포 가능). 공유 단위 2종은 동일(장비 단위/장비 전체, GDD §3.6, SCHEMA §8.1 `snapshot`)
 - 가입 전환: `/s/{shareCode}` 구경 모드(비로그인 열람)→"나도 강화하기"→가입. 전환 시 공유자 +300 다이아(BALANCE §6.3, SCHEMA §8.2). grow `/s/[shareCode]`·StoreReferralCookie 그대로
 
 ### 10.2 확률 공시 (/probability)

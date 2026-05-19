@@ -5,7 +5,6 @@ import { db } from '@/lib/db/client';
 import { profiles } from '@/lib/db/schema/profiles';
 import { catalogItems, equipmentInstances, userCodex } from '@/lib/db/schema/equipment';
 import { pieceCombatPower, totalCombatPower } from '@/lib/game/balance';
-import { championCatalogIds } from '@/lib/game/codex/ranking';
 import { spritePath } from '@/lib/game/equipment/sprite-manifest';
 import { transcendStyle } from '@/lib/game/equipment/transcend';
 import { formatCompactKR } from '@/lib/ui/format-number';
@@ -34,7 +33,7 @@ async function dataUri(url: string): Promise<string | null> {
 
 /**
  * 동적 OG 카드 — WIREFRAMES §10.1 / CLAUDE §3.7. /u/<nickname> og:image.
- * 닉네임·착용 3슬롯(실제 스프라이트, 챔피언=👑)·총 전투력 + Pixellab 배경 랜덤(요청마다).
+ * 닉네임·착용 3슬롯(실제 스프라이트·초월 등급 테두리)·총 전투력 + Pixellab 배경 랜덤(요청마다).
  * 배경/스프라이트 부재 시 그라데이션/이모지로 안전 폴백 — OG는 절대 실패하지 않음.
  */
 export async function GET(_req: Request, { params }: { params: Promise<{ shareCode: string }> }) {
@@ -57,9 +56,8 @@ export async function GET(_req: Request, { params }: { params: Promise<{ shareCo
     enhanceLevel: number;
     transcendLevel: number;
   }[] = [];
-  let champ = new Set<number>();
   if (prof) {
-    const [eq_, codexAgg, champSet] = await Promise.all([
+    const [eq_, codexAgg] = await Promise.all([
       db
         .select({
           slot: catalogItems.slot,
@@ -78,10 +76,8 @@ export async function GET(_req: Request, { params }: { params: Promise<{ shareCo
         .select({ s: sql<number>`coalesce(sum(${userCodex.maxEnhanceLevel}),0)::int` })
         .from(userCodex)
         .where(eq(userCodex.userId, prof.id)),
-      championCatalogIds(prof.id),
     ]);
     equipped = eq_;
-    champ = champSet;
     total = totalCombatPower(
       eq_.map((e) => pieceCombatPower(e.enhanceLevel, e.transcendLevel)),
       Number(codexAgg[0]?.s ?? 0),
@@ -166,7 +162,6 @@ export async function GET(_req: Request, { params }: { params: Promise<{ shareCo
         {SLOTS.map((s) => {
           const it = bySlot.get(s);
           const spr = it ? sprite.get(s) : null;
-          const isChamp = it ? champ.has(it.catalogItemId) : false;
           // 초월은 등급색 정적 테두리로 표현(✦T 텍스트 제거). OG는 절차적 프레임
           // 불가 → transcendStyle 색. T0=테두리 없음. [[transcend-no-text-label]]
           const ts = it && it.transcendLevel > 0 ? transcendStyle(it.transcendLevel) : null;
@@ -196,7 +191,7 @@ export async function GET(_req: Request, { params }: { params: Promise<{ shareCo
                 )}
               </div>
               <span style={{ opacity: it ? 1 : 0.4 }}>
-                {it ? `${isChamp ? '👑 ' : ''}${it.name}  +${it.enhanceLevel}` : '미장착'}
+                {it ? `${it.name}  +${it.enhanceLevel}` : '미장착'}
               </span>
             </div>
           );

@@ -109,7 +109,6 @@ export default async function PublicProfilePage({
                       size={48}
                     />
                     <span className="flex-1 truncate">
-                      {it.isChampion ? '👑 ' : ''}
                       {it.name}{' '}
                       <span className="text-zinc-400">+{it.enhanceLevel}</span>
                     </span>

@@ -90,7 +90,7 @@ export default async function CodexPage() {
                       size={40}
                     />
                     <span className="line-clamp-1 px-0.5 text-[9px] text-zinc-600 dark:text-zinc-400">
-                      {champ ? `👑 ${c.name}` : c.name}
+                      {c.name}
                     </span>
                     <span className="text-[10px] font-semibold text-amber-600 dark:text-amber-400">
                       최고 +{codexMap.get(c.id)}

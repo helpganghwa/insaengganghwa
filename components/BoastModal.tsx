@@ -111,7 +111,6 @@ export function BoastModal({
                             size={40}
                           />
                           <span className="truncate">
-                            {it.isChampion ? '👑 ' : ''}
                             {it.name} +{it.enhanceLevel}
                           </span>
                         </>
@@ -142,7 +141,6 @@ export function BoastModal({
               />
               <div>
                 <div className="text-sm font-bold">
-                  {piece.p.isChampion ? '👑 ' : ''}
                   {piece.p.name}{' '}
                   <span className="opacity-80">+{piece.p.enhanceLevel}</span>
                 </div>
