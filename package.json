@@ -4,7 +4,8 @@
   "private": true,
   "scripts": {
     "dev": "next dev -p 5174",
-    "build": "next build",
+    "build": "bun run scripts/build-sprite-atlas.ts && next build",
+    "build:atlas": "bun run scripts/build-sprite-atlas.ts",
     "start": "next start -p 5174",
     "lint": "eslint",
     "lint:fix": "eslint --fix",

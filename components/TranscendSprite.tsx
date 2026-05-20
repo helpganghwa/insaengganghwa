@@ -2,7 +2,12 @@
 
 import { useEffect, useRef } from 'react';
 
-import { spritePath } from '@/lib/game/equipment/sprite-manifest';
+import {
+  atlasBgStyle,
+  atlasCoord,
+  ATLAS_CELL,
+  loadAtlasImage,
+} from '@/lib/game/equipment/sprite-atlas';
 import { transcendStyle, TRANSCEND_TUNING } from '@/lib/game/equipment/transcend';
 
 const SLOT_EMOJI = { weapon: '⚔️', armor: '🛡️', accessory: '💍' } as const;
@@ -192,9 +197,8 @@ const EmojiFallback = ({ size, slot, code, className }: { size: number; slot?: P
  * 글로우/배경 없음(확정안). +10/챔피언이 아닌 모든 등급이 이 경로.
  */
 function TranscendStatic({
-  base, st, size, code, className, frameless = false,
+  st, size, code, className, frameless = false,
 }: {
-  base: string;
   st: ReturnType<typeof transcendStyle>;
   size: number;
   code: string;
@@ -207,23 +211,20 @@ function TranscendStatic({
   const sw = size * 0.52;
   const inset = size * 0.115;
   const starBox = size * 0.16;
+  // Sprite는 atlas(1 WebP)에서 background-position으로 잘라 그림. 150개 PNG 개별 X.
+  const bg = atlasBgStyle(code, sw);
   return (
     <div
       className={className}
       style={{ width: size, height: size, position: 'relative' }}
       aria-label={`${code} +${st.level}${st.labelKo ? ` ${st.labelKo}` : ''}`}
     >
-      {/* 픽셀아트 — next/image 최적화는 리샘플로 오히려 깨짐(CLAUDE §5.2). raw img 의도. */}
-      {/* eslint-disable-next-line @next/next/no-img-element */}
-      <img
-        src={base}
-        alt=""
-        draggable={false}
-        style={{
-          position: 'absolute', left: (size - sw) / 2, top: (size - sw) / 2,
-          width: sw, height: sw, imageRendering: 'pixelated',
-        }}
-      />
+      {bg ? (
+        <div
+          aria-hidden
+          style={{ position: 'absolute', left: (size - sw) / 2, top: (size - sw) / 2, ...bg }}
+        />
+      ) : null}
       {st.hasFrame && !frameless ? (
         <div
           aria-hidden
@@ -259,13 +260,12 @@ function TranscendStatic({
 
 export function TranscendSprite(props: Props) {
   const { code, level, slot, isChampion = false, size = 64, animate = true, className, frameless = false } = props;
-  const base = spritePath(code);
   const st = transcendStyle(level);
-  if (!base) return <EmojiFallback size={size} slot={slot} code={code} className={className} />;
+  if (!atlasCoord(code)) return <EmojiFallback size={size} slot={slot} code={code} className={className} />;
   // 동적(캔버스+rAF) = 광택(+10) 또는 챔피언 발광. frameless여도 광택/발광은 sprite에 적용.
   const dynamic = animate && (isChampion || st.isMax);
   if (!dynamic) {
-    return <TranscendStatic base={base} st={st} size={size} code={code} className={className} frameless={frameless} />;
+    return <TranscendStatic st={st} size={size} code={code} className={className} frameless={frameless} />;
   }
   return <TranscendCanvas {...props} />;
 }
@@ -281,13 +281,13 @@ function TranscendCanvas({
   frameless = false,
 }: Props) {
   const canvasRef = useRef<HTMLCanvasElement>(null);
-  const base = spritePath(code);
+  const coord = atlasCoord(code);
   const st = transcendStyle(level);
   // colorRgb는 매 렌더 새 배열 → deps용으로 원시값 추출 (tier에 종속, 안정적).
   const [scr, scg, scb] = st.colorRgb;
 
   useEffect(() => {
-    if (!base) return;
+    if (!coord) return;
     const canvas = canvasRef.current;
     if (!canvas) return;
     const ctx = canvas.getContext('2d');
@@ -306,7 +306,6 @@ function TranscendCanvas({
     // 글로우 단독(+8·+9)은 펄스 미미 → 정적. 애니는 +10(스윕)·챔피언만 (성능·끊김 방지).
     const dynamic = animate && (showShine || showRadiant);
 
-    const sprite = new Image();
     let frameCanvas: HTMLCanvasElement | null = null;
 
     const off = document.createElement('canvas');
@@ -330,10 +329,11 @@ function TranscendCanvas({
     let radiantCv: HTMLCanvasElement | null = null; // 챔피언 발광(블러, 1회)
     const [shineCv, shineX] = mkCanvas(); // 광택 스윕 재사용 스크래치
 
-    const buildStatic = () => {
+    const buildStatic = (atlasImg: HTMLImageElement) => {
       const [sc, sx] = mkCanvas();
       sx.imageSmoothingEnabled = false;
-      sx.drawImage(sprite, SP, SP, SW, SW);
+      // atlas 부분 그리기 — coord.x,y에서 ATLAS_CELL×ATLAS_CELL 영역 → 캔버스 SP,SP에 SW×SW.
+      sx.drawImage(atlasImg, coord.x, coord.y, ATLAS_CELL, ATLAS_CELL, SP, SP, SW, SW);
       spriteCv = sc;
 
       if (showFrame) {
@@ -351,7 +351,7 @@ function TranscendCanvas({
       if (isChampion) {
         const [rc, rx] = mkCanvas();
         rx.imageSmoothingEnabled = false;
-        rx.drawImage(sprite, SP, SP, SW, SW);
+        rx.drawImage(atlasImg, coord.x, coord.y, ATLAS_CELL, ATLAS_CELL, SP, SP, SW, SW);
         rx.globalCompositeOperation = 'source-in';
         rx.fillStyle = 'rgb(255,238,190)';
         rx.fillRect(0, 0, FS, FS);
@@ -436,29 +436,34 @@ function TranscendCanvas({
       raf = requestAnimationFrame(loop);
     };
 
-    const start = () => {
-      buildStatic();
+    const start = (atlasImg: HTMLImageElement) => {
+      buildStatic(atlasImg);
       if (dynamic) raf = requestAnimationFrame(loop);
       else draw(0.2);
     };
 
-    sprite.onload = () => {
-      if (!showFrame) return start();
-      loadFrame()
-        .then((img) => {
-          if (stopped) return;
-          frameCanvas = recolorFrame(img, color, sub);
-          start();
-        })
-        .catch(() => start());
-    };
-    sprite.src = base;
+    // atlas 1장(모듈 전역 캐시) + frame 1장 병렬 로드.
+    loadAtlasImage()
+      .then((atlasImg) => {
+        if (stopped) return;
+        if (!showFrame) return start(atlasImg);
+        loadFrame()
+          .then((img) => {
+            if (stopped) return;
+            frameCanvas = recolorFrame(img, color, sub);
+            start(atlasImg);
+          })
+          .catch(() => start(atlasImg));
+      })
+      .catch(() => {});
 
     return () => {
       stopped = true;
       if (raf) cancelAnimationFrame(raf);
     };
-  }, [base, st.level, st.tier, st.sub, st.hasFrame, st.hasGlow, st.isMax, scr, scg, scb, isChampion, championMode, animate, frameless]);
+    // coord는 같은 code면 안정. 객체 ref 변동 deps 회피 위해 code 사용.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [code, st.level, st.tier, st.sub, st.hasFrame, st.hasGlow, st.isMax, scr, scg, scb, isChampion, championMode, animate, frameless]);
 
   // base 없음/이모지 폴백은 디스패처(TranscendSprite)가 처리 — 여기 도달 시 base 보장.
   const px = Math.round(size * (typeof window !== 'undefined' ? Math.min(window.devicePixelRatio || 1, 3) : 2));

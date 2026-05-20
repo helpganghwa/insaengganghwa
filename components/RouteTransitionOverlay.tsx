@@ -3,13 +3,13 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { usePathname } from 'next/navigation';
 
-import { LOADING_SPRITES } from '@/lib/game/equipment/loading-sprites';
+import { atlasBgStyle, ATLAS_CODES } from '@/lib/game/equipment/sprite-atlas';
 
 const CYCLE_MS = 200; // grow식 — 표시 동안 여러 이미지 랜덤 순환 주기
 const SAFETY_MS = 8000; // 멈춤 방지 자동 해제
 
 function pick(prev?: string | null): string | null {
-  return LOADING_SPRITES[Math.floor(Math.random() * LOADING_SPRITES.length)] ?? prev ?? null;
+  return ATLAS_CODES[Math.floor(Math.random() * ATLAS_CODES.length)] ?? prev ?? null;
 }
 
 /**
@@ -17,12 +17,13 @@ function pick(prev?: string | null): string | null {
  * 아이템 이미지만(텍스트·배경 없음). 표시 동안 풀에서 **여러 이미지가 랜덤 순환**.
  * App Router는 라우터 이벤트가 없어 표준 기법(toploader류)으로 내부 링크 클릭 +
  * history.pushState를 가로채 표시하고 `usePathname` 변경(새 라우트 커밋) 시 해제.
- * 풀은 SpritePreloader가 캐시 적재 → 순환 교체가 네트워크 대기 없이 즉시.
+ * sprite는 atlas(public/sprites/atlas.webp) 1장에서 background-position으로 잘라
+ * 그림 — SpritePreloader가 atlas 1회 prefetch → 순환 교체 즉시.
  */
 export function RouteTransitionOverlay() {
   const pathname = usePathname();
   const [active, setActive] = useState(false);
-  const [src, setSrc] = useState<string | null>(null);
+  const [code, setCode] = useState<string | null>(null);
   const safety = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   const stop = useCallback(() => {
@@ -38,8 +39,8 @@ export function RouteTransitionOverlay() {
   // 표시 중 여러 이미지 랜덤 순환.
   useEffect(() => {
     if (!active) return;
-    setSrc((p) => pick(p));
-    const id = setInterval(() => setSrc((p) => pick(p)), CYCLE_MS);
+    setCode((p) => pick(p));
+    const id = setInterval(() => setCode((p) => pick(p)), CYCLE_MS);
     return () => clearInterval(id);
   }, [active]);
 
@@ -88,20 +89,13 @@ export function RouteTransitionOverlay() {
     };
   }, []);
 
-  if (!active || !src) return null;
+  if (!active || !code) return null;
+  const bg = atlasBgStyle(code, 72);
+  if (!bg) return null;
 
   return (
     <div className="pointer-events-none fixed inset-0 z-[200] flex items-center justify-center">
-      {/* eslint-disable-next-line @next/next/no-img-element -- 픽셀 스프라이트(next/image 부적합, 프로젝트 컨벤션) */}
-      <img
-        src={src}
-        alt=""
-        width={72}
-        height={72}
-        className="h-[72px] w-[72px]"
-        style={{ imageRendering: 'pixelated' }}
-        decoding="sync"
-      />
+      <div aria-hidden style={bg} />
     </div>
   );
 }
