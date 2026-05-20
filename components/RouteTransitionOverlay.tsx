@@ -1,7 +1,7 @@
 'use client';
 
 import { useCallback, useEffect, useRef, useState } from 'react';
-import { usePathname } from 'next/navigation';
+import { usePathname, useSearchParams } from 'next/navigation';
 
 import { atlasBgStyle, ATLAS_CODES } from '@/lib/game/equipment/sprite-atlas';
 
@@ -22,6 +22,8 @@ function pick(prev?: string | null): string | null {
  */
 export function RouteTransitionOverlay() {
   const pathname = usePathname();
+  const searchParams = useSearchParams();
+  const searchKey = searchParams.toString(); // ?tab=sum 변화도 감지(같은 pathname).
   const [active, setActive] = useState(false);
   const [code, setCode] = useState<string | null>(null);
   const safety = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -31,10 +33,11 @@ export function RouteTransitionOverlay() {
     if (safety.current) clearTimeout(safety.current);
   }, []);
 
-  // 새 라우트 커밋 → 해제.
+  // 새 라우트(경로 또는 쿼리스트링) 커밋 → 해제. /leaderboard?tab=sum 같이 pathname
+  // 동일·query만 변화하는 탭 전환도 해제 트리거(이전: pathname만 deps라 멈춤).
   useEffect(() => {
     stop();
-  }, [pathname, stop]);
+  }, [pathname, searchKey, stop]);
 
   // 표시 중 여러 이미지 랜덤 순환.
   useEffect(() => {

@@ -1,5 +1,7 @@
 import Link from 'next/link';
 
+import { vsrc } from '@/lib/asset-version';
+
 /**
  * WIREFRAMES §1 — 홈 (메뉴 허브). 2×3 그리드 + 오늘의 보급.
  * 각 카드 = Pixellab 픽셀아트 배경(public/sprites/hub/*.png) + 하단 그라데이션
@@ -29,7 +31,7 @@ export default function HomePage() {
             {/* 픽셀아트 배경 — next/image 리샘플은 깨지므로 raw img + imageRendering:pixelated (CLAUDE §5.2). */}
             {/* eslint-disable-next-line @next/next/no-img-element */}
             <img
-              src={m.bg}
+              src={vsrc(m.bg)}
               alt=""
               aria-hidden
               draggable={false}
