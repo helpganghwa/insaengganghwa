@@ -76,6 +76,45 @@ export function BoastModal({
     }
   };
 
+  // 카톡 전용 — Kakao.Share.sendDefault. imageUrl에 ?v=<random>으로 카톡 캐시
+  // 우회 → 매 공유마다 다른 OG(서버 OG는 sprite·배경 랜덤 합성).
+  type KakaoApi = {
+    isInitialized: () => boolean;
+    Share: {
+      sendDefault: (opts: unknown) => void;
+    };
+  };
+  const doShareKakao = () => {
+    const k = (window as unknown as { Kakao?: KakaoApi }).Kakao;
+    if (!k || !k.isInitialized()) {
+      doShare();
+      return;
+    }
+    const origin = window.location.origin;
+    const v = Math.random().toString(36).slice(2, 10);
+    const imageUrl = `${origin}/og/${encodeURIComponent(nickname)}?v=${v}`;
+    k.Share.sendDefault({
+      objectType: 'feed',
+      content: {
+        title: kind === 'set' ? `${nickname}의 인생강화` : (headline ?? '✨ 강화 달성'),
+        description: text,
+        imageUrl,
+        imageWidth: 800,
+        imageHeight: 420,
+        link: { mobileWebUrl: shareUrl, webUrl: shareUrl },
+      },
+      buttons: [
+        {
+          title: '나도 시작하기',
+          link: { mobileWebUrl: shareUrl, webUrl: shareUrl },
+        },
+      ],
+    });
+  };
+  const hasKakao =
+    typeof window !== 'undefined' &&
+    !!(window as unknown as { Kakao?: { isInitialized: () => boolean } }).Kakao?.isInitialized();
+
   return (
     <div
       role="dialog"
@@ -163,6 +202,15 @@ export function BoastModal({
         </div>
 
         <div className="space-y-2 p-3">
+          {hasKakao ? (
+            <button
+              type="button"
+              onClick={doShareKakao}
+              className="w-full rounded-full bg-yellow-300 py-2.5 text-sm font-bold text-yellow-950"
+            >
+              💬 카카오톡 공유
+            </button>
+          ) : null}
           <button
             type="button"
             onClick={doShare}
@@ -170,11 +218,7 @@ export function BoastModal({
           >
             {copied ? '✓ 링크 복사됨' : '🔗 공유하기'}
           </button>
-          <button
-            type="button"
-            onClick={onClose}
-            className="w-full py-1.5 text-xs text-zinc-500"
-          >
+          <button type="button" onClick={onClose} className="w-full py-1.5 text-xs text-zinc-500">
             닫기
           </button>
         </div>

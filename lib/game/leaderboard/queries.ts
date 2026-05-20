@@ -45,36 +45,34 @@ async function sumRows() {
 }
 
 async function combatRows() {
-  // 착용 장비 + 도감강화합 → 유저별 총 전투력(BALANCE §3.2). 프리런칭 규모 가정.
-  const [equipped, codex, names] = await Promise.all([
-    db
-      .select({
-        userId: equipmentInstances.userId,
-        enhanceLevel: equipmentInstances.enhanceLevel,
-        transcendLevel: equipmentInstances.transcendLevel,
-      })
-      .from(equipmentInstances)
-      .where(sql`${equipmentInstances.equippedSlot} is not null`),
-    db
-      .select({
-        userId: userCodex.userId,
-        s: sql<number>`coalesce(sum(${userCodex.maxEnhanceLevel}),0)::int`,
-      })
-      .from(userCodex)
-      .groupBy(userCodex.userId),
-    db.select({ id: profiles.id, nickname: profiles.nickname }).from(profiles),
-  ]);
-  const codexSum = new Map(codex.map((c) => [c.userId, Number(c.s)]));
-  const byUser = new Map<string, { enhanceLevel: number; transcendLevel: number }[]>();
-  for (const e of equipped) {
-    const arr = byUser.get(e.userId) ?? [];
-    arr.push({ enhanceLevel: e.enhanceLevel, transcendLevel: e.transcendLevel });
-    byUser.set(e.userId, arr);
-  }
-  return names.map((n) => ({
-    userId: n.id,
-    nickname: n.nickname,
-    value: combatPowerFromRows(byUser.get(n.id) ?? [], codexSum.get(n.id) ?? 0),
+  // 단일 SQL aggregate — 3 Promise.all + JS 합성 → 1 쿼리(풀 점유 1/3 + 디스크
+  // 1 패스). 첫 캐시 미스 시 무한 로딩 원인이었던 풀 직렬 압력 해소.
+  const rows = (await db.execute(sql`
+    with eq as (
+      select user_id,
+             coalesce(json_agg(json_build_array(enhance_level, transcend_level)), '[]'::json) as pieces
+      from equipment_instances
+      where equipped_slot is not null
+      group by user_id
+    ),
+    cdx as (
+      select user_id, coalesce(sum(max_enhance_level), 0)::int as s
+      from user_codex
+      group by user_id
+    )
+    select p.id::text as id, p.nickname, coalesce(eq.pieces, '[]'::json) as pieces,
+           coalesce(cdx.s, 0)::int as s
+    from profiles p
+    left join eq on eq.user_id = p.id
+    left join cdx on cdx.user_id = p.id
+  `)) as unknown as { id: string; nickname: string; pieces: [number, number][]; s: number }[];
+  return rows.map((r) => ({
+    userId: r.id,
+    nickname: r.nickname,
+    value: combatPowerFromRows(
+      r.pieces.map(([enhanceLevel, transcendLevel]) => ({ enhanceLevel, transcendLevel })),
+      Number(r.s),
+    ),
   }));
 }
 

@@ -1,0 +1,42 @@
+import 'server-only';
+
+import { sql } from 'drizzle-orm';
+
+import { db } from '@/lib/db/client';
+
+/**
+ * 일일 보급 — KST 자정 기준 1회 자동 발송. lazy(layout에서 호출).
+ *
+ * 멱등: daily_supply_grants(user_id, kst_day) PK + multi-CTE 단일 SQL.
+ * 동시 N 요청 시 첫 INSERT만 성공(ON CONFLICT DO NOTHING), 나머지 메일
+ * INSERT 0행(WHERE g 비어있음). 다음 KST day에 다시 활성.
+ *
+ * 보상: 1000 다이아 + 슬롯별 보급권 5장(weapon/armor/accessory).
+ */
+const PAYLOAD = JSON.stringify({
+  diamond: 1000,
+  boxes: { weapon: 5, armor: 5, accessory: 5 },
+});
+
+export async function ensureDailyMail(userId: string): Promise<boolean> {
+  // KST today를 SQL에서 계산해 race 없음. 성공 시 1행 RETURNING.
+  const r = (await db.execute(sql`
+    with g as (
+      insert into daily_supply_grants (user_id, kst_day)
+      values (${userId}::uuid, (now() at time zone 'Asia/Seoul')::date)
+      on conflict do nothing
+      returning kst_day
+    )
+    insert into mailbox (user_id, type, title, body, sender_label, payload, expires_at)
+    select ${userId}::uuid,
+           'reward'::mailbox_type,
+           '오늘의 보급',
+           '매일 KST 자정 새로 도착합니다. 30일 안에 받으세요.',
+           '일일 보급',
+           ${PAYLOAD}::jsonb,
+           now() + interval '30 days'
+    from g
+    returning id::text id
+  `)) as unknown as { id: string }[];
+  return r.length > 0;
+}

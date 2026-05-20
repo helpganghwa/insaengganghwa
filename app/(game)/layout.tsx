@@ -5,10 +5,12 @@ import { getSessionUserId } from '@/lib/auth/session';
 import { db } from '@/lib/db/client';
 import { withTimeout, DbTimeoutError } from '@/lib/db/with-timeout';
 import { enhancementJobs } from '@/lib/db/schema/enhance';
+import { ensureDailyMail } from '@/lib/game/mailbox';
 import { AppHeader } from '@/components/AppHeader';
 import { BottomNav } from '@/components/BottomNav';
 import { SpritePreloader } from '@/components/SpritePreloader';
 import { RouteTransitionOverlay } from '@/components/RouteTransitionOverlay';
+import { KakaoSdkLoader } from '@/components/KakaoSdkLoader';
 
 /**
  * 인증 필요 라우트 그룹 — WIREFRAMES §0 셸.
@@ -45,9 +47,16 @@ export default async function GameLayout({ children }: { children: React.ReactNo
     console.warn('[layout] enhance-count timeout — dot skipped');
   }
 
+  // 일일 보급 — KST 자정 1회 자동 발송(멱등 PK). 핫패스 가벼움(빠른 INSERT/no-op).
+  // 짧은 가드 + 실패 silent(다음 진입에서 재시도, 사용자 영향 X).
+  withTimeout(ensureDailyMail(userId), 2000, 'layout.dailyMail').catch((e) => {
+    if (!(e instanceof DbTimeoutError)) console.warn('[layout] dailyMail error', e);
+  });
+
   return (
     <div className="mx-auto flex min-h-dvh w-full max-w-[390px] flex-1 flex-col shadow-sm">
       <SpritePreloader />
+      <KakaoSdkLoader />
       <RouteTransitionOverlay />
       <AppHeader userId={userId} />
       <main className="flex-1 overflow-y-auto">{children}</main>

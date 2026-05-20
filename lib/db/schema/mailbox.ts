@@ -13,7 +13,9 @@ import {
   uuid,
   bigint,
   bigserial,
+  date,
   jsonb,
+  primaryKey,
   text,
   timestamp,
   index,
@@ -88,3 +90,22 @@ export const mailClaimLogs = pgTable('mail_claim_logs', {
 });
 
 export type MailClaimLog = typeof mailClaimLogs.$inferSelect;
+
+/**
+ * 일일 보급 — 매일 KST 자정 기준 1회 자동 발송 멱등 가드.
+ * PK (user_id, kst_day)로 동시·중복 발송 차단. 메일 자체는 mailbox에 별도 적재.
+ * ensureDailyMail()이 lazy 호출 — Cron 의존 X.
+ */
+export const dailySupplyGrants = pgTable(
+  'daily_supply_grants',
+  {
+    userId: uuid('user_id')
+      .notNull()
+      .references(() => profiles.id, { onDelete: 'cascade' }),
+    /** Asia/Seoul 기준 날짜. KST 자정에 갱신. */
+    kstDay: date('kst_day', { mode: 'string' }).notNull(),
+    grantedAt: timestamp('granted_at', { withTimezone: true }).notNull().defaultNow(),
+  },
+  (t) => [primaryKey({ columns: [t.userId, t.kstDay] })],
+);
+
