@@ -7,12 +7,12 @@ import Link from 'next/link';
  */
 // 이미지 톤과 어울리는 카드 배경색 — 픽셀아트가 투명 영역 위에 떠 보이지 않도록.
 const MENU = [
-  { href: '/enhance', label: '강화', desc: '장비를 한계까지 단련', bg: '/sprites/hub/enhance.png', tint: '#2a1f15' },
+  { href: '/enhance', label: '강화', desc: '장비를 한계까지 단련', bg: '/sprites/hub/enhance.png', tint: '#3d1f0c' },
   { href: '/inventory', label: '인벤토리', desc: '보유 장비 관리', bg: '/sprites/hub/inventory.png', tint: '#3a2a1c' },
-  { href: '/gacha', label: '보급', desc: '랜덤 장비 획득', bg: '/sprites/hub/gacha.png', tint: '#2a2240' },
+  { href: '/gacha', label: '보급', desc: '랜덤 장비 획득', bg: '/sprites/hub/gacha.png', tint: '#143a2a' },
   { href: '/raid', label: '레이드', desc: '보스 도전', bg: '/sprites/hub/raid.png', tint: '#3a1419' },
   { href: '/me', label: '프로필', desc: '내 정보·통계', bg: '/sprites/hub/profile.png', tint: '#1a2438' },
-  { href: '/leaderboard', label: '랭킹', desc: '최강자 순위', bg: '/sprites/hub/ranking.png', tint: '#3a2a10' },
+  { href: '/leaderboard', label: '랭킹', desc: '최강자 순위', bg: '/sprites/hub/ranking.png', tint: '#3d2a08' },
 ] as const;
 
 export default function HomePage() {

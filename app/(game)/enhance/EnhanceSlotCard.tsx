@@ -35,11 +35,48 @@ export type ActiveJob = {
 };
 
 type Outcome = 'success' | 'hold' | 'down';
-const OUTCOME_MSG: Record<Outcome, string> = {
-  success: '강화 성공! 한 단계 진화했다',
-  hold: '실패… 하지만 단계는 유지됐다',
-  down: '실패 — 한 단계 하락했다',
-};
+// 결과 문구 — 판타지 톤, 각 outcome당 5개 랜덤 노출(시도마다 분위기 변주).
+const OUTCOME_MSGS: Record<Outcome, readonly string[]> = {
+  success: [
+    '대장간이 환호한다 — 한 계단 위로!',
+    '망치질 한 번에 별이 깃들었다',
+    '쿵! 강철에 새 결이 새겨졌다',
+    '운명의 한 방 — 진화 성공',
+    '딱 한 끗, 그 한 끗이 진화다',
+  ],
+  hold: [
+    '어이쿠 손이 미끄러졌네 — 하지만 장비는 무사하다구!',
+    '강철은 의리가 있다 — 단계는 그대로',
+    '아쉽다, 단단함이 단계를 지켜냈다',
+    '쇠가 단단히 굳었다 — 다음을 노리자',
+    '망치가 빗나갔지만 장비는 견뎠다',
+  ],
+  down: [
+    '저런… 무너지는 소리가 들린다',
+    '균열이 한 줄, 단계가 한 줄 깎였다',
+    '쇠가 비명을 질렀다 — 한 단계 하락',
+    '운명이 비웃는다 — 강철이 깎였다',
+    '망치질이 어긋났다, 단계가 무너졌다',
+  ],
+} as const;
+// 확인 모드 문구 — ready/early 각 5개.
+const CONFIRM_MSGS_READY = [
+  '다시 탭하면 강화',
+  '망치를 들었다 — 다시 탭',
+  '준비 완료 — 다시 탭하면 시작',
+  '대장간이 기다린다 — 다시 탭',
+  '한 번 더 — 시작 신호다',
+] as const;
+const CONFIRM_MSGS_EARLY = [
+  '아직 무르익지 않았다 — 다시 탭하면 강행',
+  '서두를 텐가? 다시 탭하면 강화',
+  '확률이 미약하다 — 다시 탭이면 강행',
+  '운명을 시험할 텐가? 다시 탭',
+  '쇠가 아직 차다 — 다시 탭하면 시도',
+] as const;
+function pick<T>(arr: readonly T[]): T {
+  return arr[Math.floor(Math.random() * arr.length)]!;
+}
 const OUTCOME_TONE: Record<Outcome, string> = {
   success: 'text-emerald-300',
   hold: 'text-zinc-200',
@@ -81,6 +118,8 @@ export function EnhanceSlotCard({
   const [confirmCancelLeft, setConfirmCancelLeft] = useState(0);
   const [confirmReduce, setConfirmReduce] = useState(false);
   const [confirmReduceLeft, setConfirmReduceLeft] = useState(0);
+  const [flashMsg, setFlashMsg] = useState<string | null>(null); // outcome 랜덤 메시지
+  const [confirmMsg, setConfirmMsg] = useState<string | null>(null); // 확인 랜덤 메시지
 
   useEffect(() => {
     setNowMs(Date.now());
@@ -91,13 +130,15 @@ export function EnhanceSlotCard({
     setOptimisticDone(false);
     setConfirm(false);
   }, [activeJob.jobId]);
-  // 확인 모드 진입 시 3초 카운트다운. 0 도달 시 자동 해제(취소). 다시 탭 → 강화.
+  // 확인 모드 진입 시 3초 카운트다운 + 랜덤 메시지 선택(client-only — SSR 안전).
   useEffect(() => {
     if (!confirm) {
       setConfirmLeft(0);
+      setConfirmMsg(null);
       return;
     }
     setConfirmLeft(3);
+    setConfirmMsg(pick(ready ? CONFIRM_MSGS_READY : CONFIRM_MSGS_EARLY));
     const id = setInterval(() => {
       setConfirmLeft((s) => {
         if (s <= 1) {
@@ -108,6 +149,8 @@ export function EnhanceSlotCard({
       });
     }, 1000);
     return () => clearInterval(id);
+    // ready를 deps에 안 넣음 — 진입 시점의 ready 메시지를 카운트 동안 고정(자연).
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [confirm]);
   // 취소·다이아 단축 — 동일 3s 재탭 패턴(카운트 라벨 노출용 useEffect).
   useEffect(() => {
@@ -174,6 +217,7 @@ export function EnhanceSlotCard({
       }
       const oc = r.result.outcome as Outcome;
       setFlash(oc); // 결과 즉시 표시
+      setFlashMsg(pick(OUTCOME_MSGS[oc])); // 판타지 톤 5개 중 랜덤
       // §10 자랑 — +30/+50/+99 강화 성공 시 공유 모달.
       if (oc === 'success' && BOAST_LEVELS.has(activeJob.targetLevel)) {
         setTimeout(() => setBoast(true), 1600);
@@ -182,6 +226,7 @@ export function EnhanceSlotCard({
       // setTimeout 콜백은 transition 밖이라 pending을 잡지 않음(결과가 빨리 보임).
       setTimeout(() => {
         setFlash(null);
+        setFlashMsg(null);
         router.refresh();
       }, 1500);
     });
@@ -326,7 +371,7 @@ export function EnhanceSlotCard({
         {confirm && !flash ? (
           <div className="pointer-events-none absolute inset-0 flex flex-col items-center justify-center gap-1 bg-black/85 px-4 text-center">
             <p className="text-[12px] font-semibold break-keep text-amber-200">
-              {ready ? '탭하면 강화' : '아직 최대 확률이 아닙니다 — 탭하면 강화'}
+              {confirmMsg ?? (ready ? '다시 탭하면 강화' : '아직 무르익지 않았다 — 다시 탭하면 강행')}
             </p>
             <p className="font-mono text-[10px] text-zinc-300 tabular-nums">
               {confirmLeft}s 후 자동 취소
@@ -337,7 +382,7 @@ export function EnhanceSlotCard({
         {flash ? (
           <span className="absolute inset-0 flex items-center justify-center bg-black/70 px-5 text-center">
             <span className={`text-[11px] font-medium break-keep ${OUTCOME_TONE[flash]}`}>
-              {OUTCOME_MSG[flash]}
+              {flashMsg ?? OUTCOME_MSGS[flash][0]}
             </span>
           </span>
         ) : null}
