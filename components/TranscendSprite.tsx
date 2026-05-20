@@ -262,8 +262,11 @@ export function TranscendSprite(props: Props) {
   const { code, level, slot, isChampion = false, size = 64, animate = true, className, frameless = false } = props;
   const st = transcendStyle(level);
   if (!atlasCoord(code)) return <EmojiFallback size={size} slot={slot} code={code} className={className} />;
-  // 동적(캔버스+rAF) = 광택(+10) 또는 챔피언 발광. frameless여도 광택/발광은 sprite에 적용.
-  const dynamic = animate && (isChampion || st.isMax);
+  // 동적(캔버스+rAF) = 광택(+10) | T8+ 발광 | 챔피언 글로우(swap 후). frameless여도 적용.
+  // 사용자 결정(2026-05-20): 챔피언 발광 ↔ T8+ 글로우 시각 효과 교체.
+  //   챔피언 → 부드러운 라디얼 글로우(등급색, 알파 낮음)
+  //   T8+    → 노란빛 사전합성 블러 발광(크고 펄스 — 기존 챔피언 효과)
+  const dynamic = animate && (st.hasGlow || st.isMax || isChampion);
   if (!dynamic) {
     return <TranscendStatic st={st} size={size} code={code} className={className} frameless={frameless} />;
   }
@@ -299,12 +302,17 @@ function TranscendCanvas({
     const champOverride = isChampion && championMode === 'override';
     const color: RGB = champOverride ? MYTHIC_RGB : [scr, scg, scb];
     const sub: 0 | 1 = (champOverride ? 1 : st.sub ?? 0) as 0 | 1;
-    const showGlow = TRANSCEND_TUNING.glowEnabled && (champOverride ? true : st.hasGlow);
-    const showShine = champOverride ? false : st.isMax; // additive: +10이면 챔피언이어도 광택 유지
+    // ── Swap 후 시각 효과 매핑 ──
+    //   showGlow    : 라디얼 글로우(부드러운 색 라디얼, 알파 낮음). 챔피언 전용으로 이동.
+    //                 → glowEnabled 가드 제거(챔피언 표식 항상 on). override면 그대로 강제.
+    //   showRadiant : 노란빛 사전합성 블러 발광(크고 펄스). T8+ 등급 전용으로 이동.
+    //                 → 챔피언 여부와 무관, st.hasGlow(+8·+9·+10) 기준.
+    //   showShine   : +10 광택 스윕(soft-light). 그대로 유지.
+    const showGlow = champOverride ? true : isChampion;
+    const showShine = champOverride ? false : st.isMax;
     const showFrame = (champOverride ? true : st.hasFrame) && !frameless;
-    const showRadiant = isChampion; // 발광은 두 모델 공통 — 챔피언 표식
-    // 글로우 단독(+8·+9)은 펄스 미미 → 정적. 애니는 +10(스윕)·챔피언만 (성능·끊김 방지).
-    const dynamic = animate && (showShine || showRadiant);
+    const showRadiant = st.hasGlow;
+    const dynamic = animate && (showShine || showRadiant || showGlow);
 
     let frameCanvas: HTMLCanvasElement | null = null;
 
@@ -348,7 +356,8 @@ function TranscendCanvas({
         frontCv = fc;
       }
 
-      if (isChampion) {
+      // 사전합성 블러 발광 — swap 후 T8+ 전용(기존 챔피언 표식이 등급으로 이동).
+      if (showRadiant) {
         const [rc, rx] = mkCanvas();
         rx.imageSmoothingEnabled = false;
         rx.drawImage(atlasImg, coord.x, coord.y, ATLAS_CELL, ATLAS_CELL, SP, SP, SW, SW);
@@ -374,12 +383,10 @@ function TranscendCanvas({
         o.fill();
       }
 
-      // 글로우 (finalZ2 형태 부드러운 색 라디얼, 알파 낮음).
+      // 글로우 (부드러운 색 라디얼, 알파 낮음) — swap 후 챔피언 전용 표식.
       if (showGlow) {
-        const inten = isChampion ? 1 : Math.pow((st.level - 7) / 3, 0.85);
         const pulse = 0.85 + 0.15 * Math.sin(ph * Math.PI * 2);
-        const peak =
-          (isChampion ? TRANSCEND_TUNING.championGlowAlpha : TRANSCEND_TUNING.glowAlpha) * inten * pulse;
+        const peak = TRANSCEND_TUNING.championGlowAlpha * pulse;
         const grd = o.createRadialGradient(FS / 2, FS / 2, 0, FS / 2, FS / 2, FS * 0.46);
         grd.addColorStop(0, `rgba(${color[0]},${color[1]},${color[2]},${peak})`);
         grd.addColorStop(1, `rgba(${color[0]},${color[1]},${color[2]},0)`);
@@ -387,7 +394,7 @@ function TranscendCanvas({
         o.fillRect(0, 0, FS, FS);
       }
 
-      // 챔피언 발광 (사전합성 블러를 알파만 펄스 — 아이템 뒤).
+      // 사전합성 블러 발광 (알파만 펄스 — 아이템 뒤). swap 후 T8+ 등급 표식.
       if (radiantCv) {
         o.globalAlpha = 0.45 * (0.85 + 0.15 * Math.sin(ph * Math.PI * 2));
         o.drawImage(radiantCv, 0, 0);

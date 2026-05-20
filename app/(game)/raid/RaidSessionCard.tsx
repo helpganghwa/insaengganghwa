@@ -107,7 +107,7 @@ export function RaidSessionCard({ view: v }: { view: RaidView }) {
     <section className="text-zinc-100">
       {/* 히어로 — 배경 이미지(있으면) + 그라데이션 폴백 + 큰 보스 sprite(APNG 우선·정적 부유). */}
       <div
-        className={`relative flex h-52 items-end justify-center bg-gradient-to-b ${getBossBgClass(v.bossCode)}`}
+        className={`relative flex h-60 items-end justify-center bg-gradient-to-b ${getBossBgClass(v.bossCode)}`}
       >
         {bossBg ? (
           // eslint-disable-next-line @next/next/no-img-element

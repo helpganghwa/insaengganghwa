@@ -7,6 +7,8 @@ import { useRouter } from 'next/navigation';
 import { RAID_OPEN_COST_DIAMOND } from '@/lib/game/balance';
 import { RAID_BOSSES, RAID_BOSS_CODES, type RaidBoss } from '@/lib/game/raid/bosses';
 import { BossSprite } from '@/components/BossSprite';
+import { getBossBg, getBossBgClass } from '@/lib/game/raid/boss-sprites';
+import { assetUrl } from '@/lib/asset-versions';
 
 import { openRaidAction } from './actions';
 
@@ -80,11 +82,27 @@ export function RaidSlots({
             <Link
               key={s.raidId}
               href={`/raid/${s.raidId}`}
-              className="flex items-center gap-3 rounded-xl border-2 border-amber-700/50 bg-zinc-900 p-3 text-zinc-100"
+              className={`relative flex items-center gap-3 overflow-hidden rounded-xl border-2 border-amber-700/60 bg-gradient-to-r p-3 text-zinc-100 transition active:scale-[0.99] ${getBossBgClass(s.bossCode)}`}
             >
-              <BossSprite code={s.bossCode} size={56} className="shrink-0" />
-              <span className="min-w-0 flex-1">
-                <span className="block text-sm font-bold">
+              {/* 보스 배경 이미지(있으면) — opacity 35로 부드럽게 깔고 어둠 overlay로 가독성 확보 (grow 패턴). */}
+              {getBossBg(s.bossCode) ? (
+                // eslint-disable-next-line @next/next/no-img-element
+                <img
+                  src={assetUrl(getBossBg(s.bossCode)!)}
+                  alt=""
+                  aria-hidden
+                  loading="eager"
+                  fetchPriority="high"
+                  className="pointer-events-none absolute inset-0 h-full w-full object-cover opacity-35"
+                  style={{ imageRendering: 'pixelated' }}
+                />
+              ) : null}
+              <div className="pointer-events-none absolute inset-0 bg-gradient-to-r from-black/70 via-black/40 to-black/70" />
+              <div className="relative shrink-0">
+                <BossSprite code={s.bossCode} size={56} />
+              </div>
+              <span className="relative min-w-0 flex-1">
+                <span className="block text-sm font-bold drop-shadow">
                   {RAID_BOSSES[s.bossCode].name}
                   {s.isHost ? (
                     <span className="ml-1 rounded bg-amber-500 px-1 text-[9px] text-amber-950">
