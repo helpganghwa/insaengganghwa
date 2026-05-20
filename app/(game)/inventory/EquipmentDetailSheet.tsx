@@ -28,14 +28,42 @@ import { RarityFrame, rarityBorderStyle, hasRarityBorder } from '@/components/Ra
 
 const SLOT_LABEL: Record<Slot, string> = { weapon: '무기', armor: '방어구', accessory: '장신구' };
 
-// 공통 버튼 클래스 — 3×2 그리드, 보조 텍스트(서브라벨) 수용용 min-h + flex-col.
+// 공통 버튼 — 3×2 그리드. Pixellab 배경 이미지 + 그라데이션 overlay + 라벨 간략.
 const BTN =
-  'flex min-h-12 flex-col items-center justify-center gap-0 rounded-lg border px-1 py-1 text-[12px] font-semibold leading-tight disabled:opacity-40 transition-colors';
-const BTN_NEUTRAL = `${BTN} border-zinc-300 bg-white text-zinc-800 dark:border-zinc-700 dark:bg-zinc-900 dark:text-zinc-100`;
-const BTN_PRIMARY = `${BTN} border-transparent bg-zinc-900 text-white dark:bg-zinc-50 dark:text-zinc-950`;
-const BTN_AMBER = `${BTN} border-transparent bg-amber-500 text-amber-950`;
-const BTN_DANGER = `${BTN} border-red-300 bg-red-50 text-red-700 dark:border-red-900/60 dark:bg-red-950/40 dark:text-red-300`;
-const BTN_DANGER_CONFIRM = `${BTN} animate-pulse border-transparent bg-red-500 text-white`;
+  'relative flex h-16 flex-col items-center justify-end overflow-hidden rounded-lg border border-zinc-800 px-1 pb-1.5 text-white disabled:opacity-40 transition-transform active:scale-[0.97]';
+const BTN_CONFIRM =
+  `${BTN} animate-pulse border-2 border-red-400 ring-2 ring-red-500/60`;
+
+function BtnBg({ src, label, sub }: { src: string; label: string; sub?: string }) {
+  return (
+    <>
+      {/* eslint-disable-next-line @next/next/no-img-element */}
+      <img
+        src={src}
+        alt=""
+        aria-hidden
+        draggable={false}
+        className="absolute inset-0 h-full w-full object-cover"
+        style={{ imageRendering: 'pixelated' }}
+      />
+      <div className="absolute inset-0 bg-gradient-to-t from-black/90 via-black/40 to-black/15" />
+      <span
+        className="relative text-[13px] font-bold tracking-wide"
+        style={{ textShadow: '1px 1px 2px rgba(0,0,0,0.9)' }}
+      >
+        {label}
+      </span>
+      {sub ? (
+        <span
+          className="relative mt-0 text-[9px] font-semibold text-white/90"
+          style={{ textShadow: '1px 1px 2px rgba(0,0,0,0.9)' }}
+        >
+          {sub}
+        </span>
+      ) : null}
+    </>
+  );
+}
 
 export function EquipmentDetailSheet({
   item,
@@ -162,9 +190,9 @@ export function EquipmentDetailSheet({
           </p>
         ) : null}
 
-        {/* ── 3×2 액션 버튼 ── */}
+        {/* ── 3×2 액션 버튼 (Pixellab 배경 + 간략 라벨) ── */}
         <div className="mt-2.5 grid grid-cols-3 gap-1.5">
-          {/* 강화 (주요) */}
+          {/* 강화 */}
           <button
             type="button"
             disabled={pending || !canEnhance}
@@ -177,12 +205,11 @@ export function EquipmentDetailSheet({
                 },
               )
             }
-            className={BTN_PRIMARY}
+            className={BTN}
           >
-            <span>강화</span>
-            {needsFodderEnhance ? <span className="text-[9px] opacity-80">제물 1</span> : null}
+            <BtnBg src="/sprites/ui/btn-enhance.png" label="강화" sub={needsFodderEnhance ? '제물 1' : undefined} />
           </button>
-          {/* 초월 (주요) — 다음 단계 소모 정보 보조 라벨 */}
+          {/* 초월 */}
           <button
             type="button"
             disabled={pending || !canTranscend}
@@ -201,12 +228,13 @@ export function EquipmentDetailSheet({
                 },
               );
             }}
-            className={confirmT ? BTN_DANGER_CONFIRM : BTN_AMBER}
+            className={confirmT ? BTN_CONFIRM : BTN}
           >
-            <span>{`✦ ${nextT}초월`}</span>
-            <span className="text-[9px] opacity-90">
-              {confirmT ? '확정?' : atMax ? 'MAX' : `${fodderOwned}/${fodderNeed}`}
-            </span>
+            <BtnBg
+              src="/sprites/ui/btn-transcend.png"
+              label={confirmT ? '확정?' : '초월'}
+              sub={atMax ? 'MAX' : `T${nextT} · ${fodderOwned}/${fodderNeed}`}
+            />
           </button>
           {/* 장착/해제 */}
           <button
@@ -215,18 +243,18 @@ export function EquipmentDetailSheet({
             onClick={() =>
               run(() => (item.equipped ? unequipAction(item.id) : equipAction(item.id)))
             }
-            className={BTN_NEUTRAL}
+            className={BTN}
           >
-            장착
+            <BtnBg src="/sprites/ui/btn-equip.png" label={item.equipped ? '해제' : '장착'} />
           </button>
           {/* 잠금 토글 */}
           <button
             type="button"
             disabled={pending}
             onClick={() => run(() => toggleLockAction(item.id))}
-            className={BTN_NEUTRAL}
+            className={BTN}
           >
-            <span>🔒 잠금</span>
+            <BtnBg src="/sprites/ui/btn-lock.png" label={item.isLocked ? '해제' : '잠금'} />
           </button>
           {/* 분해 */}
           <button
@@ -241,16 +269,17 @@ export function EquipmentDetailSheet({
               setConfirmD(false);
               run(() => disenchantAction(item.id), onClose);
             }}
-            className={confirmD ? BTN_DANGER_CONFIRM : BTN_DANGER}
+            className={confirmD ? BTN_CONFIRM : BTN}
           >
-            <span>{confirmD ? '확정?' : '♻️ 분해'}</span>
-            {canDisenchant ? (
-              <span className="text-[9px] opacity-90">💎{DIAMOND_PER_DISENCHANT}</span>
-            ) : null}
+            <BtnBg
+              src="/sprites/ui/btn-disenchant.png"
+              label={confirmD ? '확정?' : '분해'}
+              sub={canDisenchant ? `💎${DIAMOND_PER_DISENCHANT}` : undefined}
+            />
           </button>
           {/* 자랑 */}
-          <button type="button" onClick={() => setBoast(true)} className={BTN_NEUTRAL}>
-            🔗 자랑
+          <button type="button" onClick={() => setBoast(true)} className={BTN}>
+            <BtnBg src="/sprites/ui/btn-boast.png" label="자랑" />
           </button>
         </div>
 
