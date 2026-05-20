@@ -1,0 +1,121 @@
+# MAIL — 우편함 시스템
+
+> 운영자 공지·이벤트·시즌 보상의 통일 채널. 1인 운영 5년을 견디는 최소 복잡도 설계.
+
+## 1. 목적
+
+- **운영자 ↔ 유저** 비동기 보상·공지(점검 사과, 시즌 결과, 이벤트 등).
+- **시스템 자동 알림**(레이드 6h 정산, 오프라인 강화 결과 — 별도 type 사용).
+- 친구 선물 등 P2P는 v2.
+
+## 2. 데이터 모델
+
+### 2.1 `mailbox` (SCHEMA §7 확장)
+
+| 컬럼 | 타입 | 설명 |
+|---|---|---|
+| `id` | bigserial PK | |
+| `user_id` | uuid FK profiles | 수신자 |
+| `type` | enum | `enhance_result` / `raid_settlement` / `reward` / `notice` / `admin` |
+| `title` | text | 카드 제목(짧게) |
+| `body` | text | 본문(긴 설명) |
+| `sender_label` | text | UI 발신자(`'운영자'` / `'시스템'` 등) |
+| `payload` | jsonb | `{ diamond?: string|number, boxes?: { weapon?, armor?, accessory? } }` |
+| `claimed_at` | timestamptz nullable | 수령 시점 — **null = 미수령**(멱등 키) |
+| `expires_at` | timestamptz | 만료 시점 — default = `sent_at + 30d`(통일) |
+| `created_at` | timestamptz | 발송 시점 |
+
+인덱스: `(user_id, claimed_at)`, `(user_id, expires_at)`.
+
+### 2.2 `mail_claim_logs` (감사)
+
+| 컬럼 | 타입 |
+|---|---|
+| `id` | bigserial PK |
+| `mail_id` | bigint FK mailbox |
+| `user_id` | uuid FK profiles |
+| `diamond_granted` | bigint default 0 |
+| `boxes_granted` | jsonb default '{}' |
+| `claimed_at` | timestamptz default now() |
+
+claim 발생 시 1행 insert. mailbox 데이터가 cron으로 삭제되더라도 분배 추적 가능.
+
+### 2.3 `profiles.is_admin` boolean default false
+
+어드민 권한 1컬럼. 본인 계정만 SQL로 직접 true 설정.
+
+## 3. 첨부 종류 (v1)
+
+- **다이아**: 정수 ≥ 0 (bigint).
+- **슬롯별 보급 상자**: `weapon`/`armor`/`accessory` 각자 정수 ≥ 0.
+- (v2 후속) 초월석·제물·아이템 직접 지급 등.
+
+payload 예시:
+```json
+{ "diamond": "500", "boxes": { "weapon": 5, "armor": 5, "accessory": 5 } }
+```
+
+## 4. 라이프사이클 / 트랜잭션
+
+### 4.1 발송 (insert)
+
+운영자(`/admin/mail`) 또는 시스템 트리거가 1 row insert. broadcast는 audience 기반 fan-out — 큰 발송은 청크(500/배치).
+
+### 4.2 수령 (claim)
+
+**멱등성 핵심** — 단일 SQL UPDATE 멱등 게이트:
+
+```sql
+UPDATE mailbox
+   SET claimed_at = now()
+ WHERE id = $1 AND user_id = $2
+   AND claimed_at IS NULL
+   AND expires_at > now()
+ RETURNING payload;
+```
+
+- 0행 반환 = 이미 수령 / 만료 / 본인 아님 → `MAIL_NOT_AVAILABLE` (멱등 no-op).
+- 1행 반환 시 payload 분배:
+  - `update profiles set diamond = diamond + $diamond where id = $userId`
+  - `insert into user_supply_boxes (user_id, slot, count) values ... on conflict do update set count = count + excluded.count`
+  - `insert into mail_claim_logs (...)`
+- 위 모든 작업 단일 트랜잭션(부분 실패 없음, CLAUDE §3.3).
+
+### 4.3 일괄 수령
+
+`claimAllUnclaimed()` — 미수령·미만료 mail 전부 위 절차 한 번에. 단일 SQL `UPDATE ... RETURNING *` + JS fold(diamond 합·boxes 슬롯별 합) → 단일 트랜잭션.
+
+### 4.4 만료
+
+v1: lazy — 모든 조회에 `expires_at > now()` 필터. cron 없음.
+v2: DB 누적 시 daily cron(`0 18 * * *` UTC = KST 03:00)으로 `delete from mailbox where claimed_at is null and expires_at < now()`.
+
+## 5. UI 진입점
+
+- **헤더 ✉️ 배지**: 미수령·미만료 카운트(3+는 `3+` 표기). layout 쿼리에 통합(N+1 X).
+- **`/mail` 페이지**: 미수령 / 받은 탭, [받기] / [모두 받기]. 만료 임박(<24h) 빨강.
+- **수령 모달**: 다이아·상자 아이콘 + 수량.
+
+## 6. 어드민 (`/admin/mail`)
+
+- layout 가드: `is_admin = true`만. 비-admin은 404 또는 홈 redirect.
+- **단건 발송**: nickname 또는 userId 입력 → 1 row insert.
+- **broadcast**: audience(전체 / 조건) → fan-out 청크. `mail_broadcasts` 로그(v2 추가).
+
+## 7. 보안 / Rate Limit
+
+- 모든 액션 서버 권위(CLAUDE §3.1).
+- claim — 60/10s(rate limit bucket `mail`).
+- 어드민 발송 — 1/3s(broadcast는 더 엄격).
+- payload 검증: 다이아 ≤ 10⁹, 상자 ≤ 10⁴(악성 입력 차단).
+
+## 8. 후속 (v2+)
+
+- 만료 cron
+- mail_broadcasts 감사
+- 친구 선물 (P2P) — 일일 수령 한도, 친구 관계 검증
+- 챔피언 자동 보상 (v1 도입 안 함, 사용자 결정)
+
+---
+
+**관련 메모리**: [[insaengganghwa-project]] · [[db-provisioning-state]]

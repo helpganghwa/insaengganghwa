@@ -21,6 +21,8 @@ export const profiles = pgTable('profiles', {
   representativeTitleCode: text('representative_title_code'),
   /** Day1 온보딩 진행 (GDD §4). */
   tutorialStep: integer('tutorial_step').notNull().default(0),
+  /** 어드민 권한(우편함 발송 등). 1인 운영 — 본인 계정만 직접 SQL로 true 설정. */
+  isAdmin: boolean('is_admin').notNull().default(false),
   createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
   updatedAt: timestamp('updated_at', { withTimezone: true }).notNull().defaultNow(),
 });

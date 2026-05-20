@@ -14,6 +14,12 @@ if (!KEY) {
 }
 const OUT = join(process.cwd(), 'public', 'sprites', 'hub');
 
+// 공통 — 솔리드 배경 보장(투명 영역 X).
+const COMMON =
+  'dark atmospheric fantasy pixel art, no characters, centered front view, high ' +
+  'detail, fully filled solid background, edge-to-edge composition, no transparent ' +
+  'areas, no empty space';
+
 const BOXES: { slot: string; prompt: string }[] = [
   {
     slot: 'weapon',
@@ -21,8 +27,8 @@ const BOXES: { slot: string; prompt: string }[] = [
       'ornate dark wooden treasure chest overflowing with a varied assortment of ' +
       'weapons — long sword, curved dagger, battle axe, spiked mace, spear, longbow, ' +
       'wooden staff — each clearly distinct and visible spilling out, golden brass ' +
-      'corners, warm torch lighting, dark dungeon background, dark atmospheric ' +
-      'fantasy pixel art, no characters, centered front view, high detail',
+      'corners, warm torch lighting, deep dungeon stone chamber filling the entire ' +
+      'frame, ' + COMMON,
   },
   {
     slot: 'armor',
@@ -30,9 +36,8 @@ const BOXES: { slot: string; prompt: string }[] = [
       'ornate dark wooden treasure chest overflowing with a varied assortment of ' +
       'armor — polished steel breastplate, plumed helmet, chainmail shirt, leather ' +
       'boots, round kite shield, iron gauntlets — each clearly distinct and visible ' +
-      'spilling out, golden brass corners, warm torch lighting, dark dungeon ' +
-      'background, dark atmospheric fantasy pixel art, no characters, centered ' +
-      'front view, high detail',
+      'spilling out, golden brass corners, warm torch lighting, deep dungeon stone ' +
+      'chamber filling the entire frame, ' + COMMON,
   },
   {
     slot: 'accessory',
@@ -41,8 +46,8 @@ const BOXES: { slot: string; prompt: string }[] = [
       'golden ring with ruby, silver pendant amulet, emerald earrings, jeweled ' +
       'bracelet, ornate brooch, mystical talisman, gemstone necklace — each clearly ' +
       'distinct and visible spilling out, polished mahogany wood, golden brass ' +
-      'corners, warm candle lighting, dark velvet interior, dark atmospheric fantasy ' +
-      'pixel art, no characters, centered front view, high detail',
+      'corners, warm candle lighting, deep velvet boudoir chamber filling the entire ' +
+      'frame, ' + COMMON,
   },
 ];
 

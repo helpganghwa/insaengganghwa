@@ -31,10 +31,12 @@ const MENUS: { name: string; prompt: string }[] = [
   {
     name: 'inventory',
     prompt:
-      'armory display rack room — three tier wooden shelves with neatly arranged ' +
-      'gleaming swords, polished steel armor breastplates, and gold accessory rings, ' +
-      'lit by warm lantern glow, dark stained wood walls and floor, ornate brass ' +
-      'fittings, ' + COMMON,
+      'armory display rack room with three distinct sections clearly visible — ' +
+      'left shelf with several swords and daggers, middle shelf with a steel ' +
+      'breastplate and a plumed helmet, right shelf with a tray of glowing rings ' +
+      'and gemstone amulets, all three sections equally prominent, lit by warm ' +
+      'lantern glow, dark stained wood walls and floor, ornate brass fittings, ' +
+      COMMON,
   },
   {
     name: 'gacha',
