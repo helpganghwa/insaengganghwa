@@ -23,47 +23,53 @@ const wrap = (children: React.ReactNode) => (
   </svg>
 );
 
-// 01 Pixel Stair v2 — 굵은 계단(8번 강화). 끝에 다이아 보석.
-const V1_PixelStair = ({ color, accent }: OrnateProps) =>
+// 01 Filigree Curl — Diablo/판타지 식물 덩굴 곡선 + 끝 구슬
+const V1_FiligreeCurl = ({ color, accent }: OrnateProps) =>
   wrap(
     <>
-      <rect x="0" y="0" width="16" height="3" fill={color} />
-      <rect x="0" y="3" width="13" height="3" fill={color} />
-      <rect x="0" y="6" width="10" height="3" fill={color} />
-      <rect x="0" y="9" width="7" height="3" fill={color} />
-      <rect x="0" y="12" width="4" height="4" fill={color} />
-      <rect x="14" y="-0.5" width="3.5" height="3.5" fill={accent} transform="rotate(45 15.75 1.25)" />
-      <rect x="-0.5" y="14" width="3.5" height="3.5" fill={accent} transform="rotate(45 1.25 15.75)" />
+      <path
+        d="M 2 2 Q 6 2.5 8 5 Q 10 7.5 8 10 Q 6 12 3 11"
+        stroke={color}
+        strokeWidth="1.4"
+        fill="none"
+        strokeLinecap="round"
+      />
+      <path d="M 6 5 Q 8 6 9 8" stroke={accent} strokeWidth="0.7" fill="none" strokeLinecap="round" />
+      <circle cx="2" cy="2" r="1.5" fill={color} />
+      <circle cx="2" cy="2" r="0.7" fill="rgba(255,255,255,0.95)" />
+      <circle cx="11" cy="9" r="1.1" fill={accent} />
+      <circle cx="4" cy="13" r="0.85" fill={accent} />
     </>,
   );
 
-// 02 Pixel Diagonal — 대각선 픽셀 5점 + 끝점 큰 다이아
-const V2_PixelDiagonal = ({ color, accent }: OrnateProps) =>
+// 02 Heraldic Diamond — 왕가 톤. 큰 다이아 + 양쪽 휠
+const V2_HeraldicDiamond = ({ color, accent }: OrnateProps) =>
   wrap(
     <>
-      <rect x="2" y="2" width="3.5" height="3.5" fill={color} />
-      <rect x="5.5" y="5.5" width="3" height="3" fill={color} />
-      <rect x="8.5" y="8.5" width="2.5" height="2.5" fill={color} />
-      <rect x="11" y="11" width="2" height="2" fill={color} />
-      <rect x="1" y="1" width="2.5" height="2.5" fill={accent} transform="rotate(45 2.25 2.25)" />
+      <rect x="2.5" y="2.5" width="6" height="6" fill={color} transform="rotate(45 5.5 5.5)" />
+      <rect x="3.8" y="3.8" width="3.4" height="3.4" fill={accent} transform="rotate(45 5.5 5.5)" />
+      <circle cx="5.5" cy="5.5" r="0.9" fill="rgba(255,255,255,0.95)" />
+      <circle cx="12" cy="3" r="1.8" fill="none" stroke={color} strokeWidth="0.9" />
+      <circle cx="12" cy="3" r="0.7" fill={accent} />
+      <circle cx="3" cy="12" r="1.8" fill="none" stroke={color} strokeWidth="0.9" />
+      <circle cx="3" cy="12" r="0.7" fill={accent} />
+      <line x1="9" y1="5.5" x2="11" y2="3.7" stroke={color} strokeWidth="0.6" />
+      <line x1="5.5" y1="9" x2="3.7" y2="11" stroke={color} strokeWidth="0.6" />
     </>,
   );
 
-// 03 Star Burst v2 — 큰 별 + 광선 5개(굵게·디테일)
-const V3_StarBurst = ({ color, accent }: OrnateProps) =>
+// 03 Celtic Knot — interlace 4-loop 매듭(켈틱 톤)
+const V3_CelticKnot = ({ color, accent }: OrnateProps) =>
   wrap(
     <>
-      <g stroke={accent} strokeWidth="1.2" strokeLinecap="round">
-        <line x1="5" y1="5" x2="15" y2="1" />
-        <line x1="5" y1="5" x2="15" y2="15" />
-        <line x1="5" y1="5" x2="1" y2="15" />
-        <line x1="5" y1="5" x2="11" y2="0" />
-        <line x1="5" y1="5" x2="0" y2="11" />
+      <g stroke={color} strokeWidth="1.4" fill="none" strokeLinecap="round">
+        <path d="M 3 1 Q 3 6 8 6 Q 11 6 11 3" />
+        <path d="M 1 3 Q 6 3 6 8 Q 6 11 3 11" />
+        <path d="M 11 3 Q 13 3 14 5" />
+        <path d="M 3 11 Q 3 13 5 14" />
       </g>
-      <g transform="translate(5 5)" fill={color}>
-        <polygon points="0,-5 1.4,-1.4 5,0 1.4,1.4 0,5 -1.4,1.4 -5,0 -1.4,-1.4" />
-      </g>
-      <circle cx="5" cy="5" r="1.7" fill="rgba(255,255,255,0.95)" />
+      <circle cx="6" cy="6" r="1.7" fill={accent} />
+      <circle cx="6" cy="6" r="0.8" fill="rgba(255,255,255,0.95)" />
     </>,
   );
 
@@ -87,111 +93,126 @@ const V4_StarTrio = ({ color, accent }: OrnateProps) =>
     </>,
   );
 
-// 05 Gem Cluster — 다이아 3개 클러스터(큰 + 작은 2)
-const V5_GemCluster = ({ color, accent }: OrnateProps) =>
+// 05 Greek Meander — 그리스 키 미로 패턴(직각 굴절)
+const V5_GreekMeander = ({ color, accent }: OrnateProps) =>
   wrap(
     <>
-      <rect x="3" y="3" width="5" height="5" fill={color} transform="rotate(45 5.5 5.5)" />
-      <rect x="11" y="3" width="3" height="3" fill={accent} transform="rotate(45 12.5 4.5)" />
-      <rect x="3" y="11" width="3" height="3" fill={accent} transform="rotate(45 4.5 12.5)" />
-      <circle cx="5.5" cy="5.5" r="0.9" fill="rgba(255,255,255,0.85)" />
-    </>,
-  );
-
-// 06 Sparkle Dots — 큰 별 + 흩어진 점 5
-const V6_SparkleDots = ({ color, accent }: OrnateProps) =>
-  wrap(
-    <>
-      <g transform="translate(5 5)" fill={color}>
-        <polygon points="0,-4.5 1.25,-1.25 4.5,0 1.25,1.25 0,4.5 -1.25,1.25 -4.5,0 -1.25,-1.25" />
+      <g stroke={color} strokeWidth="1.4" fill="none" strokeLinejoin="miter">
+        <path d="M 0 3 L 7 3 L 7 0" />
+        <path d="M 0 6 L 4 6 L 4 9 L 0 9" />
+        <path d="M 10 0 L 10 6 L 13 6 L 13 0" />
       </g>
-      <circle cx="5" cy="5" r="1.3" fill="rgba(255,255,255,0.92)" />
       <g fill={accent}>
-        <circle cx="13" cy="2" r="0.95" />
-        <circle cx="2" cy="13" r="0.95" />
-        <circle cx="14" cy="9" r="0.7" />
-        <circle cx="9" cy="14" r="0.7" />
-        <circle cx="11" cy="11" r="0.55" />
+        <circle cx="0" cy="0" r="1.2" />
+        <circle cx="14" cy="8" r="0.85" />
+        <circle cx="6" cy="13" r="0.85" />
       </g>
     </>,
   );
 
-// 07 Pixel Crown — 8bit 작은 왕관(3 spike + 보석점)
-const V7_PixelCrown = ({ color, accent }: OrnateProps) =>
+// 06 Crystal Shard — 다이아블로 II rare item 톤. 큰 크리스탈 + 위성
+const V6_CrystalShard = ({ color, accent }: OrnateProps) =>
   wrap(
     <>
-      <rect x="2" y="7" width="13" height="2.5" fill={color} />
-      <rect x="2" y="9.5" width="13" height="1" fill={accent} />
-      <rect x="2" y="4" width="2.5" height="3" fill={color} />
-      <rect x="7.25" y="2.5" width="2.5" height="4.5" fill={color} />
-      <rect x="12.5" y="4" width="2.5" height="3" fill={color} />
-      <circle cx="3.25" cy="3" r="0.85" fill={accent} />
-      <circle cx="8.5" cy="1.5" r="0.95" fill={accent} />
-      <circle cx="13.75" cy="3" r="0.85" fill={accent} />
+      <polygon points="6,1 10,5 6,10 2,5" fill={color} />
+      <line x1="6" y1="1" x2="6" y2="10" stroke={accent} strokeWidth="0.5" />
+      <line x1="2" y1="5" x2="10" y2="5" stroke={accent} strokeWidth="0.5" />
+      <polygon points="13,3 15,5 13,7 11,5" fill={accent} />
+      <polygon points="3,12 5,14 3,16 1,14" fill={accent} />
+      <circle cx="6" cy="5.5" r="0.95" fill="rgba(255,255,255,0.92)" />
     </>,
   );
 
-// 08 Diamond Pyramid — 큰 다이아 1 + 작은 다이아 2 대각 배치
-const V8_DiamondPyramid = ({ color, accent }: OrnateProps) =>
+// 07 Beaded Filigree — 곡선 + 대-중-소 구슬 줄(Hearthstone tooltip 톤)
+const V7_BeadedFiligree = ({ color, accent }: OrnateProps) =>
   wrap(
     <>
-      <rect x="1.5" y="1.5" width="6" height="6" fill={color} transform="rotate(45 4.5 4.5)" />
-      <rect x="10" y="3" width="3" height="3" fill={accent} transform="rotate(45 11.5 4.5)" />
-      <rect x="3" y="10" width="3" height="3" fill={accent} transform="rotate(45 4.5 11.5)" />
-      <rect x="11" y="11" width="2.5" height="2.5" fill={color} transform="rotate(45 12.25 12.25)" />
-      <circle cx="4.5" cy="4.5" r="1.2" fill="rgba(255,255,255,0.92)" />
+      <path
+        d="M 1.5 1.5 Q 5 4 9 9 Q 11 11.5 14 14"
+        stroke={color}
+        strokeWidth="1.1"
+        fill="none"
+        strokeLinecap="round"
+      />
+      <circle cx="1.5" cy="1.5" r="1.6" fill={color} />
+      <circle cx="1.5" cy="1.5" r="0.7" fill="rgba(255,255,255,0.95)" />
+      <circle cx="5" cy="4" r="0.95" fill={accent} />
+      <circle cx="9" cy="9" r="1.3" fill={color} />
+      <circle cx="9" cy="9" r="0.55" fill="rgba(255,255,255,0.85)" />
+      <circle cx="11.5" cy="11.5" r="0.75" fill={accent} />
+      <circle cx="14" cy="14" r="0.55" fill={accent} />
     </>,
   );
 
-// 09 Burst Rays — 작은 별 + 6 광선(긴·짧음 교차)
-const V9_BurstRays = ({ color, accent }: OrnateProps) =>
+// 08 Art Deco Steps — 계단형 대칭 기하(Stardew·art deco)
+const V8_ArtDecoSteps = ({ color, accent }: OrnateProps) =>
   wrap(
     <>
-      <g stroke={color} strokeWidth="1.4" strokeLinecap="round">
-        <line x1="5" y1="5" x2="16" y2="0" />
-        <line x1="5" y1="5" x2="16" y2="16" />
-        <line x1="5" y1="5" x2="0" y2="16" />
-      </g>
-      <g stroke={accent} strokeWidth="0.85" strokeLinecap="round">
-        <line x1="5" y1="5" x2="13" y2="2" />
-        <line x1="5" y1="5" x2="13" y2="13" />
-        <line x1="5" y1="5" x2="2" y2="13" />
-      </g>
-      <g transform="translate(5 5)" fill={color}>
-        <polygon points="0,-3 0.85,-0.85 3,0 0.85,0.85 0,3 -0.85,0.85 -3,0 -0.85,-0.85" />
-      </g>
-      <circle cx="5" cy="5" r="0.9" fill="rgba(255,255,255,0.95)" />
+      <rect x="0" y="0" width="11" height="2" fill={color} />
+      <rect x="0" y="0" width="2" height="11" fill={color} />
+      <rect x="3" y="3" width="6" height="1.5" fill={accent} />
+      <rect x="3" y="3" width="1.5" height="6" fill={accent} />
+      <rect x="5.5" y="5.5" width="3" height="1" fill={color} />
+      <rect x="5.5" y="5.5" width="1" height="3" fill={color} />
+      <circle cx="11.5" cy="1" r="0.95" fill={accent} />
+      <circle cx="1" cy="11.5" r="0.95" fill={accent} />
     </>,
   );
 
-// 10 Rune Cross — 룬 십자 + 점 5
-const V10_RuneCross = ({ color, accent }: OrnateProps) =>
+// 09 Sun Burst Royal — 8광선 + 중앙 보석(FF·Octopath)
+const V9_SunBurstRoyal = ({ color, accent }: OrnateProps) =>
   wrap(
     <>
-      <rect x="4" y="2" width="2.5" height="8" fill={color} />
-      <rect x="1.25" y="4.75" width="8" height="2.5" fill={color} />
-      <circle cx="5.25" cy="6" r="0.85" fill="rgba(255,255,255,0.95)" />
-      <g fill={accent}>
-        <circle cx="12" cy="2.5" r="0.95" />
-        <circle cx="2.5" cy="12" r="0.95" />
-        <circle cx="12" cy="12" r="0.85" />
-        <circle cx="14" cy="7" r="0.65" />
-        <circle cx="7" cy="14" r="0.65" />
+      <g stroke={color} strokeWidth="1" strokeLinecap="round">
+        <line x1="6" y1="6" x2="0" y2="0" />
+        <line x1="6" y1="6" x2="6" y2="0" />
+        <line x1="6" y1="6" x2="0" y2="6" />
+        <line x1="6" y1="6" x2="13" y2="0" />
+        <line x1="6" y1="6" x2="0" y2="13" />
+        <line x1="6" y1="6" x2="14" y2="6" />
+        <line x1="6" y1="6" x2="6" y2="14" />
+        <line x1="6" y1="6" x2="13" y2="13" />
       </g>
+      <g stroke={accent} strokeWidth="0.5" strokeLinecap="round">
+        <line x1="6" y1="6" x2="10" y2="2" />
+        <line x1="6" y1="6" x2="2" y2="10" />
+        <line x1="6" y1="6" x2="11" y2="11" />
+      </g>
+      <circle cx="6" cy="6" r="2.5" fill={color} />
+      <circle cx="6" cy="6" r="1.4" fill={accent} />
+      <circle cx="6" cy="6" r="0.6" fill="rgba(255,255,255,0.95)" />
+    </>,
+  );
+
+// 10 Mosaic Tile — 픽셀 사각형 모자이크(Stardew·8bit)
+const V10_MosaicTile = ({ color, accent }: OrnateProps) =>
+  wrap(
+    <>
+      <rect x="0" y="0" width="3.5" height="3.5" fill={color} />
+      <rect x="4" y="0" width="2.5" height="2.5" fill={accent} />
+      <rect x="0" y="4" width="2.5" height="2.5" fill={accent} />
+      <rect x="3.5" y="3.5" width="3" height="3" fill={color} />
+      <rect x="7" y="0" width="2" height="2" fill={accent} />
+      <rect x="0" y="7" width="2" height="2" fill={accent} />
+      <rect x="7" y="3.5" width="2" height="2" fill={color} />
+      <rect x="3.5" y="7" width="2" height="2" fill={color} />
+      <rect x="10" y="2" width="1.5" height="1.5" fill={accent} />
+      <rect x="2" y="10" width="1.5" height="1.5" fill={accent} />
+      <rect x="6.5" y="6.5" width="1.5" height="1.5" fill={accent} />
     </>,
   );
 
 const VARIANTS: { key: string; label: string; sub: string; Comp: (p: OrnateProps) => React.ReactElement }[] = [
-  { key: 'V1', label: '01. Pixel Stair', sub: '굵은 5단 계단 + 끝 다이아', Comp: V1_PixelStair },
-  { key: 'V2', label: '02. Pixel Diagonal', sub: '대각선 픽셀 5점', Comp: V2_PixelDiagonal },
-  { key: 'V3', label: '03. Star Burst', sub: '큰 별 + 5 광선', Comp: V3_StarBurst },
-  { key: 'V4', label: '04. Star Trio', sub: '큰 별 + 위성 별 3', Comp: V4_StarTrio },
-  { key: 'V5', label: '05. Gem Cluster', sub: '다이아 3 클러스터', Comp: V5_GemCluster },
-  { key: 'V6', label: '06. Sparkle Dots', sub: '큰 별 + 점 5', Comp: V6_SparkleDots },
-  { key: 'V7', label: '07. Pixel Crown', sub: '8bit 왕관 + 보석점', Comp: V7_PixelCrown },
-  { key: 'V8', label: '08. Diamond Pyramid', sub: '다이아 4 단계 배치', Comp: V8_DiamondPyramid },
-  { key: 'V9', label: '09. Burst Rays', sub: '별 + 광선 6(긴/짧음)', Comp: V9_BurstRays },
-  { key: 'V10', label: '10. Rune Cross', sub: '룬 십자 + 점 5', Comp: V10_RuneCross },
+  { key: 'V1', label: '01. Filigree Curl', sub: '식물 덩굴 곡선 + 구슬 (Diablo)', Comp: V1_FiligreeCurl },
+  { key: 'V2', label: '02. Heraldic Diamond', sub: '왕가 다이아 + 양쪽 휠', Comp: V2_HeraldicDiamond },
+  { key: 'V3', label: '03. Celtic Knot', sub: '켈틱 4-loop interlace', Comp: V3_CelticKnot },
+  { key: 'V4', label: '04. Star Trio (유지)', sub: '큰 별 + 위성 별 3', Comp: V4_StarTrio },
+  { key: 'V5', label: '05. Greek Meander', sub: '그리스 키 미로 + 점', Comp: V5_GreekMeander },
+  { key: 'V6', label: '06. Crystal Shard', sub: '크리스탈 + 위성 (Diablo II)', Comp: V6_CrystalShard },
+  { key: 'V7', label: '07. Beaded Filigree', sub: '곡선 + 대-중-소 구슬', Comp: V7_BeadedFiligree },
+  { key: 'V8', label: '08. Art Deco Steps', sub: '계단형 대칭 기하', Comp: V8_ArtDecoSteps },
+  { key: 'V9', label: '09. Sun Burst Royal', sub: '8광선 + 중앙 보석 (FF)', Comp: V9_SunBurstRoyal },
+  { key: 'V10', label: '10. Mosaic Tile', sub: '픽셀 모자이크 (Stardew)', Comp: V10_MosaicTile },
 ];
 
 function PreviewCard({
