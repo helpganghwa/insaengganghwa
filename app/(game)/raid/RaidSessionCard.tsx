@@ -11,6 +11,9 @@ import {
 } from '@/lib/game/balance';
 import { aggregatePhaseDrops } from '@/lib/game/raid/drops';
 import { RAID_BOSSES, type RaidBoss } from '@/lib/game/raid/bosses';
+import { BossSprite } from '@/components/BossSprite';
+import { getBossBg, getBossBgClass } from '@/lib/game/raid/boss-sprites';
+import { assetUrl } from '@/lib/asset-versions';
 
 import { attackRaidAction, buyExtraAttackAction } from './actions';
 
@@ -99,31 +102,55 @@ export function RaidSessionCard({ view: v }: { view: RaidView }) {
     ? '정산 대기'
     : `${Math.floor(remainMs / 3600000)}:${String(Math.floor((remainMs % 3600000) / 60000)).padStart(2, '0')}`;
 
+  const bossBg = getBossBg(v.bossCode);
   return (
     <section className="text-zinc-100">
-      <div className="relative flex h-52 flex-col items-center justify-center bg-gradient-to-b from-zinc-800 to-zinc-950">
-        <div className="absolute left-3 top-3 text-sm font-extrabold">
+      {/* 히어로 — 배경 이미지(있으면) + 그라데이션 폴백 + 큰 보스 sprite(APNG 우선·정적 부유). */}
+      <div
+        className={`relative flex h-52 items-end justify-center bg-gradient-to-b ${getBossBgClass(v.bossCode)}`}
+      >
+        {bossBg ? (
+          // eslint-disable-next-line @next/next/no-img-element
+          <img
+            src={assetUrl(bossBg)}
+            alt=""
+            loading="eager"
+            fetchPriority="high"
+            className="pointer-events-none absolute inset-0 h-full w-full object-cover"
+            style={{ imageRendering: 'pixelated' }}
+          />
+        ) : null}
+        {/* 비네팅 — 보스 가독성. radial center 50% 35%, 외곽 어두움 */}
+        <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(circle_at_50%_35%,transparent,rgba(0,0,0,0.6))]" />
+
+        <div className="absolute left-3 top-3 z-10 text-sm font-extrabold drop-shadow">
           {boss.name}
           {v.isHost ? (
             <span className="ml-1 rounded bg-amber-500 px-1 text-[9px] text-amber-950">방장</span>
           ) : null}
         </div>
         <div
-          className={`absolute right-3 top-3 rounded-full px-2.5 py-1 font-mono text-sm font-bold ${
+          className={`absolute right-3 top-3 z-10 rounded-full px-2.5 py-1 font-mono text-sm font-bold ${
             over || settled ? 'bg-black/40 text-zinc-300' : 'bg-black/40 text-amber-200'
           }`}
         >
           {settled ? '종료' : `⏳ ${cd}`}
         </div>
-        <div className={`text-7xl ${fx ? 'animate-flash-down' : ''}`}>{boss.emoji}</div>
-        {fx ? (
-          <span
-            className={`absolute top-10 font-mono font-extrabold ${fx.crit ? 'text-2xl text-amber-300' : 'text-xl text-red-300'}`}
-          >
-            {fx.crit ? '⚡' : ''}
-            {fx.dmg.toLocaleString()}
-          </span>
-        ) : null}
+
+        <div className={`relative z-10 mb-2 ${fx ? 'animate-flash-down' : ''}`}>
+          <BossSprite code={v.bossCode} size={168} className="drop-shadow-2xl" />
+          {fx ? (
+            <span
+              className={`absolute left-1/2 top-2 -translate-x-1/2 font-mono font-extrabold ${
+                fx.crit ? 'text-2xl text-amber-300' : 'text-xl text-red-300'
+              }`}
+              style={{ textShadow: '0 2px 6px rgba(0,0,0,0.7)' }}
+            >
+              {fx.crit ? '⚡' : ''}
+              {fx.dmg.toLocaleString()}
+            </span>
+          ) : null}
+        </div>
       </div>
 
       <div className="space-y-3 p-3">

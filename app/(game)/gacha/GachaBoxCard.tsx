@@ -12,12 +12,15 @@ export function GachaBoxCard({
   slot,
   label,
   bg,
+  bgPosY = '70%',
   tint,
   count,
 }: {
   slot: Slot;
   label: string;
   bg: string;
+  /** 배경 이미지의 세로 정렬 — 박스 모티프의 y가 이미지 어디쯤인지 슬롯별 조정. */
+  bgPosY?: string;
   tint: string;
   count: number;
 }) {
@@ -60,7 +63,7 @@ export function GachaBoxCard({
           aria-hidden
           draggable={false}
           className="absolute inset-0 h-full w-full object-cover opacity-90"
-          style={{ imageRendering: 'pixelated', objectPosition: '50% 70%' }}
+          style={{ imageRendering: 'pixelated', objectPosition: `50% ${bgPosY}` }}
         />
         {/* 가독성 확보용 그라데이션(상자 배경 위) */}
         <div className="relative bg-gradient-to-b from-black/0 via-black/45 to-black/85 p-4">

@@ -15,6 +15,64 @@ const SLOTS = ['weapon', 'armor', 'accessory'] as const;
 /** Pixellab 배경 아트 풀 — public/og/og-1..N.png. 부재 시 그라데이션 폴백. */
 const BG_POOL = 8;
 
+/**
+ * 초월 별 장식 — 4 모서리 ornate(RarityFrame OG 버전).
+ * 큰 별(R=4) + sub=1이면 위성 3 별. Satori 호환(abs div + inline SVG).
+ * 부모는 position:relative 필요. cornerPx = 카드 한 변의 30% px.
+ */
+function rarityCornersOG(
+  colorRgb: readonly [number, number, number],
+  sub: 0 | 1,
+  cornerPx: number,
+): React.ReactElement[] {
+  const [r, g, b] = colorRgb;
+  const color = `rgb(${r},${g},${b})`;
+  const accent = `rgb(${Math.round(r + (255 - r) * 0.45)},${Math.round(g + (255 - g) * 0.45)},${Math.round(b + (255 - b) * 0.45)})`;
+  const baseCorners: Array<{ pos: React.CSSProperties; transform: string }> = [
+    { pos: { top: 0, left: 0 }, transform: 'none' },
+    { pos: { top: 0, right: 0 }, transform: 'scaleX(-1)' },
+    { pos: { bottom: 0, left: 0 }, transform: 'scaleY(-1)' },
+    { pos: { bottom: 0, right: 0 }, transform: 'scale(-1, -1)' },
+  ];
+  return baseCorners.map((c, i) => (
+    <div
+      key={`rc${i}`}
+      style={{
+        position: 'absolute',
+        width: cornerPx,
+        height: cornerPx,
+        display: 'flex',
+        transform: c.transform,
+        ...c.pos,
+      }}
+    >
+      <svg
+        viewBox="0 0 30 30"
+        preserveAspectRatio="none"
+        style={{ width: '100%', height: '100%' }}
+      >
+        <g transform="translate(7.5 7.5)" fill={color}>
+          <polygon points="0,-4 1.1,-1.1 4,0 1.1,1.1 0,4 -1.1,1.1 -4,0 -1.1,-1.1" />
+        </g>
+        <circle cx="7.5" cy="7.5" r="1.1" fill="rgba(255,255,255,0.9)" />
+        {sub === 1 ? (
+          <>
+            <g transform="translate(14.5 4.5)" fill={accent}>
+              <polygon points="0,-2 0.55,-0.55 2,0 0.55,0.55 0,2 -0.55,0.55 -2,0 -0.55,-0.55" />
+            </g>
+            <g transform="translate(4.5 14.5)" fill={accent}>
+              <polygon points="0,-2 0.55,-0.55 2,0 0.55,0.55 0,2 -0.55,0.55 -2,0 -0.55,-0.55" />
+            </g>
+            <g transform="translate(13.5 13.5)" fill={accent}>
+              <polygon points="0,-1.6 0.45,-0.45 1.6,0 0.45,0.45 0,1.6 -0.45,0.45 -1.6,0 -0.45,-0.45" />
+            </g>
+          </>
+        ) : null}
+      </svg>
+    </div>
+  ));
+}
+
 /** 같은 배포의 정적 에셋 → base64 data URI(Satori가 안정적으로 임베드). 실패=null. */
 async function dataUri(url: string): Promise<string | null> {
   try {
@@ -79,7 +137,6 @@ export async function GET(_req: Request, { params }: { params: Promise<{ shareCo
   }
 
   const bySlot = new Map(equipped.map((e) => [e.slot, e]));
-  const display = prof ? prof.nickname : '인생강화';
 
   // 배경: 요청마다 진한 랜덤(no-store) — 풀 1개 시도, 부재면 그라데이션.
   const bgUri = await dataUri(`${origin}/og/og-${1 + Math.floor(Math.random() * BG_POOL)}.png`);
@@ -135,14 +192,19 @@ export async function GET(_req: Request, { params }: { params: Promise<{ shareCo
             <div
               style={{
                 position: 'absolute', top: 0, left: 0, width: 1200, height: 630,
-                background: 'linear-gradient(180deg,rgba(8,6,4,0.86) 0%,rgba(10,7,4,0.55) 60%,rgba(10,7,4,0.92) 100%)',
+                background: 'linear-gradient(180deg,rgba(8,6,4,0.62) 0%,rgba(10,7,4,0.42) 50%,rgba(8,6,4,0.62) 100%)',
                 display: 'flex',
               }}
             />
           </>
         ) : null}
-        <div style={{ display: 'flex', fontSize: 28, opacity: 0.85, letterSpacing: 2, zIndex: 1 }}>
-          ⚒️ 인생강화 · {display}
+        <div
+          style={{
+            display: 'flex', fontSize: 44, fontWeight: 800, color: '#fde9c8',
+            letterSpacing: 2, zIndex: 1, justifyContent: 'center',
+          }}
+        >
+          ⚒️ 인생강화
         </div>
         <div
           style={{
@@ -152,10 +214,12 @@ export async function GET(_req: Request, { params }: { params: Promise<{ shareCo
         >
           <div
             style={{
+              position: 'relative',
               width: 360, height: 360, display: 'flex', alignItems: 'center', justifyContent: 'center',
               borderRadius: 32, background: 'rgba(0,0,0,0.32)',
               border: ts ? `8px solid rgb(${tr},${tg},${tb})` : '3px solid rgba(255,255,255,0.10)',
               boxShadow: ts ? `0 0 48px rgba(${tr},${tg},${tb},0.55)` : 'none',
+              overflow: 'hidden',
             }}
           >
             {sprUri ? (
@@ -163,6 +227,8 @@ export async function GET(_req: Request, { params }: { params: Promise<{ shareCo
             ) : (
               <span style={{ fontSize: 200, opacity: 0.5 }}>❔</span>
             )}
+            {/* 초월 별 장식 — 큰 카드라 코너 108px */}
+            {ts ? rarityCornersOG(ts.colorRgb, ts.sub as 0 | 1, 108) : null}
           </div>
         </div>
         <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', zIndex: 1, marginTop: 'auto' }}>
@@ -207,7 +273,7 @@ export async function GET(_req: Request, { params }: { params: Promise<{ shareCo
               objectFit: 'cover',
             }}
           />
-          {/* 가독성 스크림 */}
+          {/* 가독성 스크림 — 좌측·상단 까만 쏠림 제거. 전체 균등 vertical 그라데이션. */}
           <div
             style={{
               position: 'absolute',
@@ -216,7 +282,7 @@ export async function GET(_req: Request, { params }: { params: Promise<{ shareCo
               width: 1200,
               height: 630,
               background:
-                'linear-gradient(105deg,rgba(8,6,4,0.86) 0%,rgba(10,7,4,0.66) 48%,rgba(10,7,4,0.30) 100%)',
+                'linear-gradient(180deg,rgba(8,6,4,0.62) 0%,rgba(10,7,4,0.42) 50%,rgba(8,6,4,0.62) 100%)',
               display: 'flex',
             }}
           />
@@ -231,33 +297,22 @@ export async function GET(_req: Request, { params }: { params: Promise<{ shareCo
           flexDirection: 'column',
           flex: 1,
           justifyContent: 'center',
-          gap: 40,
+          gap: 44,
           zIndex: 1,
         }}
       >
-      {/* 헤더 — 타이틀 + 닉네임 한 줄(가로). */}
+      {/* 헤더 — 타이틀만(닉네임 제거, 사용자 결정). 가운데 정렬. */}
       <div
         style={{
           display: 'flex',
-          alignItems: 'baseline',
-          gap: 22,
+          fontSize: 56,
+          fontWeight: 800,
+          color: '#fde9c8',
+          letterSpacing: 2,
+          justifyContent: 'center',
         }}
       >
-        <div style={{ display: 'flex', fontSize: 28, opacity: 0.85, letterSpacing: 2 }}>
-          ⚒️ 인생강화
-        </div>
-        <div
-          style={{
-            display: 'flex',
-            fontSize: 60,
-            fontWeight: 800,
-            color: '#fde9c8',
-            maxWidth: 800,
-            overflow: 'hidden',
-          }}
-        >
-          {display}
-        </div>
+        ⚒️ 인생강화
       </div>
 
       {/* 3 슬롯 가로 배치 — 각 슬롯은 sprite(위) + 이름+레벨(아래) column. */}
@@ -289,6 +344,7 @@ export async function GET(_req: Request, { params }: { params: Promise<{ shareCo
             >
               <div
                 style={{
+                  position: 'relative',
                   width: 220,
                   height: 220,
                   display: 'flex',
@@ -300,6 +356,7 @@ export async function GET(_req: Request, { params }: { params: Promise<{ shareCo
                     ? `6px solid rgb(${tr},${tg},${tb})`
                     : '3px solid rgba(255,255,255,0.12)',
                   boxShadow: ts ? `0 0 32px rgba(${tr},${tg},${tb},0.55)` : 'none',
+                  overflow: 'hidden',
                 }}
               >
                 {spr ? (
@@ -307,6 +364,8 @@ export async function GET(_req: Request, { params }: { params: Promise<{ shareCo
                 ) : (
                   <span style={{ fontSize: 108, opacity: it ? 1 : 0.4 }}>{EMOJI[s]}</span>
                 )}
+                {/* 초월 별 장식(4 모서리) — sub=0이면 큰 별만, sub=1이면 위성 별 추가. */}
+                {ts ? rarityCornersOG(ts.colorRgb, ts.sub as 0 | 1, 66) : null}
               </div>
               <div
                 style={{

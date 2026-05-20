@@ -9,15 +9,12 @@ import { assetUrl } from '@/lib/asset-versions';
 import { GachaBoxCard } from './GachaBoxCard';
 
 // 상자별 배경 이미지(Pixellab) + 어울리는 다크 tint(투명/외곽 영역 보강).
-const BOXES: { slot: Slot; label: string; bg: string; tint: string }[] = [
-  { slot: 'weapon', label: '무기 보급 상자', bg: '/sprites/hub/box-weapon.png', tint: '#2a1f15' },
-  { slot: 'armor', label: '방어구 보급 상자', bg: '/sprites/hub/box-armor.png', tint: '#1c2630' },
-  {
-    slot: 'accessory',
-    label: '장신구 보급 상자',
-    bg: '/sprites/hub/box-accessory.png',
-    tint: '#2a1620',
-  },
+// bgPosY = 배경의 y%를 카드 중앙에 맞춤 — Pixellab 결과마다 박스 모티프 y가
+// 달라 슬롯별 미세 조정. 박스가 카드 시각 중앙에 보이도록 70~85%.
+const BOXES: { slot: Slot; label: string; bg: string; bgPosY: string; tint: string }[] = [
+  { slot: 'weapon',    label: '무기 보급 상자',   bg: '/sprites/hub/box-weapon.png',    bgPosY: '70%', tint: '#2a1f15' },
+  { slot: 'armor',     label: '방어구 보급 상자', bg: '/sprites/hub/box-armor.png',     bgPosY: '85%', tint: '#1c2630' },
+  { slot: 'accessory', label: '장신구 보급 상자', bg: '/sprites/hub/box-accessory.png', bgPosY: '70%', tint: '#2a1620' },
 ];
 
 export default async function GachaPage() {
@@ -39,6 +36,7 @@ export default async function GachaPage() {
           slot={b.slot}
           label={b.label}
           bg={assetUrl(b.bg)}
+          bgPosY={b.bgPosY}
           tint={b.tint}
           count={countBySlot.get(b.slot) ?? 0}
         />
