@@ -33,26 +33,29 @@ const BOXES: { slot: string; prompt: string }[] = [
   {
     slot: 'armor',
     prompt:
-      'ornate dark wooden treasure chest overflowing with a wide assortment of armor ' +
-      'pieces of clearly different shapes — a full plate breastplate, a horned ' +
-      'barbarian helmet, a chainmail hooded shirt, a small round wooden shield, ' +
-      'a tall pointed kite shield, leather riding boots, iron gauntlets, a winged ' +
-      'great helm — every item visibly distinct silhouette (not just color), each ' +
-      'recognizable as its own type, spilling out of the chest, golden brass ' +
-      'corners, warm torch lighting, deep dungeon stone chamber filling the entire ' +
-      'frame, ' + COMMON,
+      'ornate dark wooden treasure chest overflowing with FIVE clearly different ' +
+      'types of armor with very distinct silhouettes — (1) a full chest plate ' +
+      'breastplate (torso shape), (2) a closed iron helmet (head shape), (3) a ' +
+      'large round shield (disc shape with metal boss in center), (4) tall ' +
+      'leather boots (foot/leg shape), (5) iron gauntlets (hand/glove shape) — ' +
+      'each item must be its OWN obvious type, not the same shape recolored; ' +
+      'each spilling out of the chest fully visible, golden brass corners, warm ' +
+      'torch lighting, deep dungeon stone chamber filling the entire frame edge ' +
+      'to edge with stone walls and warm light, ' + COMMON,
   },
   {
     slot: 'accessory',
     prompt:
-      'ornate dark jewelry box overflowing with a wide assortment of accessories of ' +
-      'clearly different shapes — a thick gold band ring with a ruby, a silver ' +
-      'pendant necklace on chain, a small jeweled crown tiara, dangling teardrop ' +
-      'earrings, a wide cuff bracelet, a circular medallion brooch, a triangular ' +
-      'glowing talisman, a delicate anklet — every item visibly distinct ' +
-      'silhouette (not just color), each recognizable as its own type, spilling ' +
-      'out of the box, polished mahogany wood, golden brass corners, warm candle ' +
-      'lighting, deep velvet boudoir chamber filling the entire frame, ' + COMMON,
+      'ornate dark jewelry box overflowing with FOUR clearly different types of ' +
+      'accessories with very distinct silhouettes — (1) a gold chain necklace ' +
+      'with a pendant (hanging chain shape), (2) a thick gold ring with a ruby ' +
+      '(circular band shape), (3) a pair of dangling teardrop earrings (small ' +
+      'hooked pair), (4) an ornate circular medallion brooch with a pin (flat ' +
+      'disc with center jewel) — each item must be its OWN obvious type, not the ' +
+      'same shape recolored; each spilling out of the box fully visible, polished ' +
+      'mahogany wood, golden brass corners, warm candle lighting, deep velvet ' +
+      'boudoir chamber filling the entire frame edge to edge with red velvet ' +
+      'walls and warm light, ' + COMMON,
   },
 ];
 
