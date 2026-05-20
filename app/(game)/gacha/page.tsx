@@ -1,4 +1,3 @@
-import Link from 'next/link';
 import { eq } from 'drizzle-orm';
 
 import { getSessionUserId } from '@/lib/auth/session';
@@ -8,10 +7,16 @@ import type { Slot } from '@/lib/db/schema/equipment';
 
 import { GachaBoxCard } from './GachaBoxCard';
 
-const BOXES: { slot: Slot; label: string; emoji: string }[] = [
-  { slot: 'weapon', label: '무기 보급 상자', emoji: '⚔️' },
-  { slot: 'armor', label: '방어구 보급 상자', emoji: '🛡️' },
-  { slot: 'accessory', label: '장신구 보급 상자', emoji: '💍' },
+// 상자별 배경 이미지(Pixellab) + 어울리는 다크 tint(투명/외곽 영역 보강).
+const BOXES: { slot: Slot; label: string; bg: string; tint: string }[] = [
+  { slot: 'weapon', label: '무기 보급 상자', bg: '/sprites/hub/box-weapon.png', tint: '#2a1f15' },
+  { slot: 'armor', label: '방어구 보급 상자', bg: '/sprites/hub/box-armor.png', tint: '#1c2630' },
+  {
+    slot: 'accessory',
+    label: '장신구 보급 상자',
+    bg: '/sprites/hub/box-accessory.png',
+    tint: '#2a1620',
+  },
 ];
 
 export default async function GachaPage() {
@@ -32,16 +37,11 @@ export default async function GachaPage() {
           key={b.slot}
           slot={b.slot}
           label={b.label}
-          emoji={b.emoji}
+          bg={b.bg}
+          tint={b.tint}
           count={countBySlot.get(b.slot) ?? 0}
         />
       ))}
-      <p className="pt-1 text-center text-xs text-zinc-500">
-        <Link href="/probability" className="underline">
-          확률 보기
-        </Link>{' '}
-        · 슬롯 내 균등 · 천장 없음
-      </p>
     </div>
   );
 }
