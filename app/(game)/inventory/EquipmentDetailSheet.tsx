@@ -28,9 +28,9 @@ import { RarityFrame, rarityBorderStyle, hasRarityBorder } from '@/components/Ra
 
 const SLOT_LABEL: Record<Slot, string> = { weapon: '무기', armor: '방어구', accessory: '장신구' };
 
-// 공통 버튼 클래스 — 2그리드 노출 시 시각 통일. 색만 변형으로 분기.
+// 공통 버튼 클래스 — 3×2 그리드, 보조 텍스트(서브라벨) 수용용 min-h + flex-col.
 const BTN =
-  'flex h-11 items-center justify-center rounded-lg border text-[12px] font-semibold disabled:opacity-40 transition-colors';
+  'flex min-h-12 flex-col items-center justify-center gap-0 rounded-lg border px-1 py-1 text-[12px] font-semibold leading-tight disabled:opacity-40 transition-colors';
 const BTN_NEUTRAL = `${BTN} border-zinc-300 bg-white text-zinc-800 dark:border-zinc-700 dark:bg-zinc-900 dark:text-zinc-100`;
 const BTN_PRIMARY = `${BTN} border-transparent bg-zinc-900 text-white dark:bg-zinc-50 dark:text-zinc-950`;
 const BTN_AMBER = `${BTN} border-transparent bg-amber-500 text-amber-950`;
@@ -124,6 +124,11 @@ export function EquipmentDetailSheet({
             <div className="min-w-0">
               <div className="flex items-center gap-1 text-[10px] text-zinc-500">
                 <span>{SLOT_LABEL[item.slot]}</span>
+                {item.transcendLevel > 0 ? (
+                  <span className="font-semibold text-red-600 dark:text-red-400">
+                    · ✦ {item.transcendLevel}/{MAX_TRANSCEND}
+                  </span>
+                ) : null}
                 {item.equipped ? (
                   <span className="text-emerald-600 dark:text-emerald-400">· 장착</span>
                 ) : null}
@@ -151,24 +156,14 @@ export function EquipmentDetailSheet({
           </div>
         </section>
 
-        {/* ── 초월 정보 (한 줄, 액션은 아래 2그리드에서) ── */}
-        <div className="mt-2.5 flex items-center justify-between rounded-lg bg-amber-50/60 px-2.5 py-1.5 text-[11px] dark:bg-amber-950/20">
-          <span className="font-semibold text-amber-800 dark:text-amber-300">
-            ✦ 초월 {item.transcendLevel}
-          </span>
-          <span className="text-amber-700/80 dark:text-amber-400/70">
-            {atMax ? 'MAX' : `T${nextT} 제물 ${fodderOwned}/${fodderNeed}`}
-          </span>
-        </div>
-
         {error ? (
           <p className="mt-2 rounded bg-red-50 px-2 py-1 text-[10px] text-red-700 dark:bg-red-950/60 dark:text-red-300">
             {error}
           </p>
         ) : null}
 
-        {/* ── 2그리드 액션 버튼들 ── */}
-        <div className="mt-2.5 grid grid-cols-2 gap-1.5">
+        {/* ── 3×2 액션 버튼 ── */}
+        <div className="mt-2.5 grid grid-cols-3 gap-1.5">
           {/* 강화 (주요) */}
           <button
             type="button"
@@ -184,9 +179,10 @@ export function EquipmentDetailSheet({
             }
             className={BTN_PRIMARY}
           >
-            ⚒️ 강화{needsFodderEnhance ? ' (제물)' : ''}
+            <span>⚒️ 강화</span>
+            {needsFodderEnhance ? <span className="text-[9px] opacity-80">제물 1</span> : null}
           </button>
-          {/* 초월 (주요) */}
+          {/* 초월 (주요) — 다음 단계 소모 정보 보조 라벨 */}
           <button
             type="button"
             disabled={pending || !canTranscend}
@@ -207,7 +203,10 @@ export function EquipmentDetailSheet({
             }}
             className={confirmT ? BTN_DANGER_CONFIRM : BTN_AMBER}
           >
-            {confirmT ? '확정?' : `✦ 초월${atMax ? ' MAX' : ` (${fodderNeed})`}`}
+            <span>✦ 초월</span>
+            <span className="text-[9px] opacity-90">
+              {confirmT ? '확정?' : atMax ? 'MAX' : `T${nextT} ${fodderOwned}/${fodderNeed}`}
+            </span>
           </button>
           {/* 장착/해제 */}
           <button
@@ -227,7 +226,7 @@ export function EquipmentDetailSheet({
             onClick={() => run(() => toggleLockAction(item.id))}
             className={BTN_NEUTRAL}
           >
-            {item.isLocked ? '🔓 잠금 해제' : '🔒 잠금'}
+            <span>{item.isLocked ? '🔓 해제' : '🔒 잠금'}</span>
           </button>
           {/* 분해 */}
           <button
@@ -244,11 +243,8 @@ export function EquipmentDetailSheet({
             }}
             className={confirmD ? BTN_DANGER_CONFIRM : BTN_DANGER}
           >
-            {!canDisenchant
-              ? '♻️ 분해 불가'
-              : confirmD
-                ? `확정? 💎${DIAMOND_PER_DISENCHANT}`
-                : `♻️ 분해 💎${DIAMOND_PER_DISENCHANT}`}
+            <span>{!canDisenchant ? '♻️ 불가' : confirmD ? '확정?' : '♻️ 분해'}</span>
+            {canDisenchant ? <span className="text-[9px] opacity-90">💎{DIAMOND_PER_DISENCHANT}</span> : null}
           </button>
           {/* 자랑 */}
           <button type="button" onClick={() => setBoast(true)} className={BTN_NEUTRAL}>
