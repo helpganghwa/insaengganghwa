@@ -12,134 +12,188 @@ export interface SpriteEntry {
 }
 
 // ─────────────────────────────────────────────────────────────────────
-// 10 ornate variants — 모두 좌상단 기준 SVG. 4 방향은 transform-flip으로 재사용.
-// viewBox 0 0 30 30 (카드 30% 영역에 그려짐).
+// 10 ornate variants — 둥근 모서리 친화(코너 점/별/픽셀 위주, L 라인 배제)
+// 좌상단 기준 SVG. 4방향 transform-flip 재사용. viewBox 0 0 30 30.
 // ─────────────────────────────────────────────────────────────────────
 
 type OrnateProps = { color: string; accent: string };
-
-const V1_ClassicL = ({ color, accent }: OrnateProps) => (
-  <svg viewBox="0 0 30 30" preserveAspectRatio="none" style={{ width: '100%', height: '100%', display: 'block' }}>
-    <rect x="0" y="0" width="22" height="3" fill={color} />
-    <rect x="0" y="0" width="3" height="22" fill={color} />
-    <rect x="19.5" y="-1" width="4" height="4" fill={color} transform="rotate(45 21.5 1)" />
-    <rect x="-1" y="19.5" width="4" height="4" fill={color} transform="rotate(45 1 21.5)" />
-    <circle cx="7" cy="7" r="1.8" fill={accent} />
-  </svg>
-);
-
-const V2_MinimalL = ({ color }: OrnateProps) => (
-  <svg viewBox="0 0 30 30" preserveAspectRatio="none" style={{ width: '100%', height: '100%', display: 'block' }}>
-    <rect x="0" y="0" width="18" height="2" fill={color} />
-    <rect x="0" y="0" width="2" height="18" fill={color} />
-  </svg>
-);
-
-const V3_ArrowL = ({ color }: OrnateProps) => (
-  <svg viewBox="0 0 30 30" preserveAspectRatio="none" style={{ width: '100%', height: '100%', display: 'block' }}>
-    <rect x="0" y="0" width="20" height="3" fill={color} />
-    <rect x="0" y="0" width="3" height="20" fill={color} />
-    <polygon points="20,0 26,1.5 20,3" fill={color} />
-    <polygon points="0,20 1.5,26 3,20" fill={color} />
-  </svg>
-);
-
-const V4_StarL = ({ color, accent }: OrnateProps) => (
-  <svg viewBox="0 0 30 30" preserveAspectRatio="none" style={{ width: '100%', height: '100%', display: 'block' }}>
-    <rect x="0" y="0" width="20" height="2.5" fill={color} />
-    <rect x="0" y="0" width="2.5" height="20" fill={color} />
-    <g transform="translate(20.5 1.25)" fill={accent}>
-      <polygon points="0,-2.5 0.7,-0.7 2.5,0 0.7,0.7 0,2.5 -0.7,0.7 -2.5,0 -0.7,-0.7" />
-    </g>
-    <g transform="translate(1.25 20.5)" fill={accent}>
-      <polygon points="0,-2.5 0.7,-0.7 2.5,0 0.7,0.7 0,2.5 -0.7,0.7 -2.5,0 -0.7,-0.7" />
-    </g>
-  </svg>
-);
-
-const V5_DoubleL = ({ color }: OrnateProps) => (
-  <svg viewBox="0 0 30 30" preserveAspectRatio="none" style={{ width: '100%', height: '100%', display: 'block' }}>
-    <rect x="0" y="0" width="22" height="2" fill={color} />
-    <rect x="0" y="0" width="2" height="22" fill={color} />
-    <rect x="4" y="4" width="14" height="1.5" fill={color} />
-    <rect x="4" y="4" width="1.5" height="14" fill={color} />
-  </svg>
-);
-
-const V6_CurveL = ({ color, accent }: OrnateProps) => (
-  <svg viewBox="0 0 30 30" preserveAspectRatio="none" style={{ width: '100%', height: '100%', display: 'block' }}>
-    {/* 90° 호 — 좌상 안쪽에서 시작해 외곽으로 휨 */}
-    <path d="M 22 0 L 0 0 L 0 22" stroke={color} strokeWidth="2.5" fill="none" strokeLinecap="round" />
-    <path d="M 18 4 Q 4 4, 4 18" stroke={accent} strokeWidth="1.2" fill="none" strokeLinecap="round" />
-  </svg>
-);
-
-const V7_TriangleRing = ({ color }: OrnateProps) => (
-  <svg viewBox="0 0 30 30" preserveAspectRatio="none" style={{ width: '100%', height: '100%', display: 'block' }}>
-    <defs>
-      <mask id="triHole">
-        <rect width="30" height="30" fill="white" />
-        <polygon points="4,4 16,4 4,16" fill="black" />
-      </mask>
-    </defs>
-    <polygon points="0,0 22,0 0,22" fill={color} mask="url(#triHole)" />
-  </svg>
-);
-
-const V8_PixelStair = ({ color }: OrnateProps) => (
+const wrap = (children: React.ReactNode) => (
   <svg viewBox="0 0 30 30" preserveAspectRatio="none" style={{ width: '100%', height: '100%', display: 'block' }} shapeRendering="crispEdges">
-    {/* 계단형 8bit 픽셀 */}
-    <rect x="0" y="0" width="14" height="3" fill={color} />
-    <rect x="0" y="3" width="11" height="3" fill={color} />
-    <rect x="0" y="6" width="8" height="3" fill={color} />
-    <rect x="0" y="9" width="6" height="3" fill={color} />
-    <rect x="0" y="12" width="3" height="6" fill={color} />
-    <rect x="3" y="9" width="3" height="3" fill={color} />
-    <rect x="6" y="6" width="2" height="3" fill={color} />
-    <rect x="8" y="3" width="3" height="3" fill={color} />
-    <rect x="11" y="0" width="3" height="3" fill={color} />
+    {children}
   </svg>
 );
 
-const V9_Bracket = ({ color }: OrnateProps) => (
-  <svg viewBox="0 0 30 30" preserveAspectRatio="none" style={{ width: '100%', height: '100%', display: 'block' }}>
-    {/* 두꺼운 ㄴ 브래킷 */}
-    <rect x="0" y="0" width="14" height="4" fill={color} />
-    <rect x="0" y="0" width="4" height="14" fill={color} />
-    <rect x="14" y="0" width="2" height="2" fill={color} />
-    <rect x="0" y="14" width="2" height="2" fill={color} />
-  </svg>
-);
+// 01 Pixel Stair v2 — 굵은 계단(8번 강화). 끝에 다이아 보석.
+const V1_PixelStair = ({ color, accent }: OrnateProps) =>
+  wrap(
+    <>
+      <rect x="0" y="0" width="16" height="3" fill={color} />
+      <rect x="0" y="3" width="13" height="3" fill={color} />
+      <rect x="0" y="6" width="10" height="3" fill={color} />
+      <rect x="0" y="9" width="7" height="3" fill={color} />
+      <rect x="0" y="12" width="4" height="4" fill={color} />
+      <rect x="14" y="-0.5" width="3.5" height="3.5" fill={accent} transform="rotate(45 15.75 1.25)" />
+      <rect x="-0.5" y="14" width="3.5" height="3.5" fill={accent} transform="rotate(45 1.25 15.75)" />
+    </>,
+  );
 
-const V10_StarBurst = ({ color, accent }: OrnateProps) => (
-  <svg viewBox="0 0 30 30" preserveAspectRatio="none" style={{ width: '100%', height: '100%', display: 'block' }}>
-    {/* 모서리 외각 광선 — 8각 별 + 짧은 광선 */}
-    <g transform="translate(4 4)" fill={color}>
-      <polygon points="0,-4 1.1,-1.1 4,0 1.1,1.1 0,4 -1.1,1.1 -4,0 -1.1,-1.1" />
-    </g>
-    <g stroke={accent} strokeWidth="0.7" strokeLinecap="round">
-      <line x1="4" y1="4" x2="12" y2="0.5" />
-      <line x1="4" y1="4" x2="0.5" y2="12" />
-      <line x1="4" y1="4" x2="11" y2="11" />
-    </g>
-    <circle cx="4" cy="4" r="1.2" fill="rgba(255,255,255,0.92)" />
-  </svg>
-);
+// 02 Pixel Diagonal — 대각선 픽셀 5점 + 끝점 큰 다이아
+const V2_PixelDiagonal = ({ color, accent }: OrnateProps) =>
+  wrap(
+    <>
+      <rect x="2" y="2" width="3.5" height="3.5" fill={color} />
+      <rect x="5.5" y="5.5" width="3" height="3" fill={color} />
+      <rect x="8.5" y="8.5" width="2.5" height="2.5" fill={color} />
+      <rect x="11" y="11" width="2" height="2" fill={color} />
+      <rect x="1" y="1" width="2.5" height="2.5" fill={accent} transform="rotate(45 2.25 2.25)" />
+    </>,
+  );
+
+// 03 Star Burst v2 — 큰 별 + 광선 5개(굵게·디테일)
+const V3_StarBurst = ({ color, accent }: OrnateProps) =>
+  wrap(
+    <>
+      <g stroke={accent} strokeWidth="1.2" strokeLinecap="round">
+        <line x1="5" y1="5" x2="15" y2="1" />
+        <line x1="5" y1="5" x2="15" y2="15" />
+        <line x1="5" y1="5" x2="1" y2="15" />
+        <line x1="5" y1="5" x2="11" y2="0" />
+        <line x1="5" y1="5" x2="0" y2="11" />
+      </g>
+      <g transform="translate(5 5)" fill={color}>
+        <polygon points="0,-5 1.4,-1.4 5,0 1.4,1.4 0,5 -1.4,1.4 -5,0 -1.4,-1.4" />
+      </g>
+      <circle cx="5" cy="5" r="1.7" fill="rgba(255,255,255,0.95)" />
+    </>,
+  );
+
+// 04 Star Trio — 큰 별 + 작은 별 3개 위성
+const V4_StarTrio = ({ color, accent }: OrnateProps) =>
+  wrap(
+    <>
+      <g transform="translate(6 6)" fill={color}>
+        <polygon points="0,-4 1.1,-1.1 4,0 1.1,1.1 0,4 -1.1,1.1 -4,0 -1.1,-1.1" />
+      </g>
+      <g transform="translate(13 3)" fill={accent}>
+        <polygon points="0,-2 0.55,-0.55 2,0 0.55,0.55 0,2 -0.55,0.55 -2,0 -0.55,-0.55" />
+      </g>
+      <g transform="translate(3 13)" fill={accent}>
+        <polygon points="0,-2 0.55,-0.55 2,0 0.55,0.55 0,2 -0.55,0.55 -2,0 -0.55,-0.55" />
+      </g>
+      <g transform="translate(12 12)" fill={accent}>
+        <polygon points="0,-1.6 0.45,-0.45 1.6,0 0.45,0.45 0,1.6 -0.45,0.45 -1.6,0 -0.45,-0.45" />
+      </g>
+      <circle cx="6" cy="6" r="1.1" fill="rgba(255,255,255,0.9)" />
+    </>,
+  );
+
+// 05 Gem Cluster — 다이아 3개 클러스터(큰 + 작은 2)
+const V5_GemCluster = ({ color, accent }: OrnateProps) =>
+  wrap(
+    <>
+      <rect x="3" y="3" width="5" height="5" fill={color} transform="rotate(45 5.5 5.5)" />
+      <rect x="11" y="3" width="3" height="3" fill={accent} transform="rotate(45 12.5 4.5)" />
+      <rect x="3" y="11" width="3" height="3" fill={accent} transform="rotate(45 4.5 12.5)" />
+      <circle cx="5.5" cy="5.5" r="0.9" fill="rgba(255,255,255,0.85)" />
+    </>,
+  );
+
+// 06 Sparkle Dots — 큰 별 + 흩어진 점 5
+const V6_SparkleDots = ({ color, accent }: OrnateProps) =>
+  wrap(
+    <>
+      <g transform="translate(5 5)" fill={color}>
+        <polygon points="0,-4.5 1.25,-1.25 4.5,0 1.25,1.25 0,4.5 -1.25,1.25 -4.5,0 -1.25,-1.25" />
+      </g>
+      <circle cx="5" cy="5" r="1.3" fill="rgba(255,255,255,0.92)" />
+      <g fill={accent}>
+        <circle cx="13" cy="2" r="0.95" />
+        <circle cx="2" cy="13" r="0.95" />
+        <circle cx="14" cy="9" r="0.7" />
+        <circle cx="9" cy="14" r="0.7" />
+        <circle cx="11" cy="11" r="0.55" />
+      </g>
+    </>,
+  );
+
+// 07 Pixel Crown — 8bit 작은 왕관(3 spike + 보석점)
+const V7_PixelCrown = ({ color, accent }: OrnateProps) =>
+  wrap(
+    <>
+      <rect x="2" y="7" width="13" height="2.5" fill={color} />
+      <rect x="2" y="9.5" width="13" height="1" fill={accent} />
+      <rect x="2" y="4" width="2.5" height="3" fill={color} />
+      <rect x="7.25" y="2.5" width="2.5" height="4.5" fill={color} />
+      <rect x="12.5" y="4" width="2.5" height="3" fill={color} />
+      <circle cx="3.25" cy="3" r="0.85" fill={accent} />
+      <circle cx="8.5" cy="1.5" r="0.95" fill={accent} />
+      <circle cx="13.75" cy="3" r="0.85" fill={accent} />
+    </>,
+  );
+
+// 08 Diamond Pyramid — 큰 다이아 1 + 작은 다이아 2 대각 배치
+const V8_DiamondPyramid = ({ color, accent }: OrnateProps) =>
+  wrap(
+    <>
+      <rect x="1.5" y="1.5" width="6" height="6" fill={color} transform="rotate(45 4.5 4.5)" />
+      <rect x="10" y="3" width="3" height="3" fill={accent} transform="rotate(45 11.5 4.5)" />
+      <rect x="3" y="10" width="3" height="3" fill={accent} transform="rotate(45 4.5 11.5)" />
+      <rect x="11" y="11" width="2.5" height="2.5" fill={color} transform="rotate(45 12.25 12.25)" />
+      <circle cx="4.5" cy="4.5" r="1.2" fill="rgba(255,255,255,0.92)" />
+    </>,
+  );
+
+// 09 Burst Rays — 작은 별 + 6 광선(긴·짧음 교차)
+const V9_BurstRays = ({ color, accent }: OrnateProps) =>
+  wrap(
+    <>
+      <g stroke={color} strokeWidth="1.4" strokeLinecap="round">
+        <line x1="5" y1="5" x2="16" y2="0" />
+        <line x1="5" y1="5" x2="16" y2="16" />
+        <line x1="5" y1="5" x2="0" y2="16" />
+      </g>
+      <g stroke={accent} strokeWidth="0.85" strokeLinecap="round">
+        <line x1="5" y1="5" x2="13" y2="2" />
+        <line x1="5" y1="5" x2="13" y2="13" />
+        <line x1="5" y1="5" x2="2" y2="13" />
+      </g>
+      <g transform="translate(5 5)" fill={color}>
+        <polygon points="0,-3 0.85,-0.85 3,0 0.85,0.85 0,3 -0.85,0.85 -3,0 -0.85,-0.85" />
+      </g>
+      <circle cx="5" cy="5" r="0.9" fill="rgba(255,255,255,0.95)" />
+    </>,
+  );
+
+// 10 Rune Cross — 룬 십자 + 점 5
+const V10_RuneCross = ({ color, accent }: OrnateProps) =>
+  wrap(
+    <>
+      <rect x="4" y="2" width="2.5" height="8" fill={color} />
+      <rect x="1.25" y="4.75" width="8" height="2.5" fill={color} />
+      <circle cx="5.25" cy="6" r="0.85" fill="rgba(255,255,255,0.95)" />
+      <g fill={accent}>
+        <circle cx="12" cy="2.5" r="0.95" />
+        <circle cx="2.5" cy="12" r="0.95" />
+        <circle cx="12" cy="12" r="0.85" />
+        <circle cx="14" cy="7" r="0.65" />
+        <circle cx="7" cy="14" r="0.65" />
+      </g>
+    </>,
+  );
 
 const VARIANTS: { key: string; label: string; sub: string; Comp: (p: OrnateProps) => React.ReactElement }[] = [
-  { key: 'V1', label: '01. Classic L', sub: 'L + 다이아 + 점(현재)', Comp: V1_ClassicL },
-  { key: 'V2', label: '02. Minimal L', sub: 'L 라인만', Comp: V2_MinimalL },
-  { key: 'V3', label: '03. Arrow L', sub: 'L + 끝 화살표', Comp: V3_ArrowL },
-  { key: 'V4', label: '04. Star L', sub: 'L + 끝 별', Comp: V4_StarL },
-  { key: 'V5', label: '05. Double L', sub: '평행 두 L', Comp: V5_DoubleL },
-  { key: 'V6', label: '06. Curve L', sub: '외각 직선 + 안쪽 곡선', Comp: V6_CurveL },
-  { key: 'V7', label: '07. Triangle Wedge', sub: '삼각 ring(mask hole)', Comp: V7_TriangleRing },
-  { key: 'V8', label: '08. Pixel Stair', sub: '계단형 8bit', Comp: V8_PixelStair },
-  { key: 'V9', label: '09. Bracket', sub: '두꺼운 ㄴ 브래킷', Comp: V9_Bracket },
-  { key: 'V10', label: '10. Star Burst', sub: '코너 별 + 광선', Comp: V10_StarBurst },
+  { key: 'V1', label: '01. Pixel Stair', sub: '굵은 5단 계단 + 끝 다이아', Comp: V1_PixelStair },
+  { key: 'V2', label: '02. Pixel Diagonal', sub: '대각선 픽셀 5점', Comp: V2_PixelDiagonal },
+  { key: 'V3', label: '03. Star Burst', sub: '큰 별 + 5 광선', Comp: V3_StarBurst },
+  { key: 'V4', label: '04. Star Trio', sub: '큰 별 + 위성 별 3', Comp: V4_StarTrio },
+  { key: 'V5', label: '05. Gem Cluster', sub: '다이아 3 클러스터', Comp: V5_GemCluster },
+  { key: 'V6', label: '06. Sparkle Dots', sub: '큰 별 + 점 5', Comp: V6_SparkleDots },
+  { key: 'V7', label: '07. Pixel Crown', sub: '8bit 왕관 + 보석점', Comp: V7_PixelCrown },
+  { key: 'V8', label: '08. Diamond Pyramid', sub: '다이아 4 단계 배치', Comp: V8_DiamondPyramid },
+  { key: 'V9', label: '09. Burst Rays', sub: '별 + 광선 6(긴/짧음)', Comp: V9_BurstRays },
+  { key: 'V10', label: '10. Rune Cross', sub: '룬 십자 + 점 5', Comp: V10_RuneCross },
 ];
 
-// 카드 미리보기 — 인벤토리 Tile 모방
 function PreviewCard({
   variant,
   level,
@@ -213,9 +267,9 @@ export function OrnateReviewClient({ sprites }: { sprites: SpriteEntry[] }) {
   return (
     <div className="mx-auto max-w-[1400px] px-4 py-6 text-zinc-100">
       <header className="sticky top-0 z-10 -mx-4 mb-4 border-b border-zinc-800 bg-zinc-950/95 px-4 py-3 backdrop-blur">
-        <h1 className="text-base font-semibold">코너 ornate 10가지 비교</h1>
+        <h1 className="text-base font-semibold">코너 ornate 10가지 — v2 (L 잘림 회피, 디테일 강화)</h1>
         <p className="mt-1 text-xs text-zinc-400">
-          같은 sprite·등급에서 10 변형을 나란히. 등급/sprite 변경하며 결정하세요.
+          모두 코너 모티프 위주 — 둥근 모서리에 자연. 등급/sprite 변경하며 비교.
         </p>
         <div className="mt-3 flex flex-wrap items-center gap-x-6 gap-y-2 text-xs">
           <div className="flex items-center gap-2">
