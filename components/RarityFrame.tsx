@@ -19,8 +19,10 @@ function starPoints(R: number): string {
   return pts.join(' ');
 }
 
-const STAR_BOX = 16; // viewBox 단위(%과 매칭 — 카드 폭의 16% 별)
-const STAR_INSET = 3.5; // 별 박스 좌상 끝의 카드 가장자리 inset(% — 중심이 11.5%)
+// 원본 sprite 디자인 의도 보존: 별은 모서리 안쪽에 *작게*.
+// 카드(부모 영역) 기준 — frame mask의 외측 확장과는 별개 좌표계.
+const STAR_BOX = 9; // 카드 폭의 9% (원본 sprite 64px 안에서 16% ≈ 10px과 시각적 동급)
+const STAR_INSET = 4.5; // 별 좌상 좌표 inset (% — 별 중심이 카드 모서리에서 9% 안쪽)
 
 export function RarityFrame({
   level,
@@ -43,19 +45,19 @@ export function RarityFrame({
     { style: { right: `${STAR_INSET}%`, bottom: `${STAR_INSET}%` } },
   ];
   // Frame mask asset(transcend-frame.png)은 내부 ring 디자인이라 inset:0이면
-  // ring이 카드 *안쪽*에 떨어져 보더 대체 느낌이 안 남. 음수 inset(-8%)으로
-  // 영역을 카드 외측까지 확장 → ring 외각이 카드 가장자리 ≈ "보더 자리"에 위치.
+  // ring이 카드 *안쪽*에 떨어져 보더 대체 느낌이 안 남. 두 레이어 분리:
+  //  (1) frame mask — inset:'-8%'로 카드 외측까지 확장(ring이 보더 자리에)
+  //  (2) 별 — inset:0 (카드 영역 기준). 원본 디자인 비율(작게·모서리 안쪽) 보존.
   return (
-    <div
-      aria-hidden
-      className={className}
-      style={{ position: 'absolute', inset: '-8%', pointerEvents: 'none' }}
-    >
-      {/* Frame 본체 — 등급색 배경을 frame mask로 사각형 외곽 ring + 코너 ornate로 클립 */}
+    <>
+      {/* (1) Frame 본체 — 외측 확장 */}
       <div
+        aria-hidden
+        className={className}
         style={{
           position: 'absolute',
-          inset: 0,
+          inset: '-8%',
+          pointerEvents: 'none',
           backgroundColor: frameCol,
           WebkitMaskImage: `url(${TRANSCEND_TUNING.frameAsset})`,
           maskImage: `url(${TRANSCEND_TUNING.frameAsset})`,
@@ -65,9 +67,10 @@ export function RarityFrame({
           maskRepeat: 'no-repeat',
         }}
       />
-      {/* II(짝수 등급)는 카드 4 모서리에 별. sub=0은 frame만. */}
-      {st.sub === 1
-        ? corners.map((c, i) => (
+      {/* (2) 별 4개 — 카드 영역 기준. sub=1(짝수 등급)일 때만. */}
+      {st.sub === 1 ? (
+        <div aria-hidden style={{ position: 'absolute', inset: 0, pointerEvents: 'none' }}>
+          {corners.map((c, i) => (
             <svg
               key={i}
               aria-hidden
@@ -82,8 +85,9 @@ export function RarityFrame({
               <polygon points={starPoints(STAR_BOX / 2)} fill={starCol} />
               <circle cx={STAR_BOX / 2} cy={STAR_BOX / 2} r={STAR_BOX * 0.09} fill="rgba(255,255,255,0.92)" />
             </svg>
-          ))
-        : null}
-    </div>
+          ))}
+        </div>
+      ) : null}
+    </>
   );
 }
