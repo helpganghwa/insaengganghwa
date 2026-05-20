@@ -388,7 +388,7 @@ export function EnhanceSlotCard({
           </span>
           <div className="flex min-w-0 flex-1 flex-col gap-0.5">
             <div className="flex items-center gap-1.5 text-sm font-bold whitespace-nowrap">
-              <span className="truncate">{activeJob.name}</span>
+              <span className="break-keep leading-tight">{activeJob.name}</span>
               <span className="shrink-0 text-[11px] text-zinc-400 tabular-nums">
                 +{activeJob.fromLevel}→+{activeJob.targetLevel}
               </span>

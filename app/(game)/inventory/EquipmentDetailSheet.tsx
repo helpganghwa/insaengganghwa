@@ -168,7 +168,7 @@ export function EquipmentDetailSheet({
                   <span className="text-amber-600 dark:text-amber-400">· 강화중</span>
                 ) : null}
               </div>
-              <div className="mt-0.5 truncate text-sm font-semibold">
+              <div className="mt-0.5 break-keep text-sm font-semibold leading-tight">
                 {item.name} <span className="text-zinc-400">+{item.enhanceLevel}</span>
               </div>
             </div>

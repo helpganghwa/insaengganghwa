@@ -69,7 +69,7 @@ export default async function CodexPage() {
                       <span className="text-2xl" style={{ filter: 'grayscale(1)' }}>
                         {SLOT_EMOJI[s]}
                       </span>
-                      <span className="line-clamp-1 px-0.5 text-[9px] text-zinc-600 dark:text-zinc-400">
+                      <span className="px-0.5 text-[9px] leading-tight text-zinc-600 dark:text-zinc-400">
                         미획득
                       </span>
                     </div>
@@ -90,7 +90,7 @@ export default async function CodexPage() {
                       size={40}
                       frameless
                     />
-                    <span className="line-clamp-1 px-0.5 text-[9px] text-zinc-600 dark:text-zinc-400">
+                    <span className="px-0.5 text-[9px] leading-tight text-zinc-600 dark:text-zinc-400">
                       {c.name}
                     </span>
                     <span className="text-[10px] font-semibold text-amber-600 dark:text-amber-400">

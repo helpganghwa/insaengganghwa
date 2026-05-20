@@ -127,7 +127,7 @@ export default async function PublicProfilePage({
                   size={56}
                   frameless
                 />
-                <span className="line-clamp-1 px-0.5 text-[10px] text-zinc-600 dark:text-zinc-400">
+                <span className="px-0.5 text-[10px] leading-tight text-zinc-600 dark:text-zinc-400">
                   {it.name}
                 </span>
                 <span className="text-xs font-semibold">+{it.enhanceLevel}</span>
