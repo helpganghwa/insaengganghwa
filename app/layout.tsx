@@ -15,10 +15,23 @@ const geistMono = Geist_Mono({
 });
 
 export const metadata: Metadata = {
+  // 절대 URL — manifest·OG·icons가 절대 경로로 직렬화되어야 PWA 설치 정상.
+  metadataBase: new URL('https://insaengganghwa.com'),
   title: '인생강화 — insaengganghwa',
   description: '강화는 인생이다.',
   applicationName: 'insaengganghwa',
   formatDetection: { telephone: false },
+  // PWA: app/manifest.ts가 자동으로 <link rel="manifest"> 주입. 아이콘은 명시.
+  icons: {
+    icon: [{ url: '/icons/icon-192.png', sizes: '192x192', type: 'image/png' }],
+    apple: [{ url: '/icons/icon-192.png', sizes: '192x192', type: 'image/png' }],
+  },
+  // iOS 홈 화면 추가 시 standalone(상단 사파리 chrome 제거).
+  appleWebApp: {
+    capable: true,
+    title: '인생강화',
+    statusBarStyle: 'black-translucent',
+  },
 };
 
 // 고정 390 — 출력 메타는 정확히 `<meta name="viewport" content="width=390">`.
