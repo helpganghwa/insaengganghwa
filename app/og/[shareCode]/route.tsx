@@ -1,13 +1,11 @@
 import { ImageResponse } from 'next/og';
-import { and, eq, isNotNull, sql } from 'drizzle-orm';
+import { and, eq, isNotNull } from 'drizzle-orm';
 
 import { db } from '@/lib/db/client';
 import { profiles } from '@/lib/db/schema/profiles';
-import { catalogItems, equipmentInstances, userCodex } from '@/lib/db/schema/equipment';
-import { pieceCombatPower, totalCombatPower } from '@/lib/game/balance';
+import { catalogItems, equipmentInstances } from '@/lib/db/schema/equipment';
 import { spritePath } from '@/lib/game/equipment/sprite-manifest';
 import { transcendStyle } from '@/lib/game/equipment/transcend';
-import { formatCompactKR } from '@/lib/ui/format-number';
 
 export const size = { width: 1200, height: 630 };
 export const contentType = 'image/png';
@@ -53,7 +51,8 @@ export async function GET(_req: Request, { params }: { params: Promise<{ shareCo
     .where(eq(profiles.nickname, nickname))
     .limit(1);
 
-  let total = 0;
+  // 사용자 결정: OG 카드에는 타이틀+닉네임+장비 정보만 노출(전투력·도메인 제거).
+  // 따라서 codex 합계 쿼리 + total 계산 제거 — OG 응답 빠르게.
   let equipped: {
     slot: string;
     catalogItemId: number;
@@ -63,31 +62,20 @@ export async function GET(_req: Request, { params }: { params: Promise<{ shareCo
     transcendLevel: number;
   }[] = [];
   if (prof) {
-    const [eq_, codexAgg] = await Promise.all([
-      db
-        .select({
-          slot: catalogItems.slot,
-          catalogItemId: catalogItems.id,
-          code: catalogItems.code,
-          name: catalogItems.name,
-          enhanceLevel: equipmentInstances.enhanceLevel,
-          transcendLevel: equipmentInstances.transcendLevel,
-        })
-        .from(equipmentInstances)
-        .innerJoin(catalogItems, eq(equipmentInstances.catalogItemId, catalogItems.id))
-        .where(
-          and(eq(equipmentInstances.userId, prof.id), isNotNull(equipmentInstances.equippedSlot)),
-        ),
-      db
-        .select({ s: sql<number>`coalesce(sum(${userCodex.maxEnhanceLevel}),0)::int` })
-        .from(userCodex)
-        .where(eq(userCodex.userId, prof.id)),
-    ]);
-    equipped = eq_;
-    total = totalCombatPower(
-      eq_.map((e) => pieceCombatPower(e.enhanceLevel, e.transcendLevel)),
-      Number(codexAgg[0]?.s ?? 0),
-    );
+    equipped = await db
+      .select({
+        slot: catalogItems.slot,
+        catalogItemId: catalogItems.id,
+        code: catalogItems.code,
+        name: catalogItems.name,
+        enhanceLevel: equipmentInstances.enhanceLevel,
+        transcendLevel: equipmentInstances.transcendLevel,
+      })
+      .from(equipmentInstances)
+      .innerJoin(catalogItems, eq(equipmentInstances.catalogItemId, catalogItems.id))
+      .where(
+        and(eq(equipmentInstances.userId, prof.id), isNotNull(equipmentInstances.equippedSlot)),
+      );
   }
 
   const bySlot = new Map(equipped.map((e) => [e.slot, e]));
@@ -96,13 +84,16 @@ export async function GET(_req: Request, { params }: { params: Promise<{ shareCo
   // 배경: 요청마다 진한 랜덤(no-store) — 풀 1개 시도, 부재면 그라데이션.
   const bgUri = await dataUri(`${origin}/og/og-${1 + Math.floor(Math.random() * BG_POOL)}.png`);
 
+  // 위아래 padding을 늘려(64→96) 카카오톡 카드의 cover 크롭(상하 잘림) 안전.
+  // 카톡은 1200×630 카드를 ≈5:4 비율로 cover 크롭하는 경우가 있어 상단·하단 약
+  // 96~120px이 잘릴 수 있다 → 콘텐츠를 vertical center 그룹화 + 상하 여백 보강.
   const rootBase = {
     width: '100%',
     height: '100%',
     display: 'flex',
     flexDirection: 'column' as const,
     color: '#fde9c8',
-    padding: '64px 72px',
+    padding: '96px 80px',
     fontFamily: 'sans-serif',
     position: 'relative' as const,
   };
@@ -176,7 +167,6 @@ export async function GET(_req: Request, { params }: { params: Promise<{ shareCo
         </div>
         <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', zIndex: 1, marginTop: 'auto' }}>
           <div style={{ display: 'flex', fontSize: 96, fontWeight: 800, color: '#ffd47a' }}>{headline}</div>
-          <div style={{ display: 'flex', fontSize: 26, opacity: 0.75, marginTop: 12 }}>insaengganghwa.com</div>
         </div>
       </div>,
       { ...size, headers: { 'cache-control': 'no-store, max-age=0, must-revalidate' } },
@@ -233,13 +223,24 @@ export async function GET(_req: Request, { params }: { params: Promise<{ shareCo
         </>
       ) : null}
 
+      {/* 콘텐츠 wrapper — flex:1 + justifyContent:center로 카드 vertical 중앙.
+          카카오톡이 1200×630을 ~5:4 cover 크롭하더라도 콘텐츠가 중앙에 있어 보호됨. */}
+      <div
+        style={{
+          display: 'flex',
+          flexDirection: 'column',
+          flex: 1,
+          justifyContent: 'center',
+          gap: 40,
+          zIndex: 1,
+        }}
+      >
       {/* 헤더 — 타이틀 + 닉네임 한 줄(가로). */}
       <div
         style={{
           display: 'flex',
           alignItems: 'baseline',
           gap: 22,
-          zIndex: 1,
         }}
       >
         <div style={{ display: 'flex', fontSize: 28, opacity: 0.85, letterSpacing: 2 }}>
@@ -265,8 +266,6 @@ export async function GET(_req: Request, { params }: { params: Promise<{ shareCo
           display: 'flex',
           flexDirection: 'row',
           gap: 28,
-          marginTop: 28,
-          zIndex: 1,
           justifyContent: 'space-between',
         }}
       >
@@ -327,21 +326,6 @@ export async function GET(_req: Request, { params }: { params: Promise<{ shareCo
           );
         })}
       </div>
-
-      {/* 하단 — 도메인 + 전투력. marginTop:auto로 바닥 정렬 보장. */}
-      <div
-        style={{
-          display: 'flex',
-          marginTop: 'auto',
-          alignItems: 'flex-end',
-          justifyContent: 'space-between',
-          zIndex: 1,
-        }}
-      >
-        <div style={{ display: 'flex', fontSize: 26, opacity: 0.7 }}>insaengganghwa.com</div>
-        <div style={{ display: 'flex', fontSize: 64, fontWeight: 800, color: '#ffd47a' }}>
-          ⚔️ {formatCompactKR(total)}
-        </div>
       </div>
     </div>,
     { ...size, headers: { 'cache-control': 'no-store, max-age=0, must-revalidate' } },

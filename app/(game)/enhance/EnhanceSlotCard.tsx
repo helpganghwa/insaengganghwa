@@ -381,7 +381,7 @@ export function EnhanceSlotCard({
             transition은 페이지 진입·새 잡 도착 직후엔 끔(즉시 표시), 이후 매초 채워질
             때 · 보석 단축 시만 켬(animGauge). */}
         <div
-          className={`absolute bottom-0 left-0 h-1 ${
+          className={`absolute bottom-[-1px] left-0 h-1 ${
             animGauge ? 'transition-[width] duration-700' : ''
           } ${ready ? 'bg-emerald-400' : progress >= 0.5 ? 'bg-orange-400' : 'bg-red-500'}`}
           style={{ width: `${Math.max(2, Math.round(progress * 1000) / 10)}%` }}
@@ -405,7 +405,7 @@ export function EnhanceSlotCard({
           </span>
           <div className="flex min-w-0 flex-1 flex-col gap-0.5">
             <div className="flex items-center gap-1.5 text-sm font-bold whitespace-nowrap">
-              <span className="break-keep leading-tight">{activeJob.name}</span>
+              <span className="leading-tight break-keep">{activeJob.name}</span>
               <span className="shrink-0 text-[11px] text-zinc-400 tabular-nums">
                 +{activeJob.fromLevel}→+{activeJob.targetLevel}
               </span>
@@ -440,7 +440,11 @@ export function EnhanceSlotCard({
                   : 'border-zinc-600 bg-zinc-800/60 text-amber-200'
               }`}
             >
-              {confirmReduce ? `확인 ${confirmReduceLeft}s` : instantCost ? `💎${instantCost}` : '완료'}
+              {confirmReduce
+                ? `확인 ${confirmReduceLeft}s`
+                : instantCost
+                  ? `💎${instantCost}`
+                  : '완료'}
             </button>
             <button
               type="button"
@@ -463,7 +467,8 @@ export function EnhanceSlotCard({
         {confirm && !flash ? (
           <div className="pointer-events-none absolute inset-0 flex flex-col items-center justify-center gap-1 bg-black/85 px-4 text-center">
             <p className="text-[12px] font-semibold break-keep text-amber-200">
-              {confirmMsg ?? (ready ? '다시 탭하면 강화' : '아직 무르익지 않았다 — 다시 탭하면 강행')}
+              {confirmMsg ??
+                (ready ? '다시 탭하면 강화' : '아직 무르익지 않았다 — 다시 탭하면 강행')}
             </p>
             <p className="font-mono text-[10px] text-zinc-300 tabular-nums">
               {confirmLeft}s 후 자동 취소
