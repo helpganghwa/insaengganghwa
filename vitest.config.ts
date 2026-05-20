@@ -7,6 +7,8 @@ export default defineConfig({
   resolve: {
     alias: {
       '@': fileURLToPath(new URL('./', import.meta.url)),
+      // Node 테스트 환경에서 'server-only' 가드 throw 회피.
+      'server-only': fileURLToPath(new URL('./tests/server-only.stub.ts', import.meta.url)),
     },
   },
   test: {
@@ -14,5 +16,8 @@ export default defineConfig({
     environment: 'node',
     globals: false,
     reporters: ['default'],
+    setupFiles: ['./tests/setup.ts'],
+    // DB 통합 테스트는 공유 prod DB 사용 — fixture cleanup 필수, 직렬 실행 권장.
+    fileParallelism: false,
   },
 });
