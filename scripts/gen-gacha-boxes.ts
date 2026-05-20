@@ -21,45 +21,43 @@ const COMMON =
   'detail, fully filled solid background, edge-to-edge composition, no transparent ' +
   'areas, no empty space';
 
+// 새 컨셉 — 보물상자에서 탈피, 슬롯별 "장인 작업장" 환경.
+// 가독성: 각 슬롯이 자기 직업의 무대를 가짐 → 한 눈에 슬롯 식별.
 const BOXES: { slot: string; prompt: string; fill: { r: number; g: number; b: number } }[] = [
   {
     slot: 'weapon',
-    fill: { r: 28, g: 20, b: 16 }, // #1c1410 dungeon ember
+    fill: { r: 28, g: 20, b: 16 }, // #1c1410 forge ember
     prompt:
-      'ornate dark wooden treasure chest overflowing with a varied assortment of ' +
-      'weapons — long sword, curved dagger, battle axe, spiked mace, spear, longbow, ' +
-      'wooden staff — each clearly distinct and visible spilling out, golden brass ' +
-      'corners, warm torch lighting, deep dungeon stone chamber filling the entire ' +
-      'frame, ' + COMMON,
+      'dark fantasy blacksmith forge interior scene, top-down isometric pixel art, ' +
+      'large iron anvil at center with a finished long sword resting flat on top, ' +
+      'glowing orange forge flames in the background, wooden weapon rack on the left ' +
+      'holding a battle axe and a spear standing upright, a curved dagger and a ' +
+      'blacksmith hammer lying on the wooden workbench on the right, scattered ember ' +
+      'sparks floating in the warm air, deep stone forge chamber walls, ' + COMMON,
   },
   {
     slot: 'armor',
-    fill: { r: 28, g: 32, b: 48 }, // #1c2030 dungeon iron
+    fill: { r: 28, g: 32, b: 48 }, // #1c2030 armory steel
     prompt:
-      'ornate dark wooden treasure chest overflowing with FIVE clearly different ' +
-      'types of armor with very distinct silhouettes — (1) a full chest plate ' +
-      'breastplate (torso shape), (2) a closed iron helmet (head shape), (3) a ' +
-      'large round shield (disc shape with metal boss in center), (4) tall ' +
-      'leather boots (foot/leg shape), (5) iron gauntlets (hand/glove shape) — ' +
-      'each item must be its OWN obvious type, not the same shape recolored; ' +
-      'each spilling out of the chest fully visible, golden brass corners, warm ' +
-      'torch lighting, deep dungeon stone chamber filling the entire frame edge ' +
-      'to edge with stone walls and warm light, ' + COMMON,
+      'dark fantasy armory display chamber, top-down isometric pixel art, ' +
+      'a tall wooden armor stand at center wearing a polished steel breastplate with ' +
+      'a closed knight helmet placed on top of the stand, a large round metal shield ' +
+      'hung on the back wall, a pair of iron gauntlets resting on a wooden table on ' +
+      'the right, tall leather boots standing upright on the floor on the left, two ' +
+      'lit braziers casting warm light, deep stone armory chamber walls, ' + COMMON,
   },
   {
     slot: 'accessory',
     fill: { r: 42, g: 22, b: 32 }, // #2a1620 velvet red
     prompt:
-      'ornate dark jewelry box overflowing with FOUR clearly different types of ' +
-      'accessories with very distinct silhouettes — (1) a gold chain necklace ' +
-      'with a pendant (hanging chain shape), (2) a thick gold ring with a ruby ' +
-      '(circular band shape), (3) a pair of dangling teardrop earrings (small ' +
-      'hooked pair), (4) an ornate circular medallion brooch with a pin (flat ' +
-      'disc with center jewel) — each item must be its OWN obvious type, not the ' +
-      'same shape recolored; each spilling out of the box fully visible, polished ' +
-      'mahogany wood, golden brass corners, warm candle lighting, deep velvet ' +
-      'boudoir chamber filling the entire frame edge to edge with red velvet ' +
-      'walls and warm light, ' + COMMON,
+      'dark fantasy jeweler workshop scene, top-down isometric pixel art, ' +
+      'a velvet-lined display table at center with each item on its own small velvet ' +
+      'cushion clearly separated — a gold chain necklace with a teardrop pendant, ' +
+      'a thick gold ring with a large red ruby, a pair of dangling earrings hung on ' +
+      'a small stand, and an ornate circular medallion brooch — an ornate brass ' +
+      'magnifying lens and small jeweler tweezers placed beside, soft warm candle ' +
+      'glow from candelabras, deep mahogany jeweler parlor with red velvet walls, ' +
+      COMMON,
   },
 ];
 
