@@ -6,6 +6,7 @@ import { useRouter } from 'next/navigation';
 import type { Slot } from '@/lib/db/schema/equipment';
 
 import { TranscendSprite } from '@/components/TranscendSprite';
+import { transcendStyle } from '@/lib/game/equipment/transcend';
 
 import { toggleLockAction, equipBestSetAction } from './actions';
 import { EquipmentDetailSheet } from './EquipmentDetailSheet';
@@ -148,12 +149,22 @@ function Tile({ item, onOpen }: { item: InvItem; onOpen: () => void }) {
   const [pending, startTransition] = useTransition();
   const router = useRouter();
   const isNew = Date.now() - item.acquiredAtMs < NEW_MS;
+  // 카드 보더가 등급(transcend) 색을 흡수 → sprite는 frameless로 2중 외곽선 제거.
+  // +0(none)은 중성 회색 유지(기존 톤).
+  const st = transcendStyle(item.transcendLevel);
+  const [r, g, b] = st.colorRgb;
+  const borderStyle: React.CSSProperties = st.hasFrame
+    ? { borderColor: `rgb(${r},${g},${b})` }
+    : {};
   return (
     <button
       type="button"
       onClick={onOpen}
       disabled={pending}
-      className="relative flex aspect-square flex-col items-center justify-center gap-0.5 rounded-xl border-2 border-zinc-200 bg-white px-1 text-center dark:border-zinc-800 dark:bg-zinc-950"
+      style={borderStyle}
+      className={`relative flex aspect-square flex-col items-center justify-center gap-0.5 rounded-xl border-2 bg-white px-1 text-center dark:bg-zinc-950 ${
+        st.hasFrame ? '' : 'border-zinc-200 dark:border-zinc-800'
+      }`}
     >
       <TranscendSprite
         code={item.code}
@@ -161,6 +172,7 @@ function Tile({ item, onOpen }: { item: InvItem; onOpen: () => void }) {
         level={item.transcendLevel}
         isChampion={item.isChampion}
         size={64}
+        frameless
       />
       <span className="line-clamp-1 px-0.5 text-[10px] text-zinc-600 dark:text-zinc-400">
         {item.name}

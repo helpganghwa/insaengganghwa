@@ -154,6 +154,12 @@ interface Props {
    */
   championMode?: 'additive' | 'override';
   className?: string;
+  /**
+   * true면 등급 frame과 코너 별을 그리지 않음 — 카드 보더가 등급을 표현하는
+   * 컨텍스트(인벤토리/도감 타일 등)에서 시각 중복 제거. 글로우·광택·챔피언 발광은
+   * 그대로 적용(없으면 강조 사라짐). 정적/동적 두 경로 모두 동일하게 frame skip.
+   */
+  frameless?: boolean;
 }
 
 /** 8각 별 SVG path (정적 II 코너용 — 캔버스 drawStar와 동일 형태). */
@@ -186,13 +192,14 @@ const EmojiFallback = ({ size, slot, code, className }: { size: number; slot?: P
  * 글로우/배경 없음(확정안). +10/챔피언이 아닌 모든 등급이 이 경로.
  */
 function TranscendStatic({
-  base, st, size, code, className,
+  base, st, size, code, className, frameless = false,
 }: {
   base: string;
   st: ReturnType<typeof transcendStyle>;
   size: number;
   code: string;
   className?: string;
+  frameless?: boolean;
 }) {
   const [r, g, b] = st.colorRgb;
   const frameCol = `rgb(${r},${g},${b})`;
@@ -217,7 +224,7 @@ function TranscendStatic({
           width: sw, height: sw, imageRendering: 'pixelated',
         }}
       />
-      {st.hasFrame ? (
+      {st.hasFrame && !frameless ? (
         <div
           aria-hidden
           style={{
@@ -229,7 +236,7 @@ function TranscendStatic({
           }}
         />
       ) : null}
-      {st.hasFrame && st.sub === 1
+      {st.hasFrame && !frameless && st.sub === 1
         ? ([[inset, inset], [size - inset, inset], [inset, size - inset], [size - inset, size - inset]] as const).map(
             ([cx, cy], i) => (
               <svg
@@ -251,14 +258,14 @@ function TranscendStatic({
 }
 
 export function TranscendSprite(props: Props) {
-  const { code, level, slot, isChampion = false, size = 64, animate = true, className } = props;
+  const { code, level, slot, isChampion = false, size = 64, animate = true, className, frameless = false } = props;
   const base = spritePath(code);
   const st = transcendStyle(level);
   if (!base) return <EmojiFallback size={size} slot={slot} code={code} className={className} />;
-  // 동적(캔버스+rAF) = 광택(+10) 또는 챔피언 발광. 그 외 전부 정적 경량 경로.
+  // 동적(캔버스+rAF) = 광택(+10) 또는 챔피언 발광. frameless여도 광택/발광은 sprite에 적용.
   const dynamic = animate && (isChampion || st.isMax);
   if (!dynamic) {
-    return <TranscendStatic base={base} st={st} size={size} code={code} className={className} />;
+    return <TranscendStatic base={base} st={st} size={size} code={code} className={className} frameless={frameless} />;
   }
   return <TranscendCanvas {...props} />;
 }
@@ -271,6 +278,7 @@ function TranscendCanvas({
   animate = true,
   championMode = 'additive',
   className,
+  frameless = false,
 }: Props) {
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const base = spritePath(code);
@@ -293,7 +301,7 @@ function TranscendCanvas({
     const sub: 0 | 1 = (champOverride ? 1 : st.sub ?? 0) as 0 | 1;
     const showGlow = TRANSCEND_TUNING.glowEnabled && (champOverride ? true : st.hasGlow);
     const showShine = champOverride ? false : st.isMax; // additive: +10이면 챔피언이어도 광택 유지
-    const showFrame = champOverride ? true : st.hasFrame;
+    const showFrame = (champOverride ? true : st.hasFrame) && !frameless;
     const showRadiant = isChampion; // 발광은 두 모델 공통 — 챔피언 표식
     // 글로우 단독(+8·+9)은 펄스 미미 → 정적. 애니는 +10(스윕)·챔피언만 (성능·끊김 방지).
     const dynamic = animate && (showShine || showRadiant);
@@ -450,7 +458,7 @@ function TranscendCanvas({
       stopped = true;
       if (raf) cancelAnimationFrame(raf);
     };
-  }, [base, st.level, st.tier, st.sub, st.hasFrame, st.hasGlow, st.isMax, scr, scg, scb, isChampion, championMode, animate]);
+  }, [base, st.level, st.tier, st.sub, st.hasFrame, st.hasGlow, st.isMax, scr, scg, scb, isChampion, championMode, animate, frameless]);
 
   // base 없음/이모지 폴백은 디스패처(TranscendSprite)가 처리 — 여기 도달 시 base 보장.
   const px = Math.round(size * (typeof window !== 'undefined' ? Math.min(window.devicePixelRatio || 1, 3) : 2));
