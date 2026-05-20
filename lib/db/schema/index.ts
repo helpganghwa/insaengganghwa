@@ -6,7 +6,7 @@ export * from './profiles'; // §1
 export * from './equipment'; // §2 카탈로그/장비/도감
 export * from './enhance'; // §3 강화 큐/로그/보석단축
 export * from './transcend'; // §4 초월 로그
-export * from './supply'; // §5 보급 상자/개봉/분해
+export * from './supply'; // §5 보급 상자/열기/분해
 export * from './raid'; // §6 레이드
 export * from './mailbox'; // §7 우편함
 export * from './social'; // §8 공유/추천

@@ -75,23 +75,23 @@ export function GachaBoxCard({
               보유 <span className="font-mono font-semibold tabular-nums">{count}</span>개
             </span>
           </div>
-          {/* 광고 보상 v1 미도입(사용자 결정) — 1회·10회 두 버튼만. */}
-          <div className="mt-4 grid grid-cols-2 gap-1.5">
+          {/* 광고 보상 v1 미도입(사용자 결정) — 1회·10회 두 버튼만. 높이 키움(py-3.5 + 폰트 sm). */}
+          <div className="mt-4 grid grid-cols-2 gap-2">
             <button
               type="button"
               disabled={pending || count < 1}
               onClick={() => pull(1)}
-              className="rounded-full bg-white/90 px-3 py-2.5 text-xs font-semibold text-zinc-900 disabled:opacity-40"
+              className="rounded-full bg-white/90 px-3 py-3.5 text-sm font-semibold text-zinc-900 disabled:opacity-40"
             >
-              {pending ? '여는 중…' : '1회 개봉'}
+              {pending ? '여는 중…' : '1회 열기'}
             </button>
             <button
               type="button"
               disabled={pending || count < 10}
               onClick={() => pull(10)}
-              className="rounded-full bg-gradient-to-r from-amber-500 to-orange-500 px-3 py-2.5 text-xs font-semibold text-white disabled:opacity-40"
+              className="rounded-full bg-gradient-to-r from-amber-500 to-orange-500 px-3 py-3.5 text-sm font-semibold text-white disabled:opacity-40"
             >
-              {pending ? '…' : '10회 개봉'}
+              {pending ? '…' : '10회 열기'}
             </button>
           </div>
         </div>

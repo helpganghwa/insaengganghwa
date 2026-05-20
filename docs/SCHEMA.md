@@ -42,7 +42,7 @@
 | `active` | boolean default true | 지속 추가(가변), 비활성 시 신규 드롭 제외 |
 | `created_at` | timestamptz default now() | |
 
-- 박스 개봉 확률 = `1 / (slot별 active 카탈로그 수)` 균등 — 코드 규칙(고정 수치 아님, BALANCE §4.2)
+- 박스 열기 확률 = `1 / (slot별 active 카탈로그 수)` 균등 — 코드 규칙(고정 수치 아님, BALANCE §4.2)
 
 ### 2.2 equipment_instances (장비 개체)
 
@@ -156,15 +156,15 @@
 
 ## 5. 보급 (보급 상자)
 
-### 5.1 user_supply_boxes (미개봉 인벤토리, 슬롯별 집계)
+### 5.1 user_supply_boxes (미열기 인벤토리, 슬롯별 집계)
 
 | 컬럼 | 타입 | 비고 |
 |------|------|------|
 | `user_id` | uuid FK→profiles | PK 일부 |
 | `slot` | enum(slot) | PK 일부 — 무기/방어구/장신구 |
-| `count` | bigint NOT NULL default 0 | 보유 미개봉 수 |
+| `count` | bigint NOT NULL default 0 | 보유 미열기 수 |
 
-- PK `(user_id, slot)`. 개봉 = count−1 + 장비 개체 생성 + 보석 드롭(20%→1~3) + 로그, 단일 tx
+- PK `(user_id, slot)`. 열기 = count−1 + 장비 개체 생성 + 보석 드롭(20%→1~3) + 로그, 단일 tx
 
 ### 5.2 supply_open_logs (append-only 감사·공시 정합)
 

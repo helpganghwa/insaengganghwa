@@ -82,7 +82,7 @@ export function GachaResultModal({
         ) : (
           <>
             <p className="text-center text-sm font-medium">
-              {results.length}회 개봉 — <span className="text-emerald-600">신규 {newCount}</span> ·{' '}
+              {results.length}회 열기 — <span className="text-emerald-600">신규 {newCount}</span> ·{' '}
               <span className="text-zinc-500">중복 {dupCount}</span>
             </p>
             <div className="mt-3 grid grid-cols-4 gap-2">

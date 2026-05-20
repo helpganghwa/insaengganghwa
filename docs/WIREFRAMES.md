@@ -232,7 +232,7 @@ grow `gacha/page.tsx` · `GachaPoolCard` · `GachaResultModal` 그대로 이식.
 │ 📦 보급                        │
 │ ┌── ⚔️ 무기 보급 상자 ──────┐ │
 │ │              보유 12개     │ │
-│ │ [1회 개봉]   [10회 개봉]   │ │  grow 1회/10회 그대로
+│ │ [1회 열기]   [10회 열기]   │ │  grow 1회/10회 그대로
 │ └────────────────────────────┘ │
 │ ┌── 🛡️ 방어구 보급 상자 ─────┐ │
 │ │ …                          │ │
@@ -247,7 +247,7 @@ grow `gacha/page.tsx` · `GachaPoolCard` · `GachaResultModal` 그대로 이식.
 - 카드/버튼(1회·10회)·로딩 오버레이는 grow 그대로. "보급권/매" → "보급 상자/개"
 - 확률 보기 → /probability (슬롯 박스별 **균등** 아이템 확률, BALANCE §4.2)
 
-### 4.2 개봉 결과 모달 (GachaResultModal)
+### 4.2 열기 결과 모달 (GachaResultModal)
 
 grow 모달 골격 그대로(1회=SingleResult, 10회=BulkResult, swipe·a11y, 한 번 더/10회 더, 장비 보기/확인). 등급 연출만 치환:
 
@@ -598,7 +598,7 @@ grow 페이지 골격(Section/Table, 게임산업법 §33, `balance.ts` 1:1, 변
  4. +100 제물        — 같은 카탈로그 아이템 1/시도(BALANCE §1.1)
  5. 초월             — 제물 수 1→10·최대 10·%배수(BALANCE §2)
  6. 보급 상자        — 슬롯별 균등 1/(슬롯 종수), 천장 없음 (BALANCE §4.2)
-                       개봉 보석 드롭 20%/1~3 (BALANCE §4.3)
+                       열기 보석 드롭 20%/1~3 (BALANCE §4.3)
  7. 레이드 보상      — 기본 100다이아 + 페이즈 50%/100다이아·50%/보급상자(슬롯1/3) (BALANCE §5.4)
  8. 보석 환산        — 1다이아 = 1분 단축 (BALANCE §6.2)
 ```

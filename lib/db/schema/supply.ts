@@ -1,7 +1,7 @@
 /**
  * SCHEMA §5. 보급 (보급 상자)
  *
- * 슬롯별 미개봉 집계. 개봉 = count−1 + 장비 개체 생성 + 보석 드롭(20%/1~3) + 로그,
+ * 슬롯별 미열기 집계. 열기 = count−1 + 장비 개체 생성 + 보석 드롭(20%/1~3) + 로그,
  * 단일 트랜잭션. 슬롯 내 균등 1/(활성 종수), 천장 없음. 분해 = 고정 2다이아.
  */
 import {
@@ -20,7 +20,7 @@ import { sql } from 'drizzle-orm';
 import { profiles } from './profiles';
 import { slotEnum, catalogItems } from './equipment';
 
-/** §5.1 user_supply_boxes — 미개봉 인벤토리(슬롯별 집계). */
+/** §5.1 user_supply_boxes — 미열기 인벤토리(슬롯별 집계). */
 export const userSupplyBoxes = pgTable(
   'user_supply_boxes',
   {

@@ -129,7 +129,7 @@ export default function ProbabilityPage() {
         </P>
         <P>
           분해 시 강화·초월 레벨과 무관하게 다이아 {DIAMOND_PER_DISENCHANT}개 고정 지급.
-          (보급 개봉 자체에는 확률형 보상 없음 — 균등 당첨 외 추가 추첨 없음.)
+          (보급 열기 자체에는 확률형 보상 없음 — 균등 당첨 외 추가 추첨 없음.)
         </P>
       </Sec>
 

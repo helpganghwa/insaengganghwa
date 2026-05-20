@@ -7,9 +7,9 @@ import { catalogItems, equipmentInstances, userCodex, type Slot } from '@/lib/db
 import { userSupplyBoxes, supplyOpenLogs } from '@/lib/db/schema/supply';
 
 /**
- * 보급 상자 개봉 — GDD §3.4 / BALANCE §4 / SCHEMA §5.
+ * 보급 상자 열기 — GDD §3.4 / BALANCE §4 / SCHEMA §5.
  * 슬롯 일치 박스 → 해당 슬롯 활성 카탈로그 **균등 랜덤** 1개(+0·초월0) 획득.
- * 천장 없음. 개봉 보석 드롭 폐기(확률형 제거 — gemDrop 항상 0). 중복=별도 개체(초월/+100 제물).
+ * 천장 없음. 열기 보석 드롭 폐기(확률형 제거 — gemDrop 항상 0). 중복=별도 개체(초월/+100 제물).
  * count 차감 + 개체 생성 + 도감 + 로그 = 단일 트랜잭션.
  */
 export type SupplyErrorCode = 'NO_BOX' | 'NO_CATALOG';
@@ -78,7 +78,7 @@ export function openSupplyBoxes(input: {
           .onConflictDoNothing();
       }
 
-      // 개봉 보석 드롭 폐기(확률형 제거) — 로그·결과는 0 고정.
+      // 열기 보석 드롭 폐기(확률형 제거) — 로그·결과는 0 고정.
       const gemDrop = 0;
 
       await tx.insert(supplyOpenLogs).values({
