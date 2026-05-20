@@ -24,6 +24,7 @@ import {
 import { startEnhance } from '@/app/(game)/enhance/actions';
 import { BoastModal } from '@/components/BoastModal';
 import { TranscendSprite } from '@/components/TranscendSprite';
+import { RarityFrame, rarityBorderStyle, hasRarityBorder } from '@/components/RarityFrame';
 
 const SLOT_LABEL: Record<Slot, string> = { weapon: '무기', armor: '방어구', accessory: '장신구' };
 
@@ -105,13 +106,22 @@ export function EquipmentDetailSheet({
         </header>
 
         <section className="mt-2 flex items-center gap-3 rounded-lg border border-zinc-200 p-2.5 dark:border-zinc-800">
-          <TranscendSprite
-            code={item.code}
-            slot={item.slot}
-            level={item.transcendLevel}
-            isChampion={item.isChampion}
-            size={64}
-          />
+          <span
+            className={`relative flex h-[72px] w-[72px] shrink-0 items-center justify-center overflow-hidden rounded-lg border-2 ${
+              hasRarityBorder(item.transcendLevel) ? '' : 'border-zinc-200 dark:border-zinc-800'
+            }`}
+            style={rarityBorderStyle(item.transcendLevel)}
+          >
+            <RarityFrame level={item.transcendLevel} />
+            <TranscendSprite
+              code={item.code}
+              slot={item.slot}
+              level={item.transcendLevel}
+              isChampion={item.isChampion}
+              size={64}
+              frameless
+            />
+          </span>
           <div>
             <div className="text-[10px] text-zinc-500">⚔️ 전투력</div>
             <div className="text-sm font-semibold tabular-nums">{formatCompactKR(cp)}</div>

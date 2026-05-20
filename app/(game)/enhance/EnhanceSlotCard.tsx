@@ -13,6 +13,7 @@ import {
 import type { Slot } from '@/lib/db/schema/equipment';
 import { BoastModal } from '@/components/BoastModal';
 import { TranscendSprite } from '@/components/TranscendSprite';
+import { RarityFrame, rarityBorderStyle, hasRarityBorder } from '@/components/RarityFrame';
 
 import { finalizeEnhance, reduceTimeWithGems, cancelEnhanceAction } from './actions';
 
@@ -181,13 +182,20 @@ export function EnhanceSlotCard({
           style={{ width: `${Math.max(2, Math.round(progress * 1000) / 10)}%` }}
         />
         <div className="flex h-full items-center gap-3 px-3">
-          <span className="flex h-16 w-16 shrink-0 items-center justify-center rounded-lg border border-zinc-700 bg-black/40">
+          <span
+            className={`relative flex h-16 w-16 shrink-0 items-center justify-center overflow-hidden rounded-lg border bg-black/40 ${
+              hasRarityBorder(activeJob.transcendLevel) ? '' : 'border-zinc-700'
+            }`}
+            style={rarityBorderStyle(activeJob.transcendLevel)}
+          >
+            <RarityFrame level={activeJob.transcendLevel} />
             <TranscendSprite
               code={activeJob.code}
               slot={activeJob.slot}
               level={activeJob.transcendLevel}
               isChampion={activeJob.isChampion}
               size={60}
+              frameless
             />
           </span>
           <div className="flex min-w-0 flex-1 flex-col gap-0.5">

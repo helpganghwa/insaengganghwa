@@ -88,6 +88,7 @@ export default async function CodexPage() {
                       level={0}
                       isChampion={champ}
                       size={40}
+                      frameless
                     />
                     <span className="line-clamp-1 px-0.5 text-[9px] text-zinc-600 dark:text-zinc-400">
                       {c.name}

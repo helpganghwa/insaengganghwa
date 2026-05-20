@@ -51,7 +51,7 @@ export default async function CodexItemPage({
       </header>
 
       <div className="flex justify-center py-2">
-        <TranscendSprite code={item.code} slot={item.slot} level={0} size={72} />
+        <TranscendSprite code={item.code} slot={item.slot} level={0} size={72} frameless />
       </div>
 
       {lore ? (

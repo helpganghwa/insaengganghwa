@@ -52,6 +52,7 @@ export function GachaResultModal({
                 level={0}
                 isChampion={single.isChampion}
                 size={64}
+                frameless
               />
               <div className="mt-1 text-base font-semibold">{single.name}</div>
               <div className="mt-0.5 text-[11px] text-zinc-500">+0</div>
@@ -102,6 +103,7 @@ export function GachaResultModal({
                     level={0}
                     isChampion={r.isChampion}
                     size={36}
+                    frameless
                   />
                   <span className="line-clamp-1 px-0.5 text-[9px] text-zinc-600 dark:text-zinc-400">
                     {r.name}
