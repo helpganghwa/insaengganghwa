@@ -4,6 +4,7 @@ import { useEffect, useState } from 'react';
 
 import { formatCompactKR } from '@/lib/ui/format-number';
 import { TranscendSprite } from '@/components/TranscendSprite';
+import { RarityFrame, rarityBorderStyle, hasRarityBorder } from '@/components/RarityFrame';
 
 const SLOT_EMOJI = { weapon: '⚔️', armor: '🛡️', accessory: '💍' } as const;
 
@@ -96,30 +97,41 @@ export function BoastModal({
 
           {kind === 'set' && set ? (
             <>
-              <div className="mt-3 space-y-1">
+              <div className="mt-3 grid grid-cols-3 gap-1.5">
                 {(['weapon', 'armor', 'accessory'] as const).map((s) => {
                   const it = set.pieces.find((x) => x.slot === s);
+                  if (!it) {
+                    return (
+                      <div
+                        key={s}
+                        className="flex aspect-square flex-col items-center justify-center gap-0.5 rounded-lg border-2 border-dashed border-amber-300/60 px-0.5 text-center text-amber-100/60"
+                      >
+                        <span className="text-xl" aria-hidden>{SLOT_EMOJI[s]}</span>
+                        <span className="text-[9px]">미장착</span>
+                      </div>
+                    );
+                  }
                   return (
-                    <div key={s} className="flex items-center gap-2 text-xs">
-                      {it ? (
-                        <>
-                          <TranscendSprite
-                            code={it.code}
-                            slot={s}
-                            level={it.transcendLevel}
-                            isChampion={it.isChampion}
-                            size={40}
-                          />
-                          <span className="truncate">
-                            {it.name} +{it.enhanceLevel}
-                          </span>
-                        </>
-                      ) : (
-                        <>
-                          <span aria-hidden>{SLOT_EMOJI[s]}</span>
-                          <span className="opacity-60">미장착</span>
-                        </>
-                      )}
+                    <div
+                      key={s}
+                      style={rarityBorderStyle(it.transcendLevel)}
+                      className={`relative flex aspect-square flex-col items-center justify-center gap-0.5 overflow-hidden rounded-lg border-2 bg-amber-900/30 px-0.5 text-center ${
+                        hasRarityBorder(it.transcendLevel) ? '' : 'border-amber-200/40'
+                      }`}
+                    >
+                      <RarityFrame level={it.transcendLevel} />
+                      <TranscendSprite
+                        code={it.code}
+                        slot={s}
+                        level={it.transcendLevel}
+                        isChampion={it.isChampion}
+                        size={44}
+                        frameless
+                      />
+                      <span className="line-clamp-1 px-0.5 text-[9px] text-amber-100/90">
+                        {it.name}
+                      </span>
+                      <span className="text-[10px] font-semibold">+{it.enhanceLevel}</span>
                     </div>
                   );
                 })}

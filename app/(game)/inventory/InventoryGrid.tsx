@@ -8,7 +8,7 @@ import type { Slot } from '@/lib/db/schema/equipment';
 import { TranscendSprite } from '@/components/TranscendSprite';
 import { RarityFrame, rarityBorderStyle, hasRarityBorder } from '@/components/RarityFrame';
 
-import { toggleLockAction, equipBestSetAction } from './actions';
+import { equipBestSetAction } from './actions';
 import { EquipmentDetailSheet } from './EquipmentDetailSheet';
 
 export type InvItem = {
@@ -146,20 +146,16 @@ function Section({ title, children }: { title: string; children: React.ReactNode
 }
 
 function Tile({ item, onOpen }: { item: InvItem; onOpen: () => void }) {
-  const [pending, startTransition] = useTransition();
-  const router = useRouter();
   const isNew = Date.now() - item.acquiredAtMs < NEW_MS;
-  // 카드 보더 색 = 등급(transcend) 색(별과 동색). +0(none)은 회색 기본.
-  // 4 모서리에 RarityFrame(큰 별, 짝수 등급은 위성 별 추가).
-  const useRarity = hasRarityBorder(item.transcendLevel);
+  // 카드 보더 색 = 등급(transcend) 색. 4 모서리에 RarityFrame(별).
+  // 잠금/강화중 상태는 카드에서 시각 표시 안 함(보더 가림 회피) — 상세 팝업에서 관리/확인.
   return (
     <button
       type="button"
       onClick={onOpen}
-      disabled={pending}
       style={rarityBorderStyle(item.transcendLevel)}
       className={`relative flex aspect-square flex-col items-center justify-center gap-0.5 overflow-hidden rounded-xl border-2 bg-white px-1 text-center dark:bg-zinc-950 ${
-        useRarity ? '' : 'border-zinc-200 dark:border-zinc-800'
+        hasRarityBorder(item.transcendLevel) ? '' : 'border-zinc-200 dark:border-zinc-800'
       }`}
     >
       <RarityFrame level={item.transcendLevel} />
@@ -178,30 +174,6 @@ function Tile({ item, onOpen }: { item: InvItem; onOpen: () => void }) {
       {isNew ? (
         <span className="absolute left-1 top-1 rounded-full bg-emerald-500 px-1 text-[8px] font-bold text-white">
           NEW
-        </span>
-      ) : null}
-      <span
-        role="button"
-        tabIndex={-1}
-        aria-label={item.isLocked ? '잠금 해제' : '잠금'}
-        onClick={(e) => {
-          e.stopPropagation();
-          startTransition(async () => {
-            await toggleLockAction(item.id);
-            router.refresh();
-          });
-        }}
-        className={`absolute right-1 top-1 inline-flex h-5 w-5 items-center justify-center rounded-full text-[10px] ${
-          item.isLocked
-            ? 'bg-amber-500/95 text-white'
-            : 'bg-zinc-100/95 text-zinc-400 dark:bg-zinc-800/95'
-        }`}
-      >
-        {item.isLocked ? '🔒' : '🔓'}
-      </span>
-      {item.busy ? (
-        <span className="absolute bottom-1 right-1 rounded-full bg-zinc-900/80 px-1 text-[8px] font-bold text-amber-300">
-          ⚒️
         </span>
       ) : null}
     </button>

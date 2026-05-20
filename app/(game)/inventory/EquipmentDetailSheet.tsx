@@ -28,6 +28,14 @@ import { RarityFrame, rarityBorderStyle, hasRarityBorder } from '@/components/Ra
 
 const SLOT_LABEL: Record<Slot, string> = { weapon: '무기', armor: '방어구', accessory: '장신구' };
 
+// 공통 버튼 클래스 — 2그리드 노출 시 시각 통일. 색만 변형으로 분기.
+const BTN = 'flex h-11 items-center justify-center rounded-lg border text-[12px] font-semibold disabled:opacity-40 transition-colors';
+const BTN_NEUTRAL = `${BTN} border-zinc-300 bg-white text-zinc-800 dark:border-zinc-700 dark:bg-zinc-900 dark:text-zinc-100`;
+const BTN_PRIMARY = `${BTN} border-transparent bg-zinc-900 text-white dark:bg-zinc-50 dark:text-zinc-950`;
+const BTN_AMBER = `${BTN} border-transparent bg-amber-500 text-amber-950`;
+const BTN_DANGER = `${BTN} border-red-300 bg-red-50 text-red-700 dark:border-red-900/60 dark:bg-red-950/40 dark:text-red-300`;
+const BTN_DANGER_CONFIRM = `${BTN} animate-pulse border-transparent bg-red-500 text-white`;
+
 export function EquipmentDetailSheet({
   item,
   all,
@@ -68,6 +76,7 @@ export function EquipmentDetailSheet({
   const canTranscend = !atMax && fodderOwned >= fodderNeed;
   const canDisenchant = !item.equipped && !item.isLocked && !item.busy;
   const needsFodderEnhance = item.enhanceLevel >= FODDER_REQUIRED_FROM_LEVEL;
+  const canEnhance = !item.busy && !item.isLocked;
 
   const run = (fn: () => Promise<{ status: string; message?: string }>, after?: () => void) =>
     startTransition(async () => {
@@ -92,22 +101,10 @@ export function EquipmentDetailSheet({
         className="max-h-[92dvh] w-full max-w-xs overflow-y-auto rounded-2xl bg-white p-3 dark:bg-zinc-950"
         onClick={(e) => e.stopPropagation()}
       >
-        <header className="text-center">
-          <div className="text-[10px] font-medium text-amber-600 dark:text-amber-400">
-            {SLOT_LABEL[item.slot]}
-          </div>
-          <h2 className="mt-0.5 text-sm font-semibold">
-            {item.name} <span className="text-zinc-400">+{item.enhanceLevel}</span>
-          </h2>
-          <div className="mt-1 flex justify-center gap-2 text-[10px]">
-            {item.isLocked ? <span className="text-amber-600">🔒 잠금</span> : null}
-            {item.equipped ? <span className="text-green-600">✓ 장착 중</span> : null}
-          </div>
-        </header>
-
-        <section className="mt-2 flex items-center gap-3 rounded-lg border border-zinc-200 p-2.5 dark:border-zinc-800">
+        {/* ── 상단: sprite + 정보(이름/슬롯/상태/전투력) 한 행 ── */}
+        <section className="flex items-stretch gap-3">
           <span
-            className={`relative flex h-[72px] w-[72px] shrink-0 items-center justify-center overflow-hidden rounded-lg border-2 ${
+            className={`relative flex h-[76px] w-[76px] shrink-0 items-center justify-center overflow-hidden rounded-xl border-2 ${
               hasRarityBorder(item.transcendLevel) ? '' : 'border-zinc-200 dark:border-zinc-800'
             }`}
             style={rarityBorderStyle(item.transcendLevel)}
@@ -122,41 +119,40 @@ export function EquipmentDetailSheet({
               frameless
             />
           </span>
-          <div>
-            <div className="text-[10px] text-zinc-500">⚔️ 전투력</div>
-            <div className="text-sm font-semibold tabular-nums">{formatCompactKR(cp)}</div>
+          <div className="flex min-w-0 flex-1 flex-col justify-between py-0.5">
+            <div className="min-w-0">
+              <div className="flex items-center gap-1 text-[10px] text-zinc-500">
+                <span>{SLOT_LABEL[item.slot]}</span>
+                {item.equipped ? <span className="text-emerald-600 dark:text-emerald-400">· ✓ 장착</span> : null}
+                {item.isLocked ? <span className="text-amber-600 dark:text-amber-400">· 🔒 잠금</span> : null}
+                {item.busy ? <span className="text-amber-600 dark:text-amber-400">· ⚒️ 강화중</span> : null}
+              </div>
+              <div className="mt-0.5 truncate text-sm font-semibold">
+                {item.name} <span className="text-zinc-400">+{item.enhanceLevel}</span>
+              </div>
+            </div>
+            <div className="text-[11px] tabular-nums">
+              <span className="text-zinc-500">⚔️ </span>
+              <span className="font-semibold">{formatCompactKR(cp)}</span>
+              {eqCp != null ? (
+                <span className={`ml-1.5 ${cp - eqCp >= 0 ? 'text-emerald-600' : 'text-red-600'}`}>
+                  ({cp - eqCp >= 0 ? '+' : ''}
+                  {formatCompactKR(cp - eqCp)} vs 장착)
+                </span>
+              ) : null}
+            </div>
           </div>
         </section>
 
-        {item.lore ? (
-          <section className="mt-2 rounded-lg border border-zinc-200 p-2.5 dark:border-zinc-800">
-            <div className="mb-1 text-[10px] font-semibold tracking-wide text-zinc-400">
-              📖 이야기
-            </div>
-            <p className="whitespace-pre-line text-[11px] leading-relaxed text-zinc-600 dark:text-zinc-300">
-              {item.lore}
-            </p>
-          </section>
-        ) : null}
-
-        {equippedInSlot && eqCp != null ? (
-          <div className="mt-2 grid grid-cols-2 gap-2 rounded-lg border border-dashed border-zinc-300 p-2 text-[11px] dark:border-zinc-700">
-            <div>
-              <div className="text-[10px] text-zinc-500">현재 장착</div>
-              <div className="font-mono tabular-nums">⚔️ {formatCompactKR(eqCp)}</div>
-            </div>
-            <div>
-              <div className="text-[10px] text-zinc-500">이 장비</div>
-              <div className="font-mono tabular-nums">
-                ⚔️ {formatCompactKR(cp)}
-                <span className={cp - eqCp >= 0 ? 'ml-1 text-emerald-600' : 'ml-1 text-red-600'}>
-                  ({cp - eqCp >= 0 ? '+' : ''}
-                  {formatCompactKR(cp - eqCp)})
-                </span>
-              </div>
-            </div>
-          </div>
-        ) : null}
+        {/* ── 초월 정보 (한 줄, 액션은 아래 2그리드에서) ── */}
+        <div className="mt-2.5 flex items-center justify-between rounded-lg bg-amber-50/60 px-2.5 py-1.5 text-[11px] dark:bg-amber-950/20">
+          <span className="font-semibold text-amber-800 dark:text-amber-300">
+            ✦ 초월 {item.transcendLevel}/{MAX_TRANSCEND}
+          </span>
+          <span className="text-amber-700/80 dark:text-amber-400/70">
+            {atMax ? 'MAX' : `T${nextT} 제물 ${fodderOwned}/${fodderNeed}`}
+          </span>
+        </div>
 
         {error ? (
           <p className="mt-2 rounded bg-red-50 px-2 py-1 text-[10px] text-red-700 dark:bg-red-950/60 dark:text-red-300">
@@ -164,88 +160,63 @@ export function EquipmentDetailSheet({
           </p>
         ) : null}
 
-        {/* ── 초월 ── */}
-        <section className="mt-2 rounded-lg border border-amber-200 bg-amber-50/50 p-2 dark:border-amber-900/60 dark:bg-amber-950/20">
-          <div className="text-[11px] font-semibold text-amber-800 dark:text-amber-300">
-            초월 ✦ {item.transcendLevel} / {MAX_TRANSCEND}
-          </div>
-          {atMax ? (
-            <div className="mt-1 text-[11px] font-bold text-amber-700">MAX 도달</div>
-          ) : (
-            <>
-              <div className="mt-0.5 text-[10px] text-zinc-600 dark:text-zinc-400">
-                T{nextT} 제물: 같은 아이템 ×{fodderNeed} (보유 {fodderOwned})
-              </div>
-              <button
-                type="button"
-                disabled={pending || !canTranscend}
-                onClick={() => {
-                  if (!confirmT) {
-                    setConfirmT(true);
-                    setTimeout(() => setConfirmT(false), 3000);
-                    return;
-                  }
-                  setConfirmT(false);
-                  // §10 자랑 — 첫 초월(T1) / 초월 MAX 달성 시 공유 모달, 그 외엔 닫기.
-                  run(() => transcendAction(item.id), () => {
-                    if (nextT === 1 || nextT === MAX_TRANSCEND) setBoast(true);
-                    else onClose();
-                  });
-                }}
-                className={`mt-1.5 w-full rounded-full px-3 py-1.5 text-xs font-bold disabled:opacity-40 ${
-                  confirmT ? 'animate-pulse bg-red-500 text-white' : 'bg-amber-500 text-amber-950'
-                }`}
-              >
-                {confirmT ? '다시 탭 — 확정' : `초월하기 (제물 ${fodderNeed})`}
-              </button>
-            </>
-          )}
-        </section>
-
-        <div className="mt-2 space-y-1">
-          {!item.busy ? (
-            <button
-              type="button"
-              disabled={pending || item.isLocked}
-              onClick={() =>
-                run(() => startEnhance(item.id), () => {
-                  onClose();
-                  router.push('/enhance');
-                })
+        {/* ── 2그리드 액션 버튼들 ── */}
+        <div className="mt-2.5 grid grid-cols-2 gap-1.5">
+          {/* 강화 (주요) */}
+          <button
+            type="button"
+            disabled={pending || !canEnhance}
+            onClick={() =>
+              run(() => startEnhance(item.id), () => {
+                onClose();
+                router.push('/enhance');
+              })
+            }
+            className={BTN_PRIMARY}
+          >
+            ⚒️ 강화{needsFodderEnhance ? ' (제물)' : ''}
+          </button>
+          {/* 초월 (주요) */}
+          <button
+            type="button"
+            disabled={pending || !canTranscend}
+            onClick={() => {
+              if (!confirmT) {
+                setConfirmT(true);
+                setTimeout(() => setConfirmT(false), 3000);
+                return;
               }
-              className="w-full rounded-full bg-zinc-900 px-3 py-2 text-xs font-medium text-white disabled:opacity-40 dark:bg-zinc-50 dark:text-zinc-950"
-            >
-              {item.isLocked
-                ? '🔒 잠금 해제 후 강화'
-                : `⚒️ +${item.enhanceLevel} → +${item.enhanceLevel + 1} 강화${needsFodderEnhance ? ' (제물 1)' : ''}`}
-            </button>
-          ) : (
-            <div className="rounded-lg border border-amber-300 bg-amber-50/60 p-2 text-center text-[11px] text-amber-800 dark:border-amber-800 dark:bg-amber-950/30 dark:text-amber-300">
-              강화 진행 중 — 강화소에서 관리
-            </div>
-          )}
-
-          <div className="flex gap-1.5">
-            <button
-              type="button"
-              disabled={pending}
-              onClick={() =>
-                run(() => (item.equipped ? unequipAction(item.id) : equipAction(item.id)))
-              }
-              className="flex-1 rounded-full border border-zinc-300 px-3 py-1.5 text-xs disabled:opacity-40 dark:border-zinc-700"
-            >
-              {item.equipped ? '해제' : '장착'}
-            </button>
-            <button
-              type="button"
-              disabled={pending}
-              onClick={() => run(() => toggleLockAction(item.id))}
-              className="flex-1 rounded-full border border-zinc-300 px-3 py-1.5 text-xs disabled:opacity-40 dark:border-zinc-700"
-            >
-              {item.isLocked ? '잠금 해제' : '잠금'}
-            </button>
-          </div>
-
+              setConfirmT(false);
+              run(() => transcendAction(item.id), () => {
+                if (nextT === 1 || nextT === MAX_TRANSCEND) setBoast(true);
+                else onClose();
+              });
+            }}
+            className={confirmT ? BTN_DANGER_CONFIRM : BTN_AMBER}
+          >
+            {confirmT ? '확정?' : `✦ 초월${atMax ? ' MAX' : ` (${fodderNeed})`}`}
+          </button>
+          {/* 장착/해제 */}
+          <button
+            type="button"
+            disabled={pending}
+            onClick={() =>
+              run(() => (item.equipped ? unequipAction(item.id) : equipAction(item.id)))
+            }
+            className={BTN_NEUTRAL}
+          >
+            {item.equipped ? '해제' : '장착'}
+          </button>
+          {/* 잠금 토글 */}
+          <button
+            type="button"
+            disabled={pending}
+            onClick={() => run(() => toggleLockAction(item.id))}
+            className={BTN_NEUTRAL}
+          >
+            {item.isLocked ? '🔓 잠금 해제' : '🔒 잠금'}
+          </button>
+          {/* 분해 */}
           <button
             type="button"
             disabled={pending || !canDisenchant}
@@ -258,35 +229,38 @@ export function EquipmentDetailSheet({
               setConfirmD(false);
               run(() => disenchantAction(item.id), onClose);
             }}
-            className={`w-full rounded-full border px-3 py-1.5 text-xs disabled:opacity-40 ${
-              confirmD
-                ? 'animate-pulse border-red-500 bg-red-500 text-white'
-                : 'border-zinc-300 text-zinc-600 dark:border-zinc-700 dark:text-zinc-400'
-            }`}
+            className={confirmD ? BTN_DANGER_CONFIRM : BTN_DANGER}
           >
             {!canDisenchant
-              ? '♻️ 분해 불가 (장착/잠금/강화중)'
+              ? '♻️ 분해 불가'
               : confirmD
-                ? `♻️ 분해 확정 — 💎 ${DIAMOND_PER_DISENCHANT}`
-                : `♻️ 분해 — 💎 ${DIAMOND_PER_DISENCHANT}`}
+                ? `확정? 💎${DIAMOND_PER_DISENCHANT}`
+                : `♻️ 분해 💎${DIAMOND_PER_DISENCHANT}`}
           </button>
-
+          {/* 자랑 */}
           <button
             type="button"
             onClick={() => setBoast(true)}
-            className="w-full rounded-full border border-amber-300 px-3 py-1.5 text-xs font-medium text-amber-700 dark:border-amber-800 dark:text-amber-300"
+            className={BTN_NEUTRAL}
           >
-            🔗 이 장비 자랑하기
-          </button>
-
-          <button
-            type="button"
-            onClick={onClose}
-            className="w-full px-4 py-1.5 text-[11px] text-zinc-500"
-          >
-            닫기
+            🔗 자랑
           </button>
         </div>
+
+        {/* ── 로어 (있으면, 폴드 안 함 — 짧게 line-clamp) ── */}
+        {item.lore ? (
+          <p className="mt-2.5 line-clamp-3 rounded-lg border border-zinc-200 bg-zinc-50 px-2.5 py-2 text-[11px] leading-relaxed text-zinc-600 dark:border-zinc-800 dark:bg-zinc-900 dark:text-zinc-400">
+            📖 {item.lore}
+          </p>
+        ) : null}
+
+        <button
+          type="button"
+          onClick={onClose}
+          className="mt-2.5 w-full py-1.5 text-[11px] text-zinc-500"
+        >
+          닫기
+        </button>
       </div>
 
       <BoastModal

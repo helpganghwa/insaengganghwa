@@ -10,6 +10,7 @@ import { pieceCombatPower, totalCombatPower } from '@/lib/game/balance';
 import { championCatalogIds } from '@/lib/game/codex/ranking';
 import { formatCompactKR } from '@/lib/ui/format-number';
 import { TranscendSprite } from '@/components/TranscendSprite';
+import { RarityFrame, rarityBorderStyle, hasRarityBorder } from '@/components/RarityFrame';
 
 const SLOT_LABEL: Record<Slot, string> = { weapon: '무기', armor: '방어구', accessory: '장신구' };
 const SLOT_EMOJI: Record<Slot, string> = { weapon: '⚔️', armor: '🛡️', accessory: '💍' };
@@ -94,31 +95,42 @@ export default async function PublicProfilePage({
 
       <section className="mt-5 rounded-2xl border border-zinc-200 p-3 dark:border-zinc-800">
         <div className="mb-2 text-xs font-medium text-zinc-500">장착 세트</div>
-        <div className="space-y-1.5">
+        <div className="grid grid-cols-3 gap-2">
           {(['weapon', 'armor', 'accessory'] as Slot[]).map((s) => {
             const it = bySlot.get(s);
+            if (!it) {
+              return (
+                <div
+                  key={s}
+                  className="flex aspect-square flex-col items-center justify-center gap-0.5 rounded-xl border-2 border-dashed border-zinc-300 px-1 text-center text-zinc-400 dark:border-zinc-700"
+                >
+                  <span className="text-2xl" aria-hidden>{SLOT_EMOJI[s]}</span>
+                  <span className="text-[10px]">{SLOT_LABEL[s]}</span>
+                  <span className="text-[9px]">미장착</span>
+                </div>
+              );
+            }
             return (
-              <div key={s} className="flex items-center gap-2 text-sm">
-                {it ? (
-                  <>
-                    <TranscendSprite
-                      code={it.code}
-                      slot={s}
-                      level={it.transcendLevel}
-                      isChampion={it.isChampion}
-                      size={48}
-                    />
-                    <span className="flex-1 truncate">
-                      {it.name}{' '}
-                      <span className="text-zinc-400">+{it.enhanceLevel}</span>
-                    </span>
-                  </>
-                ) : (
-                  <>
-                    <span aria-hidden>{SLOT_EMOJI[s]}</span>
-                    <span className="flex-1 text-zinc-400">{SLOT_LABEL[s]} 미장착</span>
-                  </>
-                )}
+              <div
+                key={s}
+                style={rarityBorderStyle(it.transcendLevel)}
+                className={`relative flex aspect-square flex-col items-center justify-center gap-0.5 overflow-hidden rounded-xl border-2 bg-white px-1 text-center dark:bg-zinc-950 ${
+                  hasRarityBorder(it.transcendLevel) ? '' : 'border-zinc-200 dark:border-zinc-800'
+                }`}
+              >
+                <RarityFrame level={it.transcendLevel} />
+                <TranscendSprite
+                  code={it.code}
+                  slot={s}
+                  level={it.transcendLevel}
+                  isChampion={it.isChampion}
+                  size={56}
+                  frameless
+                />
+                <span className="line-clamp-1 px-0.5 text-[10px] text-zinc-600 dark:text-zinc-400">
+                  {it.name}
+                </span>
+                <span className="text-xs font-semibold">+{it.enhanceLevel}</span>
               </div>
             );
           })}
