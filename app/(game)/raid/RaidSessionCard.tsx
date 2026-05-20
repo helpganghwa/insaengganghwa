@@ -104,7 +104,9 @@ export function RaidSessionCard({ view: v }: { view: RaidView }) {
 
   const bossBg = getBossBg(v.bossCode);
   return (
-    <section className="text-zinc-100">
+    // 레이드 상세는 grow 분위기 따라 **다크 강제** — 라이트 모드에서도 동일 다크 톤.
+    // (히어로/배경/텍스트 색이 모두 다크 가정이라 라이트 적용 시 가독성 깨짐)
+    <section className="overflow-hidden bg-zinc-950 text-zinc-100">
       {/* 히어로 — 배경 이미지(있으면) + 그라데이션 폴백 + 큰 보스 sprite(APNG 우선·정적 부유). */}
       <div
         className={`relative flex h-60 items-end justify-center bg-gradient-to-b ${getBossBgClass(v.bossCode)}`}

@@ -23,10 +23,10 @@ export const TRANSCEND_TUNING = {
    *  finalZ2 승인 형태(부드러운 중앙 라디얼)를 유지하되 알파만 낮춤. 헤일로/링 금지(흰띠 아티팩트). */
   glowAlpha: 0.18,
   championGlowAlpha: 0.16,
-  /** +10 광택 스윕 sheen 피크 알파 (soft-light 블렌드 — 금속 광택, 흰색 폭발 아님) */
-  shineAlpha: 0.6,
+  /** 챔피언 광택 스윕 피크 알파 (screen 블렌드 — 골드 광채). 챔피언 식별 표식이라 크게. */
+  shineAlpha: 0.85,
   /** 광택 띠 반폭 (FS 비율). 클수록 두껍고 눈에 띔 */
-  shineWidth: 0.24,
+  shineWidth: 0.32,
   /** 애니 1주기 ms (글로우 펄스·스윕 공통 시간축). 길수록 천천히 */
   animPeriodMs: 2400,
   /** 1주기당 광택 스윕 횟수 (작을수록 천천히 글라이드 → 프레임당 이동 작아 매끄러움) */
