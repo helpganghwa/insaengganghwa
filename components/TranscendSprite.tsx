@@ -377,16 +377,26 @@ function TranscendCanvas({
         frontCv = fc;
       }
 
-      // 사전합성 블러 발광 — swap 후 T8+ 전용(기존 챔피언 표식이 등급으로 이동).
+      // T8+ glow — 사전합성. Canvas `filter:blur`는 iOS Safari 17+ 한정 →
+      // **shadowBlur**로 외곽 글로우 그림(모든 환경 지원). sprite 외곽으로 노란빛
+      // 확산. 추가로 sprite 마스크해 본체 채움까지 노란빛으로 흠뻑.
       if (showRadiant) {
+        const [bc, bx] = mkCanvas();
+        bx.imageSmoothingEnabled = false;
+        // 1) sprite 모양으로 노란 채움
         const [rc, rx] = mkCanvas();
         rx.imageSmoothingEnabled = false;
         rx.drawImage(atlasImg, coord.x, coord.y, ATLAS_CELL, ATLAS_CELL, SP, SP, SW, SW);
         rx.globalCompositeOperation = 'source-in';
         rx.fillStyle = 'rgb(255,238,190)';
         rx.fillRect(0, 0, FS, FS);
-        const [bc, bx] = mkCanvas();
-        bx.filter = 'blur(11px)';
+        // 2) 노란 sprite를 shadowBlur로 외곽 글로우 + 본체 함께
+        bx.shadowColor = 'rgba(255,238,190,1)';
+        bx.shadowBlur = 16;
+        bx.drawImage(rc, 0, 0);
+        // 한 번 더 그려 글로우 두텁게(shadow는 첫 그리기에만 적용)
+        bx.shadowBlur = 24;
+        bx.globalAlpha = 0.6;
         bx.drawImage(rc, 0, 0);
         radiantCv = bc;
       }

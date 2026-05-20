@@ -16,10 +16,9 @@ const SLOTS = ['weapon', 'armor', 'accessory'] as const;
 const BG_POOL = 8;
 
 // 초월 별 장식 — 4 모서리 등급색 별. Satori 호환을 위해 단순 SVG <polygon>
-// (transform 없음, viewBox 절대 좌표만). 4점 다이아몬드 별 모양.
-// sub=1이면 코너 안쪽에 작은 별 1개 추가.
-const STAR_POINTS =
-  '50,8 60,42 92,50 60,58 50,92 40,58 8,50 40,42';
+// (transform 없음). sub=1(짝수 등급)이면 인벤토리 RarityFrame과 동일하게 위성 별
+// **3개**(코너 안쪽 우/하/대각). 4 모서리에 같은 구성 + mirror로 안쪽 향함.
+const STAR_POINTS = '50,8 60,42 92,50 60,58 50,92 40,58 8,50 40,42';
 function rarityStarsOG(
   colorRgb: readonly [number, number, number],
   sub: 0 | 1,
@@ -29,17 +28,25 @@ function rarityStarsOG(
   const color = `rgb(${r},${g},${b})`;
   const accent = `rgb(${Math.round(r + (255 - r) * 0.55)},${Math.round(g + (255 - g) * 0.55)},${Math.round(b + (255 - b) * 0.55)})`;
   const big = Math.round(cornerPx * 0.7);
-  const small = Math.round(cornerPx * 0.42); // 위성 별 ↑(0.28 → 0.42) — 더 잘 보이게
-  const off = Math.round(cornerPx * 0.62); // 위성 별 위치(큰 별 안쪽 대각선)
-  const corners: { pos: React.CSSProperties; small: React.CSSProperties }[] = [
-    { pos: { top: 0, left: 0 }, small: { top: off, left: off } },
-    { pos: { top: 0, right: 0 }, small: { top: off, right: off } },
-    { pos: { bottom: 0, left: 0 }, small: { bottom: off, left: off } },
-    { pos: { bottom: 0, right: 0 }, small: { bottom: off, right: off } },
+  const sat = Math.round(cornerPx * 0.32); // 위성 별 — 큰 별 절반보다 작게
+  const satTiny = Math.round(cornerPx * 0.24); // 안쪽 대각 위성 — 가장 작게
+  // 위성 별 3개 위치(좌상 코너 기준). 4 모서리는 top/bottom·left/right swap.
+  // 인벤토리 RarityFrame과 같은 구성: (14.5,4.5), (4.5,14.5), (13.5,13.5)을 cornerPx로 환산.
+  const satOff1 = Math.round(cornerPx * 0.48); // 큰 별 안쪽 우측(또는 하단) 위성
+  const satOff2 = Math.round(cornerPx * 0.05); // 큰 별 옆/위 위성의 다른 축 가까운 값
+  const satMidOff = Math.round(cornerPx * 0.42); // 대각 위성
+  // edge map — top:0/left:0 (좌상) 기준. 각 코너별로 top/left 키를 bottom/right로 swap.
+  type Edge = { e1: 'top' | 'bottom'; e2: 'left' | 'right' };
+  const edges: Edge[] = [
+    { e1: 'top', e2: 'left' }, // 좌상
+    { e1: 'top', e2: 'right' }, // 우상
+    { e1: 'bottom', e2: 'left' }, // 좌하
+    { e1: 'bottom', e2: 'right' }, // 우하
   ];
   const els: React.ReactElement[] = [];
-  for (let i = 0; i < corners.length; i++) {
-    const c = corners[i]!;
+  for (let i = 0; i < edges.length; i++) {
+    const { e1, e2 } = edges[i]!;
+    // 큰 별 — 코너에 붙임
     els.push(
       <div
         key={`s${i}`}
@@ -48,7 +55,8 @@ function rarityStarsOG(
           display: 'flex',
           width: big,
           height: big,
-          ...c.pos,
+          [e1]: 0,
+          [e2]: 0,
         }}
       >
         <svg width={big} height={big} viewBox="0 0 100 100">
@@ -57,18 +65,56 @@ function rarityStarsOG(
       </div>,
     );
     if (sub === 1) {
+      // 위성 1: 큰 별의 안쪽 e2 방향(좌상이면 우측, 우상이면 좌측 ...)
       els.push(
         <div
-          key={`a${i}`}
+          key={`a${i}-1`}
           style={{
             position: 'absolute',
             display: 'flex',
-            width: small,
-            height: small,
-            ...c.small,
+            width: sat,
+            height: sat,
+            [e1]: satOff2,
+            [e2]: satOff1,
           }}
         >
-          <svg width={small} height={small} viewBox="0 0 100 100">
+          <svg width={sat} height={sat} viewBox="0 0 100 100">
+            <polygon points={STAR_POINTS} fill={accent} />
+          </svg>
+        </div>,
+      );
+      // 위성 2: 안쪽 e1 방향(좌상이면 아래, 좌하이면 위 ...)
+      els.push(
+        <div
+          key={`a${i}-2`}
+          style={{
+            position: 'absolute',
+            display: 'flex',
+            width: sat,
+            height: sat,
+            [e1]: satOff1,
+            [e2]: satOff2,
+          }}
+        >
+          <svg width={sat} height={sat} viewBox="0 0 100 100">
+            <polygon points={STAR_POINTS} fill={accent} />
+          </svg>
+        </div>,
+      );
+      // 위성 3: 대각 안쪽(가장 작음) — 큰 별의 카드 중심 쪽 대각
+      els.push(
+        <div
+          key={`a${i}-3`}
+          style={{
+            position: 'absolute',
+            display: 'flex',
+            width: satTiny,
+            height: satTiny,
+            [e1]: satMidOff,
+            [e2]: satMidOff,
+          }}
+        >
+          <svg width={satTiny} height={satTiny} viewBox="0 0 100 100">
             <polygon points={STAR_POINTS} fill={accent} />
           </svg>
         </div>,
@@ -154,7 +200,7 @@ export async function GET(_req: Request, { params }: { params: Promise<{ shareCo
     display: 'flex',
     flexDirection: 'column' as const,
     color: '#fde9c8',
-    padding: '130px 130px',
+    padding: '160px 160px',
     fontFamily: 'sans-serif',
     position: 'relative' as const,
   };
@@ -327,12 +373,12 @@ export async function GET(_req: Request, { params }: { params: Promise<{ shareCo
               <div
                 style={{
                   position: 'relative',
-                  width: 200,
-                  height: 200,
+                  width: 170,
+                  height: 170,
                   display: 'flex',
                   alignItems: 'center',
                   justifyContent: 'center',
-                  borderRadius: 22,
+                  borderRadius: 20,
                   background: 'rgba(0,0,0,0.36)',
                   border: ts
                     ? `6px solid rgb(${tr},${tg},${tb})`
@@ -342,12 +388,12 @@ export async function GET(_req: Request, { params }: { params: Promise<{ shareCo
                 }}
               >
                 {spr ? (
-                  <img src={spr} width={168} height={168} style={{ width: 168, height: 168 }} />
+                  <img src={spr} width={140} height={140} style={{ width: 140, height: 140 }} />
                 ) : (
-                  <span style={{ fontSize: 100, opacity: it ? 1 : 0.4 }}>{EMOJI[s]}</span>
+                  <span style={{ fontSize: 84, opacity: it ? 1 : 0.4 }}>{EMOJI[s]}</span>
                 )}
-                {/* 초월 별 장식 — 4 모서리(폰트 ✦, Satori 호환). cornerPx 52. */}
-                {ts ? rarityStarsOG(ts.colorRgb, ts.sub as 0 | 1, 52) : null}
+                {/* 초월 별 장식 — 4 모서리. cornerPx 48 (위성 3개 인벤토리 동일). */}
+                {ts ? rarityStarsOG(ts.colorRgb, ts.sub as 0 | 1, 48) : null}
               </div>
               <div
                 style={{
