@@ -186,8 +186,10 @@ export function BoastModal({
         title: kind === 'set' ? `${nickname}의 인생강화` : (headline ?? '✨ 강화 달성'),
         description: text, // 위 pickMsg() 풀에서 1개 — 매번 다른 멘트
         imageUrl,
-        imageWidth: 800,
-        imageHeight: 420,
+        // ⚠ 실제 OG PNG 사이즈(1200×630)와 정확히 일치시켜야 카카오가 정상 처리.
+        // 사이즈 mismatch면 카카오 image scraper가 무효 처리 후 엑박 캐시 가능.
+        imageWidth: 1200,
+        imageHeight: 630,
         link: { mobileWebUrl: shareUrl, webUrl: shareUrl },
       },
       buttons: [

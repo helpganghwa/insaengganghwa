@@ -13,7 +13,7 @@ import { GachaBoxCard } from './GachaBoxCard';
 // 달라 슬롯별 미세 조정. 박스가 카드 시각 중앙에 보이도록 70~85%.
 const BOXES: { slot: Slot; label: string; bg: string; bgPosY: string; tint: string }[] = [
   { slot: 'weapon',    label: '무기 보급 상자',   bg: '/sprites/hub/box-weapon.png',    bgPosY: '70%', tint: '#2a1f15' },
-  { slot: 'armor',     label: '방어구 보급 상자', bg: '/sprites/hub/box-armor.png',     bgPosY: '85%', tint: '#1c2630' },
+  { slot: 'armor',     label: '방어구 보급 상자', bg: '/sprites/hub/box-armor.png',     bgPosY: '80%', tint: '#1c2630' },
   { slot: 'accessory', label: '장신구 보급 상자', bg: '/sprites/hub/box-accessory.png', bgPosY: '70%', tint: '#2a1620' },
 ];
 
