@@ -51,12 +51,61 @@ export function BoastModal({
 
   if (!open) return null;
 
-  const text =
-    kind === 'set'
-      ? `${nickname}의 인생강화 — 총 전투력 ⚔️${formatCompactKR(set?.total ?? 0)}`
-      : piece
-        ? `${nickname} — ${piece.p.name} +${piece.p.enhanceLevel} ✦T${piece.p.transcendLevel} 달성!`
-        : `${nickname}의 인생강화`;
+  // ── 자랑 멘트 풀 ── 랜덤 노출(매 공유마다 변주). "단조"는 게임 타이틀(인생강화)에 맞춰
+  // "강화" 표기. piece는 enhanceLevel 구간별 분기.
+  const pickMsg = (): string => {
+    if (kind === 'piece' && piece) {
+      const lv = piece.p.enhanceLevel;
+      const t = piece.p.transcendLevel;
+      const pool =
+        t >= 10
+          ? [
+              `✦✦✦ 초월 MAX 달성! 신화에 이름을 새겼다`,
+              `최고의 자리에 올랐다 — ✦MAX 영광`,
+              `별이 깃든 그 한 자루, ✦10 MAX`,
+            ]
+          : t >= 1
+            ? [
+                `✦ 초월 T${t} — 별의 결이 깃들었다`,
+                `✦${t} 진화의 증거`,
+                `평범한 강철을 넘어 ✦T${t}`,
+              ]
+            : lv >= 99
+              ? [
+                  `전설의 영역 — +99 강화 달성!`,
+                  `+99, 그 한 끗을 넘었다`,
+                  `한계 너머의 +99`,
+                ]
+              : lv >= 50
+                ? [
+                    `✨ +${lv} 강화 — 망치가 노래한다`,
+                    `+${lv}의 결, 한 계단 위에서 보는 풍경`,
+                    `쇠가 한 호흡 멈춘 그 순간 +${lv}`,
+                  ]
+                : lv >= 30
+                  ? [
+                      `+${lv} 단계 달성!`,
+                      `30고지 돌파 — +${lv}`,
+                      `한 망치 한 망치, +${lv}`,
+                    ]
+                  : [
+                      `${piece.p.name} +${lv}!`,
+                      `오늘의 한 단계, +${lv}`,
+                      `${piece.p.name} 강화 진행 중`,
+                    ];
+      return `${nickname} — ${pool[Math.floor(Math.random() * pool.length)]}`;
+    }
+    const setPool = [
+      `${nickname}의 인생강화 — ⚔️ ${formatCompactKR(set?.total ?? 0)}`,
+      `⚔️ ${formatCompactKR(set?.total ?? 0)} — 망치의 결실`,
+      `한 번에 하나씩, ⚔️ ${formatCompactKR(set?.total ?? 0)}`,
+      `오늘도 한 망치 — ${nickname}의 ⚔️ ${formatCompactKR(set?.total ?? 0)}`,
+      `${nickname} · 강화의 길 · ⚔️ ${formatCompactKR(set?.total ?? 0)}`,
+    ];
+    return setPool[Math.floor(Math.random() * setPool.length)]!;
+  };
+  // 매 모달 오픈 시 1회 고정 — 같은 모달 안에서 일관(공유 시 동일 텍스트).
+  const text = pickMsg();
 
   const doShare = async () => {
     if (navigator.share) {
@@ -91,13 +140,26 @@ export function BoastModal({
       return;
     }
     const origin = window.location.origin;
+    // imageUrl에 컨텍스트 query — /og route가 seed로 멘트·시각 분기 가능.
+    // v=random은 카톡 캐시 우회. focus=piece 시 sprite 1개 강조 모드(OG route 분기).
     const v = Math.random().toString(36).slice(2, 10);
-    const imageUrl = `${origin}/og/${encodeURIComponent(nickname)}?v=${v}`;
+    const params = new URLSearchParams({ v });
+    if (kind === 'piece' && piece) {
+      params.set('focus', 'piece');
+      params.set('code', piece.p.code);
+      params.set('lvl', String(piece.p.enhanceLevel));
+      params.set('t', String(piece.p.transcendLevel));
+    } else if (kind === 'set' && set) {
+      params.set('focus', 'set');
+      params.set('cp', String(set.total));
+    }
+    const imageUrl = `${origin}/og/${encodeURIComponent(nickname)}?${params.toString()}`;
+    const startUrl = `${origin}/`;
     k.Share.sendDefault({
       objectType: 'feed',
       content: {
         title: kind === 'set' ? `${nickname}의 인생강화` : (headline ?? '✨ 강화 달성'),
-        description: text,
+        description: text, // 위 pickMsg() 풀에서 1개 — 매번 다른 멘트
         imageUrl,
         imageWidth: 800,
         imageHeight: 420,
@@ -105,7 +167,11 @@ export function BoastModal({
       },
       buttons: [
         {
-          title: '나도 시작하기',
+          title: '인생강화 시작',
+          link: { mobileWebUrl: startUrl, webUrl: startUrl },
+        },
+        {
+          title: '이 플레이어 보기',
           link: { mobileWebUrl: shareUrl, webUrl: shareUrl },
         },
       ],

@@ -38,8 +38,14 @@ async function dataUri(url: string): Promise<string | null> {
  */
 export async function GET(_req: Request, { params }: { params: Promise<{ shareCode: string }> }) {
   const { shareCode } = await params;
+  const url = new URL(_req.url);
   const nickname = decodeURIComponent(shareCode);
-  const origin = new URL(_req.url).origin;
+  const origin = url.origin;
+  // 카카오 공유 query — focus=piece면 sprite 1개 강조 모드(아래 분기).
+  const focus = url.searchParams.get('focus'); // 'piece' | 'set' | null
+  const focusCode = url.searchParams.get('code') ?? '';
+  const focusLvl = Number(url.searchParams.get('lvl') ?? 0);
+  const focusT = Number(url.searchParams.get('t') ?? 0);
 
   const [prof] = await db
     .select({ id: profiles.id, nickname: profiles.nickname })
@@ -89,14 +95,6 @@ export async function GET(_req: Request, { params }: { params: Promise<{ shareCo
 
   // 배경: 요청마다 진한 랜덤(no-store) — 풀 1개 시도, 부재면 그라데이션.
   const bgUri = await dataUri(`${origin}/og/og-${1 + Math.floor(Math.random() * BG_POOL)}.png`);
-  // 슬롯 스프라이트 data URI 선해결(Satori는 동기 렌더).
-  const sprite = new Map<string, string | null>();
-  await Promise.all(
-    [...bySlot.values()].map(async (it) => {
-      const p = spritePath(it.code);
-      sprite.set(it.slot, p ? await dataUri(`${origin}${p}`) : null);
-    }),
-  );
 
   const rootBase = {
     width: '100%',
@@ -108,6 +106,90 @@ export async function GET(_req: Request, { params }: { params: Promise<{ shareCo
     fontFamily: 'sans-serif',
     position: 'relative' as const,
   };
+
+  // ── focus=piece 모드 — 단일 아이템 강조(sprite 큼 + 레벨 강조). 카카오 공유 query. ──
+  if (focus === 'piece' && focusCode) {
+    const sprUri = await dataUri(`${origin}${spritePath(focusCode) ?? ''}`);
+    const ts = focusT > 0 ? transcendStyle(focusT) : null;
+    const [tr, tg, tb] = ts?.colorRgb ?? [0, 0, 0];
+    const headline =
+      focusT >= 10
+        ? `✦✦✦ 초월 MAX`
+        : focusT >= 1
+          ? `✦ 초월 T${focusT}`
+          : focusLvl >= 99
+            ? `전설의 +99`
+            : focusLvl >= 50
+              ? `✨ +${focusLvl}`
+              : `+${focusLvl}`;
+    return new ImageResponse(
+      <div
+        style={
+          bgUri
+            ? { ...rootBase, background: '#120c08' }
+            : {
+                ...rootBase,
+                background: 'linear-gradient(135deg,#1c1410 0%,#3a2a14 60%,#7a5a1e 100%)',
+              }
+        }
+      >
+        {bgUri ? (
+          <>
+            <img
+              src={bgUri}
+              width={1200}
+              height={630}
+              style={{ position: 'absolute', top: 0, left: 0, width: 1200, height: 630, objectFit: 'cover' }}
+            />
+            <div
+              style={{
+                position: 'absolute', top: 0, left: 0, width: 1200, height: 630,
+                background: 'linear-gradient(180deg,rgba(8,6,4,0.86) 0%,rgba(10,7,4,0.55) 60%,rgba(10,7,4,0.92) 100%)',
+                display: 'flex',
+              }}
+            />
+          </>
+        ) : null}
+        <div style={{ display: 'flex', fontSize: 28, opacity: 0.85, letterSpacing: 2, zIndex: 1 }}>
+          ⚒️ 인생강화 · {display}
+        </div>
+        <div
+          style={{
+            display: 'flex', alignItems: 'center', justifyContent: 'center', flex: 1,
+            zIndex: 1, marginTop: 16,
+          }}
+        >
+          <div
+            style={{
+              width: 360, height: 360, display: 'flex', alignItems: 'center', justifyContent: 'center',
+              borderRadius: 32, background: 'rgba(0,0,0,0.32)',
+              border: ts ? `8px solid rgb(${tr},${tg},${tb})` : '3px solid rgba(255,255,255,0.10)',
+              boxShadow: ts ? `0 0 48px rgba(${tr},${tg},${tb},0.55)` : 'none',
+            }}
+          >
+            {sprUri ? (
+              <img src={sprUri} width={320} height={320} style={{ width: 320, height: 320 }} />
+            ) : (
+              <span style={{ fontSize: 200, opacity: 0.5 }}>❔</span>
+            )}
+          </div>
+        </div>
+        <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', zIndex: 1, marginTop: 'auto' }}>
+          <div style={{ display: 'flex', fontSize: 96, fontWeight: 800, color: '#ffd47a' }}>{headline}</div>
+          <div style={{ display: 'flex', fontSize: 26, opacity: 0.75, marginTop: 12 }}>insaengganghwa.com</div>
+        </div>
+      </div>,
+      { ...size, headers: { 'cache-control': 'no-store, max-age=0, must-revalidate' } },
+    );
+  }
+  // 슬롯 스프라이트 data URI 선해결(Satori는 동기 렌더).
+  const sprite = new Map<string, string | null>();
+  await Promise.all(
+    [...bySlot.values()].map(async (it) => {
+      const p = spritePath(it.code);
+      sprite.set(it.slot, p ? await dataUri(`${origin}${p}`) : null);
+    }),
+  );
 
   return new ImageResponse(
     <div
