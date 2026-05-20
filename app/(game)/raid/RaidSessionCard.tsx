@@ -105,10 +105,10 @@ export function RaidSessionCard({ view: v }: { view: RaidView }) {
   const bossBg = getBossBg(v.bossCode);
   return (
     // 레이드 상세는 grow 분위기 따라 **다크 강제** — 라이트 모드에서도 동일 다크 톤.
-    // (히어로/배경/텍스트 색이 모두 다크 가정이라 라이트 적용 시 가독성 깨짐)
-    // min-h-dvh — 콘텐츠 부족한 긴 화면(태블릿/큰 모바일)에서 하단에 라이트 배경
-    // 비치지 않도록 카드 자체가 화면 전체 차지.
-    <section className="min-h-dvh overflow-hidden bg-zinc-950 text-zinc-100">
+    // min-h-full — (game) layout의 main(flex-1 overflow-y-auto)을 가득 채워 콘텐츠
+    // 짧을 때 라이트 배경 비침 방지. dvh로 잡으면 header+footer 합쳐 잉여 스크롤 발생.
+    // 콘텐츠가 크면 자연 확장되어 main의 overflow-y-auto가 정상 스크롤.
+    <section className="min-h-full overflow-hidden bg-zinc-950 text-zinc-100">
       {/* 히어로 — 배경 이미지(있으면) + 그라데이션 폴백 + 큰 보스 sprite(APNG 우선·정적 부유). */}
       <div
         className={`relative flex h-60 items-end justify-center bg-gradient-to-b ${getBossBgClass(v.bossCode)}`}

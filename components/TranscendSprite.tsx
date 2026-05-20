@@ -404,26 +404,31 @@ function TranscendCanvas({
       // 베이스 스프라이트 (불변).
       if (spriteCv) o.drawImage(spriteCv, 0, 0);
 
-      // 광택 스윕 — 챔피언 식별 표식. **무채색(흰빛) 투명 띠** + screen 블렌드.
-      // 노란기 제거(2026-05-20 사용자 결정). 아이템 실루엣 마스크라 외곽으로 새지 않음.
+      // Glare — 챔피언 식별 표식. 좁은 흰빛 띠 sharp peak + screen 블렌드.
+      // 한 주기에 두 번 통과(shineSpeed=2.0) → 반복 섬광 느낌. peak 구간 ±6% 좁게.
       if (showShine && spriteCv) {
-        shineX.clearRect(0, 0, FS, FS);
-        const gx = ((ph * TRANSCEND_TUNING.shineSpeed) % 1) * FS * 1.7 - FS * 0.35;
-        const half = FS * TRANSCEND_TUNING.shineWidth;
-        const lg = shineX.createLinearGradient(gx - half, 0, gx + half, FS);
-        lg.addColorStop(0, 'rgba(255,255,255,0)');
-        lg.addColorStop(0.34, 'rgba(255,255,255,0)');
-        lg.addColorStop(0.5, `rgba(255,255,255,${TRANSCEND_TUNING.shineAlpha})`);
-        lg.addColorStop(0.66, 'rgba(255,255,255,0)');
-        lg.addColorStop(1, 'rgba(255,255,255,0)');
-        shineX.globalCompositeOperation = 'source-over';
-        shineX.fillStyle = lg;
-        shineX.fillRect(0, 0, FS, FS);
-        shineX.globalCompositeOperation = 'destination-in';
-        shineX.drawImage(spriteCv, 0, 0);
-        o.globalCompositeOperation = 'screen';
-        o.drawImage(shineCv, 0, 0);
-        o.globalCompositeOperation = 'source-over';
+        const sprite = spriteCv; // closure narrowing 보존
+        const drawBand = (phShift: number) => {
+          shineX.clearRect(0, 0, FS, FS);
+          const gx =
+            (((ph + phShift) * TRANSCEND_TUNING.shineSpeed) % 1) * FS * 1.7 - FS * 0.35;
+          const half = FS * TRANSCEND_TUNING.shineWidth;
+          const lg = shineX.createLinearGradient(gx - half, 0, gx + half, FS);
+          lg.addColorStop(0, 'rgba(255,255,255,0)');
+          lg.addColorStop(0.44, 'rgba(255,255,255,0)');
+          lg.addColorStop(0.5, `rgba(255,255,255,${TRANSCEND_TUNING.shineAlpha})`);
+          lg.addColorStop(0.56, 'rgba(255,255,255,0)');
+          lg.addColorStop(1, 'rgba(255,255,255,0)');
+          shineX.globalCompositeOperation = 'source-over';
+          shineX.fillStyle = lg;
+          shineX.fillRect(0, 0, FS, FS);
+          shineX.globalCompositeOperation = 'destination-in';
+          shineX.drawImage(sprite, 0, 0);
+          o.globalCompositeOperation = 'screen';
+          o.drawImage(shineCv, 0, 0);
+          o.globalCompositeOperation = 'source-over';
+        };
+        drawBand(0); // 메인 띠
       }
 
       // 프레임 + 별 (정적).
