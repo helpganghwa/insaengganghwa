@@ -262,11 +262,12 @@ export function TranscendSprite(props: Props) {
   const { code, level, slot, isChampion = false, size = 64, animate = true, className, frameless = false } = props;
   const st = transcendStyle(level);
   if (!atlasCoord(code)) return <EmojiFallback size={size} slot={slot} code={code} className={className} />;
-  // 동적(캔버스+rAF) = 광택(+10) | T8+ 발광 | 챔피언 글로우(swap 후). frameless여도 적용.
-  // 사용자 결정(2026-05-20): 챔피언 발광 ↔ T8+ 글로우 시각 효과 교체.
-  //   챔피언 → 부드러운 라디얼 글로우(등급색, 알파 낮음)
-  //   T8+    → 노란빛 사전합성 블러 발광(크고 펄스 — 기존 챔피언 효과)
-  const dynamic = animate && (st.hasGlow || st.isMax || isChampion);
+  // 동적(캔버스+rAF) 진입 조건 — 사용자 확정(2026-05-20) 최종 매핑:
+  //   챔피언 → 광택 sheen (T 무관)
+  //   T8+    → 노란빛 사전합성 블러 발광
+  //   그 외   → 정적(프레임/별만)
+  // T10의 isMax 광택은 제거 — 광택은 오직 챔피언만의 표식.
+  const dynamic = animate && (st.hasGlow || isChampion);
   if (!dynamic) {
     return <TranscendStatic st={st} size={size} code={code} className={className} frameless={frameless} />;
   }
@@ -302,17 +303,16 @@ function TranscendCanvas({
     const champOverride = isChampion && championMode === 'override';
     const color: RGB = champOverride ? MYTHIC_RGB : [scr, scg, scb];
     const sub: 0 | 1 = (champOverride ? 1 : st.sub ?? 0) as 0 | 1;
-    // ── Swap 후 시각 효과 매핑 ──
-    //   showGlow    : 라디얼 글로우(부드러운 색 라디얼, 알파 낮음). 챔피언 전용으로 이동.
-    //                 → glowEnabled 가드 제거(챔피언 표식 항상 on). override면 그대로 강제.
-    //   showRadiant : 노란빛 사전합성 블러 발광(크고 펄스). T8+ 등급 전용으로 이동.
-    //                 → 챔피언 여부와 무관, st.hasGlow(+8·+9·+10) 기준.
-    //   showShine   : +10 광택 스윕(soft-light). 그대로 유지.
-    const showGlow = champOverride ? true : isChampion;
-    const showShine = champOverride ? false : st.isMax;
+    // ── 시각 효과 매핑(사용자 확정 2026-05-20 최종) ──
+    //   showShine   : 광택 스윕(soft-light sheen). **챔피언 전용**(T 무관).
+    //   showRadiant : 노란빛 사전합성 블러 발광. T8+(st.hasGlow) 전용.
+    //   showGlow    : 라디얼 글로우. 미사용(false).
+    //   showFrame   : 등급 프레임. T1+에서 표시(기존 그대로).
+    const showGlow = false;
+    const showShine = isChampion;
     const showFrame = (champOverride ? true : st.hasFrame) && !frameless;
     const showRadiant = st.hasGlow;
-    const dynamic = animate && (showShine || showRadiant || showGlow);
+    const dynamic = animate && (showShine || showRadiant);
 
     let frameCanvas: HTMLCanvasElement | null = null;
 
