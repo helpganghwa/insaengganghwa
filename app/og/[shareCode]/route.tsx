@@ -15,8 +15,11 @@ const SLOTS = ['weapon', 'armor', 'accessory'] as const;
 /** Pixellab 배경 아트 풀 — public/og/og-1..N.png. 부재 시 그라데이션 폴백. */
 const BG_POOL = 8;
 
-// 초월 별 장식 — 4 모서리에 등급색 ✦ 문자(폰트). Satori 호환(SVG transform 회피).
-// sub=1(짝수 등급)이면 ✦ 옆에 작은 ✦ 1개 더(코너 안쪽). cornerPx ≈ 카드 한 변의 26%.
+// 초월 별 장식 — 4 모서리 등급색 별. Satori 호환을 위해 단순 SVG <polygon>
+// (transform 없음, viewBox 절대 좌표만). 4점 다이아몬드 별 모양.
+// sub=1이면 코너 안쪽에 작은 별 1개 추가.
+const STAR_POINTS =
+  '50,8 60,42 92,50 60,58 50,92 40,58 8,50 40,42';
 function rarityStarsOG(
   colorRgb: readonly [number, number, number],
   sub: 0 | 1,
@@ -25,43 +28,33 @@ function rarityStarsOG(
   const [r, g, b] = colorRgb;
   const color = `rgb(${r},${g},${b})`;
   const accent = `rgb(${Math.round(r + (255 - r) * 0.55)},${Math.round(g + (255 - g) * 0.55)},${Math.round(b + (255 - b) * 0.55)})`;
-  const corners: { pos: React.CSSProperties; accentPos: React.CSSProperties }[] = [
-    { pos: { top: 0, left: 0 }, accentPos: { top: cornerPx * 0.05, left: cornerPx * 0.7 } },
-    { pos: { top: 0, right: 0 }, accentPos: { top: cornerPx * 0.05, right: cornerPx * 0.7 } },
-    { pos: { bottom: 0, left: 0 }, accentPos: { bottom: cornerPx * 0.05, left: cornerPx * 0.7 } },
-    { pos: { bottom: 0, right: 0 }, accentPos: { bottom: cornerPx * 0.05, right: cornerPx * 0.7 } },
+  const big = Math.round(cornerPx * 0.7);
+  const small = Math.round(cornerPx * 0.28);
+  const corners: { pos: React.CSSProperties; small: React.CSSProperties }[] = [
+    { pos: { top: 0, left: 0 }, small: { top: 4, left: cornerPx * 0.55 } },
+    { pos: { top: 0, right: 0 }, small: { top: 4, right: cornerPx * 0.55 } },
+    { pos: { bottom: 0, left: 0 }, small: { bottom: 4, left: cornerPx * 0.55 } },
+    { pos: { bottom: 0, right: 0 }, small: { bottom: 4, right: cornerPx * 0.55 } },
   ];
   const els: React.ReactElement[] = [];
   for (let i = 0; i < corners.length; i++) {
     const c = corners[i]!;
-    // 큰 별
     els.push(
       <div
         key={`s${i}`}
         style={{
           position: 'absolute',
           display: 'flex',
-          alignItems: 'center',
-          justifyContent: 'center',
-          width: cornerPx,
-          height: cornerPx,
+          width: big,
+          height: big,
           ...c.pos,
         }}
       >
-        <div
-          style={{
-            display: 'flex',
-            fontSize: cornerPx * 0.55,
-            color,
-            lineHeight: 1,
-            textShadow: `0 0 ${cornerPx * 0.15}px ${color}`,
-          }}
-        >
-          ✦
-        </div>
+        <svg width={big} height={big} viewBox="0 0 100 100">
+          <polygon points={STAR_POINTS} fill={color} />
+        </svg>
       </div>,
     );
-    // sub=1 위성 별 — 큰 별과 같은 모서리 안쪽에 작게 한 개
     if (sub === 1) {
       els.push(
         <div
@@ -69,13 +62,14 @@ function rarityStarsOG(
           style={{
             position: 'absolute',
             display: 'flex',
-            fontSize: cornerPx * 0.22,
-            color: accent,
-            lineHeight: 1,
-            ...c.accentPos,
+            width: small,
+            height: small,
+            ...c.small,
           }}
         >
-          ✦
+          <svg width={small} height={small} viewBox="0 0 100 100">
+            <polygon points={STAR_POINTS} fill={accent} />
+          </svg>
         </div>,
       );
     }
