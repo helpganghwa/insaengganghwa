@@ -73,6 +73,7 @@ export function EnhanceSlotCard({
   const [pending, startTransition] = useTransition();
   const [nowMs, setNowMs] = useState(0); // SSR 매칭 위해 0 → mount 후 동기화
   const [confirm, setConfirm] = useState(false);
+  const [confirmLeft, setConfirmLeft] = useState(0); // 확인 카운트다운(초). 0=비활성/만료.
   const [flash, setFlash] = useState<Outcome | null>(null);
   const [boast, setBoast] = useState(false);
   const [optimisticDone, setOptimisticDone] = useState(false);
@@ -87,6 +88,24 @@ export function EnhanceSlotCard({
     setOptimisticDone(false);
     setConfirm(false);
   }, [activeJob.jobId]);
+  // 확인 모드 진입 시 3초 카운트다운. 0 도달 시 자동 해제(취소). 다시 탭 → 강화.
+  useEffect(() => {
+    if (!confirm) {
+      setConfirmLeft(0);
+      return;
+    }
+    setConfirmLeft(3);
+    const id = setInterval(() => {
+      setConfirmLeft((s) => {
+        if (s <= 1) {
+          setConfirm(false);
+          return 0;
+        }
+        return s - 1;
+      });
+    }, 1000);
+    return () => clearInterval(id);
+  }, [confirm]);
 
   const startMs = new Date(activeJob.startedAtIso).getTime();
   const endMs = new Date(activeJob.completeAtIso).getTime();
@@ -163,11 +182,17 @@ export function EnhanceSlotCard({
         role="button"
         tabIndex={pending ? -1 : 0}
         aria-label={`강화 시도 — 현재 성공률 ${(effBp / 100).toFixed(1)}%`}
-        onClick={() => !pending && !confirm && setConfirm(true)}
+        onClick={() => {
+          if (pending || flash) return;
+          // 확인 모드: 두 번째 탭 = 강화. 그 외(기본): 첫 탭 = 확인 진입.
+          if (confirm) doAttempt();
+          else setConfirm(true);
+        }}
         onKeyDown={(e) => {
-          if ((e.key === 'Enter' || e.key === ' ') && !pending) {
+          if ((e.key === 'Enter' || e.key === ' ') && !pending && !flash) {
             e.preventDefault();
-            setConfirm(true);
+            if (confirm) doAttempt();
+            else setConfirm(true);
           }
         }}
         className={`relative h-[92px] cursor-pointer overflow-hidden rounded-xl border-2 bg-zinc-950 text-zinc-100 transition active:scale-[0.99] ${
@@ -252,31 +277,13 @@ export function EnhanceSlotCard({
         </div>
 
         {confirm && !flash ? (
-          <div
-            className="absolute inset-0 flex flex-col items-center justify-center gap-2 bg-black/85 px-4 text-center"
-            onClick={(e) => e.stopPropagation()}
-          >
-            <p className="text-[11px] font-semibold break-keep text-amber-200">
-              {ready
-                ? '강화하시겠습니까?'
-                : '아직 최대 확률이 아닙니다. 그래도 강화하시겠습니까?'}
+          <div className="pointer-events-none absolute inset-0 flex flex-col items-center justify-center gap-1 bg-black/85 px-4 text-center">
+            <p className="text-[12px] font-semibold break-keep text-amber-200">
+              {ready ? '다시 탭하면 강화' : '아직 최대 확률이 아닙니다 — 다시 탭하면 강화'}
             </p>
-            <div className="flex gap-2">
-              <button
-                type="button"
-                onClick={doAttempt}
-                className="h-7 rounded-md bg-amber-500 px-3 text-[11px] font-bold text-amber-950"
-              >
-                강화
-              </button>
-              <button
-                type="button"
-                onClick={() => setConfirm(false)}
-                className="h-7 rounded-md border border-zinc-500 px-3 text-[11px] font-bold text-zinc-200"
-              >
-                취소
-              </button>
-            </div>
+            <p className="font-mono text-[10px] tabular-nums text-zinc-300">
+              {confirmLeft}s 후 자동 취소
+            </p>
           </div>
         ) : null}
 
