@@ -78,7 +78,9 @@ export function EnhanceSlotCard({
   const [boast, setBoast] = useState(false);
   const [optimisticDone, setOptimisticDone] = useState(false);
   const [confirmCancel, setConfirmCancel] = useState(false);
+  const [confirmCancelLeft, setConfirmCancelLeft] = useState(0);
   const [confirmReduce, setConfirmReduce] = useState(false);
+  const [confirmReduceLeft, setConfirmReduceLeft] = useState(0);
 
   useEffect(() => {
     setNowMs(Date.now());
@@ -107,6 +109,41 @@ export function EnhanceSlotCard({
     }, 1000);
     return () => clearInterval(id);
   }, [confirm]);
+  // 취소·다이아 단축 — 동일 3s 재탭 패턴(카운트 라벨 노출용 useEffect).
+  useEffect(() => {
+    if (!confirmCancel) {
+      setConfirmCancelLeft(0);
+      return;
+    }
+    setConfirmCancelLeft(3);
+    const id = setInterval(() => {
+      setConfirmCancelLeft((s) => {
+        if (s <= 1) {
+          setConfirmCancel(false);
+          return 0;
+        }
+        return s - 1;
+      });
+    }, 1000);
+    return () => clearInterval(id);
+  }, [confirmCancel]);
+  useEffect(() => {
+    if (!confirmReduce) {
+      setConfirmReduceLeft(0);
+      return;
+    }
+    setConfirmReduceLeft(3);
+    const id = setInterval(() => {
+      setConfirmReduceLeft((s) => {
+        if (s <= 1) {
+          setConfirmReduce(false);
+          return 0;
+        }
+        return s - 1;
+      });
+    }, 1000);
+    return () => clearInterval(id);
+  }, [confirmReduce]);
 
   const startMs = new Date(activeJob.startedAtIso).getTime();
   const endMs = new Date(activeJob.completeAtIso).getTime();
@@ -152,10 +189,9 @@ export function EnhanceSlotCard({
 
   const doReduce = () => {
     if (pending || !instantCost || !canAfford) return;
-    // 다이아 사용도 취소와 동일한 3s 재탭 패턴(오탭 보호 — 즉시 차감 방지).
+    // 다이아 사용 — 취소와 동일 3s 재탭 패턴(오탭 보호). 카운트다운은 useEffect.
     if (!confirmReduce) {
       setConfirmReduce(true);
-      setTimeout(() => setConfirmReduce(false), 3000);
       return;
     }
     setConfirmReduce(false);
@@ -173,7 +209,6 @@ export function EnhanceSlotCard({
     if (pending) return;
     if (!confirmCancel) {
       setConfirmCancel(true);
-      setTimeout(() => setConfirmCancel(false), 3000);
       return;
     }
     startTransition(async () => {
@@ -268,7 +303,7 @@ export function EnhanceSlotCard({
                   : 'border-zinc-600 bg-zinc-800/60 text-amber-200'
               }`}
             >
-              {confirmReduce ? '확정?' : instantCost ? `💎${instantCost}` : '완료'}
+              {confirmReduce ? `확인 ${confirmReduceLeft}s` : instantCost ? `💎${instantCost}` : '완료'}
             </button>
             <button
               type="button"
@@ -283,7 +318,7 @@ export function EnhanceSlotCard({
                   : 'border-zinc-600 bg-zinc-800/60 text-zinc-200'
               }`}
             >
-              {confirmCancel ? '확정?' : '취소'}
+              {confirmCancel ? `확인 ${confirmCancelLeft}s` : '취소'}
             </button>
           </div>
         </div>
