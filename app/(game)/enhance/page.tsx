@@ -1,5 +1,4 @@
-import Link from 'next/link';
-import { and, eq } from 'drizzle-orm';
+import { and, desc, eq, isNull } from 'drizzle-orm';
 
 import { getSessionUserId } from '@/lib/auth/session';
 import { db } from '@/lib/db/client';
@@ -9,6 +8,7 @@ import { enhancementJobs } from '@/lib/db/schema/enhance';
 import { championCatalogIds } from '@/lib/game/codex/ranking';
 
 import { EnhanceSlotCard, type ActiveJob } from './EnhanceSlotCard';
+import { EmptySlotButton, type EnhanceCandidate } from './EnhanceSlotPicker';
 
 const SLOTS: Slot[] = ['weapon', 'armor', 'accessory'];
 const LANES = [1, 2] as const;
@@ -18,7 +18,7 @@ export default async function EnhancePage() {
   const userId = await getSessionUserId();
   if (!userId) return null; // (game) layout이 가드
 
-  const [jobs, profRow, champSet] = await Promise.all([
+  const [jobs, profRow, champSet, candidatesRaw] = await Promise.all([
     db
       .select({
         jobId: enhancementJobs.id,
@@ -45,12 +45,58 @@ export default async function EnhancePage() {
       .where(eq(profiles.id, userId))
       .limit(1),
     championCatalogIds(userId),
+    // 강화 가능 후보: 잠금 X, 진행 중 X. equipped 무관(equippedSlot 포함).
+    // LEFT JOIN status='running' ej → ej.id IS NULL 로 진행 중 제외.
+    db
+      .select({
+        id: equipmentInstances.id,
+        catalogItemId: equipmentInstances.catalogItemId,
+        enhanceLevel: equipmentInstances.enhanceLevel,
+        transcendLevel: equipmentInstances.transcendLevel,
+        equippedSlot: equipmentInstances.equippedSlot,
+        code: catalogItems.code,
+        name: catalogItems.name,
+        slot: catalogItems.slot,
+      })
+      .from(equipmentInstances)
+      .innerJoin(catalogItems, eq(equipmentInstances.catalogItemId, catalogItems.id))
+      .leftJoin(
+        enhancementJobs,
+        and(
+          eq(enhancementJobs.equipmentInstanceId, equipmentInstances.id),
+          eq(enhancementJobs.status, 'running'),
+        ),
+      )
+      .where(
+        and(
+          eq(equipmentInstances.userId, userId),
+          eq(equipmentInstances.isLocked, false),
+          isNull(enhancementJobs.id),
+        ),
+      )
+      .orderBy(desc(equipmentInstances.enhanceLevel), desc(equipmentInstances.createdAt)),
   ]);
 
   const diamond = profRow[0]?.diamond ?? 0n;
   const nickname = profRow[0]?.nickname ?? '플레이어';
   const byLane = new Map<string, (typeof jobs)[number]>();
   for (const j of jobs) byLane.set(`${j.slot}:${j.slotLane}`, j);
+
+  // 후보를 slot별 그룹화 + champion 표식.
+  const candidatesBySlot = new Map<Slot, EnhanceCandidate[]>();
+  for (const s of SLOTS) candidatesBySlot.set(s, []);
+  for (const c of candidatesRaw) {
+    candidatesBySlot.get(c.slot)!.push({
+      id: c.id.toString(),
+      code: c.code,
+      name: c.name,
+      slot: c.slot,
+      enhanceLevel: c.enhanceLevel,
+      transcendLevel: c.transcendLevel,
+      isChampion: champSet.has(c.catalogItemId),
+      equipped: c.equippedSlot !== null,
+    });
+  }
 
   return (
     <div className="space-y-5 px-4 py-4">
@@ -82,13 +128,11 @@ export default async function EnhancePage() {
                 nickname={nickname}
               />
             ) : (
-              <Link
+              <EmptySlotButton
                 key={lane}
-                href={`/inventory?slot=${slot}`}
-                className="flex h-[92px] w-full items-center justify-center gap-2 rounded-xl border-2 border-dashed border-zinc-300 text-sm text-zinc-500 transition hover:border-amber-400 hover:bg-amber-50/40 dark:border-zinc-700 dark:hover:border-amber-700 dark:hover:bg-amber-950/20"
-              >
-                <span className="text-lg">＋</span> {SLOT_LABEL[slot]} 올려 강화
-              </Link>
+                slot={slot}
+                candidates={candidatesBySlot.get(slot) ?? []}
+              />
             );
           })}
         </section>
