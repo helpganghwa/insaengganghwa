@@ -1,11 +1,11 @@
 import 'server-only';
 
-import { and, eq, isNull, sql } from 'drizzle-orm';
+import { and, eq, gt, isNull, sql } from 'drizzle-orm';
 
 import { db } from '@/lib/db/client';
 import { profiles } from '@/lib/db/schema/profiles';
 import { userSupplyBoxes } from '@/lib/db/schema/supply';
-import { mailbox } from '@/lib/db/schema/mailbox';
+import { mailbox, mailClaimLogs } from '@/lib/db/schema/mailbox';
 import { SUPPLY_SLOTS, type SupplySlot } from '@/lib/game/balance';
 
 /**
@@ -56,19 +56,35 @@ const emptyResult = (): ClaimResult => ({
   boxes: { weapon: 0, armor: 0, accessory: 0 },
 });
 
+/** v1 갱신 — 만료(expires_at > now()) 체크 + mail_claim_logs 감사 insert. */
 export function claimMail(input: { userId: string; mailId: bigint }): Promise<ClaimResult> {
   const { userId, mailId } = input;
   return db.transaction(async (tx) => {
     const [m] = await tx
       .select({ id: mailbox.id, payload: mailbox.payload })
       .from(mailbox)
-      .where(and(eq(mailbox.id, mailId), eq(mailbox.userId, userId), isNull(mailbox.claimedAt)))
+      .where(
+        and(
+          eq(mailbox.id, mailId),
+          eq(mailbox.userId, userId),
+          isNull(mailbox.claimedAt),
+          gt(mailbox.expiresAt, sql`now()`),
+        ),
+      )
       .for('update');
-    if (!m) throw new MailError('MAIL_NOT_FOUND');
+    if (!m) throw new MailError('MAIL_NOT_FOUND'); // 이미 수령 / 만료 / 본인 아님
 
+    const payload = m.payload as MailPayload;
     const acc = emptyResult();
-    await applyPayload(tx, userId, m.payload as MailPayload, acc);
+    await applyPayload(tx, userId, payload, acc);
     await tx.update(mailbox).set({ claimedAt: new Date() }).where(eq(mailbox.id, mailId));
+    // 감사 — diamond/boxes 분배 결과 기록(mailbox cron 삭제 후에도 추적 가능).
+    await tx.insert(mailClaimLogs).values({
+      mailId,
+      userId,
+      diamondGranted: BigInt(acc.diamond),
+      boxesGranted: acc.boxes,
+    });
     return acc;
   });
 }
@@ -79,13 +95,30 @@ export function claimAllMail(input: { userId: string }): Promise<ClaimResult> {
     const rows = await tx
       .select({ id: mailbox.id, payload: mailbox.payload })
       .from(mailbox)
-      .where(and(eq(mailbox.userId, userId), isNull(mailbox.claimedAt)))
+      .where(
+        and(
+          eq(mailbox.userId, userId),
+          isNull(mailbox.claimedAt),
+          gt(mailbox.expiresAt, sql`now()`),
+        ),
+      )
       .for('update');
 
     const acc = emptyResult();
     for (const m of rows) {
+      const before = { diamond: acc.diamond, boxes: { ...acc.boxes } };
       await applyPayload(tx, userId, m.payload as MailPayload, acc);
       await tx.update(mailbox).set({ claimedAt: new Date() }).where(eq(mailbox.id, m.id));
+      await tx.insert(mailClaimLogs).values({
+        mailId: m.id,
+        userId,
+        diamondGranted: BigInt(acc.diamond - before.diamond),
+        boxesGranted: {
+          weapon: acc.boxes.weapon - before.boxes.weapon,
+          armor: acc.boxes.armor - before.boxes.armor,
+          accessory: acc.boxes.accessory - before.boxes.accessory,
+        },
+      });
     }
     return acc;
   });
