@@ -351,7 +351,7 @@ function TranscendCanvas({
         const [bc, bx] = mkCanvas();
         bx.imageSmoothingEnabled = false;
         // brightness 1.7 + saturation 1.25 — sprite 색은 유지하면서 광채 추가.
-        bx.filter = 'brightness(1.7) saturate(1.25)';
+        bx.filter = 'brightness(2.5) saturate(1.4)';
         bx.drawImage(atlasImg, coord.x, coord.y, ATLAS_CELL, ATLAS_CELL, SP, SP, SW, SW);
         brightCv = bc;
       }

@@ -62,13 +62,13 @@ export const ASSET_VERSIONS: Record<string, string> = {
   "/sprites/boss/bg/dragon_west.png": "b28cf8da",
   "/sprites/boss/stone_golem__anim.png": "c7d8270a",
   "/sprites/boss/dragon_west.png": "a7d0385c",
-  "/og/og-8.png": "b63f6324",
-  "/og/og-6.png": "508f72d5",
-  "/og/og-7.png": "a3d3b266",
-  "/og/og-5.png": "bed08792",
-  "/og/og-4.png": "4f9b6982",
-  "/og/og-1.png": "406c63ec",
-  "/og/og-3.png": "10ab7900",
-  "/og/og-2.png": "52d487b5",
-  "/sprites/atlas.webp": "c41b9a23"
+  "/og/og-8.png": "1b596525",
+  "/og/og-6.png": "0bba9fe8",
+  "/og/og-7.png": "f9b3df7a",
+  "/og/og-5.png": "4c1db0b5",
+  "/og/og-4.png": "5c551d20",
+  "/og/og-1.png": "413439ad",
+  "/og/og-3.png": "2963471d",
+  "/og/og-2.png": "a71ceb8e",
+  "/sprites/atlas.webp": "260d7d17"
 };

@@ -23,10 +23,10 @@ export const TRANSCEND_TUNING = {
    *  finalZ2 승인 형태(부드러운 중앙 라디얼)를 유지하되 알파만 낮춤. 헤일로/링 금지(흰띠 아티팩트). */
   glowAlpha: 0.18,
   championGlowAlpha: 0.16,
-  /** 챔피언 glare 피크 알파 — 매우 투명. 사용자 피드백 '더더욱 투명'. */
-  shineAlpha: 0.45,
-  /** 광택 띠 반폭 (FS 비율). */
-  shineWidth: 0.18,
+  /** 챔피언 glare 피크 알파 — brightCv mask 방식이라 충분히 강해야 보임. */
+  shineAlpha: 0.95,
+  /** 광택 띠 반폭 (FS 비율). 띠가 넓을수록 sprite 위 빛나는 면적 ↑ */
+  shineWidth: 0.30,
   /** 애니 1주기 ms — 한 번 통과 후 텀 포함. */
   animPeriodMs: 2400,
   /** 1주기당 통과 횟수 — 1회만(반복 사이 텀). */
