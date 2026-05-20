@@ -156,7 +156,7 @@ function Tile({ item, onOpen }: { item: InvItem; onOpen: () => void }) {
       type="button"
       onClick={onOpen}
       disabled={pending}
-      className="relative flex aspect-square flex-col items-center justify-center gap-0.5 rounded-xl border-2 border-zinc-200 bg-white px-1 text-center dark:border-zinc-800 dark:bg-zinc-950"
+      className="relative flex aspect-square flex-col items-center justify-center gap-0.5 overflow-hidden rounded-xl border-2 border-zinc-200 bg-white px-1 text-center dark:border-zinc-800 dark:bg-zinc-950"
     >
       <RarityFrame level={item.transcendLevel} />
       <TranscendSprite

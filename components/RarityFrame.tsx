@@ -22,13 +22,17 @@ function starPoints(R: number): string {
   return pts.join(' ');
 }
 
-// 코너 영역 크기 — 카드 폭의 30%. 너무 크면 가운데 빈 영역으로 ring 형태가 보임.
-// mask-size = 100% / 30% = 333.33% (frame 전체가 그 영역에 그려지고, 30% × 30% 부분만 보임)
+// 코너 영역 — 카드 외측(-8%)부터 30%까지. asset 외곽 padding 때문에 inset:0이면
+// ring 외각이 카드 보더에서 안쪽으로 떨어져 빈공간 발생 → 음수 inset로 외측 확장
+// (overflow-hidden으로 카드 밖은 잘라냄). mask-size는 frame 전체가 카드 영역에
+// 그려지도록 계산: corner div가 카드의 30%면 mask-size 100/30 ≈ 333%.
 const CORNER_PCT = 30;
+const CORNER_INSET_PCT = -8;
 const MASK_PCT = (100 / CORNER_PCT) * 100; // = 333.33%
 
-const STAR_BOX = 8;
-const STAR_INSET = 10;
+// 별 — sub=1만, 코너 ornate 위에 추가 (충분히 크게 보이도록 12%).
+const STAR_BOX = 12;
+const STAR_INSET = 7;
 
 export function RarityFrame({ level, className }: { level: number; className?: string }) {
   const st = transcendStyle(level);
@@ -37,11 +41,12 @@ export function RarityFrame({ level, className }: { level: number; className?: s
   const color = `rgb(${r},${g},${b})`;
   const starCol = `rgb(${Math.round(r + (255 - r) * 0.3)},${Math.round(g + (255 - g) * 0.3)},${Math.round(b + (255 - b) * 0.3)})`;
 
+  const I = `${CORNER_INSET_PCT}%`;
   const corners: { pos: React.CSSProperties; mask: string }[] = [
-    { pos: { top: 0, left: 0 }, mask: '0% 0%' },
-    { pos: { top: 0, right: 0 }, mask: '100% 0%' },
-    { pos: { bottom: 0, left: 0 }, mask: '0% 100%' },
-    { pos: { bottom: 0, right: 0 }, mask: '100% 100%' },
+    { pos: { top: I, left: I }, mask: '0% 0%' },
+    { pos: { top: I, right: I }, mask: '100% 0%' },
+    { pos: { bottom: I, left: I }, mask: '0% 100%' },
+    { pos: { bottom: I, right: I }, mask: '100% 100%' },
   ];
 
   return (
