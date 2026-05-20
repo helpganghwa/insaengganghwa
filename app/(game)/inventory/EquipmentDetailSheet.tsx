@@ -11,7 +11,6 @@ import {
   DIAMOND_PER_DISENCHANT,
   FODDER_REQUIRED_FROM_LEVEL,
 } from '@/lib/game/balance';
-import { formatCompactKR } from '@/lib/ui/format-number';
 
 import type { InvItem } from './InventoryGrid';
 import {
@@ -174,11 +173,11 @@ export function EquipmentDetailSheet({
             </div>
             <div className="text-[11px] tabular-nums">
               <span className="text-zinc-500">⚔️ </span>
-              <span className="font-semibold">{formatCompactKR(cp)}</span>
+              <span className="font-semibold">{cp.toLocaleString('ko-KR')}</span>
               {eqCp != null ? (
                 <span className={`ml-1.5 ${cp - eqCp >= 0 ? 'text-emerald-600' : 'text-red-600'}`}>
                   ({cp - eqCp >= 0 ? '+' : ''}
-                  {formatCompactKR(cp - eqCp)} vs 장착)
+                  {(cp - eqCp).toLocaleString('ko-KR')} vs 장착)
                 </span>
               ) : null}
             </div>

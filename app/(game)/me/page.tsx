@@ -7,7 +7,6 @@ import { profiles } from '@/lib/db/schema/profiles';
 import { catalogItems, equipmentInstances, userCodex, type Slot } from '@/lib/db/schema/equipment';
 import { pieceCombatPower, totalCombatPower } from '@/lib/game/balance';
 import { championCatalogIds } from '@/lib/game/codex/ranking';
-import { formatCompactKR } from '@/lib/ui/format-number';
 
 import { BoastLauncher } from '@/components/BoastModal';
 import { TranscendSprite } from '@/components/TranscendSprite';
@@ -110,7 +109,7 @@ export default async function ProfilePage() {
           })}
         </div>
         <div className="mt-3 border-t border-zinc-100 pt-2 text-right text-sm font-bold dark:border-zinc-900">
-          ⚔️ 총 전투력 {formatCompactKR(total)}
+          ⚔️ 총 전투력 {total.toLocaleString('ko-KR')}
         </div>
       </section>
 

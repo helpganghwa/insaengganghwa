@@ -75,13 +75,13 @@ export function GachaBoxCard({
               보유 <span className="font-mono font-semibold tabular-nums">{count}</span>개
             </span>
           </div>
-          {/* 우측 아래로 버튼 몰아 배경 시각 보존(사용자 결정). 1회·10회 모두 작은 칩 스타일. */}
+          {/* 우측 아래 칩 — 살짝 각진 rounded-md + 단색(덜 화려). */}
           <div className="mt-4 flex justify-end gap-1.5">
             <button
               type="button"
               disabled={pending || count < 1}
               onClick={() => pull(1)}
-              className="rounded-full border border-white/40 bg-white/95 px-3 py-1.5 text-[11px] font-bold text-zinc-900 shadow-md ring-1 ring-white/10 transition-transform active:scale-95 disabled:opacity-40"
+              className="rounded-md bg-white/95 px-3 py-1.5 text-[11px] font-semibold text-zinc-900 shadow-sm transition-transform active:scale-95 disabled:opacity-40"
             >
               {pending ? '여는 중…' : '1회 열기'}
             </button>
@@ -89,7 +89,7 @@ export function GachaBoxCard({
               type="button"
               disabled={pending || count < 10}
               onClick={() => pull(10)}
-              className="rounded-full bg-gradient-to-r from-amber-400 via-orange-500 to-red-500 px-3 py-1.5 text-[11px] font-bold text-white shadow-lg ring-1 ring-amber-300/50 transition-transform active:scale-95 disabled:opacity-40"
+              className="rounded-md bg-amber-500 px-3 py-1.5 text-[11px] font-semibold text-white shadow-sm transition-transform active:scale-95 disabled:opacity-40"
             >
               {pending ? '여는 중…' : '10회 열기'}
             </button>
