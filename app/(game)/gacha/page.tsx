@@ -4,7 +4,7 @@ import { getSessionUserId } from '@/lib/auth/session';
 import { db } from '@/lib/db/client';
 import { userSupplyBoxes } from '@/lib/db/schema/supply';
 import type { Slot } from '@/lib/db/schema/equipment';
-import { vsrc } from '@/lib/asset-version';
+import { assetUrl } from '@/lib/asset-versions';
 
 import { GachaBoxCard } from './GachaBoxCard';
 
@@ -38,7 +38,7 @@ export default async function GachaPage() {
           key={b.slot}
           slot={b.slot}
           label={b.label}
-          bg={vsrc(b.bg)}
+          bg={assetUrl(b.bg)}
           tint={b.tint}
           count={countBySlot.get(b.slot) ?? 0}
         />

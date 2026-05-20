@@ -150,120 +150,68 @@ export function MailButton({ mailBadge }: { mailBadge: string | null }) {
           role="dialog"
           aria-modal="true"
           aria-label="우편함"
-          className="fixed inset-0 z-40 flex items-center justify-center bg-black/75 p-4"
+          className="fixed inset-0 z-40 flex items-center justify-center bg-black/60 p-4"
           onClick={() => setOpen(false)}
         >
           <div
-            className="flex max-h-[82dvh] w-full max-w-[360px] flex-col overflow-hidden rounded-2xl border-2 border-amber-700/70 bg-amber-50 text-amber-950 shadow-2xl shadow-black/50 dark:border-amber-800 dark:bg-stone-950 dark:text-amber-100"
-            style={{
-              backgroundImage:
-                'repeating-linear-gradient(45deg, rgba(146,99,36,0.04) 0 2px, transparent 2px 6px)',
-            }}
+            className="flex max-h-[82dvh] w-full max-w-xs flex-col overflow-hidden rounded-2xl bg-white dark:bg-zinc-950"
             onClick={(e) => e.stopPropagation()}
           >
-            {/* 헤더 — Pixellab 양피지 banner 배경 위 텍스트 overlay */}
-            <header className="relative h-20 overflow-hidden border-b-2 border-amber-700/60 dark:border-amber-900/80">
-              {/* eslint-disable-next-line @next/next/no-img-element */}
-              <img
-                src="/sprites/ui/mail-header.png"
-                alt=""
-                aria-hidden
-                draggable={false}
-                className="absolute inset-0 h-full w-full object-cover"
-                style={{ imageRendering: 'pixelated' }}
-              />
-              <div className="absolute inset-0 bg-gradient-to-r from-black/70 via-black/30 to-black/70" />
-              <div className="relative flex h-full items-center justify-between px-4">
-                <h2
-                  className="text-base font-bold tracking-wider text-amber-100"
-                  style={{ fontFamily: 'serif', textShadow: '1px 1px 2px rgba(0,0,0,0.85)' }}
-                >
-                  ✉️ 우편함
-                  {items != null ? (
-                    <span className="ml-1.5 text-xs font-normal text-amber-200/90">
-                      ({items.length})
-                    </span>
-                  ) : null}
-                </h2>
-                <button
-                  type="button"
-                  onClick={() => setOpen(false)}
-                  className="flex h-8 w-8 items-center justify-center rounded-full bg-black/40 text-base leading-none text-amber-100 hover:bg-black/60"
-                  aria-label="닫기"
-                >
-                  ×
-                </button>
-              </div>
+            <header className="flex items-center justify-between border-b border-zinc-100 px-4 py-3 dark:border-zinc-900">
+              <h2 className="text-sm font-semibold">
+                ✉️ 우편함
+                {items != null ? (
+                  <span className="ml-1 text-xs font-normal text-zinc-500">({items.length})</span>
+                ) : null}
+              </h2>
+              <button
+                type="button"
+                onClick={() => setOpen(false)}
+                className="text-base leading-none text-zinc-400 hover:text-zinc-700 dark:hover:text-zinc-300"
+                aria-label="닫기"
+              >
+                ×
+              </button>
             </header>
 
-            <div className="flex-1 overflow-y-auto px-4 py-3">
+            <div className="flex-1 overflow-y-auto px-3 py-3">
               {error ? (
-                <p className="mb-2 rounded border border-red-300 bg-red-50 px-2 py-1 text-[11px] text-red-800 dark:border-red-900/60 dark:bg-red-950/60 dark:text-red-300">
+                <p className="mb-2 rounded bg-red-50 px-2 py-1 text-[11px] text-red-700 dark:bg-red-950/60 dark:text-red-300">
                   {error}
                 </p>
               ) : null}
               {loading && items == null ? (
-                <p
-                  className="py-10 text-center text-xs text-amber-800/70 dark:text-amber-200/60"
-                  style={{ fontFamily: 'serif' }}
-                >
-                  파발이 도착 중…
-                </p>
+                <p className="py-10 text-center text-xs text-zinc-500">불러오는 중…</p>
               ) : items != null && items.length === 0 ? (
-                <p
-                  className="rounded-lg border-2 border-dashed border-amber-700/40 p-10 text-center text-xs text-amber-800/70 dark:border-amber-800/50 dark:text-amber-200/60"
-                  style={{ fontFamily: 'serif' }}
-                >
-                  도착한 우편이 없습니다.
+                <p className="rounded-lg border border-dashed border-zinc-300 p-8 text-center text-xs text-zinc-500 dark:border-zinc-700">
+                  받지 않은 우편이 없습니다.
                 </p>
               ) : items != null ? (
-                <ul className="space-y-2.5">
+                <ul className="space-y-1.5">
                   {items.map((m) => {
                     const expMs = new Date(m.expiresAtIso).getTime();
                     const expSoon = expMs - nowMs < 24 * 3_600_000;
                     return (
                       <li
                         key={m.id}
-                        className="relative rounded-lg border border-amber-700/40 bg-gradient-to-b from-amber-100 to-amber-50 p-3 shadow-sm dark:border-amber-800/60 dark:from-stone-900 dark:to-stone-950"
+                        className="rounded-lg border border-zinc-200 p-2.5 dark:border-zinc-800"
                       >
-                        {/* 왁스 봉인 — 좌상단 */}
-                        <span
-                          aria-hidden
-                          className="absolute -left-1.5 -top-1.5 flex h-5 w-5 items-center justify-center rounded-full bg-red-700 text-[9px] text-amber-100 shadow"
-                          style={{
-                            boxShadow: '0 0 0 1.5px rgba(123,40,30,0.6), 0 1px 2px rgba(0,0,0,0.5)',
-                          }}
-                        >
-                          ✦
-                        </span>
                         <div className="flex items-baseline justify-between gap-2">
                           <div className="min-w-0 flex-1">
-                            <div className="flex items-center gap-1.5 text-[10px]">
-                              <span
-                                className="font-semibold text-amber-900 dark:text-amber-200"
-                                style={{ fontFamily: 'serif' }}
-                              >
-                                {m.senderLabel}
-                              </span>
-                              <span className="text-amber-700/60 dark:text-amber-300/60">·</span>
+                            <div className="flex items-center gap-1 text-[10px] text-zinc-500">
+                              <span>{m.senderLabel}</span>
+                              <span>·</span>
                               <span
                                 className={
-                                  expSoon
-                                    ? 'font-semibold text-red-700 dark:text-red-400'
-                                    : 'text-amber-700/70 dark:text-amber-300/70'
+                                  expSoon ? 'text-red-600 dark:text-red-400' : 'text-zinc-500'
                                 }
                               >
                                 {fmtRemaining(expMs, nowMs)}
                               </span>
                             </div>
-                            <div
-                              className="mt-0.5 truncate text-sm font-bold"
-                              style={{ fontFamily: 'serif' }}
-                            >
-                              {m.title}
-                            </div>
+                            <div className="mt-0.5 truncate text-sm font-semibold">{m.title}</div>
                             {m.body ? (
-                              <p className="mt-1 line-clamp-2 text-[11px] leading-relaxed text-amber-900/80 dark:text-amber-200/70">
+                              <p className="mt-1 line-clamp-2 text-[11px] text-zinc-600 dark:text-zinc-400">
                                 {m.body}
                               </p>
                             ) : null}
@@ -272,12 +220,12 @@ export function MailButton({ mailBadge }: { mailBadge: string | null }) {
                             type="button"
                             disabled={pending}
                             onClick={() => claim(m.id)}
-                            className="shrink-0 rounded-full border border-amber-700 bg-amber-600 px-3 py-1.5 text-[11px] font-bold text-amber-50 shadow-sm disabled:opacity-40 hover:bg-amber-500"
+                            className="shrink-0 rounded-full bg-zinc-900 px-3 py-1.5 text-[11px] font-semibold text-white disabled:opacity-40 dark:bg-zinc-50 dark:text-zinc-950"
                           >
-                            수령
+                            받기
                           </button>
                         </div>
-                        <div className="mt-2">
+                        <div className="mt-1.5">
                           <PayloadChips payload={m.payload} />
                         </div>
                       </li>
@@ -288,15 +236,14 @@ export function MailButton({ mailBadge }: { mailBadge: string | null }) {
             </div>
 
             {items != null && items.length > 0 ? (
-              <div className="border-t-2 border-amber-700/50 bg-amber-100/70 px-4 py-3 dark:border-amber-900/70 dark:bg-stone-900/80">
+              <div className="border-t border-zinc-100 px-3 py-3 dark:border-zinc-900">
                 <button
                   type="button"
                   disabled={pending}
                   onClick={claimAll}
-                  className="w-full rounded-full border border-amber-800 bg-gradient-to-b from-amber-500 to-amber-700 px-3 py-2.5 text-sm font-bold text-amber-50 shadow disabled:opacity-40"
-                  style={{ fontFamily: 'serif', textShadow: '1px 1px 1px rgba(0,0,0,0.4)' }}
+                  className="w-full rounded-full bg-amber-500 px-3 py-2.5 text-sm font-bold text-amber-950 disabled:opacity-40"
                 >
-                  {pending ? '수령 중…' : `📜 ${items.length}건 모두 수령`}
+                  {pending ? '수령 중…' : `${items.length}건 모두 받기`}
                 </button>
               </div>
             ) : null}
@@ -304,10 +251,7 @@ export function MailButton({ mailBadge }: { mailBadge: string | null }) {
 
           {toast ? (
             <div className="pointer-events-none fixed inset-x-0 bottom-20 z-50 flex justify-center px-4">
-              <div
-                className="rounded-full border border-amber-700 bg-amber-50 px-4 py-2 text-xs font-bold text-amber-950 shadow-lg dark:border-amber-800 dark:bg-stone-950 dark:text-amber-100"
-                style={{ fontFamily: 'serif' }}
-              >
+              <div className="rounded-full bg-zinc-900 px-4 py-2 text-xs font-semibold text-white shadow-lg dark:bg-zinc-50 dark:text-zinc-950">
                 {toast}
               </div>
             </div>

@@ -25,6 +25,7 @@ import { startEnhance } from '@/app/(game)/enhance/actions';
 import { BoastModal } from '@/components/BoastModal';
 import { TranscendSprite } from '@/components/TranscendSprite';
 import { RarityFrame, rarityBorderStyle, hasRarityBorder } from '@/components/RarityFrame';
+import { assetUrl } from '@/lib/asset-versions';
 
 const SLOT_LABEL: Record<Slot, string> = { weapon: '무기', armor: '방어구', accessory: '장신구' };
 
@@ -207,7 +208,7 @@ export function EquipmentDetailSheet({
             }
             className={BTN}
           >
-            <BtnBg src="/sprites/ui/btn-enhance.png" label="강화" sub={needsFodderEnhance ? '제물 1' : undefined} />
+            <BtnBg src={assetUrl('/sprites/ui/btn-enhance.png')} label="강화" sub={needsFodderEnhance ? '제물 1' : undefined} />
           </button>
           {/* 초월 */}
           <button
@@ -231,7 +232,7 @@ export function EquipmentDetailSheet({
             className={confirmT ? BTN_CONFIRM : BTN}
           >
             <BtnBg
-              src="/sprites/ui/btn-transcend.png"
+              src={assetUrl("/sprites/ui/btn-transcend.png")}
               label={confirmT ? '확정?' : '초월'}
               sub={atMax ? 'MAX' : `T${nextT} · ${fodderOwned}/${fodderNeed}`}
             />
@@ -245,7 +246,7 @@ export function EquipmentDetailSheet({
             }
             className={BTN}
           >
-            <BtnBg src="/sprites/ui/btn-equip.png" label={item.equipped ? '해제' : '장착'} />
+            <BtnBg src={assetUrl("/sprites/ui/btn-equip.png")} label={item.equipped ? '해제' : '장착'} />
           </button>
           {/* 잠금 토글 */}
           <button
@@ -254,7 +255,7 @@ export function EquipmentDetailSheet({
             onClick={() => run(() => toggleLockAction(item.id))}
             className={BTN}
           >
-            <BtnBg src="/sprites/ui/btn-lock.png" label={item.isLocked ? '해제' : '잠금'} />
+            <BtnBg src={assetUrl("/sprites/ui/btn-lock.png")} label={item.isLocked ? '해제' : '잠금'} />
           </button>
           {/* 분해 */}
           <button
@@ -272,14 +273,14 @@ export function EquipmentDetailSheet({
             className={confirmD ? BTN_CONFIRM : BTN}
           >
             <BtnBg
-              src="/sprites/ui/btn-disenchant.png"
+              src={assetUrl("/sprites/ui/btn-disenchant.png")}
               label={confirmD ? '확정?' : '분해'}
               sub={canDisenchant ? `💎${DIAMOND_PER_DISENCHANT}` : undefined}
             />
           </button>
           {/* 자랑 */}
           <button type="button" onClick={() => setBoast(true)} className={BTN}>
-            <BtnBg src="/sprites/ui/btn-boast.png" label="자랑" />
+            <BtnBg src={assetUrl("/sprites/ui/btn-boast.png")} label="자랑" />
           </button>
         </div>
 
