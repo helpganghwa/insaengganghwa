@@ -33,21 +33,26 @@ const BOXES: { slot: string; prompt: string }[] = [
   {
     slot: 'armor',
     prompt:
-      'ornate dark wooden treasure chest overflowing with a varied assortment of ' +
-      'armor — polished steel breastplate, plumed helmet, chainmail shirt, leather ' +
-      'boots, round kite shield, iron gauntlets — each clearly distinct and visible ' +
-      'spilling out, golden brass corners, warm torch lighting, deep dungeon stone ' +
-      'chamber filling the entire frame, ' + COMMON,
+      'ornate dark wooden treasure chest overflowing with a wide assortment of armor ' +
+      'pieces of clearly different shapes — a full plate breastplate, a horned ' +
+      'barbarian helmet, a chainmail hooded shirt, a small round wooden shield, ' +
+      'a tall pointed kite shield, leather riding boots, iron gauntlets, a winged ' +
+      'great helm — every item visibly distinct silhouette (not just color), each ' +
+      'recognizable as its own type, spilling out of the chest, golden brass ' +
+      'corners, warm torch lighting, deep dungeon stone chamber filling the entire ' +
+      'frame, ' + COMMON,
   },
   {
     slot: 'accessory',
     prompt:
-      'ornate dark jewelry box overflowing with a varied assortment of accessories — ' +
-      'golden ring with ruby, silver pendant amulet, emerald earrings, jeweled ' +
-      'bracelet, ornate brooch, mystical talisman, gemstone necklace — each clearly ' +
-      'distinct and visible spilling out, polished mahogany wood, golden brass ' +
-      'corners, warm candle lighting, deep velvet boudoir chamber filling the entire ' +
-      'frame, ' + COMMON,
+      'ornate dark jewelry box overflowing with a wide assortment of accessories of ' +
+      'clearly different shapes — a thick gold band ring with a ruby, a silver ' +
+      'pendant necklace on chain, a small jeweled crown tiara, dangling teardrop ' +
+      'earrings, a wide cuff bracelet, a circular medallion brooch, a triangular ' +
+      'glowing talisman, a delicate anklet — every item visibly distinct ' +
+      'silhouette (not just color), each recognizable as its own type, spilling ' +
+      'out of the box, polished mahogany wood, golden brass corners, warm candle ' +
+      'lighting, deep velvet boudoir chamber filling the entire frame, ' + COMMON,
   },
 ];
 

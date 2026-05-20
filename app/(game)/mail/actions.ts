@@ -1,8 +1,11 @@
 'use server';
 
 import { revalidatePath } from 'next/cache';
+import { and, desc, eq, gt, isNull, sql } from 'drizzle-orm';
 
 import { getSessionUserId } from '@/lib/auth/session';
+import { db } from '@/lib/db/client';
+import { mailbox } from '@/lib/db/schema/mailbox';
 import { rateLimited } from '@/lib/ratelimit';
 import {
   claimMail,
@@ -10,6 +13,7 @@ import {
   MailError,
   type ClaimResult,
 } from '@/lib/game/mailbox';
+import type { MailItem } from './MailList';
 
 type ErrorState = { status: 'error'; code: string; message: string };
 
@@ -48,6 +52,41 @@ export async function claimMailAction(
     console.error('[mail.claim]', e);
     return err('UNKNOWN');
   }
+}
+
+/** 미수령(미만료) 우편 — 헤더 팝업용 fetch action. 최대 50건. */
+export async function getUnreadMailsAction(): Promise<MailItem[]> {
+  const userId = await uid();
+  if (!userId) return [];
+  const rows = await db
+    .select({
+      id: mailbox.id,
+      type: mailbox.type,
+      title: mailbox.title,
+      body: mailbox.body,
+      senderLabel: mailbox.senderLabel,
+      payload: mailbox.payload,
+      claimedAt: mailbox.claimedAt,
+      expiresAt: mailbox.expiresAt,
+      createdAt: mailbox.createdAt,
+    })
+    .from(mailbox)
+    .where(
+      and(eq(mailbox.userId, userId), isNull(mailbox.claimedAt), gt(mailbox.expiresAt, sql`now()`)),
+    )
+    .orderBy(desc(mailbox.createdAt))
+    .limit(50);
+  return rows.map((r) => ({
+    id: r.id.toString(),
+    type: r.type,
+    title: r.title || (r.type === 'admin' ? '운영자 메시지' : '우편'),
+    body: r.body || '',
+    senderLabel: r.senderLabel,
+    payload: r.payload as MailItem['payload'],
+    claimedAtIso: r.claimedAt ? r.claimedAt.toISOString() : null,
+    expiresAtIso: r.expiresAt.toISOString(),
+    createdAtIso: r.createdAt.toISOString(),
+  }));
 }
 
 export async function claimAllMailAction(): Promise<

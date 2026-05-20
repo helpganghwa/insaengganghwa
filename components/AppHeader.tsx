@@ -6,6 +6,7 @@ import { profiles } from '@/lib/db/schema/profiles';
 import { mailbox } from '@/lib/db/schema/mailbox';
 import { withTimeout } from '@/lib/db/with-timeout';
 import { formatCompactKR } from '@/lib/ui/format-number';
+import { MailButton } from '@/components/MailButton';
 
 /**
  * WIREFRAMES §0 — 좌: ⚒️ 인생강화 / 우: 닉네임 · ✉️ 우편 · 🏆 랭킹 · 💎 다이아.
@@ -49,18 +50,7 @@ export async function AppHeader({ userId }: { userId: string }) {
         <span className="max-w-[68px] truncate text-zinc-700 dark:text-zinc-200">
           {nickname}
         </span>
-        <Link
-          href="/mail"
-          aria-label={`우편함${mailBadge ? ` 미수령 ${mailBadge}` : ''}`}
-          className="relative inline-flex items-center gap-1 rounded-full bg-zinc-100 px-2 py-0.5 text-zinc-700 dark:bg-zinc-800 dark:text-zinc-100"
-        >
-          <span aria-hidden>✉️</span>
-          {mailBadge ? (
-            <span className="absolute -right-1 -top-1 inline-flex h-4 min-w-[16px] items-center justify-center rounded-full bg-red-500 px-1 text-[9px] font-bold text-white">
-              {mailBadge}
-            </span>
-          ) : null}
-        </Link>
+        <MailButton mailBadge={mailBadge} />
         {/* 랭킹 순위 숫자는 leaderboard 쿼리 구현 시 표기 (현재 링크만). */}
         <Link
           href="/leaderboard"
