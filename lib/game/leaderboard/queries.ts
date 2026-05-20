@@ -1,5 +1,6 @@
 import 'server-only';
 
+import { unstable_cache } from 'next/cache';
 import { eq, sql } from 'drizzle-orm';
 
 import { db } from '@/lib/db/client';
@@ -77,17 +78,27 @@ async function combatRows() {
   }));
 }
 
-async function allRows(metric: LeaderboardMetric) {
-  if (metric === 'max') return maxRows();
-  if (metric === 'sum') return sumRows();
-  return combatRows();
-}
+// metric별 unstable_cache 60s — 한 번 fetch 후 60s 동안 즉시(메모리/ISR) 응답.
+// 풀(max:1) 직렬 압력으로 SSR 매달림이 무한 로딩 원인 → 캐시로 fetch 자체 회피.
+// 첫 캐시 미스 시는 timeout 8s 가드 + 빈 폴백(페이지는 항상 응답).
+const cachedMax = unstable_cache(maxRows, ['leaderboard:max'], {
+  revalidate: 60,
+  tags: ['leaderboard'],
+});
+const cachedSum = unstable_cache(sumRows, ['leaderboard:sum'], {
+  revalidate: 60,
+  tags: ['leaderboard'],
+});
+const cachedCombat = unstable_cache(combatRows, ['leaderboard:combat'], {
+  revalidate: 60,
+  tags: ['leaderboard'],
+});
 
-// 풀(max:1) 직렬 압력으로 SSR이 매달리면 라우트 전환 오버레이 무한 → 페이지 진입 불가.
-// 짧은 가드 + 빈 폴백으로 항상 응답. 차후 풀 확장/캐싱 시 가드 제거.
-const TIMEOUT_MS = 3000;
-const safeRows = (m: LeaderboardMetric) =>
-  withTimeout(allRows(m), TIMEOUT_MS, `leaderboard.${m}`).catch(() => []);
+const TIMEOUT_MS = 8000;
+const safeRows = (m: LeaderboardMetric) => {
+  const fn = m === 'max' ? cachedMax : m === 'sum' ? cachedSum : cachedCombat;
+  return withTimeout(fn(), TIMEOUT_MS, `leaderboard.${m}`).catch(() => []);
+};
 
 /**
  * Top + 내 순위 — **단일 쿼리 1회**로 둘 다 계산(같은 데이터를 두 번 안 가져옴).
