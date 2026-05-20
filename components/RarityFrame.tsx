@@ -1,13 +1,16 @@
-import { transcendStyle, TRANSCEND_TUNING } from '@/lib/game/equipment/transcend';
+import { transcendStyle } from '@/lib/game/equipment/transcend';
 
 /**
- * 카드 보더로 등급 frame을 흡수하는 absolute overlay.
- * 부모 컨테이너는 `position: relative` + `aspect-square`(혹은 정사각) 필요.
- * Frame mask는 사각형 외곽 ring + 코너 ornate 형태(중앙은 투명) →
- * 부모 카드의 내용물(이미지·이름·레벨)을 가리지 않음.
+ * 카드 보더에 등급 ornate 코너 장식을 얹는 absolute overlay.
+ * 부모는 `position: relative` 필요.
  *
- * 사용 컨텍스트: 인벤토리·도감·강화소·가챠 결과 등 sprite + 메타가 있는 카드.
- * sprite는 frameless로 그려 시각 외곽선이 카드 보더(=등급 frame)에 단일화됨.
+ * 디자인 결정:
+ *   카드 보더 두께는 기존(border-2)을 유지하고 *색만* 등급색으로 흡수. 그 위에
+ *   4 모서리 별(sub=1, 짝수 등급)만 overlay → 시각적으로 "코너 ornate가 보더 위에
+ *   덧붙은" 형태. 두꺼운 frame mask ring을 그리지 않으므로 기존 보더 두께와의
+ *   이질감 없음. 등급 정보는 (a) 카드 보더 색 (b) 짝수 등급의 별로 표현.
+ *
+ *  +0(none) → null 반환 (부모가 회색 기본 보더 유지)
  */
 function starPoints(R: number): string {
   const pts: string[] = [];
@@ -19,75 +22,59 @@ function starPoints(R: number): string {
   return pts.join(' ');
 }
 
-// 원본 sprite 디자인 의도 보존: 별은 모서리 안쪽에 *작게*.
-// 카드(부모 영역) 기준 — frame mask의 외측 확장과는 별개 좌표계.
-const STAR_BOX = 9; // 카드 폭의 9% (원본 sprite 64px 안에서 16% ≈ 10px과 시각적 동급)
-const STAR_INSET = 4.5; // 별 좌상 좌표 inset (% — 별 중심이 카드 모서리에서 9% 안쪽)
+// 별 — 카드 영역 기준. 모서리에서 충분히 안쪽(중심 ≈ 카드 14% 위치).
+const STAR_BOX = 8; // 카드 폭의 8% 별 박스
+const STAR_INSET = 10; // 별 좌상단 inset (% — 별 중심이 카드 모서리에서 14% 안쪽)
 
-export function RarityFrame({
-  level,
-  className,
-}: {
-  /** transcend_level (0..MAX). +0이면 frame 없음(null 반환). */
-  level: number;
-  /** 부모는 반드시 position:relative. 이 컴포넌트는 부모 영역 전체를 absolute로 덮음. */
-  className?: string;
-}) {
+/**
+ * 등급 시각 표식(코너 별만). 카드 보더 *색*은 호출자가 등급색으로 별도 설정한다
+ * (`useRarityBorder` 헬퍼 사용 권장).
+ */
+export function RarityFrame({ level, className }: { level: number; className?: string }) {
   const st = transcendStyle(level);
-  if (!st.hasFrame) return null;
+  // 별은 sub=1(짝수 등급)만. +0 / 홀수(sub=0)는 보더 색만으로 표현 → 이 컴포넌트 미렌더.
+  if (!st.hasFrame || st.sub !== 1) return null;
   const [r, g, b] = st.colorRgb;
-  const frameCol = `rgb(${r},${g},${b})`;
   const starCol = `rgb(${Math.round(r + (255 - r) * 0.3)},${Math.round(g + (255 - g) * 0.3)},${Math.round(b + (255 - b) * 0.3)})`;
-  const corners: { style: React.CSSProperties }[] = [
-    { style: { left: `${STAR_INSET}%`, top: `${STAR_INSET}%` } },
-    { style: { right: `${STAR_INSET}%`, top: `${STAR_INSET}%` } },
-    { style: { left: `${STAR_INSET}%`, bottom: `${STAR_INSET}%` } },
-    { style: { right: `${STAR_INSET}%`, bottom: `${STAR_INSET}%` } },
+  const corners: React.CSSProperties[] = [
+    { left: `${STAR_INSET}%`, top: `${STAR_INSET}%` },
+    { right: `${STAR_INSET}%`, top: `${STAR_INSET}%` },
+    { left: `${STAR_INSET}%`, bottom: `${STAR_INSET}%` },
+    { right: `${STAR_INSET}%`, bottom: `${STAR_INSET}%` },
   ];
-  // Frame mask asset(transcend-frame.png)은 내부 ring 디자인이라 inset:0이면
-  // ring이 카드 *안쪽*에 떨어져 보더 대체 느낌이 안 남. 두 레이어 분리:
-  //  (1) frame mask — inset:'-8%'로 카드 외측까지 확장(ring이 보더 자리에)
-  //  (2) 별 — inset:0 (카드 영역 기준). 원본 디자인 비율(작게·모서리 안쪽) 보존.
   return (
-    <>
-      {/* (1) Frame 본체 — 외측 확장 */}
-      <div
-        aria-hidden
-        className={className}
-        style={{
-          position: 'absolute',
-          inset: '-8%',
-          pointerEvents: 'none',
-          backgroundColor: frameCol,
-          WebkitMaskImage: `url(${TRANSCEND_TUNING.frameAsset})`,
-          maskImage: `url(${TRANSCEND_TUNING.frameAsset})`,
-          WebkitMaskSize: '100% 100%',
-          maskSize: '100% 100%',
-          WebkitMaskRepeat: 'no-repeat',
-          maskRepeat: 'no-repeat',
-        }}
-      />
-      {/* (2) 별 4개 — 카드 영역 기준. sub=1(짝수 등급)일 때만. */}
-      {st.sub === 1 ? (
-        <div aria-hidden style={{ position: 'absolute', inset: 0, pointerEvents: 'none' }}>
-          {corners.map((c, i) => (
-            <svg
-              key={i}
-              aria-hidden
-              viewBox={`0 0 ${STAR_BOX} ${STAR_BOX}`}
-              style={{
-                position: 'absolute',
-                width: `${STAR_BOX}%`,
-                height: `${STAR_BOX}%`,
-                ...c.style,
-              }}
-            >
-              <polygon points={starPoints(STAR_BOX / 2)} fill={starCol} />
-              <circle cx={STAR_BOX / 2} cy={STAR_BOX / 2} r={STAR_BOX * 0.09} fill="rgba(255,255,255,0.92)" />
-            </svg>
-          ))}
-        </div>
-      ) : null}
-    </>
+    <div
+      aria-hidden
+      className={className}
+      style={{ position: 'absolute', inset: 0, pointerEvents: 'none' }}
+    >
+      {corners.map((c, i) => (
+        <svg
+          key={i}
+          aria-hidden
+          viewBox={`0 0 ${STAR_BOX} ${STAR_BOX}`}
+          style={{ position: 'absolute', width: `${STAR_BOX}%`, height: `${STAR_BOX}%`, ...c }}
+        >
+          <polygon points={starPoints(STAR_BOX / 2)} fill={starCol} />
+          <circle cx={STAR_BOX / 2} cy={STAR_BOX / 2} r={STAR_BOX * 0.09} fill="rgba(255,255,255,0.92)" />
+        </svg>
+      ))}
+    </div>
   );
+}
+
+/**
+ * 카드 보더에 적용할 inline style — hasFrame이면 등급색, 아니면 빈 객체(부모의
+ * 기본 회색 border 유지). hasFrame과 함께 className에서 `border-2`는 유지하되
+ * `border-zinc-200 dark:border-zinc-800`은 빼고 호출자가 조건부로 적용한다.
+ */
+export function rarityBorderStyle(level: number): React.CSSProperties {
+  const st = transcendStyle(level);
+  if (!st.hasFrame) return {};
+  const [r, g, b] = st.colorRgb;
+  return { borderColor: `rgb(${r},${g},${b})` };
+}
+
+export function hasRarityBorder(level: number): boolean {
+  return transcendStyle(level).hasFrame;
 }
