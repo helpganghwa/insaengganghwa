@@ -87,16 +87,15 @@ export async function GET(_req: Request, { params }: { params: Promise<{ shareCo
   // 배경: 요청마다 진한 랜덤(no-store) — 풀 1개 시도, 부재면 그라데이션.
   const bgUri = await dataUri(`${origin}/og/og-${1 + Math.floor(Math.random() * BG_POOL)}.png`);
 
-  // 위아래 padding을 늘려(64→96) 카카오톡 카드의 cover 크롭(상하 잘림) 안전.
-  // 카톡은 1200×630 카드를 ≈5:4 비율로 cover 크롭하는 경우가 있어 상단·하단 약
-  // 96~120px이 잘릴 수 있다 → 콘텐츠를 vertical center 그룹화 + 상하 여백 보강.
+  // 카톡 카드의 cover 크롭(상하 ~120px / 좌우 ~130px 잘림) 안전을 위한 큰 padding.
+  // 콘텐츠가 어느 비율에서도 잘리지 않게 중앙 940×~390 영역 안에 배치.
   const rootBase = {
     width: '100%',
     height: '100%',
     display: 'flex',
     flexDirection: 'column' as const,
     color: '#fde9c8',
-    padding: '96px 80px',
+    padding: '130px 130px',
     fontFamily: 'sans-serif',
     position: 'relative' as const,
   };
@@ -146,16 +145,7 @@ export async function GET(_req: Request, { params }: { params: Promise<{ shareCo
         ) : null}
         <div
           style={{
-            display: 'flex', fontSize: 44, fontWeight: 800, color: '#fde9c8',
-            letterSpacing: 2, justifyContent: 'center',
-          }}
-        >
-          ⚒️ 인생강화
-        </div>
-        <div
-          style={{
             display: 'flex', alignItems: 'center', justifyContent: 'center', flex: 1,
-            marginTop: 16,
           }}
         >
           <div
@@ -245,19 +235,7 @@ export async function GET(_req: Request, { params }: { params: Promise<{ shareCo
           gap: 44,
         }}
       >
-      {/* 헤더 — 타이틀만(닉네임 제거, 사용자 결정). 가운데 정렬. */}
-      <div
-        style={{
-          display: 'flex',
-          fontSize: 56,
-          fontWeight: 800,
-          color: '#fde9c8',
-          letterSpacing: 2,
-          justifyContent: 'center',
-        }}
-      >
-        ⚒️ 인생강화
-      </div>
+      {/* 헤더 제거(사용자 결정 2026-05-20) — 타이틀 없이 슬롯 정보만. */}
 
       {/* 3 슬롯 가로 배치 — 각 슬롯은 sprite(위) + 이름+레벨(아래) column. */}
       <div
@@ -289,12 +267,12 @@ export async function GET(_req: Request, { params }: { params: Promise<{ shareCo
               <div
                 style={{
                   position: 'relative',
-                  width: 220,
-                  height: 220,
+                  width: 200,
+                  height: 200,
                   display: 'flex',
                   alignItems: 'center',
                   justifyContent: 'center',
-                  borderRadius: 24,
+                  borderRadius: 22,
                   background: 'rgba(0,0,0,0.36)',
                   border: ts
                     ? `6px solid rgb(${tr},${tg},${tb})`
@@ -304,19 +282,19 @@ export async function GET(_req: Request, { params }: { params: Promise<{ shareCo
                 }}
               >
                 {spr ? (
-                  <img src={spr} width={184} height={184} style={{ width: 184, height: 184 }} />
+                  <img src={spr} width={168} height={168} style={{ width: 168, height: 168 }} />
                 ) : (
-                  <span style={{ fontSize: 108, opacity: it ? 1 : 0.4 }}>{EMOJI[s]}</span>
+                  <span style={{ fontSize: 100, opacity: it ? 1 : 0.4 }}>{EMOJI[s]}</span>
                 )}
                 {/* 초월 별 장식은 Satori 제약으로 제거됨 — 등급은 보더 색 + boxShadow로 표현. */}
               </div>
               <div
                 style={{
                   display: 'flex',
-                  fontSize: 26,
+                  fontSize: 24,
                   fontWeight: 700,
                   opacity: it ? 1 : 0.4,
-                  maxWidth: 260,
+                  maxWidth: 240,
                   textAlign: 'center',
                   overflow: 'hidden',
                   justifyContent: 'center',
