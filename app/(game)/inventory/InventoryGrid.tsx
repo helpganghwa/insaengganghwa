@@ -6,6 +6,7 @@ import { useRouter } from 'next/navigation';
 import type { Slot } from '@/lib/db/schema/equipment';
 
 import { TranscendSprite } from '@/components/TranscendSprite';
+import { RarityFrame } from '@/components/RarityFrame';
 import { transcendStyle } from '@/lib/game/equipment/transcend';
 
 import { toggleLockAction, equipBestSetAction } from './actions';
@@ -149,23 +150,19 @@ function Tile({ item, onOpen }: { item: InvItem; onOpen: () => void }) {
   const [pending, startTransition] = useTransition();
   const router = useRouter();
   const isNew = Date.now() - item.acquiredAtMs < NEW_MS;
-  // 카드 보더가 등급(transcend) 색을 흡수 → sprite는 frameless로 2중 외곽선 제거.
-  // +0(none)은 중성 회색 유지(기존 톤).
+  // 카드 보더 = 등급 frame 자체(ornate 사각 ring + 코너 별). hasFrame이면 카드
+  // 자체 border 제거하고 RarityFrame을 overlay로 덮음. +0(none)은 회색 border 유지.
   const st = transcendStyle(item.transcendLevel);
-  const [r, g, b] = st.colorRgb;
-  const borderStyle: React.CSSProperties = st.hasFrame
-    ? { borderColor: `rgb(${r},${g},${b})` }
-    : {};
   return (
     <button
       type="button"
       onClick={onOpen}
       disabled={pending}
-      style={borderStyle}
-      className={`relative flex aspect-square flex-col items-center justify-center gap-0.5 rounded-xl border-2 bg-white px-1 text-center dark:bg-zinc-950 ${
-        st.hasFrame ? '' : 'border-zinc-200 dark:border-zinc-800'
+      className={`relative flex aspect-square flex-col items-center justify-center gap-0.5 rounded-xl bg-white px-1 text-center dark:bg-zinc-950 ${
+        st.hasFrame ? '' : 'border-2 border-zinc-200 dark:border-zinc-800'
       }`}
     >
+      <RarityFrame level={item.transcendLevel} />
       <TranscendSprite
         code={item.code}
         slot={item.slot}
