@@ -5,14 +5,11 @@ import { getSessionUserId } from '@/lib/auth/session';
 import { db } from '@/lib/db/client';
 import { profiles } from '@/lib/db/schema/profiles';
 import { formatCompactKR } from '@/lib/ui/format-number';
-import {
-  AD_DAILY_CAP,
-  AD_REWARD_SUPPLY_BOXES,
-  SHARE_DAILY_REWARD_DIAMOND,
-} from '@/lib/game/balance';
+import { SHARE_DAILY_REWARD_DIAMOND } from '@/lib/game/balance';
 
 /**
- * 상점 — WIREFRAMES §8. 단일 프리미엄 재화(다이아) 충전 + 무료 획득(광고/공유).
+ * 상점 — WIREFRAMES §8. 단일 프리미엄 재화(다이아) 충전 + 무료 획득(공유).
+ * 광고 보상은 v1 미도입(사용자 결정) — 모바일 웹 SSV 인프라 한계.
  * 등급 패키지 없음(등급 시스템 미존재). 결제 백엔드(포트원/IAP/본인인증/영수증)는
  * 후속 — 현재 상점 UI + 무료 획득 동선만, 충전 CTA는 비활성('준비 중').
  */
@@ -48,23 +45,9 @@ export default async function ShopPage() {
         </span>
       </header>
 
-      {/* 무료 획득 — 광고/공유 (실제 동작 동선) */}
+      {/* 무료 획득 — 공유 보상(광고 보상 v1 미도입) */}
       <section className="space-y-2">
         <h2 className="px-1 text-xs font-semibold text-zinc-500">무료로 받기</h2>
-        <Link
-          href="/gacha"
-          className="flex items-center justify-between rounded-xl border border-amber-300 bg-amber-50 px-3 py-3 dark:border-amber-800 dark:bg-amber-950/40"
-        >
-          <span className="flex flex-col">
-            <span className="text-sm font-semibold text-amber-900 dark:text-amber-200">
-              📺 광고 보고 보급 상자
-            </span>
-            <span className="text-[11px] text-amber-700/80 dark:text-amber-300/80">
-              1회 = 슬롯 랜덤 보급 상자 {AD_REWARD_SUPPLY_BOXES}개 · 하루 {AD_DAILY_CAP}회
-            </span>
-          </span>
-          <span className="text-amber-500">→</span>
-        </Link>
         <Link
           href="/me"
           className="flex items-center justify-between rounded-xl border border-zinc-200 px-3 py-3 dark:border-zinc-800"

@@ -35,8 +35,6 @@ import {
   GEM_TO_MS,
   SHARE_DAILY_REWARD_DIAMOND,
   REFERRAL_CONVERSION_DIAMOND,
-  AD_DAILY_CAP,
-  AD_REWARD_SUPPLY_BOXES,
 } from '@/lib/game/balance';
 
 export const metadata: Metadata = {
@@ -188,10 +186,6 @@ export default function ProbabilityPage() {
         <P>
           공유 보상: 1일 1회 {SHARE_DAILY_REWARD_DIAMOND}다이아. 신규 가입 전환 시 공유자{' '}
           {REFERRAL_CONVERSION_DIAMOND}다이아 추가 지급.
-        </P>
-        <P>
-          광고 보상: 1일 최대 {AD_DAILY_CAP}회, 회당 슬롯 무작위 보급 상자{' '}
-          {AD_REWARD_SUPPLY_BOXES}개(슬롯 균등 1/3). 다이아 직접 지급 없음.
         </P>
       </Sec>
 

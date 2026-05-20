@@ -2,7 +2,7 @@
  * SCHEMA §10. 운영 / 감사 / 안티치트
  *
  * 확률공시 스냅샷(게임산업법 §33, 변경 시 영구 기록+24h 사전), 점검 모드,
- * 광고 보상 검증(1회용 토큰·중복 거부), 운영 감사 로그. 레이트리밋은 Upstash(DB 아님).
+ * 운영 감사 로그. 레이트리밋은 Upstash(DB 아님).
  */
 import {
   pgTable,
@@ -10,7 +10,6 @@ import {
   uuid,
   text,
   bigserial,
-  boolean,
   jsonb,
   timestamp,
 } from 'drizzle-orm/pg-core';
@@ -21,7 +20,6 @@ export const systemModeValueEnum = pgEnum('system_mode_value', [
   'maintenance',
   'emergency_stop',
 ]);
-export const adRewardEnum = pgEnum('ad_reward', ['supply_box', 'mail_instant']);
 
 /** §10.1 probability_snapshots — 확률/수치 공시 전문 영구 기록. */
 export const probabilitySnapshots = pgTable('probability_snapshots', {
@@ -41,16 +39,7 @@ export const systemMode = pgTable('system_mode', {
   updatedAt: timestamp('updated_at', { withTimezone: true }).notNull().defaultNow(),
 });
 
-/** §10.3 ad_views — 광고 보상 검증(1회용·5분 만료·중복 거부). */
-export const adViews = pgTable('ad_views', {
-  id: bigserial('id', { mode: 'bigint' }).primaryKey(),
-  userId: uuid('user_id').notNull(),
-  adToken: text('ad_token').notNull().unique(),
-  reward: adRewardEnum('reward').notNull(),
-  granted: boolean('granted').notNull().default(false),
-  createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
-  expiresAt: timestamp('expires_at', { withTimezone: true }).notNull(),
-});
+// §10.3 ad_views — 광고 보상 v1 미도입. 향후 SSV 지원 광고 환경 도입 시 재검토.
 
 /** §10.4 admin_actions — 운영 감사 로그. */
 export const adminActions = pgTable('admin_actions', {

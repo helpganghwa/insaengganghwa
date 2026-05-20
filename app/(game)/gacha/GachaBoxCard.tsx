@@ -42,11 +42,6 @@ export function GachaBoxCard({
     });
   };
 
-  const watchAd = () => {
-    // TODO: AdMob 통합. 초안 — placeholder.
-    alert('광고 기능 준비 중입니다 — 시청하면 1회 무료 개봉이 진행됩니다.');
-  };
-
   return (
     <>
       <div
@@ -73,7 +68,8 @@ export function GachaBoxCard({
               보유 <span className="font-mono font-semibold tabular-nums">{count}</span>개
             </span>
           </div>
-          <div className="mt-4 grid grid-cols-3 gap-1.5">
+          {/* 광고 보상 v1 미도입(사용자 결정) — 1회·10회 두 버튼만. */}
+          <div className="mt-4 grid grid-cols-2 gap-1.5">
             <button
               type="button"
               disabled={pending || count < 1}
@@ -89,14 +85,6 @@ export function GachaBoxCard({
               className="rounded-full bg-gradient-to-r from-amber-500 to-orange-500 px-3 py-2.5 text-xs font-semibold text-white disabled:opacity-40"
             >
               {pending ? '…' : '10회 개봉'}
-            </button>
-            <button
-              type="button"
-              disabled={pending}
-              onClick={watchAd}
-              className="rounded-full border border-emerald-400/60 bg-emerald-500/20 px-3 py-2.5 text-xs font-semibold text-emerald-100 disabled:opacity-40"
-            >
-              📺 광고 1회
             </button>
           </div>
         </div>

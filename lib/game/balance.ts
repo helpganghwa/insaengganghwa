@@ -302,6 +302,6 @@ export function diamondToFinishMs(remainingMs: number): number {
 export const SHARE_DAILY_REWARD_DIAMOND = 100;
 export const REFERRAL_CONVERSION_DIAMOND = 300;
 
-/** §6.4 광고 보상: 1회 = 슬롯 랜덤 보급 상자 1개. 일일 한도. (보석 직접 지급 없음) */
-export const AD_DAILY_CAP = 5;
-export const AD_REWARD_SUPPLY_BOXES = 1;
+// §6.4 광고 보상 — v1 미도입(사용자 결정). 모바일 웹은 보상형 광고 SDK SSV
+// 인프라가 약해 치트 방어가 어렵고 1인 운영 부담이 큼. 상점에 광고 제거 IAP는
+// 향후 도입 검토(광고 노출 자체 OFF). 향후 네이티브 wrapper 도입 시 재검토.

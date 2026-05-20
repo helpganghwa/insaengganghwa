@@ -256,8 +256,7 @@
 
 - 인덱스 `(user_id, claimed_at)` — 미수령 조회
 - 적재: 오프라인 강화 cron 정산 · 레이드 6h 정산 · 비동기 보상 · 운영 공지(GDD §3.10)
-- "광고 → 우편 즉시 수령"(GDD §3.7) = 미수령 1건 즉시 claim 처리
-- 보관/만료 정책은 운영 정책(AUTOMATION) — 컬럼은 `created_at` 기준
+- 우편 만료 정리는 cron (`/api/cron/mail-expire`)이 매일 KST 03시(UTC 18시) `claimed_at IS NULL AND expires_at < now()` 행 삭제. claim 경로는 이미 `gt(expiresAt, now())` lazy 만료 — cron은 누적 정리용.
 
 ---
 
@@ -333,18 +332,13 @@
 
 단일 키 행: `mode` enum(`live`,`read_only`,`maintenance`,`emergency_stop`) · `note` · `updated_by` · `updated_at`. 모든 게임 API 진입 미들웨어가 참조.
 
-### 10.3 ad_views (광고 보상 검증)
+### 10.3 ad_views — v1 미도입
 
-| 컬럼 | 타입 | 비고 |
-|------|------|------|
-| `id` | bigserial PK | |
-| `user_id` | uuid FK | |
-| `ad_token` | text UNIQUE NOT NULL | 1회용·중복 거부 |
-| `reward` | enum(`supply_box`,`mail_instant`) | 보급 상자=슬롯 랜덤(BALANCE §6.4) |
-| `granted` | boolean default false | |
-| `created_at`·`expires_at` | timestamptz | 5분 만료 |
+보상형 광고 v1 폐기(GDD §3.7, BALANCE §6.4)에 따라 테이블·enum 모두 제거.
+0000 마이그레이션에 남아있는 `ad_views` / `ad_reward` enum은 과거 기록일 뿐 코드에서
+참조하지 않으며, v2 도입 시 별도 마이그레이션으로 재정의한다.
 
-- 일일 한도 = `(user_id, KST date)` 카운트. 레이트리밋(강화/단축/초월/보급/광고 API)은 **Upstash Redis**(DB 아님, GDD §8)
+레이트리밋(강화/단축/초월/보급)은 **Upstash Redis**(DB 아님, GDD §8).
 
 ### 10.4 admin_actions (운영 감사 로그)
 
