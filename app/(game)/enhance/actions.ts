@@ -70,17 +70,16 @@ export async function finalizeEnhance(jobId: string): Promise<
     // 결과 판정·저장 원자 트랜잭션(CLAUDE §3.1/§3.3/§3.4).
     const r = await resolveEnhance({ jobId: BigInt(jobId), userId, requireComplete: false });
 
-    // 다음 레벨 자동 재등록(GDD §3.2)은 **응답 내에서 await** 해야 함 — 백그라운드
-    // (after)로 빼면 응답 후 router.refresh가 새 잡 생성 전에 /enhance를 재렌더해
-    // 슬롯이 빈 상태로 깜빡였다가 다시 나타남(레이스, 검증됨). best-effort·멱등.
+    // 결과 무관 자동 재등록(GDD §3.2 갱신 — 실패도 슬롯 유지) — **응답 내에서
+    // await** 해야 함. 백그라운드(after)로 빼면 응답 후 router.refresh가 새 잡
+    // 생성 전에 /enhance를 재렌더해 슬롯이 빈 상태로 깜빡임(레이스, 검증됨).
+    // best-effort·멱등 — MAX 레벨 도달 등으로 큐잉 실패는 흡수(슬롯 자연 해제).
     let requeued = false;
-    if (r.outcome === 'success') {
-      try {
-        await queueEnhance({ userId, equipmentInstanceId: r.equipmentInstanceId });
-        requeued = true;
-      } catch (re) {
-        if (!(re instanceof EnhanceError)) console.error('[enhance.requeue]', re);
-      }
+    try {
+      await queueEnhance({ userId, equipmentInstanceId: r.equipmentInstanceId });
+      requeued = true;
+    } catch (re) {
+      if (!(re instanceof EnhanceError)) console.error('[enhance.requeue]', re);
     }
     // 변경 데이터만 무효화(홈 '/'은 다음 방문 시 자연 갱신 — 핫패스 축소).
     revalidatePath('/enhance');

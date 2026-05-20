@@ -78,6 +78,7 @@ export function EnhanceSlotCard({
   const [boast, setBoast] = useState(false);
   const [optimisticDone, setOptimisticDone] = useState(false);
   const [confirmCancel, setConfirmCancel] = useState(false);
+  const [confirmReduce, setConfirmReduce] = useState(false);
 
   useEffect(() => {
     setNowMs(Date.now());
@@ -151,6 +152,13 @@ export function EnhanceSlotCard({
 
   const doReduce = () => {
     if (pending || !instantCost || !canAfford) return;
+    // 다이아 사용도 취소와 동일한 3s 재탭 패턴(오탭 보호 — 즉시 차감 방지).
+    if (!confirmReduce) {
+      setConfirmReduce(true);
+      setTimeout(() => setConfirmReduce(false), 3000);
+      return;
+    }
+    setConfirmReduce(false);
     setOptimisticDone(true);
     startTransition(async () => {
       const r = await reduceTimeWithGems(activeJob.jobId, instantCost);
@@ -254,9 +262,13 @@ export function EnhanceSlotCard({
                 e.stopPropagation();
                 doReduce();
               }}
-              className="h-6 w-[54px] rounded-md border border-zinc-600 bg-zinc-800/60 text-[9px] font-bold text-amber-200 tabular-nums disabled:opacity-40"
+              className={`h-6 w-[54px] rounded-md border text-[9px] font-bold tabular-nums disabled:opacity-40 ${
+                confirmReduce
+                  ? 'animate-pulse border-amber-300 bg-amber-500 text-white'
+                  : 'border-zinc-600 bg-zinc-800/60 text-amber-200'
+              }`}
             >
-              {instantCost ? `💎${instantCost}` : '완료'}
+              {confirmReduce ? '확정?' : instantCost ? `💎${instantCost}` : '완료'}
             </button>
             <button
               type="button"
