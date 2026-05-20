@@ -333,6 +333,7 @@ function TranscendCanvas({
 
     // 정적 레이어 1회 사전합성 (프레임마다 재계산 금지 → 끊김 제거).
     let spriteCv: HTMLCanvasElement | null = null; // 베이스 스프라이트(불변·픽셀)
+    let brightCv: HTMLCanvasElement | null = null; // glare용 밝아진 sprite(챔피언)
     let frontCv: HTMLCanvasElement | null = null; // 프레임 + 사방 별
     let radiantCv: HTMLCanvasElement | null = null; // 챔피언 발광(블러, 1회)
     const [shineCv, shineX] = mkCanvas(); // 광택 스윕 재사용 스크래치
@@ -343,6 +344,17 @@ function TranscendCanvas({
       // atlas 부분 그리기 — coord.x,y에서 ATLAS_CELL×ATLAS_CELL 영역 → 캔버스 SP,SP에 SW×SW.
       sx.drawImage(atlasImg, coord.x, coord.y, ATLAS_CELL, ATLAS_CELL, SP, SP, SW, SW);
       spriteCv = sc;
+
+      // Glare용 밝아진 sprite 사전합성 — chamion 광택은 흰빛 띠가 아니라
+      // **sprite 자체의 밝아진 버전**이 띠 영역에만 잠깐 보이는 방식. 흰색 띠 느낌 제거.
+      if (showShine) {
+        const [bc, bx] = mkCanvas();
+        bx.imageSmoothingEnabled = false;
+        // brightness 1.7 + saturation 1.25 — sprite 색은 유지하면서 광채 추가.
+        bx.filter = 'brightness(1.7) saturate(1.25)';
+        bx.drawImage(atlasImg, coord.x, coord.y, ATLAS_CELL, ATLAS_CELL, SP, SP, SW, SW);
+        brightCv = bc;
+      }
 
       if (showFrame) {
         const [fc, fx] = mkCanvas();
@@ -404,36 +416,47 @@ function TranscendCanvas({
       // 베이스 스프라이트 (불변).
       if (spriteCv) o.drawImage(spriteCv, 0, 0);
 
-      // Glare — 챔피언 표식. 사용자 피드백 반영:
-      //   1) 중앙 집중 완화 → σ 0.06 → 0.14 (peak 영역 넓혀 자연스러운 페이드)
-      //   2) 반복 사이 텀 → localPh ∈ [0.25, 0.75] 외엔 강제 skip (한 통과 후 멈춤)
-      //   3) 더 투명 → shineAlpha 0.45 + screen 블렌드(어두운 sprite에서만 빛 추가)
-      if (showShine && spriteCv) {
+      // Glare — 챔피언 표식.
+      //   기법: 흰색 띠 X. **밝아진 sprite의 띠 영역만** sprite 위에 source-over로 덮음.
+      //         → 결과 = "sprite 자체가 한순간 빛남". 흰색 line 느낌 사라짐.
+      //   - 통과 구간 [0.30, 0.70] (한 주기 40%만 활성, 나머지 60%는 텀)
+      //   - σ=0.13 가우시안 peak — 중앙 집중 완화 + 자연 페이드
+      //   - alpha = peakBoost × shineAlpha
+      if (showShine && spriteCv && brightCv) {
         const sprite = spriteCv;
+        const bright = brightCv;
         const drawBand = (phShift: number) => {
-          const localPh = ((ph + phShift) * TRANSCEND_TUNING.shineSpeed) % 1; // 0..1
-          // 활성 구간 외(0..0.25, 0.75..1)는 텀 — sprite를 가만히 둠.
-          if (localPh < 0.25 || localPh > 0.75) return;
-          const peakBoost = Math.exp(-Math.pow((localPh - 0.5) / 0.14, 2));
+          const localPh = ((ph + phShift) * TRANSCEND_TUNING.shineSpeed) % 1;
+          if (localPh < 0.30 || localPh > 0.70) return; // 텀
+          const peakBoost = Math.exp(-Math.pow((localPh - 0.5) / 0.13, 2));
           const alpha = TRANSCEND_TUNING.shineAlpha * peakBoost;
-          if (alpha < 0.015) return;
+          if (alpha < 0.02) return;
+          // 1) 띠 모양 그라데이션을 mask로 사용 (위치는 통과 속도 빠르게 = 활성 구간 짧음)
           shineX.clearRect(0, 0, FS, FS);
-          const gx = localPh * FS * 1.7 - FS * 0.35;
+          // 활성 0.30~0.70만 통과 — 그 안에서 위치 0..1 매핑 → 빠른 통과
+          const tband = (localPh - 0.30) / 0.40; // 0..1
+          const gx = tband * FS * 1.6 - FS * 0.3;
           const half = FS * TRANSCEND_TUNING.shineWidth;
           const lg = shineX.createLinearGradient(gx - half, 0, gx + half, FS);
           lg.addColorStop(0, 'rgba(255,255,255,0)');
           lg.addColorStop(0.4, 'rgba(255,255,255,0)');
-          lg.addColorStop(0.5, `rgba(255,255,255,${alpha})`);
+          lg.addColorStop(0.5, `rgba(255,255,255,1)`); // mask용 — 알파는 아래서 적용
           lg.addColorStop(0.6, 'rgba(255,255,255,0)');
           lg.addColorStop(1, 'rgba(255,255,255,0)');
           shineX.globalCompositeOperation = 'source-over';
           shineX.fillStyle = lg;
           shineX.fillRect(0, 0, FS, FS);
+          // 2) sprite 실루엣 mask 적용 — 띠가 sprite 영역만
           shineX.globalCompositeOperation = 'destination-in';
           shineX.drawImage(sprite, 0, 0);
-          o.globalCompositeOperation = 'screen';
-          o.drawImage(shineCv, 0, 0);
+          // 3) 띠 mask를 brightCv에 적용 → 띠 영역의 밝아진 sprite만 남음
+          shineX.globalCompositeOperation = 'source-in';
+          shineX.drawImage(bright, 0, 0);
+          // 4) source-over로 덮음 + globalAlpha로 강도(=흰색 띠가 아닌 밝아진 sprite의 페이드)
+          o.globalAlpha = alpha;
           o.globalCompositeOperation = 'source-over';
+          o.drawImage(shineCv, 0, 0);
+          o.globalAlpha = 1;
         };
         drawBand(0);
       }

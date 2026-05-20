@@ -15,9 +15,73 @@ const SLOTS = ['weapon', 'armor', 'accessory'] as const;
 /** Pixellab 배경 아트 풀 — public/og/og-1..N.png. 부재 시 그라데이션 폴백. */
 const BG_POOL = 8;
 
-// rarityCornersOG (inline SVG 별 장식) 제거됨 — Satori가 `<g transform>` 일부와
-// preserveAspectRatio 미지원으로 prod에서 500 유발. 슬롯 카드는 등급색 보더 +
-// boxShadow 글로우로 등급 표현(이미 적용). sub=0/1 시각 차이는 글로우 강도로 표현.
+// 초월 별 장식 — 4 모서리에 등급색 ✦ 문자(폰트). Satori 호환(SVG transform 회피).
+// sub=1(짝수 등급)이면 ✦ 옆에 작은 ✦ 1개 더(코너 안쪽). cornerPx ≈ 카드 한 변의 26%.
+function rarityStarsOG(
+  colorRgb: readonly [number, number, number],
+  sub: 0 | 1,
+  cornerPx: number,
+): React.ReactElement[] {
+  const [r, g, b] = colorRgb;
+  const color = `rgb(${r},${g},${b})`;
+  const accent = `rgb(${Math.round(r + (255 - r) * 0.55)},${Math.round(g + (255 - g) * 0.55)},${Math.round(b + (255 - b) * 0.55)})`;
+  const corners: { pos: React.CSSProperties; accentPos: React.CSSProperties }[] = [
+    { pos: { top: 0, left: 0 }, accentPos: { top: cornerPx * 0.05, left: cornerPx * 0.7 } },
+    { pos: { top: 0, right: 0 }, accentPos: { top: cornerPx * 0.05, right: cornerPx * 0.7 } },
+    { pos: { bottom: 0, left: 0 }, accentPos: { bottom: cornerPx * 0.05, left: cornerPx * 0.7 } },
+    { pos: { bottom: 0, right: 0 }, accentPos: { bottom: cornerPx * 0.05, right: cornerPx * 0.7 } },
+  ];
+  const els: React.ReactElement[] = [];
+  for (let i = 0; i < corners.length; i++) {
+    const c = corners[i]!;
+    // 큰 별
+    els.push(
+      <div
+        key={`s${i}`}
+        style={{
+          position: 'absolute',
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'center',
+          width: cornerPx,
+          height: cornerPx,
+          ...c.pos,
+        }}
+      >
+        <div
+          style={{
+            display: 'flex',
+            fontSize: cornerPx * 0.55,
+            color,
+            lineHeight: 1,
+            textShadow: `0 0 ${cornerPx * 0.15}px ${color}`,
+          }}
+        >
+          ✦
+        </div>
+      </div>,
+    );
+    // sub=1 위성 별 — 큰 별과 같은 모서리 안쪽에 작게 한 개
+    if (sub === 1) {
+      els.push(
+        <div
+          key={`a${i}`}
+          style={{
+            position: 'absolute',
+            display: 'flex',
+            fontSize: cornerPx * 0.22,
+            color: accent,
+            lineHeight: 1,
+            ...c.accentPos,
+          }}
+        >
+          ✦
+        </div>,
+      );
+    }
+  }
+  return els;
+}
 
 /** 같은 배포의 정적 에셋 → base64 data URI(Satori가 안정적으로 임베드). 실패=null. */
 async function dataUri(url: string): Promise<string | null> {
@@ -137,7 +201,7 @@ export async function GET(_req: Request, { params }: { params: Promise<{ shareCo
             <div
               style={{
                 position: 'absolute', top: 0, left: 0, width: 1200, height: 630,
-                background: 'linear-gradient(180deg,rgba(8,6,4,0.62) 0%,rgba(10,7,4,0.42) 50%,rgba(8,6,4,0.62) 100%)',
+                background: 'radial-gradient(ellipse 70% 60% at 50% 50%,rgba(0,0,0,0.25) 0%,rgba(8,6,4,0.78) 100%)',
                 display: 'flex',
               }}
             />
@@ -163,7 +227,8 @@ export async function GET(_req: Request, { params }: { params: Promise<{ shareCo
             ) : (
               <span style={{ fontSize: 200, opacity: 0.5 }}>❔</span>
             )}
-            {/* 초월 별 장식은 Satori 제약으로 제거됨 — 등급은 보더 색 + boxShadow로 표현. */}
+            {/* 초월 별 장식 — 4 모서리(폰트 ✦, Satori 호환). 큰 카드라 cornerPx 90. */}
+            {ts ? rarityStarsOG(ts.colorRgb, ts.sub as 0 | 1, 90) : null}
           </div>
         </div>
         <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', marginTop: 'auto' }}>
@@ -217,7 +282,7 @@ export async function GET(_req: Request, { params }: { params: Promise<{ shareCo
               width: 1200,
               height: 630,
               background:
-                'linear-gradient(180deg,rgba(8,6,4,0.62) 0%,rgba(10,7,4,0.42) 50%,rgba(8,6,4,0.62) 100%)',
+                'radial-gradient(ellipse 70% 60% at 50% 50%,rgba(0,0,0,0.25) 0%,rgba(8,6,4,0.78) 100%)',
               display: 'flex',
             }}
           />
@@ -286,7 +351,8 @@ export async function GET(_req: Request, { params }: { params: Promise<{ shareCo
                 ) : (
                   <span style={{ fontSize: 100, opacity: it ? 1 : 0.4 }}>{EMOJI[s]}</span>
                 )}
-                {/* 초월 별 장식은 Satori 제약으로 제거됨 — 등급은 보더 색 + boxShadow로 표현. */}
+                {/* 초월 별 장식 — 4 모서리(폰트 ✦, Satori 호환). cornerPx 52. */}
+                {ts ? rarityStarsOG(ts.colorRgb, ts.sub as 0 | 1, 52) : null}
               </div>
               <div
                 style={{
