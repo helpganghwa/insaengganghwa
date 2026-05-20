@@ -50,7 +50,9 @@ export function GachaBoxCard({
         style={{ backgroundColor: tint }}
         className="relative overflow-hidden rounded-2xl border border-zinc-800"
       >
-        {/* Pixellab 배경 — 픽셀아트 raw img + imageRendering pixelated. */}
+        {/* Pixellab 배경 — 픽셀아트 raw img + imageRendering pixelated.
+            object-position '50% 70%' : 박스가 원본 이미지 하단 1/3 즈음 위치 →
+            이미지의 70% 지점을 카드 중앙에 맞춰 박스를 카드 시각 중앙으로 끌어올림. */}
         {/* eslint-disable-next-line @next/next/no-img-element */}
         <img
           src={bg}
@@ -58,7 +60,7 @@ export function GachaBoxCard({
           aria-hidden
           draggable={false}
           className="absolute inset-0 h-full w-full object-cover opacity-90"
-          style={{ imageRendering: 'pixelated' }}
+          style={{ imageRendering: 'pixelated', objectPosition: '50% 70%' }}
         />
         {/* 가독성 확보용 그라데이션(상자 배경 위) */}
         <div className="relative bg-gradient-to-b from-black/0 via-black/45 to-black/85 p-4">
