@@ -404,18 +404,18 @@ function TranscendCanvas({
       // 베이스 스프라이트 (불변).
       if (spriteCv) o.drawImage(spriteCv, 0, 0);
 
-      // 광택 스윕 — 챔피언 식별 표식. screen 블렌드(밝게) + 골드 색 + 두꺼운 띠.
-      // 아이템 실루엣 마스크라 외곽으로 새지 않음.
+      // 광택 스윕 — 챔피언 식별 표식. **무채색(흰빛) 투명 띠** + screen 블렌드.
+      // 노란기 제거(2026-05-20 사용자 결정). 아이템 실루엣 마스크라 외곽으로 새지 않음.
       if (showShine && spriteCv) {
         shineX.clearRect(0, 0, FS, FS);
         const gx = ((ph * TRANSCEND_TUNING.shineSpeed) % 1) * FS * 1.7 - FS * 0.35;
-        const half = FS * TRANSCEND_TUNING.shineWidth; // 띠 반폭 (두꺼울수록 눈에 띔)
+        const half = FS * TRANSCEND_TUNING.shineWidth;
         const lg = shineX.createLinearGradient(gx - half, 0, gx + half, FS);
-        lg.addColorStop(0, 'rgba(255,228,120,0)');
-        lg.addColorStop(0.34, 'rgba(255,228,120,0)');
-        lg.addColorStop(0.5, `rgba(255,228,120,${TRANSCEND_TUNING.shineAlpha})`);
-        lg.addColorStop(0.66, 'rgba(255,228,120,0)');
-        lg.addColorStop(1, 'rgba(255,228,120,0)');
+        lg.addColorStop(0, 'rgba(255,255,255,0)');
+        lg.addColorStop(0.34, 'rgba(255,255,255,0)');
+        lg.addColorStop(0.5, `rgba(255,255,255,${TRANSCEND_TUNING.shineAlpha})`);
+        lg.addColorStop(0.66, 'rgba(255,255,255,0)');
+        lg.addColorStop(1, 'rgba(255,255,255,0)');
         shineX.globalCompositeOperation = 'source-over';
         shineX.fillStyle = lg;
         shineX.fillRect(0, 0, FS, FS);
