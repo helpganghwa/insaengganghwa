@@ -43,6 +43,7 @@ export function BoastModal({
   // 카카오 SDK는 next/script afterInteractive로 비동기 로드 → 첫 모달 오픈 시점에
   // 아직 init 안 됐을 수 있음. open 동안 200ms 폴링(최대 5s)로 ready 감지 후 활성.
   const [kakaoReady, setKakaoReady] = useState(false);
+  const [imgErr, setImgErr] = useState(false);
 
   useEffect(() => {
     if (typeof window !== 'undefined') {
@@ -74,6 +75,7 @@ export function BoastModal({
   // 모달 mount 시점 imageUrl 한 번 계산(매 공유 다른 OG). open=false면 빈 값.
   // ⚠ React #310 회피 — 모든 hook은 early return(`if (!open) return null`) **이전**에
   // 호출되어야 함. 같은 컴포넌트 인스턴스의 hook 호출 순서·갯수는 매 render 동일.
+  // deps에 piece/set 원시값 추가 — 같은 모달 인스턴스에서 piece 변경 시 stale 회피.
   const imageUrl = useMemo(() => {
     if (!open || typeof window === 'undefined') return '';
     const origin = window.location.origin;
@@ -89,8 +91,16 @@ export function BoastModal({
       params.set('cp', String(set.total));
     }
     return `${origin}/og/${encodeURIComponent(nickname)}?${params.toString()}`;
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [open, kind, nickname]);
+  }, [
+    open, kind, nickname,
+    piece?.p.code, piece?.p.enhanceLevel, piece?.p.transcendLevel,
+    set?.total,
+  ]);
+
+  // 모달 열릴 때마다 에러 상태 리셋(이전 시도의 onError를 다음 시도가 끌고 가지 않게).
+  useEffect(() => {
+    if (open) setImgErr(false);
+  }, [open, imageUrl]);
 
   if (!open) return null;
 
@@ -225,16 +235,27 @@ export function BoastModal({
           💬 카카오톡 공유 미리보기
         </div>
         <div className="bg-white dark:bg-zinc-950">
-          {/* OG 이미지 — 실제 카톡 카드 비율 1200×630 ≈ 40:21 */}
+          {/* OG 이미지 — 실제 카톡 카드 비율 1200×630 ≈ 40:21. onError로 fetch 실패 가시화. */}
           <div className="relative overflow-hidden bg-zinc-900" style={{ aspectRatio: '40/21' }}>
-            {imageUrl ? (
+            {imageUrl && !imgErr ? (
               // eslint-disable-next-line @next/next/no-img-element
               <img
                 src={imageUrl}
                 alt="공유 이미지 미리보기"
                 draggable={false}
                 className="absolute inset-0 h-full w-full object-cover"
+                onError={() => {
+                  // 미리보기 fetch 실패 — URL을 콘솔에 노출(사용자 디버그 + 우리 후속 진단).
+                  console.error('[BoastModal] og preview failed', imageUrl);
+                  setImgErr(true);
+                }}
               />
+            ) : null}
+            {imgErr ? (
+              <div className="absolute inset-0 flex flex-col items-center justify-center gap-1 p-3 text-center text-[10px] leading-relaxed text-zinc-400">
+                <span>⚠ 미리보기 로드 실패</span>
+                <span className="break-all text-zinc-500">{imageUrl}</span>
+              </div>
             ) : null}
           </div>
           {/* 카톡 본문 텍스트 카드 */}
