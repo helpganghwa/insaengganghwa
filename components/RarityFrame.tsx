@@ -23,21 +23,21 @@ function StarTrioOrnate({ color, accent, subOne }: { color: string; accent: stri
       preserveAspectRatio="none"
       style={{ width: '100%', height: '100%', display: 'block' }}
     >
-      {/* 큰 별 (외각 R=4) — 모든 등급 공통 */}
-      <g transform="translate(6 6)" fill={color}>
+      {/* 큰 별 (외각 R=4) — 모든 등급 공통. 코너에서 2px(viewBox 1.5단위) 안쪽 이동. */}
+      <g transform="translate(7.5 7.5)" fill={color}>
         <polygon points="0,-4 1.1,-1.1 4,0 1.1,1.1 0,4 -1.1,1.1 -4,0 -1.1,-1.1" />
       </g>
-      <circle cx="6" cy="6" r="1.1" fill="rgba(255,255,255,0.9)" />
-      {/* 위성 별 3개 — 짝수 등급(sub=1)만 */}
+      <circle cx="7.5" cy="7.5" r="1.1" fill="rgba(255,255,255,0.9)" />
+      {/* 위성 별 3개 — 짝수 등급(sub=1)만. 큰 별과 같은 1.5 오프셋. */}
       {subOne ? (
         <>
-          <g transform="translate(13 3)" fill={accent}>
+          <g transform="translate(14.5 4.5)" fill={accent}>
             <polygon points="0,-2 0.55,-0.55 2,0 0.55,0.55 0,2 -0.55,0.55 -2,0 -0.55,-0.55" />
           </g>
-          <g transform="translate(3 13)" fill={accent}>
+          <g transform="translate(4.5 14.5)" fill={accent}>
             <polygon points="0,-2 0.55,-0.55 2,0 0.55,0.55 0,2 -0.55,0.55 -2,0 -0.55,-0.55" />
           </g>
-          <g transform="translate(12 12)" fill={accent}>
+          <g transform="translate(13.5 13.5)" fill={accent}>
             <polygon points="0,-1.6 0.45,-0.45 1.6,0 0.45,0.45 0,1.6 -0.45,0.45 -1.6,0 -0.45,-0.45" />
           </g>
         </>
