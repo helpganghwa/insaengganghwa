@@ -233,14 +233,43 @@ export async function GET(_req: Request, { params }: { params: Promise<{ shareCo
         </>
       ) : null}
 
-      <div style={{ display: 'flex', fontSize: 30, opacity: 0.9, letterSpacing: 2, zIndex: 1 }}>
-        ⚒️ 인생강화
-      </div>
-      <div style={{ display: 'flex', marginTop: 18, fontSize: 78, fontWeight: 800, zIndex: 1 }}>
-        {display}
+      {/* 헤더 — 타이틀 + 닉네임 한 줄(가로). */}
+      <div
+        style={{
+          display: 'flex',
+          alignItems: 'baseline',
+          gap: 22,
+          zIndex: 1,
+        }}
+      >
+        <div style={{ display: 'flex', fontSize: 28, opacity: 0.85, letterSpacing: 2 }}>
+          ⚒️ 인생강화
+        </div>
+        <div
+          style={{
+            display: 'flex',
+            fontSize: 60,
+            fontWeight: 800,
+            color: '#fde9c8',
+            maxWidth: 800,
+            overflow: 'hidden',
+          }}
+        >
+          {display}
+        </div>
       </div>
 
-      <div style={{ display: 'flex', flexDirection: 'column', gap: 18, marginTop: 34, zIndex: 1 }}>
+      {/* 3 슬롯 가로 배치 — 각 슬롯은 sprite(위) + 이름+레벨(아래) column. */}
+      <div
+        style={{
+          display: 'flex',
+          flexDirection: 'row',
+          gap: 28,
+          marginTop: 28,
+          zIndex: 1,
+          justifyContent: 'space-between',
+        }}
+      >
         {SLOTS.map((s) => {
           const it = bySlot.get(s);
           const spr = it ? sprite.get(s) : null;
@@ -249,37 +278,57 @@ export async function GET(_req: Request, { params }: { params: Promise<{ shareCo
           const ts = it && it.transcendLevel > 0 ? transcendStyle(it.transcendLevel) : null;
           const [tr, tg, tb] = ts?.colorRgb ?? [0, 0, 0];
           return (
-            <div key={s} style={{ display: 'flex', alignItems: 'center', fontSize: 42 }}>
+            <div
+              key={s}
+              style={{
+                display: 'flex',
+                flexDirection: 'column',
+                alignItems: 'center',
+                flex: 1,
+                gap: 14,
+              }}
+            >
               <div
                 style={{
-                  width: 116,
-                  height: 116,
+                  width: 220,
+                  height: 220,
                   display: 'flex',
                   alignItems: 'center',
                   justifyContent: 'center',
-                  marginRight: 26,
-                  borderRadius: 18,
-                  background: 'rgba(0,0,0,0.32)',
+                  borderRadius: 24,
+                  background: 'rgba(0,0,0,0.36)',
                   border: ts
-                    ? `5px solid rgb(${tr},${tg},${tb})`
-                    : '2px solid rgba(255,255,255,0.10)',
-                  boxShadow: ts ? `0 0 22px rgba(${tr},${tg},${tb},0.55)` : 'none',
+                    ? `6px solid rgb(${tr},${tg},${tb})`
+                    : '3px solid rgba(255,255,255,0.12)',
+                  boxShadow: ts ? `0 0 32px rgba(${tr},${tg},${tb},0.55)` : 'none',
                 }}
               >
                 {spr ? (
-                  <img src={spr} width={104} height={104} style={{ width: 104, height: 104 }} />
+                  <img src={spr} width={184} height={184} style={{ width: 184, height: 184 }} />
                 ) : (
-                  <span style={{ fontSize: 64, opacity: it ? 1 : 0.4 }}>{EMOJI[s]}</span>
+                  <span style={{ fontSize: 108, opacity: it ? 1 : 0.4 }}>{EMOJI[s]}</span>
                 )}
               </div>
-              <span style={{ opacity: it ? 1 : 0.4 }}>
-                {it ? `${it.name}  +${it.enhanceLevel}` : '미장착'}
-              </span>
+              <div
+                style={{
+                  display: 'flex',
+                  fontSize: 26,
+                  fontWeight: 700,
+                  opacity: it ? 1 : 0.4,
+                  maxWidth: 260,
+                  textAlign: 'center',
+                  overflow: 'hidden',
+                  justifyContent: 'center',
+                }}
+              >
+                {it ? `${it.name} +${it.enhanceLevel}` : '미장착'}
+              </div>
             </div>
           );
         })}
       </div>
 
+      {/* 하단 — 도메인 + 전투력. marginTop:auto로 바닥 정렬 보장. */}
       <div
         style={{
           display: 'flex',
@@ -289,7 +338,7 @@ export async function GET(_req: Request, { params }: { params: Promise<{ shareCo
           zIndex: 1,
         }}
       >
-        <div style={{ display: 'flex', fontSize: 30, opacity: 0.75 }}>insaengganghwa.com</div>
+        <div style={{ display: 'flex', fontSize: 26, opacity: 0.7 }}>insaengganghwa.com</div>
         <div style={{ display: 'flex', fontSize: 64, fontWeight: 800, color: '#ffd47a' }}>
           ⚔️ {formatCompactKR(total)}
         </div>

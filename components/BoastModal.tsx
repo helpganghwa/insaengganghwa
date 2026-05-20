@@ -4,6 +4,9 @@ import { useEffect, useMemo, useState } from 'react';
 
 import { formatCompactKR } from '@/lib/ui/format-number';
 
+// 공유는 **카카오톡 전용** — 사용자 결정. 링크 복사·navigator.share 분기 제거.
+// 카카오 SDK 미로드 시(앱 외부 또는 로딩 실패) 안내 alert.
+
 export type BoastPiece = {
   slot: 'weapon' | 'armor' | 'accessory';
   code: string;
@@ -36,14 +39,37 @@ export function BoastModal({
   piece?: { p: BoastPiece; cp: number };
   headline?: string;
 }) {
-  const [copied, setCopied] = useState(false);
   const [shareUrl, setShareUrl] = useState('');
+  // 카카오 SDK는 next/script afterInteractive로 비동기 로드 → 첫 모달 오픈 시점에
+  // 아직 init 안 됐을 수 있음. open 동안 200ms 폴링(최대 5s)로 ready 감지 후 활성.
+  const [kakaoReady, setKakaoReady] = useState(false);
 
   useEffect(() => {
     if (typeof window !== 'undefined') {
       setShareUrl(`${window.location.origin}/s/${encodeURIComponent(nickname)}`);
     }
   }, [nickname]);
+
+  useEffect(() => {
+    if (!open) return;
+    const check = (): boolean => {
+      const k = (window as unknown as { Kakao?: { isInitialized: () => boolean } }).Kakao;
+      if (k && k.isInitialized()) {
+        setKakaoReady(true);
+        return true;
+      }
+      return false;
+    };
+    if (check()) return;
+    const id = window.setInterval(() => {
+      if (check()) window.clearInterval(id);
+    }, 200);
+    const timeout = window.setTimeout(() => window.clearInterval(id), 5000);
+    return () => {
+      window.clearInterval(id);
+      window.clearTimeout(timeout);
+    };
+  }, [open]);
 
   // 모달 mount 시점 imageUrl 한 번 계산(매 공유 다른 OG). open=false면 빈 값.
   // ⚠ React #310 회피 — 모든 hook은 early return(`if (!open) return null`) **이전**에
@@ -124,24 +150,6 @@ export function BoastModal({
   // 매 모달 오픈 시 1회 고정 — 같은 모달 안에서 일관(공유 시 동일 텍스트).
   const text = pickMsg();
 
-  const doShare = async () => {
-    if (navigator.share) {
-      try {
-        await navigator.share({ title: '인생강화', text, url: shareUrl });
-        return;
-      } catch {
-        /* 취소/미지원 → 복사로 폴백 */
-      }
-    }
-    try {
-      await navigator.clipboard.writeText(`${text}\n${shareUrl}`);
-      setCopied(true);
-      setTimeout(() => setCopied(false), 2000);
-    } catch {
-      /* clipboard 거부 시 무시 */
-    }
-  };
-
   // 카톡 전용 — Kakao.Share.sendDefault. imageUrl에 ?v=<random>으로 카톡 캐시
   // 우회 → 매 공유마다 다른 OG(서버 OG는 sprite·배경 랜덤 합성).
   type KakaoApi = {
@@ -153,7 +161,7 @@ export function BoastModal({
   const doShareKakao = () => {
     const k = (window as unknown as { Kakao?: KakaoApi }).Kakao;
     if (!k || !k.isInitialized()) {
-      doShare();
+      alert('카카오톡 공유가 준비되지 않았습니다. 잠시 후 다시 시도해주세요.');
       return;
     }
     const origin = window.location.origin;
@@ -194,9 +202,9 @@ export function BoastModal({
       ],
     });
   };
-  const hasKakao =
-    typeof window !== 'undefined' &&
-    !!(window as unknown as { Kakao?: { isInitialized: () => boolean } }).Kakao?.isInitialized();
+  // 폴링 결과 — 초기 false, SDK 준비되면 true. (이전 동기 평가는 첫 렌더 1회만 되어
+  // SDK 늦게 로드되면 영구 disabled 되는 문제 → 폴링으로 해결)
+  const hasKakao = kakaoReady;
 
   return (
     <div
@@ -249,21 +257,13 @@ export function BoastModal({
         </div>
 
         <div className="space-y-2 p-3">
-          {hasKakao ? (
-            <button
-              type="button"
-              onClick={doShareKakao}
-              className="w-full rounded-full bg-yellow-300 py-2.5 text-sm font-bold text-yellow-950"
-            >
-              💬 카카오톡 공유
-            </button>
-          ) : null}
           <button
             type="button"
-            onClick={doShare}
-            className="w-full rounded-full bg-zinc-900 py-2.5 text-sm font-bold text-white dark:bg-zinc-50 dark:text-zinc-950"
+            onClick={doShareKakao}
+            disabled={!hasKakao}
+            className="w-full rounded-full bg-yellow-300 py-2.5 text-sm font-bold text-yellow-950 disabled:opacity-50"
           >
-            {copied ? '✓ 링크 복사됨' : '🔗 공유하기'}
+            {hasKakao ? '💬 카카오톡 공유' : '💬 카카오톡 준비 중…'}
           </button>
           <button type="button" onClick={onClose} className="w-full py-1.5 text-xs text-zinc-500">
             닫기
