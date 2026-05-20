@@ -21,43 +21,57 @@ const COMMON =
   'detail, fully filled solid background, edge-to-edge composition, no transparent ' +
   'areas, no empty space';
 
-// 새 컨셉 — 보물상자에서 탈피, 슬롯별 "장인 작업장" 환경.
-// 가독성: 각 슬롯이 자기 직업의 무대를 가짐 → 한 눈에 슬롯 식별.
+// 새 컨셉 — 닫힌 보급 상자 + **옆에 흐트러진 아이템들**. 슬롯마다 분위기 미세 차이.
+//   weapon: 거친 대장간 톤(붉은 화로 그림자)
+//   armor: 정돈된 차가운 갑주 보관실 톤(푸른 회색)
+//   accessory: 우아한 벨벳 보석함 톤(붉은 자주)
+// 공통: 상자 그 자체가 화면 중심·닫혀 있음 + 옆 바닥에 해당 슬롯 아이템 4종 이상이 무질서하게 흩어짐.
 const BOXES: { slot: string; prompt: string; fill: { r: number; g: number; b: number } }[] = [
   {
     slot: 'weapon',
-    fill: { r: 28, g: 20, b: 16 }, // #1c1410 forge ember
+    fill: { r: 28, g: 20, b: 16 }, // #1c1410 forge shadow
     prompt:
-      'dark fantasy blacksmith forge interior scene, top-down isometric pixel art, ' +
-      'large iron anvil at center with a finished long sword resting flat on top, ' +
-      'glowing orange forge flames in the background, wooden weapon rack on the left ' +
-      'holding a battle axe and a spear standing upright, a curved dagger and a ' +
-      'blacksmith hammer lying on the wooden workbench on the right, scattered ember ' +
-      'sparks floating in the warm air, deep stone forge chamber walls, ' + COMMON,
+      'a closed iron-bound dark wooden treasure chest sitting on a worn stone floor, ' +
+      'around the chest on the floor are FOUR clearly different types of weapons ' +
+      'scattered and lying in disarray — a long sword with its blade angled across ' +
+      'the ground, a curved battle axe with its head resting flat, a wooden-shafted ' +
+      'spear lying diagonally, and a longbow with a loose string curving away — each ' +
+      'weapon must be its OWN obvious type, not the same shape recolored; warm orange ' +
+      'forge glow from the right edge of the frame casting long shadows, hot embers ' +
+      'and sparks faintly in the air, rough soot-stained stone walls of a deep forge ' +
+      'chamber filling the background edge to edge with no empty area, gritty rough ' +
+      'blacksmith atmosphere, ' + COMMON,
   },
   {
     slot: 'armor',
-    fill: { r: 28, g: 32, b: 48 }, // #1c2030 armory steel
+    fill: { r: 28, g: 32, b: 48 }, // #1c2030 armory cold steel
     prompt:
-      'dark fantasy armory display chamber, top-down isometric pixel art, ' +
-      'a tall wooden armor stand at center wearing a polished steel breastplate with ' +
-      'a closed knight helmet placed on top of the stand, a large round metal shield ' +
-      'hung on the back wall, a pair of iron gauntlets resting on a wooden table on ' +
-      'the right, tall leather boots standing upright on the floor on the left, two ' +
-      'lit braziers casting warm light, deep stone armory chamber walls, ' + COMMON,
+      'a closed iron-bound dark wooden treasure chest sitting on a cold stone floor, ' +
+      'around the chest on the floor are FIVE clearly different types of armor pieces ' +
+      'scattered and lying in disarray — (1) a steel breastplate lying flat on its ' +
+      'back, (2) a closed iron helmet on its side, (3) a large round metal shield ' +
+      'leaning against the chest at an angle, (4) a pair of tall leather boots ' +
+      'fallen over on their side, (5) a pair of iron gauntlets opened palm-down — ' +
+      'each piece must be its OWN obvious type, not the same shape recolored; cool ' +
+      'pale blue moonlight from above with two muted blue torches at the corners, ' +
+      'dim stone walls of an old armory chamber filling the entire background edge to ' +
+      'edge with no empty area, quiet solemn knightly atmosphere, ' + COMMON,
   },
   {
     slot: 'accessory',
     fill: { r: 42, g: 22, b: 32 }, // #2a1620 velvet red
     prompt:
-      'dark fantasy jeweler workshop scene, top-down isometric pixel art, ' +
-      'a velvet-lined display table at center with each item on its own small velvet ' +
-      'cushion clearly separated — a gold chain necklace with a teardrop pendant, ' +
-      'a thick gold ring with a large red ruby, a pair of dangling earrings hung on ' +
-      'a small stand, and an ornate circular medallion brooch — an ornate brass ' +
-      'magnifying lens and small jeweler tweezers placed beside, soft warm candle ' +
-      'glow from candelabras, deep mahogany jeweler parlor with red velvet walls, ' +
-      COMMON,
+      'a closed ornate jewelry chest with brass corners and velvet trim sitting on a ' +
+      'polished mahogany table top, around the chest on the table are FOUR clearly ' +
+      'different types of accessories scattered casually in disarray — (1) a gold ' +
+      'chain necklace with a teardrop ruby pendant lying coiled, (2) a thick gold ' +
+      'ring with a large red ruby resting on its side, (3) a pair of dangling ' +
+      'teardrop earrings fallen apart from each other, (4) an ornate circular ' +
+      'medallion brooch with a center jewel face up — each item must be its OWN ' +
+      'obvious type, not the same shape recolored; warm glowing candle light from ' +
+      'two ornate candelabras at the edges casting soft golden light, deep red velvet ' +
+      'wall background filling the entire frame edge to edge with no empty area, ' +
+      'elegant boudoir parlor atmosphere, ' + COMMON,
   },
 ];
 
