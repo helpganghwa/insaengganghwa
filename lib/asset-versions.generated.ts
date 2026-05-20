@@ -9,12 +9,15 @@ export const ASSET_VERSIONS: Record<string, string> = {
   "/sprites/ui/transcend-frame.png": "eefc4d09",
   "/sprites/ui/btn-enhance.png": "11d81db3",
   "/sprites/ui/btn-lock.png": "ec294c71",
-  "/sprites/hub/box-accessory.png": "799a108e",
+  "/sprites/hub/box-accessory.png": "4b657b95",
   "/sprites/hub/ranking.png": "83195331",
-  "/sprites/hub/box-weapon.png": "3f36fa93",
+  "/sprites/hub/box-weapon.png": "c1870c32",
   "/sprites/hub/raid.png": "92401284",
+  "/sprites/hub/box-armor.bak8.png": "a04e62ba",
   "/sprites/hub/inventory.png": "504ac0c9",
   "/sprites/hub/inventory.bak2.png": "f75f35d8",
+  "/sprites/hub/box-accessory.bak8.png": "1dec8db8",
+  "/sprites/hub/box-weapon.bak8.png": "fe9df5f8",
   "/sprites/hub/enhance.bak.png": "41e663af",
   "/sprites/hub/ranking.bak.png": "0006bc3c",
   "/sprites/hub/inventory.bak.png": "689f2e3c",
@@ -31,7 +34,7 @@ export const ASSET_VERSIONS: Record<string, string> = {
   "/sprites/hub/profile.png": "21a2af3f",
   "/sprites/hub/box-weapon.bak6.png": "5f8e7500",
   "/sprites/hub/box-weapon.bak7.png": "96e3a5de",
-  "/sprites/hub/box-armor.png": "0cc01ef0",
+  "/sprites/hub/box-armor.png": "baefad61",
   "/sprites/hub/gacha.png": "5b562bf0",
   "/sprites/hub/box-accessory.bak4.png": "6086b24d",
   "/sprites/hub/box-armor.bak6.png": "3764f4ad",
@@ -67,5 +70,5 @@ export const ASSET_VERSIONS: Record<string, string> = {
   "/og/og-1.png": "406c63ec",
   "/og/og-3.png": "10ab7900",
   "/og/og-2.png": "52d487b5",
-  "/sprites/atlas.webp": "d27b2e0f"
+  "/sprites/atlas.webp": "9ad6334e"
 };

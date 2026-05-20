@@ -21,57 +21,51 @@ const COMMON =
   'detail, fully filled solid background, edge-to-edge composition, no transparent ' +
   'areas, no empty space';
 
-// 새 컨셉 — 닫힌 보급 상자 + **옆에 흐트러진 아이템들**. 슬롯마다 분위기 미세 차이.
-//   weapon: 거친 대장간 톤(붉은 화로 그림자)
-//   armor: 정돈된 차가운 갑주 보관실 톤(푸른 회색)
-//   accessory: 우아한 벨벳 보석함 톤(붉은 자주)
-// 공통: 상자 그 자체가 화면 중심·닫혀 있음 + 옆 바닥에 해당 슬롯 아이템 4종 이상이 무질서하게 흩어짐.
+// 새 컨셉 v4 — **장비 없음. 상자 자체 + 공간 분위기**만으로 슬롯 식별.
+// 슬롯마다 상자 재질 · 공간 톤이 명확히 다름.
+//   weapon: 강철·철띠 거친 상자, 어두운 대장간/화로 공간 (붉은 그림자)
+//   armor: 강철·리벳 무거운 상자, 차가운 갑주 보관실 (푸른 회색)
+//   accessory: 마호가니+황금 장식 보석함, 붉은 벨벳 부드러운 공간
 const BOXES: { slot: string; prompt: string; fill: { r: number; g: number; b: number } }[] = [
   {
     slot: 'weapon',
     fill: { r: 28, g: 20, b: 16 }, // #1c1410 forge shadow
     prompt:
-      'a closed iron-bound dark wooden treasure chest sitting on a worn stone floor, ' +
-      'around the chest on the floor are FOUR clearly different types of weapons ' +
-      'scattered and lying in disarray — a long sword with its blade angled across ' +
-      'the ground, a curved battle axe with its head resting flat, a wooden-shafted ' +
-      'spear lying diagonally, and a longbow with a loose string curving away — each ' +
-      'weapon must be its OWN obvious type, not the same shape recolored; warm orange ' +
-      'forge glow from the right edge of the frame casting long shadows, hot embers ' +
-      'and sparks faintly in the air, rough soot-stained stone walls of a deep forge ' +
-      'chamber filling the background edge to edge with no empty area, gritty rough ' +
-      'blacksmith atmosphere, ' + COMMON,
+      'a single large closed treasure chest at center, the chest is made of dark ' +
+      'iron and rough scorched dark wood with thick black iron bands and rusted ' +
+      'rivets, a heavy iron padlock at the front, slightly battered worn surface, ' +
+      'sitting alone on a soot-stained rough stone floor inside a deep blacksmith ' +
+      'forge chamber, warm orange glow from a large stone forge on the right side ' +
+      'casting long flickering shadows across the chest, hot embers and sparks float ' +
+      'faintly in the dark air, rough soot-blackened stone walls and a hanging ' +
+      'blacksmith hammer silhouette in the far background, no items around the ' +
+      'chest, gritty rough hot blacksmith atmosphere, ' + COMMON,
   },
   {
     slot: 'armor',
     fill: { r: 28, g: 32, b: 48 }, // #1c2030 armory cold steel
     prompt:
-      'a closed iron-bound dark wooden treasure chest sitting on a cold stone floor, ' +
-      'around the chest on the floor are FIVE clearly different types of armor pieces ' +
-      'scattered and lying in disarray — (1) a steel breastplate lying flat on its ' +
-      'back, (2) a closed iron helmet on its side, (3) a large round metal shield ' +
-      'leaning against the chest at an angle, (4) a pair of tall leather boots ' +
-      'fallen over on their side, (5) a pair of iron gauntlets opened palm-down — ' +
-      'each piece must be its OWN obvious type, not the same shape recolored; cool ' +
-      'pale blue moonlight from above with two muted blue torches at the corners, ' +
-      'dim stone walls of an old armory chamber filling the entire background edge to ' +
-      'edge with no empty area, quiet solemn knightly atmosphere, ' + COMMON,
+      'a single large closed treasure chest at center, the chest is made of ' +
+      'polished cold steel plates with thick riveted seams and a heavy bolted ' +
+      'lock, very solid heavy knight-like construction, sitting alone on a cool ' +
+      'pale stone floor inside an old castle armory chamber, soft pale blue ' +
+      'moonlight pouring down from a high arched window with two muted blue ' +
+      'torches at the corners casting cool light, polished stone walls and tall ' +
+      'arched columns in the background, no items around the chest, quiet solemn ' +
+      'cool knightly atmosphere, ' + COMMON,
   },
   {
     slot: 'accessory',
     fill: { r: 42, g: 22, b: 32 }, // #2a1620 velvet red
     prompt:
-      'a closed ornate jewelry chest with brass corners and velvet trim sitting on a ' +
-      'polished mahogany table top, around the chest on the table are FOUR clearly ' +
-      'different types of accessories scattered casually in disarray — (1) a gold ' +
-      'chain necklace with a teardrop ruby pendant lying coiled, (2) a thick gold ' +
-      'ring with a large red ruby resting on its side, (3) a pair of dangling ' +
-      'teardrop earrings fallen apart from each other, (4) an ornate circular ' +
-      'medallion brooch with a center jewel face up — each item must be its OWN ' +
-      'obvious type, not the same shape recolored; warm glowing candle light from ' +
-      'two ornate candelabras at the edges casting soft golden light, deep red velvet ' +
-      'wall background filling the entire frame edge to edge with no empty area, ' +
-      'elegant boudoir parlor atmosphere, ' + COMMON,
+      'a single closed jewelry box at center, the box is made of polished deep ' +
+      'mahogany wood with ornate golden brass corner fittings and a small filigree ' +
+      'gold latch, very refined elegant smaller box, sitting alone on top of a ' +
+      'polished mahogany table covered with deep red velvet cloth, warm flickering ' +
+      'golden candle light from two ornate gold candelabras at the edges casting ' +
+      'soft glowing reflections on the box, deep red velvet drapery wall background ' +
+      'with gold ornament edges filling the entire frame, no items around the box, ' +
+      'elegant refined warm boudoir parlor atmosphere, ' + COMMON,
   },
 ];
 
