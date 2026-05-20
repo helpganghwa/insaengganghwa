@@ -404,24 +404,27 @@ function TranscendCanvas({
       // 베이스 스프라이트 (불변).
       if (spriteCv) o.drawImage(spriteCv, 0, 0);
 
-      // Glare — 챔피언 표식. **시간 가우시안 peak**로 띠가 sprite 중앙 통과 순간에만
-      // 알파 폭증("번쩍"). 그 외엔 거의 보이지 않음 → "슥~ 흰선"이 아니라 plash.
+      // Glare — 챔피언 표식. 사용자 피드백 반영:
+      //   1) 중앙 집중 완화 → σ 0.06 → 0.14 (peak 영역 넓혀 자연스러운 페이드)
+      //   2) 반복 사이 텀 → localPh ∈ [0.25, 0.75] 외엔 강제 skip (한 통과 후 멈춤)
+      //   3) 더 투명 → shineAlpha 0.45 + screen 블렌드(어두운 sprite에서만 빛 추가)
       if (showShine && spriteCv) {
         const sprite = spriteCv;
         const drawBand = (phShift: number) => {
           const localPh = ((ph + phShift) * TRANSCEND_TUNING.shineSpeed) % 1; // 0..1
-          // localPh ≈ 0.5 (sprite 한가운데 통과 시점)에서만 강한 알파. σ=0.06 → 매우 좁음.
-          const peakBoost = Math.exp(-Math.pow((localPh - 0.5) / 0.06, 2));
+          // 활성 구간 외(0..0.25, 0.75..1)는 텀 — sprite를 가만히 둠.
+          if (localPh < 0.25 || localPh > 0.75) return;
+          const peakBoost = Math.exp(-Math.pow((localPh - 0.5) / 0.14, 2));
           const alpha = TRANSCEND_TUNING.shineAlpha * peakBoost;
-          if (alpha < 0.02) return; // 거의 안 보이면 skip
+          if (alpha < 0.015) return;
           shineX.clearRect(0, 0, FS, FS);
           const gx = localPh * FS * 1.7 - FS * 0.35;
           const half = FS * TRANSCEND_TUNING.shineWidth;
           const lg = shineX.createLinearGradient(gx - half, 0, gx + half, FS);
           lg.addColorStop(0, 'rgba(255,255,255,0)');
-          lg.addColorStop(0.42, 'rgba(255,255,255,0)');
+          lg.addColorStop(0.4, 'rgba(255,255,255,0)');
           lg.addColorStop(0.5, `rgba(255,255,255,${alpha})`);
-          lg.addColorStop(0.58, 'rgba(255,255,255,0)');
+          lg.addColorStop(0.6, 'rgba(255,255,255,0)');
           lg.addColorStop(1, 'rgba(255,255,255,0)');
           shineX.globalCompositeOperation = 'source-over';
           shineX.fillStyle = lg;
