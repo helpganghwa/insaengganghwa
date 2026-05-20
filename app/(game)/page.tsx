@@ -2,15 +2,16 @@ import Link from 'next/link';
 
 /**
  * WIREFRAMES §1 — 홈 (메뉴 허브). 2×3 그리드 + 오늘의 보급.
- * 장비/강화 현황 정보 없음(강화 화면 전용).
+ * 각 카드 = Pixellab 픽셀아트 배경(public/sprites/hub/*.png) + 하단 그라데이션
+ * 텍스트(이름 + 한 줄 설명). 장비/강화 현황 정보 없음(강화 화면 전용).
  */
 const MENU = [
-  { href: '/enhance', label: '강화', icon: '⚒️' },
-  { href: '/inventory', label: '인벤토리', icon: '🎒' },
-  { href: '/gacha', label: '보급', icon: '📦' },
-  { href: '/raid', label: '레이드', icon: '⚔️' },
-  { href: '/me', label: '프로필', icon: '👤' },
-  { href: '/leaderboard', label: '랭킹', icon: '🏆' },
+  { href: '/enhance', label: '강화', desc: '장비를 한계까지 단련', bg: '/sprites/hub/enhance.png' },
+  { href: '/inventory', label: '인벤토리', desc: '보유 장비 관리', bg: '/sprites/hub/inventory.png' },
+  { href: '/gacha', label: '보급', desc: '랜덤 장비 획득', bg: '/sprites/hub/gacha.png' },
+  { href: '/raid', label: '레이드', desc: '보스 도전', bg: '/sprites/hub/raid.png' },
+  { href: '/me', label: '프로필', desc: '내 정보·통계', bg: '/sprites/hub/profile.png' },
+  { href: '/leaderboard', label: '랭킹', desc: '최강자 순위', bg: '/sprites/hub/ranking.png' },
 ] as const;
 
 export default function HomePage() {
@@ -21,12 +22,24 @@ export default function HomePage() {
           <Link
             key={m.href}
             href={m.href}
-            className="flex aspect-[4/3] flex-col items-center justify-center gap-2 rounded-2xl border border-zinc-200 bg-white text-center transition active:scale-[0.98] hover:bg-zinc-50 dark:border-zinc-800 dark:bg-zinc-950 dark:hover:bg-zinc-900"
+            className="relative flex aspect-[4/3] overflow-hidden rounded-2xl border border-zinc-200 bg-zinc-100 transition active:scale-[0.98] dark:border-zinc-800 dark:bg-zinc-900"
           >
-            <span aria-hidden className="text-3xl">
-              {m.icon}
-            </span>
-            <span className="text-sm font-semibold">{m.label}</span>
+            {/* 픽셀아트 배경 — next/image 리샘플은 깨지므로 raw img + imageRendering:pixelated (CLAUDE §5.2). */}
+            {/* eslint-disable-next-line @next/next/no-img-element */}
+            <img
+              src={m.bg}
+              alt=""
+              aria-hidden
+              draggable={false}
+              className="absolute inset-0 h-full w-full object-cover"
+              style={{ imageRendering: 'pixelated' }}
+            />
+            <div className="absolute inset-x-0 bottom-0 bg-gradient-to-t from-black/85 via-black/55 to-transparent px-3 pb-2 pt-6">
+              <div className="text-sm font-bold leading-tight text-white drop-shadow-sm">
+                {m.label}
+              </div>
+              <div className="mt-0.5 text-[10px] leading-tight text-white/85">{m.desc}</div>
+            </div>
           </Link>
         ))}
       </div>

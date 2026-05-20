@@ -224,7 +224,7 @@ export function EnhanceSlotCard({
             />
           </span>
           <div className="flex min-w-0 flex-1 flex-col gap-0.5">
-            <div className="flex items-center gap-1.5 whitespace-nowrap text-sm font-bold">
+            <div className="flex items-center gap-1.5 text-sm font-bold whitespace-nowrap">
               <span className="truncate">{activeJob.name}</span>
               <span className="shrink-0 text-[11px] text-zinc-400 tabular-nums">
                 +{activeJob.fromLevel}→+{activeJob.targetLevel}
@@ -279,9 +279,9 @@ export function EnhanceSlotCard({
         {confirm && !flash ? (
           <div className="pointer-events-none absolute inset-0 flex flex-col items-center justify-center gap-1 bg-black/85 px-4 text-center">
             <p className="text-[12px] font-semibold break-keep text-amber-200">
-              {ready ? '다시 탭하면 강화' : '아직 최대 확률이 아닙니다 — 다시 탭하면 강화'}
+              {ready ? '탭하면 강화' : '아직 최대 확률이 아닙니다 — 탭하면 강화'}
             </p>
-            <p className="font-mono text-[10px] tabular-nums text-zinc-300">
+            <p className="font-mono text-[10px] text-zinc-300 tabular-nums">
               {confirmLeft}s 후 자동 취소
             </p>
           </div>
