@@ -42,11 +42,14 @@ export function RarityFrame({
     { style: { left: `${STAR_INSET}%`, bottom: `${STAR_INSET}%` } },
     { style: { right: `${STAR_INSET}%`, bottom: `${STAR_INSET}%` } },
   ];
+  // Frame mask asset(transcend-frame.png)은 내부 ring 디자인이라 inset:0이면
+  // ring이 카드 *안쪽*에 떨어져 보더 대체 느낌이 안 남. 음수 inset(-8%)으로
+  // 영역을 카드 외측까지 확장 → ring 외각이 카드 가장자리 ≈ "보더 자리"에 위치.
   return (
     <div
       aria-hidden
       className={className}
-      style={{ position: 'absolute', inset: 0, pointerEvents: 'none' }}
+      style={{ position: 'absolute', inset: '-8%', pointerEvents: 'none' }}
     >
       {/* Frame 본체 — 등급색 배경을 frame mask로 사각형 외곽 ring + 코너 ornate로 클립 */}
       <div
