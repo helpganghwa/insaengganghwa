@@ -3,6 +3,7 @@ import 'server-only';
 import { eq, sql } from 'drizzle-orm';
 
 import { db } from '@/lib/db/client';
+import { withTimeout } from '@/lib/db/with-timeout';
 import { profiles } from '@/lib/db/schema/profiles';
 import { equipmentInstances, userCodex } from '@/lib/db/schema/equipment';
 import { combatPowerFromRows } from '@/lib/game/equipment/combat-power';
@@ -91,15 +92,21 @@ async function allRows(metric: LeaderboardMetric) {
   return combatRows();
 }
 
+// 풀(max:1) 직렬 압력으로 SSR이 매달리면 라우트 전환 오버레이 무한 → 페이지 진입 불가.
+// 짧은 가드 + 빈 폴백으로 항상 응답. 차후 풀 확장/캐싱 시 가드 제거.
+const TIMEOUT_MS = 3000;
+const safeRows = (m: LeaderboardMetric) =>
+  withTimeout(allRows(m), TIMEOUT_MS, `leaderboard.${m}`).catch(() => []);
+
 export async function getTop(metric: LeaderboardMetric): Promise<LeaderboardEntry[]> {
-  return ranked(await allRows(metric));
+  return ranked(await safeRows(metric));
 }
 
 export async function getMyRank(
   metric: LeaderboardMetric,
   userId: string,
 ): Promise<{ rank: number; value: number } | null> {
-  const rows = (await allRows(metric)).sort((a, b) => b.value - a.value);
+  const rows = (await safeRows(metric)).sort((a, b) => b.value - a.value);
   const idx = rows.findIndex((r) => r.userId === userId);
   if (idx < 0) return null;
   return { rank: idx + 1, value: rows[idx]!.value };
