@@ -13,11 +13,7 @@ import { assetUrl } from '@/lib/asset-versions';
 import { settleRaidAction } from '../actions';
 import { RaidSessionCard, type RaidView } from '../RaidSessionCard';
 
-export default async function RaidDetail({
-  params,
-}: {
-  params: Promise<{ raidId: string }>;
-}) {
+export default async function RaidDetail({ params }: { params: Promise<{ raidId: string }> }) {
   const userId = await getSessionUserId();
   if (!userId) return null;
   const { raidId } = await params;
@@ -98,7 +94,7 @@ export default async function RaidDetail({
   };
 
   return (
-    <div className="pb-4">
+    <div className="flex-1">
       <RaidSessionCard view={view} />
     </div>
   );

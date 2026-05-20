@@ -404,20 +404,24 @@ function TranscendCanvas({
       // 베이스 스프라이트 (불변).
       if (spriteCv) o.drawImage(spriteCv, 0, 0);
 
-      // Glare — 챔피언 식별 표식. 좁은 흰빛 띠 sharp peak + screen 블렌드.
-      // 한 주기에 두 번 통과(shineSpeed=2.0) → 반복 섬광 느낌. peak 구간 ±6% 좁게.
+      // Glare — 챔피언 표식. **시간 가우시안 peak**로 띠가 sprite 중앙 통과 순간에만
+      // 알파 폭증("번쩍"). 그 외엔 거의 보이지 않음 → "슥~ 흰선"이 아니라 plash.
       if (showShine && spriteCv) {
-        const sprite = spriteCv; // closure narrowing 보존
+        const sprite = spriteCv;
         const drawBand = (phShift: number) => {
+          const localPh = ((ph + phShift) * TRANSCEND_TUNING.shineSpeed) % 1; // 0..1
+          // localPh ≈ 0.5 (sprite 한가운데 통과 시점)에서만 강한 알파. σ=0.06 → 매우 좁음.
+          const peakBoost = Math.exp(-Math.pow((localPh - 0.5) / 0.06, 2));
+          const alpha = TRANSCEND_TUNING.shineAlpha * peakBoost;
+          if (alpha < 0.02) return; // 거의 안 보이면 skip
           shineX.clearRect(0, 0, FS, FS);
-          const gx =
-            (((ph + phShift) * TRANSCEND_TUNING.shineSpeed) % 1) * FS * 1.7 - FS * 0.35;
+          const gx = localPh * FS * 1.7 - FS * 0.35;
           const half = FS * TRANSCEND_TUNING.shineWidth;
           const lg = shineX.createLinearGradient(gx - half, 0, gx + half, FS);
           lg.addColorStop(0, 'rgba(255,255,255,0)');
-          lg.addColorStop(0.44, 'rgba(255,255,255,0)');
-          lg.addColorStop(0.5, `rgba(255,255,255,${TRANSCEND_TUNING.shineAlpha})`);
-          lg.addColorStop(0.56, 'rgba(255,255,255,0)');
+          lg.addColorStop(0.42, 'rgba(255,255,255,0)');
+          lg.addColorStop(0.5, `rgba(255,255,255,${alpha})`);
+          lg.addColorStop(0.58, 'rgba(255,255,255,0)');
           lg.addColorStop(1, 'rgba(255,255,255,0)');
           shineX.globalCompositeOperation = 'source-over';
           shineX.fillStyle = lg;
@@ -428,7 +432,7 @@ function TranscendCanvas({
           o.drawImage(shineCv, 0, 0);
           o.globalCompositeOperation = 'source-over';
         };
-        drawBand(0); // 메인 띠
+        drawBand(0);
       }
 
       // 프레임 + 별 (정적).

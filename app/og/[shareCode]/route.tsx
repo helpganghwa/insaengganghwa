@@ -15,63 +15,9 @@ const SLOTS = ['weapon', 'armor', 'accessory'] as const;
 /** Pixellab 배경 아트 풀 — public/og/og-1..N.png. 부재 시 그라데이션 폴백. */
 const BG_POOL = 8;
 
-/**
- * 초월 별 장식 — 4 모서리 ornate(RarityFrame OG 버전).
- * 큰 별(R=4) + sub=1이면 위성 3 별. Satori 호환(abs div + inline SVG).
- * 부모는 position:relative 필요. cornerPx = 카드 한 변의 30% px.
- */
-function rarityCornersOG(
-  colorRgb: readonly [number, number, number],
-  sub: 0 | 1,
-  cornerPx: number,
-): React.ReactElement[] {
-  const [r, g, b] = colorRgb;
-  const color = `rgb(${r},${g},${b})`;
-  const accent = `rgb(${Math.round(r + (255 - r) * 0.45)},${Math.round(g + (255 - g) * 0.45)},${Math.round(b + (255 - b) * 0.45)})`;
-  const baseCorners: Array<{ pos: React.CSSProperties; transform: string }> = [
-    { pos: { top: 0, left: 0 }, transform: 'none' },
-    { pos: { top: 0, right: 0 }, transform: 'scaleX(-1)' },
-    { pos: { bottom: 0, left: 0 }, transform: 'scaleY(-1)' },
-    { pos: { bottom: 0, right: 0 }, transform: 'scale(-1, -1)' },
-  ];
-  return baseCorners.map((c, i) => (
-    <div
-      key={`rc${i}`}
-      style={{
-        position: 'absolute',
-        width: cornerPx,
-        height: cornerPx,
-        display: 'flex',
-        transform: c.transform,
-        ...c.pos,
-      }}
-    >
-      <svg
-        viewBox="0 0 30 30"
-        preserveAspectRatio="none"
-        style={{ width: '100%', height: '100%' }}
-      >
-        <g transform="translate(7.5 7.5)" fill={color}>
-          <polygon points="0,-4 1.1,-1.1 4,0 1.1,1.1 0,4 -1.1,1.1 -4,0 -1.1,-1.1" />
-        </g>
-        <circle cx="7.5" cy="7.5" r="1.1" fill="rgba(255,255,255,0.9)" />
-        {sub === 1 ? (
-          <>
-            <g transform="translate(14.5 4.5)" fill={accent}>
-              <polygon points="0,-2 0.55,-0.55 2,0 0.55,0.55 0,2 -0.55,0.55 -2,0 -0.55,-0.55" />
-            </g>
-            <g transform="translate(4.5 14.5)" fill={accent}>
-              <polygon points="0,-2 0.55,-0.55 2,0 0.55,0.55 0,2 -0.55,0.55 -2,0 -0.55,-0.55" />
-            </g>
-            <g transform="translate(13.5 13.5)" fill={accent}>
-              <polygon points="0,-1.6 0.45,-0.45 1.6,0 0.45,0.45 0,1.6 -0.45,0.45 -1.6,0 -0.45,-0.45" />
-            </g>
-          </>
-        ) : null}
-      </svg>
-    </div>
-  ));
-}
+// rarityCornersOG (inline SVG 별 장식) 제거됨 — Satori가 `<g transform>` 일부와
+// preserveAspectRatio 미지원으로 prod에서 500 유발. 슬롯 카드는 등급색 보더 +
+// boxShadow 글로우로 등급 표현(이미 적용). sub=0/1 시각 차이는 글로우 강도로 표현.
 
 /** 같은 배포의 정적 에셋 → base64 data URI(Satori가 안정적으로 임베드). 실패=null. */
 async function dataUri(url: string): Promise<string | null> {
@@ -201,7 +147,7 @@ export async function GET(_req: Request, { params }: { params: Promise<{ shareCo
         <div
           style={{
             display: 'flex', fontSize: 44, fontWeight: 800, color: '#fde9c8',
-            letterSpacing: 2, zIndex: 1, justifyContent: 'center',
+            letterSpacing: 2, justifyContent: 'center',
           }}
         >
           ⚒️ 인생강화
@@ -209,7 +155,7 @@ export async function GET(_req: Request, { params }: { params: Promise<{ shareCo
         <div
           style={{
             display: 'flex', alignItems: 'center', justifyContent: 'center', flex: 1,
-            zIndex: 1, marginTop: 16,
+            marginTop: 16,
           }}
         >
           <div
@@ -227,11 +173,10 @@ export async function GET(_req: Request, { params }: { params: Promise<{ shareCo
             ) : (
               <span style={{ fontSize: 200, opacity: 0.5 }}>❔</span>
             )}
-            {/* 초월 별 장식 — 큰 카드라 코너 108px */}
-            {ts ? rarityCornersOG(ts.colorRgb, ts.sub as 0 | 1, 108) : null}
+            {/* 초월 별 장식은 Satori 제약으로 제거됨 — 등급은 보더 색 + boxShadow로 표현. */}
           </div>
         </div>
-        <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', zIndex: 1, marginTop: 'auto' }}>
+        <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', marginTop: 'auto' }}>
           <div style={{ display: 'flex', fontSize: 96, fontWeight: 800, color: '#ffd47a' }}>{headline}</div>
         </div>
       </div>,
@@ -298,7 +243,6 @@ export async function GET(_req: Request, { params }: { params: Promise<{ shareCo
           flex: 1,
           justifyContent: 'center',
           gap: 44,
-          zIndex: 1,
         }}
       >
       {/* 헤더 — 타이틀만(닉네임 제거, 사용자 결정). 가운데 정렬. */}
@@ -364,8 +308,7 @@ export async function GET(_req: Request, { params }: { params: Promise<{ shareCo
                 ) : (
                   <span style={{ fontSize: 108, opacity: it ? 1 : 0.4 }}>{EMOJI[s]}</span>
                 )}
-                {/* 초월 별 장식(4 모서리) — sub=0이면 큰 별만, sub=1이면 위성 별 추가. */}
-                {ts ? rarityCornersOG(ts.colorRgb, ts.sub as 0 | 1, 66) : null}
+                {/* 초월 별 장식은 Satori 제약으로 제거됨 — 등급은 보더 색 + boxShadow로 표현. */}
               </div>
               <div
                 style={{

@@ -59,7 +59,7 @@ export default async function GameLayout({ children }: { children: React.ReactNo
       <KakaoSdkLoader />
       <RouteTransitionOverlay />
       <AppHeader userId={userId} />
-      <main className="flex-1 overflow-y-auto">{children}</main>
+      <main className="flex flex-1 flex-col overflow-y-auto">{children}</main>
       <BottomNav hasCompletedEnhance={hasCompletedEnhance} />
     </div>
   );
