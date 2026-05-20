@@ -45,6 +45,27 @@ export function BoastModal({
     }
   }, [nickname]);
 
+  // 모달 mount 시점 imageUrl 한 번 계산(매 공유 다른 OG). open=false면 빈 값.
+  // ⚠ React #310 회피 — 모든 hook은 early return(`if (!open) return null`) **이전**에
+  // 호출되어야 함. 같은 컴포넌트 인스턴스의 hook 호출 순서·갯수는 매 render 동일.
+  const imageUrl = useMemo(() => {
+    if (!open || typeof window === 'undefined') return '';
+    const origin = window.location.origin;
+    const v = Math.random().toString(36).slice(2, 10);
+    const params = new URLSearchParams({ v });
+    if (kind === 'piece' && piece) {
+      params.set('focus', 'piece');
+      params.set('code', piece.p.code);
+      params.set('lvl', String(piece.p.enhanceLevel));
+      params.set('t', String(piece.p.transcendLevel));
+    } else if (kind === 'set' && set) {
+      params.set('focus', 'set');
+      params.set('cp', String(set.total));
+    }
+    return `${origin}/og/${encodeURIComponent(nickname)}?${params.toString()}`;
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [open, kind, nickname]);
+
   if (!open) return null;
 
   // ── 자랑 멘트 풀 ── 랜덤 노출(매 공유마다 변주). "단조"는 게임 타이틀(인생강화)에 맞춰
@@ -176,26 +197,6 @@ export function BoastModal({
   const hasKakao =
     typeof window !== 'undefined' &&
     !!(window as unknown as { Kakao?: { isInitialized: () => boolean } }).Kakao?.isInitialized();
-
-  // 미리보기·카톡 공유 동일 imageUrl 사용 — 사용자가 보는 그대로 공유.
-  // 모달 mount 시점에 한 번 계산해 useMemo로 안정화(같은 모달 안 일관).
-  const imageUrl = useMemo(() => {
-    if (typeof window === 'undefined') return '';
-    const origin = window.location.origin;
-    const v = Math.random().toString(36).slice(2, 10);
-    const params = new URLSearchParams({ v });
-    if (kind === 'piece' && piece) {
-      params.set('focus', 'piece');
-      params.set('code', piece.p.code);
-      params.set('lvl', String(piece.p.enhanceLevel));
-      params.set('t', String(piece.p.transcendLevel));
-    } else if (kind === 'set' && set) {
-      params.set('focus', 'set');
-      params.set('cp', String(set.total));
-    }
-    return `${origin}/og/${encodeURIComponent(nickname)}?${params.toString()}`;
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [open, kind, nickname]);
 
   return (
     <div

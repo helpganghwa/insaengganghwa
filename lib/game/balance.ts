@@ -245,10 +245,14 @@ export const RAID_DAILY_CAP = 5; // 유저당 1일(KST)
 export const RAID_WINDOW_MS = 6 * HOUR; // 개설 후 공격창
 export const RAID_BASE_ATTACKS = 10; // 참여자당 기본
 
-/** §5.5 n번째 추가 공격 비용(다이아) = 50 + 10·(n−1). n ≥ 1. */
+/**
+ * §5.5 n번째 추가 공격 비용(다이아) — 10번 단위 단계 상승.
+ * 1~10번째: 50, 11~20: 100, 21~30: 150, 31~40: 200, …
+ * = 50 × ceil(n / 10). n ≥ 1.
+ */
 export function raidExtraAttackCost(nth: number): number {
   const n = Math.max(1, Math.floor(nth));
-  return 50 + 10 * (n - 1);
+  return 50 * Math.ceil(n / 10);
 }
 
 /** §5.2 phase1 HP 범위. phase n HP = phase1 × 1.5^(n-1). */

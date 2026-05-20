@@ -31,7 +31,7 @@ export async function ensureDailyMail(userId: string): Promise<boolean> {
     select ${userId}::uuid,
            'reward'::mailbox_type,
            '오늘의 보급',
-           '매일 KST 자정 새로 도착합니다. 30일 안에 받으세요.',
+           '동트는 종소리와 함께 보급이 닿았습니다. 30일 안에 받으세요.',
            '일일 보급',
            ${PAYLOAD}::jsonb,
            now() + interval '30 days'

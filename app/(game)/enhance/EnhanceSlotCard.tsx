@@ -205,6 +205,21 @@ export function EnhanceSlotCard({
     setOptimisticDone(false);
     setConfirm(false);
   }, [activeJob.jobId]);
+  // 게이지 transition 토글 — 페이지 진입(초기) + 새 잡 도착(시도 후 게이지 점프) 시
+  // 첫 paint는 transition 끔(즉시 그 자리). 다음 frame부터 켜서 매초 흐름 · 보석 단축은
+  // 부드럽게(700ms). 두 단계 rAF로 React commit + 브라우저 paint 후 클래스 추가.
+  const [animGauge, setAnimGauge] = useState(false);
+  useEffect(() => {
+    setAnimGauge(false);
+    let raf2 = 0;
+    const raf1 = requestAnimationFrame(() => {
+      raf2 = requestAnimationFrame(() => setAnimGauge(true));
+    });
+    return () => {
+      cancelAnimationFrame(raf1);
+      if (raf2) cancelAnimationFrame(raf2);
+    };
+  }, [activeJob.jobId]);
   // 확인 모드 진입 시 3초 카운트다운 + 랜덤 메시지 선택(client-only — SSR 안전).
   useEffect(() => {
     if (!confirm) {
@@ -362,11 +377,13 @@ export function EnhanceSlotCard({
           ready ? 'border-emerald-500' : 'border-zinc-700'
         } ${flash ? FLASH_CLASS[flash] : ''} ${pending ? 'opacity-70' : ''}`}
       >
-        {/* 진행 게이지 — 하단 바. 색: <50% 빨강 / 50~<100% 주황 / 100% 초록 */}
+        {/* 진행 게이지 — 하단 바. 색: <50% 빨강 / 50~<100% 주황 / 100% 초록.
+            transition은 페이지 진입·새 잡 도착 직후엔 끔(즉시 표시), 이후 매초 채워질
+            때 · 보석 단축 시만 켬(animGauge). */}
         <div
-          className={`absolute bottom-0 left-0 h-1 transition-[width] duration-700 ${
-            ready ? 'bg-emerald-400' : progress >= 0.5 ? 'bg-orange-400' : 'bg-red-500'
-          }`}
+          className={`absolute bottom-0 left-0 h-1 ${
+            animGauge ? 'transition-[width] duration-700' : ''
+          } ${ready ? 'bg-emerald-400' : progress >= 0.5 ? 'bg-orange-400' : 'bg-red-500'}`}
           style={{ width: `${Math.max(2, Math.round(progress * 1000) / 10)}%` }}
         />
         <div className="flex h-full items-center gap-3 px-3">

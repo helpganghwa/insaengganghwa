@@ -6,8 +6,13 @@ import { useRouter } from 'next/navigation';
 
 import { RAID_OPEN_COST_DIAMOND } from '@/lib/game/balance';
 import { RAID_BOSSES, RAID_BOSS_CODES, type RaidBoss } from '@/lib/game/raid/bosses';
+import { assetUrl } from '@/lib/asset-versions';
 
 import { openRaidAction } from './actions';
+
+function bossSrc(code: RaidBoss): string {
+  return assetUrl(`/sprites/boss/${code}.png`);
+}
 
 export type ActiveRaid = {
   raidId: string;
@@ -81,7 +86,16 @@ export function RaidSlots({
               href={`/raid/${s.raidId}`}
               className="flex items-center gap-3 rounded-xl border-2 border-amber-700/50 bg-zinc-900 p-3 text-zinc-100"
             >
-              <span className="text-3xl">{RAID_BOSSES[s.bossCode].emoji}</span>
+              {/* eslint-disable-next-line @next/next/no-img-element */}
+              <img
+                src={bossSrc(s.bossCode)}
+                alt=""
+                aria-hidden
+                width={56}
+                height={56}
+                className="h-14 w-14 shrink-0"
+                style={{ imageRendering: 'pixelated' }}
+              />
               <span className="min-w-0 flex-1">
                 <span className="block text-sm font-bold">
                   {RAID_BOSSES[s.bossCode].name}
@@ -135,7 +149,16 @@ export function RaidSlots({
                       onClick={() => setPicked(c)}
                       className="flex flex-col items-center gap-1 rounded-lg border border-zinc-300 p-2 text-[10px] dark:border-zinc-700"
                     >
-                      <span className="text-2xl">{RAID_BOSSES[c].emoji}</span>
+                      {/* eslint-disable-next-line @next/next/no-img-element */}
+                      <img
+                        src={bossSrc(c)}
+                        alt=""
+                        aria-hidden
+                        width={48}
+                        height={48}
+                        className="h-12 w-12"
+                        style={{ imageRendering: 'pixelated' }}
+                      />
                       {RAID_BOSSES[c].name}
                     </button>
                   ))}
@@ -150,7 +173,18 @@ export function RaidSlots({
               </>
             ) : (
               <>
-                <div className="text-center text-5xl">{RAID_BOSSES[picked].emoji}</div>
+                <div className="flex justify-center">
+                  {/* eslint-disable-next-line @next/next/no-img-element */}
+                  <img
+                    src={bossSrc(picked)}
+                    alt=""
+                    aria-hidden
+                    width={96}
+                    height={96}
+                    className="h-24 w-24"
+                    style={{ imageRendering: 'pixelated' }}
+                  />
+                </div>
                 <h3 className="mt-1 text-center text-base font-bold">
                   {RAID_BOSSES[picked].name}
                 </h3>

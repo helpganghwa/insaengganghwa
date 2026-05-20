@@ -14,6 +14,29 @@ import {
   pieceCombatPower,
   CODEX_BONUS_COEFF,
   DIAMOND_PER_DISENCHANT,
+  RAID_OPEN_COST_DIAMOND,
+  RAID_MAX_PARTICIPANTS,
+  RAID_MAX_CONCURRENT_PER_USER,
+  RAID_DAILY_CAP,
+  RAID_WINDOW_MS,
+  RAID_BASE_ATTACKS,
+  raidExtraAttackCost,
+  RAID_PHASE1_HP_MIN,
+  RAID_PHASE1_HP_MAX,
+  RAID_PHASE_HP_MULT,
+  raidPhaseHp,
+  RAID_CRIT_RATE_BP,
+  RAID_CRIT_MULT,
+  RAID_DAMAGE_VARIANCE,
+  RAID_DAMAGE_K,
+  RAID_BASE_PARTICIPATION_DIAMOND,
+  RAID_PHASE_DROP_DIAMOND,
+  RAID_PHASE_DROP_DIAMOND_RATE_BP,
+  GEM_TO_MS,
+  SHARE_DAILY_REWARD_DIAMOND,
+  REFERRAL_CONVERSION_DIAMOND,
+  AD_DAILY_CAP,
+  AD_REWARD_SUPPLY_BOXES,
 } from '@/lib/game/balance';
 
 export const metadata: Metadata = {
@@ -28,6 +51,8 @@ const pct = (bp: number) => {
 
 const ENH_SAMPLES = [0, 9, 10, 15, 20, 30, 40, 51, 52, 60, 75, 90, 99, 100];
 const CP_SAMPLES = [0, 10, 30, 51, 99];
+const PHASE_SAMPLES = [1, 2, 3, 4, 5];
+const EXTRA_ATTACK_SAMPLES = [1, 10, 11, 20, 21, 30, 31, 40];
 
 /** 확률 공시 — 공개 페이지. lib/game/balance.ts(단일 진실 원천)에서 직접 산출. */
 export default function ProbabilityPage() {
@@ -109,6 +134,71 @@ export default function ProbabilityPage() {
           (보급 개봉 자체에는 확률형 보상 없음 — 균등 당첨 외 추가 추첨 없음.)
         </P>
       </Sec>
+
+      <Sec n="5" title="레이드">
+        <P>
+          개설 비용 {RAID_OPEN_COST_DIAMOND.toLocaleString('ko-KR')}다이아 / 인원 최대{' '}
+          {RAID_MAX_PARTICIPANTS}명(호스트 포함) / 동시 진행 1인 최대{' '}
+          {RAID_MAX_CONCURRENT_PER_USER}건 / 1일(KST) {RAID_DAILY_CAP}건 / 공격창{' '}
+          {Math.round(RAID_WINDOW_MS / 3_600_000)}시간 / 참여자당 기본 {RAID_BASE_ATTACKS}회 공격.
+        </P>
+        <P>
+          페이즈 1 HP는 [{RAID_PHASE1_HP_MIN.toLocaleString('ko-KR')},{' '}
+          {RAID_PHASE1_HP_MAX.toLocaleString('ko-KR')}] 균등 추첨. 이후 페이즈 HP = 페이즈 1 ×{' '}
+          {RAID_PHASE_HP_MULT}^(n−1).
+        </P>
+        <Table head={['페이즈', 'HP (최소)', 'HP (최대)']}>
+          {PHASE_SAMPLES.map((n) => (
+            <tr key={n} className="border-t border-zinc-100 dark:border-zinc-900">
+              <Td>P{n}</Td>
+              <Td>{raidPhaseHp(RAID_PHASE1_HP_MIN, n).toLocaleString('ko-KR')}</Td>
+              <Td>{raidPhaseHp(RAID_PHASE1_HP_MAX, n).toLocaleString('ko-KR')}</Td>
+            </tr>
+          ))}
+        </Table>
+        <P>
+          데미지 = round(총전투력 × {RAID_DAMAGE_K} × 분산계수 × 크리배수). 분산계수는 [
+          {1 - RAID_DAMAGE_VARIANCE}, {1 + RAID_DAMAGE_VARIANCE}] 균등(±
+          {Math.round(RAID_DAMAGE_VARIANCE * 100)}%). 크리티컬 {pct(RAID_CRIT_RATE_BP)} 확률로 ×
+          {RAID_CRIT_MULT}. 미스 없음 · 데미지 캡 없음.
+        </P>
+        <Table head={['n번째 추가 공격', '비용(다이아)']}>
+          {EXTRA_ATTACK_SAMPLES.map((n) => (
+            <tr key={n} className="border-t border-zinc-100 dark:border-zinc-900">
+              <Td>{n}번째</Td>
+              <Td>{raidExtraAttackCost(n).toLocaleString('ko-KR')}</Td>
+            </tr>
+          ))}
+        </Table>
+        <P>
+          추가 공격 비용 = 50 × ⌈n/10⌉ 다이아 (10번 단위 계단). 보상: 1회 이상 공격 참여 시 기본{' '}
+          {RAID_BASE_PARTICIPATION_DIAMOND}다이아. 페이즈 돌파마다 참여 전원 1회 추첨 —{' '}
+          {pct(RAID_PHASE_DROP_DIAMOND_RATE_BP)} 다이아{' '}
+          {RAID_PHASE_DROP_DIAMOND.toLocaleString('ko-KR')}개 /{' '}
+          {pct(10000 - RAID_PHASE_DROP_DIAMOND_RATE_BP)} 슬롯 무작위 보급 상자 1개(무기/방어구/장신구
+          각 1/3 균등).
+        </P>
+      </Sec>
+
+      <Sec n="6" title="경제·기타">
+        <P>
+          강화 시간 단축: 다이아 1개당 {Math.round(GEM_TO_MS / 60_000)}분 단축(등록 시점 환산률
+          영구 고정 — 진행 중 작업에 소급 적용 없음).
+        </P>
+        <P>
+          공유 보상: 1일 1회 {SHARE_DAILY_REWARD_DIAMOND}다이아. 신규 가입 전환 시 공유자{' '}
+          {REFERRAL_CONVERSION_DIAMOND}다이아 추가 지급.
+        </P>
+        <P>
+          광고 보상: 1일 최대 {AD_DAILY_CAP}회, 회당 슬롯 무작위 보급 상자{' '}
+          {AD_REWARD_SUPPLY_BOXES}개(슬롯 균등 1/3). 다이아 직접 지급 없음.
+        </P>
+      </Sec>
+
+      <p className="mt-6 text-[10px] leading-relaxed text-zinc-400 dark:text-zinc-500">
+        본 공시의 모든 수치는 <code>lib/game/balance.ts</code>(단일 진실 원천)에서 직접 산출되어
+        게임 내 판정 로직과 1:1 일치합니다. 사양 변경 시 24시간 이전 사전 공지.
+      </p>
     </main>
   );
 }
