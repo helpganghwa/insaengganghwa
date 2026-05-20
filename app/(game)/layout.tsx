@@ -3,6 +3,7 @@ import { and, eq, lte, sql } from 'drizzle-orm';
 
 import { getSessionUserId } from '@/lib/auth/session';
 import { db } from '@/lib/db/client';
+import { withTimeout, DbTimeoutError } from '@/lib/db/with-timeout';
 import { enhancementJobs } from '@/lib/db/schema/enhance';
 import { AppHeader } from '@/components/AppHeader';
 import { BottomNav } from '@/components/BottomNav';
@@ -20,17 +21,29 @@ export default async function GameLayout({ children }: { children: React.ReactNo
   // 백필 마이그레이션이 담당 — 앱 렌더 핫패스에 부트스트랩 없음(hang 위험 제거).
 
   // BottomNav 알림 dot — 완료 시점 도달한 강화 작업 존재 여부(서버 시계).
-  const [row] = await db
-    .select({ n: sql<number>`count(*)::int` })
-    .from(enhancementJobs)
-    .where(
-      and(
-        eq(enhancementJobs.userId, userId),
-        eq(enhancementJobs.status, 'running'),
-        lte(enhancementJobs.completeAt, sql`now()`),
-      ),
+  // 핫패스(모든 인증 페이지에서 1회). 5s 타임아웃 가드 → 매달리면 dot 미표시 폴백.
+  let hasCompletedEnhance = false;
+  try {
+    const [row] = await withTimeout(
+      db
+        .select({ n: sql<number>`count(*)::int` })
+        .from(enhancementJobs)
+        .where(
+          and(
+            eq(enhancementJobs.userId, userId),
+            eq(enhancementJobs.status, 'running'),
+            lte(enhancementJobs.completeAt, sql`now()`),
+          ),
+        ),
+      5000,
+      'layout.enhance-count',
     );
-  const hasCompletedEnhance = (row?.n ?? 0) > 0;
+    hasCompletedEnhance = (row?.n ?? 0) > 0;
+  } catch (e) {
+    if (!(e instanceof DbTimeoutError)) throw e;
+    // 폴백: 알림 dot 안 보이는 것뿐, 사용자가 강화소 진입 시 정확한 상태 확인됨.
+    console.warn('[layout] enhance-count timeout — dot skipped');
+  }
 
   return (
     <div className="mx-auto flex min-h-dvh w-full max-w-[390px] flex-1 flex-col shadow-sm">
