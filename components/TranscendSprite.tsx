@@ -427,7 +427,8 @@ function TranscendCanvas({
 
       // 사전합성 블러 발광 (알파만 펄스 — 아이템 뒤). swap 후 T8+ 등급 표식.
       if (radiantCv) {
-        o.globalAlpha = 0.45 * (0.85 + 0.15 * Math.sin(ph * Math.PI * 2));
+        // 글로우 강도 ↑ — baseline 0.95 + 펄스 (0.85~1.0). sprite 외곽 노란 빛이 명확히 보임.
+        o.globalAlpha = 0.95 * (0.85 + 0.15 * Math.sin(ph * Math.PI * 2));
         o.drawImage(radiantCv, 0, 0);
         o.globalAlpha = 1;
       }

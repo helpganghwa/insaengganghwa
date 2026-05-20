@@ -239,13 +239,7 @@ export async function GET(_req: Request, { params }: { params: Promise<{ shareCo
               height={630}
               style={{ position: 'absolute', top: 0, left: 0, width: 1200, height: 630, objectFit: 'cover' }}
             />
-            <div
-              style={{
-                position: 'absolute', top: 0, left: 0, width: 1200, height: 630,
-                background: 'radial-gradient(ellipse 70% 60% at 50% 50%,rgba(0,0,0,0.25) 0%,rgba(8,6,4,0.78) 100%)',
-                display: 'flex',
-              }}
-            />
+            {/* scrim 제거(2026-05-20 사용자 결정) — 배경이 자체 분위기로 보이도록 */}
           </>
         ) : null}
         <div
@@ -259,7 +253,11 @@ export async function GET(_req: Request, { params }: { params: Promise<{ shareCo
               width: 360, height: 360, display: 'flex', alignItems: 'center', justifyContent: 'center',
               borderRadius: 32, background: 'rgba(0,0,0,0.32)',
               border: ts ? `8px solid rgb(${tr},${tg},${tb})` : '3px solid rgba(255,255,255,0.10)',
-              boxShadow: ts ? `0 0 48px rgba(${tr},${tg},${tb},0.55)` : 'none',
+              boxShadow: ts
+                ? ts.hasGlow
+                  ? `0 0 72px rgba(${tr},${tg},${tb},0.7), 0 0 36px rgba(255,238,190,0.6)`
+                  : `0 0 48px rgba(${tr},${tg},${tb},0.55)`
+                : 'none',
               overflow: 'hidden',
             }}
           >
@@ -314,19 +312,7 @@ export async function GET(_req: Request, { params }: { params: Promise<{ shareCo
               objectFit: 'cover',
             }}
           />
-          {/* 가독성 스크림 — 좌측·상단 까만 쏠림 제거. 전체 균등 vertical 그라데이션. */}
-          <div
-            style={{
-              position: 'absolute',
-              top: 0,
-              left: 0,
-              width: 1200,
-              height: 630,
-              background:
-                'radial-gradient(ellipse 70% 60% at 50% 50%,rgba(0,0,0,0.25) 0%,rgba(8,6,4,0.78) 100%)',
-              display: 'flex',
-            }}
-          />
+          {/* scrim 제거(2026-05-20 사용자 결정) — 배경이 자체 분위기로 보이도록 */}
         </>
       ) : null}
 
@@ -383,7 +369,12 @@ export async function GET(_req: Request, { params }: { params: Promise<{ shareCo
                   border: ts
                     ? `6px solid rgb(${tr},${tg},${tb})`
                     : '3px solid rgba(255,255,255,0.12)',
-                  boxShadow: ts ? `0 0 32px rgba(${tr},${tg},${tb},0.55)` : 'none',
+                  // T8+(hasGlow)는 등급색 + 노란 두 겹 글로우(인벤토리 T8+ 발광과 동일 의도).
+                  boxShadow: ts
+                    ? ts.hasGlow
+                      ? `0 0 48px rgba(${tr},${tg},${tb},0.7), 0 0 24px rgba(255,238,190,0.6)`
+                      : `0 0 32px rgba(${tr},${tg},${tb},0.55)`
+                    : 'none',
                   overflow: 'hidden',
                 }}
               >
