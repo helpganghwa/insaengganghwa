@@ -6,7 +6,7 @@ import { useRouter } from 'next/navigation';
 import type { Slot } from '@/lib/db/schema/equipment';
 
 import { TranscendSprite } from '@/components/TranscendSprite';
-import { RarityFrame, rarityBorderStyle, hasRarityBorder } from '@/components/RarityFrame';
+import { RarityFrame } from '@/components/RarityFrame';
 
 import { toggleLockAction, equipBestSetAction } from './actions';
 import { EquipmentDetailSheet } from './EquipmentDetailSheet';
@@ -149,19 +149,14 @@ function Tile({ item, onOpen }: { item: InvItem; onOpen: () => void }) {
   const [pending, startTransition] = useTransition();
   const router = useRouter();
   const isNew = Date.now() - item.acquiredAtMs < NEW_MS;
-  // 카드 보더 = 기존 border-2 두께 그대로, 색만 등급색으로 흡수(이질감 없음).
-  // 그 위에 RarityFrame이 짝수 등급(+2/+4/+6/+8/+10) 4 모서리에 별 overlay.
-  // +0은 회색 기본 보더.
-  const useRarity = hasRarityBorder(item.transcendLevel);
+  // 카드 보더 = 기존 회색 zinc-200/800 그대로(이질감 0).
+  // 4 모서리에만 등급 ornate(frame asset corner 부분)를 RarityFrame이 overlay.
   return (
     <button
       type="button"
       onClick={onOpen}
       disabled={pending}
-      style={rarityBorderStyle(item.transcendLevel)}
-      className={`relative flex aspect-square flex-col items-center justify-center gap-0.5 rounded-xl border-2 bg-white px-1 text-center dark:bg-zinc-950 ${
-        useRarity ? '' : 'border-zinc-200 dark:border-zinc-800'
-      }`}
+      className="relative flex aspect-square flex-col items-center justify-center gap-0.5 rounded-xl border-2 border-zinc-200 bg-white px-1 text-center dark:border-zinc-800 dark:bg-zinc-950"
     >
       <RarityFrame level={item.transcendLevel} />
       <TranscendSprite
