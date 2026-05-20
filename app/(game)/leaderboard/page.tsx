@@ -2,8 +2,7 @@ import Link from 'next/link';
 
 import { getSessionUserId } from '@/lib/auth/session';
 import {
-  getTop,
-  getMyRank,
+  getLeaderboardPayload,
   type LeaderboardMetric,
 } from '@/lib/game/leaderboard/queries';
 import { formatCompactKR } from '@/lib/ui/format-number';
@@ -32,7 +31,7 @@ export default async function LeaderboardPage({
   const userId = await getSessionUserId();
   if (!userId) return null;
   const metric = parse((await searchParams).tab);
-  const [top, mine] = await Promise.all([getTop(metric), getMyRank(metric, userId)]);
+  const { top, mine } = await getLeaderboardPayload(metric, userId);
 
   return (
     <div className="space-y-4 px-4 py-4">

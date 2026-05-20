@@ -17,15 +17,6 @@ export type LeaderboardMetric = 'max' | 'sum' | 'combat';
 export type LeaderboardEntry = { userId: string; nickname: string; value: number; rank: number };
 const TOP = 100;
 
-function ranked(
-  rows: { userId: string; nickname: string; value: number }[],
-): LeaderboardEntry[] {
-  return rows
-    .sort((a, b) => b.value - a.value)
-    .slice(0, TOP)
-    .map((r, i) => ({ ...r, rank: i + 1 }));
-}
-
 async function maxRows() {
   const r = await db
     .select({
@@ -98,16 +89,20 @@ const TIMEOUT_MS = 3000;
 const safeRows = (m: LeaderboardMetric) =>
   withTimeout(allRows(m), TIMEOUT_MS, `leaderboard.${m}`).catch(() => []);
 
-export async function getTop(metric: LeaderboardMetric): Promise<LeaderboardEntry[]> {
-  return ranked(await safeRows(metric));
-}
-
-export async function getMyRank(
+/**
+ * Top + 내 순위 — **단일 쿼리 1회**로 둘 다 계산(같은 데이터를 두 번 안 가져옴).
+ * 라우트 전환 시 풀 점유 시간 절반 → 간헐적 무한 로딩 완화.
+ */
+export async function getLeaderboardPayload(
   metric: LeaderboardMetric,
   userId: string,
-): Promise<{ rank: number; value: number } | null> {
+): Promise<{
+  top: LeaderboardEntry[];
+  mine: { rank: number; value: number } | null;
+}> {
   const rows = (await safeRows(metric)).sort((a, b) => b.value - a.value);
+  const top = rows.slice(0, TOP).map((r, i) => ({ ...r, rank: i + 1 }));
   const idx = rows.findIndex((r) => r.userId === userId);
-  if (idx < 0) return null;
-  return { rank: idx + 1, value: rows[idx]!.value };
+  const mine = idx < 0 ? null : { rank: idx + 1, value: rows[idx]!.value };
+  return { top, mine };
 }
