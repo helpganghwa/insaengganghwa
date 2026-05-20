@@ -18,26 +18,31 @@ const BOXES: { slot: string; prompt: string }[] = [
   {
     slot: 'weapon',
     prompt:
-      'ornate dark wooden treasure chest overflowing with gleaming steel swords, ' +
-      'daggers, and spear tips spilling out, golden brass corners, warm torch lighting, ' +
-      'dark dungeon background, dark atmospheric fantasy pixel art, no characters, ' +
-      'centered front view, high detail',
+      'ornate dark wooden treasure chest overflowing with a varied assortment of ' +
+      'weapons — long sword, curved dagger, battle axe, spiked mace, spear, longbow, ' +
+      'wooden staff — each clearly distinct and visible spilling out, golden brass ' +
+      'corners, warm torch lighting, dark dungeon background, dark atmospheric ' +
+      'fantasy pixel art, no characters, centered front view, high detail',
   },
   {
     slot: 'armor',
     prompt:
-      'ornate dark wooden treasure chest overflowing with polished steel breastplate, ' +
-      'chainmail shirts, and gauntlets spilling out, golden brass corners, warm torch ' +
-      'lighting, dark dungeon background, dark atmospheric fantasy pixel art, no ' +
-      'characters, centered front view, high detail',
+      'ornate dark wooden treasure chest overflowing with a varied assortment of ' +
+      'armor — polished steel breastplate, plumed helmet, chainmail shirt, leather ' +
+      'boots, round kite shield, iron gauntlets — each clearly distinct and visible ' +
+      'spilling out, golden brass corners, warm torch lighting, dark dungeon ' +
+      'background, dark atmospheric fantasy pixel art, no characters, centered ' +
+      'front view, high detail',
   },
   {
     slot: 'accessory',
     prompt:
-      'ornate dark jewelry box overflowing with sparkling golden rings, ruby amulets, ' +
-      'and emerald gemstones spilling out, polished mahogany wood, golden brass corners, ' +
-      'warm candle lighting, dark velvet interior, dark atmospheric fantasy pixel art, no ' +
-      'characters, centered front view, high detail',
+      'ornate dark jewelry box overflowing with a varied assortment of accessories — ' +
+      'golden ring with ruby, silver pendant amulet, emerald earrings, jeweled ' +
+      'bracelet, ornate brooch, mystical talisman, gemstone necklace — each clearly ' +
+      'distinct and visible spilling out, polished mahogany wood, golden brass ' +
+      'corners, warm candle lighting, dark velvet interior, dark atmospheric fantasy ' +
+      'pixel art, no characters, centered front view, high detail',
   },
 ];
 
