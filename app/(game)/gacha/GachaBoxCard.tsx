@@ -15,6 +15,7 @@ export function GachaBoxCard({
   bgPosY = '70%',
   tint,
   count,
+  eager = false,
 }: {
   slot: Slot;
   label: string;
@@ -23,6 +24,8 @@ export function GachaBoxCard({
   bgPosY?: string;
   tint: string;
   count: number;
+  /** 화면 최상단(LCP)에 노출되는 첫 카드만 true → eager + fetchpriority high. */
+  eager?: boolean;
 }) {
   const router = useRouter();
   const [pending, startTransition] = useTransition();
@@ -50,13 +53,17 @@ export function GachaBoxCard({
       >
         {/* Pixellab 배경 — 픽셀아트 raw img + imageRendering pixelated.
             object-position '50% 70%' : 박스가 원본 이미지 하단 1/3 즈음 위치 →
-            이미지의 70% 지점을 카드 중앙에 맞춰 박스를 카드 시각 중앙으로 끌어올림. */}
+            이미지의 70% 지점을 카드 중앙에 맞춰 박스를 카드 시각 중앙으로 끌어올림.
+            첫 카드(eager=true)는 LCP 자산 → fetchpriority high + eager 로드. */}
         {/* eslint-disable-next-line @next/next/no-img-element */}
         <img
           src={bg}
           alt=""
           aria-hidden
           draggable={false}
+          loading={eager ? 'eager' : 'lazy'}
+          fetchPriority={eager ? 'high' : 'auto'}
+          decoding="async"
           className="absolute inset-0 h-full w-full object-cover opacity-90"
           style={{ imageRendering: 'pixelated', objectPosition: `50% ${bgPosY}` }}
         />

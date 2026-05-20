@@ -70,5 +70,5 @@ export const ASSET_VERSIONS: Record<string, string> = {
   "/og/og-1.png": "406c63ec",
   "/og/og-3.png": "10ab7900",
   "/og/og-2.png": "52d487b5",
-  "/sprites/atlas.webp": "43ea8768"
+  "/sprites/atlas.webp": "e46d6aff"
 };

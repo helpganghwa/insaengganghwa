@@ -138,7 +138,7 @@ export function RaidSessionCard({ view: v }: { view: RaidView }) {
         </div>
 
         <div className={`relative z-10 mb-2 ${fx ? 'animate-flash-down' : ''}`}>
-          <BossSprite code={v.bossCode} size={168} className="drop-shadow-2xl" />
+          <BossSprite code={v.bossCode} size={168} className="drop-shadow-2xl" eager />
           {fx ? (
             <span
               className={`absolute left-1/2 top-2 -translate-x-1/2 font-mono font-extrabold ${

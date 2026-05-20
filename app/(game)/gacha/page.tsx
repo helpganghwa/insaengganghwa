@@ -1,4 +1,5 @@
 import { eq } from 'drizzle-orm';
+import { preload } from 'react-dom';
 
 import { getSessionUserId } from '@/lib/auth/session';
 import { db } from '@/lib/db/client';
@@ -18,6 +19,10 @@ const BOXES: { slot: Slot; label: string; bg: string; bgPosY: string; tint: stri
 ];
 
 export default async function GachaPage() {
+  // LCP 자산 — 첫 카드(무기 박스) 배경에 가장 높은 우선순위. RSC가 Link 헤더에 주입해
+  // 브라우저가 HTML 파싱 전부터 병렬 fetch 시작.
+  preload(assetUrl(BOXES[0].bg), { as: 'image', fetchPriority: 'high' });
+
   const userId = await getSessionUserId();
   if (!userId) return null;
 
@@ -30,7 +35,7 @@ export default async function GachaPage() {
   return (
     <div className="space-y-3 px-4 py-4">
       <h1 className="text-lg font-semibold">📦 보급</h1>
-      {BOXES.map((b) => (
+      {BOXES.map((b, i) => (
         <GachaBoxCard
           key={b.slot}
           slot={b.slot}
@@ -39,6 +44,7 @@ export default async function GachaPage() {
           bgPosY={b.bgPosY}
           tint={b.tint}
           count={countBySlot.get(b.slot) ?? 0}
+          eager={i === 0}
         />
       ))}
     </div>

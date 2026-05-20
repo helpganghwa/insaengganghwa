@@ -1,11 +1,14 @@
 import { notFound } from 'next/navigation';
 import { eq } from 'drizzle-orm';
+import { preload } from 'react-dom';
 
 import { getSessionUserId } from '@/lib/auth/session';
 import { db } from '@/lib/db/client';
 import { profiles } from '@/lib/db/schema/profiles';
 import { raids, raidParticipants } from '@/lib/db/schema/raid';
 import { raidPhasesCleared } from '@/lib/game/raid';
+import { getBossBg, getBossSprite } from '@/lib/game/raid/boss-sprites';
+import { assetUrl } from '@/lib/asset-versions';
 
 import { settleRaidAction } from '../actions';
 import { RaidSessionCard, type RaidView } from '../RaidSessionCard';
@@ -38,6 +41,19 @@ export default async function RaidDetail({
 
   let raid = await loadRaid();
   if (!raid) notFound();
+
+  // LCP 우선 — 보스 배경 + 보스 sprite(또는 APNG) preload 시그널 주입.
+  // RSC가 직렬화한 헤더에 `Link: <url>; rel=preload; as=image; fetchpriority=high`로
+  // 변환되어 브라우저가 HTML 파싱 전부터 fetch 시작 → 진입 즉시 표시(첫 페인트 빨라짐).
+  const bgPath = getBossBg(raid.bossCode);
+  if (bgPath) {
+    preload(assetUrl(bgPath), { as: 'image', fetchPriority: 'high' });
+  }
+  const entry = getBossSprite(raid.bossCode);
+  if (entry) {
+    preload(assetUrl(entry.apng ?? entry.static), { as: 'image', fetchPriority: 'high' });
+  }
+
   // 만료된 active → lazy 정산(멱등) 후 재조회.
   if (raid.status === 'active' && raid.expireAt.getTime() <= Date.now()) {
     await settleRaidAction(raidId);
