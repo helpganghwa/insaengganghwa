@@ -3,6 +3,7 @@
 import { revalidatePath } from 'next/cache';
 
 import { getSessionUserId } from '@/lib/auth/session';
+import { rateLimited } from '@/lib/ratelimit';
 import {
   queueEnhance,
   resolveEnhance,
@@ -24,6 +25,7 @@ const MSG: Record<string, string> = {
   JOB_NOT_FOUND: '강화 작업을 찾을 수 없습니다.',
   INSUFFICIENT_DIAMOND: '다이아가 부족합니다.',
   UNAUTHENTICATED: '로그인이 필요합니다.',
+  RATE_LIMITED: '요청이 너무 빠릅니다. 잠시 후 다시 시도해 주세요.',
   UNKNOWN: '알 수 없는 오류',
 };
 
@@ -44,6 +46,7 @@ async function uid(): Promise<string | null> {
 export async function startEnhance(equipmentInstanceId: string) {
   const userId = await uid();
   if (!userId) return err('UNAUTHENTICATED');
+  if (await rateLimited(userId, 'enhance')) return err('RATE_LIMITED');
   try {
     const result = await queueEnhance({ userId, equipmentInstanceId: BigInt(equipmentInstanceId) });
     revalidateAll();
@@ -62,6 +65,7 @@ export async function finalizeEnhance(jobId: string): Promise<
 > {
   const userId = await uid();
   if (!userId) return err('UNAUTHENTICATED');
+  if (await rateLimited(userId, 'enhance')) return err('RATE_LIMITED');
   try {
     // 결과 판정·저장 원자 트랜잭션(CLAUDE §3.1/§3.3/§3.4).
     const r = await resolveEnhance({ jobId: BigInt(jobId), userId, requireComplete: false });
@@ -102,6 +106,7 @@ export async function finalizeEnhance(jobId: string): Promise<
 export async function reduceTimeWithGems(jobId: string, diamonds: number) {
   const userId = await uid();
   if (!userId) return err('UNAUTHENTICATED');
+  if (await rateLimited(userId, 'enhance')) return err('RATE_LIMITED');
   try {
     const result = await reduceEnhanceTime({ userId, jobId: BigInt(jobId), diamonds });
     revalidateAll();
@@ -121,6 +126,7 @@ export async function reduceTimeWithGems(jobId: string, diamonds: number) {
 export async function cancelEnhanceAction(jobId: string) {
   const userId = await uid();
   if (!userId) return err('UNAUTHENTICATED');
+  if (await rateLimited(userId, 'enhance')) return err('RATE_LIMITED');
   try {
     await cancelEnhance({ userId, jobId: BigInt(jobId) });
     revalidateAll();
@@ -136,6 +142,7 @@ export async function cancelEnhanceAction(jobId: string) {
 export async function swapEnhanceAction(cancelJobId: string, equipmentInstanceId: string) {
   const userId = await uid();
   if (!userId) return err('UNAUTHENTICATED');
+  if (await rateLimited(userId, 'enhance')) return err('RATE_LIMITED');
   try {
     const result = await swapEnhance({
       userId,

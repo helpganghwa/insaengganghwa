@@ -3,6 +3,7 @@
 import { revalidatePath } from 'next/cache';
 
 import { getSessionUserId } from '@/lib/auth/session';
+import { rateLimited } from '@/lib/ratelimit';
 import { equipItem, unequipItem, toggleEquipmentLock, equipBestSet, EquipError } from '@/lib/game/equipment/equip';
 import { performTranscend, TranscendError } from '@/lib/game/transcend';
 import { disenchant } from '@/lib/game/supply';
@@ -16,6 +17,7 @@ const MSG: Record<string, string> = {
   TRANSCEND_MAX: '이미 최대 초월(10)입니다.',
   INSUFFICIENT_FODDER: '제물이 부족합니다 (같은 아이템, 미장착·미잠금).',
   UNAUTHENTICATED: '로그인이 필요합니다.',
+  RATE_LIMITED: '요청이 너무 빠릅니다. 잠시 후 다시 시도해 주세요.',
   UNKNOWN: '알 수 없는 오류',
 };
 const err = (c: string): ErrorState => ({ status: 'error', code: c, message: MSG[c] ?? c });
@@ -30,6 +32,7 @@ const uid = () => getSessionUserId();
 export async function equipAction(id: string) {
   const u = await uid();
   if (!u) return err('UNAUTHENTICATED');
+  if (await rateLimited(u, 'inventory')) return err('RATE_LIMITED');
   try {
     await equipItem(u, BigInt(id));
     revalidate();
@@ -44,6 +47,7 @@ export async function equipAction(id: string) {
 export async function unequipAction(id: string) {
   const u = await uid();
   if (!u) return err('UNAUTHENTICATED');
+  if (await rateLimited(u, 'inventory')) return err('RATE_LIMITED');
   await unequipItem(u, BigInt(id));
   revalidate();
   return { status: 'success' as const };
@@ -52,6 +56,7 @@ export async function unequipAction(id: string) {
 export async function toggleLockAction(id: string) {
   const u = await uid();
   if (!u) return err('UNAUTHENTICATED');
+  if (await rateLimited(u, 'inventory')) return err('RATE_LIMITED');
   try {
     const { isLocked } = await toggleEquipmentLock(u, BigInt(id));
     revalidate();
@@ -65,6 +70,7 @@ export async function toggleLockAction(id: string) {
 export async function equipBestSetAction() {
   const u = await uid();
   if (!u) return err('UNAUTHENTICATED');
+  if (await rateLimited(u, 'inventory')) return err('RATE_LIMITED');
   const { slotsUpdated } = await equipBestSet(u);
   revalidate();
   return { status: 'success' as const, slotsUpdated };
@@ -74,6 +80,7 @@ export async function equipBestSetAction() {
 export async function transcendAction(id: string) {
   const u = await uid();
   if (!u) return err('UNAUTHENTICATED');
+  if (await rateLimited(u, 'inventory')) return err('RATE_LIMITED');
   try {
     const r = await performTranscend({ userId: u, equipmentInstanceId: BigInt(id) });
     revalidate();
@@ -89,6 +96,7 @@ export async function transcendAction(id: string) {
 export async function disenchantAction(id: string) {
   const u = await uid();
   if (!u) return err('UNAUTHENTICATED');
+  if (await rateLimited(u, 'inventory')) return err('RATE_LIMITED');
   const r = await disenchant({ userId: u, equipmentInstanceIds: [BigInt(id)] });
   if (r.disenchanted === 0) return err('NOT_FOUND');
   revalidate();

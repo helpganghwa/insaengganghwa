@@ -6,11 +6,14 @@ import { eq } from 'drizzle-orm';
 import { getSessionUserId } from '@/lib/auth/session';
 import { db } from '@/lib/db/client';
 import { profiles } from '@/lib/db/schema/profiles';
+import { rateLimited } from '@/lib/ratelimit';
 
 /** 닉네임 변경 — UNIQUE 충돌 시 에러. (변경 횟수 제한 정책은 후속) */
 export async function updateNickname(formData: FormData) {
   const userId = await getSessionUserId();
   if (!userId) return { status: 'error' as const, message: '로그인이 필요합니다.' };
+  if (await rateLimited(userId, 'nickname'))
+    return { status: 'error' as const, message: '요청이 너무 빠릅니다. 잠시 후 다시 시도해 주세요.' };
   const raw = String(formData.get('nickname') ?? '').trim();
   if (raw.length < 2 || raw.length > 16) {
     return { status: 'error' as const, message: '닉네임은 2~16자입니다.' };

@@ -4,6 +4,7 @@ import { revalidatePath } from 'next/cache';
 import { and, eq, inArray } from 'drizzle-orm';
 
 import { getSessionUserId } from '@/lib/auth/session';
+import { rateLimited } from '@/lib/ratelimit';
 import { db } from '@/lib/db/client';
 import { catalogItems, type Slot } from '@/lib/db/schema/equipment';
 import { userSupplyBoxes } from '@/lib/db/schema/supply';
@@ -29,12 +30,15 @@ const MSG: Record<string, string> = {
   NO_BOX: '보급 상자가 부족합니다.',
   NO_CATALOG: '해당 슬롯 카탈로그가 없습니다.',
   UNAUTHENTICATED: '로그인이 필요합니다.',
+  RATE_LIMITED: '요청이 너무 빠릅니다. 잠시 후 다시 시도해 주세요.',
   UNKNOWN: '알 수 없는 오류',
 };
 
 export async function openAction(slot: Slot, count: 1 | 10): Promise<OpenActionResult> {
   const userId = await getSessionUserId();
   if (!userId) return { status: 'error', code: 'UNAUTHENTICATED', message: MSG.UNAUTHENTICATED! };
+  if (await rateLimited(userId, 'gacha'))
+    return { status: 'error', code: 'RATE_LIMITED', message: MSG.RATE_LIMITED! };
   try {
     const opened = await openSupplyBoxes({ userId, slot, count });
     const ids = [...new Set(opened.map((o) => o.catalogItemId))];

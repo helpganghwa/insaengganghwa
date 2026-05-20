@@ -3,6 +3,7 @@
 import { revalidatePath } from 'next/cache';
 
 import { getSessionUserId } from '@/lib/auth/session';
+import { rateLimited } from '@/lib/ratelimit';
 import {
   openRaid,
   joinRaid,
@@ -25,6 +26,7 @@ const MSG: Record<string, string> = {
   NOT_PARTICIPANT: '참여자가 아닙니다.',
   NO_ATTACKS: '공격 횟수를 모두 사용했습니다 (추가 공격 구매 가능).',
   UNAUTHENTICATED: '로그인이 필요합니다.',
+  RATE_LIMITED: '요청이 너무 빠릅니다. 잠시 후 다시 시도해 주세요.',
   UNKNOWN: '알 수 없는 오류',
 };
 const err = (c: string): Err => ({ status: 'error', code: c, message: MSG[c] ?? c });
@@ -38,6 +40,7 @@ const uid = () => getSessionUserId();
 export async function openRaidAction(bossCode: RaidBoss) {
   const u = await uid();
   if (!u) return err('UNAUTHENTICATED');
+  if (await rateLimited(u, 'raid')) return err('RATE_LIMITED');
   try {
     const r = await openRaid({ userId: u, bossCode });
     rev();
@@ -52,6 +55,7 @@ export async function openRaidAction(bossCode: RaidBoss) {
 export async function joinRaidAction(shareCode: string) {
   const u = await uid();
   if (!u) return err('UNAUTHENTICATED');
+  if (await rateLimited(u, 'raid')) return err('RATE_LIMITED');
   try {
     const r = await joinRaid({ userId: u, shareCode });
     rev(r.raidId.toString());
@@ -66,6 +70,7 @@ export async function joinRaidAction(shareCode: string) {
 export async function attackRaidAction(raidId: string) {
   const u = await uid();
   if (!u) return err('UNAUTHENTICATED');
+  if (await rateLimited(u, 'raid')) return err('RATE_LIMITED');
   try {
     const r = await attackRaid({ userId: u, raidId: BigInt(raidId) });
     rev(raidId);
@@ -80,6 +85,7 @@ export async function attackRaidAction(raidId: string) {
 export async function buyExtraAttackAction(raidId: string) {
   const u = await uid();
   if (!u) return err('UNAUTHENTICATED');
+  if (await rateLimited(u, 'raid')) return err('RATE_LIMITED');
   try {
     const r = await buyExtraAttack({ userId: u, raidId: BigInt(raidId) });
     rev(raidId);
@@ -95,6 +101,7 @@ export async function buyExtraAttackAction(raidId: string) {
 export async function settleRaidAction(raidId: string) {
   const u = await uid();
   if (!u) return err('UNAUTHENTICATED');
+  if (await rateLimited(u, 'raid')) return err('RATE_LIMITED');
   try {
     const r = await settleRaid({ raidId: BigInt(raidId) });
     rev(raidId);
