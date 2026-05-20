@@ -1,12 +1,8 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 
 import { formatCompactKR } from '@/lib/ui/format-number';
-import { TranscendSprite } from '@/components/TranscendSprite';
-import { RarityFrame, rarityBorderStyle, hasRarityBorder } from '@/components/RarityFrame';
-
-const SLOT_EMOJI = { weapon: '⚔️', armor: '🛡️', accessory: '💍' } as const;
 
 export type BoastPiece = {
   slot: 'weapon' | 'armor' | 'accessory';
@@ -181,6 +177,26 @@ export function BoastModal({
     typeof window !== 'undefined' &&
     !!(window as unknown as { Kakao?: { isInitialized: () => boolean } }).Kakao?.isInitialized();
 
+  // 미리보기·카톡 공유 동일 imageUrl 사용 — 사용자가 보는 그대로 공유.
+  // 모달 mount 시점에 한 번 계산해 useMemo로 안정화(같은 모달 안 일관).
+  const imageUrl = useMemo(() => {
+    if (typeof window === 'undefined') return '';
+    const origin = window.location.origin;
+    const v = Math.random().toString(36).slice(2, 10);
+    const params = new URLSearchParams({ v });
+    if (kind === 'piece' && piece) {
+      params.set('focus', 'piece');
+      params.set('code', piece.p.code);
+      params.set('lvl', String(piece.p.enhanceLevel));
+      params.set('t', String(piece.p.transcendLevel));
+    } else if (kind === 'set' && set) {
+      params.set('focus', 'set');
+      params.set('cp', String(set.total));
+    }
+    return `${origin}/og/${encodeURIComponent(nickname)}?${params.toString()}`;
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [open, kind, nickname]);
+
   return (
     <div
       role="dialog"
@@ -193,78 +209,42 @@ export function BoastModal({
         className="w-full max-w-xs overflow-hidden rounded-2xl bg-white dark:bg-zinc-950"
         onClick={(e) => e.stopPropagation()}
       >
-        {/* 미리보기 카드 */}
-        <div className="bg-gradient-to-br from-amber-500 to-amber-700 px-4 py-5 text-amber-50">
-          <div className="text-[11px] font-medium opacity-90">
-            {headline ?? (kind === 'set' ? '🏆 나의 장비 세트' : '✨ 강화 달성')}
-          </div>
-          <div className="mt-0.5 text-base font-bold">{nickname}</div>
-
-          {kind === 'set' && set ? (
-            <>
-              <div className="mt-3 grid grid-cols-3 gap-1.5">
-                {(['weapon', 'armor', 'accessory'] as const).map((s) => {
-                  const it = set.pieces.find((x) => x.slot === s);
-                  if (!it) {
-                    return (
-                      <div
-                        key={s}
-                        className="flex aspect-square flex-col items-center justify-center gap-0.5 rounded-lg border-2 border-dashed border-amber-300/60 px-0.5 text-center text-amber-100/60"
-                      >
-                        <span className="text-xl" aria-hidden>{SLOT_EMOJI[s]}</span>
-                        <span className="text-[9px]">미장착</span>
-                      </div>
-                    );
-                  }
-                  return (
-                    <div
-                      key={s}
-                      style={rarityBorderStyle(it.transcendLevel)}
-                      className={`relative flex aspect-square flex-col items-center justify-center gap-0.5 overflow-hidden rounded-lg border-2 bg-amber-900/30 px-0.5 text-center ${
-                        hasRarityBorder(it.transcendLevel) ? '' : 'border-amber-200/40'
-                      }`}
-                    >
-                      <RarityFrame level={it.transcendLevel} />
-                      <TranscendSprite
-                        code={it.code}
-                        slot={s}
-                        level={it.transcendLevel}
-                        isChampion={it.isChampion}
-                        size={44}
-                        frameless
-                      />
-                      <span className="line-clamp-1 px-0.5 text-[9px] text-amber-100/90">
-                        {it.name}
-                      </span>
-                      <span className="text-[10px] font-semibold">+{it.enhanceLevel}</span>
-                    </div>
-                  );
-                })}
-              </div>
-              <div className="mt-3 border-t border-amber-400/40 pt-2 text-right text-sm font-bold">
-                ⚔️ 총 전투력 {formatCompactKR(set.total)}
-              </div>
-            </>
-          ) : null}
-
-          {kind === 'piece' && piece ? (
-            <div className="mt-3 flex items-center gap-3">
-              <TranscendSprite
-                code={piece.p.code}
-                slot={piece.p.slot}
-                level={piece.p.transcendLevel}
-                isChampion={piece.p.isChampion}
-                size={68}
+        {/* 카톡 메시지 카드 미리보기 — 실제 공유 이미지와 텍스트 */}
+        <div className="bg-yellow-300 px-3 py-2 text-[10px] font-bold text-yellow-950">
+          💬 카카오톡 공유 미리보기
+        </div>
+        <div className="bg-white dark:bg-zinc-950">
+          {/* OG 이미지 — 실제 카톡 카드 비율 1200×630 ≈ 40:21 */}
+          <div className="relative overflow-hidden bg-zinc-900" style={{ aspectRatio: '40/21' }}>
+            {imageUrl ? (
+              // eslint-disable-next-line @next/next/no-img-element
+              <img
+                src={imageUrl}
+                alt="공유 이미지 미리보기"
+                draggable={false}
+                className="absolute inset-0 h-full w-full object-cover"
               />
-              <div>
-                <div className="text-sm font-bold">
-                  {piece.p.name}{' '}
-                  <span className="opacity-80">+{piece.p.enhanceLevel}</span>
-                </div>
-                <div className="text-xs opacity-90">⚔️ 전투력 {formatCompactKR(piece.cp)}</div>
-              </div>
+            ) : null}
+          </div>
+          {/* 카톡 본문 텍스트 카드 */}
+          <div className="space-y-1 px-3 py-2.5">
+            <div className="text-sm font-semibold text-zinc-900 dark:text-zinc-100">
+              {kind === 'set' ? `${nickname}의 인생강화` : (headline ?? '✨ 강화 달성')}
             </div>
-          ) : null}
+            <div className="text-[12px] leading-relaxed text-zinc-600 dark:text-zinc-400">
+              {text}
+            </div>
+            <div className="text-[10px] text-zinc-400 dark:text-zinc-500">insaengganghwa.com</div>
+            {/* 카톡 버튼 미리보기 */}
+            <div className="mt-2 flex gap-1.5">
+              <span className="flex-1 rounded border border-zinc-300 px-2 py-1 text-center text-[11px] text-zinc-700 dark:border-zinc-700 dark:text-zinc-300">
+                인생강화 시작
+              </span>
+              <span className="flex-1 rounded border border-zinc-300 px-2 py-1 text-center text-[11px] text-zinc-700 dark:border-zinc-700 dark:text-zinc-300">
+                이 플레이어 보기
+              </span>
+            </div>
+          </div>
         </div>
 
         <div className="space-y-2 p-3">

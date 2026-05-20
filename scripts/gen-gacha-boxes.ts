@@ -3,6 +3,7 @@
 import { config } from 'dotenv';
 import { existsSync, writeFileSync } from 'node:fs';
 import { join } from 'node:path';
+import sharp from 'sharp';
 
 config({ path: '.env.local' });
 config({ path: '.env', override: false });
@@ -20,9 +21,10 @@ const COMMON =
   'detail, fully filled solid background, edge-to-edge composition, no transparent ' +
   'areas, no empty space';
 
-const BOXES: { slot: string; prompt: string }[] = [
+const BOXES: { slot: string; prompt: string; fill: { r: number; g: number; b: number } }[] = [
   {
     slot: 'weapon',
+    fill: { r: 28, g: 20, b: 16 }, // #1c1410 dungeon ember
     prompt:
       'ornate dark wooden treasure chest overflowing with a varied assortment of ' +
       'weapons — long sword, curved dagger, battle axe, spiked mace, spear, longbow, ' +
@@ -32,6 +34,7 @@ const BOXES: { slot: string; prompt: string }[] = [
   },
   {
     slot: 'armor',
+    fill: { r: 28, g: 32, b: 48 }, // #1c2030 dungeon iron
     prompt:
       'ornate dark wooden treasure chest overflowing with FIVE clearly different ' +
       'types of armor with very distinct silhouettes — (1) a full chest plate ' +
@@ -45,6 +48,7 @@ const BOXES: { slot: string; prompt: string }[] = [
   },
   {
     slot: 'accessory',
+    fill: { r: 42, g: 22, b: 32 }, // #2a1620 velvet red
     prompt:
       'ornate dark jewelry box overflowing with FOUR clearly different types of ' +
       'accessories with very distinct silhouettes — (1) a gold chain necklace ' +
@@ -59,7 +63,11 @@ const BOXES: { slot: string; prompt: string }[] = [
   },
 ];
 
-async function gen(slot: string, prompt: string): Promise<'ok' | 'skip' | 'fail'> {
+async function gen(
+  slot: string,
+  prompt: string,
+  fill: { r: number; g: number; b: number },
+): Promise<'ok' | 'skip' | 'fail'> {
   const file = join(OUT, `box-${slot}.png`);
   if (existsSync(file)) return 'skip';
   for (let attempt = 0; attempt < 4; attempt++) {
@@ -89,13 +97,29 @@ async function gen(slot: string, prompt: string): Promise<'ok' | 'skip' | 'fail'
         console.error(`  ${slot} no base64`);
         return 'fail';
       }
-      const buf = Buffer.from(b64, 'base64');
-      if (buf.length < 8 || buf[0] !== 0x89 || buf[1] !== 0x50) {
+      const raw = Buffer.from(b64, 'base64');
+      if (raw.length < 8 || raw[0] !== 0x89 || raw[1] !== 0x50) {
         console.error(`  ${slot} bad PNG`);
         return 'fail';
       }
+      // sharp 후처리 — 솔리드 배경(slot tint) 위에 Pixellab 출력 합성. 투명
+      // 영역(Pixellab pixflux가 가끔 alpha 출력)을 강제로 배경색으로 채움.
+      const meta = await sharp(raw).metadata();
+      const w = meta.width ?? 256;
+      const h = meta.height ?? 256;
+      const base = await sharp({
+        create: {
+          width: w,
+          height: h,
+          channels: 4,
+          background: { ...fill, alpha: 1 },
+        },
+      })
+        .png()
+        .toBuffer();
+      const buf = await sharp(base).composite([{ input: raw }]).png().toBuffer();
       writeFileSync(file, buf);
-      console.log(`  ✓ ${file} (${buf.length}B)`);
+      console.log(`  ✓ ${file} (${buf.length}B) — bg ${fill.r},${fill.g},${fill.b}`);
       return 'ok';
     } catch (e) {
       console.error(`  ${slot} 예외 ${(e as Error).message} (attempt ${attempt})`);
@@ -109,7 +133,7 @@ let ok = 0;
 let skip = 0;
 let fail = 0;
 for (const b of BOXES) {
-  const r = await gen(b.slot, b.prompt);
+  const r = await gen(b.slot, b.prompt, b.fill);
   if (r === 'ok') ok++;
   else if (r === 'skip') skip++;
   else fail++;
