@@ -29,12 +29,13 @@ function rarityStarsOG(
   const color = `rgb(${r},${g},${b})`;
   const accent = `rgb(${Math.round(r + (255 - r) * 0.55)},${Math.round(g + (255 - g) * 0.55)},${Math.round(b + (255 - b) * 0.55)})`;
   const big = Math.round(cornerPx * 0.7);
-  const small = Math.round(cornerPx * 0.28);
+  const small = Math.round(cornerPx * 0.42); // 위성 별 ↑(0.28 → 0.42) — 더 잘 보이게
+  const off = Math.round(cornerPx * 0.62); // 위성 별 위치(큰 별 안쪽 대각선)
   const corners: { pos: React.CSSProperties; small: React.CSSProperties }[] = [
-    { pos: { top: 0, left: 0 }, small: { top: 4, left: cornerPx * 0.55 } },
-    { pos: { top: 0, right: 0 }, small: { top: 4, right: cornerPx * 0.55 } },
-    { pos: { bottom: 0, left: 0 }, small: { bottom: 4, left: cornerPx * 0.55 } },
-    { pos: { bottom: 0, right: 0 }, small: { bottom: 4, right: cornerPx * 0.55 } },
+    { pos: { top: 0, left: 0 }, small: { top: off, left: off } },
+    { pos: { top: 0, right: 0 }, small: { top: off, right: off } },
+    { pos: { bottom: 0, left: 0 }, small: { bottom: off, left: off } },
+    { pos: { bottom: 0, right: 0 }, small: { bottom: off, right: off } },
   ];
   const els: React.ReactElement[] = [];
   for (let i = 0; i < corners.length; i++) {

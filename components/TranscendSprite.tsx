@@ -345,14 +345,23 @@ function TranscendCanvas({
       sx.drawImage(atlasImg, coord.x, coord.y, ATLAS_CELL, ATLAS_CELL, SP, SP, SW, SW);
       spriteCv = sc;
 
-      // Glare용 밝아진 sprite 사전합성 — chamion 광택은 흰빛 띠가 아니라
-      // **sprite 자체의 밝아진 버전**이 띠 영역에만 잠깐 보이는 방식. 흰색 띠 느낌 제거.
+      // Glare용 밝아진 sprite 사전합성 — sprite 자체의 밝아진 버전이 띠 영역에만
+      // 잠깐 보이는 방식. Canvas 2D `filter` 속성은 iOS Safari 17+ 한정 지원이라
+      // **픽셀 단위 RGB×k**로 처리(모든 브라우저 동일 결과 보장).
       if (showShine) {
         const [bc, bx] = mkCanvas();
         bx.imageSmoothingEnabled = false;
-        // brightness 1.7 + saturation 1.25 — sprite 색은 유지하면서 광채 추가.
-        bx.filter = 'brightness(2.5) saturate(1.4)';
         bx.drawImage(atlasImg, coord.x, coord.y, ATLAS_CELL, ATLAS_CELL, SP, SP, SW, SW);
+        const id = bx.getImageData(0, 0, FS, FS);
+        const d = id.data;
+        const k = 2.4; // 명도 배수
+        for (let i = 0; i < d.length; i += 4) {
+          if (d[i + 3] === 0) continue; // 투명 픽셀 skip
+          d[i] = Math.min(255, d[i]! * k);
+          d[i + 1] = Math.min(255, d[i + 1]! * k);
+          d[i + 2] = Math.min(255, d[i + 2]! * k);
+        }
+        bx.putImageData(id, 0, 0);
         brightCv = bc;
       }
 
