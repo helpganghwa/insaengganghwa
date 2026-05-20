@@ -74,7 +74,7 @@ export default async function EnhancePage() {
           isNull(enhancementJobs.id),
         ),
       )
-      .orderBy(desc(equipmentInstances.enhanceLevel), desc(equipmentInstances.createdAt)),
+      .orderBy(desc(equipmentInstances.enhanceLevel), desc(equipmentInstances.acquiredAt)),
   ]);
 
   const diamond = profRow[0]?.diamond ?? 0n;
