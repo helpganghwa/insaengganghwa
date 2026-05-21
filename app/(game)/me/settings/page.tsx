@@ -7,6 +7,7 @@ import { profiles } from '@/lib/db/schema/profiles';
 import { signOut } from '@/lib/auth/actions';
 
 import { ThemeToggle, LocalToggle } from './SettingsControls';
+import { NicknameRow } from './NicknameRow';
 
 const APP_VERSION = '0.1.0'; // 출시 전 v0
 
@@ -16,7 +17,12 @@ export default async function SettingsPage() {
   if (!userId) return null;
 
   const [p] = await db
-    .select({ nickname: profiles.nickname, verifiedAt: profiles.identityVerifiedAt })
+    .select({
+      nickname: profiles.nickname,
+      verifiedAt: profiles.identityVerifiedAt,
+      diamond: profiles.diamond,
+      nicknameChangedCount: profiles.nicknameChangedCount,
+    })
     .from(profiles)
     .where(eq(profiles.id, userId))
     .limit(1);
@@ -48,9 +54,11 @@ export default async function SettingsPage() {
 
       <Section title="계정">
         <Row label="닉네임">
-          <Link href="/me" className="text-sm text-zinc-500 underline">
-            {p?.nickname ?? '플레이어'} 변경 →
-          </Link>
+          <NicknameRow
+            current={p?.nickname ?? '플레이어'}
+            changedCount={p?.nicknameChangedCount ?? 0}
+            diamond={String(p?.diamond ?? 0n)}
+          />
         </Row>
         <Divider />
         <Row label="로그인 방식">

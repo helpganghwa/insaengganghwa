@@ -28,7 +28,15 @@ export default async function ProfilePage() {
   if (!userId) return null;
 
   const [prof, equipped, codexAgg, champSet] = await Promise.all([
-    db.select({ nickname: profiles.nickname }).from(profiles).where(eq(profiles.id, userId)).limit(1),
+    db
+      .select({
+        nickname: profiles.nickname,
+        diamond: profiles.diamond,
+        nicknameChangedCount: profiles.nicknameChangedCount,
+      })
+      .from(profiles)
+      .where(eq(profiles.id, userId))
+      .limit(1),
     db
       .select({
         slot: catalogItems.slot,
@@ -62,7 +70,11 @@ export default async function ProfilePage() {
     <div className="space-y-4 px-4 py-6">
       <header className="text-center">
         <div className="text-4xl">🏆</div>
-        <NicknameEditor current={nickname} />
+        <NicknameEditor
+          current={nickname}
+          changedCount={prof[0]?.nicknameChangedCount ?? 0}
+          diamond={String(prof[0]?.diamond ?? 0n)}
+        />
       </header>
 
       <section className="rounded-2xl border border-zinc-200 p-3 dark:border-zinc-800">

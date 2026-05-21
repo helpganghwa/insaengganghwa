@@ -1,58 +1,41 @@
 'use client';
 
-import { useState, useTransition } from 'react';
-import { useRouter } from 'next/navigation';
+import { useState } from 'react';
 
-import { updateNickname } from './actions';
+import { NicknameChangeModal } from './NicknameChangeModal';
 
-export function NicknameEditor({ current }: { current: string }) {
-  const router = useRouter();
-  const [editing, setEditing] = useState(false);
-  const [pending, startTransition] = useTransition();
-  const [err, setErr] = useState<string | null>(null);
-
-  if (!editing) {
-    return (
+/**
+ * 프로필 페이지의 닉네임 클릭 트리거.
+ * 사용자 결정(2026-05-21): ✎ 아이콘 제거. 닉네임 자체가 클릭 가능 = 변경 팝업 노출.
+ * 첫 변경 무료 / 이후 1000다이아 — NicknameChangeModal에서 처리.
+ */
+export function NicknameEditor({
+  current,
+  changedCount,
+  diamond,
+}: {
+  current: string;
+  changedCount: number;
+  diamond: string;
+}) {
+  const [open, setOpen] = useState(false);
+  return (
+    <>
       <button
         type="button"
-        onClick={() => setEditing(true)}
+        onClick={() => setOpen(true)}
+        aria-label="닉네임 변경"
         className="mt-2 text-lg font-semibold tracking-tight"
       >
-        {current} <span className="text-xs text-zinc-400">✎</span>
+        {current}
       </button>
-    );
-  }
-  return (
-    <form
-      action={(fd) =>
-        startTransition(async () => {
-          const r = await updateNickname(fd);
-          if (r.status === 'error') setErr(r.message);
-          else {
-            setEditing(false);
-            setErr(null);
-            router.refresh();
-          }
-        })
-      }
-      className="mt-2 flex flex-col items-center gap-1"
-    >
-      <div className="flex gap-1">
-        <input
-          name="nickname"
-          defaultValue={current}
-          maxLength={16}
-          className="w-40 rounded-full border border-zinc-300 px-3 py-1 text-center text-sm dark:border-zinc-700 dark:bg-zinc-900"
-        />
-        <button
-          type="submit"
-          disabled={pending}
-          className="rounded-full bg-zinc-900 px-3 py-1 text-xs font-medium text-white disabled:opacity-50 dark:bg-zinc-50 dark:text-zinc-950"
-        >
-          저장
-        </button>
-      </div>
-      {err ? <span className="text-[11px] text-red-500">{err}</span> : null}
-    </form>
+      <NicknameChangeModal
+        open={open}
+        onClose={() => setOpen(false)}
+        currentNickname={current}
+        changedCount={changedCount}
+        diamond={diamond}
+      />
+    </>
   );
 }

@@ -304,6 +304,9 @@ export function diamondToFinishMs(remainingMs: number): number {
 export const SHARE_DAILY_REWARD_DIAMOND = 100;
 export const REFERRAL_CONVERSION_DIAMOND = 300;
 
+/** §6.5 닉네임 변경 — 첫 변경 무료, 이후 매 변경마다 차감. */
+export const NICKNAME_CHANGE_COST_DIAMOND = 1000;
+
 // §6.4 광고 보상 — v1 미도입(사용자 결정). 모바일 웹은 보상형 광고 SDK SSV
 // 인프라가 약해 치트 방어가 어렵고 1인 운영 부담이 큼. 상점에 광고 제거 IAP는
 // 향후 도입 검토(광고 노출 자체 OFF). 향후 네이티브 wrapper 도입 시 재검토.
