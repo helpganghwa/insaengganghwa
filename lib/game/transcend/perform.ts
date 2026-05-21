@@ -6,7 +6,7 @@ import { db } from '@/lib/db/client';
 import { equipmentInstances } from '@/lib/db/schema/equipment';
 import { enhancementJobs } from '@/lib/db/schema/enhance';
 import { transcendLogs } from '@/lib/db/schema/transcend';
-import { MAX_TRANSCEND, transcendFodderForStep } from '@/lib/game/balance';
+import { transcendFodderForStep } from '@/lib/game/balance';
 
 /**
  * 초월 — GDD §3.3 / BALANCE §2 / SCHEMA §4. **즉시·무RNG**(제물 충족 시 100%).
@@ -56,7 +56,7 @@ export function performTranscend(input: TranscendInput): Promise<TranscendResult
       .for('update');
 
     if (!target) throw new TranscendError('EQUIPMENT_NOT_FOUND');
-    if (target.transcendLevel >= MAX_TRANSCEND) throw new TranscendError('TRANSCEND_MAX');
+    // T10 cap 제거(사용자 결정 2026-05-21) — 무한 진행 허용. 디자인은 T10과 동일.
 
     const fromT = target.transcendLevel;
     const toT = fromT + 1;

@@ -149,31 +149,33 @@ export function levelAfterFail(fromLevel: number): number {
 // §2. 초월 — 제물 수 & 전투력 % 배수
 // ─────────────────────────────────────────────────────────────────────────────
 
-/** §2 초월 상한. transcend_level ∈ [0, 10] (SCHEMA CHECK 제약과 1:1). */
+/**
+ * §2 초월은 **무한 진행**(사용자 결정, 2026-05-21). T10 이상은 디자인/수치 모두 T10과
+ * 동일하게 처리 — 시각 등급 클램프(transcend.ts) + 제물 수 10 고정 + 보너스 +100% 고정.
+ * MAX_TRANSCEND는 **시각 등급 매핑 cap**으로만 유지(0..10 LADDER 인덱스).
+ */
 export const MAX_TRANSCEND = 10;
 
 /**
  * §2.1 `toLevel` 단계(=T-1 → T) 달성에 필요한 같은 카탈로그 아이템 제물 수.
- * 선형 1→10 (0→1:1 … 9→10:10). 누적 풀 초월(10) = 55.
+ * 선형 1→10 (0→1:1 … 9→10:10). T11+ = 10 고정(무한 진행, 디자인 동일).
  * 제물: 같은 카탈로그 아이템이면 강화·초월 레벨 무관(+0 가능, GDD §3.3).
  */
 export function transcendFodderForStep(toLevel: number): number {
-  if (toLevel < 1 || toLevel > MAX_TRANSCEND) {
-    throw new Error(`INVALID_TRANSCEND_STEP:${toLevel}`);
-  }
-  return toLevel;
+  if (toLevel < 1) throw new Error(`INVALID_TRANSCEND_STEP:${toLevel}`);
+  return Math.min(toLevel, MAX_TRANSCEND);
 }
 
-/** §2.1 0 → targetT 까지 누적 제물 수 (검증/표시용). */
+/** §2.1 0 → targetT 까지 누적 제물 수 (검증/표시용). T11+는 10 고정 누적. */
 export function transcendFodderCumulative(targetT: number): number {
   let sum = 0;
-  for (let t = 1; t <= Math.min(targetT, MAX_TRANSCEND); t++) sum += transcendFodderForStep(t);
+  for (let t = 1; t <= targetT; t++) sum += transcendFodderForStep(t);
   return sum;
 }
 
 /**
  * §2.2 초월 레벨 T의 전투력 % 배수 — bp. 가속 곡선, T10 = +100%(×2.0).
- * 개별 장비 전투력 = (강화 기반 전투력) × (1 + transcendBonusBp[T]/10000).
+ * T11+ = T10과 동일(+100%) — 무한 진행이지만 보너스는 캡(디자인 동일 의도).
  */
 const TRANSCEND_BONUS_BP: readonly number[] = [
   0, 500, 1100, 1800, 2600, 3500, 4500, 5600, 6800, 8200, 10000,

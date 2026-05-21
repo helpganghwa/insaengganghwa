@@ -69,7 +69,8 @@ export const equipmentInstances = pgTable(
     // 제물 후보/중복 조회.
     index('eq_user_catalog_idx').on(t.userId, t.catalogItemId),
     index('eq_user_equipped_idx').on(t.userId, t.equippedSlot),
-    check('transcend_level_range', sql`${t.transcendLevel} between 0 and 10`),
+    // 초월 무한 진행(2026-05-21) — 상한 제거. 음수만 차단.
+    check('transcend_level_min', sql`${t.transcendLevel} >= 0`),
   ],
 );
 

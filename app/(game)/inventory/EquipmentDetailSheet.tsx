@@ -91,9 +91,9 @@ export function EquipmentDetailSheet({
     ? pieceCombatPower(equippedInSlot.enhanceLevel, equippedInSlot.transcendLevel)
     : null;
 
-  const atMax = item.transcendLevel >= MAX_TRANSCEND;
+  // 무한 초월 (사용자 결정 2026-05-21) — atMax 가드 제거. 제물 수는 T10 이상 10 고정.
   const nextT = item.transcendLevel + 1;
-  const fodderNeed = atMax ? 0 : transcendFodderForStep(nextT);
+  const fodderNeed = transcendFodderForStep(nextT);
   const fodderOwned = all.filter(
     (i) =>
       i.catalogItemId === item.catalogItemId &&
@@ -102,7 +102,7 @@ export function EquipmentDetailSheet({
       !i.isLocked &&
       !i.busy,
   ).length;
-  const canTranscend = !atMax && fodderOwned >= fodderNeed;
+  const canTranscend = fodderOwned >= fodderNeed;
   const canDisenchant = !item.equipped && !item.isLocked && !item.busy;
   const needsFodderEnhance = item.enhanceLevel >= FODDER_REQUIRED_FROM_LEVEL;
   const canEnhance = !item.busy && !item.isLocked;
@@ -223,6 +223,7 @@ export function EquipmentDetailSheet({
               run(
                 () => transcendAction(item.id),
                 () => {
+                  // 첫 초월(T1) / T10 첫 도달 → 자랑 트리거.
                   if (nextT === 1 || nextT === MAX_TRANSCEND) setBoast(true);
                   else onClose();
                 },
@@ -233,7 +234,7 @@ export function EquipmentDetailSheet({
             <BtnBg
               src={assetUrl("/sprites/ui/btn-transcend.png")}
               label={confirmT ? '확정?' : '초월'}
-              sub={atMax ? 'MAX' : `T${nextT} · ${fodderOwned}/${fodderNeed}`}
+              sub={`T${nextT} · ${fodderOwned}/${fodderNeed}`}
             />
           </button>
           {/* 장착/해제 */}
