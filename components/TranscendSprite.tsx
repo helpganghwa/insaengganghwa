@@ -377,9 +377,8 @@ function TranscendCanvas({
         frontCv = fc;
       }
 
-      // T8+ glow — 사전합성. Canvas `filter:blur`는 iOS Safari 17+ 한정 →
-      // **shadowBlur**로 외곽 글로우 그림(모든 환경 지원). sprite 외곽으로 노란빛
-      // 확산. 추가로 sprite 마스크해 본체 채움까지 노란빛으로 흠뻑.
+      // T8+ glow — 사전합성. Canvas `filter:blur` 모바일 미지원 회피용 `shadowBlur` 3겹.
+      // 사용자 피드백: 발광 펄스를 더 넓게 → shadowBlur 22 → 40 → 56 점진 확산.
       if (showRadiant) {
         const [bc, bx] = mkCanvas();
         bx.imageSmoothingEnabled = false;
@@ -390,13 +389,17 @@ function TranscendCanvas({
         rx.globalCompositeOperation = 'source-in';
         rx.fillStyle = 'rgb(255,238,190)';
         rx.fillRect(0, 0, FS, FS);
-        // 2) 노란 sprite를 shadowBlur로 외곽 글로우 + 본체 함께
         bx.shadowColor = 'rgba(255,238,190,1)';
-        bx.shadowBlur = 16;
+        // 가까운 본체 글로우
+        bx.shadowBlur = 22;
         bx.drawImage(rc, 0, 0);
-        // 한 번 더 그려 글로우 두텁게(shadow는 첫 그리기에만 적용)
-        bx.shadowBlur = 24;
-        bx.globalAlpha = 0.6;
+        // 중간 외곽 글로우
+        bx.shadowBlur = 40;
+        bx.globalAlpha = 0.7;
+        bx.drawImage(rc, 0, 0);
+        // 가장 멀리 퍼지는 외곽 헤일로
+        bx.shadowBlur = 56;
+        bx.globalAlpha = 0.45;
         bx.drawImage(rc, 0, 0);
         radiantCv = bc;
       }
