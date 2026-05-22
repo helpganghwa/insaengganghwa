@@ -240,6 +240,77 @@ const ITEMS: Item[] = [
       'stone 망치 + 파란 룬 줄 (단순)',
     ],
   },
+  // ── batch 4: 서쪽 화산 weapon × 5 ──
+  {
+    slug: 'volcano_witty_pan_cleaver',
+    tone: '위트',
+    region: '서쪽 화산',
+    slot: 'weapon',
+    recommend: 1,
+    hint: '프라이팬 + 잭오랜턴 + cleaver — 화로 부엌 위트',
+    candidateNotes: [
+      '작은 검은 cleaver in 프라이팬 (작은 sparks)',
+      '프라이팬 안에 잭오랜턴 + cleaver + 불꽃',
+      '단순 cleaver (위트 약함)',
+      '프라이팬 + 잭오랜턴 + cleaver (큰 구성)',
+    ],
+  },
+  {
+    slug: 'volcano_mournful_widow_hammer',
+    tone: '비애',
+    region: '서쪽 화산',
+    slot: 'weapon',
+    recommend: 0,
+    hint: '단순한 망치 + 리본 한 줄 — 잿더미 과부의 망치',
+    candidateNotes: [
+      '회색 망치 + 리본 한 줄 + 갈색 grip',
+      '검정 망치 + 빨간 술 매달림 (화려)',
+      '검은 작은 mace + 손가락 행거 (기괴 쪽)',
+      '회색 망치 + 짧은 술 (단순)',
+    ],
+  },
+  {
+    slug: 'volcano_uncanny_molten_eye_dagger',
+    tone: '기괴',
+    region: '서쪽 화산',
+    slot: 'weapon',
+    recommend: 3,
+    hint: '거대 용암 균열 + 오렌지 눈 — 가장 dramatic',
+    candidateNotes: [
+      '단검 + crossguard 가운데 오렌지 눈 (작음)',
+      '단검 + 가운데 오렌지 눈 + 거대 + 용암 균열',
+      '단순 단검 + 끝에 오렌지 눈 보석 (소용돌이)',
+      '단검 + 끝에 오렌지 눈 + 거대한 균열',
+    ],
+  },
+  {
+    slug: 'volcano_mystic_ember_runesword',
+    tone: '수수께끼',
+    region: '서쪽 화산',
+    slot: 'weapon',
+    recommend: 2,
+    hint: '룬 + 빨간 보석 pommel — 일관된 잉걸 룬 검',
+    candidateNotes: [
+      '검은 검 + 빨간 룬 줄 + crossguard 작은 곤충',
+      '검은 검 + 빨간 룬 줄 (단순)',
+      '검은 검 + 빨간 룬 줄 + 빨간 보석 pommel (균형)',
+      '검은 검 + 빨간 룬 줄 + 가시 자루',
+    ],
+  },
+  {
+    slug: 'volcano_legendary_dragon_forge_axe',
+    tone: '장엄',
+    region: '서쪽 화산',
+    slot: 'weapon',
+    recommend: 2,
+    hint: '용암 균열 + 가운데 황금 룬 — mythic 톤 최고',
+    candidateNotes: [
+      '검은 도끼 + 용암 균열 (양옆) + 비늘 머리',
+      '빨간 도끼 + 거대한 + 비늘+가시 (강렬)',
+      '검은 도끼 + 용암 균열 + 가운데 황금 룬',
+      '갈색 도끼 + 용암 균열 + 뼈 자루',
+    ],
+  },
 ];
 
 export default function BatchReviewPage() {
