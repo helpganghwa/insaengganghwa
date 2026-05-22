@@ -385,6 +385,77 @@ const ITEMS: Item[] = [
       '청록색 추상 베일+깃털 (추상적)',
     ],
   },
+  // ── batch 6: 일반 region weapon × 5 ──
+  {
+    slug: 'common_witty_lucky_dagger',
+    tone: '위트',
+    region: '일반',
+    slot: 'weapon',
+    recommend: 0,
+    hint: '단검 + 측면 클로버 — 단순+명확한 위트',
+    candidateNotes: [
+      '단순 단검 + 측면에 작은 클로버 매달림',
+      '단검 + grip에 클로버 + pommel에 클로버 (3 클로버)',
+      '단검 + 갈색 grip + 행운 부적들 (말굽 등)',
+      '단검 + 클로버 + 가죽 끈',
+    ],
+  },
+  {
+    slug: 'common_mournful_widow_sword',
+    tone: '비애',
+    region: '일반',
+    slot: 'weapon',
+    recommend: 1,
+    hint: '검 + crossguard 늘어진 검은 베일 — 비애 명확',
+    candidateNotes: [
+      '단순 회색 검 + grip 단순 검은 천',
+      '회색 검 + crossguard에 검은 베일 늘어진 천',
+      '가시 검 + 늘어진 천 (화려)',
+      '검 + 검은 술 매달림',
+    ],
+  },
+  {
+    slug: 'common_uncanny_grave_pick',
+    tone: '기괴',
+    region: '일반',
+    slot: 'weapon',
+    recommend: 1,
+    hint: '곡괭이 + grip에 흰 손가락뼈 — 기괴 톤 명확',
+    candidateNotes: [
+      '갈색 곡괭이 + grip 끈',
+      '어두운 곡괭이 + grip에 흰 손가락뼈',
+      '갈색 곡괭이 + 갈대 끈 묶음',
+      '갈색 곡괭이 + grip 끈',
+    ],
+  },
+  {
+    slug: 'common_mystic_quill_wand',
+    tone: '수수께끼',
+    region: '일반',
+    slot: 'weapon',
+    recommend: 0,
+    hint: 'brass nib + 황금 두 깃털 + 안 룬 — 가장 mystic',
+    candidateNotes: [
+      'brass nib + 가운데 황금 두 깃털 + 안 룬',
+      'nib + 가운데 푸른 보석 + 두 흰 깃털',
+      'nib + 가운데 brass 룬 + 두 흰 깃털',
+      'nib + 가운데 brass + 가시 깃털',
+    ],
+  },
+  {
+    slug: 'common_legendary_hero_greatsword',
+    tone: '장엄',
+    region: '일반',
+    slot: 'weapon',
+    recommend: 0,
+    hint: '황금 날개 crossguard + 푸른 보석 — 영웅 검 최고',
+    candidateNotes: [
+      '황금 trim 검 + 가운데 푸른 보석 + 황금 날개 crossguard',
+      '황금 검 + 푸른 보석 + 가시 detail',
+      '검 + 황금 trim + 가운데 별',
+      '검 + 가운데 푸른 보석 + 황금 mounting',
+    ],
+  },
 ];
 
 export default function BatchReviewPage() {
