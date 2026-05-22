@@ -3,9 +3,8 @@
 // 적용 순서:
 //   1) DROP SCHEMA public CASCADE / CREATE SCHEMA public
 //   2) lib/db/migrations/*.sql 알파벳순 순차 적용
-//   3) lib/db/manual/0001_onboarding_starter.sql (auth 트리거 + 기존 유저 백필)
-//   4) lib/db/manual/0002_codex_max_enhance_reached_at.sql (멱등 백필)
-//   5) seed-catalog (150종 INSERT)
+//   3) lib/db/manual/*.sql 알파벳순 순차 적용
+//   4) seed-catalog (150종 INSERT)
 
 import { readFileSync, readdirSync } from 'node:fs';
 import { join } from 'node:path';
@@ -60,7 +59,7 @@ async function main() {
   await sql.unsafe('GRANT USAGE ON SCHEMA public TO postgres, anon, authenticated, service_role');
   await sql.unsafe('GRANT ALL ON SCHEMA public TO postgres, service_role');
 
-  console.log('\n[2/5] Drizzle migrations 순차 적용');
+  console.log('\n[2/4] Drizzle migrations 순차 적용');
   const migrations = readdirSync(MIGRATIONS_DIR)
     .filter((f) => f.endsWith('.sql'))
     .sort();
@@ -68,13 +67,15 @@ async function main() {
     await execFile(sql, f, join(MIGRATIONS_DIR, f));
   }
 
-  console.log('\n[3/5] lib/db/manual/0001_onboarding_starter.sql');
-  await execFile(sql, '0001_onboarding_starter.sql', join(MANUAL_DIR, '0001_onboarding_starter.sql'));
+  console.log('\n[3/4] lib/db/manual 순차 적용');
+  const manuals = readdirSync(MANUAL_DIR)
+    .filter((f) => f.endsWith('.sql'))
+    .sort();
+  for (const f of manuals) {
+    await execFile(sql, f, join(MANUAL_DIR, f));
+  }
 
-  console.log('\n[4/5] lib/db/manual/0002_codex_max_enhance_reached_at.sql');
-  await execFile(sql, '0002_codex_max_enhance_reached_at.sql', join(MANUAL_DIR, '0002_codex_max_enhance_reached_at.sql'));
-
-  console.log('\n[5/5] seed-catalog');
+  console.log('\n[4/4] seed-catalog');
   await sql.end();
 
   // seed-catalog는 별도 connection을 사용하는 독립 스크립트 → exec
