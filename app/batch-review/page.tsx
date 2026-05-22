@@ -169,6 +169,77 @@ const ITEMS: Item[] = [
       'stone+brass 어두운 망치 + 뼈 grip',
     ],
   },
+  // ── batch 3: 고대 룬 산맥 weapon × 5 ──
+  {
+    slug: 'rune_witty_chime_wand',
+    tone: '위트',
+    region: '고대 룬 산맥',
+    slot: 'weapon',
+    recommend: 0,
+    hint: '단일 brass 종 + 룬 새김 — 가장 위트',
+    candidateNotes: [
+      '어두운 wand + 끝에 작은 brass 종 (룬 새김)',
+      '동그란 룬 패널 wand (위트 약함)',
+      '어두운 wand + 끝에 작은 종 3개 행거',
+      '모자 형태 wand (이상)',
+    ],
+  },
+  {
+    slug: 'rune_mournful_shard_sword',
+    tone: '비애',
+    region: '고대 룬 산맥',
+    slot: 'weapon',
+    recommend: 2,
+    hint: '깨진 stone 검 3조각 — 비애 톤 가장 명확',
+    candidateNotes: [
+      '큰 stone sword (룬 새김, 깨지지 않음)',
+      '청록 룬 줄기 감긴 검 (자라난 룬)',
+      '깨진 stone 검신 (3조각으로 깨짐)',
+      '청록 곡검 (사선)',
+    ],
+  },
+  {
+    slug: 'rune_uncanny_eye_dagger',
+    tone: '기괴',
+    region: '고대 룬 산맥',
+    slot: 'weapon',
+    recommend: 0,
+    hint: '빨간 동공의 눈 — 살아있는 눈 가장 명확',
+    candidateNotes: [
+      '어두운 단검 + crossguard에 빨간 눈',
+      '청록 단검 + crossguard에 청록 보석 눈',
+      '어두운 단검 + 4개 보석 (눈 같지 않음)',
+      '청록 단검 + 가운데 푸른 보석 눈',
+    ],
+  },
+  {
+    slug: 'rune_mystic_seven_book_staff',
+    tone: '수수께끼',
+    region: '고대 룬 산맥',
+    slot: 'weapon',
+    recommend: 0,
+    hint: 'wand + 옆에 매단 stone book 모티프 명확',
+    candidateNotes: [
+      '어두운 wand + 옆에 stone book (룬 글자) 행거',
+      '갈색 wand + brass 책 (작은)',
+      '갈색 wand + 흰 stone book + 두 보석',
+      '검은 wand + 검정 stone book',
+    ],
+  },
+  {
+    slug: 'rune_legendary_first_thunder_hammer',
+    tone: '장엄',
+    region: '고대 룬 산맥',
+    slot: 'weapon',
+    recommend: 1,
+    hint: '산 모양 hammer + 룬 글자 — 룬 산맥 region 정체성 최강',
+    candidateNotes: [
+      '회색 stone head + 가운데 큰 파란 번개 룬',
+      '산 모양 stone hammer + 룬 글자 다수',
+      'stone+brass 망치 + 룬 새김 + 자루 묶음',
+      'stone 망치 + 파란 룬 줄 (단순)',
+    ],
+  },
 ];
 
 export default function BatchReviewPage() {
