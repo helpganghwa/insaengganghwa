@@ -500,6 +500,35 @@ const ITEMS: Item[] = [
       '회색 작살 + 흰 코일 (단순)',
     ],
   },
+  // ── batch 9: 전설 2종 (정밀 3종 폐기) ──
+  {
+    slug: 'orc_legendary_ancestor_axe',
+    tone: '전설',
+    region: '오크 부락',
+    slot: 'weapon',
+    recommend: 1,
+    hint: '양날 도끼 + 부족 글리프 + 두개골 — 전설 톤 강함',
+    candidateNotes: [
+      '갈색 도끼 + 큰 송곳니 + 글리프 두개골',
+      '검은 양날 도끼 + 가운데 작은 두개골 + 부족 글리프',
+      '어두운 양날 도끼 + 가운데 X (단순)',
+      '가시 부족 도끼 + 두 송곳니 (위협적)',
+    ],
+  },
+  {
+    slug: 'volcano_legendary_dragonbone_sword',
+    tone: '전설',
+    region: '서쪽 화산',
+    slot: 'weapon',
+    recommend: 1,
+    hint: '척추뼈 검 + 용암 균열 — 용뼈 전설 명확',
+    candidateNotes: [
+      '검은 검 + 빨간 균열 줄 + 가시 자루',
+      '척추뼈로 만든 검 + 용암 균열',
+      '검은 검 + 가운데 황금 균열 + 뼈 grip',
+      '검은 검 + 빨간 균열 + 발톱 crossguard',
+    ],
+  },
 ];
 
 export default function BatchReviewPage() {

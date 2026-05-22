@@ -19,42 +19,42 @@ interface Plan {
   description: string; // Pixellab description (영문)
 }
 
-// batch 9: 새 톤(전설·정밀) 시범 × 5종
+// batch 10: 화려 톤 시범 × 5종
 const BATCH: Plan[] = [
   {
-    slug: 'marsh_refined_witch_wand',
+    slug: 'marsh_ornate_jewel_wand',
     slot: 'weapon',
     region: '늪지대',
-    tone: '정밀',
-    description: 'refined intricate finely crafted precise marsh swamp witch fantasy wand weapon item icon, slender wand with delicate filigree silver vines and a small precisely cut teal gem at the tip, single inanimate game loot object on transparent background, no character, no figure',
+    tone: '화려',
+    description: 'ornate flamboyant lavishly decorated gilded marsh swamp fantasy jeweled wand weapon item icon, slender wand encrusted with multiple bright teal and emerald gemstones and ornate gold leaf vines, single inanimate game loot object on transparent background, no character, no figure',
   },
   {
-    slug: 'orc_legendary_ancestor_axe',
+    slug: 'orc_ornate_gilded_chief_axe',
     slot: 'weapon',
     region: '오크 부락',
-    tone: '전설',
-    description: 'legendary mythic ancient storied orcish tribal ancestor fantasy two-handed axe weapon item icon, massive weathered iron axe head with carved ancestral tribal glyphs and a single large ancient tusk wedged at the haft, single inanimate game loot object on transparent background, no character, no figure',
+    tone: '화려',
+    description: 'ornate flamboyant lavishly decorated gilded orcish tribal chieftain fantasy two-handed axe weapon item icon, massive iron axe heavily embellished with bright gold inlays, dangling bright trophies, and large red gemstones, single inanimate game loot object on transparent background, no character, no figure',
   },
   {
-    slug: 'rune_refined_filigree_blade',
+    slug: 'rune_ornate_jeweled_warhammer',
     slot: 'weapon',
     region: '고대 룬 산맥',
-    tone: '정밀',
-    description: 'refined intricate finely crafted precise mountain rune ancient fantasy filigree longsword weapon item icon, slender pale steel blade with extremely detailed silver filigree rune patterns engraved along the fuller, single inanimate game loot object on transparent background, no character, no figure',
+    tone: '화려',
+    description: 'ornate flamboyant lavishly decorated gilded mountain rune ancient fantasy jeweled warhammer weapon item icon, large stone hammer head encrusted with multiple blue sapphires, bright gold filigree, and inlaid silver rune patterns, single inanimate game loot object on transparent background, no character, no figure',
   },
   {
-    slug: 'volcano_legendary_dragonbone_sword',
+    slug: 'volcano_ornate_phoenix_blade',
     slot: 'weapon',
     region: '서쪽 화산',
-    tone: '전설',
-    description: 'legendary mythic ancient storied volcanic dragon fantasy dragonbone longsword weapon item icon, dark sword forged from a single curved dragon rib with a glowing molten core line, single inanimate game loot object on transparent background, no character, no figure',
+    tone: '화려',
+    description: 'ornate flamboyant lavishly decorated gilded volcanic fire phoenix fantasy ornate longsword weapon item icon, blade encrusted with bright ruby gemstones, ornate gold phoenix-wing crossguard, and brilliant flame motifs, single inanimate game loot object on transparent background, no character, no figure',
   },
   {
-    slug: 'fallen_refined_silver_rapier',
+    slug: 'fallen_ornate_golden_glaive',
     slot: 'weapon',
     region: '타락천사',
-    tone: '정밀',
-    description: 'refined intricate finely crafted precise fallen angel divine fantasy silver rapier weapon item icon, slender polished silver rapier with extremely detailed swept hilt and small engraved feather etchings along the blade, single inanimate game loot object on transparent background, no character, no figure',
+    tone: '화려',
+    description: 'ornate flamboyant lavishly decorated gilded fallen angel divine seraphic fantasy ornate glaive weapon item icon, tall curved blade encrusted with multiple bright sapphires and pearls, lavish gold halo arcs, and intricate feather embossing, single inanimate game loot object on transparent background, no character, no figure',
   },
 ];
 
