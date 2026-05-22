@@ -33,7 +33,7 @@ export function GachaResultModal({
       role="dialog"
       aria-modal="true"
       aria-label="보급 결과"
-      className="fixed inset-0 z-[60] flex items-end justify-center bg-black/60 p-4 sm:items-center"
+      className="fixed inset-0 z-[60] flex items-center justify-center bg-black/60 p-4"
     >
       <div className="max-h-[88dvh] w-full max-w-[360px] overflow-y-auto rounded-2xl bg-white p-4 dark:bg-zinc-950">
         {single ? (
