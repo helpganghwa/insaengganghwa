@@ -208,7 +208,8 @@ function TranscendStatic({
   const [r, g, b] = st.colorRgb;
   const frameCol = `rgb(${r},${g},${b})`;
   const starCol = `rgb(${Math.round(r + (255 - r) * 0.3)},${Math.round(g + (255 - g) * 0.3)},${Math.round(b + (255 - b) * 0.3)})`;
-  const sw = size * 0.52;
+  // sprite는 프레임 안쪽 영역에 더 크게 노출. frameless(도감 상세 등)는 전체 영역.
+  const sw = frameless ? size : size * 0.7;
   const inset = size * 0.115;
   const starBox = size * 0.16;
   // Sprite는 atlas(1 WebP)에서 background-position으로 잘라 그림. 150개 PNG 개별 X.
@@ -319,7 +320,8 @@ function TranscendCanvas({
     const off = document.createElement('canvas');
     off.width = off.height = FS;
     const o = off.getContext('2d')!;
-    const SW = FS * 0.52;
+    // sprite 노출 크기 — TranscendStatic의 sw 비율과 동기화.
+    const SW = frameless ? FS : FS * 0.7;
     const SP = (FS - SW) / 2;
     const t = st.tier === 'none' ? 0 : st.level / 10;
     const bg = lerp([19, 19, 24], [color[0] * 0.13 + 12, color[1] * 0.13 + 12, color[2] * 0.13 + 12] as RGB, t);
