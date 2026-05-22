@@ -76,12 +76,26 @@ const ITEMS: Item[] = [
     region: '늪지대',
     slot: 'weapon',
     recommend: 1,
-    hint: '청동 삼지창 = 늪 어부 일상 톤 명확',
+    hint: '청동 삼지창 = 늪 어부 일상 톤 명확 (※ 일상 → 장엄으로 변경, 본 항목은 폐기)',
     candidateNotes: [
       '단순 어두운 창 (가시 끝)',
       '청동 삼지창 어부의 작살',
       '막대형 창 + 가죽 끈',
       '짧은 어부 작살 + 단순 가죽 매듭',
+    ],
+  },
+  {
+    slug: 'marsh_legendary_polearm',
+    tone: '장엄',
+    region: '늪지대',
+    slot: 'weapon',
+    recommend: 3,
+    hint: '가시 자루 폴암 + 거대 보라 꽃송이 → 늪의 전설 톤 최고치',
+    candidateNotes: [
+      '청록 도끼날 + 송장 머리 행거 + 가시 자루 (늪지 무덤 도끼)',
+      '무거운 양손 battle axe (무게감 있지만 평이)',
+      '회색 도끼날 + 두 보석 + 의례 술 (의례적)',
+      '어두운 폴암 + 거대 보라 꽃송이 + 가시 자루 (늪의 전설)',
     ],
   },
 ];
