@@ -127,3 +127,20 @@ for (const item of items) {
 }
 
 console.log(`done. +${done} 생성, ${skipped} skip, ${fail} 실패`);
+
+// 새 sprite를 인게임에 반영하려면 atlas·asset-versions 재빌드 필수.
+// 누락 시 atlas는 옛 그림 그대로 → 인게임 이름·이미지 어긋남.
+if (done > 0) {
+  console.log('\n[atlas·asset-versions 재빌드]');
+  const { spawnSync } = await import('node:child_process');
+  for (const cmd of [
+    ['bun', ['run', 'scripts/build-sprite-atlas.ts']],
+    ['bun', ['run', 'scripts/build-asset-versions.ts']],
+  ] as const) {
+    const r = spawnSync(cmd[0], cmd[1], { stdio: 'inherit' });
+    if (r.status !== 0) {
+      console.error(`✗ ${cmd[1].join(' ')} 실패 — 수동으로 다시 실행`);
+      process.exit(1);
+    }
+  }
+}
