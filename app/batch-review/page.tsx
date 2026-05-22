@@ -529,6 +529,77 @@ const ITEMS: Item[] = [
       '검은 검 + 빨간 균열 + 발톱 crossguard',
     ],
   },
+  // ── batch 10: 화려 톤 시범 × 5 ──
+  {
+    slug: 'marsh_ornate_jewel_wand',
+    tone: '화려',
+    region: '늪지대',
+    slot: 'weapon',
+    recommend: 3,
+    hint: '다양한 보석 + 황금 망사 — 가장 화려',
+    candidateNotes: [
+      '황금 wand + 큰 청록 보석 + 황금 잎 (단순 화려)',
+      '황금 wand + 청록 큰 보석 + 다수 청록 + 황금 가지',
+      '황금 wand + 잎 + 청록 보석 끝 (자연 느낌)',
+      '황금 wand + 청록 보석 + 다양한 보석 + 황금 망사',
+    ],
+  },
+  {
+    slug: 'orc_ornate_gilded_chief_axe',
+    tone: '화려',
+    region: '오크 부락',
+    slot: 'weapon',
+    recommend: 3,
+    hint: '양날 도끼 + 빨간 보석 다수 + 깃털 — 부족장 화려 톤 최고',
+    candidateNotes: [
+      '양날 도끼 + 황금 trim + 빨간 보석 + 깃털',
+      '사람 얼굴 모양 도끼 + 빨간 보석 + 황금 (totem)',
+      '양날 도끼 + 황금 trim + 가운데 빨간 보석',
+      '양날 도끼 + 황금 trim + 빨간 보석 다수 + 깃털',
+    ],
+  },
+  {
+    slug: 'rune_ornate_jeweled_warhammer',
+    tone: '화려',
+    region: '고대 룬 산맥',
+    slot: 'weapon',
+    recommend: 0,
+    hint: '큰 망치 + 황금 + 파란 보석 4개 + "MXR" 글자 — 가장 ornate',
+    candidateNotes: [
+      '큰 망치 + 황금 + 파란 보석 4개 + "MXR" 글자',
+      '양면 망치 + 가운데 큰 파란 보석 + 황금 (수직 elegant)',
+      '망치 + 황금 룬 패턴 (보석 적음)',
+      '양면 망치 + 가운데 큰 파란 보석 + 황금 룬',
+    ],
+  },
+  {
+    slug: 'volcano_ornate_phoenix_blade',
+    tone: '화려',
+    region: '서쪽 화산',
+    slot: 'weapon',
+    recommend: 0,
+    hint: '황금 검 + 빨간 룬 + phoenix wing crossguard + 빨간 보석 — 이상적 phoenix',
+    candidateNotes: [
+      '황금 검 + 빨간 룬 + phoenix wing crossguard + 빨간 보석',
+      '빨간 화염 검 + 황금 crossguard',
+      '황금 검 + wing crossguard + 빨간 보석 (단순 elegant)',
+      '황금 검 + phoenix tail crossguard (특이)',
+    ],
+  },
+  {
+    slug: 'fallen_ornate_golden_glaive',
+    tone: '화려',
+    region: '타락천사',
+    slot: 'weapon',
+    recommend: 3,
+    hint: 'wing 후광 + 다수 보석 + 가운데 큰 보석 — 가장 화려',
+    candidateNotes: [
+      '황금 곡선 글레이브 + wings + 보석 ring + 푸른 보석',
+      '황금 글레이브 + 큰 wings + 가운데 푸른 보석 (mythical)',
+      '황금 글레이브 + 작은 wings + 가운데 보석 + 가시',
+      '황금 글레이브 + wing 후광 + 다수 보석 + 가운데 큰 보석',
+    ],
+  },
 ];
 
 export default function BatchReviewPage() {
