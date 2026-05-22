@@ -600,6 +600,77 @@ const ITEMS: Item[] = [
       '황금 글레이브 + wing 후광 + 다수 보석 + 가운데 큰 보석',
     ],
   },
+  // ── batch 11: 일반 region 새 톤 보충 + 추가 전설 ──
+  {
+    slug: 'common_heroic_knight_lance',
+    tone: '영웅담',
+    region: '일반',
+    slot: 'weapon',
+    recommend: 0,
+    hint: '파란 깃발 lance — 클래식 기사 톤',
+    candidateNotes: [
+      '검은 lance + 파란 깃발',
+      '어두운 lance + 적색 깃발 + 가시',
+      '회색 lance + 청록 깃발 (sword like)',
+      '갈색 lance + 황금 깃발 + 가시',
+    ],
+  },
+  {
+    slug: 'common_legendary_anointed_sword',
+    tone: '전설',
+    region: '일반',
+    slot: 'weapon',
+    recommend: 2,
+    hint: '회색 검 + 황금 crossguard — anointed 분위기',
+    candidateNotes: [
+      '두 검 (한쪽 회색 + 한쪽 황금) — twin blade',
+      '황금 brass 검 (단순 전설)',
+      '회색 검 + 황금 crossguard (균형)',
+      '곡선 검 + 황금 swept guard',
+    ],
+  },
+  {
+    slug: 'common_ornate_royal_scepter',
+    tone: '화려',
+    region: '일반',
+    slot: 'weapon',
+    recommend: 0,
+    hint: '왕관 모양 + 다수 보석 + 진주 — royal 화려',
+    candidateNotes: [
+      '황금 왕관 모양 scepter + 보석 + 큰 진주',
+      '황금 sun-burst + 가운데 진주 + 보석 다수',
+      '두 용 wings + 가운데 진주',
+      '큰 보석 박힌 scepter + 진주',
+    ],
+  },
+  {
+    slug: 'rune_legendary_first_writer_pen',
+    tone: '전설',
+    region: '고대 룬 산맥',
+    slot: 'weapon',
+    recommend: 2,
+    hint: '청록 깃털 펜 + nib — 가장 펜 형태',
+    candidateNotes: [
+      '청록 깃털 펜 + 작은 ink (mystic)',
+      '어두운 자루 + 두 깃털 + 룬 (trident-like)',
+      '청록 깃털 펜 + nib (가장 펜 형태)',
+      '어두운 자루 + 깃털 (펜 모양)',
+    ],
+  },
+  {
+    slug: 'fallen_legendary_archangel_flail',
+    tone: '전설',
+    region: '타락천사',
+    slot: 'weapon',
+    recommend: 0,
+    hint: '가시 공 + 검은 깃털 + 체인 — fallen 모티프 명확',
+    candidateNotes: [
+      '회색 spiked ball + chain + 검은 깃털',
+      '회색 spiked ball + chain + 작은 깃털',
+      '회색 star + chain + 검은 깃털 (star ball, holy)',
+      '회색 spiked ball + chain + 두 깃털',
+    ],
+  },
 ];
 
 export default function BatchReviewPage() {
