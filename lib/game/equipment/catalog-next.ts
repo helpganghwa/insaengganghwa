@@ -315,4 +315,82 @@ export const CATALOG_NEXT: CatalogItem[] = [
     lore: '서쪽 화로의 첫 잉걸 한 알을 그 화로의 첫 풀무지기가 자기 망치 머리 안에 봉인한 것이라 한다. 망치를 두드리면 잉걸의 빛이 가운데에서 한 박자 늦게 한 번 짙어졌다 옅어지고, 그 한 박자에 다른 화로의 풀무지기들도 한 호흡을 맞춰 두드린다.',
     art: 'heroic epic volcanic forge fire fantasy first ember blacksmith hammer weapon item icon, large dark hammer with a single glowing orange ember sealed in the center of the head, single inanimate game loot object on transparent background',
   },
+
+  // ── batch 8: 영웅담 1종 ──
+  {
+    key: 'marsh_ferry_harpoon',
+    slot: 'weapon',
+    nameKo: '뱃사공의 작살',
+    region: '늪지대',
+    tone: '영웅담',
+    lore: '늪 한가운데서 큰 손 하나가 물 아래로 끌어내려 한 자루를 잠시 멈추게 한 뱃사공이 자기 자리로 돌아온 새벽에 자기 작살의 자루에 그 자국이 가시처럼 남았다. 자루에 감긴 한 줄의 코일은 그 새벽에 그가 묶어 둔 자리 그대로다.',
+    art: 'heroic epic marsh swamp fantasy ferryman harpoon weapon item icon, dark harpoon with thorn-marked shaft and a single iron coiled rope wrapping, single inanimate game loot object on transparent background',
+  },
+
+  // ── batch 9: 전설 2종 ──
+  {
+    key: 'orc_ancestor_twin_tusk_axe',
+    slot: 'weapon',
+    nameKo: '조상의 양날 도끼',
+    region: '오크 부락',
+    tone: '전설',
+    lore: '부락의 첫 조상이 자기 두 손에 한 자루의 양날 도끼를 들고 부락의 첫 자리를 열었다고 전해 내려오는 도끼다. 두 칼날 위로 그 조상이 길에 잡은 짐승들의 송곳니 두 개가 솟아 있고, 자루 둘레의 가시는 부락 사람이 한 세대마다 한 줄씩 더 깎아 박는다.',
+    art: 'legendary mythic ancient orcish tribal ancestor fantasy two-handed twin-edged axe weapon item icon, massive twin-bladed iron axe with two protruding tusks and a thorned haft, single inanimate game loot object on transparent background',
+  },
+  {
+    key: 'volcano_dragon_bone_blade',
+    slot: 'weapon',
+    nameKo: '용뼈의 검',
+    region: '서쪽 화산',
+    tone: '전설',
+    lore: '서쪽 화산이 식기 전 그 안에서 잠든 용의 등뼈 한 토막으로 깎아 낸 검이다. 검신 가운데를 한 줄로 흐르는 용암 균열은 그 용이 식다가 한 박자 더 숨을 내쉰 자리이고, 검을 휘두를 때마다 그 한 박자가 손바닥으로 한 번 더 전해진다.',
+    art: 'legendary mythic ancient volcanic dragon fantasy dragonbone longsword weapon item icon, blade carved from a single curved dragon vertebra with a glowing molten crack running down the center, single inanimate game loot object on transparent background',
+  },
+
+  // ── batch 10: 화려 5종 ──
+  {
+    key: 'marsh_gemwoven_wand',
+    slot: 'weapon',
+    nameKo: '보석 그물 wand',
+    region: '늪지대',
+    tone: '화려',
+    lore: '늪 깊은 자리의 한 마녀가 자기 wand 둘레에 길어 올린 청록 보석들을 황금 그물로 한 줄로 엮어 박은 자리다. 보석 알 하나하나는 그 마녀가 늪에서 만난 사람의 새벽 하나씩을 끌어와 굳힌 것이라 한다.',
+    art: 'ornate flamboyant lavishly decorated gilded marsh swamp fantasy jeweled wand weapon item icon, wand with multiple teal gemstones woven into a gold mesh net wrapping along the shaft, single inanimate game loot object on transparent background',
+  },
+  {
+    key: 'orc_totem_chief_axe',
+    slot: 'weapon',
+    nameKo: '조상 얼굴의 도끼',
+    region: '오크 부락',
+    tone: '화려',
+    lore: '부락의 부족장이 자기 도끼 머리를 자기 조상의 얼굴 모양으로 깎고, 그 이마 가운데에 첫 사냥에서 얻은 큰 빨간 보석을 한 알 박아 둔 것이다. 자루 아래로 늘어진 두 줄의 깃털은 부족장이 마지막 새벽까지 떠날 때마다 한 줄씩 손가락 끝으로 짚어 본 자리다.',
+    art: 'ornate flamboyant gilded orcish tribal chieftain fantasy totem axe weapon item icon, iron axe head carved into an ancestor face with a large red gemstone in the forehead and two feather strands hanging from the haft, single inanimate game loot object on transparent background',
+  },
+  {
+    key: 'rune_mxr_warhammer',
+    slot: 'weapon',
+    nameKo: '산맥의 룬 망치',
+    region: '고대 룬 산맥',
+    tone: '화려',
+    lore: '룬 산맥의 첫 일곱 새김장이가 각자 자기 룬 한 글자씩 새 망치 머리 가운데에 한 자씩 박아 두기로 약속한 자리다. 망치 머리에 새겨진 세 글자는 일곱 글자 중 첫 세 글자이고, 나머지 네 자리에는 그들이 자기 자리에 못 박은 글자 대신 파란 보석을 한 알씩 박아 두었다.',
+    art: 'ornate flamboyant gilded mountain rune ancient fantasy jeweled warhammer weapon item icon, large stone hammer head inlaid with three engraved rune letters and four blue sapphire gems, single inanimate game loot object on transparent background',
+  },
+  {
+    key: 'volcano_phoenix_blade',
+    slot: 'weapon',
+    nameKo: '불사조의 검',
+    region: '서쪽 화산',
+    tone: '화려',
+    lore: '서쪽 화산이 한 번 다 식고 한 번 다시 태어났다는 새벽에 그 불사조의 깃을 떨어뜨린 자리에서 한 장인이 그 깃의 모양 그대로 자기 검의 crossguard를 깎아 낸 자리다. 검신 위로 한 줄의 빨간 룬이 그 새벽의 한 박자를 지금도 한 번씩 더 그어 준다.',
+    art: 'ornate flamboyant gilded volcanic fire phoenix fantasy ornate longsword weapon item icon, golden blade with red rune line down the fuller and ornate phoenix wing crossguard with red gemstone, single inanimate game loot object on transparent background',
+  },
+  {
+    key: 'fallen_golden_glaive',
+    slot: 'weapon',
+    nameKo: '황금 깃의 글레이브',
+    region: '타락천사',
+    tone: '화려',
+    lore: '한 세라프가 추락하기 전 자기 깃 두 개를 자기 글레이브의 양 옆에 황금으로 덮어 굳혀 둔 자리다. 자루의 가시는 그 세라프가 자기 손가락이 떨지 않게 한 줄로 박아 둔 자리이고, 가운데 보석은 그가 마지막 새벽 한 번 더 잡으려 한 자리에 한 알이 박혀 있다.',
+    art: 'ornate flamboyant gilded fallen angel divine seraphic fantasy ornate glaive weapon item icon, golden curved glaive blade with two small golden wings on each side and a single gemstone at the center, single inanimate game loot object on transparent background',
+  },
 ];
