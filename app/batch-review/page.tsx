@@ -1,6 +1,9 @@
 // 임시 batch 리뷰 — 새 sprite candidates 4×5 = 20장 시각 비교.
 // 사용자가 각 슬롯에서 베스트 선택하면 promote + lore 단계로.
 // 리뷰 후 디렉터리 통째 삭제.
+//
+// Next 16 prerender에서 발생한 빌드 에러 회피 — dynamic으로 강제.
+export const dynamic = 'force-dynamic';
 
 interface Item {
   slug: string;
