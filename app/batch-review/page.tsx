@@ -456,6 +456,77 @@ const ITEMS: Item[] = [
       '검 + 가운데 푸른 보석 + 황금 mounting',
     ],
   },
+  // ── batch 7: 5 region × 새 톤 (담백/일상/영웅담) ──
+  {
+    slug: 'marsh_humble_reed_sickle',
+    tone: '일상',
+    region: '늪지대',
+    slot: 'weapon',
+    recommend: 0,
+    hint: '낫 + 갈대 한 묶음 — 일상 톤 명확',
+    candidateNotes: [
+      '검은 낫 + 자루에 갈대 줄기 한 묶음',
+      '어두운 낫 + 가시 grip (기괴 쪽)',
+      '회색 곡선 낫 + 가시·갈대 (화려)',
+      '단순 검은 낫',
+    ],
+  },
+  {
+    slug: 'orc_heroic_first_tusk_axe',
+    tone: '영웅담',
+    region: '오크 부락',
+    slot: 'weapon',
+    recommend: 1,
+    hint: '도끼 + 송곳니 + 빨간 천 — 영웅담 톤 가장 명확',
+    candidateNotes: [
+      '어두운 도끼 + 큰 노란 송곳니',
+      '검은 도끼 + 가운데 송곳니 박힘 + 빨간 천',
+      '검은 도끼 + 부서진 도끼날 + 송곳니',
+      '양날 도끼 + 가운데 송곳니 다발',
+    ],
+  },
+  {
+    slug: 'rune_plain_carver_chisel',
+    tone: '담백',
+    region: '고대 룬 산맥',
+    slot: 'weapon',
+    recommend: 0,
+    hint: '단순 끌 (회색 머리 + 나무 grip) — 담백 톤',
+    candidateNotes: [
+      '단순 끌 (회색 머리 + 나무 grip)',
+      '끌 + 룬 새김 (mystic 쪽)',
+      '끌 + 룬 새김 (작음)',
+      '짧은 끌',
+    ],
+  },
+  {
+    slug: 'volcano_heroic_first_ember_hammer',
+    tone: '영웅담',
+    region: '서쪽 화산',
+    slot: 'weapon',
+    recommend: 0,
+    hint: '큰 검은 망치 + 가운데 잉걸 — 영웅 망치 명확',
+    candidateNotes: [
+      '큰 검은 망치 + 가운데 큰 오렌지 잉걸',
+      '양면 망치 + 양 옆에 잉걸 + 십자',
+      '큰 망치 + 가운데 잉걸 + 가시 detail',
+      '화려한 brass 망치 + 십자 + 잉걸',
+    ],
+  },
+  {
+    slug: 'fallen_plain_choir_baton',
+    tone: '담백',
+    region: '타락천사',
+    slot: 'weapon',
+    recommend: 0,
+    hint: '짧은 ivory baton + 가운데 silver ring — 가장 단순',
+    candidateNotes: [
+      '짧은 ivory baton + 가운데 silver ring',
+      '베이지 baton + 끝 작은 ring + grip',
+      '짧은 baton + 가운데 작은 silver band',
+      'baton + 가운데 silver wing 장식',
+    ],
+  },
 ];
 
 export default function BatchReviewPage() {
