@@ -93,24 +93,6 @@ export default function HomePage() {
           </Link>
         ))}
       </div>
-
-      {/* 오늘의 보급 — 일일 무료 보급 상자 (수령 ledger는 후속: daily 클레임 테이블 필요) */}
-      <Link
-        href="/gacha"
-        className="flex items-center justify-between rounded-2xl border border-amber-300 bg-amber-50 px-4 py-3 dark:border-amber-800 dark:bg-amber-950/40"
-      >
-        <span className="flex flex-col">
-          <span className="text-sm font-semibold text-amber-900 dark:text-amber-200">
-            🎁 오늘의 보급
-          </span>
-          <span className="text-xs text-amber-700/80 dark:text-amber-300/80">
-            무기/방어구/장신구 보급 상자
-          </span>
-        </span>
-        <span className="rounded-full bg-amber-500 px-3 py-1.5 text-xs font-bold text-amber-950">
-          받으러 가기 →
-        </span>
-      </Link>
     </div>
   );
 }
