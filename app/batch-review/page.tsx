@@ -314,6 +314,77 @@ const ITEMS: Item[] = [
       '갈색 도끼 + 용암 균열 + 뼈 자루',
     ],
   },
+  // ── batch 5: 타락천사 weapon × 5 ──
+  {
+    slug: 'fallen_witty_cherub_rapier',
+    tone: '위트',
+    region: '타락천사',
+    slot: 'weapon',
+    recommend: 1,
+    hint: 'cherub이 검 위에 누워 노는 자세 — 위트 톤 최고',
+    candidateNotes: [
+      '가는 rapier + pommel에 작은 cherub 아기',
+      'rapier 위에 cherub 천사가 앉아 노는 모양',
+      '검 + 위 cherub + 가운데 룬 줄기 (mystic 쪽)',
+      '작은 rapier + 황금 swept guard + cherub (화려)',
+    ],
+  },
+  {
+    slug: 'fallen_mournful_choir_sword',
+    tone: '비애',
+    region: '타락천사',
+    slot: 'weapon',
+    recommend: 1,
+    hint: '검은 깃털 + 천 — fallen 모티프 가장 명확',
+    candidateNotes: [
+      '단순 회색 검 + pommel 작은 보석 + grip 가죽',
+      '어두운 검 + crossguard 검은 깃털 + 천',
+      '회색 검 + 가시 crossguard + 가죽 wrap',
+      '가시 crossguard + 천 늘어짐',
+    ],
+  },
+  {
+    slug: 'fallen_uncanny_decay_scythe',
+    tone: '기괴',
+    region: '타락천사',
+    slot: 'weapon',
+    recommend: 2,
+    hint: '낫 + 두 부패 날개 + 가운데 보석 — dramatic',
+    candidateNotes: [
+      '어두운 낫 + 자루에 검은 깃털',
+      '큰 황금+회색 깃털로 만든 낫 모양',
+      '낫 + 두 깃털 날개 + 가운데 보석 (부패 신성)',
+      '어두운 낫 + 흩어진 검은 깃털',
+    ],
+  },
+  {
+    slug: 'fallen_mystic_veiled_wand',
+    tone: '수수께끼',
+    region: '타락천사',
+    slot: 'weapon',
+    recommend: 0,
+    hint: '신부 베일 wand — 가장 순수한 베일 모티프',
+    candidateNotes: [
+      '신부 베일 wand (흰 베일이 끝을 덮음)',
+      '베일에 보라 보석 박힘 wand',
+      '검은 보석 + 흰 베일 + 짧은 wand',
+      '검 + 베일 (검 모양, wand 아님)',
+    ],
+  },
+  {
+    slug: 'fallen_legendary_seraph_glaive',
+    tone: '장엄',
+    region: '타락천사',
+    slot: 'weapon',
+    recommend: 2,
+    hint: '황금 후광 + 깃털 + 가운데 룬 검 — 세라프 장엄',
+    candidateNotes: [
+      '후광 + 깃털 날개 + 가운데 보석 (날개 강조)',
+      '어두운 fallen 깃털 + 후광 + 곡선 글레이브',
+      '황금 후광 + 깃털 + 가운데 룬 검',
+      '청록색 추상 베일+깃털 (추상적)',
+    ],
+  },
 ];
 
 export default function BatchReviewPage() {
