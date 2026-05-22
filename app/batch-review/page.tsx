@@ -98,6 +98,77 @@ const ITEMS: Item[] = [
       '어두운 폴암 + 거대 보라 꽃송이 + 가시 자루 (늪의 전설)',
     ],
   },
+  // ── batch 2: 오크 부락 weapon × 5 ──
+  {
+    slug: 'orc_witty_club',
+    tone: '위트',
+    region: '오크 부락',
+    slot: 'weapon',
+    recommend: 2,
+    hint: '잭오랜턴 얼굴 곤봉 — 위트 톤 가장 명확',
+    candidateNotes: [
+      '거친 곤봉 + 가운데 작은 송곳니/이빨',
+      '매끄러운 곤봉 + 끝에 깃털·치아 행거',
+      '곤봉 + 큰 웃는 잭오랜턴 얼굴 새겨짐',
+      '곤봉 끝에 짐승 두개골/이빨',
+    ],
+  },
+  {
+    slug: 'orc_mournful_sabre',
+    tone: '비애',
+    region: '오크 부락',
+    slot: 'weapon',
+    recommend: 2,
+    hint: '잔뜩 매단 묘비 천 → 비애 최고치',
+    candidateNotes: [
+      '곡검 + grip에 어두운 헝겊 (단순)',
+      '곡검 + 자루에 빨간/누덕 천 감김',
+      '곡검 + 잔뜩 매단 묘비 천·헝겊',
+      '곡검 + grip 천 + 깃털 두 개',
+    ],
+  },
+  {
+    slug: 'orc_uncanny_flail',
+    tone: '기괴',
+    region: '오크 부락',
+    slot: 'weapon',
+    recommend: 2,
+    hint: '두개골 박힌 가시 공 — flail 형태 유지 + 기괴',
+    candidateNotes: [
+      '가시 공 + 체인 (평이)',
+      '척추뼈 chain whip (unique하지만 flail 컨셉에서 벗어남)',
+      '두개골 박힌 가시 공 + 체인',
+      '가시 공 + 뼈 grip + 체인',
+    ],
+  },
+  {
+    slug: 'orc_mystic_warhorn_axe',
+    tone: '수수께끼',
+    region: '오크 부락',
+    slot: 'weapon',
+    recommend: 0,
+    hint: '도끼날 위로 굽은 양머리 뿔 — 의례적 융합',
+    candidateNotes: [
+      '양머리 뿔이 도끼날 위로 굽어 모자 형태',
+      '두 뿔이 양 옆으로 뻗은 양날 도끼',
+      '두 뿔만 (도끼 모양 X)',
+      '양머리 두개골 + 뿔 + 자루 (장식 무기)',
+    ],
+  },
+  {
+    slug: 'orc_legendary_chieftain_maul',
+    tone: '장엄',
+    region: '오크 부락',
+    slot: 'weapon',
+    recommend: 0,
+    hint: '검은 maul + 황금 문장 — 부족장 장엄 명확',
+    candidateNotes: [
+      '큰 검은 maul + 황금 띠/문장',
+      '가시 박힌 mace (덜 거대)',
+      'brass 망치 + 황금 trim',
+      'stone+brass 어두운 망치 + 뼈 grip',
+    ],
+  },
 ];
 
 export default function BatchReviewPage() {
