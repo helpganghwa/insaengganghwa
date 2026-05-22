@@ -456,21 +456,7 @@ const ITEMS: Item[] = [
       '검 + 가운데 푸른 보석 + 황금 mounting',
     ],
   },
-  // ── batch 7: 5 region × 새 톤 (담백/일상/영웅담) ──
-  {
-    slug: 'marsh_humble_reed_sickle',
-    tone: '일상',
-    region: '늪지대',
-    slot: 'weapon',
-    recommend: 0,
-    hint: '낫 + 갈대 한 묶음 — 일상 톤 명확',
-    candidateNotes: [
-      '검은 낫 + 자루에 갈대 줄기 한 묶음',
-      '어두운 낫 + 가시 grip (기괴 쪽)',
-      '회색 곡선 낫 + 가시·갈대 (화려)',
-      '단순 검은 낫',
-    ],
-  },
+  // ── batch 7: 영웅담 2종만 유지 (담백/일상 제외) ──
   {
     slug: 'orc_heroic_first_tusk_axe',
     tone: '영웅담',
@@ -483,20 +469,6 @@ const ITEMS: Item[] = [
       '검은 도끼 + 가운데 송곳니 박힘 + 빨간 천',
       '검은 도끼 + 부서진 도끼날 + 송곳니',
       '양날 도끼 + 가운데 송곳니 다발',
-    ],
-  },
-  {
-    slug: 'rune_plain_carver_chisel',
-    tone: '담백',
-    region: '고대 룬 산맥',
-    slot: 'weapon',
-    recommend: 0,
-    hint: '단순 끌 (회색 머리 + 나무 grip) — 담백 톤',
-    candidateNotes: [
-      '단순 끌 (회색 머리 + 나무 grip)',
-      '끌 + 룬 새김 (mystic 쪽)',
-      '끌 + 룬 새김 (작음)',
-      '짧은 끌',
     ],
   },
   {
@@ -513,18 +485,19 @@ const ITEMS: Item[] = [
       '화려한 brass 망치 + 십자 + 잉걸',
     ],
   },
+  // ── batch 8: 영웅담 1종 (담백/일상 4종 폐기) ──
   {
-    slug: 'fallen_plain_choir_baton',
-    tone: '담백',
-    region: '타락천사',
+    slug: 'marsh_heroic_ferry_harpoon',
+    tone: '영웅담',
+    region: '늪지대',
     slot: 'weapon',
-    recommend: 0,
-    hint: '짧은 ivory baton + 가운데 silver ring — 가장 단순',
+    recommend: 2,
+    hint: '굵은 코일 + iron tip — 영웅 작살 무게감 최고',
     candidateNotes: [
-      '짧은 ivory baton + 가운데 silver ring',
-      '베이지 baton + 끝 작은 ring + grip',
-      '짧은 baton + 가운데 작은 silver band',
-      'baton + 가운데 silver wing 장식',
+      '어두운 작살 + 가시 + 코일 (mystic)',
+      '갈색 작살 + 흰 코일 + iron tip',
+      '회색 작살 + 굵은 코일 + iron tip',
+      '회색 작살 + 흰 코일 (단순)',
     ],
   },
 ];

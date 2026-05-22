@@ -296,16 +296,7 @@ export const CATALOG_NEXT: CatalogItem[] = [
     art: 'grand legendary heroic fantasy human village hero two-handed greatsword weapon item icon, massive shining steel blade with golden winged crossguard and a single blue gemstone at the center, single inanimate game loot object on transparent background',
   },
 
-  // ── batch 7: 5 region × 새 톤 (담백/일상/영웅담) ──
-  {
-    key: 'marsh_reed_sickle',
-    slot: 'weapon',
-    nameKo: '갈대 베는 낫',
-    region: '늪지대',
-    tone: '일상',
-    lore: '늪 마을의 한 노인이 평생 갈대만 베어 살림을 꾸린 낫이다. 자루의 가시는 갈대를 베다 따라온 마른 줄기와 늪의 뿌리가 함께 자루에 한 줄로 감겨 굳은 자리인데, 노인이 매년 한 줄씩 더 감기게 두기만 했다.',
-    art: 'humble everyday simple marsh swamp fantasy reed-cutting sickle weapon item icon, dark curved iron sickle with thorn and dried reed wrapped around the haft, single inanimate game loot object on transparent background',
-  },
+  // ── batch 7 (부분, 담백/일상 제외 후 영웅담 2종만 유지) ──
   {
     key: 'orc_first_hunt_broken_axe',
     slot: 'weapon',
@@ -316,15 +307,6 @@ export const CATALOG_NEXT: CatalogItem[] = [
     art: 'heroic epic orcish tribal fantasy first hunt axe weapon item icon, dark iron axe with one chipped broken blade edge and a yellowed tusk hanging from the haft on a cord, single inanimate game loot object on transparent background',
   },
   {
-    key: 'rune_first_letter_chisel',
-    slot: 'weapon',
-    nameKo: '첫 룬의 끌',
-    region: '고대 룬 산맥',
-    tone: '담백',
-    lore: '룬 산맥의 한 새김장이가 자기 첫 룬을 산문 돌 대신 자기 끌에 한 줄로 새긴 자리다. 그 한 줄이 끌 머리 가운데에 옅게 남아 있는데, 새김장이가 마지막 새벽까지 그 자리를 한 번도 깎아 내지 않았다.',
-    art: 'plain humble mountain rune ancient fantasy stonemason carver chisel weapon item icon, steel chisel with a single faint engraved rune line on the head and worn wooden grip, single inanimate game loot object on transparent background',
-  },
-  {
     key: 'volcano_first_ember_hammer',
     slot: 'weapon',
     nameKo: '첫 잉걸의 망치',
@@ -332,14 +314,5 @@ export const CATALOG_NEXT: CatalogItem[] = [
     tone: '영웅담',
     lore: '서쪽 화로의 첫 잉걸 한 알을 그 화로의 첫 풀무지기가 자기 망치 머리 안에 봉인한 것이라 한다. 망치를 두드리면 잉걸의 빛이 가운데에서 한 박자 늦게 한 번 짙어졌다 옅어지고, 그 한 박자에 다른 화로의 풀무지기들도 한 호흡을 맞춰 두드린다.',
     art: 'heroic epic volcanic forge fire fantasy first ember blacksmith hammer weapon item icon, large dark hammer with a single glowing orange ember sealed in the center of the head, single inanimate game loot object on transparent background',
-  },
-  {
-    key: 'fallen_conductor_baton',
-    slot: 'weapon',
-    nameKo: '성가대의 baton',
-    region: '타락천사',
-    tone: '담백',
-    lore: '한 성가대의 지휘자가 평생 한 자루만 손에 쥔 baton이다. 가운데에 박힌 silver ring이 그가 한 박자 빠르거나 한 박자 늦으면 옆자리의 합창단원의 손가락이 한 번씩 그 자리를 짚어 박자를 다시 맞춰 주었다.',
-    art: 'plain humble fallen angel divine fantasy choir conductor baton weapon item icon, short ivory baton with a single thin silver ring band at the center grip, single inanimate game loot object on transparent background',
   },
 ];

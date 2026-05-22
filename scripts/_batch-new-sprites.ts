@@ -19,42 +19,42 @@ interface Plan {
   description: string; // Pixellab description (영문)
 }
 
-// batch 4: 서쪽 화산 weapon × 5종
+// batch 9: 새 톤(전설·정밀) 시범 × 5종
 const BATCH: Plan[] = [
   {
-    slug: 'volcano_witty_pan_cleaver',
+    slug: 'marsh_refined_witch_wand',
     slot: 'weapon',
-    region: '서쪽 화산',
-    tone: '위트',
-    description: 'humorous quirky comical volcanic forge fire fantasy frying-pan cleaver kitchen weapon item icon, blackened iron pan-cleaver crossbreed weapon with cheerful sparks, single inanimate game loot object on transparent background, no character, no figure',
+    region: '늪지대',
+    tone: '정밀',
+    description: 'refined intricate finely crafted precise marsh swamp witch fantasy wand weapon item icon, slender wand with delicate filigree silver vines and a small precisely cut teal gem at the tip, single inanimate game loot object on transparent background, no character, no figure',
   },
   {
-    slug: 'volcano_mournful_widow_hammer',
+    slug: 'orc_legendary_ancestor_axe',
     slot: 'weapon',
-    region: '서쪽 화산',
-    tone: '비애',
-    description: 'mournful sorrowful ashen volcanic forge fire fantasy widow blacksmith hammer weapon item icon, scorched hammer with a single faded ribbon tied at the grip, single inanimate game loot object on transparent background, no character, no figure',
+    region: '오크 부락',
+    tone: '전설',
+    description: 'legendary mythic ancient storied orcish tribal ancestor fantasy two-handed axe weapon item icon, massive weathered iron axe head with carved ancestral tribal glyphs and a single large ancient tusk wedged at the haft, single inanimate game loot object on transparent background, no character, no figure',
   },
   {
-    slug: 'volcano_uncanny_molten_eye_dagger',
+    slug: 'rune_refined_filigree_blade',
     slot: 'weapon',
-    region: '서쪽 화산',
-    tone: '기괴',
-    description: 'uncanny eerie volcanic forge fire fantasy molten-eye dagger weapon item icon, black obsidian dagger with a single glowing molten orange eye crackling in the pommel, single inanimate game loot object on transparent background, no character, no figure',
+    region: '고대 룬 산맥',
+    tone: '정밀',
+    description: 'refined intricate finely crafted precise mountain rune ancient fantasy filigree longsword weapon item icon, slender pale steel blade with extremely detailed silver filigree rune patterns engraved along the fuller, single inanimate game loot object on transparent background, no character, no figure',
   },
   {
-    slug: 'volcano_mystic_ember_runesword',
+    slug: 'volcano_legendary_dragonbone_sword',
     slot: 'weapon',
     region: '서쪽 화산',
-    tone: '수수께끼',
-    description: 'mysterious cryptic volcanic forge fire fantasy ember rune longsword weapon item icon, dark steel blade with a glowing molten ember rune line down the fuller, single inanimate game loot object on transparent background, no character, no figure',
+    tone: '전설',
+    description: 'legendary mythic ancient storied volcanic dragon fantasy dragonbone longsword weapon item icon, dark sword forged from a single curved dragon rib with a glowing molten core line, single inanimate game loot object on transparent background, no character, no figure',
   },
   {
-    slug: 'volcano_legendary_dragon_forge_axe',
+    slug: 'fallen_refined_silver_rapier',
     slot: 'weapon',
-    region: '서쪽 화산',
-    tone: '장엄',
-    description: 'grand legendary mythic volcanic forge fire fantasy dragon-forged greataxe weapon item icon, massive blackened axe head with glowing molten cracks and a dragon scale embedded at the haft top, single inanimate game loot object on transparent background, no character, no figure',
+    region: '타락천사',
+    tone: '정밀',
+    description: 'refined intricate finely crafted precise fallen angel divine fantasy silver rapier weapon item icon, slender polished silver rapier with extremely detailed swept hilt and small engraved feather etchings along the blade, single inanimate game loot object on transparent background, no character, no figure',
   },
 ];
 
