@@ -6,9 +6,9 @@ import type { NextConfig } from 'next';
 const LONG_CACHE = 'public, max-age=604800, stale-while-revalidate=2592000';
 
 const nextConfig: NextConfig = {
-  turbopack: {
-    root: import.meta.dirname,
-  },
+  // turbopack root 명시 제거 — Vercel build의 modifyConfig 단계가
+  // import.meta.dirname을 undefined로 받아 path TypeError 발생. Next 16에서
+  // turbopack은 default이며 root는 자동 추론으로 충분.
   allowedDevOrigins: ['localhost', '127.0.0.1'],
   async headers() {
     return [
