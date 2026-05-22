@@ -54,6 +54,7 @@ export interface CatalogItem {
 }
 
 const STYLE = 'single hero object centered, bold clean silhouette, crisp dark outline, rich pixel shading with rim light, fantasy RPG loot inventory icon, transparent background';
+const NEG = 'no character, no scene, no glow effect, no rarity border';
 
 /** 슬롯별 묶음을 합쳐 단일 export. 배치(슬롯)별로 확장한다. */
 
@@ -68,7 +69,7 @@ const WEAPONS: CatalogItem[] = [
     region: '서쪽 화산',
     tone: '영웅담',
     lore: '한 영웅이 평생을 좇은 드래곤을 마침내 화산 정상에서 잡은 검이다. 사흘 밤을 싸웠고, 사흘째 새벽에 영웅의 검 끝이 드래곤의 심장을 꿰뚫었다. 그러나 영웅은 다시 산을 내려오지 못했다. 화로지기 둘이 정상에 올라 영웅의 검과 잿빛 비늘 한 조각을 가지고 내려왔다.\n검 자루 끝의 비늘 한 조각은 지금도 손바닥에 닿으면 따뜻하다. 식지 않는다.',
-    art: `ornate fantasy weapon: heavy hero-forged longsword, scorched blade with a single grey dragon scale set into the pommel, gold-bound hilt, monumental epic, crafted equippable weapon game asset, ${STYLE}`,
+    art: `ornate fantasy weapon, hero motif: ONE LARGE clearly visible dull grey dragon scale shaped like a hexagonal roof tile with a central ridge embedded into the round pommel disc at the very bottom of the hilt, the scale OVERLAPS and replaces the front face of the pommel facing the viewer, oversized hero longsword with a CHARRED MATTE BLACK steel blade with a broad central fuller and a thick iron crossguard, leather-wrapped hilt grip, palette: matte charred black steel blade body (not gold), dark wrapped leather hilt grip, ONE prominent dull stone grey dragon scale at the pommel face accent, gold trim only on the very narrow crossguard edge, side profile, ${STYLE}, ${NEG}, the pommel accent is a clearly hexagonal dragon scale shape NOT a round gem NOT a golden disc NOT a jewel, the scale is dull stone grey with darker grey rim not golden not colored, the blade is matte CHARRED BLACK steel not gold and not orange, gold is only on the crossguard not the blade`,
   },
   {
     key: 'lovesick_slime_dirk',
@@ -77,7 +78,7 @@ const WEAPONS: CatalogItem[] = [
     region: '늪지대',
     tone: '위트',
     lore: '어느 슬라임이 길을 지나가던 여행자에게 반했다. 슬라임은 여행자가 늪에 들를 때마다 자기 몸 한 조각을 떼어 따라다녔고, 여행자가 떠나려 하자 단검 한 자루를 꿀꺽 삼켜 길 가운데에 토해 놓았다. 자루엔 슬라임의 점액이 굳어 손에 딱 맞았다.\n여행자는 그 단검을 받고 마음이 약해져 늪 마을에 자리를 잡았다. 슬라임은 그 뒤로 여행자의 집 문 앞에 자주 와서 한참 쉬다 간다.',
-    art: `ornate fantasy weapon: small dirk with translucent jelly-coated hilt, faintly glowing green resin grip, swamp-iron blade, charmingly weird, crafted equippable weapon game asset, ${STYLE}`,
+    art: `ornate fantasy weapon, hero motif: lumpy hardened green resin custom-molded around the dirk's leather-wrapped grip forming a personalized hand shape with finger indents, polished mirror-finish silver steel dirk blade pristine and reflective with sharp crisp edges, short straight dagger with round pommel, palette: lime green resin on the grip only, polished silver steel blade, dark brown leather under the resin, side profile, ${STYLE}, ${NEG}, the blade is pure silver steel not green, no green color touches the blade at all`,
   },
   {
     key: 'stone_golem_heart_maul',
@@ -86,7 +87,7 @@ const WEAPONS: CatalogItem[] = [
     region: '고대 룬 산맥',
     tone: '수수께끼',
     lore: '무너진 돌골렘의 가슴 깊은 곳에서 발견된 푸른 결정이다. 자루 끝에 박은 망치는 두드릴 때마다 안에서 작은 산울림이 한 번 더 울린다. 한 학자가 호기심에 그 결정을 빼내 자기 책상 위에 두었다. 사흘 만에 학자의 이마에 푸른 균열이 한 줄 생겼고, 학자는 결정을 도로 망치에 박아 산으로 돌려보냈다.\n학자의 이마 균열은 그 뒤로도 사라지지 않았다. 학자는 강의 첫 시간마다 그 자국을 가리키며 말한다 — 산의 것은 산으로 돌려보내야 하오.',
-    art: `ornate fantasy weapon: short stone war maul, glowing blue crystal core embedded in the head, iron banding, runic chiseled grip, mysterious, crafted equippable weapon game asset, ${STYLE}`,
+    art: `ornate fantasy weapon, hero motif: glowing soft blue mountain crystal core embedded deep inside the stone head of the maul visible through a small opening, short stocky stone war maul with a chunky square head and thick iron-banded haft, dark weathered carved stone head with cool blue crystal heart visible only in the center face of the head, palette: cool glowing blue crystal core, weathered slate grey stone head, dark iron banding and grip, side profile, ${STYLE}, ${NEG}, glow confined to the crystal core only not on the haft or stone`,
   },
   {
     key: 'rusted_king_axe',
@@ -95,7 +96,7 @@ const WEAPONS: CatalogItem[] = [
     region: '오크 부락',
     tone: '영웅담',
     lore: '옛 오크 부락에 왕이라 불리던 자가 있었다. 단 한 번 휘둘러 적의 전열 한 줄을 무너뜨린 도끼다. 왕이 죽은 뒤 부락은 그 도끼를 천막 가운데에 박아 두었다. 새 족장이 들어설 때마다 한 번씩 빼 보았는데, 빼낸 족장은 백 년 동안 한 사람뿐이었다.\n다른 족장들은 그 자리에서 한 번 웃고 천막을 나선다. 왕의 도끼는 왕만이 빼지. 새 족장이 그 농을 외우는 게 부락의 통과의례다.',
-    art: `ornate fantasy weapon: brutal two-handed orcish battleaxe, rust-eaten broad iron head, sinew-wrapped haft with a king-tooth pommel, proud worn glory, crafted equippable weapon game asset, ${STYLE}`,
+    art: `ornate fantasy weapon, hero motif: a single large yellowed orcish tooth set prominently into the pommel of a brutal two-handed orcish battleaxe, broad rust-eaten dark red iron axe head, sinew-wrapped dark wood haft, palette: rust-eaten reddish-brown iron head, dark hide-wrapped haft, yellowed tooth pommel accent, side profile, ${STYLE}, ${NEG}`,
   },
   {
     key: 'lighthouse_keeper_harpoon',
@@ -104,7 +105,7 @@ const WEAPONS: CatalogItem[] = [
     region: '일반',
     tone: '담백',
     lore: '폭풍이 든 밤, 바람에 등불이 휘청였다. 등대지기는 늘 그랬듯 등불 옆에 작살을 세워 두었다 — 누구에게 휘두르려는 게 아니라 손에 잡을 무거운 게 필요해서였다. 그 새벽, 그가 손을 뻗어 작살을 쥔 그 짧은 순간에 큰 갈매기 한 마리가 깨진 창으로 뛰어들어 등불을 꺾었고, 작살촉이 갈매기의 가슴을 가로질렀다.',
-    art: `ornate fantasy weapon: long whaler harpoon, salt-stained iron tip, weathered ash haft with rope coil, one white feather caught at the barb, quiet seaside, crafted equippable weapon game asset, ${STYLE}`,
+    art: `ornate fantasy weapon, hero motif: a single small white seagull feather with visible delicate barbs and a central quill shaped like a soft leaf clearly recognizable as a bird feather snagged on the iron barb of the harpoon tip, long sturdy whaler harpoon with a single sharp barbed iron head and a coiled rope wrapped around the ash wood haft, weathered grey iron tip with one detailed white feather caught at the barb area showing its plume texture and quill shaft, palette: weathered iron grey tip, warm ash wood brown haft, pure bright white feather with subtle grey shading along the barbs, side profile, ${STYLE}, ${NEG}, the feather must look like an actual bird feather with visible plume texture and a central spine, not a piece of cloth or ribbon or flag or torn fabric`,
   },
   {
     key: 'inn_keeper_cleaver',
@@ -113,7 +114,7 @@ const WEAPONS: CatalogItem[] = [
     region: '일반',
     tone: '일상',
     lore: '여관 주인이 부엌에서 이 칼을 들고 나오면 어떤 시비도 가라앉는다. 닭 기름이 묻은 채인 데다, 든 사람이 화도 안 내고 가만히 서 있어서 더 무섭다. 손님 하나가 한참 보다 술잔을 다시 들어 술을 비웠다. 주인이 그제야 입을 열었다.\n「우리 집 닭 잘 잡소.」',
-    art: `ornate fantasy weapon: heavy butcher cleaver as a weapon, oiled steel blade with faint kitchen grease, worn wooden grip, homely menacing, crafted equippable weapon game asset, ${STYLE}`,
+    art: `kitchen equipment item, hero motif: SOFT GLOSSY AMBER OIL SHEEN HIGHLIGHT smeared in irregular smudge patches across the WIDE flat steel kitchen butcher cleaver blade like greasy fingerprint smears NOT flames NOT fire NOT glowing patterns just oily grease residue, a humble household kitchen butcher's cleaver shaped exactly like a real-world meat cleaver with a WIDE rectangular flat blade and a rounded BLUNT rectangular tip (NOT a pointed sharp tip), bolt rivets joining a dark wooden kitchen knife handle, dull worn kitchen steel rectangular blade with soft amber translucent grease smudges across its surface, palette: dull steel grey wide rectangular kitchen cleaver blade, soft amber translucent grease smudges only as oily highlights NOT solid colored patterns, dark walnut brown wooden kitchen handle, side profile, ${STYLE}, ${NEG}, the amber on the blade is GREASE OIL SHEEN not flames not fire not flame-shaped patterns, this is a kitchen cooking butcher's cleaver not a fantasy dagger or sword, the blade shape is WIDE and RECTANGULAR like a butcher's chopping tool, the tip is BLUNT and FLAT not a pointed weapon tip`,
   },
   {
     key: 'volcano_bellows_hammer',
@@ -122,7 +123,7 @@ const WEAPONS: CatalogItem[] = [
     region: '서쪽 화산',
     tone: '담백',
     lore: '서쪽 화로의 풀무지기가 평생 풀무 손잡이만 톡톡 두드려 박자를 맞춘 망치다. 무엇을 친 적은 없다. 마지막 새벽 풀무지기가 망치를 박자 자리에 가만히 내려놓고 자기 풀무 옆에 앉아 숨을 거뒀다. 화로의 박자가 한 번 끊겼다, 다시 이어졌다.',
-    art: `ornate fantasy weapon: forge hammer, soot-blackened iron head, scorched oak haft worn smooth by years of rhythmic tapping, quiet craftsman warmth, crafted equippable weapon game asset, ${STYLE}`,
+    art: `ornate fantasy weapon, hero motif: a worn smooth rhythmic-tapping groove visibly carved into the haft of a forge hammer where years of rhythmic taps have worn the wood, simple compact forge hammer with a soot-blackened iron head and a scorched oak haft, palette: dull soot-blackened iron head, scorched dark oak haft with paler worn-smooth groove on the grip, side profile, ${STYLE}, ${NEG}`,
   },
   {
     key: 'ferry_pole_spear',
@@ -131,7 +132,7 @@ const WEAPONS: CatalogItem[] = [
     region: '늪지대',
     tone: '수수께끼',
     lore: '늪 한가운데서 뱃사공의 삿대를 큰 손 하나가 물 아래에서 잡았다. 뱃사공은 놓지 않았고, 손도 놓지 않았다. 한참을 그렇게 있다가 손은 풀렸다. 그날 이후 뱃사공은 그 자리에 가까이 가지 않는다.\n늪이 그날 뱃사공에게 무엇을 부탁했는지, 뱃사공이 무엇을 약속했는지는 손님이 물어도 답하지 않는다.',
-    art: `ornate fantasy weapon: long marsh polearm, dark waterlogged ash shaft, iron-shod tip worn smooth, faint green algae, quiet useful, crafted equippable weapon game asset, ${STYLE}`,
+    art: `ornate fantasy weapon, hero motif: a LARGE BOLD clearly recognizable PALE WHITE FIVE-FINGER HANDPRINT shape stamped boldly into the dark waterlogged wood at the bottom grip area of a marsh ferry polearm with each of the FIVE FINGERS clearly visible as distinct elongated marks and a wider palm shape connecting them like a stamped palm print, long sturdy marsh polearm with a dark waterlogged ash wood shaft and a worn iron-shod tip with smoothed edges, palette: dark waterlogged ash brown shaft, weathered iron tip, distinctly visible BOLD pale white handprint shape with 5 fingers spread clearly at the bottom of the shaft, side profile, ${STYLE}, ${NEG}, the handprint must be clearly recognizable as a HUMAN HAND with FIVE separate fingers visible like a paint stamp not an abstract blob not a smudge not a small mark`,
   },
   {
     key: 'mountain_silence_bow',
@@ -140,7 +141,7 @@ const WEAPONS: CatalogItem[] = [
     region: '고대 룬 산맥',
     tone: '장엄',
     lore: '룬 산맥의 첫 봉우리가 흔들리던 해의 일이다. 산이 사흘째 으르렁대 마을 사람들이 짐을 싸 산을 떠나려 할 때, 한 늙은 궁수가 산문 앞에 혼자 서 있었다. 그는 활시위를 가만히 끝까지 당기더니, 산울림이 가장 깊은 자리를 향해 단 한 발을 쏘았다. 화살은 어디에도 박히지 않았다. 산이 그 자리에서 입을 다물었다.',
-    art: `ornate fantasy weapon: tall recurve longbow, pale stone-wood limbs with deep blue rune cracks, single silver string, monumental quiet, crafted equippable weapon game asset, ${STYLE}`,
+    art: `ornate fantasy weapon, hero motif: a single thin silver bowstring stretched taut across the tall recurve longbow with deep glowing blue rune cracks running along the pale stone-wood limbs as if storing one quiet shot, tall recurve longbow shaped from pale carved stone-wood, palette: pale stone-grey wood limbs, deep cobalt blue rune crack lines, single bright silver bowstring, side profile of the strung bow standing vertically, ${STYLE}, ${NEG}`,
   },
   {
     key: 'fallen_choir_rapier',
@@ -149,7 +150,7 @@ const WEAPONS: CatalogItem[] = [
     region: '타락천사',
     tone: '비애',
     lore: '타천사가 떨어진 새벽, 빈 성가대 자리에서 가는 검 한 자루가 발견되었다. 손잡이엔 노래 가사 한 줄이 새겨져 있는데 절반에서 끊겼다. 신전 사람들은 그 가사의 다음 줄을 아는 사람을 평생 찾는 중이다.\n언젠가 그 줄을 끝낼 사람이 와서 손가락 끝으로 자루를 짚을 것이다. 그날을 위해 검은 닦이지 않고 그대로 두기로 했다.',
-    art: `ornate fantasy weapon: slim choir rapier, pale silver blade engraved with half a hymn, ivory grip, soft faded gold guard, mournful sacred, crafted equippable weapon game asset, ${STYLE}`,
+    art: `ornate fantasy weapon, hero motif: a clearly visible row of small carved letter symbols engraved like X V T angular marks across the rapier's grip pommel that abruptly stops halfway leaving the rest of the pommel smooth and blank, slender choir rapier with a pale silver thrusting blade and a faded gold swept guard, ivory grip with the partial inscription clearly visible, palette: pale silver thin blade, faded gold guard, ivory white grip with darker engraved letter marks on one half only, side profile, ${STYLE}, ${NEG}, the letters must be clearly visible on the grip not faint`,
   },
   {
     key: 'twin_widow_sabre',
@@ -158,7 +159,7 @@ const WEAPONS: CatalogItem[] = [
     region: '일반',
     tone: '비애',
     lore: '두 자매가 한 사람을 사랑했고, 그 사람은 둘 다 잃었다. 언니가 곡검을 차고 묘를 지킨 사십 년, 동생이 그 곡검을 받아 든 그날 새벽 언니는 묘 옆에 옆으로 누워 잠들었다. 동생은 곡검을 묘 발치 흙에 가만히 꽂고 언니의 손을 잡았다.',
-    art: `ornate fantasy weapon: curved sabre, polished steel blade with two thin engraved names, twin braided silk grips knotted together, sorrowful, crafted equippable weapon game asset, ${STYLE}`,
+    art: `ornate fantasy weapon, hero motif: two slim braided silk grip wraps in different colors knotted tightly together at the pommel of a cavalry sabre with two thin engraved names visible on the polished steel blade, slim curved single-edged sabre with a simple cross guard, palette: pale polished steel curved blade with darker engraved names, two contrasting silk grip wraps (deep red and pale blue) knotted at the pommel, simple iron guard, side profile, ${STYLE}, ${NEG}`,
   },
   {
     key: 'last_apprentice_wand',
@@ -167,7 +168,7 @@ const WEAPONS: CatalogItem[] = [
     region: '일반',
     tone: '비애',
     lore: '늙은 마법사가 마지막 제자에게 물려주려고 깎던 완드다. 제자는 받기 전날 밤 말없이 마을을 떠났다. 마법사는 빈 작업대를 매일 닦으면서도 완드엔 손을 대지 않았다. 끝부분의 결정은 아직 자르지 않은 채다. 제자가 왜 떠났는지, 마법사가 무엇을 잘못 가르쳤다고 생각했는지, 아는 사람은 누구일까.',
-    art: `ornate fantasy weapon: short magician wand, pale willow shaft half-carved with runes, raw uncut crystal tip, single silver wire, lonely tender, crafted equippable weapon game asset, ${STYLE}`,
+    art: `ornate fantasy weapon, hero motif: a raw uncut translucent crystal lump still in its rough natural form perched at the tip of a short magician's wand as if waiting to be shaped, pale willow wand shaft with rune carvings only on the lower half a single thin silver wire wrapping near the tip, palette: pale willow wood shaft with darker rune carvings on the lower half, raw uncut translucent purple-grey crystal lump at the tip, single bright silver wire wrap, side profile, ${STYLE}, ${NEG}`,
   },
   {
     key: 'pilgrim_stone_staff',
@@ -175,8 +176,8 @@ const WEAPONS: CatalogItem[] = [
     nameKo: '순례자의 지팡이',
     region: '일반',
     tone: '담백',
-    lore: '늙은 순례자가 평생 짚고 다닌 지팡이다. 길마다 한 군데씩 손때가 다르게 묻었다. 마지막 마을에서 그는 지팡이를 문 옆에 세워 두고 자기 짐을 풀었다. 마을 사람이 다음 행선지를 물었다. 순례자는 짧게 답했다.\n「여기까지요.」',
-    art: `ornate fantasy weapon: tall pilgrim staff, smooth pale oak with countless hand polish patches, simple iron cap, plain serene, crafted equippable weapon game asset, ${STYLE}`,
+    lore: '늙은 순례자가 평생 짚고 다닌 지팡이다. 자루 위·아래에 박은 무광 놋쇠 끝쇠가 길마다 두드린 자리에 닳아 빛이 옅게 죽었다. 마지막 마을에서 그는 지팡이를 문 옆에 세워 두고 자기 짐을 풀었다. 마을 사람이 다음 행선지를 물었다. 순례자는 짧게 답했다.\n「여기까지요.」',
+    art: `ornate fantasy weapon, hero motif: a tall simple pilgrim's oak walking staff with a polished brass ferrule cap at the top and a smaller brass ferrule cap at the bottom, smooth uniformly warm-stained oak wood shaft, palette: warm honey-brown oak wood shaft, polished warm brass cap at the top and a smaller brass ferrule at the bottom, side profile of the staff standing vertically, ${STYLE}, ${NEG}`,
   },
   {
     key: 'thief_with_thousand_faces_dagger',
@@ -185,7 +186,7 @@ const WEAPONS: CatalogItem[] = [
     region: '일반',
     tone: '위트',
     lore: '천 얼굴을 가진 도둑이 있었다. 백 번 잡혔다 풀려났는데 풀려날 때마다 이 단검을 잊지 않고 챙겨 갔다. 마지막에 잡혔을 때만 단검을 두고 도주했다. 자루엔 그동안 베인 자물쇠 흠집이 빼곡하다.\n언젠가 단검에 새 흠집이 하나 더 늘어나는 날, 그 도둑은 다시 잡힐 것이다. 간수들은 그날을 기다린다.',
-    art: `ornate fantasy weapon: slim thief dagger, narrow blackened steel blade, leather grip wrapped tight, dozens of faint lockpick scratches along the spine, sly, crafted equippable weapon game asset, ${STYLE}`,
+    art: `ornate fantasy weapon, hero motif: MANY DENSE PARALLEL HORIZONTAL TALLY SCRATCH LINES clearly engraved densely stacked together along the entire spine edge of a thief's narrow dagger blade like prison count marks IIII IIII IIII tally pattern, blade surface OTHERWISE CLEAN AND UNDECORATED with NO central gem NO concentric circles NO decorative jewel just plain dark steel with the spine tally lines, slim narrow blackened steel dagger with leather grip wrapped tight, palette: dark blackened steel narrow plain blade with many distinctly visible paler thin horizontal scratch tally marks ONLY along the spine edge, dark leather grip wrap, simple iron crossguard, side profile, ${STYLE}, ${NEG}, the blade has NO central gem NO jewel NO decorative pattern in the middle, just dense tally scratch lines along the spine edge clearly visible as multiple parallel pale lines`,
   },
   {
     key: 'ash_kiln_short_sword',
@@ -193,8 +194,8 @@ const WEAPONS: CatalogItem[] = [
     nameKo: '재가마의 한손검',
     region: '서쪽 화산',
     tone: '일상',
-    lore: '화산 밑 가마에서 평생 그릇만 굽던 장인의 칼이다. 가끔 굳은 점토를 떼어 내려고 그릇 가장자리를 톡톡 두드리는 데 썼다. 사람을 벤 적은 없다.\n칼날엔 마른 점토 가루가 가는 줄로 내려앉았다. 닦아도 닦이지 않는다.',
-    art: `ornate fantasy weapon: short forge sword, ash-dusted steel blade with faint clay marks, simple wood grip, calm artisan warmth, crafted equippable weapon game asset, ${STYLE}`,
+    lore: '화산 밑 가마에서 평생 그릇만 굽던 장인의 칼이다. 가끔 굳은 점토를 떼어 내려고 그릇 가장자리를 톡톡 두드리는 데 썼다. 사람을 벤 적은 없다.\n칼날은 평생 닦여 깨끗하다. 가마 옆의 흙은 칼이 아니라 장인의 손에 가만히 머물러 있었다.',
+    art: `ornate fantasy weapon, hero motif: a clean polished one-handed forge sword with a plain straight silver steel blade in pristine condition, simple brass crossguard, dark wood grip, polished brass round pommel, palette: bright clean silver steel blade, polished brass crossguard and pommel, dark walnut wood grip, side profile, ${STYLE}, ${NEG}`,
   },
   {
     key: 'orc_naming_axe',
@@ -203,7 +204,7 @@ const WEAPONS: CatalogItem[] = [
     region: '오크 부락',
     tone: '담백',
     lore: '오크 아이는 일정한 키가 되면 부락 가운데 박힌 이 도끼를 한 번 들어 보고 이름을 받는다. 들면 자루에 자기 이름의 첫 글자를 새긴다. 자루엔 글자가 빼곡해 더 새길 자리가 거의 없다. 한 아이가 새길 자리가 없다며 늙은 전사를 올려다봤다. 늙은 전사가 자루 끝을 가리키며 말했다.\n「거기부터 다시 새기지.」',
-    art: `ornate fantasy weapon: ceremonial orcish hand axe, broad iron blade, bone-wrapped haft densely covered with carved initials, dignified ritual, crafted equippable weapon game asset, ${STYLE}`,
+    art: `ornate fantasy weapon, hero motif: BONE-WRAPPED GRIP COMPLETELY COVERED in DENSE BOLD CARVED INITIAL LETTER MARKS like X V T A R angular shapes engraved deeply across every part of the haft with NO BLANK SPACE REMAINING visible like graffiti tally marks layered on top of each other, broad pale iron axe head, palette: pale polished iron head, pale bone grip body OBVIOUSLY DENSELY COVERED in many DARKER deeply engraved angular letter mark glyphs visible as multiple bold scratched-in initials with no smooth blank section, side profile, ${STYLE}, ${NEG}, the bone grip must be CLEARLY COVERED in many visible letter mark engravings not smooth not plain not blank`,
   },
   {
     key: 'moss_drinker_mace',
@@ -212,7 +213,7 @@ const WEAPONS: CatalogItem[] = [
     region: '늪지대',
     tone: '기괴',
     lore: '늪지대 한 모퉁이에 박힌 철퇴는 자루를 거꾸로 타고 이끼가 올라간다. 뽑아 들어도 사흘이면 다시 손목까지 푸르게 덮인다. 한 모험가가 일주일을 들고 다닌 뒤 어깨에 푸른 무늬가 평생 남았다.\n그 무늬는 비가 오는 날이면 천천히 자란다. 어깨에서 목 옆까지 한 가닥씩 가지를 친다.',
-    art: `ornate fantasy weapon: heavy bog mace, iron flanged head, dark mossy oak haft with creeping green moss climbing the grip, eerie organic, crafted equippable weapon game asset, ${STYLE}`,
+    art: `ornate fantasy weapon, hero motif: thick living green moss climbing UPWARD along the grip of the mace haft in vivid creeping tendrils reaching toward the head, heavy bog mace with a flanged dark iron mace head and a dark mossy oak haft entirely wrapped in upward-creeping green moss, palette: dull dark iron flanged head, deep oak brown haft, vivid green creeping moss along the grip, side profile, ${STYLE}, ${NEG}`,
   },
   {
     key: 'priest_who_doubted_flail',
@@ -221,7 +222,7 @@ const WEAPONS: CatalogItem[] = [
     region: '타락천사',
     tone: '수수께끼',
     lore: '신을 끝까지 의심한 신관의 플레일이다. 자루에 그가 묻고 싶었던 질문 일곱 줄이 새겨져 있는데, 마지막 한 줄만 지워져 있다. 신관 본인이 지웠는지, 답이 와서 지워졌는지는 누구도 모른다. 신관은 신전 계단에서 아무 말도 남기지 않고 죽었다. 지워진 자리에 손가락을 대 본 사람들은 그 자리만 어쩐지 차다고 한다 — 그 차가움이 답인지 침묵인지도 분명하지 않다.',
-    art: `ornate fantasy weapon: heavy single-headed flail, blackened spiked ball, chain links, oak haft engraved with seven faded inscriptions, solemn, crafted equippable weapon game asset, ${STYLE}`,
+    art: `ornate fantasy weapon, hero motif: heavy single-headed flail with an OBVIOUSLY SPIKED IRON BALL showing multiple sharp pointed spikes radiating outward from the ball clearly visible, connected by short chain links to a dark oak haft showing SIX clearly visible deeply engraved horizontal text lines stacked vertically down the haft like ladder rungs with carved X V T angular letter marks, plus ONE clearly EMPTY BLANK SMOOTH HORIZONTAL BAND at the bottom of the haft where the seventh line is missing, palette: dull blackened SPIKED iron ball with visible spikes, dark iron chain, dark oak brown haft showing SIX deeply engraved letter mark text lines plus ONE blank smooth space at the bottom, side profile, ${STYLE}, ${NEG}, the iron ball MUST be spiked with visible sharp spikes, the haft MUST clearly show six engraved horizontal text lines plus one blank line at the bottom`,
   },
   {
     key: 'rune_keeper_halberd',
@@ -230,7 +231,7 @@ const WEAPONS: CatalogItem[] = [
     region: '고대 룬 산맥',
     tone: '담백',
     lore: '늙은 보초가 평생 산문 앞을 지킨 미늘창이다. 산이 흔들리는 새벽이면 그는 미늘창 끝을 산문 돌에 가만히 댔다. 보초가 마지막으로 댄 새벽, 산문 돌이 그 자국을 받아 한 번 더 닳았다. 산이 그 박자 그대로 조용해졌다.',
-    art: `ornate fantasy weapon: tall halberd, pale steel head with rune-etched edge, dark stained ash shaft, leather strap, watchful dignity, crafted equippable weapon game asset, ${STYLE}`,
+    art: `ornate fantasy weapon, hero motif: a clearly visible row of small angular rune symbols engraved boldly along the entire cutting edge of a halberd's axe blade like X V T angular marks, tall halberd with a pale steel head and a dark stained ash haft, palette: pale polished steel axe head with distinctly visible darker engraved rune symbols running along the edge, dark ash wood haft, dark leather strap below the head, side profile, ${STYLE}, ${NEG}, the rune symbols must be clearly visible on the blade edge as engraved angular marks`,
   },
   {
     key: 'circus_juggler_chain_whip',
@@ -239,7 +240,7 @@ const WEAPONS: CatalogItem[] = [
     region: '일반',
     tone: '위트',
     lore: '곡예단 막내가 휘두르던 긴 채찍이다. 끝에 방울 일곱 개가 달려 있었다. 어느 공연 마지막 박자, 채찍이 한 바퀴 돈 자리에서 방울 하나가 톡 떨어져 굴렀다. 막내가 휘둘러도, 곡예단장이 휘둘러도 방울은 한 번 더 굴러 객석 어둠으로 사라졌다. 무대 위엔 여섯 방울만 남았다.',
-    art: `ornate fantasy weapon: long performer chain whip, six small bells strung along braided red leather, polished brass grip with ribbon, playful sly, crafted equippable weapon game asset, ${STYLE}`,
+    art: `ornate fantasy weapon, hero motif: SIX distinct INDIVIDUAL polished brass jingle bells clearly visible HANGING SEPARATELY in a SPREAD-OUT FAN ARRANGEMENT at the tip of a long braided red leather chain whip with each bell drawn as a clearly identifiable small round bell with a vertical hanging chain plus ONE empty hanging chain link visible at the side where the seventh bell used to be, the bells must be drawn as six countable individual bells not a single cluster, polished brass grip handle at the top with a red ribbon, palette: deep red braided leather whip body, SIX clearly individually drawn polished warm brass small round bells with visible round body and small slot opening each hanging separately on its own chain, one empty hanging chain link without a bell visible as a gap, polished brass grip with red ribbon, side profile of the whip with the SIX SEPARATELY DRAWN BELLS clearly visible fanning out at the end, ${STYLE}, ${NEG}, the six bells must be drawn as separate countable individual round bells fanning out not merged into one cluster, plus one obviously empty hanging chain slot`,
   },
   {
     key: 'broken_oath_greatsword',
@@ -248,7 +249,7 @@ const WEAPONS: CatalogItem[] = [
     region: '일반',
     tone: '비애',
     lore: '두 기사가 같은 검 한 자루를 잡고 평생 한편이 되기로 맹세했다. 한 사람은 맹세를 지켰고, 한 사람은 지키지 않았다. 칼날 가운데가 한 줄로 갈라져 있다.\n갈라진 자리는 다시 붙지 않는다. 손가락 끝으로 그 줄을 따라가면, 한쪽 끝은 차고 한쪽 끝은 따뜻하다.',
-    art: `ornate fantasy weapon: heavy two-handed greatsword with a single deep crack running down the blade, tarnished silver guard, twin leather wraps, melancholic, crafted equippable weapon game asset, ${STYLE}`,
+    art: `ornate fantasy weapon, hero motif: BOLD DEEP BLACK JAGGED LIGHTNING-SHAPED VERTICAL CRACK fissure clearly splitting the entire greatsword blade vertically from tip to crossguard like a thick dark zigzag scar dividing the blade into two halves, the crack must be drawn as a THICK BOLD BLACK ZIGZAG LINE not subtle not faint, heavy two-handed pale polished steel greatsword with a thick tarnished silver crossguard, twin contrasting leather grip wraps at the handle, palette: pale polished steel blade clearly SPLIT IN HALF by a BOLD THICK BLACK ZIGZAG CRACK LINE running vertically down the center from tip to crossguard, tarnished silver crossguard, twin contrasting dark and pale leather grip wraps, side profile, ${STYLE}, ${NEG}, the blade MUST clearly show a thick bold black crack zigzag line splitting it vertically from tip to base, the blade is NOT pristine, the crack is dramatic and obvious not a thin engraved line`,
   },
   {
     key: 'innocent_acolyte_spear',
@@ -257,7 +258,7 @@ const WEAPONS: CatalogItem[] = [
     region: '타락천사',
     tone: '비애',
     lore: '신전 마지막 날 어린 사제 하나가 창을 들고 계단 위에 섰다. 휘두를 줄도, 누구를 막아야 하는지도 몰랐다. 어른 사제가 거기 서 있으라고 해서 서 있었다. 새벽이 오자 어린 사제는 창 자루에 이마를 대고 잠들었고, 어른 사제는 외투를 벗어 그 위에 덮어 주고 신전을 나섰다.',
-    art: `ornate fantasy weapon: slim acolyte spear, pale ash shaft, faded white cloth wrap, simple silver leaf-shaped tip, tender sorrowful, crafted equippable weapon game asset, ${STYLE}`,
+    art: `ornate fantasy weapon, hero motif: thick faded soft white cloth strips clearly and visibly wrapped tightly around the middle grip area of a slim acolyte spear shaft contrasting against the dark wood, slim acolyte spear with a small silver leaf-shaped tip and a pale ash wood shaft, palette: bright silver leaf-shaped tip, pale ash wood shaft, distinctly visible faded white cloth wraps clearly visible around the grip area, side profile, ${STYLE}, ${NEG}, the white cloth wraps must be clearly visible across the grip area`,
   },
   {
     key: 'tax_collector_cudgel',
@@ -266,7 +267,7 @@ const WEAPONS: CatalogItem[] = [
     region: '일반',
     tone: '위트',
     lore: '한 징세관이 들고 다니던 짧은 봉이다. 휘두른 적은 없고, 농가 문 앞에서 톡톡 두드리기만 했다. 그 소리만 들어도 농민들은 지갑을 꺼냈다. 그가 은퇴하는 날, 마을 사람들이 봉을 빼앗아 어떻게 할까 의논할 때 그가 먼저 손을 들고 말했다.\n「광장에 박아 두시오. 내 손이 빈 게 그쪽도 편할 거요.」',
-    art: `ornate fantasy weapon: short heavy cudgel, dark stained oak with iron ring banding, brass cap pommel, smug worn polish, crafted equippable weapon game asset, ${STYLE}`,
+    art: `ornate fantasy weapon, hero motif: a short heavy cudgel staff with a polished brass cap pommel showing visible smooth-worn polish from years of tapping door frames, dark stained oak shaft with iron ring banding, palette: dark stained oak shaft body, polished iron ring bands, polished warm brass cap pommel with paler smooth-worn shine, side profile, ${STYLE}, ${NEG}`,
   },
   {
     key: 'orc_widow_sickle',
@@ -275,7 +276,7 @@ const WEAPONS: CatalogItem[] = [
     region: '오크 부락',
     tone: '비애',
     lore: '남편 오크가 전장에서 돌아오지 않자 그의 아내가 들녘에서 낫을 들고 풀을 베기 시작했다. 처음엔 분풀이였고, 그 다음엔 살림이었고, 마지막엔 그저 손이 그 자리를 외워 버렸다. 낫엔 벤 풀의 가짓수만큼 자루에 가는 줄이 새겨졌다. 그 줄을 다 채운 새벽, 그는 들녘 한가운데에 앉아 다시 돌아오지 않을 사람을 한 번 더 기다렸다.',
-    art: `ornate fantasy weapon: rugged orcish field sickle, broad curved blade with dense tally marks on the handle, hide-wrapped grip, quiet sorrow, crafted equippable weapon game asset, ${STYLE}`,
+    art: `ornate fantasy weapon, hero motif: HANDLE COMPLETELY COVERED in MANY DENSE BRIGHT PALE VERTICAL HASH TALLY LINES like prison count marks IIII IIII IIII stacked side by side covering the entire hide-wrap grip from top to bottom OBVIOUSLY CONTRASTING against the dark hide background, the tally lines must be drawn as multiple thin vertical pale lines like ladder rungs, broad curved iron sickle blade with hide-wrapped grip, palette: dark weathered iron curved blade, dark brown hide-wrap handle COMPLETELY DENSELY COVERED in many bright PALE WHITISH vertical tally hash mark lines clearly contrasting against the dark hide, side profile, ${STYLE}, ${NEG}, the handle MUST be obviously covered in dense vertical tally lines as bright pale contrasting marks not smooth not plain not blank`,
   },
   {
     key: 'gravedigger_shovel_spade',
@@ -283,8 +284,8 @@ const WEAPONS: CatalogItem[] = [
     nameKo: '묘지기의 삽',
     region: '일반',
     tone: '담백',
-    lore: '늙은 묘지기는 삽 한 자루로 평생 묘를 팠다. 마지막으로 판 묘는 자기 자신의 자리였고, 그는 삽을 묘 옆에 세워 둔 채 자리에 누웠다.\n삽날엔 평생 묻은 흙이 거뭇하게 박여 있다. 닦이지 않는다. 닦으려는 사람도 없다.',
-    art: `ornate fantasy weapon: heavy gravedigger spade as weapon, dirt-stained iron blade, smooth dark oak haft, quiet dignified, crafted equippable weapon game asset, ${STYLE}`,
+    lore: '늙은 묘지기는 삽 한 자루로 평생 묘를 팠다. 마지막으로 판 묘는 자기 자신의 자리였고, 그는 삽을 묘 옆에 세워 둔 채 자리에 누웠다.\n삽날은 평생 한 자리만 향했다. 다른 자리로 든 적이 없다.',
+    art: `ornate fantasy weapon, hero motif: a sturdy short-handled spade with a heavy dark iron blade in a pointed shovel shape, smooth dark oak haft with a T-shape grip handle at the top, simple iron banding, palette: dark iron spade blade body, dark oak haft, polished iron T-grip at the top, side profile of the spade standing vertically, ${STYLE}, ${NEG}`,
   },
   {
     key: 'volcano_song_hammer',
@@ -293,7 +294,7 @@ const WEAPONS: CatalogItem[] = [
     region: '서쪽 화산',
     tone: '수수께끼',
     lore: '서쪽 화로의 두 번째 풀무지기가 두드리면 망치가 가늘게 노래했다. 풀무지기는 그게 망치의 노래라고 했다. 그가 떠난 뒤로 누가 두드려도 망치는 입을 다물었다. 그러면 망치가 노래한 게 망치인지, 풀무지기인지, 화로 속의 무엇이었는지는 끝내 알 수 없다 — 한밤중 화로 근처에서 가는 노래가 한 소절씩 들리는 날에도, 망치는 가만히 놓여 있을 뿐이다.',
-    art: `ornate fantasy weapon: forge hammer with rune-etched head, polished steel face, dark oak haft, single thin silver inlay along the grip, eerie melodic, crafted equippable weapon game asset, ${STYLE}`,
+    art: `ornate fantasy weapon, hero motif: a single bright SILVER inlay line running vertically down the entire grip of a forge hammer combined with clearly visible rune symbols engraved on the polished steel head, forge hammer with a polished steel face and a dark oak haft, palette: polished steel head with darker engraved rune symbols on the face, dark oak haft, distinctly visible bright silver inlay line down the grip accent, side profile, ${STYLE}, ${NEG}, the silver inlay line must be clearly visible against the dark wood grip`,
   },
   {
     key: 'apothecary_silver_shears',
@@ -302,7 +303,7 @@ const WEAPONS: CatalogItem[] = [
     region: '일반',
     tone: '담백',
     lore: '약사는 평생 이 은가위로 약초 줄기만 잘랐다. 사람을 향해 든 적은 없다. 은이 약초의 기운을 흐리지 않는다고 했다. 약사가 죽고 손녀가 가위를 이어받아, 약사가 자르던 약초 이름을 손잡이에 한 줄씩 새기는 중이다.\n손녀는 자기 손녀가 그 이름들을 다 외우게 될 때까지는 새기는 일을 끝내지 못할 것이라고 짐작한다. 그래도 새긴다.',
-    art: `ornate fantasy weapon: ornate silver herbalist shears, two slender curved blades, polished silver fulcrum, oak finger rings engraved with leaf names, gentle scholarly, crafted equippable weapon game asset, ${STYLE}`,
+    art: `ornate fantasy weapon, hero motif: TWO classic herbalist scissor shears with TWO ROUND OAK FINGER RING HANDLES at the bottom forming an X-SHAPE CROSSED SCISSOR OUTLINE clearly visible with both finger rings drawn as two distinct circles at the bottom, both finger rings showing carved letter mark inscriptions around their rims like herb name labels, two slender curved polished silver shear blades pointing upward crossing in classic scissor X-shape with polished silver fulcrum at the center, palette: bright polished silver curved blades and fulcrum, warm oak wood TWIN finger rings with darker engraved carved letter marks around each ring, front-facing view of the shears in classic crossed scissor X-shape with both finger ring handles visible at the bottom, ${STYLE}, ${NEG}, the shears MUST have TWO finger ring handles visible at the bottom forming a classic scissor shape with crossed blades, not a single-handle implement`,
   },
   {
     key: 'bog_witch_staff',
@@ -311,7 +312,7 @@ const WEAPONS: CatalogItem[] = [
     region: '늪지대',
     tone: '기괴',
     lore: '늪 깊은 자리의 마녀가 지팡이만 두고 사라졌다. 사흘 뒤 마녀의 검은 고양이가 지팡이를 끌고 늪 안쪽으로 들어갔는데, 다음 새벽 지팡이는 마을 우물 옆에 다시 기대 있었다. 마녀가 돌아오려는 것인지, 지팡이를 영영 보내려는 것인지, 고양이가 마녀인지는 어느 노파도 묻지 않는다 — 그저 우물물을 길어 갈 뿐.',
-    art: `ornate fantasy weapon: tall crooked witch staff, dark gnarled bog wood, single cracked black crystal at the head, swamp algae creeping the shaft, eerie crooked, crafted equippable weapon game asset, ${STYLE}`,
+    art: `ornate fantasy weapon, hero motif: a single cracked black crystal mounted at the top head of a tall crooked witch's staff with visible fracture lines as if broken once and held together, tall gnarled dark bog wood staff with a noticeably crooked silhouette and twisted grain, faint green swamp algae creeping along the lower shaft, palette: dark twisted bog wood shaft, jet black cracked crystal at the head, faint green algae creeping on lower shaft, side profile, ${STYLE}, ${NEG}`,
   },
   {
     key: 'orc_brewmaster_mace',
@@ -320,7 +321,7 @@ const WEAPONS: CatalogItem[] = [
     region: '오크 부락',
     tone: '위트',
     lore: '술도가 오크는 손이 굵어 잔을 자주 깼다. 그래서 잔 대신 자기 철퇴 끝에 술을 따라 마셨다. 평생을 그렇게 마시고, 마지막 잔치 날에도 그렇게 마셨다. 한 모금에 비우고 큰 소리로 웃었다. 천막을 나서다 멈춰 서서 다시 들어와 잔 하나를 들고 부락 막내에게 처음으로 따라 주었다.',
-    art: `ornate fantasy weapon: heavy orcish mace with a cup-shaped pommel, iron studded head, hide-wrapped haft, dark drink stains on the cup end, jovial brawny, crafted equippable weapon game asset, ${STYLE}`,
+    art: `ornate fantasy weapon, hero motif: a wide cup-shaped polished bronze pommel at the bottom of an orcish mace with dark dried drink stains running down the inside of the cup, heavy iron-studded mace head and a hide-wrapped haft, palette: dull dark iron studded head, hide-wrap haft, polished bronze cup pommel with darker drink stain residue, side profile, ${STYLE}, ${NEG}`,
   },
   {
     key: 'rune_apprentice_wand',
@@ -329,7 +330,7 @@ const WEAPONS: CatalogItem[] = [
     region: '고대 룬 산맥',
     tone: '담백',
     lore: '산맥의 룬 학원 견습생은 첫해에 자기 완드 끝에 박을 돌을 직접 산에서 골라 온다. 어떤 돌이냐로 평생의 룬이 정해진다고 한다. 한 견습생은 자기가 고른 돌이 마음에 안 들어 평생 그 돌만 닦았다. 노년이 되어 돌이 콩알만 해졌을 때, 그는 그 돌을 가루로 빻아 자기 마지막 룬 한 줄에 한 줄기로 뿌렸다.',
-    art: `ornate fantasy weapon: short apprentice wand, pale carved birch with small embedded mountain stone, single rune ring at the tip, scholarly, crafted equippable weapon game asset, ${STYLE}`,
+    art: `ornate fantasy weapon, hero motif: a SMALL ROUGH IRREGULAR PEBBLE-SHAPED DARK GREY MOUNTAIN STONE clearly embedded at the tip of a short pale birch apprentice wand with the stone drawn as an OBVIOUSLY ROUGH NATURAL PEBBLE SHAPE with irregular edges NOT a smooth round disc NOT a coin NOT a jewel just a natural rough mountain stone, a thin darker engraved rune ring visible around the base of the pebble, short slender pale carved birch wand with simple smooth shaft, palette: pale birch wand body, small ROUGH IRREGULAR dark grey mountain pebble stone embedded at tip with natural lumpy edges, darker engraved rune ring around the stone base, side profile, ${STYLE}, ${NEG}, the stone at the tip MUST be a rough natural mountain pebble with irregular edges, NOT a polished disc NOT a golden coin NOT a smooth jewel NOT a flat metal token`,
   },
   {
     key: 'caravan_guard_falchion',
@@ -338,7 +339,7 @@ const WEAPONS: CatalogItem[] = [
     region: '일반',
     tone: '담백',
     lore: '대상 호위 한 사람이 십 년을 차고 다닌 곡검이다. 호위 일이 끝나는 날 그는 시장 옆 기둥에 곡검을 걸었다. 시장 사람들이 누구한테 줄 거냐 물었다. 그는 어깨에서 짐을 천천히 내려 놓으며 말했다.\n「길 갈 사람.」',
-    art: `ornate fantasy weapon: curved one-handed falchion, sturdy steel blade, leather-wrapped grip with dust of long roads, brass guard, plain useful, crafted equippable weapon game asset, ${STYLE}`,
+    art: `ornate fantasy weapon, hero motif: distinctly visible pale dusty streaks of road-dust patina clearly marked across the dark leather-wrapped grip of a sturdy curved falchion from many years of long road travel, broad curved steel blade with a polished brass crossguard, palette: sturdy pale steel curved blade, dark brown leather grip wrap with clearly visible paler dusty streaks across the wrap, polished brass crossguard, side profile, ${STYLE}, ${NEG}, the pale dust streaks must be clearly visible across the leather grip wrap`,
   },
   {
     key: 'fallen_lover_bow',
@@ -347,7 +348,7 @@ const WEAPONS: CatalogItem[] = [
     region: '타락천사',
     tone: '비애',
     lore: '신전 사제와 사랑에 빠진 자가 신을 거역한 죄로 떨어져 타천사가 되었다. 사제는 그가 떨어진 자리에 자기 활을 놓고 평생 신전 안으로 들어가지 않았다. 활시위는 사제가 자기 머리카락으로 매었다.\n언젠가 그가 다시 돌아온다면 사제의 머리카락이 시위 위에서 풀려 그의 손에 감길 거라 한다. 아직 풀린 적은 없다.',
-    art: `ornate fantasy weapon: slim longbow, pale silvered wood limbs, single dark braided string of hair, faint fallen-feather charm hanging from the grip, mournful sacred, crafted equippable weapon game asset, ${STYLE}`,
+    art: `ornate fantasy weapon, hero motif: a TALL SLENDER VERTICAL LONGBOW with clearly visible CURVED RECURVE LIMBS shaped exactly like a real longbow with upper and lower curved limbs meeting at a central grip wrap forming a classic strung bow C-SHAPE silhouette, a thin DARK BLACK BRAIDED HAIR BOWSTRING stretched TAUT vertically connecting the two limb tips, a small dark feather charm dangling on a thin cord from the central grip, slim pale silvered wood longbow limbs, palette: pale silvered wood curved bow limbs forming clear bow C-shape, dark braided black hair string stretched taut along the bow inside the C-curve, dark black feather charm accent dangling from grip, side profile of the strung bow standing vertically with clear bow silhouette, ${STYLE}, ${NEG}, the weapon MUST be clearly recognizable as a strung longbow with curved limbs and taut string, NOT a staff NOT a cross NOT a stick`,
   },
   {
     key: 'midnight_pawn_dagger',
@@ -356,7 +357,7 @@ const WEAPONS: CatalogItem[] = [
     region: '일반',
     tone: '수수께끼',
     lore: '시장 한쪽에 한밤에만 여는 전당포가 있다. 진열장 가운데에 단검 한 자루가 놓여 있는데, 주인은 값을 물을 때마다 다른 값을 부른다. 어느 손님이 그 값을 다 모아 와 카운터에 올렸을 때, 주인이 손가락 끝으로 단검을 톡 두드리며 말했다.\n「이 칼은 값이 아니라 무게로 가져가는 거요. 들 수 있겠소?」',
-    art: `ornate fantasy weapon: ornate pawnshop dagger, dark steel blade with strange glyph etched near the hilt, polished ebony grip, brass guard, mysterious lantern shine, crafted equippable weapon game asset, ${STYLE}`,
+    art: `ornate fantasy weapon, hero motif: a single bold angular STRANGE GLYPH SYMBOL clearly etched prominently into the dark steel blade right near the hilt of a small pawnshop dagger like a bright runic mark, slim straight ornamental dagger with a dark blackened steel blade and a polished ebony grip with a brass crossguard, palette: dark blackened steel blade with a clearly visible single bright engraved angular glyph symbol near the hilt area, polished black ebony grip, polished warm brass crossguard, side profile, ${STYLE}, ${NEG}, the strange glyph must be clearly visible engraved as a single distinct symbol on the blade near the hilt`,
   },
   {
     key: 'orc_runner_javelin',
@@ -365,7 +366,7 @@ const WEAPONS: CatalogItem[] = [
     region: '오크 부락',
     tone: '담백',
     lore: '전령 오크는 다른 부락 천막 앞에 투창을 박는 것으로 자기가 왔다는 표시를 했다. 적을 향해 던진 적은 없다. 자루엔 다녀온 부락의 표시가 빼곡하다. 마지막 부락에서 그는 표시를 새기다 손이 멈췄고, 새벽 모래 위에 옆으로 쓰러져 잠든 자세로 발견되었다. 그가 새기던 표시는 절반에서 끊겼다.',
-    art: `ornate fantasy weapon: short orcish throwing javelin, dark iron tip, sinew-bound shaft densely carved with foreign tribe marks, lean swift, crafted equippable weapon game asset, ${STYLE}`,
+    art: `ornate fantasy weapon, hero motif: many clearly visible different angular tribal insignia marks carved densely across the entire shaft of an orcish javelin in many distinct shapes like X V T O angular hash patterns, short throwing javelin with a dark iron leaf-shaped tip and sinew-bound shaft, palette: weathered iron tip, pale wooden shaft body with many distinctly visible darker carved angular tribal insignia marks, sinew binding accent, side profile, ${STYLE}, ${NEG}, the tribal marks must be clearly visible as multiple distinct carved angular patterns across the shaft`,
   },
   {
     key: 'ash_widow_flail',
@@ -374,7 +375,7 @@ const WEAPONS: CatalogItem[] = [
     region: '서쪽 화산',
     tone: '비애',
     lore: '서쪽 마을이 잿더미가 된 새벽, 한 과부가 무너진 집에서 남편의 플레일을 끌어내 어깨에 멨다. 갈 곳은 없었다. 그는 마을 가장자리까지 플레일을 끌고 갔다 끌고 왔고, 그 자국이 잿더미 위에 한 줄로 남았다.\n다음 마을이 들어선 뒤로, 그 자국 위로 새 마을의 사람들이 한 번씩 그 길을 걸어 본다. 끌어 보고 다시 걸어 보는 자도 가끔 있다.',
-    art: `ornate fantasy weapon: heavy flail, scorched iron ball with chain, ash-stained oak haft, faint soot streaks, sorrowful resilient, crafted equippable weapon game asset, ${STYLE}`,
+    art: `ornate fantasy weapon, hero motif: a heavy single-headed flail with a round scorched dark iron ball connected by short chain links to a dark oak haft, simple iron banding around the grip, palette: scorched dark iron ball, dark iron chain, dark oak haft, side profile of the flail hanging straight down, ${STYLE}, ${NEG}`,
   },
   {
     key: 'shepherd_dawn_sling',
@@ -383,7 +384,7 @@ const WEAPONS: CatalogItem[] = [
     region: '일반',
     tone: '일상',
     lore: '새벽 산기슭에서 늑대를 쫓는 데만 쓰는 짧은 활이다. 양치기 늙은이는 평생 화살 일곱 발을 쏘았고, 그중 늑대를 맞춘 건 한 발이다. 그래도 활을 본 새벽엔 늑대가 조용했다. 시위는 양털을 꼬아 만들었다.\n매년 첫 봄날이면 양치기는 새 양털 한 줌으로 시위를 다시 꼰다. 그 손길이 그날따라 늙은 양치기의 손에 닿는다.',
-    art: `ornate fantasy weapon: short pastoral shortbow, pale willow limbs, wool-twisted string, plain leather grip, peaceful dawn mood, crafted equippable weapon game asset, ${STYLE}`,
+    art: `ornate fantasy weapon, hero motif: a THICK clearly visible FLUFFY WHITE woolen yarn bowstring made from raw sheep wool stretched taut across a short shepherd's bow as the bowstring distinctly visible against the dark wood limbs, short simple pale willow hunting bow with a plain leather grip wrap, palette: warm pale willow wood bow limbs, distinctly THICK fluffy white wool yarn bowstring clearly visible across the bow, simple leather grip wrap, side profile of the strung bow vertically, ${STYLE}, ${NEG}, the bowstring must be clearly visible as a thick fluffy white wool yarn not a thin string`,
   },
   {
     key: 'rune_carver_chisel',
@@ -392,7 +393,7 @@ const WEAPONS: CatalogItem[] = [
     region: '고대 룬 산맥',
     tone: '담백',
     lore: '늙은 룬 새김장이가 산문 돌에 마지막 룬을 새기다 죽었다. 끌은 절반에서 끊긴 룬에 박힌 채 그대로였다. 손잡이는 그의 손바닥에 맞춰 닳아 다른 사람 손엔 잘 안 잡힌다.\n언젠가 그 손에 맞는 사람이 와서 끌을 마저 잡고 절반의 룬을 끝낼 거라 한다. 그때까지 산문 돌은 절반의 말을 품고 있다.',
-    art: `ornate fantasy weapon: stonemason chisel as weapon, fine polished steel point, dark rune-carving oak grip with stone dust, single half-finished rune mark traced on the head, scholarly, crafted equippable weapon game asset, ${STYLE}`,
+    art: `ornate fantasy weapon, hero motif: a clearly visible angular rune symbol traced HALFWAY into the polished steel chisel head where the carving abruptly stops mid-stroke leaving the rest of the head smooth and blank, stonemason chisel weapon with a polished steel pointed tip and dark oak grip with grey stone dust traces, palette: polished pale steel chisel head with darker half-finished rune carving on one half only, dark oak grip body, grey stone dust accent, side profile, ${STYLE}, ${NEG}, only half of the rune is carved the other half is smooth blank steel`,
   },
   {
     key: 'sleepless_blacksmith_warhammer',
@@ -401,7 +402,7 @@ const WEAPONS: CatalogItem[] = [
     region: '서쪽 화산',
     tone: '영웅담',
     lore: '잠 못 자는 대장장이가 평생 두드린 워해머는 자기 자신을 위한 것이었다. 일흔 살이 된 해, 그는 망치를 어깨에 메고 화산 가장 깊은 굴로 내려갔다. 일곱 밤이 지난 새벽, 그는 망치를 끌고 굴 밖으로 걸어 나와 자기 모루 옆에 그것을 내려놓고 처음으로 깊은 잠에 들었다.',
-    art: `ornate fantasy weapon: massive two-handed warhammer, scorched steel head with one deep central gouge, dark oak haft bound in iron, smith hero mood, crafted equippable weapon game asset, ${STYLE}`,
+    art: `ornate fantasy weapon, hero motif: a single deep central gouge mark visibly struck into the scorched steel head of a massive two-handed warhammer, massive two-handed warhammer with a heavy dark steel head and a dark oak haft bound in iron, palette: scorched dark steel head with deeper darker central gouge, dark oak haft with iron banding, side profile, ${STYLE}, ${NEG}`,
   },
   {
     key: 'orc_pupil_practice_sword',
@@ -410,7 +411,7 @@ const WEAPONS: CatalogItem[] = [
     region: '오크 부락',
     tone: '일상',
     lore: '오크 부락의 어린 견습이 처음 받는 검이다. 칼날은 일부러 무디게 만든다. 견습은 천막 줄과 마른 풀을 자르는 시늉을 잘하면 합격이다. 합격한 견습은 자루에 자기 이름의 한 글자를 새기고 검을 다음 견습에게 넘긴다.\n검은 부락 천막 가운데, 합격한 이름들이 빼곡한 채로 세워져 있다.',
-    art: `ornate fantasy weapon: short blunt practice sword, dulled iron blade with countless training nicks, sinew grip, dense initials carved on the pommel, cheerful coming-of-age, crafted equippable weapon game asset, ${STYLE}`,
+    art: `ornate fantasy weapon, hero motif: a dense pattern of small carved initial letters visibly covering the pommel of a short orcish practice sword, dulled blunt training blade with countless small training nicks along the edge, sinew-wrapped grip, palette: dulled grey training steel blade with darker training nicks, sinew grip, polished pommel with darker carved initials, side profile, ${STYLE}, ${NEG}`,
   },
   {
     key: 'frog_chorus_fishing_spear',
@@ -419,7 +420,7 @@ const WEAPONS: CatalogItem[] = [
     region: '늪지대',
     tone: '위트',
     lore: '개구리가 합창하는 늪 자리에 어부가 꽂아 둔 작살이다. 잡으려는 게 아니라 졸지 않게 등을 기대는 용이었다. 어부가 졸아 작살이 옆으로 쓰러지면 개구리들이 놀라 잠깐 침묵하고, 그 침묵에 어부는 정신을 차렸다.\n자루엔 그 평생의 합창이 손때로 진하게 박여 있다. 자루에 귀를 대면 침묵이 한 박자 들렸다 멎는다.',
-    art: `ornate fantasy weapon: long marsh fishing spear, three-prong iron tip, reed-wrapped shaft, faint green algae, comedic peaceful, crafted equippable weapon game asset, ${STYLE}`,
+    art: `ornate fantasy weapon, hero motif: a clearly visible distinctly darkened oily hand-grip stain patch boldly visible at the very center of a long marsh fishing spear shaft showing where a fisherman's palm rested nightly, long marsh fishing spear with a three-prong iron pronged tip and a reed-wrapped shaft, palette: weathered iron three-pronged tip, pale dried reed wrappings, distinctly visible darker hand-stained patch in the center grip area, side profile, ${STYLE}, ${NEG}, the hand-stain patch must be clearly visible in the center of the shaft`,
   },
   {
     key: 'fallen_seraph_glaive',
@@ -428,7 +429,7 @@ const WEAPONS: CatalogItem[] = [
     region: '타락천사',
     tone: '장엄',
     lore: '세라프가 추락하던 순간 그의 손에서 떨어진 긴 글레이브다. 칼날엔 그가 마지막에 내려치려던 자국이 한 줄 새겨져 있다. 신전 사람들은 그 자국이 신을 향한 것이라고도 하고, 자기 자신을 향한 것이라고도 한다. 둘 중 어느 쪽인지 답을 정한 신관은 한 사람도 없다 — 한 신관이 칼날에 손가락을 댄 새벽, 그는 그 답이 둘 다 맞을 수도 있다는 가능성에 무릎이 풀렸다고 한다.',
-    art: `ornate fantasy weapon: tall fallen glaive, pale silver curved blade with one deep struck line, dark ash shaft with feather charm, monumental fallen, crafted equippable weapon game asset, ${STYLE}`,
+    art: `ornate fantasy weapon, hero motif: a single deep struck scar line engraved horizontally across the polished silver curved glaive blade as if marking one final intended strike, tall fallen seraph's glaive with a curved silver-pale blade and a dark ash wood shaft with a small dark feather charm tied near the grip, palette: pale silver curved blade with darker scar line, dark ash wood shaft, dark feather charm accent, side profile, ${STYLE}, ${NEG}`,
   },
   {
     key: 'beggar_king_cudgel',
@@ -437,7 +438,7 @@ const WEAPONS: CatalogItem[] = [
     region: '일반',
     tone: '위트',
     lore: '시장 거지들 사이에서 왕이라 불린 노인이 있었다. 봉 하나를 시장 한가운데에 박아 두고 그 옆에 앉아 동냥을 받았다. 누구를 때린 적은 없다. 봉 옆에 앉으면 어쩐지 동냥이 더 잘 받혀, 거지들은 그 자리를 두고 다투지 않기로 약속했다.\n봉은 지금도 시장 한가운데에 박혀 있다. 옆자리는 매일 같은 시간에 채워진다.',
-    art: `ornate fantasy weapon: short heavy market cudgel, dark polished oak, copper ring banding, worn smooth by sitting hands, jovial market mood, crafted equippable weapon game asset, ${STYLE}`,
+    art: `ornate fantasy weapon, hero motif: a CLEARLY VISIBLE distinctly paler smooth-worn polished section visibly bright in the very middle of a short market cudgel staff grip from many years of sitting hands resting on it, dark polished oak walking staff with copper ring banding above and below the worn section, palette: dark polished oak body with a clearly visible distinctly PALER smooth-worn grip section in the middle as a bright band, polished warm copper ring bands at the top and bottom of the worn section accent, side profile of the staff standing vertically, ${STYLE}, ${NEG}, the worn polish section must be clearly visible as a bright pale smooth band in the middle of the staff`,
   },
   {
     key: 'lost_brother_short_axe',
@@ -445,8 +446,8 @@ const WEAPONS: CatalogItem[] = [
     nameKo: '잃은 형제의 손도끼',
     region: '일반',
     tone: '비애',
-    lore: '두 형제 중 동생만 전장에서 돌아왔다. 동생은 형의 손도끼를 마당 한쪽 나무에 박았다. 그 나무는 그 뒤로 형이 살던 방 창문 쪽으로만 가지를 뻗었다.\n자루 끝만 나무 밖으로 나와 있다. 동생이 죽은 뒤로도 나무는 자라고, 자루 끝이 박힌 자리는 매년 한 손가락만큼씩 동생이 앉던 자리에서 멀어진다.',
-    art: `ornate fantasy weapon: weathered short hand axe half-embedded in old bark visible at the pommel, dark iron blade, leather strap, sorrowful familial, crafted equippable weapon game asset, ${STYLE}`,
+    lore: '두 형제 중 동생만 전장에서 돌아왔다. 동생은 형의 손도끼를 마당 한쪽 나무 그루터기에 한 번 깊이 내려치고는, 그 자리에서 손을 떼었다. 도끼 머리는 그루터기 위에 그대로 박혀 있고, 자루는 그루터기 안쪽으로 내려가다 멈춰 있다.\n동생이 떠난 뒤로도 그루터기는 도끼를 토해 내지 않았다. 매년 봄이 오면 그루터기에서 새 가지가 한 줄 자라 형이 살던 방 창문 쪽으로만 뻗는다.',
+    art: `ornate fantasy weapon, hero motif: a short hand-axe DRIVEN DEEPLY DOWNWARD INTO a round flat-topped tree stump with the iron axe HEAD AND BLADE clearly EXPOSED at the top resting on the stump and the wooden HAFT GRIP DESCENDING DOWN INTO the wood of the stump, the bark has grown slightly around the buried haft, palette: dark warm tree bark stump body with visible concentric ring grain on the flat cut top, exposed silver-grey iron axe head and blade on top, dark wooden haft visible only as the portion entering the stump, dark leather wrap accent, front-facing view of the axe head embedded down into the tree stump, ${STYLE}, ${NEG}`,
   },
   {
     key: 'orc_grandmother_skinning_knife',
@@ -455,7 +456,7 @@ const WEAPONS: CatalogItem[] = [
     region: '오크 부락',
     tone: '담백',
     lore: '부락에서 가장 늙은 오크 할머니가 평생 가죽을 다듬은 칼이다. 자루는 그 손바닥에 맞게 닳아 다른 사람 손엔 잘 맞지 않는다. 손녀들이 번갈아 쥐어 봤지만 모두 어색했다. 막내 손녀 하나가 자루를 가만히 손안에 굴리다 칼을 가죽 더미 위에 다시 내려놓고, 자기 손에 맞는 칼을 새로 깎기 시작했다.',
-    art: `ornate fantasy weapon: small orcish skinning knife, curved iron blade with hide oil sheen, bone-wrapped handle worn to one specific grip shape, dignified domestic, crafted equippable weapon game asset, ${STYLE}`,
+    art: `ornate fantasy weapon, hero motif: a clearly hand-worn molded grip shape visible in the bone handle of a small skinning knife indented by years of one specific hand, small curved iron skinning blade with hide-oil sheen and a bone-wrapped grip with visible finger-grooves worn into it, palette: weathered curved iron blade with soft hide-oil sheen, pale bone grip with darker finger groove indentations, side profile, ${STYLE}, ${NEG}`,
   },
   {
     key: 'thunder_rune_warhammer',
@@ -464,7 +465,7 @@ const WEAPONS: CatalogItem[] = [
     region: '고대 룬 산맥',
     tone: '영웅담',
     lore: '룬 산맥의 첫 새벽, 한 영웅이 산 정상에 올라 그날의 천둥을 자기 망치에 새겨 넣었다. 새벽이 지나도 망치 머리엔 그 천둥이 갇혀 있어, 가까이 들면 작은 우르릉 소리가 손바닥에 닿는다.\n망치는 그 산 정상에 박혀 있다. 빼낸 사람은 아직 없고, 빼려고 손을 댄 사람의 손바닥엔 사흘간 가는 떨림이 남는다.',
-    art: `ornate fantasy weapon: monumental two-handed warhammer, pale stone head with deep blue rune cracks crackling like lightning, iron-bound stone grip, epic, crafted equippable weapon game asset, ${STYLE}`,
+    art: `ornate fantasy weapon, hero motif: vivid jagged glowing blue lightning-shaped rune cracks branching across the pale stone hammer head as if a thunderbolt is sealed inside the stone, monumental two-handed warhammer with a heavy pale carved stone head and an iron-bound stone grip, palette: pale stone-grey head body, glowing cobalt blue lightning-shaped rune cracks branching across the head face, dark iron banding on the grip, side profile, ${STYLE}, ${NEG}, glow confined to the rune cracks not the entire head`,
   },
   {
     key: 'midwife_lantern_staff',
@@ -473,7 +474,7 @@ const WEAPONS: CatalogItem[] = [
     region: '일반',
     tone: '수수께끼',
     lore: '한 산파가 평생 한밤에 들고 다닌 지팡이다. 끝에 작은 등잔이 매달려 있고, 산파가 아이를 받으러 가는 길에 한 번도 꺼진 적이 없다. 산파가 죽은 새벽 등잔도 함께 꺼졌다. 그 뒤로 누가 켜도 등잔은 다시 켜지지 않는다 — 산파가 가져간 게 불꽃인지, 받으러 갈 아이가 사라진 것인지, 아니면 등잔이 산파 본인이었던 것인지 답한 사람은 없다.',
-    art: `ornate fantasy weapon: tall midwife staff, pale oak with small dark unlit lantern hanging from the head, soft cloth wrap on the grip, gentle nocturnal, crafted equippable weapon game asset, ${STYLE}`,
+    art: `ornate fantasy weapon, hero motif: a small dark unlit oil lantern hanging from a simple hook at the head of a tall midwife's wooden staff with the lantern flame extinguished and the glass dark inside, tall slender pale oak staff with a soft cloth wrap on the grip, palette: pale oak staff body, polished iron lantern frame, dark unlit lantern glass, soft pale cloth grip wrap accent, side profile of the staff standing vertically, ${STYLE}, ${NEG}`,
   },
   {
     key: 'last_volcano_blade',
@@ -482,7 +483,7 @@ const WEAPONS: CatalogItem[] = [
     region: '서쪽 화산',
     tone: '수수께끼',
     lore: '서쪽 화산이 다 식은 뒤, 화로 가장 안쪽에서 굳은 검 한 자루다. 누가 만들고 있었는지 모른다. 자루엔 미완성의 룬 한 줄이 새겨져 있다.\n언젠가 그 룬을 끝까지 새길 사람이 와서 식은 화로에 손을 댈 거라 한다. 화로지기들은 그 사람이 누구일지 짐작하는 일을 매 세대 한 번씩 새로 시작한다.',
-    art: `ornate fantasy weapon: half-finished one-handed blade, dark cooled volcanic steel with one unfinished rune line on the fuller, plain iron grip, mysterious quiet, crafted equippable weapon game asset, ${STYLE}`,
+    art: `ornate fantasy weapon, hero motif: a single clearly visible angular rune line engraved HALFWAY into the central fuller groove of a half-finished one-handed blade where the carving abruptly stops leaving the rest of the fuller smooth and blank, dark cooled volcanic steel sword with a plain iron grip, palette: dark cooled volcanic steel blade body, distinctly visible darker half-finished rune carving in the fuller on one half only, plain dark iron grip, side profile, ${STYLE}, ${NEG}, only half of the rune carving is visible the rest of the fuller is smooth empty steel`,
   },
   {
     key: 'marsh_letter_carrier_baton',
@@ -491,7 +492,7 @@ const WEAPONS: CatalogItem[] = [
     region: '늪지대',
     tone: '일상',
     lore: '늪을 건너 편지를 나르던 우체부가 들고 다닌 짧은 봉이다. 갈대를 헤치며 길을 내고, 끝에 편지 뭉치를 매달았다. 새 우체부가 그 봉을 잡은 첫 새벽, 늪의 안개가 평소보다 한 호흡쯤 늦게 걷혔다.\n그 뒤로 첫 새벽 안개는 새 우체부의 첫 걸음에 맞춰 늦게 걷힌다. 새 우체부가 걸음을 빠르게 떼면 안개도 따라 빨라진다.',
-    art: `ornate fantasy weapon: short marsh delivery baton, dark waterlogged oak, brass ring banding, knotted letter twine wrapped around the grip, plain useful, crafted equippable weapon game asset, ${STYLE}`,
+    art: `ornate fantasy weapon, hero motif: a CLEARLY VISIBLE LARGE STACK OF MULTIPLE CREAM-WHITE FOLDED LETTERS clearly drawn as a recognizable bundle of rectangular folded envelope sheets stacked together TIED with knotted twine and dangling prominently from the very top end of a short delivery baton, the letter bundle must be drawn as a thick rectangular stack of papers like a small mailbox of envelopes NOT as a tassel NOT as a string, short marsh delivery baton with a dark waterlogged oak shaft, simple brass ring banding around the grip, palette: dark waterlogged oak shaft, polished brass ring bands, OBVIOUSLY VISIBLE thick stack of cream-white rectangular folded letter envelopes tied with twine hanging at the top accent, side profile with the letter bundle clearly visible as a stack of paper sheets at the top, ${STYLE}, ${NEG}, the top of the baton MUST clearly show a stack of multiple folded letter envelopes drawn as recognizable paper sheets NOT a small charm NOT a tassel NOT a single ribbon`,
   },
   {
     key: 'doubting_apprentice_wand',
@@ -500,7 +501,7 @@ const WEAPONS: CatalogItem[] = [
     region: '일반',
     tone: '위트',
     lore: '한 견습 마법사는 모든 주문을 의심했다. 스승의 주문도, 자기 주문도, 마지막엔 자기 완드까지 의심했다. 그는 완드 끝의 결정을 일곱 번 갈아 끼웠고, 결국 결정 자리에 빈자리만 남겼다. 그가 떠난 뒤 완드는 학원 책상에 그대로 남았다. 다음 견습들이 한 번씩 들어 보고, 그중 하나는 빈자리에 자기 결정을 끼우지 않고 그대로 들고 강의실로 들어간다.',
-    art: `ornate fantasy weapon: short magician wand with an empty crystal socket at the tip, polished birch shaft, single fine silver wire, dryly witty, crafted equippable weapon game asset, ${STYLE}`,
+    art: `ornate fantasy weapon, hero motif: a short magician's wand with an obvious empty bare wooden socket at the very tip where a crystal should be visible but is conspicuously missing leaving a clear empty hole, polished birch wand shaft with a single fine silver wire wrap, palette: pale polished birch wood wand body, conspicuously empty dark socket at the tip, single bright silver wire wrap accent, side profile, ${STYLE}, ${NEG}, the tip is empty with no crystal just an obvious empty socket hole`,
   },
   {
     key: 'old_chronicler_quill_wand',
@@ -509,7 +510,7 @@ const WEAPONS: CatalogItem[] = [
     region: '일반',
     tone: '수수께끼',
     lore: '늙은 사관이 평생 옆구리에 차고 다닌 깃촉 모양 완드다. 끝으로 직접 글을 새겼고, 마음에 안 들면 종이에 한 번 그어 글을 지웠다. 그가 죽은 새벽 마지막 종이엔 단 한 줄이 있었고, 그 줄 끝에 완드 끝의 자국이 길게 그어져 있었다. 그 줄이 그가 지운 글의 잔해인지, 마지막으로 남기려던 한 줄인지, 학원의 어떤 사관도 답을 내리지 못했다.',
-    art: `ornate fantasy weapon: ornate quill-shaped wand, slender feathered silver shaft tipped with a fine writing nib, ink-stained ebony grip, scholarly mysterious, crafted equippable weapon game asset, ${STYLE}`,
+    art: `ornate fantasy weapon, hero motif: a wand shaped exactly like a tall writing quill feather with a fine sharpened writing nib at the bottom for inscribing, slender silver-feathered shaft with delicate barbed feather details and a polished metal nib bottom, ink-stained dark ebony grip near the center, palette: bright pale silver feathered shaft with darker barbed feather lines, polished dark metal nib with subtle ink-stain residue, dark ebony grip with darker ink stains, side profile of the quill wand standing vertically, ${STYLE}, ${NEG}`,
   },
 ];
 
@@ -524,7 +525,7 @@ const ARMOR: CatalogItem[] = [
     region: '일반',
     tone: '일상',
     lore: '마을이 처음 뽑은 보초는 열다섯 살 농가의 아들이었다. 가슴받이가 그의 가슴엔 너무 커서, 어머니가 안에 헝겊을 덧대고 끈을 다섯 번 줄여 매 주었다. 첫 보초 새벽에 그는 아무것도 일어나지 않은 마을 어귀에 똑바로 서 있었다. 한 농부가 일찍 밭에 나오다 그를 보고 웃으며 인사했다.\n「잘 지키네.」 보초는 어깨를 한 번 폈다. 어머니가 줄여 맨 끈이 톡 끊어졌다.',
-    art: `ornate fantasy armor: oversized rookie breastplate, polished dull steel front, child-thick padding underneath, leather straps tied with too many extra knots, plain heartfelt, crafted equippable armor game asset, ${STYLE}`,
+    art: `ornate fantasy armor, hero motif: an oversized rookie breastplate with several visibly tied extra knots in the leather straps as if tied too many times nervously, polished dull steel front plate with thick child-padded interior visible at the edges, palette: dull polished steel breastplate body, dark leather straps with multiple visible extra knots, pale thick padding accent at the edges, front-facing view of the oversized armor, ${STYLE}, ${NEG}`,
   },
   {
     key: 'reed_weaver_cuirass',
@@ -533,16 +534,16 @@ const ARMOR: CatalogItem[] = [
     region: '늪지대',
     tone: '담백',
     lore: '늪 마을엔 평생 갈대만 엮은 노파가 있었다. 노파는 자기가 죽는 해의 흉갑을 미리 한 벌 엮어 처마 밑에 매달아 두었다. 누구를 줄지는 말하지 않았다. 노파가 떠난 새벽, 가장 어린 어부가 자기 흉갑을 잃어버렸다는 핑계로 그 처마 아래에 한참 서 있었다. 노파의 손주가 사다리를 가져와 흉갑을 내려 어부의 어깨에 둘러 주었다.\n어부는 그날 처음으로 노파가 자기를 어떻게 봤는지 알았다.',
-    art: `ornate fantasy armor: woven reed cuirass, neatly braided dried marsh reeds, fresh resin coating, simple twine ties, quiet domestic, crafted equippable armor game asset, ${STYLE}`,
+    art: `ornate fantasy armor, hero motif: neatly hand-braided pale dried marsh reed strips forming the entire surface of the cuirass in a tight basket weave pattern visibly resin-coated to a soft golden sheen, sleeveless reed-woven cuirass with simple twine ties at the sides, palette: warm pale dried reed beige body with subtle golden resin sheen across the surface, darker twine ties accent, front-facing view of the woven cuirass, ${STYLE}, ${NEG}`,
   },
   {
-    key: 'runefall_chestplate',
+    key: 'mountain_seven_words_chestplate',
     slot: 'armor',
-    nameKo: '룬이 떨어진 흉갑',
+    nameKo: '산이 일곱 번 말한 흉갑',
     region: '고대 룬 산맥',
     tone: '수수께끼',
-    lore: '룬 산맥의 한 기사가 평생 입은 흉갑엔 일곱 줄의 룬이 새겨져 있었다. 기사가 죽은 새벽, 일곱 줄 중 가운데 한 줄이 흉갑 표면에서 떨어져 나와 바닥에 가루로 흩어져 있었다. 학자들이 가루를 모아 다시 그 자리에 박아 보려 했으나, 가루는 매번 다른 모양으로 굳었다. 떨어진 룬이 무엇을 말했는지는 학자도, 산맥의 어느 보초도 끝내 답을 정하지 못했다.',
-    art: `ornate fantasy armor: pale stone-grey breastplate engraved with seven rune lines, the middle line carved hollow as if its rune had fallen out, iron clasps, mysterious, crafted equippable armor game asset, ${STYLE}`,
+    lore: '룬 산맥의 가장 깊은 보초가 평생 입은 흉갑이다. 산은 그 보초에게 평생 일곱 번 말했고, 그때마다 보초는 그 한 줄을 흉갑 가운데에 차곡차곡 새겼다. 일곱 줄이 다 채워진 어느 새벽, 산이 한 번 더 무어라 말하려다 멈췄다 — 일곱 줄이 차서 더 새길 자리가 없었기 때문이다.\n산은 그 새벽 이후 한참을 침묵했다. 산맥의 다음 보초는 빈 흉갑을 새로 받아 입고, 자기 일곱 줄을 천천히 채우기 시작했다.',
+    art: `ornate fantasy armor, the front face of a heavy stone breastplate is divided into SEVEN distinct horizontal stripes stacked from top to bottom across the chest, all seven stripes are filled with deeply carved angular geometric runic glyphs that look like primitive letters such as X V T asterisk shapes triangles and angular hash marks engraved into the stone surface, additional small square runic marks decorating the side flanks of the chest, pale grey stone heavy breastplate with iron clasps at the shoulders and a dark leather strap, palette: cold pale stone grey plate with darker engraved angular geometric runic marks across all seven stripes, faded dull iron clasps, dark leather strap accent, front-facing view, ${STYLE}, ${NEG}`,
   },
   {
     key: 'orc_scrap_harness',
@@ -551,7 +552,7 @@ const ARMOR: CatalogItem[] = [
     region: '오크 부락',
     tone: '일상',
     lore: '부락의 견습 오크는 첫 갑옷을 직접 짜 입어야 한다. 어른들이 자기 갑옷에서 한 조각씩 떼어 주는데, 견습은 그 조각들을 자기 가슴에 맞게 두드려 이어 붙인다. 색도 두께도 다른 조각들이 어색하게 붙어 있어 한눈에 견습임을 알 수 있다. 한 견습이 자기 잡갑을 한 번 둘러보고 늙은 전사에게 물었다.\n「이게 다 누구 거예요?」 전사가 답했다.\n「이젠 다 네 거지.」',
-    art: `ornate fantasy armor: orcish patchwork harness, mismatched iron and leather plates riveted together, uneven shoulder pieces, sinew laces, scrappy proud, crafted equippable armor game asset, ${STYLE}`,
+    art: `ornate fantasy armor, hero motif: an obviously mismatched patchwork of iron plates and leather pieces in clearly different sizes thicknesses and tones riveted unevenly together across the chest harness, asymmetric orcish chest harness with uneven shoulder pieces and visible sinew lacing between mismatched plates, palette: mismatched dark iron and rust-brown plates, pale leather patches, sinew lacing accent, front-facing view of the patchwork harness, ${STYLE}, ${NEG}`,
   },
   {
     key: 'fallen_choir_mantle',
@@ -560,7 +561,7 @@ const ARMOR: CatalogItem[] = [
     region: '타락천사',
     tone: '비애',
     lore: '신전이 비던 마지막 새벽, 어깨망토 한 장만 성가대 자리에 단정히 개켜져 있었다. 망토의 안감엔 노래 한 줄이 자수로 들어 있는데, 자수실이 가운데서 끊겨 다음 줄이 시작되지 못했다. 신전 사람들은 그 자수를 끊은 게 떠난 자였는지, 떠나지 못한 자였는지 답을 미루었다 — 망토는 매년 한 번 펼쳐지고, 펼친 사람은 끊긴 자수를 더 잇지 않고 도로 개킨다.',
-    art: `ornate fantasy armor: pale ivory choir mantle, soft pleated cloth with gold-thread embroidery cut off mid-line on the inner lining, simple silver clasp, mournful sacred, crafted equippable armor game asset, ${STYLE}`,
+    art: `ornate fantasy armor, hero motif: a single clearly visible row of bold gold-thread embroidered angular letter marks running across the inner lining of an ivory choir mantle that abruptly stops HALFWAY across leaving the rest of the lining smooth and empty, pale ivory pleated shoulder mantle with a polished silver clasp at the front, inner-lining embroidery clearly visible at the open neckline, palette: pale ivory pleated cloth body, distinctly bright gold embroidery letter marks on the lining stopping halfway, polished silver clasp accent, front-facing view of the open mantle showing the half-empty embroidery, ${STYLE}, ${NEG}, the embroidered text must clearly stop halfway across leaving the other half empty`,
   },
   {
     key: 'ember_slag_cuirass',
@@ -569,7 +570,7 @@ const ARMOR: CatalogItem[] = [
     region: '서쪽 화산',
     tone: '담백',
     lore: '서쪽 화로의 풀무지기들은 풀무 옆에서 쇠찌끼가 굳은 덩어리를 모아 두었다가, 자기 흉갑이 닳으면 그 자리에 한 조각씩 덧대 붙였다. 어느 풀무지기의 흉갑은 그렇게 평생 동안 새 살이 붙은 자리투성이가 되었다. 그가 흉갑을 벗어 다음 풀무지기에게 넘긴 새벽, 새 풀무지기는 어느 자리에 자기 첫 덧대를 붙일지 한참을 두리번거렸다.',
-    art: `ornate fantasy armor: forge cuirass with irregular black slag patches welded along the front, dark scorched steel underneath, leather straps, craftsman calm, crafted equippable armor game asset, ${STYLE}`,
+    art: `ornate fantasy armor, hero motif: several irregular black slag patches visibly welded onto the front of a forge cuirass in different patch shapes where damage has been repaired, dark scorched steel cuirass body with leather straps at the sides, palette: scorched dark steel underneath, distinct black slag patch overlays at irregular spots, dark leather straps accent, front-facing view, ${STYLE}, ${NEG}`,
   },
   {
     key: 'nightwatch_cloak',
@@ -577,8 +578,8 @@ const ARMOR: CatalogItem[] = [
     nameKo: '야간 보초의 망토',
     region: '일반',
     tone: '일상',
-    lore: '마을 야간 보초의 망토는 거의 검은색이라 어둠에 잘 섞였다. 단 한 군데, 안감 오른쪽 아래에 손바닥만 한 흰 천이 덧대져 있었다. 누가 망토를 받든 그 자리에 자기 손을 한 번 대고 보초를 나갔다. 왜인지 묻는 사람은 없었다.\n다들 한 번씩 대 보고는 가만히 끄덕였다. 매 세대 검은 천이 한 겹씩 더해졌고, 흰 천만 한자리에 남았다.',
-    art: `ornate fantasy armor: long dark wool watch cloak, faded black outer with a single small white cloth patch sewn under the right hem inside, simple bone clasp, plain quiet, crafted equippable armor game asset, ${STYLE}`,
+    lore: '마을 야간 보초의 망토는 거의 검은색이라 어둠에 잘 섞였다. 깃 가운데에 무광 놋쇠 클래스프 한 점이 있는데, 받은 보초들은 새벽을 나서기 전에 한 번씩 그 자리를 가만히 짚어 보았다. 왜인지 묻는 사람은 없었다.\n다들 한 번씩 짚어 보고는 가만히 끄덕였다. 매 세대 망토의 검은 천이 한 겹씩 더해졌고, 클래스프만 한자리에 남았다.',
+    art: `ornate fantasy armor, hero motif: a long simple draped night watch cloak in deep faded black with a polished warm brass clasp centered prominently at the neck, the cloak hangs closed with simple soft folds, palette: faded dark black wool body, polished warm brass clasp at the neck accent, soft black shadowed folds, front-facing view of the closed draped cloak, ${STYLE}, ${NEG}`,
   },
   {
     key: 'widow_veil_shroud',
@@ -586,8 +587,8 @@ const ARMOR: CatalogItem[] = [
     nameKo: '과부의 베일 외투',
     region: '일반',
     tone: '비애',
-    lore: '한 과부는 남편의 외투를 줄여 자기 베일 외투로 만들어 입었다. 그 외투엔 남편이 길 위에서 만난 흙먼지가 솔기마다 옅게 박여 있어, 빨아도 한 번에 다 빠지지 않았다. 과부는 외투의 그 자국을 다 지우지 않기로 했다. 마지막 길을 떠나던 날, 과부는 외투를 입은 채 마차에 올랐다. 다음 마차에 그 외투의 안주머니가 비어 있는 채로 돌아왔다.',
-    art: `ornate fantasy armor: mourning over-cloak made from a man-sized coat resewn smaller, faint road-dust streaks along the hem, dark wool with a thin black veil collar, sorrowful, crafted equippable armor game asset, ${STYLE}`,
+    lore: '한 과부는 남편의 외투를 줄여 자기 베일 외투로 만들어 입었다. 밑단에 남편이 떠난 마을의 문장이 작은 금실 자수로 한 줄 둘러 있었다. 과부는 그 문장을 풀어내지 않기로 했다. 마지막 길을 떠나던 날, 과부는 외투를 입은 채 마차에 올랐다. 다음 마차에 그 외투의 안주머니가 비어 있는 채로 돌아왔다.',
+    art: `ornate fantasy armor, hero motif: a long mourning over-cloak in deep charcoal wool with a thin sheer black veil collar at the neckline and a clearly visible row of small repeating warm gold diamond-shape embroidered crest marks running prominently along the bottom hem like a heraldic gold border band, palette: deep charcoal wool body, warm gold diamond-shape embroidered hem band accent clearly visible at the bottom edge, sheer black veil at the collar, front-facing view, ${STYLE}, ${NEG}, the gold hem band must be clearly visible as a row of small repeating diamond-shape gold marks along the bottom edge`,
   },
   {
     key: 'graverobber_jacket',
@@ -596,7 +597,7 @@ const ARMOR: CatalogItem[] = [
     region: '일반',
     tone: '기괴',
     lore: '한 도굴꾼이 평생 입은 가죽조끼다. 안주머니가 일곱 개나 되고, 각 주머니마다 다른 흙 색깔이 살짝 묻어 있다. 도굴꾼이 잡혀 묘 옆에 묻힌 새벽, 조끼는 묘 위에 단정히 개켜진 채 발견되었다. 누가 그 마지막을 정돈했는지에 대한 묘지기의 짐작은 매년 한 번씩 새로 시작되었다.',
-    art: `ornate fantasy armor: lean leather thief vest with seven hidden pockets each lightly stained a different soil color, dark waxed cowhide, brass buckles, eerie, crafted equippable armor game asset, ${STYLE}`,
+    art: `ornate fantasy armor, hero motif: SEVEN CLEARLY VISIBLE rectangular pocket flaps arranged in a visible grid pattern across the front of a thief's leather vest, each of the seven pocket flaps OBVIOUSLY STAINED in a DIFFERENT EARTH COLOR like a quilt of soil stains, arrange them as 3 pockets on the upper chest and 4 pockets on the lower torso so 7 pockets are countable, lean dark waxed cowhide vest with polished brass buckles down the front, palette: dark waxed cowhide leather base body, SEVEN pocket flaps each in a CLEARLY DIFFERENT earth-tone stain visible as distinct contrasting patches (rust-red, dark loam brown, pale sand beige, ash grey, peat dark brown, chalk white, olive green), polished brass buckles, front-facing view of the vest with seven differently-colored pockets clearly visible, ${STYLE}, ${NEG}, the vest MUST clearly show seven pocket flaps in seven different earth-tone stain colors arranged across the front not a single solid color, the multi-pocket multi-color quilt effect must be obvious`,
   },
   {
     key: 'hero_dented_breastplate',
@@ -605,7 +606,7 @@ const ARMOR: CatalogItem[] = [
     region: '일반',
     tone: '영웅담',
     lore: '한 영웅이 사흘을 싸우고 살아 돌아왔을 때, 그의 흉갑 가운데엔 어른 주먹만 한 홈이 패여 있었다. 두드려 펼 수 있었지만, 영웅은 두드리지 말라 했다. 자기 가슴이 거기서 한 번 멎었다가 다시 뛰었다는 표시라고. 영웅이 늙어 죽은 뒤 후손이 그 홈을 보고 처음으로 손바닥을 대 보았다. 손바닥 한가운데가 따뜻해졌다 — 거기서 다시 뛰기 시작한 박동을 자기 손이 받아 든 것 같았다고, 후손은 평생 그 말을 한 번씩 했다.',
-    art: `ornate fantasy armor: heavy hero breastplate with a single huge fist-sized dent at the center, polished darkened steel, gold-trim edges worn dull, monumental, crafted equippable armor game asset, ${STYLE}`,
+    art: `ornate fantasy armor, hero motif: DEEP RECESSED BLACK HOLE-LIKE CRATER PUNCHED INTO the very center of the chest plate where the metal is visibly PUSHED INWARD AWAY from the viewer creating a DARK SHADOWY CONCAVE INDENTATION drawn as a clearly recessed dark area with stress crack lines radiating outward from the central pit, the dent must be drawn as a HOLE going BACKWARDS into the chest NOT a leaf NOT a heart NOT a gem NOT a bump NOT a protruding decoration just an empty dark recessed crater hole like a punched-in dent, heavy battle-worn dark steel breastplate with broad shoulder pauldrons and a thin worn dull gold trim along the edges, palette: dark battered steel plate, DEEP BLACK SHADOWY HOLE clearly recessed inward at the center as a dark pit not a protruding shape, dull worn gold trim along edges, front-facing view of the damaged battle-worn breastplate with the obvious recessed crater dent at center, ${STYLE}, ${NEG}, the chest center MUST be a DARK RECESSED HOLE drawn as inward concave shadow NOT a heart NOT a leaf NOT a gem NOT a flower NOT a protruding boss, just an empty dark dent going inward`,
   },
   {
     key: 'blank_question_helm',
@@ -614,7 +615,7 @@ const ARMOR: CatalogItem[] = [
     region: '일반',
     tone: '수수께끼',
     lore: '광장 한가운데에 늘 빈 투구가 한 점 놓여 있는 좌판이 있다. 좌판 주인이 누구인지 아는 사람은 없다. 누가 와서 자기 머리에 그 투구를 써 보면, 잠시 뒤 가만히 벗어 자리에 놓고 간다. 무엇을 묻고 무엇을 들었는지는 아무도 말하지 않는다.\n좌판이 사라진 날엔, 마을엔 답을 듣고 떠나는 사람과 떠나지 못하고 좌판을 다시 찾는 사람만 남는다.',
-    art: `ornate fantasy armor: plain full-face helm with a smooth blank visor, dull polished steel, no markings, simple leather padding inside, mysterious, crafted equippable armor game asset, ${STYLE}`,
+    art: `ornate fantasy armor, hero motif: a closed full-face knight's helm with the entire VISOR FRONT FACE COMPLETELY PERFECTLY SMOOTH AND BLANK like a featureless metal plate with ABSOLUTELY NO eye slits NO breath holes NO openings NO engravings NO marks just a perfectly polished smooth flat steel face like a smooth metal mirror surface, full-face knight's helm of dull polished steel with simple leather padding visible at the neck rim, palette: dull polished steel helm body with a perfectly SMOOTH FLAT FEATURELESS BLANK visor face plate with NO openings of any kind, dark leather padding accent at the rim, front-facing view of the helm with the perfectly blank smooth visor, ${STYLE}, ${NEG}, the visor MUST be completely smooth and blank with NO eye slits NO horizontal openings NO holes NO marks just a flat featureless steel plate face`,
   },
   {
     key: 'bog_hide_jerkin',
@@ -623,7 +624,7 @@ const ARMOR: CatalogItem[] = [
     region: '늪지대',
     tone: '담백',
     lore: '늪의 노련한 사냥꾼이 자기 손으로 무두질해 만든 물소 가죽조끼다. 한 번 입으면 늪의 시큼한 냄새가 한 달은 빠지지 않는다. 사냥꾼이 자기 막내 동생에게 그 조끼를 처음 입혀 준 새벽, 동생은 코를 잠깐 찡그리다 곧 익숙해졌다. 동생이 늪에 들어가는 첫걸음을 본 사냥꾼은, 그 첫걸음이 자기의 첫걸음과 똑같이 무거운 걸 보고 안심했다.',
-    art: `ornate fantasy armor: marsh hunter buffalo-hide jerkin, oiled dark brown leather, bone toggles, faint swamp-stain at the hem, plain rugged, crafted equippable armor game asset, ${STYLE}`,
+    art: `ornate fantasy armor, hero motif: BOTTOM HEM AREA of the jerkin OBVIOUSLY DRENCHED in a DARK MOSSY GREEN-BROWN SWAMP STAIN BAND drawn as a clearly contrasting darker green-tinted horizontal band across the entire lower portion of the jerkin like the bottom was dipped in marsh water, the band must be clearly visible as a distinct darker green-brown stripe at the hem, sturdy sleeveless oiled dark brown buffalo-hide jerkin with EXACTLY THREE clearly visible pale bone toggle clasps down the front center spaced evenly, palette: oiled dark warm brown buffalo hide upper body, OBVIOUSLY DARKER MOSSY GREEN-BROWN swamp-stain band clearly visible across the lower hem as a contrasting horizontal stripe, EXACTLY 3 polished pale bone toggle clasps down the front center, front-facing view, ${STYLE}, ${NEG}, the lower hem MUST clearly show a distinct darker green-brown swamp stain band, exactly 3 bone toggles down the front not more`,
   },
   {
     key: 'jester_patchwork_doublet',
@@ -632,7 +633,7 @@ const ARMOR: CatalogItem[] = [
     region: '일반',
     tone: '위트',
     lore: '죽은 광대 일곱 명의 옷에서 한 조각씩 떼어 이어 붙인 더블릿이다. 한 조각은 빨강, 한 조각은 보라, 다른 한 조각은 옅은 청록. 입은 사람은 새 공연에 나갈 때마다 거울 앞에서 어느 조각이 누구의 것이었는지 짚어 본다. 마지막 조각을 짚을 때면 손가락이 잠깐 떨렸다 — 그 조각의 옛 주인이 마지막으로 무대에서 무엇을 하다 떠났는지를, 다음 거울 앞의 광대가 또 한 번 짚어 보았다.',
-    art: `ornate fantasy armor: colorful jester doublet stitched from seven different fabric scraps, mismatched red purple teal yellow panels, brass bells along the hem, sly bittersweet, crafted equippable armor game asset, ${STYLE}`,
+    art: `ornate fantasy armor, hero motif: a jester's doublet stitched from seven clearly different mismatched fabric panels in red purple teal and yellow with small polished brass bells dangling along the bottom hem, sleeveless patchwork doublet body, palette: red purple teal and yellow patchwork panels, small polished warm brass bells along the hem accent, front-facing view, ${STYLE}, ${NEG}`,
   },
   {
     key: 'rune_hush_helm',
@@ -641,7 +642,7 @@ const ARMOR: CatalogItem[] = [
     region: '고대 룬 산맥',
     tone: '장엄',
     lore: '룬 산맥이 한 번 더 흔들리던 새벽, 늙은 보초의 투구가 산문 돌 위에 떨어져 있었다. 투구는 산문 돌의 한 박자에 정확히 맞춰 떨어졌고, 산은 그 박자에서 입을 다물었다. 산문 옆 보초들은 새 투구를 받을 때마다 이 늙은 투구의 한 박자를 잊지 말라는 인사를 듣는다.',
-    art: `ornate fantasy armor: heavy stone-grey rune helm, deep blue rune cracks along the brow, dark leather padding, gold-trim worn dull, monumental quiet, crafted equippable armor game asset, ${STYLE}`,
+    art: `ornate fantasy armor, hero motif: a single horizontal deep cobalt blue rune crack line running prominently across the brow of a heavy stone-grey helmet, full helm shaped from pale carved stone with dark leather padding visible under the rim and a thin worn-dull gold trim along the edges, palette: pale stone-grey helmet body, deep cobalt blue rune line across the brow, dark leather padding accent, worn dull gold trim, front-facing view of the helmet, ${STYLE}, ${NEG}`,
   },
   {
     key: 'orc_skull_cap',
@@ -650,7 +651,7 @@ const ARMOR: CatalogItem[] = [
     region: '오크 부락',
     tone: '위트',
     lore: '오크 부락의 머리덮개는 가죽 한 장에 송곳니 두 개를 덧댄 단순한 것이다. 송곳니는 자기가 처음 잡은 짐승의 것을 박는다. 한 어린 오크는 첫 사냥에서 사슴 한 마리도 못 잡고 돌아왔다. 어른 오크가 자기 송곳니 두 개를 뽑아 그 머리덮개에 박아 주었다. 어린 오크가 입을 벌리고 보자, 어른은 손을 흔들며 말했다.\n「내 거 아직 많아.」',
-    art: `ornate fantasy armor: simple orcish leather skullcap, two animal-fang ornaments riveted to the brow, sinew laces, scrappy warm, crafted equippable armor game asset, ${STYLE}`,
+    art: `ornate fantasy armor, hero motif: two small curved yellowed animal-fang ornaments clearly riveted on the brow of an orcish leather skullcap symmetrically left and right, simple round dark leather skullcap with sinew laces at the rim, palette: dark brown leather cap body, two yellowed bone fang ornaments at the brow, dark sinew laces, front-facing view of the skullcap, ${STYLE}, ${NEG}`,
   },
   {
     key: 'pilgrim_travel_robe',
@@ -659,7 +660,7 @@ const ARMOR: CatalogItem[] = [
     region: '일반',
     tone: '담백',
     lore: '순례자는 새 로브를 받을 때마다 옛 로브의 한 자락을 잘라 새 로브 안주머니에 꿰매 넣었다. 그래서 마지막 로브 안엔 평생 거쳐 온 길의 색이 한 줄로 이어져 있었다. 순례자가 마지막 마을에서 로브를 벗어 둔 새벽, 다음 순례자는 그 안주머니의 한 줄을 자기 새 안주머니에 그대로 옮겨 꿰매고 길을 나섰다.',
-    art: `ornate fantasy armor: long grey pilgrim robe, plain wool with a hidden inner-pocket strip stitched from many different cloth scraps, simple rope belt, serene, crafted equippable armor game asset, ${STYLE}`,
+    art: `ornate fantasy armor, hero motif: a long pale grey pilgrim's robe held open at the front revealing a hidden inner-pocket strip stitched from many different colored cloth scraps along the inner lining, plain woolen pilgrim robe with a simple rope belt at the waist, palette: muted pale grey wool body, multicolored patchwork inner pocket strip (pale red blue green and gold patches), simple dark rope belt accent, front-facing view of the robe spread open showing the inner pocket strip, ${STYLE}, ${NEG}`,
   },
   {
     key: 'ash_evac_shawl',
@@ -668,7 +669,7 @@ const ARMOR: CatalogItem[] = [
     region: '서쪽 화산',
     tone: '비애',
     lore: '서쪽 마을이 잿더미가 되던 새벽, 한 어머니가 아이의 머리에 자기 숄을 둘러 주고 자기는 그대로 잿더미 속으로 들어갔다. 숄엔 어머니의 머리카락 한 가닥이 끝에 매여 있다. 아이가 자라 그 숄을 다시 자기 아이의 머리에 둘러 주는 날, 그 머리카락 한 가닥이 어디로 갔는지는 묻지 않기로 약속되어 있다.',
-    art: `ornate fantasy armor: ash-grey wool head shawl, fine soot streaks woven into the fringe, a single dark hair knotted at one corner, sorrowful resilient, crafted equippable armor game asset, ${STYLE}`,
+    art: `ornate fantasy armor, hero motif: a SINGLE OBVIOUSLY VISIBLE LONG DARK BLACK HAIR STRAND clearly drawn as a distinct dangling THIN BLACK LINE hanging down BELOW the bottom corner of an ash-grey wool head shawl extending below the fringe like a single hair string visibly hanging out, the hair must be drawn as a clear distinct dark line clearly contrasting against the pale background NOT a subtle mark NOT a small detail, simple draped wool head shawl with darker soot streaks along the fringe, palette: ash-grey wool body, darker soot streaks along the fringe, OBVIOUSLY VISIBLE single long dark black hair strand drawn as a distinct dangling thin black line hanging below one corner accent, front-facing view of the shawl with the hair strand clearly hanging down, ${STYLE}, ${NEG}, a SINGLE LONG DARK HAIR STRAND must be clearly drawn as a distinct dangling thin dark line hanging visibly below one corner of the shawl as a recognizable hair strand`,
   },
   {
     key: 'unbroken_line_tabard',
@@ -677,7 +678,7 @@ const ARMOR: CatalogItem[] = [
     region: '일반',
     tone: '영웅담',
     lore: '한 부대가 사흘을 막아 낸 새벽, 살아남은 자들의 외피 가슴엔 같은 자리에 같은 색의 흙이 묻어 있었다. 어깨에서 어깨로 이어 선 자리의 흙이었다. 부대장은 그 외피를 빨지 말라 명했고, 그 명령은 그 부대가 해산한 뒤에도 이어졌다. 외피들은 지금도 같은 옷장 한 칸에, 같은 자리에 같은 흙을 묻힌 채 걸려 있다.',
-    art: `ornate fantasy armor: heavy soldier tabard, faded blue cloth with one curved soil streak across the chest, leather underlying gambeson, monumental, crafted equippable armor game asset, ${STYLE}`,
+    art: `ornate fantasy armor, hero motif: a single curved soil-stain streak running visibly across the chest of a faded blue soldier's tabard from one shoulder down to the opposite hip, long heavy faded blue tabard worn over a darker leather gambeson, palette: faded soft blue tabard cloth body, single darker curved soil-stain streak across the chest, dark leather gambeson visible at the edges, front-facing view, ${STYLE}, ${NEG}`,
   },
   {
     key: 'bark_woven_armor',
@@ -686,7 +687,7 @@ const ARMOR: CatalogItem[] = [
     region: '늪지대',
     tone: '담백',
     lore: '늪 가장자리의 한 노인이 평생 나무껍질만 엮어 갑옷을 만들었다. 노인의 작업장 벽엔 자기 평생의 작업을 한 줄로 걸어 두었는데, 가장 오른쪽의 한 벌만 안감이 없었다. 노인은 끝내 그 한 벌의 안감을 대지 않고 떠났다. 다음 늪지 사람이 그 작업장을 물려받았을 때, 그가 가장 먼저 한 일은 그 한 벌의 안감을 대는 것이 아니라, 그것을 그대로 벽에 다시 거는 것이었다.',
-    art: `ornate fantasy armor: layered bark-strip body armor, dark waterlogged bark plates woven with twine, simple bone clasps, plain crafty, crafted equippable armor game asset, ${STYLE}`,
+    art: `ornate fantasy armor, hero motif: clearly visible overlapping vertical strips of dark waterlogged tree bark plate LACED prominently TOGETHER with bright pale twine cord X-crossings across the entire chest of a body armor showing the layered bark texture, layered marsh bark-strip body armor with simple polished bone clasps, palette: dark waterlogged bark brown vertical plate strips, distinctly visible bright PALE twine lacing crossing the chest in clear X patterns, polished pale bone clasps accent, front-facing view, ${STYLE}, ${NEG}, the bright pale twine X-lacing must be clearly visible crossing the dark bark strips`,
   },
   {
     key: 'fallen_robe_grey',
@@ -695,7 +696,7 @@ const ARMOR: CatalogItem[] = [
     region: '타락천사',
     tone: '비애',
     lore: '추락한 자가 신전을 떠나며 마지막으로 벗은 흰 로브는, 새벽이 지나기 전에 옅은 회색으로 변해 신전 계단에 단정히 개켜져 있었다. 신전 사람들은 그 색이 본래 그랬는지, 새벽이 그렇게 만든 것인지 답을 미루었다. 로브는 매년 한 번 펼쳐지고, 펼친 사람은 자기 손바닥에 그 회색이 옅게 옮겨 묻는다 — 손을 씻으면 사흘 만에 사라진다.',
-    art: `ornate fantasy armor: long pale grey priestly robe, soft pleated fabric, faint feather-pattern on the lining, simple silver clasp, mournful sacred, crafted equippable armor game asset, ${STYLE}`,
+    art: `ornate fantasy armor, hero motif: robe shown OPEN AT THE FRONT spread apart clearly revealing the INNER LINING with a BOLD CLEARLY VISIBLE FEATHER-SHAPE EMBROIDERY PATTERN drawn as multiple distinct recognizable feather silhouettes running vertically along the inner lining edge each feather drawn with a central quill spine and clear barbs like a column of stylized feathers, the feather pattern must be drawn as obvious recognizable feather shapes NOT abstract scrollwork NOT geometric, long soft pleated grey robe with a simple round silver clasp at the neck, palette: muted pale grey wool outer body, OBVIOUSLY VISIBLE darker grey feather-shape pattern clearly embroidered as a column of recognizable feather silhouettes along the inner lining edge, polished silver clasp accent, front-facing view of the robe spread open clearly showing the column of feather embroidery on the inner lining, ${STYLE}, ${NEG}, the inner lining MUST clearly show recognizable feather-shape embroidery patterns drawn as obvious feather silhouettes with quill spine and barbs not abstract scrollwork`,
   },
   {
     key: 'tollgate_overcoat',
@@ -704,7 +705,7 @@ const ARMOR: CatalogItem[] = [
     region: '일반',
     tone: '위트',
     lore: '국경 통행세 관리는 평생 같은 외투 하나를 입었다. 안주머니가 깊어 동전이 잘 빠지지 않았다. 그가 은퇴하는 날 후임이 외투를 받아 입었는데, 안주머니에서 옛 동전 일곱 닢이 떨어졌다. 후임이 그것을 들고 그를 돌아보자, 그가 어깨를 한 번 으쓱하고 말했다.\n「내 거 아니야. 자네 첫 보너스라 치게.」',
-    art: `ornate fantasy armor: long dark-green tollkeeper overcoat, brass buttons in two rows, deep inner pockets, faded gold trim, smug warm, crafted equippable armor game asset, ${STYLE}`,
+    art: `ornate fantasy armor, hero motif: two visible parallel rows of polished brass buttons running down the front of a long dark green tollkeeper's overcoat with faded gold trim along the lapels, long heavy wool overcoat with deep inner pockets, palette: dark forest green wool body, two parallel rows of polished warm brass buttons, faded muted gold trim along the lapels, front-facing view, ${STYLE}, ${NEG}`,
   },
   {
     key: 'dragon_scorch_shield',
@@ -713,7 +714,7 @@ const ARMOR: CatalogItem[] = [
     region: '서쪽 화산',
     tone: '영웅담',
     lore: '드래곤의 숨결을 한 번 정면으로 받은 방패다. 표면이 한쪽에서 다른 쪽까지 그을린 자국이 길게 갈라 놓았다. 그 자국을 따라 손가락을 가만히 그어 보면, 한쪽 끝에서 다른 쪽 끝까지 닿는 동안 손가락이 한 번 따끔하다.\n방패는 화로지기 마을의 작은 회당에 걸려 있다. 매년 새 화로지기가 한 번씩 그 자국을 손가락으로 따라 그어 보고, 따끔한 자리에서 멈춰 한참 서 있다 돌아간다.',
-    art: `ornate fantasy armor: large round war shield with a long curved scorch streak burned across the face, charred iron rim, oak boss, monumental, crafted equippable armor game asset, ${STYLE}`,
+    art: `ornate fantasy armor, hero motif: a long curved scorch streak burned visibly across the face of a large round war shield from one side to the other, large round wooden war shield with a charred iron rim and a central oak boss, palette: dark wood shield body with darker charred scorch streak across the face, charred iron rim, dark oak central boss, front-facing view of the shield face, ${STYLE}, ${NEG}`,
   },
   {
     key: 'riddle_lamellar',
@@ -722,7 +723,7 @@ const ARMOR: CatalogItem[] = [
     region: '고대 룬 산맥',
     tone: '수수께끼',
     lore: '미늘 한 장 한 장에 한 글자씩 새겨진 미늘갑이다. 다 모아 읽으면 한 줄의 수수께끼가 되어야 하는데, 미늘이 자꾸 자리를 바꿔 매번 다른 수수께끼가 읽힌다. 학자 셋이 이 미늘갑을 풀러 산을 올랐는데, 셋 다 자기들이 풀어낸 수수께끼의 답을 일러주지 않고 산을 내려왔다 — 그 답이 들어맞으려면 답한 자가 미늘갑을 입어야 한다고만 했다.',
-    art: `ornate fantasy armor: scaled lamellar armor of overlapping pale stone-grey scales each engraved with a single rune-letter, leather thongs binding the scales, mysterious, crafted equippable armor game asset, ${STYLE}`,
+    art: `ornate fantasy armor, hero motif: overlapping pale stone-grey lamellar scales arranged in horizontal rows where each individual scale clearly shows a single different carved rune-letter symbol engraved on its surface, scaled lamellar chest armor with dark leather thongs binding the scales together, palette: pale stone-grey scale plates with darker engraved single-rune-letter on each scale, dark leather thong binding, front-facing view of the lamellar chest piece, ${STYLE}, ${NEG}`,
   },
   {
     key: 'marsh_shell_carapace',
@@ -731,7 +732,7 @@ const ARMOR: CatalogItem[] = [
     region: '늪지대',
     tone: '기괴',
     lore: '늪 깊은 자리에 사는 큰 거북이 평생에 한 번 자기 등껍데기를 벗는다고 한다. 이 갑껍데기는 그 한 번의 새벽에 늪 사람이 주워 온 것이다. 안감에 옅게 거북의 체온이 남아 있어, 입은 사람의 어깨가 비 오는 날엔 미지근하다. 거북이 다시 자기 등껍데기를 찾으러 오면, 입은 사람은 그것을 도로 늪에 두고 가야 한다. 거북은 아직 오지 않았다.',
-    art: `ornate fantasy armor: layered turtle-shell back carapace, dark green segmented plates, leather straps across the chest, faint algae lining, eerie organic, crafted equippable armor game asset, ${STYLE}`,
+    art: `ornate fantasy armor, hero motif: a single large segmented dark green turtle shell carapace shaped into a back-and-chest plate with the natural hexagonal scute pattern clearly visible across the surface, layered turtle-shell armor held on by dark leather chest straps, faint pale algae lining at the lower edges, palette: dark mossy green segmented turtle shell with darker hexagonal scute outlines, dark leather straps across the chest, faint pale algae lining accent, front-facing view, ${STYLE}, ${NEG}`,
   },
   {
     key: 'grandmother_quilt_vest',
@@ -740,7 +741,7 @@ const ARMOR: CatalogItem[] = [
     region: '일반',
     tone: '일상',
     lore: '한 할머니는 자기 손주 일곱 명의 헌 옷에서 한 조각씩 잘라 누비조끼 한 벌을 지었다. 가장자리엔 손주들의 이름을 한 자씩 새겨 둘렀다. 할머니가 떠난 새벽 조끼는 막내 손주의 어깨에 둘러져 있었다. 막내는 그날부터 자기 옷을 입을 때 한 번씩 그 조끼를 위에 덧입어 본다 — 평소엔 옷장에 단정히 걸려 있고, 솔기는 매년 한 번씩 빨아 다림질해 둔다.',
-    art: `ornate fantasy armor: warm quilted vest stitched from seven different child-sized fabric scraps, faded pastel colors, embroidered names along the trim, gentle homely, crafted equippable armor game asset, ${STYLE}`,
+    art: `ornate fantasy armor, hero motif: a warm sleeveless quilted vest stitched from seven clearly different soft pastel colored child-sized fabric squares with delicate embroidered name letters running along the trim edges, simple quilted patchwork vest body, palette: seven different soft pastel patchwork squares (pale pink, sky blue, butter yellow, mint green, lavender, peach, cream), darker embroidered name lettering accent along the trim, front-facing view, ${STYLE}, ${NEG}`,
   },
   {
     key: 'rune_anchor_greaves',
@@ -749,7 +750,7 @@ const ARMOR: CatalogItem[] = [
     region: '고대 룬 산맥',
     tone: '장엄',
     lore: '룬 산맥의 첫 보초가 평생 차고 있던 정강이받이다. 그가 산문 앞에 처음 선 새벽, 발이 떨려 한 발짝 물러서려 했다. 정강이받이의 안쪽 룬이 그 새벽 처음으로 빛났고, 그의 발은 그 자리에 박혀 사흘 동안 움직이지 않았다. 보초가 마지막으로 산을 내려간 새벽 룬은 다시 한 번 빛났고, 그 뒤로는 누가 차도 빛난 적이 없다.',
-    art: `ornate fantasy armor: heavy stone-grey greaves with deep blue rune lines down the inner side, iron buckles, monumental anchor mood, crafted equippable armor game asset, ${STYLE}`,
+    art: `ornate fantasy armor, hero motif: a single deep cobalt blue rune line running vertically down the inner side of each greave plate as if anchoring the wearer to the ground, heavy stone-grey greaves armor pair shown side by side with polished iron buckle straps, palette: pale stone-grey greave plates, deep cobalt blue vertical rune lines on the inner sides, polished iron buckles, front-facing view of the greaves pair, ${STYLE}, ${NEG}`,
   },
   {
     key: 'carnival_breastplate',
@@ -758,7 +759,7 @@ const ARMOR: CatalogItem[] = [
     region: '일반',
     tone: '위트',
     lore: '곡예단의 단장이 무대 위에서 입던 흉갑이다. 진짜 강철이 아니라 얇은 양철에 색을 칠한 것이라 두드리면 빈 소리가 났다. 단장이 무대에서 그 빈 소리를 일부러 한 번씩 내고 관객을 웃겼다. 마지막 공연 날, 단장은 그 흉갑을 무대 한가운데에 내려놓고 인사 없이 무대를 내려갔다.\n양철 흉갑은 그 자리에서 한 번 더 빈 소리를 냈고, 객석에서 그 소리만큼의 한숨이 일제히 나왔다.',
-    art: `ornate fantasy armor: lightweight painted tin breastplate, gaudy red and gold leaf paint flaking, two crossed brass stars at the center, hollow-sounding, comedic showy, crafted equippable armor game asset, ${STYLE}`,
+    art: `ornate fantasy armor, hero motif: two crossed polished brass stars mounted prominently at the very center of a lightweight painted tin breastplate with gaudy red and gold leaf paint visibly flaking off at the edges, light show armor with simple leather strap shoulders, palette: gaudy bright red and gold flaking painted tin body, two crossed polished warm brass stars at the chest center accent, simple dark leather straps, front-facing view, ${STYLE}, ${NEG}`,
   },
   {
     key: 'deserter_cloak',
@@ -767,7 +768,7 @@ const ARMOR: CatalogItem[] = [
     region: '일반',
     tone: '비애',
     lore: '한 병사가 부대를 떠나며 자기 부대 표시를 망토 안감 쪽으로 뒤집어 매고 산으로 들어갔다. 그가 산에서 어떻게 살았는지를 마을은 끝내 모른다. 평생을 지나고 늙어 마을로 돌아온 새벽, 그는 망토를 다시 뒤집어 표시를 밖으로 내고 마을 어귀에 서 있었다. 마을 사람들이 그를 알아본 한 사람도 없었다 — 그가 가장 두려워한 일이었는데, 그 새벽엔 그 두려움이 어쩐지 옅게 풀렸다.',
-    art: `ornate fantasy armor: long traveler cloak with a faded regimental insignia turned to the inside, dark wool outer with dust of many years, simple bone clasp, sorrowful, crafted equippable armor game asset, ${STYLE}`,
+    art: `ornate fantasy armor, hero motif: a faded regimental insignia patch visibly turned to the inside lining of a long dark wool traveler cloak revealed at the open front edge, long simple draped cloak with a polished bone clasp at the neck, dark wool outer with fine dust of many years on the surface, palette: dark dusty wool outer body, faded regimental insignia patch visible on the inner lining accent when the cloak is open, polished pale bone clasp, front-facing view of the cloak partially open showing the inside-out insignia, ${STYLE}, ${NEG}`,
   },
   {
     key: 'rain_cowl_hide',
@@ -776,7 +777,7 @@ const ARMOR: CatalogItem[] = [
     region: '늪지대',
     tone: '일상',
     lore: '늪지 사람들은 비가 오기 시작하면 가죽 후드를 한 번 머리에 덮어 본다. 후드를 덮는다고 비가 그치는 건 아니다. 그저 그 첫 빗방울이 얼굴에 떨어지지 않으면 그날 하루가 조금 덜 사납게 시작된다고들 한다. 어느 늪 마을의 후드는 평생 한 노인의 머리에만 덮여, 그가 떠난 새벽 다음 사람의 머리에 옮겨 덮였다 — 첫 빗방울은 그 새 사람의 얼굴에 다정하게 비껴 떨어졌다.',
-    art: `ornate fantasy armor: simple oiled-leather rain cowl, dark brown hide with bone toggle, water-stained edges, plain useful, crafted equippable armor game asset, ${STYLE}`,
+    art: `ornate fantasy armor, hero motif: a humble dark brown oiled-leather rain cowl with the hood pulled up and distinctly visible significantly DARKER water-stain band patches running prominently along the entire bottom hem edge and along the front collar opening, simple draped leather cowl with a single small pale bone toggle clasping the front collar, palette: dark brown oiled leather body, distinctly visible significantly DARKER water-stained band patches along the bottom hem and front opening, pale bone toggle clasp accent, front-facing view of the cowl with hood raised, ${STYLE}, ${NEG}, the water-stained darker edges must be clearly visible as a distinct dark band along the hem and front opening`,
   },
   {
     key: 'fallen_halo_circlet',
@@ -784,8 +785,8 @@ const ARMOR: CatalogItem[] = [
     nameKo: '떨어진 후광 머리띠',
     region: '타락천사',
     tone: '장엄',
-    lore: '추락한 자의 머리에서 떨어진 후광이 식어 굳은 머리띠다. 한쪽이 살짝 찌그러져 둥글지 않다. 새벽 햇살이 그 찌그러진 자리에 닿으면 다른 자리보다 한 박자 늦게 빛이 비친다. 그 한 박자에 무슨 의미가 있는지는 신전이 답을 정해 두지 않았다. 매 세대 새 신관 한 사람이 그 한 박자를 자기 나름의 말로 풀어 말해 보고, 다음 신관에게 넘긴다.',
-    art: `ornate fantasy armor: thin pale-gold circlet shaped from a once-round halo, slightly flattened on one side, faint feather-engraving along the band, monumental fallen, crafted equippable armor game asset, ${STYLE}`,
+    lore: '추락한 자의 머리에서 떨어진 후광이 식어 굳은 머리띠다. 식어 굳은 자리에서도 후광은 한 번 흐트러지지 않았다. 새벽 햇살이 그 둥근 자리에 한 박자 늦게 닿는다. 그 한 박자에 무슨 의미가 있는지는 신전이 답을 정해 두지 않았다. 매 세대 새 신관 한 사람이 그 한 박자를 자기 나름의 말로 풀어 말해 보고, 다음 신관에게 넘긴다.',
+    art: `ornate fantasy armor, hero motif: a perfect round pale gold halo circlet headband shaped as a smooth complete unbroken circle with thin gold band and faint feather pattern engraving running along the gold surface, palette: warm pale gold band body, slightly darker engraved feather pattern accent along the gold, front-facing view of the round halo circlet, ${STYLE}, ${NEG}`,
   },
   {
     key: 'orc_wardrum_harness',
@@ -794,7 +795,7 @@ const ARMOR: CatalogItem[] = [
     region: '오크 부락',
     tone: '영웅담',
     lore: '오크 부락의 전고를 평생 두드린 자가 가슴에 매고 다닌 가슴띠다. 띠 가운데엔 자기 북채 끝이 닿아 박힌 작은 자국이 한 줄로 새겨져 있다. 그가 마지막 전고를 두드린 새벽, 마지막 자국이 그 줄의 끝에 박혔다. 그 줄은 한 줄이 채 안 되는 길이로 끝났다 — 다음 전고지기는 그 끝에서부터 자기 첫 자국을 새 줄로 시작한다.',
-    art: `ornate fantasy armor: orcish thick leather chest harness, dark hide with a single row of small drumstick-shaped marks across the front, iron buckles, monumental tribal, crafted equippable armor game asset, ${STYLE}`,
+    art: `ornate fantasy armor, hero motif: a clearly visible distinct horizontal row of multiple small evenly-spaced DRUMSTICK-SHAPED stick marks stamped boldly across the very center of a thick dark leather chest harness showing where a drumstick repeatedly tapped, dark hide chest harness with iron buckle straps on the sides, palette: thick dark leather harness body, distinctly visible row of darker drumstick-shaped stick marks across the chest center, dull iron buckles accent, front-facing view, ${STYLE}, ${NEG}, the row of drumstick-shaped marks must be clearly visible as multiple small dark stick shapes stamped across the chest`,
   },
   {
     key: 'forge_apron',
@@ -802,8 +803,8 @@ const ARMOR: CatalogItem[] = [
     nameKo: '대장간 가죽 앞치마',
     region: '서쪽 화산',
     tone: '담백',
-    lore: '서쪽 화로의 대장장이가 평생 두른 가죽 앞치마다. 가슴 가운데에 모루에서 튄 불꽃의 자국이 점점이 박혀 있는데, 그 점들을 잇는 보이지 않는 선이 있다고 대장장이는 농담처럼 말하곤 했다. 그가 마지막으로 앞치마를 모루 옆에 걸어 둔 새벽, 다음 대장장이가 그 앞치마를 둘러 보고 점들 위에 자기 손바닥을 댔다. 손바닥 한가운데에 따뜻한 자리가 정확히 하나 잡혔다.',
-    art: `ornate fantasy armor: thick blacksmith leather apron, dark oiled cowhide with a sprinkle of small burn dots across the chest, brass rivets, simple neck strap, calm craftsman, crafted equippable armor game asset, ${STYLE}`,
+    lore: '서쪽 화로의 대장장이가 평생 두른 가죽 앞치마다. 어깨끈에 박은 두 알의 놋쇠 단추가 평생 한 자리에서 모루의 박자를 받아 들었다. 그가 마지막으로 앞치마를 모루 옆에 걸어 둔 새벽, 다음 대장장이가 그 앞치마를 둘러 보고 두 단추 위에 가만히 손바닥을 댔다. 손바닥 한가운데에 따뜻한 자리가 정확히 두 군데 잡혔다.',
+    art: `ornate fantasy armor, hero motif: a simple sleeveless dark oiled cowhide blacksmith apron with two polished warm brass button studs prominently visible at the upper chest where the shoulder straps attach, the apron has a leather belt with a brass buckle at the waist, palette: dark oiled cowhide leather body, two polished warm brass button studs accent at the upper chest, dark leather neck and waist straps with a warm brass belt buckle, front-facing view, ${STYLE}, ${NEG}`,
   },
   {
     key: 'oath_kite_shield',
@@ -812,7 +813,7 @@ const ARMOR: CatalogItem[] = [
     region: '일반',
     tone: '영웅담',
     lore: '두 기사가 같은 카이트 방패에 자기 맹세를 한 줄씩 새겨 들고 다녔다. 한 사람은 맹세를 지키며 죽었고, 한 사람은 살아남아 그 방패를 묘 앞에 세워 두었다. 살아남은 자는 매년 한 번 묘에 들러 자기 줄 옆에 새 줄을 한 줄씩 덧붙여 새겼다. 그 자신이 묻힌 해에 줄은 일곱 줄이 되었고, 그 일곱 번째 줄의 마지막 글자에 새 칼 자국이 한 줄 더 새겨져 있었다 — 누가 그 마지막 자국을 새겼는지는 묘지기도 답을 정하지 못했다.',
-    art: `ornate fantasy armor: tall heater-style kite shield, faded blue field with two engraved oath lines down the center plus several added lines beside them, iron rim, monumental, crafted equippable armor game asset, ${STYLE}`,
+    art: `ornate fantasy armor, hero motif: a tall heater kite shield with the FACE OBVIOUSLY COVERED in MULTIPLE DEEPLY ENGRAVED HORIZONTAL TEXT LINES like an oath inscription tablet, draw TWO BOLDER DARKER central horizontal text lines down the middle PLUS SEVERAL THINNER ADDED HORIZONTAL TEXT LINES added beside them carved into the shield face like layered oath writings stacked together, the text lines must be drawn as multiple clearly visible horizontal engraved bars filling the central area of the shield, tall faded blue heater kite shield with a polished iron rim, palette: faded soft blue shield field, OBVIOUSLY VISIBLE MULTIPLE darker engraved horizontal text lines (2 bold central plus several added thinner lines beside) carved into the shield face as clearly contrasting engraved bars, polished iron rim, front-facing view of the shield face with the multiple engraved oath text lines clearly visible, ${STYLE}, ${NEG}, the shield face MUST clearly show multiple horizontal engraved oath text lines carved into the surface NOT a plain shield NOT spikes NOT a gem`,
   },
   {
     key: 'hollow_visor_helm',
@@ -821,7 +822,7 @@ const ARMOR: CatalogItem[] = [
     region: '일반',
     tone: '기괴',
     lore: '한 기사의 투구가 전장에서 돌아왔는데, 면갑 안엔 아무도 없었다. 흙도, 핏자국도, 어떤 흔적도 없었다. 기사단은 그 투구를 어떻게 처리할지 정하지 못해 본부 한쪽에 그대로 세워 두었다. 매년 새 기사 한 사람이 호기심에 면갑을 들어 안을 들여다보고, 본 것을 아무에게도 말하지 않은 채 자기 자리로 돌아간다.',
-    art: `ornate fantasy armor: knight closed-face helm with the visor slightly cracked open, polished dark steel exterior, perfectly empty interior, eerie quiet, crafted equippable armor game asset, ${STYLE}`,
+    art: `ornate fantasy armor, hero motif: a closed-face knight's helm with the visor slightly cracked open revealing an obviously completely empty pitch-black hollow interior with no head or face inside, polished dark steel helm exterior with leather padding visible at the neck, palette: polished dark steel helm exterior, pitch-black empty hollow interior visible through the cracked-open visor slit, dark leather neck padding accent, front-facing view of the helm with cracked visor showing the empty inside, ${STYLE}, ${NEG}, the interior is completely empty with no face visible`,
   },
   {
     key: 'traveler_patch_coat',
@@ -830,7 +831,7 @@ const ARMOR: CatalogItem[] = [
     region: '일반',
     tone: '담백',
     lore: '한 여행자가 새 마을에 들를 때마다 자기 외투에 그 마을의 천 한 조각을 덧대 꿰매 다녔다. 외투는 점점 두꺼워졌고, 그 무게로 여행자의 걸음이 조금씩 느려졌다. 그가 마지막 마을에 들어선 새벽, 그는 외투를 벗어 한 번 흔들고 마을 사람들에게 펼쳐 보였다 — 자기가 어디를 다녀왔는지가 그 한 장에 다 적혀 있다는 듯이.',
-    art: `ornate fantasy armor: long heavy travel coat patched with many fabric scraps of different colors and weaves, faded outer wool, brass buttons, plain warm, crafted equippable armor game asset, ${STYLE}`,
+    art: `ornate fantasy armor, hero motif: a long heavy travel coat visibly patched with many different fabric scraps in different colors weaves and textures all stitched together over the faded outer wool, long sleeve coat with polished brass buttons down the front, palette: faded wool outer base with many different colored patches (red, blue, green, brown, grey, beige patches scattered), polished warm brass buttons accent, front-facing view, ${STYLE}, ${NEG}`,
   },
   {
     key: 'marsh_root_buckler',
@@ -839,7 +840,7 @@ const ARMOR: CatalogItem[] = [
     region: '늪지대',
     tone: '담백',
     lore: '늪의 한 사냥꾼이 큰 나무뿌리를 잘라 손방패로 깎았다. 뿌리의 결이 손바닥 모양으로 모여 있어, 그 자리에 손을 대면 뿌리가 손을 쥐어 주는 느낌이 들었다. 사냥꾼이 그 손방패를 다음 사냥꾼에게 넘기며 한 마디 했다.\n「이건 자네 손에 맞을 거야.」 다음 사냥꾼이 손을 대 보자, 뿌리는 정말 그의 손도 가만히 쥐어 주었다.',
-    art: `ornate fantasy armor: small round buckler carved from a thick tree-root, dark waterlogged wood with hand-shaped grain on the inside, leather grip, plain crafty, crafted equippable armor game asset, ${STYLE}`,
+    art: `ornate fantasy armor, hero motif: a small round wooden buckler carved from a thick gnarled tree-root with the natural wood grain on the front face arranging itself into a visible open-hand shape pattern at the center, round marsh root buckler with a single leather strap grip visible on the rear edge, palette: dark waterlogged wood body, paler grain lines forming the hand-shape pattern at the center, dark brown leather grip strap accent, front-facing view of the buckler face, ${STYLE}, ${NEG}`,
   },
   {
     key: 'wailing_chain_mail',
@@ -847,8 +848,8 @@ const ARMOR: CatalogItem[] = [
     nameKo: '울음 우는 체인메일',
     region: '타락천사',
     tone: '기괴',
-    lore: '추락한 자가 마지막 새벽 입고 있던 체인메일이다. 고리들이 서로 부딪힐 때 사람이 우는 소리가 가늘게 섞여 난다. 신관 둘이 그 소리가 추락한 자의 마지막 울음인지, 그를 부르는 자의 울음인지 평생을 두고 논쟁했다. 결론이 난 새벽엔 두 신관 모두 신전에 없었고, 체인메일은 단정히 개켜진 채 두 사람 사이의 빈자리에 놓여 있었다.',
-    art: `ornate fantasy armor: dark steel chain mail shirt with a faint silver thread woven through every fourth ring, eerie sacred, gold-trim collar, mournful, crafted equippable armor game asset, ${STYLE}`,
+    lore: '추락한 자가 마지막 새벽 입고 있던 체인메일이다. 깃에 두른 금실의 한 줄과 허리의 짙은 띠가 그의 마지막 자세를 평생 그대로 잡고 있었다. 신관 둘이 그 자세가 추락한 자의 마지막 자세인지, 그를 부르는 자가 잡아 둔 자세인지 평생을 두고 논쟁했다. 결론이 난 새벽엔 두 신관 모두 신전에 없었고, 체인메일은 단정히 개켜진 채 두 사람 사이의 빈자리에 놓여 있었다.',
+    art: `ornate fantasy armor, hero motif: a knee-length dark steel chain mail hauberk with a faded gold-trim line along the high collar and edges, a deep charcoal hanging tabard cloth panel down the center of the chest with a polished warm brass disc buckle at the waist belt, palette: dark blackened steel chain rings body, faded warm gold trim along the collar and edges accent, deep charcoal cloth tabard panel down the center, polished warm brass waist buckle, front-facing view, ${STYLE}, ${NEG}`,
   },
   {
     key: 'dusk_paladin_plate',
@@ -857,7 +858,7 @@ const ARMOR: CatalogItem[] = [
     region: '일반',
     tone: '장엄',
     lore: '한 성기사가 평생 땅거미에만 갑옷을 입었다. 새벽엔 벗고, 한낮엔 옆에 두고, 해가 기울기 시작하면 그제야 차근차근 둘러 맸다. 그가 왜 그렇게 했는지는 동료들도 끝내 묻지 않았다. 그가 마지막으로 갑옷을 두른 새벽은 사흘 동안 땅거미가 끊이지 않은 날이었고, 그 새벽 갑옷은 사흘 만에 처음으로 새벽까지 그의 몸에 둘러져 있었다.',
-    art: `ornate fantasy armor: full paladin plate, deep blue-grey steel with faint sunset gold trim along the edges, single silver pauldron star, monumental dusk mood, crafted equippable armor game asset, ${STYLE}`,
+    art: `ornate fantasy armor, hero motif: a single bright silver star insignia mounted prominently on the left pauldron of a full paladin's deep blue-grey steel plate armor with faint sunset gold trim running along the edges, full body plate cuirass with shoulder pauldrons, palette: deep dusk blue-grey steel plate body, faint warm sunset gold trim along the edges, single bright silver pauldron star accent, front-facing view, ${STYLE}, ${NEG}`,
   },
   {
     key: 'rune_echo_buckler',
@@ -866,7 +867,7 @@ const ARMOR: CatalogItem[] = [
     region: '고대 룬 산맥',
     tone: '수수께끼',
     lore: '룬 산맥의 한 보초가 들고 다닌 작은 손방패다. 산의 한 봉우리가 흔들리면 방패의 뒷면에서 같은 박자의 울림이 한 박자 늦게 들렸다. 보초가 죽은 뒤에도 그 울림은 그치지 않았다. 산이 흔들리지 않은 새벽에도 방패가 가끔 한 박자 울림을 들려준다 — 무엇이 흔들리는지는 산맥의 보초도 자기 자리에서 답을 정하지 않는다.',
-    art: `ornate fantasy armor: small round buckler with a single deep blue rune circle carved on the front, pale stone-grey face, leather grip, mysterious resonant, crafted equippable armor game asset, ${STYLE}`,
+    art: `ornate fantasy armor, hero motif: a single deep cobalt blue rune circle carved prominently across the front face of a small round stone buckler taking up most of the shield face, round stone-grey buckler with a dark leather grip strap visible behind, palette: pale stone-grey face body, deep cobalt blue carved rune circle dominating the front, dark leather grip strap accent, front-facing view of the buckler face, ${STYLE}, ${NEG}`,
   },
   {
     key: 'child_practice_shield',
@@ -875,7 +876,7 @@ const ARMOR: CatalogItem[] = [
     region: '일반',
     tone: '일상',
     lore: '한 기사가 자기 아들에게 처음 만들어 준 연습 방패다. 어른 손에는 너무 작고, 아이 손에는 꼭 맞았다. 아들이 자라 자기 손에 안 맞게 되자, 방패는 다음 동생의 손으로 넘어갔다. 동생이 자란 뒤에는 그 다음 동생의 손으로, 그 다음의 손으로 — 한 세대의 형제들이 한 번씩 손을 댄 자국이 손잡이에 일곱 자국으로 남아 있다.\n방패는 지금도 그 집 마루의 한쪽에 세워져 있다. 새 동생이 태어나면 누군가 손잡이를 한 번 닦아 둔다.',
-    art: `ornate fantasy armor: small wooden training shield, light oak face with painted blue cross faded, leather strap with seven distinct hand-worn spots, plain warm, crafted equippable armor game asset, ${STYLE}`,
+    art: `ornate fantasy armor, hero motif: a small wooden training shield with a faded painted blue cross on the front face and a dark leather strap on the back with seven visible distinct hand-worn polished spots showing different children's grips, light oak wood round shield, palette: pale light oak wood shield body, faded soft blue painted cross on the front face, dark leather grip strap with seven paler polished worn spots accent, front-facing view of the shield face, ${STYLE}, ${NEG}`,
   },
   {
     key: 'fools_brass_cuirass',
@@ -884,7 +885,7 @@ const ARMOR: CatalogItem[] = [
     region: '일반',
     tone: '위트',
     lore: '한 바보는 시장에서 놋쇠 흉갑 한 벌을 사고 자기 가슴팍에 둘러 광장 가운데에 서 있었다. 누가 그걸 왜 입고 있냐고 물으면 그는 「가슴이 추워서요」라고만 답했다. 가을이 지나도, 한겨울이 와도, 그는 같은 자리에 같은 흉갑을 두르고 서 있었다. 사람들이 더 이상 묻지 않게 되었을 때, 그는 흉갑을 벗어 광장 한가운데에 두고 마을을 떠났다.\n흉갑은 그 자리에 한참을 놓여 있었다. 누가 가져갔는지는 광장 사람들도 못 봤다.',
-    art: `ornate fantasy armor: bright polished brass cuirass with a few comical dents, simple leather straps, faintly tarnished neckline, comedic warm, crafted equippable armor game asset, ${STYLE}`,
+    art: `ornate fantasy armor, hero motif: a bright polished warm brass cuirass with several small comical visible dents pressed into the front as if from joke punches, simple leather strap shoulders and side ties, palette: bright polished warm brass body, several small darker comical dents accent on the front, slightly tarnished darker neckline, simple dark leather straps, front-facing view, ${STYLE}, ${NEG}`,
   },
   {
     key: 'ash_pelt_mantle',
@@ -893,16 +894,16 @@ const ARMOR: CatalogItem[] = [
     region: '서쪽 화산',
     tone: '기괴',
     lore: '서쪽 화산의 한 가죽장이가 잿더미 안에서 발견한 짐승의 가죽으로 만든 어깨망토다. 무슨 짐승인지는 가죽장이도 끝내 답하지 않았다. 망토를 두른 사람은 한겨울에도 어깨가 덥지 않고, 한여름에도 시리지 않다. 입은 사람의 등에 가는 그을음이 옅게 묻어나는데, 빨면 사흘 만에 다시 묻어난다 — 가죽 안에 무엇이 아직 식지 않은 채라는 설이 한 줄로 전해 온다.',
-    art: `ornate fantasy armor: ash-grey pelt shoulder mantle, long coarse fur with faint singed tips, leather strap across the chest, eerie warm, crafted equippable armor game asset, ${STYLE}`,
+    art: `ornate fantasy armor, hero motif: long coarse ash-grey animal fur covering a shoulder mantle with the tips of the fur clearly singed darker as if burnt, draped pelt shoulder mantle with a leather strap across the chest, palette: ash-grey coarse fur body, darker singed fur tips, dark leather strap accent, front-facing view of the draped mantle, ${STYLE}, ${NEG}`,
   },
   {
     key: 'unmarked_grave_plate',
     slot: 'armor',
-    nameKo: '무명 묘의 흉갑',
+    nameKo: '한 박자 늦은 박동의 흉갑',
     region: '일반',
     tone: '비애',
-    lore: '한 묘지기가 묘를 파다 흙 속에서 가슴팍 흉갑 한 벌을 꺼냈다. 흉갑엔 어떤 표시도 없었다. 묘지기는 그것을 다시 묻지 않고 자기 헛간 벽에 걸어 두었다. 누군가 와서 「이거 내 형의 것이오」라고 말하기를 기다린다고 했다. 묘지기가 죽을 때까지 그 사람은 오지 않았다. 다음 묘지기가 그 흉갑을 같은 벽에 그대로 걸어 두고, 같은 사람을 기다린다.',
-    art: `ornate fantasy armor: plain unmarked breastplate, dark tarnished steel with a single soil-darkened patch over the heart, leather straps, sorrowful, crafted equippable armor game asset, ${STYLE}`,
+    lore: '한 사람이 자기 흉갑의 가슴 가운데에 작은 심장 한 점을 새겨 두고 떠났다. 누구의 심장이었는지, 자기 자신을 새긴 것인지 자기가 두고 온 사람을 새긴 것인지, 흉갑을 받은 다음 사람도 답을 정하지 못했다.\n다음 사람이 흉갑을 둘러 본 새벽, 자기 손바닥이 그 심장 자리에서 한 박자 늦게 따뜻해졌다. 그 한 박자가 누구의 박동이었는지는 두 사람 모두 끝내 알지 못한다.',
+    art: `ornate fantasy armor, hero motif: a single clearly visible warm brass-bronze HEART SHAPE inlaid prominently at the chest center of a dark tarnished steel breastplate, the heart shape is a recognizable simple symmetric heart silhouette in warm brass-bronze color contrasting against the dark steel body, dark tarnished steel breastplate with thin worn dull gold trim along the edges and small brass shoulder rivets, palette: dark tarnished steel breastplate body, single warm brass-bronze heart shape clearly visible at the chest center accent, thin dull gold trim along edges, dark leather straps at the sides with a brass belt buckle, front-facing view of the breastplate with the brass heart prominently at the center, ${STYLE}, ${NEG}, the heart shape must be clearly visible as a small symmetric heart silhouette at the chest center in warm brass color`,
   },
   {
     key: 'watchlantern_rig',
@@ -911,7 +912,7 @@ const ARMOR: CatalogItem[] = [
     region: '일반',
     tone: '담백',
     lore: '마을의 등잔 보초는 어깨에 작은 가죽 걸이를 매고 그 끝에 등잔을 매달아 다녔다. 한 보초가 평생 그 걸이만 매고 새벽을 돌았다. 그가 마지막 새벽에 등잔을 끄지 않고 자기 집 문 앞에 걸이를 풀어 두었다. 다음 새벽 등잔은 그대로 켜져 있었고, 다음 보초가 와서 그 등잔을 자기 어깨걸이에 옮겨 매고 새벽을 나섰다.',
-    art: `ornate fantasy armor: simple leather watchman shoulder rig, brass hook at the end, smoke-stained strap with a small unlit oil lantern dangling, plain useful, crafted equippable armor game asset, ${STYLE}`,
+    art: `ornate fantasy armor, hero motif: a simple leather watchman's shoulder rig with a polished brass hook at the end of a smoke-stained strap holding a small dark unlit oil lantern dangling from the hook, plain shoulder harness across the chest, palette: dark smoke-stained leather strap body, polished warm brass hook accent, small dark unlit lantern dangling at the end, front-facing view of the rig worn across the shoulder, ${STYLE}, ${NEG}`,
   },
   {
     key: 'orc_trophy_pauldrons',
@@ -920,7 +921,7 @@ const ARMOR: CatalogItem[] = [
     region: '오크 부락',
     tone: '영웅담',
     lore: '한 오크 전사가 평생 모은 적의 송곳니를 자기 견갑 두 짝의 가장자리에 박아 둘렀다. 송곳니 하나하나가 다른 각도로 박혀 있어, 멀리서 보면 새벽 햇살이 일곱 방향으로 부서져 나갔다. 그가 마지막 전장에서 죽었을 때 견갑은 그의 어깨에서 떨어지지 않은 채 부락으로 돌아왔다. 부락은 견갑을 내리지 않고 그를 묻었다 — 송곳니의 새벽 햇살은 묘 위에서 일곱 방향으로 한 번 더 부서져 나갔다.',
-    art: `ornate fantasy armor: massive orcish shoulder pauldrons with rows of animal fangs riveted along the rims, dark iron base plates, sinew laces, monumental tribal, crafted equippable armor game asset, ${STYLE}`,
+    art: `ornate fantasy armor, hero motif: a dense row of curved yellowed animal fangs riveted along the rim edges of massive orcish shoulder pauldrons at different angles, large dark iron base shoulder plates with sinew lacing, palette: dark iron pauldron base, yellowed bone fang trim along the rims, dark sinew lacing accent, front-facing view of the pauldron pair, ${STYLE}, ${NEG}`,
   },
   {
     key: 'silent_choir_hood',
@@ -929,7 +930,7 @@ const ARMOR: CatalogItem[] = [
     region: '타락천사',
     tone: '비애',
     lore: '한 성가대원이 노래를 잃은 새벽부터 평생 두건을 깊이 눌러쓰고 다녔다. 그가 떠난 새벽 두건은 자기 자리 빈 의자 위에 단정히 놓여 있었다. 두건의 안쪽엔 그가 마지막으로 부르려던 한 줄의 가사가 자수로 새겨져 있었다. 자수실은 자기 자리에서 마지막 글자만 한 박자 늦게 멎어 있었다 — 어느 신관도 그 한 박자의 자리에 손을 더 대지 않는다.',
-    art: `ornate fantasy armor: deep grey choir hood, soft pleated cloth, single line of fine silver embroidery hidden inside the brim with the last letter unfinished, mournful sacred, crafted equippable armor game asset, ${STYLE}`,
+    art: `ornate fantasy armor, hero motif: a clearly visible row of fine bright silver embroidered angular letter marks running along the entire inside brim of a folded-back choir hood that abruptly stops mid-stroke leaving the rest of the brim smooth blank, deep charcoal grey pleated cloth hood with the brim folded back prominently showing the inner embroidery, palette: deep charcoal grey pleated cloth body, distinctly visible bright silver embroidery letter marks on the inner brim stopping halfway, soft black shadow inside the hood, front-facing view, ${STYLE}, ${NEG}, the silver embroidery text must be clearly visible on the inner brim stopping abruptly halfway`,
   },
   {
     key: 'bog_breath_mask',
@@ -938,7 +939,7 @@ const ARMOR: CatalogItem[] = [
     region: '늪지대',
     tone: '기괴',
     lore: '늪 깊은 자리에선 가끔 숨이 멎을 만큼 시큼한 안개가 한 번씩 일었다. 늪 사람들은 가죽 숨가리개를 만들어 코와 입을 가렸다. 어느 노인이 한 번 가리개를 벗고 그 안개에 일부러 코를 들이댔다. 노인은 사흘 만에 마을로 돌아왔고, 그날 이후로 한 마디도 하지 않았다. 그 노인이 마지막으로 가리개를 자기 손주의 얼굴에 둘러 주고 한 번 끄덕인 새벽 이후, 그 가리개는 손주의 얼굴에만 들러붙어 있다.',
-    art: `ornate fantasy armor: leather marsh breathing mask covering the lower face, dark waxed hide with small breath holes and bone toggles, faint algae stain, eerie, crafted equippable armor game asset, ${STYLE}`,
+    art: `ornate fantasy armor, hero motif: a clearly visible distinct horizontal row of multiple small round dark BREATH HOLES PUNCHED prominently across the entire front face plate of a wide oval leather breathing half-mask, dark waxed leather marsh breathing mask with pale bone toggle straps wrapping around the head, palette: dark waxed leather mask body, distinctly visible multiple round dark breath hole openings clearly punched in a row across the front, pale bone toggle straps accent, faint dull green algae stain accent at the edges, front-facing view of the mask, ${STYLE}, ${NEG}, the row of breath holes must be clearly visible as multiple small dark round dots punched in the leather`,
   },
   {
     key: 'herald_banner_cloak',
@@ -947,7 +948,7 @@ const ARMOR: CatalogItem[] = [
     region: '일반',
     tone: '영웅담',
     lore: '한 전령이 자기 부대의 깃발을 망토로 둘러 차고 다녔다. 부대가 흩어진 새벽, 깃발만 남은 자리에 그가 한 사람으로 서 있었다. 그가 마지막으로 망토를 펼친 새벽엔 마을의 모든 창문이 그 깃발을 한 번씩 마주 보았다. 망토는 그 새벽 이후 그의 어깨에서 내려진 적이 없다 — 그가 묻힌 묘 위에서, 깃발은 새벽마다 한 번씩 바람에 펄럭인다.',
-    art: `ornate fantasy armor: long heralding cloak shaped from a faded regimental banner, blue and gold field with a single bold crest at the back, brass clasps, monumental, crafted equippable armor game asset, ${STYLE}`,
+    art: `ornate fantasy armor, hero motif: a long heralding cloak made from a faded regimental banner cloth with a single bold central crest emblem clearly visible at the back of the cloak, long draped cloak with polished brass clasps at the neck, palette: faded soft blue and gold banner cloth body, single bold central crest emblem accent at the back, polished warm brass clasps, back-facing view of the cloak showing the crest at center back, ${STYLE}, ${NEG}`,
   },
   {
     key: 'late_mirror_shield',
@@ -956,7 +957,7 @@ const ARMOR: CatalogItem[] = [
     region: '일반',
     tone: '수수께끼',
     lore: '한 기사의 방패는 표면이 거울처럼 매끄러웠다. 그 거울엔 든 사람의 얼굴이 비치되, 한 박자 늦게 비쳤다. 기사가 거울에 자기 얼굴을 마주 본 새벽엔 자기보다 한 박자 늙은 자기가 마주 보고 있었다고 한다. 기사가 마지막 새벽에 방패를 내려놓고 거울에 한 번 손을 댄 자리에, 한 박자 늙은 자기의 손이 같이 닿았다.\n그 손이 그의 손을 가만히 잡아 거울 밖으로 한 박자 끌어내 주었는지, 아니면 그 반대였는지는, 손자 대에서도 답을 정하지 못한다.',
-    art: `ornate fantasy armor: round mirror shield with a polished silver face, faint engraved sun-rays around the rim, leather grip, mysterious reflective, crafted equippable armor game asset, ${STYLE}`,
+    art: `ornate fantasy armor, hero motif: a round shield with the ENTIRE FACE drawn as a BRIGHT POLISHED SILVER MIRROR-LIKE REFLECTIVE SURFACE like an actual smooth mirror disc shiny and bright with a pale silver-blue gradient highlight suggesting reflective sheen, the face is OBVIOUSLY POLISHED MIRROR-BRIGHT SILVER NOT dark NOT black NOT a gem, surrounded by clearly engraved sun-ray patterns radiating outward along the rim, simple round buckler with a leather grip strap visible behind, palette: BRIGHT POLISHED MIRROR-BRIGHT SILVER face body shining like a real mirror with pale silver-white sheen, darker engraved sun-ray patterns along the rim accent, dark leather grip strap behind accent, front-facing view of the shield with the bright silver mirror face clearly visible, ${STYLE}, ${NEG}, the shield face MUST be bright polished mirror silver like an actual mirror NOT dark NOT a black orb NOT a gem NOT recessed shadow`,
   },
   {
     key: 'twice_resoled_boots',
@@ -965,7 +966,7 @@ const ARMOR: CatalogItem[] = [
     region: '일반',
     tone: '담백',
     lore: '한 행상이 평생 신은 가죽 장화다. 굽이 두 번 닳아 두 번 갈았다. 첫 굽은 자기 길에, 둘째 굽은 누군가의 길에, 마지막 굽은 자기가 누구의 길도 가지 않은 새벽에 닳았다. 마지막 새벽 행상은 장화를 가만히 벗어 자기 마루 한가운데에 두고, 그날부터 다른 신을 신지 않았다. 다음 식구가 그 장화를 신어 보고, 자기 발에 맞으면 그대로 끌고 나간다.',
-    art: `ornate fantasy armor: well-worn leather travel boots, twice-resoled soles, softened creased uppers, plain laces, calm road mood, crafted equippable armor game asset, ${STYLE}`,
+    art: `ornate fantasy armor, hero motif: a pair of well-worn leather travel boots with visibly two distinctly layered sole stripes at the bottom showing the boots have been resoled twice, softened creased dark leather uppers with plain laces, palette: warm dark brown weathered leather upper body with creased fold marks, two visibly different colored stripe-layers in the sole, simple plain laces, side profile of the boots, ${STYLE}, ${NEG}`,
   },
 ];
 
@@ -980,7 +981,7 @@ const ACCESSORIES: CatalogItem[] = [
     region: '늪지대',
     tone: '담백',
     lore: '늪 마을의 아이는 처음 혼자 늪에 다녀온 새벽, 자기가 마지막으로 밟은 마른 자리의 조약돌 한 알을 주워 끈에 꿰어 목에 건다. 무슨 영험이 있어서가 아니라, 그 한 알이 그 새벽의 자기 발자국을 기억하게 해 주기 때문이다. 한 노인이 자기 평생의 펜던트를 일곱 알로 셀 수 있게 늘려 매고 다녔다. 그가 마지막 늪에 들고 돌아오지 않은 새벽, 그의 손주는 자기 펜던트의 첫 한 알을 끈에서 풀어 그 자리에 가만히 놓고 왔다.',
-    art: `ornate fantasy pendant: a single polished teal-grey marsh pebble set in a worn-bronze bail, thin braided cord, simple drop, plain quiet, crafted equippable trinket, ${STYLE}`,
+    art: `ornate fantasy trinket, hero motif: a single smooth polished teal-grey marsh river pebble set in a worn-bronze bail at the top, simple humble pendant hanging from a thin braided dark cord, palette: smooth teal-grey polished pebble body, worn bronze metal bail, dark braided cord, front-facing view of the pendant hanging from the cord, ${STYLE}, ${NEG}`,
   },
   {
     key: 'bog_fang_choker',
@@ -989,7 +990,7 @@ const ACCESSORIES: CatalogItem[] = [
     region: '늪지대',
     tone: '기괴',
     lore: '늪 깊은 자리에서 건져 올린 큰 송곳니 하나를 가죽끈에 꿰어 목 가까이에 매단 초커다. 끼고 다닌 사람은 비가 며칠째 이어지면 슬그머니 송곳니를 옷깃 안쪽으로 돌려 찼다. 살갗에 닿는 자리가 미지근해진다 했고, 그 미지근함이 어디서 오는 것인지는 끼고 있던 본인도 답을 정하지 않았다. 끼어 본 사람마다 같은 버릇을 같은 속도로 들였다 — 송곳니를 안쪽으로 돌리는 손짓이 한 사람에서 다음 사람으로 그대로 옮겨 갔다.',
-    art: `ornate fantasy choker: thick leather neck-cord with one large curved bog fang dangling close to the throat, faint yellowed enamel, swamp-stained binding, eerie, crafted equippable trinket, ${STYLE}`,
+    art: `ornate fantasy trinket, hero motif: one large curved yellowed bone fang dangling close to the throat from a thick dark leather neck cord, the fang has visible enamel curve and a darker root at the top where it is bound to the cord, palette: thick dark swamp-stained leather cord, yellowed pale bone fang body with darker tip and root, front-facing view of the choker laid flat with the fang hanging at the bottom center, ${STYLE}, ${NEG}`,
   },
   {
     key: 'frogcall_silver_whistle',
@@ -998,7 +999,7 @@ const ACCESSORIES: CatalogItem[] = [
     region: '늪지대',
     tone: '위트',
     lore: '한 늪 어부가 개구리 우는 소리를 흉내 내려고 깎아 만든 작은 은피리다. 어부가 불면 늪의 개구리들이 한 박자 늦게 따라 울었다. 한 젊은이가 호기심에 그 피리를 받아 불었더니, 개구리들이 일제히 입을 다물고 한참 그를 빤히 쳐다보았다. 어부가 그 옆에서 배를 잡고 웃으며 한 마디 했다.\n「자네는 가락이 좀 다르네.」 젊은이는 그 새벽 이후로 피리를 어부에게 도로 돌려주었다.',
-    art: `ornate fantasy whistle pendant: small silver flute-shaped whistle on a thin braided cord, tiny frog-figure cast at the mouthpiece, faint algae green patina, comedic, crafted equippable trinket, ${STYLE}`,
+    art: `ornate fantasy trinket, hero motif: a prominent and clearly visible small cast silver frog figure mounted boldly at the mouthpiece end of an aged whistle pendant, the frog figure is detailed and easy to recognize at the top, short tarnished aged silver flute-shaped whistle hung on a thin braided dark cord, heavily oxidized aged silver body covered in noticeable algae-green tarnish patches across most of the surface with brighter silver only showing on the wear-edges, palette: aged tarnished silver whistle body, prominent algae-green tarnish covering most of the body, dark braided cord at the top, side profile of the whistle hanging from the cord, ${STYLE}, ${NEG}, the frog figure must be clearly visible at the top, the tarnish must be prominent not faint`,
   },
   {
     key: 'drowned_lovers_ring',
@@ -1007,7 +1008,7 @@ const ACCESSORIES: CatalogItem[] = [
     region: '늪지대',
     tone: '비애',
     lore: '두 연인이 짝지어 끼던 두 반지 중, 늪 어부의 그물에 한 짝만 걸려 올라왔다. 다른 한 짝은 늪 어딘가의 더 깊은 자리에 그대로 있다. 어부는 그 반지를 자기가 끼지 않고, 늪 마을 사당의 작은 함에 넣어 두었다. 늪 사람들은 매년 그 함을 한 번씩 열어 본다. 다른 한 짝이 누구의 손에 들려 함에 들어오는 날까지, 두 반지는 같은 사당 안에서 서로 한 자리를 비워 두기로 약속되어 있다.',
-    art: `ornate fantasy ring: simple silver-brown band with a single small teal stone, gently water-worn, faint swamp tarnish, mournful, crafted equippable trinket, ${STYLE}`,
+    art: `ornate fantasy trinket, hero motif: single small round teal blue-green gemstone seated in a tiny bezel on the top of a narrow ring band, plain undecorated narrow tarnished silver ring band with one small teal gem and gently water-worn smooth surface, palette: soft tarnished silver band, single bright teal blue-green gem, no other colors anywhere, top-down view of the ring lying flat showing the band circle and the gem on top, ${STYLE}, ${NEG}`,
   },
   {
     key: 'orc_brag_torc',
@@ -1016,7 +1017,7 @@ const ACCESSORIES: CatalogItem[] = [
     region: '오크 부락',
     tone: '위트',
     lore: '오크 부락의 전사는 자기 자랑거리가 늘어나면 자기 목에 두꺼운 청동 토크를 한 줄씩 덧붙여 갔다. 자랑할 거리가 모자라면 토크 한 줄을 떼어 모닥불에 던지는 게 또 다른 풍습이다 — 잘 안 떼는 풍습이긴 하다. 한 젊은 오크는 첫해에 토크 두 줄을 덧붙였다가, 늙은 전사가 자기 토크 일곱 줄을 한 번에 떼어 모닥불에 던지는 걸 보고 자기도 한 줄을 슬쩍 떼어 같이 던졌다. 두 오크는 모닥불 양쪽에 앉아 그 풍습이 잘 안 떼는 풍습인 이유를 같이 웃었다.',
-    art: `ornate fantasy neck torc: thick twisted bronze neck-ring with several layered bands, animal-tooth ornament dangling at the front, dark patina, jovial proud, crafted equippable trinket, ${STYLE}`,
+    art: `ornate fantasy trinket, hero motif: a thick twisted bronze neck-ring with several visibly stacked layered bands and a single small yellowed animal-tooth ornament dangling at the front center, layered bronze torc with dark patina across the surface, palette: dark patinated warm bronze body, yellowed tooth ornament accent, front-facing view of the torc laid open with the tooth hanging at the bottom center, ${STYLE}, ${NEG}`,
   },
   {
     key: 'warband_knuckle_charm',
@@ -1025,7 +1026,7 @@ const ACCESSORIES: CatalogItem[] = [
     region: '오크 부락',
     tone: '영웅담',
     lore: '오크 부락의 전사단은 결단의 새벽이면 같은 모양의 작은 주먹 부적을 하나씩 받아 자기 손목에 매었다. 한 부적엔 다른 부적엔 없는 작은 자국이 한 줄 새겨져 있었는데, 그 자국이 새겨진 부적을 받은 자는 그 새벽 가장 앞에 선다는 규칙이었다. 그날의 부적은 가장 어린 오크의 손목에 매여 있었다. 부락은 그 새벽 줄을 한 발도 흩뜨리지 않았다 — 가장 앞의 어린 오크가 가장 늦게까지 발을 떼지 않았기 때문이다.',
-    art: `ornate fantasy bracelet charm: braided leather wrist-cord with a small clenched-fist iron pendant, single small notch carved on the knuckle, dark patina, monumental tribal, crafted equippable trinket, ${STYLE}`,
+    art: `ornate fantasy trinket, hero motif: a small dark iron pendant drawn UNAMBIGUOUSLY as a CLENCHED HUMAN FIST SHAPE clearly recognizable as a closed fist with four knuckle bumps visible across the top and a visible thumb wrapping over the front like a real clenched hand silhouette, with a single small carved notch line across one knuckle, dangling from a braided dark leather wrist cord, the pendant must be drawn OBVIOUSLY as a clenched fist NOT a leaf NOT a shield NOT a teardrop, palette: dark patinated iron pendant body shaped clearly as a closed fist with knuckle bumps and thumb visible, single bright pale notch mark on one knuckle accent, braided dark leather wrist cord, front-facing view of the recognizable clenched fist pendant hanging from the cord, ${STYLE}, ${NEG}, the pendant MUST be unambiguously drawn as a closed clenched fist with knuckles and thumb visible NOT a leaf NOT a shield NOT a teardrop NOT an abstract shape`,
   },
   {
     key: 'orc_ration_tally_tag',
@@ -1034,7 +1035,7 @@ const ACCESSORIES: CatalogItem[] = [
     region: '오크 부락',
     tone: '일상',
     lore: '부락의 식량지기는 자기 목에 작은 가죽 셈표를 매고 다녔다. 한 칸이 한 끼였다. 길고 험한 길에 나선 부락에선 그 셈표가 곧 모든 사람의 다음 끼니의 줄이었다. 한 식량지기는 자기 칸을 두 번 줄였고, 그 두 번을 자기 셈표가 아닌 다른 사람들의 셈표에 한 칸씩 더 그어 넣었다. 부락은 그가 죽은 새벽 그 셈표를 식량지기 천막의 가운데 기둥에 걸어 두었다.',
-    art: `ornate fantasy tag pendant: small rectangular leather tally tag on a sinew cord, dense vertical hash marks in two columns, bone toggle, plain useful, crafted equippable trinket, ${STYLE}`,
+    art: `ornate fantasy trinket, hero motif: a small rectangular leather tally tag with the FACE OBVIOUSLY COVERED in DENSE VERTICAL HASH TALLY LINES drawn in TWO PARALLEL COLUMNS like IIII IIII tally counting marks NOT letters NOT numbers NOT alphabetic glyphs just pure vertical line tally marks like prison count strokes, the tally hash marks must be drawn as multiple thin vertical lines grouped in two side-by-side columns, simple small rectangular hide tag hanging from a thin sinew cord with a pale bone toggle at the top, palette: tanned dark brown leather tag body OBVIOUSLY COVERED in MANY thin darker vertical hash tally line marks in TWO parallel columns NOT alphabetic letters NOT numerals, pale bone toggle, thin sinew cord, front-facing view of the tally tag hanging straight clearly showing the dense hash tally lines, ${STYLE}, ${NEG}, the tag face MUST be drawn with dense vertical hash tally line marks as IIII IIII counting strokes NOT alphabet letters NOT numbers NOT 1S NOT readable text just pure tally line marks`,
   },
   {
     key: 'chiefs_riddle_bead',
@@ -1043,7 +1044,7 @@ const ACCESSORIES: CatalogItem[] = [
     region: '오크 부락',
     tone: '수수께끼',
     lore: '족장이 새로 들어선 새벽 그의 손에 쥐여지는 구슬이 있다. 구슬엔 한 줄의 수수께끼가 새겨져 있는데, 족장은 자기 임기 동안 그 답을 부락의 누구에게도 말하면 안 된다. 답한 자가 다음 족장이 된다는 규칙도 같이 전한다. 한 족장은 평생 그 답을 말하지 않고 떠났다. 그 다음 족장도 그 답을 알아도 말하지 않았다 — 부락의 어느 늙은 전사가 자기 평생 본 족장 일곱 명 중 다섯이 그 답을 알았다고 짐작했지만, 그 짐작 역시 자기 무덤까지 가져갔다.',
-    art: `ornate fantasy bead pendant: a single large polished tribal stone bead with a spiraling rune-line engraved across it, leather thong, mysterious, crafted equippable trinket, ${STYLE}`,
+    art: `ornate fantasy trinket, hero motif: a single large polished tribal stone bead with a continuous spiraling rune-line engraving running across its entire surface, simple humble bead pendant hanging from a dark leather thong, palette: polished tribal earth-grey stone bead body, deep darker spiraling rune-line engraving, dark leather thong cord, front-facing view of the bead on the thong, ${STYLE}, ${NEG}`,
   },
   {
     key: 'runeshard_amulet',
@@ -1052,7 +1053,7 @@ const ACCESSORIES: CatalogItem[] = [
     region: '고대 룬 산맥',
     tone: '장엄',
     lore: '룬 산맥의 한 봉우리가 흔들리던 새벽 떨어진 바위 조각이다. 깨진 면에 룬 한 줄의 시작 부분이 새겨져 있다. 어느 학자가 그 다음 줄을 어디서 찾아야 할지 평생을 두고 산을 돌아다녔다. 학자가 떠난 뒤 부적은 그의 책상 위에 놓여 있었고, 책상의 어느 자리에 마지막 줄이 와야 할지가 학자의 손으로 옅게 그어져 있었다. 다음 학자가 그 자리에 다음 조각을 놓는 일에 자기 평생을 걸기로 한 새벽, 그는 자기 손목에 부적을 처음 매었다.',
-    art: `ornate fantasy amulet: a single jagged stone shard hung on a thin braided cord, pale stone-grey with deep blue rune-line broken at the edge, simple iron bail, monumental, crafted equippable trinket, ${STYLE}`,
+    art: `ornate fantasy trinket, hero motif: single jagged broken-edged triangular stone shard pendant with the start of one carved deep cobalt blue rune line interrupted abruptly at the fractured edge, rough irregular stone fragment hung on a thin twisted braided dark cord with a simple iron loop bail at the top, palette: pale weathered stone grey shard body, deep cobalt blue carved rune line, dark twine brown braided cord, front-facing view of the shard hanging from the cord, ${STYLE}, ${NEG}`,
   },
   {
     key: 'echo_stone_earring',
@@ -1061,7 +1062,7 @@ const ACCESSORIES: CatalogItem[] = [
     region: '고대 룬 산맥',
     tone: '수수께끼',
     lore: '산이 흔들린 새벽 떨어진 돌 한 알을 깎아 만든 귀걸이다. 가까이 들으면 산의 한 박자 늦은 울림이 귓속으로 들어온다. 그 울림이 좋아 끼고 다니던 한 산사람은, 자기 귀에서 들리는 울림이 자기 박자보다 한 박자 더 늦어진 새벽부터 그 귀걸이를 한쪽만 끼고 다녔다 — 다른 쪽 귀로 사람의 말을 마저 듣기 위해서였다고 한다. 그가 마지막으로 한쪽 귀걸이를 풀어 자기 산문 돌 옆에 놓아둔 새벽 이후로, 그 자리에 새 귀걸이 한 짝이 매년 한 번씩 늘어 간다.',
-    art: `ornate fantasy earring: a single small carved stone bead on a thin silver hook, faint blue rune-spiral, simple drop, mysterious, crafted equippable trinket, ${STYLE}`,
+    art: `ornate fantasy trinket, hero motif: a single small carved round stone bead with a delicate blue rune-spiral pattern visibly engraved into its surface, dangling from a thin polished silver hook earring, palette: pale carved stone bead body, deep cobalt blue rune-spiral engraving on the bead, polished silver hook, front-facing view of the earring with the bead hanging down, ${STYLE}, ${NEG}`,
   },
   {
     key: 'last_carver_ring',
@@ -1070,7 +1071,7 @@ const ACCESSORIES: CatalogItem[] = [
     region: '고대 룬 산맥',
     tone: '비애',
     lore: '늙은 룬 새김장이가 자기 손에 끼고 평생 룬을 새긴 반지다. 반지 안쪽 면에 새김장이가 마지막으로 새기지 못한 한 줄의 룬이 절반만 새겨져 있다. 새김장이가 마지막 새벽에 자기 손에서 반지를 빼지 않은 채 잠들었고, 그 새벽 그의 손가락 한가운데가 그 절반의 룬에 닿아 있었다 — 손가락의 그 자리가 평소보다 옅게 푸르렀다고, 그 새벽 그의 곁에 있던 제자가 한 줄로 기록을 남겼다.',
-    art: `ornate fantasy ring: simple polished pale-stone signet ring, faint blue rune-cuts half-finished on the inner band, plain band, mournful scholarly, crafted equippable trinket, ${STYLE}`,
+    art: `ornate fantasy trinket, hero motif: a polished pale stone signet ring with a single half-finished blue rune carving visibly cut into the inner band that abruptly ends mid-stroke, plain undecorated pale stone band shown from a slightly tilted angle so the inner band engraving is partially visible through the ring opening, palette: pale polished stone-grey band, deep cobalt blue half-finished rune carving on the inner band, soft shadow inside the ring opening, front-facing tilted view, ${STYLE}, ${NEG}`,
   },
   {
     key: 'surveyor_plumb_pendant',
@@ -1079,7 +1080,7 @@ const ACCESSORIES: CatalogItem[] = [
     region: '고대 룬 산맥',
     tone: '담백',
     lore: '한 측량사가 평생 산의 비탈을 재고 다닌 다림추를 자기 펜던트로 매고 다녔다. 추가 가만히 있는지 살짝 기울었는지를 자기 가슴께에서 한 번 들어 보고 그날의 비탈을 짐작했다. 측량사가 마지막 산을 잰 새벽 추는 오랜만에 가만히 멈춰 있었다. 다음 측량사가 그 펜던트를 받아 매고 같은 비탈에 섰을 때, 추는 그 새벽처럼 가만히 멈춰 있다가 한 박자 늦게 가는 떨림으로 답했다.',
-    art: `ornate fantasy pendant: a small brass plumb-bob hanging from a fine cord, faint engraved measurement marks along the line, simple polished cone, plain scholarly, crafted equippable trinket, ${STYLE}`,
+    art: `ornate fantasy trinket, hero motif: a small polished cone-shaped brass plumb-bob hanging from a fine thin cord with delicate engraved measurement tick marks visible along the cord length, simple humble surveyor's plumb pendant, palette: polished warm brass plumb-bob, pale fine cord with darker engraved tick marks, front-facing view of the plumb-bob hanging straight down, ${STYLE}, ${NEG}`,
   },
   {
     key: 'ember_bead_bracelet',
@@ -1088,7 +1089,7 @@ const ACCESSORIES: CatalogItem[] = [
     region: '서쪽 화산',
     tone: '담백',
     lore: '서쪽 화로의 풀무지기들은 화로의 마지막 잉걸 한 알을 식혀 단단하게 굳힌 구슬로 자기 팔찌를 한 알씩 늘려 갔다. 풀무지기 한 사람의 팔찌는 그 사람이 살린 화로의 새벽 수만큼 늘어났다. 한 풀무지기는 평생 일곱 알을 모았고, 자기 마지막 새벽 그 일곱 알을 자기 견습의 빈 팔찌에 한 알씩 옮겨 매주고 자기 손목엔 빈 끈만 남겼다. 견습은 그 일곱 알의 끈 위에 자기 첫 알을 덧대 매고 풀무 옆에 앉았다.',
-    art: `ornate fantasy bracelet: simple twisted leather wrist-cord strung with several small cooled ember-beads, faint warm orange-grey hues, plain band, calm craftsman, crafted equippable trinket, ${STYLE}`,
+    art: `ornate fantasy trinket, hero motif: several small cooled ember-stone beads in warm orange-grey hues strung on a twisted leather wrist cord visible as a row across the bracelet, simple bracelet with a humble leather band, palette: twisted dark brown leather wrist cord, warm orange-grey ember-stone beads accent, front-facing view of the bracelet laid out flat, ${STYLE}, ${NEG}`,
   },
   {
     key: 'ashglass_pendant',
@@ -1097,7 +1098,7 @@ const ACCESSORIES: CatalogItem[] = [
     region: '서쪽 화산',
     tone: '수수께끼',
     lore: '서쪽 화산이 다 식은 새벽, 잿더미에서 얇은 유리 한 조각이 발견되었다. 누가 어떻게 만들었는지, 잿더미가 스스로 유리로 굳은 것인지 답한 사람은 없다. 그 조각을 펜던트로 매고 다닌 한 사람의 가슴께에선 새벽 햇살이 한 박자 늦게 부서져 나갔다 — 그가 그 새벽의 박자를 어디에 두고 살았는지, 옆 사람도 본인도 답하지 않았다.',
-    art: `ornate fantasy pendant: thin translucent volcanic-glass shard set in a simple silver bail, faint smoky ash swirl inside, thin silver chain, mysterious, crafted equippable trinket, ${STYLE}`,
+    art: `ornate fantasy trinket, hero motif: a thin translucent volcanic-glass shard pendant with a visible smoky ash swirl pattern inside the glass, simple silver bail at the top with a thin silver chain, palette: pale translucent grey volcanic glass body with darker smoky swirl inside, polished silver bail and chain, front-facing view of the pendant hanging from the chain, ${STYLE}, ${NEG}`,
   },
   {
     key: 'scorch_medallion',
@@ -1106,7 +1107,7 @@ const ACCESSORIES: CatalogItem[] = [
     region: '서쪽 화산',
     tone: '영웅담',
     lore: '드래곤의 숨결을 한 번 정면으로 받은 자가 살아 돌아온 새벽, 그의 가슴팍 갑옷에서 떨어진 메달 한 점이다. 메달의 가운데가 검게 그을려 본래의 문장이 한쪽으로 비껴 남았다. 그가 메달을 자기 마을 회당에 걸어 두었고, 매년 새 화로지기가 한 번씩 메달의 그을린 자리에 손바닥을 댄다. 손바닥이 잠깐 따뜻해지는 자리가 사람마다 다르다 — 다음 회당의 새 화로지기가 그 자리에 한 번 더 손을 댄다.',
-    art: `ornate fantasy medallion: round brass medal with a deep scorched dark patch off-center, faint engraved crest half visible, simple ring loop, monumental, crafted equippable trinket, ${STYLE}`,
+    art: `ornate fantasy trinket, hero motif: a deep scorched dark patch visibly burnt off-center on a round brass medal making the original engraved crest only half visible on one side, simple round medallion with a ring loop at the top, palette: warm polished brass medallion body, darker scorched patch off-center, half-visible engraved crest on the unburnt side, simple ring loop accent, front-facing view of the medallion, ${STYLE}, ${NEG}`,
   },
   {
     key: 'cinder_eye_charm',
@@ -1115,7 +1116,7 @@ const ACCESSORIES: CatalogItem[] = [
     region: '서쪽 화산',
     tone: '기괴',
     lore: '화로 깊은 자리의 잉걸 가운데 가끔 사람 눈 모양으로 굳어 있는 것이 있다. 화로지기들은 그것을 가볍게 꺼내 식혀 자기 부적의 알로 박지 않았다. 그것을 박은 부적 한 점이 있는데, 박은 사람이 누구인지 화로지기들도 모른다. 부적이 한 화로지기의 작업대 위에 놓인 새벽이면, 그 잉걸 눈은 가는 떨림으로 한 번 깜빡인다 — 누가 그 깜빡임을 받아 받아 들어야 하는지는 화로지기들의 다음 새벽이 답을 정한다.',
-    art: `ornate fantasy charm: small dark cinder-stone shaped like a closed eye, set in scorched copper bezel, single leather thong, eerie organic, crafted equippable trinket, ${STYLE}`,
+    art: `ornate fantasy trinket, hero motif: a small dark cinder-stone shaped distinctly like a closed almond-shaped eye with a visible curved lid line down the middle, set in a scorched copper bezel hung on a single leather thong, palette: dark cinder-stone eye body with darker eye-lid line, scorched copper bezel, dark leather thong cord, front-facing view of the charm, ${STYLE}, ${NEG}`,
   },
   {
     key: 'feather_locket',
@@ -1124,7 +1125,7 @@ const ACCESSORIES: CatalogItem[] = [
     region: '타락천사',
     tone: '비애',
     lore: '추락한 자가 떨어진 자리에 한 가닥 검은 깃이 남았다. 한 신관이 그 깃을 작은 로켓 안에 가만히 접어 넣었다. 신관이 죽은 새벽 로켓은 신전 계단 위에 놓여 있었고, 그 안의 깃은 신관이 접은 그대로였다. 다음 신관이 로켓을 받아 자기 목에 매고도 한 번도 열어 보지 않았다 — 안에 든 것이 신관이 접어 둔 그대로인지, 그렇지 않은지를 굳이 보지 않기로 마음을 정한 새벽이 있었다.',
-    art: `ornate fantasy locket: small oval silver locket on a thin chain, faint engraved feather pattern on the lid, soft tarnish at the hinge, mournful sacred, crafted equippable trinket, ${STYLE}`,
+    art: `ornate fantasy trinket, hero motif: a single clearly engraved feather shape on the front lid of a small oval polished silver locket sealed shut, the locket hangs from a thin silver chain, palette: polished silver locket body, darker engraved feather pattern on the lid, faint dark tarnish at the hinge edge, thin silver chain, front-facing view of the closed locket, ${STYLE}, ${NEG}`,
   },
   {
     key: 'fallen_bell_charm',
@@ -1133,7 +1134,7 @@ const ACCESSORIES: CatalogItem[] = [
     region: '타락천사',
     tone: '장엄',
     lore: '신전의 큰 종이 떨어지던 새벽 깨진 종의 가장 작은 조각으로 깎은 부적이다. 손에 쥐고 가만히 들면 그 새벽의 한 박자가 손바닥으로 들어온다. 신전 사람들은 그 한 박자를 따라 흩어졌다 — 흩어진 자리에서 그들은 각자 자기 새 자리에 그 한 박자만큼의 자국을 한 번씩 남겼다고 한다.',
-    art: `ornate fantasy charm: small fragment of a broken bronze bell shaped into a teardrop pendant, fine engraved gold-trim arc, thin silver chain, monumental sacred, crafted equippable trinket, ${STYLE}`,
+    art: `ornate fantasy trinket, hero motif: a teardrop-shaped pendant carved from a fragment of a broken bronze temple bell with the curved outer edge clearly retaining the original bell curvature, fine engraved gold-trim arc running along the curved outer edge, hung on a thin silver chain, palette: aged dark bronze pendant body, fine gold-trim engraving along the outer curve, thin silver chain, front-facing view of the teardrop pendant, ${STYLE}, ${NEG}`,
   },
   {
     key: 'crooked_halo_hairpin',
@@ -1142,7 +1143,7 @@ const ACCESSORIES: CatalogItem[] = [
     region: '타락천사',
     tone: '위트',
     lore: '추락한 자가 떠난 새벽, 한 신전 막내가 추락한 자의 후광이 굳은 자리에서 작은 금빛 조각을 얇게 잘라 자기 머리에 비스듬히 꽂았다. 어른 신관이 그 비뚠 자리를 두고 한참을 입을 벌렸다. 막내는 그 어른의 손이 닿기 전에 한 발 뒤로 물러서며 말했다.\n「이건 일부러 비뚜로 꽂은 거예요.」 어른은 뭐라 답할 말을 찾지 못해 결국 자기 머리도 한 번 만져 보았다.',
-    art: `ornate fantasy hairpin: a thin pale-gold pin shaped from a piece of a broken halo, bent slightly off-axis at the tip, faint feather engraving along the shaft, comedic sacred, crafted equippable trinket, ${STYLE}`,
+    art: `ornate fantasy trinket, hero motif: a thin pale-gold hairpin shaped from a fragment of a broken halo with the tip visibly bent slightly off-axis to one side giving it a charmingly crooked silhouette, narrow gold pin with a faint feather engraving running along the shaft, palette: warm pale gold pin body, slightly darker engraved feather pattern along the shaft, side profile showing the bent tip clearly, ${STYLE}, ${NEG}, the tip is clearly bent off-center not straight`,
   },
   {
     key: 'hollow_prayer_beads',
@@ -1151,7 +1152,7 @@ const ACCESSORIES: CatalogItem[] = [
     region: '타락천사',
     tone: '수수께끼',
     lore: '한 신관이 평생 손에 꿰고 다닌 기도 구슬꿰미의 일곱 알 중 한 알이 안이 텅 비어 있었다. 신관이 어느 새벽 그 한 알에 손가락을 한 번 더 쥐어 본 새벽, 다음 알로 그의 손이 넘어가지 않고 한참 멎어 있었다. 그가 떠난 뒤 구슬꿰미는 그의 책상 위에 놓여 있었고, 빈 알의 자리가 다른 알들과 한 줄로 단정히 놓여 있었다 — 그 한 알이 그날 새벽 더 가벼워졌는지, 더 무거워졌는지는 다음 신관도 답을 정하지 못했다.',
-    art: `ornate fantasy beads: a string of seven small wooden prayer beads on a knotted cord, the central bead hollow and slightly translucent, simple tassel, mysterious sacred, crafted equippable trinket, ${STYLE}`,
+    art: `ornate fantasy trinket, hero motif: a vertical string of EXACTLY SEVEN COUNTABLE prayer beads on a knotted dark cord with all seven beads drawn clearly visible spaced apart so they can be individually counted, the FOURTH MIDDLE BEAD (3rd from top, 3rd from bottom) must be drawn as OBVIOUSLY PALER and TRANSLUCENT like a hollow glass bead letting light through while the OTHER SIX beads are drawn as SOLID OPAQUE WARM AMBER-BROWN wooden beads, a simple thin tassel hangs at the bottom, the seven beads must be countable as 3 above + 1 hollow middle + 3 below, palette: warm amber-brown solid wood for six beads, OBVIOUSLY PALER TRANSLUCENT pale glass-like hollow center middle bead clearly different from the others, dark knotted cord, simple dark tassel, front-facing view of the seven beads strung vertically with the middle hollow bead clearly contrasting, ${STYLE}, ${NEG}, the string MUST have exactly 7 countable beads with the middle one obviously translucent pale and the other six solid opaque amber-brown wood, not 5 not 6 not a cluster`,
   },
   {
     key: 'gamblers_lucky_coin',
@@ -1160,7 +1161,7 @@ const ACCESSORIES: CatalogItem[] = [
     region: '일반',
     tone: '위트',
     lore: '한 도박꾼이 평생 같은 동전 한 닢을 부적으로 매고 다녔다. 매번 결정적인 자리에서 그 동전을 한 번 손가락 끝으로 굴렸다. 그가 마지막 판에서 그 동전을 굴리지 않은 새벽, 그는 처음으로 그 판을 졌다. 도박꾼은 다음 새벽 동전을 자기 단골 술집의 카운터 위에 가만히 놓고 술 한 잔을 청했다.\n주인이 동전을 들어 보고 농담처럼 한 마디 했다.\n「이거 운 다 쓴 동전 같은데?」',
-    art: `ornate fantasy coin pendant: an old polished bronze coin pierced with a hole at the top, smoothed edges from years of thumbing, fine leather cord, comedic worn, crafted equippable trinket, ${STYLE}`,
+    art: `ornate fantasy trinket, hero motif: an old polished bronze coin pendant with a single drilled hole at the top and clearly visible smooth-worn polish around the edges from years of thumb rubbing, simple coin disc hanging on a thin leather cord, palette: warm polished bronze coin body with paler smooth-worn edge ring, simple dark leather cord, front-facing view of the coin hanging from the cord, ${STYLE}, ${NEG}`,
   },
   {
     key: 'widowers_silver_band',
@@ -1169,7 +1170,7 @@ const ACCESSORIES: CatalogItem[] = [
     region: '일반',
     tone: '비애',
     lore: '아내를 먼저 보낸 한 남자가 자기 반지와 아내 반지 두 짝을 모두 자기 손가락에 끼고 다녔다. 자기 손가락엔 두 짝이 한 번에 다 들어가지 않아, 두 짝을 가는 끈으로 한 줄로 묶어 손가락 하나에 함께 끼웠다. 그가 마지막 새벽에 두 반지를 풀어 자기 베개 옆에 가만히 놓았다. 다음 새벽 그의 손은 빈 손가락이었고, 두 반지의 끈이 한 번 더 다정히 매여 있었다 — 그가 풀어 둔 매듭은 그게 아니었다.',
-    art: `ornate fantasy ring: two thin silver bands tied together by a fine linen cord, polished smooth from years of wear, simple plain design, mournful, crafted equippable trinket, ${STYLE}`,
+    art: `ornate fantasy trinket, hero motif: two thin polished silver wedding band rings tied tightly together by a fine pale linen cord knotted between them, paired ring trinket laid out flat, palette: bright polished silver bands, pale natural linen cord knot accent, top-down view of the two rings tied side by side, ${STYLE}, ${NEG}`,
   },
   {
     key: 'nameless_signet',
@@ -1178,7 +1179,7 @@ const ACCESSORIES: CatalogItem[] = [
     region: '일반',
     tone: '수수께끼',
     lore: '한 상속 분쟁의 마지막 새벽, 분쟁의 자리에 한 인장반지가 놓여 있었다. 인장의 면이 매끄럽게 닦여 어떤 문장도 새겨져 있지 않았다. 분쟁의 자리에 모인 모두가 그 매끄러운 면에 자기 엄지손가락을 차례로 댔다. 다음 새벽 인장 면엔 한 사람의 엄지 자국이 옅게 남아 있었다 — 그 자국이 누구의 것인지는 그 자리에 모인 누구도 자기 것이라 말하지 못했고, 누구의 것이 아니라고도 말하지 못했다.',
-    art: `ornate fantasy signet ring: heavy gold signet with a perfectly smooth blank face, faint engraved scrollwork on the band, mysterious, crafted equippable trinket, ${STYLE}`,
+    art: `ornate fantasy trinket, hero motif: a heavy gold signet ring with a perfectly smooth completely blank circular face plate having no engraving or insignia at all, polished gold band with faint engraved scrollwork visible along the band sides, palette: warm polished gold band body, smooth featureless blank gold face plate, darker scrollwork engraving along the band sides accent, top-down view of the ring lying flat showing the blank face, ${STYLE}, ${NEG}, the face plate is completely blank with no engraving`,
   },
   {
     key: 'grandmas_thimble_pendant',
@@ -1187,7 +1188,7 @@ const ACCESSORIES: CatalogItem[] = [
     region: '일반',
     tone: '일상',
     lore: '한 할머니가 평생 손가락에 끼고 바느질한 골무다. 끝이 다 닳아 가운데가 옅게 비쳤다. 할머니가 떠난 새벽 손주가 골무에 작은 고리를 달아 자기 목에 펜던트로 매었다. 손주의 손가락은 골무에 들어가지 않을 만큼 컸지만, 옷이 터지면 골무를 손가락 끝에 살짝 끼우고 바늘을 들었다 — 손가락에 다 안 들어가도 그 자리가 어쩐지 단단해진다고, 손주는 자기 아이에게도 그 말을 한 번씩 했다.',
-    art: `ornate fantasy pendant: small worn silver thimble with a thin loop soldered on the rim, soft polish from years of fingertips, simple chain, gentle homely, crafted equippable trinket, ${STYLE}`,
+    art: `ornate fantasy trinket, hero motif: a small worn polished silver sewing thimble with a thin loop soldered to its rim hanging from a simple silver chain, the thimble surface shows soft worn-smooth polish from years of fingertip use, palette: polished pale silver thimble body with paler hand-worn smooth patches, thin silver chain, front-facing view of the thimble pendant hanging upside-down from the chain, ${STYLE}, ${NEG}`,
   },
   {
     key: 'first_tooth_locket',
@@ -1196,7 +1197,7 @@ const ACCESSORIES: CatalogItem[] = [
     region: '일반',
     tone: '일상',
     lore: '아이의 첫 빠진 이를 넣어 두는 작은 로켓이 있다. 어느 집에서 처음 만들어진 풍습이었는지는 잊혔다. 한 어머니의 로켓엔 자기 아이 다섯의 첫 이가 다섯 칸에 한 알씩 들어 있었다. 어머니가 마지막 새벽 그 로켓을 첫 아이에게 넘기며 한 마디 했다.\n「너희 다섯이 한 줄로 들어 있어. 무거우면 한 알씩 너희 아이한테 줘.」 첫 아이는 그날 이후로 그 로켓을 그대로 한 줄로 두고, 자기 아이의 첫 이를 자기 새 로켓에 따로 모았다.',
-    art: `ornate fantasy locket: small oval silver locket on a thin chain, faint engraved flower on the lid, five tiny compartments inside, gentle warm, crafted equippable trinket, ${STYLE}`,
+    art: `ornate fantasy trinket, hero motif: a small oval polished silver locket pendant with a delicate engraved flower pattern visible on the front lid, hanging from a thin silver chain, the locket is closed showing the front face, palette: polished pale silver locket body, darker engraved flower pattern on the front lid accent, thin silver chain, front-facing view of the closed locket, ${STYLE}, ${NEG}`,
   },
   {
     key: 'merchants_scale_pendant',
@@ -1205,7 +1206,7 @@ const ACCESSORIES: CatalogItem[] = [
     region: '일반',
     tone: '위트',
     lore: '한 상인이 평생 자기 가슴께에 작은 저울을 펜던트로 매고 다녔다. 무엇을 달려는 게 아니라 그저 자기가 무엇을 더 쥐고 있는지 한 번씩 들여다보려는 것이라 했다. 상인이 떠나는 새벽 후임이 그 펜던트를 받아 자기 가슴께에 매고, 첫 손님 앞에서 그 저울을 한 번 들여다보았다. 저울의 한쪽이 손님 쪽으로 살짝 기울어 있었다 — 후임은 그 새벽의 거래에서 자기 이익을 한 번 덜 챙기고 손님을 한 번 더 챙겼다.',
-    art: `ornate fantasy pendant: a tiny brass merchant scale with two delicate pans hanging from a thin chain, faint engraved hash marks on the crossbeam, smug practical, crafted equippable trinket, ${STYLE}`,
+    art: `ornate fantasy trinket, hero motif: a tiny brass merchant's balance scale shape with two small delicate brass pans hanging from each end of a horizontal crossbeam, the pendant suspended from a thin chain at the top center, palette: polished warm brass scale body, dark brass thin chain, two small empty brass pans hanging at each end accent, darker engraved hash marks on the crossbeam, front-facing view of the scale pendant suspended showing the balance shape, ${STYLE}, ${NEG}`,
   },
   {
     key: 'hero_ear_notch_stud',
@@ -1214,7 +1215,7 @@ const ACCESSORIES: CatalogItem[] = [
     region: '일반',
     tone: '영웅담',
     lore: '한 영웅이 어린 시절 마을의 한 노인에게 자기 귀에 작은 구멍을 뚫게 했다. 그 구멍에 끼울 작은 귀걸이를 노인은 영웅이 평생 떠난 마을의 반대편에서 마지막에 깎아 두었다. 영웅이 마을에 돌아온 새벽 노인은 이미 떠난 뒤였고, 작업대 위에 그 귀걸이가 단정히 놓여 있었다. 영웅은 그 귀걸이를 받아 끼고 자기 어린 시절의 자리에 한 번 앉았다. 그 자리에 앉은 영웅의 귀에서 새벽 햇살이 한 박자 옅게 튕겼다 — 영웅의 다음 길은 그 한 박자에서 시작했다.',
-    art: `ornate fantasy earring: a single small silver stud with a tiny notched crest, fine engraved sun-ray, simple post, monumental, crafted equippable trinket, ${STYLE}`,
+    art: `ornate fantasy trinket, hero motif: a single small polished silver stud earring with a tiny visible notch cut into one edge and fine engraved sun-ray patterns radiating outward across the face, simple post earring, palette: bright polished silver stud body, single visible notch cut on the edge, darker engraved sun-ray pattern accent, front-facing view of the stud, ${STYLE}, ${NEG}`,
   },
   {
     key: 'liars_tongue_pin',
@@ -1223,7 +1224,7 @@ const ACCESSORIES: CatalogItem[] = [
     region: '일반',
     tone: '위트',
     lore: '시장의 한 단골 거짓말쟁이가 자기 옷깃에 작은 혀 모양의 핀을 꽂고 다녔다. 거짓말을 한 번 할 때마다 그 핀이 자기 옷깃에 미세하게 더 깊이 박혔다. 거짓말쟁이가 자기 단골 술집에서 어느 새벽 그 핀을 옷깃에서 직접 뽑아 술집 카운터에 놓고 술을 한 잔 청했다.\n주인이 그 핀을 보고 입을 비죽 웃으며 한 마디 했다.\n「오늘 한 잔은 진실이지?」',
-    art: `ornate fantasy lapel pin: a small brass pin shaped like a curled tongue, faint enamel-red detail on the tip, sharp tack on the back, comedic sly, crafted equippable trinket, ${STYLE}`,
+    art: `ornate fantasy trinket, hero motif: a small lapel pin shaped distinctly like a curled-up tongue with a tiny bright red enamel detail on the curled tip, polished brass pin body, palette: warm polished brass curled-tongue pin body, bright red enamel detail at the tip accent, dark sharp tack on the back, front-facing view of the tongue pin, ${STYLE}, ${NEG}`,
   },
   {
     key: 'quiet_compass_charm',
@@ -1232,7 +1233,7 @@ const ACCESSORIES: CatalogItem[] = [
     region: '일반',
     tone: '담백',
     lore: '한 항해사가 평생 자기 가슴께에 작은 나침반을 부적으로 매고 다녔다. 그 나침반의 바늘은 북을 가리키지 않고, 그가 다음으로 가야 할 자리를 가리켰다. 마지막 새벽 그 바늘은 그가 처음 떠난 자기 마을 쪽을 가리키고 있었다 — 그 새벽 그가 그 마을로 돌아갔는지, 그 바늘의 가리킴을 따르지 않기로 했는지, 다음 새벽의 그를 만난 사람은 누구도 답하지 못한다.',
-    art: `ornate fantasy compass charm: a small worn brass compass on a thin silver chain, faint engraved rose, single needle slightly off-cardinal, plain weathered, crafted equippable trinket, ${STYLE}`,
+    art: `ornate fantasy trinket, hero motif: a small worn brass compass charm with a visible thin red-tipped needle pointing clearly off-cardinal direction not aligned to North, fine engraved compass rose pattern on the face, hanging from a thin silver chain, palette: warm worn brass compass body, darker engraved compass rose pattern, single thin red-tipped needle pointing off-axis accent, thin silver chain, front-facing view of the compass face, ${STYLE}, ${NEG}`,
   },
   {
     key: 'beekeepers_bell',
@@ -1241,7 +1242,7 @@ const ACCESSORIES: CatalogItem[] = [
     region: '일반',
     tone: '일상',
     lore: '한 양봉가의 가슴팍엔 늘 작은 청동 종 하나가 매여 있었다. 벌들을 부르는 종이 아니라, 자기 자신이 벌통 앞에서 너무 빨리 움직이지 않는지 확인하는 종이라 했다. 종이 한 번 울리면 양봉가는 한 박자 천천히 움직였다. 양봉가가 떠난 새벽 다음 양봉가가 그 종을 받아 매었다. 새 양봉가의 첫 새벽 벌통 앞에서 그 종이 한 번 울렸고, 그는 가만히 한 박자 멎었다.',
-    art: `ornate fantasy charm: a small antique bronze bell on a hemp cord, soft warm patina, simple loop, faint engraved bee on the side, gentle homely, crafted equippable trinket, ${STYLE}`,
+    art: `ornate fantasy trinket, hero motif: a small antique polished bronze bell with a single delicately engraved bee insect figure clearly visible on the side of the bell body, simple twisted natural hemp cord at the top, palette: warm polished antique bronze bell body with soft patina, darker engraved bee figure on the side accent, simple natural hemp cord, front-facing view of the bell hanging from the cord, ${STYLE}, ${NEG}`,
   },
   {
     key: 'dueling_silver_garter',
@@ -1250,7 +1251,7 @@ const ACCESSORIES: CatalogItem[] = [
     region: '일반',
     tone: '비애',
     lore: '두 결투자가 같은 자리에 서기 전, 자기 다리에 같은 모양의 은 가터를 한 짝씩 매었다. 결투가 끝난 새벽 한 쪽의 가터만 그 자리에 남아 있었다. 살아남은 자는 떨어진 가터를 가져가 자기 가터와 함께 한 줄로 매었다. 그가 평생 두 짝을 한 줄로 매고 다닌 새벽들 동안, 그가 떨어뜨린 자의 이름을 자기 입으로 한 번 더 부른 새벽은 한 번도 없었다 — 두 짝의 가터가 그 이름을 대신 한 줄로 옆에 두고 있어서였다.',
-    art: `ornate fantasy garter: a slim silver leg-band on a thin black ribbon, faint engraved twin crests on the buckle, single small loop sewn beside, mournful, crafted equippable trinket, ${STYLE}`,
+    art: `ornate fantasy trinket, hero motif: a slim polished silver leg garter band on a thin black ribbon with two engraved twin coat-of-arms crests visible on the central silver buckle and a small additional sewn loop beside the buckle, palette: polished silver buckle and band edges, dark black ribbon body, darker engraved twin crests accent on the buckle, front-facing view of the garter laid out flat, ${STYLE}, ${NEG}`,
   },
   {
     key: 'fools_paper_crown_brooch',
@@ -1259,7 +1260,7 @@ const ACCESSORIES: CatalogItem[] = [
     region: '일반',
     tone: '위트',
     lore: '한 광장의 어린 바보가 종이로 작은 왕관을 접어 자기 옷깃에 브로치로 꽂고 다녔다. 바보가 떠난 새벽 그 종이 왕관은 광장 한가운데에 놓여 있었다. 한 어른이 그것을 주워 자기 옷깃에 꽂아 보고는, 잠깐 멈춰 서서 광장 사람들을 한 번 둘러보았다.\n그 어른은 그 새벽 이후로 자기 옷깃에 그 종이 왕관을 꽂은 채 광장에 한 번씩 나왔고 — 광장 사람들은 그 어른을 부를 호칭을 한참 못 정한 채 자기들끼리만 작은 별명을 하나 붙여 불렀다.',
-    art: `ornate fantasy brooch: a small paper-shaped crown brooch in tarnished bright gold, comically uneven points, simple pin on the back, comedic warm, crafted equippable trinket, ${STYLE}`,
+    art: `ornate fantasy trinket, hero motif: a small paper-cutout-shaped crown brooch with comically uneven jagged spiky points on top and a tarnished bright gold finish, simple pin attached on the back, palette: tarnished bright gold crown body with comically asymmetric uneven point heights, darker tarnish residue in the crevices accent, simple dark pin on the back, front-facing view of the crown brooch, ${STYLE}, ${NEG}`,
   },
   {
     key: 'pilgrims_knot_cord',
@@ -1268,7 +1269,7 @@ const ACCESSORIES: CatalogItem[] = [
     region: '일반',
     tone: '담백',
     lore: '한 순례자가 자기 평생의 길마다 한 매듭씩 매어 둔 가는 가죽끈이다. 매듭의 굵기와 간격이 그가 걸은 길의 험함을 가늠하게 한다. 순례자가 마지막 마을에 들어선 새벽 매듭은 일곱이었다. 그가 일곱 번째 매듭을 자기 손가락 끝으로 한 번 가만히 짚어 본 새벽 이후, 그 끈은 그 마지막 마을의 작은 회당에 가만히 걸려 있다.',
-    art: `ornate fantasy cord: a thin braided leather cord with seven distinct knots tied along its length, single small bone bead at the end, plain serene, crafted equippable trinket, ${STYLE}`,
+    art: `ornate fantasy trinket, hero motif: a thin braided dark leather wrist cord with seven clearly visible distinct knots tied evenly spaced along its length with a single small pale carved bone bead at the very end, palette: thin dark braided leather cord body, seven visibly spaced knots along the length, single pale bone bead at the end accent, front-facing view of the cord laid out straight, ${STYLE}, ${NEG}`,
   },
   {
     key: 'oathkeeper_iron_token',
@@ -1277,7 +1278,7 @@ const ACCESSORIES: CatalogItem[] = [
     region: '일반',
     tone: '영웅담',
     lore: '두 기사가 같은 맹세를 한 새벽, 같은 모양의 작은 쇠 표식을 두 짝으로 깎아 한 짝씩 나눠 가졌다. 한 기사가 먼저 떠난 새벽, 살아남은 기사는 두 짝을 자기 한 줄에 매어 차고 다녔다. 그가 마지막 새벽 두 짝의 표식을 자기 가슴께에서 풀어 자기 동무의 묘 옆 흙에 가만히 박았다. 다음 새벽 묘 옆 흙엔 두 짝이 그대로 박혀 있었고, 그 사이의 흙이 옅게 따뜻해져 있었다.',
-    art: `ornate fantasy token charm: two small iron tokens shaped like a paired oath crest, joined by a thin chain, dark patina, monumental, crafted equippable trinket, ${STYLE}`,
+    art: `ornate fantasy trinket, hero motif: two small paired iron tokens shaped like matching halves of an oath crest connected together by a thin iron chain between them, dark patinated tokens hanging side by side, palette: dark patinated iron token bodies with darker engraved oath crest halves on each, thin iron chain accent connecting them, front-facing view of the two tokens laid out side by side, ${STYLE}, ${NEG}`,
   },
   {
     key: 'grave_dust_vial',
@@ -1286,7 +1287,7 @@ const ACCESSORIES: CatalogItem[] = [
     region: '일반',
     tone: '기괴',
     lore: '한 묘지기가 평생 자기 묘를 판 흙을 한 알씩 모아 작은 유리병에 채워 자기 목에 매고 다녔다. 병이 다 차면 한 자리에 묻을 마지막 흙이라 했다. 묘지기가 마지막 묘를 판 새벽 병은 거의 다 찼지만 한 알의 자리가 비어 있었다. 그가 자기 마지막 묘의 흙 한 알을 그 자리에 마저 채우지 않고 떠났고, 다음 묘지기는 그 비어 있는 한 알의 자리를 그대로 자기 목에 매고 새 묘를 팠다.',
-    art: `ornate fantasy vial pendant: a small corked glass vial filled with fine dark soil, thin silver cap, simple cord, eerie quiet, crafted equippable trinket, ${STYLE}`,
+    art: `ornate fantasy trinket, hero motif: a small clear glass vial pendant visibly filled with dense fine dark earth-brown soil sealed by a thin polished silver cap at the top, simple dark cord at the top, palette: clear glass vial body filled with dark earth-brown soil inside, polished pale silver cap accent at the top, simple dark cord, front-facing view of the vial hanging from the cord, ${STYLE}, ${NEG}`,
   },
   {
     key: 'lullaby_music_charm',
@@ -1295,7 +1296,7 @@ const ACCESSORIES: CatalogItem[] = [
     region: '일반',
     tone: '비애',
     lore: '한 어머니가 자기 아이의 자장가 한 줄을 작은 종 안의 가는 쇳가락에 새겨 자기 가슴께에 부적으로 매고 다녔다. 아이가 자란 새벽 어머니는 그 부적을 아이의 가슴께에 옮겨 매주었다. 아이가 자기 아이를 가진 새벽 그 부적은 그대로 그의 가슴께에 매여 있었다. 종을 가만히 흔들어 보면 어머니의 자장가 한 줄이 가는 가락으로 들렸다 — 아이는 그 새벽 그 가락의 마지막 음을 자기 자신은 외워 본 적이 없다는 걸 처음 깨달았다.',
-    art: `ornate fantasy charm: a small ornate music-box-style bell pendant, faint engraved lullaby motif along the side, thin silver chain, soft tarnish, mournful sacred, crafted equippable trinket, ${STYLE}`,
+    art: `ornate fantasy trinket, hero motif: a small ornate music-box-shaped bell pendant with delicate engraved lullaby musical notes visible along the side, soft tarnished silver body hanging from a thin silver chain, palette: tarnished pale silver music-box body, darker engraved musical-note lullaby pattern along the side accent, thin silver chain, front-facing view of the charm hanging, ${STYLE}, ${NEG}`,
   },
   {
     key: 'saltworkers_ring',
@@ -1304,7 +1305,7 @@ const ACCESSORIES: CatalogItem[] = [
     region: '일반',
     tone: '일상',
     lore: '한 소금꾼이 평생 자기 손에 끼고 소금밭에 들어간 작은 청동 반지다. 반지의 안쪽이 소금에 부어 매끄럽게 마모되어 있어, 다른 사람의 손가락에는 잘 안 맞는다. 소금꾼이 떠난 새벽 그 반지는 자기 소금밭의 한 모퉁이에 놓여 있었다. 다음 소금꾼이 그 반지를 자기 손가락에 끼워 보고 안 맞자, 자기 옷깃에 가는 끈으로 매달아 가슴께에 차고 첫 새벽의 소금밭에 들어갔다.',
-    art: `ornate fantasy ring: a worn bronze band with the inner surface smoothed and slightly pitted from years of brine, simple plain design, plain useful, crafted equippable trinket, ${STYLE}`,
+    art: `ornate fantasy trinket, hero motif: a worn warm bronze ring band with the inner surface visibly smoothed and slightly pitted from years of brine exposure showing salt corrosion marks, simple plain undecorated band on the outside, palette: warm worn bronze band body, darker pitted brine-corrosion patches on the inner surface accent, smooth simple plain design outside, top-down tilted view of the ring showing the pitted inner surface, ${STYLE}, ${NEG}`,
   },
   {
     key: 'last_breath_amulet',
@@ -1313,7 +1314,7 @@ const ACCESSORIES: CatalogItem[] = [
     region: '일반',
     tone: '수수께끼',
     lore: '한 의사는 자기 환자의 마지막 새벽이면 그 환자의 마지막 숨을 작은 유리 부적의 안쪽에 한 번 가둬 두는 풍습이 있었다. 의사가 평생 모은 부적이 일곱이었다. 의사가 떠난 새벽 그 일곱 부적은 의사의 작업대 위에 한 줄로 단정히 놓여 있었고, 그 옆에 빈 부적 한 점이 같이 놓여 있었다 — 다음 의사가 그 빈 한 점을 자기 첫 부적으로 받아 자기 평생의 일곱을 모으기 시작했다.',
-    art: `ornate fantasy amulet: a small clear glass bulb sealed with thin silver wire, a faint trace of mist inside, simple chain, mysterious, crafted equippable trinket, ${STYLE}`,
+    art: `ornate fantasy trinket, hero motif: a small clear glass bulb pendant sealed with thin twisted silver wire at the top with a single visible wisp of pale ghostly mist trapped inside the glass, simple silver chain, palette: clear glass bulb body with pale ghostly white mist swirl inside, thin twisted silver wire seal at the top accent, simple silver chain, front-facing view of the bulb pendant hanging, ${STYLE}, ${NEG}`,
   },
   {
     key: 'mummers_false_medal',
@@ -1322,7 +1323,7 @@ const ACCESSORIES: CatalogItem[] = [
     region: '일반',
     tone: '위트',
     lore: '한 곡예단의 광대가 무대에서 가짜 메달 일곱 점을 가슴팍에 매달고 등장했다. 메달엔 누구도 알아볼 수 없는 문장이 가득 새겨져 있었다. 광대가 무대 끝에 멈춰 서 관객을 한 번 둘러보고 한 마디 했다.\n「이 중 진짜가 한 점 있소. 그게 어느 거요?」 관객이 한참 웃었고, 광대는 그 새벽 이후 그 일곱 메달 중 한 점을 슬그머니 자기 안주머니로 옮겼다 — 다음 무대에선 여섯이 가짜로 매여 있었다.',
-    art: `ornate fantasy medal pendant: a gaudy painted brass medal on a thick ribbon, exaggerated heraldic crest, faint flaking gold paint, comedic showy, crafted equippable trinket, ${STYLE}`,
+    art: `ornate fantasy trinket, hero motif: a gaudy painted brass medal pendant with an exaggerated overly-large heraldic crest design in the center hanging from a thick wide ribbon, faint gold paint visibly flaking off at the edges of the medal, palette: gaudy bright painted brass medal body with darker exaggerated heraldic crest, thick wide colorful striped ribbon, paler flaking gold paint accent at edges, front-facing view of the medal hanging from the ribbon, ${STYLE}, ${NEG}`,
   },
   {
     key: 'storm_warned_bead',
@@ -1331,7 +1332,7 @@ const ACCESSORIES: CatalogItem[] = [
     region: '일반',
     tone: '담백',
     lore: '한 어부의 가슴팍엔 작은 푸른 구슬이 매여 있었다. 폭풍이 한 새벽 안에 오면 구슬의 안쪽 색이 한 박자 짙어졌다. 어부가 떠난 새벽 그 구슬을 자기 막내 동생에게 매주었다. 막내 동생이 자기 첫 새벽의 바다에 나간 새벽 구슬의 안쪽 색은 가만히 있었다 — 그날 바다는 잔잔했고, 동생은 형이 자기에게 그 구슬을 매준 새벽의 한 박자가 그날 바다의 잔잔함과 같았다는 걸 한참 뒤에 알았다.',
-    art: `ornate fantasy bead pendant: a small translucent blue glass bead on a simple cord, faint inner swirl, plain seafarer charm, calm watchful, crafted equippable trinket, ${STYLE}`,
+    art: `ornate fantasy trinket, hero motif: a small translucent deep blue glass bead pendant with a visible swirling stormy weather pattern sealed inside the glass like a tiny captured storm, simple dark cord, palette: translucent deep ocean-blue glass bead body with darker swirling stormy patterns inside accent, simple dark twisted cord, front-facing view of the bead hanging from the cord, ${STYLE}, ${NEG}`,
   },
   {
     key: 'cartographers_eye_pendant',
@@ -1340,7 +1341,7 @@ const ACCESSORIES: CatalogItem[] = [
     region: '일반',
     tone: '수수께끼',
     lore: '한 지도장이가 평생 자기 가슴께에 작은 유리 눈을 펜던트로 매고 다녔다. 그 눈으로 지도를 들여다보면 지도의 한 자리가 다른 자리보다 옅게 떨려 보였다. 지도장이가 떠난 새벽 그 펜던트는 그의 작업대 위 가장 큰 지도 위에 놓여 있었고, 펜던트의 자리 아래 지도의 한 자리가 옅게 떨려 보였다 — 그 자리에 무엇이 있었는지 다음 지도장이도 자기 평생을 두고 답을 정하지 못했다.',
-    art: `ornate fantasy pendant: a small polished glass lens set in a worn silver bezel shaped like an eye, fine engraved compass rose, simple chain, mysterious scholarly, crafted equippable trinket, ${STYLE}`,
+    art: `ornate fantasy trinket, hero motif: a small polished round glass lens set inside a worn silver bezel shaped distinctly like an open eye with the clear glass lens at the iris position, fine engraved compass rose pattern around the bezel rim, simple chain, palette: clear polished glass lens at the iris position, worn pale silver eye-shaped bezel body with darker engraved compass rose along the rim accent, simple silver chain, front-facing view of the eye pendant, ${STYLE}, ${NEG}`,
   },
   {
     key: 'standardbearer_clasp',
@@ -1349,7 +1350,7 @@ const ACCESSORIES: CatalogItem[] = [
     region: '일반',
     tone: '영웅담',
     lore: '한 깃대잡이가 평생 자기 망토를 한 청동 클래스프 하나로 매고 다녔다. 클래스프의 한가운데에 자기 부대의 문장이 새겨져 있었다. 그가 마지막 깃대를 손에서 놓지 않은 새벽, 그의 어깨에서 망토가 풀려 떨어졌고 클래스프는 그의 손에 마지막까지 쥐여 있었다. 다음 깃대잡이가 그 클래스프를 받아 매고 자기 첫 새벽의 깃대를 들었다 — 클래스프의 문장 옆에 한 박자 늦게 깃대잡이 자신의 작은 자국이 한 줄로 더 새겨졌다.',
-    art: `ornate fantasy cloak clasp: a heavy bronze cloak brooch with a regimental crest at the center, faint added side-notch carved near the rim, simple pin on the back, monumental, crafted equippable trinket, ${STYLE}`,
+    art: `ornate fantasy trinket, hero motif: a heavy bronze cloak brooch with an engraved regimental heraldic crest at the center and a single small additional side-notch carved into the rim beside the crest, simple pin attached on the back, palette: dark patinated warm bronze brooch body, darker engraved regimental crest at the center accent, single visible carved notch on the rim, dark pin on the back, front-facing view of the brooch, ${STYLE}, ${NEG}`,
   },
   {
     key: 'whispering_keyring',
@@ -1358,7 +1359,7 @@ const ACCESSORIES: CatalogItem[] = [
     region: '일반',
     tone: '기괴',
     lore: '한 늙은 자물쇠장이가 평생 자기 가슴께에 작은 열쇠고리를 매고 다녔다. 열쇠 일곱 자루가 매여 있었는데, 그가 자기 손가락 끝으로 한 자루를 가만히 짚으면 그 자루의 속에서 가는 속삭임이 한 박자 들렸다 멎었다. 자물쇠장이가 떠난 새벽 열쇠고리는 그의 작업대 위에 놓여 있었고, 일곱 자루 중 한 자루의 속삭임만 멎지 않고 가만히 이어졌다 — 다음 자물쇠장이가 그 한 자루를 자기 손가락 끝으로 짚어 본 새벽 이후, 그는 그 한 자루를 자기 다른 자물쇠 어디에도 끼우지 않았다.',
-    art: `ornate fantasy keyring charm: a small iron ring holding seven slim worn keys of varied shapes, faint engraved ward marks on the bows, dark patina, eerie quiet, crafted equippable trinket, ${STYLE}`,
+    art: `ornate fantasy trinket, hero motif: a small dark iron keyring loop holding exactly seven slim worn keys of clearly varied head shapes hanging from it spread out together, faint engraved ward marks visible on the key bow heads, palette: dark patinated iron keyring body, seven different patinated iron key bodies of varying head shapes accent, darker engraved ward marks on the key bow heads, front-facing view of the keyring with all seven keys spread out, ${STYLE}, ${NEG}`,
   },
   {
     key: 'plain_iron_bangle',
@@ -1367,7 +1368,7 @@ const ACCESSORIES: CatalogItem[] = [
     region: '일반',
     tone: '담백',
     lore: '한 마을의 사람들은 자기 손목에 같은 모양의 쇠 뱅글을 한 짝씩 매고 살았다. 마을이 큰 가뭄을 한 번 넘긴 새벽, 그 뱅글의 한 짝씩이 사람들의 손목에 그대로 매여 있었다. 그 가뭄을 넘긴 사람들의 손주들은 자기 새 뱅글을 그 옛 뱅글의 옆에 한 줄로 매고 다녔다. 마을은 손목에 매여 있는 뱅글의 줄로 자기 집의 평생을 한 번 셀 수 있게 되었다.',
-    art: `ornate fantasy bangle: a simple polished iron wrist-band, faint inner inscription of a single date-like mark, smooth surface from years of wear, plain dignified, crafted equippable trinket, ${STYLE}`,
+    art: `ornate fantasy trinket, hero motif: a simple smoothly polished iron wrist bangle with a single small date-like engraved inscription visible on the inner surface of the band, the bangle is a circular band with no other decoration on the outside, palette: polished pale iron bangle body with smooth worn surface from years of wear, single darker engraved date-mark on the inner surface accent, top-down tilted view of the bangle showing the inner inscription, ${STYLE}, ${NEG}`,
   },
   {
     key: 'child_string_bracelet',
@@ -1376,7 +1377,7 @@ const ACCESSORIES: CatalogItem[] = [
     region: '일반',
     tone: '일상',
     lore: '한 아이가 자기 손목에 처음 매단 실 팔찌다. 실의 색이 다섯 색이고, 매듭의 모양이 아이의 손에 맞춰 좀 어설프다. 아이가 자라 손목이 커진 새벽, 그 팔찌는 더 이상 손목에 들어가지 않게 되었다. 아이는 그 팔찌를 자기 책상 서랍의 한 칸에 가만히 넣고 새 팔찌를 매었다. 아이가 자기 아이를 가진 새벽 그 옛 팔찌를 서랍에서 꺼내 자기 아이의 손목에 매주었다 — 매듭의 어설픈 자리가 아이의 작은 손목에 다정히 맞았다.',
-    art: `ornate fantasy bracelet: a small braided cotton wrist-cord in five faded colors, simple childlike knot at the clasp, gentle warm, crafted equippable trinket, ${STYLE}`,
+    art: `ornate fantasy trinket, hero motif: a small braided cotton wrist-cord bracelet woven from five clearly different faded child-color cotton strands twisted together with a simple childlike knot at the clasp, palette: five different faded pastel cotton strands (pale pink, sky blue, butter yellow, mint green, lavender), simple childlike knot accent at the clasp, front-facing view of the bracelet laid out flat, ${STYLE}, ${NEG}`,
   },
   {
     key: 'lighthouse_keepers_charm',
@@ -1385,7 +1386,7 @@ const ACCESSORIES: CatalogItem[] = [
     region: '일반',
     tone: '담백',
     lore: '한 등대지기가 평생 자기 가슴께에 작은 부적을 매고 다녔다. 부적엔 자기 등대의 등불 모양이 옅게 새겨져 있었다. 등대지기가 떠난 새벽 부적은 그의 등대 가장 위의 등불 옆에 놓여 있었다. 다음 등대지기가 그 부적을 자기 가슴께에 매고 첫 새벽 등불을 살린 새벽, 부적의 등불 자국이 한 박자 옅게 빛났다 — 다음 등대지기는 그 한 박자를 매일의 첫 새벽마다 한 번씩 확인하며 등불을 살린다.',
-    art: `ornate fantasy charm: a small dark-bronze charm shaped like a lantern, faint engraved flame on the front, thin silver chain, calm dignified, crafted equippable trinket, ${STYLE}`,
+    art: `ornate fantasy trinket, hero motif: a small dark bronze charm shaped distinctly like a hanging oil lantern with a clearly engraved flame symbol visible on the front face of the lantern body, thin silver chain at the top, palette: dark patinated bronze lantern-shape charm body, darker engraved flame symbol on the front face accent, thin silver chain, front-facing view of the lantern charm hanging, ${STYLE}, ${NEG}`,
   },
   {
     key: 'mourners_jet_brooch',
@@ -1394,7 +1395,7 @@ const ACCESSORIES: CatalogItem[] = [
     region: '일반',
     tone: '비애',
     lore: '한 가문은 자기 식구가 떠난 새벽이면 자기 상복의 깃에 작은 흑단 브로치를 한 점 꽂았다. 가문의 한 어머니의 상복 깃엔 자기 평생 일곱 점의 브로치가 꽂혀 있었다. 어머니가 떠난 새벽 그 일곱 점이 그대로 깃에 꽂힌 채 가문의 다른 식구들이 그것을 한 줄로 둘러 다른 상복의 깃에 옮겨 꽂았다 — 다음 식구가 떠난 새벽 그 일곱 점 옆에 새 한 점이 더해졌다.',
-    art: `ornate fantasy brooch: a small carved jet stone brooch shaped like a closed flower, fine engraved silver border, simple pin on the back, mournful, crafted equippable trinket, ${STYLE}`,
+    art: `ornate fantasy trinket, hero motif: a small carved jet black stone brooch shaped distinctly like a closed flower bud with delicate carved petal lines visible across the surface, surrounded by a fine engraved silver border ring, simple pin on the back, palette: deep glossy jet black stone flower body with darker carved petal lines, fine pale engraved silver border accent, dark pin on the back, front-facing view of the closed-flower brooch, ${STYLE}, ${NEG}`,
   },
   {
     key: 'grin_in_glass_pendant',
@@ -1403,7 +1404,7 @@ const ACCESSORIES: CatalogItem[] = [
     region: '일반',
     tone: '기괴',
     lore: '한 유리장이가 자기 손으로 만든 작은 유리 펜던트의 안쪽에 사람의 웃는 입 모양이 한 줄로 굳어 있었다. 유리장이는 그것을 자기 작업대에 평생 놓아 두었다. 유리장이가 떠난 새벽 다음 유리장이가 그 펜던트를 자기 목에 매고 새벽 햇살 앞에 한 번 들어 보았다. 유리 안의 웃음이 새벽 햇살에 한 박자 옅게 더 깊어졌다 — 다음 유리장이는 그 새벽 이후 그 펜던트를 자기 목에서 한 번도 풀지 않았다.',
-    art: `ornate fantasy pendant: a small ornate glass orb pendant with a faint smile-shape sealed inside, thin silver bail, simple chain, eerie playful, crafted equippable trinket, ${STYLE}`,
+    art: `ornate fantasy trinket, hero motif: a small ornate clear glass orb pendant with a visible smile-shape curl sealed inside the glass like a trapped grin, thin polished silver bail at the top, simple silver chain, palette: clear glass orb body with a darker visible smile-shape curl inside accent, thin polished silver bail at the top, simple silver chain, front-facing view of the orb pendant hanging, ${STYLE}, ${NEG}`,
   },
   {
     key: 'last_call_tavern_token',
@@ -1412,7 +1413,7 @@ const ACCESSORIES: CatalogItem[] = [
     region: '일반',
     tone: '위트',
     lore: '한 술집의 단골 일곱이 자기들끼리만 알아보는 작은 청동 표식을 한 짝씩 매고 다녔다. 표식엔 그 술집의 마지막 잔을 받은 자만 알아볼 수 있는 작은 문장이 새겨져 있었다. 한 단골이 떠난 새벽 다른 여섯 단골이 그 표식을 자기 카운터에 가만히 모았다. 술집 주인이 일곱 짝의 표식을 카운터 위에 한 줄로 놓고 술 한 잔씩을 일곱 잔으로 채워 한 잔의 자리만 비워 두었다.\n다음 단골이 그 한 잔의 자리에 자기 표식을 가만히 놓을 새벽까지, 그 한 잔의 자리는 그대로 비워 있을 거라 주인은 한 마디 했다.',
-    art: `ornate fantasy token charm: a small worn bronze tavern token with a unique tavern crest, faint engraved tally marks along the edge, simple cord, comedic warm, crafted equippable trinket, ${STYLE}`,
+    art: `ornate fantasy trinket, hero motif: a small worn warm bronze tavern token disc with a unique engraved tavern crest at the center and several clearly visible tally marks engraved along the outer edge rim, hanging from a simple dark cord through a small hole, palette: warm worn bronze token body, darker engraved tavern crest at center accent, darker engraved tally marks along the edge rim, simple dark cord, front-facing view of the token hanging, ${STYLE}, ${NEG}`,
   },
   {
     key: 'knotted_memory_cord_bracelet',
@@ -1421,7 +1422,7 @@ const ACCESSORIES: CatalogItem[] = [
     region: '일반',
     tone: '수수께끼',
     lore: '글을 모르던 한 사람이 자기 손목에 매듭끈 한 줄을 매고 다녔다. 잊고 싶지 않은 일이 생길 때마다 매듭을 한 줄에 한 알씩 더 매었다. 그 사람의 손목엔 평생 일곱 매듭이 매여 있었다. 그가 떠난 새벽 한 학자가 그 매듭을 풀어 보려 했다. 한 매듭을 풀자 매듭의 뜻 한 줄이 그 자리에서 같이 풀려 사라졌다. 학자는 두 번째 매듭을 풀지 않고 손을 떼었다 — 매듭은 그 손목 자리 그대로의 일곱을 지금도 한 줄로 매고 있다.',
-    art: `ornate fantasy bracelet: a thin braided leather wrist-cord with seven distinct knots along its length, small carved bone bead at the clasp, plain serene, mysterious, crafted equippable trinket, ${STYLE}`,
+    art: `ornate fantasy trinket, hero motif: a thin braided dark leather wrist cord bracelet with seven clearly visible distinct knots tied evenly spaced along its length and a small carved pale bone bead at the clasp end, palette: thin dark braided leather cord body, seven visibly spaced knots along the length, small carved pale bone bead accent at the clasp end, front-facing view of the bracelet laid out flat, ${STYLE}, ${NEG}`,
   },
 ];
 

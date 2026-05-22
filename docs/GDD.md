@@ -408,19 +408,39 @@ SDK + Google SSV 통합 가능. 그때 §6.4 BALANCE와 함께 재도입 검토.
 ### 스타일
 - 픽셀아트(레트로). **등급 색상/보더/라벨 없음** (등급 시스템 자체가 없음)
 - 시각 차별화 **3축**:
-  1. **카탈로그 아이템 외관** — 슬롯별(무기/방어구/장신구), 종수 가변·지속 추가. **전부 64×64 고품질 생성**
+  1. **카탈로그 아이템 외관** — 슬롯별(무기/방어구/장신구), 종수 가변·지속 추가. **전부 128×128 고품질 생성**
   2. **강화 글로우/오라** — 단계 임계 **+30 / +50 / +99** + **초월 0~10**에 매핑. 글로우 강도는 기존보다 **조금 더 강하게**
   3. **초월 표식** — 0~10단계 누적 배지/오라
 - CRT 스캔라인 (선택 모드) — 유지
 
 ### 자산 생성 파이프라인 (Pixellab)
-| 자산 | Pixellab 도구 | 비고 |
-|------|---------------|------|
-| 장비 아이템 (전 카탈로그) | **Create M-XL image** (64px+) — 보조: Create image S-XL (new) / Create image PRO | **64×64 고품질**, 신규 추가분도 동일 파이프라인 |
-| 레이드 보스 5종 | Create image PRO / Create image S-XL (대형·고품질) | 정적 우선, 애니메이션은 Animate 후속(수동) |
-| UI 요소 | Create UI elements (PRO) | 버튼/프레임/아이콘 등 게임 UI |
-| 타일/배경 | Create tiles | 배경 변주 |
-| 스타일 일관성 | Create from style reference | 전 자산 아트 스타일 통일 락 |
+| 자산 | 엔드포인트 | 해상도 |
+|------|----------|------|
+| 장비 아이템 (전 카탈로그) | `POST api.pixellab.ai/v1/generate-image-pixflux` (REST) | **128×128**, `no_background:true` |
+| 레이드 보스 5종 | 동상 (pixflux) | 큰 사이즈, 정적 우선 (애니메이션 후속) |
+| UI 요소·타일·배경 | 동상 (pixflux) | 자산별 비율 |
+
+- 호출은 `Bearer ${PIXELLAB_API_KEY}`, 응답 `{ image: { base64 } }`, 직접 PNG 저장.
+- 동시성 3~4 + 페이싱 0.8s + 429 시 지수 백오프(2→4→8→16→30s). 무료 티어는 버스트 후 강하게 스로틀.
+- 재개형 잡 상태 = `scripts/sprite-jobs.json`. 단일 진실 원천 = `lib/game/equipment/catalog.ts`(`art` 필드).
+
+### 프롬프트 작성 원칙
+**기본 (모든 아이템)**:
+1. **HERO MOTIF 앞배치** — 스토리의 단일 시각 상징을 첫 토큰으로 (`hero motif: ...`).
+2. **학습 데이터 강한 단어 회피** — 의도와 다르게 끌고 가는 단어는 동의어로 치환 (예: `slime` → `hardened green resin`).
+3. **영역 격리** — 모티프가 묻을 영역과 깨끗할 영역을 양방향으로 강하게 명시 (반대편 영역에 강한 형용사).
+4. **palette 3색 명시** — 색 분기를 영역별로 박음.
+5. **view 고정** — `side profile` 또는 `front-facing view`.
+6. **STYLE + NEG** — 공통 상수 두 개로 마감 (catalog.ts `STYLE`·`NEG`).
+
+**보조 (미세 디테일 케이스)**:
+1. 약한 형용사 회피 (`faint`/`subtle` → `clearly visible`/`prominent`/`bold`).
+2. 방향성·입체감 명시 (`concave inward`/`recessed`) + 반대편 negative에 박기.
+3. 강한 색·재질 단어 비중 축소 (`polished` → `tarnished aged`).
+4. 추상 지시는 구체 형상 예시로 (`rune writing` → `X V T angular shapes`).
+
+### 모델 한계 우회 — lore ↔ art 재조정
+프롬프트 정교화에도 모델이 표현 못 하는 모티프(예: 128×128에서 미세 7줄 분리)는 **이름·로어를 결과 이미지에 맞춰 다시 쓴다**. catalog의 `nameKo`·`lore`·`art`는 한 셋이고, 셋이 서로 일치하면 어느 쪽이 먼저 정해졌는지는 결과에서 보이지 않는다. 모티프가 모델 한계에 닿으면 art를 억지로 비틀지 않고 lore를 재해석한다.
 
 - 초기 1회 batch 생성 → 1인 큐레이션 → Aseprite 외곽선/팔레트 통일 → 단일 팔레트 락
 - 상세 배치 워크플로 = `AUTOMATION.md` (후속 작성)
