@@ -5,6 +5,8 @@
 // 150 PNG 개별 다운로드(이전: 1 요청 × 150) → atlas 1요청. 페이지 전환·인벤
 // 마운트 시 sprite 단위 fetch/디코드 사라짐.
 
+import { assetUrl } from '@/lib/asset-versions';
+
 import atlas from '@/public/sprites/atlas.json';
 
 export interface AtlasCoord {
@@ -22,7 +24,7 @@ export interface AtlasMeta {
 
 const ATLAS = atlas as AtlasMeta;
 
-export const ATLAS_URL = '/sprites/atlas.webp';
+export const ATLAS_URL = assetUrl('/sprites/atlas.webp');
 export const ATLAS_SIZE = ATLAS.size;
 export const ATLAS_CELL = ATLAS.cell;
 /** atlas에 포함된 모든 code 리스트 — 로딩 오버레이 등의 풀로 사용. */
