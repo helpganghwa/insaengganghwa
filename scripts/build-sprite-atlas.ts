@@ -1,5 +1,5 @@
 // Sprite atlas 빌드 — 150 PNG → 1 WebP atlas + JSON 좌표맵.
-// 150 = 15×10 grid · cell 64px · atlas 960×640.
+// 150 = 15×10 grid · cell 128px · atlas 1920×1280 (GDD §6 sprite 표준 = 128).
 // 실행: bun run scripts/build-sprite-atlas.ts
 // 결과: public/sprites/atlas.webp + public/sprites/atlas.json
 //
@@ -11,7 +11,7 @@ import { join } from 'node:path';
 
 import { SPRITE_MANIFEST } from '../lib/game/equipment/sprite-manifest';
 
-const CELL = 64;
+const CELL = 128;
 const COLS = 15;
 const ROWS = 10; // 150 정확. 늘리려면 row 추가.
 
