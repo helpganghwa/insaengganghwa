@@ -309,16 +309,17 @@ export function EnhanceSlotCard({
       setFlash(oc); // 결과 즉시 표시
       setFlashMsg(pick(OUTCOME_MSGS[oc])); // 판타지 톤 5개 중 랜덤
       // §10 자랑 — +30/+50/+99 강화 성공 시 공유 모달.
+      // flash 끝나고 100ms 후 — flash 3s와 비례 유지.
       if (oc === 'success' && BOAST_LEVELS.has(activeJob.targetLevel)) {
-        setTimeout(() => setBoast(true), 1600);
+        setTimeout(() => setBoast(true), 3100);
       }
-      // 새 잡/소진 반영은 축하 연출(1.5s) 후 비차단 reconcile —
+      // 새 잡/소진 반영은 축하 연출(3s) 후 비차단 reconcile —
       // setTimeout 콜백은 transition 밖이라 pending을 잡지 않음(결과가 빨리 보임).
       setTimeout(() => {
         setFlash(null);
         setFlashMsg(null);
         router.refresh();
-      }, 1500);
+      }, 3000);
     });
   };
 
