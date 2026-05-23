@@ -2163,6 +2163,52 @@ const ITEMS: Item[] = [
       '두 부채 + 검은 칼날',
     ],
   },
+  // ── batch 34: 재생성 weapon 5종 (일반, 위트/장엄/전설/화려/아름다운) ──
+  {
+    slug: 'common_bard_lute_with_blade',
+    tone: '위트',
+    region: '일반',
+    slot: 'weapon',
+    recommend: -1,
+    hint: '음유시인 류트 + 숨겨진 칼날',
+    candidateNotes: ['c0', 'c1', 'c2', 'c3'],
+  },
+  {
+    slug: 'common_holy_relic_greatsword',
+    tone: '전설',
+    region: '일반',
+    slot: 'weapon',
+    recommend: -1,
+    hint: '성유물 양손검 + 성구·성인 새김',
+    candidateNotes: ['c0', 'c1', 'c2', 'c3'],
+  },
+  {
+    slug: 'common_royal_archer_longbow',
+    tone: '화려',
+    region: '일반',
+    slot: 'weapon',
+    recommend: -1,
+    hint: '황금 장궁 + 보석',
+    candidateNotes: ['c0', 'c1', 'c2', 'c3'],
+  },
+  {
+    slug: 'common_dancer_silk_ribbon_whip',
+    tone: '아름다운',
+    region: '일반',
+    slot: 'weapon',
+    recommend: -1,
+    hint: '무용수 비단 리본 채찍',
+    candidateNotes: ['c0', 'c1', 'c2', 'c3'],
+  },
+  {
+    slug: 'common_grand_executioner_halberd',
+    tone: '장엄',
+    region: '일반',
+    slot: 'weapon',
+    recommend: -1,
+    hint: '처형인 미늘창',
+    candidateNotes: ['c0', 'c1', 'c2', 'c3'],
+  },
 ];
 
 export default function BatchReviewPage() {
