@@ -19,42 +19,42 @@ interface Plan {
   description: string; // Pixellab description (영문)
 }
 
-// batch 32: 마지막 5종 (1종 채택해서 150 완성, 나머지 4종 백업)
+// batch 33: 일반 region 재생성 weapon 5종 (11/14/17/24/28 자리)
 const BATCH: Plan[] = [
   {
-    slug: 'common_beautiful_silver_locket',
-    slot: 'accessory',
+    slug: 'common_innkeeper_breadknife',
+    slot: 'weapon',
     region: '일반',
-    tone: '아름다운',
-    description: 'beautiful elegant graceful fantasy silver locket accessory item icon, slender silver chain holding a small heart-shaped polished silver locket with a tiny single rose etched on the front, single inanimate game loot object on transparent background, no character, no figure',
-  },
-  {
-    slug: 'marsh_hope_dawn_lotus_charm',
-    slot: 'accessory',
-    region: '늪지대',
-    tone: '희망',
-    description: 'hopeful radiant warm serene marsh swamp fantasy dawn lotus charm accessory item icon, silver chain holding a single pink lotus blossom pendant with a tiny warm gold sun rising behind the petals, single inanimate game loot object on transparent background, no character, no figure',
-  },
-  {
-    slug: 'orc_hope_first_kin_braid',
-    slot: 'accessory',
-    region: '오크 부락',
-    tone: '희망',
-    description: 'hopeful radiant warm orcish tribal fantasy first kin braid bracelet accessory item icon, simple braided brown leather bracelet with three small wooden beads carved with tribal warm family marks, single inanimate game loot object on transparent background, no character, no figure',
-  },
-  {
-    slug: 'rune_witty_apprentice_inkwell_charm',
-    slot: 'accessory',
-    region: '고대 룬 산맥',
     tone: '위트',
-    description: 'humorous quirky whimsical mountain rune fantasy apprentice inkwell charm accessory item icon, silver chain holding a tiny dark inkwell pendant with a small quill leaning into it and three ink splatter dots around, single inanimate game loot object on transparent background, no character, no figure',
+    description: 'humorous quirky cheerful fantasy innkeeper bread knife weapon item icon, simple wide kitchen bread knife with serrated edge and worn wooden handle, with a small piece of bread crumb stuck to the blade, single inanimate game loot object on transparent background, no character, no figure',
   },
   {
-    slug: 'fallen_witty_cherub_brooch',
-    slot: 'accessory',
-    region: '타락천사',
+    slug: 'common_alchemist_potion_dagger',
+    slot: 'weapon',
+    region: '일반',
+    tone: '기괴',
+    description: 'uncanny eerie fantasy alchemist throwing potion vial dagger weapon item icon, slim glass vial with a sharp dagger blade tip, filled with bubbling green liquid and a cork stopper, single inanimate game loot object on transparent background, no character, no figure',
+  },
+  {
+    slug: 'common_old_gentleman_cane_sword',
+    slot: 'weapon',
+    region: '일반',
+    tone: '장엄',
+    description: 'grand majestic fantasy old gentleman concealed cane sword weapon item icon, polished mahogany walking cane with a brass duck-head handle, slightly drawn revealing a thin slim sword blade inside, single inanimate game loot object on transparent background, no character, no figure',
+  },
+  {
+    slug: 'common_fortune_teller_orb_staff',
+    slot: 'weapon',
+    region: '일반',
+    tone: '수수께끼',
+    description: 'mysterious cryptic fantasy fortune teller crystal orb staff weapon item icon, slim brass staff topped with a clear crystal ball cradled by three brass claws, with a small swirl of pale mist inside the orb, single inanimate game loot object on transparent background, no character, no figure',
+  },
+  {
+    slug: 'common_acrobat_fan_blade',
+    slot: 'weapon',
+    region: '일반',
     tone: '위트',
-    description: 'humorous quirky whimsical fallen angel divine fantasy cherub brooch accessory item icon, single small gold brooch shaped like a tiny chubby smiling cherub face with two tiny wings on each side, single inanimate game loot object on transparent background, no character, no figure',
+    description: 'humorous quirky whimsical fantasy acrobat folding fan blade weapon item icon, ornate red and gold folding fan half-opened with sharp steel blades along each spoke, single inanimate game loot object on transparent background, no character, no figure',
   },
 ];
 
