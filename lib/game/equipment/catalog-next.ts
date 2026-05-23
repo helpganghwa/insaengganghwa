@@ -1185,4 +1185,42 @@ export const CATALOG_NEXT: CatalogItem[] = [
     lore: '한 순례자가 자기 평생 자기 가슴께에 한 번 더 매달아 두고 다닌 부적이다. cord의 매듭은 그가 자기 첫 길의 자리에 한 번 더 짚어 본 결대로 한 번씩 더 묶인 자국이고, medallion 가운데에 굳어 박힌 sun은 순례자가 자기 첫 새벽에 자기 자리에서 본 결대로 굳어 있다.',
     art: 'hopeful radiant warm serene fantasy pilgrim travel knot charm accessory item icon, brown cord with a single decorative knot above a small wooden round medallion engraved with a warm gold sun at the center, single inanimate game loot object on transparent background',
   },
+
+  // ── batch 28: accessory 4종 (volcano dragon medallion 잔존 → 모티프 교체) ──
+  {
+    key: 'marsh_swamp_god_eye_amulet',
+    slot: 'accessory',
+    nameKo: '늪의 신의 눈 amulet',
+    region: '늪지대',
+    tone: '장엄',
+    lore: '늪의 가장 깊은 자리에 한 번 자리를 잡은 신이 자기 한 눈을 한 알의 보석으로 한 번 더 굳혀 자기 자리에 두고 잠든 자리다. amulet 가장자리의 가시는 신이 자기 자리를 한 번도 떠나지 않은 결대로 늪의 풀들이 한 줄로 더 둘러 둔 자국이다.',
+    art: 'grand majestic imposing marsh swamp god ancient fantasy eye amulet accessory item icon, dark teal chain holding a round amulet with a large staring deep green divine eye at the center and small thorn details along the rim, single inanimate game loot object on transparent background',
+  },
+  {
+    key: 'orc_blood_pact_skull_brooch',
+    slot: 'accessory',
+    nameKo: '혈맹의 두개골 brooch',
+    region: '오크 부락',
+    tone: '전설',
+    lore: '부락의 두 형제 전사가 자기 첫 사냥에서 같이 잡은 짐승의 두개골 위에 자기 두 단검을 한 번 더 교차해 박고, 가운데에 자기 두 사람의 첫 핏방울을 한 알의 보석으로 굳혀 둔 자리다. 양 옆 두 황금 뿔은 두개골이 한 번 더 일어나지 않게 못 박힌 결이다.',
+    art: 'legendary mythic ancient orcish tribal blood pact fantasy skull brooch accessory item icon, animal skull with two golden horns on each side and two crossed tribal daggers in front of it with a single red blood gemstone at the crossing, single inanimate game loot object on transparent background',
+  },
+  {
+    key: 'rune_quartz_droplet_earring',
+    slot: 'accessory',
+    nameKo: '수정 물방울 귀걸이',
+    region: '고대 룬 산맥',
+    tone: '아름다운',
+    lore: '룬 산맥의 한 새김장이가 자기 누이의 귀에 자기 평생 한 번도 새기지 못한 한 자루의 새벽 이슬을 한 알의 수정으로 한 번 더 굳혀 매달아 둔 자리다. 위쪽 작은 룬 한 자는 그 새벽의 결을 한 줄로 적어 둔 결이다.',
+    art: 'beautiful elegant graceful mountain rune ancient fantasy quartz droplet earring accessory item icon, slender silver hook holding a clear quartz crystal teardrop with a tiny single rune carved at the top, single inanimate game loot object on transparent background',
+  },
+  {
+    key: 'fallen_archangel_halo_crown',
+    slot: 'accessory',
+    nameKo: '대천사의 후광 crown',
+    region: '타락천사',
+    tone: '장엄',
+    lore: '한 대천사가 자기 평생 자기 머리 둘레에 두 줄의 후광을 한 번 더 굳혀 박아 두고, 그 가운데에 자기 첫 깃 한 가닥을 한 번 더 박아 둔 자리다. 두 후광의 한 박자 늦은 빛은 대천사가 자기 자리에서 한 번 더 깨어나는 새벽까지 한 줄씩 더 옅어진다.',
+    art: 'grand majestic imposing fallen angel archangel divine fantasy halo crown accessory item icon, two concentric pale gold halo arcs forming a crown shape with a single white feather rising at the center, single inanimate game loot object on transparent background',
+  },
 ];
