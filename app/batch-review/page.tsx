@@ -813,6 +813,77 @@ const ITEMS: Item[] = [
       '흰 breastplate + 황금 후광 + 흰 날개 (균형)',
     ],
   },
+  // ── batch 14: armor 두 번째 5종 ──
+  {
+    slug: 'marsh_mournful_widow_shroud',
+    tone: '비애',
+    region: '늪지대',
+    slot: 'armor',
+    recommend: 0,
+    hint: '어두운 녹색 shroud + 검은 ribbon — 과부 비애 명확',
+    candidateNotes: [
+      '어두운 녹색 cloak + 검은 ribbon',
+      '어두운 hood + 거친 천 (ghost)',
+      'pauldron + 어두운 천 (armor like, cloak 아님)',
+      '가방 (armor 아님)',
+    ],
+  },
+  {
+    slug: 'orc_legendary_warlord_pauldron',
+    tone: '전설',
+    region: '오크 부락',
+    slot: 'armor',
+    recommend: 2,
+    hint: '어두운 pauldron + 룬 글자 + 송곳니 + 사슬 — pauldron 형태 명확',
+    candidateNotes: [
+      '어두운 helm + 룬 + 송곳니 4개 (helm)',
+      '어두운 helm + 가시 + 송곳니',
+      '어두운 pauldron + 룬 + 송곳니 + 사슬',
+      '어두운 helm + 깃털 + 송곳니',
+    ],
+  },
+  {
+    slug: 'rune_heroic_guardian_helm',
+    tone: '영웅담',
+    region: '고대 룬 산맥',
+    slot: 'armor',
+    recommend: 2,
+    hint: 'brass helm + 큰 룬 — 영웅 guardian',
+    candidateNotes: [
+      '회색 helm + 가운데 작은 룬',
+      '회색 helm + 가운데 큰 ring 룬',
+      '황금 brass helm + 큰 룬',
+      '회색 helm + 가운데 룬 글자',
+    ],
+  },
+  {
+    slug: 'volcano_ornate_phoenix_robe',
+    tone: '화려',
+    region: '서쪽 화산',
+    slot: 'armor',
+    recommend: 2,
+    hint: '거대한 phoenix robe + 황금 + 빨간 — 가장 화려',
+    candidateNotes: [
+      '갈색 robe + 황금 phoenix 자수 + 깃털',
+      '갈색 robe + 황금 자수 + 보석 다수',
+      '거대한 phoenix robe + 황금 + 빨간 (가장 화려)',
+      '갈색 robe + 황금 phoenix 자수 + trim',
+    ],
+  },
+  {
+    slug: 'fallen_beautiful_silk_robe',
+    tone: '아름다운',
+    region: '타락천사',
+    slot: 'armor',
+    recommend: 3,
+    hint: '긴 흰 silk + 황금 trim + 깃털 — 가장 길고 elegant',
+    candidateNotes: [
+      '흰 silk + 가운데 보석 + 깃털',
+      '흰 silk + 황금 trim + 깃털 + collar 보석',
+      '흰 silk + 황금 자수 + 깃털',
+      '긴 흰 silk + 황금 trim + 깃털 (가장 길고 우아)',
+    ],
+  },
 ];
 
 export default function BatchReviewPage() {
