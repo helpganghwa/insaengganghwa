@@ -487,4 +487,52 @@ export const CATALOG_NEXT: CatalogItem[] = [
     lore: '서쪽 화로의 가장 깊은 자리에서 굳어 떨어진 한 두개골을 그 화로의 풀무지기가 자기 mace의 머리로 박아 둔 자리다. 두개골의 두 눈자리 안쪽엔 식지 않은 잉걸 한 알씩이 가만히 불을 머금고 있고, 자루의 황금 trim은 그 두개골이 화로 밖으로 한 번 더 나가지 못하게 묶어 둔 자리다.',
     art: 'uncanny eerie unsettling volcanic forge fire fantasy skull furnace mace weapon item icon, dark mace head shaped like a charred skull with molten orange embers burning inside the eye sockets and a gold-trimmed dark haft, single inanimate game loot object on transparent background',
   },
+
+  // ═══════ armor 50종 ═══════
+  // ── batch 13: armor 시작 5종 ──
+  {
+    key: 'marsh_lily_dress',
+    slot: 'armor',
+    nameKo: '백합의 드레스',
+    region: '늪지대',
+    tone: '아름다운',
+    lore: '늪의 한 마녀가 자기 손바닥 위에 한 송이 백합을 한 번 들여다본 새벽에 그 백합의 결대로 자기 dress를 한 자락 짜 내려놓은 것이다. 가슴께에 가만히 자라난 청록 보석은 백합이 자기 결을 dress 안쪽에 한 번 더 박아 둔 자리다.',
+    art: 'beautiful elegant graceful marsh swamp witch fantasy lily dress robe armor item icon, slender pale flowing dress with a single teal lily-shaped gemstone at the chest, single inanimate game loot object on transparent background',
+  },
+  {
+    key: 'orc_palm_print_vest',
+    slot: 'armor',
+    nameKo: '손바닥 자국 가죽 vest',
+    region: '오크 부락',
+    tone: '위트',
+    lore: '부락의 한 어린 오크가 자기 첫 사냥 새벽에 그 짐승을 한 번 잡은 자기 손바닥을 자기 가죽 vest에 한 번 더 찍어 둔 자리다. 손바닥 자국 아래로 그 사냥의 송곳니 두 개가 한 줄로 매달려 있고, 그 어린 오크는 그 자국이 옅어질 때까지 vest를 한 번도 벗지 않았다.',
+    art: 'humorous orcish tribal fantasy leather warpaint vest armor item icon, brown leather chest vest with a single red palm-print smear and two tusks hanging from the chest cord, single inanimate game loot object on transparent background',
+  },
+  {
+    key: 'rune_single_curve_stone_plate',
+    slot: 'armor',
+    nameKo: '한 줄 곡선의 stone plate',
+    region: '고대 룬 산맥',
+    tone: '기괴',
+    lore: '룬 산맥의 한 새김장이가 자기 stone breastplate 가슴께에 한 줄의 곡선만 한 번 더 깊이 그어 둔 자리다. 그 곡선이 어떤 룬인지는 그 새김장이도 자기 마지막 새벽까지 답하지 않았는데, 한 번씩 보는 사람마다 그 곡선이 한 번씩 다른 모양으로 보인다고 한다.',
+    art: 'uncanny eerie mountain rune ancient fantasy stone breastplate armor item icon, dark gray stone breastplate with a single deep curved rune line carved across the chest, single inanimate game loot object on transparent background',
+  },
+  {
+    key: 'volcano_ember_embroidered_cloak',
+    slot: 'armor',
+    nameKo: '잉걸 자수의 cloak',
+    region: '서쪽 화산',
+    tone: '수수께끼',
+    lore: '서쪽 화로 옆 마을의 한 자수가가 자기 cloak 한 자락에 잉걸 한 알을 한 줄로 박아 넣은 자리다. cloak 안쪽에서 한 번씩 옅게 흘러나오는 작은 빛은 그 자수가가 자기 손가락 끝으로 그 잉걸의 가장자리에 한 줄씩 더 박아 둔 결을 따라 한 박자 늦게 흘러간다.',
+    art: 'mysterious cryptic volcanic forge fire fantasy ashen hooded cloak armor item icon, dark gray hooded cloak with glowing ember embroidery along the hem and a small sealed rune at the collar, single inanimate game loot object on transparent background',
+  },
+  {
+    key: 'fallen_seraph_dark_breastplate',
+    slot: 'armor',
+    nameKo: '추락한 자의 흉갑',
+    region: '타락천사',
+    tone: '장엄',
+    lore: '한 세라프가 추락하기 전 자기 흉갑 가운데에 자기 후광을 한 번 더 황금으로 굳혀 박아 두고 떠난 자리다. 양 옆에 굳은 두 검은 날개는 그 세라프가 자기 자리를 한 번 더 안 돌아본다는 약속처럼 펴진 채 굳었고, 후광의 동심원은 한 새벽에 한 줄씩 옅어진다.',
+    art: 'grand majestic legendary fallen angel seraphic divine fantasy dark seraph breastplate armor item icon, dark chest plate with concentric gold halo embossed at the center and two dark feathered wing pauldrons, single inanimate game loot object on transparent background',
+  },
 ];
