@@ -29,7 +29,7 @@ export type CatalogRegion =
 
 /** 로어 정서 — 배치 내 고르게 분포(한 톤이 슬롯의 ~1/4 초과 금지). docs/LORE.md §1.
  *  2026-05-23: catalog-next 신규 워크플로에서는 '담백'·'일상'·'정밀' 사용 금지,
- *  '전설'·'화려'로 대체. 기존 catalog.ts entries는 enum 호환을 위해 옛 톤 유지. */
+ *  '전설'·'화려'·'아름다운'으로 대체. 기존 catalog.ts entries는 enum 호환을 위해 옛 톤 유지. */
 export type CatalogTone =
   | '장엄'
   | '담백'
@@ -40,7 +40,8 @@ export type CatalogTone =
   | '영웅담'
   | '수수께끼'
   | '전설'
-  | '화려';
+  | '화려'
+  | '아름다운';
 
 export interface CatalogItem {
   /** 영문 snake — 스프라이트 파일/스프라이트키 식별자. 전역 유니크. */

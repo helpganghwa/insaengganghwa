@@ -19,42 +19,42 @@ interface Plan {
   description: string; // Pixellab description (영문)
 }
 
-// batch 10: 화려 톤 시범 × 5종
+// batch 13: armor 시작 5종 (아름다운 톤 시범 포함)
 const BATCH: Plan[] = [
   {
-    slug: 'marsh_ornate_jewel_wand',
-    slot: 'weapon',
+    slug: 'marsh_beautiful_lily_dress',
+    slot: 'armor',
     region: '늪지대',
-    tone: '화려',
-    description: 'ornate flamboyant lavishly decorated gilded marsh swamp fantasy jeweled wand weapon item icon, slender wand encrusted with multiple bright teal and emerald gemstones and ornate gold leaf vines, single inanimate game loot object on transparent background, no character, no figure',
+    tone: '아름다운',
+    description: 'beautiful elegant graceful dainty marsh swamp witch fantasy lily dress robe armor item icon, slender pale dress with woven lily petals and a single teal lily blooming at the chest, single inanimate game loot object on transparent background, no character, no figure',
   },
   {
-    slug: 'orc_ornate_gilded_chief_axe',
-    slot: 'weapon',
+    slug: 'orc_witty_warpaint_vest',
+    slot: 'armor',
     region: '오크 부락',
-    tone: '화려',
-    description: 'ornate flamboyant lavishly decorated gilded orcish tribal chieftain fantasy two-handed axe weapon item icon, massive iron axe heavily embellished with bright gold inlays, dangling bright trophies, and large red gemstones, single inanimate game loot object on transparent background, no character, no figure',
+    tone: '위트',
+    description: 'humorous quirky orcish tribal fantasy warpaint leather vest armor item icon, brown leather chest vest with crude tribal warpaint smears in three colors and dangling small bone trinkets, single inanimate game loot object on transparent background, no character, no figure',
   },
   {
-    slug: 'rune_ornate_jeweled_warhammer',
-    slot: 'weapon',
+    slug: 'rune_uncanny_living_stone_plate',
+    slot: 'armor',
     region: '고대 룬 산맥',
-    tone: '화려',
-    description: 'ornate flamboyant lavishly decorated gilded mountain rune ancient fantasy jeweled warhammer weapon item icon, large stone hammer head encrusted with multiple blue sapphires, bright gold filigree, and inlaid silver rune patterns, single inanimate game loot object on transparent background, no character, no figure',
+    tone: '기괴',
+    description: 'uncanny eerie unsettling mountain rune ancient fantasy living stone plate armor item icon, dark gray stone breastplate with carved runes that look like watching mouths and a single seam slowly opening, single inanimate game loot object on transparent background, no character, no figure',
   },
   {
-    slug: 'volcano_ornate_phoenix_blade',
-    slot: 'weapon',
+    slug: 'volcano_mystic_ashen_cloak',
+    slot: 'armor',
     region: '서쪽 화산',
-    tone: '화려',
-    description: 'ornate flamboyant lavishly decorated gilded volcanic fire phoenix fantasy ornate longsword weapon item icon, blade encrusted with bright ruby gemstones, ornate gold phoenix-wing crossguard, and brilliant flame motifs, single inanimate game loot object on transparent background, no character, no figure',
+    tone: '수수께끼',
+    description: 'mysterious cryptic volcanic forge fire fantasy ashen cloak armor item icon, dark gray hooded cloak with smoldering ember embroidery along the hem and a small unreadable rune sealed at the collar, single inanimate game loot object on transparent background, no character, no figure',
   },
   {
-    slug: 'fallen_ornate_golden_glaive',
-    slot: 'weapon',
+    slug: 'fallen_grand_seraph_breastplate',
+    slot: 'armor',
     region: '타락천사',
-    tone: '화려',
-    description: 'ornate flamboyant lavishly decorated gilded fallen angel divine seraphic fantasy ornate glaive weapon item icon, tall curved blade encrusted with multiple bright sapphires and pearls, lavish gold halo arcs, and intricate feather embossing, single inanimate game loot object on transparent background, no character, no figure',
+    tone: '장엄',
+    description: 'grand majestic legendary fallen angel seraphic divine fantasy seraph breastplate armor item icon, pale silver chest plate with a single concentric gold halo embossed at the center and two folded feathered wing pauldrons, single inanimate game loot object on transparent background, no character, no figure',
   },
 ];
 
