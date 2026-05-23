@@ -1026,6 +1026,77 @@ const ITEMS: Item[] = [
       'silver helm + 황금 십자 + 푸른 보석 + 황금 trim',
     ],
   },
+  // ── batch 17: armor 다섯 번째 5종 ──
+  {
+    slug: 'orc_witty_jester_mask_hood',
+    tone: '위트',
+    region: '오크 부락',
+    slot: 'armor',
+    recommend: 1,
+    hint: '어릿광대 모자 + 흰 jester 얼굴 — 가장 위트',
+    candidateNotes: [
+      '어두운 hood + 빨간 코 마스크 + 양쪽 두개골',
+      '어릿광대 모자 + 흰 jester 얼굴',
+      '갈색 hood + 빨간 디아블로 가면',
+      '갈색 hood + 마스크 + 작은 종',
+    ],
+  },
+  {
+    slug: 'marsh_grand_swamp_lord_robe',
+    tone: '장엄',
+    region: '늪지대',
+    slot: 'armor',
+    recommend: 0,
+    hint: '어두운 청록 robe + 깃털·잎 collar + 가운데 보석 — 장엄 swamp lord',
+    candidateNotes: [
+      '어두운 청록 robe + 깃털·잎 collar + 가운데 보석',
+      '청록 robe + 큰 깃털 collar + 보석',
+      'weapon 형태 (잘못 생성)',
+      '갑옷 + 장갑 (robe 형태 아님)',
+    ],
+  },
+  {
+    slug: 'rune_beautiful_silver_diadem',
+    tone: '아름다운',
+    region: '고대 룬 산맥',
+    slot: 'armor',
+    recommend: 0,
+    hint: '가는 silver diadem + 가운데 청록 보석 — 가장 elegant',
+    candidateNotes: [
+      '가는 silver diadem + 가운데 청록 보석',
+      'silver crown + 흰 결정',
+      'brass diadem + 가운데 R 룬',
+      'silver crown + 잎·진주',
+    ],
+  },
+  {
+    slug: 'volcano_uncanny_corrupted_mask',
+    tone: '기괴',
+    region: '서쪽 화산',
+    slot: 'armor',
+    recommend: 0,
+    hint: '어두운 가면 + 균열에서 잉걸 흘러나옴 — 기괴 톤 균형',
+    candidateNotes: [
+      '어두운 가면 + 가운데 오렌지 균열 + 흐르는 잉걸',
+      '어두운 가면 + 양쪽 오렌지 hint',
+      '어두운 가면 + 두 빨간 눈 + 흐르는 피 (horror)',
+      '어두운 가면 + 빨간 균열 + 가운데 입 잉걸',
+    ],
+  },
+  {
+    slug: 'fallen_heroic_paladin_breastplate',
+    tone: '영웅담',
+    region: '타락천사',
+    slot: 'armor',
+    recommend: 0,
+    hint: '흰 breastplate + 가운데 황금 sun emblem — 깔끔 paladin',
+    candidateNotes: [
+      '흰 breastplate + 가운데 황금 sun emblem',
+      '흰 breastplate + 황금 sun + 측면 dent',
+      '흰 breastplate + 큰 sun emblem + 양옆 깃 (화려)',
+      '흰 breastplate + 황금 sun face + 가운데 trim',
+    ],
+  },
 ];
 
 export default function BatchReviewPage() {
