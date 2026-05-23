@@ -2092,6 +2092,77 @@ const ITEMS: Item[] = [
       '황금 ribbon (작음) + silver medal + 검+왕관',
     ],
   },
+  // ── batch 33: 재생성 weapon 5종 (11/14/17/24/28 자리, 일반 region) ──
+  {
+    slug: 'common_innkeeper_breadknife',
+    tone: '위트',
+    region: '일반',
+    slot: 'weapon',
+    recommend: 0,
+    hint: '흰 톱칼 + 갈색 나무 손잡이 + 빵 부스러기 — 빵칼 명확',
+    candidateNotes: [
+      '단순 흰 톱칼 + 갈색 손잡이 + 빵 부스러기',
+      '단순 칼 (bread knife 아님)',
+      '작은 손도끼 + 톱니',
+      '단순 검 (bread knife 아님)',
+    ],
+  },
+  {
+    slug: 'common_alchemist_potion_dagger',
+    tone: '기괴',
+    region: '일반',
+    slot: 'weapon',
+    recommend: 0,
+    hint: '녹색 약병 + 위에 칼날 — 약병 단검',
+    candidateNotes: [
+      '녹색 약병 + 위에 칼날',
+      '둥근 녹색 보석 + 위에 칼날',
+      '칼날 + 가운데 녹색 + 검은 점액',
+      '녹색 약병 + 위에 갈고리',
+    ],
+  },
+  {
+    slug: 'common_old_gentleman_cane_sword',
+    tone: '장엄',
+    region: '일반',
+    slot: 'weapon',
+    recommend: 1,
+    hint: '갈색 지팡이 + 오리 머리 + 살짝 빠진 칼 + 빈 칼집 — 가장 명확',
+    candidateNotes: [
+      '갈색 지팡이 + 황금 오리 머리 + 약간 빠진 검',
+      '갈색 지팡이 + 오리 머리 + 빠진 칼 + 옆에 빈 칼집',
+      '갈색 지팡이 + 오리 머리 + 빠진 칼 + 황금 trim',
+      '갈색 지팡이 + 오리 머리 (검 안 보임)',
+    ],
+  },
+  {
+    slug: 'common_fortune_teller_orb_staff',
+    tone: '수수께끼',
+    region: '일반',
+    slot: 'weapon',
+    recommend: 0,
+    hint: '갈색 staff + 황금 claw + 흰 crystal orb — 점쟁이 staff',
+    candidateNotes: [
+      '갈색 staff + 황금 claw + 흰 crystal orb',
+      '갈색 staff + claw + crystal + 청록 detail',
+      'brass staff + claw + crystal (multi-leveled)',
+      '갈색 staff + 손바닥 + 오렌지 crystal',
+    ],
+  },
+  {
+    slug: 'common_acrobat_fan_blade',
+    tone: '위트',
+    region: '일반',
+    slot: 'weapon',
+    recommend: 0,
+    hint: '빨간/황금 부채 + 양 옆 검은 칼날 — dramatic',
+    candidateNotes: [
+      '빨간/황금 반쯤 펼친 부채 + 양 옆 검은 칼날',
+      '빨간/황금 부채 + 가시 칼날 + 줄무늬',
+      '갈색·흰 부채 + 가시 칼날',
+      '두 부채 + 검은 칼날',
+    ],
+  },
 ];
 
 export default function BatchReviewPage() {
