@@ -1168,6 +1168,77 @@ const ITEMS: Item[] = [
       '흰 깃 + 황금 왕관 (helm 형태)',
     ],
   },
+  // ── batch 19: 다양 톤 보충 5종 ──
+  {
+    slug: 'marsh_witty_lilypad_hat',
+    tone: '위트',
+    region: '늪지대',
+    slot: 'armor',
+    recommend: 1,
+    hint: '잎 + 진주 + 옆에 개구리 — 위트 강함',
+    candidateNotes: [
+      '동그란 청록 잎 모자 + 가운데 진주',
+      '잎 모자 + 진주 + 옆에 개구리',
+      '잎 + 진주 (큰 잎)',
+      '잎 + 진주 + 옆에 자물쇠',
+    ],
+  },
+  {
+    slug: 'orc_grand_chieftain_cloak',
+    tone: '장엄',
+    region: '오크 부락',
+    slot: 'armor',
+    recommend: 3,
+    hint: '갈색 모피 + 가운데 큰 송곳니 한 쌍 — chieftain dramatic',
+    candidateNotes: [
+      '갈색 모피 망토 + 황금 clasp + 송곳니',
+      '빨간/검은 모피 cloak + 가운데 큰 뼈',
+      '갈색 모피 + 가운데 짐승 얼굴 + 송곳니',
+      '갈색 모피 + 가운데 큰 송곳니 한 쌍',
+    ],
+  },
+  {
+    slug: 'rune_mystic_seer_hood',
+    tone: '수수께끼',
+    region: '고대 룬 산맥',
+    slot: 'armor',
+    recommend: 0,
+    hint: '어두운 hood + 가운데 작은 룬 + 베일 — 유일 hood',
+    candidateNotes: [
+      '어두운 hood + 가운데 작은 룬 + 베일',
+      '돌 panel (armor 아님)',
+      '펜던트 (armor 아님)',
+      '가죽 패치 (armor 아님)',
+    ],
+  },
+  {
+    slug: 'volcano_beautiful_glass_crown',
+    tone: '아름다운',
+    region: '서쪽 화산',
+    slot: 'armor',
+    recommend: 0,
+    hint: '곡선 crown + 빨간 보석 — elegant (어두운 톤)',
+    candidateNotes: [
+      '어두운 곡선 crown + 빨간 보석 (가시)',
+      '어두운 crown + 빨간 보석 + 큰 spike',
+      '어두운 crown + 큰 빨간 보석 + 곡선 spike (드라마)',
+      '어두운 crown + 작은 빨간 보석 (단순)',
+    ],
+  },
+  {
+    slug: 'fallen_ornate_celestial_robe',
+    tone: '화려',
+    region: '타락천사',
+    slot: 'armor',
+    recommend: 3,
+    hint: '흰 robe + 가운데 sun + 빨간 보석 다수 + 황금 trim — 가장 화려',
+    candidateNotes: [
+      '황금 trim 흰 robe + 가운데 sun + 황금 collar',
+      '황금 armor + 가운데 sun + 빨간 보석들',
+      '황금 sash/stole (robe 아님, 작음)',
+      '흰 robe + 가운데 sun + 빨간 보석 다수 + 황금 trim',
+    ],
+  },
 ];
 
 export default function BatchReviewPage() {
