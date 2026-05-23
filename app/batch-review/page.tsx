@@ -742,6 +742,77 @@ const ITEMS: Item[] = [
       '검은 두개골 + 체인 + 황금 자루 (화려 쪽)',
     ],
   },
+  // ── batch 13: armor 시작 5종 (아름다운 시범) ──
+  {
+    slug: 'marsh_beautiful_lily_dress',
+    tone: '아름다운',
+    region: '늪지대',
+    slot: 'armor',
+    recommend: 0,
+    hint: '긴 흰 dress + 가운데 청록 보석 — 아름다운 톤 dress 명확',
+    candidateNotes: [
+      '긴 흰 dress + 가운데 청록 보석',
+      'wand 형태 (armor 아님)',
+      '흉갑 + 백합 두 송이 (armor지만 dress 아님)',
+      'wand/staff 형태 (armor 아님)',
+    ],
+  },
+  {
+    slug: 'orc_witty_warpaint_vest',
+    tone: '위트',
+    region: '오크 부락',
+    slot: 'armor',
+    recommend: 3,
+    hint: '갈색 vest + 청록·빨강 번개 워페인트 — 위트 강함',
+    candidateNotes: [
+      '갈색 vest + 빨간 X 워페인트 + 뼈',
+      '청록 vest + 청록·황금 워페인트',
+      '갈색 vest + 빨간 손바닥 + 송곳니',
+      '갈색 vest + 청록·빨강 번개 워페인트',
+    ],
+  },
+  {
+    slug: 'rune_uncanny_living_stone_plate',
+    tone: '기괴',
+    region: '고대 룬 산맥',
+    slot: 'armor',
+    recommend: 1,
+    hint: '어두운 stone breastplate + 가운데 큰 눈 룬 — 가장 살아있는 톤',
+    candidateNotes: [
+      '어두운 stone + 가운데 얼굴 룬',
+      '어두운 stone + 가운데 큰 눈 룬',
+      '어두운 stone + 벌어진 입 + 두 눈 (드라마)',
+      '회색 stone + 큰 곡선 (단순)',
+    ],
+  },
+  {
+    slug: 'volcano_mystic_ashen_cloak',
+    tone: '수수께끼',
+    region: '서쪽 화산',
+    slot: 'armor',
+    recommend: 0,
+    hint: '어두운 hood cloak + ember 자수 — 가장 cloak 형태',
+    candidateNotes: [
+      '어두운 hood cloak + 가운데 ember + 잉걸 자수',
+      '대장간 도구들 (armor 아님)',
+      '어두운 gauntlet (armor지만 cloak 아님)',
+      '둥근 ember 부적 (armor 아님)',
+    ],
+  },
+  {
+    slug: 'fallen_grand_seraph_breastplate',
+    tone: '장엄',
+    region: '타락천사',
+    slot: 'armor',
+    recommend: 0,
+    hint: '흰 breastplate + 황금 후광 + 흰 날개 — 세라프 장엄',
+    candidateNotes: [
+      '흰 breastplate + 황금 후광 + 양옆 흰 날개',
+      '검은 breastplate + 황금 후광 + 검은 날개 (fallen)',
+      '황금 brass breastplate + 깃털·후광 (화려)',
+      '흰 breastplate + 황금 후광 + 흰 날개 (균형)',
+    ],
+  },
 ];
 
 export default function BatchReviewPage() {
