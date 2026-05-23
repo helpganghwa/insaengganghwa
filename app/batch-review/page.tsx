@@ -1808,6 +1808,77 @@ const ITEMS: Item[] = [
       '갈색 cord + 매듭 + 둥근 medallion + sun',
     ],
   },
+  // ── batch 28: accessory 5종 (volcano 재생성 + 4 신규) ──
+  {
+    slug: 'volcano_witty_baby_dragon_pendant_v2',
+    tone: '위트',
+    region: '서쪽 화산',
+    slot: 'accessory',
+    recommend: 0,
+    hint: '검은 dragon medallion + ZZ 잠 표시 — 위트 강함',
+    candidateNotes: [
+      '황금 chain + 검은 dragon medallion + ZZ',
+      '황금 chain + 보라/회색 dragon medallion',
+      '갈색 chain + 오렌지 dragon medallion (화려)',
+      '황금 chain + 검은 dragon + 흰 배경',
+    ],
+  },
+  {
+    slug: 'marsh_grand_swamp_god_eye_amulet',
+    tone: '장엄',
+    region: '늪지대',
+    slot: 'accessory',
+    recommend: 0,
+    hint: '청록 chain + 큰 청록 눈 + 가시 detail — dramatic 신',
+    candidateNotes: [
+      '어두운 청록 chain + 큰 청록 눈 + 가시 (드라마)',
+      '어두운 chain + medallion + 큰 청록 눈 (단순)',
+      '갈색 chain + medallion + 큰 청록 눈 + 가시',
+      '어두운 chain + medallion + 큰 청록 눈 (단순)',
+    ],
+  },
+  {
+    slug: 'orc_legendary_blood_pact_brooch',
+    tone: '전설',
+    region: '오크 부락',
+    slot: 'accessory',
+    recommend: 2,
+    hint: '두개골 + 황금 뿔 + 두 dagger + 빨간 보석 — blood pact dramatic',
+    candidateNotes: [
+      '어두운 brooch + 두 dagger + 빨간 보석 (단순)',
+      '어두운 brooch + 두 dagger + 빨간 보석 + swirl',
+      '두개골 + 황금 뿔 + 두 dagger + 빨간 보석',
+      '어두운 brooch + 두 dagger + 룬 + 빨간 보석',
+    ],
+  },
+  {
+    slug: 'rune_beautiful_quartz_droplet_earring',
+    tone: '아름다운',
+    region: '고대 룬 산맥',
+    slot: 'accessory',
+    recommend: 0,
+    hint: 'silver hook + 작은 룬 + 클리어 quartz 물방울 — elegant 단순',
+    candidateNotes: [
+      'silver hook + 작은 룬 + 클리어 quartz 물방울',
+      '회색 hook + 룬 + quartz + 작은 보석',
+      'silver hook + 사각 보석 + 둥근 룬 + 큰 quartz',
+      'silver hook + 큰 quartz + 황금 wing',
+    ],
+  },
+  {
+    slug: 'fallen_grand_archangel_halo_crown',
+    tone: '장엄',
+    region: '타락천사',
+    slot: 'accessory',
+    recommend: 0,
+    hint: '두 황금 후광 ring + 가운데 흰 깃털 — halo crown',
+    candidateNotes: [
+      '두 황금 후광 ring + 가운데 흰 깃털',
+      '어두운 두 후광 ring + 가운데 깃털',
+      '두 황금 후광 + 가운데 깃털 + 양 옆 새 머리',
+      '두 황금 후광 + 가운데 깃털 + 안에 검',
+    ],
+  },
 ];
 
 export default function BatchReviewPage() {
