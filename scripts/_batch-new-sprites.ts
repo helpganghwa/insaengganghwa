@@ -19,42 +19,42 @@ interface Plan {
   description: string; // Pixellab description (영문)
 }
 
-// batch 13: armor 시작 5종 (아름다운 톤 시범 포함)
+// batch 18: '희망' 톤 시범 × 5 (긍정 톤 보충 — 기괴·비애 줄이는 정책)
 const BATCH: Plan[] = [
   {
-    slug: 'marsh_beautiful_lily_dress',
+    slug: 'marsh_hope_lotus_robe',
     slot: 'armor',
     region: '늪지대',
-    tone: '아름다운',
-    description: 'beautiful elegant graceful dainty marsh swamp witch fantasy lily dress robe armor item icon, slender pale dress with woven lily petals and a single teal lily blooming at the chest, single inanimate game loot object on transparent background, no character, no figure',
+    tone: '희망',
+    description: 'hopeful radiant warm serene marsh swamp fantasy lotus robe armor item icon, pale pink flowing robe with a single open lotus blossom embroidered at the chest and soft sun-yellow trim, single inanimate game loot object on transparent background, no character, no figure',
   },
   {
-    slug: 'orc_witty_warpaint_vest',
+    slug: 'orc_hope_sunrise_tabard',
     slot: 'armor',
     region: '오크 부락',
-    tone: '위트',
-    description: 'humorous quirky orcish tribal fantasy warpaint leather vest armor item icon, brown leather chest vest with crude tribal warpaint smears in three colors and dangling small bone trinkets, single inanimate game loot object on transparent background, no character, no figure',
+    tone: '희망',
+    description: 'hopeful radiant warm orcish tribal fantasy sunrise tabard armor item icon, leather chest tabard with a single embroidered orange rising sun on the front and warm gold cord trim, single inanimate game loot object on transparent background, no character, no figure',
   },
   {
-    slug: 'rune_uncanny_living_stone_plate',
+    slug: 'rune_hope_morning_light_cloak',
     slot: 'armor',
     region: '고대 룬 산맥',
-    tone: '기괴',
-    description: 'uncanny eerie unsettling mountain rune ancient fantasy living stone plate armor item icon, dark gray stone breastplate with carved runes that look like watching mouths and a single seam slowly opening, single inanimate game loot object on transparent background, no character, no figure',
+    tone: '희망',
+    description: 'hopeful radiant warm serene mountain rune fantasy morning light cloak armor item icon, pale sky-blue hooded cloak with a single small gold sun-rune at the collar and soft warm light embroidery along the hem, single inanimate game loot object on transparent background, no character, no figure',
   },
   {
-    slug: 'volcano_mystic_ashen_cloak',
+    slug: 'volcano_hope_first_spark_apron',
     slot: 'armor',
     region: '서쪽 화산',
-    tone: '수수께끼',
-    description: 'mysterious cryptic volcanic forge fire fantasy ashen cloak armor item icon, dark gray hooded cloak with smoldering ember embroidery along the hem and a small unreadable rune sealed at the collar, single inanimate game loot object on transparent background, no character, no figure',
+    tone: '희망',
+    description: 'hopeful radiant warm volcanic forge fire fantasy first spark apron armor item icon, warm brown leather apron with a single bright orange spark glowing at the chest pocket and clean polished iron rivets, single inanimate game loot object on transparent background, no character, no figure',
   },
   {
-    slug: 'fallen_grand_seraph_breastplate',
+    slug: 'fallen_hope_dawn_wings_robe',
     slot: 'armor',
     region: '타락천사',
-    tone: '장엄',
-    description: 'grand majestic legendary fallen angel seraphic divine fantasy seraph breastplate armor item icon, pale silver chest plate with a single concentric gold halo embossed at the center and two folded feathered wing pauldrons, single inanimate game loot object on transparent background, no character, no figure',
+    tone: '희망',
+    description: 'hopeful radiant warm blessed fallen angel divine fantasy dawn wings robe armor item icon, pale ivory robe with soft golden sunrise embroidery across the chest and small white feather details on the shoulders, single inanimate game loot object on transparent background, no character, no figure',
   },
 ];
 
