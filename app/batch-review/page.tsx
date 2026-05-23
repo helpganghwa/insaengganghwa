@@ -1737,6 +1737,77 @@ const ITEMS: Item[] = [
       '어두운 silver anklet + 3 깃털',
     ],
   },
+  // ── batch 27: accessory 5종 ──
+  {
+    slug: 'marsh_legendary_drowned_queen_circlet',
+    tone: '전설',
+    region: '늪지대',
+    slot: 'accessory',
+    recommend: 3,
+    hint: '뿌리에 둘러싸인 circlet + 가운데 청록 보석 — drowned queen',
+    candidateNotes: [
+      '베이지 진주 circlet + 가운데 청록 보석',
+      '갈색 circlet + 진주 string + 청록 보석',
+      '검은/회색 chain + 가운데 청록 보석 + 황금',
+      '뿌리에 둘러싸인 circlet + 가운데 청록 보석',
+    ],
+  },
+  {
+    slug: 'orc_ornate_chief_gold_collar',
+    tone: '화려',
+    region: '오크 부락',
+    slot: 'accessory',
+    recommend: 3,
+    hint: '황금 collar + 화려한 swirl + ruby — 가장 ornate',
+    candidateNotes: [
+      '황금 collar + 빨간 ruby ring + 글리프',
+      '황금 collar + 빨간 ruby 중앙 + 글리프',
+      '황금 collar + 양 옆 사자 + 빨간 ruby',
+      '황금 collar + 화려한 swirl + ruby',
+    ],
+  },
+  {
+    slug: 'rune_mystic_riddle_circle_ring',
+    tone: '수수께끼',
+    region: '고대 룬 산맥',
+    slot: 'accessory',
+    recommend: 2,
+    hint: '검은 ring + 가운데 hex 룬 — 가장 mystic',
+    candidateNotes: [
+      '검은 ring + 가운데 silver round 룬',
+      '검은 ring + 가시 + 가운데 룬',
+      '검은 ring + 가운데 hex 룬',
+      '검은 ring + 가시 + 가운데 작은 룬',
+    ],
+  },
+  {
+    slug: 'volcano_witty_baby_dragon_pendant',
+    tone: '위트',
+    region: '서쪽 화산',
+    slot: 'accessory',
+    recommend: 0,
+    hint: '황금 chain + 잠든 새끼 용 + 연기 — 위트 명확',
+    candidateNotes: [
+      '황금 chain + 잠든 새끼 용 + 연기',
+      '갈색 cord + 둥근 medallion + 잠든 새끼 용',
+      '황금 chain + 검은 frame + 빨간 보석',
+      '황금 chain + 잠든 새끼 용 + 흰 배경',
+    ],
+  },
+  {
+    slug: 'common_hope_pilgrim_charm',
+    tone: '희망',
+    region: '일반',
+    slot: 'accessory',
+    recommend: 3,
+    hint: '갈색 cord + 매듭 + 둥근 medallion + 가운데 sun — elegant',
+    candidateNotes: [
+      '갈색 cord + 갈색 medallion + sun + 안쪽 ring',
+      '갈색 cord + 둥근 medallion + sun',
+      '갈색 cord + 둥근 medallion + sun (c1 유사)',
+      '갈색 cord + 매듭 + 둥근 medallion + sun',
+    ],
+  },
 ];
 
 export default function BatchReviewPage() {
