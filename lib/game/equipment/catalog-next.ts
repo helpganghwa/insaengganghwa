@@ -110,13 +110,13 @@ export const CATALOG_NEXT: CatalogItem[] = [
 
   // ── batch 3: 고대 룬 산맥 weapon × 5 ──
   {
-    key: 'rune_chime_wand',
+    key: 'common_bard_lute_with_blade',
     slot: 'weapon',
-    nameKo: '종 달린 wand',
-    region: '고대 룬 산맥',
+    nameKo: '음유시인의 비밀 류트',
+    region: '일반',
     tone: '위트',
-    lore: '룬 학원의 한 견습이 자기 wand 끝에 작은 종을 하나 매달았다. 종에 새긴 룬은 "조용"이라는 한 글자였는데, 흔들 때마다 정확히 한 번씩 가는 소리를 냈다. 견습은 그 한 박자에 자기 호흡을 맞춰 룬을 외웠다고 한 줄로 일기에 적었다.',
-    art: 'humorous whimsical mountain rune ancient fantasy wand weapon item icon, dark slender wand with a small brass bell carved with a rune hanging at the tip, single inanimate game loot object on transparent background',
+    lore: '한 광장의 음유시인이 자기 마지막 새벽 자기 류트 안쪽에 한 알의 칼날을 한 번 더 깎아 넣고 자기 자리를 떠난 자리다. 류트의 줄 옆에 매달린 파란 ribbon은 그가 자기 자리에서 한 번 더 자기 노래의 마지막 줄을 한 번 더 흥얼거린 결이다.',
+    art: 'humorous quirky fantasy traveling bard lute with hidden blade weapon item icon, dark wooden pear-shaped lute instrument with strings, a blue ribbon tied at the neck, and a small concealed blade extending from the bottom tip, single inanimate game loot object on transparent background',
   },
   {
     key: 'rune_three_shard_blade',
@@ -166,13 +166,13 @@ export const CATALOG_NEXT: CatalogItem[] = [
     art: 'humorous comical volcanic forge fire fantasy frying-pan cleaver kitchen weapon item icon, blackened iron pan-cleaver crossbreed weapon with sparks, single inanimate game loot object on transparent background',
   },
   {
-    key: 'volcano_widow_ribbon_hammer',
+    key: 'common_royal_archer_longbow',
     slot: 'weapon',
-    nameKo: '리본의 망치',
-    region: '서쪽 화산',
-    tone: '비애',
-    lore: '서쪽 마을이 잿더미가 된 새벽 한 과부가 자기 남편의 대장간 망치 grip에 그가 한때 자기에게 선물한 머리 리본을 한 줄로 묶어 놓은 자리다. 리본의 옅은 색은 그 새벽의 잿빛에 한 번 덮였다가 다시 한 색만 옅게 떠올랐다.',
-    art: 'mournful sorrowful ashen volcanic forge fire fantasy widow blacksmith hammer weapon item icon, scorched hammer with a single faded ribbon tied at the grip, single inanimate game loot object on transparent background',
+    nameKo: '왕실 궁수의 황금 장궁',
+    region: '일반',
+    tone: '화려',
+    lore: '한 왕국의 첫 궁수가 자기 평생 자기 활시위를 한 번도 줄여 박지 않은 결을 자기 활 grip 가운데에 한 알의 큰 푸른 보석으로 한 번 더 굳혀 박아 둔 자리다. 활의 양 끝의 filigree는 그가 자기 평생 한 번씩 더 짚어 본 결을 따라 한 줄씩 더 둘러져 있다.',
+    art: 'ornate flamboyant gilded fantasy royal archer recurve longbow weapon item icon, elegant gold-inlaid wooden recurve longbow with intricate filigree carvings, a sapphire gemstone at the grip, and a single nocked golden arrow, single inanimate game loot object on transparent background',
   },
   {
     key: 'volcano_molten_eye_dirk',
@@ -367,13 +367,13 @@ export const CATALOG_NEXT: CatalogItem[] = [
     art: 'ornate flamboyant gilded orcish tribal chieftain fantasy totem axe weapon item icon, iron axe head carved into an ancestor face with a large red gemstone in the forehead and two feather strands hanging from the haft, single inanimate game loot object on transparent background',
   },
   {
-    key: 'rune_mxr_warhammer',
+    key: 'common_grand_executioner_halberd',
     slot: 'weapon',
-    nameKo: '산맥의 룬 망치',
-    region: '고대 룬 산맥',
-    tone: '화려',
-    lore: '룬 산맥의 첫 일곱 새김장이가 각자 자기 룬 한 글자씩 새 망치 머리 가운데에 한 자씩 박아 두기로 약속한 자리다. 망치 머리에 새겨진 세 글자는 일곱 글자 중 첫 세 글자이고, 나머지 네 자리에는 그들이 자기 자리에 못 박은 글자 대신 파란 보석을 한 알씩 박아 두었다.',
-    art: 'ornate flamboyant gilded mountain rune ancient fantasy jeweled warhammer weapon item icon, large stone hammer head inlaid with three engraved rune letters and four blue sapphire gems, single inanimate game loot object on transparent background',
+    nameKo: '처형인의 미늘창',
+    region: '일반',
+    tone: '장엄',
+    lore: '한 왕국의 첫 처형인이 자기 평생 한 번도 자기 손가락 끝을 떨지 않은 결을 자기 미늘창의 곡선 칼날에 한 번 더 굳혀 박아 둔 자리다. 양 옆의 옅은 빛은 처형인이 자기 자리에서 한 번 더 자기 결정을 미룬 새벽마다 한 줄씩 더 옅어진다.',
+    art: 'grand majestic imposing fantasy royal executioner halberd weapon item icon, tall heavy iron halberd with a curved axe blade, a long spike on top, a small back hook, and a dark wood haft with faint glow at the sides, single inanimate game loot object on transparent background',
   },
   {
     key: 'volcano_phoenix_blade',
