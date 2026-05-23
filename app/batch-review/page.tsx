@@ -1097,6 +1097,77 @@ const ITEMS: Item[] = [
       '흰 breastplate + 황금 sun face + 가운데 trim',
     ],
   },
+  // ── batch 18: 희망 톤 시범 5종 ──
+  {
+    slug: 'marsh_hope_lotus_robe',
+    tone: '희망',
+    region: '늪지대',
+    slot: 'armor',
+    recommend: 0,
+    hint: '분홍 robe + 가운데 연꽃 자수 — 가장 robe + lotus 명확',
+    candidateNotes: [
+      '분홍 robe + 가운데 연꽃 자수',
+      '연꽃 펜던트 (armor 아님)',
+      '황금 trim 신발 (armor 아님)',
+      '갈색 가방 (armor 아님)',
+    ],
+  },
+  {
+    slug: 'orc_hope_sunrise_tabard',
+    tone: '희망',
+    region: '오크 부락',
+    slot: 'armor',
+    recommend: 0,
+    hint: '갈색 가죽 vest + 가운데 황금 일출 — 깔끔 sunrise',
+    candidateNotes: [
+      '갈색 가죽 vest + 가운데 황금 일출',
+      '가죽 + 어두운 collar + 일출',
+      '갈색 cloak + 가운데 일출 + 황금 trim',
+      '갈색 armor + 작은 일출 + 황금 detail',
+    ],
+  },
+  {
+    slug: 'rune_hope_morning_light_cloak',
+    tone: '희망',
+    region: '고대 룬 산맥',
+    slot: 'armor',
+    recommend: 0,
+    hint: '청록 cloak + 가운데 황금 sun + 양 옆 light 자수 — 유일한 cloak',
+    candidateNotes: [
+      '청록 cloak + 가운데 황금 sun + 양 옆 light',
+      '황금 armor (cloak 아님)',
+      '펜던트 (armor 아님)',
+      '작은 가방 (armor 아님)',
+    ],
+  },
+  {
+    slug: 'volcano_hope_first_spark_apron',
+    tone: '희망',
+    region: '서쪽 화산',
+    slot: 'armor',
+    recommend: 0,
+    hint: '갈색 apron + 가운데 환한 spark — apron + first spark',
+    candidateNotes: [
+      '갈색 apron + 가운데 환한 spark',
+      'silver breastplate + 황금 spark (apron 아님)',
+      '어두운 vest + 황금 디자인 + orange 보석',
+      '갈색 apron + 작은 spark + 가시 detail',
+    ],
+  },
+  {
+    slug: 'fallen_hope_dawn_wings_robe',
+    tone: '희망',
+    region: '타락천사',
+    slot: 'armor',
+    recommend: 0,
+    hint: '황금 흉갑 + 양옆 흰 깃 + 가운데 sun 보석 — dawn wings',
+    candidateNotes: [
+      '황금 흉갑 + 양옆 흰 깃 + 가운데 sun 보석',
+      '황금 잔 (armor 아님)',
+      '깃털 펜 (armor 아님)',
+      '흰 깃 + 황금 왕관 (helm 형태)',
+    ],
+  },
 ];
 
 export default function BatchReviewPage() {
