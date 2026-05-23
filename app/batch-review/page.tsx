@@ -1950,6 +1950,77 @@ const ITEMS: Item[] = [
       '황금 amulet + 청록 깃털 + 7 seal + 시계 형태',
     ],
   },
+  // ── batch 30: accessory 5종 ──
+  {
+    slug: 'marsh_uncanny_swamp_finger_bone_charm',
+    tone: '기괴',
+    region: '늪지대',
+    slot: 'accessory',
+    recommend: 1,
+    hint: '단순 cord + 손가락뼈 + 이끼 — 기괴 단순',
+    candidateNotes: [
+      '어두운 endless knot + 손 뼈 (가시·이끼)',
+      '단순 cord + 손가락뼈 + 이끼',
+      '검은 cord + 큰 송곳니 (손가락뼈 아님)',
+      '검은 cord + 매듭 + 손가락뼈 + 이끼',
+    ],
+  },
+  {
+    slug: 'orc_ornate_chief_warpaint_diadem',
+    tone: '화려',
+    region: '오크 부락',
+    slot: 'accessory',
+    recommend: 3,
+    hint: '황금 diadem + warpaint + 양 옆 사자 — chief 화려',
+    candidateNotes: [
+      '황금 diadem + warpaint stripe + 빨간 ruby',
+      '황금 diadem + 가운데 ruby + warpaint + 양 옆 ruby',
+      '황금 crown + warpaint stripe + ruby + spike',
+      '황금 diadem + 가운데 ruby + warpaint + 양옆 사자',
+    ],
+  },
+  {
+    slug: 'rune_hope_sunrise_pendant',
+    tone: '희망',
+    region: '고대 룬 산맥',
+    slot: 'accessory',
+    recommend: 0,
+    hint: 'silver chain + 황금 medallion + sunrise + 진주 — 깔끔 희망',
+    candidateNotes: [
+      'silver chain + 황금 medallion + sunrise + 진주',
+      '회색 chain + 황금 medallion + sun + 진주',
+      '검은 chain + 황금 medallion + sunrise + 진주',
+      '검은 chain + 황금 medallion + sunrise + ruby + 진주',
+    ],
+  },
+  {
+    slug: 'volcano_heroic_blacksmith_pin',
+    tone: '영웅담',
+    region: '서쪽 화산',
+    slot: 'accessory',
+    recommend: 0,
+    hint: '망치 + 모루 + 잉걸 + sparks — 영웅 blacksmith',
+    candidateNotes: [
+      '망치 + 모루 + 잉걸 + sparks',
+      '망치 + 모루 + 잉걸 + 검은',
+      '망치 + 모루 + 잉걸 + 가시',
+      '망치 + 모루 + 잉걸 + 단순',
+    ],
+  },
+  {
+    slug: 'fallen_beautiful_pearl_choker',
+    tone: '아름다운',
+    region: '타락천사',
+    slot: 'accessory',
+    recommend: 2,
+    hint: '진주 choker + 가운데 큰 진주 + silver 깃털 — elegant',
+    candidateNotes: [
+      '흰 진주 choker + silver 깃털 pendant',
+      '흰 진주 choker + silver 깃털 (균형)',
+      '흰 진주 choker + silver 깃털 + 가운데 큰 진주',
+      '흰 진주 choker + silver wing pendant',
+    ],
+  },
 ];
 
 export default function BatchReviewPage() {
