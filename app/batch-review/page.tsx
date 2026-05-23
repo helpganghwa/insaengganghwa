@@ -1879,6 +1879,77 @@ const ITEMS: Item[] = [
       '두 황금 후광 + 가운데 깃털 + 안에 검',
     ],
   },
+  // ── batch 29: accessory 5종 ──
+  {
+    slug: 'volcano_witty_salamander_ring',
+    tone: '위트',
+    region: '서쪽 화산',
+    slot: 'accessory',
+    recommend: 0,
+    hint: '검은 ring + 위에 큰 오렌지 도롱뇽 + ember — 위트',
+    candidateNotes: [
+      '검은 ring + 위 큰 오렌지 도롱뇽 + ember',
+      '검은 ring + 위 작은 오렌지 도롱뇽',
+      '두 검은 ring 묶임 + 위 도롱뇽',
+      '검은 ring + 가운데 도롱뇽 보석',
+    ],
+  },
+  {
+    slug: 'marsh_hope_lily_pad_anklet',
+    tone: '희망',
+    region: '늪지대',
+    slot: 'accessory',
+    recommend: 0,
+    hint: '흰 anklet + 3 녹색 lily pad + 분홍 lily 한 송이 — hope 명확',
+    candidateNotes: [
+      '흰 anklet + 3 녹색 lily pad + 분홍 lily',
+      '갈색 wreath + 연꽃 + 잎 (anklet 형태 약함)',
+      'silver anklet + 청록 보석 + 진주 (lily pad 없음)',
+      'silver anklet + 4 lily pad + 큰 분홍 연꽃',
+    ],
+  },
+  {
+    slug: 'orc_witty_chief_beard_braid_bead',
+    tone: '위트',
+    region: '오크 부락',
+    slot: 'accessory',
+    recommend: 0,
+    hint: '어두운 wooden bead + grinning 얼굴 + 송곳니 — 위트',
+    candidateNotes: [
+      '어두운 wooden bead + grinning 얼굴 + 송곳니',
+      '어두운 bead + evil grinning + 송곳니',
+      '어두운 bead + surprised 얼굴 + 송곳니',
+      '어두운 bead + toothy grin + 송곳니',
+    ],
+  },
+  {
+    slug: 'rune_heroic_first_carver_chisel_charm',
+    tone: '영웅담',
+    region: '고대 룬 산맥',
+    slot: 'accessory',
+    recommend: 0,
+    hint: '검은 chain + 두 X 십자 끌 — carver 영웅 명확',
+    candidateNotes: [
+      '검은 chain + 두 X 십자 끌',
+      '검은 chain + 가운데 stone + 룬',
+      '검은 chain + X 십자 끌 (단순)',
+      '검은 chain + 가운데 stone + 룬',
+    ],
+  },
+  {
+    slug: 'fallen_legendary_seven_seals_amulet',
+    tone: '전설',
+    region: '타락천사',
+    slot: 'accessory',
+    recommend: 0,
+    hint: '갈색 amulet + 가운데 깃털 + 7 seal symbols — 전설',
+    candidateNotes: [
+      '갈색 amulet + 가운데 깃털 + 7 seal symbols',
+      '황금 amulet + 가운데 깃털 + 7 보석',
+      '황금 amulet + 가운데 깃털 + 6 seal symbols',
+      '황금 amulet + 청록 깃털 + 7 seal + 시계 형태',
+    ],
+  },
 ];
 
 export default function BatchReviewPage() {
