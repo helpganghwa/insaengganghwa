@@ -2209,6 +2209,43 @@ const ITEMS: Item[] = [
     hint: '처형인 미늘창',
     candidateNotes: ['c0', 'c1', 'c2', 'c3'],
   },
+  // ── batch 35: weapon 4종 (twin_daggers 실패) ──
+  {
+    slug: 'common_chef_giant_skillet',
+    tone: '위트',
+    region: '일반',
+    slot: 'weapon',
+    recommend: -1,
+    hint: '거대 검은 프라이팬 + 계란',
+    candidateNotes: ['c0', 'c1', 'c2', 'c3'],
+  },
+  {
+    slug: 'common_warrior_chakram',
+    tone: '전설',
+    region: '일반',
+    slot: 'weapon',
+    recommend: -1,
+    hint: '차크람 던지기 원반 + 황금 trim + 글리프',
+    candidateNotes: ['c0', 'c1', 'c2', 'c3'],
+  },
+  {
+    slug: 'common_two_handed_morningstar',
+    tone: '장엄',
+    region: '일반',
+    slot: 'weapon',
+    recommend: -1,
+    hint: '양손 모닝스타 (가시 공)',
+    candidateNotes: ['c0', 'c1', 'c2', 'c3'],
+  },
+  {
+    slug: 'common_emperor_naginata',
+    tone: '화려',
+    region: '일반',
+    slot: 'weapon',
+    recommend: -1,
+    hint: '황금 나기나타 + 학 문양 + 빨간 술',
+    candidateNotes: ['c0', 'c1', 'c2', 'c3'],
+  },
 ];
 
 export default function BatchReviewPage() {
