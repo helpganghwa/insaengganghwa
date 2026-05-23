@@ -1239,6 +1239,77 @@ const ITEMS: Item[] = [
       '흰 robe + 가운데 sun + 빨간 보석 다수 + 황금 trim',
     ],
   },
+  // ── batch 20: armor 균등화 5종 ──
+  {
+    slug: 'marsh_legendary_drowned_pearl_robe',
+    tone: '전설',
+    region: '늪지대',
+    slot: 'armor',
+    recommend: 1,
+    hint: '청록 trihat 모자 + 거미·뼈 + 진주 — 해적 전설 톤',
+    candidateNotes: [
+      '청록 장갑 (armor 아님)',
+      '청록 trihat 모자 + 거미·뼈 + 진주',
+      '펜던트 부적 (armor 아님)',
+      '청록 부츠 (armor 아님)',
+    ],
+  },
+  {
+    slug: 'orc_heroic_blood_brother_pauldron',
+    tone: '영웅담',
+    region: '오크 부락',
+    slot: 'armor',
+    recommend: 3,
+    hint: '두 쌍 pauldron + 큰 뿔 + 빨간 cord — 전사 dramatic',
+    candidateNotes: [
+      '두 쌍 어두운 pauldron + 빨간 cord',
+      '두 쌍 어두운 pauldron + 빨간 십자 + 보석',
+      '두 쌍 회색 pauldron + 큰 가시 + 빨간 cord',
+      '두 쌍 어두운 pauldron + 큰 뿔 + 빨간 cord',
+    ],
+  },
+  {
+    slug: 'rune_ornate_high_lord_plate',
+    tone: '화려',
+    region: '고대 룬 산맥',
+    slot: 'armor',
+    recommend: 0,
+    hint: '흰 breastplate + 파란 보석 다수 + 황금 trim — plate + 화려',
+    candidateNotes: [
+      '흰 breastplate + 파란 보석 다수 + 황금 trim',
+      '두 황금 장갑 (gauntlet, plate 아님)',
+      '황금 brass helm (helm, plate 아님)',
+      '두 silver pauldron + 황금 trim (pauldron)',
+    ],
+  },
+  {
+    slug: 'volcano_mournful_widow_apron',
+    tone: '비애',
+    region: '서쪽 화산',
+    slot: 'armor',
+    recommend: 0,
+    hint: '검은 가죽 apron + 뒤 리본 + pocket — widow apron',
+    candidateNotes: [
+      '검은 가죽 apron + 뒤 리본 + pocket',
+      '검은 가죽 apron + 뒤 리본 + pocket (c0 유사)',
+      '검은 가죽 apron + pocket + 거친 천',
+      '검은 가죽 apron + 머리 + pocket',
+    ],
+  },
+  {
+    slug: 'common_witty_traveler_pointed_hat',
+    tone: '위트',
+    region: '일반',
+    slot: 'armor',
+    recommend: 0,
+    hint: '어두운 파란 마법사 뾰족모자 + 황금 ribbon + 별 charm',
+    candidateNotes: [
+      '어두운 파란 마법사 뾰족모자 + 황금 ribbon + 별 charm',
+      '갈색 가죽 vest (hat 아님)',
+      '별 모양 sun 형태 (armor 아님)',
+      '갈색 가방 (armor 아님)',
+    ],
+  },
 ];
 
 export default function BatchReviewPage() {
