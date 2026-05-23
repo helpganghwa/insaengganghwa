@@ -1452,6 +1452,78 @@ const ITEMS: Item[] = [
       '황금 trim 방패 (armor 아님)',
     ],
   },
+  // ═══════ accessory 시작 ═══════
+  // ── batch 23: accessory 첫 5종 ──
+  {
+    slug: 'marsh_beautiful_lily_amulet',
+    tone: '아름다운',
+    region: '늪지대',
+    slot: 'accessory',
+    recommend: 0,
+    hint: 'silver 체인 + 청록 lily blossom + 가운데 진주 — elegant lily',
+    candidateNotes: [
+      'silver 체인 + 청록 lily blossom + 가운데 진주',
+      'silver 체인 + 청록 lily (다른 형태)',
+      'silver 체인 + 청록 꽃 + 진주',
+      'silver 체인 + 청록 별 모양 lily + 진주',
+    ],
+  },
+  {
+    slug: 'orc_legendary_first_chief_pendant',
+    tone: '전설',
+    region: '오크 부락',
+    slot: 'accessory',
+    recommend: 0,
+    hint: '갈색 가죽 cord + 황토 medallion + 빨간 글리프 — chief 전설',
+    candidateNotes: [
+      '갈색 cord + 황토 medallion + 빨간 글리프',
+      '갈색 cord + 황토 medallion + 청록 글리프',
+      '갈색 cord + 황토 medallion + 파란 발자국 글리프',
+      '갈색 cord + 황토 medallion + 청록 발톱 글리프',
+    ],
+  },
+  {
+    slug: 'rune_mystic_listening_rune_ring',
+    tone: '수수께끼',
+    region: '고대 룬 산맥',
+    slot: 'accessory',
+    recommend: 2,
+    hint: '검은 ring + 가운데 룬 글자 — 가장 룬 명확',
+    candidateNotes: [
+      'silver band + 가운데 작은 푸른 보석 (단순)',
+      '어두운 ring + 가운데 푸른 보석 + 양 옆 룬',
+      '검은 ring + 가운데 룬 글자',
+      'silver ring + 가운데 룬 트라이앵글',
+    ],
+  },
+  {
+    slug: 'volcano_grand_phoenix_eye_amulet',
+    tone: '장엄',
+    region: '서쪽 화산',
+    slot: 'accessory',
+    recommend: 0,
+    hint: '황금 brass amulet + 가운데 큰 오렌지 phoenix 눈 — eye 명확',
+    candidateNotes: [
+      '황금 brass amulet + 가운데 큰 오렌지 phoenix 눈',
+      '검은 frame + 가운데 빨간 보석 + phoenix 자수',
+      '검은 amulet + 가운데 오렌지 보석 + 깃털',
+      '검은 amulet + 황금 wing + ankh 형태',
+    ],
+  },
+  {
+    slug: 'fallen_hope_morning_charm',
+    tone: '희망',
+    region: '타락천사',
+    slot: 'accessory',
+    recommend: 0,
+    hint: '황금 체인 + 황금 sun + 작은 흰 깃털 — morning charm',
+    candidateNotes: [
+      '황금 체인 + 황금 sun + 작은 흰 깃털',
+      '황금 체인 + 작은 황금 sun + 깃털 (단순)',
+      '황금 체인 + 큰 황금 sun + 깃털',
+      '황금 체인 + 작은 sun + 가시',
+    ],
+  },
 ];
 
 export default function BatchReviewPage() {
