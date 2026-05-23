@@ -2021,6 +2021,77 @@ const ITEMS: Item[] = [
       '흰 진주 choker + silver wing pendant',
     ],
   },
+  // ── batch 31: accessory 5종 ──
+  {
+    slug: 'marsh_witty_will_o_wisp_lantern_charm',
+    tone: '위트',
+    region: '늪지대',
+    slot: 'accessory',
+    recommend: 0,
+    hint: 'silver chain + 작은 lantern + 청록 wisp — 깔끔 도깨비불',
+    candidateNotes: [
+      'silver chain + 작은 lantern + 청록 wisp',
+      '검은 chain + 작은 lantern + 청록 wisp',
+      'silver chain + 황갈색 cocoon + 청록 wisp',
+      '검은 chain + 작은 lantern + wisp + 흰 빛',
+    ],
+  },
+  {
+    slug: 'orc_mournful_lost_brother_token',
+    tone: '비애',
+    region: '오크 부락',
+    slot: 'accessory',
+    recommend: 0,
+    hint: '갈색 cord + token + 두 빨간 손바닥 — 두 형제 비애',
+    candidateNotes: [
+      '갈색 cord + token + 두 빨간 손바닥',
+      'bead chain + token + 하나 손바닥 + 가시',
+      '갈색 cord + 매듭 + token + 손바닥 + 룬',
+      '갈색 cord + 작은 token + 두 손바닥',
+    ],
+  },
+  {
+    slug: 'rune_grand_high_archon_crown',
+    tone: '장엄',
+    region: '고대 룬 산맥',
+    slot: 'accessory',
+    recommend: 0,
+    hint: '어두운 silver crown + 큰 푸른 sapphire + 룬 — imposing',
+    candidateNotes: [
+      '어두운 silver crown + 큰 푸른 sapphire + 룬',
+      'silver crown + 큰 푸른 sapphire (단순)',
+      '어두운 crown + 양 옆 푸른 sapphire',
+      'silver crown + 별 + sapphire + 빛',
+    ],
+  },
+  {
+    slug: 'volcano_legendary_ash_phoenix_feather_charm',
+    tone: '전설',
+    region: '서쪽 화산',
+    slot: 'accessory',
+    recommend: 0,
+    hint: '검은 chain + 흰 깃 + 끝 ember — ash phoenix',
+    candidateNotes: [
+      '검은 chain + 흰 깃 + 끝 ember',
+      '검은 chain + lantern + 깃 + ember',
+      '검은 bead + medallion + 깃 + 룬',
+      '검은 chain + 어두운 보석 깃',
+    ],
+  },
+  {
+    slug: 'common_heroic_kingsguard_medal',
+    tone: '영웅담',
+    region: '일반',
+    slot: 'accessory',
+    recommend: 0,
+    hint: '황금 ribbon + silver medal + 황금 검+왕관 — kingsguard',
+    candidateNotes: [
+      '황금 ribbon + silver medal + 황금 검+왕관 emblem',
+      '황금 bow + silver medal + 황금 검+왕관',
+      '황금 ribbon + silver medal + 황금 검+왕관 (균형)',
+      '황금 ribbon (작음) + silver medal + 검+왕관',
+    ],
+  },
 ];
 
 export default function BatchReviewPage() {
