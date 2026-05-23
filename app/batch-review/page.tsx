@@ -671,6 +671,77 @@ const ITEMS: Item[] = [
       '회색 spiked ball + chain + 두 깃털',
     ],
   },
+  // ── batch 12: weapon 마지막 5종 ──
+  {
+    slug: 'rune_heroic_guardian_warhammer',
+    tone: '영웅담',
+    region: '고대 룬 산맥',
+    slot: 'weapon',
+    recommend: 0,
+    hint: '회색 stone 망치 + 양면 큰 룬 — 영웅 망치 명확',
+    candidateNotes: [
+      '회색 stone 망치 + 양면 큰 룬 + nail 자루',
+      '흰 stone 망치 + 큰 황금 룬 (화려 쪽)',
+      '흰 stone 망치 + 작은 룬 다수',
+      '회색 stone 망치 + 작은 룬 + 가시 자루',
+    ],
+  },
+  {
+    slug: 'fallen_heroic_avenger_sword',
+    tone: '영웅담',
+    region: '타락천사',
+    slot: 'weapon',
+    recommend: 0,
+    hint: '검 + 황금 wing + 푸른 보석 — 영웅 천사 검',
+    candidateNotes: [
+      '어두운 검 + 자루 황금 wing + 가운데 푸른 보석',
+      '회색 검 + crossguard 흰 깃털',
+      '회색 검 + crossguard 가운데 흰 깃털',
+      '어두운 검 + crossguard 흰 깃털 + 가시',
+    ],
+  },
+  {
+    slug: 'orc_heroic_warband_axe',
+    tone: '영웅담',
+    region: '오크 부락',
+    slot: 'weapon',
+    recommend: 1,
+    hint: '양날 도끼 + 자루 깃털 + 송곳니 + 끈 — 워밴드 톤 최고',
+    candidateNotes: [
+      '어두운 cleaver + 자루 두개골·끈 + 두 깃털',
+      '큰 양날 도끼 + 자루 깃털 + 송곳니 + 끈',
+      '어두운 곡선 도끼 + 자루 깃털 + 두개골',
+      '어두운 도끼 + 자루 황금 메달 + 가시',
+    ],
+  },
+  {
+    slug: 'marsh_legendary_witch_queen_staff',
+    tone: '전설',
+    region: '늪지대',
+    slot: 'weapon',
+    recommend: 1,
+    hint: '어두운 staff + 청록 orb + root 곡선 — 마녀 queen 톤',
+    candidateNotes: [
+      '어두운 staff + 큰 청록 orb (식물 root)',
+      '어두운 staff + 큰 청록 orb + 거대 root 곡선',
+      '어두운 staff + 작은 청록 orb + 뼈 곡선',
+      '어두운 staff + 청록 orb + root 곡선 (작음)',
+    ],
+  },
+  {
+    slug: 'volcano_uncanny_skull_furnace_mace',
+    tone: '기괴',
+    region: '서쪽 화산',
+    slot: 'weapon',
+    recommend: 0,
+    hint: '검은 두개골 + 안쪽 오렌지 잉걸 — 기괴 톤 명확',
+    candidateNotes: [
+      '검은 두개골 + 안쪽 오렌지 잉걸',
+      '검은 두개골 + 균열 잉걸 + 자루 오렌지',
+      '검은 두개골 (horns) + 잉걸 흐름',
+      '검은 두개골 + 체인 + 황금 자루 (화려 쪽)',
+    ],
+  },
 ];
 
 export default function BatchReviewPage() {
