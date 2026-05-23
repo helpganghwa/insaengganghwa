@@ -1524,6 +1524,77 @@ const ITEMS: Item[] = [
       '황금 체인 + 작은 sun + 가시',
     ],
   },
+  // ── batch 24: accessory 두 번째 5종 ──
+  {
+    slug: 'marsh_witty_frog_ring',
+    tone: '위트',
+    region: '늪지대',
+    slot: 'accessory',
+    recommend: 2,
+    hint: 'silver ring + 마법사 모자 쓴 개구리 — 가장 위트',
+    candidateNotes: [
+      'silver ring + 위에 작은 녹색 개구리 (단순)',
+      '검은 ring + 위에 큰 녹색 개구리 + 황금',
+      'silver ring + 작은 마법사 모자 쓴 개구리',
+      'silver ring + 옆에 빨간 버섯에 앉은 개구리',
+    ],
+  },
+  {
+    slug: 'orc_grand_chieftain_tusk_necklace',
+    tone: '장엄',
+    region: '오크 부락',
+    slot: 'accessory',
+    recommend: 2,
+    hint: '갈색 cord + 큰 송곳니 2개 + 작은 깃털 — chieftain 분위기',
+    candidateNotes: [
+      '갈색 cord + 큰 송곳니 1개 + 끈 묶음',
+      '검은 cord + 황색 송곳니 + 검은 보석',
+      '갈색 cord + 큰 송곳니 2개 + 작은 깃털',
+      '갈색 cord + 큰 송곳니 1개 + 흰 송곳니',
+    ],
+  },
+  {
+    slug: 'rune_heroic_warden_seal_brooch',
+    tone: '영웅담',
+    region: '고대 룬 산맥',
+    slot: 'accessory',
+    recommend: 0,
+    hint: '회색 stone brooch + shield + 산 emblem — 룬 산맥 warden 정체성',
+    candidateNotes: [
+      '회색 stone brooch + 가운데 shield + 산 emblem',
+      'silver brooch + 가운데 shield + 날개',
+      'silver brooch + 가운데 shield + 도끼 emblem',
+      'brass brooch + 가운데 shield + 룬 글자',
+    ],
+  },
+  {
+    slug: 'volcano_beautiful_glass_drop_earring',
+    tone: '아름다운',
+    region: '서쪽 화산',
+    slot: 'accessory',
+    recommend: 2,
+    hint: '황금 hook + 클리어 유리 + 가운데 큰 오렌지 ember — elegant glass drop',
+    candidateNotes: [
+      '황금 hook + 회색 유리 + 가운데 빨간 ember',
+      '황금 hook + 갈색/오렌지 유리',
+      '황금 hook + 클리어 유리 + 가운데 큰 오렌지 ember',
+      '황금 hook + 보라 보석 보더 + 빨간 보석',
+    ],
+  },
+  {
+    slug: 'fallen_ornate_seraph_brooch',
+    tone: '화려',
+    region: '타락천사',
+    slot: 'accessory',
+    recommend: 0,
+    hint: '양 옆 황금 wing + 가운데 진주 — wing 브로치 명확',
+    candidateNotes: [
+      '양 옆 황금 wing + 가운데 진주',
+      '4 wing 풍차 + 가운데 진주',
+      '검은 wing + 황금 + 가운데 진주 + 보석',
+      '황금 wing + 푸른 보석 + 가운데 진주',
+    ],
+  },
 ];
 
 export default function BatchReviewPage() {
