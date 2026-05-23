@@ -884,6 +884,77 @@ const ITEMS: Item[] = [
       '긴 흰 silk + 황금 trim + 깃털 (가장 길고 우아)',
     ],
   },
+  // ── batch 15: armor 세 번째 5종 ──
+  {
+    slug: 'marsh_witty_frog_hat',
+    tone: '위트',
+    region: '늪지대',
+    slot: 'armor',
+    recommend: 3,
+    hint: '개구리 얼굴 자체가 모자 모양 — 위트 + 모자 형태 명확',
+    candidateNotes: [
+      '큰 개구리가 잎 위 (모자 형태 약함)',
+      '개구리 + 잎 (둥지)',
+      '개구리가 lily pad에 앉음',
+      '개구리 얼굴 자체가 모자 모양',
+    ],
+  },
+  {
+    slug: 'orc_uncanny_bone_chest_armor',
+    tone: '기괴',
+    region: '오크 부락',
+    slot: 'armor',
+    recommend: 0,
+    hint: '어두운 갑옷 + 갈비뼈 다수 — bone 모티프 명확',
+    candidateNotes: [
+      '어두운 갑옷 + 갈비뼈 다수',
+      '어두운 갑옷 + 작은 두개골 + 갈비뼈',
+      '어두운 갑옷 + 두개골 + 갈비뼈 (균형)',
+      '어두운 갑옷 + 갈비뼈 + 검은 깃털',
+    ],
+  },
+  {
+    slug: 'rune_grand_high_priest_robe',
+    tone: '장엄',
+    region: '고대 룬 산맥',
+    slot: 'armor',
+    recommend: 0,
+    hint: '어두운 파란 robe + 7 룬 자수 + 망토 — high priest 톤',
+    candidateNotes: [
+      '어두운 파란 robe + 7 룬 자수 + 망토',
+      '어두운 파란 robe + R 룬 + 어깨 mantle',
+      '왕관 + 망토 (King 톤, robe 아님)',
+      'weapon 형태 (잘못 생성)',
+    ],
+  },
+  {
+    slug: 'volcano_heroic_blacksmith_apron',
+    tone: '영웅담',
+    region: '서쪽 화산',
+    slot: 'armor',
+    recommend: 0,
+    hint: '갈색 apron + 망치 pocket + sparks — 영웅 blacksmith 톤',
+    candidateNotes: [
+      '갈색 apron + 망치 pocket + sparks',
+      '갈색 apron + 작은 pocket (단순)',
+      '어두운 apron + 황금 T 글자 + 가시',
+      '어두운 apron + 가시 detail (단순)',
+    ],
+  },
+  {
+    slug: 'common_mystic_pilgrim_cloak',
+    tone: '수수께끼',
+    region: '일반',
+    slot: 'armor',
+    recommend: 2,
+    hint: '갈색 hood cloak + 가운데 룬 medallion — mystic 톤',
+    candidateNotes: [
+      '갈색 hood cloak + 가운데 작은 medallion',
+      '동그란 medallion 부적 (cloak 아님)',
+      '갈색 hood cloak + 가운데 룬 medallion',
+      '갈색 bag (cloak 아님)',
+    ],
+  },
 ];
 
 export default function BatchReviewPage() {
