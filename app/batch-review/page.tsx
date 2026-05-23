@@ -1666,6 +1666,77 @@ const ITEMS: Item[] = [
       '황금 ring + 큰 sapphire + 왕관 + 황금 wing trim',
     ],
   },
+  // ── batch 26: accessory 5종 ──
+  {
+    slug: 'marsh_uncanny_drowned_eye_pendant',
+    tone: '기괴',
+    region: '늪지대',
+    slot: 'accessory',
+    recommend: 1,
+    hint: '청록 chain + medallion + 큰 눈 — dramatic',
+    candidateNotes: [
+      '갈색 medallion + 가운데 물고기 눈',
+      '청록 ring chain + 가운데 medallion + 큰 눈',
+      '가지/뿌리에 둘러싸인 medallion + 눈',
+      '검은 chain + 갈색 medallion + 좁은 눈',
+    ],
+  },
+  {
+    slug: 'orc_witty_warpaint_armband',
+    tone: '위트',
+    region: '오크 부락',
+    slot: 'accessory',
+    recommend: 2,
+    hint: '갈색 armband + 가운데 페인트 얼굴 + 매달린 송곳니·발톱 — 위트',
+    candidateNotes: [
+      '갈색 가죽 armband + 가운데 화살 페인트 + 송곳니',
+      '갈색 braided armband + 컬러 stripe + 송곳니',
+      '갈색 armband + 가운데 페인트 얼굴 + 송곳니·발톱',
+      '갈색 armband + 빨간/주황 페인트 + 송곳니',
+    ],
+  },
+  {
+    slug: 'rune_grand_starlight_circlet',
+    tone: '장엄',
+    region: '고대 룬 산맥',
+    slot: 'accessory',
+    recommend: 1,
+    hint: 'silver crown + 가시 + 별 자수 + 가운데 보석 — imposing star crown',
+    candidateNotes: [
+      'silver circlet + 별 자수 (band)',
+      'silver crown + 가시 + 별 + 보석',
+      'silver tiara + 가운데 큰 별 + swirl',
+      'silver tiara + 별 + swirl + band',
+    ],
+  },
+  {
+    slug: 'volcano_hope_first_spark_ring',
+    tone: '희망',
+    region: '서쪽 화산',
+    slot: 'accessory',
+    recommend: 0,
+    hint: '갈색 ring + 가운데 오렌지 spark — 단순 first spark',
+    candidateNotes: [
+      '갈색 ring + 가운데 오렌지 spark',
+      '갈색 disc + 가운데 spark + 깃 detail',
+      '황금 ring + 가운데 spark + 황금 sun trim',
+      '갈색 ring + 가운데 큰 ember + 가시',
+    ],
+  },
+  {
+    slug: 'fallen_beautiful_silver_anklet',
+    tone: '아름다운',
+    region: '타락천사',
+    slot: 'accessory',
+    recommend: 0,
+    hint: '가는 silver anklet + 3 깃털 매달림 — elegant',
+    candidateNotes: [
+      '가는 silver anklet + 3 깃털',
+      'silver anklet + 가시 + 2 깃털',
+      'silver anklet + 큰 깃털 두 짝',
+      '어두운 silver anklet + 3 깃털',
+    ],
+  },
 ];
 
 export default function BatchReviewPage() {
