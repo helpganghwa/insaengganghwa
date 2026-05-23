@@ -19,42 +19,42 @@ interface Plan {
   description: string; // Pixellab description (영문)
 }
 
-// batch 23: accessory 시작 첫 5종 (5 region × 다양 톤)
+// batch 25: accessory 세 번째 5종 (다양 모티프 — 개구리 회피)
 const BATCH: Plan[] = [
   {
-    slug: 'marsh_beautiful_lily_amulet',
+    slug: 'marsh_witty_slime_blob_charm',
     slot: 'accessory',
     region: '늪지대',
-    tone: '아름다운',
-    description: 'beautiful elegant graceful marsh swamp fantasy lily amulet accessory item icon, slender silver chain holding a single small open teal lily blossom pendant with a tiny pearl at the center, single inanimate game loot object on transparent background, no character, no figure',
+    tone: '위트',
+    description: 'humorous quirky whimsical marsh swamp fantasy slime blob charm accessory item icon, silver chain holding a single small round cheerful green slime blob with two tiny dot eyes and a small smile, single inanimate game loot object on transparent background, no character, no figure',
   },
   {
-    slug: 'orc_legendary_first_chief_pendant',
+    slug: 'orc_heroic_first_kill_tooth_ring',
     slot: 'accessory',
     region: '오크 부락',
-    tone: '전설',
-    description: 'legendary mythic ancient storied orcish tribal first chief fantasy pendant accessory item icon, brown leather cord holding a single carved bone medallion with an ancient tribal glyph engraved on the front, single inanimate game loot object on transparent background, no character, no figure',
+    tone: '영웅담',
+    description: 'heroic epic orcish tribal warband fantasy first kill tooth ring accessory item icon, simple dark iron band ring with a single small yellowed wolf tooth set on top, single inanimate game loot object on transparent background, no character, no figure',
   },
   {
-    slug: 'rune_mystic_listening_rune_ring',
+    slug: 'rune_legendary_first_letter_amulet',
     slot: 'accessory',
     region: '고대 룬 산맥',
-    tone: '수수께끼',
-    description: 'mysterious cryptic veiled mountain rune ancient fantasy listening rune ring accessory item icon, slender silver band ring with a single small carved rune sigil at the top and a tiny crystal embedded behind it, single inanimate game loot object on transparent background, no character, no figure',
+    tone: '전설',
+    description: 'legendary mythic ancient storied mountain rune fantasy first letter amulet accessory item icon, silver chain holding a flat dark stone medallion with a single deep ancient rune letter carved at the center glowing faint blue, single inanimate game loot object on transparent background, no character, no figure',
   },
   {
-    slug: 'volcano_grand_phoenix_eye_amulet',
+    slug: 'volcano_mournful_ember_locket',
     slot: 'accessory',
     region: '서쪽 화산',
-    tone: '장엄',
-    description: 'grand majestic imposing volcanic phoenix fire fantasy phoenix eye amulet accessory item icon, dark gold chain holding a single large round amulet with a glowing orange phoenix-eye gemstone at the center and small flame embossing around the rim, single inanimate game loot object on transparent background, no character, no figure',
+    tone: '비애',
+    description: 'mournful sorrowful volcanic forge fire fantasy ember locket accessory item icon, dark blackened brass locket on a chain with a single fading orange ember inside, the locket slightly open at the seam, single inanimate game loot object on transparent background, no character, no figure',
   },
   {
-    slug: 'fallen_hope_morning_charm',
+    slug: 'common_grand_king_signet_ring',
     slot: 'accessory',
-    region: '타락천사',
-    tone: '희망',
-    description: 'hopeful radiant warm blessed fallen angel divine fantasy morning charm accessory item icon, pale gold chain holding a single small sunrise-shaped pendant with a tiny white feather hanging beside it, single inanimate game loot object on transparent background, no character, no figure',
+    region: '일반',
+    tone: '장엄',
+    description: 'grand majestic imposing fantasy king signet ring accessory item icon, heavy gold signet ring with a single large blue sapphire at the top engraved with a royal crown emblem, single inanimate game loot object on transparent background, no character, no figure',
   },
 ];
 
