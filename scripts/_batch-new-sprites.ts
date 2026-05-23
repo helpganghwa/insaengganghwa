@@ -19,42 +19,42 @@ interface Plan {
   description: string; // Pixellab description (영문)
 }
 
-// batch 25: accessory 세 번째 5종 (다양 모티프 — 개구리 회피)
+// batch 32: 마지막 5종 (1종 채택해서 150 완성, 나머지 4종 백업)
 const BATCH: Plan[] = [
   {
-    slug: 'marsh_witty_slime_blob_charm',
-    slot: 'accessory',
-    region: '늪지대',
-    tone: '위트',
-    description: 'humorous quirky whimsical marsh swamp fantasy slime blob charm accessory item icon, silver chain holding a single small round cheerful green slime blob with two tiny dot eyes and a small smile, single inanimate game loot object on transparent background, no character, no figure',
-  },
-  {
-    slug: 'orc_heroic_first_kill_tooth_ring',
-    slot: 'accessory',
-    region: '오크 부락',
-    tone: '영웅담',
-    description: 'heroic epic orcish tribal warband fantasy first kill tooth ring accessory item icon, simple dark iron band ring with a single small yellowed wolf tooth set on top, single inanimate game loot object on transparent background, no character, no figure',
-  },
-  {
-    slug: 'rune_legendary_first_letter_amulet',
-    slot: 'accessory',
-    region: '고대 룬 산맥',
-    tone: '전설',
-    description: 'legendary mythic ancient storied mountain rune fantasy first letter amulet accessory item icon, silver chain holding a flat dark stone medallion with a single deep ancient rune letter carved at the center glowing faint blue, single inanimate game loot object on transparent background, no character, no figure',
-  },
-  {
-    slug: 'volcano_mournful_ember_locket',
-    slot: 'accessory',
-    region: '서쪽 화산',
-    tone: '비애',
-    description: 'mournful sorrowful volcanic forge fire fantasy ember locket accessory item icon, dark blackened brass locket on a chain with a single fading orange ember inside, the locket slightly open at the seam, single inanimate game loot object on transparent background, no character, no figure',
-  },
-  {
-    slug: 'common_grand_king_signet_ring',
+    slug: 'common_beautiful_silver_locket',
     slot: 'accessory',
     region: '일반',
-    tone: '장엄',
-    description: 'grand majestic imposing fantasy king signet ring accessory item icon, heavy gold signet ring with a single large blue sapphire at the top engraved with a royal crown emblem, single inanimate game loot object on transparent background, no character, no figure',
+    tone: '아름다운',
+    description: 'beautiful elegant graceful fantasy silver locket accessory item icon, slender silver chain holding a small heart-shaped polished silver locket with a tiny single rose etched on the front, single inanimate game loot object on transparent background, no character, no figure',
+  },
+  {
+    slug: 'marsh_hope_dawn_lotus_charm',
+    slot: 'accessory',
+    region: '늪지대',
+    tone: '희망',
+    description: 'hopeful radiant warm serene marsh swamp fantasy dawn lotus charm accessory item icon, silver chain holding a single pink lotus blossom pendant with a tiny warm gold sun rising behind the petals, single inanimate game loot object on transparent background, no character, no figure',
+  },
+  {
+    slug: 'orc_hope_first_kin_braid',
+    slot: 'accessory',
+    region: '오크 부락',
+    tone: '희망',
+    description: 'hopeful radiant warm orcish tribal fantasy first kin braid bracelet accessory item icon, simple braided brown leather bracelet with three small wooden beads carved with tribal warm family marks, single inanimate game loot object on transparent background, no character, no figure',
+  },
+  {
+    slug: 'rune_witty_apprentice_inkwell_charm',
+    slot: 'accessory',
+    region: '고대 룬 산맥',
+    tone: '위트',
+    description: 'humorous quirky whimsical mountain rune fantasy apprentice inkwell charm accessory item icon, silver chain holding a tiny dark inkwell pendant with a small quill leaning into it and three ink splatter dots around, single inanimate game loot object on transparent background, no character, no figure',
+  },
+  {
+    slug: 'fallen_witty_cherub_brooch',
+    slot: 'accessory',
+    region: '타락천사',
+    tone: '위트',
+    description: 'humorous quirky whimsical fallen angel divine fantasy cherub brooch accessory item icon, single small gold brooch shaped like a tiny chubby smiling cherub face with two tiny wings on each side, single inanimate game loot object on transparent background, no character, no figure',
   },
 ];
 
