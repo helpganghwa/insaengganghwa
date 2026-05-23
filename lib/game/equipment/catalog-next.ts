@@ -958,4 +958,52 @@ export const CATALOG_NEXT: CatalogItem[] = [
     lore: '한 왕국의 첫 왕비가 자기 신혼 새벽에 자기 남편의 방패 가운데에 한 송이 황금 장미를 한 번 더 박아 두고 자기 자리로 돌아온 자리다. 가장자리의 황금 leaf trim은 그 새벽 이후로 새 왕비가 한 번씩 더 자기 손가락 끝으로 짚어 본 결을 따라 한 줄씩 더 둘러져 있다.',
     art: 'ornate flamboyant gilded fantasy royal golden rose kite shield armor item icon, pale ivory kite shield with a large golden rose embossed at the center and intricate gold leaf filigree along the rim, single inanimate game loot object on transparent background',
   },
+
+  // ═══════ accessory 50종 ═══════
+  // ── batch 23: accessory 첫 5종 ──
+  {
+    key: 'marsh_lily_amulet',
+    slot: 'accessory',
+    nameKo: '연꽃 amulet',
+    region: '늪지대',
+    tone: '아름다운',
+    lore: '늪의 한 어부가 자기 누이에게 자기 평생 가장 깊은 자리에서 길어 올린 한 송이 청록 연꽃을 한 알의 진주와 함께 silver 한 가닥으로 한 번 더 묶어 둔 자리다. 누이는 그 amulet을 자기 가슴 가운데에 한 번 더 짚어 본 결대로 한 자리에 가만히 걸어 두었다.',
+    art: 'beautiful elegant graceful marsh swamp fantasy lily amulet accessory item icon, slender silver chain holding a single small teal lily blossom pendant with a pearl at the center, single inanimate game loot object on transparent background',
+  },
+  {
+    key: 'orc_ancestor_jade_glyph_pendant',
+    slot: 'accessory',
+    nameKo: '조상의 청록 글리프 pendant',
+    region: '오크 부락',
+    tone: '전설',
+    lore: '부락의 첫 부족장이 자기 자리에서 한 번도 답하지 않은 한 글자가 있다. 그가 자기 어깨에 한 번 더 메고 다닌 가죽 cord 끝의 황토 medallion 가운데에 청록으로 굳혀 박힌 그 글자는 그의 자손들도 자기 마지막 새벽까지 한 번도 자기 입 밖으로 꺼낸 적이 없다고 한다.',
+    art: 'legendary mythic ancient orcish tribal first chief fantasy pendant accessory item icon, brown leather cord holding a tan stone medallion with a single teal jade tribal glyph carved at the center, single inanimate game loot object on transparent background',
+  },
+  {
+    key: 'rune_listening_rune_ring',
+    slot: 'accessory',
+    nameKo: '엿듣는 룬 반지',
+    region: '고대 룬 산맥',
+    tone: '수수께끼',
+    lore: '룬 산맥의 한 새김장이가 자기 평생 한 번도 자기 입으로 말하지 않은 한 줄의 룬을 자기 반지의 양 옆에 한 자씩 더 새겨 둔 자리다. 가운데에 박힌 푸른 보석은 새김장이가 자기 손가락 끝으로 한 번씩 더 짚어 본 자리에 한 알이 굳어 있다.',
+    art: 'mysterious cryptic mountain rune ancient fantasy listening rune ring accessory item icon, dark silver band ring with a single small blue gem at the center and tiny carved runes on each side, single inanimate game loot object on transparent background',
+  },
+  {
+    key: 'volcano_phoenix_eye_amulet',
+    slot: 'accessory',
+    nameKo: '불사조의 눈 amulet',
+    region: '서쪽 화산',
+    tone: '장엄',
+    lore: '서쪽 화산의 가장 깊은 자리에 잠든 불사조가 자기 잠들기 전 자기 한 눈을 한 알의 보석으로 한 번 더 굳혀 자기 자리에 두고 떠난 자리다. amulet 가운데에 박힌 오렌지 보석은 그 불사조가 자기 자리에서 다시 한 번 더 깨어나는 새벽까지 한 박자 늦은 빛으로 가만히 보고 있다.',
+    art: 'grand majestic imposing volcanic phoenix fire fantasy phoenix eye amulet accessory item icon, gold brass amulet pendant with a large round orange phoenix-eye gemstone at the center and small flame embossing around the rim, single inanimate game loot object on transparent background',
+  },
+  {
+    key: 'fallen_morning_sun_charm',
+    slot: 'accessory',
+    nameKo: '아침 해의 부적',
+    region: '타락천사',
+    tone: '희망',
+    lore: '한 천사가 자기 평생 자기 가슴께에 매달아 두고 다닌 부적이다. 가운데에 황금으로 굳어 박힌 큰 해는 천사가 자기 자리에서 한 번 더 본 첫 새벽의 결대로 굳어 있고, 옆에 가만히 매달린 흰 깃은 그 새벽의 첫 빛이 자기 결을 깃에 한 번 더 적어 둔 자리다.',
+    art: 'hopeful radiant warm blessed fallen angel divine fantasy morning sun charm accessory item icon, gold chain holding a large radiant gold sun pendant with a small white feather hanging beside it, single inanimate game loot object on transparent background',
+  },
 ];
