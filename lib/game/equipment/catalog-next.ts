@@ -269,13 +269,13 @@ export const CATALOG_NEXT: CatalogItem[] = [
     art: 'mournful sorrowful widow fantasy human village longsword weapon item icon, plain steel blade with a black mourning veil tied at the crossguard hanging down along the blade, single inanimate game loot object on transparent background',
   },
   {
-    key: 'common_gravedigger_pick',
+    key: 'common_acrobat_fan_blade',
     slot: 'weapon',
-    nameKo: '묘지기의 곡괭이',
+    nameKo: '곡예사의 칼 부채',
     region: '일반',
-    tone: '기괴',
-    lore: '마을 끝 묘지의 한 묘지기가 평생 한 자루만 들고 들어간 곡괭이다. 자루의 끈은 그가 자기 손가락 끝으로 한 번 더 묶은 자리에서 끊긴 채 그대로 매여 있고, 끈 사이로 묻지 못한 흙 한 알이 매년 한 알씩 더 끼어 들어간다.',
-    art: 'uncanny eerie gravedigger fantasy human village pickaxe weapon item icon, brown wooden pickaxe with simple binding cord wrapped around the haft, single inanimate game loot object on transparent background',
+    tone: '위트',
+    lore: '한 광장에서 평생 자기 부채로 사람들의 웃음을 풀어 둔 한 곡예사가 마지막 새벽에 자기 부채의 spoke 끝마다 한 알의 칼날을 박아 둔 자리다. 그 칼날들은 부채를 흔드는 새벽에 한 박자 늦은 빛으로 한 번씩 더 가만히 흔들린다.',
+    art: 'humorous quirky fantasy acrobat folding fan blade weapon item icon, ornate red and gold half-opened folding fan with sharp steel blades along each spoke, single inanimate game loot object on transparent background',
   },
   {
     key: 'common_scribe_quill_wand',
