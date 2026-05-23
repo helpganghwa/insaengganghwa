@@ -19,42 +19,42 @@ interface Plan {
   description: string; // Pixellab description (영문)
 }
 
-// batch 18: '희망' 톤 시범 × 5 (긍정 톤 보충 — 기괴·비애 줄이는 정책)
+// batch 23: accessory 시작 첫 5종 (5 region × 다양 톤)
 const BATCH: Plan[] = [
   {
-    slug: 'marsh_hope_lotus_robe',
-    slot: 'armor',
+    slug: 'marsh_beautiful_lily_amulet',
+    slot: 'accessory',
     region: '늪지대',
-    tone: '희망',
-    description: 'hopeful radiant warm serene marsh swamp fantasy lotus robe armor item icon, pale pink flowing robe with a single open lotus blossom embroidered at the chest and soft sun-yellow trim, single inanimate game loot object on transparent background, no character, no figure',
+    tone: '아름다운',
+    description: 'beautiful elegant graceful marsh swamp fantasy lily amulet accessory item icon, slender silver chain holding a single small open teal lily blossom pendant with a tiny pearl at the center, single inanimate game loot object on transparent background, no character, no figure',
   },
   {
-    slug: 'orc_hope_sunrise_tabard',
-    slot: 'armor',
+    slug: 'orc_legendary_first_chief_pendant',
+    slot: 'accessory',
     region: '오크 부락',
-    tone: '희망',
-    description: 'hopeful radiant warm orcish tribal fantasy sunrise tabard armor item icon, leather chest tabard with a single embroidered orange rising sun on the front and warm gold cord trim, single inanimate game loot object on transparent background, no character, no figure',
+    tone: '전설',
+    description: 'legendary mythic ancient storied orcish tribal first chief fantasy pendant accessory item icon, brown leather cord holding a single carved bone medallion with an ancient tribal glyph engraved on the front, single inanimate game loot object on transparent background, no character, no figure',
   },
   {
-    slug: 'rune_hope_morning_light_cloak',
-    slot: 'armor',
+    slug: 'rune_mystic_listening_rune_ring',
+    slot: 'accessory',
     region: '고대 룬 산맥',
-    tone: '희망',
-    description: 'hopeful radiant warm serene mountain rune fantasy morning light cloak armor item icon, pale sky-blue hooded cloak with a single small gold sun-rune at the collar and soft warm light embroidery along the hem, single inanimate game loot object on transparent background, no character, no figure',
+    tone: '수수께끼',
+    description: 'mysterious cryptic veiled mountain rune ancient fantasy listening rune ring accessory item icon, slender silver band ring with a single small carved rune sigil at the top and a tiny crystal embedded behind it, single inanimate game loot object on transparent background, no character, no figure',
   },
   {
-    slug: 'volcano_hope_first_spark_apron',
-    slot: 'armor',
+    slug: 'volcano_grand_phoenix_eye_amulet',
+    slot: 'accessory',
     region: '서쪽 화산',
-    tone: '희망',
-    description: 'hopeful radiant warm volcanic forge fire fantasy first spark apron armor item icon, warm brown leather apron with a single bright orange spark glowing at the chest pocket and clean polished iron rivets, single inanimate game loot object on transparent background, no character, no figure',
+    tone: '장엄',
+    description: 'grand majestic imposing volcanic phoenix fire fantasy phoenix eye amulet accessory item icon, dark gold chain holding a single large round amulet with a glowing orange phoenix-eye gemstone at the center and small flame embossing around the rim, single inanimate game loot object on transparent background, no character, no figure',
   },
   {
-    slug: 'fallen_hope_dawn_wings_robe',
-    slot: 'armor',
+    slug: 'fallen_hope_morning_charm',
+    slot: 'accessory',
     region: '타락천사',
     tone: '희망',
-    description: 'hopeful radiant warm blessed fallen angel divine fantasy dawn wings robe armor item icon, pale ivory robe with soft golden sunrise embroidery across the chest and small white feather details on the shoulders, single inanimate game loot object on transparent background, no character, no figure',
+    description: 'hopeful radiant warm blessed fallen angel divine fantasy morning charm accessory item icon, pale gold chain holding a single small sunrise-shaped pendant with a tiny white feather hanging beside it, single inanimate game loot object on transparent background, no character, no figure',
   },
 ];
 
