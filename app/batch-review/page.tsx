@@ -1381,6 +1381,77 @@ const ITEMS: Item[] = [
       '황금 보석 + 가시 detail (armor 아님)',
     ],
   },
+  // ── batch 22: armor 마지막 5종 (armor 50/50 완성) ──
+  {
+    slug: 'marsh_mournful_drowned_veil',
+    tone: '비애',
+    region: '늪지대',
+    slot: 'armor',
+    recommend: 0,
+    hint: '청회색 짧은 cape + 작은 진주 clasp + 너덜한 hem — widow veil 깔끔',
+    candidateNotes: [
+      '청회색 짧은 cape + 작은 진주 clasp + 너덜한 hem',
+      '청록 cape + 황금 ribbon + 보석 + 너덜한 hem',
+      '청록 천 뭉치 (armor 아님)',
+      '청록 cape + 큰 collar + 진주 다수 + 너덜한 hem',
+    ],
+  },
+  {
+    slug: 'orc_mystic_oracle_hood',
+    tone: '수수께끼',
+    region: '오크 부락',
+    slot: 'armor',
+    recommend: 0,
+    hint: '갈색 hood + 가운데 빨간 눈 룬 + 뼈구슬 trim — oracle 톤',
+    candidateNotes: [
+      '갈색 hood + 가운데 빨간 눈 룬 + 뼈구슬 trim',
+      '갈색 hood + 황금 둥근 detail + 뼈구슬',
+      '갈색 hood + 가운데 빨간 사과 글리프',
+      '갈색 hood + 가운데 큰 눈 + 룬 + 뼈구슬',
+    ],
+  },
+  {
+    slug: 'rune_witty_apprentice_cap',
+    tone: '위트',
+    region: '고대 룬 산맥',
+    slot: 'armor',
+    recommend: 0,
+    hint: '어두운 cap + 룬 + 옆에 두루마리·잉크 — apprentice 위트',
+    candidateNotes: [
+      '어두운 cap + 룬 글자 + 옆에 두루마리·잉크 자국',
+      '갈색 가방 (armor 아님)',
+      '룬 펜던트 (armor 아님)',
+      '망치/끌 (armor 아님)',
+    ],
+  },
+  {
+    slug: 'volcano_heroic_master_smith_chest',
+    tone: '영웅담',
+    region: '서쪽 화산',
+    slot: 'armor',
+    recommend: 1,
+    hint: '어두운 plate + 망치 emblem + 빨간 잉걸 + 가죽 — master smith 영웅',
+    candidateNotes: [
+      '회색 plate + 가운데 망치 emblem + 가죽 strap',
+      '어두운 plate + 가운데 망치 + 빨간 잉걸 + 가죽',
+      '회색 plate + 망치 + 갈색 strap + 황금 trim',
+      '회색 plate + 가운데 망치 + 가죽 strap (c0 유사)',
+    ],
+  },
+  {
+    slug: 'common_ornate_bride_dress',
+    tone: '화려',
+    region: '일반',
+    slot: 'armor',
+    recommend: 0,
+    hint: '황금 trim 흰 wedding dress + 베일 + 화려한 자수',
+    candidateNotes: [
+      '황금 trim 흰 wedding dress + 베일 + 화려한 자수',
+      '황금 armor (dress 아님)',
+      '황금 trim 흰 dress + 베일 + 황금 원형 자수',
+      '황금 trim 방패 (armor 아님)',
+    ],
+  },
 ];
 
 export default function BatchReviewPage() {
