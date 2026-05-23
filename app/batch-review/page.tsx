@@ -2246,6 +2246,52 @@ const ITEMS: Item[] = [
     hint: '황금 나기나타 + 학 문양 + 빨간 술',
     candidateNotes: ['c0', 'c1', 'c2', 'c3'],
   },
+  // ── batch 36: weapon 1 + armor 4 ──
+  {
+    slug: 'common_dancer_butterfly_blade',
+    tone: '아름다운',
+    region: '일반',
+    slot: 'weapon',
+    recommend: -1,
+    hint: '나비 모양 silver 검 [weapon 50번]',
+    candidateNotes: ['c0', 'c1', 'c2', 'c3'],
+  },
+  {
+    slug: 'common_imperial_dragon_robe',
+    tone: '화려',
+    region: '일반',
+    slot: 'armor',
+    recommend: -1,
+    hint: '황금 용 자수 빨강 silk robe [armor 56번]',
+    candidateNotes: ['c0', 'c1', 'c2', 'c3'],
+  },
+  {
+    slug: 'common_knight_chainmail_hauberk',
+    tone: '장엄',
+    region: '일반',
+    slot: 'armor',
+    recommend: -1,
+    hint: '사슬갑옷 + 가죽 벨트 + 사슬 coif [armor 57번]',
+    candidateNotes: ['c0', 'c1', 'c2', 'c3'],
+  },
+  {
+    slug: 'common_court_jester_motley',
+    tone: '위트',
+    region: '일반',
+    slot: 'armor',
+    recommend: -1,
+    hint: '4색 patchwork 튜닉 + 종 + 줄무늬 [armor 65번]',
+    candidateNotes: ['c0', 'c1', 'c2', 'c3'],
+  },
+  {
+    slug: 'common_legendary_relic_breastplate',
+    tone: '전설',
+    region: '일반',
+    slot: 'armor',
+    recommend: -1,
+    hint: '청동 흉갑 + 3 영웅 얼굴 + 루비 [armor 66번]',
+    candidateNotes: ['c0', 'c1', 'c2', 'c3'],
+  },
 ];
 
 export default function BatchReviewPage() {
