@@ -1147,4 +1147,42 @@ export const CATALOG_NEXT: CatalogItem[] = [
     lore: '한 천사가 자기 발걸음의 첫 일곱 새벽을 자기 발목 둘레에 한 줄의 silver로 한 번 더 둘러 둔 자리다. 매달린 세 깃은 그 천사가 자기 자리에서 한 번 더 떠올린 자기 첫 세 동료의 자리에 한 가닥씩 박혀 있고, 가운데 진주는 일곱 새벽이 한 알로 굳어진 자리다.',
     art: 'beautiful elegant graceful fallen angel divine fantasy silver feather anklet accessory item icon, delicate slim silver anklet with three small dangling feather charms and a tiny single pearl at the clasp, single inanimate game loot object on transparent background',
   },
+
+  // ── batch 27: accessory 4종 (volcano_witty_baby_dragon_pendant 배경 재생성으로 제외) ──
+  {
+    key: 'marsh_drowned_queen_circlet',
+    slot: 'accessory',
+    nameKo: '익사한 여왕의 circlet',
+    region: '늪지대',
+    tone: '전설',
+    lore: '늪 가장 깊은 자리에 한 번 자리를 잡은 여왕이 자기 자리를 떠나지 않은 채 늪 바닥에 가만히 그대로 굳어 가는 동안 늪의 뿌리들이 그 여왕의 circlet을 한 줄씩 더 자기 결로 감싸 안은 자리다. 가운데 청록 보석은 여왕이 자기 마지막 새벽까지 자기 시선을 한 번도 떼지 않은 자리다.',
+    art: 'legendary mythic ancient marsh swamp drowned queen fantasy root-wrapped circlet accessory item icon, tarnished bronze circlet entwined with dark twisted swamp roots and a single teal gem at the center, single inanimate game loot object on transparent background',
+  },
+  {
+    key: 'orc_chief_gold_collar',
+    slot: 'accessory',
+    nameKo: '부족장의 황금 collar',
+    region: '오크 부락',
+    tone: '화려',
+    lore: '부락의 한 부족장이 자기 즉위 새벽에 자기 평생 잡은 짐승들의 첫 송곳니를 황금으로 굳혀 자기 목 둘레 collar에 한 줄로 박아 둔 자리다. 가운데 박힌 큰 빨간 보석은 부족장이 자기 부락 첫 광맥에서 가져온 한 알이고, swirl 패턴은 그가 손가락 끝으로 한 줄씩 더 그어 둔 결이다.',
+    art: 'ornate flamboyant gilded orcish tribal chieftain fantasy gold collar accessory item icon, wide gold neck collar with ornate swirl patterns and a single large red ruby at the center flanked by smaller rubies, single inanimate game loot object on transparent background',
+  },
+  {
+    key: 'rune_hex_riddle_ring',
+    slot: 'accessory',
+    nameKo: '여섯 결 룬 반지',
+    region: '고대 룬 산맥',
+    tone: '수수께끼',
+    lore: '룬 산맥의 한 새김장이가 자기 평생 한 번도 풀지 못한 한 줄의 룬을 자기 반지의 가운데에 여섯 결의 면으로 한 번 더 새겨 둔 자리다. 그 한 줄을 풀려 시도한 자는 자기 자리에서 한 번도 답을 찾지 못한 채 그 반지를 한 번 더 가만히 끼고 있는다.',
+    art: 'mysterious cryptic enigmatic mountain rune ancient fantasy hexagon riddle ring accessory item icon, dark silver band ring with a six-sided hexagonal silver plate at the top engraved with a single rune line, single inanimate game loot object on transparent background',
+  },
+  {
+    key: 'common_pilgrim_knot_charm',
+    slot: 'accessory',
+    nameKo: '순례자의 매듭 부적',
+    region: '일반',
+    tone: '희망',
+    lore: '한 순례자가 자기 평생 자기 가슴께에 한 번 더 매달아 두고 다닌 부적이다. cord의 매듭은 그가 자기 첫 길의 자리에 한 번 더 짚어 본 결대로 한 번씩 더 묶인 자국이고, medallion 가운데에 굳어 박힌 sun은 순례자가 자기 첫 새벽에 자기 자리에서 본 결대로 굳어 있다.',
+    art: 'hopeful radiant warm serene fantasy pilgrim travel knot charm accessory item icon, brown cord with a single decorative knot above a small wooden round medallion engraved with a warm gold sun at the center, single inanimate game loot object on transparent background',
+  },
 ];
