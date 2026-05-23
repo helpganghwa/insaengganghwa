@@ -1310,6 +1310,77 @@ const ITEMS: Item[] = [
       '갈색 가방 (armor 아님)',
     ],
   },
+  // ── batch 21: armor 마무리 첫 5종 ──
+  {
+    slug: 'marsh_beautiful_water_silk_dress',
+    tone: '아름다운',
+    region: '늪지대',
+    slot: 'armor',
+    recommend: 0,
+    hint: '청록 silk dress + 물결 자수 + 가운데 작은 보석 — 유일 dress',
+    candidateNotes: [
+      '청록 silk dress + 물결 자수 + 가운데 작은 보석',
+      '두 손목 보호대 + 띠 (dress 아님)',
+      '청록 cloak + 물결 자수 + clasp',
+      '두 보석 머리띠/벨트 (액세서리)',
+    ],
+  },
+  {
+    slug: 'orc_legendary_first_chief_armor',
+    tone: '전설',
+    region: '오크 부락',
+    slot: 'armor',
+    recommend: 0,
+    hint: '어두운 가죽 armor + 부족 깃발 + 송곳니 — chief 전설 명확',
+    candidateNotes: [
+      '어두운 가죽 armor + 부족 깃발 + 송곳니',
+      '어두운 비늘 armor + 작은 두개골 + 빨간 sun',
+      '어두운 armor + 가운데 룬 + brass clasp',
+      '어두운 armor + 가운데 큰 두개골',
+    ],
+  },
+  {
+    slug: 'rune_grand_arch_priest_robe',
+    tone: '장엄',
+    region: '고대 룬 산맥',
+    slot: 'armor',
+    recommend: 0,
+    hint: '어두운 보라 robe + 황금 룬 + 큰 깃 — 장엄 명확',
+    candidateNotes: [
+      '어두운 보라 robe + 황금 룬 + 큰 깃',
+      '어두운 보라 robe + 황금 자수 + 보석 + 빨간 trim',
+      '어두운 보라 robe + 가운데 brass crystal',
+      '어두운 보라 robe + 황금 trim + 큰 sleeve',
+    ],
+  },
+  {
+    slug: 'volcano_witty_lava_pup_helm',
+    tone: '위트',
+    region: '서쪽 화산',
+    slot: 'armor',
+    recommend: 0,
+    hint: '검은 도롱뇽 머리 helm + 빨간 눈 — 가장 귀여운 pup 위트',
+    candidateNotes: [
+      '검은 도롱뇽 머리 helm + 빨간 눈',
+      '검은 두개골 + 빨간 눈 + 뿔 (horror)',
+      '검은 helm + 가운데 화염 얼굴',
+      '검은 왕관 + 작은 화염 spike',
+    ],
+  },
+  {
+    slug: 'fallen_hope_evening_glow_robe',
+    tone: '희망',
+    region: '타락천사',
+    slot: 'armor',
+    recommend: 0,
+    hint: '분홍 robe + 가슴 sunset 자수 + 황금 — evening 희망',
+    candidateNotes: [
+      '분홍 robe + 가슴 sunset 자수 + 황금',
+      '황금 armor + 분홍 silk + 짧음',
+      '펜던트 (armor 아님)',
+      '황금 보석 + 가시 detail (armor 아님)',
+    ],
+  },
 ];
 
 export default function BatchReviewPage() {
