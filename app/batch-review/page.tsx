@@ -1595,6 +1595,77 @@ const ITEMS: Item[] = [
       '황금 wing + 푸른 보석 + 가운데 진주',
     ],
   },
+  // ── batch 25: accessory 5종 (다양 모티프) ──
+  {
+    slug: 'marsh_witty_slime_blob_charm',
+    tone: '위트',
+    region: '늪지대',
+    slot: 'accessory',
+    recommend: 2,
+    hint: '녹색 slime + 황금 왕관 — slime king 위트',
+    candidateNotes: [
+      '녹색 슬라임 + 작은 미소 (단순)',
+      '녹색 슬라임 + 가운데 청록 보석',
+      '녹색 슬라임 + 황금 왕관 (slime king)',
+      '녹색 슬라임 + 작은 날개',
+    ],
+  },
+  {
+    slug: 'orc_heroic_first_kill_tooth_ring',
+    tone: '영웅담',
+    region: '오크 부락',
+    slot: 'accessory',
+    recommend: 0,
+    hint: '검은 ring + 위에 단순 송곳니 — first kill 영웅 톤',
+    candidateNotes: [
+      '검은 ring + 위에 단순 송곳니',
+      '검은 ring + 황금 + 송곳니 + 룬',
+      '검은 ring + 송곳니 발톱 다수',
+      '검은 ring + 황금 송곳니',
+    ],
+  },
+  {
+    slug: 'rune_legendary_first_letter_amulet',
+    tone: '전설',
+    region: '고대 룬 산맥',
+    slot: 'accessory',
+    recommend: 0,
+    hint: '검은 chain + 둥근 amulet + 가운데 파란 룬 글자',
+    candidateNotes: [
+      '검은 chain + 둥근 amulet + 가운데 파란 룬 글자',
+      '검은 chain + 둥근 + 다른 룬 글자',
+      '검은 chain + 둥근 + 룬 (c0 유사)',
+      '검은 chain + 방패 모양 + 룬',
+    ],
+  },
+  {
+    slug: 'volcano_mournful_ember_locket',
+    tone: '비애',
+    region: '서쪽 화산',
+    slot: 'accessory',
+    recommend: 0,
+    hint: '어두운 heart locket + 가운데 ember + 갈라진 detail — 비애',
+    candidateNotes: [
+      '어두운 heart locket + 가운데 ember + 갈라진 detail',
+      '어두운 oct + 가운데 ember (단순)',
+      '어두운 round + 갈라진 ember',
+      '어두운 leaf shape + 큰 ember + 갈라진',
+    ],
+  },
+  {
+    slug: 'common_grand_king_signet_ring',
+    tone: '장엄',
+    region: '일반',
+    slot: 'accessory',
+    recommend: 1,
+    hint: '황금 ring + 큰 sapphire + 양 옆 사자 — royal 장엄',
+    candidateNotes: [
+      '황금 ring + 파란 sapphire + 왕관 emblem',
+      '황금 ring + 큰 sapphire + 양 옆 사자',
+      '황금 ring + 사각 sapphire + 왕관 + 황금 trim',
+      '황금 ring + 큰 sapphire + 왕관 + 황금 wing trim',
+    ],
+  },
 ];
 
 export default function BatchReviewPage() {
