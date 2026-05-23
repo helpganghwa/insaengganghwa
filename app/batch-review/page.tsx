@@ -955,6 +955,77 @@ const ITEMS: Item[] = [
       '갈색 bag (cloak 아님)',
     ],
   },
+  // ── batch 16: armor 네 번째 5종 ──
+  {
+    slug: 'orc_mournful_widow_hide',
+    tone: '비애',
+    region: '오크 부락',
+    slot: 'armor',
+    recommend: 0,
+    hint: '갈색 vest + 검은 띠 + 두 빈 cord-loop — 사라진 trophy 비애',
+    candidateNotes: [
+      '갈색 가죽 vest + 검은 띠 + 두 빈 cord-loop',
+      '갈색 vest + 검은 띠 사선 + 발톱 매달림',
+      '작은 가죽 corset + 검은 띠',
+      '갈색 vest + 검은 띠 (단순)',
+    ],
+  },
+  {
+    slug: 'rune_legendary_first_arch_circlet',
+    tone: '전설',
+    region: '고대 룬 산맥',
+    slot: 'armor',
+    recommend: 2,
+    hint: '가는 silver circlet + 가운데 큰 룬 — elegant + legendary',
+    candidateNotes: [
+      '흰 silver circlet + 빛 룬 + 푸른 물방울 보석',
+      '흰 silver bangle + 룬 + 푸른 보석 (작은)',
+      '가는 silver circlet + 가운데 큰 룬',
+      '작은 silver circlet + 보석 + 푸른 보석 매달림',
+    ],
+  },
+  {
+    slug: 'volcano_legendary_drake_lord_helm',
+    tone: '전설',
+    region: '서쪽 화산',
+    slot: 'armor',
+    recommend: 1,
+    hint: '어두운 dragon head + 큰 뿔 + 빨간 눈 — dragon lord dramatic',
+    candidateNotes: [
+      '갈색 dragon head + 큰 뿔 + 적색',
+      '어두운 dragon head + 큰 뿔 + 빨간 눈',
+      '검은 dragon head + 빨간 균열 + 뿔',
+      '어두운 dragon head + 황금 trim + 뿔',
+    ],
+  },
+  {
+    slug: 'fallen_ornate_archangel_pauldrons',
+    tone: '화려',
+    region: '타락천사',
+    slot: 'armor',
+    recommend: 2,
+    hint: '양쪽 황금 wing + 푸른 보석 — archangel 양 짝 정확',
+    candidateNotes: [
+      '황금 pauldron + 푸른 보석 + 깃털 trim',
+      '황금 wing 모양 pauldron + 푸른 보석',
+      '양쪽 황금 wing (대천사 두 날개) + 푸른 보석',
+      '황금 wing 한쪽 + 큰 푸른 보석',
+    ],
+  },
+  {
+    slug: 'common_grand_king_crown_helm',
+    tone: '장엄',
+    region: '일반',
+    slot: 'armor',
+    recommend: 1,
+    hint: 'silver helm + 황금 왕관 + 푸른 보석 — 깔끔한 왕관 helm',
+    candidateNotes: [
+      'silver helm + 황금 왕관 + 캐릭터 일부 (부적절)',
+      'silver helm + 황금 왕관 + 가운데 푸른 보석',
+      'silver helm + 황금 trim + 큰 푸른 보석 (왕관 형태 약함)',
+      'silver helm + 황금 십자 + 푸른 보석 + 황금 trim',
+    ],
+  },
 ];
 
 export default function BatchReviewPage() {
