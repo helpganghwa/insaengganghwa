@@ -1186,7 +1186,16 @@ export const CATALOG_NEXT: CatalogItem[] = [
     art: 'hopeful radiant warm serene fantasy pilgrim travel knot charm accessory item icon, brown cord with a single decorative knot above a small wooden round medallion engraved with a warm gold sun at the center, single inanimate game loot object on transparent background',
   },
 
-  // ── batch 28: accessory 4종 (volcano dragon medallion 잔존 → 모티프 교체) ──
+  // ── batch 28: accessory 5종 (volcano dragon v2 채택) ──
+  {
+    key: 'volcano_baby_dragon_pendant',
+    slot: 'accessory',
+    nameKo: '잠든 새끼 용 pendant',
+    region: '서쪽 화산',
+    tone: '위트',
+    lore: '서쪽 화산의 한 새끼 용이 자기 첫 새벽에 자기 둥지에서 한 번 더 잠들어 가만히 한 자리에 굳어 있다가 한 어린 풀무지기의 손에 한 번 더 옮겨진 자리다. 둥근 안쪽에서 새끼 용은 자기 꼬리를 한 번 더 자기 몸에 둘러 잠든 채로 한 번도 자기 자세를 흩뜨리지 않는다.',
+    art: 'humorous quirky volcanic fantasy baby dragon pendant accessory item icon, gold chain holding a round medallion with a tiny curled sleeping pale dragon figurine inside, single inanimate game loot object on transparent background',
+  },
   {
     key: 'marsh_swamp_god_eye_amulet',
     slot: 'accessory',
@@ -1194,7 +1203,7 @@ export const CATALOG_NEXT: CatalogItem[] = [
     region: '늪지대',
     tone: '장엄',
     lore: '늪의 가장 깊은 자리에 한 번 자리를 잡은 신이 자기 한 눈을 한 알의 보석으로 한 번 더 굳혀 자기 자리에 두고 잠든 자리다. amulet 가장자리의 가시는 신이 자기 자리를 한 번도 떠나지 않은 결대로 늪의 풀들이 한 줄로 더 둘러 둔 자국이다.',
-    art: 'grand majestic imposing marsh swamp god ancient fantasy eye amulet accessory item icon, dark teal chain holding a round amulet with a large staring deep green divine eye at the center and small thorn details along the rim, single inanimate game loot object on transparent background',
+    art: 'grand majestic imposing marsh swamp god ancient fantasy eye amulet accessory item icon, brown chain holding a round amulet with a large staring deep green divine eye at the center and small thorn details along the rim, single inanimate game loot object on transparent background',
   },
   {
     key: 'orc_blood_pact_skull_brooch',
@@ -1211,8 +1220,8 @@ export const CATALOG_NEXT: CatalogItem[] = [
     nameKo: '수정 물방울 귀걸이',
     region: '고대 룬 산맥',
     tone: '아름다운',
-    lore: '룬 산맥의 한 새김장이가 자기 누이의 귀에 자기 평생 한 번도 새기지 못한 한 자루의 새벽 이슬을 한 알의 수정으로 한 번 더 굳혀 매달아 둔 자리다. 위쪽 작은 룬 한 자는 그 새벽의 결을 한 줄로 적어 둔 결이다.',
-    art: 'beautiful elegant graceful mountain rune ancient fantasy quartz droplet earring accessory item icon, slender silver hook holding a clear quartz crystal teardrop with a tiny single rune carved at the top, single inanimate game loot object on transparent background',
+    lore: '룬 산맥의 한 새김장이가 자기 누이의 귀에 자기 첫 깃 한 가닥을 한 알의 수정으로 한 번 더 굳혀 매달아 둔 자리다. 위쪽 작은 황금 wing은 그 깃의 결을 한 번 더 적어 둔 자리다.',
+    art: 'beautiful elegant graceful mountain rune ancient fantasy quartz droplet earring accessory item icon, slender silver hook holding a large clear quartz crystal teardrop with a tiny single gold wing detail at the top, single inanimate game loot object on transparent background',
   },
   {
     key: 'fallen_archangel_halo_crown',
@@ -1220,7 +1229,54 @@ export const CATALOG_NEXT: CatalogItem[] = [
     nameKo: '대천사의 후광 crown',
     region: '타락천사',
     tone: '장엄',
-    lore: '한 대천사가 자기 평생 자기 머리 둘레에 두 줄의 후광을 한 번 더 굳혀 박아 두고, 그 가운데에 자기 첫 깃 한 가닥을 한 번 더 박아 둔 자리다. 두 후광의 한 박자 늦은 빛은 대천사가 자기 자리에서 한 번 더 깨어나는 새벽까지 한 줄씩 더 옅어진다.',
-    art: 'grand majestic imposing fallen angel archangel divine fantasy halo crown accessory item icon, two concentric pale gold halo arcs forming a crown shape with a single white feather rising at the center, single inanimate game loot object on transparent background',
+    lore: '한 대천사가 자기 평생 자기 머리 둘레에 두 줄의 후광을 한 번 더 굳혀 박아 두고, 그 가운데에 자기 첫 깃 한 가닥과 자기 첫 검을 한 번 더 함께 박아 둔 자리다. 두 후광의 한 박자 늦은 빛은 그 검과 깃이 자기 결을 한 번 더 적어 둔 결을 따라 옅어진다.',
+    art: 'grand majestic imposing fallen angel archangel divine fantasy halo crown accessory item icon, two concentric pale gold halo arcs forming a crown shape with a single white feather and a small upright sword rising at the center, single inanimate game loot object on transparent background',
+  },
+
+  // ── batch 29: accessory 5종 ──
+  {
+    key: 'volcano_salamander_ring',
+    slot: 'accessory',
+    nameKo: '도롱뇽의 반지',
+    region: '서쪽 화산',
+    tone: '위트',
+    lore: '서쪽 화로의 가장자리에 살던 한 도롱뇽이 자기 자리에서 한 번 더 떠나기 전 자기 한 새끼를 한 알의 반지 위에 가만히 한 번 더 두고 떠난 자리다. 그 새끼 도롱뇽은 자기 자리에서 한 박자 늦게 한 번씩 더 자기 발자국을 ring 위에 한 번 더 박는다.',
+    art: 'humorous quirky volcanic fire fantasy salamander ring accessory item icon, dark band ring with a bright orange salamander wrapped around the top and a small ember gem at the center, single inanimate game loot object on transparent background',
+  },
+  {
+    key: 'marsh_lily_pad_anklet',
+    slot: 'accessory',
+    nameKo: '연꽃잎 발찌',
+    region: '늪지대',
+    tone: '희망',
+    lore: '늪의 한 신부가 자기 결혼 새벽에 자기 발목 둘레에 세 잎의 연꽃잎을 한 번 더 매달고, 그 끝에 한 송이 분홍 연꽃을 한 번 더 매달아 둔 자리다. 그 신부가 자기 발걸음을 한 박자 늦게 옮길 때마다 세 잎은 한 번씩 더 가만히 같이 흔들린다.',
+    art: 'hopeful radiant warm serene marsh swamp fantasy lily pad anklet accessory item icon, pale silver anklet with three small green lily pad charms hanging and a pink lily blossom at the clasp, single inanimate game loot object on transparent background',
+  },
+  {
+    key: 'orc_grinning_beard_bead',
+    slot: 'accessory',
+    nameKo: '웃는 얼굴의 턱수염 구슬',
+    region: '오크 부락',
+    tone: '위트',
+    lore: '부락의 한 부족장이 자기 평생 자기 턱수염 끝에 한 알의 wooden bead를 한 번 더 묶어 매달고 다닌 자리다. bead 가운데에 한 번 더 새겨진 grinning 얼굴은 부족장이 자기 자리에 한 번 더 웃어 본 결대로 굳어 있고, 양 옆 송곳니는 그가 자기 첫 사냥에서 가져온 자국이다.',
+    art: 'humorous quirky orcish tribal chief fantasy beard braid bead accessory item icon, single large dark wooden bead carved with a comical grinning tribal face and two small dangling tooth charms, single inanimate game loot object on transparent background',
+  },
+  {
+    key: 'rune_two_chisel_charm',
+    slot: 'accessory',
+    nameKo: '두 끌의 십자 부적',
+    region: '고대 룬 산맥',
+    tone: '영웅담',
+    lore: '룬 산맥의 첫 두 새김장이가 자기 평생 한 번도 자기 자리를 떠나지 않은 결을 자기 두 끌을 한 번 더 십자로 교차해 자기 가슴께에 한 줄로 매달아 둔 자리다. 두 끌이 한 자리에 한 번 더 만나는 가운데는 그들이 같이 새긴 첫 룬이 한 자 더 깊이 박혀 있다.',
+    art: 'heroic epic mountain rune ancient fantasy two chisel cross charm accessory item icon, silver chain holding two miniature stone-carver chisels crossed in an X with a small rune mark at the crossing point, single inanimate game loot object on transparent background',
+  },
+  {
+    key: 'fallen_seven_seals_amulet',
+    slot: 'accessory',
+    nameKo: '일곱 봉인의 amulet',
+    region: '타락천사',
+    tone: '전설',
+    lore: '한 대천사가 자기 평생 한 번도 자기 입 밖으로 꺼내지 않은 일곱 가지 약속을 자기 amulet 가장자리에 한 알씩 더 봉인으로 박아 둔 자리다. 가운데 깃 한 가닥은 일곱 약속이 자기 결을 한 번 더 모으는 자리이고, 봉인 한 알이 한 번 옅어지는 새벽은 약속 한 줄이 깨진 결이다.',
+    art: 'legendary mythic ancient storied fallen angel divine fantasy seven seals amulet accessory item icon, dark chain holding a round bronze amulet engraved with seven small wax-seal symbols around the rim and a single small feather at the center, single inanimate game loot object on transparent background',
   },
 ];
