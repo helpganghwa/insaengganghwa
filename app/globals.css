@@ -1,6 +1,6 @@
 @import "tailwindcss";
 
-/* next-themes의 <html class="dark"> 토글과 매칭. 시스템 테마는 ThemeProvider가 처리. */
+/* 다크 고정 — <html class="dark">. dark: 변형은 항상 활성. */
 @custom-variant dark (&:where(.dark, .dark *));
 
 :root {

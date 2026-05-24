@@ -6,7 +6,7 @@ import { db } from '@/lib/db/client';
 import { profiles } from '@/lib/db/schema/profiles';
 import { signOut } from '@/lib/auth/actions';
 
-import { ThemeToggle, LocalToggle } from './SettingsControls';
+import { LocalToggle } from './SettingsControls';
 import { NicknameRow } from './NicknameRow';
 import { InstallAppButton } from './InstallAppButton';
 
@@ -37,10 +37,6 @@ export default async function SettingsPage() {
         </Link>
         <h1 className="text-lg font-semibold">⚙️ 설정</h1>
       </header>
-
-      <Section title="화면">
-        <ThemeToggle />
-      </Section>
 
       <Section title="알림 / 사운드">
         <LocalToggle storageKey="ig:sound" label="효과음" hint="강화 결과·연출음" />

@@ -1,43 +1,6 @@
 'use client';
 
 import { useEffect, useState } from 'react';
-import { useTheme } from 'next-themes';
-
-/** 화면 테마 — next-themes(클래스 토글, globals.css @custom-variant dark와 매칭). */
-export function ThemeToggle() {
-  const { theme, setTheme } = useTheme();
-  const [mounted, setMounted] = useState(false);
-  useEffect(() => setMounted(true), []);
-
-  const opts = [
-    { v: 'light', label: '라이트' },
-    { v: 'dark', label: '다크' },
-    { v: 'system', label: '시스템' },
-  ] as const;
-  const current = mounted ? (theme ?? 'system') : 'system';
-
-  return (
-    <div className="flex items-center justify-between px-3 py-2.5">
-      <span className="text-sm">화면 테마</span>
-      <div className="flex gap-1 rounded-full bg-zinc-100 p-0.5 dark:bg-zinc-800">
-        {opts.map((o) => (
-          <button
-            key={o.v}
-            type="button"
-            onClick={() => setTheme(o.v)}
-            className={`rounded-full px-2.5 py-1 text-[11px] font-medium transition ${
-              current === o.v
-                ? 'bg-white text-zinc-900 shadow-sm dark:bg-zinc-950 dark:text-zinc-50'
-                : 'text-zinc-500'
-            }`}
-          >
-            {o.label}
-          </button>
-        ))}
-      </div>
-    </div>
-  );
-}
 
 /**
  * 로컬 환경설정 토글 — 브라우저 localStorage에만 저장(기기별).
