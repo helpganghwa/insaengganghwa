@@ -2384,6 +2384,52 @@ const ITEMS: Item[] = [
     hint: '두꺼운 황금 체인 + 사자 인장 plate [136번]',
     candidateNotes: ['c0', 'c1', 'c2', 'c3'],
   },
+  // ── batch 39: 마지막 accessory 5종 ──
+  {
+    slug: 'common_witty_three_needle_compass',
+    tone: '위트',
+    region: '일반',
+    slot: 'accessory',
+    recommend: -1,
+    hint: 'brass 나침반 + 세 바늘 + 가운데 작은 얼굴 [137번]',
+    candidateNotes: ['c0', 'c1', 'c2', 'c3'],
+  },
+  {
+    slug: 'common_kingsguard_shield_brooch',
+    tone: '장엄',
+    region: '일반',
+    slot: 'accessory',
+    recommend: -1,
+    hint: 'silver heater shield 브로치 + 왕관 사자 emblem [139번]',
+    candidateNotes: ['c0', 'c1', 'c2', 'c3'],
+  },
+  {
+    slug: 'common_first_forge_ring',
+    tone: '전설',
+    region: '일반',
+    slot: 'accessory',
+    recommend: -1,
+    hint: '어두운 iron band + 작은 ember glass [141번]',
+    candidateNotes: ['c0', 'c1', 'c2', 'c3'],
+  },
+  {
+    slug: 'common_ornate_ruby_diadem',
+    tone: '화려',
+    region: '일반',
+    slot: 'accessory',
+    recommend: -1,
+    hint: '황금 tiara + 다양한 ruby + 황금 leaf filigree [145번]',
+    candidateNotes: ['c0', 'c1', 'c2', 'c3'],
+  },
+  {
+    slug: 'common_silver_swan_pendant',
+    tone: '아름다운',
+    region: '일반',
+    slot: 'accessory',
+    recommend: -1,
+    hint: 'silver 백조 figurine pendant + 등에 진주 [156번 신규]',
+    candidateNotes: ['c0', 'c1', 'c2', 'c3'],
+  },
 ];
 
 export default function BatchReviewPage() {
