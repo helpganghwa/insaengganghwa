@@ -3,7 +3,7 @@ import Link from 'next/link';
 import { assetUrl } from '@/lib/asset-versions';
 
 /**
- * WIREFRAMES §1 — 홈 (메뉴 허브). 2×3 그리드 + 오늘의 보급.
+ * WIREFRAMES §1 — 홈 (메뉴 허브). 2×N 그리드 + 오늘의 보급.
  * 각 카드 = Pixellab 픽셀아트 배경(public/sprites/hub/*.png) + 하단 그라데이션
  * 텍스트(이름 + 한 줄 설명). 장비/강화 현황 정보 없음(강화 화면 전용).
  */
@@ -39,6 +39,22 @@ const MENU = [
     desc: '보스 도전',
     bg: '/sprites/hub/raid.png',
     tint: '#3a1419',
+    scale: 1,
+  },
+  {
+    href: '/mail',
+    label: '우편함',
+    desc: '보상·메시지 수령',
+    bg: '/sprites/hub/mail.png',
+    tint: '#3a2406',
+    scale: 1,
+  },
+  {
+    href: '/me/codex',
+    label: '도감',
+    desc: '수집·최고 강화',
+    bg: '/sprites/hub/codex.png',
+    tint: '#1f1a36',
     scale: 1,
   },
   {

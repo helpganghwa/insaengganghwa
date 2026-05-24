@@ -13,6 +13,7 @@ export const ASSET_VERSIONS: Record<string, string> = {
   "/sprites/hub/ranking.png": "83195331",
   "/sprites/hub/box-weapon.png": "c1870c32",
   "/sprites/hub/raid.png": "92401284",
+  "/sprites/hub/mail.png": "3e54bb9e",
   "/sprites/hub/box-armor.bak8.png": "a04e62ba",
   "/sprites/hub/inventory.png": "504ac0c9",
   "/sprites/hub/inventory.bak2.png": "f75f35d8",
@@ -43,6 +44,7 @@ export const ASSET_VERSIONS: Record<string, string> = {
   "/sprites/hub/box-armor.bak.png": "5138d00b",
   "/sprites/hub/box-armor.bak4.png": "b6ad4335",
   "/sprites/hub/box-weapon.bak.png": "c4604bf9",
+  "/sprites/hub/codex.png": "aa3b655c",
   "/sprites/hub/box-armor.bak3.png": "4f3f27a9",
   "/sprites/hub/gacha.bak.png": "31bad7f7",
   "/sprites/hub/box-armor.bak2.png": "454f7337",
@@ -70,5 +72,5 @@ export const ASSET_VERSIONS: Record<string, string> = {
   "/og/og-1.png": "737cfeac",
   "/og/og-3.png": "c2ce0140",
   "/og/og-2.png": "acef7196",
-  "/sprites/atlas.webp": "de9745e9"
+  "/sprites/atlas.webp": "9f669982"
 };
