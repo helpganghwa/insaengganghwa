@@ -1300,13 +1300,13 @@ export const CATALOG_NEXT: CatalogItem[] = [
     art: 'grand majestic imposing fantasy emperor signet chain accessory item icon, heavy gold thick chain holding a large rectangular gold signet plate engraved with a stylized lion seal, single inanimate game loot object on transparent background',
   },
   {
-    key: 'rune_sunrise_medallion',
+    key: 'common_witty_three_needle_compass',
     slot: 'accessory',
-    nameKo: '일출의 medallion',
-    region: '고대 룬 산맥',
-    tone: '희망',
-    lore: '룬 산맥의 가장 높은 자리에서 평생 자기 첫 새벽의 일출을 한 번도 놓치지 않은 한 보초가 자기 medallion 가운데에 그 일출의 결을 한 번 더 황금으로 굳혀 박아 둔 자리다. 가운데 박힌 작은 진주는 보초가 마지막 새벽에 손가락 끝으로 한 번 더 짚어 본 자리다.',
-    art: 'hopeful radiant warm serene mountain rune fantasy sunrise medallion accessory item icon, silver chain holding a round gold medallion with an embossed warm sunrise emblem and a small pearl at the center, single inanimate game loot object on transparent background',
+    nameKo: '세 바늘의 나침반',
+    region: '일반',
+    tone: '위트',
+    lore: '한 항해사가 자기 평생 자기 가슴께에 한 알의 brass 나침반을 한 번 더 메고 다닌 자리다. 가운데에 박혀 있는 세 개의 바늘은 그 항해사가 자기 자리에서 한 번도 한 방향으로만 한 줄로 가지 않은 결대로 각자 자기 자리를 향해 한 박자 늦게 한 번씩 더 떨린다.',
+    art: 'humorous quirky whimsical fantasy three needle compass accessory item icon, brass round compass pendant with three small needles pointing different directions and a tiny face at the center, single inanimate game loot object on transparent background',
   },
   {
     key: 'volcano_smith_hammer_pin',
@@ -1318,13 +1318,13 @@ export const CATALOG_NEXT: CatalogItem[] = [
     art: 'heroic epic volcanic forge fire fantasy blacksmith hammer anvil pin accessory item icon, dark iron pin shaped like a small upright hammer and anvil with a single glowing ember at the center, single inanimate game loot object on transparent background',
   },
   {
-    key: 'fallen_pearl_feather_choker',
+    key: 'common_kingsguard_shield_brooch',
     slot: 'accessory',
-    nameKo: '진주 깃 choker',
-    region: '타락천사',
-    tone: '아름다운',
-    lore: '한 천사가 자기 누이의 목 둘레에 한 줄의 흰 진주를 한 번 더 감아 두고, 그 가운데에 자기 첫 깃 한 가닥을 한 번 더 silver로 굳혀 매달아 둔 자리다. 진주 한 알 한 알은 천사가 자기 누이를 한 번씩 더 떠올린 새벽마다 한 알씩 더 굳어진 결이다.',
-    art: 'beautiful elegant graceful fallen angel divine fantasy pearl feather choker accessory item icon, slender white pearl strand choker with a single silver feather pendant hanging at the front, single inanimate game loot object on transparent background',
+    nameKo: '근위의 방패 브로치',
+    region: '일반',
+    tone: '장엄',
+    lore: '한 왕국의 첫 근위 기사가 자기 평생 한 번도 자기 왕의 자리에서 등 돌리지 않은 결을 자기 가슴께 한 알의 작은 silver 방패 브로치에 한 번 더 굳혀 박아 둔 자리다. 가운데에 새겨진 왕관 사자는 그 근위가 자기 자리에서 한 번도 자기 시선을 떼지 않은 결대로 한 줄로 더 깊이 새겨져 있다.',
+    art: 'grand majestic imposing fantasy kingsguard shield brooch accessory item icon, polished silver heater shield brooch with a crowned lion crest at the center and gold trim along the rim, single inanimate game loot object on transparent background',
   },
 
   // ── batch 31: accessory 5종 ──
@@ -1338,13 +1338,13 @@ export const CATALOG_NEXT: CatalogItem[] = [
     art: 'humorous quirky marsh swamp will-o-wisp fantasy tiny lantern charm accessory item icon, silver chain holding a small silver teardrop lantern pendant with a teal wisp flame glowing inside, single inanimate game loot object on transparent background',
   },
   {
-    key: 'orc_lost_brother_token',
+    key: 'common_first_forge_ring',
     slot: 'accessory',
-    nameKo: '잃은 형제의 token',
-    region: '오크 부락',
-    tone: '비애',
-    lore: '부락의 한 어린 오크가 자기 동무 한 명을 자기 첫 사냥에서 잃은 새벽에, 그 동무의 마지막 손바닥 자국을 자기 가슴께 token에 한 번 더 굳혀 박아 둔 자리다. cord의 매듭은 그 어린 오크가 한 번도 그 동무의 이름을 다시 부르지 않은 결대로 한 번 더 묶여 있다.',
-    art: 'mournful sorrowful orcish tribal fantasy lost brother token accessory item icon, brown leather cord with a single knot above a small carved bone token engraved with a red handprint and a single rune mark, single inanimate game loot object on transparent background',
+    nameKo: '첫 화로의 반지',
+    region: '일반',
+    tone: '전설',
+    lore: '한 왕국의 첫 대장장이가 자기 화로의 첫 잉걸 한 알을 자기 반지의 한가운데에 한 번 더 굳혀 박아 둔 자리다. 그 잉걸은 대장장이가 자기 평생 자기 화로를 한 번도 식히지 않은 결대로 한 박자 늦은 빛으로 가만히 자기 자리에 남아 있다.',
+    art: 'legendary mythic ancient fantasy first forge ring accessory item icon, weathered dark iron band ring with a small inset of bright orange ember glass at the top representing the first forge spark, single inanimate game loot object on transparent background',
   },
   {
     key: 'rune_high_archon_crown',
@@ -1376,13 +1376,13 @@ export const CATALOG_NEXT: CatalogItem[] = [
 
   // ── batch 32: accessory 마지막 5종 ──
   {
-    key: 'common_silver_rose_locket',
+    key: 'common_ornate_ruby_diadem',
     slot: 'accessory',
-    nameKo: '은 장미 locket',
+    nameKo: '루비 diadem',
     region: '일반',
-    tone: '아름다운',
-    lore: '한 신부가 자기 결혼 새벽에 자기 가슴께에 한 알의 은 locket을 한 번 더 매달고, 그 locket의 가운데에 자기 평생 한 번 더 짚어 본 한 송이 장미를 한 번 더 새겨 둔 자리다. locket은 그 신부가 자기 자리에서 한 번도 다시 열어 본 적이 없는 채로 가만히 한 자리에 굳어 있다.',
-    art: 'beautiful elegant graceful fantasy silver rose locket accessory item icon, silver chain holding a small heart-shaped polished silver locket with a single rose etched on the front, single inanimate game loot object on transparent background',
+    tone: '화려',
+    lore: '한 왕국의 첫 왕비가 자기 평생 자기 머리 둘레에 한 알 한 알 자기 결정에서 가져온 ruby를 한 번 더 황금 tiara 위에 박아 둔 자리다. 보석 사이 사이의 leaf filigree는 왕비가 자기 자리에서 한 번씩 더 자기 손가락 끝으로 짚어 본 결을 따라 한 줄씩 더 둘러져 있다.',
+    art: 'ornate flamboyant gilded fantasy ornate ruby diadem accessory item icon, slim gold tiara set with multiple bright red rubies of different sizes and small gold leaf filigree between the gems, single inanimate game loot object on transparent background',
   },
   {
     key: 'marsh_dawn_lotus_charm',
@@ -1419,5 +1419,15 @@ export const CATALOG_NEXT: CatalogItem[] = [
     tone: '위트',
     lore: '한 천사가 자기 어린 케르빔 동무 한 명을 자기 자리에 한 번 더 두고 떠난 새벽에, 그 케르빔이 자기 자리에서 한 번 더 가만히 웃어 본 결을 한 알의 황금으로 한 번 더 굳혀 brooch로 박아 둔 자리다. 양 옆 두 작은 날개와 머리 위의 후광은 케르빔이 자기 자세를 한 번 더 흩뜨리지 않은 결대로 굳어 있다.',
     art: 'humorous quirky whimsical fallen angel divine fantasy cherub brooch accessory item icon, small gold brooch shaped like a chubby smiling cherub face with two tiny wings on each side and a small halo above, single inanimate game loot object on transparent background',
+  },
+  // ── 150번째 신규 (accessory 50/50 완성) ──
+  {
+    key: 'common_silver_swan_pendant',
+    slot: 'accessory',
+    nameKo: '은 백조 펜던트',
+    region: '일반',
+    tone: '아름다운',
+    lore: '한 호수의 가장자리에 평생 자기 한 마리 백조를 한 번 더 들여다본 한 화가가 자기 누이의 가슴께에 그 백조의 결을 한 알의 silver 펜던트로 한 번 더 굳혀 매달아 둔 자리다. 백조의 등 위에 가만히 박힌 작은 진주는 그 호수의 첫 새벽이 한 알로 굳어진 자리다.',
+    art: 'beautiful elegant graceful fantasy silver swan pendant accessory item icon, slender silver chain holding a single delicate silver swan figurine pendant with a curving neck and a tiny pearl on its back, single inanimate game loot object on transparent background',
   },
 ];
