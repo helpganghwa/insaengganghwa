@@ -6,9 +6,9 @@ import { profiles } from '@/lib/db/schema/profiles';
 import { formatCompactKR } from '@/lib/ui/format-number';
 
 /**
- * WIREFRAMES §0 — 좌: ⚒️ 인생강화 / 우: 닉네임 · 🏆 랭킹 · 💎 다이아.
+ * WIREFRAMES §0 — 좌: ⚒️ 인생강화 / 우: 닉네임 · 💎 다이아.
  * userId는 (game) layout에서 세션 검증(로컬 JWT §11.1) 후 주입.
- * 우편함은 홈 메뉴 카드(/mail)로 진입.
+ * 우편함·랭킹은 홈 메뉴 카드로 진입.
  */
 export async function AppHeader({ userId }: { userId: string }) {
   const [profile] = await db
@@ -33,14 +33,6 @@ export async function AppHeader({ userId }: { userId: string }) {
         <span className="max-w-[68px] truncate text-zinc-700 dark:text-zinc-200">
           {nickname}
         </span>
-        {/* 랭킹 순위 숫자는 leaderboard 쿼리 구현 시 표기 (현재 링크만). */}
-        <Link
-          href="/leaderboard"
-          aria-label="랭킹"
-          className="inline-flex items-center gap-1 rounded-full bg-amber-100 px-2 py-0.5 text-amber-800 dark:bg-amber-950/60 dark:text-amber-200"
-        >
-          <span aria-hidden>🏆</span>
-        </Link>
         <Link
           href="/shop"
           aria-label={`다이아 ${diamond} · 충전`}
