@@ -87,7 +87,7 @@ export const raidAttacks = pgTable('raid_attacks', {
   createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
 });
 
-/** §6.4 raid_rewards — 정산 멱등. (raid_id,user_id) UNIQUE. */
+/** §6.4 raid_rewards — 정산 멱등. (raid_id,user_id) UNIQUE. claimed_at: 인페이지 수령 stamping. */
 export const raidRewards = pgTable(
   'raid_rewards',
   {
@@ -104,6 +104,8 @@ export const raidRewards = pgTable(
     phaseDiamond: bigint('phase_diamond', { mode: 'bigint' }).notNull().default(sql`0`),
     /** 슬롯별 지급 보급 상자 수 { weapon, armor, accessory }. */
     boxes: jsonb('boxes').$type<{ weapon: number; armor: number; accessory: number }>().notNull(),
+    /** 인페이지 수령 시각 — IS NULL = 미수령. 조건부 stamping으로 동시 수령 레이스 차단. */
+    claimedAt: timestamp('claimed_at', { withTimezone: true }),
     createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
   },
   (t) => [uniqueIndex('raid_reward_uq').on(t.raidId, t.userId)],

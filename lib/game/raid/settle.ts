@@ -4,14 +4,14 @@ import { and, eq, gte, sql } from 'drizzle-orm';
 
 import { db } from '@/lib/db/client';
 import { raids, raidParticipants, raidRewards } from '@/lib/db/schema/raid';
-import { mailbox } from '@/lib/db/schema/mailbox';
 import { RAID_BASE_PARTICIPATION_DIAMOND } from '@/lib/game/balance';
 import { aggregatePhaseDrops, raidPhasesCleared } from './drops';
 
 /**
  * 레이드 정산 — GDD §3.5 / SCHEMA §6.4. 6시간 만료 시 lazy(접속 조회) + cron 일괄.
  * **멱등**: status='active' AND expire_at<=now() 조건부 → 'settled'. 보상 = 1회+ 공격
- * 전원 동일(기본 100 + 페이즈 결정론 추첨, drops.ts). 지급은 우편함 적재(SCHEMA §7).
+ * 전원 동일(기본 100 + 페이즈 결정론 추첨, drops.ts). 정산은 raid_rewards 적재만 —
+ * 실제 지급은 유저가 레이드 상세에서 직접 수령(`claimRaidReward`, claim.ts).
  */
 export function settleRaid(
   input: { raidId: bigint },
@@ -62,12 +62,6 @@ export function settleRaid(
           boxes: drops.boxes,
         })
         .onConflictDoNothing({ target: [raidRewards.raidId, raidRewards.userId] });
-
-      await tx.insert(mailbox).values({
-        userId: w.userId,
-        type: 'raid_settlement',
-        payload: { diamond: RAID_BASE_PARTICIPATION_DIAMOND + drops.diamond, boxes: drops.boxes },
-      });
     }
 
     await tx

@@ -1,11 +1,11 @@
 import { notFound } from 'next/navigation';
-import { eq } from 'drizzle-orm';
+import { and, eq } from 'drizzle-orm';
 import { preload } from 'react-dom';
 
 import { getSessionUserId } from '@/lib/auth/session';
 import { db } from '@/lib/db/client';
 import { profiles } from '@/lib/db/schema/profiles';
-import { raids, raidParticipants } from '@/lib/db/schema/raid';
+import { raids, raidParticipants, raidRewards } from '@/lib/db/schema/raid';
 import { raidPhasesCleared } from '@/lib/game/raid';
 import { getBossBg, getBossSprite } from '@/lib/game/raid/boss-sprites';
 import { assetUrl } from '@/lib/asset-versions';
@@ -71,6 +71,28 @@ export default async function RaidDetail({ params }: { params: Promise<{ raidId:
   const total = parts.reduce((s, p) => s + Number(p.totalDamage), 0);
   const me = parts.find((p) => p.userId === userId) ?? null;
 
+  // 정산된 레이드면 내 결산 보상(미수령/수령 여부 포함) 조회.
+  let myReward: RaidView['myReward'] = null;
+  if (raid.status === 'settled') {
+    const [rw] = await db
+      .select({
+        baseDiamond: raidRewards.baseDiamond,
+        phaseDiamond: raidRewards.phaseDiamond,
+        boxes: raidRewards.boxes,
+        claimedAt: raidRewards.claimedAt,
+      })
+      .from(raidRewards)
+      .where(and(eq(raidRewards.raidId, BigInt(raidId)), eq(raidRewards.userId, userId)))
+      .limit(1);
+    if (rw) {
+      myReward = {
+        diamond: Number(rw.baseDiamond) + Number(rw.phaseDiamond),
+        boxes: rw.boxes,
+        claimed: rw.claimedAt != null,
+      };
+    }
+  }
+
   const view: RaidView = {
     raidId,
     bossCode: raid.bossCode,
@@ -84,6 +106,7 @@ export default async function RaidDetail({ params }: { params: Promise<{ raidId:
     isParticipant: !!me,
     myAttacksUsed: me?.attacksUsed ?? 0,
     myExtraAttacks: me?.extraAttacks ?? 0,
+    myReward,
     participants: parts
       .map((p) => ({
         nickname: p.nickname,

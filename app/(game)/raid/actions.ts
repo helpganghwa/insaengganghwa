@@ -10,6 +10,7 @@ import {
   attackRaid,
   buyExtraAttack,
   settleRaid,
+  claimRaidReward,
   RaidError,
   type RaidBoss,
 } from '@/lib/game/raid';
@@ -25,6 +26,7 @@ const MSG: Record<string, string> = {
   ALREADY_JOINED: '이미 참여 중입니다.',
   NOT_PARTICIPANT: '참여자가 아닙니다.',
   NO_ATTACKS: '공격 횟수를 모두 사용했습니다 (추가 공격 구매 가능).',
+  REWARD_ALREADY_CLAIMED: '이미 보상을 받았습니다.',
   UNAUTHENTICATED: '로그인이 필요합니다.',
   RATE_LIMITED: '요청이 너무 빠릅니다. 잠시 후 다시 시도해 주세요.',
   UNKNOWN: '알 수 없는 오류',
@@ -97,7 +99,23 @@ export async function buyExtraAttackAction(raidId: string) {
   }
 }
 
-/** 만료 레이드 lazy 정산 — 조회 시 호출(멱등). 보상은 우편함 적재. */
+/** 결산 보상 인페이지 수령 — grow와 동일 흐름. (raid_id,user_id) 단위 멱등. */
+export async function claimRaidRewardAction(raidId: string) {
+  const u = await uid();
+  if (!u) return err('UNAUTHENTICATED');
+  if (await rateLimited(u, 'raid')) return err('RATE_LIMITED');
+  try {
+    const r = await claimRaidReward({ userId: u, raidId: BigInt(raidId) });
+    rev(raidId);
+    return { status: 'success' as const, result: r };
+  } catch (e) {
+    if (e instanceof RaidError) return err(e.code);
+    console.error('[raid.claim]', e);
+    return err('UNKNOWN');
+  }
+}
+
+/** 만료 레이드 lazy 정산 — 조회 시 호출(멱등). 보상은 raid_rewards 적재(인페이지 수령). */
 export async function settleRaidAction(raidId: string) {
   const u = await uid();
   if (!u) return err('UNAUTHENTICATED');

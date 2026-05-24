@@ -20,6 +20,14 @@
   --animate-flash-down: flash-down 0.9s ease-out;
   /* 레이드 보스 부유(정적 스프라이트 전용 — APNG는 자체 재생). 8px 부드러운 상하. */
   --animate-boss-float: boss-float 3.2s ease-in-out infinite;
+  /* 레이드 — 타격/치명타 화면 셰이크·플래시, 데미지 부유, 페이즈 돌파 ripple. */
+  --animate-hit-shake: hit-shake 0.32s ease-in-out;
+  --animate-crit-shake: crit-shake 0.5s ease-in-out;
+  --animate-hit-flash: hit-flash 0.32s ease-out;
+  --animate-crit-flash: crit-flash 0.5s ease-out;
+  --animate-dmg-float: dmg-float 0.8s ease-out forwards;
+  --animate-phase-up: phase-up 0.6s ease-out;
+  --animate-pulse-soft: pulse-soft 1.6s ease-in-out infinite;
 
   @keyframes boss-float {
     0%, 100% { transform: translateY(0); }
@@ -43,6 +51,55 @@
     60% { transform: translateX(-2px); }
     100% { transform: translateX(0); box-shadow: 0 0 0 0 rgba(251, 191, 36, 0); }
   }
+
+  @keyframes hit-shake {
+    0%, 100% { transform: translate(0, 0); }
+    25% { transform: translate(-4px, 1px); }
+    50% { transform: translate(3px, -1px); }
+    75% { transform: translate(-2px, 1px); }
+  }
+  @keyframes crit-shake {
+    0%, 100% { transform: translate(0, 0) scale(1); }
+    15% { transform: translate(-6px, -2px) scale(1.04); }
+    30% { transform: translate(6px, 2px) scale(1.06); }
+    45% { transform: translate(-5px, 1px) scale(1.04); }
+    60% { transform: translate(4px, -2px) scale(1.03); }
+    80% { transform: translate(-2px, 1px) scale(1.01); }
+  }
+  @keyframes hit-flash {
+    0% { opacity: 0; }
+    20% { opacity: 0.55; }
+    100% { opacity: 0; }
+  }
+  @keyframes crit-flash {
+    0% { opacity: 0; }
+    18% { opacity: 0.85; }
+    100% { opacity: 0; }
+  }
+  @keyframes dmg-float {
+    0% { opacity: 0; transform: translate(-50%, 0) scale(0.85); }
+    20% { opacity: 1; transform: translate(-50%, -8px) scale(1.1); }
+    100% { opacity: 0; transform: translate(-50%, -64px) scale(1); }
+  }
+  @keyframes phase-up {
+    0% { transform: scale(1); filter: brightness(1); }
+    25% { transform: scale(1.025); filter: brightness(1.4); }
+    100% { transform: scale(1); filter: brightness(1); }
+  }
+  @keyframes pulse-soft {
+    0%, 100% { opacity: 1; }
+    50% { opacity: 0.55; }
+  }
+}
+
+/* 리소스 토스트 — 위로 솟구쳤다 떨어지는 짧은 알림(ResourceToast.tsx). */
+@keyframes toast-pop {
+  0% { opacity: 0; transform: translateY(-12px) scale(0.9); }
+  100% { opacity: 1; transform: translateY(0) scale(1); }
+}
+@keyframes toast-fall {
+  0% { opacity: 1; transform: translateY(0); }
+  100% { opacity: 0; transform: translateY(8px); }
 }
 
 /* 그 외 게임 연출(가챠/레이드/로딩)은 해당 화면 구현 시 단계 이식. */

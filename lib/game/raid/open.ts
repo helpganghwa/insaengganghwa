@@ -29,7 +29,8 @@ export type RaidErrorCode =
   | 'ALREADY_JOINED'
   | 'NOT_PARTICIPANT'
   | 'NO_ATTACKS'
-  | 'NOT_SETTLEABLE';
+  | 'NOT_SETTLEABLE'
+  | 'REWARD_ALREADY_CLAIMED';
 
 export class RaidError extends Error {
   constructor(public code: RaidErrorCode) {

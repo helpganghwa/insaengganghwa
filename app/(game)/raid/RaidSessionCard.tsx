@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useState, useTransition } from 'react';
+import { useEffect, useRef, useState, useTransition } from 'react';
 import { useRouter } from 'next/navigation';
 
 import {
@@ -14,8 +14,15 @@ import { RAID_BOSSES, type RaidBoss } from '@/lib/game/raid/bosses';
 import { BossSprite } from '@/components/BossSprite';
 import { getBossBg, getBossBgClass } from '@/lib/game/raid/boss-sprites';
 import { assetUrl } from '@/lib/asset-versions';
+import { useResourceToast } from '@/components/ResourceToast';
+import * as haptic from '@/lib/game/haptic';
+import { sounds } from '@/lib/game/sound';
 
-import { attackRaidAction, buyExtraAttackAction } from './actions';
+import {
+  attackRaidAction,
+  buyExtraAttackAction,
+  claimRaidRewardAction,
+} from './actions';
 
 export type RaidView = {
   raidId: string;
@@ -30,86 +37,216 @@ export type RaidView = {
   isParticipant: boolean;
   myAttacksUsed: number;
   myExtraAttacks: number;
+  /** 정산 후에만 set. claimed=true면 수령 완료. */
+  myReward: {
+    diamond: number;
+    boxes: Record<SupplySlot, number>;
+    claimed: boolean;
+  } | null;
   participants: { nickname: string; totalDamage: number; isMe: boolean }[];
 };
 
 const MEDAL = ['🥇', '🥈', '🥉'];
 
-export function RaidSessionCard({ view: v }: { view: RaidView }) {
-  const router = useRouter();
-  const [pending, startTransition] = useTransition();
-  const [now, setNow] = useState(() => Date.now());
-  const [fx, setFx] = useState<null | { dmg: number; crit: boolean }>(null);
+// 페이즈마다 순환하는 게이지 컬러(돌파 후 다음 컬러로 교체).
+const PHASE_PALETTE = [
+  { bar: 'bg-emerald-400', text: 'text-emerald-300', glow: 'shadow-emerald-400/60' },
+  { bar: 'bg-sky-400', text: 'text-sky-300', glow: 'shadow-sky-400/60' },
+  { bar: 'bg-violet-400', text: 'text-violet-300', glow: 'shadow-violet-400/60' },
+  { bar: 'bg-amber-400', text: 'text-amber-300', glow: 'shadow-amber-400/60' },
+  { bar: 'bg-rose-400', text: 'text-rose-300', glow: 'shadow-rose-400/60' },
+  { bar: 'bg-cyan-400', text: 'text-cyan-300', glow: 'shadow-cyan-400/60' },
+];
 
+const SLOT_LABEL: Record<SupplySlot, string> = {
+  weapon: '무기',
+  armor: '방어구',
+  accessory: '장신구',
+};
+const SLOT_EMOJI: Record<SupplySlot, string> = {
+  weapon: '⚔️',
+  armor: '🛡️',
+  accessory: '💍',
+};
+
+function useCountdown(expireAtIso: string): { text: string; over: boolean; urgent: boolean } {
+  const [now, setNow] = useState(() => Date.now());
   useEffect(() => {
     const t = setInterval(() => setNow(Date.now()), 1000);
     return () => clearInterval(t);
   }, []);
+  const ms = new Date(expireAtIso).getTime() - now;
+  if (ms <= 0) return { text: '정산 대기', over: true, urgent: false };
+  const h = Math.floor(ms / 3_600_000);
+  const m = Math.floor((ms % 3_600_000) / 60_000);
+  const s = Math.floor((ms % 60_000) / 1000);
+  // 1시간 미만은 m:ss, 이상은 h:mm.
+  const text = h > 0 ? `${h}:${String(m).padStart(2, '0')}` : `${m}:${String(s).padStart(2, '0')}`;
+  return { text, over: false, urgent: ms < 60_000 };
+}
+
+export function RaidSessionCard({ view: v }: { view: RaidView }) {
+  const router = useRouter();
+  const { showResource, showError } = useResourceToast();
+  const [pending, startTransition] = useTransition();
+  const { text: countdown, over, urgent } = useCountdown(v.expireAtIso);
 
   const boss = RAID_BOSSES[v.bossCode];
   const settled = v.status === 'settled';
-  const remainMs = new Date(v.expireAtIso).getTime() - now;
-  const over = remainMs <= 0;
   const allowed = RAID_BASE_ATTACKS + v.myExtraAttacks;
   const left = allowed - v.myAttacksUsed;
   const canAttack = v.isParticipant && !settled && !over && left > 0;
 
-  // 현재 페이즈 진행률 — 누적 임계 = phase1·2·(1.5^N − 1).
-  const thr = (n: number) => v.phase1Hp * 2 * (1.5 ** n - 1);
-  const floor = thr(v.phasesCleared);
-  const nextHp = raidPhaseHp(v.phase1Hp, v.phasesCleared + 1);
-  const prog = Math.max(0, Math.min(1, (v.totalDamage - floor) / nextHp));
-
+  // 누적 보상(공시) — 현재까지 돌파한 페이즈의 결정론 드롭 합산.
   const drops = aggregatePhaseDrops(BigInt(v.raidId), v.phasesCleared);
-  const boxStr = (Object.entries(drops.boxes) as [SupplySlot, number][])
-    .filter(([, n]) => n > 0)
-    .map(([s, n]) => `${s === 'weapon' ? '무기' : s === 'armor' ? '방어구' : '장신구'}×${n}`)
-    .join(' ');
 
-  const attack = () =>
-    startTransition(async () => {
-      const r = await attackRaidAction(v.raidId);
-      if (r.status === 'error') {
-        alert(r.message);
+  // ── 타격 FX: hit/crit. (insaeng은 미스 없음 — BALANCE §5.3.) ──
+  const [fx, setFx] = useState<null | 'hit' | 'crit'>(null);
+  const [floatDmg, setFloatDmg] = useState<{ id: number; val: number; crit: boolean } | null>(
+    null,
+  );
+  const fxKey = useRef(0);
+
+  // ── 페이즈 게이지: 이전 페이즈가 100% 다 찬 뒤 다음 컬러로 순차 진행 ──
+  // 현재 진행률 계산: 누적 임계 = phase1·2·(1.5^N − 1).
+  const thrFloor = v.phase1Hp * 2 * (1.5 ** v.phasesCleared - 1);
+  const nextHp = raidPhaseHp(v.phase1Hp, v.phasesCleared + 1);
+  const targetProg = Math.max(0, Math.min(1, (v.totalDamage - thrFloor) / nextHp));
+
+  const [gPhase, setGPhase] = useState(v.phasesCleared);
+  const [gPct, setGPct] = useState(targetProg * 100);
+  const [phaseUp, setPhaseUp] = useState(false);
+  const animTok = useRef(0);
+  const lastRef = useRef({ phase: v.phasesCleared, prog: targetProg });
+
+  useEffect(() => {
+    const last = lastRef.current;
+    if (last.phase === v.phasesCleared && Math.abs(last.prog - targetProg) < 0.0001) return;
+    const advanced = v.phasesCleared > last.phase;
+    lastRef.current = { phase: v.phasesCleared, prog: targetProg };
+    const token = ++animTok.current;
+    const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
+
+    (async () => {
+      // 페이즈 역행(보정 등)은 즉시 반영.
+      if (v.phasesCleared < gPhase) {
+        setGPhase(v.phasesCleared);
+        setGPct(targetProg * 100);
         return;
       }
-      setFx({ dmg: r.damage, crit: r.isCrit });
-      setTimeout(() => setFx(null), 800);
+      let ph = gPhase;
+      while (ph < v.phasesCleared) {
+        setGPct(100);
+        await sleep(440);
+        if (animTok.current !== token) return;
+        ph += 1;
+        setGPhase(ph);
+        setGPct(0);
+        await sleep(50);
+        if (animTok.current !== token) return;
+      }
+      setGPct(targetProg * 100);
+      if (advanced) {
+        setPhaseUp(true);
+        setTimeout(() => setPhaseUp(false), 650);
+      }
+    })();
+    // gPhase는 의도적으로 deps 제외(시퀀스 내부에서 갱신).
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [v.phasesCleared, targetProg]);
+
+  const pal = PHASE_PALETTE[gPhase % PHASE_PALETTE.length]!;
+  const shake = fx === 'crit' ? 'animate-crit-shake' : fx === 'hit' ? 'animate-hit-shake' : '';
+
+  const handleAttack = () => {
+    if (!canAttack || pending) return;
+    startTransition(async () => {
+      const r = await attackRaidAction(v.raidId);
+      if (r.status !== 'success') {
+        showError(r.message);
+        return;
+      }
+      fxKey.current += 1;
+      if (r.isCrit) {
+        sounds.raidCrit();
+        haptic.success();
+        setFx('crit');
+        setFloatDmg({ id: fxKey.current, val: r.damage, crit: true });
+      } else {
+        sounds.raidHit();
+        haptic.tap();
+        setFx('hit');
+        setFloatDmg({ id: fxKey.current, val: r.damage, crit: false });
+      }
+      setTimeout(() => setFx(null), 520);
+      setTimeout(() => setFloatDmg(null), 850);
       router.refresh();
     });
+  };
 
-  const buyExtra = () =>
+  const handleBuyExtra = () => {
+    if (pending) return;
     startTransition(async () => {
       const r = await buyExtraAttackAction(v.raidId);
-      if (r.status === 'error') alert(r.message);
-      else router.refresh();
+      if (r.status === 'error') {
+        showError(r.message);
+        return;
+      }
+      router.refresh();
     });
+  };
 
-  const invite = async () => {
+  const handleClaim = () => {
+    if (pending) return;
+    haptic.tap();
+    startTransition(async () => {
+      const r = await claimRaidRewardAction(v.raidId);
+      if (r.status !== 'success') {
+        showError(r.message);
+        return;
+      }
+      sounds.rewardClaim();
+      haptic.success();
+      const { diamond, boxes } = r.result;
+      let delay = 0;
+      if (diamond > 0) {
+        showResource('💎', '레이드 보상', diamond);
+        delay = 350;
+      }
+      for (const s of ['weapon', 'armor', 'accessory'] as SupplySlot[]) {
+        const n = boxes[s] ?? 0;
+        if (n > 0) {
+          setTimeout(() => showResource(SLOT_EMOJI[s], `${SLOT_LABEL[s]} 상자`, n), delay);
+          delay += 350;
+        }
+      }
+      setTimeout(() => router.refresh(), delay + 200);
+    });
+  };
+
+  const handleInvite = async () => {
+    haptic.tap();
     const url = `${window.location.origin}/s/${v.shareCode}`;
+    const nav = typeof navigator !== 'undefined' ? navigator : null;
     try {
-      if (navigator.share) await navigator.share({ title: `${boss.name} 레이드`, url });
-      else {
-        await navigator.clipboard.writeText(url);
-        alert('초대 링크 복사됨 — 카톡방에 붙여넣기');
+      if (nav?.share) {
+        await nav.share({ title: `${boss.name} 레이드`, url });
+        return;
+      }
+      if (nav?.clipboard) {
+        await nav.clipboard.writeText(url);
+        showResource('🔗', '초대 링크를 복사했어요');
       }
     } catch {
-      /* 취소 무시 */
+      /* 사용자 취소 무시 */
     }
   };
 
-  const cd = over
-    ? '정산 대기'
-    : `${Math.floor(remainMs / 3600000)}:${String(Math.floor((remainMs % 3600000) / 60000)).padStart(2, '0')}`;
-
   const bossBg = getBossBg(v.bossCode);
   return (
-    // 레이드 상세는 grow 분위기 따라 **다크 강제** — 라이트 모드에서도 동일 다크 톤.
-    // min-h-full — (game) layout의 main(flex-1 overflow-y-auto)을 가득 채워 콘텐츠
-    // 짧을 때 라이트 배경 비침 방지. dvh로 잡으면 header+footer 합쳐 잉여 스크롤 발생.
-    // 콘텐츠가 크면 자연 확장되어 main의 overflow-y-auto가 정상 스크롤.
+    // 레이드 상세는 grow와 동일한 다크 톤 강제.
     <section className="min-h-full overflow-hidden bg-zinc-950 text-zinc-100">
-      {/* 히어로 — 배경 이미지(있으면) + 그라데이션 폴백 + 큰 보스 sprite(APNG 우선·정적 부유). */}
+      {/* ── 히어로: 배경 + 큰 보스(풀블리드, 타격 FX 오버레이) ── */}
       <div
         className={`relative flex h-60 items-end justify-center bg-gradient-to-b ${getBossBgClass(v.bossCode)}`}
       >
@@ -124,44 +261,57 @@ export function RaidSessionCard({ view: v }: { view: RaidView }) {
             style={{ imageRendering: 'pixelated' }}
           />
         ) : null}
-        {/* 비네팅 — 보스 가독성. radial center 50% 35%, 외곽 어두움 */}
         <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(circle_at_50%_35%,transparent,rgba(0,0,0,0.6))]" />
+        {fx === 'crit' ? (
+          <div className="animate-crit-flash pointer-events-none absolute inset-0 bg-amber-300 mix-blend-screen" />
+        ) : fx === 'hit' ? (
+          <div className="animate-hit-flash pointer-events-none absolute inset-0 bg-red-500 mix-blend-screen" />
+        ) : null}
 
-        <div className="absolute left-3 top-3 z-10 text-sm font-extrabold drop-shadow">
-          {boss.name}
-          {v.isHost ? (
-            <span className="ml-1 rounded bg-amber-500 px-1 text-[9px] text-amber-950">방장</span>
-          ) : null}
-        </div>
-        <div
-          className={`absolute right-3 top-3 z-10 rounded-full px-2.5 py-1 font-mono text-sm font-bold ${
-            over || settled ? 'bg-black/40 text-zinc-300' : 'bg-black/40 text-amber-200'
-          }`}
-        >
-          {settled ? '종료' : `⏳ ${cd}`}
-        </div>
-
-        <div className={`relative z-10 mb-2 ${fx ? 'animate-flash-down' : ''}`}>
+        <div className={`relative mb-2 ${shake}`}>
           <BossSprite code={v.bossCode} size={168} className="drop-shadow-2xl" eager />
-          {fx ? (
+          {floatDmg ? (
             <span
-              className={`absolute left-1/2 top-2 -translate-x-1/2 font-mono font-extrabold ${
-                fx.crit ? 'text-2xl text-amber-300' : 'text-xl text-red-300'
+              key={floatDmg.id}
+              className={`animate-dmg-float pointer-events-none absolute left-1/2 top-2 font-mono font-extrabold ${
+                floatDmg.crit ? 'text-3xl text-amber-300' : 'text-2xl text-red-300'
               }`}
               style={{ textShadow: '0 2px 6px rgba(0,0,0,0.7)' }}
             >
-              {fx.crit ? '⚡' : ''}
-              {fx.dmg.toLocaleString()}
+              {floatDmg.crit ? '⚡' : ''}
+              {floatDmg.val.toLocaleString()}
             </span>
           ) : null}
+        </div>
+
+        <div className="absolute left-0 right-0 top-0 z-10 flex items-start justify-between p-3">
+          <div className="text-sm font-extrabold drop-shadow">
+            {boss.name}
+            {v.isHost ? (
+              <span className="ml-1 rounded bg-amber-500 px-1 text-[9px] text-amber-950">방장</span>
+            ) : null}
+          </div>
+          <div
+            className={`rounded-full px-2.5 py-1 font-mono text-sm font-bold backdrop-blur ${
+              settled
+                ? 'bg-black/40 text-zinc-300'
+                : urgent
+                  ? 'animate-pulse-soft bg-red-500/80 text-white'
+                  : 'bg-black/40 text-amber-200'
+            }`}
+          >
+            {settled ? '종료' : `⏳ ${countdown}`}
+          </div>
         </div>
       </div>
 
       <div className="space-y-3 p-3">
-        <div>
-          <div className="flex justify-between text-[11px]">
+        {/* ── 페이즈 게이지(돌파마다 컬러 순환·100% 채우고 다음으로) ── */}
+        <div className={phaseUp ? 'animate-phase-up' : ''}>
+          <div className="flex items-baseline justify-between text-[11px]">
             <span className="font-bold">
-              PHASE <span className="font-mono text-lg text-emerald-300">{v.phasesCleared}</span> 돌파
+              <span className={`font-mono text-lg ${pal.text}`}>PHASE {gPhase}</span>
+              <span className="ml-1 text-zinc-500">돌파</span>
             </span>
             <span className="font-mono text-[10px] text-zinc-500">
               누적 {v.totalDamage.toLocaleString()}
@@ -169,28 +319,71 @@ export function RaidSessionCard({ view: v }: { view: RaidView }) {
           </div>
           <div className="mt-1 h-2.5 overflow-hidden rounded-full bg-zinc-800">
             <div
-              className="h-full bg-emerald-400 transition-[width] duration-500"
-              style={{ width: `${Math.max(2, prog * 100)}%` }}
+              key={gPhase}
+              className={`h-full ${pal.bar} shadow-[0_0_10px] ${pal.glow}`}
+              style={{ width: `${Math.max(2, gPct)}%`, transition: 'width 380ms ease-out' }}
             />
           </div>
         </div>
 
+        {/* ── 누적 보상 ── */}
         <div className="rounded-lg border border-amber-700/50 bg-amber-950/30 px-3 py-2 text-center text-[11px]">
           <span className="font-semibold text-amber-300">🎁 누적 보상</span>{' '}
           {v.phasesCleared > 0 ? (
             <span className="text-zinc-200">
               💎{drops.diamond}
-              {boxStr ? ` · 보급상자 ${boxStr}` : ''}
+              {Object.entries(drops.boxes)
+                .filter(([, n]) => n > 0)
+                .map(([s, n]) => ` · ${SLOT_EMOJI[s as SupplySlot]}${n}`)
+                .join('')}
             </span>
           ) : (
             <span className="text-zinc-500">아직 없음</span>
           )}
         </div>
 
+        {/* ── 액션: 진행 중 → 공격/추가/초대, 정산됨 → 보상 카드 ── */}
         {settled ? (
-          <div className="rounded-xl border-2 border-zinc-700 bg-zinc-900/60 p-3 text-center text-sm font-bold text-zinc-300">
-            ✅ 정산 완료 — 보상은 우편함에서 수령
-          </div>
+          v.myReward == null ? (
+            <div className="rounded-xl border border-zinc-700 p-3 text-center text-xs text-zinc-400">
+              참여 보상이 없습니다 (공격 0회).
+            </div>
+          ) : v.myReward.claimed ? (
+            <div className="rounded-xl border-2 border-zinc-700 bg-zinc-900/60 p-3 text-center">
+              <div className="text-sm font-bold text-zinc-400">✅ 보상 수령 완료</div>
+            </div>
+          ) : (
+            <div className="rounded-xl border-2 border-amber-500/60 bg-gradient-to-br from-amber-900/40 to-yellow-900/30 p-3 text-center">
+              <div className="text-sm font-bold text-amber-300">🏆 결산 보상</div>
+              <div className="mt-1.5 text-[12px] text-zinc-100">
+                <span className="font-mono font-bold">
+                  💎 {v.myReward.diamond.toLocaleString()}
+                </span>
+                {Object.entries(v.myReward.boxes).some(([, n]) => n > 0) ? (
+                  <span className="text-zinc-300">
+                    {' · '}보급상자(
+                    {Object.entries(v.myReward.boxes)
+                      .filter(([, n]) => n > 0)
+                      .map(([s, n], i) => (
+                        <span key={s}>
+                          {i > 0 ? ', ' : ''}
+                          {SLOT_LABEL[s as SupplySlot]} {n}
+                        </span>
+                      ))}
+                    )
+                  </span>
+                ) : null}
+              </div>
+              <button
+                type="button"
+                disabled={pending}
+                onClick={handleClaim}
+                className="mt-2.5 w-full rounded-full bg-gradient-to-r from-amber-500 to-yellow-500 px-4 py-2.5 text-sm font-extrabold text-amber-950 shadow-lg shadow-amber-900/40 transition active:scale-95 hover:brightness-110 disabled:opacity-50"
+              >
+                {pending ? '수령 중…' : '🎁 보상 받기'}
+              </button>
+            </div>
+          )
         ) : !v.isParticipant ? (
           <div className="rounded-xl border border-zinc-700 p-3 text-center text-xs text-zinc-400">
             참여자가 아닙니다.
@@ -201,8 +394,8 @@ export function RaidSessionCard({ view: v }: { view: RaidView }) {
               <button
                 type="button"
                 disabled={pending}
-                onClick={attack}
-                className="w-full rounded-full bg-gradient-to-r from-red-600 to-orange-500 px-4 py-3.5 text-sm font-extrabold text-white disabled:opacity-50"
+                onClick={handleAttack}
+                className="w-full rounded-full bg-gradient-to-r from-red-600 to-orange-500 px-4 py-3.5 text-sm font-extrabold text-white shadow-lg shadow-red-900/40 transition active:scale-95 hover:brightness-110 disabled:opacity-50"
               >
                 ⚔️ {boss.name} 공격!  {left}/{allowed}
               </button>
@@ -210,7 +403,7 @@ export function RaidSessionCard({ view: v }: { view: RaidView }) {
               <button
                 type="button"
                 disabled={pending}
-                onClick={buyExtra}
+                onClick={handleBuyExtra}
                 className="w-full rounded-full border-2 border-amber-400 bg-amber-400/10 px-4 py-3 text-sm font-bold text-amber-300 disabled:opacity-50"
               >
                 💎 {raidExtraAttackCost(v.myExtraAttacks + 1)} 추가 공격
@@ -223,37 +416,51 @@ export function RaidSessionCard({ view: v }: { view: RaidView }) {
             {v.isHost && !over ? (
               <button
                 type="button"
-                onClick={invite}
-                className="w-full rounded-full border-2 border-amber-300 bg-amber-400/10 px-4 py-3 text-sm font-extrabold text-amber-300"
+                onClick={handleInvite}
+                className="flex w-full items-center justify-center gap-1.5 rounded-full border-2 border-amber-300 bg-amber-400/10 px-4 py-3 text-sm font-extrabold text-amber-300 shadow-[0_0_16px_rgba(251,191,36,0.35)] transition active:scale-95 hover:bg-amber-400/20"
               >
-                🤝 동료 초대
+                <span className="animate-pulse-soft">🤝</span> 동료 초대
               </button>
             ) : null}
           </div>
         )}
 
+        {/* ── 참여자: 기여도 순위 + 비율 바 ── */}
         <div>
           <div className="mb-1 text-[10px] font-semibold tracking-widest text-zinc-500">
-            참여자 {v.participants.length}명 · 기여도
+            참여자 {v.participants.length}명 · 기여도 순위
           </div>
           <ul className="space-y-1">
-            {v.participants.map((p, i) => (
-              <li
-                key={i}
-                className={`flex items-center gap-2 rounded-lg px-2.5 py-1.5 text-[11px] ${
-                  p.isMe ? 'bg-amber-900/40 ring-1 ring-amber-500/50' : 'bg-zinc-900'
-                }`}
-              >
-                <span className="w-5 text-center">{MEDAL[i] ?? i + 1}</span>
-                <span className="min-w-0 flex-1 truncate font-medium">
-                  {p.nickname}
-                  {p.isMe ? ' (나)' : ''}
-                </span>
-                <span className="font-mono tabular-nums text-zinc-300">
-                  {p.totalDamage.toLocaleString()}
-                </span>
-              </li>
-            ))}
+            {v.participants.map((p, i) => {
+              const pct =
+                v.totalDamage > 0 ? Math.round((p.totalDamage / v.totalDamage) * 100) : 0;
+              return (
+                <li
+                  key={i}
+                  className={`relative overflow-hidden rounded-lg px-2.5 py-1.5 text-[11px] ${
+                    p.isMe ? 'bg-amber-900/40 ring-1 ring-amber-500/50' : 'bg-zinc-900'
+                  }`}
+                >
+                  <div
+                    className="absolute inset-y-0 left-0 bg-amber-500/10"
+                    style={{ width: `${pct}%` }}
+                  />
+                  <div className="relative flex items-center gap-2">
+                    <span className="w-5 shrink-0 text-center">
+                      {MEDAL[i] ?? <span className="text-zinc-500">{i + 1}</span>}
+                    </span>
+                    <span className="min-w-0 flex-1 truncate font-medium">
+                      {p.nickname}
+                      {p.isMe ? ' (나)' : ''}
+                    </span>
+                    <span className="shrink-0 font-mono tabular-nums text-zinc-300">
+                      {p.totalDamage.toLocaleString()}
+                      <span className="ml-1 text-[9px] text-zinc-500">{pct}%</span>
+                    </span>
+                  </div>
+                </li>
+              );
+            })}
           </ul>
           <p className="mt-1 text-center text-[10px] text-zinc-500">
             보상은 전원 동일(기여도 무관) — 1회+ 공격 시 지급
