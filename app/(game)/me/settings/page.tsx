@@ -8,6 +8,7 @@ import { signOut } from '@/lib/auth/actions';
 
 import { ThemeToggle, LocalToggle } from './SettingsControls';
 import { NicknameRow } from './NicknameRow';
+import { InstallAppButton } from './InstallAppButton';
 
 const APP_VERSION = '0.1.0'; // 출시 전 v0
 
@@ -99,6 +100,8 @@ export default async function SettingsPage() {
         <Row label="버전">
           <span className="text-sm text-zinc-500">insaengganghwa v{APP_VERSION}</span>
         </Row>
+        <Divider />
+        <InstallAppButton />
       </Section>
 
       <form action={signOut}>
