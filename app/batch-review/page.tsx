@@ -2338,6 +2338,52 @@ const ITEMS: Item[] = [
     hint: 'silver 흉갑 + 서약 두루마리 자수 + 검 [armor 91번]',
     candidateNotes: ['c0', 'c1', 'c2', 'c3'],
   },
+  // ── batch 38: accessory 5 ──
+  {
+    slug: 'common_witty_clockwork_pocket_watch',
+    tone: '위트',
+    region: '일반',
+    slot: 'accessory',
+    recommend: -1,
+    hint: 'brass 회중시계 + 톱니바퀴 + 작은 gear charm [102번]',
+    candidateNotes: ['c0', 'c1', 'c2', 'c3'],
+  },
+  {
+    slug: 'common_royal_fan_brooch',
+    tone: '화려',
+    region: '일반',
+    slot: 'accessory',
+    recommend: -1,
+    hint: '황금 부채 브로치 + 빨강·분홍 보석꽃잎 + 진주 [117번]',
+    candidateNotes: ['c0', 'c1', 'c2', 'c3'],
+  },
+  {
+    slug: 'common_phoenix_egg_pendant',
+    tone: '전설',
+    region: '일반',
+    slot: 'accessory',
+    recommend: -1,
+    hint: '황금 알 + 깨진 껍질에서 ember 빛 [119번]',
+    candidateNotes: ['c0', 'c1', 'c2', 'c3'],
+  },
+  {
+    slug: 'common_butterfly_wing_earring',
+    tone: '아름다운',
+    region: '일반',
+    slot: 'accessory',
+    recommend: -1,
+    hint: 'silver hook + 파랑·silver 나비 날개 [134번]',
+    candidateNotes: ['c0', 'c1', 'c2', 'c3'],
+  },
+  {
+    slug: 'common_emperor_signet_chain',
+    tone: '장엄',
+    region: '일반',
+    slot: 'accessory',
+    recommend: -1,
+    hint: '두꺼운 황금 체인 + 사자 인장 plate [136번]',
+    candidateNotes: ['c0', 'c1', 'c2', 'c3'],
+  },
 ];
 
 export default function BatchReviewPage() {
