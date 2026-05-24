@@ -4,10 +4,10 @@ import { useEffect, useState, useTransition } from 'react';
 import { useRouter } from 'next/navigation';
 
 import {
-  effectiveRateBp,
+  effectiveOutcomeProbsBp,
+  downRateBp,
   diamondToFinishMs,
   pieceCombatPower,
-  SAFE_MAX_LEVEL,
   FODDER_REQUIRED_FROM_LEVEL,
 } from '@/lib/game/balance';
 import type { Slot } from '@/lib/db/schema/equipment';
@@ -287,10 +287,14 @@ export function EnhanceSlotCard({
   const remainingMs = done ? 0 : Math.max(0, endMs - nowMs);
   const ready = progress >= 1;
 
-  const effBp = effectiveRateBp(activeJob.baseRateBp, elapsedMs, totalMs);
-  const isRiskZone = activeJob.fromLevel > SAFE_MAX_LEVEL; // +52~ 실패 시 하락
+  // 3분기 outcome 확률(BALANCE §1.2) — 사이클 내 ℓ 기준. down은 시간 무관 고정.
+  const fixedDownBp = downRateBp(activeJob.fromLevel);
+  const probs = effectiveOutcomeProbsBp(activeJob.baseRateBp, fixedDownBp, elapsedMs, totalMs);
+  const effBp = probs.success;
+  const isRiskZone = fixedDownBp > 0;
   const needsFodder = activeJob.fromLevel >= FODDER_REQUIRED_FROM_LEVEL;
-  const downPct = isRiskZone ? (1 - effBp / 10000) * 100 : 0;
+  const downPct = probs.down / 100;
+  const holdPct = probs.hold / 100;
 
   const instantCost = remainingMs > 0 ? diamondToFinishMs(remainingMs) : 0;
   const canAfford = BigInt(diamond) >= BigInt(instantCost || 0);
@@ -413,10 +417,11 @@ export function EnhanceSlotCard({
             </div>
             <div className="flex gap-2 text-[11px] font-semibold tabular-nums">
               <span className="text-emerald-300">성공 {(effBp / 100).toFixed(1)}%</span>
-              <span className="text-zinc-400">최대 {(activeJob.baseRateBp / 100).toFixed(0)}%</span>
+              <span className="text-zinc-400">유지 {holdPct.toFixed(1)}%</span>
               {isRiskZone ? (
                 <span className="text-amber-300">하락 {downPct.toFixed(1)}%</span>
               ) : null}
+              <span className="text-zinc-500">최대 {(activeJob.baseRateBp / 100).toFixed(0)}%</span>
             </div>
             <div className="text-[10px] text-zinc-400 tabular-nums">
               {pending

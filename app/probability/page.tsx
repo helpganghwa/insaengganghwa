@@ -3,7 +3,10 @@ import type { Metadata } from 'next';
 
 import {
   baseSuccessRateBp,
+  downRateBp,
   SAFE_MAX_LEVEL,
+  CYCLE_LEN,
+  CYCLE_TIME_BASE,
   FODDER_REQUIRED_FROM_LEVEL,
   FODDER_PER_ATTEMPT,
   MAX_TRANSCEND,
@@ -47,7 +50,7 @@ const pct = (bp: number) => {
   return Number.isInteger(v) ? `${v}%` : `${v.toFixed(2)}%`;
 };
 
-const ENH_SAMPLES = [0, 9, 10, 15, 20, 30, 40, 51, 52, 60, 75, 90, 99, 100];
+const ENH_SAMPLES = [0, 9, 10, 15, 20, 30, 40, 51, 52, 60, 75, 90, 99, 100, 152, 199, 200];
 const CP_SAMPLES = [0, 10, 30, 51, 99];
 const PHASE_SAMPLES = [1, 2, 3, 4, 5];
 const EXTRA_ATTACK_SAMPLES = [1, 10, 11, 20, 21, 30, 31, 40];
@@ -69,22 +72,38 @@ export default function ProbabilityPage() {
 
       <Sec n="1" title="강화">
         <P>
-          강화는 시간이 흐를수록 성공 확률이 오릅니다. 실제 성공률 = 공시 성공률 × (경과 시간 ÷ 필요
-          시간), 최대 대기 시 공시 성공률에 도달합니다.
+          강화는 매 시도마다 세 결과로 분기됩니다 — <b>성공</b>(다음 단계로 진행) /{' '}
+          <b>유지</b>(단계 변동 없음) / <b>하락</b>(−1 단계). 실제 성공률 = 공시 성공률 × (경과 시간
+          ÷ 필요 시간)으로 시간에 비례해 오르며, 최대 대기 시 공시 성공률에 도달합니다.{' '}
+          <b>하락 확률은 시간에 무관하게 단계별로 고정</b>입니다(일찍 시도해도 하락 확률 동일,
+          잃은 성공 확률은 유지로 이동).
         </P>
-        <Table head={['강화 단계', '공시 성공률', '실패 결과']}>
-          {ENH_SAMPLES.map((lv) => (
-            <tr key={lv} className="border-t border-zinc-100 dark:border-zinc-900">
-              <Td>+{lv}</Td>
-              <Td>{pct(baseSuccessRateBp(lv))}</Td>
-              <Td>{lv > SAFE_MAX_LEVEL ? '−1 하락' : '유지(안전)'}</Td>
-            </tr>
-          ))}
+        <P>
+          강화는 {CYCLE_LEN}단위 <b>사이클</b>로 진행되며, 각 사이클마다 시도 시간이{' '}
+          {CYCLE_TIME_BASE}배씩 늘어납니다(1배·2배·4배…). 확률 곡선은 사이클마다 동일하게
+          반복됩니다(예: +100 = +0, +152 = +52의 확률).
+        </P>
+        <Table head={['단계', '공시 성공률', '하락률(고정)', '유지률(최대)']}>
+          {ENH_SAMPLES.map((lv) => {
+            const base = baseSuccessRateBp(lv);
+            const down = downRateBp(lv);
+            const hold = 10000 - base - down;
+            return (
+              <tr key={lv} className="border-t border-zinc-100 dark:border-zinc-900">
+                <Td>+{lv}</Td>
+                <Td>{pct(base)}</Td>
+                <Td>{pct(down)}</Td>
+                <Td>{pct(hold)}</Td>
+              </tr>
+            );
+          })}
         </Table>
         <P>
-          +0~+{SAFE_MAX_LEVEL}: 실패해도 단계 유지(안전 구간). +{SAFE_MAX_LEVEL + 1}부터: 실패 시
-          1단계 하락(하한 +{SAFE_MAX_LEVEL}).+
-          {FODDER_REQUIRED_FROM_LEVEL}강 시도부터 매 시도 같은 종류 장비 {FODDER_PER_ATTEMPT}
+          사이클 내 +0~+{SAFE_MAX_LEVEL}(예: +0~+{SAFE_MAX_LEVEL}, +100~+{100 + SAFE_MAX_LEVEL}):
+          하락 0%. +{SAFE_MAX_LEVEL + 1}부터: 하락 확률 발생, 1단계 하락(사이클 내 +
+          {SAFE_MAX_LEVEL} 하한 — 사이클 경계 가로지름 없음). +
+          {FODDER_REQUIRED_FROM_LEVEL}강(사이클 1+) 시도부터 매 시도 같은 종류 장비{' '}
+          {FODDER_PER_ATTEMPT}
           개를 제물로 소모합니다.
         </P>
       </Sec>

@@ -12,9 +12,11 @@ const skip = !TEST_USER_ID;
  * resolveEnhance DB 통합 — 결과 트랜잭션 무결성(원자성·멱등) 회귀 방지.
  * 이 테스트가 green이어야 C(단일 왕복 multi-CTE) 재시도의 게이트.
  *
- * 결정성: RNG mock 없이 timing + baseRateBp + fromLevel로 outcome 강제.
- *  - timing 'full' + baseRateBp 10000 → effBp 10000 → 항상 success
- *  - timing 'zero' → effBp 0 → 항상 fail → fromLevel ≤51 hold / ≥52 down
+ * 결정성: BALANCE §1.2 3분기 모델(success/hold/down)이라 outcome은 RNG roll에 의존.
+ * 테스트 전용 rngBp 주입으로 결정성 확보:
+ *  - rng=0     → roll=0      → success(success>0이면) / 하락(success=0, down>0)
+ *  - rng=9999  → roll=9999   → hold(hold>0이면)
+ * timing+baseRateBp+rngBp 조합으로 의도한 분기를 강제한다.
  */
 describe.skipIf(skip)('resolveEnhance — DB 통합', () => {
   let cleanupFn: null | (() => Promise<void>) = null;
@@ -63,29 +65,10 @@ describe.skipIf(skip)('resolveEnhance — DB 통합', () => {
     expect(job[0]?.st).toBe('completed');
   });
 
-  it('hold: 안전 구간 실패 → 레벨 유지, 로그 hold', async () => {
+  it('hold: 안전 구간(L=10) 실패 → 레벨 유지, 로그 hold', async () => {
     const fromLevel = 10;
-    const { instanceId, jobId, cleanup } = await makeRunningJob({
-      userId: TEST_USER_ID,
-      catalogItemId,
-      fromLevel,
-      baseRateBp: 10000,
-      timing: 'zero', // elapsed≈0 → effBp=0 → 항상 fail
-    });
-    cleanupFn = cleanup;
-
-    const r = await resolveEnhance({ jobId, userId: TEST_USER_ID, requireComplete: false });
-    expect(r.outcome).toBe('hold');
-    expect(r.toLevel).toBe(fromLevel);
-
-    const inst = (await testDb.execute(sql`select enhance_level lv from equipment_instances where id = ${instanceId.toString()}::bigint`)) as unknown as { lv: number }[];
-    expect(inst[0]?.lv).toBe(fromLevel); // 레벨 불변
-    const log = (await testDb.execute(sql`select result::text res from enhancement_logs where equipment_instance_id = ${instanceId.toString()}::bigint order by id desc limit 1`)) as unknown as { res: string }[];
-    expect(log[0]?.res).toBe('hold');
-  });
-
-  it('down: +52~ 실패 → 레벨 −1(하한 51), 로그 down', async () => {
-    const fromLevel = 60;
+    // L=10: down=0%, baseRate=100%. timing=zero → success=0, hold=10000 → 항상 hold.
+    // rngBp=9999로 hold 영역 강제.
     const { instanceId, jobId, cleanup } = await makeRunningJob({
       userId: TEST_USER_ID,
       catalogItemId,
@@ -95,7 +78,40 @@ describe.skipIf(skip)('resolveEnhance — DB 통합', () => {
     });
     cleanupFn = cleanup;
 
-    const r = await resolveEnhance({ jobId, userId: TEST_USER_ID, requireComplete: false });
+    const r = await resolveEnhance({
+      jobId,
+      userId: TEST_USER_ID,
+      requireComplete: false,
+      rngBp: () => 9999,
+    });
+    expect(r.outcome).toBe('hold');
+    expect(r.toLevel).toBe(fromLevel);
+
+    const inst = (await testDb.execute(sql`select enhance_level lv from equipment_instances where id = ${instanceId.toString()}::bigint`)) as unknown as { lv: number }[];
+    expect(inst[0]?.lv).toBe(fromLevel); // 레벨 불변
+    const log = (await testDb.execute(sql`select result::text res from enhancement_logs where equipment_instance_id = ${instanceId.toString()}::bigint order by id desc limit 1`)) as unknown as { res: string }[];
+    expect(log[0]?.res).toBe('hold');
+  });
+
+  it('down: L=60(ℓ52~99 위험구간) → 레벨 −1(하한 51), 로그 down', async () => {
+    const fromLevel = 60;
+    // L=60: base=38%, down=25%, hold=37%. timing=zero → success=0, down=2500, hold=7500.
+    // rngBp=0 → 0 < 0(success) 아님, 0 < 2500(down) 맞음 → down 강제.
+    const { instanceId, jobId, cleanup } = await makeRunningJob({
+      userId: TEST_USER_ID,
+      catalogItemId,
+      fromLevel,
+      baseRateBp: 10000,
+      timing: 'zero',
+    });
+    cleanupFn = cleanup;
+
+    const r = await resolveEnhance({
+      jobId,
+      userId: TEST_USER_ID,
+      requireComplete: false,
+      rngBp: () => 0,
+    });
     expect(r.outcome).toBe('down');
     expect(r.toLevel).toBe(59);
 

@@ -9,6 +9,7 @@ import { signOut } from '@/lib/auth/actions';
 import { LocalToggle } from './SettingsControls';
 import { NicknameRow } from './NicknameRow';
 import { InstallAppButton } from './InstallAppButton';
+import { PushSettings } from './PushSettings';
 
 const APP_VERSION = '0.1.0'; // 출시 전 v0
 
@@ -23,6 +24,9 @@ export default async function SettingsPage() {
       verifiedAt: profiles.identityVerifiedAt,
       diamond: profiles.diamond,
       nicknameChangedCount: profiles.nicknameChangedCount,
+      pushEnhance: profiles.pushEnhance,
+      pushRaid: profiles.pushRaid,
+      pushSupply: profiles.pushSupply,
     })
     .from(profiles)
     .where(eq(profiles.id, userId))
@@ -41,11 +45,10 @@ export default async function SettingsPage() {
       <Section title="알림 / 사운드">
         <LocalToggle storageKey="ig:sound" label="효과음" hint="강화 결과·연출음" />
         <Divider />
-        <LocalToggle
-          storageKey="ig:push"
-          label="강화 완료 알림"
-          hint="기기 알림 — 브라우저 권한 필요(연동 예정)"
-          defaultOn={false}
+        <PushSettings
+          initialEnhance={p?.pushEnhance ?? true}
+          initialRaid={p?.pushRaid ?? true}
+          initialSupply={p?.pushSupply ?? true}
         />
       </Section>
 

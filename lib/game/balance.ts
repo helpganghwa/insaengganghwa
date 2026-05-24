@@ -11,7 +11,7 @@
  */
 
 // ─────────────────────────────────────────────────────────────────────────────
-// §1. 강화 — 시간 곡선 & effective rate & baseRate & 실패 분기
+// §1. 강화 — 사이클(100단위) 시간 곡선 & 3분기 outcome 확률
 // ─────────────────────────────────────────────────────────────────────────────
 
 const SEC = 1_000;
@@ -36,74 +36,71 @@ function lerpAnchors(anchors: ReadonlyArray<readonly [number, number]>, x: numbe
 }
 
 /**
- * §1.1 1회 강화 시도 소요 시간 d(L) — `fromLevel → fromLevel+1` (ms).
- *
- * 모든 카탈로그/슬롯 동일 곡선(BALANCE §1.1). 앵커는 **누적 도달 시간**
- * (+30≈24h · +50≈3일 · +99≈2주, full-wait)이며, 아래 per-attempt 값은
- * 그 누적을 baseRate(§1.3)·평균 재시도와 함께 충족하도록 한 **추천 시작값** —
- * `scripts/simulate-enhance`(Vitest balance)로 정밀화한다.
+ * §1.0 사이클(cycle) — 100단위로 강화 곡선이 리셋되고 시도 시간이 2배씩 증가.
+ * cycle = floor(L / 100), cycleLevel ℓ = L mod 100 ∈ [0, 99].
+ * 사이클 시간 배수 = 2^cycle (cycle0 = 1배, cycle1 = 2배, cycle2 = 4배 …).
+ * 모든 확률(성공·하락)은 ℓ만의 함수. 사이클 무한 진행 — 도달할수록 시간만 지수 증가.
  */
-const ENHANCE_DURATION_LOW: Record<number, number> = {
-  0: 3 * SEC,
-  1: 6 * SEC,
-  2: 12 * SEC,
-  3: 25 * SEC,
-  4: 50 * SEC,
-  5: 2 * MIN,
-  6: 4 * MIN,
-  7: 8 * MIN,
-  8: 15 * MIN,
-};
-/** L≥9 구간 per-attempt 시간 앵커 (BALANCE §1.1, 단조 비감소). */
-const ENHANCE_DURATION_ANCHORS = [
-  [9, 20 * MIN],
-  [10, 20 * MIN],
-  [20, 50 * MIN],
-  [30, 70 * MIN],
-  [35, 75 * MIN],
-  [40, 80 * MIN],
-  [50, 85 * MIN],
-  [60, 85 * MIN],
-  [75, 90 * MIN],
-  [90, 90 * MIN],
-  [99, 90 * MIN],
-  [100, 90 * MIN],
-] as const;
+export const CYCLE_LEN = 100;
+export const CYCLE_TIME_BASE = 2;
 
-export function enhanceDurationMs(fromLevel: number): number {
-  const lv = Math.max(0, Math.floor(fromLevel));
-  if (lv in ENHANCE_DURATION_LOW) return ENHANCE_DURATION_LOW[lv]!;
-  return Math.round(lerpAnchors(ENHANCE_DURATION_ANCHORS, lv));
+export function cycleIndex(level: number): number {
+  return Math.max(0, Math.floor(level / CYCLE_LEN));
+}
+export function cycleLevel(level: number): number {
+  const lv = Math.max(0, Math.floor(level));
+  return lv % CYCLE_LEN;
+}
+export function cycleTimeMultiplier(level: number): number {
+  return Math.pow(CYCLE_TIME_BASE, cycleIndex(level));
 }
 
-/** §1.1 누적 도달 시간 앵커(검증용) — full-wait 평균. 시뮬이 이 값을 충족해야 함. */
+/**
+ * §1.1 1회 강화 시도 소요 시간 d(L) — `L → L+1` (ms).
+ *
+ * 사이클 0 기본 곡선은 **선형**: d₀(ℓ) = D_MIN + (D_MAX − D_MIN) × ℓ/(CYCLE_LEN−1).
+ * 사이클 시간 배수 2^cycle 적용:
+ *   d(L) = d₀(ℓ) × 2^cycle
+ *
+ * 채택값(D_MIN = 10s, D_MAX = 215m) → 사이클 0 +0→+99 누적 평균 ≈ **28일(4주)**
+ * (2026-05-25, `scripts/tune-linear-duration.ts`로 산출).
+ */
+export const ENHANCE_BASE_DURATION_MIN_MS = 10 * SEC;
+export const ENHANCE_BASE_DURATION_MAX_MS = 215 * MIN;
+
+/** 사이클 0 기준 ℓ → 한 시도 시간. 사이클 시간 배수는 enhanceDurationMs에서 곱함. */
+export function baseAttemptDurationMs(cycleLv: number): number {
+  const lv = Math.max(0, Math.min(CYCLE_LEN - 1, Math.floor(cycleLv)));
+  const span = ENHANCE_BASE_DURATION_MAX_MS - ENHANCE_BASE_DURATION_MIN_MS;
+  return Math.round(ENHANCE_BASE_DURATION_MIN_MS + (span * lv) / (CYCLE_LEN - 1));
+}
+
+export function enhanceDurationMs(fromLevel: number): number {
+  return Math.round(baseAttemptDurationMs(cycleLevel(fromLevel)) * cycleTimeMultiplier(fromLevel));
+}
+
+/**
+ * §1.1 누적 도달 시간 설계 목표(full-wait 평균). +99=4주가 핵심 제약(2026-05-25).
+ * +30·+50은 design intent — 실제 해석 평균은 lower일 수 있음.
+ * `bun run scripts/analyze-enhance.ts`가 실제 평균 산출.
+ */
 export const CUMULATIVE_REACH_ANCHORS_MS = {
   30: 24 * HOUR,
   50: 3 * 24 * HOUR,
-  99: 14 * 24 * HOUR,
+  99: 28 * 24 * HOUR,
 } as const;
 
 /**
- * §1.1 +100 이상 강화 시도부터 매 시도 같은 카탈로그 아이템 1개를 제물로 소모
- * (강화·초월 레벨 무관, +0 가능 — 초월 제물 규칙과 동일).
+ * §1.1 +100 이상(=cycle ≥ 1) 강화 시도부터 매 시도 같은 카탈로그 아이템 1개를 제물로 소모.
+ * 사이클 0(0~99)은 제물 없음, 사이클 1+ 전 구간 제물 필요.
  */
-export const FODDER_REQUIRED_FROM_LEVEL = 100;
+export const FODDER_REQUIRED_FROM_LEVEL = CYCLE_LEN;
 export const FODDER_PER_ATTEMPT = 1;
 
 /**
- * §1.2 시간 비례 effective rate.
- * `p_eff = baseRate × clamp(elapsed/total, 0, 1)`. 완료 대기 시 공시 baseRate 도달.
- * RNG는 시도 시점 서버에서만 (CLAUDE §3.1).
- */
-export function effectiveRateBp(baseRateBp: number, elapsedMs: number, totalMs: number): number {
-  if (totalMs <= 0) return baseRateBp;
-  const frac = Math.min(1, Math.max(0, elapsedMs / totalMs));
-  return Math.round(baseRateBp * frac);
-}
-
-/**
- * §1.3 강화 단계별 공시 성공률 baseRate(L) — bp.
- * +0~9 100% / +10~51 100→50%(실패=유지) / +52~ 48→10%(실패 −1 하락) / +100~ 10% 고정.
+ * §1.3 사이클 내 공시 성공률 baseRate(ℓ) — bp. 모든 사이클 동일 곡선(ℓ만의 함수).
+ * 안전 구간(ℓ 0~51)은 종전 곡선(100→50%). 위험 구간(ℓ 52~99)은 high-level up 상향:
+ * +99 = 25%·+90 = 30%·+75 = 40%. 사이클 0에서 +99 도달 평균 ≈ 15일(BALANCE §1.1).
  */
 const BASE_RATE_ANCHORS = [
   [10, 10000],
@@ -112,37 +109,102 @@ const BASE_RATE_ANCHORS = [
   [40, 5800],
   [51, 5000],
   [52, 4800],
-  [60, 3800],
-  [75, 2500],
-  [90, 1500],
-  [99, 1000],
-  [100, 1000],
+  [60, 4200],
+  [75, 4000],
+  [90, 3000],
+  [99, 2500],
 ] as const;
 
 export function baseSuccessRateBp(level: number): number {
-  const lv = Math.max(0, Math.floor(level));
+  const lv = cycleLevel(level);
   if (lv <= 9) return 10000;
-  if (lv >= 100) return 1000;
   return Math.round(lerpAnchors(BASE_RATE_ANCHORS, lv));
 }
 
-/** §1.3 안전 구간 상한 — 이 레벨 이하에서 실패 시 항상 유지(하락 없음). */
+/** §1.3 안전 구간 상한 — 사이클 내 이 이하 ℓ는 하락 0%(=실패=유지). */
 export const SAFE_MAX_LEVEL = 51;
+
+/**
+ * §1.3 사이클 내 하락 확률 downRate(ℓ) — bp **고정**(시간에 무관).
+ * ℓ ≤ 51 = 0%(안전). 위험 구간은 +52=8% → +99=15% — up 곡선과 독립으로 설계해
+ * 모든 ℓ에서 drift(up−down) > 0 유지(=+99 도달 평균 ≈ 15일). 불변식: up+down ≤ 100%.
+ */
+const DOWN_RATE_ANCHORS = [
+  [52, 800],
+  [60, 1200],
+  [75, 1500],
+  [90, 1500],
+  [99, 1500],
+] as const;
+
+export function downRateBp(level: number): number {
+  const lv = cycleLevel(level);
+  if (lv <= SAFE_MAX_LEVEL) return 0;
+  return Math.round(lerpAnchors(DOWN_RATE_ANCHORS, lv));
+}
 
 export type EnhanceFailOutcome = 'hold' | 'down';
 
 /**
- * §1.3 실패 결과 분기. +0~+51 실패=유지(안전), +52~ 실패=−1 하락.
- * **파괴 없음**(개념 자체 미도입). 하락 하한 = +51(안전 구간 회귀).
+ * §1.3 (레거시) 실패 결과 분기 — 사이클 내 ℓ 기준. ℓ≤51 hold, ℓ>51 down.
+ * 새 3분기 모델에선 effectiveOutcomeProbsBp가 진실 — 본 함수는 down이 *가능한지* 만 표현.
  */
 export function failOutcome(fromLevel: number): EnhanceFailOutcome {
-  return fromLevel > SAFE_MAX_LEVEL ? 'down' : 'hold';
+  return downRateBp(fromLevel) > 0 ? 'down' : 'hold';
 }
 
-/** 실패(하락) 시 결과 레벨. hold면 fromLevel 그대로, down이면 max(51, fromLevel-1). */
+/**
+ * 실패(하락) 시 결과 레벨. 항상 −1, **하한 = 사이클 내 +51**(=cycle_start+51).
+ * 사이클 경계를 가로지르지 않음(예: +152→+151 OK, +100→+99 불가 — +100은 안전구간이라 그 자체로 down 발생 0%).
+ */
 export function levelAfterFail(fromLevel: number): number {
-  if (failOutcome(fromLevel) === 'hold') return fromLevel;
-  return Math.max(SAFE_MAX_LEVEL, fromLevel - 1);
+  if (downRateBp(fromLevel) === 0) return fromLevel;
+  const cycleStart = cycleIndex(fromLevel) * CYCLE_LEN;
+  return Math.max(cycleStart + SAFE_MAX_LEVEL, fromLevel - 1);
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// §1.2 시간 비례 3분기 outcome 확률
+// ─────────────────────────────────────────────────────────────────────────────
+
+/**
+ * §1.2 (레거시) 시간 비례 effective success rate.
+ * `p_eff = baseRate × clamp(elapsed/total, 0, 1)`. 완료 대기 시 공시 baseRate 도달.
+ * resolve.ts 3분기 분기는 effectiveOutcomeProbsBp 사용 — 본 함수는 로깅·표시용.
+ */
+export function effectiveRateBp(baseRateBp: number, elapsedMs: number, totalMs: number): number {
+  if (totalMs <= 0) return baseRateBp;
+  const frac = Math.min(1, Math.max(0, elapsedMs / totalMs));
+  return Math.round(baseRateBp * frac);
+}
+
+export type OutcomeProbsBp = {
+  /** 성공 확률 bp — 시간에 따라 0 → baseRate 선형 상승. */
+  success: number;
+  /** 유지 확률 bp — 시간에 따라 (1−down) → (1−base−down)으로 선형 감소. */
+  hold: number;
+  /** 하락 확률 bp — 시간 무관 고정(downRate). */
+  down: number;
+};
+
+/**
+ * §1.2 시간 t에서의 3분기 확률 (bp 합 = 10000).
+ *   p_success(t) = baseRate(ℓ) × clamp(elapsed/total)
+ *   p_down       = downRate(ℓ)          ← 시간 무관 고정
+ *   p_hold(t)    = 10000 − p_success − p_down
+ * 불변식: 모든 ℓ에서 baseRate + downRate ≤ 10000 → p_hold ≥ 0.
+ */
+export function effectiveOutcomeProbsBp(
+  baseRateBp: number,
+  downBp: number,
+  elapsedMs: number,
+  totalMs: number,
+): OutcomeProbsBp {
+  const successFrac = totalMs <= 0 ? 1 : Math.min(1, Math.max(0, elapsedMs / totalMs));
+  const success = Math.round(baseRateBp * successFrac);
+  const down = Math.max(0, Math.min(10000 - success, downBp));
+  const hold = Math.max(0, 10000 - success - down);
+  return { success, hold, down };
 }
 
 // ─────────────────────────────────────────────────────────────────────────────

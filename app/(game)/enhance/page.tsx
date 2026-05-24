@@ -9,6 +9,7 @@ import { championCatalogIds } from '@/lib/game/codex/ranking';
 
 import { EnhanceSlotCard, type ActiveJob } from './EnhanceSlotCard';
 import { EmptySlotButton, type EnhanceCandidate } from './EnhanceSlotPicker';
+import { PushPermissionPrompt } from '@/components/PushPermissionPrompt';
 
 const SLOTS: Slot[] = ['weapon', 'armor', 'accessory'];
 const LANES = [1, 2] as const;
@@ -98,8 +99,13 @@ export default async function EnhancePage() {
     });
   }
 
+  // 진행 중 강화 큐가 1개 이상이면 푸시 권한 contextual prompt 노출(첫 진입 시).
+  // 이미 권한 있음/거부/7일 dismiss 윈도는 컴포넌트가 자체 가드.
+  const hasRunningJob = jobs.length > 0;
+
   return (
     <div className="space-y-5 px-4 py-4">
+      <PushPermissionPrompt trigger={hasRunningJob} />
       {SLOTS.map((slot) => (
         <section key={slot} className="space-y-2">
           <h2 className="text-xs font-semibold text-zinc-500">{SLOT_LABEL[slot]}</h2>

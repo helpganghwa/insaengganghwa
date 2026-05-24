@@ -25,6 +25,10 @@ export const profiles = pgTable('profiles', {
   tutorialStep: integer('tutorial_step').notNull().default(0),
   /** 어드민 권한(우편함 발송 등). 1인 운영 — 본인 계정만 직접 SQL로 true 설정. */
   isAdmin: boolean('is_admin').notNull().default(false),
+  /** PWA Push 카테고리 토글(GDD §3.10 v1) — 기본 ON. 토글 OFF 시 해당 카테고리 발송 skip. */
+  pushEnhance: boolean('push_enhance').notNull().default(true),
+  pushRaid: boolean('push_raid').notNull().default(true),
+  pushSupply: boolean('push_supply').notNull().default(true),
   createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
   updatedAt: timestamp('updated_at', { withTimezone: true }).notNull().defaultNow(),
 });

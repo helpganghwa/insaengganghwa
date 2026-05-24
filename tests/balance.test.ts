@@ -2,11 +2,19 @@ import { describe, expect, it } from 'vitest';
 
 import {
   effectiveRateBp,
+  effectiveOutcomeProbsBp,
   failOutcome,
   levelAfterFail,
   baseSuccessRateBp,
-  SAFE_MAX_LEVEL,
+  downRateBp,
   MAX_TRANSCEND,
+  CYCLE_LEN,
+  CYCLE_TIME_BASE,
+  cycleIndex,
+  cycleLevel,
+  cycleTimeMultiplier,
+  baseAttemptDurationMs,
+  enhanceDurationMs,
   transcendFodderForStep,
   transcendFodderCumulative,
   transcendBonusBp,
@@ -43,56 +51,145 @@ describe('effectiveRateBp — 시간 비례 effective rate', () => {
   });
 });
 
-describe('failOutcome — 안전/하락 분기', () => {
-  it('+0 ~ +SAFE_MAX_LEVEL(51): hold(안전)', () => {
-    expect(failOutcome(0)).toBe('hold');
-    expect(failOutcome(10)).toBe('hold');
-    expect(failOutcome(SAFE_MAX_LEVEL)).toBe('hold');
+describe('사이클 헬퍼 — 100단위 리셋, 시간 2배', () => {
+  it('cycleIndex / cycleLevel', () => {
+    expect(cycleIndex(0)).toBe(0);
+    expect(cycleLevel(0)).toBe(0);
+    expect(cycleIndex(99)).toBe(0);
+    expect(cycleLevel(99)).toBe(99);
+    expect(cycleIndex(100)).toBe(1);
+    expect(cycleLevel(100)).toBe(0);
+    expect(cycleIndex(199)).toBe(1);
+    expect(cycleLevel(199)).toBe(99);
+    expect(cycleIndex(250)).toBe(2);
+    expect(cycleLevel(250)).toBe(50);
   });
-  it('+SAFE_MAX_LEVEL+1(52) 이상: down(하락)', () => {
+  it('cycleTimeMultiplier = 2^cycle', () => {
+    expect(cycleTimeMultiplier(0)).toBe(1);
+    expect(cycleTimeMultiplier(50)).toBe(1);
+    expect(cycleTimeMultiplier(100)).toBe(CYCLE_TIME_BASE);
+    expect(cycleTimeMultiplier(199)).toBe(CYCLE_TIME_BASE);
+    expect(cycleTimeMultiplier(200)).toBe(CYCLE_TIME_BASE ** 2);
+  });
+  it('enhanceDurationMs = baseAttempt × 2^cycle', () => {
+    for (const lv of [0, 1, 10, 50, 99]) {
+      expect(enhanceDurationMs(lv)).toBe(baseAttemptDurationMs(lv));
+      expect(enhanceDurationMs(lv + CYCLE_LEN)).toBe(baseAttemptDurationMs(lv) * CYCLE_TIME_BASE);
+      expect(enhanceDurationMs(lv + 2 * CYCLE_LEN)).toBe(
+        baseAttemptDurationMs(lv) * CYCLE_TIME_BASE ** 2,
+      );
+    }
+  });
+});
+
+describe('failOutcome — 사이클 내 안전/하락 분기 (ℓ 기준)', () => {
+  it('ℓ ≤ 51 hold(안전), 모든 사이클', () => {
+    expect(failOutcome(0)).toBe('hold');
+    expect(failOutcome(51)).toBe('hold');
+    expect(failOutcome(100)).toBe('hold'); // 사이클1의 ℓ=0
+    expect(failOutcome(151)).toBe('hold');
+    expect(failOutcome(251)).toBe('hold');
+  });
+  it('ℓ ≥ 52 down(하락), 모든 사이클', () => {
     expect(failOutcome(52)).toBe('down');
     expect(failOutcome(99)).toBe('down');
-    expect(failOutcome(100)).toBe('down');
+    expect(failOutcome(152)).toBe('down'); // 사이클1의 ℓ=52
+    expect(failOutcome(199)).toBe('down');
   });
 });
 
-describe('levelAfterFail — 실패 시 결과 레벨', () => {
-  it('안전 구간(hold): fromLevel 그대로', () => {
+describe('levelAfterFail — 사이클 내 하한(+51)', () => {
+  it('안전(hold): fromLevel 그대로', () => {
     expect(levelAfterFail(0)).toBe(0);
-    expect(levelAfterFail(30)).toBe(30);
     expect(levelAfterFail(51)).toBe(51);
+    expect(levelAfterFail(100)).toBe(100); // ℓ=0 안전
+    expect(levelAfterFail(151)).toBe(151);
   });
-  it('하락 구간(down): −1, 하한 51', () => {
+  it('하락(down): −1, 사이클 경계 가로지르지 않음', () => {
     expect(levelAfterFail(52)).toBe(51);
-    expect(levelAfterFail(60)).toBe(59);
-    expect(levelAfterFail(100)).toBe(99);
+    expect(levelAfterFail(99)).toBe(98);
+    expect(levelAfterFail(152)).toBe(151); // 사이클1: 하한 +151
+    expect(levelAfterFail(199)).toBe(198);
+    expect(levelAfterFail(252)).toBe(251); // 사이클2: 하한 +251
   });
 });
 
-describe('baseSuccessRateBp — 공시 곡선', () => {
-  it('+0~9 = 10000(100%) 평탄', () => {
+describe('baseSuccessRateBp — 사이클 내 동일 곡선', () => {
+  it('ℓ 0~9 = 10000(100%)', () => {
     expect(baseSuccessRateBp(0)).toBe(10000);
     expect(baseSuccessRateBp(9)).toBe(10000);
+    expect(baseSuccessRateBp(100)).toBe(10000); // 사이클1 ℓ=0
+    expect(baseSuccessRateBp(109)).toBe(10000);
   });
-  it('+10 앵커 = 10000', () => {
-    expect(baseSuccessRateBp(10)).toBe(10000);
-  });
-  it('+51 앵커 = 5000(50%)', () => {
+  it('ℓ 51 = 5000(50%) 모든 사이클', () => {
     expect(baseSuccessRateBp(51)).toBe(5000);
+    expect(baseSuccessRateBp(151)).toBe(5000);
+    expect(baseSuccessRateBp(251)).toBe(5000);
   });
-  it('+52 앵커 = 4800', () => {
+  it('ℓ 52 = 4800 모든 사이클', () => {
     expect(baseSuccessRateBp(52)).toBe(4800);
+    expect(baseSuccessRateBp(152)).toBe(4800);
   });
-  it('+99 = 1000(10%)', () => {
-    expect(baseSuccessRateBp(99)).toBe(1000);
+  it('ℓ 99 = 2500(25%) 모든 사이클 — 고레벨 상향(2026-05-25)', () => {
+    expect(baseSuccessRateBp(99)).toBe(2500);
+    expect(baseSuccessRateBp(199)).toBe(2500);
   });
-  it('+100 이상 = 1000 고정', () => {
-    expect(baseSuccessRateBp(100)).toBe(1000);
-    expect(baseSuccessRateBp(500)).toBe(1000);
+});
+
+describe('downRateBp — 사이클 내 고정 곡선(시간 무관)', () => {
+  it('ℓ ≤ 51 = 0(안전 구간)', () => {
+    for (const lv of [0, 10, 51, 100, 151, 251]) {
+      expect(downRateBp(lv)).toBe(0);
+    }
   });
-  it('음수/소수 — 0으로 클램프/내림', () => {
-    expect(baseSuccessRateBp(-5)).toBe(10000);
-    expect(baseSuccessRateBp(9.9)).toBe(10000);
+  it('ℓ 52 = 800(8%) 모든 사이클', () => {
+    expect(downRateBp(52)).toBe(800);
+    expect(downRateBp(152)).toBe(800);
+  });
+  it('ℓ 99 = 1500(15%) 모든 사이클', () => {
+    expect(downRateBp(99)).toBe(1500);
+    expect(downRateBp(199)).toBe(1500);
+  });
+  it('불변식: baseRate + downRate ≤ 10000 모든 ℓ', () => {
+    for (let lv = 0; lv < CYCLE_LEN; lv++) {
+      expect(baseSuccessRateBp(lv) + downRateBp(lv)).toBeLessThanOrEqual(10000);
+    }
+  });
+});
+
+describe('effectiveOutcomeProbsBp — 3분기 시간 곡선', () => {
+  it('합 = 10000 (모든 t)', () => {
+    for (const lv of [0, 30, 51, 60, 99, 152, 199]) {
+      const base = baseSuccessRateBp(lv);
+      const down = downRateBp(lv);
+      for (const frac of [0, 0.25, 0.5, 0.75, 1]) {
+        const p = effectiveOutcomeProbsBp(base, down, frac * 10000, 10000);
+        expect(p.success + p.hold + p.down).toBe(10000);
+      }
+    }
+  });
+  it('t=0: success=0, down=고정, hold=10000-down', () => {
+    const base = baseSuccessRateBp(60);
+    const down = downRateBp(60);
+    const p = effectiveOutcomeProbsBp(base, down, 0, 10000);
+    expect(p.success).toBe(0);
+    expect(p.down).toBe(down);
+    expect(p.hold).toBe(10000 - down);
+  });
+  it('t=total: success=base, down=고정, hold=10000-base-down', () => {
+    const base = baseSuccessRateBp(60);
+    const down = downRateBp(60);
+    const p = effectiveOutcomeProbsBp(base, down, 10000, 10000);
+    expect(p.success).toBe(base);
+    expect(p.down).toBe(down);
+    expect(p.hold).toBe(10000 - base - down);
+  });
+  it('안전 구간(down=0): hold = 10000 - success', () => {
+    const base = baseSuccessRateBp(30);
+    const p = effectiveOutcomeProbsBp(base, 0, 5000, 10000);
+    expect(p.down).toBe(0);
+    expect(p.success).toBe(Math.round(base * 0.5));
+    expect(p.hold).toBe(10000 - p.success);
   });
 });
 

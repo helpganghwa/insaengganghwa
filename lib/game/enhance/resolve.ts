@@ -3,7 +3,12 @@ import 'server-only';
 import { sql } from 'drizzle-orm';
 
 import { db } from '@/lib/db/client';
-import { effectiveRateBp, failOutcome, levelAfterFail } from '@/lib/game/balance';
+import {
+  effectiveOutcomeProbsBp,
+  downRateBp,
+  levelAfterFail,
+} from '@/lib/game/balance';
+import { appendEnhancePending } from '@/lib/push/pending';
 import { EnhanceError } from './queue';
 
 /**
@@ -29,6 +34,8 @@ export type ResolveInput = {
   userId?: string;
   /** true면 완료 시각 도달한 큐만(cron). false면 조기 시도 허용(유저). */
   requireComplete: boolean;
+  /** 테스트용 RNG 주입(0..9999). 기본=crypto. 프로덕션 호출은 절대 지정 금지. */
+  rngBp?: () => number;
 };
 
 export type ResolveOutcome = 'success' | 'hold' | 'down';
@@ -49,7 +56,7 @@ function rollBp(): number {
 type Row = Record<string, unknown>;
 
 export async function resolveEnhance(input: ResolveInput): Promise<ResolveResult> {
-  const { jobId, userId, requireComplete } = input;
+  const { jobId, userId, requireComplete, rngBp } = input;
   const jid = jobId.toString();
 
   // ── RT1: 검증·계산용 조인 select (락 없음 — 동시성은 RT2 status 가드가 보장) ──
@@ -89,15 +96,20 @@ export async function resolveEnhance(input: ResolveInput): Promise<ResolveResult
   const endMs = Math.floor(Number(job.complete_epoch) * 1000);
   const totalMs = Math.max(1, endMs - startMs);
   const elapsedMs = Math.min(totalMs, Math.max(0, now - startMs));
-  const effBp = effectiveRateBp(baseRateBp, elapsedMs, totalMs);
+  // BALANCE §1.2 — 3분기 outcome: success(시간 비례) / down(고정) / hold(잔여).
+  // baseRate는 등록 시 스냅샷(소급 금지). downRate는 ℓ만의 함수로 시간 무관 고정이라
+  // 코드 상수에서 산출(스냅샷 불요 — 코드 자체가 단일 진실).
+  const fixedDownBp = downRateBp(fromLevel);
+  const probs = effectiveOutcomeProbsBp(baseRateBp, fixedDownBp, elapsedMs, totalMs);
+  const effBp = probs.success;
 
-  const rolled = rollBp();
+  const rolled = (rngBp ?? rollBp)();
   let outcome: ResolveOutcome;
   let toLevel: number;
-  if (rolled < effBp) {
+  if (rolled < probs.success) {
     outcome = 'success';
     toLevel = fromLevel + 1;
-  } else if (failOutcome(fromLevel) === 'down') {
+  } else if (rolled < probs.success + probs.down) {
     outcome = 'down';
     toLevel = levelAfterFail(fromLevel);
   } else {
@@ -154,6 +166,12 @@ export async function resolveEnhance(input: ResolveInput): Promise<ResolveResult
   if (Number(w[0]?.applied ?? 0) === 0) {
     throw new EnhanceError('JOB_NOT_FOUND'); // 동시 정산 패자/이미 처리 → 멱등 no-op
   }
+
+  // 푸시 그룹화 누적(BALANCE §11). 실패해도 게임 트랜잭션은 성공으로 처리 — 알림은 best-effort.
+  const userIdStr = String(job.user_id);
+  appendEnhancePending(userIdStr, { fromLevel, toLevel, outcome }).catch((e) => {
+    console.warn('[push] enhance pending append failed', e);
+  });
 
   return { jobId, equipmentInstanceId, outcome, fromLevel, toLevel, effectiveRateBp: effBp };
 }

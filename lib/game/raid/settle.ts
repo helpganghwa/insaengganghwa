@@ -5,7 +5,9 @@ import { and, eq, gte, sql } from 'drizzle-orm';
 import { db } from '@/lib/db/client';
 import { raids, raidParticipants, raidRewards } from '@/lib/db/schema/raid';
 import { RAID_BASE_PARTICIPATION_DIAMOND } from '@/lib/game/balance';
+import { sendPushToUsers } from '@/lib/push/send';
 import { aggregatePhaseDrops, raidPhasesCleared } from './drops';
+import { RAID_BOSSES } from './bosses';
 
 /**
  * 레이드 정산 — GDD §3.5 / SCHEMA §6.4. 6시간 만료 시 lazy(접속 조회) + cron 일괄.
@@ -13,18 +15,19 @@ import { aggregatePhaseDrops, raidPhasesCleared } from './drops';
  * 전원 동일(기본 100 + 페이즈 결정론 추첨, drops.ts). 정산은 raid_rewards 적재만 —
  * 실제 지급은 유저가 레이드 상세에서 직접 수령(`claimRaidReward`, claim.ts).
  */
-export function settleRaid(
+export async function settleRaid(
   input: { raidId: bigint },
 ): Promise<{ settled: boolean; phasesCleared: number; rewarded: number }> {
   const { raidId } = input;
 
-  return db.transaction(async (tx) => {
+  const result = await db.transaction(async (tx) => {
     const [raid] = await tx
       .select({
         id: raids.id,
         status: raids.status,
         expireAt: raids.expireAt,
         phase1Hp: raids.phase1Hp,
+        bossCode: raids.bossCode,
       })
       .from(raids)
       .where(eq(raids.id, raidId))
@@ -32,10 +35,10 @@ export function settleRaid(
 
     // 멱등 no-op — 없거나 이미 정산됨.
     if (!raid || raid.status !== 'active') {
-      return { settled: false, phasesCleared: 0, rewarded: 0 };
+      return { settled: false, phasesCleared: 0, rewarded: 0, winnerIds: [] as string[], bossCode: null as null | typeof raid.bossCode };
     }
     if (raid.expireAt.getTime() > Date.now()) {
-      return { settled: false, phasesCleared: 0, rewarded: 0 }; // 아직 진행 중
+      return { settled: false, phasesCleared: 0, rewarded: 0, winnerIds: [] as string[], bossCode: null as null | typeof raid.bossCode }; // 아직 진행 중
     }
 
     const [{ total }] = await tx
@@ -69,6 +72,30 @@ export function settleRaid(
       .set({ phasesCleared, status: 'settled', settledAt: new Date() })
       .where(and(eq(raids.id, raidId), eq(raids.status, 'active')));
 
-    return { settled: true, phasesCleared, rewarded: winners.length };
+    return {
+      settled: true,
+      phasesCleared,
+      rewarded: winners.length,
+      winnerIds: winners.map((w) => w.userId),
+      bossCode: raid.bossCode,
+    };
   });
+
+  // 트랜잭션 커밋 후 푸시 발송(best-effort). 토글·구독 없는 유저는 자동 스킵.
+  if (result.settled && (result.winnerIds?.length ?? 0) > 0) {
+    const bossName = RAID_BOSSES[result.bossCode!]?.name ?? '보스';
+    sendPushToUsers(result.winnerIds!, {
+      title: '레이드 종료',
+      body: `${bossName} 레이드가 종료되었습니다 — 보상 확인 (페이즈 ${result.phasesCleared}돌파)`,
+      url: `/raid/${input.raidId.toString()}`,
+      tag: `raid-${input.raidId.toString()}`,
+      category: 'raid',
+    }).catch((e) => console.warn('[push] raid settle send failed', e));
+  }
+
+  return {
+    settled: result.settled,
+    phasesCleared: result.phasesCleared,
+    rewarded: result.rewarded,
+  };
 }
