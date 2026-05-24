@@ -2292,6 +2292,52 @@ const ITEMS: Item[] = [
     hint: '청동 흉갑 + 3 영웅 얼굴 + 루비 [armor 66번]',
     candidateNotes: ['c0', 'c1', 'c2', 'c3'],
   },
+  // ── batch 37: weapon 1 + armor 4 ──
+  {
+    slug: 'common_jester_lollipop_mace',
+    tone: '위트',
+    region: '일반',
+    slot: 'weapon',
+    recommend: -1,
+    hint: '거대 빨강·흰 막대사탕 mace [weapon 50번]',
+    candidateNotes: ['c0', 'c1', 'c2', 'c3'],
+  },
+  {
+    slug: 'common_pope_mitre_crown',
+    tone: '장엄',
+    region: '일반',
+    slot: 'armor',
+    recommend: -1,
+    hint: '뾰족한 흰·황금 mitre + 십자 + fanon [armor 67번]',
+    candidateNotes: ['c0', 'c1', 'c2', 'c3'],
+  },
+  {
+    slug: 'common_emperor_jade_crown',
+    tone: '화려',
+    region: '일반',
+    slot: 'armor',
+    recommend: -1,
+    hint: '황금 crown + jade discs + jade bead strand + ruby [armor 76번]',
+    candidateNotes: ['c0', 'c1', 'c2', 'c3'],
+  },
+  {
+    slug: 'common_aristocrat_lace_dress',
+    tone: '아름다운',
+    region: '일반',
+    slot: 'armor',
+    recommend: -1,
+    hint: '크림 색 빅토리안 레이스 드레스 + 진주 단추 [armor 82번]',
+    candidateNotes: ['c0', 'c1', 'c2', 'c3'],
+  },
+  {
+    slug: 'common_first_paladin_oath_chestplate',
+    tone: '전설',
+    region: '일반',
+    slot: 'armor',
+    recommend: -1,
+    hint: 'silver 흉갑 + 서약 두루마리 자수 + 검 [armor 91번]',
+    candidateNotes: ['c0', 'c1', 'c2', 'c3'],
+  },
 ];
 
 export default function BatchReviewPage() {
