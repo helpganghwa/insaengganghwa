@@ -479,13 +479,13 @@ export const CATALOG_NEXT: CatalogItem[] = [
     art: 'legendary mythic ancient marsh swamp witch queen fantasy staff weapon item icon, tall gnarled black staff with a large dark teal orb cradled at the top by curled root claws, single inanimate game loot object on transparent background',
   },
   {
-    key: 'volcano_skull_furnace_mace',
+    key: 'common_jester_lollipop_mace',
     slot: 'weapon',
-    nameKo: '두개골 화로의 mace',
-    region: '서쪽 화산',
-    tone: '기괴',
-    lore: '서쪽 화로의 가장 깊은 자리에서 굳어 떨어진 한 두개골을 그 화로의 풀무지기가 자기 mace의 머리로 박아 둔 자리다. 두개골의 두 눈자리 안쪽엔 식지 않은 잉걸 한 알씩이 가만히 불을 머금고 있고, 자루의 황금 trim은 그 두개골이 화로 밖으로 한 번 더 나가지 못하게 묶어 둔 자리다.',
-    art: 'uncanny eerie unsettling volcanic forge fire fantasy skull furnace mace weapon item icon, dark mace head shaped like a charred skull with molten orange embers burning inside the eye sockets and a gold-trimmed dark haft, single inanimate game loot object on transparent background',
+    nameKo: '광대의 막대사탕 mace',
+    region: '일반',
+    tone: '위트',
+    lore: '한 왕실의 광대가 자기 평생 한 번도 자기 손에서 떨어뜨리지 않은 거대 막대사탕이다. 빨강·흰 소용돌이는 광대가 자기 자리에서 한 번 더 자기 농담을 한 줄로 더 풀어 놓을 때마다 한 박자 늦은 색으로 한 번씩 더 자기 결을 둘러 박은 자리다.',
+    art: 'humorous quirky whimsical fantasy court jester giant lollipop mace weapon item icon, oversized round candy lollipop with red and white swirl pattern on a sturdy wooden stick, single inanimate game loot object on transparent background',
   },
 
   // ═══════ armor 50종 ═══════
@@ -641,13 +641,13 @@ export const CATALOG_NEXT: CatalogItem[] = [
     art: 'legendary mythic ancient fantasy hero relic breastplate armor item icon, weathered bronze breastplate with three engraved ancient hero faces across the chest and a single embedded ruby gem at the heart, single inanimate game loot object on transparent background',
   },
   {
-    key: 'rune_first_archmage_circlet',
+    key: 'common_pope_mitre_crown',
     slot: 'armor',
-    nameKo: '첫 대마법사의 circlet',
-    region: '고대 룬 산맥',
-    tone: '전설',
-    lore: '룬 산맥의 첫 대마법사가 자기 첫 룬을 자기 손가락으로 짚어 본 새벽에 그 룬을 자기 머리띠 가운데에 한 자만 더 깊이 박아 둔 자리다. 그 한 글자가 한 번 빛을 머금는 새벽엔 산맥 안쪽의 룬 한 자리가 같이 한 박자 옅게 떨린다.',
-    art: 'legendary mythic ancient mountain rune fantasy first archmage circlet armor item icon, slender silver circlet with a single deep engraved rune at the brow and a small hanging crystal at the temple, single inanimate game loot object on transparent background',
+    nameKo: '교황의 미터',
+    region: '일반',
+    tone: '장엄',
+    lore: '한 신성한 도시의 첫 교황이 자기 즉위 새벽에 자기 머리 위에 한 알의 흰·황금 미터를 한 번 더 박아 두고 자기 자리에 한 번 더 가만히 앉은 자리다. 미터 가운데에 굳어 박힌 황금 십자는 교황이 자기 평생 한 번도 자기 시선을 떼지 않은 결대로 굳어 있다.',
+    art: 'grand majestic imposing fantasy pope high priest mitre crown armor item icon, tall pointed white and gold ceremonial mitre headpiece with an embroidered cross at the front and two narrow fanons hanging at the back, single inanimate game loot object on transparent background',
   },
   {
     key: 'volcano_drake_lord_helm',
@@ -726,13 +726,13 @@ export const CATALOG_NEXT: CatalogItem[] = [
 
   // ── batch 18: 희망 톤 시범 5종 ──
   {
-    key: 'marsh_lotus_robe',
+    key: 'common_emperor_jade_crown',
     slot: 'armor',
-    nameKo: '연꽃 robe',
-    region: '늪지대',
-    tone: '희망',
-    lore: '늪의 한 새벽이 처음 옅어진 자리에서 한 송이 분홍 연꽃이 한 번 더 자기 결을 펴 보인 자리에 한 자수가가 자기 robe의 가슴께를 한 자리 비워 두고 그 결대로 자수를 한 송이 박아 넣었다. 옷자락 둘레의 노란 trim은 그 새벽의 첫 빛이 한 줄로 옅게 머무른 자리다.',
-    art: 'hopeful radiant warm marsh swamp fantasy lotus robe armor item icon, pale pink flowing robe with a single open lotus blossom embroidered at the chest and warm yellow trim, single inanimate game loot object on transparent background',
+    nameKo: '황제의 옥관',
+    region: '일반',
+    tone: '화려',
+    lore: '한 황제가 자기 즉위 새벽에 자기 머리에 한 알의 큰 빨간 보석과 그 둘레의 푸른 jade를 한 번 더 황금 crown 위에 박아 둔 자리다. 양 옆에서 늘어진 jade bead strand는 황제가 자기 자리에서 한 번씩 더 자기 시선을 옮길 때마다 한 박자 늦은 결로 한 번씩 더 가만히 흔들린다.',
+    art: 'ornate flamboyant gilded fantasy emperor jade crown armor item icon, ornate gold crown set with multiple polished green jade discs, dangling jade bead strands hanging from each side, and a large central red jewel, single inanimate game loot object on transparent background',
   },
   {
     key: 'orc_sunrise_tabard',
@@ -782,13 +782,13 @@ export const CATALOG_NEXT: CatalogItem[] = [
     art: 'humorous quirky marsh swamp fantasy big lilypad hat armor item icon, wide round dark green lily-pad hat with a single dewdrop pearl at the center and curled leaf edges, single inanimate game loot object on transparent background',
   },
   {
-    key: 'orc_chieftain_fur_cloak',
+    key: 'common_aristocrat_lace_dress',
     slot: 'armor',
-    nameKo: '부족장의 모피 망토',
-    region: '오크 부락',
-    tone: '장엄',
-    lore: '부락의 한 부족장이 자기 첫 사냥에서 잡은 짐승의 모피를 그대로 자기 등에 한 번 더 둘러 묶은 망토다. 어깨의 황금 clasp는 그가 첫 새벽에 손가락 끝으로 한 번 더 짚어 본 자리이고, 가장자리의 송곳니는 그 짐승의 입에서 한 줄로 박혀 굳은 그대로다.',
-    art: 'grand majestic imposing orcish tribal chieftain fantasy fur cloak armor item icon, thick brown beast fur cloak with a gold clasp at the throat and tusks woven into the hem, single inanimate game loot object on transparent background',
+    nameKo: '귀족 영애의 레이스 드레스',
+    region: '일반',
+    tone: '아름다운',
+    lore: '한 귀족 영애가 자기 평생 자기 한 자루의 dress 위에 한 번 더 자기 손가락 끝으로 한 자국씩 더 레이스를 풀어 짠 자리다. 가슴께의 작은 진주 단추 한 알 한 알은 영애가 자기 자리에서 한 번도 풀지 않은 결대로 한 번 더 가만히 박혀 있다.',
+    art: 'beautiful elegant graceful fantasy aristocrat Victorian lace dress armor item icon, slender pale cream lace dress with delicate floral lace patterns, a tight bodice, and small pearl buttons down the front, single inanimate game loot object on transparent background',
   },
   {
     key: 'rune_seer_hood',
@@ -867,13 +867,13 @@ export const CATALOG_NEXT: CatalogItem[] = [
 
   // ── batch 21: armor 5종 ──
   {
-    key: 'marsh_water_silk_dress',
+    key: 'common_first_paladin_oath_chestplate',
     slot: 'armor',
-    nameKo: '물결의 silk dress',
-    region: '늪지대',
-    tone: '아름다운',
-    lore: '늪의 한 새벽 안개가 가장 옅어진 자리에서 한 잠수부가 늪 가운데에서 길어 올린 한 가닥 silk를 자기 누이에게 한 자루의 dress로 한 번 더 짜 둔 자리다. 가슴께의 작은 보석은 잠수부가 물 아래에서 본 새벽의 한 결을 자기 손가락 끝으로 한 번 더 굳혀 박아 둔 알이다.',
-    art: 'beautiful elegant graceful marsh swamp fantasy water silk dress armor item icon, pale teal flowing silk dress with rippling water-pattern silver embroidery and a single small clear gem at the throat, single inanimate game loot object on transparent background',
+    nameKo: '첫 팰러딘의 서약 흉갑',
+    region: '일반',
+    tone: '전설',
+    lore: '한 왕국의 첫 팰러딘이 자기 평생 자기 가슴 가운데에 한 줄의 서약을 한 번 더 자기 흉갑의 결대로 새겨 둔 자리다. 가슴 가운데에 굳어 박힌 작은 검은 팰러딘이 자기 자리에서 한 번도 자기 시선을 떼지 않은 결을 한 알의 emblem으로 한 번 더 굳혀 둔 자리다.',
+    art: 'legendary mythic ancient fantasy first paladin oath chest plate armor item icon, polished silver breastplate with a single sworn-oath scroll engraved across the chest and a small upright sword embossed at the heart, single inanimate game loot object on transparent background',
   },
   {
     key: 'orc_first_chief_armor',
