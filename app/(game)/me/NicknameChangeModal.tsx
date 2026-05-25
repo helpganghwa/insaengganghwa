@@ -5,8 +5,9 @@ import { useRouter } from 'next/navigation';
 
 import { NICKNAME_CHANGE_COST_DIAMOND } from '@/lib/game/balance';
 import {
-  NICKNAME_MAX_BYTES,
-  nicknameByteLen,
+  NICKNAME_MAX_LEN,
+  nicknameLen,
+  sanitizeNicknameInput,
   validateNickname,
 } from '@/lib/game/nickname';
 
@@ -50,7 +51,7 @@ export function NicknameChangeModal({
   const unchanged = next.trim() === currentNickname.trim();
   const validation = validateNickname(next);
   const canSubmit = !pending && !unchanged && validation.ok && canAfford;
-  const usedBytes = nicknameByteLen(next.trim());
+  const usedLen = nicknameLen(next.trim());
 
   const submit = () => {
     if (!canSubmit) return;
@@ -92,20 +93,17 @@ export function NicknameChangeModal({
         <input
           value={next}
           onChange={(e) => {
-            // byte 한도 초과 입력 차단(붙여넣기 포함). 한 글자 더 들어오는 순간 잘라냄.
-            let v = e.target.value;
-            while (nicknameByteLen(v.trim()) > NICKNAME_MAX_BYTES) v = v.slice(0, -1);
-            setNext(v);
+            // 허용 외 문자(공백·기호·이모지·자모) 즉시 strip + 최대 10자 컷.
+            setNext(sanitizeNicknameInput(e.target.value));
             setErr(null);
           }}
-          // 안전망 — 영문 12자 입력 시 deterministic 컷.
-          maxLength={NICKNAME_MAX_BYTES}
-          placeholder="한글 6자 / 영문 12자"
+          maxLength={NICKNAME_MAX_LEN}
+          placeholder="2~10자 (한글·영문·숫자)"
           className="mt-3 w-full rounded-md border border-zinc-300 bg-transparent px-2.5 py-2 text-sm dark:border-zinc-700"
           autoFocus
         />
         <p className="mt-1 text-right text-[10px] text-zinc-500 tabular-nums">
-          {usedBytes} / {NICKNAME_MAX_BYTES} byte
+          {usedLen} / {NICKNAME_MAX_LEN}자
         </p>
 
         {err ? (
