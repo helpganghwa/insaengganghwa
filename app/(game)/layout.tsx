@@ -79,10 +79,7 @@ export default async function GameLayout({ children }: { children: React.ReactNo
       <ResourceToastProvider>
         <main className="flex flex-1 flex-col overflow-y-auto">{children}</main>
       </ResourceToastProvider>
-      <BottomNav
-        hasCompletedEnhance={hasCompletedEnhance}
-        hasUnreadMail={hasUnreadMail}
-      />
+      <BottomNav hasCompletedEnhance={hasCompletedEnhance} />
     </div>
   );
 }

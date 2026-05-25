@@ -4,6 +4,11 @@ import { useEffect, useState, useTransition } from 'react';
 import { useRouter } from 'next/navigation';
 
 import { NICKNAME_CHANGE_COST_DIAMOND } from '@/lib/game/balance';
+import {
+  NICKNAME_MAX_BYTES,
+  nicknameByteLen,
+  validateNickname,
+} from '@/lib/game/nickname';
 
 import { changeNicknameAction } from './actions';
 
@@ -43,8 +48,9 @@ export function NicknameChangeModal({
   const cost = isFree ? 0 : NICKNAME_CHANGE_COST_DIAMOND;
   const canAfford = BigInt(diamond || '0') >= BigInt(cost);
   const unchanged = next.trim() === currentNickname.trim();
-  const lengthOk = next.trim().length >= 2 && next.trim().length <= 16;
-  const canSubmit = !pending && !unchanged && lengthOk && canAfford;
+  const validation = validateNickname(next);
+  const canSubmit = !pending && !unchanged && validation.ok && canAfford;
+  const usedBytes = nicknameByteLen(next.trim());
 
   const submit = () => {
     if (!canSubmit) return;
@@ -86,14 +92,21 @@ export function NicknameChangeModal({
         <input
           value={next}
           onChange={(e) => {
-            setNext(e.target.value);
+            // byte 한도 초과 입력 차단(붙여넣기 포함). 한 글자 더 들어오는 순간 잘라냄.
+            let v = e.target.value;
+            while (nicknameByteLen(v.trim()) > NICKNAME_MAX_BYTES) v = v.slice(0, -1);
+            setNext(v);
             setErr(null);
           }}
-          maxLength={16}
-          placeholder="2~16자"
+          // 안전망 — 영문 12자 입력 시 deterministic 컷.
+          maxLength={NICKNAME_MAX_BYTES}
+          placeholder="한글 6자 / 영문 12자"
           className="mt-3 w-full rounded-md border border-zinc-300 bg-transparent px-2.5 py-2 text-sm dark:border-zinc-700"
           autoFocus
         />
+        <p className="mt-1 text-right text-[10px] text-zinc-500 tabular-nums">
+          {usedBytes} / {NICKNAME_MAX_BYTES} byte
+        </p>
 
         {err ? (
           <p className="mt-2 rounded bg-red-50 px-2 py-1.5 text-[11px] text-red-700 dark:bg-red-950/60 dark:text-red-300">

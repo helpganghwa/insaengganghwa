@@ -6,6 +6,7 @@ import { sql } from 'drizzle-orm';
 import { getSessionUserId } from '@/lib/auth/session';
 import { db } from '@/lib/db/client';
 import { NICKNAME_CHANGE_COST_DIAMOND } from '@/lib/game/balance';
+import { validateNickname } from '@/lib/game/nickname';
 import { rateLimited } from '@/lib/ratelimit';
 
 export interface NicknameChangeOk {
@@ -34,8 +35,9 @@ export async function changeNicknameAction(
   if (await rateLimited(userId, 'nickname'))
     return { status: 'error', code: 'RATE_LIMIT', message: '요청이 너무 빠릅니다.' };
   const next = String(raw ?? '').trim();
-  if (next.length < 2 || next.length > 16) {
-    return { status: 'error', code: 'INVALID', message: '닉네임은 2~16자입니다.' };
+  const v = validateNickname(next);
+  if (!v.ok) {
+    return { status: 'error', code: 'INVALID', message: v.reason };
   }
 
   try {

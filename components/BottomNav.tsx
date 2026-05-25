@@ -3,13 +3,12 @@
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 
-// WIREFRAMES §0 + SCREEN-ANALYSIS §1.3 P0-2(2026-05-25):
-// 5탭 — 홈/강화/우편함/레이드/프로필. 인벤토리는 강화 picker·프로필 내부로 진입.
-// 우편함이 1-tap(비동기 보상 도달성 ↑).
+// WIREFRAMES §0 — 5탭: 홈/인벤토리/강화/레이드/프로필.
+// 우편함은 헤더 📬 아이콘 진입(BottomNav 제외, 사용자 피드백 2026-05-25).
 const items = [
   { href: '/', label: '홈', icon: '🏠' },
+  { href: '/inventory', label: '인벤토리', icon: '🎒' },
   { href: '/enhance', label: '강화', icon: '⚒️' },
-  { href: '/mail', label: '우편함', icon: '📬' },
   { href: '/raid', label: '레이드', icon: '⚔️' },
   { href: '/me', label: '프로필', icon: '👤' },
 ] as const;
@@ -17,14 +16,9 @@ const items = [
 type Props = {
   /** /enhance 탭 알림 dot — 완료 시점 도달 강화 1건 이상. */
   hasCompletedEnhance?: boolean;
-  /** /mail 탭 알림 dot — 미수령(미만료) 우편 1건 이상. */
-  hasUnreadMail?: boolean;
 };
 
-export function BottomNav({
-  hasCompletedEnhance = false,
-  hasUnreadMail = false,
-}: Props) {
+export function BottomNav({ hasCompletedEnhance = false }: Props) {
   const pathname = usePathname();
 
   return (
@@ -32,9 +26,7 @@ export function BottomNav({
       {items.map((item) => {
         const active =
           item.href === '/' ? pathname === '/' : pathname.startsWith(item.href);
-        const dot =
-          (item.href === '/enhance' && hasCompletedEnhance) ||
-          (item.href === '/mail' && hasUnreadMail);
+        const dot = item.href === '/enhance' && hasCompletedEnhance;
         return (
           <Link
             key={item.href}

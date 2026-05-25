@@ -49,9 +49,7 @@ export async function AppHeader({
             />
           ) : null}
         </Link>
-        <span className="max-w-[68px] truncate text-zinc-700 dark:text-zinc-200">
-          {nickname}
-        </span>
+        <span className="text-zinc-700 dark:text-zinc-200">{nickname}</span>
         <Link
           href="/shop"
           aria-label={`다이아 ${diamond} · 충전`}
