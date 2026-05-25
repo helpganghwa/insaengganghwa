@@ -20,20 +20,20 @@ const OUT = join(process.cwd(), 'public', 'sprites', 'hub');
 const FILE = join(OUT, 'daily-supply-bg.png');
 
 const PROMPT =
-  'horizontal wide banner background for fantasy RPG game daily supply UI card, ' +
+  'horizontal wide banner background for fantasy RPG daily mail and supply delivery UI card, ' +
   'no characters no people no faces no hands, ' +
-  // 좌측 — 보급/보물 디테일
-  'left third: open wooden treasure chest overflowing with golden coins and bright gemstones, ' +
-  'gift box with red ribbon, scattered coins on wooden floor, ' +
-  // 중앙 — 마법/장식
-  'center third: floating glowing magical diamonds and gold ribbons drifting upward, ' +
-  'small sparkle particles, soft warm light rays, ' +
-  // 우측 — 캐릭터 자리(어둡지만 textured)
-  'right third: warm amber glow ambient with subtle floating gold particles, ' +
+  // 좌측 — 우편함·편지·보급권(메일 정서)
+  'left third: cozy ornate fantasy wooden mailbox postbox with rolled parchment scrolls sticking out, ' +
+  'sealed envelope letters with red wax seal, small wrapped gift package with ribbon on top, ' +
+  // 중앙 — 떠있는 다이아·보급권(보상 정서)
+  'center third: floating wrapped supply ticket scrolls and glowing magical crystal gems drifting upward, ' +
+  'soft warm lantern light from above, small sparkle particles, ' +
+  // 우측 — 캐릭터 자리(따뜻한 광원)
+  'right third: warm amber glow ambient with floating golden particles, ' +
   'no objects in right third (reserved for character overlay), ' +
-  // 톤·스타일
-  'cozy warm forge interior ambience with soft wooden plank texture in background, ' +
-  'palette: deep warm brown, rich amber gold, soft cream highlights, dark mahogany shadows, ' +
+  // 톤·스타일 — 우편 office cozy ambience
+  'cozy fantasy postal office interior ambience with soft warm lamp light, ' +
+  'palette: warm cream parchment, deep brown wood, amber gold light, soft red wax accents, ' +
   'Japanese anime pixel art game UI background style, ' +
   'soft gradient cel shading, crisp pixel art with detailed individual pixels, ' +
   'wide horizontal composition, edge-to-edge fully filled solid background, no transparent areas';
