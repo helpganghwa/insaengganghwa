@@ -8,7 +8,7 @@
 // PRO Tier 3 활용 — Bitforge 140×140 max. style_strength 60(중간).
 
 import { config } from 'dotenv';
-import { existsSync, readFileSync, writeFileSync, mkdirSync } from 'node:fs';
+import { existsSync, writeFileSync, mkdirSync } from 'node:fs';
 import { join } from 'node:path';
 import sharp from 'sharp';
 
@@ -60,10 +60,11 @@ async function gen(refKey: string, refFile: string): Promise<'ok' | 'fail'> {
     console.error(`  reference 없음: ${refPath}`);
     return 'fail';
   }
-  // Bitforge style_image는 정확히 image_size와 같아야 함(140×140).
-  // sharp로 contain 리사이즈(비율 유지 + 흰 배경 padding) + PNG 인코딩 후 base64.
-  // nearest neighbor 보간으로 픽셀 결 유지.
+  // 1) trim — 흰 배경 자동 제거(캐릭터 영역만 살림). 그래야 140 fit 시 캐릭터가 가득 참.
+  //    원본은 1400+×600+이고 캐릭터 영역은 30~40%라 trim 안 하면 노이즈처럼 보임.
+  // 2) 140×140 contain + nearest neighbor 보간으로 픽셀 결 보존 + 흰 배경 padding.
   const resized = await sharp(refPath)
+    .trim({ background: { r: 255, g: 255, b: 255, alpha: 1 }, threshold: 10 })
     .resize(140, 140, {
       fit: 'contain',
       kernel: sharp.kernel.nearest,
@@ -72,6 +73,8 @@ async function gen(refKey: string, refFile: string): Promise<'ok' | 'fail'> {
     .png()
     .toBuffer();
   const refB64 = resized.toString('base64');
+  // 디버깅용 — trim된 reference도 저장해서 사용자가 비교 가능.
+  writeFileSync(join(OUT, `_ref-trimmed-${refKey}.png`), resized);
 
   for (let attempt = 0; attempt < 4; attempt++) {
     try {
@@ -83,7 +86,7 @@ async function gen(refKey: string, refFile: string): Promise<'ok' | 'fail'> {
           negative_description: NEGATIVE,
           image_size: { width: 140, height: 140 },
           style_image: { type: 'base64', base64: refB64 },
-          style_strength: 60, // 0..100. 60 = reference 결 강하게, prompt도 충분히 반영
+          style_strength: 50, // trim 후 더 좋은 reference라 style 약간 줄임(prompt 충실도 ↑)
           text_guidance_scale: 12,
           no_background: true,
         }),
