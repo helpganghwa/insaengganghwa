@@ -65,51 +65,61 @@ async function sleep(ms: number) {
   return new Promise((r) => setTimeout(r, ms));
 }
 
-// 인생강화 공식 마스코트(2026-05-25) — 직업 무관 영웅형 모험가.
-// 레퍼런스 결: 픽셀법사키우기 / 메이플스토리 캐릭터 일러스트 픽셀화.
-// 3~3.5등신, 풍성한 머리카락, 큰 눈, 그라데이션 채색, 진한 빨강-갈색 outline.
+// 인생강화 공식 마스코트 v2(2026-05-25) — 일본 애니메이션 풍 픽셀 일러스트.
+// 레퍼런스(엘프·검사·모험가): 6~7등신 슬림 어른 비례, anime 일러스트의 픽셀화,
+// 풍성한 그라데이션 머리, 큰 anime 눈, 빨강-갈색 outline, gradient cel shading.
 const DESCRIPTION =
-  'official mascot character of Korean idle RPG game 인생강화 — ' +
-  'a young adventurer hero standing centered front-facing T-pose full body, ' +
-  // 비례 — chibi 아님, 슬림 3등신
-  'slim stylized proportions about 3 heads tall (NOT chibi NOT super deformed), ' +
-  // 얼굴
-  'large detailed expressive eyes with multiple highlights, small button nose, gentle confident smile, ' +
-  'warm cream skin with soft cheek shading, ' +
-  // 머리 — 풍부함 강조
-  'short tousled warm brown hair with golden tips, wind-blown wavy strands, detailed hair flow, ' +
-  // 의상 — 다중 톤 + 그라데이션
-  'wearing a cream sleeveless tunic with rolled cloth collar, ' +
-  'brown leather harness with iron buckle across chest, ' +
-  'dark forest green hooded cloak with subtle gradient draped over shoulders flowing softly behind, ' +
-  'small dark leather gloves, sturdy short brown boots with metal toe caps, ' +
-  // 소품 — 망치(인생강화 시그니처)
-  'holding a small iron forge hammer at right side (small square iron head, short wooden handle), ' +
-  // 포즈·정서
-  'calm proud heroic stance, slight smile, slight hip tilt for charm, ' +
-  // 스타일·결
-  'JRPG anime illustration pixel art style, ' +
-  'reference style: 픽셀법사키우기 mobile game character, MapleStory NPC illustration, ' +
-  'Korean mobile pixel RPG character portrait, ' +
-  'crisp 1-pixel dark red-brown outline rim around silhouette, ' +
-  'soft gradient cel shading on hair and fabric (multiple tone steps, NOT flat), ' +
-  'warm multi-tone palette: cream, brown, forest green, amber gold, soft charcoal accents, ' +
+  'anime JRPG illustration pixel art of a full body fantasy adventurer hero character, ' +
+  // 비례 — 어른 슬림 6.5~7등신
+  '7-heads-tall slim adult proportions, long legs and slim torso, ' +
+  'NOT chibi NOT super deformed NOT cute baby proportions, ' +
+  // 포즈
+  'standing centered front-facing T-pose, slight relaxed hip stance, ' +
+  // 얼굴 — anime 결
+  'detailed anime style face: large expressive eyes with multiple shining highlights, ' +
+  'small refined nose, small detailed mouth, calm confident expression, soft cheek blush, ' +
+  // 머리카락 — 풍성·바람결·그라데이션 (레퍼런스 핵심)
+  'voluminous flowing detailed hair with multiple gradient color tones, ' +
+  'wind-blown wavy strands cascading down past shoulders, ' +
+  'medium-length warm chestnut brown hair with golden amber highlights and darker root shadow, ' +
+  // 의상 — 디테일 풍부, 다중 톤
+  'wearing a cream high-collared sleeveless tunic with subtle gradient shading, ' +
+  'brown leather harness straps with iron buckles crossing the chest, ' +
+  'dark forest green hooded long cloak with gradient shading flowing behind from one shoulder, ' +
+  'fingerless leather gloves, ' +
+  'fitted dark green pants with cloth wrap detail, ' +
+  'sturdy laced brown leather boots with metal eyelets, ' +
+  'small leather belt pouch on hip, ' +
+  // 소품 — 작은 망치(인생강화 시그니처)
+  'right hand holding a small ornate iron forge hammer with detailed wooden handle, ' +
+  // 결·스타일 (가장 중요)
+  'high quality anime illustration pixel art style, ' +
+  'reference look: detailed 2D RPG character illustration converted to pixel art, ' +
+  'crisp dark reddish-brown outline rim around silhouette (NOT pure black outline), ' +
+  'rich gradient cel shading with 3-4 tone steps on hair fabric and skin (NOT flat shading), ' +
+  'detailed individual pixels visible but with smooth color transitions, ' +
+  // 팔레트
+  'warm multi-tone palette: cream skin, chestnut brown, amber gold, forest green, ' +
+  'iron grey accents, soft cream highlights, dark reddish-brown shadows, ' +
   // 배경
-  'pure white background, character only, no scenery, no UI elements, no text';
+  'pure white background, character only, no scenery, no UI elements, no text, no border';
 
 async function main() {
   console.log('[create_character] queuing...');
   const createdText = await callTool('create_character', {
     description: DESCRIPTION,
-    name: 'Insaeng-Mascot',
+    name: 'Insaeng-Mascot-V2',
     body_type: 'humanoid',
-    mode: 'pro',                                       // AI reference 기반 고품질
-    proportions: '{"type":"preset","name":"stylized"}', // chibi 아닌 슬림 3등신
+    mode: 'pro',
+    // 6.5~7등신 슬림 어른 비례 — custom으로 강제(preset stylized 3등신 폐기)
+    proportions:
+      '{"type":"custom","head_size":0.85,"arms_length":1.3,"legs_length":1.6,"shoulder_width":0.8,"hip_width":0.7}',
     size: 128,
-    view: 'low top-down',
-    outline: 'single color outline',                   // 검정 대신 컬러 outline(빨강-갈색)
-    shading: 'medium shading',
+    view: 'side',                                      // 정면 캐릭터 view (low top-down 아님)
+    outline: 'single color outline',                   // 빨강-갈색 rim
+    shading: 'detailed shading',                       // gradient cel 강화
     detail: 'high detail',
+    text_guidance_scale: 9,                            // prompt 충실도 약간 ↑
   });
   console.log('[create_character] response:\n', createdText.slice(0, 600));
 
@@ -136,7 +146,7 @@ async function main() {
       if (south) {
         const img = await fetch(south[1]!);
         const buf = Buffer.from(await img.arrayBuffer());
-        const file = join(OUT, `mcp-mascot-${charId}-south.png`);
+        const file = join(OUT, `mcp-mascot-v2-${charId}-south.png`);
         writeFileSync(file, buf);
         console.log(`✓ saved ${file} (${buf.length}B)`);
         console.log(`id: ${charId} — full text:\n${text.slice(0, 1500)}`);
