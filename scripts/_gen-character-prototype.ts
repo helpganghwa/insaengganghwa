@@ -21,33 +21,45 @@ if (!KEY) {
 const OUT = '/tmp/character-prototype';
 mkdirSync(OUT, { recursive: true });
 
-// 캐릭터 디자인 가이드(공통): 다크 판타지 픽셀, 1:1 정사각, 풀바디 정자세,
-// 솔리드 어두운 배경(워크숍 톤), 깨끗한 외곽선, 제한 팔레트.
+// 캐릭터 디자인 가이드(2026-05-25 사용자 재피드백 반영):
+// "판타지 RPG 게임 속 NPC + 2D 픽셀 캐릭터" — Stardew Valley / Octopath Traveler /
+// Eastward / Moonlighter 같은 정통 픽셀 RPG NPC 결. chibi 2.5등신 유지하되
+// 게임 NPC 정통성 강화 (드워프형, 큰 망치, 두건/모자 등 판타지 클리셰).
 const STYLE =
-  'detailed fantasy pixel art, clean outlines, limited palette, ' +
+  'classic 2D pixel art RPG game NPC, ' +
+  'reference style: Stardew Valley / Octopath Traveler / Moonlighter NPC sprites, ' +
+  '2.5-heads-tall chibi proportions, big head with simple expressive face, ' +
+  'short stocky body and limbs, ' +
   'standing centered front-facing full body pose, ' +
-  'fully filled solid dark workshop background with hint of warm orange forge glow, ' +
-  'no characters in background, no text, no UI elements, ' +
+  'crisp clean 2D pixel art with thick bold black outlines, ' +
+  'large clearly visible pixels (low-resolution dot-art aesthetic), ' +
+  'flat 2D cell shading with simple highlight + shadow tones (no painterly blur), ' +
+  'limited 10-12 color palette, ' +
+  'fully filled solid dark warm background, no other characters, no text, no UI elements, ' +
   'edge-to-edge composition';
 
 const PROMPT =
-  // 대장장이(blacksmith) — 두꺼운 몸, 가죽 앞치마, 망치 손에. 인생강화 컨셉의 핵심 NPC.
-  'a male fantasy blacksmith character — stocky strong build, thick black beard with grey streaks, ' +
-  'focused weathered face, wearing rolled-sleeve linen shirt under a heavy brown leather apron, ' +
-  'thick leather gloves, sturdy boots, holding a small forge hammer in right hand resting at side, ' +
-  'left hand open, calm and confident stance, ' +
-  'palette: deep brown leather, dark amber highlights, smoky umber, charcoal grey beard, ' +
+  // 대장장이 — 정통 RPG NPC 클리셰(드워프형 + 큰 망치 + 가죽 앞치마 + 거친 두건).
+  'a fantasy RPG blacksmith NPC character, dwarf-like short stocky build with broad shoulders, ' +
+  'thick bushy brown beard covering chest, simple stern face with small round eyes, ' +
+  'wearing a brown leather forge cap pulled low, ' +
+  'heavy dark leather apron with metal rivets over a rolled-sleeve grey linen shirt, ' +
+  'thick scorched leather gloves, big iron-tipped boots, ' +
+  'holding a large two-handed iron forge hammer planted upright beside him, ' +
+  'orange glowing forge embers behind, ' +
+  'palette: dark brown leather, iron grey, warm amber forge glow, soft cream skin, charcoal beard, ' +
   STYLE;
 
 async function gen(): Promise<'ok' | 'fail'> {
   for (let attempt = 0; attempt < 4; attempt++) {
     try {
+      // 128 sweet-spot: 픽셀감 강조 + 캐릭터 디테일 충분. 256은 큰 픽셀 살리기 어려움.
       const res = await fetch('https://api.pixellab.ai/v1/generate-image-pixflux', {
         method: 'POST',
         headers: { 'content-type': 'application/json', authorization: `Bearer ${KEY}` },
         body: JSON.stringify({
           description: PROMPT,
-          image_size: { width: 256, height: 256 },
+          image_size: { width: 128, height: 128 },
           no_background: false,
         }),
       });
@@ -69,7 +81,8 @@ async function gen(): Promise<'ok' | 'fail'> {
         console.error('  bad PNG');
         return 'fail';
       }
-      const file = join(OUT, 'blacksmith-default.png');
+      // v3 — RPG NPC + 2D 픽셀(드워프형 정통 대장장이).
+      const file = join(OUT, 'blacksmith-rpg.png');
       writeFileSync(file, buf);
       console.log(`  ✓ ${file} (${buf.length}B)`);
       return 'ok';
