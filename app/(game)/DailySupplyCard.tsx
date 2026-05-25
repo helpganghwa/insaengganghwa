@@ -3,40 +3,69 @@ import Link from 'next/link';
 import { assetUrl } from '@/lib/asset-versions';
 
 /**
- * 홈 §1 — 오늘의 보급 카드. WIREFRAMES §1 미구현분 보강(2026-05-25).
+ * 홈 §1 — 오늘의 보급 카드. 마스코트 + 환경 효과로 자연스러운 배경.
  *
- * 노출 조건:
- *  - 오늘(KST) 일일 보급 우편 1건 이상 미수령(claimed_at IS NULL)
- *  - 수령 완료 시 카드 숨김(다음 KST 00:00에 ensureDailyMail로 재등장)
+ * 노출 조건: 오늘 KST 일일 보급 1건 이상 미수령. 수령 완료 시 카드 숨김.
  *
- * 디자인(SCREEN-ANALYSIS §4):
- *  - h-20 슬림 banner
- *  - 좌측: 📬 + 텍스트(오늘의 보급 + 보상 요약) + 우측 "수령하기"
- *  - 우측 끝: 인생강화 공식 마스코트(south-east) — 카드 높이보다 살짝 크게,
- *    bottom-align으로 다리 일부만 잘리고 캐릭터 정체성 노출 (자연스러운 녹임)
- *  - 배경: 따뜻한 갈색 그라데이션 + 좌측 어둡게(텍스트 가독성)
+ * 디자인:
+ *  - h-20 슬림 banner, 좌측 텍스트 + 우측 마스코트(어깨~머리)
+ *  - 마스코트 = south-west 방향(좌측 텍스트를 바라봄)
+ *  - 마스코트는 카드 ~3.5배 크기 + top-aligned로 어깨/머리만 노출
+ *  - 우측에 따뜻한 amber halo + sparkle 입자 → 마스코트가 떠 있지 않고 광원에 녹음
+ *  - 좌→우 어두운 fade로 텍스트 가독성 보호
  */
 export function DailySupplyCard() {
   return (
     <Link
       href="/mail"
-      className="relative flex h-20 overflow-hidden rounded-xl border border-amber-600/40 bg-gradient-to-r from-[#3a2406] via-[#3a2406] to-[#5a3a10] transition active:scale-[0.99]"
+      className="relative flex h-20 overflow-hidden rounded-xl border border-amber-600/40 bg-gradient-to-r from-[#2a1804] via-[#3d2208] to-[#5a3a10] transition active:scale-[0.99]"
     >
-      {/* 마스코트 — 우측 bottom-align, 카드 높이의 ~140%로 다리 일부만 잘림. */}
-      {/* 좌측 텍스트 영역과 안 겹치도록 우측에만. pointer-events:none으로 클릭 방해 X. */}
+      {/* 우측 amber 광원 halo — 마스코트가 빛에 감싸진 듯 */}
+      <div
+        aria-hidden
+        className="pointer-events-none absolute inset-y-0 right-0 w-[180px]"
+        style={{
+          background:
+            'radial-gradient(circle at 75% 50%, rgba(245,158,11,0.35) 0%, rgba(245,158,11,0.12) 40%, transparent 75%)',
+        }}
+      />
+
+      {/* sparkle 입자 — 마법/보급 정서 */}
+      <span
+        aria-hidden
+        className="pointer-events-none absolute right-[68px] top-2 h-1 w-1 rounded-full bg-amber-100 opacity-90 shadow-[0_0_4px_rgba(252,211,77,0.9)]"
+      />
+      <span
+        aria-hidden
+        className="pointer-events-none absolute right-[44px] top-7 h-1.5 w-1.5 rounded-full bg-yellow-200 opacity-80 shadow-[0_0_6px_rgba(252,211,77,1)]"
+      />
+      <span
+        aria-hidden
+        className="pointer-events-none absolute right-[86px] top-12 h-0.5 w-0.5 rounded-full bg-amber-50 opacity-90 shadow-[0_0_3px_rgba(252,211,77,0.9)]"
+      />
+      <span
+        aria-hidden
+        className="pointer-events-none absolute right-[32px] top-3 h-0.5 w-0.5 rounded-full bg-amber-100 opacity-80"
+      />
+
+      {/* 마스코트 — south-west(좌측 시선) + 매우 크게 top-aligned (어깨~머리만 노출). */}
       {/* eslint-disable-next-line @next/next/no-img-element */}
       <img
-        src={assetUrl('/sprites/characters/user-mascot-south-east.png')}
+        src={assetUrl('/sprites/characters/user-mascot-south-west.png')}
         alt=""
         aria-hidden
         draggable={false}
-        className="pointer-events-none absolute right-0 bottom-0 h-[140%] w-auto"
-        style={{ imageRendering: 'pixelated' }}
+        className="pointer-events-none absolute right-0 top-0 h-[280px] w-auto"
+        style={{
+          imageRendering: 'pixelated',
+          // 캐릭터 머리·어깨가 카드 안에 들어오도록 살짝 위로 오프셋(완전 정수 단위).
+          transform: 'translateY(-12px)',
+          transformOrigin: 'top right',
+        }}
       />
-      {/* 좌→우 페이드 — 마스코트 위에 자연스러운 그라데이션, 좌측 텍스트 가독성 보호. */}
-      <div className="pointer-events-none absolute inset-0 bg-gradient-to-r from-black/85 via-black/50 to-transparent" />
-      {/* 우측 텍스트(수령하기)를 마스코트 위 살짝 어둡게 — 텍스트 가독성 + 캐릭터 보임. */}
-      <div className="pointer-events-none absolute inset-y-0 right-0 w-28 bg-gradient-to-l from-black/55 to-transparent" />
+
+      {/* 좌→우 어두운 fade — 좌측 텍스트 가독성 */}
+      <div className="pointer-events-none absolute inset-0 bg-gradient-to-r from-black/85 via-black/45 to-transparent" />
 
       <div className="relative z-10 flex w-full items-center gap-3 px-3.5 py-2.5">
         <span aria-hidden className="text-xl leading-none drop-shadow">
@@ -50,9 +79,6 @@ export function DailySupplyCard() {
             💎 1,000 + 보급권 3종
           </div>
         </div>
-        <span aria-hidden className="shrink-0 text-[11px] font-semibold text-amber-200 drop-shadow">
-          수령하기
-        </span>
       </div>
     </Link>
   );
