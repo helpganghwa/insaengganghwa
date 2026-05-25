@@ -39,8 +39,8 @@ export function DailySupplyCard() {
             💎 1,000 + 보급권 3종
           </div>
         </div>
-        <span aria-hidden className="shrink-0 text-[11px] text-amber-200/90">
-          수령하기 →
+        <span aria-hidden className="shrink-0 text-[11px] font-semibold text-amber-200/95">
+          수령하기
         </span>
       </div>
     </Link>
