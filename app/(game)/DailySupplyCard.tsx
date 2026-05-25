@@ -30,11 +30,11 @@ export function DailySupplyCard() {
         style={{ imageRendering: 'pixelated' }}
       />
 
-      {/* 마스코트(보급 들고 웃는 state v2, 눈 뜬 미소). south-west = 좌측 아래 시선. */}
-      {/* 같은 character group(59ead3b2 3rd state, id 0fd71429...). */}
+      {/* 마스코트(보급 들고 웃는 state — 빨간 상자, closed-eye smile). south-west 좌측 아래 시선. */}
+      {/* 같은 character group(59ead3b2 2nd state, id 638fadc4...). */}
       {/* eslint-disable-next-line @next/next/no-img-element */}
       <img
-        src={assetUrl('/sprites/characters/mascot-supply-v2-bust-south-west.png')}
+        src={assetUrl('/sprites/characters/mascot-supply-bust-south-west.png')}
         alt=""
         aria-hidden
         draggable={false}
