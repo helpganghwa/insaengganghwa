@@ -24,43 +24,47 @@ if (!KEY) {
 const OUT = '/tmp/character-prototype';
 mkdirSync(OUT, { recursive: true });
 
-// 디자인 가이드(2026-05-25 v4):
-// 16-bit SNES JRPG NPC portrait sprite — Stardew Valley Clint, Octopath Traveler,
-// Chrono Trigger 결. 80×80 portrait, dot-art 명확, 16색 팔레트, 굵은 outline.
+// 디자인 가이드(2026-05-25 v5 — 동양 카와이 마스코트 결):
+// 한국·중국·일본 모바일 픽셀 게임의 귀여운 마스코트 결 — Cookie Run, MapleStory,
+// Kirby, Pokemon Mystery Dungeon, 라인프렌즈/카카오프렌즈 픽셀화. 서양 dwarf 컨셉 폐기.
+// 핵심: 큰 둥근 머리(2등신) + 큰 반짝이는 눈 + 작은 버튼 코 + 분홍 볼 + 미소.
 const STYLE =
-  '16-bit SNES JRPG NPC dialogue portrait sprite, ' +
-  'reference style: Stardew Valley Clint blacksmith portrait, Octopath Traveler NPC, Chrono Trigger character portrait, ' +
-  'head and shoulders chibi portrait composition (face fills upper 60% of frame), ' +
-  'centered front-facing, ' +
-  'true low-resolution dot pixel art (every individual pixel clearly visible, no anti-aliasing), ' +
-  'strict 16-color limited palette, ' +
-  'thick bold 1-pixel black outline on every silhouette edge, ' +
-  'flat 2D cel shading: 1 base tone + 1 shadow + 1 highlight per region (no blur, no gradient), ' +
-  'fully filled solid dark background, no text, no UI elements';
+  'adorable kawaii chibi mascot pixel sprite, ' +
+  'reference style: Cookie Run mobile game mascot, MapleStory NPC, Kirby cute character, ' +
+  'Pokemon Mystery Dungeon chibi sprite, Korean/Japanese mobile cute pixel art, ' +
+  'LINE Friends / Kakao Friends mascot pixelated, ' +
+  'super deformed 2-heads-tall proportions, oversized perfectly round head, tiny rounded body, ' +
+  'big shining expressive black eyes with two bright white highlights each, ' +
+  'tiny button nose, soft pink blushing cheek circles, wide warm friendly closed-mouth smile, ' +
+  'centered front-facing head-and-shoulders portrait, slight head tilt for charm, ' +
+  'smooth rounded silhouette with no sharp angular edges, ' +
+  'clean 2D pixel dot art with crisp 1-pixel black outline, ' +
+  'flat cel shading using 1 base tone + 1 soft shadow per region (no anti-aliasing, no gradient), ' +
+  'soft warm pastel palette (cream, peach, light brown, soft amber, dusty pink), ' +
+  'solid soft warm cream-orange background, no text, no UI, no other characters';
 
 const PROMPT =
-  // 대장장이 — RPG NPC 정통 클리셰(드워프 비례, 큰 수염, 두건, 앞치마, 망치).
-  'a fantasy RPG dwarf blacksmith NPC head-and-shoulders portrait, ' +
-  'big round face with thick bushy brown beard covering chest, ' +
-  'small round determined eyes with bold black pupils, ' +
-  'tanned weathered skin with soot smudges on cheeks, ' +
-  'wearing a brown leather forge cap pulled low, dark leather apron with iron rivets over a cream linen shirt collar, ' +
-  'holding a small iron forge hammer raised over the right shoulder visible at frame edge, ' +
-  'background: solid dark warm forge interior, subtle orange ember glow behind, ' +
-  'palette: dark brown leather, iron grey, warm amber forge, cream skin, charcoal beard, ' +
+  // 대장장이 — 동양 카와이 마스코트. 거친 dwarf 폐기, 작고 둥글고 친근한 견습 대장장이.
+  'a cute kawaii chibi mascot of a tiny apprentice blacksmith character, ' +
+  'wearing a soft brown leather apron over a cream linen shirt collar, ' +
+  'tiny round leather cap on top of head, small soft fingerless mittens, ' +
+  'holding a tiny adorable toy-like forge hammer with rounded edges resting on shoulder, ' +
+  'happy friendly expression, slightly closed eyes with bright highlights, ' +
+  'palette: warm cream skin, soft brown leather, peach blush cheeks, gentle amber accent, ' +
   STYLE;
 
 const NEGATIVE =
-  'anti-aliasing, painted look, photo realistic, 3D render, soft brush, ' +
-  'gradient blur, watercolor, modern clothing, sunglasses, hat with brim, ' +
-  'multiple characters, full body, lower body visible, text, UI, frame border, ' +
-  'jpeg artifacts';
+  'scary, dark, gritty, ugly, monster, evil expression, sharp teeth, ' +
+  'dwarf, bushy beard, mustache, facial hair, muscular, adult man, weathered face, ' +
+  'harsh shadows, painted brush, anti-aliasing, photo realistic, 3D render, ' +
+  'soft blur, gradient, watercolor, modern clothing, sunglasses, brimmed hat, ' +
+  'multiple characters, full body, lower body, legs, feet, text, UI, frame border, jpeg artifacts';
 
 async function gen(): Promise<'ok' | 'fail'> {
   for (let attempt = 0; attempt < 4; attempt++) {
     try {
-      // Bitforge endpoint — Tier 1 max 80×80, Tier 2+ 140×140. 80은 portrait에 적정.
-      // text_guidance_scale 12로 prompt 충실도 ↑. style_image 없이 description만.
+      // Bitforge 80×80 portrait + 카와이 prompt. text_guidance 14로 prompt 강조.
+      // view 'side' 빼고 front-facing은 prompt에서 처리.
       const res = await fetch('https://api.pixellab.ai/v1/generate-image-bitforge', {
         method: 'POST',
         headers: { 'content-type': 'application/json', authorization: `Bearer ${KEY}` },
@@ -68,9 +72,8 @@ async function gen(): Promise<'ok' | 'fail'> {
           description: PROMPT,
           negative_description: NEGATIVE,
           image_size: { width: 80, height: 80 },
-          text_guidance_scale: 12,
+          text_guidance_scale: 14,
           no_background: false,
-          view: 'side',
         }),
       });
       if (res.status === 429) {
@@ -91,8 +94,8 @@ async function gen(): Promise<'ok' | 'fail'> {
         console.error('  bad PNG');
         return 'fail';
       }
-      // v4 — Bitforge + 80×80 portrait + 16-bit JRPG NPC 결.
-      const file = join(OUT, 'blacksmith-bitforge.png');
+      // v5 — 동양 카와이 마스코트 결(쿠키런/메이플/커비/포켓몬 미스던).
+      const file = join(OUT, 'blacksmith-kawaii.png');
       writeFileSync(file, buf);
       console.log(`  ✓ ${file} (${buf.length}B)`);
       return 'ok';
