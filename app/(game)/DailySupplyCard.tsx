@@ -30,10 +30,11 @@ export function DailySupplyCard() {
         style={{ imageRendering: 'pixelated' }}
       />
 
-      {/* 마스코트 bust — 우측 amber 영역(캐릭터 자리)에 합성. amber drop-shadow로 배경에 녹음. */}
+      {/* 마스코트(보급 들고 웃는 state, 정면) — 우측 amber 영역에 합성. */}
+      {/* 같은 character group(c9801fb1...의 state 638fadc4...), bust 0.55 crop으로 손까지 노출. */}
       {/* eslint-disable-next-line @next/next/no-img-element */}
       <img
-        src={assetUrl('/sprites/characters/user-mascot-bust-south-west.png')}
+        src={assetUrl('/sprites/characters/mascot-supply-bust-south.png')}
         alt=""
         aria-hidden
         draggable={false}
