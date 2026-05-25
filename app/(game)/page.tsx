@@ -19,7 +19,9 @@ import { RankingTop3Card } from './RankingTop3Card';
  *  - 본 페이지는 "오늘 KST 발급분 중 미수령 1건 이상"이면 wide 카드 노출.
  *  - 수령 완료(claimed_at) 시 카드 숨김 → 다음 KST 00:00에 재등장.
  */
-// 이미지 톤과 어울리는 카드 배경색 — 픽셀아트가 투명 영역 위에 떠 보이지 않도록.
+// 메뉴 4카드 — SCREEN-ANALYSIS §6 P0-4(2026-05-25). 코어 4 동선만 그리드 노출.
+// 빠진 4개 진입점:
+//  - 우편함 → 헤더 📬 / 도감 → 프로필 / 프로필 → 바텀네비 👤 / 랭킹 → 홈 랭킹 카드 "전체 →"
 const MENU = [
   {
     href: '/enhance',
@@ -51,38 +53,6 @@ const MENU = [
     desc: '보스 도전',
     bg: '/sprites/hub/raid.png',
     tint: '#3a1419',
-    scale: 1,
-  },
-  {
-    href: '/mail',
-    label: '우편함',
-    desc: '보상·메시지 수령',
-    bg: '/sprites/hub/mail.png',
-    tint: '#3a2406',
-    scale: 1,
-  },
-  {
-    href: '/me/codex',
-    label: '도감',
-    desc: '수집·최고 강화',
-    bg: '/sprites/hub/codex.png',
-    tint: '#1f1a36',
-    scale: 1,
-  },
-  {
-    href: '/me',
-    label: '프로필',
-    desc: '내 정보·통계',
-    bg: '/sprites/hub/profile.png',
-    tint: '#1a2438',
-    scale: 1,
-  },
-  {
-    href: '/leaderboard',
-    label: '랭킹',
-    desc: '최강자 순위',
-    bg: '/sprites/hub/ranking.png',
-    tint: '#3d2a08',
     scale: 1,
   },
 ] as const;
