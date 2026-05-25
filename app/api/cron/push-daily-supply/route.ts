@@ -34,6 +34,18 @@ type Row = { user_id: string };
 export async function GET(req: Request) {
   if (!isAuthorized(req)) return new Response('forbidden', { status: 403 });
 
+  // 멱등 게이트 — 오늘 KST 이미 발송했으면 skip. 매 30분 fallback cron이 안전하게 재시도 가능.
+  // INSERT ON CONFLICT DO NOTHING 결과 0 row면 이미 발송됨(=skip).
+  const claim = (await db.execute(sql`
+    insert into daily_supply_broadcasts (kst_day)
+    values ((now() at time zone 'Asia/Seoul')::date)
+    on conflict (kst_day) do nothing
+    returning kst_day
+  `)) as unknown as Array<{ kst_day: string }>;
+  if (claim.length === 0) {
+    return Response.json({ ok: true, skipped: true, reason: 'already_sent_today', kind: 'push-daily-supply' });
+  }
+
   // 구독이 1건 이상 있는 유저 중 push_supply ON. 한 번에 모두 조회 후 chunk 발송.
   // (DAU 1k 이하 가정. 만 단위가 되면 페이지네이션 필요.)
   const rows = (await db.execute(sql`
@@ -65,6 +77,13 @@ export async function GET(req: Request) {
     goneSum += res.gone;
     failedSum += res.failed;
   }
+
+  // 발송 통계 기록 (이미 INSERT된 row 업데이트)
+  await db.execute(sql`
+    update daily_supply_broadcasts
+    set recipients = ${rows.length}
+    where kst_day = (now() at time zone 'Asia/Seoul')::date
+  `);
 
   return Response.json({
     ok: true,

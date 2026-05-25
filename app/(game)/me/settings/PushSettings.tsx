@@ -11,6 +11,7 @@ import {
 import {
   registerPushSubscriptionAction,
   setPushCategoryAction,
+  setPushEnhanceModeAction,
   unregisterPushSubscriptionAction,
 } from '@/lib/push/actions';
 
@@ -33,6 +34,7 @@ export function PushSettings(props: {
   initialEnhance: boolean;
   initialRaid: boolean;
   initialSupply: boolean;
+  initialEnhanceMode: 'instant' | 'batched';
 }) {
   const [supportKind, setSupportKind] = useState<string | null>(null);
   const [permission, setPermission] = useState<NotificationPermission | null>(null);
@@ -40,6 +42,7 @@ export function PushSettings(props: {
   const [enhance, setEnhance] = useState(props.initialEnhance);
   const [raid, setRaid] = useState(props.initialRaid);
   const [supply, setSupply] = useState(props.initialSupply);
+  const [enhanceMode, setEnhanceMode] = useState<'instant' | 'batched'>(props.initialEnhanceMode);
   const [pending, startTransition] = useTransition();
 
   useEffect(() => {
@@ -141,11 +144,43 @@ export function PushSettings(props: {
 
       <Toggle
         label="강화 완료"
-        hint="30분 간격 그룹 알림 — '강화 N건 완료'"
+        hint={enhanceMode === 'instant' ? '슬롯마다 즉시 알림' : '30분 묶음 알림'}
         on={enhance}
         disabled={togglesDisabled || pending}
         onChange={(v) => flip('enhance', v)}
       />
+      {enhance ? (
+        <div className="-mt-1 ml-6 mb-1 flex gap-1 px-3 text-[10px]">
+          <button
+            type="button"
+            disabled={togglesDisabled || pending}
+            onClick={() => {
+              setEnhanceMode('instant');
+              startTransition(async () => {
+                const r = await setPushEnhanceModeAction({ mode: 'instant' });
+                if (!r.ok) setEnhanceMode('batched');
+              });
+            }}
+            className={`rounded-full px-2 py-0.5 ${enhanceMode === 'instant' ? 'bg-emerald-500 text-white' : 'bg-zinc-200 text-zinc-600 dark:bg-zinc-800 dark:text-zinc-400'}`}
+          >
+            즉시
+          </button>
+          <button
+            type="button"
+            disabled={togglesDisabled || pending}
+            onClick={() => {
+              setEnhanceMode('batched');
+              startTransition(async () => {
+                const r = await setPushEnhanceModeAction({ mode: 'batched' });
+                if (!r.ok) setEnhanceMode('instant');
+              });
+            }}
+            className={`rounded-full px-2 py-0.5 ${enhanceMode === 'batched' ? 'bg-emerald-500 text-white' : 'bg-zinc-200 text-zinc-600 dark:bg-zinc-800 dark:text-zinc-400'}`}
+          >
+            30분 묶음
+          </button>
+        </div>
+      ) : null}
       <Toggle
         label="레이드 종료"
         hint="6시간 만료 후 보상 안내"

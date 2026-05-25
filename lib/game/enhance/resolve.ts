@@ -167,11 +167,16 @@ export async function resolveEnhance(input: ResolveInput): Promise<ResolveResult
     throw new EnhanceError('JOB_NOT_FOUND'); // 동시 정산 패자/이미 처리 → 멱등 no-op
   }
 
-  // 푸시 그룹화 누적(BALANCE §11). 실패해도 게임 트랜잭션은 성공으로 처리 — 알림은 best-effort.
+  // 푸시 — 사용자 mode에 따라 즉시(instant) 또는 30분 그룹화(batched). best-effort.
+  // catalog name도 전달해서 즉시 알림에 "{아이템} +N → +M" 노출.
   const userIdStr = String(job.user_id);
-  appendEnhancePending(userIdStr, { fromLevel, toLevel, outcome }).catch((e) => {
-    console.warn('[push] enhance pending append failed', e);
-  });
+  (async () => {
+    const info = (await db.execute(sql`
+      select name as item_ko from catalog_items where id = ${catalogItemId} limit 1
+    `)) as unknown as Array<{ item_ko: string }>;
+    const itemKo = info[0]?.item_ko;
+    await appendEnhancePending(userIdStr, { fromLevel, toLevel, outcome }, itemKo);
+  })().catch((e) => console.warn('[push] enhance append failed', e));
 
   return { jobId, equipmentInstanceId, outcome, fromLevel, toLevel, effectiveRateBp: effBp };
 }

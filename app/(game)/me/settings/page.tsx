@@ -27,6 +27,7 @@ export default async function SettingsPage() {
       pushEnhance: profiles.pushEnhance,
       pushRaid: profiles.pushRaid,
       pushSupply: profiles.pushSupply,
+      pushEnhanceMode: profiles.pushEnhanceMode,
     })
     .from(profiles)
     .where(eq(profiles.id, userId))
@@ -49,6 +50,7 @@ export default async function SettingsPage() {
           initialEnhance={p?.pushEnhance ?? true}
           initialRaid={p?.pushRaid ?? true}
           initialSupply={p?.pushSupply ?? true}
+          initialEnhanceMode={p?.pushEnhanceMode ?? 'instant'}
         />
       </Section>
 

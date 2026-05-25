@@ -7,12 +7,20 @@
       "schedule": "0 18 * * *"
     },
     {
+      "path": "/api/cron/resolve-enhance",
+      "schedule": "*/10 * * * *"
+    },
+    {
+      "path": "/api/cron/settle-raid",
+      "schedule": "*/5 * * * *"
+    },
+    {
       "path": "/api/cron/push-flush",
       "schedule": "*/5 * * * *"
     },
     {
       "path": "/api/cron/push-daily-supply",
-      "schedule": "0 15 * * *"
+      "schedule": "0,30 15-23 * * *"
     }
   ]
 }

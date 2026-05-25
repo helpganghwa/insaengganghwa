@@ -38,28 +38,32 @@ type FlushRow = { user_id: string; items: unknown[] };
 export async function GET(req: Request) {
   if (!isAuthorized(req)) return new Response('forbidden', { status: 403 });
 
-  // DELETE … RETURNING으로 묶인 행 회수(원자적). enhance 카테고리만.
+  // 재시도 패턴 — SELECT(읽기만) → 발송 시도 → 성공한 user_id만 DELETE.
+  // 발송 실패한 row는 push_pending에 남아 다음 5분 cron에서 자동 재시도.
   const rows = (await db.execute(sql`
-    delete from push_pending
+    select user_id::text user_id, items
+    from push_pending
     where category = 'enhance'::push_category
       and first_at + interval '${sql.raw(String(WINDOW_MIN))} minutes' <= now()
-    returning user_id::text user_id, items
   `)) as unknown as FlushRow[];
 
   if (rows.length === 0) {
     return Response.json({ ok: true, flushed: 0, kind: 'push-flush' });
   }
 
-  // 유저별 발송 — 묶음 메시지 생성.
   let sent = 0;
   let failed = 0;
+  const sentUserIds: string[] = [];
   await Promise.all(
     rows.map(async (r) => {
       const items = Array.isArray(r.items) ? r.items : [];
       const n = items.length;
-      if (n === 0) return;
-      const title =
-        n === 1 ? '강화 결과 확인' : `강화 ${n}건 완료`;
+      if (n === 0) {
+        // 빈 items도 정리해야 row 영구 남음 방지 — 성공으로 처리.
+        sentUserIds.push(r.user_id);
+        return;
+      }
+      const title = n === 1 ? '강화 결과 확인' : `강화 ${n}건 완료`;
       const body = describeBatch(items);
       try {
         const res = await sendPushToUser(r.user_id, {
@@ -69,8 +73,15 @@ export async function GET(req: Request) {
           tag: 'enhance',
           category: 'enhance',
         });
-        if (res.ok > 0) sent++;
-        else failed++;
+        if (res.ok > 0) {
+          sent++;
+          sentUserIds.push(r.user_id);
+        } else if (res.gone > 0 && res.ok === 0 && res.failed === 0) {
+          // 구독 다 없음(전부 410으로 정리됨) — row도 정리. 재시도 무의미.
+          sentUserIds.push(r.user_id);
+        } else {
+          failed++;
+        }
       } catch (e) {
         failed++;
         console.warn('[push-flush] send failed', r.user_id, e);
@@ -78,7 +89,23 @@ export async function GET(req: Request) {
     }),
   );
 
-  return Response.json({ ok: true, flushed: rows.length, sent, failed, kind: 'push-flush' });
+  // 성공한 user_id의 row만 DELETE. 실패는 다음 cron에서 재시도.
+  if (sentUserIds.length > 0) {
+    await db.execute(sql`
+      delete from push_pending
+      where category = 'enhance'::push_category
+        and user_id::text = any(${sentUserIds}::text[])
+    `);
+  }
+
+  return Response.json({
+    ok: true,
+    candidates: rows.length,
+    sent,
+    failed,
+    retried: failed,
+    kind: 'push-flush',
+  });
 }
 
 function describeBatch(items: unknown[]): string {

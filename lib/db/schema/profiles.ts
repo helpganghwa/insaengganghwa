@@ -5,8 +5,11 @@
  * Drizzle은 `public`만 다룬다(`id`는 auth.users.id 값을 그대로 PK로 사용).
  * 등급/시즌/천장/자가통계 컬럼 없음. `diamond` 변동은 항상 트랜잭션+감사(직접 UPDATE 금지).
  */
-import { pgTable, uuid, text, bigint, boolean, integer, timestamp } from 'drizzle-orm/pg-core';
+import { pgTable, pgEnum, uuid, text, bigint, boolean, integer, timestamp } from 'drizzle-orm/pg-core';
 import { sql } from 'drizzle-orm';
+
+/** 강화 푸시 모드 — instant(슬롯별 즉시) | batched(30분 그룹화). 기본 instant. */
+export const pushEnhanceModeEnum = pgEnum('push_enhance_mode', ['instant', 'batched']);
 
 export const profiles = pgTable('profiles', {
   /** = auth.users.id (Supabase). FK는 DB 레벨에서 auth.users 참조(마이그레이션에서 설정). */
@@ -29,6 +32,8 @@ export const profiles = pgTable('profiles', {
   pushEnhance: boolean('push_enhance').notNull().default(true),
   pushRaid: boolean('push_raid').notNull().default(true),
   pushSupply: boolean('push_supply').notNull().default(true),
+  /** 강화 모드 — instant(즉시) | batched(30분 묶음). 기본 instant. */
+  pushEnhanceMode: pushEnhanceModeEnum('push_enhance_mode').notNull().default('instant'),
   createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
   updatedAt: timestamp('updated_at', { withTimezone: true }).notNull().defaultNow(),
 });

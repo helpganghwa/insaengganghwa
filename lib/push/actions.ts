@@ -78,3 +78,16 @@ export async function setPushCategoryAction(input: {
   );
   return { ok: true };
 }
+
+/** 강화 알림 모드 갱신 — instant(즉시) | batched(30분 묶음). */
+export async function setPushEnhanceModeAction(input: {
+  mode: 'instant' | 'batched';
+}): Promise<{ ok: boolean }> {
+  const userId = await getSessionUserId();
+  if (!userId) return { ok: false };
+  if (input.mode !== 'instant' && input.mode !== 'batched') return { ok: false };
+  await db.execute(
+    sql`update profiles set push_enhance_mode = ${input.mode}::push_enhance_mode, updated_at = now() where id = ${userId}::uuid`,
+  );
+  return { ok: true };
+}
