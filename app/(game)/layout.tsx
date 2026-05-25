@@ -1,10 +1,11 @@
 import { redirect } from 'next/navigation';
-import { and, eq, lte, sql } from 'drizzle-orm';
+import { and, eq, gt, isNull, lte, or, sql } from 'drizzle-orm';
 
 import { getSessionUserId } from '@/lib/auth/session';
 import { db } from '@/lib/db/client';
 import { withTimeout, DbTimeoutError } from '@/lib/db/with-timeout';
 import { enhancementJobs } from '@/lib/db/schema/enhance';
+import { mailbox } from '@/lib/db/schema/mailbox';
 import { ensureDailyMail } from '@/lib/game/mailbox';
 import { AppHeader } from '@/components/AppHeader';
 import { BottomNav } from '@/components/BottomNav';
@@ -23,29 +24,44 @@ export default async function GameLayout({ children }: { children: React.ReactNo
   // 프로필/스타터 지급은 DB 트리거(auth.users INSERT → handle_new_user) + 기존 유저
   // 백필 마이그레이션이 담당 — 앱 렌더 핫패스에 부트스트랩 없음(hang 위험 제거).
 
-  // BottomNav 알림 dot — 완료 시점 도달한 강화 작업 존재 여부(서버 시계).
-  // 핫패스(모든 인증 페이지에서 1회). 5s 타임아웃 가드 → 매달리면 dot 미표시 폴백.
+  // 알림 dot — 강화 완료 + 우편 미수령. 핫패스(모든 인증 페이지에서 1회).
+  // 5s 타임아웃 가드 + Promise.all로 두 쿼리 병렬(§11.4).
   let hasCompletedEnhance = false;
+  let hasUnreadMail = false;
   try {
-    const [row] = await withTimeout(
-      db
-        .select({ n: sql<number>`count(*)::int` })
-        .from(enhancementJobs)
-        .where(
-          and(
-            eq(enhancementJobs.userId, userId),
-            eq(enhancementJobs.status, 'running'),
-            lte(enhancementJobs.completeAt, sql`now()`),
+    const [enhanceRow, mailRow] = await withTimeout(
+      Promise.all([
+        db
+          .select({ n: sql<number>`count(*)::int` })
+          .from(enhancementJobs)
+          .where(
+            and(
+              eq(enhancementJobs.userId, userId),
+              eq(enhancementJobs.status, 'running'),
+              lte(enhancementJobs.completeAt, sql`now()`),
+            ),
           ),
-        ),
+        // 우편 미수령(만료 안 됨). exists 패턴: limit 1 + 존재 여부만.
+        db
+          .select({ id: mailbox.id })
+          .from(mailbox)
+          .where(
+            and(
+              eq(mailbox.userId, userId),
+              isNull(mailbox.claimedAt),
+              or(isNull(mailbox.expiresAt), gt(mailbox.expiresAt, sql`now()`)),
+            ),
+          )
+          .limit(1),
+      ]),
       5000,
-      'layout.enhance-count',
+      'layout.badges',
     );
-    hasCompletedEnhance = (row?.n ?? 0) > 0;
+    hasCompletedEnhance = (enhanceRow[0]?.n ?? 0) > 0;
+    hasUnreadMail = mailRow.length > 0;
   } catch (e) {
     if (!(e instanceof DbTimeoutError)) throw e;
-    // 폴백: 알림 dot 안 보이는 것뿐, 사용자가 강화소 진입 시 정확한 상태 확인됨.
-    console.warn('[layout] enhance-count timeout — dot skipped');
+    console.warn('[layout] badges timeout — dots skipped');
   }
 
   // 일일 보급 — KST 자정 1회 자동 발송(멱등 PK). 핫패스 가벼움(빠른 INSERT/no-op).
@@ -59,11 +75,14 @@ export default async function GameLayout({ children }: { children: React.ReactNo
       <SpritePreloader />
       <KakaoSdkLoader />
       <RouteTransitionOverlay />
-      <AppHeader userId={userId} />
+      <AppHeader userId={userId} hasUnreadMail={hasUnreadMail} />
       <ResourceToastProvider>
         <main className="flex flex-1 flex-col overflow-y-auto">{children}</main>
       </ResourceToastProvider>
-      <BottomNav hasCompletedEnhance={hasCompletedEnhance} />
+      <BottomNav
+        hasCompletedEnhance={hasCompletedEnhance}
+        hasUnreadMail={hasUnreadMail}
+      />
     </div>
   );
 }
