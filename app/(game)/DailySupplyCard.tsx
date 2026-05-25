@@ -9,15 +9,15 @@ import { assetUrl } from '@/lib/asset-versions';
  *  - 오늘(KST) 일일 보급 우편 1건 이상 미수령(claimed_at IS NULL)
  *  - 수령 완료 시 카드 숨김(다음 KST 00:00에 ensureDailyMail로 재등장)
  *
- * 동작: 클릭 → `/mail` 이동(우편함에서 수령). 다른 우편도 같이 확인 가능.
- * 시각: hub/mail.png 픽셀아트 배경 + 메뉴 카드와 동일한 다크 톤. wide 1열.
+ * 동작: 클릭 → `/mail` 이동. 시각: 슬림 banner(h-20) — 메뉴 그리드 가림 최소화.
+ * 캐릭터 트랙 후속: courier(배달부) NPC 채택 시 본 배경 교체 검토(전달 정서 강화).
  */
 export function DailySupplyCard() {
   return (
     <Link
       href="/mail"
       style={{ backgroundColor: '#3a2406' }}
-      className="relative flex aspect-[5/2] overflow-hidden rounded-2xl border border-amber-600/40 transition active:scale-[0.99]"
+      className="relative flex h-20 overflow-hidden rounded-xl border border-amber-600/40 transition active:scale-[0.99]"
     >
       {/* eslint-disable-next-line @next/next/no-img-element */}
       <img
@@ -25,22 +25,22 @@ export function DailySupplyCard() {
         alt=""
         aria-hidden
         draggable={false}
-        className="absolute inset-0 h-full w-full object-cover opacity-90"
+        className="absolute inset-0 h-full w-full object-cover opacity-80"
         style={{ imageRendering: 'pixelated' }}
       />
-      <div className="absolute inset-0 bg-gradient-to-r from-black/85 via-black/55 to-transparent" />
-      <div className="relative z-10 flex w-full items-center justify-between px-4 py-3">
-        <div className="min-w-0">
-          <div className="text-[10px] font-semibold tracking-widest text-amber-300/95">
+      <div className="absolute inset-0 bg-gradient-to-r from-black/90 via-black/60 to-black/30" />
+      <div className="relative z-10 flex w-full items-center gap-3 px-3.5 py-2.5">
+        <span aria-hidden className="text-xl leading-none">📬</span>
+        <div className="min-w-0 flex-1">
+          <div className="text-[10px] font-semibold tracking-wider text-amber-300/95">
             오늘의 보급 도착
           </div>
-          <div className="mt-0.5 text-sm font-bold text-white drop-shadow-sm">
+          <div className="text-[12px] font-bold text-white drop-shadow-sm">
             💎 1,000 + 보급권 3종
           </div>
-          <div className="mt-0.5 text-[10px] text-white/70">우편함에서 수령</div>
         </div>
-        <span aria-hidden className="shrink-0 text-amber-200/90">
-          →
+        <span aria-hidden className="shrink-0 text-[11px] text-amber-200/90">
+          수령하기 →
         </span>
       </div>
     </Link>
