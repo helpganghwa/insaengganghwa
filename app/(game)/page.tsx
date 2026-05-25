@@ -1,11 +1,22 @@
 import Link from 'next/link';
+import { and, eq, isNull, sql } from 'drizzle-orm';
 
 import { assetUrl } from '@/lib/asset-versions';
+import { getSessionUserId } from '@/lib/auth/session';
+import { db } from '@/lib/db/client';
+import { mailbox } from '@/lib/db/schema/mailbox';
+
+import { DailySupplyCard } from './DailySupplyCard';
 
 /**
- * WIREFRAMES §1 — 홈 (메뉴 허브). 2×N 그리드 + 오늘의 보급.
+ * WIREFRAMES §1 — 홈 (메뉴 허브). 오늘의 보급(미수령 시) + 2×N 메뉴 그리드.
  * 각 카드 = Pixellab 픽셀아트 배경(public/sprites/hub/*.png) + 하단 그라데이션
  * 텍스트(이름 + 한 줄 설명). 장비/강화 현황 정보 없음(강화 화면 전용).
+ *
+ * 일일 보급 노출(SCREEN-ANALYSIS §6 P0-1, 2026-05-25):
+ *  - layout이 ensureDailyMail로 매 접속 자동 적재(KST 자정 기준 멱등 PK).
+ *  - 본 페이지는 "오늘 KST 발급분 중 미수령 1건 이상"이면 wide 카드 노출.
+ *  - 수령 완료(claimed_at) 시 카드 숨김 → 다음 KST 00:00에 재등장.
  */
 // 이미지 톤과 어울리는 카드 배경색 — 픽셀아트가 투명 영역 위에 떠 보이지 않도록.
 const MENU = [
@@ -75,9 +86,31 @@ const MENU = [
   },
 ] as const;
 
-export default function HomePage() {
+export default async function HomePage() {
+  const userId = await getSessionUserId();
+  // (game) layout이 가드하므로 정상 흐름엔 null 아님. 폴백 안전.
+  let hasUnclaimedDaily = false;
+  if (userId) {
+    // 오늘 KST 발급된 일일 보급 우편 중 미수령 1건 이상 — `daily` sender_label 일치.
+    // `(created_at AT TIME ZONE 'Asia/Seoul')::date = KST today` 로 오늘분만 필터.
+    const r = (await db
+      .select({ n: sql<number>`count(*)::int` })
+      .from(mailbox)
+      .where(
+        and(
+          eq(mailbox.userId, userId),
+          eq(mailbox.senderLabel, '일일 보급'),
+          isNull(mailbox.claimedAt),
+          sql`(${mailbox.createdAt} at time zone 'Asia/Seoul')::date = (now() at time zone 'Asia/Seoul')::date`,
+        ),
+      )
+      .limit(1)) as Array<{ n: number }>;
+    hasUnclaimedDaily = (r[0]?.n ?? 0) > 0;
+  }
+
   return (
     <div className="flex flex-col gap-4 px-4 py-4">
+      {hasUnclaimedDaily ? <DailySupplyCard /> : null}
       <div className="grid grid-cols-2 gap-3">
         {MENU.map((m) => (
           <Link
