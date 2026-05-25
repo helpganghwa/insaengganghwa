@@ -65,61 +65,67 @@ async function sleep(ms: number) {
   return new Promise((r) => setTimeout(r, ms));
 }
 
-// 인생강화 공식 마스코트 v2(2026-05-25) — 일본 애니메이션 풍 픽셀 일러스트.
-// 레퍼런스(엘프·검사·모험가): 6~7등신 슬림 어른 비례, anime 일러스트의 픽셀화,
-// 풍성한 그라데이션 머리, 큰 anime 눈, 빨강-갈색 outline, gradient cel shading.
+// 마스코트 v3(2026-05-25) — 일본 anime/manga 결 강화 + 대장장이 완전 제거.
+// 레퍼런스: 엘프(녹색드레스)·검사(빨강머리)·모험가(금발) — Japanese anime/JRPG illustration의
+// 픽셀 변환. doll-like 얼굴, ahoge, gradient 머리, pastel jewel 팔레트.
 const DESCRIPTION =
-  'anime JRPG illustration pixel art of a full body fantasy adventurer hero character, ' +
-  // 비례 — 어른 슬림 6.5~7등신
-  '7-heads-tall slim adult proportions, long legs and slim torso, ' +
-  'NOT chibi NOT super deformed NOT cute baby proportions, ' +
-  // 포즈
-  'standing centered front-facing T-pose, slight relaxed hip stance, ' +
-  // 얼굴 — anime 결
-  'detailed anime style face: large expressive eyes with multiple shining highlights, ' +
-  'small refined nose, small detailed mouth, calm confident expression, soft cheek blush, ' +
-  // 머리카락 — 풍성·바람결·그라데이션 (레퍼런스 핵심)
-  'voluminous flowing detailed hair with multiple gradient color tones, ' +
-  'wind-blown wavy strands cascading down past shoulders, ' +
-  'medium-length warm chestnut brown hair with golden amber highlights and darker root shadow, ' +
-  // 의상 — 디테일 풍부, 다중 톤
-  'wearing a cream high-collared sleeveless tunic with subtle gradient shading, ' +
-  'brown leather harness straps with iron buckles crossing the chest, ' +
-  'dark forest green hooded long cloak with gradient shading flowing behind from one shoulder, ' +
-  'fingerless leather gloves, ' +
-  'fitted dark green pants with cloth wrap detail, ' +
-  'sturdy laced brown leather boots with metal eyelets, ' +
-  'small leather belt pouch on hip, ' +
-  // 소품 — 작은 망치(인생강화 시그니처)
-  'right hand holding a small ornate iron forge hammer with detailed wooden handle, ' +
-  // 결·스타일 (가장 중요)
-  'high quality anime illustration pixel art style, ' +
-  'reference look: detailed 2D RPG character illustration converted to pixel art, ' +
-  'crisp dark reddish-brown outline rim around silhouette (NOT pure black outline), ' +
-  'rich gradient cel shading with 3-4 tone steps on hair fabric and skin (NOT flat shading), ' +
-  'detailed individual pixels visible but with smooth color transitions, ' +
+  // 스타일 첫 토큰 — Japanese anime 강조
+  'beautiful Japanese anime manga style pixel art character illustration, ' +
+  'detailed JRPG game character portrait converted to pixel art, ' +
+  // 캐릭터 정체성 — 대장장이 X, 우아한 모험가
+  'an elegant young fantasy adventurer character, gender-neutral bishōnen/bishōjo, ' +
+  'full body standing pose centered front-facing T-pose, ' +
+  // 비례 — 슬림 어른 7등신
+  'slim 7-heads-tall adult anatomy with long legs and slim torso, ' +
+  'NOT chibi NOT super deformed NOT cute baby NOT short proportions, ' +
+  // 얼굴 — doll-like anime 핵심
+  'delicate doll-like anime face: large round expressive doe eyes with multiple bright shining highlights and detailed eyelashes, ' +
+  'small refined button nose, small petal-pink lips with very subtle gentle smile, ' +
+  'pale porcelain skin with soft pink cheek blush, ' +
+  // 머리카락 — 풍성·바람결·그라데이션·ahoge
+  'voluminous long flowing hair cascading past shoulders with rich smooth gradient color, ' +
+  'warm chestnut brown to golden amber tips with darker root shadow, ' +
+  'individual wind-swept wavy hair strands visible, single ahoge antenna strand on top of head, ' +
+  // 의상 — 우아한 판타지, 무기 없음
+  'wearing elegant fantasy adventurer outfit: ' +
+  'cream sleeveless high-collared turtleneck top with subtle gold trim and gradient shading, ' +
+  'brown leather corset belt with iron buckle wrapping the waist, ' +
+  'deep forest green long hooded cape with gradient fading to teal at edges flowing behind from shoulders, ' +
+  'fitted dark teal pants with leather wraps at knees, ' +
+  'knee-high laced brown leather boots with metal eyelets, ' +
+  'small leather satchel pouch on hip, delicate gold pendant necklace, ' +
+  // 손·자세 — 무기/도구 절대 없음
+  'both hands relaxed empty at sides (NO weapons NO hammer NO sword NO staff NO bow NO tools NO items in hands), ' +
+  'graceful calm confident heroic stance, ' +
+  // 결 (가장 중요)
+  'high quality Japanese anime illustration art style with painterly soft details, ' +
+  'rich gradient cel shading with 4 tone steps per area on hair fabric and skin (NOT flat shading), ' +
+  'crisp dark reddish-brown outline rim around silhouette (NOT black outline NOT cartoon outline), ' +
+  'subtle anti-aliasing pixels for smooth color transitions, ' +
+  'detailed individual pixels visible with delicate manga-like rendering, ' +
   // 팔레트
-  'warm multi-tone palette: cream skin, chestnut brown, amber gold, forest green, ' +
-  'iron grey accents, soft cream highlights, dark reddish-brown shadows, ' +
+  'warm Japanese RPG art palette: cream beige, chestnut brown, golden amber, ' +
+  'forest green, dark teal, soft petal pink, iron grey accents, ' +
   // 배경
-  'pure white background, character only, no scenery, no UI elements, no text, no border';
+  'pure white background, character only, no scenery, no other characters, no UI, no text';
 
 async function main() {
   console.log('[create_character] queuing...');
   const createdText = await callTool('create_character', {
     description: DESCRIPTION,
-    name: 'Insaeng-Mascot-V2',
+    name: 'Insaeng-Mascot-V3',
     body_type: 'humanoid',
     mode: 'pro',
-    // 6.5~7등신 슬림 어른 비례 — custom으로 강제(preset stylized 3등신 폐기)
+    // 슬림 어른 비례 — head 조금 더 작게(0.8), 다리 더 길게(1.7) → 일본 anime 결
     proportions:
-      '{"type":"custom","head_size":0.85,"arms_length":1.3,"legs_length":1.6,"shoulder_width":0.8,"hip_width":0.7}',
+      '{"type":"custom","head_size":0.8,"arms_length":1.3,"legs_length":1.7,"shoulder_width":0.75,"hip_width":0.7}',
     size: 128,
-    view: 'side',                                      // 정면 캐릭터 view (low top-down 아님)
-    outline: 'single color outline',                   // 빨강-갈색 rim
-    shading: 'detailed shading',                       // gradient cel 강화
+    view: 'side',
+    // 'selective outline' — anime 결에 가까움(검정 outline 폐기)
+    outline: 'selective outline',
+    shading: 'detailed shading',
     detail: 'high detail',
-    text_guidance_scale: 9,                            // prompt 충실도 약간 ↑
+    text_guidance_scale: 10, // prompt 충실도 더 ↑ (스타일 핵심 키워드 살리기)
   });
   console.log('[create_character] response:\n', createdText.slice(0, 600));
 
@@ -146,7 +152,7 @@ async function main() {
       if (south) {
         const img = await fetch(south[1]!);
         const buf = Buffer.from(await img.arrayBuffer());
-        const file = join(OUT, `mcp-mascot-v2-${charId}-south.png`);
+        const file = join(OUT, `mcp-mascot-v3-${charId}-south.png`);
         writeFileSync(file, buf);
         console.log(`✓ saved ${file} (${buf.length}B)`);
         console.log(`id: ${charId} — full text:\n${text.slice(0, 1500)}`);
