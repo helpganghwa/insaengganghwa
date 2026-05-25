@@ -52,10 +52,13 @@ async function sleep(ms: number) {
 }
 
 const EDIT_DESC =
-  'cheerful big bright smile with eyes happily curved, ' +
+  // 눈은 명확히 뜬 채로(이전 closed-eye smile 폐기) + 부드러운 미소
+  'EYES WIDE OPEN looking forward with bright sparkling round anime pupils visible, ' +
+  'NOT closed-eye smile NOT happy curved eyes, ' +
+  'gentle warm soft smile on small mouth, ' +
   'holding a wrapped gift package box with both hands extended forward, ' +
   'presenting and offering the supply package toward the viewer, ' +
-  'warm welcoming gesture, joyful expression, ' +
+  'warm welcoming gesture, cheerful confident expression, ' +
   'small floating sparkle effects around the package';
 
 console.log('[create_character_state] queuing for', SOURCE_ID);

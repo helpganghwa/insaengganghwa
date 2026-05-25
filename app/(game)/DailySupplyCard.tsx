@@ -30,11 +30,11 @@ export function DailySupplyCard() {
         style={{ imageRendering: 'pixelated' }}
       />
 
-      {/* 마스코트(보급 들고 웃는 state, 정면) — 우측 amber 영역에 합성. */}
-      {/* 같은 character group(c9801fb1...의 state 638fadc4...), bust 0.55 crop으로 손까지 노출. */}
+      {/* 마스코트(보급 들고 웃는 state v2, 눈 뜬 미소). 정면 south + 0.55 bust crop. */}
+      {/* 같은 character group(59ead3b2 3rd state, id 0fd71429...). */}
       {/* eslint-disable-next-line @next/next/no-img-element */}
       <img
-        src={assetUrl('/sprites/characters/mascot-supply-bust-south.png')}
+        src={assetUrl('/sprites/characters/mascot-supply-v2-bust-south.png')}
         alt=""
         aria-hidden
         draggable={false}

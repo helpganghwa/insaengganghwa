@@ -5,7 +5,7 @@ import { existsSync } from 'node:fs';
 
 const DIRECTIONS = ['south', 'south-east', 'south-west', 'east', 'west', 'north', 'north-east', 'north-west'];
 const ROOT = 'public/sprites/characters';
-const PREFIX = 'mascot-supply';
+const PREFIX = process.argv[2] ?? 'mascot-supply';
 
 async function bbox(src: string): Promise<{ top: number; cropH: number; left: number; right: number }> {
   const { data, info } = await sharp(src).raw().toBuffer({ resolveWithObject: true });
