@@ -115,3 +115,12 @@ export async function getLeaderboardPayload(
   const mine = idx < 0 ? null : { rank: idx + 1, value: rows[idx]!.value };
   return { top, mine };
 }
+
+/** 홈 카드 등 — userId 무관 Top N. 캐싱된 row 재사용. */
+export async function getRankingTop(
+  metric: LeaderboardMetric,
+  n: number,
+): Promise<LeaderboardEntry[]> {
+  const rows = (await safeRows(metric)).sort((a, b) => b.value - a.value);
+  return rows.slice(0, n).map((r, i) => ({ ...r, rank: i + 1 }));
+}

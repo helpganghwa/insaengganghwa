@@ -7,7 +7,6 @@ import { equipmentInstances } from '@/lib/db/schema/equipment';
 import { enhancementJobs } from '@/lib/db/schema/enhance';
 import { transcendLogs } from '@/lib/db/schema/transcend';
 import { transcendFodderForStep } from '@/lib/game/balance';
-import { recordTranscendMax } from '@/lib/game/world-history/record';
 
 /**
  * 초월 — GDD §3.3 / BALANCE §2 / SCHEMA §4. **즉시·무RNG**(제물 충족 시 100%).
@@ -39,10 +38,10 @@ export type TranscendResult = {
   fodderConsumed: number;
 };
 
-export async function performTranscend(input: TranscendInput): Promise<TranscendResult> {
+export function performTranscend(input: TranscendInput): Promise<TranscendResult> {
   const { userId, equipmentInstanceId } = input;
 
-  const result = await db.transaction(async (tx) => {
+  return db.transaction(async (tx) => {
     const [target] = await tx
       .select({
         id: equipmentInstances.id,
@@ -103,23 +102,6 @@ export async function performTranscend(input: TranscendInput): Promise<Transcend
       fodderInstanceIds: fodderIds,
     });
 
-    return { equipmentInstanceId, fromT, toT, fodderConsumed: need, catalogItemId: target.catalogItemId };
+    return { equipmentInstanceId, fromT, toT, fodderConsumed: need };
   });
-
-  // 세계역사 milestone — T10 첫 도달 시 적재(best-effort). 닉네임·아이템명 1쿼리.
-  if (result.toT === 10) {
-    (async () => {
-      const info = (await db.execute(sql`
-        select p.nickname, ci.name as item_ko
-        from profiles p, catalog_items ci
-        where p.id = ${userId}::uuid and ci.id = ${result.catalogItemId}
-        limit 1
-      `)) as unknown as Array<{ nickname: string; item_ko: string }>;
-      if (info[0]) {
-        await recordTranscendMax(userId, info[0].nickname, info[0].item_ko);
-      }
-    })().catch((e) => console.warn('[world] transcend max failed', e));
-  }
-
-  return result;
 }

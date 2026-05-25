@@ -7,7 +7,7 @@ import { db } from '@/lib/db/client';
 import { mailbox } from '@/lib/db/schema/mailbox';
 
 import { DailySupplyCard } from './DailySupplyCard';
-import { WorldHistoryCard } from './WorldHistoryCard';
+import { RankingTop3Card } from './RankingTop3Card';
 
 /**
  * WIREFRAMES §1 — 홈 (메뉴 허브). 오늘의 보급(미수령 시) + 2×N 메뉴 그리드.
@@ -143,7 +143,7 @@ export default async function HomePage() {
           </Link>
         ))}
       </div>
-      <WorldHistoryCard />
+      <RankingTop3Card />
     </div>
   );
 }
