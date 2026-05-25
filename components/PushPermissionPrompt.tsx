@@ -91,11 +91,11 @@ export function PushPermissionPrompt({
     <div
       role="dialog"
       aria-modal="true"
-      className="fixed inset-0 z-50 flex items-end justify-center bg-black/60 px-4 pb-6"
+      className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 p-4 backdrop-blur-md"
       onClick={dismiss}
     >
       <div
-        className="w-full max-w-[358px] rounded-2xl bg-white p-5 shadow-xl dark:bg-zinc-900"
+        className="w-full max-w-[358px] rounded-2xl bg-white p-5 shadow-[0_0_40px_rgba(245,158,11,0.18)] ring-1 ring-amber-700/40 dark:bg-zinc-900"
         onClick={(e) => e.stopPropagation()}
       >
         {step === 'pitch' ? (

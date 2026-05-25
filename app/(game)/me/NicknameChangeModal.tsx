@@ -66,11 +66,11 @@ export function NicknameChangeModal({
       role="dialog"
       aria-modal="true"
       aria-label="닉네임 변경"
-      className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-4"
+      className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 p-4 backdrop-blur-md"
       onClick={onClose}
     >
       <div
-        className="w-full max-w-xs rounded-2xl bg-white p-4 dark:bg-zinc-950"
+        className="w-full max-w-xs rounded-2xl bg-white p-4 shadow-[0_0_40px_rgba(245,158,11,0.18)] ring-1 ring-amber-700/40 dark:bg-zinc-950"
         onClick={(e) => e.stopPropagation()}
       >
         <h2 className="text-sm font-bold">닉네임 변경</h2>

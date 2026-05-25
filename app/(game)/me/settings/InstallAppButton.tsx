@@ -106,11 +106,11 @@ export function InstallAppButton() {
 
       {iosOpen ? (
         <div
-          className="fixed inset-0 z-50 flex items-end justify-center bg-black/50 sm:items-center"
+          className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 p-4 backdrop-blur-md"
           onClick={() => setIosOpen(false)}
         >
           <div
-            className="m-4 max-w-sm rounded-xl bg-white p-4 text-sm shadow-xl dark:bg-zinc-950"
+            className="m-4 max-w-sm rounded-xl bg-white p-4 text-sm shadow-[0_0_40px_rgba(245,158,11,0.18)] ring-1 ring-amber-700/40 dark:bg-zinc-950"
             onClick={(e) => e.stopPropagation()}
           >
             <h3 className="mb-2 text-base font-semibold">iOS 홈 화면 추가</h3>

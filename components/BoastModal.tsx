@@ -223,11 +223,11 @@ export function BoastModal({
       role="dialog"
       aria-modal="true"
       aria-label="자랑하기"
-      className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 p-4"
+      className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 p-4 backdrop-blur-md"
       onClick={onClose}
     >
       <div
-        className="w-full max-w-xs overflow-hidden rounded-2xl bg-white dark:bg-zinc-950"
+        className="w-full max-w-xs overflow-hidden rounded-2xl bg-white shadow-[0_0_40px_rgba(245,158,11,0.18)] ring-1 ring-amber-700/40 dark:bg-zinc-950"
         onClick={(e) => e.stopPropagation()}
       >
         {/* 카톡 메시지 카드 미리보기 — 실제 공유 이미지와 텍스트 */}
