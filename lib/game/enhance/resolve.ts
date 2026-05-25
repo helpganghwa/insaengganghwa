@@ -9,6 +9,7 @@ import {
   levelAfterFail,
 } from '@/lib/game/balance';
 import { appendEnhancePending } from '@/lib/push/pending';
+import { recordEnhanceMilestone } from '@/lib/game/world-history/record';
 import { EnhanceError } from './queue';
 
 /**
@@ -172,6 +173,22 @@ export async function resolveEnhance(input: ResolveInput): Promise<ResolveResult
   appendEnhancePending(userIdStr, { fromLevel, toLevel, outcome }).catch((e) => {
     console.warn('[push] enhance pending append failed', e);
   });
+
+  // 세계역사 milestone(SCHEMA §12) — 사이클 경계 +99/199/299... 성공 도달 시 적재.
+  // 닉네임·아이템명 1쿼리 보강. best-effort, 트랜잭션 분리.
+  if (outcome === 'success' && (toLevel + 1) % 100 === 0) {
+    (async () => {
+      const info = (await db.execute(sql`
+        select p.nickname, ci.name as item_ko
+        from profiles p, catalog_items ci
+        where p.id = ${userIdStr}::uuid and ci.id = ${catalogItemId}
+        limit 1
+      `)) as unknown as Array<{ nickname: string; item_ko: string }>;
+      if (info[0]) {
+        await recordEnhanceMilestone(userIdStr, info[0].nickname, info[0].item_ko, toLevel);
+      }
+    })().catch((e) => console.warn('[world] enhance milestone failed', e));
+  }
 
   return { jobId, equipmentInstanceId, outcome, fromLevel, toLevel, effectiveRateBp: effBp };
 }
