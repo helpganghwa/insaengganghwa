@@ -4,12 +4,7 @@ import { useEffect, useState, useTransition } from 'react';
 import { useRouter } from 'next/navigation';
 
 import { NICKNAME_CHANGE_COST_DIAMOND } from '@/lib/game/balance';
-import {
-  NICKNAME_MAX_LEN,
-  nicknameLen,
-  sanitizeNicknameInput,
-  validateNickname,
-} from '@/lib/game/nickname';
+import { NICKNAME_MAX_LEN, nicknameLen, validateNickname } from '@/lib/game/nickname';
 
 import { changeNicknameAction } from './actions';
 
@@ -90,14 +85,16 @@ export function NicknameChangeModal({
           )}
         </p>
 
+        {/* IME composition 중 자모 분리(ㄱ·ㅏ)를 onChange에서 strip하지 않음 — 한글 입력 보존. */}
+        {/* 검증은 변경확인(submit) 시 validateNickname()이 수행. */}
         <input
           value={next}
           onChange={(e) => {
-            // 허용 외 문자(공백·기호·이모지·자모) 즉시 strip + 최대 10자 컷.
-            setNext(sanitizeNicknameInput(e.target.value));
+            setNext(e.target.value);
             setErr(null);
           }}
-          maxLength={NICKNAME_MAX_LEN}
+          // 자모 합성 여유로 약간 크게(10*2=20), 실제 한도는 validateNickname.
+          maxLength={NICKNAME_MAX_LEN * 2}
           placeholder="2~10자 (한글·영문·숫자)"
           className="mt-3 w-full rounded-md border border-zinc-300 bg-transparent px-2.5 py-2 text-sm dark:border-zinc-700"
           autoFocus
