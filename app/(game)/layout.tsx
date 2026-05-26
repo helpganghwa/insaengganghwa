@@ -13,6 +13,7 @@ import { SpritePreloader } from '@/components/SpritePreloader';
 import { RouteTransitionOverlay } from '@/components/RouteTransitionOverlay';
 import { KakaoSdkLoader } from '@/components/KakaoSdkLoader';
 import { ResourceToastProvider } from '@/components/ResourceToast';
+import { VersionUpdateToast } from '@/components/VersionUpdateToast';
 
 /**
  * 인증 필요 라우트 그룹 — WIREFRAMES §0 셸.
@@ -80,6 +81,7 @@ export default async function GameLayout({ children }: { children: React.ReactNo
         <main className="flex flex-1 flex-col overflow-y-auto">{children}</main>
       </ResourceToastProvider>
       <BottomNav hasCompletedEnhance={hasCompletedEnhance} />
+      <VersionUpdateToast />
     </div>
   );
 }
