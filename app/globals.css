@@ -116,10 +116,9 @@
   }
   @keyframes fx-num-shake {
     0%, 100% { transform: translateX(0); }
-    20% { transform: translateX(-4px); }
-    40% { transform: translateX(4px); }
-    60% { transform: translateX(-3px); }
-    80% { transform: translateX(2px); }
+    25% { transform: translateX(-1.5px); }
+    50% { transform: translateX(1.5px); }
+    75% { transform: translateX(-1px); }
   }
   /* 캐릭터는 애니메이션 없이 즉시 표시(opacity 효과 제거 — 사용자 결정 2026-05-26).
      unmount 시 자연 사라짐. */
