@@ -80,11 +80,12 @@ function CountAnim({
 }
 
 /**
- * 카운터 영역 — 카드 텍스트 영역과 겹치지 않게 상단 정렬.
- * 카드 92px 안에 텍스트가 세로 중앙 정렬돼 있어, 카운터는 텍스트 위쪽 공간(상단 ~28px)에 표시.
+ * 카운터/별/원/충격파 공통 영역 — 카드 상단 ~24px 구간(텍스트 상단끝과 카드 상단끝 중앙).
+ * 모든 FX가 같은 위치에 겹쳐 표시되도록 단일 영역으로 통일.
+ * 위치 조정: top-[Npx] (현재 2). 클수록 아래.
  */
-const COUNTER_AREA =
-  'pointer-events-none absolute inset-x-0 top-1 z-30 flex justify-center';
+const FX_CENTER_AREA =
+  'pointer-events-none absolute inset-x-0 top-[2px] h-[22px] z-30 flex items-center justify-center';
 
 function MegaFX({ fromLevel, toLevel }: { fromLevel?: number; toLevel?: number }) {
   const directions = [0, 90, 180, 270];
@@ -98,7 +99,8 @@ function MegaFX({ fromLevel, toLevel }: { fromLevel?: number; toLevel?: number }
           boxShadow: 'inset 0 0 32px 8px rgba(253, 224, 71, 0.4)',
         }}
       />
-      <span className="pointer-events-none absolute inset-0 z-30 flex items-center justify-center">
+      {/* 별 + 카운터 — 카운터 위치(FX_CENTER_AREA)에 겹쳐서 배치. */}
+      <span className={FX_CENTER_AREA}>
         {directions.map((deg) => (
           <span
             key={deg}
@@ -108,44 +110,39 @@ function MegaFX({ fromLevel, toLevel }: { fromLevel?: number; toLevel?: number }
             ✦
           </span>
         ))}
-      </span>
-      {fromLevel !== undefined && toLevel !== undefined ? (
-        <span className={COUNTER_AREA}>
+        {fromLevel !== undefined && toLevel !== undefined ? (
           <CountAnim
             from={fromLevel}
             to={toLevel}
             fontSize={22}
             className="relative font-bold text-yellow-100 drop-shadow-[0_0_10px_rgba(253,224,71,0.95)] tabular-nums tracking-tight"
           />
-        </span>
-      ) : null}
+        ) : null}
+      </span>
     </>
   );
 }
 
 function SuccessFX({ fromLevel, toLevel }: { fromLevel?: number; toLevel?: number }) {
   return (
-    <>
-      <span className="pointer-events-none absolute inset-0 z-30 flex items-center justify-center">
-        <span
-          className="animate-fx-success-pop absolute h-20 w-20 rounded-full"
-          style={{
-            background:
-              'radial-gradient(circle, rgba(52, 211, 153, 0.7), rgba(16, 185, 129, 0.3) 50%, transparent 75%)',
-          }}
-        />
-      </span>
+    <span className={FX_CENTER_AREA}>
+      {/* 그린 펄스 — 카운터 뒤. */}
+      <span
+        className="animate-fx-success-pop absolute h-20 w-20 rounded-full"
+        style={{
+          background:
+            'radial-gradient(circle, rgba(52, 211, 153, 0.7), rgba(16, 185, 129, 0.3) 50%, transparent 75%)',
+        }}
+      />
       {fromLevel !== undefined && toLevel !== undefined ? (
-        <span className={COUNTER_AREA}>
-          <CountAnim
-            from={fromLevel}
-            to={toLevel}
-            fontSize={18}
-            className="relative font-bold text-emerald-100 drop-shadow-[0_0_8px_rgba(52,211,153,0.9)] tabular-nums tracking-tight"
-          />
-        </span>
+        <CountAnim
+          from={fromLevel}
+          to={toLevel}
+          fontSize={18}
+          className="relative font-bold text-emerald-100 drop-shadow-[0_0_8px_rgba(52,211,153,0.9)] tabular-nums tracking-tight"
+        />
       ) : null}
-    </>
+    </span>
   );
 }
 
@@ -160,7 +157,7 @@ function HoldFX({ fromLevel, toLevel }: { fromLevel?: number; toLevel?: number }
         }}
       />
       {fromLevel !== undefined && toLevel !== undefined ? (
-        <span className={COUNTER_AREA}>
+        <span className={FX_CENTER_AREA}>
           <CountAnim
             from={fromLevel}
             to={toLevel}
@@ -175,31 +172,28 @@ function HoldFX({ fromLevel, toLevel }: { fromLevel?: number; toLevel?: number }
 
 function DownFX({ fromLevel, toLevel }: { fromLevel?: number; toLevel?: number }) {
   return (
-    <>
-      <span className="pointer-events-none absolute inset-0 z-30 flex items-center justify-center">
-        {[0, 0.15, 0.3].map((delay, i) => (
-          <span
-            key={i}
-            className="absolute h-10 w-10 rounded-full border-red-500"
-            style={{
-              animation: `fx-shockwave 0.9s cubic-bezier(0.16, 1, 0.3, 1) ${delay}s forwards`,
-              opacity: 0,
-              boxShadow: '0 0 12px 2px rgba(239, 68, 68, 0.7)',
-            }}
-          />
-        ))}
-      </span>
+    <span className={FX_CENTER_AREA}>
+      {/* 충격파 — 카운터 뒤. */}
+      {[0, 0.15, 0.3].map((delay, i) => (
+        <span
+          key={i}
+          className="absolute h-10 w-10 rounded-full border-red-500"
+          style={{
+            animation: `fx-shockwave 0.9s cubic-bezier(0.16, 1, 0.3, 1) ${delay}s forwards`,
+            opacity: 0,
+            boxShadow: '0 0 12px 2px rgba(239, 68, 68, 0.7)',
+          }}
+        />
+      ))}
       {fromLevel !== undefined && toLevel !== undefined ? (
-        <span className={COUNTER_AREA}>
-          <CountAnim
-            from={fromLevel}
-            to={toLevel}
-            fontSize={18}
-            className="relative font-bold text-red-100 drop-shadow-[0_0_8px_rgba(239,68,68,0.9)] tabular-nums tracking-tight"
-          />
-        </span>
+        <CountAnim
+          from={fromLevel}
+          to={toLevel}
+          fontSize={18}
+          className="relative font-bold text-red-100 drop-shadow-[0_0_8px_rgba(239,68,68,0.9)] tabular-nums tracking-tight"
+        />
       ) : null}
-    </>
+    </span>
   );
 }
 
