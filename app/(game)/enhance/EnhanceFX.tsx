@@ -36,11 +36,11 @@ const DOWN_POOL = ['fx-char-down-1', 'fx-char-down-2'] as const;
  * 상반신만 카드 안에 보이고 하반신은 overflow-hidden로 잘림.
  */
 function CharOverlay({ cls }: { cls: string }) {
-  // 컨테이너를 카드 위쪽에서 30px만 빠뜨림 → 카드에 캐릭터의 위 25%(머리/얼굴)가 노출.
+  // 우측 머리끝이 카드 상단 끝에 닿게(top-0). 카드에 캐릭터 위 25%(머리/얼굴) 노출.
   // animation 없음(opacity 효과 제거 — preload로 깜빡임 회피).
   return (
     <span
-      className={`fx-char ${cls} pointer-events-none absolute right-[-20px] top-[-30px] h-[400%] aspect-square z-25 drop-shadow-[0_2px_6px_rgba(0,0,0,0.7)]`}
+      className={`fx-char ${cls} pointer-events-none absolute right-[-20px] top-0 h-[400%] aspect-square z-25 drop-shadow-[0_2px_6px_rgba(0,0,0,0.7)]`}
     />
   );
 }
@@ -73,7 +73,7 @@ function MegaFX({ counter }: { counter?: string }) {
           </span>
         ))}
         {counter ? (
-          <span className="animate-fx-counter-modern relative font-bold text-3xl text-yellow-100 drop-shadow-[0_0_10px_rgba(253,224,71,0.95)] tabular-nums tracking-tight">
+          <span className="animate-fx-counter-modern relative font-bold text-2xl text-yellow-100 drop-shadow-[0_0_10px_rgba(253,224,71,0.95)] tabular-nums tracking-tight">
             {counter}
           </span>
         ) : null}
@@ -96,7 +96,7 @@ function SuccessFX({ counter }: { counter?: string }) {
           }}
         />
         {counter ? (
-          <span className="animate-fx-counter-modern relative font-bold text-2xl text-emerald-100 drop-shadow-[0_0_8px_rgba(52,211,153,0.9)] tabular-nums tracking-tight">
+          <span className="animate-fx-counter-modern relative font-bold text-xl text-emerald-100 drop-shadow-[0_0_8px_rgba(52,211,153,0.9)] tabular-nums tracking-tight">
             {counter}
           </span>
         ) : null}
@@ -105,7 +105,7 @@ function SuccessFX({ counter }: { counter?: string }) {
   );
 }
 
-function HoldFX() {
+function HoldFX({ counter }: { counter?: string }) {
   const charCls = useMemo(() => pickRandom(HOLD_POOL), []);
   return (
     <>
@@ -117,11 +117,18 @@ function HoldFX() {
         }}
       />
       <CharOverlay cls={charCls} />
+      {counter ? (
+        <span className="pointer-events-none absolute inset-0 z-30 flex items-center justify-center">
+          <span className="animate-fx-counter-modern relative font-bold text-xl text-zinc-100 drop-shadow-[0_0_8px_rgba(161,161,170,0.9)] tabular-nums tracking-tight">
+            {counter}
+          </span>
+        </span>
+      ) : null}
     </>
   );
 }
 
-function DownFX() {
+function DownFX({ counter }: { counter?: string }) {
   const charCls = useMemo(() => pickRandom(DOWN_POOL), []);
   // 충격파 — 3개 ring을 stagger로 발산(0s, 0.15s, 0.3s).
   return (
@@ -139,6 +146,11 @@ function DownFX() {
             }}
           />
         ))}
+        {counter ? (
+          <span className="animate-fx-counter-modern relative font-bold text-xl text-red-100 drop-shadow-[0_0_8px_rgba(239,68,68,0.9)] tabular-nums tracking-tight">
+            {counter}
+          </span>
+        ) : null}
       </span>
     </>
   );
@@ -147,6 +159,6 @@ function DownFX() {
 export const EnhanceFX = memo(function EnhanceFX({ kind, counter }: Props) {
   if (kind === 'success-mega') return <MegaFX counter={counter} />;
   if (kind === 'success') return <SuccessFX counter={counter} />;
-  if (kind === 'hold') return <HoldFX />;
-  return <DownFX />;
+  if (kind === 'hold') return <HoldFX counter={counter} />;
+  return <DownFX counter={counter} />;
 });

@@ -128,6 +128,17 @@ const CONFIRM_MSGS_READY = [
   '용광로가 으르렁댄다 — 다시 탭하게',
   '오늘은 자네 차례 같군. 다시 탭',
 ] as const;
+// 강화 시도 중(pending) — 결과 도착 전 잠깐 표시.
+const ATTEMPTING_MSGS = [
+  '망치가 불을 부른다…',
+  '심호흡 한 번… 두드린다',
+  '용광로가 으르렁댄다…',
+  '쇠가 빨갛게 운다…',
+  '운명의 망치가 떨어진다',
+  '한 박자, 한 호흡, 한 망치',
+  '대장간이 숨을 죽인다…',
+  '별이 모루 위에 내려앉는다',
+] as const;
 const CONFIRM_MSGS_EARLY = [
   '쇠가 아직 차네. 더 기다리든지, 다시 탭하면 강행',
   '아직 무르익지 않았어. 그래도 가겠다면 다시 탭',
@@ -188,6 +199,7 @@ export function EnhanceSlotCard({
   const [confirm, setConfirm] = useState(false);
   const [confirmLeft, setConfirmLeft] = useState(0); // 확인 카운트다운(초). 0=비활성/만료.
   const [flash, setFlash] = useState<Outcome | null>(null);
+  const [flashToLevel, setFlashToLevel] = useState<number | null>(null); // 결과 후 새 레벨(카운터 표시용)
   const [boast, setBoast] = useState(false);
   const [optimisticDone, setOptimisticDone] = useState(false);
   const [confirmCancel, setConfirmCancel] = useState(false);
@@ -196,6 +208,8 @@ export function EnhanceSlotCard({
   const [confirmReduceLeft, setConfirmReduceLeft] = useState(0);
   const [flashMsg, setFlashMsg] = useState<string | null>(null); // outcome 랜덤 메시지
   const [confirmMsg, setConfirmMsg] = useState<string | null>(null); // 확인 랜덤 메시지
+  const [attempting, setAttempting] = useState(false); // 강화 시도 중(취소/단축 제외)
+  const [attemptingMsg, setAttemptingMsg] = useState<string | null>(null);
 
   useEffect(() => {
     setNowMs(Date.now());
@@ -301,15 +315,20 @@ export function EnhanceSlotCard({
   const doAttempt = () => {
     if (pending) return;
     setConfirm(false);
+    setAttempting(true);
+    setAttemptingMsg(pick(ATTEMPTING_MSGS));
     startTransition(async () => {
       // 결과 트랜잭션 커밋 즉시 반환(후처리는 서버 after). 이 await만 pending.
       const r = await finalizeEnhance(activeJob.jobId);
       if (r.status === 'error') {
+        setAttempting(false);
         alert(r.message);
         return;
       }
       const oc = r.result.outcome as Outcome;
+      setAttempting(false);
       setFlash(oc); // 결과 즉시 표시
+      setFlashToLevel(Number(r.result.toLevel));
       setFlashMsg(pick(OUTCOME_MSGS[oc])); // 판타지 톤 5개 중 랜덤
       // 햅틱(모바일) — prefers-reduced-motion 사용자는 햅틱도 약화/생략.
       // Vibration API 없는 브라우저는 navigator.vibrate undefined → 자동 no-op.
@@ -336,6 +355,7 @@ export function EnhanceSlotCard({
       setTimeout(() => {
         setFlash(null);
         setFlashMsg(null);
+        setFlashToLevel(null);
         router.refresh();
       }, 3000);
     });
@@ -498,10 +518,10 @@ export function EnhanceSlotCard({
           </div>
         </div>
 
-        {confirm && !pending && !flash ? (
+        {confirm && !attempting && !flash ? (
           <div className="pointer-events-none absolute inset-0 z-20 flex flex-col items-center justify-center gap-1 bg-black/55 px-4 text-center backdrop-blur-[2px]">
-            {/* 대장장이 캐릭터 — confirm 단계 dim 위(z-25), 우측 중앙. */}
-            <span className="fx-char fx-char-base pointer-events-none absolute right-[-20px] top-[-30px] h-[400%] aspect-square z-25 drop-shadow-[0_2px_6px_rgba(0,0,0,0.7)]" />
+            {/* 대장장이 캐릭터 — 우측 머리끝이 카드 상단에 닿게. */}
+            <span className="fx-char fx-char-base pointer-events-none absolute right-[-20px] top-0 h-[400%] aspect-square z-25 drop-shadow-[0_2px_6px_rgba(0,0,0,0.7)]" />
             <p className="relative z-30 text-[12px] font-semibold break-keep text-amber-200 drop-shadow-[0_1px_2px_rgba(0,0,0,0.9)]">
               {confirmMsg ??
                 (ready ? '다시 탭하면 강화' : '아직 무르익지 않았다 — 다시 탭하면 강행')}
@@ -512,12 +532,12 @@ export function EnhanceSlotCard({
           </div>
         ) : null}
 
-        {pending && !flash ? (
+        {attempting && !flash ? (
           <div className="pointer-events-none absolute inset-0 z-20 flex flex-col items-center justify-center gap-1 bg-black/55 px-4 text-center backdrop-blur-[2px]">
-            {/* confirm dim 유지 + 강화 시도 중 표시 (시도→결과 사이 비어 보이지 않게). */}
-            <span className="fx-char fx-char-base pointer-events-none absolute right-[-20px] top-[-30px] h-[400%] aspect-square z-25 drop-shadow-[0_2px_6px_rgba(0,0,0,0.7)]" />
-            <p className="relative z-30 text-[12px] font-semibold text-amber-200 drop-shadow-[0_1px_2px_rgba(0,0,0,0.9)]">
-              ⚒️ 강화 중...
+            {/* 시도 → 결과 사이 dim 유지 + 판타지 로어 메시지. */}
+            <span className="fx-char fx-char-base pointer-events-none absolute right-[-20px] top-0 h-[400%] aspect-square z-25 drop-shadow-[0_2px_6px_rgba(0,0,0,0.7)]" />
+            <p className="relative z-30 text-[12px] font-semibold break-keep text-amber-200 drop-shadow-[0_1px_2px_rgba(0,0,0,0.9)]">
+              {attemptingMsg ?? '망치가 불을 부른다…'}
             </p>
           </div>
         ) : null}
@@ -534,7 +554,13 @@ export function EnhanceSlotCard({
                   ? ('success-mega' satisfies FxKind)
                   : (flash satisfies FxKind)
               }
-              counter={flash === 'success' ? `+${activeJob.targetLevel}` : undefined}
+              counter={
+                flash === 'hold'
+                  ? '유지'
+                  : flashToLevel !== null
+                    ? `+${flashToLevel}`
+                    : undefined
+              }
             />
             {/* 판타지 톤 메시지 — 최상위(z-30), 모든 FX·dim 위. */}
             <span className="pointer-events-none absolute inset-x-0 bottom-2 z-30 flex items-center justify-center px-5 text-center">
