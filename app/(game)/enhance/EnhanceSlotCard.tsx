@@ -434,7 +434,7 @@ export function EnhanceSlotCard({
         }}
         className={`relative h-[92px] cursor-pointer overflow-hidden rounded-xl border-2 bg-zinc-950 text-zinc-100 transition active:scale-[0.99] ${
           ready ? 'border-emerald-500' : 'border-zinc-700'
-        } ${flash ? FLASH_CLASS[flash] : ''} ${pending ? 'opacity-70' : ''}`}
+        } ${flash ? FLASH_CLASS[flash] : ''}`}
       >
         {/* 진행 게이지 — 하단 바. 색: <50% 빨강 / 50~<100% 주황 / 100% 초록.
             transition은 페이지 진입·새 잡 도착 직후엔 끔(즉시 표시), 이후 매초 채워질
@@ -540,21 +540,21 @@ export function EnhanceSlotCard({
 
         {confirm && !attempting && !flash ? (
           <div className="pointer-events-none absolute inset-0 z-20 flex flex-col items-center justify-center gap-1 px-4 text-center">
-            <p className="relative z-30 text-[12px] font-semibold break-keep text-amber-200 drop-shadow-[0_1px_2px_rgba(0,0,0,0.9)]">
+            <span className="relative z-30 rounded bg-black/75 px-2 py-0.5 text-[12px] font-semibold break-keep text-amber-200">
               {confirmMsg ??
                 (ready ? '다시 탭하면 강화' : '아직 무르익지 않았다 — 다시 탭하면 강행')}
-            </p>
-            <p className="relative z-30 font-mono text-[10px] text-zinc-300 tabular-nums drop-shadow-[0_1px_2px_rgba(0,0,0,0.9)]">
+            </span>
+            <span className="relative z-30 rounded bg-black/75 px-2 py-0.5 font-mono text-[10px] text-zinc-300 tabular-nums">
               {confirmLeft}s 후 자동 취소
-            </p>
+            </span>
           </div>
         ) : null}
 
         {attempting && !flash ? (
           <div className="pointer-events-none absolute inset-0 z-20 flex flex-col items-center justify-center gap-1 px-4 text-center">
-            <p className="relative z-30 text-[12px] font-semibold break-keep text-amber-200 drop-shadow-[0_1px_2px_rgba(0,0,0,0.9)]">
+            <span className="relative z-30 rounded bg-black/75 px-2 py-0.5 text-[12px] font-semibold break-keep text-amber-200">
               {attemptingMsg ?? '망치가 불을 부른다…'}
-            </p>
+            </span>
           </div>
         ) : null}
 
