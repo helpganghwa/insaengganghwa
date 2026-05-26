@@ -2,20 +2,22 @@
  * 강화 결과 시각 이펙트 오버레이 — 카드 내부 absolute 레이어.
  *
  * 4-tier:
- *  - 'success-mega': Boast 레벨(+30/+50/+99) 도달 — 화려한 광채 + 4방향 별 폭발
- *  - 'success'     : 일반 성공 — 그린 펄스 + +1 카운터 솟구침
- *  - 'hold'        : 유지 — 회색 안개 좌→우 흐름 (실망감 회피, 중립 톤)
- *  - 'down'        : 하락 — 빨강 균열 + 카드 진동(부모 컨테이너에서 처리)
+ *  - 'success-mega': Boast 레벨(+30/+50/+99) 도달 — 골든 폭발 + 4방향 별 + cheer 캐릭터
+ *  - 'success'     : 일반 성공 — 그린 펄스 + +1 카운터 + cheer 캐릭터
+ *  - 'hold'        : 유지 — 회색 안개 좌→우 + hold 캐릭터(2종 랜덤)
+ *  - 'down'        : 하락 — 빨강 균열 + 카드 진동 + down 캐릭터(2종 랜덤)
  *
- * 현재는 CSS-only 폴백. Pixellab 스프라이트 도착 시 각 tier의 .fx-* 클래스만
- * `background-image: url('/fx/enhance-{tier}.png')` + `animation: fx-sprite-N`
- * 으로 교체. 타이밍/햅틱 흐름은 그대로 유지.
+ * 캐릭터 풀:
+ *  - success / mega 공통: char-cheer-1..4 (4종 랜덤)
+ *  - hold: char-hold-1, char-hold-2 (2종 랜덤)
+ *  - down: char-down-1, char-down-2 (2종 랜덤)
  *
- * 햅틱(Vibration API)·prefers-reduced-motion은 부모(EnhanceSlotCard)가 트리거 시 처리.
+ * 캐릭터 위치: 카드 우상단 작은 영역(56px). 결과 시점에만 fade-in.
+ * 햅틱·prefers-reduced-motion은 부모(EnhanceSlotCard)가 트리거 시 처리.
  */
 'use client';
 
-import { memo } from 'react';
+import { memo, useMemo } from 'react';
 
 export type FxKind = 'success-mega' | 'success' | 'hold' | 'down';
 
@@ -25,12 +27,30 @@ interface Props {
   counter?: string;
 }
 
+/** mount 시 1회 결정 — useMemo가 같은 deps 유지. */
+function pickRandom<T>(arr: readonly T[]): T {
+  return arr[Math.floor(Math.random() * arr.length)]!;
+}
+
+const CHEER_POOL = ['fx-char-cheer-1', 'fx-char-cheer-2', 'fx-char-cheer-3', 'fx-char-cheer-4'] as const;
+const HOLD_POOL = ['fx-char-hold-1', 'fx-char-hold-2'] as const;
+const DOWN_POOL = ['fx-char-down-1', 'fx-char-down-2'] as const;
+
+/** 카드 우상단 캐릭터 오버레이. 56px, fade-in 0.4s. */
+function CharOverlay({ cls }: { cls: string }) {
+  return (
+    <span
+      className={`fx-char ${cls} animate-fx-success-pop pointer-events-none absolute top-1 right-1 h-14 w-14 z-20 drop-shadow-[0_0_4px_rgba(0,0,0,0.6)]`}
+    />
+  );
+}
+
 function MegaFX({ counter }: { counter?: string }) {
-  // 4방향 광채 폭발. CSS var --burst-deg로 각 별 회전 각도 주입.
   const directions = [0, 90, 180, 270];
+  const charCls = useMemo(() => pickRandom(CHEER_POOL), []);
   return (
     <>
-      {/* 카드 전체 골든 글로우 — z-0 (콘텐츠 뒤). */}
+      {/* 카드 전체 골든 글로우 — z-0. */}
       <span
         className="pointer-events-none absolute inset-0 animate-fx-mega-glow"
         style={{
@@ -39,9 +59,9 @@ function MegaFX({ counter }: { counter?: string }) {
           boxShadow: 'inset 0 0 32px 8px rgba(253, 224, 71, 0.4)',
         }}
       />
-      {/* Pixellab sprite — 골든 폭발 PNG, 중앙 80px. 폴백 글로우 위에 합성. */}
-      <span className="fx-sprite fx-sprite-success-mega animate-fx-mega-glow pointer-events-none absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 h-20 w-20" />
-      {/* 4방향 별 — 중앙에서 확산. z-10. */}
+      {/* Pixellab sprite 골든 폭발 — 좌측 중앙 80px(우상단 캐릭터와 분리). */}
+      <span className="fx-sprite fx-sprite-success-mega animate-fx-mega-glow pointer-events-none absolute top-1/2 left-12 -translate-y-1/2 h-20 w-20" />
+      {/* 4방향 별 — 중앙에서 확산. */}
       <span className="pointer-events-none absolute inset-0 flex items-center justify-center">
         {directions.map((deg) => (
           <span
@@ -58,36 +78,43 @@ function MegaFX({ counter }: { counter?: string }) {
           </span>
         ) : null}
       </span>
+      {/* 캐릭터 cheer (4종 랜덤) — 카드 우상단. */}
+      <CharOverlay cls={charCls} />
     </>
   );
 }
 
 function SuccessFX({ counter }: { counter?: string }) {
+  const charCls = useMemo(() => pickRandom(CHEER_POOL), []);
   return (
-    <span className="pointer-events-none absolute inset-0 flex items-center justify-center">
-      {/* 폴백 그린 펄스 — sprite 뒤. */}
-      <span
-        className="animate-fx-success-pop absolute h-20 w-20 rounded-full"
-        style={{
-          background:
-            'radial-gradient(circle, rgba(52, 211, 153, 0.7), rgba(16, 185, 129, 0.3) 50%, transparent 75%)',
-        }}
-      />
-      {/* Pixellab sprite — 그린 별 PNG, 중앙 64px. */}
-      <span className="fx-sprite fx-sprite-success animate-fx-success-pop absolute h-16 w-16" />
-      {counter ? (
-        <span className="animate-fx-counter-pop relative font-bold text-lg text-emerald-100 drop-shadow-[0_0_4px_rgba(52,211,153,0.9)] tabular-nums">
-          {counter}
-        </span>
-      ) : null}
-    </span>
+    <>
+      <span className="pointer-events-none absolute inset-0 flex items-center justify-center">
+        {/* 폴백 그린 펄스. */}
+        <span
+          className="animate-fx-success-pop absolute h-20 w-20 rounded-full"
+          style={{
+            background:
+              'radial-gradient(circle, rgba(52, 211, 153, 0.7), rgba(16, 185, 129, 0.3) 50%, transparent 75%)',
+          }}
+        />
+        {/* Pixellab sprite 그린 별. 좌측 중앙 64px. */}
+        <span className="fx-sprite fx-sprite-success animate-fx-success-pop absolute left-12 h-16 w-16" />
+        {counter ? (
+          <span className="animate-fx-counter-pop relative font-bold text-lg text-emerald-100 drop-shadow-[0_0_4px_rgba(52,211,153,0.9)] tabular-nums">
+            {counter}
+          </span>
+        ) : null}
+      </span>
+      <CharOverlay cls={charCls} />
+    </>
   );
 }
 
 function HoldFX() {
+  const charCls = useMemo(() => pickRandom(HOLD_POOL), []);
   return (
     <>
-      {/* 폴백 안개 sweep — sprite 뒤에 가로 흐름. */}
+      {/* 폴백 안개 sweep — 카드 폭 전체. */}
       <span
         className="pointer-events-none absolute inset-0 animate-fx-mist"
         style={{
@@ -95,44 +122,47 @@ function HoldFX() {
             'linear-gradient(90deg, transparent 0%, rgba(161, 161, 170, 0.45) 35%, rgba(212, 212, 216, 0.5) 50%, rgba(161, 161, 170, 0.45) 65%, transparent 100%)',
         }}
       />
-      {/* Pixellab sprite — 회색 안개 PNG, 카드 폭 전체. */}
-      <span className="fx-sprite fx-sprite-hold animate-fx-mist pointer-events-none absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 h-16 w-24 opacity-80" />
+      {/* Pixellab sprite 회색 안개. 좌측 96px. */}
+      <span className="fx-sprite fx-sprite-hold animate-fx-mist pointer-events-none absolute top-1/2 left-12 -translate-y-1/2 h-16 w-24 opacity-80" />
+      <CharOverlay cls={charCls} />
     </>
   );
 }
 
 function DownFX() {
-  // SVG 균열 + Pixellab sprite 합성. 폴백 SVG는 sprite 뒤에 카드 중앙 영역.
+  const charCls = useMemo(() => pickRandom(DOWN_POOL), []);
   return (
-    <span className="pointer-events-none absolute inset-0 flex items-center justify-center">
-      {/* 폴백 SVG 균열 — sprite 뒤. */}
-      <svg
-        viewBox="0 0 100 60"
-        className="animate-fx-crack absolute h-full w-full"
-        preserveAspectRatio="xMidYMid meet"
-        aria-hidden
-      >
-        <defs>
-          <filter id="crack-glow">
-            <feGaussianBlur stdDeviation="0.6" />
-          </filter>
-        </defs>
-        <g
-          stroke="rgb(248, 113, 113)"
-          strokeWidth="1.2"
-          strokeLinecap="round"
-          fill="none"
-          filter="url(#crack-glow)"
-          style={{ filter: 'drop-shadow(0 0 4px rgba(248, 113, 113, 0.8))' }}
+    <>
+      <span className="pointer-events-none absolute inset-0 flex items-center justify-center">
+        <svg
+          viewBox="0 0 100 60"
+          className="animate-fx-crack absolute h-full w-full"
+          preserveAspectRatio="xMidYMid meet"
+          aria-hidden
         >
-          <path d="M 35 55 L 42 38 L 36 28 L 44 14 L 40 4" />
-          <path d="M 65 55 L 58 40 L 64 30 L 56 18 L 60 6" />
-          <path d="M 50 58 L 50 36 L 46 24 L 52 10" />
-        </g>
-      </svg>
-      {/* Pixellab sprite — 빨강 균열 PNG, 중앙 80px. */}
-      <span className="fx-sprite fx-sprite-down animate-fx-crack absolute h-20 w-20" />
-    </span>
+          <defs>
+            <filter id="crack-glow">
+              <feGaussianBlur stdDeviation="0.6" />
+            </filter>
+          </defs>
+          <g
+            stroke="rgb(248, 113, 113)"
+            strokeWidth="1.2"
+            strokeLinecap="round"
+            fill="none"
+            filter="url(#crack-glow)"
+            style={{ filter: 'drop-shadow(0 0 4px rgba(248, 113, 113, 0.8))' }}
+          >
+            <path d="M 35 55 L 42 38 L 36 28 L 44 14 L 40 4" />
+            <path d="M 65 55 L 58 40 L 64 30 L 56 18 L 60 6" />
+            <path d="M 50 58 L 50 36 L 46 24 L 52 10" />
+          </g>
+        </svg>
+        {/* Pixellab sprite 빨강 균열 — 좌측 80px. */}
+        <span className="fx-sprite fx-sprite-down animate-fx-crack absolute left-12 h-20 w-20" />
+      </span>
+      <CharOverlay cls={charCls} />
+    </>
   );
 }
 

@@ -500,6 +500,8 @@ export function EnhanceSlotCard({
 
         {confirm && !flash ? (
           <div className="pointer-events-none absolute inset-0 flex flex-col items-center justify-center gap-1 bg-black/85 px-4 text-center">
+            {/* 대장장이 캐릭터 — 카드 우상단 56px, 강화 시도 대기 분위기. */}
+            <span className="fx-char fx-char-base pointer-events-none absolute top-1 right-1 h-14 w-14 drop-shadow-[0_0_4px_rgba(0,0,0,0.7)]" />
             <p className="text-[12px] font-semibold break-keep text-amber-200">
               {confirmMsg ??
                 (ready ? '다시 탭하면 강화' : '아직 무르익지 않았다 — 다시 탭하면 강행')}
