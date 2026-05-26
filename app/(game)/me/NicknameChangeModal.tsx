@@ -4,7 +4,7 @@ import { useEffect, useState, useTransition } from 'react';
 import { useRouter } from 'next/navigation';
 
 import { NICKNAME_CHANGE_COST_DIAMOND } from '@/lib/game/balance';
-import { NICKNAME_MAX_LEN, nicknameLen, validateNickname } from '@/lib/game/nickname';
+import { NICKNAME_MAX_LEN, NICKNAME_MIN_LEN, nicknameLen, validateNickname } from '@/lib/game/nickname';
 
 import { changeNicknameAction } from './actions';
 
@@ -95,7 +95,7 @@ export function NicknameChangeModal({
           }}
           // 자모 합성 여유로 약간 크게(10*2=20), 실제 한도는 validateNickname.
           maxLength={NICKNAME_MAX_LEN * 2}
-          placeholder="2~10자 (한글·영문·숫자)"
+          placeholder={`${NICKNAME_MIN_LEN}~${NICKNAME_MAX_LEN}자 (한글·영문·숫자)`}
           className="mt-3 w-full rounded-md border border-zinc-300 bg-transparent px-2.5 py-2 text-sm dark:border-zinc-700"
           autoFocus
         />

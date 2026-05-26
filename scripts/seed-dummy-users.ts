@@ -2,7 +2,8 @@
  * 더미 유저 200명 생성 (테스트용).
  *
  *  - Supabase Admin API로 auth.users 200 row 생성(email/password)
- *  - public.profiles 200 row insert (한국어 자연스러운 닉네임 + 다이아 랜덤)
+ *  - public.profiles 200 row insert (닉네임은 DB의 generate_korean_nickname() 호출 —
+ *    실유저와 동일한 한글 풀 사용, 0005 참조) + 다이아 랜덤
  *  - 각 유저 무기/방어구/장신구 각 1~3개 장비 보유(랜덤 카탈로그)
  *  - 전체 장비 강화 +0~+99 / 초월 0~10 분포(피라미드 — 대부분 낮고, 일부 고강)
  *  - user_codex 갱신(도감/챔피언 판정 정합)
@@ -26,27 +27,11 @@ if (!URL_BASE || !SERVICE || !DIRECT) {
 }
 const COUNT = Number(process.env.DUMMY_COUNT ?? 200);
 
-// ── 한국어 닉네임 풀(자연스러운 조합) ──
-const ADJ = [
-  '달빛', '잿빛', '푸른', '붉은', '고요한', '용감한', '느릿한', '재바른', '늪의',
-  '산울림', '잠 못 자는', '말없는', '느긋한', '꼼꼼한', '들떠 있는', '서두르는',
-  '오래 견딘', '늙은', '어린', '한가한', '단단한', '맑은', '흐릿한', '먼 길의',
-  '북쪽의', '서쪽의', '동트는', '저녁의', '한밤의', '새벽의', '잿더미', '눈먼',
-  '귀먼', '말 많은', '입 무거운', '발 가벼운', '손 무거운', '느린 손의', '한가위의',
-];
-const NOUN = [
-  '대장간', '대장장이', '망치꾼', '검객', '도끼꾼', '활잡이', '창잡이', '방랑자',
-  '여행자', '길손', '나무꾼', '어부', '사냥꾼', '학자', '점쟁이', '음유시인',
-  '농부', '목수', '도공', '상인', '거지왕', '수도사', '기사', '용사', '전사',
-  '주술사', '광부', '대공', '소공자', '말꾼', '북치는이', '청지기', '경비병',
-  '척후병', '제련공', '깃대잡이', '갈대공', '뱃사공', '석공', '문지기', '약초꾼',
-];
-function nick(rng: () => number): string {
-  const a = ADJ[Math.floor(rng() * ADJ.length)]!;
-  const n = NOUN[Math.floor(rng() * NOUN.length)]!;
-  // 끝에 1~3자리 숫자 — 닉네임 unique 확보
-  const tag = Math.floor(rng() * 9000 + 100);
-  return `${a} ${n}${tag}`;
+// 닉네임은 DB 함수 호출 — 실유저 가입 트리거(handle_new_user)와 동일 풀(0005).
+// 공백·영문·숫자 섞임 없이 한글만, 자연스러운 동사+색상+명사 조합.
+async function nick(): Promise<string> {
+  const [r] = (await db`select public.generate_korean_nickname() as name`) as { name: string }[];
+  return r!.name;
 }
 
 // 시드 가능한 PRNG (mulberry32) — 실행마다 다른 결과 위해 Date.now seed.
@@ -111,7 +96,7 @@ try {
       // 2) profiles upsert — Supabase trigger가 placeholder row를 만들어 두었을 수 있어
       //    INSERT ... ON CONFLICT(id) DO UPDATE로 닉네임/다이아 덮어씀. 닉네임 unique
       //    충돌 시 재시도.
-      let nickname = nick(rng);
+      let nickname = await nick();
       const diamond = Math.floor(rng() * 50000 + 1000);
       for (let attempt = 0; attempt < 8; attempt++) {
         try {
@@ -132,7 +117,7 @@ try {
         } catch (err) {
           const msg = (err as Error).message;
           if (msg.includes('nickname') && attempt < 7) {
-            nickname = nick(rng);
+            nickname = await nick();
             continue;
           }
           throw err;
