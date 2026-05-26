@@ -38,7 +38,7 @@ const DOWN_POOL = ['fx-char-down-1', 'fx-char-down-2'] as const;
 function CharOverlay({ cls }: { cls: string }) {
   return (
     <span
-      className={`fx-char ${cls} animate-fx-char-appear pointer-events-none absolute right-[-40px] top-[-30px] h-[320%] aspect-square z-0 drop-shadow-[0_2px_6px_rgba(0,0,0,0.7)]`}
+      className={`fx-char ${cls} animate-fx-char-appear pointer-events-none absolute right-[-40px] top-[-30px] h-[640%] aspect-square z-25 drop-shadow-[0_2px_6px_rgba(0,0,0,0.7)]`}
     />
   );
 }

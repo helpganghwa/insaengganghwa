@@ -405,11 +405,7 @@ export function EnhanceSlotCard({
           } ${ready ? 'bg-emerald-400' : progress >= 0.5 ? 'bg-orange-400' : 'bg-red-500'}`}
           style={{ width: `${Math.max(2, Math.round(progress * 1000) / 10)}%` }}
         />
-        <div
-          className={`relative z-10 flex h-full items-center gap-3 px-3 ${
-            flash ? 'bg-black/50 backdrop-blur-[2px]' : ''
-          }`}
-        >
+        <div className="relative z-10 flex h-full items-center gap-3 px-3">
           <span
             className={`relative flex h-16 w-16 shrink-0 items-center justify-center overflow-hidden rounded-lg border bg-black/40 ${
               hasRarityBorder(activeJob.transcendLevel) ? '' : 'border-zinc-700'
@@ -504,8 +500,8 @@ export function EnhanceSlotCard({
 
         {confirm && !flash ? (
           <div className="pointer-events-none absolute inset-0 flex flex-col items-center justify-center gap-1 bg-black/85 px-4 text-center">
-            {/* 대장장이 캐릭터 — 우측 큰 상반신, fade-in. 텍스트 뒤(z-0). */}
-            <span className="fx-char fx-char-base animate-fx-char-appear pointer-events-none absolute right-[-40px] top-[-30px] h-[320%] aspect-square z-0 drop-shadow-[0_2px_6px_rgba(0,0,0,0.7)]" />
+            {/* 대장장이 캐릭터 — confirm 단계, z-0(텍스트 뒤). 결과 단계는 EnhanceFX에서 z-25. */}
+            <span className="fx-char fx-char-base animate-fx-char-appear pointer-events-none absolute right-[-40px] top-[-30px] h-[640%] aspect-square z-0 drop-shadow-[0_2px_6px_rgba(0,0,0,0.7)]" />
             <p className="text-[12px] font-semibold break-keep text-amber-200">
               {confirmMsg ??
                 (ready ? '다시 탭하면 강화' : '아직 무르익지 않았다 — 다시 탭하면 강행')}
@@ -518,6 +514,9 @@ export function EnhanceSlotCard({
 
         {flash ? (
           <>
+            {/* 결과 dim — 본 콘텐츠(z-10) 위(z-20), 캐릭터(z-25)·FX(z-30) 뒤.
+                장비 정보가 결과 연출 뒤로 묻혀 시각 hierarchy 정리. */}
+            <span className="pointer-events-none absolute inset-0 z-20 bg-black/55 backdrop-blur-[2px]" />
             {/* FX 시각 레이어 — Boast 레벨 성공은 mega tier. */}
             <EnhanceFX
               kind={
