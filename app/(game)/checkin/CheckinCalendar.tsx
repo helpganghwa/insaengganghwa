@@ -174,7 +174,7 @@ export function CheckinCalendar({
                 style={justClaimed ? { animation: 'checkin-glow 700ms ease-out' } : undefined}
                 className={`relative flex aspect-square flex-col items-center justify-between rounded-md border ${borderCls} ${stateCls} backdrop-blur-[1px] p-0.5 text-center`}
               >
-                {/* 상단 D라벨 */}
+                {/* 상단 D라벨 — D28만 GRAND, 나머지는 숫자만(★ 제거) */}
                 <div
                   className={`text-[8px] leading-none font-bold drop-shadow-[0_1px_1px_rgba(0,0,0,0.8)] ${
                     isGrand
@@ -184,7 +184,7 @@ export function CheckinCalendar({
                         : 'text-amber-100/80'
                   }`}
                 >
-                  {isGrand ? 'GRAND' : isMilestone ? `★${day}` : `${day}`}
+                  {isGrand ? 'GRAND' : `${day}`}
                 </div>
 
                 {/* 보상 타일(64×64 픽셀아트) */}
@@ -224,69 +224,81 @@ export function CheckinCalendar({
         </div>
       </div>
 
-      {/* 오늘 카드 + 액션 (양피지 버튼) */}
-      <section className="rounded-2xl border border-zinc-200 bg-white p-4 dark:border-zinc-800 dark:bg-zinc-950">
-        <div className="text-xs text-zinc-500">
-          {claimedToday
-            ? '오늘 수령 완료'
-            : `오늘 (D${todayCellDay}${
-                todayCellDay === CHECKIN_CYCLE_DAYS
-                  ? ' · GRAND ★'
-                  : isCheckinMilestone(todayCellDay)
-                    ? ' · 마일스톤 ★'
-                    : ''
-              })`}
-        </div>
-        <div className="mt-1 flex items-center gap-3">
-          {/* eslint-disable-next-line @next/next/no-img-element */}
-          <img
-            src={assetUrl(`/sprites/checkin/${tileFile(todayReward)}`)}
-            alt=""
-            aria-hidden
-            draggable={false}
-            className="h-12 w-12 object-contain"
-            style={{ imageRendering: 'pixelated' }}
-          />
-          <div className="flex-1">
-            <div className="text-base font-semibold">{rewardLongLabel(todayReward)}</div>
-            <div className="text-[11px] text-zinc-400">
-              {claimedToday ? 'KST 자정 이후 다음 칸 활성화' : '오늘 1회 수령'}
+      {/* 오늘 카드 + 액션 — ornate 패널 배경(card-bg) + 양피지 버튼 */}
+      <section className="relative overflow-hidden rounded-2xl border border-amber-900/60 shadow-md">
+        {/* eslint-disable-next-line @next/next/no-img-element */}
+        <img
+          src={assetUrl('/sprites/checkin/card-bg.png')}
+          alt=""
+          aria-hidden
+          draggable={false}
+          className="absolute inset-0 h-full w-full object-cover"
+          style={{ imageRendering: 'pixelated' }}
+        />
+        <div className="pointer-events-none absolute inset-0 bg-amber-950/10" />
+        <div className="relative z-10 p-4">
+          <div className="text-xs font-semibold text-amber-900 drop-shadow-[0_1px_1px_rgba(255,240,200,0.7)]">
+            {claimedToday
+              ? '오늘 수령 완료'
+              : `오늘 (D${todayCellDay}${
+                  todayCellDay === CHECKIN_CYCLE_DAYS
+                    ? ' · GRAND'
+                    : isCheckinMilestone(todayCellDay)
+                      ? ' · 마일스톤'
+                      : ''
+                })`}
+          </div>
+          <div className="mt-1 flex items-center gap-3">
+            {/* eslint-disable-next-line @next/next/no-img-element */}
+            <img
+              src={assetUrl(`/sprites/checkin/${tileFile(todayReward)}`)}
+              alt=""
+              aria-hidden
+              draggable={false}
+              className="h-12 w-12 object-contain drop-shadow-[0_1px_2px_rgba(0,0,0,0.3)]"
+              style={{ imageRendering: 'pixelated' }}
+            />
+            <div className="flex-1">
+              <div className="text-base font-bold text-amber-950 drop-shadow-[0_1px_1px_rgba(255,240,200,0.7)]">
+                {rewardLongLabel(todayReward)}
+              </div>
+              <div className="text-[11px] text-amber-900/70">
+                {claimedToday ? 'KST 자정 이후 다음 칸 활성화' : '오늘 1회 수령'}
+              </div>
             </div>
           </div>
-        </div>
 
-        <button
-          type="button"
-          onClick={onClaim}
-          disabled={claimedToday || pending}
-          className="relative mt-3 flex h-12 w-full items-center justify-center overflow-hidden rounded-xl border border-amber-700/60 shadow-md transition active:scale-[0.99] disabled:cursor-not-allowed disabled:opacity-60"
-        >
-          {/* eslint-disable-next-line @next/next/no-img-element */}
-          <img
-            src={assetUrl('/sprites/checkin/button-bg.png')}
-            alt=""
-            aria-hidden
-            draggable={false}
-            className="absolute inset-0 h-full w-full object-cover"
-            style={{ imageRendering: 'pixelated' }}
-          />
-          {claimedToday ? (
-            <div className="pointer-events-none absolute inset-0 bg-zinc-950/55" />
-          ) : (
-            <div className="pointer-events-none absolute inset-0 bg-gradient-to-b from-amber-900/10 to-amber-950/25" />
-          )}
-          <span
-            className={`relative z-10 text-sm font-bold drop-shadow-[0_1px_2px_rgba(255,240,200,0.9)] ${
-              claimedToday ? 'text-amber-100' : 'text-amber-950'
-            }`}
+          <button
+            type="button"
+            onClick={onClaim}
+            disabled={claimedToday || pending}
+            className="relative mt-3 flex h-12 w-full items-center justify-center overflow-hidden rounded-xl border border-amber-700/70 shadow-md transition active:scale-[0.99] disabled:cursor-not-allowed disabled:opacity-60"
           >
-            {claimedToday
-              ? '오늘 도장 완료 · 자정 이후 다음 칸'
-              : pending
-                ? '도장 찍는 중…'
-                : '출석 도장 찍기'}
-          </span>
-        </button>
+            {/* eslint-disable-next-line @next/next/no-img-element */}
+            <img
+              src={assetUrl('/sprites/checkin/button-bg.png')}
+              alt=""
+              aria-hidden
+              draggable={false}
+              className="absolute inset-0 h-full w-full object-cover"
+              style={{ imageRendering: 'pixelated' }}
+            />
+            {claimedToday ? (
+              <div className="pointer-events-none absolute inset-0 bg-zinc-950/55" />
+            ) : null}
+            <span
+              className={`relative z-10 text-sm font-bold drop-shadow-[0_1px_2px_rgba(0,0,0,0.6)] ${
+                claimedToday ? 'text-amber-100' : 'text-amber-50'
+              }`}
+            >
+              {claimedToday
+                ? '오늘 도장 완료 · 자정 이후 다음 칸'
+                : pending
+                  ? '도장 찍는 중…'
+                  : '출석 도장 찍기'}
+            </span>
+          </button>
+        </div>
       </section>
     </div>
   );
