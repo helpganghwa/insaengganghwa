@@ -92,38 +92,6 @@
     100% { opacity: 0; transform: translateY(-22px) scale(1); }
   }
 
-  /* FX sprite — Pixellab pixflux로 생성한 96×96 투명 PNG. CSS 폴백 위에 합성. */
-  .fx-sprite {
-    image-rendering: pixelated;
-    background-size: contain;
-    background-position: center;
-    background-repeat: no-repeat;
-  }
-  .fx-sprite-success-mega { background-image: url('/fx/enhance-success-mega.png'); }
-  .fx-sprite-success      { background-image: url('/fx/enhance-success.png'); }
-  .fx-sprite-hold         { background-image: url('/fx/enhance-hold.png'); }
-  .fx-sprite-down         { background-image: url('/fx/enhance-down.png'); }
-
-  /* 캐릭터 reaction sprite — outcome 시점 카드 우상단에 표시(64px). */
-  .fx-char {
-    image-rendering: pixelated;
-    background-size: contain;
-    background-position: center;
-    background-repeat: no-repeat;
-  }
-  .fx-char-base    { background-image: url('/fx/char-base.png'); }
-  /* success/mega 공통 cheer 풀 4종 — 매번 랜덤 1장. */
-  .fx-char-cheer-1 { background-image: url('/fx/char-cheer-1.png'); }
-  .fx-char-cheer-2 { background-image: url('/fx/char-cheer-2.png'); }
-  .fx-char-cheer-3 { background-image: url('/fx/char-cheer-3.png'); }
-  .fx-char-cheer-4 { background-image: url('/fx/char-cheer-4.png'); }
-  /* hold 2종 랜덤 */
-  .fx-char-hold-1  { background-image: url('/fx/char-hold.png'); }
-  .fx-char-hold-2  { background-image: url('/fx/char-hold-2.png'); }
-  /* down 2종 랜덤 */
-  .fx-char-down-1  { background-image: url('/fx/char-down.png'); }
-  .fx-char-down-2  { background-image: url('/fx/char-down-2.png'); }
-
   @keyframes hit-shake {
     0%, 100% { transform: translate(0, 0); }
     25% { transform: translate(-4px, 1px); }
@@ -163,6 +131,38 @@
     50% { opacity: 0.55; }
   }
 }
+
+/* FX sprite — Pixellab pixflux 96×96 투명 PNG. CSS 폴백 위에 합성. */
+.fx-sprite {
+  image-rendering: pixelated;
+  background-size: contain;
+  background-position: center;
+  background-repeat: no-repeat;
+}
+.fx-sprite-success-mega { background-image: url('/fx/enhance-success-mega.png'); }
+.fx-sprite-success      { background-image: url('/fx/enhance-success.png'); }
+.fx-sprite-hold         { background-image: url('/fx/enhance-hold.png'); }
+.fx-sprite-down         { background-image: url('/fx/enhance-down.png'); }
+
+/* 캐릭터 reaction sprite — outcome 시점 카드 우상단(56px). */
+.fx-char {
+  image-rendering: pixelated;
+  background-size: contain;
+  background-position: center;
+  background-repeat: no-repeat;
+}
+.fx-char-base    { background-image: url('/fx/char-base.png'); }
+/* success/mega 공통 cheer 풀 4종 — 매번 랜덤 1장. */
+.fx-char-cheer-1 { background-image: url('/fx/char-cheer-1.png'); }
+.fx-char-cheer-2 { background-image: url('/fx/char-cheer-2.png'); }
+.fx-char-cheer-3 { background-image: url('/fx/char-cheer-3.png'); }
+.fx-char-cheer-4 { background-image: url('/fx/char-cheer-4.png'); }
+/* hold 2종 랜덤 */
+.fx-char-hold-1  { background-image: url('/fx/char-hold.png'); }
+.fx-char-hold-2  { background-image: url('/fx/char-hold-2.png'); }
+/* down 2종 랜덤(1: 어깨 슬럼프 / 2: 무릎 꿇기). */
+.fx-char-down-1  { background-image: url('/fx/char-down.png'); }
+.fx-char-down-2  { background-image: url('/fx/char-down-2.png'); }
 
 /* 리소스 토스트 — 위로 솟구쳤다 떨어지는 짧은 알림(ResourceToast.tsx). */
 @keyframes toast-pop {
