@@ -13,7 +13,9 @@
  */
 'use client';
 
-import { memo, useMemo } from 'react';
+import { memo, useEffect, useMemo, useState } from 'react';
+
+import Counter from '@/components/Counter';
 
 export type FxKind = 'success-mega' | 'success' | 'hold' | 'down';
 
@@ -29,29 +31,57 @@ function pickRandom<T>(arr: readonly T[]): T {
 }
 
 /**
- * 카운트 morph — 두 숫자가 같은 위치에 겹쳐서 crossfade.
- *  - from !== to: 기존 숫자가 fade-out(축소·blur), 새 숫자가 fade-in(확대→정상·blur해제)
+ * 자릿수 슬롯 카운트 — motion useSpring으로 자연 회전.
+ *  - from !== to: Counter value가 from→to 보간(자릿수 하나만 굴러감)
  *  - from === to (hold): 좌우 흔들림만, 숫자 변화 없음
- *
- * 구조: relative span에 두 숫자 absolute 겹침. invisible placeholder로 폭 안정.
  */
-function CountAnim({ from, to, className }: { from: number; to: number; className: string }) {
+function CountAnim({
+  from,
+  to,
+  className,
+  fontSize,
+}: {
+  from: number;
+  to: number;
+  className: string;
+  fontSize: number;
+}) {
+  const [val, setVal] = useState(from);
+  useEffect(() => {
+    if (from === to) {
+      setVal(from);
+      return;
+    }
+    // mount 직후 to로 변경 → useSpring이 from→to 보간 실행.
+    const t = setTimeout(() => setVal(to), 16);
+    return () => clearTimeout(t);
+  }, [from, to]);
+
   if (from === to) {
-    return (
-      <span className={`animate-fx-num-shake inline-block ${className}`}>+{from}</span>
-    );
+    return <span className={`animate-fx-num-shake inline-block ${className}`}>+{from}</span>;
   }
-  const longer = Math.abs(to) >= Math.abs(from) ? to : from;
+
+  // 폭 안정 — max 자릿수 기준 places 고정.
+  const maxAbs = Math.max(Math.abs(from), Math.abs(to));
+  const places = [...maxAbs.toString()].map(
+    (_, i, a) => 10 ** (a.length - i - 1),
+  ) as number[];
+
   return (
-    <span className={`relative inline-block leading-none ${className}`}>
-      {/* 폭 placeholder — 두 숫자 중 긴 쪽 기준. */}
-      <span className="invisible">+{longer}</span>
-      <span className="animate-fx-num-out absolute inset-0 flex items-center justify-center">
-        +{from}
-      </span>
-      <span className="animate-fx-num-in absolute inset-0 flex items-center justify-center">
-        +{to}
-      </span>
+    <span className={`inline-flex items-center leading-none ${className}`}>
+      <span>+</span>
+      <Counter
+        value={val}
+        fontSize={fontSize}
+        padding={0}
+        gap={0}
+        horizontalPadding={0}
+        borderRadius={0}
+        places={places}
+        gradientHeight={0}
+        gradientFrom="transparent"
+        gradientTo="transparent"
+      />
     </span>
   );
 }
@@ -71,7 +101,7 @@ function CharOverlay({ cls }: { cls: string }) {
   //   h-[X%]                   : 카드 높이 대비. h-[400%]=368px, h-[500%]=460px.
   return (
     <span
-      className={`fx-char ${cls} pointer-events-none absolute right-[-30px] top-1/2 translate-y-[calc(-50%-80px)] h-[400%] aspect-square z-25 drop-shadow-[0_2px_6px_rgba(0,0,0,0.7)]`}
+      className={`fx-char ${cls} pointer-events-none absolute right-[-80px] top-1/2 translate-y-[calc(-50%+50px)] h-[400%] aspect-square z-25 drop-shadow-[0_2px_6px_rgba(0,0,0,0.7)]`}
     />
   );
 }
@@ -107,7 +137,8 @@ function MegaFX({ fromLevel, toLevel }: { fromLevel?: number; toLevel?: number }
           <CountAnim
             from={fromLevel}
             to={toLevel}
-            className="animate-fx-counter-modern relative font-bold text-2xl text-yellow-100 drop-shadow-[0_0_10px_rgba(253,224,71,0.95)] tabular-nums tracking-tight"
+            fontSize={28}
+            className="animate-fx-counter-modern relative font-bold text-yellow-100 drop-shadow-[0_0_10px_rgba(253,224,71,0.95)] tabular-nums tracking-tight"
           />
         ) : null}
       </span>
@@ -132,7 +163,8 @@ function SuccessFX({ fromLevel, toLevel }: { fromLevel?: number; toLevel?: numbe
           <CountAnim
             from={fromLevel}
             to={toLevel}
-            className="animate-fx-counter-modern relative font-bold text-xl text-emerald-100 drop-shadow-[0_0_8px_rgba(52,211,153,0.9)] tabular-nums tracking-tight"
+            fontSize={24}
+            className="animate-fx-counter-modern relative font-bold text-emerald-100 drop-shadow-[0_0_8px_rgba(52,211,153,0.9)] tabular-nums tracking-tight"
           />
         ) : null}
       </span>
@@ -157,7 +189,8 @@ function HoldFX({ fromLevel, toLevel }: { fromLevel?: number; toLevel?: number }
           <CountAnim
             from={fromLevel}
             to={toLevel}
-            className="animate-fx-counter-modern relative font-bold text-xl text-zinc-100 drop-shadow-[0_0_8px_rgba(161,161,170,0.9)] tabular-nums tracking-tight"
+            fontSize={24}
+            className="animate-fx-counter-modern relative font-bold text-zinc-100 drop-shadow-[0_0_8px_rgba(161,161,170,0.9)] tabular-nums tracking-tight"
           />
         </span>
       ) : null}
@@ -187,7 +220,8 @@ function DownFX({ fromLevel, toLevel }: { fromLevel?: number; toLevel?: number }
           <CountAnim
             from={fromLevel}
             to={toLevel}
-            className="animate-fx-counter-modern relative font-bold text-xl text-red-100 drop-shadow-[0_0_8px_rgba(239,68,68,0.9)] tabular-nums tracking-tight"
+            fontSize={24}
+            className="animate-fx-counter-modern relative font-bold text-red-100 drop-shadow-[0_0_8px_rgba(239,68,68,0.9)] tabular-nums tracking-tight"
           />
         ) : null}
       </span>
