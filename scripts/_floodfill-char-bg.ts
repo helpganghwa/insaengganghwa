@@ -54,19 +54,17 @@ for (const f of files) {
     push(x, y + 1);
   }
 
-  // 1차 — 외부 영역과 4px 이내 인접 + 밝은 픽셀(rgb >= 180) 제거.
-  // 2차 — 검은 outline 픽셀(rgb 모두 <= 80) 옆 8방향에 있는 흰색(rgb >= 200) 픽셀도 제거
-  //       (outline의 anti-alias halo).
+  // 보수적: 외부 영역과 직접 인접(8방향 1px)한 흰색 픽셀(rgb >= 210)만 제거.
+  // outline 본체·내부 픽셀은 절대 건드리지 않음.
   let cleaned = 0;
-  const EDGE_RADIUS = 4;
-  const EDGE_BRIGHT = 180;
   for (let y = 0; y < H; y++) {
     for (let x = 0; x < W; x++) {
       const idx = y * W + x;
       if (buf[idx * 4 + 3] === 0) continue;
+      // 외부 영역과 직접 인접인지(8방향 1px)
       let nextToOutside = false;
-      for (let dy = -EDGE_RADIUS; dy <= EDGE_RADIUS && !nextToOutside; dy++) {
-        for (let dx = -EDGE_RADIUS; dx <= EDGE_RADIUS && !nextToOutside; dx++) {
+      for (let dy = -1; dy <= 1 && !nextToOutside; dy++) {
+        for (let dx = -1; dx <= 1 && !nextToOutside; dx++) {
           if (dx === 0 && dy === 0) continue;
           const nx = x + dx;
           const ny = y + dy;
@@ -75,54 +73,13 @@ for (const f of files) {
         }
       }
       if (!nextToOutside) continue;
+      // 흰색에 가까운 픽셀만 제거 (210 이상 — 옷·머리·피부의 자연 밝은 색은 보존).
       const r = buf[idx * 4]!;
       const g = buf[idx * 4 + 1]!;
       const b = buf[idx * 4 + 2]!;
-      if (r >= EDGE_BRIGHT && g >= EDGE_BRIGHT && b >= EDGE_BRIGHT) {
+      if (r >= 210 && g >= 210 && b >= 210) {
         buf[idx * 4 + 3] = 0;
         cleaned++;
-      }
-    }
-  }
-  // 2차 — outline halo: 검은 픽셀 옆 흰 픽셀.
-  for (let y = 0; y < H; y++) {
-    for (let x = 0; x < W; x++) {
-      const idx = y * W + x;
-      if (buf[idx * 4 + 3] !== 255) continue;
-      const r = buf[idx * 4]!;
-      const g = buf[idx * 4 + 1]!;
-      const b = buf[idx * 4 + 2]!;
-      if (r < 200 || g < 200 || b < 200) continue; // 흰색만
-      // 8방향 이웃에 검은 outline 픽셀(rgb 모두 <= 80) 있나
-      let nextToOutline = false;
-      for (let dy = -1; dy <= 1 && !nextToOutline; dy++) {
-        for (let dx = -1; dx <= 1 && !nextToOutline; dx++) {
-          if (dx === 0 && dy === 0) continue;
-          const nx = x + dx;
-          const ny = y + dy;
-          if (nx < 0 || nx >= W || ny < 0 || ny >= H) continue;
-          const ni = (ny * W + nx) * 4;
-          if (buf[ni + 3] !== 255) continue;
-          if (buf[ni]! <= 80 && buf[ni + 1]! <= 80 && buf[ni + 2]! <= 80) {
-            nextToOutline = true;
-          }
-        }
-      }
-      if (nextToOutline) {
-        // 외부 영역과 인접하면 제거(outline 외측 halo만). 내부 흰자위는 보존.
-        let nearOutside = false;
-        for (let dy = -3; dy <= 3 && !nearOutside; dy++) {
-          for (let dx = -3; dx <= 3 && !nearOutside; dx++) {
-            const nx = x + dx;
-            const ny = y + dy;
-            if (nx < 0 || nx >= W || ny < 0 || ny >= H) continue;
-            if (outside[ny * W + nx]) nearOutside = true;
-          }
-        }
-        if (nearOutside) {
-          buf[idx * 4 + 3] = 0;
-          cleaned++;
-        }
       }
     }
   }

@@ -541,7 +541,7 @@ export function EnhanceSlotCard({
         {confirm && !attempting && !flash ? (
           <div className="pointer-events-none absolute inset-0 z-20 flex flex-col items-center justify-center gap-1 bg-black/55 px-4 text-center backdrop-blur-[2px]">
             {/* 대장장이 캐릭터 — 우측 머리끝이 카드 상단에 닿게. */}
-            <span className="fx-char fx-char-base pointer-events-none absolute right-[-80px] top-1/2 translate-y-[calc(-50%+50px)] h-[400%] aspect-square z-25 drop-shadow-[0_2px_6px_rgba(0,0,0,0.7)]" />
+            <span className="fx-char fx-char-base pointer-events-none absolute right-[-110px] top-1/2 translate-y-[calc(-50%+50px)] h-[400%] aspect-square z-25 drop-shadow-[0_2px_6px_rgba(0,0,0,0.7)]" />
             <p className="relative z-30 text-[12px] font-semibold break-keep text-amber-200 drop-shadow-[0_1px_2px_rgba(0,0,0,0.9)]">
               {confirmMsg ??
                 (ready ? '다시 탭하면 강화' : '아직 무르익지 않았다 — 다시 탭하면 강행')}
@@ -555,7 +555,7 @@ export function EnhanceSlotCard({
         {attempting && !flash ? (
           <div className="pointer-events-none absolute inset-0 z-20 flex flex-col items-center justify-center gap-1 bg-black/55 px-4 text-center backdrop-blur-[2px]">
             {/* 시도 → 결과 사이 dim 유지 + 판타지 로어 메시지. */}
-            <span className="fx-char fx-char-base pointer-events-none absolute right-[-80px] top-1/2 translate-y-[calc(-50%+50px)] h-[400%] aspect-square z-25 drop-shadow-[0_2px_6px_rgba(0,0,0,0.7)]" />
+            <span className="fx-char fx-char-base pointer-events-none absolute right-[-110px] top-1/2 translate-y-[calc(-50%+50px)] h-[400%] aspect-square z-25 drop-shadow-[0_2px_6px_rgba(0,0,0,0.7)]" />
             <p className="relative z-30 text-[12px] font-semibold break-keep text-amber-200 drop-shadow-[0_1px_2px_rgba(0,0,0,0.9)]">
               {attemptingMsg ?? '망치가 불을 부른다…'}
             </p>

@@ -101,7 +101,7 @@ function CharOverlay({ cls }: { cls: string }) {
   //   h-[X%]                   : 카드 높이 대비. h-[400%]=368px, h-[500%]=460px.
   return (
     <span
-      className={`fx-char ${cls} pointer-events-none absolute right-[-80px] top-1/2 translate-y-[calc(-50%+50px)] h-[400%] aspect-square z-25 drop-shadow-[0_2px_6px_rgba(0,0,0,0.7)]`}
+      className={`fx-char ${cls} pointer-events-none absolute right-[-110px] top-1/2 translate-y-[calc(-50%+50px)] h-[400%] aspect-square z-25 drop-shadow-[0_2px_6px_rgba(0,0,0,0.7)]`}
     />
   );
 }
@@ -137,8 +137,8 @@ function MegaFX({ fromLevel, toLevel }: { fromLevel?: number; toLevel?: number }
           <CountAnim
             from={fromLevel}
             to={toLevel}
-            fontSize={28}
-            className="animate-fx-counter-modern relative font-bold text-yellow-100 drop-shadow-[0_0_10px_rgba(253,224,71,0.95)] tabular-nums tracking-tight"
+            fontSize={22}
+            className="relative font-bold text-yellow-100 drop-shadow-[0_0_10px_rgba(253,224,71,0.95)] tabular-nums tracking-tight"
           />
         ) : null}
       </span>
@@ -163,8 +163,8 @@ function SuccessFX({ fromLevel, toLevel }: { fromLevel?: number; toLevel?: numbe
           <CountAnim
             from={fromLevel}
             to={toLevel}
-            fontSize={24}
-            className="animate-fx-counter-modern relative font-bold text-emerald-100 drop-shadow-[0_0_8px_rgba(52,211,153,0.9)] tabular-nums tracking-tight"
+            fontSize={18}
+            className="relative font-bold text-emerald-100 drop-shadow-[0_0_8px_rgba(52,211,153,0.9)] tabular-nums tracking-tight"
           />
         ) : null}
       </span>
@@ -189,8 +189,8 @@ function HoldFX({ fromLevel, toLevel }: { fromLevel?: number; toLevel?: number }
           <CountAnim
             from={fromLevel}
             to={toLevel}
-            fontSize={24}
-            className="animate-fx-counter-modern relative font-bold text-zinc-100 drop-shadow-[0_0_8px_rgba(161,161,170,0.9)] tabular-nums tracking-tight"
+            fontSize={18}
+            className="relative font-bold text-zinc-100 drop-shadow-[0_0_8px_rgba(161,161,170,0.9)] tabular-nums tracking-tight"
           />
         </span>
       ) : null}
@@ -220,8 +220,8 @@ function DownFX({ fromLevel, toLevel }: { fromLevel?: number; toLevel?: number }
           <CountAnim
             from={fromLevel}
             to={toLevel}
-            fontSize={24}
-            className="animate-fx-counter-modern relative font-bold text-red-100 drop-shadow-[0_0_8px_rgba(239,68,68,0.9)] tabular-nums tracking-tight"
+            fontSize={18}
+            className="relative font-bold text-red-100 drop-shadow-[0_0_8px_rgba(239,68,68,0.9)] tabular-nums tracking-tight"
           />
         ) : null}
       </span>
