@@ -539,7 +539,7 @@ export function EnhanceSlotCard({
         </div>
 
         {confirm && !attempting && !flash ? (
-          <div className="pointer-events-none absolute inset-0 z-20 flex flex-col items-center justify-center gap-1 bg-black/55 px-4 text-center backdrop-blur-[2px]">
+          <div className="pointer-events-none absolute inset-0 z-20 flex flex-col items-center justify-center gap-1 px-4 text-center">
             <p className="relative z-30 text-[12px] font-semibold break-keep text-amber-200 drop-shadow-[0_1px_2px_rgba(0,0,0,0.9)]">
               {confirmMsg ??
                 (ready ? '다시 탭하면 강화' : '아직 무르익지 않았다 — 다시 탭하면 강행')}
@@ -551,7 +551,7 @@ export function EnhanceSlotCard({
         ) : null}
 
         {attempting && !flash ? (
-          <div className="pointer-events-none absolute inset-0 z-20 flex flex-col items-center justify-center gap-1 bg-black/55 px-4 text-center backdrop-blur-[2px]">
+          <div className="pointer-events-none absolute inset-0 z-20 flex flex-col items-center justify-center gap-1 px-4 text-center">
             <p className="relative z-30 text-[12px] font-semibold break-keep text-amber-200 drop-shadow-[0_1px_2px_rgba(0,0,0,0.9)]">
               {attemptingMsg ?? '망치가 불을 부른다…'}
             </p>
@@ -560,9 +560,6 @@ export function EnhanceSlotCard({
 
         {flash ? (
           <>
-            {/* 결과 dim — 본 콘텐츠(z-10) 위(z-20), 캐릭터(z-25)·FX(z-30) 뒤.
-                장비 정보가 결과 연출 뒤로 묻혀 시각 hierarchy 정리. */}
-            <span className="pointer-events-none absolute inset-0 z-20 bg-black/55 backdrop-blur-[2px]" />
             {/* FX 시각 레이어 — Boast 레벨 성공은 mega tier. */}
             <EnhanceFX
               kind={
@@ -573,7 +570,7 @@ export function EnhanceSlotCard({
               fromLevel={flashFromLevel ?? activeJob.fromLevel}
               toLevel={flashToLevel ?? activeJob.fromLevel}
             />
-            {/* 판타지 톤 메시지 — 최상위(z-30), 모든 FX·dim 위. */}
+            {/* 판타지 톤 메시지 — 최상위(z-30), 모든 FX 위. */}
             <span className="pointer-events-none absolute inset-x-0 bottom-2 z-30 flex items-center justify-center px-5 text-center">
               <span
                 className={`rounded bg-black/75 px-2 py-0.5 text-[11px] font-medium break-keep ${OUTCOME_TONE[flash]}`}
