@@ -10,6 +10,7 @@ import {
   type CheckinReward,
   type SupplySlot,
 } from '@/lib/game/balance';
+import { assetUrl } from '@/lib/asset-versions';
 import { useResourceToast } from '@/components/ResourceToast';
 import * as haptic from '@/lib/game/haptic';
 import { sounds } from '@/lib/game/sound';
@@ -27,10 +28,20 @@ const SLOT_EMOJI: Record<SupplySlot, string> = {
   accessory: '💍',
 };
 
-function rewardSummary(r: CheckinReward): { emoji: string; primary: string; tone: 'dia' | 'sup' } {
-  if (r.kind === 'diamond') return { emoji: '💎', primary: `${r.amount.toLocaleString('ko-KR')}`, tone: 'dia' };
-  if (r.kind === 'supply') return { emoji: SLOT_EMOJI[r.slot], primary: `${r.count}장`, tone: 'sup' };
-  return { emoji: '📦', primary: `각 ${r.perSlot}장`, tone: 'sup' };
+/** Pixellab pixflux 64×64 보상 타일 파일명(public/sprites/checkin/). */
+function tileFile(r: CheckinReward): string {
+  if (r.kind === 'supply') return `tile-${r.slot}.png`;
+  if (r.kind === 'supply_set') return r.perSlot >= 20 ? 'tile-chest-lg.png' : 'tile-chest-sm.png';
+  if (r.amount >= 5000) return 'tile-gem-grand.png';
+  if (r.amount >= 2000) return 'tile-gem-md.png';
+  return 'tile-gem-sm.png';
+}
+
+/** 칸 우하단 작은 수량 라벨. */
+function quantityLabel(r: CheckinReward): string {
+  if (r.kind === 'diamond') return r.amount >= 1000 ? `${(r.amount / 1000).toFixed(r.amount % 1000 === 0 ? 0 : 1)}k` : `${r.amount}`;
+  if (r.kind === 'supply') return `×${r.count}`;
+  return `×${r.perSlot}`;
 }
 
 function rewardLongLabel(r: CheckinReward): string {
@@ -39,11 +50,19 @@ function rewardLongLabel(r: CheckinReward): string {
   return `보급권 3종 각 ${r.perSlot}장`;
 }
 
-function cellAriaLabel(day: number, r: CheckinReward, state: 'past' | 'today' | 'today_done' | 'future', isMilestone: boolean, isGrand: boolean) {
+function cellAriaLabel(
+  day: number,
+  r: CheckinReward,
+  state: 'past' | 'today' | 'today_done' | 'future',
+  isMilestone: boolean,
+  isGrand: boolean,
+) {
   const stateText =
-    state === 'today' ? '오늘 수령 가능' :
-    state === 'today_done' || state === 'past' ? '수령 완료' :
-    '미래 칸';
+    state === 'today'
+      ? '오늘 수령 가능'
+      : state === 'today_done' || state === 'past'
+        ? '수령 완료'
+        : '미래 칸';
   const tag = isGrand ? '최종 마일스톤' : isMilestone ? '마일스톤' : '';
   return [`${day}일째`, tag, rewardLongLabel(r), stateText].filter(Boolean).join(', ');
 }
@@ -60,14 +79,12 @@ export function CheckinCalendar({
   const [dayProgress, setDayProgress] = useState(initialDayProgress);
   const [lastClaimed, setLastClaimed] = useState<string | null>(initialLastClaimedKstDay);
   const [pending, startTransition] = useTransition();
-  // #11 — 수령 직후 셀 하이라이트(글로우+스탬프). 700ms 후 해제.
   const [justClaimedDay, setJustClaimedDay] = useState<number | null>(null);
   const { showResource, showError } = useResourceToast();
 
   const claimedToday = lastClaimed === kstToday;
   const todayCellDay = nextCheckinDay1Indexed(dayProgress);
   const todayReward = CHECKIN_CALENDAR[todayCellDay - 1]!;
-  const todaySummary = rewardSummary(todayReward);
 
   useEffect(() => {
     if (justClaimedDay === null) return;
@@ -85,10 +102,8 @@ export function CheckinCalendar({
       }
       const reward = r.result.reward;
       const claimedDay = r.result.cycleDay;
-      // #3 — 햅틱·사운드(레이드 보상 수령과 동일 톤)
       sounds.rewardClaim();
       haptic.success();
-      // 토스트 — 다이아 / 보급권 / 보급권 3종 분기
       if (reward.kind === 'diamond') {
         showResource('💎', '다이아', reward.amount);
       } else if (reward.kind === 'supply') {
@@ -98,7 +113,6 @@ export function CheckinCalendar({
           showResource(SLOT_EMOJI[s], `${SLOT_LABEL[s]} 보급권`, reward.perSlot);
         }
       }
-      // 낙관적 갱신 — 다음 사이클 첫칸이면 dp=0
       setDayProgress((dp) => (dp + 1) % CHECKIN_CYCLE_DAYS);
       setLastClaimed(kstToday);
       setJustClaimedDay(claimedDay);
@@ -113,84 +127,126 @@ export function CheckinCalendar({
         </h1>
       </div>
 
-      {/* 4×7 그리드 */}
-      <div className="grid grid-cols-7 gap-1.5" role="list" aria-label="28일 출석 캘린더">
-        {CHECKIN_CALENDAR.map((r, idx) => {
-          const day = idx + 1;
-          const isMilestone = isCheckinMilestone(day);
-          const isGrand = day === CHECKIN_CYCLE_DAYS; // #7 — D28 최종 마일스톤
-          const isClaimed = day <= dayProgress;
-          const isToday = day === todayCellDay && !claimedToday;
-          const isTodayClaimed = day === todayCellDay && claimedToday;
-          const justClaimed = justClaimedDay === day;
-          const showCheck = isClaimed || isTodayClaimed;
-          const sum = rewardSummary(r);
+      {/* 4×7 그리드 — 나무 판뎍 배경 위에 보상 타일 28칸 */}
+      <div className="relative overflow-hidden rounded-2xl border border-amber-900/60 shadow-md">
+        {/* eslint-disable-next-line @next/next/no-img-element */}
+        <img
+          src={assetUrl('/sprites/checkin/grid-bg.png')}
+          alt=""
+          aria-hidden
+          draggable={false}
+          className="absolute inset-0 h-full w-full object-cover"
+          style={{ imageRendering: 'pixelated' }}
+        />
+        <div className="pointer-events-none absolute inset-0 bg-black/15" />
+        <div
+          className="relative z-10 grid grid-cols-7 gap-1.5 p-2.5"
+          role="list"
+          aria-label="28일 출석 캘린더"
+        >
+          {CHECKIN_CALENDAR.map((r, idx) => {
+            const day = idx + 1;
+            const isMilestone = isCheckinMilestone(day);
+            const isGrand = day === CHECKIN_CYCLE_DAYS;
+            const isClaimed = day <= dayProgress;
+            const isToday = day === todayCellDay && !claimedToday;
+            const isTodayClaimed = day === todayCellDay && claimedToday;
+            const justClaimed = justClaimedDay === day;
+            const showCheck = isClaimed || isTodayClaimed;
+            const state = isToday ? 'today' : isTodayClaimed ? 'today_done' : isClaimed ? 'past' : 'future';
 
-          const borderCls = isGrand
-            ? 'border-amber-500 ring-2 ring-amber-400/60 shadow-[0_0_10px_rgba(245,158,11,0.35)]'
-            : isMilestone
-              ? 'border-amber-500/70 ring-1 ring-amber-400/30'
-              : 'border-zinc-200 dark:border-zinc-800';
-          const stateCls = isToday
-            ? 'bg-amber-500/15 dark:bg-amber-400/10 shadow-[inset_0_0_0_2px_rgba(245,158,11,0.55)]'
-            : showCheck
-              // #1 — opacity-50 (전체 dim 버그) 제거. 배경 톤만 변경, 본문은 자체 opacity로 dim.
-              ? 'bg-zinc-100 dark:bg-zinc-900'
-              : 'bg-white dark:bg-zinc-950';
+            const borderCls = isGrand
+              ? 'border-amber-300 ring-2 ring-amber-300/70 shadow-[0_0_10px_rgba(252,211,77,0.5)]'
+              : isMilestone
+                ? 'border-amber-300/80 ring-1 ring-amber-300/40'
+                : 'border-amber-100/30';
+            const stateCls = isToday
+              ? 'bg-amber-300/30 shadow-[inset_0_0_0_2px_rgba(252,211,77,0.7)]'
+              : showCheck
+                ? 'bg-black/40'
+                : 'bg-black/25';
 
-          const state = isToday ? 'today' : isTodayClaimed ? 'today_done' : isClaimed ? 'past' : 'future';
-
-          return (
-            <div
-              key={day}
-              role="listitem"
-              aria-label={cellAriaLabel(day, r, state, isMilestone, isGrand)}
-              style={
-                justClaimed ? { animation: 'checkin-glow 700ms ease-out' } : undefined
-              }
-              className={`relative flex aspect-square flex-col items-center justify-center rounded-lg border ${borderCls} ${stateCls} px-1 py-1 text-center`}
-            >
-              {/* 본문(D라벨·이모지·보상량) — showCheck 시 dim */}
-              <div className={showCheck ? 'flex flex-col items-center opacity-40' : 'flex flex-col items-center'}>
+            return (
+              <div
+                key={day}
+                role="listitem"
+                aria-label={cellAriaLabel(day, r, state, isMilestone, isGrand)}
+                style={justClaimed ? { animation: 'checkin-glow 700ms ease-out' } : undefined}
+                className={`relative flex aspect-square flex-col items-center justify-between rounded-md border ${borderCls} ${stateCls} backdrop-blur-[1px] p-0.5 text-center`}
+              >
+                {/* 상단 D라벨 */}
                 <div
-                  className={`text-[9px] font-medium ${isGrand ? 'text-amber-700 dark:text-amber-300' : isMilestone ? 'text-amber-600 dark:text-amber-400' : 'text-zinc-400'}`}
+                  className={`text-[8px] leading-none font-bold drop-shadow-[0_1px_1px_rgba(0,0,0,0.8)] ${
+                    isGrand
+                      ? 'text-amber-200'
+                      : isMilestone
+                        ? 'text-amber-300'
+                        : 'text-amber-100/80'
+                  }`}
                 >
-                  {isGrand ? 'GRAND' : isMilestone ? `★D${day}` : `D${day}`}
+                  {isGrand ? 'GRAND' : isMilestone ? `★${day}` : `${day}`}
                 </div>
-                <div className="text-base leading-none" aria-hidden>
-                  {sum.emoji}
+
+                {/* 보상 타일(64×64 픽셀아트) */}
+                <div className={`flex flex-1 items-center justify-center ${showCheck ? 'opacity-40' : ''}`}>
+                  {/* eslint-disable-next-line @next/next/no-img-element */}
+                  <img
+                    src={assetUrl(`/sprites/checkin/${tileFile(r)}`)}
+                    alt=""
+                    aria-hidden
+                    draggable={false}
+                    className="h-full w-full object-contain"
+                    style={{ imageRendering: 'pixelated' }}
+                  />
                 </div>
+
+                {/* 우하단 수량 라벨 */}
                 <div
-                  className={`mt-0.5 text-[9px] leading-tight ${sum.tone === 'dia' ? 'text-sky-700 dark:text-sky-300' : 'text-zinc-600 dark:text-zinc-400'}`}
+                  className={`text-[8px] leading-none font-semibold drop-shadow-[0_1px_1px_rgba(0,0,0,0.8)] ${
+                    showCheck ? 'opacity-40' : ''
+                  } ${r.kind === 'diamond' ? 'text-sky-200' : 'text-amber-100'}`}
                 >
-                  {sum.primary}
+                  {quantityLabel(r)}
                 </div>
+
+                {showCheck && (
+                  <div
+                    className="pointer-events-none absolute inset-0 flex items-center justify-center text-2xl font-bold text-amber-300 drop-shadow-[0_2px_2px_rgba(0,0,0,0.8)]"
+                    style={justClaimed ? { animation: 'checkin-stamp 520ms ease-out' } : undefined}
+                    aria-hidden
+                  >
+                    ✓
+                  </div>
+                )}
               </div>
-              {showCheck && (
-                <div
-                  // #14 — ✓ 색상 amber 톤(테마 일관) · 항상 100% 가시
-                  // #11 — 갓 수령한 칸은 스탬프 등장 애니메이션
-                  className="pointer-events-none absolute inset-0 flex items-center justify-center text-lg font-bold text-amber-600 drop-shadow-[0_1px_1px_rgba(0,0,0,0.25)] dark:text-amber-400"
-                  style={justClaimed ? { animation: 'checkin-stamp 520ms ease-out' } : undefined}
-                  aria-hidden
-                >
-                  ✓
-                </div>
-              )}
-            </div>
-          );
-        })}
+            );
+          })}
+        </div>
       </div>
 
-      {/* 오늘 카드 + 액션 */}
+      {/* 오늘 카드 + 액션 (양피지 버튼) */}
       <section className="rounded-2xl border border-zinc-200 bg-white p-4 dark:border-zinc-800 dark:bg-zinc-950">
         <div className="text-xs text-zinc-500">
           {claimedToday
             ? '오늘 수령 완료'
-            : `오늘 (D${todayCellDay}${todayCellDay === CHECKIN_CYCLE_DAYS ? ' · GRAND ★' : isCheckinMilestone(todayCellDay) ? ' · 마일스톤 ★' : ''})`}
+            : `오늘 (D${todayCellDay}${
+                todayCellDay === CHECKIN_CYCLE_DAYS
+                  ? ' · GRAND ★'
+                  : isCheckinMilestone(todayCellDay)
+                    ? ' · 마일스톤 ★'
+                    : ''
+              })`}
         </div>
         <div className="mt-1 flex items-center gap-3">
-          <span className="text-3xl" aria-hidden>{todaySummary.emoji}</span>
+          {/* eslint-disable-next-line @next/next/no-img-element */}
+          <img
+            src={assetUrl(`/sprites/checkin/${tileFile(todayReward)}`)}
+            alt=""
+            aria-hidden
+            draggable={false}
+            className="h-12 w-12 object-contain"
+            style={{ imageRendering: 'pixelated' }}
+          />
           <div className="flex-1">
             <div className="text-base font-semibold">{rewardLongLabel(todayReward)}</div>
             <div className="text-[11px] text-zinc-400">
@@ -198,18 +254,38 @@ export function CheckinCalendar({
             </div>
           </div>
         </div>
+
         <button
           type="button"
           onClick={onClaim}
           disabled={claimedToday || pending}
-          className="mt-3 w-full rounded-xl bg-amber-600 px-4 py-3 text-sm font-bold text-white shadow-md transition active:scale-[0.99] disabled:cursor-not-allowed disabled:bg-zinc-300 disabled:text-zinc-500 dark:disabled:bg-zinc-800 dark:disabled:text-zinc-500"
+          className="relative mt-3 flex h-12 w-full items-center justify-center overflow-hidden rounded-xl border border-amber-700/60 shadow-md transition active:scale-[0.99] disabled:cursor-not-allowed disabled:opacity-60"
         >
-          {/* #10 — 캘린더 메타포에 맞는 라벨 */}
-          {claimedToday
-            ? '오늘 도장 완료 · 자정 이후 다음 칸'
-            : pending
-              ? '도장 찍는 중…'
-              : '출석 도장 찍기'}
+          {/* eslint-disable-next-line @next/next/no-img-element */}
+          <img
+            src={assetUrl('/sprites/checkin/button-bg.png')}
+            alt=""
+            aria-hidden
+            draggable={false}
+            className="absolute inset-0 h-full w-full object-cover"
+            style={{ imageRendering: 'pixelated' }}
+          />
+          {claimedToday ? (
+            <div className="pointer-events-none absolute inset-0 bg-zinc-950/55" />
+          ) : (
+            <div className="pointer-events-none absolute inset-0 bg-gradient-to-b from-amber-900/10 to-amber-950/25" />
+          )}
+          <span
+            className={`relative z-10 text-sm font-bold drop-shadow-[0_1px_2px_rgba(255,240,200,0.9)] ${
+              claimedToday ? 'text-amber-100' : 'text-amber-950'
+            }`}
+          >
+            {claimedToday
+              ? '오늘 도장 완료 · 자정 이후 다음 칸'
+              : pending
+                ? '도장 찍는 중…'
+                : '출석 도장 찍기'}
+          </span>
         </button>
       </section>
     </div>
