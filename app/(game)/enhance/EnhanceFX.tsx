@@ -13,18 +13,46 @@
  */
 'use client';
 
-import { memo, useMemo } from 'react';
+import { memo, useEffect, useMemo, useState } from 'react';
 
 export type FxKind = 'success-mega' | 'success' | 'hold' | 'down';
 
 interface Props {
   kind: FxKind;
-  /** 카운터 텍스트(success/mega 한정). */
-  counter?: string;
+  /** 강화 직전 레벨 → 결과 레벨로 보간(count up/down/유지). */
+  fromLevel?: number;
+  toLevel?: number;
 }
 
 function pickRandom<T>(arr: readonly T[]): T {
   return arr[Math.floor(Math.random() * arr.length)]!;
+}
+
+/**
+ * 카운트 보간 텍스트 — from→to를 ease-out cubic으로 ~700ms.
+ * from === to(hold)면 정적 표시.
+ */
+function CountAnim({ from, to, className }: { from: number; to: number; className: string }) {
+  const [val, setVal] = useState(from);
+  useEffect(() => {
+    if (from === to) {
+      setVal(from);
+      return;
+    }
+    setVal(from);
+    const start = Date.now();
+    const dur = 700;
+    let raf = 0;
+    const step = () => {
+      const t = Math.min(1, (Date.now() - start) / dur);
+      const eased = 1 - Math.pow(1 - t, 3);
+      setVal(Math.round(from + (to - from) * eased));
+      if (t < 1) raf = requestAnimationFrame(step);
+    };
+    raf = requestAnimationFrame(step);
+    return () => cancelAnimationFrame(raf);
+  }, [from, to]);
+  return <span className={className}>+{val}</span>;
 }
 
 const CHEER_POOL = ['fx-char-cheer-1', 'fx-char-cheer-2', 'fx-char-cheer-3', 'fx-char-cheer-4'] as const;
@@ -36,16 +64,16 @@ const DOWN_POOL = ['fx-char-down-1', 'fx-char-down-2'] as const;
  * 상반신만 카드 안에 보이고 하반신은 overflow-hidden로 잘림.
  */
 function CharOverlay({ cls }: { cls: string }) {
-  // 우측 머리끝이 카드 상단 끝에 닿게(top-0). 카드에 캐릭터 위 25%(머리/얼굴) 노출.
-  // animation 없음(opacity 효과 제거 — preload로 깜빡임 회피).
+  // top-[-30px]: 컨테이너 위 30px만 카드 밖 → 카드에 캐릭터 머리/얼굴/가슴 상단 노출.
+  // (top-0은 정수리만 표시되어 캐릭터가 사라진 듯 보임)
   return (
     <span
-      className={`fx-char ${cls} pointer-events-none absolute right-[-20px] top-0 h-[400%] aspect-square z-25 drop-shadow-[0_2px_6px_rgba(0,0,0,0.7)]`}
+      className={`fx-char ${cls} pointer-events-none absolute right-[-20px] top-[-30px] h-[400%] aspect-square z-25 drop-shadow-[0_2px_6px_rgba(0,0,0,0.7)]`}
     />
   );
 }
 
-function MegaFX({ counter }: { counter?: string }) {
+function MegaFX({ fromLevel, toLevel }: { fromLevel?: number; toLevel?: number }) {
   const directions = [0, 90, 180, 270];
   const charCls = useMemo(() => pickRandom(CHEER_POOL), []);
   return (
@@ -72,17 +100,19 @@ function MegaFX({ counter }: { counter?: string }) {
             ✦
           </span>
         ))}
-        {counter ? (
-          <span className="animate-fx-counter-modern relative font-bold text-2xl text-yellow-100 drop-shadow-[0_0_10px_rgba(253,224,71,0.95)] tabular-nums tracking-tight">
-            {counter}
-          </span>
+        {fromLevel !== undefined && toLevel !== undefined ? (
+          <CountAnim
+            from={fromLevel}
+            to={toLevel}
+            className="animate-fx-counter-modern relative font-bold text-2xl text-yellow-100 drop-shadow-[0_0_10px_rgba(253,224,71,0.95)] tabular-nums tracking-tight"
+          />
         ) : null}
       </span>
     </>
   );
 }
 
-function SuccessFX({ counter }: { counter?: string }) {
+function SuccessFX({ fromLevel, toLevel }: { fromLevel?: number; toLevel?: number }) {
   const charCls = useMemo(() => pickRandom(CHEER_POOL), []);
   return (
     <>
@@ -95,17 +125,19 @@ function SuccessFX({ counter }: { counter?: string }) {
               'radial-gradient(circle, rgba(52, 211, 153, 0.7), rgba(16, 185, 129, 0.3) 50%, transparent 75%)',
           }}
         />
-        {counter ? (
-          <span className="animate-fx-counter-modern relative font-bold text-xl text-emerald-100 drop-shadow-[0_0_8px_rgba(52,211,153,0.9)] tabular-nums tracking-tight">
-            {counter}
-          </span>
+        {fromLevel !== undefined && toLevel !== undefined ? (
+          <CountAnim
+            from={fromLevel}
+            to={toLevel}
+            className="animate-fx-counter-modern relative font-bold text-xl text-emerald-100 drop-shadow-[0_0_8px_rgba(52,211,153,0.9)] tabular-nums tracking-tight"
+          />
         ) : null}
       </span>
     </>
   );
 }
 
-function HoldFX({ counter }: { counter?: string }) {
+function HoldFX({ fromLevel, toLevel }: { fromLevel?: number; toLevel?: number }) {
   const charCls = useMemo(() => pickRandom(HOLD_POOL), []);
   return (
     <>
@@ -117,18 +149,20 @@ function HoldFX({ counter }: { counter?: string }) {
         }}
       />
       <CharOverlay cls={charCls} />
-      {counter ? (
+      {fromLevel !== undefined && toLevel !== undefined ? (
         <span className="pointer-events-none absolute inset-0 z-30 flex items-center justify-center">
-          <span className="animate-fx-counter-modern relative font-bold text-xl text-zinc-100 drop-shadow-[0_0_8px_rgba(161,161,170,0.9)] tabular-nums tracking-tight">
-            {counter}
-          </span>
+          <CountAnim
+            from={fromLevel}
+            to={toLevel}
+            className="animate-fx-counter-modern relative font-bold text-xl text-zinc-100 drop-shadow-[0_0_8px_rgba(161,161,170,0.9)] tabular-nums tracking-tight"
+          />
         </span>
       ) : null}
     </>
   );
 }
 
-function DownFX({ counter }: { counter?: string }) {
+function DownFX({ fromLevel, toLevel }: { fromLevel?: number; toLevel?: number }) {
   const charCls = useMemo(() => pickRandom(DOWN_POOL), []);
   // 충격파 — 3개 ring을 stagger로 발산(0s, 0.15s, 0.3s).
   return (
@@ -146,19 +180,21 @@ function DownFX({ counter }: { counter?: string }) {
             }}
           />
         ))}
-        {counter ? (
-          <span className="animate-fx-counter-modern relative font-bold text-xl text-red-100 drop-shadow-[0_0_8px_rgba(239,68,68,0.9)] tabular-nums tracking-tight">
-            {counter}
-          </span>
+        {fromLevel !== undefined && toLevel !== undefined ? (
+          <CountAnim
+            from={fromLevel}
+            to={toLevel}
+            className="animate-fx-counter-modern relative font-bold text-xl text-red-100 drop-shadow-[0_0_8px_rgba(239,68,68,0.9)] tabular-nums tracking-tight"
+          />
         ) : null}
       </span>
     </>
   );
 }
 
-export const EnhanceFX = memo(function EnhanceFX({ kind, counter }: Props) {
-  if (kind === 'success-mega') return <MegaFX counter={counter} />;
-  if (kind === 'success') return <SuccessFX counter={counter} />;
-  if (kind === 'hold') return <HoldFX counter={counter} />;
-  return <DownFX counter={counter} />;
+export const EnhanceFX = memo(function EnhanceFX({ kind, fromLevel, toLevel }: Props) {
+  if (kind === 'success-mega') return <MegaFX fromLevel={fromLevel} toLevel={toLevel} />;
+  if (kind === 'success') return <SuccessFX fromLevel={fromLevel} toLevel={toLevel} />;
+  if (kind === 'hold') return <HoldFX fromLevel={fromLevel} toLevel={toLevel} />;
+  return <DownFX fromLevel={fromLevel} toLevel={toLevel} />;
 });

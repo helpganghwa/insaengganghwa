@@ -379,19 +379,26 @@ export function EnhanceSlotCard({
     });
   };
 
+  const [optimisticCancelled, setOptimisticCancelled] = useState(false);
   const doCancel = () => {
-    if (pending) return;
+    if (attempting) return;
     if (!confirmCancel) {
       setConfirmCancel(true);
       return;
     }
-    startTransition(async () => {
-      const r = await cancelEnhanceAction(activeJob.jobId);
-      setConfirmCancel(false);
-      if (r.status === 'error') alert(r.message);
-      else router.refresh();
+    setConfirmCancel(false);
+    setOptimisticCancelled(true); // 카드 즉시 숨김 — 처리중 표시 X
+    void cancelEnhanceAction(activeJob.jobId).then((r) => {
+      if (r.status === 'error') {
+        setOptimisticCancelled(false);
+        alert(r.message);
+      } else {
+        router.refresh();
+      }
     });
   };
+
+  if (optimisticCancelled) return null;
 
   return (
     <div className="relative">
@@ -472,7 +479,7 @@ export function EnhanceSlotCard({
                 +{activeJob.fromLevel}→+{activeJob.targetLevel}
               </span>
               <span>
-                {pending
+                {attempting
                   ? '처리 중…'
                   : ready
                     ? '강화 가능 (최대 확률)'
@@ -521,7 +528,7 @@ export function EnhanceSlotCard({
         {confirm && !attempting && !flash ? (
           <div className="pointer-events-none absolute inset-0 z-20 flex flex-col items-center justify-center gap-1 bg-black/55 px-4 text-center backdrop-blur-[2px]">
             {/* 대장장이 캐릭터 — 우측 머리끝이 카드 상단에 닿게. */}
-            <span className="fx-char fx-char-base pointer-events-none absolute right-[-20px] top-0 h-[400%] aspect-square z-25 drop-shadow-[0_2px_6px_rgba(0,0,0,0.7)]" />
+            <span className="fx-char fx-char-base pointer-events-none absolute right-[-20px] top-[-30px] h-[400%] aspect-square z-25 drop-shadow-[0_2px_6px_rgba(0,0,0,0.7)]" />
             <p className="relative z-30 text-[12px] font-semibold break-keep text-amber-200 drop-shadow-[0_1px_2px_rgba(0,0,0,0.9)]">
               {confirmMsg ??
                 (ready ? '다시 탭하면 강화' : '아직 무르익지 않았다 — 다시 탭하면 강행')}
@@ -535,7 +542,7 @@ export function EnhanceSlotCard({
         {attempting && !flash ? (
           <div className="pointer-events-none absolute inset-0 z-20 flex flex-col items-center justify-center gap-1 bg-black/55 px-4 text-center backdrop-blur-[2px]">
             {/* 시도 → 결과 사이 dim 유지 + 판타지 로어 메시지. */}
-            <span className="fx-char fx-char-base pointer-events-none absolute right-[-20px] top-0 h-[400%] aspect-square z-25 drop-shadow-[0_2px_6px_rgba(0,0,0,0.7)]" />
+            <span className="fx-char fx-char-base pointer-events-none absolute right-[-20px] top-[-30px] h-[400%] aspect-square z-25 drop-shadow-[0_2px_6px_rgba(0,0,0,0.7)]" />
             <p className="relative z-30 text-[12px] font-semibold break-keep text-amber-200 drop-shadow-[0_1px_2px_rgba(0,0,0,0.9)]">
               {attemptingMsg ?? '망치가 불을 부른다…'}
             </p>
@@ -554,13 +561,8 @@ export function EnhanceSlotCard({
                   ? ('success-mega' satisfies FxKind)
                   : (flash satisfies FxKind)
               }
-              counter={
-                flash === 'hold'
-                  ? '유지'
-                  : flashToLevel !== null
-                    ? `+${flashToLevel}`
-                    : undefined
-              }
+              fromLevel={activeJob.fromLevel}
+              toLevel={flashToLevel ?? activeJob.fromLevel}
             />
             {/* 판타지 톤 메시지 — 최상위(z-30), 모든 FX·dim 위. */}
             <span className="pointer-events-none absolute inset-x-0 bottom-2 z-30 flex items-center justify-center px-5 text-center">
