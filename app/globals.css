@@ -91,6 +91,17 @@
     50%  { opacity: 1; transform: translateY(-2px) scale(1.18); }
     100% { opacity: 0; transform: translateY(-22px) scale(1); }
   }
+  /* 카운터 임팩트 — 회전 등장 + 큰 scale bounce + 살짝 흔들림 후 페이드. */
+  --animate-fx-counter-impact: fx-counter-impact 1.6s cubic-bezier(0.34, 1.56, 0.64, 1) forwards;
+  @keyframes fx-counter-impact {
+    0%   { opacity: 0; transform: scale(0.2) rotate(-25deg); }
+    15%  { opacity: 1; transform: scale(1.6) rotate(8deg); }
+    30%  { transform: scale(1.0) rotate(-4deg); }
+    42%  { transform: scale(1.15) rotate(3deg); }
+    55%  { transform: scale(1.0) rotate(0deg); }
+    80%  { opacity: 1; transform: scale(1.0) rotate(0deg); }
+    100% { opacity: 0; transform: scale(1.1) translateY(-16px) rotate(0deg); }
+  }
   /* 캐릭터 reaction — 단순 fade-in/out (슬라이드 없음). */
   --animate-fx-char-appear: fx-char-appear 3s ease-out forwards;
   @keyframes fx-char-appear {
