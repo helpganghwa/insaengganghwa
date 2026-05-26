@@ -91,6 +91,18 @@
     50%  { opacity: 1; transform: translateY(-2px) scale(1.18); }
     100% { opacity: 0; transform: translateY(-22px) scale(1); }
   }
+
+  /* /checkin — 수령 직후 칸 글로우 + ✓ 스탬프 시퀀스. */
+  @keyframes checkin-glow {
+    0%   { box-shadow: 0 0 0 0 rgba(245, 158, 11, 0); }
+    35%  { box-shadow: 0 0 18px 5px rgba(245, 158, 11, 0.65); }
+    100% { box-shadow: 0 0 0 0 rgba(245, 158, 11, 0); }
+  }
+  @keyframes checkin-stamp {
+    0%   { opacity: 0; transform: scale(0.2) rotate(-18deg); }
+    50%  { opacity: 1; transform: scale(1.25) rotate(6deg); }
+    100% { opacity: 1; transform: scale(1) rotate(0); }
+  }
   /* 카운터 — 얌전·모던. 살짝 솟구치며 등장, 잠시 유지, 위로 페이드. 회전·진동 없음. */
   --animate-fx-counter-modern: fx-counter-modern 1.8s ease-out forwards;
   @keyframes fx-counter-modern {
