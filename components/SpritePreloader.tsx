@@ -20,16 +20,43 @@ const idle: IdleCb =
 
 let warmed = false;
 
+// 강화 결과 FX 캐릭터 9장 — 첫 결과 시 깜빡임 방지(new Image()로 디코드 캐시).
+const FX_CHAR_FILES = [
+  '/fx/char-base.png',
+  '/fx/char-cheer-1.png',
+  '/fx/char-cheer-2.png',
+  '/fx/char-cheer-3.png',
+  '/fx/char-cheer-4.png',
+  '/fx/char-hold.png',
+  '/fx/char-hold-2.png',
+  '/fx/char-down.png',
+  '/fx/char-down-2.png',
+];
+let charsWarmed = false;
+function warmChars() {
+  if (charsWarmed) return;
+  charsWarmed = true;
+  for (const src of FX_CHAR_FILES) {
+    const img = new Image();
+    img.src = src;
+  }
+}
+
 export function SpritePreloader() {
   useEffect(() => {
-    if (warmed || typeof window === 'undefined') return;
-    warmed = true;
-    idle(() => {
-      // 결과 무시 — 캐시 워밍 목적.
-      loadAtlasImage().catch(() => {
-        warmed = false; // 실패 시 다음 진입에서 재시도 허용.
-      });
-    }, { timeout: 5000 });
+    if (typeof window === 'undefined') return;
+    if (!warmed) {
+      warmed = true;
+      idle(
+        () => {
+          loadAtlasImage().catch(() => {
+            warmed = false;
+          });
+        },
+        { timeout: 5000 },
+      );
+    }
+    idle(warmChars, { timeout: 3000 });
   }, []);
   return null;
 }

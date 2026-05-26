@@ -501,7 +501,7 @@ export function EnhanceSlotCard({
         {confirm && !pending && !flash ? (
           <div className="pointer-events-none absolute inset-0 z-20 flex flex-col items-center justify-center gap-1 bg-black/55 px-4 text-center backdrop-blur-[2px]">
             {/* 대장장이 캐릭터 — confirm 단계 dim 위(z-25), 우측 중앙. */}
-            <span className="fx-char fx-char-base animate-fx-char-appear pointer-events-none absolute right-[-20px] top-1/2 -translate-y-1/2 h-[400%] aspect-square z-25 drop-shadow-[0_2px_6px_rgba(0,0,0,0.7)]" />
+            <span className="fx-char fx-char-base pointer-events-none absolute right-[-20px] top-[-30px] h-[400%] aspect-square z-25 drop-shadow-[0_2px_6px_rgba(0,0,0,0.7)]" />
             <p className="relative z-30 text-[12px] font-semibold break-keep text-amber-200 drop-shadow-[0_1px_2px_rgba(0,0,0,0.9)]">
               {confirmMsg ??
                 (ready ? '다시 탭하면 강화' : '아직 무르익지 않았다 — 다시 탭하면 강행')}
@@ -515,7 +515,7 @@ export function EnhanceSlotCard({
         {pending && !flash ? (
           <div className="pointer-events-none absolute inset-0 z-20 flex flex-col items-center justify-center gap-1 bg-black/55 px-4 text-center backdrop-blur-[2px]">
             {/* confirm dim 유지 + 강화 시도 중 표시 (시도→결과 사이 비어 보이지 않게). */}
-            <span className="fx-char fx-char-base animate-fx-char-appear pointer-events-none absolute right-[-20px] top-1/2 -translate-y-1/2 h-[400%] aspect-square z-25 drop-shadow-[0_2px_6px_rgba(0,0,0,0.7)]" />
+            <span className="fx-char fx-char-base pointer-events-none absolute right-[-20px] top-[-30px] h-[400%] aspect-square z-25 drop-shadow-[0_2px_6px_rgba(0,0,0,0.7)]" />
             <p className="relative z-30 text-[12px] font-semibold text-amber-200 drop-shadow-[0_1px_2px_rgba(0,0,0,0.9)]">
               ⚒️ 강화 중...
             </p>

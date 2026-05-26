@@ -36,11 +36,11 @@ const DOWN_POOL = ['fx-char-down-1', 'fx-char-down-2'] as const;
  * 상반신만 카드 안에 보이고 하반신은 overflow-hidden로 잘림.
  */
 function CharOverlay({ cls }: { cls: string }) {
-  // 우측 중앙 — top-1/2 + -translate-y-1/2로 컨테이너 세로 중심을 카드 중심에 정렬.
-  // 카드 안엔 캐릭터의 중간 영역(가슴/배)이 자연 노출.
+  // 컨테이너를 카드 위쪽에서 30px만 빠뜨림 → 카드에 캐릭터의 위 25%(머리/얼굴)가 노출.
+  // animation 없음(opacity 효과 제거 — preload로 깜빡임 회피).
   return (
     <span
-      className={`fx-char ${cls} animate-fx-char-appear pointer-events-none absolute right-[-20px] top-1/2 -translate-y-1/2 h-[400%] aspect-square z-25 drop-shadow-[0_2px_6px_rgba(0,0,0,0.7)]`}
+      className={`fx-char ${cls} pointer-events-none absolute right-[-20px] top-[-30px] h-[400%] aspect-square z-25 drop-shadow-[0_2px_6px_rgba(0,0,0,0.7)]`}
     />
   );
 }
@@ -73,7 +73,7 @@ function MegaFX({ counter }: { counter?: string }) {
           </span>
         ))}
         {counter ? (
-          <span className="animate-fx-counter-impact relative inline-block rounded-md bg-gradient-to-b from-yellow-300 to-amber-500 px-3 py-1 font-black text-3xl text-amber-950 shadow-[0_0_18px_4px_rgba(253,224,71,0.85)] ring-2 ring-yellow-100 tabular-nums">
+          <span className="animate-fx-counter-modern relative font-bold text-3xl text-yellow-100 drop-shadow-[0_0_10px_rgba(253,224,71,0.95)] tabular-nums tracking-tight">
             {counter}
           </span>
         ) : null}
@@ -96,7 +96,7 @@ function SuccessFX({ counter }: { counter?: string }) {
           }}
         />
         {counter ? (
-          <span className="animate-fx-counter-impact relative inline-block rounded-md bg-gradient-to-b from-emerald-300 to-emerald-600 px-2.5 py-0.5 font-black text-2xl text-emerald-950 shadow-[0_0_12px_3px_rgba(52,211,153,0.7)] ring-2 ring-emerald-100 tabular-nums">
+          <span className="animate-fx-counter-modern relative font-bold text-2xl text-emerald-100 drop-shadow-[0_0_8px_rgba(52,211,153,0.9)] tabular-nums tracking-tight">
             {counter}
           </span>
         ) : null}

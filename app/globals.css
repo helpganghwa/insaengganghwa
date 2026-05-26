@@ -91,25 +91,16 @@
     50%  { opacity: 1; transform: translateY(-2px) scale(1.18); }
     100% { opacity: 0; transform: translateY(-22px) scale(1); }
   }
-  /* 카운터 임팩트 — 회전 등장 + 큰 scale bounce + 살짝 흔들림 후 페이드. */
-  --animate-fx-counter-impact: fx-counter-impact 1.6s cubic-bezier(0.34, 1.56, 0.64, 1) forwards;
-  @keyframes fx-counter-impact {
-    0%   { opacity: 0; transform: scale(0.2) rotate(-25deg); }
-    15%  { opacity: 1; transform: scale(1.6) rotate(8deg); }
-    30%  { transform: scale(1.0) rotate(-4deg); }
-    42%  { transform: scale(1.15) rotate(3deg); }
-    55%  { transform: scale(1.0) rotate(0deg); }
-    80%  { opacity: 1; transform: scale(1.0) rotate(0deg); }
-    100% { opacity: 0; transform: scale(1.1) translateY(-16px) rotate(0deg); }
+  /* 카운터 — 얌전·모던. 살짝 솟구치며 등장, 잠시 유지, 위로 페이드. 회전·진동 없음. */
+  --animate-fx-counter-modern: fx-counter-modern 1.8s ease-out forwards;
+  @keyframes fx-counter-modern {
+    0%   { opacity: 0; transform: scale(0.85) translateY(6px); }
+    20%  { opacity: 1; transform: scale(1) translateY(0); }
+    75%  { opacity: 1; transform: scale(1) translateY(0); }
+    100% { opacity: 0; transform: scale(1.02) translateY(-14px); }
   }
-  /* 캐릭터 reaction — 단순 fade-in/out (슬라이드 없음). */
-  --animate-fx-char-appear: fx-char-appear 3s ease-out forwards;
-  @keyframes fx-char-appear {
-    0%   { opacity: 0; }
-    15%  { opacity: 1; }
-    90%  { opacity: 1; }
-    100% { opacity: 0; }
-  }
+  /* 캐릭터는 애니메이션 없이 즉시 표시(opacity 효과 제거 — 사용자 결정 2026-05-26).
+     unmount 시 자연 사라짐. */
   /* 하락 — 빨강 충격파(concentric rings, stagger 발산). */
   --animate-fx-shockwave: fx-shockwave 0.9s cubic-bezier(0.16, 1, 0.3, 1) forwards;
   @keyframes fx-shockwave {
