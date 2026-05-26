@@ -99,6 +99,25 @@
     75%  { opacity: 1; transform: scale(1) translateY(0); }
     100% { opacity: 0; transform: scale(1.02) translateY(-14px); }
   }
+  /* 슬롯머신 카운트 — 위/아래 슬라이드. h-[1em] overflow-hidden 컨테이너 내부에서 사용. */
+  --animate-fx-slot-up: fx-slot-up 0.7s cubic-bezier(0.22, 1, 0.36, 1) forwards;
+  --animate-fx-slot-down: fx-slot-down 0.7s cubic-bezier(0.22, 1, 0.36, 1) forwards;
+  --animate-fx-slot-shake: fx-slot-shake 0.5s ease-in-out;
+  @keyframes fx-slot-up {
+    0%   { transform: translateY(0); }
+    100% { transform: translateY(-50%); }
+  }
+  @keyframes fx-slot-down {
+    0%   { transform: translateY(-50%); }
+    100% { transform: translateY(0); }
+  }
+  @keyframes fx-slot-shake {
+    0%, 100% { transform: translateX(0); }
+    20% { transform: translateX(-4px); }
+    40% { transform: translateX(4px); }
+    60% { transform: translateX(-3px); }
+    80% { transform: translateX(2px); }
+  }
   /* 캐릭터는 애니메이션 없이 즉시 표시(opacity 효과 제거 — 사용자 결정 2026-05-26).
      unmount 시 자연 사라짐. */
   /* 하락 — 빨강 충격파(concentric rings, stagger 발산). */

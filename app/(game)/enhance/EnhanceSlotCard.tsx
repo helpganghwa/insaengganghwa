@@ -398,7 +398,16 @@ export function EnhanceSlotCard({
     });
   };
 
-  if (optimisticCancelled) return null;
+  if (optimisticCancelled) {
+    // 카드를 picker와 동일 외관의 placeholder로 즉시 교체 — 슬롯 2칸 유지.
+    // router.refresh() 후 부모 page가 실제 EmptySlotButton(후보 모달 가능)으로 교체.
+    const slotLabel: Record<Slot, string> = { weapon: '무기', armor: '방어구', accessory: '장신구' };
+    return (
+      <div className="flex h-[92px] w-full items-center justify-center gap-2 rounded-xl border-2 border-dashed border-zinc-700 text-sm text-zinc-500">
+        <span className="text-lg">＋</span> {slotLabel[activeJob.slot]} 올려 강화
+      </div>
+    );
+  }
 
   return (
     <div className="relative">
@@ -528,7 +537,7 @@ export function EnhanceSlotCard({
         {confirm && !attempting && !flash ? (
           <div className="pointer-events-none absolute inset-0 z-20 flex flex-col items-center justify-center gap-1 bg-black/55 px-4 text-center backdrop-blur-[2px]">
             {/* 대장장이 캐릭터 — 우측 머리끝이 카드 상단에 닿게. */}
-            <span className="fx-char fx-char-base pointer-events-none absolute right-[-20px] top-[-30px] h-[400%] aspect-square z-25 drop-shadow-[0_2px_6px_rgba(0,0,0,0.7)]" />
+            <span className="fx-char fx-char-base pointer-events-none absolute right-0 top-1/2 -translate-y-1/2 h-[400%] aspect-square z-25 drop-shadow-[0_2px_6px_rgba(0,0,0,0.7)]" />
             <p className="relative z-30 text-[12px] font-semibold break-keep text-amber-200 drop-shadow-[0_1px_2px_rgba(0,0,0,0.9)]">
               {confirmMsg ??
                 (ready ? '다시 탭하면 강화' : '아직 무르익지 않았다 — 다시 탭하면 강행')}
@@ -542,7 +551,7 @@ export function EnhanceSlotCard({
         {attempting && !flash ? (
           <div className="pointer-events-none absolute inset-0 z-20 flex flex-col items-center justify-center gap-1 bg-black/55 px-4 text-center backdrop-blur-[2px]">
             {/* 시도 → 결과 사이 dim 유지 + 판타지 로어 메시지. */}
-            <span className="fx-char fx-char-base pointer-events-none absolute right-[-20px] top-[-30px] h-[400%] aspect-square z-25 drop-shadow-[0_2px_6px_rgba(0,0,0,0.7)]" />
+            <span className="fx-char fx-char-base pointer-events-none absolute right-0 top-1/2 -translate-y-1/2 h-[400%] aspect-square z-25 drop-shadow-[0_2px_6px_rgba(0,0,0,0.7)]" />
             <p className="relative z-30 text-[12px] font-semibold break-keep text-amber-200 drop-shadow-[0_1px_2px_rgba(0,0,0,0.9)]">
               {attemptingMsg ?? '망치가 불을 부른다…'}
             </p>

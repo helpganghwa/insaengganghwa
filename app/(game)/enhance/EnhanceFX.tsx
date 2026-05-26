@@ -13,7 +13,7 @@
  */
 'use client';
 
-import { memo, useEffect, useMemo, useState } from 'react';
+import { memo, useMemo } from 'react';
 
 export type FxKind = 'success-mega' | 'success' | 'hold' | 'down';
 
@@ -29,30 +29,39 @@ function pickRandom<T>(arr: readonly T[]): T {
 }
 
 /**
- * 카운트 보간 텍스트 — from→to를 ease-out cubic으로 ~700ms.
- * from === to(hold)면 정적 표시.
+ * 슬롯머신 카운트 — from→to를 위/아래 슬라이드로 표시.
+ *  - to > from (success/mega): 위로 슬라이드 (from 위, to 아래 — translateY 0 → -50%)
+ *  - to < from (down)        : 아래로 슬라이드 (to 위, from 아래 — translateY -50% → 0)
+ *  - from === to (hold)      : 좌우 흔들림(fx-slot-shake), 숫자 변화 없음
+ *
+ * 구조: 부모 h-[1em] overflow-hidden, 내부 자식이 슬라이드. 자식 높이 = 2em (두 숫자 수직 배치).
  */
 function CountAnim({ from, to, className }: { from: number; to: number; className: string }) {
-  const [val, setVal] = useState(from);
-  useEffect(() => {
-    if (from === to) {
-      setVal(from);
-      return;
-    }
-    setVal(from);
-    const start = Date.now();
-    const dur = 700;
-    let raf = 0;
-    const step = () => {
-      const t = Math.min(1, (Date.now() - start) / dur);
-      const eased = 1 - Math.pow(1 - t, 3);
-      setVal(Math.round(from + (to - from) * eased));
-      if (t < 1) raf = requestAnimationFrame(step);
-    };
-    raf = requestAnimationFrame(step);
-    return () => cancelAnimationFrame(raf);
-  }, [from, to]);
-  return <span className={className}>+{val}</span>;
+  if (from === to) {
+    return (
+      <span className={`animate-fx-slot-shake inline-block ${className}`}>
+        +{from}
+      </span>
+    );
+  }
+  const up = to > from; // 카운트업
+  // up: 위에 from, 아래 to. 슬라이드 0→-50% → 결과 to가 위로 노출.
+  // down: 위에 to, 아래 from. 슬라이드 -50%→0 → 결과 to가 위로 노출.
+  const first = up ? from : to;
+  const second = up ? to : from;
+  return (
+    <span
+      className={`relative inline-block overflow-hidden align-baseline ${className}`}
+      style={{ height: '1em', lineHeight: 1 }}
+    >
+      <span
+        className={`flex flex-col leading-none ${up ? 'animate-fx-slot-up' : 'animate-fx-slot-down'}`}
+      >
+        <span className="block">+{first}</span>
+        <span className="block">+{second}</span>
+      </span>
+    </span>
+  );
 }
 
 const CHEER_POOL = ['fx-char-cheer-1', 'fx-char-cheer-2', 'fx-char-cheer-3', 'fx-char-cheer-4'] as const;
@@ -64,11 +73,14 @@ const DOWN_POOL = ['fx-char-down-1', 'fx-char-down-2'] as const;
  * 상반신만 카드 안에 보이고 하반신은 overflow-hidden로 잘림.
  */
 function CharOverlay({ cls }: { cls: string }) {
-  // top-[-30px]: 컨테이너 위 30px만 카드 밖 → 카드에 캐릭터 머리/얼굴/가슴 상단 노출.
-  // (top-0은 정수리만 표시되어 캐릭터가 사라진 듯 보임)
+  // 우측 세로 중앙 — top-1/2 + -translate-y-1/2로 컨테이너 세로 중심을 카드 중심에 정렬.
+  // 위치 조정 가이드:
+  //   right-[Npx] : 컨테이너 우측 끝(음수=카드 밖). 캐릭터 좌우 노출 영역 조정.
+  //   top-1/2 -translate-y-1/2 : 세로 정중앙. 대신 top-[Ypx] 직접 지정 가능.
+  //   h-[X%]    : 카드 높이 대비 컨테이너 높이. 클수록 캐릭터 시각 면적 ↑.
   return (
     <span
-      className={`fx-char ${cls} pointer-events-none absolute right-[-20px] top-[-30px] h-[400%] aspect-square z-25 drop-shadow-[0_2px_6px_rgba(0,0,0,0.7)]`}
+      className={`fx-char ${cls} pointer-events-none absolute right-0 top-1/2 -translate-y-1/2 h-[400%] aspect-square z-25 drop-shadow-[0_2px_6px_rgba(0,0,0,0.7)]`}
     />
   );
 }
