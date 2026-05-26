@@ -64,7 +64,7 @@ export default async function HomePage() {
   const userId = await getSessionUserId();
   // (game) layout이 가드하므로 정상 흐름엔 null 아님. 폴백 안전.
   let hasUnclaimedDaily = false;
-  let checkinDayProgress: number | null = null;
+  let hasUnclaimedCheckin = false;
   if (userId) {
     const kstToday = kstDateString();
     // 일일 보급 + 출석 state — 핫패스 1RTT(병렬, CLAUDE §11.4)
@@ -82,25 +82,21 @@ export default async function HomePage() {
         )
         .limit(1) as unknown as Promise<Array<{ n: number }>>,
       db
-        .select({
-          dayProgress: userCheckinState.dayProgress,
-          lastClaimedKstDay: userCheckinState.lastClaimedKstDay,
-        })
+        .select({ lastClaimedKstDay: userCheckinState.lastClaimedKstDay })
         .from(userCheckinState)
         .where(eq(userCheckinState.userId, userId))
         .limit(1),
     ]);
     hasUnclaimedDaily = (dailyRow[0]?.n ?? 0) > 0;
-    // 신규 유저 = 행 없음 → dp=0, lastClaimed=null → 카드 노출(D1).
-    const dp = checkinRow[0]?.dayProgress ?? 0;
+    // 신규 유저 = 행 없음 → lastClaimed=null → 카드 노출(D1).
     const last = checkinRow[0]?.lastClaimedKstDay ?? null;
-    if (last !== kstToday) checkinDayProgress = dp;
+    hasUnclaimedCheckin = last !== kstToday;
   }
 
   return (
     <div className="flex flex-col gap-4 px-4 py-4">
-      {checkinDayProgress !== null ? <HubCheckinCard dayProgress={checkinDayProgress} /> : null}
       {hasUnclaimedDaily ? <DailySupplyCard /> : null}
+      {hasUnclaimedCheckin ? <HubCheckinCard /> : null}
       <div className="grid grid-cols-2 gap-3">
         {MENU.map((m) => (
           <Link
