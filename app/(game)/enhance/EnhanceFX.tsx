@@ -29,36 +29,28 @@ function pickRandom<T>(arr: readonly T[]): T {
 }
 
 /**
- * 슬롯머신 카운트 — from→to를 위/아래 슬라이드로 표시.
- *  - to > from (success/mega): 위로 슬라이드 (from 위, to 아래 — translateY 0 → -50%)
- *  - to < from (down)        : 아래로 슬라이드 (to 위, from 아래 — translateY -50% → 0)
- *  - from === to (hold)      : 좌우 흔들림(fx-slot-shake), 숫자 변화 없음
+ * 카운트 morph — 두 숫자가 같은 위치에 겹쳐서 crossfade.
+ *  - from !== to: 기존 숫자가 fade-out(축소·blur), 새 숫자가 fade-in(확대→정상·blur해제)
+ *  - from === to (hold): 좌우 흔들림만, 숫자 변화 없음
  *
- * 구조: 부모 h-[1em] overflow-hidden, 내부 자식이 슬라이드. 자식 높이 = 2em (두 숫자 수직 배치).
+ * 구조: relative span에 두 숫자 absolute 겹침. invisible placeholder로 폭 안정.
  */
 function CountAnim({ from, to, className }: { from: number; to: number; className: string }) {
   if (from === to) {
     return (
-      <span className={`animate-fx-slot-shake inline-block ${className}`}>
-        +{from}
-      </span>
+      <span className={`animate-fx-num-shake inline-block ${className}`}>+{from}</span>
     );
   }
-  const up = to > from; // 카운트업
-  // up: 위에 from, 아래 to. 슬라이드 0→-50% → 결과 to가 위로 노출.
-  // down: 위에 to, 아래 from. 슬라이드 -50%→0 → 결과 to가 위로 노출.
-  const first = up ? from : to;
-  const second = up ? to : from;
+  const longer = Math.abs(to) >= Math.abs(from) ? to : from;
   return (
-    <span
-      className={`relative inline-block overflow-hidden align-baseline ${className}`}
-      style={{ height: '1em', lineHeight: 1 }}
-    >
-      <span
-        className={`flex flex-col leading-none ${up ? 'animate-fx-slot-up' : 'animate-fx-slot-down'}`}
-      >
-        <span className="block">+{first}</span>
-        <span className="block">+{second}</span>
+    <span className={`relative inline-block leading-none ${className}`}>
+      {/* 폭 placeholder — 두 숫자 중 긴 쪽 기준. */}
+      <span className="invisible">+{longer}</span>
+      <span className="animate-fx-num-out absolute inset-0 flex items-center justify-center">
+        +{from}
+      </span>
+      <span className="animate-fx-num-in absolute inset-0 flex items-center justify-center">
+        +{to}
       </span>
     </span>
   );
@@ -79,7 +71,7 @@ function CharOverlay({ cls }: { cls: string }) {
   //   h-[X%]                   : 카드 높이 대비. h-[400%]=368px, h-[500%]=460px.
   return (
     <span
-      className={`fx-char ${cls} pointer-events-none absolute right-[-30px] top-1/2 translate-y-[calc(-50%+50px)] h-[400%] aspect-square z-25 drop-shadow-[0_2px_6px_rgba(0,0,0,0.7)]`}
+      className={`fx-char ${cls} pointer-events-none absolute right-[-30px] top-1/2 translate-y-[calc(-50%-80px)] h-[400%] aspect-square z-25 drop-shadow-[0_2px_6px_rgba(0,0,0,0.7)]`}
     />
   );
 }
