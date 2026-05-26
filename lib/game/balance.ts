@@ -90,12 +90,6 @@ export const CUMULATIVE_REACH_ANCHORS_MS = {
   99: 28 * 24 * HOUR,
 } as const;
 
-/**
- * §1.1 +100 이상(=cycle ≥ 1) 강화 시도부터 매 시도 같은 카탈로그 아이템 1개를 제물로 소모.
- * 사이클 0(0~99)은 제물 없음, 사이클 1+ 전 구간 제물 필요.
- */
-export const FODDER_REQUIRED_FROM_LEVEL = CYCLE_LEN;
-export const FODDER_PER_ATTEMPT = 1;
 
 /**
  * §1.3 사이클 내 공시 성공률 baseRate(ℓ) — bp. 모든 사이클 동일 곡선(ℓ만의 함수).

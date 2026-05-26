@@ -9,7 +9,6 @@ import {
   transcendFodderForStep,
   MAX_TRANSCEND,
   DIAMOND_PER_DISENCHANT,
-  FODDER_REQUIRED_FROM_LEVEL,
 } from '@/lib/game/balance';
 
 import type { InvItem } from './InventoryGrid';
@@ -104,7 +103,6 @@ export function EquipmentDetailSheet({
   ).length;
   const canTranscend = fodderOwned >= fodderNeed;
   const canDisenchant = !item.equipped && !item.isLocked && !item.busy;
-  const needsFodderEnhance = item.enhanceLevel >= FODDER_REQUIRED_FROM_LEVEL;
   const canEnhance = !item.busy && !item.isLocked;
 
   const run = (fn: () => Promise<{ status: string; message?: string }>, after?: () => void) =>
@@ -207,7 +205,7 @@ export function EquipmentDetailSheet({
             }
             className={BTN}
           >
-            <BtnBg src={assetUrl('/sprites/ui/btn-enhance.png')} label="강화" sub={needsFodderEnhance ? '제물 1' : undefined} />
+            <BtnBg src={assetUrl('/sprites/ui/btn-enhance.png')} label="강화" />
           </button>
           {/* 초월 */}
           <button

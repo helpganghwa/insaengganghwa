@@ -58,7 +58,7 @@ export function GachaResultModal({
               <div className="mt-0.5 text-[11px] text-zinc-500">+0</div>
               {!single.isNew ? (
                 <div className="mt-1 text-[11px] text-amber-600 dark:text-amber-400">
-                  중복 — 초월/+100 제물로 활용
+                  중복 — 초월 제물로 활용
                 </div>
               ) : null}
             </div>

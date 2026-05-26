@@ -68,7 +68,6 @@ export async function resolveEnhance(input: ResolveInput): Promise<ResolveResult
            j.base_rate_bp                    as base_rate_bp,
            j.duration_ms::text               as duration_ms,
            j.total_reduced_ms::text          as total_reduced_ms,
-           j.fodder_instance_id::text        as fodder_instance_id,
            extract(epoch from j.started_at)  as started_epoch,
            extract(epoch from j.complete_at) as complete_epoch,
            ei.catalog_item_id                as catalog_item_id
@@ -86,7 +85,6 @@ export async function resolveEnhance(input: ResolveInput): Promise<ResolveResult
   const baseRateBp = Number(job.base_rate_bp);
   const durationMs = String(job.duration_ms);
   const reducedMs = String(job.total_reduced_ms);
-  const fodderId = job.fodder_instance_id === null ? null : String(job.fodder_instance_id);
 
   // 서버 시계 기준 경과/총 (총 = completeAt - startedAt, 단축분은 completeAt에 반영됨).
   // extract(epoch)는 microsecond 소수 → *1000 후 정수 아님. bigint 파라미터로 가기 전 floor.
@@ -132,12 +130,6 @@ export async function resolveEnhance(input: ResolveInput): Promise<ResolveResult
       where ei.id = j.equipment_instance_id and ${toLevel} <> ${fromLevel}
       returning ei.id
     ),
-    fdl as (
-      delete from equipment_instances
-      using j
-      where equipment_instances.id = ${fodderId}::bigint
-      returning equipment_instances.id
-    ),
     cdx as (
       insert into user_codex (user_id, catalog_item_id, max_enhance_level, max_enhance_reached_at)
       select j.user_id, ${catalogItemId}, ${toLevel}, now() from j
@@ -155,7 +147,7 @@ export async function resolveEnhance(input: ResolveInput): Promise<ResolveResult
          fodder_instance_id, rolled)
       select j.user_id, j.equipment_instance_id, ${catalogItemId}, ${fromLevel}, ${toLevel},
              ${outcome}::enhance_result, ${baseRateBp}, ${effBp}, ${elapsedMs}::bigint,
-             ${durationMs}::bigint, ${reducedMs}::bigint, ${fodderId}::bigint, ${rolled}
+             ${durationMs}::bigint, ${reducedMs}::bigint, null::bigint, ${rolled}
       from j
       returning id
     )

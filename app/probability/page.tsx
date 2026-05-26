@@ -7,8 +7,6 @@ import {
   SAFE_MAX_LEVEL,
   CYCLE_LEN,
   CYCLE_TIME_BASE,
-  FODDER_REQUIRED_FROM_LEVEL,
-  FODDER_PER_ATTEMPT,
   MAX_TRANSCEND,
   transcendFodderForStep,
   transcendFodderCumulative,
@@ -101,10 +99,7 @@ export default function ProbabilityPage() {
         <P>
           사이클 내 +0~+{SAFE_MAX_LEVEL}(예: +0~+{SAFE_MAX_LEVEL}, +100~+{100 + SAFE_MAX_LEVEL}):
           하락 0%. +{SAFE_MAX_LEVEL + 1}부터: 하락 확률 발생, 1단계 하락(사이클 내 +
-          {SAFE_MAX_LEVEL} 하한 — 사이클 경계 가로지름 없음). +
-          {FODDER_REQUIRED_FROM_LEVEL}강(사이클 1+) 시도부터 매 시도 같은 종류 장비{' '}
-          {FODDER_PER_ATTEMPT}
-          개를 제물로 소모합니다.
+          {SAFE_MAX_LEVEL} 하한 — 사이클 경계 가로지름 없음).
         </P>
       </Sec>
 

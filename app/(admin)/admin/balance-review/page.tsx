@@ -16,7 +16,6 @@ import {
   CYCLE_LEN,
   CYCLE_TIME_BASE,
   CUMULATIVE_REACH_ANCHORS_MS,
-  FODDER_REQUIRED_FROM_LEVEL,
   SAFE_MAX_LEVEL,
 } from '@/lib/game/balance';
 import { computeCycleZeroReach } from '@/lib/game/enhance/analytics';
@@ -110,9 +109,6 @@ export default async function BalanceReviewPage() {
           <li>
             안전 구간 ℓ 0~{SAFE_MAX_LEVEL} = 하락 0%. ℓ {SAFE_MAX_LEVEL + 1}~99 = 하락 발생, −1만
             떨어지며 <b>사이클 내 +{SAFE_MAX_LEVEL}</b>가 하한(사이클 경계 가로지름 없음).
-          </li>
-          <li>
-            +{FODDER_REQUIRED_FROM_LEVEL} 이상(=사이클 1+) 매 시도 같은 카탈로그 1개 제물 소모.
           </li>
         </ul>
       </section>

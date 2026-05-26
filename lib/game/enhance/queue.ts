@@ -1,28 +1,22 @@
 import 'server-only';
 
-import { and, eq, sql } from 'drizzle-orm';
+import { and, eq } from 'drizzle-orm';
 import type { PgTransaction } from 'drizzle-orm/pg-core';
 
 import { db } from '@/lib/db/client';
 import { catalogItems, equipmentInstances } from '@/lib/db/schema/equipment';
 import { enhancementJobs } from '@/lib/db/schema/enhance';
-import {
-  baseSuccessRateBp,
-  enhanceDurationMs,
-  FODDER_REQUIRED_FROM_LEVEL,
-} from '@/lib/game/balance';
+import { baseSuccessRateBp, enhanceDurationMs } from '@/lib/game/balance';
 
 /**
  * (A) 강화 큐 등록 — CLAUDE §6.1. **강화 시도는 무료**(자원 비용 없음, BALANCE §1).
- * 등급/경고 없음(§2 치환표). +100 이상은 같은 카탈로그 아이템 1제물 예약(BALANCE §1.1).
- * 시간·baseRate는 **등록 시점 스냅샷 영구**(소급 금지, CLAUDE §6.3).
+ * 등급/경고 없음(§2 치환표). 시간·baseRate는 **등록 시점 스냅샷 영구**(소급 금지, CLAUDE §6.3).
  */
 export type EnhanceErrorCode =
   | 'EQUIPMENT_NOT_FOUND'
   | 'EQUIPMENT_LOCKED'
   | 'ALREADY_ENHANCING'
   | 'SLOT_BUSY'
-  | 'INSUFFICIENT_FODDER'
   | 'JOB_NOT_FOUND'
   | 'INSUFFICIENT_DIAMOND';
 
@@ -108,32 +102,6 @@ export async function queueEnhanceInTx(
   const slotLane = !used.has(1) ? 1 : !used.has(2) ? 2 : 0;
   if (slotLane === 0) throw new EnhanceError('SLOT_BUSY');
 
-  // +100 이상 — 같은 카탈로그 아이템 1제물 예약 (강화/초월 레벨 무관, 미장착·비잠금·
-  // 비강화중, 대상 자신 제외). 예약된 개체는 resolve 시 소모(삭제).
-  let fodderInstanceId: bigint | null = null;
-  if (fromLevel >= FODDER_REQUIRED_FROM_LEVEL) {
-    const [fodder] = await tx
-      .select({ id: equipmentInstances.id })
-      .from(equipmentInstances)
-      .where(
-        and(
-          eq(equipmentInstances.userId, userId),
-          eq(equipmentInstances.catalogItemId, equip.catalogItemId),
-          eq(equipmentInstances.isLocked, false),
-          sql`${equipmentInstances.id} <> ${equipmentInstanceId}`,
-          sql`${equipmentInstances.equippedSlot} is null`,
-          sql`not exists (select 1 from ${enhancementJobs} ej
-              where ej.equipment_instance_id = ${equipmentInstances.id} and ej.status = 'running')`,
-          sql`not exists (select 1 from ${enhancementJobs} ej
-              where ej.fodder_instance_id = ${equipmentInstances.id} and ej.status = 'running')`,
-        ),
-      )
-      .limit(1)
-      .for('update');
-    if (!fodder) throw new EnhanceError('INSUFFICIENT_FODDER');
-    fodderInstanceId = fodder.id;
-  }
-
   const durationMs = enhanceDurationMs(fromLevel);
   const baseRateBp = baseSuccessRateBp(fromLevel);
   const completeAt = new Date(Date.now() + durationMs);
@@ -151,7 +119,7 @@ export async function queueEnhanceInTx(
         baseRateBp,
         durationMs: BigInt(durationMs),
         completeAt,
-        fodderInstanceId,
+        fodderInstanceId: null,
         status: 'running',
       })
       .returning({ id: enhancementJobs.id });
@@ -162,7 +130,7 @@ export async function queueEnhanceInTx(
       fromLevel,
       targetLevel,
       baseRateBp,
-      fodderInstanceId,
+      fodderInstanceId: null,
     };
   } catch (e) {
     if (isUniqueViolation(e)) throw new EnhanceError('SLOT_BUSY'); // partial unique 최후 방어

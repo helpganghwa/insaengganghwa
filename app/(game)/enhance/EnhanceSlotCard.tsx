@@ -8,7 +8,6 @@ import {
   downRateBp,
   diamondToFinishMs,
   pieceCombatPower,
-  FODDER_REQUIRED_FROM_LEVEL,
 } from '@/lib/game/balance';
 import type { Slot } from '@/lib/db/schema/equipment';
 import { BoastModal } from '@/components/BoastModal';
@@ -293,7 +292,6 @@ export function EnhanceSlotCard({
   const probs = effectiveOutcomeProbsBp(activeJob.baseRateBp, fixedDownBp, elapsedMs, totalMs);
   const effBp = probs.success;
   const isRiskZone = fixedDownBp > 0;
-  const needsFodder = activeJob.fromLevel >= FODDER_REQUIRED_FROM_LEVEL;
   const downPct = probs.down / 100;
 
   const instantCost = remainingMs > 0 ? diamondToFinishMs(remainingMs) : 0;
@@ -443,7 +441,6 @@ export function EnhanceSlotCard({
                 : ready
                   ? '강화 가능 (최대 확률)'
                   : `최대 확률까지 ${fmtRemaining(remainingMs)}`}
-              {needsFodder ? ' · 제물 1 소모' : ''}
             </div>
           </div>
           <div className="flex shrink-0 flex-col gap-1">
