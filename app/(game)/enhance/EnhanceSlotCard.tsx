@@ -500,8 +500,8 @@ export function EnhanceSlotCard({
 
         {confirm && !flash ? (
           <div className="pointer-events-none absolute inset-0 flex flex-col items-center justify-center gap-1 bg-black/85 px-4 text-center">
-            {/* 대장장이 캐릭터 — 우측 상반신, 우측에서 슬라이드 인(DailySupplyCard 패턴). */}
-            <span className="fx-char fx-char-base animate-fx-char-slide pointer-events-none absolute right-0 top-0 h-[160%] aspect-square drop-shadow-[0_2px_6px_rgba(0,0,0,0.6)]" />
+            {/* 대장장이 캐릭터 — 우측 큰 상반신, fade-in. */}
+            <span className="fx-char fx-char-base animate-fx-char-appear pointer-events-none absolute right-0 top-0 h-[240%] aspect-square drop-shadow-[0_2px_6px_rgba(0,0,0,0.7)]" />
             <p className="text-[12px] font-semibold break-keep text-amber-200">
               {confirmMsg ??
                 (ready ? '다시 탭하면 강화' : '아직 무르익지 않았다 — 다시 탭하면 강행')}
