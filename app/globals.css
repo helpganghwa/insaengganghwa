@@ -91,6 +91,15 @@
     50%  { opacity: 1; transform: translateY(-2px) scale(1.18); }
     100% { opacity: 0; transform: translateY(-22px) scale(1); }
   }
+  /* 캐릭터 reaction — 우측에서 슬라이드 인 + 살짝 바운스, 유지, 슬라이드 아웃. */
+  --animate-fx-char-slide: fx-char-slide 3s cubic-bezier(0.34, 1.4, 0.5, 1) forwards;
+  @keyframes fx-char-slide {
+    0%   { opacity: 0; transform: translateX(110%); }
+    12%  { opacity: 1; transform: translateX(-6%); }
+    22%  { opacity: 1; transform: translateX(0); }
+    90%  { opacity: 1; transform: translateX(0); }
+    100% { opacity: 0; transform: translateX(30%); }
+  }
 
   @keyframes hit-shake {
     0%, 100% { transform: translate(0, 0); }
@@ -132,19 +141,7 @@
   }
 }
 
-/* FX sprite — Pixellab pixflux 96×96 투명 PNG. CSS 폴백 위에 합성. */
-.fx-sprite {
-  image-rendering: pixelated;
-  background-size: contain;
-  background-position: center;
-  background-repeat: no-repeat;
-}
-.fx-sprite-success-mega { background-image: url('/fx/enhance-success-mega.png'); }
-.fx-sprite-success      { background-image: url('/fx/enhance-success.png'); }
-.fx-sprite-hold         { background-image: url('/fx/enhance-hold.png'); }
-.fx-sprite-down         { background-image: url('/fx/enhance-down.png'); }
-
-/* 캐릭터 reaction sprite — outcome 시점 카드 우상단(56px). */
+/* 캐릭터 reaction sprite — outcome/confirm 시점 카드 우측에 큰 상반신 표시. */
 .fx-char {
   image-rendering: pixelated;
   background-size: contain;
