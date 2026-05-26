@@ -58,21 +58,31 @@ export function cycleTimeMultiplier(level: number): number {
 /**
  * §1.1 1회 강화 시도 소요 시간 d(L) — `L → L+1` (ms).
  *
- * 사이클 0 기본 곡선은 **선형**: d₀(ℓ) = D_MIN + (D_MAX − D_MIN) × ℓ/(CYCLE_LEN−1).
+ * 사이클 0 곡선은 **piecewise 선형**(초반 온보딩 가속):
+ *   ℓ ∈ [0, 10]  : D_MIN(10s)  → D_AT_10(10분)  — 가파른 진입 가속
+ *   ℓ ∈ [10, 99]: D_AT_10(10분) → D_MAX(215분) — 후반 본 곡선
  * 사이클 시간 배수 2^cycle 적용:
  *   d(L) = d₀(ℓ) × 2^cycle
  *
- * 채택값(D_MIN = 10s, D_MAX = 215m) → 사이클 0 +0→+99 누적 평균 ≈ **28일(4주)**
- * (2026-05-25, `scripts/tune-linear-duration.ts`로 산출).
+ * +99 도달 ≈ 4주 설계 유지 — 후반 구간(+10~+99) 끝점은 변동 없음.
  */
 export const ENHANCE_BASE_DURATION_MIN_MS = 10 * SEC;
+export const ENHANCE_BASE_DURATION_AT_10_MS = 10 * MIN;
 export const ENHANCE_BASE_DURATION_MAX_MS = 215 * MIN;
+const EARLY_BREAKPOINT_LV = 10;
 
 /** 사이클 0 기준 ℓ → 한 시도 시간. 사이클 시간 배수는 enhanceDurationMs에서 곱함. */
 export function baseAttemptDurationMs(cycleLv: number): number {
   const lv = Math.max(0, Math.min(CYCLE_LEN - 1, Math.floor(cycleLv)));
-  const span = ENHANCE_BASE_DURATION_MAX_MS - ENHANCE_BASE_DURATION_MIN_MS;
-  return Math.round(ENHANCE_BASE_DURATION_MIN_MS + (span * lv) / (CYCLE_LEN - 1));
+  if (lv <= EARLY_BREAKPOINT_LV) {
+    const span = ENHANCE_BASE_DURATION_AT_10_MS - ENHANCE_BASE_DURATION_MIN_MS;
+    return Math.round(ENHANCE_BASE_DURATION_MIN_MS + (span * lv) / EARLY_BREAKPOINT_LV);
+  }
+  const span = ENHANCE_BASE_DURATION_MAX_MS - ENHANCE_BASE_DURATION_AT_10_MS;
+  return Math.round(
+    ENHANCE_BASE_DURATION_AT_10_MS +
+      (span * (lv - EARLY_BREAKPOINT_LV)) / (CYCLE_LEN - 1 - EARLY_BREAKPOINT_LV),
+  );
 }
 
 export function enhanceDurationMs(fromLevel: number): number {
