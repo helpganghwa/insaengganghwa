@@ -16,6 +16,7 @@ import { TranscendSprite } from '@/components/TranscendSprite';
 import { RarityFrame, rarityBorderStyle, hasRarityBorder } from '@/components/RarityFrame';
 
 import { finalizeEnhance, reduceTimeWithGems, cancelEnhanceAction } from './actions';
+import { EnhanceFX, type FxKind } from './EnhanceFX';
 
 /** §10 자랑 자동 트리거 강화 단계(GDD §6 / 사용자 확정 델타). */
 const BOAST_LEVELS = new Set([30, 50, 99]);
@@ -312,6 +313,21 @@ export function EnhanceSlotCard({
       const oc = r.result.outcome as Outcome;
       setFlash(oc); // 결과 즉시 표시
       setFlashMsg(pick(OUTCOME_MSGS[oc])); // 판타지 톤 5개 중 랜덤
+      // 햅틱(모바일) — prefers-reduced-motion 사용자는 햅틱도 약화/생략.
+      // Vibration API 없는 브라우저는 navigator.vibrate undefined → 자동 no-op.
+      const reduceMotion =
+        typeof window !== 'undefined' &&
+        window.matchMedia?.('(prefers-reduced-motion: reduce)').matches;
+      if (!reduceMotion && typeof navigator !== 'undefined' && 'vibrate' in navigator) {
+        if (oc === 'success' && BOAST_LEVELS.has(activeJob.targetLevel)) {
+          navigator.vibrate([0, 50, 80, 50, 80, 100]); // mega
+        } else if (oc === 'success') {
+          navigator.vibrate(30);
+        } else if (oc === 'down') {
+          navigator.vibrate([0, 30, 50, 30]);
+        }
+        // hold: 무음
+      }
       // §10 자랑 — +30/+50/+99 강화 성공 시 공유 모달.
       // flash 끝나고 100ms 후 — flash 3s와 비례 유지.
       if (oc === 'success' && BOAST_LEVELS.has(activeJob.targetLevel)) {
@@ -483,11 +499,25 @@ export function EnhanceSlotCard({
         ) : null}
 
         {flash ? (
-          <span className="absolute inset-0 flex items-center justify-center bg-black/70 px-5 text-center">
-            <span className={`text-[11px] font-medium break-keep ${OUTCOME_TONE[flash]}`}>
-              {flashMsg ?? OUTCOME_MSGS[flash][0]}
+          <>
+            {/* FX 시각 레이어 — Boast 레벨 성공은 mega tier. */}
+            <EnhanceFX
+              kind={
+                flash === 'success' && BOAST_LEVELS.has(activeJob.targetLevel)
+                  ? ('success-mega' satisfies FxKind)
+                  : (flash satisfies FxKind)
+              }
+              counter={flash === 'success' ? `+${activeJob.targetLevel}` : undefined}
+            />
+            {/* 판타지 톤 메시지 — 카드 하단에 작게(FX 가리지 않음). */}
+            <span className="pointer-events-none absolute inset-x-0 bottom-2 flex items-center justify-center px-5 text-center">
+              <span
+                className={`rounded bg-black/75 px-2 py-0.5 text-[11px] font-medium break-keep ${OUTCOME_TONE[flash]}`}
+              >
+                {flashMsg ?? OUTCOME_MSGS[flash][0]}
+              </span>
             </span>
-          </span>
+          </>
         ) : null}
       </div>
 
