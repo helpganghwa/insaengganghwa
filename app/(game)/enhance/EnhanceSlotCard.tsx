@@ -13,6 +13,7 @@ import type { Slot } from '@/lib/db/schema/equipment';
 import { BoastModal } from '@/components/BoastModal';
 import { TranscendSprite } from '@/components/TranscendSprite';
 import { RarityFrame, rarityBorderStyle, hasRarityBorder } from '@/components/RarityFrame';
+import { transcendStyle } from '@/lib/game/equipment/transcend';
 
 import { finalizeEnhance, reduceTimeWithGems, cancelEnhanceAction } from './actions';
 import { EnhanceFX, type FxKind } from './EnhanceFX';
@@ -422,8 +423,21 @@ export function EnhanceSlotCard({
             />
           </span>
           <div className="flex min-w-0 flex-1 flex-col gap-0.5 overflow-hidden">
-            {/* 1줄: 이름 — 자연 wrap(잘림 없음). 한국어는 break-keep로 단어 경계 줄바꿈. */}
-            <div className="text-sm font-bold leading-tight break-keep">{activeJob.name}</div>
+            {/* 1줄: 이름 — 자연 wrap(잘림 없음). 한국어는 break-keep로 단어 경계 줄바꿈.
+                초월 ≥ T1이면 이름 끝에 inline T라벨(등급 색상)로 따라붙음 — wrap 시 마지막 줄 끝. */}
+            <div className="text-sm font-bold leading-tight break-keep">
+              {activeJob.name}
+              {activeJob.transcendLevel > 0 ? (
+                <span
+                  className="ml-1.5 align-middle text-[10px] font-bold tabular-nums"
+                  style={{
+                    color: `rgb(${transcendStyle(activeJob.transcendLevel).colorRgb.join(',')})`,
+                  }}
+                >
+                  T{activeJob.transcendLevel}
+                </span>
+              ) : null}
+            </div>
             {/* 2줄: 확률 — 짧으니 잘릴 일 없음. */}
             <div className="flex gap-2 text-[11px] font-semibold tabular-nums whitespace-nowrap">
               <span className="text-emerald-300">성공 {(effBp / 100).toFixed(1)}%</span>
