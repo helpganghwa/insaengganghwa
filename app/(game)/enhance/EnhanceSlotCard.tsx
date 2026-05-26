@@ -295,7 +295,6 @@ export function EnhanceSlotCard({
   const isRiskZone = fixedDownBp > 0;
   const needsFodder = activeJob.fromLevel >= FODDER_REQUIRED_FROM_LEVEL;
   const downPct = probs.down / 100;
-  const holdPct = probs.hold / 100;
 
   const instantCost = remainingMs > 0 ? diamondToFinishMs(remainingMs) : 0;
   const canAfford = BigInt(diamond) >= BigInt(instantCost || 0);
@@ -433,11 +432,10 @@ export function EnhanceSlotCard({
             </div>
             <div className="flex gap-2 text-[11px] font-semibold tabular-nums">
               <span className="text-emerald-300">성공 {(effBp / 100).toFixed(1)}%</span>
-              <span className="text-zinc-400">유지 {holdPct.toFixed(1)}%</span>
+              <span className="text-zinc-500">최대 {(activeJob.baseRateBp / 100).toFixed(0)}%</span>
               {isRiskZone ? (
                 <span className="text-amber-300">하락 {downPct.toFixed(1)}%</span>
               ) : null}
-              <span className="text-zinc-500">최대 {(activeJob.baseRateBp / 100).toFixed(0)}%</span>
             </div>
             <div className="text-[10px] text-zinc-400 tabular-nums">
               {pending
