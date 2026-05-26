@@ -22,6 +22,7 @@ export const ASSET_VERSIONS: Record<string, string> = {
   "/sprites/hub/box-weapon.bak8.png": "900bc028",
   "/sprites/hub/enhance.bak.png": "a7a78f85",
   "/sprites/hub/ranking.bak.png": "1d9bedf8",
+  "/sprites/hub/checkin-bg.png": "9710e50f",
   "/sprites/hub/inventory.bak.png": "b64443df",
   "/sprites/hub/profile.bak.png": "bc4345e6",
   "/sprites/hub/box-weapon.bak2.png": "065b8716",

@@ -376,3 +376,77 @@ export const NICKNAME_CHANGE_COST_DIAMOND = 1000;
 // §6.4 광고 보상 — v1 미도입(사용자 결정). 모바일 웹은 보상형 광고 SDK SSV
 // 인프라가 약해 치트 방어가 어렵고 1인 운영 부담이 큼. 상점에 광고 제거 IAP는
 // 향후 도입 검토(광고 노출 자체 OFF). 향후 네이티브 wrapper 도입 시 재검토.
+
+// ─────────────────────────────────────────────────────────────────────────────
+// §7. 출석 캘린더 — 28일 누적·반복
+// ─────────────────────────────────────────────────────────────────────────────
+
+/** §7.1 28일 1사이클 길이. 28칸 완료 후 다음 접속일 1칸으로 롤. */
+export const CHECKIN_CYCLE_DAYS = 28;
+
+export type CheckinReward =
+  | { kind: 'diamond'; amount: number }
+  | { kind: 'supply'; slot: SupplySlot; count: number }
+  | { kind: 'supply_set'; perSlot: number };
+
+/**
+ * §7.1 출석 캘린더 보상 — 1-index(1~28). BALANCE.md §7.1 표와 1:1.
+ * 평일 6일 순환(무기→💎→방어구→💎→장신구→💎) + 7일째마다 마일스톤 4종 순환
+ * (보급권 30 → 💎2,000 → 보급권 60 → 💎5,000).
+ */
+export const CHECKIN_CALENDAR: readonly CheckinReward[] = [
+  { kind: 'supply', slot: 'weapon', count: 10 }, // 1
+  { kind: 'diamond', amount: 500 }, // 2
+  { kind: 'supply', slot: 'armor', count: 10 }, // 3
+  { kind: 'diamond', amount: 500 }, // 4
+  { kind: 'supply', slot: 'accessory', count: 10 }, // 5
+  { kind: 'diamond', amount: 500 }, // 6
+  { kind: 'supply_set', perSlot: 10 }, // 7 ★
+  { kind: 'supply', slot: 'weapon', count: 10 }, // 8
+  { kind: 'diamond', amount: 500 }, // 9
+  { kind: 'supply', slot: 'armor', count: 10 }, // 10
+  { kind: 'diamond', amount: 500 }, // 11
+  { kind: 'supply', slot: 'accessory', count: 10 }, // 12
+  { kind: 'diamond', amount: 500 }, // 13
+  { kind: 'diamond', amount: 2000 }, // 14 ★
+  { kind: 'supply', slot: 'weapon', count: 10 }, // 15
+  { kind: 'diamond', amount: 500 }, // 16
+  { kind: 'supply', slot: 'armor', count: 10 }, // 17
+  { kind: 'diamond', amount: 500 }, // 18
+  { kind: 'supply', slot: 'accessory', count: 10 }, // 19
+  { kind: 'diamond', amount: 500 }, // 20
+  { kind: 'supply_set', perSlot: 20 }, // 21 ★
+  { kind: 'supply', slot: 'weapon', count: 10 }, // 22
+  { kind: 'diamond', amount: 500 }, // 23
+  { kind: 'supply', slot: 'armor', count: 10 }, // 24
+  { kind: 'diamond', amount: 500 }, // 25
+  { kind: 'supply', slot: 'accessory', count: 10 }, // 26
+  { kind: 'diamond', amount: 500 }, // 27
+  { kind: 'diamond', amount: 5000 }, // 28 ★
+] as const;
+
+/** §7.1 7일째 마일스톤 칸(1-index)인지 — UI 강조용. */
+export function isCheckinMilestone(cycleDay1Indexed: number): boolean {
+  return cycleDay1Indexed > 0 && cycleDay1Indexed % 7 === 0;
+}
+
+/**
+ * §7.3 state.dayProgress(0~27 = 마지막 수령 칸의 0-index) → 다음 수령 칸 1-index(1~28).
+ * 초기값 0 / 막 수령 직후 1 → 다음 칸은 ((dp) % 28) + 1.
+ */
+export function nextCheckinDay1Indexed(dayProgress: number): number {
+  const dp = Math.max(0, Math.min(CHECKIN_CYCLE_DAYS - 1, Math.floor(dayProgress)));
+  return dp + 1;
+}
+
+/** §7.3 수령 직후 advance — `(dp + 1) % 28`. 28번째 수령하면 0으로 롤(다음 사이클 D1 대기). */
+export function advanceCheckinDayProgress(dayProgress: number): number {
+  return (Math.max(0, Math.floor(dayProgress)) + 1) % CHECKIN_CYCLE_DAYS;
+}
+
+/** §7.1 day(1~28) → 보상. 범위 밖은 throw. */
+export function checkinRewardForDay(day1Indexed: number): CheckinReward {
+  const d = Math.floor(day1Indexed);
+  if (d < 1 || d > CHECKIN_CYCLE_DAYS) throw new Error(`INVALID_CHECKIN_DAY:${d}`);
+  return CHECKIN_CALENDAR[d - 1]!;
+}

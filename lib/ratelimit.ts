@@ -13,7 +13,7 @@ import { Redis } from '@upstash/redis';
  *
  * 식별자 = userId(계정 단위). 윈도우는 정상 빠른 플레이는 통과, 봇 연타만 차단.
  */
-export type RlBucket = 'enhance' | 'gacha' | 'inventory' | 'raid' | 'nickname' | 'mail';
+export type RlBucket = 'enhance' | 'gacha' | 'inventory' | 'raid' | 'nickname' | 'mail' | 'checkin';
 
 const WINDOWS: Record<RlBucket, [limit: number, window: `${number} s`]> = {
   enhance: [30, '10 s'],
@@ -22,6 +22,7 @@ const WINDOWS: Record<RlBucket, [limit: number, window: `${number} s`]> = {
   raid: [30, '10 s'],
   nickname: [5, '60 s'],
   mail: [60, '10 s'],
+  checkin: [10, '10 s'],
 };
 
 const url = process.env.UPSTASH_REDIS_REST_URL;

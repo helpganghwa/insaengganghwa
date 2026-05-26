@@ -5,8 +5,11 @@ import { assetUrl } from '@/lib/asset-versions';
 import { getSessionUserId } from '@/lib/auth/session';
 import { db } from '@/lib/db/client';
 import { mailbox } from '@/lib/db/schema/mailbox';
+import { userCheckinState } from '@/lib/db/schema/checkin';
+import { kstDateString } from '@/lib/kst';
 
 import { DailySupplyCard } from './DailySupplyCard';
+import { HubCheckinCard } from './HubCheckinCard';
 import { RankingTop3Card } from './RankingTop3Card';
 
 /**
@@ -61,26 +64,42 @@ export default async function HomePage() {
   const userId = await getSessionUserId();
   // (game) layout이 가드하므로 정상 흐름엔 null 아님. 폴백 안전.
   let hasUnclaimedDaily = false;
+  let checkinDayProgress: number | null = null;
   if (userId) {
-    // 오늘 KST 발급된 일일 보급 우편 중 미수령 1건 이상 — `daily` sender_label 일치.
-    // `(created_at AT TIME ZONE 'Asia/Seoul')::date = KST today` 로 오늘분만 필터.
-    const r = (await db
-      .select({ n: sql<number>`count(*)::int` })
-      .from(mailbox)
-      .where(
-        and(
-          eq(mailbox.userId, userId),
-          eq(mailbox.senderLabel, '일일 보급'),
-          isNull(mailbox.claimedAt),
-          sql`(${mailbox.createdAt} at time zone 'Asia/Seoul')::date = (now() at time zone 'Asia/Seoul')::date`,
-        ),
-      )
-      .limit(1)) as Array<{ n: number }>;
-    hasUnclaimedDaily = (r[0]?.n ?? 0) > 0;
+    const kstToday = kstDateString();
+    // 일일 보급 + 출석 state — 핫패스 1RTT(병렬, CLAUDE §11.4)
+    const [dailyRow, checkinRow] = await Promise.all([
+      db
+        .select({ n: sql<number>`count(*)::int` })
+        .from(mailbox)
+        .where(
+          and(
+            eq(mailbox.userId, userId),
+            eq(mailbox.senderLabel, '일일 보급'),
+            isNull(mailbox.claimedAt),
+            sql`(${mailbox.createdAt} at time zone 'Asia/Seoul')::date = (now() at time zone 'Asia/Seoul')::date`,
+          ),
+        )
+        .limit(1) as unknown as Promise<Array<{ n: number }>>,
+      db
+        .select({
+          dayProgress: userCheckinState.dayProgress,
+          lastClaimedKstDay: userCheckinState.lastClaimedKstDay,
+        })
+        .from(userCheckinState)
+        .where(eq(userCheckinState.userId, userId))
+        .limit(1),
+    ]);
+    hasUnclaimedDaily = (dailyRow[0]?.n ?? 0) > 0;
+    // 신규 유저 = 행 없음 → dp=0, lastClaimed=null → 카드 노출(D1).
+    const dp = checkinRow[0]?.dayProgress ?? 0;
+    const last = checkinRow[0]?.lastClaimedKstDay ?? null;
+    if (last !== kstToday) checkinDayProgress = dp;
   }
 
   return (
     <div className="flex flex-col gap-4 px-4 py-4">
+      {checkinDayProgress !== null ? <HubCheckinCard dayProgress={checkinDayProgress} /> : null}
       {hasUnclaimedDaily ? <DailySupplyCard /> : null}
       <div className="grid grid-cols-2 gap-3">
         {MENU.map((m) => (

@@ -346,4 +346,39 @@
 
 ---
 
+## 12. 출석 캘린더 (28일 누적·반복)
+
+GDD §7 · BALANCE §7. 1일 1회(KST 자정) 수령 — 누적 출석, 끊겨도 자리 유지.
+
+### 12.1 user_checkin_state (1행/유저)
+
+| 컬럼 | 타입 | 비고 |
+|------|------|------|
+| `user_id` | uuid PK FK→profiles ON DELETE CASCADE | |
+| `day_progress` | smallint NOT NULL default 0 | 다음 받을 칸의 0-index 직전값(0~27). 1수령 후 +1, 28 → 0 롤 |
+| `last_claimed_kst_day` | date null | KST 일자. 같은 KST day 재수령 차단 |
+| `total_claimed_count` | bigint NOT NULL default 0 | 누적 수령 횟수(통계·표시) |
+| `updated_at` | timestamptz default now() | |
+
+- **PK = user_id** — 1행/유저 (UPSERT로 첫 수령 시 생성)
+- **수령 다음 칸 계산**: 다음 칸 1-index = `(day_progress % 28) + 1`. claim 시 `day_progress = (day_progress + 1) % 28`
+- 멱등 가드: `last_claimed_kst_day = (now() at time zone 'Asia/Seoul')::date` 비교(`for update` + WHERE 조건부)
+
+### 12.2 checkin_claim_logs (append-only 감사)
+
+| 컬럼 | 타입 | 비고 |
+|------|------|------|
+| `id` | bigserial PK | |
+| `user_id` | uuid FK→profiles | |
+| `kst_day` | date NOT NULL | (user_id, kst_day) UNIQUE — 일일 멱등 키 |
+| `cycle_day` | smallint NOT NULL | 1~28 — 이 수령에서 매핑된 캘린더 칸 |
+| `diamond_granted` | bigint NOT NULL default 0 | 다이아 지급 분량 |
+| `boxes_granted` | jsonb NOT NULL default `'{}'::jsonb` | `{weapon?,armor?,accessory?}` |
+| `claimed_at` | timestamptz default now() | |
+
+- `UNIQUE (user_id, kst_day)` — DB 레벨 중복 수령 차단(보조 가드, 1차 가드는 state.last_claimed_kst_day)
+- 5년 보관(감사 정책, GDD §8)
+
+---
+
 > 모든 도메인 = Drizzle 도메인별 스키마 파일(`lib/db/schema/*.ts`)로 1:1. 수치 기본값은 `BALANCE.md`, 행위 트랜잭션 규칙은 `CLAUDE.md §3·§6`.

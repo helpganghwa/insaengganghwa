@@ -13,3 +13,4 @@ export * from './social'; // §8 공유/추천
 export * from './payment'; // §9 결제/IAP/본인인증
 export * from './ops'; // §10 운영/감사/안티치트
 export * from './push'; // §11 PWA Web Push (v1: 강화·레이드·보급)
+export * from './checkin'; // §12 출석 캘린더 (28일 누적·반복)
