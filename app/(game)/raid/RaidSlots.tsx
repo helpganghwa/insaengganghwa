@@ -18,6 +18,9 @@ export type ActiveRaid = {
   expireAtIso: string;
   phasesCleared: number;
   isHost: boolean;
+  attacksLeft: number;
+  myRank: number;
+  participantCount: number;
 };
 
 function Countdown({ iso }: { iso: string }) {
@@ -110,10 +113,19 @@ export function RaidSlots({
                     </span>
                   ) : null}
                 </span>
-                <span className="mt-0.5 flex gap-2 text-[10px] text-zinc-300">
+                <span className="mt-0.5 flex flex-wrap gap-x-2 gap-y-0.5 text-[10px] text-zinc-300">
                   <Countdown iso={s.expireAtIso} />
                   <span>
                     페이즈 <span className="font-mono font-bold">{s.phasesCleared}</span>
+                  </span>
+                  <span className={s.attacksLeft <= 0 ? 'text-zinc-500' : ''}>
+                    잔여 <span className="font-mono font-bold">{s.attacksLeft}</span>
+                  </span>
+                  <span>
+                    내 순위{' '}
+                    <span className="font-mono font-bold">
+                      {s.myRank}/{s.participantCount}
+                    </span>
                   </span>
                 </span>
               </span>
