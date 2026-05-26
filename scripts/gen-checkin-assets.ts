@@ -78,11 +78,13 @@ const SPECS: Spec[] = [
     prompt:
       'a single silver-blue carnival admit-one paper ticket coupon shaped like a horizontal rectangle ' +
       'with a clear zigzag perforated tear edge on the left side, ' +
-      'a bold embossed round kite shield emblem icon at the center of the ticket, ' +
+      'a bold detailed kite shield emblem at the center of the ticket — the shield is a pointed teardrop ' +
+      'kite shape with a vertical band and two diagonal cross-stripes across its face, metal rivets ' +
+      'around the rim, clearly looks like a medieval knight shield (NOT just a plain circle, NOT a coin), ' +
       'cool steel-blue and white ticket colors, soft silver glow, ' +
       'clearly recognizable as a paper TICKET shape (not a scroll, not a parchment), ' +
       STYLE_OBJ,
-    negative: NEG_OBJ + ', scroll, rolled parchment, banner, shield by itself',
+    negative: NEG_OBJ + ', scroll, rolled parchment, banner, plain circle, coin, disc, ring, shield by itself',
   },
   {
     name: 'tile-accessory',
@@ -108,14 +110,14 @@ const SPECS: Spec[] = [
     noBg: true,
     prompt:
       'three flat horizontal carnival paper tickets fanned out like a poker hand, ' +
-      'top ticket is golden with a tiny crossed-swords emblem, ' +
-      'middle ticket is blue with a tiny shield emblem, ' +
-      'bottom ticket is green with a tiny ring emblem, ' +
+      'top ticket is golden with a clear crossed-swords X emblem (two swords crossing diagonally), ' +
+      'middle ticket is blue with a clear kite shield emblem (pointed teardrop shape with band+cross stripes, NOT a circle), ' +
+      'bottom ticket is green with a clear gemstone ring emblem (golden ring with a cyan gem on top), ' +
       'each ticket has clear zigzag perforated tear edges, fanned at slight angles overlapping, ' +
       'red ribbon tie at the bottom corner, soft warm glow, ' +
       'absolutely no box, no chest, no container — just three fanned TICKETS, ' +
       STYLE_OBJ,
-    negative: NEG_OBJ + ', chest, box, container, package, gift box, wrapped present, scroll, parchment, single object',
+    negative: NEG_OBJ + ', chest, box, container, package, gift box, wrapped present, scroll, parchment, single object, plain circles, coins',
   },
   {
     name: 'tile-chest-lg',
@@ -123,12 +125,17 @@ const SPECS: Spec[] = [
     height: 64,
     noBg: true,
     prompt:
-      'a large tall stack of many carnival paper tickets tied in several ribbons, ' +
-      'multiple bundles of weapon, shield, ring tickets stacked high, ' +
-      'gold ribbon binding, sparkle particles around the stack, intense golden glow, ' +
-      'clearly visible as a HUGE PILE of TICKETS (not a chest, not parchment), ' +
+      'a single large fan of six horizontal carnival paper tickets fanned out wide like a poker hand held up, ' +
+      'six tickets spread in a wider fan arc — two golden weapon tickets (crossed swords emblem), ' +
+      'two blue kite shield tickets (kite shield emblem), two green ring tickets (gem ring emblem), ' +
+      'each ticket has clear zigzag perforated edges on the short sides, tickets overlap slightly at the fan center, ' +
+      'soft warm golden glow halo, small sparkle particles around the fan, ' +
+      'clearly visible as SIX FANNED TICKETS (NOT a gift box, NOT a wrapped present, NOT a chest, NOT a stripe block, NOT a scroll), ' +
       STYLE_OBJ,
-    negative: NEG_OBJ + ', chest, box, container, scroll, parchment',
+    negative:
+      NEG_OBJ +
+      ', gift box, wrapped present, ribbon bow, chest, box, container, scroll, parchment, ' +
+      'single block, single object, book, journal, layered stripes, color bands, indistinct mass',
   },
   // ─────────────────────────────────────────────────────────────────────
   // 다이아 — 클래식 cut diamond gem 형태(♦), 가공된 보석. gem pile 금지
@@ -152,13 +159,13 @@ const SPECS: Spec[] = [
     height: 64,
     noBg: true,
     prompt:
-      'a small bundle pile of three to five bright cyan-blue cut diamond gems with classic faceted brilliant-cut shape, ' +
-      'diamonds stacked together forming a small cluster, polished facets reflecting light, ' +
-      'gemstones clearly diamond-cut (rhombus/brilliant shape), ' +
-      'rich cyan glow halo, ' +
-      'visible as a CLUSTER OF CUT DIAMONDS (not a chest, not a scroll, not raw crystals), ' +
+      'three large bright cyan-blue cut diamond gems with classic faceted brilliant-cut rhombus shape, ' +
+      'arranged in a triangle pyramid composition — two diamonds at the bottom side by side, one big diamond on top center, ' +
+      'each diamond is clearly individually visible with sharp polished facet lines, top triangular crown, bottom pointed tip, ' +
+      'white sparkle highlights on top edges of each diamond, soft cyan glow halo, ' +
+      'three CLEAN DISTINCT CUT DIAMONDS arranged like a small trophy display (NOT a vague pile, NOT raw crystals, NOT a chest), ' +
       STYLE_OBJ,
-    negative: NEG_OBJ + ', single gem, crystal cluster, raw crystal, chest, ticket, scroll',
+    negative: NEG_OBJ + ', single gem, crystal cluster, raw crystal, vague mass, chest, ticket, scroll, blob',
   },
   {
     name: 'tile-gem-grand',
@@ -182,14 +189,19 @@ const SPECS: Spec[] = [
     height: 288,
     noBg: false,
     prompt:
-      'ornate fantasy RPG attendance calendar board background, ' +
-      'rich dark navy-purple velvet cloth backdrop with subtle starfield pattern, ' +
-      'golden filigree decorative borders on all four edges, golden corner ornaments, ' +
-      'subtle magical sparkle particles scattered throughout, soft ambient amber-gold glow, ' +
-      'gilded festive medieval guild hall feel, no grid cells (cells will be overlaid by UI), ' +
-      'uniform tone across the whole image so UI cells overlay cleanly, ' +
+      'calm subtle dark wood plank board background for a UI grid overlay, ' +
+      'uniform deep brown stained wood texture with very faint subtle wood grain lines, ' +
+      'extremely simple thin golden hairline border framing the outer edge only, no corner ornaments, ' +
+      'completely flat uniform tone across the entire image (no central focus, no patterns, no particles), ' +
+      'low contrast quiet backdrop designed so foreground UI cells and text stay highly readable, ' +
+      'soft ambient warm low brightness, ' +
+      'NO filigree, NO sparkles, NO stars, NO ornate scrollwork, NO bright highlights, NO decorative motifs, ' +
       STYLE_BG,
-    negative: NEG_BG + ', grid lines, calendar cells, squares, individual stamps',
+    negative:
+      NEG_BG +
+      ', filigree, scrollwork, ornaments, sparkles, stars, particles, glitter, ' +
+      'bright highlights, vibrant colors, busy pattern, central focus object, ' +
+      'grid lines, calendar cells, squares, individual stamps',
   },
   // ─────────────────────────────────────────────────────────────────────
   // 수령 버튼 — 보석·금장 strip
@@ -200,14 +212,18 @@ const SPECS: Spec[] = [
     height: 64,
     noBg: false,
     prompt:
-      'horizontal ornate fantasy RPG action button background banner, ' +
-      'polished gold metal strip with embossed scroll filigree pattern, ' +
-      'central wax seal medallion stamp accent, ' +
-      'small cyan gem inlays on both short ends, soft amber inner glow, ' +
-      'rich gold gleam highlights, completely uniform horizontal tone (no central focus object), ' +
-      'looks like a premium golden press-button strip ready for text overlay, ' +
+      'horizontal calm flat amber wooden button background banner, ' +
+      'uniform warm dark amber wood tone across the entire strip, very faint horizontal grain only, ' +
+      'extremely simple thin golden hairline border framing the outer rectangle edges, ' +
+      'subtle soft inner shadow at top and bottom edges for slight 3D depth, ' +
+      'completely uniform horizontal tone with NO central focus, NO medallion, NO gem inlay, NO filigree, ' +
+      'low contrast quiet backdrop designed so white/light button label text overlay stays highly readable, ' +
+      'looks like a calm clean tappable button base ready for text overlay, ' +
       STYLE_BG,
-    negative: NEG_BG + ', text label, words, characters',
+    negative:
+      NEG_BG +
+      ', filigree, scrollwork, ornaments, medallion, wax seal, gem inlay, sparkles, ' +
+      'bright highlights, central focus object, decorative motifs, text label, words, characters',
   },
   // ─────────────────────────────────────────────────────────────────────
   // 오늘 카드 — ornate 패널 (오늘 보상 미리보기 + 버튼 wrapper)
@@ -218,13 +234,17 @@ const SPECS: Spec[] = [
     height: 128,
     noBg: false,
     prompt:
-      'ornate fantasy RPG UI panel background banner, ' +
-      'aged warm parchment with gilded gold filigree corner decorations, ' +
-      'subtle red wax seal smudges, soft warm amber inner glow, ' +
-      'thin golden inner border line, fine pixel-art floral motif corners, ' +
-      'completely uniform horizontal tone with no central object (panel ready for text and button overlay), ' +
+      'calm flat clean cream parchment panel background, ' +
+      'uniform warm cream beige paper tone across the entire panel with very subtle paper grain texture, ' +
+      'extremely simple thin golden hairline border framing the outer rectangle edges only, no corner ornaments, ' +
+      'no wax seal, no filigree, no central focus object, no patterns, no particles, ' +
+      'completely uniform tone designed so foreground dark text and an inset button overlay stay highly readable, ' +
+      'low contrast quiet backdrop with very gentle soft warm ambient light, ' +
       STYLE_BG,
-    negative: NEG_BG + ', text label, words, characters, central object',
+    negative:
+      NEG_BG +
+      ', filigree, scrollwork, ornaments, corner ornaments, wax seal, sparkles, ' +
+      'central focus object, decorative motifs, text label, words, characters, busy pattern',
   },
 ];
 
