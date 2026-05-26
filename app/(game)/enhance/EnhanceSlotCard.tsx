@@ -422,14 +422,9 @@ export function EnhanceSlotCard({
             />
           </span>
           <div className="flex min-w-0 flex-1 flex-col gap-0.5 overflow-hidden">
-            {/* 첫 줄: 이름(truncate로 자동 ... 잘림) + 강화 단계(shrink-0 — 항상 보임). */}
-            <div className="flex min-w-0 items-baseline gap-1.5 text-sm font-bold">
-              <span className="truncate leading-tight">{activeJob.name}</span>
-              <span className="shrink-0 text-[11px] text-zinc-400 tabular-nums">
-                +{activeJob.fromLevel}→+{activeJob.targetLevel}
-              </span>
-            </div>
-            {/* 둘째 줄: 확률 — 짧으니 잘릴 일 없음. */}
+            {/* 1줄: 이름 — 자연 wrap(잘림 없음). 한국어는 break-keep로 단어 경계 줄바꿈. */}
+            <div className="text-sm font-bold leading-tight break-keep">{activeJob.name}</div>
+            {/* 2줄: 확률 — 짧으니 잘릴 일 없음. */}
             <div className="flex gap-2 text-[11px] font-semibold tabular-nums whitespace-nowrap">
               <span className="text-emerald-300">성공 {(effBp / 100).toFixed(1)}%</span>
               <span className="text-zinc-500">최대 {(activeJob.baseRateBp / 100).toFixed(0)}%</span>
@@ -437,12 +432,18 @@ export function EnhanceSlotCard({
                 <span className="text-amber-300">하락 {downPct.toFixed(1)}%</span>
               ) : null}
             </div>
-            <div className="text-[10px] text-zinc-400 tabular-nums">
-              {pending
-                ? '처리 중…'
-                : ready
-                  ? '강화 가능 (최대 확률)'
-                  : `최대 확률까지 ${fmtRemaining(remainingMs)}`}
+            {/* 3줄: 강화 단계(+N→+M) + 시간 안내. 강화 단계는 진한 톤으로 강조. */}
+            <div className="flex gap-2 text-[10px] text-zinc-400 tabular-nums whitespace-nowrap">
+              <span className="font-semibold text-zinc-200">
+                +{activeJob.fromLevel}→+{activeJob.targetLevel}
+              </span>
+              <span>
+                {pending
+                  ? '처리 중…'
+                  : ready
+                    ? '강화 가능 (최대 확률)'
+                    : `최대 확률까지 ${fmtRemaining(remainingMs)}`}
+              </span>
             </div>
           </div>
           <div className="flex shrink-0 flex-col gap-1">
