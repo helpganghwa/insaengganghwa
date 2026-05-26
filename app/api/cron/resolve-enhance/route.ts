@@ -1,13 +1,13 @@
 /**
- * 강화 자동 정산 cron — `complete_at <= now() AND status='running'`인 잡 일괄 resolve.
+ * 강화 **24h+ 미해결** 자동 정산 cron — GDD §6.1 원래 의도(2026-05-26 정정).
  *
- * GDD §3.10 / SCHEMA §3.1 의도: (B) 완료 = Lazy(사용자 접속 시) + Cron(자동).
- * 사용자가 강화소 안 들어와도 정산 + 푸시 적재 보장 → 알림 누락 90%+ 해결.
+ * 알림은 별도 cron(/api/cron/push-enhance-ready)이 'complete_at 도달 시점'에 처리.
+ * 본 cron은 사용자가 24시간+ 페이지에 안 들어와 정산이 누락된 잡만 안전망으로 자동 처리.
  *
- * 멱등성: resolveEnhance 자체가 status='running' 조건부 transition + multi-CTE 원자 처리.
- * 동시 호출(사용자 lazy + cron) 안전: 첫 한쪽만 j에 row, 나머지 no-op.
+ * 의도: 너무 일찍 자동 정산하면 사용자 시도 의지 박탈. 24h+면 잊었거나 의도 방치로 간주.
  *
- * 매 10분 실행(vercel.json). 한 cron 호출에서 최대 CHUNK개까지 처리(timeout 보호).
+ * 멱등: resolveEnhance status='running' 조건부 transition. lazy와 동시 안전.
+ * 매 1시간(0 * * * *) 실행. CHUNK 50.
  */
 import { and, eq, lte, sql, asc } from 'drizzle-orm';
 
@@ -20,6 +20,7 @@ export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
 
 const CHUNK = 50;
+const STALE_HOURS = 24;
 
 function isAuthorized(req: Request): boolean {
   const secret = process.env.CRON_SECRET;
@@ -36,14 +37,14 @@ function isAuthorized(req: Request): boolean {
 export async function GET(req: Request) {
   if (!isAuthorized(req)) return new Response('forbidden', { status: 403 });
 
-  // complete_at 도달 + 미정산 잡 ID들 — 가장 오래된 것부터(공정성).
+  // complete_at + STALE_HOURS 이상 지난 미정산 잡만 — 즉 24시간+ 방치된 잡.
   const due = await db
     .select({ id: enhancementJobs.id })
     .from(enhancementJobs)
     .where(
       and(
         eq(enhancementJobs.status, 'running'),
-        lte(enhancementJobs.completeAt, sql`now()`),
+        lte(enhancementJobs.completeAt, sql`now() - interval '${sql.raw(String(STALE_HOURS))} hours'`),
       ),
     )
     .orderBy(asc(enhancementJobs.completeAt))

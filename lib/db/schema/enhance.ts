@@ -12,6 +12,7 @@ import {
   smallint,
   bigint,
   bigserial,
+  boolean,
   text,
   timestamp,
   index,
@@ -60,6 +61,8 @@ export const enhancementJobs = pgTable(
       { onDelete: 'set null' },
     ),
     status: enhanceJobStatusEnum('status').notNull().default('running'),
+    /** '최대확률 도달' 알림 1회 보장 게이트(2026-05-26). complete_at 도달 시 cron이 발송 후 true 마크. */
+    pushSent: boolean('push_sent').notNull().default(false),
     createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
   },
   (t) => [

@@ -63,7 +63,8 @@ export async function GET(req: Request) {
         sentUserIds.push(r.user_id);
         return;
       }
-      const title = n === 1 ? '강화 결과 확인' : `강화 ${n}건 완료`;
+      // 의미 변경(2026-05-26): '강화 N건 완료' → '강화 N건 준비 완료'(최대확률 도달).
+      const title = n === 1 ? '강화 준비 완료' : `강화 ${n}건 준비 완료`;
       const body = describeBatch(items);
       try {
         const res = await sendPushToUser(r.user_id, {
@@ -109,24 +110,20 @@ export async function GET(req: Request) {
 }
 
 function describeBatch(items: unknown[]): string {
-  // 결과 한 줄 요약. 최대 3개까지 노출, 그 이상은 "외 N건"으로.
+  // 'ready' 메시지 — 최대확률 도달한 잡 요약. 최대 2개까지 아이템명 + 레벨 표시.
   const parsed = items
     .map((it) => {
       if (!it || typeof it !== 'object') return null;
-      const o = it as { fromLevel?: number; toLevel?: number; outcome?: string };
-      if (typeof o.toLevel !== 'number' || typeof o.outcome !== 'string') return null;
-      return o as { fromLevel: number; toLevel: number; outcome: string };
+      const o = it as { fromLevel?: number; targetLevel?: number; itemKo?: string };
+      if (typeof o.targetLevel !== 'number' || typeof o.fromLevel !== 'number') return null;
+      return { fromLevel: o.fromLevel, targetLevel: o.targetLevel, itemKo: o.itemKo ?? '장비' };
     })
-    .filter((v): v is { fromLevel: number; toLevel: number; outcome: string } => v !== null);
-  if (parsed.length === 0) return '강화 결과를 확인하세요';
-  const counts = { success: 0, hold: 0, down: 0 };
-  for (const p of parsed) counts[p.outcome as keyof typeof counts]++;
-  const parts: string[] = [];
-  if (counts.success > 0) parts.push(`성공 ${counts.success}`);
-  if (counts.hold > 0) parts.push(`유지 ${counts.hold}`);
-  if (counts.down > 0) parts.push(`하락 ${counts.down}`);
-  // 마지막 결과 1건 강조
-  const last = parsed[parsed.length - 1]!;
-  const arrow = last.outcome === 'success' ? '→' : last.outcome === 'down' ? '↓' : '·';
-  return `${parts.join(' / ')} (최근 +${last.fromLevel} ${arrow} +${last.toLevel})`;
+    .filter((v): v is { fromLevel: number; targetLevel: number; itemKo: string } => v !== null);
+  if (parsed.length === 0) return '강화 가능한 장비가 있어요';
+  if (parsed.length === 1) {
+    const p = parsed[0]!;
+    return `${p.itemKo} +${p.fromLevel} → +${p.targetLevel} 최대 확률 도달`;
+  }
+  const first = parsed[0]!;
+  return `${first.itemKo} 외 ${parsed.length - 1}건 최대 확률 도달`;
 }
