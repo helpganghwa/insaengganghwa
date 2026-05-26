@@ -13,6 +13,7 @@
 import { config } from 'dotenv';
 import { existsSync, mkdirSync, readFileSync, writeFileSync } from 'node:fs';
 import { join } from 'node:path';
+import sharp from 'sharp';
 
 config({ path: '.env.local' });
 
@@ -56,87 +57,56 @@ const SPECS: Spec[] = [
   // 보급권 = 클래식 티켓/쿠폰 모양 (양피지·스크롤 X)
   //  - 직사각형 가로 티켓, 좌측 절취선(perforation), 우측 중앙에 종류 아이콘
   // ─────────────────────────────────────────────────────────────────────
-  {
-    name: 'tile-weapon',
-    width: 64,
-    height: 64,
-    noBg: true,
-    prompt:
-      'a single golden carnival admit-one paper ticket coupon shaped like a horizontal rectangle ' +
-      'with a clear zigzag perforated tear edge on the left side, ' +
-      'a bold embossed crossed-swords weapon emblem icon at the center of the ticket, ' +
-      'rich gold and crimson ticket colors, soft golden glow, ' +
-      'clearly recognizable as a paper TICKET shape (not a scroll, not a parchment), ' +
-      STYLE_OBJ,
-    negative: NEG_OBJ + ', scroll, rolled parchment, banner, sword by itself',
-  },
-  {
-    name: 'tile-armor',
-    width: 64,
-    height: 64,
-    noBg: true,
-    prompt:
-      'a single silver-blue carnival admit-one paper ticket coupon shaped like a horizontal rectangle ' +
-      'with a clear zigzag perforated tear edge on the left side, ' +
-      'a bold detailed kite shield emblem at the center of the ticket — the shield is a pointed teardrop ' +
-      'kite shape with a vertical band and two diagonal cross-stripes across its face, metal rivets ' +
-      'around the rim, clearly looks like a medieval knight shield (NOT just a plain circle, NOT a coin), ' +
-      'cool steel-blue and white ticket colors, soft silver glow, ' +
-      'clearly recognizable as a paper TICKET shape (not a scroll, not a parchment), ' +
-      STYLE_OBJ,
-    negative: NEG_OBJ + ', scroll, rolled parchment, banner, plain circle, coin, disc, ring, shield by itself',
-  },
-  {
-    name: 'tile-accessory',
-    width: 64,
-    height: 64,
-    noBg: true,
-    prompt:
-      'a single emerald-green carnival admit-one paper ticket coupon shaped like a horizontal rectangle ' +
-      'with a clear zigzag perforated tear edge on the left side, ' +
-      'a bold embossed gemstone ring emblem icon at the center of the ticket, ' +
-      'rich emerald-green and gold ticket colors, soft green glow, ' +
-      'clearly recognizable as a paper TICKET shape (not a scroll, not a parchment), ' +
-      STYLE_OBJ,
-    negative: NEG_OBJ + ', scroll, rolled parchment, banner, ring by itself, bucket',
-  },
-  // ─────────────────────────────────────────────────────────────────────
-  // 마일스톤 보급권 묶음 (D7=10ea, D21=20ea) — 티켓 묶음 / 티켓 묶음 여러개
-  // ─────────────────────────────────────────────────────────────────────
-  {
-    name: 'tile-chest-sm',
-    width: 64,
-    height: 64,
-    noBg: true,
-    prompt:
-      'three flat horizontal carnival paper tickets fanned out like a poker hand, ' +
-      'top ticket is golden with a clear crossed-swords X emblem (two swords crossing diagonally), ' +
-      'middle ticket is blue with a clear kite shield emblem (pointed teardrop shape with band+cross stripes, NOT a circle), ' +
-      'bottom ticket is green with a clear gemstone ring emblem (golden ring with a cyan gem on top), ' +
-      'each ticket has clear zigzag perforated tear edges, fanned at slight angles overlapping, ' +
-      'red ribbon tie at the bottom corner, soft warm glow, ' +
-      'absolutely no box, no chest, no container — just three fanned TICKETS, ' +
-      STYLE_OBJ,
-    negative: NEG_OBJ + ', chest, box, container, package, gift box, wrapped present, scroll, parchment, single object, plain circles, coins',
-  },
-  {
-    name: 'tile-chest-lg',
-    width: 64,
-    height: 64,
-    noBg: true,
-    prompt:
-      'a single large fan of six horizontal carnival paper tickets fanned out wide like a poker hand held up, ' +
-      'six tickets spread in a wider fan arc — two golden weapon tickets (crossed swords emblem), ' +
-      'two blue kite shield tickets (kite shield emblem), two green ring tickets (gem ring emblem), ' +
-      'each ticket has clear zigzag perforated edges on the short sides, tickets overlap slightly at the fan center, ' +
-      'soft warm golden glow halo, small sparkle particles around the fan, ' +
-      'clearly visible as SIX FANNED TICKETS (NOT a gift box, NOT a wrapped present, NOT a chest, NOT a stripe block, NOT a scroll), ' +
-      STYLE_OBJ,
-    negative:
-      NEG_OBJ +
-      ', gift box, wrapped present, ribbon bow, chest, box, container, scroll, parchment, ' +
-      'single block, single object, book, journal, layered stripes, color bands, indistinct mass',
-  },
+  // ↓ 3종 모두 동일 prompt template, color+emblem 키워드만 변경 → 사이즈/모양 일관성 최대화
+  ...(
+    [
+      {
+        name: 'tile-weapon',
+        color: 'rich warm gold yellow with crimson red trim',
+        glow: 'golden',
+        emblem:
+          'a bold black crossed-swords X emblem (two crossed pixel-art swords forming an X) at the dead center of the ticket',
+        negExtra: 'sword by itself, single sword',
+      },
+      {
+        name: 'tile-armor',
+        color: 'cool steel blue with white trim',
+        glow: 'silver-blue',
+        emblem:
+          'a bold black detailed kite shield emblem at the dead center of the ticket — pointed teardrop kite shape with vertical band and diagonal cross stripes, metal rivets around rim, looks like a medieval knight shield (NOT a plain circle, NOT a coin)',
+        negExtra: 'plain circle, coin, disc, ring, shield by itself',
+      },
+      {
+        name: 'tile-accessory',
+        color: 'rich emerald green with gold trim',
+        glow: 'emerald-green',
+        emblem:
+          'a bold black gemstone ring emblem at the dead center of the ticket — a circular gold ring viewed from front with a sparkling cut gem mounted on top, clearly a piece of jewelry (NOT a plain circle, NOT a coin)',
+        negExtra: 'ring by itself, plain circle, coin, disc, bucket',
+      },
+    ] as const
+  ).map(
+    (t): Spec => ({
+      name: t.name,
+      width: 64,
+      height: 64,
+      noBg: true,
+      // ── 공통 템플릿: 형태/비율/원근 모두 동일 ──
+      prompt:
+        'a single classic horizontal carnival admit-one paper ticket coupon, ' +
+        'strictly horizontal rectangle aspect ratio about 2 to 1 (wider than tall), ' +
+        'flat 2D front-facing view, perfectly centered in the canvas, no tilt no rotation, ' +
+        'clear zigzag perforated tear edges on BOTH left and right short sides, ' +
+        `${t.emblem}, ` +
+        `ticket body color is ${t.color}, soft ${t.glow} glow halo, ` +
+        'classic ticket shape with rounded inner border line, identical proportions to a real movie ticket, ' +
+        'NOT a scroll, NOT a parchment, NOT a banner, NOT a card, NOT a coin — ONLY a horizontal paper TICKET, ' +
+        STYLE_OBJ,
+      negative: NEG_OBJ + ', ' + t.negExtra + ', scroll, rolled parchment, banner, vertical orientation, tilted',
+    }),
+  ),
+  // tile-chest-sm / tile-chest-lg — Pixellab 생성 X. sharp로 단일 티켓 PNG를
+  // 회전·합성해 만든다(아래 composeFanTiles 함수). 매번 모양·사이즈 100% 동일 보장.
   // ─────────────────────────────────────────────────────────────────────
   // 다이아 — 클래식 cut diamond gem 형태(♦), 가공된 보석. gem pile 금지
   // ─────────────────────────────────────────────────────────────────────
@@ -295,7 +265,98 @@ async function gen(spec: Spec): Promise<'ok' | 'fail'> {
   return 'fail';
 }
 
+// ─────────────────────────────────────────────────────────────────────────────
+// 마일스톤 fan/stack 합성 — 단일 티켓 PNG를 회전·축소·합성
+// 사용자 피드백(2026-05-26): 단일·fan·stack 티켓 모양 일관성 보장 위해 같은 PNG 사용
+// ─────────────────────────────────────────────────────────────────────────────
+
+const SINGLE_TICKETS = ['tile-weapon', 'tile-armor', 'tile-accessory'] as const;
+
+type FanLayer = {
+  /** 단일 티켓 파일명(확장자 제외) */
+  from: (typeof SINGLE_TICKETS)[number];
+  /** 회전(도). 양수 = 시계방향. */
+  rotate: number;
+  /** 캔버스 width 대비 크기 비율(0~1). */
+  scale: number;
+  /** 캔버스 중심에서 가로 offset (px). 음수=왼쪽. 기본 0. */
+  dx?: number;
+  /** 캔버스 중심에서 세로 offset (px). 양수=아래. 기본 0. */
+  dy?: number;
+};
+
+const TILE = 64;
+
+async function composeFan(layers: FanLayer[], outName: string): Promise<void> {
+  const composites = await Promise.all(
+    layers.map(async (L) => {
+      const target = Math.round(TILE * L.scale);
+      // 1) 단일 티켓 → 목표 정사각으로 contain 리사이즈 (티켓은 가로 직사각이라 실제 높이는 낮음)
+      // 2) 투명 배경 보존하며 회전 — bbox는 회전 후 sharp가 자동 확장
+      const buf = await sharp(join(OUT, `${L.from}.png`))
+        .resize(target, target, { fit: 'inside', background: { r: 0, g: 0, b: 0, alpha: 0 } })
+        .rotate(L.rotate, { background: { r: 0, g: 0, b: 0, alpha: 0 } })
+        .toBuffer({ resolveWithObject: true });
+      const { width: w, height: h } = buf.info;
+      // 회전된 레이어의 중심을 캔버스 중심 + (dx, dy)에 배치
+      const cx = TILE / 2 + (L.dx ?? 0);
+      const cy = TILE / 2 + (L.dy ?? 0);
+      const left = Math.round(cx - w / 2);
+      const top = Math.round(cy - h / 2);
+      return { input: buf.data, top, left };
+    }),
+  );
+  const file = join(OUT, `${outName}.png`);
+  if (existsSync(file)) writeFileSync(file.replace(/\.png$/, '.bak.png'), readFileSync(file));
+  await sharp({
+    create: {
+      width: TILE,
+      height: TILE,
+      channels: 4,
+      background: { r: 0, g: 0, b: 0, alpha: 0 },
+    },
+  })
+    .composite(composites)
+    .png({ compressionLevel: 9 })
+    .toFile(file);
+  console.log(`  ✓ ${file} (compose ${layers.length} layers)`);
+}
+
+async function composeAllFans(): Promise<void> {
+  // tile-chest-sm — 3 티켓 fan (D7 보급 세트 ×10).
+  // 손패처럼 아래쪽 anchor + 위로 펼침. z-order: 좌→우→중앙(중앙이 최상단).
+  await composeFan(
+    [
+      { from: 'tile-weapon', rotate: -22, scale: 0.6, dx: -12, dy: 4 },
+      { from: 'tile-accessory', rotate: 22, scale: 0.6, dx: 12, dy: 4 },
+      { from: 'tile-armor', rotate: 0, scale: 0.6, dx: 0, dy: -2 },
+    ],
+    'tile-chest-sm',
+  );
+
+  // tile-chest-lg — 6 티켓 wider arch fan (D21 보급 세트 ×20).
+  // 6장 가능한 한 겹침 줄여 개별 식별. 작은 scale + 넓은 dx + 위로 아치형 dy.
+  await composeFan(
+    [
+      { from: 'tile-weapon', rotate: -40, scale: 0.42, dx: -19, dy: 10 },
+      { from: 'tile-armor', rotate: -24, scale: 0.42, dx: -13, dy: 3 },
+      { from: 'tile-accessory', rotate: -8, scale: 0.42, dx: -5, dy: -3 },
+      { from: 'tile-weapon', rotate: 8, scale: 0.42, dx: 5, dy: -3 },
+      { from: 'tile-armor', rotate: 24, scale: 0.42, dx: 13, dy: 3 },
+      { from: 'tile-accessory', rotate: 40, scale: 0.42, dx: 19, dy: 10 },
+    ],
+    'tile-chest-lg',
+  );
+}
+
 const only = process.argv[2];
+
+if (only === 'fan' || only === 'compose') {
+  // 합성만 실행 — 단일 티켓이 이미 있다는 전제
+  await composeAllFans();
+  process.exit(0);
+}
+
 const targets = only ? SPECS.filter((s) => s.name.includes(only)) : SPECS;
 if (targets.length === 0) {
   console.error(`매칭 자산 없음: ${only}`);
@@ -309,4 +370,12 @@ for (const s of targets) {
   await new Promise((r) => setTimeout(r, 800));
 }
 console.log(`[checkin assets] OK ${okCount}/${targets.length}`);
+
+// 단일 티켓 3종 또는 전체를 생성한 경우, fan/stack도 자동 합성.
+const generatedSingles = targets.filter((s) => SINGLE_TICKETS.includes(s.name as (typeof SINGLE_TICKETS)[number]));
+if (generatedSingles.length === SINGLE_TICKETS.length) {
+  console.log('[checkin assets] 마일스톤 fan/stack 합성 중…');
+  await composeAllFans();
+}
+
 process.exit(okCount === targets.length ? 0 : 1);
