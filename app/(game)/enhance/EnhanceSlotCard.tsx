@@ -421,14 +421,14 @@ export function EnhanceSlotCard({
               frameless
             />
           </span>
-          <div className="flex min-w-0 flex-1 flex-col gap-0.5">
-            <div className="flex items-center gap-1.5 text-sm font-bold whitespace-nowrap">
-              <span className="leading-tight break-keep">{activeJob.name}</span>
-              <span className="shrink-0 text-[11px] text-zinc-400 tabular-nums">
+          <div className="flex min-w-0 flex-1 flex-col gap-0.5 overflow-hidden">
+            {/* 첫 줄: 이름만 — 길면 ...으로 자동 잘림(버튼 영역 보호). */}
+            <div className="truncate text-sm font-bold leading-tight">{activeJob.name}</div>
+            {/* 둘째 줄: 강화 진행 단계 + 확률 묶음. tabular-nums로 폭 안정. */}
+            <div className="flex gap-2 text-[11px] font-semibold tabular-nums whitespace-nowrap">
+              <span className="text-zinc-400">
                 +{activeJob.fromLevel}→+{activeJob.targetLevel}
               </span>
-            </div>
-            <div className="flex gap-2 text-[11px] font-semibold tabular-nums">
               <span className="text-emerald-300">성공 {(effBp / 100).toFixed(1)}%</span>
               <span className="text-zinc-500">최대 {(activeJob.baseRateBp / 100).toFixed(0)}%</span>
               {isRiskZone ? (
