@@ -499,14 +499,14 @@ export function EnhanceSlotCard({
         </div>
 
         {confirm && !flash ? (
-          <div className="pointer-events-none absolute inset-0 flex flex-col items-center justify-center gap-1 bg-black/85 px-4 text-center">
-            {/* 대장장이 캐릭터 — confirm 단계, z-0(텍스트 뒤). 결과 단계는 EnhanceFX에서 z-25. */}
-            <span className="fx-char fx-char-base animate-fx-char-appear pointer-events-none absolute right-[-40px] top-[-30px] h-[640%] aspect-square z-0 drop-shadow-[0_2px_6px_rgba(0,0,0,0.7)]" />
-            <p className="text-[12px] font-semibold break-keep text-amber-200">
+          <div className="pointer-events-none absolute inset-0 z-20 flex flex-col items-center justify-center gap-1 bg-black/55 px-4 text-center backdrop-blur-[2px]">
+            {/* 대장장이 캐릭터 — confirm 단계 dim 위(z-25)에 또렷이 표시. */}
+            <span className="fx-char fx-char-base animate-fx-char-appear pointer-events-none absolute right-[-20px] top-[-30px] h-[400%] aspect-square z-25 drop-shadow-[0_2px_6px_rgba(0,0,0,0.7)]" />
+            <p className="relative z-30 text-[12px] font-semibold break-keep text-amber-200 drop-shadow-[0_1px_2px_rgba(0,0,0,0.9)]">
               {confirmMsg ??
                 (ready ? '다시 탭하면 강화' : '아직 무르익지 않았다 — 다시 탭하면 강행')}
             </p>
-            <p className="font-mono text-[10px] text-zinc-300 tabular-nums">
+            <p className="relative z-30 font-mono text-[10px] text-zinc-300 tabular-nums drop-shadow-[0_1px_2px_rgba(0,0,0,0.9)]">
               {confirmLeft}s 후 자동 취소
             </p>
           </div>
@@ -526,8 +526,8 @@ export function EnhanceSlotCard({
               }
               counter={flash === 'success' ? `+${activeJob.targetLevel}` : undefined}
             />
-            {/* 판타지 톤 메시지 — 카드 하단에 작게(FX 가리지 않음). */}
-            <span className="pointer-events-none absolute inset-x-0 bottom-2 flex items-center justify-center px-5 text-center">
+            {/* 판타지 톤 메시지 — 최상위(z-30), 모든 FX·dim 위. */}
+            <span className="pointer-events-none absolute inset-x-0 bottom-2 z-30 flex items-center justify-center px-5 text-center">
               <span
                 className={`rounded bg-black/75 px-2 py-0.5 text-[11px] font-medium break-keep ${OUTCOME_TONE[flash]}`}
               >
