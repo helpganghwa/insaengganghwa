@@ -7,7 +7,7 @@
  *
  * 멱등: enhancement_jobs.push_sent=true 마크. 같은 잡 중복 발송 X.
  *
- * 매 5분 cron. partial index(ej_push_ready_idx)로 빠른 조회.
+ * 매 1분 cron(평균 30초 지연 — 사실상 즉시 체감). partial index(ej_push_ready_idx)로 빠른 조회.
  */
 import { sql } from 'drizzle-orm';
 
