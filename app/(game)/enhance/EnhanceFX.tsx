@@ -85,7 +85,7 @@ function CountAnim({
  * 위치 조정: top-[Npx] (현재 2). 클수록 아래.
  */
 const FX_CENTER_AREA =
-  'pointer-events-none absolute inset-x-0 top-[30px] h-[22px] z-30 flex items-center justify-center';
+  'pointer-events-none absolute inset-x-0 top-[24px] h-[22px] z-30 flex items-center justify-center';
 
 function MegaFX({ fromLevel, toLevel }: { fromLevel?: number; toLevel?: number }) {
   const directions = [0, 90, 180, 270];
