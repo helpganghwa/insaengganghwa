@@ -92,6 +92,18 @@
     100% { opacity: 0; transform: translateY(-22px) scale(1); }
   }
 
+  /* FX sprite — Pixellab pixflux로 생성한 96×96 투명 PNG. CSS 폴백 위에 합성. */
+  .fx-sprite {
+    image-rendering: pixelated;
+    background-size: contain;
+    background-position: center;
+    background-repeat: no-repeat;
+  }
+  .fx-sprite-success-mega { background-image: url('/fx/enhance-success-mega.png'); }
+  .fx-sprite-success      { background-image: url('/fx/enhance-success.png'); }
+  .fx-sprite-hold         { background-image: url('/fx/enhance-hold.png'); }
+  .fx-sprite-down         { background-image: url('/fx/enhance-down.png'); }
+
   @keyframes hit-shake {
     0%, 100% { transform: translate(0, 0); }
     25% { transform: translate(-4px, 1px); }

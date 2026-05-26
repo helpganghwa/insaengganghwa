@@ -39,6 +39,8 @@ function MegaFX({ counter }: { counter?: string }) {
           boxShadow: 'inset 0 0 32px 8px rgba(253, 224, 71, 0.4)',
         }}
       />
+      {/* Pixellab sprite — 골든 폭발 PNG, 중앙 80px. 폴백 글로우 위에 합성. */}
+      <span className="fx-sprite fx-sprite-success-mega animate-fx-mega-glow pointer-events-none absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 h-20 w-20" />
       {/* 4방향 별 — 중앙에서 확산. z-10. */}
       <span className="pointer-events-none absolute inset-0 flex items-center justify-center">
         {directions.map((deg) => (
@@ -63,6 +65,7 @@ function MegaFX({ counter }: { counter?: string }) {
 function SuccessFX({ counter }: { counter?: string }) {
   return (
     <span className="pointer-events-none absolute inset-0 flex items-center justify-center">
+      {/* 폴백 그린 펄스 — sprite 뒤. */}
       <span
         className="animate-fx-success-pop absolute h-20 w-20 rounded-full"
         style={{
@@ -70,6 +73,8 @@ function SuccessFX({ counter }: { counter?: string }) {
             'radial-gradient(circle, rgba(52, 211, 153, 0.7), rgba(16, 185, 129, 0.3) 50%, transparent 75%)',
         }}
       />
+      {/* Pixellab sprite — 그린 별 PNG, 중앙 64px. */}
+      <span className="fx-sprite fx-sprite-success animate-fx-success-pop absolute h-16 w-16" />
       {counter ? (
         <span className="animate-fx-counter-pop relative font-bold text-lg text-emerald-100 drop-shadow-[0_0_4px_rgba(52,211,153,0.9)] tabular-nums">
           {counter}
@@ -81,23 +86,29 @@ function SuccessFX({ counter }: { counter?: string }) {
 
 function HoldFX() {
   return (
-    <span
-      className="pointer-events-none absolute inset-0 animate-fx-mist"
-      style={{
-        background:
-          'linear-gradient(90deg, transparent 0%, rgba(161, 161, 170, 0.45) 35%, rgba(212, 212, 216, 0.5) 50%, rgba(161, 161, 170, 0.45) 65%, transparent 100%)',
-      }}
-    />
+    <>
+      {/* 폴백 안개 sweep — sprite 뒤에 가로 흐름. */}
+      <span
+        className="pointer-events-none absolute inset-0 animate-fx-mist"
+        style={{
+          background:
+            'linear-gradient(90deg, transparent 0%, rgba(161, 161, 170, 0.45) 35%, rgba(212, 212, 216, 0.5) 50%, rgba(161, 161, 170, 0.45) 65%, transparent 100%)',
+        }}
+      />
+      {/* Pixellab sprite — 회색 안개 PNG, 카드 폭 전체. */}
+      <span className="fx-sprite fx-sprite-hold animate-fx-mist pointer-events-none absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 h-16 w-24 opacity-80" />
+    </>
   );
 }
 
 function DownFX() {
-  // SVG 균열 — 카드 하단에서 솟구치는 두 줄 빨강 균열.
+  // SVG 균열 + Pixellab sprite 합성. 폴백 SVG는 sprite 뒤에 카드 중앙 영역.
   return (
     <span className="pointer-events-none absolute inset-0 flex items-center justify-center">
+      {/* 폴백 SVG 균열 — sprite 뒤. */}
       <svg
         viewBox="0 0 100 60"
-        className="animate-fx-crack h-full w-full"
+        className="animate-fx-crack absolute h-full w-full"
         preserveAspectRatio="xMidYMid meet"
         aria-hidden
       >
@@ -119,6 +130,8 @@ function DownFX() {
           <path d="M 50 58 L 50 36 L 46 24 L 52 10" />
         </g>
       </svg>
+      {/* Pixellab sprite — 빨강 균열 PNG, 중앙 80px. */}
+      <span className="fx-sprite fx-sprite-down animate-fx-crack absolute h-20 w-20" />
     </span>
   );
 }
