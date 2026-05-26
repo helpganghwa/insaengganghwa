@@ -21,7 +21,6 @@ export default async function CheckinPage() {
       <CheckinCalendar
         initialDayProgress={state.dayProgress}
         initialLastClaimedKstDay={state.lastClaimedKstDay}
-        initialTotalClaimedCount={Number(state.totalClaimedCount)}
         kstToday={kstToday}
       />
     </div>

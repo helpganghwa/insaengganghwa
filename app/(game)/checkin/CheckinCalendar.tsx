@@ -40,17 +40,14 @@ function rewardLongLabel(r: CheckinReward): string {
 export function CheckinCalendar({
   initialDayProgress,
   initialLastClaimedKstDay,
-  initialTotalClaimedCount,
   kstToday,
 }: {
   initialDayProgress: number;
   initialLastClaimedKstDay: string | null;
-  initialTotalClaimedCount: number;
   kstToday: string;
 }) {
   const [dayProgress, setDayProgress] = useState(initialDayProgress);
   const [lastClaimed, setLastClaimed] = useState<string | null>(initialLastClaimedKstDay);
-  const [total, setTotal] = useState(initialTotalClaimedCount);
   const [pending, startTransition] = useTransition();
   const { showResource, showError } = useResourceToast();
 
@@ -81,7 +78,6 @@ export function CheckinCalendar({
       // 낙관적 갱신 — 다음 사이클 첫칸이면 dp=0
       setDayProgress((dp) => (dp + 1) % CHECKIN_CYCLE_DAYS);
       setLastClaimed(kstToday);
-      setTotal((t) => t + 1);
     });
   };
 
@@ -92,9 +88,6 @@ export function CheckinCalendar({
         <h1 className="text-lg font-bold">
           <span aria-hidden>⚡ </span>출석 캘린더
         </h1>
-        <div className="text-xs text-zinc-500">
-          누적 {total.toLocaleString('ko-KR')}회 · 사이클 {dayProgress}/{CHECKIN_CYCLE_DAYS}
-        </div>
       </div>
 
       {/* 4×7 그리드 */}
@@ -164,9 +157,6 @@ export function CheckinCalendar({
         </button>
       </section>
 
-      <p className="text-center text-[10px] text-zinc-400">
-        누적 출석 — 끊겨도 자리 유지. 28칸 완료 후 다음 접속일 1칸으로 롤.
-      </p>
     </div>
   );
 }

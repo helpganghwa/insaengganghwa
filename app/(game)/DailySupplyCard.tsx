@@ -43,10 +43,7 @@ export function DailySupplyCard() {
       {/* 좌→우 어두운 fade — 텍스트 가독성 강화 */}
       <div className="pointer-events-none absolute inset-0 bg-gradient-to-r from-black/80 via-black/45 to-transparent" />
 
-      <div className="relative z-10 flex w-full items-center gap-3 px-3.5">
-        <span aria-hidden className="text-2xl leading-none drop-shadow-[0_2px_2px_rgba(0,0,0,0.8)]">
-          📬
-        </span>
+      <div className="relative z-10 flex w-full items-center px-3.5">
         <div className="min-w-0 flex-1">
           <div className="text-[10px] font-semibold tracking-wider text-amber-300 drop-shadow-[0_1px_2px_rgba(0,0,0,0.9)]">
             오늘의 보급
