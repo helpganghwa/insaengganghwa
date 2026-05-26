@@ -73,14 +73,13 @@ const DOWN_POOL = ['fx-char-down-1', 'fx-char-down-2'] as const;
  * 상반신만 카드 안에 보이고 하반신은 overflow-hidden로 잘림.
  */
 function CharOverlay({ cls }: { cls: string }) {
-  // 우측 세로 중앙 — top-1/2 + -translate-y-1/2로 컨테이너 세로 중심을 카드 중심에 정렬.
-  // 위치 조정 가이드:
-  //   right-[Npx] : 컨테이너 우측 끝(음수=카드 밖). 캐릭터 좌우 노출 영역 조정.
-  //   top-1/2 -translate-y-1/2 : 세로 정중앙. 대신 top-[Ypx] 직접 지정 가능.
-  //   h-[X%]    : 카드 높이 대비 컨테이너 높이. 클수록 캐릭터 시각 면적 ↑.
+  // 위치 조정 가이드(EnhanceFX.tsx · EnhanceSlotCard.tsx 양쪽 동일 값 사용):
+  //   right-[Npx]              : 우측 위치(음수=카드 밖). 클수록 캐릭터가 우측으로 빠짐.
+  //   top-1/2 + translate-y-X  : 세로. -translate-y-1/2 = 정중앙. calc(-50%+50px) = 50px 아래.
+  //   h-[X%]                   : 카드 높이 대비. h-[400%]=368px, h-[500%]=460px.
   return (
     <span
-      className={`fx-char ${cls} pointer-events-none absolute right-0 top-1/2 -translate-y-1/2 h-[400%] aspect-square z-25 drop-shadow-[0_2px_6px_rgba(0,0,0,0.7)]`}
+      className={`fx-char ${cls} pointer-events-none absolute right-[-30px] top-1/2 translate-y-[calc(-50%+50px)] h-[400%] aspect-square z-25 drop-shadow-[0_2px_6px_rgba(0,0,0,0.7)]`}
     />
   );
 }
