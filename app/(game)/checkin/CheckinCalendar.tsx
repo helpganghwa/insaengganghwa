@@ -46,8 +46,8 @@ function quantityLabel(r: CheckinReward): string {
 
 function rewardLongLabel(r: CheckinReward): string {
   if (r.kind === 'diamond') return `다이아 ${r.amount.toLocaleString('ko-KR')}`;
-  if (r.kind === 'supply') return `${SLOT_LABEL[r.slot]} 보급권 ${r.count}장`;
-  return `보급권 3종 각 ${r.perSlot}장`;
+  if (r.kind === 'supply') return `${SLOT_LABEL[r.slot]} 보급 상자 ${r.count}장`;
+  return `보급 상자 3종 각 ${r.perSlot}장`;
 }
 
 function cellAriaLabel(
@@ -107,10 +107,10 @@ export function CheckinCalendar({
       if (reward.kind === 'diamond') {
         showResource('💎', '다이아', reward.amount);
       } else if (reward.kind === 'supply') {
-        showResource(SLOT_EMOJI[reward.slot], `${SLOT_LABEL[reward.slot]} 보급권`, reward.count);
+        showResource(SLOT_EMOJI[reward.slot], `${SLOT_LABEL[reward.slot]} 보급 상자`, reward.count);
       } else {
         for (const s of SUPPLY_SLOTS) {
-          showResource(SLOT_EMOJI[s], `${SLOT_LABEL[s]} 보급권`, reward.perSlot);
+          showResource(SLOT_EMOJI[s], `${SLOT_LABEL[s]} 보급 상자`, reward.perSlot);
         }
       }
       setDayProgress((dp) => (dp + 1) % CHECKIN_CYCLE_DAYS);
