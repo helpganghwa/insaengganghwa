@@ -114,8 +114,10 @@ export const profileGenerationJobs = pgTable(
     userId: uuid('user_id')
       .notNull()
       .references(() => profiles.id, { onDelete: 'cascade' }),
-    /** Pixellab 큐 등록 후 채워짐. */
+    /** Pixellab 큐 등록 후 채워짐 (character 다운로드용). */
     pixellabCharacterId: text('pixellab_character_id'),
+    /** Pixellab background job ID — status polling 키(/v2/background-jobs/{id}). */
+    pixellabBackgroundJobId: text('pixellab_background_job_id'),
     descriptionPrompt: text('description_prompt').notNull(),
     options: jsonb('options').notNull(),
     equipmentSnapshot: jsonb('equipment_snapshot').notNull(),

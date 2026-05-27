@@ -146,28 +146,37 @@ UPDATE user_profiles SET report_count = report_count + 1 WHERE id = $ AND ROW_CO
 - **실패 처리**: pixellab 내부 service timeout(code 5000)은 transient — 자동 재시도 1~2회 후 환불.
 - **인증**: v2 모든 endpoint Bearer API key 통과 (v1 `/generate-reference-to-8-rotations/background`는 web-only JWT, API key 403).
 
-### 4.2 description 합성 규칙
+### 4.2 description 합성 규칙 (v3, 2026-05-27 motif 방식)
 
-JRPG 아니메 픽셀아트 톤 고정. 다음 블록을 순서대로 결합:
+JRPG 아니메 픽셀아트 톤 고정. **6 블록** 결합:
 
 ```
-1. HEADER          — "slim 7-heads-tall adult bishonen|bishojo [concept] character of insaeng-ganghwa game, NOT chibi NOT super deformed,
-                     emphasizing tall slender [feminine|masculine] anime body proportions [+ female: narrow slim waist, ample bust, curvy thighs],
-                     small head and long graceful legs, total body height approximately seven times head height."
-2. Face            — 옵션: 체형·눈·표정
-3. Hair            — 옵션: 색·스타일
-4. Outfit          — armor.art 발췌(외형 묘사만 — sprite-prompt-visual-only 원칙)
-5. Accessory       — accessory.art 발췌
-6. Holding         — weapon.art 발췌
-7. Pose            — 옵션: 포즈 enum + "T-pose standing centered front-facing facing the viewer directly"
-8. Style           — 공용 STYLE 상수(JRPG 아니메 픽셀, colored rim outline, cel shading, 흰배경)
+1. HEADER          — "slim 7-heads-tall adult bishonen|bishojo young adventurer mascot character of insaeng-ganghwa game,
+                     NOT chibi NOT super deformed, emphasizing tall slender [feminine|masculine] anime body proportions
+                     [+ female: narrow slim waist, ample bust, curvy thighs], small head and long graceful legs."
+2. Face            — 옵션: 체형·눈·표정 (gender별 jawline·lashes 분기)
+3. Hair            — 옵션: 색만(스타일·길이는 공용 템플릿 fixed)
+4. Motifs          — 장비 3종 컨셉/스타일을 아바타에 **메타포로 녹임** (직접 입거나 들지 않음):
+                     · Weapon theme: weapon.art 발췌 → 어깨·망토·머리장식의 wing/horn/symbol/pattern 모티프
+                     · Armor theme:  armor.art 발췌  → 의상 색·재질·엠블럼·실루엣
+                     · Accessory theme: accessory.art 발췌 → 머리장식·귀걸이·소매·펜던트
+                     "DO NOT have the character physically hold or wear the literal item" 명시.
+5. Pose            — 옵션 enum + 각 pose에 "front-facing facing the viewer directly" 명시(뒷통수 방지)
+6. Style           — 공용 STYLE 상수(colored rim outline, gradient cel shading, JRPG anime pixel, 흰배경)
 ```
 
-**비율 강제 필수** — `proportions`·`negative_description` 파라미터 spec에 없음. HEADER 블록의 비율 강조 문구가 유일한 제어 수단. female은 일본 아니메 신체 라인(가는 허리·풍성한 가슴·curvy thighs) 명시적 묘사로 push (2026-05-27 검증, 안 넣으면 머리 큼·체형 밋밋).
+**Motif 변경 의도(사용자 결정 2026-05-27)** — 이전엔 Outfit/Accessory/Holding 3블록으로 art를 그대로 입히고 들렸음. 결과: "literal item icon"이 캐릭터 옆에 분리되어 그려지거나 어색한 합성. Motif 통합으로 **캐릭터 디자인 통일성** + 모티프가 의상·실루엣에 녹아드는 일러스트레이션 톤.
 
-장비의 `lore` 필드는 **사용 금지**(`sprite-prompt-visual-only`). `art` 필드의 외형 토큰만 채택.
+예시:
+- 드래곤 도끼 → 어깨에 작은 용 날개 또는 비늘 패턴
+- 개구리 단검 → 초록 leaf 패턴 소매·녹색 톤 의상
+- 팰러딘 흉갑 → 흰·금 oath 엠블럼 가슴, 어드벤처러 컷 의상
 
-공용 상수는 `lib/game/profile/prompt.ts`의 `STYLE_PROFILE`·`HEADER_M`·`HEADER_F` 등으로 박는다(`equipment/catalog`의 `STYLE`/`NEG`와 동일 패턴).
+**비율 강제 필수** — `proportions`·`negative_description` 파라미터 spec에 없음. HEADER 블록의 비율 강조 문구가 유일한 제어 수단. female은 일본 아니메 신체 라인(가는 허리·풍성한 가슴·curvy thighs) 명시적 묘사로 push.
+
+장비의 `lore` 필드는 **사용 금지**(`sprite-prompt-visual-only`). `art` 필드의 외형 토큰만 채택. `sanitizeArt()`가 catalog의 "item icon ... transparent background" boilerplate 제거.
+
+매핑 함수는 `lib/game/profile/compose.ts:composeDescription(opts, eq)` (서버 전용). 변경 시 본 §4.2 갱신.
 
 ### 4.3 reference 풀
 

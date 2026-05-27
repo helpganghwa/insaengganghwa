@@ -1,7 +1,10 @@
 /**
  * PROFILE §4.2 — description 합성.
  *
- * 8 블록 결합: HEADER · Face · Hair · Outfit(armor) · Accessory · Holding(weapon) · Pose · Style.
+ * 6 블록 결합: HEADER · Face · Hair · Motifs(장비 3종 모티프 통합) · Pose · Style.
+ * - 장비는 **직접 입거나 들지 않음** — 각 장비의 컨셉·테마가 아바타 의상/실루엣/디테일에
+ *   메타포로 녹아듦(2026-05-27 사용자 결정). 예: "드래곤 검" → 어깨 용 날개 모티프,
+ *   "개구리 단검" → 초록 leaf 패턴, "팰러딘 흉갑" → 흰·금 oath 엠블럼.
  * - 장비 lore 사용 금지(sprite-prompt-visual-only). `art` 외형 토큰만.
  * - HEADER의 비율·신체 라인 명시가 model 비율을 결정하는 유일한 수단
  *   (CreateCharacterProRequest엔 proportions·negative_description 없음, 2026-05-27 검증).
@@ -158,19 +161,20 @@ function hairBlock(opts: ProfileOptions): string {
   return `Hair: voluminous wind-swept long ${HAIR_COLOR[opts.hair]} hair flowing past the shoulders with individual pixel strands and side bangs, single small ahoge.`;
 }
 
-function outfitBlock(eq: ProfileEquipment): string {
-  const armor = getItem(eq.armorKey, 'armor');
-  return `Outfit: wearing ${sanitizeArt(armor.art)}.`;
-}
-
-function accessoryBlock(eq: ProfileEquipment): string {
-  const accessory = getItem(eq.accessoryKey, 'accessory');
-  return `Accessory: ${sanitizeArt(accessory.art)}.`;
-}
-
-function holdingBlock(eq: ProfileEquipment): string {
+/**
+ * 장비 3종을 캐릭터에 직접 입히지 않고 **모티프**로 녹임.
+ * 모델이 "literal item icon으로 캐릭터를 분리해 그리는" 위험 방지.
+ */
+function motifBlock(eq: ProfileEquipment): string {
   const weapon = getItem(eq.weaponKey, 'weapon');
-  return `Holding: ${sanitizeArt(weapon.art)}.`;
+  const armor = getItem(eq.armorKey, 'armor');
+  const accessory = getItem(eq.accessoryKey, 'accessory');
+  return [
+    'Design motifs woven into the character — translate these themes into the silhouette, outfit fabric, color palette, and small details (DO NOT have the character physically hold or wear the literal item):',
+    `- Weapon theme: ${sanitizeArt(weapon.art)} — interpret as wing/horn/symbol/pattern on shoulders, cloak, or hair ornament`,
+    `- Armor theme: ${sanitizeArt(armor.art)} — adapt color, material, emblem, and silhouette into an adventurer outfit`,
+    `- Accessory theme: ${sanitizeArt(accessory.art)} — fold motif into hair piece, earrings, sleeve detail, or pendant`,
+  ].join('\n');
 }
 
 function poseBlock(opts: ProfileOptions): string {
@@ -186,9 +190,7 @@ export function composeDescription(opts: ProfileOptions, eq: ProfileEquipment): 
     headerBlock(opts),
     faceBlock(opts),
     hairBlock(opts),
-    outfitBlock(eq),
-    accessoryBlock(eq),
-    holdingBlock(eq),
+    motifBlock(eq),
     poseBlock(opts),
     `Style: ${STYLE_BLOCK}`,
   ].join('\n\n');

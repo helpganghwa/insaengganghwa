@@ -13,18 +13,35 @@
  */
 import 'server-only';
 
-import { readFile } from 'node:fs/promises';
-
+import sharp from 'sharp';
 import { and, eq, sql } from 'drizzle-orm';
+
+import { createClient, type SupabaseClient } from '@supabase/supabase-js';
 
 import { db } from '@/lib/db/client';
 import { profileGenerationJobs, userProfiles } from '@/lib/db/schema/avatar';
 import { mailbox } from '@/lib/db/schema/mailbox';
 import { profiles } from '@/lib/db/schema/profiles';
-import { createSupabaseServerClient } from '@/lib/auth/supabase-server';
 
 import { reviewProfile, type ReviewVerdict } from './ai-review';
 import { pickRefs } from './refs';
+
+/**
+ * Storage write·read는 service_role 클라이언트 사용. cron/script context엔
+ * Next request scope(cookies)가 없으므로 `createSupabaseServerClient()` 사용 불가.
+ * RLS 우회 + cookies 의존 X.
+ */
+let _serviceClient: SupabaseClient | null = null;
+function serviceClient(): SupabaseClient {
+  if (_serviceClient) return _serviceClient;
+  const url = process.env.NEXT_PUBLIC_SUPABASE_URL;
+  const key = process.env.SUPABASE_SERVICE_ROLE_KEY;
+  if (!url || !key) throw new Error('SUPABASE service env missing');
+  _serviceClient = createClient(url, key, {
+    auth: { persistSession: false, autoRefreshToken: false },
+  });
+  return _serviceClient;
+}
 
 // ─── 상수 ───
 
@@ -51,13 +68,18 @@ function dirKey(d: Direction): string {
 interface PixellabCreateResponse {
   character_id: string;
   background_job_id: string;
-  status: 'processing';
+  status: 'processing' | 'completed' | 'failed';
 }
 
-interface PixellabCharacterStatus {
-  status: 'creating' | 'completed' | 'failed';
-  rotations?: Record<string, string>;
-  error?: string;
+interface PixellabBackgroundJob {
+  id: string;
+  status: 'processing' | 'completed' | 'failed';
+  last_response?: { character_id?: string; [k: string]: unknown } | null;
+}
+
+interface PixellabCharacterDetail {
+  id: string;
+  rotation_urls: Record<string, string | null>;
 }
 
 // ─── 1. 큐 등록 — status='queued' 1건 → Pixellab POST → 'downloading' ───
@@ -85,12 +107,30 @@ export async function enqueueOnePixellab(): Promise<
 
   if (!job) return { kind: 'noop' };
 
-  // ref 로드 (concept_image + reference_image base64).
+  // ref 로드 + spec 사이즈로 sharp resize (nearest-neighbor 픽셀결 유지).
+  // concept_image max 1024×1024, reference_image max 168×168 (Pixellab v2 spec).
+  // ref 파일 원본은 더 큰 사이즈 — runtime에 resize.
   const optsTyped = job.options as { gender: 'male' | 'female' };
   const refPair = pickRefs({ gender: optsTyped.gender });
   const [conceptBuf, referenceBuf] = await Promise.all([
-    readFile(refPair.conceptPath),
-    readFile(refPair.referencePath),
+    sharp(refPair.conceptPath)
+      .trim({ background: { r: 255, g: 255, b: 255, alpha: 1 }, threshold: 10 })
+      .resize(512, 512, {
+        fit: 'contain',
+        kernel: sharp.kernel.nearest,
+        background: { r: 255, g: 255, b: 255, alpha: 1 },
+      })
+      .png()
+      .toBuffer(),
+    sharp(refPair.referencePath)
+      .trim({ background: { r: 255, g: 255, b: 255, alpha: 1 }, threshold: 10 })
+      .resize(168, 168, {
+        fit: 'contain',
+        kernel: sharp.kernel.nearest,
+        background: { r: 255, g: 255, b: 255, alpha: 1 },
+      })
+      .png()
+      .toBuffer(),
   ]);
 
   // Pixellab v2 호출 — PROFILE §4.1 검증 파라미터.
@@ -125,7 +165,11 @@ export async function enqueueOnePixellab(): Promise<
 
   await db
     .update(profileGenerationJobs)
-    .set({ status: 'downloading', pixellabCharacterId: json.character_id })
+    .set({
+      status: 'downloading',
+      pixellabCharacterId: json.character_id,
+      pixellabBackgroundJobId: json.background_job_id,
+    })
     .where(eq(profileGenerationJobs.id, job.id));
 
   return { kind: 'enqueued', jobId: job.id, characterId: json.character_id };
@@ -148,6 +192,7 @@ export async function pollAndProcessDownloading(limit = 5): Promise<{
       id: profileGenerationJobs.id,
       userId: profileGenerationJobs.userId,
       characterId: profileGenerationJobs.pixellabCharacterId,
+      backgroundJobId: profileGenerationJobs.pixellabBackgroundJobId,
       description: profileGenerationJobs.descriptionPrompt,
       options: profileGenerationJobs.options,
       equipmentSnapshot: profileGenerationJobs.equipmentSnapshot,
@@ -164,42 +209,55 @@ export async function pollAndProcessDownloading(limit = 5): Promise<{
   let stillProcessing = 0;
 
   for (const job of due) {
-    if (!job.characterId) {
-      // 비정상 — queued에서 character_id 안 들어왔는데 downloading. fail 처리.
-      await markFailedAndRefund(job.id, job.userId, 'Pixellab character_id missing');
+    if (!job.characterId || !job.backgroundJobId) {
+      await markFailedAndRefund(job.id, job.userId, 'Pixellab ids missing');
       failed += 1;
       continue;
     }
 
-    const statusRes = await fetch(`${PIXELLAB_BASE}/characters/${job.characterId}`, {
+    // 1) background job status polling (v2 spec: status가 여기 있음).
+    const bgRes = await fetch(`${PIXELLAB_BASE}/background-jobs/${job.backgroundJobId}`, {
       headers: { authorization: `Bearer ${key}` },
     });
-    if (!statusRes.ok) {
-      // transient — 다음 cron iteration에 재시도. fail 처리 안 함.
+    if (!bgRes.ok) {
       stillProcessing += 1;
       continue;
     }
-    const status = (await statusRes.json()) as PixellabCharacterStatus;
+    const bgJob = (await bgRes.json()) as PixellabBackgroundJob;
 
-    if (status.status === 'creating') {
+    if (bgJob.status === 'processing') {
       stillProcessing += 1;
       continue;
     }
-    if (status.status === 'failed') {
-      await markFailedAndRefund(job.id, job.userId, status.error ?? 'Pixellab generation failed');
+    if (bgJob.status === 'failed') {
+      const detail = JSON.stringify(bgJob.last_response ?? {}).slice(0, 300);
+      await markFailedAndRefund(job.id, job.userId, `Pixellab job failed: ${detail}`);
       failed += 1;
       continue;
     }
 
-    // completed — 8방향 다운로드 + Storage 미러링.
-    if (!status.rotations) {
-      await markFailedAndRefund(job.id, job.userId, 'Pixellab rotations missing');
+    // 2) completed — character GET으로 rotation_urls 가져옴.
+    const charRes = await fetch(`${PIXELLAB_BASE}/characters/${job.characterId}`, {
+      headers: { authorization: `Bearer ${key}` },
+    });
+    if (!charRes.ok) {
+      stillProcessing += 1;
+      continue;
+    }
+    const char = (await charRes.json()) as PixellabCharacterDetail;
+    if (!char.rotation_urls) {
+      await markFailedAndRefund(job.id, job.userId, 'Pixellab character rotation_urls missing');
       failed += 1;
       continue;
+    }
+    // rotation_urls의 string|null을 filter — 8방향 풀시트라 다 string이어야.
+    const remoteRotations: Record<string, string> = {};
+    for (const [k, v] of Object.entries(char.rotation_urls)) {
+      if (typeof v === 'string') remoteRotations[k] = v;
     }
 
     try {
-      const rotations = await mirrorRotations(job.characterId, status.rotations, job.userId);
+      const rotations = await mirrorRotations(job.characterId, remoteRotations, job.userId);
       const southUrl = rotations[dirKey('south')];
       if (!southUrl) throw new Error('south rotation missing after mirror');
 
@@ -238,7 +296,7 @@ async function mirrorRotations(
   remoteRotations: Record<string, string>,
   userId: string,
 ): Promise<Record<string, string>> {
-  const supabase = await createSupabaseServerClient();
+  const supabase = serviceClient();
   const result: Record<string, string> = {};
 
   for (const dir of DIRECTIONS) {
