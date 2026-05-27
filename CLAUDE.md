@@ -19,6 +19,8 @@
 | **인증** | Kakao OAuth (Supabase Auth) | 한국 유저 대상 단독 인증 |
 | **결제** | 포트원 + KMC/PASS 본인인증 | 카카오페이/토스/카드 |
 | **이메일** | Resend | 결제 영수증 (전자상거래법 의무) |
+| **AI 검토** | Anthropic SDK (Claude Haiku 4.5 vision) | 프로필 자동 검토 — NSFW/품질/일치성 (PROFILE §5) |
+| **AI 스프라이트** | Pixellab v2 (Pro Tier 3) | 캐릭터 프로필 생성 — `/v2/create-character-pro` (PROFILE §4) |
 | **모니터링** | Sentry + PostHog + Better Stack | 에러/분석/uptime |
 | **배포** | Vercel (Edge + Cron) | 빠른 배포, KST Cron |
 | **광고** | AdMob Web (1차) | 보상형 광고 |

@@ -34,6 +34,12 @@ export const profiles = pgTable('profiles', {
   pushSupply: boolean('push_supply').notNull().default(true),
   /** 강화 모드 — instant(즉시) | batched(30분 묶음). 기본 instant. */
   pushEnhanceMode: pushEnhanceModeEnum('push_enhance_mode').notNull().default('instant'),
+  /**
+   * 현재 active 캐릭터 프로필(`user_profiles.id`). null = 미설정(fallback 아이콘).
+   * FK는 마이그레이션에서 `ON DELETE SET NULL`로 ALTER 추가(순환 import 회피).
+   * PROFILE §3.3.
+   */
+  activeProfileId: uuid('active_profile_id'),
   createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
   updatedAt: timestamp('updated_at', { withTimezone: true }).notNull().defaultNow(),
 });

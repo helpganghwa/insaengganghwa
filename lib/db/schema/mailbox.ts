@@ -31,6 +31,12 @@ export const mailboxTypeEnum = pgEnum('mailbox_type', [
   'notice',
   /** 운영자 수동 발송(어드민 대시보드). */
   'admin',
+  /** 프로필 자동 검토 통과 — 목록 추가 안내(PROFILE §5.4). */
+  'profile_accepted',
+  /** 프로필 AI 검토 거절 — 다이아 환불 + 사유 통지. */
+  'profile_rejected_ai',
+  /** 프로필 시스템 장애 환불 — Anthropic/Pixellab 재시도 다 실패. */
+  'profile_failed',
 ]);
 
 /**
