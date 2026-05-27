@@ -25,6 +25,10 @@
     {
       "path": "/api/cron/push-daily-supply",
       "schedule": "0,30 15-23 * * *"
+    },
+    {
+      "path": "/api/cron/profile-poll",
+      "schedule": "*/2 * * * *"
     }
   ]
 }
