@@ -6,19 +6,24 @@
  * - HEADER의 비율·신체 라인 명시가 model 비율을 결정하는 유일한 수단
  *   (CreateCharacterProRequest엔 proportions·negative_description 없음, 2026-05-27 검증).
  * - female은 일본 아니메 신체 라인(가는 허리·풍성한 가슴·curvy thighs) 명시 필수.
+ * - 자세는 Pose 블록이 단독 결정 — HEADER엔 자세 단어 X (sitting/jumping 같은 비-standing 허용).
  */
 import 'server-only';
 
 import { CATALOG_ITEMS, type CatalogItem } from '@/lib/game/equipment/catalog';
-import type { ProfileConceptCategory, ProfileGender } from './refs';
+import type { ProfileGender } from './refs';
 
 export type ProfileHair =
-  | 'short_black'
-  | 'long_silver'
-  | 'long_blonde'
-  | 'spiky_red_orange'
-  | 'long_brown_wavy'
-  | 'long_teal_ash';
+  | 'black'
+  | 'silver'
+  | 'blonde'
+  | 'red'
+  | 'brown'
+  | 'blue'
+  | 'pink'
+  | 'teal'
+  | 'purple'
+  | 'white';
 
 export type ProfileExpression =
   | 'gentle_smile'
@@ -28,15 +33,20 @@ export type ProfileExpression =
   | 'warm_warm';
 
 export type ProfilePose =
-  | 'hands_relaxed_at_sides'
-  | 'arms_crossed'
-  | 'one_hand_on_hip'
-  | 'gripping_weapon_at_side';
+  | 'standing_naturally'
+  | 'peace_sign'
+  | 'sitting'
+  | 'hands_on_hips'
+  | 'jumping'
+  | 'side_glance'
+  | 'one_hand_wave'
+  | 'hand_on_chin'
+  | 'hands_behind_back'
+  | 'arms_crossed';
 
-/** 유저 옵션 — PROFILE §5.1 4축 확정안(컨셉 + gender + hair + expression + pose). */
+/** 유저 옵션 — PROFILE §5.1 4축(gender + hair + expression + pose). */
 export interface ProfileOptions {
   gender: ProfileGender;
-  conceptCategory: ProfileConceptCategory;
   hair: ProfileHair;
   expression: ProfileExpression;
   pose: ProfilePose;
@@ -72,21 +82,20 @@ function sanitizeArt(art: string): string {
   return (m?.[1] ?? art).trim().replace(/[.,;]\s*$/, '');
 }
 
-// ─── 옵션 enum → 텍스트 매핑 (PROFILE §5.1 [TBD] 확정 v1) ───
+// ─── 옵션 enum → 텍스트 매핑 (PROFILE §5.1 확정 v2) ───
 
-const HAIR_DESC: Record<ProfileHair, string> = {
-  short_black:
-    'voluminous deep black short hair with individual pixel strands, slight side bangs, single small ahoge',
-  long_silver:
-    'voluminous wind-swept long silver hair flowing past the waist with individual pixel strands and side bangs, single small ahoge',
-  long_blonde:
-    'voluminous wind-swept long golden-blonde hair flowing past the shoulders with individual pixel strands, single small ahoge',
-  spiky_red_orange:
-    'spiky messy red-orange hair with lighter highlights, a few longer strands falling over the forehead, single small ahoge',
-  long_brown_wavy:
-    'voluminous wind-swept long warm brown wavy hair flowing past the shoulders with individual pixel strands, single small ahoge',
-  long_teal_ash:
-    'voluminous wind-swept long pale teal-ash hair flowing past the shoulders with individual pixel strands and side bangs, single small ahoge',
+/** 색만 결정 — 길이·스타일은 공용 템플릿 고정. */
+const HAIR_COLOR: Record<ProfileHair, string> = {
+  black: 'deep black',
+  silver: 'shimmering silver',
+  blonde: 'golden blonde',
+  red: 'fiery red-orange',
+  brown: 'warm chestnut brown',
+  blue: 'cool cobalt blue',
+  pink: 'soft pastel pink',
+  teal: 'pale teal-ash',
+  purple: 'mystical lavender purple',
+  white: 'pure platinum white',
 };
 
 const EXPRESSION_DESC: Record<ProfileExpression, string> = {
@@ -97,26 +106,28 @@ const EXPRESSION_DESC: Record<ProfileExpression, string> = {
   warm_warm: 'warm friendly half-smile, eyes wide open looking forward',
 };
 
+/** Pose는 자세 단독 결정 — front-facing 명시로 뒷통수 방지(2026-05-27 검증). */
 const POSE_DESC: Record<ProfilePose, string> = {
-  hands_relaxed_at_sides:
-    'T-pose standing centered front-facing facing the viewer directly, empty hands relaxed at sides',
+  standing_naturally:
+    'T-pose standing centered front-facing facing the viewer directly, empty hands relaxed at the sides',
+  peace_sign:
+    'standing centered front-facing facing the viewer directly with one hand held up in a V peace sign at face level, other hand relaxed at side, slight smile',
+  sitting:
+    'sitting on the ground centered front-facing facing the viewer directly, legs casually crossed, both hands resting on knees',
+  hands_on_hips:
+    'standing centered front-facing facing the viewer directly, both hands on hips in a confident stance',
+  jumping:
+    'mid-jump pose centered front-facing facing the viewer directly, both feet off the ground, arms slightly raised dynamically',
+  side_glance:
+    'body slightly turned to the side with one hand on hip, head turned to face the viewer directly in a sass side glance',
+  one_hand_wave:
+    'standing centered front-facing facing the viewer directly, one hand raised in a friendly greeting wave, other hand relaxed at side',
+  hand_on_chin:
+    'standing centered front-facing facing the viewer directly, one hand resting on the chin in a thoughtful pose, other hand relaxed at side',
+  hands_behind_back:
+    'standing centered front-facing facing the viewer directly, both hands clasped behind the back in gentle upright posture',
   arms_crossed:
-    'standing centered front-facing facing the viewer directly, arms crossed in front of the chest',
-  one_hand_on_hip:
-    'standing centered front-facing facing the viewer directly with slight hip tilt, one hand resting on hip',
-  gripping_weapon_at_side:
-    'standing centered front-facing facing the viewer directly, right hand gripping the weapon planted head-down at the side, left hand relaxed',
-};
-
-const CONCEPT_LABEL: Record<ProfileConceptCategory, string> = {
-  scholar: 'young rune mountain scholar',
-  mage: 'young arcane mage adept',
-  warrior: 'young warrior adventurer',
-  ranger: 'young forest ranger',
-  rogue: 'young shadow rogue',
-  noble: 'young noble heir adventurer',
-  apprentice: 'young apprentice adventurer',
-  merchant: 'young traveling merchant',
+    'standing centered front-facing facing the viewer directly, arms crossed firmly in front of the chest',
 };
 
 // ─── 공용 STYLE 상수 (서버 상수) ───
@@ -125,16 +136,15 @@ const STYLE_BLOCK =
   'colored reddish-brown outline rim (not pure black), rich gradient cel shading, ' +
   'classic JRPG anime pixel art aesthetic, pure white background, character only.';
 
-// ─── HEADER 블록 — gender별 신체 라인 분기 ───
+// ─── HEADER 블록 — gender별 신체 라인 분기, 컨셉 generic ───
 
 function headerBlock(opts: ProfileOptions): string {
-  const body =
-    opts.gender === 'female' ? 'adult bishojo' : 'adult bishonen';
+  const body = opts.gender === 'female' ? 'adult bishojo' : 'adult bishonen';
   const proportions =
     opts.gender === 'female'
       ? 'emphasizing tall slender feminine anime body proportions with narrow slim waist, ample bust, and curvy thighs (classic JRPG female adventurer build), small head and long graceful legs, total body height approximately seven times head height.'
       : 'emphasizing tall slender masculine anime body proportions with broad shoulders and long legs, small head and total body height approximately seven times head height.';
-  return `slim 7-heads-tall ${body} ${CONCEPT_LABEL[opts.conceptCategory]} mascot character of insaeng-ganghwa game, NOT chibi NOT super deformed, ${proportions}`;
+  return `slim 7-heads-tall ${body} young adventurer mascot character of insaeng-ganghwa game, NOT chibi NOT super deformed, ${proportions}`;
 }
 
 function faceBlock(opts: ProfileOptions): string {
@@ -145,7 +155,7 @@ function faceBlock(opts: ProfileOptions): string {
 }
 
 function hairBlock(opts: ProfileOptions): string {
-  return `Hair: ${HAIR_DESC[opts.hair]}.`;
+  return `Hair: voluminous wind-swept long ${HAIR_COLOR[opts.hair]} hair flowing past the shoulders with individual pixel strands and side bangs, single small ahoge.`;
 }
 
 function outfitBlock(eq: ProfileEquipment): string {
@@ -164,7 +174,7 @@ function holdingBlock(eq: ProfileEquipment): string {
 }
 
 function poseBlock(opts: ProfileOptions): string {
-  return `Pose: ${POSE_DESC[opts.pose]}, calm and confident stance.`;
+  return `Pose: ${POSE_DESC[opts.pose]}.`;
 }
 
 /**

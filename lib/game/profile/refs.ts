@@ -1,11 +1,11 @@
 /**
  * PROFILE §4.3 — Pixellab v2 reference 풀 매핑.
  *
- * `concept_image`(톤 주도)는 모든 케이스에 `concept-bishonen-red` 고정 — 가장 강한
- * 톤·검증된 아니메 결(2026-05-27). `reference_image`(구도 보조)만 gender·컨셉에 따라 분기.
+ * v1: 모든 케이스에 검증된 단일 쌍 (concept=bishonen-red, reference=bishojo-elf).
+ * v6 사용자 만족 결과의 입력 매핑(2026-05-27).
  *
- * 외부 reference 3장만 사용(`public/sprites/profile/refs/`) — v1 확정, 사용자 캐릭터
- * 추가 X. 풀 확장은 운영 후 필요 시점.
+ * 추후 ref pool 확장 시 gender·옵션 기반 분기 추가 — `reference-bishojo-adventurer.png`도
+ * pool에 보관(PROFILE §11).
  */
 import 'server-only';
 
@@ -14,22 +14,10 @@ import { readFile } from 'node:fs/promises';
 
 export type ProfileGender = 'male' | 'female';
 
-/** 컨셉 카테고리 — description HEADER + ref 분기에 사용. */
-export type ProfileConceptCategory =
-  | 'scholar'
-  | 'mage'
-  | 'warrior'
-  | 'ranger'
-  | 'rogue'
-  | 'noble'
-  | 'apprentice'
-  | 'merchant';
-
 const REFS_DIR = join(process.cwd(), 'public', 'sprites', 'profile', 'refs');
 
 const CONCEPT_BISHONEN_RED = 'concept-bishonen-red.png';
 const REFERENCE_BISHOJO_ELF = 'reference-bishojo-elf.png';
-const REFERENCE_BISHOJO_ADVENTURER = 'reference-bishojo-adventurer.png';
 
 export interface RefPair {
   /** concept_image — 톤 주도 ref. base64 변환 전 절대 경로. */
@@ -39,26 +27,12 @@ export interface RefPair {
 }
 
 /**
- * 검증된 매핑 (PROFILE §4.3):
- * - female + ranger|rogue → adventurer
- * - 그 외 (female 학자·기사·마법사·노블 등 + male all) → elf
- * - concept는 unconditional bishonen-red.
+ * v1: 옵션 무관 단일 쌍 반환. 시그니처는 옵션 받게 두고 분기는 추후 확장.
  */
-export function pickRefs(opts: {
-  gender: ProfileGender;
-  conceptCategory: ProfileConceptCategory;
-}): RefPair {
-  const isFemaleAdventurous =
-    opts.gender === 'female' &&
-    (opts.conceptCategory === 'ranger' || opts.conceptCategory === 'rogue');
-
-  const referenceName = isFemaleAdventurous
-    ? REFERENCE_BISHOJO_ADVENTURER
-    : REFERENCE_BISHOJO_ELF;
-
+export function pickRefs(_opts: { gender: ProfileGender }): RefPair {
   return {
     conceptPath: join(REFS_DIR, CONCEPT_BISHONEN_RED),
-    referencePath: join(REFS_DIR, referenceName),
+    referencePath: join(REFS_DIR, REFERENCE_BISHOJO_ELF),
   };
 }
 
