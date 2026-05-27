@@ -56,7 +56,7 @@
 | `rotations` | jsonb | `{ south, east, north, west, south_east, north_east, north_west, south_west }` 8 URL. Supabase Storage 미러링 결과 |
 | `active_direction` | enum default `south` | 현재 표시 방향. 자랑카드·hub·랭킹은 `rotations[active_direction]` 단일 이미지 사용 |
 | `pixellab_character_id` | text | 원본 추적용(재다운로드 가능) |
-| `options` | jsonb | 유저가 고른 옵션 4축 [TBD] (성별·헤어·표정·포즈 등) |
+| `options` | jsonb | 유저 옵션 4축 v2 확정: `{ gender, hair, expression, pose }` — 총 1,000 조합. enum 값은 §4.2·`lib/game/profile/compose.ts` |
 | `equipment_snapshot` | jsonb | `{ weapon, armor, accessory }` 카탈로그 키 — 디버그·재현용 |
 | `description_prompt` | text | 합성된 최종 description (재현·신고 처리용) |
 | `report_count` | int default 0 | 누적 신고 수 (표시용, 자동 차단 X) |
@@ -361,7 +361,7 @@ Be lenient. Only fail on CLEAR defects. "Could be better" or "head looks big" is
 
 ### 8.3 옵션 선택 화면
 
-옵션 4축(또는 8축, [TBD]) enum 선택 UI. 장비 3종은 현재 장착 자동 표시(편집 불가). "생성 — N 다이아" 버튼.
+옵션 4축(gender·hair·expression·pose) enum 선택 UI — 칩/드롭다운 4 row. 장비 3종은 현재 장착 자동 표시(편집 불가, `actions.ts`가 트랜잭션 안에서 본인 장착 조회). 미장착 슬롯 있으면 "장비 3종을 모두 장착하세요" 안내 + 생성 버튼 disabled. "생성 — N 다이아" 버튼(다이아 잔액 부족 시 disabled).
 
 ### 8.4 fallback
 
@@ -409,9 +409,7 @@ Be lenient. Only fail on CLEAR defects. "Could be better" or "head looks big" is
 
 | # | 항목 | 결정 시점 |
 |---|---|---|
-| 1 | 옵션 구조: A(4축) vs B(8축) | 첫 베타 유저 데이터 보고 |
-| 2 | 다이아 가격: 5,000 vs 10,000 | Pixellab Pro 실측 USD + Claude vision 단가 합산 후 |
-| 3 | reference 풀 초기 구성 — concept_pool·style_pool 각 N장 | 운영자 픽셀아트 자산 준비 단계 |
-| 4 | AI 검토 system prompt 최종 wording + reason enum 확정 | Claude vision 첫 검토 결과 50건 보고 |
-| 5 | 디스크/CDN 정책: Supabase Storage 직접 vs 별도 CDN | 인프라 §11 검토 |
-| 6 | Anthropic SDK CLAUDE.md §1 기술스택 추가 (Resend·Sentry처럼 명시) | 별도 PR |
+| 1 | 다이아 가격: 5,000 vs 10,000 (default 10,000 박제) | Pixellab Pro 실측 USD + Claude vision 단가 합산 + 초기 운영 어뷰징 신호 |
+| 2 | reference 풀 확장 — 현재 외부 3장 단일 쌍, gender·옵션 분기 필요한지 | 초기 베타 다양성 평가 후 |
+| 3 | 디스크/CDN 정책: Supabase Storage 직접 vs 별도 CDN | 인프라 §11 검토 |
+| 4 | 옵션 v2 enum이 충분히 다양한지 (현재 1,000 조합) | 베타 유저 100명 결과 보고 |

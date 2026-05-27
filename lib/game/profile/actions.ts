@@ -1,0 +1,161 @@
+'use server';
+
+/**
+ * PROFILE §2 핵심 흐름 — 유저 "생성" 클릭 진입점.
+ *
+ * 단일 트랜잭션:
+ *  1. 본인 장착 3슬롯 조회 (NO_EQUIPMENT 검증)
+ *  2. 옵션 zod 검증
+ *  3. description 합성(서버 합성 — 클라 텍스트 절대 안 받음, PROFILE §10)
+ *  4. 다이아 escrow 차감(조건부 update — INSUFFICIENT_DIAMOND)
+ *  5. profile_generation_jobs INSERT — UNIQUE 부분 인덱스로 활성 큐 1건 보장
+ *
+ * Pixellab v2 큐 등록은 별도 cron(`/api/cron/profile-poll`)이 `status='queued'`
+ * 행을 잡아서 처리 — Server Action은 빠른 응답 우선.
+ */
+import 'server-only';
+
+import { and, eq, isNotNull, sql } from 'drizzle-orm';
+import { z } from 'zod';
+
+import { db } from '@/lib/db/client';
+import { profileGenerationJobs } from '@/lib/db/schema/avatar';
+import { catalogItems, equipmentInstances } from '@/lib/db/schema/equipment';
+import { profiles } from '@/lib/db/schema/profiles';
+import { PROFILE_GENERATION_DIAMOND } from '@/lib/game/balance';
+import { getSessionUserId } from '@/lib/auth/session';
+
+import { composeDescription } from './compose';
+
+export type CreateProfileJobErrorCode =
+  | 'UNAUTHORIZED'
+  | 'INVALID_OPTIONS'
+  | 'NO_EQUIPMENT'
+  | 'INSUFFICIENT_DIAMOND'
+  | 'PROFILE_GEN_IN_PROGRESS';
+
+export class CreateProfileJobError extends Error {
+  constructor(public code: CreateProfileJobErrorCode) {
+    super(code);
+    this.name = 'CreateProfileJobError';
+  }
+}
+
+const ProfileOptionsSchema = z.object({
+  gender: z.enum(['male', 'female']),
+  hair: z.enum([
+    'black',
+    'silver',
+    'blonde',
+    'red',
+    'brown',
+    'blue',
+    'pink',
+    'teal',
+    'purple',
+    'white',
+  ]),
+  expression: z.enum([
+    'gentle_smile',
+    'stoic_neutral',
+    'thoughtful',
+    'confident_smirk',
+    'warm_warm',
+  ]),
+  pose: z.enum([
+    'standing_naturally',
+    'peace_sign',
+    'sitting',
+    'hands_on_hips',
+    'jumping',
+    'side_glance',
+    'one_hand_wave',
+    'hand_on_chin',
+    'hands_behind_back',
+    'arms_crossed',
+  ]),
+});
+
+export type CreateProfileJobResult = {
+  jobId: string;
+  /** UI 안내용 — Pixellab Pro mode 평균 (~6분). */
+  estimatedMinutes: number;
+};
+
+export async function createProfileJob(
+  rawOptions: unknown,
+): Promise<CreateProfileJobResult> {
+  const userId = await getSessionUserId();
+  if (!userId) throw new CreateProfileJobError('UNAUTHORIZED');
+
+  const parsed = ProfileOptionsSchema.safeParse(rawOptions);
+  if (!parsed.success) throw new CreateProfileJobError('INVALID_OPTIONS');
+  const opts = parsed.data;
+
+  return db.transaction(async (tx) => {
+    // 1. 본인 장착 3슬롯 조회 — equippedSlot이 set된 instances만.
+    const equipped = await tx
+      .select({
+        slot: equipmentInstances.equippedSlot,
+        code: catalogItems.code,
+      })
+      .from(equipmentInstances)
+      .innerJoin(catalogItems, eq(equipmentInstances.catalogItemId, catalogItems.id))
+      .where(
+        and(
+          eq(equipmentInstances.userId, userId),
+          isNotNull(equipmentInstances.equippedSlot),
+        ),
+      );
+
+    const bySlot = new Map(equipped.map((e) => [e.slot ?? '', e.code]));
+    const weaponKey = bySlot.get('weapon');
+    const armorKey = bySlot.get('armor');
+    const accessoryKey = bySlot.get('accessory');
+    if (!weaponKey || !armorKey || !accessoryKey) {
+      throw new CreateProfileJobError('NO_EQUIPMENT');
+    }
+    const equipmentSnapshot = { weaponKey, armorKey, accessoryKey };
+
+    // 2. description 합성 (서버 전용, sanitizeArt로 카탈로그 art boilerplate 제거).
+    const description = composeDescription(opts, equipmentSnapshot);
+
+    // 3. 다이아 escrow — 조건부 update. 부족 시 0행 반환.
+    const deducted = await tx
+      .update(profiles)
+      .set({ diamond: sql`${profiles.diamond} - ${PROFILE_GENERATION_DIAMOND}` })
+      .where(
+        and(
+          eq(profiles.id, userId),
+          sql`${profiles.diamond} >= ${PROFILE_GENERATION_DIAMOND}`,
+        ),
+      )
+      .returning({ diamond: profiles.diamond });
+    if (deducted.length === 0) {
+      throw new CreateProfileJobError('INSUFFICIENT_DIAMOND');
+    }
+
+    // 4. Job INSERT — UNIQUE 부분 인덱스(profile_gen_one_active_per_user)가
+    //    유저당 활성 큐 1건 보장. 위반 시 Postgres 23505.
+    try {
+      const [job] = await tx
+        .insert(profileGenerationJobs)
+        .values({
+          userId,
+          descriptionPrompt: description,
+          options: opts,
+          equipmentSnapshot,
+          diamondEscrow: BigInt(PROFILE_GENERATION_DIAMOND),
+          status: 'queued',
+        })
+        .returning({ id: profileGenerationJobs.id });
+      return { jobId: String(job!.id), estimatedMinutes: 6 };
+    } catch (e) {
+      const code = (e as { code?: string }).code;
+      if (code === '23505') {
+        throw new CreateProfileJobError('PROFILE_GEN_IN_PROGRESS');
+      }
+      throw e;
+    }
+  });
+}

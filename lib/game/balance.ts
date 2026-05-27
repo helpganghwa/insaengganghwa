@@ -373,6 +373,14 @@ export const REFERRAL_CONVERSION_DIAMOND = 300;
 /** §6.5 닉네임 변경 — 첫 변경 무료, 이후 매 변경마다 차감. */
 export const NICKNAME_CHANGE_COST_DIAMOND = 1000;
 
+/**
+ * §6.6 캐릭터 프로필 생성 — Pixellab v2 Pro + Claude vision 자동 검토 비용 포함.
+ * **[TBD]** 5000 vs 10000 최종 결정은 운영 시작 후 USD 실측 + 어뷰징 신호 보고.
+ * v1 default = 10000 (1다=1분 환산 ≈ 7일치 플레이, 프리미엄 자기표현 가치).
+ * AI 검토 거절 시 100% 환불(PROFILE §5.1·§6).
+ */
+export const PROFILE_GENERATION_DIAMOND = 10_000;
+
 // §6.4 광고 보상 — v1 미도입(사용자 결정). 모바일 웹은 보상형 광고 SDK SSV
 // 인프라가 약해 치트 방어가 어렵고 1인 운영 부담이 큼. 상점에 광고 제거 IAP는
 // 향후 도입 검토(광고 노출 자체 OFF). 향후 네이티브 wrapper 도입 시 재검토.
