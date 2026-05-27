@@ -16,7 +16,7 @@ import 'server-only';
 import { CATALOG_ITEMS, type CatalogItem } from '@/lib/game/equipment/catalog';
 import type { ProfileGender } from './refs';
 
-export type ProfileHair =
+export type ProfileHairColor =
   | 'black'
   | 'silver'
   | 'blonde'
@@ -27,6 +27,16 @@ export type ProfileHair =
   | 'teal'
   | 'purple'
   | 'white';
+
+export type ProfileHairStyle =
+  | 'long_loose'
+  | 'long_braided'
+  | 'long_ponytail'
+  | 'long_twin_tails'
+  | 'wavy_medium'
+  | 'short_bob'
+  | 'pixie_short'
+  | 'spiky';
 
 export type ProfileExpression =
   | 'gentle_smile'
@@ -47,10 +57,11 @@ export type ProfilePose =
   | 'hands_behind_back'
   | 'arms_crossed';
 
-/** 유저 옵션 — PROFILE §5.1 4축(gender + hair + expression + pose). */
+/** 유저 옵션 — PROFILE §5.1 5축(gender + hair_color + hair_style + expression + pose). */
 export interface ProfileOptions {
   gender: ProfileGender;
-  hair: ProfileHair;
+  hairColor: ProfileHairColor;
+  hairStyle: ProfileHairStyle;
   expression: ProfileExpression;
   pose: ProfilePose;
 }
@@ -87,8 +98,7 @@ function sanitizeArt(art: string): string {
 
 // ─── 옵션 enum → 텍스트 매핑 (PROFILE §5.1 확정 v2) ───
 
-/** 색만 결정 — 길이·스타일은 공용 템플릿 고정. */
-const HAIR_COLOR: Record<ProfileHair, string> = {
+const HAIR_COLOR: Record<ProfileHairColor, string> = {
   black: 'deep black',
   silver: 'shimmering silver',
   blonde: 'golden blonde',
@@ -101,11 +111,31 @@ const HAIR_COLOR: Record<ProfileHair, string> = {
   white: 'pure platinum white',
 };
 
+/** 스타일별 길이·실루엣 묘사 — 헤어 다양성의 핵심. */
+const HAIR_STYLE: Record<ProfileHairStyle, string> = {
+  long_loose:
+    'voluminous wind-swept long hair flowing past the shoulders with individual pixel strands and side bangs, single small ahoge',
+  long_braided:
+    'long single braid trailing down the back tied with a small ribbon, side bangs framing the face, single small ahoge',
+  long_ponytail:
+    'long high ponytail tied with a small clip swaying past the shoulders, side bangs, single small ahoge',
+  long_twin_tails:
+    'long twin tails tied high on both sides with small ribbons, side bangs, single small ahoge',
+  wavy_medium:
+    'voluminous wavy medium-length hair just past the chin with playful curls and side bangs, single small ahoge',
+  short_bob:
+    'sharp short bob cut ending at the jawline with straight bangs framing the eyes, single small ahoge',
+  pixie_short:
+    'very short pixie cut with soft wisps and a few longer strands falling over the forehead, single small ahoge',
+  spiky:
+    'lively tousled short-to-medium hair with playful upward tufts and a few longer strands over the forehead, single small ahoge',
+};
+
 const EXPRESSION_DESC: Record<ProfileExpression, string> = {
   gentle_smile: 'gentle warm smile with clean readable mouth shape',
   stoic_neutral: 'stoic neutral expression with calm authority',
   thoughtful: 'gentle thoughtful expression with soft brow',
-  confident_smirk: 'confident slight smirk with sharp eye line',
+  confident_smirk: 'confident playful smirk with bright cheerful eyes',
   warm_warm: 'warm friendly half-smile, eyes wide open looking forward',
 };
 
@@ -136,8 +166,8 @@ const POSE_DESC: Record<ProfilePose, string> = {
 // ─── 공용 STYLE 상수 (서버 상수) ───
 
 const STYLE_BLOCK =
-  'colored reddish-brown outline rim (not pure black), rich gradient cel shading, ' +
-  'classic JRPG anime pixel art aesthetic, pure white background, character only.';
+  'cute Japanese JRPG anime pixel art — soft warm features, large round eyes, gentle silhouette, NOT sharp NOT edgy. ' +
+  'colored reddish-brown rim outline (not pure black), rich gradient cel shading, pure white background, character only.';
 
 // ─── HEADER 블록 — gender별 신체 라인 분기, 컨셉 generic ───
 
@@ -145,9 +175,9 @@ function headerBlock(opts: ProfileOptions): string {
   const body = opts.gender === 'female' ? 'adult bishojo' : 'adult bishonen';
   const proportions =
     opts.gender === 'female'
-      ? 'emphasizing tall slender feminine anime body proportions with narrow slim waist, ample bust, and curvy thighs (classic JRPG female adventurer build), small head and long graceful legs, total body height approximately seven times head height.'
-      : 'emphasizing tall slender masculine anime body proportions with broad shoulders and long legs, small head and total body height approximately seven times head height.';
-  return `slim 7-heads-tall ${body} young adventurer mascot character of insaeng-ganghwa game, NOT chibi NOT super deformed, ${proportions}`;
+      ? '7-heads slim feminine anime body — narrow waist, soft bust, curvy thighs, small head, long legs'
+      : '7-heads slim masculine anime body — broad shoulders, long legs, small head';
+  return `FULL BODY head-to-feet visible, both feet planted on ground, NOT bust shot. slim ${body} cute young adventurer mascot character of insaeng-ganghwa game, NOT chibi, ${proportions}.`;
 }
 
 function faceBlock(opts: ProfileOptions): string {
@@ -158,7 +188,7 @@ function faceBlock(opts: ProfileOptions): string {
 }
 
 function hairBlock(opts: ProfileOptions): string {
-  return `Hair: voluminous wind-swept long ${HAIR_COLOR[opts.hair]} hair flowing past the shoulders with individual pixel strands and side bangs, single small ahoge.`;
+  return `Hair: ${HAIR_COLOR[opts.hairColor]} ${HAIR_STYLE[opts.hairStyle]}.`;
 }
 
 /**
@@ -194,4 +224,30 @@ export function composeDescription(opts: ProfileOptions, eq: ProfileEquipment): 
     poseBlock(opts),
     `Style: ${STYLE_BLOCK}`,
   ].join('\n\n');
+}
+
+/**
+ * `create_character_state` 용 압축 description (max 1000자, spec).
+ * source character의 톤·체형·풀바디·아니메 결을 그대로 유지하고 외형(머리·표정·포즈·옷
+ * 모티프)만 변경 지시. composeDescription과 달리 HEADER·Style 블록 생략(source 보존).
+ */
+export function composeEditDescription(opts: ProfileOptions, eq: ProfileEquipment): string {
+  const weapon = getItem(eq.weaponKey, 'weapon');
+  const armor = getItem(eq.armorKey, 'armor');
+  const accessory = getItem(eq.accessoryKey, 'accessory');
+
+  // 각 motif는 80자 trim해 합산 ~800자 안에 들어오게.
+  const short = (s: string, n: number) => (s.length > n ? s.slice(0, n).trim() : s);
+
+  return [
+    `Edit appearance:`,
+    `hair = ${HAIR_COLOR[opts.hairColor]} ${short(HAIR_STYLE[opts.hairStyle], 90)};`,
+    `expression = ${EXPRESSION_DESC[opts.expression]};`,
+    `pose = ${short(POSE_DESC[opts.pose], 110)}.`,
+    `Outfit motifs (color/pattern/small detail only — DO NOT hold or wear literal item icons):`,
+    `weapon = ${short(sanitizeArt(weapon.art), 80)};`,
+    `armor = ${short(sanitizeArt(armor.art), 80)};`,
+    `accessory = ${short(sanitizeArt(accessory.art), 80)}.`,
+    `Keep cute Japanese JRPG anime pixel style and full body head-to-feet composition.`,
+  ].join(' ');
 }

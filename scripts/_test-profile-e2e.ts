@@ -17,8 +17,9 @@ const USER_ID = 'e30b881b-0ad6-45cc-b468-a0b4073fbf3f';
 
 const OPTS = {
   gender: 'female' as const,
-  hair: 'silver' as const,
-  expression: 'thoughtful' as const,
+  hairColor: 'pink' as const,
+  hairStyle: 'long_loose' as const,
+  expression: 'gentle_smile' as const,
   pose: 'standing_naturally' as const,
 };
 
@@ -29,7 +30,7 @@ async function main() {
   const { profiles } = await import('../lib/db/schema/profiles');
   const { mailbox } = await import('../lib/db/schema/mailbox');
   const { PROFILE_GENERATION_DIAMOND } = await import('../lib/game/balance');
-  const { composeDescription } = await import('../lib/game/profile/compose');
+  const { composeEditDescription } = await import('../lib/game/profile/compose');
   const { enqueueOnePixellab, pollAndProcessDownloading } = await import('../lib/game/profile/pipeline');
 
   console.log('[e2e] step 1 — 본인 장착 + 다이아 확인');
@@ -54,7 +55,7 @@ async function main() {
 
   console.log('\n[e2e] step 2 — jobs queued INSERT (escrow 차감 + 단일 tx)');
   const equipmentSnapshot = { weaponKey, armorKey, accessoryKey };
-  const description = composeDescription(OPTS, equipmentSnapshot);
+  const description = composeEditDescription(OPTS, equipmentSnapshot);
   console.log('  description length:', description.length);
 
   const jobId = await db.transaction(async (tx) => {

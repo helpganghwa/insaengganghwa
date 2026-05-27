@@ -25,7 +25,7 @@ import { profiles } from '@/lib/db/schema/profiles';
 import { PROFILE_GENERATION_DIAMOND } from '@/lib/game/balance';
 import { getSessionUserId } from '@/lib/auth/session';
 
-import { composeDescription } from './compose';
+import { composeEditDescription } from './compose';
 
 export type CreateProfileJobErrorCode =
   | 'UNAUTHORIZED'
@@ -43,7 +43,7 @@ export class CreateProfileJobError extends Error {
 
 const ProfileOptionsSchema = z.object({
   gender: z.enum(['male', 'female']),
-  hair: z.enum([
+  hairColor: z.enum([
     'black',
     'silver',
     'blonde',
@@ -54,6 +54,16 @@ const ProfileOptionsSchema = z.object({
     'teal',
     'purple',
     'white',
+  ]),
+  hairStyle: z.enum([
+    'long_loose',
+    'long_braided',
+    'long_ponytail',
+    'long_twin_tails',
+    'wavy_medium',
+    'short_bob',
+    'pixie_short',
+    'spiky',
   ]),
   expression: z.enum([
     'gentle_smile',
@@ -118,7 +128,7 @@ export async function createProfileJob(
     const equipmentSnapshot = { weaponKey, armorKey, accessoryKey };
 
     // 2. description 합성 (서버 전용, sanitizeArt로 카탈로그 art boilerplate 제거).
-    const description = composeDescription(opts, equipmentSnapshot);
+    const description = composeEditDescription(opts, equipmentSnapshot);
 
     // 3. 다이아 escrow — 조건부 update. 부족 시 0행 반환.
     const deducted = await tx

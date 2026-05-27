@@ -13,7 +13,6 @@
  */
 import 'server-only';
 
-import sharp from 'sharp';
 import { and, eq, sql } from 'drizzle-orm';
 
 import { createClient, type SupabaseClient } from '@supabase/supabase-js';
@@ -24,7 +23,17 @@ import { mailbox } from '@/lib/db/schema/mailbox';
 import { profiles } from '@/lib/db/schema/profiles';
 
 import { reviewProfile, type ReviewVerdict } from './ai-review';
-import { pickRefs } from './refs';
+
+/**
+ * 사용자 본인이 pixellab 웹에서 만든·만족 검증한 source character 2장 (2026-05-27 결정).
+ * `create_character_state`로 이 두 source에 edit_description을 적용해 새 캐릭터 파생 —
+ * 풀바디·아니메 결·체형·사이즈(248×248px) 모두 source 보존. 다양성은 edit_description의
+ * 머리·표정·포즈·장비 모티프 조합으로.
+ */
+const SOURCE_BY_GENDER: Record<'male' | 'female', string> = {
+  male: '40ce2048-edb1-4e30-af6c-352784efa0b1',
+  female: 'c9801fb1-9804-47c1-9a0c-77e7c6f3a6c5',
+};
 
 /**
  * Storage write·read는 service_role 클라이언트 사용. cron/script context엔
@@ -71,12 +80,6 @@ interface PixellabCreateResponse {
   status: 'processing' | 'completed' | 'failed';
 }
 
-interface PixellabBackgroundJob {
-  id: string;
-  status: 'processing' | 'completed' | 'failed';
-  last_response?: { character_id?: string; [k: string]: unknown } | null;
-}
-
 interface PixellabCharacterDetail {
   id: string;
   rotation_urls: Record<string, string | null>;
@@ -92,7 +95,7 @@ export async function enqueueOnePixellab(): Promise<
   const key = process.env.PIXELLAB_API_KEY;
   if (!key) throw new Error('PIXELLAB_API_KEY missing');
 
-  // 1건 선점 (FIFO).
+  // 1건 선점 (FIFO). state edit_description은 descriptionPrompt에 저장.
   const [job] = await db
     .select({
       id: profileGenerationJobs.id,
@@ -107,49 +110,20 @@ export async function enqueueOnePixellab(): Promise<
 
   if (!job) return { kind: 'noop' };
 
-  // ref 로드 + spec 사이즈로 sharp resize (nearest-neighbor 픽셀결 유지).
-  // concept_image max 1024×1024, reference_image max 168×168 (Pixellab v2 spec).
-  // ref 파일 원본은 더 큰 사이즈 — runtime에 resize.
+  // 2026-05-27 결정: create_character_state로 사용자 검증 source 활용.
+  // source = 사용자 본인이 web에서 만든 만족 캐릭터 (gender별 1장). edit_description으로
+  // 머리·표정·포즈·장비 모티프 변형 — source 톤·풀바디·체형 그대로 유지.
   const optsTyped = job.options as { gender: 'male' | 'female' };
-  const refPair = pickRefs({ gender: optsTyped.gender });
-  const [conceptBuf, referenceBuf] = await Promise.all([
-    sharp(refPair.conceptPath)
-      .trim({ background: { r: 255, g: 255, b: 255, alpha: 1 }, threshold: 10 })
-      .resize(512, 512, {
-        fit: 'contain',
-        kernel: sharp.kernel.nearest,
-        background: { r: 255, g: 255, b: 255, alpha: 1 },
-      })
-      .png()
-      .toBuffer(),
-    sharp(refPair.referencePath)
-      .trim({ background: { r: 255, g: 255, b: 255, alpha: 1 }, threshold: 10 })
-      .resize(168, 168, {
-        fit: 'contain',
-        kernel: sharp.kernel.nearest,
-        background: { r: 255, g: 255, b: 255, alpha: 1 },
-      })
-      .png()
-      .toBuffer(),
-  ]);
+  const sourceCharacterId = SOURCE_BY_GENDER[optsTyped.gender];
 
-  // Pixellab v2 호출 — PROFILE §4.1 검증 파라미터.
   const body = {
-    description: job.description,
-    image_size: { width: 168, height: 168 },
-    method: 'create_from_concept',
-    view: 'low top-down',
-    template_id: 'mannequin',
-    concept_image: { type: 'base64', base64: conceptBuf.toString('base64'), format: 'png' },
-    reference_image: {
-      type: 'base64',
-      base64: referenceBuf.toString('base64'),
-      format: 'png',
-    },
+    character_id: sourceCharacterId,
+    edit_description: job.description,
     no_background: true,
+    use_color_palette_from_reference: false,
   };
 
-  const res = await fetch(`${PIXELLAB_BASE}/create-character-pro`, {
+  const res = await fetch(`${PIXELLAB_BASE}/create-character-state`, {
     method: 'POST',
     headers: { 'content-type': 'application/json', authorization: `Bearer ${key}` },
     body: JSON.stringify(body),
@@ -157,7 +131,7 @@ export async function enqueueOnePixellab(): Promise<
 
   if (!res.ok) {
     const text = (await res.text()).slice(0, 300);
-    await markFailedAndRefund(job.id, job.userId, `Pixellab POST HTTP ${res.status}: ${text}`);
+    await markFailedAndRefund(job.id, job.userId, `Pixellab state POST HTTP ${res.status}: ${text}`);
     return { kind: 'failed', jobId: job.id, reason: text };
   }
 
@@ -197,6 +171,7 @@ export async function pollAndProcessDownloading(limit = 5): Promise<{
       options: profileGenerationJobs.options,
       equipmentSnapshot: profileGenerationJobs.equipmentSnapshot,
       diamondEscrow: profileGenerationJobs.diamondEscrow,
+      createdAt: profileGenerationJobs.createdAt,
     })
     .from(profileGenerationJobs)
     .where(eq(profileGenerationJobs.status, 'downloading'))
@@ -209,51 +184,48 @@ export async function pollAndProcessDownloading(limit = 5): Promise<{
   let stillProcessing = 0;
 
   for (const job of due) {
-    if (!job.characterId || !job.backgroundJobId) {
-      await markFailedAndRefund(job.id, job.userId, 'Pixellab ids missing');
+    if (!job.characterId) {
+      await markFailedAndRefund(job.id, job.userId, 'Pixellab character_id missing');
       failed += 1;
       continue;
     }
 
-    // 1) background job status polling (v2 spec: status가 여기 있음).
-    const bgRes = await fetch(`${PIXELLAB_BASE}/background-jobs/${job.backgroundJobId}`, {
-      headers: { authorization: `Bearer ${key}` },
-    });
-    if (!bgRes.ok) {
-      stillProcessing += 1;
-      continue;
-    }
-    const bgJob = (await bgRes.json()) as PixellabBackgroundJob;
-
-    if (bgJob.status === 'processing') {
-      stillProcessing += 1;
-      continue;
-    }
-    if (bgJob.status === 'failed') {
-      const detail = JSON.stringify(bgJob.last_response ?? {}).slice(0, 300);
-      await markFailedAndRefund(job.id, job.userId, `Pixellab job failed: ${detail}`);
-      failed += 1;
-      continue;
-    }
-
-    // 2) completed — character GET으로 rotation_urls 가져옴.
+    // character endpoint로 polling — rotation_urls 완성도가 완료 신호.
+    // (background-jobs는 만료/404 가능, v2 character 응답엔 status 필드 없음 —
+    //  rotation_urls의 string 갯수 8이면 completed, 미만이면 pending.)
     const charRes = await fetch(`${PIXELLAB_BASE}/characters/${job.characterId}`, {
       headers: { authorization: `Bearer ${key}` },
     });
     if (!charRes.ok) {
-      stillProcessing += 1;
+      if (charRes.status === 404) {
+        await markFailedAndRefund(job.id, job.userId, `Pixellab character not found (${charRes.status})`);
+        failed += 1;
+      } else {
+        stillProcessing += 1;
+      }
       continue;
     }
     const char = (await charRes.json()) as PixellabCharacterDetail;
     if (!char.rotation_urls) {
-      await markFailedAndRefund(job.id, job.userId, 'Pixellab character rotation_urls missing');
-      failed += 1;
+      stillProcessing += 1;
       continue;
     }
-    // rotation_urls의 string|null을 filter — 8방향 풀시트라 다 string이어야.
+    // rotation_urls의 string|null 필터. 8방향 다 string이어야 completed.
     const remoteRotations: Record<string, string> = {};
     for (const [k, v] of Object.entries(char.rotation_urls)) {
-      if (typeof v === 'string') remoteRotations[k] = v;
+      if (typeof v === 'string' && v.length > 0) remoteRotations[k] = v;
+    }
+    if (Object.keys(remoteRotations).length < 8) {
+      stillProcessing += 1;
+      continue;
+    }
+
+    // Timeout 가드 — 생성 시작 후 20분+ 지났는데 미완료면 failed.
+    const ageMin = (Date.now() - new Date(job.createdAt ?? 0).getTime()) / 60_000;
+    if (ageMin > 20 && Object.keys(remoteRotations).length < 8) {
+      await markFailedAndRefund(job.id, job.userId, `Pixellab timeout ${ageMin.toFixed(0)}min`);
+      failed += 1;
+      continue;
     }
 
     try {
