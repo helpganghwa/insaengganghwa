@@ -33,7 +33,7 @@ async function safePush(
   body: string,
 ): Promise<void> {
   try {
-    await sendPushToUser(userId, { category: 'profile', title, body, url: '/profile', tag: 'profile' });
+    await sendPushToUser(userId, { category: 'profile', title, body, url: '/me', tag: 'profile' });
   } catch (e) {
     console.error('[profile-poll] push failed:', (e as Error).message);
   }

@@ -1,11 +1,11 @@
 import Link from 'next/link';
-import { and, desc, eq, inArray, isNotNull, isNull, sql } from 'drizzle-orm';
+import { and, desc, eq, isNotNull, isNull, sql } from 'drizzle-orm';
 
 import { getSessionUserId } from '@/lib/auth/session';
 import { db } from '@/lib/db/client';
 import { profiles } from '@/lib/db/schema/profiles';
 import { catalogItems, equipmentInstances, userCodex, type Slot } from '@/lib/db/schema/equipment';
-import { userProfiles, profileGenerationJobs } from '@/lib/db/schema/avatar';
+import { userProfiles } from '@/lib/db/schema/avatar';
 import { pieceCombatPower, totalCombatPower } from '@/lib/game/balance';
 import { championCatalogIds } from '@/lib/game/codex/ranking';
 
@@ -30,7 +30,7 @@ export default async function ProfilePage() {
   const userId = await getSessionUserId();
   if (!userId) return null;
 
-  const [prof, equipped, codexAgg, champSet, myProfiles, activeJobs] = await Promise.all([
+  const [prof, equipped, codexAgg, champSet, myProfiles] = await Promise.all([
     db
       .select({
         nickname: profiles.nickname,
@@ -69,16 +69,6 @@ export default async function ProfilePage() {
       .from(userProfiles)
       .where(and(eq(userProfiles.userId, userId), isNull(userProfiles.hiddenAt)))
       .orderBy(desc(userProfiles.createdAt)),
-    db
-      .select({ status: profileGenerationJobs.status })
-      .from(profileGenerationJobs)
-      .where(
-        and(
-          eq(profileGenerationJobs.userId, userId),
-          inArray(profileGenerationJobs.status, ['queued', 'downloading', 'ai_reviewing']),
-        ),
-      )
-      .limit(1),
   ]);
 
   const nickname = prof[0]?.nickname ?? '플레이어';
@@ -91,18 +81,22 @@ export default async function ProfilePage() {
 
   const activeProfileId = prof[0]?.activeProfileId ?? null;
   const activeProfile = myProfiles.find((p) => p.id === activeProfileId) ?? null;
-  const generating = activeJobs.length > 0;
   const dirImg = (p: { rotations: unknown; activeDirection: string }) =>
     (p.rotations as Record<string, string>)[p.activeDirection];
 
   return (
     <div className="space-y-4 px-4 py-6">
-      <header className="space-y-2 text-center">
+      <header className="space-y-3 text-center">
+        <NicknameEditor
+          current={nickname}
+          changedCount={prof[0]?.nicknameChangedCount ?? 0}
+          diamond={String(prof[0]?.diamond ?? 0n)}
+        />
         {activeProfile ? (
           <Link
             href="/me/profiles"
             aria-label="프로필 선택"
-            className="mx-auto block aspect-square w-36 overflow-hidden rounded-2xl border border-zinc-200 bg-zinc-50 dark:border-zinc-800 dark:bg-zinc-900"
+            className="mx-auto block aspect-square w-48 overflow-hidden rounded-2xl border border-zinc-200 bg-zinc-50 dark:border-zinc-800 dark:bg-zinc-900"
           >
             {/* eslint-disable-next-line @next/next/no-img-element */}
             <img
@@ -116,26 +110,14 @@ export default async function ProfilePage() {
         ) : (
           <Link
             href="/me/create"
-            className="mx-auto flex aspect-square w-36 flex-col items-center justify-center gap-1 rounded-2xl border-2 border-dashed border-zinc-300 text-zinc-400 dark:border-zinc-700"
+            className="mx-auto flex aspect-square w-48 flex-col items-center justify-center gap-1 rounded-2xl border-2 border-dashed border-zinc-300 text-zinc-400 dark:border-zinc-700"
           >
-            <span className="text-2xl" aria-hidden>
+            <span className="text-3xl" aria-hidden>
               ✨
             </span>
             <span className="text-xs">프로필 만들기</span>
           </Link>
         )}
-        {generating && (
-          <div>
-            <span className="rounded-full bg-amber-100 px-2 py-0.5 text-[10px] font-medium text-amber-700 dark:bg-amber-950/40 dark:text-amber-300">
-              ⏳ 프로필 생성 중
-            </span>
-          </div>
-        )}
-        <NicknameEditor
-          current={nickname}
-          changedCount={prof[0]?.nicknameChangedCount ?? 0}
-          diamond={String(prof[0]?.diamond ?? 0n)}
-        />
       </header>
 
       <section className="rounded-2xl border border-zinc-200 p-3 dark:border-zinc-800">

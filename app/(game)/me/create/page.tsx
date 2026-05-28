@@ -65,9 +65,8 @@ export default async function CreateProfilePage() {
       </header>
 
       <p className="text-xs leading-relaxed text-zinc-500">
-        성별만 고르면 현재 장착한 장비 3종의 컨셉을 녹여 캐릭터를 생성해요. 표정·머리·종족은
-        랜덤으로 부여되어 매번 다른 개성이 나옵니다. 생성 후 자동 검토를 거쳐 통과하면 프로필
-        목록에 추가돼요.
+        성별을 고르면 현재 장착한 장비 3종의 컨셉을 녹여 캐릭터를 생성해요. 생성 후 자동 검토를
+        거쳐 통과하면 프로필 목록에 추가돼요.
       </p>
 
       <CreateProfileForm

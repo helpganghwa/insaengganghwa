@@ -53,20 +53,15 @@ export function ProfileSelector({
   const [pending, startTransition] = useTransition();
   const [confirmDelete, setConfirmDelete] = useState(false);
 
-  // 캐릭터 선택 → 즉시 대표 전환 + 방향을 그 프로필 기준으로.
+  // 캐릭터 선택 → 로컬 미리보기만(서버 반영은 "적용" 버튼).
   const selectChar = (p: ProfileItem) => {
     if (p.id === selectedId) return;
     setSelectedId(p.id);
     setDir(p.activeDirection);
     setConfirmDelete(false);
-    startTransition(async () => {
-      const r = await setActiveProfile(p.id);
-      if (r.status === 'error') return alert(r.message);
-      router.refresh();
-    });
   };
 
-  // 스와이프 회전(turntable) — pointerup 시 방향 즉시 저장.
+  // 스와이프 회전(turntable) — 방향은 로컬 state만 변경.
   const STEP = 26;
   const dragRef = useRef<{ startX: number; baseIdx: number } | null>(null);
   const onPointerDown = (e: React.PointerEvent) => {
@@ -84,16 +79,20 @@ export function ProfileSelector({
     if (nd !== dir) setDir(nd);
   };
   const endDrag = () => {
-    const d = dragRef.current;
     dragRef.current = null;
-    if (!d) return;
-    if (ROT_ORDER.indexOf(dir as (typeof ROT_ORDER)[number]) === d.baseIdx) return; // 안 돌면 저장 생략
-    startTransition(async () => {
-      const r = await setActiveDirection(selectedId, dir);
-      if (r.status === 'error') return alert(r.message);
-      router.refresh();
-    });
   };
+
+  // 적용 → 선택 캐릭터를 대표로 + 현재 방향을 표시 방향으로 커밋.
+  const activeNow = profiles.find((p) => p.id === activeProfileId);
+  const dirty = selectedId !== activeProfileId || dir !== (activeNow?.activeDirection ?? '');
+  const apply = () =>
+    startTransition(async () => {
+      const r1 = await setActiveProfile(selectedId);
+      if (r1.status === 'error') return alert(r1.message);
+      const r2 = await setActiveDirection(selectedId, dir);
+      if (r2.status === 'error') return alert(r2.message);
+      router.push('/me');
+    });
 
   const doDelete = () =>
     startTransition(async () => {
@@ -158,9 +157,19 @@ export function ProfileSelector({
         ))}
       </div>
 
-      <p className="text-center text-[11px] text-zinc-400">
-        선택한 캐릭터와 방향이 대표 프로필로 바로 적용돼요.
-      </p>
+      {/* 적용 — 선택 캐릭터 + 방향을 대표 프로필로 커밋 */}
+      <button
+        type="button"
+        onClick={apply}
+        disabled={pending || !dirty}
+        className={`w-full rounded-xl py-3.5 text-sm font-bold transition-colors ${
+          pending || !dirty
+            ? 'bg-zinc-200 text-zinc-400 dark:bg-zinc-800 dark:text-zinc-600'
+            : 'bg-violet-600 text-white'
+        }`}
+      >
+        {!dirty ? '현재 대표 프로필' : '이 프로필로 적용'}
+      </button>
 
       {/* 삭제 */}
       {confirmDelete ? (
