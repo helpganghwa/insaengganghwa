@@ -1,10 +1,11 @@
 import Link from 'next/link';
-import { and, eq, isNotNull, sql } from 'drizzle-orm';
+import { and, desc, eq, inArray, isNotNull, isNull, sql } from 'drizzle-orm';
 
 import { getSessionUserId } from '@/lib/auth/session';
 import { db } from '@/lib/db/client';
 import { profiles } from '@/lib/db/schema/profiles';
 import { catalogItems, equipmentInstances, userCodex, type Slot } from '@/lib/db/schema/equipment';
+import { userProfiles, profileGenerationJobs } from '@/lib/db/schema/avatar';
 import { pieceCombatPower, totalCombatPower } from '@/lib/game/balance';
 import { championCatalogIds } from '@/lib/game/codex/ranking';
 
@@ -29,12 +30,13 @@ export default async function ProfilePage() {
   const userId = await getSessionUserId();
   if (!userId) return null;
 
-  const [prof, equipped, codexAgg, champSet] = await Promise.all([
+  const [prof, equipped, codexAgg, champSet, myProfiles, activeJobs] = await Promise.all([
     db
       .select({
         nickname: profiles.nickname,
         diamond: profiles.diamond,
         nicknameChangedCount: profiles.nicknameChangedCount,
+        activeProfileId: profiles.activeProfileId,
       })
       .from(profiles)
       .where(eq(profiles.id, userId))
@@ -58,6 +60,25 @@ export default async function ProfilePage() {
       .from(userCodex)
       .where(eq(userCodex.userId, userId)),
     championCatalogIds(userId),
+    db
+      .select({
+        id: userProfiles.id,
+        rotations: userProfiles.rotations,
+        activeDirection: userProfiles.activeDirection,
+      })
+      .from(userProfiles)
+      .where(and(eq(userProfiles.userId, userId), isNull(userProfiles.hiddenAt)))
+      .orderBy(desc(userProfiles.createdAt)),
+    db
+      .select({ status: profileGenerationJobs.status })
+      .from(profileGenerationJobs)
+      .where(
+        and(
+          eq(profileGenerationJobs.userId, userId),
+          inArray(profileGenerationJobs.status, ['queued', 'downloading', 'ai_reviewing']),
+        ),
+      )
+      .limit(1),
   ]);
 
   const nickname = prof[0]?.nickname ?? '플레이어';
@@ -67,6 +88,12 @@ export default async function ProfilePage() {
     codexSum,
   );
   const bySlot = new Map(equipped.map((e) => [e.slot, e]));
+
+  const activeProfileId = prof[0]?.activeProfileId ?? null;
+  const activeProfile = myProfiles.find((p) => p.id === activeProfileId) ?? null;
+  const generating = activeJobs.length > 0;
+  const dirImg = (p: { rotations: unknown; activeDirection: string }) =>
+    (p.rotations as Record<string, string>)[p.activeDirection];
 
   return (
     <div className="space-y-4 px-4 py-6">
@@ -78,6 +105,79 @@ export default async function ProfilePage() {
           diamond={String(prof[0]?.diamond ?? 0n)}
         />
       </header>
+
+      {/* 프로필 — 대표 이미지 + 보유 목록 (PROFILE §8.1) */}
+      <section className="rounded-2xl border border-zinc-200 p-3 dark:border-zinc-800">
+        <div className="mb-2 flex items-center justify-between">
+          <span className="text-xs font-medium text-zinc-500">내 프로필</span>
+          {generating && (
+            <span className="rounded-full bg-amber-100 px-2 py-0.5 text-[10px] font-medium text-amber-700 dark:bg-amber-950/40 dark:text-amber-300">
+              ⏳ 생성 중
+            </span>
+          )}
+        </div>
+
+        {myProfiles.length === 0 ? (
+          <Link
+            href="/me/create"
+            className="flex flex-col items-center justify-center gap-1 rounded-xl border-2 border-dashed border-zinc-300 py-6 text-center text-zinc-400 dark:border-zinc-700"
+          >
+            <span className="text-2xl" aria-hidden>
+              ✨
+            </span>
+            <span className="text-xs">첫 프로필 만들기</span>
+          </Link>
+        ) : (
+          <div className="space-y-3">
+            {activeProfile && (
+              <div className="mx-auto flex aspect-square w-32 items-center justify-center overflow-hidden rounded-xl bg-zinc-50 dark:bg-zinc-900">
+                {/* eslint-disable-next-line @next/next/no-img-element */}
+                <img
+                  src={dirImg(activeProfile)}
+                  alt="대표 프로필"
+                  draggable={false}
+                  className="h-full w-full object-contain"
+                  style={{ imageRendering: 'pixelated' }}
+                />
+              </div>
+            )}
+            <div className="flex gap-2 overflow-x-auto pb-1">
+              {myProfiles.map((p) => (
+                <Link
+                  key={p.id}
+                  href={`/me/profiles/${p.id}`}
+                  className={`relative flex aspect-square w-16 shrink-0 items-center justify-center overflow-hidden rounded-lg border bg-white dark:bg-zinc-950 ${
+                    p.id === activeProfileId
+                      ? 'border-violet-400'
+                      : 'border-zinc-200 dark:border-zinc-800'
+                  }`}
+                >
+                  {/* eslint-disable-next-line @next/next/no-img-element */}
+                  <img
+                    src={dirImg(p)}
+                    alt="프로필"
+                    draggable={false}
+                    className="h-full w-full object-contain"
+                    style={{ imageRendering: 'pixelated' }}
+                  />
+                  {p.id === activeProfileId && (
+                    <span className="absolute inset-x-0 bottom-0 bg-violet-500 text-center text-[8px] text-white">
+                      대표
+                    </span>
+                  )}
+                </Link>
+              ))}
+              <Link
+                href="/me/create"
+                aria-label="새 프로필 생성"
+                className="flex aspect-square w-16 shrink-0 items-center justify-center rounded-lg border-2 border-dashed border-zinc-300 text-lg text-zinc-400 dark:border-zinc-700"
+              >
+                ＋
+              </Link>
+            </div>
+          </div>
+        )}
+      </section>
 
       <section className="rounded-2xl border border-zinc-200 p-3 dark:border-zinc-800">
         <div className="mb-2 text-xs font-medium text-zinc-500">장착 세트 (자랑 단위)</div>
