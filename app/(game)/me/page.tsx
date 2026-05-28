@@ -86,7 +86,7 @@ export default async function ProfilePage() {
 
   return (
     <div className="space-y-4 px-4 py-6">
-      <header className="space-y-3 text-center">
+      <section className="space-y-3 rounded-2xl border border-zinc-200 p-4 text-center dark:border-zinc-800">
         <NicknameEditor
           current={nickname}
           changedCount={prof[0]?.nicknameChangedCount ?? 0}
@@ -118,11 +118,9 @@ export default async function ProfilePage() {
             <span className="text-xs">프로필 만들기</span>
           </Link>
         )}
-      </header>
-
-      <section className="rounded-2xl border border-zinc-200 p-3 dark:border-zinc-800">
-        <div className="mb-2 text-xs font-medium text-zinc-500">장착 세트 (자랑 단위)</div>
-        <div className="grid grid-cols-3 gap-2">
+        <div className="border-t border-zinc-100 pt-3 text-left dark:border-zinc-900">
+          <div className="mb-2 text-xs font-medium text-zinc-500">장착 세트 (자랑 단위)</div>
+          <div className="grid grid-cols-3 gap-2">
           {(['weapon', 'armor', 'accessory'] as Slot[]).map((s) => {
             const it = bySlot.get(s);
             if (!it) {
@@ -163,8 +161,9 @@ export default async function ProfilePage() {
             );
           })}
         </div>
-        <div className="mt-3 border-t border-zinc-100 pt-2 text-right text-sm font-bold dark:border-zinc-900">
-          ⚔️ 총 전투력 {total.toLocaleString('ko-KR')}
+          <div className="mt-3 text-right text-sm font-bold">
+            ⚔️ 총 전투력 {total.toLocaleString('ko-KR')}
+          </div>
         </div>
       </section>
 
