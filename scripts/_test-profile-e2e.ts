@@ -19,6 +19,7 @@ const OPTS = {
   gender: 'male' as const,
   expression: 'confident_smirk' as const,
   hairLength: 'short' as const,
+  pose: 'peace_sign' as const,
   race: 'dragonkin' as const,
 };
 

@@ -28,6 +28,7 @@ interface Case {
     gender: Gender;
     expression: 'stoic_neutral'|'gentle_smile'|'confident_smirk'|'warm_warm';
     hairLength: 'long'|'short'|'natural';
+    pose: 'natural'|'arms_crossed'|'hand_wave'|'peace_sign'|'hand_on_hip';
     race: 'human'|'elf'|'dark_elf'|'nekomimi'|'dragonkin'|'fairy';
   };
   eq: { weaponKey: string; armorKey: string; accessoryKey: string };
@@ -36,15 +37,15 @@ interface Case {
 // 4 case — 여2·남2, 새 source(7-8등신)로 새 장비 세트. race는 gender 제약.
 const CASES: Case[] = [
   {
-    // 머리색 모티프 검증 — source(금발 톤)와 다른 초록 marsh 테마. hairLength=long.
-    label: 'nekomimi F · gentle · long — marsh green',
-    opts: { gender:'female', expression:'gentle_smile', hairLength:'long', race:'nekomimi' },
+    // 포즈 검증 — arms_crossed(팔짱).
+    label: 'nekomimi F · gentle · long · arms_crossed — marsh',
+    opts: { gender:'female', expression:'gentle_smile', hairLength:'long', pose:'arms_crossed', race:'nekomimi' },
     eq: { weaponKey:'marsh_frog_leaf_dirk', armorKey:'marsh_lily_dress', accessoryKey:'marsh_lily_amulet' },
   },
   {
-    // 머리색 모티프 검증 — source(빨강 톤)와 다른 파랑/보라 rune 테마. hairLength=short.
-    label: 'dragonkin M · confident · short — rune blue',
-    opts: { gender:'male', expression:'confident_smirk', hairLength:'short', race:'dragonkin' },
+    // 포즈 검증 — peace_sign(V).
+    label: 'dragonkin M · confident · short · peace_sign — rune',
+    opts: { gender:'male', expression:'confident_smirk', hairLength:'short', pose:'peace_sign', race:'dragonkin' },
     eq: { weaponKey:'rune_three_shard_blade', armorKey:'rune_guardian_brass_helm', accessoryKey:'rune_listening_rune_ring' },
   },
 ];

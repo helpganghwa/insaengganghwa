@@ -46,14 +46,18 @@ export type ProfileExpression =
  */
 export type ProfileHairLength = 'long' | 'short' | 'natural';
 
-// 포즈 enum 폐기 (2026-05-28 사용자 결정) — state edit이 source 포즈를 강하게 보존해
-// peace_sign/wave 등이 결과에 반영되지 않음. 옵션에서 제거하고 source 포즈를 그대로 사용.
+/**
+ * 포즈 — 서버 random 가벼운 변형 (2026-05-28 재도입). state가 source 전신을 강하게 보존하므로
+ * 팔·손 수준의 가벼운 포즈만(레퍼런스 비율·전신 유지). 실제 반영도는 e2e로 검증.
+ */
+export type ProfilePose = 'natural' | 'arms_crossed' | 'hand_wave' | 'peace_sign' | 'hand_on_hip';
 
-/** 합성 옵션 — gender(유저)만 선택. expression·hairLength·race는 서버 random, 머리색은 장비 모티프 위임. */
+/** 합성 옵션 — gender(유저)만 선택. expression·hairLength·pose·race는 서버 random, 머리색은 장비 모티프 위임. */
 export interface ProfileOptions {
   gender: ProfileGender;
   expression: ProfileExpression;
   hairLength: ProfileHairLength;
+  pose: ProfilePose;
   race: ProfileRace;
 }
 
@@ -156,6 +160,22 @@ export function pickRandomHairLength(): ProfileHairLength {
   return ALL_HAIR_LENGTHS[i]!;
 }
 
+const POSE_DESC: Record<ProfilePose, string> = {
+  natural: 'arms resting naturally at the sides',
+  arms_crossed: 'arms casually crossed over the chest',
+  hand_wave: 'one hand raised in a friendly little wave',
+  peace_sign: 'one hand making a cute V sign near the face',
+  hand_on_hip: 'one hand resting lightly on the hip',
+};
+
+const ALL_POSES = Object.keys(POSE_DESC) as ProfilePose[];
+
+/** 포즈 균등 random — 서버 RNG (CLAUDE §3.1). */
+export function pickRandomPose(): ProfilePose {
+  const i = crypto.getRandomValues(new Uint32Array(1))[0]! % ALL_POSES.length;
+  return ALL_POSES[i]!;
+}
+
 // ─── 공용 STYLE 상수 (서버 상수) ───
 
 const STYLE_BLOCK =
@@ -227,23 +247,22 @@ export function composeEditDescription(opts: ProfileOptions, eq: ProfileEquipmen
   // small head + long legs 같은 시각 키워드로 지시 (2026-05-28 사용자 결정).
   return [
     // KEEP — source 톤·디자인 보존 + 비율은 small head/long legs 시각 키워드로 강조.
-    `KEEP unchanged from source: gender, face structure, the attractive anime art style, color saturation, and overall character vibe.`,
+    `KEEP from source: gender, face structure, anime art style, color saturation, overall vibe.`,
     // PROPORTIONS — 시각적 비율 키워드 (positive, 개수 세기 회피).
-    `Slim tall figure with a small head and very long slender legs.`,
-    // CAMERA — 풀바디 framing (positive).
-    `Wide framing: full character head-to-feet fills the tall frame.`,
-    // QUALITY — positive.
-    `Sharp clear detailed face, clean background, character only.`,
+    `Slim tall figure, small head, very long slender legs.`,
+    // CAMERA + QUALITY — 풀바디 framing + 화질 (positive).
+    `Wide framing: full body head-to-feet fills the tall frame. Sharp clear face, clean background, character only.`,
     // CHANGE — 편집할 것만. 머리 길이는 랜덤, 색은 item 테마 팔레트를 따름.
-    `CHANGE these — race appearance: ${short(raceTrait, 90)} (same gender and body as source);`,
-    `hair: ${HAIR_LENGTH_DESC[opts.hairLength]}, color drawn from the item themes below;`,
+    `CHANGE these — race: ${short(raceTrait, 90)} (same gender & body as source);`,
+    `hair: ${HAIR_LENGTH_DESC[opts.hairLength]}, color from item themes below;`,
     `expression: ${short(EXPRESSION_DESC[opts.expression], 38)};`,
+    `light pose, arms/hands only: ${POSE_DESC[opts.pose]};`,
     // 모티프 강화 — source 옷을 '덧입히기'가 아니라 '완전 교체'로 (2026-05-28 사용자 결정).
-    `FULLY REDESIGN the whole outfit & gear from these item themes (replace the source clothing; keep body proportions & art style):`,
+    `REDESIGN the whole outfit & gear from these item themes (replace source clothing; keep body & art style):`,
     `weapon ${short(sanitizeArt(weapon.art), 34)},`,
     `armor ${short(sanitizeArt(armor.art), 28)},`,
     `accessory ${short(sanitizeArt(accessory.art), 22)}.`,
     // CONFIRM — 끝 reminder (positive).
-    `Confirm: same gender as source, small head and long legs, full body with both feet visible on the ground.`,
+    `Confirm: same gender, small head & long legs, full body, both feet on the ground.`,
   ].join(' ');
 }

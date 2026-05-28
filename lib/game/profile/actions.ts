@@ -29,6 +29,7 @@ import {
   composeEditDescription,
   pickRandomExpression,
   pickRandomHairLength,
+  pickRandomPose,
   pickRandomRace,
 } from './compose';
 import { CreateProfileJobError } from './errors';
@@ -58,6 +59,7 @@ export async function createProfileJob(
     gender: parsed.data.gender,
     expression: pickRandomExpression(),
     hairLength: pickRandomHairLength(),
+    pose: pickRandomPose(),
     race: pickRandomRace(parsed.data.gender),
   };
 
