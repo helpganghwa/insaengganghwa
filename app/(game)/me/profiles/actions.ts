@@ -10,8 +10,8 @@ import { userProfiles } from '@/lib/db/schema/avatar';
 import { profiles } from '@/lib/db/schema/profiles';
 
 /**
- * PROFILE §8.2 — 프로필 상세 관리 액션. 모두 본인 소유 프로필만 대상.
- * createProfileJob과 달리 throw 대신 ErrorState 반환(클라 useTransition에서 직접 처리).
+ * PROFILE §8.2 — 프로필 선택화면 액션. 모두 본인 소유 프로필만 대상.
+ * 선택/방향 변경이 즉시 대표·표시 방향에 반영(별도 "설정" 버튼 없음).
  */
 type ActionState = { status: 'ok' } | { status: 'error'; message: string };
 
@@ -55,12 +55,12 @@ export async function setActiveDirection(
     .set({ activeDirection: dir.data })
     .where(and(eq(userProfiles.id, profileId), eq(userProfiles.userId, userId)));
 
-  revalidatePath(`/me/profiles/${profileId}`);
+  revalidatePath('/me/profiles');
   revalidatePath('/me');
   return { status: 'ok' };
 }
 
-/** 이 프로필을 메인(active) 프로필로 설정. */
+/** 이 프로필을 대표(active) 프로필로 설정. */
 export async function setActiveProfile(profileId: string): Promise<ActionState> {
   const userId = await getSessionUserId();
   if (!userId) return { status: 'error', message: '로그인이 필요합니다.' };
@@ -70,11 +70,11 @@ export async function setActiveProfile(profileId: string): Promise<ActionState> 
   await db.update(profiles).set({ activeProfileId: profileId }).where(eq(profiles.id, userId));
 
   revalidatePath('/me');
-  revalidatePath(`/me/profiles/${profileId}`);
+  revalidatePath('/me/profiles');
   return { status: 'ok' };
 }
 
-/** 프로필 삭제(본인). active였으면 active 해제. (hidden 처리는 운영자 전용, 여긴 hard delete) */
+/** 프로필 삭제(본인). 대표였으면 대표 해제. (hidden 처리는 운영자 전용, 여긴 hard delete) */
 export async function deleteProfile(profileId: string): Promise<ActionState> {
   const userId = await getSessionUserId();
   if (!userId) return { status: 'error', message: '로그인이 필요합니다.' };
@@ -82,7 +82,6 @@ export async function deleteProfile(profileId: string): Promise<ActionState> {
     return { status: 'error', message: '프로필을 찾을 수 없습니다.' };
 
   await db.transaction(async (tx) => {
-    // active였다면 먼저 해제(FK·표시 정합).
     await tx
       .update(profiles)
       .set({ activeProfileId: null })
@@ -93,5 +92,6 @@ export async function deleteProfile(profileId: string): Promise<ActionState> {
   });
 
   revalidatePath('/me');
+  revalidatePath('/me/profiles');
   return { status: 'ok' };
 }

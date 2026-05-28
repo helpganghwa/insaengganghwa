@@ -97,87 +97,46 @@ export default async function ProfilePage() {
 
   return (
     <div className="space-y-4 px-4 py-6">
-      <header className="text-center">
-        <div className="text-4xl">🏆</div>
+      <header className="space-y-2 text-center">
+        {activeProfile ? (
+          <Link
+            href="/me/profiles"
+            aria-label="프로필 선택"
+            className="mx-auto block aspect-square w-36 overflow-hidden rounded-2xl border border-zinc-200 bg-zinc-50 dark:border-zinc-800 dark:bg-zinc-900"
+          >
+            {/* eslint-disable-next-line @next/next/no-img-element */}
+            <img
+              src={dirImg(activeProfile)}
+              alt="대표 프로필"
+              draggable={false}
+              className="h-full w-full object-contain"
+              style={{ imageRendering: 'pixelated' }}
+            />
+          </Link>
+        ) : (
+          <Link
+            href="/me/create"
+            className="mx-auto flex aspect-square w-36 flex-col items-center justify-center gap-1 rounded-2xl border-2 border-dashed border-zinc-300 text-zinc-400 dark:border-zinc-700"
+          >
+            <span className="text-2xl" aria-hidden>
+              ✨
+            </span>
+            <span className="text-xs">프로필 만들기</span>
+          </Link>
+        )}
+        {generating && (
+          <div>
+            <span className="rounded-full bg-amber-100 px-2 py-0.5 text-[10px] font-medium text-amber-700 dark:bg-amber-950/40 dark:text-amber-300">
+              ⏳ 프로필 생성 중
+            </span>
+          </div>
+        )}
         <NicknameEditor
           current={nickname}
           changedCount={prof[0]?.nicknameChangedCount ?? 0}
           diamond={String(prof[0]?.diamond ?? 0n)}
         />
       </header>
-
-      {/* 프로필 — 대표 이미지 + 보유 목록 (PROFILE §8.1) */}
-      <section className="rounded-2xl border border-zinc-200 p-3 dark:border-zinc-800">
-        <div className="mb-2 flex items-center justify-between">
-          <span className="text-xs font-medium text-zinc-500">내 프로필</span>
-          {generating && (
-            <span className="rounded-full bg-amber-100 px-2 py-0.5 text-[10px] font-medium text-amber-700 dark:bg-amber-950/40 dark:text-amber-300">
-              ⏳ 생성 중
-            </span>
-          )}
-        </div>
-
-        {myProfiles.length === 0 ? (
-          <Link
-            href="/me/create"
-            className="flex flex-col items-center justify-center gap-1 rounded-xl border-2 border-dashed border-zinc-300 py-6 text-center text-zinc-400 dark:border-zinc-700"
-          >
-            <span className="text-2xl" aria-hidden>
-              ✨
-            </span>
-            <span className="text-xs">첫 프로필 만들기</span>
-          </Link>
-        ) : (
-          <div className="space-y-3">
-            {activeProfile && (
-              <div className="mx-auto flex aspect-square w-32 items-center justify-center overflow-hidden rounded-xl bg-zinc-50 dark:bg-zinc-900">
-                {/* eslint-disable-next-line @next/next/no-img-element */}
-                <img
-                  src={dirImg(activeProfile)}
-                  alt="대표 프로필"
-                  draggable={false}
-                  className="h-full w-full object-contain"
-                  style={{ imageRendering: 'pixelated' }}
-                />
-              </div>
-            )}
-            <div className="flex gap-2 overflow-x-auto pb-1">
-              {myProfiles.map((p) => (
-                <Link
-                  key={p.id}
-                  href={`/me/profiles/${p.id}`}
-                  className={`relative flex aspect-square w-16 shrink-0 items-center justify-center overflow-hidden rounded-lg border bg-white dark:bg-zinc-950 ${
-                    p.id === activeProfileId
-                      ? 'border-violet-400'
-                      : 'border-zinc-200 dark:border-zinc-800'
-                  }`}
-                >
-                  {/* eslint-disable-next-line @next/next/no-img-element */}
-                  <img
-                    src={dirImg(p)}
-                    alt="프로필"
-                    draggable={false}
-                    className="h-full w-full object-contain"
-                    style={{ imageRendering: 'pixelated' }}
-                  />
-                  {p.id === activeProfileId && (
-                    <span className="absolute inset-x-0 bottom-0 bg-violet-500 text-center text-[8px] text-white">
-                      대표
-                    </span>
-                  )}
-                </Link>
-              ))}
-              <Link
-                href="/me/create"
-                aria-label="새 프로필 생성"
-                className="flex aspect-square w-16 shrink-0 items-center justify-center rounded-lg border-2 border-dashed border-zinc-300 text-lg text-zinc-400 dark:border-zinc-700"
-              >
-                ＋
-              </Link>
-            </div>
-          </div>
-        )}
-      </section>
 
       <section className="rounded-2xl border border-zinc-200 p-3 dark:border-zinc-800">
         <div className="mb-2 text-xs font-medium text-zinc-500">장착 세트 (자랑 단위)</div>
