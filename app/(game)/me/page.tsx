@@ -6,7 +6,6 @@ import { db } from '@/lib/db/client';
 import { profiles } from '@/lib/db/schema/profiles';
 import { catalogItems, equipmentInstances, userCodex, type Slot } from '@/lib/db/schema/equipment';
 import { userProfiles } from '@/lib/db/schema/avatar';
-import { backgroundSrc } from '@/lib/game/profile/backgrounds';
 import { pieceCombatPower, totalCombatPower } from '@/lib/game/balance';
 import { championCatalogIds } from '@/lib/game/codex/ranking';
 
@@ -38,7 +37,6 @@ export default async function ProfilePage() {
         diamond: profiles.diamond,
         nicknameChangedCount: profiles.nicknameChangedCount,
         activeProfileId: profiles.activeProfileId,
-        activeBackground: profiles.activeBackground,
       })
       .from(profiles)
       .where(eq(profiles.id, userId))
@@ -83,33 +81,22 @@ export default async function ProfilePage() {
 
   const activeProfileId = prof[0]?.activeProfileId ?? null;
   const activeProfile = myProfiles.find((p) => p.id === activeProfileId) ?? null;
-  const bgSrc = backgroundSrc(prof[0]?.activeBackground);
   const dirImg = (p: { rotations: unknown; activeDirection: string }) =>
     (p.rotations as Record<string, string>)[p.activeDirection];
 
   return (
     <div className="space-y-4 px-4 py-6">
-      {/* 내 정보 카드 — 포스터형: 배경 풀블리드 위에 캐릭터(바닥)·닉네임(상단)·장비(하단) */}
-      <section className="relative aspect-[4/5] overflow-hidden rounded-2xl border border-zinc-800 bg-gradient-to-b from-zinc-700 to-zinc-900">
-        {bgSrc && (
-          // eslint-disable-next-line @next/next/no-img-element
-          <img
-            src={bgSrc}
-            alt=""
-            aria-hidden
-            draggable={false}
-            className="absolute inset-0 h-full w-full object-cover"
-            style={{ imageRendering: 'pixelated' }}
-          />
-        )}
-
-        {/* 캐릭터 — 크게, 바닥 정렬(하단 장비 패널 위에 서게). 탭 → 선택화면 */}
+      {/* 내 정보 카드 — 그라디언트 무대 위 캐릭터(바닥+발그림자)·닉네임(상단)·장비(하단) */}
+      <section className="relative aspect-[4/5] overflow-hidden rounded-2xl border border-zinc-800 bg-gradient-to-b from-zinc-700 via-zinc-900 to-zinc-950">
+        {/* 캐릭터 — 크게, 바닥 정렬 + 발밑 그림자. 탭 → 선택화면 */}
         {activeProfile ? (
           <Link
             href="/me/profiles"
             aria-label="프로필 선택"
             className="absolute inset-x-0 bottom-[24%] top-[3%] z-0 block overflow-hidden"
           >
+            {/* 발밑 타원 그림자 */}
+            <div className="absolute bottom-[1%] left-1/2 h-[5%] w-1/2 -translate-x-1/2 rounded-[50%] bg-black/45 blur-[6px]" />
             {/* eslint-disable-next-line @next/next/no-img-element */}
             <img
               src={dirImg(activeProfile)}

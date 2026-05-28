@@ -8,7 +8,6 @@ import { getSessionUserId } from '@/lib/auth/session';
 import { db } from '@/lib/db/client';
 import { userProfiles } from '@/lib/db/schema/avatar';
 import { profiles } from '@/lib/db/schema/profiles';
-import { isValidBackground } from '@/lib/game/profile/backgrounds';
 
 /**
  * PROFILE §8.2 — 프로필 선택화면 액션. 모두 본인 소유 프로필만 대상.
@@ -69,20 +68,6 @@ export async function setActiveProfile(profileId: string): Promise<ActionState> 
     return { status: 'error', message: '프로필을 찾을 수 없습니다.' };
 
   await db.update(profiles).set({ activeProfileId: profileId }).where(eq(profiles.id, userId));
-
-  revalidatePath('/me');
-  revalidatePath('/me/profiles');
-  return { status: 'ok' };
-}
-
-/** 활성 배경 설정(전역 1개). key=null 이면 배경 해제. */
-export async function setActiveBackground(key: string | null): Promise<ActionState> {
-  const userId = await getSessionUserId();
-  if (!userId) return { status: 'error', message: '로그인이 필요합니다.' };
-  if (key !== null && !isValidBackground(key))
-    return { status: 'error', message: '잘못된 배경입니다.' };
-
-  await db.update(profiles).set({ activeBackground: key }).where(eq(profiles.id, userId));
 
   revalidatePath('/me');
   revalidatePath('/me/profiles');

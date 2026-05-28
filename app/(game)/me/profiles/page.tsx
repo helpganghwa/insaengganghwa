@@ -23,10 +23,7 @@ export default async function ProfileSelectPage() {
       .where(and(eq(userProfiles.userId, userId), isNull(userProfiles.hiddenAt)))
       .orderBy(desc(userProfiles.createdAt)),
     db
-      .select({
-        activeProfileId: profiles.activeProfileId,
-        activeBackground: profiles.activeBackground,
-      })
+      .select({ activeProfileId: profiles.activeProfileId })
       .from(profiles)
       .where(eq(profiles.id, userId))
       .limit(1),
@@ -59,7 +56,6 @@ export default async function ProfileSelectPage() {
             activeDirection: r.activeDirection,
           }))}
           activeProfileId={p[0]?.activeProfileId ?? null}
-          activeBackground={p[0]?.activeBackground ?? null}
         />
       )}
     </div>

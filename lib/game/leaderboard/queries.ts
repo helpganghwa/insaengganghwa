@@ -9,7 +9,6 @@ import { profiles } from '@/lib/db/schema/profiles';
 import { userProfiles } from '@/lib/db/schema/avatar';
 import { equipmentInstances, userCodex } from '@/lib/db/schema/equipment';
 import { combatPowerFromRows } from '@/lib/game/equipment/combat-power';
-import { backgroundSrc } from '@/lib/game/profile/backgrounds';
 
 /**
  * 랭킹 — BALANCE §3.3. **시즌제 없음·상시 누적·Top 100**.
@@ -24,8 +23,6 @@ export type LeaderboardEntry = {
   rank: number;
   /** 대표 프로필 이미지 URL(없으면 null) */
   profileImg?: string | null;
-  /** 프로필 배경 public src(없으면 null) */
-  bg?: string | null;
 };
 const TOP = 100;
 
@@ -38,7 +35,6 @@ async function attachProfiles(entries: LeaderboardEntry[]): Promise<LeaderboardE
   const rows = await db
     .select({
       userId: profiles.id,
-      activeBackground: profiles.activeBackground,
       rotations: userProfiles.rotations,
       activeDirection: userProfiles.activeDirection,
     })
@@ -49,14 +45,10 @@ async function attachProfiles(entries: LeaderboardEntry[]): Promise<LeaderboardE
     rows.map((r) => {
       const rot = r.rotations as Record<string, string> | null;
       const img = rot && r.activeDirection ? (rot[r.activeDirection] ?? null) : null;
-      return [r.userId, { img, bg: backgroundSrc(r.activeBackground) }] as const;
+      return [r.userId, img] as const;
     }),
   );
-  return entries.map((e) => ({
-    ...e,
-    profileImg: map.get(e.userId)?.img ?? null,
-    bg: map.get(e.userId)?.bg ?? null,
-  }));
+  return entries.map((e) => ({ ...e, profileImg: map.get(e.userId) ?? null }));
 }
 
 async function maxRows() {

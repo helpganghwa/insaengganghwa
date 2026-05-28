@@ -70,17 +70,6 @@ export default async function LeaderboardPage({
                       e.userId === userId ? 'ring-2 ring-inset ring-amber-400' : ''
                     }`}
                   >
-                    {/* 행 배경 (프로필 배경) */}
-                    {e.bg && (
-                      // eslint-disable-next-line @next/next/no-img-element
-                      <img
-                        src={e.bg}
-                        alt=""
-                        aria-hidden
-                        className="absolute inset-0 h-full w-full object-cover"
-                        style={{ imageRendering: 'pixelated' }}
-                      />
-                    )}
                     {/* 캐릭터 — 우측, 행보다 크게 바닥 정렬(상반신 노출) */}
                     {e.profileImg && (
                       // eslint-disable-next-line @next/next/no-img-element

@@ -5,7 +5,6 @@ import { getSessionUserId } from '@/lib/auth/session';
 import { db } from '@/lib/db/client';
 import { profiles } from '@/lib/db/schema/profiles';
 import { userProfiles, profileReports } from '@/lib/db/schema/avatar';
-import { backgroundSrc } from '@/lib/game/profile/backgrounds';
 
 import { AdminReportActions } from './AdminReportActions';
 
@@ -35,7 +34,6 @@ export default async function AdminReportsPage() {
         nickname: profiles.nickname,
         rotations: userProfiles.rotations,
         activeDirection: userProfiles.activeDirection,
-        bg: profiles.activeBackground,
         reportCount: userProfiles.reportCount,
         hiddenAt: userProfiles.hiddenAt,
       })
@@ -69,7 +67,6 @@ export default async function AdminReportsPage() {
         reported.map((p) => {
           const rot = p.rotations as Record<string, string>;
           const charImg = rot[p.activeDirection] ?? null;
-          const bg = backgroundSrc(p.bg);
           const reasons = (reasonMap.get(p.id) ?? []).sort((a, b) => b.c - a.c);
           return (
             <div
@@ -80,11 +77,7 @@ export default async function AdminReportsPage() {
                   : 'border-zinc-200 dark:border-zinc-800'
               }`}
             >
-              <div className="relative h-20 w-20 shrink-0 overflow-hidden rounded-lg bg-zinc-800">
-                {bg && (
-                  // eslint-disable-next-line @next/next/no-img-element
-                  <img src={bg} alt="" aria-hidden className="absolute inset-0 h-full w-full object-cover" style={{ imageRendering: 'pixelated' }} />
-                )}
+              <div className="relative h-20 w-20 shrink-0 overflow-hidden rounded-lg bg-gradient-to-b from-zinc-700 to-zinc-950">
                 {charImg && (
                   // eslint-disable-next-line @next/next/no-img-element
                   <img src={charImg} alt="" aria-hidden className="absolute inset-0 h-full w-full object-contain object-bottom" style={{ imageRendering: 'pixelated', transform: 'scale(1.4)', transformOrigin: 'center bottom' }} />

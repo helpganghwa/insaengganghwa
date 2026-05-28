@@ -10,9 +10,9 @@ import { userProfiles } from '@/lib/db/schema/avatar';
 import { catalogItems, equipmentInstances, userCodex, type Slot } from '@/lib/db/schema/equipment';
 import { pieceCombatPower, totalCombatPower } from '@/lib/game/balance';
 import { championCatalogIds } from '@/lib/game/codex/ranking';
-import { backgroundSrc } from '@/lib/game/profile/backgrounds';
 import { TranscendSprite } from '@/components/TranscendSprite';
 import { RarityFrame, rarityBorderStyle, hasRarityBorder } from '@/components/RarityFrame';
+import { CharacterStage } from '@/components/CharacterStage';
 
 import { ReportButton } from './ReportButton';
 
@@ -26,7 +26,6 @@ async function loadProfile(nickname: string) {
       id: profiles.id,
       nickname: profiles.nickname,
       activeProfileId: profiles.activeProfileId,
-      activeBackground: profiles.activeBackground,
     })
     .from(profiles)
     .where(eq(profiles.nickname, nickname))
@@ -81,7 +80,6 @@ async function loadProfile(nickname: string) {
     ownerId: prof.id,
     profileId,
     charImg,
-    bg: backgroundSrc(prof.activeBackground),
     equipped: pieces,
     total,
   };
@@ -125,25 +123,7 @@ export default async function PublicProfilePage({
     <main className="mx-auto min-h-dvh w-full max-w-[390px] bg-white px-4 py-6 text-zinc-900 dark:bg-black dark:text-zinc-50">
       <header className="text-center">
         {data.charImg ? (
-          <div className="relative mx-auto aspect-square w-44 overflow-hidden rounded-2xl border border-zinc-800 bg-gradient-to-b from-zinc-700 to-zinc-900">
-            {data.bg && (
-              // eslint-disable-next-line @next/next/no-img-element
-              <img
-                src={data.bg}
-                alt=""
-                aria-hidden
-                className="absolute inset-0 h-full w-full object-cover"
-                style={{ imageRendering: 'pixelated' }}
-              />
-            )}
-            {/* eslint-disable-next-line @next/next/no-img-element */}
-            <img
-              src={data.charImg}
-              alt={`${data.nickname} 프로필`}
-              className="absolute inset-0 h-full w-full object-contain object-bottom"
-              style={{ imageRendering: 'pixelated', transform: 'scale(1.45)', transformOrigin: 'center bottom' }}
-            />
-          </div>
+          <CharacterStage charSrc={data.charImg} className="mx-auto aspect-square w-44 border border-zinc-800" />
         ) : (
           <div className="text-4xl">🏆</div>
         )}

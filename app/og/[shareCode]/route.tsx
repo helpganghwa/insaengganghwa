@@ -7,7 +7,6 @@ import { userProfiles } from '@/lib/db/schema/avatar';
 import { catalogItems, equipmentInstances } from '@/lib/db/schema/equipment';
 import { spritePath } from '@/lib/game/equipment/sprite-manifest';
 import { transcendStyle } from '@/lib/game/equipment/transcend';
-import { backgroundSrc } from '@/lib/game/profile/backgrounds';
 
 export const size = { width: 1200, height: 630 };
 export const contentType = 'image/png';
@@ -161,7 +160,6 @@ export async function GET(_req: Request, { params }: { params: Promise<{ shareCo
       id: profiles.id,
       nickname: profiles.nickname,
       activeProfileId: profiles.activeProfileId,
-      activeBackground: profiles.activeBackground,
     })
     .from(profiles)
     .where(eq(profiles.nickname, nickname))
@@ -214,13 +212,8 @@ export async function GET(_req: Request, { params }: { params: Promise<{ shareCo
     }
   }
 
-  // 배경: 프로필 배경(active_background) 우선, 없으면 og-pool 랜덤(no-store), 둘 다 부재면 그라데이션.
-  const profBgSrc = prof?.activeBackground ? backgroundSrc(prof.activeBackground) : null;
-  const bgUri = await dataUri(
-    profBgSrc
-      ? `${origin}${profBgSrc}`
-      : `${origin}/og/og-${1 + Math.floor(Math.random() * BG_POOL)}.png`,
-  );
+  // OG 카드 배경 — og-pool 랜덤(no-store). 프로필 캐릭터는 아래 그라디언트 무대 박스에 별도 합성.
+  const bgUri = await dataUri(`${origin}/og/og-${1 + Math.floor(Math.random() * BG_POOL)}.png`);
 
   // 카톡 카드의 cover 크롭(상하 ~120px / 좌우 ~130px 잘림) 안전을 위한 큰 padding.
   // 콘텐츠가 어느 비율에서도 잘리지 않게 중앙 940×~390 영역 안에 배치.
@@ -327,7 +320,7 @@ export async function GET(_req: Request, { params }: { params: Promise<{ shareCo
         gap: 56,
       }}
     >
-      {/* 프로필 초상 박스 — 배경(cover) + 캐릭터(contain·바닥). /me·선택화면과 동일 비율. */}
+      {/* 프로필 초상 박스 — 그라디언트 무대 + 발그림자 + 캐릭터. /me·선택화면과 동일 비주얼. */}
       <div
         style={{
           position: 'relative',
@@ -337,18 +330,22 @@ export async function GET(_req: Request, { params }: { params: Promise<{ shareCo
           flexShrink: 0,
           borderRadius: 24,
           overflow: 'hidden',
-          background: '#18181b',
+          backgroundImage: 'linear-gradient(180deg,#3f3f46 0%,#18181b 70%,#09090b 100%)',
           border: '3px solid rgba(255,255,255,0.12)',
         }}
       >
-        {bgUri ? (
-          <img
-            src={bgUri}
-            width={430}
-            height={430}
-            style={{ position: 'absolute', top: 0, left: 0, width: 430, height: 430, objectFit: 'cover' }}
-          />
-        ) : null}
+        {/* 발밑 타원 그림자 */}
+        <div
+          style={{
+            position: 'absolute',
+            bottom: 28,
+            left: 107,
+            width: 216,
+            height: 34,
+            borderRadius: '50%',
+            backgroundImage: 'radial-gradient(50% 50% at 50% 50%, rgba(0,0,0,0.55) 0%, rgba(0,0,0,0) 70%)',
+          }}
+        />
         {charUri ? (
           <img
             src={charUri}
