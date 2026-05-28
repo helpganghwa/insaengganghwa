@@ -42,6 +42,11 @@ export const profiles = pgTable('profiles', {
    * PROFILE §3.3.
    */
   activeProfileId: uuid('active_profile_id'),
+  /**
+   * 활성 프로필 배경 key(`lib/game/profile/backgrounds.ts`). null = 배경 없음(기본).
+   * 전역 1개 — 캐릭터와 무관하게 대표 카드·OG·랭킹에 공통 적용. PROFILE §8.
+   */
+  activeBackground: text('active_background'),
   createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
   updatedAt: timestamp('updated_at', { withTimezone: true }).notNull().defaultNow(),
 });

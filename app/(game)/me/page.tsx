@@ -6,6 +6,7 @@ import { db } from '@/lib/db/client';
 import { profiles } from '@/lib/db/schema/profiles';
 import { catalogItems, equipmentInstances, userCodex, type Slot } from '@/lib/db/schema/equipment';
 import { userProfiles } from '@/lib/db/schema/avatar';
+import { backgroundSrc } from '@/lib/game/profile/backgrounds';
 import { pieceCombatPower, totalCombatPower } from '@/lib/game/balance';
 import { championCatalogIds } from '@/lib/game/codex/ranking';
 
@@ -37,6 +38,7 @@ export default async function ProfilePage() {
         diamond: profiles.diamond,
         nicknameChangedCount: profiles.nicknameChangedCount,
         activeProfileId: profiles.activeProfileId,
+        activeBackground: profiles.activeBackground,
       })
       .from(profiles)
       .where(eq(profiles.id, userId))
@@ -81,88 +83,108 @@ export default async function ProfilePage() {
 
   const activeProfileId = prof[0]?.activeProfileId ?? null;
   const activeProfile = myProfiles.find((p) => p.id === activeProfileId) ?? null;
+  const bgSrc = backgroundSrc(prof[0]?.activeBackground);
   const dirImg = (p: { rotations: unknown; activeDirection: string }) =>
     (p.rotations as Record<string, string>)[p.activeDirection];
 
   return (
     <div className="space-y-4 px-4 py-6">
-      <section className="space-y-3 rounded-2xl border border-zinc-200 p-4 text-center dark:border-zinc-800">
-        <NicknameEditor
-          current={nickname}
-          changedCount={prof[0]?.nicknameChangedCount ?? 0}
-          diamond={String(prof[0]?.diamond ?? 0n)}
-        />
-        {activeProfile ? (
-          <Link
-            href="/me/profiles"
-            aria-label="프로필 선택"
-            className="mx-auto block aspect-square w-48 overflow-hidden rounded-2xl border border-zinc-200 bg-zinc-50 dark:border-zinc-800 dark:bg-zinc-900"
-          >
-            {/* eslint-disable-next-line @next/next/no-img-element */}
-            <img
-              src={dirImg(activeProfile)}
-              alt="대표 프로필"
-              draggable={false}
-              className="h-full w-full object-contain"
-              style={{ imageRendering: 'pixelated' }}
-            />
-          </Link>
-        ) : (
-          <Link
-            href="/me/create"
-            className="mx-auto flex aspect-square w-48 flex-col items-center justify-center gap-1 rounded-2xl border-2 border-dashed border-zinc-300 text-zinc-400 dark:border-zinc-700"
-          >
-            <span className="text-3xl" aria-hidden>
-              ✨
-            </span>
-            <span className="text-xs">프로필 만들기</span>
-          </Link>
+      {/* 내 정보 카드 (포스터형 — 닉네임+캐릭터+배경+장비 통합, OG 자랑카드 호환) */}
+      <section className="relative overflow-hidden rounded-2xl border border-zinc-800">
+        {/* 어두운 베이스 (배경 없을 때도 일관) */}
+        <div className="absolute inset-0 bg-gradient-to-b from-zinc-700 to-zinc-900" />
+        {/* 선택한 배경 */}
+        {bgSrc && (
+          // eslint-disable-next-line @next/next/no-img-element
+          <img
+            src={bgSrc}
+            alt=""
+            aria-hidden
+            draggable={false}
+            className="absolute inset-0 h-full w-full object-cover"
+            style={{ imageRendering: 'pixelated' }}
+          />
         )}
-        <div className="border-t border-zinc-100 pt-3 text-left dark:border-zinc-900">
-          <div className="mb-2 text-xs font-medium text-zinc-500">장착 세트 (자랑 단위)</div>
-          <div className="grid grid-cols-3 gap-2">
-          {(['weapon', 'armor', 'accessory'] as Slot[]).map((s) => {
-            const it = bySlot.get(s);
-            if (!it) {
-              return (
-                <Link
-                  key={s}
-                  href={`/inventory?slot=${s}`}
-                  className="flex aspect-square flex-col items-center justify-center gap-0.5 rounded-xl border-2 border-dashed border-zinc-300 px-1 text-center text-zinc-400 dark:border-zinc-700"
-                >
-                  <span className="text-2xl" aria-hidden>{SLOT_EMOJI[s]}</span>
-                  <span className="text-[10px]">{SLOT_LABEL[s]}</span>
-                  <span className="text-[9px] underline">장착</span>
-                </Link>
-              );
-            }
-            return (
-              <div
-                key={s}
-                style={rarityBorderStyle(it.transcendLevel)}
-                className={`relative flex aspect-square flex-col items-center justify-center gap-0.5 overflow-hidden rounded-xl border-2 bg-white px-1 text-center dark:bg-zinc-950 ${
-                  hasRarityBorder(it.transcendLevel) ? '' : 'border-zinc-200 dark:border-zinc-800'
-                }`}
-              >
-                <RarityFrame level={it.transcendLevel} />
-                <TranscendSprite
-                  code={it.code}
-                  slot={s}
-                  level={it.transcendLevel}
-                  isChampion={champSet.has(it.catalogItemId)}
-                  size={56}
-                  frameless
-                />
-                <span className="px-0.5 text-[10px] leading-tight text-zinc-600 dark:text-zinc-400">
-                  {it.name}
-                </span>
-                <span className="text-xs font-semibold">+{it.enhanceLevel}</span>
-              </div>
-            );
-          })}
-        </div>
-          <div className="mt-3 text-right text-sm font-bold">
-            ⚔️ 총 전투력 {total.toLocaleString('ko-KR')}
+        {/* 가독성 오버레이 */}
+        <div className="absolute inset-0 bg-gradient-to-b from-black/15 via-transparent to-black/60" />
+
+        <div className="relative flex flex-col items-center px-4 pb-3 pt-4 text-white">
+          <NicknameEditor
+            current={nickname}
+            changedCount={prof[0]?.nicknameChangedCount ?? 0}
+            diamond={String(prof[0]?.diamond ?? 0n)}
+            className="text-white drop-shadow-[0_1px_3px_rgba(0,0,0,0.7)]"
+          />
+
+          {activeProfile ? (
+            <Link href="/me/profiles" aria-label="프로필 선택" className="mt-1 block aspect-square w-44">
+              {/* eslint-disable-next-line @next/next/no-img-element */}
+              <img
+                src={dirImg(activeProfile)}
+                alt="대표 프로필"
+                draggable={false}
+                className="h-full w-full object-contain drop-shadow-[0_4px_8px_rgba(0,0,0,0.5)]"
+                style={{ imageRendering: 'pixelated' }}
+              />
+            </Link>
+          ) : (
+            <Link
+              href="/me/create"
+              className="mt-2 flex aspect-square w-44 flex-col items-center justify-center gap-1 rounded-2xl border-2 border-dashed border-white/40 text-white/70"
+            >
+              <span className="text-3xl" aria-hidden>
+                ✨
+              </span>
+              <span className="text-xs">프로필 만들기</span>
+            </Link>
+          )}
+
+          {/* 장착 세트 패널 */}
+          <div className="mt-3 w-full rounded-xl bg-black/35 p-2.5">
+            <div className="grid grid-cols-3 gap-2">
+              {(['weapon', 'armor', 'accessory'] as Slot[]).map((s) => {
+                const it = bySlot.get(s);
+                if (!it) {
+                  return (
+                    <Link
+                      key={s}
+                      href={`/inventory?slot=${s}`}
+                      className="flex aspect-square flex-col items-center justify-center gap-0.5 rounded-xl border-2 border-dashed border-white/30 px-1 text-center text-white/60"
+                    >
+                      <span className="text-2xl" aria-hidden>{SLOT_EMOJI[s]}</span>
+                      <span className="text-[10px]">{SLOT_LABEL[s]}</span>
+                      <span className="text-[9px] underline">장착</span>
+                    </Link>
+                  );
+                }
+                return (
+                  <div
+                    key={s}
+                    style={rarityBorderStyle(it.transcendLevel)}
+                    className={`relative flex aspect-square flex-col items-center justify-center gap-0.5 overflow-hidden rounded-xl border-2 bg-white px-1 text-center dark:bg-zinc-950 ${
+                      hasRarityBorder(it.transcendLevel) ? '' : 'border-zinc-200 dark:border-zinc-800'
+                    }`}
+                  >
+                    <RarityFrame level={it.transcendLevel} />
+                    <TranscendSprite
+                      code={it.code}
+                      slot={s}
+                      level={it.transcendLevel}
+                      isChampion={champSet.has(it.catalogItemId)}
+                      size={56}
+                      frameless
+                    />
+                    <span className="px-0.5 text-[10px] leading-tight text-zinc-600 dark:text-zinc-400">
+                      {it.name}
+                    </span>
+                    <span className="text-xs font-semibold">+{it.enhanceLevel}</span>
+                  </div>
+                );
+              })}
+            </div>
+            <div className="mt-2 text-right text-xs font-bold text-white drop-shadow-[0_1px_2px_rgba(0,0,0,0.7)]">
+              ⚔️ 총 전투력 {total.toLocaleString('ko-KR')}
+            </div>
           </div>
         </div>
       </section>

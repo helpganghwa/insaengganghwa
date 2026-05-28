@@ -13,10 +13,12 @@ export function NicknameEditor({
   current,
   changedCount,
   diamond,
+  className,
 }: {
   current: string;
   changedCount: number;
   diamond: string;
+  className?: string;
 }) {
   const [open, setOpen] = useState(false);
   return (
@@ -25,7 +27,7 @@ export function NicknameEditor({
         type="button"
         onClick={() => setOpen(true)}
         aria-label="닉네임 변경"
-        className="mt-2 text-lg font-semibold tracking-tight"
+        className={`text-lg font-semibold tracking-tight ${className ?? ''}`}
       >
         {current}
       </button>
