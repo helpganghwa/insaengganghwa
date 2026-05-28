@@ -25,6 +25,7 @@ import { profiles } from '@/lib/db/schema/profiles';
 import { sendPushToUser } from '@/lib/push/send';
 
 import { reviewProfile, type ReviewVerdict } from './ai-review';
+import { cleanupSprite } from './sprite-cleanup';
 
 /** 검토 결과 push — 실패는 무시(전체 흐름 막지 않음). 토글·구독은 sendPushToUser가 처리. */
 async function safePush(
@@ -313,9 +314,11 @@ async function mirrorRotations(
     if (!remoteUrl) continue;
     const r = await fetch(remoteUrl);
     if (!r.ok) throw new Error(`fetch rotation ${dir} HTTP ${r.status}`);
-    const buf = Buffer.from(await r.arrayBuffer());
+    const raw = Buffer.from(await r.arrayBuffer());
     // 404 JSON/빈 파일을 200으로 받는 케이스 방어 — PNG 아니면 storage에 안 올림.
-    if (!isPng(buf)) throw new Error(`rotation ${dir} not a valid PNG (${buf.length}B)`);
+    if (!isPng(raw)) throw new Error(`rotation ${dir} not a valid PNG (${raw.length}B)`);
+    // 외곽 흰점 노이즈 제거 (2026-05-28 사용자 결정) — 고립 흰 픽셀만 투명화.
+    const buf = await cleanupSprite(raw);
     const path = `${userId}/${characterId}/${dir}.png`;
     const { error } = await supabase.storage.from(STORAGE_BUCKET).upload(path, buf, {
       contentType: 'image/png',
