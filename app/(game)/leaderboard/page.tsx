@@ -52,9 +52,9 @@ export default async function LeaderboardPage({
         </div>
       </section>
 
-      <section className="overflow-hidden rounded-xl border border-zinc-200 dark:border-zinc-800">
+      <section className="overflow-hidden rounded-xl border border-zinc-800 bg-zinc-900">
         {top.length === 0 ? (
-          <div className="px-4 py-10 text-center text-sm text-zinc-500">
+          <div className="px-4 py-10 text-center text-sm text-zinc-400">
             아직 랭킹에 오른 유저가 없습니다.
           </div>
         ) : (
@@ -66,42 +66,42 @@ export default async function LeaderboardPage({
                 <li key={e.userId}>
                   <Link
                     href={`/u/${encodeURIComponent(e.nickname)}`}
-                    className={`flex items-center gap-2.5 border-b border-zinc-100 px-3 py-2.5 last:border-b-0 dark:border-zinc-900 ${
-                      e.userId === userId ? 'bg-amber-50 dark:bg-amber-950/40' : ''
+                    className={`relative flex h-16 items-center gap-2.5 overflow-hidden border-b border-zinc-800 px-3 last:border-b-0 ${
+                      e.userId === userId ? 'ring-2 ring-inset ring-amber-400' : ''
                     }`}
                   >
-                    <span className="w-7 shrink-0 text-center font-mono text-sm tabular-nums">
+                    {/* 행 배경 (프로필 배경) */}
+                    {e.bg && (
+                      // eslint-disable-next-line @next/next/no-img-element
+                      <img
+                        src={e.bg}
+                        alt=""
+                        aria-hidden
+                        className="absolute inset-0 h-full w-full object-cover"
+                        style={{ imageRendering: 'pixelated' }}
+                      />
+                    )}
+                    {/* 캐릭터 — 우측, 행보다 크게 바닥 정렬(상반신 노출) */}
+                    {e.profileImg && (
+                      // eslint-disable-next-line @next/next/no-img-element
+                      <img
+                        src={e.profileImg}
+                        alt=""
+                        aria-hidden
+                        className="absolute bottom-0 right-2 h-[160%] w-auto object-contain object-bottom"
+                        style={{ imageRendering: 'pixelated' }}
+                      />
+                    )}
+                    {/* 좌→우 그라데이션 (좌측 텍스트 가독, 우측 캐릭터 노출) */}
+                    <div className="absolute inset-0 bg-gradient-to-r from-zinc-950/95 via-zinc-950/65 to-zinc-950/15" />
+
+                    <span className="relative w-7 shrink-0 text-center font-mono text-sm tabular-nums text-white">
                       {medal ?? `#${e.rank}`}
                     </span>
-                    {/* 프로필 썸네일 (배경 + 캐릭터) */}
-                    <div className="relative h-9 w-9 shrink-0 overflow-hidden rounded-lg bg-zinc-100 dark:bg-zinc-800">
-                      {e.bg && (
-                        // eslint-disable-next-line @next/next/no-img-element
-                        <img
-                          src={e.bg}
-                          alt=""
-                          aria-hidden
-                          className="absolute inset-0 h-full w-full object-cover"
-                          style={{ imageRendering: 'pixelated' }}
-                        />
-                      )}
-                      {e.profileImg ? (
-                        // eslint-disable-next-line @next/next/no-img-element
-                        <img
-                          src={e.profileImg}
-                          alt=""
-                          aria-hidden
-                          className="absolute inset-0 h-full w-full object-contain"
-                          style={{ imageRendering: 'pixelated' }}
-                        />
-                      ) : (
-                        <span className="flex h-full w-full items-center justify-center text-sm">
-                          🙂
-                        </span>
-                      )}
-                    </div>
-                    <span className="flex-1 truncate text-sm font-medium">{e.nickname}</span>
-                    <span className="font-mono text-sm tabular-nums text-zinc-700 dark:text-zinc-300">
+                    <span className="relative flex-1 truncate text-sm font-semibold text-white drop-shadow-[0_1px_2px_rgba(0,0,0,0.9)]">
+                      {e.nickname}
+                    </span>
+                    <span className="relative font-mono text-sm tabular-nums text-amber-200 drop-shadow-[0_1px_2px_rgba(0,0,0,0.9)]">
                       {fmt(metric, e.value)}
                     </span>
                   </Link>
