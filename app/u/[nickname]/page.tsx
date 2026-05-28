@@ -4,12 +4,17 @@ import type { Metadata } from 'next';
 import { and, eq, isNotNull, sql } from 'drizzle-orm';
 
 import { db } from '@/lib/db/client';
+import { getSessionUserId } from '@/lib/auth/session';
 import { profiles } from '@/lib/db/schema/profiles';
+import { userProfiles } from '@/lib/db/schema/avatar';
 import { catalogItems, equipmentInstances, userCodex, type Slot } from '@/lib/db/schema/equipment';
 import { pieceCombatPower, totalCombatPower } from '@/lib/game/balance';
 import { championCatalogIds } from '@/lib/game/codex/ranking';
+import { backgroundSrc } from '@/lib/game/profile/backgrounds';
 import { TranscendSprite } from '@/components/TranscendSprite';
 import { RarityFrame, rarityBorderStyle, hasRarityBorder } from '@/components/RarityFrame';
+
+import { ReportButton } from './ReportButton';
 
 const SLOT_LABEL: Record<Slot, string> = { weapon: '무기', armor: '방어구', accessory: '장신구' };
 const SLOT_EMOJI: Record<Slot, string> = { weapon: '⚔️', armor: '🛡️', accessory: '💍' };
@@ -17,11 +22,32 @@ const SLOT_EMOJI: Record<Slot, string> = { weapon: '⚔️', armor: '🛡️', a
 /** 닉네임 → 공개 프로필 데이터(착용 세트 + 총 전투력). 미존재 시 null. */
 async function loadProfile(nickname: string) {
   const [prof] = await db
-    .select({ id: profiles.id, nickname: profiles.nickname })
+    .select({
+      id: profiles.id,
+      nickname: profiles.nickname,
+      activeProfileId: profiles.activeProfileId,
+      activeBackground: profiles.activeBackground,
+    })
     .from(profiles)
     .where(eq(profiles.nickname, nickname))
     .limit(1);
   if (!prof) return null;
+
+  // 대표 프로필 캐릭터 이미지(있으면).
+  let profileId: string | null = null;
+  let charImg: string | null = null;
+  if (prof.activeProfileId) {
+    const [up] = await db
+      .select({ id: userProfiles.id, rotations: userProfiles.rotations, activeDirection: userProfiles.activeDirection })
+      .from(userProfiles)
+      .where(eq(userProfiles.id, prof.activeProfileId))
+      .limit(1);
+    if (up) {
+      profileId = up.id;
+      const rot = up.rotations as Record<string, string>;
+      charImg = rot[up.activeDirection] ?? null;
+    }
+  }
 
   const [equipped, codexAgg, champSet] = await Promise.all([
     db
@@ -50,7 +76,15 @@ async function loadProfile(nickname: string) {
     Number(codexAgg[0]?.s ?? 0),
   );
   const pieces = equipped.map((e) => ({ ...e, isChampion: champSet.has(e.catalogItemId) }));
-  return { nickname: prof.nickname, equipped: pieces, total };
+  return {
+    nickname: prof.nickname,
+    ownerId: prof.id,
+    profileId,
+    charImg,
+    bg: backgroundSrc(prof.activeBackground),
+    equipped: pieces,
+    total,
+  };
 }
 
 export async function generateMetadata({
@@ -83,13 +117,39 @@ export default async function PublicProfilePage({
   if (!data) notFound();
 
   const bySlot = new Map(data.equipped.map((e) => [e.slot, e]));
+  const viewerId = await getSessionUserId();
+  // 신고 버튼: 대표 프로필 존재 + 로그인 + 본인 아님.
+  const canReport = !!data.profileId && !!viewerId && viewerId !== data.ownerId;
 
   return (
     <main className="mx-auto min-h-dvh w-full max-w-[390px] bg-white px-4 py-6 text-zinc-900 dark:bg-black dark:text-zinc-50">
       <header className="text-center">
-        <div className="text-4xl">🏆</div>
-        <h1 className="mt-1 text-xl font-bold">{data.nickname}</h1>
+        {data.charImg ? (
+          <div className="relative mx-auto aspect-square w-44 overflow-hidden rounded-2xl border border-zinc-800 bg-gradient-to-b from-zinc-700 to-zinc-900">
+            {data.bg && (
+              // eslint-disable-next-line @next/next/no-img-element
+              <img
+                src={data.bg}
+                alt=""
+                aria-hidden
+                className="absolute inset-0 h-full w-full object-cover"
+                style={{ imageRendering: 'pixelated' }}
+              />
+            )}
+            {/* eslint-disable-next-line @next/next/no-img-element */}
+            <img
+              src={data.charImg}
+              alt={`${data.nickname} 프로필`}
+              className="absolute inset-0 h-full w-full object-contain object-bottom"
+              style={{ imageRendering: 'pixelated', transform: 'scale(1.45)', transformOrigin: 'center bottom' }}
+            />
+          </div>
+        ) : (
+          <div className="text-4xl">🏆</div>
+        )}
+        <h1 className="mt-2 text-xl font-bold">{data.nickname}</h1>
         <p className="text-xs text-zinc-500">인생강화 플레이어</p>
+        {canReport && <ReportButton profileId={data.profileId!} />}
       </header>
 
       <section className="mt-5 rounded-2xl border border-zinc-200 p-3 dark:border-zinc-800">
