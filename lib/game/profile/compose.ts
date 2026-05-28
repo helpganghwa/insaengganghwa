@@ -169,8 +169,8 @@ export function composeEditDescription(opts: ProfileOptions, eq: ProfileEquipmen
     `KEEP unchanged from source: gender, the exact same facial features, the Japanese anime art style, body proportions, and overall vibe.`,
     `Full body head-to-feet, pure clean background, character only. Crisp clean silhouette with smooth solid outlines — no stray white dots, specks or noise around the edges.`,
     `Slim tall figure with a small head and long legs.`,
-    `Redesign ONLY the hairstyle (${HAIR_LENGTH_DESC[opts.hairLength]}, fresh new style & color) and the whole outfit. Default to ORDINARY everyday clothes (casual, streetwear, school uniform, dress, modern) — NOT fantasy armor/gear. Use the motifs ONLY as subtle accents (a color, small pattern, hair clip, print). Pose: ${POSE_DESC[opts.pose]}. Expression free — any natural look. You may add small props (book, phone, flower…).`,
-    `Motifs (subtle accent only): ${motifs}.`,
+    `Redesign ONLY the hairstyle (${HAIR_LENGTH_DESC[opts.hairLength]}, fresh new style & color) and the whole outfit — be creative, ANY genre (casual, school uniform, swimwear, dress, suit, modern, fantasy, etc.), loosely inspired by the motifs. Pose: ${POSE_DESC[opts.pose]}. Expression free — any natural pleasant look. You may add handheld props (sword, book, staff…) and decorations (wings, ornaments).`,
+    `Motifs (loose only): ${motifs}.`,
     `Confirm: keep the same facial features, body and anime style as source; full body with both feet on the ground.`,
   ].join(' ');
 }
