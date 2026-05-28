@@ -31,9 +31,10 @@ async function safePush(
   userId: string,
   title: string,
   body: string,
+  url = '/me',
 ): Promise<void> {
   try {
-    await sendPushToUser(userId, { category: 'profile', title, body, url: '/me', tag: 'profile' });
+    await sendPushToUser(userId, { category: 'profile', title, body, url, tag: 'profile' });
   } catch (e) {
     console.error('[profile-poll] push failed:', (e as Error).message);
   }
@@ -376,7 +377,7 @@ async function acceptJob(
       payload: {},
     });
   });
-  await safePush(userId, '프로필 생성 완료', '새 프로필이 목록에 추가되었어요. 확인해 보세요!');
+  await safePush(userId, '프로필 생성 완료', '새 프로필이 목록에 추가되었어요. 확인해 보세요!', '/me/profiles');
 }
 
 async function rejectJob(
