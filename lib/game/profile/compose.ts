@@ -13,6 +13,7 @@
 import 'server-only';
 
 import { CATALOG_ITEMS, type CatalogItem } from '@/lib/game/equipment/catalog';
+import { ITEM_MOTIFS } from '@/lib/game/equipment/motifs';
 import type { ProfileGender } from './refs';
 
 // 헤어 컬러·스타일 옵션 폐기 (2026-05-28 사용자 결정) — 머리색은 장비 모티프 팔레트를
@@ -236,32 +237,34 @@ export function composeDescription(opts: ProfileOptions, eq: ProfileEquipment): 
  * 모티프)만 변경 지시. composeDescription과 달리 HEADER·Style 블록 생략(source 보존).
  */
 export function composeEditDescription(opts: ProfileOptions, eq: ProfileEquipment): string {
-  const weapon = getItem(eq.weaponKey, 'weapon');
-  const armor = getItem(eq.armorKey, 'armor');
-  const accessory = getItem(eq.accessoryKey, 'accessory');
+  // getItem 검증(잘못된 키/슬롯 조기 throw) — 반환은 미사용(모티프는 ITEM_MOTIFS에서).
+  getItem(eq.weaponKey, 'weapon');
+  getItem(eq.armorKey, 'armor');
+  getItem(eq.accessoryKey, 'accessory');
 
   const short = (s: string, n: number) => (s.length > n ? s.slice(0, n).trim() : s);
   const raceTrait = RACE_LINE[opts.race];
+  const wMotif = ITEM_MOTIFS[eq.weaponKey] ?? '';
+  const aMotif = ITEM_MOTIFS[eq.armorKey] ?? '';
+  const cMotif = ITEM_MOTIFS[eq.accessoryKey] ?? '';
 
-  // positive-only + KEEP/CHANGE 명확 분리. 비율은 "8 heads"(개수 세기, diffusion 약함) 대신
-  // small head + long legs 같은 시각 키워드로 지시 (2026-05-28 사용자 결정).
+  // 장비는 형태(검/모자/브로치)가 아니라 모티프(개념+색)만 — 모델이 자유롭게 의상에 녹여
+  // 완성도·다양성 확보, source 옷에 갇히지 않음 (2026-05-28 사용자 결정).
   return [
     // KEEP — source 톤·디자인 보존 + 비율은 small head/long legs 시각 키워드로 강조.
     `KEEP from source: gender, face structure, anime art style, color saturation, overall vibe.`,
     // PROPORTIONS — 시각적 비율 키워드 (positive, 개수 세기 회피).
     `Slim tall figure, small head, very long slender legs.`,
     // CAMERA + QUALITY — 풀바디 framing + 화질 (positive).
-    `Wide framing: full body head-to-feet fills the tall frame. Sharp clear face, clean background, character only.`,
-    // CHANGE — 편집할 것만. 머리 길이는 랜덤, 색은 item 테마 팔레트를 따름.
+    `Full body head-to-feet in frame. Sharp face, clean background, character only.`,
+    // CHANGE — 편집할 것만. 머리 길이는 랜덤, 색은 모티프 팔레트를 따름.
     `CHANGE these — race: ${short(raceTrait, 90)} (same gender & body as source);`,
-    `hair: ${HAIR_LENGTH_DESC[opts.hairLength]}, color from item themes below;`,
+    `hair: ${HAIR_LENGTH_DESC[opts.hairLength]}, color drawn from the motifs below;`,
     `expression: ${short(EXPRESSION_DESC[opts.expression], 38)};`,
     `light pose, arms/hands only: ${POSE_DESC[opts.pose]};`,
-    // 모티프 강화 — source 옷을 '덧입히기'가 아니라 '완전 교체'로 (2026-05-28 사용자 결정).
-    `REDESIGN the whole outfit & gear from these item themes (replace source clothing; keep body & art style):`,
-    `weapon ${short(sanitizeArt(weapon.art), 34)},`,
-    `armor ${short(sanitizeArt(armor.art), 28)},`,
-    `accessory ${short(sanitizeArt(accessory.art), 22)}.`,
+    // 모티프 자유 재디자인 — 형태를 그리지 말고 색·패턴·날개·장식·실루엣으로 해석.
+    `Freely redesign outfit, hair & accessories from these motifs as colors/patterns/wings/ornaments/silhouette — do NOT draw literal items; new design replacing source clothing (keep body & art style):`,
+    `weapon motif: ${wMotif}; armor motif: ${aMotif}; accessory motif: ${cMotif}.`,
     // CONFIRM — 끝 reminder (positive).
     `Confirm: same gender, small head & long legs, full body, both feet on the ground.`,
   ].join(' ');

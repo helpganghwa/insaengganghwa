@@ -103,7 +103,7 @@ export default async function ProfilePage() {
               alt="대표 프로필"
               draggable={false}
               className="h-full w-full object-contain object-bottom drop-shadow-[0_6px_10px_rgba(0,0,0,0.55)]"
-              style={{ imageRendering: 'pixelated', transform: 'scale(1.45)', transformOrigin: 'center bottom' }}
+              style={{ imageRendering: 'pixelated', transform: 'scale(1.3)', transformOrigin: 'center bottom' }}
             />
           </Link>
         ) : (
