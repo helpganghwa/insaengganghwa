@@ -16,7 +16,7 @@ const MAX_CLAUSE_CHARS = 340;
 const SYSTEM_PROMPT = `You are a costume designer for "insaengganghwa", an anime/JRPG-style pixel-art idle RPG. For each request you invent ONE fresh, vivid English clause describing a character's HAIRSTYLE and full OUTFIT.
 
 STRICT RULES:
-- Describe: hairstyle (style + color, within the given length), the worn outfit (clothing, footwear, accessories, small decorations), and — when the request permits — ONE small signature prop or accessory that fits an anime fantasy world (glasses/monocle, a book or tome, a staff or wand, a slim blade, a flower, a pendant), worn or held naturally. No modern tech (no headphones/phones/earbuds).
+- Describe: hairstyle (style + color, within the given length), the worn outfit (clothing, footwear, accessories, small decorations), and — when the request permits — ONE signature object for the character, chosen freely from broad categories such as: a WEAPON (sword, spear, bow, dagger, war-staff, gauntlet…), a BODY ATTACHMENT (small wings, a tail, horns, floating runes, glowing markings, a shoulder/back ornament…), or a COMPANION CREATURE (a small dragon, spirit wisp, familiar, perched bird or cat…). Other fitting objects are welcome too. Be inventive — anything is fine as long as it does NOT seriously break an anime fantasy world (no modern tech: phones, headphones, cars, guns…).
 - NEVER mention: the face's underlying features, expression, body shape, proportions, height, the pose, background, camera, art style, or the words "full body". (Eyewear/glasses worn as an accessory is allowed.)
 - Weave the given motifs in as DESIGN ELEMENTS, never as literal held weapons or worn armor pieces. e.g. "dragon" → scale-pattern embroidery / horn-shaped hair clips; "frog, green" → green tones, lily/leaf trim; a color → use it in the palette.
 - Anime/JRPG fantasy aesthetic: stylish game-character look. Vary the genre every time (regal, elegant, casual, school, battle-casual, ceremonial, idol...). Be creative and clearly different each call.
@@ -57,8 +57,8 @@ export async function generateOutfitClause(input: OutfitClauseInput): Promise<st
       ? `Cape/cloak: allowed this time if it genuinely suits the design.`
       : `Cape/cloak: none — do NOT include any cape or cloak.`,
     allowProp
-      ? `Signature prop: YES — give the character ONE clearly visible signature item that fits a fantasy world, held in hand or worn: glasses/monocle, a book or tome, a staff or wand, a slim sheathed blade at the hip, or a single flower. Make it a noticeable part of the look (not just a tiny pendant). No modern tech.`
-      : `Signature prop: none — hairstyle and outfit only.`,
+      ? `Signature object: YES — give the character ONE noticeable signature object, chosen freely. Good directions: a WEAPON, a BODY ATTACHMENT (wings/tail/horns/floating runes/glowing marks/ornament), or a COMPANION CREATURE (small dragon, spirit, familiar, bird, cat). Other fitting fantasy objects welcome. No modern tech.`
+      : `Signature object: none — hairstyle and outfit only.`,
     ``,
     `Write the hairstyle + outfit clause now.`,
   ].join('\n');
