@@ -27,7 +27,7 @@ export function NicknameEditor({
         type="button"
         onClick={() => setOpen(true)}
         aria-label="닉네임 변경"
-        className={`text-lg font-semibold tracking-tight ${className ?? ''}`}
+        className={`max-w-full truncate text-base font-semibold tracking-tight ${className ?? ''}`}
       >
         {current}
       </button>

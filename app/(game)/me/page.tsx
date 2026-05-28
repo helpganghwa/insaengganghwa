@@ -87,27 +87,33 @@ export default async function ProfilePage() {
 
   return (
     <div className="space-y-4 px-4 py-6">
-      {/* 내 정보 카드 — OG 배치 차용: 좌(닉네임+프로필), 우(장비 3종 세로) */}
-      <section className="rounded-2xl border border-zinc-800 bg-gradient-to-b from-zinc-800 to-zinc-950 p-3">
+      {/* 내 정보 카드 — 헤더(닉네임·전투력) + 본문(캐릭터·장비 세로) */}
+      <section className="rounded-3xl border border-zinc-800 bg-gradient-to-b from-zinc-900 to-zinc-950 p-4">
+        {/* 헤더 — 닉네임 + 전투력 배지 */}
+        <div className="mb-3 flex items-center justify-between gap-3">
+          <NicknameEditor
+            current={nickname}
+            changedCount={prof[0]?.nicknameChangedCount ?? 0}
+            diamond={String(prof[0]?.diamond ?? 0n)}
+            className="min-w-0 text-white"
+          />
+          <span className="inline-flex shrink-0 items-center gap-1 rounded-full border border-amber-400/30 bg-amber-400/10 px-2.5 py-1 text-xs font-bold tabular-nums text-amber-300">
+            <span aria-hidden>⚔️</span>
+            {total.toLocaleString('ko-KR')}
+          </span>
+        </div>
+
+        {/* 본문 — 캐릭터 + 장비 3종 */}
         <div className="flex gap-3">
-          {/* 좌 — 닉네임 + 프로필 */}
-          <div className="flex flex-1 flex-col gap-2">
-            <div className="text-center">
-              <NicknameEditor
-                current={nickname}
-                changedCount={prof[0]?.nicknameChangedCount ?? 0}
-                diamond={String(prof[0]?.diamond ?? 0n)}
-                className="text-white drop-shadow-[0_1px_3px_rgba(0,0,0,0.85)]"
-              />
-            </div>
+          <div className="flex-1">
             {activeProfile ? (
               <Link href="/me/profiles" aria-label="프로필 선택" className="block">
-                <CharacterStage charSrc={dirImg(activeProfile)} className="w-full border border-zinc-800" />
+                <CharacterStage charSrc={dirImg(activeProfile)} className="aspect-square w-full border border-zinc-800" />
               </Link>
             ) : (
               <Link
                 href="/me/create"
-                className="flex aspect-square w-full flex-col items-center justify-center gap-1 rounded-2xl border-2 border-dashed border-white/40 text-white/70"
+                className="flex aspect-square w-full flex-col items-center justify-center gap-1 rounded-2xl border-2 border-dashed border-white/25 text-white/60"
               >
                 <span className="text-3xl" aria-hidden>✨</span>
                 <span className="text-xs">프로필 만들기</span>
@@ -115,8 +121,7 @@ export default async function ProfilePage() {
             )}
           </div>
 
-          {/* 우 — 장비 3종 세로 + 전투력 */}
-          <div className="flex w-[36%] flex-col gap-1.5">
+          <div className="flex w-[44%] flex-col justify-center gap-2">
             {(['weapon', 'armor', 'accessory'] as Slot[]).map((s) => {
               const it = bySlot.get(s);
               if (!it) {
@@ -124,10 +129,12 @@ export default async function ProfilePage() {
                   <Link
                     key={s}
                     href={`/inventory?slot=${s}`}
-                    className="flex items-center gap-1.5 rounded-lg border border-dashed border-white/25 p-1.5 text-white/55"
+                    className="flex items-center gap-2 rounded-xl border border-dashed border-white/15 bg-white/[0.02] p-2 text-white/45"
                   >
-                    <span className="text-lg" aria-hidden>{SLOT_EMOJI[s]}</span>
-                    <span className="text-[10px]">{SLOT_LABEL[s]} 장착</span>
+                    <span className="grid h-9 w-9 shrink-0 place-items-center rounded-lg bg-white/5 text-base" aria-hidden>
+                      {SLOT_EMOJI[s]}
+                    </span>
+                    <span className="text-[11px]">{SLOT_LABEL[s]} 장착</span>
                   </Link>
                 );
               }
@@ -135,30 +142,29 @@ export default async function ProfilePage() {
                 <div
                   key={s}
                   style={rarityBorderStyle(it.transcendLevel)}
-                  className={`flex items-center gap-1.5 overflow-hidden rounded-lg border bg-white p-1 dark:bg-zinc-950 ${
-                    hasRarityBorder(it.transcendLevel) ? '' : 'border-zinc-200 dark:border-zinc-800'
+                  className={`flex items-center gap-2 rounded-xl border bg-white/5 p-2 ${
+                    hasRarityBorder(it.transcendLevel) ? '' : 'border-white/10'
                   }`}
                 >
-                  <TranscendSprite
-                    code={it.code}
-                    slot={s}
-                    level={it.transcendLevel}
-                    isChampion={champSet.has(it.catalogItemId)}
-                    size={34}
-                    frameless
-                  />
+                  <div className="shrink-0">
+                    <TranscendSprite
+                      code={it.code}
+                      slot={s}
+                      level={it.transcendLevel}
+                      isChampion={champSet.has(it.catalogItemId)}
+                      size={36}
+                      frameless
+                    />
+                  </div>
                   <div className="min-w-0 flex-1">
-                    <div className="truncate text-[10px] leading-tight text-zinc-600 dark:text-zinc-400">
-                      {it.name}
+                    <div className="line-clamp-2 text-[11px] leading-snug text-white/85">{it.name}</div>
+                    <div className="mt-0.5 text-[11px] font-bold tabular-nums text-white">
+                      +{it.enhanceLevel}
                     </div>
-                    <div className="text-[11px] font-semibold">+{it.enhanceLevel}</div>
                   </div>
                 </div>
               );
             })}
-            <div className="mt-auto pt-1 text-right text-[11px] font-bold text-white">
-              ⚔️ {total.toLocaleString('ko-KR')}
-            </div>
           </div>
         </div>
       </section>
