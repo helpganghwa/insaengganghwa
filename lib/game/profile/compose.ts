@@ -1,7 +1,7 @@
 /**
  * PROFILE §4.2 — description 합성.
  *
- * 6 블록 결합: HEADER · Face · Hair · Motifs(장비 3종 모티프 통합) · Pose · Style.
+ * 블록 결합: HEADER · Face · Hair · Motifs(장비 3종 모티프 통합) · Style.
  * - 장비는 **직접 입거나 들지 않음** — 각 장비의 컨셉·테마가 아바타 의상/실루엣/디테일에
  *   메타포로 녹아듦(2026-05-27 사용자 결정). 예: "드래곤 검" → 어깨 용 날개 모티프,
  *   "개구리 단검" → 초록 leaf 패턴, "팰러딘 흉갑" → 흰·금 oath 엠블럼.
@@ -9,61 +9,52 @@
  * - HEADER의 비율·신체 라인 명시가 model 비율을 결정하는 유일한 수단
  *   (CreateCharacterProRequest엔 proportions·negative_description 없음, 2026-05-27 검증).
  * - female은 일본 아니메 신체 라인(가는 허리·풍성한 가슴·curvy thighs) 명시 필수.
- * - 자세는 Pose 블록이 단독 결정 — HEADER엔 자세 단어 X (sitting/jumping 같은 비-standing 허용).
  */
 import 'server-only';
 
 import { CATALOG_ITEMS, type CatalogItem } from '@/lib/game/equipment/catalog';
 import type { ProfileGender } from './refs';
 
-export type ProfileHairColor =
-  | 'black'
-  | 'silver'
-  | 'blonde'
-  | 'red'
-  | 'brown'
-  | 'blue'
-  | 'pink'
-  | 'teal'
-  | 'purple'
-  | 'white';
+// 헤어 컬러·스타일 옵션 폐기 (2026-05-28 사용자 결정) — 머리색은 장비 모티프 팔레트를
+// 따라가도록 모델에 위임. 유저가 직접 고르지 않음.
 
-export type ProfileHairStyle =
-  | 'long_loose'
-  | 'long_braided'
-  | 'long_ponytail'
-  | 'long_twin_tails'
-  | 'wavy_medium'
-  | 'short_bob'
-  | 'pixie_short'
-  | 'spiky';
+/**
+ * 종족 6종 — 서버 weighted random 부여 (2026-05-28 사용자 결정).
+ * human이 default(line 생략), 나머지는 race line 추가로 시각 변별 강화.
+ */
+export type ProfileRace =
+  | 'human'
+  | 'elf'
+  | 'dark_elf'
+  | 'nekomimi'
+  | 'dragonkin'
+  | 'fairy';
 
+/**
+ * 표정 — 서버 random 부여 (2026-05-28 사용자 결정). 무표정 1 + 밝은 계열 3.
+ * 우울/날카로운 계열 배제(thoughtful 제거) — 프로필은 밝고 호감가는 톤만.
+ */
 export type ProfileExpression =
-  | 'gentle_smile'
   | 'stoic_neutral'
-  | 'thoughtful'
+  | 'gentle_smile'
   | 'confident_smirk'
   | 'warm_warm';
 
-export type ProfilePose =
-  | 'standing_naturally'
-  | 'peace_sign'
-  | 'sitting'
-  | 'hands_on_hips'
-  | 'jumping'
-  | 'side_glance'
-  | 'one_hand_wave'
-  | 'hand_on_chin'
-  | 'hands_behind_back'
-  | 'arms_crossed';
+/**
+ * 머리 길이 — 서버 random 부여 (2026-05-28 사용자 결정). 색은 장비 모티프 팔레트를 따르고
+ * 길이만 랜덤으로 변별. natural = 어깨선 전후 자연스러운 길이.
+ */
+export type ProfileHairLength = 'long' | 'short' | 'natural';
 
-/** 유저 옵션 — PROFILE §5.1 5축(gender + hair_color + hair_style + expression + pose). */
+// 포즈 enum 폐기 (2026-05-28 사용자 결정) — state edit이 source 포즈를 강하게 보존해
+// peace_sign/wave 등이 결과에 반영되지 않음. 옵션에서 제거하고 source 포즈를 그대로 사용.
+
+/** 합성 옵션 — gender(유저)만 선택. expression·hairLength·race는 서버 random, 머리색은 장비 모티프 위임. */
 export interface ProfileOptions {
   gender: ProfileGender;
-  hairColor: ProfileHairColor;
-  hairStyle: ProfileHairStyle;
   expression: ProfileExpression;
-  pose: ProfilePose;
+  hairLength: ProfileHairLength;
+  race: ProfileRace;
 }
 
 export interface ProfileEquipment {
@@ -98,70 +89,72 @@ function sanitizeArt(art: string): string {
 
 // ─── 옵션 enum → 텍스트 매핑 (PROFILE §5.1 확정 v2) ───
 
-const HAIR_COLOR: Record<ProfileHairColor, string> = {
-  black: 'deep black',
-  silver: 'shimmering silver',
-  blonde: 'golden blonde',
-  red: 'fiery red-orange',
-  brown: 'warm chestnut brown',
-  blue: 'cool cobalt blue',
-  pink: 'soft pastel pink',
-  teal: 'pale teal-ash',
-  purple: 'mystical lavender purple',
-  white: 'pure platinum white',
+/** 종족별 시각 변별 trait — "race appearance:" 뒤에 들어감(prefix 없음). */
+const RACE_LINE: Record<ProfileRace, string> = {
+  human: 'ordinary human',
+  elf: 'elf with long delicately pointed ears',
+  dark_elf: 'dark elf with dusky purple-tinted skin and long pointed ears',
+  nekomimi: 'cat-eared catperson with soft furry cat ears on the head and a slender cat tail',
+  dragonkin: 'dragonkin with small curved horns on the forehead and faint scale patches on cheeks',
+  fairy: 'fairy with small translucent insect wings on the back and pointed pixie ears',
 };
 
-/** 스타일별 길이·실루엣 묘사 — 헤어 다양성의 핵심. */
-const HAIR_STYLE: Record<ProfileHairStyle, string> = {
-  long_loose:
-    'voluminous wind-swept long hair flowing past the shoulders with individual pixel strands and side bangs, single small ahoge',
-  long_braided:
-    'long single braid trailing down the back tied with a small ribbon, side bangs framing the face, single small ahoge',
-  long_ponytail:
-    'long high ponytail tied with a small clip swaying past the shoulders, side bangs, single small ahoge',
-  long_twin_tails:
-    'long twin tails tied high on both sides with small ribbons, side bangs, single small ahoge',
-  wavy_medium:
-    'voluminous wavy medium-length hair just past the chin with playful curls and side bangs, single small ahoge',
-  short_bob:
-    'sharp short bob cut ending at the jawline with straight bangs framing the eyes, single small ahoge',
-  pixie_short:
-    'very short pixie cut with soft wisps and a few longer strands falling over the forehead, single small ahoge',
-  spiky:
-    'lively tousled short-to-medium hair with playful upward tufts and a few longer strands over the forehead, single small ahoge',
+/**
+ * gender별 weighted random race (2026-05-28 사용자 결정):
+ *  - nekomimi·fairy = 여자만, dragonkin = 남자만, human·elf·dark_elf = 공통.
+ * crypto.getRandomValues로 서버 RNG (CLAUDE §3.1).
+ */
+const RACE_WEIGHTS_BY_GENDER: Record<ProfileGender, { race: ProfileRace; cumBp: number }[]> = {
+  female: [
+    { race: 'human', cumBp: 3000 },
+    { race: 'nekomimi', cumBp: 5500 },
+    { race: 'fairy', cumBp: 7500 },
+    { race: 'elf', cumBp: 9000 },
+    { race: 'dark_elf', cumBp: 10000 },
+  ],
+  male: [
+    { race: 'human', cumBp: 4000 },
+    { race: 'dragonkin', cumBp: 6500 },
+    { race: 'elf', cumBp: 8500 },
+    { race: 'dark_elf', cumBp: 10000 },
+  ],
 };
+
+export function pickRandomRace(gender: ProfileGender): ProfileRace {
+  const table = RACE_WEIGHTS_BY_GENDER[gender];
+  const r = crypto.getRandomValues(new Uint32Array(1))[0]! % 10000;
+  for (const { race, cumBp } of table) if (r < cumBp) return race;
+  return 'human';
+}
 
 const EXPRESSION_DESC: Record<ProfileExpression, string> = {
+  stoic_neutral: 'calm neutral expression, relaxed and composed',
   gentle_smile: 'gentle warm smile with clean readable mouth shape',
-  stoic_neutral: 'stoic neutral expression with calm authority',
-  thoughtful: 'gentle thoughtful expression with soft brow',
   confident_smirk: 'confident playful smirk with bright cheerful eyes',
   warm_warm: 'warm friendly half-smile, eyes wide open looking forward',
 };
 
-/** Pose는 자세 단독 결정 — front-facing 명시로 뒷통수 방지(2026-05-27 검증). */
-const POSE_DESC: Record<ProfilePose, string> = {
-  standing_naturally:
-    'T-pose standing centered front-facing facing the viewer directly, empty hands relaxed at the sides',
-  peace_sign:
-    'standing centered front-facing facing the viewer directly with one hand held up in a V peace sign at face level, other hand relaxed at side, slight smile',
-  sitting:
-    'sitting on the ground centered front-facing facing the viewer directly, legs casually crossed, both hands resting on knees',
-  hands_on_hips:
-    'standing centered front-facing facing the viewer directly, both hands on hips in a confident stance',
-  jumping:
-    'mid-jump pose centered front-facing facing the viewer directly, both feet off the ground, arms slightly raised dynamically',
-  side_glance:
-    'body slightly turned to the side with one hand on hip, head turned to face the viewer directly in a sass side glance',
-  one_hand_wave:
-    'standing centered front-facing facing the viewer directly, one hand raised in a friendly greeting wave, other hand relaxed at side',
-  hand_on_chin:
-    'standing centered front-facing facing the viewer directly, one hand resting on the chin in a thoughtful pose, other hand relaxed at side',
-  hands_behind_back:
-    'standing centered front-facing facing the viewer directly, both hands clasped behind the back in gentle upright posture',
-  arms_crossed:
-    'standing centered front-facing facing the viewer directly, arms crossed firmly in front of the chest',
+const ALL_EXPRESSIONS = Object.keys(EXPRESSION_DESC) as ProfileExpression[];
+
+/** 표정 균등 random — 서버 RNG (CLAUDE §3.1). */
+export function pickRandomExpression(): ProfileExpression {
+  const i = crypto.getRandomValues(new Uint32Array(1))[0]! % ALL_EXPRESSIONS.length;
+  return ALL_EXPRESSIONS[i]!;
+}
+
+const HAIR_LENGTH_DESC: Record<ProfileHairLength, string> = {
+  long: 'long flowing hair',
+  short: 'short cropped hair',
+  natural: 'natural shoulder-length hair',
 };
+
+const ALL_HAIR_LENGTHS = Object.keys(HAIR_LENGTH_DESC) as ProfileHairLength[];
+
+/** 머리 길이 균등 random — 서버 RNG (CLAUDE §3.1). */
+export function pickRandomHairLength(): ProfileHairLength {
+  const i = crypto.getRandomValues(new Uint32Array(1))[0]! % ALL_HAIR_LENGTHS.length;
+  return ALL_HAIR_LENGTHS[i]!;
+}
 
 // ─── 공용 STYLE 상수 (서버 상수) ───
 
@@ -187,12 +180,8 @@ function faceBlock(opts: ProfileOptions): string {
   return `Face: oval face with ${jaw}, huge anime doe eyes with multi-highlights${lashes}, small nose, ${lips}, ${EXPRESSION_DESC[opts.expression]}.`;
 }
 
-function hairBlock(opts: ProfileOptions): string {
-  return `Hair: ${HAIR_COLOR[opts.hairColor]} ${HAIR_STYLE[opts.hairStyle]}.`;
-}
-
 /**
- * 장비 3종을 캐릭터에 직접 입히지 않고 **모티프**로 녹임.
+ * 장비 3종을 캐릭터에 직접 입히지 않고 **모티프**로 녹임. 머리색도 모티프 팔레트를 따름.
  * 모델이 "literal item icon으로 캐릭터를 분리해 그리는" 위험 방지.
  */
 function motifBlock(eq: ProfileEquipment): string {
@@ -200,28 +189,23 @@ function motifBlock(eq: ProfileEquipment): string {
   const armor = getItem(eq.armorKey, 'armor');
   const accessory = getItem(eq.accessoryKey, 'accessory');
   return [
-    'Design motifs woven into the character — translate these themes into the silhouette, outfit fabric, color palette, and small details (DO NOT have the character physically hold or wear the literal item):',
+    'Design motifs woven into the character — translate these themes into the silhouette, outfit fabric, color palette, hair color, and small details (DO NOT have the character physically hold or wear the literal item):',
     `- Weapon theme: ${sanitizeArt(weapon.art)} — interpret as wing/horn/symbol/pattern on shoulders, cloak, or hair ornament`,
     `- Armor theme: ${sanitizeArt(armor.art)} — adapt color, material, emblem, and silhouette into an adventurer outfit`,
     `- Accessory theme: ${sanitizeArt(accessory.art)} — fold motif into hair piece, earrings, sleeve detail, or pendant`,
+    '- Hair color: drawn from the dominant color of these item themes (model chooses a fitting shade).',
   ].join('\n');
-}
-
-function poseBlock(opts: ProfileOptions): string {
-  return `Pose: ${POSE_DESC[opts.pose]}.`;
 }
 
 /**
  * 최종 description 합성 — Pixellab v2 `description` 필드에 그대로 입력.
- * 최대 2000자(spec). HEADER + 6 블록 + Style ≈ 800~1500자 (장비 art 길이에 따라).
+ * 최대 2000자(spec). HEADER + 블록 + Style ≈ 800~1500자 (장비 art 길이에 따라).
  */
 export function composeDescription(opts: ProfileOptions, eq: ProfileEquipment): string {
   return [
     headerBlock(opts),
     faceBlock(opts),
-    hairBlock(opts),
     motifBlock(eq),
-    poseBlock(opts),
     `Style: ${STYLE_BLOCK}`,
   ].join('\n\n');
 }
@@ -236,18 +220,30 @@ export function composeEditDescription(opts: ProfileOptions, eq: ProfileEquipmen
   const armor = getItem(eq.armorKey, 'armor');
   const accessory = getItem(eq.accessoryKey, 'accessory');
 
-  // 각 motif는 80자 trim해 합산 ~800자 안에 들어오게.
   const short = (s: string, n: number) => (s.length > n ? s.slice(0, n).trim() : s);
+  const raceTrait = RACE_LINE[opts.race];
 
+  // positive-only + KEEP/CHANGE 명확 분리. 비율은 "8 heads"(개수 세기, diffusion 약함) 대신
+  // small head + long legs 같은 시각 키워드로 지시 (2026-05-28 사용자 결정).
   return [
-    `Edit appearance:`,
-    `hair = ${HAIR_COLOR[opts.hairColor]} ${short(HAIR_STYLE[opts.hairStyle], 90)};`,
-    `expression = ${EXPRESSION_DESC[opts.expression]};`,
-    `pose = ${short(POSE_DESC[opts.pose], 110)}.`,
-    `Outfit motifs (color/pattern/small detail only — DO NOT hold or wear literal item icons):`,
-    `weapon = ${short(sanitizeArt(weapon.art), 80)};`,
-    `armor = ${short(sanitizeArt(armor.art), 80)};`,
-    `accessory = ${short(sanitizeArt(accessory.art), 80)}.`,
-    `Keep cute Japanese JRPG anime pixel style and full body head-to-feet composition.`,
+    // KEEP — source 톤·디자인 보존 + 비율은 small head/long legs 시각 키워드로 강조.
+    `KEEP unchanged from source: gender, face structure, the attractive anime art style, color saturation, and overall character vibe.`,
+    // PROPORTIONS — 시각적 비율 키워드 (positive, 개수 세기 회피).
+    `Slim tall figure with a small head and very long slender legs.`,
+    // CAMERA — 풀바디 framing (positive).
+    `Wide framing: full character head-to-feet fills the tall frame.`,
+    // QUALITY — positive.
+    `Sharp clear detailed face, clean background, character only.`,
+    // CHANGE — 편집할 것만. 머리 길이는 랜덤, 색은 item 테마 팔레트를 따름.
+    `CHANGE these — race appearance: ${short(raceTrait, 90)} (same gender and body as source);`,
+    `hair: ${HAIR_LENGTH_DESC[opts.hairLength]}, color drawn from the item themes below;`,
+    `expression: ${short(EXPRESSION_DESC[opts.expression], 38)};`,
+    // 모티프 강화 — source 옷을 '덧입히기'가 아니라 '완전 교체'로 (2026-05-28 사용자 결정).
+    `FULLY REDESIGN the whole outfit & gear from these item themes (replace the source clothing; keep body proportions & art style):`,
+    `weapon ${short(sanitizeArt(weapon.art), 34)},`,
+    `armor ${short(sanitizeArt(armor.art), 28)},`,
+    `accessory ${short(sanitizeArt(accessory.art), 22)}.`,
+    // CONFIRM — 끝 reminder (positive).
+    `Confirm: same gender as source, small head and long legs, full body with both feet visible on the ground.`,
   ].join(' ');
 }

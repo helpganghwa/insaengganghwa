@@ -25,7 +25,12 @@ import { profiles } from '@/lib/db/schema/profiles';
 import { PROFILE_GENERATION_DIAMOND } from '@/lib/game/balance';
 import { getSessionUserId } from '@/lib/auth/session';
 
-import { composeEditDescription } from './compose';
+import {
+  composeEditDescription,
+  pickRandomExpression,
+  pickRandomHairLength,
+  pickRandomRace,
+} from './compose';
 
 export type CreateProfileJobErrorCode =
   | 'UNAUTHORIZED'
@@ -41,49 +46,10 @@ export class CreateProfileJobError extends Error {
   }
 }
 
+// 유저 입력은 gender만 (2026-05-28). hair color/style·pose 폐기, expression·race는 서버 random.
+// 개성은 장비 3종 모티프 + 서버 random(표정·종족)으로 — 머리색도 모티프 팔레트를 따름.
 const ProfileOptionsSchema = z.object({
   gender: z.enum(['male', 'female']),
-  hairColor: z.enum([
-    'black',
-    'silver',
-    'blonde',
-    'red',
-    'brown',
-    'blue',
-    'pink',
-    'teal',
-    'purple',
-    'white',
-  ]),
-  hairStyle: z.enum([
-    'long_loose',
-    'long_braided',
-    'long_ponytail',
-    'long_twin_tails',
-    'wavy_medium',
-    'short_bob',
-    'pixie_short',
-    'spiky',
-  ]),
-  expression: z.enum([
-    'gentle_smile',
-    'stoic_neutral',
-    'thoughtful',
-    'confident_smirk',
-    'warm_warm',
-  ]),
-  pose: z.enum([
-    'standing_naturally',
-    'peace_sign',
-    'sitting',
-    'hands_on_hips',
-    'jumping',
-    'side_glance',
-    'one_hand_wave',
-    'hand_on_chin',
-    'hands_behind_back',
-    'arms_crossed',
-  ]),
 });
 
 export type CreateProfileJobResult = {
@@ -100,7 +66,13 @@ export async function createProfileJob(
 
   const parsed = ProfileOptionsSchema.safeParse(rawOptions);
   if (!parsed.success) throw new CreateProfileJobError('INVALID_OPTIONS');
-  const opts = parsed.data;
+  // expression·hairLength·race 서버 random 부여 (race는 gender 제약 — nekomimi/fairy=여, dragonkin=남).
+  const opts = {
+    gender: parsed.data.gender,
+    expression: pickRandomExpression(),
+    hairLength: pickRandomHairLength(),
+    race: pickRandomRace(parsed.data.gender),
+  };
 
   return db.transaction(async (tx) => {
     // 1. 본인 장착 3슬롯 조회 — equippedSlot이 set된 instances만.

@@ -19,7 +19,7 @@ import { sql } from 'drizzle-orm';
 
 import { profiles } from './profiles';
 
-export const pushCategoryEnum = pgEnum('push_category', ['enhance', 'raid', 'supply']);
+export const pushCategoryEnum = pgEnum('push_category', ['enhance', 'raid', 'supply', 'profile']);
 
 /**
  * §11.1 push_subscriptions — 디바이스별 Web Push 구독. endpoint UNIQUE로 재구독 멱등.

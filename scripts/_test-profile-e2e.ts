@@ -16,11 +16,10 @@ config({ path: '.env.local' });
 const USER_ID = 'e30b881b-0ad6-45cc-b468-a0b4073fbf3f';
 
 const OPTS = {
-  gender: 'female' as const,
-  hairColor: 'pink' as const,
-  hairStyle: 'long_loose' as const,
-  expression: 'gentle_smile' as const,
-  pose: 'standing_naturally' as const,
+  gender: 'male' as const,
+  expression: 'confident_smirk' as const,
+  hairLength: 'short' as const,
+  race: 'dragonkin' as const,
 };
 
 async function main() {

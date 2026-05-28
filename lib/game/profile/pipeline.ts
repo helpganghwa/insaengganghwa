@@ -22,7 +22,22 @@ import { profileGenerationJobs, userProfiles } from '@/lib/db/schema/avatar';
 import { mailbox } from '@/lib/db/schema/mailbox';
 import { profiles } from '@/lib/db/schema/profiles';
 
+import { sendPushToUser } from '@/lib/push/send';
+
 import { reviewProfile, type ReviewVerdict } from './ai-review';
+
+/** 검토 결과 push — 실패는 무시(전체 흐름 막지 않음). 토글·구독은 sendPushToUser가 처리. */
+async function safePush(
+  userId: string,
+  title: string,
+  body: string,
+): Promise<void> {
+  try {
+    await sendPushToUser(userId, { category: 'profile', title, body, url: '/profile', tag: 'profile' });
+  } catch (e) {
+    console.error('[profile-poll] push failed:', (e as Error).message);
+  }
+}
 
 /**
  * 사용자 본인이 pixellab 웹에서 만든·만족 검증한 source character 2장 (2026-05-27 결정).
@@ -31,8 +46,9 @@ import { reviewProfile, type ReviewVerdict } from './ai-review';
  * 머리·표정·포즈·장비 모티프 조합으로.
  */
 const SOURCE_BY_GENDER: Record<'male' | 'female', string> = {
-  male: '40ce2048-edb1-4e30-af6c-352784efa0b1',
-  female: 'c9801fb1-9804-47c1-9a0c-77e7c6f3a6c5',
+  // 2026-05-28 — 7-8등신 심플 프롬프트 source (reference 톤·비율).
+  male: '921ba198-d299-4f92-8d5d-bde41d2e179c',
+  female: 'cdc970f0-44a8-4c9e-8555-c4e01aeae3a1',
 };
 
 /**
@@ -56,6 +72,24 @@ function serviceClient(): SupabaseClient {
 
 const PIXELLAB_BASE = 'https://api.pixellab.ai/v2';
 const STORAGE_BUCKET = 'profiles';
+
+/**
+ * downloading 상태 상한(분). createdAt 기준. pixellab pro 평균 ~6분, 큐 지연 포함 여유.
+ * 초과 시 rotation 완성 여부와 무관하게 fail+환불 — rotation_urls는 떴지만 실제 파일이
+ * 영원히 404인 부분 실패(검증된 케이스)까지 잡기 위해 length 조건과 분리.
+ */
+const PROFILE_GEN_TIMEOUT_MIN = 20;
+
+/** PNG 매직 넘버(89 50 4E 47) 검증 — pixellab이 404 JSON/빈 파일을 줄 때 깨진 업로드 방지. */
+function isPng(buf: Buffer): boolean {
+  return (
+    buf.length >= 67 &&
+    buf[0] === 0x89 &&
+    buf[1] === 0x50 &&
+    buf[2] === 0x4e &&
+    buf[3] === 0x47
+  );
+}
 
 const DIRECTIONS = [
   'south',
@@ -206,6 +240,16 @@ export async function pollAndProcessDownloading(limit = 5): Promise<{
       continue;
     }
     const char = (await charRes.json()) as PixellabCharacterDetail;
+
+    // Timeout 가드 (rotation 완성 여부와 무관 — 맨 앞). rotation_urls는 떴지만 실제 파일이
+    // 영원히 404인 부분 실패(검증됨)까지 포함해 무한 재시도·큐 영구 점유를 차단.
+    const ageMin = (Date.now() - new Date(job.createdAt ?? 0).getTime()) / 60_000;
+    if (ageMin > PROFILE_GEN_TIMEOUT_MIN) {
+      await markFailedAndRefund(job.id, job.userId, `Pixellab timeout/stall ${ageMin.toFixed(0)}min`);
+      failed += 1;
+      continue;
+    }
+
     if (!char.rotation_urls) {
       stillProcessing += 1;
       continue;
@@ -217,14 +261,6 @@ export async function pollAndProcessDownloading(limit = 5): Promise<{
     }
     if (Object.keys(remoteRotations).length < 8) {
       stillProcessing += 1;
-      continue;
-    }
-
-    // Timeout 가드 — 생성 시작 후 20분+ 지났는데 미완료면 failed.
-    const ageMin = (Date.now() - new Date(job.createdAt ?? 0).getTime()) / 60_000;
-    if (ageMin > 20 && Object.keys(remoteRotations).length < 8) {
-      await markFailedAndRefund(job.id, job.userId, `Pixellab timeout ${ageMin.toFixed(0)}min`);
-      failed += 1;
       continue;
     }
 
@@ -277,6 +313,8 @@ async function mirrorRotations(
     const r = await fetch(remoteUrl);
     if (!r.ok) throw new Error(`fetch rotation ${dir} HTTP ${r.status}`);
     const buf = Buffer.from(await r.arrayBuffer());
+    // 404 JSON/빈 파일을 200으로 받는 케이스 방어 — PNG 아니면 storage에 안 올림.
+    if (!isPng(buf)) throw new Error(`rotation ${dir} not a valid PNG (${buf.length}B)`);
     const path = `${userId}/${characterId}/${dir}.png`;
     const { error } = await supabase.storage.from(STORAGE_BUCKET).upload(path, buf, {
       contentType: 'image/png',
@@ -338,6 +376,7 @@ async function acceptJob(
       payload: {},
     });
   });
+  await safePush(userId, '프로필 생성 완료', '새 프로필이 목록에 추가되었어요. 확인해 보세요!');
 }
 
 async function rejectJob(
@@ -373,6 +412,7 @@ async function rejectJob(
       payload: {},
     });
   });
+  await safePush(userId, '프로필 검토 미통과', '검토를 통과하지 못해 다이아를 환불했어요. 우편함을 확인하세요.');
 }
 
 async function markFailedAndRefund(jobId: bigint, userId: string, reason: string): Promise<void> {
@@ -407,4 +447,5 @@ async function markFailedAndRefund(jobId: bigint, userId: string, reason: string
       payload: {},
     });
   });
+  await safePush(userId, '프로필 생성 실패', '시스템 오류로 다이아를 환불했어요. 다시 시도해 주세요.');
 }
