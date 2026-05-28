@@ -16,10 +16,11 @@ const MAX_CLAUSE_CHARS = 340;
 const SYSTEM_PROMPT = `You are a costume designer for "insaengganghwa", an anime/JRPG-style pixel-art idle RPG. For each request you invent ONE fresh, vivid English clause describing a character's HAIRSTYLE and full OUTFIT.
 
 STRICT RULES:
-- Describe ONLY: hairstyle (style + color, within the given length) and the worn outfit (clothing, footwear, accessories, small decorations).
-- NEVER mention: face, eyes, expression, body, proportions, height, pose, hands, background, camera, art style, or the words "full body".
+- Describe: hairstyle (style + color, within the given length), the worn outfit (clothing, footwear, accessories, small decorations), and — when the request permits — ONE small signature prop or accessory that fits the theme (glasses, a book, a staff, a slim blade, a flower, a pendant, headphones), worn or held naturally.
+- NEVER mention: the face's underlying features, expression, body shape, proportions, height, the pose, background, camera, art style, or the words "full body". (Eyewear/glasses worn as an accessory is allowed.)
 - Weave the given motifs in as DESIGN ELEMENTS, never as literal held weapons or worn armor pieces. e.g. "dragon" → scale-pattern embroidery / horn-shaped hair clips; "frog, green" → green tones, lily/leaf trim; a color → use it in the palette.
 - Anime/JRPG fantasy aesthetic: stylish game-character look. Vary the genre every time (regal, elegant, casual, school, battle-casual, ceremonial, idol...). Be creative and clearly different each call.
+- By DEFAULT avoid capes and cloaks; include one ONLY when the request explicitly permits it.
 - One flowing clause, concrete and visual. Max 48 words. Output ONLY the clause — no preamble, no quotes, no trailing period needed.`;
 
 let _client: Anthropic | null = null;
@@ -43,11 +44,21 @@ export interface OutfitClauseInput {
 
 /** Haiku로 의상/헤어 절 생성. 실패 시 throw — 상위에서 정적 fallback. */
 export async function generateOutfitClause(input: OutfitClauseInput): Promise<string> {
+  // 망토는 기본 제외 ~18%만, 시그니처 소품은 ~40% 등장 (서버 RNG, CLAUDE §3.1) — 가끔 변주.
+  const roll = () => crypto.getRandomValues(new Uint32Array(1))[0]! % 100;
+  const allowCape = roll() < 18;
+  const allowProp = roll() < 40;
   const userMsg = [
     `Gender: ${input.gender}`,
     input.raceMotif ? `Race flavor (subtly include): ${input.raceMotif}` : `Race flavor: ordinary human`,
     `Hair length (fixed): ${input.hairLengthDesc}`,
     `Motifs to weave in: ${input.motifs || 'none — free creative outfit'}`,
+    allowCape
+      ? `Cape/cloak: allowed this time if it genuinely suits the design.`
+      : `Cape/cloak: none — do NOT include any cape or cloak.`,
+    allowProp
+      ? `Signature prop: YES — give the character ONE clearly visible signature item, held in hand or worn: glasses/monocle, a book, a staff or wand, headphones, a slim sheathed blade at the hip, or a single flower. Make it a noticeable part of the look (not just a tiny pendant).`
+      : `Signature prop: none — hairstyle and outfit only.`,
     ``,
     `Write the hairstyle + outfit clause now.`,
   ].join('\n');
