@@ -108,7 +108,7 @@ export default async function ProfilePage() {
           <Link
             href="/me/profiles"
             aria-label="프로필 선택"
-            className="absolute inset-x-0 bottom-[27%] top-[6%] z-0 block"
+            className="absolute inset-x-0 bottom-[24%] top-[3%] z-0 block overflow-hidden"
           >
             {/* eslint-disable-next-line @next/next/no-img-element */}
             <img
@@ -116,7 +116,7 @@ export default async function ProfilePage() {
               alt="대표 프로필"
               draggable={false}
               className="h-full w-full object-contain object-bottom drop-shadow-[0_6px_10px_rgba(0,0,0,0.55)]"
-              style={{ imageRendering: 'pixelated' }}
+              style={{ imageRendering: 'pixelated', transform: 'scale(1.45)', transformOrigin: 'center bottom' }}
             />
           </Link>
         ) : (

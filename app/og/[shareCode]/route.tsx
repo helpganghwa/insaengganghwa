@@ -362,6 +362,8 @@ export async function GET(_req: Request, { params }: { params: Promise<{ shareCo
               height: 430,
               objectFit: 'contain',
               objectPosition: 'center bottom',
+              transform: 'scale(1.45)',
+              transformOrigin: 'center bottom',
             }}
           />
         ) : (

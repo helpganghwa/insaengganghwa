@@ -149,7 +149,12 @@ export function ProfileSelector({
                 alt={`프로필 ${DIR_LABEL[d] ?? d}`}
                 draggable={false}
                 className="pointer-events-none absolute inset-0 h-full w-full object-contain object-bottom"
-                style={{ imageRendering: 'pixelated', opacity: d === dir ? 1 : 0 }}
+                style={{
+                  imageRendering: 'pixelated',
+                  opacity: d === dir ? 1 : 0,
+                  transform: 'scale(1.45)',
+                  transformOrigin: 'center bottom',
+                }}
               />
             ) : null,
           )}
