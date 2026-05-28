@@ -14,6 +14,7 @@ import 'server-only';
 
 import { CATALOG_ITEMS, type CatalogItem } from '@/lib/game/equipment/catalog';
 import { ITEM_MOTIFS } from '@/lib/game/equipment/motifs';
+import { generateOutfitClause } from './outfit-llm';
 import type { ProfileGender } from './refs';
 
 // 헤어 컬러·스타일 옵션 폐기 (2026-05-28 사용자 결정) — 머리색은 장비 모티프 팔레트를
@@ -141,21 +142,41 @@ export function pickRandomPose(): ProfilePose {
   return ALL_POSES[i]!;
 }
 
+/** 고정 골격(KEEP source·8등신·full body·흰점·pose·Confirm) + 가변 의상절 결합. */
+function assemble(opts: ProfileOptions, outfitClause: string): string {
+  return [
+    `KEEP unchanged from source: gender, the exact same facial features, the Japanese anime art style, body proportions, and overall vibe.`,
+    `Full body head-to-feet, pure clean background, character only. Crisp clean silhouette with smooth solid outlines — no stray white dots, specks or noise around the edges.`,
+    `Slim tall figure with a small head and long legs.`,
+    `${outfitClause} Pose: ${POSE_DESC[opts.pose]}. Expression free — any natural pleasant look.`,
+    `Confirm: keep the same facial features, body and anime style as source; full body with both feet on the ground.`,
+  ].join(' ');
+}
+
+/** Haiku 실패 시 정적 의상절(장르 자유·모티프 느슨) — 기존 동작 보존. */
+function staticOutfitClause(opts: ProfileOptions, motifsConcept: string): string {
+  return `Redesign ONLY the hairstyle (${HAIR_LENGTH_DESC[opts.hairLength]}, fresh new style & color) and the whole outfit — be creative, ANY genre (casual, school uniform, swimwear, dress, suit, modern, fantasy, etc.), loosely inspired by the motifs (loose only): ${motifsConcept}.`;
+}
+
+const OUTFIT_PREFIX = 'Redesign ONLY hair & outfit (keep all else from source): ';
+
 /**
  * `create_character_state` 용 압축 description (max 1000자, spec).
- * source character의 톤·체형·풀바디·아니메 결을 그대로 유지하고 외형(머리·표정·포즈·옷
- * 모티프)만 변경 지시. composeDescription과 달리 HEADER·Style 블록 생략(source 보존).
+ * 하이브리드 (2026-05-28 사용자 결정): 고정 골격은 코드, 의상/헤어 절은 Haiku가 모티프·종족·
+ * 성별을 받아 매번 다르게 생성 → 다양성·랜덤성 확보. Haiku 실패 시 정적 절로 fallback.
  */
-export function composeEditDescription(opts: ProfileOptions, eq: ProfileEquipment): string {
+export async function composeEditDescription(
+  opts: ProfileOptions,
+  eq: ProfileEquipment,
+): Promise<string> {
   // getItem 검증(잘못된 키/슬롯 조기 throw) — 반환은 미사용(모티프는 ITEM_MOTIFS에서).
   getItem(eq.weaponKey, 'weapon');
   getItem(eq.armorKey, 'armor');
   getItem(eq.accessoryKey, 'accessory');
 
-  // 모티프 = 장비 3종 개념 + 종족 개념. 색 제거(첫 단어=개념), 무기/방어구/장신구 구분 없이
-  // 통합·중복 제거 (2026-05-28 사용자 결정).
+  // concept-only(색 제거, 첫 단어) — 정적 fallback용.
   const concept = (key: string) => (ITEM_MOTIFS[key] ?? '').split(',')[0]!.trim();
-  const motifs = [
+  const motifsConcept = [
     ...new Set(
       [concept(eq.weaponKey), concept(eq.armorKey), concept(eq.accessoryKey), RACE_MOTIF[opts.race]].filter(
         Boolean,
@@ -163,14 +184,32 @@ export function composeEditDescription(opts: ProfileOptions, eq: ProfileEquipmen
     ),
   ].join(', ');
 
-  // 얼굴 이목구비는 source 유지, 표정 자유. 의상은 장르 무제한(자유), 모티프는 느슨한 영감.
-  // 외곽 흰점/노이즈 방지 지시 추가 (2026-05-28 사용자 결정).
-  return [
-    `KEEP unchanged from source: gender, the exact same facial features, the Japanese anime art style, body proportions, and overall vibe.`,
-    `Full body head-to-feet, pure clean background, character only. Crisp clean silhouette with smooth solid outlines — no stray white dots, specks or noise around the edges.`,
-    `Slim tall figure with a small head and long legs.`,
-    `Redesign ONLY the hairstyle (${HAIR_LENGTH_DESC[opts.hairLength]}, fresh new style & color) and the whole outfit — be creative, ANY genre (casual, school uniform, swimwear, dress, suit, modern, fantasy, etc.), loosely inspired by the motifs. Pose: ${POSE_DESC[opts.pose]}. Expression free — any natural pleasant look. You may add handheld props (sword, book, staff…) and decorations (wings, ornaments).`,
-    `Motifs (loose only): ${motifs}.`,
-    `Confirm: keep the same facial features, body and anime style as source; full body with both feet on the ground.`,
-  ].join(' ');
+  // full(색 포함) — Haiku 입력용(더 풍부). 그룹 구분 '; '.
+  const full = (key: string) => (ITEM_MOTIFS[key] ?? '').trim();
+  const motifsFull = [
+    ...new Set([full(eq.weaponKey), full(eq.armorKey), full(eq.accessoryKey), RACE_MOTIF[opts.race]].filter(Boolean)),
+  ].join('; ');
+
+  let outfitClause: string;
+  try {
+    const clause = await generateOutfitClause({
+      gender: opts.gender,
+      raceMotif: RACE_MOTIF[opts.race],
+      hairLengthDesc: HAIR_LENGTH_DESC[opts.hairLength],
+      motifs: motifsFull,
+    });
+    outfitClause = `${OUTFIT_PREFIX}${clause}.`;
+    // 1000자 안전 가드 — 초과 시 절을 단어 경계로 추가 절삭(드문 경우).
+    const over = assemble(opts, outfitClause).length - 1000;
+    if (over > 0) {
+      let t = clause.slice(0, Math.max(0, clause.length - over - 1));
+      const sp = t.lastIndexOf(' ');
+      if (sp > 0) t = t.slice(0, sp);
+      outfitClause = `${OUTFIT_PREFIX}${t.trimEnd()}.`;
+    }
+  } catch {
+    outfitClause = staticOutfitClause(opts, motifsConcept);
+  }
+
+  return assemble(opts, outfitClause);
 }

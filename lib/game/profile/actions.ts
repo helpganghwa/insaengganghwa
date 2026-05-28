@@ -61,34 +61,35 @@ export async function createProfileJob(
     race: pickRandomRace(parsed.data.gender),
   };
 
+  // 1. 본인 장착 3슬롯 조회 — equippedSlot이 set된 instances만. (읽기 전용 — tx 밖)
+  const equipped = await db
+    .select({
+      slot: equipmentInstances.equippedSlot,
+      code: catalogItems.code,
+    })
+    .from(equipmentInstances)
+    .innerJoin(catalogItems, eq(equipmentInstances.catalogItemId, catalogItems.id))
+    .where(
+      and(
+        eq(equipmentInstances.userId, userId),
+        isNotNull(equipmentInstances.equippedSlot),
+      ),
+    );
+
+  const bySlot = new Map(equipped.map((e) => [e.slot ?? '', e.code]));
+  const weaponKey = bySlot.get('weapon');
+  const armorKey = bySlot.get('armor');
+  const accessoryKey = bySlot.get('accessory');
+  if (!weaponKey || !armorKey || !accessoryKey) {
+    throw new CreateProfileJobError('NO_EQUIPMENT');
+  }
+  const equipmentSnapshot = { weaponKey, armorKey, accessoryKey };
+
+  // 2. description 합성 — 의상/헤어 절은 Haiku 호출(수초). tx 밖에서 처리해
+  //    풀러(:6543, max:1) 커넥션을 외부 API 동안 점유하지 않도록 함.
+  const description = await composeEditDescription(opts, equipmentSnapshot);
+
   return db.transaction(async (tx) => {
-    // 1. 본인 장착 3슬롯 조회 — equippedSlot이 set된 instances만.
-    const equipped = await tx
-      .select({
-        slot: equipmentInstances.equippedSlot,
-        code: catalogItems.code,
-      })
-      .from(equipmentInstances)
-      .innerJoin(catalogItems, eq(equipmentInstances.catalogItemId, catalogItems.id))
-      .where(
-        and(
-          eq(equipmentInstances.userId, userId),
-          isNotNull(equipmentInstances.equippedSlot),
-        ),
-      );
-
-    const bySlot = new Map(equipped.map((e) => [e.slot ?? '', e.code]));
-    const weaponKey = bySlot.get('weapon');
-    const armorKey = bySlot.get('armor');
-    const accessoryKey = bySlot.get('accessory');
-    if (!weaponKey || !armorKey || !accessoryKey) {
-      throw new CreateProfileJobError('NO_EQUIPMENT');
-    }
-    const equipmentSnapshot = { weaponKey, armorKey, accessoryKey };
-
-    // 2. description 합성 (서버 전용, sanitizeArt로 카탈로그 art boilerplate 제거).
-    const description = composeEditDescription(opts, equipmentSnapshot);
-
     // 3. 다이아 escrow — 조건부 update. 부족 시 0행 반환.
     const deducted = await tx
       .update(profiles)

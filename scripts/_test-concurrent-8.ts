@@ -66,14 +66,16 @@ interface Result {
 async function main() {
   const { composeEditDescription } = await import('../lib/game/profile/compose');
   const startAll = Date.now();
-  const results: Result[] = CASES.map((c, i) => ({
-    caseIdx: i,
-    label: c.label,
-    opts: c.opts,
-    eq: c.eq,
-    edit_description: composeEditDescription(c.opts, c.eq),
-    source_character_id: SOURCE[c.opts.gender],
-  }));
+  const results: Result[] = await Promise.all(
+    CASES.map(async (c, i) => ({
+      caseIdx: i,
+      label: c.label,
+      opts: c.opts,
+      eq: c.eq,
+      edit_description: await composeEditDescription(c.opts, c.eq),
+      source_character_id: SOURCE[c.opts.gender],
+    })),
+  );
 
   console.log(`[concurrent-${CASES.length}] step 1 — ${CASES.length} 동시 POST`);
   await Promise.all(results.map(async (r) => {

@@ -54,7 +54,7 @@ async function main() {
 
   console.log('\n[e2e] step 2 — jobs queued INSERT (escrow 차감 + 단일 tx)');
   const equipmentSnapshot = { weaponKey, armorKey, accessoryKey };
-  const description = composeEditDescription(OPTS, equipmentSnapshot);
+  const description = await composeEditDescription(OPTS, equipmentSnapshot);
   console.log('  description length:', description.length);
 
   const jobId = await db.transaction(async (tx) => {
