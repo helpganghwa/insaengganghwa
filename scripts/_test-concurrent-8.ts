@@ -26,7 +26,6 @@ interface Case {
   label: string;
   opts: {
     gender: Gender;
-    expression: 'stoic_neutral'|'gentle_smile'|'confident_smirk'|'warm_warm';
     hairLength: 'long'|'short'|'natural';
     pose: 'natural'|'arms_crossed'|'hand_wave'|'peace_sign'|'hand_on_hip';
     race: 'human'|'elf'|'dark_elf'|'nekomimi'|'dragonkin'|'fairy';
@@ -37,16 +36,14 @@ interface Case {
 // 4 case — 여2·남2, 새 source(7-8등신)로 새 장비 세트. race는 gender 제약.
 const CASES: Case[] = [
   {
-    // 포즈 검증 — arms_crossed(팔짱).
-    label: 'nekomimi F · gentle · long · arms_crossed — marsh',
-    opts: { gender:'female', expression:'gentle_smile', hairLength:'long', pose:'arms_crossed', race:'nekomimi' },
+    label: 'nekomimi F · long · arms_crossed — marsh(frog)',
+    opts: { gender:'female', hairLength:'long', pose:'arms_crossed', race:'nekomimi' },
     eq: { weaponKey:'marsh_frog_leaf_dirk', armorKey:'marsh_lily_dress', accessoryKey:'marsh_lily_amulet' },
   },
   {
-    // 포즈 검증 — peace_sign(V).
-    label: 'dragonkin M · confident · short · peace_sign — rune',
-    opts: { gender:'male', expression:'confident_smirk', hairLength:'short', pose:'peace_sign', race:'dragonkin' },
-    eq: { weaponKey:'rune_three_shard_blade', armorKey:'rune_guardian_brass_helm', accessoryKey:'rune_listening_rune_ring' },
+    label: 'dragonkin M · short · peace_sign — dragon',
+    opts: { gender:'male', hairLength:'short', pose:'peace_sign', race:'dragonkin' },
+    eq: { weaponKey:'common_twin_dragon_scepter', armorKey:'common_imperial_dragon_robe', accessoryKey:'common_phoenix_egg_pendant' },
   },
 ];
 

@@ -27,7 +27,6 @@ import { getSessionUserId } from '@/lib/auth/session';
 
 import {
   composeEditDescription,
-  pickRandomExpression,
   pickRandomHairLength,
   pickRandomPose,
   pickRandomRace,
@@ -57,7 +56,6 @@ export async function createProfileJob(
   // expression·hairLength·race 서버 random 부여 (race는 gender 제약 — nekomimi/fairy=여, dragonkin=남).
   const opts = {
     gender: parsed.data.gender,
-    expression: pickRandomExpression(),
     hairLength: pickRandomHairLength(),
     pose: pickRandomPose(),
     race: pickRandomRace(parsed.data.gender),
