@@ -66,13 +66,40 @@ export default async function LeaderboardPage({
                 <li key={e.userId}>
                   <Link
                     href={`/u/${encodeURIComponent(e.nickname)}`}
-                    className={`flex items-center gap-3 border-b border-zinc-100 px-4 py-2.5 last:border-b-0 dark:border-zinc-900 ${
+                    className={`flex items-center gap-2.5 border-b border-zinc-100 px-3 py-2.5 last:border-b-0 dark:border-zinc-900 ${
                       e.userId === userId ? 'bg-amber-50 dark:bg-amber-950/40' : ''
                     }`}
                   >
-                    <span className="w-9 shrink-0 text-center font-mono text-sm tabular-nums">
+                    <span className="w-7 shrink-0 text-center font-mono text-sm tabular-nums">
                       {medal ?? `#${e.rank}`}
                     </span>
+                    {/* 프로필 썸네일 (배경 + 캐릭터) */}
+                    <div className="relative h-9 w-9 shrink-0 overflow-hidden rounded-lg bg-zinc-100 dark:bg-zinc-800">
+                      {e.bg && (
+                        // eslint-disable-next-line @next/next/no-img-element
+                        <img
+                          src={e.bg}
+                          alt=""
+                          aria-hidden
+                          className="absolute inset-0 h-full w-full object-cover"
+                          style={{ imageRendering: 'pixelated' }}
+                        />
+                      )}
+                      {e.profileImg ? (
+                        // eslint-disable-next-line @next/next/no-img-element
+                        <img
+                          src={e.profileImg}
+                          alt=""
+                          aria-hidden
+                          className="absolute inset-0 h-full w-full object-contain"
+                          style={{ imageRendering: 'pixelated' }}
+                        />
+                      ) : (
+                        <span className="flex h-full w-full items-center justify-center text-sm">
+                          🙂
+                        </span>
+                      )}
+                    </div>
                     <span className="flex-1 truncate text-sm font-medium">{e.nickname}</span>
                     <span className="font-mono text-sm tabular-nums text-zinc-700 dark:text-zinc-300">
                       {fmt(metric, e.value)}

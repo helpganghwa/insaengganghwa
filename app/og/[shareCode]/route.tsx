@@ -3,9 +3,11 @@ import { and, eq, isNotNull } from 'drizzle-orm';
 
 import { db } from '@/lib/db/client';
 import { profiles } from '@/lib/db/schema/profiles';
+import { userProfiles } from '@/lib/db/schema/avatar';
 import { catalogItems, equipmentInstances } from '@/lib/db/schema/equipment';
 import { spritePath } from '@/lib/game/equipment/sprite-manifest';
 import { transcendStyle } from '@/lib/game/equipment/transcend';
+import { backgroundSrc } from '@/lib/game/profile/backgrounds';
 
 export const size = { width: 1200, height: 630 };
 export const contentType = 'image/png';
@@ -155,7 +157,12 @@ export async function GET(_req: Request, { params }: { params: Promise<{ shareCo
   const focusT = Number(url.searchParams.get('t') ?? 0);
 
   const [prof] = await db
-    .select({ id: profiles.id, nickname: profiles.nickname })
+    .select({
+      id: profiles.id,
+      nickname: profiles.nickname,
+      activeProfileId: profiles.activeProfileId,
+      activeBackground: profiles.activeBackground,
+    })
     .from(profiles)
     .where(eq(profiles.nickname, nickname))
     .limit(1);
@@ -189,8 +196,31 @@ export async function GET(_req: Request, { params }: { params: Promise<{ shareCo
 
   const bySlot = new Map(equipped.map((e) => [e.slot, e]));
 
-  // 배경: 요청마다 진한 랜덤(no-store) — 풀 1개 시도, 부재면 그라데이션.
-  const bgUri = await dataUri(`${origin}/og/og-${1 + Math.floor(Math.random() * BG_POOL)}.png`);
+  // 대표 프로필 캐릭터 이미지(rotations[active_direction]) — 있으면 OG에 합성.
+  let charUri: string | null = null;
+  if (prof?.activeProfileId) {
+    const [up] = await db
+      .select({
+        rotations: userProfiles.rotations,
+        activeDirection: userProfiles.activeDirection,
+      })
+      .from(userProfiles)
+      .where(eq(userProfiles.id, prof.activeProfileId))
+      .limit(1);
+    if (up) {
+      const rot = up.rotations as Record<string, string>;
+      const u = rot[up.activeDirection];
+      if (u) charUri = await dataUri(u);
+    }
+  }
+
+  // 배경: 프로필 배경(active_background) 우선, 없으면 og-pool 랜덤(no-store), 둘 다 부재면 그라데이션.
+  const profBgSrc = prof?.activeBackground ? backgroundSrc(prof.activeBackground) : null;
+  const bgUri = await dataUri(
+    profBgSrc
+      ? `${origin}${profBgSrc}`
+      : `${origin}/og/og-${1 + Math.floor(Math.random() * BG_POOL)}.png`,
+  );
 
   // 카톡 카드의 cover 크롭(상하 ~120px / 좌우 ~130px 잘림) 안전을 위한 큰 padding.
   // 콘텐츠가 어느 비율에서도 잘리지 않게 중앙 940×~390 영역 안에 배치.
@@ -288,114 +318,103 @@ export async function GET(_req: Request, { params }: { params: Promise<{ shareCo
 
   return new ImageResponse(
     <div
-      style={
-        bgUri
-          ? { ...rootBase, background: '#120c08' }
-          : {
-              ...rootBase,
-              background: 'linear-gradient(135deg,#1c1410 0%,#3a2a14 60%,#7a5a1e 100%)',
-            }
-      }
+      style={{
+        ...rootBase,
+        background: 'linear-gradient(135deg,#1c1410 0%,#2a1f14 70%,#3a2a14 100%)',
+        flexDirection: 'row',
+        alignItems: 'center',
+        justifyContent: 'center',
+        gap: 56,
+      }}
     >
-      {bgUri ? (
-        <>
+      {/* 프로필 초상 박스 — 배경(cover) + 캐릭터(contain·바닥). /me·선택화면과 동일 비율. */}
+      <div
+        style={{
+          position: 'relative',
+          display: 'flex',
+          width: 430,
+          height: 430,
+          flexShrink: 0,
+          borderRadius: 24,
+          overflow: 'hidden',
+          background: '#18181b',
+          border: '3px solid rgba(255,255,255,0.12)',
+        }}
+      >
+        {bgUri ? (
           <img
             src={bgUri}
-            width={1200}
-            height={630}
+            width={430}
+            height={430}
+            style={{ position: 'absolute', top: 0, left: 0, width: 430, height: 430, objectFit: 'cover' }}
+          />
+        ) : null}
+        {charUri ? (
+          <img
+            src={charUri}
+            width={430}
+            height={430}
             style={{
               position: 'absolute',
               top: 0,
               left: 0,
-              width: 1200,
-              height: 630,
-              objectFit: 'cover',
+              width: 430,
+              height: 430,
+              objectFit: 'contain',
+              objectPosition: 'center bottom',
             }}
           />
-          {/* scrim 제거(2026-05-20 사용자 결정) — 배경이 자체 분위기로 보이도록 */}
-        </>
-      ) : null}
+        ) : (
+          <div style={{ display: 'flex', width: '100%', height: '100%', alignItems: 'center', justifyContent: 'center', fontSize: 160, opacity: 0.5 }}>🙂</div>
+        )}
+      </div>
 
-      {/* 콘텐츠 wrapper — flex:1 + justifyContent:center로 카드 vertical 중앙.
-          카카오톡이 1200×630을 ~5:4 cover 크롭하더라도 콘텐츠가 중앙에 있어 보호됨. */}
-      <div
-        style={{
-          display: 'flex',
-          flexDirection: 'column',
-          flex: 1,
-          justifyContent: 'center',
-          gap: 44,
-        }}
-      >
-      {/* 헤더 제거(사용자 결정 2026-05-20) — 타이틀 없이 슬롯 정보만. */}
-
-      {/* 3 슬롯 가로 배치 — 각 슬롯은 sprite(위) + 이름+레벨(아래) column. */}
-      <div
-        style={{
-          display: 'flex',
-          flexDirection: 'row',
-          gap: 28,
-          justifyContent: 'space-between',
-        }}
-      >
+      {/* 장비 3종 세로 스택 (sprite + 이름·레벨) */}
+      <div style={{ display: 'flex', flexDirection: 'column', gap: 18 }}>
         {SLOTS.map((s) => {
           const it = bySlot.get(s);
           const spr = it ? sprite.get(s) : null;
-          // 초월은 등급색 정적 테두리로 표현(✦T 텍스트 제거). OG는 절차적 프레임
-          // 불가 → transcendStyle 색. T0=테두리 없음. [[transcend-no-text-label]]
+          // 초월은 등급색 정적 테두리(✦T 텍스트 제거). [[transcend-no-text-label]]
           const ts = it && it.transcendLevel > 0 ? transcendStyle(it.transcendLevel) : null;
           const [tr, tg, tb] = ts?.colorRgb ?? [0, 0, 0];
           return (
-            <div
-              key={s}
-              style={{
-                display: 'flex',
-                flexDirection: 'column',
-                alignItems: 'center',
-                flex: 1,
-                gap: 14,
-              }}
-            >
+            <div key={s} style={{ display: 'flex', flexDirection: 'row', alignItems: 'center', gap: 16 }}>
               <div
                 style={{
                   position: 'relative',
-                  width: 170,
-                  height: 170,
+                  width: 120,
+                  height: 120,
                   display: 'flex',
                   alignItems: 'center',
                   justifyContent: 'center',
-                  borderRadius: 20,
+                  borderRadius: 16,
                   background: 'rgba(0,0,0,0.36)',
                   border: ts
-                    ? `6px solid rgb(${tr},${tg},${tb})`
+                    ? `5px solid rgb(${tr},${tg},${tb})`
                     : '3px solid rgba(255,255,255,0.12)',
-                  // T8+(hasGlow)는 등급색 + 노란 두 겹 글로우(인벤토리 T8+ 발광과 동일 의도).
                   boxShadow: ts
                     ? ts.hasGlow
-                      ? `0 0 48px rgba(${tr},${tg},${tb},0.7), 0 0 24px rgba(255,238,190,0.6)`
-                      : `0 0 32px rgba(${tr},${tg},${tb},0.55)`
+                      ? `0 0 32px rgba(${tr},${tg},${tb},0.7), 0 0 16px rgba(255,238,190,0.6)`
+                      : `0 0 22px rgba(${tr},${tg},${tb},0.55)`
                     : 'none',
                   overflow: 'hidden',
                 }}
               >
                 {spr ? (
-                  <img src={spr} width={140} height={140} style={{ width: 140, height: 140 }} />
+                  <img src={spr} width={100} height={100} style={{ width: 100, height: 100 }} />
                 ) : (
-                  <span style={{ fontSize: 84, opacity: it ? 1 : 0.4 }}>{EMOJI[s]}</span>
+                  <span style={{ fontSize: 60, opacity: it ? 1 : 0.4 }}>{EMOJI[s]}</span>
                 )}
-                {/* 초월 별 장식 — 4 모서리. cornerPx 48 (위성 3개 인벤토리 동일). */}
-                {ts ? rarityStarsOG(ts.colorRgb, ts.sub as 0 | 1, 48) : null}
+                {ts ? rarityStarsOG(ts.colorRgb, ts.sub as 0 | 1, 34) : null}
               </div>
               <div
                 style={{
                   display: 'flex',
-                  fontSize: 24,
+                  fontSize: 26,
                   fontWeight: 700,
                   opacity: it ? 1 : 0.4,
-                  maxWidth: 240,
-                  textAlign: 'center',
+                  maxWidth: 280,
                   overflow: 'hidden',
-                  justifyContent: 'center',
                 }}
               >
                 {it ? `${it.name} +${it.enhanceLevel}` : '미장착'}
@@ -403,7 +422,6 @@ export async function GET(_req: Request, { params }: { params: Promise<{ shareCo
             </div>
           );
         })}
-      </div>
       </div>
     </div>,
     { ...size, headers: { 'cache-control': 'no-store, max-age=0, must-revalidate' } },

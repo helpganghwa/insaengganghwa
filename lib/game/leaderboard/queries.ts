@@ -1,13 +1,15 @@
 import 'server-only';
 
 import { unstable_cache } from 'next/cache';
-import { eq, sql } from 'drizzle-orm';
+import { eq, inArray, sql } from 'drizzle-orm';
 
 import { db } from '@/lib/db/client';
 import { withTimeout } from '@/lib/db/with-timeout';
 import { profiles } from '@/lib/db/schema/profiles';
+import { userProfiles } from '@/lib/db/schema/avatar';
 import { equipmentInstances, userCodex } from '@/lib/db/schema/equipment';
 import { combatPowerFromRows } from '@/lib/game/equipment/combat-power';
+import { backgroundSrc } from '@/lib/game/profile/backgrounds';
 
 /**
  * 랭킹 — BALANCE §3.3. **시즌제 없음·상시 누적·Top 100**.
@@ -15,8 +17,47 @@ import { combatPowerFromRows } from '@/lib/game/equipment/combat-power';
  * 전투력 = (착용 3합)×(1+도감강화합×0.005) (P(L)는 balance 단일 진실 — combat은 앱 계산).
  */
 export type LeaderboardMetric = 'max' | 'sum' | 'combat';
-export type LeaderboardEntry = { userId: string; nickname: string; value: number; rank: number };
+export type LeaderboardEntry = {
+  userId: string;
+  nickname: string;
+  value: number;
+  rank: number;
+  /** 대표 프로필 이미지 URL(없으면 null) */
+  profileImg?: string | null;
+  /** 프로필 배경 public src(없으면 null) */
+  bg?: string | null;
+};
 const TOP = 100;
+
+/**
+ * top entries에 대표 프로필 이미지 + 배경을 batch로 붙임(metric 쿼리와 분리).
+ * profiles.active_profile_id → user_profiles 조인, active_background → public src.
+ */
+async function attachProfiles(entries: LeaderboardEntry[]): Promise<LeaderboardEntry[]> {
+  if (entries.length === 0) return entries;
+  const rows = await db
+    .select({
+      userId: profiles.id,
+      activeBackground: profiles.activeBackground,
+      rotations: userProfiles.rotations,
+      activeDirection: userProfiles.activeDirection,
+    })
+    .from(profiles)
+    .leftJoin(userProfiles, eq(userProfiles.id, profiles.activeProfileId))
+    .where(inArray(profiles.id, entries.map((e) => e.userId)));
+  const map = new Map(
+    rows.map((r) => {
+      const rot = r.rotations as Record<string, string> | null;
+      const img = rot && r.activeDirection ? (rot[r.activeDirection] ?? null) : null;
+      return [r.userId, { img, bg: backgroundSrc(r.activeBackground) }] as const;
+    }),
+  );
+  return entries.map((e) => ({
+    ...e,
+    profileImg: map.get(e.userId)?.img ?? null,
+    bg: map.get(e.userId)?.bg ?? null,
+  }));
+}
 
 async function maxRows() {
   const r = await db
@@ -110,7 +151,7 @@ export async function getLeaderboardPayload(
   mine: { rank: number; value: number } | null;
 }> {
   const rows = (await safeRows(metric)).sort((a, b) => b.value - a.value);
-  const top = rows.slice(0, TOP).map((r, i) => ({ ...r, rank: i + 1 }));
+  const top = await attachProfiles(rows.slice(0, TOP).map((r, i) => ({ ...r, rank: i + 1 })));
   const idx = rows.findIndex((r) => r.userId === userId);
   const mine = idx < 0 ? null : { rank: idx + 1, value: rows[idx]!.value };
   return { top, mine };
@@ -122,5 +163,5 @@ export async function getRankingTop(
   n: number,
 ): Promise<LeaderboardEntry[]> {
   const rows = (await safeRows(metric)).sort((a, b) => b.value - a.value);
-  return rows.slice(0, n).map((r, i) => ({ ...r, rank: i + 1 }));
+  return attachProfiles(rows.slice(0, n).map((r, i) => ({ ...r, rank: i + 1 })));
 }

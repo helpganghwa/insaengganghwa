@@ -148,7 +148,7 @@ export function ProfileSelector({
                 src={sel.rotations[d]}
                 alt={`프로필 ${DIR_LABEL[d] ?? d}`}
                 draggable={false}
-                className="pointer-events-none absolute inset-0 h-full w-full object-contain"
+                className="pointer-events-none absolute inset-0 h-full w-full object-contain object-bottom"
                 style={{ imageRendering: 'pixelated', opacity: d === dir ? 1 : 0 }}
               />
             ) : null,
