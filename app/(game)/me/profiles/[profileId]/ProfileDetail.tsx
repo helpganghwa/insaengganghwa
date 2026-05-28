@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useTransition } from 'react';
+import { useRef, useState, useTransition } from 'react';
 import { useRouter } from 'next/navigation';
 
 import { setActiveDirection, setActiveProfile, deleteProfile } from './actions';
@@ -64,8 +64,28 @@ export function ProfileDetail({
   const [pending, startTransition] = useTransition();
   const [confirmDelete, setConfirmDelete] = useState(false);
 
-  const idx = Math.max(0, ROT_ORDER.indexOf(dir as (typeof ROT_ORDER)[number]));
-  const go = (delta: number) => setDir(ROT_ORDER[(idx + delta + 8) % 8]!);
+  // 스와이프 회전(turntable). 드래그 시작 시 기준 인덱스 고정 → 누적 deltaX를 STEP 단위로
+  // 방향에 매핑. 오른쪽으로 밀면 캐릭터가 반시계로 돈다(ROT_ORDER 시계방향이므로 idx 감소).
+  const STEP = 26;
+  const dragRef = useRef<{ startX: number; baseIdx: number } | null>(null);
+
+  const onPointerDown = (e: React.PointerEvent) => {
+    (e.currentTarget as HTMLElement).setPointerCapture(e.pointerId);
+    dragRef.current = {
+      startX: e.clientX,
+      baseIdx: Math.max(0, ROT_ORDER.indexOf(dir as (typeof ROT_ORDER)[number])),
+    };
+  };
+  const onPointerMove = (e: React.PointerEvent) => {
+    const d = dragRef.current;
+    if (!d) return;
+    const steps = Math.round(-(e.clientX - d.startX) / STEP);
+    const nd = ROT_ORDER[(((d.baseIdx + steps) % 8) + 8) % 8]!;
+    if (nd !== dir) setDir(nd);
+  };
+  const endDrag = () => {
+    dragRef.current = null;
+  };
 
   const saveDir = () =>
     startTransition(async () => {
@@ -89,7 +109,6 @@ export function ProfileDetail({
       router.push('/me');
     });
 
-  const src = rotations[dir];
   const tags = [
     options.gender ? (GENDER_LABEL[options.gender] ?? options.gender) : null,
     options.race ? (RACE_LABEL[options.race] ?? options.race) : null,
@@ -97,43 +116,34 @@ export function ProfileDetail({
 
   return (
     <div className="space-y-4">
-      {/* 8방향 뷰어 */}
+      {/* 8방향 뷰어 — 좌우 스와이프로 회전(turntable). 8장 모두 프리로드 + opacity 토글로 깜박임 0. */}
       <div className="rounded-2xl border border-zinc-200 p-3 dark:border-zinc-800">
-        <div className="flex items-center justify-center gap-2">
-          <button
-            type="button"
-            onClick={() => go(-1)}
-            aria-label="이전 방향"
-            className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-zinc-100 text-lg dark:bg-zinc-800"
-          >
-            ‹
-          </button>
-          <div className="relative flex aspect-square w-full max-w-[256px] items-center justify-center overflow-hidden rounded-xl bg-zinc-50 dark:bg-zinc-900">
-            {src ? (
+        <div
+          className="relative mx-auto flex aspect-square w-full max-w-[256px] cursor-grab touch-pan-y select-none items-center justify-center overflow-hidden rounded-xl bg-zinc-50 active:cursor-grabbing dark:bg-zinc-900"
+          onPointerDown={onPointerDown}
+          onPointerMove={onPointerMove}
+          onPointerUp={endDrag}
+          onPointerCancel={endDrag}
+        >
+          {ROT_ORDER.map((d) =>
+            rotations[d] ? (
               // eslint-disable-next-line @next/next/no-img-element
               <img
-                src={src}
-                alt={`프로필 ${DIR_LABEL[dir] ?? dir}`}
+                key={d}
+                src={rotations[d]}
+                alt={`프로필 ${DIR_LABEL[d] ?? d}`}
                 draggable={false}
-                className="h-full w-full object-contain"
-                style={{ imageRendering: 'pixelated' }}
+                className="pointer-events-none absolute inset-0 h-full w-full object-contain"
+                style={{ imageRendering: 'pixelated', opacity: d === dir ? 1 : 0 }}
               />
-            ) : (
-              <span className="text-xs text-zinc-400">이미지 없음</span>
-            )}
-          </div>
-          <button
-            type="button"
-            onClick={() => go(1)}
-            aria-label="다음 방향"
-            className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-zinc-100 text-lg dark:bg-zinc-800"
-          >
-            ›
-          </button>
+            ) : null,
+          )}
         </div>
 
-        {/* 방향 라벨 + dot 인디케이터 */}
-        <div className="mt-2 text-center text-xs font-medium text-zinc-500">
+        <p className="mt-2 text-center text-[11px] text-zinc-400">← 좌우로 밀어 돌려보세요 →</p>
+
+        {/* 방향 라벨 + dot 인디케이터(현재 위치 표시·탭 보조) */}
+        <div className="mt-1 text-center text-xs font-medium text-zinc-500">
           {DIR_LABEL[dir] ?? dir}
           {savedDir === dir && <span className="ml-1 text-violet-500">· 현재 설정</span>}
         </div>
