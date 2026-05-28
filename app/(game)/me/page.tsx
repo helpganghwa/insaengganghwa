@@ -6,12 +6,13 @@ import { db } from '@/lib/db/client';
 import { profiles } from '@/lib/db/schema/profiles';
 import { catalogItems, equipmentInstances, userCodex, type Slot } from '@/lib/db/schema/equipment';
 import { userProfiles } from '@/lib/db/schema/avatar';
+import { CharacterStage } from '@/components/CharacterStage';
 import { pieceCombatPower, totalCombatPower } from '@/lib/game/balance';
 import { championCatalogIds } from '@/lib/game/codex/ranking';
 
 import { BoastLauncher } from '@/components/BoastModal';
 import { TranscendSprite } from '@/components/TranscendSprite';
-import { RarityFrame, rarityBorderStyle, hasRarityBorder } from '@/components/RarityFrame';
+import { rarityBorderStyle, hasRarityBorder } from '@/components/RarityFrame';
 
 import { NicknameEditor } from './NicknameEditor';
 
@@ -86,53 +87,36 @@ export default async function ProfilePage() {
 
   return (
     <div className="space-y-4 px-4 py-6">
-      {/* 내 정보 카드 — 그라디언트 무대 위 캐릭터(바닥+발그림자)·닉네임(상단)·장비(하단) */}
-      <section className="relative aspect-[4/5] overflow-hidden rounded-2xl border border-zinc-800 bg-gradient-to-b from-zinc-700 via-zinc-900 to-zinc-950">
-        {/* 캐릭터 — 크게, 바닥 정렬 + 발밑 그림자. 탭 → 선택화면 */}
-        {activeProfile ? (
-          <Link
-            href="/me/profiles"
-            aria-label="프로필 선택"
-            className="absolute inset-x-0 bottom-[24%] top-[3%] z-0 block overflow-hidden"
-          >
-            {/* 발밑 타원 그림자 */}
-            <div className="absolute bottom-[1%] left-1/2 h-[5%] w-1/2 -translate-x-1/2 rounded-[50%] bg-black/45 blur-[6px]" />
-            {/* eslint-disable-next-line @next/next/no-img-element */}
-            <img
-              src={dirImg(activeProfile)}
-              alt="대표 프로필"
-              draggable={false}
-              className="h-full w-full object-contain object-bottom drop-shadow-[0_6px_10px_rgba(0,0,0,0.55)]"
-              style={{ imageRendering: 'pixelated', transform: 'scale(1.3)', transformOrigin: 'center bottom' }}
-            />
-          </Link>
-        ) : (
-          <Link
-            href="/me/create"
-            className="absolute inset-0 z-0 flex flex-col items-center justify-center gap-1 text-white/70"
-          >
-            <span className="text-4xl" aria-hidden>
-              ✨
-            </span>
-            <span className="text-sm">프로필 만들기</span>
-          </Link>
-        )}
+      {/* 내 정보 카드 — OG 배치 차용: 좌(닉네임+프로필), 우(장비 3종 세로) */}
+      <section className="rounded-2xl border border-zinc-800 bg-gradient-to-b from-zinc-800 to-zinc-950 p-3">
+        <div className="flex gap-3">
+          {/* 좌 — 닉네임 + 프로필 */}
+          <div className="flex flex-1 flex-col gap-2">
+            <div className="text-center">
+              <NicknameEditor
+                current={nickname}
+                changedCount={prof[0]?.nicknameChangedCount ?? 0}
+                diamond={String(prof[0]?.diamond ?? 0n)}
+                className="text-white drop-shadow-[0_1px_3px_rgba(0,0,0,0.85)]"
+              />
+            </div>
+            {activeProfile ? (
+              <Link href="/me/profiles" aria-label="프로필 선택" className="block">
+                <CharacterStage charSrc={dirImg(activeProfile)} className="w-full border border-zinc-800" />
+              </Link>
+            ) : (
+              <Link
+                href="/me/create"
+                className="flex aspect-square w-full flex-col items-center justify-center gap-1 rounded-2xl border-2 border-dashed border-white/40 text-white/70"
+              >
+                <span className="text-3xl" aria-hidden>✨</span>
+                <span className="text-xs">프로필 만들기</span>
+              </Link>
+            )}
+          </div>
 
-        {/* 닉네임 — 상단 오버레이 */}
-        <div className="pointer-events-none absolute inset-x-0 top-0 z-10 bg-gradient-to-b from-black/55 to-transparent px-3 pb-10 pt-3 text-center">
-          <span className="pointer-events-auto inline-block">
-            <NicknameEditor
-              current={nickname}
-              changedCount={prof[0]?.nicknameChangedCount ?? 0}
-              diamond={String(prof[0]?.diamond ?? 0n)}
-              className="text-white drop-shadow-[0_1px_3px_rgba(0,0,0,0.85)]"
-            />
-          </span>
-        </div>
-
-        {/* 장비 3종 + 전투력 — 하단 오버레이 */}
-        <div className="absolute inset-x-0 bottom-0 z-10 bg-gradient-to-t from-black/85 via-black/45 to-transparent px-2.5 pb-2.5 pt-12">
-          <div className="grid grid-cols-3 gap-2">
+          {/* 우 — 장비 3종 세로 + 전투력 */}
+          <div className="flex w-[36%] flex-col gap-1.5">
             {(['weapon', 'armor', 'accessory'] as Slot[]).map((s) => {
               const it = bySlot.get(s);
               if (!it) {
@@ -140,10 +124,10 @@ export default async function ProfilePage() {
                   <Link
                     key={s}
                     href={`/inventory?slot=${s}`}
-                    className="flex aspect-square flex-col items-center justify-center gap-0.5 rounded-xl border-2 border-dashed border-white/30 px-1 text-center text-white/60"
+                    className="flex items-center gap-1.5 rounded-lg border border-dashed border-white/25 p-1.5 text-white/55"
                   >
-                    <span className="text-xl" aria-hidden>{SLOT_EMOJI[s]}</span>
-                    <span className="text-[9px]">{SLOT_LABEL[s]}</span>
+                    <span className="text-lg" aria-hidden>{SLOT_EMOJI[s]}</span>
+                    <span className="text-[10px]">{SLOT_LABEL[s]} 장착</span>
                   </Link>
                 );
               }
@@ -151,29 +135,30 @@ export default async function ProfilePage() {
                 <div
                   key={s}
                   style={rarityBorderStyle(it.transcendLevel)}
-                  className={`relative flex aspect-square flex-col items-center justify-center gap-0.5 overflow-hidden rounded-xl border-2 bg-white px-1 text-center dark:bg-zinc-950 ${
+                  className={`flex items-center gap-1.5 overflow-hidden rounded-lg border bg-white p-1 dark:bg-zinc-950 ${
                     hasRarityBorder(it.transcendLevel) ? '' : 'border-zinc-200 dark:border-zinc-800'
                   }`}
                 >
-                  <RarityFrame level={it.transcendLevel} />
                   <TranscendSprite
                     code={it.code}
                     slot={s}
                     level={it.transcendLevel}
                     isChampion={champSet.has(it.catalogItemId)}
-                    size={44}
+                    size={34}
                     frameless
                   />
-                  <span className="px-0.5 text-[9px] leading-tight text-zinc-600 dark:text-zinc-400">
-                    {it.name}
-                  </span>
-                  <span className="text-[11px] font-semibold">+{it.enhanceLevel}</span>
+                  <div className="min-w-0 flex-1">
+                    <div className="truncate text-[10px] leading-tight text-zinc-600 dark:text-zinc-400">
+                      {it.name}
+                    </div>
+                    <div className="text-[11px] font-semibold">+{it.enhanceLevel}</div>
+                  </div>
                 </div>
               );
             })}
-          </div>
-          <div className="mt-1.5 text-right text-xs font-bold text-white drop-shadow-[0_1px_2px_rgba(0,0,0,0.85)]">
-            ⚔️ 총 전투력 {total.toLocaleString('ko-KR')}
+            <div className="mt-auto pt-1 text-right text-[11px] font-bold text-white">
+              ⚔️ {total.toLocaleString('ko-KR')}
+            </div>
           </div>
         </div>
       </section>
