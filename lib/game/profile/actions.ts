@@ -31,20 +31,7 @@ import {
   pickRandomHairLength,
   pickRandomRace,
 } from './compose';
-
-export type CreateProfileJobErrorCode =
-  | 'UNAUTHORIZED'
-  | 'INVALID_OPTIONS'
-  | 'NO_EQUIPMENT'
-  | 'INSUFFICIENT_DIAMOND'
-  | 'PROFILE_GEN_IN_PROGRESS';
-
-export class CreateProfileJobError extends Error {
-  constructor(public code: CreateProfileJobErrorCode) {
-    super(code);
-    this.name = 'CreateProfileJobError';
-  }
-}
+import { CreateProfileJobError } from './errors';
 
 // 유저 입력은 gender만 (2026-05-28). hair color/style·pose 폐기, expression·race는 서버 random.
 // 개성은 장비 3종 모티프 + 서버 random(표정·종족)으로 — 머리색도 모티프 팔레트를 따름.

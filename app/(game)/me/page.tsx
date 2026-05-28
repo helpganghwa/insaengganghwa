@@ -17,6 +17,7 @@ import { NicknameEditor } from './NicknameEditor';
 const SLOT_LABEL: Record<Slot, string> = { weapon: '무기', armor: '방어구', accessory: '장신구' };
 const SLOT_EMOJI: Record<Slot, string> = { weapon: '⚔️', armor: '🛡️', accessory: '💍' };
 const MENU = [
+  { href: '/me/create', icon: '✨', label: '프로필 생성' },
   { href: '/checkin', icon: '⚡', label: '출석 캘린더' },
   { href: '/me/codex', icon: '📖', label: '도감' },
   { href: '/leaderboard', icon: '🏆', label: '랭킹' },
