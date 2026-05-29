@@ -356,15 +356,13 @@ export function RaidSessionCard({ view: v }: { view: RaidView }) {
       }
     ).Kakao;
     if (k && k.isInitialized()) {
+      const bg = getBossBg(v.bossCode);
       k.Share.sendDefault({
         objectType: 'feed',
         content: {
           title: `⚔️ ${boss.name} 레이드`,
           description: `함께 ${boss.name}을(를) 토벌하고 보상을 나눠요!`,
-          // 레이드 화면처럼 배경색+배경+정적 보스 합성 OG (satori).
-          imageUrl: `${origin}/og/raid/${v.bossCode}`,
-          imageWidth: 1200,
-          imageHeight: 630,
+          imageUrl: bg ? `${origin}${assetUrl(bg)}` : `${origin}/icons/icon-512.png`,
           link: { mobileWebUrl: url, webUrl: url },
         },
         buttons: [{ title: '레이드 참여하기', link: { mobileWebUrl: url, webUrl: url } }],
@@ -524,10 +522,10 @@ export function RaidSessionCard({ view: v }: { view: RaidView }) {
           </div>
         ) : (
           <div className="relative space-y-2">
-            {/* 공격 로어 오버레이 — 강화처럼 버튼 위에 표시(연속 클릭 차단 시각화) */}
+            {/* 공격 로어 — 강화 시도와 동일: dim layer + 정적 텍스트(bg). 애니 없음. */}
             {attackLore ? (
-              <div className="pointer-events-none absolute inset-x-0 -top-2 z-20 flex justify-center">
-                <span className="animate-fx-counter-pop rounded-lg bg-black/80 px-3 py-1.5 text-sm font-bold text-amber-100 shadow-lg ring-1 ring-amber-400/40 backdrop-blur-sm">
+              <div className="pointer-events-none absolute inset-0 z-20 flex items-center justify-center bg-black/55 px-4 text-center backdrop-blur-[2px]">
+                <span className="rounded bg-black/75 px-3 py-1 text-sm font-semibold break-keep text-amber-200">
                   {attackLore}
                 </span>
               </div>
@@ -561,15 +559,6 @@ export function RaidSessionCard({ view: v }: { view: RaidView }) {
                 {over ? '⏳ 정산 대기' : '공격 불가'}
               </div>
             )}
-            {v.isHost && !over ? (
-              <button
-                type="button"
-                onClick={handleInvite}
-                className="flex w-full items-center justify-center gap-1.5 rounded-full border-2 border-amber-300 bg-amber-400/10 px-4 py-3 text-sm font-extrabold text-amber-300 shadow-[0_0_16px_rgba(251,191,36,0.35)] transition active:scale-95 hover:bg-amber-400/20"
-              >
-                <span className="animate-pulse-soft">🤝</span> 동료 초대
-              </button>
-            ) : null}
           </div>
         )}
 
@@ -609,6 +598,18 @@ export function RaidSessionCard({ view: v }: { view: RaidView }) {
                 </li>
               );
             })}
+            {/* 동료 초대 — 순위 카드와 동일 영역, 리스트 맨 아래. 10명 다 차면 미노출. */}
+            {v.isHost && !over && v.participants.length < 10 ? (
+              <li>
+                <button
+                  type="button"
+                  onClick={handleInvite}
+                  className="flex w-full items-center justify-center gap-1.5 rounded-lg border-2 border-dashed border-amber-400/60 bg-amber-400/5 px-2.5 py-2 text-[11px] font-bold text-amber-300 transition active:scale-[0.99] hover:bg-amber-400/15"
+                >
+                  <span className="animate-pulse-soft">🤝</span> 동료 초대
+                </button>
+              </li>
+            ) : null}
           </ul>
           <p className="mt-1 text-center text-[10px] text-zinc-500">
             보상은 전원 동일(기여도 무관) — 1회+ 공격 시 지급
