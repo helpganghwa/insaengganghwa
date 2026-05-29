@@ -2,6 +2,7 @@ import { and, desc, eq, isNull } from 'drizzle-orm';
 
 import { getSessionUserId } from '@/lib/auth/session';
 import { db } from '@/lib/db/client';
+import { withTimeout } from '@/lib/db/with-timeout';
 import { profiles } from '@/lib/db/schema/profiles';
 import { catalogItems, equipmentInstances, type Slot } from '@/lib/db/schema/equipment';
 import { enhancementJobs } from '@/lib/db/schema/enhance';
@@ -19,7 +20,9 @@ export default async function EnhancePage() {
   const userId = await getSessionUserId();
   if (!userId) return null; // (game) layout이 가드
 
-  const [jobs, profRow, champSet, candidatesRaw] = await Promise.all([
+  // 콜드 DB 커넥션 hang 시 페이지 무한 대기 방지 — 실패 시 빈 결과로 degrade(2026-05-29).
+  const _r = await withTimeout(
+    Promise.all([
     db
       .select({
         jobId: enhancementJobs.id,
@@ -76,7 +79,14 @@ export default async function EnhancePage() {
         ),
       )
       .orderBy(desc(equipmentInstances.enhanceLevel), desc(equipmentInstances.acquiredAt)),
-  ]);
+    ]),
+    3500,
+    'enhance.page',
+  ).catch(() => null);
+  const jobs = _r?.[0] ?? [];
+  const profRow = _r?.[1] ?? [];
+  const champSet = _r?.[2] ?? new Set<number>();
+  const candidatesRaw = _r?.[3] ?? [];
 
   const diamond = profRow[0]?.diamond ?? 0n;
   const nickname = profRow[0]?.nickname ?? '플레이어';

@@ -3,6 +3,7 @@ import { and, desc, eq, isNotNull, isNull, sql } from 'drizzle-orm';
 
 import { getSessionUserId } from '@/lib/auth/session';
 import { db } from '@/lib/db/client';
+import { withTimeout } from '@/lib/db/with-timeout';
 import { profiles } from '@/lib/db/schema/profiles';
 import { catalogItems, equipmentInstances, userCodex, type Slot } from '@/lib/db/schema/equipment';
 import { userProfiles } from '@/lib/db/schema/avatar';
@@ -31,7 +32,9 @@ export default async function ProfilePage() {
   const userId = await getSessionUserId();
   if (!userId) return null;
 
-  const [prof, equipped, codexAgg, champSet, myProfiles] = await Promise.all([
+  // 콜드 DB 커넥션 hang 시 페이지 무한 대기 방지 — 실패 시 빈 결과로 degrade(2026-05-29).
+  const _r = await withTimeout(
+    Promise.all([
     db
       .select({
         nickname: profiles.nickname,
@@ -70,7 +73,15 @@ export default async function ProfilePage() {
       .from(userProfiles)
       .where(and(eq(userProfiles.userId, userId), isNull(userProfiles.hiddenAt)))
       .orderBy(desc(userProfiles.createdAt)),
-  ]);
+    ]),
+    3500,
+    'me.page',
+  ).catch(() => null);
+  const prof = _r?.[0] ?? [];
+  const equipped = _r?.[1] ?? [];
+  const codexAgg = _r?.[2] ?? [];
+  const champSet = _r?.[3] ?? new Set<number>();
+  const myProfiles = _r?.[4] ?? [];
 
   const nickname = prof[0]?.nickname ?? '플레이어';
   const codexSum = Number(codexAgg[0]?.s ?? 0);

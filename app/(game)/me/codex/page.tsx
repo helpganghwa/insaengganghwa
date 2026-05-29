@@ -3,6 +3,7 @@ import { eq } from 'drizzle-orm';
 
 import { getSessionUserId } from '@/lib/auth/session';
 import { db } from '@/lib/db/client';
+import { withTimeout } from '@/lib/db/with-timeout';
 import { catalogItems, userCodex, type Slot } from '@/lib/db/schema/equipment';
 import { championCatalogIds } from '@/lib/game/codex/ranking';
 import { TranscendSprite } from '@/components/TranscendSprite';
@@ -16,7 +17,9 @@ export default async function CodexPage() {
   const userId = await getSessionUserId();
   if (!userId) return null;
 
-  const [catalog, codex, champSet] = await Promise.all([
+  // 콜드 DB 커넥션 hang 시 페이지 무한 대기 방지 — 실패 시 빈 결과로 degrade(2026-05-29).
+  const _r = await withTimeout(
+    Promise.all([
     db
       .select({
         id: catalogItems.id,
@@ -31,7 +34,13 @@ export default async function CodexPage() {
       .from(userCodex)
       .where(eq(userCodex.userId, userId)),
     championCatalogIds(userId),
-  ]);
+    ]),
+    3500,
+    'codex.page',
+  ).catch(() => null);
+  const catalog = _r?.[0] ?? [];
+  const codex = _r?.[1] ?? [];
+  const champSet = _r?.[2] ?? new Set<number>();
 
   const codexMap = new Map(codex.map((c) => [c.catalogItemId, c.max]));
   const acquired = codex.length;

@@ -3,6 +3,7 @@ import { and, desc, eq, isNull } from 'drizzle-orm';
 
 import { getSessionUserId } from '@/lib/auth/session';
 import { db } from '@/lib/db/client';
+import { withTimeout } from '@/lib/db/with-timeout';
 import { userProfiles } from '@/lib/db/schema/avatar';
 import { profiles } from '@/lib/db/schema/profiles';
 
@@ -12,7 +13,9 @@ export default async function ProfileSelectPage() {
   const userId = await getSessionUserId();
   if (!userId) return null;
 
-  const [list, p] = await Promise.all([
+  // 콜드 DB 커넥션 hang 시 페이지 무한 대기 방지 — 실패 시 빈 결과로 degrade(2026-05-29).
+  const _r = await withTimeout(
+    Promise.all([
     db
       .select({
         id: userProfiles.id,
@@ -27,7 +30,12 @@ export default async function ProfileSelectPage() {
       .from(profiles)
       .where(eq(profiles.id, userId))
       .limit(1),
-  ]);
+    ]),
+    3500,
+    'me.profiles.page',
+  ).catch(() => null);
+  const list = _r?.[0] ?? [];
+  const p = _r?.[1] ?? [];
 
   return (
     <div className="space-y-4 px-4 py-6">

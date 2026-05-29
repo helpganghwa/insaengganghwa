@@ -3,6 +3,7 @@ import { eq } from 'drizzle-orm';
 
 import { getSessionUserId } from '@/lib/auth/session';
 import { db } from '@/lib/db/client';
+import { withTimeout } from '@/lib/db/with-timeout';
 import { profiles } from '@/lib/db/schema/profiles';
 import { signOut } from '@/lib/auth/actions';
 
@@ -18,20 +19,26 @@ export default async function SettingsPage() {
   const userId = await getSessionUserId();
   if (!userId) return null;
 
-  const [p] = await db
-    .select({
-      nickname: profiles.nickname,
-      verifiedAt: profiles.identityVerifiedAt,
-      diamond: profiles.diamond,
-      nicknameChangedCount: profiles.nicknameChangedCount,
-      pushEnhance: profiles.pushEnhance,
-      pushRaid: profiles.pushRaid,
-      pushSupply: profiles.pushSupply,
-      pushEnhanceMode: profiles.pushEnhanceMode,
-    })
-    .from(profiles)
-    .where(eq(profiles.id, userId))
-    .limit(1);
+  // 콜드 DB 커넥션 hang 시 페이지 무한 대기 방지 — 실패 시 기본값으로 degrade(2026-05-29).
+  const pRows = await withTimeout(
+    db
+      .select({
+        nickname: profiles.nickname,
+        verifiedAt: profiles.identityVerifiedAt,
+        diamond: profiles.diamond,
+        nicknameChangedCount: profiles.nicknameChangedCount,
+        pushEnhance: profiles.pushEnhance,
+        pushRaid: profiles.pushRaid,
+        pushSupply: profiles.pushSupply,
+        pushEnhanceMode: profiles.pushEnhanceMode,
+      })
+      .from(profiles)
+      .where(eq(profiles.id, userId))
+      .limit(1),
+    3500,
+    'settings.profile',
+  ).catch(() => []);
+  const [p] = pRows;
   const verified = p?.verifiedAt != null;
 
   return (

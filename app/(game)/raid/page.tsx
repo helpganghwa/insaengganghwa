@@ -2,6 +2,7 @@ import { and, eq, inArray } from 'drizzle-orm';
 
 import { getSessionUserId } from '@/lib/auth/session';
 import { db } from '@/lib/db/client';
+import { withTimeout } from '@/lib/db/with-timeout';
 import { raids, raidParticipants, raidDailyCounts } from '@/lib/db/schema/raid';
 import {
   RAID_BASE_ATTACKS,
@@ -16,7 +17,9 @@ export default async function RaidPage() {
   const userId = await getSessionUserId();
   if (!userId) return null;
 
-  const [rows, dailyRow] = await Promise.all([
+  // 콜드 DB 커넥션 hang 시 페이지 무한 대기 방지 — 실패 시 빈 결과로 degrade(2026-05-29).
+  const _r = await withTimeout(
+    Promise.all([
     db
       .select({
         id: raids.id,
@@ -37,20 +40,29 @@ export default async function RaidPage() {
         and(eq(raidDailyCounts.userId, userId), eq(raidDailyCounts.kstDate, kstDateString())),
       )
       .limit(1),
-  ]);
+    ]),
+    3500,
+    'raid.page',
+  ).catch(() => null);
+  const rows = _r?.[0] ?? [];
+  const dailyRow = _r?.[1] ?? [];
 
   // 내 활성 레이드들의 전체 참가자 데미지로 순위 산출.
   // 보통 RAID_MAX_CONCURRENT_PER_USER × 평균 참가자 수라 1 쿼리 batch면 충분.
   const raidIds = rows.map((r) => r.id);
   const allParts = raidIds.length
-    ? await db
-        .select({
-          raidId: raidParticipants.raidId,
-          userId: raidParticipants.userId,
-          totalDamage: raidParticipants.totalDamage,
-        })
-        .from(raidParticipants)
-        .where(inArray(raidParticipants.raidId, raidIds))
+    ? await withTimeout(
+        db
+          .select({
+            raidId: raidParticipants.raidId,
+            userId: raidParticipants.userId,
+            totalDamage: raidParticipants.totalDamage,
+          })
+          .from(raidParticipants)
+          .where(inArray(raidParticipants.raidId, raidIds)),
+        3500,
+        'raid.participants',
+      ).catch(() => [] as { raidId: bigint; userId: string; totalDamage: bigint }[])
     : [];
   const partsByRaid = new Map<string, { userId: string; totalDamage: bigint }[]>();
   for (const p of allParts) {

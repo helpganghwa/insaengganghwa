@@ -4,6 +4,7 @@ import { eq } from 'drizzle-orm';
 
 import { getSessionUserId } from '@/lib/auth/session';
 import { db } from '@/lib/db/client';
+import { withTimeout } from '@/lib/db/with-timeout';
 import { catalogItems, type Slot } from '@/lib/db/schema/equipment';
 import { getItemTop10 } from '@/lib/game/codex/ranking';
 import { loreByCode } from '@/lib/game/equipment/lore';
@@ -26,19 +27,28 @@ export default async function CodexItemPage({
   const catalogId = Number((await params).catalogId);
   if (!Number.isInteger(catalogId) || catalogId <= 0) notFound();
 
-  const [item] = await db
-    .select({
-      id: catalogItems.id,
-      code: catalogItems.code,
-      name: catalogItems.name,
-      slot: catalogItems.slot,
-    })
-    .from(catalogItems)
-    .where(eq(catalogItems.id, catalogId))
-    .limit(1);
+  // 콜드 DB 커넥션 hang 시 페이지 무한 대기 방지 — 실패 시 빈 결과로 degrade(2026-05-29).
+  const itemRows = await withTimeout(
+    db
+      .select({
+        id: catalogItems.id,
+        code: catalogItems.code,
+        name: catalogItems.name,
+        slot: catalogItems.slot,
+      })
+      .from(catalogItems)
+      .where(eq(catalogItems.id, catalogId))
+      .limit(1),
+    3500,
+    'codex.item',
+  ).catch(() => [] as Array<{ id: number; code: string; name: string; slot: Slot }>);
+  const [item] = itemRows;
   if (!item) notFound();
 
-  const [top, lore] = [await getItemTop10(item.id), loreByCode(item.code)];
+  const top = await withTimeout(getItemTop10(item.id), 3500, 'codex.top10').catch(
+    () => [] as Awaited<ReturnType<typeof getItemTop10>>,
+  );
+  const lore = loreByCode(item.code);
 
   return (
     <div className="space-y-4 px-4 py-4">

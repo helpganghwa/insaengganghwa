@@ -3,6 +3,7 @@ import { preload } from 'react-dom';
 
 import { getSessionUserId } from '@/lib/auth/session';
 import { db } from '@/lib/db/client';
+import { withTimeout } from '@/lib/db/with-timeout';
 import { userSupplyBoxes } from '@/lib/db/schema/supply';
 import type { Slot } from '@/lib/db/schema/equipment';
 import { assetUrl } from '@/lib/asset-versions';
@@ -26,10 +27,15 @@ export default async function GachaPage() {
   const userId = await getSessionUserId();
   if (!userId) return null;
 
-  const rows = await db
-    .select({ slot: userSupplyBoxes.slot, count: userSupplyBoxes.count })
-    .from(userSupplyBoxes)
-    .where(eq(userSupplyBoxes.userId, userId));
+  // 콜드 DB 커넥션 hang 시 페이지 무한 대기 방지 — 실패 시 보유 수량 0으로 degrade(2026-05-29).
+  const rows = await withTimeout(
+    db
+      .select({ slot: userSupplyBoxes.slot, count: userSupplyBoxes.count })
+      .from(userSupplyBoxes)
+      .where(eq(userSupplyBoxes.userId, userId)),
+    3500,
+    'gacha.boxes',
+  ).catch(() => []);
   const countBySlot = new Map(rows.map((r) => [r.slot, Number(r.count)]));
 
   return (

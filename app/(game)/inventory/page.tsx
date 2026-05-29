@@ -2,6 +2,7 @@ import { and, eq } from 'drizzle-orm';
 
 import { getSessionUserId } from '@/lib/auth/session';
 import { db } from '@/lib/db/client';
+import { withTimeout } from '@/lib/db/with-timeout';
 import { catalogItems, equipmentInstances, type Slot } from '@/lib/db/schema/equipment';
 import { enhancementJobs } from '@/lib/db/schema/enhance';
 import { profiles } from '@/lib/db/schema/profiles';
@@ -21,7 +22,9 @@ export default async function InventoryPage({
   const initialSlot: Slot | 'all' =
     slot === 'weapon' || slot === 'armor' || slot === 'accessory' ? slot : 'all';
 
-  const [rows, runningJobs, prof, champSet] = await Promise.all([
+  // 콜드 DB 커넥션 hang 시 페이지 무한 대기 방지 — 실패 시 빈 결과로 degrade(2026-05-29).
+  const _r = await withTimeout(
+    Promise.all([
     db
       .select({
         id: equipmentInstances.id,
@@ -48,7 +51,14 @@ export default async function InventoryPage({
       .where(eq(profiles.id, userId))
       .limit(1),
     championCatalogIds(userId),
-  ]);
+    ]),
+    3500,
+    'inventory.page',
+  ).catch(() => null);
+  const rows = _r?.[0] ?? [];
+  const runningJobs = _r?.[1] ?? [];
+  const prof = _r?.[2] ?? [];
+  const champSet = _r?.[3] ?? new Set<number>();
   const nickname = prof[0]?.nickname ?? '플레이어';
 
   const busy = new Set(runningJobs.map((r) => r.instanceId.toString()));

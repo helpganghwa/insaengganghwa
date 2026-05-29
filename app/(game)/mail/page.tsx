@@ -2,6 +2,7 @@ import { and, desc, eq, gt, isNotNull, isNull, sql } from 'drizzle-orm';
 
 import { getSessionUserId } from '@/lib/auth/session';
 import { db } from '@/lib/db/client';
+import { withTimeout } from '@/lib/db/with-timeout';
 import { mailbox } from '@/lib/db/schema/mailbox';
 
 import { MailList, type MailItem } from './MailList';
@@ -21,26 +22,31 @@ export default async function MailPage({
   if (!userId) return null;
   const tab = (await searchParams).tab === 'done' ? 'done' : 'unread';
 
-  const rows = await db
-    .select({
-      id: mailbox.id,
-      type: mailbox.type,
-      title: mailbox.title,
-      body: mailbox.body,
-      senderLabel: mailbox.senderLabel,
-      payload: mailbox.payload,
-      claimedAt: mailbox.claimedAt,
-      expiresAt: mailbox.expiresAt,
-      createdAt: mailbox.createdAt,
-    })
-    .from(mailbox)
-    .where(
-      tab === 'unread'
-        ? and(eq(mailbox.userId, userId), isNull(mailbox.claimedAt), gt(mailbox.expiresAt, sql`now()`))
-        : and(eq(mailbox.userId, userId), isNotNull(mailbox.claimedAt)),
-    )
-    .orderBy(desc(mailbox.createdAt))
-    .limit(PAGE_SIZE);
+  // 콜드 DB 커넥션 hang 시 페이지 무한 대기 방지 — 실패 시 빈 목록으로 degrade(2026-05-29).
+  const rows = await withTimeout(
+    db
+      .select({
+        id: mailbox.id,
+        type: mailbox.type,
+        title: mailbox.title,
+        body: mailbox.body,
+        senderLabel: mailbox.senderLabel,
+        payload: mailbox.payload,
+        claimedAt: mailbox.claimedAt,
+        expiresAt: mailbox.expiresAt,
+        createdAt: mailbox.createdAt,
+      })
+      .from(mailbox)
+      .where(
+        tab === 'unread'
+          ? and(eq(mailbox.userId, userId), isNull(mailbox.claimedAt), gt(mailbox.expiresAt, sql`now()`))
+          : and(eq(mailbox.userId, userId), isNotNull(mailbox.claimedAt)),
+      )
+      .orderBy(desc(mailbox.createdAt))
+      .limit(PAGE_SIZE),
+    3500,
+    'mail.page',
+  ).catch(() => []);
 
   const items: MailItem[] = rows.map((r) => ({
     id: r.id.toString(),
