@@ -114,26 +114,26 @@ export default async function ProfilePage() {
           </span>
         </div>
 
-        {/* 본문 — 캐릭터(상단) + 장비 3종(하단 가로 균등). 세로 스택이라 정렬 어긋남 없음. */}
-        <div className="space-y-3">
+        {/* 본문 — 좌 캐릭터 + 우 장비 3종. 고정 높이(h-44)로 양쪽 높이를 맞춰 정렬·컴팩트. */}
+        <div className="flex gap-3">
           {activeProfile ? (
-            <Link href="/me/profiles" aria-label="프로필 선택" className="block">
+            <Link href="/me/profiles" aria-label="프로필 선택" className="block shrink-0">
               <CharacterStage
                 charSrc={dirImg(activeProfile)}
-                className="mx-auto aspect-square w-[68%] border border-zinc-800"
+                className="aspect-[3/4] h-44 border border-zinc-800"
               />
             </Link>
           ) : (
             <Link
               href="/me/create"
-              className="mx-auto flex aspect-square w-[68%] flex-col items-center justify-center gap-1 rounded-2xl border-2 border-dashed border-white/25 text-white/60"
+              className="flex aspect-[3/4] h-44 shrink-0 flex-col items-center justify-center gap-1 rounded-2xl border-2 border-dashed border-white/25 text-white/60"
             >
-              <span className="text-3xl" aria-hidden>✨</span>
-              <span className="text-xs">프로필 만들기</span>
+              <span className="text-2xl" aria-hidden>✨</span>
+              <span className="text-[11px]">생성</span>
             </Link>
           )}
 
-          <div className="grid grid-cols-3 gap-2">
+          <div className="flex h-44 flex-1 flex-col gap-2">
             {(['weapon', 'armor', 'accessory'] as Slot[]).map((s) => {
               const it = bySlot.get(s);
               if (!it) {
@@ -141,12 +141,12 @@ export default async function ProfilePage() {
                   <Link
                     key={s}
                     href={`/inventory?slot=${s}`}
-                    className="flex flex-col items-center gap-1 rounded-xl border border-dashed border-white/15 bg-white/[0.02] p-2 text-white/45"
+                    className="flex flex-1 items-center gap-2 rounded-xl border border-dashed border-white/15 bg-white/[0.02] px-2 text-white/45"
                   >
-                    <span className="grid h-10 w-10 place-items-center rounded-lg bg-white/5 text-lg" aria-hidden>
+                    <span className="grid h-8 w-8 shrink-0 place-items-center rounded-lg bg-white/5 text-base" aria-hidden>
                       {SLOT_EMOJI[s]}
                     </span>
-                    <span className="text-[10px]">{SLOT_LABEL[s]}</span>
+                    <span className="text-[11px]">{SLOT_LABEL[s]} 장착</span>
                   </Link>
                 );
               }
@@ -154,22 +154,24 @@ export default async function ProfilePage() {
                 <div
                   key={s}
                   style={rarityBorderStyle(it.transcendLevel)}
-                  className={`flex flex-col items-center gap-1 rounded-xl border bg-white/5 p-2 ${
+                  className={`flex flex-1 items-center gap-2 rounded-xl border bg-white/5 px-2 ${
                     hasRarityBorder(it.transcendLevel) ? '' : 'border-white/10'
                   }`}
                 >
-                  <TranscendSprite
-                    code={it.code}
-                    slot={s}
-                    level={it.transcendLevel}
-                    isChampion={champSet.has(it.catalogItemId)}
-                    size={40}
-                    frameless
-                  />
-                  <div className="w-full truncate text-center text-[10px] leading-tight text-white/80">
-                    {it.name}
+                  <div className="shrink-0">
+                    <TranscendSprite
+                      code={it.code}
+                      slot={s}
+                      level={it.transcendLevel}
+                      isChampion={champSet.has(it.catalogItemId)}
+                      size={34}
+                      frameless
+                    />
                   </div>
-                  <div className="text-[11px] font-bold tabular-nums text-white">+{it.enhanceLevel}</div>
+                  <div className="min-w-0 flex-1">
+                    <div className="line-clamp-2 text-[11px] leading-tight text-white/85">{it.name}</div>
+                    <div className="text-[11px] font-bold tabular-nums text-white">+{it.enhanceLevel}</div>
+                  </div>
                 </div>
               );
             })}
