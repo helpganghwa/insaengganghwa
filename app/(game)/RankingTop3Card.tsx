@@ -17,18 +17,14 @@ export async function RankingTop3Card() {
       aria-label="최고 강화 랭킹"
       className="overflow-hidden rounded-xl border border-amber-900/50 shadow-lg shadow-black/40"
     >
-      <header className="flex items-baseline justify-between bg-stone-950/70 px-3.5 py-2">
-        <h2 className="flex items-center gap-1.5 text-[12px] font-bold text-amber-200">
-          <span aria-hidden>🏆</span>
-          <span>최고 강화 랭킹</span>
-        </h2>
-        <Link
-          href="/leaderboard"
-          className="text-[10px] font-medium text-amber-300/80 hover:text-amber-200"
-        >
-          전체 →
-        </Link>
-      </header>
+      {/* 헤더 전체가 랭킹 진입 — 명예의 전당 톤(amber/gold 그라데이션)으로 이질감 해소 */}
+      <Link
+        href="/leaderboard"
+        className="flex items-center gap-1.5 border-b border-amber-700/40 bg-gradient-to-r from-amber-950/80 via-stone-900/70 to-amber-950/50 px-3.5 py-2.5 text-[12px] font-bold text-amber-200 transition hover:brightness-125"
+      >
+        <span aria-hidden>🏆</span>
+        <span>최고 강화 랭킹</span>
+      </Link>
 
       <div className="relative w-full" style={{ aspectRatio: '400 / 174' }}>
         {/* eslint-disable-next-line @next/next/no-img-element */}
