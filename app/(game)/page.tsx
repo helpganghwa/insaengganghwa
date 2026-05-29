@@ -1,4 +1,3 @@
-import { Suspense } from 'react';
 import Link from 'next/link';
 import { and, eq, isNull, sql } from 'drizzle-orm';
 
@@ -139,9 +138,7 @@ export default async function HomePage() {
           </Link>
         ))}
       </div>
-      <Suspense fallback={null}>
-        <RankingTop3Card />
-      </Suspense>
+      <RankingTop3Card />
     </div>
   );
 }
