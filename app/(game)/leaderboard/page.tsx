@@ -69,7 +69,7 @@ export default async function LeaderboardPage({
                 src={BG[metric]}
                 alt=""
                 aria-hidden
-                className="absolute inset-0 h-full w-full object-cover"
+                className="absolute inset-0 h-full w-full object-fill"
                 style={{ imageRendering: 'pixelated' }}
               />
               {/* 하단 어둠 — 닉네임/점수 가독 */}
@@ -80,7 +80,12 @@ export default async function LeaderboardPage({
                   .filter((e): e is (typeof top)[number] => !!e)
                   .map((e) => {
                     const first = e.rank === 1;
-                    const medal = e.rank === 1 ? '🥇' : e.rank === 2 ? '🥈' : '🥉';
+                    const rankColor =
+                      e.rank === 1
+                        ? 'text-amber-300'
+                        : e.rank === 2
+                          ? 'text-zinc-200'
+                          : 'text-amber-500';
                     const me = e.userId === userId;
                     return (
                       <Link
@@ -92,8 +97,12 @@ export default async function LeaderboardPage({
                       >
                         {/* 위 — 메달 + 닉네임 */}
                         <div className="flex w-full items-center justify-center gap-0.5 px-0.5 pt-1">
-                          <span className={first ? 'text-base leading-none' : 'text-sm leading-none'}>
-                            {medal}
+                          <span
+                            className={`font-mono font-extrabold leading-none drop-shadow-[0_1px_2px_rgba(0,0,0,1)] ${
+                              first ? 'text-base' : 'text-sm'
+                            } ${rankColor}`}
+                          >
+                            #{e.rank}
                           </span>
                           <span
                             className={`truncate font-bold drop-shadow-[0_1px_2px_rgba(0,0,0,1)] ${
@@ -115,7 +124,7 @@ export default async function LeaderboardPage({
                               className="absolute inset-0 h-full w-full object-contain object-bottom"
                               style={{
                                 imageRendering: 'pixelated',
-                                transform: first ? 'scale(1.06)' : 'scale(0.8)',
+                                transform: first ? 'scale(1.24) translateY(5%)' : 'scale(0.96) translateY(5%)',
                                 transformOrigin: 'center bottom',
                                 filter: 'drop-shadow(0 3px 5px rgba(0,0,0,0.55))',
                               }}

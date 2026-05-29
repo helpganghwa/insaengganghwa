@@ -14,7 +14,7 @@ export function CharacterStage({
 }) {
   return (
     <div
-      className={`relative overflow-hidden bg-gradient-to-b from-zinc-700 via-zinc-900 to-zinc-950 ${rounded ? 'rounded-2xl' : ''} ${className ?? ''}`}
+      className={`relative overflow-hidden ${rounded ? 'rounded-2xl' : ''} ${className ?? ''}`}
     >
       {charSrc && (
         <>

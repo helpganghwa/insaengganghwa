@@ -330,8 +330,6 @@ export async function GET(_req: Request, { params }: { params: Promise<{ shareCo
           flexShrink: 0,
           borderRadius: 24,
           overflow: 'hidden',
-          backgroundImage: 'linear-gradient(180deg,#3f3f46 0%,#18181b 70%,#09090b 100%)',
-          border: '3px solid rgba(255,255,255,0.12)',
         }}
       >
         {/* 발밑 타원 그림자 */}

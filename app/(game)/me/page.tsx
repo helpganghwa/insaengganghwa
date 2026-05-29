@@ -120,7 +120,7 @@ export default async function ProfilePage() {
             <Link href="/me/profiles" aria-label="프로필 선택" className="block shrink-0">
               <CharacterStage
                 charSrc={dirImg(activeProfile)}
-                className="aspect-[3/4] h-44 border border-zinc-800"
+                className="aspect-[3/4] h-44"
               />
             </Link>
           ) : (

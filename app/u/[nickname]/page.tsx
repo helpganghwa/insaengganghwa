@@ -123,7 +123,7 @@ export default async function PublicProfilePage({
     <main className="mx-auto min-h-dvh w-full max-w-[390px] bg-white px-4 py-6 text-zinc-900 dark:bg-black dark:text-zinc-50">
       <header className="text-center">
         {data.charImg ? (
-          <CharacterStage charSrc={data.charImg} className="mx-auto aspect-square w-44 border border-zinc-800" />
+          <CharacterStage charSrc={data.charImg} className="mx-auto aspect-square w-44" />
         ) : (
           <div className="text-4xl">🏆</div>
         )}
