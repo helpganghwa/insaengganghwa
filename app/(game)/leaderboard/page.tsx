@@ -72,13 +72,16 @@ export default async function LeaderboardPage({
                   >
                     {/* 캐릭터 — 우측, 행보다 크게 바닥 정렬(상반신 노출) */}
                     {e.profileImg && (
-                      // eslint-disable-next-line @next/next/no-img-element
-                      <img
-                        src={e.profileImg}
-                        alt=""
+                      <div
                         aria-hidden
-                        className="absolute inset-y-0 right-0 h-full w-32 object-cover"
-                        style={{ objectPosition: '50% 27%', imageRendering: 'pixelated' }}
+                        className="absolute inset-y-0 right-0 w-40"
+                        style={{
+                          backgroundImage: `url(${e.profileImg})`,
+                          backgroundSize: '200% auto', // 확대(얼굴 클로즈업)
+                          backgroundPosition: '50% 13%', // 얼굴 전체 + 어깨 살짝(상단)
+                          backgroundRepeat: 'no-repeat',
+                          imageRendering: 'pixelated',
+                        }}
                       />
                     )}
                     {/* 좌→우 그라데이션 (좌측 텍스트 가독, 우측 캐릭터 노출) */}
