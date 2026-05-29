@@ -8,6 +8,16 @@
   --foreground: #171717;
 }
 
+/* 다크 베이스 톤업 — 순수 검정 대신 짙은 중성 회색(2026-05-29 사용자 결정).
+   어두운 테마는 유지하되 최암부를 한 단계 밝게. zinc 950/900/800을 전역 재정의해
+   bg-zinc-950 등 모든 유틸에 일괄 반영(레이어 순서 950<900<800 유지). 기본값 대비:
+   950 #09090b→#151518 · 900 #18181b→#202024 · 800 #27272a→#2d2d32 */
+@theme {
+  --color-zinc-950: #151518;
+  --color-zinc-900: #202024;
+  --color-zinc-800: #2d2d32;
+}
+
 @theme inline {
   --color-background: var(--background);
   --color-foreground: var(--foreground);

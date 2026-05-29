@@ -28,8 +28,14 @@ declare global {
 const POSTGRES_OPTS = {
   prepare: false,
   max: 1,
-  idle_timeout: 20, // sec
-  connect_timeout: 10, // sec
+  // idle_timeout 20→90s (2026-05-29): 트래픽이 뜸하면 20s마다 커넥션이 닫혀 다음 요청이
+  // 콜드 재연결로 느려지고(첫 DB 쿼리가 가드를 넘겨 데이터 누락) 무한로딩처럼 보였음.
+  // 매분 도는 cron(push-enhance-ready 등)이 90s 윈도 안에서 커넥션을 살려두므로 재연결 제거.
+  idle_timeout: 90, // sec
+  // 콜드 새 연결이 매달릴 때 8s 내 실패시켜 재연결 유도(기존 10s에서 단축).
+  connect_timeout: 8, // sec
+  // 죽은 커넥션이 풀에 남는 시간 상한 — 주기적 재생성으로 조용히 끊긴 소켓 재사용 hang 방지.
+  max_lifetime: 60 * 30, // sec
 } as const;
 
 function buildClient(): ReturnType<typeof postgres> {
