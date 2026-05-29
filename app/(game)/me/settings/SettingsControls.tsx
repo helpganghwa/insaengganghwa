@@ -18,12 +18,14 @@ export function LocalToggle({
   defaultOn?: boolean;
 }) {
   const [on, setOn] = useState(defaultOn);
-  const [mounted, setMounted] = useState(false);
+  // 최초 페인트엔 transition을 끄고(rAF 후 활성) localStorage 값 적용 시 모션이 안 보이게.
+  const [ready, setReady] = useState(false);
 
   useEffect(() => {
-    setMounted(true);
     const v = localStorage.getItem(storageKey);
     if (v != null) setOn(v === '1');
+    const id = requestAnimationFrame(() => setReady(true));
+    return () => cancelAnimationFrame(id);
   }, [storageKey]);
 
   const toggle = () => {
@@ -44,13 +46,13 @@ export function LocalToggle({
       </span>
       <span
         aria-hidden
-        className={`relative h-5 w-9 shrink-0 rounded-full transition ${
-          mounted && on ? 'bg-emerald-500' : 'bg-zinc-300 dark:bg-zinc-700'
+        className={`relative h-5 w-9 shrink-0 rounded-full ${ready ? 'transition-colors' : ''} ${
+          on ? 'bg-emerald-500' : 'bg-zinc-300 dark:bg-zinc-700'
         }`}
       >
         <span
-          className={`absolute top-0.5 h-4 w-4 rounded-full bg-white transition-all ${
-            mounted && on ? 'left-[18px]' : 'left-0.5'
+          className={`absolute top-0.5 h-4 w-4 rounded-full bg-white ${ready ? 'transition-all' : ''} ${
+            on ? 'left-[18px]' : 'left-0.5'
           }`}
         />
       </span>

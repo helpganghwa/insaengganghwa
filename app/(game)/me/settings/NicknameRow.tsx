@@ -3,7 +3,6 @@
 import { useState } from 'react';
 
 import { NicknameChangeModal } from '../NicknameChangeModal';
-import { NICKNAME_CHANGE_COST_DIAMOND } from '@/lib/game/balance';
 
 /**
  * 설정 페이지의 닉네임 row — 클릭 시 NicknameChangeModal 오픈(프로필 페이지와 동일).
@@ -19,7 +18,6 @@ export function NicknameRow({
   diamond: string;
 }) {
   const [open, setOpen] = useState(false);
-  const free = changedCount === 0;
   return (
     <>
       <button
@@ -27,10 +25,7 @@ export function NicknameRow({
         onClick={() => setOpen(true)}
         className="text-sm text-zinc-500 underline"
       >
-        {current} ·{' '}
-        {free
-          ? '변경(무료) →'
-          : `변경(💎 ${NICKNAME_CHANGE_COST_DIAMOND.toLocaleString('ko-KR')}) →`}
+        {current}
       </button>
       <NicknameChangeModal
         open={open}

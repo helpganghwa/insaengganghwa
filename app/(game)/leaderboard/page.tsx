@@ -14,9 +14,9 @@ const LABEL: Record<LeaderboardMetric, string> = {
 };
 // metric별 명예의 전당 배경 — 최고=전당, 합산=대장간, 전투력=투기장
 const BG: Record<LeaderboardMetric, string> = {
-  max: '/sprites/hof-bg.png?v=2',
-  sum: '/sprites/hof-bg.png?v=2',
-  combat: '/sprites/hof-bg.png?v=2',
+  max: '/sprites/hof-bg.png?v=3',
+  sum: '/sprites/hof-bg.png?v=3',
+  combat: '/sprites/hof-bg.png?v=3',
 };
 // 수치는 순수 숫자(천단위 콤마)만 — 접두/이모지/축약 없이 전체 노출
 function fmt(v: number): string {
@@ -109,9 +109,7 @@ export default async function LeaderboardPage({
                               className="absolute inset-0 h-full w-full object-contain object-bottom"
                               style={{
                                 imageRendering: 'pixelated',
-                                transform: first
-                                  ? 'scale(1.49) translateY(calc(5% + 15px))'
-                                  : 'scale(1.35) translateY(calc(5% + 15px))',
+                                transform: 'scale(1.49) translateY(calc(5% + 15px))',
                                 transformOrigin: 'center bottom',
                                 filter: 'drop-shadow(0 3px 5px rgba(0,0,0,0.55))',
                               }}
