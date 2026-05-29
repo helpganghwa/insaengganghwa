@@ -57,69 +57,107 @@ export default async function LeaderboardPage({
           아직 랭킹에 오른 유저가 없습니다.
         </section>
       ) : (
-        <section className="overflow-hidden rounded-xl border border-zinc-800 bg-zinc-900">
-          <ul>
-            {top.map((e) => {
-              const top3 = e.rank <= 3;
-              const medal =
-                e.rank === 1 ? '🥇' : e.rank === 2 ? '🥈' : e.rank === 3 ? '🥉' : null;
-              const me = e.userId === userId;
-              return (
-                <li key={e.userId}>
-                  <Link
-                    href={`/u/${encodeURIComponent(e.nickname)}`}
-                    className={`relative flex items-center gap-2.5 overflow-hidden border-b border-zinc-800 px-3 last:border-b-0 ${
-                      top3 ? 'h-20' : 'h-12'
-                    } ${me ? 'ring-2 ring-inset ring-amber-400' : ''}`}
-                  >
-                    {/* 1~3위만 — 배경에 캐릭터 얼굴 + 어깨 크게 */}
-                    {top3 && e.profileImg && (
-                      <div
-                        aria-hidden
-                        className="absolute inset-y-0 right-0 w-3/5"
-                        style={{
-                          backgroundImage: `url(${e.profileImg})`,
-                          backgroundSize: '185% auto', // 얼굴 + 어깨 크게
-                          backgroundPosition: '50% 13%',
-                          backgroundRepeat: 'no-repeat',
-                          imageRendering: 'pixelated',
-                        }}
-                      />
-                    )}
-                    {top3 && (
-                      <div className="absolute inset-0 bg-gradient-to-r from-zinc-950 via-zinc-950/70 to-transparent" />
-                    )}
-                    <span
-                      className={`relative shrink-0 text-center font-mono tabular-nums ${
-                        top3 ? 'w-8 text-xl' : 'w-7 text-sm text-zinc-400'
-                      } text-white`}
-                    >
-                      {medal ?? `#${e.rank}`}
-                    </span>
-                    <span
-                      className={`relative flex-1 truncate text-white ${
-                        top3
-                          ? 'text-base font-bold drop-shadow-[0_1px_2px_rgba(0,0,0,0.9)]'
-                          : 'text-sm font-medium'
-                      }`}
-                    >
-                      {e.nickname}
-                    </span>
-                    <span
-                      className={`relative font-mono tabular-nums text-amber-200 ${
-                        top3
-                          ? 'text-base font-bold drop-shadow-[0_1px_2px_rgba(0,0,0,0.9)]'
-                          : 'text-sm'
-                      }`}
-                    >
-                      {fmt(metric, e.value)}
-                    </span>
-                  </Link>
-                </li>
-              );
-            })}
-          </ul>
-        </section>
+        <>
+          {/* Top 3 — 명예의 전당 (pixellab 배경 + 전신 높이차) */}
+          <section className="overflow-hidden rounded-xl border border-amber-900/50 shadow-lg shadow-black/40">
+            <div className="relative w-full" style={{ aspectRatio: '400 / 224' }}>
+              {/* eslint-disable-next-line @next/next/no-img-element */}
+              <img
+                src="/sprites/hof-bg.png"
+                alt=""
+                aria-hidden
+                className="absolute inset-0 h-full w-full object-cover"
+                style={{ imageRendering: 'pixelated' }}
+              />
+              {/* 하단 어둠 — 닉네임/점수 가독 */}
+              <div className="absolute inset-x-0 bottom-0 h-2/5 bg-gradient-to-t from-zinc-950/90 to-transparent" />
+              {/* 1·2·3위 전신 — 2위(좌)·1위(중앙, 큼)·3위(우) */}
+              <div className="absolute inset-0 flex items-end justify-center gap-0.5 px-1 pb-1.5">
+                {[top[1], top[0], top[2]]
+                  .filter((e): e is (typeof top)[number] => !!e)
+                  .map((e) => {
+                    const first = e.rank === 1;
+                    const medal = e.rank === 1 ? '🥇' : e.rank === 2 ? '🥈' : '🥉';
+                    const me = e.userId === userId;
+                    return (
+                      <Link
+                        key={e.userId}
+                        href={`/u/${encodeURIComponent(e.nickname)}`}
+                        className={`flex min-w-0 flex-col items-center justify-end self-stretch ${
+                          first ? 'flex-[1.35] z-10' : 'flex-1'
+                        }`}
+                      >
+                        <div className="relative w-full flex-1">
+                          {e.profileImg && (
+                            // eslint-disable-next-line @next/next/no-img-element
+                            <img
+                              src={e.profileImg}
+                              alt=""
+                              aria-hidden
+                              draggable={false}
+                              className="absolute inset-0 h-full w-full object-contain object-bottom"
+                              style={{
+                                imageRendering: 'pixelated',
+                                transform: first ? 'scale(1.06)' : 'scale(0.8)',
+                                transformOrigin: 'center bottom',
+                                filter: 'drop-shadow(0 3px 5px rgba(0,0,0,0.55))',
+                              }}
+                            />
+                          )}
+                        </div>
+                        <div className="flex w-full items-center justify-center gap-0.5 px-0.5">
+                          <span className={first ? 'text-base leading-none' : 'text-sm leading-none'}>
+                            {medal}
+                          </span>
+                          <span
+                            className={`truncate font-bold drop-shadow-[0_1px_2px_rgba(0,0,0,1)] ${
+                              first ? 'text-xs' : 'text-[11px]'
+                            } ${me ? 'text-amber-300' : 'text-white'}`}
+                          >
+                            {e.nickname}
+                          </span>
+                        </div>
+                        <span className="font-mono text-[10px] tabular-nums text-amber-200 drop-shadow-[0_1px_2px_rgba(0,0,0,1)]">
+                          {fmt(metric, e.value)}
+                        </span>
+                      </Link>
+                    );
+                  })}
+              </div>
+            </div>
+          </section>
+
+          {/* 4위~ — 텍스트 목록 */}
+          {top.length > 3 && (
+            <section className="overflow-hidden rounded-xl border border-zinc-800 bg-zinc-900">
+              <ul>
+                {top.slice(3).map((e) => {
+                  const me = e.userId === userId;
+                  return (
+                    <li key={e.userId}>
+                      <Link
+                        href={`/u/${encodeURIComponent(e.nickname)}`}
+                        className={`flex h-12 items-center gap-2.5 border-b border-zinc-800 px-3 last:border-b-0 ${
+                          me ? 'bg-amber-400/10 ring-1 ring-inset ring-amber-400/60' : ''
+                        }`}
+                      >
+                        <span className="w-7 shrink-0 text-center font-mono text-sm tabular-nums text-zinc-400">
+                          #{e.rank}
+                        </span>
+                        <span className="flex-1 truncate text-sm font-medium text-white">
+                          {e.nickname}
+                        </span>
+                        <span className="font-mono text-sm tabular-nums text-amber-200">
+                          {fmt(metric, e.value)}
+                        </span>
+                      </Link>
+                    </li>
+                  );
+                })}
+              </ul>
+            </section>
+          )}
+        </>
       )}
       <p className="text-center text-xs text-zinc-400">상시 누적 · Top 100 (시즌 없음)</p>
     </div>
