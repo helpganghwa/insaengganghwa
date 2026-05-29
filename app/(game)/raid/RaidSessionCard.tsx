@@ -356,13 +356,15 @@ export function RaidSessionCard({ view: v }: { view: RaidView }) {
       }
     ).Kakao;
     if (k && k.isInitialized()) {
-      const bg = getBossBg(v.bossCode);
       k.Share.sendDefault({
         objectType: 'feed',
         content: {
           title: `⚔️ ${boss.name} 레이드`,
           description: `함께 ${boss.name}을(를) 토벌하고 보상을 나눠요!`,
-          imageUrl: bg ? `${origin}${assetUrl(bg)}` : `${origin}/icons/icon-512.png`,
+          // 레이드 화면처럼 배경색+배경+정적 보스 합성 OG (satori).
+          imageUrl: `${origin}/og/raid/${v.bossCode}`,
+          imageWidth: 1200,
+          imageHeight: 630,
           link: { mobileWebUrl: url, webUrl: url },
         },
         buttons: [{ title: '레이드 참여하기', link: { mobileWebUrl: url, webUrl: url } }],
