@@ -26,7 +26,7 @@ export function CharacterStage({
             alt="프로필 캐릭터"
             draggable={false}
             className="absolute inset-0 h-full w-full object-contain object-bottom"
-            style={{ imageRendering: 'pixelated', transform: 'scale(1.3)', transformOrigin: 'center bottom' }}
+            style={{ imageRendering: 'pixelated', transform: 'scale(1.3) translateY(7%)', transformOrigin: 'center bottom' }}
           />
         </>
       )}

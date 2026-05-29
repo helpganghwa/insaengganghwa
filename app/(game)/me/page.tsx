@@ -132,7 +132,7 @@ export default async function ProfilePage() {
             )}
           </div>
 
-          <div className="flex w-[44%] flex-col justify-center gap-2">
+          <div className="flex w-[44%] flex-col gap-2">
             {(['weapon', 'armor', 'accessory'] as Slot[]).map((s) => {
               const it = bySlot.get(s);
               if (!it) {
@@ -140,7 +140,7 @@ export default async function ProfilePage() {
                   <Link
                     key={s}
                     href={`/inventory?slot=${s}`}
-                    className="flex items-center gap-2 rounded-xl border border-dashed border-white/15 bg-white/[0.02] p-2 text-white/45"
+                    className="flex flex-1 items-center gap-2 rounded-xl border border-dashed border-white/15 bg-white/[0.02] p-2 text-white/45"
                   >
                     <span className="grid h-9 w-9 shrink-0 place-items-center rounded-lg bg-white/5 text-base" aria-hidden>
                       {SLOT_EMOJI[s]}
@@ -153,7 +153,7 @@ export default async function ProfilePage() {
                 <div
                   key={s}
                   style={rarityBorderStyle(it.transcendLevel)}
-                  className={`flex items-center gap-2 rounded-xl border bg-white/5 p-2 ${
+                  className={`flex flex-1 items-center gap-2 rounded-xl border bg-white/5 p-2 ${
                     hasRarityBorder(it.transcendLevel) ? '' : 'border-white/10'
                   }`}
                 >
