@@ -46,9 +46,13 @@ export const metadata: Metadata = {
 //   metadata API로 순수 width=390을 내는 유일한 방법(리터럴 <meta>는 Next 주입분과
 //   중복되어 불가). CLAUDE §5.2.
 export const viewport = {
-  themeColor: '#0a0a0a',
+  themeColor: '#151518',
   width: 390,
   initialScale: undefined,
+  // PWA(홈 화면 실행) 하단/노치 safe-area 활성화 — 없으면 env(safe-area-inset-*)=0이라
+  // BottomNav의 pb-[env(safe-area-inset-bottom)]가 무효가 되어 버튼이 홈 인디케이터와
+  // 겹쳤음(2026-05-29). viewport-fit은 스케일 속성이 아니라 width=390 자동핏과 무충돌.
+  viewportFit: 'cover' as const,
 };
 
 export default function RootLayout({ children }: Readonly<{ children: React.ReactNode }>) {
@@ -60,9 +64,11 @@ export default function RootLayout({ children }: Readonly<{ children: React.Reac
   return (
     <html
       lang="ko"
-      className={`dark ${geistSans.variable} ${geistMono.variable} h-full antialiased`}
+      className={`dark ${geistSans.variable} ${geistMono.variable} h-full overscroll-none antialiased`}
     >
-      <body className="flex min-h-full flex-col bg-black text-zinc-50">{children}</body>
+      <body className="flex min-h-full flex-col overscroll-none bg-zinc-950 text-zinc-50">
+        {children}
+      </body>
     </html>
   );
 }
