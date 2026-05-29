@@ -1,4 +1,3 @@
-import Link from 'next/link';
 import { redirect } from 'next/navigation';
 
 import { signInWithKakao } from '@/lib/auth/actions';
@@ -37,18 +36,8 @@ export default async function LoginPage({
             로그인 실패: {decodeURIComponent(error)}
           </p>
         ) : null}
-
-        <p className="text-xs leading-5 text-zinc-500">
-          가입 시{' '}
-          <Link href="/terms" className="underline">
-            이용약관
-          </Link>{' '}
-          및{' '}
-          <Link href="/privacy" className="underline">
-            개인정보처리방침
-          </Link>
-          에 동의하는 것으로 간주됩니다.
-        </p>
+        {/* TODO(출시 전): 정식 이용약관·개인정보처리방침 페이지(/terms·/privacy) 작성 후
+            "가입 시 …에 동의 간주" 고지 + 링크 복원. 링크가 404라 임시 제거(2026-05-29). */}
       </main>
     </div>
   );
