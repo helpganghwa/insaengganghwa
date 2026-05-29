@@ -115,7 +115,7 @@ export function attackRaid(input: {
   });
 }
 
-/** 추가 공격 구매 — n번째 비용 50+10·(n−1) 다이아 (BALANCE §5.5). */
+/** 추가 공격 구매 — n번째 비용 50×⌈n/10⌉ 다이아 (10번 단위 계단, BALANCE §5.5). */
 export function buyExtraAttack(input: {
   userId: string;
   raidId: bigint;
