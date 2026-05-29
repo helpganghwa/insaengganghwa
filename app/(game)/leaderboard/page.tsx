@@ -77,8 +77,8 @@ export default async function LeaderboardPage({
                         src={e.profileImg}
                         alt=""
                         aria-hidden
-                        className="absolute bottom-0 right-2 h-[160%] w-auto object-contain object-bottom"
-                        style={{ imageRendering: 'pixelated' }}
+                        className="absolute inset-y-0 right-0 h-full w-32 object-cover"
+                        style={{ objectPosition: '50% 27%', imageRendering: 'pixelated' }}
                       />
                     )}
                     {/* 좌→우 그라데이션 (좌측 텍스트 가독, 우측 캐릭터 노출) */}
