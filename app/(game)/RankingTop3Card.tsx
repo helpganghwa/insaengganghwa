@@ -1,22 +1,52 @@
 import Link from 'next/link';
 
-import { getRankingTop } from '@/lib/game/leaderboard/queries';
+import { getRankingTop, type LeaderboardMetric } from '@/lib/game/leaderboard/queries';
 
 /**
- * 홈 §1 — 최고 강화 Top 3 카드. 랭킹 상세(leaderboard)의 명예의 전당과 동일 구성:
- * 배경(hof) + 1·2·3위 전신(2위 좌·1위 중앙·3위 우) + #순위/닉네임(위)·수치(아래).
+ * 홈 §1 — Top 3 명예의 전당 카드. 진입마다 metric(최고/합산/전투력) 랜덤 노출.
+ * 헤더는 pixellab 배너 배경 + 랭킹 진입. 본문은 leaderboard 상세와 동일 구성.
  */
 const HOF_BG = '/sprites/hof-bg.png?v=3';
+const HEADER_BG = '/sprites/hof-header.png';
+const METRICS: LeaderboardMetric[] = ['max', 'sum', 'combat'];
+const LABEL: Record<LeaderboardMetric, string> = {
+  max: '최고 강화',
+  sum: '합산 강화',
+  combat: '전투력',
+};
 
 export async function RankingTop3Card() {
-  const top = await getRankingTop('max', 3);
+  const metric = METRICS[crypto.getRandomValues(new Uint32Array(1))[0]! % METRICS.length]!;
+  const top = await getRankingTop(metric, 3);
   if (top.length === 0) return null;
 
   return (
     <section
-      aria-label="최고 강화 랭킹"
+      aria-label={`${LABEL[metric]} 랭킹`}
       className="overflow-hidden rounded-xl border border-amber-900/50 shadow-lg shadow-black/40"
     >
+      {/* 헤더 — pixellab 배너 배경 + 랭킹 진입 */}
+      <Link
+        href="/leaderboard"
+        className="relative flex items-center gap-1.5 overflow-hidden border-b border-amber-700/40 px-3.5 py-2.5 transition hover:brightness-110"
+      >
+        {/* eslint-disable-next-line @next/next/no-img-element */}
+        <img
+          src={HEADER_BG}
+          alt=""
+          aria-hidden
+          className="absolute inset-0 h-full w-full object-cover"
+          style={{ imageRendering: 'pixelated' }}
+        />
+        <div className="absolute inset-0 bg-gradient-to-r from-black/55 to-black/25" />
+        <span className="relative" aria-hidden>
+          🏆
+        </span>
+        <span className="relative text-[12px] font-bold text-amber-100 drop-shadow-[0_1px_2px_rgba(0,0,0,1)]">
+          {LABEL[metric]} 랭킹
+        </span>
+      </Link>
+
       <div className="relative w-full" style={{ aspectRatio: '400 / 174' }}>
         {/* eslint-disable-next-line @next/next/no-img-element */}
         <img
@@ -26,7 +56,6 @@ export async function RankingTop3Card() {
           className="absolute inset-0 h-[105%] w-full object-fill"
           style={{ imageRendering: 'pixelated' }}
         />
-        {/* 1·2·3위 전신 — 2위(좌)·1위(중앙)·3위(우) */}
         <div className="absolute inset-0 flex items-end justify-center gap-0.5 px-1 py-1.5">
           {[top[1], top[0], top[2]]
             .filter((e): e is (typeof top)[number] => !!e)
@@ -40,7 +69,6 @@ export async function RankingTop3Card() {
                     first ? 'z-10' : ''
                   }`}
                 >
-                  {/* 위 — #순위 + 닉네임 */}
                   <div className="flex w-full items-center justify-center gap-0.5 px-0.5 pt-1">
                     <span className="font-mono text-[11px] leading-none tabular-nums text-white drop-shadow-[0_1px_2px_rgba(0,0,0,1)]">
                       #{e.rank}
@@ -49,7 +77,6 @@ export async function RankingTop3Card() {
                       {e.nickname}
                     </span>
                   </div>
-                  {/* 중앙 — 캐릭터 전신 */}
                   <div className="relative w-full flex-1">
                     {e.profileImg ? (
                       // eslint-disable-next-line @next/next/no-img-element
@@ -68,7 +95,6 @@ export async function RankingTop3Card() {
                       />
                     ) : null}
                   </div>
-                  {/* 아래 — 수치(순수 숫자) */}
                   <span className="pb-1 font-mono text-[11px] font-bold tabular-nums text-amber-200 drop-shadow-[0_1px_2px_rgba(0,0,0,1)]">
                     {e.value.toLocaleString('ko-KR')}
                   </span>
