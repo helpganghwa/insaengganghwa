@@ -48,15 +48,39 @@ export type RaidView = {
 
 const MEDAL = ['🥇', '🥈', '🥉'];
 
-// 공격 연출 로어 — 매 공격 랜덤. 연속 클릭을 막는 오버레이 텍스트로도 쓰임.
-const ATTACK_LORE = [
-  '강철이 비늘을 갈랐다',
-  '일격이 급소를 파고든다',
-  '망치의 노래가 적을 뒤흔든다',
-  '날이 어둠을 베어낸다',
-  '혼신의 타격이 작렬한다',
-  '단 한 수가 깊이 박힌다',
-] as const;
+// 공격 연출 로어 — 보스 5종별 커스텀. 매 공격 랜덤, 버튼 위 오버레이로 연속 클릭 차단.
+const ATTACK_LORE: Record<RaidBoss, readonly string[]> = {
+  slime_king: [
+    '점액을 가르자 끈적한 비명이 터진다',
+    '핵을 노린 일격이 젤리를 꿰뚫는다',
+    '천 년의 점액이 출렁이며 갈라진다',
+    '녹아내리는 칼끝이 군주를 찌른다',
+  ],
+  orc_chief: [
+    '족장의 어금니가 한 번 더 부러진다',
+    '포효를 가르고 도끼날이 박힌다',
+    '전리품 두개골이 흩어진다',
+    '거구가 휘청이며 변경의 빚을 갚는다',
+  ],
+  stone_golem: [
+    '바위 틈으로 룬의 마력이 새어 나온다',
+    '균열을 따라 일격이 파고든다',
+    '다시 뭉치기 전에 한 조각을 깎는다',
+    '산이 울리며 푸른 빛이 흩어진다',
+  ],
+  dragon_west: [
+    '방패만 한 비늘 사이로 칼을 밀어넣는다',
+    '잿빛 날개가 일격에 흔들린다',
+    '끓는 숨결을 뚫고 급소를 노린다',
+    '고룡의 자만에 첫 균열이 난다',
+  ],
+  fallen_angel: [
+    '깨진 후광 아래로 검은 깃털이 진다',
+    '저주받은 검과 칼날이 부딪친다',
+    '타락한 신성을 한 겹 벗겨낸다',
+    '추락한 날개에 일격이 스민다',
+  ],
+};
 // 보석 공격 컨펌 로어 — {n}=보석 비용.
 const GEM_CONFIRM_LORE = [
   '보석 {n}을 바쳐 한 번 더 검을 들겠는가?',
@@ -110,12 +134,16 @@ export function RaidSessionCard({ view: v }: { view: RaidView }) {
 
   const boss = RAID_BOSSES[v.bossCode];
   const settled = v.status === 'settled';
-  const allowed = RAID_BASE_ATTACKS + v.myExtraAttacks;
-  // 낙관적 공격 횟수 — 즉시 차감, 서버 응답(refresh)이 따라잡음.
+  // 낙관적 공격 횟수/추가 — 즉시 반영, 서버 응답(refresh)이 max로 따라잡음.
   const [localUsed, setLocalUsed] = useState(v.myAttacksUsed);
+  const [localExtra, setLocalExtra] = useState(v.myExtraAttacks);
   useEffect(() => {
     setLocalUsed((n) => Math.max(n, v.myAttacksUsed));
   }, [v.myAttacksUsed]);
+  useEffect(() => {
+    setLocalExtra((n) => Math.max(n, v.myExtraAttacks));
+  }, [v.myExtraAttacks]);
+  const allowed = RAID_BASE_ATTACKS + localExtra;
   const left = allowed - localUsed;
   const canAttack = v.isParticipant && !settled && !over && left > 0;
 
@@ -221,7 +249,7 @@ export function RaidSessionCard({ view: v }: { view: RaidView }) {
     onFail?: () => void,
   ) => {
     setAttacking(true);
-    setAttackLore(pick(ATTACK_LORE));
+    setAttackLore(pick(ATTACK_LORE[v.bossCode]));
     fxKey.current += 1;
     sounds.raidHit();
     haptic.tap();
@@ -271,7 +299,16 @@ export function RaidSessionCard({ view: v }: { view: RaidView }) {
       return;
     }
     setGemConfirm(false);
-    runAttack(() => gemAttackRaidAction(v.raidId));
+    // 낙관 — 보석 공격은 추가 공격(extra+1)+공격(used+1)이라 left 변화 0. 응답 후 깜빡임 방지.
+    setLocalExtra((n) => n + 1);
+    setLocalUsed((n) => n + 1);
+    runAttack(
+      () => gemAttackRaidAction(v.raidId),
+      () => {
+        setLocalExtra((n) => Math.max(0, n - 1));
+        setLocalUsed((n) => Math.max(0, n - 1));
+      },
+    );
   };
 
   const handleClaim = () => {
@@ -362,14 +399,6 @@ export function RaidSessionCard({ view: v }: { view: RaidView }) {
           <div className="animate-crit-flash pointer-events-none absolute inset-0 bg-amber-300 mix-blend-screen" />
         ) : fx === 'hit' ? (
           <div className="animate-hit-flash pointer-events-none absolute inset-0 bg-red-500 mix-blend-screen" />
-        ) : null}
-        {/* 공격 로어 오버레이 — 연속 클릭 차단 동안 표시 */}
-        {attackLore ? (
-          <div className="pointer-events-none absolute inset-x-0 top-1/2 z-20 -translate-y-1/2 px-6 text-center">
-            <span className="animate-fx-counter-pop inline-block rounded-lg bg-black/65 px-3 py-1.5 text-sm font-bold text-amber-100 shadow-lg backdrop-blur-sm">
-              {attackLore}
-            </span>
-          </div>
         ) : null}
 
         <div className={`relative mb-2 ${shake}`}>
@@ -492,7 +521,15 @@ export function RaidSessionCard({ view: v }: { view: RaidView }) {
             참여자가 아닙니다.
           </div>
         ) : (
-          <div className="space-y-2">
+          <div className="relative space-y-2">
+            {/* 공격 로어 오버레이 — 강화처럼 버튼 위에 표시(연속 클릭 차단 시각화) */}
+            {attackLore ? (
+              <div className="pointer-events-none absolute inset-x-0 -top-2 z-20 flex justify-center">
+                <span className="animate-fx-counter-pop rounded-lg bg-black/80 px-3 py-1.5 text-sm font-bold text-amber-100 shadow-lg ring-1 ring-amber-400/40 backdrop-blur-sm">
+                  {attackLore}
+                </span>
+              </div>
+            ) : null}
             {canAttack ? (
               <button
                 type="button"
