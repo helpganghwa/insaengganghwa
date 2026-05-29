@@ -15,11 +15,11 @@
  */
 import 'server-only';
 
-import { and, eq, isNotNull, sql } from 'drizzle-orm';
+import { and, count, eq, isNotNull, sql } from 'drizzle-orm';
 import { z } from 'zod';
 
 import { db } from '@/lib/db/client';
-import { profileGenerationJobs } from '@/lib/db/schema/avatar';
+import { profileGenerationJobs, userProfiles } from '@/lib/db/schema/avatar';
 import { catalogItems, equipmentInstances } from '@/lib/db/schema/equipment';
 import { profiles } from '@/lib/db/schema/profiles';
 import { PROFILE_GENERATION_DIAMOND } from '@/lib/game/balance';
@@ -50,6 +50,13 @@ export async function createProfileJob(
 ): Promise<CreateProfileJobResult> {
   const userId = await getSessionUserId();
   if (!userId) throw new CreateProfileJobError('UNAUTHORIZED');
+
+  // 프로필 최대 20개 — 초과 시 생성 차단(기본 2개 포함).
+  const [pc] = await db
+    .select({ n: count() })
+    .from(userProfiles)
+    .where(eq(userProfiles.userId, userId));
+  if ((pc?.n ?? 0) >= 20) throw new CreateProfileJobError('PROFILE_LIMIT');
 
   const parsed = ProfileOptionsSchema.safeParse(rawOptions);
   if (!parsed.success) throw new CreateProfileJobError('INVALID_OPTIONS');

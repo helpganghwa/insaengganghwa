@@ -15,8 +15,8 @@ const LABEL: Record<LeaderboardMetric, string> = {
 // metric별 명예의 전당 배경 — 최고=전당, 합산=대장간, 전투력=투기장
 const BG: Record<LeaderboardMetric, string> = {
   max: '/sprites/hof-bg.png?v=2',
-  sum: '/sprites/forge-bg.png?v=2',
-  combat: '/sprites/arena-bg.png?v=2',
+  sum: '/sprites/hof-bg.png?v=2',
+  combat: '/sprites/hof-bg.png?v=2',
 };
 // 수치는 순수 숫자(천단위 콤마)만 — 접두/이모지/축약 없이 전체 노출
 function fmt(v: number): string {
@@ -41,18 +41,15 @@ export default async function LeaderboardPage({
       <h1 className="text-lg font-semibold">🏆 랭킹</h1>
       <LeaderboardTabs active={metric} />
 
-      <section className="rounded-xl border-2 border-amber-300 bg-amber-50 px-4 py-3 dark:border-amber-700 dark:bg-amber-950/50">
-        <div className="flex items-baseline justify-between">
-          <span className="text-xs text-amber-700 dark:text-amber-300">
-            내 {LABEL[metric]} 순위
-          </span>
-          <span className="font-mono text-lg font-bold text-amber-900 dark:text-amber-100">
-            {mine ? `#${mine.rank.toLocaleString('ko-KR')}` : '—'}
-          </span>
-        </div>
-        <div className="mt-1 text-xs text-amber-700/80 dark:text-amber-300/80">
-          {mine ? fmt(mine.value) : '기록을 쌓으면 집계됩니다'}
-        </div>
+      <section className="flex items-center justify-between gap-2 rounded-xl border border-amber-300 bg-amber-50 px-3 py-2 dark:border-amber-700 dark:bg-amber-950/50">
+        <span className="text-xs text-amber-700 dark:text-amber-300">
+          내 {LABEL[metric]} 순위
+        </span>
+        <span className="font-mono text-sm font-bold text-amber-900 dark:text-amber-100">
+          {mine
+            ? `#${mine.rank.toLocaleString('ko-KR')} · ${fmt(mine.value)}`
+            : '기록을 쌓으면 집계됩니다'}
+        </span>
       </section>
 
       {top.length === 0 ? (
@@ -73,7 +70,7 @@ export default async function LeaderboardPage({
                 style={{ imageRendering: 'pixelated' }}
               />
               {/* 하단 어둠 — 닉네임/점수 가독 */}
-              <div className="absolute inset-x-0 bottom-0 h-2/5 bg-gradient-to-t from-zinc-950/90 to-transparent" />
+              <div className="absolute inset-x-0 bottom-0 h-1/5 bg-gradient-to-t from-zinc-950/55 to-transparent" />
               {/* 1·2·3위 전신 — 2위(좌)·1위(중앙, 큼)·3위(우) */}
               <div className="absolute inset-0 flex items-end justify-center gap-0.5 px-1 pb-1.5">
                 {[top[1], top[0], top[2]]
@@ -92,12 +89,12 @@ export default async function LeaderboardPage({
                         {/* 위 — 메달 + 닉네임 */}
                         <div className="flex w-full items-center justify-center gap-0.5 px-0.5 pt-1">
                           <span
-                            className={`font-mono text-sm tabular-nums leading-none drop-shadow-[0_1px_2px_rgba(0,0,0,1)] ${rankColor}`}
+                            className={`font-mono text-[11px] tabular-nums leading-none drop-shadow-[0_1px_2px_rgba(0,0,0,1)] ${rankColor}`}
                           >
                             #{e.rank}
                           </span>
                           <span
-                            className={`truncate text-sm font-medium drop-shadow-[0_1px_2px_rgba(0,0,0,1)] ${rankColor}`}
+                            className={`truncate text-[11px] font-medium drop-shadow-[0_1px_2px_rgba(0,0,0,1)] ${rankColor}`}
                           >
                             {e.nickname}
                           </span>

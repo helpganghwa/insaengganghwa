@@ -119,7 +119,7 @@ export function ProfileSelector({
       {/* 선택된 캐릭터 8방향 뷰어 — 스와이프로 회전, 방향은 즉시 적용 */}
       <div className="rounded-2xl border border-zinc-200 p-3 dark:border-zinc-800">
         <div
-          className="relative mx-auto flex aspect-square w-full max-w-[256px] cursor-grab touch-pan-y select-none items-center justify-center overflow-hidden rounded-xl bg-gradient-to-b from-zinc-700 via-zinc-900 to-zinc-950 active:cursor-grabbing"
+          className="relative mx-auto flex aspect-square w-full max-w-[256px] cursor-grab touch-pan-y select-none items-center justify-center overflow-hidden rounded-xl active:cursor-grabbing"
           onPointerDown={onPointerDown}
           onPointerMove={onPointerMove}
           onPointerUp={endDrag}

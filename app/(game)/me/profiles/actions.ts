@@ -1,7 +1,7 @@
 'use server';
 
 import { revalidatePath } from 'next/cache';
-import { and, eq } from 'drizzle-orm';
+import { and, count, eq } from 'drizzle-orm';
 import { z } from 'zod';
 
 import { getSessionUserId } from '@/lib/auth/session';
@@ -80,6 +80,14 @@ export async function deleteProfile(profileId: string): Promise<ActionState> {
   if (!userId) return { status: 'error', message: '로그인이 필요합니다.' };
   if (!(await ownedProfileId(userId, profileId)))
     return { status: 'error', message: '프로필을 찾을 수 없습니다.' };
+
+  // 최소 1개 보유 — 마지막 프로필은 삭제 불가.
+  const [c] = await db
+    .select({ n: count() })
+    .from(userProfiles)
+    .where(eq(userProfiles.userId, userId));
+  if ((c?.n ?? 0) <= 1)
+    return { status: 'error', message: '프로필은 최소 1개 이상 보유해야 합니다.' };
 
   await db.transaction(async (tx) => {
     await tx

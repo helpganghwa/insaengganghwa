@@ -20,6 +20,7 @@ const MSG: Record<string, string> = {
   NO_EQUIPMENT: '무기·방어구·장신구 3종을 모두 장착해야 합니다.',
   INSUFFICIENT_DIAMOND: '다이아가 부족합니다.',
   PROFILE_GEN_IN_PROGRESS: '이미 프로필을 생성하고 있어요. 완료 후 다시 시도해 주세요.',
+  PROFILE_LIMIT: '프로필은 최대 20개까지 보유할 수 있습니다.',
   UNKNOWN: '알 수 없는 오류가 발생했습니다.',
 };
 

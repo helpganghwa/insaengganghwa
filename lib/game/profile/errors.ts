@@ -7,7 +7,8 @@ export type CreateProfileJobErrorCode =
   | 'INVALID_OPTIONS'
   | 'NO_EQUIPMENT'
   | 'INSUFFICIENT_DIAMOND'
-  | 'PROFILE_GEN_IN_PROGRESS';
+  | 'PROFILE_GEN_IN_PROGRESS'
+  | 'PROFILE_LIMIT';
 
 export class CreateProfileJobError extends Error {
   constructor(public code: CreateProfileJobErrorCode) {
