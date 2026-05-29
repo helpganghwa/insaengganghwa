@@ -12,6 +12,11 @@ import { join } from 'node:path';
 import { SPRITE_MANIFEST } from '../lib/game/equipment/sprite-manifest';
 
 const CELL = 128;
+// 셀 사이 투명 여백 — 축소 렌더(인벤 목록 등) 시 인접 셀이 경계로 새어나오는 bleeding
+// 방지(2026-05-29). stride = CELL + GUTTER. atlasBgStyle은 cell(128)로 crop하므로 누출
+// 영역이 gutter(투명)에 떨어져 점이 안 보임.
+const GUTTER = 8;
+const STRIDE = CELL + GUTTER;
 const COLS = 15;
 const ROWS = 10; // 150 정확. 늘리려면 row 추가.
 
@@ -39,15 +44,15 @@ for (let i = 0; i < codes.length; i++) {
   }
   const col = i % COLS;
   const row = Math.floor(i / COLS);
-  const x = col * CELL;
-  const y = row * CELL;
+  const x = col * STRIDE;
+  const y = row * STRIDE;
   composite.push({ input: file, left: x, top: y });
   items[code] = { x, y };
   placed++;
 }
 
-const atlasW = COLS * CELL;
-const atlasH = ROWS * CELL;
+const atlasW = COLS * STRIDE;
+const atlasH = ROWS * STRIDE;
 console.log(`composing ${placed}/${codes.length} sprites → ${atlasW}×${atlasH}`);
 
 const base = sharp({
