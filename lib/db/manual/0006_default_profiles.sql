@@ -23,17 +23,32 @@ security definer
 set search_path = public
 as $$
 declare
+  new_nickname text;
+  attempts int := 0;
+  max_attempts constant int := 10;
   v_male_rot jsonb := '{"south":"/sprites/default/male/south.png","south_east":"/sprites/default/male/south_east.png","east":"/sprites/default/male/east.png","north_east":"/sprites/default/male/north_east.png","north":"/sprites/default/male/north.png","north_west":"/sprites/default/male/north_west.png","west":"/sprites/default/male/west.png","south_west":"/sprites/default/male/south_west.png"}'::jsonb;
   v_female_rot jsonb := '{"south":"/sprites/default/female/south.png","south_east":"/sprites/default/female/south_east.png","east":"/sprites/default/female/east.png","north_east":"/sprites/default/female/north_east.png","north":"/sprites/default/female/north.png","north_west":"/sprites/default/female/north_west.png","west":"/sprites/default/female/west.png","south_west":"/sprites/default/female/south_west.png"}'::jsonb;
 begin
-  insert into public.profiles (id, nickname, diamond, tutorial_step)
-  values (
-    new.id,
-    '용사' || substr(replace(new.id::text, '-', ''), 1, 12),
-    5,
-    1
-  )
-  on conflict (id) do nothing;
+  -- 한글 닉네임(0005) — UNIQUE 충돌 재시도 + fallback. 절대 '용사*'로 회귀 금지.
+  loop
+    new_nickname := public.generate_korean_nickname();
+    begin
+      insert into public.profiles (id, nickname, diamond, tutorial_step)
+      values (new.id, new_nickname, 5, 1);
+      exit;
+    exception when unique_violation then
+      if exists (select 1 from public.profiles where id = new.id) then exit; end if;
+      attempts := attempts + 1;
+      if attempts >= max_attempts then
+        new_nickname := substr(new_nickname, 1, 8)
+                     || lpad((floor(random() * 9000) + 1000)::int::text, 4, '0');
+        insert into public.profiles (id, nickname, diamond, tutorial_step)
+        values (new.id, new_nickname, 5, 1)
+        on conflict (id) do nothing;
+        exit;
+      end if;
+    end;
+  end loop;
 
   insert into public.user_supply_boxes (user_id, slot, count)
   values

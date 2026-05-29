@@ -69,9 +69,7 @@ export default async function LeaderboardPage({
                 className="absolute inset-0 h-full w-full object-fill"
                 style={{ imageRendering: 'pixelated' }}
               />
-              {/* 하단 어둠 — 닉네임/점수 가독 */}
-              <div className="absolute inset-x-0 bottom-0 h-1/5 bg-gradient-to-t from-zinc-950/55 to-transparent" />
-              {/* 1·2·3위 전신 — 2위(좌)·1위(중앙, 큼)·3위(우) */}
+              {/* 1·2·3위 전신 — 2위(좌)·1위(중앙, 큼)·3위(우). 텍스트는 drop-shadow로 가독 확보 */}
               <div className="absolute inset-0 flex items-end justify-center gap-0.5 px-1 pb-1.5">
                 {[top[1], top[0], top[2]]
                   .filter((e): e is (typeof top)[number] => !!e)
@@ -113,7 +111,7 @@ export default async function LeaderboardPage({
                                 imageRendering: 'pixelated',
                                 transform: first
                                   ? 'scale(1.49) translateY(calc(5% + 15px))'
-                                  : 'scale(1.15) translateY(calc(5% + 15px))',
+                                  : 'scale(1.35) translateY(calc(5% + 15px))',
                                 transformOrigin: 'center bottom',
                                 filter: 'drop-shadow(0 3px 5px rgba(0,0,0,0.55))',
                               }}
