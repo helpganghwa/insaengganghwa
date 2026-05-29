@@ -521,39 +521,50 @@ export function RaidSessionCard({ view: v }: { view: RaidView }) {
             참여자가 아닙니다.
           </div>
         ) : (
-          <div className="relative space-y-2">
-            {/* 공격 로어 — 강화 시도와 동일: 버튼에 정확히 맞춘 dim + 정적 텍스트(bg). */}
-            {attackLore ? (
-              <div className="pointer-events-none absolute inset-0 z-20 flex items-center justify-center rounded-full bg-black/55 backdrop-blur-[2px]">
-                <span className="rounded bg-black/75 px-2 py-0.5 text-[12px] font-semibold break-keep text-amber-200">
-                  {attackLore}
-                </span>
-              </div>
-            ) : null}
+          <div className="space-y-2">
             {canAttack ? (
-              <button
-                type="button"
-                onClick={handleAttack}
-                disabled={attacking}
-                className="w-full rounded-full bg-gradient-to-r from-red-600 to-orange-500 px-4 py-3.5 text-sm font-extrabold text-white shadow-lg shadow-red-900/40 transition active:scale-95 hover:brightness-110 disabled:opacity-60"
-              >
-                ⚔️ {boss.name} 공격!  {left}/{allowed}
-              </button>
+              <div className="relative">
+                <button
+                  type="button"
+                  onClick={handleAttack}
+                  disabled={attacking}
+                  className="w-full rounded-full bg-gradient-to-r from-red-600 to-orange-500 px-4 py-3.5 text-sm font-extrabold text-white shadow-lg shadow-red-900/40 transition active:scale-95 hover:brightness-110 disabled:opacity-60"
+                >
+                  ⚔️ {boss.name} 공격!  {left}/{allowed}
+                </button>
+                {/* 공격 로어 — 강화처럼 버튼에 정확히 맞춘 dim + 정적 텍스트(bg). */}
+                {attackLore ? (
+                  <div className="pointer-events-none absolute inset-0 z-20 flex items-center justify-center rounded-full bg-black/60 backdrop-blur-[2px]">
+                    <span className="rounded bg-black/80 px-2 py-0.5 text-[12px] font-semibold break-keep text-amber-200">
+                      {attackLore}
+                    </span>
+                  </div>
+                ) : null}
+              </div>
             ) : !over && left <= 0 ? (
-              <button
-                type="button"
-                onClick={handleGemAttack}
-                disabled={attacking}
-                className={`w-full rounded-full border-2 px-4 py-3 text-xs font-bold leading-snug transition active:scale-95 disabled:opacity-60 ${
-                  gemConfirm
-                    ? 'animate-pulse-soft border-red-400 bg-red-500/20 text-red-100'
-                    : 'border-amber-400 bg-amber-400/10 text-amber-300'
-                }`}
-              >
-                {gemConfirm
-                  ? `${gemLore ?? ''} (${gemLeft})`
-                  : `💎 ${raidExtraAttackCost(v.myExtraAttacks + 1).toLocaleString()} 추가 공격`}
-              </button>
+              <div className="relative">
+                <button
+                  type="button"
+                  onClick={handleGemAttack}
+                  disabled={attacking}
+                  className={`w-full rounded-full border-2 px-4 py-3 text-xs font-bold leading-snug transition active:scale-95 disabled:opacity-60 ${
+                    gemConfirm
+                      ? 'animate-pulse-soft border-red-400 bg-red-500/20 text-red-100'
+                      : 'border-amber-400 bg-amber-400/10 text-amber-300'
+                  }`}
+                >
+                  {gemConfirm
+                    ? `${gemLore ?? ''} (${gemLeft})`
+                    : `💎 ${raidExtraAttackCost(v.myExtraAttacks + 1).toLocaleString()} 추가 공격`}
+                </button>
+                {attackLore ? (
+                  <div className="pointer-events-none absolute inset-0 z-20 flex items-center justify-center rounded-full bg-black/60 backdrop-blur-[2px]">
+                    <span className="rounded bg-black/80 px-2 py-0.5 text-[12px] font-semibold break-keep text-amber-200">
+                      {attackLore}
+                    </span>
+                  </div>
+                ) : null}
+              </div>
             ) : (
               <div className="rounded-full bg-zinc-800 px-4 py-3 text-center text-sm text-zinc-400">
                 {over ? '⏳ 정산 대기' : '공격 불가'}
@@ -604,9 +615,9 @@ export function RaidSessionCard({ view: v }: { view: RaidView }) {
                 <button
                   type="button"
                   onClick={handleInvite}
-                  className="flex w-full items-center justify-center gap-1.5 rounded-lg bg-amber-400/10 px-2.5 py-1.5 text-[11px] font-bold text-amber-300 ring-1 ring-inset ring-amber-400/40 transition active:scale-[0.99] hover:bg-amber-400/20"
+                  className="flex w-full items-center justify-center rounded-lg bg-amber-400/20 px-2.5 py-1.5 text-[11px] font-extrabold text-amber-100 ring-1 ring-inset ring-amber-400/70 transition active:scale-[0.99] hover:bg-amber-400/30"
                 >
-                  <span className="animate-pulse-soft">🤝</span> 동료 초대
+                  동료 초대
                 </button>
               </li>
             ) : null}
