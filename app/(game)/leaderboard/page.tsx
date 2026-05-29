@@ -75,7 +75,9 @@ export default async function LeaderboardPage({
                   .filter((e): e is (typeof top)[number] => !!e)
                   .map((e) => {
                     const first = e.rank === 1;
-                    const rankColor = e.rank === 1 ? 'text-amber-300' : 'text-white';
+                    const me = e.userId === userId;
+                    // 기본 흰색 — 내 등수일 때만 amber로 강조(1등 포함).
+                    const rankColor = me ? 'text-amber-300' : 'text-white';
                     return (
                       <Link
                         key={e.userId}
