@@ -55,6 +55,14 @@ interface DigitProps {
 }
 
 function Digit({ place, value, height, digitStyle }: DigitProps) {
+  // hook은 조건 분기보다 위에서 무조건 호출 (rules-of-hooks). '.'이면 값은 미사용.
+  const valueRoundedToPlace = place === '.' ? 0 : getValueRoundedToPlace(value, place);
+  const animatedValue = useSpring(valueRoundedToPlace);
+
+  useEffect(() => {
+    animatedValue.set(valueRoundedToPlace);
+  }, [animatedValue, valueRoundedToPlace]);
+
   if (place === '.') {
     return (
       <span className="counter-digit" style={{ height, ...digitStyle, width: 'fit-content' }}>
@@ -62,13 +70,6 @@ function Digit({ place, value, height, digitStyle }: DigitProps) {
       </span>
     );
   }
-
-  const valueRoundedToPlace = getValueRoundedToPlace(value, place);
-  const animatedValue = useSpring(valueRoundedToPlace);
-
-  useEffect(() => {
-    animatedValue.set(valueRoundedToPlace);
-  }, [animatedValue, valueRoundedToPlace]);
 
   return (
     <span className="counter-digit" style={{ height, ...digitStyle }}>

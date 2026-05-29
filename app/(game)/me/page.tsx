@@ -114,25 +114,26 @@ export default async function ProfilePage() {
           </span>
         </div>
 
-        {/* 본문 — 캐릭터 + 장비 3종 */}
-        <div className="flex gap-3">
-          <div className="flex-1">
-            {activeProfile ? (
-              <Link href="/me/profiles" aria-label="프로필 선택" className="block">
-                <CharacterStage charSrc={dirImg(activeProfile)} className="aspect-square w-full border border-zinc-800" />
-              </Link>
-            ) : (
-              <Link
-                href="/me/create"
-                className="flex aspect-square w-full flex-col items-center justify-center gap-1 rounded-2xl border-2 border-dashed border-white/25 text-white/60"
-              >
-                <span className="text-3xl" aria-hidden>✨</span>
-                <span className="text-xs">프로필 만들기</span>
-              </Link>
-            )}
-          </div>
+        {/* 본문 — 캐릭터(상단) + 장비 3종(하단 가로 균등). 세로 스택이라 정렬 어긋남 없음. */}
+        <div className="space-y-3">
+          {activeProfile ? (
+            <Link href="/me/profiles" aria-label="프로필 선택" className="block">
+              <CharacterStage
+                charSrc={dirImg(activeProfile)}
+                className="mx-auto aspect-square w-[68%] border border-zinc-800"
+              />
+            </Link>
+          ) : (
+            <Link
+              href="/me/create"
+              className="mx-auto flex aspect-square w-[68%] flex-col items-center justify-center gap-1 rounded-2xl border-2 border-dashed border-white/25 text-white/60"
+            >
+              <span className="text-3xl" aria-hidden>✨</span>
+              <span className="text-xs">프로필 만들기</span>
+            </Link>
+          )}
 
-          <div className="flex w-[44%] flex-col gap-2">
+          <div className="grid grid-cols-3 gap-2">
             {(['weapon', 'armor', 'accessory'] as Slot[]).map((s) => {
               const it = bySlot.get(s);
               if (!it) {
@@ -140,12 +141,12 @@ export default async function ProfilePage() {
                   <Link
                     key={s}
                     href={`/inventory?slot=${s}`}
-                    className="flex flex-1 items-center gap-2 rounded-xl border border-dashed border-white/15 bg-white/[0.02] p-2 text-white/45"
+                    className="flex flex-col items-center gap-1 rounded-xl border border-dashed border-white/15 bg-white/[0.02] p-2 text-white/45"
                   >
-                    <span className="grid h-9 w-9 shrink-0 place-items-center rounded-lg bg-white/5 text-base" aria-hidden>
+                    <span className="grid h-10 w-10 place-items-center rounded-lg bg-white/5 text-lg" aria-hidden>
                       {SLOT_EMOJI[s]}
                     </span>
-                    <span className="text-[11px]">{SLOT_LABEL[s]} 장착</span>
+                    <span className="text-[10px]">{SLOT_LABEL[s]}</span>
                   </Link>
                 );
               }
@@ -153,26 +154,22 @@ export default async function ProfilePage() {
                 <div
                   key={s}
                   style={rarityBorderStyle(it.transcendLevel)}
-                  className={`flex flex-1 items-center gap-2 rounded-xl border bg-white/5 p-2 ${
+                  className={`flex flex-col items-center gap-1 rounded-xl border bg-white/5 p-2 ${
                     hasRarityBorder(it.transcendLevel) ? '' : 'border-white/10'
                   }`}
                 >
-                  <div className="shrink-0">
-                    <TranscendSprite
-                      code={it.code}
-                      slot={s}
-                      level={it.transcendLevel}
-                      isChampion={champSet.has(it.catalogItemId)}
-                      size={36}
-                      frameless
-                    />
+                  <TranscendSprite
+                    code={it.code}
+                    slot={s}
+                    level={it.transcendLevel}
+                    isChampion={champSet.has(it.catalogItemId)}
+                    size={40}
+                    frameless
+                  />
+                  <div className="w-full truncate text-center text-[10px] leading-tight text-white/80">
+                    {it.name}
                   </div>
-                  <div className="min-w-0 flex-1">
-                    <div className="line-clamp-2 text-[11px] leading-snug text-white/85">{it.name}</div>
-                    <div className="mt-0.5 text-[11px] font-bold tabular-nums text-white">
-                      +{it.enhanceLevel}
-                    </div>
-                  </div>
+                  <div className="text-[11px] font-bold tabular-nums text-white">+{it.enhanceLevel}</div>
                 </div>
               );
             })}
