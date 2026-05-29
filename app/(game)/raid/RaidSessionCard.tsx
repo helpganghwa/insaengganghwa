@@ -48,6 +48,24 @@ export type RaidView = {
 
 const MEDAL = ['🥇', '🥈', '🥉'];
 
+// 공격 연출 로어 — 매 공격 랜덤. 연속 클릭을 막는 오버레이 텍스트로도 쓰임.
+const ATTACK_LORE = [
+  '강철이 비늘을 갈랐다',
+  '일격이 급소를 파고든다',
+  '망치의 노래가 적을 뒤흔든다',
+  '날이 어둠을 베어낸다',
+  '혼신의 타격이 작렬한다',
+  '단 한 수가 깊이 박힌다',
+] as const;
+// 보석 공격 컨펌 로어 — {n}=보석 비용.
+const GEM_CONFIRM_LORE = [
+  '보석 {n}을 바쳐 한 번 더 검을 들겠는가?',
+  '{n}의 대가로 일격의 기회를 청하시겠습니까?',
+  '{n}을 제물 삼아 다시 맞서시겠습니까?',
+  '영혼의 {n}을 불살라 추가 공격을 감행할까?',
+] as const;
+const pick = <T,>(a: readonly T[]): T => a[Math.floor(Math.random() * a.length)]!;
+
 // 페이즈마다 순환하는 게이지 컬러(돌파 후 다음 컬러로 교체).
 const PHASE_PALETTE = [
   { bar: 'bg-emerald-400', text: 'text-emerald-300', glow: 'shadow-emerald-400/60' },
@@ -110,11 +128,38 @@ export function RaidSessionCard({ view: v }: { view: RaidView }) {
     null,
   );
   const fxKey = useRef(0);
-  // 보석 공격 — 1탭 시 3초 컨펌, 그 안에 2탭하면 실행(충전 단계 생략).
+  // 보석 공격 — 1탭 시 3초 컨펌(카운트+로어), 그 안에 2탭하면 실행.
   const [gemConfirm, setGemConfirm] = useState(false);
-  const gemTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const [gemLeft, setGemLeft] = useState(0);
+  const [gemLore, setGemLore] = useState<string | null>(null);
+  // 공격 연출 — 로어 오버레이 + 쿨다운(연속 클릭 차단).
+  const [attacking, setAttacking] = useState(false);
+  const [attackLore, setAttackLore] = useState<string | null>(null);
   // 보상 수령 — 낙관 완료 표시(서버 확정 전 즉시 '수령 완료' UI).
   const [claimedOpt, setClaimedOpt] = useState(false);
+
+  // 보석 컨펌 3초 카운트 + 로어 선택(강화 패턴).
+  useEffect(() => {
+    if (!gemConfirm) {
+      setGemLeft(0);
+      setGemLore(null);
+      return;
+    }
+    const cost = raidExtraAttackCost(v.myExtraAttacks + 1);
+    setGemLeft(3);
+    setGemLore(pick(GEM_CONFIRM_LORE).replace('{n}', `💎${cost.toLocaleString()}`));
+    const id = setInterval(() => {
+      setGemLeft((s) => {
+        if (s <= 1) {
+          setGemConfirm(false);
+          return 0;
+        }
+        return s - 1;
+      });
+    }, 1000);
+    return () => clearInterval(id);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [gemConfirm]);
 
   // ── 페이즈 게이지: 이전 페이즈가 100% 다 찬 뒤 다음 컬러로 순차 진행 ──
   // 현재 진행률 계산: 누적 임계 = phase1·2·(1.5^N − 1).
@@ -167,21 +212,28 @@ export function RaidSessionCard({ view: v }: { view: RaidView }) {
   const pal = PHASE_PALETTE[gPhase % PHASE_PALETTE.length]!;
   const shake = fx === 'crit' ? 'animate-crit-shake' : fx === 'hit' ? 'animate-hit-shake' : '';
 
-  const handleAttack = () => {
-    if (!canAttack) return;
-    // 낙관: 즉시 횟수 차감 + 타격 모션/사운드/햅틱 (서버 응답 전).
-    setLocalUsed((n) => n + 1);
+  // 공격 공통 — 로어 오버레이 + 쿨다운(연속 차단). 데미지/HP는 서버 응답 반영.
+  const runAttack = (
+    action: () => Promise<
+      | { status: 'success'; damage: number; isCrit: boolean }
+      | { status: 'error'; message: string; code: string }
+    >,
+    onFail?: () => void,
+  ) => {
+    setAttacking(true);
+    setAttackLore(pick(ATTACK_LORE));
     fxKey.current += 1;
     sounds.raidHit();
     haptic.tap();
     setFx('hit');
     setTimeout(() => setFx(null), 520);
-    // 서버 공격(백그라운드) — 데미지 숫자·크리·HP는 응답으로 반영. 실패 시 횟수 롤백.
     void (async () => {
-      const r = await attackRaidAction(v.raidId);
+      const r = await action();
       if (r.status !== 'success') {
-        setLocalUsed((n) => Math.max(0, n - 1));
+        onFail?.();
         showError(r.message);
+        setAttacking(false);
+        setAttackLore(null);
         return;
       }
       const id = (fxKey.current += 1);
@@ -194,43 +246,32 @@ export function RaidSessionCard({ view: v }: { view: RaidView }) {
       setFloatDmg({ id, val: r.damage, crit: r.isCrit });
       setTimeout(() => setFloatDmg(null), 850);
       router.refresh();
+      // 쿨다운 — 오버레이 유지 동안 재공격 차단(연속 클릭 + refresh 깜빡임 방지).
+      setTimeout(() => {
+        setAttacking(false);
+        setAttackLore(null);
+      }, 850);
     })();
   };
 
+  const handleAttack = () => {
+    if (!canAttack || attacking) return;
+    setLocalUsed((n) => n + 1); // 낙관 횟수 차감
+    runAttack(
+      () => attackRaidAction(v.raidId),
+      () => setLocalUsed((n) => Math.max(0, n - 1)),
+    );
+  };
+
   const handleGemAttack = () => {
-    if (gemConfirm) {
-      // 2탭 — 보석 공격(낙관 모션 + 서버 단일 트랜잭션). 데미지/HP는 응답 반영.
-      if (gemTimer.current) clearTimeout(gemTimer.current);
-      setGemConfirm(false);
-      fxKey.current += 1;
-      sounds.raidHit();
+    if (attacking) return;
+    if (!gemConfirm) {
       haptic.tap();
-      setFx('hit');
-      setTimeout(() => setFx(null), 520);
-      void (async () => {
-        const r = await gemAttackRaidAction(v.raidId);
-        if (r.status !== 'success') {
-          showError(r.message);
-          return;
-        }
-        const id = (fxKey.current += 1);
-        if (r.isCrit) {
-          sounds.raidCrit();
-          haptic.success();
-          setFx('crit');
-          setTimeout(() => setFx(null), 520);
-        }
-        setFloatDmg({ id, val: r.damage, crit: r.isCrit });
-        setTimeout(() => setFloatDmg(null), 850);
-        router.refresh();
-      })();
+      setGemConfirm(true); // useEffect가 3초 카운트 + 로어 설정
       return;
     }
-    // 1탭 — 3초 컨펌 대기.
-    haptic.tap();
-    setGemConfirm(true);
-    if (gemTimer.current) clearTimeout(gemTimer.current);
-    gemTimer.current = setTimeout(() => setGemConfirm(false), 3000);
+    setGemConfirm(false);
+    runAttack(() => gemAttackRaidAction(v.raidId));
   };
 
   const handleClaim = () => {
@@ -306,6 +347,14 @@ export function RaidSessionCard({ view: v }: { view: RaidView }) {
           <div className="animate-crit-flash pointer-events-none absolute inset-0 bg-amber-300 mix-blend-screen" />
         ) : fx === 'hit' ? (
           <div className="animate-hit-flash pointer-events-none absolute inset-0 bg-red-500 mix-blend-screen" />
+        ) : null}
+        {/* 공격 로어 오버레이 — 연속 클릭 차단 동안 표시 */}
+        {attackLore ? (
+          <div className="pointer-events-none absolute inset-x-0 top-1/2 z-20 -translate-y-1/2 px-6 text-center">
+            <span className="animate-fx-counter-pop inline-block rounded-lg bg-black/65 px-3 py-1.5 text-sm font-bold text-amber-100 shadow-lg backdrop-blur-sm">
+              {attackLore}
+            </span>
+          </div>
         ) : null}
 
         <div className={`relative mb-2 ${shake}`}>
@@ -433,7 +482,8 @@ export function RaidSessionCard({ view: v }: { view: RaidView }) {
               <button
                 type="button"
                 onClick={handleAttack}
-                className="w-full rounded-full bg-gradient-to-r from-red-600 to-orange-500 px-4 py-3.5 text-sm font-extrabold text-white shadow-lg shadow-red-900/40 transition active:scale-95 hover:brightness-110"
+                disabled={attacking}
+                className="w-full rounded-full bg-gradient-to-r from-red-600 to-orange-500 px-4 py-3.5 text-sm font-extrabold text-white shadow-lg shadow-red-900/40 transition active:scale-95 hover:brightness-110 disabled:opacity-60"
               >
                 ⚔️ {boss.name} 공격!  {left}/{allowed}
               </button>
@@ -441,14 +491,16 @@ export function RaidSessionCard({ view: v }: { view: RaidView }) {
               <button
                 type="button"
                 onClick={handleGemAttack}
-                className={`w-full rounded-full border-2 px-4 py-3 text-sm font-bold transition active:scale-95 ${
+                disabled={attacking}
+                className={`w-full rounded-full border-2 px-4 py-3 text-xs font-bold leading-snug transition active:scale-95 disabled:opacity-60 ${
                   gemConfirm
-                    ? 'animate-pulse-soft border-red-400 bg-red-500/20 text-red-200'
+                    ? 'animate-pulse-soft border-red-400 bg-red-500/20 text-red-100'
                     : 'border-amber-400 bg-amber-400/10 text-amber-300'
                 }`}
               >
-                💎 {raidExtraAttackCost(v.myExtraAttacks + 1)}{' '}
-                {gemConfirm ? '— 한번 더 탭!' : '공격'}
+                {gemConfirm
+                  ? `${gemLore ?? ''} (${gemLeft})`
+                  : `💎 ${raidExtraAttackCost(v.myExtraAttacks + 1).toLocaleString()} 추가 공격`}
               </button>
             ) : (
               <div className="rounded-full bg-zinc-800 px-4 py-3 text-center text-sm text-zinc-400">
