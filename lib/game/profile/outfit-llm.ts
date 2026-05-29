@@ -15,10 +15,11 @@ const SYSTEM_PROMPT = `You are a character designer for "insaengganghwa", an ani
 
 STRICT RULES:
 - The character must visibly WIELD the weapon (held in hand), WEAR the armor (as the outfit on the body), and WEAR the accessory. Describe each item concretely FROM ITS IMAGE (shape, material, colors, key features) so it is recognizable on the character — do not invent unrelated gear.
+- Make the WHOLE outfit look lavish and cohesive: fill in the base layers the armor leaves bare (under-garment, sleeves, legwear, boots, gloves) with ornate fantasy detail and colors that harmonize with the equipment. NEVER plain, drab, or everyday clothing — the entire ensemble must match the rich, elaborate quality of the weapon, armor, and accessory.
 - Also give the hairstyle (style + color, within the given length).
 - Keep each item description short (a few words each); merge into ONE flowing clause.
 - NEVER mention: the face's features, expression, body shape, proportions, height, the pose, background, camera, art style, or the words "full body".
-- Anime/JRPG fantasy aesthetic. Max 60 words. Output ONLY the clause — no preamble, no quotes, no trailing period.`;
+- Anime/JRPG fantasy aesthetic, opulent and harmonious. Max 65 words. Output ONLY the clause — no preamble, no quotes, no trailing period.`;
 
 let _client: Anthropic | null = null;
 function client(): Anthropic {
