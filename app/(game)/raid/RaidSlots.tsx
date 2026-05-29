@@ -66,8 +66,7 @@ export function RaidSlots({
         alert(r.message);
         return;
       }
-      setPicking(false);
-      setPicked(null);
+      // 팝업은 닫지 않고 상세로 이동 — 페이지 전환 시 자연 unmount(전환 중 깜빡임 방지).
       router.push(`/raid/${r.raidId}`);
     });
 

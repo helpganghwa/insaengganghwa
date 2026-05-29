@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useRef, useState, useTransition } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { useRouter } from 'next/navigation';
 
 import {
@@ -88,7 +88,6 @@ function useCountdown(expireAtIso: string): { text: string; over: boolean; urgen
 export function RaidSessionCard({ view: v }: { view: RaidView }) {
   const router = useRouter();
   const { showResource, showError } = useResourceToast();
-  const [pending, startTransition] = useTransition();
   const { text: countdown, over, urgent } = useCountdown(v.expireAtIso);
 
   const boss = RAID_BOSSES[v.bossCode];
@@ -114,6 +113,8 @@ export function RaidSessionCard({ view: v }: { view: RaidView }) {
   // 보석 공격 — 1탭 시 3초 컨펌, 그 안에 2탭하면 실행(충전 단계 생략).
   const [gemConfirm, setGemConfirm] = useState(false);
   const gemTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+  // 보상 수령 — 낙관 완료 표시(서버 확정 전 즉시 '수령 완료' UI).
+  const [claimedOpt, setClaimedOpt] = useState(false);
 
   // ── 페이즈 게이지: 이전 페이즈가 100% 다 찬 뒤 다음 컬러로 순차 진행 ──
   // 현재 진행률 계산: 누적 임계 = phase1·2·(1.5^N − 1).
@@ -233,31 +234,34 @@ export function RaidSessionCard({ view: v }: { view: RaidView }) {
   };
 
   const handleClaim = () => {
-    if (pending) return;
-    haptic.tap();
-    startTransition(async () => {
+    if (claimedOpt || !v.myReward || v.myReward.claimed) return;
+    // 낙관: 보상 값은 이미 화면에 있고 claim은 서버 멱등 → 즉시 '수령 완료' + 연출.
+    setClaimedOpt(true);
+    sounds.rewardClaim();
+    haptic.success();
+    const { diamond, boxes } = v.myReward;
+    let delay = 0;
+    if (diamond > 0) {
+      showResource('💎', '레이드 보상', diamond);
+      delay = 350;
+    }
+    for (const s of ['weapon', 'armor', 'accessory'] as SupplySlot[]) {
+      const n = boxes[s] ?? 0;
+      if (n > 0) {
+        setTimeout(() => showResource(SLOT_EMOJI[s], `${SLOT_LABEL[s]} 상자`, n), delay);
+        delay += 350;
+      }
+    }
+    // 백그라운드 확정 — 실패(이미 수령 등) 시 롤백.
+    void (async () => {
       const r = await claimRaidRewardAction(v.raidId);
       if (r.status !== 'success') {
+        setClaimedOpt(false);
         showError(r.message);
         return;
       }
-      sounds.rewardClaim();
-      haptic.success();
-      const { diamond, boxes } = r.result;
-      let delay = 0;
-      if (diamond > 0) {
-        showResource('💎', '레이드 보상', diamond);
-        delay = 350;
-      }
-      for (const s of ['weapon', 'armor', 'accessory'] as SupplySlot[]) {
-        const n = boxes[s] ?? 0;
-        if (n > 0) {
-          setTimeout(() => showResource(SLOT_EMOJI[s], `${SLOT_LABEL[s]} 상자`, n), delay);
-          delay += 350;
-        }
-      }
       setTimeout(() => router.refresh(), delay + 200);
-    });
+    })();
   };
 
   const handleInvite = async () => {
@@ -383,7 +387,7 @@ export function RaidSessionCard({ view: v }: { view: RaidView }) {
             <div className="rounded-xl border border-zinc-700 p-3 text-center text-xs text-zinc-400">
               참여 보상이 없습니다 (공격 0회).
             </div>
-          ) : v.myReward.claimed ? (
+          ) : v.myReward.claimed || claimedOpt ? (
             <div className="rounded-xl border-2 border-zinc-700 bg-zinc-900/60 p-3 text-center">
               <div className="text-sm font-bold text-zinc-400">✅ 보상 수령 완료</div>
             </div>
@@ -411,11 +415,11 @@ export function RaidSessionCard({ view: v }: { view: RaidView }) {
               </div>
               <button
                 type="button"
-                disabled={pending}
+                disabled={claimedOpt}
                 onClick={handleClaim}
                 className="mt-2.5 w-full rounded-full bg-gradient-to-r from-amber-500 to-yellow-500 px-4 py-2.5 text-sm font-extrabold text-amber-950 shadow-lg shadow-amber-900/40 transition active:scale-95 hover:brightness-110 disabled:opacity-50"
               >
-                {pending ? '수령 중…' : '🎁 보상 받기'}
+                🎁 보상 받기
               </button>
             </div>
           )
