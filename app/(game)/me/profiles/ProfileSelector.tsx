@@ -126,7 +126,7 @@ export function ProfileSelector({
                 style={{
                   imageRendering: 'pixelated',
                   opacity: d === dir ? 1 : 0,
-                  transform: 'scale(1.3)',
+                  transform: 'scale(1.05)',
                   transformOrigin: 'center bottom',
                 }}
               />
