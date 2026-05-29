@@ -66,7 +66,7 @@ export default function RootLayout({ children }: Readonly<{ children: React.Reac
       lang="ko"
       className={`dark ${geistSans.variable} ${geistMono.variable} h-full overscroll-none antialiased`}
     >
-      <body className="flex min-h-full flex-col overscroll-none bg-zinc-950 text-zinc-50">
+      <body className="flex h-full flex-col overscroll-none bg-zinc-950 text-zinc-50">
         {children}
       </body>
     </html>
