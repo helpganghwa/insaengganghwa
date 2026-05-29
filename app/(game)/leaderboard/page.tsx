@@ -80,8 +80,8 @@ export default async function LeaderboardPage({
                       <Link
                         key={e.userId}
                         href={`/u/${encodeURIComponent(e.nickname)}`}
-                        className={`flex min-w-0 flex-col items-center self-stretch ${
-                          first ? 'flex-[1.35] z-10' : 'flex-1'
+                        className={`flex min-w-0 flex-1 flex-col items-center self-stretch ${
+                          first ? 'z-10' : ''
                         }`}
                       >
                         {/* 위 — 메달 + 닉네임 */}
