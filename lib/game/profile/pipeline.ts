@@ -48,9 +48,9 @@ async function safePush(
  * 머리·표정·포즈·장비 모티프 조합으로.
  */
 const SOURCE_BY_GENDER: Record<'male' | 'female', string> = {
-  // 2026-05-28 — 7-8등신 심플 프롬프트 source (reference 톤·비율).
-  male: '921ba198-d299-4f92-8d5d-bde41d2e179c',
-  female: 'cdc970f0-44a8-4c9e-8555-c4e01aeae3a1',
+  // 2026-05-29 — source 교체.
+  male: '49f210db-1899-4df0-8b2e-bb09537ed7c6',
+  female: 'fa5ff0de-1ab2-4dcf-b1a9-80a08f86f67b',
 };
 
 /**

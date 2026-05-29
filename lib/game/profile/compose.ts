@@ -12,10 +12,21 @@
  */
 import 'server-only';
 
+import { readFileSync } from 'node:fs';
+import { join } from 'node:path';
+
 import { CATALOG_ITEMS, type CatalogItem } from '@/lib/game/equipment/catalog';
 import { ITEM_MOTIFS } from '@/lib/game/equipment/motifs';
+import { spritePath } from '@/lib/game/equipment/sprite-manifest';
 import { generateOutfitClause } from './outfit-llm';
 import type { ProfileGender } from './refs';
+
+/** 장비 스프라이트 PNG → base64(vision 입력). 파일 부재 시 throw(상위 catch fallback). */
+function readSpriteB64(key: string): string {
+  const rel = spritePath(key);
+  if (!rel) throw new Error(`NO_SPRITE: ${key}`);
+  return readFileSync(join(process.cwd(), 'public', rel.replace(/^\//, ''))).toString('base64');
+}
 
 // 헤어 컬러·스타일 옵션 폐기 (2026-05-28 사용자 결정) — 머리색은 장비 모티프 팔레트를
 // 따라가도록 모델에 위임. 유저가 직접 고르지 않음.
@@ -169,12 +180,12 @@ export async function composeEditDescription(
   opts: ProfileOptions,
   eq: ProfileEquipment,
 ): Promise<string> {
-  // getItem 검증(잘못된 키/슬롯 조기 throw) — 반환은 미사용(모티프는 ITEM_MOTIFS에서).
-  getItem(eq.weaponKey, 'weapon');
-  getItem(eq.armorKey, 'armor');
-  getItem(eq.accessoryKey, 'accessory');
+  // 장비 3종 — vision 입력(스프라이트 이미지 + 이름 + art). 잘못된 키/슬롯은 조기 throw.
+  const wpn = getItem(eq.weaponKey, 'weapon');
+  const arm = getItem(eq.armorKey, 'armor');
+  const acc = getItem(eq.accessoryKey, 'accessory');
 
-  // concept-only(색 제거, 첫 단어) — 정적 fallback용.
+  // concept-only(색 제거, 첫 단어) — Haiku 실패 시 정적 fallback용.
   const concept = (key: string) => (ITEM_MOTIFS[key] ?? '').split(',')[0]!.trim();
   const motifsConcept = [
     ...new Set(
@@ -184,19 +195,19 @@ export async function composeEditDescription(
     ),
   ].join(', ');
 
-  // full(색 포함) — Haiku 입력용(더 풍부). 그룹 구분 '; '.
-  const full = (key: string) => (ITEM_MOTIFS[key] ?? '').trim();
-  const motifsFull = [
-    ...new Set([full(eq.weaponKey), full(eq.armorKey), full(eq.accessoryKey), RACE_MOTIF[opts.race]].filter(Boolean)),
-  ].join('; ');
-
   let outfitClause: string;
   try {
+    const items = [wpn, arm, acc].map((it) => ({
+      slot: it.slot,
+      name: it.nameKo,
+      art: it.art,
+      imageB64: readSpriteB64(it.key),
+    }));
     const clause = await generateOutfitClause({
       gender: opts.gender,
       raceMotif: RACE_MOTIF[opts.race],
       hairLengthDesc: HAIR_LENGTH_DESC[opts.hairLength],
-      motifs: motifsFull,
+      items,
     });
     outfitClause = `${OUTFIT_PREFIX}${clause}.`;
     // 1000자 안전 가드 — 초과 시 절을 단어 경계로 추가 절삭(드문 경우).
