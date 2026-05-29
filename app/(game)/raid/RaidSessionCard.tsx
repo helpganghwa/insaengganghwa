@@ -94,7 +94,12 @@ export function RaidSessionCard({ view: v }: { view: RaidView }) {
   const boss = RAID_BOSSES[v.bossCode];
   const settled = v.status === 'settled';
   const allowed = RAID_BASE_ATTACKS + v.myExtraAttacks;
-  const left = allowed - v.myAttacksUsed;
+  // 낙관적 공격 횟수 — 즉시 차감, 서버 응답(refresh)이 따라잡음.
+  const [localUsed, setLocalUsed] = useState(v.myAttacksUsed);
+  useEffect(() => {
+    setLocalUsed((n) => Math.max(n, v.myAttacksUsed));
+  }, [v.myAttacksUsed]);
+  const left = allowed - localUsed;
   const canAttack = v.isParticipant && !settled && !over && left > 0;
 
   // 누적 보상(공시) — 현재까지 돌파한 페이즈의 결정론 드롭 합산.
@@ -159,29 +164,33 @@ export function RaidSessionCard({ view: v }: { view: RaidView }) {
   const shake = fx === 'crit' ? 'animate-crit-shake' : fx === 'hit' ? 'animate-hit-shake' : '';
 
   const handleAttack = () => {
-    if (!canAttack || pending) return;
-    startTransition(async () => {
+    if (!canAttack) return;
+    // 낙관: 즉시 횟수 차감 + 타격 모션/사운드/햅틱 (서버 응답 전).
+    setLocalUsed((n) => n + 1);
+    fxKey.current += 1;
+    sounds.raidHit();
+    haptic.tap();
+    setFx('hit');
+    setTimeout(() => setFx(null), 520);
+    // 서버 공격(백그라운드) — 데미지 숫자·크리·HP는 응답으로 반영. 실패 시 횟수 롤백.
+    void (async () => {
       const r = await attackRaidAction(v.raidId);
       if (r.status !== 'success') {
+        setLocalUsed((n) => Math.max(0, n - 1));
         showError(r.message);
         return;
       }
-      fxKey.current += 1;
+      const id = (fxKey.current += 1);
       if (r.isCrit) {
         sounds.raidCrit();
         haptic.success();
         setFx('crit');
-        setFloatDmg({ id: fxKey.current, val: r.damage, crit: true });
-      } else {
-        sounds.raidHit();
-        haptic.tap();
-        setFx('hit');
-        setFloatDmg({ id: fxKey.current, val: r.damage, crit: false });
+        setTimeout(() => setFx(null), 520);
       }
-      setTimeout(() => setFx(null), 520);
+      setFloatDmg({ id, val: r.damage, crit: r.isCrit });
       setTimeout(() => setFloatDmg(null), 850);
       router.refresh();
-    });
+    })();
   };
 
   const handleBuyExtra = () => {
@@ -393,9 +402,8 @@ export function RaidSessionCard({ view: v }: { view: RaidView }) {
             {canAttack ? (
               <button
                 type="button"
-                disabled={pending}
                 onClick={handleAttack}
-                className="w-full rounded-full bg-gradient-to-r from-red-600 to-orange-500 px-4 py-3.5 text-sm font-extrabold text-white shadow-lg shadow-red-900/40 transition active:scale-95 hover:brightness-110 disabled:opacity-50"
+                className="w-full rounded-full bg-gradient-to-r from-red-600 to-orange-500 px-4 py-3.5 text-sm font-extrabold text-white shadow-lg shadow-red-900/40 transition active:scale-95 hover:brightness-110"
               >
                 ⚔️ {boss.name} 공격!  {left}/{allowed}
               </button>
