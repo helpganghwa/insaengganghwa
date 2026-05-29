@@ -42,13 +42,16 @@ export function ProfileSelector({
   activeProfileId: string | null;
 }) {
   const router = useRouter();
+  // 삭제된 프로필은 즉시 목록에서 제외(상세 페이지 유지) — optimistic.
+  const [deletedIds, setDeletedIds] = useState<Set<string>>(new Set());
+  const list = profiles.filter((p) => !deletedIds.has(p.id));
   const initId =
-    activeProfileId && profiles.some((p) => p.id === activeProfileId)
+    activeProfileId && list.some((p) => p.id === activeProfileId)
       ? activeProfileId
-      : profiles[0]!.id;
+      : list[0]!.id;
 
   const [selectedId, setSelectedId] = useState<string>(initId);
-  const sel = profiles.find((p) => p.id === selectedId) ?? profiles[0]!;
+  const sel = list.find((p) => p.id === selectedId) ?? list[0]!;
   const [dir, setDir] = useState<string>(sel.activeDirection);
   const [pending, startTransition] = useTransition();
   const [confirmDelete, setConfirmDelete] = useState(false);
@@ -83,7 +86,7 @@ export function ProfileSelector({
   };
 
   // 적용 → 선택 캐릭터·방향을 한 번에 커밋.
-  const activeNow = profiles.find((p) => p.id === activeProfileId);
+  const activeNow = list.find((p) => p.id === activeProfileId);
   const dirty = selectedId !== activeProfileId || dir !== (activeNow?.activeDirection ?? '');
   const apply = () =>
     startTransition(async () => {
@@ -98,7 +101,17 @@ export function ProfileSelector({
     startTransition(async () => {
       const r = await deleteProfile(selectedId);
       if (r.status === 'error') return alert(r.message);
-      router.push('/me');
+      // 삭제된 캐릭터는 목록에서 제외하고 남은 프로필로 전환 — 상세 페이지 유지.
+      const remaining = list.filter((p) => p.id !== selectedId);
+      if (remaining.length === 0) {
+        router.push('/me');
+        return;
+      }
+      setDeletedIds((s) => new Set(s).add(selectedId));
+      setSelectedId(remaining[0]!.id);
+      setDir(remaining[0]!.activeDirection);
+      setConfirmDelete(false);
+      router.refresh();
     });
 
   return (
@@ -141,7 +154,7 @@ export function ProfileSelector({
 
       {/* 보유 목록 — 탭하면 미리보기(적용 버튼으로 확정) */}
       <div className="flex gap-2 overflow-x-auto pb-1">
-        {profiles.map((p) => (
+        {list.map((p) => (
           <button
             key={p.id}
             type="button"
