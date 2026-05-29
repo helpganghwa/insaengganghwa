@@ -45,7 +45,7 @@ export default async function GameLayout({ children }: { children: React.ReactNo
         <AppHeader dataPromise={layoutData} />
       </Suspense>
       <ResourceToastProvider>
-        <main className="flex flex-1 flex-col overflow-y-auto overscroll-contain">{children}</main>
+        <main className="flex min-h-0 flex-1 flex-col overflow-y-auto overscroll-contain">{children}</main>
       </ResourceToastProvider>
       <Suspense fallback={<BottomNav />}>
         <BottomNavAsync dataPromise={layoutData} />
