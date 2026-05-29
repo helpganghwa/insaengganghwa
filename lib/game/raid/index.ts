@@ -5,7 +5,7 @@
 export { openRaid, RaidError } from './open';
 export type { RaidErrorCode, RaidBoss } from './open';
 export { joinRaid } from './join';
-export { attackRaid, buyExtraAttack } from './attack';
+export { attackRaid, buyExtraAttack, gemAttackRaid } from './attack';
 export { settleRaid } from './settle';
 export { claimRaidReward } from './claim';
 export type { ClaimRaidResult } from './claim';

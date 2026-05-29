@@ -9,6 +9,7 @@ import {
   joinRaid,
   attackRaid,
   buyExtraAttack,
+  gemAttackRaid,
   settleRaid,
   claimRaidReward,
   RaidError,
@@ -95,6 +96,22 @@ export async function buyExtraAttackAction(raidId: string) {
   } catch (e) {
     if (e instanceof RaidError) return err(e.code);
     console.error('[raid.extra]', e);
+    return err('UNKNOWN');
+  }
+}
+
+/** 보석 공격 — 추가 공격 구매 + 즉시 공격을 한 트랜잭션으로(충전 단계 생략). */
+export async function gemAttackRaidAction(raidId: string) {
+  const u = await uid();
+  if (!u) return err('UNAUTHENTICATED');
+  if (await rateLimited(u, 'raid')) return err('RATE_LIMITED');
+  try {
+    const r = await gemAttackRaid({ userId: u, raidId: BigInt(raidId) });
+    rev(raidId);
+    return { status: 'success' as const, ...r };
+  } catch (e) {
+    if (e instanceof RaidError) return err(e.code);
+    console.error('[raid.gemAttack]', e);
     return err('UNKNOWN');
   }
 }

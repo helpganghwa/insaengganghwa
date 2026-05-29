@@ -20,7 +20,7 @@ import { sounds } from '@/lib/game/sound';
 
 import {
   attackRaidAction,
-  buyExtraAttackAction,
+  gemAttackRaidAction,
   claimRaidRewardAction,
 } from './actions';
 
@@ -111,6 +111,9 @@ export function RaidSessionCard({ view: v }: { view: RaidView }) {
     null,
   );
   const fxKey = useRef(0);
+  // 보석 공격 — 1탭 시 3초 컨펌, 그 안에 2탭하면 실행(충전 단계 생략).
+  const [gemConfirm, setGemConfirm] = useState(false);
+  const gemTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   // ── 페이즈 게이지: 이전 페이즈가 100% 다 찬 뒤 다음 컬러로 순차 진행 ──
   // 현재 진행률 계산: 누적 임계 = phase1·2·(1.5^N − 1).
@@ -193,16 +196,40 @@ export function RaidSessionCard({ view: v }: { view: RaidView }) {
     })();
   };
 
-  const handleBuyExtra = () => {
-    if (pending) return;
-    startTransition(async () => {
-      const r = await buyExtraAttackAction(v.raidId);
-      if (r.status === 'error') {
-        showError(r.message);
-        return;
-      }
-      router.refresh();
-    });
+  const handleGemAttack = () => {
+    if (gemConfirm) {
+      // 2탭 — 보석 공격(낙관 모션 + 서버 단일 트랜잭션). 데미지/HP는 응답 반영.
+      if (gemTimer.current) clearTimeout(gemTimer.current);
+      setGemConfirm(false);
+      fxKey.current += 1;
+      sounds.raidHit();
+      haptic.tap();
+      setFx('hit');
+      setTimeout(() => setFx(null), 520);
+      void (async () => {
+        const r = await gemAttackRaidAction(v.raidId);
+        if (r.status !== 'success') {
+          showError(r.message);
+          return;
+        }
+        const id = (fxKey.current += 1);
+        if (r.isCrit) {
+          sounds.raidCrit();
+          haptic.success();
+          setFx('crit');
+          setTimeout(() => setFx(null), 520);
+        }
+        setFloatDmg({ id, val: r.damage, crit: r.isCrit });
+        setTimeout(() => setFloatDmg(null), 850);
+        router.refresh();
+      })();
+      return;
+    }
+    // 1탭 — 3초 컨펌 대기.
+    haptic.tap();
+    setGemConfirm(true);
+    if (gemTimer.current) clearTimeout(gemTimer.current);
+    gemTimer.current = setTimeout(() => setGemConfirm(false), 3000);
   };
 
   const handleClaim = () => {
@@ -287,7 +314,6 @@ export function RaidSessionCard({ view: v }: { view: RaidView }) {
               }`}
               style={{ textShadow: '0 2px 6px rgba(0,0,0,0.7)' }}
             >
-              {floatDmg.crit ? '⚡' : ''}
               {floatDmg.val.toLocaleString()}
             </span>
           ) : null}
@@ -410,11 +436,15 @@ export function RaidSessionCard({ view: v }: { view: RaidView }) {
             ) : !over && left <= 0 ? (
               <button
                 type="button"
-                disabled={pending}
-                onClick={handleBuyExtra}
-                className="w-full rounded-full border-2 border-amber-400 bg-amber-400/10 px-4 py-3 text-sm font-bold text-amber-300 disabled:opacity-50"
+                onClick={handleGemAttack}
+                className={`w-full rounded-full border-2 px-4 py-3 text-sm font-bold transition active:scale-95 ${
+                  gemConfirm
+                    ? 'animate-pulse-soft border-red-400 bg-red-500/20 text-red-200'
+                    : 'border-amber-400 bg-amber-400/10 text-amber-300'
+                }`}
               >
-                💎 {raidExtraAttackCost(v.myExtraAttacks + 1)} 추가 공격
+                💎 {raidExtraAttackCost(v.myExtraAttacks + 1)}{' '}
+                {gemConfirm ? '— 한번 더 탭!' : '공격'}
               </button>
             ) : (
               <div className="rounded-full bg-zinc-800 px-4 py-3 text-center text-sm text-zinc-400">
