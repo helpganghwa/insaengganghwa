@@ -5,8 +5,6 @@ import {
   getLeaderboardPayload,
   type LeaderboardMetric,
 } from '@/lib/game/leaderboard/queries';
-import { formatCompactKR } from '@/lib/ui/format-number';
-
 import { LeaderboardTabs } from './LeaderboardTabs';
 
 const LABEL: Record<LeaderboardMetric, string> = {
@@ -20,10 +18,9 @@ const BG: Record<LeaderboardMetric, string> = {
   sum: '/sprites/forge-bg.png',
   combat: '/sprites/arena-bg.png',
 };
-function fmt(m: LeaderboardMetric, v: number): string {
-  if (m === 'max') return `+${v}`;
-  if (m === 'sum') return `합 ${formatCompactKR(v)}`;
-  return `⚔️ ${formatCompactKR(v)}`;
+// 수치는 순수 숫자(천단위 콤마)만 — 접두/이모지/축약 없이 전체 노출
+function fmt(v: number): string {
+  return v.toLocaleString('ko-KR');
 }
 function parse(t: string | undefined): LeaderboardMetric {
   return t === 'sum' || t === 'combat' ? t : 'max';
@@ -54,7 +51,7 @@ export default async function LeaderboardPage({
           </span>
         </div>
         <div className="mt-1 text-xs text-amber-700/80 dark:text-amber-300/80">
-          {mine ? fmt(metric, mine.value) : '기록을 쌓으면 집계됩니다'}
+          {mine ? fmt(mine.value) : '기록을 쌓으면 집계됩니다'}
         </div>
       </section>
 
@@ -66,14 +63,14 @@ export default async function LeaderboardPage({
         <>
           {/* Top 3 — 명예의 전당 (pixellab 배경 + 전신 높이차) */}
           <section className="overflow-hidden rounded-xl border border-amber-900/50 shadow-lg shadow-black/40">
-            <div className="relative w-full" style={{ aspectRatio: '400 / 188' }}>
+            <div className="relative w-full" style={{ aspectRatio: '400 / 174' }}>
               {/* eslint-disable-next-line @next/next/no-img-element */}
               <img
                 src={BG[metric]}
                 alt=""
                 aria-hidden
                 className="absolute inset-0 h-full w-full object-cover"
-                style={{ imageRendering: 'pixelated', objectPosition: '50% 58%' }}
+                style={{ imageRendering: 'pixelated' }}
               />
               {/* 하단 어둠 — 닉네임/점수 가독 */}
               <div className="absolute inset-x-0 bottom-0 h-2/5 bg-gradient-to-t from-zinc-950/90 to-transparent" />
@@ -89,10 +86,24 @@ export default async function LeaderboardPage({
                       <Link
                         key={e.userId}
                         href={`/u/${encodeURIComponent(e.nickname)}`}
-                        className={`flex min-w-0 flex-col items-center justify-end self-stretch ${
+                        className={`flex min-w-0 flex-col items-center self-stretch ${
                           first ? 'flex-[1.35] z-10' : 'flex-1'
                         }`}
                       >
+                        {/* 위 — 메달 + 닉네임 */}
+                        <div className="flex w-full items-center justify-center gap-0.5 px-0.5 pt-1">
+                          <span className={first ? 'text-base leading-none' : 'text-sm leading-none'}>
+                            {medal}
+                          </span>
+                          <span
+                            className={`truncate font-bold drop-shadow-[0_1px_2px_rgba(0,0,0,1)] ${
+                              first ? 'text-xs' : 'text-[11px]'
+                            } ${me ? 'text-amber-300' : 'text-white'}`}
+                          >
+                            {e.nickname}
+                          </span>
+                        </div>
+                        {/* 중앙 — 캐릭터 전신 */}
                         <div className="relative w-full flex-1">
                           {e.profileImg && (
                             // eslint-disable-next-line @next/next/no-img-element
@@ -111,20 +122,9 @@ export default async function LeaderboardPage({
                             />
                           )}
                         </div>
-                        <div className="-mt-2 flex w-full items-center justify-center gap-0.5 px-0.5">
-                          <span className={first ? 'text-base leading-none' : 'text-sm leading-none'}>
-                            {medal}
-                          </span>
-                          <span
-                            className={`truncate font-bold drop-shadow-[0_1px_2px_rgba(0,0,0,1)] ${
-                              first ? 'text-xs' : 'text-[11px]'
-                            } ${me ? 'text-amber-300' : 'text-white'}`}
-                          >
-                            {e.nickname}
-                          </span>
-                        </div>
-                        <span className="font-mono text-[10px] tabular-nums text-amber-200 drop-shadow-[0_1px_2px_rgba(0,0,0,1)]">
-                          {fmt(metric, e.value)}
+                        {/* 아래 — 수치(순수 숫자) */}
+                        <span className="pb-1 font-mono text-[11px] font-bold tabular-nums text-amber-200 drop-shadow-[0_1px_2px_rgba(0,0,0,1)]">
+                          {fmt(e.value)}
                         </span>
                       </Link>
                     );
@@ -154,7 +154,7 @@ export default async function LeaderboardPage({
                           {e.nickname}
                         </span>
                         <span className="font-mono text-sm tabular-nums text-amber-200">
-                          {fmt(metric, e.value)}
+                          {fmt(e.value)}
                         </span>
                       </Link>
                     </li>
