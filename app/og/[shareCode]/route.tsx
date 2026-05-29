@@ -359,7 +359,7 @@ export async function GET(_req: Request, { params }: { params: Promise<{ shareCo
               height: 430,
               objectFit: 'contain',
               objectPosition: 'center bottom',
-              transform: 'scale(1.3)',
+              transform: 'scale(1.8) translateY(8%)',
               transformOrigin: 'center bottom',
             }}
           />
@@ -368,8 +368,21 @@ export async function GET(_req: Request, { params }: { params: Promise<{ shareCo
         )}
       </div>
 
-      {/* 장비 3종 세로 스택 (sprite + 이름·레벨) */}
+      {/* 닉네임 + 장비 3종 세로 스택 (sprite + 이름·레벨). /me 헤더와 통일. */}
       <div style={{ display: 'flex', flexDirection: 'column', gap: 18 }}>
+        <div
+          style={{
+            display: 'flex',
+            fontSize: 54,
+            fontWeight: 800,
+            color: '#ffd47a',
+            marginBottom: 6,
+            maxWidth: 380,
+            overflow: 'hidden',
+          }}
+        >
+          {nickname}
+        </div>
         {SLOTS.map((s) => {
           const it = bySlot.get(s);
           const spr = it ? sprite.get(s) : null;
