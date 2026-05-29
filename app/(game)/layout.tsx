@@ -37,7 +37,7 @@ export default async function GameLayout({ children }: { children: React.ReactNo
   const layoutData = loadLayoutData(userId);
 
   return (
-    <div className="mx-auto flex h-full w-full max-w-[390px] flex-col shadow-sm">
+    <div className="mx-auto flex min-h-dvh w-full max-w-[390px] flex-1 flex-col shadow-sm">
       <SpritePreloader />
       <KakaoSdkLoader />
       <RouteTransitionOverlay />
@@ -45,7 +45,7 @@ export default async function GameLayout({ children }: { children: React.ReactNo
         <AppHeader dataPromise={layoutData} />
       </Suspense>
       <ResourceToastProvider>
-        <main className="flex min-h-0 flex-1 flex-col overflow-y-auto overscroll-contain">{children}</main>
+        <main className="flex flex-1 flex-col overflow-y-auto overscroll-contain">{children}</main>
       </ResourceToastProvider>
       <Suspense fallback={<BottomNav />}>
         <BottomNavAsync dataPromise={layoutData} />
