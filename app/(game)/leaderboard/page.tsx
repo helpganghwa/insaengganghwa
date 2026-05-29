@@ -14,6 +14,12 @@ const LABEL: Record<LeaderboardMetric, string> = {
   sum: '합산 강화',
   combat: '전투력',
 };
+// metric별 명예의 전당 배경 — 최고=전당, 합산=대장간, 전투력=투기장
+const BG: Record<LeaderboardMetric, string> = {
+  max: '/sprites/hof-bg.png',
+  sum: '/sprites/forge-bg.png',
+  combat: '/sprites/arena-bg.png',
+};
 function fmt(m: LeaderboardMetric, v: number): string {
   if (m === 'max') return `+${v}`;
   if (m === 'sum') return `합 ${formatCompactKR(v)}`;
@@ -60,14 +66,14 @@ export default async function LeaderboardPage({
         <>
           {/* Top 3 — 명예의 전당 (pixellab 배경 + 전신 높이차) */}
           <section className="overflow-hidden rounded-xl border border-amber-900/50 shadow-lg shadow-black/40">
-            <div className="relative w-full" style={{ aspectRatio: '400 / 224' }}>
+            <div className="relative w-full" style={{ aspectRatio: '400 / 188' }}>
               {/* eslint-disable-next-line @next/next/no-img-element */}
               <img
-                src="/sprites/hof-bg.png"
+                src={BG[metric]}
                 alt=""
                 aria-hidden
                 className="absolute inset-0 h-full w-full object-cover"
-                style={{ imageRendering: 'pixelated' }}
+                style={{ imageRendering: 'pixelated', objectPosition: '50% 58%' }}
               />
               {/* 하단 어둠 — 닉네임/점수 가독 */}
               <div className="absolute inset-x-0 bottom-0 h-2/5 bg-gradient-to-t from-zinc-950/90 to-transparent" />
@@ -105,7 +111,7 @@ export default async function LeaderboardPage({
                             />
                           )}
                         </div>
-                        <div className="flex w-full items-center justify-center gap-0.5 px-0.5">
+                        <div className="-mt-2 flex w-full items-center justify-center gap-0.5 px-0.5">
                           <span className={first ? 'text-base leading-none' : 'text-sm leading-none'}>
                             {medal}
                           </span>
