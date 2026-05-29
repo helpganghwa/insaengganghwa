@@ -7,7 +7,7 @@ import type { MetadataRoute } from 'next';
  * 정책:
  *  - display: 'standalone' — 홈 화면 추가 시 상단 브라우저 chrome 제거, 게임 같은 UX.
  *  - orientation: 'portrait' — 모바일 세로 전용 UI(고정 390 컬럼, CLAUDE §5.2).
- *  - background_color/theme_color: layout.tsx viewport.themeColor와 동기(#0a0a0a).
+ *  - background_color/theme_color: layout.tsx viewport.themeColor와 동기(#151518).
  *  - icons: any + maskable 두 purpose 모두 제공(안드로이드 마스킹 대응).
  *  - id: '/' — 홈 추가 후 같은 origin 다른 path와 별도 PWA로 인식되지 않도록 고정.
  */
@@ -21,8 +21,8 @@ export default function manifest(): MetadataRoute.Manifest {
     scope: '/',
     display: 'standalone',
     orientation: 'portrait',
-    background_color: '#0a0a0a',
-    theme_color: '#0a0a0a',
+    background_color: '#151518',
+    theme_color: '#151518',
     lang: 'ko',
     categories: ['games', 'entertainment'],
     icons: [

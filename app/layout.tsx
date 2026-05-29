@@ -63,23 +63,7 @@ export default function RootLayout({ children }: Readonly<{ children: React.Reac
       className={`dark ${geistSans.variable} ${geistMono.variable} h-full overscroll-none antialiased`}
     >
       <body className="flex min-h-full flex-col overscroll-none bg-zinc-950 text-zinc-50">
-        {/* 앱 실행 스플래시 — 콜드 첫 진입 시 본문이 비는 구간을 덮음. 로드 완료 후 fade-out.
-            SSR HTML에 포함되어 첫 페인트부터 표시, 클라 네비(SPA)에는 다시 뜨지 않음. */}
-        <div
-          id="app-splash"
-          aria-hidden
-          className="fixed inset-0 z-[9999] flex flex-col items-center justify-center gap-3 bg-zinc-950 transition-opacity duration-300"
-        >
-          <span className="text-5xl">⚒️</span>
-          <span className="text-lg font-bold tracking-tight text-zinc-100">인생강화</span>
-        </div>
         {children}
-        <script
-          dangerouslySetInnerHTML={{
-            __html:
-              "(function(){function h(){var s=document.getElementById('app-splash');if(s){s.style.opacity='0';setTimeout(function(){s.remove();},350);}}if(document.readyState==='complete'){h();}else{window.addEventListener('load',h);}})();",
-          }}
-        />
       </body>
     </html>
   );
