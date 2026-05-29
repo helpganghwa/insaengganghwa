@@ -14,9 +14,9 @@ const LABEL: Record<LeaderboardMetric, string> = {
 };
 // metric별 명예의 전당 배경 — 최고=전당, 합산=대장간, 전투력=투기장
 const BG: Record<LeaderboardMetric, string> = {
-  max: '/sprites/hof-bg.png',
-  sum: '/sprites/forge-bg.png',
-  combat: '/sprites/arena-bg.png',
+  max: '/sprites/hof-bg.png?v=2',
+  sum: '/sprites/forge-bg.png?v=2',
+  combat: '/sprites/arena-bg.png?v=2',
 };
 // 수치는 순수 숫자(천단위 콤마)만 — 접두/이모지/축약 없이 전체 노출
 function fmt(v: number): string {
@@ -80,13 +80,7 @@ export default async function LeaderboardPage({
                   .filter((e): e is (typeof top)[number] => !!e)
                   .map((e) => {
                     const first = e.rank === 1;
-                    const rankColor =
-                      e.rank === 1
-                        ? 'text-amber-300'
-                        : e.rank === 2
-                          ? 'text-zinc-200'
-                          : 'text-amber-500';
-                    const me = e.userId === userId;
+                    const rankColor = e.rank === 1 ? 'text-amber-300' : 'text-white';
                     return (
                       <Link
                         key={e.userId}
@@ -98,16 +92,12 @@ export default async function LeaderboardPage({
                         {/* 위 — 메달 + 닉네임 */}
                         <div className="flex w-full items-center justify-center gap-0.5 px-0.5 pt-1">
                           <span
-                            className={`font-mono font-extrabold leading-none drop-shadow-[0_1px_2px_rgba(0,0,0,1)] ${
-                              first ? 'text-base' : 'text-sm'
-                            } ${rankColor}`}
+                            className={`font-mono text-sm tabular-nums leading-none drop-shadow-[0_1px_2px_rgba(0,0,0,1)] ${rankColor}`}
                           >
                             #{e.rank}
                           </span>
                           <span
-                            className={`truncate font-bold drop-shadow-[0_1px_2px_rgba(0,0,0,1)] ${
-                              first ? 'text-xs' : 'text-[11px]'
-                            } ${me ? 'text-amber-300' : 'text-white'}`}
+                            className={`truncate text-sm font-medium drop-shadow-[0_1px_2px_rgba(0,0,0,1)] ${rankColor}`}
                           >
                             {e.nickname}
                           </span>
@@ -124,7 +114,9 @@ export default async function LeaderboardPage({
                               className="absolute inset-0 h-full w-full object-contain object-bottom"
                               style={{
                                 imageRendering: 'pixelated',
-                                transform: first ? 'scale(1.24) translateY(5%)' : 'scale(0.96) translateY(5%)',
+                                transform: first
+                                  ? 'scale(1.49) translateY(calc(5% + 15px))'
+                                  : 'scale(1.15) translateY(calc(5% + 15px))',
                                 transformOrigin: 'center bottom',
                                 filter: 'drop-shadow(0 3px 5px rgba(0,0,0,0.55))',
                               }}
