@@ -66,7 +66,7 @@ export default async function LeaderboardPage({
                 src={BG[metric]}
                 alt=""
                 aria-hidden
-                className="absolute inset-0 h-full w-full object-fill"
+                className="absolute inset-0 h-[105%] w-full object-fill"
                 style={{ imageRendering: 'pixelated' }}
               />
               {/* 1·2·3위 전신 — 2위(좌)·1위(중앙, 큼)·3위(우). 텍스트는 drop-shadow로 가독 확보 */}
