@@ -305,21 +305,36 @@ export function RaidSessionCard({ view: v }: { view: RaidView }) {
     })();
   };
 
-  const handleInvite = async () => {
+  const handleInvite = () => {
     haptic.tap();
-    const url = `${window.location.origin}/s/${v.shareCode}`;
-    const nav = typeof navigator !== 'undefined' ? navigator : null;
-    try {
-      if (nav?.share) {
-        await nav.share({ title: `${boss.name} 레이드`, url });
-        return;
+    const origin = window.location.origin;
+    const url = `${origin}/s/${v.shareCode}`;
+    // 자랑하기(BoastModal)와 동일 — 카카오톡 공유. 미init 시 링크 복사 fallback.
+    const k = (
+      window as unknown as {
+        Kakao?: {
+          isInitialized: () => boolean;
+          Share: { sendDefault: (o: unknown) => void };
+        };
       }
-      if (nav?.clipboard) {
-        await nav.clipboard.writeText(url);
-        showResource('🔗', '초대 링크를 복사했어요');
-      }
-    } catch {
-      /* 사용자 취소 무시 */
+    ).Kakao;
+    if (k && k.isInitialized()) {
+      const bg = getBossBg(v.bossCode);
+      k.Share.sendDefault({
+        objectType: 'feed',
+        content: {
+          title: `⚔️ ${boss.name} 레이드`,
+          description: `함께 ${boss.name}을(를) 토벌하고 보상을 나눠요!`,
+          imageUrl: bg ? `${origin}${assetUrl(bg)}` : `${origin}/icon-512.png`,
+          link: { mobileWebUrl: url, webUrl: url },
+        },
+        buttons: [{ title: '레이드 참여하기', link: { mobileWebUrl: url, webUrl: url } }],
+      });
+      return;
+    }
+    if (typeof navigator !== 'undefined' && navigator.clipboard) {
+      void navigator.clipboard.writeText(url);
+      showResource('🔗', '초대 링크를 복사했어요 (카톡 준비 중)');
     }
   };
 
