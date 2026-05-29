@@ -32,15 +32,25 @@ const TOP = 100;
  */
 async function attachProfiles(entries: LeaderboardEntry[]): Promise<LeaderboardEntry[]> {
   if (entries.length === 0) return entries;
-  const rows = await db
-    .select({
-      userId: profiles.id,
-      rotations: userProfiles.rotations,
-      activeDirection: userProfiles.activeDirection,
-    })
-    .from(profiles)
-    .leftJoin(userProfiles, eq(userProfiles.id, profiles.activeProfileId))
-    .where(inArray(profiles.id, entries.map((e) => e.userId)));
+  let rows: { userId: string; rotations: unknown; activeDirection: string | null }[];
+  try {
+    rows = await withTimeout(
+      db
+        .select({
+          userId: profiles.id,
+          rotations: userProfiles.rotations,
+          activeDirection: userProfiles.activeDirection,
+        })
+        .from(profiles)
+        .leftJoin(userProfiles, eq(userProfiles.id, profiles.activeProfileId))
+        .where(inArray(profiles.id, entries.map((e) => e.userId))),
+      3000,
+      'leaderboard.profiles',
+    );
+  } catch {
+    // 콜드/hang → 이미지 없이 순위만 반환(페이지 응답 보장).
+    return entries.map((e) => ({ ...e, profileImg: null }));
+  }
   const map = new Map(
     rows.map((r) => {
       const rot = r.rotations as Record<string, string> | null;
@@ -125,7 +135,7 @@ const cachedCombat = unstable_cache(combatRows, ['leaderboard:combat'], {
   tags: ['leaderboard'],
 });
 
-const TIMEOUT_MS = 8000;
+const TIMEOUT_MS = 3000;
 const safeRows = (m: LeaderboardMetric) => {
   const fn = m === 'max' ? cachedMax : m === 'sum' ? cachedSum : cachedCombat;
   return withTimeout(fn(), TIMEOUT_MS, `leaderboard.${m}`).catch(() => []);
