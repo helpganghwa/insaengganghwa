@@ -33,6 +33,19 @@ export async function updateSession(request: NextRequest) {
     },
   );
 
-  await supabase.auth.getUser();
+  // 세션 쿠키 refresh — SSR 표준(getUser가 만료 토큰 갱신 트리거). 단 Auth 원격 호출이
+  // 콜드/지연 시 미들웨어가 통째로 hang하면 전 사이트가 about:blank 무한로딩이 되므로
+  // 타임아웃 가드 필수(2026-05-29). 실패/지연 시 그대로 통과 — 세션 식별은 각 페이지의
+  // getSessionUserId(로컬 JWT)가 수행하므로 refresh 누락은 다음 요청에서 자연 복구.
+  try {
+    await Promise.race([
+      supabase.auth.getUser(),
+      new Promise<never>((_, reject) =>
+        setTimeout(() => reject(new Error('SESSION_REFRESH_TIMEOUT')), 2500),
+      ),
+    ]);
+  } catch {
+    // best-effort — 통과.
+  }
   return response;
 }
