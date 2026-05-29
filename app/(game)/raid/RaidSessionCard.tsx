@@ -458,22 +458,6 @@ export function RaidSessionCard({ view: v }: { view: RaidView }) {
           </div>
         </div>
 
-        {/* ── 누적 보상 ── */}
-        <div className="rounded-lg border border-amber-700/50 bg-amber-950/30 px-3 py-2 text-center text-[11px]">
-          <span className="font-semibold text-amber-300">🎁 누적 보상</span>{' '}
-          {v.phasesCleared > 0 ? (
-            <span className="text-zinc-200">
-              💎{drops.diamond}
-              {Object.entries(drops.boxes)
-                .filter(([, n]) => n > 0)
-                .map(([s, n]) => ` · ${SLOT_EMOJI[s as SupplySlot]}${n}`)
-                .join('')}
-            </span>
-          ) : (
-            <span className="text-zinc-500">아직 없음</span>
-          )}
-        </div>
-
         {/* ── 액션: 진행 중 → 공격/추가/초대, 정산됨 → 보상 카드 ── */}
         {settled ? (
           v.myReward == null ? (
@@ -534,7 +518,7 @@ export function RaidSessionCard({ view: v }: { view: RaidView }) {
                 </button>
                 {/* 공격 로어 — 강화처럼 버튼에 정확히 맞춘 dim + 정적 텍스트(bg). */}
                 {attackLore ? (
-                  <div className="pointer-events-none absolute inset-0 z-20 flex items-center justify-center rounded-full bg-black/60 backdrop-blur-[2px]">
+                  <div className="absolute inset-0 z-20 flex items-center justify-center rounded-full bg-black/60 backdrop-blur-[2px]">
                     <span className="rounded bg-black/80 px-2 py-0.5 text-[12px] font-semibold break-keep text-amber-200">
                       {attackLore}
                     </span>
@@ -558,7 +542,7 @@ export function RaidSessionCard({ view: v }: { view: RaidView }) {
                     : `💎 ${raidExtraAttackCost(v.myExtraAttacks + 1).toLocaleString()} 추가 공격`}
                 </button>
                 {attackLore ? (
-                  <div className="pointer-events-none absolute inset-0 z-20 flex items-center justify-center rounded-full bg-black/60 backdrop-blur-[2px]">
+                  <div className="absolute inset-0 z-20 flex items-center justify-center rounded-full bg-black/60 backdrop-blur-[2px]">
                     <span className="rounded bg-black/80 px-2 py-0.5 text-[12px] font-semibold break-keep text-amber-200">
                       {attackLore}
                     </span>
@@ -572,6 +556,22 @@ export function RaidSessionCard({ view: v }: { view: RaidView }) {
             )}
           </div>
         )}
+
+        {/* ── 누적 보상 ── */}
+        <div className="rounded-lg border border-amber-700/50 bg-amber-950/30 px-3 py-2 text-center text-[11px]">
+          <span className="font-semibold text-amber-300">🎁 누적 보상</span>{' '}
+          {v.phasesCleared > 0 ? (
+            <span className="text-zinc-200">
+              💎{drops.diamond}
+              {Object.entries(drops.boxes)
+                .filter(([, n]) => n > 0)
+                .map(([s, n]) => ` · ${SLOT_EMOJI[s as SupplySlot]}${n}`)
+                .join('')}
+            </span>
+          ) : (
+            <span className="text-zinc-500">아직 없음</span>
+          )}
+        </div>
 
         {/* ── 참여자: 기여도 순위 + 비율 바 ── */}
         <div>
