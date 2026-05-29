@@ -70,7 +70,7 @@ export default async function LeaderboardPage({
                 style={{ imageRendering: 'pixelated' }}
               />
               {/* 1·2·3위 전신 — 2위(좌)·1위(중앙, 큼)·3위(우). 텍스트는 drop-shadow로 가독 확보 */}
-              <div className="absolute inset-0 flex items-end justify-center gap-0.5 px-1 pb-1.5">
+              <div className="absolute inset-0 flex items-end justify-center gap-0.5 px-1 py-1.5">
                 {[top[1], top[0], top[2]]
                   .filter((e): e is (typeof top)[number] => !!e)
                   .map((e) => {
