@@ -325,7 +325,7 @@ export function RaidSessionCard({ view: v }: { view: RaidView }) {
         content: {
           title: `⚔️ ${boss.name} 레이드`,
           description: `함께 ${boss.name}을(를) 토벌하고 보상을 나눠요!`,
-          imageUrl: bg ? `${origin}${assetUrl(bg)}` : `${origin}/icon-512.png`,
+          imageUrl: bg ? `${origin}${assetUrl(bg)}` : `${origin}/icons/icon-512.png`,
           link: { mobileWebUrl: url, webUrl: url },
         },
         buttons: [{ title: '레이드 참여하기', link: { mobileWebUrl: url, webUrl: url } }],
