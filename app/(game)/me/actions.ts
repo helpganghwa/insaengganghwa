@@ -55,8 +55,8 @@ export async function changeNicknameAction(
       upd as (
         update profiles p
         set nickname = ${next},
-            nickname_changed_count = nickname_changed_count + 1,
-            diamond = diamond - (select c from cost),
+            nickname_changed_count = p.nickname_changed_count + 1,
+            diamond = p.diamond - (select c from cost),
             updated_at = now()
         from curr, cost
         where p.id = curr.id
