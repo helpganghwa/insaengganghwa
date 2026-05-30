@@ -162,7 +162,6 @@ function assemble(opts: ProfileOptions, outfitClause: string): string {
       ? `Slim tall shōnen anime hero build — small head and long legs (8-head proportions), round youthful boyish face with soft cheeks and bright lively eyes, upright energetic stance.`
       : `Slim tall Japanese anime heroine build — small head and long legs (8-head proportions), slender waist with soft natural curves, gentle anime facial features, graceful posture.`,
     `${outfitClause} Pose: ${POSE_DESC[opts.pose]}. Expression free — any natural pleasant look.`,
-    `Confirm: keep the same facial features, body and anime style as source; full body with both feet on the ground.`,
   ].join(' ');
 }
 
