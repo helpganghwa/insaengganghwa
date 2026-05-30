@@ -3,13 +3,13 @@
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 
-// WIREFRAMES §0 — 5탭: 홈/인벤토리/강화/레이드/프로필.
-// 우편함은 헤더 📬 아이콘 진입(BottomNav 제외, 사용자 피드백 2026-05-25).
+// WIREFRAMES §0 — 5탭: 홈/레이드/강화/상점/프로필.
+// 우편함·인벤토리는 홈 그리드 진입(BottomNav 제외).
 const items = [
   { href: '/', label: '홈', icon: '🏠' },
-  { href: '/inventory', label: '인벤토리', icon: '🎒' },
-  { href: '/enhance', label: '강화', icon: '⚒️' },
   { href: '/raid', label: '레이드', icon: '⚔️' },
+  { href: '/enhance', label: '강화', icon: '⚒️' },
+  { href: '/shop', label: '상점', icon: '🛒' },
   { href: '/me', label: '프로필', icon: '👤' },
 ] as const;
 
