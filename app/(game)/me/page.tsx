@@ -98,37 +98,40 @@ export default async function ProfilePage() {
 
   return (
     <div className="space-y-4 px-4 py-6">
-      {/* 내 정보 카드 — 헤더(닉네임·전투력) + 본문(캐릭터·장비 세로) */}
+      {/* 내 정보 카드 — 좌: 닉네임/캐릭터/전투력 · 우: 장비 3종 */}
       <section className="rounded-3xl border border-zinc-800 bg-gradient-to-b from-zinc-900 to-zinc-950 p-4">
-        {/* 헤더 — 중앙 닉네임만 */}
-        <div className="mb-3 flex items-center justify-center">
-          <NicknameEditor
-            current={nickname}
-            changedCount={prof[0]?.nicknameChangedCount ?? 0}
-            diamond={String(prof[0]?.diamond ?? 0n)}
-            className="text-white"
-          />
-        </div>
+        <div className="flex items-center gap-3">
+          {/* 좌 — 머리 위 닉네임 + 캐릭터 + 발끝 전투력 */}
+          <div className="flex shrink-0 flex-col items-center gap-1.5">
+            <NicknameEditor
+              current={nickname}
+              changedCount={prof[0]?.nicknameChangedCount ?? 0}
+              diamond={String(prof[0]?.diamond ?? 0n)}
+              className="text-white"
+            />
+            {activeProfile ? (
+              <Link href="/me/profiles" aria-label="프로필 선택" className="block">
+                <CharacterStage
+                  charSrc={dirImg(activeProfile)}
+                  className="aspect-[3/4] h-44"
+                />
+              </Link>
+            ) : (
+              <Link
+                href="/me/create"
+                className="flex aspect-[3/4] h-44 flex-col items-center justify-center gap-1 rounded-2xl border-2 border-dashed border-white/25 text-white/60"
+              >
+                <span className="text-2xl" aria-hidden>✨</span>
+                <span className="text-[11px]">생성</span>
+              </Link>
+            )}
+            <span className="inline-flex h-7 items-center gap-1 rounded-full border border-amber-400/30 bg-amber-400/10 px-2.5 text-xs font-bold tabular-nums text-amber-300">
+              <span>전투력</span>
+              {total.toLocaleString('ko-KR')}
+            </span>
+          </div>
 
-        {/* 본문 — 좌 캐릭터 + 우 장비 3종. 고정 높이(h-44)로 양쪽 높이를 맞춰 정렬·컴팩트. */}
-        <div className="flex gap-3">
-          {activeProfile ? (
-            <Link href="/me/profiles" aria-label="프로필 선택" className="block shrink-0">
-              <CharacterStage
-                charSrc={dirImg(activeProfile)}
-                className="aspect-[3/4] h-44"
-              />
-            </Link>
-          ) : (
-            <Link
-              href="/me/create"
-              className="flex aspect-[3/4] h-44 shrink-0 flex-col items-center justify-center gap-1 rounded-2xl border-2 border-dashed border-white/25 text-white/60"
-            >
-              <span className="text-2xl" aria-hidden>✨</span>
-              <span className="text-[11px]">생성</span>
-            </Link>
-          )}
-
+          {/* 우 — 장비 3종 */}
           <div className="flex h-44 flex-1 flex-col gap-2">
             {(['weapon', 'armor', 'accessory'] as Slot[]).map((s) => {
               const it = bySlot.get(s);
