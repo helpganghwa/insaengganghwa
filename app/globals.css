@@ -227,6 +227,12 @@ html {
   100% { opacity: 0; transform: translateY(8px); }
 }
 
+/* 일괄 초월 확정 버튼 — 배경색만 펄스(텍스트는 안정). */
+@keyframes confirm-bg-pulse {
+  0%, 100% { opacity: 0; }
+  50%      { opacity: 0.6; }
+}
+
 /* 랭킹 바 — 값/순위 시퀀스 교차. 전체 duration이 RANKING_TOAST_MS(4.4s)와 일치.
    값:  0~0.25s fade-in → ~2.0s 표시 → 2.2s까지 fade-out. (Phase 1)
    순위: 2.2s까지 hidden → 2.4s까지 fade-in → ~4.4s 표시. (Phase 2) */

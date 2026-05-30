@@ -117,22 +117,13 @@ export function BulkTranscendModal({
   const [confirm, setConfirm] = useState(false);
   const [confirmLeft, setConfirmLeft] = useState(0);
 
-  // 선택 — 기본 전체 선택. preview 갱신 시 동기화.
+  // 선택 — preview가 갱신될 때마다 항상 전체 선택으로 리셋.
+  // (서버 응답이 initialPreview와 다른 row를 포함하는 경우 일부만 선택되는 문제 회피)
   const [selected, setSelected] = useState<Set<string>>(
     () => new Set(initialPreview.rows.map((r) => r.targetInstanceId)),
   );
   useEffect(() => {
-    setSelected((prev) => {
-      const next = new Set<string>();
-      for (const r of preview.rows) {
-        // 이미 선택 해제한 항목은 유지(true는 새로 추가).
-        if (prev.has(r.targetInstanceId) || prev.size === 0) next.add(r.targetInstanceId);
-      }
-      // 빈 prev이면 전체 선택.
-      return next.size === 0 && preview.rows.length > 0
-        ? new Set(preview.rows.map((r) => r.targetInstanceId))
-        : next;
-    });
+    setSelected(new Set(preview.rows.map((r) => r.targetInstanceId)));
   }, [preview]);
 
   const selectedRows = preview.rows.filter((r) => selected.has(r.targetInstanceId));
@@ -275,13 +266,9 @@ export function BulkTranscendModal({
                 ? result.upgraded.map((u, i) => (
                     <li
                       key={`r-${i}`}
-                      className="grid grid-cols-[auto_1fr_auto] items-center gap-2 rounded-lg bg-white/5 px-3 py-2 text-[11px]"
+                      className="grid grid-cols-[1fr_auto] items-center gap-2 rounded-lg bg-white/5 px-3 py-2 text-[11px]"
                     >
-                      <span aria-hidden className="h-3.5 w-3.5" /> {/* 선택자 spacer */}
-                      <div className="min-w-0">
-                        <div className="truncate font-semibold">{u.name}</div>
-                        <div className="min-h-[0.85rem] text-[10px] text-zinc-400"></div>
-                      </div>
+                      <div className="truncate font-semibold">{u.name}</div>
                       <div className="shrink-0 text-right font-mono">
                         <span style={tierColorStyle(u.fromT)}>T{u.fromT}</span>
                         <span className="mx-1 text-zinc-500">→</span>
@@ -360,15 +347,19 @@ export function BulkTranscendModal({
                     type="button"
                     onClick={tryExecute}
                     disabled={selectedRows.length === 0}
-                    className={`flex-[2] rounded-xl border py-2 text-xs font-bold tabular-nums disabled:opacity-40 ${
-                      confirm
-                        ? 'animate-pulse border-amber-300 bg-amber-500 text-white'
-                        : 'border-amber-500 bg-amber-500 text-zinc-950'
-                    }`}
+                    className="relative flex-[2] overflow-hidden rounded-xl border border-amber-500 bg-amber-500 py-2 text-xs font-bold tabular-nums text-zinc-950 disabled:opacity-40"
                   >
-                    {confirm
-                      ? `확정? (${confirmLeft})`
-                      : `초월하기 (${selectedRows.length}개)`}
+                    {/* 배경만 펄스(텍스트는 안정). */}
+                    {confirm ? (
+                      <span
+                        aria-hidden
+                        className="absolute inset-0 bg-amber-400"
+                        style={{ animation: 'confirm-bg-pulse 1.2s ease-in-out infinite' }}
+                      />
+                    ) : null}
+                    <span className="relative">
+                      {confirm ? `확정? (${confirmLeft})` : `초월하기 (${selectedRows.length}개)`}
+                    </span>
                   </button>
                 </>
               )}

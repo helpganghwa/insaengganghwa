@@ -144,7 +144,7 @@ export function InventoryGrid({
       ) : null}
       <Section title={`보유 (${owned.length})`}>
         {owned.map((it) => (
-          <Tile key={it.id} item={it} onOpen={() => setOpenId(it.id)} />
+          <Tile key={it.id} item={it} isNew={!seen.has(it.id)} onOpen={() => openDetail(it.id)} />
         ))}
       </Section>
 
