@@ -8,7 +8,8 @@ import type { Slot } from '@/lib/db/schema/equipment';
 import { TranscendSprite } from '@/components/TranscendSprite';
 import { RarityFrame, rarityBorderStyle, hasRarityBorder } from '@/components/RarityFrame';
 
-import { bulkTranscendAction, equipBestSetAction } from './actions';
+import { equipBestSetAction } from './actions';
+import { BulkTranscendModal } from './BulkTranscendModal';
 import { EquipmentDetailSheet } from './EquipmentDetailSheet';
 
 export type InvItem = {
@@ -45,6 +46,7 @@ export function InventoryGrid({
   const [filter, setFilter] = useState<SlotFilter>(initialSlot);
   const [sortBy, setSortBy] = useState<SortBy>('recent');
   const [openId, setOpenId] = useState<string | null>(null);
+  const [bulkOpen, setBulkOpen] = useState(false);
   const [pending, startTransition] = useTransition();
 
   const sorted = useMemo(() => {
@@ -109,24 +111,7 @@ export function InventoryGrid({
           <button
             type="button"
             disabled={pending}
-            onClick={() => {
-              if (!window.confirm('보유한 모든 장비를 한 번씩 일괄 초월 시도합니다. 진행할까요?'))
-                return;
-              startTransition(async () => {
-                const r = await bulkTranscendAction();
-                if (r.status === 'success') {
-                  const parts: string[] = [];
-                  parts.push(`초월 성공: ${r.success}개`);
-                  if (r.skippedMax > 0) parts.push(`이미 MAX(불필요): ${r.skippedMax}개`);
-                  if (r.skippedFodder > 0) parts.push(`제물 부족: ${r.skippedFodder}개`);
-                  if (r.skippedBusy > 0) parts.push(`강화 중/잠김: ${r.skippedBusy}개`);
-                  window.alert(`일괄 초월 결과\n\n${parts.join('\n')}`);
-                  router.refresh();
-                } else {
-                  window.alert(r.message ?? '일괄 초월 실패');
-                }
-              });
-            }}
+            onClick={() => setBulkOpen(true)}
             className="pointer-events-auto rounded-full bg-amber-500 px-4 py-2 text-xs font-semibold text-zinc-950 shadow-lg disabled:opacity-50"
           >
             ✦ 일괄 초월
@@ -153,6 +138,16 @@ export function InventoryGrid({
           all={items}
           nickname={nickname}
           onClose={() => setOpenId(null)}
+        />
+      ) : null}
+
+      {bulkOpen ? (
+        <BulkTranscendModal
+          onClose={() => setBulkOpen(false)}
+          onDone={() => {
+            setBulkOpen(false);
+            router.refresh();
+          }}
         />
       ) : null}
     </>

@@ -2,14 +2,16 @@
 
 import { revalidatePath } from 'next/cache';
 
-import { eq } from 'drizzle-orm';
+import { and, eq } from 'drizzle-orm';
 
 import { getSessionUserId } from '@/lib/auth/session';
 import { rateLimited } from '@/lib/ratelimit';
 import { db } from '@/lib/db/client';
-import { equipmentInstances } from '@/lib/db/schema/equipment';
+import { catalogItems, equipmentInstances } from '@/lib/db/schema/equipment';
+import { enhancementJobs } from '@/lib/db/schema/enhance';
 import { equipItem, unequipItem, toggleEquipmentLock, equipBestSet, EquipError } from '@/lib/game/equipment/equip';
 import { performTranscend, TranscendError } from '@/lib/game/transcend';
+import { transcendFodderForStep } from '@/lib/game/balance';
 import { disenchant } from '@/lib/game/supply';
 
 type ErrorState = { status: 'error'; code: string; message: string };
@@ -81,68 +83,215 @@ export async function equipBestSetAction() {
 }
 
 /**
- * 일괄 초월 — 보유 장비 전체를 한 번씩 순회하며 performTranscend 시도.
- * 실패 사유(EQUIPMENT_LOCKED·INSUFFICIENT_FODDER·그 외)는 카운트만 집계, 전체 진행 계속.
- * 트랜잭션은 performTranscend가 각자 보유 — 한 건 실패가 다른 건에 영향 X.
- *
- * "한 번씩" 정책: 사용자 1회 클릭 = 각 장비 1단계만 시도. 누적 초월은 재호출.
- *
- * 우선순위: 가장 낮은 transcend_level 먼저(= 적은 제물부터 → 단일 통과로 최대 성공률).
+ * 일괄 초월 시뮬레이션 (preview + execute 공유).
+ * - 카탈로그별 그룹화 → 각 그룹의 target(transcend·enhance 가장 높은 1개) +
+ *   fodder candidates(나머지 중 미장착·미잠금·강화/예약 안 됨).
+ * - target.currentT에서 fodder 보유량으로 도달 가능한 maxT 계산
+ *   (transcendFodderForStep 기반 누적).
+ * - lockedTargets은 별도 보고(스킵).
+ */
+type BulkPlanRow = {
+  catalogItemId: number;
+  code: string;
+  name: string;
+  targetInstanceId: bigint;
+  currentT: number;
+  maxT: number;
+  fodderAvailable: number;
+  fodderToConsume: number;
+  totalCountInGroup: number;
+};
+type BulkPlan = {
+  rows: BulkPlanRow[];
+  skippedLockedTarget: number;
+  skippedNoUpgrade: number; // fodder 0개 또는 1개로 1단계도 불가.
+};
+
+async function planBulkTranscend(userId: string): Promise<BulkPlan> {
+  // 보유 장비 전체.
+  const equips = (await db
+    .select({
+      id: equipmentInstances.id,
+      catalogItemId: equipmentInstances.catalogItemId,
+      transcendLevel: equipmentInstances.transcendLevel,
+      enhanceLevel: equipmentInstances.enhanceLevel,
+      isLocked: equipmentInstances.isLocked,
+      equippedSlot: equipmentInstances.equippedSlot,
+      code: catalogItems.code,
+      name: catalogItems.name,
+    })
+    .from(equipmentInstances)
+    .innerJoin(catalogItems, eq(equipmentInstances.catalogItemId, catalogItems.id))
+    .where(eq(equipmentInstances.userId, userId))) as unknown as Array<{
+    id: bigint;
+    catalogItemId: number;
+    transcendLevel: number;
+    enhanceLevel: number;
+    isLocked: boolean;
+    equippedSlot: string | null;
+    code: string;
+    name: string;
+  }>;
+
+  // 강화 중 또는 강화 제물로 예약된 instance 집합 — fodder 후보에서 제외.
+  const equipIds = equips.map((e) => BigInt(e.id));
+  const busySet = new Set<string>();
+  if (equipIds.length > 0) {
+    const rows = await db
+      .select({
+        eq: enhancementJobs.equipmentInstanceId,
+        fo: enhancementJobs.fodderInstanceId,
+      })
+      .from(enhancementJobs)
+      .where(
+        and(
+          eq(enhancementJobs.userId, userId),
+          eq(enhancementJobs.status, 'running'),
+        ),
+      );
+    for (const r of rows) {
+      if (r.eq != null) busySet.add(String(r.eq));
+      if (r.fo != null) busySet.add(String(r.fo));
+    }
+  }
+
+  // 카탈로그별 그룹 + 정렬(target 결정용: transcend desc → enhance desc → id asc).
+  const groups = new Map<number, typeof equips>();
+  for (const e of equips) {
+    if (!groups.has(e.catalogItemId)) groups.set(e.catalogItemId, []);
+    groups.get(e.catalogItemId)!.push(e);
+  }
+
+  const planRows: BulkPlanRow[] = [];
+  let skippedLockedTarget = 0;
+  let skippedNoUpgrade = 0;
+
+  for (const [catalogItemId, list] of groups) {
+    list.sort(
+      (a, b) =>
+        b.transcendLevel - a.transcendLevel ||
+        b.enhanceLevel - a.enhanceLevel ||
+        Number(a.id) - Number(b.id),
+    );
+    const target = list[0]!;
+    if (target.isLocked) {
+      skippedLockedTarget++;
+      continue;
+    }
+    const fodderCandidates = list.slice(1).filter(
+      (f) => !f.isLocked && f.equippedSlot == null && !busySet.has(String(f.id)),
+    );
+    const fodderAvailable = fodderCandidates.length;
+    // currentT에서 가능한 maxT 누적 시뮬레이션.
+    let used = 0;
+    let maxT = target.transcendLevel;
+    for (let step = target.transcendLevel + 1; ; step++) {
+      const need = transcendFodderForStep(step);
+      if (used + need > fodderAvailable) break;
+      used += need;
+      maxT = step;
+    }
+    if (maxT === target.transcendLevel) {
+      skippedNoUpgrade++;
+      continue;
+    }
+    planRows.push({
+      catalogItemId,
+      code: target.code,
+      name: target.name,
+      targetInstanceId: BigInt(target.id),
+      currentT: target.transcendLevel,
+      maxT,
+      fodderAvailable,
+      fodderToConsume: used,
+      totalCountInGroup: list.length,
+    });
+  }
+
+  // 표시 순서 — 큰 변동(maxT - currentT) 먼저, 그 다음 이름.
+  planRows.sort(
+    (a, b) => b.maxT - b.currentT - (a.maxT - a.currentT) || a.name.localeCompare(b.name, 'ko'),
+  );
+
+  return { rows: planRows, skippedLockedTarget, skippedNoUpgrade };
+}
+
+/** preview — UI에서 모달에 띄울 정보. 실행 없음. */
+export async function previewBulkTranscendAction() {
+  const u = await uid();
+  if (!u) return err('UNAUTHENTICATED');
+  const plan = await planBulkTranscend(u);
+  // BigInt → string 직렬화(클라이언트로 전송 안전).
+  return {
+    status: 'success' as const,
+    rows: plan.rows.map((r) => ({
+      catalogItemId: r.catalogItemId,
+      code: r.code,
+      name: r.name,
+      targetInstanceId: r.targetInstanceId.toString(),
+      currentT: r.currentT,
+      maxT: r.maxT,
+      fodderToConsume: r.fodderToConsume,
+      fodderAvailable: r.fodderAvailable,
+      totalCountInGroup: r.totalCountInGroup,
+    })),
+    skippedLockedTarget: plan.skippedLockedTarget,
+    skippedNoUpgrade: plan.skippedNoUpgrade,
+  };
+}
+
+/**
+ * 일괄 초월 실행 — preview와 동일 시뮬레이션으로 그룹별 maxT 계산 후,
+ * target마다 (maxT - currentT) 회 performTranscend 호출. 각 호출은 자체 트랜잭션.
+ * 한 건 실패해도 다른 그룹은 계속 진행.
  */
 export async function bulkTranscendAction() {
   const u = await uid();
   if (!u) return err('UNAUTHENTICATED');
   if (await rateLimited(u, 'inventory')) return err('RATE_LIMITED');
 
-  // 후보 — 본인 보유 + 미잠금 + 강화 중 아님(잠금/강화중은 performTranscend 자체가 가능,
-  // 단 단순 BUSY로 분류해 사용자에 명확 표시하기 위해 액션 단에서 사전 분류).
-  const rows = (await db
-    .select({
-      id: equipmentInstances.id,
-      transcendLevel: equipmentInstances.transcendLevel,
-      isLocked: equipmentInstances.isLocked,
-    })
-    .from(equipmentInstances)
-    .where(eq(equipmentInstances.userId, u))
-    .orderBy(equipmentInstances.transcendLevel)) as unknown as Array<{
-    id: bigint;
-    transcendLevel: number;
-    isLocked: boolean;
-  }>;
+  const plan = await planBulkTranscend(u);
+  let stepsApplied = 0;
+  let targetsUpgraded = 0;
+  let failedSteps = 0;
+  const upgraded: Array<{ name: string; fromT: number; toT: number }> = [];
 
-  let success = 0;
-  let skippedFodder = 0;
-  let skippedBusy = 0;
-  let skippedMax = 0; // 무한 초월이라 실질 미사용(향후 cap 도입 대비).
-
-  for (const r of rows) {
-    if (r.isLocked) {
-      skippedBusy++;
-      continue;
-    }
-    try {
-      await performTranscend({ userId: u, equipmentInstanceId: BigInt(r.id) });
-      success++;
-    } catch (e) {
-      if (e instanceof TranscendError) {
-        if (e.code === 'INSUFFICIENT_FODDER') skippedFodder++;
-        else if (e.code === 'TRANSCEND_MAX') skippedMax++;
-        else skippedBusy++;
-      } else {
-        console.error('[bulk-transcend]', e);
-        skippedBusy++;
+  for (const row of plan.rows) {
+    let curT = row.currentT;
+    let success = false;
+    for (let step = row.currentT + 1; step <= row.maxT; step++) {
+      try {
+        const r = await performTranscend({
+          userId: u,
+          equipmentInstanceId: row.targetInstanceId,
+        });
+        curT = r.toT;
+        stepsApplied++;
+        success = true;
+      } catch (e) {
+        // 시뮬레이션과 실제가 어긋난 케이스(다른 액션이 fodder 소비 등) — 중단하고 다음 그룹.
+        if (!(e instanceof TranscendError)) {
+          console.error('[bulk-transcend.execute]', e);
+        }
+        failedSteps++;
+        break;
       }
+    }
+    if (success) {
+      targetsUpgraded++;
+      upgraded.push({ name: row.name, fromT: row.currentT, toT: curT });
     }
   }
 
   revalidate();
   return {
     status: 'success' as const,
-    total: rows.length,
-    success,
-    skippedFodder,
-    skippedBusy,
-    skippedMax,
+    stepsApplied,
+    targetsUpgraded,
+    failedSteps,
+    skippedLockedTarget: plan.skippedLockedTarget,
+    skippedNoUpgrade: plan.skippedNoUpgrade,
+    upgraded,
   };
 }
 
