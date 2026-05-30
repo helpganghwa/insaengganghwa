@@ -2,7 +2,7 @@
 
 import { revalidatePath } from 'next/cache';
 
-import { and, eq, isNull, sql } from 'drizzle-orm';
+import { eq } from 'drizzle-orm';
 
 import { getSessionUserId } from '@/lib/auth/session';
 import { rateLimited } from '@/lib/ratelimit';
