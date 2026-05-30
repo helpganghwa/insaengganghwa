@@ -18,7 +18,7 @@ export function AppHeaderShell({
   profileSouth?: string | null;
 }) {
   return (
-    <header className="sticky top-0 z-30 box-content flex h-14 items-center justify-between gap-2 border-b border-zinc-200 bg-white px-3 pt-[env(safe-area-inset-top)] dark:border-zinc-800 dark:bg-zinc-950">
+    <header className="sticky top-0 z-30 box-content flex h-12 items-center justify-between gap-2 border-b border-zinc-200 bg-white px-3 pt-[env(safe-area-inset-top)] dark:border-zinc-800 dark:bg-zinc-950">
       <Link href="/me" className="flex min-w-0 items-center gap-2">
         <div className="relative h-8 w-8 shrink-0 overflow-hidden">
           {profileSouth ? (
