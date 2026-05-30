@@ -227,4 +227,13 @@ html {
   100% { opacity: 0; transform: translateY(8px); }
 }
 
+/* 강화 결과 랭킹 바 — 헤더 위에서 슬라이드 다운 → 유지 → 슬라이드 업.
+   전체 duration이 토스트 노출 시간(3.2s)과 일치. 진입 240ms / 종료 280ms. */
+@keyframes ranking-bar {
+  0%   { transform: translateY(-110%); }
+  7.5% { transform: translateY(0); }
+  91%  { transform: translateY(0); }
+  100% { transform: translateY(-110%); }
+}
+
 /* 그 외 게임 연출(가챠/레이드/로딩)은 해당 화면 구현 시 단계 이식. */

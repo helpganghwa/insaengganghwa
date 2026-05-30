@@ -43,8 +43,8 @@ export function useResourceToast(): ToastContextValue {
   return ctx;
 }
 
-const RANKING_DEBOUNCE_MS = 3000;
-const RANKING_TOAST_MS = 4200;
+const RANKING_DEBOUNCE_MS = 1200;
+const RANKING_TOAST_MS = 3200;
 
 export function ResourceToastProvider({ children }: { children: React.ReactNode }) {
   const [toasts, setToasts] = useState<ToastEntry[]>([]);
@@ -99,21 +99,30 @@ export function ResourceToastProvider({ children }: { children: React.ReactNode 
     [dismiss],
   );
 
+  // 랭킹 토스트(헤더 슬라이드)와 기타 토스트(중앙 상단) 위치 분리.
+  const rankingToasts = toasts.filter((t): t is RankingToast => t.kind === 'ranking');
+  const otherToasts = toasts.filter((t) => t.kind !== 'ranking');
+
   return (
     <ToastContext.Provider value={{ showResource, showError, showRanking }}>
       {children}
+      {/* 헤더(h-12=48px) 위 슬라이드 바 — sticky 헤더(z-30)를 덮도록 z-40. */}
+      <div className="pointer-events-none fixed inset-x-0 top-0 z-40 overflow-hidden">
+        {rankingToasts.map((t) => (
+          <RankingBar key={t.id} entry={t} />
+        ))}
+      </div>
+      {/* 자원/에러 토스트 — 중앙 상단(기존 위치). */}
       <div
         className="pointer-events-none fixed left-1/2 z-[75] flex -translate-x-1/2 flex-col items-center gap-2"
         style={{ top: 'calc(env(safe-area-inset-top) + 4rem)' }}
         aria-live="polite"
       >
-        {toasts.map((t) =>
+        {otherToasts.map((t) =>
           t.kind === 'resource' ? (
             <ResourceItem key={t.id} entry={t} />
-          ) : t.kind === 'error' ? (
-            <ErrorItem key={t.id} entry={t} onDismiss={() => dismiss(t.id)} />
           ) : (
-            <RankingItem key={t.id} entry={t} />
+            <ErrorItem key={t.id} entry={t} onDismiss={() => dismiss(t.id)} />
           ),
         )}
       </div>
@@ -146,7 +155,7 @@ function CountUp({ from, to }: { from: number; to: number }) {
   return <>{v.toLocaleString('ko-KR')}</>;
 }
 
-function RankingRow({
+function RankingCompact({
   label,
   before,
   after,
@@ -155,38 +164,50 @@ function RankingRow({
   before: { value: number; rank: number } | null;
   after: { value: number; rank: number } | null;
 }) {
-  if (!before || !after) return null;
-  // rank 낮을수록 상위 → rankDelta 양수 = 상승.
+  if (!before || !after) {
+    return (
+      <div className="flex min-w-0 flex-1 flex-col items-center justify-center px-1 leading-tight">
+        <span className="text-[9px] text-zinc-500">{label}</span>
+        <span className="text-[10px] text-zinc-600">—</span>
+      </div>
+    );
+  }
   const rankDelta = before.rank - after.rank;
   const arrow = rankDelta > 0 ? `▲${rankDelta}` : rankDelta < 0 ? `▼${-rankDelta}` : '—';
   const arrowColor =
     rankDelta > 0 ? 'text-amber-300' : rankDelta < 0 ? 'text-zinc-500' : 'text-zinc-600';
   return (
-    <div className="flex items-baseline justify-between gap-2 tabular-nums">
-      <span className="w-12 shrink-0 text-zinc-400">{label}</span>
-      <span className="flex-1 text-right font-semibold text-white">
-        <CountUp from={before.value} to={after.value} />
-      </span>
-      <span className="w-12 shrink-0 text-right text-zinc-300">
-        #<CountUp from={before.rank} to={after.rank} />
-      </span>
-      <span className={`w-8 shrink-0 text-right text-[11px] font-bold ${arrowColor}`}>
-        {arrow}
-      </span>
+    <div className="flex min-w-0 flex-1 flex-col items-center justify-center px-1 leading-tight tabular-nums">
+      <span className="text-[9px] text-zinc-400">{label}</span>
+      <div className="flex items-baseline gap-1 text-[11px]">
+        <span className="font-bold text-white">
+          <CountUp from={before.value} to={after.value} />
+        </span>
+        <span className="text-zinc-300">
+          #<CountUp from={before.rank} to={after.rank} />
+        </span>
+        <span className={`text-[9px] font-bold ${arrowColor}`}>{arrow}</span>
+      </div>
     </div>
   );
 }
 
-function RankingItem({ entry }: { entry: RankingToast }) {
+/** 헤더 위 슬라이드 바 — 헤더(h-12)와 같은 크기로 덮음, 진입/종료 슬라이드. */
+function RankingBar({ entry }: { entry: RankingToast }) {
   return (
     <div
-      className="pointer-events-none w-[320px] rounded-xl bg-zinc-950/95 px-4 py-3 text-xs shadow-lg ring-1 ring-zinc-800"
-      style={{ animation: 'toast-pop 0.3s ease-out' }}
+      className="pointer-events-none w-full border-b border-amber-700/40 bg-zinc-950/95 shadow-lg backdrop-blur"
+      style={{
+        animation: `ranking-bar ${RANKING_TOAST_MS}ms ease-out forwards`,
+        paddingTop: 'env(safe-area-inset-top)',
+      }}
     >
-      <div className="space-y-1">
-        <RankingRow label="최고" before={entry.before.max} after={entry.after.max} />
-        <RankingRow label="합산" before={entry.before.sum} after={entry.after.sum} />
-        <RankingRow label="전투력" before={entry.before.combat} after={entry.after.combat} />
+      <div className="flex h-12 items-center justify-between gap-1 px-3">
+        <RankingCompact label="최고" before={entry.before.max} after={entry.after.max} />
+        <span aria-hidden className="text-zinc-700">·</span>
+        <RankingCompact label="합산" before={entry.before.sum} after={entry.after.sum} />
+        <span aria-hidden className="text-zinc-700">·</span>
+        <RankingCompact label="전투력" before={entry.before.combat} after={entry.after.combat} />
       </div>
     </div>
   );
