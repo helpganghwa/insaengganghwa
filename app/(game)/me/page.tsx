@@ -112,13 +112,13 @@ export default async function ProfilePage() {
               <Link href="/me/profiles" aria-label="프로필 선택" className="block">
                 <CharacterStage
                   charSrc={dirImg(activeProfile)}
-                  className="aspect-[3/4] h-52"
+                  className="aspect-[3/4] h-36"
                 />
               </Link>
             ) : (
               <Link
                 href="/me/create"
-                className="flex aspect-[3/4] h-52 flex-col items-center justify-center gap-1 rounded-2xl border-2 border-dashed border-white/25 text-white/60"
+                className="flex aspect-[3/4] h-36 flex-col items-center justify-center gap-1 rounded-2xl border-2 border-dashed border-white/25 text-white/60"
               >
                 <span className="text-2xl" aria-hidden>✨</span>
                 <span className="text-[11px]">생성</span>
