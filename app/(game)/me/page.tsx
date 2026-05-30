@@ -25,7 +25,6 @@ const MENU = [
   { href: '/me/codex', icon: '📖', label: '도감' },
   { href: '/leaderboard', icon: '🏆', label: '랭킹' },
   { href: '/me/settings', icon: '⚙️', label: '설정' },
-  { href: '/probability', icon: '📜', label: '확률 공시' },
 ];
 
 export default async function ProfilePage() {
