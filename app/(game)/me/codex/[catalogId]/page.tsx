@@ -53,9 +53,6 @@ export default async function CodexItemPage({
   return (
     <div className="space-y-4 px-4 py-4">
       <header className="flex items-center gap-2">
-        <Link href="/me/codex" className="text-sm text-zinc-500" aria-label="도감으로">
-          ←
-        </Link>
         <h1 className="text-lg font-semibold">{item.name}</h1>
         <span className="ml-auto text-xs text-zinc-500">{SLOT_LABEL[item.slot]}</span>
       </header>

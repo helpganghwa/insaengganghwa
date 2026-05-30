@@ -58,10 +58,7 @@ export default function ProbabilityPage() {
   return (
     <main className="mx-auto min-h-dvh w-full max-w-[390px] bg-white px-4 py-5 text-zinc-900 dark:bg-black dark:text-zinc-50">
       <header className="mb-4">
-        <Link href="/" className="text-xs text-zinc-500">
-          ← 인생강화
-        </Link>
-        <h1 className="mt-1 text-lg font-bold">📜 확률 공시</h1>
+        <h1 className="text-lg font-bold">📜 확률 공시</h1>
         <p className="mt-1 text-[11px] leading-relaxed text-zinc-500">
           게임산업진흥에 관한 법률 §33에 따른 공시입니다. 본 페이지의 모든 수치는 게임 내 판정
           로직과 1:1로 일치하며, 변경 시 24시간 전 사전 공지합니다.

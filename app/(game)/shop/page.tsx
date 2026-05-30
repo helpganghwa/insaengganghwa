@@ -43,9 +43,6 @@ export default async function ShopPage() {
   return (
     <div className="space-y-5 px-4 py-4">
       <header className="flex items-baseline gap-2">
-        <Link href="/" className="text-sm text-zinc-500">
-          ←
-        </Link>
         <h1 className="text-lg font-semibold">💎 상점</h1>
         <span className="ml-auto font-mono text-sm tabular-nums text-zinc-600 dark:text-zinc-300">
           보유 💎 {formatCompactKR(diamond)}

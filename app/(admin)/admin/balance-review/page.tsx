@@ -84,10 +84,7 @@ export default async function BalanceReviewPage() {
   return (
     <main className="mx-auto min-h-dvh w-full max-w-[720px] bg-white px-4 py-6 text-zinc-900 dark:bg-black dark:text-zinc-50">
       <header className="mb-5">
-        <Link href="/" className="text-xs text-zinc-500">
-          ← 홈
-        </Link>
-        <h1 className="mt-1 text-xl font-bold">⚖️ 강화 밸런스 리뷰</h1>
+        <h1 className="text-xl font-bold">⚖️ 강화 밸런스 리뷰</h1>
         <p className="mt-2 text-[12px] leading-relaxed text-zinc-500">
           운영자 전용. <code>lib/game/balance.ts</code>(단일 진실 원천)에서 직접 산출.
           공시(<Link href="/probability" className="underline">/probability</Link>)와 1:1.
