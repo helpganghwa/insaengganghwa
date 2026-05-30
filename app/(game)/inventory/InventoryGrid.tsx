@@ -8,7 +8,7 @@ import type { Slot } from '@/lib/db/schema/equipment';
 import { TranscendSprite } from '@/components/TranscendSprite';
 import { RarityFrame, rarityBorderStyle, hasRarityBorder } from '@/components/RarityFrame';
 
-import { equipBestSetAction } from './actions';
+import { bulkTranscendAction, equipBestSetAction } from './actions';
 import { EquipmentDetailSheet } from './EquipmentDetailSheet';
 
 export type InvItem = {
@@ -91,8 +91,6 @@ export function InventoryGrid({
         </select>
       </div>
 
-      <p className="mt-2 text-[10px] text-zinc-400">탭=상세 · 🔓 잠금토글</p>
-
       {equipped.length > 0 ? (
         <Section title={`장착 중 (${equipped.length})`}>
           {equipped.map((it) => (
@@ -107,7 +105,32 @@ export function InventoryGrid({
       </Section>
 
       <div className="pointer-events-none fixed inset-x-0 bottom-[4.5rem] z-20">
-        <div className="mx-auto flex max-w-[390px] justify-end px-4">
+        <div className="mx-auto flex max-w-[390px] flex-col items-end gap-2 px-4">
+          <button
+            type="button"
+            disabled={pending}
+            onClick={() => {
+              if (!window.confirm('보유한 모든 장비를 한 번씩 일괄 초월 시도합니다. 진행할까요?'))
+                return;
+              startTransition(async () => {
+                const r = await bulkTranscendAction();
+                if (r.status === 'success') {
+                  const parts: string[] = [];
+                  parts.push(`초월 성공: ${r.success}개`);
+                  if (r.skippedMax > 0) parts.push(`이미 MAX(불필요): ${r.skippedMax}개`);
+                  if (r.skippedFodder > 0) parts.push(`제물 부족: ${r.skippedFodder}개`);
+                  if (r.skippedBusy > 0) parts.push(`강화 중/잠김: ${r.skippedBusy}개`);
+                  window.alert(`일괄 초월 결과\n\n${parts.join('\n')}`);
+                  router.refresh();
+                } else {
+                  window.alert(r.message ?? '일괄 초월 실패');
+                }
+              });
+            }}
+            className="pointer-events-auto rounded-full bg-amber-500 px-4 py-2 text-xs font-semibold text-zinc-950 shadow-lg disabled:opacity-50"
+          >
+            ✦ 일괄 초월
+          </button>
           <button
             type="button"
             disabled={pending}
