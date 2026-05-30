@@ -562,7 +562,7 @@ export function EnhanceSlotCard({
               <span
                 className={`rounded bg-black/75 px-2 py-0.5 text-[11px] font-medium break-keep ${OUTCOME_TONE[flash]}`}
               >
-                {flashMsg ?? OUTCOME_MSGS[flash][0]}
+                {flashMsg ?? ''}
               </span>
             </span>
           </>
