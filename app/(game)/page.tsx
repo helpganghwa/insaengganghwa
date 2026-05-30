@@ -1,11 +1,14 @@
 import Link from 'next/link';
-import { and, eq, isNull, sql } from 'drizzle-orm';
+import { and, eq, gt, isNull, lte, or, sql } from 'drizzle-orm';
 
 import { assetUrl } from '@/lib/asset-versions';
 import { getSessionUserId } from '@/lib/auth/session';
 import { db } from '@/lib/db/client';
 import { withTimeout } from '@/lib/db/with-timeout';
+import { enhancementJobs } from '@/lib/db/schema/enhance';
 import { mailbox } from '@/lib/db/schema/mailbox';
+import { raidRewards } from '@/lib/db/schema/raid';
+import { userSupplyBoxes } from '@/lib/db/schema/supply';
 import { userCheckinState } from '@/lib/db/schema/checkin';
 import { kstDateString } from '@/lib/kst';
 
@@ -80,12 +83,19 @@ export default async function HomePage() {
   // (game) layout이 가드하므로 정상 흐름엔 null 아님. 폴백 안전.
   let hasUnclaimedDaily = false;
   let hasUnclaimedCheckin = false;
+  /** 메뉴 카드 우상단 알림 뱃지. 0이면 미노출. */
+  const counts: Record<string, number> = {
+    '/enhance': 0,
+    '/gacha': 0,
+    '/mail': 0,
+    '/raid': 0,
+  };
   if (userId) {
     const kstToday = kstDateString();
-    // 일일 보급 + 출석 state — 핫패스 1RTT(병렬, CLAUDE §11.4).
-    // 콜드 DB 커넥션 hang 시 페이지가 무한 대기하지 않도록 가드 — 실패 시 카드 숨김(2026-05-29).
+    // 일일 보급 + 출석 state + 4종 알림 카운트 — 핫패스 1RTT(병렬, CLAUDE §11.4).
+    // 콜드 DB 커넥션 hang 시 페이지가 무한 대기하지 않도록 가드.
     try {
-      const [dailyRow, checkinRow] = await withTimeout(
+      const [dailyRow, checkinRow, enhanceRow, supplyRow, mailRow, raidRow] = await withTimeout(
         Promise.all([
           db
             .select({ n: sql<number>`count(*)::int` })
@@ -104,16 +114,53 @@ export default async function HomePage() {
             .from(userCheckinState)
             .where(eq(userCheckinState.userId, userId))
             .limit(1),
+          // 강화: complete_at 도달한 running job 수.
+          db
+            .select({ n: sql<number>`count(*)::int` })
+            .from(enhancementJobs)
+            .where(
+              and(
+                eq(enhancementJobs.userId, userId),
+                eq(enhancementJobs.status, 'running'),
+                lte(enhancementJobs.completeAt, sql`now()`),
+              ),
+            ) as unknown as Promise<Array<{ n: number }>>,
+          // 보급: 슬롯 3종 보급상자 총합.
+          db
+            .select({ n: sql<number>`coalesce(sum(${userSupplyBoxes.count}),0)::int` })
+            .from(userSupplyBoxes)
+            .where(eq(userSupplyBoxes.userId, userId)) as unknown as Promise<Array<{ n: number }>>,
+          // 우편함: 미수령(미만료) 메일 수.
+          db
+            .select({ n: sql<number>`count(*)::int` })
+            .from(mailbox)
+            .where(
+              and(
+                eq(mailbox.userId, userId),
+                isNull(mailbox.claimedAt),
+                or(isNull(mailbox.expiresAt), gt(mailbox.expiresAt, sql`now()`)),
+              ),
+            ) as unknown as Promise<Array<{ n: number }>>,
+          // 레이드: 미수령 보상 수.
+          db
+            .select({ n: sql<number>`count(*)::int` })
+            .from(raidRewards)
+            .where(
+              and(eq(raidRewards.userId, userId), isNull(raidRewards.claimedAt)),
+            ) as unknown as Promise<Array<{ n: number }>>,
         ]),
         3000,
         'home.cards',
       );
       hasUnclaimedDaily = (dailyRow[0]?.n ?? 0) > 0;
-      // 신규 유저 = 행 없음 → lastClaimed=null → 카드 노출(D1).
       const last = checkinRow[0]?.lastClaimedKstDay ?? null;
       hasUnclaimedCheckin = last !== kstToday;
+      counts['/enhance'] = enhanceRow[0]?.n ?? 0;
+      counts['/gacha'] = supplyRow[0]?.n ?? 0;
+      counts['/mail'] = mailRow[0]?.n ?? 0;
+      counts['/raid'] = raidRow[0]?.n ?? 0;
     } catch {
-      // 콜드/hang → 보급·출석 카드 숨김(기본 false). 메뉴 그리드는 정상 노출.
+      // 콜드/hang → 카드 + 알림 숨김(기본 false/0). 메뉴 그리드는 정상 노출.
     }
   }
 
@@ -123,35 +170,46 @@ export default async function HomePage() {
       {hasUnclaimedDaily ? <DailySupplyCard /> : null}
       {hasUnclaimedCheckin ? <HubCheckinCard /> : null}
       <div className="grid grid-cols-2 gap-3">
-        {MENU.map((m) => (
-          <Link
-            key={m.href}
-            href={m.href}
-            style={{ backgroundColor: m.tint }}
-            className="relative flex aspect-[5/3] overflow-hidden rounded-2xl border border-zinc-800 transition active:scale-[0.98]"
-          >
-            {/* 픽셀아트 배경 — next/image 리샘플은 깨지므로 raw img + imageRendering:pixelated (CLAUDE §5.2). */}
-            {/* eslint-disable-next-line @next/next/no-img-element */}
-            <img
-              src={assetUrl(m.bg)}
-              alt=""
-              aria-hidden
-              draggable={false}
-              className="absolute inset-0 h-full w-full object-cover"
-              style={{
-                imageRendering: 'pixelated',
-                transform: `scale(${m.scale})`,
-                transformOrigin: 'center',
-              }}
-            />
-            <div className="absolute inset-x-0 bottom-0 bg-gradient-to-t from-black/85 via-black/55 to-transparent px-3 pt-6 pb-2">
-              <div className="text-sm leading-tight font-bold text-white drop-shadow-sm">
-                {m.label}
+        {MENU.map((m) => {
+          const count = counts[m.href] ?? 0;
+          const badge = count > 99 ? '99+' : count > 0 ? String(count) : null;
+          return (
+            <Link
+              key={m.href}
+              href={m.href}
+              style={{ backgroundColor: m.tint }}
+              className="relative flex aspect-[5/3] overflow-hidden rounded-2xl border border-zinc-800 transition active:scale-[0.98]"
+            >
+              {/* eslint-disable-next-line @next/next/no-img-element */}
+              <img
+                src={assetUrl(m.bg)}
+                alt=""
+                aria-hidden
+                draggable={false}
+                className="absolute inset-0 h-full w-full object-cover"
+                style={{
+                  imageRendering: 'pixelated',
+                  transform: `scale(${m.scale})`,
+                  transformOrigin: 'center',
+                }}
+              />
+              {badge ? (
+                <span
+                  aria-label={`알림 ${count}건`}
+                  className="absolute top-1.5 right-1.5 z-10 inline-flex min-w-[20px] items-center justify-center rounded-full bg-red-600 px-1.5 py-0.5 text-[10px] font-bold text-white shadow ring-2 ring-zinc-900/50 tabular-nums"
+                >
+                  {badge}
+                </span>
+              ) : null}
+              <div className="absolute inset-x-0 bottom-0 bg-gradient-to-t from-black/85 via-black/55 to-transparent px-3 pt-6 pb-2">
+                <div className="text-sm leading-tight font-bold text-white drop-shadow-sm">
+                  {m.label}
+                </div>
+                <div className="mt-0.5 text-[10px] leading-tight text-white/85">{m.desc}</div>
               </div>
-              <div className="mt-0.5 text-[10px] leading-tight text-white/85">{m.desc}</div>
-            </div>
-          </Link>
-        ))}
+            </Link>
+          );
+        })}
       </div>
     </div>
   );
