@@ -297,15 +297,17 @@ export function BoastModal({
   );
 }
 
-/** 서버 컴포넌트에서 쓰는 자랑 버튼 런처(세트 단위). */
+/** 서버 컴포넌트에서 쓰는 자랑 버튼 런처(세트 단위). compact=헤더용 작은 칩 형태. */
 export function BoastLauncher({
   nickname,
   pieces,
   total,
+  compact = false,
 }: {
   nickname: string;
   pieces: BoastPiece[];
   total: number;
+  compact?: boolean;
 }) {
   const [open, setOpen] = useState(false);
   return (
@@ -313,9 +315,14 @@ export function BoastLauncher({
       <button
         type="button"
         onClick={() => setOpen(true)}
-        className="w-full rounded-xl border border-amber-300 bg-amber-50 py-2.5 text-sm font-semibold text-amber-800 dark:border-amber-800 dark:bg-amber-950/40 dark:text-amber-200"
+        aria-label="공유하기"
+        className={
+          compact
+            ? 'inline-flex h-7 shrink-0 items-center gap-1 rounded-full border border-amber-400/30 bg-amber-400/10 px-2.5 text-xs font-semibold text-amber-300'
+            : 'w-full rounded-xl border border-amber-300 bg-amber-50 py-2.5 text-sm font-semibold text-amber-800 dark:border-amber-800 dark:bg-amber-950/40 dark:text-amber-200'
+        }
       >
-        🔗 내 세트 자랑하기
+        {compact ? '🔗 공유' : '🔗 내 세트 자랑하기'}
       </button>
       <BoastModal
         open={open}
