@@ -34,7 +34,7 @@ FAIL ONLY if one of these is clearly true:
 - nsfw: explicit sexual content, visible genitals or nipples, sexually suggestive posing
 - violence: graphic gore, dismemberment, severed body parts shown on-screen
 - hate: hate symbols (swastika, etc.), clearly offensive imagery toward identity groups
-- quality: image is unrecognizable noise/garbage, OR character is missing essential body parts (no head at all, no torso at all), OR severely glitched anatomy (multiple heads, multiple torsos, limbs growing from face)
+- quality: image is unrecognizable noise/garbage, OR character is missing essential body parts (no head at all, no torso at all), OR severely glitched anatomy (multiple heads, multiple torsos, limbs growing from face, duplicated limbs such as multiple arms on the same side, extra hands, extra feet, three or more legs)
 
 PASS (default) for everything else, including:
 - Body proportions different from description (chibi-looking, big head, short legs, etc.)
