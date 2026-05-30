@@ -18,6 +18,7 @@ STRICT RULES:
 - Make the WHOLE outfit look lavish and cohesive: fill in the base layers the armor leaves bare (under-garment, sleeves, legwear, boots, gloves) with ornate fantasy detail and colors that harmonize with the equipment. NEVER plain, drab, or everyday clothing — the entire ensemble must match the rich, elaborate quality of the weapon, armor, and accessory.
 - Also give the hairstyle (style + color, within the given length).
 - Keep each item description short (a few words each); merge into ONE flowing clause.
+- ORDER (mandatory): weapon → armor → accessory → hairstyle (style + color). All four must appear in this exact order, each in roughly 8 words. Keep weapon and armor concise so the accessory and hairstyle at the tail are never cut off.
 - NEVER mention: the face's features, expression, body shape, proportions, height, the pose, background, camera, art style, or the words "full body".
 - Anime/JRPG fantasy aesthetic, opulent and harmonious. Max 55 words. Output ONLY the clause — no preamble, no quotes, no trailing period.`;
 
