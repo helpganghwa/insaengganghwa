@@ -33,8 +33,8 @@ export function AppHeaderShell({
                 imageRendering: 'pixelated',
                 objectFit: 'cover',
                 objectPosition: '50% 0%',
-                transform: 'scale(3.2)',
-                transformOrigin: '50% 14%',
+                transform: 'scale(3.6)',
+                transformOrigin: '50% 22%',
               }}
             />
           ) : (
