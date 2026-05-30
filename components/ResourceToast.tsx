@@ -44,7 +44,7 @@ export function useResourceToast(): ToastContextValue {
 }
 
 const RANKING_DEBOUNCE_MS = 1200;
-const RANKING_TOAST_MS = 3200;
+const RANKING_TOAST_MS = 4400;
 
 export function ResourceToastProvider({ children }: { children: React.ReactNode }) {
   const [toasts, setToasts] = useState<ToastEntry[]>([]);
@@ -139,7 +139,7 @@ function CountUp({ from, to, delay = 0 }: { from: number; to: number; delay?: nu
       return;
     }
     const diff = Math.abs(to - from);
-    const duration = Math.min(1000, 600 + Math.log10(1 + diff) * 250);
+    const duration = Math.min(1400, 800 + Math.log10(1 + diff) * 300);
     const startAt = performance.now() + delay;
     let raf = 0;
     const step = (now: number) => {
@@ -158,7 +158,7 @@ function CountUp({ from, to, delay = 0 }: { from: number; to: number; delay?: nu
   return <>{v.toLocaleString('ko-KR')}</>;
 }
 
-const RANK_REVEAL_MS = 1600;
+const RANK_REVEAL_MS = 2200;
 
 function RankingCompact({
   label,
