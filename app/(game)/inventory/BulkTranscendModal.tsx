@@ -117,6 +117,37 @@ export function BulkTranscendModal({
   const [confirm, setConfirm] = useState(false);
   const [confirmLeft, setConfirmLeft] = useState(0);
 
+  // 선택 — 기본 전체 선택. preview 갱신 시 동기화.
+  const [selected, setSelected] = useState<Set<string>>(
+    () => new Set(initialPreview.rows.map((r) => r.targetInstanceId)),
+  );
+  useEffect(() => {
+    setSelected((prev) => {
+      const next = new Set<string>();
+      for (const r of preview.rows) {
+        // 이미 선택 해제한 항목은 유지(true는 새로 추가).
+        if (prev.has(r.targetInstanceId) || prev.size === 0) next.add(r.targetInstanceId);
+      }
+      // 빈 prev이면 전체 선택.
+      return next.size === 0 && preview.rows.length > 0
+        ? new Set(preview.rows.map((r) => r.targetInstanceId))
+        : next;
+    });
+  }, [preview]);
+
+  const selectedRows = preview.rows.filter((r) => selected.has(r.targetInstanceId));
+
+  function toggle(id: string) {
+    setSelected((prev) => {
+      const next = new Set(prev);
+      if (next.has(id)) next.delete(id);
+      else next.add(id);
+      return next;
+    });
+    // 선택 변경 시 confirm 해제.
+    if (confirm) setConfirm(false);
+  }
+
   useEffect(() => {
     let cancelled = false;
     (async () => {
@@ -145,7 +176,7 @@ export function BulkTranscendModal({
   }, [confirm, confirmLeft]);
 
   function tryExecute() {
-    if (!preview || preview.rows.length === 0) return;
+    if (selectedRows.length === 0) return;
     if (!confirm) {
       setConfirm(true);
       setConfirmLeft(3);
@@ -156,20 +187,21 @@ export function BulkTranscendModal({
   }
 
   function execute() {
-    // 낙관적 — preview를 그대로 결과로 표시. 백그라운드에서 실제 실행 후 갱신.
+    // 낙관적 — 선택된 row를 결과로 표시. 백그라운드에서 실제 실행 후 갱신.
     const optimistic: ExecResult = {
       status: 'success',
-      stepsApplied: preview.rows.reduce((a, r) => a + (r.maxT - r.currentT), 0),
-      targetsUpgraded: preview.rows.length,
+      stepsApplied: selectedRows.reduce((a, r) => a + (r.maxT - r.currentT), 0),
+      targetsUpgraded: selectedRows.length,
       failedSteps: 0,
       skippedLockedTarget: preview.skippedLockedTarget,
       skippedNoUpgrade: preview.skippedNoUpgrade,
-      upgraded: preview.rows.map((r) => ({ name: r.name, fromT: r.currentT, toT: r.maxT })),
+      upgraded: selectedRows.map((r) => ({ name: r.name, fromT: r.currentT, toT: r.maxT })),
     };
     setResult(optimistic);
     setPhase('result');
+    const ids = selectedRows.map((r) => r.targetInstanceId);
     startTransition(async () => {
-      const r = await bulkTranscendAction();
+      const r = await bulkTranscendAction(ids);
       if (r.status === 'error') {
         setError(r.message);
         setPhase('error');
@@ -185,24 +217,7 @@ export function BulkTranscendModal({
       ? `총 ${result.targetsUpgraded}개 장비 ${result.stepsApplied}단계 초월 완료`
       : preview.rows.length === 0
         ? '초월 가능한 장비가 없습니다'
-        : `${preview.rows.length}개 장비 초월 가능`;
-
-  const listItems =
-    phase === 'result' && result
-      ? result.upgraded.map((u, i) => ({
-          key: `r-${i}`,
-          name: u.name,
-          sub: '', // 결과는 제물 정보 자리에 빈 자리 유지(시프트 방지).
-          fromT: u.fromT,
-          toT: u.toT,
-        }))
-      : preview.rows.map((r) => ({
-          key: `p-${r.catalogItemId}`,
-          name: r.name,
-          sub: `제물 ${r.fodderToConsume}개`,
-          fromT: r.currentT,
-          toT: r.maxT,
-        }));
+        : `${preview.rows.length}개 중 ${selectedRows.length}개 선택`;
 
   return (
     <div
@@ -256,25 +271,63 @@ export function BulkTranscendModal({
             </p>
 
             <ul className="min-h-[80px] max-h-[40vh] space-y-1.5 overflow-y-auto">
-              {listItems.map((it) => (
-                <li
-                  key={it.key}
-                  className="grid grid-cols-[1fr_auto] items-center gap-2 rounded-lg bg-white/5 px-3 py-2 text-[11px]"
-                >
-                  <div className="min-w-0">
-                    <div className="truncate font-semibold">{it.name}</div>
-                    <div className="min-h-[0.85rem] text-[10px] text-zinc-400">{it.sub}</div>
-                  </div>
-                  <div className="shrink-0 text-right font-mono">
-                    <span style={tierColorStyle(it.fromT)}>T{it.fromT}</span>
-                    <span className="mx-1 text-zinc-500">→</span>
-                    <span style={tierColorStyle(it.toT)}>T{it.toT}</span>
-                    <span className="ml-1 text-[10px] text-zinc-400">
-                      (+{it.toT - it.fromT})
-                    </span>
-                  </div>
-                </li>
-              ))}
+              {phase === 'result' && result
+                ? result.upgraded.map((u, i) => (
+                    <li
+                      key={`r-${i}`}
+                      className="grid grid-cols-[auto_1fr_auto] items-center gap-2 rounded-lg bg-white/5 px-3 py-2 text-[11px]"
+                    >
+                      <span aria-hidden className="h-3.5 w-3.5" /> {/* 선택자 spacer */}
+                      <div className="min-w-0">
+                        <div className="truncate font-semibold">{u.name}</div>
+                        <div className="min-h-[0.85rem] text-[10px] text-zinc-400"></div>
+                      </div>
+                      <div className="shrink-0 text-right font-mono">
+                        <span style={tierColorStyle(u.fromT)}>T{u.fromT}</span>
+                        <span className="mx-1 text-zinc-500">→</span>
+                        <span style={tierColorStyle(u.toT)}>T{u.toT}</span>
+                        <span className="ml-1 text-[10px] text-zinc-400">
+                          (+{u.toT - u.fromT})
+                        </span>
+                      </div>
+                    </li>
+                  ))
+                : preview.rows.map((r) => {
+                    const checked = selected.has(r.targetInstanceId);
+                    return (
+                      <li
+                        key={`p-${r.catalogItemId}`}
+                        className={`grid cursor-pointer grid-cols-[auto_1fr_auto] items-center gap-2 rounded-lg px-3 py-2 text-[11px] transition ${
+                          checked ? 'bg-white/5' : 'bg-white/[0.02] opacity-60'
+                        }`}
+                        onClick={() => toggle(r.targetInstanceId)}
+                      >
+                        <input
+                          type="checkbox"
+                          checked={checked}
+                          readOnly
+                          aria-label={`${r.name} 선택`}
+                          className="h-3.5 w-3.5 cursor-pointer accent-amber-500"
+                          onClick={(e) => e.stopPropagation()}
+                          onChange={() => toggle(r.targetInstanceId)}
+                        />
+                        <div className="min-w-0">
+                          <div className="truncate font-semibold">{r.name}</div>
+                          <div className="min-h-[0.85rem] text-[10px] text-zinc-400">
+                            제물 {r.fodderToConsume}개
+                          </div>
+                        </div>
+                        <div className="shrink-0 text-right font-mono">
+                          <span style={tierColorStyle(r.currentT)}>T{r.currentT}</span>
+                          <span className="mx-1 text-zinc-500">→</span>
+                          <span style={tierColorStyle(r.maxT)}>T{r.maxT}</span>
+                          <span className="ml-1 text-[10px] text-zinc-400">
+                            (+{r.maxT - r.currentT})
+                          </span>
+                        </div>
+                      </li>
+                    );
+                  })}
             </ul>
 
             {phase === 'preview' && preview.skippedLockedTarget > 0 ? (
@@ -306,12 +359,16 @@ export function BulkTranscendModal({
                   <button
                     type="button"
                     onClick={tryExecute}
-                    disabled={preview.rows.length === 0}
-                    className="flex-[2] rounded-xl bg-amber-500 py-2 text-xs font-bold text-zinc-950 disabled:opacity-40"
+                    disabled={selectedRows.length === 0}
+                    className={`flex-[2] rounded-xl border py-2 text-xs font-bold tabular-nums disabled:opacity-40 ${
+                      confirm
+                        ? 'animate-pulse border-amber-300 bg-amber-500 text-white'
+                        : 'border-amber-500 bg-amber-500 text-zinc-950'
+                    }`}
                   >
                     {confirm
                       ? `확정? (${confirmLeft})`
-                      : `초월하기 (${preview.rows.length}개)`}
+                      : `초월하기 (${selectedRows.length}개)`}
                   </button>
                 </>
               )}

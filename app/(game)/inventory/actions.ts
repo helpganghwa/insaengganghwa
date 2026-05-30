@@ -244,19 +244,25 @@ export async function previewBulkTranscendAction() {
  * 일괄 초월 실행 — preview와 동일 시뮬레이션으로 그룹별 maxT 계산 후,
  * target마다 (maxT - currentT) 회 performTranscend 호출. 각 호출은 자체 트랜잭션.
  * 한 건 실패해도 다른 그룹은 계속 진행.
+ *
+ * @param targetInstanceIds 선택한 target만 처리. 미지정/빈 배열이면 전체.
  */
-export async function bulkTranscendAction() {
+export async function bulkTranscendAction(targetInstanceIds?: string[]) {
   const u = await uid();
   if (!u) return err('UNAUTHENTICATED');
   if (await rateLimited(u, 'inventory')) return err('RATE_LIMITED');
 
   const plan = await planBulkTranscend(u);
+  const selected =
+    targetInstanceIds && targetInstanceIds.length > 0
+      ? plan.rows.filter((r) => targetInstanceIds.includes(r.targetInstanceId.toString()))
+      : plan.rows;
   let stepsApplied = 0;
   let targetsUpgraded = 0;
   let failedSteps = 0;
   const upgraded: Array<{ name: string; fromT: number; toT: number }> = [];
 
-  for (const row of plan.rows) {
+  for (const row of selected) {
     let curT = row.currentT;
     let success = false;
     for (let step = row.currentT + 1; step <= row.maxT; step++) {
