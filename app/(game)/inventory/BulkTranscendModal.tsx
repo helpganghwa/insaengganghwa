@@ -80,13 +80,13 @@ export function BulkTranscendModal({
 
   return (
     <div
-      className="fixed inset-0 z-50 flex items-end justify-center bg-black/60 backdrop-blur-sm sm:items-center"
+      className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-4 backdrop-blur-sm"
       role="dialog"
       aria-modal="true"
       onClick={onClose}
     >
       <div
-        className="w-full max-w-[390px] rounded-t-2xl bg-zinc-950 p-4 text-zinc-100 sm:rounded-2xl"
+        className="w-full max-w-[340px] rounded-2xl bg-zinc-950 p-4 text-zinc-100"
         onClick={(e) => e.stopPropagation()}
       >
         <div className="mb-3 flex items-baseline justify-between">
@@ -116,10 +116,6 @@ export function BulkTranscendModal({
               </p>
             ) : (
               <>
-                <p className="mb-2 text-[11px] text-zinc-400">
-                  같은 카탈로그 아이템 중 가장 강한 1개를 target으로, 나머지를 제물로 사용해
-                  가능한 최대까지 초월합니다.
-                </p>
                 <ul className="max-h-[40vh] space-y-1.5 overflow-y-auto">
                   {preview.rows.map((r) => (
                     <li
@@ -143,10 +139,11 @@ export function BulkTranscendModal({
                     </li>
                   ))}
                 </ul>
-                <div className="mt-2 text-[10px] text-zinc-500">
-                  {preview.skippedLockedTarget > 0 ? `잠긴 target 제외: ${preview.skippedLockedTarget}개 · ` : ''}
-                  {preview.skippedNoUpgrade > 0 ? `제물 부족으로 미진행: ${preview.skippedNoUpgrade}개` : ''}
-                </div>
+                {preview.skippedLockedTarget > 0 ? (
+                  <div className="mt-2 text-[10px] text-zinc-500">
+                    잠긴 target 제외: {preview.skippedLockedTarget}개
+                  </div>
+                ) : null}
                 <div className="mt-3 flex gap-2">
                   <button
                     type="button"
@@ -160,8 +157,7 @@ export function BulkTranscendModal({
                     onClick={execute}
                     className="flex-[2] rounded-xl bg-amber-500 py-2 text-xs font-bold text-zinc-950"
                   >
-                    초월하기 (
-                    {preview.rows.reduce((a, r) => a + (r.maxT - r.currentT), 0)}단계)
+                    초월하기 ({preview.rows.length}개)
                   </button>
                 </div>
               </>
