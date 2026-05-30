@@ -71,60 +71,82 @@ export default async function LeaderboardPage({
               />
               {/* 1·2·3위 전신 — 2위(좌)·1위(중앙, 큼)·3위(우). 텍스트는 drop-shadow로 가독 확보 */}
               <div className="absolute inset-0 flex items-end justify-center gap-0.5 px-1 py-1.5">
-                {[top[1], top[0], top[2]]
-                  .filter((e): e is (typeof top)[number] => !!e)
-                  .map((e) => {
-                    const first = e.rank === 1;
-                    const me = e.userId === userId;
-                    // 기본 흰색 — 내 등수일 때만 amber로 강조(1등 포함).
-                    const rankColor = me ? 'text-amber-300' : 'text-white';
+                {/* 항상 3분할 — 2/1/3 자리. 데이터 없으면 placeholder로 슬롯 유지. */}
+                {[
+                  { slot: 2 as const, entry: top[1] ?? null },
+                  { slot: 1 as const, entry: top[0] ?? null },
+                  { slot: 3 as const, entry: top[2] ?? null },
+                ].map(({ slot, entry }) => {
+                  const first = slot === 1;
+                  if (!entry) {
                     return (
-                      <Link
-                        key={e.userId}
-                        href={`/u/${encodeURIComponent(e.nickname)}`}
+                      <div
+                        key={`empty-${slot}`}
                         className={`flex min-w-0 flex-1 flex-col items-center self-stretch ${
                           first ? 'z-10' : ''
                         }`}
                       >
-                        {/* 위 — 메달 + 닉네임 */}
                         <div className="flex w-full items-center justify-center gap-0.5 px-0.5 pt-1">
-                          <span
-                            className={`font-mono text-[11px] tabular-nums leading-none drop-shadow-[0_1px_2px_rgba(0,0,0,1)] ${rankColor}`}
-                          >
-                            #{e.rank}
+                          <span className="font-mono text-[11px] tabular-nums leading-none text-white/55 drop-shadow-[0_1px_2px_rgba(0,0,0,1)]">
+                            #{slot}
                           </span>
-                          <span
-                            className={`truncate text-[11px] font-medium drop-shadow-[0_1px_2px_rgba(0,0,0,1)] ${rankColor}`}
-                          >
-                            {e.nickname}
+                          <span className="truncate text-[11px] font-medium text-white/55 drop-shadow-[0_1px_2px_rgba(0,0,0,1)]">
+                            —
                           </span>
                         </div>
-                        {/* 중앙 — 캐릭터 전신 */}
-                        <div className="relative w-full flex-1">
-                          {e.profileImg && (
-                            // eslint-disable-next-line @next/next/no-img-element
-                            <img
-                              src={e.profileImg}
-                              alt=""
-                              aria-hidden
-                              draggable={false}
-                              className="absolute inset-0 h-full w-full object-contain object-bottom"
-                              style={{
-                                imageRendering: 'pixelated',
-                                transform: 'scale(1.49) translateY(calc(5% + 15px))',
-                                transformOrigin: 'center bottom',
-                                filter: 'drop-shadow(0 3px 5px rgba(0,0,0,0.55))',
-                              }}
-                            />
-                          )}
-                        </div>
-                        {/* 아래 — 수치(순수 숫자) */}
-                        <span className="pb-1 font-mono text-[11px] font-bold tabular-nums text-amber-200 drop-shadow-[0_1px_2px_rgba(0,0,0,1)]">
-                          {fmt(e.value)}
+                        <div className="relative w-full flex-1" aria-hidden />
+                        <span className="pb-1 font-mono text-[11px] font-bold tabular-nums text-amber-200/55 drop-shadow-[0_1px_2px_rgba(0,0,0,1)]">
+                          —
                         </span>
-                      </Link>
+                      </div>
                     );
-                  })}
+                  }
+                  const me = entry.userId === userId;
+                  const rankColor = me ? 'text-amber-300' : 'text-white';
+                  return (
+                    <Link
+                      key={entry.userId}
+                      href={`/u/${encodeURIComponent(entry.nickname)}`}
+                      className={`flex min-w-0 flex-1 flex-col items-center self-stretch ${
+                        first ? 'z-10' : ''
+                      }`}
+                    >
+                      <div className="flex w-full items-center justify-center gap-0.5 px-0.5 pt-1">
+                        <span
+                          className={`font-mono text-[11px] tabular-nums leading-none drop-shadow-[0_1px_2px_rgba(0,0,0,1)] ${rankColor}`}
+                        >
+                          #{entry.rank}
+                        </span>
+                        <span
+                          className={`truncate text-[11px] font-medium drop-shadow-[0_1px_2px_rgba(0,0,0,1)] ${rankColor}`}
+                        >
+                          {entry.nickname}
+                        </span>
+                      </div>
+                      <div className="relative w-full flex-1">
+                        {entry.profileImg && (
+                          // eslint-disable-next-line @next/next/no-img-element
+                          <img
+                            src={entry.profileImg}
+                            alt=""
+                            aria-hidden
+                            draggable={false}
+                            className="absolute inset-0 h-full w-full object-contain object-bottom"
+                            style={{
+                              imageRendering: 'pixelated',
+                              transform: 'scale(1.49) translateY(calc(5% + 15px))',
+                              transformOrigin: 'center bottom',
+                              filter: 'drop-shadow(0 3px 5px rgba(0,0,0,0.55))',
+                            }}
+                          />
+                        )}
+                      </div>
+                      <span className="pb-1 font-mono text-[11px] font-bold tabular-nums text-amber-200 drop-shadow-[0_1px_2px_rgba(0,0,0,1)]">
+                        {fmt(entry.value)}
+                      </span>
+                    </Link>
+                  );
+                })}
               </div>
             </div>
           </section>

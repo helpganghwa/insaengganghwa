@@ -54,50 +54,76 @@ export async function RankingTop3Card() {
           style={{ imageRendering: 'pixelated' }}
         />
         <div className="absolute inset-0 flex items-end justify-center gap-0.5 px-1 py-1.5">
-          {[top[1], top[0], top[2]]
-            .filter((e): e is (typeof top)[number] => !!e)
-            .map((e) => {
-              const first = e.rank === 1;
+          {/* 항상 3분할 — 2/1/3 자리. 데이터 없으면 placeholder로 슬롯 유지. */}
+          {[
+            { slot: 2 as const, entry: top[1] ?? null },
+            { slot: 1 as const, entry: top[0] ?? null },
+            { slot: 3 as const, entry: top[2] ?? null },
+          ].map(({ slot, entry }) => {
+            const first = slot === 1;
+            if (!entry) {
               return (
-                <Link
-                  key={e.userId}
-                  href={`/u/${encodeURIComponent(e.nickname)}`}
+                <div
+                  key={`empty-${slot}`}
                   className={`flex min-w-0 flex-1 flex-col items-center self-stretch ${
                     first ? 'z-10' : ''
                   }`}
                 >
                   <div className="flex w-full items-center justify-center gap-0.5 px-0.5 pt-1">
-                    <span className="font-mono text-[11px] leading-none tabular-nums text-white drop-shadow-[0_1px_2px_rgba(0,0,0,1)]">
-                      #{e.rank}
+                    <span className="font-mono text-[11px] leading-none tabular-nums text-white/55 drop-shadow-[0_1px_2px_rgba(0,0,0,1)]">
+                      #{slot}
                     </span>
-                    <span className="truncate text-[11px] font-medium text-white drop-shadow-[0_1px_2px_rgba(0,0,0,1)]">
-                      {e.nickname}
+                    <span className="truncate text-[11px] font-medium text-white/55 drop-shadow-[0_1px_2px_rgba(0,0,0,1)]">
+                      —
                     </span>
                   </div>
-                  <div className="relative w-full flex-1">
-                    {e.profileImg ? (
-                      // eslint-disable-next-line @next/next/no-img-element
-                      <img
-                        src={e.profileImg}
-                        alt=""
-                        aria-hidden
-                        draggable={false}
-                        className="absolute inset-0 h-full w-full object-contain object-bottom"
-                        style={{
-                          imageRendering: 'pixelated',
-                          transform: 'scale(1.49) translateY(calc(5% + 15px))',
-                          transformOrigin: 'center bottom',
-                          filter: 'drop-shadow(0 3px 5px rgba(0,0,0,0.55))',
-                        }}
-                      />
-                    ) : null}
-                  </div>
-                  <span className="pb-1 font-mono text-[11px] font-bold tabular-nums text-amber-200 drop-shadow-[0_1px_2px_rgba(0,0,0,1)]">
-                    {e.value.toLocaleString('ko-KR')}
+                  <div className="relative w-full flex-1" aria-hidden />
+                  <span className="pb-1 font-mono text-[11px] font-bold tabular-nums text-amber-200/55 drop-shadow-[0_1px_2px_rgba(0,0,0,1)]">
+                    —
                   </span>
-                </Link>
+                </div>
               );
-            })}
+            }
+            return (
+              <Link
+                key={entry.userId}
+                href={`/u/${encodeURIComponent(entry.nickname)}`}
+                className={`flex min-w-0 flex-1 flex-col items-center self-stretch ${
+                  first ? 'z-10' : ''
+                }`}
+              >
+                <div className="flex w-full items-center justify-center gap-0.5 px-0.5 pt-1">
+                  <span className="font-mono text-[11px] leading-none tabular-nums text-white drop-shadow-[0_1px_2px_rgba(0,0,0,1)]">
+                    #{entry.rank}
+                  </span>
+                  <span className="truncate text-[11px] font-medium text-white drop-shadow-[0_1px_2px_rgba(0,0,0,1)]">
+                    {entry.nickname}
+                  </span>
+                </div>
+                <div className="relative w-full flex-1">
+                  {entry.profileImg ? (
+                    // eslint-disable-next-line @next/next/no-img-element
+                    <img
+                      src={entry.profileImg}
+                      alt=""
+                      aria-hidden
+                      draggable={false}
+                      className="absolute inset-0 h-full w-full object-contain object-bottom"
+                      style={{
+                        imageRendering: 'pixelated',
+                        transform: 'scale(1.49) translateY(calc(5% + 15px))',
+                        transformOrigin: 'center bottom',
+                        filter: 'drop-shadow(0 3px 5px rgba(0,0,0,0.55))',
+                      }}
+                    />
+                  ) : null}
+                </div>
+                <span className="pb-1 font-mono text-[11px] font-bold tabular-nums text-amber-200 drop-shadow-[0_1px_2px_rgba(0,0,0,1)]">
+                  {entry.value.toLocaleString('ko-KR')}
+                </span>
+              </Link>
+            );
+          })}
         </div>
       </div>
     </section>
