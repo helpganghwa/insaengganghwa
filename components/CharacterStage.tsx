@@ -13,9 +13,7 @@ export function CharacterStage({
   rounded?: boolean;
 }) {
   return (
-    <div
-      className={`relative overflow-hidden ${rounded ? 'rounded-2xl' : ''} ${className ?? ''}`}
-    >
+    <div className={`relative overflow-hidden ${rounded ? 'rounded-2xl' : ''} ${className ?? ''}`}>
       {charSrc && (
         <>
           {/* 발밑 타원 그림자 — 캐릭터가 바닥에 서 있는 느낌 */}
@@ -26,7 +24,11 @@ export function CharacterStage({
             alt="프로필 캐릭터"
             draggable={false}
             className="absolute inset-0 h-full w-full object-contain object-bottom"
-            style={{ imageRendering: 'pixelated', transform: 'scale(1.8) translateY(8%)', transformOrigin: 'center bottom' }}
+            style={{
+              imageRendering: 'pixelated',
+              transform: 'scale(1.8) translateY(10%)',
+              transformOrigin: 'center bottom',
+            }}
           />
         </>
       )}
