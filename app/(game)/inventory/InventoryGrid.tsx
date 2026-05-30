@@ -71,28 +71,30 @@ export function InventoryGrid({
 
   const openItem = openId ? items.find((i) => i.id === openId) ?? null : null;
 
-  // NEW 표시 — localStorage seen 집합 기반. 상세 진입(setOpenId) 시 seen에 추가.
-  const [seen, setSeen] = useState<Set<string>>(() => new Set());
-  useEffect(() => {
+  // NEW 표시 — localStorage seen 집합 기반. 첫 렌더부터 localStorage 동기화(SSR 안전).
+  const [seen, setSeen] = useState<Set<string>>(() => {
+    if (typeof window === 'undefined') return new Set();
     try {
       const raw = localStorage.getItem(SEEN_STORAGE_KEY);
-      if (raw) {
-        const arr = JSON.parse(raw) as string[];
-        setSeen(new Set(arr));
-      }
+      return new Set(raw ? (JSON.parse(raw) as string[]) : []);
     } catch {
-      /* ignore */
+      return new Set();
     }
-  }, []);
+  });
   const markSeen = useCallback((id: string) => {
     setSeen((prev) => {
-      if (prev.has(id)) return prev;
+      if (prev.has(id)) {
+        if (typeof window !== 'undefined') console.debug('[seen] already', id);
+        return prev;
+      }
       const next = new Set(prev);
       next.add(id);
       try {
         localStorage.setItem(SEEN_STORAGE_KEY, JSON.stringify(Array.from(next)));
-      } catch {
-        /* ignore */
+        if (typeof window !== 'undefined')
+          console.debug('[seen] marked', id, 'total=', next.size);
+      } catch (e) {
+        console.warn('[seen] localStorage save failed', e);
       }
       return next;
     });
