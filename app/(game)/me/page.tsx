@@ -98,7 +98,7 @@ export default async function ProfilePage() {
   return (
     <div className="space-y-4 px-4 py-6">
       {/* 내 정보 카드 — 좌: 닉네임/캐릭터/전투력 · 우: 장비 3종 */}
-      <section className="rounded-3xl border border-zinc-800 bg-gradient-to-b from-zinc-900 to-zinc-950 p-4">
+      <section className="rounded-xl border border-zinc-800 bg-gradient-to-b from-zinc-900 to-zinc-950 p-4">
         <div className="flex items-stretch gap-3">
           {/* 좌 — 머리 위 닉네임 + 캐릭터 + 발끝 전투력 */}
           <div className="flex shrink-0 flex-col items-center gap-1.5">
