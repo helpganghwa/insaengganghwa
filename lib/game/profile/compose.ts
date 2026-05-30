@@ -159,7 +159,7 @@ function assemble(opts: ProfileOptions, outfitClause: string): string {
     `KEEP unchanged from source: gender, the exact same facial features, the Japanese anime art style, body proportions, and overall vibe.`,
     `Full body head-to-feet, pure clean background, character only. Crisp clean silhouette with smooth solid outlines — no stray white dots, specks or noise around the edges.`,
     opts.gender === 'male'
-      ? `Slim tall shōnen anime hero build — small head and long legs (8-head proportions), athletic teen body, broad squared shoulders, narrow waist, angular masculine jawline, sharp confident eyes, upright assured stance. NOT androgynous, NOT effeminate, NOT bishōnen — boyish energetic shōnen hero.`
+      ? `Slim tall shōnen anime hero build — small head and long legs (8-head proportions), athletic teen body, broad squared shoulders, narrow waist, round youthful boyish face with soft cheeks and bright lively eyes, upright energetic stance.`
       : `Slim tall Japanese anime heroine build — small head and long legs (8-head proportions), slender waist with soft natural curves, gentle anime facial features, graceful posture.`,
     `${outfitClause} Pose: ${POSE_DESC[opts.pose]}. Expression free — any natural pleasant look.`,
     `Confirm: keep the same facial features, body and anime style as source; full body with both feet on the ground.`,
