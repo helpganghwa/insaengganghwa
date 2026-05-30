@@ -1,6 +1,8 @@
 'use client';
 
-import { createContext, useCallback, useContext, useRef, useState } from 'react';
+import { createContext, useCallback, useContext, useEffect, useRef, useState } from 'react';
+
+import type { MyRanks } from '@/lib/game/leaderboard/queries';
 
 type ResourceToast = {
   id: number;
@@ -17,24 +19,39 @@ type ErrorToast = {
   message: string;
 };
 
-type ToastEntry = ResourceToast | ErrorToast;
+type RankingToast = {
+  id: number;
+  kind: 'ranking';
+  before: MyRanks;
+  after: MyRanks;
+};
+
+type ToastEntry = ResourceToast | ErrorToast | RankingToast;
 
 type ToastContextValue = {
   showResource: (icon: string, label: string, delta?: number) => void;
   showError: (message: string) => void;
+  /** 강화 랭킹 변동 — last-wins 디바운스 3s 후 한 번만 노출. */
+  showRanking: (before: MyRanks, after: MyRanks) => void;
 };
 
 const ToastContext = createContext<ToastContextValue | null>(null);
 
 export function useResourceToast(): ToastContextValue {
   const ctx = useContext(ToastContext);
-  if (!ctx) return { showResource: () => {}, showError: () => {} };
+  if (!ctx) return { showResource: () => {}, showError: () => {}, showRanking: () => {} };
   return ctx;
 }
+
+const RANKING_DEBOUNCE_MS = 3000;
+const RANKING_TOAST_MS = 4200;
 
 export function ResourceToastProvider({ children }: { children: React.ReactNode }) {
   const [toasts, setToasts] = useState<ToastEntry[]>([]);
   const counterRef = useRef(0);
+  /** 디바운스 큐 — 첫 before 보존, 마지막 after 갱신(last-wins). */
+  const rankingPendingRef = useRef<{ before: MyRanks; after: MyRanks } | null>(null);
+  const rankingTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   const dismiss = useCallback((id: number) => {
     setToasts((prev) => prev.filter((t) => t.id !== id));
@@ -58,8 +75,32 @@ export function ResourceToastProvider({ children }: { children: React.ReactNode 
     [dismiss],
   );
 
+  const showRanking = useCallback(
+    (before: MyRanks, after: MyRanks) => {
+      if (rankingPendingRef.current) {
+        rankingPendingRef.current.after = after; // 첫 before 보존, 마지막 after로 누적.
+      } else {
+        rankingPendingRef.current = { before, after };
+      }
+      if (rankingTimerRef.current) clearTimeout(rankingTimerRef.current);
+      rankingTimerRef.current = setTimeout(() => {
+        const data = rankingPendingRef.current;
+        rankingPendingRef.current = null;
+        rankingTimerRef.current = null;
+        if (!data) return;
+        const id = ++counterRef.current;
+        setToasts((prev) => [
+          ...prev,
+          { id, kind: 'ranking', before: data.before, after: data.after },
+        ]);
+        setTimeout(() => dismiss(id), RANKING_TOAST_MS);
+      }, RANKING_DEBOUNCE_MS);
+    },
+    [dismiss],
+  );
+
   return (
-    <ToastContext.Provider value={{ showResource, showError }}>
+    <ToastContext.Provider value={{ showResource, showError, showRanking }}>
       {children}
       <div
         className="pointer-events-none fixed left-1/2 z-[75] flex -translate-x-1/2 flex-col items-center gap-2"
@@ -69,12 +110,85 @@ export function ResourceToastProvider({ children }: { children: React.ReactNode 
         {toasts.map((t) =>
           t.kind === 'resource' ? (
             <ResourceItem key={t.id} entry={t} />
-          ) : (
+          ) : t.kind === 'error' ? (
             <ErrorItem key={t.id} entry={t} onDismiss={() => dismiss(t.id)} />
+          ) : (
+            <RankingItem key={t.id} entry={t} />
           ),
         )}
       </div>
     </ToastContext.Provider>
+  );
+}
+
+/** 카운트업 — easeOutCubic, 변동 클수록 길게(700~1500ms). */
+function CountUp({ from, to }: { from: number; to: number }) {
+  const [v, setV] = useState(from);
+  useEffect(() => {
+    if (from === to) {
+      setV(to);
+      return;
+    }
+    const diff = Math.abs(to - from);
+    // 작은 변동(<5)은 0.7s, 큰 변동은 1.5s. 로그 스케일로 부드럽게.
+    const duration = Math.min(1500, 700 + Math.log10(1 + diff) * 400);
+    const t0 = performance.now();
+    let raf = 0;
+    const step = (now: number) => {
+      const t = Math.min(1, (now - t0) / duration);
+      const eased = 1 - Math.pow(1 - t, 3); // easeOutCubic
+      setV(Math.round(from + (to - from) * eased));
+      if (t < 1) raf = requestAnimationFrame(step);
+    };
+    raf = requestAnimationFrame(step);
+    return () => cancelAnimationFrame(raf);
+  }, [from, to]);
+  return <>{v.toLocaleString('ko-KR')}</>;
+}
+
+function RankingRow({
+  label,
+  before,
+  after,
+}: {
+  label: string;
+  before: { value: number; rank: number } | null;
+  after: { value: number; rank: number } | null;
+}) {
+  if (!before || !after) return null;
+  // rank 낮을수록 상위 → rankDelta 양수 = 상승.
+  const rankDelta = before.rank - after.rank;
+  const arrow = rankDelta > 0 ? `▲${rankDelta}` : rankDelta < 0 ? `▼${-rankDelta}` : '—';
+  const arrowColor =
+    rankDelta > 0 ? 'text-amber-300' : rankDelta < 0 ? 'text-zinc-500' : 'text-zinc-600';
+  return (
+    <div className="flex items-baseline justify-between gap-2 tabular-nums">
+      <span className="w-12 shrink-0 text-zinc-400">{label}</span>
+      <span className="flex-1 text-right font-semibold text-white">
+        <CountUp from={before.value} to={after.value} />
+      </span>
+      <span className="w-12 shrink-0 text-right text-zinc-300">
+        #<CountUp from={before.rank} to={after.rank} />
+      </span>
+      <span className={`w-8 shrink-0 text-right text-[11px] font-bold ${arrowColor}`}>
+        {arrow}
+      </span>
+    </div>
+  );
+}
+
+function RankingItem({ entry }: { entry: RankingToast }) {
+  return (
+    <div
+      className="pointer-events-none w-[320px] rounded-xl bg-zinc-950/95 px-4 py-3 text-xs shadow-lg ring-1 ring-zinc-800"
+      style={{ animation: 'toast-pop 0.3s ease-out' }}
+    >
+      <div className="space-y-1">
+        <RankingRow label="최고" before={entry.before.max} after={entry.after.max} />
+        <RankingRow label="합산" before={entry.before.sum} after={entry.after.sum} />
+        <RankingRow label="전투력" before={entry.before.combat} after={entry.after.combat} />
+      </div>
+    </div>
   );
 }
 

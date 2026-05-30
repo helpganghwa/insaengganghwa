@@ -167,3 +167,74 @@ export async function getRankingTop(
   const rows = (await safeRows(metric)).sort((a, b) => b.value - a.value);
   return attachProfiles(rows.slice(0, n).map((r, i) => ({ ...r, rank: i + 1 })));
 }
+
+/** before/after 비교용 단일 메트릭 스냅샷. null = 데이터 없음(신규 유저). */
+export type MyRankSnap = { value: number; rank: number } | null;
+export type MyRanks = { max: MyRankSnap; sum: MyRankSnap; combat: MyRankSnap };
+
+/**
+ * 강화 직전 — 캐시(60s) 시점 사용자 본인의 3 메트릭 + 순위.
+ * safeRows(unstable_cache 60s) 그대로 사용 — 풀 점유 없음.
+ */
+export async function getMyRanks(userId: string): Promise<MyRanks> {
+  const [maxR, sumR, combatR] = await Promise.all([
+    safeRows('max'),
+    safeRows('sum'),
+    safeRows('combat'),
+  ]);
+  const find = (rows: { userId: string; value: number }[]): MyRankSnap => {
+    const sorted = rows.slice().sort((a, b) => b.value - a.value);
+    const idx = sorted.findIndex((r) => r.userId === userId);
+    return idx < 0 ? null : { value: sorted[idx]!.value, rank: idx + 1 };
+  };
+  return { max: find(maxR), sum: find(sumR), combat: find(combatR) };
+}
+
+/**
+ * 강화 직후 — 본인의 새 stat은 DB에서 직접 read(캐시 우회), 다른 유저는 캐시 정렬
+ * 그대로. 본인 new value 기준 bisect → before와 같은 캐시 시점이라도 실제 변동 반영.
+ *
+ * 비용: 본인의 단일 쿼리(equipment + codex)만 추가. ranking은 캐시 60s 그대로.
+ */
+export async function getMyRanksAfter(userId: string): Promise<MyRanks> {
+  const [eqRows, cdxAgg] = await Promise.all([
+    db
+      .select({
+        enhanceLevel: equipmentInstances.enhanceLevel,
+        transcendLevel: equipmentInstances.transcendLevel,
+        equippedSlot: equipmentInstances.equippedSlot,
+      })
+      .from(equipmentInstances)
+      .where(eq(equipmentInstances.userId, userId)),
+    db
+      .select({ s: sql<number>`coalesce(sum(${userCodex.maxEnhanceLevel}),0)::int` })
+      .from(userCodex)
+      .where(eq(userCodex.userId, userId)),
+  ]);
+  const myMax = eqRows.reduce((acc, r) => Math.max(acc, r.enhanceLevel), 0);
+  const mySum = Number(cdxAgg[0]?.s ?? 0);
+  const equipped = eqRows
+    .filter((r) => r.equippedSlot != null)
+    .map((r) => ({ enhanceLevel: r.enhanceLevel, transcendLevel: r.transcendLevel }));
+  const myCombat = combatPowerFromRows(equipped, mySum);
+
+  const [maxR, sumR, combatR] = await Promise.all([
+    safeRows('max'),
+    safeRows('sum'),
+    safeRows('combat'),
+  ]);
+  const bisect = (
+    rows: { userId: string; value: number }[],
+    myValue: number,
+  ): MyRankSnap => {
+    const others = rows.filter((r) => r.userId !== userId).sort((a, b) => b.value - a.value);
+    let i = 0;
+    while (i < others.length && others[i]!.value > myValue) i++;
+    return { value: myValue, rank: i + 1 };
+  };
+  return {
+    max: myMax > 0 ? bisect(maxR, myMax) : null,
+    sum: mySum > 0 ? bisect(sumR, mySum) : null,
+    combat: equipped.length > 0 ? bisect(combatR, myCombat) : null,
+  };
+}

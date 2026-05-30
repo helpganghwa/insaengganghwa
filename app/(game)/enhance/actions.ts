@@ -13,6 +13,7 @@ import {
   EnhanceError,
   type ResolveResult,
 } from '@/lib/game/enhance';
+import { getMyRanks, getMyRanksAfter, type MyRanks } from '@/lib/game/leaderboard/queries';
 
 type ErrorState = { status: 'error'; code: string; message: string };
 
@@ -57,15 +58,27 @@ export async function startEnhance(equipmentInstanceId: string) {
   }
 }
 
-/** (B) 강화 시도 — 유저 조기 시도 허용(effective rate). 성공 시 서버 자동 재등록. */
+/**
+ * (B) 강화 시도 — 유저 조기 시도 허용(effective rate). 성공 시 서버 자동 재등록.
+ * 토스트용 ranks before/after 동봉(상승/하락 모두 표시, 클라이언트가 디바운스/노출 판단).
+ */
 export async function finalizeEnhance(jobId: string): Promise<
-  | { status: 'success'; result: Omit<ResolveResult, 'jobId' | 'equipmentInstanceId'>; requeued: boolean }
+  | {
+      status: 'success';
+      result: Omit<ResolveResult, 'jobId' | 'equipmentInstanceId'>;
+      requeued: boolean;
+      ranksBefore: MyRanks;
+      ranksAfter: MyRanks;
+    }
   | ErrorState
 > {
   const userId = await uid();
   if (!userId) return err('UNAUTHENTICATED');
   if (await rateLimited(userId, 'enhance')) return err('RATE_LIMITED');
   try {
+    // 강화 직전 — 캐시 시점 본인 3 메트릭 + 순위(토스트 before).
+    const ranksBefore = await getMyRanks(userId);
+
     // 결과 판정·저장 원자 트랜잭션(CLAUDE §3.1/§3.3/§3.4).
     const r = await resolveEnhance({ jobId: BigInt(jobId), userId, requireComplete: false });
 
@@ -80,6 +93,8 @@ export async function finalizeEnhance(jobId: string): Promise<
     } catch (re) {
       if (!(re instanceof EnhanceError)) console.error('[enhance.requeue]', re);
     }
+    // 강화 직후 — 본인 새 stat 직접 fetch + 캐시 sorted bisect(토스트 after).
+    const ranksAfter = await getMyRanksAfter(userId);
     // 변경 데이터만 무효화(홈 '/'은 다음 방문 시 자연 갱신 — 핫패스 축소).
     revalidatePath('/enhance');
     revalidatePath('/inventory');
@@ -92,6 +107,8 @@ export async function finalizeEnhance(jobId: string): Promise<
         effectiveRateBp: r.effectiveRateBp,
       },
       requeued,
+      ranksBefore,
+      ranksAfter,
     };
   } catch (e) {
     if (e instanceof EnhanceError) return err(e.code);

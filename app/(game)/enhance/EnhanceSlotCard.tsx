@@ -15,6 +15,8 @@ import { TranscendSprite } from '@/components/TranscendSprite';
 import { RarityFrame, rarityBorderStyle, hasRarityBorder } from '@/components/RarityFrame';
 import { transcendStyle } from '@/lib/game/equipment/transcend';
 
+import { useResourceToast } from '@/components/ResourceToast';
+
 import { finalizeEnhance, reduceTimeWithGems, cancelEnhanceAction } from './actions';
 import { EnhanceFX, type FxKind } from './EnhanceFX';
 
@@ -176,6 +178,7 @@ export function EnhanceSlotCard({
   nickname: string;
 }) {
   const router = useRouter();
+  const { showRanking } = useResourceToast();
   const [pending, startTransition] = useTransition();
   const [nowMs, setNowMs] = useState(0); // SSR 매칭 위해 0 → mount 후 동기화
   const [confirm, setConfirm] = useState(false);
@@ -311,6 +314,8 @@ export function EnhanceSlotCard({
         alert(r.message);
         return;
       }
+      // 강화 결과 토스트 — last-wins 3s 디바운스 후 한 번 노출.
+      showRanking(r.ranksBefore, r.ranksAfter);
       const oc = r.result.outcome as Outcome;
       setAttempting(false);
       setFlash(oc); // 결과 즉시 표시
