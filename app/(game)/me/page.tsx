@@ -100,35 +100,14 @@ export default async function ProfilePage() {
     <div className="space-y-4 px-4 py-6">
       {/* 내 정보 카드 — 헤더(닉네임·전투력) + 본문(캐릭터·장비 세로) */}
       <section className="rounded-3xl border border-zinc-800 bg-gradient-to-b from-zinc-900 to-zinc-950 p-4">
-        {/* 헤더 — 공유 / 닉네임(중앙) / 전투력 배지 */}
-        <div className="mb-3 grid grid-cols-3 items-center gap-2">
-          <div className="justify-self-start">
-            <BoastLauncher
-              compact
-              nickname={nickname}
-              total={total}
-              pieces={equipped.map((e) => ({
-                slot: e.slot,
-                code: e.code,
-                name: e.name,
-                enhanceLevel: e.enhanceLevel,
-                transcendLevel: e.transcendLevel,
-                isChampion: champSet.has(e.catalogItemId),
-              }))}
-            />
-          </div>
-          <div className="min-w-0 justify-self-center">
-            <NicknameEditor
-              current={nickname}
-              changedCount={prof[0]?.nicknameChangedCount ?? 0}
-              diamond={String(prof[0]?.diamond ?? 0n)}
-              className="text-white"
-            />
-          </div>
-          <span className="inline-flex h-7 shrink-0 items-center gap-1 justify-self-end rounded-full border border-amber-400/30 bg-amber-400/10 px-2.5 text-xs font-bold tabular-nums text-amber-300">
-            <span>전투력</span>
-            {total.toLocaleString('ko-KR')}
-          </span>
+        {/* 헤더 — 중앙 닉네임만 */}
+        <div className="mb-3 flex items-center justify-center">
+          <NicknameEditor
+            current={nickname}
+            changedCount={prof[0]?.nicknameChangedCount ?? 0}
+            diamond={String(prof[0]?.diamond ?? 0n)}
+            className="text-white"
+          />
         </div>
 
         {/* 본문 — 좌 캐릭터 + 우 장비 3종. 고정 높이(h-44)로 양쪽 높이를 맞춰 정렬·컴팩트. */}
