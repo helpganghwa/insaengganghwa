@@ -20,7 +20,7 @@ export function AppHeaderShell({
   return (
     <header className="sticky top-0 z-30 box-content flex h-14 items-center justify-between gap-2 border-b border-zinc-200 bg-white px-3 pt-[env(safe-area-inset-top)] dark:border-zinc-800 dark:bg-zinc-950">
       <Link href="/me" className="flex min-w-0 items-center gap-2">
-        <div className="relative h-8 w-8 shrink-0 overflow-hidden rounded-full bg-zinc-100 ring-1 ring-zinc-200 dark:bg-zinc-800 dark:ring-zinc-700">
+        <div className="relative h-8 w-8 shrink-0 overflow-hidden">
           {profileSouth ? (
             // eslint-disable-next-line @next/next/no-img-element
             <img
@@ -46,7 +46,7 @@ export function AppHeaderShell({
             </span>
           )}
         </div>
-        <span className="truncate text-sm font-semibold text-zinc-800 dark:text-zinc-100">
+        <span className="truncate text-[13px] font-semibold text-zinc-800 dark:text-zinc-100">
           {nickname}
         </span>
       </Link>
