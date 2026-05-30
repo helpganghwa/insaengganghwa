@@ -109,7 +109,7 @@ export default async function ProfilePage() {
             className="min-w-0 text-white"
           />
           <span className="inline-flex shrink-0 items-center gap-1 rounded-full border border-amber-400/30 bg-amber-400/10 px-2.5 py-1 text-xs font-bold tabular-nums text-amber-300">
-            <span aria-hidden>⚔️</span>
+            <span>전투력</span>
             {total.toLocaleString('ko-KR')}
           </span>
         </div>

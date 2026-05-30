@@ -170,7 +170,7 @@ export function EquipmentDetailSheet({
               </div>
             </div>
             <div className="text-[11px] tabular-nums">
-              <span className="text-zinc-500">⚔️ </span>
+              <span className="text-zinc-500">전투력 </span>
               <span className="font-semibold">{cp.toLocaleString('ko-KR')}</span>
               {eqCp != null ? (
                 <span className={`ml-1.5 ${cp - eqCp >= 0 ? 'text-emerald-600' : 'text-red-600'}`}>

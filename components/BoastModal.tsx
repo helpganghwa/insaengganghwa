@@ -149,11 +149,11 @@ export function BoastModal({
       return `${nickname} — ${pool[Math.floor(Math.random() * pool.length)]}`;
     }
     const setPool = [
-      `${nickname}의 인생강화 — ⚔️ ${formatCompactKR(set?.total ?? 0)}`,
-      `⚔️ ${formatCompactKR(set?.total ?? 0)} — 망치의 결실`,
-      `한 번에 하나씩, ⚔️ ${formatCompactKR(set?.total ?? 0)}`,
-      `오늘도 한 망치 — ${nickname}의 ⚔️ ${formatCompactKR(set?.total ?? 0)}`,
-      `${nickname} · 강화의 길 · ⚔️ ${formatCompactKR(set?.total ?? 0)}`,
+      `${nickname}의 인생강화 — 전투력 ${formatCompactKR(set?.total ?? 0)}`,
+      `전투력 ${formatCompactKR(set?.total ?? 0)} — 망치의 결실`,
+      `한 번에 하나씩, 전투력 ${formatCompactKR(set?.total ?? 0)}`,
+      `오늘도 한 망치 — ${nickname}의 전투력 ${formatCompactKR(set?.total ?? 0)}`,
+      `${nickname} · 강화의 길 · 전투력 ${formatCompactKR(set?.total ?? 0)}`,
     ];
     return setPool[Math.floor(Math.random() * setPool.length)]!;
   };

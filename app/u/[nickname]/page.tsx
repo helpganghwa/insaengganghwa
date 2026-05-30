@@ -95,7 +95,7 @@ export async function generateMetadata({
   const data = await loadProfile(nickname);
   if (!data) return { title: '인생강화' };
   const title = `${data.nickname} — 인생강화`;
-  const description = `총 전투력 ⚔️${data.total.toLocaleString('ko-KR')}.`;
+  const description = `총 전투력 ${data.total.toLocaleString('ko-KR')}.`;
   const ogImage = `/og/${encodeURIComponent(nickname)}`;
   return {
     title,
@@ -175,7 +175,7 @@ export default async function PublicProfilePage({
           })}
         </div>
         <div className="mt-3 border-t border-zinc-100 pt-2 text-right text-sm font-bold dark:border-zinc-900">
-          ⚔️ 총 전투력 {data.total.toLocaleString('ko-KR')}
+          총 전투력 {data.total.toLocaleString('ko-KR')}
         </div>
       </section>
 
