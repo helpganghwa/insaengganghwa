@@ -11,21 +11,47 @@ import type { LayoutData } from '@/lib/game/layout-data';
 export function AppHeaderShell({
   nickname = '플레이어',
   diamond = 0n,
+  profileSouth = null,
 }: {
   nickname?: string;
   diamond?: bigint;
+  profileSouth?: string | null;
 }) {
   return (
     <header className="sticky top-0 z-30 box-content flex h-14 items-center justify-between gap-2 border-b border-zinc-200 bg-white px-3 pt-[env(safe-area-inset-top)] dark:border-zinc-800 dark:bg-zinc-950">
-      <Link href="/" className="flex min-w-0 items-center gap-1.5">
-        <span aria-hidden className="text-lg leading-none">
-          ⚒️
+      <Link href="/me" className="flex min-w-0 items-center gap-2">
+        <div className="relative h-8 w-8 shrink-0 overflow-hidden rounded-full bg-zinc-100 ring-1 ring-zinc-200 dark:bg-zinc-800 dark:ring-zinc-700">
+          {profileSouth ? (
+            // eslint-disable-next-line @next/next/no-img-element
+            <img
+              src={profileSouth}
+              alt=""
+              aria-hidden
+              draggable={false}
+              className="absolute inset-0 h-full w-full"
+              style={{
+                imageRendering: 'pixelated',
+                objectFit: 'cover',
+                objectPosition: '50% 0%',
+                transform: 'scale(3.2)',
+                transformOrigin: '50% 14%',
+              }}
+            />
+          ) : (
+            <span
+              aria-hidden
+              className="absolute inset-0 flex items-center justify-center text-base leading-none"
+            >
+              👤
+            </span>
+          )}
+        </div>
+        <span className="truncate text-sm font-semibold text-zinc-800 dark:text-zinc-100">
+          {nickname}
         </span>
-        <span className="text-sm font-bold tracking-tight">인생강화</span>
       </Link>
 
       <div className="flex shrink-0 items-center gap-1.5 text-xs">
-        <span className="text-zinc-700 dark:text-zinc-200">{nickname}</span>
         <Link
           href="/shop"
           aria-label={`다이아 ${diamond} · 충전`}
@@ -43,5 +69,7 @@ export function AppHeaderShell({
 /** Suspense 경계 안에서 셸 데이터 await — 절대 throw 안 함(loadLayoutData가 흡수). */
 export async function AppHeader({ dataPromise }: { dataPromise: Promise<LayoutData> }) {
   const d = await dataPromise;
-  return <AppHeaderShell nickname={d.nickname} diamond={d.diamond} />;
+  return (
+    <AppHeaderShell nickname={d.nickname} diamond={d.diamond} profileSouth={d.profileSouth} />
+  );
 }

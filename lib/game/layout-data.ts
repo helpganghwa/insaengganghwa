@@ -6,6 +6,7 @@ import { db } from '@/lib/db/client';
 import { enhancementJobs } from '@/lib/db/schema/enhance';
 import { mailbox } from '@/lib/db/schema/mailbox';
 import { profiles } from '@/lib/db/schema/profiles';
+import { userProfiles } from '@/lib/db/schema/avatar';
 import { withTimeout } from '@/lib/db/with-timeout';
 
 /**
@@ -18,6 +19,8 @@ export interface LayoutData {
   diamond: bigint;
   hasUnreadMail: boolean;
   hasCompletedEnhance: boolean;
+  /** 헤더 머리 아이콘용 — 활성 프로필 south rotation URL. 없으면 null(폴백 아이콘). */
+  profileSouth: string | null;
 }
 
 const DEFAULTS: LayoutData = {
@@ -25,6 +28,7 @@ const DEFAULTS: LayoutData = {
   diamond: 0n,
   hasUnreadMail: false,
   hasCompletedEnhance: false,
+  profileSouth: null,
 };
 
 /**
@@ -36,8 +40,13 @@ export async function loadLayoutData(userId: string): Promise<LayoutData> {
     const [profileRow, mailRow, enhanceRow] = await withTimeout(
       Promise.all([
         db
-          .select({ nickname: profiles.nickname, diamond: profiles.diamond })
+          .select({
+            nickname: profiles.nickname,
+            diamond: profiles.diamond,
+            rotations: userProfiles.rotations,
+          })
           .from(profiles)
+          .leftJoin(userProfiles, eq(profiles.activeProfileId, userProfiles.id))
           .where(eq(profiles.id, userId))
           .limit(1),
         db
@@ -65,11 +74,13 @@ export async function loadLayoutData(userId: string): Promise<LayoutData> {
       4000,
       'layout.data',
     );
+    const rot = profileRow[0]?.rotations as Record<string, string> | null | undefined;
     return {
       nickname: profileRow[0]?.nickname ?? '플레이어',
       diamond: profileRow[0]?.diamond ?? 0n,
       hasUnreadMail: mailRow.length > 0,
       hasCompletedEnhance: (enhanceRow[0]?.n ?? 0) > 0,
+      profileSouth: rot?.south ?? null,
     };
   } catch (e) {
     console.warn('[layout] data load failed — defaults', (e as Error).message);
