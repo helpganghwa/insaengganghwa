@@ -1,6 +1,6 @@
 'use client';
 
-import { useCallback, useMemo, useState, useTransition } from 'react';
+import { useEffect, useMemo, useState, useTransition } from 'react';
 import { useRouter } from 'next/navigation';
 
 import type { Slot } from '@/lib/db/schema/equipment';
@@ -71,41 +71,38 @@ export function InventoryGrid({
 
   const openItem = openId ? items.find((i) => i.id === openId) ?? null : null;
 
-  // NEW 표시 — localStorage seen 집합 기반. 첫 렌더부터 localStorage 동기화(SSR 안전).
-  const [seen, setSeen] = useState<Set<string>>(() => {
+  // NEW 표시 — 인벤토리 진입 시점에 캡처(직전 seen에 없는 id) → 이번 방문에 표시.
+  // mount(+ items 변경) 시 모든 현재 아이템을 seen에 마크 + localStorage 저장.
+  // 결과: 이번 방문 = NEW 노출, 다음 방문 = NEW 사라짐(다 확인한 것으로 간주).
+  const [newIds] = useState<Set<string>>(() => {
     if (typeof window === 'undefined') return new Set();
     try {
       const raw = localStorage.getItem(SEEN_STORAGE_KEY);
-      return new Set(raw ? (JSON.parse(raw) as string[]) : []);
+      const seen = new Set(raw ? (JSON.parse(raw) as string[]) : []);
+      return new Set(items.filter((it) => !seen.has(it.id)).map((it) => it.id));
     } catch {
       return new Set();
     }
   });
-  const markSeen = useCallback((id: string) => {
-    setSeen((prev) => {
-      if (prev.has(id)) {
-        if (typeof window !== 'undefined') console.debug('[seen] already', id);
-        return prev;
+  useEffect(() => {
+    if (typeof window === 'undefined') return;
+    try {
+      const raw = localStorage.getItem(SEEN_STORAGE_KEY);
+      const seen = new Set<string>(raw ? (JSON.parse(raw) as string[]) : []);
+      let changed = false;
+      for (const it of items) {
+        if (!seen.has(it.id)) {
+          seen.add(it.id);
+          changed = true;
+        }
       }
-      const next = new Set(prev);
-      next.add(id);
-      try {
-        localStorage.setItem(SEEN_STORAGE_KEY, JSON.stringify(Array.from(next)));
-        if (typeof window !== 'undefined')
-          console.debug('[seen] marked', id, 'total=', next.size);
-      } catch (e) {
-        console.warn('[seen] localStorage save failed', e);
+      if (changed) {
+        localStorage.setItem(SEEN_STORAGE_KEY, JSON.stringify(Array.from(seen)));
       }
-      return next;
-    });
-  }, []);
-  const openDetail = useCallback(
-    (id: string) => {
-      markSeen(id);
-      setOpenId(id);
-    },
-    [markSeen],
-  );
+    } catch {
+      /* ignore */
+    }
+  }, [items]);
 
   const fb = (active: boolean) =>
     active
@@ -140,7 +137,7 @@ export function InventoryGrid({
       {equipped.length > 0 ? (
         <Section title={`장착 중 (${equipped.length})`}>
           {equipped.map((it) => (
-            <Tile key={it.id} item={it} isNew={!seen.has(it.id)} onOpen={() => openDetail(it.id)} />
+            <Tile key={it.id} item={it} isNew={newIds.has(it.id)} onOpen={() => setOpenId(it.id)} />
           ))}
         </Section>
       ) : null}
