@@ -11,11 +11,9 @@ import type { LayoutData } from '@/lib/game/layout-data';
 export function AppHeaderShell({
   nickname = '플레이어',
   diamond = 0n,
-  hasUnreadMail = false,
 }: {
   nickname?: string;
   diamond?: bigint;
-  hasUnreadMail?: boolean;
 }) {
   return (
     <header className="sticky top-0 z-30 box-content flex h-14 items-center justify-between gap-2 border-b border-zinc-200 bg-white px-3 pt-[env(safe-area-inset-top)] dark:border-zinc-800 dark:bg-zinc-950">
@@ -27,19 +25,6 @@ export function AppHeaderShell({
       </Link>
 
       <div className="flex shrink-0 items-center gap-1.5 text-xs">
-        <Link
-          href="/mail"
-          aria-label={hasUnreadMail ? '우편함 (미수령 있음)' : '우편함'}
-          className="relative inline-flex h-7 w-7 items-center justify-center rounded-full text-zinc-600 hover:bg-zinc-100 active:bg-zinc-200 dark:text-zinc-300 dark:hover:bg-zinc-800 dark:active:bg-zinc-700"
-        >
-          <span aria-hidden className="text-base leading-none">📬</span>
-          {hasUnreadMail ? (
-            <span
-              aria-hidden
-              className="absolute top-0.5 right-0.5 h-1.5 w-1.5 rounded-full bg-red-500 ring-2 ring-white dark:ring-zinc-950"
-            />
-          ) : null}
-        </Link>
         <span className="text-zinc-700 dark:text-zinc-200">{nickname}</span>
         <Link
           href="/shop"
@@ -58,7 +43,5 @@ export function AppHeaderShell({
 /** Suspense 경계 안에서 셸 데이터 await — 절대 throw 안 함(loadLayoutData가 흡수). */
 export async function AppHeader({ dataPromise }: { dataPromise: Promise<LayoutData> }) {
   const d = await dataPromise;
-  return (
-    <AppHeaderShell nickname={d.nickname} diamond={d.diamond} hasUnreadMail={d.hasUnreadMail} />
-  );
+  return <AppHeaderShell nickname={d.nickname} diamond={d.diamond} />;
 }

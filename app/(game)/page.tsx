@@ -23,9 +23,7 @@ import { RankingTop3Card } from './RankingTop3Card';
  *  - 본 페이지는 "오늘 KST 발급분 중 미수령 1건 이상"이면 wide 카드 노출.
  *  - 수령 완료(claimed_at) 시 카드 숨김 → 다음 KST 00:00에 재등장.
  */
-// 메뉴 4카드 — SCREEN-ANALYSIS §6 P0-4(2026-05-25). 코어 4 동선만 그리드 노출.
-// 빠진 4개 진입점:
-//  - 우편함 → 헤더 📬 / 도감 → 프로필 / 프로필 → 바텀네비 👤 / 랭킹 → 홈 랭킹 카드 "전체 →"
+// 메뉴 6카드 — 강화/인벤/보급/레이드/우편함/상점. 우편함은 헤더에서 그리드로 이동.
 const MENU = [
   {
     href: '/enhance',
@@ -57,6 +55,22 @@ const MENU = [
     desc: '보스 도전',
     bg: '/sprites/hub/raid.png',
     tint: '#3a1419',
+    scale: 1,
+  },
+  {
+    href: '/mail',
+    label: '우편함',
+    desc: '받은 보상 확인',
+    bg: '/sprites/hub/mail.png',
+    tint: '#2a1f0c',
+    scale: 1,
+  },
+  {
+    href: '/shop',
+    label: '상점',
+    desc: '다이아·아이템 (준비 중)',
+    bg: '/sprites/hub/shop.png',
+    tint: '#1c2238',
     scale: 1,
   },
 ] as const;
@@ -105,6 +119,7 @@ export default async function HomePage() {
 
   return (
     <div className="flex flex-col gap-4 px-4 py-4">
+      <RankingTop3Card />
       {hasUnclaimedDaily ? <DailySupplyCard /> : null}
       {hasUnclaimedCheckin ? <HubCheckinCard /> : null}
       <div className="grid grid-cols-2 gap-3">
@@ -113,7 +128,7 @@ export default async function HomePage() {
             key={m.href}
             href={m.href}
             style={{ backgroundColor: m.tint }}
-            className="relative flex aspect-[4/3] overflow-hidden rounded-2xl border border-zinc-800 transition active:scale-[0.98]"
+            className="relative flex aspect-[5/3] overflow-hidden rounded-2xl border border-zinc-800 transition active:scale-[0.98]"
           >
             {/* 픽셀아트 배경 — next/image 리샘플은 깨지므로 raw img + imageRendering:pixelated (CLAUDE §5.2). */}
             {/* eslint-disable-next-line @next/next/no-img-element */}
@@ -138,7 +153,6 @@ export default async function HomePage() {
           </Link>
         ))}
       </div>
-      <RankingTop3Card />
     </div>
   );
 }
