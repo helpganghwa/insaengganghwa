@@ -227,5 +227,11 @@ html {
   100% { opacity: 0; transform: translateY(8px); }
 }
 
+/* 랭킹 바 — 값 카운트업 끝난 후 순위·화살표가 위에서 살짝 떨어지며 등장. */
+@keyframes rank-reveal {
+  0%   { opacity: 0; transform: translateY(-4px); }
+  100% { opacity: 1; transform: translateY(0); }
+}
+
 
 /* 그 외 게임 연출(가챠/레이드/로딩)은 해당 화면 구현 시 단계 이식. */

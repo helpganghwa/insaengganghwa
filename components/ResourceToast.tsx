@@ -130,8 +130,8 @@ export function ResourceToastProvider({ children }: { children: React.ReactNode 
   );
 }
 
-/** 카운트업 — easeOutCubic, 변동 클수록 길게(700~1500ms). */
-function CountUp({ from, to }: { from: number; to: number }) {
+/** 카운트업 — easeOutCubic, 변동 크기로 600~1000ms. delay(ms) 동안 from에 머무름. */
+function CountUp({ from, to, delay = 0 }: { from: number; to: number; delay?: number }) {
   const [v, setV] = useState(from);
   useEffect(() => {
     if (from === to) {
@@ -139,21 +139,26 @@ function CountUp({ from, to }: { from: number; to: number }) {
       return;
     }
     const diff = Math.abs(to - from);
-    // 작은 변동(<5)은 0.7s, 큰 변동은 1.5s. 로그 스케일로 부드럽게.
-    const duration = Math.min(1500, 700 + Math.log10(1 + diff) * 400);
-    const t0 = performance.now();
+    const duration = Math.min(1000, 600 + Math.log10(1 + diff) * 250);
+    const startAt = performance.now() + delay;
     let raf = 0;
     const step = (now: number) => {
-      const t = Math.min(1, (now - t0) / duration);
-      const eased = 1 - Math.pow(1 - t, 3); // easeOutCubic
+      if (now < startAt) {
+        raf = requestAnimationFrame(step);
+        return;
+      }
+      const t = Math.min(1, (now - startAt) / duration);
+      const eased = 1 - Math.pow(1 - t, 3);
       setV(Math.round(from + (to - from) * eased));
       if (t < 1) raf = requestAnimationFrame(step);
     };
     raf = requestAnimationFrame(step);
     return () => cancelAnimationFrame(raf);
-  }, [from, to]);
+  }, [from, to, delay]);
   return <>{v.toLocaleString('ko-KR')}</>;
 }
+
+const RANK_REVEAL_MS = 1000;
 
 function RankingCompact({
   label,
@@ -176,6 +181,10 @@ function RankingCompact({
   const arrow = rankDelta > 0 ? `▲${rankDelta}` : rankDelta < 0 ? `▼${-rankDelta}` : '—';
   const arrowColor =
     rankDelta > 0 ? 'text-amber-300' : rankDelta < 0 ? 'text-zinc-500' : 'text-zinc-600';
+  // Phase 1 (0~1s): 값 카운트업 단독. Phase 2 (1s~): 순위·화살표 fade/slide-in + 카운트업.
+  const revealStyle = {
+    animation: `rank-reveal 0.4s ease-out ${RANK_REVEAL_MS}ms both`,
+  } as const;
   return (
     <div className="flex min-w-0 flex-1 flex-col items-center justify-center px-1 leading-tight tabular-nums">
       <span className="text-[9px] text-zinc-400">{label}</span>
@@ -183,10 +192,12 @@ function RankingCompact({
         <span className="font-bold text-white">
           <CountUp from={before.value} to={after.value} />
         </span>
-        <span className="text-zinc-300">
-          #<CountUp from={before.rank} to={after.rank} />
+        <span className="text-zinc-300" style={revealStyle}>
+          #<CountUp from={before.rank} to={after.rank} delay={RANK_REVEAL_MS} />
         </span>
-        <span className={`text-[9px] font-bold ${arrowColor}`}>{arrow}</span>
+        <span className={`text-[9px] font-bold ${arrowColor}`} style={revealStyle}>
+          {arrow}
+        </span>
       </div>
     </div>
   );
