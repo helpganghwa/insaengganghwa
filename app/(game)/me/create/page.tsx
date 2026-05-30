@@ -67,9 +67,6 @@ export default async function CreateProfilePage() {
   return (
     <div className="space-y-4 px-4 py-6">
       <header className="flex items-center gap-2">
-        <Link href="/me" aria-label="뒤로" className="text-zinc-400">
-          ‹
-        </Link>
         <h1 className="text-lg font-bold">프로필 생성</h1>
       </header>
 
