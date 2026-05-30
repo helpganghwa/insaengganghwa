@@ -44,9 +44,6 @@ export default async function SettingsPage() {
   return (
     <div className="space-y-4 px-4 py-4">
       <header className="flex items-baseline gap-2">
-        <Link href="/me" className="text-sm text-zinc-500">
-          ←
-        </Link>
         <h1 className="text-lg font-semibold">⚙️ 설정</h1>
       </header>
 
