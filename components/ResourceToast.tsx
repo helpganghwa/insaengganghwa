@@ -158,7 +158,7 @@ function CountUp({ from, to, delay = 0 }: { from: number; to: number; delay?: nu
   return <>{v.toLocaleString('ko-KR')}</>;
 }
 
-const RANK_REVEAL_MS = 1000;
+const RANK_REVEAL_MS = 1600;
 
 function RankingCompact({
   label,
@@ -185,23 +185,34 @@ function RankingCompact({
   const rankArrow = rankDelta > 0 ? `▲${rankDelta}` : rankDelta < 0 ? `▼${-rankDelta}` : '—';
   const rankArrowColor =
     rankDelta > 0 ? 'text-amber-300' : rankDelta < 0 ? 'text-zinc-500' : 'text-zinc-600';
-  // Phase 1 (0~1s): 값 + 값 화살표. Phase 2 (1s~): 순위·순위 화살표 fade/slide-in + 카운트업.
-  const revealStyle = {
-    animation: `rank-reveal 0.4s ease-out ${RANK_REVEAL_MS}ms both`,
+  // Phase 1 (값) → Phase 2 (순위) 같은 자리에 교차. animation duration은 토스트 노출 시간과 일치.
+  const phaseValueStyle = {
+    animation: `ranking-value ${RANKING_TOAST_MS}ms ease-out forwards`,
+  } as const;
+  const phaseRankStyle = {
+    animation: `ranking-rank ${RANKING_TOAST_MS}ms ease-out forwards`,
   } as const;
   return (
     <div className="flex min-w-0 flex-1 flex-col items-center justify-center px-1 leading-tight tabular-nums">
       <span className="text-[9px] text-zinc-400">{label}</span>
-      <div className="flex items-baseline gap-1 text-[11px]">
-        <span className="font-bold text-white">
-          <CountUp from={before.value} to={after.value} />
+      <div className="relative flex h-4 w-full items-center justify-center text-[11px]">
+        <span
+          className="absolute inset-0 flex items-baseline justify-center gap-1"
+          style={phaseValueStyle}
+        >
+          <span className="font-bold text-white">
+            <CountUp from={before.value} to={after.value} />
+          </span>
+          <span className={`text-[9px] font-bold ${valueArrowColor}`}>{valueArrow}</span>
         </span>
-        <span className={`text-[9px] font-bold ${valueArrowColor}`}>{valueArrow}</span>
-        <span className="text-zinc-300" style={revealStyle}>
-          #<CountUp from={before.rank} to={after.rank} delay={RANK_REVEAL_MS} />
-        </span>
-        <span className={`text-[9px] font-bold ${rankArrowColor}`} style={revealStyle}>
-          {rankArrow}
+        <span
+          className="absolute inset-0 flex items-baseline justify-center gap-1"
+          style={phaseRankStyle}
+        >
+          <span className="text-zinc-300">
+            #<CountUp from={before.rank} to={after.rank} delay={RANK_REVEAL_MS} />
+          </span>
+          <span className={`text-[9px] font-bold ${rankArrowColor}`}>{rankArrow}</span>
         </span>
       </div>
     </div>

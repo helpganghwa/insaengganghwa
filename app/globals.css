@@ -227,10 +227,21 @@ html {
   100% { opacity: 0; transform: translateY(8px); }
 }
 
-/* 랭킹 바 — 값 카운트업 끝난 후 순위·화살표가 위에서 살짝 떨어지며 등장. */
-@keyframes rank-reveal {
-  0%   { opacity: 0; transform: translateY(-4px); }
-  100% { opacity: 1; transform: translateY(0); }
+/* 랭킹 바 — 값/순위 시퀀스 교차. 전체 duration이 RANKING_TOAST_MS(3.2s)와 일치.
+   값:  0~0.2s fade-in → ~1.2s 표시 → 1.4s까지 fade-out. (Phase 1)
+   순위: 1.4s까지 hidden → 1.6s까지 fade-in → ~3.2s 표시. (Phase 2) */
+@keyframes ranking-value {
+  0%     { opacity: 0; transform: translateY(2px); }
+  6.25%  { opacity: 1; transform: translateY(0); }
+  37.5%  { opacity: 1; transform: translateY(0); }
+  43.75% { opacity: 0; transform: translateY(-2px); }
+  100%   { opacity: 0; transform: translateY(-2px); }
+}
+@keyframes ranking-rank {
+  0%     { opacity: 0; transform: translateY(2px); }
+  43.75% { opacity: 0; transform: translateY(2px); }
+  50%    { opacity: 1; transform: translateY(0); }
+  100%   { opacity: 1; transform: translateY(0); }
 }
 
 
