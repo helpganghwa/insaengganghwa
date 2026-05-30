@@ -193,17 +193,17 @@ export default async function HomePage() {
                   transformOrigin: 'center',
                 }}
               />
+              {badge ? (
+                <span
+                  aria-label={`알림 ${count}건`}
+                  className="absolute top-1.5 right-1.5 z-10 inline-flex min-w-[20px] items-center justify-center rounded-full bg-red-600 px-1.5 py-0.5 text-[10px] font-bold text-white shadow ring-2 ring-zinc-900/50 tabular-nums"
+                >
+                  {badge}
+                </span>
+              ) : null}
               <div className="absolute inset-x-0 bottom-0 bg-gradient-to-t from-black/85 via-black/55 to-transparent px-3 pt-6 pb-2">
-                <div className="flex items-center gap-1.5 text-sm leading-tight font-bold text-white drop-shadow-sm">
-                  <span>{m.label}</span>
-                  {badge ? (
-                    <span
-                      aria-label={`알림 ${count}건`}
-                      className="inline-flex min-w-[18px] items-center justify-center rounded-full bg-red-600 px-1.5 py-0 text-[10px] font-bold text-white tabular-nums"
-                    >
-                      {badge}
-                    </span>
-                  ) : null}
+                <div className="text-sm leading-tight font-bold text-white drop-shadow-sm">
+                  {m.label}
                 </div>
                 <div className="mt-0.5 text-[10px] leading-tight text-white/85">{m.desc}</div>
               </div>
