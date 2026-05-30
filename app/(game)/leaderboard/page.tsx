@@ -87,15 +87,15 @@ export default async function LeaderboardPage({
                         }`}
                       >
                         <div className="flex w-full items-center justify-center gap-0.5 px-0.5 pt-1">
-                          <span className="font-mono text-[11px] tabular-nums leading-none text-white/55 drop-shadow-[0_1px_2px_rgba(0,0,0,1)]">
+                          <span className="font-mono text-[11px] tabular-nums leading-none text-white/55 text-pixel-outline">
                             #{slot}
                           </span>
-                          <span className="truncate text-[11px] font-medium text-white/55 drop-shadow-[0_1px_2px_rgba(0,0,0,1)]">
+                          <span className="truncate text-[11px] font-medium text-white/55 text-pixel-outline">
                             —
                           </span>
                         </div>
                         <div className="relative w-full flex-1" aria-hidden />
-                        <span className="pb-1 font-mono text-[11px] font-bold tabular-nums text-amber-200/55 drop-shadow-[0_1px_2px_rgba(0,0,0,1)]">
+                        <span className="pb-1 font-mono text-[11px] font-bold tabular-nums text-amber-200/55 text-pixel-outline">
                           —
                         </span>
                       </div>
@@ -113,12 +113,12 @@ export default async function LeaderboardPage({
                     >
                       <div className="flex w-full items-center justify-center gap-0.5 px-0.5 pt-1">
                         <span
-                          className={`font-mono text-[11px] tabular-nums leading-none drop-shadow-[0_1px_2px_rgba(0,0,0,1)] ${rankColor}`}
+                          className={`font-mono text-[11px] tabular-nums leading-none text-pixel-outline ${rankColor}`}
                         >
                           #{entry.rank}
                         </span>
                         <span
-                          className={`truncate text-[11px] font-medium drop-shadow-[0_1px_2px_rgba(0,0,0,1)] ${rankColor}`}
+                          className={`truncate text-[11px] font-medium text-pixel-outline ${rankColor}`}
                         >
                           {entry.nickname}
                         </span>
@@ -141,7 +141,7 @@ export default async function LeaderboardPage({
                           />
                         )}
                       </div>
-                      <span className="pb-1 font-mono text-[11px] font-bold tabular-nums text-amber-200 drop-shadow-[0_1px_2px_rgba(0,0,0,1)]">
+                      <span className="pb-1 font-mono text-[11px] font-bold tabular-nums text-amber-200 text-pixel-outline">
                         {fmt(entry.value)}
                       </span>
                     </Link>

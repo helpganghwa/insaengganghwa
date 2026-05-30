@@ -39,7 +39,7 @@ export async function RankingTop3Card() {
           style={{ imageRendering: 'pixelated' }}
         />
         <div className="absolute inset-0 bg-black/35" />
-        <span className="relative text-[10px] font-bold text-amber-100 drop-shadow-[0_1px_2px_rgba(0,0,0,1)]">
+        <span className="relative text-[10px] font-bold text-amber-100 text-pixel-outline">
           {LABEL[metric]} 랭킹
         </span>
       </Link>
@@ -70,15 +70,15 @@ export async function RankingTop3Card() {
                   }`}
                 >
                   <div className="flex w-full items-center justify-center gap-0.5 px-0.5 pt-1">
-                    <span className="font-mono text-[11px] leading-none tabular-nums text-white/55 drop-shadow-[0_1px_2px_rgba(0,0,0,1)]">
+                    <span className="font-mono text-[11px] leading-none tabular-nums text-white/55 text-pixel-outline">
                       #{slot}
                     </span>
-                    <span className="truncate text-[11px] font-medium text-white/55 drop-shadow-[0_1px_2px_rgba(0,0,0,1)]">
+                    <span className="truncate text-[11px] font-medium text-white/55 text-pixel-outline">
                       —
                     </span>
                   </div>
                   <div className="relative w-full flex-1" aria-hidden />
-                  <span className="pb-1 font-mono text-[11px] font-bold tabular-nums text-amber-200/55 drop-shadow-[0_1px_2px_rgba(0,0,0,1)]">
+                  <span className="pb-1 font-mono text-[11px] font-bold tabular-nums text-amber-200/55 text-pixel-outline">
                     —
                   </span>
                 </div>
@@ -93,10 +93,10 @@ export async function RankingTop3Card() {
                 }`}
               >
                 <div className="flex w-full items-center justify-center gap-0.5 px-0.5 pt-1">
-                  <span className="font-mono text-[11px] leading-none tabular-nums text-white drop-shadow-[0_1px_2px_rgba(0,0,0,1)]">
+                  <span className="font-mono text-[11px] leading-none tabular-nums text-white text-pixel-outline">
                     #{entry.rank}
                   </span>
-                  <span className="truncate text-[11px] font-medium text-white drop-shadow-[0_1px_2px_rgba(0,0,0,1)]">
+                  <span className="truncate text-[11px] font-medium text-white text-pixel-outline">
                     {entry.nickname}
                   </span>
                 </div>
@@ -118,7 +118,7 @@ export async function RankingTop3Card() {
                     />
                   ) : null}
                 </div>
-                <span className="pb-1 font-mono text-[11px] font-bold tabular-nums text-amber-200 drop-shadow-[0_1px_2px_rgba(0,0,0,1)]">
+                <span className="pb-1 font-mono text-[11px] font-bold tabular-nums text-amber-200 text-pixel-outline">
                   {entry.value.toLocaleString('ko-KR')}
                 </span>
               </Link>
