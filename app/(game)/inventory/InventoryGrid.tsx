@@ -1,6 +1,6 @@
 'use client';
 
-import { useMemo, useState, useTransition } from 'react';
+import { useCallback, useEffect, useMemo, useState, useTransition } from 'react';
 import { useRouter } from 'next/navigation';
 
 import type { Slot } from '@/lib/db/schema/equipment';
@@ -29,7 +29,8 @@ export type InvItem = {
 };
 
 const SLOT_EMOJI: Record<Slot, string> = { weapon: '⚔️', armor: '🛡️', accessory: '💍' };
-const NEW_MS = 10 * 60 * 1000;
+const SLOT_ORDER: Record<Slot, number> = { weapon: 0, armor: 1, accessory: 2 };
+const SEEN_STORAGE_KEY = 'ig:seen-items';
 type SlotFilter = 'all' | Slot;
 type SortBy = 'recent' | 'enhance' | 'transcend';
 
@@ -49,8 +50,17 @@ export function InventoryGrid({
   const [bulkOpen, setBulkOpen] = useState(false);
   const [pending, startTransition] = useTransition();
 
-  const sorted = useMemo(() => {
+  // 장착 중 — 필터 무관, 항상 무기→방어구→장신구 순 노출.
+  const equipped = useMemo(() => {
     return items
+      .filter((i) => i.equipped)
+      .sort((a, b) => SLOT_ORDER[a.slot] - SLOT_ORDER[b.slot]);
+  }, [items]);
+
+  // 보유(미장착) — 필터/정렬 적용.
+  const owned = useMemo(() => {
+    return items
+      .filter((i) => !i.equipped)
       .filter((i) => (filter === 'all' ? true : i.slot === filter))
       .sort((a, b) => {
         if (sortBy === 'enhance') return b.enhanceLevel - a.enhanceLevel;
@@ -59,9 +69,41 @@ export function InventoryGrid({
       });
   }, [items, filter, sortBy]);
 
-  const equipped = sorted.filter((i) => i.equipped);
-  const owned = sorted.filter((i) => !i.equipped);
   const openItem = openId ? items.find((i) => i.id === openId) ?? null : null;
+
+  // NEW 표시 — localStorage seen 집합 기반. 상세 진입(setOpenId) 시 seen에 추가.
+  const [seen, setSeen] = useState<Set<string>>(() => new Set());
+  useEffect(() => {
+    try {
+      const raw = localStorage.getItem(SEEN_STORAGE_KEY);
+      if (raw) {
+        const arr = JSON.parse(raw) as string[];
+        setSeen(new Set(arr));
+      }
+    } catch {
+      /* ignore */
+    }
+  }, []);
+  const markSeen = useCallback((id: string) => {
+    setSeen((prev) => {
+      if (prev.has(id)) return prev;
+      const next = new Set(prev);
+      next.add(id);
+      try {
+        localStorage.setItem(SEEN_STORAGE_KEY, JSON.stringify(Array.from(next)));
+      } catch {
+        /* ignore */
+      }
+      return next;
+    });
+  }, []);
+  const openDetail = useCallback(
+    (id: string) => {
+      markSeen(id);
+      setOpenId(id);
+    },
+    [markSeen],
+  );
 
   const fb = (active: boolean) =>
     active
@@ -96,7 +138,7 @@ export function InventoryGrid({
       {equipped.length > 0 ? (
         <Section title={`장착 중 (${equipped.length})`}>
           {equipped.map((it) => (
-            <Tile key={it.id} item={it} onOpen={() => setOpenId(it.id)} />
+            <Tile key={it.id} item={it} isNew={!seen.has(it.id)} onOpen={() => openDetail(it.id)} />
           ))}
         </Section>
       ) : null}
@@ -164,8 +206,7 @@ function Section({ title, children }: { title: string; children: React.ReactNode
   );
 }
 
-function Tile({ item, onOpen }: { item: InvItem; onOpen: () => void }) {
-  const isNew = Date.now() - item.acquiredAtMs < NEW_MS;
+function Tile({ item, isNew, onOpen }: { item: InvItem; isNew: boolean; onOpen: () => void }) {
   // 카드 보더 색 = 등급(transcend) 색. 4 모서리에 RarityFrame(별).
   // 잠금/강화중 상태는 카드에서 시각 표시 안 함(보더 가림 회피) — 상세 팝업에서 관리/확인.
   return (
