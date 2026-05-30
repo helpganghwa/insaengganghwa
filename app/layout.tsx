@@ -19,16 +19,46 @@ export const metadata: Metadata = {
   description: '강화는 인생이다.',
   applicationName: 'insaengganghwa',
   formatDetection: { telephone: false },
-  // PWA: app/manifest.ts가 자동으로 <link rel="manifest"> 주입. 아이콘은 명시.
+  // PWA: app/manifest.ts가 자동으로 <link rel="manifest"> 주입.
+  // 아이콘은 app/icon.png(favicon) + app/apple-icon.png(iOS)도 Next convention으로
+  // 자동 주입되지만, 사이즈/타입 명시를 위해 metadata에도 두 번 선언(중복 무해).
   icons: {
     icon: [{ url: '/icons/icon-192.png', sizes: '192x192', type: 'image/png' }],
-    apple: [{ url: '/icons/icon-192.png', sizes: '192x192', type: 'image/png' }],
+    apple: [{ url: '/apple-icon.png', sizes: '180x180', type: 'image/png' }],
   },
-  // iOS 홈 화면 추가 시 standalone(상단 사파리 chrome 제거).
+  // iOS 홈 화면 추가 시 standalone(상단 사파리 chrome 제거) + 스플래쉬 화면.
+  // iOS는 manifest를 읽지 않으므로 apple-touch-startup-image link로 직접 지정.
+  // 디바이스별 media query 매칭 필수(매칭 안 되면 백색 빈 화면).
   appleWebApp: {
     capable: true,
     title: '인생강화',
     statusBarStyle: 'black-translucent',
+    startupImage: [
+      // iPhone 14/15 Pro Max (6.7") — 1290x2796
+      {
+        url: '/icons/splash-1290x2796.png',
+        media:
+          '(device-width: 430px) and (device-height: 932px) and (-webkit-device-pixel-ratio: 3) and (orientation: portrait)',
+      },
+      // iPhone 14/15 (6.1") — 1179x2556
+      {
+        url: '/icons/splash-1179x2556.png',
+        media:
+          '(device-width: 393px) and (device-height: 852px) and (-webkit-device-pixel-ratio: 3) and (orientation: portrait)',
+      },
+      // iPhone 12/13/14 (6.1") — 1170x2532
+      {
+        url: '/icons/splash-1170x2532.png',
+        media:
+          '(device-width: 390px) and (device-height: 844px) and (-webkit-device-pixel-ratio: 3) and (orientation: portrait)',
+      },
+      // iPhone 8/SE 2-3 (4.7") — 750x1334
+      {
+        url: '/icons/splash-750x1334.png',
+        media:
+          '(device-width: 375px) and (device-height: 667px) and (-webkit-device-pixel-ratio: 2) and (orientation: portrait)',
+      },
+    ],
   },
 };
 
