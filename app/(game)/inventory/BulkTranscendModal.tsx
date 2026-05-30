@@ -218,7 +218,7 @@ export function BulkTranscendModal({
       onClick={onClose}
     >
       <div
-        className="w-full max-w-[340px] rounded-2xl bg-zinc-950 p-4 text-zinc-100"
+        className="w-full max-w-[340px] rounded-2xl bg-zinc-950 p-4 text-zinc-100 shadow-[0_0_40px_rgba(245,158,11,0.18)] ring-1 ring-amber-700/40"
         onClick={(e) => e.stopPropagation()}
       >
         <div className="mb-3 flex items-baseline justify-between">
