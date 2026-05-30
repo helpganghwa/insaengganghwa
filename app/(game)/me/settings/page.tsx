@@ -95,12 +95,8 @@ export default async function SettingsPage() {
         <Divider />
         <DisabledRow label="고객센터 문의" />
         <Divider />
-        <Link
-          href="/probability"
-          className="flex items-center justify-between px-3 py-2.5 text-sm"
-        >
-          <span>📜 확률 공시</span>
-          <span className="text-zinc-400">→</span>
+        <Link href="/probability" className="flex items-center justify-between px-3 py-2.5">
+          <span className="text-sm text-zinc-400">확률 공시</span>
         </Link>
       </Section>
 

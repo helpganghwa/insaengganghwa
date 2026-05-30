@@ -99,7 +99,7 @@ export default async function ProfilePage() {
     <div className="space-y-4 px-4 py-6">
       {/* 내 정보 카드 — 좌: 닉네임/캐릭터/전투력 · 우: 장비 3종 */}
       <section className="rounded-3xl border border-zinc-800 bg-gradient-to-b from-zinc-900 to-zinc-950 p-4">
-        <div className="flex items-center gap-3">
+        <div className="flex items-stretch gap-3">
           {/* 좌 — 머리 위 닉네임 + 캐릭터 + 발끝 전투력 */}
           <div className="flex shrink-0 flex-col items-center gap-1.5">
             <NicknameEditor
@@ -124,14 +124,13 @@ export default async function ProfilePage() {
                 <span className="text-[11px]">생성</span>
               </Link>
             )}
-            <span className="inline-flex h-7 items-center gap-1 rounded-full border border-amber-400/30 bg-amber-400/10 px-2.5 text-xs font-bold tabular-nums text-amber-300">
-              <span>전투력</span>
-              {total.toLocaleString('ko-KR')}
+            <span className="text-sm font-bold tabular-nums text-amber-300 drop-shadow-[0_1px_2px_rgba(0,0,0,1)]">
+              전투력 {total.toLocaleString('ko-KR')}
             </span>
           </div>
 
-          {/* 우 — 장비 3종 */}
-          <div className="flex h-44 flex-1 flex-col gap-2">
+          {/* 우 — 장비 3종, 좌 높이에 맞춰 stretch */}
+          <div className="flex flex-1 flex-col gap-2">
             {(['weapon', 'armor', 'accessory'] as Slot[]).map((s) => {
               const it = bySlot.get(s);
               if (!it) {
