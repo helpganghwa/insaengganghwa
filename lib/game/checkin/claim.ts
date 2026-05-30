@@ -15,6 +15,7 @@ import {
   type CheckinReward,
   type SupplySlot,
 } from '@/lib/game/balance';
+import { CHECKIN_REWARD_MULTIPLIER } from '@/lib/game/test-mode';
 
 /**
  * 출석 캘린더 수령 — SCHEMA §12 · BALANCE §7.
@@ -52,15 +53,16 @@ type Acc = { diamond: number; boxes: Record<SupplySlot, number> };
 const emptyAcc = (): Acc => ({ diamond: 0, boxes: { weapon: 0, armor: 0, accessory: 0 } });
 
 function applyRewardToAcc(reward: CheckinReward, acc: Acc) {
+  const m = CHECKIN_REWARD_MULTIPLIER;
   switch (reward.kind) {
     case 'diamond':
-      acc.diamond += reward.amount;
+      acc.diamond += reward.amount * m;
       return;
     case 'supply':
-      acc.boxes[reward.slot] += reward.count;
+      acc.boxes[reward.slot] += reward.count * m;
       return;
     case 'supply_set':
-      for (const s of SUPPLY_SLOTS) acc.boxes[s] += reward.perSlot;
+      for (const s of SUPPLY_SLOTS) acc.boxes[s] += reward.perSlot * m;
       return;
   }
 }
