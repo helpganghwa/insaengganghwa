@@ -139,6 +139,17 @@ export function BulkTranscendModal({
     if (confirm) setConfirm(false);
   }
 
+  function toggleAll() {
+    if (selected.size === preview.rows.length) {
+      setSelected(new Set());
+    } else {
+      setSelected(new Set(preview.rows.map((r) => r.targetInstanceId)));
+    }
+    if (confirm) setConfirm(false);
+  }
+  const allSelected =
+    preview.rows.length > 0 && selected.size === preview.rows.length;
+
   useEffect(() => {
     let cancelled = false;
     (async () => {
@@ -247,19 +258,31 @@ export function BulkTranscendModal({
         ) : (
           <>
             {/* 헤더 — 상태와 무관하게 1줄 자리 유지(시프트 방지). */}
-            <p className="mb-2 min-h-[1.25rem] text-xs text-zinc-300">
-              {phase === 'result' && result ? (
-                <>
-                  총 <span className="font-bold text-amber-300">{result.targetsUpgraded}</span>개
-                  장비{' '}
-                  <span className="font-bold text-amber-300">{result.stepsApplied}</span>단계 초월
-                  완료
-                  {result.failedSteps > 0 ? ` · 중도 실패 ${result.failedSteps}회` : ''}
-                </>
-              ) : (
-                headerText
-              )}
-            </p>
+            <div className="mb-2 flex min-h-[1.25rem] items-center justify-between text-xs text-zinc-300">
+              <p>
+                {phase === 'result' && result ? (
+                  <>
+                    총{' '}
+                    <span className="font-bold text-amber-300">{result.targetsUpgraded}</span>개
+                    장비{' '}
+                    <span className="font-bold text-amber-300">{result.stepsApplied}</span>단계
+                    초월 완료
+                    {result.failedSteps > 0 ? ` · 중도 실패 ${result.failedSteps}회` : ''}
+                  </>
+                ) : (
+                  headerText
+                )}
+              </p>
+              {phase === 'preview' && preview.rows.length > 0 ? (
+                <button
+                  type="button"
+                  onClick={toggleAll}
+                  className="rounded-full border border-zinc-700 px-2 py-0.5 text-[10px] text-zinc-300 hover:bg-zinc-800"
+                >
+                  {allSelected ? '전체 해제' : '전체 선택'}
+                </button>
+              ) : null}
+            </div>
 
             <ul className="min-h-[80px] max-h-[40vh] space-y-1.5 overflow-y-auto">
               {phase === 'result' && result
@@ -358,7 +381,9 @@ export function BulkTranscendModal({
                       />
                     ) : null}
                     <span className="relative">
-                      {confirm ? `확정? (${confirmLeft})` : `초월하기 (${selectedRows.length}개)`}
+                      {confirm
+                        ? `정말 초월하시겠어요? (${confirmLeft})`
+                        : `초월하기 (${selectedRows.length}개)`}
                     </span>
                   </button>
                 </>
