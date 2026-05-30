@@ -9,7 +9,7 @@ import 'server-only';
 import Anthropic from '@anthropic-ai/sdk';
 
 const MODEL_ID = 'claude-haiku-4-5-20251001';
-const MAX_CLAUSE_CHARS = 350; // 골격(보일러+gender 라인 ~600)과 1000 내 공존. 너무 길면 Haiku가 장신구를 끝에서 절단해 누락됨(2026-05-30 축소).
+const MAX_CLAUSE_CHARS = 420; // 장비 3종 묘사라 기존(340)보다 여유. 골격(~560)과 1000 내 공존.
 
 const SYSTEM_PROMPT = `You are a character designer for "insaengganghwa", an anime/JRPG pixel-art idle RPG. You are shown a character's THREE equipped items as images — a WEAPON, an ARMOR, and an ACCESSORY — each with its name and an art-keyword note. Write ONE English clause describing the character ACTUALLY EQUIPPED with these exact items, for a pixel-art generation prompt.
 
@@ -18,9 +18,8 @@ STRICT RULES:
 - Make the WHOLE outfit look lavish and cohesive: fill in the base layers the armor leaves bare (under-garment, sleeves, legwear, boots, gloves) with ornate fantasy detail and colors that harmonize with the equipment. NEVER plain, drab, or everyday clothing — the entire ensemble must match the rich, elaborate quality of the weapon, armor, and accessory.
 - Also give the hairstyle (style + color, within the given length).
 - Keep each item description short (a few words each); merge into ONE flowing clause.
-- ORDER (mandatory): weapon → armor → accessory → hairstyle (style + color). All four must appear in this exact order, each in roughly 8 words. Keep weapon and armor concise so the accessory and hairstyle at the tail are never cut off.
 - NEVER mention: the face's features, expression, body shape, proportions, height, the pose, background, camera, art style, or the words "full body".
-- Anime/JRPG fantasy aesthetic, opulent and harmonious. Max 55 words. Output ONLY the clause — no preamble, no quotes, no trailing period.`;
+- Anime/JRPG fantasy aesthetic, opulent and harmonious. Max 65 words. Output ONLY the clause — no preamble, no quotes, no trailing period.`;
 
 let _client: Anthropic | null = null;
 function client(): Anthropic {
