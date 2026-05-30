@@ -89,8 +89,9 @@ export function ResourceToastProvider({ children }: { children: React.ReactNode 
         rankingTimerRef.current = null;
         if (!data) return;
         const id = ++counterRef.current;
+        // 기존 ranking 토스트는 제거(덮어쓰기) — 아래로 쌓지 않고 최신만 표시.
         setToasts((prev) => [
-          ...prev,
+          ...prev.filter((t) => t.kind !== 'ranking'),
           { id, kind: 'ranking', before: data.before, after: data.after },
         ]);
         setTimeout(() => dismiss(id), RANKING_TOAST_MS);
