@@ -100,8 +100,8 @@ export default async function ProfilePage() {
       {/* 내 정보 카드 — 좌: 닉네임/캐릭터/전투력 · 우: 장비 3종 */}
       <section className="rounded-xl border border-zinc-800 bg-gradient-to-b from-zinc-900 to-zinc-950 p-3">
         <div className="flex items-stretch gap-2">
-          {/* 좌 — 머리 위 닉네임 + 캐릭터 */}
-          <div className="flex shrink-0 flex-col items-center gap-1">
+          {/* 좌(4) — 머리 위 닉네임 + 캐릭터 */}
+          <div className="flex basis-2/5 flex-col items-center gap-1">
             <NicknameEditor
               current={nickname}
               changedCount={prof[0]?.nicknameChangedCount ?? 0}
@@ -126,8 +126,8 @@ export default async function ProfilePage() {
             )}
           </div>
 
-          {/* 우 — 장비 3종, 좌 높이에 맞춰 stretch */}
-          <div className="flex flex-1 flex-col gap-1.5">
+          {/* 우(6) — 장비 3종, 좌 높이에 맞춰 stretch */}
+          <div className="flex basis-3/5 flex-col gap-1.5">
             {(['weapon', 'armor', 'accessory'] as Slot[]).map((s) => {
               const it = bySlot.get(s);
               if (!it) {
