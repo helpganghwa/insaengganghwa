@@ -192,15 +192,12 @@ function RankingCompact({
   );
 }
 
-/** 헤더 위 슬라이드 바 — 헤더(h-12)와 같은 크기로 덮음, 진입/종료 슬라이드. */
+/** 헤더 위 바 — 헤더(h-12)와 같은 크기로 덮음. 즉시 표시 → RANKING_TOAST_MS 후 즉시 unmount. */
 function RankingBar({ entry }: { entry: RankingToast }) {
   return (
     <div
-      className="pointer-events-none w-full border-b border-amber-700/40 bg-zinc-950/95 shadow-lg backdrop-blur"
-      style={{
-        animation: `ranking-bar ${RANKING_TOAST_MS}ms ease-out forwards`,
-        paddingTop: 'env(safe-area-inset-top)',
-      }}
+      className="pointer-events-none w-full border-b border-zinc-200 bg-zinc-950/95 shadow-lg backdrop-blur dark:border-zinc-800"
+      style={{ paddingTop: 'env(safe-area-inset-top)' }}
     >
       <div className="flex h-12 items-center justify-between gap-1 px-3">
         <RankingCompact label="최고" before={entry.before.max} after={entry.after.max} />
