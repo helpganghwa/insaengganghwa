@@ -177,11 +177,15 @@ function RankingCompact({
       </div>
     );
   }
-  const rankDelta = before.rank - after.rank;
-  const arrow = rankDelta > 0 ? `▲${rankDelta}` : rankDelta < 0 ? `▼${-rankDelta}` : '—';
-  const arrowColor =
+  const valueDelta = after.value - before.value;
+  const valueArrow = valueDelta > 0 ? `▲${valueDelta}` : valueDelta < 0 ? `▼${-valueDelta}` : '—';
+  const valueArrowColor =
+    valueDelta > 0 ? 'text-amber-300' : valueDelta < 0 ? 'text-zinc-500' : 'text-zinc-600';
+  const rankDelta = before.rank - after.rank; // rank 낮을수록 상위 → 양수 = 상승
+  const rankArrow = rankDelta > 0 ? `▲${rankDelta}` : rankDelta < 0 ? `▼${-rankDelta}` : '—';
+  const rankArrowColor =
     rankDelta > 0 ? 'text-amber-300' : rankDelta < 0 ? 'text-zinc-500' : 'text-zinc-600';
-  // Phase 1 (0~1s): 값 카운트업 단독. Phase 2 (1s~): 순위·화살표 fade/slide-in + 카운트업.
+  // Phase 1 (0~1s): 값 + 값 화살표. Phase 2 (1s~): 순위·순위 화살표 fade/slide-in + 카운트업.
   const revealStyle = {
     animation: `rank-reveal 0.4s ease-out ${RANK_REVEAL_MS}ms both`,
   } as const;
@@ -192,11 +196,12 @@ function RankingCompact({
         <span className="font-bold text-white">
           <CountUp from={before.value} to={after.value} />
         </span>
+        <span className={`text-[9px] font-bold ${valueArrowColor}`}>{valueArrow}</span>
         <span className="text-zinc-300" style={revealStyle}>
           #<CountUp from={before.rank} to={after.rank} delay={RANK_REVEAL_MS} />
         </span>
-        <span className={`text-[9px] font-bold ${arrowColor}`} style={revealStyle}>
-          {arrow}
+        <span className={`text-[9px] font-bold ${rankArrowColor}`} style={revealStyle}>
+          {rankArrow}
         </span>
       </div>
     </div>
