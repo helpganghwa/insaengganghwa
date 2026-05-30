@@ -98,10 +98,10 @@ export default async function ProfilePage() {
   return (
     <div className="space-y-4 px-4 py-6">
       {/* 내 정보 카드 — 좌: 닉네임/캐릭터/전투력 · 우: 장비 3종 */}
-      <section className="rounded-xl border border-zinc-800 bg-gradient-to-b from-zinc-900 to-zinc-950 p-4">
-        <div className="flex items-stretch gap-3">
+      <section className="rounded-xl border border-zinc-800 bg-gradient-to-b from-zinc-900 to-zinc-950 p-3">
+        <div className="flex items-stretch gap-2">
           {/* 좌 — 머리 위 닉네임 + 캐릭터 + 발끝 전투력 */}
-          <div className="flex shrink-0 flex-col items-center gap-1.5">
+          <div className="flex shrink-0 flex-col items-center gap-1">
             <NicknameEditor
               current={nickname}
               changedCount={prof[0]?.nicknameChangedCount ?? 0}
@@ -112,25 +112,25 @@ export default async function ProfilePage() {
               <Link href="/me/profiles" aria-label="프로필 선택" className="block">
                 <CharacterStage
                   charSrc={dirImg(activeProfile)}
-                  className="aspect-[3/4] h-44"
+                  className="aspect-[3/4] h-36"
                 />
               </Link>
             ) : (
               <Link
                 href="/me/create"
-                className="flex aspect-[3/4] h-44 flex-col items-center justify-center gap-1 rounded-2xl border-2 border-dashed border-white/25 text-white/60"
+                className="flex aspect-[3/4] h-36 flex-col items-center justify-center gap-1 rounded-2xl border-2 border-dashed border-white/25 text-white/60"
               >
                 <span className="text-2xl" aria-hidden>✨</span>
                 <span className="text-[11px]">생성</span>
               </Link>
             )}
-            <span className="text-sm font-bold tabular-nums text-amber-300 drop-shadow-[0_1px_2px_rgba(0,0,0,1)]">
+            <span className="text-[13px] font-bold tabular-nums text-amber-300 drop-shadow-[0_1px_2px_rgba(0,0,0,1)]">
               전투력 {total.toLocaleString('ko-KR')}
             </span>
           </div>
 
           {/* 우 — 장비 3종, 좌 높이에 맞춰 stretch */}
-          <div className="flex flex-1 flex-col gap-2">
+          <div className="flex flex-1 flex-col gap-1.5">
             {(['weapon', 'armor', 'accessory'] as Slot[]).map((s) => {
               const it = bySlot.get(s);
               if (!it) {
