@@ -143,6 +143,7 @@ export function InventoryGrid({
 
       {bulkOpen ? (
         <BulkTranscendModal
+          items={items}
           onClose={() => setBulkOpen(false)}
           onDone={() => {
             setBulkOpen(false);

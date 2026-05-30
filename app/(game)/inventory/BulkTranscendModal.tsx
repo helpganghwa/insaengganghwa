@@ -1,12 +1,13 @@
 'use client';
 
-import { useEffect, useState, useTransition } from 'react';
+import { useEffect, useMemo, useState, useTransition } from 'react';
 
 import { transcendStyle } from '@/lib/game/equipment/transcend';
+import { transcendFodderForStep } from '@/lib/game/balance';
 
 import { bulkTranscendAction, previewBulkTranscendAction } from './actions';
+import type { InvItem } from './InventoryGrid';
 
-/** T 색상 — 초월 등급별 색상(T0=neutral, T1+=tier). */
 function tierColorStyle(level: number) {
   const [r, g, b] = transcendStyle(level).colorRgb;
   return { color: `rgb(${r},${g},${b})` };
@@ -39,19 +40,82 @@ type ExecResult = {
   upgraded: Array<{ name: string; fromT: number; toT: number }>;
 };
 
+/** 클라이언트 시뮬레이션 — 서버 planBulkTranscend와 동일 알고리즘.
+ *  낙관적 UI: 모달 열림 즉시 표시. 서버 preview 응답으로 갱신. */
+function clientSimulate(items: InvItem[]): Preview {
+  const groups = new Map<number, InvItem[]>();
+  for (const it of items) {
+    if (!groups.has(it.catalogItemId)) groups.set(it.catalogItemId, []);
+    groups.get(it.catalogItemId)!.push(it);
+  }
+  const rows: PreviewRow[] = [];
+  let skippedLockedTarget = 0;
+  let skippedNoUpgrade = 0;
+  for (const [catalogItemId, list] of groups) {
+    list.sort(
+      (a, b) =>
+        b.transcendLevel - a.transcendLevel ||
+        b.enhanceLevel - a.enhanceLevel ||
+        a.id.localeCompare(b.id),
+    );
+    const target = list[0]!;
+    if (target.isLocked) {
+      skippedLockedTarget++;
+      continue;
+    }
+    const fodderCandidates = list
+      .slice(1)
+      .filter((f) => !f.isLocked && !f.equipped && !f.busy);
+    let used = 0;
+    let maxT = target.transcendLevel;
+    for (let step = target.transcendLevel + 1; ; step++) {
+      const need = transcendFodderForStep(step);
+      if (used + need > fodderCandidates.length) break;
+      used += need;
+      maxT = step;
+    }
+    if (maxT === target.transcendLevel) {
+      skippedNoUpgrade++;
+      continue;
+    }
+    rows.push({
+      catalogItemId,
+      code: target.code,
+      name: target.name,
+      targetInstanceId: target.id,
+      currentT: target.transcendLevel,
+      maxT,
+      fodderToConsume: used,
+      fodderAvailable: fodderCandidates.length,
+      totalCountInGroup: list.length,
+    });
+  }
+  rows.sort(
+    (a, b) => b.maxT - b.currentT - (a.maxT - a.currentT) || a.name.localeCompare(b.name, 'ko'),
+  );
+  return { status: 'success', rows, skippedLockedTarget, skippedNoUpgrade };
+}
+
 export function BulkTranscendModal({
+  items,
   onClose,
   onDone,
 }: {
+  items: InvItem[];
   onClose: () => void;
   onDone: () => void;
 }) {
-  // loading/executing phase 제거 → preview 비어있으면 빈 ul, execute는 낙관적 UI로 즉시 result.
+  // 낙관적 UI — 클라이언트 시뮬레이션으로 즉시 채움. 서버 preview 응답으로 검증/갱신.
+  const initialPreview = useMemo(() => clientSimulate(items), [items]);
   const [phase, setPhase] = useState<'preview' | 'result' | 'error'>('preview');
-  const [preview, setPreview] = useState<Preview | null>(null);
+  const [preview, setPreview] = useState<Preview>(initialPreview);
   const [result, setResult] = useState<ExecResult | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [, startTransition] = useTransition();
+
+  // 강화 패턴 — 3s 확정 카운트다운.
+  const [confirm, setConfirm] = useState(false);
+  const [confirmLeft, setConfirmLeft] = useState(0);
 
   useEffect(() => {
     let cancelled = false;
@@ -70,9 +134,29 @@ export function BulkTranscendModal({
     };
   }, []);
 
+  useEffect(() => {
+    if (!confirm) return;
+    if (confirmLeft <= 0) {
+      setConfirm(false);
+      return;
+    }
+    const t = setTimeout(() => setConfirmLeft((c) => c - 1), 1000);
+    return () => clearTimeout(t);
+  }, [confirm, confirmLeft]);
+
+  function tryExecute() {
+    if (!preview || preview.rows.length === 0) return;
+    if (!confirm) {
+      setConfirm(true);
+      setConfirmLeft(3);
+      return;
+    }
+    setConfirm(false);
+    execute();
+  }
+
   function execute() {
-    if (!preview) return;
-    // 낙관적 UI — preview 그대로 결과 표시. 백그라운드에서 실제 실행 후 응답으로 갱신.
+    // 낙관적 — preview를 그대로 결과로 표시. 백그라운드에서 실제 실행 후 갱신.
     const optimistic: ExecResult = {
       status: 'success',
       stepsApplied: preview.rows.reduce((a, r) => a + (r.maxT - r.currentT), 0),
@@ -94,6 +178,31 @@ export function BulkTranscendModal({
       setResult(r);
     });
   }
+
+  // 공유 UI 레이아웃 — 상단 헤더 1줄 + ul + 하단 버튼. preview/result 동일 시프트 없음.
+  const headerText =
+    phase === 'result' && result
+      ? `총 ${result.targetsUpgraded}개 장비 ${result.stepsApplied}단계 초월 완료`
+      : preview.rows.length === 0
+        ? '초월 가능한 장비가 없습니다'
+        : `${preview.rows.length}개 장비 초월 가능`;
+
+  const listItems =
+    phase === 'result' && result
+      ? result.upgraded.map((u, i) => ({
+          key: `r-${i}`,
+          name: u.name,
+          sub: '', // 결과는 제물 정보 자리에 빈 자리 유지(시프트 방지).
+          fromT: u.fromT,
+          toT: u.toT,
+        }))
+      : preview.rows.map((r) => ({
+          key: `p-${r.catalogItemId}`,
+          name: r.name,
+          sub: `제물 ${r.fodderToConsume}개`,
+          fromT: r.currentT,
+          toT: r.maxT,
+        }));
 
   return (
     <div
@@ -118,97 +227,6 @@ export function BulkTranscendModal({
           </button>
         </div>
 
-        {phase === 'preview' ? (
-          preview && preview.rows.length === 0 ? (
-            <p className="py-6 text-center text-xs text-zinc-400">
-              현재 초월 가능한 장비가 없습니다.
-              <br />
-              같은 아이템을 더 모은 뒤 다시 시도해 주세요.
-            </p>
-          ) : (
-            <>
-              <ul className="max-h-[40vh] space-y-1.5 overflow-y-auto">
-                {(preview?.rows ?? []).map((r) => (
-                  <li
-                    key={r.catalogItemId}
-                    className="flex items-center justify-between rounded-lg bg-white/5 px-3 py-2 text-[11px]"
-                  >
-                    <div className="min-w-0 flex-1">
-                      <div className="truncate font-semibold">{r.name}</div>
-                      <div className="text-[10px] text-zinc-400">제물 {r.fodderToConsume}개</div>
-                    </div>
-                    <div className="shrink-0 text-right font-mono">
-                      <span style={tierColorStyle(r.currentT)}>T{r.currentT}</span>
-                      <span className="mx-1 text-zinc-500">→</span>
-                      <span style={tierColorStyle(r.maxT)}>T{r.maxT}</span>
-                      <span className="ml-1 text-[10px] text-zinc-400">
-                        (+{r.maxT - r.currentT})
-                      </span>
-                    </div>
-                  </li>
-                ))}
-              </ul>
-              {preview && preview.skippedLockedTarget > 0 ? (
-                <div className="mt-2 text-[10px] text-zinc-500">
-                  잠긴 target 제외: {preview.skippedLockedTarget}개
-                </div>
-              ) : null}
-              <div className="mt-3 flex gap-2">
-                <button
-                  type="button"
-                  onClick={onClose}
-                  className="flex-1 rounded-xl border border-zinc-700 py-2 text-xs text-zinc-200"
-                >
-                  취소
-                </button>
-                <button
-                  type="button"
-                  onClick={execute}
-                  disabled={!preview || preview.rows.length === 0}
-                  className="flex-[2] rounded-xl bg-amber-500 py-2 text-xs font-bold text-zinc-950 disabled:opacity-40"
-                >
-                  초월하기 ({preview?.rows.length ?? 0}개)
-                </button>
-              </div>
-            </>
-          )
-        ) : null}
-
-        {phase === 'result' && result ? (
-          <>
-            <p className="mb-2 text-xs text-zinc-300">
-              총 <span className="font-bold text-amber-300">{result.targetsUpgraded}</span>개 장비{' '}
-              <span className="font-bold text-amber-300">{result.stepsApplied}</span>단계 초월
-              완료
-              {result.failedSteps > 0 ? ` · 중도 실패 ${result.failedSteps}회` : ''}
-            </p>
-            {result.upgraded.length > 0 ? (
-              <ul className="max-h-[40vh] space-y-1.5 overflow-y-auto">
-                {result.upgraded.map((u, i) => (
-                  <li
-                    key={i}
-                    className="flex items-center justify-between rounded-lg bg-white/5 px-3 py-2 text-[11px]"
-                  >
-                    <span className="truncate font-semibold">{u.name}</span>
-                    <span className="font-mono">
-                      <span style={tierColorStyle(u.fromT)}>T{u.fromT}</span>
-                      <span className="mx-1 text-zinc-500">→</span>
-                      <span style={tierColorStyle(u.toT)}>T{u.toT}</span>
-                    </span>
-                  </li>
-                ))}
-              </ul>
-            ) : null}
-            <button
-              type="button"
-              onClick={onDone}
-              className="mt-3 w-full rounded-xl bg-amber-500 py-2 text-xs font-bold text-zinc-950"
-            >
-              확인
-            </button>
-          </>
-        ) : null}
-
         {phase === 'error' ? (
           <>
             <p className="py-6 text-center text-xs text-red-300">{error ?? '오류'}</p>
@@ -220,7 +238,86 @@ export function BulkTranscendModal({
               닫기
             </button>
           </>
-        ) : null}
+        ) : (
+          <>
+            {/* 헤더 — 상태와 무관하게 1줄 자리 유지(시프트 방지). */}
+            <p className="mb-2 min-h-[1.25rem] text-xs text-zinc-300">
+              {phase === 'result' && result ? (
+                <>
+                  총 <span className="font-bold text-amber-300">{result.targetsUpgraded}</span>개
+                  장비{' '}
+                  <span className="font-bold text-amber-300">{result.stepsApplied}</span>단계 초월
+                  완료
+                  {result.failedSteps > 0 ? ` · 중도 실패 ${result.failedSteps}회` : ''}
+                </>
+              ) : (
+                headerText
+              )}
+            </p>
+
+            <ul className="min-h-[80px] max-h-[40vh] space-y-1.5 overflow-y-auto">
+              {listItems.map((it) => (
+                <li
+                  key={it.key}
+                  className="grid grid-cols-[1fr_auto] items-center gap-2 rounded-lg bg-white/5 px-3 py-2 text-[11px]"
+                >
+                  <div className="min-w-0">
+                    <div className="truncate font-semibold">{it.name}</div>
+                    <div className="min-h-[0.85rem] text-[10px] text-zinc-400">{it.sub}</div>
+                  </div>
+                  <div className="shrink-0 text-right font-mono">
+                    <span style={tierColorStyle(it.fromT)}>T{it.fromT}</span>
+                    <span className="mx-1 text-zinc-500">→</span>
+                    <span style={tierColorStyle(it.toT)}>T{it.toT}</span>
+                    <span className="ml-1 text-[10px] text-zinc-400">
+                      (+{it.toT - it.fromT})
+                    </span>
+                  </div>
+                </li>
+              ))}
+            </ul>
+
+            {phase === 'preview' && preview.skippedLockedTarget > 0 ? (
+              <div className="mt-2 text-[10px] text-zinc-500">
+                잠긴 target 제외: {preview.skippedLockedTarget}개
+              </div>
+            ) : (
+              <div className="mt-2 min-h-[0.85rem]" aria-hidden />
+            )}
+
+            <div className="mt-3 flex gap-2">
+              {phase === 'result' ? (
+                <button
+                  type="button"
+                  onClick={onDone}
+                  className="flex-1 rounded-xl bg-amber-500 py-2 text-xs font-bold text-zinc-950"
+                >
+                  확인
+                </button>
+              ) : (
+                <>
+                  <button
+                    type="button"
+                    onClick={onClose}
+                    className="flex-1 rounded-xl border border-zinc-700 py-2 text-xs text-zinc-200"
+                  >
+                    취소
+                  </button>
+                  <button
+                    type="button"
+                    onClick={tryExecute}
+                    disabled={preview.rows.length === 0}
+                    className="flex-[2] rounded-xl bg-amber-500 py-2 text-xs font-bold text-zinc-950 disabled:opacity-40"
+                  >
+                    {confirm
+                      ? `확정? (${confirmLeft})`
+                      : `초월하기 (${preview.rows.length}개)`}
+                  </button>
+                </>
+              )}
+            </div>
+          </>
+        )}
       </div>
     </div>
   );
