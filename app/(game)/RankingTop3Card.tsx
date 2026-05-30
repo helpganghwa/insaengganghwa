@@ -28,7 +28,7 @@ export async function RankingTop3Card() {
       {/* 헤더 — pixellab 배너 배경 + 랭킹 진입 */}
       <Link
         href="/leaderboard"
-        className="relative flex items-center justify-center overflow-hidden border-b border-amber-700/40 px-3.5 py-2.5 transition hover:brightness-110"
+        className="relative flex items-center justify-center overflow-hidden border-b border-amber-700/40 px-3.5 py-1.5 transition hover:brightness-110"
       >
         {/* eslint-disable-next-line @next/next/no-img-element */}
         <img
@@ -39,7 +39,7 @@ export async function RankingTop3Card() {
           style={{ imageRendering: 'pixelated' }}
         />
         <div className="absolute inset-0 bg-black/35" />
-        <span className="relative text-[12px] font-bold text-amber-100 drop-shadow-[0_1px_2px_rgba(0,0,0,1)]">
+        <span className="relative text-[10px] font-bold text-amber-100 drop-shadow-[0_1px_2px_rgba(0,0,0,1)]">
           {LABEL[metric]} 랭킹
         </span>
       </Link>
