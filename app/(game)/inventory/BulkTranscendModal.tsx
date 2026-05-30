@@ -284,7 +284,7 @@ export function BulkTranscendModal({
                     return (
                       <li
                         key={`p-${r.catalogItemId}`}
-                        className={`grid cursor-pointer grid-cols-[auto_1fr_auto] items-center gap-2 rounded-lg px-3 py-2 text-[11px] transition ${
+                        className={`grid cursor-pointer grid-cols-[auto_1fr_auto] items-center gap-2 rounded-lg px-3 py-2 text-[11px] ${
                           checked ? 'bg-white/5' : 'bg-white/[0.02] opacity-60'
                         }`}
                         onClick={() => toggle(r.targetInstanceId)}
