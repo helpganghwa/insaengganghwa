@@ -9,7 +9,7 @@ const items = [
   { href: '/', label: '홈', icon: '🏠' },
   { href: '/raid', label: '레이드', icon: '⚔️' },
   { href: '/enhance', label: '강화', icon: '⚒️' },
-  { href: '/shop', label: '상점', icon: '🏪' },
+  { href: '/shop', label: '상점', icon: '💎' },
   { href: '/me', label: '프로필', icon: '👤' },
 ] as const;
 
