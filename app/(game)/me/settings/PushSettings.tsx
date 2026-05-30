@@ -30,11 +30,13 @@ import {
 
 type Cat = 'enhance' | 'raid' | 'supply';
 
+type EnhanceMode = 'instant' | 'batched' | 'batched_1h';
+
 export function PushSettings(props: {
   initialEnhance: boolean;
   initialRaid: boolean;
   initialSupply: boolean;
-  initialEnhanceMode: 'instant' | 'batched';
+  initialEnhanceMode: EnhanceMode;
 }) {
   const [supportKind, setSupportKind] = useState<string | null>(null);
   const [permission, setPermission] = useState<NotificationPermission | null>(null);
@@ -42,7 +44,7 @@ export function PushSettings(props: {
   const [enhance, setEnhance] = useState(props.initialEnhance);
   const [raid, setRaid] = useState(props.initialRaid);
   const [supply, setSupply] = useState(props.initialSupply);
-  const [enhanceMode, setEnhanceMode] = useState<'instant' | 'batched'>(props.initialEnhanceMode);
+  const [enhanceMode, setEnhanceMode] = useState<EnhanceMode>(props.initialEnhanceMode);
   const [pending, startTransition] = useTransition();
 
   useEffect(() => {
@@ -117,6 +119,22 @@ export function PushSettings(props: {
 
   const togglesDisabled = permission !== 'granted' || !hasSubscription;
 
+  function pickMode(next: EnhanceMode) {
+    const prev = enhanceMode;
+    setEnhanceMode(next);
+    startTransition(async () => {
+      const r = await setPushEnhanceModeAction({ mode: next });
+      if (!r.ok) setEnhanceMode(prev);
+    });
+  }
+
+  const modeHint =
+    enhanceMode === 'instant'
+      ? '슬롯마다 즉시 알림'
+      : enhanceMode === 'batched'
+        ? '30분 묶음 알림'
+        : '1시간 묶음 알림';
+
   return (
     <div className="space-y-1">
       {permission === 'denied' ? (
@@ -124,61 +142,41 @@ export function PushSettings(props: {
           브라우저에서 알림이 차단되어 있어요. 사이트 설정에서 알림을 허용한 뒤 다시 이 페이지에
           들어와 주세요.
         </p>
-      ) : !hasSubscription ? (
-        <button
-          type="button"
-          onClick={enable}
-          className="mx-3 my-2 rounded-xl bg-emerald-600 px-3 py-2 text-[12px] font-bold text-white"
-        >
-          🔔 알림 받기
-        </button>
       ) : (
-        <button
-          type="button"
-          onClick={disable}
-          className="mx-3 my-2 rounded-xl border border-zinc-300 px-3 py-2 text-[12px] font-medium text-zinc-600 dark:border-zinc-700 dark:text-zinc-300"
-        >
-          알림 끄기 (이 기기)
-        </button>
+        <Toggle
+          label="알림 받기"
+          hint={hasSubscription ? '이 기기에서 알림 수신 중' : '이 기기에서 푸시 알림 받기'}
+          on={hasSubscription}
+          onChange={(v) => (v ? enable() : disable())}
+        />
       )}
 
       <Toggle
         label="강화 완료"
-        hint={enhanceMode === 'instant' ? '슬롯마다 즉시 알림' : '30분 묶음 알림'}
+        hint={modeHint}
         on={enhance}
         disabled={togglesDisabled || pending}
         onChange={(v) => flip('enhance', v)}
       />
       {enhance ? (
-        <div className="-mt-1 ml-6 mb-1 flex gap-1 px-3 text-[10px]">
-          <button
-            type="button"
-            disabled={togglesDisabled || pending}
-            onClick={() => {
-              setEnhanceMode('instant');
-              startTransition(async () => {
-                const r = await setPushEnhanceModeAction({ mode: 'instant' });
-                if (!r.ok) setEnhanceMode('batched');
-              });
-            }}
-            className={`rounded-full px-2 py-0.5 ${enhanceMode === 'instant' ? 'bg-emerald-500 text-white' : 'bg-zinc-200 text-zinc-600 dark:bg-zinc-800 dark:text-zinc-400'}`}
-          >
-            즉시
-          </button>
-          <button
-            type="button"
-            disabled={togglesDisabled || pending}
-            onClick={() => {
-              setEnhanceMode('batched');
-              startTransition(async () => {
-                const r = await setPushEnhanceModeAction({ mode: 'batched' });
-                if (!r.ok) setEnhanceMode('instant');
-              });
-            }}
-            className={`rounded-full px-2 py-0.5 ${enhanceMode === 'batched' ? 'bg-emerald-500 text-white' : 'bg-zinc-200 text-zinc-600 dark:bg-zinc-800 dark:text-zinc-400'}`}
-          >
-            30분 묶음
-          </button>
+        <div className="-mt-1 mb-1 flex gap-1 px-3 text-[10px]">
+          {(
+            [
+              { v: 'instant', label: '즉시' },
+              { v: 'batched', label: '30분 묶음' },
+              { v: 'batched_1h', label: '1시간 묶음' },
+            ] as const
+          ).map((opt) => (
+            <button
+              key={opt.v}
+              type="button"
+              disabled={togglesDisabled || pending}
+              onClick={() => pickMode(opt.v)}
+              className={`rounded-full px-2 py-0.5 ${enhanceMode === opt.v ? 'bg-emerald-500 text-white' : 'bg-zinc-200 text-zinc-600 dark:bg-zinc-800 dark:text-zinc-400'}`}
+            >
+              {opt.label}
+            </button>
+          ))}
         </div>
       ) : null}
       <Toggle

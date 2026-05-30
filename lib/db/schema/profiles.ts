@@ -8,8 +8,8 @@
 import { pgTable, pgEnum, uuid, text, bigint, boolean, integer, timestamp } from 'drizzle-orm/pg-core';
 import { sql } from 'drizzle-orm';
 
-/** 강화 푸시 모드 — instant(슬롯별 즉시) | batched(30분 그룹화). 기본 instant. */
-export const pushEnhanceModeEnum = pgEnum('push_enhance_mode', ['instant', 'batched']);
+/** 강화 푸시 모드 — instant(슬롯별 즉시) | batched(30분 그룹화) | batched_1h(1시간 그룹화). 기본 instant. */
+export const pushEnhanceModeEnum = pgEnum('push_enhance_mode', ['instant', 'batched', 'batched_1h']);
 
 export const profiles = pgTable('profiles', {
   /** = auth.users.id (Supabase). FK는 DB 레벨에서 auth.users 참조(마이그레이션에서 설정). */

@@ -19,7 +19,8 @@ import { sendPushToUser } from '@/lib/push/send';
 export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
 
-const WINDOW_MIN = 30;
+// 모드별 묶음 윈도(batched=30분 / batched_1h=60분)는 아래 SQL에 인라인.
+// instant 모드는 push_pending을 거치지 않음.
 
 function isAuthorized(req: Request): boolean {
   const secret = process.env.CRON_SECRET;
@@ -38,13 +39,21 @@ type FlushRow = { user_id: string; items: unknown[] };
 export async function GET(req: Request) {
   if (!isAuthorized(req)) return new Response('forbidden', { status: 403 });
 
-  // 재시도 패턴 — SELECT(읽기만) → 발송 시도 → 성공한 user_id만 DELETE.
-  // 발송 실패한 row는 push_pending에 남아 다음 5분 cron에서 자동 재시도.
+  // DELETE … RETURNING — row를 먼저 빼낸 뒤 발송. 누적 버그(2026-05-30) 방지:
+  // 이전엔 SELECT 후 발송 + 성공 시 DELETE였는데, 윈도 직전 신규 적재가 ON CONFLICT로
+  // 같은 row에 누적되어 다음 윈도에 또 발송되는 케이스가 있었음. 모드별 윈도(30/60분)는
+  // profiles.push_enhance_mode와 JOIN해 사용자별로 적용.
   const rows = (await db.execute(sql`
-    select user_id::text user_id, items
-    from push_pending
-    where category = 'enhance'::push_category
-      and first_at + interval '${sql.raw(String(WINDOW_MIN))} minutes' <= now()
+    delete from push_pending pp
+    using profiles p
+    where p.id = pp.user_id
+      and pp.category = 'enhance'::push_category
+      and (
+        (p.push_enhance_mode = 'batched'    and pp.first_at + interval '30 minutes' <= now())
+        or
+        (p.push_enhance_mode = 'batched_1h' and pp.first_at + interval '60 minutes' <= now())
+      )
+    returning pp.user_id::text user_id, pp.items
   `)) as unknown as FlushRow[];
 
   if (rows.length === 0) {
@@ -53,17 +62,11 @@ export async function GET(req: Request) {
 
   let sent = 0;
   let failed = 0;
-  const sentUserIds: string[] = [];
   await Promise.all(
     rows.map(async (r) => {
       const items = Array.isArray(r.items) ? r.items : [];
       const n = items.length;
-      if (n === 0) {
-        // 빈 items도 정리해야 row 영구 남음 방지 — 성공으로 처리.
-        sentUserIds.push(r.user_id);
-        return;
-      }
-      // 의미 변경(2026-05-26): '강화 N건 완료' → '강화 N건 준비 완료'(최대확률 도달).
+      if (n === 0) return;
       const title = n === 1 ? '강화 준비 완료' : `강화 ${n}건 준비 완료`;
       const body = describeBatch(items);
       try {
@@ -74,15 +77,8 @@ export async function GET(req: Request) {
           tag: 'enhance',
           category: 'enhance',
         });
-        if (res.ok > 0) {
-          sent++;
-          sentUserIds.push(r.user_id);
-        } else if (res.gone > 0 && res.ok === 0 && res.failed === 0) {
-          // 구독 다 없음(전부 410으로 정리됨) — row도 정리. 재시도 무의미.
-          sentUserIds.push(r.user_id);
-        } else {
-          failed++;
-        }
+        if (res.ok > 0) sent++;
+        else failed++;
       } catch (e) {
         failed++;
         console.warn('[push-flush] send failed', r.user_id, e);
@@ -90,21 +86,11 @@ export async function GET(req: Request) {
     }),
   );
 
-  // 성공한 user_id의 row만 DELETE. 실패는 다음 cron에서 재시도.
-  if (sentUserIds.length > 0) {
-    await db.execute(sql`
-      delete from push_pending
-      where category = 'enhance'::push_category
-        and user_id::text = any(${sentUserIds}::text[])
-    `);
-  }
-
   return Response.json({
     ok: true,
     candidates: rows.length,
     sent,
     failed,
-    retried: failed,
     kind: 'push-flush',
   });
 }
