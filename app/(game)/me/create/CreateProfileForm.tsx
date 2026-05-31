@@ -114,7 +114,7 @@ export function CreateProfileForm({
             it.code ? (
               <div
                 key={it.slot}
-                className="grid grid-rows-[minmax(3rem,1fr)_1.75rem] rounded-xl border border-zinc-200 bg-white px-1 py-1 text-center dark:border-zinc-800 dark:bg-zinc-950"
+                className="grid aspect-square min-h-[5.25rem] grid-rows-[minmax(3rem,1fr)_1.75rem] rounded-xl border border-zinc-200 bg-white px-1 py-1 text-center dark:border-zinc-800 dark:bg-zinc-950"
               >
                 <div className="flex items-center justify-center overflow-hidden">
                   <TranscendSprite

@@ -86,7 +86,7 @@ export default async function CodexPage() {
                   <Link
                     key={c.id}
                     href={`/me/codex/${c.id}`}
-                    className="grid grid-rows-[1.5rem_minmax(2.5rem,1fr)_1.5rem] rounded-xl border-2 border-zinc-200 bg-white p-1 text-center dark:border-zinc-800 dark:bg-zinc-950"
+                    className="grid aspect-square min-h-[6rem] grid-rows-[1.5rem_minmax(2.5rem,1fr)_1.5rem] rounded-xl border-2 border-zinc-200 bg-white p-1 text-center dark:border-zinc-800 dark:bg-zinc-950"
                   >
                     <div className="flex items-center justify-center overflow-hidden">
                       <span className="text-[10px] font-semibold text-amber-600 dark:text-amber-400">

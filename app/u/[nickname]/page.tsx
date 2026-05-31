@@ -154,7 +154,7 @@ export default async function PublicProfilePage({
               <div
                 key={s}
                 style={rarityBorderStyle(it.transcendLevel)}
-                className={`relative grid grid-rows-[1.75rem_minmax(3.5rem,1fr)_1.75rem] overflow-hidden rounded-xl border-2 bg-white px-1 py-1 text-center dark:bg-zinc-950 ${
+                className={`relative grid aspect-square min-h-[7.5rem] grid-rows-[1.75rem_minmax(3.5rem,1fr)_1.75rem] overflow-hidden rounded-xl border-2 bg-white px-1 py-1 text-center dark:bg-zinc-950 ${
                   hasRarityBorder(it.transcendLevel) ? '' : 'border-zinc-200 dark:border-zinc-800'
                 }`}
               >
