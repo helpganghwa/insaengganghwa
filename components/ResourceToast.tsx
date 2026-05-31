@@ -181,11 +181,11 @@ function RankingCompact({
   const valueDelta = after.value - before.value;
   const valueArrow = valueDelta > 0 ? `▲${valueDelta}` : valueDelta < 0 ? `▼${-valueDelta}` : '—';
   const valueArrowColor =
-    valueDelta > 0 ? 'text-amber-300' : valueDelta < 0 ? 'text-zinc-500' : 'text-zinc-600';
+    valueDelta > 0 ? 'text-emerald-400' : valueDelta < 0 ? 'text-red-400' : 'text-zinc-500';
   const rankDelta = before.rank - after.rank; // rank 낮을수록 상위 → 양수 = 상승
   const rankArrow = rankDelta > 0 ? `▲${rankDelta}` : rankDelta < 0 ? `▼${-rankDelta}` : '—';
   const rankArrowColor =
-    rankDelta > 0 ? 'text-amber-300' : rankDelta < 0 ? 'text-zinc-500' : 'text-zinc-600';
+    rankDelta > 0 ? 'text-emerald-400' : rankDelta < 0 ? 'text-red-400' : 'text-zinc-500';
   // Phase 1 (값) → Phase 2 (순위) 같은 자리에 교차. animation duration은 토스트 노출 시간과 일치.
   const phaseValueStyle = {
     animation: `ranking-value ${RANKING_TOAST_MS}ms ease-out forwards`,
