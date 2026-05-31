@@ -1,12 +1,8 @@
 import { formatCompactKR } from '@/lib/ui/format-number';
-import {
-  INVITE_BOX_PER_REFERRAL,
-  INVITE_DIAMOND_PER_REFERRAL,
-} from '@/lib/game/referral/stats';
 
 /**
- * 초대 보상 표시 섹션 — 내 프로필 자랑하기 아래에 노출.
- * 통계 3종(초대 친구 / 획득 💎 / 획득 📦) + 보상 정책 1줄 안내.
+ * 초대 보상 표시 — 컴팩트(사용자 결정 2026-05-31).
+ * 타이틀 이모지·정책 안내문 없음. 숫자 폰트 작게.
  */
 export function ReferralSection({
   totalReferrals,
@@ -18,21 +14,13 @@ export function ReferralSection({
   totalBoxEarned: number;
 }) {
   return (
-    <section className="rounded-xl border border-zinc-200 bg-white p-4 dark:border-zinc-800 dark:bg-zinc-950">
-      <header className="flex items-baseline justify-between">
-        <h2 className="text-sm font-medium">🎟 친구 초대</h2>
-      </header>
-
-      <div className="mt-3 grid grid-cols-3 gap-2 text-center">
+    <section className="rounded-xl border border-zinc-200 bg-white px-3 py-2.5 dark:border-zinc-800 dark:bg-zinc-950">
+      <h2 className="text-[11px] font-medium text-zinc-500">친구 초대</h2>
+      <div className="mt-1.5 grid grid-cols-3 gap-1 text-center">
         <Stat label="초대한 친구" value={totalReferrals} />
         <Stat label="획득 💎" value={totalDiamondEarned} />
         <Stat label="획득 📦" value={totalBoxEarned} />
       </div>
-
-      <p className="mt-3 text-center text-[11px] leading-relaxed text-zinc-500">
-        내 공유 링크로 가입한 친구 1명당 💎 {INVITE_DIAMOND_PER_REFERRAL.toLocaleString('ko-KR')} ·
-        📦 {INVITE_BOX_PER_REFERRAL}개(무기·방어구·장신구 각 1)
-      </p>
     </section>
   );
 }
@@ -40,8 +28,8 @@ export function ReferralSection({
 function Stat({ label, value }: { label: string; value: number }) {
   return (
     <div>
-      <div className="text-xs text-zinc-500">{label}</div>
-      <div className="mt-0.5 font-mono text-lg font-bold tabular-nums">
+      <div className="text-[10px] text-zinc-500">{label}</div>
+      <div className="mt-0.5 font-mono text-xs font-bold tabular-nums">
         {formatCompactKR(value)}
       </div>
     </div>
