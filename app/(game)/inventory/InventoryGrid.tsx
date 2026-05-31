@@ -8,6 +8,8 @@ import type { Slot } from '@/lib/db/schema/equipment';
 import { TranscendSprite } from '@/components/TranscendSprite';
 import { RarityFrame, rarityBorderStyle, hasRarityBorder } from '@/components/RarityFrame';
 
+import { useResourceToast } from '@/components/ResourceToast';
+
 import { equipBestSetAction } from './actions';
 import { BulkTranscendModal } from './BulkTranscendModal';
 import { EquipmentDetailSheet } from './EquipmentDetailSheet';
@@ -44,6 +46,7 @@ export function InventoryGrid({
   nickname: string;
 }) {
   const router = useRouter();
+  const { showRanking } = useResourceToast();
   const [filter, setFilter] = useState<SlotFilter>(initialSlot);
   const [sortBy, setSortBy] = useState<SortBy>('recent');
   const [openId, setOpenId] = useState<string | null>(null);
@@ -162,7 +165,10 @@ export function InventoryGrid({
             disabled={pending}
             onClick={() =>
               startTransition(async () => {
-                await equipBestSetAction();
+                const r = await equipBestSetAction();
+                if (r.status === 'success' && 'ranksBefore' in r && 'ranksAfter' in r) {
+                  showRanking(r.ranksBefore, r.ranksAfter);
+                }
                 router.refresh();
               })
             }

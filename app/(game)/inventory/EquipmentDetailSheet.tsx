@@ -21,6 +21,8 @@ import {
 } from './actions';
 import { startEnhance } from '@/app/(game)/enhance/actions';
 import { BoastModal } from '@/components/BoastModal';
+import { useResourceToast } from '@/components/ResourceToast';
+import type { MyRanks } from '@/lib/game/leaderboard/queries';
 import { TranscendSprite } from '@/components/TranscendSprite';
 import { RarityFrame, rarityBorderStyle, hasRarityBorder } from '@/components/RarityFrame';
 import { assetUrl } from '@/lib/asset-versions';
@@ -105,12 +107,20 @@ export function EquipmentDetailSheet({
   const canDisenchant = !item.equipped && !item.isLocked && !item.busy;
   const canEnhance = !item.busy && !item.isLocked;
 
-  const run = (fn: () => Promise<{ status: string; message?: string }>, after?: () => void) =>
+  const { showRanking } = useResourceToast();
+  type ActionResult = {
+    status: string;
+    message?: string;
+    ranksBefore?: MyRanks;
+    ranksAfter?: MyRanks;
+  };
+  const run = (fn: () => Promise<ActionResult>, after?: () => void) =>
     startTransition(async () => {
       setError(null);
       const r = await fn();
       if (r.status === 'error') setError(r.message ?? '오류');
       else {
+        if (r.ranksBefore && r.ranksAfter) showRanking(r.ranksBefore, r.ranksAfter);
         after?.();
         router.refresh();
       }

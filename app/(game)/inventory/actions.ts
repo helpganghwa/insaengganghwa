@@ -13,6 +13,18 @@ import { equipItem, unequipItem, toggleEquipmentLock, equipBestSet, EquipError }
 import { performTranscend, TranscendError } from '@/lib/game/transcend';
 import { transcendFodderForStep } from '@/lib/game/balance';
 import { disenchant } from '@/lib/game/supply';
+import { getMyRanks, getMyRanksAfter, type MyRanks } from '@/lib/game/leaderboard/queries';
+
+/** 액션 결과에 ranks before/after를 동봉(랭킹 토스트용). 실패 시 throw → 호출자 catch. */
+async function withRanks<T extends object>(
+  userId: string,
+  fn: () => Promise<T>,
+): Promise<T & { ranksBefore: MyRanks; ranksAfter: MyRanks }> {
+  const ranksBefore = await getMyRanks(userId);
+  const result = await fn();
+  const ranksAfter = await getMyRanksAfter(userId);
+  return { ...result, ranksBefore, ranksAfter };
+}
 
 type ErrorState = { status: 'error'; code: string; message: string };
 
@@ -40,9 +52,12 @@ export async function equipAction(id: string) {
   if (!u) return err('UNAUTHENTICATED');
   if (await rateLimited(u, 'inventory')) return err('RATE_LIMITED');
   try {
-    await equipItem(u, BigInt(id));
+    const r = await withRanks(u, async () => {
+      await equipItem(u, BigInt(id));
+      return { status: 'success' as const };
+    });
     revalidate();
-    return { status: 'success' as const };
+    return r;
   } catch (e) {
     if (e instanceof EquipError) return err(e.code);
     console.error('[equip]', e);
@@ -54,9 +69,12 @@ export async function unequipAction(id: string) {
   const u = await uid();
   if (!u) return err('UNAUTHENTICATED');
   if (await rateLimited(u, 'inventory')) return err('RATE_LIMITED');
-  await unequipItem(u, BigInt(id));
+  const r = await withRanks(u, async () => {
+    await unequipItem(u, BigInt(id));
+    return { status: 'success' as const };
+  });
   revalidate();
-  return { status: 'success' as const };
+  return r;
 }
 
 export async function toggleLockAction(id: string) {
@@ -77,9 +95,12 @@ export async function equipBestSetAction() {
   const u = await uid();
   if (!u) return err('UNAUTHENTICATED');
   if (await rateLimited(u, 'inventory')) return err('RATE_LIMITED');
-  const { slotsUpdated } = await equipBestSet(u);
+  const r = await withRanks(u, async () => {
+    const { slotsUpdated } = await equipBestSet(u);
+    return { status: 'success' as const, slotsUpdated };
+  });
   revalidate();
-  return { status: 'success' as const, slotsUpdated };
+  return r;
 }
 
 /**
@@ -252,6 +273,7 @@ export async function bulkTranscendAction(targetInstanceIds?: string[]) {
   if (!u) return err('UNAUTHENTICATED');
   if (await rateLimited(u, 'inventory')) return err('RATE_LIMITED');
 
+  const ranksBefore = await getMyRanks(u);
   const plan = await planBulkTranscend(u);
   const selected =
     targetInstanceIds && targetInstanceIds.length > 0
@@ -289,6 +311,9 @@ export async function bulkTranscendAction(targetInstanceIds?: string[]) {
     }
   }
 
+  const ranksAfter = await getMyRanksAfter(u);
+  // ranksBefore는 plan 시점에서 별도 fetch — 시뮬레이션 시작 직전이 가장 정확.
+  // 단순화 위해 plan fetch 직전이 아니라 함수 시작 시점 캐시값 사용.
   revalidate();
   return {
     status: 'success' as const,
@@ -298,6 +323,8 @@ export async function bulkTranscendAction(targetInstanceIds?: string[]) {
     skippedLockedTarget: plan.skippedLockedTarget,
     skippedNoUpgrade: plan.skippedNoUpgrade,
     upgraded,
+    ranksBefore,
+    ranksAfter,
   };
 }
 
@@ -307,9 +334,17 @@ export async function transcendAction(id: string) {
   if (!u) return err('UNAUTHENTICATED');
   if (await rateLimited(u, 'inventory')) return err('RATE_LIMITED');
   try {
-    const r = await performTranscend({ userId: u, equipmentInstanceId: BigInt(id) });
+    const r = await withRanks(u, async () => {
+      const inner = await performTranscend({ userId: u, equipmentInstanceId: BigInt(id) });
+      return {
+        status: 'success' as const,
+        fromT: inner.fromT,
+        toT: inner.toT,
+        fodder: inner.fodderConsumed,
+      };
+    });
     revalidate();
-    return { status: 'success' as const, fromT: r.fromT, toT: r.toT, fodder: r.fodderConsumed };
+    return r;
   } catch (e) {
     if (e instanceof TranscendError) return err(e.code);
     console.error('[transcend]', e);

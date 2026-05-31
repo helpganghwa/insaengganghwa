@@ -2,6 +2,7 @@
 
 import { useEffect, useMemo, useState, useTransition } from 'react';
 
+import { useResourceToast } from '@/components/ResourceToast';
 import { transcendStyle } from '@/lib/game/equipment/transcend';
 import { transcendFodderForStep } from '@/lib/game/balance';
 
@@ -112,6 +113,7 @@ export function BulkTranscendModal({
   const [result, setResult] = useState<ExecResult | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [, startTransition] = useTransition();
+  const { showRanking } = useResourceToast();
 
   // 강화 패턴 — 3s 확정 카운트다운.
   const [confirm, setConfirm] = useState(false);
@@ -210,6 +212,9 @@ export function BulkTranscendModal({
         return;
       }
       setResult(r);
+      if ('ranksBefore' in r && 'ranksAfter' in r) {
+        showRanking(r.ranksBefore, r.ranksAfter);
+      }
     });
   }
 
