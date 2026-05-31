@@ -168,7 +168,7 @@ export default async function ProfilePage() {
                     />
                   </div>
                   <div className="min-w-0 flex-1">
-                    <div className="line-clamp-2 text-[11px] leading-tight text-white/85">{it.name}</div>
+                    <div className="line-clamp-2 break-keep text-[11px] leading-tight text-white/85">{it.name}</div>
                     <div className="text-[11px] font-bold tabular-nums text-white">+{it.enhanceLevel}</div>
                   </div>
                 </div>

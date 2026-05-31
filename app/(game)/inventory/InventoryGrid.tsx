@@ -328,7 +328,7 @@ function Tile({ item, isNew, onOpen }: { item: InvItem; isNew: boolean; onOpen: 
         size={64}
         frameless
       />
-      <span className="px-0.5 text-[10px] leading-tight text-zinc-600 dark:text-zinc-400">
+      <span className="break-keep px-0.5 text-[10px] leading-tight text-zinc-600 dark:text-zinc-400">
         {item.name}
       </span>
       <span className="text-xs font-semibold">+{item.enhanceLevel}</span>
