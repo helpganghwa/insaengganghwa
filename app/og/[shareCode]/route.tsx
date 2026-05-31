@@ -318,11 +318,16 @@ export async function GET(_req: Request, { params }: { params: Promise<{ shareCo
   const slotH = Math.round((innerH - slotGap * 2) / 3); // ≈ 167
   const nicknameH = 44;
   const charBoxH = innerH - nicknameH - 12; // 478 — gap 12 빼고
-  // 캐릭터 박스는 좌측 컬럼 전체 폭을 사용(이전 358 → 432). img에 scale 적용 시
-  // 캐릭터가 박스보다 크게 그려져 미리보기 인상(scale 1.8) 재현. transform-origin
-  // center bottom으로 발밑 고정 — 무기/소품이 우측으로 넘쳐도 우측 장비 박스 시작점
-  // (leftW + gap = 456px)을 침범하지 않도록 scale 1.4로 보수적 설정. */
   const charBoxW = leftW;
+  // 캐릭터를 박스보다 크게 그리되 우측 장비 박스 시작점(rootPad+leftW+gap = 504px)
+  // 침범 최소화. Satori는 img transform: scale + translateY가 의도대로 적용 안 되는
+  // 경우가 있어 픽셀 단위 width/height + absolute bottom으로 직접 제어.
+  // enlargedH(720) > charBoxH(478) → sprite contain의 머리 위 빈 영역이 카드 padding
+  // 위쪽으로 자연스럽게 침범(시각적 무해). bottom -48로 발이 카드 outer bottom 근접.
+  const enlargedW = 600;
+  const enlargedH = 720;
+  const charLeftOffset = Math.round((charBoxW - enlargedW) / 2); // -84
+  const charBottomLift = 48;
 
   return new ImageResponse(
     <div
@@ -372,18 +377,16 @@ export async function GET(_req: Request, { params }: { params: Promise<{ shareCo
           {charUri ? (
             <img
               src={charUri}
-              width={charBoxW}
-              height={charBoxH}
+              width={enlargedW}
+              height={enlargedH}
               style={{
                 position: 'absolute',
-                top: 0,
-                left: 0,
-                width: charBoxW,
-                height: charBoxH,
+                bottom: -charBottomLift,
+                left: charLeftOffset,
+                width: enlargedW,
+                height: enlargedH,
                 objectFit: 'contain',
                 objectPosition: 'center bottom',
-                transform: 'scale(1.4) translateY(8%)',
-                transformOrigin: 'center bottom',
               }}
             />
           ) : (
