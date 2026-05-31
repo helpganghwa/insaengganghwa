@@ -18,17 +18,21 @@ export function HomeBannerCarousel({ children }: { children: ReactNode }) {
   const slides = Children.toArray(children).filter(Boolean);
   if (slides.length === 0) return null;
   if (slides.length === 1) return <>{slides[0]}</>;
+  // 외부 wrapper로 폭을 명시 제약(flex 부모 안에서 Swiper가 자식 너비 합으로
+  // 부모를 늘리는 케이스 방지).
   return (
-    <Swiper
-      modules={[Pagination]}
-      pagination={{ clickable: true }}
-      spaceBetween={12}
-      slidesPerView={1}
-      className="home-banner-swiper"
-    >
-      {slides.map((slide, i) => (
-        <SwiperSlide key={i}>{slide}</SwiperSlide>
-      ))}
-    </Swiper>
+    <div className="w-full min-w-0 overflow-hidden">
+      <Swiper
+        modules={[Pagination]}
+        pagination={{ clickable: true }}
+        spaceBetween={12}
+        slidesPerView={1}
+        className="home-banner-swiper"
+      >
+        {slides.map((slide, i) => (
+          <SwiperSlide key={i}>{slide}</SwiperSlide>
+        ))}
+      </Swiper>
+    </div>
   );
 }
