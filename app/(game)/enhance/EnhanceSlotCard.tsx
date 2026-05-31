@@ -16,6 +16,7 @@ import { transcendStyle } from '@/lib/game/equipment/transcend';
 import { useResourceToast } from '@/components/ResourceToast';
 
 import { finalizeEnhance, reduceTimeWithGems, cancelEnhanceAction } from './actions';
+import { useDiamond } from '@/components/DiamondContext';
 import { EnhanceFX, type FxKind } from './EnhanceFX';
 
 /** §10 자랑 자동 트리거 강화 단계(GDD §6 / 사용자 확정 델타). */
@@ -186,6 +187,7 @@ export function EnhanceSlotCard({
 }) {
   const router = useRouter();
   const { showRanking } = useResourceToast();
+  const { optimisticAdjust: adjustDiamond } = useDiamond();
   const [pending, startTransition] = useTransition();
   const [nowMs, setNowMs] = useState(0); // SSR 매칭 위해 0 → mount 후 동기화
   const [confirm, setConfirm] = useState(false);
@@ -389,10 +391,14 @@ export function EnhanceSlotCard({
     }
     setConfirmReduce(false);
     setOptimisticDone(true);
+    // 헤더 다이아 즉시 차감(낙관). 실패 시 롤백.
+    const debit = BigInt(instantCost);
+    adjustDiamond(-debit);
     startTransition(async () => {
       const r = await reduceTimeWithGems(activeJob.jobId, instantCost);
       if (r.status === 'error') {
         setOptimisticDone(false);
+        adjustDiamond(debit); // 롤백
         alert(r.message);
       } else router.refresh();
     });

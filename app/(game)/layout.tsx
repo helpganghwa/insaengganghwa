@@ -13,6 +13,7 @@ import { RouteTransitionOverlay } from '@/components/RouteTransitionOverlay';
 import { KakaoSdkLoader } from '@/components/KakaoSdkLoader';
 import { ResourceToastProvider } from '@/components/ResourceToast';
 import { VersionUpdateToast } from '@/components/VersionUpdateToast';
+import { DiamondProvider } from '@/components/DiamondContext';
 
 /**
  * 인증 필요 라우트 그룹 — WIREFRAMES §0 셸.
@@ -37,22 +38,24 @@ export default async function GameLayout({ children }: { children: React.ReactNo
   const layoutData = loadLayoutData(userId);
 
   return (
-    <div className="mx-auto flex h-dvh w-full max-w-[390px] flex-1 flex-col shadow-sm">
-      <SpritePreloader />
-      <KakaoSdkLoader />
-      <RouteTransitionOverlay />
-      <Suspense fallback={<AppHeaderShell />}>
-        <AppHeader dataPromise={layoutData} />
-      </Suspense>
-      <ResourceToastProvider>
-        <main className="flex min-h-0 flex-1 flex-col overflow-y-auto overscroll-contain">
-          {children}
-        </main>
-      </ResourceToastProvider>
-      <Suspense fallback={<BottomNav />}>
-        <BottomNavAsync dataPromise={layoutData} />
-      </Suspense>
-      <VersionUpdateToast />
-    </div>
+    <DiamondProvider>
+      <div className="mx-auto flex h-dvh w-full max-w-[390px] flex-1 flex-col shadow-sm">
+        <SpritePreloader />
+        <KakaoSdkLoader />
+        <RouteTransitionOverlay />
+        <Suspense fallback={<AppHeaderShell />}>
+          <AppHeader dataPromise={layoutData} />
+        </Suspense>
+        <ResourceToastProvider>
+          <main className="flex min-h-0 flex-1 flex-col overflow-y-auto overscroll-contain">
+            {children}
+          </main>
+        </ResourceToastProvider>
+        <Suspense fallback={<BottomNav />}>
+          <BottomNavAsync dataPromise={layoutData} />
+        </Suspense>
+        <VersionUpdateToast />
+      </div>
+    </DiamondProvider>
   );
 }
