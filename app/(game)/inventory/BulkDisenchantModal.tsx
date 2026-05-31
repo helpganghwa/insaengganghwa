@@ -39,30 +39,23 @@ function clientSimulate(items: InvItem[]): Preview {
   }
   const rows: PreviewRow[] = [];
   for (const [catalogItemId, list] of groups) {
-    list.sort(
-      (a, b) =>
-        b.transcendLevel - a.transcendLevel ||
-        b.enhanceLevel - a.enhanceLevel ||
-        a.id.localeCompare(b.id),
-    );
     // 강화 0 + 초월 0인 신규 장비만 분해 대상(서버 planBulkDisenchant와 동일).
-    const candidates = list
-      .slice(1)
-      .filter(
-        (f) =>
-          !f.isLocked &&
-          !f.equipped &&
-          !f.busy &&
-          f.enhanceLevel === 0 &&
-          f.transcendLevel === 0,
-      );
+    // '가장 강한 1개 보존' 정책 없음 — 모든 적격 인스턴스 분해.
+    const candidates = list.filter(
+      (f) =>
+        !f.isLocked &&
+        !f.equipped &&
+        !f.busy &&
+        f.enhanceLevel === 0 &&
+        f.transcendLevel === 0,
+    );
     if (candidates.length === 0) continue;
-    const first = list[0]!;
+    const rep = candidates[0]!;
     rows.push({
       catalogItemId,
-      code: first.code,
-      name: first.name,
-      slot: first.slot,
+      code: rep.code,
+      name: rep.name,
+      slot: rep.slot,
       toDisenchantIds: candidates.map((c) => c.id),
       count: candidates.length,
       diamondGranted: candidates.length * DIAMOND_PER_DISENCHANT,
@@ -279,7 +272,7 @@ export function BulkDisenchantModal({
                         <div className="min-w-0">
                           <div className="truncate font-semibold">{r.name}</div>
                           <div className="min-h-[0.85rem] text-[10px] text-zinc-400">
-                            {r.count}개 분해 (가장 강한 1개 보존)
+                            {r.count}개 분해
                           </div>
                         </div>
                         <div className="shrink-0 text-right font-mono text-emerald-300">
@@ -292,7 +285,7 @@ export function BulkDisenchantModal({
 
             <div className="mt-2 min-h-[0.85rem] text-[10px] leading-tight text-zinc-500">
               {phase === 'preview' && preview.rows.length > 0
-                ? `강화 1 이상·초월 1 이상·잠금·장착중·강화중 장비는 일괄 분해에서 제외 (개당 💎${DIAMOND_PER_DISENCHANT})`
+                ? '강화 1 이상·초월 1 이상·잠금·장착중·강화중 장비는 일괄 분해에서 제외'
                 : ''}
             </div>
 

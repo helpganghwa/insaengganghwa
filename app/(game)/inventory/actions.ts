@@ -436,17 +436,9 @@ async function planBulkDisenchant(userId: string): Promise<BulkDisenchantPlan> {
 
   const planRows: BulkDisenchantRow[] = [];
   for (const [catalogItemId, list] of groups) {
-    list.sort(
-      (a, b) =>
-        b.transcendLevel - a.transcendLevel ||
-        b.enhanceLevel - a.enhanceLevel ||
-        Number(a.id) - Number(b.id),
-    );
     // 일괄 분해 적격: 강화 0 + 초월 0 + 미장착 + 미잠금 + 강화중·예약 아님(2026-05-31 정책).
-    // 강화/초월 0인 신규 장비만 — 사용자 가공 흔적이 있는 인스턴스는 잠금 없이도 보호.
-    // 가장 강한 1개(list[0]) 보존은 유지(같은 카탈로그 T0+0만 있을 때 사용자가 인스턴스
-    // 0개 되는 것 방지).
-    const candidates = list.slice(1).filter(
+    // 가공 흔적이 있는 인스턴스는 잠금 없이도 자동 보호 — 별도 '가장 강한 1개 보존' 없음.
+    const candidates = list.filter(
       (f) =>
         !f.isLocked &&
         f.equippedSlot == null &&
@@ -455,12 +447,12 @@ async function planBulkDisenchant(userId: string): Promise<BulkDisenchantPlan> {
         f.transcendLevel === 0,
     );
     if (candidates.length === 0) continue;
-    const first = list[0]!;
+    const rep = candidates[0]!;
     planRows.push({
       catalogItemId,
-      code: first.code,
-      name: first.name,
-      slot: first.slot,
+      code: rep.code,
+      name: rep.name,
+      slot: rep.slot,
       toDisenchantIds: candidates.map((c) => BigInt(c.id)),
       count: candidates.length,
       diamondGranted: candidates.length * DIAMOND_PER_DISENCHANT,
