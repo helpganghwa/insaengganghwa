@@ -2,8 +2,6 @@
 
 import { useEffect, useMemo, useState } from 'react';
 
-import { formatCompactKR } from '@/lib/ui/format-number';
-
 // 공유는 **카카오톡 전용** — 사용자 결정. 링크 복사·navigator.share 분기 제거.
 // 카카오 SDK 미로드 시(앱 외부 또는 로딩 실패) 안내 alert.
 
