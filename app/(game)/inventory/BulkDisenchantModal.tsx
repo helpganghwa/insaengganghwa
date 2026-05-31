@@ -45,9 +45,17 @@ function clientSimulate(items: InvItem[]): Preview {
         b.enhanceLevel - a.enhanceLevel ||
         a.id.localeCompare(b.id),
     );
+    // 강화 0 + 초월 0인 신규 장비만 분해 대상(서버 planBulkDisenchant와 동일).
     const candidates = list
       .slice(1)
-      .filter((f) => !f.isLocked && !f.equipped && !f.busy);
+      .filter(
+        (f) =>
+          !f.isLocked &&
+          !f.equipped &&
+          !f.busy &&
+          f.enhanceLevel === 0 &&
+          f.transcendLevel === 0,
+      );
     if (candidates.length === 0) continue;
     const first = list[0]!;
     rows.push({
@@ -282,9 +290,9 @@ export function BulkDisenchantModal({
                   })}
             </ul>
 
-            <div className="mt-2 min-h-[0.85rem] text-[10px] text-zinc-500">
+            <div className="mt-2 min-h-[0.85rem] text-[10px] leading-tight text-zinc-500">
               {phase === 'preview' && preview.rows.length > 0
-                ? `잠금·장착·강화중 개체는 자동 제외 (개당 💎${DIAMOND_PER_DISENCHANT})`
+                ? `강화 1 이상·초월 1 이상·잠금·장착중·강화중 장비는 일괄 분해에서 제외 (개당 💎${DIAMOND_PER_DISENCHANT})`
                 : ''}
             </div>
 

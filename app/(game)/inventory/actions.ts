@@ -442,9 +442,17 @@ async function planBulkDisenchant(userId: string): Promise<BulkDisenchantPlan> {
         b.enhanceLevel - a.enhanceLevel ||
         Number(a.id) - Number(b.id),
     );
-    // 가장 강한 1개(list[0]) 보존, 나머지 중 적격만 분해 대상.
+    // 일괄 분해 적격: 강화 0 + 초월 0 + 미장착 + 미잠금 + 강화중·예약 아님(2026-05-31 정책).
+    // 강화/초월 0인 신규 장비만 — 사용자 가공 흔적이 있는 인스턴스는 잠금 없이도 보호.
+    // 가장 강한 1개(list[0]) 보존은 유지(같은 카탈로그 T0+0만 있을 때 사용자가 인스턴스
+    // 0개 되는 것 방지).
     const candidates = list.slice(1).filter(
-      (f) => !f.isLocked && f.equippedSlot == null && !busySet.has(String(f.id)),
+      (f) =>
+        !f.isLocked &&
+        f.equippedSlot == null &&
+        !busySet.has(String(f.id)) &&
+        f.enhanceLevel === 0 &&
+        f.transcendLevel === 0,
     );
     if (candidates.length === 0) continue;
     const first = list[0]!;
