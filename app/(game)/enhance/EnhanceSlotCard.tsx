@@ -7,10 +7,8 @@ import {
   effectiveOutcomeProbsBp,
   downRateBp,
   diamondToFinishMs,
-  pieceCombatPower,
 } from '@/lib/game/balance';
 import type { Slot } from '@/lib/db/schema/equipment';
-import { BoastModal } from '@/components/BoastModal';
 import { TranscendSprite } from '@/components/TranscendSprite';
 import { RarityFrame, rarityBorderStyle, hasRarityBorder } from '@/components/RarityFrame';
 import { transcendStyle } from '@/lib/game/equipment/transcend';
@@ -186,7 +184,6 @@ export function EnhanceSlotCard({
   const [flash, setFlash] = useState<Outcome | null>(null);
   const [flashFromLevel, setFlashFromLevel] = useState<number | null>(null); // 결과 직전 레벨(보간 시작)
   const [flashToLevel, setFlashToLevel] = useState<number | null>(null); // 결과 후 새 레벨(보간 종료)
-  const [boast, setBoast] = useState(false);
   const [optimisticDone, setOptimisticDone] = useState(false);
   const [confirmCancel, setConfirmCancel] = useState(false);
   const [confirmCancelLeft, setConfirmCancelLeft] = useState(0);
@@ -338,11 +335,7 @@ export function EnhanceSlotCard({
         }
         // hold: 무음
       }
-      // §10 자랑 — +30/+50/+99 강화 성공 시 공유 모달.
-      // flash 끝나고 100ms 후 — flash 3s와 비례 유지.
-      if (oc === 'success' && BOAST_LEVELS.has(activeJob.targetLevel)) {
-        setTimeout(() => setBoast(true), 3100);
-      }
+      // 강화 마일스톤 자동 자랑 제거(사용자 결정) — 자랑은 프로필 페이지 세트 자랑만.
       // 새 잡/소진 반영은 축하 연출(3s) 후 비차단 reconcile —
       // setTimeout 콜백은 transition 밖이라 pending을 잡지 않음(결과가 빨리 보임).
       setTimeout(() => {
@@ -574,24 +567,6 @@ export function EnhanceSlotCard({
         ) : null}
       </div>
 
-      <BoastModal
-        open={boast}
-        onClose={() => setBoast(false)}
-        nickname={nickname}
-        kind="piece"
-        headline={`✨ +${activeJob.targetLevel} 강화 달성`}
-        piece={{
-          p: {
-            slot: activeJob.slot,
-            code: activeJob.code,
-            name: activeJob.name,
-            enhanceLevel: activeJob.targetLevel,
-            transcendLevel: activeJob.transcendLevel,
-            isChampion: activeJob.isChampion,
-          },
-          cp: pieceCombatPower(activeJob.targetLevel, activeJob.transcendLevel),
-        }}
-      />
     </div>
   );
 }

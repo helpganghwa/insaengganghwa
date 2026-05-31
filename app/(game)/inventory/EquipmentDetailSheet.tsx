@@ -7,7 +7,6 @@ import type { Slot } from '@/lib/db/schema/equipment';
 import {
   pieceCombatPower,
   transcendFodderForStep,
-  MAX_TRANSCEND,
   DIAMOND_PER_DISENCHANT,
 } from '@/lib/game/balance';
 
@@ -20,7 +19,6 @@ import {
   disenchantAction,
 } from './actions';
 import { startEnhance } from '@/app/(game)/enhance/actions';
-import { BoastModal } from '@/components/BoastModal';
 import { useResourceToast } from '@/components/ResourceToast';
 import type { MyRanks } from '@/lib/game/leaderboard/queries';
 import { TranscendSprite } from '@/components/TranscendSprite';
@@ -82,7 +80,6 @@ export function EquipmentDetailSheet({
   const [error, setError] = useState<string | null>(null);
   const [confirmT, setConfirmT] = useState(false);
   const [confirmD, setConfirmD] = useState(false);
-  const [boast, setBoast] = useState(false);
 
   const cp = pieceCombatPower(item.enhanceLevel, item.transcendLevel);
   const equippedInSlot = !item.equipped
@@ -228,14 +225,7 @@ export function EquipmentDetailSheet({
                 return;
               }
               setConfirmT(false);
-              run(
-                () => transcendAction(item.id),
-                () => {
-                  // 첫 초월(T1) / T10 첫 도달 → 자랑 트리거.
-                  if (nextT === 1 || nextT === MAX_TRANSCEND) setBoast(true);
-                  else onClose();
-                },
-              );
+              run(() => transcendAction(item.id), () => onClose());
             }}
             className={confirmT ? BTN_CONFIRM : BTN}
           >
@@ -286,10 +276,6 @@ export function EquipmentDetailSheet({
               sub={canDisenchant ? `💎${DIAMOND_PER_DISENCHANT}` : undefined}
             />
           </button>
-          {/* 자랑 */}
-          <button type="button" onClick={() => setBoast(true)} className={BTN}>
-            <BtnBg src={assetUrl("/sprites/ui/btn-boast.png")} label="자랑" />
-          </button>
         </div>
 
         {/* ── 로어(스토리) — 전체 노출. 시트는 max-h-[92dvh] overflow-y-auto로 스크롤 ── */}
@@ -308,30 +294,6 @@ export function EquipmentDetailSheet({
         </button>
       </div>
 
-      <BoastModal
-        open={boast}
-        onClose={() => setBoast(false)}
-        nickname={nickname}
-        kind="piece"
-        headline={
-          item.transcendLevel >= MAX_TRANSCEND
-            ? '✦ 초월 MAX 달성!'
-            : item.transcendLevel > 0
-              ? `✦ 초월 T${item.transcendLevel}`
-              : `✨ +${item.enhanceLevel} 장비`
-        }
-        piece={{
-          p: {
-            slot: item.slot,
-            code: item.code,
-            name: item.name,
-            enhanceLevel: item.enhanceLevel,
-            transcendLevel: item.transcendLevel,
-            isChampion: item.isChampion,
-          },
-          cp,
-        }}
-      />
     </div>
   );
 }
