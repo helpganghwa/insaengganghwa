@@ -154,15 +154,15 @@ export default async function PublicProfilePage({
               <div
                 key={s}
                 style={rarityBorderStyle(it.transcendLevel)}
-                className={`relative flex aspect-square flex-col items-stretch overflow-hidden rounded-xl border-2 bg-white px-1 py-1 text-center dark:bg-zinc-950 ${
+                className={`relative grid aspect-square grid-rows-[1.75rem_minmax(0,1fr)_1.75rem] overflow-hidden rounded-xl border-2 bg-white px-1 py-1 text-center dark:bg-zinc-950 ${
                   hasRarityBorder(it.transcendLevel) ? '' : 'border-zinc-200 dark:border-zinc-800'
                 }`}
               >
                 <RarityFrame level={it.transcendLevel} />
-                <div className="flex h-7 items-center justify-center">
+                <div className="flex items-center justify-center overflow-hidden">
                   <span className="text-xs font-semibold">+{it.enhanceLevel}</span>
                 </div>
-                <div className="flex flex-1 items-center justify-center">
+                <div className="flex items-center justify-center overflow-hidden">
                   <TranscendSprite
                     code={it.code}
                     slot={s}
@@ -172,7 +172,7 @@ export default async function PublicProfilePage({
                     frameless
                   />
                 </div>
-                <div className="flex h-7 items-center justify-center px-0.5">
+                <div className="flex items-center justify-center overflow-hidden px-0.5">
                   <span className="line-clamp-2 break-keep text-[10px] leading-tight text-zinc-600 dark:text-zinc-400">
                     {it.name}
                   </span>

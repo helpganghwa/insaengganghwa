@@ -125,15 +125,15 @@ function EnhanceSlotPicker({
                 disabled={pending}
                 onClick={() => pick(c.id)}
                 style={rarityBorderStyle(c.transcendLevel)}
-                className={`relative flex aspect-square flex-col items-stretch overflow-hidden rounded-xl border-2 bg-white px-1 py-1 text-center disabled:opacity-40 dark:bg-zinc-950 ${
+                className={`relative grid aspect-square grid-rows-[1.75rem_minmax(0,1fr)_1.75rem] overflow-hidden rounded-xl border-2 bg-white px-1 py-1 text-center disabled:opacity-40 dark:bg-zinc-950 ${
                   hasRarityBorder(c.transcendLevel) ? '' : 'border-zinc-200 dark:border-zinc-800'
                 }`}
               >
                 <RarityFrame level={c.transcendLevel} />
-                <div className="flex h-7 items-center justify-center">
+                <div className="flex items-center justify-center overflow-hidden">
                   <span className="text-xs font-semibold">+{c.enhanceLevel}</span>
                 </div>
-                <div className="flex flex-1 items-center justify-center">
+                <div className="flex items-center justify-center overflow-hidden">
                   <TranscendSprite
                     code={c.code}
                     slot={c.slot}
@@ -143,7 +143,7 @@ function EnhanceSlotPicker({
                     frameless
                   />
                 </div>
-                <div className="flex h-7 items-center justify-center px-0.5">
+                <div className="flex items-center justify-center overflow-hidden px-0.5">
                   <span className="line-clamp-2 break-keep text-[10px] leading-tight text-zinc-600 dark:text-zinc-400">
                     {c.name}
                   </span>

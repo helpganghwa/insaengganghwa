@@ -98,7 +98,7 @@ export function GachaResultModal({
               {results.map((r, i) => (
                 <div
                   key={i}
-                  className="relative flex aspect-square flex-col items-stretch rounded-lg border-2 border-zinc-200 p-1 text-center dark:border-zinc-800"
+                  className="relative grid aspect-square grid-rows-[minmax(0,1fr)_1.5rem] rounded-lg border-2 border-zinc-200 p-1 text-center dark:border-zinc-800"
                   title={r.name}
                 >
                   {r.isNew ? (
@@ -106,9 +106,7 @@ export function GachaResultModal({
                       N
                     </span>
                   ) : null}
-                  {/* 강화수치 없음 — 상단 영역은 시각 균형용 빈 자리 */}
-                  <div className="h-6" aria-hidden />
-                  <div className="flex flex-1 items-center justify-center">
+                  <div className="flex items-center justify-center overflow-hidden">
                     <TranscendSprite
                       code={r.code}
                       slot={slot}
@@ -118,7 +116,7 @@ export function GachaResultModal({
                       frameless
                     />
                   </div>
-                  <div className="flex h-6 items-center justify-center px-0.5">
+                  <div className="flex items-center justify-center overflow-hidden px-0.5">
                     <span className="line-clamp-2 break-keep text-[9px] leading-tight text-zinc-600 dark:text-zinc-400">
                       {r.name}
                     </span>
