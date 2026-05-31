@@ -44,6 +44,7 @@ const LORE_SETS: ReadonlyArray<
   {
     attempting: '운명의 망치가 떨어진다',
     success: '망치가 노래를 부른다… 한 단계 올랐어',
+    mega: '망치가 두 번 울렸다! 보너스로 한 단계 더 — 메가 진화!',
     hold: '망치가 비켜갔지만, 자네 장비 의리가 있어',
     down: '망치가 너무 깊이 들어갔어… 미안하네, 한 단계 하락',
   },
@@ -51,6 +52,7 @@ const LORE_SETS: ReadonlyArray<
   {
     attempting: '용광로가 으르렁댄다…',
     success: '불꽃이 한 호흡 멈췄다. 그게 바로 성공의 신호야',
+    mega: '용광로가 한 번 더 폭발했다! 메가 — 한 단계 추가!',
     hold: '쇠가 굳었어. 다행이지, 단계만 안 떨어졌으면',
     down: '쇠가 토라졌어. 한 단계 떨어졌네',
   },
@@ -58,6 +60,7 @@ const LORE_SETS: ReadonlyArray<
   {
     attempting: '별이 모루 위에 내려앉는다',
     success: '쿵! 망치가 제대로 먹혔다… 별이 깃들었구먼',
+    mega: '별 두 개가 동시에 깃들었다! 메가 — 한 단계 더!',
     hold: '아슬아슬했어… 한 호흡 더 잡아야겠어',
     down: '균열이 한 줄. 단계가 한 줄. 운명일세',
   },
@@ -65,6 +68,7 @@ const LORE_SETS: ReadonlyArray<
   {
     attempting: '한 박자, 한 호흡, 한 망치',
     success: '운명이 모루 위에 떨어졌다. 자네 편이었어',
+    mega: '운명이 두 번 자네 편이었네 — 메가 진화!',
     hold: '운은 변덕이지. 장비가 멀쩡한 게 어디인가',
     down: '운명이 비웃네. 강철이 한 칸 깎였다',
   },
@@ -72,6 +76,7 @@ const LORE_SETS: ReadonlyArray<
   {
     attempting: '쇠가 빨갛게 운다…',
     success: '바로 이 맛이지. 강철이 비명을 멈추고 노래한다',
+    mega: '강철이 두 번 노래했다! 메가 — 한 단계 보너스!',
     hold: '쇠가 버텨줬다. 다음을 노리세',
     down: '쇠가 비명을 질렀다. 단계가 한 줄 깎였구먼',
   },
@@ -79,6 +84,7 @@ const LORE_SETS: ReadonlyArray<
   {
     attempting: '대장간이 숨을 죽인다…',
     success: '50년 망치질에 처음 보는 결이군. 진화 성공!',
+    mega: '60년 망치질에 이런 결은 처음이야 — 메가, 보너스 한 단계!',
     hold: '망치 끝이 미세하게 어긋났구먼. 다음은 잡힐 거야',
     down: '내 평생 망치질이 이렇게 무거운 적은 없었네… 하락일세',
   },
@@ -86,6 +92,7 @@ const LORE_SETS: ReadonlyArray<
   {
     attempting: '심호흡 한 번… 두드린다',
     success: '내 손이 떨릴 정도구나… 완벽한 한 방이었네',
+    mega: '심호흡 한 번, 망치 두 번 — 메가! 한 단계 더!',
     hold: '내 잘못이야, 자네 잘못이 아니야. 다시 해보자',
     down: '잠깐 한눈팔았더니… 단계가 무너졌어',
   },
@@ -93,6 +100,7 @@ const LORE_SETS: ReadonlyArray<
   {
     attempting: '망치가 불을 부른다…',
     success: '강철 깊은 곳에서 무언가가 깨어났어',
+    mega: '깊은 곳에서 두 번째 울림이 왔다! 메가 — 한 단계 추가!',
     hold: '오, 거의 다 됐었는데. 다음 망치질에 맡기지',
     down: '쩌적— 이 소리는 못 들은 척하고 싶군',
   },
@@ -315,38 +323,59 @@ export function EnhanceSlotCard({
       // 강화 결과 토스트 — last-wins 3s 디바운스 후 한 번 노출.
       showRanking(r.ranksBefore, r.ranksAfter);
       const oc = r.result.outcome as Outcome;
+      const fromLv = Number(r.result.fromLevel);
+      const toLv = Number(r.result.toLevel);
       setAttempting(false);
-      setFlash(oc); // 결과 즉시 표시
-      // revalidatePath로 activeJob이 즉시 갱신되므로 result 자체의 from/to 보존(보간용).
-      setFlashFromLevel(Number(r.result.fromLevel));
-      setFlashToLevel(Number(r.result.toLevel));
-      // 같은 세트의 outcome — 맥락 유지. mega는 lore 미정의면 success 재사용.
-      setFlashMsg(lore[oc] ?? lore.success);
-      // 햅틱(모바일) — prefers-reduced-motion 사용자는 햅틱도 약화/생략.
-      // Vibration API 없는 브라우저는 navigator.vibrate undefined → 자동 no-op.
+
       const reduceMotion =
         typeof window !== 'undefined' &&
         window.matchMedia?.('(prefers-reduced-motion: reduce)').matches;
-      if (!reduceMotion && typeof navigator !== 'undefined' && 'vibrate' in navigator) {
-        if (oc === 'mega') {
-          navigator.vibrate([0, 50, 80, 50, 80, 100]); // mega — 2단계 상승
-        } else if (oc === 'success') {
-          navigator.vibrate(30);
-        } else if (oc === 'down') {
-          navigator.vibrate([0, 30, 50, 30]);
+
+      if (oc === 'mega') {
+        // 메가(+2) — 2단계 연출. Phase 1: 일반 성공 +1, Phase 2: 보너스 +1.
+        setFlash('success');
+        setFlashFromLevel(fromLv);
+        setFlashToLevel(fromLv + 1);
+        setFlashMsg(lore.success);
+        if (!reduceMotion && typeof navigator !== 'undefined' && 'vibrate' in navigator) {
+          navigator.vibrate(30); // Phase 1 — success 햅틱
         }
-        // hold: 무음
+        // Phase 2 — 1.4s 후 메가 추가.
+        setTimeout(() => {
+          setFlash('mega');
+          setFlashFromLevel(fromLv + 1);
+          setFlashToLevel(toLv);
+          setFlashMsg(lore.mega ?? lore.success);
+          if (!reduceMotion && typeof navigator !== 'undefined' && 'vibrate' in navigator) {
+            navigator.vibrate([0, 50, 80, 50, 80, 100]); // mega 햅틱
+          }
+        }, 1400);
+        // 종료 — Phase 2 표시 후 충분히 보이도록 총 4.4s.
+        setTimeout(() => {
+          setFlash(null);
+          setFlashMsg(null);
+          setFlashFromLevel(null);
+          setFlashToLevel(null);
+          router.refresh();
+        }, 4400);
+      } else {
+        setFlash(oc);
+        setFlashFromLevel(fromLv);
+        setFlashToLevel(toLv);
+        setFlashMsg(lore[oc] ?? lore.success);
+        if (!reduceMotion && typeof navigator !== 'undefined' && 'vibrate' in navigator) {
+          if (oc === 'success') navigator.vibrate(30);
+          else if (oc === 'down') navigator.vibrate([0, 30, 50, 30]);
+          // hold: 무음
+        }
+        setTimeout(() => {
+          setFlash(null);
+          setFlashMsg(null);
+          setFlashFromLevel(null);
+          setFlashToLevel(null);
+          router.refresh();
+        }, 3000);
       }
-      // 강화 마일스톤 자동 자랑 제거(사용자 결정) — 자랑은 프로필 페이지 세트 자랑만.
-      // 새 잡/소진 반영은 축하 연출(3s) 후 비차단 reconcile —
-      // setTimeout 콜백은 transition 밖이라 pending을 잡지 않음(결과가 빨리 보임).
-      setTimeout(() => {
-        setFlash(null);
-        setFlashMsg(null);
-        setFlashFromLevel(null);
-        setFlashToLevel(null);
-        router.refresh();
-      }, 3000);
     });
   };
 
