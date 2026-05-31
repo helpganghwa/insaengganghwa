@@ -1,11 +1,13 @@
 'use server';
 
 import { revalidatePath } from 'next/cache';
-import { sql } from 'drizzle-orm';
+import { and, eq, sql } from 'drizzle-orm';
 
 import { getSessionUserId } from '@/lib/auth/session';
 import { rateLimited } from '@/lib/ratelimit';
 import { db } from '@/lib/db/client';
+import { enhancementJobs } from '@/lib/db/schema/enhance';
+import { catalogItems, equipmentInstances, type Slot } from '@/lib/db/schema/equipment';
 import {
   queueEnhance,
   resolveEnhance,
@@ -184,6 +186,52 @@ export async function cancelEnhanceAction(jobId: string) {
     console.error('[enhance.cancel]', e);
     return err('UNKNOWN');
   }
+}
+
+/**
+ * 같은 슬롯의 강화중 jobs 조회 — 인벤토리 강화 시작 시 SLOT_BUSY면 이걸로
+ * 교체 후보 목록을 보여줌(SwapPickerModal). slot은 catalog.slot 기준.
+ */
+export async function getActiveJobsForSlot(slot: Slot) {
+  const userId = await uid();
+  if (!userId) return err('UNAUTHENTICATED');
+  const rows = await db
+    .select({
+      jobId: enhancementJobs.id,
+      equipmentInstanceId: enhancementJobs.equipmentInstanceId,
+      completeAt: enhancementJobs.completeAt,
+      enhanceLevel: equipmentInstances.enhanceLevel,
+      transcendLevel: equipmentInstances.transcendLevel,
+      code: catalogItems.code,
+      name: catalogItems.name,
+      slot: catalogItems.slot,
+    })
+    .from(enhancementJobs)
+    .innerJoin(
+      equipmentInstances,
+      eq(equipmentInstances.id, enhancementJobs.equipmentInstanceId),
+    )
+    .innerJoin(catalogItems, eq(catalogItems.id, equipmentInstances.catalogItemId))
+    .where(
+      and(
+        eq(enhancementJobs.userId, userId),
+        eq(enhancementJobs.status, 'running'),
+        eq(catalogItems.slot, slot),
+      ),
+    );
+  return {
+    status: 'success' as const,
+    jobs: rows.map((r) => ({
+      jobId: r.jobId.toString(),
+      equipmentInstanceId: r.equipmentInstanceId.toString(),
+      completeAtIso: r.completeAt.toISOString(),
+      enhanceLevel: r.enhanceLevel,
+      transcendLevel: r.transcendLevel,
+      code: r.code,
+      name: r.name,
+      slot: r.slot,
+    })),
+  };
 }
 
 /** (D+A) 슬롯 교체 — 취소 + 등록 단일 트랜잭션 */

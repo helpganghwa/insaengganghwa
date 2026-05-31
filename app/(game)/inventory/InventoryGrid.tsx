@@ -7,9 +7,10 @@ import type { Slot } from '@/lib/db/schema/equipment';
 
 import { TranscendSprite } from '@/components/TranscendSprite';
 import { RarityFrame, rarityBorderStyle, hasRarityBorder } from '@/components/RarityFrame';
-import { pieceCombatPower } from '@/lib/game/balance';
+import { DIAMOND_PER_DISENCHANT, pieceCombatPower } from '@/lib/game/balance';
 
 import { useResourceToast } from '@/components/ResourceToast';
+import { useDiamond } from '@/components/DiamondContext';
 
 import { equipBestSetAction } from './actions';
 import { BulkTranscendModal, type BulkTranscendOptimistic } from './BulkTranscendModal';
@@ -49,6 +50,7 @@ export function InventoryGrid({
 }) {
   const router = useRouter();
   const { showRanking } = useResourceToast();
+  const { optimisticAdjust: adjustDiamond } = useDiamond();
   const [filter, setFilter] = useState<SlotFilter>(initialSlot);
   const [sortBy, setSortBy] = useState<SortBy>('enhance');
   const [openId, setOpenId] = useState<string | null>(null);
@@ -210,6 +212,40 @@ export function InventoryGrid({
           all={displayItems}
           nickname={nickname}
           onClose={() => setOpenId(null)}
+          onOptimisticDisenchant={(id) => {
+            startTransition(() => {
+              setOptimisticItems(displayItems.filter((it) => it.id !== id));
+            });
+            adjustDiamond(BigInt(DIAMOND_PER_DISENCHANT));
+          }}
+          onOptimisticToggleLock={(id) => {
+            startTransition(() => {
+              setOptimisticItems(
+                displayItems.map((it) =>
+                  it.id === id ? { ...it, isLocked: !it.isLocked } : it,
+                ),
+              );
+            });
+          }}
+          onOptimisticStartEnhance={(id) => {
+            startTransition(() => {
+              setOptimisticItems(
+                displayItems.map((it) => (it.id === id ? { ...it, busy: true } : it)),
+              );
+            });
+          }}
+          onOptimisticTranscend={(targetId, toT, consumedFodderIds) => {
+            startTransition(() => {
+              const consumedSet = new Set<string>(consumedFodderIds);
+              setOptimisticItems(
+                displayItems
+                  .filter((it) => !consumedSet.has(it.id))
+                  .map((it): InvItem =>
+                    it.id === targetId ? { ...it, transcendLevel: toT } : it,
+                  ),
+              );
+            });
+          }}
         />
       ) : null}
 

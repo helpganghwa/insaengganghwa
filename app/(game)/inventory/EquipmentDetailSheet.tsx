@@ -19,6 +19,7 @@ import {
   disenchantAction,
 } from './actions';
 import { startEnhance } from '@/app/(game)/enhance/actions';
+import { SwapPickerModal } from './SwapPickerModal';
 import { useResourceToast } from '@/components/ResourceToast';
 import type { MyRanks } from '@/lib/game/leaderboard/queries';
 import { TranscendSprite } from '@/components/TranscendSprite';
@@ -69,17 +70,34 @@ export function EquipmentDetailSheet({
   all,
   nickname,
   onClose,
+  onOptimisticDisenchant,
+  onOptimisticToggleLock,
+  onOptimisticStartEnhance,
+  onOptimisticTranscend,
 }: {
   item: InvItem;
   all: InvItem[];
   nickname: string;
   onClose: () => void;
+  /** 단일 분해 직후 InventoryGrid에 즉시 반영용(인스턴스 제거 + 다이아 +10). */
+  onOptimisticDisenchant?: (id: string) => void;
+  /** 잠금 토글 직후 InventoryGrid에 즉시 반영용. */
+  onOptimisticToggleLock?: (id: string) => void;
+  /** 강화 시작 직후 인스턴스 busy=true 낙관 반영(페이지 이동 직전). */
+  onOptimisticStartEnhance?: (id: string) => void;
+  /** 단일 초월 직후 target 갱신 + fodder 제거 낙관 반영. */
+  onOptimisticTranscend?: (
+    targetId: string,
+    toT: number,
+    consumedFodderIds: string[],
+  ) => void;
 }) {
   const router = useRouter();
   const [pending, startTransition] = useTransition();
   const [error, setError] = useState<string | null>(null);
   const [confirmT, setConfirmT] = useState(false);
   const [confirmD, setConfirmD] = useState(false);
+  const [swapPicker, setSwapPicker] = useState(false);
 
   const cp = pieceCombatPower(item.enhanceLevel, item.transcendLevel);
   const equippedInSlot = !item.equipped
@@ -206,19 +224,29 @@ export function EquipmentDetailSheet({
 
         {/* ── 3×2 액션 버튼 (Pixellab 배경 + 간략 라벨) ── */}
         <div className="mt-2.5 grid grid-cols-3 gap-1.5">
-          {/* 강화 */}
+          {/* 강화 — SLOT_BUSY 시 SwapPickerModal 열어 교체. */}
           <button
             type="button"
             disabled={pending || !canEnhance}
-            onClick={() =>
-              run(
-                () => startEnhance(item.id),
-                () => {
-                  onClose();
-                  router.push('/enhance');
-                },
-              )
-            }
+            onClick={() => {
+              if (pending || !canEnhance) return;
+              setError(null);
+              startTransition(async () => {
+                const r = await startEnhance(item.id);
+                if (r.status === 'error') {
+                  if (r.code === 'SLOT_BUSY') {
+                    setSwapPicker(true);
+                    return;
+                  }
+                  setError(r.message);
+                  return;
+                }
+                // 성공 — 낙관 busy 반영 후 강화 페이지로 이동.
+                onOptimisticStartEnhance?.(item.id);
+                onClose();
+                router.push('/enhance');
+              });
+            }}
             className={BTN}
           >
             <BtnBg src={assetUrl('/sprites/ui/btn-enhance.png')} label="강화" />
@@ -240,7 +268,32 @@ export function EquipmentDetailSheet({
                 return;
               }
               setConfirmT(false);
-              run(() => transcendAction(item.id), () => onClose());
+              // performTranscend가 약한 순으로 fodder를 잡으므로 클라도 동일 정렬로
+              // 시뮬레이션 → 어떤 인스턴스가 사라질지 알아내 낙관 갱신.
+              const consumedFodder = [...all]
+                .filter(
+                  (i) =>
+                    i.catalogItemId === item.catalogItemId &&
+                    i.id !== item.id &&
+                    !i.isLocked &&
+                    !i.equipped &&
+                    !i.busy,
+                )
+                .sort(
+                  (a, b) =>
+                    a.transcendLevel - b.transcendLevel ||
+                    a.enhanceLevel - b.enhanceLevel ||
+                    a.id.localeCompare(b.id),
+                )
+                .slice(0, fodderNeed)
+                .map((i) => i.id);
+              run(
+                () => transcendAction(item.id),
+                () => {
+                  onOptimisticTranscend?.(item.id, nextT, consumedFodder);
+                  onClose();
+                },
+              );
             }}
             className={confirmT ? BTN_CONFIRM : BTN}
           >
@@ -261,16 +314,21 @@ export function EquipmentDetailSheet({
           >
             <BtnBg src={assetUrl("/sprites/ui/btn-equip.png")} label={item.equipped ? '해제' : '장착'} />
           </button>
-          {/* 잠금 토글 */}
+          {/* 잠금 토글 — 낙관 즉시 반영. */}
           <button
             type="button"
             disabled={pending}
-            onClick={() => run(() => toggleLockAction(item.id))}
+            onClick={() =>
+              run(
+                () => toggleLockAction(item.id),
+                () => onOptimisticToggleLock?.(item.id),
+              )
+            }
             className={BTN}
           >
             <BtnBg src={assetUrl("/sprites/ui/btn-lock.png")} label={item.isLocked ? '해제' : '잠금'} />
           </button>
-          {/* 분해 */}
+          {/* 분해 — 낙관: 인스턴스 즉시 제거 + 다이아 +10. */}
           <button
             type="button"
             disabled={pending || !canDisenchant}
@@ -281,7 +339,13 @@ export function EquipmentDetailSheet({
                 return;
               }
               setConfirmD(false);
-              run(() => disenchantAction(item.id), onClose);
+              run(
+                () => disenchantAction(item.id),
+                () => {
+                  onOptimisticDisenchant?.(item.id);
+                  onClose();
+                },
+              );
             }}
             className={confirmD ? BTN_CONFIRM : BTN}
           >
@@ -309,6 +373,13 @@ export function EquipmentDetailSheet({
         </button>
       </div>
 
+      {swapPicker ? (
+        <SwapPickerModal
+          newEquipmentInstanceId={item.id}
+          slot={item.slot}
+          onClose={() => setSwapPicker(false)}
+        />
+      ) : null}
     </div>
   );
 }
