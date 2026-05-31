@@ -160,7 +160,7 @@ export function InventoryGrid({
             onClick={() => setBulkOpen(true)}
             className="pointer-events-auto rounded-full bg-amber-500 px-4 py-2 text-xs font-semibold text-zinc-950 shadow-lg disabled:opacity-50"
           >
-            ✦ 일괄 초월
+            일괄 초월
           </button>
           <button
             type="button"
@@ -168,7 +168,7 @@ export function InventoryGrid({
             onClick={() => setBulkDisenchantOpen(true)}
             className="pointer-events-auto rounded-full bg-emerald-500 px-4 py-2 text-xs font-semibold text-zinc-950 shadow-lg disabled:opacity-50"
           >
-            ♻️ 일괄 분해
+            일괄 분해
           </button>
           <button
             type="button"
@@ -184,7 +184,7 @@ export function InventoryGrid({
             }
             className="pointer-events-auto rounded-full bg-zinc-900 px-4 py-2 text-xs font-semibold text-white shadow-lg disabled:opacity-50 dark:bg-zinc-50 dark:text-zinc-950"
           >
-            ⚙️ 최적조합
+            최적조합
           </button>
         </div>
       </div>

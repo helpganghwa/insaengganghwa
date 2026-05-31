@@ -101,8 +101,7 @@ export function EquipmentDetailSheet({
       !i.busy,
   ).length;
   // 같은 카탈로그에 더 강한 인스턴스가 있으면 약한 쪽 초월을 차단(2026-05-31 결정).
-  // 약한 인스턴스를 굳이 초월해 T1 인스턴스가 중복 생성되는 비효율 방지 — 사용자가
-  // 가장 강한 인스턴스를 target으로 자연스럽게 선택하도록 유도.
+  // 안내는 상시 노출이 아닌 사용자가 초월 시도 시점에만 표시(2026-05-31 변경).
   const strongerInstance = all.find(
     (i) =>
       i.catalogItemId === item.catalogItemId &&
@@ -110,10 +109,7 @@ export function EquipmentDetailSheet({
       (i.transcendLevel > item.transcendLevel ||
         (i.transcendLevel === item.transcendLevel && i.enhanceLevel > item.enhanceLevel)),
   );
-  const canTranscend = fodderOwned >= fodderNeed && !strongerInstance;
-  const transcendBlockedHint = strongerInstance
-    ? `더 강한 같은 아이템(T${strongerInstance.transcendLevel} · +${strongerInstance.enhanceLevel})이 있어 이 인스턴스는 초월할 수 없어요.`
-    : null;
+  const canTranscend = fodderOwned >= fodderNeed;
   const canDisenchant = !item.equipped && !item.isLocked && !item.busy;
   const canEnhance = !item.busy && !item.isLocked;
 
@@ -203,12 +199,8 @@ export function EquipmentDetailSheet({
         </section>
 
         {error ? (
-          <p className="mt-2 rounded bg-red-50 px-2 py-1 text-[10px] text-red-700 dark:bg-red-950/60 dark:text-red-300">
+          <p className="mt-2 rounded bg-red-50 px-2 py-1 text-[10px] leading-snug text-red-700 dark:bg-red-950/60 dark:text-red-300">
             {error}
-          </p>
-        ) : transcendBlockedHint ? (
-          <p className="mt-2 rounded bg-amber-50 px-2 py-1 text-[10px] leading-snug text-amber-800 dark:bg-amber-950/60 dark:text-amber-300">
-            ⚠ {transcendBlockedHint}
           </p>
         ) : null}
 
@@ -231,11 +223,17 @@ export function EquipmentDetailSheet({
           >
             <BtnBg src={assetUrl('/sprites/ui/btn-enhance.png')} label="강화" />
           </button>
-          {/* 초월 */}
+          {/* 초월 — 시도 시점에 strongerInstance 검사하여 안내(상시 노출 X). */}
           <button
             type="button"
             disabled={pending || !canTranscend}
             onClick={() => {
+              if (strongerInstance) {
+                setError(
+                  `더 강한 같은 아이템(T${strongerInstance.transcendLevel} · +${strongerInstance.enhanceLevel})이 있어 이 인스턴스는 초월할 수 없어요.`,
+                );
+                return;
+              }
               if (!confirmT) {
                 setConfirmT(true);
                 setTimeout(() => setConfirmT(false), 3000);

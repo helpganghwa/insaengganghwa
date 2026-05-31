@@ -3,7 +3,9 @@
 import { useEffect, useMemo, useState, useTransition } from 'react';
 
 import { useResourceToast } from '@/components/ResourceToast';
+import { TranscendSprite } from '@/components/TranscendSprite';
 import { DIAMOND_PER_DISENCHANT } from '@/lib/game/balance';
+import type { Slot } from '@/lib/db/schema/equipment';
 
 import { bulkDisenchantAction, previewBulkDisenchantAction } from './actions';
 import type { InvItem } from './InventoryGrid';
@@ -12,7 +14,7 @@ type PreviewRow = {
   catalogItemId: number;
   code: string;
   name: string;
-  slot: string;
+  slot: Slot;
   toDisenchantIds: string[];
   count: number;
   diamondGranted: number;
@@ -198,7 +200,7 @@ export function BulkDisenchantModal({
         onClick={(e) => e.stopPropagation()}
       >
         <div className="mb-3 flex items-baseline justify-between">
-          <h2 className="text-base font-bold">♻️ 일괄 분해</h2>
+          <h2 className="text-base font-bold">일괄 분해</h2>
           <button
             type="button"
             onClick={onClose}
@@ -237,25 +239,40 @@ export function BulkDisenchantModal({
 
             <ul className="min-h-[80px] max-h-[40vh] space-y-1.5 overflow-y-auto">
               {phase === 'result' && result
-                ? result.groups.map((g, i) => (
-                    <li
-                      key={`r-${i}`}
-                      className="grid grid-cols-[1fr_auto] items-center gap-2 rounded-lg bg-white/5 px-3 py-2 text-[11px]"
-                    >
-                      <div className="truncate font-semibold">
-                        {g.name} <span className="text-zinc-400">× {g.count}</span>
-                      </div>
-                      <div className="shrink-0 text-right font-mono text-emerald-300">
-                        💎 {g.diamondGranted.toLocaleString('ko-KR')}
-                      </div>
-                    </li>
-                  ))
+                ? result.groups.map((g, i) => {
+                    const matchRow = preview.rows.find((r) => r.name === g.name);
+                    return (
+                      <li
+                        key={`r-${i}`}
+                        className="grid grid-cols-[auto_1fr_auto] items-center gap-2 rounded-lg bg-white/5 px-3 py-2 text-[11px]"
+                      >
+                        {matchRow ? (
+                          <TranscendSprite
+                            code={matchRow.code}
+                            slot={matchRow.slot}
+                            level={0}
+                            isChampion={false}
+                            size={28}
+                            frameless
+                          />
+                        ) : (
+                          <span className="block h-7 w-7" aria-hidden />
+                        )}
+                        <div className="truncate font-semibold">
+                          {g.name} <span className="text-zinc-400">× {g.count}</span>
+                        </div>
+                        <div className="shrink-0 text-right font-mono text-emerald-300">
+                          💎 {g.diamondGranted.toLocaleString('ko-KR')}
+                        </div>
+                      </li>
+                    );
+                  })
                 : preview.rows.map((r) => {
                     const checked = selected.has(r.catalogItemId);
                     return (
                       <li
                         key={`p-${r.catalogItemId}`}
-                        className={`grid cursor-pointer grid-cols-[auto_1fr_auto] items-center gap-2 rounded-lg px-3 py-2 text-[11px] ${
+                        className={`grid cursor-pointer grid-cols-[auto_auto_1fr_auto] items-center gap-2 rounded-lg px-3 py-2 text-[11px] ${
                           checked ? 'bg-white/5' : 'bg-white/[0.02] opacity-60'
                         }`}
                         onClick={() => toggle(r.catalogItemId)}
@@ -268,6 +285,14 @@ export function BulkDisenchantModal({
                           className="h-3.5 w-3.5 cursor-pointer accent-emerald-500"
                           onClick={(e) => e.stopPropagation()}
                           onChange={() => toggle(r.catalogItemId)}
+                        />
+                        <TranscendSprite
+                          code={r.code}
+                          slot={r.slot}
+                          level={0}
+                          isChampion={false}
+                          size={28}
+                          frameless
                         />
                         <div className="min-w-0">
                           <div className="truncate font-semibold">{r.name}</div>

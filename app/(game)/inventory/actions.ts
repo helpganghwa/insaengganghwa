@@ -116,6 +116,7 @@ type BulkPlanRow = {
   catalogItemId: number;
   code: string;
   name: string;
+  slot: Slot;
   targetInstanceId: bigint;
   currentT: number;
   maxT: number;
@@ -141,6 +142,7 @@ async function planBulkTranscend(userId: string): Promise<BulkPlan> {
       equippedSlot: equipmentInstances.equippedSlot,
       code: catalogItems.code,
       name: catalogItems.name,
+      slot: catalogItems.slot,
     })
     .from(equipmentInstances)
     .innerJoin(catalogItems, eq(equipmentInstances.catalogItemId, catalogItems.id))
@@ -153,6 +155,7 @@ async function planBulkTranscend(userId: string): Promise<BulkPlan> {
     equippedSlot: string | null;
     code: string;
     name: string;
+    slot: Slot;
   }>;
 
   // 강화 중 또는 강화 제물로 예약된 instance 집합 — fodder 후보에서 제외.
@@ -221,6 +224,7 @@ async function planBulkTranscend(userId: string): Promise<BulkPlan> {
       catalogItemId,
       code: target.code,
       name: target.name,
+      slot: target.slot,
       targetInstanceId: BigInt(target.id),
       currentT: target.transcendLevel,
       maxT,
@@ -250,6 +254,7 @@ export async function previewBulkTranscendAction() {
       catalogItemId: r.catalogItemId,
       code: r.code,
       name: r.name,
+      slot: r.slot,
       targetInstanceId: r.targetInstanceId.toString(),
       currentT: r.currentT,
       maxT: r.maxT,
