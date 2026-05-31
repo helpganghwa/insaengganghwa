@@ -154,23 +154,29 @@ export default async function PublicProfilePage({
               <div
                 key={s}
                 style={rarityBorderStyle(it.transcendLevel)}
-                className={`relative flex aspect-square flex-col items-center justify-center gap-0.5 overflow-hidden rounded-xl border-2 bg-white px-1 text-center dark:bg-zinc-950 ${
+                className={`relative flex aspect-square flex-col items-stretch overflow-hidden rounded-xl border-2 bg-white px-1 py-1 text-center dark:bg-zinc-950 ${
                   hasRarityBorder(it.transcendLevel) ? '' : 'border-zinc-200 dark:border-zinc-800'
                 }`}
               >
                 <RarityFrame level={it.transcendLevel} />
-                <TranscendSprite
-                  code={it.code}
-                  slot={s}
-                  level={it.transcendLevel}
-                  isChampion={it.isChampion}
-                  size={56}
-                  frameless
-                />
-                <span className="px-0.5 text-[10px] leading-tight text-zinc-600 dark:text-zinc-400">
-                  {it.name}
-                </span>
-                <span className="text-xs font-semibold">+{it.enhanceLevel}</span>
+                <div className="flex h-7 items-center justify-center px-0.5">
+                  <span className="line-clamp-2 break-keep text-[10px] leading-tight text-zinc-600 dark:text-zinc-400">
+                    {it.name}
+                  </span>
+                </div>
+                <div className="flex flex-1 items-center justify-center">
+                  <TranscendSprite
+                    code={it.code}
+                    slot={s}
+                    level={it.transcendLevel}
+                    isChampion={it.isChampion}
+                    size={56}
+                    frameless
+                  />
+                </div>
+                <div className="flex h-7 items-center justify-center">
+                  <span className="text-xs font-semibold">+{it.enhanceLevel}</span>
+                </div>
               </div>
             );
           })}

@@ -125,23 +125,29 @@ function EnhanceSlotPicker({
                 disabled={pending}
                 onClick={() => pick(c.id)}
                 style={rarityBorderStyle(c.transcendLevel)}
-                className={`relative flex aspect-square flex-col items-center justify-center gap-0.5 overflow-hidden rounded-xl border-2 bg-white px-1 text-center disabled:opacity-40 dark:bg-zinc-950 ${
+                className={`relative flex aspect-square flex-col items-stretch overflow-hidden rounded-xl border-2 bg-white px-1 py-1 text-center disabled:opacity-40 dark:bg-zinc-950 ${
                   hasRarityBorder(c.transcendLevel) ? '' : 'border-zinc-200 dark:border-zinc-800'
                 }`}
               >
                 <RarityFrame level={c.transcendLevel} />
-                <TranscendSprite
-                  code={c.code}
-                  slot={c.slot}
-                  level={c.transcendLevel}
-                  isChampion={c.isChampion}
-                  size={48}
-                  frameless
-                />
-                <span className="px-0.5 text-[10px] leading-tight text-zinc-600 dark:text-zinc-400">
-                  {c.name}
-                </span>
-                <span className="text-xs font-semibold">+{c.enhanceLevel}</span>
+                <div className="flex h-7 items-center justify-center px-0.5">
+                  <span className="line-clamp-2 break-keep text-[10px] leading-tight text-zinc-600 dark:text-zinc-400">
+                    {c.name}
+                  </span>
+                </div>
+                <div className="flex flex-1 items-center justify-center">
+                  <TranscendSprite
+                    code={c.code}
+                    slot={c.slot}
+                    level={c.transcendLevel}
+                    isChampion={c.isChampion}
+                    size={48}
+                    frameless
+                  />
+                </div>
+                <div className="flex h-7 items-center justify-center">
+                  <span className="text-xs font-semibold">+{c.enhanceLevel}</span>
+                </div>
                 {c.equipped ? (
                   <span className="absolute left-1 top-1 rounded-full bg-emerald-500/95 px-1 text-[8px] font-bold text-white">
                     장

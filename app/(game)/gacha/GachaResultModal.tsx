@@ -89,7 +89,7 @@ export function GachaResultModal({
               {results.map((r, i) => (
                 <div
                   key={i}
-                  className="relative flex aspect-square flex-col items-center justify-center rounded-lg border-2 border-zinc-200 p-1 text-center dark:border-zinc-800"
+                  className="relative flex aspect-square flex-col items-stretch rounded-lg border-2 border-zinc-200 p-1 text-center dark:border-zinc-800"
                   title={r.name}
                 >
                   {r.isNew ? (
@@ -97,17 +97,21 @@ export function GachaResultModal({
                       N
                     </span>
                   ) : null}
-                  <TranscendSprite
-                    code={r.code}
-                    slot={slot}
-                    level={0}
-                    isChampion={r.isChampion}
-                    size={36}
-                    frameless
-                  />
-                  <span className="px-0.5 text-[9px] leading-tight text-zinc-600 dark:text-zinc-400">
-                    {r.name}
-                  </span>
+                  <div className="flex h-6 items-center justify-center px-0.5">
+                    <span className="line-clamp-2 break-keep text-[9px] leading-tight text-zinc-600 dark:text-zinc-400">
+                      {r.name}
+                    </span>
+                  </div>
+                  <div className="flex flex-1 items-center justify-center">
+                    <TranscendSprite
+                      code={r.code}
+                      slot={slot}
+                      level={0}
+                      isChampion={r.isChampion}
+                      size={36}
+                      frameless
+                    />
+                  </div>
                 </div>
               ))}
             </div>
