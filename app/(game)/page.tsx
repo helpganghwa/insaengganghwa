@@ -13,6 +13,7 @@ import { userCheckinState } from '@/lib/db/schema/checkin';
 import { kstDateString } from '@/lib/kst';
 
 import { DailySupplyCard } from './DailySupplyCard';
+import { HomeBannerCarousel } from './HomeBannerCarousel';
 import { HubCheckinCard } from './HubCheckinCard';
 import { RankingTop3Card } from './RankingTop3Card';
 
@@ -167,8 +168,10 @@ export default async function HomePage() {
   return (
     <div className="flex flex-col gap-4 px-4 py-4">
       <RankingTop3Card />
-      {hasUnclaimedDaily ? <DailySupplyCard /> : null}
-      {hasUnclaimedCheckin ? <HubCheckinCard /> : null}
+      <HomeBannerCarousel>
+        {hasUnclaimedDaily ? <DailySupplyCard /> : null}
+        {hasUnclaimedCheckin ? <HubCheckinCard /> : null}
+      </HomeBannerCarousel>
       <div className="grid grid-cols-2 gap-3">
         {MENU.map((m) => {
           const count = counts[m.href] ?? 0;

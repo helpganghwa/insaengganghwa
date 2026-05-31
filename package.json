@@ -37,6 +37,7 @@
     "postgres": "^3.4.9",
     "react": "19.2.4",
     "react-dom": "19.2.4",
+    "swiper": "^12.2.0",
     "web-push": "^3.6.7"
   },
   "devDependencies": {
