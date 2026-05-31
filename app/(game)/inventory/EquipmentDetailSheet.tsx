@@ -230,7 +230,7 @@ export function EquipmentDetailSheet({
             onClick={() => {
               if (strongerInstance) {
                 setError(
-                  `더 강한 같은 아이템(T${strongerInstance.transcendLevel} · +${strongerInstance.enhanceLevel})이 있어 이 인스턴스는 초월할 수 없어요.`,
+                  `더 강한 같은 아이템(T${strongerInstance.transcendLevel} · +${strongerInstance.enhanceLevel})이 있어 이 아이템은 초월할 수 없어요.`,
                 );
                 return;
               }
