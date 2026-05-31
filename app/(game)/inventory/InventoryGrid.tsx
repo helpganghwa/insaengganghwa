@@ -49,7 +49,7 @@ export function InventoryGrid({
   const router = useRouter();
   const { showRanking } = useResourceToast();
   const [filter, setFilter] = useState<SlotFilter>(initialSlot);
-  const [sortBy, setSortBy] = useState<SortBy>('recent');
+  const [sortBy, setSortBy] = useState<SortBy>('enhance');
   const [openId, setOpenId] = useState<string | null>(null);
   const [bulkOpen, setBulkOpen] = useState(false);
   const [bulkDisenchantOpen, setBulkDisenchantOpen] = useState(false);

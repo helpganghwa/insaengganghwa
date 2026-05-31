@@ -5,7 +5,7 @@ import { getSessionUserId } from '@/lib/auth/session';
 import { db } from '@/lib/db/client';
 import { withTimeout } from '@/lib/db/with-timeout';
 import { profiles } from '@/lib/db/schema/profiles';
-import { catalogItems, equipmentInstances, userCodex, type Slot } from '@/lib/db/schema/equipment';
+import { catalogItems, equipmentInstances, type Slot } from '@/lib/db/schema/equipment';
 import { userProfiles } from '@/lib/db/schema/avatar';
 import { CharacterStage } from '@/components/CharacterStage';
 import { pieceCombatPower, totalCombatPower } from '@/lib/game/balance';
@@ -59,9 +59,10 @@ export default async function ProfilePage() {
         and(eq(equipmentInstances.userId, userId), isNotNull(equipmentInstances.equippedSlot)),
       ),
     db
-      .select({ s: sql<number>`coalesce(sum(${userCodex.maxEnhanceLevel}),0)::int` })
-      .from(userCodex)
-      .where(eq(userCodex.userId, userId)),
+      // 합산 강화 = 현재 보유 인스턴스 enhance_level 합(2026-05-31 정책).
+      .select({ s: sql<number>`coalesce(sum(${equipmentInstances.enhanceLevel}),0)::int` })
+      .from(equipmentInstances)
+      .where(eq(equipmentInstances.userId, userId)),
     championCatalogIds(userId),
     db
       .select({

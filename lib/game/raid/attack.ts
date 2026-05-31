@@ -4,7 +4,7 @@ import { and, eq, sql, isNotNull } from 'drizzle-orm';
 
 import { db } from '@/lib/db/client';
 import { profiles } from '@/lib/db/schema/profiles';
-import { equipmentInstances, userCodex } from '@/lib/db/schema/equipment';
+import { equipmentInstances } from '@/lib/db/schema/equipment';
 import { raids, raidParticipants, raidAttacks } from '@/lib/db/schema/raid';
 import {
   RAID_BASE_ATTACKS,
@@ -33,9 +33,10 @@ async function userTotalCP(
     .from(equipmentInstances)
     .where(and(eq(equipmentInstances.userId, userId), isNotNull(equipmentInstances.equippedSlot)));
   const [{ s }] = await tx
-    .select({ s: sql<number>`coalesce(sum(${userCodex.maxEnhanceLevel}), 0)::int` })
-    .from(userCodex)
-    .where(eq(userCodex.userId, userId));
+    // 전투력 보너스 계수 = 현재 보유 인스턴스 enhance_level 합(2026-05-31 정책).
+    .select({ s: sql<number>`coalesce(sum(${equipmentInstances.enhanceLevel}), 0)::int` })
+    .from(equipmentInstances)
+    .where(eq(equipmentInstances.userId, userId));
   return combatPowerFromRows(equipped, s);
 }
 

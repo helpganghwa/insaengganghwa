@@ -7,7 +7,7 @@ import { db } from '@/lib/db/client';
 import { withTimeout } from '@/lib/db/with-timeout';
 import { profiles } from '@/lib/db/schema/profiles';
 import { userProfiles } from '@/lib/db/schema/avatar';
-import { equipmentInstances, userCodex } from '@/lib/db/schema/equipment';
+import { equipmentInstances } from '@/lib/db/schema/equipment';
 import { combatPowerFromRows } from '@/lib/game/equipment/combat-power';
 
 /**
@@ -75,15 +75,18 @@ async function maxRows() {
 }
 
 async function sumRows() {
+  // 합산 강화 = **현재 보유 인스턴스의 enhance_level 합**(2026-05-31 정책 변경).
+  // 이전: sum(user_codex.max_enhance_level)는 lifetime 누적이라 강화 하락에 비반응 →
+  // 현재 상태와 어긋남. 도감 자체는 콜렉션 진척으로 유지(여기서만 분리).
   const r = await db
     .select({
-      userId: userCodex.userId,
+      userId: equipmentInstances.userId,
       nickname: profiles.nickname,
-      value: sql<number>`coalesce(sum(${userCodex.maxEnhanceLevel}),0)::int`,
+      value: sql<number>`coalesce(sum(${equipmentInstances.enhanceLevel}),0)::int`,
     })
-    .from(userCodex)
-    .innerJoin(profiles, eq(profiles.id, userCodex.userId))
-    .groupBy(userCodex.userId, profiles.nickname);
+    .from(equipmentInstances)
+    .innerJoin(profiles, eq(profiles.id, equipmentInstances.userId))
+    .groupBy(equipmentInstances.userId, profiles.nickname);
   return r.map((x) => ({ userId: x.userId, nickname: x.nickname, value: Number(x.value) }));
 }
 
@@ -99,8 +102,10 @@ async function combatRows() {
       group by user_id
     ),
     cdx as (
-      select user_id, coalesce(sum(max_enhance_level), 0)::int as s
-      from user_codex
+      -- 전투력 보너스 계수 = **현재 보유 강화합**(2026-05-31 정책 변경). 도감(lifetime)
+      -- 에서 분리. 강화 하락 시 전투력도 같이 변동.
+      select user_id, coalesce(sum(enhance_level), 0)::int as s
+      from equipment_instances
       group by user_id
     )
     select p.id::text as id, p.nickname, coalesce(eq.pieces, '[]'::json) as pieces,
@@ -207,9 +212,10 @@ export async function getMyRanksAfter(userId: string): Promise<MyRanks> {
       .from(equipmentInstances)
       .where(eq(equipmentInstances.userId, userId)),
     db
-      .select({ s: sql<number>`coalesce(sum(${userCodex.maxEnhanceLevel}),0)::int` })
-      .from(userCodex)
-      .where(eq(userCodex.userId, userId)),
+      // 합산 강화 = 현재 보유 인스턴스 enhance_level 합(2026-05-31 정책 변경).
+      .select({ s: sql<number>`coalesce(sum(${equipmentInstances.enhanceLevel}),0)::int` })
+      .from(equipmentInstances)
+      .where(eq(equipmentInstances.userId, userId)),
   ]);
   const myMax = eqRows.reduce((acc, r) => Math.max(acc, r.enhanceLevel), 0);
   const mySum = Number(cdxAgg[0]?.s ?? 0);
