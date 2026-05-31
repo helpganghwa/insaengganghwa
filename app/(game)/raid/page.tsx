@@ -1,4 +1,3 @@
-import Link from 'next/link';
 import { and, eq, inArray, isNull } from 'drizzle-orm';
 
 import { getSessionUserId } from '@/lib/auth/session';
@@ -11,10 +10,9 @@ import {
   RAID_MAX_CONCURRENT_PER_USER,
 } from '@/lib/game/balance';
 import { kstDateString } from '@/lib/kst';
-import { RAID_BOSSES, type RaidBoss } from '@/lib/game/raid/bosses';
-import { BossSprite } from '@/components/BossSprite';
+import type { RaidBoss } from '@/lib/game/raid/bosses';
 
-import { RaidSlots, type ActiveRaid } from './RaidSlots';
+import { RaidSlots, type RaidSlotCell } from './RaidSlots';
 
 export default async function RaidPage() {
   const userId = await getSessionUserId();
@@ -90,12 +88,14 @@ export default async function RaidPage() {
     else partsByRaid.set(key, [{ userId: p.userId, totalDamage: p.totalDamage }]);
   }
 
-  const active: ActiveRaid[] = rows.map((r) => {
+  // 활성 + 정산 대기를 동일 슬롯 목록으로 통합(grow 패턴). 사용자가 슬롯 하나에서
+  // 진행 중/수령 대기 상태를 한 눈에 보고 카드 클릭으로 상세 진입(2026-05-31 결정).
+  const activeCells: RaidSlotCell[] = rows.map((r) => {
     const parts = partsByRaid.get(r.id.toString()) ?? [];
-    // totalDamage desc 정렬 후 내 위치. 동점은 안정정렬(입장 순) — 표시용이라 충분.
     parts.sort((a, b) => (a.totalDamage < b.totalDamage ? 1 : a.totalDamage > b.totalDamage ? -1 : 0));
     const myRank = Math.max(1, parts.findIndex((p) => p.userId === userId) + 1);
     return {
+      kind: 'active',
       raidId: r.id.toString(),
       bossCode: r.bossCode,
       expireAtIso: r.expireAt.toISOString(),
@@ -106,48 +106,23 @@ export default async function RaidPage() {
       participantCount: parts.length,
     };
   });
+  const pendingCells: RaidSlotCell[] = pendingClaims.map((p) => ({
+    kind: 'pending_claim',
+    raidId: p.raidId.toString(),
+    bossCode: p.bossCode as RaidBoss,
+    diamond: Number(p.baseDiamond) + Number(p.phaseDiamond),
+    boxTotal: (p.boxes.weapon ?? 0) + (p.boxes.armor ?? 0) + (p.boxes.accessory ?? 0),
+  }));
+  const cells: RaidSlotCell[] = [...activeCells, ...pendingCells];
+  // 합계가 슬롯 한도 초과 시(정산 안 한 채 새 레이드 개설 등) 모두 노출.
+  const slotCount = Math.max(RAID_MAX_CONCURRENT_PER_USER, cells.length);
 
   return (
     <div className="px-4 py-4">
       <h1 className="mb-1 text-lg font-semibold">⚔️ 레이드</h1>
-
-      {/* 정산 대기 보상 — 정산 완료 후 미수령. 상세 화면에서 수령. */}
-      {pendingClaims.length > 0 ? (
-        <section className="mb-3 space-y-2">
-          <h2 className="text-[11px] font-semibold tracking-wide text-amber-500">
-            ⚡ 정산 대기 보상
-          </h2>
-          {pendingClaims.map((p) => {
-            const diamond = Number(p.baseDiamond) + Number(p.phaseDiamond);
-            const boxTotal = (p.boxes.weapon ?? 0) + (p.boxes.armor ?? 0) + (p.boxes.accessory ?? 0);
-            return (
-              <Link
-                key={p.raidId.toString()}
-                href={`/raid/${p.raidId}`}
-                className="flex items-center gap-3 rounded-xl border-2 border-amber-500/70 bg-amber-50 p-3 text-zinc-900 transition active:scale-[0.99] dark:bg-amber-950/40 dark:text-amber-50"
-              >
-                <div className="shrink-0">
-                  <BossSprite code={p.bossCode as RaidBoss} size={48} />
-                </div>
-                <div className="min-w-0 flex-1">
-                  <div className="text-sm font-bold">{RAID_BOSSES[p.bossCode as RaidBoss].name}</div>
-                  <div className="mt-0.5 flex flex-wrap gap-x-2 text-[11px] text-amber-700 dark:text-amber-200">
-                    {diamond > 0 ? <span>💎 {diamond.toLocaleString('ko-KR')}</span> : null}
-                    {boxTotal > 0 ? <span>📦 {boxTotal}</span> : null}
-                  </div>
-                </div>
-                <span className="shrink-0 rounded-full bg-amber-500 px-3 py-1.5 text-[11px] font-bold text-amber-950">
-                  수령 →
-                </span>
-              </Link>
-            );
-          })}
-        </section>
-      ) : null}
-
       <RaidSlots
-        active={active}
-        slots={RAID_MAX_CONCURRENT_PER_USER}
+        cells={cells}
+        slots={slotCount}
         dailyUsed={dailyRow[0]?.c ?? 0}
         dailyCap={RAID_DAILY_CAP}
       />

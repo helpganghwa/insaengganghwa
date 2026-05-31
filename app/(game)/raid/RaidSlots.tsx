@@ -12,16 +12,30 @@ import { assetUrl } from '@/lib/asset-versions';
 
 import { openRaidAction } from './actions';
 
-export type ActiveRaid = {
-  raidId: string;
-  bossCode: RaidBoss;
-  expireAtIso: string;
-  phasesCleared: number;
-  isHost: boolean;
-  attacksLeft: number;
-  myRank: number;
-  participantCount: number;
-};
+/**
+ * 슬롯 셀 — 활성 레이드와 정산 대기(미수령 보상)를 한 목록에서 표현(grow 패턴).
+ * status가 'active'면 진행 상태 + 카운트다운, 'pending_claim'이면 보상 미리보기 +
+ * '수령 →' 라벨. 클릭하면 둘 다 /raid/[raidId] 상세로 이동(상세에서 수령 트리거).
+ */
+export type RaidSlotCell =
+  | {
+      kind: 'active';
+      raidId: string;
+      bossCode: RaidBoss;
+      expireAtIso: string;
+      phasesCleared: number;
+      isHost: boolean;
+      attacksLeft: number;
+      myRank: number;
+      participantCount: number;
+    }
+  | {
+      kind: 'pending_claim';
+      raidId: string;
+      bossCode: RaidBoss;
+      diamond: number;
+      boxTotal: number;
+    };
 
 function Countdown({ iso }: { iso: string }) {
   const [now, setNow] = useState(() => Date.now());
@@ -41,12 +55,12 @@ function Countdown({ iso }: { iso: string }) {
 }
 
 export function RaidSlots({
-  active,
+  cells: cellsIn,
   slots,
   dailyUsed,
   dailyCap,
 }: {
-  active: ActiveRaid[];
+  cells: RaidSlotCell[];
   slots: number;
   dailyUsed: number;
   dailyCap: number;
@@ -57,7 +71,7 @@ export function RaidSlots({
   const [picked, setPicked] = useState<RaidBoss | null>(null);
   const exhausted = dailyUsed >= dailyCap;
 
-  const cells = Array.from({ length: slots }, (_, i) => active[i] ?? null);
+  const cells = Array.from({ length: slots }, (_, i) => cellsIn[i] ?? null);
 
   const open = (code: RaidBoss) =>
     startTransition(async () => {
@@ -81,6 +95,45 @@ export function RaidSlots({
       <div className="space-y-2">
         {cells.map((s, i) =>
           s ? (
+            s.kind === 'pending_claim' ? (
+              <Link
+                key={s.raidId}
+                href={`/raid/${s.raidId}`}
+                className={`relative flex items-center gap-3 overflow-hidden rounded-xl border-2 border-amber-400 bg-gradient-to-r p-3 text-zinc-100 shadow-[0_0_24px_rgba(245,158,11,0.35)] transition active:scale-[0.99] ${getBossBgClass(s.bossCode)}`}
+              >
+                {getBossBg(s.bossCode) ? (
+                  // eslint-disable-next-line @next/next/no-img-element
+                  <img
+                    src={assetUrl(getBossBg(s.bossCode)!)}
+                    alt=""
+                    aria-hidden
+                    loading="eager"
+                    fetchPriority="high"
+                    className="pointer-events-none absolute inset-0 h-full w-full object-cover opacity-30"
+                    style={{ imageRendering: 'pixelated' }}
+                  />
+                ) : null}
+                <div className="pointer-events-none absolute inset-0 bg-gradient-to-r from-black/75 via-black/45 to-black/75" />
+                <div className="relative shrink-0">
+                  <BossSprite code={s.bossCode} size={56} />
+                </div>
+                <span className="relative min-w-0 flex-1">
+                  <span className="block text-sm font-bold drop-shadow">
+                    {RAID_BOSSES[s.bossCode].name}
+                    <span className="ml-1 rounded bg-amber-400 px-1 text-[9px] text-amber-950">
+                      정산 대기
+                    </span>
+                  </span>
+                  <span className="mt-0.5 flex flex-wrap gap-x-2 gap-y-0.5 text-[10px] text-amber-200">
+                    {s.diamond > 0 ? <span>💎 {s.diamond.toLocaleString('ko-KR')}</span> : null}
+                    {s.boxTotal > 0 ? <span>📦 {s.boxTotal}</span> : null}
+                  </span>
+                </span>
+                <span className="relative shrink-0 rounded-full bg-amber-400 px-2.5 py-1 text-[10px] font-bold text-amber-950">
+                  수령 →
+                </span>
+              </Link>
+            ) : (
             <Link
               key={s.raidId}
               href={`/raid/${s.raidId}`}
@@ -129,6 +182,7 @@ export function RaidSlots({
                 </span>
               </span>
             </Link>
+            )
           ) : (
             <button
               key={`e${i}`}
