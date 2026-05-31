@@ -13,10 +13,8 @@ export function ReferralSection({
   totalBoxEarned: number;
 }) {
   return (
-    <section className="relative overflow-hidden rounded-xl border border-zinc-200 bg-white px-3 py-2.5 dark:border-zinc-800 dark:bg-zinc-950">
-      {/* 상단 카카오 노랑 strip — 카톡 연결 톤 */}
-      <span aria-hidden className="absolute inset-x-0 top-0 h-1 bg-[#FEE500]" />
-      <h2 className="mt-1 text-[11px] font-semibold text-zinc-600 dark:text-zinc-300">
+    <section className="rounded-xl border border-zinc-200 bg-white px-3 py-2.5 dark:border-zinc-800 dark:bg-zinc-950">
+      <h2 className="text-[11px] font-semibold text-zinc-600 dark:text-zinc-300">
         카카오톡 공유 가입 보상
       </h2>
       <div className="mt-2 grid grid-cols-3 gap-1 text-center">
