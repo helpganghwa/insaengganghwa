@@ -37,7 +37,7 @@ export type ResolveInput = {
   rngBp?: () => number;
 };
 
-export type ResolveOutcome = 'success' | 'hold' | 'down';
+export type ResolveOutcome = 'success' | 'hold' | 'down' | 'mega';
 export type ResolveResult = {
   jobId: bigint;
   equipmentInstanceId: bigint;
@@ -103,10 +103,15 @@ export async function resolveEnhance(input: ResolveInput): Promise<ResolveResult
   const rolled = (rngBp ?? rollBp)();
   let outcome: ResolveOutcome;
   let toLevel: number;
-  if (rolled < probs.success) {
+  // 순서: mega(0..mega) → success(...) → down(...) → hold(...).
+  // mega는 success 안에서 분리된 분량이므로 success보다 먼저 판정.
+  if (rolled < probs.mega) {
+    outcome = 'mega';
+    toLevel = fromLevel + 2;
+  } else if (rolled < probs.mega + probs.success) {
     outcome = 'success';
     toLevel = fromLevel + 1;
-  } else if (rolled < probs.success + probs.down) {
+  } else if (rolled < probs.mega + probs.success + probs.down) {
     outcome = 'down';
     toLevel = levelAfterFail(fromLevel);
   } else {

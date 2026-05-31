@@ -182,9 +182,14 @@ export function effectiveRateBp(baseRateBp: number, elapsedMs: number, totalMs: 
   return Math.round(baseRateBp * frac);
 }
 
+/** §1.2.1 메가 강화 — success 확률 안에서 5% 분리. +2 단계 상승. */
+export const MEGA_OF_SUCCESS_BP = 500;
+
 export type OutcomeProbsBp = {
-  /** 성공 확률 bp — 시간에 따라 0 → baseRate 선형 상승. */
+  /** 성공 확률 bp — 시간에 따라 0 → baseRate 선형 상승(mega 제외 분량). */
   success: number;
+  /** 메가 확률 bp — success_total의 MEGA_OF_SUCCESS_BP%. +2. */
+  mega: number;
   /** 유지 확률 bp — 시간에 따라 (1−down) → (1−base−down)으로 선형 감소. */
   hold: number;
   /** 하락 확률 bp — 시간 무관 고정(downRate). */
@@ -192,11 +197,13 @@ export type OutcomeProbsBp = {
 };
 
 /**
- * §1.2 시간 t에서의 3분기 확률 (bp 합 = 10000).
- *   p_success(t) = baseRate(ℓ) × clamp(elapsed/total)
- *   p_down       = downRate(ℓ)          ← 시간 무관 고정
- *   p_hold(t)    = 10000 − p_success − p_down
- * 불변식: 모든 ℓ에서 baseRate + downRate ≤ 10000 → p_hold ≥ 0.
+ * §1.2 시간 t에서의 4분기 확률 (bp 합 = 10000).
+ *   p_success_total(t) = baseRate(ℓ) × clamp(elapsed/total)
+ *   p_mega(t)          = p_success_total × MEGA_OF_SUCCESS_BP / 10000
+ *   p_success(t)       = p_success_total − p_mega
+ *   p_down             = downRate(ℓ)
+ *   p_hold(t)          = 10000 − p_success_total − p_down
+ * 불변식: baseRate + downRate ≤ 10000 → p_hold ≥ 0.
  */
 export function effectiveOutcomeProbsBp(
   baseRateBp: number,
@@ -205,10 +212,12 @@ export function effectiveOutcomeProbsBp(
   totalMs: number,
 ): OutcomeProbsBp {
   const successFrac = totalMs <= 0 ? 1 : Math.min(1, Math.max(0, elapsedMs / totalMs));
-  const success = Math.round(baseRateBp * successFrac);
-  const down = Math.max(0, Math.min(10000 - success, downBp));
-  const hold = Math.max(0, 10000 - success - down);
-  return { success, hold, down };
+  const successTotal = Math.round(baseRateBp * successFrac);
+  const mega = Math.floor((successTotal * MEGA_OF_SUCCESS_BP) / 10000);
+  const success = successTotal - mega;
+  const down = Math.max(0, Math.min(10000 - successTotal, downBp));
+  const hold = Math.max(0, 10000 - successTotal - down);
+  return { success, mega, hold, down };
 }
 
 // ─────────────────────────────────────────────────────────────────────────────

@@ -19,7 +19,6 @@ import { finalizeEnhance, reduceTimeWithGems, cancelEnhanceAction } from './acti
 import { EnhanceFX, type FxKind } from './EnhanceFX';
 
 /** §10 자랑 자동 트리거 강화 단계(GDD §6 / 사용자 확정 델타). */
-const BOAST_LEVELS = new Set([30, 50, 99]);
 
 export type ActiveJob = {
   jobId: string;
@@ -35,11 +34,11 @@ export type ActiveJob = {
   completeAtIso: string;
 };
 
-type Outcome = 'success' | 'hold' | 'down';
+type Outcome = 'success' | 'hold' | 'down' | 'mega';
 // 강화 시도/결과 로어 — 8 컨셉 세트(망치·용광로·별·운명·강철·대장간·손·불꽃).
 // 시도 시 세트 랜덤 선택 → 결과(success/hold/down)도 같은 세트에서 맥락 유지.
 const LORE_SETS: ReadonlyArray<
-  Readonly<{ attempting: string; success: string; hold: string; down: string }>
+  Readonly<{ attempting: string; success: string; hold: string; down: string; mega?: string }>
 > = [
   // 1. 망치 — 정밀한 한 방
   {
@@ -148,11 +147,13 @@ function pick<T>(arr: readonly T[]): T {
 }
 const OUTCOME_TONE: Record<Outcome, string> = {
   success: 'text-emerald-300',
+  mega: 'text-amber-200',
   hold: 'text-zinc-200',
   down: 'text-amber-300',
 };
 const FLASH_CLASS: Record<Outcome, string> = {
   success: 'animate-flash-success',
+  mega: 'animate-flash-success',
   hold: 'animate-flash-hold',
   down: 'animate-flash-down',
 };
@@ -319,15 +320,16 @@ export function EnhanceSlotCard({
       // revalidatePath로 activeJob이 즉시 갱신되므로 result 자체의 from/to 보존(보간용).
       setFlashFromLevel(Number(r.result.fromLevel));
       setFlashToLevel(Number(r.result.toLevel));
-      setFlashMsg(lore[oc]); // 같은 세트의 outcome — 시도 컨셉과 맥락 유지
+      // 같은 세트의 outcome — 맥락 유지. mega는 lore 미정의면 success 재사용.
+      setFlashMsg(lore[oc] ?? lore.success);
       // 햅틱(모바일) — prefers-reduced-motion 사용자는 햅틱도 약화/생략.
       // Vibration API 없는 브라우저는 navigator.vibrate undefined → 자동 no-op.
       const reduceMotion =
         typeof window !== 'undefined' &&
         window.matchMedia?.('(prefers-reduced-motion: reduce)').matches;
       if (!reduceMotion && typeof navigator !== 'undefined' && 'vibrate' in navigator) {
-        if (oc === 'success' && BOAST_LEVELS.has(activeJob.targetLevel)) {
-          navigator.vibrate([0, 50, 80, 50, 80, 100]); // mega
+        if (oc === 'mega') {
+          navigator.vibrate([0, 50, 80, 50, 80, 100]); // mega — 2단계 상승
         } else if (oc === 'success') {
           navigator.vibrate(30);
         } else if (oc === 'down') {
@@ -545,10 +547,10 @@ export function EnhanceSlotCard({
           <>
             {/* 결과 dim — 본 콘텐츠(z-10) 위(z-20), 캐릭터(z-25)·FX(z-30) 뒤. */}
             <span className="pointer-events-none absolute inset-0 z-20 bg-black/55 backdrop-blur-[2px]" />
-            {/* FX 시각 레이어 — Boast 레벨 성공은 mega tier. */}
+            {/* FX 시각 레이어 — mega 결과는 success-mega tier(2단계 상승 강조). */}
             <EnhanceFX
               kind={
-                flash === 'success' && BOAST_LEVELS.has(activeJob.targetLevel)
+                flash === 'mega'
                   ? ('success-mega' satisfies FxKind)
                   : (flash satisfies FxKind)
               }

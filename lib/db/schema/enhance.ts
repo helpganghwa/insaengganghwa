@@ -28,8 +28,8 @@ export const enhanceJobStatusEnum = pgEnum('enhance_job_status', [
   'completed',
   'cancelled',
 ]);
-/** 성공 +1 / 유지(안전 실패) / 하락(−1, +52~). 파괴 없음. */
-export const enhanceResultEnum = pgEnum('enhance_result', ['success', 'hold', 'down']);
+/** 성공 +1 / 메가 +2(success의 5%) / 유지(안전 실패) / 하락(−1, +52~). 파괴 없음. */
+export const enhanceResultEnum = pgEnum('enhance_result', ['success', 'hold', 'down', 'mega']);
 
 /** §3.1 enhancement_jobs — 진행 중 큐. */
 export const enhancementJobs = pgTable(
