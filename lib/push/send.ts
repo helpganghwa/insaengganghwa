@@ -37,7 +37,7 @@ export type PushPayload = {
   body: string;
   url?: string;
   tag?: string;
-  category: 'enhance' | 'raid' | 'supply' | 'profile';
+  category: 'enhance' | 'raid' | 'supply' | 'profile' | 'referral';
 };
 
 export type SendResult = { ok: number; gone: number; failed: number };
@@ -48,6 +48,7 @@ const TOGGLE_COLUMN = {
   raid: profiles.pushRaid,
   supply: profiles.pushSupply,
   profile: profiles.pushProfile,
+  referral: profiles.pushReferral,
 } as const;
 
 /**

@@ -19,7 +19,14 @@ import { sql } from 'drizzle-orm';
 
 import { profiles } from './profiles';
 
-export const pushCategoryEnum = pgEnum('push_category', ['enhance', 'raid', 'supply', 'profile']);
+export const pushCategoryEnum = pgEnum('push_category', [
+  'enhance',
+  'raid',
+  'supply',
+  'profile',
+  /** 카카오 공유 가입 보상 — 신규 가입자 귀속 시 referrer에게 즉시 발송(2026-05-31). */
+  'referral',
+]);
 
 /**
  * §11.1 push_subscriptions — 디바이스별 Web Push 구독. endpoint UNIQUE로 재구독 멱등.

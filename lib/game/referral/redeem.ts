@@ -1,13 +1,13 @@
 import 'server-only';
 
-import { and, eq, sql } from 'drizzle-orm';
+import { eq } from 'drizzle-orm';
 
 import { db } from '@/lib/db/client';
 import { profiles } from '@/lib/db/schema/profiles';
-import { userSupplyBoxes } from '@/lib/db/schema/supply';
+import { mailbox } from '@/lib/db/schema/mailbox';
 import { referralAttributions } from '@/lib/db/schema/social';
-import { SUPPLY_SLOTS } from '@/lib/game/balance';
-import { INVITE_DIAMOND_PER_REFERRAL } from './stats';
+import { sendPushToUser } from '@/lib/push/send';
+import { INVITE_BOX_PER_REFERRAL, INVITE_DIAMOND_PER_REFERRAL } from './stats';
 
 export class ReferralError extends Error {
   constructor(
@@ -23,32 +23,42 @@ export class ReferralError extends Error {
 }
 
 /**
- * 카카오 공유 링크 → 가입 귀속 + 추천인(referrer) 보상 지급.
+ * 카카오 공유 링크 → 가입 귀속 + referrer 우편함 적재 + 푸시 알림.
+ *
+ * 변경(2026-05-31 사용자 결정):
+ * - 이전: profiles.diamond + userSupplyBoxes에 직접 가산(자동 수령).
+ * - 현재: mailbox에 type='reward' row 적재 → 사용자가 우편함에서 명시적 수령.
+ *   referrer는 신규 가입 즉시 push 알림으로 인지.
  *
  * - shareCode = referrer nickname (현재 /s/[shareCode] → /u/<nickname> 패턴).
- * - referrer 보상: 다이아 +300 + 보급상자 종류별 +1(무기·방어구·장신구 각 1).
- * - 멱등: referral_attributions(new_user_id UNIQUE) — 두 번째 호출은
- *   ALREADY_REDEEMED throw. unique violation 시 rewarded는 이전에 처리된 상태.
- * - 단일 트랜잭션(attribute row 생성 + diamond 가산 + 상자 가산 + rewarded=true).
+ * - 멱등: referral_attributions(new_user_id UNIQUE) — 두 번째 호출 ALREADY_REDEEMED.
+ * - 단일 트랜잭션(attribute row + mailbox row + rewarded=true), 푸시는 tx 밖.
  */
 export async function attributeReferralFromShare(
   newUserId: string,
   shareCode: string,
 ): Promise<{ referrerNickname: string } | null> {
-  return db.transaction(async (tx) => {
-    // 1. shareCode (=nickname) → referrer 식별.
+  // 1. tx — attribute + mailbox 적재.
+  const result = await db.transaction(async (tx) => {
     const [referrer] = await tx
       .select({ id: profiles.id, nickname: profiles.nickname })
       .from(profiles)
       .where(eq(profiles.nickname, shareCode))
       .limit(1);
-    if (!referrer) return null; // 존재하지 않는 nickname → silent skip(잘못된 링크).
+    if (!referrer) return null;
 
     if (referrer.id === newUserId) {
       throw new ReferralError('SELF_REFERRAL');
     }
 
-    // 2. attribution row 생성 — new_user_id UNIQUE 위반 시 이미 귀속된 사용자.
+    // 신규 가입자 nickname — 알림·우편함 메시지에 표시.
+    const [newUser] = await tx
+      .select({ nickname: profiles.nickname })
+      .from(profiles)
+      .where(eq(profiles.id, newUserId))
+      .limit(1);
+    const newUserNickname = newUser?.nickname ?? '친구';
+
     try {
       await tx.insert(referralAttributions).values({
         referrerUserId: referrer.id,
@@ -60,36 +70,41 @@ export async function attributeReferralFromShare(
       throw new ReferralError('ALREADY_REDEEMED');
     }
 
-    // 3. referrer 다이아 +INVITE_DIAMOND_PER_REFERRAL.
-    await tx
-      .update(profiles)
-      .set({
-        diamond: sql`${profiles.diamond} + ${BigInt(INVITE_DIAMOND_PER_REFERRAL)}`,
-      })
-      .where(eq(profiles.id, referrer.id));
+    // mailbox row — referrer가 명시적 수령. claim 시 다이아 + 슬롯별 상자 가산.
+    // INVITE_BOX_PER_REFERRAL=3 = 종류별 1개씩(무기·방어구·장신구).
+    await tx.insert(mailbox).values({
+      userId: referrer.id,
+      type: 'reward',
+      title: '친구 초대 보상',
+      body: `${newUserNickname}님이 내 카카오톡 공유로 가입했어요. 보상을 받아주세요!`,
+      senderLabel: '시스템',
+      payload: {
+        diamond: INVITE_DIAMOND_PER_REFERRAL,
+        boxes: { weapon: 1, armor: 1, accessory: 1 },
+      },
+    });
 
-    // 4. referrer 보급상자 종류별 +1.
-    for (const slot of SUPPLY_SLOTS) {
-      await tx
-        .insert(userSupplyBoxes)
-        .values({ userId: referrer.id, slot, count: 1n })
-        .onConflictDoUpdate({
-          target: [userSupplyBoxes.userId, userSupplyBoxes.slot],
-          set: { count: sql`${userSupplyBoxes.count} + 1` },
-        });
-    }
-
-    // 5. rewarded 표시(멱등 보강).
     await tx
       .update(referralAttributions)
       .set({ rewarded: true })
-      .where(
-        and(
-          eq(referralAttributions.referrerUserId, referrer.id),
-          eq(referralAttributions.newUserId, newUserId),
-        ),
-      );
+      .where(eq(referralAttributions.newUserId, newUserId));
 
-    return { referrerNickname: referrer.nickname };
+    return { referrerId: referrer.id, referrerNickname: referrer.nickname, newUserNickname };
   });
+  if (!result) return null;
+
+  // 2. push 알림 — referrer에게 즉시 발송(tx 밖, best-effort).
+  try {
+    await sendPushToUser(result.referrerId, {
+      title: '친구 초대 보상',
+      body: `${result.newUserNickname}님이 가입했어요! 💎 ${INVITE_DIAMOND_PER_REFERRAL} + 📦 ${INVITE_BOX_PER_REFERRAL}개 받기`,
+      url: '/mail',
+      tag: 'referral',
+      category: 'referral',
+    });
+  } catch (e) {
+    console.error('[referral.push]', e);
+  }
+
+  return { referrerNickname: result.referrerNickname };
 }
