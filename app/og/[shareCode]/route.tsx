@@ -327,7 +327,9 @@ export async function GET(_req: Request, { params }: { params: Promise<{ shareCo
   const enlargedW = 660;
   const enlargedH = 792;
   const charLeftOffset = Math.round((charBoxW - enlargedW) / 2); // -114
-  const charBottomLift = 48;
+  // 박스 height(478)의 ~20% — sprite 캔버스 아래쪽 빈 공간을 카드 padding 영역으로
+  // 밀어내 캐릭터 본체를 카드 아래쪽에 가깝게 노출.
+  const charBottomLift = 96;
 
   return new ImageResponse(
     <div
