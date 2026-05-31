@@ -1,9 +1,11 @@
 'use server';
 
 import { revalidatePath } from 'next/cache';
+import { sql } from 'drizzle-orm';
 
 import { getSessionUserId } from '@/lib/auth/session';
 import { rateLimited } from '@/lib/ratelimit';
+import { db } from '@/lib/db/client';
 import {
   queueEnhance,
   resolveEnhance,
@@ -14,6 +16,35 @@ import {
   type ResolveResult,
 } from '@/lib/game/enhance';
 import { getMyRanks, getMyRanksAfter, type MyRanks } from '@/lib/game/leaderboard/queries';
+
+/**
+ * push_pending(='enhance')에서 해당 jobId를 가진 element 제거.
+ * 사용자가 알림 발송 전(=push-flush 30분 도래 전) 잡을 직접 처리한 경우,
+ * 누적된 items에서 그 jobId를 빼서 "이미 처리된 잡까지 묶음 알림"이 안 가도록.
+ * items 비면 row 자체 삭제(다음 cron에서 빈 묶음 발송 미연 방지).
+ * best-effort — 실패해도 강화 결과 자체는 정상 반환.
+ */
+async function cleanupPushPendingJob(userId: string, jobId: string): Promise<void> {
+  try {
+    await db.execute(sql`
+      update push_pending
+      set items = coalesce(
+        (select jsonb_agg(elem) from jsonb_array_elements(items) elem where elem->>'jobId' <> ${jobId}),
+        '[]'::jsonb
+      ),
+      updated_at = now()
+      where user_id = ${userId}::uuid and category = 'enhance'::push_category
+    `);
+    await db.execute(sql`
+      delete from push_pending
+      where user_id = ${userId}::uuid
+        and category = 'enhance'::push_category
+        and jsonb_array_length(items) = 0
+    `);
+  } catch (e) {
+    console.error('[push_pending.cleanup]', e);
+  }
+}
 
 type ErrorState = { status: 'error'; code: string; message: string };
 
@@ -95,6 +126,8 @@ export async function finalizeEnhance(jobId: string): Promise<
     }
     // 강화 직후 — 본인 새 stat 직접 fetch + 캐시 sorted bisect(토스트 after).
     const ranksAfter = await getMyRanksAfter(userId);
+    // 묶음 알림에서 이미 처리된 잡 제거 — best-effort. 다음 cron이 빈 묶음 발송 안 함.
+    await cleanupPushPendingJob(userId, jobId);
     // 변경 데이터만 무효화(홈 '/'은 다음 방문 시 자연 갱신 — 핫패스 축소).
     revalidatePath('/enhance');
     revalidatePath('/inventory');
