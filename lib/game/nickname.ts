@@ -8,7 +8,7 @@
  */
 
 export const NICKNAME_MIN_LEN = 2;
-export const NICKNAME_MAX_LEN = 12;
+export const NICKNAME_MAX_LEN = 10;
 
 /** 허용 문자: 영문 대소문자 / 숫자 / 한글 완성형(가-힣). 자모·기호·공백·이모지 차단. */
 export const NICKNAME_CHAR_REGEX = /^[A-Za-z0-9가-힣]+$/;
