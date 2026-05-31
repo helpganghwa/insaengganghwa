@@ -106,9 +106,6 @@ export default async function CodexItemPage({
           </ul>
         )}
       </section>
-      <p className="text-center text-xs text-zinc-400">
-        상시 누적 · Top 10 · 동률은 먼저 달성한 순 (시즌 없음)
-      </p>
     </div>
   );
 }
