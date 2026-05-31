@@ -27,6 +27,16 @@ type PreviewRow = {
   fodderToConsume: number;
   fodderAvailable: number;
   totalCountInGroup: number;
+  /** 약한 순 정렬로 잡힌 fodder instance ids — 낙관적 UI에서 인벤토리 갱신용. */
+  consumedFodderIds: string[];
+};
+/** 일괄 초월 완료 시 부모(InventoryGrid)에게 전달할 낙관 업데이트 payload. */
+export type BulkTranscendOptimistic = {
+  upgrades: Array<{
+    targetInstanceId: string;
+    toT: number;
+    consumedFodderIds: string[];
+  }>;
 };
 type Preview = {
   status: 'success';
@@ -67,14 +77,25 @@ function clientSimulate(items: InvItem[]): Preview {
       skippedLockedTarget++;
       continue;
     }
+    // 서버 performTranscend가 fodder를 약한 순으로 선택하므로 시뮬레이션도 같은 정렬.
     const fodderCandidates = list
       .slice(1)
-      .filter((f) => !f.isLocked && !f.equipped && !f.busy);
+      .filter((f) => !f.isLocked && !f.equipped && !f.busy)
+      .sort(
+        (a, b) =>
+          a.transcendLevel - b.transcendLevel ||
+          a.enhanceLevel - b.enhanceLevel ||
+          a.id.localeCompare(b.id),
+      );
     let used = 0;
     let maxT = target.transcendLevel;
+    const consumedFodderIds: string[] = [];
     for (let step = target.transcendLevel + 1; ; step++) {
       const need = transcendFodderForStep(step);
       if (used + need > fodderCandidates.length) break;
+      for (let i = used; i < used + need; i++) {
+        consumedFodderIds.push(fodderCandidates[i]!.id);
+      }
       used += need;
       maxT = step;
     }
@@ -93,6 +114,7 @@ function clientSimulate(items: InvItem[]): Preview {
       fodderToConsume: used,
       fodderAvailable: fodderCandidates.length,
       totalCountInGroup: list.length,
+      consumedFodderIds,
     });
   }
   rows.sort(
@@ -108,7 +130,8 @@ export function BulkTranscendModal({
 }: {
   items: InvItem[];
   onClose: () => void;
-  onDone: () => void;
+  /** payload 있으면 InventoryGrid에 낙관 업데이트 적용 후 refresh. */
+  onDone: (payload?: BulkTranscendOptimistic) => void;
 }) {
   // 낙관적 UI — 클라이언트 시뮬레이션으로 즉시 채움. 서버 preview 응답으로 검증/갱신.
   const initialPreview = useMemo(() => clientSimulate(items), [items]);
@@ -116,6 +139,8 @@ export function BulkTranscendModal({
   const [preview, setPreview] = useState<Preview>(initialPreview);
   const [result, setResult] = useState<ExecResult | null>(null);
   const [error, setError] = useState<string | null>(null);
+  // onDone에 전달할 낙관 업데이트 payload — execute 시점에 selectedRows로 캡처.
+  const [optimisticPayload, setOptimisticPayload] = useState<BulkTranscendOptimistic | null>(null);
   const [, startTransition] = useTransition();
   const { showRanking } = useResourceToast();
 
@@ -207,6 +232,14 @@ export function BulkTranscendModal({
     };
     setResult(optimistic);
     setPhase('result');
+    // 인벤토리 grid 낙관 업데이트용 payload 캡처(onDone 시점에 부모에게 전달).
+    setOptimisticPayload({
+      upgrades: selectedRows.map((r) => ({
+        targetInstanceId: r.targetInstanceId,
+        toT: r.maxT,
+        consumedFodderIds: r.consumedFodderIds,
+      })),
+    });
     const ids = selectedRows.map((r) => r.targetInstanceId);
     startTransition(async () => {
       const r = await bulkTranscendAction(ids);
@@ -385,7 +418,7 @@ export function BulkTranscendModal({
               {phase === 'result' ? (
                 <button
                   type="button"
-                  onClick={onDone}
+                  onClick={() => onDone(optimisticPayload ?? undefined)}
                   className="flex-1 rounded-xl bg-amber-500 py-2 text-xs font-bold text-zinc-950"
                 >
                   확인

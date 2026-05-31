@@ -123,6 +123,8 @@ type BulkPlanRow = {
   fodderAvailable: number;
   fodderToConsume: number;
   totalCountInGroup: number;
+  /** performTranscend fodder 쿼리 ORDER BY와 동일 정렬로 잡힐 ids — 낙관 UI용. */
+  consumedFodderIds: bigint[];
 };
 type BulkPlan = {
   rows: BulkPlanRow[];
@@ -203,16 +205,26 @@ async function planBulkTranscend(userId: string): Promise<BulkPlan> {
       skippedLockedTarget++;
       continue;
     }
-    const fodderCandidates = list.slice(1).filter(
-      (f) => !f.isLocked && f.equippedSlot == null && !busySet.has(String(f.id)),
-    );
+    // 서버 performTranscend fodder 쿼리(약한 순)과 동일 정렬로 fodder identity 추적.
+    const fodderCandidates = list
+      .slice(1)
+      .filter((f) => !f.isLocked && f.equippedSlot == null && !busySet.has(String(f.id)))
+      .sort(
+        (a, b) =>
+          a.transcendLevel - b.transcendLevel ||
+          a.enhanceLevel - b.enhanceLevel ||
+          Number(a.id) - Number(b.id),
+      );
     const fodderAvailable = fodderCandidates.length;
-    // currentT에서 가능한 maxT 누적 시뮬레이션.
     let used = 0;
     let maxT = target.transcendLevel;
+    const consumedFodderIds: bigint[] = [];
     for (let step = target.transcendLevel + 1; ; step++) {
       const need = transcendFodderForStep(step);
       if (used + need > fodderAvailable) break;
+      for (let i = used; i < used + need; i++) {
+        consumedFodderIds.push(BigInt(fodderCandidates[i]!.id));
+      }
       used += need;
       maxT = step;
     }
@@ -231,6 +243,7 @@ async function planBulkTranscend(userId: string): Promise<BulkPlan> {
       fodderAvailable,
       fodderToConsume: used,
       totalCountInGroup: list.length,
+      consumedFodderIds,
     });
   }
 
@@ -261,6 +274,7 @@ export async function previewBulkTranscendAction() {
       fodderToConsume: r.fodderToConsume,
       fodderAvailable: r.fodderAvailable,
       totalCountInGroup: r.totalCountInGroup,
+      consumedFodderIds: r.consumedFodderIds.map((i) => i.toString()),
     })),
     skippedLockedTarget: plan.skippedLockedTarget,
     skippedNoUpgrade: plan.skippedNoUpgrade,

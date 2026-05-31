@@ -12,7 +12,7 @@ import { pieceCombatPower } from '@/lib/game/balance';
 import { useResourceToast } from '@/components/ResourceToast';
 
 import { equipBestSetAction } from './actions';
-import { BulkTranscendModal } from './BulkTranscendModal';
+import { BulkTranscendModal, type BulkTranscendOptimistic } from './BulkTranscendModal';
 import { BulkDisenchantModal } from './BulkDisenchantModal';
 import { EquipmentDetailSheet } from './EquipmentDetailSheet';
 
@@ -217,7 +217,25 @@ export function InventoryGrid({
         <BulkTranscendModal
           items={displayItems}
           onClose={() => setBulkOpen(false)}
-          onDone={() => {
+          onDone={(payload?: BulkTranscendOptimistic) => {
+            if (payload) {
+              startTransition(() => {
+                const upgradedMap = new Map<string, number>(
+                  payload.upgrades.map((u) => [u.targetInstanceId, u.toT] as [string, number]),
+                );
+                const consumedSet = new Set<string>(
+                  payload.upgrades.flatMap((u) => u.consumedFodderIds),
+                );
+                setOptimisticItems(
+                  displayItems
+                    .filter((it) => !consumedSet.has(it.id))
+                    .map((it): InvItem => {
+                      const toT = upgradedMap.get(it.id);
+                      return toT !== undefined ? { ...it, transcendLevel: toT } : it;
+                    }),
+                );
+              });
+            }
             setBulkOpen(false);
             router.refresh();
           }}
