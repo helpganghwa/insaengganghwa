@@ -315,14 +315,23 @@ export function BoastLauncher({
       <button
         type="button"
         onClick={() => setOpen(true)}
-        aria-label="공유하기"
+        aria-label="카카오톡으로 자랑하기"
         className={
           compact
-            ? 'inline-flex h-7 shrink-0 items-center gap-1 rounded-full border border-amber-400/30 bg-amber-400/10 px-2.5 text-xs font-semibold text-amber-300'
-            : 'w-full rounded-xl border border-amber-300 bg-amber-50 py-2.5 text-sm font-semibold text-amber-800 dark:border-amber-800 dark:bg-amber-950/40 dark:text-amber-200'
+            ? 'inline-flex h-7 shrink-0 items-center gap-1 rounded-full bg-[#FEE500] px-2.5 text-xs font-semibold text-[#191919]'
+            : 'flex w-full items-center justify-center gap-2 rounded-xl bg-[#FEE500] py-2.5 text-sm font-semibold text-[#191919]'
         }
       >
-        {compact ? '🔗 공유' : '🔗 내 세트 자랑하기'}
+        {/* 카카오 말풍선 아이콘 (인라인 SVG — 외부 파일 의존 없음). */}
+        <svg
+          aria-hidden
+          viewBox="0 0 24 24"
+          className={compact ? 'h-3.5 w-3.5' : 'h-4 w-4'}
+          fill="currentColor"
+        >
+          <path d="M12 3C6.477 3 2 6.477 2 10.7c0 2.61 1.66 4.92 4.2 6.3l-.83 3.05a.4.4 0 0 0 .6.42l3.66-2.43c.77.12 1.56.19 2.37.19 5.523 0 10-3.477 10-7.74S17.523 3 12 3Z" />
+        </svg>
+        {compact ? '자랑' : '내 프로필 자랑하기'}
       </button>
       <BoastModal
         open={open}
