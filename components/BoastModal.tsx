@@ -5,6 +5,7 @@ import { createPortal } from 'react-dom';
 
 import { TranscendSprite } from '@/components/TranscendSprite';
 import { rarityBorderStyle, hasRarityBorder } from '@/components/RarityFrame';
+import { getEnhancingUserCount } from '@/app/(game)/me/actions';
 
 // 공유는 **카카오톡 전용** — 사용자 결정. 링크 복사·navigator.share 분기 제거.
 // 카카오 SDK 미로드 시(앱 외부 또는 로딩 실패) 안내 alert.
@@ -54,6 +55,8 @@ export function BoastModal({
   // 아직 init 안 됐을 수 있음. open 동안 200ms 폴링(최대 5s)로 ready 감지 후 활성.
   const [kakaoReady, setKakaoReady] = useState(false);
   const [imgErr, setImgErr] = useState(false);
+  // description의 'N명이 인생 강화중' — 모달 마운트 시 1회 fetch(60s 캐시).
+  const [enhancingCount, setEnhancingCount] = useState<number | null>(null);
   // Portal — main(overflow-y-auto) 내부의 stacking 충돌로 BottomNav가 dim 위로 떠
   // 보이는 문제 회피. document.body 직속 렌더 → 무조건 root context.
   const [portalReady, setPortalReady] = useState(false);
@@ -116,57 +119,33 @@ export function BoastModal({
     if (open) setImgErr(false);
   }, [open, imageUrl]);
 
+  // 'N명이 인생 강화중' 카운트 — 모달 마운트 시 1회. (캐시 60s라 가볍게)
+  useEffect(() => {
+    let cancelled = false;
+    (async () => {
+      try {
+        const c = await getEnhancingUserCount();
+        if (!cancelled) setEnhancingCount(c);
+      } catch {
+        if (!cancelled) setEnhancingCount(0);
+      }
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, []);
+
   if (!open || !portalReady) return null;
 
-  // ── 자랑 멘트 풀 ── 랜덤 노출(매 공유마다 변주). "단조"는 게임 타이틀(인생강화)에 맞춰
-  // "강화" 표기. piece는 enhanceLevel 구간별 분기.
-  const pickMsg = (): string => {
-    if (kind === 'piece' && piece) {
-      const lv = piece.p.enhanceLevel;
-      const t = piece.p.transcendLevel;
-      const pool =
-        t >= 10
-          ? [
-              `✦✦✦ 초월 MAX 달성! 신화에 이름을 새겼다`,
-              `최고의 자리에 올랐다 — ✦MAX 영광`,
-              `별이 깃든 그 한 자루, ✦10 MAX`,
-            ]
-          : t >= 1
-            ? [
-                `✦ 초월 T${t} — 별의 결이 깃들었다`,
-                `✦${t} 진화의 증거`,
-                `평범한 강철을 넘어 ✦T${t}`,
-              ]
-            : lv >= 99
-              ? [
-                  `전설의 영역 — +99 강화 달성!`,
-                  `+99, 그 한 끗을 넘었다`,
-                  `한계 너머의 +99`,
-                ]
-              : lv >= 50
-                ? [
-                    `✨ +${lv} 강화 — 망치가 노래한다`,
-                    `+${lv}의 결, 한 계단 위에서 보는 풍경`,
-                    `쇠가 한 호흡 멈춘 그 순간 +${lv}`,
-                  ]
-                : lv >= 30
-                  ? [
-                      `+${lv} 단계 달성!`,
-                      `30고지 돌파 — +${lv}`,
-                      `한 망치 한 망치, +${lv}`,
-                    ]
-                  : [
-                      `${piece.p.name} +${lv}!`,
-                      `오늘의 한 단계, +${lv}`,
-                      `${piece.p.name} 강화 진행 중`,
-                    ];
-      return `${nickname} — ${pool[Math.floor(Math.random() * pool.length)]}`;
-    }
-    return '강화는 인생이다';
-  };
-  const setTitle = kind === 'set' ? `${nickname}의 인생강화` : (headline ?? '✨ 강화 달성');
-  // 매 모달 오픈 시 1회 고정 — 같은 모달 안에서 일관(공유 시 동일 텍스트).
-  const text = pickMsg();
+  // 사용자 결정(2026-05-31): 타이틀·설명을 고정 문구로 통일.
+  //   title       = "{nick} - '강화는 인생이다'"
+  //   description = "인생강화에서 N명이 인생 강화중" (N=현재 강화중 distinct user)
+  const setTitle =
+    kind === 'set' ? `${nickname} - '강화는 인생이다'` : (headline ?? '✨ 강화 달성');
+  const text =
+    enhancingCount !== null
+      ? `인생강화에서 ${enhancingCount.toLocaleString('ko-KR')}명이 인생 강화중`
+      : '인생강화에서 지금도 누군가 인생 강화중';
 
   // 카톡 전용 — Kakao.Share.sendDefault. imageUrl에 ?v=<random>으로 카톡 캐시
   // 우회 → 매 공유마다 다른 OG(서버 OG는 sprite·배경 랜덤 합성).
