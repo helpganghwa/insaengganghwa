@@ -85,19 +85,27 @@ export function baseAttemptDurationMs(cycleLv: number): number {
   );
 }
 
+/** 전체 진행 속도 2배 — 시도 시간만 ÷ 2 (사용자 결정 2026-05-31).
+ *  확률(baseRate/downRate/mega)은 불변, 도달 시간만 정확히 반으로. */
+export const ATTEMPT_DURATION_SCALE = 0.5;
+
 export function enhanceDurationMs(fromLevel: number): number {
-  return Math.round(baseAttemptDurationMs(cycleLevel(fromLevel)) * cycleTimeMultiplier(fromLevel));
+  return Math.round(
+    baseAttemptDurationMs(cycleLevel(fromLevel)) *
+      cycleTimeMultiplier(fromLevel) *
+      ATTEMPT_DURATION_SCALE,
+  );
 }
 
 /**
- * §1.1 누적 도달 시간 설계 목표(full-wait 평균). +99=4주가 핵심 제약(2026-05-25).
- * +30·+50은 design intent — 실제 해석 평균은 lower일 수 있음.
+ * §1.1 누적 도달 시간 설계 목표(full-wait 평균). 2026-05-31 속도 2배 적용으로
+ * 직전 anchors의 ÷ 2 (30: 24→12h / 50: 3일→36h / 99: 28일→14일).
  * `bun run scripts/analyze-enhance.ts`가 실제 평균 산출.
  */
 export const CUMULATIVE_REACH_ANCHORS_MS = {
-  30: 24 * HOUR,
-  50: 3 * 24 * HOUR,
-  99: 28 * 24 * HOUR,
+  30: 12 * HOUR,
+  50: 36 * HOUR,
+  99: 14 * 24 * HOUR,
 } as const;
 
 
