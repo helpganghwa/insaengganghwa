@@ -17,20 +17,26 @@ import 'swiper/css/pagination';
 export function HomeBannerCarousel({ children }: { children: ReactNode }) {
   const slides = Children.toArray(children).filter(Boolean);
   if (slides.length === 0) return null;
-  if (slides.length === 1) return <>{slides[0]}</>;
-  // 외부 wrapper로 폭을 명시 제약(flex 부모 안에서 Swiper가 자식 너비 합으로
-  // 부모를 늘리는 케이스 방지).
+  // 공통 outer — h-16 + border/rounded. 자식 카드는 frameless(h-full)로 그림만 채움.
+  // 슬라이드 콘텐츠만 좌우로 슬라이드하고 outer 테두리는 고정.
+  const outerClass =
+    'relative h-16 w-full min-w-0 overflow-hidden rounded-xl border border-amber-600/40';
+  if (slides.length === 1) {
+    return <div className={outerClass}>{slides[0]}</div>;
+  }
   return (
-    <div className="w-full min-w-0 overflow-hidden">
+    <div className={outerClass}>
       <Swiper
         modules={[Pagination]}
         pagination={{ clickable: true }}
-        spaceBetween={12}
+        spaceBetween={0}
         slidesPerView={1}
-        className="home-banner-swiper"
+        className="home-banner-swiper h-full"
       >
         {slides.map((slide, i) => (
-          <SwiperSlide key={i}>{slide}</SwiperSlide>
+          <SwiperSlide key={i} className="h-full">
+            {slide}
+          </SwiperSlide>
         ))}
       </Swiper>
     </div>

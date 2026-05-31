@@ -166,7 +166,7 @@ export default async function HomePage() {
   }
 
   return (
-    <div className="flex flex-col gap-4 px-4 py-4">
+    <div className="flex flex-col gap-3 px-4 py-4">
       <RankingTop3Card />
       <HomeBannerCarousel>
         {hasUnclaimedDaily ? <DailySupplyCard /> : null}

@@ -251,18 +251,27 @@ html {
 }
 
 
-/* swiper 페이지네이션 — 홈 배너 carousel용 dot 색/위치 조정 + 폭 제약. */
+/* swiper 페이지네이션 — 홈 배너 carousel용 dot. outer h-16 안 우하단에 작게. */
 .home-banner-swiper {
   width: 100% !important;
   max-width: 100% !important;
-  padding-bottom: 18px !important;
+}
+.home-banner-swiper .swiper-pagination {
+  bottom: 4px !important;
+  right: 8px !important;
+  left: auto !important;
+  width: auto !important;
+  text-align: right;
 }
 .home-banner-swiper .swiper-pagination-bullet {
-  background-color: rgb(113 113 122); /* zinc-500 */
-  opacity: 0.6;
+  width: 5px;
+  height: 5px;
+  margin: 0 2px !important;
+  background-color: rgb(255 255 255); /* white */
+  opacity: 0.45;
 }
 .home-banner-swiper .swiper-pagination-bullet-active {
-  background-color: rgb(245 158 11); /* amber-500 */
+  background-color: rgb(252 211 77); /* amber-300 */
   opacity: 1;
 }
 

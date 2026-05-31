@@ -16,7 +16,7 @@ export function DailySupplyCard() {
   return (
     <Link
       href="/mail"
-      className="relative flex h-16 overflow-hidden rounded-xl border border-amber-600/40 transition active:scale-[0.99]"
+      className="relative flex h-full w-full overflow-hidden transition active:scale-[0.99]"
     >
       {/* Pixellab 생성 배경 — wide banner 풀필 */}
       {/* eslint-disable-next-line @next/next/no-img-element */}
