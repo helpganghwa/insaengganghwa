@@ -5,6 +5,7 @@ import { getSessionUserId } from '@/lib/auth/session';
 import { withTimeout, DbTimeoutError } from '@/lib/db/with-timeout';
 import { ensureDailyMail } from '@/lib/game/mailbox';
 import { loadLayoutData } from '@/lib/game/layout-data';
+import { processPendingReferral } from '@/lib/game/referral/auto-attribute';
 import { AppHeader, AppHeaderShell } from '@/components/AppHeader';
 import { BottomNav } from '@/components/BottomNav';
 import { BottomNavAsync } from '@/components/BottomNavAsync';
@@ -32,6 +33,12 @@ export default async function GameLayout({ children }: { children: React.ReactNo
   // 일일 보급 — KST 자정 1회 자동 발송(멱등 PK). fire-and-forget(핫패스 비차단).
   withTimeout(ensureDailyMail(userId), 2000, 'layout.dailyMail').catch((e) => {
     if (!(e instanceof DbTimeoutError)) console.warn('[layout] dailyMail error', e);
+  });
+
+  // 카카오 공유 링크 가입 귀속 — pending_referral 쿠키 있으면 1회 처리(멱등).
+  // fire-and-forget — 실패해도 layout 깨지지 않게 silent. 핫패스 2s 가드.
+  withTimeout(processPendingReferral(userId), 2000, 'layout.referral').catch((e) => {
+    if (!(e instanceof DbTimeoutError)) console.warn('[layout] referral error', e);
   });
 
   // 헤더/네비 데이터 — 여기서 await하지 않음(Suspense 스트리밍). 두 자식이 같은 promise 공유.
