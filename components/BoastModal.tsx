@@ -1,9 +1,16 @@
 'use client';
 
 import { useEffect, useMemo, useState } from 'react';
+import { createPortal } from 'react-dom';
+
+import { TranscendSprite } from '@/components/TranscendSprite';
+import { rarityBorderStyle, hasRarityBorder } from '@/components/RarityFrame';
 
 // 공유는 **카카오톡 전용** — 사용자 결정. 링크 복사·navigator.share 분기 제거.
 // 카카오 SDK 미로드 시(앱 외부 또는 로딩 실패) 안내 alert.
+
+const SLOT_LABEL = { weapon: '무기', armor: '방어구', accessory: '장신구' } as const;
+const SLOT_EMOJI = { weapon: '⚔️', armor: '🛡️', accessory: '💍' } as const;
 
 export type BoastPiece = {
   slot: 'weapon' | 'armor' | 'accessory';
@@ -47,6 +54,10 @@ export function BoastModal({
   // 아직 init 안 됐을 수 있음. open 동안 200ms 폴링(최대 5s)로 ready 감지 후 활성.
   const [kakaoReady, setKakaoReady] = useState(false);
   const [imgErr, setImgErr] = useState(false);
+  // Portal — main(overflow-y-auto) 내부의 stacking 충돌로 BottomNav가 dim 위로 떠
+  // 보이는 문제 회피. document.body 직속 렌더 → 무조건 root context.
+  const [portalReady, setPortalReady] = useState(false);
+  useEffect(() => setPortalReady(true), []);
 
   useEffect(() => {
     if (typeof window !== 'undefined') {
@@ -105,7 +116,7 @@ export function BoastModal({
     if (open) setImgErr(false);
   }, [open, imageUrl]);
 
-  if (!open) return null;
+  if (!open || !portalReady) return null;
 
   // ── 자랑 멘트 풀 ── 랜덤 노출(매 공유마다 변주). "단조"는 게임 타이틀(인생강화)에 맞춰
   // "강화" 표기. piece는 enhanceLevel 구간별 분기.
@@ -221,7 +232,7 @@ export function BoastModal({
     </svg>
   );
 
-  return (
+  return createPortal(
     <div
       role="dialog"
       aria-modal="true"
@@ -230,7 +241,7 @@ export function BoastModal({
       onClick={onClose}
     >
       <div
-        className="w-full max-w-sm overflow-hidden rounded-2xl bg-zinc-950 shadow-[0_0_40px_rgba(245,158,11,0.18)] ring-1 ring-amber-700/40"
+        className="flex max-h-[calc(100dvh-2rem)] w-full max-w-sm flex-col overflow-hidden rounded-2xl bg-zinc-950 shadow-[0_0_40px_rgba(245,158,11,0.18)] ring-1 ring-amber-700/40"
         onClick={(e) => e.stopPropagation()}
       >
         {/* 카톡 헤더 — 카카오 노란 톤 */}
@@ -240,7 +251,7 @@ export function BoastModal({
         </div>
 
         {/* 미리보기 카드 — 프로필 페이지 프로필 섹션과 동일 구성(좌 캐릭터·우 장비 3종). */}
-        <div className="bg-zinc-950 p-3">
+        <div className="flex-1 overflow-y-auto bg-zinc-950 p-3">
           <section className="rounded-xl border border-zinc-800 bg-gradient-to-b from-zinc-900 to-zinc-950 p-3">
             <div className="flex items-stretch gap-2">
               {/* 좌(4) — 닉네임 + 캐릭터(머리위 닉네임은 작게) */}
@@ -268,7 +279,7 @@ export function BoastModal({
                   )}
                 </div>
               </div>
-              {/* 우(6) — 장비 3종(없으면 미장착 자리) */}
+              {/* 우(6) — 장비 3종(없으면 미장착 자리). me/page와 동일 — TranscendSprite + rarity border. */}
               <div className="flex basis-3/5 flex-col gap-1.5">
                 {(['weapon', 'armor', 'accessory'] as const).map((s) => {
                   const it = set?.pieces.find((p) => p.slot === s);
@@ -278,20 +289,30 @@ export function BoastModal({
                         key={s}
                         className="flex flex-1 items-center gap-2 rounded-xl border border-dashed border-white/15 bg-white/[0.02] px-2 text-[11px] text-white/45"
                       >
-                        <span className="grid h-8 w-8 shrink-0 place-items-center rounded-lg bg-white/5 text-base">
-                          {s === 'weapon' ? '⚔️' : s === 'armor' ? '🛡️' : '💍'}
+                        <span className="grid h-8 w-8 shrink-0 place-items-center rounded-lg bg-white/5 text-base" aria-hidden>
+                          {SLOT_EMOJI[s]}
                         </span>
-                        <span>{s === 'weapon' ? '무기' : s === 'armor' ? '방어구' : '장신구'} 미장착</span>
+                        <span>{SLOT_LABEL[s]} 미장착</span>
                       </div>
                     );
                   }
                   return (
                     <div
                       key={s}
-                      className="flex flex-1 items-center gap-2 rounded-xl border border-white/10 bg-white/5 px-2"
+                      style={rarityBorderStyle(it.transcendLevel)}
+                      className={`flex flex-1 items-center gap-2 rounded-xl border bg-white/5 px-2 ${
+                        hasRarityBorder(it.transcendLevel) ? '' : 'border-white/10'
+                      }`}
                     >
-                      <div className="grid h-8 w-8 shrink-0 place-items-center rounded-lg bg-white/5 text-base">
-                        {s === 'weapon' ? '⚔️' : s === 'armor' ? '🛡️' : '💍'}
+                      <div className="shrink-0">
+                        <TranscendSprite
+                          code={it.code}
+                          slot={s}
+                          level={it.transcendLevel}
+                          isChampion={it.isChampion}
+                          size={34}
+                          frameless
+                        />
                       </div>
                       <div className="min-w-0 flex-1">
                         <div className="line-clamp-2 text-[11px] leading-tight text-white/85">{it.name}</div>
@@ -340,7 +361,8 @@ export function BoastModal({
           ) : null}
         </div>
 
-        <div className="space-y-2 p-3 pt-0">
+        {/* 버튼 영역 — 스크롤 영역(위) 바깥, 모달 하단 고정. */}
+        <div className="shrink-0 space-y-2 border-t border-zinc-900 bg-zinc-950 p-3">
           <button
             type="button"
             onClick={doShareKakao}
@@ -359,7 +381,8 @@ export function BoastModal({
           </button>
         </div>
       </div>
-    </div>
+    </div>,
+    document.body,
   );
 }
 
