@@ -40,7 +40,7 @@ export default async function ProfileSelectPage() {
   return (
     <div className="space-y-4 px-4 py-6">
       <header className="flex items-center gap-2">
-        <h1 className="text-lg font-bold">프로필 선택</h1>
+        <h1 className="text-lg font-bold">아바타 선택</h1>
       </header>
 
       {list.length === 0 ? (
@@ -51,7 +51,7 @@ export default async function ProfileSelectPage() {
           <span className="text-2xl" aria-hidden>
             ✨
           </span>
-          <span className="text-xs">첫 프로필 만들기</span>
+          <span className="text-xs">첫 아바타 만들기</span>
         </Link>
       ) : (
         <ProfileSelector

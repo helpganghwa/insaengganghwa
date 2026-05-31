@@ -133,7 +133,7 @@ export function ProfileSelector({
               <img
                 key={d}
                 src={sel.rotations[d]}
-                alt={`프로필 ${DIR_LABEL[d] ?? d}`}
+                alt={`아바타 ${DIR_LABEL[d] ?? d}`}
                 draggable={false}
                 className="pointer-events-none absolute inset-0 h-full w-full object-contain object-bottom"
                 style={{
@@ -168,7 +168,7 @@ export function ProfileSelector({
             {/* eslint-disable-next-line @next/next/no-img-element */}
             <img
               src={p.rotations[p.activeDirection]}
-              alt="프로필"
+              alt="아바타"
               draggable={false}
               className="h-full w-full object-contain"
               style={{ imageRendering: 'pixelated' }}
@@ -188,7 +188,7 @@ export function ProfileSelector({
             : 'bg-violet-600 text-white'
         }`}
       >
-        {!dirty ? '현재 대표 프로필' : '이 프로필로 적용'}
+        {!dirty ? '현재 대표 아바타' : '이 아바타로 적용'}
       </button>
 
       {/* 삭제 */}
@@ -218,7 +218,7 @@ export function ProfileSelector({
           disabled={pending}
           className="w-full rounded-xl py-3 text-sm text-red-500"
         >
-          선택한 프로필 삭제
+          선택한 아바타 삭제
         </button>
       )}
     </div>

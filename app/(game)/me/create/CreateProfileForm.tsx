@@ -74,7 +74,7 @@ export function CreateProfileForm({
       <div className="rounded-2xl border border-amber-300 bg-amber-50 p-4 text-center dark:border-amber-700/50 dark:bg-amber-950/30">
         <div className="text-2xl">⏳</div>
         <div className="mt-1 text-sm font-semibold">
-          프로필 {STATUS_LABEL[activeJob!.status] ?? '처리 중'}
+          아바타 {STATUS_LABEL[activeJob!.status] ?? '처리 중'}
         </div>
         <p className="mt-1 text-xs text-zinc-500">
           보통 몇 분 정도 걸려요. 완료되면 알림과 우편함으로 알려드릴게요.
@@ -183,7 +183,7 @@ export function CreateProfileForm({
               ? '다이아 부족'
               : confirm
                 ? `한 번 더 눌러 생성 (💎 ${price.toLocaleString('ko-KR')})`
-                : '프로필 생성'}
+                : '아바타 생성'}
       </button>
       {confirm && !pending && (
         <p className="text-center text-[11px] text-zinc-400">생성을 시작하면 다이아가 차감돼요.</p>

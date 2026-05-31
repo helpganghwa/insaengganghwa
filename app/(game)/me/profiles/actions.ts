@@ -48,7 +48,7 @@ export async function setActiveDirection(
   const dir = DirectionSchema.safeParse(direction);
   if (!dir.success) return { status: 'error', message: '잘못된 방향입니다.' };
   if (!(await ownedProfileId(userId, profileId)))
-    return { status: 'error', message: '프로필을 찾을 수 없습니다.' };
+    return { status: 'error', message: '아바타를 찾을 수 없습니다.' };
 
   await db
     .update(userProfiles)
@@ -65,7 +65,7 @@ export async function setActiveProfile(profileId: string): Promise<ActionState> 
   const userId = await getSessionUserId();
   if (!userId) return { status: 'error', message: '로그인이 필요합니다.' };
   if (!(await ownedProfileId(userId, profileId)))
-    return { status: 'error', message: '프로필을 찾을 수 없습니다.' };
+    return { status: 'error', message: '아바타를 찾을 수 없습니다.' };
 
   await db.update(profiles).set({ activeProfileId: profileId }).where(eq(profiles.id, userId));
 
@@ -79,7 +79,7 @@ export async function deleteProfile(profileId: string): Promise<ActionState> {
   const userId = await getSessionUserId();
   if (!userId) return { status: 'error', message: '로그인이 필요합니다.' };
   if (!(await ownedProfileId(userId, profileId)))
-    return { status: 'error', message: '프로필을 찾을 수 없습니다.' };
+    return { status: 'error', message: '아바타를 찾을 수 없습니다.' };
 
   // 최소 1개 보유 — 마지막 프로필은 삭제 불가.
   const [c] = await db
@@ -87,7 +87,7 @@ export async function deleteProfile(profileId: string): Promise<ActionState> {
     .from(userProfiles)
     .where(eq(userProfiles.userId, userId));
   if ((c?.n ?? 0) <= 1)
-    return { status: 'error', message: '프로필은 최소 1개 이상 보유해야 합니다.' };
+    return { status: 'error', message: '아바타는 최소 1개 이상 보유해야 합니다.' };
 
   await db.transaction(async (tx) => {
     await tx

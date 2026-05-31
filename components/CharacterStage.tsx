@@ -21,7 +21,7 @@ export function CharacterStage({
           {/* eslint-disable-next-line @next/next/no-img-element */}
           <img
             src={charSrc}
-            alt="프로필 캐릭터"
+            alt="아바타"
             draggable={false}
             className="absolute inset-0 h-full w-full object-contain object-bottom"
             style={{

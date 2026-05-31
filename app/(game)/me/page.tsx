@@ -20,7 +20,7 @@ import { NicknameEditor } from './NicknameEditor';
 const SLOT_LABEL: Record<Slot, string> = { weapon: '무기', armor: '방어구', accessory: '장신구' };
 const SLOT_EMOJI: Record<Slot, string> = { weapon: '⚔️', armor: '🛡️', accessory: '💍' };
 const MENU = [
-  { href: '/me/create', icon: '✨', label: '프로필 생성' },
+  { href: '/me/create', icon: '✨', label: '아바타 생성' },
   { href: '/checkin', icon: '⚡', label: '출석 캘린더' },
   { href: '/me/codex', icon: '📖', label: '도감' },
   { href: '/leaderboard', icon: '🏆', label: '랭킹' },
@@ -110,7 +110,7 @@ export default async function ProfilePage() {
               className="relative z-10 text-white text-xs font-normal"
             />
             {activeProfile ? (
-              <Link href="/me/profiles" aria-label="프로필 선택" className="block">
+              <Link href="/me/profiles" aria-label="아바타 선택" className="block">
                 <CharacterStage
                   charSrc={dirImg(activeProfile)}
                   className="aspect-[3/4] h-36 overflow-visible"
