@@ -1,12 +1,13 @@
 'use client';
 
-import { useEffect, useMemo, useState, useTransition } from 'react';
+import { useEffect, useMemo, useOptimistic, useState, useTransition } from 'react';
 import { useRouter } from 'next/navigation';
 
 import type { Slot } from '@/lib/db/schema/equipment';
 
 import { TranscendSprite } from '@/components/TranscendSprite';
 import { RarityFrame, rarityBorderStyle, hasRarityBorder } from '@/components/RarityFrame';
+import { pieceCombatPower } from '@/lib/game/balance';
 
 import { useResourceToast } from '@/components/ResourceToast';
 
@@ -54,17 +55,20 @@ export function InventoryGrid({
   const [bulkOpen, setBulkOpen] = useState(false);
   const [bulkDisenchantOpen, setBulkDisenchantOpen] = useState(false);
   const [pending, startTransition] = useTransition();
+  // 낙관적 items — 최적조합 클릭 시 클라이언트에서 같은 알고리즘으로 시뮬레이션 후
+  // 즉시 화면 반영. 서버 응답 + router.refresh()로 prop 새로 들어오면 자동 fallback.
+  const [displayItems, setOptimisticItems] = useOptimistic(items);
 
   // 장착 중 — 필터 무관, 항상 무기→방어구→장신구 순 노출.
   const equipped = useMemo(() => {
-    return items
+    return displayItems
       .filter((i) => i.equipped)
       .sort((a, b) => SLOT_ORDER[a.slot] - SLOT_ORDER[b.slot]);
-  }, [items]);
+  }, [displayItems]);
 
   // 보유(미장착) — 필터/정렬 적용.
   const owned = useMemo(() => {
-    return items
+    return displayItems
       .filter((i) => !i.equipped)
       .filter((i) => (filter === 'all' ? true : i.slot === filter))
       .sort((a, b) => {
@@ -72,9 +76,9 @@ export function InventoryGrid({
         if (sortBy === 'transcend') return b.transcendLevel - a.transcendLevel;
         return b.acquiredAtMs - a.acquiredAtMs;
       });
-  }, [items, filter, sortBy]);
+  }, [displayItems, filter, sortBy]);
 
-  const openItem = openId ? items.find((i) => i.id === openId) ?? null : null;
+  const openItem = openId ? displayItems.find((i) => i.id === openId) ?? null : null;
 
   // NEW 표시 — 인벤토리 진입 시점에 캡처(직전 seen에 없는 id) → 이번 방문에 표시.
   // mount(+ items 변경) 시 모든 현재 아이템을 seen에 마크 + localStorage 저장.
@@ -175,6 +179,17 @@ export function InventoryGrid({
             disabled={pending}
             onClick={() =>
               startTransition(async () => {
+                // 낙관: 같은 알고리즘(슬롯별 pieceCombatPower 최대) 시뮬레이션 후 즉시 반영.
+                const bestBySlot = new Map<Slot, { id: string; cp: number }>();
+                for (const it of displayItems) {
+                  const cp = pieceCombatPower(it.enhanceLevel, it.transcendLevel);
+                  const cur = bestBySlot.get(it.slot);
+                  if (!cur || cp > cur.cp) bestBySlot.set(it.slot, { id: it.id, cp });
+                }
+                const bestIds = new Set([...bestBySlot.values()].map((b) => b.id));
+                setOptimisticItems(
+                  displayItems.map((it) => ({ ...it, equipped: bestIds.has(it.id) })),
+                );
                 const r = await equipBestSetAction();
                 if (r.status === 'success' && 'ranksBefore' in r && 'ranksAfter' in r) {
                   showRanking(r.ranksBefore, r.ranksAfter);
@@ -192,7 +207,7 @@ export function InventoryGrid({
       {openItem ? (
         <EquipmentDetailSheet
           item={openItem}
-          all={items}
+          all={displayItems}
           nickname={nickname}
           onClose={() => setOpenId(null)}
         />
@@ -200,7 +215,7 @@ export function InventoryGrid({
 
       {bulkOpen ? (
         <BulkTranscendModal
-          items={items}
+          items={displayItems}
           onClose={() => setBulkOpen(false)}
           onDone={() => {
             setBulkOpen(false);
@@ -211,7 +226,7 @@ export function InventoryGrid({
 
       {bulkDisenchantOpen ? (
         <BulkDisenchantModal
-          items={items}
+          items={displayItems}
           onClose={() => setBulkDisenchantOpen(false)}
           onDone={() => {
             setBulkDisenchantOpen(false);
