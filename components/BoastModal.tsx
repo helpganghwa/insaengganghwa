@@ -15,6 +15,8 @@ export type BoastPiece = {
   transcendLevel: number;
   /** 이 유저가 그 카탈로그 아이템의 챔피언(아이템별 1위) — BALANCE §3.3. */
   isChampion: boolean;
+  /** 미리보기 sprite 식별용. me/page에서 전달, 다른 경로는 optional. */
+  catalogItemId?: number;
 };
 
 /**
@@ -30,6 +32,7 @@ export function BoastModal({
   set,
   piece,
   headline,
+  profileImg,
 }: {
   open: boolean;
   onClose: () => void;
@@ -38,6 +41,8 @@ export function BoastModal({
   set?: { pieces: BoastPiece[]; total: number };
   piece?: { p: BoastPiece; cp: number };
   headline?: string;
+  /** 미리보기에 그릴 활성 프로필 캐릭터 이미지(me/page profileImg). null이면 폴백. */
+  profileImg?: string | null;
 }) {
   const [shareUrl, setShareUrl] = useState('');
   // 카카오 SDK는 next/script afterInteractive로 비동기 로드 → 첫 모달 오픈 시점에
@@ -148,15 +153,18 @@ export function BoastModal({
                     ];
       return `${nickname} — ${pool[Math.floor(Math.random() * pool.length)]}`;
     }
+    const cp = formatCompactKR(set?.total ?? 0);
     const setPool = [
-      `${nickname}의 인생강화 — 전투력 ${formatCompactKR(set?.total ?? 0)}`,
-      `전투력 ${formatCompactKR(set?.total ?? 0)} — 망치의 결실`,
-      `한 번에 하나씩, 전투력 ${formatCompactKR(set?.total ?? 0)}`,
-      `오늘도 한 망치 — ${nickname}의 전투력 ${formatCompactKR(set?.total ?? 0)}`,
-      `${nickname} · 강화의 길 · 전투력 ${formatCompactKR(set?.total ?? 0)}`,
+      `대장간의 별이 ${nickname}의 어깨 위에 깃들었다 — 전투력 ${cp}`,
+      `${nickname} — 강철의 노래가 멈추지 않는다, 전투력 ${cp}`,
+      `망치가 운명을 두드린 자 ${nickname} — 전투력 ${cp}`,
+      `${nickname}의 무구가 빛을 머금었다 — 전투력 ${cp}`,
+      `${nickname} — 영웅의 무구, 별이 깃든 손길, 전투력 ${cp}`,
+      `별빛이 깃든 강철의 주인 ${nickname} — 전투력 ${cp}`,
     ];
     return setPool[Math.floor(Math.random() * setPool.length)]!;
   };
+  const setTitle = kind === 'set' ? `${nickname} — 영웅의 무구` : (headline ?? '✦ 강화의 별이 깃들었다');
   // 매 모달 오픈 시 1회 고정 — 같은 모달 안에서 일관(공유 시 동일 텍스트).
   const text = pickMsg();
 
@@ -193,7 +201,7 @@ export function BoastModal({
     k.Share.sendDefault({
       objectType: 'feed',
       content: {
-        title: kind === 'set' ? `${nickname}의 인생강화` : (headline ?? '✨ 강화 달성'),
+        title: setTitle,
         description: text, // 위 pickMsg() 풀에서 1개 — 매번 다른 멘트
         imageUrl,
         // ⚠ 실제 OG PNG 사이즈(1200×630)와 정확히 일치시켜야 카카오가 정상 처리.
@@ -218,77 +226,146 @@ export function BoastModal({
   // SDK 늦게 로드되면 영구 disabled 되는 문제 → 폴링으로 해결)
   const hasKakao = kakaoReady;
 
+  const kakaoIcon = (
+    <svg aria-hidden viewBox="0 0 24 24" className="h-4 w-4" fill="currentColor">
+      <path d="M12 3C6.477 3 2 6.477 2 10.7c0 2.61 1.66 4.92 4.2 6.3l-.83 3.05a.4.4 0 0 0 .6.42l3.66-2.43c.77.12 1.56.19 2.37.19 5.523 0 10-3.477 10-7.74S17.523 3 12 3Z" />
+    </svg>
+  );
+
   return (
     <div
       role="dialog"
       aria-modal="true"
       aria-label="자랑하기"
-      className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 p-4 backdrop-blur-md"
+      className="fixed inset-0 z-50 flex items-end justify-center bg-black/70 backdrop-blur-md sm:items-center sm:p-4"
       onClick={onClose}
     >
       <div
-        className="w-full max-w-xs overflow-hidden rounded-2xl bg-white shadow-[0_0_40px_rgba(245,158,11,0.18)] ring-1 ring-amber-700/40 dark:bg-zinc-950"
+        className="w-full max-w-sm overflow-hidden rounded-t-2xl bg-zinc-950 shadow-[0_0_40px_rgba(245,158,11,0.18)] ring-1 ring-amber-700/40 sm:rounded-2xl"
         onClick={(e) => e.stopPropagation()}
       >
-        {/* 카톡 메시지 카드 미리보기 — 실제 공유 이미지와 텍스트 */}
-        <div className="bg-yellow-300 px-3 py-2 text-[10px] font-bold text-yellow-950">
-          💬 카카오톡 공유 미리보기
+        {/* 카톡 헤더 — 카카오 노란 톤 */}
+        <div className="flex items-center gap-1.5 bg-[#FEE500] px-3 py-2 text-[11px] font-bold text-[#191919]">
+          <span className="text-[#191919]">{kakaoIcon}</span>
+          카카오톡 공유 미리보기
         </div>
-        <div className="bg-white dark:bg-zinc-950">
-          {/* OG 이미지 — 실제 카톡 카드 비율 1200×630 ≈ 40:21. onError로 fetch 실패 가시화. */}
-          <div className="relative overflow-hidden bg-zinc-900" style={{ aspectRatio: '40/21' }}>
-            {imageUrl && !imgErr ? (
-              // eslint-disable-next-line @next/next/no-img-element
-              <img
-                src={imageUrl}
-                alt="공유 이미지 미리보기"
-                draggable={false}
-                className="absolute inset-0 h-full w-full object-cover"
-                onError={() => {
-                  // 미리보기 fetch 실패 — URL을 콘솔에 노출(사용자 디버그 + 우리 후속 진단).
-                  console.error('[BoastModal] og preview failed', imageUrl);
-                  setImgErr(true);
-                }}
-              />
-            ) : null}
-            {imgErr ? (
-              <div className="absolute inset-0 flex flex-col items-center justify-center gap-1 p-3 text-center text-[10px] leading-relaxed text-zinc-400">
-                <span>⚠ 미리보기 로드 실패</span>
-                <span className="break-all text-zinc-500">{imageUrl}</span>
+
+        {/* 미리보기 카드 — 프로필 페이지 프로필 섹션과 동일 구성(좌 캐릭터·우 장비 3종). */}
+        <div className="bg-zinc-950 p-3">
+          <section className="rounded-xl border border-zinc-800 bg-gradient-to-b from-zinc-900 to-zinc-950 p-3">
+            <div className="flex items-stretch gap-2">
+              {/* 좌(4) — 닉네임 + 캐릭터(머리위 닉네임은 작게) */}
+              <div className="flex basis-2/5 flex-col items-center gap-1">
+                <span className="truncate text-xs font-normal text-white">{nickname}</span>
+                <div className="relative aspect-[3/4] h-36 overflow-visible">
+                  {profileImg ? (
+                    // eslint-disable-next-line @next/next/no-img-element
+                    <img
+                      src={profileImg}
+                      alt=""
+                      aria-hidden
+                      draggable={false}
+                      className="absolute inset-0 h-full w-full object-contain object-bottom"
+                      style={{
+                        imageRendering: 'pixelated',
+                        transform: 'scale(1.8) translateY(10%)',
+                        transformOrigin: 'center bottom',
+                      }}
+                    />
+                  ) : (
+                    <div className="absolute inset-0 flex items-center justify-center text-2xl text-white/40">
+                      ✨
+                    </div>
+                  )}
+                </div>
               </div>
-            ) : null}
-          </div>
+              {/* 우(6) — 장비 3종(없으면 미장착 자리) */}
+              <div className="flex basis-3/5 flex-col gap-1.5">
+                {(['weapon', 'armor', 'accessory'] as const).map((s) => {
+                  const it = set?.pieces.find((p) => p.slot === s);
+                  if (!it) {
+                    return (
+                      <div
+                        key={s}
+                        className="flex flex-1 items-center gap-2 rounded-xl border border-dashed border-white/15 bg-white/[0.02] px-2 text-[11px] text-white/45"
+                      >
+                        <span className="grid h-8 w-8 shrink-0 place-items-center rounded-lg bg-white/5 text-base">
+                          {s === 'weapon' ? '⚔️' : s === 'armor' ? '🛡️' : '💍'}
+                        </span>
+                        <span>{s === 'weapon' ? '무기' : s === 'armor' ? '방어구' : '장신구'} 미장착</span>
+                      </div>
+                    );
+                  }
+                  return (
+                    <div
+                      key={s}
+                      className="flex flex-1 items-center gap-2 rounded-xl border border-white/10 bg-white/5 px-2"
+                    >
+                      <div className="grid h-8 w-8 shrink-0 place-items-center rounded-lg bg-white/5 text-base">
+                        {s === 'weapon' ? '⚔️' : s === 'armor' ? '🛡️' : '💍'}
+                      </div>
+                      <div className="min-w-0 flex-1">
+                        <div className="line-clamp-2 text-[11px] leading-tight text-white/85">{it.name}</div>
+                        <div className="text-[11px] font-bold tabular-nums text-white">+{it.enhanceLevel}</div>
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+            </div>
+          </section>
+
           {/* 카톡 본문 텍스트 카드 */}
-          <div className="space-y-1 px-3 py-2.5">
-            <div className="text-sm font-semibold text-zinc-900 dark:text-zinc-100">
-              {kind === 'set' ? `${nickname}의 인생강화` : (headline ?? '✨ 강화 달성')}
-            </div>
-            <div className="text-[12px] leading-relaxed text-zinc-600 dark:text-zinc-400">
-              {text}
-            </div>
-            <div className="text-[10px] text-zinc-400 dark:text-zinc-500">insaengganghwa.com</div>
-            {/* 카톡 버튼 미리보기 */}
+          <div className="mt-3 space-y-1 px-1">
+            <div className="text-sm font-semibold text-zinc-100">{setTitle}</div>
+            <div className="text-[12px] leading-relaxed text-zinc-400">{text}</div>
+            <div className="text-[10px] text-zinc-500">insaengganghwa.com</div>
             <div className="mt-2 flex gap-1.5">
-              <span className="flex-1 rounded border border-zinc-300 px-2 py-1 text-center text-[11px] text-zinc-700 dark:border-zinc-700 dark:text-zinc-300">
+              <span className="flex-1 rounded border border-zinc-700 px-2 py-1 text-center text-[11px] text-zinc-300">
                 인생강화 시작
               </span>
-              <span className="flex-1 rounded border border-zinc-300 px-2 py-1 text-center text-[11px] text-zinc-700 dark:border-zinc-700 dark:text-zinc-300">
+              <span className="flex-1 rounded border border-zinc-700 px-2 py-1 text-center text-[11px] text-zinc-300">
                 이 플레이어 보기
               </span>
             </div>
           </div>
+
+          {/* OG fetch 실패 시 디버그 정보(개발자만 보임, 사용자 무관). */}
+          {imgErr ? (
+            <div className="mt-2 break-all rounded bg-zinc-900 p-2 text-[9px] text-zinc-500">
+              ⚠ OG 미리보기 fetch 실패: {imageUrl}
+            </div>
+          ) : null}
+          {imageUrl ? (
+            // eslint-disable-next-line @next/next/no-img-element
+            <img
+              src={imageUrl}
+              alt=""
+              aria-hidden
+              className="hidden"
+              onError={() => {
+                console.error('[BoastModal] og preview failed', imageUrl);
+                setImgErr(true);
+              }}
+            />
+          ) : null}
         </div>
 
-        <div className="space-y-2 p-3">
+        <div className="space-y-2 p-3 pt-0">
           <button
             type="button"
             onClick={doShareKakao}
             disabled={!hasKakao}
-            className="w-full rounded-full bg-yellow-300 py-2.5 text-sm font-bold text-yellow-950 disabled:opacity-50"
+            className="flex w-full items-center justify-center gap-2 rounded-xl bg-[#FEE500] py-3 text-sm font-bold text-[#191919] disabled:opacity-50"
           >
-            {hasKakao ? '💬 카카오톡 공유' : '💬 카카오톡 준비 중…'}
+            {kakaoIcon}
+            {hasKakao ? '카카오톡 공유' : '카카오톡 준비 중…'}
           </button>
-          <button type="button" onClick={onClose} className="w-full py-1.5 text-xs text-zinc-500">
+          <button
+            type="button"
+            onClick={onClose}
+            className="w-full py-1.5 text-xs text-zinc-400"
+          >
             닫기
           </button>
         </div>
@@ -302,11 +379,13 @@ export function BoastLauncher({
   nickname,
   pieces,
   total,
+  profileImg,
   compact = false,
 }: {
   nickname: string;
   pieces: BoastPiece[];
   total: number;
+  profileImg?: string | null;
   compact?: boolean;
 }) {
   const [open, setOpen] = useState(false);
@@ -339,6 +418,7 @@ export function BoastLauncher({
         nickname={nickname}
         kind="set"
         set={{ pieces, total }}
+        profileImg={profileImg ?? null}
       />
     </>
   );

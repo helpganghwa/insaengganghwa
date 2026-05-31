@@ -176,6 +176,7 @@ export default async function ProfilePage() {
       <BoastLauncher
         nickname={nickname}
         total={total}
+        profileImg={activeProfile ? dirImg(activeProfile) : null}
         pieces={equipped.map((e) => ({
           slot: e.slot,
           code: e.code,
@@ -183,6 +184,7 @@ export default async function ProfilePage() {
           enhanceLevel: e.enhanceLevel,
           transcendLevel: e.transcendLevel,
           isChampion: champSet.has(e.catalogItemId),
+          catalogItemId: e.catalogItemId,
         }))}
       />
 
