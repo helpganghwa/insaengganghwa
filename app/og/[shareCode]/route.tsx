@@ -212,24 +212,20 @@ export async function GET(_req: Request, { params }: { params: Promise<{ shareCo
     }
   }
 
-  // OG 카드 배경 — og-pool 랜덤(no-store). 프로필 캐릭터는 아래 그라디언트 무대 박스에 별도 합성.
-  const bgUri = await dataUri(`${origin}/og/og-${1 + Math.floor(Math.random() * BG_POOL)}.png`);
-
-  // 카톡 카드의 cover 크롭(상하 ~120px / 좌우 ~130px 잘림) 안전을 위한 큰 padding.
-  // 콘텐츠가 어느 비율에서도 잘리지 않게 중앙 940×~390 영역 안에 배치.
-  const rootBase = {
-    width: '100%',
-    height: '100%',
-    display: 'flex',
-    flexDirection: 'column' as const,
-    color: '#fde9c8',
-    padding: '160px 160px',
-    fontFamily: 'sans-serif',
-    position: 'relative' as const,
-  };
-
   // ── focus=piece 모드 — 단일 아이템 강조(sprite 큼 + 레벨 강조). 카카오 공유 query. ──
   if (focus === 'piece' && focusCode) {
+    // piece 모드 전용 배경(og-pool 랜덤) + root 패딩. set 모드는 카드 컨테이너 사용.
+    const bgUri = await dataUri(`${origin}/og/og-${1 + Math.floor(Math.random() * BG_POOL)}.png`);
+    const rootBase = {
+      width: '100%',
+      height: '100%',
+      display: 'flex',
+      flexDirection: 'column' as const,
+      color: '#fde9c8',
+      padding: '160px 160px',
+      fontFamily: 'sans-serif',
+      position: 'relative' as const,
+    };
     const sprUri = await dataUri(`${origin}${spritePath(focusCode) ?? ''}`);
     const ts = focusT > 0 ? transcendStyle(focusT) : null;
     const [tr, tg, tb] = ts?.colorRgb ?? [0, 0, 0];
@@ -309,129 +305,241 @@ export async function GET(_req: Request, { params }: { params: Promise<{ shareCo
     }),
   );
 
+  // ── set 카드 — me/page 프로필 섹션 + BoastModal 미리보기와 동일 구성 ──
+  // 940×440 다크 카드(rounded·border) 안에 좌(2/5) 닉네임+캐릭터 · 우(3/5) 장비 3종.
+  // 카카오 카드 cover crop(좌우 ~130/상하 ~100) 안전 영역에 콘텐츠 배치.
+  const cardW = 940;
+  const cardH = 440;
+  const cardPad = 24;
+  const innerW = cardW - cardPad * 2; // 892
+  const innerH = cardH - cardPad * 2; // 392
+  const gapX = 24;
+  const leftW = Math.round((innerW - gapX) * 0.4); // ≈ 347
+  const rightW = innerW - gapX - leftW; // ≈ 521
+  const slotGap = 12;
+  const slotH = Math.round((innerH - slotGap * 2) / 3); // ≈ 122
+
   return new ImageResponse(
     <div
       style={{
-        ...rootBase,
-        background: 'linear-gradient(135deg,#1c1410 0%,#2a1f14 70%,#3a2a14 100%)',
-        flexDirection: 'row',
+        width: '100%',
+        height: '100%',
+        display: 'flex',
         alignItems: 'center',
         justifyContent: 'center',
-        gap: 56,
+        // me/page 외부 배경(다크) — 카드 자체가 시각언어이므로 외곽은 단색.
+        background: '#09090b',
+        fontFamily: 'sans-serif',
+        color: '#fafafa',
       }}
     >
-      {/* 프로필 초상 박스 — 그라디언트 무대 + 발그림자 + 캐릭터. /me·선택화면과 동일 비주얼. */}
+      {/* 카드 컨테이너 — me/page 섹션과 동일: rounded-xl, border zinc-800, gradient from-zinc-900 to-zinc-950 */}
       <div
         style={{
-          position: 'relative',
           display: 'flex',
-          width: 430,
-          height: 430,
-          flexShrink: 0,
+          width: cardW,
+          height: cardH,
+          padding: cardPad,
           borderRadius: 24,
-          overflow: 'hidden',
+          border: '2px solid #27272a',
+          background: 'linear-gradient(180deg,#18181b 0%,#09090b 100%)',
+          alignItems: 'stretch',
+          gap: gapX,
         }}
       >
-        {/* 발밑 타원 그림자 */}
-        <div
-          style={{
-            position: 'absolute',
-            bottom: 28,
-            left: 107,
-            width: 216,
-            height: 34,
-            borderRadius: '50%',
-            backgroundImage: 'radial-gradient(50% 50% at 50% 50%, rgba(0,0,0,0.55) 0%, rgba(0,0,0,0) 70%)',
-          }}
-        />
-        {charUri ? (
-          <img
-            src={charUri}
-            width={430}
-            height={430}
-            style={{
-              position: 'absolute',
-              top: 0,
-              left: 0,
-              width: 430,
-              height: 430,
-              objectFit: 'contain',
-              objectPosition: 'center bottom',
-              transform: 'scale(1.8) translateY(8%)',
-              transformOrigin: 'center bottom',
-            }}
-          />
-        ) : (
-          <div style={{ display: 'flex', width: '100%', height: '100%', alignItems: 'center', justifyContent: 'center', fontSize: 160, opacity: 0.5 }}>🙂</div>
-        )}
-      </div>
-
-      {/* 닉네임 + 장비 3종 세로 스택 (sprite + 이름·레벨). /me 헤더와 통일. */}
-      <div style={{ display: 'flex', flexDirection: 'column', gap: 18 }}>
+        {/* 좌(2/5) — 머리 위 닉네임 + 캐릭터 */}
         <div
           style={{
             display: 'flex',
-            fontSize: 54,
-            fontWeight: 800,
-            color: '#ffd47a',
-            marginBottom: 6,
-            maxWidth: 380,
-            overflow: 'hidden',
+            flexDirection: 'column',
+            alignItems: 'center',
+            width: leftW,
+            gap: 8,
           }}
         >
-          {nickname}
-        </div>
-        {SLOTS.map((s) => {
-          const it = bySlot.get(s);
-          const spr = it ? sprite.get(s) : null;
-          // 초월은 등급색 정적 테두리(✦T 텍스트 제거). [[transcend-no-text-label]]
-          const ts = it && it.transcendLevel > 0 ? transcendStyle(it.transcendLevel) : null;
-          const [tr, tg, tb] = ts?.colorRgb ?? [0, 0, 0];
-          return (
-            <div key={s} style={{ display: 'flex', flexDirection: 'row', alignItems: 'center', gap: 16 }}>
+          <div
+            style={{
+              display: 'flex',
+              fontSize: 30,
+              fontWeight: 400,
+              color: '#ffffff',
+              maxWidth: leftW - 8,
+              overflow: 'hidden',
+            }}
+          >
+            {nickname}
+          </div>
+          <div
+            style={{
+              position: 'relative',
+              display: 'flex',
+              width: leftW,
+              height: innerH - 38 - 8,
+              overflow: 'hidden',
+            }}
+          >
+            {charUri ? (
+              <img
+                src={charUri}
+                width={leftW}
+                height={innerH - 38 - 8}
+                style={{
+                  position: 'absolute',
+                  top: 0,
+                  left: 0,
+                  width: leftW,
+                  height: innerH - 38 - 8,
+                  objectFit: 'contain',
+                  objectPosition: 'center bottom',
+                  transform: 'scale(1.8) translateY(10%)',
+                  transformOrigin: 'center bottom',
+                }}
+              />
+            ) : (
               <div
                 style={{
-                  position: 'relative',
-                  width: 120,
-                  height: 120,
                   display: 'flex',
+                  width: '100%',
+                  height: '100%',
                   alignItems: 'center',
                   justifyContent: 'center',
-                  borderRadius: 16,
-                  background: 'rgba(0,0,0,0.36)',
-                  border: ts
-                    ? `5px solid rgb(${tr},${tg},${tb})`
-                    : '3px solid rgba(255,255,255,0.12)',
-                  boxShadow: ts
-                    ? ts.hasGlow
-                      ? `0 0 32px rgba(${tr},${tg},${tb},0.7), 0 0 16px rgba(255,238,190,0.6)`
-                      : `0 0 22px rgba(${tr},${tg},${tb},0.55)`
-                    : 'none',
-                  overflow: 'hidden',
+                  fontSize: 120,
+                  opacity: 0.4,
                 }}
               >
-                {spr ? (
-                  <img src={spr} width={100} height={100} style={{ width: 100, height: 100 }} />
-                ) : (
-                  <span style={{ fontSize: 60, opacity: it ? 1 : 0.4 }}>{EMOJI[s]}</span>
-                )}
-                {ts ? rarityStarsOG(ts.colorRgb, ts.sub as 0 | 1, 34) : null}
+                ✨
               </div>
+            )}
+          </div>
+        </div>
+
+        {/* 우(3/5) — 장비 3종 카드 (sprite 좌 + 이름·레벨 우, rarity border) */}
+        <div
+          style={{
+            display: 'flex',
+            flexDirection: 'column',
+            width: rightW,
+            gap: slotGap,
+          }}
+        >
+          {SLOTS.map((s) => {
+            const it = bySlot.get(s);
+            const spr = it ? sprite.get(s) : null;
+            const ts = it && it.transcendLevel > 0 ? transcendStyle(it.transcendLevel) : null;
+            const [tr, tg, tb] = ts?.colorRgb ?? [0, 0, 0];
+            const slotW = rightW;
+            const spriteBox = 84;
+            if (!it) {
+              return (
+                <div
+                  key={s}
+                  style={{
+                    display: 'flex',
+                    width: slotW,
+                    height: slotH,
+                    alignItems: 'center',
+                    gap: 14,
+                    paddingLeft: 14,
+                    paddingRight: 14,
+                    borderRadius: 16,
+                    border: '2px dashed rgba(255,255,255,0.15)',
+                    background: 'rgba(255,255,255,0.02)',
+                    color: 'rgba(255,255,255,0.45)',
+                  }}
+                >
+                  <div
+                    style={{
+                      display: 'flex',
+                      width: 56,
+                      height: 56,
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                      borderRadius: 12,
+                      background: 'rgba(255,255,255,0.05)',
+                      fontSize: 32,
+                    }}
+                  >
+                    {EMOJI[s]}
+                  </div>
+                  <div style={{ display: 'flex', fontSize: 24 }}>
+                    {s === 'weapon' ? '무기' : s === 'armor' ? '방어구' : '장신구'} 미장착
+                  </div>
+                </div>
+              );
+            }
+            return (
               <div
+                key={s}
                 style={{
                   display: 'flex',
-                  fontSize: 26,
-                  fontWeight: 700,
-                  opacity: it ? 1 : 0.4,
-                  maxWidth: 280,
-                  overflow: 'hidden',
+                  width: slotW,
+                  height: slotH,
+                  alignItems: 'center',
+                  gap: 14,
+                  paddingLeft: 14,
+                  paddingRight: 14,
+                  borderRadius: 16,
+                  border: ts
+                    ? `3px solid rgb(${tr},${tg},${tb})`
+                    : '2px solid rgba(255,255,255,0.10)',
+                  background: 'rgba(255,255,255,0.05)',
                 }}
               >
-                {it ? `${it.name} +${it.enhanceLevel}` : '미장착'}
+                <div
+                  style={{
+                    position: 'relative',
+                    display: 'flex',
+                    width: spriteBox,
+                    height: spriteBox,
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    flexShrink: 0,
+                  }}
+                >
+                  {spr ? (
+                    <img src={spr} width={spriteBox} height={spriteBox} style={{ width: spriteBox, height: spriteBox }} />
+                  ) : (
+                    <span style={{ fontSize: 56, opacity: 0.9 }}>{EMOJI[s]}</span>
+                  )}
+                  {ts ? rarityStarsOG(ts.colorRgb, ts.sub as 0 | 1, 24) : null}
+                </div>
+                <div
+                  style={{
+                    display: 'flex',
+                    flexDirection: 'column',
+                    flex: 1,
+                    minWidth: 0,
+                    gap: 4,
+                  }}
+                >
+                  <div
+                    style={{
+                      display: 'flex',
+                      fontSize: 26,
+                      fontWeight: 500,
+                      color: 'rgba(255,255,255,0.85)',
+                      maxWidth: rightW - spriteBox - 60,
+                      overflow: 'hidden',
+                      whiteSpace: 'nowrap',
+                    }}
+                  >
+                    {it.name}
+                  </div>
+                  <div
+                    style={{
+                      display: 'flex',
+                      fontSize: 30,
+                      fontWeight: 800,
+                      color: '#ffffff',
+                    }}
+                  >
+                    +{it.enhanceLevel}
+                  </div>
+                </div>
               </div>
-            </div>
-          );
-        })}
+            );
+          })}
+        </div>
       </div>
     </div>,
     { ...size, headers: { 'cache-control': 'no-store, max-age=0, must-revalidate' } },
