@@ -31,6 +31,10 @@ type ExecResult = {
   diamondGranted: number;
   groups: Array<{ name: string; count: number; diamondGranted: number }>;
 };
+/** 일괄 분해 완료 시 부모(InventoryGrid)에게 전달할 낙관 업데이트 payload. */
+export type BulkDisenchantOptimistic = {
+  disenchantedIds: string[];
+};
 
 /** 클라이언트 시뮬레이션 — 서버 planBulkDisenchant와 동일 알고리즘. 낙관적 UI. */
 function clientSimulate(items: InvItem[]): Preview {
@@ -75,13 +79,16 @@ export function BulkDisenchantModal({
 }: {
   items: InvItem[];
   onClose: () => void;
-  onDone: () => void;
+  /** payload 있으면 InventoryGrid에 낙관 업데이트 적용 후 refresh. */
+  onDone: (payload?: BulkDisenchantOptimistic) => void;
 }) {
   const initialPreview = useMemo(() => clientSimulate(items), [items]);
   const [phase, setPhase] = useState<'preview' | 'result' | 'error'>('preview');
   const [preview, setPreview] = useState<Preview>(initialPreview);
   const [result, setResult] = useState<ExecResult | null>(null);
   const [error, setError] = useState<string | null>(null);
+  // onDone에 전달할 낙관 업데이트 payload — execute 시점에 selectedRows로 캡처.
+  const [optimisticPayload, setOptimisticPayload] = useState<BulkDisenchantOptimistic | null>(null);
   const [, startTransition] = useTransition();
   const { showRanking } = useResourceToast();
 
@@ -166,6 +173,10 @@ export function BulkDisenchantModal({
     };
     setResult(optimistic);
     setPhase('result');
+    // 인벤토리 grid 낙관 업데이트용 payload 캡처(onDone 시점에 부모에게 전달).
+    setOptimisticPayload({
+      disenchantedIds: selectedRows.flatMap((r) => r.toDisenchantIds),
+    });
     const catalogIds = selectedRows.map((r) => r.catalogItemId);
     startTransition(async () => {
       const r = await bulkDisenchantAction(catalogIds);
@@ -318,7 +329,7 @@ export function BulkDisenchantModal({
               {phase === 'result' ? (
                 <button
                   type="button"
-                  onClick={onDone}
+                  onClick={() => onDone(optimisticPayload ?? undefined)}
                   className="flex-1 rounded-xl bg-emerald-500 py-2 text-xs font-bold text-zinc-950"
                 >
                   확인

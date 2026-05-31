@@ -13,7 +13,7 @@ import { useResourceToast } from '@/components/ResourceToast';
 
 import { equipBestSetAction } from './actions';
 import { BulkTranscendModal, type BulkTranscendOptimistic } from './BulkTranscendModal';
-import { BulkDisenchantModal } from './BulkDisenchantModal';
+import { BulkDisenchantModal, type BulkDisenchantOptimistic } from './BulkDisenchantModal';
 import { EquipmentDetailSheet } from './EquipmentDetailSheet';
 
 export type InvItem = {
@@ -246,7 +246,13 @@ export function InventoryGrid({
         <BulkDisenchantModal
           items={displayItems}
           onClose={() => setBulkDisenchantOpen(false)}
-          onDone={() => {
+          onDone={(payload?: BulkDisenchantOptimistic) => {
+            if (payload) {
+              startTransition(() => {
+                const removed = new Set<string>(payload.disenchantedIds);
+                setOptimisticItems(displayItems.filter((it) => !removed.has(it.id)));
+              });
+            }
             setBulkDisenchantOpen(false);
             router.refresh();
           }}
