@@ -199,7 +199,7 @@ export function PushSettings(props: {
       />
       <Toggle
         label="일일 보급 충전"
-        hint="매일 자정(KST) 보급 상자 도착"
+        hint="매일 자정 보급 상자 도착"
         on={supply}
         disabled={togglesDisabled || pending}
         onChange={(v) => flip('supply', v)}

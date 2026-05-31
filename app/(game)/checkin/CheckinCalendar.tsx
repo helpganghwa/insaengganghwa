@@ -232,7 +232,7 @@ export function CheckinCalendar({
           <div className="flex-1">
             <div className="text-base font-semibold">{rewardLongLabel(todayReward)}</div>
             <div className="text-[11px] text-zinc-400">
-              {claimedToday ? 'KST 자정 이후 다음 칸 활성화' : '오늘 1회 수령'}
+              {claimedToday ? '자정 이후 다음 칸 활성화' : '오늘 1회 수령'}
             </div>
           </div>
         </div>

@@ -152,7 +152,7 @@ export default function ProbabilityPage() {
         <P>
           개설 비용 {RAID_OPEN_COST_DIAMOND.toLocaleString('ko-KR')}다이아 / 인원 최대{' '}
           {RAID_MAX_PARTICIPANTS}명(호스트 포함) / 동시 진행 1인 최대{' '}
-          {RAID_MAX_CONCURRENT_PER_USER}건 / 1일(KST) {RAID_DAILY_CAP}건 / 공격창{' '}
+          {RAID_MAX_CONCURRENT_PER_USER}건 / 1일 {RAID_DAILY_CAP}건 / 공격창{' '}
           {Math.round(RAID_WINDOW_MS / 3_600_000)}시간 / 참여자당 기본 {RAID_BASE_ATTACKS}회 공격.
         </P>
         <P>
