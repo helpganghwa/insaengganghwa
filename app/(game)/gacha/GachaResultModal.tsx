@@ -98,7 +98,7 @@ export function GachaResultModal({
               {results.map((r, i) => (
                 <div
                   key={i}
-                  className="relative grid aspect-square grid-rows-[minmax(0,1fr)_1.5rem] rounded-lg border-2 border-zinc-200 p-1 text-center dark:border-zinc-800"
+                  className="relative grid grid-rows-[minmax(2.25rem,1fr)_1.5rem] rounded-lg border-2 border-zinc-200 p-1 text-center dark:border-zinc-800"
                   title={r.name}
                 >
                   {r.isNew ? (

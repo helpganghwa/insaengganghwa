@@ -318,7 +318,7 @@ function Tile({ item, isNew, onOpen }: { item: InvItem; isNew: boolean; onOpen: 
       type="button"
       onClick={onOpen}
       style={rarityBorderStyle(item.transcendLevel)}
-      className={`relative grid aspect-square grid-rows-[1.75rem_minmax(0,1fr)_1.75rem] overflow-hidden rounded-xl border-2 bg-white px-1 py-1 text-center dark:bg-zinc-950 ${
+      className={`relative grid grid-rows-[1.75rem_minmax(4rem,1fr)_1.75rem] overflow-hidden rounded-xl border-2 bg-white px-1 py-1 text-center dark:bg-zinc-950 ${
         hasRarityBorder(item.transcendLevel) ? '' : 'border-zinc-200 dark:border-zinc-800'
       }`}
     >
