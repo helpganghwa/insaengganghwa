@@ -353,14 +353,14 @@ export function EnhanceSlotCard({
             navigator.vibrate([0, 50, 80, 50, 80, 100]); // mega 햅틱
           }
         }, 1400);
-        // 종료 — Phase 2 표시 후 충분히 보이도록 총 4.4s.
+        // 종료 — Phase 2 표시 후 총 3.9s(2026-05-31 사용자 결정: 0.5s 단축).
         setTimeout(() => {
           setFlash(null);
           setFlashMsg(null);
           setFlashFromLevel(null);
           setFlashToLevel(null);
           router.refresh();
-        }, 4400);
+        }, 3900);
       } else {
         setFlash(oc);
         setFlashFromLevel(fromLv);
@@ -377,7 +377,7 @@ export function EnhanceSlotCard({
           setFlashFromLevel(null);
           setFlashToLevel(null);
           router.refresh();
-        }, 3000);
+        }, 2500);
       }
     });
   };
