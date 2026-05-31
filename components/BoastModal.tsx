@@ -153,18 +153,9 @@ export function BoastModal({
                     ];
       return `${nickname} — ${pool[Math.floor(Math.random() * pool.length)]}`;
     }
-    const cp = formatCompactKR(set?.total ?? 0);
-    const setPool = [
-      `대장간의 별이 ${nickname}의 어깨 위에 깃들었다 — 전투력 ${cp}`,
-      `${nickname} — 강철의 노래가 멈추지 않는다, 전투력 ${cp}`,
-      `망치가 운명을 두드린 자 ${nickname} — 전투력 ${cp}`,
-      `${nickname}의 무구가 빛을 머금었다 — 전투력 ${cp}`,
-      `${nickname} — 영웅의 무구, 별이 깃든 손길, 전투력 ${cp}`,
-      `별빛이 깃든 강철의 주인 ${nickname} — 전투력 ${cp}`,
-    ];
-    return setPool[Math.floor(Math.random() * setPool.length)]!;
+    return '강화는 인생이다';
   };
-  const setTitle = kind === 'set' ? `${nickname} — 영웅의 무구` : (headline ?? '✦ 강화의 별이 깃들었다');
+  const setTitle = kind === 'set' ? `${nickname}의 인생강화` : (headline ?? '✨ 강화 달성');
   // 매 모달 오픈 시 1회 고정 — 같은 모달 안에서 일관(공유 시 동일 텍스트).
   const text = pickMsg();
 
@@ -237,11 +228,11 @@ export function BoastModal({
       role="dialog"
       aria-modal="true"
       aria-label="자랑하기"
-      className="fixed inset-0 z-50 flex items-end justify-center bg-black/70 backdrop-blur-md sm:items-center sm:p-4"
+      className="fixed inset-0 z-[100] flex items-center justify-center bg-black/70 p-4 backdrop-blur-md"
       onClick={onClose}
     >
       <div
-        className="w-full max-w-sm overflow-hidden rounded-t-2xl bg-zinc-950 shadow-[0_0_40px_rgba(245,158,11,0.18)] ring-1 ring-amber-700/40 sm:rounded-2xl"
+        className="w-full max-w-sm overflow-hidden rounded-2xl bg-zinc-950 shadow-[0_0_40px_rgba(245,158,11,0.18)] ring-1 ring-amber-700/40"
         onClick={(e) => e.stopPropagation()}
       >
         {/* 카톡 헤더 — 카카오 노란 톤 */}
