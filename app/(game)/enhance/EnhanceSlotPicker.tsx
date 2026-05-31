@@ -30,9 +30,12 @@ export type EnhanceCandidate = {
 export function EmptySlotButton({
   slot,
   candidates,
+  onOptimisticStart,
 }: {
   slot: Slot;
   candidates: EnhanceCandidate[];
+  /** 강화 등록 직후 SlotLane의 useOptimistic에 가짜 ActiveJob 주입. */
+  onOptimisticStart?: (candidate: EnhanceCandidate) => void;
 }) {
   const [open, setOpen] = useState(false);
   return (
@@ -44,7 +47,14 @@ export function EmptySlotButton({
       >
         <span className="text-lg">＋</span> {SLOT_LABEL[slot]} 올려 강화
       </button>
-      {open ? <EnhanceSlotPicker slot={slot} candidates={candidates} onClose={() => setOpen(false)} /> : null}
+      {open ? (
+        <EnhanceSlotPicker
+          slot={slot}
+          candidates={candidates}
+          onClose={() => setOpen(false)}
+          onOptimisticStart={onOptimisticStart}
+        />
+      ) : null}
     </>
   );
 }
@@ -53,10 +63,12 @@ function EnhanceSlotPicker({
   slot,
   candidates,
   onClose,
+  onOptimisticStart,
 }: {
   slot: Slot;
   candidates: EnhanceCandidate[];
   onClose: () => void;
+  onOptimisticStart?: (candidate: EnhanceCandidate) => void;
 }) {
   const router = useRouter();
   const [pending, startTransition] = useTransition();
@@ -65,13 +77,18 @@ function EnhanceSlotPicker({
   const pick = (id: string) => {
     if (pending) return;
     setError(null);
+    const candidate = candidates.find((c) => c.id === id);
     startTransition(async () => {
+      // 낙관 — 가짜 ActiveJob 즉시 표시(SlotLane.useOptimistic). 모달도 즉시 닫음.
+      if (candidate) {
+        onOptimisticStart?.(candidate);
+        onClose();
+      }
       const r = await startEnhance(id);
       if (r.status === 'error') {
         setError(r.message);
         return;
       }
-      onClose();
       router.refresh();
     });
   };

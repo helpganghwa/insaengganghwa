@@ -8,8 +8,9 @@ import { catalogItems, equipmentInstances, type Slot } from '@/lib/db/schema/equ
 import { enhancementJobs } from '@/lib/db/schema/enhance';
 import { championCatalogIds } from '@/lib/game/codex/ranking';
 
-import { EnhanceSlotCard, type ActiveJob } from './EnhanceSlotCard';
-import { EmptySlotButton, type EnhanceCandidate } from './EnhanceSlotPicker';
+import { type ActiveJob } from './EnhanceSlotCard';
+import { type EnhanceCandidate } from './EnhanceSlotPicker';
+import { SlotLane } from './SlotLane';
 import { PushPermissionPrompt } from '@/components/PushPermissionPrompt';
 
 const SLOTS: Slot[] = ['weapon', 'armor', 'accessory'];
@@ -136,18 +137,14 @@ export default async function EnhancePage() {
                   completeAtIso: j.completeAt.toISOString(),
                 }
               : null;
-            return active ? (
-              <EnhanceSlotCard
+            return (
+              <SlotLane
                 key={lane}
-                activeJob={active}
+                initialActive={active}
+                candidates={candidatesBySlot.get(slot) ?? []}
+                slot={slot}
                 diamond={diamond.toString()}
                 nickname={nickname}
-              />
-            ) : (
-              <EmptySlotButton
-                key={lane}
-                slot={slot}
-                candidates={candidatesBySlot.get(slot) ?? []}
               />
             );
           })}
