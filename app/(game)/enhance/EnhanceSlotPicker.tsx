@@ -130,10 +130,8 @@ function EnhanceSlotPicker({
                 }`}
               >
                 <RarityFrame level={c.transcendLevel} />
-                <div className="flex h-7 items-center justify-center px-0.5">
-                  <span className="line-clamp-2 break-keep text-[10px] leading-tight text-zinc-600 dark:text-zinc-400">
-                    {c.name}
-                  </span>
+                <div className="flex h-7 items-center justify-center">
+                  <span className="text-xs font-semibold">+{c.enhanceLevel}</span>
                 </div>
                 <div className="flex flex-1 items-center justify-center">
                   <TranscendSprite
@@ -145,8 +143,10 @@ function EnhanceSlotPicker({
                     frameless
                   />
                 </div>
-                <div className="flex h-7 items-center justify-center">
-                  <span className="text-xs font-semibold">+{c.enhanceLevel}</span>
+                <div className="flex h-7 items-center justify-center px-0.5">
+                  <span className="line-clamp-2 break-keep text-[10px] leading-tight text-zinc-600 dark:text-zinc-400">
+                    {c.name}
+                  </span>
                 </div>
                 {c.equipped ? (
                   <span className="absolute left-1 top-1 rounded-full bg-emerald-500/95 px-1 text-[8px] font-bold text-white">

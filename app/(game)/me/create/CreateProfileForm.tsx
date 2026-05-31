@@ -116,11 +116,8 @@ export function CreateProfileForm({
                 key={it.slot}
                 className="flex aspect-square flex-col items-stretch rounded-xl border border-zinc-200 bg-white px-1 py-1 text-center dark:border-zinc-800 dark:bg-zinc-950"
               >
-                <div className="flex h-7 items-center justify-center px-0.5">
-                  <span className="line-clamp-2 break-keep text-[10px] leading-tight text-zinc-600 dark:text-zinc-400">
-                    {it.name}
-                  </span>
-                </div>
+                {/* 강화수치 없음 — 상단 영역은 시각 균형용 빈 자리 */}
+                <div className="h-7" aria-hidden />
                 <div className="flex flex-1 items-center justify-center">
                   <TranscendSprite
                     code={it.code}
@@ -130,6 +127,11 @@ export function CreateProfileForm({
                     frameless
                     animate={false}
                   />
+                </div>
+                <div className="flex h-7 items-center justify-center px-0.5">
+                  <span className="line-clamp-2 break-keep text-[10px] leading-tight text-zinc-600 dark:text-zinc-400">
+                    {it.name}
+                  </span>
                 </div>
               </div>
             ) : (

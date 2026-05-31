@@ -159,10 +159,8 @@ export default async function PublicProfilePage({
                 }`}
               >
                 <RarityFrame level={it.transcendLevel} />
-                <div className="flex h-7 items-center justify-center px-0.5">
-                  <span className="line-clamp-2 break-keep text-[10px] leading-tight text-zinc-600 dark:text-zinc-400">
-                    {it.name}
-                  </span>
+                <div className="flex h-7 items-center justify-center">
+                  <span className="text-xs font-semibold">+{it.enhanceLevel}</span>
                 </div>
                 <div className="flex flex-1 items-center justify-center">
                   <TranscendSprite
@@ -174,8 +172,10 @@ export default async function PublicProfilePage({
                     frameless
                   />
                 </div>
-                <div className="flex h-7 items-center justify-center">
-                  <span className="text-xs font-semibold">+{it.enhanceLevel}</span>
+                <div className="flex h-7 items-center justify-center px-0.5">
+                  <span className="line-clamp-2 break-keep text-[10px] leading-tight text-zinc-600 dark:text-zinc-400">
+                    {it.name}
+                  </span>
                 </div>
               </div>
             );

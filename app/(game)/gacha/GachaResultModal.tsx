@@ -45,17 +45,24 @@ export function GachaResultModal({
                 <span className="text-zinc-500">획득!</span>
               )}
             </p>
-            <div className="mt-2 flex flex-col items-center rounded-xl border-2 border-zinc-200 p-4 dark:border-zinc-800">
-              <TranscendSprite
-                code={single.code}
-                slot={slot}
-                level={0}
-                isChampion={single.isChampion}
-                size={64}
-                frameless
-              />
-              <div className="mt-1 text-base font-semibold">{single.name}</div>
-              <div className="mt-0.5 text-[11px] text-zinc-500">+0</div>
+            {/* 강화수치 → 이미지 → 이름 순(2026-05-31 사용자 결정). */}
+            <div className="mt-2 flex flex-col items-stretch rounded-xl border-2 border-zinc-200 p-4 text-center dark:border-zinc-800">
+              <div className="flex h-5 items-center justify-center">
+                <span className="text-[11px] text-zinc-500">+0</span>
+              </div>
+              <div className="mt-2 flex items-center justify-center">
+                <TranscendSprite
+                  code={single.code}
+                  slot={slot}
+                  level={0}
+                  isChampion={single.isChampion}
+                  size={64}
+                  frameless
+                />
+              </div>
+              <div className="mt-2 flex items-center justify-center px-1">
+                <span className="line-clamp-2 break-keep text-base font-semibold">{single.name}</span>
+              </div>
               {!single.isNew ? (
                 <div className="mt-1 text-[11px] text-amber-600 dark:text-amber-400">
                   중복 — 초월 제물로 활용
@@ -97,11 +104,8 @@ export function GachaResultModal({
                       N
                     </span>
                   ) : null}
-                  <div className="flex h-6 items-center justify-center px-0.5">
-                    <span className="line-clamp-2 break-keep text-[9px] leading-tight text-zinc-600 dark:text-zinc-400">
-                      {r.name}
-                    </span>
-                  </div>
+                  {/* 강화수치 없음 — 상단 영역은 시각 균형용 빈 자리 */}
+                  <div className="h-6" aria-hidden />
                   <div className="flex flex-1 items-center justify-center">
                     <TranscendSprite
                       code={r.code}
@@ -111,6 +115,11 @@ export function GachaResultModal({
                       size={36}
                       frameless
                     />
+                  </div>
+                  <div className="flex h-6 items-center justify-center px-0.5">
+                    <span className="line-clamp-2 break-keep text-[9px] leading-tight text-zinc-600 dark:text-zinc-400">
+                      {r.name}
+                    </span>
                   </div>
                 </div>
               ))}

@@ -88,9 +88,9 @@ export default async function CodexPage() {
                     href={`/me/codex/${c.id}`}
                     className="flex aspect-square flex-col items-stretch rounded-xl border-2 border-zinc-200 bg-white p-1 text-center dark:border-zinc-800 dark:bg-zinc-950"
                   >
-                    <div className="flex h-6 items-center justify-center px-0.5">
-                      <span className="line-clamp-2 break-keep text-[9px] leading-tight text-zinc-600 dark:text-zinc-400">
-                        {c.name}
+                    <div className="flex h-6 items-center justify-center">
+                      <span className="text-[10px] font-semibold text-amber-600 dark:text-amber-400">
+                        최고 +{codexMap.get(c.id)}
                       </span>
                     </div>
                     <div className="flex flex-1 items-center justify-center">
@@ -103,9 +103,9 @@ export default async function CodexPage() {
                         frameless
                       />
                     </div>
-                    <div className="flex h-6 items-center justify-center">
-                      <span className="text-[10px] font-semibold text-amber-600 dark:text-amber-400">
-                        최고 +{codexMap.get(c.id)}
+                    <div className="flex h-6 items-center justify-center px-0.5">
+                      <span className="line-clamp-2 break-keep text-[9px] leading-tight text-zinc-600 dark:text-zinc-400">
+                        {c.name}
                       </span>
                     </div>
                   </Link>
