@@ -21,12 +21,14 @@ export function GachaResultModal({
   remaining: number;
   gemTotal: number;
   pulling: boolean;
-  onAgain: (n: 1 | 10) => void;
+  onAgain: (n: number) => void;
   onClose: () => void;
 }) {
   const newCount = results.filter((r) => r.isNew).length;
   const dupCount = results.length - newCount;
   const single = results.length === 1 ? results[0]! : null;
+  // 멀티 다시 — 남은 보유량 N이 10 미만이면 N회까지(최대 10). 0~1이면 disabled.
+  const multiN = remaining >= 2 ? Math.min(10, remaining) : 10;
 
   return (
     <div
@@ -147,11 +149,11 @@ export function GachaResultModal({
           </button>
           <button
             type="button"
-            disabled={pulling || remaining < 10}
-            onClick={() => onAgain(10)}
+            disabled={pulling || remaining < 2}
+            onClick={() => onAgain(multiN)}
             className="rounded-full bg-gradient-to-r from-amber-500 to-orange-500 px-3 py-2.5 text-xs font-medium text-white disabled:opacity-40"
           >
-            {pulling ? '…' : '10회 더'}
+            {pulling ? '…' : `${multiN}회 더`}
           </button>
         </div>
         <div className="mt-2 grid grid-cols-2 gap-2">

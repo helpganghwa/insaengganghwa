@@ -33,7 +33,7 @@ export function GachaBoxCard({
     null,
   );
 
-  const pull = (n: 1 | 10) => {
+  const pull = (n: number) => {
     startTransition(async () => {
       const r = await openAction(slot, n);
       if (r.status === 'error') {
@@ -44,6 +44,8 @@ export function GachaBoxCard({
       router.refresh();
     });
   };
+  // 멀티 열기 — 보유량(N)이 10 미만이면 N회까지(최대 10). 0~1이면 의미 없어 disabled.
+  const multiN = count >= 2 ? Math.min(10, count) : 10;
 
   return (
     <>
@@ -87,11 +89,11 @@ export function GachaBoxCard({
             </button>
             <button
               type="button"
-              disabled={pending || count < 10}
-              onClick={() => pull(10)}
+              disabled={pending || count < 2}
+              onClick={() => pull(multiN)}
               className="rounded-md bg-amber-500 px-3 py-1.5 text-[11px] font-semibold text-white shadow-sm transition-transform active:scale-95 disabled:opacity-40"
             >
-              {pending ? '여는 중…' : '10회 열기'}
+              {pending ? '여는 중…' : `${multiN}회 열기`}
             </button>
           </div>
         </div>

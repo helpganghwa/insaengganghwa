@@ -34,13 +34,15 @@ const MSG: Record<string, string> = {
   UNKNOWN: '알 수 없는 오류',
 };
 
-export async function openAction(slot: Slot, count: 1 | 10): Promise<OpenActionResult> {
+export async function openAction(slot: Slot, count: number): Promise<OpenActionResult> {
   const userId = await getSessionUserId();
   if (!userId) return { status: 'error', code: 'UNAUTHENTICATED', message: MSG.UNAUTHENTICATED! };
   if (await rateLimited(userId, 'gacha'))
     return { status: 'error', code: 'RATE_LIMITED', message: MSG.RATE_LIMITED! };
+  // count 1~10 범위 클램프 — UI에서도 동일 보장(보유량 < 10이면 보유량까지).
+  const n = Math.max(1, Math.min(10, Math.floor(count)));
   try {
-    const opened = await openSupplyBoxes({ userId, slot, count });
+    const opened = await openSupplyBoxes({ userId, slot, count: n });
     const ids = [...new Set(opened.map((o) => o.catalogItemId))];
     const [meta, champSet, boxRows] = await Promise.all([
       ids.length
