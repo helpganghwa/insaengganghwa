@@ -294,10 +294,11 @@ export function EnhanceSlotCard({
   const remainingMs = done ? 0 : Math.max(0, endMs - nowMs);
   const ready = progress >= 1;
 
-  // 3분기 outcome 확률(BALANCE §1.2) — 사이클 내 ℓ 기준. down은 시간 무관 고정.
+  // 4분기 outcome 확률(BALANCE §1.2) — 사이클 내 ℓ 기준. down은 시간 무관 고정.
+  // UI '성공'은 +1·+2 모두 포함(success + mega) — 시간 꽉 차면 '최대'(baseRate)와 일치.
   const fixedDownBp = downRateBp(activeJob.fromLevel);
   const probs = effectiveOutcomeProbsBp(activeJob.baseRateBp, fixedDownBp, elapsedMs, totalMs);
-  const effBp = probs.success;
+  const effBp = probs.success + probs.mega;
   const isRiskZone = fixedDownBp > 0;
   const downPct = probs.down / 100;
 
