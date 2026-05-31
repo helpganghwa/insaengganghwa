@@ -11,8 +11,9 @@ import { catalogItems, equipmentInstances } from '@/lib/db/schema/equipment';
 import { enhancementJobs } from '@/lib/db/schema/enhance';
 import { equipItem, unequipItem, toggleEquipmentLock, equipBestSet, EquipError } from '@/lib/game/equipment/equip';
 import { performTranscend, TranscendError } from '@/lib/game/transcend';
-import { transcendFodderForStep } from '@/lib/game/balance';
+import { DIAMOND_PER_DISENCHANT, transcendFodderForStep } from '@/lib/game/balance';
 import { disenchant } from '@/lib/game/supply';
+import type { Slot } from '@/lib/db/schema/equipment';
 import { getMyRanks, getMyRanksAfter, type MyRanks } from '@/lib/game/leaderboard/queries';
 
 /** 액션 결과에 ranks before/after를 동봉(랭킹 토스트용). 실패 시 throw → 호출자 catch. */
@@ -361,4 +362,150 @@ export async function disenchantAction(id: string) {
   if (r.disenchanted === 0) return err('NOT_FOUND');
   revalidate();
   return { status: 'success' as const, diamondGranted: r.diamondGranted };
+}
+
+/**
+ * 일괄 분해 plan — 카탈로그별 그룹화, 그룹의 가장 강한 1개(transcend·enhance 가장
+ * 높은 인스턴스)는 보존하고 나머지 적격 인스턴스(미장착·미잠금·강화중 아님·예약 아님)를
+ * 분해 대상으로 묶음. 일괄 초월과 동일한 보존 정책 — 사용자가 가장 강한 개체를 실수로
+ * 분해하지 않도록 default 보호.
+ */
+type BulkDisenchantRow = {
+  catalogItemId: number;
+  code: string;
+  name: string;
+  slot: Slot;
+  toDisenchantIds: bigint[];
+  count: number;
+  diamondGranted: number;
+};
+type BulkDisenchantPlan = {
+  rows: BulkDisenchantRow[];
+  totalCount: number;
+  totalDiamond: number;
+};
+
+async function planBulkDisenchant(userId: string): Promise<BulkDisenchantPlan> {
+  const equips = (await db
+    .select({
+      id: equipmentInstances.id,
+      catalogItemId: equipmentInstances.catalogItemId,
+      transcendLevel: equipmentInstances.transcendLevel,
+      enhanceLevel: equipmentInstances.enhanceLevel,
+      isLocked: equipmentInstances.isLocked,
+      equippedSlot: equipmentInstances.equippedSlot,
+      code: catalogItems.code,
+      name: catalogItems.name,
+      slot: catalogItems.slot,
+    })
+    .from(equipmentInstances)
+    .innerJoin(catalogItems, eq(equipmentInstances.catalogItemId, catalogItems.id))
+    .where(eq(equipmentInstances.userId, userId))) as unknown as Array<{
+    id: bigint;
+    catalogItemId: number;
+    transcendLevel: number;
+    enhanceLevel: number;
+    isLocked: boolean;
+    equippedSlot: string | null;
+    code: string;
+    name: string;
+    slot: Slot;
+  }>;
+
+  const equipIds = equips.map((e) => BigInt(e.id));
+  const busySet = new Set<string>();
+  if (equipIds.length > 0) {
+    const rows = await db
+      .select({
+        eq: enhancementJobs.equipmentInstanceId,
+        fo: enhancementJobs.fodderInstanceId,
+      })
+      .from(enhancementJobs)
+      .where(and(eq(enhancementJobs.userId, userId), eq(enhancementJobs.status, 'running')));
+    for (const r of rows) {
+      if (r.eq != null) busySet.add(String(r.eq));
+      if (r.fo != null) busySet.add(String(r.fo));
+    }
+  }
+
+  const groups = new Map<number, typeof equips>();
+  for (const e of equips) {
+    if (!groups.has(e.catalogItemId)) groups.set(e.catalogItemId, []);
+    groups.get(e.catalogItemId)!.push(e);
+  }
+
+  const planRows: BulkDisenchantRow[] = [];
+  for (const [catalogItemId, list] of groups) {
+    list.sort(
+      (a, b) =>
+        b.transcendLevel - a.transcendLevel ||
+        b.enhanceLevel - a.enhanceLevel ||
+        Number(a.id) - Number(b.id),
+    );
+    // 가장 강한 1개(list[0]) 보존, 나머지 중 적격만 분해 대상.
+    const candidates = list.slice(1).filter(
+      (f) => !f.isLocked && f.equippedSlot == null && !busySet.has(String(f.id)),
+    );
+    if (candidates.length === 0) continue;
+    const first = list[0]!;
+    planRows.push({
+      catalogItemId,
+      code: first.code,
+      name: first.name,
+      slot: first.slot,
+      toDisenchantIds: candidates.map((c) => BigInt(c.id)),
+      count: candidates.length,
+      diamondGranted: candidates.length * DIAMOND_PER_DISENCHANT,
+    });
+  }
+  // 표시 순서 — 분해 개수 큰 순, 그 다음 이름.
+  planRows.sort((a, b) => b.count - a.count || a.name.localeCompare(b.name, 'ko'));
+  const totalCount = planRows.reduce((a, r) => a + r.count, 0);
+  return { rows: planRows, totalCount, totalDiamond: totalCount * DIAMOND_PER_DISENCHANT };
+}
+
+export async function previewBulkDisenchantAction() {
+  const u = await uid();
+  if (!u) return err('UNAUTHENTICATED');
+  const plan = await planBulkDisenchant(u);
+  return {
+    status: 'success' as const,
+    rows: plan.rows.map((r) => ({
+      catalogItemId: r.catalogItemId,
+      code: r.code,
+      name: r.name,
+      slot: r.slot,
+      toDisenchantIds: r.toDisenchantIds.map((i) => i.toString()),
+      count: r.count,
+      diamondGranted: r.diamondGranted,
+    })),
+    totalCount: plan.totalCount,
+    totalDiamond: plan.totalDiamond,
+  };
+}
+
+/** 선택한 카탈로그 그룹의 모든 적격 인스턴스를 일괄 분해. */
+export async function bulkDisenchantAction(catalogItemIds?: number[]) {
+  const u = await uid();
+  if (!u) return err('UNAUTHENTICATED');
+  if (await rateLimited(u, 'inventory')) return err('RATE_LIMITED');
+
+  const ranksBefore = await getMyRanks(u);
+  const plan = await planBulkDisenchant(u);
+  const selected =
+    catalogItemIds && catalogItemIds.length > 0
+      ? plan.rows.filter((r) => catalogItemIds.includes(r.catalogItemId))
+      : plan.rows;
+  const allIds = selected.flatMap((r) => r.toDisenchantIds);
+  const r = await disenchant({ userId: u, equipmentInstanceIds: allIds });
+  const ranksAfter = await getMyRanksAfter(u);
+  revalidate();
+  return {
+    status: 'success' as const,
+    disenchanted: r.disenchanted,
+    diamondGranted: r.diamondGranted,
+    groups: selected.map((s) => ({ name: s.name, count: s.count, diamondGranted: s.diamondGranted })),
+    ranksBefore,
+    ranksAfter,
+  };
 }

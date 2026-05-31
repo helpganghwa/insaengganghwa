@@ -12,6 +12,7 @@ import { useResourceToast } from '@/components/ResourceToast';
 
 import { equipBestSetAction } from './actions';
 import { BulkTranscendModal } from './BulkTranscendModal';
+import { BulkDisenchantModal } from './BulkDisenchantModal';
 import { EquipmentDetailSheet } from './EquipmentDetailSheet';
 
 export type InvItem = {
@@ -51,6 +52,7 @@ export function InventoryGrid({
   const [sortBy, setSortBy] = useState<SortBy>('recent');
   const [openId, setOpenId] = useState<string | null>(null);
   const [bulkOpen, setBulkOpen] = useState(false);
+  const [bulkDisenchantOpen, setBulkDisenchantOpen] = useState(false);
   const [pending, startTransition] = useTransition();
 
   // 장착 중 — 필터 무관, 항상 무기→방어구→장신구 순 노출.
@@ -163,6 +165,14 @@ export function InventoryGrid({
           <button
             type="button"
             disabled={pending}
+            onClick={() => setBulkDisenchantOpen(true)}
+            className="pointer-events-auto rounded-full bg-emerald-500 px-4 py-2 text-xs font-semibold text-zinc-950 shadow-lg disabled:opacity-50"
+          >
+            ♻️ 일괄 분해
+          </button>
+          <button
+            type="button"
+            disabled={pending}
             onClick={() =>
               startTransition(async () => {
                 const r = await equipBestSetAction();
@@ -194,6 +204,17 @@ export function InventoryGrid({
           onClose={() => setBulkOpen(false)}
           onDone={() => {
             setBulkOpen(false);
+            router.refresh();
+          }}
+        />
+      ) : null}
+
+      {bulkDisenchantOpen ? (
+        <BulkDisenchantModal
+          items={items}
+          onClose={() => setBulkDisenchantOpen(false)}
+          onDone={() => {
+            setBulkDisenchantOpen(false);
             router.refresh();
           }}
         />
