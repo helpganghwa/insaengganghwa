@@ -63,6 +63,8 @@ export function performTranscend(input: TranscendInput): Promise<TranscendResult
     const need = transcendFodderForStep(toT);
 
     // 제물 후보 — 같은 카탈로그 아이템, 대상 제외, 미장착·미잠금·강화중/예약 아님.
+    // **약한 순으로 정렬 후 limit** — 비싼 인스턴스(예: T3, +99) 보존(2026-05-31 버그 수정).
+    // 이전에는 ORDER BY 없이 DB row 순서대로 잡혀 T3 fodder가 T0→T1 초월에 소비될 수 있었음.
     const fodder = await tx
       .select({ id: equipmentInstances.id })
       .from(equipmentInstances)
@@ -78,6 +80,11 @@ export function performTranscend(input: TranscendInput): Promise<TranscendResult
           sql`not exists (select 1 from ${enhancementJobs} ej
               where ej.fodder_instance_id = ${equipmentInstances.id} and ej.status = 'running')`,
         ),
+      )
+      .orderBy(
+        equipmentInstances.transcendLevel,
+        equipmentInstances.enhanceLevel,
+        equipmentInstances.id,
       )
       .limit(need)
       .for('update');
