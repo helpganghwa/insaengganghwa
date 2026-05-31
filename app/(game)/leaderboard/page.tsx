@@ -183,7 +183,6 @@ export default async function LeaderboardPage({
           )}
         </>
       )}
-      <p className="text-center text-xs text-zinc-400">상시 누적 · Top 100 (시즌 없음)</p>
     </div>
   );
 }
