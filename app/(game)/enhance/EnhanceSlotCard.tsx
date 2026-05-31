@@ -488,7 +488,14 @@ export function EnhanceSlotCard({
           <div className="flex shrink-0 flex-col gap-1">
             <button
               type="button"
-              disabled={pending || !instantCost || !canAfford}
+              disabled={
+                pending ||
+                !instantCost ||
+                !canAfford ||
+                confirm ||
+                attempting ||
+                !!flash
+              }
               onClick={(e) => {
                 e.stopPropagation();
                 doReduce();
@@ -507,7 +514,7 @@ export function EnhanceSlotCard({
             </button>
             <button
               type="button"
-              disabled={pending}
+              disabled={pending || confirm || attempting || !!flash}
               onClick={(e) => {
                 e.stopPropagation();
                 doCancel();
