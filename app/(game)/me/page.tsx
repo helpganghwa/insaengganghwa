@@ -106,7 +106,7 @@ export default async function ProfilePage() {
               current={nickname}
               changedCount={prof[0]?.nicknameChangedCount ?? 0}
               diamond={String(prof[0]?.diamond ?? 0n)}
-              className="text-white text-xs font-normal"
+              className="relative z-10 text-white text-xs font-normal"
             />
             {activeProfile ? (
               <Link href="/me/profiles" aria-label="프로필 선택" className="block">

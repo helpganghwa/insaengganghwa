@@ -324,9 +324,9 @@ export async function GET(_req: Request, { params }: { params: Promise<{ shareCo
   // 경우가 있어 픽셀 단위 width/height + absolute bottom으로 직접 제어.
   // enlargedH(720) > charBoxH(478) → sprite contain의 머리 위 빈 영역이 카드 padding
   // 위쪽으로 자연스럽게 침범(시각적 무해). bottom -48로 발이 카드 outer bottom 근접.
-  const enlargedW = 600;
-  const enlargedH = 720;
-  const charLeftOffset = Math.round((charBoxW - enlargedW) / 2); // -84
+  const enlargedW = 660;
+  const enlargedH = 792;
+  const charLeftOffset = Math.round((charBoxW - enlargedW) / 2); // -114
   const charBottomLift = 48;
 
   return new ImageResponse(
