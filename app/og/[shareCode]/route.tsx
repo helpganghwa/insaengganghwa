@@ -318,8 +318,11 @@ export async function GET(_req: Request, { params }: { params: Promise<{ shareCo
   const slotH = Math.round((innerH - slotGap * 2) / 3); // ≈ 167
   const nicknameH = 44;
   const charBoxH = innerH - nicknameH - 12; // 478 — gap 12 빼고
-  // 캐릭터 박스는 aspect-[3/4] 비율(me/page 동일). 좌측 컬럼 가운데 정렬.
-  const charBoxW = Math.round((charBoxH * 3) / 4); // ≈ 358
+  // 캐릭터 박스는 좌측 컬럼 전체 폭을 사용(이전 358 → 432). img에 scale 적용 시
+  // 캐릭터가 박스보다 크게 그려져 미리보기 인상(scale 1.8) 재현. transform-origin
+  // center bottom으로 발밑 고정 — 무기/소품이 우측으로 넘쳐도 우측 장비 박스 시작점
+  // (leftW + gap = 456px)을 침범하지 않도록 scale 1.4로 보수적 설정. */
+  const charBoxW = leftW;
 
   return new ImageResponse(
     <div
@@ -379,6 +382,8 @@ export async function GET(_req: Request, { params }: { params: Promise<{ shareCo
                 height: charBoxH,
                 objectFit: 'contain',
                 objectPosition: 'center bottom',
+                transform: 'scale(1.4) translateY(8%)',
+                transformOrigin: 'center bottom',
               }}
             />
           ) : (
