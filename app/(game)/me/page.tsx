@@ -16,6 +16,8 @@ import { TranscendSprite } from '@/components/TranscendSprite';
 import { rarityBorderStyle, hasRarityBorder } from '@/components/RarityFrame';
 
 import { NicknameEditor } from './NicknameEditor';
+import { ReferralSection } from './ReferralSection';
+import { getReferralStats } from '@/lib/game/referral/stats';
 
 const SLOT_LABEL: Record<Slot, string> = { weapon: '무기', armor: '방어구', accessory: '장신구' };
 const SLOT_EMOJI: Record<Slot, string> = { weapon: '⚔️', armor: '🛡️', accessory: '💍' };
@@ -73,6 +75,7 @@ export default async function ProfilePage() {
       .from(userProfiles)
       .where(and(eq(userProfiles.userId, userId), isNull(userProfiles.hiddenAt)))
       .orderBy(desc(userProfiles.createdAt)),
+    getReferralStats(userId),
     ]),
     3500,
     'me.page',
@@ -82,6 +85,7 @@ export default async function ProfilePage() {
   const codexAgg = _r?.[2] ?? [];
   const champSet = _r?.[3] ?? new Set<number>();
   const myProfiles = _r?.[4] ?? [];
+  const referralStats = _r?.[5] ?? { totalReferrals: 0, totalDiamondEarned: 0, totalBoxEarned: 0 };
 
   const nickname = prof[0]?.nickname ?? '플레이어';
   const codexSum = Number(codexAgg[0]?.s ?? 0);
@@ -187,6 +191,12 @@ export default async function ProfilePage() {
           isChampion: champSet.has(e.catalogItemId),
           catalogItemId: e.catalogItemId,
         }))}
+      />
+
+      <ReferralSection
+        totalReferrals={referralStats.totalReferrals}
+        totalDiamondEarned={referralStats.totalDiamondEarned}
+        totalBoxEarned={referralStats.totalBoxEarned}
       />
 
       <nav className="space-y-2">
