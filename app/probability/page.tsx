@@ -3,6 +3,7 @@ import type { Metadata } from 'next';
 import {
   baseSuccessRateBp,
   downRateBp,
+  MEGA_OF_SUCCESS_BP,
   SAFE_MAX_LEVEL,
   CYCLE_LEN,
   CYCLE_TIME_BASE,
@@ -66,26 +67,30 @@ export default function ProbabilityPage() {
 
       <Sec n="1" title="강화">
         <P>
-          강화는 매 시도마다 세 결과로 분기됩니다 — <b>성공</b>(다음 단계로 진행) /{' '}
+          강화는 매 시도마다 네 결과로 분기됩니다 — <b>성공</b>(+1 단계) / <b>메가</b>(+2 단계) /{' '}
           <b>유지</b>(단계 변동 없음) / <b>하락</b>(−1 단계). 실제 성공률 = 공시 성공률 × (경과 시간
-          ÷ 필요 시간)으로 시간에 비례해 오르며, 최대 대기 시 공시 성공률에 도달합니다.{' '}
-          <b>하락 확률은 시간에 무관하게 단계별로 고정</b>입니다(일찍 시도해도 하락 확률 동일,
-          잃은 성공 확률은 유지로 이동).
+          ÷ 필요 시간)으로 시간에 비례해 오르며, 최대 대기 시 공시 성공률에 도달합니다. 공시
+          성공률 안에서 <b>{pct(MEGA_OF_SUCCESS_BP)}는 메가</b>(+2)로 분리됩니다(예: 공시 70%
+          중 메가 3.50% / 일반 성공 66.50%). <b>하락 확률은 시간에 무관하게 단계별로 고정</b>
+          입니다(일찍 시도해도 하락 확률 동일, 잃은 성공 확률은 유지로 이동).
         </P>
         <P>
           강화는 {CYCLE_LEN}단위 <b>사이클</b>로 진행되며, 각 사이클마다 시도 시간이{' '}
           {CYCLE_TIME_BASE}배씩 늘어납니다(1배·2배·4배…). 확률 곡선은 사이클마다 동일하게
           반복됩니다(예: +100 = +0, +152 = +52의 확률).
         </P>
-        <Table head={['단계', '공시 성공률', '하락률(고정)', '유지률(최대)']}>
+        <Table head={['단계', '성공(+1)', '메가(+2)', '하락(고정)', '유지(최대)']}>
           {ENH_SAMPLES.map((lv) => {
             const base = baseSuccessRateBp(lv);
+            const mega = Math.floor((base * MEGA_OF_SUCCESS_BP) / 10000);
+            const success = base - mega;
             const down = downRateBp(lv);
             const hold = 10000 - base - down;
             return (
               <tr key={lv} className="border-t border-zinc-100 dark:border-zinc-900">
                 <Td>+{lv}</Td>
-                <Td>{pct(base)}</Td>
+                <Td>{pct(success)}</Td>
+                <Td>{pct(mega)}</Td>
                 <Td>{pct(down)}</Td>
                 <Td>{pct(hold)}</Td>
               </tr>
