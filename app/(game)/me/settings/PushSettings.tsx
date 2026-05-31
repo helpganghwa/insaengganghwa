@@ -28,7 +28,7 @@ import {
  * 카테고리 토글 OFF는 즉시 DB 반영(낙관적 UI).
  */
 
-type Cat = 'enhance' | 'raid' | 'supply';
+type Cat = 'enhance' | 'raid' | 'supply' | 'profile' | 'referral';
 
 type EnhanceMode = 'instant' | 'batched' | 'batched_1h';
 
@@ -36,6 +36,8 @@ export function PushSettings(props: {
   initialEnhance: boolean;
   initialRaid: boolean;
   initialSupply: boolean;
+  initialProfile: boolean;
+  initialReferral: boolean;
   initialEnhanceMode: EnhanceMode;
 }) {
   const [supportKind, setSupportKind] = useState<string | null>(null);
@@ -44,6 +46,8 @@ export function PushSettings(props: {
   const [enhance, setEnhance] = useState(props.initialEnhance);
   const [raid, setRaid] = useState(props.initialRaid);
   const [supply, setSupply] = useState(props.initialSupply);
+  const [profile, setProfile] = useState(props.initialProfile);
+  const [referral, setReferral] = useState(props.initialReferral);
   const [enhanceMode, setEnhanceMode] = useState<EnhanceMode>(props.initialEnhanceMode);
   const [pending, startTransition] = useTransition();
 
@@ -89,7 +93,14 @@ export function PushSettings(props: {
   }
 
   function flip(cat: Cat, next: boolean) {
-    const setLocal = cat === 'enhance' ? setEnhance : cat === 'raid' ? setRaid : setSupply;
+    const setterMap: Record<Cat, (v: boolean) => void> = {
+      enhance: setEnhance,
+      raid: setRaid,
+      supply: setSupply,
+      profile: setProfile,
+      referral: setReferral,
+    };
+    const setLocal = setterMap[cat];
     setLocal(next);
     startTransition(async () => {
       const r = await setPushCategoryAction({ category: cat, enabled: next });
@@ -192,6 +203,20 @@ export function PushSettings(props: {
         on={supply}
         disabled={togglesDisabled || pending}
         onChange={(v) => flip('supply', v)}
+      />
+      <Toggle
+        label="아바타 생성 결과"
+        hint="아바타 검토 완료/반려/실패 알림"
+        on={profile}
+        disabled={togglesDisabled || pending}
+        onChange={(v) => flip('profile', v)}
+      />
+      <Toggle
+        label="친구 초대"
+        hint="내 카카오톡 공유로 친구가 가입했을 때"
+        on={referral}
+        disabled={togglesDisabled || pending}
+        onChange={(v) => flip('referral', v)}
       />
     </div>
   );

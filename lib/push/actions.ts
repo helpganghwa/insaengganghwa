@@ -59,19 +59,21 @@ export async function unregisterPushSubscriptionAction(input: {
   return { ok: true };
 }
 
-/** 카테고리 토글 갱신 — profiles.push_{enhance,raid,supply} 컬럼. */
+/** 카테고리 토글 갱신 — profiles.push_{enhance,raid,supply,profile,referral} 컬럼. */
 export async function setPushCategoryAction(input: {
-  category: 'enhance' | 'raid' | 'supply';
+  category: 'enhance' | 'raid' | 'supply' | 'profile' | 'referral';
   enabled: boolean;
 }): Promise<{ ok: boolean }> {
   const userId = await getSessionUserId();
   if (!userId) return { ok: false };
-  const col =
-    input.category === 'enhance'
-      ? 'push_enhance'
-      : input.category === 'raid'
-        ? 'push_raid'
-        : 'push_supply';
+  const colMap: Record<typeof input.category, string> = {
+    enhance: 'push_enhance',
+    raid: 'push_raid',
+    supply: 'push_supply',
+    profile: 'push_profile',
+    referral: 'push_referral',
+  };
+  const col = colMap[input.category];
   // 컬럼 식별자는 enum이라 SQL injection 위험 없음.
   await db.execute(
     sql`update profiles set ${sql.raw(col)} = ${input.enabled}, updated_at = now() where id = ${userId}::uuid`,
