@@ -86,22 +86,28 @@ export default async function CodexPage() {
                   <Link
                     key={c.id}
                     href={`/me/codex/${c.id}`}
-                    className="flex aspect-square flex-col items-center justify-center gap-0.5 rounded-xl border-2 border-zinc-200 bg-white p-1 text-center dark:border-zinc-800 dark:bg-zinc-950"
+                    className="flex aspect-square flex-col items-stretch rounded-xl border-2 border-zinc-200 bg-white p-1 text-center dark:border-zinc-800 dark:bg-zinc-950"
                   >
-                    <TranscendSprite
-                      code={c.code}
-                      slot={c.slot}
-                      level={0}
-                      isChampion={champ}
-                      size={40}
-                      frameless
-                    />
-                    <span className="px-0.5 text-[9px] leading-tight text-zinc-600 dark:text-zinc-400">
-                      {c.name}
-                    </span>
-                    <span className="text-[10px] font-semibold text-amber-600 dark:text-amber-400">
-                      최고 +{codexMap.get(c.id)}
-                    </span>
+                    <div className="flex h-6 items-center justify-center px-0.5">
+                      <span className="line-clamp-2 break-keep text-[9px] leading-tight text-zinc-600 dark:text-zinc-400">
+                        {c.name}
+                      </span>
+                    </div>
+                    <div className="flex flex-1 items-center justify-center">
+                      <TranscendSprite
+                        code={c.code}
+                        slot={c.slot}
+                        level={0}
+                        isChampion={champ}
+                        size={40}
+                        frameless
+                      />
+                    </div>
+                    <div className="flex h-6 items-center justify-center">
+                      <span className="text-[10px] font-semibold text-amber-600 dark:text-amber-400">
+                        최고 +{codexMap.get(c.id)}
+                      </span>
+                    </div>
                   </Link>
                 );
               })}

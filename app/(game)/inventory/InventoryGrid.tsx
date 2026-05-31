@@ -310,28 +310,36 @@ function Section({ title, children }: { title: string; children: React.ReactNode
 function Tile({ item, isNew, onOpen }: { item: InvItem; isNew: boolean; onOpen: () => void }) {
   // 카드 보더 색 = 등급(transcend) 색. 4 모서리에 RarityFrame(별).
   // 잠금/강화중 상태는 카드에서 시각 표시 안 함(보더 가림 회피) — 상세 팝업에서 관리/확인.
+  // 카드 구성: 이름(고정 h-7) → 이미지(flex-1 center) → 강화수치(고정 h-7).
+  // 위·아래 영역을 같은 높이로 잡아 이미지가 항상 카드 중앙 — 이름 2줄/1줄 무관.
   return (
     <button
       type="button"
       onClick={onOpen}
       style={rarityBorderStyle(item.transcendLevel)}
-      className={`relative flex aspect-square flex-col items-center justify-center gap-0.5 overflow-hidden rounded-xl border-2 bg-white px-1 text-center dark:bg-zinc-950 ${
+      className={`relative flex aspect-square flex-col items-stretch overflow-hidden rounded-xl border-2 bg-white px-1 py-1 text-center dark:bg-zinc-950 ${
         hasRarityBorder(item.transcendLevel) ? '' : 'border-zinc-200 dark:border-zinc-800'
       }`}
     >
       <RarityFrame level={item.transcendLevel} />
-      <TranscendSprite
-        code={item.code}
-        slot={item.slot}
-        level={item.transcendLevel}
-        isChampion={item.isChampion}
-        size={64}
-        frameless
-      />
-      <span className="break-keep px-0.5 text-[10px] leading-tight text-zinc-600 dark:text-zinc-400">
-        {item.name}
-      </span>
-      <span className="text-xs font-semibold">+{item.enhanceLevel}</span>
+      <div className="flex h-7 items-center justify-center px-0.5">
+        <span className="line-clamp-2 break-keep text-[10px] leading-tight text-zinc-600 dark:text-zinc-400">
+          {item.name}
+        </span>
+      </div>
+      <div className="flex flex-1 items-center justify-center">
+        <TranscendSprite
+          code={item.code}
+          slot={item.slot}
+          level={item.transcendLevel}
+          isChampion={item.isChampion}
+          size={64}
+          frameless
+        />
+      </div>
+      <div className="flex h-7 items-center justify-center">
+        <span className="text-xs font-semibold">+{item.enhanceLevel}</span>
+      </div>
       {isNew ? (
         <span className="absolute left-1 top-1 rounded-full bg-emerald-500 px-1 text-[8px] font-bold text-white">
           NEW
