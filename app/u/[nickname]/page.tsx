@@ -1,3 +1,4 @@
+import { cache } from 'react';
 import Link from 'next/link';
 import { notFound } from 'next/navigation';
 import type { Metadata } from 'next';
@@ -21,8 +22,12 @@ import { ReportButton } from './ReportButton';
 const SLOT_LABEL: Record<Slot, string> = { weapon: '무기', armor: '방어구', accessory: '장신구' };
 const SLOT_EMOJI: Record<Slot, string> = { weapon: '⚔️', armor: '🛡️', accessory: '💍' };
 
-/** 닉네임 → 공개 프로필 데이터(착용 세트 + KPI + 챔피언). 미존재 시 null. */
-async function loadProfile(nickname: string) {
+/**
+ * 닉네임 → 공개 프로필 데이터(착용 세트 + KPI + 챔피언). 미존재 시 null.
+ * React cache로 generateMetadata + page render 사이 dedupe — 한 요청 내
+ * DB 쿼리 1번만 실행(이전엔 무한 로딩 원인이었음, 2026-06-01).
+ */
+const loadProfile = cache(async (nickname: string) => {
   const [prof] = await db
     .select({
       id: profiles.id,
@@ -130,7 +135,7 @@ async function loadProfile(nickname: string) {
     ranks,
     champItems,
   };
-}
+});
 
 export async function generateMetadata({
   params,
