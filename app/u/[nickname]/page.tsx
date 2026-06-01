@@ -178,29 +178,27 @@ export default async function PublicProfilePage({
   return (
     <main className="mx-auto min-h-dvh w-full max-w-[390px] bg-zinc-950 text-zinc-50">
       {/* ── 히어로: 캐릭터 풀블리드 + 그라데이션 + 닉네임 ── */}
-      <section className="relative flex h-[300px] items-end justify-center overflow-hidden bg-gradient-to-b from-amber-900/30 via-zinc-900 to-zinc-950">
+      <section className="relative flex h-[220px] items-end justify-center overflow-hidden bg-gradient-to-b from-amber-900/30 via-zinc-900 to-zinc-950">
         {data.charImg ? (
           <div className="absolute inset-0 flex items-end justify-center">
-            {/* aspect-[2/3] — sprite scale 1.8 적용 시 좌우 잘림 방지(390px 내 안전). */}
             <CharacterStage charSrc={data.charImg} className="aspect-[2/3] h-full" />
           </div>
         ) : (
-          <div className="absolute inset-0 flex items-center justify-center text-6xl opacity-30">
+          <div className="absolute inset-0 flex items-center justify-center text-5xl opacity-30">
             🏆
           </div>
         )}
-        {/* radial vignette — 캐릭터 가독성 보강 */}
         <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(circle_at_50%_55%,transparent_30%,rgba(0,0,0,0.55))]" />
-        <div className="relative z-10 mb-3 text-center">
-          <h1 className="text-2xl font-extrabold tracking-tight text-white drop-shadow-[0_2px_3px_rgba(0,0,0,0.7)]">
+        <div className="relative z-10 mb-2 text-center">
+          <h1 className="text-xl font-extrabold tracking-tight text-white drop-shadow-[0_2px_3px_rgba(0,0,0,0.7)]">
             {data.nickname}
           </h1>
         </div>
       </section>
 
-      <div className="px-4 pb-6">
-        {/* ── KPI 3종: 전투력 / 최고 강화 / 합산 강화 + 랭킹 ── */}
-        <section className="-mt-4 grid grid-cols-3 gap-2">
+      <div className="space-y-3 px-3 pb-4">
+        {/* ── KPI 3종 ── */}
+        <section className="-mt-3 grid grid-cols-3 gap-1.5">
           <KpiCard
             label="전투력"
             value={data.total.toLocaleString('ko-KR')}
@@ -219,24 +217,23 @@ export default async function PublicProfilePage({
         </section>
 
         {/* ── 장착 세트 ── */}
-        <section className="mt-5 rounded-2xl border border-zinc-800 bg-zinc-900/50 p-3">
-          <div className="mb-2 text-[11px] font-semibold tracking-wide text-zinc-400">
+        <section className="rounded-xl border border-zinc-800 bg-zinc-900/50 p-2">
+          <div className="mb-1.5 text-[10px] font-semibold tracking-wide text-zinc-400">
             장착 세트
           </div>
-          <div className="grid grid-cols-3 gap-2">
+          <div className="grid grid-cols-3 gap-1.5">
             {(['weapon', 'armor', 'accessory'] as Slot[]).map((s) => {
               const it = bySlot.get(s);
               if (!it) {
                 return (
                   <div
                     key={s}
-                    className="flex aspect-square flex-col items-center justify-center gap-0.5 rounded-xl border-2 border-dashed border-zinc-700 px-1 text-center text-zinc-500"
+                    className="flex aspect-square flex-col items-center justify-center gap-0.5 rounded-lg border-2 border-dashed border-zinc-700 px-1 text-center text-zinc-500"
                   >
-                    <span className="text-2xl" aria-hidden>
+                    <span className="text-xl" aria-hidden>
                       {SLOT_EMOJI[s]}
                     </span>
-                    <span className="text-[10px]">{SLOT_LABEL[s]}</span>
-                    <span className="text-[9px]">미장착</span>
+                    <span className="text-[9px]">{SLOT_LABEL[s]}</span>
                   </div>
                 );
               }
@@ -244,7 +241,7 @@ export default async function PublicProfilePage({
                 <div
                   key={s}
                   style={rarityBorderStyle(it.transcendLevel)}
-                  className={`relative flex aspect-square flex-col items-center justify-center gap-0.5 overflow-hidden rounded-xl border-2 bg-zinc-950 px-1 text-center ${
+                  className={`relative flex aspect-square flex-col items-center justify-center gap-0.5 overflow-hidden rounded-lg border-2 bg-zinc-950 px-1 text-center ${
                     hasRarityBorder(it.transcendLevel) ? '' : 'border-zinc-800'
                   }`}
                 >
@@ -254,45 +251,45 @@ export default async function PublicProfilePage({
                     slot={s}
                     level={it.transcendLevel}
                     isChampion={it.isChampion}
-                    size={56}
+                    size={48}
                     frameless
                   />
-                  <span className="line-clamp-2 break-keep px-0.5 text-[10px] leading-tight text-zinc-400">
+                  <span className="line-clamp-2 break-keep px-0.5 text-[9px] leading-tight text-zinc-400">
                     {it.name}
                   </span>
-                  <span className="text-xs font-semibold text-zinc-100">+{it.enhanceLevel}</span>
+                  <span className="text-[11px] font-semibold text-zinc-100">+{it.enhanceLevel}</span>
                 </div>
               );
             })}
           </div>
         </section>
 
-        {/* ── 챔피언 아이템(있을 때만) — 1위 카탈로그 carousel ── */}
+        {/* ── 챔피언 아이템(있을 때만) ── */}
         {data.champItems.length > 0 ? (
-          <section className="mt-5 rounded-2xl border border-amber-700/50 bg-gradient-to-b from-amber-950/40 to-zinc-950 p-3">
-            <div className="mb-2 flex items-baseline justify-between">
-              <div className="text-[11px] font-semibold tracking-wide text-amber-300">
-                이 플레이어가 1위인 아이템
+          <section className="rounded-xl border border-amber-700/50 bg-gradient-to-b from-amber-950/40 to-zinc-950 p-2">
+            <div className="mb-1.5 flex items-baseline justify-between">
+              <div className="text-[10px] font-semibold tracking-wide text-amber-300">
+                1위 아이템
               </div>
-              <div className="font-mono text-[11px] text-amber-200/80">
+              <div className="font-mono text-[10px] text-amber-200/80">
                 {data.champItems.length}종
               </div>
             </div>
-            <ul className="flex gap-2 overflow-x-auto pb-1">
+            <ul className="flex gap-1.5 overflow-x-auto pb-0.5">
               {data.champItems.map((c) => (
                 <li
                   key={c.id}
-                  className="flex w-16 shrink-0 flex-col items-center gap-0.5 rounded-lg border border-amber-700/60 bg-zinc-950 p-1 text-center"
+                  className="flex w-12 shrink-0 flex-col items-center gap-0.5 rounded border border-amber-700/60 bg-zinc-950 p-0.5 text-center"
                 >
                   <TranscendSprite
                     code={c.code}
                     slot={c.slot}
                     level={0}
                     isChampion
-                    size={44}
+                    size={36}
                     frameless
                   />
-                  <span className="line-clamp-2 break-keep text-[9px] leading-tight text-zinc-400">
+                  <span className="line-clamp-1 break-keep text-[8px] leading-tight text-zinc-400">
                     {c.name}
                   </span>
                 </li>
@@ -301,20 +298,18 @@ export default async function PublicProfilePage({
           </section>
         ) : null}
 
-        {/* ── 신고 + CTA ── */}
-        <div className="mt-5 space-y-2">
-          <Link
-            href="/login"
-            className="block rounded-full bg-gradient-to-r from-amber-500 to-orange-500 py-3 text-center text-sm font-bold text-amber-950 shadow-lg shadow-amber-900/30 transition active:scale-[0.98]"
-          >
-            나도 인생강화 시작하기 →
-          </Link>
-          {canReport && (
-            <div className="text-center">
-              <ReportButton profileId={data.profileId!} />
-            </div>
-          )}
-        </div>
+        {/* ── CTA + 신고 ── */}
+        <Link
+          href="/login"
+          className="block rounded-full bg-gradient-to-r from-amber-500 to-orange-500 py-2.5 text-center text-sm font-bold text-amber-950 shadow-lg shadow-amber-900/30 transition active:scale-[0.98]"
+        >
+          나도 인생강화 시작하기 →
+        </Link>
+        {canReport && (
+          <div className="text-center">
+            <ReportButton profileId={data.profileId!} />
+          </div>
+        )}
       </div>
     </main>
   );
@@ -322,12 +317,12 @@ export default async function PublicProfilePage({
 
 function KpiCard({ label, value, rank }: { label: string; value: string; rank: string }) {
   return (
-    <div className="rounded-xl border border-zinc-800 bg-zinc-900/80 px-2 py-2.5 text-center shadow-lg shadow-black/30 backdrop-blur">
-      <div className="text-[9px] font-semibold uppercase tracking-widest text-zinc-500">
+    <div className="rounded-lg border border-zinc-800 bg-zinc-900/85 px-1.5 py-1.5 text-center shadow-lg shadow-black/30 backdrop-blur">
+      <div className="text-[8px] font-semibold uppercase tracking-widest text-zinc-500">
         {label}
       </div>
-      <div className="mt-1 font-mono text-base font-bold tabular-nums text-zinc-50">{value}</div>
-      <div className="mt-0.5 font-mono text-[10px] tabular-nums text-amber-300">{rank}</div>
+      <div className="mt-0.5 font-mono text-sm font-bold tabular-nums text-zinc-50">{value}</div>
+      <div className="mt-0.5 font-mono text-[9px] tabular-nums text-amber-300">{rank}</div>
     </div>
   );
 }
