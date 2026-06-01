@@ -162,7 +162,8 @@ export default async function PublicProfilePage({
       <section className="relative flex h-[300px] items-end justify-center overflow-hidden bg-gradient-to-b from-amber-900/30 via-zinc-900 to-zinc-950">
         {data.charImg ? (
           <div className="absolute inset-0 flex items-end justify-center">
-            <CharacterStage charSrc={data.charImg} className="aspect-square h-full" />
+            {/* aspect-[2/3] — sprite scale 1.8 적용 시 좌우 잘림 방지(390px 내 안전). */}
+            <CharacterStage charSrc={data.charImg} className="aspect-[2/3] h-full" />
           </div>
         ) : (
           <div className="absolute inset-0 flex items-center justify-center text-6xl opacity-30">
@@ -175,7 +176,6 @@ export default async function PublicProfilePage({
           <h1 className="text-2xl font-extrabold tracking-tight text-white drop-shadow-[0_2px_3px_rgba(0,0,0,0.7)]">
             {data.nickname}
           </h1>
-          <p className="mt-0.5 text-[11px] text-zinc-300 drop-shadow">인생강화 플레이어</p>
         </div>
       </section>
 
