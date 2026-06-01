@@ -45,7 +45,7 @@ export const CATALOG_NEXT: CatalogItem[] = [
   {
     key: 'marsh_lantern_wand',
     slot: 'weapon',
-    nameKo: '안개 등롱 wand',
+    nameKo: '안개 등롱 완드',
     region: '늪지대',
     tone: '수수께끼',
     lore: '늪 가장 깊은 안개 안쪽에서 한 길잡이가 들고 다닌 wand다. 끝의 작은 등롱 안에 청록 룬 보석이 한 알 박혀 있고, 길이 어디로 굽었는지에 따라 보석의 빛이 한 박자 늦게 한 방향으로 기운다. 등롱은 길잡이가 자기 집에 두고 떠난 새벽에도 가만히 켜져 있었다.',
@@ -186,7 +186,7 @@ export const CATALOG_NEXT: CatalogItem[] = [
   {
     key: 'volcano_ember_rune_blade',
     slot: 'weapon',
-    nameKo: '잉걸 룬의 검',
+    nameKo: '불꽃 룬의 검',
     region: '서쪽 화산',
     tone: '수수께끼',
     lore: '화로의 한 학자가 자기 검의 빈 fuller에 잉걸 한 알을 한 글자 모양으로 굳혀 넣은 것이다. 자루의 가시는 그 글자를 누구도 쥐지 않게 하려고 함께 굳힌 자리인데, 가시 한 줄에 한 새벽씩 옅은 빨간 빛이 한 박자 늦게 한 번 흐른다.',
@@ -280,7 +280,7 @@ export const CATALOG_NEXT: CatalogItem[] = [
   {
     key: 'common_scribe_quill_wand',
     slot: 'weapon',
-    nameKo: '사관의 깃촉 wand',
+    nameKo: '사관 깃촉 완드',
     region: '일반',
     tone: '수수께끼',
     lore: '한 사관이 평생 자기 옆구리에 차고 다닌 깃촉 wand다. 가운데에 박힌 푸른 보석이 그가 한 줄을 새겨 들어갈 때마다 한 박자 늦은 빛으로 답해 주었는데, 보석의 한 박자가 흐릿한 새벽엔 사관은 그날의 줄을 쓰지 않았다.',
@@ -309,7 +309,7 @@ export const CATALOG_NEXT: CatalogItem[] = [
   {
     key: 'volcano_first_ember_hammer',
     slot: 'weapon',
-    nameKo: '첫 잉걸의 망치',
+    nameKo: '첫 불꽃의 망치',
     region: '서쪽 화산',
     tone: '영웅담',
     lore: '서쪽 화로의 첫 잉걸 한 알을 그 화로의 첫 풀무지기가 자기 망치 머리 안에 봉인한 것이라 한다. 망치를 두드리면 잉걸의 빛이 가운데에서 한 박자 늦게 한 번 짙어졌다 옅어지고, 그 한 박자에 다른 화로의 풀무지기들도 한 호흡을 맞춰 두드린다.',
@@ -351,7 +351,7 @@ export const CATALOG_NEXT: CatalogItem[] = [
   {
     key: 'marsh_gemwoven_wand',
     slot: 'weapon',
-    nameKo: '보석 그물 wand',
+    nameKo: '보석 그물 완드',
     region: '늪지대',
     tone: '화려',
     lore: '늪 깊은 자리의 한 마녀가 자기 wand 둘레에 길어 올린 청록 보석들을 황금 그물로 한 줄로 엮어 박은 자리다. 보석 알 하나하나는 그 마녀가 늪에서 만난 사람의 새벽 하나씩을 끌어와 굳힌 것이라 한다.',
@@ -398,7 +398,7 @@ export const CATALOG_NEXT: CatalogItem[] = [
   {
     key: 'common_knight_lance',
     slot: 'weapon',
-    nameKo: '기사의 lance',
+    nameKo: '기사의 창',
     region: '일반',
     tone: '영웅담',
     lore: '한 늙은 기사가 마지막 진영 앞에 자기 lance를 한 번 더 들고 섰다. 자루 끝에 묶인 황금 깃발은 그가 평생 들고 다닌 자기 가문의 마지막 한 자락이고, 자루의 가시는 그가 살아온 길에서 한 번씩 적을 멈추게 한 자리에 한 줄씩 박은 것이다.',
@@ -416,7 +416,7 @@ export const CATALOG_NEXT: CatalogItem[] = [
   {
     key: 'common_twin_dragon_scepter',
     slot: 'weapon',
-    nameKo: '두 용의 scepter',
+    nameKo: '두 용의 홀',
     region: '일반',
     tone: '화려',
     lore: '한 왕국의 첫 왕이 자기 즉위 새벽에 두 용의 머리를 자기 scepter의 양 옆에 황금으로 굳혀 박은 것이다. 두 용의 시선이 마주 보는 자리에 가운데 한 알의 큰 진주가 박혀 있어, 왕이 자기 결정을 한 번 더 미루는 새벽엔 그 진주의 빛이 한 박자 늦게 옅어진다.',
@@ -434,7 +434,7 @@ export const CATALOG_NEXT: CatalogItem[] = [
   {
     key: 'fallen_starhead_flail',
     slot: 'weapon',
-    nameKo: '별 형상의 flail',
+    nameKo: '별 도리깨',
     region: '타락천사',
     tone: '전설',
     lore: '한 대천사가 자기 손에 별의 모양을 한 번 굳혀 박아 두고 추락한 자리다. 별의 한 끝에 검은 깃 한 가닥이 체인의 끝에서 한 박자 늦게 흔들리고 있고, 별의 가운데 자리는 그 대천사가 마지막 새벽까지 자기 자리로 다시 돌아오지 않은 빈 자리 그대로다.',
@@ -472,7 +472,7 @@ export const CATALOG_NEXT: CatalogItem[] = [
   {
     key: 'marsh_witch_queen_staff',
     slot: 'weapon',
-    nameKo: '늪 여왕의 staff',
+    nameKo: '늪 여왕 완드',
     region: '늪지대',
     tone: '전설',
     lore: '늪의 가장 깊은 자리에 한 번 살았다고 전해 내려오는 마녀 여왕이 자기 자리에 세워 두고 떠난 staff다. 끝에 굳은 청록 orb는 여왕이 늪의 한 호흡을 자기 손바닥 안에 굳혀 박은 자리이고, orb를 감싼 root는 그 새벽 이후로도 매해 한 가닥씩 더 자라 올라온다.',
@@ -481,7 +481,7 @@ export const CATALOG_NEXT: CatalogItem[] = [
   {
     key: 'common_jester_lollipop_mace',
     slot: 'weapon',
-    nameKo: '광대의 막대사탕 mace',
+    nameKo: '광대 사탕 철퇴',
     region: '일반',
     tone: '위트',
     lore: '한 왕실의 광대가 자기 평생 한 번도 자기 손에서 떨어뜨리지 않은 거대 막대사탕이다. 빨강·흰 소용돌이는 광대가 자기 자리에서 한 번 더 자기 농담을 한 줄로 더 풀어 놓을 때마다 한 박자 늦은 색으로 한 번씩 더 자기 결을 둘러 박은 자리다.',
@@ -502,7 +502,7 @@ export const CATALOG_NEXT: CatalogItem[] = [
   {
     key: 'orc_palm_print_vest',
     slot: 'armor',
-    nameKo: '손바닥 자국 가죽 vest',
+    nameKo: '손바닥 가죽 조끼',
     region: '오크 부락',
     tone: '위트',
     lore: '부락의 한 어린 오크가 자기 첫 사냥 새벽에 그 짐승을 한 번 잡은 자기 손바닥을 자기 가죽 vest에 한 번 더 찍어 둔 자리다. 손바닥 자국 아래로 그 사냥의 송곳니 두 개가 한 줄로 매달려 있고, 그 어린 오크는 그 자국이 옅어질 때까지 vest를 한 번도 벗지 않았다.',
@@ -511,7 +511,7 @@ export const CATALOG_NEXT: CatalogItem[] = [
   {
     key: 'rune_single_curve_stone_plate',
     slot: 'armor',
-    nameKo: '한 줄 곡선의 stone plate',
+    nameKo: '곡선 돌판 갑옷',
     region: '고대 룬 산맥',
     tone: '기괴',
     lore: '룬 산맥의 한 새김장이가 자기 stone breastplate 가슴께에 한 줄의 곡선만 한 번 더 깊이 그어 둔 자리다. 그 곡선이 어떤 룬인지는 그 새김장이도 자기 마지막 새벽까지 답하지 않았는데, 한 번씩 보는 사람마다 그 곡선이 한 번씩 다른 모양으로 보인다고 한다.',
@@ -520,7 +520,7 @@ export const CATALOG_NEXT: CatalogItem[] = [
   {
     key: 'volcano_ember_embroidered_cloak',
     slot: 'armor',
-    nameKo: '잉걸 자수의 cloak',
+    nameKo: '불꽃 자수 망토',
     region: '서쪽 화산',
     tone: '수수께끼',
     lore: '서쪽 화로 옆 마을의 한 자수가가 자기 cloak 한 자락에 잉걸 한 알을 한 줄로 박아 넣은 자리다. cloak 안쪽에서 한 번씩 옅게 흘러나오는 작은 빛은 그 자수가가 자기 손가락 끝으로 그 잉걸의 가장자리에 한 줄씩 더 박아 둔 결을 따라 한 박자 늦게 흘러간다.',
@@ -540,7 +540,7 @@ export const CATALOG_NEXT: CatalogItem[] = [
   {
     key: 'common_imperial_dragon_robe',
     slot: 'armor',
-    nameKo: '황제의 용 robe',
+    nameKo: '황제 용 로브',
     region: '일반',
     tone: '화려',
     lore: '한 황제가 자기 즉위 새벽에 자기 가슴에 한 마리의 용을 한 번 더 자기 silk robe 위로 황금으로 굳혀 자수한 자리다. 용의 비늘 하나하나는 황제가 자기 평생 한 번씩 더 짚어 본 자기 광맥의 결을 따라 한 자국씩 더 깊어졌고, jade buttons는 그가 자기 자리에서 한 번도 풀지 않은 결대로 한 알씩 더 가만히 박혀 있다.',
@@ -558,7 +558,7 @@ export const CATALOG_NEXT: CatalogItem[] = [
   {
     key: 'rune_guardian_brass_helm',
     slot: 'armor',
-    nameKo: '수호자의 brass 투구',
+    nameKo: '수호자 황동 투구',
     region: '고대 룬 산맥',
     tone: '영웅담',
     lore: '룬 산맥의 산문을 자기 평생의 자리로 삼은 한 보초가 자기 brass 투구의 이마 가운데에 보호의 룬을 한 글자 더 깊이 박아 둔 자리다. 그 글자가 한 번 빛을 머금는 새벽엔 산문 앞에 다가오던 발자국 하나가 그 자리에서 한 박자 멈춰 섰다.',
@@ -567,7 +567,7 @@ export const CATALOG_NEXT: CatalogItem[] = [
   {
     key: 'volcano_phoenix_robe',
     slot: 'armor',
-    nameKo: '불사조의 robe',
+    nameKo: '불사조 로브',
     region: '서쪽 화산',
     tone: '화려',
     lore: '서쪽 화산의 한 자수가가 자기 robe 전체에 불사조 한 마리를 한 번 펼쳐 박아 넣은 자리다. robe의 두 옷자락은 그 불사조의 날개가 그대로 펴진 모양으로 굳어 있고, 가슴께의 황금 깃은 그 불사조가 자기 가슴을 한 번 더 안에서 보여 준 자국이다.',
@@ -576,7 +576,7 @@ export const CATALOG_NEXT: CatalogItem[] = [
   {
     key: 'fallen_white_silk_robe',
     slot: 'armor',
-    nameKo: '흰 silk의 robe',
+    nameKo: '흰 비단 로브',
     region: '타락천사',
     tone: '아름다운',
     lore: '한 천사가 추락하지 않으려 자기 손가락 끝으로 한 가닥 흰 silk를 자기 robe의 가운데에 한 줄로 길게 늘여 놓은 자리다. 그 한 줄 trim 위로 한 가닥씩 옅게 떠 있는 깃털 자수는 그 천사가 자기 깃 하나를 한 번 더 자기 자리에 남겨 두려 한 표식이다.',
@@ -623,7 +623,7 @@ export const CATALOG_NEXT: CatalogItem[] = [
   {
     key: 'common_court_jester_motley',
     slot: 'armor',
-    nameKo: '광대의 motley 튜닉',
+    nameKo: '광대 잡색 튜닉',
     region: '일반',
     tone: '위트',
     lore: '한 왕실의 광대가 자기 평생 자기 몸에 한 번도 다른 색을 두르지 않은 결을 자기 튜닉의 네 자락에 한 번 더 네 가지 색으로 갈라 박은 자리다. hem 둘레의 작은 종은 광대가 자기 자리에서 한 번 더 농담을 끝낸 새벽마다 한 알씩 더 가만히 매달려 있다.',
@@ -690,7 +690,7 @@ export const CATALOG_NEXT: CatalogItem[] = [
   {
     key: 'marsh_lord_robe',
     slot: 'armor',
-    nameKo: '늪 영주의 robe',
+    nameKo: '늪 영주 로브',
     region: '늪지대',
     tone: '장엄',
     lore: '늪의 가장 깊은 자리에 살았다는 한 영주가 자기 자리에 두고 떠난 robe다. 어깨의 잎과 깃털 collar는 늪의 식물들이 한 번씩 자기 결을 robe 위에 묶어 둔 결이고, 가슴께의 큰 보석은 영주가 마지막 새벽 자기 손가락으로 한 번 더 짚어 본 자리다.',
@@ -699,7 +699,7 @@ export const CATALOG_NEXT: CatalogItem[] = [
   {
     key: 'rune_silver_diadem',
     slot: 'armor',
-    nameKo: '은빛 diadem',
+    nameKo: '은빛 머리띠',
     region: '고대 룬 산맥',
     tone: '아름다운',
     lore: '룬 산맥의 한 새김장이가 자기 평생의 연인이 한 번 자기 곁에 머무를 새벽을 위해 한 가닥 은을 자기 손가락 끝으로 한 줄로 펴 둔 것이다. 가운데에 박힌 청록 보석은 그 연인이 자기 자리에서 한 번 더 돌아본 새벽에 그 자리에 굳어 떨어진 한 알이다.',
@@ -737,7 +737,7 @@ export const CATALOG_NEXT: CatalogItem[] = [
   {
     key: 'orc_sunrise_tabard',
     slot: 'armor',
-    nameKo: '일출 tabard',
+    nameKo: '일출의 겉옷',
     region: '오크 부락',
     tone: '희망',
     lore: '부락의 한 어린 오크가 자기 첫 사냥 새벽의 일출 자리를 자기 가슴 한 가운데에 한 번 더 작게 박아 둔 가죽 tabard다. 어깨와 가슴께의 황금 detail은 그 어린 오크가 자기 동무들과 같은 새벽을 한 번 더 함께 본다는 약속처럼 한 줄씩 더 둘러져 있다.',
@@ -746,7 +746,7 @@ export const CATALOG_NEXT: CatalogItem[] = [
   {
     key: 'rune_morning_light_cloak',
     slot: 'armor',
-    nameKo: '새벽빛의 cloak',
+    nameKo: '새벽빛 망토',
     region: '고대 룬 산맥',
     tone: '희망',
     lore: '룬 산맥의 한 새벽 보초가 자기 망토의 collar 가운데에 새벽의 첫 sun-rune을 한 자만 더 박아 둔 자리다. 망토의 옷자락 둘레로 한 줄씩 흐르는 작은 빛 자수는 그가 자기 보초 자리에서 처음 본 새벽의 결을 한 새벽씩 더 따라 적어 둔 자리다.',
@@ -784,7 +784,7 @@ export const CATALOG_NEXT: CatalogItem[] = [
   {
     key: 'common_aristocrat_lace_dress',
     slot: 'armor',
-    nameKo: '귀족 영애의 레이스 드레스',
+    nameKo: '영애의 레이스 드레스',
     region: '일반',
     tone: '아름다운',
     lore: '한 귀족 영애가 자기 평생 자기 한 자루의 dress 위에 한 번 더 자기 손가락 끝으로 한 자국씩 더 레이스를 풀어 짠 자리다. 가슴께의 작은 진주 단추 한 알 한 알은 영애가 자기 자리에서 한 번도 풀지 않은 결대로 한 번 더 가만히 박혀 있다.',
@@ -793,7 +793,7 @@ export const CATALOG_NEXT: CatalogItem[] = [
   {
     key: 'rune_seer_hood',
     slot: 'armor',
-    nameKo: 'seer의 hood',
+    nameKo: '점쟁이의 두건',
     region: '고대 룬 산맥',
     tone: '수수께끼',
     lore: '룬 산맥의 가장 깊은 자리에 살았다는 seer가 자기 평생 한 번도 자기 눈을 직접 드러내지 않았다고 한다. 그가 자기 머리에 두른 hood의 이마 가운데에 한 줄로 새겨진 룬 원은 그가 한 번씩 꺼내 보던 다른 사람의 다음 새벽 한 자리를 적어 둔 자리다.',
@@ -802,7 +802,7 @@ export const CATALOG_NEXT: CatalogItem[] = [
   {
     key: 'volcano_glass_flame_crown',
     slot: 'armor',
-    nameKo: '유리 화염의 crown',
+    nameKo: '유리 화염 왕관',
     region: '서쪽 화산',
     tone: '아름다운',
     lore: '서쪽 화로의 유리 장인이 자기 마지막 작업 새벽에 한 줄기 유리 화염을 그대로 굳혀 둔 자리에 한 알의 빨간 보석을 가만히 박아 둔 자리다. 화염의 곡선은 식다가도 한 번도 자기 결을 흩뜨리지 않고 가만히 한 알을 둘러싼 채 굳어 있다.',
@@ -887,7 +887,7 @@ export const CATALOG_NEXT: CatalogItem[] = [
   {
     key: 'rune_arch_priest_robe',
     slot: 'armor',
-    nameKo: '대주교의 robe',
+    nameKo: '대주교 로브',
     region: '고대 룬 산맥',
     tone: '장엄',
     lore: '룬 산맥의 일곱 산문 가장 안쪽에서 평생 자기 자리를 한 번도 떠나지 않은 한 대주교가 자기 robe의 가슴께를 한 번 더 황금 룬으로 둘러 박은 자리다. 큰 깃 collar는 그가 자기 산문 안쪽의 한 박자 더 깊은 정적을 자기 어깨 둘레로 한 번 더 감싸 둔 결이다.',
@@ -896,7 +896,7 @@ export const CATALOG_NEXT: CatalogItem[] = [
   {
     key: 'volcano_lava_pup_helm',
     slot: 'armor',
-    nameKo: '도롱뇽 새끼 helm',
+    nameKo: '도롱뇽 새끼 투구',
     region: '서쪽 화산',
     tone: '위트',
     lore: '서쪽 화로 가장자리에서 자라난 한 도롱뇽 새끼가 자기 첫 새벽에 한 화로 장인의 머리 위로 자기 자리를 옮겨 가만히 한 번 앉아 있다 떠난 자리에 그 모양 그대로 굳혀진 helm이다. 두 빨간 눈은 도롱뇽이 자기 자리를 한 번 더 들여다본 결대로 가만히 한 새벽씩 더 짙어진다.',
@@ -905,7 +905,7 @@ export const CATALOG_NEXT: CatalogItem[] = [
   {
     key: 'fallen_dusk_short_robe',
     slot: 'armor',
-    nameKo: '노을의 짧은 robe',
+    nameKo: '노을의 짧은 로브',
     region: '타락천사',
     tone: '희망',
     lore: '한 천사가 자기 마지막 새벽이 노을빛으로 깊어진 결을 자기 robe의 분홍 자락에 한 줄로 적어 둔 자리다. 어깨의 황금 armor는 그 노을의 가장 짙은 자리를 단단히 감싸 둔 결이고, 짧은 자락의 옅은 분홍빛은 천사가 떠나지 않은 새벽마다 한 번씩 더 옅게 깜빡인다.',
@@ -916,7 +916,7 @@ export const CATALOG_NEXT: CatalogItem[] = [
   {
     key: 'marsh_drowned_pearl_cape',
     slot: 'armor',
-    nameKo: '익사한 자의 진주 cape',
+    nameKo: '익사자 진주 망토',
     region: '늪지대',
     tone: '비애',
     lore: '늪 가장 깊은 자리에 가라앉은 한 여인의 cape가 한 새벽에 자기 자리에서 위로 떠올라 어부의 손에 잡힌 자리다. cape의 너덜한 hem 둘레로 한 알씩 진주가 박힌 자리는 그 여인이 자기 마지막 호흡마다 한 알씩 자기 가슴에 굳혀 박아 둔 결이다.',
@@ -925,7 +925,7 @@ export const CATALOG_NEXT: CatalogItem[] = [
   {
     key: 'orc_oracle_hood',
     slot: 'armor',
-    nameKo: '오라클의 hood',
+    nameKo: '신탁의 두건',
     region: '오크 부락',
     tone: '수수께끼',
     lore: '부락의 한 oracle이 자기 평생 한 번도 자기 양쪽 눈을 동시에 뜨지 않았다고 한다. 그가 자기 머리에 두른 hood의 이마 가운데에 박혀 있는 빨간 눈은 그가 다른 사람의 다음 새벽을 한 번씩 더 들여다본 자리에 한 알씩 더 짙어진 자리다.',
@@ -964,7 +964,7 @@ export const CATALOG_NEXT: CatalogItem[] = [
   {
     key: 'marsh_lily_amulet',
     slot: 'accessory',
-    nameKo: '연꽃 amulet',
+    nameKo: '연꽃 부적',
     region: '늪지대',
     tone: '아름다운',
     lore: '늪의 한 어부가 자기 누이에게 자기 평생 가장 깊은 자리에서 길어 올린 한 송이 청록 연꽃을 한 알의 진주와 함께 silver 한 가닥으로 한 번 더 묶어 둔 자리다. 누이는 그 amulet을 자기 가슴 가운데에 한 번 더 짚어 본 결대로 한 자리에 가만히 걸어 두었다.',
@@ -991,7 +991,7 @@ export const CATALOG_NEXT: CatalogItem[] = [
   {
     key: 'volcano_phoenix_eye_amulet',
     slot: 'accessory',
-    nameKo: '불사조의 눈 amulet',
+    nameKo: '불사조 눈 부적',
     region: '서쪽 화산',
     tone: '장엄',
     lore: '서쪽 화산의 가장 깊은 자리에 잠든 불사조가 자기 잠들기 전 자기 한 눈을 한 알의 보석으로 한 번 더 굳혀 자기 자리에 두고 떠난 자리다. amulet 가운데에 박힌 오렌지 보석은 그 불사조가 자기 자리에서 다시 한 번 더 깨어나는 새벽까지 한 박자 늦은 빛으로 가만히 보고 있다.',
@@ -1020,7 +1020,7 @@ export const CATALOG_NEXT: CatalogItem[] = [
   {
     key: 'orc_chieftain_twin_tusk_necklace',
     slot: 'accessory',
-    nameKo: '두 송곳니의 부족장 목걸이',
+    nameKo: '송곳니 부족장 목걸이',
     region: '오크 부락',
     tone: '장엄',
     lore: '부락의 한 부족장이 자기 첫 사냥에서 한 짐승의 두 송곳니를 한 알씩 자기 목 둘레에 한 번 더 묶어 둔 자리다. 두 송곳니 사이에 가만히 매달린 두 깃털은 그 부족장이 자기 자리에서 한 번 더 떠올린 자기 두 동무의 자리에 한 줄씩 박혀 있다.',
@@ -1038,7 +1038,7 @@ export const CATALOG_NEXT: CatalogItem[] = [
   {
     key: 'volcano_glass_ember_earring',
     slot: 'accessory',
-    nameKo: '유리 물방울 ember 귀걸이',
+    nameKo: '유리 불꽃 귀걸이',
     region: '서쪽 화산',
     tone: '아름다운',
     lore: '서쪽 화로의 유리 장인이 자기 첫 잉걸 한 알을 한 방울의 유리 안에 한 번 더 굳혀 박아 둔 자리다. 그 잉걸의 빛은 한 박자 늦은 빛으로 유리 안쪽에서 가만히 흔들리는데, 귀걸이가 한 번 흔들릴 때마다 그 안쪽의 잉걸도 한 번 더 같이 흔들린다.',
@@ -1047,7 +1047,7 @@ export const CATALOG_NEXT: CatalogItem[] = [
   {
     key: 'fallen_four_wing_pinwheel_brooch',
     slot: 'accessory',
-    nameKo: '네 깃의 풍차 brooch',
+    nameKo: '네 깃 풍차 브로치',
     region: '타락천사',
     tone: '화려',
     lore: '한 세라프가 추락하기 전 자기 네 깃을 자기 손가락 끝으로 한 자리에 한 번 더 모아 둔 결대로 굳어진 brooch다. 네 깃이 가운데를 향해 한 박자 늦게 도는 결을 따라 박힌 진주 한 알은 그 세라프가 자기 자리에서 한 번 더 떠올린 새벽의 결이다.',
@@ -1076,7 +1076,7 @@ export const CATALOG_NEXT: CatalogItem[] = [
   {
     key: 'rune_first_letter_amulet',
     slot: 'accessory',
-    nameKo: '첫 글자 amulet',
+    nameKo: '첫 글자 부적',
     region: '고대 룬 산맥',
     tone: '전설',
     lore: '룬 산맥의 첫 새김장이가 자기 첫 룬을 산문 돌 대신 자기 가슴께 amulet의 한 가운데에 한 자만 더 깊이 박아 둔 자리다. 그 한 글자가 한 번 빛을 머금는 새벽엔 산맥 안쪽에 잠든 다른 룬 한 자리도 같이 한 박자 옅게 떨린다.',
@@ -1085,7 +1085,7 @@ export const CATALOG_NEXT: CatalogItem[] = [
   {
     key: 'volcano_leaf_ember_locket',
     slot: 'accessory',
-    nameKo: '잎의 잉걸 locket',
+    nameKo: '잎 불꽃 로켓',
     region: '서쪽 화산',
     tone: '비애',
     lore: '서쪽 화로 곁의 한 잎 모양 잿더미에서 한 부인이 자기 남편의 마지막 호흡 한 알을 잉걸로 굳혀 자기 amulet 안에 박아 둔 자리다. 잎 가장자리의 갈라진 검은 자국은 그 부인이 손가락 끝으로 한 번씩 더 짚어 본 결을 따라 한 줄씩 더 패여 들어간 자리다.',
@@ -1094,7 +1094,7 @@ export const CATALOG_NEXT: CatalogItem[] = [
   {
     key: 'common_king_lion_signet_ring',
     slot: 'accessory',
-    nameKo: '왕의 사자 signet ring',
+    nameKo: '왕 사자 인장 반지',
     region: '일반',
     tone: '장엄',
     lore: '한 왕국의 첫 왕이 자기 즉위 새벽에 자기 손가락 둘레에 한 알의 큰 푸른 보석을 한 번 더 박고, 그 양 옆에 자기 왕국의 두 수호 사자를 한 짝씩 더 새겨 둔 자리다. 사자 두 짝은 그 왕이 자기 결정을 한 번 더 미루는 새벽엔 가운데 보석을 한 박자 늦게 한 번 더 가만히 본다.',
@@ -1105,7 +1105,7 @@ export const CATALOG_NEXT: CatalogItem[] = [
   {
     key: 'marsh_root_eye_pendant',
     slot: 'accessory',
-    nameKo: '뿌리에 둘러싸인 눈의 pendant',
+    nameKo: '뿌리 감긴 눈 펜던트',
     region: '늪지대',
     tone: '기괴',
     lore: '늪 가장 깊은 자리에서 한 자루의 medallion이 어부의 그물에 한 번 더 걸려 올라온 자리다. 가운데에 박힌 청록의 눈은 그 medallion을 가져온 뱃사공이 자기 자리로 한 번 더 돌리지 못한 자리이고, 둘레의 뿌리들은 늪 바닥의 풀들이 자기 결을 한 번 더 medallion 위에 한 줄씩 감아 둔 결이다.',
@@ -1123,7 +1123,7 @@ export const CATALOG_NEXT: CatalogItem[] = [
   {
     key: 'rune_starlight_crown',
     slot: 'accessory',
-    nameKo: '별빛의 silver crown',
+    nameKo: '별빛 은 왕관',
     region: '고대 룬 산맥',
     tone: '장엄',
     lore: '룬 산맥의 가장 높은 자리에서 자기 평생 자기 등으로 별을 한 번 더 본 한 보초가 자기 머리띠 가운데에 그 별의 결을 한 알의 보석으로 한 번 더 굳혀 박아 둔 자리다. 가장자리의 가시는 별빛이 자기 결을 보초의 머리띠 위에 한 줄씩 더 그어 둔 자국이다.',
@@ -1141,7 +1141,7 @@ export const CATALOG_NEXT: CatalogItem[] = [
   {
     key: 'fallen_three_feather_anklet',
     slot: 'accessory',
-    nameKo: '세 깃의 silver anklet',
+    nameKo: '세 깃 은 발찌',
     region: '타락천사',
     tone: '아름다운',
     lore: '한 천사가 자기 발걸음의 첫 일곱 새벽을 자기 발목 둘레에 한 줄의 silver로 한 번 더 둘러 둔 자리다. 매달린 세 깃은 그 천사가 자기 자리에서 한 번 더 떠올린 자기 첫 세 동료의 자리에 한 가닥씩 박혀 있고, 가운데 진주는 일곱 새벽이 한 알로 굳어진 자리다.',
@@ -1152,7 +1152,7 @@ export const CATALOG_NEXT: CatalogItem[] = [
   {
     key: 'marsh_drowned_queen_circlet',
     slot: 'accessory',
-    nameKo: '익사한 여왕의 circlet',
+    nameKo: '익사한 여왕의 써클렛',
     region: '늪지대',
     tone: '전설',
     lore: '늪 가장 깊은 자리에 한 번 자리를 잡은 여왕이 자기 자리를 떠나지 않은 채 늪 바닥에 가만히 그대로 굳어 가는 동안 늪의 뿌리들이 그 여왕의 circlet을 한 줄씩 더 자기 결로 감싸 안은 자리다. 가운데 청록 보석은 여왕이 자기 마지막 새벽까지 자기 시선을 한 번도 떼지 않은 자리다.',
@@ -1161,7 +1161,7 @@ export const CATALOG_NEXT: CatalogItem[] = [
   {
     key: 'orc_chief_gold_collar',
     slot: 'accessory',
-    nameKo: '부족장의 황금 collar',
+    nameKo: '부족장 황금 목걸이',
     region: '오크 부락',
     tone: '화려',
     lore: '부락의 한 부족장이 자기 즉위 새벽에 자기 평생 잡은 짐승들의 첫 송곳니를 황금으로 굳혀 자기 목 둘레 collar에 한 줄로 박아 둔 자리다. 가운데 박힌 큰 빨간 보석은 부족장이 자기 부락 첫 광맥에서 가져온 한 알이고, swirl 패턴은 그가 손가락 끝으로 한 줄씩 더 그어 둔 결이다.',
@@ -1190,7 +1190,7 @@ export const CATALOG_NEXT: CatalogItem[] = [
   {
     key: 'volcano_baby_dragon_pendant',
     slot: 'accessory',
-    nameKo: '잠든 새끼 용 pendant',
+    nameKo: '잠든 용 펜던트',
     region: '서쪽 화산',
     tone: '위트',
     lore: '서쪽 화산의 한 새끼 용이 자기 첫 새벽에 자기 둥지에서 한 번 더 잠들어 가만히 한 자리에 굳어 있다가 한 어린 풀무지기의 손에 한 번 더 옮겨진 자리다. 둥근 안쪽에서 새끼 용은 자기 꼬리를 한 번 더 자기 몸에 둘러 잠든 채로 한 번도 자기 자세를 흩뜨리지 않는다.',
@@ -1199,7 +1199,7 @@ export const CATALOG_NEXT: CatalogItem[] = [
   {
     key: 'marsh_swamp_god_eye_amulet',
     slot: 'accessory',
-    nameKo: '늪의 신의 눈 amulet',
+    nameKo: '늪 신의 눈 부적',
     region: '늪지대',
     tone: '장엄',
     lore: '늪의 가장 깊은 자리에 한 번 자리를 잡은 신이 자기 한 눈을 한 알의 보석으로 한 번 더 굳혀 자기 자리에 두고 잠든 자리다. amulet 가장자리의 가시는 신이 자기 자리를 한 번도 떠나지 않은 결대로 늪의 풀들이 한 줄로 더 둘러 둔 자국이다.',
@@ -1208,7 +1208,7 @@ export const CATALOG_NEXT: CatalogItem[] = [
   {
     key: 'orc_blood_pact_skull_brooch',
     slot: 'accessory',
-    nameKo: '혈맹의 두개골 brooch',
+    nameKo: '혈맹 두개골 브로치',
     region: '오크 부락',
     tone: '전설',
     lore: '부락의 두 형제 전사가 자기 첫 사냥에서 같이 잡은 짐승의 두개골 위에 자기 두 단검을 한 번 더 교차해 박고, 가운데에 자기 두 사람의 첫 핏방울을 한 알의 보석으로 굳혀 둔 자리다. 양 옆 두 황금 뿔은 두개골이 한 번 더 일어나지 않게 못 박힌 결이다.',
@@ -1226,7 +1226,7 @@ export const CATALOG_NEXT: CatalogItem[] = [
   {
     key: 'fallen_archangel_halo_crown',
     slot: 'accessory',
-    nameKo: '대천사의 후광 crown',
+    nameKo: '대천사 후광 왕관',
     region: '타락천사',
     tone: '장엄',
     lore: '한 대천사가 자기 평생 자기 머리 둘레에 두 줄의 후광을 한 번 더 굳혀 박아 두고, 그 가운데에 자기 첫 깃 한 가닥과 자기 첫 검을 한 번 더 함께 박아 둔 자리다. 두 후광의 한 박자 늦은 빛은 그 검과 깃이 자기 결을 한 번 더 적어 둔 결을 따라 옅어진다.',
@@ -1255,7 +1255,7 @@ export const CATALOG_NEXT: CatalogItem[] = [
   {
     key: 'orc_grinning_beard_bead',
     slot: 'accessory',
-    nameKo: '웃는 얼굴의 턱수염 구슬',
+    nameKo: '웃는 턱수염 구슬',
     region: '오크 부락',
     tone: '위트',
     lore: '부락의 한 부족장이 자기 평생 자기 턱수염 끝에 한 알의 wooden bead를 한 번 더 묶어 매달고 다닌 자리다. bead 가운데에 한 번 더 새겨진 grinning 얼굴은 부족장이 자기 자리에 한 번 더 웃어 본 결대로 굳어 있고, 양 옆 송곳니는 그가 자기 첫 사냥에서 가져온 자국이다.',
@@ -1311,7 +1311,7 @@ export const CATALOG_NEXT: CatalogItem[] = [
   {
     key: 'volcano_smith_hammer_pin',
     slot: 'accessory',
-    nameKo: '대장간의 망치 pin',
+    nameKo: '대장간 망치 핀',
     region: '서쪽 화산',
     tone: '영웅담',
     lore: '서쪽 화로의 한 대장장이가 자기 평생 한 번도 자기 자리를 떠나지 않은 망치와 모루를 자기 가슴께에 한 번 더 작은 pin으로 한 번 더 굳혀 박아 둔 자리다. 가운데 작은 잉걸은 그가 자기 첫 새벽에 처음 두드린 잉걸이 한 번 더 그 자리에 굳어 있는 결이다.',
@@ -1331,7 +1331,7 @@ export const CATALOG_NEXT: CatalogItem[] = [
   {
     key: 'marsh_wisp_lantern_charm',
     slot: 'accessory',
-    nameKo: '도깨비불의 lantern',
+    nameKo: '도깨비불 랜턴',
     region: '늪지대',
     tone: '위트',
     lore: '늪의 한 아이가 자기 첫 새벽에 자기 손바닥 안에 한 알의 청록 도깨비불을 한 번 더 굳혀 둔 자리에 한 자루의 작은 lantern이 그 자리 그대로 자기 결을 한 번 더 둘러 굳어진 자리다. lantern 안쪽의 wisp는 자기 자리에서 한 박자 늦게 한 번씩 더 옅게 깜빡인다.',
@@ -1349,7 +1349,7 @@ export const CATALOG_NEXT: CatalogItem[] = [
   {
     key: 'rune_high_archon_crown',
     slot: 'accessory',
-    nameKo: '대제관의 crown',
+    nameKo: '대제관 왕관',
     region: '고대 룬 산맥',
     tone: '장엄',
     lore: '룬 산맥의 가장 안쪽 산문을 자기 자리로 삼은 한 대제관이 자기 평생 한 번도 자기 자리에서 일어나지 않은 결을 자기 머리띠 가운데에 한 알의 큰 푸른 보석으로 한 번 더 굳혀 박아 둔 자리다. 양 옆에 새겨진 룬은 그 대제관이 자기 자리에서 한 번씩 더 짚어 본 결의 자국이다.',
@@ -1367,7 +1367,7 @@ export const CATALOG_NEXT: CatalogItem[] = [
   {
     key: 'common_kingsguard_medal',
     slot: 'accessory',
-    nameKo: '왕실 근위의 medal',
+    nameKo: '왕실 근위 훈장',
     region: '일반',
     tone: '영웅담',
     lore: '한 왕국의 첫 근위 기사가 자기 평생 자기 왕의 자리 옆을 한 번도 떠나지 않은 결을 자기 medal에 한 번 더 굳혀 박아 둔 자리다. 가운데 황금으로 새겨진 검과 왕관은 그 근위가 마지막 새벽에 손가락 끝으로 한 번 더 짚어 본 자리에 깊이 새겨졌다.',
@@ -1378,7 +1378,7 @@ export const CATALOG_NEXT: CatalogItem[] = [
   {
     key: 'common_ornate_ruby_diadem',
     slot: 'accessory',
-    nameKo: '루비 diadem',
+    nameKo: '루비 왕관',
     region: '일반',
     tone: '화려',
     lore: '한 왕국의 첫 왕비가 자기 평생 자기 머리 둘레에 한 알 한 알 자기 결정에서 가져온 ruby를 한 번 더 황금 tiara 위에 박아 둔 자리다. 보석 사이 사이의 leaf filigree는 왕비가 자기 자리에서 한 번씩 더 자기 손가락 끝으로 짚어 본 결을 따라 한 줄씩 더 둘러져 있다.',
@@ -1414,7 +1414,7 @@ export const CATALOG_NEXT: CatalogItem[] = [
   {
     key: 'fallen_cherub_brooch',
     slot: 'accessory',
-    nameKo: 'cherub의 brooch',
+    nameKo: '어린 천사 브로치',
     region: '타락천사',
     tone: '위트',
     lore: '한 천사가 자기 어린 케르빔 동무 한 명을 자기 자리에 한 번 더 두고 떠난 새벽에, 그 케르빔이 자기 자리에서 한 번 더 가만히 웃어 본 결을 한 알의 황금으로 한 번 더 굳혀 brooch로 박아 둔 자리다. 양 옆 두 작은 날개와 머리 위의 후광은 케르빔이 자기 자세를 한 번 더 흩뜨리지 않은 결대로 굳어 있다.',
