@@ -161,7 +161,7 @@ export function GachaResultModal({
             onClick={() => onAgain(1)}
             className="rounded-full bg-zinc-100 px-3 py-2.5 text-xs font-medium disabled:opacity-40 dark:bg-zinc-900"
           >
-            {pulling ? '여는 중…' : '한 번 더'}
+            한 번 더
           </button>
           <button
             type="button"
@@ -169,7 +169,7 @@ export function GachaResultModal({
             onClick={() => onAgain(multiN)}
             className="rounded-full bg-gradient-to-r from-amber-500 to-orange-500 px-3 py-2.5 text-xs font-medium text-white disabled:opacity-40"
           >
-            {pulling ? '…' : `${multiN}회 더`}
+            {multiN}회 더
           </button>
         </div>
         <button

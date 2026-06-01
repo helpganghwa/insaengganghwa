@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useTransition } from 'react';
+import { useOptimistic, useState, useTransition } from 'react';
 import { useRouter } from 'next/navigation';
 
 import type { Slot } from '@/lib/db/schema/equipment';
@@ -37,14 +37,17 @@ export function GachaBoxCard({
     null,
   );
   const [shake, setShake] = useState(false);
+  // 보유 카운트 낙관 차감 — 클릭 즉시 우상단 표시 감소(서버 응답 + refresh로 sync).
+  const [displayCount, setOptimisticCount] = useOptimistic(count);
 
-  const multiN = count >= 2 ? Math.min(10, count) : 10;
+  const multiN = displayCount >= 2 ? Math.min(10, displayCount) : 10;
 
   const pull = (n: number) => {
-    if (pending || count < 1) return;
+    if (pending || displayCount < 1) return;
     setShake(true);
     setTimeout(() => setShake(false), 360);
     startTransition(async () => {
+      setOptimisticCount(Math.max(0, displayCount - n));
       const r = await openAction(slot, n);
       if (r.status === 'error') {
         alert(r.message);
@@ -80,26 +83,27 @@ export function GachaBoxCard({
           <div className="flex items-baseline justify-between">
             <h2 className="text-base font-bold text-white drop-shadow-sm">{label}</h2>
             <span className="text-xs text-white/85">
-              보유 <span className="font-mono font-semibold tabular-nums">{count}</span>개
+              보유 <span className="font-mono font-semibold tabular-nums">{displayCount}</span>개
             </span>
           </div>
 
-          <div className="mt-3 flex justify-end gap-1.5">
+          {/* 두 버튼 grid-cols-2로 폭 동일 — multiN 라벨 가변에 따른 width 흔들림 방지. */}
+          <div className="mt-3 ml-auto grid w-44 grid-cols-2 gap-1.5">
             <button
               type="button"
-              disabled={pending || count < 1}
+              disabled={pending || displayCount < 1}
               onClick={() => pull(1)}
-              className="rounded-md bg-white/95 px-3 py-1.5 text-[11px] font-semibold text-zinc-900 shadow-sm transition-transform active:scale-95 disabled:opacity-40"
+              className="rounded-md bg-white/95 px-3 py-1.5 text-center text-[11px] font-semibold text-zinc-900 shadow-sm transition-transform active:scale-95 disabled:opacity-40"
             >
-              {pending ? '여는 중…' : '1회 열기'}
+              1회 열기
             </button>
             <button
               type="button"
-              disabled={pending || count < 2}
+              disabled={pending || displayCount < 2}
               onClick={() => pull(multiN)}
-              className="rounded-md bg-amber-500 px-3 py-1.5 text-[11px] font-semibold text-white shadow-sm transition-transform active:scale-95 disabled:opacity-40"
+              className="rounded-md bg-amber-500 px-3 py-1.5 text-center text-[11px] font-semibold text-white shadow-sm transition-transform active:scale-95 disabled:opacity-40"
             >
-              {pending ? '여는 중…' : `${multiN}회 열기`}
+              {multiN}회 열기
             </button>
           </div>
         </div>
