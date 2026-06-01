@@ -55,7 +55,7 @@ export function GachaResultModal({
             <div className="text-center">
               <p className="text-sm font-medium">
                 {single.isNew ? (
-                  <span className="text-emerald-600 dark:text-emerald-400">🆕 신규 해금!</span>
+                  <span className="text-emerald-600 dark:text-emerald-400">신규 해금!</span>
                 ) : (
                   <span className="text-zinc-500">획득!</span>
                 )}
@@ -80,11 +80,6 @@ export function GachaResultModal({
                   frameless
                 />
                 <div className="mt-1 text-base font-semibold">{single.name}</div>
-                {!single.isNew ? (
-                  <div className="mt-1 text-[11px] text-amber-600 dark:text-amber-400">
-                    중복 — 초월 제물로 활용
-                  </div>
-                ) : null}
               </div>
               {single.isNew && single.loreTeaser ? (
                 <div className="mt-3 rounded-xl border border-zinc-200 bg-zinc-50 px-3.5 py-3 text-left dark:border-zinc-800 dark:bg-zinc-900">
@@ -99,26 +94,13 @@ export function GachaResultModal({
             </div>
           ) : (
             <>
-              <div className="space-y-1.5">
-                <p className="flex items-baseline justify-between text-sm">
-                  <span className="font-medium">{results.length}회 열기</span>
-                  <span className="text-[11px] text-zinc-500">
-                    🆕 신규 <span className="font-semibold text-emerald-600">{newCount}</span> · 중복{' '}
-                    <span className="font-semibold text-zinc-700 dark:text-zinc-300">{dupCount}</span>
-                  </span>
-                </p>
-                {/* 신규/중복 비율 progress bar */}
-                <div className="flex h-1.5 w-full overflow-hidden rounded-full bg-zinc-200 dark:bg-zinc-800">
-                  <span
-                    className="h-full bg-emerald-500"
-                    style={{ width: `${(newCount / results.length) * 100}%` }}
-                  />
-                  <span
-                    className="h-full bg-zinc-400 dark:bg-zinc-600"
-                    style={{ width: `${(dupCount / results.length) * 100}%` }}
-                  />
-                </div>
-              </div>
+              <p className="flex items-baseline justify-between text-sm">
+                <span className="font-medium">{results.length}회 열기</span>
+                <span className="text-[11px] text-zinc-500">
+                  신규 <span className="font-semibold text-emerald-600">{newCount}</span> · 중복{' '}
+                  <span className="font-semibold text-zinc-700 dark:text-zinc-300">{dupCount}</span>
+                </span>
+              </p>
               <div className="mt-3 grid grid-cols-4 gap-2">
                 {sortedResults.map((r, i) => {
                   const isOpen = openLoreIdx === i;
@@ -138,11 +120,6 @@ export function GachaResultModal({
                       }
                       title={r.name}
                     >
-                      {r.isNew ? (
-                        <span className="absolute -left-1 -top-1 rounded-full bg-emerald-500 px-1 text-[8px] font-bold text-white">
-                          NEW
-                        </span>
-                      ) : null}
                       <TranscendSprite
                         code={r.code}
                         slot={slot}

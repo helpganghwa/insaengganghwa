@@ -39,7 +39,6 @@ export function GachaBoxCard({
   const [shake, setShake] = useState(false);
 
   const multiN = count >= 2 ? Math.min(10, count) : 10;
-  const empty = count <= 0;
 
   const pull = (n: number) => {
     if (pending || count < 1) return;
@@ -56,12 +55,6 @@ export function GachaBoxCard({
     });
   };
 
-  // 카드 전체 클릭 = 멀티 열기(기본). 1회는 작은 우측 칩.
-  const onCardClick = () => {
-    if (empty) return;
-    pull(multiN);
-  };
-
   return (
     <>
       <div
@@ -69,19 +62,7 @@ export function GachaBoxCard({
           backgroundColor: tint,
           animation: shake ? 'gacha-box-shake 360ms ease-in-out' : undefined,
         }}
-        className={`relative overflow-hidden rounded-2xl border border-zinc-800 transition active:scale-[0.99] ${
-          empty ? 'opacity-55' : 'cursor-pointer'
-        }`}
-        onClick={onCardClick}
-        role="button"
-        tabIndex={empty ? -1 : 0}
-        aria-disabled={empty}
-        onKeyDown={(e) => {
-          if (e.key === 'Enter' || e.key === ' ') {
-            e.preventDefault();
-            onCardClick();
-          }
-        }}
+        className="relative overflow-hidden rounded-2xl border border-zinc-800"
       >
         {/* eslint-disable-next-line @next/next/no-img-element */}
         <img
@@ -103,38 +84,24 @@ export function GachaBoxCard({
             </span>
           </div>
 
-          {empty ? (
-            <p className="mt-3 text-[11px] leading-relaxed text-white/75">
-              상자가 없어요 — <span className="font-semibold text-amber-300">우편함</span>·
-              <span className="font-semibold text-amber-300">출석</span>·
-              <span className="font-semibold text-amber-300">친구 초대</span>로 받을 수 있어요.
-            </p>
-          ) : (
-            <div className="mt-3 flex justify-end gap-1.5">
-              <button
-                type="button"
-                disabled={pending}
-                onClick={(e) => {
-                  e.stopPropagation();
-                  pull(1);
-                }}
-                className="rounded-md bg-white/95 px-3 py-1.5 text-[11px] font-semibold text-zinc-900 shadow-sm transition-transform active:scale-95 disabled:opacity-40"
-              >
-                {pending ? '여는 중…' : '1회'}
-              </button>
-              <button
-                type="button"
-                disabled={pending || count < 2}
-                onClick={(e) => {
-                  e.stopPropagation();
-                  pull(multiN);
-                }}
-                className="rounded-md bg-amber-500 px-3 py-1.5 text-[11px] font-semibold text-white shadow-sm transition-transform active:scale-95 disabled:opacity-40"
-              >
-                {pending ? '여는 중…' : `${multiN}회 열기`}
-              </button>
-            </div>
-          )}
+          <div className="mt-3 flex justify-end gap-1.5">
+            <button
+              type="button"
+              disabled={pending || count < 1}
+              onClick={() => pull(1)}
+              className="rounded-md bg-white/95 px-3 py-1.5 text-[11px] font-semibold text-zinc-900 shadow-sm transition-transform active:scale-95 disabled:opacity-40"
+            >
+              {pending ? '여는 중…' : '1회 열기'}
+            </button>
+            <button
+              type="button"
+              disabled={pending || count < 2}
+              onClick={() => pull(multiN)}
+              className="rounded-md bg-amber-500 px-3 py-1.5 text-[11px] font-semibold text-white shadow-sm transition-transform active:scale-95 disabled:opacity-40"
+            >
+              {pending ? '여는 중…' : `${multiN}회 열기`}
+            </button>
+          </div>
         </div>
 
         {/* 클릭 시 white flash overlay */}
