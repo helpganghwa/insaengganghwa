@@ -605,22 +605,14 @@ export function RaidSessionCard({ view: v }: { view: RaidView }) {
                     <span className="w-5 shrink-0 text-center">
                       {MEDAL[i] ?? <span className="text-zinc-500">{i + 1}</span>}
                     </span>
-                    {/* 닉네임 클릭 → 공개 프로필. 본인은 영역 비활성(자기 자신은 /me로). */}
-                    {p.isMe ? (
-                      <Link
-                        href="/me"
-                        className="min-w-0 flex-1 truncate font-medium hover:underline"
-                      >
-                        {p.nickname} (나)
-                      </Link>
-                    ) : (
-                      <Link
-                        href={`/u/${encodeURIComponent(p.nickname)}`}
-                        className="min-w-0 flex-1 truncate font-medium hover:underline"
-                      >
-                        {p.nickname}
-                      </Link>
-                    )}
+                    {/* 닉네임 클릭 → 본인 포함 모두 /u/<nickname> 공개 프로필. */}
+                    <Link
+                      href={`/u/${encodeURIComponent(p.nickname)}`}
+                      className="min-w-0 flex-1 truncate font-medium hover:underline"
+                    >
+                      {p.nickname}
+                      {p.isMe ? ' (나)' : ''}
+                    </Link>
                     <span className="shrink-0 font-mono tabular-nums text-zinc-300">
                       {p.totalDamage.toLocaleString()}
                       <span className="ml-1 text-[9px] text-zinc-500">{pct}%</span>
