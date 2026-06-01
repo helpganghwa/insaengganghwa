@@ -43,6 +43,10 @@ export function PushSettings(props: {
   const [supportKind, setSupportKind] = useState<string | null>(null);
   const [permission, setPermission] = useState<NotificationPermission | null>(null);
   const [hasSubscription, setHasSubscription] = useState<boolean>(false);
+  // 구독 확인 끝나기 전엔 토글을 그리지 않음 — false→true 전환 시 발생하던
+  // OFF→ON 슬라이드 애니메이션(2026-06-01 사용자 지적) 회피. 첫 마운트부터
+  // 실제 값(true)으로 렌더되어 transition이 'mount 시점'에 트리거되지 않음.
+  const [subChecked, setSubChecked] = useState<boolean>(false);
   const [enhance, setEnhance] = useState(props.initialEnhance);
   const [raid, setRaid] = useState(props.initialRaid);
   const [supply, setSupply] = useState(props.initialSupply);
@@ -56,12 +60,21 @@ export function PushSettings(props: {
     setSupportKind(support.kind);
     if (support.kind === 'supported') {
       setPermission(support.permission);
-      // 현재 구독 여부 확인
+      // 현재 구독 여부 확인 — 끝나면 subChecked=true로 게이트 해제.
       navigator.serviceWorker
         .getRegistration()
         .then((reg) => reg?.pushManager.getSubscription())
-        .then((sub) => setHasSubscription(!!sub))
-        .catch(() => setHasSubscription(false));
+        .then((sub) => {
+          setHasSubscription(!!sub);
+          setSubChecked(true);
+        })
+        .catch(() => {
+          setHasSubscription(false);
+          setSubChecked(true);
+        });
+    } else {
+      // 미지원/ios-needs-install — 토글을 안 그리므로 게이트 즉시 해제.
+      setSubChecked(true);
     }
   }, []);
 
@@ -108,7 +121,7 @@ export function PushSettings(props: {
     });
   }
 
-  if (supportKind === null) {
+  if (supportKind === null || (supportKind === 'supported' && !subChecked)) {
     return <p className="px-3 py-2.5 text-[11px] text-zinc-500">불러오는 중…</p>;
   }
   if (supportKind === 'unsupported') {
