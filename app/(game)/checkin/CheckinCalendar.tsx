@@ -54,16 +54,12 @@ function rewardLongLabel(r: CheckinReward): string {
 function cellAriaLabel(
   day: number,
   r: CheckinReward,
-  state: 'past' | 'today' | 'today_done' | 'future',
+  state: 'past' | 'today' | 'future',
   isMilestone: boolean,
   isGrand: boolean,
 ) {
   const stateText =
-    state === 'today'
-      ? '오늘 수령 가능'
-      : state === 'today_done' || state === 'past'
-        ? '수령 완료'
-        : '미래 칸';
+    state === 'today' ? '오늘 수령 가능' : state === 'past' ? '수령 완료' : '미래 칸';
   const tag = isGrand ? '최종 마일스톤' : isMilestone ? '마일스톤' : '';
   return [`${day}일째`, tag, rewardLongLabel(r), stateText].filter(Boolean).join(', ');
 }
@@ -132,17 +128,12 @@ export function CheckinCalendar({
           const isMilestone = isCheckinMilestone(day);
           const isGrand = day === CHECKIN_CYCLE_DAYS;
           const isClaimed = day <= dayProgress;
+          // 오늘 수령 후 todayCellDay는 '내일 칸'을 가리킴 → 체크/오늘강조 모두 안 함.
+          // (이전 isTodayClaimed가 다음 칸을 수령완료로 오표시하던 버그 수정 2026-06-01)
           const isToday = day === todayCellDay && !claimedToday;
-          const isTodayClaimed = day === todayCellDay && claimedToday;
           const justClaimed = justClaimedDay === day;
-          const showCheck = isClaimed || isTodayClaimed;
-          const state = isToday
-            ? 'today'
-            : isTodayClaimed
-              ? 'today_done'
-              : isClaimed
-                ? 'past'
-                : 'future';
+          const showCheck = isClaimed;
+          const state = isToday ? 'today' : isClaimed ? 'past' : 'future';
 
           const borderCls = isGrand
             ? 'border-amber-500 ring-2 ring-amber-400/60 shadow-[0_0_10px_rgba(245,158,11,0.35)]'
@@ -164,7 +155,7 @@ export function CheckinCalendar({
               className={`relative flex aspect-square flex-col items-center justify-between rounded-md border ${borderCls} ${stateCls} p-0.5 text-center`}
             >
               <div
-                className={`text-[8px] leading-none font-bold ${
+                className={`text-[9px] leading-none font-bold ${
                   isGrand
                     ? 'text-amber-700 dark:text-amber-300'
                     : isMilestone
@@ -172,7 +163,7 @@ export function CheckinCalendar({
                       : 'text-zinc-400'
                 } ${showCheck ? 'opacity-50' : ''}`}
               >
-                {isGrand ? 'GRAND' : `${day}`}
+                {isGrand ? '최종' : `${day}`}
               </div>
 
               <div
@@ -185,7 +176,7 @@ export function CheckinCalendar({
               </div>
 
               <div
-                className={`text-[8px] leading-none font-semibold ${
+                className={`text-[9px] leading-none font-semibold ${
                   showCheck ? 'opacity-50' : ''
                 } ${
                   r.kind === 'diamond'
@@ -198,7 +189,7 @@ export function CheckinCalendar({
 
               {showCheck && (
                 <div
-                  className="pointer-events-none absolute inset-0 flex items-center justify-center text-2xl font-bold text-amber-600 drop-shadow-[0_1px_1px_rgba(0,0,0,0.25)] dark:text-amber-400"
+                  className="pointer-events-none absolute right-0.5 top-0.5 flex h-3.5 w-3.5 items-center justify-center rounded-full bg-amber-500 text-[9px] leading-none font-bold text-white shadow-sm"
                   style={justClaimed ? { animation: 'checkin-stamp 520ms ease-out' } : undefined}
                   aria-hidden
                 >
@@ -217,7 +208,7 @@ export function CheckinCalendar({
             ? '오늘 수령 완료'
             : `오늘 (D${todayCellDay}${
                 todayCellDay === CHECKIN_CYCLE_DAYS
-                  ? ' · GRAND'
+                  ? ' · 최종'
                   : isCheckinMilestone(todayCellDay)
                     ? ' · 마일스톤'
                     : ''
