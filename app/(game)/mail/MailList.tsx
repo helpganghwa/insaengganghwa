@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useMemo, useOptimistic, useRef, useState, useTransition } from 'react';
+import { useEffect, useMemo, useOptimistic, useState, useTransition } from 'react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 
@@ -156,7 +156,7 @@ export function MailList({
   unreadAggregate: UnreadAggregate | null;
 }) {
   const router = useRouter();
-  const [pending, startTransition] = useTransition();
+  const [, startTransition] = useTransition();
   const [error, setError] = useState<string | null>(null);
   const [extraItems, setExtraItems] = useState<MailItem[]>([]);
   const [hasMore, setHasMore] = useState(initialHasMore);
