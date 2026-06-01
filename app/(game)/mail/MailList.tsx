@@ -1,12 +1,17 @@
 'use client';
 
-import { useOptimistic, useState, useTransition } from 'react';
+import { useEffect, useMemo, useOptimistic, useState, useTransition } from 'react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 
 import type { Slot } from '@/lib/db/schema/equipment';
 import { useDiamond } from '@/components/DiamondContext';
-import { claimMailAction, claimAllMailAction } from './actions';
+import { useResourceToast } from '@/components/ResourceToast';
+import {
+  claimMailAction,
+  claimAllMailAction,
+  loadMoreMailsAction,
+} from './actions';
 
 export type MailItem = {
   id: string;
@@ -21,6 +26,53 @@ export type MailItem = {
 };
 
 const SLOT_EMOJI: Record<Slot, string> = { weapon: '⚔️', armor: '🛡️', accessory: '💍' };
+const SLOT_LABEL: Record<Slot, string> = { weapon: '무기', armor: '방어구', accessory: '장신구' };
+
+/**
+ * type별 시각 메타(2026-06-01 추가) — 카드 좌측 컬러바 + 작은 라벨 배지.
+ * 실사용 5종 + notice 폴백. 미정의 type은 zinc 톤.
+ */
+type TypeMeta = { bar: string; label: string; labelClass: string };
+const TYPE_META: Record<string, TypeMeta> = {
+  admin: {
+    bar: 'bg-violet-500',
+    label: '운영자',
+    labelClass:
+      'bg-violet-100 text-violet-700 dark:bg-violet-950/60 dark:text-violet-300',
+  },
+  reward: {
+    bar: 'bg-amber-500',
+    label: '보상',
+    labelClass:
+      'bg-amber-100 text-amber-800 dark:bg-amber-950/60 dark:text-amber-300',
+  },
+  profile_accepted: {
+    bar: 'bg-emerald-500',
+    label: '프로필 승인',
+    labelClass:
+      'bg-emerald-100 text-emerald-700 dark:bg-emerald-950/60 dark:text-emerald-300',
+  },
+  profile_rejected_ai: {
+    bar: 'bg-rose-500',
+    label: '프로필 거절',
+    labelClass: 'bg-rose-100 text-rose-700 dark:bg-rose-950/60 dark:text-rose-300',
+  },
+  profile_failed: {
+    bar: 'bg-zinc-500',
+    label: '프로필 실패',
+    labelClass: 'bg-zinc-200 text-zinc-700 dark:bg-zinc-800 dark:text-zinc-300',
+  },
+  notice: {
+    bar: 'bg-sky-500',
+    label: '공지',
+    labelClass: 'bg-sky-100 text-sky-700 dark:bg-sky-950/60 dark:text-sky-300',
+  },
+};
+const DEFAULT_TYPE_META: TypeMeta = {
+  bar: 'bg-zinc-600',
+  label: '우편',
+  labelClass: 'bg-zinc-100 text-zinc-700 dark:bg-zinc-800 dark:text-zinc-300',
+};
 
 function fmtRemaining(targetMs: number, nowMs: number): string {
   const diff = targetMs - nowMs;
@@ -31,11 +83,17 @@ function fmtRemaining(targetMs: number, nowMs: number): string {
   return `${d}일 남음`;
 }
 
+function hasPayload(payload: MailItem['payload']): boolean {
+  if (Number(payload.diamond ?? 0) > 0) return true;
+  const b = payload.boxes ?? {};
+  return (['weapon', 'armor', 'accessory'] as Slot[]).some((s) => (b[s] ?? 0) > 0);
+}
+
 function PayloadChips({ payload }: { payload: MailItem['payload'] }) {
   const dia = Number(payload.diamond ?? 0);
   const boxes = payload.boxes ?? {};
   return (
-    <div className="flex flex-wrap gap-1.5 text-[11px] font-mono tabular-nums">
+    <div className="flex flex-wrap gap-1.5 font-mono text-[11px] tabular-nums">
       {dia > 0 ? (
         <span className="inline-flex items-center gap-0.5 rounded-md bg-amber-100 px-1.5 py-0.5 text-amber-900 dark:bg-amber-950/60 dark:text-amber-200">
           💎 {dia.toLocaleString('ko-KR')}
@@ -57,26 +115,86 @@ function PayloadChips({ payload }: { payload: MailItem['payload'] }) {
   );
 }
 
+/** 운영자 우편 신뢰성 배지 — sender 옆 ✓ 운영자. 사칭 신고 회피용. */
+function VerifiedAdminBadge() {
+  return (
+    <span className="inline-flex items-center gap-0.5 rounded-full bg-violet-100 px-1 text-[8.5px] font-bold text-violet-700 dark:bg-violet-950/60 dark:text-violet-300">
+      <svg
+        viewBox="0 0 12 12"
+        aria-hidden
+        className="h-2.5 w-2.5 fill-current"
+      >
+        <path d="M6 0l1.5 1.5L9.6 1l.6 2.1 2.1.6-.5 2.1L13 7.5 11.5 9l.6 2.1-2.1.6-.6 2.1L7.5 13 6 14.5 4.5 13l-2.1.6-.6-2.1L0 11.5 1 9 0 7.5 1.5 6 0 4.5 1 2.1 3 1.5 4.5 0 6 1.5z" />
+      </svg>
+      운영자
+    </span>
+  );
+}
+
 export function MailList({
   items,
   tab,
   unreadCount,
+  hasMore: initialHasMore,
 }: {
   items: MailItem[];
   tab: 'unread' | 'done';
   unreadCount: number | null;
+  hasMore: boolean;
 }) {
   const router = useRouter();
   const [pending, startTransition] = useTransition();
   const [error, setError] = useState<string | null>(null);
-  const [toast, setToast] = useState<string | null>(null);
-  const [displayItems, setOptimisticItems] = useOptimistic(items);
+  const [extraItems, setExtraItems] = useState<MailItem[]>([]);
+  const [hasMore, setHasMore] = useState(initialHasMore);
+  // items prop이 바뀌면(claim 후 router.refresh) extras·hasMore 리셋 — 중복 방지.
+  useEffect(() => {
+    setExtraItems([]);
+    setHasMore(initialHasMore);
+  }, [items, initialHasMore]);
+
+  const combinedBase = useMemo(() => [...items, ...extraItems], [items, extraItems]);
+  const [displayItems, setOptimisticItems] = useOptimistic(combinedBase);
   const { optimisticAdjust: adjustDiamond } = useDiamond();
+  const { showResource, showError } = useResourceToast();
   const nowMs = Date.now();
+
+  // 모두 받기 합계 preview — 현재 표시된 미수령 우편 기준(서버는 모든 미수령 처리).
+  // 표시 외 우편이 있을 수 있어 'N건 +' suffix(extras 로드 안 됨 + hasMore=true 시).
+  const totals = useMemo(() => {
+    let diamond = 0;
+    const boxes: Record<Slot, number> = { weapon: 0, armor: 0, accessory: 0 };
+    for (const m of displayItems) {
+      diamond += Number(m.payload.diamond ?? 0);
+      const b = m.payload.boxes ?? {};
+      for (const s of ['weapon', 'armor', 'accessory'] as Slot[]) {
+        boxes[s] += b[s] ?? 0;
+      }
+    }
+    return { diamond, boxes };
+  }, [displayItems]);
+
+  const totalParts = useMemo(() => {
+    const parts: string[] = [];
+    if (totals.diamond > 0) parts.push(`💎 +${totals.diamond.toLocaleString('ko-KR')}`);
+    for (const s of ['weapon', 'armor', 'accessory'] as Slot[]) {
+      const n = totals.boxes[s];
+      if (n > 0) parts.push(`${SLOT_EMOJI[s]} +${n}`);
+    }
+    return parts;
+  }, [totals]);
+
+  const emitClaimToasts = (result: { diamond: number; boxes: Record<Slot, number> }) => {
+    if (result.diamond > 0) showResource('💎', '다이아', result.diamond);
+    for (const s of ['weapon', 'armor', 'accessory'] as Slot[]) {
+      const n = result.boxes[s];
+      if (n > 0) showResource(SLOT_EMOJI[s], `${SLOT_LABEL[s]} 보급권`, n);
+    }
+  };
 
   const claim = (id: string) => {
     setError(null);
-    const target = items.find((m) => m.id === id);
+    const target = combinedBase.find((m) => m.id === id);
     startTransition(async () => {
       // 낙관: 우편 즉시 제거 + 헤더 다이아 즉시 가산.
       if (target) {
@@ -86,29 +204,22 @@ export function MailList({
       }
       const r = await claimMailAction(id);
       if (r.status === 'error') {
-        // 롤백 — 서버 분배 정확값으로 재계산은 router.refresh로 자연 복귀.
         if (target) {
           const dia = Number(target.payload.diamond ?? 0);
           if (dia > 0) adjustDiamond(-BigInt(dia));
         }
         setError(r.message);
+        showError(r.message);
         return;
       }
-      const { diamond, boxes } = r.result;
-      const parts: string[] = [];
-      if (diamond > 0) parts.push(`💎 +${diamond.toLocaleString('ko-KR')}`);
-      for (const s of ['weapon', 'armor', 'accessory'] as Slot[]) {
-        if (boxes[s] > 0) parts.push(`${SLOT_EMOJI[s]} +${boxes[s]}`);
-      }
-      setToast(parts.length ? `수령: ${parts.join(' · ')}` : '수령 완료');
-      setTimeout(() => setToast(null), 3000);
+      emitClaimToasts(r.result);
       router.refresh();
     });
   };
 
   const claimAll = () => {
     setError(null);
-    const totalDiamondOptimistic = items.reduce(
+    const totalDiamondOptimistic = combinedBase.reduce(
       (a, m) => a + Number(m.payload.diamond ?? 0),
       0,
     );
@@ -120,17 +231,27 @@ export function MailList({
       if (r.status === 'error') {
         if (totalDiamondOptimistic > 0) adjustDiamond(-BigInt(totalDiamondOptimistic));
         setError(r.message);
+        showError(r.message);
         return;
       }
-      const { diamond, boxes } = r.result;
-      const parts: string[] = [];
-      if (diamond > 0) parts.push(`💎 +${diamond.toLocaleString('ko-KR')}`);
-      for (const s of ['weapon', 'armor', 'accessory'] as Slot[]) {
-        if (boxes[s] > 0) parts.push(`${SLOT_EMOJI[s]} +${boxes[s]}`);
-      }
-      setToast(parts.length ? `일괄 수령: ${parts.join(' · ')}` : '받을 우편이 없습니다');
-      setTimeout(() => setToast(null), 3500);
+      emitClaimToasts(r.result);
       router.refresh();
+    });
+  };
+
+  const loadMore = () => {
+    setError(null);
+    if (combinedBase.length === 0) return;
+    const oldest = combinedBase[combinedBase.length - 1];
+    startTransition(async () => {
+      const r = await loadMoreMailsAction(tab, oldest.createdAtIso);
+      if (r.status === 'error') {
+        setError(r.message);
+        showError(r.message);
+        return;
+      }
+      setExtraItems((prev) => [...prev, ...r.items]);
+      setHasMore(r.hasMore);
     });
   };
 
@@ -157,9 +278,17 @@ export function MailList({
           type="button"
           disabled={pending}
           onClick={claimAll}
-          className="w-full rounded-full bg-amber-500 px-3 py-2.5 text-sm font-bold text-amber-950 disabled:opacity-40"
+          className="flex w-full flex-col items-center justify-center gap-0.5 rounded-full bg-amber-500 px-3 py-2.5 text-amber-950 disabled:opacity-40"
         >
-          {pending ? '수령 중…' : `📬 ${displayItems.length}건 모두 받기`}
+          <span className="text-sm font-bold">
+            {pending ? '수령 중…' : `${displayItems.length}건 모두 받기`}
+          </span>
+          {!pending && totalParts.length > 0 ? (
+            <span className="font-mono text-[11px] tabular-nums text-amber-900/80">
+              {totalParts.join(' · ')}
+              {hasMore ? ' · 외 더 있음' : ''}
+            </span>
+          ) : null}
         </button>
       ) : null}
 
@@ -170,50 +299,77 @@ export function MailList({
       ) : null}
 
       {displayItems.length === 0 ? (
-        <p className="rounded-lg border border-dashed border-zinc-300 p-10 text-center text-xs text-zinc-500 dark:border-zinc-700">
-          {tab === 'unread' ? '받지 않은 우편이 없습니다.' : '받은 우편이 없습니다.'}
-        </p>
+        <div className="rounded-lg border border-dashed border-zinc-300 px-4 py-10 text-center dark:border-zinc-700">
+          <p className="text-xs text-zinc-500">
+            {tab === 'unread' ? '받지 않은 우편이 없습니다.' : '받은 우편이 없습니다.'}
+          </p>
+          {tab === 'unread' ? (
+            <Link
+              href="/checkin"
+              className="mt-3 inline-block rounded-full bg-zinc-900 px-3 py-1.5 text-[11px] font-semibold text-white dark:bg-zinc-50 dark:text-zinc-950"
+            >
+              출석 체크하러 가기
+            </Link>
+          ) : null}
+        </div>
       ) : (
         <ul className="space-y-2">
           {displayItems.map((m) => {
             const expMs = new Date(m.expiresAtIso).getTime();
             const expSoon = tab === 'unread' && expMs - nowMs < 24 * 3_600_000;
+            const meta = TYPE_META[m.type] ?? DEFAULT_TYPE_META;
+            const showPayload = hasPayload(m.payload);
             return (
               <li
                 key={m.id}
-                className="rounded-xl border border-zinc-200 bg-white p-3 dark:border-zinc-800 dark:bg-zinc-950"
+                className="relative overflow-hidden rounded-xl border border-zinc-200 bg-white dark:border-zinc-800 dark:bg-zinc-950"
               >
-                <div className="flex items-baseline justify-between gap-2">
-                  <div className="min-w-0 flex-1">
-                    <div className="flex items-center gap-1.5 text-[10px] text-zinc-500">
-                      <span className="font-semibold text-zinc-700 dark:text-zinc-300">
-                        {m.senderLabel}
-                      </span>
-                      <span>·</span>
-                      <span className={expSoon ? 'text-red-600 dark:text-red-400' : ''}>
-                        {tab === 'unread' ? fmtRemaining(expMs, nowMs) : '수령 완료'}
-                      </span>
+                {/* 좌측 컬러바 — type별 시각 anchor */}
+                <span
+                  className={`absolute left-0 top-0 h-full w-[3px] ${meta.bar}`}
+                  aria-hidden
+                />
+                <div className="p-3 pl-3.5">
+                  <div className="flex items-baseline justify-between gap-2">
+                    <div className="min-w-0 flex-1">
+                      <div className="flex items-center gap-1.5 text-[10px] text-zinc-500">
+                        <span
+                          className={`rounded-full px-1.5 py-0 text-[9px] font-semibold ${meta.labelClass}`}
+                        >
+                          {meta.label}
+                        </span>
+                        <span className="truncate font-semibold text-zinc-700 dark:text-zinc-300">
+                          {m.senderLabel}
+                        </span>
+                        {m.type === 'admin' ? <VerifiedAdminBadge /> : null}
+                        <span>·</span>
+                        <span className={expSoon ? 'text-red-600 dark:text-red-400' : ''}>
+                          {tab === 'unread' ? fmtRemaining(expMs, nowMs) : '수령 완료'}
+                        </span>
+                      </div>
+                      <div className="mt-0.5 text-sm font-semibold">{m.title}</div>
+                      {m.body ? (
+                        <p className="mt-1 whitespace-pre-wrap text-[11px] leading-relaxed text-zinc-600 dark:text-zinc-400">
+                          {m.body}
+                        </p>
+                      ) : null}
                     </div>
-                    <div className="mt-0.5 truncate text-sm font-semibold">{m.title}</div>
-                    {m.body ? (
-                      <p className="mt-1 line-clamp-2 text-[11px] text-zinc-600 dark:text-zinc-400">
-                        {m.body}
-                      </p>
+                    {tab === 'unread' ? (
+                      <button
+                        type="button"
+                        disabled={pending}
+                        onClick={() => claim(m.id)}
+                        className="shrink-0 rounded-full bg-zinc-900 px-3 py-1.5 text-[11px] font-semibold text-white disabled:opacity-40 dark:bg-zinc-50 dark:text-zinc-950"
+                      >
+                        받기
+                      </button>
                     ) : null}
                   </div>
-                  {tab === 'unread' ? (
-                    <button
-                      type="button"
-                      disabled={pending}
-                      onClick={() => claim(m.id)}
-                      className="shrink-0 rounded-full bg-zinc-900 px-3 py-1.5 text-[11px] font-semibold text-white disabled:opacity-40 dark:bg-zinc-50 dark:text-zinc-950"
-                    >
-                      받기
-                    </button>
+                  {showPayload ? (
+                    <div className="mt-2">
+                      <PayloadChips payload={m.payload} />
+                    </div>
                   ) : null}
-                </div>
-                <div className="mt-2">
-                  <PayloadChips payload={m.payload} />
                 </div>
               </li>
             );
@@ -221,12 +377,15 @@ export function MailList({
         </ul>
       )}
 
-      {toast ? (
-        <div className="fixed inset-x-0 bottom-20 z-40 flex justify-center px-4">
-          <div className="rounded-full bg-zinc-900 px-4 py-2 text-xs font-semibold text-white shadow-lg dark:bg-zinc-50 dark:text-zinc-950">
-            {toast}
-          </div>
-        </div>
+      {displayItems.length > 0 && hasMore ? (
+        <button
+          type="button"
+          disabled={pending}
+          onClick={loadMore}
+          className="w-full rounded-full border border-zinc-300 px-3 py-2 text-xs font-semibold text-zinc-700 hover:bg-zinc-50 disabled:opacity-40 dark:border-zinc-700 dark:text-zinc-300 dark:hover:bg-zinc-900"
+        >
+          {pending ? '불러오는 중…' : '더 보기'}
+        </button>
       ) : null}
     </div>
   );

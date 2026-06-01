@@ -23,6 +23,7 @@ export default async function MailPage({
   const tab = (await searchParams).tab === 'done' ? 'done' : 'unread';
 
   // 콜드 DB 커넥션 hang 시 페이지 무한 대기 방지 — 실패 시 빈 목록으로 degrade(2026-05-29).
+  // PAGE_SIZE+1 fetch → '더 보기' 활성 여부 판정(hasMore).
   const rows = await withTimeout(
     db
       .select({
@@ -43,12 +44,13 @@ export default async function MailPage({
           : and(eq(mailbox.userId, userId), isNotNull(mailbox.claimedAt)),
       )
       .orderBy(desc(mailbox.createdAt))
-      .limit(PAGE_SIZE),
+      .limit(PAGE_SIZE + 1),
     3500,
     'mail.page',
   ).catch(() => []);
 
-  const items: MailItem[] = rows.map((r) => ({
+  const hasMore = rows.length > PAGE_SIZE;
+  const items: MailItem[] = rows.slice(0, PAGE_SIZE).map((r) => ({
     id: r.id.toString(),
     type: r.type,
     title: r.title || defaultTitle(r.type),
@@ -60,21 +62,32 @@ export default async function MailPage({
     createdAtIso: r.createdAt.toISOString(),
   }));
 
-  return <MailList items={items} tab={tab} unreadCount={tab === 'unread' ? items.length : null} />;
+  return (
+    <MailList
+      items={items}
+      tab={tab}
+      unreadCount={tab === 'unread' ? items.length : null}
+      hasMore={hasMore}
+    />
+  );
 }
 
 function defaultTitle(type: string): string {
+  // 실사용 mail type 폴백 타이틀. notice/raid_settlement/enhance_result는 enum에만
+  // 존재하고 실제 insert 경로 없음(2026-06-01 확인) — fallback 안전망.
   switch (type) {
     case 'admin':
       return '운영자 메시지';
     case 'reward':
       return '보상이 도착했습니다';
+    case 'profile_accepted':
+      return '프로필이 승인되었습니다';
+    case 'profile_rejected_ai':
+      return '프로필 검토 결과';
+    case 'profile_failed':
+      return '프로필 처리 실패';
     case 'notice':
       return '공지';
-    case 'raid_settlement':
-      return '레이드 정산';
-    case 'enhance_result':
-      return '강화 결과';
     default:
       return '우편';
   }

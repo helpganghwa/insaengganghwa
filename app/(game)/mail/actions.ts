@@ -1,7 +1,7 @@
 'use server';
 
 import { revalidatePath } from 'next/cache';
-import { and, desc, eq, gt, isNull, sql } from 'drizzle-orm';
+import { and, desc, eq, gt, isNotNull, isNull, lt, sql } from 'drizzle-orm';
 
 import { getSessionUserId } from '@/lib/auth/session';
 import { db } from '@/lib/db/client';
@@ -87,6 +87,59 @@ export async function getUnreadMailsAction(): Promise<MailItem[]> {
     expiresAtIso: r.expiresAt.toISOString(),
     createdAtIso: r.createdAt.toISOString(),
   }));
+}
+
+/**
+ * "더 보기" — 현재 표시된 우편 중 가장 오래된 row 이전의 50건. tab별 동일 필터.
+ * 첫 PAGE_SIZE+1로 fetch해서 hasMore 판정.
+ */
+const PAGE_SIZE = 50;
+export async function loadMoreMailsAction(
+  tab: 'unread' | 'done',
+  beforeCreatedAtIso: string,
+): Promise<{ status: 'success'; items: MailItem[]; hasMore: boolean } | ErrorState> {
+  const userId = await uid();
+  if (!userId) return err('UNAUTHENTICATED');
+  let before: Date;
+  try {
+    before = new Date(beforeCreatedAtIso);
+    if (Number.isNaN(before.getTime())) throw new Error('invalid date');
+  } catch {
+    return err('UNKNOWN');
+  }
+  const tabClause =
+    tab === 'unread'
+      ? and(isNull(mailbox.claimedAt), gt(mailbox.expiresAt, sql`now()`))
+      : isNotNull(mailbox.claimedAt);
+  const rows = await db
+    .select({
+      id: mailbox.id,
+      type: mailbox.type,
+      title: mailbox.title,
+      body: mailbox.body,
+      senderLabel: mailbox.senderLabel,
+      payload: mailbox.payload,
+      claimedAt: mailbox.claimedAt,
+      expiresAt: mailbox.expiresAt,
+      createdAt: mailbox.createdAt,
+    })
+    .from(mailbox)
+    .where(and(eq(mailbox.userId, userId), tabClause, lt(mailbox.createdAt, before)))
+    .orderBy(desc(mailbox.createdAt))
+    .limit(PAGE_SIZE + 1);
+  const hasMore = rows.length > PAGE_SIZE;
+  const items: MailItem[] = rows.slice(0, PAGE_SIZE).map((r) => ({
+    id: r.id.toString(),
+    type: r.type,
+    title: r.title || (r.type === 'admin' ? '운영자 메시지' : '우편'),
+    body: r.body || '',
+    senderLabel: r.senderLabel,
+    payload: r.payload as MailItem['payload'],
+    claimedAtIso: r.claimedAt ? r.claimedAt.toISOString() : null,
+    expiresAtIso: r.expiresAt.toISOString(),
+    createdAtIso: r.createdAt.toISOString(),
+  }));
+  return { status: 'success', items, hasMore };
 }
 
 export async function claimAllMailAction(): Promise<
