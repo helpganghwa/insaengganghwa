@@ -7,7 +7,7 @@ import { useRouter } from 'next/navigation';
 import { RAID_OPEN_COST_DIAMOND } from '@/lib/game/balance';
 import { RAID_BOSSES, RAID_BOSS_CODES, type RaidBoss } from '@/lib/game/raid/bosses';
 import { BossSprite } from '@/components/BossSprite';
-import { getBossBg, getBossBgClass } from '@/lib/game/raid/boss-sprites';
+import { getBossBg, getBossBgClass, getBossShadow } from '@/lib/game/raid/boss-sprites';
 import { assetUrl } from '@/lib/asset-versions';
 
 import { openRaidAction } from './actions';
@@ -99,7 +99,8 @@ export function RaidSlots({
               <Link
                 key={s.raidId}
                 href={`/raid/${s.raidId}`}
-                className={`relative flex items-center gap-3 overflow-hidden rounded-xl border-2 border-amber-700/60 bg-gradient-to-r p-3 text-zinc-100 shadow-[0_0_24px_rgba(245,158,11,0.35)] transition active:scale-[0.99] ${getBossBgClass(s.bossCode)}`}
+                style={{ boxShadow: getBossShadow(s.bossCode) }}
+                className={`relative flex items-center gap-3 overflow-hidden rounded-xl border-2 border-amber-700/60 bg-gradient-to-r p-3 text-zinc-100 transition active:scale-[0.99] ${getBossBgClass(s.bossCode)}`}
               >
                 {getBossBg(s.bossCode) ? (
                   // eslint-disable-next-line @next/next/no-img-element
@@ -134,7 +135,8 @@ export function RaidSlots({
             <Link
               key={s.raidId}
               href={`/raid/${s.raidId}`}
-              className={`relative flex items-center gap-3 overflow-hidden rounded-xl border-2 border-amber-700/60 bg-gradient-to-r p-3 text-zinc-100 shadow-[0_0_24px_rgba(245,158,11,0.35)] transition active:scale-[0.99] ${getBossBgClass(s.bossCode)}`}
+              style={{ boxShadow: getBossShadow(s.bossCode) }}
+              className={`relative flex items-center gap-3 overflow-hidden rounded-xl border-2 border-amber-700/60 bg-gradient-to-r p-3 text-zinc-100 transition active:scale-[0.99] ${getBossBgClass(s.bossCode)}`}
             >
               {/* 보스 배경 이미지(있으면) — opacity 35로 부드럽게 깔고 어둠 overlay로 가독성 확보 (grow 패턴). */}
               {getBossBg(s.bossCode) ? (

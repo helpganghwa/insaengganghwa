@@ -33,6 +33,22 @@ export function getBossBgClass(code: string): string {
   );
 }
 
+/** 보스별 카드 외곽 글로우 색 — 배경 톤과 동조시켜 시각 정체성 유지. */
+const BOSS_SHADOW: Record<RaidBoss, string> = {
+  slime_king:   '0 0 24px rgba(16, 185, 129, 0.40)',   // emerald
+  orc_chief:    '0 0 24px rgba(220, 38, 38, 0.40)',    // red
+  stone_golem:  '0 0 24px rgba(168, 162, 158, 0.40)',  // stone
+  dragon_west:  '0 0 24px rgba(249, 115, 22, 0.45)',   // orange
+  fallen_angel: '0 0 24px rgba(168, 85, 247, 0.40)',   // violet
+};
+
+export function getBossShadow(code: string): string {
+  return (
+    (BOSS_SHADOW as Record<string, string>)[code] ??
+    '0 0 24px rgba(245, 158, 11, 0.35)'
+  );
+}
+
 export const BOSS_SPRITES: Record<RaidBoss, BossSpriteEntry> = {
   slime_king: {
     static: '/sprites/boss/slime_king.png',
