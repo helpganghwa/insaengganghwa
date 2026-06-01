@@ -47,24 +47,17 @@ export function GachaResultModal({
                 <span className="text-zinc-500">획득!</span>
               )}
             </p>
-            {/* 강화수치 → 이미지 → 이름 순(2026-05-31 사용자 결정). */}
-            <div className="mt-2 flex flex-col items-stretch rounded-xl border-2 border-zinc-200 p-4 text-center dark:border-zinc-800">
-              <div className="flex h-5 items-center justify-center">
-                <span className="text-[11px] text-zinc-500">+0</span>
-              </div>
-              <div className="mt-2 flex items-center justify-center">
-                <TranscendSprite
-                  code={single.code}
-                  slot={slot}
-                  level={0}
-                  isChampion={single.isChampion}
-                  size={64}
-                  frameless
-                />
-              </div>
-              <div className="mt-2 flex items-center justify-center px-1">
-                <span className="line-clamp-2 break-keep text-base font-semibold">{single.name}</span>
-              </div>
+            <div className="mt-2 flex flex-col items-center rounded-xl border-2 border-zinc-200 p-4 dark:border-zinc-800">
+              <TranscendSprite
+                code={single.code}
+                slot={slot}
+                level={0}
+                isChampion={single.isChampion}
+                size={64}
+                frameless
+              />
+              <div className="mt-1 text-base font-semibold">{single.name}</div>
+              <div className="mt-0.5 text-[11px] text-zinc-500">+0</div>
               {!single.isNew ? (
                 <div className="mt-1 text-[11px] text-amber-600 dark:text-amber-400">
                   중복 — 초월 제물로 활용
@@ -98,7 +91,7 @@ export function GachaResultModal({
               {results.map((r, i) => (
                 <div
                   key={i}
-                  className="relative grid aspect-square min-h-[4.25rem] grid-rows-[minmax(2.25rem,1fr)_1.5rem] rounded-lg border-2 border-zinc-200 p-1 text-center dark:border-zinc-800"
+                  className="relative flex aspect-square flex-col items-center justify-center rounded-lg border-2 border-zinc-200 p-1 text-center dark:border-zinc-800"
                   title={r.name}
                 >
                   {r.isNew ? (
@@ -106,21 +99,17 @@ export function GachaResultModal({
                       N
                     </span>
                   ) : null}
-                  <div className="flex items-center justify-center overflow-hidden">
-                    <TranscendSprite
-                      code={r.code}
-                      slot={slot}
-                      level={0}
-                      isChampion={r.isChampion}
-                      size={36}
-                      frameless
-                    />
-                  </div>
-                  <div className="flex items-center justify-center overflow-hidden px-0.5">
-                    <span className="line-clamp-2 break-keep text-[9px] leading-tight text-zinc-600 dark:text-zinc-400">
-                      {r.name}
-                    </span>
-                  </div>
+                  <TranscendSprite
+                    code={r.code}
+                    slot={slot}
+                    level={0}
+                    isChampion={r.isChampion}
+                    size={36}
+                    frameless
+                  />
+                  <span className="line-clamp-2 break-keep px-0.5 text-[9px] leading-tight text-zinc-600 dark:text-zinc-400">
+                    {r.name}
+                  </span>
                 </div>
               ))}
             </div>

@@ -114,23 +114,19 @@ export function CreateProfileForm({
             it.code ? (
               <div
                 key={it.slot}
-                className="grid aspect-square min-h-[5.25rem] grid-rows-[minmax(3rem,1fr)_1.75rem] rounded-xl border border-zinc-200 bg-white px-1 py-1 text-center dark:border-zinc-800 dark:bg-zinc-950"
+                className="flex aspect-square flex-col items-center justify-center gap-0.5 rounded-xl border border-zinc-200 bg-white px-1 text-center dark:border-zinc-800 dark:bg-zinc-950"
               >
-                <div className="flex items-center justify-center overflow-hidden">
-                  <TranscendSprite
-                    code={it.code}
-                    slot={it.slot}
-                    level={it.transcendLevel}
-                    size={48}
-                    frameless
-                    animate={false}
-                  />
-                </div>
-                <div className="flex items-center justify-center overflow-hidden px-0.5">
-                  <span className="line-clamp-2 break-keep text-[10px] leading-tight text-zinc-600 dark:text-zinc-400">
-                    {it.name}
-                  </span>
-                </div>
+                <TranscendSprite
+                  code={it.code}
+                  slot={it.slot}
+                  level={it.transcendLevel}
+                  size={48}
+                  frameless
+                  animate={false}
+                />
+                <span className="line-clamp-2 break-keep px-0.5 text-[10px] leading-tight text-zinc-600 dark:text-zinc-400">
+                  {it.name}
+                </span>
               </div>
             ) : (
               <a
