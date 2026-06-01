@@ -43,7 +43,7 @@ export function useResourceToast(): ToastContextValue {
   return ctx;
 }
 
-const RANKING_DEBOUNCE_MS = 1200;
+const RANKING_DEBOUNCE_MS = 2200;
 const RANKING_TOAST_MS = 4400;
 
 export function ResourceToastProvider({ children }: { children: React.ReactNode }) {
