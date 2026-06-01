@@ -99,13 +99,8 @@ export function EquipmentDetailSheet({
   const [confirmD, setConfirmD] = useState(false);
   const [swapPicker, setSwapPicker] = useState(false);
 
+  // 착용은 외형 전용 — 전투력은 착용 무관(BALANCE §3.2)이라 아이템 자체 전투력만 표시(교체 비교 없음).
   const cp = pieceCombatPower(item.enhanceLevel, item.transcendLevel);
-  const equippedInSlot = !item.equipped
-    ? (all.find((i) => i.slot === item.slot && i.equipped) ?? null)
-    : null;
-  const eqCp = equippedInSlot
-    ? pieceCombatPower(equippedInSlot.enhanceLevel, equippedInSlot.transcendLevel)
-    : null;
 
   // 무한 초월 (사용자 결정 2026-05-21) — atMax 가드 제거. 제물 수는 T10 이상 10 고정.
   const nextT = item.transcendLevel + 1;
@@ -206,12 +201,6 @@ export function EquipmentDetailSheet({
             <div className="text-[11px] tabular-nums">
               <span className="text-zinc-500">전투력 </span>
               <span className="font-semibold">{cp.toLocaleString('ko-KR')}</span>
-              {eqCp != null ? (
-                <span className={`ml-1.5 ${cp - eqCp >= 0 ? 'text-emerald-600' : 'text-red-600'}`}>
-                  ({cp - eqCp >= 0 ? '+' : ''}
-                  {(cp - eqCp).toLocaleString('ko-KR')} vs 장착)
-                </span>
-              ) : null}
             </div>
           </div>
         </section>

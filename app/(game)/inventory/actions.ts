@@ -53,12 +53,10 @@ export async function equipAction(id: string) {
   if (!u) return err('UNAUTHENTICATED');
   if (await rateLimited(u, 'inventory')) return err('RATE_LIMITED');
   try {
-    const r = await withRanks(u, async () => {
-      await equipItem(u, BigInt(id));
-      return { status: 'success' as const };
-    });
+    // 장착은 외형 전용 — 어떤 랭킹도 바꾸지 않으므로 랭킹 토스트 미동봉(BALANCE §3.2).
+    await equipItem(u, BigInt(id));
     revalidate();
-    return r;
+    return { status: 'success' as const };
   } catch (e) {
     if (e instanceof EquipError) return err(e.code);
     console.error('[equip]', e);
@@ -70,12 +68,10 @@ export async function unequipAction(id: string) {
   const u = await uid();
   if (!u) return err('UNAUTHENTICATED');
   if (await rateLimited(u, 'inventory')) return err('RATE_LIMITED');
-  const r = await withRanks(u, async () => {
-    await unequipItem(u, BigInt(id));
-    return { status: 'success' as const };
-  });
+  // 해제도 외형 전용 — 랭킹 불변, 토스트 미동봉.
+  await unequipItem(u, BigInt(id));
   revalidate();
-  return r;
+  return { status: 'success' as const };
 }
 
 export async function toggleLockAction(id: string) {
@@ -96,12 +92,10 @@ export async function equipBestSetAction() {
   const u = await uid();
   if (!u) return err('UNAUTHENTICATED');
   if (await rateLimited(u, 'inventory')) return err('RATE_LIMITED');
-  const r = await withRanks(u, async () => {
-    const { slotsUpdated } = await equipBestSet(u);
-    return { status: 'success' as const, slotsUpdated };
-  });
+  // 최강 세트 장착도 외형 전용 — 랭킹 불변, 토스트 미동봉.
+  const { slotsUpdated } = await equipBestSet(u);
   revalidate();
-  return r;
+  return { status: 'success' as const, slotsUpdated };
 }
 
 /**

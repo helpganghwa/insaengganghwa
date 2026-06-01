@@ -9,7 +9,6 @@ import { TranscendSprite } from '@/components/TranscendSprite';
 import { RarityFrame, rarityBorderStyle, hasRarityBorder } from '@/components/RarityFrame';
 import { DIAMOND_PER_DISENCHANT, pieceCombatPower } from '@/lib/game/balance';
 
-import { useResourceToast } from '@/components/ResourceToast';
 import { useDiamond } from '@/components/DiamondContext';
 
 import { equipBestSetAction } from './actions';
@@ -49,7 +48,6 @@ export function InventoryGrid({
   nickname: string;
 }) {
   const router = useRouter();
-  const { showRanking } = useResourceToast();
   const { optimisticAdjust: adjustDiamond } = useDiamond();
   const [filter, setFilter] = useState<SlotFilter>(initialSlot);
   const [sortBy, setSortBy] = useState<SortBy>('enhance');
@@ -192,10 +190,8 @@ export function InventoryGrid({
                 setOptimisticItems(
                   displayItems.map((it) => ({ ...it, equipped: bestIds.has(it.id) })),
                 );
-                const r = await equipBestSetAction();
-                if (r.status === 'success' && 'ranksBefore' in r && 'ranksAfter' in r) {
-                  showRanking(r.ranksBefore, r.ranksAfter);
-                }
+                // 장착은 외형 전용 — 랭킹 불변이라 토스트 없음(BALANCE §3.2).
+                await equipBestSetAction();
                 router.refresh();
               })
             }
