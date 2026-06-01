@@ -201,7 +201,7 @@ async function KpiRowWithRanks({
       />
       <KpiCard
         label="최고 강화"
-        value={`+${maxEnhance}`}
+        value={maxEnhance.toLocaleString('ko-KR')}
         rank={rankBadgeStreamed(ranks.max?.rank)}
       />
       <KpiCard
@@ -225,7 +225,7 @@ function KpiRowFallback({
   return (
     <section className="-mt-3 grid grid-cols-3 gap-1.5">
       <KpiCard label="전투력" value={total.toLocaleString('ko-KR')} rank="—" />
-      <KpiCard label="최고 강화" value={`+${maxEnhance}`} rank="—" />
+      <KpiCard label="최고 강화" value={maxEnhance.toLocaleString('ko-KR')} rank="—" />
       <KpiCard label="합산 강화" value={sumEnhance.toLocaleString('ko-KR')} rank="—" />
     </section>
   );

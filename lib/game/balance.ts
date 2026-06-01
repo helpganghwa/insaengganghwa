@@ -358,7 +358,7 @@ export function computeRaidDamage(totalCP: number, varFactor: number, isCrit: bo
 
 /** §5.4 보상 — 1회+ 공격 전원 동일. 기본 참가 + 페이즈 돌파마다 1회 추첨. */
 export const RAID_BASE_PARTICIPATION_DIAMOND = 100;
-export const RAID_PHASE_DROP_DIAMOND = 100;
+export const RAID_PHASE_DROP_DIAMOND = 50;
 export const RAID_PHASE_DROP_DIAMOND_RATE_BP = 5000; // 50% 다이아 / 50% 슬롯 랜덤 보급 상자
 /** 보급 상자 당첨 시 슬롯 균등 — SUPPLY_SLOTS 중 1/3. (RNG는 서버에서) */
 
