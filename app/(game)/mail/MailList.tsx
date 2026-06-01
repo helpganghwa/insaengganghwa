@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useMemo, useOptimistic, useState, useTransition } from 'react';
+import { useEffect, useMemo, useOptimistic, useRef, useState, useTransition } from 'react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 
@@ -160,18 +160,9 @@ export function MailList({
   const [error, setError] = useState<string | null>(null);
   const [extraItems, setExtraItems] = useState<MailItem[]>([]);
   const [hasMore, setHasMore] = useState(initialHasMore);
-  // 일괄 초월/분해와 동일한 3s 확정 패턴(2026-06-01) — 모두 받기 오클릭 방지.
-  const [confirm, setConfirm] = useState(false);
-  const [confirmLeft, setConfirmLeft] = useState(0);
-  useEffect(() => {
-    if (!confirm) return;
-    if (confirmLeft <= 0) {
-      setConfirm(false);
-      return;
-    }
-    const t = setTimeout(() => setConfirmLeft((c) => c - 1), 1000);
-    return () => clearTimeout(t);
-  }, [confirm, confirmLeft]);
+  // 더 보기 누른 직후 skeleton 자리 N개 표시(2026-06-02) — '불러오는 중…' 텍스트 폴백
+  // 대신 실제 카드 슬롯을 점유해 layout shift 최소화.
+  const [loadingSkeletons, setLoadingSkeletons] = useState(0);
   // items prop이 바뀌면(claim 후 router.refresh) extras·hasMore 리셋 — 중복 방지.
   useEffect(() => {
     setExtraItems([]);
@@ -202,7 +193,13 @@ export function MailList({
     return { diamond, boxes };
   }, [displayItems, unreadAggregate]);
 
-  const totalCount = unreadAggregate?.count ?? displayItems.length;
+  // 표시 카운트: 서버 권위 + displayItems 중 작은 쪽 — optimistic clear(displayItems=0)
+  // 시 카운트도 0으로 줄어 '모두 받기' 버튼이 즉시 사라짐. 정상 상태에선 unreadAggregate가
+  // 표시 외 미수령 포함 전체 count이므로 큰 값 노출.
+  const totalCount =
+    displayItems.length === 0
+      ? 0
+      : Math.max(unreadAggregate?.count ?? 0, displayItems.length);
 
   const totalParts = useMemo(() => {
     const parts: string[] = [];
@@ -260,23 +257,15 @@ export function MailList({
     });
   };
 
-  const tryClaimAll = () => {
-    if (totalCount === 0) return;
-    if (!confirm) {
-      setConfirm(true);
-      setConfirmLeft(3);
-      return;
-    }
-    setConfirm(false);
-    claimAll();
-  };
-
   const loadMore = () => {
     setError(null);
     if (combinedBase.length === 0) return;
     const oldest = combinedBase[combinedBase.length - 1];
+    // skeleton 3개 즉시 노출(layout shift 최소화).
+    setLoadingSkeletons(3);
     startTransition(async () => {
       const r = await loadMoreMailsAction(tab, oldest.createdAtIso);
+      setLoadingSkeletons(0);
       if (r.status === 'error') {
         setError(r.message);
         showError(r.message);
@@ -306,29 +295,16 @@ export function MailList({
       </div>
 
       {tab === 'unread' && totalCount > 0 ? (
-        // 컴팩트 1행 — 좌 라벨 + 우 합계 preview. 3s 확정 UI(일괄 초월/분해 동일).
+        // 컴팩트 1행 — 좌 라벨 + 우 합계 preview. 즉시 실행(컨펌 없음).
+        // 옵티미스틱: 클릭 시 displayItems가 즉시 [] → 버튼 자체가 사라짐.
         <button
           type="button"
-          disabled={pending}
-          onClick={tryClaimAll}
-          className="relative flex w-full items-center justify-between gap-2 overflow-hidden rounded-lg border border-amber-500/50 bg-amber-500/10 px-3 py-2.5 text-amber-700 hover:bg-amber-500/20 disabled:opacity-40 dark:text-amber-300"
+          onClick={claimAll}
+          className="flex w-full items-center justify-between gap-2 rounded-lg border border-amber-500/50 bg-amber-500/10 px-3 py-2.5 text-amber-700 hover:bg-amber-500/20 dark:text-amber-300"
         >
-          {confirm ? (
-            <span
-              aria-hidden
-              className="absolute inset-0 bg-amber-400/30"
-              style={{ animation: 'confirm-bg-pulse 1.2s ease-in-out infinite' }}
-            />
-          ) : null}
-          <span className="relative text-xs font-bold">
-            {pending
-              ? '수령 중…'
-              : confirm
-                ? `정말 받으시겠어요? (${confirmLeft})`
-                : `모두 받기 (${totalCount}건)`}
-          </span>
-          {!pending && !confirm && totalParts.length > 0 ? (
-            <span className="relative truncate font-mono text-[10px] tabular-nums opacity-85">
+          <span className="text-xs font-bold">모두 받기 ({totalCount}건)</span>
+          {totalParts.length > 0 ? (
+            <span className="truncate font-mono text-[10px] tabular-nums opacity-85">
               {totalParts.join(' · ')}
             </span>
           ) : null}
@@ -410,11 +386,12 @@ export function MailList({
                       ) : null}
                     </div>
                     {tab === 'unread' ? (
+                      // disabled={pending} 제거(2026-06-02) — 옵티미스틱 제거로 더블클릭
+                      // 자체가 불가능(이미 사라진 카드 클릭 X). 다른 카드는 자유롭게 수령.
                       <button
                         type="button"
-                        disabled={pending}
                         onClick={() => claim(m.id)}
-                        className="shrink-0 rounded-full bg-zinc-900 px-3 py-1.5 text-[11px] font-semibold text-white disabled:opacity-40 dark:bg-zinc-50 dark:text-zinc-950"
+                        className="shrink-0 rounded-full bg-zinc-900 px-3 py-1.5 text-[11px] font-semibold text-white dark:bg-zinc-50 dark:text-zinc-950"
                       >
                         받기
                       </button>
@@ -429,17 +406,32 @@ export function MailList({
               </li>
             );
           })}
+          {/* 더 보기 skeleton — 카드 슬롯을 즉시 점유해 layout shift 방지.
+              pulse 애니메이션으로 로딩 상태 시각 표시. */}
+          {Array.from({ length: loadingSkeletons }, (_, i) => (
+            <li
+              key={`sk-${i}`}
+              className="relative overflow-hidden rounded-xl border border-zinc-200 bg-white dark:border-zinc-800 dark:bg-zinc-950"
+              aria-hidden
+            >
+              <span className="absolute left-0 top-0 h-full w-[3px] bg-zinc-300 dark:bg-zinc-700" />
+              <div className="animate-pulse p-3 pl-3.5">
+                <div className="h-2 w-20 rounded bg-zinc-200 dark:bg-zinc-800" />
+                <div className="mt-2 h-3 w-3/4 rounded bg-zinc-200 dark:bg-zinc-800" />
+                <div className="mt-2 h-2 w-full rounded bg-zinc-200/70 dark:bg-zinc-800/70" />
+              </div>
+            </li>
+          ))}
         </ul>
       )}
 
-      {displayItems.length > 0 && hasMore ? (
+      {displayItems.length > 0 && hasMore && loadingSkeletons === 0 ? (
         <button
           type="button"
-          disabled={pending}
           onClick={loadMore}
-          className="w-full rounded-full border border-zinc-300 px-3 py-2 text-xs font-semibold text-zinc-700 hover:bg-zinc-50 disabled:opacity-40 dark:border-zinc-700 dark:text-zinc-300 dark:hover:bg-zinc-900"
+          className="w-full rounded-full border border-zinc-300 px-3 py-2 text-xs font-semibold text-zinc-700 hover:bg-zinc-50 dark:border-zinc-700 dark:text-zinc-300 dark:hover:bg-zinc-900"
         >
-          {pending ? '불러오는 중…' : '더 보기'}
+          더 보기
         </button>
       ) : null}
     </div>
