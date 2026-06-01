@@ -295,7 +295,7 @@ async function EnhanceStatsCard() {
   const s = await getEnhanceLive();
   return (
     <StatsShell>
-      <StatTile tone="live" value={s.activeUsers.toLocaleString('ko-KR')} label="강화중인 유저" />
+      <StatTile tone="live" value={`${s.activeUsers.toLocaleString('ko-KR')}명`} label="인생강화중" />
       <StatTile tone="success" value={fmtCompact(s.success)} label="강화 성공" />
       <StatTile tone="hold" value={fmtCompact(s.hold)} label="강화 유지" />
       <StatTile tone="down" value={fmtCompact(s.down)} label="강화 하락" />
@@ -306,7 +306,7 @@ async function EnhanceStatsCard() {
 function EnhanceStatsFallback() {
   return (
     <StatsShell>
-      <StatTile tone="live" value="—" label="강화중인 유저" />
+      <StatTile tone="live" value="—" label="인생강화중" />
       <StatTile tone="success" value="—" label="강화 성공" />
       <StatTile tone="hold" value="—" label="강화 유지" />
       <StatTile tone="down" value="—" label="강화 하락" />
