@@ -175,6 +175,11 @@ function rankBadge(rank: number | null | undefined): string {
   return `#${rank.toLocaleString('ko-KR')}`;
 }
 
+/** stream으로 도착한 랭크 — fade-up 1회. KpiCard rank 슬롯에 직접 전달. */
+function rankBadgeStreamed(rank: number | null | undefined) {
+  return <span className="inline-block animate-rank-in">{rankBadge(rank)}</span>;
+}
+
 /**
  * 랭크 3종을 stream으로 채우는 KPI 행 — `getMyRanks` 콜드 캐시는 ~3s까지 걸리므로
  * 메인 데이터(장비/합산/전투력)와 분리해서 Suspense로 점진 표시.
@@ -197,17 +202,17 @@ async function KpiRowWithRanks({
       <KpiCard
         label="전투력"
         value={total.toLocaleString('ko-KR')}
-        rank={rankBadge(ranks.combat?.rank)}
+        rank={rankBadgeStreamed(ranks.combat?.rank)}
       />
       <KpiCard
         label="최고 강화"
         value={`+${maxEnhance}`}
-        rank={rankBadge(ranks.max?.rank)}
+        rank={rankBadgeStreamed(ranks.max?.rank)}
       />
       <KpiCard
         label="합산 강화"
         value={sumEnhance.toLocaleString('ko-KR')}
-        rank={rankBadge(ranks.sum?.rank)}
+        rank={rankBadgeStreamed(ranks.sum?.rank)}
       />
     </section>
   );
@@ -509,7 +514,15 @@ export default async function PublicProfilePage({
   );
 }
 
-function KpiCard({ label, value, rank }: { label: string; value: string; rank: string }) {
+function KpiCard({
+  label,
+  value,
+  rank,
+}: {
+  label: string;
+  value: string;
+  rank: React.ReactNode;
+}) {
   return (
     <div className="rounded-lg border border-zinc-800 bg-zinc-900/85 px-1.5 py-1.5 text-center shadow-lg shadow-black/30 backdrop-blur">
       <div className="text-[8px] font-semibold uppercase tracking-widest text-zinc-500">

@@ -206,6 +206,14 @@ html {
     0%, 100% { opacity: 1; }
     50% { opacity: 0.55; }
   }
+
+  /* /u 랭크 뱃지 — Suspense stream으로 #N 도착 시 1회 fade-up.
+     '—' 폴백은 SSR 정적 렌더라 동일 클래스를 쓰지 않음 → 애니메이션 없음. */
+  --animate-rank-in: rank-in 0.45s cubic-bezier(0.22, 1, 0.36, 1);
+  @keyframes rank-in {
+    0%   { opacity: 0; transform: translateY(3px); }
+    100% { opacity: 1; transform: translateY(0); }
+  }
 }
 
 /* 캐릭터 reaction sprite — outcome/confirm 시점 카드 우측에 큰 상반신 표시. */
