@@ -164,11 +164,21 @@ export function ProfileSelector({
             onClick={doDelete}
             disabled={pending}
             aria-label="선택한 아바타 삭제"
-            className={`absolute right-2 top-2 z-10 rounded-full px-2.5 py-1 text-[11px] font-bold backdrop-blur-sm transition active:scale-95 disabled:opacity-50 ${
+            className={`absolute right-2 top-2 z-10 overflow-hidden rounded-full px-2.5 py-1 text-[11px] font-bold backdrop-blur-sm transition active:scale-95 disabled:opacity-50 ${
               confirmDelete ? 'bg-red-600 text-white' : 'bg-black/55 text-red-300'
             }`}
           >
-            {confirmDelete ? `삭제 확인 ${confirmDeleteLeft}s` : '삭제'}
+            {/* 배경만 펄스(텍스트 안정) — 일괄 초월 확인버튼 패턴. */}
+            {confirmDelete ? (
+              <span
+                aria-hidden
+                className="absolute inset-0 bg-red-500"
+                style={{ animation: 'confirm-bg-pulse 1.2s ease-in-out infinite' }}
+              />
+            ) : null}
+            <span className="relative">
+              {confirmDelete ? `삭제 확인 ${confirmDeleteLeft}s` : '삭제'}
+            </span>
           </button>
         ) : null}
         <div
