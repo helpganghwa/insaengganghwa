@@ -282,7 +282,7 @@ function StatsShell({ children }: { children: React.ReactNode }) {
       <div className="relative">
         <div className="mb-2 flex items-baseline justify-between">
           <div className="text-[10px] font-semibold tracking-wide text-zinc-400">
-            지금 인생강화는
+            지금 인생강화에서
           </div>
         </div>
         <div className="flex divide-x divide-zinc-800/80">{children}</div>
@@ -296,9 +296,9 @@ async function EnhanceStatsCard() {
   return (
     <StatsShell>
       <StatTile tone="live" value={s.activeUsers.toLocaleString('ko-KR')} label="강화중인 유저" />
-      <StatTile tone="success" value={fmtCompact(s.success)} label="누적 강화 성공" />
-      <StatTile tone="hold" value={fmtCompact(s.hold)} label="누적 강화 유지" />
-      <StatTile tone="down" value={fmtCompact(s.down)} label="누적 강화 하락" />
+      <StatTile tone="success" value={fmtCompact(s.success)} label="강화 성공" />
+      <StatTile tone="hold" value={fmtCompact(s.hold)} label="강화 유지" />
+      <StatTile tone="down" value={fmtCompact(s.down)} label="강화 하락" />
     </StatsShell>
   );
 }
@@ -307,9 +307,9 @@ function EnhanceStatsFallback() {
   return (
     <StatsShell>
       <StatTile tone="live" value="—" label="강화중인 유저" />
-      <StatTile tone="success" value="—" label="누적 강화 성공" />
-      <StatTile tone="hold" value="—" label="누적 강화 유지" />
-      <StatTile tone="down" value="—" label="누적 강화 하락" />
+      <StatTile tone="success" value="—" label="강화 성공" />
+      <StatTile tone="hold" value="—" label="강화 유지" />
+      <StatTile tone="down" value="—" label="강화 하락" />
     </StatsShell>
   );
 }
