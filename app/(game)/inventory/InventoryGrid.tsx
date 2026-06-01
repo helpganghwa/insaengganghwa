@@ -208,22 +208,32 @@ export function InventoryGrid({
           all={displayItems}
           nickname={nickname}
           onClose={() => setOpenId(null)}
+          onOptimisticEquip={(id) => {
+            // 착용 토글 — 장착 시 같은 슬롯 기존 장착 해제(슬롯 배타성). run()의 await 전
+            // 호출이라 자체 startTransition 없이 시트 트랜잭션에 편승(즉시 반영·refresh까지 유지).
+            const target = displayItems.find((it) => it.id === id);
+            if (!target) return;
+            const willEquip = !target.equipped;
+            setOptimisticItems(
+              displayItems.map((it) => {
+                if (it.id === id) return { ...it, equipped: willEquip };
+                if (willEquip && it.slot === target.slot && it.equipped)
+                  return { ...it, equipped: false };
+                return it;
+              }),
+            );
+          }}
           onOptimisticDisenchant={(id) => {
-            startTransition(() => {
-              setOptimisticItems(displayItems.filter((it) => it.id !== id));
-            });
+            setOptimisticItems(displayItems.filter((it) => it.id !== id));
             adjustDiamond(BigInt(DIAMOND_PER_DISENCHANT));
           }}
           onOptimisticToggleLock={(id) => {
-            startTransition(() => {
-              setOptimisticItems(
-                displayItems.map((it) =>
-                  it.id === id ? { ...it, isLocked: !it.isLocked } : it,
-                ),
-              );
-            });
+            setOptimisticItems(
+              displayItems.map((it) => (it.id === id ? { ...it, isLocked: !it.isLocked } : it)),
+            );
           }}
           onOptimisticStartEnhance={(id) => {
+            // 강화는 await 후(페이지 이동 직전) 호출 → 트랜잭션 밖이라 자체 startTransition 필요.
             startTransition(() => {
               setOptimisticItems(
                 displayItems.map((it) => (it.id === id ? { ...it, busy: true } : it)),
@@ -231,16 +241,14 @@ export function InventoryGrid({
             });
           }}
           onOptimisticTranscend={(targetId, toT, consumedFodderIds) => {
-            startTransition(() => {
-              const consumedSet = new Set<string>(consumedFodderIds);
-              setOptimisticItems(
-                displayItems
-                  .filter((it) => !consumedSet.has(it.id))
-                  .map((it): InvItem =>
-                    it.id === targetId ? { ...it, transcendLevel: toT } : it,
-                  ),
-              );
-            });
+            const consumedSet = new Set<string>(consumedFodderIds);
+            setOptimisticItems(
+              displayItems
+                .filter((it) => !consumedSet.has(it.id))
+                .map((it): InvItem =>
+                  it.id === targetId ? { ...it, transcendLevel: toT } : it,
+                ),
+            );
           }}
         />
       ) : null}

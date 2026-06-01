@@ -74,6 +74,7 @@ export function EquipmentDetailSheet({
   onOptimisticToggleLock,
   onOptimisticStartEnhance,
   onOptimisticTranscend,
+  onOptimisticEquip,
 }: {
   item: InvItem;
   all: InvItem[];
@@ -91,6 +92,8 @@ export function EquipmentDetailSheet({
     toT: number,
     consumedFodderIds: string[],
   ) => void;
+  /** 장착/해제 즉시 반영 — equipped 토글(장착 시 같은 슬롯 기존 장착 해제). */
+  onOptimisticEquip?: (id: string) => void;
 }) {
   const router = useRouter();
   const [pending, startTransition] = useTransition();
@@ -133,16 +136,17 @@ export function EquipmentDetailSheet({
     ranksBefore?: MyRanks;
     ranksAfter?: MyRanks;
   };
-  const run = (fn: () => Promise<ActionResult>, after?: () => void) =>
+  // optimistic은 **await 전**에 실행 — 탭 즉시 화면 반영. 서버 확정 후 router.refresh()로
+  // 실제 데이터 동기화(실패 시에도 refresh → useOptimistic 자동 롤백). 같은 트랜잭션이
+  // refresh까지 pending이라 낙관 상태가 그동안 유지됨(equipBestSet과 동일 패턴).
+  const run = (fn: () => Promise<ActionResult>, optimistic?: () => void) =>
     startTransition(async () => {
       setError(null);
+      optimistic?.();
       const r = await fn();
       if (r.status === 'error') setError(r.message ?? '오류');
-      else {
-        if (r.ranksBefore && r.ranksAfter) showRanking(r.ranksBefore, r.ranksAfter);
-        after?.();
-        router.refresh();
-      }
+      else if (r.ranksBefore && r.ranksAfter) showRanking(r.ranksBefore, r.ranksAfter);
+      router.refresh();
     });
 
   return (
@@ -297,7 +301,10 @@ export function EquipmentDetailSheet({
             type="button"
             disabled={pending}
             onClick={() =>
-              run(() => (item.equipped ? unequipAction(item.id) : equipAction(item.id)))
+              run(
+                () => (item.equipped ? unequipAction(item.id) : equipAction(item.id)),
+                () => onOptimisticEquip?.(item.id),
+              )
             }
             className={BTN}
           >
