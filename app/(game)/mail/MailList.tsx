@@ -143,8 +143,6 @@ export function MailList({
 
   return (
     <div className="space-y-3 px-4 py-4">
-      <h1 className="text-lg font-semibold">✉️ 우편함</h1>
-
       <div className="flex gap-1 rounded-full bg-zinc-100 p-1 text-center dark:bg-zinc-900">
         <Link href="/mail" className={tabCls(tab === 'unread')}>
           미수령{unreadCount != null && unreadCount > 0 ? ` (${unreadCount})` : ''}

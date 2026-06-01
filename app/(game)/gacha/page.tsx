@@ -40,7 +40,6 @@ export default async function GachaPage() {
 
   return (
     <div className="space-y-3 px-4 py-4">
-      <h1 className="text-lg font-semibold">📦 보급</h1>
       {BOXES.map((b, i) => (
         <GachaBoxCard
           key={b.slot}

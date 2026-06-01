@@ -125,12 +125,6 @@ export function CheckinCalendar({
 
   return (
     <div className="space-y-4">
-      <div className="flex items-baseline justify-between">
-        <h1 className="text-lg font-bold">
-          <span aria-hidden>⚡ </span>출석 캘린더
-        </h1>
-      </div>
-
       {/* 4×7 그리드 — emoji + CSS */}
       <div className="grid grid-cols-7 gap-1.5" role="list" aria-label="28일 출석 캘린더">
         {CHECKIN_CALENDAR.map((r, idx) => {

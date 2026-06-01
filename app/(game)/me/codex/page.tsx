@@ -49,7 +49,6 @@ export default async function CodexPage() {
   return (
     <div className="space-y-4 px-4 py-4">
       <header className="flex items-baseline gap-2">
-        <h1 className="text-lg font-semibold">📖 도감</h1>
         <span className="ml-auto text-xs text-zinc-500">
           획득 {acquired} / {catalog.length}
         </span>

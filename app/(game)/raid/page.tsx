@@ -119,7 +119,6 @@ export default async function RaidPage() {
 
   return (
     <div className="px-4 py-4">
-      <h1 className="mb-1 text-lg font-semibold">⚔️ 레이드</h1>
       <RaidSlots
         cells={cells}
         slots={slotCount}

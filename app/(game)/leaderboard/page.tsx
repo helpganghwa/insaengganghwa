@@ -38,7 +38,6 @@ export default async function LeaderboardPage({
 
   return (
     <div className="space-y-4 px-4 py-4">
-      <h1 className="text-lg font-semibold">🏆 랭킹</h1>
       <LeaderboardTabs active={metric} />
 
       <section className="flex items-center justify-between gap-2 rounded-xl border border-amber-300 bg-amber-50 px-3 py-2 dark:border-amber-700 dark:bg-amber-950/50">

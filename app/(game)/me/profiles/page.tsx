@@ -39,10 +39,6 @@ export default async function ProfileSelectPage() {
 
   return (
     <div className="space-y-4 px-4 py-6">
-      <header className="flex items-center gap-2">
-        <h1 className="text-lg font-bold">아바타 선택</h1>
-      </header>
-
       {list.length === 0 ? (
         <Link
           href="/me/create"

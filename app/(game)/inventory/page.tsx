@@ -80,7 +80,6 @@ export default async function InventoryPage({
 
   return (
     <div className="px-4 py-4">
-      <h1 className="mb-2 text-lg font-semibold">🎒 인벤토리</h1>
       {items.length === 0 ? (
         <div className="rounded-2xl border-2 border-dashed border-amber-300 bg-amber-50/40 p-8 text-center text-sm dark:border-amber-800 dark:bg-amber-950/20">
           첫 장비가 없습니다. 보급 상자를 받아보세요.
