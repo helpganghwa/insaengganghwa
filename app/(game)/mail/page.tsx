@@ -62,12 +62,56 @@ export default async function MailPage({
     createdAtIso: r.createdAt.toISOString(),
   }));
 
+  // unread 탭 — 미수령 **전체**의 합계 + 건수(서버 권위). 모두 받기 미리보기 정확도용.
+  // 표시된 PAGE_SIZE 항목으로 계산한 클라이언트 합계는 더 이상 사용 안 함.
+  const unreadTotals =
+    tab === 'unread'
+      ? await withTimeout(
+          db.execute(sql`
+            select
+              count(*)::int as cnt,
+              coalesce(sum((payload->>'diamond')::bigint), 0)::bigint as diamond,
+              coalesce(sum((payload->'boxes'->>'weapon')::int),    0)::int as weapon,
+              coalesce(sum((payload->'boxes'->>'armor')::int),     0)::int as armor,
+              coalesce(sum((payload->'boxes'->>'accessory')::int), 0)::int as accessory
+            from mailbox
+            where user_id = ${userId}::uuid
+              and claimed_at is null
+              and expires_at > now()
+          `),
+          2500,
+          'mail.totals',
+        ).catch(() => null)
+      : null;
+  const totalsRow = unreadTotals
+    ? (unreadTotals as unknown as {
+        cnt: number;
+        diamond: string | bigint;
+        weapon: number;
+        armor: number;
+        accessory: number;
+      }[])[0]
+    : null;
+  const unreadAggregate =
+    tab === 'unread' && totalsRow
+      ? {
+          count: Number(totalsRow.cnt ?? 0),
+          diamond: Number(totalsRow.diamond ?? 0),
+          boxes: {
+            weapon: Number(totalsRow.weapon ?? 0),
+            armor: Number(totalsRow.armor ?? 0),
+            accessory: Number(totalsRow.accessory ?? 0),
+          },
+        }
+      : null;
+
   return (
     <MailList
       items={items}
       tab={tab}
-      unreadCount={tab === 'unread' ? items.length : null}
+      unreadCount={unreadAggregate?.count ?? (tab === 'unread' ? items.length : null)}
       hasMore={hasMore}
+      unreadAggregate={unreadAggregate}
     />
   );
 }

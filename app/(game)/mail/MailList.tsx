@@ -132,22 +132,46 @@ function VerifiedAdminBadge() {
   );
 }
 
+/**
+ * 미수령 전체 합계(서버 권위) — 모두 받기 미리보기 정확도용. null이면
+ * 폴백으로 displayItems 기반 합계 사용. count는 PAGE_SIZE 표시 외 포함 전체.
+ */
+export type UnreadAggregate = {
+  count: number;
+  diamond: number;
+  boxes: { weapon: number; armor: number; accessory: number };
+};
+
 export function MailList({
   items,
   tab,
   unreadCount,
   hasMore: initialHasMore,
+  unreadAggregate,
 }: {
   items: MailItem[];
   tab: 'unread' | 'done';
   unreadCount: number | null;
   hasMore: boolean;
+  unreadAggregate: UnreadAggregate | null;
 }) {
   const router = useRouter();
   const [pending, startTransition] = useTransition();
   const [error, setError] = useState<string | null>(null);
   const [extraItems, setExtraItems] = useState<MailItem[]>([]);
   const [hasMore, setHasMore] = useState(initialHasMore);
+  // 일괄 초월/분해와 동일한 3s 확정 패턴(2026-06-01) — 모두 받기 오클릭 방지.
+  const [confirm, setConfirm] = useState(false);
+  const [confirmLeft, setConfirmLeft] = useState(0);
+  useEffect(() => {
+    if (!confirm) return;
+    if (confirmLeft <= 0) {
+      setConfirm(false);
+      return;
+    }
+    const t = setTimeout(() => setConfirmLeft((c) => c - 1), 1000);
+    return () => clearTimeout(t);
+  }, [confirm, confirmLeft]);
   // items prop이 바뀌면(claim 후 router.refresh) extras·hasMore 리셋 — 중복 방지.
   useEffect(() => {
     setExtraItems([]);
@@ -160,9 +184,12 @@ export function MailList({
   const { showError } = useResourceToast();
   const nowMs = Date.now();
 
-  // 모두 받기 합계 preview — 현재 표시된 미수령 우편 기준(서버는 모든 미수령 처리).
-  // 표시 외 우편이 있을 수 있어 'N건 +' suffix(extras 로드 안 됨 + hasMore=true 시).
+  // 모두 받기 합계 preview — 서버 권위 unreadAggregate 우선(전체 미수령 기준).
+  // 폴백: displayItems 기반(레거시 호환, 보통 닿지 않음).
   const totals = useMemo(() => {
+    if (unreadAggregate) {
+      return { diamond: unreadAggregate.diamond, boxes: unreadAggregate.boxes };
+    }
     let diamond = 0;
     const boxes: Record<Slot, number> = { weapon: 0, armor: 0, accessory: 0 };
     for (const m of displayItems) {
@@ -173,7 +200,9 @@ export function MailList({
       }
     }
     return { diamond, boxes };
-  }, [displayItems]);
+  }, [displayItems, unreadAggregate]);
+
+  const totalCount = unreadAggregate?.count ?? displayItems.length;
 
   const totalParts = useMemo(() => {
     const parts: string[] = [];
@@ -212,10 +241,10 @@ export function MailList({
 
   const claimAll = () => {
     setError(null);
-    const totalDiamondOptimistic = combinedBase.reduce(
-      (a, m) => a + Number(m.payload.diamond ?? 0),
-      0,
-    );
+    // 서버 권위 합계가 있으면 사용, 없으면 표시된 항목 기반 폴백.
+    const totalDiamondOptimistic =
+      unreadAggregate?.diamond ??
+      combinedBase.reduce((a, m) => a + Number(m.payload.diamond ?? 0), 0);
     startTransition(async () => {
       // 낙관: 모든 우편 즉시 제거 + 다이아 합계 가산.
       setOptimisticItems([]);
@@ -229,6 +258,17 @@ export function MailList({
       }
       router.refresh();
     });
+  };
+
+  const tryClaimAll = () => {
+    if (totalCount === 0) return;
+    if (!confirm) {
+      setConfirm(true);
+      setConfirmLeft(3);
+      return;
+    }
+    setConfirm(false);
+    claimAll();
   };
 
   const loadMore = () => {
@@ -265,21 +305,31 @@ export function MailList({
         </Link>
       </div>
 
-      {tab === 'unread' && displayItems.length > 0 ? (
-        // 컴팩트 1행 — 좌 라벨 + 우 합계 preview. 굵은 amber outline + amber 글자.
+      {tab === 'unread' && totalCount > 0 ? (
+        // 컴팩트 1행 — 좌 라벨 + 우 합계 preview. 3s 확정 UI(일괄 초월/분해 동일).
         <button
           type="button"
           disabled={pending}
-          onClick={claimAll}
-          className="flex w-full items-center justify-between gap-2 rounded-lg border border-amber-500/50 bg-amber-500/10 px-3 py-1.5 text-amber-700 hover:bg-amber-500/20 disabled:opacity-40 dark:text-amber-300"
+          onClick={tryClaimAll}
+          className="relative flex w-full items-center justify-between gap-2 overflow-hidden rounded-lg border border-amber-500/50 bg-amber-500/10 px-3 py-1.5 text-amber-700 hover:bg-amber-500/20 disabled:opacity-40 dark:text-amber-300"
         >
-          <span className="text-xs font-bold">
-            {pending ? '수령 중…' : `모두 받기 (${displayItems.length}건)`}
+          {confirm ? (
+            <span
+              aria-hidden
+              className="absolute inset-0 bg-amber-400/30"
+              style={{ animation: 'confirm-bg-pulse 1.2s ease-in-out infinite' }}
+            />
+          ) : null}
+          <span className="relative text-xs font-bold">
+            {pending
+              ? '수령 중…'
+              : confirm
+                ? `정말 받으시겠어요? (${confirmLeft})`
+                : `모두 받기 (${totalCount}건)`}
           </span>
-          {!pending && totalParts.length > 0 ? (
-            <span className="truncate font-mono text-[10px] tabular-nums opacity-85">
+          {!pending && !confirm && totalParts.length > 0 ? (
+            <span className="relative truncate font-mono text-[10px] tabular-nums opacity-85">
               {totalParts.join(' · ')}
-              {hasMore ? ' …' : ''}
             </span>
           ) : null}
         </button>
@@ -317,16 +367,36 @@ export function MailList({
                 <div className="p-3 pl-3.5">
                   <div className="flex items-baseline justify-between gap-2">
                     <div className="min-w-0 flex-1">
+                      {/* 메타 행 — 발신 출처 1종만 노출(2026-06-01 중복 정리):
+                          · admin: senderLabel + ✓ 운영자 배지(타입 배지 생략)
+                          · 시스템 우편(reward/profile_*/notice): 타입 배지만(senderLabel 생략)
+                          · 그 외/미지정: 타입 배지 + senderLabel 폴백 */}
                       <div className="flex items-center gap-1.5 text-[10px] text-zinc-500">
-                        <span
-                          className={`rounded-full px-1.5 py-0 text-[9px] font-semibold ${meta.labelClass}`}
-                        >
-                          {meta.label}
-                        </span>
-                        <span className="truncate font-semibold text-zinc-700 dark:text-zinc-300">
-                          {m.senderLabel}
-                        </span>
-                        {m.type === 'admin' ? <VerifiedAdminBadge /> : null}
+                        {m.type === 'admin' ? (
+                          <>
+                            <span className="truncate font-semibold text-zinc-700 dark:text-zinc-300">
+                              {m.senderLabel || '운영자'}
+                            </span>
+                            <VerifiedAdminBadge />
+                          </>
+                        ) : TYPE_META[m.type] ? (
+                          <span
+                            className={`rounded-full px-1.5 py-0 text-[9px] font-semibold ${meta.labelClass}`}
+                          >
+                            {meta.label}
+                          </span>
+                        ) : (
+                          <>
+                            <span
+                              className={`rounded-full px-1.5 py-0 text-[9px] font-semibold ${meta.labelClass}`}
+                            >
+                              {meta.label}
+                            </span>
+                            <span className="truncate font-semibold text-zinc-700 dark:text-zinc-300">
+                              {m.senderLabel}
+                            </span>
+                          </>
+                        )}
                         <span>·</span>
                         <span className={expSoon ? 'text-red-600 dark:text-red-400' : ''}>
                           {tab === 'unread' ? fmtRemaining(expMs, nowMs) : '수령 완료'}
