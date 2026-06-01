@@ -311,7 +311,7 @@ export function MailList({
           type="button"
           disabled={pending}
           onClick={tryClaimAll}
-          className="relative flex w-full items-center justify-between gap-2 overflow-hidden rounded-lg border border-amber-500/50 bg-amber-500/10 px-3 py-1.5 text-amber-700 hover:bg-amber-500/20 disabled:opacity-40 dark:text-amber-300"
+          className="relative flex w-full items-center justify-between gap-2 overflow-hidden rounded-lg border border-amber-500/50 bg-amber-500/10 px-3 py-2.5 text-amber-700 hover:bg-amber-500/20 disabled:opacity-40 dark:text-amber-300"
         >
           {confirm ? (
             <span
