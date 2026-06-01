@@ -156,7 +156,21 @@ export function ProfileSelector({
   return (
     <div className="space-y-4">
       {/* 선택된 캐릭터 8방향 뷰어 — 스와이프로 회전, 방향은 즉시 적용 */}
-      <div className="rounded-2xl border border-zinc-200 p-3 dark:border-zinc-800">
+      <div className="relative rounded-2xl border border-zinc-200 p-3 dark:border-zinc-800">
+        {/* 삭제 — 프리뷰 컨테이너 우상단 코너. 3s 재탭 컨펌(마지막 1개 숨김). */}
+        {list.length > 1 ? (
+          <button
+            type="button"
+            onClick={doDelete}
+            disabled={pending}
+            aria-label="선택한 아바타 삭제"
+            className={`absolute right-2 top-2 z-10 rounded-full px-2.5 py-1 text-[11px] font-bold backdrop-blur-sm transition active:scale-95 disabled:opacity-50 ${
+              confirmDelete ? 'bg-red-600 text-white' : 'bg-black/55 text-red-300'
+            }`}
+          >
+            {confirmDelete ? `삭제 확인 ${confirmDeleteLeft}s` : '삭제'}
+          </button>
+        ) : null}
         <div
           className="relative mx-auto flex aspect-square w-full max-w-[256px] cursor-grab touch-pan-y select-none items-center justify-center overflow-hidden rounded-xl active:cursor-grabbing"
           onPointerDown={onPointerDown}
@@ -164,22 +178,6 @@ export function ProfileSelector({
           onPointerUp={endDrag}
           onPointerCancel={endDrag}
         >
-          {/* 삭제 — 우상단 코너 텍스트 버튼. 강화 취소식 3s 재탭 컨펌(마지막 1개 숨김).
-              스와이프 핸들러로 포인터 전파 차단. */}
-          {list.length > 1 ? (
-            <button
-              type="button"
-              onClick={doDelete}
-              disabled={pending}
-              aria-label="선택한 아바타 삭제"
-              onPointerDown={(e) => e.stopPropagation()}
-              className={`absolute right-1 top-1 z-10 rounded-full px-2.5 py-1 text-[11px] font-bold backdrop-blur-sm transition active:scale-95 disabled:opacity-50 ${
-                confirmDelete ? 'bg-red-600 text-white' : 'bg-black/55 text-red-300'
-              }`}
-            >
-              {confirmDelete ? `삭제 확인 ${confirmDeleteLeft}s` : '삭제'}
-            </button>
-          ) : null}
           {/* 발밑 타원 그림자 */}
           <div className="pointer-events-none absolute bottom-[6%] left-1/2 h-[6%] w-1/2 -translate-x-1/2 rounded-[50%] bg-black/45 blur-[6px]" />
           {ROT_ORDER.map((d) =>
