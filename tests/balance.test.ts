@@ -10,6 +10,7 @@ import {
   MAX_TRANSCEND,
   CYCLE_LEN,
   CYCLE_TIME_BASE,
+  ATTEMPT_DURATION_SCALE,
   cycleIndex,
   cycleLevel,
   cycleTimeMultiplier,
@@ -71,12 +72,15 @@ describe('사이클 헬퍼 — 100단위 리셋, 시간 2배', () => {
     expect(cycleTimeMultiplier(199)).toBe(CYCLE_TIME_BASE);
     expect(cycleTimeMultiplier(200)).toBe(CYCLE_TIME_BASE ** 2);
   });
-  it('enhanceDurationMs = baseAttempt × 2^cycle', () => {
+  it('enhanceDurationMs = baseAttempt × 2^cycle × 0.5 (전체 2배속, 2026-05-31)', () => {
     for (const lv of [0, 1, 10, 50, 99]) {
-      expect(enhanceDurationMs(lv)).toBe(baseAttemptDurationMs(lv));
-      expect(enhanceDurationMs(lv + CYCLE_LEN)).toBe(baseAttemptDurationMs(lv) * CYCLE_TIME_BASE);
+      const b = baseAttemptDurationMs(lv);
+      expect(enhanceDurationMs(lv)).toBe(Math.round(b * ATTEMPT_DURATION_SCALE));
+      expect(enhanceDurationMs(lv + CYCLE_LEN)).toBe(
+        Math.round(b * CYCLE_TIME_BASE * ATTEMPT_DURATION_SCALE),
+      );
       expect(enhanceDurationMs(lv + 2 * CYCLE_LEN)).toBe(
-        baseAttemptDurationMs(lv) * CYCLE_TIME_BASE ** 2,
+        Math.round(b * CYCLE_TIME_BASE ** 2 * ATTEMPT_DURATION_SCALE),
       );
     }
   });
@@ -164,7 +168,8 @@ describe('effectiveOutcomeProbsBp — 3분기 시간 곡선', () => {
       const down = downRateBp(lv);
       for (const frac of [0, 0.25, 0.5, 0.75, 1]) {
         const p = effectiveOutcomeProbsBp(base, down, frac * 10000, 10000);
-        expect(p.success + p.hold + p.down).toBe(10000);
+        // 4분기(success/mega/hold/down) 합 = 10000. mega는 success_total에서 분리된 분량.
+        expect(p.success + p.mega + p.hold + p.down).toBe(10000);
       }
     }
   });
@@ -176,20 +181,21 @@ describe('effectiveOutcomeProbsBp — 3분기 시간 곡선', () => {
     expect(p.down).toBe(down);
     expect(p.hold).toBe(10000 - down);
   });
-  it('t=total: success=base, down=고정, hold=10000-base-down', () => {
+  it('t=total: success_total(success+mega)=base, down=고정, hold=10000-base-down', () => {
     const base = baseSuccessRateBp(60);
     const down = downRateBp(60);
     const p = effectiveOutcomeProbsBp(base, down, 10000, 10000);
-    expect(p.success).toBe(base);
+    expect(p.success + p.mega).toBe(base);
     expect(p.down).toBe(down);
     expect(p.hold).toBe(10000 - base - down);
   });
-  it('안전 구간(down=0): hold = 10000 - success', () => {
+  it('안전 구간(down=0): hold = 10000 - success_total', () => {
     const base = baseSuccessRateBp(30);
     const p = effectiveOutcomeProbsBp(base, 0, 5000, 10000);
     expect(p.down).toBe(0);
-    expect(p.success).toBe(Math.round(base * 0.5));
-    expect(p.hold).toBe(10000 - p.success);
+    // t=0.5 → success_total = round(base×0.5), 그 중 mega 분리.
+    expect(p.success + p.mega).toBe(Math.round(base * 0.5));
+    expect(p.hold).toBe(10000 - p.success - p.mega);
   });
 });
 
