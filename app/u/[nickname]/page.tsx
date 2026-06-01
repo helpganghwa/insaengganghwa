@@ -16,6 +16,9 @@ import { getMyRanks } from '@/lib/game/leaderboard/queries';
 import { TranscendSprite } from '@/components/TranscendSprite';
 import { RarityFrame, rarityBorderStyle, hasRarityBorder } from '@/components/RarityFrame';
 import { CharacterStage } from '@/components/CharacterStage';
+import { BoastLauncher } from '@/components/BoastModal';
+import { ReferralSection } from '@/app/(game)/me/ReferralSection';
+import { getReferralStats } from '@/lib/game/referral/stats';
 
 import { ReportButton } from './ReportButton';
 
@@ -173,7 +176,22 @@ export default async function PublicProfilePage({
 
   const bySlot = new Map(data.equipped.map((e) => [e.slot, e]));
   const viewerId = await getSessionUserId();
-  const canReport = !!data.profileId && !!viewerId && viewerId !== data.ownerId;
+  // CTA 분기 모드(2026-06-01).
+  const mode: 'guest' | 'self' | 'other' = !viewerId
+    ? 'guest'
+    : viewerId === data.ownerId
+      ? 'self'
+      : 'other';
+  const canReport = mode === 'other' && !!data.profileId;
+  // 본인 view에서만 referral stats fetch — 자랑하기 아래 보상 누적 표시.
+  const referralStats =
+    mode === 'self'
+      ? await getReferralStats(viewerId!).catch(() => ({
+          totalReferrals: 0,
+          totalDiamondEarned: 0,
+          totalBoxEarned: 0,
+        }))
+      : null;
 
   return (
     <main className="mx-auto min-h-dvh w-full max-w-[390px] bg-zinc-950 text-zinc-50">
@@ -299,18 +317,45 @@ export default async function PublicProfilePage({
           </section>
         ) : null}
 
-        {/* ── CTA + 신고 ── */}
-        <Link
-          href="/login"
-          className="block rounded-full bg-gradient-to-r from-amber-500 to-orange-500 py-2.5 text-center text-sm font-bold text-amber-950 shadow-lg shadow-amber-900/30 transition active:scale-[0.98]"
-        >
-          나도 인생강화 시작하기 →
-        </Link>
-        {canReport && (
+        {/* ── CTA 분기 ── */}
+        {mode === 'guest' ? (
+          <Link
+            href="/login"
+            className="block rounded-full bg-gradient-to-r from-amber-500 to-orange-500 py-2.5 text-center text-sm font-bold text-amber-950 shadow-lg shadow-amber-900/30 transition active:scale-[0.98]"
+          >
+            인생강화 시작하기
+          </Link>
+        ) : null}
+
+        {mode === 'self' && referralStats ? (
+          <>
+            <BoastLauncher
+              nickname={data.nickname}
+              total={data.total}
+              profileImg={data.charImg}
+              pieces={data.equipped.map((e) => ({
+                slot: e.slot,
+                code: e.code,
+                name: e.name,
+                enhanceLevel: e.enhanceLevel,
+                transcendLevel: e.transcendLevel,
+                isChampion: e.isChampion,
+                catalogItemId: e.catalogItemId,
+              }))}
+            />
+            <ReferralSection
+              totalReferrals={referralStats.totalReferrals}
+              totalDiamondEarned={referralStats.totalDiamondEarned}
+              totalBoxEarned={referralStats.totalBoxEarned}
+            />
+          </>
+        ) : null}
+
+        {mode === 'other' && canReport ? (
           <div className="text-center">
             <ReportButton profileId={data.profileId!} />
           </div>
-        )}
+        ) : null}
       </div>
     </main>
   );
