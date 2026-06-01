@@ -12,6 +12,8 @@ import {
   claimAllMailAction,
   loadMoreMailsAction,
 } from './actions';
+// 수령 토스트는 사용자 결정으로 제거(2026-06-01). 다이아 헤더 카운트 + 우편 사라짐
+// 으로 결과는 충분히 인지됨. useResourceToast는 오류 알림(showError) 용도로만 유지.
 
 export type MailItem = {
   id: string;
@@ -26,7 +28,6 @@ export type MailItem = {
 };
 
 const SLOT_EMOJI: Record<Slot, string> = { weapon: '⚔️', armor: '🛡️', accessory: '💍' };
-const SLOT_LABEL: Record<Slot, string> = { weapon: '무기', armor: '방어구', accessory: '장신구' };
 
 /**
  * type별 시각 메타(2026-06-01 추가) — 카드 좌측 컬러바 + 작은 라벨 배지.
@@ -156,7 +157,7 @@ export function MailList({
   const combinedBase = useMemo(() => [...items, ...extraItems], [items, extraItems]);
   const [displayItems, setOptimisticItems] = useOptimistic(combinedBase);
   const { optimisticAdjust: adjustDiamond } = useDiamond();
-  const { showResource, showError } = useResourceToast();
+  const { showError } = useResourceToast();
   const nowMs = Date.now();
 
   // 모두 받기 합계 preview — 현재 표시된 미수령 우편 기준(서버는 모든 미수령 처리).
@@ -184,14 +185,6 @@ export function MailList({
     return parts;
   }, [totals]);
 
-  const emitClaimToasts = (result: { diamond: number; boxes: Record<Slot, number> }) => {
-    if (result.diamond > 0) showResource('💎', '다이아', result.diamond);
-    for (const s of ['weapon', 'armor', 'accessory'] as Slot[]) {
-      const n = result.boxes[s];
-      if (n > 0) showResource(SLOT_EMOJI[s], `${SLOT_LABEL[s]} 보급권`, n);
-    }
-  };
-
   const claim = (id: string) => {
     setError(null);
     const target = combinedBase.find((m) => m.id === id);
@@ -212,7 +205,7 @@ export function MailList({
         showError(r.message);
         return;
       }
-      emitClaimToasts(r.result);
+      // 성공 토스트는 미노출(2026-06-01 사용자 결정) — 헤더 다이아 + 우편 사라짐으로 충분.
       router.refresh();
     });
   };
@@ -234,7 +227,6 @@ export function MailList({
         showError(r.message);
         return;
       }
-      emitClaimToasts(r.result);
       router.refresh();
     });
   };
@@ -269,24 +261,25 @@ export function MailList({
           미수령{unreadCount != null && unreadCount > 0 ? ` (${unreadCount})` : ''}
         </Link>
         <Link href="/mail?tab=done" className={tabCls(tab === 'done')}>
-          받은
+          수령 완료
         </Link>
       </div>
 
       {tab === 'unread' && displayItems.length > 0 ? (
+        // 컴팩트 1행 — 좌 라벨 + 우 합계 preview. 굵은 amber outline + amber 글자.
         <button
           type="button"
           disabled={pending}
           onClick={claimAll}
-          className="flex w-full flex-col items-center justify-center gap-0.5 rounded-full bg-amber-500 px-3 py-2.5 text-amber-950 disabled:opacity-40"
+          className="flex w-full items-center justify-between gap-2 rounded-lg border border-amber-500/50 bg-amber-500/10 px-3 py-1.5 text-amber-700 hover:bg-amber-500/20 disabled:opacity-40 dark:text-amber-300"
         >
-          <span className="text-sm font-bold">
-            {pending ? '수령 중…' : `${displayItems.length}건 모두 받기`}
+          <span className="text-xs font-bold">
+            {pending ? '수령 중…' : `모두 받기 (${displayItems.length}건)`}
           </span>
           {!pending && totalParts.length > 0 ? (
-            <span className="font-mono text-[11px] tabular-nums text-amber-900/80">
+            <span className="truncate font-mono text-[10px] tabular-nums opacity-85">
               {totalParts.join(' · ')}
-              {hasMore ? ' · 외 더 있음' : ''}
+              {hasMore ? ' …' : ''}
             </span>
           ) : null}
         </button>
@@ -301,16 +294,8 @@ export function MailList({
       {displayItems.length === 0 ? (
         <div className="rounded-lg border border-dashed border-zinc-300 px-4 py-10 text-center dark:border-zinc-700">
           <p className="text-xs text-zinc-500">
-            {tab === 'unread' ? '받지 않은 우편이 없습니다.' : '받은 우편이 없습니다.'}
+            {tab === 'unread' ? '미수령 우편이 없습니다.' : '수령 완료한 우편이 없습니다.'}
           </p>
-          {tab === 'unread' ? (
-            <Link
-              href="/checkin"
-              className="mt-3 inline-block rounded-full bg-zinc-900 px-3 py-1.5 text-[11px] font-semibold text-white dark:bg-zinc-50 dark:text-zinc-950"
-            >
-              출석 체크하러 가기
-            </Link>
-          ) : null}
         </div>
       ) : (
         <ul className="space-y-2">
