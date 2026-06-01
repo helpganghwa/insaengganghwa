@@ -14,6 +14,17 @@ html {
   touch-action: pan-x pan-y;
 }
 
+/* 스크롤바 전역 숨김(2026-06-01 사용자 결정). 데스크톱 Chrome/Firefox/Safari
+   에서 페이지·모달·캐러셀 모두 깨끗하게. iOS Safari·PWA는 원래 overlay라 무영향.
+   스크롤 동작 자체는 유지 — 휠/터치/키보드 모두 정상. 단서가 줄어드는 trade-off는
+   스냅·페이드·"더 보기" UI로 보완. */
+* {
+  scrollbar-width: none;
+}
+*::-webkit-scrollbar {
+  display: none;
+}
+
 /* 다크 베이스 톤업 — 순수 검정 대신 짙은 중성 회색(2026-05-29 사용자 결정).
    어두운 테마는 유지하되 최암부를 한 단계 밝게. zinc 950/900/800을 전역 재정의해
    bg-zinc-950 등 모든 유틸에 일괄 반영(레이어 순서 950<900<800 유지). 기본값 대비:
