@@ -372,12 +372,15 @@ export function BoastLauncher({
   total,
   profileImg,
   compact = false,
+  label,
 }: {
   nickname: string;
   pieces: BoastPiece[];
   total: number;
   profileImg?: string | null;
   compact?: boolean;
+  /** 풀 버튼 라벨 — 기본 '내 프로필 자랑하기'. 타인 프로필은 '프로필 공유하기' 등. */
+  label?: string;
 }) {
   const [open, setOpen] = useState(false);
   return (
@@ -385,7 +388,7 @@ export function BoastLauncher({
       <button
         type="button"
         onClick={() => setOpen(true)}
-        aria-label="카카오톡으로 프로필 공유하기"
+        aria-label={label ?? '카카오톡으로 자랑하기'}
         className={
           compact
             ? 'inline-flex h-7 shrink-0 items-center gap-1 rounded-full bg-[#FEE500] px-2.5 text-xs font-semibold text-[#191919]'
@@ -401,7 +404,7 @@ export function BoastLauncher({
         >
           <path d="M12 3C6.477 3 2 6.477 2 10.7c0 2.61 1.66 4.92 4.2 6.3l-.83 3.05a.4.4 0 0 0 .6.42l3.66-2.43c.77.12 1.56.19 2.37.19 5.523 0 10-3.477 10-7.74S17.523 3 12 3Z" />
         </svg>
-        {compact ? '공유' : '프로필 공유하기'}
+        {compact ? '자랑' : (label ?? '내 프로필 자랑하기')}
       </button>
       <BoastModal
         open={open}

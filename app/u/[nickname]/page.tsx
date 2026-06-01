@@ -22,7 +22,6 @@ import { BoastLauncher } from '@/components/BoastModal';
 import { ReportButton } from './ReportButton';
 
 const SLOT_LABEL: Record<Slot, string> = { weapon: '무기', armor: '방어구', accessory: '장신구' };
-const SLOT_EMOJI: Record<Slot, string> = { weapon: '⚔️', armor: '🛡️', accessory: '💍' };
 
 /**
  * 닉네임 → 공개 프로필 데이터(착용 세트 + KPI + 챔피언). 미존재 시 null.
@@ -500,6 +499,7 @@ export default async function PublicProfilePage({
                 isChampion: e.isChampion,
                 catalogItemId: e.catalogItemId,
               }))}
+              label="프로필 공유하기"
             />
             {canReport ? <ReportButton profileId={data.profileId!} /> : null}
           </>
