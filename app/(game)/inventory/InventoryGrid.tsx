@@ -137,7 +137,7 @@ export function InventoryGrid({
           value={sortBy}
           onChange={(e) => setSortBy(e.target.value as SortBy)}
           aria-label="정렬"
-          className="rounded-full border border-zinc-300 bg-white px-3 py-1.5 text-xs dark:border-zinc-700 dark:bg-zinc-950"
+          className="rounded-full border border-zinc-300 bg-white px-3 py-1.5 text-base dark:border-zinc-700 dark:bg-zinc-950"
         >
           <option value="recent">최근순</option>
           <option value="enhance">강화순</option>

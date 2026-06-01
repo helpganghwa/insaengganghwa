@@ -114,7 +114,7 @@ export function AdminMailClient() {
             <select
               value={toKind}
               onChange={(e) => setToKind(e.target.value as 'nickname' | 'userId')}
-              className="rounded border border-zinc-300 bg-transparent px-2 py-1.5 text-xs dark:border-zinc-700"
+              className="rounded border border-zinc-300 bg-transparent px-2 py-1.5 text-base dark:border-zinc-700"
             >
               <option value="nickname">닉네임</option>
               <option value="userId">userId</option>
@@ -123,7 +123,7 @@ export function AdminMailClient() {
               value={to}
               onChange={(e) => setTo(e.target.value)}
               placeholder={toKind === 'nickname' ? '닉네임' : 'uuid'}
-              className="flex-1 rounded border border-zinc-300 bg-transparent px-2 py-1.5 text-xs dark:border-zinc-700"
+              className="flex-1 rounded border border-zinc-300 bg-transparent px-2 py-1.5 text-base dark:border-zinc-700"
             />
           </div>
         </section>
@@ -140,7 +140,7 @@ export function AdminMailClient() {
           value={title}
           onChange={(e) => setTitle(e.target.value.slice(0, 100))}
           placeholder="예: [점검 보상] 잠시 점검에 협조해주셔서 감사합니다"
-          className="w-full rounded border border-zinc-300 bg-transparent px-2 py-1.5 text-xs dark:border-zinc-700"
+          className="w-full rounded border border-zinc-300 bg-transparent px-2 py-1.5 text-base dark:border-zinc-700"
         />
       </section>
       <section className="mb-3 space-y-1.5">
@@ -150,7 +150,7 @@ export function AdminMailClient() {
           onChange={(e) => setBody(e.target.value.slice(0, 1000))}
           rows={4}
           placeholder="본문 (선택)"
-          className="w-full rounded border border-zinc-300 bg-transparent px-2 py-1.5 text-xs dark:border-zinc-700"
+          className="w-full rounded border border-zinc-300 bg-transparent px-2 py-1.5 text-base dark:border-zinc-700"
         />
       </section>
 
@@ -176,7 +176,7 @@ export function AdminMailClient() {
             value={confirmBcast}
             onChange={(e) => setConfirmBcast(e.target.value)}
             placeholder="BROADCAST"
-            className="w-full rounded border border-red-400 bg-transparent px-2 py-1.5 text-xs"
+            className="w-full rounded border border-red-400 bg-transparent px-2 py-1.5 text-base"
           />
         </section>
       ) : null}
@@ -223,7 +223,7 @@ function NumInput({
         value={value}
         onChange={(e) => onChange(e.target.value.replace(/[^0-9]/g, ''))}
         placeholder="0"
-        className="w-full rounded border border-zinc-300 bg-transparent px-1.5 py-1 text-right text-xs tabular-nums dark:border-zinc-700"
+        className="w-full rounded border border-zinc-300 bg-transparent px-1.5 py-1 text-right text-base tabular-nums dark:border-zinc-700"
       />
     </label>
   );
