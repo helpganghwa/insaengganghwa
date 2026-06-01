@@ -1,7 +1,7 @@
 import Link from 'next/link';
 import { notFound } from 'next/navigation';
 import type { Metadata } from 'next';
-import { and, eq, isNotNull, sql } from 'drizzle-orm';
+import { and, eq, inArray, isNotNull, sql } from 'drizzle-orm';
 
 import { db } from '@/lib/db/client';
 import { getSessionUserId } from '@/lib/auth/session';
@@ -10,6 +10,7 @@ import { userProfiles } from '@/lib/db/schema/avatar';
 import { catalogItems, equipmentInstances, type Slot } from '@/lib/db/schema/equipment';
 import { pieceCombatPower, totalCombatPower } from '@/lib/game/balance';
 import { championCatalogIds } from '@/lib/game/codex/ranking';
+import { getMyRanks } from '@/lib/game/leaderboard/queries';
 import { TranscendSprite } from '@/components/TranscendSprite';
 import { RarityFrame, rarityBorderStyle, hasRarityBorder } from '@/components/RarityFrame';
 import { CharacterStage } from '@/components/CharacterStage';
@@ -19,7 +20,7 @@ import { ReportButton } from './ReportButton';
 const SLOT_LABEL: Record<Slot, string> = { weapon: '무기', armor: '방어구', accessory: '장신구' };
 const SLOT_EMOJI: Record<Slot, string> = { weapon: '⚔️', armor: '🛡️', accessory: '💍' };
 
-/** 닉네임 → 공개 프로필 데이터(착용 세트 + 총 전투력). 미존재 시 null. */
+/** 닉네임 → 공개 프로필 데이터(착용 세트 + KPI + 챔피언). 미존재 시 null. */
 async function loadProfile(nickname: string) {
   const [prof] = await db
     .select({
@@ -37,7 +38,11 @@ async function loadProfile(nickname: string) {
   let charImg: string | null = null;
   if (prof.activeProfileId) {
     const [up] = await db
-      .select({ id: userProfiles.id, rotations: userProfiles.rotations, activeDirection: userProfiles.activeDirection })
+      .select({
+        id: userProfiles.id,
+        rotations: userProfiles.rotations,
+        activeDirection: userProfiles.activeDirection,
+      })
       .from(userProfiles)
       .where(eq(userProfiles.id, prof.activeProfileId))
       .limit(1);
@@ -48,7 +53,7 @@ async function loadProfile(nickname: string) {
     }
   }
 
-  const [equipped, codexAgg, champSet] = await Promise.all([
+  const [equipped, sumAgg, maxAgg, champSet, ranks] = await Promise.all([
     db
       .select({
         slot: catalogItems.slot,
@@ -63,19 +68,42 @@ async function loadProfile(nickname: string) {
       .where(
         and(eq(equipmentInstances.userId, prof.id), isNotNull(equipmentInstances.equippedSlot)),
       ),
+    // 합산 강화 = 현재 보유 인스턴스 enhance_level 합.
     db
-      // 합산 강화 = 현재 보유 인스턴스 enhance_level 합(2026-05-31 정책).
       .select({ s: sql<number>`coalesce(sum(${equipmentInstances.enhanceLevel}),0)::int` })
       .from(equipmentInstances)
       .where(eq(equipmentInstances.userId, prof.id)),
+    // 최고 강화 = 현재 보유 인스턴스 enhance_level 최대.
+    db
+      .select({ m: sql<number>`coalesce(max(${equipmentInstances.enhanceLevel}),0)::int` })
+      .from(equipmentInstances)
+      .where(eq(equipmentInstances.userId, prof.id)),
     championCatalogIds(prof.id),
+    getMyRanks(prof.id),
   ]);
 
+  const sumEnhance = Number(sumAgg[0]?.s ?? 0);
+  const maxEnhance = Number(maxAgg[0]?.m ?? 0);
   const total = totalCombatPower(
     equipped.map((e) => pieceCombatPower(e.enhanceLevel, e.transcendLevel)),
-    Number(codexAgg[0]?.s ?? 0),
+    sumEnhance,
   );
   const pieces = equipped.map((e) => ({ ...e, isChampion: champSet.has(e.catalogItemId) }));
+
+  // 챔피언 아이템(이 플레이어가 1위인 카탈로그) 메타 — sprite/name 표시용.
+  const champIds = [...champSet];
+  const champItems = champIds.length
+    ? await db
+        .select({
+          id: catalogItems.id,
+          slot: catalogItems.slot,
+          code: catalogItems.code,
+          name: catalogItems.name,
+        })
+        .from(catalogItems)
+        .where(inArray(catalogItems.id, champIds))
+    : [];
+
   return {
     nickname: prof.nickname,
     ownerId: prof.id,
@@ -83,6 +111,10 @@ async function loadProfile(nickname: string) {
     charImg,
     equipped: pieces,
     total,
+    sumEnhance,
+    maxEnhance,
+    ranks,
+    champItems,
   };
 }
 
@@ -106,6 +138,11 @@ export async function generateMetadata({
   };
 }
 
+function rankBadge(rank: number | null | undefined): string {
+  if (rank == null) return '—';
+  return `#${rank.toLocaleString('ko-KR')}`;
+}
+
 export default async function PublicProfilePage({
   params,
 }: {
@@ -117,75 +154,161 @@ export default async function PublicProfilePage({
 
   const bySlot = new Map(data.equipped.map((e) => [e.slot, e]));
   const viewerId = await getSessionUserId();
-  // 신고 버튼: 대표 프로필 존재 + 로그인 + 본인 아님.
   const canReport = !!data.profileId && !!viewerId && viewerId !== data.ownerId;
 
   return (
-    <main className="mx-auto min-h-dvh w-full max-w-[390px] bg-white px-4 py-6 text-zinc-900 dark:bg-black dark:text-zinc-50">
-      <header className="text-center">
+    <main className="mx-auto min-h-dvh w-full max-w-[390px] bg-zinc-950 text-zinc-50">
+      {/* ── 히어로: 캐릭터 풀블리드 + 그라데이션 + 닉네임 ── */}
+      <section className="relative flex h-[300px] items-end justify-center overflow-hidden bg-gradient-to-b from-amber-900/30 via-zinc-900 to-zinc-950">
         {data.charImg ? (
-          <CharacterStage charSrc={data.charImg} className="mx-auto aspect-square w-44" />
+          <div className="absolute inset-0 flex items-end justify-center">
+            <CharacterStage charSrc={data.charImg} className="aspect-square h-full" />
+          </div>
         ) : (
-          <div className="text-4xl">🏆</div>
+          <div className="absolute inset-0 flex items-center justify-center text-6xl opacity-30">
+            🏆
+          </div>
         )}
-        <h1 className="mt-2 text-xl font-bold">{data.nickname}</h1>
-        <p className="text-xs text-zinc-500">인생강화 플레이어</p>
-        {canReport && <ReportButton profileId={data.profileId!} />}
-      </header>
-
-      <section className="mt-5 rounded-2xl border border-zinc-200 p-3 dark:border-zinc-800">
-        <div className="mb-2 text-xs font-medium text-zinc-500">장착 세트</div>
-        <div className="grid grid-cols-3 gap-2">
-          {(['weapon', 'armor', 'accessory'] as Slot[]).map((s) => {
-            const it = bySlot.get(s);
-            if (!it) {
-              return (
-                <div
-                  key={s}
-                  className="flex aspect-square flex-col items-center justify-center gap-0.5 rounded-xl border-2 border-dashed border-zinc-300 px-1 text-center text-zinc-400 dark:border-zinc-700"
-                >
-                  <span className="text-2xl" aria-hidden>{SLOT_EMOJI[s]}</span>
-                  <span className="text-[10px]">{SLOT_LABEL[s]}</span>
-                  <span className="text-[9px]">미장착</span>
-                </div>
-              );
-            }
-            return (
-              <div
-                key={s}
-                style={rarityBorderStyle(it.transcendLevel)}
-                className={`relative flex aspect-square flex-col items-center justify-center gap-0.5 overflow-hidden rounded-xl border-2 bg-white px-1 text-center dark:bg-zinc-950 ${
-                  hasRarityBorder(it.transcendLevel) ? '' : 'border-zinc-200 dark:border-zinc-800'
-                }`}
-              >
-                <RarityFrame level={it.transcendLevel} />
-                <TranscendSprite
-                  code={it.code}
-                  slot={s}
-                  level={it.transcendLevel}
-                  isChampion={it.isChampion}
-                  size={56}
-                  frameless
-                />
-                <span className="line-clamp-2 break-keep px-0.5 text-[10px] leading-tight text-zinc-600 dark:text-zinc-400">
-                  {it.name}
-                </span>
-                <span className="text-xs font-semibold">+{it.enhanceLevel}</span>
-              </div>
-            );
-          })}
-        </div>
-        <div className="mt-3 border-t border-zinc-100 pt-2 text-right text-sm font-bold dark:border-zinc-900">
-          총 전투력 {data.total.toLocaleString('ko-KR')}
+        {/* radial vignette — 캐릭터 가독성 보강 */}
+        <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(circle_at_50%_55%,transparent_30%,rgba(0,0,0,0.55))]" />
+        <div className="relative z-10 mb-3 text-center">
+          <h1 className="text-2xl font-extrabold tracking-tight text-white drop-shadow-[0_2px_3px_rgba(0,0,0,0.7)]">
+            {data.nickname}
+          </h1>
+          <p className="mt-0.5 text-[11px] text-zinc-300 drop-shadow">인생강화 플레이어</p>
         </div>
       </section>
 
-      <Link
-        href="/login"
-        className="mt-5 block rounded-full bg-amber-500 py-3 text-center text-sm font-bold text-amber-950"
-      >
-        나도 인생강화 시작하기 →
-      </Link>
+      <div className="px-4 pb-6">
+        {/* ── KPI 3종: 전투력 / 최고 강화 / 합산 강화 + 랭킹 ── */}
+        <section className="-mt-4 grid grid-cols-3 gap-2">
+          <KpiCard
+            label="전투력"
+            value={data.total.toLocaleString('ko-KR')}
+            rank={rankBadge(data.ranks.combat?.rank)}
+          />
+          <KpiCard
+            label="최고 강화"
+            value={`+${data.maxEnhance}`}
+            rank={rankBadge(data.ranks.max?.rank)}
+          />
+          <KpiCard
+            label="합산 강화"
+            value={data.sumEnhance.toLocaleString('ko-KR')}
+            rank={rankBadge(data.ranks.sum?.rank)}
+          />
+        </section>
+
+        {/* ── 장착 세트 ── */}
+        <section className="mt-5 rounded-2xl border border-zinc-800 bg-zinc-900/50 p-3">
+          <div className="mb-2 text-[11px] font-semibold tracking-wide text-zinc-400">
+            장착 세트
+          </div>
+          <div className="grid grid-cols-3 gap-2">
+            {(['weapon', 'armor', 'accessory'] as Slot[]).map((s) => {
+              const it = bySlot.get(s);
+              if (!it) {
+                return (
+                  <div
+                    key={s}
+                    className="flex aspect-square flex-col items-center justify-center gap-0.5 rounded-xl border-2 border-dashed border-zinc-700 px-1 text-center text-zinc-500"
+                  >
+                    <span className="text-2xl" aria-hidden>
+                      {SLOT_EMOJI[s]}
+                    </span>
+                    <span className="text-[10px]">{SLOT_LABEL[s]}</span>
+                    <span className="text-[9px]">미장착</span>
+                  </div>
+                );
+              }
+              return (
+                <div
+                  key={s}
+                  style={rarityBorderStyle(it.transcendLevel)}
+                  className={`relative flex aspect-square flex-col items-center justify-center gap-0.5 overflow-hidden rounded-xl border-2 bg-zinc-950 px-1 text-center ${
+                    hasRarityBorder(it.transcendLevel) ? '' : 'border-zinc-800'
+                  }`}
+                >
+                  <RarityFrame level={it.transcendLevel} />
+                  <TranscendSprite
+                    code={it.code}
+                    slot={s}
+                    level={it.transcendLevel}
+                    isChampion={it.isChampion}
+                    size={56}
+                    frameless
+                  />
+                  <span className="line-clamp-2 break-keep px-0.5 text-[10px] leading-tight text-zinc-400">
+                    {it.name}
+                  </span>
+                  <span className="text-xs font-semibold text-zinc-100">+{it.enhanceLevel}</span>
+                </div>
+              );
+            })}
+          </div>
+        </section>
+
+        {/* ── 챔피언 아이템(있을 때만) — 1위 카탈로그 carousel ── */}
+        {data.champItems.length > 0 ? (
+          <section className="mt-5 rounded-2xl border border-amber-700/50 bg-gradient-to-b from-amber-950/40 to-zinc-950 p-3">
+            <div className="mb-2 flex items-baseline justify-between">
+              <div className="text-[11px] font-semibold tracking-wide text-amber-300">
+                이 플레이어가 1위인 아이템
+              </div>
+              <div className="font-mono text-[11px] text-amber-200/80">
+                {data.champItems.length}종
+              </div>
+            </div>
+            <ul className="flex gap-2 overflow-x-auto pb-1">
+              {data.champItems.map((c) => (
+                <li
+                  key={c.id}
+                  className="flex w-16 shrink-0 flex-col items-center gap-0.5 rounded-lg border border-amber-700/60 bg-zinc-950 p-1 text-center"
+                >
+                  <TranscendSprite
+                    code={c.code}
+                    slot={c.slot}
+                    level={0}
+                    isChampion
+                    size={44}
+                    frameless
+                  />
+                  <span className="line-clamp-2 break-keep text-[9px] leading-tight text-zinc-400">
+                    {c.name}
+                  </span>
+                </li>
+              ))}
+            </ul>
+          </section>
+        ) : null}
+
+        {/* ── 신고 + CTA ── */}
+        <div className="mt-5 space-y-2">
+          <Link
+            href="/login"
+            className="block rounded-full bg-gradient-to-r from-amber-500 to-orange-500 py-3 text-center text-sm font-bold text-amber-950 shadow-lg shadow-amber-900/30 transition active:scale-[0.98]"
+          >
+            나도 인생강화 시작하기 →
+          </Link>
+          {canReport && (
+            <div className="text-center">
+              <ReportButton profileId={data.profileId!} />
+            </div>
+          )}
+        </div>
+      </div>
     </main>
+  );
+}
+
+function KpiCard({ label, value, rank }: { label: string; value: string; rank: string }) {
+  return (
+    <div className="rounded-xl border border-zinc-800 bg-zinc-900/80 px-2 py-2.5 text-center shadow-lg shadow-black/30 backdrop-blur">
+      <div className="text-[9px] font-semibold uppercase tracking-widest text-zinc-500">
+        {label}
+      </div>
+      <div className="mt-1 font-mono text-base font-bold tabular-nums text-zinc-50">{value}</div>
+      <div className="mt-0.5 font-mono text-[10px] tabular-nums text-amber-300">{rank}</div>
+    </div>
   );
 }
