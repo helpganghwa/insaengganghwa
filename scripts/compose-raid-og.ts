@@ -19,7 +19,7 @@ const BOSSES = [
 
 const OUT_W = 1200;
 const OUT_H = 630;
-const SPRITE_SIZE = 420; // 화면 height의 ~2/3, 카드 cover crop에도 안전.
+const SPRITE_SIZE = 630; // 화면 height 가득(2026-06-01 사용자 결정 — 420 → 1.5배).
 
 const ROOT = process.cwd();
 const SPRITE_DIR = path.join(ROOT, 'public/sprites/boss');
@@ -47,8 +47,7 @@ async function compose(boss: string) {
     .composite([
       {
         input: spriteBuf,
-        // 약간 위쪽으로 배치(발밑 약간 아래에 카드 텍스트가 들어갈 여지).
-        top: Math.round((OUT_H - SPRITE_SIZE) / 2) - 20,
+        top: Math.max(0, Math.round((OUT_H - SPRITE_SIZE) / 2)),
         left: Math.round((OUT_W - SPRITE_SIZE) / 2),
       },
     ])
