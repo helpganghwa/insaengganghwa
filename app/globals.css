@@ -284,4 +284,31 @@ html {
     -1px  0   0 #000, 1px  0   0 #000;
 }
 
-/* 그 외 게임 연출(가챠/레이드/로딩)은 해당 화면 구현 시 단계 이식. */
+/* 가챠 박스 클릭 → 흔들림 + 화이트 플래시. */
+@keyframes gacha-box-shake {
+  0%, 100% { transform: translate3d(0, 0, 0); }
+  15%      { transform: translate3d(-3px, 1px, 0) rotate(-1deg); }
+  30%      { transform: translate3d(3px, -1px, 0) rotate(1deg); }
+  45%      { transform: translate3d(-2px, 0, 0) rotate(-0.6deg); }
+  60%      { transform: translate3d(2px, 0, 0) rotate(0.6deg); }
+  75%      { transform: translate3d(-1px, 0, 0); }
+}
+@keyframes gacha-box-flash {
+  0%, 100% { opacity: 0; }
+  60%      { opacity: 0.85; }
+}
+/* 결과 모달 fade-in. */
+@keyframes gacha-result-in {
+  0%   { opacity: 0; transform: scale(0.96); }
+  100% { opacity: 1; transform: scale(1); }
+}
+/* 결과 영역 교체 fade(연속 열기). */
+@keyframes gacha-result-swap {
+  0%   { opacity: 0; transform: translateY(6px); }
+  100% { opacity: 1; transform: translateY(0); }
+}
+/* 신규 카드 emerald glow. */
+@keyframes gacha-new-glow {
+  0%, 100% { box-shadow: 0 0 0 0 rgba(16, 185, 129, 0); }
+  50%      { box-shadow: 0 0 14px 3px rgba(16, 185, 129, 0.55); }
+}
