@@ -629,9 +629,6 @@ export function RaidSessionCard({ view: v }: { view: RaidView }) {
               </li>
             ) : null}
           </ul>
-          <p className="mt-1 text-center text-[10px] text-zinc-500">
-            보상은 전원 동일(기여도 무관) — 1회+ 공격 시 지급
-          </p>
         </div>
       </div>
     </section>
