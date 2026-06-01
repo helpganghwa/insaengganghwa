@@ -268,16 +268,20 @@ export async function pollAndProcessDownloading(limit = 5): Promise<{
 
     try {
       const rotations = await mirrorRotations(job.characterId, remoteRotations, job.userId);
-      const southUrl = rotations[dirKey('south')];
-      if (!southUrl) throw new Error('south rotation missing after mirror');
+      const rotEntries = Object.entries(rotations);
+      if (rotEntries.length === 0) throw new Error('no rotations after mirror');
 
-      // south.png를 fetch해서 Claude review로 — Supabase public URL 활용.
-      const southRes = await fetch(southUrl);
-      if (!southRes.ok) throw new Error(`south fetch HTTP ${southRes.status}`);
-      const southBuf = Buffer.from(await southRes.arrayBuffer());
+      // 8방향 전부 fetch(병렬) → 멀티 이미지 검토(측면/후면의 신체 개수 결함도 검출).
+      const images = await Promise.all(
+        rotEntries.map(async ([direction, url]) => {
+          const res = await fetch(url);
+          if (!res.ok) throw new Error(`rotation ${direction} fetch HTTP ${res.status}`);
+          return { direction, png: Buffer.from(await res.arrayBuffer()) };
+        }),
+      );
 
       const review = await reviewProfile({
-        imagePng: southBuf,
+        images,
         descriptionPrompt: job.description,
       });
 
