@@ -177,8 +177,8 @@ export default async function PublicProfilePage({
 
   return (
     <main className="mx-auto min-h-dvh w-full max-w-[390px] bg-zinc-950 text-zinc-50">
-      {/* ── 히어로: 캐릭터 풀블리드 + 그라데이션 + 닉네임 ── */}
-      <section className="relative flex h-[220px] items-end justify-center overflow-hidden bg-gradient-to-b from-amber-900/30 via-zinc-900 to-zinc-950">
+      {/* ── 히어로: 닉네임(머리 위) + 캐릭터 풀블리드 + 그라데이션 ── */}
+      <section className="relative h-[220px] overflow-hidden bg-gradient-to-b from-amber-900/30 via-zinc-900 to-zinc-950">
         {data.charImg ? (
           <div className="absolute inset-0 flex items-end justify-center">
             <CharacterStage charSrc={data.charImg} className="aspect-[2/3] h-full" />
@@ -189,7 +189,8 @@ export default async function PublicProfilePage({
           </div>
         )}
         <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(circle_at_50%_55%,transparent_30%,rgba(0,0,0,0.55))]" />
-        <div className="relative z-10 mb-2 text-center">
+        {/* 닉네임 — 상단 가운데, 아바타 머리 위 */}
+        <div className="absolute inset-x-0 top-3 z-10 text-center">
           <h1 className="text-xl font-extrabold tracking-tight text-white drop-shadow-[0_2px_3px_rgba(0,0,0,0.7)]">
             {data.nickname}
           </h1>
