@@ -13,7 +13,7 @@ import { catalogItems, equipmentInstances, type Slot } from '@/lib/db/schema/equ
 import { pieceCombatPower, totalCombatPower } from '@/lib/game/balance';
 import { championCatalogIds } from '@/lib/game/codex/ranking';
 import { getMyRanks } from '@/lib/game/leaderboard/queries';
-import { getEnhanceTotals } from '@/lib/game/stats/queries';
+import { getEnhanceLive } from '@/lib/game/stats/queries';
 import { TranscendSprite } from '@/components/TranscendSprite';
 import { RarityFrame, rarityBorderStyle, hasRarityBorder } from '@/components/RarityFrame';
 import { CharacterStage } from '@/components/CharacterStage';
@@ -233,57 +233,93 @@ function KpiRowFallback({
 }
 
 /**
- * "지금 인생강화는" 누적 통계 카드 — 사회적 증거(grow 패턴).
- * 누적 강화 시도의 성공/유지/하락 카운트를 10분 캐시로 보여줌.
- * 첫 페인트 빠르게 흘리기 위해 <Suspense>로 stream(콜드 캐시 ~2s).
+ * "지금 인생강화는" 카드 — grow 풍 가로 4타일.
+ * 강화중(라이브, 90s) + 누적 성공/유지/하락(10분). 색 톤으로 의미 구분.
+ * <Suspense> stream — 첫 페인트 차단 없음.
  */
-async function EnhanceStatsCard() {
-  const totals = await getEnhanceTotals();
-  const fmt = (n: number) => n.toLocaleString('ko-KR');
+function fmtCompact(n: number): string {
+  // 1,238,902 → "124만" — 가로 4타일 폭 90px 안에 들어가야 가독.
+  return new Intl.NumberFormat('ko-KR', {
+    notation: 'compact',
+    maximumFractionDigits: 1,
+  }).format(n);
+}
+
+type StatTone = 'live' | 'success' | 'hold' | 'down';
+const TONE: Record<StatTone, { num: string; dot: string; label: string }> = {
+  live: { num: 'text-amber-200', dot: 'bg-amber-400', label: 'text-amber-300/80' },
+  success: { num: 'text-emerald-200', dot: 'bg-emerald-400', label: 'text-emerald-300/80' },
+  hold: { num: 'text-zinc-200', dot: 'bg-zinc-400', label: 'text-zinc-400' },
+  down: { num: 'text-rose-200', dot: 'bg-rose-400', label: 'text-rose-300/80' },
+};
+
+function StatTile({
+  tone,
+  value,
+  label,
+  pulse,
+}: {
+  tone: StatTone;
+  value: string;
+  label: string;
+  pulse?: boolean;
+}) {
+  const t = TONE[tone];
   return (
-    <section className="rounded-xl border border-zinc-800 bg-zinc-900/50 p-2.5">
-      <div className="mb-1.5 text-[10px] font-semibold tracking-wide text-zinc-400">
-        지금 인생강화는
+    <div className="flex flex-1 flex-col items-center gap-0.5 px-1">
+      <div className="flex items-center gap-1">
+        <span
+          className={`inline-block h-1.5 w-1.5 rounded-full ${t.dot} ${
+            pulse ? 'animate-pulse' : ''
+          }`}
+        />
+        <span className={`font-mono text-[15px] font-bold tabular-nums ${t.num}`}>{value}</span>
       </div>
-      <ul className="space-y-0.5 font-mono text-[11px] tabular-nums text-zinc-300">
-        <li className="flex justify-between">
-          <span className="text-emerald-300/90">누적 강화 성공</span>
-          <span>{fmt(totals.success)}회</span>
-        </li>
-        <li className="flex justify-between">
-          <span className="text-zinc-400">누적 강화 유지</span>
-          <span>{fmt(totals.hold)}회</span>
-        </li>
-        <li className="flex justify-between">
-          <span className="text-rose-300/90">누적 강화 하락</span>
-          <span>{fmt(totals.down)}회</span>
-        </li>
-      </ul>
+      <span className={`text-[9px] font-medium tracking-wide ${t.label}`}>{label}</span>
+    </div>
+  );
+}
+
+function StatsShell({ children }: { children: React.ReactNode }) {
+  return (
+    <section className="relative overflow-hidden rounded-xl border border-zinc-800 bg-gradient-to-br from-zinc-900 via-zinc-900/70 to-zinc-950 p-2.5 shadow-lg shadow-black/30">
+      {/* 위쪽 미세 글로우 — 깊이감. */}
+      <div
+        className="pointer-events-none absolute -top-8 left-1/2 h-16 w-3/4 -translate-x-1/2 rounded-full bg-amber-500/10 blur-2xl"
+        aria-hidden
+      />
+      <div className="relative">
+        <div className="mb-2 flex items-baseline justify-between">
+          <div className="text-[10px] font-semibold tracking-wide text-zinc-400">
+            지금 인생강화는
+          </div>
+        </div>
+        <div className="flex divide-x divide-zinc-800/80">{children}</div>
+      </div>
     </section>
+  );
+}
+
+async function EnhanceStatsCard() {
+  const s = await getEnhanceLive();
+  return (
+    <StatsShell>
+      <StatTile tone="live" value={s.activeUsers.toLocaleString('ko-KR')} label="명 강화중" pulse />
+      <StatTile tone="success" value={fmtCompact(s.success)} label="누적 성공" />
+      <StatTile tone="hold" value={fmtCompact(s.hold)} label="누적 유지" />
+      <StatTile tone="down" value={fmtCompact(s.down)} label="누적 하락" />
+    </StatsShell>
   );
 }
 
 function EnhanceStatsFallback() {
   return (
-    <section className="rounded-xl border border-zinc-800 bg-zinc-900/50 p-2.5">
-      <div className="mb-1.5 text-[10px] font-semibold tracking-wide text-zinc-400">
-        지금 인생강화는
-      </div>
-      <ul className="space-y-0.5 font-mono text-[11px] tabular-nums text-zinc-500">
-        <li className="flex justify-between">
-          <span className="text-emerald-300/60">누적 강화 성공</span>
-          <span>—</span>
-        </li>
-        <li className="flex justify-between">
-          <span>누적 강화 유지</span>
-          <span>—</span>
-        </li>
-        <li className="flex justify-between">
-          <span className="text-rose-300/60">누적 강화 하락</span>
-          <span>—</span>
-        </li>
-      </ul>
-    </section>
+    <StatsShell>
+      <StatTile tone="live" value="—" label="명 강화중" />
+      <StatTile tone="success" value="—" label="누적 성공" />
+      <StatTile tone="hold" value="—" label="누적 유지" />
+      <StatTile tone="down" value="—" label="누적 하락" />
+    </StatsShell>
   );
 }
 
