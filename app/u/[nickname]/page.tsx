@@ -272,21 +272,14 @@ function StatTile({
 }
 
 function StatsShell({ children }: { children: React.ReactNode }) {
+  // KPI 카드와 톤 통일(2026-06-01): 글로우·이중 그라데이션 제거,
+  // 평면 zinc-900/85 + zinc-800 border + rounded-xl.
   return (
-    <section className="relative overflow-hidden rounded-xl border border-zinc-800 bg-gradient-to-br from-zinc-900 via-zinc-900/70 to-zinc-950 p-2.5 shadow-lg shadow-black/30">
-      {/* 위쪽 미세 글로우 — 깊이감. */}
-      <div
-        className="pointer-events-none absolute -top-8 left-1/2 h-16 w-3/4 -translate-x-1/2 rounded-full bg-amber-500/10 blur-2xl"
-        aria-hidden
-      />
-      <div className="relative">
-        <div className="mb-2 flex items-baseline justify-between">
-          <div className="text-[10px] font-semibold tracking-wide text-zinc-400">
-            지금 인생강화에서
-          </div>
-        </div>
-        <div className="flex divide-x divide-zinc-800/80">{children}</div>
+    <section className="rounded-xl border border-zinc-800 bg-zinc-900/85 p-2.5">
+      <div className="mb-2 text-[10px] font-semibold tracking-wide text-zinc-400">
+        지금 인생강화에서
       </div>
+      <div className="flex divide-x divide-zinc-800/80">{children}</div>
     </section>
   );
 }
@@ -385,15 +378,15 @@ export default async function PublicProfilePage({
             {(['weapon', 'armor', 'accessory'] as Slot[]).map((s) => {
               const it = bySlot.get(s);
               if (!it) {
+                // 미장착 — 점선 박스를 톤다운(2026-06-01). 이모지 제거, border
+                // zinc-700/2px → zinc-800/60·1px, 텍스트는 슬롯 이름만 작게.
                 return (
                   <div
                     key={s}
-                    className="flex aspect-square flex-col items-center justify-center gap-0.5 rounded-lg border-2 border-dashed border-zinc-700 px-1 text-center text-zinc-500"
+                    className="flex aspect-square flex-col items-center justify-center gap-0.5 rounded-lg border border-dashed border-zinc-800/60 px-1 text-center"
                   >
-                    <span className="text-xl" aria-hidden>
-                      {SLOT_EMOJI[s]}
-                    </span>
-                    <span className="text-[9px]">{SLOT_LABEL[s]}</span>
+                    <span className="text-[9px] text-zinc-600">{SLOT_LABEL[s]}</span>
+                    <span className="text-[8px] text-zinc-700">비어 있음</span>
                   </div>
                 );
               }
@@ -424,37 +417,39 @@ export default async function PublicProfilePage({
           </div>
         </section>
 
-        {/* ── 챔피언 아이템(있을 때만) ── */}
+        {/* ── 챔피언 spotlight(있을 때만) — 첫 1위 아이템을 큰 sprite로 강조. ── */}
         {data.champItems.length > 0 ? (
-          <section className="rounded-xl border border-amber-700/50 bg-gradient-to-b from-amber-950/40 to-zinc-950 p-2">
-            <div className="mb-1.5 flex items-baseline justify-between">
-              <div className="text-[10px] font-semibold tracking-wide text-amber-300">
-                1위 아이템
+          <section className="relative overflow-hidden rounded-xl border border-amber-700/40 bg-gradient-to-r from-amber-950/50 via-amber-900/30 to-amber-950/50 p-3 shadow-lg shadow-amber-950/30">
+            <div
+              className="pointer-events-none absolute inset-0 bg-[radial-gradient(circle_at_22%_50%,rgba(251,191,36,0.18),transparent_60%)]"
+              aria-hidden
+            />
+            <div className="relative flex items-center gap-3">
+              <div className="relative flex h-16 w-16 shrink-0 items-center justify-center">
+                <div className="absolute inset-1 rounded-full bg-amber-400/25 blur-md" aria-hidden />
+                <TranscendSprite
+                  code={data.champItems[0].code}
+                  slot={data.champItems[0].slot}
+                  level={0}
+                  isChampion
+                  size={64}
+                  frameless
+                />
               </div>
-              <div className="font-mono text-[10px] text-amber-200/80">
-                {data.champItems.length}종
+              <div className="min-w-0 flex-1">
+                <div className="text-[10px] font-bold tracking-wide text-amber-300">
+                  🏆 1위 아이템 보유
+                </div>
+                <div className="mt-0.5 truncate text-sm font-bold text-amber-100">
+                  {data.champItems[0].name}
+                </div>
+                {data.champItems.length > 1 ? (
+                  <div className="mt-0.5 text-[10px] text-amber-200/70">
+                    외 {data.champItems.length - 1}종 더
+                  </div>
+                ) : null}
               </div>
             </div>
-            <ul className="flex gap-1.5 overflow-x-auto pb-0.5">
-              {data.champItems.map((c) => (
-                <li
-                  key={c.id}
-                  className="flex w-12 shrink-0 flex-col items-center gap-0.5 rounded border border-amber-700/60 bg-zinc-950 p-0.5 text-center"
-                >
-                  <TranscendSprite
-                    code={c.code}
-                    slot={c.slot}
-                    level={0}
-                    isChampion
-                    size={36}
-                    frameless
-                  />
-                  <span className="line-clamp-1 break-keep text-[8px] leading-tight text-zinc-400">
-                    {c.name}
-                  </span>
-                </li>
-              ))}
-            </ul>
           </section>
         ) : null}
 
@@ -490,8 +485,24 @@ export default async function PublicProfilePage({
           />
         ) : null}
 
-        {mode === 'other' && canReport ? (
-          <ReportButton profileId={data.profileId!} />
+        {mode === 'other' ? (
+          <>
+            <BoastLauncher
+              nickname={data.nickname}
+              total={data.total}
+              profileImg={data.charImg}
+              pieces={data.equipped.map((e) => ({
+                slot: e.slot,
+                code: e.code,
+                name: e.name,
+                enhanceLevel: e.enhanceLevel,
+                transcendLevel: e.transcendLevel,
+                isChampion: e.isChampion,
+                catalogItemId: e.catalogItemId,
+              }))}
+            />
+            {canReport ? <ReportButton profileId={data.profileId!} /> : null}
+          </>
         ) : null}
       </div>
     </main>
