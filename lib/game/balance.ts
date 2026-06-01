@@ -383,10 +383,6 @@ export function diamondToFinishMs(remainingMs: number): number {
   return Math.max(1, Math.ceil(remainingMs / GEM_TO_MS));
 }
 
-/** §6.3 공유 보상: 1일 1회 100 다이아 (보급 상자 없음). 가입 전환 시 공유자 +300. */
-export const SHARE_DAILY_REWARD_DIAMOND = 100;
-export const REFERRAL_CONVERSION_DIAMOND = 300;
-
 /** §6.5 닉네임 변경 — 첫 변경 무료, 이후 매 변경마다 차감. */
 export const NICKNAME_CHANGE_COST_DIAMOND = 1000;
 

@@ -21,7 +21,7 @@ export function kstStartOfDay(at: Date = new Date()): Date {
   return new Date(Date.UTC(y, m - 1, d) - KST_OFFSET_MS);
 }
 
-/** `YYYY-MM-DD` (KST) — raid_daily_counts / share_reward_claims 키. */
+/** `YYYY-MM-DD` (KST) — raid_daily_counts 등 일자 키. */
 export function kstDateString(at: Date = new Date()): string {
   const { y, m, d } = kstParts(at);
   return `${y}-${String(m).padStart(2, '0')}-${String(d).padStart(2, '0')}`;

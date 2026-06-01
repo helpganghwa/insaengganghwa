@@ -13,8 +13,6 @@ import {
   boolean,
   jsonb,
   timestamp,
-  date,
-  primaryKey,
 } from 'drizzle-orm/pg-core';
 
 import { profiles } from './profiles';
@@ -58,15 +56,3 @@ export const referralAttributions = pgTable('referral_attributions', {
   rewarded: boolean('rewarded').notNull().default(false),
   createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
 });
-
-/** §8.3 share_reward_claims — 1일 1회 100다이아(존재 = 당일 수령 완료). */
-export const shareRewardClaims = pgTable(
-  'share_reward_claims',
-  {
-    userId: uuid('user_id')
-      .notNull()
-      .references(() => profiles.id, { onDelete: 'cascade' }),
-    kstDate: date('kst_date').notNull(),
-  },
-  (t) => [primaryKey({ columns: [t.userId, t.kstDate] })],
-);

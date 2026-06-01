@@ -6,7 +6,7 @@ import { db } from '@/lib/db/client';
 import { withTimeout } from '@/lib/db/with-timeout';
 import { profiles } from '@/lib/db/schema/profiles';
 import { formatCompactKR } from '@/lib/ui/format-number';
-import { SHARE_DAILY_REWARD_DIAMOND } from '@/lib/game/balance';
+import { INVITE_DIAMOND_PER_REFERRAL, INVITE_BOX_PER_REFERRAL } from '@/lib/game/referral/stats';
 
 /**
  * 상점 — WIREFRAMES §8. 단일 프리미엄 재화(다이아) 충전 + 무료 획득(공유).
@@ -48,7 +48,7 @@ export default async function ShopPage() {
         </span>
       </header>
 
-      {/* 무료 획득 — 공유 보상(광고 보상 v1 미도입) */}
+      {/* 무료 획득 — 친구 초대 보상(광고 보상 v1 미도입) */}
       <section className="space-y-2">
         <h2 className="px-1 text-xs font-semibold text-zinc-500">무료로 받기</h2>
         <Link
@@ -56,9 +56,9 @@ export default async function ShopPage() {
           className="flex items-center justify-between rounded-xl border border-zinc-200 px-3 py-3 dark:border-zinc-800"
         >
           <span className="flex flex-col">
-            <span className="text-sm font-semibold">🔗 공유 보상</span>
+            <span className="text-sm font-semibold">🔗 친구 초대 보상</span>
             <span className="text-[11px] text-zinc-500">
-              하루 1회 공유 시 💎 {SHARE_DAILY_REWARD_DIAMOND}
+              친구가 가입하면 💎 {INVITE_DIAMOND_PER_REFERRAL} + 보급상자 {INVITE_BOX_PER_REFERRAL}개
             </span>
           </span>
           <span className="text-zinc-400">→</span>

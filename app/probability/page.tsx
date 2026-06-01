@@ -34,9 +34,8 @@ import {
   RAID_PHASE_DROP_DIAMOND,
   RAID_PHASE_DROP_DIAMOND_RATE_BP,
   GEM_TO_MS,
-  SHARE_DAILY_REWARD_DIAMOND,
-  REFERRAL_CONVERSION_DIAMOND,
 } from '@/lib/game/balance';
+import { INVITE_DIAMOND_PER_REFERRAL, INVITE_BOX_PER_REFERRAL } from '@/lib/game/referral/stats';
 
 export const metadata: Metadata = {
   title: '확률 공시 — 인생강화',
@@ -198,8 +197,8 @@ export default function ProbabilityPage() {
           영구 고정 — 진행 중 작업에 소급 적용 없음).
         </P>
         <P>
-          공유 보상: 1일 1회 {SHARE_DAILY_REWARD_DIAMOND}다이아. 신규 가입 전환 시 공유자{' '}
-          {REFERRAL_CONVERSION_DIAMOND}다이아 추가 지급.
+          친구 초대: 공유 링크로 신규 가입 전환 시 공유자에게 💎{INVITE_DIAMOND_PER_REFERRAL} +
+          보급상자 {INVITE_BOX_PER_REFERRAL}개(무기·방어구·장신구 각 1개) 지급.
         </P>
       </Sec>
 
