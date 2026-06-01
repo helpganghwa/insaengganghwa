@@ -196,7 +196,7 @@ export function CreateProfileForm({
         type="button"
         onClick={onClick}
         disabled={disabled}
-        className={`w-full rounded-xl py-3.5 text-sm font-bold transition-colors ${
+        className={`relative w-full overflow-hidden rounded-xl py-3.5 text-sm font-bold transition-colors ${
           disabled
             ? 'bg-zinc-200 text-zinc-400 dark:bg-zinc-800 dark:text-zinc-600'
             : confirm
@@ -204,21 +204,26 @@ export function CreateProfileForm({
               : 'bg-violet-600 text-white'
         }`}
       >
-        {pending
-          ? '요청 중…'
-          : !allEquipped
-            ? '장비 3종 장착 필요'
-            : !enough
-              ? '다이아 부족'
-              : confirm
-                ? `생성 확인 ${confirmLeft}s`
-                : '아바타 생성'}
+        {/* 배경만 펄스(텍스트 안정) — 일괄 초월 확인버튼 패턴. */}
+        {confirm ? (
+          <span
+            aria-hidden
+            className="absolute inset-0 bg-violet-500"
+            style={{ animation: 'confirm-bg-pulse 1.2s ease-in-out infinite' }}
+          />
+        ) : null}
+        <span className="relative">
+          {pending
+            ? '요청 중…'
+            : !allEquipped
+              ? '장비 3종 장착 필요'
+              : !enough
+                ? '다이아 부족'
+                : confirm
+                  ? `한 번 더 누르면 💎 ${price.toLocaleString('ko-KR')} 차감 (${confirmLeft}s)`
+                  : '아바타 생성'}
+        </span>
       </button>
-      {confirm && !pending && (
-        <p className="text-center text-[11px] text-zinc-400">
-          한 번 더 누르면 💎 {price.toLocaleString('ko-KR')} 차감 · {confirmLeft}s 후 자동 취소
-        </p>
-      )}
     </div>
   );
 }
