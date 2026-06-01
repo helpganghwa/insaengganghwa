@@ -47,8 +47,15 @@ export const profileDirectionEnum = pgEnum('profile_direction', [
   'south_west',
 ]);
 
-/** PROFILE §3.4 신고 reason — AI 검토(§5.2)와 정렬 + 신고 전용 2종. */
+/**
+ * PROFILE §3.4 신고 reason.
+ * 운영 카테고리: nickname / avatar / bug_abuse / other (사용자 선택 4종).
+ * 레거시(nsfw/violence/hate/quality/impersonation)는 과거 신고 row 호환 — 읽기 전용.
+ */
 export const profileReportReasonEnum = pgEnum('profile_report_reason', [
+  'nickname',
+  'avatar',
+  'bug_abuse',
   'nsfw',
   'violence',
   'hate',

@@ -1,4 +1,4 @@
-import { cache } from 'react';
+import { Suspense, cache } from 'react';
 import Link from 'next/link';
 import { notFound } from 'next/navigation';
 import type { Metadata } from 'next';
@@ -60,10 +60,12 @@ const loadProfile = cache(async (nickname: string) => {
     }
   }
 
-  // Promise.all + withTimeout — 한 쿼리 hang이 전체 페이지를 멈추지 않도록 3.5s 가드.
-  // 실패 시 빈 결과로 graceful degrade (히어로·신고는 여전히 렌더).
-  const _r = await withTimeout(
-    Promise.all([
+  // 각 쿼리 **개별** withTimeout — 한 쿼리가 느려도 다른 결과를 살린다.
+  // 이전: 5개를 한 묶음으로 3.5s 가드 → 가장 느린 쿼리(주로 ranks: unstable_cache 콜드
+  // ~3s)에 도달하면 _r=null로 전부 비어버려 장비도 안 보였음(2026-06-01 수정).
+  // ranks는 이 함수에서 빼고 페이지에서 <Suspense>로 stream(첫 페인트 지연 제거).
+  const [equipped, sumAgg, maxAgg, champSet] = await Promise.all([
+    withTimeout(
       db
         .select({
           slot: catalogItems.slot,
@@ -78,25 +80,36 @@ const loadProfile = cache(async (nickname: string) => {
         .where(
           and(eq(equipmentInstances.userId, prof.id), isNotNull(equipmentInstances.equippedSlot)),
         ),
+      2500,
+      'u.equipped',
+    ).catch(() => [] as Array<{
+      slot: Slot;
+      catalogItemId: number;
+      code: string;
+      name: string;
+      enhanceLevel: number;
+      transcendLevel: number;
+    }>),
+    withTimeout(
       db
         .select({ s: sql<number>`coalesce(sum(${equipmentInstances.enhanceLevel}),0)::int` })
         .from(equipmentInstances)
         .where(eq(equipmentInstances.userId, prof.id)),
+      2000,
+      'u.sum',
+    ).catch(() => [] as { s: number }[]),
+    withTimeout(
       db
         .select({ m: sql<number>`coalesce(max(${equipmentInstances.enhanceLevel}),0)::int` })
         .from(equipmentInstances)
         .where(eq(equipmentInstances.userId, prof.id)),
-      championCatalogIds(prof.id),
-      getMyRanks(prof.id),
-    ]),
-    3500,
-    'u.profile',
-  ).catch(() => null);
-  const equipped = _r?.[0] ?? [];
-  const sumAgg = _r?.[1] ?? [];
-  const maxAgg = _r?.[2] ?? [];
-  const champSet = _r?.[3] ?? new Set<number>();
-  const ranks = _r?.[4] ?? { max: null, sum: null, combat: null };
+      2000,
+      'u.max',
+    ).catch(() => [] as { m: number }[]),
+    withTimeout(championCatalogIds(prof.id), 2000, 'u.champion').catch(
+      () => new Set<number>(),
+    ),
+  ]);
 
   const sumEnhance = Number(sumAgg[0]?.s ?? 0);
   const maxEnhance = Number(maxAgg[0]?.m ?? 0);
@@ -133,7 +146,6 @@ const loadProfile = cache(async (nickname: string) => {
     total,
     sumEnhance,
     maxEnhance,
-    ranks,
     champItems,
   };
 });
@@ -161,6 +173,62 @@ export async function generateMetadata({
 function rankBadge(rank: number | null | undefined): string {
   if (rank == null) return '—';
   return `#${rank.toLocaleString('ko-KR')}`;
+}
+
+/**
+ * 랭크 3종을 stream으로 채우는 KPI 행 — `getMyRanks` 콜드 캐시는 ~3s까지 걸리므로
+ * 메인 데이터(장비/합산/전투력)와 분리해서 Suspense로 점진 표시.
+ * 첫 페인트: KPI 값 + rank='—' / 스트림 완료 후: rank='#N' 채워짐.
+ */
+async function KpiRowWithRanks({
+  userId,
+  total,
+  sumEnhance,
+  maxEnhance,
+}: {
+  userId: string;
+  total: number;
+  sumEnhance: number;
+  maxEnhance: number;
+}) {
+  const ranks = await getMyRanks(userId);
+  return (
+    <section className="-mt-3 grid grid-cols-3 gap-1.5">
+      <KpiCard
+        label="전투력"
+        value={total.toLocaleString('ko-KR')}
+        rank={rankBadge(ranks.combat?.rank)}
+      />
+      <KpiCard
+        label="최고 강화"
+        value={`+${maxEnhance}`}
+        rank={rankBadge(ranks.max?.rank)}
+      />
+      <KpiCard
+        label="합산 강화"
+        value={sumEnhance.toLocaleString('ko-KR')}
+        rank={rankBadge(ranks.sum?.rank)}
+      />
+    </section>
+  );
+}
+
+function KpiRowFallback({
+  total,
+  sumEnhance,
+  maxEnhance,
+}: {
+  total: number;
+  sumEnhance: number;
+  maxEnhance: number;
+}) {
+  return (
+    <section className="-mt-3 grid grid-cols-3 gap-1.5">
+      <KpiCard label="전투력" value={total.toLocaleString('ko-KR')} rank="—" />
+      <KpiCard label="최고 강화" value={`+${maxEnhance}`} rank="—" />
+      <KpiCard label="합산 강화" value={sumEnhance.toLocaleString('ko-KR')} rank="—" />
+    </section>
+  );
 }
 
 export default async function PublicProfilePage({
@@ -204,24 +272,23 @@ export default async function PublicProfilePage({
       </section>
 
       <div className="space-y-3 px-3 pb-4">
-        {/* ── KPI 3종 ── */}
-        <section className="-mt-3 grid grid-cols-3 gap-1.5">
-          <KpiCard
-            label="전투력"
-            value={data.total.toLocaleString('ko-KR')}
-            rank={rankBadge(data.ranks.combat?.rank)}
+        {/* ── KPI 3종 — 값은 즉시, 순위는 Suspense로 stream(콜드 캐시 ~3s) ── */}
+        <Suspense
+          fallback={
+            <KpiRowFallback
+              total={data.total}
+              sumEnhance={data.sumEnhance}
+              maxEnhance={data.maxEnhance}
+            />
+          }
+        >
+          <KpiRowWithRanks
+            userId={data.ownerId}
+            total={data.total}
+            sumEnhance={data.sumEnhance}
+            maxEnhance={data.maxEnhance}
           />
-          <KpiCard
-            label="최고 강화"
-            value={`+${data.maxEnhance}`}
-            rank={rankBadge(data.ranks.max?.rank)}
-          />
-          <KpiCard
-            label="합산 강화"
-            value={data.sumEnhance.toLocaleString('ko-KR')}
-            rank={rankBadge(data.ranks.sum?.rank)}
-          />
-        </section>
+        </Suspense>
 
         {/* ── 장착 세트 ── */}
         <section className="rounded-xl border border-zinc-800 bg-zinc-900/50 p-2">
