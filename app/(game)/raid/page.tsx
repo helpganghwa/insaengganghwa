@@ -50,6 +50,7 @@ export default async function RaidPage() {
         bossCode: raids.bossCode,
         phaseDiamond: raidRewards.phaseDiamond,
         boxes: raidRewards.boxes,
+        phasesCleared: raids.phasesCleared,
       })
       .from(raidRewards)
       .innerJoin(raids, eq(raids.id, raidRewards.raidId))
@@ -64,7 +65,8 @@ export default async function RaidPage() {
 
   // 내 활성 레이드들의 전체 참가자 데미지로 순위 산출.
   // 보통 RAID_MAX_CONCURRENT_PER_USER × 평균 참가자 수라 1 쿼리 batch면 충분.
-  const raidIds = rows.map((r) => r.id);
+  // 활성 + 정산 대기(미수령) 레이드 모두 — 정산 대기 셀에도 내 순위 노출(2026-06-01 피드백).
+  const raidIds = [...rows.map((r) => r.id), ...pendingClaims.map((p) => p.raidId)];
   const allParts = raidIds.length
     ? await withTimeout(
         db
@@ -105,13 +107,25 @@ export default async function RaidPage() {
       participantCount: parts.length,
     };
   });
-  const pendingCells: RaidSlotCell[] = pendingClaims.map((p) => ({
-    kind: 'pending_claim',
-    raidId: p.raidId.toString(),
-    bossCode: p.bossCode as RaidBoss,
-    diamond: Number(p.phaseDiamond),
-    boxTotal: (p.boxes.weapon ?? 0) + (p.boxes.armor ?? 0) + (p.boxes.accessory ?? 0),
-  }));
+  const pendingCells: RaidSlotCell[] = pendingClaims.map((p) => {
+    const parts = partsByRaid.get(p.raidId.toString()) ?? [];
+    parts.sort((a, b) => (a.totalDamage < b.totalDamage ? 1 : a.totalDamage > b.totalDamage ? -1 : 0));
+    const myRank = Math.max(1, parts.findIndex((x) => x.userId === userId) + 1);
+    return {
+      kind: 'pending_claim',
+      raidId: p.raidId.toString(),
+      bossCode: p.bossCode as RaidBoss,
+      diamond: Number(p.phaseDiamond),
+      boxes: {
+        weapon: p.boxes.weapon ?? 0,
+        armor: p.boxes.armor ?? 0,
+        accessory: p.boxes.accessory ?? 0,
+      },
+      phasesCleared: p.phasesCleared,
+      myRank,
+      participantCount: parts.length,
+    };
+  });
   const cells: RaidSlotCell[] = [...activeCells, ...pendingCells];
   // 합계가 슬롯 한도 초과 시(정산 안 한 채 새 레이드 개설 등) 모두 노출.
   const slotCount = Math.max(RAID_MAX_CONCURRENT_PER_USER, cells.length);

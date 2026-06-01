@@ -63,9 +63,8 @@ html {
   --animate-phase-up: phase-up 0.6s ease-out;
   --animate-pulse-soft: pulse-soft 1.6s ease-in-out infinite;
 
-  /* 레이드 결산 보상 수령 — 초록 글로우 1회 + ✓ 도장 팝(checkin-stamp 재사용). */
+  /* 레이드 결산 보상 수령 — 초록 글로우 1회. */
   --animate-claim-glow: claim-glow 0.8s ease-out;
-  --animate-claim-stamp: checkin-stamp 0.6s cubic-bezier(0.34, 1.56, 0.64, 1) forwards;
   @keyframes claim-glow {
     0%   { box-shadow: 0 0 0 0 rgba(16, 185, 129, 0); }
     40%  { box-shadow: 0 0 20px 6px rgba(16, 185, 129, 0.6); }

@@ -469,43 +469,29 @@ export function RaidSessionCard({ view: v }: { view: RaidView }) {
                   : 'border-amber-500/60 bg-gradient-to-br from-amber-900/40 to-yellow-900/30'
               } ${justClaimed ? 'animate-claim-glow' : ''}`}
             >
-              {/* 수령 직후 1회 ✓ 도장 팝(연출). 새로고침 후엔 정적 초록 톤만. */}
-              {justClaimed ? (
-                <div className="pointer-events-none absolute inset-0 z-10 flex items-center justify-center">
-                  <span className="animate-claim-stamp text-5xl drop-shadow-[0_0_8px_rgba(16,185,129,0.7)]">
-                    ✅
-                  </span>
-                </div>
-              ) : null}
               <div
                 className={`text-sm font-bold ${
                   rewardClaimed ? 'text-emerald-300' : 'text-amber-300'
                 }`}
               >
-                {rewardClaimed ? '✓ 수령 완료' : '결산 보상'}
+                결산 보상
               </div>
               <div
-                className={`mt-1.5 text-[12px] text-zinc-100 ${rewardClaimed ? 'opacity-70' : ''}`}
+                className={`mt-1.5 flex flex-wrap items-center justify-center gap-x-2.5 gap-y-0.5 text-[12px] text-zinc-100 ${
+                  rewardClaimed ? 'opacity-70' : ''
+                }`}
               >
                 {v.myReward.diamond > 0 ? (
                   <span className="font-mono font-bold">
                     💎 {v.myReward.diamond.toLocaleString()}
                   </span>
                 ) : null}
-                {Object.entries(v.myReward.boxes).some(([, n]) => n > 0) ? (
-                  <span className="text-zinc-300">
-                    {v.myReward.diamond > 0 ? ' · ' : ''}보급상자(
-                    {Object.entries(v.myReward.boxes)
-                      .filter(([, n]) => n > 0)
-                      .map(([s, n], i) => (
-                        <span key={s}>
-                          {i > 0 ? ', ' : ''}
-                          {SLOT_LABEL[s as SupplySlot]} {n}
-                        </span>
-                      ))}
-                    )
+                {(['weapon', 'armor', 'accessory'] as SupplySlot[]).map((s) => (
+                  <span key={s}>
+                    {SLOT_EMOJI[s]} {SLOT_LABEL[s]}{' '}
+                    <span className="font-mono font-bold">{v.myReward?.boxes[s] ?? 0}</span>
                   </span>
-                ) : null}
+                ))}
               </div>
               <button
                 type="button"
@@ -517,7 +503,7 @@ export function RaidSessionCard({ view: v }: { view: RaidView }) {
                     : 'bg-gradient-to-r from-amber-500 to-yellow-500 text-amber-950 shadow-lg shadow-amber-900/40 active:scale-95 hover:brightness-110'
                 }`}
               >
-                {rewardClaimed ? '✓ 수령 완료' : '보상 받기'}
+                {rewardClaimed ? '수령 완료' : '보상 받기'}
               </button>
             </div>
           )

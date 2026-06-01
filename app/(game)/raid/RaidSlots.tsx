@@ -34,7 +34,10 @@ export type RaidSlotCell =
       raidId: string;
       bossCode: RaidBoss;
       diamond: number;
-      boxTotal: number;
+      boxes: { weapon: number; armor: number; accessory: number };
+      phasesCleared: number;
+      myRank: number;
+      participantCount: number;
     };
 
 function Countdown({ iso }: { iso: string }) {
@@ -126,8 +129,19 @@ export function RaidSlots({
                     </span>
                   </span>
                   <span className="mt-0.5 flex flex-wrap gap-x-2 gap-y-0.5 text-[10px] text-amber-200">
+                    <span>
+                      페이즈 <span className="font-mono font-bold">{s.phasesCleared}</span>
+                    </span>
+                    <span>
+                      내 순위{' '}
+                      <span className="font-mono font-bold">
+                        {s.myRank}/{s.participantCount}
+                      </span>
+                    </span>
                     {s.diamond > 0 ? <span>💎 {s.diamond.toLocaleString('ko-KR')}</span> : null}
-                    {s.boxTotal > 0 ? <span>📦 {s.boxTotal}</span> : null}
+                    <span>
+                      ⚔️{s.boxes.weapon} 🛡️{s.boxes.armor} 💍{s.boxes.accessory}
+                    </span>
                   </span>
                 </span>
               </Link>
