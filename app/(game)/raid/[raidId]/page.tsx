@@ -94,7 +94,6 @@ export default async function RaidDetail({ params }: { params: Promise<{ raidId:
     const [rw] = await withTimeout(
       db
         .select({
-          baseDiamond: raidRewards.baseDiamond,
           phaseDiamond: raidRewards.phaseDiamond,
           boxes: raidRewards.boxes,
           claimedAt: raidRewards.claimedAt,
@@ -107,7 +106,7 @@ export default async function RaidDetail({ params }: { params: Promise<{ raidId:
     ).catch(() => []);
     if (rw) {
       myReward = {
-        diamond: Number(rw.baseDiamond) + Number(rw.phaseDiamond),
+        diamond: Number(rw.phaseDiamond),
         boxes: rw.boxes,
         claimed: rw.claimedAt != null,
       };

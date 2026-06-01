@@ -48,7 +48,6 @@ export default async function RaidPage() {
       .select({
         raidId: raidRewards.raidId,
         bossCode: raids.bossCode,
-        baseDiamond: raidRewards.baseDiamond,
         phaseDiamond: raidRewards.phaseDiamond,
         boxes: raidRewards.boxes,
       })
@@ -110,7 +109,7 @@ export default async function RaidPage() {
     kind: 'pending_claim',
     raidId: p.raidId.toString(),
     bossCode: p.bossCode as RaidBoss,
-    diamond: Number(p.baseDiamond) + Number(p.phaseDiamond),
+    diamond: Number(p.phaseDiamond),
     boxTotal: (p.boxes.weapon ?? 0) + (p.boxes.armor ?? 0) + (p.boxes.accessory ?? 0),
   }));
   const cells: RaidSlotCell[] = [...activeCells, ...pendingCells];

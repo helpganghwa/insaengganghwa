@@ -98,9 +98,7 @@ export const raidRewards = pgTable(
     userId: uuid('user_id')
       .notNull()
       .references(() => profiles.id, { onDelete: 'cascade' }),
-    /** 1회+ 공격 시 100. */
-    baseDiamond: bigint('base_diamond', { mode: 'bigint' }).notNull().default(sql`0`),
-    /** 페이즈 추첨 50%→100 합. */
+    /** 페이즈 돌파 추첨(50%) 다이아 합. */
     phaseDiamond: bigint('phase_diamond', { mode: 'bigint' }).notNull().default(sql`0`),
     /** 슬롯별 지급 보급 상자 수 { weapon, armor, accessory }. */
     boxes: jsonb('boxes').$type<{ weapon: number; armor: number; accessory: number }>().notNull(),

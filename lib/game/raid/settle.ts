@@ -4,7 +4,6 @@ import { and, eq, gte, sql } from 'drizzle-orm';
 
 import { db } from '@/lib/db/client';
 import { raids, raidParticipants, raidRewards } from '@/lib/db/schema/raid';
-import { RAID_BASE_PARTICIPATION_DIAMOND } from '@/lib/game/balance';
 import { sendPushToUsers } from '@/lib/push/send';
 import { aggregatePhaseDrops, raidPhasesCleared } from './drops';
 import { RAID_BOSSES } from './bosses';
@@ -60,7 +59,6 @@ export async function settleRaid(
         .values({
           raidId,
           userId: w.userId,
-          baseDiamond: BigInt(RAID_BASE_PARTICIPATION_DIAMOND),
           phaseDiamond: BigInt(drops.diamond),
           boxes: drops.boxes,
         })

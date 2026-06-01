@@ -29,7 +29,6 @@ import {
   RAID_CRIT_MULT,
   RAID_DAMAGE_VARIANCE,
   RAID_DAMAGE_K,
-  RAID_BASE_PARTICIPATION_DIAMOND,
   RAID_PHASE_DROP_DIAMOND,
   RAID_PHASE_DROP_DIAMOND_RATE_BP,
   GEM_TO_MS,
@@ -181,9 +180,8 @@ export default function ProbabilityPage() {
           ))}
         </Table>
         <P>
-          추가 공격 비용 = 50 × ⌈n/10⌉ 다이아 (10번 단위 계단). 보상: 1회 이상 공격 참여 시 기본{' '}
-          {RAID_BASE_PARTICIPATION_DIAMOND}다이아. 페이즈 돌파마다 참여 전원 1회 추첨 —{' '}
-          {pct(RAID_PHASE_DROP_DIAMOND_RATE_BP)} 다이아{' '}
+          추가 공격 비용 = 50 × ⌈n/10⌉ 다이아 (10번 단위 계단). 보상: 페이즈 돌파마다 참여 전원 1회
+          추첨 — {pct(RAID_PHASE_DROP_DIAMOND_RATE_BP)} 다이아{' '}
           {RAID_PHASE_DROP_DIAMOND.toLocaleString('ko-KR')}개 /{' '}
           {pct(10000 - RAID_PHASE_DROP_DIAMOND_RATE_BP)} 슬롯 무작위 보급 상자 1개(무기/방어구/장신구
           각 1/3 균등).

@@ -287,10 +287,6 @@
 
 - 클릭/펀널 상세는 PostHog. DB는 전환·보상 멱등만 보장
 
-### 8.3 share_reward_claims (1일 1회 100다이아)
-
-`user_id` · `kst_date` date — PK `(user_id, kst_date)`. 존재 = 당일 수령 완료(BALANCE §6.3)
-
 ---
 
 ## 9. 결제 / IAP / 본인인증 (REGULATORY)

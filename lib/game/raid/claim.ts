@@ -29,7 +29,6 @@ export function claimRaidReward(input: {
     const [reward] = await tx
       .select({
         id: raidRewards.id,
-        baseDiamond: raidRewards.baseDiamond,
         phaseDiamond: raidRewards.phaseDiamond,
         boxes: raidRewards.boxes,
         claimedAt: raidRewards.claimedAt,
@@ -54,7 +53,7 @@ export function claimRaidReward(input: {
       .returning({ id: raidRewards.id });
     if (stamped.length === 0) throw new RaidError('REWARD_ALREADY_CLAIMED');
 
-    const totalDiamond = Number(reward.baseDiamond) + Number(reward.phaseDiamond);
+    const totalDiamond = Number(reward.phaseDiamond);
     if (totalDiamond > 0) {
       await tx
         .update(profiles)
