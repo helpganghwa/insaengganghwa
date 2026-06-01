@@ -4,6 +4,8 @@ import { useState, useTransition } from 'react';
 import { useRouter } from 'next/navigation';
 
 import { TranscendSprite } from '@/components/TranscendSprite';
+import { useDiamond } from '@/components/DiamondContext';
+import * as haptic from '@/lib/game/haptic';
 import { formatCompactKR } from '@/lib/ui/format-number';
 import type { Slot } from '@/lib/db/schema/equipment';
 
@@ -42,8 +44,10 @@ export function CreateProfileForm({
   activeJob: ActiveJob;
 }) {
   const router = useRouter();
+  const { optimisticAdjust: adjustDiamond } = useDiamond();
   const [gender, setGender] = useState<'female' | 'male'>('female');
   const [confirm, setConfirm] = useState(false);
+  const [submitted, setSubmitted] = useState(false); // 낙관: 제출 직후 ⏳ 즉시 표시
   const [pending, startTransition] = useTransition();
 
   const balance = BigInt(diamond);
@@ -59,9 +63,15 @@ export function CreateProfileForm({
       return;
     }
     setConfirm(false);
+    // 낙관 업데이트: 헤더 다이아 즉시 차감 + ⏳ 처리중 카드 즉시 노출. 실패 시 롤백.
+    haptic.success();
+    adjustDiamond(-BigInt(price));
+    setSubmitted(true);
     startTransition(async () => {
       const r = await submitProfileJob(gender);
       if (r.status === 'error') {
+        adjustDiamond(BigInt(price));
+        setSubmitted(false);
         alert(r.message);
         return;
       }
@@ -69,13 +79,12 @@ export function CreateProfileForm({
     });
   };
 
-  if (inProgress) {
+  if (inProgress || submitted) {
+    const statusText = activeJob ? (STATUS_LABEL[activeJob.status] ?? '처리 중') : '요청 중';
     return (
       <div className="rounded-2xl border border-amber-300 bg-amber-50 p-4 text-center dark:border-amber-700/50 dark:bg-amber-950/30">
         <div className="text-2xl">⏳</div>
-        <div className="mt-1 text-sm font-semibold">
-          아바타 {STATUS_LABEL[activeJob!.status] ?? '처리 중'}
-        </div>
+        <div className="mt-1 text-sm font-semibold">아바타 {statusText}</div>
         <p className="mt-1 text-xs text-zinc-500">
           보통 몇 분 정도 걸려요. 완료되면 알림과 우편함으로 알려드릴게요.
         </p>

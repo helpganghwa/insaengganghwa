@@ -3,6 +3,7 @@
 import { useRef, useState, useTransition } from 'react';
 import { useRouter } from 'next/navigation';
 
+import * as haptic from '@/lib/game/haptic';
 import { setActiveDirection, setActiveProfile, deleteProfile } from './actions';
 
 type ProfileItem = {
@@ -88,14 +89,19 @@ export function ProfileSelector({
   // 적용 → 선택 캐릭터·방향을 한 번에 커밋.
   const activeNow = list.find((p) => p.id === activeProfileId);
   const dirty = selectedId !== activeProfileId || dir !== (activeNow?.activeDirection ?? '');
-  const apply = () =>
+  const apply = () => {
+    haptic.success(); // 낙관: 탭 즉시 피드백
     startTransition(async () => {
-      const r1 = await setActiveProfile(selectedId);
+      // 두 갱신은 독립 → 병렬(왕복 2→1). 커밋 후 /me로 이동(서버 권위 반영).
+      const [r1, r2] = await Promise.all([
+        setActiveProfile(selectedId),
+        setActiveDirection(selectedId, dir),
+      ]);
       if (r1.status === 'error') return alert(r1.message);
-      const r2 = await setActiveDirection(selectedId, dir);
       if (r2.status === 'error') return alert(r2.message);
       router.push('/me');
     });
+  };
 
   const doDelete = () =>
     startTransition(async () => {
@@ -125,6 +131,44 @@ export function ProfileSelector({
           onPointerUp={endDrag}
           onPointerCancel={endDrag}
         >
+          {/* 삭제 — 우상단 코너(마지막 1개는 숨김). 스와이프 핸들러로 전파 차단. */}
+          {list.length > 1 ? (
+            <div
+              className="absolute right-1.5 top-1.5 z-10"
+              onPointerDown={(e) => e.stopPropagation()}
+            >
+              {confirmDelete ? (
+                <div className="flex items-center gap-1 rounded-full bg-black/65 p-0.5 backdrop-blur-sm">
+                  <button
+                    type="button"
+                    onClick={() => setConfirmDelete(false)}
+                    disabled={pending}
+                    className="rounded-full px-2 py-1 text-[11px] font-medium text-white/80"
+                  >
+                    취소
+                  </button>
+                  <button
+                    type="button"
+                    onClick={doDelete}
+                    disabled={pending}
+                    className="rounded-full bg-red-600 px-2.5 py-1 text-[11px] font-bold text-white"
+                  >
+                    삭제
+                  </button>
+                </div>
+              ) : (
+                <button
+                  type="button"
+                  onClick={() => setConfirmDelete(true)}
+                  disabled={pending}
+                  aria-label="선택한 아바타 삭제"
+                  className="flex h-8 w-8 items-center justify-center rounded-full bg-black/50 text-base text-white/90 backdrop-blur-sm transition active:scale-95"
+                >
+                  🗑
+                </button>
+              )}
+            </div>
+          ) : null}
           {/* 발밑 타원 그림자 */}
           <div className="pointer-events-none absolute bottom-[6%] left-1/2 h-[6%] w-1/2 -translate-x-1/2 rounded-[50%] bg-black/45 blur-[6px]" />
           {ROT_ORDER.map((d) =>
@@ -190,37 +234,6 @@ export function ProfileSelector({
       >
         {!dirty ? '현재 대표 아바타' : '이 아바타로 적용'}
       </button>
-
-      {/* 삭제 */}
-      {confirmDelete ? (
-        <div className="flex gap-2">
-          <button
-            type="button"
-            onClick={() => setConfirmDelete(false)}
-            disabled={pending}
-            className="flex-1 rounded-xl border border-zinc-200 py-3 text-sm dark:border-zinc-800"
-          >
-            취소
-          </button>
-          <button
-            type="button"
-            onClick={doDelete}
-            disabled={pending}
-            className="flex-1 rounded-xl bg-red-600 py-3 text-sm font-semibold text-white"
-          >
-            삭제 확인
-          </button>
-        </div>
-      ) : (
-        <button
-          type="button"
-          onClick={() => setConfirmDelete(true)}
-          disabled={pending}
-          className="w-full rounded-xl py-3 text-sm text-red-500"
-        >
-          선택한 아바타 삭제
-        </button>
-      )}
     </div>
   );
 }
