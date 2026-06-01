@@ -21,6 +21,9 @@ export type EnhanceReadyItem = {
   fromLevel: number;
   targetLevel: number;
   itemKo: string;
+  /** 슬롯 단위 dedupe 키(2026-06-01) — 묶음 모드에서 같은 (slot, lane) 사이클 시 교체. */
+  slot: 'weapon' | 'armor' | 'accessory';
+  slotLane: number;
 };
 
 function describeOne(item: EnhanceReadyItem): { title: string; body: string } {
@@ -53,7 +56,12 @@ export async function appendEnhanceReady(
     return;
   }
 
-  // batched — push_pending 누적, push-flush cron이 30분 후 묶어 발송.
+  // batched — push_pending 누적, push-flush cron이 30분/60분 후 묶어 발송.
+  //
+  // dedupe(2026-06-01): 같은 (slot, slot_lane) 항목이 items에 이미 있으면 제거하고
+  //   새 항목으로 교체. 저레벨 cycling 시 같은 슬롯이 윈도 안에서 여러 번
+  //   완료해도 카운트가 6(슬롯)을 초과하지 않음.
+  // first_at은 INSERT 시점에만 set — 윈도 시작점 유지(ON CONFLICT는 미수정).
   const itemJson = JSON.stringify(item);
   await db.execute(sql`
     insert into push_pending (user_id, category, items, first_at)
@@ -64,7 +72,15 @@ export async function appendEnhanceReady(
       now()
     )
     on conflict (user_id, category) do update
-      set items = push_pending.items || ${itemJson}::jsonb,
-          updated_at = now()
+      set items = coalesce(
+        (select jsonb_agg(elem)
+         from jsonb_array_elements(push_pending.items) elem
+         where not (
+           elem->>'slot' = ${item.slot}
+           and (elem->>'slotLane')::int = ${item.slotLane}
+         )),
+        '[]'::jsonb
+      ) || jsonb_build_array(${itemJson}::jsonb),
+      updated_at = now()
   `);
 }

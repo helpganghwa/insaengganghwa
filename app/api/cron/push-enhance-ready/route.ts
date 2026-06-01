@@ -41,6 +41,8 @@ type ReadyRow = {
   from_level: number;
   target_level: number;
   item_ko: string;
+  slot: 'weapon' | 'armor' | 'accessory';
+  slot_lane: number;
 };
 
 export async function GET(req: Request) {
@@ -66,12 +68,14 @@ export async function GET(req: Request) {
       update enhancement_jobs
       set push_sent = true
       where id in (select id from target)
-      returning id, user_id, from_level, target_level, equipment_instance_id
+      returning id, user_id, from_level, target_level, equipment_instance_id, slot, slot_lane
     )
     select u.id::text as job_id,
            u.user_id::text as user_id,
            u.from_level,
            u.target_level,
+           u.slot::text as slot,
+           u.slot_lane as slot_lane,
            ci.name as item_ko
     from updated u
     join equipment_instances ei on ei.id = u.equipment_instance_id
@@ -92,6 +96,8 @@ export async function GET(req: Request) {
         fromLevel: r.from_level,
         targetLevel: r.target_level,
         itemKo: r.item_ko,
+        slot: r.slot,
+        slotLane: r.slot_lane,
       });
       sent++;
     } catch (e) {
