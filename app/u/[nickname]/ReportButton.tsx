@@ -35,7 +35,7 @@ export function ReportButton({ profileId }: { profileId: string }) {
       <button
         type="button"
         onClick={() => setOpen(true)}
-        className="flex w-full items-center justify-center rounded-xl border-2 border-zinc-700 bg-transparent py-2.5 text-sm font-semibold text-zinc-300 transition active:scale-[0.98] hover:bg-zinc-900/40"
+        className="flex w-full items-center justify-center rounded-xl bg-transparent py-2.5 text-sm font-semibold text-zinc-400 transition active:scale-[0.98] hover:bg-zinc-900/40"
       >
         신고
       </button>

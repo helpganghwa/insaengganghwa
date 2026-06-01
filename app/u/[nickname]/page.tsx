@@ -254,7 +254,7 @@ export default async function PublicProfilePage({
       {/* ── 히어로: 닉네임(머리 위) + 캐릭터 풀블리드 + 그라데이션 ── */}
       <section className="relative h-[220px] overflow-hidden bg-gradient-to-b from-amber-900/30 via-zinc-900 to-zinc-950">
         {data.charImg ? (
-          <div className="absolute inset-0 flex items-end justify-center pb-4">
+          <div className="absolute inset-0 flex items-end justify-center pb-[6px]">
             <CharacterStage charSrc={data.charImg} className="aspect-[2/3] h-full" />
           </div>
         ) : (
