@@ -246,36 +246,27 @@ function fmtCompact(n: number): string {
 }
 
 type StatTone = 'live' | 'success' | 'hold' | 'down';
-const TONE: Record<StatTone, { num: string; dot: string; label: string }> = {
-  live: { num: 'text-amber-200', dot: 'bg-amber-400', label: 'text-amber-300/80' },
-  success: { num: 'text-emerald-200', dot: 'bg-emerald-400', label: 'text-emerald-300/80' },
-  hold: { num: 'text-zinc-200', dot: 'bg-zinc-400', label: 'text-zinc-400' },
-  down: { num: 'text-rose-200', dot: 'bg-rose-400', label: 'text-rose-300/80' },
+const TONE: Record<StatTone, { num: string; label: string }> = {
+  live: { num: 'text-amber-200', label: 'text-amber-300/80' },
+  success: { num: 'text-emerald-200', label: 'text-emerald-300/80' },
+  hold: { num: 'text-zinc-200', label: 'text-zinc-400' },
+  down: { num: 'text-rose-200', label: 'text-rose-300/80' },
 };
 
 function StatTile({
   tone,
   value,
   label,
-  pulse,
 }: {
   tone: StatTone;
   value: string;
   label: string;
-  pulse?: boolean;
 }) {
   const t = TONE[tone];
   return (
-    <div className="flex flex-1 flex-col items-center gap-0.5 px-1">
-      <div className="flex items-center gap-1">
-        <span
-          className={`inline-block h-1.5 w-1.5 rounded-full ${t.dot} ${
-            pulse ? 'animate-pulse' : ''
-          }`}
-        />
-        <span className={`font-mono text-[15px] font-bold tabular-nums ${t.num}`}>{value}</span>
-      </div>
+    <div className="flex flex-1 flex-col items-center gap-1 px-1">
       <span className={`text-[9px] font-medium tracking-wide ${t.label}`}>{label}</span>
+      <span className={`font-mono text-[13px] font-bold tabular-nums ${t.num}`}>{value}</span>
     </div>
   );
 }
@@ -304,10 +295,10 @@ async function EnhanceStatsCard() {
   const s = await getEnhanceLive();
   return (
     <StatsShell>
-      <StatTile tone="live" value={s.activeUsers.toLocaleString('ko-KR')} label="명 강화중" pulse />
-      <StatTile tone="success" value={fmtCompact(s.success)} label="누적 성공" />
-      <StatTile tone="hold" value={fmtCompact(s.hold)} label="누적 유지" />
-      <StatTile tone="down" value={fmtCompact(s.down)} label="누적 하락" />
+      <StatTile tone="live" value={s.activeUsers.toLocaleString('ko-KR')} label="강화중인 유저" />
+      <StatTile tone="success" value={fmtCompact(s.success)} label="누적 강화 성공" />
+      <StatTile tone="hold" value={fmtCompact(s.hold)} label="누적 강화 유지" />
+      <StatTile tone="down" value={fmtCompact(s.down)} label="누적 강화 하락" />
     </StatsShell>
   );
 }
@@ -315,10 +306,10 @@ async function EnhanceStatsCard() {
 function EnhanceStatsFallback() {
   return (
     <StatsShell>
-      <StatTile tone="live" value="—" label="명 강화중" />
-      <StatTile tone="success" value="—" label="누적 성공" />
-      <StatTile tone="hold" value="—" label="누적 유지" />
-      <StatTile tone="down" value="—" label="누적 하락" />
+      <StatTile tone="live" value="—" label="강화중인 유저" />
+      <StatTile tone="success" value="—" label="누적 강화 성공" />
+      <StatTile tone="hold" value="—" label="누적 강화 유지" />
+      <StatTile tone="down" value="—" label="누적 강화 하락" />
     </StatsShell>
   );
 }
