@@ -246,46 +246,86 @@ function fmtCompact(n: number): string {
 }
 
 type StatTone = 'live' | 'success' | 'hold' | 'down';
-const TONE: Record<StatTone, { num: string; label: string }> = {
-  live: { num: 'text-amber-200', label: 'text-amber-300/80' },
-  success: { num: 'text-emerald-200', label: 'text-emerald-300/80' },
-  hold: { num: 'text-zinc-200', label: 'text-zinc-400' },
-  down: { num: 'text-rose-200', label: 'text-rose-300/80' },
+const TONE: Record<StatTone, { num: string; label: string; glow?: string }> = {
+  live: {
+    num: 'text-amber-100',
+    label: 'text-amber-300/90',
+    glow: 'drop-shadow-[0_0_6px_rgba(251,191,36,0.45)]',
+  },
+  success: { num: 'text-emerald-100', label: 'text-emerald-300/85' },
+  hold: { num: 'text-zinc-100', label: 'text-zinc-400' },
+  down: { num: 'text-rose-100', label: 'text-rose-300/85' },
 };
 
-function StatTile({
-  tone,
-  value,
-  label,
-}: {
-  tone: StatTone;
-  value: string;
-  label: string;
-}) {
+function StatTile({ tone, value, label }: { tone: StatTone; value: string; label: string }) {
   const t = TONE[tone];
   return (
-    <div className="flex flex-1 flex-col items-center gap-1 px-1">
-      <span className={`text-[9px] font-medium tracking-wide ${t.label}`}>{label}</span>
-      <span className={`font-mono text-[13px] font-bold tabular-nums ${t.num}`}>{value}</span>
+    <div className="flex flex-1 flex-col items-center gap-1 px-1 py-0.5">
+      <span
+        className={`text-[9px] font-medium tracking-wide ${t.label} whitespace-nowrap`}
+      >
+        {label}
+      </span>
+      <span
+        className={`font-mono text-[13px] font-bold tabular-nums ${t.num} ${t.glow ?? ''}`}
+      >
+        {value}
+      </span>
     </div>
   );
 }
 
+/**
+ * 다듬은 디자인(2026-06-01):
+ *  - 카드 ring + 외곽 border 이중 레이어로 입체감
+ *  - 좌상단 amber corner 액센트 + 중앙 상단 glow blur(깊이)
+ *  - 좌측 컬러바(amber 그라데이션)로 "라이브" 시각 단서
+ *  - 헤더: 점 + 라벨 + 우측 '실시간' ping 펄스 뱃지
+ *  - 4타일 사이 얇은 그라데이션 divider(위·아래는 fade, 중간만 진함)
+ *  - 라이브 타일 amber 미세 드롭쉐도우로 자연스러운 강조
+ */
 function StatsShell({ children }: { children: React.ReactNode }) {
   return (
-    <section className="relative overflow-hidden rounded-xl border border-zinc-800 bg-gradient-to-br from-zinc-900 via-zinc-900/70 to-zinc-950 p-2.5 shadow-lg shadow-black/30">
-      {/* 위쪽 미세 글로우 — 깊이감. */}
+    <section className="relative overflow-hidden rounded-2xl border border-zinc-800/80 bg-gradient-to-b from-zinc-900/95 via-zinc-900/70 to-zinc-950 p-3 shadow-lg shadow-black/40 ring-1 ring-white/[0.04]">
+      {/* 중앙 상단 amber 글로우 — 깊이감 */}
       <div
-        className="pointer-events-none absolute -top-8 left-1/2 h-16 w-3/4 -translate-x-1/2 rounded-full bg-amber-500/10 blur-2xl"
+        className="pointer-events-none absolute -top-10 left-1/2 h-20 w-2/3 -translate-x-1/2 rounded-full bg-amber-500/[0.08] blur-3xl"
         aria-hidden
       />
+      {/* 좌상단 corner 액센트 — 따뜻한 입사광 */}
+      <div
+        className="pointer-events-none absolute left-0 top-0 h-14 w-14 rounded-tl-2xl bg-gradient-to-br from-amber-500/[0.12] to-transparent"
+        aria-hidden
+      />
+      {/* 좌측 컬러 바 — '라이브'를 시각적으로 anchor */}
+      <div
+        className="pointer-events-none absolute left-0 top-1/2 h-8 w-[2px] -translate-y-1/2 rounded-r bg-gradient-to-b from-transparent via-amber-400/70 to-transparent"
+        aria-hidden
+      />
+
       <div className="relative">
-        <div className="mb-2 flex items-baseline justify-between">
-          <div className="text-[10px] font-semibold tracking-wide text-zinc-400">
-            지금 인생강화는
+        <div className="mb-2.5 flex items-center justify-between">
+          <div className="flex items-center gap-1.5">
+            <span className="h-1 w-1 rounded-full bg-amber-400/80" aria-hidden />
+            <span className="text-[10px] font-semibold tracking-[0.08em] text-zinc-300">
+              지금 인생강화는
+            </span>
+          </div>
+          <div className="flex items-center gap-1">
+            <span className="relative flex h-1.5 w-1.5">
+              <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-amber-400/60" />
+              <span className="relative inline-flex h-1.5 w-1.5 rounded-full bg-amber-400" />
+            </span>
+            <span className="text-[8.5px] font-bold uppercase tracking-[0.14em] text-amber-300/80">
+              실시간
+            </span>
           </div>
         </div>
-        <div className="flex divide-x divide-zinc-800/80">{children}</div>
+
+        {/* 4타일 — 사이에 그라데이션 vertical divider(중간만 진함). */}
+        <div className="flex items-stretch [&>*+*]:relative [&>*+*]:before:absolute [&>*+*]:before:left-0 [&>*+*]:before:top-1/2 [&>*+*]:before:h-[80%] [&>*+*]:before:w-px [&>*+*]:before:-translate-y-1/2 [&>*+*]:before:bg-gradient-to-b [&>*+*]:before:from-transparent [&>*+*]:before:via-zinc-700/60 [&>*+*]:before:to-transparent">
+          {children}
+        </div>
       </div>
     </section>
   );
