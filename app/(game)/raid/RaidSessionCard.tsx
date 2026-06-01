@@ -10,7 +10,7 @@ import {
   type SupplySlot,
 } from '@/lib/game/balance';
 import { aggregatePhaseDrops } from '@/lib/game/raid/drops';
-import { RAID_BOSSES, type RaidBoss } from '@/lib/game/raid/bosses';
+import { RAID_BOSSES, pickRaidShareCopy, type RaidBoss } from '@/lib/game/raid/bosses';
 import { BossSprite } from '@/components/BossSprite';
 import { getBossBg, getBossBgClass } from '@/lib/game/raid/boss-sprites';
 import { assetUrl } from '@/lib/asset-versions';
@@ -346,7 +346,6 @@ export function RaidSessionCard({ view: v }: { view: RaidView }) {
     haptic.tap();
     const origin = window.location.origin;
     const url = `${origin}/s/${v.shareCode}`;
-    // 자랑하기(BoastModal)와 동일 — 카카오톡 공유. 미init 시 링크 복사 fallback.
     const k = (
       window as unknown as {
         Kakao?: {
@@ -356,22 +355,28 @@ export function RaidSessionCard({ view: v }: { view: RaidView }) {
       }
     ).Kakao;
     if (k && k.isInitialized()) {
-      const bg = getBossBg(v.bossCode);
+      // 보스 카피 — raidId 해시로 결정론 선택(동일 레이드는 일관된 문구).
+      const copy = pickRaidShareCopy(v.bossCode, Number(v.raidId));
+      // 미리 합성된 정적 OG(1200×630, public/og/raid/<boss>.png) — 동적 OG route 불필요.
+      const imageUrl = `${origin}/og/raid/${v.bossCode}.png?v=${v.raidId}`;
       k.Share.sendDefault({
         objectType: 'feed',
         content: {
-          title: `⚔️ ${boss.name} 레이드`,
-          description: `함께 ${boss.name}을(를) 토벌하고 보상을 나눠요!`,
-          imageUrl: bg ? `${origin}${assetUrl(bg)}` : `${origin}/icons/icon-512.png`,
+          title: copy.title,
+          description: copy.body,
+          imageUrl,
+          imageWidth: 1200,
+          imageHeight: 630,
           link: { mobileWebUrl: url, webUrl: url },
         },
         buttons: [{ title: '레이드 참여하기', link: { mobileWebUrl: url, webUrl: url } }],
       });
       return;
     }
+    // 폴백 — SDK 미로드/init 시 링크 복사.
     if (typeof navigator !== 'undefined' && navigator.clipboard) {
       void navigator.clipboard.writeText(url);
-      showResource('🔗', '초대 링크를 복사했어요 (카톡 준비 중)');
+      showResource('🔗', '초대 링크를 복사했어요');
     }
   };
 
