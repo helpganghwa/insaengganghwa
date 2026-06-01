@@ -60,7 +60,7 @@
 - 인덱스: `(user_id, catalog_item_id)` — 제물 후보/중복 조회 / `(user_id, equipped_slot)`
 - 등급·옵션·seed·전투력 컬럼 **없음**. 전투력은 `(enhance_level, transcend_level)`로 런타임 계산(BALANCE §3)
 
-### 2.3 user_codex (도감 — 도감강화합 소스)
+### 2.3 user_codex (도감 — 아이템별 챔피언 랭킹·수집 진척)
 
 | 컬럼 | 타입 | 비고 |
 |------|------|------|
@@ -71,7 +71,7 @@
 | `first_acquired_at` | timestamptz | 도감 해금(미획득=row 없음) |
 
 - PK `(user_id, catalog_item_id)`
-- **도감강화합** = `Σ max_enhance_level`(전 카탈로그) → 총 전투력·합산 강화 랭킹(BALANCE §3.2/3.3)
+- `user_codex`(lifetime)는 **아이템별 챔피언 랭킹**(BALANCE §3.3)과 도감 수집 진척 기록 전용. 전역 랭킹 3종(최고·합산·전투력)과 총 전투력은 모두 **현재 보유 인스턴스**(equipment_instances) 기준이라 lifetime과 분리(하락·분해 즉시 반영, BALANCE §3.2/3.3)
 - 강화 완료 트랜잭션에서 `GREATEST(max_enhance_level, 신규레벨)` upsert. **신규레벨 > 기존 max**일 때만 `max_enhance_reached_at = now()` 동시 갱신(달성 시각 = 그 기록을 처음 세운 때, 이후 하락·재달성과 무관). 신규 row insert 시 default `now()`.
 - **아이템별 랭킹/챔피언**: catalog_item 단위로 `max_enhance_level` DESC, `max_enhance_reached_at` ASC, `user_id` ASC 정렬 → Top10. 1위 = 그 아이템 **챔피언**(단, `max_enhance_level > 0`). 결정적 정렬 — 확률 없음(BALANCE §3.3)
 

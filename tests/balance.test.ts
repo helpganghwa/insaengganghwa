@@ -20,8 +20,8 @@ import {
   transcendBonusBp,
   enhanceBasePower,
   pieceCombatPower,
-  totalCombatPower,
 } from '@/lib/game/balance';
+import { combatPowerFromOwned } from '@/lib/game/equipment/combat-power';
 
 /**
  * 강화 결정 로직(resolveEnhance 핵심 분기) + 초월/전투력 공식 회귀 방지.
@@ -235,11 +235,38 @@ describe('전투력 공식', () => {
     expect(pieceCombatPower(30, 0)).toBe(base);
     expect(pieceCombatPower(30, MAX_TRANSCEND)).toBe(base * 2);
   });
-  it('totalCombatPower: 도감 보너스 0이면 합과 동일', () => {
-    expect(totalCombatPower([100, 200, 300], 0)).toBe(600);
+  it('combatPowerFromOwned: 보유 카탈로그별 개별 전투력 합(착용 무관)', () => {
+    // 서로 다른 카탈로그 3개 → 단순 합. P(30)=1726, P(40)=2625, P(20)=962.
+    const owned = [
+      { catalogItemId: 1, enhanceLevel: 30, transcendLevel: 0 },
+      { catalogItemId: 2, enhanceLevel: 40, transcendLevel: 0 },
+      { catalogItemId: 3, enhanceLevel: 20, transcendLevel: 0 },
+    ];
+    const expected =
+      pieceCombatPower(30, 0) + pieceCombatPower(40, 0) + pieceCombatPower(20, 0);
+    expect(combatPowerFromOwned(owned)).toBe(expected);
   });
-  it('totalCombatPower: 도감 합 N → ×(1 + N×0.005)', () => {
-    // 도감강화합 100 → ×1.5
-    expect(totalCombatPower([100, 200, 300], 100)).toBe(900);
+  it('combatPowerFromOwned: 같은 카탈로그 중복은 최강 1개만 합산', () => {
+    // catalog 1을 2개 보유(+10, +50) → +50만. catalog 2는 +30.
+    const owned = [
+      { catalogItemId: 1, enhanceLevel: 10, transcendLevel: 0 },
+      { catalogItemId: 1, enhanceLevel: 50, transcendLevel: 0 },
+      { catalogItemId: 2, enhanceLevel: 30, transcendLevel: 0 },
+    ];
+    expect(combatPowerFromOwned(owned)).toBe(
+      pieceCombatPower(50, 0) + pieceCombatPower(30, 0),
+    );
+  });
+  it('combatPowerFromOwned: 최강 판정은 개별 전투력 기준(낮은 강화+고초월 > 높은 강화)', () => {
+    // 같은 카탈로그: +49 T10 vs +50 T0 — 전자가 더 강함.
+    const owned = [
+      { catalogItemId: 1, enhanceLevel: 49, transcendLevel: MAX_TRANSCEND },
+      { catalogItemId: 1, enhanceLevel: 50, transcendLevel: 0 },
+    ];
+    expect(pieceCombatPower(49, MAX_TRANSCEND)).toBeGreaterThan(pieceCombatPower(50, 0));
+    expect(combatPowerFromOwned(owned)).toBe(pieceCombatPower(49, MAX_TRANSCEND));
+  });
+  it('combatPowerFromOwned: 빈 보유 = 0', () => {
+    expect(combatPowerFromOwned([])).toBe(0);
   });
 });

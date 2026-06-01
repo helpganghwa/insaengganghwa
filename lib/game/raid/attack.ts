@@ -1,6 +1,6 @@
 import 'server-only';
 
-import { and, eq, sql, isNotNull } from 'drizzle-orm';
+import { and, eq, sql } from 'drizzle-orm';
 
 import { db } from '@/lib/db/client';
 import { profiles } from '@/lib/db/schema/profiles';
@@ -13,7 +13,7 @@ import {
   computeRaidDamage,
   raidExtraAttackCost,
 } from '@/lib/game/balance';
-import { combatPowerFromRows } from '@/lib/game/equipment/combat-power';
+import { combatPowerFromOwned } from '@/lib/game/equipment/combat-power';
 import { RaidError } from './open';
 import { raidPhasesCleared } from './drops';
 
@@ -25,19 +25,16 @@ async function userTotalCP(
   tx: Parameters<Parameters<typeof db.transaction>[0]>[0],
   userId: string,
 ): Promise<number> {
-  const equipped = await tx
+  // 보유 전체(착용 무관) → 카탈로그별 최강 1개 합산(BALANCE §3.2).
+  const owned = await tx
     .select({
+      catalogItemId: equipmentInstances.catalogItemId,
       enhanceLevel: equipmentInstances.enhanceLevel,
       transcendLevel: equipmentInstances.transcendLevel,
     })
     .from(equipmentInstances)
-    .where(and(eq(equipmentInstances.userId, userId), isNotNull(equipmentInstances.equippedSlot)));
-  const [{ s }] = await tx
-    // 전투력 보너스 계수 = 현재 보유 인스턴스 enhance_level 합(2026-05-31 정책).
-    .select({ s: sql<number>`coalesce(sum(${equipmentInstances.enhanceLevel}), 0)::int` })
-    .from(equipmentInstances)
     .where(eq(equipmentInstances.userId, userId));
-  return combatPowerFromRows(equipped, s);
+  return combatPowerFromOwned(owned);
 }
 
 /** 레이드 1회 공격 — 미스 없음·크리 5%/×1.5·뎀 ±30%·캡 없음 (BALANCE §5.3). */

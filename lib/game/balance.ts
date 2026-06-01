@@ -288,17 +288,8 @@ export function pieceCombatPower(enhanceLevel: number, transcendLevel: number): 
   return Math.round(base * (1 + transcendBonusBp(transcendLevel) / 10000));
 }
 
-/** §3.2 도감 보너스 계수 (총 전투력 = (착용 합) × (1 + 도감강화합 × 0.005)). */
-export const CODEX_BONUS_COEFF = 0.005;
-
-/**
- * §3.2 총 전투력 = (착용 3장비 전투력 합) × (1 + 도감강화합 × 0.005).
- * `codexEnhanceSum` = 도감에 기록된 카탈로그 아이템별 최고 강화 레벨의 합 (SCHEMA §2.3).
- */
-export function totalCombatPower(equippedPieceCPs: readonly number[], codexEnhanceSum: number): number {
-  const sum = equippedPieceCPs.reduce((a, b) => a + b, 0);
-  return Math.round(sum * (1 + Math.max(0, codexEnhanceSum) * CODEX_BONUS_COEFF));
-}
+// 총 전투력(보유 카탈로그 중복 제외 합)은 dedup 그룹핑이 필요해
+// `lib/game/equipment/combat-power.ts`에서 pieceCombatPower로 계산한다.
 
 // ─────────────────────────────────────────────────────────────────────────────
 // §4. 보급 (보급 상자)

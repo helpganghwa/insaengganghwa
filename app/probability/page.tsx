@@ -13,7 +13,6 @@ import {
   transcendBonusBp,
   enhanceBasePower,
   pieceCombatPower,
-  CODEX_BONUS_COEFF,
   DIAMOND_PER_DISENCHANT,
   RAID_OPEN_COST_DIAMOND,
   RAID_MAX_PARTICIPANTS,
@@ -122,7 +121,7 @@ export default function ProbabilityPage() {
       <Sec n="3" title="전투력">
         <P>
           기반 전투력 P = round(10 × (1+강화레벨)^1.5). 개별 장비 전투력 = P × (1 + 초월 보너스). 총
-          전투력 = (착용 3장비 합) × (1 + 도감 강화합 × {CODEX_BONUS_COEFF}).
+          전투력 = 보유한 모든 카탈로그 아이템(중복 제외)의 개별 전투력 합 — 착용 여부 무관.
         </P>
         <Table head={['강화', '기반 전투력', 'T10 적용']}>
           {CP_SAMPLES.map((lv) => (

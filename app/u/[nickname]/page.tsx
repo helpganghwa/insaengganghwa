@@ -2,7 +2,7 @@ import { Suspense, cache } from 'react';
 import Link from 'next/link';
 import { notFound } from 'next/navigation';
 import type { Metadata } from 'next';
-import { and, eq, inArray, isNotNull, sql } from 'drizzle-orm';
+import { and, eq, inArray, isNotNull } from 'drizzle-orm';
 
 import { db } from '@/lib/db/client';
 import { withTimeout } from '@/lib/db/with-timeout';
@@ -10,7 +10,7 @@ import { getSessionUserId } from '@/lib/auth/session';
 import { profiles } from '@/lib/db/schema/profiles';
 import { userProfiles } from '@/lib/db/schema/avatar';
 import { catalogItems, equipmentInstances, type Slot } from '@/lib/db/schema/equipment';
-import { pieceCombatPower, totalCombatPower } from '@/lib/game/balance';
+import { combatPowerFromOwned } from '@/lib/game/equipment/combat-power';
 import { championCatalogIds } from '@/lib/game/codex/ranking';
 import { getMyRanks } from '@/lib/game/leaderboard/queries';
 import { getEnhanceLive } from '@/lib/game/stats/queries';
@@ -64,7 +64,7 @@ const loadProfile = cache(async (nickname: string) => {
   // 이전: 5개를 한 묶음으로 3.5s 가드 → 가장 느린 쿼리(주로 ranks: unstable_cache 콜드
   // ~3s)에 도달하면 _r=null로 전부 비어버려 장비도 안 보였음(2026-06-01 수정).
   // ranks는 이 함수에서 빼고 페이지에서 <Suspense>로 stream(첫 페인트 지연 제거).
-  const [equipped, sumAgg, maxAgg, champSet] = await Promise.all([
+  const [equipped, ownedAll, champSet] = await Promise.all([
     withTimeout(
       db
         .select({
@@ -92,31 +92,26 @@ const loadProfile = cache(async (nickname: string) => {
     }>),
     withTimeout(
       db
-        .select({ s: sql<number>`coalesce(sum(${equipmentInstances.enhanceLevel}),0)::int` })
+        .select({
+          catalogItemId: equipmentInstances.catalogItemId,
+          enhanceLevel: equipmentInstances.enhanceLevel,
+          transcendLevel: equipmentInstances.transcendLevel,
+        })
         .from(equipmentInstances)
         .where(eq(equipmentInstances.userId, prof.id)),
       2000,
-      'u.sum',
-    ).catch(() => [] as { s: number }[]),
-    withTimeout(
-      db
-        .select({ m: sql<number>`coalesce(max(${equipmentInstances.enhanceLevel}),0)::int` })
-        .from(equipmentInstances)
-        .where(eq(equipmentInstances.userId, prof.id)),
-      2000,
-      'u.max',
-    ).catch(() => [] as { m: number }[]),
+      'u.owned',
+    ).catch(
+      () => [] as { catalogItemId: number; enhanceLevel: number; transcendLevel: number }[],
+    ),
     withTimeout(championCatalogIds(prof.id), 2000, 'u.champion').catch(
       () => new Set<number>(),
     ),
   ]);
 
-  const sumEnhance = Number(sumAgg[0]?.s ?? 0);
-  const maxEnhance = Number(maxAgg[0]?.m ?? 0);
-  const total = totalCombatPower(
-    equipped.map((e) => pieceCombatPower(e.enhanceLevel, e.transcendLevel)),
-    sumEnhance,
-  );
+  const sumEnhance = ownedAll.reduce((a, r) => a + r.enhanceLevel, 0);
+  const maxEnhance = ownedAll.reduce((a, r) => Math.max(a, r.enhanceLevel), 0);
+  const total = combatPowerFromOwned(ownedAll);
   const pieces = equipped.map((e) => ({ ...e, isChampion: champSet.has(e.catalogItemId) }));
 
   // 챔피언 아이템(이 플레이어가 1위인 카탈로그) 메타 — sprite/name 표시용.

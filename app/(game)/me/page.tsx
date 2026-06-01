@@ -1,5 +1,5 @@
 import Link from 'next/link';
-import { and, desc, eq, isNotNull, isNull, sql } from 'drizzle-orm';
+import { and, desc, eq, isNotNull, isNull } from 'drizzle-orm';
 
 import { getSessionUserId } from '@/lib/auth/session';
 import { db } from '@/lib/db/client';
@@ -8,7 +8,7 @@ import { profiles } from '@/lib/db/schema/profiles';
 import { catalogItems, equipmentInstances, type Slot } from '@/lib/db/schema/equipment';
 import { userProfiles } from '@/lib/db/schema/avatar';
 import { CharacterStage } from '@/components/CharacterStage';
-import { pieceCombatPower, totalCombatPower } from '@/lib/game/balance';
+import { combatPowerFromOwned } from '@/lib/game/equipment/combat-power';
 import { championCatalogIds } from '@/lib/game/codex/ranking';
 
 import { BoastLauncher } from '@/components/BoastModal';
@@ -61,8 +61,12 @@ export default async function ProfilePage() {
         and(eq(equipmentInstances.userId, userId), isNotNull(equipmentInstances.equippedSlot)),
       ),
     db
-      // 합산 강화 = 현재 보유 인스턴스 enhance_level 합(2026-05-31 정책).
-      .select({ s: sql<number>`coalesce(sum(${equipmentInstances.enhanceLevel}),0)::int` })
+      // 총 전투력용 — 보유 전 인스턴스(착용 무관). 카탈로그 dedup·합산은 앱에서.
+      .select({
+        catalogItemId: equipmentInstances.catalogItemId,
+        enhanceLevel: equipmentInstances.enhanceLevel,
+        transcendLevel: equipmentInstances.transcendLevel,
+      })
       .from(equipmentInstances)
       .where(eq(equipmentInstances.userId, userId)),
     championCatalogIds(userId),
@@ -82,17 +86,13 @@ export default async function ProfilePage() {
   ).catch(() => null);
   const prof = _r?.[0] ?? [];
   const equipped = _r?.[1] ?? [];
-  const codexAgg = _r?.[2] ?? [];
+  const ownedAll = _r?.[2] ?? [];
   const champSet = _r?.[3] ?? new Set<number>();
   const myProfiles = _r?.[4] ?? [];
   const referralStats = _r?.[5] ?? { totalReferrals: 0, totalDiamondEarned: 0, totalBoxEarned: 0 };
 
   const nickname = prof[0]?.nickname ?? '플레이어';
-  const codexSum = Number(codexAgg[0]?.s ?? 0);
-  const total = totalCombatPower(
-    equipped.map((e) => pieceCombatPower(e.enhanceLevel, e.transcendLevel)),
-    codexSum,
-  );
+  const total = combatPowerFromOwned(ownedAll);
   const bySlot = new Map(equipped.map((e) => [e.slot, e]));
 
   const activeProfileId = prof[0]?.activeProfileId ?? null;

@@ -8,12 +8,12 @@ import { withTimeout } from '@/lib/db/with-timeout';
 import { profiles } from '@/lib/db/schema/profiles';
 import { userProfiles } from '@/lib/db/schema/avatar';
 import { equipmentInstances } from '@/lib/db/schema/equipment';
-import { combatPowerFromRows } from '@/lib/game/equipment/combat-power';
+import { combatPowerFromOwned } from '@/lib/game/equipment/combat-power';
 
 /**
  * 랭킹 — BALANCE §3.3. **시즌제 없음·상시 누적·Top 100**.
- * 최고 강화 = 보유 단일 최고 enhance_level / 합산 강화 = Σ user_codex.max_enhance_level /
- * 전투력 = (착용 3합)×(1+도감강화합×0.005) (P(L)는 balance 단일 진실 — combat은 앱 계산).
+ * 최고 강화 = 보유 단일 최고 enhance_level / 합산 강화 = Σ 보유 인스턴스 enhance_level /
+ * 전투력 = 보유 카탈로그(중복 제외) 개별 전투력 합(BALANCE §3.2 — combat은 앱 계산).
  */
 export type LeaderboardMetric = 'max' | 'sum' | 'combat';
 export type LeaderboardEntry = {
@@ -91,35 +91,28 @@ async function sumRows() {
 }
 
 async function combatRows() {
-  // 단일 SQL aggregate — 3 Promise.all + JS 합성 → 1 쿼리(풀 점유 1/3 + 디스크
-  // 1 패스). 첫 캐시 미스 시 무한 로딩 원인이었던 풀 직렬 압력 해소.
+  // 단일 SQL aggregate — 유저별 보유 전 인스턴스를 [catalog, L, T]로 json_agg(풀 점유 1쿼리).
+  // 카탈로그 dedup·최강 선택은 앱에서(pieceCombatPower 단일 진실, SQL 공식 중복 금지).
   const rows = (await db.execute(sql`
-    with eq as (
-      select user_id,
-             coalesce(json_agg(json_build_array(enhance_level, transcend_level)), '[]'::json) as pieces
-      from equipment_instances
-      where equipped_slot is not null
-      group by user_id
-    ),
-    cdx as (
-      -- 전투력 보너스 계수 = **현재 보유 강화합**(2026-05-31 정책 변경). 도감(lifetime)
-      -- 에서 분리. 강화 하락 시 전투력도 같이 변동.
-      select user_id, coalesce(sum(enhance_level), 0)::int as s
-      from equipment_instances
-      group by user_id
-    )
-    select p.id::text as id, p.nickname, coalesce(eq.pieces, '[]'::json) as pieces,
-           coalesce(cdx.s, 0)::int as s
+    select p.id::text as id, p.nickname,
+           coalesce(
+             json_agg(json_build_array(e.catalog_item_id, e.enhance_level, e.transcend_level))
+               filter (where e.user_id is not null),
+             '[]'::json
+           ) as items
     from profiles p
-    left join eq on eq.user_id = p.id
-    left join cdx on cdx.user_id = p.id
-  `)) as unknown as { id: string; nickname: string; pieces: [number, number][]; s: number }[];
+    left join equipment_instances e on e.user_id = p.id
+    group by p.id, p.nickname
+  `)) as unknown as { id: string; nickname: string; items: [number, number, number][] }[];
   return rows.map((r) => ({
     userId: r.id,
     nickname: r.nickname,
-    value: combatPowerFromRows(
-      r.pieces.map(([enhanceLevel, transcendLevel]) => ({ enhanceLevel, transcendLevel })),
-      Number(r.s),
+    value: combatPowerFromOwned(
+      r.items.map(([catalogItemId, enhanceLevel, transcendLevel]) => ({
+        catalogItemId,
+        enhanceLevel,
+        transcendLevel,
+      })),
     ),
   }));
 }
@@ -202,27 +195,18 @@ export async function getMyRanks(userId: string): Promise<MyRanks> {
  * 비용: 본인의 단일 쿼리(equipment + codex)만 추가. ranking은 캐시 60s 그대로.
  */
 export async function getMyRanksAfter(userId: string): Promise<MyRanks> {
-  const [eqRows, cdxAgg] = await Promise.all([
-    db
-      .select({
-        enhanceLevel: equipmentInstances.enhanceLevel,
-        transcendLevel: equipmentInstances.transcendLevel,
-        equippedSlot: equipmentInstances.equippedSlot,
-      })
-      .from(equipmentInstances)
-      .where(eq(equipmentInstances.userId, userId)),
-    db
-      // 합산 강화 = 현재 보유 인스턴스 enhance_level 합(2026-05-31 정책 변경).
-      .select({ s: sql<number>`coalesce(sum(${equipmentInstances.enhanceLevel}),0)::int` })
-      .from(equipmentInstances)
-      .where(eq(equipmentInstances.userId, userId)),
-  ]);
+  // 보유 전 인스턴스 1회 read → max/sum/combat 3 메트릭 모두 산출(캐시 우회).
+  const eqRows = await db
+    .select({
+      catalogItemId: equipmentInstances.catalogItemId,
+      enhanceLevel: equipmentInstances.enhanceLevel,
+      transcendLevel: equipmentInstances.transcendLevel,
+    })
+    .from(equipmentInstances)
+    .where(eq(equipmentInstances.userId, userId));
   const myMax = eqRows.reduce((acc, r) => Math.max(acc, r.enhanceLevel), 0);
-  const mySum = Number(cdxAgg[0]?.s ?? 0);
-  const equipped = eqRows
-    .filter((r) => r.equippedSlot != null)
-    .map((r) => ({ enhanceLevel: r.enhanceLevel, transcendLevel: r.transcendLevel }));
-  const myCombat = combatPowerFromRows(equipped, mySum);
+  const mySum = eqRows.reduce((acc, r) => acc + r.enhanceLevel, 0);
+  const myCombat = combatPowerFromOwned(eqRows);
 
   const [maxR, sumR, combatR] = await Promise.all([
     safeRows('max'),
@@ -241,6 +225,6 @@ export async function getMyRanksAfter(userId: string): Promise<MyRanks> {
   return {
     max: myMax > 0 ? bisect(maxR, myMax) : null,
     sum: mySum > 0 ? bisect(sumR, mySum) : null,
-    combat: equipped.length > 0 ? bisect(combatR, myCombat) : null,
+    combat: eqRows.length > 0 ? bisect(combatR, myCombat) : null,
   };
 }

@@ -84,7 +84,8 @@ export const userCodex = pgTable(
     catalogItemId: integer('catalog_item_id')
       .notNull()
       .references(() => catalogItems.id),
-    /** 해당 아이템 역대 최고 강화. 총 전투력·합산 강화 랭킹 소스(BALANCE §3.2/3.3). */
+    /** 해당 아이템 역대 최고 강화(lifetime). 아이템별 챔피언 랭킹 소스(BALANCE §3.3).
+     *  전역 랭킹(최고/합산/전투력)은 현재 보유 인스턴스 기준이라 이 값과 무관. */
     maxEnhanceLevel: integer('max_enhance_level').notNull().default(0),
     /**
      * 현재 max_enhance_level을 **최초 달성한 시각**. 아이템별 랭킹 동률 타이브레이크
