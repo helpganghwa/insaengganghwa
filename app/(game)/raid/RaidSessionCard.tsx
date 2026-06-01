@@ -2,6 +2,7 @@
 
 import { useEffect, useRef, useState } from 'react';
 import { useRouter } from 'next/navigation';
+import Link from 'next/link';
 
 import {
   RAID_BASE_ATTACKS,
@@ -252,7 +253,7 @@ export function RaidSessionCard({ view: v }: { view: RaidView }) {
     setAttackLore(pick(ATTACK_LORE[v.bossCode]));
     fxKey.current += 1;
     sounds.raidHit();
-    haptic.tap();
+    haptic.hit();
     setFx('hit');
     setTimeout(() => setFx(null), 520);
     void (async () => {
@@ -267,7 +268,7 @@ export function RaidSessionCard({ view: v }: { view: RaidView }) {
       const id = (fxKey.current += 1);
       if (r.isCrit) {
         sounds.raidCrit();
-        haptic.success();
+        haptic.crit();
         setFx('crit');
         setTimeout(() => setFx(null), 520);
       }
@@ -475,7 +476,7 @@ export function RaidSessionCard({ view: v }: { view: RaidView }) {
             </div>
           ) : (
             <div className="rounded-xl border-2 border-amber-500/60 bg-gradient-to-br from-amber-900/40 to-yellow-900/30 p-3 text-center">
-              <div className="text-sm font-bold text-amber-300">🏆 결산 보상</div>
+              <div className="text-sm font-bold text-amber-300">결산 보상</div>
               <div className="mt-1.5 text-[12px] text-zinc-100">
                 <span className="font-mono font-bold">
                   💎 {v.myReward.diamond.toLocaleString()}
@@ -501,7 +502,7 @@ export function RaidSessionCard({ view: v }: { view: RaidView }) {
                 onClick={handleClaim}
                 className="mt-2.5 w-full rounded-full bg-gradient-to-r from-amber-500 to-yellow-500 px-4 py-2.5 text-sm font-extrabold text-amber-950 shadow-lg shadow-amber-900/40 transition active:scale-95 hover:brightness-110 disabled:opacity-50"
               >
-                🎁 보상 받기
+                보상 받기
               </button>
             </div>
           )
@@ -565,7 +566,7 @@ export function RaidSessionCard({ view: v }: { view: RaidView }) {
         {/* 누적 보상 섹션 — 정산 완료(settled) 상태에서는 결산 보상 섹션과 중복이라 숨김. */}
         {!settled ? (
           <div className="rounded-lg border border-amber-700/50 bg-amber-950/30 px-3 py-2 text-center text-[11px]">
-            <span className="font-semibold text-amber-300">🎁 누적 보상</span>{' '}
+            <span className="font-semibold text-amber-300">누적 보상</span>{' '}
             {v.phasesCleared > 0 ? (
               <span className="text-zinc-200">
                 💎{drops.diamond}
@@ -604,10 +605,22 @@ export function RaidSessionCard({ view: v }: { view: RaidView }) {
                     <span className="w-5 shrink-0 text-center">
                       {MEDAL[i] ?? <span className="text-zinc-500">{i + 1}</span>}
                     </span>
-                    <span className="min-w-0 flex-1 truncate font-medium">
-                      {p.nickname}
-                      {p.isMe ? ' (나)' : ''}
-                    </span>
+                    {/* 닉네임 클릭 → 공개 프로필. 본인은 영역 비활성(자기 자신은 /me로). */}
+                    {p.isMe ? (
+                      <Link
+                        href="/me"
+                        className="min-w-0 flex-1 truncate font-medium hover:underline"
+                      >
+                        {p.nickname} (나)
+                      </Link>
+                    ) : (
+                      <Link
+                        href={`/u/${encodeURIComponent(p.nickname)}`}
+                        className="min-w-0 flex-1 truncate font-medium hover:underline"
+                      >
+                        {p.nickname}
+                      </Link>
+                    )}
                     <span className="shrink-0 font-mono tabular-nums text-zinc-300">
                       {p.totalDamage.toLocaleString()}
                       <span className="ml-1 text-[9px] text-zinc-500">{pct}%</span>

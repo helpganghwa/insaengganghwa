@@ -23,3 +23,15 @@ export function error(): void {
   if (typeof navigator === 'undefined') return;
   navigator.vibrate?.([100]);
 }
+
+/** 일반 hit — 짧고 가벼움. (레이드 공격 등) */
+export function hit(): void {
+  if (typeof navigator === 'undefined') return;
+  navigator.vibrate?.([20]);
+}
+
+/** 크리티컬 — 강하고 긴 패턴. */
+export function crit(): void {
+  if (typeof navigator === 'undefined') return;
+  navigator.vibrate?.([60, 20, 80]);
+}
