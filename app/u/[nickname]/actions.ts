@@ -13,7 +13,8 @@ import { userProfiles, profileReports } from '@/lib/db/schema/avatar';
  */
 type ReportState = { status: 'ok' } | { status: 'error'; message: string };
 
-const REASONS = ['nsfw', 'violence', 'hate', 'quality', 'impersonation', 'other'] as const;
+// 신고 사유 카테고리(2026-06-01) — 부적절 닉네임/아바타/버그 악용/기타 4종.
+const REASONS = ['nickname', 'avatar', 'bug_abuse', 'other'] as const;
 const ReasonSchema = z.enum(REASONS);
 
 export async function reportProfile(

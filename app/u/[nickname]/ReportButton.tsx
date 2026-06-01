@@ -5,11 +5,9 @@ import { useState, useTransition } from 'react';
 import { reportProfile } from './actions';
 
 const REASONS: { value: string; label: string }[] = [
-  { value: 'nsfw', label: '선정적·음란' },
-  { value: 'violence', label: '폭력적·잔인' },
-  { value: 'hate', label: '혐오·차별' },
-  { value: 'impersonation', label: '사칭·도용' },
-  { value: 'quality', label: '부적절·저품질' },
+  { value: 'nickname', label: '부적절한 닉네임' },
+  { value: 'avatar', label: '부적절한 아바타' },
+  { value: 'bug_abuse', label: '버그 악용' },
   { value: 'other', label: '기타' },
 ];
 
@@ -37,9 +35,9 @@ export function ReportButton({ profileId }: { profileId: string }) {
       <button
         type="button"
         onClick={() => setOpen(true)}
-        className="mt-2 text-[11px] text-zinc-400 underline"
+        className="flex w-full items-center justify-center rounded-xl border-2 border-zinc-700 bg-transparent py-2.5 text-sm font-semibold text-zinc-300 transition active:scale-[0.98] hover:bg-zinc-900/40"
       >
-        🚩 신고
+        신고
       </button>
 
       {open && (
