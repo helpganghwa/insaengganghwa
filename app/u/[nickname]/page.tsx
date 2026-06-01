@@ -421,39 +421,37 @@ export default async function PublicProfilePage({
           </div>
         </section>
 
-        {/* ── 챔피언 spotlight(있을 때만) — 첫 1위 아이템을 큰 sprite로 강조. ── */}
+        {/* ── 챔피언 아이템(있을 때만) ── */}
         {data.champItems.length > 0 ? (
-          <section className="relative overflow-hidden rounded-xl border border-amber-700/40 bg-gradient-to-r from-amber-950/50 via-amber-900/30 to-amber-950/50 p-3 shadow-lg shadow-amber-950/30">
-            <div
-              className="pointer-events-none absolute inset-0 bg-[radial-gradient(circle_at_22%_50%,rgba(251,191,36,0.18),transparent_60%)]"
-              aria-hidden
-            />
-            <div className="relative flex items-center gap-3">
-              <div className="relative flex h-16 w-16 shrink-0 items-center justify-center">
-                <div className="absolute inset-1 rounded-full bg-amber-400/25 blur-md" aria-hidden />
-                <TranscendSprite
-                  code={data.champItems[0].code}
-                  slot={data.champItems[0].slot}
-                  level={0}
-                  isChampion
-                  size={64}
-                  frameless
-                />
+          <section className="rounded-xl border border-amber-700/50 bg-gradient-to-b from-amber-950/40 to-zinc-950 p-2">
+            <div className="mb-1.5 flex items-baseline justify-between">
+              <div className="text-[10px] font-semibold tracking-wide text-amber-300">
+                1위 아이템
               </div>
-              <div className="min-w-0 flex-1">
-                <div className="text-[10px] font-bold tracking-wide text-amber-300">
-                  🏆 1위 아이템 보유
-                </div>
-                <div className="mt-0.5 truncate text-sm font-bold text-amber-100">
-                  {data.champItems[0].name}
-                </div>
-                {data.champItems.length > 1 ? (
-                  <div className="mt-0.5 text-[10px] text-amber-200/70">
-                    외 {data.champItems.length - 1}종 더
-                  </div>
-                ) : null}
+              <div className="font-mono text-[10px] text-amber-200/80">
+                {data.champItems.length}종
               </div>
             </div>
+            <ul className="flex gap-1.5 overflow-x-auto pb-0.5">
+              {data.champItems.map((c) => (
+                <li
+                  key={c.id}
+                  className="flex w-12 shrink-0 flex-col items-center gap-0.5 rounded border border-amber-700/60 bg-zinc-950 p-0.5 text-center"
+                >
+                  <TranscendSprite
+                    code={c.code}
+                    slot={c.slot}
+                    level={0}
+                    isChampion
+                    size={36}
+                    frameless
+                  />
+                  <span className="line-clamp-1 break-keep text-[8px] leading-tight text-zinc-400">
+                    {c.name}
+                  </span>
+                </li>
+              ))}
+            </ul>
           </section>
         ) : null}
 
