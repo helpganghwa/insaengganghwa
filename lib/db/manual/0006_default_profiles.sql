@@ -34,7 +34,7 @@ begin
     new_nickname := public.generate_korean_nickname();
     begin
       insert into public.profiles (id, nickname, diamond, tutorial_step)
-      values (new.id, new_nickname, 5, 1);
+      values (new.id, new_nickname, 1000, 1);
       exit;
     exception when unique_violation then
       if exists (select 1 from public.profiles where id = new.id) then exit; end if;
@@ -43,7 +43,7 @@ begin
         new_nickname := substr(new_nickname, 1, 8)
                      || lpad((floor(random() * 9000) + 1000)::int::text, 4, '0');
         insert into public.profiles (id, nickname, diamond, tutorial_step)
-        values (new.id, new_nickname, 5, 1)
+        values (new.id, new_nickname, 1000, 1)
         on conflict (id) do nothing;
         exit;
       end if;
@@ -52,9 +52,9 @@ begin
 
   insert into public.user_supply_boxes (user_id, slot, count)
   values
-    (new.id, 'weapon',    2),
-    (new.id, 'armor',     2),
-    (new.id, 'accessory', 2)
+    (new.id, 'weapon',    10),
+    (new.id, 'armor',     10),
+    (new.id, 'accessory', 10)
   on conflict (user_id, slot) do nothing;
 
   -- 기본 프로필 남/여 (멱등) + 활성 랜덤(정면)

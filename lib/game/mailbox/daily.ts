@@ -3,6 +3,7 @@ import 'server-only';
 import { sql } from 'drizzle-orm';
 
 import { db } from '@/lib/db/client';
+import { TEST_REWARD_MULTIPLIER } from '@/lib/game/test-mode';
 
 /**
  * 일일 보급 — KST 자정 기준 1회 자동 발송. lazy(layout에서 호출).
@@ -11,11 +12,18 @@ import { db } from '@/lib/db/client';
  * 동시 N 요청 시 첫 INSERT만 성공(ON CONFLICT DO NOTHING), 나머지 메일
  * INSERT 0행(WHERE g 비어있음). 다음 KST day에 다시 활성.
  *
- * 보상: 1000 다이아 + 슬롯별 보급권 5장(weapon/armor/accessory).
+ * 보상(기본): 1000 다이아 + 슬롯별 보급권 5장(weapon/armor/accessory).
+ * 테스트 기간에는 ×TEST_REWARD_MULTIPLIER로 지급.
  */
+const BASE_DIAMOND = 1000;
+const BASE_BOX_PER_SLOT = 5;
 const PAYLOAD = JSON.stringify({
-  diamond: 1000,
-  boxes: { weapon: 5, armor: 5, accessory: 5 },
+  diamond: BASE_DIAMOND * TEST_REWARD_MULTIPLIER,
+  boxes: {
+    weapon: BASE_BOX_PER_SLOT * TEST_REWARD_MULTIPLIER,
+    armor: BASE_BOX_PER_SLOT * TEST_REWARD_MULTIPLIER,
+    accessory: BASE_BOX_PER_SLOT * TEST_REWARD_MULTIPLIER,
+  },
 });
 
 export async function ensureDailyMail(userId: string): Promise<boolean> {

@@ -1,10 +1,12 @@
 /**
- * 실운영 전 테스트 기간 플래그. 해제 시 false + 0007 원복 SQL 재실행.
+ * 실운영 전 테스트 기간 플래그.
  *
- * - 신규가입 보너스(다이아 10000 + 보급상자 종류별 100개)는 DB trigger(0007)가 적용.
- * - 출석체크 10배는 본 상수가 적용(lib/game/checkin/claim.ts).
+ * 테스트 기간 동안 ×10로 지급되는 보상: 신규가입 보너스 · 출석체크 · 일일 우편 보급.
+ * - 신규가입(다이아 1000→10000, 보급상자 슬롯당 10→100)은 DB 트리거(0007)가 적용.
+ *   해제 시 TEST_MODE=false + 0006 SQL 재적용 → 기본값(1000 / 10)으로 원복.
+ * - 출석체크·일일 우편은 아래 배율 상수로 적용(false 시 ×1 자동 원복).
  */
 export const TEST_MODE = true;
 
-/** 출석체크 보상 배율 — TEST_MODE 시 ×10. */
-export const CHECKIN_REWARD_MULTIPLIER = TEST_MODE ? 10 : 1;
+/** 테스트 기간 보상 배율 — 신규가입·출석체크·일일 우편에 적용. */
+export const TEST_REWARD_MULTIPLIER = TEST_MODE ? 10 : 1;
