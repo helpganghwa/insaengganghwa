@@ -50,14 +50,22 @@ export default async function ProfileSelectPage() {
           <span className="text-xs">첫 아바타 만들기</span>
         </Link>
       ) : (
-        <ProfileSelector
-          profiles={list.map((r) => ({
-            id: r.id,
-            rotations: r.rotations as Record<string, string>,
-            activeDirection: r.activeDirection,
-          }))}
-          activeProfileId={p[0]?.activeProfileId ?? null}
-        />
+        <>
+          <ProfileSelector
+            profiles={list.map((r) => ({
+              id: r.id,
+              rotations: r.rotations as Record<string, string>,
+              activeDirection: r.activeDirection,
+            }))}
+            activeProfileId={p[0]?.activeProfileId ?? null}
+          />
+          <Link
+            href="/me/create"
+            className="flex w-full items-center justify-center gap-2 rounded-xl bg-amber-600 px-4 py-3 text-sm font-bold text-white shadow-md transition active:scale-[0.99]"
+          >
+            <span aria-hidden>✨</span> 아바타 생성
+          </Link>
+        </>
       )}
     </div>
   );

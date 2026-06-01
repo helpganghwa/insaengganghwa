@@ -22,7 +22,7 @@ import { getReferralStats } from '@/lib/game/referral/stats';
 const SLOT_LABEL: Record<Slot, string> = { weapon: '무기', armor: '방어구', accessory: '장신구' };
 const SLOT_EMOJI: Record<Slot, string> = { weapon: '⚔️', armor: '🛡️', accessory: '💍' };
 const MENU = [
-  { href: '/me/create', icon: '✨', label: '아바타 생성' },
+  { href: '/me/profiles', icon: '✨', label: '아바타 관리' },
   { href: '/checkin', icon: '⚡', label: '출석 캘린더' },
   { href: '/me/codex', icon: '📖', label: '도감' },
   { href: '/leaderboard', icon: '🏆', label: '랭킹' },
@@ -114,7 +114,11 @@ export default async function ProfilePage() {
               className="relative z-10 text-white text-xs font-normal"
             />
             {activeProfile ? (
-              <Link href="/me/profiles" aria-label="아바타 선택" className="block">
+              <Link
+                href={`/u/${encodeURIComponent(nickname)}`}
+                aria-label="내 프로필 상세"
+                className="block"
+              >
                 <CharacterStage
                   charSrc={dirImg(activeProfile)}
                   className="aspect-[3/4] h-36 overflow-visible"
