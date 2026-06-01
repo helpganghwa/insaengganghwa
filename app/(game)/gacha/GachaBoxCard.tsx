@@ -79,7 +79,7 @@ export function GachaBoxCard({
           className="absolute inset-0 h-full w-full object-cover opacity-90"
           style={{ imageRendering: 'pixelated', objectPosition: `50% ${bgPosY}` }}
         />
-        <div className="relative bg-gradient-to-b from-black/0 via-black/45 to-black/85 px-4 py-3">
+        <div className="relative bg-gradient-to-b from-black/0 via-black/45 to-black/85 px-4 py-5">
           <div className="flex items-baseline justify-between">
             <h2 className="text-base font-bold text-white drop-shadow-sm">{label}</h2>
             <span className="text-xs text-white/85">
