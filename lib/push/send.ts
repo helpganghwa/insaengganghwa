@@ -38,6 +38,12 @@ export type PushPayload = {
   url?: string;
   tag?: string;
   category: 'enhance' | 'raid' | 'supply' | 'profile' | 'referral';
+  /**
+   * 같은 tag 알림 교체 시 재알림(소리/진동) 여부. 기본 true — 미지정 시 SW가
+   * 무음 교체해 "알림이 안 온다"고 느껴지던 문제 방지(2026-06-01). tag가 항상
+   * 설정되므로(category fallback) renotify:true는 스펙상 안전.
+   */
+  renotify?: boolean;
 };
 
 export type SendResult = { ok: number; gone: number; failed: number };
@@ -122,6 +128,8 @@ async function dispatch(subs: SubRow[], payload: PushPayload): Promise<SendResul
     url: payload.url ?? '/',
     tag: payload.tag ?? payload.category,
     category: payload.category,
+    // 기본 재알림 ON — 같은 tag 묶음/연속 이벤트도 무음 교체 대신 실제 알림.
+    renotify: payload.renotify ?? true,
   });
 
   let ok = 0;
