@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useTransition } from 'react';
+import { useEffect, useState, useTransition } from 'react';
 import { useRouter } from 'next/navigation';
 
 import { TranscendSprite } from '@/components/TranscendSprite';
@@ -47,8 +47,28 @@ export function CreateProfileForm({
   const { optimisticAdjust: adjustDiamond } = useDiamond();
   const [gender, setGender] = useState<'female' | 'male'>('female');
   const [confirm, setConfirm] = useState(false);
+  const [confirmLeft, setConfirmLeft] = useState(0); // 3s 재탭 컨펌 카운트다운
   const [submitted, setSubmitted] = useState(false); // 낙관: 제출 직후 ⏳ 즉시 표시
   const [pending, startTransition] = useTransition();
+
+  // 생성 — 강화 취소와 동일 3s 재탭 컨펌(오탭 보호). 만료 시 자동 해제.
+  useEffect(() => {
+    if (!confirm) {
+      setConfirmLeft(0);
+      return;
+    }
+    setConfirmLeft(3);
+    const id = setInterval(() => {
+      setConfirmLeft((s) => {
+        if (s <= 1) {
+          setConfirm(false);
+          return 0;
+        }
+        return s - 1;
+      });
+    }, 1000);
+    return () => clearInterval(id);
+  }, [confirm]);
 
   const balance = BigInt(diamond);
   const allEquipped = equipped.every((e) => e.code);
@@ -191,11 +211,13 @@ export function CreateProfileForm({
             : !enough
               ? '다이아 부족'
               : confirm
-                ? `한 번 더 눌러 생성 (💎 ${price.toLocaleString('ko-KR')})`
+                ? `생성 확인 ${confirmLeft}s`
                 : '아바타 생성'}
       </button>
       {confirm && !pending && (
-        <p className="text-center text-[11px] text-zinc-400">생성을 시작하면 다이아가 차감돼요.</p>
+        <p className="text-center text-[11px] text-zinc-400">
+          한 번 더 누르면 💎 {price.toLocaleString('ko-KR')} 차감 · {confirmLeft}s 후 자동 취소
+        </p>
       )}
     </div>
   );

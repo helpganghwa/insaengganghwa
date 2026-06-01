@@ -1,6 +1,6 @@
 'use client';
 
-import { useRef, useState, useTransition } from 'react';
+import { useEffect, useRef, useState, useTransition } from 'react';
 import { useRouter } from 'next/navigation';
 
 import * as haptic from '@/lib/game/haptic';
@@ -56,6 +56,26 @@ export function ProfileSelector({
   const [dir, setDir] = useState<string>(sel.activeDirection);
   const [pending, startTransition] = useTransition();
   const [confirmDelete, setConfirmDelete] = useState(false);
+  const [confirmDeleteLeft, setConfirmDeleteLeft] = useState(0); // 3s 재탭 컨펌 카운트다운
+
+  // 삭제 — 강화 취소와 동일 3s 재탭 패턴(오탭 보호). 만료 시 자동 해제.
+  useEffect(() => {
+    if (!confirmDelete) {
+      setConfirmDeleteLeft(0);
+      return;
+    }
+    setConfirmDeleteLeft(3);
+    const id = setInterval(() => {
+      setConfirmDeleteLeft((s) => {
+        if (s <= 1) {
+          setConfirmDelete(false);
+          return 0;
+        }
+        return s - 1;
+      });
+    }, 1000);
+    return () => clearInterval(id);
+  }, [confirmDelete]);
 
   // 캐릭터 선택 → 로컬 미리보기만(서버 반영은 "적용" 버튼).
   const selectChar = (p: ProfileItem) => {
@@ -90,20 +110,32 @@ export function ProfileSelector({
   const activeNow = list.find((p) => p.id === activeProfileId);
   const dirty = selectedId !== activeProfileId || dir !== (activeNow?.activeDirection ?? '');
   const apply = () => {
-    haptic.success(); // 낙관: 탭 즉시 피드백
-    startTransition(async () => {
-      // 두 갱신은 독립 → 병렬(왕복 2→1). 커밋 후 /me로 이동(서버 권위 반영).
-      const [r1, r2] = await Promise.all([
-        setActiveProfile(selectedId),
-        setActiveDirection(selectedId, dir),
-      ]);
-      if (r1.status === 'error') return alert(r1.message);
-      if (r2.status === 'error') return alert(r2.message);
-      router.push('/me');
+    if (!dirty) return;
+    haptic.success();
+    // 낙관: 로딩 없이 즉시 /me로 이동. 두 갱신은 병렬로 백그라운드 커밋 →
+    // 완료 후 router.refresh로 서버 권위 보정(초기 렌더가 stale이어도 자가 교정).
+    router.push('/me');
+    void Promise.all([
+      setActiveProfile(selectedId),
+      setActiveDirection(selectedId, dir),
+    ]).then(([r1, r2]) => {
+      const msg =
+        r1.status === 'error' ? r1.message : r2.status === 'error' ? r2.message : null;
+      if (msg) {
+        alert(msg);
+        return;
+      }
+      router.refresh();
     });
   };
 
-  const doDelete = () =>
+  const doDelete = () => {
+    if (pending) return;
+    if (!confirmDelete) {
+      setConfirmDelete(true); // 1탭: 3s 컨펌 진입
+      return;
+    }
+    setConfirmDelete(false);
     startTransition(async () => {
       const r = await deleteProfile(selectedId);
       if (r.status === 'error') return alert(r.message);
@@ -119,6 +151,7 @@ export function ProfileSelector({
       setConfirmDelete(false);
       router.refresh();
     });
+  };
 
   return (
     <div className="space-y-4">
@@ -131,43 +164,21 @@ export function ProfileSelector({
           onPointerUp={endDrag}
           onPointerCancel={endDrag}
         >
-          {/* 삭제 — 우상단 코너(마지막 1개는 숨김). 스와이프 핸들러로 전파 차단. */}
+          {/* 삭제 — 우상단 코너 텍스트 버튼. 강화 취소식 3s 재탭 컨펌(마지막 1개 숨김).
+              스와이프 핸들러로 포인터 전파 차단. */}
           {list.length > 1 ? (
-            <div
-              className="absolute right-1.5 top-1.5 z-10"
+            <button
+              type="button"
+              onClick={doDelete}
+              disabled={pending}
+              aria-label="선택한 아바타 삭제"
               onPointerDown={(e) => e.stopPropagation()}
+              className={`absolute right-1 top-1 z-10 rounded-full px-2.5 py-1 text-[11px] font-bold backdrop-blur-sm transition active:scale-95 disabled:opacity-50 ${
+                confirmDelete ? 'bg-red-600 text-white' : 'bg-black/55 text-red-300'
+              }`}
             >
-              {confirmDelete ? (
-                <div className="flex items-center gap-1 rounded-full bg-black/65 p-0.5 backdrop-blur-sm">
-                  <button
-                    type="button"
-                    onClick={() => setConfirmDelete(false)}
-                    disabled={pending}
-                    className="rounded-full px-2 py-1 text-[11px] font-medium text-white/80"
-                  >
-                    취소
-                  </button>
-                  <button
-                    type="button"
-                    onClick={doDelete}
-                    disabled={pending}
-                    className="rounded-full bg-red-600 px-2.5 py-1 text-[11px] font-bold text-white"
-                  >
-                    삭제
-                  </button>
-                </div>
-              ) : (
-                <button
-                  type="button"
-                  onClick={() => setConfirmDelete(true)}
-                  disabled={pending}
-                  aria-label="선택한 아바타 삭제"
-                  className="flex h-8 w-8 items-center justify-center rounded-full bg-black/50 text-base text-white/90 backdrop-blur-sm transition active:scale-95"
-                >
-                  🗑
-                </button>
-              )}
-            </div>
+              {confirmDelete ? `삭제 확인 ${confirmDeleteLeft}s` : '삭제'}
+            </button>
           ) : null}
           {/* 발밑 타원 그림자 */}
           <div className="pointer-events-none absolute bottom-[6%] left-1/2 h-[6%] w-1/2 -translate-x-1/2 rounded-[50%] bg-black/45 blur-[6px]" />
