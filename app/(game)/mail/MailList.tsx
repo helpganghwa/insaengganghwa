@@ -1,10 +1,11 @@
 'use client';
 
-import { useState, useTransition } from 'react';
+import { useOptimistic, useState, useTransition } from 'react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 
 import type { Slot } from '@/lib/db/schema/equipment';
+import { useDiamond } from '@/components/DiamondContext';
 import { claimMailAction, claimAllMailAction } from './actions';
 
 export type MailItem = {
@@ -69,13 +70,27 @@ export function MailList({
   const [pending, startTransition] = useTransition();
   const [error, setError] = useState<string | null>(null);
   const [toast, setToast] = useState<string | null>(null);
+  const [displayItems, setOptimisticItems] = useOptimistic(items);
+  const { optimisticAdjust: adjustDiamond } = useDiamond();
   const nowMs = Date.now();
 
   const claim = (id: string) => {
     setError(null);
+    const target = items.find((m) => m.id === id);
     startTransition(async () => {
+      // 낙관: 우편 즉시 제거 + 헤더 다이아 즉시 가산.
+      if (target) {
+        setOptimisticItems(displayItems.filter((m) => m.id !== id));
+        const dia = Number(target.payload.diamond ?? 0);
+        if (dia > 0) adjustDiamond(BigInt(dia));
+      }
       const r = await claimMailAction(id);
       if (r.status === 'error') {
+        // 롤백 — 서버 분배 정확값으로 재계산은 router.refresh로 자연 복귀.
+        if (target) {
+          const dia = Number(target.payload.diamond ?? 0);
+          if (dia > 0) adjustDiamond(-BigInt(dia));
+        }
         setError(r.message);
         return;
       }
@@ -93,9 +108,17 @@ export function MailList({
 
   const claimAll = () => {
     setError(null);
+    const totalDiamondOptimistic = items.reduce(
+      (a, m) => a + Number(m.payload.diamond ?? 0),
+      0,
+    );
     startTransition(async () => {
+      // 낙관: 모든 우편 즉시 제거 + 다이아 합계 가산.
+      setOptimisticItems([]);
+      if (totalDiamondOptimistic > 0) adjustDiamond(BigInt(totalDiamondOptimistic));
       const r = await claimAllMailAction();
       if (r.status === 'error') {
+        if (totalDiamondOptimistic > 0) adjustDiamond(-BigInt(totalDiamondOptimistic));
         setError(r.message);
         return;
       }
@@ -131,14 +154,14 @@ export function MailList({
         </Link>
       </div>
 
-      {tab === 'unread' && items.length > 0 ? (
+      {tab === 'unread' && displayItems.length > 0 ? (
         <button
           type="button"
           disabled={pending}
           onClick={claimAll}
           className="w-full rounded-full bg-amber-500 px-3 py-2.5 text-sm font-bold text-amber-950 disabled:opacity-40"
         >
-          {pending ? '수령 중…' : `📬 ${items.length}건 모두 받기`}
+          {pending ? '수령 중…' : `📬 ${displayItems.length}건 모두 받기`}
         </button>
       ) : null}
 
@@ -148,13 +171,13 @@ export function MailList({
         </p>
       ) : null}
 
-      {items.length === 0 ? (
+      {displayItems.length === 0 ? (
         <p className="rounded-lg border border-dashed border-zinc-300 p-10 text-center text-xs text-zinc-500 dark:border-zinc-700">
           {tab === 'unread' ? '받지 않은 우편이 없습니다.' : '받은 우편이 없습니다.'}
         </p>
       ) : (
         <ul className="space-y-2">
-          {items.map((m) => {
+          {displayItems.map((m) => {
             const expMs = new Date(m.expiresAtIso).getTime();
             const expSoon = tab === 'unread' && expMs - nowMs < 24 * 3_600_000;
             return (

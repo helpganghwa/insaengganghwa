@@ -11,6 +11,7 @@ import {
   type SupplySlot,
 } from '@/lib/game/balance';
 import { useResourceToast } from '@/components/ResourceToast';
+import { useDiamond } from '@/components/DiamondContext';
 import * as haptic from '@/lib/game/haptic';
 import { sounds } from '@/lib/game/sound';
 
@@ -81,6 +82,7 @@ export function CheckinCalendar({
   const [pending, startTransition] = useTransition();
   const [justClaimedDay, setJustClaimedDay] = useState<number | null>(null);
   const { showResource, showError } = useResourceToast();
+  const { optimisticAdjust: adjustDiamond } = useDiamond();
 
   const claimedToday = lastClaimed === kstToday;
   const todayCellDay = nextCheckinDay1Indexed(dayProgress);
@@ -105,6 +107,8 @@ export function CheckinCalendar({
       sounds.rewardClaim();
       haptic.success();
       if (reward.kind === 'diamond') {
+        // 헤더 다이아 즉시 가산(낙관) — 페이지가 router.refresh 안 부르므로 필수.
+        adjustDiamond(BigInt(reward.amount));
         showResource('💎', '다이아', reward.amount);
       } else if (reward.kind === 'supply') {
         showResource(SLOT_EMOJI[reward.slot], `${SLOT_LABEL[reward.slot]} 보급 상자`, reward.count);
