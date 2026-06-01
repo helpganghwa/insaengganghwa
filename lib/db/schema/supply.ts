@@ -1,8 +1,9 @@
 /**
  * SCHEMA §5. 보급 (보급 상자)
  *
- * 슬롯별 미열기 집계. 열기 = count−1 + 장비 개체 생성 + 보석 드롭(20%/1~3) + 로그,
- * 단일 트랜잭션. 슬롯 내 균등 1/(활성 종수), 천장 없음. 분해 = 고정 2다이아.
+ * 슬롯별 미열기 집계. 열기 = count−1 + 장비 개체 생성 + 로그, 단일 트랜잭션.
+ * 슬롯 내 균등 1/(활성 종수), 천장 없음. 분해 = 고정 10다이아.
+ * (보석 드롭 기획은 2026-06-01 완전 폐기.)
  */
 import {
   pgTable,
@@ -10,7 +11,6 @@ import {
   bigint,
   bigserial,
   integer,
-  smallint,
   boolean,
   timestamp,
   primaryKey,
@@ -43,8 +43,6 @@ export const supplyOpenLogs = pgTable('supply_open_logs', {
     .references(() => catalogItems.id),
   /** 도감 신규 해금 여부. */
   isNew: boolean('is_new').notNull(),
-  /** 0~3 (20% 확률, BALANCE §4.3). */
-  gemDrop: smallint('gem_drop').notNull().default(0),
   createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
 });
 

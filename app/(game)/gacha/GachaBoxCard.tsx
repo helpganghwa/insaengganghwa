@@ -104,7 +104,6 @@ export function GachaBoxCard({
           slot={slot}
           results={result.results}
           remaining={result.remaining}
-          gemTotal={result.gemTotal}
           pulling={pending}
           onAgain={pull}
           onClose={() => setResult(null)}

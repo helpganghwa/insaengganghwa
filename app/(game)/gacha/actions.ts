@@ -20,10 +20,9 @@ export type OpenedItem = {
   isChampion: boolean;
   /** 신규 해금 시 보여줄 로어 티저(1~2문장). 중복/없음=null. */
   loreTeaser: string | null;
-  gemDrop: number;
 };
 export type OpenActionResult =
-  | { status: 'success'; results: OpenedItem[]; remaining: number; gemTotal: number }
+  | { status: 'success'; results: OpenedItem[]; remaining: number }
   | { status: 'error'; code: string; message: string };
 
 const MSG: Record<string, string> = {
@@ -75,11 +74,9 @@ export async function openAction(slot: Slot, count: number): Promise<OpenActionR
           isNew: o.isNew,
           isChampion: champSet.has(o.catalogItemId),
           loreTeaser: o.isNew && code ? loreTeaser(code) : null,
-          gemDrop: o.gemDrop,
         };
       }),
       remaining: Number(boxRow?.c ?? 0n),
-      gemTotal: opened.reduce((s, o) => s + o.gemDrop, 0),
     };
   } catch (e) {
     if (e instanceof SupplyError) return { status: 'error', code: e.code, message: MSG[e.code] ?? e.code };

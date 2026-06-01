@@ -11,7 +11,6 @@ export function GachaResultModal({
   slot,
   results,
   remaining,
-  gemTotal,
   pulling,
   onAgain,
   onClose,
@@ -19,7 +18,6 @@ export function GachaResultModal({
   slot: Slot;
   results: OpenedItem[];
   remaining: number;
-  gemTotal: number;
   pulling: boolean;
   onAgain: (n: number) => void;
   onClose: () => void;
@@ -117,11 +115,6 @@ export function GachaResultModal({
         )}
 
         <p className="mt-3 text-center text-[11px] text-zinc-500">
-          {gemTotal > 0 ? (
-            <span className="font-medium text-cyan-600 dark:text-cyan-400">
-              💎 +{gemTotal} 보너스 ·{' '}
-            </span>
-          ) : null}
           남은 상자 {remaining}개
         </p>
 
