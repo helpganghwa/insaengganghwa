@@ -367,10 +367,10 @@ export function MailList({
                 <div className="p-3 pl-3.5">
                   <div className="flex items-baseline justify-between gap-2">
                     <div className="min-w-0 flex-1">
-                      {/* 메타 행 — 발신 출처 1종만 노출(2026-06-01 중복 정리):
-                          · admin: senderLabel + ✓ 운영자 배지(타입 배지 생략)
-                          · 시스템 우편(reward/profile_*/notice): 타입 배지만(senderLabel 생략)
-                          · 그 외/미지정: 타입 배지 + senderLabel 폴백 */}
+{/* 메타 행 — 발신 출처 1종만 노출(2026-06-01 중복 정리).
+    admin: senderLabel + 운영자 배지(타입 배지 생략).
+    시스템 우편(reward 또는 profile_x 또는 notice): 타입 배지만(senderLabel 생략).
+    그 외: 타입 배지 + senderLabel 폴백. */}
                       <div className="flex items-center gap-1.5 text-[10px] text-zinc-500">
                         {m.type === 'admin' ? (
                           <>

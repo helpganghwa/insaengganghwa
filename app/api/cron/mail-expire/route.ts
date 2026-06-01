@@ -1,5 +1,8 @@
 /**
- * 우편 만료 정리 — `expires_at < now()` 이면서 미수령(`claimed_at IS NULL`)인 행 삭제.
+ * 우편 만료/보관 정리 — 두 조건 OR:
+ *  (a) 미수령 + 만료(`expires_at < now() AND claimed_at IS NULL`) — 종래.
+ *  (b) 발송일 기준 30일 경과(`created_at < now() - 30 days`) — 수령 여부 무관(2026-06-01 추가).
+ *      claimed mail이 영구 누적되어 DB 비대해지는 문제 방지. 보관 SLA = 30일.
  *
  * 정책:
  *  - claim 경로(claim.ts)는 이미 `gt(expiresAt, now())` 가드라 만료 우편은 수령 불가.
@@ -40,12 +43,13 @@ export async function GET(req: Request) {
   if (!isAuthorized(req)) {
     return new Response('forbidden', { status: 403 });
   }
-  // 단일 SQL — DELETE … WHERE expires_at < now() AND claimed_at IS NULL RETURNING id.
-  // RETURNING id로 삭제 수 산출(서버 로그). 큰 트랜잭션은 인덱스(mailbox_user_unclaimed_idx)로 빠름.
+  // (a) 미수령+만료 OR (b) 발송 후 30일 경과 row 삭제.
+  // RETURNING id로 삭제 수 산출(서버 로그). 인덱스(mailbox_user_unclaimed_idx)로 (a) 빠름;
+  // (b)는 created_at full scan일 수 있으나 매일 1회 KST 03시 호출이라 부담 적음.
   const rows = (await db.execute(sql`
     delete from mailbox
-    where claimed_at is null
-      and expires_at < now()
+    where (claimed_at is null and expires_at < now())
+       or created_at < now() - interval '30 days'
     returning id
   `)) as unknown as { id: string }[];
   const deleted = rows.length;
