@@ -4,6 +4,7 @@ import type { Metadata } from 'next';
 import { and, eq, inArray, isNotNull, sql } from 'drizzle-orm';
 
 import { db } from '@/lib/db/client';
+import { withTimeout } from '@/lib/db/with-timeout';
 import { getSessionUserId } from '@/lib/auth/session';
 import { profiles } from '@/lib/db/schema/profiles';
 import { userProfiles } from '@/lib/db/schema/avatar';
@@ -53,34 +54,43 @@ async function loadProfile(nickname: string) {
     }
   }
 
-  const [equipped, sumAgg, maxAgg, champSet, ranks] = await Promise.all([
-    db
-      .select({
-        slot: catalogItems.slot,
-        catalogItemId: catalogItems.id,
-        code: catalogItems.code,
-        name: catalogItems.name,
-        enhanceLevel: equipmentInstances.enhanceLevel,
-        transcendLevel: equipmentInstances.transcendLevel,
-      })
-      .from(equipmentInstances)
-      .innerJoin(catalogItems, eq(equipmentInstances.catalogItemId, catalogItems.id))
-      .where(
-        and(eq(equipmentInstances.userId, prof.id), isNotNull(equipmentInstances.equippedSlot)),
-      ),
-    // 합산 강화 = 현재 보유 인스턴스 enhance_level 합.
-    db
-      .select({ s: sql<number>`coalesce(sum(${equipmentInstances.enhanceLevel}),0)::int` })
-      .from(equipmentInstances)
-      .where(eq(equipmentInstances.userId, prof.id)),
-    // 최고 강화 = 현재 보유 인스턴스 enhance_level 최대.
-    db
-      .select({ m: sql<number>`coalesce(max(${equipmentInstances.enhanceLevel}),0)::int` })
-      .from(equipmentInstances)
-      .where(eq(equipmentInstances.userId, prof.id)),
-    championCatalogIds(prof.id),
-    getMyRanks(prof.id),
-  ]);
+  // Promise.all + withTimeout — 한 쿼리 hang이 전체 페이지를 멈추지 않도록 3.5s 가드.
+  // 실패 시 빈 결과로 graceful degrade (히어로·신고는 여전히 렌더).
+  const _r = await withTimeout(
+    Promise.all([
+      db
+        .select({
+          slot: catalogItems.slot,
+          catalogItemId: catalogItems.id,
+          code: catalogItems.code,
+          name: catalogItems.name,
+          enhanceLevel: equipmentInstances.enhanceLevel,
+          transcendLevel: equipmentInstances.transcendLevel,
+        })
+        .from(equipmentInstances)
+        .innerJoin(catalogItems, eq(equipmentInstances.catalogItemId, catalogItems.id))
+        .where(
+          and(eq(equipmentInstances.userId, prof.id), isNotNull(equipmentInstances.equippedSlot)),
+        ),
+      db
+        .select({ s: sql<number>`coalesce(sum(${equipmentInstances.enhanceLevel}),0)::int` })
+        .from(equipmentInstances)
+        .where(eq(equipmentInstances.userId, prof.id)),
+      db
+        .select({ m: sql<number>`coalesce(max(${equipmentInstances.enhanceLevel}),0)::int` })
+        .from(equipmentInstances)
+        .where(eq(equipmentInstances.userId, prof.id)),
+      championCatalogIds(prof.id),
+      getMyRanks(prof.id),
+    ]),
+    3500,
+    'u.profile',
+  ).catch(() => null);
+  const equipped = _r?.[0] ?? [];
+  const sumAgg = _r?.[1] ?? [];
+  const maxAgg = _r?.[2] ?? [];
+  const champSet = _r?.[3] ?? new Set<number>();
+  const ranks = _r?.[4] ?? { max: null, sum: null, combat: null };
 
   const sumEnhance = Number(sumAgg[0]?.s ?? 0);
   const maxEnhance = Number(maxAgg[0]?.m ?? 0);
@@ -93,15 +103,19 @@ async function loadProfile(nickname: string) {
   // 챔피언 아이템(이 플레이어가 1위인 카탈로그) 메타 — sprite/name 표시용.
   const champIds = [...champSet];
   const champItems = champIds.length
-    ? await db
-        .select({
-          id: catalogItems.id,
-          slot: catalogItems.slot,
-          code: catalogItems.code,
-          name: catalogItems.name,
-        })
-        .from(catalogItems)
-        .where(inArray(catalogItems.id, champIds))
+    ? await withTimeout(
+        db
+          .select({
+            id: catalogItems.id,
+            slot: catalogItems.slot,
+            code: catalogItems.code,
+            name: catalogItems.name,
+          })
+          .from(catalogItems)
+          .where(inArray(catalogItems.id, champIds)),
+        1500,
+        'u.profile.champ',
+      ).catch(() => [] as { id: number; slot: Slot; code: string; name: string }[])
     : [];
 
   return {
