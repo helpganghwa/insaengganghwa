@@ -557,21 +557,23 @@ export function RaidSessionCard({ view: v }: { view: RaidView }) {
           </div>
         )}
 
-        {/* ── 누적 보상 ── */}
-        <div className="rounded-lg border border-amber-700/50 bg-amber-950/30 px-3 py-2 text-center text-[11px]">
-          <span className="font-semibold text-amber-300">🎁 누적 보상</span>{' '}
-          {v.phasesCleared > 0 ? (
-            <span className="text-zinc-200">
-              💎{drops.diamond}
-              {Object.entries(drops.boxes)
-                .filter(([, n]) => n > 0)
-                .map(([s, n]) => ` · ${SLOT_EMOJI[s as SupplySlot]}${n}`)
-                .join('')}
-            </span>
-          ) : (
-            <span className="text-zinc-500">아직 없음</span>
-          )}
-        </div>
+        {/* 누적 보상 섹션 — 정산 완료(settled) 상태에서는 결산 보상 섹션과 중복이라 숨김. */}
+        {!settled ? (
+          <div className="rounded-lg border border-amber-700/50 bg-amber-950/30 px-3 py-2 text-center text-[11px]">
+            <span className="font-semibold text-amber-300">🎁 누적 보상</span>{' '}
+            {v.phasesCleared > 0 ? (
+              <span className="text-zinc-200">
+                💎{drops.diamond}
+                {Object.entries(drops.boxes)
+                  .filter(([, n]) => n > 0)
+                  .map(([s, n]) => ` · ${SLOT_EMOJI[s as SupplySlot]}${n}`)
+                  .join('')}
+              </span>
+            ) : (
+              <span className="text-zinc-500">아직 없음</span>
+            )}
+          </div>
+        ) : null}
 
         {/* ── 참여자: 기여도 순위 + 비율 바 ── */}
         <div>
