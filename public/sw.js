@@ -43,19 +43,27 @@ self.addEventListener('notificationclick', (event) => {
   event.notification.close();
   const url = (event.notification.data && event.notification.data.url) || '/';
   event.waitUntil(
-    self.clients
-      .matchAll({ type: 'window', includeUncontrolled: true })
-      .then((clientsArr) => {
-        // 이미 열린 탭이 있으면 포커스 + navigate
-        for (const client of clientsArr) {
-          if ('focus' in client) {
-            client.focus();
-            if ('navigate' in client) client.navigate(url);
-            return;
+    (async () => {
+      const clientsArr = await self.clients.matchAll({
+        type: 'window',
+        includeUncontrolled: true,
+      });
+      // 이미 타깃 경로에 있는 탭을 우선 재사용, 없으면 아무 탭이나.
+      // navigate/focus 프로미스를 await — SW가 이동 완료 전 종료되는 것 방지.
+      const target =
+        clientsArr.find((c) => {
+          try {
+            return new URL(c.url).pathname === url;
+          } catch {
+            return false;
           }
-        }
-        // 없으면 새 창
-        if (self.clients.openWindow) return self.clients.openWindow(url);
-      }),
+        }) || clientsArr[0];
+      if (target) {
+        if ('navigate' in target) await target.navigate(url);
+        return target.focus();
+      }
+      // 열린 탭이 없으면 새 창.
+      if (self.clients.openWindow) return self.clients.openWindow(url);
+    })(),
   );
 });
