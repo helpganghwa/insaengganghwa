@@ -10,4 +10,3 @@ export { settleRaid } from './settle';
 export { claimRaidReward } from './claim';
 export type { ClaimRaidResult } from './claim';
 export { raidPhasesCleared, phaseDropOutcome, aggregatePhaseDrops } from './drops';
-export type { PhaseDrop } from './drops';

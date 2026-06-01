@@ -166,6 +166,8 @@ export function RaidSessionCard({ view: v }: { view: RaidView }) {
   const [attackLore, setAttackLore] = useState<string | null>(null);
   // 보상 수령 — 낙관 완료 표시(서버 확정 전 즉시 '수령 완료' UI).
   const [claimedOpt, setClaimedOpt] = useState(false);
+  // 결산 보상 수령 여부 — 서버 확정 or 낙관 클릭(둘 중 하나면 disabled 톤).
+  const rewardClaimed = Boolean(v.myReward?.claimed) || claimedOpt;
 
   // 보석 컨펌 3초 카운트 + 로어 선택(강화 패턴).
   useEffect(() => {
@@ -314,23 +316,10 @@ export function RaidSessionCard({ view: v }: { view: RaidView }) {
 
   const handleClaim = () => {
     if (claimedOpt || !v.myReward || v.myReward.claimed) return;
-    // 낙관: 보상 값은 이미 화면에 있고 claim은 서버 멱등 → 즉시 '수령 완료' + 연출.
+    // 낙관: 보상 값은 이미 화면에 있고 claim은 서버 멱등 → 즉시 '수령 완료'(토스트 없음).
     setClaimedOpt(true);
     sounds.rewardClaim();
     haptic.success();
-    const { diamond, boxes } = v.myReward;
-    let delay = 0;
-    if (diamond > 0) {
-      showResource('💎', '레이드 보상', diamond);
-      delay = 350;
-    }
-    for (const s of ['weapon', 'armor', 'accessory'] as SupplySlot[]) {
-      const n = boxes[s] ?? 0;
-      if (n > 0) {
-        setTimeout(() => showResource(SLOT_EMOJI[s], `${SLOT_LABEL[s]} 상자`, n), delay);
-        delay += 350;
-      }
-    }
     // 백그라운드 확정 — 실패(이미 수령 등) 시 롤백.
     void (async () => {
       const r = await claimRaidRewardAction(v.raidId);
@@ -339,7 +328,7 @@ export function RaidSessionCard({ view: v }: { view: RaidView }) {
         showError(r.message);
         return;
       }
-      setTimeout(() => router.refresh(), delay + 200);
+      setTimeout(() => router.refresh(), 600);
     })();
   };
 
@@ -470,20 +459,26 @@ export function RaidSessionCard({ view: v }: { view: RaidView }) {
             <div className="rounded-xl border border-zinc-700 p-3 text-center text-xs text-zinc-400">
               참여 보상이 없습니다 (공격 0회).
             </div>
-          ) : v.myReward.claimed || claimedOpt ? (
-            <div className="rounded-xl border-2 border-zinc-700 bg-zinc-900/60 p-3 text-center">
-              <div className="text-sm font-bold text-zinc-400">✅ 보상 수령 완료</div>
-            </div>
           ) : (
-            <div className="rounded-xl border-2 border-amber-500/60 bg-gradient-to-br from-amber-900/40 to-yellow-900/30 p-3 text-center">
-              <div className="text-sm font-bold text-amber-300">결산 보상</div>
+            <div
+              className={`rounded-xl border-2 p-3 text-center transition ${
+                rewardClaimed
+                  ? 'border-zinc-700 bg-zinc-900/50 opacity-60 grayscale'
+                  : 'border-amber-500/60 bg-gradient-to-br from-amber-900/40 to-yellow-900/30'
+              }`}
+            >
+              <div className={`text-sm font-bold ${rewardClaimed ? 'text-zinc-400' : 'text-amber-300'}`}>
+                결산 보상
+              </div>
               <div className="mt-1.5 text-[12px] text-zinc-100">
-                <span className="font-mono font-bold">
-                  💎 {v.myReward.diamond.toLocaleString()}
-                </span>
+                {v.myReward.diamond > 0 ? (
+                  <span className="font-mono font-bold">
+                    💎 {v.myReward.diamond.toLocaleString()}
+                  </span>
+                ) : null}
                 {Object.entries(v.myReward.boxes).some(([, n]) => n > 0) ? (
                   <span className="text-zinc-300">
-                    {' · '}보급상자(
+                    {v.myReward.diamond > 0 ? ' · ' : ''}보급상자(
                     {Object.entries(v.myReward.boxes)
                       .filter(([, n]) => n > 0)
                       .map(([s, n], i) => (
@@ -498,11 +493,15 @@ export function RaidSessionCard({ view: v }: { view: RaidView }) {
               </div>
               <button
                 type="button"
-                disabled={claimedOpt}
+                disabled={rewardClaimed}
                 onClick={handleClaim}
-                className="mt-2.5 w-full rounded-full bg-gradient-to-r from-amber-500 to-yellow-500 px-4 py-2.5 text-sm font-extrabold text-amber-950 shadow-lg shadow-amber-900/40 transition active:scale-95 hover:brightness-110 disabled:opacity-50"
+                className={`mt-2.5 w-full rounded-full px-4 py-2.5 text-sm font-extrabold transition ${
+                  rewardClaimed
+                    ? 'cursor-default bg-zinc-700 text-zinc-400'
+                    : 'bg-gradient-to-r from-amber-500 to-yellow-500 text-amber-950 shadow-lg shadow-amber-900/40 active:scale-95 hover:brightness-110'
+                }`}
               >
-                보상 받기
+                {rewardClaimed ? '수령 완료' : '보상 받기'}
               </button>
             </div>
           )
@@ -569,10 +568,9 @@ export function RaidSessionCard({ view: v }: { view: RaidView }) {
             <span className="font-semibold text-amber-300">누적 보상</span>{' '}
             {v.phasesCleared > 0 ? (
               <span className="text-zinc-200">
-                💎{drops.diamond}
                 {Object.entries(drops.boxes)
                   .filter(([, n]) => n > 0)
-                  .map(([s, n]) => ` · ${SLOT_EMOJI[s as SupplySlot]}${n}`)
+                  .map(([s, n], i) => `${i > 0 ? ' · ' : ''}${SLOT_EMOJI[s as SupplySlot]}${n}`)
                   .join('')}
               </span>
             ) : (

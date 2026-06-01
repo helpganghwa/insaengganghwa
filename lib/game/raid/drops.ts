@@ -3,10 +3,10 @@
  *
  * 페이즈 돌파 수: 누적 데미지 ≥ Σ_{k=1}^{N} phase1·1.5^(k-1) 인 최대 N.
  * 페이즈 드롭: **(raidId, phase) 결정론** 추첨 → 모든 참여자 동일 적용(GDD §3.5).
+ * 돌파 페이즈마다 보급 상자 RAID_PHASE_DROP_BOXES개(슬롯 균등) — 다이아 드롭 없음.
  */
 import {
-  RAID_PHASE_DROP_DIAMOND,
-  RAID_PHASE_DROP_DIAMOND_RATE_BP,
+  RAID_PHASE_DROP_BOXES,
   RAID_PHASE_HP_MULT,
   SUPPLY_SLOTS,
   type SupplySlot,
@@ -33,32 +33,25 @@ function fnv1a(str: string): number {
   return h >>> 0;
 }
 
-export type PhaseDrop =
-  | { kind: 'diamond'; amount: number }
-  | { kind: 'box'; slot: SupplySlot };
-
-/** 페이즈 1개 돌파 보상 — 50% 100다이아 / 50% 슬롯 랜덤 보급 상자(1/3). 결정론. */
-export function phaseDropOutcome(raidId: bigint, phase: number): PhaseDrop {
-  const h = fnv1a(`${raidId.toString()}:${phase}`);
-  if (h % 10000 < RAID_PHASE_DROP_DIAMOND_RATE_BP) {
-    return { kind: 'diamond', amount: RAID_PHASE_DROP_DIAMOND };
+/** 페이즈 1개 돌파 보상 — 보급 상자 슬롯 목록(RAID_PHASE_DROP_BOXES개). 결정론. */
+export function phaseDropOutcome(raidId: bigint, phase: number): SupplySlot[] {
+  const slots: SupplySlot[] = [];
+  for (let i = 0; i < RAID_PHASE_DROP_BOXES; i++) {
+    // 박스별 다른 해시 비트 → 같은 페이즈 내 복수 박스도 결정론 분산.
+    const h = fnv1a(`${raidId.toString()}:${phase}:${i}`);
+    slots.push(SUPPLY_SLOTS[h % SUPPLY_SLOTS.length]!);
   }
-  // 슬롯 균등 1/3 — 다른 해시 비트로 결정.
-  const slot = SUPPLY_SLOTS[(h >>> 16) % SUPPLY_SLOTS.length]!;
-  return { kind: 'box', slot };
+  return slots;
 }
 
-/** 1..N 페이즈 드롭 합산 → {diamond, boxes{slot:n}} (전원 동일 지급분). */
+/** 1..N 페이즈 드롭 합산 → {boxes{slot:n}} (전원 동일 지급분). */
 export function aggregatePhaseDrops(
   raidId: bigint,
   phasesCleared: number,
-): { diamond: number; boxes: Record<SupplySlot, number> } {
+): { boxes: Record<SupplySlot, number> } {
   const boxes: Record<SupplySlot, number> = { weapon: 0, armor: 0, accessory: 0 };
-  let diamond = 0;
   for (let p = 1; p <= phasesCleared; p++) {
-    const d = phaseDropOutcome(raidId, p);
-    if (d.kind === 'diamond') diamond += d.amount;
-    else boxes[d.slot] += 1;
+    for (const slot of phaseDropOutcome(raidId, p)) boxes[slot] += 1;
   }
-  return { diamond, boxes };
+  return { boxes };
 }

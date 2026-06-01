@@ -314,7 +314,7 @@ export const DIAMOND_PER_DISENCHANT = 10;
 // §5. 레이드 (플레이어 호스팅 co-op)
 // ─────────────────────────────────────────────────────────────────────────────
 
-export const RAID_OPEN_COST_DIAMOND = 1000;
+export const RAID_OPEN_COST_DIAMOND = 500;
 export const RAID_MAX_PARTICIPANTS = 10; // 호스트 포함
 export const RAID_MAX_CONCURRENT_PER_USER = 3; // 호스팅+참여 합산
 export const RAID_DAILY_CAP = 5; // 유저당 1일(KST)
@@ -356,10 +356,13 @@ export function computeRaidDamage(totalCP: number, varFactor: number, isCrit: bo
   return Math.round(totalCP * RAID_DAMAGE_K * v * (isCrit ? RAID_CRIT_MULT : 1));
 }
 
-/** §5.4 보상 — 1회+ 공격 전원 동일. 페이즈 돌파마다 1회 추첨(기본 참가 보상 없음). */
-export const RAID_PHASE_DROP_DIAMOND = 50;
-export const RAID_PHASE_DROP_DIAMOND_RATE_BP = 5000; // 50% 다이아 / 50% 슬롯 랜덤 보급 상자
-/** 보급 상자 당첨 시 슬롯 균등 — SUPPLY_SLOTS 중 1/3. (RNG는 서버에서) */
+/**
+ * §5.4 보상 — 1회+ 공격 전원 동일. 기본 참가 보상 없음.
+ * 돌파 페이즈마다 **보급 상자 1개**(슬롯 균등 1/3) 지급 — 다이아 드롭 없음.
+ * 레이드는 초월용 박스 수급의 *보조* 경로(시뮬 simulate-raid-boxes: 무과금 패시브 대비
+ * 보통 ×1.4~1.7, 천장 ×3.3 — 1개 고정 채택. 1~3개는 헤비/고래 ×4~6.6로 과공급).
+ */
+export const RAID_PHASE_DROP_BOXES = 1;
 
 // ─────────────────────────────────────────────────────────────────────────────
 // §6. 경제 — 단일 프리미엄 재화 (다이아 ≡ 보석)
