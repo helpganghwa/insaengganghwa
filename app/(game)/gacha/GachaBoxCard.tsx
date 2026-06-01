@@ -79,7 +79,7 @@ export function GachaBoxCard({
           className="absolute inset-0 h-full w-full object-cover opacity-90"
           style={{ imageRendering: 'pixelated', objectPosition: `50% ${bgPosY}` }}
         />
-        <div className="relative bg-gradient-to-b from-black/0 via-black/45 to-black/85 px-4 py-5">
+        <div className="relative flex flex-col justify-between gap-7 bg-gradient-to-b from-black/0 via-black/45 to-black/85 px-4 py-4">
           <div className="flex items-baseline justify-between">
             <h2 className="text-base font-bold text-white drop-shadow-sm">{label}</h2>
             <span className="text-xs text-white/85">
@@ -88,7 +88,7 @@ export function GachaBoxCard({
           </div>
 
           {/* 두 버튼 grid-cols-2로 폭 동일 — multiN 라벨 가변에 따른 width 흔들림 방지. */}
-          <div className="mt-3 ml-auto grid w-44 grid-cols-2 gap-1.5">
+          <div className="ml-auto grid w-44 grid-cols-2 gap-1.5">
             <button
               type="button"
               disabled={pending || displayCount < 1}
