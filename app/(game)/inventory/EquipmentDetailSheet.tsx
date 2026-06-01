@@ -220,9 +220,9 @@ export function EquipmentDetailSheet({
           {/* 강화 — SLOT_BUSY 시 SwapPickerModal 열어 교체. */}
           <button
             type="button"
-            disabled={pending || !canEnhance}
+            disabled={!canEnhance}
             onClick={() => {
-              if (pending || !canEnhance) return;
+              if (pending || !canEnhance) return; // 시각적 dim 없이 재진입만 차단
               setError(null);
               startTransition(async () => {
                 const r = await startEnhance(item.id);
@@ -247,7 +247,7 @@ export function EquipmentDetailSheet({
           {/* 초월 — 시도 시점에 strongerInstance 검사하여 안내(상시 노출 X). */}
           <button
             type="button"
-            disabled={pending || !canTranscend}
+            disabled={!canTranscend}
             onClick={() => {
               if (strongerInstance) {
                 setError(
@@ -299,7 +299,6 @@ export function EquipmentDetailSheet({
           {/* 장착/해제 */}
           <button
             type="button"
-            disabled={pending}
             onClick={() =>
               run(
                 () => (item.equipped ? unequipAction(item.id) : equipAction(item.id)),
@@ -313,7 +312,6 @@ export function EquipmentDetailSheet({
           {/* 잠금 토글 — 낙관 즉시 반영. */}
           <button
             type="button"
-            disabled={pending}
             onClick={() =>
               run(
                 () => toggleLockAction(item.id),
@@ -327,7 +325,7 @@ export function EquipmentDetailSheet({
           {/* 분해 — 낙관: 인스턴스 즉시 제거 + 다이아 +10. */}
           <button
             type="button"
-            disabled={pending || !canDisenchant}
+            disabled={!canDisenchant}
             onClick={() => {
               if (!confirmD) {
                 setConfirmD(true);
