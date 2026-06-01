@@ -13,6 +13,7 @@ import { catalogItems, equipmentInstances, type Slot } from '@/lib/db/schema/equ
 import { pieceCombatPower, totalCombatPower } from '@/lib/game/balance';
 import { championCatalogIds } from '@/lib/game/codex/ranking';
 import { getMyRanks } from '@/lib/game/leaderboard/queries';
+import { getEnhanceTotals } from '@/lib/game/stats/queries';
 import { TranscendSprite } from '@/components/TranscendSprite';
 import { RarityFrame, rarityBorderStyle, hasRarityBorder } from '@/components/RarityFrame';
 import { CharacterStage } from '@/components/CharacterStage';
@@ -231,6 +232,61 @@ function KpiRowFallback({
   );
 }
 
+/**
+ * "지금 인생강화는" 누적 통계 카드 — 사회적 증거(grow 패턴).
+ * 누적 강화 시도의 성공/유지/하락 카운트를 10분 캐시로 보여줌.
+ * 첫 페인트 빠르게 흘리기 위해 <Suspense>로 stream(콜드 캐시 ~2s).
+ */
+async function EnhanceStatsCard() {
+  const totals = await getEnhanceTotals();
+  const fmt = (n: number) => n.toLocaleString('ko-KR');
+  return (
+    <section className="rounded-xl border border-zinc-800 bg-zinc-900/50 p-2.5">
+      <div className="mb-1.5 text-[10px] font-semibold tracking-wide text-zinc-400">
+        지금 인생강화는
+      </div>
+      <ul className="space-y-0.5 font-mono text-[11px] tabular-nums text-zinc-300">
+        <li className="flex justify-between">
+          <span className="text-emerald-300/90">누적 강화 성공</span>
+          <span>{fmt(totals.success)}회</span>
+        </li>
+        <li className="flex justify-between">
+          <span className="text-zinc-400">누적 강화 유지</span>
+          <span>{fmt(totals.hold)}회</span>
+        </li>
+        <li className="flex justify-between">
+          <span className="text-rose-300/90">누적 강화 하락</span>
+          <span>{fmt(totals.down)}회</span>
+        </li>
+      </ul>
+    </section>
+  );
+}
+
+function EnhanceStatsFallback() {
+  return (
+    <section className="rounded-xl border border-zinc-800 bg-zinc-900/50 p-2.5">
+      <div className="mb-1.5 text-[10px] font-semibold tracking-wide text-zinc-400">
+        지금 인생강화는
+      </div>
+      <ul className="space-y-0.5 font-mono text-[11px] tabular-nums text-zinc-500">
+        <li className="flex justify-between">
+          <span className="text-emerald-300/60">누적 강화 성공</span>
+          <span>—</span>
+        </li>
+        <li className="flex justify-between">
+          <span>누적 강화 유지</span>
+          <span>—</span>
+        </li>
+        <li className="flex justify-between">
+          <span className="text-rose-300/60">누적 강화 하락</span>
+          <span>—</span>
+        </li>
+      </ul>
+    </section>
+  );
+}
+
 export default async function PublicProfilePage({
   params,
 }: {
@@ -374,6 +430,11 @@ export default async function PublicProfilePage({
             </ul>
           </section>
         ) : null}
+
+        {/* ── 누적 통계("지금 인생강화는") — CTA 직전 사회적 증거. ── */}
+        <Suspense fallback={<EnhanceStatsFallback />}>
+          <EnhanceStatsCard />
+        </Suspense>
 
         {/* ── CTA 분기 — 모두 동일 폭·패딩, 디자인 강조만 다름. ── */}
         {mode === 'guest' ? (
