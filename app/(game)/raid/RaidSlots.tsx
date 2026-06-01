@@ -99,7 +99,7 @@ export function RaidSlots({
               <Link
                 key={s.raidId}
                 href={`/raid/${s.raidId}`}
-                className={`relative flex items-center gap-3 overflow-hidden rounded-xl border-2 border-amber-400 bg-gradient-to-r p-3 text-zinc-100 shadow-[0_0_24px_rgba(245,158,11,0.35)] transition active:scale-[0.99] ${getBossBgClass(s.bossCode)}`}
+                className={`relative flex items-center gap-3 overflow-hidden rounded-xl border-2 border-amber-700/60 bg-gradient-to-r p-3 text-zinc-100 shadow-[0_0_24px_rgba(245,158,11,0.35)] transition active:scale-[0.99] ${getBossBgClass(s.bossCode)}`}
               >
                 {getBossBg(s.bossCode) ? (
                   // eslint-disable-next-line @next/next/no-img-element
@@ -129,15 +129,12 @@ export function RaidSlots({
                     {s.boxTotal > 0 ? <span>📦 {s.boxTotal}</span> : null}
                   </span>
                 </span>
-                <span className="relative shrink-0 rounded-full bg-amber-400 px-2.5 py-1 text-[10px] font-bold text-amber-950">
-                  수령 →
-                </span>
               </Link>
             ) : (
             <Link
               key={s.raidId}
               href={`/raid/${s.raidId}`}
-              className={`relative flex items-center gap-3 overflow-hidden rounded-xl border-2 border-amber-700/60 bg-gradient-to-r p-3 text-zinc-100 transition active:scale-[0.99] ${getBossBgClass(s.bossCode)}`}
+              className={`relative flex items-center gap-3 overflow-hidden rounded-xl border-2 border-amber-700/60 bg-gradient-to-r p-3 text-zinc-100 shadow-[0_0_24px_rgba(245,158,11,0.35)] transition active:scale-[0.99] ${getBossBgClass(s.bossCode)}`}
             >
               {/* 보스 배경 이미지(있으면) — opacity 35로 부드럽게 깔고 어둠 overlay로 가독성 확보 (grow 패턴). */}
               {getBossBg(s.bossCode) ? (
