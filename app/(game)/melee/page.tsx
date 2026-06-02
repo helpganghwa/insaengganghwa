@@ -7,36 +7,16 @@ import { meleeBattles, meleeParticipants } from '@/lib/db/schema/melee';
 import { profiles } from '@/lib/db/schema/profiles';
 import { userProfiles } from '@/lib/db/schema/avatar';
 import { kstDateString, kstStartOfDay } from '@/lib/kst';
-import { assetUrl } from '@/lib/asset-versions';
 
 import { MeleeCountdown } from './MeleeCountdown';
 import { MeleeResult, type MeleeResultView } from './MeleeResult';
 
 /**
  * /melee — 대난투 (MELEE.md). 상태별:
- *  - 발표 전(status≠revealed): 콜로세움 + 카운트다운/진행중 대기(MeleeCountdown).
- *  - 발표 후(revealed): 랭킹(1·2·3) + 내 순위/보상 + 2탭(전투 리플레이 / 내 전투 리캡).
+ *  - 발표 전(status≠revealed): 아레나 배경 카운트다운/진행중(MeleeCountdown, main 꽉 채움).
+ *  - 발표 후(revealed): 고정 무대(랭킹/단일 전투) + 내 순위 + 2탭 로그(MeleeResult).
  * 결과 API는 status='revealed' 전 비공개(서버 시각 게이트).
  */
-function Hero() {
-  return (
-    <div className="relative flex h-44 items-end justify-center overflow-hidden rounded-2xl border border-zinc-800">
-      {/* eslint-disable-next-line @next/next/no-img-element */}
-      <img
-        src={assetUrl('/sprites/hub/melee.png')}
-        alt=""
-        aria-hidden
-        className="absolute inset-0 h-full w-full object-cover"
-        style={{ imageRendering: 'pixelated' }}
-      />
-      <div className="pointer-events-none absolute inset-0 bg-gradient-to-t from-black/85 via-black/40 to-black/10" />
-      <h1 className="relative z-10 pb-3 text-xl font-extrabold text-white drop-shadow-[0_2px_4px_rgba(0,0,0,0.9)]">
-        대난투
-      </h1>
-    </div>
-  );
-}
-
 export default async function MeleePage() {
   const userId = await getSessionUserId();
   if (!userId) return null;
@@ -67,14 +47,11 @@ export default async function MeleePage() {
 
   if (!battle || battle.status !== 'revealed') {
     return (
-      <div className="space-y-4 px-4 py-6">
-        <Hero />
-        <MeleeCountdown
-          runAtIso={runAtIso}
-          revealAtIso={revealAtIso}
-          participantCount={battle?.participantCount ?? null}
-        />
-      </div>
+      <MeleeCountdown
+        runAtIso={runAtIso}
+        revealAtIso={revealAtIso}
+        participantCount={battle?.participantCount ?? null}
+      />
     );
   }
 

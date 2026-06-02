@@ -57,8 +57,8 @@ html {
   /* 레이드 — 타격/치명타 화면 셰이크·플래시, 데미지 부유, 페이즈 돌파 ripple. */
   --animate-hit-shake: hit-shake 0.32s ease-in-out;
   --animate-crit-shake: crit-shake 0.5s ease-in-out;
-  --animate-hit-flash: hit-flash 0.32s ease-out;
-  --animate-crit-flash: crit-flash 0.5s ease-out;
+  --animate-hit-flash: hit-flash 0.32s ease-out forwards;
+  --animate-crit-flash: crit-flash 0.5s ease-out forwards;
   --animate-dmg-float: dmg-float 0.8s ease-out forwards;
   --animate-phase-up: phase-up 0.6s ease-out;
   --animate-pulse-soft: pulse-soft 1.6s ease-in-out infinite;

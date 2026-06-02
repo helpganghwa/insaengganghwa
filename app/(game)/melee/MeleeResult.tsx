@@ -54,6 +54,14 @@ function boxSummary(b: { weapon: number; armor: number; accessory: number }): st
   return parts.join(' · ');
 }
 
+/** 잔여 HP 비율별 게이지 색상(녹→황→주→적). */
+function hpColor(pct: number): string {
+  if (pct > 55) return 'bg-emerald-500';
+  if (pct > 30) return 'bg-amber-400';
+  if (pct > 0) return 'bg-orange-500';
+  return 'bg-red-700';
+}
+
 // ── 단일 전투 무대(레이드식 타격·HP 연출) ──
 function Fighter({
   name,
@@ -61,6 +69,7 @@ function Fighter({
   side,
   attacking,
   shake,
+  dmg,
   hp,
   hpBefore,
   maxHp,
@@ -70,6 +79,8 @@ function Fighter({
   side: 'l' | 'r';
   attacking: boolean;
   shake: boolean;
+  /** 이 캐릭터 머리 위로 띄울 피해량(타겟에만). */
+  dmg?: number;
   hp?: number;
   hpBefore?: number;
   maxHp?: number;
@@ -85,12 +96,18 @@ function Fighter({
 
   const lunge = attacking ? (side === 'l' ? 'translate-x-2' : '-translate-x-2') : '';
   return (
-    <div className="flex w-24 flex-col items-center gap-1">
+    <div className="flex w-32 flex-col items-center gap-1">
       <div
-        className={`relative h-28 w-24 transition-transform duration-200 ${dead ? 'opacity-30 grayscale' : ''} ${lunge} ${
+        className={`relative h-40 w-32 transition-transform duration-200 ${dead ? 'opacity-30 grayscale' : ''} ${lunge} ${
           shake ? 'animate-hit-shake' : ''
         }`}
       >
+        {/* 피해량 — 타겟 머리 위 정중앙에서 떠오름 */}
+        {dmg != null ? (
+          <div className="animate-dmg-float pointer-events-none absolute left-1/2 top-1 z-20 font-mono text-3xl font-extrabold text-red-300 drop-shadow-[0_2px_4px_rgba(0,0,0,0.9)]">
+            {dmg.toLocaleString()}
+          </div>
+        ) : null}
         {avatar ? (
           // eslint-disable-next-line @next/next/no-img-element
           <img
@@ -102,17 +119,17 @@ function Fighter({
             style={{ imageRendering: 'pixelated' }}
           />
         ) : (
-          <div className="flex h-full w-full items-center justify-center text-lg font-extrabold text-zinc-400">
+          <div className="flex h-full w-full items-center justify-center text-2xl font-extrabold text-zinc-400">
             {name.slice(0, 1)}
           </div>
         )}
-        <div className="pointer-events-none absolute -bottom-0.5 left-1/2 h-1.5 w-14 -translate-x-1/2 rounded-[50%] bg-black/55 blur-[3px]" />
+        <div className="pointer-events-none absolute -bottom-0.5 left-1/2 h-2 w-20 -translate-x-1/2 rounded-[50%] bg-black/55 blur-[3px]" />
       </div>
-      <div className="max-w-[92px] truncate text-[11px] font-bold text-white drop-shadow">{name}</div>
+      <div className="max-w-[120px] truncate text-[12px] font-bold text-white drop-shadow">{name}</div>
       {maxHp != null ? (
-        <div className="h-1.5 w-16 overflow-hidden rounded-full bg-zinc-800 ring-1 ring-black/40">
+        <div className="h-2 w-24 overflow-hidden rounded-full bg-zinc-800 ring-1 ring-black/40">
           <div
-            className={`h-full ${pct > 0 ? 'bg-emerald-500' : 'bg-red-600'}`}
+            className={`h-full ${hpColor(pct)}`}
             style={{ width: `${pct}%`, transition: 'width 650ms ease-out' }}
           />
         </div>
@@ -131,47 +148,40 @@ function FightStage({
   onBack: () => void;
 }) {
   const killed = fight.hpAfter <= 0;
+  // 판타지 내레이션 — 한 줄로 전투를 묘사.
+  const narration = killed
+    ? `${fight.atkName}의 일격이 ${fight.tgtName}을(를) 꿰뚫는다. ${fight.dmg.toLocaleString()}의 치명타 — ${fight.tgtName}, 모래 위에 무너지다.`
+    : `${fight.atkName}, ${fight.tgtName}에게 ${fight.dmg.toLocaleString()}의 피해를 새긴다. 남은 생명력 ${Math.max(0, fight.hpAfter).toLocaleString()}, 아직 쓰러지지 않는다.`;
   return (
     <div className="relative z-10 flex h-full flex-col">
       {/* 피격 플래시(1회) */}
       <div className="animate-hit-flash pointer-events-none absolute inset-0 bg-red-500/70 mix-blend-screen" />
-      {/* 상단: 참가자 / 라운드 / 비움 */}
+      {/* 상단: 참가자 / ROUND / 비움 */}
       <div className="relative z-10 grid grid-cols-3 items-center px-3 pt-2 text-[10px] font-semibold drop-shadow">
         <span className="text-left text-zinc-200">참가 {participantCount.toLocaleString()}</span>
-        <span className="text-center text-amber-200">라운드 {fight.round.toLocaleString()}</span>
+        <span className="text-center font-mono tracking-wider text-amber-200">
+          {fight.round.toLocaleString()} ROUND
+        </span>
         <span />
       </div>
-      {/* 중단: 아바타 vs 아바타 + 플로팅 데미지 */}
+      {/* 중단: 아바타 vs 아바타(타겟 머리 위 데미지) */}
       <div className="relative z-10 flex flex-1 items-center justify-center gap-2">
         <Fighter name={fight.atkName} avatar={fight.atkAvatar} side="l" attacking shake={false} />
-        <div className="animate-dmg-float pointer-events-none font-mono text-2xl font-extrabold text-red-300 drop-shadow">
-          {fight.dmg.toLocaleString()}
-        </div>
         <Fighter
           name={fight.tgtName}
           avatar={fight.tgtAvatar}
           side="r"
           attacking={false}
           shake
+          dmg={fight.dmg}
           hp={fight.hpAfter}
           hpBefore={fight.hpAfter + fight.dmg}
           maxHp={fight.tgtMaxHp}
         />
       </div>
-      {/* 하단: 전투 로그 */}
-      <div className="relative z-10 px-2 pb-2 text-center text-[11px] text-zinc-100 drop-shadow">
-        <span className="font-bold">{fight.atkName}</span>
-        <span className="text-zinc-400"> → </span>
-        <span className="font-bold">{fight.tgtName}</span>{' '}
-        <span className="font-mono text-red-300">{fight.dmg.toLocaleString()} 피해</span>
-        {killed ? (
-          <span className="font-bold text-red-400"> · 쓰러짐!</span>
-        ) : (
-          <span className="text-zinc-400">
-            {' '}
-            · HP <span className="font-mono text-emerald-300">{Math.max(0, fight.hpAfter).toLocaleString()}</span>
-          </span>
-        )}
+      {/* 하단: 판타지 내레이션 */}
+      <div className="relative z-10 px-3 pb-2.5 text-center text-[11px] italic leading-relaxed text-zinc-100 drop-shadow">
+        {narration}
       </div>
       <button
         type="button"
@@ -230,7 +240,7 @@ function RankingView({
                     className="absolute inset-0 h-full w-full object-contain object-bottom"
                     style={{
                       imageRendering: 'pixelated',
-                      transform: first ? 'scale(1.32)' : 'scale(1.08)',
+                      transform: first ? 'scale(1.7)' : 'scale(1.35)',
                       transformOrigin: 'center bottom',
                       filter: 'drop-shadow(0 3px 5px rgba(0,0,0,0.6))',
                     }}
@@ -248,13 +258,14 @@ function RankingView({
   );
 }
 
-// ── 로그 라운드 카드 — ROUND divider + 공격(좌)/방어(우) 한 줄 ──
+// ── 로그 라운드 카드 — ROUND divider + 턴제 PVP 흐름(공격→피해→결과) ──
 function RoundCard({
   round,
   atk,
   tgt,
   dmg,
   hp,
+  tgtRank,
   me,
   onClick,
 }: {
@@ -263,6 +274,8 @@ function RoundCard({
   tgt: string;
   dmg: number;
   hp: number;
+  /** 탈락 시 그 타겟의 최종 등수(있으면 "N위 기록" 표기). */
+  tgtRank?: number;
   me?: string;
   onClick: () => void;
 }) {
@@ -283,28 +296,29 @@ function RoundCard({
           </span>
           <div className="h-px flex-1 bg-zinc-800" />
         </div>
-        {/* 공격(좌) / 방어(우) */}
-        <div className="flex items-baseline justify-between gap-2 text-[11px]">
-          <span className="min-w-0 flex-1 truncate">
-            <span className="text-amber-400/90">공격 </span>
-            <span className={`font-bold ${hl(atk)}`}>{atk}</span>{' '}
+        {/* 턴제 PVP 흐름 — 공격 → 피해 → 결과 */}
+        <div className="space-y-0.5 px-0.5 text-[11px] leading-snug">
+          <p className="truncate">
+            <span className="text-amber-400/90">▸ </span>
+            <span className={`font-bold ${hl(atk)}`}>{atk}</span>
+            <span className="text-zinc-400">의 공격</span>
+          </p>
+          <p className="truncate text-zinc-300">
+            <span className={`font-semibold ${hl(tgt)}`}>{tgt}</span>
+            <span className="text-zinc-400">, </span>
             <span className="font-mono text-red-300">{dmg.toLocaleString()}</span>
-          </span>
-          <span className="min-w-0 flex-1 truncate text-right">
-            {killed ? (
-              <>
-                <span className="text-zinc-500">방어 </span>
-                <span className={`font-semibold ${hl(tgt)}`}>{tgt}</span>{' '}
-                <span className="font-bold text-red-400">쓰러짐</span>
-              </>
-            ) : (
-              <>
-                <span className="text-sky-400/80">방어 </span>
-                <span className={`font-semibold ${hl(tgt)}`}>{tgt}</span>{' '}
-                <span className="font-mono text-emerald-300">HP {hp.toLocaleString()}</span>
-              </>
-            )}
-          </span>
+            <span className="text-zinc-400">의 피해 · 남은 체력 </span>
+            <span className="font-mono text-emerald-300">{Math.max(0, hp).toLocaleString()}</span>
+          </p>
+          {killed ? (
+            <p className="truncate font-bold text-red-400">
+              {tgt} 쓰러짐{tgtRank ? ` · ${tgtRank.toLocaleString()}위 기록` : ''}
+            </p>
+          ) : (
+            <p className="truncate text-sky-300/90">
+              {tgt}, {atk}의 공격을 버텨낸다
+            </p>
+          )}
         </div>
       </button>
     </li>
@@ -421,6 +435,7 @@ export function MeleeResult({ view }: { view: MeleeResultView }) {
                   const an = roster[e[0]]?.nickname ?? '?';
                   const tn = roster[e[1]]?.nickname ?? '?';
                   const tgtCp = roster[e[1]]?.cp ?? 0;
+                  const tgtRank = roster[e[1]]?.rank;
                   return (
                     <RoundCard
                       key={round}
@@ -429,6 +444,7 @@ export function MeleeResult({ view }: { view: MeleeResultView }) {
                       tgt={tn}
                       dmg={e[2]}
                       hp={e[3]}
+                      tgtRank={e[3] <= 0 ? tgtRank : undefined}
                       me={myNickname}
                       onClick={() =>
                         play({
@@ -458,6 +474,8 @@ export function MeleeResult({ view }: { view: MeleeResultView }) {
                 const atkName = role === 0 ? myNickname : opp;
                 const tgtName = role === 0 ? opp : myNickname;
                 const tgtMaxHp = role === 1 && myCp > 0 ? myCp * MELEE_HP_MULT : undefined;
+                // 내가 타겟이고 탈락한 라운드면 내 최종 등수를 기록 표기(상대 탈락 등수는 미상).
+                const tgtRank = role === 1 && hp <= 0 ? me?.rank : undefined;
                 return (
                   <RoundCard
                     key={round}
@@ -466,6 +484,7 @@ export function MeleeResult({ view }: { view: MeleeResultView }) {
                     tgt={tgtName}
                     dmg={dmg}
                     hp={hp}
+                    tgtRank={tgtRank}
                     me={myNickname}
                     onClick={() =>
                       play({
