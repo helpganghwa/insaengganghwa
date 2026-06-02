@@ -7,13 +7,14 @@
  *  - 마지막 생존자 = 1위(챔피언)
  * HP = 전투력 × MELEE_HP_MULT. 데미지 = 공격자 전투력 × U(MIN,MAX)(최소 1).
  *
- * 리플레이는 finale(생존자 ≤ MELEE_FINALE_SIZE 구간 = 상위 100위 전투)만 보존 — N무관 상수 크기.
+ * 리플레이: 총 라운드 ≤ MELEE_REPLAY_ROUNDS면 전체, 초과면 **마지막 그만큼**(클라이맥스).
+ * 링 버퍼로 O(REPLAY) 메모리 — N무관. finale는 등장 유저 로컬 인덱스로 압축.
  */
 import {
   MELEE_HP_MULT,
   MELEE_DMG_MIN,
   MELEE_DMG_MAX,
-  MELEE_FINALE_SIZE,
+  MELEE_REPLAY_ROUNDS,
 } from '@/lib/game/balance';
 import type { MeleeFinale } from '@/lib/db/schema/melee';
 
@@ -38,7 +39,7 @@ export function simulateMelee(
     return {
       ranks: [{ userId: p.userId, finalRank: 1, killerUserId: null }],
       championUserId: p.userId,
-      finale: { roster: [{ userId: p.userId, nickname: p.nickname, cp: p.cp }], events: [] },
+      finale: { roster: [{ userId: p.userId, nickname: p.nickname, cp: p.cp, rank: 1 }], events: [] },
     };
   }
 
@@ -52,13 +53,19 @@ export function simulateMelee(
   const alive: number[] = [];
   for (let i = 0; i < n; i++) alive.push(i);
 
-  const events: MeleeFinale['events'] = [];
+  // 링 버퍼 — 마지막 REPLAY 라운드만 보존(O(REPLAY), N무관).
+  const REPLAY = MELEE_REPLAY_ROUNDS;
+  const rA = new Int32Array(REPLAY);
+  const rT = new Int32Array(REPLAY);
+  const rD = new Int32Array(REPLAY);
+  const rK = new Uint8Array(REPLAY);
+  let rounds = 0; // 총 라운드 수
+
   let attacker = -1; // 참가자 인덱스. -1 = 새로 뽑아야 함(체인 종료/시작)
   let worstRank = n;
 
   while (alive.length > 1) {
     if (attacker < 0) attacker = alive[Math.floor(rng() * alive.length)]!;
-    // 타겟 = 생존자 중 공격자 제외 (alive 위치 ti로 뽑아 O(1) 제거)
     let ti = Math.floor(rng() * alive.length);
     if (alive[ti] === attacker) ti = (ti + 1) % alive.length;
     const target = alive[ti]!;
@@ -70,14 +77,12 @@ export function simulateMelee(
     hp[target]! -= dmg;
     const killed = hp[target]! <= 0;
 
-    if (alive.length <= MELEE_FINALE_SIZE) {
-      events.push({
-        a: participants[attacker]!.userId,
-        t: participants[target]!.userId,
-        d: dmg,
-        k: killed,
-      });
-    }
+    const slot = rounds % REPLAY;
+    rA[slot] = attacker;
+    rT[slot] = target;
+    rD[slot] = dmg;
+    rK[slot] = killed ? 1 : 0;
+    rounds++;
 
     if (killed) {
       finalRank[target] = worstRank;
@@ -85,7 +90,7 @@ export function simulateMelee(
       worstRank--;
       alive[ti] = alive[alive.length - 1]!; // swap-remove
       alive.pop();
-      attacker = -1; // 체인 종료 → 다음은 새 랜덤 공격자
+      attacker = -1; // 체인 종료 → 새 랜덤 공격자
     } else {
       attacker = target; // 생존자가 다음 공격자
     }
@@ -101,12 +106,26 @@ export function simulateMelee(
     killerUserId: killer[i]! < 0 ? null : participants[killer[i]!]!.userId,
   }));
 
-  // 피날레 로스터 = 상위 MELEE_FINALE_SIZE 등(이벤트에 등장하는 전원). 등수 오름차순.
-  const roster = participants
-    .map((p, i) => ({ p, r: finalRank[i]! }))
-    .filter((x) => x.r <= MELEE_FINALE_SIZE)
-    .sort((a, b) => a.r - b.r)
-    .map((x) => ({ userId: x.p.userId, nickname: x.p.nickname, cp: x.p.cp }));
+  // 링 버퍼 → 시간순 마지막 min(rounds, REPLAY)개. 등장 유저 로컬 인덱스 압축 + 등수 포함.
+  const kept = Math.min(rounds, REPLAY);
+  const start = rounds > REPLAY ? rounds % REPLAY : 0;
+  const localOf = new Map<number, number>();
+  const roster: MeleeFinale['roster'] = [];
+  const local = (g: number): number => {
+    let l = localOf.get(g);
+    if (l === undefined) {
+      l = roster.length;
+      localOf.set(g, l);
+      const p = participants[g]!;
+      roster.push({ userId: p.userId, nickname: p.nickname, cp: p.cp, rank: finalRank[g]! });
+    }
+    return l;
+  };
+  const events: MeleeFinale['events'] = [];
+  for (let i = 0; i < kept; i++) {
+    const s = (start + i) % REPLAY;
+    events.push([local(rA[s]!), local(rT[s]!), rD[s]!, rK[s]! as 0 | 1]);
+  }
 
   return { ranks, championUserId: participants[champ]!.userId, finale: { roster, events } };
 }

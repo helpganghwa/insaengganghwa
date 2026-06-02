@@ -25,17 +25,14 @@ import { profiles } from './profiles';
 
 export const meleeStatusEnum = pgEnum('melee_status', ['running', 'computed', 'revealed']);
 
-/** 피날레 이벤트 1건 — 마지막 MELEE_FINALE_SIZE명 생존 구간만 보존(리플레이용). */
-export type MeleeFinaleEvent = {
-  /** 공격자 user_id */ a: string;
-  /** 타겟 user_id */ t: string;
-  /** 데미지 */ d: number;
-  /** 이 타격으로 탈락했는지 */ k: boolean;
-};
-/** 피날레 페이로드 — 자기완결(닉네임·전투력 스냅샷 포함, 그날 리플레이 렌더용). */
+/**
+ * 리플레이 페이로드 — 마지막 MELEE_REPLAY_ROUNDS 라운드(총 라운드 적으면 전체).
+ * 자기완결: roster(등장 유저 닉·전투력·등수 스냅샷) + events(roster 로컬 인덱스 압축).
+ */
 export type MeleeFinale = {
-  roster: { userId: string; nickname: string; cp: number }[];
-  events: MeleeFinaleEvent[];
+  roster: { userId: string; nickname: string; cp: number; rank: number }[];
+  /** [공격자 로컬idx, 타겟 로컬idx, 데미지, 탈락(1/0)] — 시간순. */
+  events: [number, number, number, 0 | 1][];
 };
 
 /** §13.1 melee_battles — 하루 1행. */

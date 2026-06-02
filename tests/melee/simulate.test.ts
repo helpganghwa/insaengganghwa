@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 
-import { MELEE_FINALE_SIZE } from '@/lib/game/balance';
+import { MELEE_REPLAY_ROUNDS } from '@/lib/game/balance';
 import { simulateMelee, type MeleeParticipantInput } from '@/lib/game/melee/simulate';
 
 function roster(n: number, cpFn: (i: number) => number): MeleeParticipantInput[] {
@@ -44,17 +44,33 @@ describe('simulateMelee', () => {
     }
   });
 
-  it('finale 로스터 = min(N, FINALE_SIZE)등, 이벤트는 로스터 내 유저만, 챔피언 포함', () => {
-    const n = MELEE_FINALE_SIZE + 80;
-    const ps = roster(n, (i) => 1000 + i * 50);
-    const { finale, championUserId } = simulateMelee(ps, 'finale');
-    expect(finale.roster).toHaveLength(MELEE_FINALE_SIZE);
-    const ids = new Set(finale.roster.map((r) => r.userId));
-    expect(ids.has(championUserId)).toBe(true);
-    for (const e of finale.events) {
-      expect(ids.has(e.a)).toBe(true);
-      expect(ids.has(e.t)).toBe(true);
-      expect(e.d).toBeGreaterThanOrEqual(1);
+  it('소규모(라운드 ≤ REPLAY) — 전체 리플레이: 로스터=전원, 이벤트 인덱스/값 유효', () => {
+    const ps = roster(60, (i) => 1000 + i * 100); // rounds ≈ 120 ≤ 1000 → 전체
+    const { finale, championUserId } = simulateMelee(ps, 'small');
+    expect(finale.events.length).toBeLessThanOrEqual(MELEE_REPLAY_ROUNDS);
+    expect(finale.roster).toHaveLength(60); // 전체 노출 시 전원 등장
+    // 챔피언 = 로스터 rank 1
+    const champ = finale.roster.find((r) => r.rank === 1);
+    expect(champ?.userId).toBe(championUserId);
+    for (const [a, t, d, k] of finale.events) {
+      expect(a).toBeGreaterThanOrEqual(0);
+      expect(a).toBeLessThan(finale.roster.length);
+      expect(t).toBeLessThan(finale.roster.length);
+      expect(a).not.toBe(t);
+      expect(d).toBeGreaterThanOrEqual(1);
+      expect(k === 0 || k === 1).toBe(true);
+    }
+  });
+
+  it('대규모(라운드 > REPLAY) — 마지막 REPLAY 라운드만, 챔피언 포함', () => {
+    const ps = roster(2000, (i) => 1000 + i * 10); // rounds ≈ 4000 > 1000
+    const { finale, championUserId } = simulateMelee(ps, 'big');
+    expect(finale.events).toHaveLength(MELEE_REPLAY_ROUNDS);
+    expect(finale.roster.length).toBeLessThan(2000); // 일부만 등장
+    expect(finale.roster.some((r) => r.userId === championUserId && r.rank === 1)).toBe(true);
+    for (const [a, t] of finale.events) {
+      expect(a).toBeLessThan(finale.roster.length);
+      expect(t).toBeLessThan(finale.roster.length);
     }
   });
 

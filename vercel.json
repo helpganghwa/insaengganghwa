@@ -33,6 +33,14 @@
     {
       "path": "/api/cron/warm",
       "schedule": "* * * * *"
+    },
+    {
+      "path": "/api/cron/melee-run",
+      "schedule": "0 0 * * *"
+    },
+    {
+      "path": "/api/cron/melee-reveal",
+      "schedule": "30 0 * * *"
     }
   ]
 }
