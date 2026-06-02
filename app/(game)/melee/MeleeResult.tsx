@@ -73,7 +73,6 @@ function MyRankChip({ me }: { me: MeleeResultView['me'] }) {
         내 순위 <span className="font-mono font-extrabold text-amber-300">{me.rank}위</span>
       </span>
       {reward ? <span className="text-zinc-300">· {reward}</span> : null}
-      <span className="text-[10px] text-amber-300/90">›</span>
     </Link>
   );
 }
@@ -160,10 +159,13 @@ function Fighter({
             <img
               src={avatar}
               alt={name}
-              className={`h-full w-full object-contain object-bottom drop-shadow-[0_2px_5px_rgba(0,0,0,0.85)] ${
-                side === 'r' ? '-scale-x-100' : ''
-              }`}
-              style={{ imageRendering: 'pixelated' }}
+              className="h-full w-full object-contain object-bottom drop-shadow-[0_2px_5px_rgba(0,0,0,0.85)]"
+              style={{
+                imageRendering: 'pixelated',
+                // +20% 확대 + 아래로 이동(닉네임~라벨 사이에 위치). origin bottom으로 발끝 고정. side r는 좌우반전.
+                transform: `translateY(14px) scale(1.2) scaleX(${side === 'r' ? -1 : 1})`,
+                transformOrigin: 'center bottom',
+              }}
             />
           ) : (
             <div className="flex h-full w-full items-center justify-center text-3xl font-extrabold text-zinc-400">
@@ -235,7 +237,8 @@ function FightStage({
             dmg={fight.dmg}
             hp={fight.hpAfter}
             hpBefore={fight.hpAfter + fight.dmg}
-            maxHp={fight.tgtMaxHp}
+            // maxHp 미상(예: 내 전투 상대)이면 피격 전 HP를 기준으로 → 항상 바가 보이고 0까지 차감 연출.
+            maxHp={fight.tgtMaxHp ?? Math.max(1, fight.hpAfter + fight.dmg)}
           />
         </div>
       </div>
@@ -284,9 +287,10 @@ function RankingView({
                 <span className="font-mono text-[11px] font-bold tabular-nums text-amber-300 text-pixel-outline">
                   #{slot}
                 </span>
-                <span className="max-w-[78px] truncate text-[11px] font-medium text-white text-pixel-outline">
+                <span className="max-w-[72px] truncate text-[11px] font-medium text-white text-pixel-outline">
                   {p?.nickname ?? '—'}
                 </span>
+                {first && p ? <span className="shrink-0 text-[11px] leading-none">👑</span> : null}
               </div>
               {/* object-bottom + 동일 박스 하단선(items-end) → 발끝 통일. scale은 origin bottom이라 발끝 고정. */}
               <div className="relative h-36 w-full">
@@ -300,7 +304,8 @@ function RankingView({
                     className="absolute inset-0 h-full w-full object-contain object-bottom"
                     style={{
                       imageRendering: 'pixelated',
-                      transform: first ? 'scale(1.8)' : 'scale(1.5)',
+                      // 1~3등 동일 크기 + 20px 아래로(바닥에 더 붙게). origin bottom으로 발끝 통일.
+                      transform: 'translateY(20px) scale(1.5)',
                       transformOrigin: 'center bottom',
                       filter: 'drop-shadow(0 3px 5px rgba(0,0,0,0.6))',
                     }}
@@ -318,13 +323,15 @@ function RankingView({
   );
 }
 
-// ── 로그 라운드 카드 — ROUND divider + 공격(좌)/방어(우) 말풍선(턴제 PVP) ──
+// ── 로그 라운드 카드 — 라운드 번호 + 공격/방어 2행(모던·스캔 가능) ──
 function RoundCard({
   round,
   atk,
   tgt,
   dmg,
   hp,
+  atkSeq,
+  defSeq,
   tgtRank,
   me,
   onClick,
@@ -334,58 +341,62 @@ function RoundCard({
   tgt: string;
   dmg: number;
   hp: number;
-  /** 탈락 시 그 타겟의 최종 등수(있으면 "N위 기록" 표기). */
+  /** 공격자의 누적 공격 횟수(이 라운드 기준). */
+  atkSeq: number;
+  /** 방어자의 누적 방어(피격) 횟수. */
+  defSeq: number;
+  /** 탈락 시 그 타겟의 최종 등수(있으면 "N위" 표기). */
   tgtRank?: number;
   me?: string;
   onClick: () => void;
 }) {
   const killed = hp <= 0;
-  const hl = (n: string) => (n === me ? 'text-amber-300' : 'text-white');
+  const isMe = (n: string) => n === me;
   return (
-    <li>
+    <li className="border-b border-zinc-900/60 last:border-b-0">
       <button
         type="button"
         onClick={onClick}
-        className="block w-full px-2.5 py-1.5 text-left transition hover:bg-zinc-900/60 active:bg-zinc-800"
+        className="flex w-full items-stretch gap-2.5 px-3 py-2 text-left transition hover:bg-zinc-900/50 active:bg-zinc-800/60"
       >
-        {/* ROUND divider */}
-        <div className="mb-1.5 flex items-center gap-2">
-          <div className="h-px flex-1 bg-zinc-800" />
-          <span className="font-mono text-[9px] font-bold tracking-wider text-amber-400/90">
-            {round.toLocaleString()} ROUND
+        {/* 라운드 번호 */}
+        <div className="flex w-8 shrink-0 flex-col items-center justify-center">
+          <span className="font-mono text-[13px] font-extrabold leading-none tabular-nums text-zinc-400">
+            {round.toLocaleString()}
           </span>
-          <div className="h-px flex-1 bg-zinc-800" />
+          <span className="mt-0.5 text-[7px] font-bold tracking-[0.15em] text-zinc-600">ROUND</span>
         </div>
-        {/* 공격 밴드 — 전체 폭, 내용은 왼쪽 정렬 */}
-        <div className="flex justify-start rounded-lg bg-amber-500/10 px-2.5 py-1.5 text-[11px]">
-          <span className="flex min-w-0 items-center gap-1.5">
-            <span className="shrink-0 rounded bg-amber-500/25 px-1.5 py-0.5 text-[9px] font-bold text-amber-200">
-              공격
+        <div className="w-px shrink-0 bg-zinc-800/80" />
+        {/* 공격 / 방어 2행 */}
+        <div className="min-w-0 flex-1 space-y-1">
+          <div className="flex items-center gap-2">
+            <span className="h-1.5 w-1.5 shrink-0 rounded-full bg-amber-400" />
+            <span className="min-w-0 truncate text-[12px]">
+              <span className={`font-bold ${isMe(atk) ? 'text-amber-300' : 'text-white'}`}>{atk}</span>
+              <span className="text-zinc-500">의 {atkSeq.toLocaleString()}번째 공격</span>
             </span>
-            <span className={`truncate font-semibold ${hl(atk)}`}>{atk}</span>
-            <span className="shrink-0 text-zinc-300">
-              <span className="font-mono text-red-300">{dmg.toLocaleString()}</span>의 피해를 입힌다
+            <span className="ml-auto shrink-0 font-mono text-[11px] font-semibold text-red-300">
+              -{dmg.toLocaleString()}
             </span>
-          </span>
-        </div>
-        {/* 방어 밴드 — 전체 폭, 내용은 오른쪽 정렬 */}
-        <div className="mt-1 flex justify-end rounded-lg bg-sky-500/10 px-2.5 py-1.5 text-[11px]">
-          <span className="flex min-w-0 items-center gap-1.5">
-            <span className="shrink-0 rounded bg-sky-500/25 px-1.5 py-0.5 text-[9px] font-bold text-sky-200">
-              방어
+          </div>
+          <div className="flex items-center gap-2">
+            <span className="h-1.5 w-1.5 shrink-0 rounded-full bg-sky-400" />
+            <span className="min-w-0 truncate text-[12px]">
+              <span className={`font-bold ${isMe(tgt) ? 'text-amber-300' : 'text-zinc-200'}`}>{tgt}</span>
+              <span className="text-zinc-500">의 {defSeq.toLocaleString()}번째 방어</span>
             </span>
-            <span className={`truncate font-semibold ${hl(tgt)}`}>{tgt}</span>
-            {killed ? (
-              <span className="shrink-0 font-semibold text-red-300">
-                쓰러진다{tgtRank ? ` · ${tgtRank.toLocaleString()}위` : ''}
-              </span>
-            ) : (
-              <span className="shrink-0 text-zinc-300">
-                체력 <span className="font-mono text-emerald-300">{Math.max(0, hp).toLocaleString()}</span> 남기고
-                버텨낸다
-              </span>
-            )}
-          </span>
+            <span className="ml-auto shrink-0 text-[11px]">
+              {killed ? (
+                <span className="font-bold text-red-400">
+                  쓰러짐{tgtRank ? ` · ${tgtRank.toLocaleString()}위` : ''}
+                </span>
+              ) : (
+                <span className="font-mono font-semibold text-emerald-300">
+                  HP {Math.max(0, hp).toLocaleString()}
+                </span>
+              )}
+            </span>
+          </div>
         </div>
       </button>
     </li>
@@ -436,14 +447,23 @@ export function MeleeResult({ view }: { view: MeleeResultView }) {
     tgt: string;
     dmg: number;
     hp: number;
+    atkSeq: number;
+    defSeq: number;
     tgtRank?: number;
     fight: Fight;
   };
+  // 누적 공격/방어 횟수(리플레이 윈도 내 시간순). 미절단이면 절대값, 절단이면 윈도 기준.
+  const atkSeqMap = new Map<number, number>();
+  const defSeqMap = new Map<number, number>();
   const logData: Row[] = finale.events.map((e, i) => {
     const round = finaleStart + i + 1;
     const atk = roster[e[0]]?.nickname ?? '?';
     const tgt = roster[e[1]]?.nickname ?? '?';
     const tgtCp = roster[e[1]]?.cp ?? 0;
+    const atkSeq = (atkSeqMap.get(e[0]) ?? 0) + 1;
+    atkSeqMap.set(e[0], atkSeq);
+    const defSeq = (defSeqMap.get(e[1]) ?? 0) + 1;
+    defSeqMap.set(e[1], defSeq);
     return {
       key: round,
       round,
@@ -451,6 +471,8 @@ export function MeleeResult({ view }: { view: MeleeResultView }) {
       tgt,
       dmg: e[2],
       hp: e[3],
+      atkSeq,
+      defSeq,
       tgtRank: e[3] <= 0 ? roster[e[1]]?.rank : undefined,
       fight: {
         round,
@@ -465,11 +487,17 @@ export function MeleeResult({ view }: { view: MeleeResultView }) {
       },
     };
   });
+  const myAtkSeqMap = new Map<string, number>();
+  const myDefSeqMap = new Map<string, number>();
   const myData: Row[] = myEvents.map((e, i) => {
     const [role, opp, dmg, hp] = e;
     const round = e[4] ?? i + 1;
     const atk = role === 0 ? myNickname : opp;
     const tgt = role === 0 ? opp : myNickname;
+    const atkSeq = (myAtkSeqMap.get(atk) ?? 0) + 1;
+    myAtkSeqMap.set(atk, atkSeq);
+    const defSeq = (myDefSeqMap.get(tgt) ?? 0) + 1;
+    myDefSeqMap.set(tgt, defSeq);
     return {
       key: i,
       round,
@@ -477,6 +505,8 @@ export function MeleeResult({ view }: { view: MeleeResultView }) {
       tgt,
       dmg,
       hp,
+      atkSeq,
+      defSeq,
       // 내가 타겟이고 탈락한 라운드면 내 최종 등수 기록(상대 탈락 등수는 미상).
       tgtRank: role === 1 && hp <= 0 ? me?.rank : undefined,
       fight: {
@@ -495,8 +525,9 @@ export function MeleeResult({ view }: { view: MeleeResultView }) {
   const rows = tab === 'log' ? logData : myData;
   const displayRows = [...rows].reverse(); // 최신 라운드가 위로
 
-  // 전체 재생 — 시간순으로 무대에 라운드를 순차 재생(라운드당 ~1.6s).
+  // 전체 재생 — 시간순으로 무대에 라운드를 순차 재생. 배속(1·2·4x)으로 간격 조절.
   const [autoplay, setAutoplay] = useState<{ list: Fight[]; idx: number } | null>(null);
+  const [speed, setSpeed] = useState(1);
   useEffect(() => {
     if (!autoplay) return;
     const t = setTimeout(() => {
@@ -507,10 +538,11 @@ export function MeleeResult({ view }: { view: MeleeResultView }) {
       }
       setAutoplay({ list: autoplay.list, idx: next });
       play(autoplay.list[next]!);
-    }, 1600);
+    }, 1600 / speed);
     return () => clearTimeout(t);
-  }, [autoplay]);
+  }, [autoplay, speed]);
   const stopPlay = () => setAutoplay(null);
+  const cycleSpeed = () => setSpeed((s) => (s === 1 ? 2 : s === 2 ? 4 : 1));
   const startPlayAll = () => {
     const list = rows.map((r) => r.fight);
     if (list.length === 0) return;
@@ -577,23 +609,30 @@ export function MeleeResult({ view }: { view: MeleeResultView }) {
         </div>
 
         <section className="overflow-hidden rounded-xl border border-zinc-800 bg-zinc-950">
-          {/* 헤더 — 전체 재생 / 정지 */}
+          {/* 헤더 — 배속 / 전체 재생·정지 */}
           <div className="flex items-center justify-between gap-2 border-b border-zinc-900 px-2.5 py-1.5">
             <span className="truncate text-[10px] text-zinc-500">
-              {tab === 'log' && truncated
-                ? `최신순 · 마지막 ${finale.events.length.toLocaleString()}전`
-                : '최신순'}
+              {tab === 'log' && truncated ? `마지막 ${finale.events.length.toLocaleString()}전` : ''}
             </span>
-            <button
-              type="button"
-              onClick={() => (autoplay ? stopPlay() : startPlayAll())}
-              disabled={rows.length === 0}
-              className={`shrink-0 rounded-lg px-2.5 py-1 text-[10px] font-bold text-white transition disabled:opacity-40 ${
-                autoplay ? 'bg-zinc-700' : 'bg-amber-600/90'
-              }`}
-            >
-              {autoplay ? `정지 ${autoplay.idx + 1}/${autoplay.list.length}` : '전체 재생'}
-            </button>
+            <div className="flex shrink-0 items-center gap-1.5">
+              <button
+                type="button"
+                onClick={cycleSpeed}
+                className="rounded-lg bg-zinc-800 px-2 py-1 text-[10px] font-bold text-zinc-200 tabular-nums transition active:bg-zinc-700"
+              >
+                {speed}x
+              </button>
+              <button
+                type="button"
+                onClick={() => (autoplay ? stopPlay() : startPlayAll())}
+                disabled={rows.length === 0}
+                className={`rounded-lg px-2.5 py-1 text-[10px] font-bold text-white transition disabled:opacity-40 ${
+                  autoplay ? 'bg-zinc-700' : 'bg-amber-600/90'
+                }`}
+              >
+                {autoplay ? `정지 ${autoplay.idx + 1}/${autoplay.list.length}` : '전체 재생'}
+              </button>
+            </div>
           </div>
           {displayRows.length === 0 ? (
             <div className="px-2 py-6 text-center text-[11px] text-zinc-500">
@@ -609,6 +648,8 @@ export function MeleeResult({ view }: { view: MeleeResultView }) {
                   tgt={r.tgt}
                   dmg={r.dmg}
                   hp={r.hp}
+                  atkSeq={r.atkSeq}
+                  defSeq={r.defSeq}
                   tgtRank={r.tgtRank}
                   me={myNickname}
                   onClick={() => {
