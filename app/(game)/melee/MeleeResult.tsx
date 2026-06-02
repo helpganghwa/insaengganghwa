@@ -192,10 +192,13 @@ function Fighter({
 function FightStage({
   fight,
   participantCount,
+  playing,
   onBack,
 }: {
   fight: Fight;
   participantCount: number;
+  /** 전체 재생 중이면 진행 상황(N/M). */
+  playing: { idx: number; total: number } | null;
   onBack: () => void;
 }) {
   const killed = fight.hpAfter <= 0;
@@ -245,7 +248,7 @@ function FightStage({
         onClick={onBack}
         className="absolute right-1.5 top-1.5 z-20 rounded-full bg-black/55 px-2 py-0.5 text-[10px] font-bold text-zinc-200 backdrop-blur-sm"
       >
-        ← 랭킹
+        {playing ? `정지 ${playing.idx + 1}/${playing.total}` : '← 랭킹'}
       </button>
     </div>
   );
@@ -425,11 +428,100 @@ export function MeleeResult({ view }: { view: MeleeResultView }) {
     setFightKey((k) => k + 1);
   };
 
-  // 최신 라운드가 위로(역순) 렌더.
-  const logRows = finale.events
-    .map((e, i) => ({ e, round: finaleStart + i + 1 }))
-    .reverse();
-  const myRows = myEvents.map((e, i) => ({ e, round: e[4] ?? i + 1 })).reverse();
+  // 행 데이터(시간순) — 표시는 역순, 전체 재생은 시간순으로 사용.
+  type Row = {
+    key: number;
+    round: number;
+    atk: string;
+    tgt: string;
+    dmg: number;
+    hp: number;
+    tgtRank?: number;
+    fight: Fight;
+  };
+  const logData: Row[] = finale.events.map((e, i) => {
+    const round = finaleStart + i + 1;
+    const atk = roster[e[0]]?.nickname ?? '?';
+    const tgt = roster[e[1]]?.nickname ?? '?';
+    const tgtCp = roster[e[1]]?.cp ?? 0;
+    return {
+      key: round,
+      round,
+      atk,
+      tgt,
+      dmg: e[2],
+      hp: e[3],
+      tgtRank: e[3] <= 0 ? roster[e[1]]?.rank : undefined,
+      fight: {
+        round,
+        atkName: atk,
+        atkAvatar: rosterAvatars[e[0]] ?? null,
+        tgtName: tgt,
+        tgtAvatar: rosterAvatars[e[1]] ?? null,
+        dmg: e[2],
+        hpAfter: e[3],
+        tgtMaxHp: tgtCp > 0 ? tgtCp * MELEE_HP_MULT : undefined,
+        survivors: aliveByRound.get(round),
+      },
+    };
+  });
+  const myData: Row[] = myEvents.map((e, i) => {
+    const [role, opp, dmg, hp] = e;
+    const round = e[4] ?? i + 1;
+    const atk = role === 0 ? myNickname : opp;
+    const tgt = role === 0 ? opp : myNickname;
+    return {
+      key: i,
+      round,
+      atk,
+      tgt,
+      dmg,
+      hp,
+      // 내가 타겟이고 탈락한 라운드면 내 최종 등수 기록(상대 탈락 등수는 미상).
+      tgtRank: role === 1 && hp <= 0 ? me?.rank : undefined,
+      fight: {
+        round,
+        atkName: atk,
+        atkAvatar: role === 0 ? myAvatar ?? DEFAULT_AVATAR : DEFAULT_AVATAR,
+        tgtName: tgt,
+        tgtAvatar: role === 0 ? DEFAULT_AVATAR : myAvatar ?? DEFAULT_AVATAR,
+        dmg,
+        hpAfter: hp,
+        tgtMaxHp: role === 1 && myCp > 0 ? myCp * MELEE_HP_MULT : undefined,
+        survivors: aliveByRound.get(round) ?? (role === 1 && hp <= 0 ? me?.rank : undefined),
+      },
+    };
+  });
+  const rows = tab === 'log' ? logData : myData;
+  const displayRows = [...rows].reverse(); // 최신 라운드가 위로
+
+  // 전체 재생 — 시간순으로 무대에 라운드를 순차 재생(라운드당 ~1.6s).
+  const [autoplay, setAutoplay] = useState<{ list: Fight[]; idx: number } | null>(null);
+  useEffect(() => {
+    if (!autoplay) return;
+    const t = setTimeout(() => {
+      const next = autoplay.idx + 1;
+      if (next >= autoplay.list.length) {
+        setAutoplay(null);
+        return;
+      }
+      setAutoplay({ list: autoplay.list, idx: next });
+      play(autoplay.list[next]!);
+    }, 1600);
+    return () => clearTimeout(t);
+  }, [autoplay]);
+  const stopPlay = () => setAutoplay(null);
+  const startPlayAll = () => {
+    const list = rows.map((r) => r.fight);
+    if (list.length === 0) return;
+    setAutoplay({ list, idx: 0 });
+    play(list[0]!);
+  };
+  const selectTab = (t: 'log' | 'mine') => {
+    setTab(t);
+    stopPlay();
+    setFight(null);
+  };
 
   return (
     <div className="flex h-full flex-col">
@@ -449,7 +541,11 @@ export function MeleeResult({ view }: { view: MeleeResultView }) {
             key={fightKey}
             fight={fight}
             participantCount={participantCount}
-            onBack={() => setFight(null)}
+            playing={autoplay ? { idx: autoplay.idx, total: autoplay.list.length } : null}
+            onBack={() => {
+              stopPlay();
+              setFight(null);
+            }}
           />
         ) : (
           <RankingView podium={podium} participantCount={participantCount} />
@@ -470,7 +566,7 @@ export function MeleeResult({ view }: { view: MeleeResultView }) {
             <button
               key={t}
               type="button"
-              onClick={() => setTab(t)}
+              onClick={() => selectTab(t)}
               className={`flex-1 rounded-lg py-1.5 text-xs font-bold transition ${
                 tab === t ? 'bg-amber-600 text-white' : 'text-zinc-400'
               }`}
@@ -481,88 +577,46 @@ export function MeleeResult({ view }: { view: MeleeResultView }) {
         </div>
 
         <section className="overflow-hidden rounded-xl border border-zinc-800 bg-zinc-950">
-          <div className="px-2.5 py-1 text-[10px] text-zinc-500">
-            로그를 누르면 위 무대에서 그 전투를 봅니다 (최신순)
-            {tab === 'log' && truncated ? ` · 마지막 ${finale.events.length.toLocaleString()}전` : ''}
+          {/* 헤더 — 전체 재생 / 정지 */}
+          <div className="flex items-center justify-between gap-2 border-b border-zinc-900 px-2.5 py-1.5">
+            <span className="truncate text-[10px] text-zinc-500">
+              {tab === 'log' && truncated
+                ? `최신순 · 마지막 ${finale.events.length.toLocaleString()}전`
+                : '최신순'}
+            </span>
+            <button
+              type="button"
+              onClick={() => (autoplay ? stopPlay() : startPlayAll())}
+              disabled={rows.length === 0}
+              className={`shrink-0 rounded-lg px-2.5 py-1 text-[10px] font-bold text-white transition disabled:opacity-40 ${
+                autoplay ? 'bg-zinc-700' : 'bg-amber-600/90'
+              }`}
+            >
+              {autoplay ? `정지 ${autoplay.idx + 1}/${autoplay.list.length}` : '전체 재생'}
+            </button>
           </div>
-          {tab === 'log' ? (
-            logRows.length === 0 ? (
-              <div className="px-2 py-6 text-center text-[11px] text-zinc-500">전투 기록이 없습니다.</div>
-            ) : (
-              <ul>
-                {logRows.map(({ e, round }) => {
-                  const an = roster[e[0]]?.nickname ?? '?';
-                  const tn = roster[e[1]]?.nickname ?? '?';
-                  const tgtCp = roster[e[1]]?.cp ?? 0;
-                  const tgtRank = roster[e[1]]?.rank;
-                  return (
-                    <RoundCard
-                      key={round}
-                      round={round}
-                      atk={an}
-                      tgt={tn}
-                      dmg={e[2]}
-                      hp={e[3]}
-                      tgtRank={e[3] <= 0 ? tgtRank : undefined}
-                      me={myNickname}
-                      onClick={() =>
-                        play({
-                          round,
-                          atkName: an,
-                          atkAvatar: rosterAvatars[e[0]] ?? null,
-                          tgtName: tn,
-                          tgtAvatar: rosterAvatars[e[1]] ?? null,
-                          dmg: e[2],
-                          hpAfter: e[3],
-                          tgtMaxHp: tgtCp > 0 ? tgtCp * MELEE_HP_MULT : undefined,
-                          survivors: aliveByRound.get(round),
-                        })
-                      }
-                    />
-                  );
-                })}
-              </ul>
-            )
-          ) : myRows.length === 0 ? (
+          {displayRows.length === 0 ? (
             <div className="px-2 py-6 text-center text-[11px] text-zinc-500">
-              {me ? '전투 기록이 없습니다.' : '참가 시 내 전투가 표시됩니다.'}
+              {tab === 'mine' && !me ? '참가 시 내 전투가 표시됩니다.' : '전투 기록이 없습니다.'}
             </div>
           ) : (
             <ul>
-              {myRows.map(({ e, round }) => {
-                const [role, opp, dmg, hp] = e;
-                const atkName = role === 0 ? myNickname : opp;
-                const tgtName = role === 0 ? opp : myNickname;
-                const tgtMaxHp = role === 1 && myCp > 0 ? myCp * MELEE_HP_MULT : undefined;
-                // 내가 타겟이고 탈락한 라운드면 내 최종 등수를 기록 표기(상대 탈락 등수는 미상).
-                const tgtRank = role === 1 && hp <= 0 ? me?.rank : undefined;
-                return (
-                  <RoundCard
-                    key={round}
-                    round={round}
-                    atk={atkName}
-                    tgt={tgtName}
-                    dmg={dmg}
-                    hp={hp}
-                    tgtRank={tgtRank}
-                    me={myNickname}
-                    onClick={() =>
-                      play({
-                        round,
-                        atkName,
-                        atkAvatar: role === 0 ? myAvatar ?? DEFAULT_AVATAR : DEFAULT_AVATAR,
-                        tgtName,
-                        tgtAvatar: role === 0 ? DEFAULT_AVATAR : myAvatar ?? DEFAULT_AVATAR,
-                        dmg,
-                        hpAfter: hp,
-                        tgtMaxHp,
-                        // finale 윈도 내면 정확, 내가 탈락한 라운드면 내 등수(=그 순간 생존자), 그 외 미상.
-                        survivors: aliveByRound.get(round) ?? (role === 1 && hp <= 0 ? me?.rank : undefined),
-                      })
-                    }
-                  />
-                );
-              })}
+              {displayRows.map((r) => (
+                <RoundCard
+                  key={r.key}
+                  round={r.round}
+                  atk={r.atk}
+                  tgt={r.tgt}
+                  dmg={r.dmg}
+                  hp={r.hp}
+                  tgtRank={r.tgtRank}
+                  me={myNickname}
+                  onClick={() => {
+                    stopPlay();
+                    play(r.fight);
+                  }}
+                />
+              ))}
             </ul>
           )}
         </section>
