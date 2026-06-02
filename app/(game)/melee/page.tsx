@@ -154,6 +154,7 @@ export default async function MeleePage() {
       : null,
     myEvents: meRow?.myEvents ?? [],
     myNickname: meRow?.nickname ?? '',
+    myAvatar: avatarOf.get(userId) ?? null,
     finale,
     rosterAvatars,
   };
