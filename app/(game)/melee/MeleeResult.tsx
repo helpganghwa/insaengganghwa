@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, type ReactNode } from 'react';
 
 import { MELEE_REPLAY_ROUNDS } from '@/lib/game/balance';
 import type { MeleeFinale, MeleeMyEvent } from '@/lib/db/schema/melee';
@@ -23,6 +23,7 @@ export type MeleeResultView = {
     boxes: { weapon: number; armor: number; accessory: number };
   } | null;
   myEvents: MeleeMyEvent[];
+  myNickname: string;
   finale: MeleeFinale;
   rosterAvatars: (string | null)[];
 };
@@ -37,101 +38,101 @@ function boxSummary(b: { weapon: number; armor: number; accessory: number }): st
   return parts.join(' ');
 }
 
-/** 전투 로그 — 스토리 형식. 동일 컴포넌트를 전체/내 전투 양쪽에서 사용. */
-function StoryLog({
-  events,
-  roster,
-  empty,
+/** 로그 한 줄 — RPG 턴제 "{공격자}의 공격 → {타겟} N 피해 · 결과". 내 닉네임(me)은 앰버 강조. */
+function LogLine({
+  atk,
+  tgt,
+  dmg,
+  hp,
+  me,
 }: {
-  events: MeleeFinale['events'];
-  roster: MeleeFinale['roster'];
-  empty: string;
+  atk: string;
+  tgt: string;
+  dmg: number;
+  hp: number;
+  me?: string;
 }) {
-  if (events.length === 0) {
-    return <div className="px-2 py-6 text-center text-[11px] text-zinc-500">{empty}</div>;
-  }
+  const killed = hp <= 0;
+  return (
+    <li className="flex flex-wrap items-baseline gap-x-1 px-2 py-1.5">
+      <span className="text-amber-400">⚔️</span>
+      <span className={`font-bold ${atk === me ? 'text-amber-300' : 'text-zinc-100'}`}>{atk}</span>
+      <span className="text-zinc-500">의 공격 →</span>
+      <span className={`font-semibold ${tgt === me ? 'text-amber-300' : 'text-zinc-300'}`}>{tgt}</span>
+      <span className="font-mono text-red-300">{dmg.toLocaleString()} 피해</span>
+      {killed ? (
+        <span className="font-bold text-red-400">· 💀 쓰러졌다!</span>
+      ) : (
+        <span className="text-zinc-500">
+          · HP <span className="font-mono text-emerald-300">{hp.toLocaleString()}</span>
+        </span>
+      )}
+    </li>
+  );
+}
+
+function LogList({ children, empty }: { children: ReactNode; empty: string | false }) {
+  if (empty) return <div className="px-2 py-6 text-center text-[11px] text-zinc-500">{empty}</div>;
   return (
     <ul className="max-h-[58vh] divide-y divide-zinc-900 overflow-y-auto text-[11px] leading-relaxed">
-      {events.map((e, i) => {
-        const [ai, ti, dmg, hp] = e;
-        const an = roster[ai]?.nickname ?? '?';
-        const tn = roster[ti]?.nickname ?? '?';
-        const killed = hp <= 0;
-        return (
-          <li key={i} className="flex flex-wrap items-baseline gap-x-1 px-2 py-1.5">
-            <span className="text-amber-400">⚔️</span>
-            <span className="font-bold text-zinc-100">{an}</span>
-            <span className="text-zinc-500">의 공격 →</span>
-            <span className="font-semibold text-zinc-300">{tn}</span>
-            <span className="font-mono text-red-300">{dmg.toLocaleString()} 피해</span>
-            {killed ? (
-              <span className="font-bold text-red-400">· 💀 쓰러졌다!</span>
-            ) : (
-              <span className="text-zinc-500">
-                · HP <span className="font-mono text-emerald-300">{hp.toLocaleString()}</span>
-              </span>
-            )}
-          </li>
-        );
-      })}
+      {children}
     </ul>
   );
 }
 
-/** 내 전투 미니로그 — 본인 관점 스토리. role 0=내가 공격, 1=내가 피격. */
-function MyStoryLog({ events, empty }: { events: MeleeMyEvent[]; empty: string }) {
-  if (events.length === 0) {
-    return <div className="px-2 py-6 text-center text-[11px] text-zinc-500">{empty}</div>;
-  }
+/** 전체 전투 로그(finale, roster 인덱스). 내 닉네임은 강조. */
+function StoryLog({
+  events,
+  roster,
+  empty,
+  me,
+}: {
+  events: MeleeFinale['events'];
+  roster: MeleeFinale['roster'];
+  empty: string;
+  me?: string;
+}) {
   return (
-    <ul className="max-h-[58vh] divide-y divide-zinc-900 overflow-y-auto text-[11px] leading-relaxed">
+    <LogList empty={events.length === 0 && empty}>
+      {events.map((e, i) => (
+        <LogLine
+          key={i}
+          atk={roster[e[0]]?.nickname ?? '?'}
+          tgt={roster[e[1]]?.nickname ?? '?'}
+          dmg={e[2]}
+          hp={e[3]}
+          me={me}
+        />
+      ))}
+    </LogList>
+  );
+}
+
+/** 내 전투 — my_events를 전체 로그와 동일 형식으로(내 닉네임 사용·강조). role 0=내가 공격, 1=내가 피격. */
+function MyStoryLog({ events, empty, me }: { events: MeleeMyEvent[]; empty: string; me: string }) {
+  return (
+    <LogList empty={events.length === 0 && empty}>
       {events.map((e, i) => {
         const [role, opp, dmg, hp] = e;
-        const killed = hp <= 0;
-        const iAttacked = role === 0;
         return (
-          <li key={i} className="flex flex-wrap items-baseline gap-x-1 px-2 py-1.5">
-            {iAttacked ? (
-              <>
-                <span className="text-amber-400">⚔️</span>
-                <span className="font-bold text-amber-200">나</span>
-                <span className="text-zinc-500">의 공격 →</span>
-                <span className="font-semibold text-zinc-300">{opp}</span>
-                <span className="font-mono text-red-300">{dmg.toLocaleString()} 피해</span>
-                {killed ? (
-                  <span className="font-bold text-red-400">· 💀 {opp} 쓰러졌다!</span>
-                ) : (
-                  <span className="text-zinc-500">
-                    · {opp} HP <span className="font-mono text-emerald-300">{hp.toLocaleString()}</span>
-                  </span>
-                )}
-              </>
-            ) : (
-              <>
-                <span className="text-sky-400">🛡️</span>
-                <span className="font-semibold text-zinc-300">{opp}</span>
-                <span className="text-zinc-500">의 공격 →</span>
-                <span className="font-bold text-amber-200">나</span>
-                <span className="font-mono text-red-300">{dmg.toLocaleString()} 피해</span>
-                {killed ? (
-                  <span className="font-bold text-red-400">· 💀 내가 쓰러졌다!</span>
-                ) : (
-                  <span className="text-zinc-500">
-                    · 내 HP <span className="font-mono text-emerald-300">{hp.toLocaleString()}</span>
-                  </span>
-                )}
-              </>
-            )}
-          </li>
+          <LogLine
+            key={i}
+            atk={role === 0 ? me : opp}
+            tgt={role === 0 ? opp : me}
+            dmg={dmg}
+            hp={hp}
+            me={me}
+          />
         );
       })}
-    </ul>
+    </LogList>
   );
 }
 
 export function MeleeResult({ view }: { view: MeleeResultView }) {
   const [tab, setTab] = useState<'replay' | 'log' | 'mine'>('replay');
-  const { podium, me, finale, participantCount, championNickname, myEvents, rosterAvatars } = view;
+  const { podium, me, finale, participantCount, championNickname, myEvents, myNickname, rosterAvatars } =
+    view;
   const roster = finale.roster;
   const truncated = finale.events.length >= MELEE_REPLAY_ROUNDS;
 
@@ -231,11 +232,12 @@ export function MeleeResult({ view }: { view: MeleeResultView }) {
                 마지막 {finale.events.length.toLocaleString()}전 · 👑 {championNickname}
               </div>
             ) : null}
-            <StoryLog events={finale.events} roster={roster} empty="전투 기록이 없습니다." />
+            <StoryLog events={finale.events} roster={roster} empty="전투 기록이 없습니다." me={myNickname} />
           </>
         ) : (
           <MyStoryLog
             events={myEvents}
+            me={myNickname}
             empty={me ? '전투 기록이 없습니다.' : '참가 시 내 전투가 표시됩니다.'}
           />
         )}

@@ -135,8 +135,10 @@ export default async function MeleePage() {
         diamond: meleeParticipants.rewardDiamond,
         boxes: meleeParticipants.rewardBoxes,
         myEvents: meleeParticipants.myEvents,
+        nickname: profiles.nickname,
       })
       .from(meleeParticipants)
+      .innerJoin(profiles, eq(profiles.id, meleeParticipants.userId))
       .where(and(eq(meleeParticipants.battleId, battle.id), eq(meleeParticipants.userId, userId)))
       .limit(1),
     3000,
@@ -151,6 +153,7 @@ export default async function MeleePage() {
       ? { rank: meRow.rank, diamond: Number(meRow.diamond), boxes: meRow.boxes }
       : null,
     myEvents: meRow?.myEvents ?? [],
+    myNickname: meRow?.nickname ?? '',
     finale,
     rosterAvatars,
   };
