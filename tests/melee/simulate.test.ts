@@ -52,14 +52,16 @@ describe('simulateMelee', () => {
     // 챔피언 = 로스터 rank 1
     const champ = finale.roster.find((r) => r.rank === 1);
     expect(champ?.userId).toBe(championUserId);
-    for (const [a, t, d, k] of finale.events) {
+    for (const [a, t, d, h] of finale.events) {
       expect(a).toBeGreaterThanOrEqual(0);
       expect(a).toBeLessThan(finale.roster.length);
       expect(t).toBeLessThan(finale.roster.length);
       expect(a).not.toBe(t);
       expect(d).toBeGreaterThanOrEqual(1);
-      expect(k === 0 || k === 1).toBe(true);
+      expect(typeof h).toBe('number'); // 타겟 잔여HP(≤0=탈락)
     }
+    // 마지막 이벤트는 챔피언 결정타 → 타겟 잔여HP ≤ 0
+    expect(finale.events.at(-1)![3]).toBeLessThanOrEqual(0);
   });
 
   it('대규모(라운드 > REPLAY) — 마지막 REPLAY 라운드만, 챔피언 포함', () => {

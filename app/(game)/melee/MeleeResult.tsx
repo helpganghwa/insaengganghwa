@@ -2,19 +2,20 @@
 
 import { useState } from 'react';
 
+import { MELEE_REPLAY_ROUNDS } from '@/lib/game/balance';
+import { assetUrl } from '@/lib/asset-versions';
 import type { MeleeFinale } from '@/lib/db/schema/melee';
 
 export type MeleeResultView = {
   participantCount: number;
   championNickname: string;
-  podium: { rank: number; nickname: string; cp: number }[];
+  podium: { rank: number; nickname: string; cp: number; avatarUrl: string | null }[];
   me: {
     rank: number;
     diamond: number;
     boxes: { weapon: number; armor: number; accessory: number };
-    killerNickname: string | null;
   } | null;
-  myKills: { rank: number; nickname: string }[];
+  myUserId: string;
   finale: MeleeFinale;
 };
 
@@ -28,63 +29,139 @@ function boxSummary(b: { weapon: number; armor: number; accessory: number }): st
   return parts.join(' ');
 }
 
+/** 전투 로그 — 스토리 형식. 동일 컴포넌트를 전체/내 전투 양쪽에서 사용. */
+function StoryLog({
+  events,
+  roster,
+  empty,
+}: {
+  events: MeleeFinale['events'];
+  roster: MeleeFinale['roster'];
+  empty: string;
+}) {
+  if (events.length === 0) {
+    return <div className="px-2 py-6 text-center text-[11px] text-zinc-500">{empty}</div>;
+  }
+  return (
+    <ul className="max-h-[58vh] divide-y divide-zinc-900 overflow-y-auto text-[11px] leading-relaxed">
+      {events.map((e, i) => {
+        const [ai, ti, dmg, hp] = e;
+        const an = roster[ai]?.nickname ?? '?';
+        const tn = roster[ti]?.nickname ?? '?';
+        const killed = hp <= 0;
+        return (
+          <li key={i} className="px-2 py-1.5">
+            <span className="font-semibold text-zinc-100">{an}</span>
+            <span className="text-zinc-400">가 </span>
+            <span className="font-semibold text-zinc-200">{tn}</span>
+            <span className="text-zinc-400">를 </span>
+            <span className="font-mono text-amber-300">{dmg.toLocaleString()}</span>
+            <span className="text-zinc-400"> 데미지로 공격 — </span>
+            {killed ? (
+              <span className="font-bold text-red-400">쓰러짐!</span>
+            ) : (
+              <span className="text-zinc-400">
+                체력 <span className="font-mono text-emerald-300">{hp.toLocaleString()}</span> 남음
+              </span>
+            )}
+          </li>
+        );
+      })}
+    </ul>
+  );
+}
+
 export function MeleeResult({ view }: { view: MeleeResultView }) {
-  const [tab, setTab] = useState<'replay' | 'mine'>('replay');
-  const { podium, me, myKills, finale, participantCount, championNickname } = view;
+  const [tab, setTab] = useState<'all' | 'mine'>('all');
+  const { podium, me, finale, participantCount, championNickname, myUserId } = view;
   const roster = finale.roster;
+  const order = [2, 1, 3]; // 시상대 배치(좌 2위·중 1위·우 3위)
+  const byRank = new Map(podium.map((p) => [p.rank, p]));
+  const truncated = finale.events.length >= MELEE_REPLAY_ROUNDS;
+
+  const myIdx = roster.findIndex((r) => r.userId === myUserId);
+  const myEvents = myIdx < 0 ? [] : finale.events.filter((e) => e[0] === myIdx || e[1] === myIdx);
 
   return (
     <div className="space-y-4">
-      {/* 랭킹 — 1·2·3 강조 */}
-      <section className="rounded-2xl border border-amber-700/40 bg-gradient-to-b from-amber-950/30 to-zinc-950 p-4">
-        <div className="text-center text-[11px] text-zinc-400">
+      {/* 포디움 — 콜로세움 배경 위 1·2·3위 아바타 */}
+      <div className="relative overflow-hidden rounded-2xl border border-amber-800/40">
+        {/* eslint-disable-next-line @next/next/no-img-element */}
+        <img
+          src={assetUrl('/sprites/hub/melee.png')}
+          alt=""
+          aria-hidden
+          className="absolute inset-0 h-full w-full object-cover"
+          style={{ imageRendering: 'pixelated' }}
+        />
+        <div className="pointer-events-none absolute inset-0 bg-gradient-to-t from-black/90 via-black/55 to-black/30" />
+        <div className="relative z-10 px-3 pt-2 text-center text-[10px] font-semibold text-amber-200/90 drop-shadow">
           오늘의 대난투 · 참가 {participantCount.toLocaleString()}명
         </div>
-        <div className="mt-3 flex items-end justify-center gap-2">
-          {podium.map((p) => (
-            <div
-              key={p.rank}
-              className={`flex flex-1 flex-col items-center rounded-xl border px-1 py-2 text-center ${
-                p.rank === 1
-                  ? 'border-amber-400/70 bg-amber-500/10 -mt-2'
-                  : 'border-zinc-700 bg-zinc-900/50'
-              }`}
-            >
-              <span className="text-2xl">{MEDAL[p.rank]}</span>
-              <span className="mt-0.5 line-clamp-1 break-all text-[12px] font-bold text-white">
-                {p.nickname}
-              </span>
-              <span className="text-[10px] tabular-nums text-zinc-400">
-                ⚔ {p.cp.toLocaleString()}
-              </span>
-            </div>
-          ))}
+        <div className="relative z-10 flex items-end justify-center gap-2 px-3 pb-4 pt-2">
+          {order.map((rank) => {
+            const p = byRank.get(rank);
+            if (!p) return null;
+            const first = rank === 1;
+            const size = first ? 84 : 64;
+            return (
+              <div key={rank} className={`flex flex-col items-center ${first ? '-mt-3' : 'mt-2'}`}>
+                <div className="text-lg leading-none drop-shadow">{MEDAL[rank]}</div>
+                <div
+                  className={`relative mt-1 overflow-hidden rounded-xl border-2 ${
+                    first ? 'border-amber-400' : 'border-zinc-500/70'
+                  } bg-black/40`}
+                  style={{ width: size, height: size }}
+                >
+                  {p.avatarUrl ? (
+                    // eslint-disable-next-line @next/next/no-img-element
+                    <img
+                      src={p.avatarUrl}
+                      alt={p.nickname}
+                      className="h-full w-full object-contain"
+                      style={{ imageRendering: 'pixelated' }}
+                    />
+                  ) : (
+                    <div className="flex h-full w-full items-center justify-center text-2xl text-zinc-500">
+                      ⚔️
+                    </div>
+                  )}
+                </div>
+                <div className="mt-1 max-w-[84px] truncate text-[11px] font-bold text-white drop-shadow">
+                  {p.nickname}
+                </div>
+                <div className="text-[9px] tabular-nums text-amber-200/80 drop-shadow">
+                  ⚔ {p.cp.toLocaleString()}
+                </div>
+              </div>
+            );
+          })}
         </div>
-      </section>
+      </div>
 
-      {/* 내 순위/보상 */}
+      {/* 내 순위 + 보상 — 컴팩트 1줄 */}
       {me ? (
-        <section className="rounded-xl border border-zinc-800 bg-zinc-900/40 p-3 text-center">
-          <div className="text-sm">
+        <div className="flex items-center justify-between rounded-xl border border-zinc-800 bg-zinc-900/40 px-3 py-2 text-[12px]">
+          <span>
             내 순위{' '}
-            <span className="font-mono text-lg font-extrabold text-amber-300">{me.rank}위</span>
-            <span className="text-zinc-500"> / {participantCount.toLocaleString()}명</span>
-          </div>
-          <div className="mt-1 text-[12px] text-zinc-300">
-            보상 {me.diamond > 0 ? `💎${me.diamond.toLocaleString()} · ` : ''}
-            {boxSummary(me.boxes) || '없음'}
-            <span className="ml-1 text-[10px] text-zinc-500">(우편 수령)</span>
-          </div>
-        </section>
+            <span className="font-mono font-extrabold text-amber-300">{me.rank}위</span>
+            <span className="text-zinc-500"> / {participantCount.toLocaleString()}</span>
+          </span>
+          <span className="text-zinc-300">
+            {me.diamond > 0 ? `💎${me.diamond.toLocaleString()} ` : ''}
+            {boxSummary(me.boxes)}
+            <span className="ml-1 text-[10px] text-zinc-500">우편</span>
+          </span>
+        </div>
       ) : (
-        <section className="rounded-xl border border-zinc-800 p-3 text-center text-xs text-zinc-400">
-          오늘 대난투에 참가하지 않았어요 (강화 1회 이상이면 자동 참가).
-        </section>
+        <div className="rounded-xl border border-zinc-800 px-3 py-2 text-center text-[11px] text-zinc-400">
+          오늘 미참가 (강화 1회 이상이면 자동 참가)
+        </div>
       )}
 
       {/* 탭 */}
       <div className="flex gap-1 rounded-xl border border-zinc-800 p-1">
-        {(['replay', 'mine'] as const).map((t) => (
+        {(['all', 'mine'] as const).map((t) => (
           <button
             key={t}
             type="button"
@@ -93,72 +170,36 @@ export function MeleeResult({ view }: { view: MeleeResultView }) {
               tab === t ? 'bg-amber-600 text-white' : 'text-zinc-400'
             }`}
           >
-            {t === 'replay' ? '전투 리플레이' : '내 전투'}
+            {t === 'all' ? '전체 전투' : '내 전투'}
           </button>
         ))}
       </div>
 
-      {tab === 'replay' ? (
-        <section className="rounded-xl border border-zinc-800 bg-zinc-950 p-2">
-          <div className="px-1 pb-1 text-[10px] text-zinc-500">
-            마지막 {finale.events.length.toLocaleString()}전 · 👑 {championNickname}
-          </div>
-          <ul className="max-h-[60vh] divide-y divide-zinc-900 overflow-y-auto text-[11px]">
-            {finale.events.map((e, i) => {
-              const a = roster[e[0]]?.nickname ?? '?';
-              const t = roster[e[1]]?.nickname ?? '?';
-              const dmg = e[2];
-              const killed = e[3] === 1;
-              return (
-                <li key={i} className="flex items-center gap-1 px-1 py-1 leading-tight">
-                  <span className="truncate font-medium text-zinc-200">{a}</span>
-                  <span className="text-zinc-600">⚔</span>
-                  <span className="truncate text-zinc-300">{t}</span>
-                  <span className="ml-auto shrink-0 font-mono text-zinc-500">
-                    {dmg.toLocaleString()}
-                  </span>
-                  <span
-                    className={`ml-1 shrink-0 ${killed ? 'font-bold text-red-400' : 'text-zinc-500'}`}
-                  >
-                    {killed ? '탈락' : '버팀'}
-                  </span>
-                </li>
-              );
-            })}
-          </ul>
-          <div className="px-1 pt-1 text-center text-[9px] text-zinc-600">
-            아바타 애니메이션 리플레이는 곧 추가됩니다.
-          </div>
-        </section>
-      ) : (
-        <section className="rounded-xl border border-zinc-800 bg-zinc-950 p-3">
-          {me ? (
-            <>
-              <div className="text-[12px] text-zinc-300">
-                나를 쓰러뜨린 자:{' '}
-                <span className="font-bold text-red-300">{me.killerNickname ?? '— (챔피언!)'}</span>
+      <section className="rounded-xl border border-zinc-800 bg-zinc-950">
+        {tab === 'all' ? (
+          <>
+            {truncated ? (
+              <div className="px-2 pt-1.5 text-[10px] text-zinc-500">
+                마지막 {finale.events.length.toLocaleString()}전 · 👑 {championNickname}
               </div>
-              <div className="mt-2 text-[12px] font-semibold text-zinc-200">
-                내가 쓰러뜨린 상대 {myKills.length}명
-              </div>
-              {myKills.length > 0 ? (
-                <ul className="mt-1 max-h-[50vh] space-y-0.5 overflow-y-auto text-[11px]">
-                  {myKills.map((k, i) => (
-                    <li key={i} className="flex justify-between px-1 py-0.5">
-                      <span className="truncate text-zinc-300">{k.nickname}</span>
-                      <span className="shrink-0 font-mono text-zinc-500">{k.rank}위</span>
-                    </li>
-                  ))}
-                </ul>
-              ) : (
-                <div className="mt-1 text-[11px] text-zinc-500">처치 기록이 없어요.</div>
-              )}
-            </>
-          ) : (
-            <div className="text-center text-xs text-zinc-500">참가 시 내 전투가 표시됩니다.</div>
-          )}
-        </section>
-      )}
+            ) : null}
+            <StoryLog events={finale.events} roster={roster} empty="전투 기록이 없습니다." />
+          </>
+        ) : (
+          <StoryLog
+            events={myEvents}
+            roster={roster}
+            empty={
+              me
+                ? '상위 전투 구간에 등장하지 않았어요 (내 순위는 위에 표시).'
+                : '참가 시 내 전투가 표시됩니다.'
+            }
+          />
+        )}
+        <div className="px-2 py-1 text-center text-[9px] text-zinc-600">
+          아바타 애니메이션 리플레이는 곧 추가됩니다.
+        </div>
+      </section>
     </div>
   );
 }

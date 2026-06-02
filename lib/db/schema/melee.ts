@@ -31,8 +31,8 @@ export const meleeStatusEnum = pgEnum('melee_status', ['running', 'computed', 'r
  */
 export type MeleeFinale = {
   roster: { userId: string; nickname: string; cp: number; rank: number }[];
-  /** [공격자 로컬idx, 타겟 로컬idx, 데미지, 탈락(1/0)] — 시간순. */
-  events: [number, number, number, 0 | 1][];
+  /** [공격자 로컬idx, 타겟 로컬idx, 데미지, 타겟 잔여HP] — 시간순. 잔여HP ≤ 0 = 탈락. */
+  events: [number, number, number, number][];
 };
 
 /** §13.1 melee_battles — 하루 1행. */

@@ -58,7 +58,7 @@ export function simulateMelee(
   const rA = new Int32Array(REPLAY);
   const rT = new Int32Array(REPLAY);
   const rD = new Int32Array(REPLAY);
-  const rK = new Uint8Array(REPLAY);
+  const rH = new Int32Array(REPLAY); // 타격 후 타겟 잔여HP(≤0 = 탈락)
   let rounds = 0; // 총 라운드 수
 
   let attacker = -1; // 참가자 인덱스. -1 = 새로 뽑아야 함(체인 종료/시작)
@@ -81,7 +81,7 @@ export function simulateMelee(
     rA[slot] = attacker;
     rT[slot] = target;
     rD[slot] = dmg;
-    rK[slot] = killed ? 1 : 0;
+    rH[slot] = Math.round(hp[target]!); // 잔여HP(≤0 = 탈락)
     rounds++;
 
     if (killed) {
@@ -124,7 +124,7 @@ export function simulateMelee(
   const events: MeleeFinale['events'] = [];
   for (let i = 0; i < kept; i++) {
     const s = (start + i) % REPLAY;
-    events.push([local(rA[s]!), local(rT[s]!), rD[s]!, rK[s]! as 0 | 1]);
+    events.push([local(rA[s]!), local(rT[s]!), rD[s]!, rH[s]!]);
   }
 
   return { ranks, championUserId: participants[champ]!.userId, finale: { roster, events } };

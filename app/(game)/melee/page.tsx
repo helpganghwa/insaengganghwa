@@ -1,10 +1,11 @@
-import { and, eq } from 'drizzle-orm';
+import { and, eq, inArray } from 'drizzle-orm';
 
 import { getSessionUserId } from '@/lib/auth/session';
 import { db } from '@/lib/db/client';
 import { withTimeout } from '@/lib/db/with-timeout';
 import { meleeBattles, meleeParticipants } from '@/lib/db/schema/melee';
 import { profiles } from '@/lib/db/schema/profiles';
+import { userProfiles } from '@/lib/db/schema/avatar';
 import { kstDateString, kstStartOfDay } from '@/lib/kst';
 import { assetUrl } from '@/lib/asset-versions';
 
@@ -78,12 +79,36 @@ export default async function MeleePage() {
 
   // ── 발표됨 — 결과 데이터 ──
   const finale = battle.finale;
-  const podium = finale.roster
+  const top = finale.roster
     .filter((r) => r.rank <= 3)
-    .sort((a, b) => a.rank - b.rank)
-    .map((r) => ({ rank: r.rank, nickname: r.nickname, cp: r.cp }));
-  const championNickname =
-    finale.roster.find((r) => r.rank === 1)?.nickname ?? '챔피언';
+    .sort((a, b) => a.rank - b.rank);
+  const championNickname = finale.roster.find((r) => r.rank === 1)?.nickname ?? '챔피언';
+
+  // 1~3위 아바타(활성 프로필 정면). 더미/미보유는 null → 폴백 렌더.
+  const topIds = top.map((r) => r.userId);
+  const avatarOf = new Map<string, string>();
+  if (topIds.length > 0) {
+    const av = await withTimeout(
+      db
+        .select({ uid: profiles.id, rotations: userProfiles.rotations, dir: userProfiles.activeDirection })
+        .from(profiles)
+        .innerJoin(userProfiles, eq(userProfiles.id, profiles.activeProfileId))
+        .where(inArray(profiles.id, topIds)),
+      3000,
+      'melee.avatars',
+    ).catch(() => []);
+    for (const a of av) {
+      const rot = a.rotations as Record<string, string>;
+      const url = rot.south ?? rot[a.dir];
+      if (url) avatarOf.set(a.uid, url);
+    }
+  }
+  const podium = top.map((r) => ({
+    rank: r.rank,
+    nickname: r.nickname,
+    cp: r.cp,
+    avatarUrl: avatarOf.get(r.userId) ?? null,
+  }));
 
   const [meRow] = await withTimeout(
     db
@@ -91,7 +116,6 @@ export default async function MeleePage() {
         rank: meleeParticipants.finalRank,
         diamond: meleeParticipants.rewardDiamond,
         boxes: meleeParticipants.rewardBoxes,
-        killerUserId: meleeParticipants.killerUserId,
       })
       .from(meleeParticipants)
       .where(and(eq(meleeParticipants.battleId, battle.id), eq(meleeParticipants.userId, userId)))
@@ -100,53 +124,19 @@ export default async function MeleePage() {
     'melee.me',
   ).catch(() => []);
 
-  let me: MeleeResultView['me'] = null;
-  let myKills: MeleeResultView['myKills'] = [];
-  if (meRow) {
-    let killerNickname: string | null = null;
-    if (meRow.killerUserId) {
-      const [k] = await db
-        .select({ nick: profiles.nickname })
-        .from(profiles)
-        .where(eq(profiles.id, meRow.killerUserId))
-        .limit(1);
-      killerNickname = k?.nick ?? null;
-    }
-    me = {
-      rank: meRow.rank,
-      diamond: Number(meRow.diamond),
-      boxes: meRow.boxes,
-      killerNickname,
-    };
-    myKills = (
-      await withTimeout(
-        db
-          .select({ rank: meleeParticipants.finalRank, nickname: profiles.nickname })
-          .from(meleeParticipants)
-          .innerJoin(profiles, eq(profiles.id, meleeParticipants.userId))
-          .where(
-            and(eq(meleeParticipants.battleId, battle.id), eq(meleeParticipants.killerUserId, userId)),
-          ),
-        3000,
-        'melee.kills',
-      ).catch(() => [])
-    )
-      .map((r) => ({ rank: r.rank, nickname: r.nickname }))
-      .sort((a, b) => a.rank - b.rank);
-  }
-
   const view: MeleeResultView = {
     participantCount: battle.participantCount,
     championNickname,
     podium,
-    me,
-    myKills,
+    me: meRow
+      ? { rank: meRow.rank, diamond: Number(meRow.diamond), boxes: meRow.boxes }
+      : null,
+    myUserId: userId,
     finale,
   };
 
   return (
-    <div className="space-y-4 px-4 py-6">
-      <Hero />
+    <div className="space-y-4 px-4 py-4">
       <MeleeResult view={view} />
     </div>
   );
