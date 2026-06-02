@@ -12,7 +12,10 @@ export const ASSET_VERSIONS: Record<string, string> = {
   "/sprites/hub/box-accessory.png": "c91c8435",
   "/sprites/hub/box-weapon.png": "4530226e",
   "/sprites/hub/raid.png": "b88ccad1",
+  "/sprites/hub/mail.png": "c8a1b77c",
+  "/sprites/hub/melee.png": "91c1b9be",
   "/sprites/hub/inventory.png": "783a437f",
+  "/sprites/hub/shop.png": "49d35107",
   "/sprites/hub/checkin-bg.png": "02a636c3",
   "/sprites/hub/daily-supply-bg.png": "6412bd4b",
   "/sprites/hub/box-armor.png": "475f817a",
@@ -40,7 +43,12 @@ export const ASSET_VERSIONS: Record<string, string> = {
   "/og/og-5.png": "8aa0a9cf",
   "/og/og-4.png": "13229676",
   "/og/og-1.png": "e8093d23",
+  "/og/raid/orc_chief.png": "92d3ee5c",
+  "/og/raid/stone_golem.png": "ad473fea",
+  "/og/raid/fallen_angel.png": "5b687c8b",
+  "/og/raid/slime_king.png": "3473d817",
+  "/og/raid/dragon_west.png": "430425cb",
   "/og/og-3.png": "f0e47cd0",
   "/og/og-2.png": "c8c24cc5",
-  "/sprites/atlas.webp": "788a84b1"
+  "/sprites/atlas.webp": "244d7293"
 };

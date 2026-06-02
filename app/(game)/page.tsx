@@ -27,8 +27,24 @@ import { RankingTop3Card } from './RankingTop3Card';
  *  - 본 페이지는 "오늘 KST 발급분 중 미수령 1건 이상"이면 wide 카드 노출.
  *  - 수령 완료(claimed_at) 시 카드 숨김 → 다음 KST 00:00에 재등장.
  */
-// 메뉴 6카드 — 강화/인벤/보급/레이드/우편함/상점. 우편함은 헤더에서 그리드로 이동.
+// 메뉴 6카드 — 대난투/레이드/강화/보급/우편함/상점. 인벤토리는 바텀네비로 이동.
 const MENU = [
+  {
+    href: '/melee',
+    label: '대난투',
+    desc: '준비 중 — 곧 공개',
+    bg: '/sprites/hub/melee.png',
+    tint: '#3a2e16',
+    scale: 1,
+  },
+  {
+    href: '/raid',
+    label: '레이드',
+    desc: '보스 도전',
+    bg: '/sprites/hub/raid.png',
+    tint: '#3a1419',
+    scale: 1,
+  },
   {
     href: '/enhance',
     label: '강화',
@@ -38,27 +54,11 @@ const MENU = [
     scale: 1.3,
   },
   {
-    href: '/inventory',
-    label: '인벤토리',
-    desc: '보유 장비 관리',
-    bg: '/sprites/hub/inventory.png',
-    tint: '#3a2a1c',
-    scale: 1,
-  },
-  {
     href: '/gacha',
     label: '보급',
     desc: '랜덤 장비 획득',
     bg: '/sprites/hub/gacha.png',
     tint: '#143a2a',
-    scale: 1,
-  },
-  {
-    href: '/raid',
-    label: '레이드',
-    desc: '보스 도전',
-    bg: '/sprites/hub/raid.png',
-    tint: '#3a1419',
     scale: 1,
   },
   {
