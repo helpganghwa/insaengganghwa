@@ -68,9 +68,26 @@ export async function buildMeleeResultView(
       if (a.code) codeOf.set(a.uid, a.code);
     }
   }
+  // 스냅샷(그 시점) 닉·아바타 — finale.roster. 아바타 스냅샷이 있으면 live보다 우선(과거 회차 고정).
+  const snapNick = new Map(finale.roster.map((r) => [r.userId, r.nickname]));
+  for (const r of finale.roster) if (r.avatar) avatarOf.set(r.userId, r.avatar);
 
   const dft = (i: number) =>
     i % 2 === 0 ? '/sprites/default/male/south.png' : '/sprites/default/female/south.png';
+
+  // 공격 성공(킬)·방어 성공(피격 후 생존) — 리플레이와 동일 소스(finale.events)로 집계.
+  //  (윈도 절단된 초대규모 배틀은 윈도 내 기준 — 리플레이에 보이는 것과 일치.)
+  const kills = new Map<string, number>();
+  const survives = new Map<string, number>();
+  for (const [a, t, , hpAfter] of finale.events) {
+    if (hpAfter <= 0) {
+      const au = finale.roster[a]?.userId;
+      if (au) kills.set(au, (kills.get(au) ?? 0) + 1);
+    } else {
+      const tu = finale.roster[t]?.userId;
+      if (tu) survives.set(tu, (survives.get(tu) ?? 0) + 1);
+    }
+  }
 
   const topRows = await withTimeout(
     db
@@ -79,7 +96,6 @@ export async function buildMeleeResultView(
         nickname: profiles.nickname,
         code: profiles.publicCode,
         uid: meleeParticipants.userId,
-        def: meleeParticipants.defenseCount,
       })
       .from(meleeParticipants)
       .innerJoin(profiles, eq(profiles.id, meleeParticipants.userId))
@@ -88,26 +104,13 @@ export async function buildMeleeResultView(
     3000,
     'melee.top3',
   ).catch(() => []);
-  // 공격 성공(킬) = 그 유저가 killer인 탈락 수. killer별 집계.
-  const killRows = await withTimeout(
-    db
-      .select({ killer: meleeParticipants.killerUserId, n: sql<number>`count(*)::int` })
-      .from(meleeParticipants)
-      .where(eq(meleeParticipants.battleId, battle.id))
-      .groupBy(meleeParticipants.killerUserId),
-    3000,
-    'melee.kills',
-  ).catch(() => [] as { killer: string | null; n: number }[]);
-  const killsOf = new Map<string, number>();
-  for (const k of killRows) if (k.killer) killsOf.set(k.killer, k.n);
   const podium = topRows.map((r) => ({
     rank: r.rank,
-    nickname: r.nickname,
+    nickname: snapNick.get(r.uid) ?? r.nickname,
     publicCode: r.code ?? null,
     avatarUrl: avatarOf.get(r.uid) ?? dft(r.rank),
-    // 공격 성공 = 킬 수, 방어 성공 = 피격 중 생존(탈락당한 1회 제외, 챔피언은 전부).
-    attackSuccess: killsOf.get(r.uid) ?? 0,
-    defenseSuccess: Math.max(0, r.def - (r.rank === 1 ? 0 : 1)),
+    attackSuccess: kills.get(r.uid) ?? 0,
+    defenseSuccess: survives.get(r.uid) ?? 0,
   }));
   const rosterAvatars = finale.roster.map((r, i) => avatarOf.get(r.userId) ?? dft(i));
   const rosterCodes = finale.roster.map((r) => codeOf.get(r.userId) ?? null);
@@ -138,7 +141,8 @@ export async function buildMeleeResultView(
     podium,
     me: meRow ? { rank: meRow.rank, diamond: Number(meRow.diamond), boxes: meRow.boxes } : null,
     myEvents: meRow?.myEvents ?? [],
-    myNickname: meRow?.nickname ?? '',
+    // 스냅샷 닉 우선 — 로그 필터(닉 매칭)와 일치 + 개명 무관.
+    myNickname: snapNick.get(userId) ?? meRow?.nickname ?? '',
     myAvatar: avatarOf.get(userId) ?? null,
     myPublicCode: meRow?.code ?? null,
     myCp: meRow ? Number(meRow.cp) : 0,

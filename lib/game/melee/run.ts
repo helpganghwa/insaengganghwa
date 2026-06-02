@@ -1,9 +1,11 @@
 import 'server-only';
 
-import { eq, sql } from 'drizzle-orm';
+import { eq, inArray, sql } from 'drizzle-orm';
 
 import { db } from '@/lib/db/client';
 import { meleeBattles, meleeParticipants } from '@/lib/db/schema/melee';
+import { profiles } from '@/lib/db/schema/profiles';
+import { userProfiles } from '@/lib/db/schema/avatar';
 import { combatPowerFromOwned, type OwnedRow } from '@/lib/game/equipment/combat-power';
 import { meleeRewardForRank, SUPPLY_SLOTS, type SupplySlot } from '@/lib/game/balance';
 
@@ -76,6 +78,28 @@ export async function runMelee(): Promise<{ ran: boolean; battleId?: string; par
   const n = participants.length;
 
   const result = simulateMelee(participants, battleDate);
+
+  // 아바타 스냅샷 — finale 로스터 유저의 그 시점 활성 프로필 정면을 finale에 박제.
+  //  과거 회차를 나중에 봐도 당시 아바타로 고정(닉·전투력·등수처럼). 로스터는 윈도 등장 유저만(유계).
+  const rosterIds = result.finale.roster.map((r) => r.userId);
+  if (rosterIds.length > 0) {
+    const avRows = await db
+      .select({
+        uid: profiles.id,
+        rotations: userProfiles.rotations,
+        dir: userProfiles.activeDirection,
+      })
+      .from(profiles)
+      .innerJoin(userProfiles, eq(userProfiles.id, profiles.activeProfileId))
+      .where(inArray(profiles.id, rosterIds));
+    const avOf = new Map<string, string>();
+    for (const a of avRows) {
+      const rot = a.rotations as Record<string, string>;
+      const url = rot.south ?? rot[a.dir];
+      if (url) avOf.set(a.uid, url);
+    }
+    for (const r of result.finale.roster) r.avatar = avOf.get(r.userId) ?? null;
+  }
 
   // 배틀 행 — 멱등 insert. race로 이미 있으면 skip.
   const inserted = await db

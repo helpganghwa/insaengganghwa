@@ -99,7 +99,7 @@ export function MeleeInfo({
             {history.map((h) => {
               const inner = (
                 <>
-                  {/* 챔피언 아바타 — 배경 레이어. object-cover + center top(얼굴이 박스 세로 중앙) + 확대. */}
+                  {/* 챔피언 아바타 — 배경 레이어. height/top으로 상반신·얼굴이 박스 세로 중앙(여백 보정). */}
                   {h.championAvatar ? (
                     <div className="pointer-events-none absolute inset-y-0 right-0 w-40 overflow-hidden">
                       {/* eslint-disable-next-line @next/next/no-img-element */}
@@ -107,13 +107,8 @@ export function MeleeInfo({
                         src={h.championAvatar}
                         alt=""
                         aria-hidden
-                        className="absolute inset-0 h-full w-full object-cover"
-                        style={{
-                          imageRendering: 'pixelated',
-                          objectPosition: 'center top',
-                          transform: 'scale(1.55)',
-                          transformOrigin: 'center',
-                        }}
+                        className="absolute left-1/2 w-auto -translate-x-1/2"
+                        style={{ imageRendering: 'pixelated', height: '320%', top: '-20%' }}
                       />
                     </div>
                   ) : null}

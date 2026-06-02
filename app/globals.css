@@ -254,6 +254,18 @@ html {
   100% { opacity: 0; transform: translateY(8px); }
 }
 
+/* 대난투 결승 WINNER — 헤더를 덮으며 위에서 내려오는 배너 + 사선 샤인 스윕. */
+@keyframes winner-drop {
+  0% { opacity: 0; transform: translateY(-100%); }
+  55% { opacity: 1; transform: translateY(5%); }
+  100% { opacity: 1; transform: translateY(0); }
+}
+@keyframes winner-shine {
+  0% { transform: translateX(-160%) skewX(-20deg); opacity: 0; }
+  25% { opacity: 0.85; }
+  100% { transform: translateX(260%) skewX(-20deg); opacity: 0; }
+}
+
 /* 일괄 초월 확정 버튼 — 배경색만 펄스(텍스트는 안정). */
 @keyframes confirm-bg-pulse {
   0%, 100% { opacity: 0; }

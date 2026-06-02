@@ -269,14 +269,6 @@ function FightStage({
       ? KILLED_MSGS[fight.round % KILLED_MSGS.length]!(fight.atkName, fight.tgtName, dmgStr)
       : SURVIVE_MSGS[fight.round % SURVIVE_MSGS.length]!(fight.atkName, fight.tgtName, dmgStr, hpStr);
 
-  // 결승 WINNER 배너 — 마운트 후 스케일·페이드 인.
-  const [winnerIn, setWinnerIn] = useState(false);
-  useEffect(() => {
-    if (!isFinal) return;
-    const id = requestAnimationFrame(() => setWinnerIn(true));
-    return () => cancelAnimationFrame(id);
-  }, [isFinal]);
-
   return (
     <div className="relative z-10 flex h-full flex-col">
       {/* 피격 플래시(1회) — 결승은 골드 */}
@@ -285,20 +277,22 @@ function FightStage({
           isFinal ? 'bg-amber-400/70' : 'bg-red-500/70'
         }`}
       />
-      {/* 결승 우승 배너 */}
+      {/* 결승 우승 배너 — 헤더를 덮으며 위에서 내려오는 화려한 골드 배너 + 샤인 스윕 */}
       {isFinal ? (
-        <div className="pointer-events-none absolute inset-0 z-30 flex items-center justify-center">
-          <div
-            className={`rounded-2xl border-2 border-amber-300/80 bg-black/40 px-6 py-2.5 shadow-[0_0_30px_rgba(245,158,11,0.5)] backdrop-blur-sm transition-all duration-500 ease-out ${
-              winnerIn ? 'scale-100 opacity-100' : 'scale-50 opacity-0'
-            }`}
-          >
-            <div className="text-center text-2xl font-extrabold tracking-[0.2em] text-amber-300 text-pixel-outline drop-shadow-[0_2px_6px_rgba(0,0,0,0.9)]">
+        <div
+          className="pointer-events-none absolute inset-x-0 top-0 z-30 overflow-hidden"
+          style={{ animation: 'winner-drop 0.6s cubic-bezier(0.22,1,0.36,1) both' }}
+        >
+          <div className="relative flex flex-col items-center justify-center overflow-hidden border-b-2 border-amber-300/70 bg-gradient-to-r from-amber-600 via-amber-300 to-amber-600 py-2 shadow-[0_6px_24px_rgba(245,158,11,0.65)]">
+            <div className="text-xl font-extrabold tracking-[0.35em] text-white drop-shadow-[0_2px_4px_rgba(120,53,15,0.9)]">
               WINNER
             </div>
-            <div className="mt-0.5 text-center text-[11px] font-bold text-amber-100 text-pixel-outline">
-              {fight.atkName} 우승
-            </div>
+            <div className="text-[12px] font-extrabold text-amber-950">{fight.atkName} 우승</div>
+            {/* 사선 샤인 스윕(1회) */}
+            <div
+              className="pointer-events-none absolute inset-y-0 -left-1/3 w-1/3 bg-white/50 blur-md"
+              style={{ animation: 'winner-shine 1.1s ease-out 0.35s both' }}
+            />
           </div>
         </div>
       ) : null}
@@ -535,7 +529,7 @@ function RoundCard({
 function FinalCard({ champion, avatar }: { champion: string; avatar: string | null }) {
   return (
     <li className="relative flex items-center overflow-hidden border-b border-amber-900/40 py-3 pr-3 pl-3">
-      {/* 우측 — 챔피언 아바타(배경 레이어). object-cover + center top(얼굴이 박스 세로 중앙) + 확대. */}
+      {/* 우측 — 챔피언 아바타(배경 레이어). height/top으로 상반신·얼굴이 박스 세로 중앙(여백 보정). */}
       {avatar ? (
         <div className="pointer-events-none absolute inset-y-0 right-0 w-36 overflow-hidden">
           {/* eslint-disable-next-line @next/next/no-img-element */}
@@ -543,13 +537,8 @@ function FinalCard({ champion, avatar }: { champion: string; avatar: string | nu
             src={avatar}
             alt=""
             aria-hidden
-            className="absolute inset-0 h-full w-full object-cover"
-            style={{
-              imageRendering: 'pixelated',
-              objectPosition: 'center top',
-              transform: 'scale(1.5)',
-              transformOrigin: 'center',
-            }}
+            className="absolute left-1/2 w-auto -translate-x-1/2"
+            style={{ imageRendering: 'pixelated', height: '300%', top: '-20%' }}
           />
         </div>
       ) : null}
