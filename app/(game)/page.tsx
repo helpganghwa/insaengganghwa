@@ -97,6 +97,8 @@ export default async function HomePage() {
   //  발표 전: 진행 전("오늘 오전 9시 개시") / 진행 중 / 집계 중. 발표 후: 우승자 닉네임.
   //  시각 판정은 서버 시계(SQL now())로(CLAUDE §3.2) — 아래 melee 조회에서 phase 산출.
   let meleeDesc = '매일 오전 9시 개시';
+  /** 발표 후 우승자 닉네임(있으면 카드에서 색상 강조 렌더). */
+  let meleeChampion: string | null = null;
 
   if (userId) {
     const kstToday = kstDateString();
@@ -191,13 +193,10 @@ export default async function HomePage() {
       if (melee) {
         if (melee.phase === 'before') meleeDesc = '오늘 오전 9시 개시';
         else if (melee.phase === 'running') meleeDesc = '난투 진행 중';
-        else
-          meleeDesc =
-            melee.status === 'revealed'
-              ? melee.champ_nick
-                ? `우승 ${melee.champ_nick}`
-                : '오늘의 결과 발표'
-              : '결과 집계 중';
+        else if (melee.status === 'revealed') {
+          if (melee.champ_nick) meleeChampion = melee.champ_nick;
+          else meleeDesc = '오늘의 결과 발표';
+        } else meleeDesc = '결과 집계 중';
       }
     } catch {
       // 콜드/hang → 카드 + 알림 숨김(기본 false/0). 메뉴 그리드는 정상 노출.
@@ -215,6 +214,7 @@ export default async function HomePage() {
         {MENU.map((m) => {
           const count = counts[m.href] ?? 0;
           const badge = count > 99 ? '99+' : count > 0 ? String(count) : null;
+          const isMeleeChamp = m.href === '/melee' && meleeChampion;
           const desc = m.href === '/melee' ? meleeDesc : m.desc;
           return (
             <Link
@@ -248,7 +248,18 @@ export default async function HomePage() {
                 <div className="text-sm leading-tight font-bold text-white drop-shadow-sm">
                   {m.label}
                 </div>
-                <div className="mt-0.5 text-[10px] leading-tight text-white/85">{desc}</div>
+                <div className="mt-0.5 truncate text-[10px] leading-tight text-white/85">
+                  {isMeleeChamp ? (
+                    <>
+                      <span className="text-white/70">우승 </span>
+                      <span className="font-extrabold text-amber-300 drop-shadow-[0_1px_2px_rgba(0,0,0,0.9)]">
+                        {meleeChampion}
+                      </span>
+                    </>
+                  ) : (
+                    desc
+                  )}
+                </div>
               </div>
             </Link>
           );

@@ -40,6 +40,8 @@ type Fight = {
   dmg: number;
   hpAfter: number;
   tgtMaxHp?: number;
+  /** 이 라운드 진행 중 아레나 생존자 수(상단 표시). */
+  survivors?: number;
 };
 
 const clampPct = (v: number) => Math.max(0, Math.min(100, v));
@@ -117,57 +119,71 @@ function Fighter({
     return () => cancelAnimationFrame(id);
   }, [hp, maxHp]);
 
+  // 사망 페이드 — 처음엔 색이 있다가, HP가 비워진 뒤(650ms) 투명/회색으로 전환.
+  const [faded, setFaded] = useState(false);
+  useEffect(() => {
+    if (!dead) return;
+    const t = setTimeout(() => setFaded(true), 680);
+    return () => clearTimeout(t);
+  }, [dead]);
+
   const attacking = role === 'atk';
   const lunge = attacking ? (side === 'l' ? 'translate-x-2' : '-translate-x-2') : '';
   return (
-    <div className="flex w-32 flex-col items-center gap-1">
-      {/* 공격/방어 라벨(머리 위) — 고정 높이 */}
-      <span
-        className={`rounded-full px-2 py-0.5 text-[10px] font-bold text-pixel-outline ${
-          attacking ? 'bg-amber-600/80 text-white' : 'bg-sky-700/80 text-white'
-        }`}
-      >
-        {attacking ? '공격' : '방어'}
-      </span>
+    <div className="flex w-40 flex-col items-center gap-0.5">
       <div
-        className={`relative h-44 w-32 transition-transform duration-200 ${dead ? 'opacity-30 grayscale' : ''} ${lunge} ${
+        className={`relative h-36 w-40 transition-transform duration-200 ${lunge} ${
           shake ? 'animate-hit-shake' : ''
         }`}
       >
+        {/* 공격/방어 라벨 — 머리 위 오버레이(세로 공간 절약) */}
+        <span
+          className={`absolute left-1/2 top-0 z-20 -translate-x-1/2 rounded-full px-2 py-0.5 text-[9px] font-bold text-white text-pixel-outline ${
+            attacking ? 'bg-amber-600/85' : 'bg-sky-700/85'
+          }`}
+        >
+          {attacking ? '공격' : '방어'}
+        </span>
         {/* 피해량 — 타겟 머리 위 정중앙에서 떠오름 */}
         {dmg != null ? (
-          <div className="animate-dmg-float pointer-events-none absolute left-1/2 top-2 z-20 font-mono text-xl font-extrabold text-red-300 drop-shadow-[0_2px_4px_rgba(0,0,0,0.9)]">
+          <div className="animate-dmg-float pointer-events-none absolute left-1/2 top-4 z-20 font-mono text-xl font-extrabold text-red-300 drop-shadow-[0_2px_4px_rgba(0,0,0,0.9)]">
             -{dmg.toLocaleString()}
           </div>
         ) : null}
-        {avatar ? (
-          // eslint-disable-next-line @next/next/no-img-element
-          <img
-            src={avatar}
-            alt={name}
-            className={`h-full w-full object-contain object-bottom drop-shadow-[0_2px_5px_rgba(0,0,0,0.85)] ${
-              side === 'r' ? '-scale-x-100' : ''
-            }`}
-            style={{ imageRendering: 'pixelated' }}
-          />
-        ) : (
-          <div className="flex h-full w-full items-center justify-center text-2xl font-extrabold text-zinc-400">
-            {name.slice(0, 1)}
-          </div>
-        )}
-        <div className="pointer-events-none absolute -bottom-0.5 left-1/2 h-2 w-20 -translate-x-1/2 rounded-[50%] bg-black/55 blur-[3px]" />
+        {/* 사망 시 색→투명 전환(transition) */}
+        <div
+          className="h-full w-full transition-all duration-500 ease-out"
+          style={{ opacity: faded ? 0.25 : 1, filter: faded ? 'grayscale(1)' : 'none' }}
+        >
+          {avatar ? (
+            // eslint-disable-next-line @next/next/no-img-element
+            <img
+              src={avatar}
+              alt={name}
+              className={`h-full w-full object-contain object-bottom drop-shadow-[0_2px_5px_rgba(0,0,0,0.85)] ${
+                side === 'r' ? '-scale-x-100' : ''
+              }`}
+              style={{ imageRendering: 'pixelated' }}
+            />
+          ) : (
+            <div className="flex h-full w-full items-center justify-center text-3xl font-extrabold text-zinc-400">
+              {name.slice(0, 1)}
+            </div>
+          )}
+        </div>
+        <div className="pointer-events-none absolute -bottom-0.5 left-1/2 h-2 w-24 -translate-x-1/2 rounded-[50%] bg-black/55 blur-[3px]" />
       </div>
-      <div className="max-w-[120px] truncate text-[12px] font-bold text-white drop-shadow">{name}</div>
+      <div className="max-w-[150px] truncate text-[11px] font-bold text-white drop-shadow">{name}</div>
       {/* HP바 — 양쪽 동일 높이 확보(공격자는 빈 자리 placeholder). */}
       {maxHp != null ? (
-        <div className="h-2 w-24 overflow-hidden rounded-full bg-zinc-800 ring-1 ring-black/40">
+        <div className="h-1.5 w-24 overflow-hidden rounded-full bg-zinc-800 ring-1 ring-black/40">
           <div
             className={`h-full ${hpColor(pct)}`}
             style={{ width: `${pct}%`, transition: 'width 650ms ease-out' }}
           />
         </div>
       ) : (
-        <div className="h-2 w-24" />
+        <div className="h-1.5 w-24" />
       )}
     </div>
   );
@@ -193,7 +209,9 @@ function FightStage({
       <div className="animate-hit-flash pointer-events-none absolute inset-0 bg-red-500/70 mix-blend-screen" />
       {/* 상단: 참가자 / ROUND / 비움 */}
       <div className="relative z-10 grid grid-cols-3 items-center px-3 pt-2 text-[10px] font-semibold drop-shadow">
-        <span className="text-left text-zinc-200">참가 {participantCount.toLocaleString()}</span>
+        <span className="text-left text-zinc-200">
+          생존 {(fight.survivors ?? participantCount).toLocaleString()}
+        </span>
         <span className="text-center font-mono tracking-wider text-amber-200">
           {fight.round.toLocaleString()} ROUND
         </span>
@@ -267,7 +285,8 @@ function RankingView({
                   {p?.nickname ?? '—'}
                 </span>
               </div>
-              <div className="relative h-32 w-full">
+              {/* object-bottom + 동일 박스 하단선(items-end) → 발끝 통일. scale은 origin bottom이라 발끝 고정. */}
+              <div className="relative h-36 w-full">
                 {p?.avatarUrl ? (
                   // eslint-disable-next-line @next/next/no-img-element
                   <img
@@ -278,7 +297,7 @@ function RankingView({
                     className="absolute inset-0 h-full w-full object-contain object-bottom"
                     style={{
                       imageRendering: 'pixelated',
-                      transform: first ? 'scale(1.55)' : 'scale(1.2)',
+                      transform: first ? 'scale(1.8)' : 'scale(1.5)',
                       transformOrigin: 'center bottom',
                       filter: 'drop-shadow(0 3px 5px rgba(0,0,0,0.6))',
                     }}
@@ -324,7 +343,7 @@ function RoundCard({
       <button
         type="button"
         onClick={onClick}
-        className="block w-full px-2.5 py-1.5 text-left transition hover:bg-zinc-900 active:bg-zinc-800"
+        className="block w-full px-2.5 py-1.5 text-left transition hover:bg-zinc-900/60 active:bg-zinc-800"
       >
         {/* ROUND divider */}
         <div className="mb-1.5 flex items-center gap-2">
@@ -334,33 +353,36 @@ function RoundCard({
           </span>
           <div className="h-px flex-1 bg-zinc-800" />
         </div>
-        {/* 공격(좌) 말풍선 */}
-        <div className="flex justify-start">
-          <div className="max-w-[80%] truncate rounded-xl rounded-bl-sm bg-amber-950/40 px-2.5 py-1 text-[11px] ring-1 ring-amber-900/40">
-            <span className="text-amber-400/90">공격 </span>
-            <span className={`font-bold ${hl(atk)}`}>{atk}</span>
-            <span className="text-zinc-400"> · </span>
-            <span className="font-mono text-red-300">{dmg.toLocaleString()}</span>
-            <span className="text-zinc-400"> 피해</span>
-          </div>
+        {/* 공격 밴드 — 전체 폭, 내용은 왼쪽 정렬 */}
+        <div className="flex justify-start rounded-lg bg-amber-500/10 px-2.5 py-1.5 text-[11px]">
+          <span className="flex min-w-0 items-center gap-1.5">
+            <span className="shrink-0 rounded bg-amber-500/25 px-1.5 py-0.5 text-[9px] font-bold text-amber-200">
+              공격
+            </span>
+            <span className={`truncate font-semibold ${hl(atk)}`}>{atk}</span>
+            <span className="shrink-0 text-zinc-300">
+              <span className="font-mono text-red-300">{dmg.toLocaleString()}</span>의 피해를 입힌다
+            </span>
+          </span>
         </div>
-        {/* 방어(우) 말풍선 */}
-        <div className="mt-1 flex justify-end">
-          <div className="max-w-[80%] truncate rounded-xl rounded-br-sm bg-sky-950/40 px-2.5 py-1 text-right text-[11px] ring-1 ring-sky-900/40">
-            <span className="text-sky-400/80">방어 </span>
-            <span className={`font-bold ${hl(tgt)}`}>{tgt}</span>
+        {/* 방어 밴드 — 전체 폭, 내용은 오른쪽 정렬 */}
+        <div className="mt-1 flex justify-end rounded-lg bg-sky-500/10 px-2.5 py-1.5 text-[11px]">
+          <span className="flex min-w-0 items-center gap-1.5">
+            <span className="shrink-0 rounded bg-sky-500/25 px-1.5 py-0.5 text-[9px] font-bold text-sky-200">
+              방어
+            </span>
+            <span className={`truncate font-semibold ${hl(tgt)}`}>{tgt}</span>
             {killed ? (
-              <span className="font-bold text-red-400">
-                {' '}
-                · 쓰러짐{tgtRank ? ` · ${tgtRank.toLocaleString()}위 기록` : ''}
+              <span className="shrink-0 font-semibold text-red-300">
+                쓰러진다{tgtRank ? ` · ${tgtRank.toLocaleString()}위` : ''}
               </span>
             ) : (
-              <span className="text-zinc-300">
-                <span className="text-zinc-400"> · 남은 체력 </span>
-                <span className="font-mono text-emerald-300">{Math.max(0, hp).toLocaleString()}</span>
+              <span className="shrink-0 text-zinc-300">
+                체력 <span className="font-mono text-emerald-300">{Math.max(0, hp).toLocaleString()}</span> 남기고
+                버텨낸다
               </span>
             )}
-          </div>
+          </span>
         </div>
       </button>
     </li>
@@ -387,6 +409,17 @@ export function MeleeResult({ view }: { view: MeleeResultView }) {
   const truncated = finale.events.length >= MELEE_REPLAY_ROUNDS;
   const finaleStart = totalRounds - finale.events.length;
 
+  // 라운드별 아레나 생존자 수(리플레이 상단 표시). finale 윈도 시작 생존자 = 챔피언 + 윈도 내 탈락 예정자.
+  const killsInFinale = finale.events.filter((e) => e[3] <= 0).length;
+  const aliveByRound = new Map<number, number>();
+  {
+    let alive = 1 + killsInFinale;
+    finale.events.forEach((e, i) => {
+      aliveByRound.set(finaleStart + i + 1, alive); // 이 라운드 진행 중 생존자
+      if (e[3] <= 0) alive -= 1; // 탈락은 다음 라운드부터 반영
+    });
+  }
+
   const play = (f: Fight) => {
     setFight(f);
     setFightKey((k) => k + 1);
@@ -401,7 +434,7 @@ export function MeleeResult({ view }: { view: MeleeResultView }) {
   return (
     <div className="flex h-full flex-col">
       {/* 무대 — 헤더처럼 고정(스크롤·오버스크롤 영향 없음) */}
-      <div className="relative h-80 shrink-0 overflow-hidden border-b border-amber-900/50">
+      <div className="relative h-60 shrink-0 overflow-hidden border-b border-amber-900/50">
         {/* eslint-disable-next-line @next/next/no-img-element */}
         <img
           src={assetUrl('/sprites/hub/melee.png')}
@@ -482,6 +515,7 @@ export function MeleeResult({ view }: { view: MeleeResultView }) {
                           dmg: e[2],
                           hpAfter: e[3],
                           tgtMaxHp: tgtCp > 0 ? tgtCp * MELEE_HP_MULT : undefined,
+                          survivors: aliveByRound.get(round),
                         })
                       }
                     />
@@ -522,6 +556,8 @@ export function MeleeResult({ view }: { view: MeleeResultView }) {
                         dmg,
                         hpAfter: hp,
                         tgtMaxHp,
+                        // finale 윈도 내면 정확, 내가 탈락한 라운드면 내 등수(=그 순간 생존자), 그 외 미상.
+                        survivors: aliveByRound.get(round) ?? (role === 1 && hp <= 0 ? me?.rank : undefined),
                       })
                     }
                   />
