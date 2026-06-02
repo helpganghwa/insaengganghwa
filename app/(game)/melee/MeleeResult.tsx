@@ -6,6 +6,8 @@ import { MELEE_REPLAY_ROUNDS } from '@/lib/game/balance';
 import { assetUrl } from '@/lib/asset-versions';
 import type { MeleeFinale, MeleeMyEvent } from '@/lib/db/schema/melee';
 
+import { MeleeReplay } from './MeleeReplay';
+
 export type MeleeResultView = {
   participantCount: number;
   championNickname: string;
@@ -17,6 +19,7 @@ export type MeleeResultView = {
   } | null;
   myEvents: MeleeMyEvent[];
   finale: MeleeFinale;
+  rosterAvatars: (string | null)[];
 };
 
 const MEDAL: Record<number, string> = { 1: '🥇', 2: '🥈', 3: '🥉' };
@@ -125,8 +128,8 @@ function MyStoryLog({ events, empty }: { events: MeleeMyEvent[]; empty: string }
 }
 
 export function MeleeResult({ view }: { view: MeleeResultView }) {
-  const [tab, setTab] = useState<'all' | 'mine'>('all');
-  const { podium, me, finale, participantCount, championNickname, myEvents } = view;
+  const [tab, setTab] = useState<'replay' | 'log' | 'mine'>('replay');
+  const { podium, me, finale, participantCount, championNickname, myEvents, rosterAvatars } = view;
   const roster = finale.roster;
   const order = [2, 1, 3]; // 시상대 배치(좌 2위·중 1위·우 3위)
   const byRank = new Map(podium.map((p) => [p.rank, p]));
@@ -211,7 +214,13 @@ export function MeleeResult({ view }: { view: MeleeResultView }) {
 
       {/* 탭 */}
       <div className="flex gap-1 rounded-xl border border-zinc-800 p-1">
-        {(['all', 'mine'] as const).map((t) => (
+        {(
+          [
+            ['replay', '리플레이'],
+            ['log', '전체 로그'],
+            ['mine', '내 전투'],
+          ] as const
+        ).map(([t, label]) => (
           <button
             key={t}
             type="button"
@@ -220,13 +229,15 @@ export function MeleeResult({ view }: { view: MeleeResultView }) {
               tab === t ? 'bg-amber-600 text-white' : 'text-zinc-400'
             }`}
           >
-            {t === 'all' ? '전체 전투' : '내 전투'}
+            {label}
           </button>
         ))}
       </div>
 
       <section className="rounded-xl border border-zinc-800 bg-zinc-950">
-        {tab === 'all' ? (
+        {tab === 'replay' ? (
+          <MeleeReplay finale={finale} rosterAvatars={rosterAvatars} />
+        ) : tab === 'log' ? (
           <>
             {truncated ? (
               <div className="px-2 pt-1.5 text-[10px] text-zinc-500">
@@ -241,9 +252,6 @@ export function MeleeResult({ view }: { view: MeleeResultView }) {
             empty={me ? '전투 기록이 없습니다.' : '참가 시 내 전투가 표시됩니다.'}
           />
         )}
-        <div className="px-2 py-1 text-center text-[9px] text-zinc-600">
-          아바타 애니메이션 리플레이는 곧 추가됩니다.
-        </div>
       </section>
     </div>
   );

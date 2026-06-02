@@ -84,16 +84,18 @@ export default async function MeleePage() {
     .sort((a, b) => a.rank - b.rank);
   const championNickname = finale.roster.find((r) => r.rank === 1)?.nickname ?? '챔피언';
 
-  // 1~3위 아바타(활성 프로필 정면). 더미/미보유는 null → 폴백 렌더.
-  const topIds = top.map((r) => r.userId);
+  // finale 로스터 전원 아바타(활성 프로필 정면) — 시상대 + 리플레이 애니메이션용.
+  // 비-uuid(더미)·미보유는 null → 폴백 렌더. uuid만 조회(잘못된 캐스트 방지).
+  const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+  const rosterIds = finale.roster.map((r) => r.userId).filter((id) => UUID_RE.test(id));
   const avatarOf = new Map<string, string>();
-  if (topIds.length > 0) {
+  if (rosterIds.length > 0) {
     const av = await withTimeout(
       db
         .select({ uid: profiles.id, rotations: userProfiles.rotations, dir: userProfiles.activeDirection })
         .from(profiles)
         .innerJoin(userProfiles, eq(userProfiles.id, profiles.activeProfileId))
-        .where(inArray(profiles.id, topIds)),
+        .where(inArray(profiles.id, rosterIds)),
       3000,
       'melee.avatars',
     ).catch(() => []);
@@ -109,6 +111,7 @@ export default async function MeleePage() {
     cp: r.cp,
     avatarUrl: avatarOf.get(r.userId) ?? null,
   }));
+  const rosterAvatars = finale.roster.map((r) => avatarOf.get(r.userId) ?? null);
 
   const [meRow] = await withTimeout(
     db
@@ -134,6 +137,7 @@ export default async function MeleePage() {
       : null,
     myEvents: meRow?.myEvents ?? [],
     finale,
+    rosterAvatars,
   };
 
   return (
