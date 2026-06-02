@@ -19,8 +19,10 @@ export type MeleeResultView = {
     /** 불변 공개 코드 — 아바타 클릭 시 /u/<code> 프로필 상세. */
     publicCode: string | null;
     avatarUrl: string | null;
-    attackCount: number;
-    defenseCount: number;
+    /** 공격 성공 = 내 공격으로 상대가 쓰러진 횟수(킬). */
+    attackSuccess: number;
+    /** 방어 성공 = 공격받고도 버텨낸 횟수(피격 − 탈락당함). */
+    defenseSuccess: number;
   }[];
   me: {
     rank: number;
@@ -439,7 +441,7 @@ function RankingView({
                 ) : null}
               </div>
               <span className="pb-0.5 text-[9px] font-medium text-amber-100 text-pixel-outline">
-                {p ? `공격 ${p.attackCount} · 방어 ${p.defenseCount}` : '—'}
+                {p ? `공격 성공 ${p.attackSuccess} · 방어 성공 ${p.defenseSuccess}` : '—'}
               </span>
             </div>
           );
@@ -533,16 +535,21 @@ function RoundCard({
 function FinalCard({ champion, avatar }: { champion: string; avatar: string | null }) {
   return (
     <li className="relative flex items-center overflow-hidden border-b border-amber-900/40 py-3 pr-3 pl-3">
-      {/* 우측 — 챔피언 아바타(배경 레이어). height 기반으로 얼굴이 세로 중앙에. */}
+      {/* 우측 — 챔피언 아바타(배경 레이어). object-cover + center top(얼굴이 박스 세로 중앙) + 확대. */}
       {avatar ? (
-        <div className="pointer-events-none absolute inset-y-0 right-0 w-32 overflow-hidden">
+        <div className="pointer-events-none absolute inset-y-0 right-0 w-36 overflow-hidden">
           {/* eslint-disable-next-line @next/next/no-img-element */}
           <img
             src={avatar}
             alt=""
             aria-hidden
-            className="absolute left-1/2 top-0 w-auto -translate-x-1/2"
-            style={{ imageRendering: 'pixelated', height: '330%' }}
+            className="absolute inset-0 h-full w-full object-cover"
+            style={{
+              imageRendering: 'pixelated',
+              objectPosition: 'center top',
+              transform: 'scale(1.5)',
+              transformOrigin: 'center',
+            }}
           />
         </div>
       ) : null}
@@ -796,7 +803,7 @@ export function MeleeResult({ view }: { view: MeleeResultView }) {
         )}
         {/* 무대 하단 바 — [보상테이블] · [내 순위] · [역대우승자]. 랭킹 뷰일 때만. */}
         {!fight ? (
-          <div className="absolute inset-x-0 bottom-2 z-20 flex items-center justify-center gap-1.5 px-2">
+          <div className="absolute inset-x-0 bottom-2 z-20 flex items-center justify-between gap-1.5 px-3">
             <Link
               href="/melee/info"
               className="shrink-0 rounded-full bg-black/55 px-2.5 py-1 text-[10px] font-bold text-amber-200 backdrop-blur-sm text-pixel-outline"
@@ -816,8 +823,8 @@ export function MeleeResult({ view }: { view: MeleeResultView }) {
 
       {/* 하단 — 내부 스크롤 영역(탭·컨트롤 sticky, 로그 풀폭) */}
       <div className="min-h-0 flex-1 overflow-y-auto overscroll-contain">
-        {/* sticky 헤더 — 전체/내 전투 필터 + 배속·전체재생 */}
-        <div className="sticky top-0 z-10 border-b border-zinc-800 bg-zinc-950/95 backdrop-blur-sm">
+        {/* sticky 헤더 — 전체/내 전투 필터 + 배속·전체재생. z-30: FINAL/로그 위로. */}
+        <div className="sticky top-0 z-30 border-b border-zinc-800 bg-zinc-950">
           <div className="flex gap-1 px-3 pt-2.5">
             {(
               [

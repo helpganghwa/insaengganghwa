@@ -79,7 +79,6 @@ export async function buildMeleeResultView(
         nickname: profiles.nickname,
         code: profiles.publicCode,
         uid: meleeParticipants.userId,
-        atk: meleeParticipants.attackCount,
         def: meleeParticipants.defenseCount,
       })
       .from(meleeParticipants)
@@ -89,13 +88,26 @@ export async function buildMeleeResultView(
     3000,
     'melee.top3',
   ).catch(() => []);
+  // 공격 성공(킬) = 그 유저가 killer인 탈락 수. killer별 집계.
+  const killRows = await withTimeout(
+    db
+      .select({ killer: meleeParticipants.killerUserId, n: sql<number>`count(*)::int` })
+      .from(meleeParticipants)
+      .where(eq(meleeParticipants.battleId, battle.id))
+      .groupBy(meleeParticipants.killerUserId),
+    3000,
+    'melee.kills',
+  ).catch(() => [] as { killer: string | null; n: number }[]);
+  const killsOf = new Map<string, number>();
+  for (const k of killRows) if (k.killer) killsOf.set(k.killer, k.n);
   const podium = topRows.map((r) => ({
     rank: r.rank,
     nickname: r.nickname,
     publicCode: r.code ?? null,
     avatarUrl: avatarOf.get(r.uid) ?? dft(r.rank),
-    attackCount: r.atk,
-    defenseCount: r.def,
+    // 공격 성공 = 킬 수, 방어 성공 = 피격 중 생존(탈락당한 1회 제외, 챔피언은 전부).
+    attackSuccess: killsOf.get(r.uid) ?? 0,
+    defenseSuccess: Math.max(0, r.def - (r.rank === 1 ? 0 : 1)),
   }));
   const rosterAvatars = finale.roster.map((r, i) => avatarOf.get(r.userId) ?? dft(i));
   const rosterCodes = finale.roster.map((r) => codeOf.get(r.userId) ?? null);
