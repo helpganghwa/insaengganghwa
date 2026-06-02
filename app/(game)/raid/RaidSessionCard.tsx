@@ -507,10 +507,6 @@ export function RaidSessionCard({ view: v }: { view: RaidView }) {
               </button>
             </div>
           )
-        ) : !v.isParticipant ? (
-          <div className="rounded-xl border border-zinc-700 p-3 text-center text-xs text-zinc-400">
-            참여자가 아닙니다.
-          </div>
         ) : (
           <div className="space-y-2">
             {canAttack ? (
