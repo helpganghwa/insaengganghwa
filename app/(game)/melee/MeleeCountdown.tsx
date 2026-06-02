@@ -53,7 +53,7 @@ export function MeleeCountdown({
     sub = '9시 30분 결과 발표 · 강화 1회 이상이면 자동 참가';
     target = runAt;
   } else if (now < revealAt) {
-    title = '⚔️ 난투 진행 중';
+    title = '난투 진행 중';
     sub = '오전 9시 30분 결과 발표';
     target = revealAt;
   } else {
@@ -71,7 +71,7 @@ export function MeleeCountdown({
           {fmt(target - now)}
         </div>
       ) : (
-        <div className="mt-3 text-2xl">⏳</div>
+        <div className="mt-3 text-sm font-bold text-zinc-400">집계 중…</div>
       )}
       {participantCount != null ? (
         <div className="mt-3 text-[11px] text-zinc-500">

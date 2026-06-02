@@ -43,15 +43,19 @@ type Fight = {
   tgtMaxHp?: number;
 };
 
-const MEDAL: Record<number, string> = { 1: '🥇', 2: '🥈', 3: '🥉' };
-
 function boxSummary(b: { weapon: number; armor: number; accessory: number }): string {
   const parts: string[] = [];
-  if (b.weapon) parts.push(`⚔️${b.weapon}`);
-  if (b.armor) parts.push(`🛡️${b.armor}`);
-  if (b.accessory) parts.push(`💍${b.accessory}`);
-  return parts.join(' ');
+  if (b.weapon) parts.push(`무기 ${b.weapon}`);
+  if (b.armor) parts.push(`방어구 ${b.armor}`);
+  if (b.accessory) parts.push(`장신구 ${b.accessory}`);
+  return parts.join(' · ');
 }
+
+const RANK_BADGE: Record<number, string> = {
+  1: 'bg-amber-400 text-amber-950',
+  2: 'bg-zinc-300 text-zinc-900',
+  3: 'bg-amber-700 text-amber-50',
+};
 
 // ── 로그(클릭 가능, 버튼) ──
 function LogList({ children, empty }: { children: ReactNode; empty: string | false }) {
@@ -59,7 +63,9 @@ function LogList({ children, empty }: { children: ReactNode; empty: string | fal
   return <ul className="divide-y divide-zinc-900 text-[11px] leading-relaxed">{children}</ul>;
 }
 
-function LogLine({
+/** 라운드 카드 — 턴제 RPG 형식. ROUND 헤더 + 공격/피격/결과(쓰러짐 or 버팀→반격). */
+function RoundCard({
+  round,
   atk,
   tgt,
   dmg,
@@ -67,6 +73,7 @@ function LogLine({
   me,
   onClick,
 }: {
+  round: number;
   atk: string;
   tgt: string;
   dmg: number;
@@ -75,23 +82,44 @@ function LogLine({
   onClick: () => void;
 }) {
   const killed = hp <= 0;
+  const hl = (n: string) => (n === me ? 'text-amber-300' : 'text-zinc-100');
   return (
     <li>
       <button
         type="button"
         onClick={onClick}
-        className="flex w-full flex-wrap items-baseline gap-x-1 px-2.5 py-1.5 text-left transition hover:bg-zinc-900 active:bg-zinc-800"
+        className="block w-full px-2.5 py-2 text-left transition hover:bg-zinc-900 active:bg-zinc-800"
       >
-        <span className="text-amber-400">⚔️</span>
-        <span className={`font-bold ${atk === me ? 'text-amber-300' : 'text-zinc-100'}`}>{atk}</span>
-        <span className="text-zinc-500">→</span>
-        <span className={`font-semibold ${tgt === me ? 'text-amber-300' : 'text-zinc-300'}`}>{tgt}</span>
-        <span className="font-mono text-red-300">{dmg.toLocaleString()}</span>
-        {killed ? (
-          <span className="font-bold text-red-400">💀</span>
-        ) : (
-          <span className="font-mono text-emerald-400/80">HP {hp.toLocaleString()}</span>
-        )}
+        <div className="mb-0.5 font-mono text-[10px] font-extrabold tracking-wider text-amber-400">
+          {round.toLocaleString()} ROUND
+        </div>
+        <div className="space-y-0.5 text-[11px] leading-snug">
+          <div>
+            <span className="font-semibold text-amber-400/90">공격</span>{' '}
+            <span className={`font-bold ${hl(atk)}`}>{atk}</span>
+            <span className="text-zinc-400"> · </span>
+            <span className="font-mono text-red-300">{dmg.toLocaleString()} 데미지</span>
+          </div>
+          <div>
+            <span className="font-semibold text-sky-400/80">피격</span>{' '}
+            <span className={`font-semibold ${hl(tgt)}`}>{tgt}</span>
+            <span className="text-zinc-400"> · HP </span>
+            <span className="font-mono text-red-300">−{dmg.toLocaleString()}</span>
+          </div>
+          {killed ? (
+            <div>
+              <span className="font-semibold text-red-400/90">결과</span>{' '}
+              <span className="font-bold text-red-400">{tgt} 쓰러짐!</span>
+            </div>
+          ) : (
+            <div>
+              <span className="font-semibold text-emerald-400/80">결과</span>{' '}
+              <span className="text-emerald-300">
+                {tgt} 버팀 (HP <span className="font-mono">{hp.toLocaleString()}</span>) — 반격
+              </span>
+            </div>
+          )}
+        </div>
       </button>
     </li>
   );
@@ -135,8 +163,8 @@ function Fighter({
             style={{ imageRendering: 'pixelated' }}
           />
         ) : (
-          <div className="flex h-full w-full items-center justify-center text-3xl text-zinc-300 drop-shadow">
-            ⚔️
+          <div className="flex h-full w-full items-center justify-center rounded-md bg-zinc-800/70 text-lg font-extrabold text-zinc-400">
+            {name.slice(0, 1)}
           </div>
         )}
         {/* 발밑 받침 그림자 — 배경 위 부유감 완화 */}
@@ -196,7 +224,7 @@ function FightStage({
         <span className="font-bold">{fight.tgtName}</span>{' '}
         <span className="font-mono text-red-300">{fight.dmg.toLocaleString()} 피해</span>
         {killed ? (
-          <span className="font-bold text-red-400"> · 💀 쓰러졌다!</span>
+          <span className="font-bold text-red-400"> · 쓰러짐!</span>
         ) : (
           <span className="text-zinc-400">
             {' '}
@@ -209,7 +237,7 @@ function FightStage({
         onClick={onBack}
         className="absolute right-1.5 top-1.5 z-20 rounded-full bg-black/55 px-2 py-0.5 text-[10px] font-bold text-zinc-200 backdrop-blur-sm"
       >
-        ↩ 랭킹
+        ← 랭킹
       </button>
     </div>
   );
@@ -235,7 +263,13 @@ function RankingView({
             p.rank === 1 ? 'border-amber-400/70 bg-amber-500/15' : 'border-zinc-600/50 bg-black/45'
           }`}
         >
-          <span className="w-4 text-center text-base leading-none">{MEDAL[p.rank]}</span>
+          <span
+            className={`flex h-5 w-5 items-center justify-center rounded-full text-[10px] font-extrabold ${
+              RANK_BADGE[p.rank] ?? 'bg-zinc-700 text-zinc-200'
+            }`}
+          >
+            {p.rank}
+          </span>
           <div className="h-8 w-8 shrink-0 overflow-hidden rounded-md border border-zinc-600 bg-black/40">
             {p.avatarUrl ? (
               // eslint-disable-next-line @next/next/no-img-element
@@ -246,13 +280,15 @@ function RankingView({
                 style={{ imageRendering: 'pixelated' }}
               />
             ) : (
-              <div className="flex h-full w-full items-center justify-center text-sm text-zinc-500">⚔️</div>
+              <div className="flex h-full w-full items-center justify-center text-xs font-bold text-zinc-400">
+                {p.nickname.slice(0, 1)}
+              </div>
             )}
           </div>
           <div className="min-w-0 flex-1">
             <div className="truncate text-[12px] font-bold text-white drop-shadow">{p.nickname}</div>
             <div className="text-[9px] text-zinc-300 drop-shadow">
-              ⚔ {p.attackCount.toLocaleString()} · 🛡 {p.defenseCount.toLocaleString()}
+              공격 {p.attackCount.toLocaleString()} · 방어 {p.defenseCount.toLocaleString()}
             </div>
           </div>
         </div>
@@ -321,7 +357,7 @@ export function MeleeResult({ view }: { view: MeleeResultView }) {
             <span className="text-zinc-500"> / {participantCount.toLocaleString()}</span>
           </span>
           <Link href="/mail" className="text-zinc-300">
-            {me.diamond > 0 ? `💎${me.diamond.toLocaleString()} ` : ''}
+            {me.diamond > 0 ? `다이아 ${me.diamond.toLocaleString()} · ` : ''}
             {boxSummary(me.boxes)}
             <span className="ml-1 text-[10px] text-amber-300 underline">우편함</span>
           </Link>
@@ -364,9 +400,11 @@ export function MeleeResult({ view }: { view: MeleeResultView }) {
               const an = roster[e[0]]?.nickname ?? '?';
               const tn = roster[e[1]]?.nickname ?? '?';
               const tgtCp = roster[e[1]]?.cp ?? 0;
+              const round = finaleStart + i + 1;
               return (
-                <LogLine
+                <RoundCard
                   key={i}
+                  round={round}
                   atk={an}
                   tgt={tn}
                   dmg={e[2]}
@@ -374,7 +412,7 @@ export function MeleeResult({ view }: { view: MeleeResultView }) {
                   me={myNickname}
                   onClick={() =>
                     play({
-                      round: finaleStart + i + 1,
+                      round,
                       atkName: an,
                       atkAvatar: rosterAvatars[e[0]] ?? null,
                       tgtName: tn,
@@ -401,9 +439,11 @@ export function MeleeResult({ view }: { view: MeleeResultView }) {
               const tgtName = role === 0 ? opp : myNickname;
               // 타겟이 '나'(role 1)면 내 cp로 HP 바, 상대면 cp 미상 → 바 없음.
               const tgtMaxHp = role === 1 && myCp > 0 ? myCp * MELEE_HP_MULT : undefined;
+              const rnd = round ?? i + 1;
               return (
-                <LogLine
+                <RoundCard
                   key={i}
+                  round={rnd}
                   atk={atkName}
                   tgt={tgtName}
                   dmg={dmg}
@@ -411,7 +451,7 @@ export function MeleeResult({ view }: { view: MeleeResultView }) {
                   me={myNickname}
                   onClick={() =>
                     play({
-                      round: round ?? i + 1,
+                      round: rnd,
                       atkName,
                       atkAvatar: role === 0 ? myAvatar : null,
                       tgtName,
