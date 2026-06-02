@@ -107,7 +107,7 @@ export function MeleeInfo({
                         src={h.championAvatar}
                         alt=""
                         aria-hidden
-                        className="absolute left-1/2 w-auto -translate-x-1/2"
+                        className="absolute left-1/2 w-auto max-w-none -translate-x-1/2"
                         style={{ imageRendering: 'pixelated', height: '1000%', top: '-170%' }}
                       />
                     </div>

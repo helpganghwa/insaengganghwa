@@ -270,15 +270,18 @@ function FightStage({
       ? KILLED_MSGS[fight.round % KILLED_MSGS.length]!(fight.atkName, fight.tgtName, dmgStr)
       : SURVIVE_MSGS[fight.round % SURVIVE_MSGS.length]!(fight.atkName, fight.tgtName, dmgStr, hpStr);
 
-  // 결승 WINNER 토스트 — 공격(HP 드레인 ~650ms + 사망 페이드)이 끝난 뒤 노출 → 3.8s 후 사라짐.
+  // 결승 WINNER 토스트 — 공격(HP 드레인 ~650ms + 사망 페이드)이 끝난 뒤 내려오고, 3.8s 뒤 위로 올라가며 사라짐.
   const [winnerShow, setWinnerShow] = useState(false);
+  const [winnerExit, setWinnerExit] = useState(false);
   useEffect(() => {
     if (!isFinal) return;
-    const showT = setTimeout(() => setWinnerShow(true), 1100);
-    const hideT = setTimeout(() => setWinnerShow(false), 1100 + 3800);
+    const t1 = setTimeout(() => setWinnerShow(true), 1100);
+    const t2 = setTimeout(() => setWinnerExit(true), 1100 + 3800);
+    const t3 = setTimeout(() => setWinnerShow(false), 1100 + 3800 + 450);
     return () => {
-      clearTimeout(showT);
-      clearTimeout(hideT);
+      clearTimeout(t1);
+      clearTimeout(t2);
+      clearTimeout(t3);
     };
   }, [isFinal]);
 
@@ -295,7 +298,11 @@ function FightStage({
         ? createPortal(
             <div
               className="pointer-events-none fixed inset-x-0 top-0 z-[60]"
-              style={{ animation: 'winner-drop 0.55s cubic-bezier(0.22,1,0.36,1) both' }}
+              style={{
+                animation: winnerExit
+                  ? 'winner-up 0.4s ease-in forwards'
+                  : 'winner-drop 0.55s cubic-bezier(0.22,1,0.36,1) both',
+              }}
             >
               <div className="mx-auto flex h-12 max-w-[390px] items-center justify-center gap-2.5 border-b border-amber-500/40 bg-zinc-950/95 shadow-[0_4px_16px_rgba(0,0,0,0.5)] backdrop-blur-sm">
                 <span className="text-[11px] font-bold tracking-[0.3em] text-amber-400">WINNER</span>
@@ -541,7 +548,7 @@ function RoundCard({
 // ── 로그 최상단 FINAL 카드 — 우승 축하(round 자리에 FINAL) + 챔피언 아바타 배경. 표시 전용(비클릭). ──
 function FinalCard({ champion, avatar }: { champion: string; avatar: string | null }) {
   return (
-    <li className="relative flex items-center overflow-hidden border-b border-amber-900/40 py-2 pr-3 pl-3">
+    <li className="relative flex min-h-[56px] items-center overflow-hidden border-b border-amber-900/40 pr-3 pl-3">
       {/* 우측 — 챔피언 아바타(배경 레이어). height/top으로 상반신·얼굴이 박스 세로 중앙(여백 보정). */}
       {avatar ? (
         <div className="pointer-events-none absolute inset-y-0 right-0 w-36 overflow-hidden">
@@ -550,14 +557,15 @@ function FinalCard({ champion, avatar }: { champion: string; avatar: string | nu
             src={avatar}
             alt=""
             aria-hidden
-            className="absolute left-1/2 w-auto -translate-x-1/2"
+            className="absolute left-1/2 w-auto max-w-none -translate-x-1/2"
             style={{ imageRendering: 'pixelated', height: '1000%', top: '-170%' }}
           />
         </div>
       ) : null}
       {/* 연속 그라데이션 — 아바타 영역까지 포함해 좌→우로 한 번에 깔림 */}
-      <div className="pointer-events-none absolute inset-0 bg-gradient-to-r from-amber-500/25 via-amber-500/10 to-transparent" />
-      <div className="pointer-events-none absolute inset-0 bg-gradient-to-r from-zinc-950/95 via-zinc-950/45 to-transparent" />
+      {/* 왼쪽 진함 → 오른쪽 연함(via 없이 선형). */}
+      <div className="pointer-events-none absolute inset-0 bg-gradient-to-r from-amber-500/25 to-transparent" />
+      <div className="pointer-events-none absolute inset-0 bg-gradient-to-r from-zinc-950 to-transparent" />
       {/* 콘텐츠 — 그라데이션 위 */}
       <div className="relative z-10 flex w-full items-center gap-2.5">
         <div className="flex w-8 shrink-0 flex-col items-center justify-center">
