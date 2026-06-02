@@ -1,6 +1,5 @@
 import Link from 'next/link';
 
-import { getSessionUserId } from '@/lib/auth/session';
 import { getRankingTop, type LeaderboardMetric } from '@/lib/game/leaderboard/queries';
 
 /**
@@ -18,7 +17,7 @@ const LABEL: Record<LeaderboardMetric, string> = {
 
 export async function RankingTop3Card() {
   const metric = METRICS[crypto.getRandomValues(new Uint32Array(1))[0]! % METRICS.length]!;
-  const [top, userId] = await Promise.all([getRankingTop(metric, 3), getSessionUserId()]);
+  const top = await getRankingTop(metric, 3);
   if (top.length === 0) return null;
 
   return (
@@ -85,8 +84,6 @@ export async function RankingTop3Card() {
                 </div>
               );
             }
-            const me = entry.userId === userId;
-            const rankColor = me ? 'text-amber-300' : 'text-white';
             return (
               <Link
                 key={entry.userId}
@@ -96,14 +93,10 @@ export async function RankingTop3Card() {
                 }`}
               >
                 <div className="flex w-full items-center justify-center gap-0.5 px-0.5 pt-1">
-                  <span
-                    className={`font-mono text-[11px] leading-none tabular-nums text-pixel-outline ${rankColor}`}
-                  >
+                  <span className="font-mono text-[11px] font-bold leading-none tabular-nums text-amber-300 text-pixel-outline">
                     #{entry.rank}
                   </span>
-                  <span
-                    className={`truncate text-[11px] font-medium text-pixel-outline ${rankColor}`}
-                  >
+                  <span className="truncate text-[11px] font-medium text-white text-pixel-outline">
                     {entry.nickname}
                   </span>
                 </div>

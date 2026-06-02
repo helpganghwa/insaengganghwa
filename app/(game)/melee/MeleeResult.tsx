@@ -270,12 +270,16 @@ function FightStage({
       ? KILLED_MSGS[fight.round % KILLED_MSGS.length]!(fight.atkName, fight.tgtName, dmgStr)
       : SURVIVE_MSGS[fight.round % SURVIVE_MSGS.length]!(fight.atkName, fight.tgtName, dmgStr, hpStr);
 
-  // 결승 WINNER 토스트 — 헤더 위(portal, fixed top)로 내려왔다 3.8s 후 사라짐(랭킹 변화 토스트처럼).
-  const [winnerShow, setWinnerShow] = useState(isFinal);
+  // 결승 WINNER 토스트 — 공격(HP 드레인 ~650ms + 사망 페이드)이 끝난 뒤 노출 → 3.8s 후 사라짐.
+  const [winnerShow, setWinnerShow] = useState(false);
   useEffect(() => {
     if (!isFinal) return;
-    const t = setTimeout(() => setWinnerShow(false), 3800);
-    return () => clearTimeout(t);
+    const showT = setTimeout(() => setWinnerShow(true), 1100);
+    const hideT = setTimeout(() => setWinnerShow(false), 1100 + 3800);
+    return () => {
+      clearTimeout(showT);
+      clearTimeout(hideT);
+    };
   }, [isFinal]);
 
   return (
@@ -286,22 +290,20 @@ function FightStage({
           isFinal ? 'bg-amber-400/70' : 'bg-red-500/70'
         }`}
       />
-      {/* 결승 우승 토스트 — 헤더 위(portal, fixed top)로 내려오는 골드 배너 + 샤인 스윕(3.8s 후 사라짐) */}
+      {/* 결승 우승 토스트 — 헤더 위(portal). 헤더 높이(h-12) + 차분·고급(다크+골드 악센트). */}
       {isFinal && winnerShow && typeof document !== 'undefined'
         ? createPortal(
             <div
-              className="pointer-events-none fixed inset-x-0 top-0 z-[60] overflow-hidden"
-              style={{ animation: 'winner-drop 0.6s cubic-bezier(0.22,1,0.36,1) both' }}
+              className="pointer-events-none fixed inset-x-0 top-0 z-[60]"
+              style={{ animation: 'winner-drop 0.55s cubic-bezier(0.22,1,0.36,1) both' }}
             >
-              <div className="mx-auto flex max-w-[390px] flex-col items-center justify-center overflow-hidden border-b-2 border-amber-300/70 bg-gradient-to-r from-amber-600 via-amber-300 to-amber-600 py-2 shadow-[0_6px_24px_rgba(245,158,11,0.7)]">
-                <div className="text-xl font-extrabold tracking-[0.35em] text-white drop-shadow-[0_2px_4px_rgba(120,53,15,0.9)]">
-                  WINNER
-                </div>
-                <div className="text-[12px] font-extrabold text-amber-950">{fight.atkName} 우승</div>
-                <div
-                  className="pointer-events-none absolute inset-y-0 -left-1/3 w-1/3 bg-white/50 blur-md"
-                  style={{ animation: 'winner-shine 1.1s ease-out 0.35s both' }}
-                />
+              <div className="mx-auto flex h-12 max-w-[390px] items-center justify-center gap-2.5 border-b border-amber-500/40 bg-zinc-950/95 shadow-[0_4px_16px_rgba(0,0,0,0.5)] backdrop-blur-sm">
+                <span className="text-[11px] font-bold tracking-[0.3em] text-amber-400">WINNER</span>
+                <span className="h-3.5 w-px bg-amber-500/30" />
+                <span className="max-w-[200px] truncate text-[13px] font-extrabold text-white">
+                  {fight.atkName}
+                </span>
+                <span className="text-[11px] font-medium text-zinc-400">우승</span>
               </div>
             </div>,
             document.body,
@@ -539,7 +541,7 @@ function RoundCard({
 // ── 로그 최상단 FINAL 카드 — 우승 축하(round 자리에 FINAL) + 챔피언 아바타 배경. 표시 전용(비클릭). ──
 function FinalCard({ champion, avatar }: { champion: string; avatar: string | null }) {
   return (
-    <li className="relative flex items-center overflow-hidden border-b border-amber-900/40 py-3 pr-3 pl-3">
+    <li className="relative flex items-center overflow-hidden border-b border-amber-900/40 py-2 pr-3 pl-3">
       {/* 우측 — 챔피언 아바타(배경 레이어). height/top으로 상반신·얼굴이 박스 세로 중앙(여백 보정). */}
       {avatar ? (
         <div className="pointer-events-none absolute inset-y-0 right-0 w-36 overflow-hidden">
@@ -549,7 +551,7 @@ function FinalCard({ champion, avatar }: { champion: string; avatar: string | nu
             alt=""
             aria-hidden
             className="absolute left-1/2 w-auto -translate-x-1/2"
-            style={{ imageRendering: 'pixelated', height: '450%', top: '-40%' }}
+            style={{ imageRendering: 'pixelated', height: '1000%', top: '-170%' }}
           />
         </div>
       ) : null}
