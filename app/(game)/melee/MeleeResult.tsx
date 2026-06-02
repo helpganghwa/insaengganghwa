@@ -1,6 +1,7 @@
 'use client';
 
 import { useEffect, useState } from 'react';
+import { createPortal } from 'react-dom';
 import Link from 'next/link';
 
 import { MELEE_REPLAY_ROUNDS, MELEE_HP_MULT } from '@/lib/game/balance';
@@ -269,6 +270,14 @@ function FightStage({
       ? KILLED_MSGS[fight.round % KILLED_MSGS.length]!(fight.atkName, fight.tgtName, dmgStr)
       : SURVIVE_MSGS[fight.round % SURVIVE_MSGS.length]!(fight.atkName, fight.tgtName, dmgStr, hpStr);
 
+  // 결승 WINNER 토스트 — 헤더 위(portal, fixed top)로 내려왔다 3.8s 후 사라짐(랭킹 변화 토스트처럼).
+  const [winnerShow, setWinnerShow] = useState(isFinal);
+  useEffect(() => {
+    if (!isFinal) return;
+    const t = setTimeout(() => setWinnerShow(false), 3800);
+    return () => clearTimeout(t);
+  }, [isFinal]);
+
   return (
     <div className="relative z-10 flex h-full flex-col">
       {/* 피격 플래시(1회) — 결승은 골드 */}
@@ -277,25 +286,27 @@ function FightStage({
           isFinal ? 'bg-amber-400/70' : 'bg-red-500/70'
         }`}
       />
-      {/* 결승 우승 배너 — 헤더를 덮으며 위에서 내려오는 화려한 골드 배너 + 샤인 스윕 */}
-      {isFinal ? (
-        <div
-          className="pointer-events-none absolute inset-x-0 top-0 z-30 overflow-hidden"
-          style={{ animation: 'winner-drop 0.6s cubic-bezier(0.22,1,0.36,1) both' }}
-        >
-          <div className="relative flex flex-col items-center justify-center overflow-hidden border-b-2 border-amber-300/70 bg-gradient-to-r from-amber-600 via-amber-300 to-amber-600 py-2 shadow-[0_6px_24px_rgba(245,158,11,0.65)]">
-            <div className="text-xl font-extrabold tracking-[0.35em] text-white drop-shadow-[0_2px_4px_rgba(120,53,15,0.9)]">
-              WINNER
-            </div>
-            <div className="text-[12px] font-extrabold text-amber-950">{fight.atkName} 우승</div>
-            {/* 사선 샤인 스윕(1회) */}
+      {/* 결승 우승 토스트 — 헤더 위(portal, fixed top)로 내려오는 골드 배너 + 샤인 스윕(3.8s 후 사라짐) */}
+      {isFinal && winnerShow && typeof document !== 'undefined'
+        ? createPortal(
             <div
-              className="pointer-events-none absolute inset-y-0 -left-1/3 w-1/3 bg-white/50 blur-md"
-              style={{ animation: 'winner-shine 1.1s ease-out 0.35s both' }}
-            />
-          </div>
-        </div>
-      ) : null}
+              className="pointer-events-none fixed inset-x-0 top-0 z-[60] overflow-hidden"
+              style={{ animation: 'winner-drop 0.6s cubic-bezier(0.22,1,0.36,1) both' }}
+            >
+              <div className="mx-auto flex max-w-[390px] flex-col items-center justify-center overflow-hidden border-b-2 border-amber-300/70 bg-gradient-to-r from-amber-600 via-amber-300 to-amber-600 py-2 shadow-[0_6px_24px_rgba(245,158,11,0.7)]">
+                <div className="text-xl font-extrabold tracking-[0.35em] text-white drop-shadow-[0_2px_4px_rgba(120,53,15,0.9)]">
+                  WINNER
+                </div>
+                <div className="text-[12px] font-extrabold text-amber-950">{fight.atkName} 우승</div>
+                <div
+                  className="pointer-events-none absolute inset-y-0 -left-1/3 w-1/3 bg-white/50 blur-md"
+                  style={{ animation: 'winner-shine 1.1s ease-out 0.35s both' }}
+                />
+              </div>
+            </div>,
+            document.body,
+          )
+        : null}
       {/* 상단: 참가자 / ROUND / 비움 */}
       <div className="relative z-10 grid grid-cols-3 items-center px-3 pt-2 text-[10px] font-semibold drop-shadow">
         <span className="text-left text-zinc-200">
@@ -538,7 +549,7 @@ function FinalCard({ champion, avatar }: { champion: string; avatar: string | nu
             alt=""
             aria-hidden
             className="absolute left-1/2 w-auto -translate-x-1/2"
-            style={{ imageRendering: 'pixelated', height: '300%', top: '-20%' }}
+            style={{ imageRendering: 'pixelated', height: '450%', top: '-40%' }}
           />
         </div>
       ) : null}
@@ -810,11 +821,9 @@ export function MeleeResult({ view }: { view: MeleeResultView }) {
         ) : null}
       </div>
 
-      {/* 하단 — 내부 스크롤 영역(탭·컨트롤 sticky, 로그 풀폭) */}
-      <div className="min-h-0 flex-1 overflow-y-auto overscroll-contain">
-        {/* sticky 헤더 — 전체/내 전투 필터 + 배속·전체재생. z-30: FINAL/로그 위로. */}
-        <div className="sticky top-0 z-30 border-b border-zinc-800 bg-zinc-950">
-          <div className="flex gap-1 px-3 pt-2.5">
+      {/* 필터·컨트롤 — 헤더/무대처럼 고정(shrink-0, 오버스크롤 영향 없음) */}
+      <div className="shrink-0 border-b border-zinc-800 bg-zinc-950">
+        <div className="flex gap-1 px-3 pt-2.5">
             {(
               [
                 ['log', '전체 전투'],
@@ -857,9 +866,10 @@ export function MeleeResult({ view }: { view: MeleeResultView }) {
               </button>
             </div>
           </div>
-        </div>
+      </div>
 
-        {/* 로그 — 풀폭(별도 박스 없음) */}
+      {/* 로그 — 고정 헤더/컨트롤 아래 내부 스크롤(풀폭, 별도 박스 없음) */}
+      <div className="min-h-0 flex-1 overflow-y-auto overscroll-contain">
         {displayRows.length === 0 ? (
           <div className="px-4 py-10 text-center text-[12px] text-zinc-500">
             {tab === 'mine' && !me ? '참가 시 내 전투가 표시됩니다.' : '전투 기록이 없습니다.'}
