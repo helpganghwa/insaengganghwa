@@ -32,7 +32,8 @@ const MENU = [
   {
     href: '/melee',
     label: '대난투',
-    desc: '준비 중 — 곧 공개',
+    desc: '매일 오전 9시 개시', // 실제 문구는 meleeDesc(배틀 상태)로 동적 대체
+
     bg: '/sprites/hub/melee.png',
     tint: '#3a2e16',
     scale: 1,
@@ -91,13 +92,20 @@ export default async function HomePage() {
     '/mail': 0,
     '/raid': 0,
   };
+
+  // 대난투 카드 상태 문구 — KST 09:00 개시 / 09:30 발표(MELEE §3).
+  //  발표 전: 진행 전("오늘 오전 9시 개시") / 진행 중 / 집계 중. 발표 후: 우승자 닉네임.
+  //  시각 판정은 서버 시계(SQL now())로(CLAUDE §3.2) — 아래 melee 조회에서 phase 산출.
+  let meleeDesc = '매일 오전 9시 개시';
+
   if (userId) {
     const kstToday = kstDateString();
     // 일일 보급 + 출석 state + 4종 알림 카운트 — 핫패스 1RTT(병렬, CLAUDE §11.4).
     // 콜드 DB 커넥션 hang 시 페이지가 무한 대기하지 않도록 가드.
     try {
-      const [dailyRow, checkinRow, enhanceRow, supplyRow, mailRow, raidRow] = await withTimeout(
-        Promise.all([
+      const [dailyRow, checkinRow, enhanceRow, supplyRow, mailRow, raidRow, meleeRow] =
+        await withTimeout(
+          Promise.all([
           db
             .select({ n: sql<number>`count(*)::int` })
             .from(mailbox)
@@ -149,10 +157,28 @@ export default async function HomePage() {
             .where(
               and(eq(raidRewards.userId, userId), isNull(raidRewards.claimedAt)),
             ) as unknown as Promise<Array<{ n: number }>>,
-        ]),
-        3000,
-        'home.cards',
-      );
+          // 대난투: 서버 시계로 phase(개시 전/진행/발표 후) + 오늘 배틀 상태·우승자 닉.
+          // now() 서브쿼리 기준이라 오늘 배틀이 없어도(09:00 전) 항상 1행 반환.
+          db.execute(sql`
+            select
+              case
+                when n.kst::time < time '09:00' then 'before'
+                when n.kst::time < time '09:30' then 'running'
+                else 'after'
+              end as phase,
+              b.status::text status,
+              p.nickname champ_nick
+            from (select (now() at time zone 'Asia/Seoul') kst) n
+            left join melee_battles b on b.battle_date = n.kst::date
+            left join profiles p on p.id = b.champion_user_id
+            limit 1
+          `) as unknown as Promise<
+            Array<{ phase: 'before' | 'running' | 'after'; status: string | null; champ_nick: string | null }>
+          >,
+          ]),
+          3000,
+          'home.cards',
+        );
       hasUnclaimedDaily = (dailyRow[0]?.n ?? 0) > 0;
       const last = checkinRow[0]?.lastClaimedKstDay ?? null;
       hasUnclaimedCheckin = last !== kstToday;
@@ -160,6 +186,19 @@ export default async function HomePage() {
       counts['/gacha'] = supplyRow[0]?.n ?? 0;
       counts['/mail'] = mailRow[0]?.n ?? 0;
       counts['/raid'] = raidRow[0]?.n ?? 0;
+      // phase별 문구. 발표 후(after) + revealed면 우승자, 닉 미상(더미)이면 발표 문구.
+      const melee = meleeRow[0];
+      if (melee) {
+        if (melee.phase === 'before') meleeDesc = '오늘 오전 9시 개시';
+        else if (melee.phase === 'running') meleeDesc = '난투 진행 중';
+        else
+          meleeDesc =
+            melee.status === 'revealed'
+              ? melee.champ_nick
+                ? `우승 ${melee.champ_nick}`
+                : '오늘의 결과 발표'
+              : '결과 집계 중';
+      }
     } catch {
       // 콜드/hang → 카드 + 알림 숨김(기본 false/0). 메뉴 그리드는 정상 노출.
     }
@@ -176,6 +215,7 @@ export default async function HomePage() {
         {MENU.map((m) => {
           const count = counts[m.href] ?? 0;
           const badge = count > 99 ? '99+' : count > 0 ? String(count) : null;
+          const desc = m.href === '/melee' ? meleeDesc : m.desc;
           return (
             <Link
               key={m.href}
@@ -208,7 +248,7 @@ export default async function HomePage() {
                 <div className="text-sm leading-tight font-bold text-white drop-shadow-sm">
                   {m.label}
                 </div>
-                <div className="mt-0.5 text-[10px] leading-tight text-white/85">{m.desc}</div>
+                <div className="mt-0.5 text-[10px] leading-tight text-white/85">{desc}</div>
               </div>
             </Link>
           );
