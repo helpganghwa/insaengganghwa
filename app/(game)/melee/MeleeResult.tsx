@@ -14,6 +14,8 @@ export type MeleeResultView = {
   podium: {
     rank: number;
     nickname: string;
+    /** 불변 공개 코드 — 아바타 클릭 시 /u/<code> 프로필 상세. */
+    publicCode: string | null;
     avatarUrl: string | null;
     attackCount: number;
     defenseCount: number;
@@ -26,17 +28,27 @@ export type MeleeResultView = {
   myEvents: MeleeMyEvent[];
   myNickname: string;
   myAvatar: string | null;
+  /** 내 공개 코드 — 내 전투 리플레이에서 내 아바타 → 프로필 상세. */
+  myPublicCode: string | null;
   myCp: number;
   finale: MeleeFinale;
   rosterAvatars: (string | null)[];
+  /** finale 로스터 로컬 인덱스별 공개 코드(아바타 클릭 링크용). */
+  rosterCodes: (string | null)[];
 };
 
 type Fight = {
   round: number;
   atkName: string;
   atkAvatar: string | null;
+  /** 공격자 프로필 상세 경로(/u/<code|nick>) — 아바타 클릭 이동. */
+  atkHref?: string | null;
+  /** 공격자 현재/최대 HP(양쪽 HP바 영역 일치 + 정보 표시). */
+  atkHp?: number;
+  atkMaxHp?: number;
   tgtName: string;
   tgtAvatar: string | null;
+  tgtHref?: string | null;
   dmg: number;
   hpAfter: number;
   tgtMaxHp?: number;
@@ -90,6 +102,7 @@ function hpColor(pct: number): string {
 function Fighter({
   name,
   avatar,
+  href,
   side,
   role,
   shake,
@@ -100,6 +113,8 @@ function Fighter({
 }: {
   name: string;
   avatar: string | null;
+  /** 있으면 아바타 클릭 시 프로필 상세로 이동. */
+  href?: string | null;
   side: 'l' | 'r';
   role: 'atk' | 'def';
   shake: boolean;
@@ -155,18 +170,34 @@ function Fighter({
           style={{ opacity: faded ? 0.25 : 1, filter: faded ? 'grayscale(1)' : 'none' }}
         >
           {avatar ? (
-            // eslint-disable-next-line @next/next/no-img-element
-            <img
-              src={avatar}
-              alt={name}
-              className="h-full w-full object-contain object-bottom drop-shadow-[0_2px_5px_rgba(0,0,0,0.85)]"
-              style={{
-                imageRendering: 'pixelated',
-                // +20% 확대 + 아래로 이동(닉네임~라벨 사이에 위치). origin bottom으로 발끝 고정. side r는 좌우반전.
-                transform: `translateY(14px) scale(1.2) scaleX(${side === 'r' ? -1 : 1})`,
-                transformOrigin: 'center bottom',
-              }}
-            />
+            href ? (
+              <Link href={href} aria-label={`${name} 프로필`} className="block h-full w-full">
+                {/* eslint-disable-next-line @next/next/no-img-element */}
+                <img
+                  src={avatar}
+                  alt={name}
+                  className="h-full w-full object-contain object-bottom drop-shadow-[0_2px_5px_rgba(0,0,0,0.85)]"
+                  style={{
+                    imageRendering: 'pixelated',
+                    // +20% 확대 + 아래로 이동(닉네임~라벨 사이). origin bottom으로 발끝 고정. side r는 좌우반전.
+                    transform: `translateY(26px) scale(1.2) scaleX(${side === 'r' ? -1 : 1})`,
+                    transformOrigin: 'center bottom',
+                  }}
+                />
+              </Link>
+            ) : (
+              // eslint-disable-next-line @next/next/no-img-element
+              <img
+                src={avatar}
+                alt={name}
+                className="h-full w-full object-contain object-bottom drop-shadow-[0_2px_5px_rgba(0,0,0,0.85)]"
+                style={{
+                  imageRendering: 'pixelated',
+                  transform: `translateY(26px) scale(1.2) scaleX(${side === 'r' ? -1 : 1})`,
+                  transformOrigin: 'center bottom',
+                }}
+              />
+            )
           ) : (
             <div className="flex h-full w-full items-center justify-center text-3xl font-extrabold text-zinc-400">
               {name.slice(0, 1)}
@@ -225,12 +256,24 @@ function FightStage({
       {/* 중단: 화면 2분할 — 각 절반 중앙에 파이터 배치 */}
       <div className="relative z-10 grid min-h-0 flex-1 grid-cols-2 items-center overflow-hidden">
         <div className="flex justify-center">
-          <Fighter name={fight.atkName} avatar={fight.atkAvatar} side="l" role="atk" shake={false} />
+          <Fighter
+            name={fight.atkName}
+            avatar={fight.atkAvatar}
+            href={fight.atkHref}
+            side="l"
+            role="atk"
+            shake={false}
+            // 공격자 HP — 양쪽 바 영역 일치 + 현재 체력 표시(피격 없음 → 정적).
+            hp={fight.atkHp}
+            hpBefore={fight.atkHp}
+            maxHp={fight.atkMaxHp}
+          />
         </div>
         <div className="flex justify-center">
           <Fighter
             name={fight.tgtName}
             avatar={fight.tgtAvatar}
+            href={fight.tgtHref}
             side="r"
             role="def"
             shake
@@ -242,8 +285,8 @@ function FightStage({
           />
         </div>
       </div>
-      {/* 하단: 판타지 내레이션(잘리지 않게 고정) */}
-      <div className="relative z-10 shrink-0 px-3 pb-2.5 text-center text-[11px] italic leading-snug text-zinc-100 drop-shadow">
+      {/* 하단: 판타지 내레이션 — 단어단위 개행(break-keep), 무대 하단 가까이 */}
+      <div className="relative z-10 shrink-0 break-keep px-4 pb-1 pt-0.5 text-center text-[11px] italic leading-snug text-zinc-100 drop-shadow">
         {narration}
       </div>
       <button
@@ -287,29 +330,51 @@ function RankingView({
                 <span className="font-mono text-[11px] font-bold tabular-nums text-amber-300 text-pixel-outline">
                   #{slot}
                 </span>
-                <span className="max-w-[72px] truncate text-[11px] font-medium text-white text-pixel-outline">
+                <span className="max-w-[78px] truncate text-[11px] font-medium text-white text-pixel-outline">
                   {p?.nickname ?? '—'}
                 </span>
-                {first && p ? <span className="shrink-0 text-[11px] leading-none">👑</span> : null}
               </div>
               {/* object-bottom + 동일 박스 하단선(items-end) → 발끝 통일. scale은 origin bottom이라 발끝 고정. */}
+              {/* 아바타 클릭 → 프로필 상세(/u/<code>). */}
               <div className="relative h-36 w-full">
                 {p?.avatarUrl ? (
-                  // eslint-disable-next-line @next/next/no-img-element
-                  <img
-                    src={p.avatarUrl}
-                    alt=""
-                    aria-hidden
-                    draggable={false}
-                    className="absolute inset-0 h-full w-full object-contain object-bottom"
-                    style={{
-                      imageRendering: 'pixelated',
-                      // 1~3등 동일 크기 + 20px 아래로(바닥에 더 붙게). origin bottom으로 발끝 통일.
-                      transform: 'translateY(20px) scale(1.5)',
-                      transformOrigin: 'center bottom',
-                      filter: 'drop-shadow(0 3px 5px rgba(0,0,0,0.6))',
-                    }}
-                  />
+                  p.publicCode ? (
+                    <Link
+                      href={`/u/${encodeURIComponent(p.publicCode)}`}
+                      aria-label={`${p.nickname} 프로필`}
+                      className="absolute inset-0 block"
+                    >
+                      {/* eslint-disable-next-line @next/next/no-img-element */}
+                      <img
+                        src={p.avatarUrl}
+                        alt=""
+                        aria-hidden
+                        draggable={false}
+                        className="absolute inset-0 h-full w-full object-contain object-bottom"
+                        style={{
+                          imageRendering: 'pixelated',
+                          transform: 'translateY(25px) scale(1.5)',
+                          transformOrigin: 'center bottom',
+                          filter: 'drop-shadow(0 3px 5px rgba(0,0,0,0.6))',
+                        }}
+                      />
+                    </Link>
+                  ) : (
+                    // eslint-disable-next-line @next/next/no-img-element
+                    <img
+                      src={p.avatarUrl}
+                      alt=""
+                      aria-hidden
+                      draggable={false}
+                      className="absolute inset-0 h-full w-full object-contain object-bottom"
+                      style={{
+                        imageRendering: 'pixelated',
+                        transform: 'translateY(25px) scale(1.5)',
+                        transformOrigin: 'center bottom',
+                        filter: 'drop-shadow(0 3px 5px rgba(0,0,0,0.6))',
+                      }}
+                    />
+                  )
                 ) : null}
               </div>
               <span className="pb-0.5 text-[9px] font-medium text-amber-100 text-pixel-outline">
@@ -416,9 +481,14 @@ export function MeleeResult({ view }: { view: MeleeResultView }) {
     myEvents,
     myNickname,
     myAvatar,
+    myPublicCode,
     myCp,
     rosterAvatars,
+    rosterCodes,
   } = view;
+  /** 핸들(코드 또는 닉네임)로 프로필 상세 경로. 없으면 null(링크 없음). */
+  const hrefOf = (handle: string | null | undefined) =>
+    handle ? `/u/${encodeURIComponent(handle)}` : null;
   const roster = finale.roster;
   const truncated = finale.events.length >= MELEE_REPLAY_ROUNDS;
   const finaleStart = totalRounds - finale.events.length;
@@ -455,15 +525,22 @@ export function MeleeResult({ view }: { view: MeleeResultView }) {
   // 누적 공격/방어 횟수(리플레이 윈도 내 시간순). 미절단이면 절대값, 절단이면 윈도 기준.
   const atkSeqMap = new Map<number, number>();
   const defSeqMap = new Map<number, number>();
+  // 로스터 인덱스별 현재 HP 추적(피격 시 hpAfter로 갱신) — 공격자 HP바 표시용.
+  const hpByIdx = new Map<number, number>();
   const logData: Row[] = finale.events.map((e, i) => {
     const round = finaleStart + i + 1;
     const atk = roster[e[0]]?.nickname ?? '?';
     const tgt = roster[e[1]]?.nickname ?? '?';
+    const atkCp = roster[e[0]]?.cp ?? 0;
     const tgtCp = roster[e[1]]?.cp ?? 0;
     const atkSeq = (atkSeqMap.get(e[0]) ?? 0) + 1;
     atkSeqMap.set(e[0], atkSeq);
     const defSeq = (defSeqMap.get(e[1]) ?? 0) + 1;
     defSeqMap.set(e[1], defSeq);
+    const atkMaxHp = atkCp > 0 ? atkCp * MELEE_HP_MULT : undefined;
+    // 공격자 현재 HP — 직전 피격 잔여(없으면 풀). 이번 라운드 공격자는 피격 안 함.
+    const atkHp = atkMaxHp != null ? hpByIdx.get(e[0]) ?? atkMaxHp : undefined;
+    hpByIdx.set(e[1], e[3]); // 타겟 HP 갱신(다음 라운드 반영)
     return {
       key: round,
       round,
@@ -478,8 +555,12 @@ export function MeleeResult({ view }: { view: MeleeResultView }) {
         round,
         atkName: atk,
         atkAvatar: rosterAvatars[e[0]] ?? null,
+        atkHref: hrefOf(rosterCodes[e[0]]),
+        atkHp,
+        atkMaxHp,
         tgtName: tgt,
         tgtAvatar: rosterAvatars[e[1]] ?? null,
+        tgtHref: hrefOf(rosterCodes[e[1]]),
         dmg: e[2],
         hpAfter: e[3],
         tgtMaxHp: tgtCp > 0 ? tgtCp * MELEE_HP_MULT : undefined,
@@ -513,8 +594,14 @@ export function MeleeResult({ view }: { view: MeleeResultView }) {
         round,
         atkName: atk,
         atkAvatar: role === 0 ? myAvatar ?? DEFAULT_AVATAR : DEFAULT_AVATAR,
+        // 내가 공격자면 내 코드, 상대 공격자면 상대 닉네임으로 링크(리졸루션이 닉도 허용).
+        atkHref: role === 0 ? hrefOf(myPublicCode) : hrefOf(opp),
+        // 내가 공격자일 때만 내 HP(근사: 풀) 표시 — 상대 공격자 HP는 데이터 없음.
+        atkMaxHp: role === 0 && myCp > 0 ? myCp * MELEE_HP_MULT : undefined,
+        atkHp: role === 0 && myCp > 0 ? myCp * MELEE_HP_MULT : undefined,
         tgtName: tgt,
         tgtAvatar: role === 0 ? DEFAULT_AVATAR : myAvatar ?? DEFAULT_AVATAR,
+        tgtHref: role === 0 ? hrefOf(opp) : hrefOf(myPublicCode),
         dmg,
         hpAfter: hp,
         tgtMaxHp: role === 1 && myCp > 0 ? myCp * MELEE_HP_MULT : undefined,

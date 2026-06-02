@@ -64,10 +64,17 @@ export default async function MeleePage() {
   const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
   const rosterIds = finale.roster.map((r) => r.userId).filter((id) => UUID_RE.test(id));
   const avatarOf = new Map<string, string>();
+  // 불변 공개 코드 — 아바타 클릭 시 /u/<code> 프로필 상세 링크용.
+  const codeOf = new Map<string, string>();
   if (rosterIds.length > 0) {
     const av = await withTimeout(
       db
-        .select({ uid: profiles.id, rotations: userProfiles.rotations, dir: userProfiles.activeDirection })
+        .select({
+          uid: profiles.id,
+          code: profiles.publicCode,
+          rotations: userProfiles.rotations,
+          dir: userProfiles.activeDirection,
+        })
         .from(profiles)
         .innerJoin(userProfiles, eq(userProfiles.id, profiles.activeProfileId))
         .where(inArray(profiles.id, rosterIds)),
@@ -78,6 +85,7 @@ export default async function MeleePage() {
       const rot = a.rotations as Record<string, string>;
       const url = rot.south ?? rot[a.dir];
       if (url) avatarOf.set(a.uid, url);
+      if (a.code) codeOf.set(a.uid, a.code);
     }
   }
   // 1~3위 랭킹 섹션 — 참가자 행(공격/방어 횟수) + 닉 + 아바타.
@@ -86,6 +94,7 @@ export default async function MeleePage() {
       .select({
         rank: meleeParticipants.finalRank,
         nickname: profiles.nickname,
+        code: profiles.publicCode,
         uid: meleeParticipants.userId,
         atk: meleeParticipants.attackCount,
         def: meleeParticipants.defenseCount,
@@ -103,11 +112,13 @@ export default async function MeleePage() {
   const podium = topRows.map((r) => ({
     rank: r.rank,
     nickname: r.nickname,
+    publicCode: r.code ?? null,
     avatarUrl: avatarOf.get(r.uid) ?? dft(r.rank),
     attackCount: r.atk,
     defenseCount: r.def,
   }));
   const rosterAvatars = finale.roster.map((r, i) => avatarOf.get(r.userId) ?? dft(i));
+  const rosterCodes = finale.roster.map((r) => codeOf.get(r.userId) ?? null);
 
   const [meRow] = await withTimeout(
     db
@@ -118,6 +129,7 @@ export default async function MeleePage() {
         myEvents: meleeParticipants.myEvents,
         cp: meleeParticipants.cpSnapshot,
         nickname: profiles.nickname,
+        code: profiles.publicCode,
       })
       .from(meleeParticipants)
       .innerJoin(profiles, eq(profiles.id, meleeParticipants.userId))
@@ -137,10 +149,12 @@ export default async function MeleePage() {
     myEvents: meRow?.myEvents ?? [],
     myNickname: meRow?.nickname ?? '',
     myAvatar: avatarOf.get(userId) ?? null,
+    myPublicCode: meRow?.code ?? null,
     myCp: meRow ? Number(meRow.cp) : 0,
     totalRounds: battle.totalRounds,
     finale,
     rosterAvatars,
+    rosterCodes,
   };
 
   // MeleeResult가 main을 꽉 채움(무대 고정 + 하단 내부 스크롤).
