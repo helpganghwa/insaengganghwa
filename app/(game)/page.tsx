@@ -255,6 +255,7 @@ export default async function HomePage() {
                       <span className="font-extrabold text-amber-300 drop-shadow-[0_1px_2px_rgba(0,0,0,0.9)]">
                         {meleeChampion}
                       </span>
+                      <span className="ml-0.5">👑</span>
                     </>
                   ) : (
                     desc
