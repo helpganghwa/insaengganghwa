@@ -60,6 +60,24 @@ const clampPct = (v: number) => Math.max(0, Math.min(100, v));
 /** 내 전투 상대(아바타 미상)·폴백용 기본 지급 아바타. */
 const DEFAULT_AVATAR = '/sprites/default/male/south.png';
 
+// 전투 내레이션 풀 — 라운드별 결정적 선택(round % len)으로 다양하게(렌더 순수성 유지).
+const KILLED_MSGS: ((a: string, t: string, d: string) => string)[] = [
+  (a, t, d) => `${a}의 일격이 ${t}을(를) 꿰뚫는다. ${d}의 치명타 — ${t}, 모래 위에 무너지다.`,
+  (a, t, d) => `${a}의 마지막 공격! ${d}의 피해로 ${t}이(가) 쓰러진다.`,
+  (a, t, d) => `${t}, ${a}의 ${d} 일격을 버티지 못하고 무릎 꿇는다.`,
+  (a, t, d) => `${a}이(가) 결정타를 꽂는다. ${d} — ${t}, 아레나에서 탈락.`,
+  (a, t, d) => `섬광 같은 ${a}의 공격. ${t}이(가) ${d}의 피해와 함께 스러진다.`,
+  (a, t, d) => `${a}의 분노가 ${t}을(를) 덮친다. ${d} 치명타로 결착.`,
+];
+const SURVIVE_MSGS: ((a: string, t: string, d: string, hp: string) => string)[] = [
+  (a, t, d, hp) => `${a}, ${t}에게 ${d}의 피해를 새긴다. 남은 생명력 ${hp}, 아직 쓰러지지 않는다.`,
+  (a, t, d, hp) => `${a}의 공격이 ${t}을(를) 강타! ${d} 피해 — ${t}, 체력 ${hp}로 버틴다.`,
+  (a, t, d, hp) => `${t}, ${a}의 ${d} 공격을 이 악물고 견딘다. (체력 ${hp})`,
+  (a, t, d, hp) => `${a}이(가) ${d}의 일격을 날린다. ${t}, 체력 ${hp}로 반격을 노린다.`,
+  (a, t, d, hp) => `격렬한 공방! ${a}의 ${d} 피해에도 ${t}은(는) 체력 ${hp}로 살아남는다.`,
+  (a, t, d, hp) => `${a}의 맹공 ${d}. ${t}, 남은 ${hp}의 생명으로 맞선다.`,
+];
+
 /** 내 순위·보상 칩 — 무대 하단에 반투명 오버레이. 탭하면 우편함(상세 보상). */
 function MyRankChip({ me }: { me: MeleeResultView['me'] }) {
   if (!me) {
@@ -235,10 +253,12 @@ function FightStage({
   onBack: () => void;
 }) {
   const killed = fight.hpAfter <= 0;
-  // 판타지 내레이션 — 한 줄로 전투를 묘사.
+  // 판타지 내레이션 — 라운드별 결정적 랜덤(다양한 멘트).
+  const dmgStr = fight.dmg.toLocaleString();
+  const hpStr = Math.max(0, fight.hpAfter).toLocaleString();
   const narration = killed
-    ? `${fight.atkName}의 일격이 ${fight.tgtName}을(를) 꿰뚫는다. ${fight.dmg.toLocaleString()}의 치명타 — ${fight.tgtName}, 모래 위에 무너지다.`
-    : `${fight.atkName}, ${fight.tgtName}에게 ${fight.dmg.toLocaleString()}의 피해를 새긴다. 남은 생명력 ${Math.max(0, fight.hpAfter).toLocaleString()}, 아직 쓰러지지 않는다.`;
+    ? KILLED_MSGS[fight.round % KILLED_MSGS.length]!(fight.atkName, fight.tgtName, dmgStr)
+    : SURVIVE_MSGS[fight.round % SURVIVE_MSGS.length]!(fight.atkName, fight.tgtName, dmgStr, hpStr);
   return (
     <div className="relative z-10 flex h-full flex-col">
       {/* 피격 플래시(1회) */}
@@ -468,6 +488,34 @@ function RoundCard({
   );
 }
 
+// ── 로그 최상단 FINAL 카드 — 우승 축하(round 자리에 FINAL). 클릭 시 결승 라운드 재생. ──
+function FinalCard({ champion, onClick }: { champion: string; onClick: () => void }) {
+  return (
+    <li className="border-b border-amber-900/40">
+      <button
+        type="button"
+        onClick={onClick}
+        className="flex w-full items-center gap-2.5 bg-gradient-to-r from-amber-500/20 via-amber-400/10 to-transparent px-3 py-2.5 text-left transition hover:from-amber-500/30"
+      >
+        <div className="flex w-8 shrink-0 flex-col items-center justify-center">
+          <span className="font-mono text-[11px] font-extrabold leading-none tracking-[0.1em] text-amber-300 drop-shadow-[0_1px_2px_rgba(0,0,0,0.8)]">
+            FINAL
+          </span>
+        </div>
+        <div className="w-px shrink-0 self-stretch bg-amber-600/40" />
+        <div className="min-w-0 flex-1">
+          <div className="truncate text-[13px] font-extrabold tracking-tight text-amber-200 drop-shadow-[0_1px_2px_rgba(0,0,0,0.8)]">
+            {champion} 우승
+          </div>
+          <div className="truncate text-[10px] font-medium text-amber-100/70">
+            최후의 1인 — 대난투를 제패하다
+          </div>
+        </div>
+      </button>
+    </li>
+  );
+}
+
 export function MeleeResult({ view }: { view: MeleeResultView }) {
   const [tab, setTab] = useState<'log' | 'mine'>('log');
   const [fight, setFight] = useState<Fight | null>(null);
@@ -476,6 +524,7 @@ export function MeleeResult({ view }: { view: MeleeResultView }) {
     podium,
     me,
     finale,
+    championNickname,
     participantCount,
     totalRounds,
     myEvents,
@@ -568,9 +617,22 @@ export function MeleeResult({ view }: { view: MeleeResultView }) {
       },
     };
   });
+  // 내 전투 = 전체 전투(finale)에서 내가 공격자/타겟인 라운드만 "필터" — 전체와 완전 동일(상대 아바타·HP·등수 일관).
+  const myFiltered: Row[] = myNickname
+    ? logData.filter((r) => r.atk === myNickname || r.tgt === myNickname)
+    : [];
+
+  // 폴백 — finale 윈도 밖(초대규모 절단 시 내 라운드가 윈도 밖)이면 per-user myEvents로 복원.
+  //  닉네임→로스터 메타(아바타·코드)로 상대 프로필 복원 + 내 HP 추적(공격 시 잔여 HP 표시).
+  const byNick = new Map<string, { avatar: string | null; code: string | null }>();
+  finale.roster.forEach((r, i) =>
+    byNick.set(r.nickname, { avatar: rosterAvatars[i] ?? null, code: rosterCodes[i] ?? null }),
+  );
+  const myMax = myCp > 0 ? myCp * MELEE_HP_MULT : undefined;
+  let myHp = myMax ?? 0;
   const myAtkSeqMap = new Map<string, number>();
   const myDefSeqMap = new Map<string, number>();
-  const myData: Row[] = myEvents.map((e, i) => {
+  const myFallback: Row[] = myEvents.map((e, i) => {
     const [role, opp, dmg, hp] = e;
     const round = e[4] ?? i + 1;
     const atk = role === 0 ? myNickname : opp;
@@ -579,7 +641,12 @@ export function MeleeResult({ view }: { view: MeleeResultView }) {
     myAtkSeqMap.set(atk, atkSeq);
     const defSeq = (myDefSeqMap.get(tgt) ?? 0) + 1;
     myDefSeqMap.set(tgt, defSeq);
-    return {
+    const oppMeta = byNick.get(opp);
+    const oppAvatar = oppMeta?.avatar ?? DEFAULT_AVATAR;
+    const oppHref = hrefOf(oppMeta?.code ?? opp);
+    const meHref = hrefOf(myPublicCode);
+    const atkHpNow = role === 0 ? (myMax != null ? myHp : undefined) : undefined;
+    const row: Row = {
       key: i,
       round,
       atk,
@@ -588,27 +655,28 @@ export function MeleeResult({ view }: { view: MeleeResultView }) {
       hp,
       atkSeq,
       defSeq,
-      // 내가 타겟이고 탈락한 라운드면 내 최종 등수 기록(상대 탈락 등수는 미상).
       tgtRank: role === 1 && hp <= 0 ? me?.rank : undefined,
       fight: {
         round,
         atkName: atk,
-        atkAvatar: role === 0 ? myAvatar ?? DEFAULT_AVATAR : DEFAULT_AVATAR,
-        // 내가 공격자면 내 코드, 상대 공격자면 상대 닉네임으로 링크(리졸루션이 닉도 허용).
-        atkHref: role === 0 ? hrefOf(myPublicCode) : hrefOf(opp),
-        // 내가 공격자일 때만 내 HP(근사: 풀) 표시 — 상대 공격자 HP는 데이터 없음.
-        atkMaxHp: role === 0 && myCp > 0 ? myCp * MELEE_HP_MULT : undefined,
-        atkHp: role === 0 && myCp > 0 ? myCp * MELEE_HP_MULT : undefined,
+        atkAvatar: role === 0 ? myAvatar ?? DEFAULT_AVATAR : oppAvatar,
+        atkHref: role === 0 ? meHref : oppHref,
+        atkHp: atkHpNow,
+        atkMaxHp: role === 0 ? myMax : undefined,
         tgtName: tgt,
-        tgtAvatar: role === 0 ? DEFAULT_AVATAR : myAvatar ?? DEFAULT_AVATAR,
-        tgtHref: role === 0 ? hrefOf(opp) : hrefOf(myPublicCode),
+        tgtAvatar: role === 0 ? oppAvatar : myAvatar ?? DEFAULT_AVATAR,
+        tgtHref: role === 0 ? oppHref : meHref,
         dmg,
         hpAfter: hp,
-        tgtMaxHp: role === 1 && myCp > 0 ? myCp * MELEE_HP_MULT : undefined,
+        tgtMaxHp: role === 1 ? myMax : undefined,
         survivors: aliveByRound.get(round) ?? (role === 1 && hp <= 0 ? me?.rank : undefined),
       },
     };
+    if (role === 1) myHp = hp; // 내가 피격 → 다음 라운드부터 잔여 HP 반영
+    return row;
   });
+
+  const myData = myFiltered.length > 0 ? myFiltered : myFallback;
   const rows = tab === 'log' ? logData : myData;
   const displayRows = [...rows].reverse(); // 최신 라운드가 위로
 
@@ -629,7 +697,7 @@ export function MeleeResult({ view }: { view: MeleeResultView }) {
     return () => clearTimeout(t);
   }, [autoplay, speed]);
   const stopPlay = () => setAutoplay(null);
-  const cycleSpeed = () => setSpeed((s) => (s === 1 ? 2 : s === 2 ? 4 : 1));
+  const cycleSpeed = () => setSpeed((s) => (s === 1 ? 4 : s === 4 ? 8 : s === 8 ? 16 : 1));
   const startPlayAll = () => {
     const list = rows.map((r) => r.fight);
     if (list.length === 0) return;
@@ -727,6 +795,16 @@ export function MeleeResult({ view }: { view: MeleeResultView }) {
             </div>
           ) : (
             <ul>
+              {/* 결승 우승 축하 — 최상단 FINAL 배너(클릭 시 결승 라운드 재생). */}
+              {championNickname && logData.length > 0 ? (
+                <FinalCard
+                  champion={championNickname}
+                  onClick={() => {
+                    stopPlay();
+                    play(logData[logData.length - 1]!.fight);
+                  }}
+                />
+              ) : null}
               {displayRows.map((r) => (
                 <RoundCard
                   key={r.key}
