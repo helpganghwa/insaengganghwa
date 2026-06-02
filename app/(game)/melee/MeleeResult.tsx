@@ -529,60 +529,48 @@ function RoundCard({
   );
 }
 
-// ── 로그 최상단 FINAL 카드 — 우승 축하(round 자리에 FINAL) + 챔피언 상반신 아바타. 클릭 시 결승 재생. ──
-function FinalCard({
-  champion,
-  avatar,
-  onClick,
-}: {
-  champion: string;
-  avatar: string | null;
-  onClick: () => void;
-}) {
+// ── 로그 최상단 FINAL 카드 — 우승 축하(round 자리에 FINAL) + 챔피언 아바타 배경. 표시 전용(비클릭). ──
+function FinalCard({ champion, avatar }: { champion: string; avatar: string | null }) {
   return (
-    <li className="border-b border-amber-900/40">
-      <button
-        type="button"
-        onClick={onClick}
-        className="relative flex w-full items-center overflow-hidden bg-gradient-to-r from-amber-500/20 via-amber-400/10 to-transparent py-3 pr-3 pl-3 text-left transition hover:from-amber-500/30"
-      >
-        {/* 우측 — 챔피언 얼굴 중심 아바타(배경 레이어). 좌→우 페이드로 카드에 자연스럽게 녹임. */}
-        {avatar ? (
-          <div className="pointer-events-none absolute inset-y-0 right-0 w-32 overflow-hidden">
-            {/* eslint-disable-next-line @next/next/no-img-element */}
-            <img
-              src={avatar}
-              alt=""
-              aria-hidden
-              className="absolute inset-0 h-full w-full object-cover"
-              style={{
-                imageRendering: 'pixelated',
-                objectPosition: 'center 20%',
-                transform: 'scale(1.5)',
-                transformOrigin: 'center 20%',
-              }}
-            />
-            <div className="absolute inset-0 bg-gradient-to-r from-zinc-950 via-zinc-950/35 to-transparent" />
+    <li className="relative flex items-center overflow-hidden border-b border-amber-900/40 py-3 pr-3 pl-3">
+      {/* 우측 — 챔피언 얼굴 중심 아바타(배경 레이어) */}
+      {avatar ? (
+        <div className="pointer-events-none absolute inset-y-0 right-0 w-32 overflow-hidden">
+          {/* eslint-disable-next-line @next/next/no-img-element */}
+          <img
+            src={avatar}
+            alt=""
+            aria-hidden
+            className="absolute inset-0 h-full w-full object-cover"
+            style={{
+              imageRendering: 'pixelated',
+              objectPosition: 'center 20%',
+              transform: 'scale(1.5)',
+              transformOrigin: 'center 20%',
+            }}
+          />
+        </div>
+      ) : null}
+      {/* 연속 그라데이션 — 아바타 영역까지 포함해 좌→우로 한 번에 깔림 */}
+      <div className="pointer-events-none absolute inset-0 bg-gradient-to-r from-amber-500/25 via-amber-500/10 to-transparent" />
+      <div className="pointer-events-none absolute inset-0 bg-gradient-to-r from-zinc-950/95 via-zinc-950/45 to-transparent" />
+      {/* 콘텐츠 — 그라데이션 위 */}
+      <div className="relative z-10 flex w-full items-center gap-2.5">
+        <div className="flex w-8 shrink-0 flex-col items-center justify-center">
+          <span className="font-mono text-[11px] font-extrabold leading-none tracking-[0.1em] text-amber-300 drop-shadow-[0_1px_2px_rgba(0,0,0,0.85)]">
+            FINAL
+          </span>
+        </div>
+        <div className="w-px shrink-0 self-stretch bg-amber-600/40" />
+        <div className="min-w-0 flex-1">
+          <div className="truncate text-[13px] font-extrabold tracking-tight text-amber-200 drop-shadow-[0_1px_2px_rgba(0,0,0,0.9)]">
+            {champion} 우승
           </div>
-        ) : null}
-        {/* 콘텐츠 — 아바타 레이어 위 */}
-        <div className="relative z-10 flex w-full items-center gap-2.5">
-          <div className="flex w-8 shrink-0 flex-col items-center justify-center">
-            <span className="font-mono text-[11px] font-extrabold leading-none tracking-[0.1em] text-amber-300 drop-shadow-[0_1px_2px_rgba(0,0,0,0.85)]">
-              FINAL
-            </span>
-          </div>
-          <div className="w-px shrink-0 self-stretch bg-amber-600/40" />
-          <div className="min-w-0 flex-1">
-            <div className="truncate text-[13px] font-extrabold tracking-tight text-amber-200 drop-shadow-[0_1px_2px_rgba(0,0,0,0.9)]">
-              {champion} 우승
-            </div>
-            <div className="truncate text-[10px] font-medium text-amber-100/80 drop-shadow-[0_1px_2px_rgba(0,0,0,0.9)]">
-              최후의 1인 — 대난투를 제패하다
-            </div>
+          <div className="truncate text-[10px] font-medium text-amber-100/80 drop-shadow-[0_1px_2px_rgba(0,0,0,0.9)]">
+            최후의 1인 — 대난투를 제패하다
           </div>
         </div>
-      </button>
+      </div>
     </li>
   );
 }
@@ -813,18 +801,19 @@ export function MeleeResult({ view }: { view: MeleeResultView }) {
         )}
         {/* 내 순위·보상 — 무대 하단 반투명 칩(스크롤 영역 차지 0). 랭킹 뷰일 때만. */}
         {!fight ? <MyRankChip me={me} /> : null}
+        {/* 보상·역대 — 무대 우상단 반투명 칩(내 순위 칩과 동일 결). */}
+        {!fight ? (
+          <Link
+            href="/melee/info"
+            className="absolute right-2 top-2 z-20 rounded-full bg-black/55 px-2.5 py-1 text-[10px] font-bold text-amber-200 backdrop-blur-sm text-pixel-outline"
+          >
+            보상·역대 ›
+          </Link>
+        ) : null}
       </div>
 
       {/* 하단 — 내부 스크롤 영역 */}
       <div className="min-h-0 flex-1 space-y-3 overflow-y-auto overscroll-contain px-4 py-3">
-        <Link
-          href="/melee/info"
-          className="flex items-center justify-between rounded-xl border border-zinc-800 bg-zinc-900/40 px-3 py-2 text-[12px] font-medium text-zinc-200 transition active:bg-zinc-800"
-        >
-          <span>보상 테이블 · 역대 우승자</span>
-          <span className="text-zinc-500">›</span>
-        </Link>
-
         <div className="flex gap-1 rounded-xl border border-zinc-800 p-1">
           {(
             [
@@ -877,15 +866,11 @@ export function MeleeResult({ view }: { view: MeleeResultView }) {
             </div>
           ) : (
             <ul>
-              {/* 결승 우승 축하 — 최상단 FINAL 배너(클릭 시 결승 라운드 재생). */}
-              {championNickname && logData.length > 0 ? (
+              {/* 결승 우승 축하 — 전체 전투 탭 최상단 FINAL 배너(표시 전용). */}
+              {tab === 'log' && championNickname && logData.length > 0 ? (
                 <FinalCard
                   champion={championNickname}
                   avatar={podium.find((p) => p.rank === 1)?.avatarUrl ?? null}
-                  onClick={() => {
-                    stopPlay();
-                    play(logData[logData.length - 1]!.fight);
-                  }}
                 />
               ) : null}
               {displayRows.map((r) => (

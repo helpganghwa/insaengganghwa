@@ -13,8 +13,6 @@ export type MeleeHistoryRow = {
   championAvatar: string | null;
   championCp: number;
   participantCount: number;
-  /** 그 회차 내 순위(미참가면 null). */
-  myRank: number | null;
 };
 
 /** 보상 테이블 + 역대 우승자 — 탭 전환. MELEE §6. */
@@ -32,10 +30,12 @@ export function MeleeInfo({ history }: { history: MeleeHistoryRow[] }) {
           className="absolute inset-0 h-full w-full object-cover"
           style={{ imageRendering: 'pixelated' }}
         />
-        <div className="pointer-events-none absolute inset-0 bg-gradient-to-b from-black/45 via-black/35 to-black/80" />
-        <div className="relative z-10 flex h-full flex-col items-center justify-end pb-3">
+        <div className="pointer-events-none absolute inset-0 bg-gradient-to-b from-black/45 via-black/35 to-black/70" />
+        <div className="relative z-10 flex h-full flex-col items-center justify-center gap-0.5">
           <h1 className="text-lg font-extrabold text-white text-pixel-outline">대난투 정보</h1>
-          <p className="text-[10px] font-medium text-amber-200 text-pixel-outline">보상 · 역대 우승자</p>
+          <p className="text-[11px] font-bold text-amber-200 text-pixel-outline">
+            {tab === 'reward' ? '보상 테이블' : '역대 우승자'}
+          </p>
         </div>
       </div>
 
@@ -91,9 +91,9 @@ export function MeleeInfo({ history }: { history: MeleeHistoryRow[] }) {
             {history.map((h) => {
               const inner = (
                 <>
-                  {/* 챔피언 아바타 — 배경 레이어(얼굴 중심, 좌→우 페이드) */}
+                  {/* 챔피언 아바타 — 배경 레이어(얼굴 중심, 2배 크게). 연속 그라데이션이 위에 깔림. */}
                   {h.championAvatar ? (
-                    <div className="pointer-events-none absolute inset-y-0 right-0 w-28 overflow-hidden">
+                    <div className="pointer-events-none absolute inset-y-0 right-0 w-36 overflow-hidden">
                       {/* eslint-disable-next-line @next/next/no-img-element */}
                       <img
                         src={h.championAvatar}
@@ -102,16 +102,16 @@ export function MeleeInfo({ history }: { history: MeleeHistoryRow[] }) {
                         className="absolute inset-0 h-full w-full object-cover"
                         style={{
                           imageRendering: 'pixelated',
-                          objectPosition: 'center 20%',
-                          transform: 'scale(1.45)',
-                          transformOrigin: 'center 20%',
+                          objectPosition: 'center 18%',
+                          transform: 'scale(2.9)',
+                          transformOrigin: 'center 18%',
                         }}
                       />
-                      <div className="absolute inset-0 bg-gradient-to-r from-zinc-950 via-zinc-950/45 to-transparent" />
                     </div>
                   ) : null}
-                  {/* 콘텐츠 — 아바타 위 */}
-                  <div className="relative z-10 px-3 py-3">
+                  <div className="pointer-events-none absolute inset-0 bg-gradient-to-r from-zinc-950 via-zinc-950/55 to-transparent" />
+                  {/* 콘텐츠 — 아바타·그라데이션 위 */}
+                  <div className="relative z-10 px-3 py-3.5">
                     <div className="flex items-center gap-2">
                       <span className="shrink-0 rounded bg-amber-500/15 px-1.5 py-0.5 font-mono text-[11px] font-bold text-amber-300">
                         제{h.edition}회
@@ -125,13 +125,7 @@ export function MeleeInfo({ history }: { history: MeleeHistoryRow[] }) {
                         전투력 <span className="font-mono text-zinc-300">{h.championCp.toLocaleString()}</span>
                       </span>
                       <span className="text-zinc-600">·</span>
-                      <span>참가 {h.participantCount.toLocaleString()}</span>
-                      <span className="text-zinc-600">·</span>
-                      {h.myRank != null ? (
-                        <span className="font-medium text-amber-300">내 순위 {h.myRank.toLocaleString()}위</span>
-                      ) : (
-                        <span className="text-zinc-600">미참가</span>
-                      )}
+                      <span>참가 {h.participantCount.toLocaleString()}명</span>
                     </div>
                   </div>
                 </>

@@ -41,7 +41,7 @@ export default async function MeleeInfoPage() {
       .map((b) => b.champ)
       .filter((c): c is string => !!c && UUID_RE.test(c));
 
-    const [champRows, champCpRows, myRankRows] = await Promise.all([
+    const [champRows, champCpRows] = await Promise.all([
       champIds.length
         ? withTimeout(
             db
@@ -67,14 +67,6 @@ export default async function MeleeInfoPage() {
         3000,
         'melee.info.champcp',
       ).catch(() => []),
-      withTimeout(
-        db
-          .select({ battleId: meleeParticipants.battleId, rank: meleeParticipants.finalRank })
-          .from(meleeParticipants)
-          .where(and(inArray(meleeParticipants.battleId, ids), eq(meleeParticipants.userId, userId))),
-        3000,
-        'melee.info.myrank',
-      ).catch(() => []),
     ]);
 
     const champOf = new Map<string, { nick: string; code: string | null; avatar: string | null }>();
@@ -84,7 +76,6 @@ export default async function MeleeInfoPage() {
       champOf.set(c.uid, { nick: c.nick, code: c.code, avatar });
     }
     const cpOf = new Map(champCpRows.map((r) => [r.battleId.toString(), Number(r.cp)]));
-    const myOf = new Map(myRankRows.map((r) => [r.battleId.toString(), r.rank]));
 
     history = battles
       .map((b, i) => {
@@ -96,7 +87,6 @@ export default async function MeleeInfoPage() {
           championAvatar: c?.avatar ?? null,
           championCp: cpOf.get(b.id.toString()) ?? 0,
           participantCount: b.pc,
-          myRank: myOf.get(b.id.toString()) ?? null,
         } satisfies MeleeHistoryRow;
       })
       .reverse(); // 최신 회차가 위로
