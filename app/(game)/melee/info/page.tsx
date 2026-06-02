@@ -15,9 +15,15 @@ const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/
  * /melee/info — 대난투 정보(보상 테이블 + 역대 우승자). MELEE §6.
  * 회차(제N회)는 날짜 순서로 파생(하루 1회). 역대: 회차·챔피언(아바타·CP)·참가자·그날 내 순위.
  */
-export default async function MeleeInfoPage() {
+export default async function MeleeInfoPage({
+  searchParams,
+}: {
+  searchParams: Promise<{ tab?: string }>;
+}) {
   const userId = await getSessionUserId();
   if (!userId) return null;
+  const { tab } = await searchParams;
+  const initialTab = tab === 'history' ? 'history' : 'reward';
 
   // 발표된 배틀 — 날짜 오름차순(회차 = index+1). 콜드 hang 가드.
   const battles = await withTimeout(
@@ -92,5 +98,5 @@ export default async function MeleeInfoPage() {
       .reverse(); // 최신 회차가 위로
   }
 
-  return <MeleeInfo history={history} />;
+  return <MeleeInfo history={history} initialTab={initialTab} />;
 }

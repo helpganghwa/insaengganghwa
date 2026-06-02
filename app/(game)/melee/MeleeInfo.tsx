@@ -16,8 +16,14 @@ export type MeleeHistoryRow = {
 };
 
 /** 보상 테이블 + 역대 우승자 — 탭 전환. MELEE §6. */
-export function MeleeInfo({ history }: { history: MeleeHistoryRow[] }) {
-  const [tab, setTab] = useState<'reward' | 'history'>('reward');
+export function MeleeInfo({
+  history,
+  initialTab = 'reward',
+}: {
+  history: MeleeHistoryRow[];
+  initialTab?: 'reward' | 'history';
+}) {
+  const [tab, setTab] = useState<'reward' | 'history'>(initialTab);
   return (
     <div className="pb-6">
       {/* 상단 아레나 배경 배너 */}
@@ -91,7 +97,7 @@ export function MeleeInfo({ history }: { history: MeleeHistoryRow[] }) {
             {history.map((h) => {
               const inner = (
                 <>
-                  {/* 챔피언 아바타 — 배경 레이어(얼굴 중심, 2배 크게). 연속 그라데이션이 위에 깔림. */}
+                  {/* 챔피언 아바타 — 배경 레이어. height 기반으로 얼굴이 박스 세로 중앙에 오게(머리끝만 보이는 문제 해소). */}
                   {h.championAvatar ? (
                     <div className="pointer-events-none absolute inset-y-0 right-0 w-36 overflow-hidden">
                       {/* eslint-disable-next-line @next/next/no-img-element */}
@@ -99,13 +105,8 @@ export function MeleeInfo({ history }: { history: MeleeHistoryRow[] }) {
                         src={h.championAvatar}
                         alt=""
                         aria-hidden
-                        className="absolute inset-0 h-full w-full object-cover"
-                        style={{
-                          imageRendering: 'pixelated',
-                          objectPosition: 'center 18%',
-                          transform: 'scale(2.9)',
-                          transformOrigin: 'center 18%',
-                        }}
+                        className="absolute left-1/2 top-0 w-auto -translate-x-1/2"
+                        style={{ imageRendering: 'pixelated', height: '330%' }}
                       />
                     </div>
                   ) : null}

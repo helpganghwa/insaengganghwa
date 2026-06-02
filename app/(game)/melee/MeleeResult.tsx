@@ -82,11 +82,11 @@ const SURVIVE_MSGS: ((a: string, t: string, d: string, hp: string) => string)[] 
   (a, t, d, hp) => `${a}의 맹공 ${d}. ${t}, 남은 ${hp}의 생명으로 맞선다.`,
 ];
 
-/** 내 순위·보상 칩 — 무대 하단에 반투명 오버레이. 탭하면 우편함(상세 보상). */
+/** 내 순위·보상 칩(인라인) — 무대 하단 바 중앙. 탭하면 우편함(상세 보상). */
 function MyRankChip({ me }: { me: MeleeResultView['me'] }) {
   if (!me) {
     return (
-      <div className="absolute bottom-2 left-1/2 z-20 -translate-x-1/2 rounded-full bg-black/55 px-3 py-1 text-[11px] font-medium text-zinc-300 ring-1 ring-zinc-700/50 backdrop-blur-sm text-pixel-outline">
+      <div className="min-w-0 shrink truncate rounded-full bg-black/55 px-3 py-1 text-[11px] font-medium text-zinc-300 ring-1 ring-zinc-700/50 backdrop-blur-sm text-pixel-outline">
         오늘 미참가
       </div>
     );
@@ -101,12 +101,12 @@ function MyRankChip({ me }: { me: MeleeResultView['me'] }) {
   return (
     <Link
       href="/mail"
-      className="absolute bottom-2 left-1/2 z-20 inline-flex max-w-[92%] -translate-x-1/2 items-center gap-1.5 truncate rounded-full bg-black/60 px-3 py-1 text-[11px] font-medium text-zinc-100 ring-1 ring-amber-700/40 backdrop-blur-sm text-pixel-outline"
+      className="inline-flex min-w-0 shrink items-center gap-1.5 truncate rounded-full bg-black/60 px-3 py-1 text-[11px] font-medium text-zinc-100 ring-1 ring-amber-700/40 backdrop-blur-sm text-pixel-outline"
     >
-      <span>
+      <span className="shrink-0">
         내 순위 <span className="font-mono font-extrabold text-amber-300">{me.rank}위</span>
       </span>
-      {reward ? <span className="text-zinc-300">· {reward}</span> : null}
+      {reward ? <span className="truncate text-zinc-300">· {reward}</span> : null}
     </Link>
   );
 }
@@ -533,7 +533,7 @@ function RoundCard({
 function FinalCard({ champion, avatar }: { champion: string; avatar: string | null }) {
   return (
     <li className="relative flex items-center overflow-hidden border-b border-amber-900/40 py-3 pr-3 pl-3">
-      {/* 우측 — 챔피언 얼굴 중심 아바타(배경 레이어) */}
+      {/* 우측 — 챔피언 아바타(배경 레이어). height 기반으로 얼굴이 세로 중앙에. */}
       {avatar ? (
         <div className="pointer-events-none absolute inset-y-0 right-0 w-32 overflow-hidden">
           {/* eslint-disable-next-line @next/next/no-img-element */}
@@ -541,13 +541,8 @@ function FinalCard({ champion, avatar }: { champion: string; avatar: string | nu
             src={avatar}
             alt=""
             aria-hidden
-            className="absolute inset-0 h-full w-full object-cover"
-            style={{
-              imageRendering: 'pixelated',
-              objectPosition: 'center 20%',
-              transform: 'scale(1.5)',
-              transformOrigin: 'center 20%',
-            }}
+            className="absolute left-1/2 top-0 w-auto -translate-x-1/2"
+            style={{ imageRendering: 'pixelated', height: '330%' }}
           />
         </div>
       ) : null}
@@ -799,44 +794,50 @@ export function MeleeResult({ view }: { view: MeleeResultView }) {
         ) : (
           <RankingView podium={podium} participantCount={participantCount} edition={edition} />
         )}
-        {/* 내 순위·보상 — 무대 하단 반투명 칩(스크롤 영역 차지 0). 랭킹 뷰일 때만. */}
-        {!fight ? <MyRankChip me={me} /> : null}
-        {/* 보상·역대 — 무대 우상단 반투명 칩(내 순위 칩과 동일 결). */}
+        {/* 무대 하단 바 — [보상테이블] · [내 순위] · [역대우승자]. 랭킹 뷰일 때만. */}
         {!fight ? (
-          <Link
-            href="/melee/info"
-            className="absolute right-2 top-2 z-20 rounded-full bg-black/55 px-2.5 py-1 text-[10px] font-bold text-amber-200 backdrop-blur-sm text-pixel-outline"
-          >
-            보상·역대 ›
-          </Link>
+          <div className="absolute inset-x-0 bottom-2 z-20 flex items-center justify-center gap-1.5 px-2">
+            <Link
+              href="/melee/info"
+              className="shrink-0 rounded-full bg-black/55 px-2.5 py-1 text-[10px] font-bold text-amber-200 backdrop-blur-sm text-pixel-outline"
+            >
+              보상테이블
+            </Link>
+            <MyRankChip me={me} />
+            <Link
+              href="/melee/info?tab=history"
+              className="shrink-0 rounded-full bg-black/55 px-2.5 py-1 text-[10px] font-bold text-amber-200 backdrop-blur-sm text-pixel-outline"
+            >
+              역대우승자
+            </Link>
+          </div>
         ) : null}
       </div>
 
-      {/* 하단 — 내부 스크롤 영역 */}
-      <div className="min-h-0 flex-1 space-y-3 overflow-y-auto overscroll-contain px-4 py-3">
-        <div className="flex gap-1 rounded-xl border border-zinc-800 p-1">
-          {(
-            [
-              ['log', '전체 전투'],
-              ['mine', '내 전투'],
-            ] as const
-          ).map(([t, label]) => (
-            <button
-              key={t}
-              type="button"
-              onClick={() => selectTab(t)}
-              className={`flex-1 rounded-lg py-1.5 text-xs font-bold transition ${
-                tab === t ? 'bg-amber-600 text-white' : 'text-zinc-400'
-              }`}
-            >
-              {label}
-            </button>
-          ))}
-        </div>
-
-        <section className="overflow-hidden rounded-xl border border-zinc-800 bg-zinc-950">
-          {/* 헤더 — 배속 / 전체 재생·정지 */}
-          <div className="flex items-center justify-between gap-2 border-b border-zinc-900 px-2.5 py-1.5">
+      {/* 하단 — 내부 스크롤 영역(탭·컨트롤 sticky, 로그 풀폭) */}
+      <div className="min-h-0 flex-1 overflow-y-auto overscroll-contain">
+        {/* sticky 헤더 — 전체/내 전투 필터 + 배속·전체재생 */}
+        <div className="sticky top-0 z-10 border-b border-zinc-800 bg-zinc-950/95 backdrop-blur-sm">
+          <div className="flex gap-1 px-3 pt-2.5">
+            {(
+              [
+                ['log', '전체 전투'],
+                ['mine', '내 전투'],
+              ] as const
+            ).map(([t, label]) => (
+              <button
+                key={t}
+                type="button"
+                onClick={() => selectTab(t)}
+                className={`flex-1 rounded-lg py-1.5 text-xs font-bold transition ${
+                  tab === t ? 'bg-amber-600 text-white' : 'bg-zinc-900 text-zinc-400'
+                }`}
+              >
+                {label}
+              </button>
+            ))}
+          </div>
+          <div className="flex items-center justify-between gap-2 px-3 py-2">
             <span className="truncate text-[10px] text-zinc-500">
               {tab === 'log' && truncated ? `마지막 ${finale.events.length.toLocaleString()}전` : ''}
             </span>
@@ -860,40 +861,42 @@ export function MeleeResult({ view }: { view: MeleeResultView }) {
               </button>
             </div>
           </div>
-          {displayRows.length === 0 ? (
-            <div className="px-2 py-6 text-center text-[11px] text-zinc-500">
-              {tab === 'mine' && !me ? '참가 시 내 전투가 표시됩니다.' : '전투 기록이 없습니다.'}
-            </div>
-          ) : (
-            <ul>
-              {/* 결승 우승 축하 — 전체 전투 탭 최상단 FINAL 배너(표시 전용). */}
-              {tab === 'log' && championNickname && logData.length > 0 ? (
-                <FinalCard
-                  champion={championNickname}
-                  avatar={podium.find((p) => p.rank === 1)?.avatarUrl ?? null}
-                />
-              ) : null}
-              {displayRows.map((r) => (
-                <RoundCard
-                  key={r.key}
-                  round={r.round}
-                  atk={r.atk}
-                  tgt={r.tgt}
-                  dmg={r.dmg}
-                  hp={r.hp}
-                  atkSeq={r.atkSeq}
-                  defSeq={r.defSeq}
-                  tgtRank={r.tgtRank}
-                  me={myNickname}
-                  onClick={() => {
-                    stopPlay();
-                    play(r.fight);
-                  }}
-                />
-              ))}
-            </ul>
-          )}
-        </section>
+        </div>
+
+        {/* 로그 — 풀폭(별도 박스 없음) */}
+        {displayRows.length === 0 ? (
+          <div className="px-4 py-10 text-center text-[12px] text-zinc-500">
+            {tab === 'mine' && !me ? '참가 시 내 전투가 표시됩니다.' : '전투 기록이 없습니다.'}
+          </div>
+        ) : (
+          <ul>
+            {/* 결승 우승 축하 — 전체 전투 탭 최상단 FINAL 배너(표시 전용). */}
+            {tab === 'log' && championNickname && logData.length > 0 ? (
+              <FinalCard
+                champion={championNickname}
+                avatar={podium.find((p) => p.rank === 1)?.avatarUrl ?? null}
+              />
+            ) : null}
+            {displayRows.map((r) => (
+              <RoundCard
+                key={r.key}
+                round={r.round}
+                atk={r.atk}
+                tgt={r.tgt}
+                dmg={r.dmg}
+                hp={r.hp}
+                atkSeq={r.atkSeq}
+                defSeq={r.defSeq}
+                tgtRank={r.tgtRank}
+                me={myNickname}
+                onClick={() => {
+                  stopPlay();
+                  play(r.fight);
+                }}
+              />
+            ))}
+          </ul>
+        )}
       </div>
     </div>
   );
