@@ -35,6 +35,13 @@ export type MeleeFinale = {
   events: [number, number, number, number][];
 };
 
+/**
+ * "내 전투" 미니로그 1건 — 본인 관점.
+ * [역할(0=내가 공격, 1=내가 피격), 상대 닉네임, 데미지, 타겟 잔여HP(≤0=탈락)].
+ * 역할 0이면 잔여HP=상대, 1이면 잔여HP=나.
+ */
+export type MeleeMyEvent = [0 | 1, string, number, number];
+
 /** §13.1 melee_battles — 하루 1행. */
 export const meleeBattles = pgTable('melee_battles', {
   id: bigserial('id', { mode: 'bigint' }).primaryKey(),
@@ -72,6 +79,8 @@ export const meleeParticipants = pgTable(
     rewardBoxes: jsonb('reward_boxes')
       .$type<{ weapon: number; armor: number; accessory: number }>()
       .notNull(),
+    /** "내 전투" 미니로그 — 본인 관여 이벤트(MeleeMyEvent[]). 등수 무관 항상 조회용. */
+    myEvents: jsonb('my_events').$type<MeleeMyEvent[]>().notNull().default(sql`'[]'::jsonb`),
   },
   (t) => [
     primaryKey({ columns: [t.battleId, t.userId] }),

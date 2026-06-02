@@ -79,10 +79,25 @@ describe('simulateMelee', () => {
   it('소규모 N(=1, 2)', () => {
     const one = simulateMelee(roster(1, () => 5000), 's');
     expect(one.championUserId).toBe('u0');
-    expect(one.ranks).toEqual([{ userId: 'u0', finalRank: 1, killerUserId: null }]);
+    expect(one.ranks).toEqual([{ userId: 'u0', finalRank: 1, killerUserId: null, events: [] }]);
 
     const two = simulateMelee(roster(2, (i) => 1000 * (i + 1)), 's');
     expect(two.ranks.map((r) => r.finalRank).sort()).toEqual([1, 2]);
+  });
+
+  it('내 전투 미니로그 — 첫 탈락 포함 전원이 본인 이벤트 보유', () => {
+    const ps = roster(40, (i) => 1000 + i * 200);
+    const { ranks } = simulateMelee(ps, 'mine');
+    for (const r of ranks) {
+      expect(r.events.length).toBeGreaterThanOrEqual(1); // 죽음(피격) 또는 우승(공격) 최소 1
+    }
+    const last = ranks.find((r) => r.finalRank === 40)!; // 첫 탈락(꼴등)
+    expect(last.events.length).toBeGreaterThanOrEqual(1);
+    const [role, opp, dmg, hp] = last.events.at(-1)!; // 마지막 = 본인 사망
+    expect(role).toBe(1); // 피격(내가 맞음)
+    expect(typeof opp).toBe('string');
+    expect(dmg).toBeGreaterThanOrEqual(1);
+    expect(hp).toBeLessThanOrEqual(0); // 사망
   });
 
   it('전투력이 높을수록 평균 등수가 좋다(여러 시드 통계)', () => {

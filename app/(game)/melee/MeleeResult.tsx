@@ -4,7 +4,7 @@ import { useState } from 'react';
 
 import { MELEE_REPLAY_ROUNDS } from '@/lib/game/balance';
 import { assetUrl } from '@/lib/asset-versions';
-import type { MeleeFinale } from '@/lib/db/schema/melee';
+import type { MeleeFinale, MeleeMyEvent } from '@/lib/db/schema/melee';
 
 export type MeleeResultView = {
   participantCount: number;
@@ -15,7 +15,7 @@ export type MeleeResultView = {
     diamond: number;
     boxes: { weapon: number; armor: number; accessory: number };
   } | null;
-  myUserId: string;
+  myEvents: MeleeMyEvent[];
   finale: MeleeFinale;
 };
 
@@ -71,16 +71,66 @@ function StoryLog({
   );
 }
 
+/** 내 전투 미니로그 — 본인 관점 스토리. role 0=내가 공격, 1=내가 피격. */
+function MyStoryLog({ events, empty }: { events: MeleeMyEvent[]; empty: string }) {
+  if (events.length === 0) {
+    return <div className="px-2 py-6 text-center text-[11px] text-zinc-500">{empty}</div>;
+  }
+  return (
+    <ul className="max-h-[58vh] divide-y divide-zinc-900 overflow-y-auto text-[11px] leading-relaxed">
+      {events.map((e, i) => {
+        const [role, opp, dmg, hp] = e;
+        const killed = hp <= 0;
+        const iAttacked = role === 0;
+        return (
+          <li key={i} className="px-2 py-1.5">
+            {iAttacked ? (
+              <>
+                <span className="font-semibold text-amber-200">나</span>
+                <span className="text-zinc-400">가 </span>
+                <span className="font-semibold text-zinc-200">{opp}</span>
+                <span className="text-zinc-400">를 </span>
+                <span className="font-mono text-amber-300">{dmg.toLocaleString()}</span>
+                <span className="text-zinc-400"> 데미지로 공격 — </span>
+                {killed ? (
+                  <span className="font-bold text-red-400">{opp} 쓰러짐!</span>
+                ) : (
+                  <span className="text-zinc-400">
+                    {opp} 체력 <span className="font-mono text-emerald-300">{hp.toLocaleString()}</span>
+                  </span>
+                )}
+              </>
+            ) : (
+              <>
+                <span className="font-semibold text-zinc-200">{opp}</span>
+                <span className="text-zinc-400">가 </span>
+                <span className="font-semibold text-amber-200">나</span>
+                <span className="text-zinc-400">를 </span>
+                <span className="font-mono text-amber-300">{dmg.toLocaleString()}</span>
+                <span className="text-zinc-400"> 데미지로 공격 — </span>
+                {killed ? (
+                  <span className="font-bold text-red-400">내가 쓰러짐!</span>
+                ) : (
+                  <span className="text-zinc-400">
+                    내 체력 <span className="font-mono text-emerald-300">{hp.toLocaleString()}</span> 남음
+                  </span>
+                )}
+              </>
+            )}
+          </li>
+        );
+      })}
+    </ul>
+  );
+}
+
 export function MeleeResult({ view }: { view: MeleeResultView }) {
   const [tab, setTab] = useState<'all' | 'mine'>('all');
-  const { podium, me, finale, participantCount, championNickname, myUserId } = view;
+  const { podium, me, finale, participantCount, championNickname, myEvents } = view;
   const roster = finale.roster;
   const order = [2, 1, 3]; // 시상대 배치(좌 2위·중 1위·우 3위)
   const byRank = new Map(podium.map((p) => [p.rank, p]));
   const truncated = finale.events.length >= MELEE_REPLAY_ROUNDS;
-
-  const myIdx = roster.findIndex((r) => r.userId === myUserId);
-  const myEvents = myIdx < 0 ? [] : finale.events.filter((e) => e[0] === myIdx || e[1] === myIdx);
 
   return (
     <div className="space-y-4">
@@ -186,14 +236,9 @@ export function MeleeResult({ view }: { view: MeleeResultView }) {
             <StoryLog events={finale.events} roster={roster} empty="전투 기록이 없습니다." />
           </>
         ) : (
-          <StoryLog
+          <MyStoryLog
             events={myEvents}
-            roster={roster}
-            empty={
-              me
-                ? '상위 전투 구간에 등장하지 않았어요 (내 순위는 위에 표시).'
-                : '참가 시 내 전투가 표시됩니다.'
-            }
+            empty={me ? '전투 기록이 없습니다.' : '참가 시 내 전투가 표시됩니다.'}
           />
         )}
         <div className="px-2 py-1 text-center text-[9px] text-zinc-600">

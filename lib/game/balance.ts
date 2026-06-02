@@ -479,6 +479,11 @@ export const MELEE_DMG_MAX = 1.2;
  * 링 버퍼로 O(이 값) 메모리 → N(참가자)=1천만이어도 재생/저장 일정. MELEE §8.
  */
 export const MELEE_REPLAY_ROUNDS = 1000;
+/**
+ * "내 전투" 미니로그 — 참가자별 본인 관여 이벤트 최대 보존 수(등수·규모 무관 항상 조회).
+ * 유저당 실제 ~5~10전이라 거의 안 닿는 안전 상한.
+ */
+export const MELEE_MY_EVENTS_MAX = 40;
 
 export type MeleeReward = { diamond: number; boxes: number };
 

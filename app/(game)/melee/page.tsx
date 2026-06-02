@@ -116,6 +116,7 @@ export default async function MeleePage() {
         rank: meleeParticipants.finalRank,
         diamond: meleeParticipants.rewardDiamond,
         boxes: meleeParticipants.rewardBoxes,
+        myEvents: meleeParticipants.myEvents,
       })
       .from(meleeParticipants)
       .where(and(eq(meleeParticipants.battleId, battle.id), eq(meleeParticipants.userId, userId)))
@@ -131,7 +132,7 @@ export default async function MeleePage() {
     me: meRow
       ? { rank: meRow.rank, diamond: Number(meRow.diamond), boxes: meRow.boxes }
       : null,
-    myUserId: userId,
+    myEvents: meRow?.myEvents ?? [],
     finale,
   };
 
