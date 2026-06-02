@@ -47,8 +47,8 @@ export function MeleeInfo({
         </div>
       </div>
 
-      <div className="space-y-3 px-4 pt-3">
-        <div className="flex gap-1 rounded-xl border border-zinc-800 p-1">
+      <div className="space-y-3 pt-3">
+        <div className="mx-4 flex gap-1 rounded-xl border border-zinc-800 p-1">
           {(
             [
               ['reward', '보상 테이블'],
@@ -69,7 +69,7 @@ export function MeleeInfo({
         </div>
 
         {tab === 'reward' ? (
-          <div className="overflow-hidden rounded-xl border border-zinc-800 bg-zinc-950">
+          <div className="mx-4 overflow-hidden rounded-xl border border-zinc-800 bg-zinc-950">
             <div className="grid grid-cols-[1fr_auto_auto] items-center gap-2 border-b border-zinc-900 px-3 py-2 text-[10px] font-bold text-zinc-500">
               <span>순위</span>
               <span className="w-16 text-right">다이아</span>
@@ -91,11 +91,12 @@ export function MeleeInfo({
             </ul>
           </div>
         ) : history.length === 0 ? (
-          <div className="rounded-xl border border-zinc-800 px-3 py-10 text-center text-[12px] text-zinc-500">
+          <div className="mx-4 rounded-xl border border-zinc-800 px-3 py-10 text-center text-[12px] text-zinc-500">
             아직 발표된 대난투가 없습니다.
           </div>
         ) : (
-          <ul className="overflow-hidden rounded-xl border border-zinc-800 bg-zinc-950">
+          /* 로그처럼 풀폭(엣지-투-엣지, 별도 박스 없음) */
+          <ul className="border-t border-zinc-900/60">
             {history.map((h) => {
               const inner = (
                 <>
