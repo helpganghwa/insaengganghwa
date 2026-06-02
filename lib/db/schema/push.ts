@@ -26,6 +26,8 @@ export const pushCategoryEnum = pgEnum('push_category', [
   'profile',
   /** 카카오 공유 가입 보상 — 신규 가입자 귀속 시 referrer에게 즉시 발송(2026-05-31). */
   'referral',
+  /** 대난투 결과 발표(매일 9:30) — 내 순위 + 챔피언 닉(MELEE §7). */
+  'melee',
 ]);
 
 /**

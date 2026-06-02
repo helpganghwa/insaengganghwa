@@ -36,6 +36,8 @@ export const profiles = pgTable('profiles', {
   pushProfile: boolean('push_profile').notNull().default(true),
   /** 친구 초대(카카오 공유 가입 귀속) 알림 토글 — 기본 ON(2026-05-31). */
   pushReferral: boolean('push_referral').notNull().default(true),
+  /** 대난투 결과 발표 알림 토글 — 기본 ON(MELEE §7). 일일 복귀 푸시 겸함. */
+  pushMelee: boolean('push_melee').notNull().default(true),
   /** 강화 모드 — instant(즉시) | batched(30분 묶음). 기본 instant. */
   pushEnhanceMode: pushEnhanceModeEnum('push_enhance_mode').notNull().default('instant'),
   /**

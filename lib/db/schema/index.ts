@@ -15,3 +15,4 @@ export * from './ops'; // §10 운영/감사/안티치트
 export * from './push'; // §11 PWA Web Push (v1: 강화·레이드·보급)
 export * from './checkin'; // §12 출석 캘린더 (28일 누적·반복)
 export * from './avatar'; // PROFILE — 캐릭터 프로필(8방향 rotations + 자동 검토 + 신고)
+export * from './melee'; // §13 대난투 (Grand Melee) — 단일 글로벌 결정론 난투

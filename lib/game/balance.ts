@@ -464,3 +464,33 @@ export function checkinRewardForDay(day1Indexed: number): CheckinReward {
   if (d < 1 || d > CHECKIN_CYCLE_DAYS) throw new Error(`INVALID_CHECKIN_DAY:${d}`);
   return CHECKIN_CALENDAR[d - 1]!;
 }
+
+// ─────────────────────────────────────────────────────────────────────────────
+// §8. 대난투 (Grand Melee) — MELEE.md. 단일 글로벌 결정론 난투.
+// ─────────────────────────────────────────────────────────────────────────────
+
+/** 시작 HP = 전투력 × 배수. */
+export const MELEE_HP_MULT = 2;
+/** 1회 타격 데미지 = 공격자 전투력 × U(MIN, MAX). 항상 명중. */
+export const MELEE_DMG_MIN = 0.5;
+export const MELEE_DMG_MAX = 1.2;
+/**
+ * 리플레이용 피날레 보존 인원 — 생존자 이 수 이하 구간의 이벤트만 저장.
+ * N(참가자)과 무관하게 상수 크기 로그 → 1천만 명도 재생/저장 일정.
+ */
+export const MELEE_FINALE_SIZE = 50;
+
+export type MeleeReward = { diamond: number; boxes: number };
+
+/**
+ * 등수(1-base) + 총 참가자 N → 보상. 티어 배타(스캔 순서로 첫 매칭 1개만). MELEE §6.
+ * 1위 💎1000+10 · 2~3위 💎500+5 · 상위5% 💎200+3 · 상위20% 💎100+2 · 상위50% 💎50+2 · 나머지 상자1.
+ */
+export function meleeRewardForRank(rank: number, n: number): MeleeReward {
+  if (rank <= 1) return { diamond: 1000, boxes: 10 };
+  if (rank <= 3) return { diamond: 500, boxes: 5 };
+  if (rank <= Math.ceil(n * 0.05)) return { diamond: 200, boxes: 3 };
+  if (rank <= Math.ceil(n * 0.2)) return { diamond: 100, boxes: 2 };
+  if (rank <= Math.ceil(n * 0.5)) return { diamond: 50, boxes: 2 };
+  return { diamond: 0, boxes: 1 };
+}
