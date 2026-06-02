@@ -109,7 +109,7 @@ export function MeleeInfo({
                         alt=""
                         aria-hidden
                         className="absolute left-1/2 w-auto max-w-none -translate-x-1/2"
-                        style={{ imageRendering: 'pixelated', height: '700%', top: '-130%' }}
+                        style={{ imageRendering: 'pixelated', height: '500%', top: '-100%' }}
                       />
                     </div>
                   ) : null}
