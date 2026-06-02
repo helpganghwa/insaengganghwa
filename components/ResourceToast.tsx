@@ -31,27 +31,42 @@ type ToastEntry = ResourceToast | ErrorToast | RankingToast;
 type ToastContextValue = {
   showResource: (icon: string, label: string, delta?: number) => void;
   showError: (message: string) => void;
-  /** 강화 랭킹 변동 — last-wins 디바운스 3s 후 한 번만 노출. */
+  /** 강화 랭킹 변동 — 누적(last-wins)만 하고, 모든 강화 오버레이 종료 시 한 번 노출. */
   showRanking: (before: MyRanks, after: MyRanks) => void;
+  /** 강화 결과 오버레이 시작/종료 신호 — 활성 0 도달 시 누적 랭킹 토스트 release. */
+  beginEnhanceOverlay: () => void;
+  endEnhanceOverlay: () => void;
 };
 
 const ToastContext = createContext<ToastContextValue | null>(null);
 
 export function useResourceToast(): ToastContextValue {
   const ctx = useContext(ToastContext);
-  if (!ctx) return { showResource: () => {}, showError: () => {}, showRanking: () => {} };
+  if (!ctx)
+    return {
+      showResource: () => {},
+      showError: () => {},
+      showRanking: () => {},
+      beginEnhanceOverlay: () => {},
+      endEnhanceOverlay: () => {},
+    };
   return ctx;
 }
 
-const RANKING_DEBOUNCE_MS = 2200;
+// 강화 결과 토스트는 '오버레이 종료' 신호로 release(고정 디바운스 X). 아래는 신호
+// 유실(슬롯 언마운트 등) 대비 강제 release 안전망 시간.
+const RANKING_FALLBACK_MS = 6000;
 const RANKING_TOAST_MS = 4400;
 
 export function ResourceToastProvider({ children }: { children: React.ReactNode }) {
   const [toasts, setToasts] = useState<ToastEntry[]>([]);
   const counterRef = useRef(0);
-  /** 디바운스 큐 — 첫 before 보존, 마지막 after 갱신(last-wins). */
+  /** 누적 큐 — 첫 before 보존, 마지막 after 갱신(last-wins). 모든 오버레이 종료 시 release. */
   const rankingPendingRef = useRef<{ before: MyRanks; after: MyRanks } | null>(null);
-  const rankingTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  /** 활성 강화 결과 오버레이 수 — 0 도달 시 누적 랭킹 토스트 노출. */
+  const overlayCountRef = useRef(0);
+  /** 오버레이 종료 신호 유실 대비 강제 release 타이머. */
+  const rankingFallbackRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   const dismiss = useCallback((id: number) => {
     setToasts((prev) => prev.filter((t) => t.id !== id));
@@ -75,6 +90,23 @@ export function ResourceToastProvider({ children }: { children: React.ReactNode 
     [dismiss],
   );
 
+  // 누적 랭킹 토스트 노출(덮어쓰기 — 최신만). 모든 오버레이 종료 or 안전망에서 호출.
+  const releaseRanking = useCallback(() => {
+    if (rankingFallbackRef.current) {
+      clearTimeout(rankingFallbackRef.current);
+      rankingFallbackRef.current = null;
+    }
+    const data = rankingPendingRef.current;
+    rankingPendingRef.current = null;
+    if (!data) return;
+    const id = ++counterRef.current;
+    setToasts((prev) => [
+      ...prev.filter((t) => t.kind !== 'ranking'),
+      { id, kind: 'ranking', before: data.before, after: data.after },
+    ]);
+    setTimeout(() => dismiss(id), RANKING_TOAST_MS);
+  }, [dismiss]);
+
   const showRanking = useCallback(
     (before: MyRanks, after: MyRanks) => {
       if (rankingPendingRef.current) {
@@ -82,30 +114,33 @@ export function ResourceToastProvider({ children }: { children: React.ReactNode 
       } else {
         rankingPendingRef.current = { before, after };
       }
-      if (rankingTimerRef.current) clearTimeout(rankingTimerRef.current);
-      rankingTimerRef.current = setTimeout(() => {
-        const data = rankingPendingRef.current;
-        rankingPendingRef.current = null;
-        rankingTimerRef.current = null;
-        if (!data) return;
-        const id = ++counterRef.current;
-        // 기존 ranking 토스트는 제거(덮어쓰기) — 아래로 쌓지 않고 최신만 표시.
-        setToasts((prev) => [
-          ...prev.filter((t) => t.kind !== 'ranking'),
-          { id, kind: 'ranking', before: data.before, after: data.after },
-        ]);
-        setTimeout(() => dismiss(id), RANKING_TOAST_MS);
-      }, RANKING_DEBOUNCE_MS);
+      // 노출은 오버레이 종료(end → count 0)에서. 신호 유실 대비 안전망만 재무장.
+      if (rankingFallbackRef.current) clearTimeout(rankingFallbackRef.current);
+      rankingFallbackRef.current = setTimeout(() => {
+        overlayCountRef.current = 0;
+        releaseRanking();
+      }, RANKING_FALLBACK_MS);
     },
-    [dismiss],
+    [releaseRanking],
   );
+
+  // 강화 결과 오버레이 시작/종료 — 활성 0 도달 시 누적 랭킹 토스트 release(슬롯 간 공유).
+  const beginEnhanceOverlay = useCallback(() => {
+    overlayCountRef.current += 1;
+  }, []);
+  const endEnhanceOverlay = useCallback(() => {
+    overlayCountRef.current = Math.max(0, overlayCountRef.current - 1);
+    if (overlayCountRef.current === 0) releaseRanking();
+  }, [releaseRanking]);
 
   // 랭킹 토스트(헤더 슬라이드)와 기타 토스트(중앙 상단) 위치 분리.
   const rankingToasts = toasts.filter((t): t is RankingToast => t.kind === 'ranking');
   const otherToasts = toasts.filter((t) => t.kind !== 'ranking');
 
   return (
-    <ToastContext.Provider value={{ showResource, showError, showRanking }}>
+    <ToastContext.Provider
+      value={{ showResource, showError, showRanking, beginEnhanceOverlay, endEnhanceOverlay }}
+    >
       {children}
       {/* 헤더(h-12=48px) 위 슬라이드 바 — sticky 헤더(z-30)를 덮도록 z-40. */}
       <div className="pointer-events-none fixed inset-x-0 top-0 z-40 overflow-hidden">

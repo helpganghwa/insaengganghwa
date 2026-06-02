@@ -186,7 +186,7 @@ export function EnhanceSlotCard({
   nickname: string;
 }) {
   const router = useRouter();
-  const { showRanking } = useResourceToast();
+  const { showRanking, beginEnhanceOverlay, endEnhanceOverlay } = useResourceToast();
   const { optimisticAdjust: adjustDiamond } = useDiamond();
   const [pending, startTransition] = useTransition();
   const [nowMs, setNowMs] = useState(0); // SSR 매칭 위해 0 → mount 후 동기화
@@ -323,8 +323,10 @@ export function EnhanceSlotCard({
         alert(r.message);
         return;
       }
-      // 강화 결과 토스트 — last-wins 3s 디바운스 후 한 번 노출.
+      // 강화 결과 토스트 — 누적(last-wins)만 하고, 결과 오버레이 종료 시 노출.
+      // 이 슬롯 오버레이 시작 신호(begin) → 종료 setTimeout에서 end → 모든 슬롯 0이면 토스트.
       showRanking(r.ranksBefore, r.ranksAfter);
+      beginEnhanceOverlay();
       const oc = r.result.outcome as Outcome;
       const fromLv = Number(r.result.fromLevel);
       const toLv = Number(r.result.toLevel);
@@ -359,6 +361,7 @@ export function EnhanceSlotCard({
           setFlashMsg(null);
           setFlashFromLevel(null);
           setFlashToLevel(null);
+          endEnhanceOverlay(); // 오버레이 종료 → 활성 0이면 랭킹 토스트 노출
           router.refresh();
         }, 3900);
       } else {
@@ -376,6 +379,7 @@ export function EnhanceSlotCard({
           setFlashMsg(null);
           setFlashFromLevel(null);
           setFlashToLevel(null);
+          endEnhanceOverlay(); // 오버레이 종료 → 활성 0이면 랭킹 토스트 노출
           router.refresh();
         }, 2500);
       }
