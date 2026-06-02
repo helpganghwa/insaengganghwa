@@ -7,6 +7,8 @@ import { MELEE_REWARD_TIERS } from '@/lib/game/balance';
 import { assetUrl } from '@/lib/asset-versions';
 
 export type MeleeHistoryRow = {
+  /** 그 회차 배틀 id — 클릭 시 결과(/melee/battle/[id])로. */
+  battleId: string;
   edition: number;
   championNick: string;
   championCode: string | null;
@@ -133,16 +135,13 @@ export function MeleeInfo({
               );
               return (
                 <li key={h.edition} className="border-b border-zinc-900/60 last:border-b-0">
-                  {h.championCode ? (
-                    <Link
-                      href={`/u/${encodeURIComponent(h.championCode)}`}
-                      className="relative block overflow-hidden transition active:bg-zinc-900/60"
-                    >
-                      {inner}
-                    </Link>
-                  ) : (
-                    <div className="relative overflow-hidden">{inner}</div>
-                  )}
+                  {/* 회차(카드) 클릭 → 그날 결과로 이동. */}
+                  <Link
+                    href={`/melee/battle/${h.battleId}`}
+                    className="relative block overflow-hidden transition active:bg-zinc-900/60"
+                  >
+                    {inner}
+                  </Link>
                 </li>
               );
             })}

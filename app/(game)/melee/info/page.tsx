@@ -87,6 +87,7 @@ export default async function MeleeInfoPage({
       .map((b, i) => {
         const c = b.champ ? champOf.get(b.champ) : undefined;
         return {
+          battleId: b.id.toString(),
           edition: i + 1,
           championNick: c?.nick ?? '챔피언',
           championCode: c?.code ?? null,
