@@ -39,6 +39,7 @@ export default async function ProfilePage() {
     db
       .select({
         nickname: profiles.nickname,
+        publicCode: profiles.publicCode,
         diamond: profiles.diamond,
         nicknameChangedCount: profiles.nicknameChangedCount,
         activeProfileId: profiles.activeProfileId,
@@ -92,6 +93,7 @@ export default async function ProfilePage() {
   const referralStats = _r?.[5] ?? { totalReferrals: 0, totalDiamondEarned: 0, totalBoxEarned: 0 };
 
   const nickname = prof[0]?.nickname ?? '플레이어';
+  const publicCode = prof[0]?.publicCode ?? '';
   const total = combatPowerFromOwned(ownedAll);
   const bySlot = new Map(equipped.map((e) => [e.slot, e]));
 
@@ -115,7 +117,7 @@ export default async function ProfilePage() {
             />
             {activeProfile ? (
               <Link
-                href={`/u/${encodeURIComponent(nickname)}`}
+                href={`/u/${encodeURIComponent(publicCode)}`}
                 aria-label="내 프로필 상세"
                 className="block"
               >
@@ -184,6 +186,7 @@ export default async function ProfilePage() {
 
       <BoastLauncher
         nickname={nickname}
+        publicCode={publicCode}
         total={total}
         profileImg={activeProfile ? dirImg(activeProfile) : null}
         pieces={equipped.map((e) => ({

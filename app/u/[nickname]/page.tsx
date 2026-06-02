@@ -2,7 +2,7 @@ import { Suspense, cache } from 'react';
 import Link from 'next/link';
 import { notFound } from 'next/navigation';
 import type { Metadata } from 'next';
-import { and, eq, inArray, isNotNull } from 'drizzle-orm';
+import { and, eq, inArray, isNotNull, or } from 'drizzle-orm';
 
 import { db } from '@/lib/db/client';
 import { withTimeout } from '@/lib/db/with-timeout';
@@ -24,19 +24,21 @@ import { ReportButton } from './ReportButton';
 const SLOT_LABEL: Record<Slot, string> = { weapon: '무기', armor: '방어구', accessory: '장신구' };
 
 /**
- * 닉네임 → 공개 프로필 데이터(착용 세트 + KPI + 챔피언). 미존재 시 null.
+ * 핸들(공개 코드 또는 닉네임) → 공개 프로필 데이터(착용 세트 + KPI + 챔피언). 미존재 시 null.
+ * publicCode(불변) 우선 + nickname(레거시 공유 링크 하위호환) 둘 다 허용.
  * React cache로 generateMetadata + page render 사이 dedupe — 한 요청 내
  * DB 쿼리 1번만 실행(이전엔 무한 로딩 원인이었음, 2026-06-01).
  */
-const loadProfile = cache(async (nickname: string) => {
+const loadProfile = cache(async (handle: string) => {
   const [prof] = await db
     .select({
       id: profiles.id,
       nickname: profiles.nickname,
+      publicCode: profiles.publicCode,
       activeProfileId: profiles.activeProfileId,
     })
     .from(profiles)
-    .where(eq(profiles.nickname, nickname))
+    .where(or(eq(profiles.publicCode, handle), eq(profiles.nickname, handle)))
     .limit(1);
   if (!prof) return null;
 
@@ -134,6 +136,7 @@ const loadProfile = cache(async (nickname: string) => {
 
   return {
     nickname: prof.nickname,
+    publicCode: prof.publicCode,
     ownerId: prof.id,
     profileId,
     charImg,
@@ -151,12 +154,13 @@ export async function generateMetadata({
   params: Promise<{ nickname: string }>;
 }): Promise<Metadata> {
   const { nickname: raw } = await params;
-  const nickname = decodeURIComponent(raw);
-  const data = await loadProfile(nickname);
+  const handle = decodeURIComponent(raw);
+  const data = await loadProfile(handle);
   if (!data) return { title: '인생강화' };
   const title = `${data.nickname} — 인생강화`;
   const description = `총 전투력 ${data.total.toLocaleString('ko-KR')}.`;
-  const ogImage = `/og/${encodeURIComponent(nickname)}`;
+  // OG는 불변 코드로 — 닉 변경/링크 캐시에도 안정.
+  const ogImage = `/og/${encodeURIComponent(data.publicCode)}`;
   return {
     title,
     description,
@@ -468,6 +472,7 @@ export default async function PublicProfilePage({
         {mode === 'self' ? (
           <BoastLauncher
             nickname={data.nickname}
+            publicCode={data.publicCode}
             total={data.total}
             profileImg={data.charImg}
             pieces={data.equipped.map((e) => ({
@@ -486,6 +491,7 @@ export default async function PublicProfilePage({
           <>
             <BoastLauncher
               nickname={data.nickname}
+              publicCode={data.publicCode}
               total={data.total}
               profileImg={data.charImg}
               pieces={data.equipped.map((e) => ({

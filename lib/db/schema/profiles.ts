@@ -15,6 +15,12 @@ export const profiles = pgTable('profiles', {
   /** = auth.users.id (Supabase). FK는 DB 레벨에서 auth.users 참조(마이그레이션에서 설정). */
   id: uuid('id').primaryKey(),
   nickname: text('nickname').notNull().unique(),
+  /**
+   * 불변 공개 식별자(base62 8자) — /u·/og·/s·추천 링크의 안정 URL 키.
+   * 닉네임은 변경/재사용 가능 → 외부 공유·OG·추천 링크가 깨지므로 코드로 식별.
+   * DB에서 가입 시 DEFAULT gen_public_code()로 자동 부여(마이그레이션 0021). 절대 변경 안 함.
+   */
+  publicCode: text('public_code').notNull().unique(),
   /** 단일 프리미엄 재화(=보석, BALANCE §6.1). int32 회피 위해 bigint. */
   diamond: bigint('diamond', { mode: 'bigint' }).notNull().default(sql`0`),
   isAdult: boolean('is_adult').notNull().default(false),

@@ -19,6 +19,8 @@ export type LeaderboardMetric = 'max' | 'sum' | 'combat';
 export type LeaderboardEntry = {
   userId: string;
   nickname: string;
+  /** 불변 공개 코드 — /u 링크 식별자(닉 변경 무관). */
+  publicCode: string;
   value: number;
   rank: number;
   /** 대표 프로필 이미지 URL(없으면 null) */
@@ -66,12 +68,13 @@ async function maxRows() {
     .select({
       userId: equipmentInstances.userId,
       nickname: profiles.nickname,
+      publicCode: profiles.publicCode,
       value: sql<number>`max(${equipmentInstances.enhanceLevel})::int`,
     })
     .from(equipmentInstances)
     .innerJoin(profiles, eq(profiles.id, equipmentInstances.userId))
-    .groupBy(equipmentInstances.userId, profiles.nickname);
-  return r.map((x) => ({ userId: x.userId, nickname: x.nickname, value: Number(x.value) }));
+    .groupBy(equipmentInstances.userId, profiles.nickname, profiles.publicCode);
+  return r.map((x) => ({ userId: x.userId, nickname: x.nickname, publicCode: x.publicCode, value: Number(x.value) }));
 }
 
 async function sumRows() {
@@ -82,19 +85,20 @@ async function sumRows() {
     .select({
       userId: equipmentInstances.userId,
       nickname: profiles.nickname,
+      publicCode: profiles.publicCode,
       value: sql<number>`coalesce(sum(${equipmentInstances.enhanceLevel}),0)::int`,
     })
     .from(equipmentInstances)
     .innerJoin(profiles, eq(profiles.id, equipmentInstances.userId))
-    .groupBy(equipmentInstances.userId, profiles.nickname);
-  return r.map((x) => ({ userId: x.userId, nickname: x.nickname, value: Number(x.value) }));
+    .groupBy(equipmentInstances.userId, profiles.nickname, profiles.publicCode);
+  return r.map((x) => ({ userId: x.userId, nickname: x.nickname, publicCode: x.publicCode, value: Number(x.value) }));
 }
 
 async function combatRows() {
   // 단일 SQL aggregate — 유저별 보유 전 인스턴스를 [catalog, L, T]로 json_agg(풀 점유 1쿼리).
   // 카탈로그 dedup·최강 선택은 앱에서(pieceCombatPower 단일 진실, SQL 공식 중복 금지).
   const rows = (await db.execute(sql`
-    select p.id::text as id, p.nickname,
+    select p.id::text as id, p.nickname, p.public_code,
            coalesce(
              json_agg(json_build_array(e.catalog_item_id, e.enhance_level, e.transcend_level))
                filter (where e.user_id is not null),
@@ -102,11 +106,17 @@ async function combatRows() {
            ) as items
     from profiles p
     left join equipment_instances e on e.user_id = p.id
-    group by p.id, p.nickname
-  `)) as unknown as { id: string; nickname: string; items: [number, number, number][] }[];
+    group by p.id, p.nickname, p.public_code
+  `)) as unknown as {
+    id: string;
+    nickname: string;
+    public_code: string;
+    items: [number, number, number][];
+  }[];
   return rows.map((r) => ({
     userId: r.id,
     nickname: r.nickname,
+    publicCode: r.public_code,
     value: combatPowerFromOwned(
       r.items.map(([catalogItemId, enhanceLevel, transcendLevel]) => ({
         catalogItemId,

@@ -20,6 +20,8 @@ const TOP = 10;
 export type ItemRankEntry = {
   userId: string;
   nickname: string;
+  /** 불변 공개 코드 — /u 링크 식별자. */
+  publicCode: string;
   maxLevel: number;
   rank: number;
 };
@@ -30,6 +32,7 @@ export async function getItemTop10(catalogItemId: number): Promise<ItemRankEntry
     .select({
       userId: userCodex.userId,
       nickname: profiles.nickname,
+      publicCode: profiles.publicCode,
       maxLevel: userCodex.maxEnhanceLevel,
     })
     .from(userCodex)

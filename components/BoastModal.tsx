@@ -28,12 +28,14 @@ export type BoastPiece = {
 /**
  * 자랑/공유 모달 — WIREFRAMES §10. 두 단위: 'set'(3슬롯 세트) / 'piece'(장비 1개).
  * 등급 표기 없음(시스템 미존재) — 강화/초월/전투력으로 표현(CLAUDE §3.7).
- * 공유 URL은 짧은 링크 /s/<nickname> (→ /u/<nickname> 공개 프로필, 동적 OG).
+ * 공유·OG URL은 불변 공개 코드 기반(/s/<code> → /u/<code>) — 닉 변경에도 안 깨짐.
+ * 닉네임은 표시(타이틀·미리보기)용으로만 사용.
  */
 export function BoastModal({
   open,
   onClose,
   nickname,
+  publicCode,
   kind,
   set,
   piece,
@@ -43,6 +45,8 @@ export function BoastModal({
   open: boolean;
   onClose: () => void;
   nickname: string;
+  /** 불변 공개 코드 — 공유/OG 링크 식별자. */
+  publicCode: string;
   kind: 'set' | 'piece';
   set?: { pieces: BoastPiece[]; total: number };
   piece?: { p: BoastPiece; cp: number };
@@ -64,9 +68,9 @@ export function BoastModal({
 
   useEffect(() => {
     if (typeof window !== 'undefined') {
-      setShareUrl(`${window.location.origin}/s/${encodeURIComponent(nickname)}`);
+      setShareUrl(`${window.location.origin}/s/${encodeURIComponent(publicCode)}`);
     }
-  }, [nickname]);
+  }, [publicCode]);
 
   useEffect(() => {
     if (!open) return;
@@ -107,9 +111,9 @@ export function BoastModal({
       params.set('focus', 'set');
       params.set('cp', String(set.total));
     }
-    return `${origin}/og/${encodeURIComponent(nickname)}?${params.toString()}`;
+    return `${origin}/og/${encodeURIComponent(publicCode)}?${params.toString()}`;
   }, [
-    open, kind, nickname,
+    open, kind, publicCode,
     piece?.p.code, piece?.p.enhanceLevel, piece?.p.transcendLevel,
     set?.total,
   ]);
@@ -175,7 +179,7 @@ export function BoastModal({
       params.set('focus', 'set');
       params.set('cp', String(set.total));
     }
-    const imageUrl = `${origin}/og/${encodeURIComponent(nickname)}?${params.toString()}`;
+    const imageUrl = `${origin}/og/${encodeURIComponent(publicCode)}?${params.toString()}`;
     const startUrl = `${origin}/`;
     k.Share.sendDefault({
       objectType: 'feed',
@@ -368,6 +372,7 @@ export function BoastModal({
 /** 서버 컴포넌트에서 쓰는 자랑 버튼 런처(세트 단위). compact=헤더용 작은 칩 형태. */
 export function BoastLauncher({
   nickname,
+  publicCode,
   pieces,
   total,
   profileImg,
@@ -375,6 +380,8 @@ export function BoastLauncher({
   label,
 }: {
   nickname: string;
+  /** 불변 공개 코드 — 공유/OG 링크 식별자. */
+  publicCode: string;
   pieces: BoastPiece[];
   total: number;
   profileImg?: string | null;
@@ -410,6 +417,7 @@ export function BoastLauncher({
         open={open}
         onClose={() => setOpen(false)}
         nickname={nickname}
+        publicCode={publicCode}
         kind="set"
         set={{ pieces, total }}
         profileImg={profileImg ?? null}

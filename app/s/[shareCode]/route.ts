@@ -10,7 +10,8 @@ import { raids } from '@/lib/db/schema/raid';
  * 분기(2026-06-01):
  *  1) 영숫자 10자(base36) + raids.share_code 매칭 → /raid/<raidId> 리다이렉트
  *     (레이드 초대 — 카카오 공유 wiring 결과).
- *  2) 그 외 → /u/<nickname> 공개 프로필 + pending_referral 쿠키.
+ *  2) 그 외 → /u/<code|nickname> 공개 프로필 + pending_referral 쿠키.
+ *     (불변 공개 코드 8자 또는 레거시 닉네임 — /u·referral 리졸루션이 둘 다 허용.)
  *
  * 가입 귀속(referral, 2026-05-31):
  *  - shareCode를 'pending_referral' 쿠키에 7일 저장(SameSite=Lax, Path=/).

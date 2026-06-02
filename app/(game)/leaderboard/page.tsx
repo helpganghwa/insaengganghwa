@@ -105,7 +105,7 @@ export default async function LeaderboardPage({
                   return (
                     <Link
                       key={entry.userId}
-                      href={`/u/${encodeURIComponent(entry.nickname)}`}
+                      href={`/u/${encodeURIComponent(entry.publicCode)}`}
                       className={`flex min-w-0 flex-1 flex-col items-center self-stretch ${
                         first ? 'z-10' : ''
                       }`}
@@ -159,7 +159,7 @@ export default async function LeaderboardPage({
                   return (
                     <li key={e.userId}>
                       <Link
-                        href={`/u/${encodeURIComponent(e.nickname)}`}
+                        href={`/u/${encodeURIComponent(e.publicCode)}`}
                         className={`flex h-12 items-center gap-2.5 border-b border-zinc-800 px-3 last:border-b-0 ${
                           me ? 'bg-amber-400/10 ring-1 ring-inset ring-amber-400/60' : ''
                         }`}

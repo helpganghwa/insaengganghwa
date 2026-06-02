@@ -72,6 +72,7 @@ export default async function RaidDetail({ params }: { params: Promise<{ raidId:
         attacksUsed: raidParticipants.attacksUsed,
         extraAttacks: raidParticipants.extraAttacks,
         nickname: profiles.nickname,
+        publicCode: profiles.publicCode,
       })
       .from(raidParticipants)
       .innerJoin(profiles, eq(profiles.id, raidParticipants.userId))
@@ -84,6 +85,7 @@ export default async function RaidDetail({ params }: { params: Promise<{ raidId:
     attacksUsed: number;
     extraAttacks: number;
     nickname: string;
+    publicCode: string;
   }[]);
 
   const total = parts.reduce((s, p) => s + Number(p.totalDamage), 0);
@@ -146,6 +148,7 @@ export default async function RaidDetail({ params }: { params: Promise<{ raidId:
     participants: parts
       .map((p) => ({
         nickname: p.nickname,
+        publicCode: p.publicCode,
         totalDamage: Number(p.totalDamage),
         isMe: p.userId === userId,
       }))

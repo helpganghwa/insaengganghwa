@@ -90,7 +90,7 @@ export async function RankingTop3Card() {
             return (
               <Link
                 key={entry.userId}
-                href={`/u/${encodeURIComponent(entry.nickname)}`}
+                href={`/u/${encodeURIComponent(entry.publicCode)}`}
                 className={`flex min-w-0 flex-1 flex-col items-center self-stretch ${
                   first ? 'z-10' : ''
                 }`}

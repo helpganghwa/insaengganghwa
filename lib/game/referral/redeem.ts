@@ -1,6 +1,6 @@
 import 'server-only';
 
-import { eq } from 'drizzle-orm';
+import { eq, or } from 'drizzle-orm';
 
 import { db } from '@/lib/db/client';
 import { profiles } from '@/lib/db/schema/profiles';
@@ -30,7 +30,7 @@ export class ReferralError extends Error {
  * - 현재: mailbox에 type='reward' row 적재 → 사용자가 우편함에서 명시적 수령.
  *   referrer는 신규 가입 즉시 push 알림으로 인지.
  *
- * - shareCode = referrer nickname (현재 /s/[shareCode] → /u/<nickname> 패턴).
+ * - shareCode = referrer 공개 코드(신규) 또는 닉네임(레거시 링크 하위호환).
  * - 멱등: referral_attributions(new_user_id UNIQUE) — 두 번째 호출 ALREADY_REDEEMED.
  * - 단일 트랜잭션(attribute row + mailbox row + rewarded=true), 푸시는 tx 밖.
  */
@@ -43,7 +43,7 @@ export async function attributeReferralFromShare(
     const [referrer] = await tx
       .select({ id: profiles.id, nickname: profiles.nickname })
       .from(profiles)
-      .where(eq(profiles.nickname, shareCode))
+      .where(or(eq(profiles.publicCode, shareCode), eq(profiles.nickname, shareCode)))
       .limit(1);
     if (!referrer) return null;
 

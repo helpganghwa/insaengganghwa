@@ -44,7 +44,7 @@ export type RaidView = {
     boxes: Record<SupplySlot, number>;
     claimed: boolean;
   } | null;
-  participants: { nickname: string; totalDamage: number; isMe: boolean }[];
+  participants: { nickname: string; publicCode: string; totalDamage: number; isMe: boolean }[];
 };
 
 const MEDAL = ['🥇', '🥈', '🥉'];
@@ -601,9 +601,9 @@ export function RaidSessionCard({ view: v }: { view: RaidView }) {
                     <span className="w-5 shrink-0 text-center">
                       {MEDAL[i] ?? <span className="text-zinc-500">{i + 1}</span>}
                     </span>
-                    {/* 닉네임 클릭 → 본인 포함 모두 /u/<nickname> 공개 프로필. */}
+                    {/* 닉네임 클릭 → 본인 포함 모두 /u/<code> 공개 프로필(불변 코드). */}
                     <Link
-                      href={`/u/${encodeURIComponent(p.nickname)}`}
+                      href={`/u/${encodeURIComponent(p.publicCode)}`}
                       className="min-w-0 flex-1 truncate font-medium hover:underline"
                     >
                       {p.nickname}

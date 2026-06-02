@@ -1,5 +1,5 @@
 import { ImageResponse } from 'next/og';
-import { and, eq, isNotNull } from 'drizzle-orm';
+import { and, eq, isNotNull, or } from 'drizzle-orm';
 
 import { db } from '@/lib/db/client';
 import { profiles } from '@/lib/db/schema/profiles';
@@ -147,7 +147,8 @@ async function dataUri(url: string): Promise<string | null> {
 export async function GET(_req: Request, { params }: { params: Promise<{ shareCode: string }> }) {
   const { shareCode } = await params;
   const url = new URL(_req.url);
-  const nickname = decodeURIComponent(shareCode);
+  // shareCode = 불변 공개 코드(신규) 또는 닉네임(레거시 링크 하위호환).
+  const handle = decodeURIComponent(shareCode);
   const origin = url.origin;
   // 카카오 공유 query — focus=piece면 sprite 1개 강조 모드(아래 분기).
   const focus = url.searchParams.get('focus'); // 'piece' | 'set' | null
@@ -162,8 +163,11 @@ export async function GET(_req: Request, { params }: { params: Promise<{ shareCo
       activeProfileId: profiles.activeProfileId,
     })
     .from(profiles)
-    .where(eq(profiles.nickname, nickname))
+    .where(or(eq(profiles.publicCode, handle), eq(profiles.nickname, handle)))
     .limit(1);
+
+  // 카드 표시 닉네임 — 조회된 현재 닉(없으면 핸들 폴백).
+  const nickname = prof?.nickname ?? handle;
 
   // 사용자 결정: OG 카드에는 타이틀+닉네임+장비 정보만 노출(전투력·도메인 제거).
   // 따라서 codex 합계 쿼리 + total 계산 제거 — OG 응답 빠르게.
