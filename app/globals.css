@@ -254,10 +254,9 @@ html {
   100% { opacity: 0; transform: translateY(8px); }
 }
 
-/* 대난투 결승 WINNER 토스트 — 위에서 내려옴(opacity 100 유지) / 사라질 때 위로 올라감. */
+/* 대난투 결승 WINNER 토스트 — 위에서 내려옴 / 사라질 때 위로(오버슈트 없음, 같은 속도). */
 @keyframes winner-drop {
   0% { transform: translateY(-100%); }
-  55% { transform: translateY(5%); }
   100% { transform: translateY(0); }
 }
 @keyframes winner-up {

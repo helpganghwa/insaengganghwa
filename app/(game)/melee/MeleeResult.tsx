@@ -300,8 +300,8 @@ function FightStage({
               className="pointer-events-none fixed inset-x-0 top-0 z-[60]"
               style={{
                 animation: winnerExit
-                  ? 'winner-up 0.4s ease-in forwards'
-                  : 'winner-drop 0.55s cubic-bezier(0.22,1,0.36,1) both',
+                  ? 'winner-up 0.45s cubic-bezier(0.22,1,0.36,1) forwards'
+                  : 'winner-drop 0.45s cubic-bezier(0.22,1,0.36,1) both',
               }}
             >
               <div className="mx-auto flex h-12 max-w-[390px] items-center justify-center gap-2.5 border-b border-amber-500/40 bg-zinc-950/95 shadow-[0_4px_16px_rgba(0,0,0,0.5)] backdrop-blur-sm">
@@ -558,7 +558,7 @@ function FinalCard({ champion, avatar }: { champion: string; avatar: string | nu
             alt=""
             aria-hidden
             className="absolute left-1/2 w-auto max-w-none -translate-x-1/2"
-            style={{ imageRendering: 'pixelated', height: '1000%', top: '-170%' }}
+            style={{ imageRendering: 'pixelated', height: '700%', top: '-130%' }}
           />
         </div>
       ) : null}
