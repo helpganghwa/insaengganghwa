@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useEffect, useState, type ReactNode } from 'react';
 import Link from 'next/link';
 
 import { MELEE_REPLAY_ROUNDS, MELEE_HP_MULT } from '@/lib/game/balance';
@@ -40,11 +40,38 @@ type Fight = {
   dmg: number;
   hpAfter: number;
   tgtMaxHp?: number;
+  /** 공격자의 현재 HP / 최대 HP(양쪽 HP바 영역 일치용). */
+  atkHp?: number;
+  atkMaxHp?: number;
   /** 이 라운드 진행 중 아레나 생존자 수(상단 표시). */
   survivors?: number;
 };
 
 const clampPct = (v: number) => Math.max(0, Math.min(100, v));
+
+/** 닉네임 → 프로필 상세 경로(/u/[nickname]). 미상('?')이면 링크 없음. */
+const hrefOf = (nick: string) => (nick && nick !== '?' ? `/u/${encodeURIComponent(nick)}` : undefined);
+
+/** href가 있으면 Link, 없으면 span으로 감싸는 헬퍼(아바타 → 프로필 상세). */
+function LinkOrSpan({
+  href,
+  className,
+  ariaLabel,
+  children,
+}: {
+  href?: string;
+  className?: string;
+  ariaLabel?: string;
+  children: ReactNode;
+}) {
+  if (href)
+    return (
+      <Link href={href} className={className} aria-label={ariaLabel}>
+        {children}
+      </Link>
+    );
+  return <span className={className}>{children}</span>;
+}
 /** 내 전투 상대(아바타 미상)·폴백용 기본 지급 아바타. */
 const DEFAULT_AVATAR = '/sprites/default/male/south.png';
 
@@ -90,6 +117,7 @@ function hpColor(pct: number): string {
 function Fighter({
   name,
   avatar,
+  href,
   side,
   role,
   shake,
@@ -100,6 +128,8 @@ function Fighter({
 }: {
   name: string;
   avatar: string | null;
+  /** 아바타 탭 시 이동할 프로필 상세 링크. */
+  href?: string;
   side: 'l' | 'r';
   role: 'atk' | 'def';
   shake: boolean;
@@ -149,24 +179,26 @@ function Fighter({
             -{dmg.toLocaleString()}
           </div>
         ) : null}
-        {/* 사망 시 색→투명 전환(transition) */}
+        {/* 사망 시 색→투명 전환(transition). 아바타 탭 시 프로필 상세. */}
         <div
           className="h-full w-full transition-all duration-500 ease-out"
           style={{ opacity: faded ? 0.25 : 1, filter: faded ? 'grayscale(1)' : 'none' }}
         >
           {avatar ? (
-            // eslint-disable-next-line @next/next/no-img-element
-            <img
-              src={avatar}
-              alt={name}
-              className="h-full w-full object-contain object-bottom drop-shadow-[0_2px_5px_rgba(0,0,0,0.85)]"
-              style={{
-                imageRendering: 'pixelated',
-                // +20% 확대 + 아래로 이동(닉네임~라벨 사이에 위치). origin bottom으로 발끝 고정. side r는 좌우반전.
-                transform: `translateY(14px) scale(1.2) scaleX(${side === 'r' ? -1 : 1})`,
-                transformOrigin: 'center bottom',
-              }}
-            />
+            <LinkOrSpan href={href} className="block h-full w-full" ariaLabel={`${name} 프로필`}>
+              {/* eslint-disable-next-line @next/next/no-img-element */}
+              <img
+                src={avatar}
+                alt={name}
+                className="h-full w-full object-contain object-bottom drop-shadow-[0_2px_5px_rgba(0,0,0,0.85)]"
+                style={{
+                  imageRendering: 'pixelated',
+                  // +20% 확대 + 아래로 이동(닉네임~라벨 사이에 위치). origin bottom으로 발끝 고정. side r는 좌우반전.
+                  transform: `translateY(26px) scale(1.2) scaleX(${side === 'r' ? -1 : 1})`,
+                  transformOrigin: 'center bottom',
+                }}
+              />
+            </LinkOrSpan>
           ) : (
             <div className="flex h-full w-full items-center justify-center text-3xl font-extrabold text-zinc-400">
               {name.slice(0, 1)}
@@ -225,12 +257,24 @@ function FightStage({
       {/* 중단: 화면 2분할 — 각 절반 중앙에 파이터 배치 */}
       <div className="relative z-10 grid min-h-0 flex-1 grid-cols-2 items-center overflow-hidden">
         <div className="flex justify-center">
-          <Fighter name={fight.atkName} avatar={fight.atkAvatar} side="l" role="atk" shake={false} />
+          <Fighter
+            name={fight.atkName}
+            avatar={fight.atkAvatar}
+            href={hrefOf(fight.atkName)}
+            side="l"
+            role="atk"
+            shake={false}
+            // 공격자도 HP바 노출(영역 일치). 공격자는 피격 안 함 → 정적(드레인 없음). 미상이면 풀 바.
+            hp={fight.atkHp ?? fight.atkMaxHp ?? 1}
+            hpBefore={fight.atkHp ?? fight.atkMaxHp ?? 1}
+            maxHp={fight.atkMaxHp ?? fight.atkHp ?? 1}
+          />
         </div>
         <div className="flex justify-center">
           <Fighter
             name={fight.tgtName}
             avatar={fight.tgtAvatar}
+            href={hrefOf(fight.tgtName)}
             side="r"
             role="def"
             shake
@@ -242,8 +286,8 @@ function FightStage({
           />
         </div>
       </div>
-      {/* 하단: 판타지 내레이션(잘리지 않게 고정) */}
-      <div className="relative z-10 shrink-0 px-3 pb-2.5 text-center text-[11px] italic leading-snug text-zinc-100 drop-shadow">
+      {/* 하단: 판타지 내레이션(잘리지 않게 고정, 단어 단위 개행) */}
+      <div className="relative z-10 mt-1 shrink-0 break-keep px-4 pb-3.5 text-center text-[11px] italic leading-snug text-zinc-100 drop-shadow">
         {narration}
       </div>
       <button
@@ -287,29 +331,34 @@ function RankingView({
                 <span className="font-mono text-[11px] font-bold tabular-nums text-amber-300 text-pixel-outline">
                   #{slot}
                 </span>
-                <span className="max-w-[72px] truncate text-[11px] font-medium text-white text-pixel-outline">
+                <span className="max-w-[80px] truncate text-[11px] font-medium text-white text-pixel-outline">
                   {p?.nickname ?? '—'}
                 </span>
-                {first && p ? <span className="shrink-0 text-[11px] leading-none">👑</span> : null}
               </div>
-              {/* object-bottom + 동일 박스 하단선(items-end) → 발끝 통일. scale은 origin bottom이라 발끝 고정. */}
+              {/* object-bottom + 동일 박스 하단선(items-end) → 발끝 통일. 탭하면 프로필 상세. */}
               <div className="relative h-36 w-full">
                 {p?.avatarUrl ? (
-                  // eslint-disable-next-line @next/next/no-img-element
-                  <img
-                    src={p.avatarUrl}
-                    alt=""
-                    aria-hidden
-                    draggable={false}
-                    className="absolute inset-0 h-full w-full object-contain object-bottom"
-                    style={{
-                      imageRendering: 'pixelated',
-                      // 1~3등 동일 크기 + 20px 아래로(바닥에 더 붙게). origin bottom으로 발끝 통일.
-                      transform: 'translateY(20px) scale(1.5)',
-                      transformOrigin: 'center bottom',
-                      filter: 'drop-shadow(0 3px 5px rgba(0,0,0,0.6))',
-                    }}
-                  />
+                  <LinkOrSpan
+                    href={hrefOf(p.nickname ?? '?')}
+                    className="absolute inset-0 block"
+                    ariaLabel={p.nickname ? `${p.nickname} 프로필` : undefined}
+                  >
+                    {/* eslint-disable-next-line @next/next/no-img-element */}
+                    <img
+                      src={p.avatarUrl}
+                      alt=""
+                      aria-hidden
+                      draggable={false}
+                      className="h-full w-full object-contain object-bottom"
+                      style={{
+                        imageRendering: 'pixelated',
+                        // 1~3등 동일 크기 + 25px 아래로(바닥에 더 붙게). origin bottom으로 발끝 통일.
+                        transform: 'translateY(25px) scale(1.5)',
+                        transformOrigin: 'center bottom',
+                        filter: 'drop-shadow(0 3px 5px rgba(0,0,0,0.6))',
+                      }}
+                    />
+                  </LinkOrSpan>
                 ) : null}
               </div>
               <span className="pb-0.5 text-[9px] font-medium text-amber-100 text-pixel-outline">
@@ -455,15 +504,20 @@ export function MeleeResult({ view }: { view: MeleeResultView }) {
   // 누적 공격/방어 횟수(리플레이 윈도 내 시간순). 미절단이면 절대값, 절단이면 윈도 기준.
   const atkSeqMap = new Map<number, number>();
   const defSeqMap = new Map<number, number>();
+  const curHp = new Map<number, number>(); // 로컬 idx → 현재 HP(공격자 HP 표시용). 미기록=풀 HP 간주.
   const logData: Row[] = finale.events.map((e, i) => {
     const round = finaleStart + i + 1;
     const atk = roster[e[0]]?.nickname ?? '?';
     const tgt = roster[e[1]]?.nickname ?? '?';
     const tgtCp = roster[e[1]]?.cp ?? 0;
+    const atkCp = roster[e[0]]?.cp ?? 0;
     const atkSeq = (atkSeqMap.get(e[0]) ?? 0) + 1;
     atkSeqMap.set(e[0], atkSeq);
     const defSeq = (defSeqMap.get(e[1]) ?? 0) + 1;
     defSeqMap.set(e[1], defSeq);
+    const atkMaxHp = atkCp > 0 ? atkCp * MELEE_HP_MULT : undefined;
+    const atkHp = curHp.get(e[0]) ?? atkMaxHp; // 공격자는 피격 안 함 → 마지막 기록(없으면 풀)
+    curHp.set(e[1], e[3]); // 타겟 HP 갱신(다음에 공격자로 나올 때 반영)
     return {
       key: round,
       round,
@@ -483,6 +537,8 @@ export function MeleeResult({ view }: { view: MeleeResultView }) {
         dmg: e[2],
         hpAfter: e[3],
         tgtMaxHp: tgtCp > 0 ? tgtCp * MELEE_HP_MULT : undefined,
+        atkHp,
+        atkMaxHp,
         survivors: aliveByRound.get(round),
       },
     };
@@ -518,6 +574,9 @@ export function MeleeResult({ view }: { view: MeleeResultView }) {
         dmg,
         hpAfter: hp,
         tgtMaxHp: role === 1 && myCp > 0 ? myCp * MELEE_HP_MULT : undefined,
+        // 내가 공격자(role 0)면 내 최대 HP는 알지만 현재 HP는 미상 → 풀 바로 표시. 상대 공격자는 미상.
+        atkMaxHp: role === 0 && myCp > 0 ? myCp * MELEE_HP_MULT : undefined,
+        atkHp: role === 0 && myCp > 0 ? myCp * MELEE_HP_MULT : undefined,
         survivors: aliveByRound.get(round) ?? (role === 1 && hp <= 0 ? me?.rank : undefined),
       },
     };
