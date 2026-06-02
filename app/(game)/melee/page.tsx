@@ -48,6 +48,7 @@ export default async function MeleePage() {
         id: meleeBattles.id,
         status: meleeBattles.status,
         participantCount: meleeBattles.participantCount,
+        totalRounds: meleeBattles.totalRounds,
         championUserId: meleeBattles.championUserId,
         finale: meleeBattles.finale,
       })
@@ -135,6 +136,7 @@ export default async function MeleePage() {
         diamond: meleeParticipants.rewardDiamond,
         boxes: meleeParticipants.rewardBoxes,
         myEvents: meleeParticipants.myEvents,
+        cp: meleeParticipants.cpSnapshot,
         nickname: profiles.nickname,
       })
       .from(meleeParticipants)
@@ -155,6 +157,8 @@ export default async function MeleePage() {
     myEvents: meRow?.myEvents ?? [],
     myNickname: meRow?.nickname ?? '',
     myAvatar: avatarOf.get(userId) ?? null,
+    myCp: meRow ? Number(meRow.cp) : 0,
+    totalRounds: battle.totalRounds,
     finale,
     rosterAvatars,
   };

@@ -85,6 +85,7 @@ export async function runMelee(): Promise<{ ran: boolean; battleId?: string; par
       seed: battleDate,
       status: 'computed',
       participantCount: n,
+      totalRounds: result.totalRounds,
       championUserId: result.championUserId || null,
       finale: result.finale,
       computedAt: new Date(),

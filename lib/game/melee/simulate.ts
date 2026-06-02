@@ -36,6 +36,7 @@ export type MeleeSimResult = {
   ranks: MeleeRankResult[];
   championUserId: string;
   finale: MeleeFinale;
+  totalRounds: number;
 };
 
 export function simulateMelee(
@@ -43,7 +44,8 @@ export function simulateMelee(
   seed: string,
 ): MeleeSimResult {
   const n = participants.length;
-  if (n === 0) return { ranks: [], championUserId: '', finale: { roster: [], events: [] } };
+  if (n === 0)
+    return { ranks: [], championUserId: '', finale: { roster: [], events: [] }, totalRounds: 0 };
   if (n === 1) {
     const p = participants[0]!;
     return {
@@ -52,6 +54,7 @@ export function simulateMelee(
       ],
       championUserId: p.userId,
       finale: { roster: [{ userId: p.userId, nickname: p.nickname, cp: p.cp, rank: 1 }], events: [] },
+      totalRounds: 0,
     };
   }
 
@@ -109,9 +112,9 @@ export function simulateMelee(
 
     atkCnt[attacker]!++;
     defCnt[target]!++;
-    // 내 전투 미니로그 — 공격자/타겟 양쪽 본인 관점으로 기록.
-    pushMy(attacker, [0, participants[target]!.nickname, dmg, hpAfter]);
-    pushMy(target, [1, participants[attacker]!.nickname, dmg, hpAfter]);
+    // 내 전투 미니로그 — 공격자/타겟 양쪽 본인 관점으로 기록(rounds = 1-based 라운드).
+    pushMy(attacker, [0, participants[target]!.nickname, dmg, hpAfter, rounds]);
+    pushMy(target, [1, participants[attacker]!.nickname, dmg, hpAfter, rounds]);
 
     if (killed) {
       finalRank[target] = worstRank;
@@ -159,5 +162,5 @@ export function simulateMelee(
     events.push([local(rA[s]!), local(rT[s]!), rD[s]!, rH[s]!]);
   }
 
-  return { ranks, championUserId: participants[champ]!.userId, finale: { roster, events } };
+  return { ranks, championUserId: participants[champ]!.userId, finale: { roster, events }, totalRounds: rounds };
 }

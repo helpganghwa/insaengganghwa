@@ -37,10 +37,10 @@ export type MeleeFinale = {
 
 /**
  * "내 전투" 미니로그 1건 — 본인 관점.
- * [역할(0=내가 공격, 1=내가 피격), 상대 닉네임, 데미지, 타겟 잔여HP(≤0=탈락)].
+ * [역할(0=내가 공격, 1=내가 피격), 상대 닉네임, 데미지, 타겟 잔여HP(≤0=탈락), 라운드].
  * 역할 0이면 잔여HP=상대, 1이면 잔여HP=나.
  */
-export type MeleeMyEvent = [0 | 1, string, number, number];
+export type MeleeMyEvent = [0 | 1, string, number, number, number];
 
 /** §13.1 melee_battles — 하루 1행. */
 export const meleeBattles = pgTable('melee_battles', {
@@ -51,6 +51,8 @@ export const meleeBattles = pgTable('melee_battles', {
   seed: text('seed').notNull(),
   status: meleeStatusEnum('status').notNull().default('running'),
   participantCount: integer('participant_count').notNull().default(0),
+  /** 총 라운드 수 — finale 이벤트의 실제 라운드 번호 역산용. */
+  totalRounds: integer('total_rounds').notNull().default(0),
   championUserId: uuid('champion_user_id').references(() => profiles.id),
   /** 리플레이용 피날레(roster+events). MeleeFinale. 비-피날레 구간은 저장 안 함. */
   finale: jsonb('finale').$type<MeleeFinale>().notNull().default(sql`'{"roster":[],"events":[]}'::jsonb`),
