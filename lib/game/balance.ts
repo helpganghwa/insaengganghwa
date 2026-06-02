@@ -499,3 +499,13 @@ export function meleeRewardForRank(rank: number, n: number): MeleeReward {
   if (rank <= Math.ceil(n * 0.5)) return { diamond: 50, boxes: 2 };
   return { diamond: 0, boxes: 1 };
 }
+
+/** 보상 테이블 표시용 — meleeRewardForRank와 1:1(공시). 등수 라벨 + 보상. */
+export const MELEE_REWARD_TIERS: { label: string; diamond: number; boxes: number }[] = [
+  { label: '1위', diamond: 1000, boxes: 10 },
+  { label: '2~3위', diamond: 500, boxes: 5 },
+  { label: '상위 5%', diamond: 200, boxes: 3 },
+  { label: '상위 20%', diamond: 100, boxes: 2 },
+  { label: '상위 50%', diamond: 50, boxes: 2 },
+  { label: '그 외', diamond: 0, boxes: 1 },
+];

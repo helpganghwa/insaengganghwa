@@ -8,6 +8,8 @@ import { assetUrl } from '@/lib/asset-versions';
 import type { MeleeFinale, MeleeMyEvent } from '@/lib/db/schema/melee';
 
 export type MeleeResultView = {
+  /** 제N회(하루 1회 → 날짜 순서가 회차). */
+  edition: number;
   participantCount: number;
   totalRounds: number;
   championNickname: string;
@@ -305,9 +307,11 @@ function FightStage({
           />
         </div>
       </div>
-      {/* 하단: 판타지 내레이션 — 단어단위 개행(break-keep), 무대 하단 가까이 */}
-      <div className="relative z-10 shrink-0 break-keep px-4 pb-1 pt-0.5 text-center text-[11px] italic leading-snug text-zinc-100 drop-shadow">
-        {narration}
+      {/* 하단: 판타지 내레이션 — 높이 2줄 고정(레이아웃 시프트 방지) + 단어단위 개행 */}
+      <div className="relative z-10 flex h-10 shrink-0 items-center justify-center px-4 pb-1">
+        <p className="line-clamp-2 break-keep text-center text-[11px] italic leading-snug text-zinc-100 drop-shadow">
+          {narration}
+        </p>
       </div>
       <button
         type="button"
@@ -324,9 +328,11 @@ function FightStage({
 function RankingView({
   podium,
   participantCount,
+  edition,
 }: {
   podium: MeleeResultView['podium'];
   participantCount: number;
+  edition: number;
 }) {
   const byRank = new Map(podium.map((p) => [p.rank, p]));
   const slots = [
@@ -337,7 +343,7 @@ function RankingView({
   return (
     <div className="relative z-10 flex h-full flex-col">
       <div className="pt-1.5 text-center text-[10px] font-semibold text-amber-200 text-pixel-outline">
-        오늘의 대난투 · 참가 {participantCount.toLocaleString()}명
+        제{edition.toLocaleString()}회 대난투 · 참가 {participantCount.toLocaleString()}명
       </div>
       {/* items-end + 동일 높이 아바타 박스 + object-bottom → 발끝(바닥선) 통일. #1만 scale로 확대. */}
       {/* pb-9: 하단 내 순위 칩과 겹치지 않게 시상대를 위로 띄움. */}
@@ -488,14 +494,22 @@ function RoundCard({
   );
 }
 
-// ── 로그 최상단 FINAL 카드 — 우승 축하(round 자리에 FINAL). 클릭 시 결승 라운드 재생. ──
-function FinalCard({ champion, onClick }: { champion: string; onClick: () => void }) {
+// ── 로그 최상단 FINAL 카드 — 우승 축하(round 자리에 FINAL) + 챔피언 상반신 아바타. 클릭 시 결승 재생. ──
+function FinalCard({
+  champion,
+  avatar,
+  onClick,
+}: {
+  champion: string;
+  avatar: string | null;
+  onClick: () => void;
+}) {
   return (
     <li className="border-b border-amber-900/40">
       <button
         type="button"
         onClick={onClick}
-        className="flex w-full items-center gap-2.5 bg-gradient-to-r from-amber-500/20 via-amber-400/10 to-transparent px-3 py-2.5 text-left transition hover:from-amber-500/30"
+        className="relative flex w-full items-center gap-2.5 overflow-hidden bg-gradient-to-r from-amber-500/20 via-amber-400/10 to-transparent py-2.5 pr-20 pl-3 text-left transition hover:from-amber-500/30"
       >
         <div className="flex w-8 shrink-0 flex-col items-center justify-center">
           <span className="font-mono text-[11px] font-extrabold leading-none tracking-[0.1em] text-amber-300 drop-shadow-[0_1px_2px_rgba(0,0,0,0.8)]">
@@ -511,6 +525,25 @@ function FinalCard({ champion, onClick }: { champion: string; onClick: () => voi
             최후의 1인 — 대난투를 제패하다
           </div>
         </div>
+        {/* 우측 — 챔피언 상반신 아바타 크게(머리·상체 강조, 하단 페이드) */}
+        {avatar ? (
+          <div className="pointer-events-none absolute inset-y-0 right-0 w-24 overflow-hidden">
+            {/* eslint-disable-next-line @next/next/no-img-element */}
+            <img
+              src={avatar}
+              alt=""
+              aria-hidden
+              className="absolute inset-x-0 top-0 mx-auto h-auto w-full object-top"
+              style={{
+                imageRendering: 'pixelated',
+                transform: 'scale(2.1)',
+                transformOrigin: 'top center',
+                filter: 'drop-shadow(0 2px 4px rgba(0,0,0,0.7))',
+              }}
+            />
+            <div className="absolute inset-0 bg-gradient-to-l from-transparent via-transparent to-zinc-950/80" />
+          </div>
+        ) : null}
       </button>
     </li>
   );
@@ -525,6 +558,7 @@ export function MeleeResult({ view }: { view: MeleeResultView }) {
     me,
     finale,
     championNickname,
+    edition,
     participantCount,
     totalRounds,
     myEvents,
@@ -735,7 +769,7 @@ export function MeleeResult({ view }: { view: MeleeResultView }) {
             }}
           />
         ) : (
-          <RankingView podium={podium} participantCount={participantCount} />
+          <RankingView podium={podium} participantCount={participantCount} edition={edition} />
         )}
         {/* 내 순위·보상 — 무대 하단 반투명 칩(스크롤 영역 차지 0). 랭킹 뷰일 때만. */}
         {!fight ? <MyRankChip me={me} /> : null}
@@ -743,6 +777,14 @@ export function MeleeResult({ view }: { view: MeleeResultView }) {
 
       {/* 하단 — 내부 스크롤 영역 */}
       <div className="min-h-0 flex-1 space-y-3 overflow-y-auto overscroll-contain px-4 py-3">
+        <Link
+          href="/melee/info"
+          className="flex items-center justify-between rounded-xl border border-zinc-800 bg-zinc-900/40 px-3 py-2 text-[12px] font-medium text-zinc-200 transition active:bg-zinc-800"
+        >
+          <span>보상 테이블 · 역대 우승자</span>
+          <span className="text-zinc-500">›</span>
+        </Link>
+
         <div className="flex gap-1 rounded-xl border border-zinc-800 p-1">
           {(
             [
@@ -799,6 +841,7 @@ export function MeleeResult({ view }: { view: MeleeResultView }) {
               {championNickname && logData.length > 0 ? (
                 <FinalCard
                   champion={championNickname}
+                  avatar={podium.find((p) => p.rank === 1)?.avatarUrl ?? null}
                   onClick={() => {
                     stopPlay();
                     play(logData[logData.length - 1]!.fight);

@@ -1,4 +1,4 @@
-import { and, eq, inArray, lte } from 'drizzle-orm';
+import { and, eq, inArray, lt, lte, sql } from 'drizzle-orm';
 
 import { getSessionUserId } from '@/lib/auth/session';
 import { db } from '@/lib/db/client';
@@ -45,9 +45,21 @@ export default async function MeleePage() {
   const runAtIso = new Date(kstMid + 9 * 3_600_000).toISOString();
   const revealAtIso = new Date(kstMid + 9 * 3_600_000 + 30 * 60_000).toISOString();
 
+  // 회차(제N회) — 하루 1회라 날짜 순서가 곧 회차. 오늘 = 이전 배틀 수 + 1(스키마 변경 없이 파생).
+  const edRows = await withTimeout(
+    db
+      .select({ n: sql<number>`count(*)::int` })
+      .from(meleeBattles)
+      .where(lt(meleeBattles.battleDate, battleDate)),
+    2000,
+    'melee.edition',
+  ).catch(() => [] as { n: number }[]);
+  const edition = (edRows[0]?.n ?? 0) + 1;
+
   if (!battle || battle.status !== 'revealed') {
     return (
       <MeleeCountdown
+        edition={edition}
         runAtIso={runAtIso}
         revealAtIso={revealAtIso}
         participantCount={battle?.participantCount ?? null}
@@ -140,6 +152,7 @@ export default async function MeleePage() {
   ).catch(() => []);
 
   const view: MeleeResultView = {
+    edition,
     participantCount: battle.participantCount,
     championNickname,
     podium,

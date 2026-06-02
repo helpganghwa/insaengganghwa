@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
+import Link from 'next/link';
 
 import { assetUrl } from '@/lib/asset-versions';
 
@@ -22,10 +23,12 @@ function fmt(ms: number): string {
 }
 
 export function MeleeCountdown({
+  edition,
   runAtIso,
   revealAtIso,
   participantCount,
 }: {
+  edition: number;
   runAtIso: string;
   revealAtIso: string;
   participantCount: number | null;
@@ -77,7 +80,9 @@ export function MeleeCountdown({
       <div className="pointer-events-none absolute inset-0 bg-gradient-to-b from-black/55 via-black/40 to-black/80" />
 
       <div className="relative z-10 flex flex-1 flex-col items-center justify-center gap-2 px-6 text-center">
-        <div className="text-2xl font-extrabold tracking-wide text-white text-pixel-outline">대난투</div>
+        <div className="text-2xl font-extrabold tracking-wide text-white text-pixel-outline">
+          제{edition.toLocaleString()}회 대난투
+        </div>
         <div className="text-sm font-bold text-amber-300 text-pixel-outline">{label}</div>
         {target > 0 ? (
           <div className="font-mono text-5xl font-extrabold tabular-nums text-white text-pixel-outline">
@@ -94,8 +99,16 @@ export function MeleeCountdown({
         </div>
       </div>
 
-      <div className="relative z-10 px-6 pb-6 text-center text-[11px] leading-relaxed text-zinc-300 text-pixel-outline">
-        매일 오전 9시, 강화한 장비 전투력으로 전원이 자동 참가하는 난투. 9시 30분에 순위·보상이 발표됩니다.
+      <div className="relative z-10 flex flex-col items-center gap-2 px-6 pb-6 text-center">
+        <p className="text-[11px] leading-relaxed text-zinc-300 text-pixel-outline">
+          매일 오전 9시, 강화한 장비 전투력으로 전원이 자동 참가하는 난투. 9시 30분에 순위·보상이 발표됩니다.
+        </p>
+        <Link
+          href="/melee/info"
+          className="rounded-full bg-black/55 px-3 py-1 text-[11px] font-medium text-amber-200 backdrop-blur-sm text-pixel-outline"
+        >
+          보상 테이블 · 역대 우승자 ›
+        </Link>
       </div>
     </div>
   );
