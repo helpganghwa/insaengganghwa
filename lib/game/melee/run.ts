@@ -107,6 +107,8 @@ export async function runMelee(): Promise<{ ran: boolean; battleId?: string; par
       rewardDiamond: BigInt(reward.diamond),
       rewardBoxes: distributeBoxes(reward.boxes, battleDate, r.userId),
       myEvents: r.events,
+      attackCount: r.attackCount,
+      defenseCount: r.defenseCount,
     };
   });
   for (let i = 0; i < rows.length; i += CHUNK) {

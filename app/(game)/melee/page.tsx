@@ -1,4 +1,4 @@
-import { and, eq, inArray } from 'drizzle-orm';
+import { and, eq, inArray, lte } from 'drizzle-orm';
 
 import { getSessionUserId } from '@/lib/auth/session';
 import { db } from '@/lib/db/client';
@@ -79,9 +79,6 @@ export default async function MeleePage() {
 
   // ── 발표됨 — 결과 데이터 ──
   const finale = battle.finale;
-  const top = finale.roster
-    .filter((r) => r.rank <= 3)
-    .sort((a, b) => a.rank - b.rank);
   const championNickname = finale.roster.find((r) => r.rank === 1)?.nickname ?? '챔피언';
 
   // finale 로스터 전원 아바타(활성 프로필 정면) — 시상대 + 리플레이 애니메이션용.
@@ -105,11 +102,29 @@ export default async function MeleePage() {
       if (url) avatarOf.set(a.uid, url);
     }
   }
-  const podium = top.map((r) => ({
+  // 1~3위 랭킹 섹션 — 참가자 행(공격/방어 횟수) + 닉 + 아바타.
+  const topRows = await withTimeout(
+    db
+      .select({
+        rank: meleeParticipants.finalRank,
+        nickname: profiles.nickname,
+        uid: meleeParticipants.userId,
+        atk: meleeParticipants.attackCount,
+        def: meleeParticipants.defenseCount,
+      })
+      .from(meleeParticipants)
+      .innerJoin(profiles, eq(profiles.id, meleeParticipants.userId))
+      .where(and(eq(meleeParticipants.battleId, battle.id), lte(meleeParticipants.finalRank, 3)))
+      .orderBy(meleeParticipants.finalRank),
+    3000,
+    'melee.top3',
+  ).catch(() => []);
+  const podium = topRows.map((r) => ({
     rank: r.rank,
     nickname: r.nickname,
-    cp: r.cp,
-    avatarUrl: avatarOf.get(r.userId) ?? null,
+    avatarUrl: avatarOf.get(r.uid) ?? null,
+    attackCount: r.atk,
+    defenseCount: r.def,
   }));
   const rosterAvatars = finale.roster.map((r) => avatarOf.get(r.userId) ?? null);
 

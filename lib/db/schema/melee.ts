@@ -81,6 +81,10 @@ export const meleeParticipants = pgTable(
       .notNull(),
     /** "내 전투" 미니로그 — 본인 관여 이벤트(MeleeMyEvent[]). 등수 무관 항상 조회용. */
     myEvents: jsonb('my_events').$type<MeleeMyEvent[]>().notNull().default(sql`'[]'::jsonb`),
+    /** 총 공격 횟수(내가 공격자였던 라운드). */
+    attackCount: integer('attack_count').notNull().default(0),
+    /** 총 방어 횟수(내가 타겟이었던 라운드). */
+    defenseCount: integer('defense_count').notNull().default(0),
   },
   (t) => [
     primaryKey({ columns: [t.battleId, t.userId] }),

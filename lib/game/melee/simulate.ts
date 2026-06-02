@@ -28,6 +28,9 @@ export type MeleeRankResult = {
   killerUserId: string | null;
   /** "내 전투" 미니로그(본인 관여 이벤트, 최대 MELEE_MY_EVENTS_MAX). */
   events: MeleeMyEvent[];
+  /** 총 공격(공격자였던 라운드) / 방어(타겟이었던 라운드) 횟수. */
+  attackCount: number;
+  defenseCount: number;
 };
 export type MeleeSimResult = {
   ranks: MeleeRankResult[];
@@ -44,7 +47,9 @@ export function simulateMelee(
   if (n === 1) {
     const p = participants[0]!;
     return {
-      ranks: [{ userId: p.userId, finalRank: 1, killerUserId: null, events: [] }],
+      ranks: [
+        { userId: p.userId, finalRank: 1, killerUserId: null, events: [], attackCount: 0, defenseCount: 0 },
+      ],
       championUserId: p.userId,
       finale: { roster: [{ userId: p.userId, nickname: p.nickname, cp: p.cp, rank: 1 }], events: [] },
     };
@@ -68,6 +73,8 @@ export function simulateMelee(
   const rH = new Int32Array(REPLAY); // 타격 후 타겟 잔여HP(≤0 = 탈락)
   let rounds = 0; // 총 라운드 수
 
+  const atkCnt = new Int32Array(n); // 공격 횟수
+  const defCnt = new Int32Array(n); // 방어(피격) 횟수
   // 참가자별 "내 전투" 미니로그(본인 관여 이벤트만, 상한 캡).
   const myEv: MeleeMyEvent[][] = Array.from({ length: n }, () => []);
   const pushMy = (i: number, ev: MeleeMyEvent) => {
@@ -100,6 +107,8 @@ export function simulateMelee(
     rH[slot] = hpAfter;
     rounds++;
 
+    atkCnt[attacker]!++;
+    defCnt[target]!++;
     // 내 전투 미니로그 — 공격자/타겟 양쪽 본인 관점으로 기록.
     pushMy(attacker, [0, participants[target]!.nickname, dmg, hpAfter]);
     pushMy(target, [1, participants[attacker]!.nickname, dmg, hpAfter]);
@@ -125,6 +134,8 @@ export function simulateMelee(
     finalRank: finalRank[i]!,
     killerUserId: killer[i]! < 0 ? null : participants[killer[i]!]!.userId,
     events: myEv[i]!,
+    attackCount: atkCnt[i]!,
+    defenseCount: defCnt[i]!,
   }));
 
   // 링 버퍼 → 시간순 마지막 min(rounds, REPLAY)개. 등장 유저 로컬 인덱스 압축 + 등수 포함.

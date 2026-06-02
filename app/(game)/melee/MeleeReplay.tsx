@@ -181,16 +181,18 @@ export function MeleeReplay({
         ) : null}
       </div>
 
-      {/* 자막 */}
+      {/* 자막 — RPG 턴제 */}
       <div className="px-1 text-center text-[11px] leading-snug text-zinc-300">
-        <span className="font-bold text-zinc-100">{roster[ai]?.nickname}</span>가{' '}
-        <span className="font-bold text-zinc-100">{roster[ti]?.nickname}</span>를{' '}
-        <span className="font-mono text-amber-300">{dmg.toLocaleString()}</span> 데미지로 공격 —{' '}
+        <span className="text-amber-400">⚔️ </span>
+        <span className="font-bold text-zinc-100">{roster[ai]?.nickname}</span>
+        <span className="text-zinc-500">의 공격 → </span>
+        <span className="font-bold text-zinc-100">{roster[ti]?.nickname}</span>{' '}
+        <span className="font-mono text-red-300">{dmg.toLocaleString()} 피해</span>{' '}
         {killed ? (
-          <span className="font-bold text-red-400">쓰러짐!</span>
+          <span className="font-bold text-red-400">· 💀 쓰러졌다!</span>
         ) : (
-          <span>
-            체력 <span className="font-mono text-emerald-300">{Math.max(0, hpAfter).toLocaleString()}</span> 남음
+          <span className="text-zinc-500">
+            · HP <span className="font-mono text-emerald-300">{Math.max(0, hpAfter).toLocaleString()}</span>
           </span>
         )}
       </div>
