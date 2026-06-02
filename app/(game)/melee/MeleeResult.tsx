@@ -46,12 +46,34 @@ const clampPct = (v: number) => Math.max(0, Math.min(100, v));
 /** 내 전투 상대(아바타 미상)·폴백용 기본 지급 아바타. */
 const DEFAULT_AVATAR = '/sprites/default/male/south.png';
 
-function boxSummary(b: { weapon: number; armor: number; accessory: number }): string {
-  const parts: string[] = [];
-  if (b.weapon) parts.push(`무기 ${b.weapon}`);
-  if (b.armor) parts.push(`방어구 ${b.armor}`);
-  if (b.accessory) parts.push(`장신구 ${b.accessory}`);
-  return parts.join(' · ');
+/** 내 순위·보상 칩 — 무대 하단에 반투명 오버레이. 탭하면 우편함(상세 보상). */
+function MyRankChip({ me }: { me: MeleeResultView['me'] }) {
+  if (!me) {
+    return (
+      <div className="absolute bottom-2 left-1/2 z-20 -translate-x-1/2 rounded-full bg-black/55 px-3 py-1 text-[11px] font-medium text-zinc-300 ring-1 ring-zinc-700/50 backdrop-blur-sm text-pixel-outline">
+        오늘 미참가
+      </div>
+    );
+  }
+  const totalBoxes = me.boxes.weapon + me.boxes.armor + me.boxes.accessory;
+  const reward = [
+    me.diamond > 0 ? `다이아 ${me.diamond.toLocaleString()}` : null,
+    totalBoxes > 0 ? `상자 ${totalBoxes}` : null,
+  ]
+    .filter(Boolean)
+    .join(' · ');
+  return (
+    <Link
+      href="/mail"
+      className="absolute bottom-2 left-1/2 z-20 inline-flex max-w-[92%] -translate-x-1/2 items-center gap-1.5 truncate rounded-full bg-black/60 px-3 py-1 text-[11px] font-medium text-zinc-100 ring-1 ring-amber-700/40 backdrop-blur-sm text-pixel-outline"
+    >
+      <span>
+        내 순위 <span className="font-mono font-extrabold text-amber-300">{me.rank}위</span>
+      </span>
+      {reward ? <span className="text-zinc-300">· {reward}</span> : null}
+      <span className="text-[10px] text-amber-300/90">›</span>
+    </Link>
+  );
 }
 
 /** 잔여 HP 비율별 게이지 색상(녹→황→주→적). */
@@ -231,7 +253,8 @@ function RankingView({
         오늘의 대난투 · 참가 {participantCount.toLocaleString()}명
       </div>
       {/* items-end + 동일 높이 아바타 박스 + object-bottom → 발끝(바닥선) 통일. #1만 scale로 확대. */}
-      <div className="flex flex-1 items-end justify-center gap-0.5 px-1 pb-1.5">
+      {/* pb-9: 하단 내 순위 칩과 겹치지 않게 시상대를 위로 띄움. */}
+      <div className="flex flex-1 items-end justify-center gap-0.5 px-1 pb-9">
         {slots.map(({ slot, p }) => {
           const first = slot === 1;
           return (
@@ -398,28 +421,12 @@ export function MeleeResult({ view }: { view: MeleeResultView }) {
         ) : (
           <RankingView podium={podium} participantCount={participantCount} />
         )}
+        {/* 내 순위·보상 — 무대 하단 반투명 칩(스크롤 영역 차지 0). 랭킹 뷰일 때만. */}
+        {!fight ? <MyRankChip me={me} /> : null}
       </div>
 
       {/* 하단 — 내부 스크롤 영역 */}
       <div className="min-h-0 flex-1 space-y-3 overflow-y-auto overscroll-contain px-4 py-3">
-        {me ? (
-          <div className="flex items-center justify-between rounded-xl border border-zinc-800 bg-zinc-900/40 px-3 py-1.5 text-[12px]">
-            <span>
-              내 순위 <span className="font-mono font-extrabold text-amber-300">{me.rank}위</span>
-              <span className="text-zinc-500"> / {participantCount.toLocaleString()}</span>
-            </span>
-            <Link href="/mail" className="text-zinc-300">
-              {me.diamond > 0 ? `다이아 ${me.diamond.toLocaleString()} · ` : ''}
-              {boxSummary(me.boxes)}
-              <span className="ml-1 text-[10px] text-amber-300 underline">우편함</span>
-            </Link>
-          </div>
-        ) : (
-          <div className="rounded-xl border border-zinc-800 px-3 py-1.5 text-center text-[11px] text-zinc-400">
-            오늘 미참가 (강화 1회 이상이면 자동 참가)
-          </div>
-        )}
-
         <div className="flex gap-1 rounded-xl border border-zinc-800 p-1">
           {(
             [
