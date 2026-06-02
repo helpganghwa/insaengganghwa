@@ -56,6 +56,8 @@ type Fight = {
   tgtMaxHp?: number;
   /** 이 라운드 진행 중 아레나 생존자 수(상단 표시). */
   survivors?: number;
+  /** 결승(최후의 1인을 가린 마지막) 라운드 — 특별 연출. */
+  isFinal?: boolean;
 };
 
 const clampPct = (v: number) => Math.max(0, Math.min(100, v));
@@ -255,16 +257,49 @@ function FightStage({
   onBack: () => void;
 }) {
   const killed = fight.hpAfter <= 0;
-  // 판타지 내레이션 — 라운드별 결정적 랜덤(다양한 멘트).
+  const isFinal = !!fight.isFinal;
+  // 판타지 내레이션 — 라운드별 결정적 랜덤. 결승은 우승 멘트.
   const dmgStr = fight.dmg.toLocaleString();
   const hpStr = Math.max(0, fight.hpAfter).toLocaleString();
-  const narration = killed
-    ? KILLED_MSGS[fight.round % KILLED_MSGS.length]!(fight.atkName, fight.tgtName, dmgStr)
-    : SURVIVE_MSGS[fight.round % SURVIVE_MSGS.length]!(fight.atkName, fight.tgtName, dmgStr, hpStr);
+  const narration = isFinal
+    ? `${fight.atkName}의 최후의 일격! 마지막 한 명까지 쓰러뜨리고 대난투를 제패하다 — 우승!`
+    : killed
+      ? KILLED_MSGS[fight.round % KILLED_MSGS.length]!(fight.atkName, fight.tgtName, dmgStr)
+      : SURVIVE_MSGS[fight.round % SURVIVE_MSGS.length]!(fight.atkName, fight.tgtName, dmgStr, hpStr);
+
+  // 결승 WINNER 배너 — 마운트 후 스케일·페이드 인.
+  const [winnerIn, setWinnerIn] = useState(false);
+  useEffect(() => {
+    if (!isFinal) return;
+    const id = requestAnimationFrame(() => setWinnerIn(true));
+    return () => cancelAnimationFrame(id);
+  }, [isFinal]);
+
   return (
     <div className="relative z-10 flex h-full flex-col">
-      {/* 피격 플래시(1회) */}
-      <div className="animate-hit-flash pointer-events-none absolute inset-0 bg-red-500/70 mix-blend-screen" />
+      {/* 피격 플래시(1회) — 결승은 골드 */}
+      <div
+        className={`animate-hit-flash pointer-events-none absolute inset-0 mix-blend-screen ${
+          isFinal ? 'bg-amber-400/70' : 'bg-red-500/70'
+        }`}
+      />
+      {/* 결승 우승 배너 */}
+      {isFinal ? (
+        <div className="pointer-events-none absolute inset-0 z-30 flex items-center justify-center">
+          <div
+            className={`rounded-2xl border-2 border-amber-300/80 bg-black/40 px-6 py-2.5 shadow-[0_0_30px_rgba(245,158,11,0.5)] backdrop-blur-sm transition-all duration-500 ease-out ${
+              winnerIn ? 'scale-100 opacity-100' : 'scale-50 opacity-0'
+            }`}
+          >
+            <div className="text-center text-2xl font-extrabold tracking-[0.2em] text-amber-300 text-pixel-outline drop-shadow-[0_2px_6px_rgba(0,0,0,0.9)]">
+              WINNER
+            </div>
+            <div className="mt-0.5 text-center text-[11px] font-bold text-amber-100 text-pixel-outline">
+              {fight.atkName} 우승
+            </div>
+          </div>
+        </div>
+      ) : null}
       {/* 상단: 참가자 / ROUND / 비움 */}
       <div className="relative z-10 grid grid-cols-3 items-center px-3 pt-2 text-[10px] font-semibold drop-shadow">
         <span className="text-left text-zinc-200">
@@ -509,41 +544,44 @@ function FinalCard({
       <button
         type="button"
         onClick={onClick}
-        className="relative flex w-full items-center gap-2.5 overflow-hidden bg-gradient-to-r from-amber-500/20 via-amber-400/10 to-transparent py-2.5 pr-20 pl-3 text-left transition hover:from-amber-500/30"
+        className="relative flex w-full items-center overflow-hidden bg-gradient-to-r from-amber-500/20 via-amber-400/10 to-transparent py-3 pr-3 pl-3 text-left transition hover:from-amber-500/30"
       >
-        <div className="flex w-8 shrink-0 flex-col items-center justify-center">
-          <span className="font-mono text-[11px] font-extrabold leading-none tracking-[0.1em] text-amber-300 drop-shadow-[0_1px_2px_rgba(0,0,0,0.8)]">
-            FINAL
-          </span>
-        </div>
-        <div className="w-px shrink-0 self-stretch bg-amber-600/40" />
-        <div className="min-w-0 flex-1">
-          <div className="truncate text-[13px] font-extrabold tracking-tight text-amber-200 drop-shadow-[0_1px_2px_rgba(0,0,0,0.8)]">
-            {champion} 우승
-          </div>
-          <div className="truncate text-[10px] font-medium text-amber-100/70">
-            최후의 1인 — 대난투를 제패하다
-          </div>
-        </div>
-        {/* 우측 — 챔피언 상반신 아바타 크게(머리·상체 강조, 하단 페이드) */}
+        {/* 우측 — 챔피언 얼굴 중심 아바타(배경 레이어). 좌→우 페이드로 카드에 자연스럽게 녹임. */}
         {avatar ? (
-          <div className="pointer-events-none absolute inset-y-0 right-0 w-24 overflow-hidden">
+          <div className="pointer-events-none absolute inset-y-0 right-0 w-32 overflow-hidden">
             {/* eslint-disable-next-line @next/next/no-img-element */}
             <img
               src={avatar}
               alt=""
               aria-hidden
-              className="absolute inset-x-0 top-0 mx-auto h-auto w-full object-top"
+              className="absolute inset-0 h-full w-full object-cover"
               style={{
                 imageRendering: 'pixelated',
-                transform: 'scale(2.1)',
-                transformOrigin: 'top center',
-                filter: 'drop-shadow(0 2px 4px rgba(0,0,0,0.7))',
+                objectPosition: 'center 20%',
+                transform: 'scale(1.5)',
+                transformOrigin: 'center 20%',
               }}
             />
-            <div className="absolute inset-0 bg-gradient-to-l from-transparent via-transparent to-zinc-950/80" />
+            <div className="absolute inset-0 bg-gradient-to-r from-zinc-950 via-zinc-950/35 to-transparent" />
           </div>
         ) : null}
+        {/* 콘텐츠 — 아바타 레이어 위 */}
+        <div className="relative z-10 flex w-full items-center gap-2.5">
+          <div className="flex w-8 shrink-0 flex-col items-center justify-center">
+            <span className="font-mono text-[11px] font-extrabold leading-none tracking-[0.1em] text-amber-300 drop-shadow-[0_1px_2px_rgba(0,0,0,0.85)]">
+              FINAL
+            </span>
+          </div>
+          <div className="w-px shrink-0 self-stretch bg-amber-600/40" />
+          <div className="min-w-0 flex-1">
+            <div className="truncate text-[13px] font-extrabold tracking-tight text-amber-200 drop-shadow-[0_1px_2px_rgba(0,0,0,0.9)]">
+              {champion} 우승
+            </div>
+            <div className="truncate text-[10px] font-medium text-amber-100/80 drop-shadow-[0_1px_2px_rgba(0,0,0,0.9)]">
+              최후의 1인 — 대난투를 제패하다
+            </div>
+          </div>
+        </div>
       </button>
     </li>
   );
@@ -648,6 +686,8 @@ export function MeleeResult({ view }: { view: MeleeResultView }) {
         hpAfter: e[3],
         tgtMaxHp: tgtCp > 0 ? tgtCp * MELEE_HP_MULT : undefined,
         survivors: aliveByRound.get(round),
+        // finale 마지막 이벤트 = 최후의 1인을 가린 결승 라운드.
+        isFinal: i === finale.events.length - 1,
       },
     };
   });

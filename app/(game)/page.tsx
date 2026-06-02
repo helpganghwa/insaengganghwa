@@ -99,6 +99,8 @@ export default async function HomePage() {
   let meleeDesc = '매일 오전 9시 개시';
   /** 발표 후 우승자 닉네임(있으면 카드에서 색상 강조 렌더). */
   let meleeChampion: string | null = null;
+  /** 발표 후 회차(제N회 우승). */
+  let meleeEdition = 0;
 
   if (userId) {
     const kstToday = kstDateString();
@@ -169,13 +171,19 @@ export default async function HomePage() {
                 else 'after'
               end as phase,
               b.status::text status,
-              p.nickname champ_nick
+              p.nickname champ_nick,
+              (select count(*)::int from melee_battles where battle_date <= n.kst::date) edition
             from (select (now() at time zone 'Asia/Seoul') kst) n
             left join melee_battles b on b.battle_date = n.kst::date
             left join profiles p on p.id = b.champion_user_id
             limit 1
           `) as unknown as Promise<
-            Array<{ phase: 'before' | 'running' | 'after'; status: string | null; champ_nick: string | null }>
+            Array<{
+              phase: 'before' | 'running' | 'after';
+              status: string | null;
+              champ_nick: string | null;
+              edition: number;
+            }>
           >,
           ]),
           3000,
@@ -194,8 +202,10 @@ export default async function HomePage() {
         if (melee.phase === 'before') meleeDesc = '오늘 오전 9시 개시';
         else if (melee.phase === 'running') meleeDesc = '난투 진행 중';
         else if (melee.status === 'revealed') {
-          if (melee.champ_nick) meleeChampion = melee.champ_nick;
-          else meleeDesc = '오늘의 결과 발표';
+          if (melee.champ_nick) {
+            meleeChampion = melee.champ_nick;
+            meleeEdition = melee.edition ?? 0;
+          } else meleeDesc = '오늘의 결과 발표';
         } else meleeDesc = '결과 집계 중';
       }
     } catch {
@@ -251,7 +261,9 @@ export default async function HomePage() {
                 <div className="mt-0.5 truncate text-[10px] leading-tight text-white/85">
                   {isMeleeChamp ? (
                     <>
-                      <span className="text-white/70">우승 </span>
+                      <span className="text-white/70">
+                        {meleeEdition > 0 ? `제${meleeEdition}회 우승 ` : '우승 '}
+                      </span>
                       <span className="font-extrabold text-amber-300 drop-shadow-[0_1px_2px_rgba(0,0,0,0.9)]">
                         {meleeChampion}
                       </span>
