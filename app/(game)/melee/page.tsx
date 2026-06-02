@@ -120,14 +120,17 @@ export default async function MeleePage() {
     3000,
     'melee.top3',
   ).catch(() => []);
+  // 아바타 미보유(더미 등)는 기본 지급 아바타로 폴백(남/여 번갈아). 실유저는 항상 활성 프로필 보유.
+  const dft = (i: number) =>
+    i % 2 === 0 ? '/sprites/default/male/south.png' : '/sprites/default/female/south.png';
   const podium = topRows.map((r) => ({
     rank: r.rank,
     nickname: r.nickname,
-    avatarUrl: avatarOf.get(r.uid) ?? null,
+    avatarUrl: avatarOf.get(r.uid) ?? dft(r.rank),
     attackCount: r.atk,
     defenseCount: r.def,
   }));
-  const rosterAvatars = finale.roster.map((r) => avatarOf.get(r.userId) ?? null);
+  const rosterAvatars = finale.roster.map((r, i) => avatarOf.get(r.userId) ?? dft(i));
 
   const [meRow] = await withTimeout(
     db
@@ -163,9 +166,6 @@ export default async function MeleePage() {
     rosterAvatars,
   };
 
-  return (
-    <div className="space-y-4 px-4 py-4">
-      <MeleeResult view={view} />
-    </div>
-  );
+  // MeleeResult가 main을 꽉 채움(무대 고정 + 하단 내부 스크롤).
+  return <MeleeResult view={view} />;
 }
