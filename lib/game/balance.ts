@@ -475,10 +475,10 @@ export const MELEE_HP_MULT = 2;
 export const MELEE_DMG_MIN = 0.5;
 export const MELEE_DMG_MAX = 1.2;
 /**
- * 리플레이용 피날레 보존 인원 — 생존자 이 수 이하 구간의 이벤트만 저장.
- * N(참가자)과 무관하게 상수 크기 로그 → 1천만 명도 재생/저장 일정.
+ * 리플레이용 피날레 보존 인원 — 생존자 이 수 이하 구간의 이벤트만 저장(= 상위 100위 전투).
+ * N(참가자)과 무관하게 상수 크기 로그 → 1천만 명도 재생/저장 일정. "상위 100 전투 보기" 탭.
  */
-export const MELEE_FINALE_SIZE = 50;
+export const MELEE_FINALE_SIZE = 100;
 
 export type MeleeReward = { diamond: number; boxes: number };
 
