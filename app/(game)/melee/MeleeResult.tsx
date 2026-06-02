@@ -30,6 +30,7 @@ export type MeleeResultView = {
 
 /** 무대에 띄울 단일 전투. */
 type Fight = {
+  round: number;
   atkName: string;
   atkAvatar: string | null;
   tgtName: string;
@@ -114,21 +115,24 @@ function Fighter({
   return (
     <div className="flex w-24 flex-col items-center gap-1">
       <div
-        className={`relative h-20 w-16 overflow-hidden rounded-xl border-2 transition-transform duration-200 ${
-          dead ? 'border-zinc-700 opacity-30 grayscale' : 'border-amber-400/70'
+        className={`relative h-24 w-20 transition-transform duration-200 ${
+          dead ? 'opacity-30 grayscale' : ''
         } ${lunge}`}
-        style={{ background: 'rgba(0,0,0,0.4)' }}
       >
         {avatar ? (
           // eslint-disable-next-line @next/next/no-img-element
           <img
             src={avatar}
             alt={name}
-            className={`h-full w-full object-contain ${side === 'r' ? '-scale-x-100' : ''}`}
+            className={`h-full w-full object-contain drop-shadow-[0_2px_5px_rgba(0,0,0,0.85)] ${
+              side === 'r' ? '-scale-x-100' : ''
+            }`}
             style={{ imageRendering: 'pixelated' }}
           />
         ) : (
-          <div className="flex h-full w-full items-center justify-center text-2xl text-zinc-500">⚔️</div>
+          <div className="flex h-full w-full items-center justify-center text-4xl text-zinc-300 drop-shadow">
+            ⚔️
+          </div>
         )}
         {dead ? (
           <div className="absolute inset-0 flex items-center justify-center text-[11px] font-bold text-red-300">
@@ -141,17 +145,25 @@ function Fighter({
   );
 }
 
-function FightStage({ fight }: { fight: Fight }) {
+function FightStage({ fight, participantCount }: { fight: Fight; participantCount: number }) {
   const killed = fight.hpAfter <= 0;
   return (
     <div className="relative z-10 flex h-full flex-col">
-      <div className="flex flex-1 items-center justify-center gap-5">
+      {/* 상단: 참가자 / 라운드 / 비움 */}
+      <div className="grid grid-cols-3 items-center px-3 pt-2 text-[10px] font-semibold drop-shadow">
+        <span className="text-left text-zinc-300">참가 {participantCount.toLocaleString()}명</span>
+        <span className="text-center text-amber-200">라운드 {fight.round.toLocaleString()}</span>
+        <span />
+      </div>
+      {/* 중단: 아바타 vs 아바타 */}
+      <div className="flex flex-1 items-center justify-center gap-4">
         <Fighter name={fight.atkName} avatar={fight.atkAvatar} side="l" attacking dead={false} />
         <div className="animate-[dmg-float_0.9s_ease-out] text-xl font-extrabold text-red-400 drop-shadow">
           -{fight.dmg.toLocaleString()}
         </div>
         <Fighter name={fight.tgtName} avatar={fight.tgtAvatar} side="r" attacking={false} dead={killed} />
       </div>
+      {/* 하단: 전투 로그 */}
       <div className="px-2 pb-2 text-center text-[11px] text-zinc-200 drop-shadow">
         <span className="font-bold">{fight.atkName}</span>
         <span className="text-zinc-400">의 공격 → </span>
@@ -261,7 +273,11 @@ export function MeleeResult({ view }: { view: MeleeResultView }) {
             style={{ imageRendering: 'pixelated' }}
           />
           <div className="pointer-events-none absolute inset-0 bg-black/55" />
-          {fight ? <FightStage key={fightKey} fight={fight} /> : <RankingView podium={podium} participantCount={participantCount} />}
+          {fight ? (
+            <FightStage key={fightKey} fight={fight} participantCount={participantCount} />
+          ) : (
+            <RankingView podium={podium} participantCount={participantCount} />
+          )}
         </div>
       </div>
 
@@ -325,6 +341,7 @@ export function MeleeResult({ view }: { view: MeleeResultView }) {
                   me={myNickname}
                   onClick={() =>
                     play({
+                      round: i + 1,
                       atkName: an,
                       atkAvatar: rosterAvatars[e[0]] ?? null,
                       tgtName: tn,
@@ -358,7 +375,9 @@ export function MeleeResult({ view }: { view: MeleeResultView }) {
                   dmg={dmg}
                   hp={hp}
                   me={myNickname}
-                  onClick={() => play({ atkName, atkAvatar, tgtName, tgtAvatar, dmg, hpAfter: hp })}
+                  onClick={() =>
+                    play({ round: i + 1, atkName, atkAvatar, tgtName, tgtAvatar, dmg, hpAfter: hp })
+                  }
                 />
               );
             })}
