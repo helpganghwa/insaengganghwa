@@ -57,11 +57,12 @@ export default async function GameLayout({ children }: { children: React.ReactNo
           <main className="flex min-h-0 flex-1 flex-col overflow-y-auto overscroll-contain">
             {children}
           </main>
+          {/* 새 배포 자동 새로고침 + 새로고침 후 토스트(showHeaderToast 사용 — 프로바이더 안). */}
+          <VersionUpdateToast />
         </ResourceToastProvider>
         <Suspense fallback={<BottomNav />}>
           <BottomNavAsync dataPromise={layoutData} />
         </Suspense>
-        <VersionUpdateToast />
       </div>
     </DiamondProvider>
   );
