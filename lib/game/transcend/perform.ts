@@ -20,7 +20,6 @@ import { transcendFodderForStep } from '@/lib/game/balance';
 export type TranscendErrorCode =
   | 'EQUIPMENT_NOT_FOUND'
   | 'EQUIPMENT_LOCKED'
-  | 'TRANSCEND_MAX'
   | 'INSUFFICIENT_FODDER';
 
 export class TranscendError extends Error {
@@ -56,7 +55,7 @@ export function performTranscend(input: TranscendInput): Promise<TranscendResult
       .for('update');
 
     if (!target) throw new TranscendError('EQUIPMENT_NOT_FOUND');
-    // T10 cap 제거(사용자 결정 2026-05-21) — 무한 진행 허용. 디자인은 T10과 동일.
+    // 초월은 무한 진행 — 레벨 상한 없음. 제물 수만 충족하면 100%(GDD §3.3).
 
     const fromT = target.transcendLevel;
     const toT = fromT + 1;

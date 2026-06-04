@@ -33,7 +33,6 @@ const MSG: Record<string, string> = {
   NOT_FOUND: '장비를 찾을 수 없습니다.',
   EQUIPMENT_NOT_FOUND: '장비를 찾을 수 없습니다.',
   EQUIPMENT_LOCKED: '잠긴 장비입니다.',
-  TRANSCEND_MAX: '이미 최대 초월(10)입니다.',
   INSUFFICIENT_FODDER: '제물이 부족합니다 (같은 아이템, 미장착·미잠금).',
   UNAUTHENTICATED: '로그인이 필요합니다.',
   RATE_LIMITED: '요청이 너무 빠릅니다. 잠시 후 다시 시도해 주세요.',

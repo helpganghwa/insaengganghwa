@@ -45,6 +45,7 @@ const pct = (bp: number) => {
 };
 
 const ENH_SAMPLES = [0, 9, 10, 15, 20, 30, 40, 51, 52, 60, 75, 90, 99, 100, 152, 199, 200];
+const TRANSCEND_SAMPLES = [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 15, 20];
 const CP_SAMPLES = [0, 10, 30, 51, 99];
 const PHASE_SAMPLES = [1, 2, 3, 4, 5];
 const EXTRA_ATTACK_SAMPLES = [1, 10, 11, 20, 21, 30, 31, 40];
@@ -101,11 +102,13 @@ export default function ProbabilityPage() {
 
       <Sec n="2" title="초월">
         <P>
-          초월은 같은 종류 장비를 제물로 소모해 전투력 배수를 올립니다(최대 T{MAX_TRANSCEND}).
-          제물은 강화·초월 레벨과 무관합니다.
+          초월은 같은 종류 장비를 제물로 소모해 전투력 배수를 올립니다. <b>상한 없이 무한
+          진행</b>되며, T단계 달성에 제물 <b>T개</b>가 필요합니다(선형). 제물은 강화·초월 레벨과
+          무관합니다. 전투력 보너스는 T{MAX_TRANSCEND}에서 +100%이고, T{MAX_TRANSCEND + 1}부터
+          레벨당 +10%p씩 증가합니다.
         </P>
         <Table head={['초월', '필요 제물', '누적 제물', '전투력 보너스']}>
-          {Array.from({ length: MAX_TRANSCEND }, (_, i) => i + 1).map((t) => (
+          {TRANSCEND_SAMPLES.map((t) => (
             <tr key={t} className="border-t border-zinc-100 dark:border-zinc-900">
               <Td>T{t}</Td>
               <Td>{transcendFodderForStep(t)}</Td>

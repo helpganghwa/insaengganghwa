@@ -200,23 +200,33 @@ describe('effectiveOutcomeProbsBp — 3분기 시간 곡선', () => {
 });
 
 describe('초월 — 제물 수·누적·전투력 배수', () => {
-  it('transcendFodderForStep: 선형 1→10', () => {
+  it('transcendFodderForStep: 선형 무한(T단계 = T개)', () => {
     expect(transcendFodderForStep(1)).toBe(1);
     expect(transcendFodderForStep(5)).toBe(5);
     expect(transcendFodderForStep(10)).toBe(10);
+    // T10 이상도 선형 — 캡 없음.
+    expect(transcendFodderForStep(11)).toBe(11);
+    expect(transcendFodderForStep(20)).toBe(20);
+    expect(transcendFodderForStep(100)).toBe(100);
   });
-  it('transcendFodderCumulative: 1+2+...+T', () => {
+  it('transcendFodderCumulative: 1+2+...+T = T(T+1)/2', () => {
     expect(transcendFodderCumulative(1)).toBe(1);
     expect(transcendFodderCumulative(3)).toBe(6);
     expect(transcendFodderCumulative(10)).toBe(55);
+    expect(transcendFodderCumulative(11)).toBe(66);
+    expect(transcendFodderCumulative(20)).toBe(210);
   });
-  it('transcendBonusBp: T0=0, T10=10000(+100%)', () => {
+  it('transcendBonusBp: T0=0, T10=10000(+100%), T11+ 레벨당 +1000bp', () => {
     expect(transcendBonusBp(0)).toBe(0);
     expect(transcendBonusBp(MAX_TRANSCEND)).toBe(10000);
+    // T11부터 레벨당 +10%p(1000bp) 무한 증가.
+    expect(transcendBonusBp(11)).toBe(11000);
+    expect(transcendBonusBp(20)).toBe(20000);
+    expect(transcendBonusBp(50)).toBe(50000);
   });
-  it('transcendBonusBp 단조 증가', () => {
+  it('transcendBonusBp 단조 증가(T10 경계 넘어서도)', () => {
     let prev = -1;
-    for (let t = 0; t <= MAX_TRANSCEND; t++) {
+    for (let t = 0; t <= MAX_TRANSCEND + 20; t++) {
       const v = transcendBonusBp(t);
       expect(v).toBeGreaterThanOrEqual(prev);
       prev = v;

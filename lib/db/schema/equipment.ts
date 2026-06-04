@@ -54,7 +54,7 @@ export const equipmentInstances = pgTable(
       .notNull()
       .references(() => catalogItems.id),
     enhanceLevel: integer('enhance_level').notNull().default(0),
-    /** 0..10 (BALANCE §2, MAX_TRANSCEND). */
+    /** 초월 레벨 — 0 이상, 상한 없음(무한 진행, BALANCE §2). */
     transcendLevel: smallint('transcend_level').notNull().default(0),
     /** 장착 시 해당 슬롯, 미장착 null. */
     equippedSlot: slotEnum('equipped_slot'),

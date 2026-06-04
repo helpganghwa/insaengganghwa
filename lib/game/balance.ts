@@ -233,23 +233,23 @@ export function effectiveOutcomeProbsBp(
 // ─────────────────────────────────────────────────────────────────────────────
 
 /**
- * §2 초월은 **무한 진행**(사용자 결정, 2026-05-21). T10 이상은 디자인/수치 모두 T10과
- * 동일하게 처리 — 시각 등급 클램프(transcend.ts) + 제물 수 10 고정 + 보너스 +100% 고정.
- * MAX_TRANSCEND는 **시각 등급 매핑 cap**으로만 유지(0..10 LADDER 인덱스).
+ * §2 초월 — **무한 진행**. 제물 수는 선형(T단계 = T개), 전투력 보너스는 T11부터 레벨당
+ * +10%p 무한 증가. 시각 등급만 T10 프레임에서 클램프(transcend.ts) — 레벨/수치 상한 아님.
+ * MAX_TRANSCEND = 시각 등급 사다리 최상단(0..10 LADDER 인덱스) 전용 상수. **초월 레벨 상한 아님.**
  */
 export const MAX_TRANSCEND = 10;
 
 /**
  * §2.1 `toLevel` 단계(=T-1 → T) 달성에 필요한 같은 카탈로그 아이템 제물 수.
- * 선형 1→10 (0→1:1 … 9→10:10). T11+ = 10 고정(무한 진행, 디자인 동일).
+ * 선형 무한 — T단계에 T개(0→1:1, 9→10:10, 10→11:11 … 상한 없음).
  * 제물: 같은 카탈로그 아이템이면 강화·초월 레벨 무관(+0 가능, GDD §3.3).
  */
 export function transcendFodderForStep(toLevel: number): number {
   if (toLevel < 1) throw new Error(`INVALID_TRANSCEND_STEP:${toLevel}`);
-  return Math.min(toLevel, MAX_TRANSCEND);
+  return toLevel;
 }
 
-/** §2.1 0 → targetT 까지 누적 제물 수 (검증/표시용). T11+는 10 고정 누적. */
+/** §2.1 0 → targetT 까지 누적 제물 수 (검증/표시용) = 1+2+…+T = T(T+1)/2. */
 export function transcendFodderCumulative(targetT: number): number {
   let sum = 0;
   for (let t = 1; t <= targetT; t++) sum += transcendFodderForStep(t);
@@ -257,16 +257,23 @@ export function transcendFodderCumulative(targetT: number): number {
 }
 
 /**
- * §2.2 초월 레벨 T의 전투력 % 배수 — bp. 가속 곡선, T10 = +100%(×2.0).
- * T11+ = T10과 동일(+100%) — 무한 진행이지만 보너스는 캡(디자인 동일 의도).
+ * §2.2 초월 레벨 T의 전투력 % 배수 — bp. T0~T10은 가속 곡선(T10 = +100%/×2.0),
+ * T11부터는 레벨당 +1000bp(+10%p) 선형 무한 증가(T20=+200%, T50=+500% …).
  */
 const TRANSCEND_BONUS_BP: readonly number[] = [
   0, 500, 1100, 1800, 2600, 3500, 4500, 5600, 6800, 8200, 10000,
 ] as const;
 
+/** §2.2 T11 이상 레벨당 추가 전투력 보너스(bp). +10%p = 1000bp. */
+const TRANSCEND_BONUS_BP_PER_LEVEL_ABOVE_MAX = 1000;
+
 export function transcendBonusBp(transcendLevel: number): number {
-  const t = Math.max(0, Math.min(MAX_TRANSCEND, Math.floor(transcendLevel)));
-  return TRANSCEND_BONUS_BP[t]!;
+  const t = Math.max(0, Math.floor(transcendLevel));
+  if (t <= MAX_TRANSCEND) return TRANSCEND_BONUS_BP[t]!;
+  return (
+    TRANSCEND_BONUS_BP[MAX_TRANSCEND]! +
+    (t - MAX_TRANSCEND) * TRANSCEND_BONUS_BP_PER_LEVEL_ABOVE_MAX
+  );
 }
 
 // ─────────────────────────────────────────────────────────────────────────────

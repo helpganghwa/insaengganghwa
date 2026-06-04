@@ -105,7 +105,7 @@ export function EquipmentDetailSheet({
   // 착용은 외형 전용 — 전투력은 착용 무관(BALANCE §3.2)이라 아이템 자체 전투력만 표시(교체 비교 없음).
   const cp = pieceCombatPower(item.enhanceLevel, item.transcendLevel);
 
-  // 무한 초월 (사용자 결정 2026-05-21) — atMax 가드 제거. 제물 수는 T10 이상 10 고정.
+  // 무한 초월 — 레벨 상한 없음. 제물 수는 선형(T단계 = T개).
   const nextT = item.transcendLevel + 1;
   const fodderNeed = transcendFodderForStep(nextT);
   const fodderOwned = all.filter(
