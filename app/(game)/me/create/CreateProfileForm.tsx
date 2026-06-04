@@ -5,6 +5,7 @@ import { useRouter } from 'next/navigation';
 
 import { TranscendSprite } from '@/components/TranscendSprite';
 import { useDiamond } from '@/components/DiamondContext';
+import { useResourceToast } from '@/components/ResourceToast';
 import * as haptic from '@/lib/game/haptic';
 import { formatCompactKR } from '@/lib/ui/format-number';
 import type { Slot } from '@/lib/db/schema/equipment';
@@ -45,6 +46,7 @@ export function CreateProfileForm({
 }) {
   const router = useRouter();
   const { optimisticAdjust: adjustDiamond } = useDiamond();
+  const { showHeaderToast } = useResourceToast();
   const [gender, setGender] = useState<'female' | 'male'>('female');
   const [confirm, setConfirm] = useState(false);
   const [confirmLeft, setConfirmLeft] = useState(0); // 3s 재탭 컨펌 카운트다운
@@ -95,6 +97,7 @@ export function CreateProfileForm({
         alert(r.message);
         return;
       }
+      showHeaderToast({ title: '아바타 생성 중', detail: '약 10분 소요' });
       router.refresh();
     });
   };

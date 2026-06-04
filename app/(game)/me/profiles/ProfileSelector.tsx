@@ -4,6 +4,7 @@ import { useEffect, useRef, useState, useTransition } from 'react';
 import { useRouter } from 'next/navigation';
 
 import * as haptic from '@/lib/game/haptic';
+import { useResourceToast } from '@/components/ResourceToast';
 import { setActiveDirection, setActiveProfile, deleteProfile } from './actions';
 
 type ProfileItem = {
@@ -43,6 +44,7 @@ export function ProfileSelector({
   activeProfileId: string | null;
 }) {
   const router = useRouter();
+  const { showHeaderToast } = useResourceToast();
   // 삭제된 프로필은 즉시 목록에서 제외(상세 페이지 유지) — optimistic.
   const [deletedIds, setDeletedIds] = useState<Set<string>>(new Set());
   const list = profiles.filter((p) => !deletedIds.has(p.id));
@@ -125,6 +127,7 @@ export function ProfileSelector({
         alert(msg);
         return;
       }
+      showHeaderToast({ title: '대표 아바타 변경' });
       router.refresh();
     });
   };

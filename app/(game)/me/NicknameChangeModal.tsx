@@ -5,6 +5,7 @@ import { useRouter } from 'next/navigation';
 
 import { NICKNAME_CHANGE_COST_DIAMOND } from '@/lib/game/balance';
 import { NICKNAME_MAX_LEN, NICKNAME_MIN_LEN, nicknameLen, validateNickname } from '@/lib/game/nickname';
+import { useResourceToast } from '@/components/ResourceToast';
 
 import { changeNicknameAction } from './actions';
 
@@ -28,6 +29,7 @@ export function NicknameChangeModal({
   diamond: string;
 }) {
   const router = useRouter();
+  const { showHeaderToast } = useResourceToast();
   const [next, setNext] = useState(currentNickname);
   const [err, setErr] = useState<string | null>(null);
   const [pending, startTransition] = useTransition();
@@ -57,6 +59,7 @@ export function NicknameChangeModal({
         return;
       }
       onClose();
+      showHeaderToast({ title: '닉네임 변경', detail: next.trim() });
       router.refresh();
     });
   };
