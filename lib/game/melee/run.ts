@@ -95,7 +95,8 @@ export async function runMelee(): Promise<{ ran: boolean; battleId?: string; par
     const avOf = new Map<string, string>();
     for (const a of avRows) {
       const rot = a.rotations as Record<string, string>;
-      const url = rot.south ?? rot[a.dir];
+      // 유저가 설정한 방향(activeDirection) 우선 — 없으면 south 폴백.
+      const url = (a.dir ? rot[a.dir] : undefined) ?? rot.south;
       if (url) avOf.set(a.uid, url);
     }
     for (const r of result.finale.roster) r.avatar = avOf.get(r.userId) ?? null;

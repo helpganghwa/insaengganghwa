@@ -63,7 +63,8 @@ export async function buildMeleeResultView(
     ).catch(() => []);
     for (const a of av) {
       const rot = a.rotations as Record<string, string>;
-      const url = rot.south ?? rot[a.dir];
+      // 유저가 설정한 방향(activeDirection) 우선 — 없으면 south 폴백.
+      const url = (a.dir ? rot[a.dir] : undefined) ?? rot.south;
       if (url) avatarOf.set(a.uid, url);
       if (a.code) codeOf.set(a.uid, a.code);
     }
