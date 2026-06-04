@@ -1,6 +1,6 @@
 import 'server-only';
 
-import { and, eq, gt, isNull, sql } from 'drizzle-orm';
+import { and, eq, gt, inArray, isNull, sql } from 'drizzle-orm';
 
 import { db } from '@/lib/db/client';
 import { profiles } from '@/lib/db/schema/profiles';
@@ -107,22 +107,56 @@ export function claimAllMail(input: { userId: string }): Promise<ClaimResult> {
       )
       .for('update');
 
-    const acc = emptyResult();
-    for (const m of rows) {
-      const before = { diamond: acc.diamond, boxes: { ...acc.boxes } };
-      await applyPayload(tx, userId, m.payload as MailPayload, acc);
-      await tx.update(mailbox).set({ claimedAt: new Date() }).where(eq(mailbox.id, m.id));
-      await tx.insert(mailClaimLogs).values({
-        mailId: m.id,
-        userId,
-        diamondGranted: BigInt(acc.diamond - before.diamond),
-        boxesGranted: {
-          weapon: acc.boxes.weapon - before.boxes.weapon,
-          armor: acc.boxes.armor - before.boxes.armor,
-          accessory: acc.boxes.accessory - before.boxes.accessory,
-        },
-      });
+    if (rows.length === 0) return emptyResult();
+
+    // N+1 제거: 메일별 4쿼리 → 합산 후 일괄. 메일별 지급액은 mailClaimLogs로 보존(감사),
+    // 자원 반영(다이아 +, 슬롯 박스 +)은 합산해 1회씩만. claimed_at도 inArray로 일괄 마킹.
+    const total = emptyResult();
+    const claimedAt = new Date();
+    const logValues = rows.map((m) => {
+      const p = (m.payload as MailPayload | null) ?? {};
+      const d = p.diamond && p.diamond > 0 ? p.diamond : 0;
+      const b = {
+        weapon: p.boxes?.weapon ?? 0,
+        armor: p.boxes?.armor ?? 0,
+        accessory: p.boxes?.accessory ?? 0,
+      };
+      total.diamond += d;
+      total.boxes.weapon += b.weapon;
+      total.boxes.armor += b.armor;
+      total.boxes.accessory += b.accessory;
+      return { mailId: m.id, userId, diamondGranted: BigInt(d), boxesGranted: b };
+    });
+
+    if (total.diamond > 0) {
+      await tx
+        .update(profiles)
+        .set({ diamond: sql`${profiles.diamond} + ${BigInt(total.diamond)}` })
+        .where(eq(profiles.id, userId));
     }
-    return acc;
+    for (const slot of SUPPLY_SLOTS) {
+      const n = total.boxes[slot];
+      if (n > 0) {
+        await tx
+          .insert(userSupplyBoxes)
+          .values({ userId, slot, count: BigInt(n) })
+          .onConflictDoUpdate({
+            target: [userSupplyBoxes.userId, userSupplyBoxes.slot],
+            set: { count: sql`${userSupplyBoxes.count} + ${BigInt(n)}` },
+          });
+      }
+    }
+    await tx
+      .update(mailbox)
+      .set({ claimedAt })
+      .where(
+        inArray(
+          mailbox.id,
+          rows.map((r) => r.id),
+        ),
+      );
+    await tx.insert(mailClaimLogs).values(logValues);
+
+    return total;
   });
 }

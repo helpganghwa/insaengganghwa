@@ -1,14 +1,15 @@
 'use server';
 
 import { revalidatePath } from 'next/cache';
-import { and, eq, inArray } from 'drizzle-orm';
+import { and, eq } from 'drizzle-orm';
 
 import { getSessionUserId } from '@/lib/auth/session';
 import { rateLimited } from '@/lib/ratelimit';
 import { db } from '@/lib/db/client';
-import { catalogItems, type Slot } from '@/lib/db/schema/equipment';
+import { type Slot } from '@/lib/db/schema/equipment';
 import { userSupplyBoxes } from '@/lib/db/schema/supply';
 import { openSupplyBoxes, SupplyError } from '@/lib/game/supply';
+import { getActiveCatalog } from '@/lib/game/catalog';
 import { championCatalogIds } from '@/lib/game/codex/ranking';
 import { loreTeaser } from '@/lib/game/equipment/lore';
 
@@ -46,14 +47,9 @@ export async function openAction(slot: Slot, count: number): Promise<OpenActionR
   const n = Math.max(1, Math.min(10, Math.floor(count)));
   try {
     const opened = await openSupplyBoxes({ userId, slot, count: n });
-    const ids = [...new Set(opened.map((o) => o.catalogItemId))];
-    const [meta, champSet, boxRows] = await Promise.all([
-      ids.length
-        ? db
-            .select({ id: catalogItems.id, code: catalogItems.code, name: catalogItems.name })
-            .from(catalogItems)
-            .where(inArray(catalogItems.id, ids))
-        : Promise.resolve([] as { id: number; code: string; name: string }[]),
+    // 개봉 아이템은 항상 active 풀에서 나오므로 캐시된 활성 카탈로그로 메타 조회(DB 왕복 제거).
+    const [catalog, champSet, boxRows] = await Promise.all([
+      getActiveCatalog(),
       championCatalogIds(userId),
       db
         .select({ c: userSupplyBoxes.count })
@@ -61,7 +57,7 @@ export async function openAction(slot: Slot, count: number): Promise<OpenActionR
         .where(and(eq(userSupplyBoxes.userId, userId), eq(userSupplyBoxes.slot, slot)))
         .limit(1),
     ]);
-    const metaMap = new Map(meta.map((m) => [m.id, m]));
+    const metaMap = new Map(catalog.map((m) => [m.id, m]));
     const boxRow = boxRows[0];
 
     revalidatePath('/gacha');
