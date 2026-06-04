@@ -6,6 +6,7 @@ import { withTimeout } from '@/lib/db/with-timeout';
 import { meleeBattles } from '@/lib/db/schema/melee';
 import { kstDateString, kstStartOfDay } from '@/lib/kst';
 import { buildMeleeResultView } from '@/lib/game/melee/result-view';
+import { loadMeleeHistory } from '@/lib/game/melee/history';
 
 import { MeleeCountdown } from './MeleeCountdown';
 import { MeleeResult } from './MeleeResult';
@@ -55,12 +56,15 @@ export default async function MeleePage() {
       'melee.edition',
     ).catch(() => [] as { n: number }[]);
     const edition = (edRows[0]?.n ?? 0) + 1;
+    // 하단 보상 테이블·역대 우승자용 데이터(공용 로더 — /melee/info와 동일).
+    const history = await loadMeleeHistory();
     return (
       <MeleeCountdown
         edition={edition}
         runAtIso={runAtIso}
         revealAtIso={revealAtIso}
         participantCount={battle?.participantCount ?? null}
+        history={history}
       />
     );
   }

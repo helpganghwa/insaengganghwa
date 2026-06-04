@@ -5,47 +5,46 @@ import Link from 'next/link';
 
 import { MELEE_REWARD_TIERS } from '@/lib/game/balance';
 import { assetUrl } from '@/lib/asset-versions';
+import type { MeleeHistoryRow } from '@/lib/game/melee/history';
 
-export type MeleeHistoryRow = {
-  /** 그 회차 배틀 id — 클릭 시 결과(/melee/battle/[id])로. */
-  battleId: string;
-  edition: number;
-  championNick: string;
-  championCode: string | null;
-  championAvatar: string | null;
-  championCp: number;
-  participantCount: number;
-};
+export type { MeleeHistoryRow };
 
-/** 보상 테이블 + 역대 우승자 — 탭 전환. MELEE §6. */
+/**
+ * 보상 테이블 + 역대 우승자 — 탭 전환. MELEE §6.
+ * showBanner=false: 상단 아레나 배너 생략(대기/진행중 화면에 무대 아래로 임베드 시).
+ */
 export function MeleeInfo({
   history,
   initialTab = 'reward',
+  showBanner = true,
 }: {
   history: MeleeHistoryRow[];
   initialTab?: 'reward' | 'history';
+  showBanner?: boolean;
 }) {
   const [tab, setTab] = useState<'reward' | 'history'>(initialTab);
   return (
     <div className="pb-6">
-      {/* 상단 아레나 배경 배너 */}
-      <div className="relative h-28 overflow-hidden">
-        {/* eslint-disable-next-line @next/next/no-img-element */}
-        <img
-          src={assetUrl('/sprites/hub/melee.png')}
-          alt=""
-          aria-hidden
-          className="absolute inset-0 h-full w-full object-cover"
-          style={{ imageRendering: 'pixelated' }}
-        />
-        <div className="pointer-events-none absolute inset-0 bg-gradient-to-b from-black/45 via-black/35 to-black/70" />
-        <div className="relative z-10 flex h-full flex-col items-center justify-center gap-0.5">
-          <h1 className="text-lg font-extrabold text-white text-pixel-outline">대난투 정보</h1>
-          <p className="text-[11px] font-bold text-amber-200 text-pixel-outline">
-            {tab === 'reward' ? '보상 테이블' : '역대 우승자'}
-          </p>
+      {showBanner ? (
+        /* 상단 아레나 배경 배너 */
+        <div className="relative h-28 overflow-hidden">
+          {/* eslint-disable-next-line @next/next/no-img-element */}
+          <img
+            src={assetUrl('/sprites/hub/melee.png')}
+            alt=""
+            aria-hidden
+            className="absolute inset-0 h-full w-full object-cover"
+            style={{ imageRendering: 'pixelated' }}
+          />
+          <div className="pointer-events-none absolute inset-0 bg-gradient-to-b from-black/45 via-black/35 to-black/70" />
+          <div className="relative z-10 flex h-full flex-col items-center justify-center gap-0.5">
+            <h1 className="text-lg font-extrabold text-white text-pixel-outline">대난투 정보</h1>
+            <p className="text-[11px] font-bold text-amber-200 text-pixel-outline">
+              {tab === 'reward' ? '보상 테이블' : '역대 우승자'}
+            </p>
+          </div>
         </div>
-      </div>
+      ) : null}
 
       <div className="space-y-3 pt-3">
         <div className="mx-4 flex gap-1 rounded-xl border border-zinc-800 p-1">
