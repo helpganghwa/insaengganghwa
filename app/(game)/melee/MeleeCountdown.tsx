@@ -58,25 +58,24 @@ export function MeleeCountdown({
     return () => clearTimeout(t);
   }, [now, revealAt, router]);
 
+  // 난투·전달은 같은 1시간 카운트다운(10:00 발표 기준), 라벨만 9:30 경계로 변경.
+  // 10:00 지나도 미발표면 '우승컵 전달 중' 유지 + 경과 시간 카운트업.
   let label: string;
-  let sub: string;
-  let target = 0;
+  let timerMs: number;
+  let countUp = false;
   if (now < runAt) {
     label = '오전 9시 개시';
-    sub = '';
-    target = runAt;
+    timerMs = runAt - now;
   } else if (now < deliverAt) {
     label = '난투 진행 중';
-    sub = '';
-    target = revealAt;
+    timerMs = revealAt - now;
   } else if (now < revealAt) {
     label = '우승자에게 우승컵 전달 중';
-    sub = '';
-    target = revealAt;
+    timerMs = revealAt - now;
   } else {
-    label = '결과 집계 중';
-    sub = '우승컵 지급이 늦어지고 있습니다';
-    target = 0;
+    label = '우승자에게 우승컵 전달 중';
+    timerMs = now - revealAt; // 발표 지연 — 경과 시간 카운트업
+    countUp = true;
   }
 
   return (
@@ -98,16 +97,10 @@ export function MeleeCountdown({
             제{edition.toLocaleString()}회 대난투
           </div>
           <div className="text-sm font-bold text-amber-300 text-pixel-outline">{label}</div>
-          {target > 0 ? (
-            <div className="font-mono text-5xl font-extrabold tabular-nums text-white text-pixel-outline">
-              {fmt(target - now)}
-            </div>
-          ) : (
-            <div className="text-lg font-bold text-zinc-200 text-pixel-outline">집계 중…</div>
-          )}
-          {sub ? (
-            <div className="text-[11px] text-zinc-200 text-pixel-outline">{sub}</div>
-          ) : null}
+          <div className="font-mono text-5xl font-extrabold tabular-nums text-white text-pixel-outline">
+            {countUp ? '+' : ''}
+            {fmt(timerMs)}
+          </div>
           <div className="mt-1 rounded-full bg-black/55 px-3 py-1 text-[11px] font-medium text-zinc-100 backdrop-blur-sm">
             {participantCount != null
               ? `참가 ${participantCount.toLocaleString()}명`
