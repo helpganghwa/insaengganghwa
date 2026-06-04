@@ -148,8 +148,8 @@ export function EquipmentDetailSheet({
         >
           <div className="mb-1 flex items-baseline justify-between text-[10px]">
             <span className="font-semibold">
-              초월 <span style={{ color: tColor }}>✦{item.transcendLevel}</span> →{' '}
-              <span style={{ color: tNextColor }}>✦{item.transcendLevel + 1}</span>
+              초월 <span style={{ color: tColor }}>✦{item.transcendLevel}</span>{' '}
+              <span style={{ color: tNextColor }}>→ ✦{item.transcendLevel + 1}</span>
             </span>
             <span className="tabular-nums text-zinc-500">
               {item.transcendProgress}/{item.transcendLevel + 1} · 다음까지{' '}
