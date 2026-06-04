@@ -328,7 +328,13 @@ const Tile = memo(function Tile({
     <button
       type="button"
       onClick={() => onOpen(item.id)}
-      style={rarityBorderStyle(item.transcendLevel)}
+      // content-visibility:auto — 화면 밖 타일의 렌더/페인트(마스크·보더·SVG·캔버스)를 브라우저가 건너뜀(렌더 가상화).
+      // contain-intrinsic-size로 off-screen 높이 예약(390폭 3열 ≈ 116px) → 스크롤바 안정.
+      style={{
+        ...rarityBorderStyle(item.transcendLevel),
+        contentVisibility: 'auto',
+        containIntrinsicSize: 'auto 116px',
+      }}
       className={`relative flex aspect-square flex-col items-center justify-center gap-0.5 overflow-hidden rounded-xl border-2 bg-white px-1 text-center dark:bg-zinc-950 ${
         hasRarityBorder(item.transcendLevel) ? '' : 'border-zinc-200 dark:border-zinc-800'
       }`}
