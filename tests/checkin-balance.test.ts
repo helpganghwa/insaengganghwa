@@ -26,22 +26,22 @@ describe('CHECKIN_CALENDAR 테이블', () => {
     expect(milestones).toEqual([7, 14, 21, 28]);
   });
 
-  it('마일스톤 4종 순환: 보급권 30 / 💎2000 / 보급권 60 / 💎5000', () => {
+  it('마일스톤 4종 순환: 보급권 30 / 💎2000 / 보급권 60 / 💎3000', () => {
     expect(checkinRewardForDay(7)).toEqual({ kind: 'supply_set', perSlot: 10 });
     expect(checkinRewardForDay(14)).toEqual({ kind: 'diamond', amount: 2000 });
     expect(checkinRewardForDay(21)).toEqual({ kind: 'supply_set', perSlot: 20 });
-    expect(checkinRewardForDay(28)).toEqual({ kind: 'diamond', amount: 5000 });
+    expect(checkinRewardForDay(28)).toEqual({ kind: 'diamond', amount: 3000 });
   });
 
-  it('평일 6일 순환: 무10→💎500→방10→💎500→장10→💎500', () => {
+  it('평일 6일 순환: 무10→💎300→방10→💎300→장10→💎300', () => {
     // 1~6, 8~13, 15~20, 22~27 모두 동일 패턴 (mod 7 = 1..6)
     const pattern: CheckinReward[] = [
       { kind: 'supply', slot: 'weapon', count: 10 },
-      { kind: 'diamond', amount: 500 },
+      { kind: 'diamond', amount: 300 },
       { kind: 'supply', slot: 'armor', count: 10 },
-      { kind: 'diamond', amount: 500 },
+      { kind: 'diamond', amount: 300 },
       { kind: 'supply', slot: 'accessory', count: 10 },
-      { kind: 'diamond', amount: 500 },
+      { kind: 'diamond', amount: 300 },
     ];
     for (let week = 0; week < 4; week++) {
       for (let i = 0; i < 6; i++) {
@@ -51,7 +51,7 @@ describe('CHECKIN_CALENDAR 테이블', () => {
     }
   });
 
-  it('1사이클 합계 — 보급권 슬롯별 70 + 다이아 13,000', () => {
+  it('1사이클 합계 — 보급권 슬롯별 70 + 다이아 8,600', () => {
     let diamond = 0;
     const boxes = { weapon: 0, armor: 0, accessory: 0 };
     for (const r of CHECKIN_CALENDAR) {
@@ -60,7 +60,7 @@ describe('CHECKIN_CALENDAR 테이블', () => {
       else
         for (const s of ['weapon', 'armor', 'accessory'] as const) boxes[s] += r.perSlot;
     }
-    expect(diamond).toBe(13_000);
+    expect(diamond).toBe(8_600);
     expect(boxes.weapon).toBe(70);
     expect(boxes.armor).toBe(70);
     expect(boxes.accessory).toBe(70);

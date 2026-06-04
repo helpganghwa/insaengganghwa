@@ -14,12 +14,15 @@ import { INVITE_DIAMOND_PER_REFERRAL, INVITE_BOX_PER_REFERRAL } from '@/lib/game
  * 등급 패키지 없음(등급 시스템 미존재). 결제 백엔드(포트원/IAP/본인인증/영수증)는
  * 후속 — 현재 상점 UI + 무료 획득 동선만, 충전 CTA는 비활성('준비 중').
  */
+// 시간 가치 기준 — 다이아 1개 = 1분 강화 단축. 하루(1,440💎) 단가가 소액 ~₩7,200 →
+// 대량 ~₩6,120로 완만(소액도 손해 적게). total = diamond(base) + bonus.
+// TODO(결제 백엔드): 첫 결제 2배(1회 한정) — 신규 전환 훅. IAP 연동 시 구현.
 const DIAMOND_PACKAGES = [
-  { id: 'starter', diamond: 1200, bonus: 0, krw: 1200, tag: null },
-  { id: 'small', diamond: 6500, bonus: 500, krw: 6500, tag: null },
-  { id: 'medium', diamond: 14000, bonus: 2000, krw: 13000, tag: '인기' },
-  { id: 'large', diamond: 30000, bonus: 6000, krw: 26000, tag: null },
-  { id: 'mega', diamond: 78000, bonus: 22000, krw: 65000, tag: '최대 혜택' },
+  { id: 'starter', diamond: 300, bonus: 0, krw: 1500, tag: null },
+  { id: 'small', diamond: 1100, bonus: 100, krw: 6000, tag: null },
+  { id: 'medium', diamond: 2400, bonus: 400, krw: 13000, tag: '인기' },
+  { id: 'large', diamond: 5200, bonus: 1200, krw: 28000, tag: null },
+  { id: 'mega', diamond: 12000, bonus: 4000, krw: 68000, tag: '최대 혜택' },
 ] as const;
 
 export default async function ShopPage() {

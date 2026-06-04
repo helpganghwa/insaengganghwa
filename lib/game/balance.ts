@@ -318,7 +318,7 @@ export function supplyItemProbability(slotActiveCatalogCount: number): number {
 // §5. 레이드 (플레이어 호스팅 co-op)
 // ─────────────────────────────────────────────────────────────────────────────
 
-export const RAID_OPEN_COST_DIAMOND = 500;
+export const RAID_OPEN_COST_DIAMOND = 300;
 export const RAID_MAX_PARTICIPANTS = 10; // 호스트 포함
 export const RAID_MAX_CONCURRENT_PER_USER = 3; // 호스팅+참여 합산
 export const RAID_DAILY_CAP = 5; // 유저당 1일(KST)
@@ -327,12 +327,12 @@ export const RAID_BASE_ATTACKS = 10; // 참여자당 기본
 
 /**
  * §5.5 n번째 추가 공격 비용(다이아) — 10번 단위 단계 상승.
- * 1~10번째: 50, 11~20: 100, 21~30: 150, 31~40: 200, …
- * = 50 × ceil(n / 10). n ≥ 1.
+ * 1~10번째: 25, 11~20: 50, 21~30: 75, 31~40: 100, …
+ * = 25 × ceil(n / 10). n ≥ 1.
  */
 export function raidExtraAttackCost(nth: number): number {
   const n = Math.max(1, Math.floor(nth));
-  return 50 * Math.ceil(n / 10);
+  return 25 * Math.ceil(n / 10);
 }
 
 /** §5.2 phase1 HP 범위. phase n HP = phase1 × 1.5^(n-1). */
@@ -381,15 +381,13 @@ export function diamondToFinishMs(remainingMs: number): number {
 }
 
 /** §6.5 닉네임 변경 — 첫 변경 무료, 이후 매 변경마다 차감. */
-export const NICKNAME_CHANGE_COST_DIAMOND = 1000;
+export const NICKNAME_CHANGE_COST_DIAMOND = 300;
 
 /**
  * §6.6 캐릭터 프로필 생성 — Pixellab v2 Pro + Claude vision 자동 검토 비용 포함.
- * **[TBD]** 5000 vs 10000 최종 결정은 운영 시작 후 USD 실측 + 어뷰징 신호 보고.
- * v1 default = 10000 (1다=1분 환산 ≈ 7일치 플레이, 프리미엄 자기표현 가치).
- * AI 검토 거절 시 100% 환불(PROFILE §5.1·§6).
+ * 2000 다이아(1다=1분 환산 ≈ 1.4일치, 프리미엄 자기표현). AI 검토 거절 시 100% 환불(PROFILE §5.1·§6).
  */
-export const PROFILE_GENERATION_DIAMOND = 10_000;
+export const PROFILE_GENERATION_DIAMOND = 2_000;
 
 // §6.4 광고 보상 — v1 미도입(사용자 결정). 모바일 웹은 보상형 광고 SDK SSV
 // 인프라가 약해 치트 방어가 어렵고 1인 운영 부담이 큼. 상점에 광고 제거 IAP는
@@ -409,38 +407,38 @@ export type CheckinReward =
 
 /**
  * §7.1 출석 캘린더 보상 — 1-index(1~28). BALANCE.md §7.1 표와 1:1.
- * 평일 6일 순환(무기→💎→방어구→💎→장신구→💎) + 7일째마다 마일스톤 4종 순환
- * (보급권 30 → 💎2,000 → 보급권 60 → 💎5,000).
+ * 평일 6일 순환(무기→💎300→방어구→💎300→장신구→💎300) + 7일째마다 마일스톤 4종 순환
+ * (보급권 30 → 💎2,000 → 보급권 60 → 💎3,000).
  */
 export const CHECKIN_CALENDAR: readonly CheckinReward[] = [
   { kind: 'supply', slot: 'weapon', count: 10 }, // 1
-  { kind: 'diamond', amount: 500 }, // 2
+  { kind: 'diamond', amount: 300 }, // 2
   { kind: 'supply', slot: 'armor', count: 10 }, // 3
-  { kind: 'diamond', amount: 500 }, // 4
+  { kind: 'diamond', amount: 300 }, // 4
   { kind: 'supply', slot: 'accessory', count: 10 }, // 5
-  { kind: 'diamond', amount: 500 }, // 6
+  { kind: 'diamond', amount: 300 }, // 6
   { kind: 'supply_set', perSlot: 10 }, // 7 ★
   { kind: 'supply', slot: 'weapon', count: 10 }, // 8
-  { kind: 'diamond', amount: 500 }, // 9
+  { kind: 'diamond', amount: 300 }, // 9
   { kind: 'supply', slot: 'armor', count: 10 }, // 10
-  { kind: 'diamond', amount: 500 }, // 11
+  { kind: 'diamond', amount: 300 }, // 11
   { kind: 'supply', slot: 'accessory', count: 10 }, // 12
-  { kind: 'diamond', amount: 500 }, // 13
+  { kind: 'diamond', amount: 300 }, // 13
   { kind: 'diamond', amount: 2000 }, // 14 ★
   { kind: 'supply', slot: 'weapon', count: 10 }, // 15
-  { kind: 'diamond', amount: 500 }, // 16
+  { kind: 'diamond', amount: 300 }, // 16
   { kind: 'supply', slot: 'armor', count: 10 }, // 17
-  { kind: 'diamond', amount: 500 }, // 18
+  { kind: 'diamond', amount: 300 }, // 18
   { kind: 'supply', slot: 'accessory', count: 10 }, // 19
-  { kind: 'diamond', amount: 500 }, // 20
+  { kind: 'diamond', amount: 300 }, // 20
   { kind: 'supply_set', perSlot: 20 }, // 21 ★
   { kind: 'supply', slot: 'weapon', count: 10 }, // 22
-  { kind: 'diamond', amount: 500 }, // 23
+  { kind: 'diamond', amount: 300 }, // 23
   { kind: 'supply', slot: 'armor', count: 10 }, // 24
-  { kind: 'diamond', amount: 500 }, // 25
+  { kind: 'diamond', amount: 300 }, // 25
   { kind: 'supply', slot: 'accessory', count: 10 }, // 26
-  { kind: 'diamond', amount: 500 }, // 27
-  { kind: 'diamond', amount: 5000 }, // 28 ★
+  { kind: 'diamond', amount: 300 }, // 27
+  { kind: 'diamond', amount: 3000 }, // 28 ★
 ] as const;
 
 /** §7.1 7일째 마일스톤 칸(1-index)인지 — UI 강조용. */
@@ -496,20 +494,20 @@ export type MeleeReward = { diamond: number; boxes: number };
  * 1위 💎1000+10 · 2~3위 💎500+5 · 상위5% 💎200+3 · 상위20% 💎100+2 · 상위50% 💎50+2 · 나머지 상자1.
  */
 export function meleeRewardForRank(rank: number, n: number): MeleeReward {
-  if (rank <= 1) return { diamond: 1000, boxes: 10 };
-  if (rank <= 3) return { diamond: 500, boxes: 5 };
-  if (rank <= Math.ceil(n * 0.05)) return { diamond: 200, boxes: 3 };
-  if (rank <= Math.ceil(n * 0.2)) return { diamond: 100, boxes: 2 };
-  if (rank <= Math.ceil(n * 0.5)) return { diamond: 50, boxes: 2 };
-  return { diamond: 0, boxes: 1 };
+  if (rank <= 1) return { diamond: 2000, boxes: 30 };
+  if (rank <= 3) return { diamond: 1000, boxes: 15 };
+  if (rank <= Math.ceil(n * 0.05)) return { diamond: 400, boxes: 10 };
+  if (rank <= Math.ceil(n * 0.2)) return { diamond: 150, boxes: 10 };
+  if (rank <= Math.ceil(n * 0.5)) return { diamond: 100, boxes: 5 };
+  return { diamond: 50, boxes: 3 };
 }
 
 /** 보상 테이블 표시용 — meleeRewardForRank와 1:1(공시). 등수 라벨 + 보상. */
 export const MELEE_REWARD_TIERS: { label: string; diamond: number; boxes: number }[] = [
-  { label: '1위', diamond: 1000, boxes: 10 },
-  { label: '2~3위', diamond: 500, boxes: 5 },
-  { label: '상위 5%', diamond: 200, boxes: 3 },
-  { label: '상위 20%', diamond: 100, boxes: 2 },
-  { label: '상위 50%', diamond: 50, boxes: 2 },
-  { label: '그 외', diamond: 0, boxes: 1 },
+  { label: '1위', diamond: 2000, boxes: 30 },
+  { label: '2~3위', diamond: 1000, boxes: 15 },
+  { label: '상위 5%', diamond: 400, boxes: 10 },
+  { label: '상위 20%', diamond: 150, boxes: 10 },
+  { label: '상위 50%', diamond: 100, boxes: 5 },
+  { label: '그 외', diamond: 50, boxes: 3 },
 ];
