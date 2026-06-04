@@ -12,6 +12,7 @@ import { userSupplyBoxes } from '@/lib/db/schema/supply';
 import { userCheckinState } from '@/lib/db/schema/checkin';
 import { kstDateString } from '@/lib/kst';
 
+import { BattlePassBanner } from './BattlePassBanner';
 import { DailySupplyCard } from './DailySupplyCard';
 import { HomeBannerCarousel } from './HomeBannerCarousel';
 import { HubCheckinCard } from './HubCheckinCard';
@@ -60,14 +61,6 @@ const MENU = [
     desc: '랜덤 장비 획득',
     bg: '/sprites/hub/gacha.png',
     tint: '#143a2a',
-    scale: 1,
-  },
-  {
-    href: '/battlepass',
-    label: '배틀패스',
-    desc: '강화·초월 성장 보상',
-    bg: '/sprites/hub/battlepass.png', // TODO: 전용 아트(현재 tint placeholder)
-    tint: '#2e1640',
     scale: 1,
   },
   {
@@ -228,6 +221,7 @@ export default async function HomePage() {
         {hasUnclaimedDaily ? <DailySupplyCard /> : null}
         {hasUnclaimedCheckin ? <HubCheckinCard /> : null}
       </HomeBannerCarousel>
+      <BattlePassBanner />
       <div className="grid grid-cols-2 gap-3">
         {MENU.map((m) => {
           const count = counts[m.href] ?? 0;
