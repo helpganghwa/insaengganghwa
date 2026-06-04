@@ -20,7 +20,7 @@ export async function endTestDb(): Promise<void> {
   await client.end({ timeout: 5 });
 }
 
-/** 유저 codex에 없고, **lane 여유 있는 슬롯**의 active catalog_item_id — 테스트 격리. */
+/** 유저가 미보유이고, **lane 여유 있는 슬롯**의 active catalog_item_id — 테스트 격리. */
 export async function pickUnusedCatalogId(userId: string): Promise<number> {
   const r = (await testDb.execute(sql`
     with rc as (
@@ -31,18 +31,18 @@ export async function pickUnusedCatalogId(userId: string): Promise<number> {
     left join rc on rc.slot = c.slot
     where c.active
       and coalesce(rc.n, 0) < 2
-      and not exists (select 1 from user_codex where user_id = ${userId}::uuid and catalog_item_id = c.id)
+      and not exists (select 1 from user_equipment where user_id = ${userId}::uuid and catalog_item_id = c.id)
     order by c.id limit 1
   `)) as unknown as { id: number }[];
   if (!r[0]) {
     throw new Error(
-      '테스트 유저: 모든 슬롯 lane이 가득 찼거나 모든 catalog가 codex에 있음 — 정리 필요',
+      '테스트 유저: 모든 슬롯 lane이 가득 찼거나 모든 catalog를 보유 중 — 정리 필요',
     );
   }
   return Number(r[0].id);
 }
 
-/** 강화 테스트용 fixture: equipment_instance + 'running' 강화 잡 생성. cleanup 반환. */
+/** 강화 테스트용 fixture: user_equipment 레코드 + 'running' 강화 잡 생성. cleanup 반환. */
 export async function makeRunningJob(opts: {
   userId: string;
   catalogItemId: number;
@@ -50,14 +50,13 @@ export async function makeRunningJob(opts: {
   baseRateBp: number;
   /** elapsed 제어 — 'full'=과거 완료시각(success 유도) / 'zero'=현재 시작·미래 완료(hold/down 유도) */
   timing: 'full' | 'zero';
-  fodder?: boolean; // +100 제물 시뮬
 }): Promise<{
+  /** 강화 대상 user_equipment.id */
   instanceId: bigint;
   jobId: bigint;
-  fodderInstanceId: bigint | null;
   cleanup: () => Promise<void>;
 }> {
-  const { userId, catalogItemId, fromLevel, baseRateBp, timing, fodder } = opts;
+  const { userId, catalogItemId, fromLevel, baseRateBp, timing } = opts;
   const slot = (await testDb.execute(sql`select slot::text s from catalog_items where id = ${catalogItemId}`)) as unknown as { s: string }[];
   const slotStr = slot[0]!.s;
   // 자유 lane 탐지 — 유저가 같은 slot에 진행 중 잡이 있으면 그 lane 회피
@@ -74,54 +73,36 @@ export async function makeRunningJob(opts: {
         `진행 중인 강화를 정리하거나 전용 테스트 계정 사용 권장`,
     );
   }
-  // 인스턴스
-  const inst = (await testDb.execute(sql`
-    insert into equipment_instances (user_id, catalog_item_id, enhance_level, transcend_level)
+  // user_equipment 레코드 (카탈로그당 1행 — pickUnusedCatalogId가 미보유 보장)
+  const eq = (await testDb.execute(sql`
+    insert into user_equipment (user_id, catalog_item_id, enhance_level, transcend_level)
     values (${userId}::uuid, ${catalogItemId}, ${fromLevel}, 0)
     returning id::text id`)) as unknown as { id: string }[];
-  const instanceId = BigInt(inst[0]!.id);
-  // (선택) 제물
-  let fodderInstanceId: bigint | null = null;
-  if (fodder) {
-    const f = (await testDb.execute(sql`
-      insert into equipment_instances (user_id, catalog_item_id, enhance_level, transcend_level)
-      values (${userId}::uuid, ${catalogItemId}, 0, 0)
-      returning id::text id`)) as unknown as { id: string }[];
-    fodderInstanceId = BigInt(f[0]!.id);
-  }
-  // 잡 — slot_lane은 동시성 충돌 회피 위해 1로(테스트 직렬 가정)
+  const instanceId = BigInt(eq[0]!.id);
+  // 잡
   const startedAt = timing === 'full' ? `now() - interval '1 hour'` : `now()`;
   const completeAt = timing === 'full' ? `now() - interval '1 second'` : `now() + interval '1 hour'`;
   const job = (await testDb.execute(sql`
     insert into enhancement_jobs
-      (user_id, equipment_instance_id, slot, slot_lane, from_level, target_level,
-       base_rate_bp, duration_ms, started_at, complete_at, total_reduced_ms, fodder_instance_id, status)
+      (user_id, user_equipment_id, slot, slot_lane, from_level, target_level,
+       base_rate_bp, duration_ms, started_at, complete_at, total_reduced_ms, status)
     values (${userId}::uuid, ${instanceId.toString()}::bigint, ${slotStr}::slot, ${lane},
        ${fromLevel}, ${fromLevel + 1}, ${baseRateBp}, ${3600000}::bigint,
-       ${sql.raw(startedAt)}, ${sql.raw(completeAt)}, 0::bigint,
-       ${fodderInstanceId === null ? null : fodderInstanceId.toString()}::bigint, 'running')
+       ${sql.raw(startedAt)}, ${sql.raw(completeAt)}, 0::bigint, 'running')
     returning id::text id`)) as unknown as { id: string }[];
   const jobId = BigInt(job[0]!.id);
 
   const cleanup = async () => {
     // 안전 — 실패해도 진행 (best-effort). 의존 순서대로 삭제.
     try {
-      await testDb.execute(sql`delete from enhancement_logs where user_id = ${userId}::uuid and equipment_instance_id = ${instanceId.toString()}::bigint`);
+      await testDb.execute(sql`delete from enhancement_logs where user_id = ${userId}::uuid and user_equipment_id = ${instanceId.toString()}::bigint`);
     } catch {}
     try {
       await testDb.execute(sql`delete from enhancement_jobs where id = ${jobId.toString()}::bigint`);
     } catch {}
     try {
-      // 인스턴스(메인 + 제물)
-      await testDb.execute(sql`delete from equipment_instances where id = ${instanceId.toString()}::bigint`);
-      if (fodderInstanceId !== null) {
-        await testDb.execute(sql`delete from equipment_instances where id = ${fodderInstanceId.toString()}::bigint`);
-      }
-    } catch {}
-    // 이 테스트가 생성한 codex 행만 삭제(catalogItemId가 사전엔 없었음 — pickUnusedCatalogId 보장).
-    try {
-      await testDb.execute(sql`delete from user_codex where user_id = ${userId}::uuid and catalog_item_id = ${catalogItemId}`);
+      await testDb.execute(sql`delete from user_equipment where id = ${instanceId.toString()}::bigint`);
     } catch {}
   };
-  return { instanceId, jobId, fodderInstanceId, cleanup };
+  return { instanceId, jobId, cleanup };
 }

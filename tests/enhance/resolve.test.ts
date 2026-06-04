@@ -52,13 +52,13 @@ describe.skipIf(skip)('resolveEnhance — DB 통합', () => {
     expect(r.userEquipmentId).toBe(instanceId);
 
     // 인스턴스 레벨 11로 갱신
-    const inst = (await testDb.execute(sql`select enhance_level lv from equipment_instances where id = ${instanceId.toString()}::bigint`)) as unknown as { lv: number }[];
+    const inst = (await testDb.execute(sql`select enhance_level lv from user_equipment where id = ${instanceId.toString()}::bigint`)) as unknown as { lv: number }[];
     expect(inst[0]?.lv).toBe(11);
     // 도감 신규 11
-    const codex = (await testDb.execute(sql`select max_enhance_level lv from user_codex where user_id = ${TEST_USER_ID}::uuid and catalog_item_id = ${catalogItemId}`)) as unknown as { lv: number }[];
+    const codex = (await testDb.execute(sql`select max_enhance_level lv from user_equipment where user_id = ${TEST_USER_ID}::uuid and catalog_item_id = ${catalogItemId}`)) as unknown as { lv: number }[];
     expect(codex[0]?.lv).toBe(11);
     // 로그 success
-    const log = (await testDb.execute(sql`select result::text res from enhancement_logs where equipment_instance_id = ${instanceId.toString()}::bigint order by id desc limit 1`)) as unknown as { res: string }[];
+    const log = (await testDb.execute(sql`select result::text res from enhancement_logs where user_equipment_id = ${instanceId.toString()}::bigint order by id desc limit 1`)) as unknown as { res: string }[];
     expect(log[0]?.res).toBe('success');
     // 잡 completed
     const job = (await testDb.execute(sql`select status::text st from enhancement_jobs where id = ${jobId.toString()}::bigint`)) as unknown as { st: string }[];
@@ -87,9 +87,9 @@ describe.skipIf(skip)('resolveEnhance — DB 통합', () => {
     expect(r.outcome).toBe('hold');
     expect(r.toLevel).toBe(fromLevel);
 
-    const inst = (await testDb.execute(sql`select enhance_level lv from equipment_instances where id = ${instanceId.toString()}::bigint`)) as unknown as { lv: number }[];
+    const inst = (await testDb.execute(sql`select enhance_level lv from user_equipment where id = ${instanceId.toString()}::bigint`)) as unknown as { lv: number }[];
     expect(inst[0]?.lv).toBe(fromLevel); // 레벨 불변
-    const log = (await testDb.execute(sql`select result::text res from enhancement_logs where equipment_instance_id = ${instanceId.toString()}::bigint order by id desc limit 1`)) as unknown as { res: string }[];
+    const log = (await testDb.execute(sql`select result::text res from enhancement_logs where user_equipment_id = ${instanceId.toString()}::bigint order by id desc limit 1`)) as unknown as { res: string }[];
     expect(log[0]?.res).toBe('hold');
   });
 
@@ -115,9 +115,9 @@ describe.skipIf(skip)('resolveEnhance — DB 통합', () => {
     expect(r.outcome).toBe('down');
     expect(r.toLevel).toBe(59);
 
-    const inst = (await testDb.execute(sql`select enhance_level lv from equipment_instances where id = ${instanceId.toString()}::bigint`)) as unknown as { lv: number }[];
+    const inst = (await testDb.execute(sql`select enhance_level lv from user_equipment where id = ${instanceId.toString()}::bigint`)) as unknown as { lv: number }[];
     expect(inst[0]?.lv).toBe(59);
-    const log = (await testDb.execute(sql`select result::text res from enhancement_logs where equipment_instance_id = ${instanceId.toString()}::bigint order by id desc limit 1`)) as unknown as { res: string }[];
+    const log = (await testDb.execute(sql`select result::text res from enhancement_logs where user_equipment_id = ${instanceId.toString()}::bigint order by id desc limit 1`)) as unknown as { res: string }[];
     expect(log[0]?.res).toBe('down');
   });
 
