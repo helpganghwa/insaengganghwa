@@ -87,6 +87,8 @@ export function ResourceToastProvider({ children }: { children: React.ReactNode 
   const overlayCountRef = useRef(0);
   /** 오버레이 종료 신호 유실 대비 강제 release 타이머. */
   const rankingFallbackRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  /** 노출 중인 공용 헤더 토스트 수 — >0이면 즉시 랭킹 토스트를 미뤘다 종료 시 노출(겹침 방지). */
+  const headerActiveRef = useRef(0);
 
   const dismiss = useCallback((id: number) => {
     setToasts((prev) => prev.filter((t) => t.id !== id));
@@ -115,6 +117,7 @@ export function ResourceToastProvider({ children }: { children: React.ReactNode 
   const showHeaderToast = useCallback(
     (opts: { icon?: string; title: string; rewards?: HeaderReward[] }) => {
       const id = ++counterRef.current;
+      headerActiveRef.current += 1; // 노출 중 표시 — 종료(dismissHeader) 시 차감.
       setToasts((prev) => [
         ...prev,
         { id, kind: 'header', icon: opts.icon, title: opts.title, rewards: opts.rewards },
@@ -140,6 +143,19 @@ export function ResourceToastProvider({ children }: { children: React.ReactNode 
     setTimeout(() => dismiss(id), RANKING_TOAST_MS);
   }, [dismiss]);
 
+  // 공용 헤더 토스트 종료 — unmount + 활성 차감. 마지막 헤더 토스트가 닫히고(0) 강화
+  // 오버레이도 없으면, 그동안 미뤄둔 즉시 랭킹 토스트를 이제 노출(겹침 방지·순차 노출).
+  const dismissHeader = useCallback(
+    (id: number) => {
+      setToasts((prev) => prev.filter((t) => t.id !== id));
+      headerActiveRef.current = Math.max(0, headerActiveRef.current - 1);
+      if (headerActiveRef.current === 0 && overlayCountRef.current === 0 && rankingPendingRef.current) {
+        releaseRanking();
+      }
+    },
+    [releaseRanking],
+  );
+
   const showRanking = useCallback(
     (before: MyRanks, after: MyRanks, immediate = false) => {
       if (rankingPendingRef.current) {
@@ -148,8 +164,10 @@ export function ResourceToastProvider({ children }: { children: React.ReactNode 
         rankingPendingRef.current = { before, after };
       }
       // 인벤토리(분해/초월/장비상세) — 동기화할 강화 결과 오버레이가 없으므로 누적·안전망
-      // 디바운스 없이 즉시 노출. (releaseRanking이 잔여 fallback 타이머도 정리)
+      // 디바운스 없이 즉시 노출. 단, 공용 헤더 토스트가 노출 중이면 끝난 뒤 노출(겹침 방지)
+      // — dismissHeader에서 release. (releaseRanking이 잔여 fallback 타이머도 정리)
       if (immediate) {
+        if (headerActiveRef.current > 0) return;
         releaseRanking();
         return;
       }
@@ -197,7 +215,7 @@ export function ResourceToastProvider({ children }: { children: React.ReactNode 
       </div>
       {/* 공용 헤더 토스트 — 헤더 덮는 슬라이드 바(WINNER 토스트와 동일 패턴). 각 바가 자체 fixed. */}
       {headerToasts.map((t) => (
-        <HeaderBar key={t.id} entry={t} onDismiss={dismiss} />
+        <HeaderBar key={t.id} entry={t} onDismiss={dismissHeader} />
       ))}
       {/* 자원/에러 토스트 — 중앙 상단(기존 위치). */}
       <div

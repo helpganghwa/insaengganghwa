@@ -15,7 +15,7 @@ import { RAID_BOSSES, pickRaidShareCopy, type RaidBoss } from '@/lib/game/raid/b
 import { BossSprite } from '@/components/BossSprite';
 import { getBossBg, getBossBgClass } from '@/lib/game/raid/boss-sprites';
 import { assetUrl } from '@/lib/asset-versions';
-import { useResourceToast } from '@/components/ResourceToast';
+import { useResourceToast, type HeaderReward } from '@/components/ResourceToast';
 import * as haptic from '@/lib/game/haptic';
 import { sounds } from '@/lib/game/sound';
 
@@ -130,7 +130,7 @@ function useCountdown(expireAtIso: string): { text: string; over: boolean; urgen
 
 export function RaidSessionCard({ view: v }: { view: RaidView }) {
   const router = useRouter();
-  const { showResource, showError } = useResourceToast();
+  const { showResource, showError, showHeaderToast } = useResourceToast();
   const { text: countdown, over, urgent } = useCountdown(v.expireAtIso);
 
   const boss = RAID_BOSSES[v.bossCode];
@@ -329,6 +329,17 @@ export function RaidSessionCard({ view: v }: { view: RaidView }) {
         setClaimedOpt(false);
         showError(r.message);
         return;
+      }
+      // 공용 헤더 토스트로 수령 보상(💎 + 상자) 노출 — 값은 이미 화면에 있는 myReward.
+      const rw = v.myReward;
+      if (rw) {
+        const rewards: HeaderReward[] = [
+          ...(rw.diamond > 0 ? [{ icon: '💎', amount: rw.diamond }] : []),
+          ...(['weapon', 'armor', 'accessory'] as SupplySlot[])
+            .filter((s) => rw.boxes[s] > 0)
+            .map((s) => ({ icon: SLOT_EMOJI[s], amount: rw.boxes[s] })),
+        ];
+        if (rewards.length > 0) showHeaderToast({ title: '레이드 보상', rewards });
       }
       setTimeout(() => router.refresh(), 600);
     })();

@@ -10,7 +10,7 @@ import {
   type CheckinReward,
   type SupplySlot,
 } from '@/lib/game/balance';
-import { useResourceToast } from '@/components/ResourceToast';
+import { useResourceToast, type HeaderReward } from '@/components/ResourceToast';
 import { useDiamond } from '@/components/DiamondContext';
 import * as haptic from '@/lib/game/haptic';
 import { sounds } from '@/lib/game/sound';
@@ -77,7 +77,7 @@ export function CheckinCalendar({
   const [lastClaimed, setLastClaimed] = useState<string | null>(initialLastClaimedKstDay);
   const [pending, startTransition] = useTransition();
   const [justClaimedDay, setJustClaimedDay] = useState<number | null>(null);
-  const { showResource, showError } = useResourceToast();
+  const { showHeaderToast, showError } = useResourceToast();
   const { optimisticAdjust: adjustDiamond } = useDiamond();
 
   const claimedToday = lastClaimed === kstToday;
@@ -102,17 +102,16 @@ export function CheckinCalendar({
       const claimedDay = r.result.cycleDay;
       sounds.rewardClaim();
       haptic.success();
-      if (reward.kind === 'diamond') {
-        // 헤더 다이아 즉시 가산(낙관) — 페이지가 router.refresh 안 부르므로 필수.
-        adjustDiamond(BigInt(reward.amount));
-        showResource('💎', '다이아', reward.amount);
-      } else if (reward.kind === 'supply') {
-        showResource(SLOT_EMOJI[reward.slot], `${SLOT_LABEL[reward.slot]} 보급 상자`, reward.count);
-      } else {
-        for (const s of SUPPLY_SLOTS) {
-          showResource(SLOT_EMOJI[s], `${SLOT_LABEL[s]} 보급 상자`, reward.perSlot);
-        }
-      }
+      // 보상 종류별 칩 구성 → 공용 헤더 토스트 한 번으로 통합(이전엔 종류마다 중앙 토스트).
+      const rewards: HeaderReward[] =
+        reward.kind === 'diamond'
+          ? [{ icon: '💎', amount: reward.amount }]
+          : reward.kind === 'supply'
+            ? [{ icon: SLOT_EMOJI[reward.slot], amount: reward.count }]
+            : SUPPLY_SLOTS.map((s) => ({ icon: SLOT_EMOJI[s], amount: reward.perSlot }));
+      // 헤더 다이아 즉시 가산(낙관) — 페이지가 router.refresh 안 부르므로 필수.
+      if (reward.kind === 'diamond') adjustDiamond(BigInt(reward.amount));
+      showHeaderToast({ title: '출석 보상', rewards });
       setDayProgress((dp) => (dp + 1) % CHECKIN_CYCLE_DAYS);
       setLastClaimed(kstToday);
       setJustClaimedDay(claimedDay);

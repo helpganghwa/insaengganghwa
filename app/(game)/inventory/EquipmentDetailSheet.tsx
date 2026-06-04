@@ -129,12 +129,13 @@ export function EquipmentDetailSheet({
   const canDisenchant = !item.equipped && !item.isLocked && !item.busy;
   const canEnhance = !item.busy && !item.isLocked;
 
-  const { showRanking } = useResourceToast();
+  const { showRanking, showHeaderToast } = useResourceToast();
   type ActionResult = {
     status: string;
     message?: string;
     ranksBefore?: MyRanks;
     ranksAfter?: MyRanks;
+    diamondGranted?: number;
   };
   // optimistic은 **await 전**에 실행 — 탭 즉시 화면 반영. 서버 확정 후 router.refresh()로
   // 실제 데이터 동기화(실패 시에도 refresh → useOptimistic 자동 롤백). 같은 트랜잭션이
@@ -144,9 +145,16 @@ export function EquipmentDetailSheet({
       setError(null);
       optimistic?.();
       const r = await fn();
-      if (r.status === 'error') setError(r.message ?? '오류');
-      else if (r.ranksBefore && r.ranksAfter)
-        showRanking(r.ranksBefore, r.ranksAfter, true); // 인벤토리 — 즉시 노출(디바운스 없음)
+      if (r.status === 'error') {
+        setError(r.message ?? '오류');
+      } else {
+        // 분해 보상(💎)이 있으면 공용 헤더 토스트(단일 분해는 랭킹 미반환 → 토스트 단독).
+        if (typeof r.diamondGranted === 'number' && r.diamondGranted > 0) {
+          showHeaderToast({ title: '장비 분해', rewards: [{ icon: '💎', amount: r.diamondGranted }] });
+        }
+        // 랭킹 변화는 헤더 토스트 종료 후 노출(provider가 겹침 방지·순차화).
+        if (r.ranksBefore && r.ranksAfter) showRanking(r.ranksBefore, r.ranksAfter, true);
+      }
       router.refresh();
     });
 

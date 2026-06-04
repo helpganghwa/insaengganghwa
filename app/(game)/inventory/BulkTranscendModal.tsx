@@ -142,7 +142,7 @@ export function BulkTranscendModal({
   // onDone에 전달할 낙관 업데이트 payload — execute 시점에 selectedRows로 캡처.
   const [optimisticPayload, setOptimisticPayload] = useState<BulkTranscendOptimistic | null>(null);
   const [, startTransition] = useTransition();
-  const { showRanking } = useResourceToast();
+  const { showRanking, showHeaderToast } = useResourceToast();
 
   // 강화 패턴 — 3s 확정 카운트다운.
   const [confirm, setConfirm] = useState(false);
@@ -249,8 +249,12 @@ export function BulkTranscendModal({
         return;
       }
       setResult(r);
+      // 초월은 자원 보상이 없어 완료 알림(칩 없음) — 헤더 토스트 먼저 → 랭킹 변화는 종료 후(겹침 방지).
+      if ('targetsUpgraded' in r && r.targetsUpgraded > 0) {
+        showHeaderToast({ title: `일괄 초월 ${r.targetsUpgraded}장 완료` });
+      }
       if ('ranksBefore' in r && 'ranksAfter' in r) {
-        showRanking(r.ranksBefore, r.ranksAfter, true); // 인벤토리 — 즉시 노출(디바운스 없음)
+        showRanking(r.ranksBefore, r.ranksAfter, true);
       }
     });
   }

@@ -90,7 +90,7 @@ export function BulkDisenchantModal({
   // onDone에 전달할 낙관 업데이트 payload — execute 시점에 selectedRows로 캡처.
   const [optimisticPayload, setOptimisticPayload] = useState<BulkDisenchantOptimistic | null>(null);
   const [, startTransition] = useTransition();
-  const { showRanking } = useResourceToast();
+  const { showRanking, showHeaderToast } = useResourceToast();
 
   const [confirm, setConfirm] = useState(false);
   const [confirmLeft, setConfirmLeft] = useState(0);
@@ -186,8 +186,12 @@ export function BulkDisenchantModal({
         return;
       }
       setResult(r);
+      // 헤더 토스트(💎 합계) 먼저 → 랭킹 변화 토스트는 헤더 토스트 종료 후 노출(겹침 방지).
+      if ('diamondGranted' in r && r.diamondGranted > 0) {
+        showHeaderToast({ title: '일괄 분해', rewards: [{ icon: '💎', amount: r.diamondGranted }] });
+      }
       if ('ranksBefore' in r && 'ranksAfter' in r) {
-        showRanking(r.ranksBefore, r.ranksAfter, true); // 인벤토리 — 즉시 노출(디바운스 없음)
+        showRanking(r.ranksBefore, r.ranksAfter, true);
       }
     });
   }
