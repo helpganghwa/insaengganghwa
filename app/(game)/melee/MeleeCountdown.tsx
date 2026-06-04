@@ -58,12 +58,12 @@ export function MeleeCountdown({
   let sub: string;
   let target = 0;
   if (now < runAt) {
-    label = '오늘 오전 9시 개시';
-    sub = '9시 30분 결과 발표';
+    label = '오전 9시 개시';
+    sub = '';
     target = runAt;
   } else if (now < revealAt) {
     label = '난투 진행 중';
-    sub = '오전 9시 30분 결과 발표';
+    sub = '';
     target = revealAt;
   } else {
     label = '결과 집계 중';
@@ -97,7 +97,9 @@ export function MeleeCountdown({
           ) : (
             <div className="text-lg font-bold text-zinc-200 text-pixel-outline">집계 중…</div>
           )}
-          <div className="text-[11px] text-zinc-200 text-pixel-outline">{sub}</div>
+          {sub ? (
+            <div className="text-[11px] text-zinc-200 text-pixel-outline">{sub}</div>
+          ) : null}
           <div className="mt-1 rounded-full bg-black/55 px-3 py-1 text-[11px] font-medium text-zinc-100 backdrop-blur-sm">
             {participantCount != null
               ? `참가 ${participantCount.toLocaleString()}명`
