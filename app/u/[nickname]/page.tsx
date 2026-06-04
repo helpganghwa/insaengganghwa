@@ -173,12 +173,7 @@ export async function generateMetadata({
   };
 }
 
-// 해방 아이템 등수별 색(금·은·동) — 추후 등수별 이펙트 차등의 시각 hook.
-const RANK_BADGE: Record<number, string> = {
-  1: 'bg-amber-400',
-  2: 'bg-zinc-300',
-  3: 'bg-orange-400',
-};
+// 해방 아이템 등수별 보더 색(금·은·동) — 추후 등수별 이펙트 차등의 시각 hook.
 const RANK_BORDER: Record<number, string> = {
   1: 'border-amber-500/70',
   2: 'border-zinc-400/60',
@@ -451,14 +446,8 @@ export default async function PublicProfilePage({
               {data.champItems.map((c) => (
                 <li
                   key={c.id}
-                  className={`relative flex w-12 shrink-0 flex-col items-center gap-0.5 rounded border bg-zinc-950 p-0.5 text-center ${RANK_BORDER[c.rank] ?? 'border-amber-700/60'}`}
+                  className={`flex w-12 shrink-0 flex-col items-center gap-0.5 rounded border bg-zinc-950 p-0.5 text-center ${RANK_BORDER[c.rank] ?? 'border-amber-700/60'}`}
                 >
-                  {/* 등수 뱃지(1·2·3 구분 — 추후 등수별 이펙트 hook) */}
-                  <span
-                    className={`absolute -left-0.5 -top-0.5 z-10 flex h-3.5 w-3.5 items-center justify-center rounded-full text-[8px] font-bold text-zinc-950 shadow ${RANK_BADGE[c.rank] ?? 'bg-amber-400'}`}
-                  >
-                    {c.rank}
-                  </span>
                   <TranscendSprite
                     code={c.code}
                     slot={c.slot}
