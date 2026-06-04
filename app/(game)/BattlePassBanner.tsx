@@ -13,17 +13,17 @@ export function BattlePassBanner() {
       style={{ backgroundColor: '#2e1640' }}
       className="relative flex h-16 w-full min-w-0 items-center overflow-hidden rounded-xl border border-amber-600/40 transition active:scale-[0.99]"
     >
-      {/* 전용 아트(TODO) — 없으면 tint만(alt="" → 깨진 아이콘 없음). */}
+      {/* 배틀패스 엠블럼(Pixellab) — 우측 장식. */}
       {/* eslint-disable-next-line @next/next/no-img-element */}
       <img
-        src={assetUrl('/sprites/hub/battlepass.png')}
+        src={assetUrl('/sprites/hub/battlepass-emblem.png')}
         alt=""
         aria-hidden
         draggable={false}
-        className="absolute inset-0 h-full w-full object-cover"
+        className="pointer-events-none absolute top-1/2 right-2 h-[155%] w-auto -translate-y-1/2 drop-shadow-[0_0_8px_rgba(252,211,77,0.45)]"
         style={{ imageRendering: 'pixelated' }}
       />
-      <div className="pointer-events-none absolute inset-0 bg-gradient-to-r from-black/80 via-black/45 to-transparent" />
+      <div className="pointer-events-none absolute inset-0 bg-gradient-to-r from-[#2e1640] via-[#2e1640]/70 to-transparent" />
 
       <div className="relative z-10 flex w-full items-center px-3.5">
         <div className="min-w-0">
