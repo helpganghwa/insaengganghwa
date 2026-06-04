@@ -4,7 +4,7 @@ import { useEffect, useMemo, useState } from 'react';
 import { createPortal } from 'react-dom';
 
 import { TranscendSprite } from '@/components/TranscendSprite';
-import { rarityBorderStyle, hasRarityBorder } from '@/components/RarityFrame';
+import { rarityBorderStyle, hasRarityBorder, TranscendTag } from '@/components/RarityFrame';
 import { getEnhancingUserCount } from '@/app/(game)/me/actions';
 
 // 공유는 **카카오톡 전용** — 사용자 결정. 링크 복사·navigator.share 분기 제거.
@@ -299,7 +299,10 @@ export function BoastModal({
                       </div>
                       <div className="min-w-0 flex-1">
                         <div className="line-clamp-2 break-keep text-[11px] leading-tight text-white/85">{it.name}</div>
-                        <div className="text-[11px] font-bold tabular-nums text-white">+{it.enhanceLevel}</div>
+                        <div className="text-[11px] font-bold tabular-nums text-white">
+                          +{it.enhanceLevel}
+                          <TranscendTag level={it.transcendLevel} className="ml-1" />
+                        </div>
                       </div>
                     </div>
                   );

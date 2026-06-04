@@ -119,8 +119,8 @@ export function EquipmentDetailSheet({
               <div className="flex items-center gap-1 text-[10px] text-zinc-500">
                 <span>{SLOT_LABEL[item.slot]}</span>
                 {item.transcendLevel > 0 ? (
-                  <span className="font-semibold text-red-600 dark:text-red-400">
-                    · ✦ {item.transcendLevel}
+                  <span className="font-semibold" style={{ color: tColor }}>
+                    · ✦{item.transcendLevel}
                   </span>
                 ) : null}
                 {item.equipped ? (

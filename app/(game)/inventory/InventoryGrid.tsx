@@ -6,7 +6,7 @@ import { useRouter } from 'next/navigation';
 import type { Slot } from '@/lib/db/schema/equipment';
 
 import { TranscendSprite } from '@/components/TranscendSprite';
-import { RarityFrame, rarityBorderStyle, hasRarityBorder } from '@/components/RarityFrame';
+import { RarityFrame, rarityBorderStyle, hasRarityBorder, TranscendTag } from '@/components/RarityFrame';
 import { pieceCombatPower } from '@/lib/game/balance';
 
 import { equipBestSetAction } from './actions';
@@ -250,7 +250,10 @@ const Tile = memo(function Tile({
       <span className="break-keep px-0.5 text-[10px] leading-tight text-zinc-600 dark:text-zinc-400">
         {item.name}
       </span>
-      <span className="text-xs font-semibold">+{item.enhanceLevel}</span>
+      <span className="text-xs font-semibold">
+        +{item.enhanceLevel}
+        <TranscendTag level={item.transcendLevel} className="ml-1" />
+      </span>
       {isNew ? (
         <span className="absolute left-1 top-1 rounded-full bg-emerald-500 px-1 text-[8px] font-bold text-white">
           NEW

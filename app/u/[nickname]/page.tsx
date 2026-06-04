@@ -15,7 +15,7 @@ import { liberatedItemRanks } from '@/lib/game/codex/ranking';
 import { getMyRanks, getMyCountRanks } from '@/lib/game/leaderboard/queries';
 import { getEnhanceLive } from '@/lib/game/stats/queries';
 import { TranscendSprite } from '@/components/TranscendSprite';
-import { RarityFrame, rarityBorderStyle, hasRarityBorder } from '@/components/RarityFrame';
+import { RarityFrame, rarityBorderStyle, hasRarityBorder, TranscendTag } from '@/components/RarityFrame';
 import { CharacterStage } from '@/components/CharacterStage';
 import { BoastLauncher } from '@/components/BoastModal';
 
@@ -424,7 +424,10 @@ export default async function PublicProfilePage({
                   <span className="line-clamp-2 break-keep px-0.5 text-[9px] leading-tight text-zinc-400">
                     {it.name}
                   </span>
-                  <span className="text-[11px] font-semibold text-zinc-100">+{it.enhanceLevel}</span>
+                  <span className="text-[11px] font-semibold text-zinc-100">
+                    +{it.enhanceLevel}
+                    <TranscendTag level={it.transcendLevel} className="ml-1" />
+                  </span>
                 </div>
               );
             })}

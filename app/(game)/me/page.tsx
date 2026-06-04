@@ -13,7 +13,7 @@ import { championCatalogIds } from '@/lib/game/codex/ranking';
 
 import { BoastLauncher } from '@/components/BoastModal';
 import { TranscendSprite } from '@/components/TranscendSprite';
-import { rarityBorderStyle, hasRarityBorder } from '@/components/RarityFrame';
+import { rarityBorderStyle, hasRarityBorder, TranscendTag } from '@/components/RarityFrame';
 
 import { NicknameEditor } from './NicknameEditor';
 import { ReferralSection } from './ReferralSection';
@@ -175,7 +175,10 @@ export default async function ProfilePage() {
                   </div>
                   <div className="min-w-0 flex-1">
                     <div className="line-clamp-2 break-keep text-[11px] leading-tight text-white/85">{it.name}</div>
-                    <div className="text-[11px] font-bold tabular-nums text-white">+{it.enhanceLevel}</div>
+                    <div className="text-[11px] font-bold tabular-nums text-white">
+                      +{it.enhanceLevel}
+                      <TranscendTag level={it.transcendLevel} className="ml-1" />
+                    </div>
                   </div>
                 </div>
               );

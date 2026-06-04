@@ -94,3 +94,22 @@ export function rarityBorderStyle(level: number): React.CSSProperties {
 export function hasRarityBorder(level: number): boolean {
   return transcendStyle(level).hasFrame;
 }
+
+/** 초월 등급 텍스트 색 — 프레임이 있으면 등급색 rgb 문자열, +0이면 null. */
+export function rarityTextColor(level: number): string | null {
+  const st = transcendStyle(level);
+  if (!st.hasFrame) return null;
+  const [r, g, b] = st.colorRgb;
+  return `rgb(${r},${g},${b})`;
+}
+
+/** 강화 수치(+N) 옆에 붙는 초월 태그 — ✦N(등급색). 초월 0이면 렌더 없음. */
+export function TranscendTag({ level, className }: { level: number; className?: string }) {
+  const color = rarityTextColor(level);
+  if (!color) return null;
+  return (
+    <span className={className} style={{ color }}>
+      ✦{level}
+    </span>
+  );
+}
