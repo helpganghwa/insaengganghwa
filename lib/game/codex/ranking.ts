@@ -77,6 +77,45 @@ export async function getMyItemRank(
 }
 
 /**
+ * 해방 아이템 — 한 유저가 아이템별 강화랭킹 **1~3위**인 catalog_item → 등수(1·2·3) 맵.
+ * 앞선 사람 수 < 3이면 해방(rank = ahead+1). 추후 등수별 이펙트 차등 적용용.
+ * champion(1위)도 여기 rank=1로 포함. 타임아웃 가드 동일(빈 맵 폴백).
+ */
+export const liberatedItemRanks = cache(async (userId: string): Promise<Map<number, number>> => {
+  try {
+    const rows = (await withTimeout(
+      db.execute(sql`
+        select uc.catalog_item_id as cid,
+          (select count(*) from user_codex o
+           where o.catalog_item_id = uc.catalog_item_id
+             and (
+               o.max_enhance_level > uc.max_enhance_level
+               or (o.max_enhance_level = uc.max_enhance_level and o.max_enhance_reached_at < uc.max_enhance_reached_at)
+               or (o.max_enhance_level = uc.max_enhance_level and o.max_enhance_reached_at = uc.max_enhance_reached_at and o.user_id < uc.user_id)
+             )
+          )::int as ahead
+        from user_codex uc
+        where uc.user_id = ${userId}::uuid and uc.max_enhance_level > 0
+      `),
+      3000,
+      'liberatedItemRanks',
+    )) as unknown as { cid: number; ahead: number }[];
+    const m = new Map<number, number>();
+    for (const r of rows) {
+      const ahead = Number(r.ahead);
+      if (ahead < 3) m.set(Number(r.cid), ahead + 1);
+    }
+    return m;
+  } catch (e) {
+    if (e instanceof DbTimeoutError) {
+      console.warn('[liberatedItemRanks] timeout — empty fallback');
+      return new Map();
+    }
+    throw e;
+  }
+});
+
+/**
  * 한 유저가 챔피언인 catalog_item 집합 — 표시처별 1쿼리 일괄(N+1 금지, CLAUDE §11.4).
  * 자기보다 상위(레벨↑ / 동률·먼저달성 / 동률·동시각·user_id↓)가 없으면 챔피언.
  *

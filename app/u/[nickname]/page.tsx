@@ -11,7 +11,7 @@ import { profiles } from '@/lib/db/schema/profiles';
 import { userProfiles } from '@/lib/db/schema/avatar';
 import { catalogItems, equipmentInstances, type Slot } from '@/lib/db/schema/equipment';
 import { combatPowerFromOwned } from '@/lib/game/equipment/combat-power';
-import { championCatalogIds } from '@/lib/game/codex/ranking';
+import { liberatedItemRanks } from '@/lib/game/codex/ranking';
 import { getMyRanks, getMyCountRanks } from '@/lib/game/leaderboard/queries';
 import { getEnhanceLive } from '@/lib/game/stats/queries';
 import { TranscendSprite } from '@/components/TranscendSprite';
@@ -66,7 +66,7 @@ const loadProfile = cache(async (handle: string) => {
   // 이전: 5개를 한 묶음으로 3.5s 가드 → 가장 느린 쿼리(주로 ranks: unstable_cache 콜드
   // ~3s)에 도달하면 _r=null로 전부 비어버려 장비도 안 보였음(2026-06-01 수정).
   // ranks는 이 함수에서 빼고 페이지에서 <Suspense>로 stream(첫 페인트 지연 제거).
-  const [equipped, ownedAll, champSet] = await Promise.all([
+  const [equipped, ownedAll, libMap] = await Promise.all([
     withTimeout(
       db
         .select({
@@ -106,19 +106,20 @@ const loadProfile = cache(async (handle: string) => {
     ).catch(
       () => [] as { catalogItemId: number; enhanceLevel: number; transcendLevel: number }[],
     ),
-    withTimeout(championCatalogIds(prof.id), 2000, 'u.champion').catch(
-      () => new Set<number>(),
+    withTimeout(liberatedItemRanks(prof.id), 2000, 'u.liberated').catch(
+      () => new Map<number, number>(),
     ),
   ]);
 
   const sumEnhance = ownedAll.reduce((a, r) => a + r.enhanceLevel, 0);
   const maxEnhance = ownedAll.reduce((a, r) => Math.max(a, r.enhanceLevel), 0);
   const total = combatPowerFromOwned(ownedAll);
-  const pieces = equipped.map((e) => ({ ...e, isChampion: champSet.has(e.catalogItemId) }));
+  // 장착 마커는 챔피언(1위)만 유지. 해방 섹션은 1~3위 전체.
+  const pieces = equipped.map((e) => ({ ...e, isChampion: libMap.get(e.catalogItemId) === 1 }));
 
-  // 챔피언 아이템(이 플레이어가 1위인 카탈로그) 메타 — sprite/name 표시용.
-  const champIds = [...champSet];
-  const champItems = champIds.length
+  // 해방 아이템(이 플레이어가 1~3위인 카탈로그) 메타 + 등수 — sprite/name/등수뱃지.
+  const libIds = [...libMap.keys()];
+  const libMeta = libIds.length
     ? await withTimeout(
         db
           .select({
@@ -128,11 +129,14 @@ const loadProfile = cache(async (handle: string) => {
             name: catalogItems.name,
           })
           .from(catalogItems)
-          .where(inArray(catalogItems.id, champIds)),
+          .where(inArray(catalogItems.id, libIds)),
         1500,
-        'u.profile.champ',
+        'u.profile.liberated',
       ).catch(() => [] as { id: number; slot: Slot; code: string; name: string }[])
     : [];
+  const champItems = libMeta
+    .map((c) => ({ ...c, rank: libMap.get(c.id) ?? 1 }))
+    .sort((a, b) => a.rank - b.rank);
 
   return {
     nickname: prof.nickname,
@@ -168,6 +172,18 @@ export async function generateMetadata({
     twitter: { card: 'summary_large_image', title, description, images: [ogImage] },
   };
 }
+
+// 해방 아이템 등수별 색(금·은·동) — 추후 등수별 이펙트 차등의 시각 hook.
+const RANK_BADGE: Record<number, string> = {
+  1: 'bg-amber-400',
+  2: 'bg-zinc-300',
+  3: 'bg-orange-400',
+};
+const RANK_BORDER: Record<number, string> = {
+  1: 'border-amber-500/70',
+  2: 'border-zinc-400/60',
+  3: 'border-orange-500/60',
+};
 
 function rankBadge(rank: number | null | undefined): string {
   if (rank == null) return '—';
@@ -331,9 +347,9 @@ export default async function PublicProfilePage({
   return (
     <main className="mx-auto min-h-dvh w-full max-w-[390px] bg-zinc-950 text-zinc-50">
       {/* ── 히어로: 닉네임(머리 위) + 캐릭터 풀블리드 + 그라데이션 ── */}
-      <section className="relative h-[220px] overflow-hidden bg-gradient-to-b from-amber-900/30 via-zinc-900 to-zinc-950">
+      <section className="relative h-[250px] overflow-hidden bg-gradient-to-b from-amber-900/30 via-zinc-900 to-zinc-950">
         {data.charImg ? (
-          <div className="absolute inset-0 flex items-end justify-center pb-[6px]">
+          <div className="absolute inset-0 flex items-end justify-center py-[15px]">
             <CharacterStage
               charSrc={data.charImg}
               className="aspect-[2/3] h-full overflow-visible"
@@ -425,7 +441,7 @@ export default async function PublicProfilePage({
           <section className="rounded-xl border border-amber-700/50 bg-gradient-to-b from-amber-950/40 to-zinc-950 p-2">
             <div className="mb-1.5 flex items-baseline justify-between">
               <div className="text-[10px] font-semibold tracking-wide text-amber-300">
-                1위 아이템
+                해방 아이템
               </div>
               <div className="font-mono text-[10px] text-amber-200/80">
                 {data.champItems.length}종
@@ -435,13 +451,19 @@ export default async function PublicProfilePage({
               {data.champItems.map((c) => (
                 <li
                   key={c.id}
-                  className="flex w-12 shrink-0 flex-col items-center gap-0.5 rounded border border-amber-700/60 bg-zinc-950 p-0.5 text-center"
+                  className={`relative flex w-12 shrink-0 flex-col items-center gap-0.5 rounded border bg-zinc-950 p-0.5 text-center ${RANK_BORDER[c.rank] ?? 'border-amber-700/60'}`}
                 >
+                  {/* 등수 뱃지(1·2·3 구분 — 추후 등수별 이펙트 hook) */}
+                  <span
+                    className={`absolute -left-0.5 -top-0.5 z-10 flex h-3.5 w-3.5 items-center justify-center rounded-full text-[8px] font-bold text-zinc-950 shadow ${RANK_BADGE[c.rank] ?? 'bg-amber-400'}`}
+                  >
+                    {c.rank}
+                  </span>
                   <TranscendSprite
                     code={c.code}
                     slot={c.slot}
                     level={0}
-                    isChampion
+                    isChampion={c.rank === 1}
                     size={36}
                     frameless
                   />
