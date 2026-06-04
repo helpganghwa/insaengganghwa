@@ -304,6 +304,9 @@ function TranscendCanvas({
   const st = transcendStyle(level);
   // colorRgb는 매 렌더 새 배열 → deps용으로 원시값 추출 (tier에 종속, 안정적).
   const [scr, scg, scb] = st.colorRgb;
+  // 후광 아이템(해방)은 캔버스를 size보다 크게 띄워(GLOW_VIEW) 스프라이트는 size 그대로,
+  // 후광은 size 박스 밖으로 퍼지게(잘림 방지). 일반 아이템은 1(=size 그대로).
+  const GLOW_VIEW = libRank(championRank, isChampion) ? 1.4 : 1;
 
   useEffect(() => {
     if (!coord) return;
@@ -340,8 +343,9 @@ function TranscendCanvas({
     off.width = off.height = FS;
     const o = off.getContext('2d')!;
     // sprite 노출 크기 — TranscendStatic의 sw 비율과 동기화.
-    // 후광 아이템(frameless)은 스프라이트를 약간 줄여 캔버스 안에 후광이 잘리지 않게 담는다.
-    const SW = frameless ? (rankColor ? FS * 0.86 : FS) : FS * 0.7;
+    // 후광 아이템은 캔버스를 GLOW_VIEW배 키워 띄우므로, FS 내 스프라이트는 1/GLOW_VIEW로 그려
+    // 표시상 size 그대로 유지(축소 없음) + 남은 여백을 후광이 채워 size 밖으로 퍼짐.
+    const SW = frameless ? FS / GLOW_VIEW : FS * 0.7;
     const SP = (FS - SW) / 2;
     const t = st.tier === 'none' ? 0 : Math.min(1, st.level / 10);
     const bg = lerp([19, 19, 24], [color[0] * 0.13 + 12, color[1] * 0.13 + 12, color[2] * 0.13 + 12] as RGB, t);
@@ -573,15 +577,23 @@ function TranscendCanvas({
   }, [code, st.level, st.tier, st.sub, st.hasFrame, scr, scg, scb, isChampion, championRank, championMode, animate, frameless]);
 
   // base 없음/이모지 폴백은 디스패처(TranscendSprite)가 처리 — 여기 도달 시 base 보장.
-  const px = Math.round(size * (typeof window !== 'undefined' ? Math.min(window.devicePixelRatio || 1, 3) : 2));
+  // 표시 캔버스는 size*GLOW_VIEW로 띄우고, 레이아웃 footprint는 size 그대로(래퍼) +
+  // overflow-visible로 후광이 박스 밖으로 퍼지게(잘림 방지). 일반 아이템은 GLOW_VIEW=1.
+  const view = size * GLOW_VIEW;
+  const pad = (view - size) / 2;
+  const px = Math.round(view * (typeof window !== 'undefined' ? Math.min(window.devicePixelRatio || 1, 3) : 2));
   return (
-    <canvas
-      ref={canvasRef}
-      width={px}
-      height={px}
+    <span
       className={className}
-      style={{ width: size, height: size, display: 'block', overflow: 'visible' }}
-      aria-label={`${code} +${st.level}${st.labelKo ? ` ${st.labelKo}` : ''}`}
-    />
+      style={{ display: 'inline-block', position: 'relative', width: size, height: size, overflow: 'visible', verticalAlign: 'top' }}
+    >
+      <canvas
+        ref={canvasRef}
+        width={px}
+        height={px}
+        style={{ position: 'absolute', left: -pad, top: -pad, width: view, height: view, display: 'block' }}
+        aria-label={`${code} +${st.level}${st.labelKo ? ` ${st.labelKo}` : ''}`}
+      />
+    </span>
   );
 }
