@@ -26,7 +26,7 @@ export function VersionUpdateToast() {
     if (typeof window === 'undefined') return;
     if (sessionStorage.getItem(UPDATED_FLAG)) {
       sessionStorage.removeItem(UPDATED_FLAG);
-      showHeaderToast({ title: '새 버전으로 자동 업데이트 되었어요' });
+      showHeaderToast({ title: '✨ 새 버전으로 자동 업데이트 되었어요 ✨' });
     }
   }, [showHeaderToast]);
 
