@@ -1,6 +1,6 @@
 'use client';
 
-import { useOptimistic, useState, useTransition } from 'react';
+import { useState } from 'react';
 import { useRouter } from 'next/navigation';
 
 import type { Slot } from '@/lib/db/schema/equipment';
@@ -32,30 +32,41 @@ export function GachaBoxCard({
   eager?: boolean;
 }) {
   const router = useRouter();
-  const [pending, startTransition] = useTransition();
   const [result, setResult] = useState<Extract<OpenActionResult, { status: 'success' }> | null>(
     null,
   );
   const [shake, setShake] = useState(false);
-  // 보유 카운트 낙관 차감 — 클릭 즉시 우상단 표시 감소(서버 응답 + refresh로 sync).
-  const [displayCount, setOptimisticCount] = useOptimistic(count);
+  // 로딩 상태는 **개봉 액션 자체**에만 묶는다(router.refresh를 transition에 넣으면
+  // 콜드 RSC 새로고침이 느리거나 멈출 때 pending이 안 풀려 버튼이 영구 disabled → 뽑기 불가).
+  const [drawing, setDrawing] = useState(false);
+  // 보유 카운트 — 낙관 차감/서버 잔여를 optimistic에 담고, 미설정이면 count prop(서버 새로고침값) 사용.
+  const [optimistic, setOptimistic] = useState<number | null>(null);
+  const displayCount = optimistic ?? count;
 
   const multiN = displayCount >= 2 ? Math.min(10, displayCount) : 10;
 
   const pull = (n: number) => {
-    if (pending || displayCount < 1) return;
+    if (drawing || displayCount < 1) return;
     setShake(true);
     setTimeout(() => setShake(false), 360);
-    startTransition(async () => {
-      setOptimisticCount(Math.max(0, displayCount - n));
-      const r = await openAction(slot, n);
-      if (r.status === 'error') {
-        alert(r.message);
-        return;
-      }
-      setResult(r);
-      router.refresh();
-    });
+    setDrawing(true);
+    setOptimistic(Math.max(0, displayCount - n)); // 낙관 차감
+    openAction(slot, n)
+      .then((r) => {
+        if (r.status === 'error') {
+          alert(r.message);
+          setOptimistic(null); // 실패 → prop으로 원복
+          return;
+        }
+        setResult(r);
+        setOptimistic(r.remaining); // 서버 권위 잔여
+        router.refresh(); // 백그라운드 동기화(로딩 게이트에 영향 없음)
+      })
+      .catch(() => {
+        alert('보급 개봉에 실패했습니다. 잠시 후 다시 시도해주세요.');
+        setOptimistic(null);
+      })
+      .finally(() => setDrawing(false)); // 액션 응답 즉시 로딩 해제(refresh 대기 안 함)
   };
 
   return (
@@ -91,7 +102,7 @@ export function GachaBoxCard({
           <div className="ml-auto grid w-44 grid-cols-2 gap-1.5">
             <button
               type="button"
-              disabled={pending || displayCount < 1}
+              disabled={drawing || displayCount < 1}
               onClick={() => pull(1)}
               className="rounded-md bg-white/95 px-3 py-1.5 text-center text-[11px] font-semibold text-zinc-900 shadow-sm transition-transform active:scale-95 disabled:opacity-40"
             >
@@ -99,7 +110,7 @@ export function GachaBoxCard({
             </button>
             <button
               type="button"
-              disabled={pending || displayCount < 2}
+              disabled={drawing || displayCount < 2}
               onClick={() => pull(multiN)}
               className="rounded-md bg-amber-500 px-3 py-1.5 text-center text-[11px] font-semibold text-white shadow-sm transition-transform active:scale-95 disabled:opacity-40"
             >
@@ -124,7 +135,7 @@ export function GachaBoxCard({
           slotLabel={SLOT_LABEL[slot]}
           results={result.results}
           remaining={result.remaining}
-          pulling={pending}
+          pulling={drawing}
           onAgain={pull}
           onClose={() => setResult(null)}
         />
