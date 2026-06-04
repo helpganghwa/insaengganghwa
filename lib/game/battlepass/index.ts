@@ -91,6 +91,8 @@ export type BattlePassSegmentView = {
   reachedTiers: number;
   freePerTier: number;
   premiumPerTier: number;
+  /** 프리미엄 수령 완료한 최고 단계(level). 미구매면 startLevel-1(아무것도 수령 안 함). */
+  premiumClaimedThrough: number;
   /** 구매 시 지금 수령 가능한 프리미엄 보상(미구매면 0). */
   premiumClaimable: number;
 };
@@ -126,10 +128,10 @@ export async function getBattlePassView(
     .where(and(eq(battlePassSegments.userId, userId), eq(battlePassSegments.passType, type)));
   const purchasedMap = new Map(segRows.map((r) => [r.idx, r.pct]));
 
-  // 도달 구간 + 다음 1구간까지 노출.
+  // 현재 속한 구간까지만 노출(다음 구간 미노출 — 2026-06-04 피드백).
   const topSegment = maxReached >= 1 ? bpSegmentIndex(type, maxReached) : 0;
   const segments: BattlePassSegmentView[] = [];
-  for (let c = 0; c <= topSegment + 1; c++) {
+  for (let c = 0; c <= topSegment; c++) {
     const startLevel = c * BP_SEGMENT_SIZE[type] + 1;
     const endLevel = bpSegmentEndLevel(type, c);
     const reachedInSeg = Math.max(0, Math.min(maxReached, endLevel) - (startLevel - 1));
@@ -147,6 +149,7 @@ export async function getBattlePassView(
       reachedTiers: reachedInSeg,
       freePerTier: bpTierReward(type, startLevel, false),
       premiumPerTier: bpTierReward(type, startLevel, true),
+      premiumClaimedThrough: pct,
       premiumClaimable,
     });
   }

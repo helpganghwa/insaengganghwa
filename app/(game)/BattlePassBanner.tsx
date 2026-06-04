@@ -25,7 +25,7 @@ export function BattlePassBanner() {
       />
       <div className="pointer-events-none absolute inset-0 bg-gradient-to-r from-black/80 via-black/45 to-transparent" />
 
-      <div className="relative z-10 flex w-full items-center justify-between px-3.5">
+      <div className="relative z-10 flex w-full items-center px-3.5">
         <div className="min-w-0">
           <div className="text-[10px] font-semibold tracking-wider text-amber-300 drop-shadow-[0_1px_2px_rgba(0,0,0,0.9)]">
             배틀패스
@@ -34,7 +34,6 @@ export function BattlePassBanner() {
             강화·초월 최고 도달마다 보상이 쌓여요.
           </div>
         </div>
-        <span className="shrink-0 text-amber-300/90 drop-shadow-[0_1px_2px_rgba(0,0,0,0.9)]">→</span>
       </div>
     </Link>
   );
