@@ -197,37 +197,21 @@ async function KpiRowWithRanks({
 }) {
   const [ranks, counts] = await Promise.all([getMyRanks(userId), getMyCountRanks(userId)]);
   return (
-    <>
-      <section className="-mt-3 grid grid-cols-3 gap-1.5">
-        <KpiCard
-          label="전투력"
-          value={total.toLocaleString('ko-KR')}
-          rank={rankBadgeStreamed(ranks.combat?.rank)}
-        />
-        <KpiCard
-          label="최고 강화"
-          value={maxEnhance.toLocaleString('ko-KR')}
-          rank={rankBadgeStreamed(ranks.max?.rank)}
-        />
-        <KpiCard
-          label="합산 강화"
-          value={sumEnhance.toLocaleString('ko-KR')}
-          rank={rankBadgeStreamed(ranks.sum?.rank)}
-        />
-      </section>
-      <section className="mt-1.5 grid grid-cols-2 gap-1.5">
-        <KpiCard
-          label="레이드 처치"
-          value={(counts.raid?.value ?? 0).toLocaleString('ko-KR')}
-          rank={rankBadgeStreamed(counts.raid?.rank)}
-        />
-        <KpiCard
-          label="대난투 우승"
-          value={(counts.melee?.value ?? 0).toLocaleString('ko-KR')}
-          rank={rankBadgeStreamed(counts.melee?.rank)}
-        />
-      </section>
-    </>
+    <section className="-mt-3 grid grid-cols-5 gap-1">
+      <KpiCard label="전투력" value={fmtCompact(total)} rank={rankBadgeStreamed(ranks.combat?.rank)} />
+      <KpiCard label="최고" value={fmtCompact(maxEnhance)} rank={rankBadgeStreamed(ranks.max?.rank)} />
+      <KpiCard label="합산" value={fmtCompact(sumEnhance)} rank={rankBadgeStreamed(ranks.sum?.rank)} />
+      <KpiCard
+        label="레이드"
+        value={fmtCompact(counts.raid?.value ?? 0)}
+        rank={rankBadgeStreamed(counts.raid?.rank)}
+      />
+      <KpiCard
+        label="대난투"
+        value={fmtCompact(counts.melee?.value ?? 0)}
+        rank={rankBadgeStreamed(counts.melee?.rank)}
+      />
+    </section>
   );
 }
 
@@ -241,17 +225,13 @@ function KpiRowFallback({
   maxEnhance: number;
 }) {
   return (
-    <>
-      <section className="-mt-3 grid grid-cols-3 gap-1.5">
-        <KpiCard label="전투력" value={total.toLocaleString('ko-KR')} rank="—" />
-        <KpiCard label="최고 강화" value={maxEnhance.toLocaleString('ko-KR')} rank="—" />
-        <KpiCard label="합산 강화" value={sumEnhance.toLocaleString('ko-KR')} rank="—" />
-      </section>
-      <section className="mt-1.5 grid grid-cols-2 gap-1.5">
-        <KpiCard label="레이드 처치" value="—" rank="—" />
-        <KpiCard label="대난투 우승" value="—" rank="—" />
-      </section>
-    </>
+    <section className="-mt-3 grid grid-cols-5 gap-1">
+      <KpiCard label="전투력" value={fmtCompact(total)} rank="—" />
+      <KpiCard label="최고" value={fmtCompact(maxEnhance)} rank="—" />
+      <KpiCard label="합산" value={fmtCompact(sumEnhance)} rank="—" />
+      <KpiCard label="레이드" value="—" rank="—" />
+      <KpiCard label="대난투" value="—" rank="—" />
+    </section>
   );
 }
 
@@ -543,11 +523,11 @@ function KpiCard({
   rank: React.ReactNode;
 }) {
   return (
-    <div className="rounded-lg border border-zinc-800 bg-zinc-900/85 px-1.5 py-1.5 text-center shadow-lg shadow-black/30 backdrop-blur">
-      <div className="text-[8px] font-semibold uppercase tracking-widest text-zinc-500">
+    <div className="rounded-lg border border-zinc-800 bg-zinc-900/85 px-1 py-1.5 text-center shadow-lg shadow-black/30 backdrop-blur">
+      <div className="truncate text-[7.5px] font-semibold uppercase tracking-wide text-zinc-500">
         {label}
       </div>
-      <div className="mt-0.5 font-mono text-sm font-bold tabular-nums text-zinc-50">{value}</div>
+      <div className="mt-0.5 font-mono text-[11px] font-bold tabular-nums text-zinc-50">{value}</div>
       <div className="mt-0.5 font-mono text-[9px] tabular-nums text-amber-300">{rank}</div>
     </div>
   );
