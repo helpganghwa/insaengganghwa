@@ -145,7 +145,8 @@ export function EquipmentDetailSheet({
       optimistic?.();
       const r = await fn();
       if (r.status === 'error') setError(r.message ?? '오류');
-      else if (r.ranksBefore && r.ranksAfter) showRanking(r.ranksBefore, r.ranksAfter);
+      else if (r.ranksBefore && r.ranksAfter)
+        showRanking(r.ranksBefore, r.ranksAfter, true); // 인벤토리 — 즉시 노출(디바운스 없음)
       router.refresh();
     });
 

@@ -6,14 +6,15 @@ import Link from 'next/link';
 
 import type { Slot } from '@/lib/db/schema/equipment';
 import { useDiamond } from '@/components/DiamondContext';
-import { useResourceToast } from '@/components/ResourceToast';
+import { useResourceToast, type HeaderReward } from '@/components/ResourceToast';
 import {
   claimMailAction,
   claimAllMailAction,
   loadMoreMailsAction,
 } from './actions';
-// 수령 토스트는 사용자 결정으로 제거(2026-06-01). 다이아 헤더 카운트 + 우편 사라짐
-// 으로 결과는 충분히 인지됨. useResourceToast는 오류 알림(showError) 용도로만 유지.
+// 수령 피드백: 공용 헤더 토스트(showHeaderToast) 첫 테스트 적용(2026-06-04). 헤더를 덮는
+// 슬라이드 바로 '우편 수령 │ 보상' 노출. (이전 2026-06-01엔 토스트 제거 상태였음 — 헤더
+// 다이아 + 우편 사라짐만으로 인지. 새 헤더 토스트 패턴 검증을 위해 재도입.)
 
 export type MailItem = {
   id: string;
@@ -28,6 +29,17 @@ export type MailItem = {
 };
 
 const SLOT_EMOJI: Record<Slot, string> = { weapon: '⚔️', armor: '🛡️', accessory: '💍' };
+
+/** payload → 헤더 토스트 보상 칩(💎 → ⚔️ → 🛡️ → 💍 순, 0은 제외). */
+function buildRewards(diamond: number, boxes: Partial<Record<Slot, number>>): HeaderReward[] {
+  const out: HeaderReward[] = [];
+  if (diamond > 0) out.push({ icon: '💎', amount: diamond });
+  for (const s of ['weapon', 'armor', 'accessory'] as Slot[]) {
+    const n = boxes[s] ?? 0;
+    if (n > 0) out.push({ icon: SLOT_EMOJI[s], amount: n });
+  }
+  return out;
+}
 
 /**
  * type별 시각 메타(2026-06-01 추가) — 카드 좌측 컬러바 + 작은 라벨 배지.
@@ -172,7 +184,7 @@ export function MailList({
   const combinedBase = useMemo(() => [...items, ...extraItems], [items, extraItems]);
   const [displayItems, setOptimisticItems] = useOptimistic(combinedBase);
   const { optimisticAdjust: adjustDiamond } = useDiamond();
-  const { showError } = useResourceToast();
+  const { showError, showHeaderToast } = useResourceToast();
   const nowMs = Date.now();
 
   // 모두 받기 합계 preview — 서버 권위 unreadAggregate 우선(전체 미수령 기준).
@@ -231,7 +243,13 @@ export function MailList({
         showError(r.message);
         return;
       }
-      // 성공 토스트는 미노출(2026-06-01 사용자 결정) — 헤더 다이아 + 우편 사라짐으로 충분.
+      // 성공 — 공용 헤더 토스트로 '우편 수령 │ 보상' 노출(보상 없는 우편은 제목만).
+      if (target) {
+        showHeaderToast({
+          title: '우편 수령',
+          rewards: buildRewards(Number(target.payload.diamond ?? 0), target.payload.boxes ?? {}),
+        });
+      }
       router.refresh();
     });
   };
@@ -253,6 +271,11 @@ export function MailList({
         showError(r.message);
         return;
       }
+      // 성공 — 모두 받기 합계를 헤더 토스트로 노출(서버 권위 totals 기준).
+      showHeaderToast({
+        title: '우편 모두 받기',
+        rewards: buildRewards(totals.diamond, totals.boxes),
+      });
       router.refresh();
     });
   };

@@ -187,7 +187,7 @@ export function BulkDisenchantModal({
       }
       setResult(r);
       if ('ranksBefore' in r && 'ranksAfter' in r) {
-        showRanking(r.ranksBefore, r.ranksAfter);
+        showRanking(r.ranksBefore, r.ranksAfter, true); // 인벤토리 — 즉시 노출(디바운스 없음)
       }
     });
   }
