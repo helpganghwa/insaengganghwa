@@ -18,6 +18,10 @@ export type OpenedItem = {
   name: string;
   isNew: boolean;
   isChampion: boolean;
+  /** 이번 열기로 자동 초월된 단계 수(중복 누적이 임계 도달 시 ≥1). */
+  transcended: number;
+  /** 결과 초월 레벨. */
+  transcendLevel: number;
   /** 신규 해금 시 보여줄 로어 티저(1~2문장). 중복/없음=null. */
   loreTeaser: string | null;
 };
@@ -73,6 +77,8 @@ export async function openAction(slot: Slot, count: number): Promise<OpenActionR
           name: metaMap.get(o.catalogItemId)?.name ?? `#${o.catalogItemId}`,
           isNew: o.isNew,
           isChampion: champSet.has(o.catalogItemId),
+          transcended: o.transcended,
+          transcendLevel: o.transcendLevel,
           loreTeaser: o.isNew && code ? loreTeaser(code) : null,
         };
       }),

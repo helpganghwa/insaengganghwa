@@ -24,10 +24,13 @@ export function GachaResultModal({
   onAgain: (n: number) => void;
   onClose: () => void;
 }) {
-  // 다중 결과 — 신규 우선 정렬.
-  const sortedResults = results.slice().sort((a, b) => Number(b.isNew) - Number(a.isNew));
+  // 다중 결과 — 신규 → 초월 우선 정렬.
+  const sortedResults = results
+    .slice()
+    .sort((a, b) => Number(b.isNew) - Number(a.isNew) || b.transcended - a.transcended);
   const newCount = results.filter((r) => r.isNew).length;
-  const dupCount = results.length - newCount;
+  const transCount = results.filter((r) => !r.isNew && r.transcended > 0).length;
+  const dupCount = results.length - newCount - transCount;
   const single = results.length === 1 ? results[0]! : null;
   const multiN = remaining >= 2 ? Math.min(10, remaining) : 10;
   // 다중 결과의 신규 카드 탭 시 인라인 로어 펼침.
@@ -56,8 +59,12 @@ export function GachaResultModal({
               <p className="text-sm font-medium">
                 {single.isNew ? (
                   <span className="text-emerald-600 dark:text-emerald-400">신규 해금!</span>
+                ) : single.transcended > 0 ? (
+                  <span className="text-amber-600 dark:text-amber-400">
+                    초월 +{single.transcended}! → T{single.transcendLevel}
+                  </span>
                 ) : (
-                  <span className="text-zinc-500">획득!</span>
+                  <span className="text-zinc-500">획득 · 초월 진행 +1</span>
                 )}
               </p>
               <div
@@ -68,13 +75,15 @@ export function GachaResultModal({
                         borderColor: 'rgb(16,185,129)',
                         animation: 'gacha-new-glow 1.6s ease-in-out 1',
                       }
-                    : { borderColor: undefined }
+                    : single.transcended > 0
+                      ? { borderColor: 'rgb(245,158,11)', animation: 'gacha-new-glow 1.6s ease-in-out 1' }
+                      : { borderColor: undefined }
                 }
               >
                 <TranscendSprite
                   code={single.code}
                   slot={slot}
-                  level={0}
+                  level={single.transcendLevel}
                   isChampion={single.isChampion}
                   size={64}
                   frameless
@@ -97,7 +106,8 @@ export function GachaResultModal({
               <p className="flex items-baseline justify-between text-sm">
                 <span className="font-medium">{results.length}회 열기</span>
                 <span className="text-[11px] text-zinc-500">
-                  신규 <span className="font-semibold text-emerald-600">{newCount}</span> · 중복{' '}
+                  신규 <span className="font-semibold text-emerald-600">{newCount}</span> · 초월{' '}
+                  <span className="font-semibold text-amber-600">{transCount}</span> · 중복{' '}
                   <span className="font-semibold text-zinc-700 dark:text-zinc-300">{dupCount}</span>
                 </span>
               </p>
@@ -116,14 +126,21 @@ export function GachaResultModal({
                       style={
                         r.isNew
                           ? { borderColor: 'rgb(16,185,129)' }
-                          : { borderColor: undefined }
+                          : r.transcended > 0
+                            ? { borderColor: 'rgb(245,158,11)' }
+                            : { borderColor: undefined }
                       }
                       title={r.name}
                     >
+                      {r.transcended > 0 ? (
+                        <span className="absolute right-0.5 top-0.5 z-10 rounded bg-amber-500 px-1 text-[8px] font-bold text-amber-950">
+                          ✦+{r.transcended}
+                        </span>
+                      ) : null}
                       <TranscendSprite
                         code={r.code}
                         slot={slot}
-                        level={0}
+                        level={r.transcendLevel}
                         isChampion={r.isChampion}
                         size={36}
                         frameless

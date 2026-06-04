@@ -34,6 +34,7 @@ export default async function InventoryPage({
         slot: catalogItems.slot,
         enhanceLevel: userEquipment.enhanceLevel,
         transcendLevel: userEquipment.transcendLevel,
+        transcendProgress: userEquipment.transcendProgress,
         equippedSlot: userEquipment.equippedSlot,
         acquiredAt: userEquipment.firstAcquiredAt,
       })
@@ -69,6 +70,7 @@ export default async function InventoryPage({
     slot: r.slot,
     enhanceLevel: r.enhanceLevel,
     transcendLevel: r.transcendLevel,
+    transcendProgress: r.transcendProgress,
     equipped: r.equippedSlot != null,
     acquiredAtMs: r.acquiredAt.getTime(),
     busy: busy.has(r.id.toString()),

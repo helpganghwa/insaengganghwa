@@ -20,6 +20,8 @@ export type InvItem = {
   slot: Slot;
   enhanceLevel: number;
   transcendLevel: number;
+  /** 다음 초월까지 누적된 중복 수(임계 = transcendLevel+1). */
+  transcendProgress: number;
   equipped: boolean;
   acquiredAtMs: number;
   busy: boolean;
