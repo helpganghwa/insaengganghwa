@@ -42,15 +42,14 @@ export default async function ShopPage() {
 
   return (
     <div className="space-y-5 px-4 py-4">
-      <header className="flex items-baseline gap-2">
-        <span className="ml-auto font-mono text-sm tabular-nums text-zinc-600 dark:text-zinc-300">
-          보유 💎 {diamond.toLocaleString('ko-KR')}
-        </span>
-      </header>
-
       {/* 다이아 충전 — 결제 백엔드 연동 전(준비 중) */}
       <section className="space-y-2">
-        <h2 className="px-1 text-xs font-semibold text-zinc-500">다이아 충전</h2>
+        <div className="flex items-baseline justify-between px-1">
+          <h2 className="text-xs font-semibold text-zinc-500">다이아 충전</h2>
+          <span className="font-mono text-[11px] tabular-nums text-zinc-500">
+            보유 💎 {diamond.toLocaleString('ko-KR')}
+          </span>
+        </div>
 
         {!verified ? (
           <p className="rounded-xl border border-dashed border-zinc-300 bg-zinc-50 px-3 py-2.5 text-[11px] leading-relaxed text-zinc-500 dark:border-zinc-700 dark:bg-zinc-900">
@@ -96,10 +95,6 @@ export default async function ShopPage() {
             );
           })}
         </ul>
-        <p className="px-1 text-[11px] leading-relaxed text-zinc-400">
-          결제 기능은 정식 오픈 시 제공됩니다. 다이아는 강화 시간 단축(1 다이아 = 1분)·레이드
-          개설·추가 공격 등에 사용됩니다. 미사용·환불 정책은 이용약관에 따릅니다.
-        </p>
       </section>
     </div>
   );
