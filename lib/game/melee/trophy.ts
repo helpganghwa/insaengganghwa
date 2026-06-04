@@ -8,14 +8,13 @@ import { meleeBattles, type MeleeFinale } from '@/lib/db/schema/melee';
 import { profiles } from '@/lib/db/schema/profiles';
 import { userProfiles } from '@/lib/db/schema/avatar';
 import { reviewProfile } from '@/lib/game/profile/ai-review';
-import { sendPushToUser } from '@/lib/push/send';
 
 /**
  * 대난투 우승 트로피 아바타 자동 생성 — MELEE §우승컵.
  * melee-run(9:00)이 우승자를 산출하면, 이 파이프라인이 우승자 프로필 캐릭터에서
  * create-character-state(우승컵 포즈)로 파생 생성 → 폴링 → AI 검토(결함 차단) →
- * 통과 시 8방향 storage 미러 + finale.roster 챔피언 avatar 교체(대난투 한정 표시) +
- * avatarGrant 우편(7일) + 푸시. 생성 실패/AI 미통과 시 재시도(상한 MAX_ATTEMPTS).
+ * 통과 시 storage 미러 + finale.trophyAvatar 저장(대난투 포디움/우승카드/역대우승자 **표시 전용**).
+ * 우승자에게 아바타로 지급하지 않음(우편/앱알림 폐기, 2026-06-04). 실패/미통과 시 재시도(상한 MAX_ATTEMPTS).
  *
  * 상태(melee_battles.trophy_status): null(미시작) → 'generating' → 'done' / 'failed'.
  * cron(`/api/cron/melee-trophy`)이 주기 호출. 멱등(상태머신 + 조건부 전이).
@@ -184,14 +183,14 @@ async function startAttempt(b: TrophyBattle, nextAttempt: number): Promise<void>
   console.log(`[melee.trophy] battle ${b.id} attempt ${nextAttempt} → ${charId} (${pose.tag})`);
 }
 
-/** 통과 — 미러 + finale 교체 + 우편 + 푸시 → done. */
-async function finalize(b: TrophyBattle, images: ReadyImages, charId: string): Promise<void> {
-  const rotations = await mirror(b.id, images);
+/** 통과 — 미러 + finale.trophyAvatar 저장 → done. 우승자 지급(우편/푸시) 없음 — 트로피는 대난투 표시 전용. */
+async function finalize(b: TrophyBattle, _images: ReadyImages, _charId: string): Promise<void> {
+  const rotations = await mirror(b.id, _images);
   const south = rotations.south;
   if (!south) throw new Error('mirror missing south');
 
-  // 트로피 아바타는 **별도 필드**(trophyAvatar)에 저장 — roster[].avatar(원본)는 전투 재생용으로 보존.
-  // 포디움/우승카드만 trophyAvatar를 쓰고, 전투 재생은 원본 아바타로 렌더(2026-06-04 피드백).
+  // 트로피 아바타는 finale.trophyAvatar에만 저장 — 대난투 포디움/우승카드/역대우승자 표시 전용.
+  // 우승자에게 아바타로 지급하지 않음(2026-06-04 피드백 — 우편/앱알림 폐기). 전투 재생은 원본 아바타.
   const finale = b.finale;
   if (finale) finale.trophyAvatar = south;
   await db
@@ -199,26 +198,7 @@ async function finalize(b: TrophyBattle, images: ReadyImages, charId: string): P
     .set({ finale, trophyStatus: 'done', trophyUpdatedAt: new Date() })
     .where(eq(meleeBattles.id, b.id));
 
-  // avatarGrant 우편(7일) — 수령 시 아바타 목록 추가(claimMail avatarGrant).
-  const payload = JSON.stringify({ avatarGrant: { rotations, characterId: charId } });
-  await db.execute(sql`
-    insert into mailbox (user_id, type, title, body, sender_label, payload, expires_at)
-    values (
-      ${b.championUserId}::uuid, 'reward'::mailbox_type, '🏆 대난투 우승 아바타',
-      ${'대난투 우승을 축하합니다! 받기를 누르면 우승컵을 든 우승 아바타가 아바타 목록에 추가됩니다. (대난투에서 우승 아바타로 등장)'},
-      '대난투', ${payload}::jsonb, now() + interval '7 days'
-    )
-  `);
-
-  await sendPushToUser(b.championUserId, {
-    title: '🏆 대난투 우승!',
-    body: '우승 아바타가 도착했어요 — 우편함에서 확인하세요',
-    url: '/mail',
-    tag: 'melee',
-    category: 'melee',
-  }).catch((e) => console.warn('[melee.trophy] push failed', e));
-
-  console.log(`[melee.trophy] battle ${b.id} DONE — 우편/푸시 발송`);
+  console.log(`[melee.trophy] battle ${b.id} DONE — trophyAvatar 저장(지급 없음)`);
 }
 
 async function processOne(b: TrophyBattle): Promise<void> {

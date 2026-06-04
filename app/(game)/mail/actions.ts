@@ -19,7 +19,6 @@ type ErrorState = { status: 'error'; code: string; message: string };
 
 const MSG: Record<string, string> = {
   MAIL_NOT_FOUND: '이미 수령했거나 만료된 우편입니다.',
-  AVATAR_FULL: '아바타가 가득 찼어요. 하나 삭제 후 다시 받기를 눌러주세요 (최대 20개).',
   UNAUTHENTICATED: '로그인이 필요합니다.',
   RATE_LIMITED: '요청이 너무 빠릅니다. 잠시 후 다시 시도해 주세요.',
   UNKNOWN: '알 수 없는 오류',
