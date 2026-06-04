@@ -109,7 +109,11 @@ export async function buildMeleeResultView(
     rank: r.rank,
     nickname: snapNick.get(r.uid) ?? r.nickname,
     publicCode: r.code ?? null,
-    avatarUrl: avatarOf.get(r.uid) ?? dft(r.rank),
+    // 우승(rank 1)은 트로피 아바타(있으면) — 포디움/우승카드 표시 전용. 전투 재생은 rosterAvatars(원본).
+    avatarUrl:
+      r.rank === 1 && finale.trophyAvatar
+        ? finale.trophyAvatar
+        : (avatarOf.get(r.uid) ?? dft(r.rank)),
     attackSuccess: kills.get(r.uid) ?? 0,
     defenseSuccess: survives.get(r.uid) ?? 0,
   }));

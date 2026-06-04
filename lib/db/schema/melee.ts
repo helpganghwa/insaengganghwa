@@ -30,10 +30,12 @@ export const meleeStatusEnum = pgEnum('melee_status', ['running', 'computed', 'r
  * 자기완결: roster(등장 유저 닉·전투력·등수 스냅샷) + events(roster 로컬 인덱스 압축).
  */
 export type MeleeFinale = {
-  /** 등장 유저 스냅샷(그 시점 닉·전투력·등수·아바타). avatar는 스냅샷 도입 이후 배틀부터(이전은 live 폴백). */
+  /** 등장 유저 스냅샷(그 시점 닉·전투력·등수·아바타). avatar는 **원본**(전투 재생용). 스냅샷 도입 이후 배틀부터(이전은 live 폴백). */
   roster: { userId: string; nickname: string; cp: number; rank: number; avatar?: string | null }[];
   /** [공격자 로컬idx, 타겟 로컬idx, 데미지, 타겟 잔여HP] — 시간순. 잔여HP ≤ 0 = 탈락. */
   events: [number, number, number, number][];
+  /** 우승자 트로피 아바타(우승컵 든 정면) — 포디움/우승카드 **표시 전용**. 전투 재생은 roster[].avatar(원본). */
+  trophyAvatar?: string | null;
 };
 
 /**

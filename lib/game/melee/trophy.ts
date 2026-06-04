@@ -190,13 +190,10 @@ async function finalize(b: TrophyBattle, images: ReadyImages, charId: string): P
   const south = rotations.south;
   if (!south) throw new Error('mirror missing south');
 
-  // finale.roster 챔피언 avatar 교체(대난투 결과 한정 표시).
+  // 트로피 아바타는 **별도 필드**(trophyAvatar)에 저장 — roster[].avatar(원본)는 전투 재생용으로 보존.
+  // 포디움/우승카드만 trophyAvatar를 쓰고, 전투 재생은 원본 아바타로 렌더(2026-06-04 피드백).
   const finale = b.finale;
-  if (finale?.roster) {
-    finale.roster = finale.roster.map((r) =>
-      r.userId === b.championUserId ? { ...r, avatar: south } : r,
-    );
-  }
+  if (finale) finale.trophyAvatar = south;
   await db
     .update(meleeBattles)
     .set({ finale, trophyStatus: 'done', trophyUpdatedAt: new Date() })
