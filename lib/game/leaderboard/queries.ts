@@ -256,6 +256,18 @@ export async function getMyRanks(userId: string): Promise<MyRanks> {
   return { max: find(maxR), sum: find(sumR), combat: find(combatR) };
 }
 
+/** 프로필 상세용 — 레이드 처치·대난투 우승 본인 값+순위(없으면 null). */
+export type MyCountRanks = { raid: MyRankSnap; melee: MyRankSnap };
+export async function getMyCountRanks(userId: string): Promise<MyCountRanks> {
+  const [raidR, meleeR] = await Promise.all([safeRows('raid'), safeRows('melee')]);
+  const find = (rows: { userId: string; value: number }[]): MyRankSnap => {
+    const sorted = rows.slice().sort((a, b) => b.value - a.value);
+    const idx = sorted.findIndex((r) => r.userId === userId);
+    return idx < 0 ? null : { value: sorted[idx]!.value, rank: idx + 1 };
+  };
+  return { raid: find(raidR), melee: find(meleeR) };
+}
+
 /**
  * 강화 직후 — 본인의 새 stat은 DB에서 직접 read(캐시 우회), 다른 유저는 캐시 정렬
  * 그대로. 본인 new value 기준 bisect → before와 같은 캐시 시점이라도 실제 변동 반영.

@@ -12,7 +12,7 @@ import { userProfiles } from '@/lib/db/schema/avatar';
 import { catalogItems, equipmentInstances, type Slot } from '@/lib/db/schema/equipment';
 import { combatPowerFromOwned } from '@/lib/game/equipment/combat-power';
 import { championCatalogIds } from '@/lib/game/codex/ranking';
-import { getMyRanks } from '@/lib/game/leaderboard/queries';
+import { getMyRanks, getMyCountRanks } from '@/lib/game/leaderboard/queries';
 import { getEnhanceLive } from '@/lib/game/stats/queries';
 import { TranscendSprite } from '@/components/TranscendSprite';
 import { RarityFrame, rarityBorderStyle, hasRarityBorder } from '@/components/RarityFrame';
@@ -195,25 +195,39 @@ async function KpiRowWithRanks({
   sumEnhance: number;
   maxEnhance: number;
 }) {
-  const ranks = await getMyRanks(userId);
+  const [ranks, counts] = await Promise.all([getMyRanks(userId), getMyCountRanks(userId)]);
   return (
-    <section className="-mt-3 grid grid-cols-3 gap-1.5">
-      <KpiCard
-        label="전투력"
-        value={total.toLocaleString('ko-KR')}
-        rank={rankBadgeStreamed(ranks.combat?.rank)}
-      />
-      <KpiCard
-        label="최고 강화"
-        value={maxEnhance.toLocaleString('ko-KR')}
-        rank={rankBadgeStreamed(ranks.max?.rank)}
-      />
-      <KpiCard
-        label="합산 강화"
-        value={sumEnhance.toLocaleString('ko-KR')}
-        rank={rankBadgeStreamed(ranks.sum?.rank)}
-      />
-    </section>
+    <>
+      <section className="-mt-3 grid grid-cols-3 gap-1.5">
+        <KpiCard
+          label="전투력"
+          value={total.toLocaleString('ko-KR')}
+          rank={rankBadgeStreamed(ranks.combat?.rank)}
+        />
+        <KpiCard
+          label="최고 강화"
+          value={maxEnhance.toLocaleString('ko-KR')}
+          rank={rankBadgeStreamed(ranks.max?.rank)}
+        />
+        <KpiCard
+          label="합산 강화"
+          value={sumEnhance.toLocaleString('ko-KR')}
+          rank={rankBadgeStreamed(ranks.sum?.rank)}
+        />
+      </section>
+      <section className="mt-1.5 grid grid-cols-2 gap-1.5">
+        <KpiCard
+          label="레이드 처치"
+          value={(counts.raid?.value ?? 0).toLocaleString('ko-KR')}
+          rank={rankBadgeStreamed(counts.raid?.rank)}
+        />
+        <KpiCard
+          label="대난투 우승"
+          value={(counts.melee?.value ?? 0).toLocaleString('ko-KR')}
+          rank={rankBadgeStreamed(counts.melee?.rank)}
+        />
+      </section>
+    </>
   );
 }
 
@@ -227,11 +241,17 @@ function KpiRowFallback({
   maxEnhance: number;
 }) {
   return (
-    <section className="-mt-3 grid grid-cols-3 gap-1.5">
-      <KpiCard label="전투력" value={total.toLocaleString('ko-KR')} rank="—" />
-      <KpiCard label="최고 강화" value={maxEnhance.toLocaleString('ko-KR')} rank="—" />
-      <KpiCard label="합산 강화" value={sumEnhance.toLocaleString('ko-KR')} rank="—" />
-    </section>
+    <>
+      <section className="-mt-3 grid grid-cols-3 gap-1.5">
+        <KpiCard label="전투력" value={total.toLocaleString('ko-KR')} rank="—" />
+        <KpiCard label="최고 강화" value={maxEnhance.toLocaleString('ko-KR')} rank="—" />
+        <KpiCard label="합산 강화" value={sumEnhance.toLocaleString('ko-KR')} rank="—" />
+      </section>
+      <section className="mt-1.5 grid grid-cols-2 gap-1.5">
+        <KpiCard label="레이드 처치" value="—" rank="—" />
+        <KpiCard label="대난투 우승" value="—" rank="—" />
+      </section>
+    </>
   );
 }
 
