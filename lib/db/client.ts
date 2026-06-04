@@ -46,17 +46,28 @@ const POSTGRES_OPTS = {
   max_lifetime: 60 * 3, // sec
 } as const;
 
-function buildClient(): ReturnType<typeof postgres> {
+let _pg: ReturnType<typeof postgres> | undefined;
+
+function getPg(): ReturnType<typeof postgres> {
+  if (_pg) return _pg;
   const url = process.env.DATABASE_URL;
   if (!url) {
     throw new Error('DATABASE_URL is required at runtime (see .env.example) — CLAUDE §7/§11');
   }
-  // dev: HMR마다 새 커넥션 폭발 방지 → 전역 싱글톤.
-  if (process.env.NODE_ENV === 'development') {
-    globalThis.__pgClient ??= postgres(url, POSTGRES_OPTS);
-    return globalThis.__pgClient;
-  }
-  return postgres(url, POSTGRES_OPTS);
+  // dev: HMR마다 새 커넥션 폭발 방지 → 전역 싱글톤. db와 raw 클라이언트가 동일 풀 공유.
+  _pg =
+    process.env.NODE_ENV === 'development'
+      ? (globalThis.__pgClient ??= postgres(url, POSTGRES_OPTS))
+      : postgres(url, POSTGRES_OPTS);
+  return _pg;
+}
+
+/**
+ * RAW postgres.js 클라이언트 — `db`(Drizzle)와 **동일 풀 공유**. 취소형 가드(pgGuard)
+ * 전용: 타임아웃 시 query.cancel()로 실제 쿼리를 취소해 풀 슬롯을 즉시 회수하기 위함.
+ */
+export function getPgClient(): ReturnType<typeof postgres> {
+  return getPg();
 }
 
 let _db: DrizzleDb | undefined;
@@ -64,7 +75,7 @@ let _db: DrizzleDb | undefined;
 // Lazy — 빌드 시 DATABASE_URL 없어도 OK. 런타임 첫 사용 시 검증/연결.
 export const db = new Proxy({} as DrizzleDb, {
   get(_t, prop, receiver) {
-    _db ??= drizzle(buildClient(), { schema });
+    _db ??= drizzle(getPg(), { schema });
     return Reflect.get(_db, prop, receiver);
   },
 });

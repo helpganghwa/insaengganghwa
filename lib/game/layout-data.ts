@@ -1,13 +1,6 @@
 import 'server-only';
 
-import { and, eq, gt, isNull, lte, or, sql } from 'drizzle-orm';
-
-import { db } from '@/lib/db/client';
-import { enhancementJobs } from '@/lib/db/schema/enhance';
-import { mailbox } from '@/lib/db/schema/mailbox';
-import { profiles } from '@/lib/db/schema/profiles';
-import { userProfiles } from '@/lib/db/schema/avatar';
-import { withTimeout } from '@/lib/db/with-timeout';
+import { pgGuard } from '@/lib/db/guarded';
 
 /**
  * (game) 셸(헤더·하단 네비)에 필요한 최소 데이터.
@@ -37,50 +30,54 @@ const DEFAULTS: LayoutData = {
  */
 export async function loadLayoutData(userId: string): Promise<LayoutData> {
   try {
-    const [profileRow, mailRow, enhanceRow] = await withTimeout(
-      Promise.all([
-        db
-          .select({
-            nickname: profiles.nickname,
-            diamond: profiles.diamond,
-            rotations: userProfiles.rotations,
-          })
-          .from(profiles)
-          .leftJoin(userProfiles, eq(profiles.activeProfileId, userProfiles.id))
-          .where(eq(profiles.id, userId))
-          .limit(1),
-        db
-          .select({ id: mailbox.id })
-          .from(mailbox)
-          .where(
-            and(
-              eq(mailbox.userId, userId),
-              isNull(mailbox.claimedAt),
-              or(isNull(mailbox.expiresAt), gt(mailbox.expiresAt, sql`now()`)),
-            ),
-          )
-          .limit(1),
-        db
-          .select({ n: sql<number>`count(*)::int` })
-          .from(enhancementJobs)
-          .where(
-            and(
-              eq(enhancementJobs.userId, userId),
-              eq(enhancementJobs.status, 'running'),
-              lte(enhancementJobs.completeAt, sql`now()`),
-            ),
-          ),
-      ]),
-      4000,
-      'layout.data',
-    );
-    const rot = profileRow[0]?.rotations as Record<string, string> | null | undefined;
+    // pgGuard: 타임아웃 시 쿼리 취소 → 풀 커넥션 즉시 회수(모든 페이지가 호출하는 핫패스).
+    const [profileRows, mailRows, enhRows] = await Promise.all([
+      pgGuard(
+        (sql) => sql`
+          select p.nickname, p.diamond, up.rotations
+          from profiles p
+          left join user_profiles up on up.id = p.active_profile_id
+          where p.id = ${userId}::uuid
+          limit 1`,
+        4000,
+        'layout.profile',
+      ),
+      pgGuard(
+        (sql) => sql`
+          select 1 from mailbox
+          where user_id = ${userId}::uuid
+            and claimed_at is null
+            and (expires_at is null or expires_at > now())
+          limit 1`,
+        4000,
+        'layout.mail',
+      ),
+      pgGuard(
+        (sql) => sql`
+          select count(*)::int as n from enhancement_jobs
+          where user_id = ${userId}::uuid and status = 'running' and complete_at <= now()`,
+        4000,
+        'layout.enhance',
+      ),
+    ]);
+    const p = profileRows[0] as
+      | { nickname?: string; diamond?: string | number | bigint; rotations?: unknown }
+      | undefined;
+    // rotations(jsonb)는 postgres.js 기본 파서가 객체로 파싱하나, 문자열일 경우 방어적 파싱.
+    let rot = p?.rotations as Record<string, string> | string | null | undefined;
+    if (typeof rot === 'string') {
+      try {
+        rot = JSON.parse(rot) as Record<string, string>;
+      } catch {
+        rot = null;
+      }
+    }
     return {
-      nickname: profileRow[0]?.nickname ?? '플레이어',
-      diamond: profileRow[0]?.diamond ?? 0n,
-      hasUnreadMail: mailRow.length > 0,
-      hasCompletedEnhance: (enhanceRow[0]?.n ?? 0) > 0,
-      profileSouth: rot?.south ?? null,
+      nickname: p?.nickname ?? '플레이어',
+      diamond: p?.diamond != null ? BigInt(p.diamond as string) : 0n,
+      hasUnreadMail: mailRows.length > 0,
+      hasCompletedEnhance: Number((enhRows[0] as { n?: number | string } | undefined)?.n ?? 0) > 0,
+      profileSouth: (rot as Record<string, string> | null)?.south ?? null,
     };
   } catch (e) {
     console.warn('[layout] data load failed — defaults', (e as Error).message);

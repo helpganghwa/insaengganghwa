@@ -5,6 +5,7 @@ import { and, eq, sql } from 'drizzle-orm';
 
 import { db } from '@/lib/db/client';
 import { withTimeout, DbTimeoutError } from '@/lib/db/with-timeout';
+import { pgGuard } from '@/lib/db/guarded';
 import { profiles } from '@/lib/db/schema/profiles';
 import { userEquipment } from '@/lib/db/schema/equipment';
 
@@ -126,8 +127,9 @@ export const liberatedItemRanks = cache(async (userId: string): Promise<Map<numb
  */
 export const championCatalogIds = cache(async (userId: string): Promise<Set<number>> => {
   try {
-    const rows = (await withTimeout(
-      db.execute(sql`
+    // pgGuard: 타임아웃 시 쿼리 취소 → 풀 커넥션 즉시 회수(5개 핫패스서 호출되는 셀프조인).
+    const rows = await pgGuard(
+      (sql) => sql`
         select uc.catalog_item_id as cid
         from user_equipment uc
         where uc.user_id = ${userId}::uuid
@@ -141,10 +143,10 @@ export const championCatalogIds = cache(async (userId: string): Promise<Set<numb
                 or (o.max_enhance_level = uc.max_enhance_level and o.max_enhance_reached_at = uc.max_enhance_reached_at and o.user_id < uc.user_id)
               )
           )
-      `),
+      `,
       3000,
       'championCatalogIds',
-    )) as unknown as { cid: number }[];
+    );
     return new Set(rows.map((r) => Number(r.cid)));
   } catch (e) {
     if (e instanceof DbTimeoutError) {
