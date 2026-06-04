@@ -36,8 +36,13 @@ const POSTGRES_OPTS = {
   idle_timeout: 20, // sec
   // 콜드 새 연결이 매달릴 때 8s 내 실패시켜 재연결 유도.
   connect_timeout: 8, // sec
-  // 죽은 커넥션이 풀에 남는 시간 상한 — 주기적 재생성으로 조용히 끊긴 소켓 재사용 hang 방지.
-  max_lifetime: 60 * 30, // sec
+  // max_lifetime 5min (2026-06-04): Supavisor 트랜잭션 풀러 경유 시 조용히 끊기거나
+  // ClientRead 상태로 멈춘 커넥션이 풀에 오래 남으면 그 인스턴스의 후속 요청이 직렬 대기 →
+  // "데이터 못 부르는 구간"이 생긴다(검증된 재발 모드 — 프로덕션서 279s orphaned 커넥션 관측).
+  // 30min→5min로 단축해 멈춘 소켓을 빠르게 폐기·재생성. (서버측 statement_timeout/
+  // idle_in_transaction을 client startup param으로 주는 방식은 풀러가 무시해 무효 — 검증함.
+  // 실제 실행 중 쿼리는 role 기본 statement_timeout 2min로 별도 상한이 걸려 있음.)
+  max_lifetime: 60 * 5, // sec
 } as const;
 
 function buildClient(): ReturnType<typeof postgres> {
