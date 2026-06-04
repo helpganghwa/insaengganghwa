@@ -4,13 +4,17 @@ import { useEffect, useState } from 'react';
 
 import type { Slot } from '@/lib/db/schema/equipment';
 import { TranscendSprite } from '@/components/TranscendSprite';
+import { RarityFrame, rarityBorderStyle, hasRarityBorder } from '@/components/RarityFrame';
 import { transcendStyle } from '@/lib/game/equipment/transcend';
 
 import type { OpenedItem } from './actions';
 
 /**
- * 한 결과 카드 — 현재 초월 등급 색 테두리. 이번 열기로 초월이 올랐으면(transcended>0)
- * ✦단계가 강화처럼 한 단계씩 올라가는 애니메이션(색도 등급색으로 전환).
+ * 한 결과 카드 — 인벤토리 목록 카드와 동일한 디자인(rounded-xl border-2 + 등급 테두리 +
+ * RarityFrame 별 장식 + frameless 스프라이트 + 이름 + ✦초월수치). 강화수치는 표기 안 함.
+ *
+ * 초월 연출(transcended>0): 단계마다 ① 부르르 떨림 → ② 밝은 빛을 뿜으며 ✦수치 한 단계 상승
+ * + 테두리/별/색이 새 등급으로 전환(같은 색 구간이면 테두리는 그대로 — 10레벨 단위 변화).
  */
 function ResultCard({
   r,
@@ -24,72 +28,103 @@ function ResultCard({
   onClick?: () => void;
 }) {
   const finalT = r.transcendLevel;
-  const fromT = r.transcended > 0 ? Math.max(0, finalT - r.transcended) : finalT;
-  const [shown, setShown] = useState(fromT);
-  const [pop, setPop] = useState(0);
+  const steps = r.transcended > 0 ? r.transcended : 0;
+  const fromT = Math.max(0, finalT - steps);
+  const [shown, setShown] = useState(steps > 0 ? fromT : finalT);
+  const [tremKey, setTremKey] = useState(0); // 떨림 트리거
+  const [flashKey, setFlashKey] = useState(0); // 빛 + 단계상승 트리거
 
   useEffect(() => {
-    if (r.transcended <= 0) {
+    if (steps <= 0) {
       setShown(finalT);
       return;
     }
-    let cur = fromT;
     setShown(fromT);
-    let t: ReturnType<typeof setTimeout>;
-    const run = () => {
-      cur += 1;
-      setShown(cur);
-      setPop((p) => p + 1);
-      if (cur < finalT) t = setTimeout(run, 520);
-    };
-    t = setTimeout(run, 350);
-    return () => clearTimeout(t);
-  }, [fromT, finalT, r.transcended]);
+    let cur = fromT;
+    const STEP = 820; // 단계당 총 길이(ms)
+    const TREM = 460; // 떨림 후 빛+상승 시점
+    const timers: ReturnType<typeof setTimeout>[] = [];
+    for (let i = 0; i < steps; i++) {
+      const base = i * STEP;
+      timers.push(setTimeout(() => setTremKey((k) => k + 1), base + 20));
+      timers.push(
+        setTimeout(() => {
+          cur += 1;
+          setShown(cur);
+          setFlashKey((k) => k + 1);
+        }, base + TREM),
+      );
+    }
+    return () => timers.forEach(clearTimeout);
+  }, [fromT, finalT, steps]);
 
-  const [cr, cg, cb] = transcendStyle(shown).colorRgb;
-  const grade = `rgb(${cr},${cg},${cb})`;
+  const st = transcendStyle(shown);
+  const grade = `rgb(${st.colorRgb.join(',')})`;
+  const spriteSize = big ? 64 : 44;
 
   return (
     <button
       type="button"
       onClick={onClick}
       title={r.name}
-      className={`relative flex flex-col items-center text-center ${
-        big ? 'rounded-xl p-4' : 'aspect-square justify-center rounded-lg p-1'
-      } border-2`}
-      style={{ borderColor: grade, transition: 'border-color 450ms ease-out' }}
+      style={{ ...rarityBorderStyle(shown), transition: 'border-color 400ms ease-out' }}
+      className={`relative flex aspect-square flex-col items-center justify-center gap-0.5 overflow-hidden rounded-xl border-2 bg-white px-1 text-center dark:bg-zinc-950 ${
+        hasRarityBorder(shown) ? '' : 'border-zinc-200 dark:border-zinc-800'
+      }`}
     >
+      <RarityFrame level={shown} />
+      {/* 밝은 빛 플래시 — 단계 상승 순간 카드 전체를 덮음 */}
+      {flashKey > 0 ? (
+        <span
+          key={`f${flashKey}`}
+          aria-hidden
+          className="pointer-events-none absolute inset-0 z-20"
+          style={{
+            background:
+              'radial-gradient(circle at 50% 45%, rgba(255,255,255,0.98), rgba(255,255,255,0) 72%)',
+            animation: 'gacha-transcend-flash 560ms ease-out',
+          }}
+        />
+      ) : null}
       {r.isNew ? (
-        <span className="absolute left-1 top-1 z-10 rounded bg-emerald-500 px-1 text-[8px] font-bold text-white">
+        <span className="absolute left-1 top-1 z-30 rounded bg-emerald-500 px-1 text-[8px] font-bold text-white">
           NEW
         </span>
       ) : null}
-      {finalT > 0 ? (
+      {/* 떨림은 스프라이트에만 — 단계 직전 부르르 */}
+      <span
+        key={`t${tremKey}`}
+        className="relative z-10 flex"
+        style={tremKey > 0 ? { animation: 'gacha-transcend-tremble 460ms ease-in-out' } : undefined}
+      >
+        <TranscendSprite
+          code={r.code}
+          slot={slot}
+          level={shown}
+          isChampion={r.isChampion}
+          size={spriteSize}
+          frameless
+        />
+      </span>
+      <span
+        className={`line-clamp-2 break-keep px-0.5 leading-tight text-zinc-600 dark:text-zinc-400 ${
+          big ? 'text-xs' : 'text-[9px]'
+        }`}
+      >
+        {r.name}
+      </span>
+      {shown > 0 ? (
         <span
-          key={pop}
-          className="absolute right-1 top-1 z-10 text-[10px] font-extrabold tabular-nums drop-shadow-[0_1px_2px_rgba(0,0,0,0.6)]"
-          style={{ color: grade, animation: r.transcended > 0 ? 'gacha-transcend-pop 420ms ease-out' : undefined }}
+          key={`p${flashKey}`}
+          className={`font-semibold tabular-nums ${big ? 'text-xs' : 'text-[9px]'}`}
+          style={{
+            color: grade,
+            animation: flashKey > 0 ? 'gacha-transcend-pop 420ms ease-out' : undefined,
+          }}
         >
           ✦{shown}
         </span>
       ) : null}
-      <TranscendSprite
-        code={r.code}
-        slot={slot}
-        level={shown}
-        isChampion={r.isChampion}
-        size={big ? 64 : 36}
-        frameless
-      />
-      <span
-        className={
-          big
-            ? 'mt-1 break-keep text-base font-semibold'
-            : 'line-clamp-2 break-keep px-0.5 text-[9px] leading-tight text-zinc-600 dark:text-zinc-400'
-        }
-      >
-        {r.name}
-      </span>
     </button>
   );
 }
@@ -138,7 +173,9 @@ export function GachaResultModal({
         <div key={resultKey} style={{ animation: 'gacha-result-swap 240ms ease-out' }}>
           {single ? (
             <div className="flex flex-col items-center text-center">
-              <ResultCard r={single} slot={slot} big />
+              <div className="w-36">
+                <ResultCard r={single} slot={slot} big />
+              </div>
               {single.isNew && single.loreTeaser ? (
                 <div className="mt-3 w-full rounded-xl border border-zinc-200 bg-zinc-50 px-3.5 py-3 text-left dark:border-zinc-800 dark:bg-zinc-900">
                   <div className="mb-1 text-[10px] font-semibold tracking-wide text-zinc-400">

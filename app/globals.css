@@ -355,3 +355,20 @@ html {
   35%  { transform: scale(1.6); filter: brightness(1.8); }
   100% { transform: scale(1); filter: brightness(1); }
 }
+/* 보급 결과 초월 — 단계 직전 '부르르' 떨림(스프라이트). */
+@keyframes gacha-transcend-tremble {
+  0%, 100% { transform: translate3d(0, 0, 0) rotate(0); }
+  12%      { transform: translate3d(-1.6px, 0.6px, 0) rotate(-1.6deg); }
+  24%      { transform: translate3d(1.6px, -0.6px, 0) rotate(1.6deg); }
+  36%      { transform: translate3d(-1.6px, 0.6px, 0) rotate(-1.6deg); }
+  48%      { transform: translate3d(1.6px, -0.6px, 0) rotate(1.6deg); }
+  60%      { transform: translate3d(-1.2px, 0, 0) rotate(-1deg); }
+  72%      { transform: translate3d(1.2px, 0, 0) rotate(1deg); }
+  84%      { transform: translate3d(-0.7px, 0, 0); }
+}
+/* 보급 결과 초월 — 단계 상승 순간 밝은 빛(카드 전체 화이트 플래시). */
+@keyframes gacha-transcend-flash {
+  0%   { opacity: 0; }
+  25%  { opacity: 1; }
+  100% { opacity: 0; }
+}
