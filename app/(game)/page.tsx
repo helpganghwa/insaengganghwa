@@ -63,6 +63,14 @@ const MENU = [
     scale: 1,
   },
   {
+    href: '/battlepass',
+    label: '배틀패스',
+    desc: '강화·초월 성장 보상',
+    bg: '/sprites/hub/battlepass.png', // TODO: 전용 아트(현재 tint placeholder)
+    tint: '#2e1640',
+    scale: 1,
+  },
+  {
     href: '/mail',
     label: '우편함',
     desc: '받은 보상 확인',
