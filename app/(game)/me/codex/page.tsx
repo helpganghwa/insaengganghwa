@@ -43,17 +43,9 @@ export default async function CodexPage() {
   const champSet = _r?.[2] ?? new Set<number>();
 
   const codexMap = new Map(codex.map((c) => [c.catalogItemId, c.max]));
-  const acquired = codex.length;
-  const sumEnhance = codex.reduce((s, c) => s + c.max, 0);
 
   return (
     <div className="space-y-4 px-4 py-4">
-      <header className="flex items-baseline gap-2">
-        <span className="ml-auto text-xs text-zinc-500">
-          획득 {acquired} / {catalog.length}
-        </span>
-      </header>
-
       {SLOTS.map((s) => {
         const items = catalog.filter((c) => c.slot === s);
         if (items.length === 0) return null;
@@ -108,11 +100,6 @@ export default async function CodexPage() {
           </section>
         );
       })}
-
-      <p className="text-center text-xs text-zinc-400">
-        합산 강화 합 <span className="font-mono font-semibold">{sumEnhance}</span> · 전투력
-        보너스로 반영(별도 수령 없음)
-      </p>
     </div>
   );
 }
