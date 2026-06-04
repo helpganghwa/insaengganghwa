@@ -27,11 +27,11 @@ declare global {
 
 const POSTGRES_OPTS = {
   prepare: false,
-  // max 1→5 (2026-05-29): max:1은 단일 커넥션이 idle로 죽으면 모든 쿼리가 그 죽은 커넥션에
-  // 막혀(데이터 누락이 주기적으로 반복) 단일 장애점이 됐음. 여러 커넥션이면 1개가 죽어도
-  // 다른 커넥션으로 즉시 처리되고 동시 요청도 병렬. Supabase 트랜잭션 풀러(:6543)가 서버측
-  // fan-out하므로 서버 커넥션 폭증 없음(클라 max만 늘어남).
-  max: 5,
+  // max 5→8 (2026-06-04): max:1은 단일 커넥션이 죽으면 단일 장애점이 됐고, max:5는 cron 다수
+  // 동시 실행(:00에 6~7개) + withTimeout이 취소 못 한 느린 쿼리가 슬롯을 물면 여유가 빠듯했음.
+  // 8로 헤드룸 확보 — 죽은/멈춘 커넥션이 몇 개 생겨도 정상 슬롯으로 처리. Supabase 트랜잭션
+  // 풀러(:6543)가 서버측 fan-out하므로 서버 커넥션 폭증 없음(클라 max만 늘어남).
+  max: 8,
   // idle 20s: 90s는 죽은 커넥션을 오래 물고 있어 "못 부르는 구간"을 늘린 역효과였음 → 원복.
   idle_timeout: 20, // sec
   // 콜드 새 연결이 매달릴 때 8s 내 실패시켜 재연결 유도.
@@ -39,10 +39,11 @@ const POSTGRES_OPTS = {
   // max_lifetime 5min (2026-06-04): Supavisor 트랜잭션 풀러 경유 시 조용히 끊기거나
   // ClientRead 상태로 멈춘 커넥션이 풀에 오래 남으면 그 인스턴스의 후속 요청이 직렬 대기 →
   // "데이터 못 부르는 구간"이 생긴다(검증된 재발 모드 — 프로덕션서 279s orphaned 커넥션 관측).
-  // 30min→5min로 단축해 멈춘 소켓을 빠르게 폐기·재생성. (서버측 statement_timeout/
-  // idle_in_transaction을 client startup param으로 주는 방식은 풀러가 무시해 무효 — 검증함.
-  // 실제 실행 중 쿼리는 role 기본 statement_timeout 2min로 별도 상한이 걸려 있음.)
-  max_lifetime: 60 * 5, // sec
+  // 30min→5min→3min로 단축해 멈춘 소켓을 더 빠르게 폐기·재생성(withTimeout이 취소 못 한
+  // 쿼리가 물고 있는 슬롯의 최대 점유 시간 = max_lifetime이므로 짧을수록 회복이 빠름).
+  // (서버측 statement_timeout/idle_in_transaction을 client startup param으로 주는 방식은
+  // 풀러가 무시해 무효 — 검증함. 실제 실행 중 쿼리는 role 기본 statement_timeout 2min 상한.)
+  max_lifetime: 60 * 3, // sec
 } as const;
 
 function buildClient(): ReturnType<typeof postgres> {

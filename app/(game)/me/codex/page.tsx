@@ -4,7 +4,8 @@ import { eq } from 'drizzle-orm';
 import { getSessionUserId } from '@/lib/auth/session';
 import { db } from '@/lib/db/client';
 import { withTimeout } from '@/lib/db/with-timeout';
-import { catalogItems, userEquipment, type Slot } from '@/lib/db/schema/equipment';
+import { userEquipment, type Slot } from '@/lib/db/schema/equipment';
+import { getActiveCatalog } from '@/lib/game/catalog';
 import { championCatalogIds } from '@/lib/game/codex/ranking';
 import { TranscendSprite } from '@/components/TranscendSprite';
 
@@ -18,22 +19,15 @@ export default async function CodexPage() {
   if (!userId) return null;
 
   // 콜드 DB 커넥션 hang 시 페이지 무한 대기 방지 — 실패 시 빈 결과로 degrade(2026-05-29).
+  // 카탈로그는 캐시(getActiveCatalog) — 요청마다 DB 조회 제거. user_equipment·champion만 실시간.
   const _r = await withTimeout(
     Promise.all([
-    db
-      .select({
-        id: catalogItems.id,
-        code: catalogItems.code,
-        name: catalogItems.name,
-        slot: catalogItems.slot,
-      })
-      .from(catalogItems)
-      .where(eq(catalogItems.active, true)),
-    db
-      .select({ catalogItemId: userEquipment.catalogItemId, max: userEquipment.maxEnhanceLevel })
-      .from(userEquipment)
-      .where(eq(userEquipment.userId, userId)),
-    championCatalogIds(userId),
+      getActiveCatalog(),
+      db
+        .select({ catalogItemId: userEquipment.catalogItemId, max: userEquipment.maxEnhanceLevel })
+        .from(userEquipment)
+        .where(eq(userEquipment.userId, userId)),
+      championCatalogIds(userId),
     ]),
     3500,
     'codex.page',
