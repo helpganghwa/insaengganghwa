@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useMemo, useOptimistic, useState, useTransition } from 'react';
+import { memo, useEffect, useMemo, useOptimistic, useState, useTransition } from 'react';
 import { useRouter } from 'next/navigation';
 
 import type { Slot } from '@/lib/db/schema/equipment';
@@ -146,13 +146,13 @@ export function InventoryGrid({
       {equipped.length > 0 ? (
         <Section title={`장착 중 (${equipped.length})`}>
           {equipped.map((it) => (
-            <Tile key={it.id} item={it} isNew={newIds.has(it.id)} onOpen={() => setOpenId(it.id)} />
+            <Tile key={it.id} item={it} isNew={newIds.has(it.id)} onOpen={setOpenId} />
           ))}
         </Section>
       ) : null}
       <Section title={`보유 (${owned.length})`}>
         {owned.map((it) => (
-          <Tile key={it.id} item={it} isNew={newIds.has(it.id)} onOpen={() => setOpenId(it.id)} />
+          <Tile key={it.id} item={it} isNew={newIds.has(it.id)} onOpen={setOpenId} />
         ))}
       </Section>
 
@@ -311,15 +311,23 @@ function Section({ title, children }: { title: string; children: React.ReactNode
   );
 }
 
-function Tile({ item, isNew, onOpen }: { item: InvItem; isNew: boolean; onOpen: () => void }) {
-  // 카드 보더 색 = 등급(transcend) 색. 4 모서리에 RarityFrame(별).
-  // 잠금/강화중 상태는 카드에서 시각 표시 안 함(보더 가림 회피) — 상세 팝업에서 관리/확인.
+// memo — 필터/정렬/낙관 업데이트 시 변하지 않은 타일 리렌더(+캔버스 effect 재실행) 방지.
+// onOpen은 안정적인 setState setter라 참조 동일 → memo 유효.
+const Tile = memo(function Tile({
+  item,
+  isNew,
+  onOpen,
+}: {
+  item: InvItem;
+  isNew: boolean;
+  onOpen: (id: string) => void;
+}) {
   // 카드 보더 색 = 등급(transcend) 색. 4 모서리에 RarityFrame(별).
   // 잠금/강화중 상태는 카드에서 시각 표시 안 함(보더 가림 회피) — 상세 팝업에서 관리/확인.
   return (
     <button
       type="button"
-      onClick={onOpen}
+      onClick={() => onOpen(item.id)}
       style={rarityBorderStyle(item.transcendLevel)}
       className={`relative flex aspect-square flex-col items-center justify-center gap-0.5 overflow-hidden rounded-xl border-2 bg-white px-1 text-center dark:bg-zinc-950 ${
         hasRarityBorder(item.transcendLevel) ? '' : 'border-zinc-200 dark:border-zinc-800'
@@ -345,4 +353,4 @@ function Tile({ item, isNew, onOpen }: { item: InvItem; isNew: boolean; onOpen: 
       ) : null}
     </button>
   );
-}
+});

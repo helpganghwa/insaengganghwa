@@ -300,6 +300,8 @@ function TranscendCanvas({
 
     let raf = 0;
     let stopped = false;
+    let visible = true; // 화면 밖이면 rAF 정지(스크롤 렉/배터리). IntersectionObserver가 토글.
+    let built = false;
     // override = 레벨 무관 신화로 대체 / additive = 실제 등급 유지 + 발광만 추가.
     const champOverride = isChampion && championMode === 'override';
     const color: RGB = champOverride ? MYTHIC_RGB : [scr, scg, scb];
@@ -495,7 +497,7 @@ function TranscendCanvas({
 
     let lastDraw = 0;
     const loop = (ts: number) => {
-      if (stopped) return;
+      if (stopped || !visible) return;
       if (ts - lastDraw >= TRANSCEND_TUNING.fpsIntervalMs) {
         lastDraw = ts;
         draw((ts / TRANSCEND_TUNING.animPeriodMs) % 1);
@@ -505,9 +507,27 @@ function TranscendCanvas({
 
     const start = (atlasImg: HTMLImageElement) => {
       buildStatic(atlasImg);
-      if (dynamic) raf = requestAnimationFrame(loop);
+      built = true;
+      if (dynamic && visible) raf = requestAnimationFrame(loop);
       else draw(0.2);
     };
+
+    // 화면 밖 타일은 애니메이션 정지 — 다수 캔버스 rAF가 스크롤 중에도 돌아 렉 유발하던 문제 해결.
+    const io = new IntersectionObserver(
+      (entries) => {
+        const e = entries[0];
+        if (!e) return;
+        visible = e.isIntersecting;
+        if (visible) {
+          if (dynamic && built && !stopped && !raf) raf = requestAnimationFrame(loop);
+        } else if (raf) {
+          cancelAnimationFrame(raf);
+          raf = 0;
+        }
+      },
+      { rootMargin: '150px' },
+    );
+    io.observe(canvas);
 
     // atlas 1장(모듈 전역 캐시) + frame 1장 병렬 로드.
     loadAtlasImage()
@@ -526,6 +546,7 @@ function TranscendCanvas({
 
     return () => {
       stopped = true;
+      io.disconnect();
       if (raf) cancelAnimationFrame(raf);
     };
     // coord는 같은 code면 안정. 객체 ref 변동 deps 회피 위해 code 사용.
