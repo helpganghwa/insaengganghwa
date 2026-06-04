@@ -6,12 +6,13 @@ import Link from 'next/link';
 import type { LeaderboardEntry, LeaderboardMetric } from '@/lib/game/leaderboard/queries';
 
 /**
- * 홈 랭킹 카드 로테이터 — 5초마다 다음 메트릭으로 전환(고정 순서, 첫 노출만 랜덤).
- * 덱·시작 인덱스는 서버(RankingTop3Card)에서 주입(hydration 일치).
+ * 홈 랭킹 카드 로테이터 — 10초마다 다음 메트릭으로 전환(고정 순서, 첫 노출만 랜덤).
+ * 전환: 본문 페이드아웃 + 타이틀 아래로 퇴장 → 교체 → 타이틀 위에서 등장 + 본문 페이드인.
  */
 const HOF_BG = '/sprites/hof-bg.png?v=3';
 const HEADER_BG = '/sprites/hof-header.png';
-const ROTATE_MS = 5000;
+const ROTATE_MS = 10000;
+const TRANSITION_MS = 350;
 
 export type RankingDeck = {
   metric: LeaderboardMetric;
@@ -27,21 +28,39 @@ export function RankingRotator({
   initialIndex: number;
 }) {
   const [idx, setIdx] = useState(initialIndex);
+  const [visible, setVisible] = useState(true);
+
   useEffect(() => {
     if (decks.length <= 1) return;
-    const t = setInterval(() => setIdx((i) => (i + 1) % decks.length), ROTATE_MS);
-    return () => clearInterval(t);
+    let swapT: ReturnType<typeof setTimeout>;
+    const cycle = setInterval(() => {
+      setVisible(false); // 퇴장(타이틀↓ + 본문 페이드아웃)
+      swapT = setTimeout(() => {
+        setIdx((i) => (i + 1) % decks.length);
+        setVisible(true); // 교체 + 등장(타이틀↑ + 본문 페이드인)
+      }, TRANSITION_MS);
+    }, ROTATE_MS);
+    return () => {
+      clearInterval(cycle);
+      clearTimeout(swapT);
+    };
   }, [decks.length]);
 
   const deck = decks[idx % decks.length]!;
   const top = deck.top;
+  const titleAnim = visible
+    ? 'rank-ticker-in 0.35s ease-out'
+    : 'rank-ticker-out 0.35s ease-in forwards';
+  const bodyAnim = visible
+    ? 'rank-fade-in 0.35s ease-out'
+    : 'rank-fade-out 0.35s ease-in forwards';
 
   return (
     <section
       aria-label={`${deck.label} 랭킹`}
       className="overflow-hidden rounded-xl border border-amber-900/50 shadow-lg shadow-black/40"
     >
-      {/* 헤더 — pixellab 배너 배경 + 해당 메트릭 랭킹 진입 */}
+      {/* 헤더 — pixellab 배너 배경 + 해당 메트릭 랭킹 진입. 타이틀은 ticker 전환. */}
       <Link
         href={`/leaderboard?tab=${deck.metric}`}
         className="relative flex items-center justify-center overflow-hidden border-b border-amber-700/40 px-3.5 py-1.5 transition hover:brightness-110"
@@ -55,12 +74,13 @@ export function RankingRotator({
           style={{ imageRendering: 'pixelated' }}
         />
         <div className="absolute inset-0 bg-black/35" />
-        <span
-          key={deck.metric}
-          className="relative text-[10px] font-bold text-amber-100 text-pixel-outline"
-          style={{ animation: 'toast-pop 0.3s ease-out' }}
-        >
-          {deck.label} 랭킹
+        <span className="relative inline-block overflow-hidden leading-tight">
+          <span
+            className="block text-[10px] font-bold text-amber-100 text-pixel-outline"
+            style={{ animation: titleAnim }}
+          >
+            {deck.label} 랭킹
+          </span>
         </span>
       </Link>
 
@@ -73,7 +93,11 @@ export function RankingRotator({
           className="absolute inset-0 h-[105%] w-full object-fill"
           style={{ imageRendering: 'pixelated' }}
         />
-        <div key={deck.metric} className="absolute inset-0 flex items-end justify-center gap-0.5 px-1 py-1.5">
+        {/* 아바타 섹션(닉네임/아바타/수치) — 페이드 인/아웃. */}
+        <div
+          className="absolute inset-0 flex items-end justify-center gap-0.5 px-1 py-1.5"
+          style={{ animation: bodyAnim }}
+        >
           {/* 항상 3분할 — 2/1/3 자리. 데이터 없으면 placeholder로 슬롯 유지. */}
           {[
             { slot: 2 as const, entry: top[1] ?? null },
