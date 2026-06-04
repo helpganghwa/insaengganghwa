@@ -1,13 +1,15 @@
 import 'server-only';
 
 import { unstable_cache } from 'next/cache';
-import { eq, inArray, sql } from 'drizzle-orm';
+import { and, eq, inArray, sql } from 'drizzle-orm';
 
 import { db } from '@/lib/db/client';
 import { withTimeout } from '@/lib/db/with-timeout';
 import { profiles } from '@/lib/db/schema/profiles';
 import { userProfiles } from '@/lib/db/schema/avatar';
 import { equipmentInstances } from '@/lib/db/schema/equipment';
+import { raids, raidParticipants } from '@/lib/db/schema/raid';
+import { meleeBattles } from '@/lib/db/schema/melee';
 import { combatPowerFromOwned } from '@/lib/game/equipment/combat-power';
 
 /**
@@ -15,7 +17,7 @@ import { combatPowerFromOwned } from '@/lib/game/equipment/combat-power';
  * 최고 강화 = 보유 단일 최고 enhance_level / 합산 강화 = Σ 보유 인스턴스 enhance_level /
  * 전투력 = 보유 카탈로그(중복 제외) 개별 전투력 합(BALANCE §3.2 — combat은 앱 계산).
  */
-export type LeaderboardMetric = 'max' | 'sum' | 'combat';
+export type LeaderboardMetric = 'max' | 'sum' | 'combat' | 'raid' | 'melee';
 export type LeaderboardEntry = {
   userId: string;
   nickname: string;
@@ -127,6 +129,45 @@ async function combatRows() {
   }));
 }
 
+// 레이드 처치 = 참여(공격≥1)한 정산 레이드 수(phasesCleared≥1). 보스 1회=1처치 카운트.
+async function raidRows() {
+  const r = await db
+    .select({
+      userId: raidParticipants.userId,
+      nickname: profiles.nickname,
+      publicCode: profiles.publicCode,
+      value: sql<number>`count(distinct ${raidParticipants.raidId})::int`,
+    })
+    .from(raidParticipants)
+    .innerJoin(profiles, eq(profiles.id, raidParticipants.userId))
+    .innerJoin(raids, eq(raids.id, raidParticipants.raidId))
+    .where(
+      and(
+        eq(raids.status, 'settled'),
+        sql`${raids.phasesCleared} >= 1`,
+        sql`${raidParticipants.attacksUsed} >= 1`,
+      ),
+    )
+    .groupBy(raidParticipants.userId, profiles.nickname, profiles.publicCode);
+  return r.map((x) => ({ userId: x.userId, nickname: x.nickname, publicCode: x.publicCode, value: Number(x.value) }));
+}
+
+// 대난투 우승 = 발표된 배틀의 챔피언(championUserId) 횟수.
+async function meleeRows() {
+  const r = await db
+    .select({
+      userId: meleeBattles.championUserId,
+      nickname: profiles.nickname,
+      publicCode: profiles.publicCode,
+      value: sql<number>`count(*)::int`,
+    })
+    .from(meleeBattles)
+    .innerJoin(profiles, eq(profiles.id, meleeBattles.championUserId))
+    .where(eq(meleeBattles.status, 'revealed'))
+    .groupBy(meleeBattles.championUserId, profiles.nickname, profiles.publicCode);
+  return r.map((x) => ({ userId: x.userId!, nickname: x.nickname, publicCode: x.publicCode, value: Number(x.value) }));
+}
+
 // metric별 unstable_cache 60s — 한 번 fetch 후 60s 동안 즉시(메모리/ISR) 응답.
 // 풀(max:1) 직렬 압력으로 SSR 매달림이 무한 로딩 원인 → 캐시로 fetch 자체 회피.
 // 첫 캐시 미스 시는 timeout 8s 가드 + 빈 폴백(페이지는 항상 응답).
@@ -142,10 +183,27 @@ const cachedCombat = unstable_cache(combatRows, ['leaderboard:combat'], {
   revalidate: 60,
   tags: ['leaderboard'],
 });
+const cachedRaid = unstable_cache(raidRows, ['leaderboard:raid'], {
+  revalidate: 60,
+  tags: ['leaderboard'],
+});
+const cachedMelee = unstable_cache(meleeRows, ['leaderboard:melee'], {
+  revalidate: 60,
+  tags: ['leaderboard'],
+});
 
 const TIMEOUT_MS = 3000;
 const safeRows = (m: LeaderboardMetric) => {
-  const fn = m === 'max' ? cachedMax : m === 'sum' ? cachedSum : cachedCombat;
+  const fn =
+    m === 'max'
+      ? cachedMax
+      : m === 'sum'
+        ? cachedSum
+        : m === 'combat'
+          ? cachedCombat
+          : m === 'raid'
+            ? cachedRaid
+            : cachedMelee;
   return withTimeout(fn(), TIMEOUT_MS, `leaderboard.${m}`).catch(() => []);
 };
 

@@ -11,19 +11,23 @@ const LABEL: Record<LeaderboardMetric, string> = {
   max: '최고 강화',
   sum: '합산 강화',
   combat: '전투력',
+  raid: '레이드 처치',
+  melee: '대난투 우승',
 };
-// metric별 명예의 전당 배경 — 최고=전당, 합산=대장간, 전투력=투기장
+// metric별 명예의 전당 배경(현재 전부 동일 전당 배경 사용).
 const BG: Record<LeaderboardMetric, string> = {
   max: '/sprites/hof-bg.png?v=3',
   sum: '/sprites/hof-bg.png?v=3',
   combat: '/sprites/hof-bg.png?v=3',
+  raid: '/sprites/hof-bg.png?v=3',
+  melee: '/sprites/hof-bg.png?v=3',
 };
 // 수치는 순수 숫자(천단위 콤마)만 — 접두/이모지/축약 없이 전체 노출
 function fmt(v: number): string {
   return v.toLocaleString('ko-KR');
 }
 function parse(t: string | undefined): LeaderboardMetric {
-  return t === 'sum' || t === 'combat' ? t : 'max';
+  return t === 'sum' || t === 'combat' || t === 'raid' || t === 'melee' ? t : 'max';
 }
 
 export default async function LeaderboardPage({
