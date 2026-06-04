@@ -112,7 +112,9 @@ export function MeleeInfo({
                       />
                     </div>
                   ) : null}
-                  <div className="pointer-events-none absolute inset-0 bg-gradient-to-r from-zinc-950 via-zinc-950/55 to-transparent" />
+                  {/* 골드 틴트 + 다크 이중 그라데이션 — FINAL 챔피언 카드와 동일 톤. */}
+                  <div className="pointer-events-none absolute inset-0 bg-gradient-to-r from-amber-500/25 to-transparent" />
+                  <div className="pointer-events-none absolute inset-0 bg-gradient-to-r from-zinc-950 to-transparent" />
                   {/* 콘텐츠 — 아바타·그라데이션 위 */}
                   <div className="relative z-10 px-3 py-3.5">
                     <div className="flex items-center gap-2">
