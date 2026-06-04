@@ -13,8 +13,8 @@ import type { OpenedItem } from './actions';
  * 한 결과 카드 — 인벤토리 목록 카드와 동일한 디자인(rounded-xl border-2 + 등급 테두리 +
  * RarityFrame 별 장식 + frameless 스프라이트 + 이름 + ✦초월수치). 강화수치는 표기 안 함.
  *
- * 초월 연출(transcended>0): 단계마다 ① 부르르 떨림 → ② 밝은 빛을 뿜으며 ✦수치 한 단계 상승
- * + 테두리/별/색이 새 등급으로 전환(같은 색 구간이면 테두리는 그대로 — 10레벨 단위 변화).
+ * 초월 연출(transcended>0): 단계마다 ① 부르르 떨림 → ② ✦수치가 한 단계 오르며 테두리/별/색이
+ * 새 등급으로 전환(같은 10레벨 색 구간이면 테두리는 그대로). 빛 효과는 사용하지 않음.
  */
 function ResultCard({
   r,
@@ -32,7 +32,7 @@ function ResultCard({
   const fromT = Math.max(0, finalT - steps);
   const [shown, setShown] = useState(steps > 0 ? fromT : finalT);
   const [tremKey, setTremKey] = useState(0); // 떨림 트리거
-  const [flashKey, setFlashKey] = useState(0); // 빛 + 단계상승 트리거
+  const [stepKey, setStepKey] = useState(0); // 단계 상승(숫자·테두리 변화) 트리거
 
   useEffect(() => {
     if (steps <= 0) {
@@ -41,8 +41,8 @@ function ResultCard({
     }
     setShown(fromT);
     let cur = fromT;
-    const STEP = 820; // 단계당 총 길이(ms)
-    const TREM = 460; // 떨림 후 빛+상승 시점
+    const STEP = 760; // 단계당 총 길이(ms)
+    const TREM = 440; // 떨림 후 상승(숫자·테두리 변화) 시점
     const timers: ReturnType<typeof setTimeout>[] = [];
     for (let i = 0; i < steps; i++) {
       const base = i * STEP;
@@ -51,7 +51,7 @@ function ResultCard({
         setTimeout(() => {
           cur += 1;
           setShown(cur);
-          setFlashKey((k) => k + 1);
+          setStepKey((k) => k + 1);
         }, base + TREM),
       );
     }
@@ -60,7 +60,7 @@ function ResultCard({
 
   const st = transcendStyle(shown);
   const grade = `rgb(${st.colorRgb.join(',')})`;
-  const spriteSize = big ? 60 : 48;
+  const spriteSize = big ? 88 : 48;
 
   return (
     <button
@@ -68,34 +68,21 @@ function ResultCard({
       onClick={onClick}
       title={r.name}
       style={{ ...rarityBorderStyle(shown), transition: 'border-color 400ms ease-out' }}
-      className={`relative flex aspect-square flex-col items-center justify-center gap-0.5 overflow-hidden rounded-xl border-2 bg-white px-1 text-center dark:bg-zinc-950 ${
-        hasRarityBorder(shown) ? '' : 'border-zinc-200 dark:border-zinc-800'
-      }`}
+      className={`relative flex flex-col items-center justify-center overflow-hidden rounded-xl border-2 bg-white text-center dark:bg-zinc-950 ${
+        big ? 'w-full gap-2 px-3 py-4' : 'aspect-square gap-0.5 px-1'
+      } ${hasRarityBorder(shown) ? '' : 'border-zinc-200 dark:border-zinc-800'}`}
     >
       <RarityFrame level={shown} />
-      {/* 밝은 빛 플래시 — 단계 상승 순간 카드 전체를 덮음 */}
-      {flashKey > 0 ? (
-        <span
-          key={`f${flashKey}`}
-          aria-hidden
-          className="pointer-events-none absolute inset-0 z-20"
-          style={{
-            background:
-              'radial-gradient(circle at 50% 45%, rgba(255,255,255,0.98), rgba(255,255,255,0) 72%)',
-            animation: 'gacha-transcend-flash 560ms ease-out',
-          }}
-        />
-      ) : null}
       {r.isNew ? (
-        <span className="absolute left-1 top-1 z-30 rounded bg-emerald-500 px-1 text-[8px] font-bold text-white">
+        <span className="absolute left-1.5 top-1.5 z-30 rounded bg-emerald-500 px-1 text-[8px] font-bold text-white">
           NEW
         </span>
       ) : null}
-      {/* 떨림은 스프라이트에만 — 단계 직전 부르르 */}
+      {/* 떨림은 스프라이트에만 — 단계 직전 부르르 (빛 효과 없음) */}
       <span
         key={`t${tremKey}`}
         className="relative z-10 flex"
-        style={tremKey > 0 ? { animation: 'gacha-transcend-tremble 460ms ease-in-out' } : undefined}
+        style={tremKey > 0 ? { animation: 'gacha-transcend-tremble 440ms ease-in-out' } : undefined}
       >
         <TranscendSprite
           code={r.code}
@@ -108,18 +95,18 @@ function ResultCard({
       </span>
       <span
         className={`line-clamp-2 break-keep px-0.5 leading-tight text-zinc-600 dark:text-zinc-400 ${
-          big ? 'text-[11px]' : 'text-[9px]'
+          big ? 'text-sm font-medium' : 'text-[9px]'
         }`}
       >
         {r.name}
       </span>
       {shown > 0 ? (
         <span
-          key={`p${flashKey}`}
-          className={`font-semibold tabular-nums ${big ? 'text-[11px]' : 'text-[9px]'}`}
+          key={`p${stepKey}`}
+          className={`font-semibold tabular-nums ${big ? 'text-[13px]' : 'text-[9px]'}`}
           style={{
             color: grade,
-            animation: flashKey > 0 ? 'gacha-transcend-pop 420ms ease-out' : undefined,
+            animation: stepKey > 0 ? 'gacha-transcend-tick 360ms ease-out' : undefined,
           }}
         >
           ✦{shown}
@@ -173,7 +160,7 @@ export function GachaResultModal({
         <div key={resultKey} style={{ animation: 'gacha-result-swap 240ms ease-out' }}>
           {single ? (
             <div className="flex flex-col items-center text-center">
-              <div className="w-40">
+              <div className="w-52">
                 <ResultCard r={single} slot={slot} big />
               </div>
               {single.isNew && single.loreTeaser ? (
