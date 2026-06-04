@@ -95,6 +95,14 @@ export const userCodex = pgTable(
     maxEnhanceReachedAt: timestamp('max_enhance_reached_at', { withTimezone: true })
       .notNull()
       .defaultNow(),
+    /** 해당 아이템 역대 최고 초월(lifetime). 강화와 대칭 — 인스턴스 분해·제물 소모와
+     *  무관하게 단조 유지(배틀패스 '최고 초월 도달' 소스). 무한 진행이라 상한 없음. */
+    maxTranscendLevel: integer('max_transcend_level').notNull().default(0),
+    /** 현재 max_transcend_level을 **최초 달성한 시각**(초월 챔피언 랭킹 동률 타이브레이크).
+     *  신규레벨 > 기존 max일 때만 now()로 갱신. 신규 row insert 시 default now(). */
+    maxTranscendReachedAt: timestamp('max_transcend_reached_at', { withTimezone: true })
+      .notNull()
+      .defaultNow(),
     /** 도감 해금(미획득 = row 없음). */
     firstAcquiredAt: timestamp('first_acquired_at', { withTimezone: true })
       .notNull()

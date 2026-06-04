@@ -3,7 +3,7 @@ import 'server-only';
 import { and, eq, inArray, sql } from 'drizzle-orm';
 
 import { db } from '@/lib/db/client';
-import { equipmentInstances } from '@/lib/db/schema/equipment';
+import { equipmentInstances, userCodex } from '@/lib/db/schema/equipment';
 import { enhancementJobs } from '@/lib/db/schema/enhance';
 import { transcendLogs } from '@/lib/db/schema/transcend';
 import { transcendFodderForStep } from '@/lib/game/balance';
@@ -97,6 +97,20 @@ export function performTranscend(input: TranscendInput): Promise<TranscendResult
       .update(equipmentInstances)
       .set({ transcendLevel: toT })
       .where(eq(equipmentInstances.id, equipmentInstanceId));
+
+    // 도감 lifetime 최고 초월 갱신(단조, 강화 max_enhance_level과 대칭). 분해·제물 소모로
+    // 인스턴스가 사라져도 유지 — 배틀패스 '최고 초월 도달' 소스(codex 집계). 도감 row는
+    // 보급 획득 시 생성되어 이미 존재하나 방어적으로 upsert.
+    await tx
+      .insert(userCodex)
+      .values({ userId, catalogItemId: target.catalogItemId, maxTranscendLevel: toT })
+      .onConflictDoUpdate({
+        target: [userCodex.userId, userCodex.catalogItemId],
+        set: {
+          maxTranscendLevel: sql`greatest(${userCodex.maxTranscendLevel}, ${toT})`,
+          maxTranscendReachedAt: sql`case when ${toT} > ${userCodex.maxTranscendLevel} then now() else ${userCodex.maxTranscendReachedAt} end`,
+        },
+      });
 
     await tx.insert(transcendLogs).values({
       userId,
