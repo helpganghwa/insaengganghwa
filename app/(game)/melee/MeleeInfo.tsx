@@ -96,12 +96,19 @@ export function MeleeInfo({
         ) : (
           /* 로그처럼 풀폭(엣지-투-엣지, 별도 박스 없음) */
           <ul className="border-t border-zinc-900/60">
-            {history.map((h) => {
+            {history.map((h, i) => {
+              // 홀짝 미러 — 홀수(1·3…): 아바타 우측·그라데이션 좌측부터 / 짝수(2·4…): 좌우 반전.
+              // 인접 카드 좌우가 엇갈려 구분감↑.
+              const mirror = i % 2 === 1;
               const inner = (
                 <>
                   {/* 챔피언 아바타 — 배경 레이어. height/top으로 상반신·얼굴이 박스 세로 중앙(여백 보정). */}
                   {h.championAvatar ? (
-                    <div className="pointer-events-none absolute inset-y-0 right-0 w-40 overflow-hidden">
+                    <div
+                      className={`pointer-events-none absolute inset-y-0 w-40 overflow-hidden ${
+                        mirror ? 'left-0' : 'right-0'
+                      }`}
+                    >
                       {/* eslint-disable-next-line @next/next/no-img-element */}
                       <img
                         src={h.championAvatar}
@@ -112,12 +119,24 @@ export function MeleeInfo({
                       />
                     </div>
                   ) : null}
-                  {/* 골드 틴트 + 다크 이중 그라데이션 — FINAL 챔피언 카드와 동일 톤. */}
-                  <div className="pointer-events-none absolute inset-0 bg-gradient-to-r from-amber-500/25 to-transparent" />
-                  <div className="pointer-events-none absolute inset-0 bg-gradient-to-r from-zinc-950 to-transparent" />
-                  {/* 콘텐츠 — 아바타·그라데이션 위 */}
-                  <div className="relative z-10 px-3 py-3.5">
-                    <div className="flex items-center gap-2">
+                  {/* 골드 틴트 + 다크 이중 그라데이션 — 어두운 쪽(텍스트)에서 아바타 쪽으로 페이드. */}
+                  <div
+                    className={`pointer-events-none absolute inset-0 from-amber-500/25 to-transparent ${
+                      mirror ? 'bg-gradient-to-l' : 'bg-gradient-to-r'
+                    }`}
+                  />
+                  <div
+                    className={`pointer-events-none absolute inset-0 from-zinc-950 to-transparent ${
+                      mirror ? 'bg-gradient-to-l' : 'bg-gradient-to-r'
+                    }`}
+                  />
+                  {/* 콘텐츠 — 어두운 쪽(아바타 반대편)에 정렬. */}
+                  <div
+                    className={`relative z-10 px-3 py-3.5 ${
+                      mirror ? 'flex flex-col items-end text-right' : ''
+                    }`}
+                  >
+                    <div className={`flex items-center gap-2 ${mirror ? 'flex-row-reverse' : ''}`}>
                       <span className="shrink-0 rounded bg-amber-500/15 px-1.5 py-0.5 font-mono text-[11px] font-bold text-amber-300">
                         제{h.edition}회
                       </span>
@@ -125,7 +144,11 @@ export function MeleeInfo({
                         {h.championNick}
                       </span>
                     </div>
-                    <div className="mt-1.5 flex flex-wrap items-center gap-x-2 gap-y-0.5 text-[10px] text-zinc-400">
+                    <div
+                      className={`mt-1.5 flex flex-wrap items-center gap-x-2 gap-y-0.5 text-[10px] text-zinc-400 ${
+                        mirror ? 'justify-end' : ''
+                      }`}
+                    >
                       <span>
                         전투력 <span className="font-mono text-zinc-300">{h.championCp.toLocaleString()}</span>
                       </span>
