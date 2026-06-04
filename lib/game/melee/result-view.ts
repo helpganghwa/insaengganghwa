@@ -71,6 +71,9 @@ export async function buildMeleeResultView(
   }
   // 스냅샷(그 시점) 닉·아바타 — finale.roster. 아바타 스냅샷이 있으면 live보다 우선(과거 회차 고정).
   const snapNick = new Map(finale.roster.map((r) => [r.userId, r.nickname]));
+  // 전투 재생용 — 스냅샷 덮어쓰기 전의 live 아바타(과거 배틀 챔피언 roster.avatar가 트로피로
+  // 박제된 경우의 오염 회피). 전투 화면은 챔피언도 유저 실제 아바타로 표시(2026-06-04 피드백).
+  const liveAvatarOf = new Map(avatarOf);
   for (const r of finale.roster) if (r.avatar) avatarOf.set(r.userId, r.avatar);
 
   const dft = (i: number) =>
@@ -117,7 +120,12 @@ export async function buildMeleeResultView(
     attackSuccess: kills.get(r.uid) ?? 0,
     defenseSuccess: survives.get(r.uid) ?? 0,
   }));
-  const rosterAvatars = finale.roster.map((r, i) => avatarOf.get(r.userId) ?? dft(i));
+  // 전투 재생 — 챔피언은 live 아바타(트로피 회피), 나머지는 스냅샷. 모두 유저의 실제 아바타.
+  const rosterAvatars = finale.roster.map(
+    (r, i) =>
+      (r.userId === battle.championUserId ? liveAvatarOf.get(r.userId) : avatarOf.get(r.userId)) ??
+      dft(i),
+  );
   const rosterCodes = finale.roster.map((r) => codeOf.get(r.userId) ?? null);
 
   const [meRow] = await withTimeout(

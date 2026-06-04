@@ -4,7 +4,7 @@ import { and, asc, eq, inArray } from 'drizzle-orm';
 
 import { db } from '@/lib/db/client';
 import { withTimeout } from '@/lib/db/with-timeout';
-import { meleeBattles, meleeParticipants } from '@/lib/db/schema/melee';
+import { meleeBattles, meleeParticipants, type MeleeFinale } from '@/lib/db/schema/melee';
 import { profiles } from '@/lib/db/schema/profiles';
 import { userProfiles } from '@/lib/db/schema/avatar';
 
@@ -32,13 +32,23 @@ export async function loadMeleeHistory(): Promise<MeleeHistoryRow[]> {
         id: meleeBattles.id,
         pc: meleeBattles.participantCount,
         champ: meleeBattles.championUserId,
+        finale: meleeBattles.finale,
       })
       .from(meleeBattles)
       .where(eq(meleeBattles.status, 'revealed'))
       .orderBy(asc(meleeBattles.battleDate)),
     3000,
     'melee.history.battles',
-  ).catch(() => [] as { id: bigint; pc: number; champ: string | null }[]);
+  ).catch(() => [] as { id: bigint; pc: number; champ: string | null; finale: MeleeFinale | null }[]);
+
+  // 역대 우승자는 **우승컵 트로피 아바타** 우선(2026-06-04 피드백). 신규=finale.trophyAvatar,
+  // 과거=roster[챔피언].avatar(박제 트로피). 트로피 미생성 배틀은 아래 live 아바타로 폴백.
+  const trophyOf = new Map<string, string>();
+  for (const b of battles) {
+    const f = b.finale;
+    const t = f?.trophyAvatar ?? f?.roster?.find((r) => r.rank === 1)?.avatar ?? null;
+    if (t) trophyOf.set(b.id.toString(), t);
+  }
 
   if (battles.length === 0) return [];
 
@@ -91,7 +101,7 @@ export async function loadMeleeHistory(): Promise<MeleeHistoryRow[]> {
         edition: i + 1,
         championNick: c?.nick ?? '챔피언',
         championCode: c?.code ?? null,
-        championAvatar: c?.avatar ?? null,
+        championAvatar: trophyOf.get(b.id.toString()) ?? c?.avatar ?? null,
         championCp: cpOf.get(b.id.toString()) ?? 0,
         participantCount: b.pc,
       } satisfies MeleeHistoryRow;
