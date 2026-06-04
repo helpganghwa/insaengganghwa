@@ -2,6 +2,7 @@ import 'server-only';
 
 import webpush from 'web-push';
 import { and, eq, inArray } from 'drizzle-orm';
+import type { PgColumn } from 'drizzle-orm/pg-core';
 
 import { db } from '@/lib/db/client';
 import { pushSubscriptions } from '@/lib/db/schema/push';
@@ -48,30 +49,33 @@ export type PushPayload = {
 
 export type SendResult = { ok: number; gone: number; failed: number };
 
-/** 카테고리별 토글 컬럼 매핑. */
-const TOGGLE_COLUMN = {
+/**
+ * 카테고리별 토글 컬럼 매핑. supply(일일 보급)·melee(대난투)는 상시 발송이라 미포함 —
+ * 토글 컬럼이 없는 카테고리는 게이팅 없이 항상 발송(설정에서도 제외, 2026-06-04).
+ */
+const TOGGLE_COLUMN: Partial<Record<PushPayload['category'], PgColumn>> = {
   enhance: profiles.pushEnhance,
   raid: profiles.pushRaid,
-  supply: profiles.pushSupply,
   profile: profiles.pushProfile,
   referral: profiles.pushReferral,
-  melee: profiles.pushMelee,
-} as const;
+};
 
 /**
  * 1유저에게 push 발송. 디바이스 N개 구독 시 전부 발송.
- * 카테고리 토글 OFF면 no-op(0/0/0 반환).
+ * 카테고리 토글 OFF면 no-op(0/0/0 반환). 토글 없는 카테고리(supply/melee)는 항상 발송.
  */
 export async function sendPushToUser(userId: string, payload: PushPayload): Promise<SendResult> {
   configure();
-  // 토글 체크 (1 query)
+  // 토글 체크 (1 query) — 토글 컬럼 있는 카테고리만.
   const togglesCol = TOGGLE_COLUMN[payload.category];
-  const [p] = await db
-    .select({ enabled: togglesCol })
-    .from(profiles)
-    .where(eq(profiles.id, userId))
-    .limit(1);
-  if (!p?.enabled) return { ok: 0, gone: 0, failed: 0 };
+  if (togglesCol) {
+    const [p] = await db
+      .select({ enabled: togglesCol })
+      .from(profiles)
+      .where(eq(profiles.id, userId))
+      .limit(1);
+    if (!p?.enabled) return { ok: 0, gone: 0, failed: 0 };
+  }
 
   const subs = await db
     .select({
@@ -95,12 +99,16 @@ export async function sendPushToUsers(
   if (userIds.length === 0) return { ok: 0, gone: 0, failed: 0 };
   const togglesCol = TOGGLE_COLUMN[payload.category];
 
-  // 토글 ON 유저만 추림
-  const enabled = await db
-    .select({ id: profiles.id })
-    .from(profiles)
-    .where(and(inArray(profiles.id, userIds), eq(togglesCol, true)));
-  if (enabled.length === 0) return { ok: 0, gone: 0, failed: 0 };
+  // 토글 컬럼 있는 카테고리는 ON 유저만 추림. 없는 카테고리(supply/melee)는 전체 대상.
+  let targetIds = userIds;
+  if (togglesCol) {
+    const enabled = await db
+      .select({ id: profiles.id })
+      .from(profiles)
+      .where(and(inArray(profiles.id, userIds), eq(togglesCol, true)));
+    if (enabled.length === 0) return { ok: 0, gone: 0, failed: 0 };
+    targetIds = enabled.map((e) => e.id);
+  }
 
   const subs = await db
     .select({
@@ -110,12 +118,7 @@ export async function sendPushToUsers(
       auth: pushSubscriptions.auth,
     })
     .from(pushSubscriptions)
-    .where(
-      inArray(
-        pushSubscriptions.userId,
-        enabled.map((e) => e.id),
-      ),
-    );
+    .where(inArray(pushSubscriptions.userId, targetIds));
   return await dispatch(subs, payload);
 }
 

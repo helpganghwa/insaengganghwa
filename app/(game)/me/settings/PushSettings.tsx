@@ -28,14 +28,14 @@ import {
  * 카테고리 토글 OFF는 즉시 DB 반영(낙관적 UI).
  */
 
-type Cat = 'enhance' | 'raid' | 'supply' | 'profile' | 'referral';
+// 일일 보급·대난투는 상시 발송(끄기 불가) — 설정 토글에서 제외.
+type Cat = 'enhance' | 'raid' | 'profile' | 'referral';
 
 type EnhanceMode = 'instant' | 'batched' | 'batched_1h';
 
 export function PushSettings(props: {
   initialEnhance: boolean;
   initialRaid: boolean;
-  initialSupply: boolean;
   initialProfile: boolean;
   initialReferral: boolean;
   initialEnhanceMode: EnhanceMode;
@@ -49,7 +49,6 @@ export function PushSettings(props: {
   const [subChecked, setSubChecked] = useState<boolean>(false);
   const [enhance, setEnhance] = useState(props.initialEnhance);
   const [raid, setRaid] = useState(props.initialRaid);
-  const [supply, setSupply] = useState(props.initialSupply);
   const [profile, setProfile] = useState(props.initialProfile);
   const [referral, setReferral] = useState(props.initialReferral);
   const [enhanceMode, setEnhanceMode] = useState<EnhanceMode>(props.initialEnhanceMode);
@@ -109,7 +108,6 @@ export function PushSettings(props: {
     const setterMap: Record<Cat, (v: boolean) => void> = {
       enhance: setEnhance,
       raid: setRaid,
-      supply: setSupply,
       profile: setProfile,
       referral: setReferral,
     };
@@ -209,13 +207,6 @@ export function PushSettings(props: {
         on={raid}
         disabled={togglesDisabled || pending}
         onChange={(v) => flip('raid', v)}
-      />
-      <Toggle
-        label="일일 보급 충전"
-        hint="매일 자정 보급 상자 도착"
-        on={supply}
-        disabled={togglesDisabled || pending}
-        onChange={(v) => flip('supply', v)}
       />
       <Toggle
         label="아바타 생성 결과"

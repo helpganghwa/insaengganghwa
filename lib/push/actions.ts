@@ -59,9 +59,12 @@ export async function unregisterPushSubscriptionAction(input: {
   return { ok: true };
 }
 
-/** 카테고리 토글 갱신 — profiles.push_{enhance,raid,supply,profile,referral} 컬럼. */
+/**
+ * 카테고리 토글 갱신 — profiles.push_{enhance,raid,profile,referral} 컬럼.
+ * supply(일일 보급)·melee(대난투)는 상시 발송이라 토글 대상에서 제외.
+ */
 export async function setPushCategoryAction(input: {
-  category: 'enhance' | 'raid' | 'supply' | 'profile' | 'referral';
+  category: 'enhance' | 'raid' | 'profile' | 'referral';
   enabled: boolean;
 }): Promise<{ ok: boolean }> {
   const userId = await getSessionUserId();
@@ -69,7 +72,6 @@ export async function setPushCategoryAction(input: {
   const colMap: Record<typeof input.category, string> = {
     enhance: 'push_enhance',
     raid: 'push_raid',
-    supply: 'push_supply',
     profile: 'push_profile',
     referral: 'push_referral',
   };

@@ -29,7 +29,6 @@ export default async function SettingsPage() {
         nicknameChangedCount: profiles.nicknameChangedCount,
         pushEnhance: profiles.pushEnhance,
         pushRaid: profiles.pushRaid,
-        pushSupply: profiles.pushSupply,
         pushProfile: profiles.pushProfile,
         pushReferral: profiles.pushReferral,
         pushEnhanceMode: profiles.pushEnhanceMode,
@@ -54,7 +53,6 @@ export default async function SettingsPage() {
         <PushSettings
           initialEnhance={p?.pushEnhance ?? true}
           initialRaid={p?.pushRaid ?? true}
-          initialSupply={p?.pushSupply ?? true}
           initialProfile={p?.pushProfile ?? true}
           initialReferral={p?.pushReferral ?? true}
           initialEnhanceMode={p?.pushEnhanceMode ?? 'instant'}
