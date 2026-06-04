@@ -4,7 +4,7 @@ import { getSessionUserId } from '@/lib/auth/session';
 import { db } from '@/lib/db/client';
 import { withTimeout } from '@/lib/db/with-timeout';
 import { profiles } from '@/lib/db/schema/profiles';
-import { catalogItems, equipmentInstances, type Slot } from '@/lib/db/schema/equipment';
+import { catalogItems, userEquipment, type Slot } from '@/lib/db/schema/equipment';
 import { profileGenerationJobs } from '@/lib/db/schema/avatar';
 import { PROFILE_GENERATION_DIAMOND } from '@/lib/game/balance';
 
@@ -27,12 +27,12 @@ export default async function CreateProfilePage() {
         slot: catalogItems.slot,
         code: catalogItems.code,
         name: catalogItems.name,
-        transcendLevel: equipmentInstances.transcendLevel,
+        transcendLevel: userEquipment.transcendLevel,
       })
-      .from(equipmentInstances)
-      .innerJoin(catalogItems, eq(equipmentInstances.catalogItemId, catalogItems.id))
+      .from(userEquipment)
+      .innerJoin(catalogItems, eq(userEquipment.catalogItemId, catalogItems.id))
       .where(
-        and(eq(equipmentInstances.userId, userId), isNotNull(equipmentInstances.equippedSlot)),
+        and(eq(userEquipment.userId, userId), isNotNull(userEquipment.equippedSlot)),
       ),
     db
       .select({

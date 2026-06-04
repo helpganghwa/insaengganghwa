@@ -3,14 +3,17 @@ import 'server-only';
 import { and, eq, sql } from 'drizzle-orm';
 
 import { db } from '@/lib/db/client';
-import { catalogItems, equipmentInstances, userCodex, type Slot } from '@/lib/db/schema/equipment';
+import { catalogItems, userEquipment, type Slot } from '@/lib/db/schema/equipment';
 import { userSupplyBoxes, supplyOpenLogs } from '@/lib/db/schema/supply';
+import { transcendLogs } from '@/lib/db/schema/transcend';
+import { transcendFodderForStep } from '@/lib/game/balance';
 
 /**
  * 보급 상자 열기 — GDD §3.4 / BALANCE §4 / SCHEMA §5.
- * 슬롯 일치 박스 → 해당 슬롯 활성 카탈로그 **균등 랜덤** 1개(+0·초월0) 획득.
- * 천장 없음. 중복=별도 개체(초월/+100 제물).
- * count 차감 + 개체 생성 + 도감 + 로그 = 단일 트랜잭션.
+ * 슬롯 일치 박스 → 해당 슬롯 활성 카탈로그 **균등 랜덤** 1개. 카탈로그당 1레코드:
+ *  - 미보유 → 획득(+0/T0)
+ *  - 보유 → transcend_progress +1 → 임계(선형 T→T+1 = T+1) 도달 시 **자동 초월**(다중 가능)
+ * count 차감 + 레코드 갱신 + (자동초월 로그) + 열기 로그 = 단일 트랜잭션(CLAUDE §3.3).
  */
 export type SupplyErrorCode = 'NO_BOX' | 'NO_CATALOG';
 export class SupplyError extends Error {
@@ -21,9 +24,13 @@ export class SupplyError extends Error {
 }
 
 export type OpenResult = {
-  equipmentInstanceId: bigint;
   catalogItemId: number;
+  /** 도감 신규 해금(최초 획득) 여부. */
   isNew: boolean;
+  /** 이번 열기로 자동 초월된 단계 수(중복일 때 0 이상). */
+  transcended: number;
+  /** 결과 초월 레벨. */
+  transcendLevel: number;
 };
 
 function rngU32(): number {
@@ -58,33 +65,69 @@ export function openSupplyBoxes(input: {
       // 슬롯 내 균등 (BALANCE §4.2).
       const catalogItemId = pool[rngU32() % pool.length]!.id;
 
-      const [inst] = await tx
-        .insert(equipmentInstances)
-        .values({ userId, catalogItemId, enhanceLevel: 0, transcendLevel: 0 })
-        .returning({ id: equipmentInstances.id });
+      const [existing] = await tx
+        .select({
+          id: userEquipment.id,
+          transcendLevel: userEquipment.transcendLevel,
+          transcendProgress: userEquipment.transcendProgress,
+          maxTranscendLevel: userEquipment.maxTranscendLevel,
+        })
+        .from(userEquipment)
+        .where(and(eq(userEquipment.userId, userId), eq(userEquipment.catalogItemId, catalogItemId)))
+        .for('update');
 
-      // 도감 신규 해금 여부 — 최초 획득이면 row 생성.
-      const [codexRow] = await tx
-        .select({ uid: userCodex.userId })
-        .from(userCodex)
-        .where(and(eq(userCodex.userId, userId), eq(userCodex.catalogItemId, catalogItemId)))
-        .limit(1);
-      const isNew = !codexRow;
-      if (isNew) {
+      let isNew = false;
+      let transcended = 0;
+      let transcendLevel = 0;
+
+      if (!existing) {
+        // 최초 획득 — 도감 해금.
         await tx
-          .insert(userCodex)
-          .values({ userId, catalogItemId, maxEnhanceLevel: 0 })
+          .insert(userEquipment)
+          .values({ userId, catalogItemId })
           .onConflictDoNothing();
+        isNew = true;
+      } else {
+        // 중복 — 초월 진행도 +1 후 임계 도달분 자동 초월(선형 T→T+1 = T+1개).
+        let progress = existing.transcendProgress + 1;
+        let tLevel = existing.transcendLevel;
+        const fromTByStep: number[] = [];
+        while (progress >= transcendFodderForStep(tLevel + 1)) {
+          progress -= transcendFodderForStep(tLevel + 1);
+          fromTByStep.push(tLevel);
+          tLevel += 1;
+          transcended += 1;
+        }
+        transcendLevel = tLevel;
+
+        const raisedMax = tLevel > existing.maxTranscendLevel;
+        await tx
+          .update(userEquipment)
+          .set({
+            transcendProgress: progress,
+            transcendLevel: tLevel,
+            ...(raisedMax
+              ? { maxTranscendLevel: tLevel, maxTranscendReachedAt: sql`now()` }
+              : {}),
+          })
+          .where(eq(userEquipment.id, existing.id));
+
+        // 자동 초월 단계별 감사 로그.
+        for (const fromT of fromTByStep) {
+          await tx.insert(transcendLogs).values({
+            userId,
+            userEquipmentId: existing.id,
+            catalogItemId,
+            fromT,
+            toT: fromT + 1,
+            fodderCount: transcendFodderForStep(fromT + 1),
+          });
+        }
       }
 
-      await tx.insert(supplyOpenLogs).values({
-        userId,
-        slot,
-        catalogItemId,
-        isNew,
-      });
+      await tx.insert(supplyOpenLogs).values({ userId, slot, catalogItemId, isNew });
 
-      results.push({ equipmentInstanceId: inst!.id, catalogItemId, isNew });
+      results.push({ catalogItemId, isNew, transcended, transcendLevel });
     }
 
     await tx

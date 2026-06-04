@@ -3,7 +3,7 @@ import { and, eq } from 'drizzle-orm';
 import { getSessionUserId } from '@/lib/auth/session';
 import { db } from '@/lib/db/client';
 import { withTimeout } from '@/lib/db/with-timeout';
-import { catalogItems, equipmentInstances, type Slot } from '@/lib/db/schema/equipment';
+import { catalogItems, userEquipment, type Slot } from '@/lib/db/schema/equipment';
 import { enhancementJobs } from '@/lib/db/schema/enhance';
 import { profiles } from '@/lib/db/schema/profiles';
 import { championCatalogIds } from '@/lib/game/codex/ranking';
@@ -27,22 +27,21 @@ export default async function InventoryPage({
     Promise.all([
     db
       .select({
-        id: equipmentInstances.id,
-        catalogItemId: equipmentInstances.catalogItemId,
+        id: userEquipment.id,
+        catalogItemId: userEquipment.catalogItemId,
         code: catalogItems.code,
         name: catalogItems.name,
         slot: catalogItems.slot,
-        enhanceLevel: equipmentInstances.enhanceLevel,
-        transcendLevel: equipmentInstances.transcendLevel,
-        isLocked: equipmentInstances.isLocked,
-        equippedSlot: equipmentInstances.equippedSlot,
-        acquiredAt: equipmentInstances.acquiredAt,
+        enhanceLevel: userEquipment.enhanceLevel,
+        transcendLevel: userEquipment.transcendLevel,
+        equippedSlot: userEquipment.equippedSlot,
+        acquiredAt: userEquipment.firstAcquiredAt,
       })
-      .from(equipmentInstances)
-      .innerJoin(catalogItems, eq(equipmentInstances.catalogItemId, catalogItems.id))
-      .where(eq(equipmentInstances.userId, userId)),
+      .from(userEquipment)
+      .innerJoin(catalogItems, eq(userEquipment.catalogItemId, catalogItems.id))
+      .where(eq(userEquipment.userId, userId)),
     db
-      .select({ instanceId: enhancementJobs.equipmentInstanceId })
+      .select({ instanceId: enhancementJobs.userEquipmentId })
       .from(enhancementJobs)
       .where(and(eq(enhancementJobs.userId, userId), eq(enhancementJobs.status, 'running'))),
     db
@@ -70,7 +69,6 @@ export default async function InventoryPage({
     slot: r.slot,
     enhanceLevel: r.enhanceLevel,
     transcendLevel: r.transcendLevel,
-    isLocked: r.isLocked,
     equipped: r.equippedSlot != null,
     acquiredAtMs: r.acquiredAt.getTime(),
     busy: busy.has(r.id.toString()),

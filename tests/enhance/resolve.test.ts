@@ -49,7 +49,7 @@ describe.skipIf(skip)('resolveEnhance — DB 통합', () => {
     expect(r.outcome).toBe('success');
     expect(r.fromLevel).toBe(10);
     expect(r.toLevel).toBe(11);
-    expect(r.equipmentInstanceId).toBe(instanceId);
+    expect(r.userEquipmentId).toBe(instanceId);
 
     // 인스턴스 레벨 11로 갱신
     const inst = (await testDb.execute(sql`select enhance_level lv from equipment_instances where id = ${instanceId.toString()}::bigint`)) as unknown as { lv: number }[];

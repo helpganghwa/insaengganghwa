@@ -9,7 +9,7 @@ import { withTimeout } from '@/lib/db/with-timeout';
 import { getSessionUserId } from '@/lib/auth/session';
 import { profiles } from '@/lib/db/schema/profiles';
 import { userProfiles } from '@/lib/db/schema/avatar';
-import { catalogItems, equipmentInstances, type Slot } from '@/lib/db/schema/equipment';
+import { catalogItems, userEquipment, type Slot } from '@/lib/db/schema/equipment';
 import { combatPowerFromOwned } from '@/lib/game/equipment/combat-power';
 import { liberatedItemRanks } from '@/lib/game/codex/ranking';
 import { getMyRanks, getMyCountRanks } from '@/lib/game/leaderboard/queries';
@@ -74,13 +74,13 @@ const loadProfile = cache(async (handle: string) => {
           catalogItemId: catalogItems.id,
           code: catalogItems.code,
           name: catalogItems.name,
-          enhanceLevel: equipmentInstances.enhanceLevel,
-          transcendLevel: equipmentInstances.transcendLevel,
+          enhanceLevel: userEquipment.enhanceLevel,
+          transcendLevel: userEquipment.transcendLevel,
         })
-        .from(equipmentInstances)
-        .innerJoin(catalogItems, eq(equipmentInstances.catalogItemId, catalogItems.id))
+        .from(userEquipment)
+        .innerJoin(catalogItems, eq(userEquipment.catalogItemId, catalogItems.id))
         .where(
-          and(eq(equipmentInstances.userId, prof.id), isNotNull(equipmentInstances.equippedSlot)),
+          and(eq(userEquipment.userId, prof.id), isNotNull(userEquipment.equippedSlot)),
         ),
       2500,
       'u.equipped',
@@ -95,12 +95,12 @@ const loadProfile = cache(async (handle: string) => {
     withTimeout(
       db
         .select({
-          catalogItemId: equipmentInstances.catalogItemId,
-          enhanceLevel: equipmentInstances.enhanceLevel,
-          transcendLevel: equipmentInstances.transcendLevel,
+          catalogItemId: userEquipment.catalogItemId,
+          enhanceLevel: userEquipment.enhanceLevel,
+          transcendLevel: userEquipment.transcendLevel,
         })
-        .from(equipmentInstances)
-        .where(eq(equipmentInstances.userId, prof.id)),
+        .from(userEquipment)
+        .where(eq(userEquipment.userId, prof.id)),
       2000,
       'u.owned',
     ).catch(

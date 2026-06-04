@@ -4,7 +4,7 @@ import { getSessionUserId } from '@/lib/auth/session';
 import { db } from '@/lib/db/client';
 import { withTimeout } from '@/lib/db/with-timeout';
 import { profiles } from '@/lib/db/schema/profiles';
-import { catalogItems, equipmentInstances, type Slot } from '@/lib/db/schema/equipment';
+import { catalogItems, userEquipment, type Slot } from '@/lib/db/schema/equipment';
 import { enhancementJobs } from '@/lib/db/schema/enhance';
 import { championCatalogIds } from '@/lib/game/codex/ranking';
 
@@ -27,7 +27,7 @@ export default async function EnhancePage() {
     db
       .select({
         jobId: enhancementJobs.id,
-        equipmentInstanceId: enhancementJobs.equipmentInstanceId,
+        equipmentInstanceId: enhancementJobs.userEquipmentId,
         slot: enhancementJobs.slot,
         slotLane: enhancementJobs.slotLane,
         fromLevel: enhancementJobs.fromLevel,
@@ -35,14 +35,14 @@ export default async function EnhancePage() {
         baseRateBp: enhancementJobs.baseRateBp,
         startedAt: enhancementJobs.startedAt,
         completeAt: enhancementJobs.completeAt,
-        transcendLevel: equipmentInstances.transcendLevel,
-        catalogItemId: equipmentInstances.catalogItemId,
+        transcendLevel: userEquipment.transcendLevel,
+        catalogItemId: userEquipment.catalogItemId,
         code: catalogItems.code,
         name: catalogItems.name,
       })
       .from(enhancementJobs)
-      .innerJoin(equipmentInstances, eq(enhancementJobs.equipmentInstanceId, equipmentInstances.id))
-      .innerJoin(catalogItems, eq(equipmentInstances.catalogItemId, catalogItems.id))
+      .innerJoin(userEquipment, eq(enhancementJobs.userEquipmentId, userEquipment.id))
+      .innerJoin(catalogItems, eq(userEquipment.catalogItemId, catalogItems.id))
       .where(and(eq(enhancementJobs.userId, userId), eq(enhancementJobs.status, 'running'))),
     db
       .select({ diamond: profiles.diamond, nickname: profiles.nickname })
@@ -54,32 +54,26 @@ export default async function EnhancePage() {
     // LEFT JOIN status='running' ej → ej.id IS NULL 로 진행 중 제외.
     db
       .select({
-        id: equipmentInstances.id,
-        catalogItemId: equipmentInstances.catalogItemId,
-        enhanceLevel: equipmentInstances.enhanceLevel,
-        transcendLevel: equipmentInstances.transcendLevel,
-        equippedSlot: equipmentInstances.equippedSlot,
+        id: userEquipment.id,
+        catalogItemId: userEquipment.catalogItemId,
+        enhanceLevel: userEquipment.enhanceLevel,
+        transcendLevel: userEquipment.transcendLevel,
+        equippedSlot: userEquipment.equippedSlot,
         code: catalogItems.code,
         name: catalogItems.name,
         slot: catalogItems.slot,
       })
-      .from(equipmentInstances)
-      .innerJoin(catalogItems, eq(equipmentInstances.catalogItemId, catalogItems.id))
+      .from(userEquipment)
+      .innerJoin(catalogItems, eq(userEquipment.catalogItemId, catalogItems.id))
       .leftJoin(
         enhancementJobs,
         and(
-          eq(enhancementJobs.equipmentInstanceId, equipmentInstances.id),
+          eq(enhancementJobs.userEquipmentId, userEquipment.id),
           eq(enhancementJobs.status, 'running'),
         ),
       )
-      .where(
-        and(
-          eq(equipmentInstances.userId, userId),
-          eq(equipmentInstances.isLocked, false),
-          isNull(enhancementJobs.id),
-        ),
-      )
-      .orderBy(desc(equipmentInstances.enhanceLevel), desc(equipmentInstances.acquiredAt)),
+      .where(and(eq(userEquipment.userId, userId), isNull(enhancementJobs.id)))
+      .orderBy(desc(userEquipment.enhanceLevel), desc(userEquipment.firstAcquiredAt)),
     ]),
     3500,
     'enhance.page',

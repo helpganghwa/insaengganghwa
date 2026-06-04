@@ -4,7 +4,7 @@ import { eq } from 'drizzle-orm';
 import { getSessionUserId } from '@/lib/auth/session';
 import { db } from '@/lib/db/client';
 import { withTimeout } from '@/lib/db/with-timeout';
-import { catalogItems, userCodex, type Slot } from '@/lib/db/schema/equipment';
+import { catalogItems, userEquipment, type Slot } from '@/lib/db/schema/equipment';
 import { championCatalogIds } from '@/lib/game/codex/ranking';
 import { TranscendSprite } from '@/components/TranscendSprite';
 
@@ -30,9 +30,9 @@ export default async function CodexPage() {
       .from(catalogItems)
       .where(eq(catalogItems.active, true)),
     db
-      .select({ catalogItemId: userCodex.catalogItemId, max: userCodex.maxEnhanceLevel })
-      .from(userCodex)
-      .where(eq(userCodex.userId, userId)),
+      .select({ catalogItemId: userEquipment.catalogItemId, max: userEquipment.maxEnhanceLevel })
+      .from(userEquipment)
+      .where(eq(userEquipment.userId, userId)),
     championCatalogIds(userId),
     ]),
     3500,

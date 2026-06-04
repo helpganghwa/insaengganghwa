@@ -50,7 +50,7 @@ export async function runMelee(): Promise<{ ran: boolean; battleId?: string; par
   // 로스터(강화 1회+) 장비 일괄 → 유저별 CP. set-based(거대 IN 리스트 회피).
   const eqRows = (await db.execute(sql`
     select ei.user_id::text uid, ei.catalog_item_id cid, ei.enhance_level el, ei.transcend_level tl
-    from equipment_instances ei
+    from user_equipment ei
     where ei.user_id in (select distinct user_id from enhancement_logs)
   `)) as unknown as EqRow[];
   if (eqRows.length === 0) return { ran: false };

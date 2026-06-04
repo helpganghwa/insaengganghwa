@@ -1,9 +1,12 @@
 /**
- * SCHEMA §2. 카탈로그 & 장비 & 도감
+ * SCHEMA §2. 카탈로그 & 장비 (카탈로그당 1레코드)
  *
  * 등급/희소성/부가스탯 없음. 모든 카탈로그 아이템 성능 동일 — 슬롯 구분 + 외관 +
- * 도감 + 초월 동일성 판정용(GDD §3.1). 강함 = 강화 레벨 + 초월 레벨뿐.
+ * 초월 동일성 판정용(GDD §3.1). 강함 = 강화 레벨 + 초월 레벨뿐.
  * 카탈로그 종수는 가변(지속 추가) — 박스 확률은 균등 규칙(BALANCE §4.2).
+ *
+ * 장비는 **인스턴스 더미가 아니라 카탈로그당 1레코드**(user_equipment). 같은 카탈로그
+ * 중복 획득은 보관되지 않고 초월 진행도(transcend_progress)로 누적 → 자동 초월.
  */
 import {
   pgTable,
@@ -11,14 +14,12 @@ import {
   uuid,
   text,
   integer,
-  smallint,
   boolean,
   serial,
   bigserial,
   timestamp,
   index,
   uniqueIndex,
-  primaryKey,
   check,
 } from 'drizzle-orm/pg-core';
 import { sql } from 'drizzle-orm';
@@ -41,76 +42,56 @@ export const catalogItems = pgTable('catalog_items', {
   createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
 });
 
-/** §2.2 equipment_instances — 장비 개체. 등급/옵션/seed/전투력 컬럼 없음. */
-export const equipmentInstances = pgTable(
-  'equipment_instances',
+/**
+ * §2.2 user_equipment — 유저가 보유한 카탈로그 아이템 1종당 1레코드.
+ *
+ * 강화·초월은 카탈로그 단위(같은 카탈로그를 여러 레벨로 복수 보유하는 개념 없음).
+ * 중복 획득(박스) = transcend_progress 누적 → 임계 도달 시 자동 초월(BALANCE §2).
+ * max_* = lifetime 최고(분해·소모 없으니 곧 현재값과 동일하나, 배틀패스/랭킹 단조 키로 유지).
+ */
+export const userEquipment = pgTable(
+  'user_equipment',
   {
     id: bigserial('id', { mode: 'bigint' }).primaryKey(),
     userId: uuid('user_id')
       .notNull()
       .references(() => profiles.id, { onDelete: 'cascade' }),
-    /** 초월/+100 제물 동일성 = 이 값 일치 (강화·초월 레벨 무관). */
     catalogItemId: integer('catalog_item_id')
       .notNull()
       .references(() => catalogItems.id),
+    /** 현재 강화 레벨 (순수 시간/RNG, 제물 없음). */
     enhanceLevel: integer('enhance_level').notNull().default(0),
-    /** 초월 레벨 — 0 이상, 상한 없음(무한 진행, BALANCE §2). */
-    transcendLevel: smallint('transcend_level').notNull().default(0),
-    /** 장착 시 해당 슬롯, 미장착 null. */
-    equippedSlot: slotEnum('equipped_slot'),
-    isLocked: boolean('is_locked').notNull().default(false),
-    acquiredAt: timestamp('acquired_at', { withTimezone: true }).notNull().defaultNow(),
-  },
-  (t) => [
-    // 슬롯당 1개 장착 — 부분 UNIQUE.
-    uniqueIndex('eq_user_equipped_slot_uq')
-      .on(t.userId, t.equippedSlot)
-      .where(sql`${t.equippedSlot} is not null`),
-    // 제물 후보/중복 조회.
-    index('eq_user_catalog_idx').on(t.userId, t.catalogItemId),
-    index('eq_user_equipped_idx').on(t.userId, t.equippedSlot),
-    // 초월 무한 진행(2026-05-21) — 상한 제거. 음수만 차단.
-    check('transcend_level_min', sql`${t.transcendLevel} >= 0`),
-  ],
-);
-
-/** §2.3 user_codex — 도감(획득+최고 강화). 도감강화합 = Σ max_enhance_level. */
-export const userCodex = pgTable(
-  'user_codex',
-  {
-    userId: uuid('user_id')
-      .notNull()
-      .references(() => profiles.id, { onDelete: 'cascade' }),
-    catalogItemId: integer('catalog_item_id')
-      .notNull()
-      .references(() => catalogItems.id),
-    /** 해당 아이템 역대 최고 강화(lifetime). 아이템별 챔피언 랭킹 소스(BALANCE §3.3).
-     *  전역 랭킹(최고/합산/전투력)은 현재 보유 인스턴스 기준이라 이 값과 무관. */
+    /** 현재 초월 레벨 (자동 초월, 무한). */
+    transcendLevel: integer('transcend_level').notNull().default(0),
+    /** 다음 초월까지 누적된 중복 수. 임계(선형 T→T+1 = T+1개) 도달 시 소진+레벨업. */
+    transcendProgress: integer('transcend_progress').notNull().default(0),
+    /** 역대 최고 강화(lifetime) — 배틀패스/아이템별 랭킹 단조 키. */
     maxEnhanceLevel: integer('max_enhance_level').notNull().default(0),
-    /**
-     * 현재 max_enhance_level을 **최초 달성한 시각**. 아이템별 랭킹 동률 타이브레이크
-     * (먼저 달성한 유저 우선, BALANCE §3.3 / SCHEMA §2.3). 신규레벨 > 기존 max일
-     * 때만 now()로 갱신(이후 하락·재달성과 무관). 신규 row insert 시 default now().
-     */
+    /** 현재 max_enhance_level 최초 달성 시각 — 랭킹 동률 타이브레이크. */
     maxEnhanceReachedAt: timestamp('max_enhance_reached_at', { withTimezone: true })
       .notNull()
       .defaultNow(),
-    /** 해당 아이템 역대 최고 초월(lifetime). 강화와 대칭 — 인스턴스 분해·제물 소모와
-     *  무관하게 단조 유지(배틀패스 '최고 초월 도달' 소스). 무한 진행이라 상한 없음. */
+    /** 역대 최고 초월(lifetime). */
     maxTranscendLevel: integer('max_transcend_level').notNull().default(0),
-    /** 현재 max_transcend_level을 **최초 달성한 시각**(초월 챔피언 랭킹 동률 타이브레이크).
-     *  신규레벨 > 기존 max일 때만 now()로 갱신. 신규 row insert 시 default now(). */
     maxTranscendReachedAt: timestamp('max_transcend_reached_at', { withTimezone: true })
       .notNull()
       .defaultNow(),
-    /** 도감 해금(미획득 = row 없음). */
-    firstAcquiredAt: timestamp('first_acquired_at', { withTimezone: true })
-      .notNull()
-      .defaultNow(),
+    /** 장착 슬롯(외형 전용, 전투력 무관) / 미장착 null. */
+    equippedSlot: slotEnum('equipped_slot'),
+    /** 도감 해금(획득) 시각. */
+    firstAcquiredAt: timestamp('first_acquired_at', { withTimezone: true }).notNull().defaultNow(),
   },
-  (t) => [primaryKey({ columns: [t.userId, t.catalogItemId] })],
+  (t) => [
+    // 카탈로그당 1레코드.
+    uniqueIndex('ue_user_catalog_uq').on(t.userId, t.catalogItemId),
+    // 슬롯 그리드/장착 조회.
+    index('ue_user_slot_idx').on(t.userId, t.equippedSlot).where(sql`${t.equippedSlot} is not null`),
+    // 강화/초월 0 이상.
+    check('ue_enhance_min', sql`${t.enhanceLevel} >= 0`),
+    check('ue_transcend_min', sql`${t.transcendLevel} >= 0`),
+    check('ue_transcend_progress_min', sql`${t.transcendProgress} >= 0`),
+  ],
 );
 
 export type CatalogItem = typeof catalogItems.$inferSelect;
-export type EquipmentInstance = typeof equipmentInstances.$inferSelect;
-export type UserCodex = typeof userCodex.$inferSelect;
+export type UserEquipment = typeof userEquipment.$inferSelect;

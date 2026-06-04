@@ -4,7 +4,7 @@ import { and, eq, sql } from 'drizzle-orm';
 
 import { db } from '@/lib/db/client';
 import { profiles } from '@/lib/db/schema/profiles';
-import { equipmentInstances } from '@/lib/db/schema/equipment';
+import { userEquipment } from '@/lib/db/schema/equipment';
 import { raids, raidParticipants, raidAttacks } from '@/lib/db/schema/raid';
 import {
   RAID_BASE_ATTACKS,
@@ -28,12 +28,12 @@ async function userTotalCP(
   // 보유 전체(착용 무관) → 카탈로그별 최강 1개 합산(BALANCE §3.2).
   const owned = await tx
     .select({
-      catalogItemId: equipmentInstances.catalogItemId,
-      enhanceLevel: equipmentInstances.enhanceLevel,
-      transcendLevel: equipmentInstances.transcendLevel,
+      catalogItemId: userEquipment.catalogItemId,
+      enhanceLevel: userEquipment.enhanceLevel,
+      transcendLevel: userEquipment.transcendLevel,
     })
-    .from(equipmentInstances)
-    .where(eq(equipmentInstances.userId, userId));
+    .from(userEquipment)
+    .where(eq(userEquipment.userId, userId));
   return combatPowerFromOwned(owned);
 }
 

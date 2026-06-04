@@ -7,13 +7,9 @@ import type { Slot } from '@/lib/db/schema/equipment';
 
 import { TranscendSprite } from '@/components/TranscendSprite';
 import { RarityFrame, rarityBorderStyle, hasRarityBorder } from '@/components/RarityFrame';
-import { DIAMOND_PER_DISENCHANT, pieceCombatPower } from '@/lib/game/balance';
-
-import { useDiamond } from '@/components/DiamondContext';
+import { pieceCombatPower } from '@/lib/game/balance';
 
 import { equipBestSetAction } from './actions';
-import { BulkTranscendModal, type BulkTranscendOptimistic } from './BulkTranscendModal';
-import { BulkDisenchantModal, type BulkDisenchantOptimistic } from './BulkDisenchantModal';
 import { EquipmentDetailSheet } from './EquipmentDetailSheet';
 
 export type InvItem = {
@@ -24,7 +20,6 @@ export type InvItem = {
   slot: Slot;
   enhanceLevel: number;
   transcendLevel: number;
-  isLocked: boolean;
   equipped: boolean;
   acquiredAtMs: number;
   busy: boolean;
@@ -48,12 +43,9 @@ export function InventoryGrid({
   nickname: string;
 }) {
   const router = useRouter();
-  const { optimisticAdjust: adjustDiamond } = useDiamond();
   const [filter, setFilter] = useState<SlotFilter>(initialSlot);
   const [sortBy, setSortBy] = useState<SortBy>('enhance');
   const [openId, setOpenId] = useState<string | null>(null);
-  const [bulkOpen, setBulkOpen] = useState(false);
-  const [bulkDisenchantOpen, setBulkDisenchantOpen] = useState(false);
   const [pending, startTransition] = useTransition();
   // 낙관적 items — 최적조합 클릭 시 클라이언트에서 같은 알고리즘으로 시뮬레이션 후
   // 즉시 화면 반영. 서버 응답 + router.refresh()로 prop 새로 들어오면 자동 fallback.
@@ -81,8 +73,6 @@ export function InventoryGrid({
   const openItem = openId ? displayItems.find((i) => i.id === openId) ?? null : null;
 
   // NEW 표시 — 인벤토리 진입 시점에 캡처(직전 seen에 없는 id) → 이번 방문에 표시.
-  // mount(+ items 변경) 시 모든 현재 아이템을 seen에 마크 + localStorage 저장.
-  // 결과: 이번 방문 = NEW 노출, 다음 방문 = NEW 사라짐(다 확인한 것으로 간주).
   const [newIds] = useState<Set<string>>(() => {
     if (typeof window === 'undefined') return new Set();
     try {
@@ -161,22 +151,6 @@ export function InventoryGrid({
           <button
             type="button"
             disabled={pending}
-            onClick={() => setBulkOpen(true)}
-            className="pointer-events-auto rounded-full bg-amber-500 px-4 py-2 text-xs font-semibold text-zinc-950 shadow-lg disabled:opacity-50"
-          >
-            일괄 초월
-          </button>
-          <button
-            type="button"
-            disabled={pending}
-            onClick={() => setBulkDisenchantOpen(true)}
-            className="pointer-events-auto rounded-full bg-emerald-500 px-4 py-2 text-xs font-semibold text-zinc-950 shadow-lg disabled:opacity-50"
-          >
-            일괄 분해
-          </button>
-          <button
-            type="button"
-            disabled={pending}
             onClick={() =>
               startTransition(async () => {
                 // 낙관: 같은 알고리즘(슬롯별 pieceCombatPower 최대) 시뮬레이션 후 즉시 반영.
@@ -187,9 +161,7 @@ export function InventoryGrid({
                   if (!cur || cp > cur.cp) bestBySlot.set(it.slot, { id: it.id, cp });
                 }
                 const bestIds = new Set([...bestBySlot.values()].map((b) => b.id));
-                setOptimisticItems(
-                  displayItems.map((it) => ({ ...it, equipped: bestIds.has(it.id) })),
-                );
+                setOptimisticItems(displayItems.map((it) => ({ ...it, equipped: bestIds.has(it.id) })));
                 // 장착은 외형 전용 — 랭킹 불변이라 토스트 없음(BALANCE §3.2).
                 await equipBestSetAction();
                 router.refresh();
@@ -209,8 +181,6 @@ export function InventoryGrid({
           nickname={nickname}
           onClose={() => setOpenId(null)}
           onOptimisticEquip={(id) => {
-            // 착용 토글 — 장착 시 같은 슬롯 기존 장착 해제(슬롯 배타성). run()의 await 전
-            // 호출이라 자체 startTransition 없이 시트 트랜잭션에 편승(즉시 반영·refresh까지 유지).
             const target = displayItems.find((it) => it.id === id);
             if (!target) return;
             const willEquip = !target.equipped;
@@ -223,78 +193,10 @@ export function InventoryGrid({
               }),
             );
           }}
-          onOptimisticDisenchant={(id) => {
-            setOptimisticItems(displayItems.filter((it) => it.id !== id));
-            adjustDiamond(BigInt(DIAMOND_PER_DISENCHANT));
-          }}
-          onOptimisticToggleLock={(id) => {
-            setOptimisticItems(
-              displayItems.map((it) => (it.id === id ? { ...it, isLocked: !it.isLocked } : it)),
-            );
-          }}
           onOptimisticStartEnhance={(id) => {
-            // 강화는 await 후(페이지 이동 직전) 호출 → 트랜잭션 밖이라 자체 startTransition 필요.
             startTransition(() => {
-              setOptimisticItems(
-                displayItems.map((it) => (it.id === id ? { ...it, busy: true } : it)),
-              );
+              setOptimisticItems(displayItems.map((it) => (it.id === id ? { ...it, busy: true } : it)));
             });
-          }}
-          onOptimisticTranscend={(targetId, toT, consumedFodderIds) => {
-            const consumedSet = new Set<string>(consumedFodderIds);
-            setOptimisticItems(
-              displayItems
-                .filter((it) => !consumedSet.has(it.id))
-                .map((it): InvItem =>
-                  it.id === targetId ? { ...it, transcendLevel: toT } : it,
-                ),
-            );
-          }}
-        />
-      ) : null}
-
-      {bulkOpen ? (
-        <BulkTranscendModal
-          items={displayItems}
-          onClose={() => setBulkOpen(false)}
-          onDone={(payload?: BulkTranscendOptimistic) => {
-            if (payload) {
-              startTransition(() => {
-                const upgradedMap = new Map<string, number>(
-                  payload.upgrades.map((u) => [u.targetInstanceId, u.toT] as [string, number]),
-                );
-                const consumedSet = new Set<string>(
-                  payload.upgrades.flatMap((u) => u.consumedFodderIds),
-                );
-                setOptimisticItems(
-                  displayItems
-                    .filter((it) => !consumedSet.has(it.id))
-                    .map((it): InvItem => {
-                      const toT = upgradedMap.get(it.id);
-                      return toT !== undefined ? { ...it, transcendLevel: toT } : it;
-                    }),
-                );
-              });
-            }
-            setBulkOpen(false);
-            router.refresh();
-          }}
-        />
-      ) : null}
-
-      {bulkDisenchantOpen ? (
-        <BulkDisenchantModal
-          items={displayItems}
-          onClose={() => setBulkDisenchantOpen(false)}
-          onDone={(payload?: BulkDisenchantOptimistic) => {
-            if (payload) {
-              startTransition(() => {
-                const removed = new Set<string>(payload.disenchantedIds);
-                setOptimisticItems(displayItems.filter((it) => !removed.has(it.id)));
-              });
-            }
-            setBulkDisenchantOpen(false);
-            router.refresh();
           }}
         />
       ) : null}
@@ -311,8 +213,7 @@ function Section({ title, children }: { title: string; children: React.ReactNode
   );
 }
 
-// memo — 필터/정렬/낙관 업데이트 시 변하지 않은 타일 리렌더(+캔버스 effect 재실행) 방지.
-// onOpen은 안정적인 setState setter라 참조 동일 → memo 유효.
+// memo — 필터/정렬/낙관 업데이트 시 변하지 않은 타일 리렌더 방지.
 const Tile = memo(function Tile({
   item,
   isNew,
@@ -322,14 +223,10 @@ const Tile = memo(function Tile({
   isNew: boolean;
   onOpen: (id: string) => void;
 }) {
-  // 카드 보더 색 = 등급(transcend) 색. 4 모서리에 RarityFrame(별).
-  // 잠금/강화중 상태는 카드에서 시각 표시 안 함(보더 가림 회피) — 상세 팝업에서 관리/확인.
   return (
     <button
       type="button"
       onClick={() => onOpen(item.id)}
-      // content-visibility:auto — 화면 밖 타일의 렌더/페인트(마스크·보더·SVG·캔버스)를 브라우저가 건너뜀(렌더 가상화).
-      // contain-intrinsic-size로 off-screen 높이 예약(390폭 3열 ≈ 116px) → 스크롤바 안정.
       style={{
         ...rarityBorderStyle(item.transcendLevel),
         contentVisibility: 'auto',

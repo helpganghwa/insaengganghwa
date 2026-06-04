@@ -5,7 +5,7 @@ import { getSessionUserId } from '@/lib/auth/session';
 import { db } from '@/lib/db/client';
 import { withTimeout } from '@/lib/db/with-timeout';
 import { profiles } from '@/lib/db/schema/profiles';
-import { catalogItems, equipmentInstances, type Slot } from '@/lib/db/schema/equipment';
+import { catalogItems, userEquipment, type Slot } from '@/lib/db/schema/equipment';
 import { userProfiles } from '@/lib/db/schema/avatar';
 import { CharacterStage } from '@/components/CharacterStage';
 import { combatPowerFromOwned } from '@/lib/game/equipment/combat-power';
@@ -53,23 +53,23 @@ export default async function ProfilePage() {
         catalogItemId: catalogItems.id,
         code: catalogItems.code,
         name: catalogItems.name,
-        enhanceLevel: equipmentInstances.enhanceLevel,
-        transcendLevel: equipmentInstances.transcendLevel,
+        enhanceLevel: userEquipment.enhanceLevel,
+        transcendLevel: userEquipment.transcendLevel,
       })
-      .from(equipmentInstances)
-      .innerJoin(catalogItems, eq(equipmentInstances.catalogItemId, catalogItems.id))
+      .from(userEquipment)
+      .innerJoin(catalogItems, eq(userEquipment.catalogItemId, catalogItems.id))
       .where(
-        and(eq(equipmentInstances.userId, userId), isNotNull(equipmentInstances.equippedSlot)),
+        and(eq(userEquipment.userId, userId), isNotNull(userEquipment.equippedSlot)),
       ),
     db
       // 총 전투력용 — 보유 전 인스턴스(착용 무관). 카탈로그 dedup·합산은 앱에서.
       .select({
-        catalogItemId: equipmentInstances.catalogItemId,
-        enhanceLevel: equipmentInstances.enhanceLevel,
-        transcendLevel: equipmentInstances.transcendLevel,
+        catalogItemId: userEquipment.catalogItemId,
+        enhanceLevel: userEquipment.enhanceLevel,
+        transcendLevel: userEquipment.transcendLevel,
       })
-      .from(equipmentInstances)
-      .where(eq(equipmentInstances.userId, userId)),
+      .from(userEquipment)
+      .where(eq(userEquipment.userId, userId)),
     championCatalogIds(userId),
     db
       .select({

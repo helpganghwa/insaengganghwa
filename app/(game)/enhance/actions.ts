@@ -7,7 +7,7 @@ import { getSessionUserId } from '@/lib/auth/session';
 import { rateLimited } from '@/lib/ratelimit';
 import { db } from '@/lib/db/client';
 import { enhancementJobs } from '@/lib/db/schema/enhance';
-import { catalogItems, equipmentInstances, type Slot } from '@/lib/db/schema/equipment';
+import { catalogItems, userEquipment, type Slot } from '@/lib/db/schema/equipment';
 import {
   queueEnhance,
   resolveEnhance,
@@ -52,7 +52,6 @@ type ErrorState = { status: 'error'; code: string; message: string };
 
 const MSG: Record<string, string> = {
   EQUIPMENT_NOT_FOUND: '장비를 찾을 수 없습니다.',
-  EQUIPMENT_LOCKED: '잠긴 장비는 강화할 수 없습니다.',
   ALREADY_ENHANCING: '이미 강화 중인 장비입니다.',
   SLOT_BUSY: '같은 부위 2 lane이 모두 사용 중입니다.',
   JOB_NOT_FOUND: '강화 작업을 찾을 수 없습니다.',
@@ -75,13 +74,13 @@ async function uid(): Promise<string | null> {
   return getSessionUserId();
 }
 
-/** (A) 큐 등록 — 강화 무료. (경고 동의 없음, §2 치환표) */
-export async function startEnhance(equipmentInstanceId: string) {
+/** (A) 큐 등록 — 강화 무료(자원·제물 없음). 대상은 user_equipment 레코드 id. */
+export async function startEnhance(userEquipmentId: string) {
   const userId = await uid();
   if (!userId) return err('UNAUTHENTICATED');
   if (await rateLimited(userId, 'enhance')) return err('RATE_LIMITED');
   try {
-    const result = await queueEnhance({ userId, equipmentInstanceId: BigInt(equipmentInstanceId) });
+    const result = await queueEnhance({ userId, userEquipmentId: BigInt(userEquipmentId) });
     revalidateAll();
     return { status: 'success' as const, jobId: result.jobId.toString() };
   } catch (e) {
@@ -98,7 +97,7 @@ export async function startEnhance(equipmentInstanceId: string) {
 export async function finalizeEnhance(jobId: string): Promise<
   | {
       status: 'success';
-      result: Omit<ResolveResult, 'jobId' | 'equipmentInstanceId'>;
+      result: Omit<ResolveResult, 'jobId' | 'userEquipmentId'>;
       requeued: boolean;
       ranksBefore: MyRanks;
       ranksAfter: MyRanks;
@@ -121,7 +120,7 @@ export async function finalizeEnhance(jobId: string): Promise<
     // best-effort·멱등 — MAX 레벨 도달 등으로 큐잉 실패는 흡수(슬롯 자연 해제).
     let requeued = false;
     try {
-      await queueEnhance({ userId, equipmentInstanceId: r.equipmentInstanceId });
+      await queueEnhance({ userId, userEquipmentId: r.userEquipmentId });
       requeued = true;
     } catch (re) {
       if (!(re instanceof EnhanceError)) console.error('[enhance.requeue]', re);
@@ -198,20 +197,17 @@ export async function getActiveJobsForSlot(slot: Slot) {
   const rows = await db
     .select({
       jobId: enhancementJobs.id,
-      equipmentInstanceId: enhancementJobs.equipmentInstanceId,
+      userEquipmentId: enhancementJobs.userEquipmentId,
       completeAt: enhancementJobs.completeAt,
-      enhanceLevel: equipmentInstances.enhanceLevel,
-      transcendLevel: equipmentInstances.transcendLevel,
+      enhanceLevel: userEquipment.enhanceLevel,
+      transcendLevel: userEquipment.transcendLevel,
       code: catalogItems.code,
       name: catalogItems.name,
       slot: catalogItems.slot,
     })
     .from(enhancementJobs)
-    .innerJoin(
-      equipmentInstances,
-      eq(equipmentInstances.id, enhancementJobs.equipmentInstanceId),
-    )
-    .innerJoin(catalogItems, eq(catalogItems.id, equipmentInstances.catalogItemId))
+    .innerJoin(userEquipment, eq(userEquipment.id, enhancementJobs.userEquipmentId))
+    .innerJoin(catalogItems, eq(catalogItems.id, userEquipment.catalogItemId))
     .where(
       and(
         eq(enhancementJobs.userId, userId),
@@ -223,7 +219,7 @@ export async function getActiveJobsForSlot(slot: Slot) {
     status: 'success' as const,
     jobs: rows.map((r) => ({
       jobId: r.jobId.toString(),
-      equipmentInstanceId: r.equipmentInstanceId.toString(),
+      userEquipmentId: r.userEquipmentId.toString(),
       completeAtIso: r.completeAt.toISOString(),
       enhanceLevel: r.enhanceLevel,
       transcendLevel: r.transcendLevel,
@@ -235,7 +231,7 @@ export async function getActiveJobsForSlot(slot: Slot) {
 }
 
 /** (D+A) 슬롯 교체 — 취소 + 등록 단일 트랜잭션 */
-export async function swapEnhanceAction(cancelJobId: string, equipmentInstanceId: string) {
+export async function swapEnhanceAction(cancelJobId: string, userEquipmentId: string) {
   const userId = await uid();
   if (!userId) return err('UNAUTHENTICATED');
   if (await rateLimited(userId, 'enhance')) return err('RATE_LIMITED');
@@ -243,7 +239,7 @@ export async function swapEnhanceAction(cancelJobId: string, equipmentInstanceId
     const result = await swapEnhance({
       userId,
       cancelJobId: BigInt(cancelJobId),
-      equipmentInstanceId: BigInt(equipmentInstanceId),
+      userEquipmentId: BigInt(userEquipmentId),
     });
     revalidateAll();
     return { status: 'success' as const, jobId: result.jobId.toString() };

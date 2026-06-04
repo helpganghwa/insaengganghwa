@@ -14,9 +14,9 @@ import { EnhanceError, queueEnhanceInTx, type QueueEnhanceResult } from './queue
 export function swapEnhance(input: {
   userId: string;
   cancelJobId: bigint;
-  equipmentInstanceId: bigint;
+  userEquipmentId: bigint;
 }): Promise<QueueEnhanceResult> {
-  const { userId, cancelJobId, equipmentInstanceId } = input;
+  const { userId, cancelJobId, userEquipmentId } = input;
 
   return db.transaction(async (tx) => {
     const cancelled = await tx
@@ -32,6 +32,6 @@ export function swapEnhance(input: {
       .returning({ id: enhancementJobs.id });
     if (cancelled.length === 0) throw new EnhanceError('JOB_NOT_FOUND');
 
-    return queueEnhanceInTx(tx, { userId, equipmentInstanceId });
+    return queueEnhanceInTx(tx, { userId, userEquipmentId });
   });
 }

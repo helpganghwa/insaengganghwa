@@ -7,7 +7,7 @@ import { db } from '@/lib/db/client';
 import { withTimeout } from '@/lib/db/with-timeout';
 import { profiles } from '@/lib/db/schema/profiles';
 import { userProfiles } from '@/lib/db/schema/avatar';
-import { equipmentInstances } from '@/lib/db/schema/equipment';
+import { userEquipment } from '@/lib/db/schema/equipment';
 import { raids, raidParticipants } from '@/lib/db/schema/raid';
 import { meleeBattles } from '@/lib/db/schema/melee';
 import { combatPowerFromOwned } from '@/lib/game/equipment/combat-power';
@@ -68,14 +68,14 @@ async function attachProfiles(entries: LeaderboardEntry[]): Promise<LeaderboardE
 async function maxRows() {
   const r = await db
     .select({
-      userId: equipmentInstances.userId,
+      userId: userEquipment.userId,
       nickname: profiles.nickname,
       publicCode: profiles.publicCode,
-      value: sql<number>`max(${equipmentInstances.enhanceLevel})::int`,
+      value: sql<number>`max(${userEquipment.enhanceLevel})::int`,
     })
-    .from(equipmentInstances)
-    .innerJoin(profiles, eq(profiles.id, equipmentInstances.userId))
-    .groupBy(equipmentInstances.userId, profiles.nickname, profiles.publicCode);
+    .from(userEquipment)
+    .innerJoin(profiles, eq(profiles.id, userEquipment.userId))
+    .groupBy(userEquipment.userId, profiles.nickname, profiles.publicCode);
   return r.map((x) => ({ userId: x.userId, nickname: x.nickname, publicCode: x.publicCode, value: Number(x.value) }));
 }
 
@@ -85,14 +85,14 @@ async function sumRows() {
   // 현재 상태와 어긋남. 도감 자체는 콜렉션 진척으로 유지(여기서만 분리).
   const r = await db
     .select({
-      userId: equipmentInstances.userId,
+      userId: userEquipment.userId,
       nickname: profiles.nickname,
       publicCode: profiles.publicCode,
-      value: sql<number>`coalesce(sum(${equipmentInstances.enhanceLevel}),0)::int`,
+      value: sql<number>`coalesce(sum(${userEquipment.enhanceLevel}),0)::int`,
     })
-    .from(equipmentInstances)
-    .innerJoin(profiles, eq(profiles.id, equipmentInstances.userId))
-    .groupBy(equipmentInstances.userId, profiles.nickname, profiles.publicCode);
+    .from(userEquipment)
+    .innerJoin(profiles, eq(profiles.id, userEquipment.userId))
+    .groupBy(userEquipment.userId, profiles.nickname, profiles.publicCode);
   return r.map((x) => ({ userId: x.userId, nickname: x.nickname, publicCode: x.publicCode, value: Number(x.value) }));
 }
 
@@ -107,7 +107,7 @@ async function combatRows() {
              '[]'::json
            ) as items
     from profiles p
-    left join equipment_instances e on e.user_id = p.id
+    left join user_equipment e on e.user_id = p.id
     group by p.id, p.nickname, p.public_code
   `)) as unknown as {
     id: string;
@@ -278,12 +278,12 @@ export async function getMyRanksAfter(userId: string): Promise<MyRanks> {
   // 보유 전 인스턴스 1회 read → max/sum/combat 3 메트릭 모두 산출(캐시 우회).
   const eqRows = await db
     .select({
-      catalogItemId: equipmentInstances.catalogItemId,
-      enhanceLevel: equipmentInstances.enhanceLevel,
-      transcendLevel: equipmentInstances.transcendLevel,
+      catalogItemId: userEquipment.catalogItemId,
+      enhanceLevel: userEquipment.enhanceLevel,
+      transcendLevel: userEquipment.transcendLevel,
     })
-    .from(equipmentInstances)
-    .where(eq(equipmentInstances.userId, userId));
+    .from(userEquipment)
+    .where(eq(userEquipment.userId, userId));
   const myMax = eqRows.reduce((acc, r) => Math.max(acc, r.enhanceLevel), 0);
   const mySum = eqRows.reduce((acc, r) => acc + r.enhanceLevel, 0);
   const myCombat = combatPowerFromOwned(eqRows);

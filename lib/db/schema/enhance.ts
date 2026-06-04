@@ -21,7 +21,7 @@ import {
 import { sql } from 'drizzle-orm';
 
 import { profiles } from './profiles';
-import { slotEnum, equipmentInstances } from './equipment';
+import { slotEnum, userEquipment } from './equipment';
 
 export const enhanceJobStatusEnum = pgEnum('enhance_job_status', [
   'running',
@@ -39,9 +39,9 @@ export const enhancementJobs = pgTable(
     userId: uuid('user_id')
       .notNull()
       .references(() => profiles.id, { onDelete: 'cascade' }),
-    equipmentInstanceId: bigint('equipment_instance_id', { mode: 'bigint' })
+    userEquipmentId: bigint('user_equipment_id', { mode: 'bigint' })
       .notNull()
-      .references(() => equipmentInstances.id, { onDelete: 'cascade' }),
+      .references(() => userEquipment.id, { onDelete: 'cascade' }),
     slot: slotEnum('slot').notNull(),
     /** 부위당 2 lane (1|2, GDD §3.2). */
     slotLane: smallint('slot_lane').notNull(),
@@ -55,11 +55,6 @@ export const enhancementJobs = pgTable(
     /** 단축 시 갱신. 완료 판정 = now() >= complete_at. */
     completeAt: timestamp('complete_at', { withTimezone: true }).notNull(),
     totalReducedMs: bigint('total_reduced_ms', { mode: 'bigint' }).notNull().default(sql`0`),
-    /** target ≥ +100 시 소모 제물 개체 (BALANCE §1.1). 개체 삭제 시 null. */
-    fodderInstanceId: bigint('fodder_instance_id', { mode: 'bigint' }).references(
-      () => equipmentInstances.id,
-      { onDelete: 'set null' },
-    ),
     status: enhanceJobStatusEnum('status').notNull().default('running'),
     /** '최대확률 도달' 알림 1회 보장 게이트(2026-05-26). complete_at 도달 시 cron이 발송 후 true 마크. */
     pushSent: boolean('push_sent').notNull().default(false),
@@ -70,9 +65,9 @@ export const enhancementJobs = pgTable(
     uniqueIndex('ej_user_slot_lane_running_uq')
       .on(t.userId, t.slot, t.slotLane)
       .where(sql`${t.status} = 'running'`),
-    // 같은 개체 중복 큐 차단.
-    uniqueIndex('ej_instance_running_uq')
-      .on(t.equipmentInstanceId)
+    // 같은 장비(카탈로그) 중복 큐 차단.
+    uniqueIndex('ej_equipment_running_uq')
+      .on(t.userEquipmentId)
       .where(sql`${t.status} = 'running'`),
     // lazy/cron 정산.
     index('ej_status_complete_idx').on(t.status, t.completeAt),
@@ -84,7 +79,7 @@ export const enhancementJobs = pgTable(
 export const enhancementLogs = pgTable('enhancement_logs', {
   id: bigserial('id', { mode: 'bigint' }).primaryKey(),
   userId: uuid('user_id').notNull(),
-  equipmentInstanceId: bigint('equipment_instance_id', { mode: 'bigint' }).notNull(),
+  userEquipmentId: bigint('user_equipment_id', { mode: 'bigint' }).notNull(),
   catalogItemId: integer('catalog_item_id').notNull(),
   fromLevel: integer('from_level').notNull(),
   toLevel: integer('to_level').notNull(),
@@ -94,8 +89,6 @@ export const enhancementLogs = pgTable('enhancement_logs', {
   elapsedMs: bigint('elapsed_ms', { mode: 'bigint' }).notNull(),
   durationMs: bigint('duration_ms', { mode: 'bigint' }).notNull(),
   reducedMs: bigint('reduced_ms', { mode: 'bigint' }).notNull().default(sql`0`),
-  /** +100 제물 개체 id (삭제돼도 감사 보존 → FK 없음). */
-  fodderInstanceId: bigint('fodder_instance_id', { mode: 'bigint' }),
   /** 사후 검증용(클라 변조 불가). */
   rngSeed: text('rng_seed'),
   rolled: integer('rolled'),

@@ -20,7 +20,7 @@ import { z } from 'zod';
 
 import { db } from '@/lib/db/client';
 import { profileGenerationJobs, userProfiles } from '@/lib/db/schema/avatar';
-import { catalogItems, equipmentInstances } from '@/lib/db/schema/equipment';
+import { catalogItems, userEquipment } from '@/lib/db/schema/equipment';
 import { profiles } from '@/lib/db/schema/profiles';
 import { PROFILE_GENERATION_DIAMOND } from '@/lib/game/balance';
 import { getSessionUserId } from '@/lib/auth/session';
@@ -71,15 +71,15 @@ export async function createProfileJob(
   // 1. 본인 장착 3슬롯 조회 — equippedSlot이 set된 instances만. (읽기 전용 — tx 밖)
   const equipped = await db
     .select({
-      slot: equipmentInstances.equippedSlot,
+      slot: userEquipment.equippedSlot,
       code: catalogItems.code,
     })
-    .from(equipmentInstances)
-    .innerJoin(catalogItems, eq(equipmentInstances.catalogItemId, catalogItems.id))
+    .from(userEquipment)
+    .innerJoin(catalogItems, eq(userEquipment.catalogItemId, catalogItems.id))
     .where(
       and(
-        eq(equipmentInstances.userId, userId),
-        isNotNull(equipmentInstances.equippedSlot),
+        eq(userEquipment.userId, userId),
+        isNotNull(userEquipment.equippedSlot),
       ),
     );
 

@@ -40,7 +40,7 @@ export type ResolveInput = {
 export type ResolveOutcome = 'success' | 'hold' | 'down' | 'mega';
 export type ResolveResult = {
   jobId: bigint;
-  equipmentInstanceId: bigint;
+  userEquipmentId: bigint;
   outcome: ResolveOutcome;
   fromLevel: number;
   toLevel: number;
@@ -62,7 +62,7 @@ export async function resolveEnhance(input: ResolveInput): Promise<ResolveResult
   const ownerCond = userId ? sql` and j.user_id = ${userId}::uuid` : sql``;
   const dueCond = requireComplete ? sql` and j.complete_at <= now()` : sql``;
   const r1 = (await db.execute(sql`
-    select j.equipment_instance_id::text     as equipment_instance_id,
+    select j.user_equipment_id::text         as user_equipment_id,
            j.user_id::text                   as user_id,
            j.from_level                      as from_level,
            j.base_rate_bp                    as base_rate_bp,
@@ -70,16 +70,16 @@ export async function resolveEnhance(input: ResolveInput): Promise<ResolveResult
            j.total_reduced_ms::text          as total_reduced_ms,
            extract(epoch from j.started_at)  as started_epoch,
            extract(epoch from j.complete_at) as complete_epoch,
-           ei.catalog_item_id                as catalog_item_id
+           ue.catalog_item_id                as catalog_item_id
     from enhancement_jobs j
-    join equipment_instances ei on ei.id = j.equipment_instance_id
+    join user_equipment ue on ue.id = j.user_equipment_id
     where j.id = ${jid}::bigint and j.status = 'running'${ownerCond}${dueCond}
     limit 1
   `)) as unknown as Row[];
   const job = r1[0];
   if (!job) throw new EnhanceError('JOB_NOT_FOUND'); // 이미 정산/취소/미도래 → 멱등 no-op
 
-  const equipmentInstanceId = BigInt(job.equipment_instance_id as string);
+  const userEquipmentId = BigInt(job.user_equipment_id as string);
   const catalogItemId = Number(job.catalog_item_id);
   const fromLevel = Number(job.from_level);
   const baseRateBp = Number(job.base_rate_bp);
@@ -126,33 +126,26 @@ export async function resolveEnhance(input: ResolveInput): Promise<ResolveResult
       update enhancement_jobs
       set status = 'completed'
       where id = ${jid}::bigint and status = 'running'
-      returning user_id, equipment_instance_id
+      returning user_id, user_equipment_id
     ),
-    inst as (
-      update equipment_instances ei
-      set enhance_level = ${toLevel}
-      from j
-      where ei.id = j.equipment_instance_id and ${toLevel} <> ${fromLevel}
-      returning ei.id
-    ),
-    cdx as (
-      insert into user_codex (user_id, catalog_item_id, max_enhance_level, max_enhance_reached_at)
-      select j.user_id, ${catalogItemId}, ${toLevel}, now() from j
-      on conflict (user_id, catalog_item_id) do update
-      set max_enhance_level = greatest(user_codex.max_enhance_level, ${toLevel}),
+    ue as (
+      update user_equipment u
+      set enhance_level = ${toLevel},
+          max_enhance_level = greatest(u.max_enhance_level, ${toLevel}),
           max_enhance_reached_at = case
-            when ${toLevel} > user_codex.max_enhance_level then now()
-            else user_codex.max_enhance_reached_at end
-      returning user_id
+            when ${toLevel} > u.max_enhance_level then now()
+            else u.max_enhance_reached_at end
+      from j
+      where u.id = j.user_equipment_id
+      returning u.id
     ),
     lg as (
       insert into enhancement_logs
-        (user_id, equipment_instance_id, catalog_item_id, from_level, to_level, result,
-         base_rate_bp, effective_rate_bp, elapsed_ms, duration_ms, reduced_ms,
-         fodder_instance_id, rolled)
-      select j.user_id, j.equipment_instance_id, ${catalogItemId}, ${fromLevel}, ${toLevel},
+        (user_id, user_equipment_id, catalog_item_id, from_level, to_level, result,
+         base_rate_bp, effective_rate_bp, elapsed_ms, duration_ms, reduced_ms, rolled)
+      select j.user_id, j.user_equipment_id, ${catalogItemId}, ${fromLevel}, ${toLevel},
              ${outcome}::enhance_result, ${baseRateBp}, ${effBp}, ${elapsedMs}::bigint,
-             ${durationMs}::bigint, ${reducedMs}::bigint, null::bigint, ${rolled}
+             ${durationMs}::bigint, ${reducedMs}::bigint, ${rolled}
       from j
       returning id
     )
@@ -166,5 +159,5 @@ export async function resolveEnhance(input: ResolveInput): Promise<ResolveResult
   // 푸시 알림은 '결과 시점' 아닌 'complete_at 도달 시점'(=최대확률)에 cron이 처리(2026-05-26).
   // resolveEnhance는 결과 트랜잭션만 담당, 알림 책임 없음.
 
-  return { jobId, equipmentInstanceId, outcome, fromLevel, toLevel, effectiveRateBp: effBp };
+  return { jobId, userEquipmentId, outcome, fromLevel, toLevel, effectiveRateBp: effBp };
 }

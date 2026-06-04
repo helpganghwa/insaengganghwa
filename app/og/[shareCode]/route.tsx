@@ -4,7 +4,7 @@ import { and, eq, isNotNull, or } from 'drizzle-orm';
 import { db } from '@/lib/db/client';
 import { profiles } from '@/lib/db/schema/profiles';
 import { userProfiles } from '@/lib/db/schema/avatar';
-import { catalogItems, equipmentInstances } from '@/lib/db/schema/equipment';
+import { catalogItems, userEquipment } from '@/lib/db/schema/equipment';
 import { spritePath } from '@/lib/game/equipment/sprite-manifest';
 import { transcendStyle } from '@/lib/game/equipment/transcend';
 
@@ -186,13 +186,13 @@ export async function GET(_req: Request, { params }: { params: Promise<{ shareCo
         catalogItemId: catalogItems.id,
         code: catalogItems.code,
         name: catalogItems.name,
-        enhanceLevel: equipmentInstances.enhanceLevel,
-        transcendLevel: equipmentInstances.transcendLevel,
+        enhanceLevel: userEquipment.enhanceLevel,
+        transcendLevel: userEquipment.transcendLevel,
       })
-      .from(equipmentInstances)
-      .innerJoin(catalogItems, eq(equipmentInstances.catalogItemId, catalogItems.id))
+      .from(userEquipment)
+      .innerJoin(catalogItems, eq(userEquipment.catalogItemId, catalogItems.id))
       .where(
-        and(eq(equipmentInstances.userId, prof.id), isNotNull(equipmentInstances.equippedSlot)),
+        and(eq(userEquipment.userId, prof.id), isNotNull(userEquipment.equippedSlot)),
       );
   }
 

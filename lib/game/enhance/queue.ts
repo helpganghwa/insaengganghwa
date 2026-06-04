@@ -4,17 +4,16 @@ import { and, eq } from 'drizzle-orm';
 import type { PgTransaction } from 'drizzle-orm/pg-core';
 
 import { db } from '@/lib/db/client';
-import { catalogItems, equipmentInstances } from '@/lib/db/schema/equipment';
+import { catalogItems, userEquipment } from '@/lib/db/schema/equipment';
 import { enhancementJobs } from '@/lib/db/schema/enhance';
 import { baseSuccessRateBp, enhanceDurationMs } from '@/lib/game/balance';
 
 /**
- * (A) 강화 큐 등록 — CLAUDE §6.1. **강화 시도는 무료**(자원 비용 없음, BALANCE §1).
- * 등급/경고 없음(§2 치환표). 시간·baseRate는 **등록 시점 스냅샷 영구**(소급 금지, CLAUDE §6.3).
+ * (A) 강화 큐 등록 — CLAUDE §6.1. **강화 시도는 무료**(자원·제물 비용 없음, BALANCE §1).
+ * 시간·baseRate는 **등록 시점 스냅샷 영구**(소급 금지, CLAUDE §6.3). 대상은 user_equipment 레코드.
  */
 export type EnhanceErrorCode =
   | 'EQUIPMENT_NOT_FOUND'
-  | 'EQUIPMENT_LOCKED'
   | 'ALREADY_ENHANCING'
   | 'SLOT_BUSY'
   | 'JOB_NOT_FOUND'
@@ -27,7 +26,7 @@ export class EnhanceError extends Error {
   }
 }
 
-export type QueueEnhanceInput = { userId: string; equipmentInstanceId: bigint };
+export type QueueEnhanceInput = { userId: string; userEquipmentId: bigint };
 export type QueueEnhanceResult = {
   jobId: bigint;
   completeAt: Date;
@@ -35,7 +34,6 @@ export type QueueEnhanceResult = {
   fromLevel: number;
   targetLevel: number;
   baseRateBp: number;
-  fodderInstanceId: bigint | null;
 };
 
 // drizzle 트랜잭션 핸들 타입(내부 공유용 — queue/swap이 같은 tx에서 재사용).
@@ -52,31 +50,29 @@ export async function queueEnhanceInTx(
   tx: Tx,
   input: QueueEnhanceInput,
 ): Promise<QueueEnhanceResult> {
-  const { userId, equipmentInstanceId } = input;
+  const { userId, userEquipmentId } = input;
 
   const [equip] = await tx
     .select({
-      id: equipmentInstances.id,
-      catalogItemId: equipmentInstances.catalogItemId,
-      enhanceLevel: equipmentInstances.enhanceLevel,
-      isLocked: equipmentInstances.isLocked,
+      id: userEquipment.id,
+      catalogItemId: userEquipment.catalogItemId,
+      enhanceLevel: userEquipment.enhanceLevel,
       slot: catalogItems.slot,
     })
-    .from(equipmentInstances)
-    .innerJoin(catalogItems, eq(equipmentInstances.catalogItemId, catalogItems.id))
-    .where(and(eq(equipmentInstances.id, equipmentInstanceId), eq(equipmentInstances.userId, userId)))
+    .from(userEquipment)
+    .innerJoin(catalogItems, eq(userEquipment.catalogItemId, catalogItems.id))
+    .where(and(eq(userEquipment.id, userEquipmentId), eq(userEquipment.userId, userId)))
     .for('update');
 
   if (!equip) throw new EnhanceError('EQUIPMENT_NOT_FOUND');
-  if (equip.isLocked) throw new EnhanceError('EQUIPMENT_LOCKED');
 
-  // 한 개체 = 동시 강화 1건 (equip을 for update로 잠가 직렬화).
+  // 한 장비 = 동시 강화 1건 (equip을 for update로 잠가 직렬화).
   const [dup] = await tx
     .select({ id: enhancementJobs.id })
     .from(enhancementJobs)
     .where(
       and(
-        eq(enhancementJobs.equipmentInstanceId, equipmentInstanceId),
+        eq(enhancementJobs.userEquipmentId, userEquipmentId),
         eq(enhancementJobs.status, 'running'),
       ),
     )
@@ -111,7 +107,7 @@ export async function queueEnhanceInTx(
       .insert(enhancementJobs)
       .values({
         userId,
-        equipmentInstanceId,
+        userEquipmentId,
         slot,
         slotLane,
         fromLevel,
@@ -119,7 +115,6 @@ export async function queueEnhanceInTx(
         baseRateBp,
         durationMs: BigInt(durationMs),
         completeAt,
-        fodderInstanceId: null,
         status: 'running',
       })
       .returning({ id: enhancementJobs.id });
@@ -130,7 +125,6 @@ export async function queueEnhanceInTx(
       fromLevel,
       targetLevel,
       baseRateBp,
-      fodderInstanceId: null,
     };
   } catch (e) {
     if (isUniqueViolation(e)) throw new EnhanceError('SLOT_BUSY'); // partial unique 최후 방어

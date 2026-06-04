@@ -9,7 +9,7 @@ import { getActiveJobsForSlot, swapEnhanceAction } from '@/app/(game)/enhance/ac
 
 type ActiveJob = {
   jobId: string;
-  equipmentInstanceId: string;
+  userEquipmentId: string;
   completeAtIso: string;
   enhanceLevel: number;
   transcendLevel: number;
@@ -34,11 +34,11 @@ function remainingLabel(iso: string, nowMs: number): string {
  * 으로 교체. 성공 시 모달 닫고 강화 페이지 이동.
  */
 export function SwapPickerModal({
-  newEquipmentInstanceId,
+  newUserEquipmentId,
   slot,
   onClose,
 }: {
-  newEquipmentInstanceId: string;
+  newUserEquipmentId: string;
   slot: Slot;
   onClose: () => void;
 }) {
@@ -74,7 +74,7 @@ export function SwapPickerModal({
   function pick(jobId: string) {
     if (pending) return;
     startTransition(async () => {
-      const r = await swapEnhanceAction(jobId, newEquipmentInstanceId);
+      const r = await swapEnhanceAction(jobId, newUserEquipmentId);
       if (r.status === 'error') {
         setError(r.message);
         return;

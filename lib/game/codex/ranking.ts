@@ -6,7 +6,7 @@ import { and, eq, sql } from 'drizzle-orm';
 import { db } from '@/lib/db/client';
 import { withTimeout, DbTimeoutError } from '@/lib/db/with-timeout';
 import { profiles } from '@/lib/db/schema/profiles';
-import { userCodex } from '@/lib/db/schema/equipment';
+import { userEquipment } from '@/lib/db/schema/equipment';
 
 /**
  * 아이템별 강화 랭킹 / 챔피언 — BALANCE §3.3 / SCHEMA §2.3 / WIREFRAMES §7.2.
@@ -30,16 +30,16 @@ export type ItemRankEntry = {
 export async function getItemTop10(catalogItemId: number): Promise<ItemRankEntry[]> {
   const rows = await db
     .select({
-      userId: userCodex.userId,
+      userId: userEquipment.userId,
       nickname: profiles.nickname,
       publicCode: profiles.publicCode,
-      maxLevel: userCodex.maxEnhanceLevel,
+      maxLevel: userEquipment.maxEnhanceLevel,
     })
-    .from(userCodex)
-    .innerJoin(profiles, eq(profiles.id, userCodex.userId))
-    .where(and(eq(userCodex.catalogItemId, catalogItemId), sql`${userCodex.maxEnhanceLevel} > 0`))
+    .from(userEquipment)
+    .innerJoin(profiles, eq(profiles.id, userEquipment.userId))
+    .where(and(eq(userEquipment.catalogItemId, catalogItemId), sql`${userEquipment.maxEnhanceLevel} > 0`))
     .orderBy(
-      sql`${userCodex.maxEnhanceLevel} desc, ${userCodex.maxEnhanceReachedAt} asc, ${userCodex.userId} asc`,
+      sql`${userEquipment.maxEnhanceLevel} desc, ${userEquipment.maxEnhanceReachedAt} asc, ${userEquipment.userId} asc`,
     )
     .limit(TOP);
   return rows.map((r, i) => ({ ...r, rank: i + 1 }));
@@ -51,9 +51,9 @@ export async function getMyItemRank(
   userId: string,
 ): Promise<{ rank: number; maxLevel: number } | null> {
   const [me] = await db
-    .select({ maxLevel: userCodex.maxEnhanceLevel })
-    .from(userCodex)
-    .where(and(eq(userCodex.userId, userId), eq(userCodex.catalogItemId, catalogItemId)))
+    .select({ maxLevel: userEquipment.maxEnhanceLevel })
+    .from(userEquipment)
+    .where(and(eq(userEquipment.userId, userId), eq(userEquipment.catalogItemId, catalogItemId)))
     .limit(1);
   if (!me || me.maxLevel <= 0) return null;
 
@@ -62,8 +62,8 @@ export async function getMyItemRank(
   // ARG_TYPE), text→uuid 비교도 연산자 없음. 파라미터는 ${userId}::uuid·int만.
   const rows = (await db.execute(sql`
     select count(*)::int as ahead
-    from user_codex o
-    join user_codex me
+    from user_equipment o
+    join user_equipment me
       on me.user_id = ${userId}::uuid and me.catalog_item_id = ${catalogItemId}
     where o.catalog_item_id = ${catalogItemId}
       and o.max_enhance_level > 0
@@ -86,7 +86,7 @@ export const liberatedItemRanks = cache(async (userId: string): Promise<Map<numb
     const rows = (await withTimeout(
       db.execute(sql`
         select uc.catalog_item_id as cid,
-          (select count(*) from user_codex o
+          (select count(*) from user_equipment o
            where o.catalog_item_id = uc.catalog_item_id
              and (
                o.max_enhance_level > uc.max_enhance_level
@@ -94,7 +94,7 @@ export const liberatedItemRanks = cache(async (userId: string): Promise<Map<numb
                or (o.max_enhance_level = uc.max_enhance_level and o.max_enhance_reached_at = uc.max_enhance_reached_at and o.user_id < uc.user_id)
              )
           )::int as ahead
-        from user_codex uc
+        from user_equipment uc
         where uc.user_id = ${userId}::uuid and uc.max_enhance_level > 0
       `),
       3000,
@@ -129,11 +129,11 @@ export const championCatalogIds = cache(async (userId: string): Promise<Set<numb
     const rows = (await withTimeout(
       db.execute(sql`
         select uc.catalog_item_id as cid
-        from user_codex uc
+        from user_equipment uc
         where uc.user_id = ${userId}::uuid
           and uc.max_enhance_level > 0
           and not exists (
-            select 1 from user_codex o
+            select 1 from user_equipment o
             where o.catalog_item_id = uc.catalog_item_id
               and (
                 o.max_enhance_level > uc.max_enhance_level
