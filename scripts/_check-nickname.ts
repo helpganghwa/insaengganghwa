@@ -1,0 +1,11 @@
+import { config } from 'dotenv';
+import postgres from 'postgres';
+config({ path: '.env.local' });
+const sql = postgres(process.env.DIRECT_URL!, { prepare: false, max: 1 });
+const [k] = await sql`select exists(select 1 from pg_proc where proname='generate_korean_nickname') as has`;
+const [f] = await sql`select pg_get_functiondef('public.handle_new_user'::regproc) as def`;
+console.log('generate_korean_nickname 존재:', k.has);
+console.log('handle_new_user가 korean 사용:', (f.def as string).includes('generate_korean_nickname'));
+const rows = await sql`select nickname from profiles limit 6`;
+console.log('닉네임 샘플:', rows.map((r) => r.nickname));
+await sql.end();

@@ -25,7 +25,8 @@ export type InvItem = {
   equipped: boolean;
   acquiredAtMs: number;
   busy: boolean;
-  isChampion: boolean;
+  /** 해방 등수(강화랭킹 1~3위) — 후광 색용. null=해방 아님. */
+  championRank: number | null;
   lore: string | null;
 };
 
@@ -243,7 +244,7 @@ const Tile = memo(function Tile({
         code={item.code}
         slot={item.slot}
         level={item.transcendLevel}
-        isChampion={item.isChampion}
+        championRank={item.championRank}
         size={64}
         frameless
       />

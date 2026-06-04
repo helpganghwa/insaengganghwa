@@ -88,7 +88,7 @@ function ResultCard({
           code={r.code}
           slot={slot}
           level={shown}
-          isChampion={r.isChampion}
+          championRank={r.championRank}
           size={spriteSize}
           frameless
         />

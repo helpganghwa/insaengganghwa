@@ -16,6 +16,18 @@ const SLOT_EMOJI = { weapon: '⚔️', armor: '🛡️', accessory: '💍' } as 
 const FS = 256;
 const MYTHIC_RGB: readonly [number, number, number] = [228, 64, 52];
 
+// 해방 아이템(강화랭킹 1~3위) 후광 색 — 1 골드 / 2 실버 / 3 브론즈 톤.
+const RANK_GLOW: Record<number, readonly [number, number, number]> = {
+  1: [255, 216, 120],
+  2: [226, 232, 240],
+  3: [216, 150, 96],
+};
+/** 해방 등수(1/2/3) 산출 — championRank 우선, 없으면 isChampion(레거시)=1위. */
+function libRank(championRank: number | null | undefined, isChampion: boolean): number | null {
+  if (championRank === 1 || championRank === 2 || championRank === 3) return championRank;
+  return isChampion ? 1 : null;
+}
+
 type RGB = readonly [number, number, number];
 const lerp = (a: RGB, b: RGB, t: number): RGB => [
   Math.round(a[0] + (b[0] - a[0]) * t),
@@ -147,7 +159,10 @@ interface Props {
   code: string;
   level: number;
   slot?: 'weapon' | 'armor' | 'accessory';
+  /** 레거시 — 강화랭킹 1위(챔피언). championRank 미지정 시 1위로 간주. */
   isChampion?: boolean;
+  /** 해방 등수(강화랭킹 1~3위) — 1/2/3이면 등수색(골드/실버/브론즈) 후광. null/미지정=후광 없음. */
+  championRank?: number | null;
   /** 표시 픽셀 크기 (정사각). 기본 64. */
   size?: number;
   /** 글로우/광택스윕/발광 애니메이션. 기본 true. 정적 컨텍스트(OG 등)는 false. */
@@ -260,15 +275,13 @@ function TranscendStatic({
 }
 
 export function TranscendSprite(props: Props) {
-  const { code, level, slot, isChampion = false, size = 64, animate = true, className, frameless = false } = props;
+  const { code, level, slot, isChampion = false, championRank, size = 64, animate = true, className, frameless = false } = props;
   const st = transcendStyle(level);
   if (!atlasCoord(code)) return <EmojiFallback size={size} slot={slot} code={code} className={className} />;
-  // 동적(캔버스+rAF) 진입 조건 — 사용자 확정(2026-05-20) 최종 매핑:
-  //   챔피언 → 광택 sheen (T 무관)
-  //   신화    → 노란빛 사전합성 블러 발광
-  //   그 외   → 정적(프레임/별만)
-  // isMax 광택은 제거 — 광택은 오직 챔피언만의 표식.
-  const dynamic = animate && (st.hasGlow || isChampion);
+  // 동적(캔버스+rAF) 진입 조건:
+  //   해방(강화랭킹 1~3위) → 등수색(골드/실버/브론즈) 후광 + 1위는 광택 sheen 추가
+  //   그 외 → 정적(프레임/별만). 초월 단계 후광은 폐지(해방 효과로 이전).
+  const dynamic = animate && libRank(championRank, isChampion) != null;
   if (!dynamic) {
     return <TranscendStatic st={st} size={size} code={code} className={className} frameless={frameless} />;
   }
@@ -279,6 +292,7 @@ function TranscendCanvas({
   code,
   level,
   isChampion = false,
+  championRank,
   size = 64,
   animate = true,
   championMode = 'additive',
@@ -302,19 +316,22 @@ function TranscendCanvas({
     let stopped = false;
     let visible = true; // 화면 밖이면 rAF 정지(스크롤 렉/배터리). IntersectionObserver가 토글.
     let built = false;
+    // 해방 등수(1/2/3) — 후광 색 결정. rank=1위는 광택 sheen도 추가.
+    const rank = libRank(championRank, isChampion);
+    const rankColor = rank ? (RANK_GLOW[rank] as RGB) : null;
     // override = 레벨 무관 신화로 대체 / additive = 실제 등급 유지 + 발광만 추가.
-    const champOverride = isChampion && championMode === 'override';
+    const champOverride = rank === 1 && championMode === 'override';
     const color: RGB = champOverride ? MYTHIC_RGB : [scr, scg, scb];
     const sub: 0 | 1 = (champOverride ? 1 : st.sub ?? 0) as 0 | 1;
-    // ── 시각 효과 매핑(사용자 확정 2026-05-20 최종) ──
-    //   showShine   : 광택 스윕(soft-light sheen). **챔피언 전용**(T 무관).
-    //   showRadiant : 노란빛 사전합성 블러 발광. 신화 등급(st.hasGlow) 전용.
+    // ── 시각 효과 매핑 ──
+    //   showShine   : 광택 스윕(soft-light sheen). **해방 1위(챔피언) 전용**.
+    //   showRadiant : 사전합성 블러 후광. **해방 1~3위 전용**(등수색). 초월 후광 폐지.
     //   showGlow    : 라디얼 글로우. 미사용(false).
     //   showFrame   : 등급 프레임. T1+에서 표시(기존 그대로).
     const showGlow = false;
-    const showShine = isChampion;
+    const showShine = rank === 1;
     const showFrame = (champOverride ? true : st.hasFrame) && !frameless;
-    const showRadiant = st.hasGlow;
+    const showRadiant = rankColor != null;
     const dynamic = animate && (showShine || showRadiant);
 
     let frameCanvas: HTMLCanvasElement | null = null;
@@ -381,19 +398,20 @@ function TranscendCanvas({
         frontCv = fc;
       }
 
-      // T8+ glow — 사전합성. Canvas `filter:blur` 모바일 미지원 회피용 `shadowBlur` 3겹.
-      // 사용자 피드백: 발광 펄스를 더 넓게 → shadowBlur 22 → 40 → 56 점진 확산.
-      if (showRadiant) {
+      // 해방 후광 — 사전합성. Canvas `filter:blur` 모바일 미지원 회피용 `shadowBlur` 3겹.
+      // shadowBlur 22 → 40 → 56 점진 확산. 색은 등수색(rankColor).
+      if (showRadiant && rankColor) {
+        const [rr, rg, rb] = rankColor;
         const [bc, bx] = mkCanvas();
         bx.imageSmoothingEnabled = false;
-        // 1) sprite 모양으로 노란 채움
+        // 1) sprite 모양으로 등수색 채움
         const [rc, rx] = mkCanvas();
         rx.imageSmoothingEnabled = false;
         rx.drawImage(atlasImg, coord.x, coord.y, ATLAS_CELL, ATLAS_CELL, SP, SP, SW, SW);
         rx.globalCompositeOperation = 'source-in';
-        rx.fillStyle = 'rgb(255,238,190)';
+        rx.fillStyle = `rgb(${rr},${rg},${rb})`;
         rx.fillRect(0, 0, FS, FS);
-        bx.shadowColor = 'rgba(255,238,190,1)';
+        bx.shadowColor = `rgba(${rr},${rg},${rb},1)`;
         // 가까운 본체 글로우
         bx.shadowBlur = 22;
         bx.drawImage(rc, 0, 0);
@@ -551,7 +569,7 @@ function TranscendCanvas({
     };
     // coord는 같은 code면 안정. 객체 ref 변동 deps 회피 위해 code 사용.
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [code, st.level, st.tier, st.sub, st.hasFrame, st.hasGlow, st.isMax, scr, scg, scb, isChampion, championMode, animate, frameless]);
+  }, [code, st.level, st.tier, st.sub, st.hasFrame, scr, scg, scb, isChampion, championRank, championMode, animate, frameless]);
 
   // base 없음/이모지 폴백은 디스패처(TranscendSprite)가 처리 — 여기 도달 시 base 보장.
   const px = Math.round(size * (typeof window !== 'undefined' ? Math.min(window.devicePixelRatio || 1, 3) : 2));

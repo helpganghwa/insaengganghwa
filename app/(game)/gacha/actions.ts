@@ -10,7 +10,7 @@ import { type Slot } from '@/lib/db/schema/equipment';
 import { userSupplyBoxes } from '@/lib/db/schema/supply';
 import { openSupplyBoxes, SupplyError } from '@/lib/game/supply';
 import { getActiveCatalog } from '@/lib/game/catalog';
-import { championCatalogIds } from '@/lib/game/codex/ranking';
+import { liberatedItemRanks } from '@/lib/game/codex/ranking';
 import { loreTeaser } from '@/lib/game/equipment/lore';
 
 export type OpenedItem = {
@@ -18,7 +18,8 @@ export type OpenedItem = {
   code: string;
   name: string;
   isNew: boolean;
-  isChampion: boolean;
+  /** 해방 등수(강화랭킹 1~3위) — 후광 색용. null=해방 아님. */
+  championRank: number | null;
   /** 이번 열기로 자동 초월된 단계 수(중복 누적이 임계 도달 시 ≥1). */
   transcended: number;
   /** 결과 초월 레벨. */
@@ -48,9 +49,9 @@ export async function openAction(slot: Slot, count: number): Promise<OpenActionR
   try {
     const opened = await openSupplyBoxes({ userId, slot, count: n });
     // 개봉 아이템은 항상 active 풀에서 나오므로 캐시된 활성 카탈로그로 메타 조회(DB 왕복 제거).
-    const [catalog, champSet, boxRows] = await Promise.all([
+    const [catalog, libRanks, boxRows] = await Promise.all([
       getActiveCatalog(),
-      championCatalogIds(userId),
+      liberatedItemRanks(userId),
       db
         .select({ c: userSupplyBoxes.count })
         .from(userSupplyBoxes)
@@ -72,7 +73,7 @@ export async function openAction(slot: Slot, count: number): Promise<OpenActionR
           code,
           name: metaMap.get(o.catalogItemId)?.name ?? `#${o.catalogItemId}`,
           isNew: o.isNew,
-          isChampion: champSet.has(o.catalogItemId),
+          championRank: libRanks.get(o.catalogItemId) ?? null,
           transcended: o.transcended,
           transcendLevel: o.transcendLevel,
           loreTeaser: o.isNew && code ? loreTeaser(code) : null,

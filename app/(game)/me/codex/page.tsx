@@ -6,7 +6,7 @@ import { db } from '@/lib/db/client';
 import { withTimeout } from '@/lib/db/with-timeout';
 import { userEquipment, type Slot } from '@/lib/db/schema/equipment';
 import { getActiveCatalog } from '@/lib/game/catalog';
-import { championCatalogIds } from '@/lib/game/codex/ranking';
+import { liberatedItemRanks } from '@/lib/game/codex/ranking';
 import { TranscendSprite } from '@/components/TranscendSprite';
 
 const SLOT_LABEL: Record<Slot, string> = { weapon: '무기', armor: '방어구', accessory: '장신구' };
@@ -27,14 +27,14 @@ export default async function CodexPage() {
         .select({ catalogItemId: userEquipment.catalogItemId, max: userEquipment.maxEnhanceLevel })
         .from(userEquipment)
         .where(eq(userEquipment.userId, userId)),
-      championCatalogIds(userId),
+      liberatedItemRanks(userId),
     ]),
     3500,
     'codex.page',
   ).catch(() => null);
   const catalog = _r?.[0] ?? [];
   const codex = _r?.[1] ?? [];
-  const champSet = _r?.[2] ?? new Set<number>();
+  const libRanks = _r?.[2] ?? new Map<number, number>();
 
   const codexMap = new Map(codex.map((c) => [c.catalogItemId, c.max]));
 
@@ -66,7 +66,7 @@ export default async function CodexPage() {
                     </div>
                   );
                 }
-                const champ = champSet.has(c.id);
+                const rank = libRanks.get(c.id) ?? null;
                 return (
                   <Link
                     key={c.id}
@@ -77,7 +77,7 @@ export default async function CodexPage() {
                       code={c.code}
                       slot={c.slot}
                       level={0}
-                      isChampion={champ}
+                      championRank={rank}
                       size={40}
                       frameless
                     />

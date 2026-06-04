@@ -47,7 +47,7 @@ export function SlotLane({
       fromLevel,
       targetLevel: fromLevel + 1,
       transcendLevel: c.transcendLevel,
-      isChampion: c.isChampion,
+      championRank: c.championRank,
       baseRateBp: baseSuccessRateBp(fromLevel),
       startedAtIso: new Date(now).toISOString(),
       completeAtIso: new Date(now + duration).toISOString(),

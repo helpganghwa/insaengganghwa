@@ -6,7 +6,7 @@ import { withTimeout } from '@/lib/db/with-timeout';
 import { catalogItems, userEquipment, type Slot } from '@/lib/db/schema/equipment';
 import { enhancementJobs } from '@/lib/db/schema/enhance';
 import { profiles } from '@/lib/db/schema/profiles';
-import { championCatalogIds } from '@/lib/game/codex/ranking';
+import { liberatedItemRanks } from '@/lib/game/codex/ranking';
 import { loreByCode } from '@/lib/game/equipment/lore';
 
 import { InventoryGrid, type InvItem } from './InventoryGrid';
@@ -50,7 +50,7 @@ export default async function InventoryPage({
       .from(profiles)
       .where(eq(profiles.id, userId))
       .limit(1),
-    championCatalogIds(userId),
+    liberatedItemRanks(userId),
     ]),
     3500,
     'inventory.page',
@@ -58,7 +58,7 @@ export default async function InventoryPage({
   const rows = _r?.[0] ?? [];
   const runningJobs = _r?.[1] ?? [];
   const prof = _r?.[2] ?? [];
-  const champSet = _r?.[3] ?? new Set<number>();
+  const libRanks = _r?.[3] ?? new Map<number, number>();
   const nickname = prof[0]?.nickname ?? '플레이어';
 
   const busy = new Set(runningJobs.map((r) => r.instanceId.toString()));
@@ -74,7 +74,7 @@ export default async function InventoryPage({
     equipped: r.equippedSlot != null,
     acquiredAtMs: r.acquiredAt.getTime(),
     busy: busy.has(r.id.toString()),
-    isChampion: champSet.has(r.catalogItemId),
+    championRank: libRanks.get(r.catalogItemId) ?? null,
     lore: loreByCode(r.code),
   }));
 

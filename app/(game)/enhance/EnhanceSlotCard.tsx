@@ -29,7 +29,7 @@ export type ActiveJob = {
   fromLevel: number;
   targetLevel: number;
   transcendLevel: number;
-  isChampion: boolean;
+  championRank: number | null;
   baseRateBp: number;
   startedAtIso: string;
   completeAtIso: string;
@@ -482,7 +482,7 @@ export function EnhanceSlotCard({
               code={activeJob.code}
               slot={activeJob.slot}
               level={activeJob.transcendLevel}
-              isChampion={activeJob.isChampion}
+              championRank={activeJob.championRank}
               size={60}
               frameless
             />

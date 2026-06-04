@@ -19,8 +19,8 @@ export type BoastPiece = {
   name: string;
   enhanceLevel: number;
   transcendLevel: number;
-  /** 이 유저가 그 카탈로그 아이템의 챔피언(아이템별 1위) — BALANCE §3.3. */
-  isChampion: boolean;
+  /** 해방 등수(강화랭킹 1~3위) — 후광 색용. null=해방 아님. */
+  championRank: number | null;
   /** 미리보기 sprite 식별용. me/page에서 전달, 다른 경로는 optional. */
   catalogItemId?: number;
 };
@@ -292,7 +292,7 @@ export function BoastModal({
                           code={it.code}
                           slot={s}
                           level={it.transcendLevel}
-                          isChampion={it.isChampion}
+                          championRank={it.championRank}
                           size={34}
                           frameless
                         />

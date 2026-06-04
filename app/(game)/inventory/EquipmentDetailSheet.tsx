@@ -109,7 +109,7 @@ export function EquipmentDetailSheet({
               code={item.code}
               slot={item.slot}
               level={item.transcendLevel}
-              isChampion={item.isChampion}
+              championRank={item.championRank}
               size={64}
               frameless
             />

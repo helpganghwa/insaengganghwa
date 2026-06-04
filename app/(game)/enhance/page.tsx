@@ -6,7 +6,7 @@ import { withTimeout } from '@/lib/db/with-timeout';
 import { profiles } from '@/lib/db/schema/profiles';
 import { catalogItems, userEquipment, type Slot } from '@/lib/db/schema/equipment';
 import { enhancementJobs } from '@/lib/db/schema/enhance';
-import { championCatalogIds } from '@/lib/game/codex/ranking';
+import { liberatedItemRanks } from '@/lib/game/codex/ranking';
 
 import { type ActiveJob } from './EnhanceSlotCard';
 import { type EnhanceCandidate } from './EnhanceSlotPicker';
@@ -49,7 +49,7 @@ export default async function EnhancePage() {
       .from(profiles)
       .where(eq(profiles.id, userId))
       .limit(1),
-    championCatalogIds(userId),
+    liberatedItemRanks(userId),
     // 강화 가능 후보: 잠금 X, 진행 중 X. equipped 무관(equippedSlot 포함).
     // LEFT JOIN status='running' ej → ej.id IS NULL 로 진행 중 제외.
     db
@@ -80,7 +80,7 @@ export default async function EnhancePage() {
   ).catch(() => null);
   const jobs = _r?.[0] ?? [];
   const profRow = _r?.[1] ?? [];
-  const champSet = _r?.[2] ?? new Set<number>();
+  const libRanks = _r?.[2] ?? new Map<number, number>();
   const candidatesRaw = _r?.[3] ?? [];
 
   const diamond = profRow[0]?.diamond ?? 0n;
@@ -99,7 +99,7 @@ export default async function EnhancePage() {
       slot: c.slot,
       enhanceLevel: c.enhanceLevel,
       transcendLevel: c.transcendLevel,
-      isChampion: champSet.has(c.catalogItemId),
+      championRank: libRanks.get(c.catalogItemId) ?? null,
       equipped: c.equippedSlot !== null,
     });
   }
@@ -125,7 +125,7 @@ export default async function EnhancePage() {
                   fromLevel: j.fromLevel,
                   targetLevel: j.targetLevel,
                   transcendLevel: j.transcendLevel,
-                  isChampion: champSet.has(j.catalogItemId),
+                  championRank: libRanks.get(j.catalogItemId) ?? null,
                   baseRateBp: j.baseRateBp,
                   startedAtIso: j.startedAt.toISOString(),
                   completeAtIso: j.completeAt.toISOString(),

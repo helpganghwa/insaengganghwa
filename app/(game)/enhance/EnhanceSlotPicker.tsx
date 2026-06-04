@@ -19,7 +19,7 @@ export type EnhanceCandidate = {
   slot: Slot;
   enhanceLevel: number;
   transcendLevel: number;
-  isChampion: boolean;
+  championRank: number | null;
   equipped: boolean;
 };
 
@@ -151,7 +151,7 @@ function EnhanceSlotPicker({
                   code={c.code}
                   slot={c.slot}
                   level={c.transcendLevel}
-                  isChampion={c.isChampion}
+                  championRank={c.championRank}
                   size={48}
                   frameless
                 />

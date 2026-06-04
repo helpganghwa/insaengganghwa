@@ -9,7 +9,7 @@ import { catalogItems, userEquipment, type Slot } from '@/lib/db/schema/equipmen
 import { userProfiles } from '@/lib/db/schema/avatar';
 import { CharacterStage } from '@/components/CharacterStage';
 import { combatPowerFromOwned } from '@/lib/game/equipment/combat-power';
-import { championCatalogIds } from '@/lib/game/codex/ranking';
+import { liberatedItemRanks } from '@/lib/game/codex/ranking';
 
 import { BoastLauncher } from '@/components/BoastModal';
 import { TranscendSprite } from '@/components/TranscendSprite';
@@ -70,7 +70,7 @@ export default async function ProfilePage() {
       })
       .from(userEquipment)
       .where(eq(userEquipment.userId, userId)),
-    championCatalogIds(userId),
+    liberatedItemRanks(userId),
     db
       .select({
         id: userProfiles.id,
@@ -88,7 +88,7 @@ export default async function ProfilePage() {
   const prof = _r?.[0] ?? [];
   const equipped = _r?.[1] ?? [];
   const ownedAll = _r?.[2] ?? [];
-  const champSet = _r?.[3] ?? new Set<number>();
+  const libRanks = _r?.[3] ?? new Map<number, number>();
   const myProfiles = _r?.[4] ?? [];
   const referralStats = _r?.[5] ?? { totalReferrals: 0, totalDiamondEarned: 0, totalBoxEarned: 0 };
 
@@ -168,7 +168,7 @@ export default async function ProfilePage() {
                       code={it.code}
                       slot={s}
                       level={it.transcendLevel}
-                      isChampion={champSet.has(it.catalogItemId)}
+                      championRank={libRanks.get(it.catalogItemId) ?? null}
                       size={42}
                       frameless
                     />
@@ -198,7 +198,7 @@ export default async function ProfilePage() {
           name: e.name,
           enhanceLevel: e.enhanceLevel,
           transcendLevel: e.transcendLevel,
-          isChampion: champSet.has(e.catalogItemId),
+          championRank: libRanks.get(e.catalogItemId) ?? null,
           catalogItemId: e.catalogItemId,
         }))}
       />

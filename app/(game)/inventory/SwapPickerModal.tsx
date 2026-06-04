@@ -136,7 +136,6 @@ export function SwapPickerModal({
                     code={j.code}
                     slot={j.slot}
                     level={j.transcendLevel}
-                    isChampion={false}
                     size={32}
                     frameless
                   />

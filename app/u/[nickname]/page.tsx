@@ -115,7 +115,7 @@ const loadProfile = cache(async (handle: string) => {
   const maxEnhance = ownedAll.reduce((a, r) => Math.max(a, r.enhanceLevel), 0);
   const total = combatPowerFromOwned(ownedAll);
   // 장착 마커는 챔피언(1위)만 유지. 해방 섹션은 1~3위 전체.
-  const pieces = equipped.map((e) => ({ ...e, isChampion: libMap.get(e.catalogItemId) === 1 }));
+  const pieces = equipped.map((e) => ({ ...e, championRank: libMap.get(e.catalogItemId) ?? null }));
 
   // 해방 아이템(이 플레이어가 1~3위인 카탈로그) 메타 + 등수 — sprite/name/등수뱃지.
   const libIds = [...libMap.keys()];
@@ -417,7 +417,7 @@ export default async function PublicProfilePage({
                     code={it.code}
                     slot={s}
                     level={it.transcendLevel}
-                    isChampion={it.isChampion}
+                    championRank={it.championRank}
                     size={48}
                     frameless
                   />
@@ -455,7 +455,7 @@ export default async function PublicProfilePage({
                     code={c.code}
                     slot={c.slot}
                     level={0}
-                    isChampion={c.rank === 1}
+                    championRank={c.rank}
                     size={36}
                     frameless
                   />
@@ -495,7 +495,7 @@ export default async function PublicProfilePage({
               name: e.name,
               enhanceLevel: e.enhanceLevel,
               transcendLevel: e.transcendLevel,
-              isChampion: e.isChampion,
+              championRank: e.championRank,
               catalogItemId: e.catalogItemId,
             }))}
           />
@@ -514,7 +514,7 @@ export default async function PublicProfilePage({
                 name: e.name,
                 enhanceLevel: e.enhanceLevel,
                 transcendLevel: e.transcendLevel,
-                isChampion: e.isChampion,
+                championRank: e.championRank,
                 catalogItemId: e.catalogItemId,
               }))}
               label="프로필 공유하기"
