@@ -250,7 +250,7 @@ const Tile = memo(function Tile({
       <span className="break-keep px-0.5 text-[10px] leading-tight text-zinc-600 dark:text-zinc-400">
         {item.name}
       </span>
-      <span className="text-xs font-semibold">
+      <span className="text-[10px] font-semibold">
         +{item.enhanceLevel}
         <TranscendTag level={item.transcendLevel} className="ml-1" />
       </span>

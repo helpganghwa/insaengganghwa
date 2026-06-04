@@ -424,7 +424,7 @@ export default async function PublicProfilePage({
                   <span className="line-clamp-2 break-keep px-0.5 text-[9px] leading-tight text-zinc-400">
                     {it.name}
                   </span>
-                  <span className="text-[11px] font-semibold text-zinc-100">
+                  <span className="text-[9px] font-semibold text-zinc-100">
                     +{it.enhanceLevel}
                     <TranscendTag level={it.transcendLevel} className="ml-1" />
                   </span>
