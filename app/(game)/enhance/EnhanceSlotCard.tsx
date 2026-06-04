@@ -488,13 +488,13 @@ export function EnhanceSlotCard({
             />
           </span>
           <div className="flex min-w-0 flex-1 flex-col gap-0.5 overflow-hidden">
-            {/* 1줄: 이름 — 자연 wrap(잘림 없음). 한국어는 break-keep로 단어 경계 줄바꿈.
-                초월 ≥ ✦1이면 이름 끝에 inline ✦라벨(등급 색상)로 따라붙음 — wrap 시 마지막 줄 끝. */}
-            <div className="text-sm font-bold leading-tight break-keep">
-              {activeJob.name}
+            {/* 1줄: 이름 + ✦라벨 — 수직 중앙정렬(flex items-center). 이름은 자연 wrap(잘림 없음,
+                break-keep), ✦라벨은 등급 색상으로 이름 옆 수직 중앙에 붙음. */}
+            <div className="flex items-center gap-1.5 text-sm font-bold leading-tight">
+              <span className="min-w-0 break-keep">{activeJob.name}</span>
               {activeJob.transcendLevel > 0 ? (
                 <span
-                  className="ml-1.5 align-middle text-[10px] font-bold tabular-nums"
+                  className="shrink-0 text-[10px] font-bold tabular-nums"
                   style={{
                     color: `rgb(${transcendStyle(activeJob.transcendLevel).colorRgb.join(',')})`,
                   }}

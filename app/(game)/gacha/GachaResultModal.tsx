@@ -60,7 +60,7 @@ function ResultCard({
 
   const st = transcendStyle(shown);
   const grade = `rgb(${st.colorRgb.join(',')})`;
-  const spriteSize = big ? 64 : 44;
+  const spriteSize = big ? 60 : 48;
 
   return (
     <button
@@ -108,7 +108,7 @@ function ResultCard({
       </span>
       <span
         className={`line-clamp-2 break-keep px-0.5 leading-tight text-zinc-600 dark:text-zinc-400 ${
-          big ? 'text-xs' : 'text-[9px]'
+          big ? 'text-[11px]' : 'text-[9px]'
         }`}
       >
         {r.name}
@@ -116,7 +116,7 @@ function ResultCard({
       {shown > 0 ? (
         <span
           key={`p${flashKey}`}
-          className={`font-semibold tabular-nums ${big ? 'text-xs' : 'text-[9px]'}`}
+          className={`font-semibold tabular-nums ${big ? 'text-[11px]' : 'text-[9px]'}`}
           style={{
             color: grade,
             animation: flashKey > 0 ? 'gacha-transcend-pop 420ms ease-out' : undefined,
@@ -173,7 +173,7 @@ export function GachaResultModal({
         <div key={resultKey} style={{ animation: 'gacha-result-swap 240ms ease-out' }}>
           {single ? (
             <div className="flex flex-col items-center text-center">
-              <div className="w-36">
+              <div className="w-40">
                 <ResultCard r={single} slot={slot} big />
               </div>
               {single.isNew && single.loreTeaser ? (
@@ -190,7 +190,7 @@ export function GachaResultModal({
           ) : (
             <>
               <p className="text-sm font-medium">{results.length}회 열기</p>
-              <div className="mt-3 grid grid-cols-4 gap-2">
+              <div className="mt-3 grid grid-cols-3 gap-2">
                 {sortedResults.map((r, i) => (
                   <ResultCard
                     key={i}
