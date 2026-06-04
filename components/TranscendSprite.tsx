@@ -340,7 +340,8 @@ function TranscendCanvas({
     off.width = off.height = FS;
     const o = off.getContext('2d')!;
     // sprite 노출 크기 — TranscendStatic의 sw 비율과 동기화.
-    const SW = frameless ? FS : FS * 0.7;
+    // 후광 아이템(frameless)은 스프라이트를 약간 줄여 캔버스 안에 후광이 잘리지 않게 담는다.
+    const SW = frameless ? (rankColor ? FS * 0.86 : FS) : FS * 0.7;
     const SP = (FS - SW) / 2;
     const t = st.tier === 'none' ? 0 : Math.min(1, st.level / 10);
     const bg = lerp([19, 19, 24], [color[0] * 0.13 + 12, color[1] * 0.13 + 12, color[2] * 0.13 + 12] as RGB, t);
@@ -412,16 +413,16 @@ function TranscendCanvas({
         rx.fillStyle = `rgb(${rr},${rg},${rb})`;
         rx.fillRect(0, 0, FS, FS);
         bx.shadowColor = `rgba(${rr},${rg},${rb},1)`;
-        // 가까운 본체 글로우
-        bx.shadowBlur = 22;
+        // 가까운 본체 글로우 (블러 축소 — 후광 약화 + 캔버스 내 수용)
+        bx.shadowBlur = 14;
         bx.drawImage(rc, 0, 0);
         // 중간 외곽 글로우
-        bx.shadowBlur = 40;
-        bx.globalAlpha = 0.7;
+        bx.shadowBlur = 24;
+        bx.globalAlpha = 0.6;
         bx.drawImage(rc, 0, 0);
         // 가장 멀리 퍼지는 외곽 헤일로
-        bx.shadowBlur = 56;
-        bx.globalAlpha = 0.45;
+        bx.shadowBlur = 32;
+        bx.globalAlpha = 0.35;
         bx.drawImage(rc, 0, 0);
         radiantCv = bc;
       }
@@ -453,7 +454,7 @@ function TranscendCanvas({
       // 사전합성 블러 발광 (알파만 펄스 — 아이템 뒤). swap 후 T8+ 등급 표식.
       if (radiantCv) {
         // 글로우 강도 ↑ — baseline 0.95 + 펄스 (0.85~1.0). sprite 외곽 노란 빛이 명확히 보임.
-        o.globalAlpha = 0.95 * (0.85 + 0.15 * Math.sin(ph * Math.PI * 2));
+        o.globalAlpha = 0.6 * (0.85 + 0.15 * Math.sin(ph * Math.PI * 2));
         o.drawImage(radiantCv, 0, 0);
         o.globalAlpha = 1;
       }
@@ -579,7 +580,7 @@ function TranscendCanvas({
       width={px}
       height={px}
       className={className}
-      style={{ width: size, height: size, display: 'block' }}
+      style={{ width: size, height: size, display: 'block', overflow: 'visible' }}
       aria-label={`${code} +${st.level}${st.labelKo ? ` ${st.labelKo}` : ''}`}
     />
   );
