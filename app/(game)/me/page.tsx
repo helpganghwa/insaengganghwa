@@ -148,10 +148,10 @@ export default async function ProfilePage() {
                     href={`/inventory?slot=${s}`}
                     className="flex flex-1 items-center gap-2 rounded-xl border border-dashed border-white/15 bg-white/[0.02] px-2 text-white/45"
                   >
-                    <span className="grid h-8 w-8 shrink-0 place-items-center rounded-lg bg-white/5 text-base" aria-hidden>
+                    <span className="grid h-10 w-10 shrink-0 place-items-center rounded-lg bg-white/5 text-lg" aria-hidden>
                       {SLOT_EMOJI[s]}
                     </span>
-                    <span className="text-[11px]">{SLOT_LABEL[s]} 장착</span>
+                    <span className="text-[12px]">{SLOT_LABEL[s]} 장착</span>
                   </Link>
                 );
               }
@@ -169,13 +169,13 @@ export default async function ProfilePage() {
                       slot={s}
                       level={it.transcendLevel}
                       isChampion={champSet.has(it.catalogItemId)}
-                      size={34}
+                      size={42}
                       frameless
                     />
                   </div>
                   <div className="min-w-0 flex-1">
-                    <div className="line-clamp-2 break-keep text-[11px] leading-tight text-white/85">{it.name}</div>
-                    <div className="text-[11px] font-bold tabular-nums text-white">
+                    <div className="line-clamp-2 break-keep text-[12px] leading-tight text-white/85">{it.name}</div>
+                    <div className="text-[12px] font-bold tabular-nums text-white">
                       +{it.enhanceLevel}
                       <TranscendTag level={it.transcendLevel} className="ml-1" />
                     </div>

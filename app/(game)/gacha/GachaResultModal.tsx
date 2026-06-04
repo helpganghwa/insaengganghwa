@@ -60,7 +60,7 @@ function ResultCard({
 
   const st = transcendStyle(shown);
   const grade = `rgb(${st.colorRgb.join(',')})`;
-  const spriteSize = big ? 60 : 48;
+  const spriteSize = big ? 76 : 48;
 
   return (
     <button
@@ -95,7 +95,7 @@ function ResultCard({
       </span>
       <span
         className={`line-clamp-2 break-keep px-0.5 leading-tight text-zinc-600 dark:text-zinc-400 ${
-          big ? 'text-[11px] font-medium' : 'text-[9px]'
+          big ? 'text-[13px] font-medium' : 'text-[9px]'
         }`}
       >
         {r.name}
@@ -103,7 +103,7 @@ function ResultCard({
       {shown > 0 ? (
         <span
           key={`p${stepKey}`}
-          className={`font-semibold tabular-nums ${big ? 'text-[11px]' : 'text-[9px]'}`}
+          className={`font-semibold tabular-nums ${big ? 'text-[13px]' : 'text-[9px]'}`}
           style={{
             color: grade,
             animation: stepKey > 0 ? 'gacha-transcend-tick 360ms ease-out' : undefined,

@@ -89,8 +89,10 @@ export function BattlePassClient({
 
   return (
     <div className="pb-6">
-      {/* ① 상단 이미지 배너 — 배틀패스 + 현재 패스 */}
-      <div className="relative h-28 overflow-hidden">
+      {/* 상단 sticky 헤더 — 이미지 배너 + 패스 토글 + 한번에 받기 (배너 포함 sticky) */}
+      <div className="sticky top-0 z-30">
+      {/* 이미지 배너 — 배틀패스 + 현재 패스 */}
+      <div className="relative h-20 overflow-hidden">
         {/* eslint-disable-next-line @next/next/no-img-element */}
         <img
           src={assetUrl('/sprites/hub/battlepass.png')}
@@ -108,8 +110,8 @@ export function BattlePassClient({
         </div>
       </div>
 
-      {/* ③ 스티키 — 패스 토글 + ④ 한번에 받기(무료+프리미엄) */}
-      <div className="sticky top-0 z-20 border-b border-zinc-200 bg-white/95 px-4 py-2 backdrop-blur dark:border-zinc-800 dark:bg-zinc-950/95">
+      {/* 패스 토글 + 한번에 받기(무료+프리미엄) */}
+      <div className="border-b border-zinc-200 bg-white/95 px-4 py-2 backdrop-blur dark:border-zinc-800 dark:bg-zinc-950/95">
         <div className="flex items-center gap-2">
           <div className="flex flex-1 gap-1 rounded-full bg-zinc-100 p-1 dark:bg-zinc-900">
             <button type="button" className={passTb(tab === 'enhance')} onClick={() => setTab('enhance')}>
@@ -134,10 +136,12 @@ export function BattlePassClient({
           </p>
         ) : null}
       </div>
+      </div>
+      {/* /상단 sticky 헤더 */}
 
       <div className="flex gap-2 px-4 pt-3">
-        {/* ⑤ 구간(티어) 필터 — 좌측 */}
-        <aside className="sticky top-14 flex shrink-0 flex-col gap-1.5 self-start">
+        {/* ⑤ 구간(티어) 필터 — 좌측. sticky 헤더(배너 h-20 + 토글) 아래에 고정. */}
+        <aside className="sticky top-[128px] flex shrink-0 flex-col gap-1.5 self-start">
           {view.segments.map((s) => {
             const [a, b] = segShort(s);
             const active = s.index === seg.index;
