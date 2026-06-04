@@ -54,3 +54,25 @@ export async function claimPremiumAction(type: BattlePassType) {
     return err('UNKNOWN');
   }
 }
+
+/** 무료 + 프리미엄 한 번에 수령. 각 라인은 받을 게 없으면 건너뜀(둘 다 없으면 에러). */
+export async function claimAllAction(type: BattlePassType) {
+  const u = await getSessionUserId();
+  if (!u) return err('UNAUTHENTICATED');
+  if (await rateLimited(u, 'battlepass')) return err('RATE_LIMITED');
+  const rewardKind = type === 'enhance' ? ('diamond' as const) : ('box' as const);
+  let granted = 0;
+  for (const claim of [claimFree, claimPremium]) {
+    try {
+      const r = await claim(u, type);
+      granted += r.granted;
+    } catch (e) {
+      if (e instanceof BattlePassErr && e.code === 'NOTHING_TO_CLAIM') continue;
+      console.error('[battlepass.claimAll]', e);
+      return err('UNKNOWN');
+    }
+  }
+  if (granted <= 0) return err('NOTHING_TO_CLAIM');
+  revalidate();
+  return { status: 'success' as const, granted, rewardKind };
+}

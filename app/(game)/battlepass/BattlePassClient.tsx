@@ -5,15 +5,15 @@ import { useRouter } from 'next/navigation';
 
 import type { BattlePassView } from '@/lib/game/battlepass';
 import type { BattlePassType } from '@/lib/game/balance';
+import { assetUrl } from '@/lib/asset-versions';
 import { useResourceToast } from '@/components/ResourceToast';
 
-import { claimFreeAction, claimPremiumAction } from './actions';
+import { claimAllAction } from './actions';
 
 const won = (n: number) => `₩${n.toLocaleString('ko-KR')}`;
 
 type CellState = 'claimed' | 'claimable' | 'locked' | 'disabled';
 
-/** 한 단계의 보상 칸 — 달성/수령/잠금/미구매 상태별 색. */
 function TierCell({ icon, amount, state }: { icon: string; amount: number; state: CellState }) {
   const cls =
     state === 'claimable'
@@ -45,10 +45,9 @@ export function BattlePassClient({
   const view = tab === 'enhance' ? enhance : transcend;
   const icon = view.rewardKind === 'diamond' ? '💎' : '📦';
   const unit = view.rewardKind === 'diamond' ? '' : '개';
-  const reachedLabel = tab === 'enhance' ? `+${view.maxReached}` : `T${view.maxReached}`;
   const premiumClaimable = view.segments.reduce((a, s) => a + s.premiumClaimable, 0);
+  const totalClaimable = view.free.claimable + premiumClaimable;
 
-  // 선택 구간 — 기본은 현재(최고) 구간. 패스 전환 시 재설정.
   const [selIdx, setSelIdx] = useState(view.segments.length - 1);
   useEffect(() => {
     setSelIdx(view.segments.length - 1);
@@ -60,22 +59,21 @@ export function BattlePassClient({
   const [error, setError] = useState<string | null>(null);
   const { showHeaderToast } = useResourceToast();
 
-  const run = (fn: () => Promise<{ status: string; message?: string; granted?: number }>) =>
+  const claimAll = () =>
     startTransition(async () => {
       setError(null);
-      const r = await fn();
+      const r = await claimAllAction(tab);
       if (r.status === 'error') setError(r.message ?? '오류');
       else if (typeof r.granted === 'number' && r.granted > 0)
         showHeaderToast({ title: '배틀패스 보상', rewards: [{ icon, amount: r.granted }] });
       router.refresh();
     });
 
-  const tb = (active: boolean) =>
-    `flex-1 rounded-full py-2 text-sm font-semibold ${
+  const passTb = (active: boolean) =>
+    `flex-1 rounded-full py-1.5 text-[13px] font-semibold ${
       active ? 'bg-zinc-900 text-white dark:bg-zinc-50 dark:text-zinc-950' : 'text-zinc-500'
     }`;
 
-  // 선택 구간 단계 목록.
   const levels: number[] = [];
   for (let l = seg.startLevel; l <= seg.endLevel; l++) levels.push(l);
   const lvLabel = (l: number) => (tab === 'enhance' ? `+${l}` : `T${l}`);
@@ -90,50 +88,56 @@ export function BattlePassClient({
   };
 
   return (
-    <div className="px-4 py-4">
-      {/* ④ 강화/초월 패스 필터 — 상단 */}
-      <div className="flex gap-1.5 rounded-full bg-zinc-100 p-1 dark:bg-zinc-900">
-        <button type="button" className={tb(tab === 'enhance')} onClick={() => setTab('enhance')}>
-          강화 패스
-        </button>
-        <button type="button" className={tb(tab === 'transcend')} onClick={() => setTab('transcend')}>
-          초월 패스
-        </button>
-      </div>
-
-      <div className="mt-3 flex items-center justify-between px-1">
-        <span className="text-xs text-zinc-500">
-          최고 도달 <span className="text-sm font-bold tabular-nums text-zinc-800 dark:text-zinc-100">{reachedLabel}</span>
-        </span>
-        <div className="flex gap-1.5">
-          <button
-            type="button"
-            disabled={pending || view.free.claimable <= 0}
-            onClick={() => run(() => claimFreeAction(tab))}
-            className="rounded-full bg-amber-500 px-3 py-1.5 text-[11px] font-bold text-amber-950 disabled:opacity-40"
-          >
-            무료 받기{view.free.claimable > 0 ? ` ${icon}${view.free.claimable.toLocaleString('ko-KR')}${unit}` : ''}
-          </button>
-          <button
-            type="button"
-            disabled={pending || premiumClaimable <= 0}
-            onClick={() => run(() => claimPremiumAction(tab))}
-            className="rounded-full bg-gradient-to-r from-amber-500 to-orange-500 px-3 py-1.5 text-[11px] font-bold text-amber-950 disabled:opacity-40"
-          >
-            프리미엄{premiumClaimable > 0 ? ` ${icon}${premiumClaimable.toLocaleString('ko-KR')}${unit}` : ''}
-          </button>
+    <div className="pb-6">
+      {/* ① 상단 이미지 배너 — 배틀패스 + 현재 패스 */}
+      <div className="relative h-28 overflow-hidden">
+        {/* eslint-disable-next-line @next/next/no-img-element */}
+        <img
+          src={assetUrl('/sprites/hub/battlepass.png')}
+          alt=""
+          aria-hidden
+          className="absolute inset-0 h-full w-full object-cover"
+          style={{ imageRendering: 'pixelated' }}
+        />
+        <div className="pointer-events-none absolute inset-0 bg-gradient-to-b from-black/45 via-black/35 to-black/70" />
+        <div className="relative z-10 flex h-full flex-col items-center justify-center gap-0.5">
+          <h1 className="text-lg font-extrabold text-white text-pixel-outline">배틀패스</h1>
+          <p className="text-[11px] font-bold text-amber-200 text-pixel-outline">
+            {tab === 'enhance' ? '강화 패스' : '초월 패스'}
+          </p>
         </div>
       </div>
 
-      {error ? (
-        <p className="mt-2 rounded bg-red-50 px-2 py-1 text-[11px] text-red-700 dark:bg-red-950/60 dark:text-red-300">
-          {error}
-        </p>
-      ) : null}
+      {/* ③ 스티키 — 패스 토글 + ④ 한번에 받기(무료+프리미엄) */}
+      <div className="sticky top-0 z-20 border-b border-zinc-200 bg-white/95 px-4 py-2 backdrop-blur dark:border-zinc-800 dark:bg-zinc-950/95">
+        <div className="flex items-center gap-2">
+          <div className="flex flex-1 gap-1 rounded-full bg-zinc-100 p-1 dark:bg-zinc-900">
+            <button type="button" className={passTb(tab === 'enhance')} onClick={() => setTab('enhance')}>
+              강화 패스
+            </button>
+            <button type="button" className={passTb(tab === 'transcend')} onClick={() => setTab('transcend')}>
+              초월 패스
+            </button>
+          </div>
+          <button
+            type="button"
+            disabled={pending || totalClaimable <= 0}
+            onClick={claimAll}
+            className="shrink-0 rounded-full bg-gradient-to-r from-amber-500 to-orange-500 px-3.5 py-2 text-[12px] font-bold text-amber-950 disabled:opacity-40"
+          >
+            한번에 받기{totalClaimable > 0 ? ` ${icon}${totalClaimable.toLocaleString('ko-KR')}${unit}` : ''}
+          </button>
+        </div>
+        {error ? (
+          <p className="mt-1.5 rounded bg-red-50 px-2 py-1 text-[11px] text-red-700 dark:bg-red-950/60 dark:text-red-300">
+            {error}
+          </p>
+        ) : null}
+      </div>
 
-      <div className="mt-3 flex gap-2">
-        {/* ⑤ 티어(구간) 필터 — 좌측, sticky */}
-        <aside className="sticky top-2 flex shrink-0 flex-col gap-1.5 self-start">
+      <div className="flex gap-2 px-4 pt-3">
+        {/* ⑤ 구간(티어) 필터 — 좌측 */}
+        <aside className="sticky top-14 flex shrink-0 flex-col gap-1.5 self-start">
           {view.segments.map((s) => {
             const [a, b] = segShort(s);
             const active = s.index === seg.index;
@@ -155,9 +159,8 @@ export function BattlePassClient({
           })}
         </aside>
 
-        {/* 선택 구간 티어 트랙 — 전체 스크롤(내부 스크롤 없음) */}
+        {/* 선택 구간 티어 트랙 — 전체 스크롤 */}
         <div className="min-w-0 flex-1">
-          {/* 프리미엄 구매 상태(범위/도달 텍스트 없음) */}
           <div className="mb-2">
             {seg.purchased ? (
               <span className="inline-block rounded-full bg-amber-100 px-2.5 py-1 text-[10px] font-bold text-amber-700 dark:bg-amber-950/40 dark:text-amber-300">
@@ -197,9 +200,10 @@ export function BattlePassClient({
         </div>
       </div>
 
-      <p className="px-1 pt-3 text-[11px] leading-relaxed text-zinc-400">
-        성장 패스는 만료가 없습니다. 단계별 달성 현황이 표시되며, 보상은 상단 버튼으로 한 번에
-        수령합니다. 프리미엄은 구간 구매 시 이미 넘긴 단계까지 소급 지급됩니다. (결제 준비 중)
+      <p className="px-4 pt-3 text-[11px] leading-relaxed text-zinc-400">
+        성장 패스는 만료가 없습니다. 단계별 달성 현황이 표시되며, 보상은 상단 '한번에 받기'로
+        무료·프리미엄을 모두 수령합니다. 프리미엄은 구간 구매 시 이미 넘긴 단계까지 소급 지급됩니다.
+        (결제 준비 중)
       </p>
     </div>
   );
