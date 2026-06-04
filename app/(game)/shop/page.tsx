@@ -1,12 +1,9 @@
-import Link from 'next/link';
 import { eq } from 'drizzle-orm';
 
 import { getSessionUserId } from '@/lib/auth/session';
 import { db } from '@/lib/db/client';
 import { withTimeout } from '@/lib/db/with-timeout';
 import { profiles } from '@/lib/db/schema/profiles';
-import { formatCompactKR } from '@/lib/ui/format-number';
-import { INVITE_DIAMOND_PER_REFERRAL, INVITE_BOX_PER_REFERRAL } from '@/lib/game/referral/stats';
 
 /**
  * 상점 — WIREFRAMES §8. 단일 프리미엄 재화(다이아) 충전 + 무료 획득(공유).
@@ -47,26 +44,9 @@ export default async function ShopPage() {
     <div className="space-y-5 px-4 py-4">
       <header className="flex items-baseline gap-2">
         <span className="ml-auto font-mono text-sm tabular-nums text-zinc-600 dark:text-zinc-300">
-          보유 💎 {formatCompactKR(diamond)}
+          보유 💎 {diamond.toLocaleString('ko-KR')}
         </span>
       </header>
-
-      {/* 무료 획득 — 친구 초대 보상(광고 보상 v1 미도입) */}
-      <section className="space-y-2">
-        <h2 className="px-1 text-xs font-semibold text-zinc-500">무료로 받기</h2>
-        <Link
-          href="/me"
-          className="flex items-center justify-between rounded-xl border border-zinc-200 px-3 py-3 dark:border-zinc-800"
-        >
-          <span className="flex flex-col">
-            <span className="text-sm font-semibold">🔗 친구 초대 보상</span>
-            <span className="text-[11px] text-zinc-500">
-              친구가 가입하면 💎 {INVITE_DIAMOND_PER_REFERRAL} + 보급상자 {INVITE_BOX_PER_REFERRAL}개
-            </span>
-          </span>
-          <span className="text-zinc-400">→</span>
-        </Link>
-      </section>
 
       {/* 다이아 충전 — 결제 백엔드 연동 전(준비 중) */}
       <section className="space-y-2">
@@ -89,10 +69,10 @@ export default async function ShopPage() {
                 <span className="text-2xl">💎</span>
                 <div className="min-w-0 flex-1">
                   <div className="flex items-center gap-1.5 text-sm font-semibold tabular-nums">
-                    {formatCompactKR(total)}
+                    {total.toLocaleString('ko-KR')}
                     {pkg.bonus > 0 ? (
                       <span className="text-[11px] font-medium text-emerald-600 dark:text-emerald-400">
-                        (+{formatCompactKR(pkg.bonus)} 보너스)
+                        (+{pkg.bonus.toLocaleString('ko-KR')} 보너스)
                       </span>
                     ) : null}
                     {pkg.tag ? (
