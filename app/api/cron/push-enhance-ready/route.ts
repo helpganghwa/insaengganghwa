@@ -68,7 +68,7 @@ export async function GET(req: Request) {
       update enhancement_jobs
       set push_sent = true
       where id in (select id from target)
-      returning id, user_id, from_level, target_level, equipment_instance_id, slot, slot_lane
+      returning id, user_id, from_level, target_level, user_equipment_id, slot, slot_lane
     )
     select u.id::text as job_id,
            u.user_id::text as user_id,
@@ -78,8 +78,8 @@ export async function GET(req: Request) {
            u.slot_lane as slot_lane,
            ci.name as item_ko
     from updated u
-    join equipment_instances ei on ei.id = u.equipment_instance_id
-    join catalog_items ci on ci.id = ei.catalog_item_id
+    join user_equipment ue on ue.id = u.user_equipment_id
+    join catalog_items ci on ci.id = ue.catalog_item_id
   `)) as unknown as ReadyRow[];
 
   if (claimed.length === 0) {
