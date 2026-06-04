@@ -41,6 +41,10 @@
     {
       "path": "/api/cron/melee-reveal",
       "schedule": "0 1 * * *"
+    },
+    {
+      "path": "/api/cron/melee-trophy",
+      "schedule": "*/3 0-2 * * *"
     }
   ]
 }

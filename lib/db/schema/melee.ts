@@ -60,6 +60,18 @@ export const meleeBattles = pgTable('melee_battles', {
   computedAt: timestamp('computed_at', { withTimezone: true }),
   revealedAt: timestamp('revealed_at', { withTimezone: true }),
   createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
+
+  // ── 우승 트로피 아바타 자동 생성 파이프라인(MELEE §우승컵) ──
+  /** null=미시작 / 'generating'=생성·폴링 중 / 'done'(우편 발송 완료) / 'failed'(상한 초과). */
+  trophyStatus: text('trophy_status'),
+  /** 현재 시도의 pixellab 캐릭터 id(생성 결과). */
+  trophyCharId: text('trophy_char_id'),
+  /** 포즈 태그(onehand/chest 등). */
+  trophyPose: text('trophy_pose'),
+  /** 생성 시도 횟수 — 재시도 상한(생성 실패/AI 미통과 시 재생성). */
+  trophyAttempts: integer('trophy_attempts').notNull().default(0),
+  /** 마지막 트로피 상태 전이 시각 — 'generating' 타임아웃 판정용. */
+  trophyUpdatedAt: timestamp('trophy_updated_at', { withTimezone: true }),
 });
 
 /** §13.2 melee_participants — 참가자×배틀 1행(로스터=결과 통합). */
