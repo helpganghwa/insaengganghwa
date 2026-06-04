@@ -13,7 +13,6 @@ import {
   transcendBonusBp,
   enhanceBasePower,
   pieceCombatPower,
-  DIAMOND_PER_DISENCHANT,
   RAID_OPEN_COST_DIAMOND,
   RAID_MAX_PARTICIPANTS,
   RAID_MAX_CONCURRENT_PER_USER,
@@ -102,12 +101,12 @@ export default function ProbabilityPage() {
 
       <Sec n="2" title="초월">
         <P>
-          초월은 같은 종류 장비를 제물로 소모해 전투력 배수를 올립니다. <b>상한 없이 무한
-          진행</b>되며, T단계 달성에 제물 <b>T개</b>가 필요합니다(선형). 제물은 강화·초월 레벨과
-          무관합니다. 전투력 보너스는 T{MAX_TRANSCEND}에서 +100%이고, T{MAX_TRANSCEND + 1}부터
-          레벨당 +10%p씩 증가합니다.
+          초월은 보급 상자로 <b>같은 카탈로그 아이템 중복</b>을 모으면 <b>자동 진행</b>됩니다.
+          T단계 달성에 중복 <b>T개</b>가 필요하고(선형), <b>상한 없이 무한 진행</b>됩니다. 전투력
+          보너스는 T{MAX_TRANSCEND}에서 +100%이고, T{MAX_TRANSCEND + 1}부터 레벨당 +10%p씩
+          증가합니다.
         </P>
-        <Table head={['초월', '필요 제물', '누적 제물', '전투력 보너스']}>
+        <Table head={['초월', '필요 중복', '누적 중복', '전투력 보너스']}>
           {TRANSCEND_SAMPLES.map((t) => (
             <tr key={t} className="border-t border-zinc-100 dark:border-zinc-900">
               <Td>T{t}</Td>
@@ -141,7 +140,7 @@ export default function ProbabilityPage() {
           활성 종류 수는 게임 내에 표기됩니다.
         </P>
         <P>
-          분해 시 강화·초월 레벨과 무관하게 다이아 {DIAMOND_PER_DISENCHANT}개 고정 지급.
+          미보유 카탈로그면 획득(도감 해금), 보유 중이면 그 카탈로그 초월 진행도로 누적됩니다.
           (보급 열기 자체에는 확률형 보상 없음 — 균등 당첨 외 추가 추첨 없음.)
         </P>
       </Sec>

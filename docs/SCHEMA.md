@@ -44,39 +44,29 @@
 
 - 박스 열기 확률 = `1 / (slot별 active 카탈로그 수)` 균등 — 코드 규칙(고정 수치 아님, BALANCE §4.2)
 
-### 2.2 equipment_instances (장비 개체)
+### 2.2 user_equipment (보유 장비 — 카탈로그당 1레코드)
+
+유저가 보유한 카탈로그 아이템 1종당 1행. 같은 카탈로그 중복 획득(박스)은 별도 보관되지 않고
+`transcend_progress`로 누적 → 임계 도달 시 **자동 초월**(§4).
 
 | 컬럼 | 타입 | 비고 |
 |------|------|------|
-| `id` | bigserial PK | 개체 고유 |
-| `user_id` | uuid FK→profiles | |
-| `catalog_item_id` | int FK→catalog_items | 초월/+100 제물 동일성 = 이 값 일치 |
-| `enhance_level` | int NOT NULL default 0 | 강화 레벨(무제한, 하한 0) |
-| `transcend_level` | int NOT NULL default 0 | 0..10 (BALANCE §2) |
-| `equipped_slot` | enum(slot) null | 장착 시 해당 슬롯, 미장착 null |
-| `acquired_at` | timestamptz default now() | |
-
-- **부분 UNIQUE**: `(user_id, equipped_slot) WHERE equipped_slot IS NOT NULL` — 슬롯당 1개 장착
-- 인덱스: `(user_id, catalog_item_id)` — 제물 후보/중복 조회 / `(user_id, equipped_slot)`
-- 등급·옵션·seed·전투력 컬럼 **없음**. 전투력은 `(enhance_level, transcend_level)`로 런타임 계산(BALANCE §3)
-
-### 2.3 user_codex (도감 — 아이템별 챔피언 랭킹·수집 진척)
-
-| 컬럼 | 타입 | 비고 |
-|------|------|------|
+| `id` | bigserial PK | |
 | `user_id` | uuid FK→profiles | |
 | `catalog_item_id` | int FK→catalog_items | |
-| `max_enhance_level` | int NOT NULL default 0 | 해당 아이템 역대 최고 강화 |
-| `max_enhance_reached_at` | timestamptz NOT NULL default now() | 현재 `max_enhance_level`을 **최초 달성한 시각** — 아이템별 랭킹 동률 타이브레이크 |
-| `max_transcend_level` | int NOT NULL default 0 | 해당 아이템 역대 최고 초월(강화와 대칭, lifetime) |
-| `max_transcend_reached_at` | timestamptz NOT NULL default now() | 현재 `max_transcend_level`을 **최초 달성한 시각** — 초월 챔피언 랭킹 동률 타이브레이크 |
-| `first_acquired_at` | timestamptz | 도감 해금(미획득=row 없음) |
+| `enhance_level` | int NOT NULL default 0 | 강화 레벨(무제한, 하한 0) |
+| `transcend_level` | int NOT NULL default 0 | 초월 레벨(무제한, 하한 0, BALANCE §2) |
+| `transcend_progress` | int NOT NULL default 0 | 다음 초월까지 누적 중복(선형 T→T+1 = T+1개) |
+| `max_enhance_level` / `max_enhance_reached_at` | int / timestamptz | 역대 최고 강화(lifetime) + 최초 달성 시각 |
+| `max_transcend_level` / `max_transcend_reached_at` | int / timestamptz | 역대 최고 초월(lifetime) + 최초 달성 시각 |
+| `equipped_slot` | enum(slot) null | 장착 시 해당 슬롯, 미장착 null |
+| `first_acquired_at` | timestamptz default now() | 도감 해금(획득) 시각 |
 
-- PK `(user_id, catalog_item_id)`
-- `user_codex`(lifetime)는 **아이템별 챔피언 랭킹**(BALANCE §3.3) · 도감 수집 진척 · **배틀패스 '최고 도달' 입력** 전용. 전역 랭킹 3종(최고·합산·전투력)과 총 전투력은 모두 **현재 보유 인스턴스**(equipment_instances) 기준이라 lifetime과 분리(하락·분해 즉시 반영, BALANCE §3.2/3.3)
-- 강화 완료 트랜잭션에서 `GREATEST(max_enhance_level, 신규레벨)` upsert. **신규레벨 > 기존 max**일 때만 `max_enhance_reached_at = now()` 동시 갱신(달성 시각 = 그 기록을 처음 세운 때, 이후 하락·재달성과 무관). 신규 row insert 시 default `now()`. **초월 완료 트랜잭션도 `max_transcend_level`을 동일 패턴으로 갱신**(대칭).
-- **계정 '최고 도달'**(배틀패스 진행 기준) = `MAX(max_enhance_level)` / `MAX(max_transcend_level)`. 단조(분해·제물 소모·하락과 무관) — `lib/game/codex/max-reached.ts`.
-- **아이템별 랭킹/챔피언**: catalog_item 단위로 `max_enhance_level` DESC, `max_enhance_reached_at` ASC, `user_id` ASC 정렬 → Top10. 1위 = 그 아이템 **챔피언**(단, `max_enhance_level > 0`). 결정적 정렬 — 확률 없음(BALANCE §3.3)
+- **UNIQUE** `(user_id, catalog_item_id)` — 카탈로그당 1레코드. 부분 인덱스 `(user_id, equipped_slot) WHERE equipped_slot IS NOT NULL`
+- 등급·옵션·seed·전투력 컬럼 **없음**. 전투력은 `(enhance_level, transcend_level)`로 런타임 계산(BALANCE §3)
+- **계정 '최고 도달'**(배틀패스 진행 기준) = `MAX(max_enhance_level)` / `MAX(max_transcend_level)`. 강화 완료 시 `GREATEST(max_enhance_level, 신규)` upsert(신규>기존일 때만 `reached_at=now()`), 자동 초월도 동일 패턴. 단조(강화 하락과 무관) — `lib/game/codex/max-reached.ts`.
+- **아이템별 랭킹/챔피언**: catalog_item 단위 `max_enhance_level` DESC, `max_enhance_reached_at` ASC, `user_id` ASC → Top10. 1위 = 챔피언(`max_enhance_level > 0`). 결정적·확률 없음(BALANCE §3.3).
+- 전역 랭킹 3종(최고·합산·전투력)·총 전투력은 현재 레코드의 `enhance_level`/전투력 기준(강화 하락 즉시 반영) — lifetime(max_*)과 분리.
 
 ---
 
@@ -88,7 +78,7 @@
 |------|------|------|
 | `id` | bigserial PK | |
 | `user_id` | uuid FK→profiles | |
-| `equipment_instance_id` | bigint FK→equipment_instances | |
+| `user_equipment_id` | bigint FK→user_equipment | 강화 대상 |
 | `slot` | enum(slot) NOT NULL | lane 그룹 키 |
 | `slot_lane` | smallint NOT NULL | 1\|2 — 부위당 2 lane(GDD §3.2) |
 | `from_level` / `target_level` | int | target = from+1 |
@@ -97,11 +87,10 @@
 | `started_at` | timestamptz default now() | |
 | `complete_at` | timestamptz NOT NULL | 단축 시 갱신. 완료 판정 = `now() >= complete_at` |
 | `total_reduced_ms` | bigint default 0 | 보석 단축 누적 |
-| `fodder_instance_id` | bigint null FK | target ≥ +100 시 소모 제물 1개체(BALANCE §1.1) |
 | `status` | enum(`running`,`completed`,`cancelled`) default `running` | 조건부 전이 |
 | `created_at` | timestamptz default now() | |
 
-- **부분 UNIQUE** `(user_id, slot, slot_lane) WHERE status='running'` → lane 점유(SLOT_BUSY). 추가 `(equipment_instance_id) WHERE status='running'` 중복 큐 차단
+- **부분 UNIQUE** `(user_id, slot, slot_lane) WHERE status='running'` → lane 점유(SLOT_BUSY). 추가 `(user_equipment_id) WHERE status='running'` 중복 큐 차단
 - 인덱스 `(status, complete_at)` — lazy/cron 정산. `(user_id, status)`
 - 환산률·base_rate **등록 시점 스냅샷 영구**(소급 금지, CLAUDE §6.3)
 - (A)등록→(B)완료(`for update`+`status='running'`조건부→`completed`)→(C)단축→(D)취소→(D+A)교체 단일 tx
@@ -111,12 +100,11 @@
 | 컬럼 | 타입 | 비고 |
 |------|------|------|
 | `id` | bigserial PK | |
-| `user_id`·`equipment_instance_id`·`catalog_item_id` | FK | |
+| `user_id`·`user_equipment_id`·`catalog_item_id` | FK | |
 | `from_level`·`to_level` | int | 결과 반영 |
-| `result` | enum(`success`,`hold`,`down`) | 성공+1 / 유지 / −1 하락 (파괴 없음) |
+| `result` | enum(`success`,`hold`,`down`,`mega`) | 성공+1 / 메가+2 / 유지 / −1 하락 (파괴 없음) |
 | `base_rate_bp`·`effective_rate_bp` | int | 공시값 / 실제(base×경과÷총, BALANCE §1.2) |
 | `elapsed_ms`·`duration_ms`·`reduced_ms` | bigint | |
-| `fodder_instance_id` | bigint null | +100 제물 |
 | `rng_seed`·`rolled` | text/int | 사후 검증(클라 변조 불가) |
 | `created_at` | timestamptz | = 완료 판정 시각 |
 
@@ -137,23 +125,23 @@
 
 ---
 
-## 4. 초월 (즉시·무RNG)
+## 4. 초월 (자동·무RNG)
 
-`equipment_instances.transcend_level` 직접 증가 + 제물 개체 **영구 삭제** + 로그 = 단일 tx(CLAUDE §3.3).
+박스로 같은 카탈로그 중복 획득 시 `user_equipment.transcend_progress` 누적 → 임계(선형 T→T+1 =
+T+1개) 도달 시 **자동으로** `transcend_level +1`(다중 가능) + `max_transcend_level` 갱신 + 로그 =
+박스 열기 단일 tx(CLAUDE §3.3). 상한 없음.
 
 ### 4.1 transcend_logs (append-only)
 
 | 컬럼 | 타입 | 비고 |
 |------|------|------|
 | `id` | bigserial PK | |
-| `user_id`·`equipment_instance_id`·`catalog_item_id` | FK | 대상 |
-| `from_t`·`to_t` | smallint | to = from+1, ≤10 |
-| `fodder_count` | int | 해당 단계 제물 수(BALANCE §2.1) |
-| `fodder_instance_ids` | bigint[] | 소모(삭제)된 개체 id 기록 |
+| `user_id`·`user_equipment_id`·`catalog_item_id` | FK | 대상 |
+| `from_t`·`to_t` | int | to = from+1 |
+| `fodder_count` | int | 해당 단계 소모 중복 수 = to_t(BALANCE §2.1) |
 | `created_at` | timestamptz | |
 
-- 제물 조건: `catalog_item_id` 일치 + 미장착 + 비강화중 개체(강화/초월 레벨 무관, +0 가능)
-- `transcend_level` 상한 10 — CHECK 제약 `transcend_level BETWEEN 0 AND 10`
+- 자동 초월 1단계당 1행. 박스 1개로 여러 단계 동시 발동 시 단계별 다행.
 
 ---
 
@@ -167,7 +155,7 @@
 | `slot` | enum(slot) | PK 일부 — 무기/방어구/장신구 |
 | `count` | bigint NOT NULL default 0 | 보유 미열기 수 |
 
-- PK `(user_id, slot)`. 열기 = count−1 + 장비 개체 생성 + 보석 드롭(20%→1~3) + 로그, 단일 tx
+- PK `(user_id, slot)`. 열기 = count−1 + 카탈로그 획득 or `transcend_progress+1`(자동초월) + 로그, 단일 tx
 
 ### 5.2 supply_open_logs (append-only 감사·공시 정합)
 
@@ -177,19 +165,7 @@
 | `user_id` FK · `slot` | | |
 | `catalog_item_id` | int FK | 균등 추첨 결과(BALANCE §4.2) |
 | `is_new` | boolean | 도감 신규 해금 여부 |
-| `gem_drop` | smallint | 0~3 (20% 확률, BALANCE §4.3) |
 | `created_at` | timestamptz | |
-
-### 5.3 disenchant_logs
-
-| 컬럼 | 타입 | 비고 |
-|------|------|------|
-| `id` | bigserial PK | |
-| `user_id`·`catalog_item_id`·`equipment_instance_id` | | 개체 영구 삭제 |
-| `diamond_granted` | bigint | 고정 2(BALANCE §4.4), 강화/초월 무관 |
-| `created_at` | timestamptz | |
-
-- 분해 = 개체 DELETE + diamond += 고정값 + 로그, 단일 tx (장착·강화중·제물중 개체 불가)
 
 ---
 

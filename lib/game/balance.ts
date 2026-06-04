@@ -314,9 +314,6 @@ export function supplyItemProbability(slotActiveCatalogCount: number): number {
   return 1 / slotActiveCatalogCount;
 }
 
-/** §4.3 분해 보상 = 고정 다이아 (강화·초월 레벨 무관). 보급 열기 보석 드롭 폐기(확률형 제거). */
-export const DIAMOND_PER_DISENCHANT = 10;
-
 // ─────────────────────────────────────────────────────────────────────────────
 // §5. 레이드 (플레이어 호스팅 co-op)
 // ─────────────────────────────────────────────────────────────────────────────
