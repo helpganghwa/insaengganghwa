@@ -60,7 +60,7 @@ function ResultCard({
 
   const st = transcendStyle(shown);
   const grade = `rgb(${st.colorRgb.join(',')})`;
-  const spriteSize = big ? 88 : 48;
+  const spriteSize = big ? 60 : 48;
 
   return (
     <button
@@ -68,8 +68,8 @@ function ResultCard({
       onClick={onClick}
       title={r.name}
       style={{ ...rarityBorderStyle(shown), transition: 'border-color 400ms ease-out' }}
-      className={`relative flex flex-col items-center justify-center overflow-hidden rounded-xl border-2 bg-white text-center dark:bg-zinc-950 ${
-        big ? 'w-full gap-2 px-3 py-4' : 'aspect-square gap-0.5 px-1'
+      className={`relative flex aspect-square flex-col items-center justify-center gap-0.5 overflow-hidden rounded-xl border-2 bg-white px-1 text-center dark:bg-zinc-950 ${
+        big ? 'w-full' : ''
       } ${hasRarityBorder(shown) ? '' : 'border-zinc-200 dark:border-zinc-800'}`}
     >
       <RarityFrame level={shown} />
@@ -95,7 +95,7 @@ function ResultCard({
       </span>
       <span
         className={`line-clamp-2 break-keep px-0.5 leading-tight text-zinc-600 dark:text-zinc-400 ${
-          big ? 'text-sm font-medium' : 'text-[9px]'
+          big ? 'text-[11px] font-medium' : 'text-[9px]'
         }`}
       >
         {r.name}
@@ -103,7 +103,7 @@ function ResultCard({
       {shown > 0 ? (
         <span
           key={`p${stepKey}`}
-          className={`font-semibold tabular-nums ${big ? 'text-[13px]' : 'text-[9px]'}`}
+          className={`font-semibold tabular-nums ${big ? 'text-[11px]' : 'text-[9px]'}`}
           style={{
             color: grade,
             animation: stepKey > 0 ? 'gacha-transcend-tick 360ms ease-out' : undefined,
@@ -160,7 +160,7 @@ export function GachaResultModal({
         <div key={resultKey} style={{ animation: 'gacha-result-swap 240ms ease-out' }}>
           {single ? (
             <div className="flex flex-col items-center text-center">
-              <div className="w-52">
+              <div className="w-36">
                 <ResultCard r={single} slot={slot} big />
               </div>
               {single.isNew && single.loreTeaser ? (
