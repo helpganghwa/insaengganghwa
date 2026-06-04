@@ -4,7 +4,7 @@ import { revalidatePath } from 'next/cache';
 
 import { getSessionUserId } from '@/lib/auth/session';
 import { rateLimited } from '@/lib/ratelimit';
-import { equipItem, unequipItem, equipBestSet, EquipError } from '@/lib/game/equipment/equip';
+import { equipItem, unequipItem, EquipError } from '@/lib/game/equipment/equip';
 
 /**
  * 인벤토리 액션 — 장착 전용(외형, 전투력·랭킹 무관 BALANCE §3.2).
@@ -49,13 +49,4 @@ export async function unequipAction(id: string) {
   await unequipItem(u, BigInt(id));
   revalidate();
   return { status: 'success' as const };
-}
-
-export async function equipBestSetAction() {
-  const u = await uid();
-  if (!u) return err('UNAUTHENTICATED');
-  if (await rateLimited(u, 'inventory')) return err('RATE_LIMITED');
-  const { slotsUpdated } = await equipBestSet(u);
-  revalidate();
-  return { status: 'success' as const, slotsUpdated };
 }

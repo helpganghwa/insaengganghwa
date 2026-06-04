@@ -1,15 +1,12 @@
 'use client';
 
 import { memo, useEffect, useMemo, useOptimistic, useState, useTransition } from 'react';
-import { useRouter } from 'next/navigation';
 
 import type { Slot } from '@/lib/db/schema/equipment';
 
 import { TranscendSprite } from '@/components/TranscendSprite';
 import { RarityFrame, rarityBorderStyle, hasRarityBorder, TranscendTag } from '@/components/RarityFrame';
-import { pieceCombatPower } from '@/lib/game/balance';
 
-import { equipBestSetAction } from './actions';
 import { EquipmentDetailSheet } from './EquipmentDetailSheet';
 
 export type InvItem = {
@@ -45,11 +42,10 @@ export function InventoryGrid({
   initialSlot?: SlotFilter;
   nickname: string;
 }) {
-  const router = useRouter();
   const [filter, setFilter] = useState<SlotFilter>(initialSlot);
   const [sortBy, setSortBy] = useState<SortBy>('enhance');
   const [openId, setOpenId] = useState<string | null>(null);
-  const [pending, startTransition] = useTransition();
+  const [, startTransition] = useTransition();
   // 낙관적 items — 최적조합 클릭 시 클라이언트에서 같은 알고리즘으로 시뮬레이션 후
   // 즉시 화면 반영. 서버 응답 + router.refresh()로 prop 새로 들어오면 자동 fallback.
   const [displayItems, setOptimisticItems] = useOptimistic(items);
@@ -148,34 +144,6 @@ export function InventoryGrid({
           <Tile key={it.id} item={it} isNew={newIds.has(it.id)} onOpen={setOpenId} />
         ))}
       </Section>
-
-      <div className="pointer-events-none fixed inset-x-0 bottom-[4.5rem] z-20">
-        <div className="mx-auto flex max-w-[390px] flex-col items-end gap-2 px-4">
-          <button
-            type="button"
-            disabled={pending}
-            onClick={() =>
-              startTransition(async () => {
-                // 낙관: 같은 알고리즘(슬롯별 pieceCombatPower 최대) 시뮬레이션 후 즉시 반영.
-                const bestBySlot = new Map<Slot, { id: string; cp: number }>();
-                for (const it of displayItems) {
-                  const cp = pieceCombatPower(it.enhanceLevel, it.transcendLevel);
-                  const cur = bestBySlot.get(it.slot);
-                  if (!cur || cp > cur.cp) bestBySlot.set(it.slot, { id: it.id, cp });
-                }
-                const bestIds = new Set([...bestBySlot.values()].map((b) => b.id));
-                setOptimisticItems(displayItems.map((it) => ({ ...it, equipped: bestIds.has(it.id) })));
-                // 장착은 외형 전용 — 랭킹 불변이라 토스트 없음(BALANCE §3.2).
-                await equipBestSetAction();
-                router.refresh();
-              })
-            }
-            className="pointer-events-auto rounded-full bg-zinc-900 px-4 py-2 text-xs font-semibold text-white shadow-lg disabled:opacity-50 dark:bg-zinc-50 dark:text-zinc-950"
-          >
-            최적조합
-          </button>
-        </div>
-      </div>
 
       {openItem ? (
         <EquipmentDetailSheet
