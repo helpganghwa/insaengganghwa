@@ -265,9 +265,9 @@ export function TranscendSprite(props: Props) {
   if (!atlasCoord(code)) return <EmojiFallback size={size} slot={slot} code={code} className={className} />;
   // 동적(캔버스+rAF) 진입 조건 — 사용자 확정(2026-05-20) 최종 매핑:
   //   챔피언 → 광택 sheen (T 무관)
-  //   T8+    → 노란빛 사전합성 블러 발광
+  //   신화    → 노란빛 사전합성 블러 발광
   //   그 외   → 정적(프레임/별만)
-  // T10의 isMax 광택은 제거 — 광택은 오직 챔피언만의 표식.
+  // isMax 광택은 제거 — 광택은 오직 챔피언만의 표식.
   const dynamic = animate && (st.hasGlow || isChampion);
   if (!dynamic) {
     return <TranscendStatic st={st} size={size} code={code} className={className} frameless={frameless} />;
@@ -308,7 +308,7 @@ function TranscendCanvas({
     const sub: 0 | 1 = (champOverride ? 1 : st.sub ?? 0) as 0 | 1;
     // ── 시각 효과 매핑(사용자 확정 2026-05-20 최종) ──
     //   showShine   : 광택 스윕(soft-light sheen). **챔피언 전용**(T 무관).
-    //   showRadiant : 노란빛 사전합성 블러 발광. T8+(st.hasGlow) 전용.
+    //   showRadiant : 노란빛 사전합성 블러 발광. 신화 등급(st.hasGlow) 전용.
     //   showGlow    : 라디얼 글로우. 미사용(false).
     //   showFrame   : 등급 프레임. T1+에서 표시(기존 그대로).
     const showGlow = false;
@@ -325,7 +325,7 @@ function TranscendCanvas({
     // sprite 노출 크기 — TranscendStatic의 sw 비율과 동기화.
     const SW = frameless ? FS : FS * 0.7;
     const SP = (FS - SW) / 2;
-    const t = st.tier === 'none' ? 0 : st.level / 10;
+    const t = st.tier === 'none' ? 0 : Math.min(1, st.level / 10);
     const bg = lerp([19, 19, 24], [color[0] * 0.13 + 12, color[1] * 0.13 + 12, color[2] * 0.13 + 12] as RGB, t);
     const bgFill = `rgb(${bg[0]},${bg[1]},${bg[2]})`;
 

@@ -489,7 +489,7 @@ export function EnhanceSlotCard({
           </span>
           <div className="flex min-w-0 flex-1 flex-col gap-0.5 overflow-hidden">
             {/* 1줄: 이름 — 자연 wrap(잘림 없음). 한국어는 break-keep로 단어 경계 줄바꿈.
-                초월 ≥ T1이면 이름 끝에 inline T라벨(등급 색상)로 따라붙음 — wrap 시 마지막 줄 끝. */}
+                초월 ≥ ✦1이면 이름 끝에 inline ✦라벨(등급 색상)로 따라붙음 — wrap 시 마지막 줄 끝. */}
             <div className="text-sm font-bold leading-tight break-keep">
               {activeJob.name}
               {activeJob.transcendLevel > 0 ? (
@@ -499,7 +499,7 @@ export function EnhanceSlotCard({
                     color: `rgb(${transcendStyle(activeJob.transcendLevel).colorRgb.join(',')})`,
                   }}
                 >
-                  T{activeJob.transcendLevel}
+                  ✦{activeJob.transcendLevel}
                 </span>
               ) : null}
             </div>

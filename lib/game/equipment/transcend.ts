@@ -1,13 +1,11 @@
 // 초월 시각 등급 — 단일 진실 원천 (side-effect 없음, 프레임워크 무관).
 //
-// 강화 레벨이 아니라 transcend_level(0..MAX_TRANSCEND)에 대한 *외관 등급*만 정의한다.
-// 아이템 스프라이트 자체는 전 등급 불변(GDD §3.1) — 여기서 정하는 건 프레임/글로우 연출 규칙뿐.
+// 강화 레벨이 아니라 transcend_level에 대한 *외관 등급*만 정의한다.
+// 아이템 스프라이트 자체는 전 등급 불변(GDD §3.1) — 여기서 정하는 건 프레임/별 장식 규칙뿐.
 //
-// 매핑(확정): +0 무프레임 → +1·2 일반(회) → +3·4 희귀(청) → +5·6 영웅(보)
-//             → +7·8 전설(금) → +9·10 신화(적). 색당 1단계(I)=기본 / 2단계(II)=코너 화려.
-//             글로우는 +8부터. +10 = 광택 스윕(MAX).
-
-import { MAX_TRANSCEND } from '@/lib/game/balance';
+// 색 구간(10레벨 단위): +0 무프레임 → +1~10 일반(회) → +11~20 희귀(청) → +21~30 영웅(보)
+//             → +31~40 전설(금) → +41~ 신화(적, 무한).
+// 각 색 구간 내 별 장식: 전반 5레벨(+1~+5) = 큰 별만 / 후반 5레벨(+6~+10) = 큰 별 + 위성 별 3개.
 
 export type TranscendTier = 'none' | 'normal' | 'rare' | 'heroic' | 'legend' | 'mythic';
 
@@ -17,8 +15,6 @@ export const TRANSCEND_TUNING = {
   glowEnabled: false,
   /** 배경 패널: 'tinted'=등급색 소폭 틴트 / 'none'=배경색 없음(투명) */
   panelBg: 'none' as 'tinted' | 'none',
-  /** 글로우가 처음 켜지는 transcend_level (glowEnabled=true일 때) */
-  glowFromLevel: 8,
   /** 글로우 최대 알파 (등급) / 챔피언. 낮을수록 투명 — 아이템 가독 우선.
    *  finalZ2 승인 형태(부드러운 중앙 라디얼)를 유지하되 알파만 낮춤. 헤일로/링 금지(흰띠 아티팩트). */
   glowAlpha: 0.18,
@@ -53,13 +49,13 @@ export interface TranscendStyle {
   labelKo: string;
   /** 프레임/글로우/별 리컬러 기준 RGB */
   colorRgb: readonly [number, number, number];
-  /** 색 구간 내 단계: 0 = I(기본), 1 = II(코너 화려). tier 'none'이면 null */
+  /** 색 구간 내 별 장식: 0 = 전반(+1~+5, 큰 별만), 1 = 후반(+6~+10, 큰 별+위성 3개). tier 'none'이면 null */
   sub: 0 | 1 | null;
   /** 프레임 표시 여부 (+0 = false) */
   hasFrame: boolean;
-  /** 배경 글로우 표시 여부 (+8 이상) */
+  /** 배경 글로우 표시 여부 (신화 등급) */
   hasGlow: boolean;
-  /** 최대 초월(+10) — 광택 스윕 연출 대상 */
+  /** 최상위 외관(신화 후반) — 광택 스윕 연출 대상 */
   isMax: boolean;
 }
 
@@ -74,14 +70,13 @@ const TIER_DEF: Record<Exclude<TranscendTier, 'none'>, { ko: string; rgb: readon
   mythic: { ko: '신화', rgb: [228, 64, 52] },
 };
 
-// +1부터 색당 2레벨씩: [tier, tier, ...] (index = level-1)
-const LADDER: Exclude<TranscendTier, 'none'>[] = [
-  'normal', 'normal', 'rare', 'rare', 'heroic', 'heroic', 'legend', 'legend', 'mythic', 'mythic',
-];
+/** 색 구간 = 10레벨씩 한 등급. 마지막(신화)은 +41~ 무한. */
+const TIERS: Exclude<TranscendTier, 'none'>[] = ['normal', 'rare', 'heroic', 'legend', 'mythic'];
+const LEVELS_PER_TIER = 10;
 
-/** transcend_level → 시각 등급 스타일. 범위 밖 입력은 [0, MAX_TRANSCEND]로 clamp. */
+/** transcend_level → 시각 등급 스타일. 음수만 0으로 clamp(상한 없음 — 초월 무한). */
 export function transcendStyle(rawLevel: number): TranscendStyle {
-  const level = Math.max(0, Math.min(MAX_TRANSCEND, Math.floor(rawLevel || 0)));
+  const level = Math.max(0, Math.floor(rawLevel || 0));
   if (level === 0) {
     return {
       level,
@@ -94,16 +89,18 @@ export function transcendStyle(rawLevel: number): TranscendStyle {
       isMax: false,
     };
   }
-  const tier = LADDER[level - 1];
+  const tier = TIERS[Math.min(TIERS.length - 1, Math.floor((level - 1) / LEVELS_PER_TIER))]!;
   const def = TIER_DEF[tier];
+  // 색 구간 내 위치(0..9): 전반(0~4)=큰 별만(sub 0), 후반(5~9)=큰 별+위성 3개(sub 1).
+  const sub: 0 | 1 = (level - 1) % LEVELS_PER_TIER >= LEVELS_PER_TIER / 2 ? 1 : 0;
   return {
     level,
     tier,
     labelKo: def.ko,
     colorRgb: def.rgb,
-    sub: ((level - 1) % 2) as 0 | 1,
+    sub,
     hasFrame: true,
-    hasGlow: level >= TRANSCEND_TUNING.glowFromLevel,
-    isMax: level === MAX_TRANSCEND,
+    hasGlow: tier === 'mythic',
+    isMax: tier === 'mythic' && sub === 1,
   };
 }
