@@ -12,6 +12,7 @@ import { startEnhance } from '@/app/(game)/enhance/actions';
 import { SwapPickerModal } from './SwapPickerModal';
 import { TranscendSprite } from '@/components/TranscendSprite';
 import { RarityFrame, rarityBorderStyle, hasRarityBorder } from '@/components/RarityFrame';
+import { transcendStyle } from '@/lib/game/equipment/transcend';
 import { assetUrl } from '@/lib/asset-versions';
 
 const SLOT_LABEL: Record<Slot, string> = { weapon: '무기', armor: '방어구', accessory: '장신구' };
@@ -67,6 +68,11 @@ export function EquipmentDetailSheet({
   // 착용은 외형 전용 — 전투력은 착용 무관(BALANCE §3.2)이라 아이템 자체 전투력만 표시.
   const cp = pieceCombatPower(item.enhanceLevel, item.transcendLevel);
   const canEnhance = !item.busy;
+  // 초월 등급 색 — 현재/다음 단계.
+  const [tr, tg, tb] = transcendStyle(item.transcendLevel).colorRgb;
+  const tColor = `rgb(${tr},${tg},${tb})`;
+  const [nr, ng, nb] = transcendStyle(item.transcendLevel + 1).colorRgb;
+  const tNextColor = `rgb(${nr},${ng},${nb})`;
 
   // 장착/해제는 외형 전용(랭킹 불변) — 낙관 즉시 반영 후 refresh.
   const run = (fn: () => Promise<{ status: string; message?: string }>, optimistic?: () => void) =>
@@ -135,26 +141,29 @@ export function EquipmentDetailSheet({
           </div>
         </section>
 
-        {/* 초월 진행 — 같은 종류 중복을 모으면 자동 초월. 다음 단계(✦N+1)까지 N+1개 필요. */}
-        <section className="mt-2.5 rounded-lg border border-red-200/60 bg-red-50/40 px-2.5 py-2 dark:border-red-900/40 dark:bg-red-950/20">
+        {/* 초월 진행 — 게이지·등급 표기를 현재 초월 등급 색상톤으로. */}
+        <section
+          className="mt-2.5 rounded-lg border px-2.5 py-2"
+          style={{ borderColor: `rgba(${tr},${tg},${tb},0.4)`, backgroundColor: `rgba(${tr},${tg},${tb},0.08)` }}
+        >
           <div className="mb-1 flex items-baseline justify-between text-[10px]">
-            <span className="font-semibold text-red-600 dark:text-red-400">
-              초월 ✦{item.transcendLevel} → ✦{item.transcendLevel + 1}
+            <span className="font-semibold">
+              초월 <span style={{ color: tColor }}>✦{item.transcendLevel}</span> →{' '}
+              <span style={{ color: tNextColor }}>✦{item.transcendLevel + 1}</span>
             </span>
             <span className="tabular-nums text-zinc-500">
-              {item.transcendProgress}/{item.transcendLevel + 1} · 다음까지 {item.transcendLevel + 1 - item.transcendProgress}개
+              {item.transcendProgress}/{item.transcendLevel + 1} · 다음까지{' '}
+              {item.transcendLevel + 1 - item.transcendProgress}개
             </span>
           </div>
           <div className="h-1.5 w-full overflow-hidden rounded-full bg-zinc-200 dark:bg-zinc-800">
             <div
-              className="h-full rounded-full bg-gradient-to-r from-red-500 to-amber-500"
+              className="h-full rounded-full"
               style={{
                 width: `${Math.min(100, (item.transcendProgress / (item.transcendLevel + 1)) * 100)}%`,
+                backgroundColor: tColor,
               }}
             />
-          </div>
-          <div className="mt-1 text-[10px] leading-tight text-zinc-400">
-            같은 종류 보급을 모으면 자동으로 초월돼요.
           </div>
         </section>
 
