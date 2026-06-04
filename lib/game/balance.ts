@@ -511,3 +511,72 @@ export const MELEE_REWARD_TIERS: { label: string; diamond: number; boxes: number
   { label: '상위 50%', diamond: 100, boxes: 5 },
   { label: '그 외', diamond: 50, boxes: 3 },
 ];
+
+// ─────────────────────────────────────────────────────────────────────────────
+// §9. 배틀패스 (성장 패스 — 만료 없음)
+// ─────────────────────────────────────────────────────────────────────────────
+
+/**
+ * §9 배틀패스 — 계정 '최고 도달'(lifetime max) 기준 단계 보상. 만료 없음(시즌제 아님).
+ * 두 종류: 강화(보상=다이아) / 초월(보상=보급상자 무작위 슬롯). 구간별 독립 결제.
+ * 매 단계 지급. 무료 라인 = 전 구간 항상 수령. 프리미엄 라인 = 산 구간만(소급 포함).
+ */
+export type BattlePassType = 'enhance' | 'transcend';
+
+/** 구간 크기 — 강화 100단위, 초월 10단위. */
+export const BP_SEGMENT_SIZE: Record<BattlePassType, number> = { enhance: 100, transcend: 10 };
+
+/** 단계(1-index level) → 구간 인덱스(0부터). level<1이면 0. */
+export function bpSegmentIndex(type: BattlePassType, level: number): number {
+  if (level < 1) return 0;
+  return Math.floor((level - 1) / BP_SEGMENT_SIZE[type]);
+}
+
+/** 구간 c의 마지막 단계(level). 강화 c0=100, c1=200; 초월 c0=10, c1=20. */
+export function bpSegmentEndLevel(type: BattlePassType, segmentIndex: number): number {
+  return (segmentIndex + 1) * BP_SEGMENT_SIZE[type];
+}
+
+/**
+ * §9.1 단계당 보상량 — 무료 = 프리미엄의 1/5. 구간 스케일: 강화 ×2^c, 초월 ×(c+1).
+ * 강화 = 다이아 개수, 초월 = 보급상자 개수. (c = 구간 인덱스)
+ */
+export function bpTierReward(type: BattlePassType, level: number, premium: boolean): number {
+  const c = bpSegmentIndex(type, level);
+  const base = premium ? 50 : 10;
+  return type === 'enhance' ? base * 2 ** c : base * (c + 1);
+}
+
+/**
+ * §9.1 (fromLevelExclusive, toLevelInclusive] 범위 보상 합 — 클레임용.
+ * 구간 내 단계당 동일하므로 구간 단위로 합산.
+ */
+export function bpRangeReward(
+  type: BattlePassType,
+  fromLevelExclusive: number,
+  toLevelInclusive: number,
+  premium: boolean,
+): number {
+  const from = Math.max(0, Math.floor(fromLevelExclusive));
+  const to = Math.floor(toLevelInclusive);
+  if (to <= from) return 0;
+  let total = 0;
+  let lv = from + 1;
+  while (lv <= to) {
+    const segEnd = bpSegmentEndLevel(type, bpSegmentIndex(type, lv));
+    const chunkEnd = Math.min(to, segEnd);
+    total += (chunkEnd - lv + 1) * bpTierReward(type, lv, premium);
+    lv = chunkEnd + 1;
+  }
+  return total;
+}
+
+/**
+ * §9.2 프리미엄 구간 가격(원, 현금/포트원) — no-brainer(보상가치 ~2.3배).
+ * 강화: 9,900 / 19,900 / 39,900 …(×2 계단) = 9900 + (2^c − 1)×10000.
+ * 초월: 9,900 / 19,900 / 29,900 …(선형) = 9900 + c×10000.
+ */
+export function bpSegmentPriceKrw(type: BattlePassType, segmentIndex: number): number {
+  const c = Math.max(0, Math.floor(segmentIndex));
+  return type === 'enhance' ? 9900 + (2 ** c - 1) * 10000 : 9900 + c * 10000;
+}

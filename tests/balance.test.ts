@@ -21,6 +21,11 @@ import {
   transcendBonusBp,
   enhanceBasePower,
   pieceCombatPower,
+  bpSegmentIndex,
+  bpSegmentEndLevel,
+  bpTierReward,
+  bpRangeReward,
+  bpSegmentPriceKrw,
 } from '@/lib/game/balance';
 import { combatPowerFromOwned } from '@/lib/game/equipment/combat-power';
 
@@ -284,5 +289,55 @@ describe('전투력 공식', () => {
   });
   it('combatPowerFromOwned: 빈 보유 = 0', () => {
     expect(combatPowerFromOwned([])).toBe(0);
+  });
+});
+
+describe('배틀패스 — 구간·보상·가격', () => {
+  it('bpSegmentIndex: 강화 100단위 / 초월 10단위', () => {
+    expect(bpSegmentIndex('enhance', 1)).toBe(0);
+    expect(bpSegmentIndex('enhance', 100)).toBe(0);
+    expect(bpSegmentIndex('enhance', 101)).toBe(1);
+    expect(bpSegmentIndex('enhance', 250)).toBe(2);
+    expect(bpSegmentIndex('transcend', 10)).toBe(0);
+    expect(bpSegmentIndex('transcend', 11)).toBe(1);
+  });
+  it('bpSegmentEndLevel', () => {
+    expect(bpSegmentEndLevel('enhance', 0)).toBe(100);
+    expect(bpSegmentEndLevel('enhance', 2)).toBe(300);
+    expect(bpSegmentEndLevel('transcend', 0)).toBe(10);
+    expect(bpSegmentEndLevel('transcend', 1)).toBe(20);
+  });
+  it('bpTierReward: 강화 ×2^c / 초월 ×(c+1), 무료=프리미엄/5', () => {
+    // 강화 c0: 무료 10 / 프리미엄 50, c1: 20 / 100, c2: 40 / 200
+    expect(bpTierReward('enhance', 50, false)).toBe(10);
+    expect(bpTierReward('enhance', 50, true)).toBe(50);
+    expect(bpTierReward('enhance', 150, true)).toBe(100);
+    expect(bpTierReward('enhance', 250, true)).toBe(200);
+    // 초월 c0: 10/50, c1: 20/100, c2: 30/150
+    expect(bpTierReward('transcend', 5, false)).toBe(10);
+    expect(bpTierReward('transcend', 5, true)).toBe(50);
+    expect(bpTierReward('transcend', 15, true)).toBe(100);
+    expect(bpTierReward('transcend', 25, true)).toBe(150);
+  });
+  it('bpRangeReward: 구간 경계 넘는 합산', () => {
+    // 강화 c0 전체(1~100) 무료 = 100×10 = 1000, 프리미엄 = 5000
+    expect(bpRangeReward('enhance', 0, 100, false)).toBe(1000);
+    expect(bpRangeReward('enhance', 0, 100, true)).toBe(5000);
+    // c1 전체(101~200) 프리미엄 = 100×100 = 10000
+    expect(bpRangeReward('enhance', 100, 200, true)).toBe(10000);
+    // 경계 가로지름: 1~150 프리미엄 = c0(5000) + c1 50단계×100(5000) = 10000
+    expect(bpRangeReward('enhance', 0, 150, true)).toBe(10000);
+    // 초월 c0(1~10) 프리미엄 = 10×50 = 500
+    expect(bpRangeReward('transcend', 0, 10, true)).toBe(500);
+    expect(bpRangeReward('enhance', 50, 50, true)).toBe(0); // 빈 범위
+  });
+  it('bpSegmentPriceKrw: 강화 ×2계단 / 초월 선형 (no-brainer)', () => {
+    expect(bpSegmentPriceKrw('enhance', 0)).toBe(9900);
+    expect(bpSegmentPriceKrw('enhance', 1)).toBe(19900);
+    expect(bpSegmentPriceKrw('enhance', 2)).toBe(39900);
+    expect(bpSegmentPriceKrw('enhance', 3)).toBe(79900);
+    expect(bpSegmentPriceKrw('transcend', 0)).toBe(9900);
+    expect(bpSegmentPriceKrw('transcend', 1)).toBe(19900);
+    expect(bpSegmentPriceKrw('transcend', 2)).toBe(29900);
   });
 });
