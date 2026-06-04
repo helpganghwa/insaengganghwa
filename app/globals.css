@@ -349,3 +349,9 @@ html {
   0%, 100% { box-shadow: 0 0 0 0 rgba(16, 185, 129, 0); }
   50%      { box-shadow: 0 0 14px 3px rgba(16, 185, 129, 0.55); }
 }
+/* 보급 결과 — 초월 단계 상승 시 ✦ 배지 팝(강화 레벨업처럼, 머무름). */
+@keyframes gacha-transcend-pop {
+  0%   { transform: scale(1); }
+  35%  { transform: scale(1.6); filter: brightness(1.8); }
+  100% { transform: scale(1); filter: brightness(1); }
+}

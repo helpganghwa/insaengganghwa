@@ -4,8 +4,95 @@ import { useEffect, useState } from 'react';
 
 import type { Slot } from '@/lib/db/schema/equipment';
 import { TranscendSprite } from '@/components/TranscendSprite';
+import { transcendStyle } from '@/lib/game/equipment/transcend';
 
 import type { OpenedItem } from './actions';
+
+/**
+ * 한 결과 카드 — 현재 초월 등급 색 테두리. 이번 열기로 초월이 올랐으면(transcended>0)
+ * ✦단계가 강화처럼 한 단계씩 올라가는 애니메이션(색도 등급색으로 전환).
+ */
+function ResultCard({
+  r,
+  slot,
+  big,
+  onClick,
+}: {
+  r: OpenedItem;
+  slot: Slot;
+  big?: boolean;
+  onClick?: () => void;
+}) {
+  const finalT = r.transcendLevel;
+  const fromT = r.transcended > 0 ? Math.max(0, finalT - r.transcended) : finalT;
+  const [shown, setShown] = useState(fromT);
+  const [pop, setPop] = useState(0);
+
+  useEffect(() => {
+    if (r.transcended <= 0) {
+      setShown(finalT);
+      return;
+    }
+    let cur = fromT;
+    setShown(fromT);
+    let t: ReturnType<typeof setTimeout>;
+    const run = () => {
+      cur += 1;
+      setShown(cur);
+      setPop((p) => p + 1);
+      if (cur < finalT) t = setTimeout(run, 520);
+    };
+    t = setTimeout(run, 350);
+    return () => clearTimeout(t);
+  }, [fromT, finalT, r.transcended]);
+
+  const [cr, cg, cb] = transcendStyle(shown).colorRgb;
+  const grade = `rgb(${cr},${cg},${cb})`;
+
+  return (
+    <button
+      type="button"
+      onClick={onClick}
+      title={r.name}
+      className={`relative flex flex-col items-center text-center ${
+        big ? 'rounded-xl p-4' : 'aspect-square justify-center rounded-lg p-1'
+      } border-2`}
+      style={{ borderColor: grade, transition: 'border-color 450ms ease-out' }}
+    >
+      {r.isNew ? (
+        <span className="absolute left-1 top-1 z-10 rounded bg-emerald-500 px-1 text-[8px] font-bold text-white">
+          NEW
+        </span>
+      ) : null}
+      {finalT > 0 ? (
+        <span
+          key={pop}
+          className="absolute right-1 top-1 z-10 text-[10px] font-extrabold tabular-nums drop-shadow-[0_1px_2px_rgba(0,0,0,0.6)]"
+          style={{ color: grade, animation: r.transcended > 0 ? 'gacha-transcend-pop 420ms ease-out' : undefined }}
+        >
+          ✦{shown}
+        </span>
+      ) : null}
+      <TranscendSprite
+        code={r.code}
+        slot={slot}
+        level={shown}
+        isChampion={r.isChampion}
+        size={big ? 64 : 36}
+        frameless
+      />
+      <span
+        className={
+          big
+            ? 'mt-1 break-keep text-base font-semibold'
+            : 'line-clamp-2 break-keep px-0.5 text-[9px] leading-tight text-zinc-600 dark:text-zinc-400'
+        }
+      >
+        {r.name}
+      </span>
+    </button>
+  );
+}
 
 export function GachaResultModal({
   slot,
@@ -24,18 +111,13 @@ export function GachaResultModal({
   onAgain: (n: number) => void;
   onClose: () => void;
 }) {
-  // 다중 결과 — 신규 → 초월 우선 정렬.
+  // 신규 → 초월 우선 정렬.
   const sortedResults = results
     .slice()
     .sort((a, b) => Number(b.isNew) - Number(a.isNew) || b.transcended - a.transcended);
-  const newCount = results.filter((r) => r.isNew).length;
-  const transCount = results.filter((r) => !r.isNew && r.transcended > 0).length;
-  const dupCount = results.length - newCount - transCount;
   const single = results.length === 1 ? results[0]! : null;
   const multiN = remaining >= 2 ? Math.min(10, remaining) : 10;
-  // 다중 결과의 신규 카드 탭 시 인라인 로어 펼침.
   const [openLoreIdx, setOpenLoreIdx] = useState<number | null>(null);
-  // 연속 열기(onAgain) 시 결과 영역 페이드 — results 변경 시 재트리거.
   const [resultKey, setResultKey] = useState(0);
   useEffect(() => {
     setResultKey((k) => k + 1);
@@ -55,43 +137,10 @@ export function GachaResultModal({
       >
         <div key={resultKey} style={{ animation: 'gacha-result-swap 240ms ease-out' }}>
           {single ? (
-            <div className="text-center">
-              <p className="text-sm font-medium">
-                {single.isNew ? (
-                  <span className="text-emerald-600 dark:text-emerald-400">신규 해금!</span>
-                ) : single.transcended > 0 ? (
-                  <span className="text-amber-600 dark:text-amber-400">
-                    초월 +{single.transcended}! → T{single.transcendLevel}
-                  </span>
-                ) : (
-                  <span className="text-zinc-500">획득 · 초월 진행 +1</span>
-                )}
-              </p>
-              <div
-                className="mt-2 flex flex-col items-center rounded-xl border-2 p-4 dark:border-zinc-800"
-                style={
-                  single.isNew
-                    ? {
-                        borderColor: 'rgb(16,185,129)',
-                        animation: 'gacha-new-glow 1.6s ease-in-out 1',
-                      }
-                    : single.transcended > 0
-                      ? { borderColor: 'rgb(245,158,11)', animation: 'gacha-new-glow 1.6s ease-in-out 1' }
-                      : { borderColor: undefined }
-                }
-              >
-                <TranscendSprite
-                  code={single.code}
-                  slot={slot}
-                  level={single.transcendLevel}
-                  isChampion={single.isChampion}
-                  size={64}
-                  frameless
-                />
-                <div className="mt-1 text-base font-semibold">{single.name}</div>
-              </div>
+            <div className="flex flex-col items-center text-center">
+              <ResultCard r={single} slot={slot} big />
               {single.isNew && single.loreTeaser ? (
-                <div className="mt-3 rounded-xl border border-zinc-200 bg-zinc-50 px-3.5 py-3 text-left dark:border-zinc-800 dark:bg-zinc-900">
+                <div className="mt-3 w-full rounded-xl border border-zinc-200 bg-zinc-50 px-3.5 py-3 text-left dark:border-zinc-800 dark:bg-zinc-900">
                   <div className="mb-1 text-[10px] font-semibold tracking-wide text-zinc-400">
                     📖 이야기
                   </div>
@@ -103,56 +152,20 @@ export function GachaResultModal({
             </div>
           ) : (
             <>
-              <p className="flex items-baseline justify-between text-sm">
-                <span className="font-medium">{results.length}회 열기</span>
-                <span className="text-[11px] text-zinc-500">
-                  신규 <span className="font-semibold text-emerald-600">{newCount}</span> · 초월{' '}
-                  <span className="font-semibold text-amber-600">{transCount}</span> · 중복{' '}
-                  <span className="font-semibold text-zinc-700 dark:text-zinc-300">{dupCount}</span>
-                </span>
-              </p>
+              <p className="text-sm font-medium">{results.length}회 열기</p>
               <div className="mt-3 grid grid-cols-4 gap-2">
-                {sortedResults.map((r, i) => {
-                  const isOpen = openLoreIdx === i;
-                  return (
-                    <button
-                      type="button"
-                      key={i}
-                      onClick={() => {
-                        if (!r.isNew) return;
-                        setOpenLoreIdx(isOpen ? null : i);
-                      }}
-                      className="relative flex aspect-square flex-col items-center justify-center rounded-lg border-2 p-1 text-center"
-                      style={
-                        r.isNew
-                          ? { borderColor: 'rgb(16,185,129)' }
-                          : r.transcended > 0
-                            ? { borderColor: 'rgb(245,158,11)' }
-                            : { borderColor: undefined }
-                      }
-                      title={r.name}
-                    >
-                      {r.transcended > 0 ? (
-                        <span className="absolute right-0.5 top-0.5 z-10 rounded bg-amber-500 px-1 text-[8px] font-bold text-amber-950">
-                          ✦+{r.transcended}
-                        </span>
-                      ) : null}
-                      <TranscendSprite
-                        code={r.code}
-                        slot={slot}
-                        level={r.transcendLevel}
-                        isChampion={r.isChampion}
-                        size={36}
-                        frameless
-                      />
-                      <span className="line-clamp-2 break-keep px-0.5 text-[9px] leading-tight text-zinc-600 dark:text-zinc-400">
-                        {r.name}
-                      </span>
-                    </button>
-                  );
-                })}
+                {sortedResults.map((r, i) => (
+                  <ResultCard
+                    key={i}
+                    r={r}
+                    slot={slot}
+                    onClick={() => {
+                      if (!r.isNew) return;
+                      setOpenLoreIdx(openLoreIdx === i ? null : i);
+                    }}
+                  />
+                ))}
               </div>
-              {/* 신규 카드 탭 시 로어 펼침 */}
               {openLoreIdx !== null && sortedResults[openLoreIdx]?.loreTeaser ? (
                 <div className="mt-3 rounded-xl border border-emerald-300 bg-emerald-50 px-3.5 py-3 text-left dark:border-emerald-800 dark:bg-emerald-950/30">
                   <div className="mb-1 text-[10px] font-semibold tracking-wide text-emerald-700 dark:text-emerald-300">
