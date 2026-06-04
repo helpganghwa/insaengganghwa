@@ -40,7 +40,7 @@
     },
     {
       "path": "/api/cron/melee-reveal",
-      "schedule": "30 0 * * *"
+      "schedule": "0 1 * * *"
     }
   ]
 }

@@ -20,7 +20,7 @@ import { MeleePreviewSwitcher } from './MeleePreviewSwitcher';
  *
  * ⚠ 임시: ?preview=before|running|tally로 대기/진행/집계 화면 강제(점검용, 곧 제거).
  */
-type PreviewMode = 'before' | 'running' | 'tally';
+type PreviewMode = 'before' | 'running' | 'deliver' | 'tally';
 
 export default async function MeleePage({
   searchParams,
@@ -52,13 +52,16 @@ export default async function MeleePage({
 
   // ⚠ 임시 점검용 — 모든 유저에게 플로팅 전환 노출(곧 제거).
   const previewMode: PreviewMode | null =
-    preview === 'before' || preview === 'running' || preview === 'tally' ? preview : null;
+    preview === 'before' || preview === 'running' || preview === 'deliver' || preview === 'tally'
+      ? preview
+      : null;
   const switcher = <MeleePreviewSwitcher current={previewMode ?? ''} />;
 
-  // KST 09:00 / 09:30 타깃(UTC instant).
+  // KST 09:00(산출) / 09:30(난투→우승컵 전달 경계) / 10:00(발표) 타깃(UTC instant).
   const kstMid = kstStartOfDay().getTime();
   const runAtIso = new Date(kstMid + 9 * 3_600_000).toISOString();
-  const revealAtIso = new Date(kstMid + 9 * 3_600_000 + 30 * 60_000).toISOString();
+  const deliverAtIso = new Date(kstMid + 9 * 3_600_000 + 30 * 60_000).toISOString();
+  const revealAtIso = new Date(kstMid + 10 * 3_600_000).toISOString();
 
   // 회차(제N회) — 하루 1회라 날짜 순서가 곧 회차. 오늘 = 이전 배틀 수 + 1.
   async function loadEdition(): Promise<number> {
@@ -79,16 +82,19 @@ export default async function MeleePage({
     const now = Date.now();
     const t =
       previewMode === 'before'
-        ? { run: now + 3_600_000, reveal: now + 5_400_000 } // now < run → 대기중
+        ? { run: now + 3_600_000, deliver: now + 5_400_000, reveal: now + 7_200_000 } // 대기중
         : previewMode === 'running'
-          ? { run: now - 300_000, reveal: now + 1_500_000 } // run ≤ now < reveal → 진행중
-          : { run: now - 3_600_000, reveal: now - 300_000 }; // now ≥ reveal → 집계 중
+          ? { run: now - 900_000, deliver: now + 900_000, reveal: now + 2_700_000 } // 난투 진행 중
+          : previewMode === 'deliver'
+            ? { run: now - 2_700_000, deliver: now - 900_000, reveal: now + 900_000 } // 우승컵 전달 중
+            : { run: now - 7_200_000, deliver: now - 5_400_000, reveal: now - 900_000 }; // 집계 중
     const [edition, history] = await Promise.all([loadEdition(), loadMeleeHistory()]);
     return (
       <>
         <MeleeCountdown
           edition={edition}
           runAtIso={new Date(t.run).toISOString()}
+          deliverAtIso={new Date(t.deliver).toISOString()}
           revealAtIso={new Date(t.reveal).toISOString()}
           participantCount={battle?.participantCount ?? 1234}
           history={history}
@@ -105,6 +111,7 @@ export default async function MeleePage({
         <MeleeCountdown
           edition={edition}
           runAtIso={runAtIso}
+          deliverAtIso={deliverAtIso}
           revealAtIso={revealAtIso}
           participantCount={battle?.participantCount ?? null}
           history={history}

@@ -27,12 +27,15 @@ function fmt(ms: number): string {
 export function MeleeCountdown({
   edition,
   runAtIso,
+  deliverAtIso,
   revealAtIso,
   participantCount,
   history,
 }: {
   edition: number;
   runAtIso: string;
+  /** 난투 진행 중 → 우승컵 전달 중 전환 경계(09:30). */
+  deliverAtIso: string;
   revealAtIso: string;
   participantCount: number | null;
   history: MeleeHistoryRow[];
@@ -45,6 +48,7 @@ export function MeleeCountdown({
   }, []);
 
   const runAt = new Date(runAtIso).getTime();
+  const deliverAt = new Date(deliverAtIso).getTime();
   const revealAt = new Date(revealAtIso).getTime();
 
   // 9:30 지나면 결과가 곧 뜸 — 주기적 새로고침으로 발표 반영.
@@ -61,13 +65,17 @@ export function MeleeCountdown({
     label = '오전 9시 개시';
     sub = '';
     target = runAt;
-  } else if (now < revealAt) {
+  } else if (now < deliverAt) {
     label = '난투 진행 중';
+    sub = '';
+    target = revealAt;
+  } else if (now < revealAt) {
+    label = '우승자에게 우승컵 전달 중';
     sub = '';
     target = revealAt;
   } else {
     label = '결과 집계 중';
-    sub = '곧 발표됩니다';
+    sub = '우승컵 지급이 늦어지고 있습니다';
     target = 0;
   }
 

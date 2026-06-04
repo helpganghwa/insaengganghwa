@@ -10,7 +10,8 @@ import { useRouter } from 'next/navigation';
 const MODES = [
   { key: '', label: '실제' },
   { key: 'before', label: '대기' },
-  { key: 'running', label: '진행' },
+  { key: 'running', label: '난투' },
+  { key: 'deliver', label: '전달' },
   { key: 'tally', label: '집계' },
 ] as const;
 

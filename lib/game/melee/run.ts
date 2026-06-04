@@ -15,7 +15,7 @@ import { makeRng } from './rng';
 /**
  * 대난투 9시 산출 — MELEE §3. KST 오늘 배틀이 없으면:
  *  로스터(강화 1회+) 도출 → 전투력 9시 스냅샷 → 결정론 시뮬 → battle+participants 저장(status='computed').
- * 결과는 9:30 reveal 전까지 비공개. 멱등: battle_date UNIQUE + 선조회.
+ * 결과는 10:00 reveal 전까지 비공개. 멱등: battle_date UNIQUE + 선조회.
  *
  * 스케일: 로스터 CP 일괄(set-based) + 참가자 청크 insert. 초대규모는 청크/스트림/배치 큐 필요(MELEE §9).
  */

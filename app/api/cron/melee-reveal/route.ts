@@ -1,5 +1,5 @@
 /**
- * 대난투 9:30 발표 cron — MELEE §7. KST 09:30 = UTC `30 0 * * *`(vercel.json).
+ * 대난투 10:00 발표 cron — MELEE §7. KST 10:00 = UTC `0 1 * * *`(vercel.json).
  * 'computed' → 'revealed'(멱등) + 참가자 전원 결과 우편 + 푸시. 인증 = CRON_SECRET / x-vercel-cron.
  */
 import { revealMelee } from '@/lib/game/melee/reveal';
