@@ -26,7 +26,7 @@ type RankingToast = {
   after: MyRanks;
 };
 
-/** 공용 헤더 토스트 — 헤더(h-12)를 덮는 슬라이드 바. 제목 + 보상 한 줄 중앙 정렬. */
+/** 공용 헤더 토스트 — 헤더(h-12)를 덮는 슬라이드 바. 제목 + 보상/상세 한 줄 중앙 정렬. */
 export type HeaderReward = { icon: string; amount: number };
 type HeaderToast = {
   id: number;
@@ -34,6 +34,8 @@ type HeaderToast = {
   icon?: string;
   title: string;
   rewards?: HeaderReward[];
+  /** 보상 칩 대신/추가로 │ 뒤에 노출하는 자유 텍스트(상태 변화·알림 등 비보상 용도). */
+  detail?: string;
 };
 
 type ToastEntry = ResourceToast | ErrorToast | RankingToast | HeaderToast;
@@ -49,8 +51,13 @@ type ToastContextValue = {
   /** 강화 결과 오버레이 시작/종료 신호 — 활성 0 도달 시 누적 랭킹 토스트 release. */
   beginEnhanceOverlay: () => void;
   endEnhanceOverlay: () => void;
-  /** 공용 헤더 토스트 — 헤더 덮는 슬라이드 바. 제목 + 보상 한 줄(좌우 구분 없이 중앙). */
-  showHeaderToast: (opts: { icon?: string; title: string; rewards?: HeaderReward[] }) => void;
+  /** 공용 헤더 토스트 — 헤더 덮는 슬라이드 바. 제목 + 보상/상세 한 줄(좌우 구분 없이 중앙). */
+  showHeaderToast: (opts: {
+    icon?: string;
+    title: string;
+    rewards?: HeaderReward[];
+    detail?: string;
+  }) => void;
 };
 
 const ToastContext = createContext<ToastContextValue | null>(null);
@@ -115,12 +122,19 @@ export function ResourceToastProvider({ children }: { children: React.ReactNode 
   // 공용 헤더 토스트 — 진입/이탈 슬라이드는 HeaderBar가 자체 타이머로 구동(이탈 애니메이션
   // 위해 provider는 dismiss만 위임). 노출 후 HeaderBar가 onDone으로 self-unmount.
   const showHeaderToast = useCallback(
-    (opts: { icon?: string; title: string; rewards?: HeaderReward[] }) => {
+    (opts: { icon?: string; title: string; rewards?: HeaderReward[]; detail?: string }) => {
       const id = ++counterRef.current;
       headerActiveRef.current += 1; // 노출 중 표시 — 종료(dismissHeader) 시 차감.
       setToasts((prev) => [
         ...prev,
-        { id, kind: 'header', icon: opts.icon, title: opts.title, rewards: opts.rewards },
+        {
+          id,
+          kind: 'header',
+          icon: opts.icon,
+          title: opts.title,
+          rewards: opts.rewards,
+          detail: opts.detail,
+        },
       ]);
     },
     [],
@@ -381,17 +395,20 @@ function HeaderBar({ entry, onDismiss }: { entry: HeaderToast; onDismiss: (id: n
             </span>
           ) : null}
           <span className="text-[13px] font-bold text-white">{entry.title}</span>
+          {(entry.rewards && entry.rewards.length > 0) || entry.detail ? (
+            <span aria-hidden className="h-3.5 w-px bg-zinc-600" />
+          ) : null}
           {entry.rewards && entry.rewards.length > 0 ? (
-            <>
-              <span aria-hidden className="h-3.5 w-px bg-zinc-600" />
-              <span className="flex items-center gap-2 font-mono text-[12px] tabular-nums text-zinc-200">
-                {entry.rewards.map((r, i) => (
-                  <span key={i} className="inline-flex items-center gap-0.5">
-                    <span aria-hidden>{r.icon}</span>+{r.amount.toLocaleString('ko-KR')}
-                  </span>
-                ))}
-              </span>
-            </>
+            <span className="flex items-center gap-2 font-mono text-[12px] tabular-nums text-zinc-200">
+              {entry.rewards.map((r, i) => (
+                <span key={i} className="inline-flex items-center gap-0.5">
+                  <span aria-hidden>{r.icon}</span>+{r.amount.toLocaleString('ko-KR')}
+                </span>
+              ))}
+            </span>
+          ) : null}
+          {entry.detail ? (
+            <span className="text-[12px] font-medium text-zinc-200">{entry.detail}</span>
           ) : null}
         </div>
       </div>

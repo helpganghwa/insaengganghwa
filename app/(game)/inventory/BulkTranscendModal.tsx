@@ -249,9 +249,12 @@ export function BulkTranscendModal({
         return;
       }
       setResult(r);
-      // 초월은 자원 보상이 없어 완료 알림(칩 없음) — 헤더 토스트 먼저 → 랭킹 변화는 종료 후(겹침 방지).
+      // 초월은 자원 보상이 없어 상세 텍스트로 결과 노출 — 헤더 토스트 먼저 → 랭킹 변화는 종료 후(겹침 방지).
       if ('targetsUpgraded' in r && r.targetsUpgraded > 0) {
-        showHeaderToast({ title: `일괄 초월 ${r.targetsUpgraded}장 완료` });
+        showHeaderToast({
+          title: '일괄 초월',
+          detail: `총 ${r.targetsUpgraded}장비 ${r.stepsApplied}단계 초월`,
+        });
       }
       if ('ranksBefore' in r && 'ranksAfter' in r) {
         showRanking(r.ranksBefore, r.ranksAfter, true);
