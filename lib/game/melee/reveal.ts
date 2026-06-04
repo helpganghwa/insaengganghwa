@@ -1,6 +1,6 @@
 import 'server-only';
 
-import { and, eq, sql } from 'drizzle-orm';
+import { and, eq, inArray, sql } from 'drizzle-orm';
 
 import { db } from '@/lib/db/client';
 import { meleeBattles, meleeParticipants } from '@/lib/db/schema/melee';
@@ -8,12 +8,12 @@ import { profiles } from '@/lib/db/schema/profiles';
 import { sendPushToUsers } from '@/lib/push/send';
 
 /**
- * 대난투 9:30 발표 — MELEE §7. KST 오늘 배틀이 'computed'면:
+ * 대난투 10:00 발표 — MELEE §7. KST 오늘 배틀이 'computed'면:
  *  status='revealed'(조건부·멱등) → 참가자 전원 결과 우편(reward, 다이아+상자) + 푸시.
- * 우편 본문 = "오늘 대난투 N위! 👑 챔피언: <닉>". 발표 전엔 결과 API 비공개(서버 시각 게이트).
+ * 우편/푸시 본문 = "오늘 대난투 N위!" + 시상대 Top3(🥇🥈🥉 닉). 발표 전엔 결과 API 비공개.
  *
  * 우편 적재는 단일 SQL(insert…select from melee_participants)로 N행 한 번에 — DB측 처리.
- * 푸시는 sendPushToUsers(배치, 동일 본문·챔피언 닉, 토글 OFF 자동 스킵). 초대규모는 청크 필요.
+ * 푸시는 sendPushToUsers(배치, 동일 본문·시상대, 토글 OFF 자동 스킵). 초대규모는 청크 필요.
  */
 export async function revealMelee(): Promise<{ revealed: boolean; battleId?: string; mailed?: number }> {
   const [today] = (await db.execute(
@@ -30,16 +30,19 @@ export async function revealMelee(): Promise<{ revealed: boolean; battleId?: str
   if (flipped.length === 0) return { revealed: false };
 
   const battleId = flipped[0]!.id;
-  const championId = flipped[0]!.champ;
-  let champNick = '챔피언';
-  if (championId) {
-    const [c] = await db
-      .select({ nick: profiles.nickname })
-      .from(profiles)
-      .where(eq(profiles.id, championId))
-      .limit(1);
-    if (c?.nick) champNick = c.nick;
-  }
+
+  // 시상대 Top3(1·2·3위) — 우편/푸시 공통 본문. 참가자 적으면 있는 만큼만(🥇 폴백).
+  const podium = await db
+    .select({ rank: meleeParticipants.finalRank, nick: profiles.nickname })
+    .from(meleeParticipants)
+    .innerJoin(profiles, eq(profiles.id, meleeParticipants.userId))
+    .where(and(eq(meleeParticipants.battleId, battleId), inArray(meleeParticipants.finalRank, [1, 2, 3])))
+    .orderBy(meleeParticipants.finalRank);
+  const MEDAL = ['🥇', '🥈', '🥉'];
+  const podiumStr =
+    podium.length > 0
+      ? podium.map((p) => `${MEDAL[p.rank - 1] ?? `${p.rank}위`} ${p.nick}`).join(' · ')
+      : '🥇 챔피언';
 
   // 결과 우편 — 참가자 전원 1행씩 DB측 일괄 적재(reward type, 다이아+상자 payload).
   await db.execute(sql`
@@ -47,7 +50,7 @@ export async function revealMelee(): Promise<{ revealed: boolean; battleId?: str
     select mp.user_id,
            'reward'::mailbox_type,
            '대난투 결과',
-           '오늘 대난투 ' || mp.final_rank || '위! 👑 챔피언: ' || ${champNick},
+           '오늘 대난투 ' || mp.final_rank || '위!' || E'\n' || ${podiumStr},
            '대난투',
            jsonb_build_object('diamond', mp.reward_diamond::text, 'boxes', mp.reward_boxes),
            now() + interval '7 days'
@@ -55,7 +58,7 @@ export async function revealMelee(): Promise<{ revealed: boolean; battleId?: str
     where mp.battle_id = ${battleId}
   `);
 
-  // 푸시 — 참가자 전원(토글 ON만 내부 필터). 본문은 챔피언 닉(개인 순위는 우편/페이지).
+  // 푸시 — 참가자 전원(토글 ON만 내부 필터). 본문은 시상대 Top3(개인 순위는 우편/페이지).
   const parts = await db
     .select({ uid: meleeParticipants.userId })
     .from(meleeParticipants)
@@ -63,7 +66,7 @@ export async function revealMelee(): Promise<{ revealed: boolean; battleId?: str
   const userIds = parts.map((p) => p.uid);
   await sendPushToUsers(userIds, {
     title: '대난투 결과 발표',
-    body: `👑 오늘의 챔피언: ${champNick} · 내 순위 확인하기`,
+    body: `${podiumStr} · 내 순위 확인하기`,
     url: '/melee',
     tag: 'melee',
     category: 'melee',

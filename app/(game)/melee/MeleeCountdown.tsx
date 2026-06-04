@@ -62,7 +62,6 @@ export function MeleeCountdown({
   // 10:00 지나도 미발표면 '우승컵 전달 중' 유지 + 경과 시간 카운트업.
   let label: string;
   let timerMs: number;
-  let countUp = false;
   if (now < runAt) {
     label = '오전 9시 개시';
     timerMs = runAt - now;
@@ -75,7 +74,6 @@ export function MeleeCountdown({
   } else {
     label = '우승자에게 우승컵 전달이 늦어지고 있습니다';
     timerMs = now - revealAt; // 발표 지연 — 경과 시간 0부터 카운트업
-    countUp = true;
   }
 
   return (
@@ -98,7 +96,6 @@ export function MeleeCountdown({
           </div>
           <div className="text-sm font-bold text-amber-300 text-pixel-outline">{label}</div>
           <div className="font-mono text-5xl font-extrabold tabular-nums text-white text-pixel-outline">
-            {countUp ? '+' : ''}
             {fmt(timerMs)}
           </div>
           <div className="mt-1 rounded-full bg-black/55 px-3 py-1 text-[11px] font-medium text-zinc-100 backdrop-blur-sm">
