@@ -57,10 +57,10 @@ export default async function MeleePage({
       : null;
   const switcher = <MeleePreviewSwitcher current={previewMode ?? ''} />;
 
-  // KST 09:00(산출) / 09:30(난투→우승컵 전달 경계) / 10:00(발표) 타깃(UTC instant).
+  // KST 09:00(산출) / 09:45(난투→우승컵 전달 경계, 발표 15분 전) / 10:00(발표) 타깃(UTC instant).
   const kstMid = kstStartOfDay().getTime();
   const runAtIso = new Date(kstMid + 9 * 3_600_000).toISOString();
-  const deliverAtIso = new Date(kstMid + 9 * 3_600_000 + 30 * 60_000).toISOString();
+  const deliverAtIso = new Date(kstMid + 9 * 3_600_000 + 45 * 60_000).toISOString();
   const revealAtIso = new Date(kstMid + 10 * 3_600_000).toISOString();
 
   // 회차(제N회) — 하루 1회라 날짜 순서가 곧 회차. 오늘 = 이전 배틀 수 + 1.
@@ -82,12 +82,12 @@ export default async function MeleePage({
     const now = Date.now();
     const t =
       previewMode === 'before'
-        ? { run: now + 3_600_000, deliver: now + 5_400_000, reveal: now + 7_200_000 } // 대기중
+        ? { run: now + 1_800_000, deliver: now + 4_500_000, reveal: now + 5_400_000 } // 대기: 30:00
         : previewMode === 'running'
-          ? { run: now - 900_000, deliver: now + 900_000, reveal: now + 2_700_000 } // 난투 진행 중
+          ? { run: now - 1000, deliver: now + 2_700_000, reveal: now + 3_600_000 } // 난투: 1:00:00 시작
           : previewMode === 'deliver'
-            ? { run: now - 2_700_000, deliver: now - 900_000, reveal: now + 900_000 } // 우승컵 전달 중
-            : { run: now - 7_200_000, deliver: now - 5_400_000, reveal: now - 900_000 }; // 집계 중
+            ? { run: now - 3_000_000, deliver: now - 300_000, reveal: now + 600_000 } // 전달: 10:00
+            : { run: now - 3_600_000, deliver: now - 900_000, reveal: now - 2000 }; // 집계: 카운트업 0부터
     const [edition, history] = await Promise.all([loadEdition(), loadMeleeHistory()]);
     return (
       <>

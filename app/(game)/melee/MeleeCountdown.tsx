@@ -73,8 +73,8 @@ export function MeleeCountdown({
     label = '우승자에게 우승컵 전달 중';
     timerMs = revealAt - now;
   } else {
-    label = '우승자에게 우승컵 전달 중';
-    timerMs = now - revealAt; // 발표 지연 — 경과 시간 카운트업
+    label = '우승자에게 우승컵 전달이 늦어지고 있습니다';
+    timerMs = now - revealAt; // 발표 지연 — 경과 시간 0부터 카운트업
     countUp = true;
   }
 
