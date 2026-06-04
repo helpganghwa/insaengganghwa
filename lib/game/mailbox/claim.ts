@@ -1,12 +1,16 @@
 import 'server-only';
 
-import { and, eq, gt, isNull, sql } from 'drizzle-orm';
+import { and, count, eq, gt, isNull, sql } from 'drizzle-orm';
 
 import { db } from '@/lib/db/client';
 import { profiles } from '@/lib/db/schema/profiles';
+import { userProfiles } from '@/lib/db/schema/avatar';
 import { userSupplyBoxes } from '@/lib/db/schema/supply';
 import { mailbox, mailClaimLogs } from '@/lib/db/schema/mailbox';
 import { SUPPLY_SLOTS, type SupplySlot } from '@/lib/game/balance';
+
+/** 아바타 보유 캡 — profile/actions.ts(생성 차단)와 동일. 초과 시 수령 차단. */
+const MAX_PROFILES = 20;
 
 /**
  * 우편함 수령 — SCHEMA §7. 비동기 보상(레이드 정산·오프라인 강화 결과 등) 지급.
@@ -16,11 +20,18 @@ import { SUPPLY_SLOTS, type SupplySlot } from '@/lib/game/balance';
 export type MailPayload = {
   diamond?: number;
   boxes?: Partial<Record<SupplySlot, number>>;
+  /** 아바타 증정(대난투 우승 트로피 등) — 수령 시 userProfiles 추가(캡 MAX_PROFILES). */
+  avatarGrant?: { rotations: Record<string, string>; characterId: string };
 };
-export type ClaimResult = { diamond: number; boxes: Record<SupplySlot, number> };
+export type ClaimResult = {
+  diamond: number;
+  boxes: Record<SupplySlot, number>;
+  /** 아바타가 목록에 추가됐는지(우승 트로피 등). */
+  avatarAdded?: boolean;
+};
 
 export class MailError extends Error {
-  constructor(public code: 'MAIL_NOT_FOUND') {
+  constructor(public code: 'MAIL_NOT_FOUND' | 'AVATAR_FULL') {
     super(code);
     this.name = 'MailError';
   }
@@ -77,6 +88,24 @@ export function claimMail(input: { userId: string; mailId: bigint }): Promise<Cl
     const payload = m.payload as MailPayload;
     const acc = emptyResult();
     await applyPayload(tx, userId, payload, acc);
+    // 아바타 증정 — 캡 체크 후 userProfiles 추가(활성 전환은 안 함, 목록에만 추가).
+    if (payload.avatarGrant) {
+      const [pc] = await tx
+        .select({ n: count() })
+        .from(userProfiles)
+        .where(eq(userProfiles.userId, userId));
+      if ((pc?.n ?? 0) >= MAX_PROFILES) throw new MailError('AVATAR_FULL');
+      await tx.insert(userProfiles).values({
+        userId,
+        rotations: payload.avatarGrant.rotations,
+        activeDirection: 'south',
+        pixellabCharacterId: payload.avatarGrant.characterId,
+        options: { source: 'melee_champion' },
+        equipmentSnapshot: {},
+        descriptionPrompt: '대난투 우승 트로피 아바타',
+      });
+      acc.avatarAdded = true;
+    }
     await tx.update(mailbox).set({ claimedAt: new Date() }).where(eq(mailbox.id, mailId));
     // 감사 — diamond/boxes 분배 결과 기록(mailbox cron 삭제 후에도 추적 가능).
     await tx.insert(mailClaimLogs).values({
@@ -106,6 +135,8 @@ export function claimAllMail(input: { userId: string }): Promise<ClaimResult> {
 
     const acc = emptyResult();
     for (const m of rows) {
+      // 아바타 증정은 보유 캡 때문에 '모두 받기'에서 제외 — 개별 수령만.
+      if ((m.payload as MailPayload).avatarGrant) continue;
       const before = { diamond: acc.diamond, boxes: { ...acc.boxes } };
       await applyPayload(tx, userId, m.payload as MailPayload, acc);
       await tx.update(mailbox).set({ claimedAt: new Date() }).where(eq(mailbox.id, m.id));
