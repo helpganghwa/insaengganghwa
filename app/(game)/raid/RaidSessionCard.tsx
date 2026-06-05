@@ -476,20 +476,20 @@ export function RaidSessionCard({ view: v }: { view: RaidView }) {
             <div
               className={`relative overflow-hidden rounded-xl border-2 p-3 text-center transition ${
                 rewardClaimed
-                  ? 'border-emerald-600/50 bg-gradient-to-br from-emerald-900/40 to-green-900/25'
+                  ? 'border-zinc-700 bg-zinc-800/40'
                   : 'border-amber-500/60 bg-gradient-to-br from-amber-900/40 to-yellow-900/30'
               } ${justClaimed ? 'animate-claim-glow' : ''}`}
             >
               <div
                 className={`text-sm font-bold ${
-                  rewardClaimed ? 'text-emerald-300' : 'text-amber-300'
+                  rewardClaimed ? 'text-zinc-400' : 'text-amber-300'
                 }`}
               >
                 결산 보상
               </div>
               <div
-                className={`mt-1.5 flex flex-wrap items-center justify-center gap-x-2.5 gap-y-0.5 text-[12px] text-zinc-100 ${
-                  rewardClaimed ? 'opacity-70' : ''
+                className={`mt-1.5 flex flex-wrap items-center justify-center gap-x-2.5 gap-y-0.5 text-[12px] ${
+                  rewardClaimed ? 'text-zinc-400 opacity-70' : 'text-zinc-100'
                 }`}
               >
                 {v.myReward.diamond > 0 ? (
@@ -504,14 +504,15 @@ export function RaidSessionCard({ view: v }: { view: RaidView }) {
                   </span>
                 ))}
               </div>
+              {/* 박스모델을 두 상태 동일하게 — 양쪽 다 border 1px(box-border)로 레이아웃 시프트 차단. */}
               <button
                 type="button"
                 disabled={rewardClaimed}
                 onClick={handleClaim}
-                className={`mt-2.5 w-full rounded-full px-4 py-2.5 text-sm font-extrabold transition ${
+                className={`mt-2.5 w-full rounded-full border px-4 py-2.5 text-sm font-extrabold transition ${
                   rewardClaimed
-                    ? 'cursor-default border border-emerald-700/40 bg-emerald-950/40 text-emerald-500/60'
-                    : 'bg-gradient-to-r from-amber-500 to-yellow-500 text-amber-950 shadow-lg shadow-amber-900/40 active:scale-95 hover:brightness-110'
+                    ? 'cursor-default border-zinc-700 bg-zinc-800/60 text-zinc-500'
+                    : 'border-amber-400 bg-gradient-to-r from-amber-500 to-yellow-500 text-amber-950 shadow-lg shadow-amber-900/40 active:scale-95 hover:brightness-110'
                 }`}
               >
                 {rewardClaimed ? '수령 완료' : '보상 받기'}

@@ -63,12 +63,12 @@ html {
   --animate-phase-up: phase-up 0.6s ease-out;
   --animate-pulse-soft: pulse-soft 1.6s ease-in-out infinite;
 
-  /* 레이드 결산 보상 수령 — 초록 글로우 1회. */
+  /* 레이드 결산 보상 수령 — 중립(회색) 글로우 1회(disabled 톤 일관). */
   --animate-claim-glow: claim-glow 0.8s ease-out;
   @keyframes claim-glow {
-    0%   { box-shadow: 0 0 0 0 rgba(16, 185, 129, 0); }
-    40%  { box-shadow: 0 0 20px 6px rgba(16, 185, 129, 0.6); }
-    100% { box-shadow: 0 0 0 0 rgba(16, 185, 129, 0); }
+    0%   { box-shadow: 0 0 0 0 rgba(228, 228, 231, 0); }
+    40%  { box-shadow: 0 0 18px 5px rgba(228, 228, 231, 0.35); }
+    100% { box-shadow: 0 0 0 0 rgba(228, 228, 231, 0); }
   }
 
   @keyframes boss-float {
