@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useState, useTransition } from 'react';
+import { useState, useTransition } from 'react';
 import { useRouter } from 'next/navigation';
 
 import type { BattlePassView } from '@/lib/game/battlepass';
@@ -48,12 +48,6 @@ export function BattlePassClient({
   const premiumClaimable = view.segments.reduce((a, s) => a + s.premiumClaimable, 0);
   const totalClaimable = view.free.claimable + premiumClaimable;
 
-  const [selIdx, setSelIdx] = useState(view.segments.length - 1);
-  useEffect(() => {
-    setSelIdx(view.segments.length - 1);
-  }, [tab, view.segments.length]);
-  const seg = view.segments[Math.min(selIdx, view.segments.length - 1)] ?? view.segments[0]!;
-
   const router = useRouter();
   const [pending, startTransition] = useTransition();
   const [error, setError] = useState<string | null>(null);
@@ -74,17 +68,18 @@ export function BattlePassClient({
       active ? 'bg-zinc-900 text-white dark:bg-zinc-50 dark:text-zinc-950' : 'text-zinc-500'
     }`;
 
-  const levels: number[] = [];
-  for (let l = seg.startLevel; l <= seg.endLevel; l++) levels.push(l);
   const lvLabel = (l: number) => (tab === 'enhance' ? `+${l}` : `T${l}`);
-  const segShort = (s: { startLevel: number; endLevel: number }) =>
-    tab === 'enhance' ? [`+${s.startLevel}`, `~${s.endLevel}`] : [`T${s.startLevel}`, `~${s.endLevel}`];
+  const segRange = (s: { startLevel: number; endLevel: number }) =>
+    tab === 'enhance' ? `+${s.startLevel}~+${s.endLevel}` : `T${s.startLevel}~T${s.endLevel}`;
   const freeState = (l: number): CellState =>
     l > view.maxReached ? 'locked' : l <= view.free.claimedThrough ? 'claimed' : 'claimable';
-  const premiumState = (l: number): CellState => {
-    if (!seg.purchased) return 'disabled';
+  const premiumState = (
+    s: { purchased: boolean; premiumClaimedThrough: number },
+    l: number,
+  ): CellState => {
+    if (!s.purchased) return 'disabled';
     if (l > view.maxReached) return 'locked';
-    return l <= seg.premiumClaimedThrough ? 'claimed' : 'claimable';
+    return l <= s.premiumClaimedThrough ? 'claimed' : 'claimable';
   };
 
   return (
@@ -139,69 +134,53 @@ export function BattlePassClient({
       </div>
       {/* /상단 sticky 헤더 */}
 
-      <div className="flex gap-2 px-4 pt-3">
-        {/* ⑤ 구간(티어) 필터 — 좌측. sticky 헤더(배너 h-20 + 토글) 아래에 고정. */}
-        <aside className="sticky top-[128px] flex shrink-0 flex-col gap-1.5 self-start">
-          {view.segments.map((s) => {
-            const [a, b] = segShort(s);
-            const active = s.index === seg.index;
-            return (
-              <button
-                key={s.index}
-                type="button"
-                onClick={() => setSelIdx(s.index)}
-                className={`flex w-12 flex-col items-center rounded-lg border py-1.5 text-[11px] font-semibold leading-tight tabular-nums ${
-                  active
-                    ? 'border-amber-500 bg-amber-500 text-amber-950'
-                    : 'border-zinc-200 text-zinc-500 dark:border-zinc-800'
-                }`}
-              >
-                <span>{a}</span>
-                <span>{b}</span>
-              </button>
-            );
-          })}
-        </aside>
-
-        {/* 선택 구간 티어 트랙 — 전체 스크롤 */}
-        <div className="min-w-0 flex-1">
-          <div className="mb-2">
-            {seg.purchased ? (
-              <span className="inline-block rounded-full bg-amber-100 px-2.5 py-1 text-[10px] font-bold text-amber-700 dark:bg-amber-950/40 dark:text-amber-300">
-                프리미엄 구매됨
-              </span>
-            ) : (
-              <button
-                type="button"
-                disabled
-                className="w-full rounded-lg bg-zinc-200 py-1.5 text-[11px] font-bold text-zinc-500 dark:bg-zinc-800"
-              >
-                프리미엄 {won(seg.priceKrw)} · 준비 중
-              </button>
-            )}
-          </div>
-
-          <div className="grid grid-cols-[36px_1fr_1fr] gap-1.5 px-0.5 pb-1 text-[10px] font-semibold text-zinc-400">
-            <span className="text-center">단계</span>
-            <span className="text-center">무료</span>
-            <span className="text-center">프리미엄</span>
-          </div>
-          <div className="space-y-1">
-            {levels.map((l) => (
-              <div key={l} className="grid grid-cols-[36px_1fr_1fr] items-center gap-1.5">
-                <span
-                  className={`text-center text-[11px] font-semibold tabular-nums ${
-                    l <= view.maxReached ? 'text-zinc-700 dark:text-zinc-200' : 'text-zinc-400'
-                  }`}
-                >
-                  {lvLabel(l)}
-                </span>
-                <TierCell icon={icon} amount={seg.freePerTier} state={freeState(l)} />
-                <TierCell icon={icon} amount={seg.premiumPerTier} state={premiumState(l)} />
-              </div>
-            ))}
-          </div>
+      <div className="px-4">
+        {/* 컬럼 헤더 — 스크롤 중에도 보이도록 sticky 헤더 아래 고정 */}
+        <div className="sticky top-[126px] z-10 grid grid-cols-[52px_1fr_1fr] gap-1.5 border-b border-zinc-200 bg-white/95 px-0.5 py-1.5 text-[10px] font-semibold text-zinc-400 backdrop-blur dark:border-zinc-800 dark:bg-zinc-950/95">
+          <span className="text-center">단계</span>
+          <span className="text-center">무료</span>
+          <span className="text-center">프리미엄</span>
         </div>
+
+        {/* 현재 볼 수 있는 모든 구간을 한 번에 노출(좌측 선택 없음) */}
+        {view.segments.map((s) => {
+          const segLevels: number[] = [];
+          for (let l = s.startLevel; l <= s.endLevel; l++) segLevels.push(l);
+          return (
+            <section key={s.index} className="pt-3">
+              {/* 구간 헤더 — 범위 + 프리미엄 상태 */}
+              <div className="mb-2 flex items-center gap-2">
+                <span className="rounded-md bg-zinc-100 px-2 py-1 text-[11px] font-bold tabular-nums text-zinc-600 dark:bg-zinc-900 dark:text-zinc-300">
+                  {segRange(s)}
+                </span>
+                {s.purchased ? (
+                  <span className="rounded-full bg-amber-100 px-2.5 py-1 text-[10px] font-bold text-amber-700 dark:bg-amber-950/40 dark:text-amber-300">
+                    프리미엄 구매됨
+                  </span>
+                ) : (
+                  <span className="rounded-full bg-zinc-200 px-2.5 py-1 text-[10px] font-bold text-zinc-500 dark:bg-zinc-800">
+                    프리미엄 {won(s.priceKrw)} · 준비 중
+                  </span>
+                )}
+              </div>
+              <div className="space-y-1">
+                {segLevels.map((l) => (
+                  <div key={l} className="grid grid-cols-[52px_1fr_1fr] items-center gap-1.5">
+                    <span
+                      className={`text-center text-[11px] font-semibold tabular-nums ${
+                        l <= view.maxReached ? 'text-zinc-700 dark:text-zinc-200' : 'text-zinc-400'
+                      }`}
+                    >
+                      {lvLabel(l)}
+                    </span>
+                    <TierCell icon={icon} amount={s.freePerTier} state={freeState(l)} />
+                    <TierCell icon={icon} amount={s.premiumPerTier} state={premiumState(s, l)} />
+                  </div>
+                ))}
+              </div>
+            </section>
+          );
+        })}
       </div>
 
       <p className="px-4 pt-3 text-[11px] leading-relaxed text-zinc-400">
