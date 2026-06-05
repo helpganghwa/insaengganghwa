@@ -54,7 +54,14 @@ export async function getTutorialState(userId: string): Promise<TutorialState> {
     if (equippedC <= 0) return { phase: 'active', step: 'equip' };
     if (jobC <= 0 && logC <= 0) return { phase: 'active', step: 'enhance' };
     if (logC <= 0) return { phase: 'active', step: 'attempt' };
-    return { phase: 'active', step: 'attempt' }; // 마킹은 완료 액션이 담당(클라 주도)
+
+    // 강화 수행 완료(log 존재) → DONE 마킹(완료 모달을 못 닫은 경우·다른 브라우저처럼
+    // localStorage가 없는 경우의 안전망). 이후 어느 브라우저에서도 튜토리얼 미노출.
+    await db
+      .update(profiles)
+      .set({ tutorialStep: TUTORIAL_DONE })
+      .where(and(eq(profiles.id, userId), eq(profiles.tutorialStep, TUTORIAL_ACTIVE)));
+    return { phase: 'done', step: null };
   } catch {
     return { phase: 'done', step: null };
   }
