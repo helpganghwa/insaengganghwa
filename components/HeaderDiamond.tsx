@@ -2,7 +2,6 @@
 
 import Link from 'next/link';
 
-import { formatCompactKR } from '@/lib/ui/format-number';
 import { useDiamond } from '@/components/DiamondContext';
 
 /**
@@ -19,7 +18,7 @@ export function HeaderDiamond() {
       className="inline-flex items-center gap-1 text-zinc-700 dark:text-zinc-100"
     >
       <span aria-hidden>💎</span>
-      <span className="font-mono tabular-nums">{formatCompactKR(diamond)}</span>
+      <span className="font-mono tabular-nums">{diamond.toLocaleString('ko-KR')}</span>
     </Link>
   );
 }

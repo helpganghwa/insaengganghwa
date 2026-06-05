@@ -1,6 +1,5 @@
 import Link from 'next/link';
 
-import { formatCompactKR } from '@/lib/ui/format-number';
 import type { LayoutData } from '@/lib/game/layout-data';
 import { DiamondInitializer } from '@/components/DiamondContext';
 import { HeaderDiamond } from '@/components/HeaderDiamond';
@@ -64,7 +63,7 @@ export function AppHeaderShell({
             className="inline-flex items-center gap-1 text-zinc-700 dark:text-zinc-100"
           >
             <span aria-hidden>💎</span>
-            <span className="font-mono tabular-nums">{formatCompactKR(diamond)}</span>
+            <span className="font-mono tabular-nums">{diamond.toLocaleString('ko-KR')}</span>
           </Link>
         )}
       </div>
