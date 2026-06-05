@@ -4,7 +4,13 @@ import { revalidatePath } from 'next/cache';
 
 import { getSessionUserId } from '@/lib/auth/session';
 import { rateLimited } from '@/lib/ratelimit';
-import { claimFree, claimPremium, BattlePassErr } from '@/lib/game/battlepass';
+import {
+  claimFree,
+  claimPremium,
+  claimFreeUpTo,
+  claimPremiumUpTo,
+  BattlePassErr,
+} from '@/lib/game/battlepass';
 import type { BattlePassType } from '@/lib/game/balance';
 
 /**
@@ -14,6 +20,7 @@ import type { BattlePassType } from '@/lib/game/balance';
 type ErrorState = { status: 'error'; code: string; message: string };
 const MSG: Record<string, string> = {
   NOTHING_TO_CLAIM: '받을 보상이 없습니다.',
+  NOT_PURCHASED: '프리미엄 미구매 구간입니다.',
   UNAUTHENTICATED: '로그인이 필요합니다.',
   RATE_LIMITED: '요청이 너무 빠릅니다. 잠시 후 다시 시도해 주세요.',
   UNKNOWN: '알 수 없는 오류',
@@ -75,4 +82,28 @@ export async function claimAllAction(type: BattlePassType) {
   if (granted <= 0) return err('NOTHING_TO_CLAIM');
   revalidate();
   return { status: 'success' as const, granted, rewardKind };
+}
+
+/** 개별 단계 수령 — 무료/프리미엄 라인의 특정 단계(level)까지. 프리미엄은 구간(segmentIndex) 필요. */
+export async function claimTierAction(
+  type: BattlePassType,
+  line: 'free' | 'premium',
+  level: number,
+  segmentIndex?: number,
+) {
+  const u = await getSessionUserId();
+  if (!u) return err('UNAUTHENTICATED');
+  if (await rateLimited(u, 'battlepass')) return err('RATE_LIMITED');
+  try {
+    const r =
+      line === 'free'
+        ? await claimFreeUpTo(u, type, level)
+        : await claimPremiumUpTo(u, type, segmentIndex ?? 0, level);
+    revalidate();
+    return { status: 'success' as const, granted: r.granted, rewardKind: r.rewardKind };
+  } catch (e) {
+    if (e instanceof BattlePassErr) return err(e.code);
+    console.error('[battlepass.claimTier]', e);
+    return err('UNKNOWN');
+  }
 }

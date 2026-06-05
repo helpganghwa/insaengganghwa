@@ -23,7 +23,11 @@ import { getMaxReached } from '@/lib/game/codex/max-reached';
  * 배틀패스 — BALANCE §9 / SCHEMA §14. 성장 패스(만료 없음). 진행도 = 계정 최고 도달.
  * 무료 라인은 전 구간 항상 수령, 프리미엄은 산 구간만(소급). 보상: 강화=다이아, 초월=보급상자.
  */
-export type BattlePassError = 'NOTHING_TO_CLAIM' | 'ALREADY_PURCHASED' | 'SEGMENT_LOCKED';
+export type BattlePassError =
+  | 'NOTHING_TO_CLAIM'
+  | 'ALREADY_PURCHASED'
+  | 'SEGMENT_LOCKED'
+  | 'NOT_PURCHASED';
 export class BattlePassErr extends Error {
   constructor(public code: BattlePassError) {
     super(code);
@@ -202,6 +206,36 @@ export function claimFree(
   });
 }
 
+/** 무료 라인 — 특정 단계(level)까지 수령(개별 단계 수령). target = min(level, maxReached). */
+export function claimFreeUpTo(
+  userId: string,
+  type: BattlePassType,
+  level: number,
+): Promise<{ granted: number; rewardKind: 'diamond' | 'box' }> {
+  return db.transaction(async (tx) => {
+    const [s] = await tx
+      .select({ ft: battlePassState.freeClaimedThrough })
+      .from(battlePassState)
+      .where(and(eq(battlePassState.userId, userId), eq(battlePassState.passType, type)))
+      .for('update');
+    const claimedThrough = s?.ft ?? 0;
+    const reached = await getMaxReached(userId);
+    const maxReached = type === 'enhance' ? reached.maxEnhance : reached.maxTranscend;
+    const target = Math.min(Math.floor(level), maxReached);
+    const granted = bpRangeReward(type, claimedThrough, target, false);
+    if (granted <= 0) throw new BattlePassErr('NOTHING_TO_CLAIM');
+    await grantReward(tx, userId, type, granted);
+    await tx
+      .insert(battlePassState)
+      .values({ userId, passType: type, freeClaimedThrough: target })
+      .onConflictDoUpdate({
+        target: [battlePassState.userId, battlePassState.passType],
+        set: { freeClaimedThrough: target },
+      });
+    return { granted, rewardKind: type === 'enhance' ? 'diamond' : 'box' };
+  });
+}
+
 // ── 프리미엄 라인 수령(산 구간 전체) ──────────────────────────────────────────
 
 export function claimPremium(
@@ -241,6 +275,47 @@ export function claimPremium(
     }
     if (granted <= 0) throw new BattlePassErr('NOTHING_TO_CLAIM');
     await grantReward(tx, userId, type, granted);
+    return { granted, rewardKind: type === 'enhance' ? 'diamond' : 'box' };
+  });
+}
+
+/** 프리미엄 라인 — 산 구간에서 특정 단계(level)까지 수령(개별). 미구매 구간이면 NOT_PURCHASED. */
+export function claimPremiumUpTo(
+  userId: string,
+  type: BattlePassType,
+  segmentIndex: number,
+  level: number,
+): Promise<{ granted: number; rewardKind: 'diamond' | 'box' }> {
+  return db.transaction(async (tx) => {
+    const [seg] = await tx
+      .select({ pct: battlePassSegments.premiumClaimedThrough })
+      .from(battlePassSegments)
+      .where(
+        and(
+          eq(battlePassSegments.userId, userId),
+          eq(battlePassSegments.passType, type),
+          eq(battlePassSegments.segmentIndex, segmentIndex),
+        ),
+      )
+      .for('update');
+    if (!seg) throw new BattlePassErr('NOT_PURCHASED');
+    const reached = await getMaxReached(userId);
+    const maxReached = type === 'enhance' ? reached.maxEnhance : reached.maxTranscend;
+    const endLevel = bpSegmentEndLevel(type, segmentIndex);
+    const target = Math.min(Math.floor(level), maxReached, endLevel);
+    const granted = bpRangeReward(type, seg.pct, target, true);
+    if (granted <= 0) throw new BattlePassErr('NOTHING_TO_CLAIM');
+    await grantReward(tx, userId, type, granted);
+    await tx
+      .update(battlePassSegments)
+      .set({ premiumClaimedThrough: target })
+      .where(
+        and(
+          eq(battlePassSegments.userId, userId),
+          eq(battlePassSegments.passType, type),
+          eq(battlePassSegments.segmentIndex, segmentIndex),
+        ),
+      );
     return { granted, rewardKind: type === 'enhance' ? 'diamond' : 'box' };
   });
 }

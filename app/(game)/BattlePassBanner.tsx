@@ -28,7 +28,7 @@ export function BattlePassBanner() {
       <div className="relative z-10 flex w-full items-center px-3.5">
         <div className="min-w-0">
           <div className="text-[10px] font-semibold tracking-wider text-amber-300 drop-shadow-[0_1px_2px_rgba(0,0,0,0.9)]">
-            배틀패스
+            성장패스
           </div>
           <div className="truncate text-[12px] font-medium text-white/95 drop-shadow-[0_1px_2px_rgba(0,0,0,0.9)]">
             강화·초월 최고 도달마다 보상이 쌓여요.
