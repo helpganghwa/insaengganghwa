@@ -22,7 +22,7 @@ function ResultCard({
   big,
   onClick,
 }: {
-  r: OpenedItem;
+  r: OpenedItem & { count?: number };
   slot: Slot;
   big?: boolean;
   onClick?: () => void;
@@ -62,6 +62,13 @@ function ResultCard({
   const grade = `rgb(${st.colorRgb.join(',')})`;
   const spriteSize = big ? 76 : 48;
 
+  // 다음 초월 진행 게이지(간략) — 임계 = transcendLevel+1(선형). 애니 끝난 뒤 표시.
+  const threshold = finalT + 1;
+  const remain = Math.max(0, threshold - r.transcendProgress);
+  const gaugePct = Math.min(100, Math.round((r.transcendProgress / threshold) * 100));
+  const nextGrade = `rgb(${transcendStyle(finalT + 1).colorRgb.join(',')})`;
+  const animDone = shown >= finalT;
+
   return (
     <button
       type="button"
@@ -76,6 +83,11 @@ function ResultCard({
       {r.isNew ? (
         <span className="absolute left-1.5 top-1.5 z-30 rounded bg-emerald-500 px-1 text-[8px] font-bold text-white">
           NEW
+        </span>
+      ) : null}
+      {r.count && r.count > 1 ? (
+        <span className="absolute right-1.5 top-1.5 z-30 rounded bg-zinc-900/80 px-1 text-[9px] font-bold text-white">
+          ×{r.count}
         </span>
       ) : null}
       {/* 떨림은 스프라이트에만 — 단계 직전 부르르 (빛 효과 없음) */}
@@ -112,6 +124,20 @@ function ResultCard({
           ✦{shown}
         </span>
       ) : null}
+      {/* 다음 초월 진행 게이지(간략) — 인벤토리 상세처럼 다음 단계까지 진행도 */}
+      {animDone ? (
+        <div className={`mt-1 ${big ? 'w-24' : 'w-full px-0.5'}`} title={`다음 초월까지 ${remain}`}>
+          <div className="h-1 w-full overflow-hidden rounded-full bg-zinc-200 dark:bg-zinc-800">
+            <div
+              className="h-full rounded-full"
+              style={{ width: `${gaugePct}%`, backgroundColor: nextGrade }}
+            />
+          </div>
+          {big ? (
+            <span className="mt-0.5 block text-[9px] text-zinc-400">다음 초월까지 {remain}</span>
+          ) : null}
+        </div>
+      ) : null}
     </button>
   );
 }
@@ -133,10 +159,24 @@ export function GachaResultModal({
   onAgain: (n: number) => void;
   onClose: () => void;
 }) {
-  // 신규 → 초월 우선 정렬.
-  const sortedResults = results
-    .slice()
-    .sort((a, b) => Number(b.isNew) - Number(a.isNew) || b.transcended - a.transcended);
+  // ② 같은 종류는 하나로 묶기 — 박스 순서상 마지막 엔트리가 최종 상태(누적), transcended 합산·count.
+  const groupedMap = new Map<number, OpenedItem & { count: number }>();
+  for (const r of results) {
+    const g = groupedMap.get(r.catalogItemId);
+    groupedMap.set(r.catalogItemId, {
+      ...r, // 최종(transcendLevel/Progress/championRank)은 최신 엔트리
+      count: (g?.count ?? 0) + 1,
+      transcended: (g?.transcended ?? 0) + r.transcended,
+      isNew: (g?.isNew ?? false) || r.isNew,
+      loreTeaser: g?.loreTeaser ?? r.loreTeaser,
+    });
+  }
+  // ③ 초월 수치 내림차순 → 동률이면 다음 초월에 가까운(진행도 비율) 순.
+  const sortedResults = [...groupedMap.values()].sort(
+    (a, b) =>
+      b.transcendLevel - a.transcendLevel ||
+      b.transcendProgress / (b.transcendLevel + 1) - a.transcendProgress / (a.transcendLevel + 1),
+  );
   const single = results.length === 1 ? results[0]! : null;
   const multiN = remaining >= 2 ? Math.min(10, remaining) : 10;
   const [openLoreIdx, setOpenLoreIdx] = useState<number | null>(null);

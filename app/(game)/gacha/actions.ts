@@ -24,6 +24,8 @@ export type OpenedItem = {
   transcended: number;
   /** 결과 초월 레벨. */
   transcendLevel: number;
+  /** 결과 초월 진행도(다음 초월 임계 = transcendLevel+1). 게이지용. */
+  transcendProgress: number;
   /** 신규 해금 시 보여줄 로어 티저(1~2문장). 중복/없음=null. */
   loreTeaser: string | null;
 };
@@ -76,6 +78,7 @@ export async function openAction(slot: Slot, count: number): Promise<OpenActionR
           championRank: libRanks.get(o.catalogItemId) ?? null,
           transcended: o.transcended,
           transcendLevel: o.transcendLevel,
+          transcendProgress: o.transcendProgress,
           loreTeaser: o.isNew && code ? loreTeaser(code) : null,
         };
       }),

@@ -31,6 +31,8 @@ export type OpenResult = {
   transcended: number;
   /** 결과 초월 레벨. */
   transcendLevel: number;
+  /** 결과 초월 진행도(다음 초월 임계 = transcendLevel+1). 게이지용. */
+  transcendProgress: number;
 };
 
 function rngU32(): number {
@@ -79,6 +81,7 @@ export function openSupplyBoxes(input: {
       let isNew = false;
       let transcended = 0;
       let transcendLevel = 0;
+      let transcendProgress = 0;
 
       if (!existing) {
         // 최초 획득 — 도감 해금.
@@ -99,6 +102,7 @@ export function openSupplyBoxes(input: {
           transcended += 1;
         }
         transcendLevel = tLevel;
+        transcendProgress = progress;
 
         const raisedMax = tLevel > existing.maxTranscendLevel;
         await tx
@@ -127,7 +131,7 @@ export function openSupplyBoxes(input: {
 
       await tx.insert(supplyOpenLogs).values({ userId, slot, catalogItemId, isNew });
 
-      results.push({ catalogItemId, isNew, transcended, transcendLevel });
+      results.push({ catalogItemId, isNew, transcended, transcendLevel, transcendProgress });
     }
 
     await tx
