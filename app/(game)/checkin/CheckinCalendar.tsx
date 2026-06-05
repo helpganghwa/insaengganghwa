@@ -42,13 +42,14 @@ function quantityLabel(r: CheckinReward): string {
       ? `${(r.amount / 1000).toFixed(r.amount % 1000 === 0 ? 0 : 1)}k`
       : `${r.amount}`;
   if (r.kind === 'supply') return `×${r.count}`;
-  return `×${r.perSlot}`;
+  // 📦 = 종류 섞인 보급 상자(총 개수 기준). supply_set은 3슬롯 각 perSlot → 총 perSlot×3.
+  return `×${r.perSlot * SUPPLY_SLOTS.length}`;
 }
 
 function rewardLongLabel(r: CheckinReward): string {
   if (r.kind === 'diamond') return `다이아 ${r.amount.toLocaleString('ko-KR')}`;
   if (r.kind === 'supply') return `${SLOT_LABEL[r.slot]} 보급 상자 ${r.count}개`;
-  return `보급 상자 3종 각 ${r.perSlot}개`;
+  return `보급 상자 ${r.perSlot * SUPPLY_SLOTS.length}개(무기·방어구·장신구 각 ${r.perSlot}개)`;
 }
 
 function cellAriaLabel(
