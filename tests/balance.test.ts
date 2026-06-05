@@ -307,13 +307,13 @@ describe('배틀패스 — 구간·보상·가격', () => {
     expect(bpSegmentEndLevel('transcend', 0)).toBe(10);
     expect(bpSegmentEndLevel('transcend', 1)).toBe(20);
   });
-  it('bpTierReward: 강화 ×2^c / 초월 ×(c+1), 무료=프리미엄/5', () => {
-    // 강화 c0: 무료 10 / 프리미엄 50, c1: 20 / 100, c2: 40 / 200
-    expect(bpTierReward('enhance', 50, false)).toBe(10);
-    expect(bpTierReward('enhance', 50, true)).toBe(50);
-    expect(bpTierReward('enhance', 150, true)).toBe(100);
-    expect(bpTierReward('enhance', 250, true)).toBe(200);
-    // 초월 c0: 10/50, c1: 20/100, c2: 30/150
+  it('bpTierReward: 마일스톤 1개당 보상(강화 ×2^c×step10 / 초월 ×(c+1)×step1)', () => {
+    // 강화는 10단위 마일스톤에 ×10 몰아줌 — c0 무료 100 / 프리미엄 500, c1 1000, c2 2000
+    expect(bpTierReward('enhance', 50, false)).toBe(100);
+    expect(bpTierReward('enhance', 50, true)).toBe(500);
+    expect(bpTierReward('enhance', 150, true)).toBe(1000);
+    expect(bpTierReward('enhance', 250, true)).toBe(2000);
+    // 초월은 매 단계(step1) 그대로 — c0 10/50, c1 20/100, c2 30/150
     expect(bpTierReward('transcend', 5, false)).toBe(10);
     expect(bpTierReward('transcend', 5, true)).toBe(50);
     expect(bpTierReward('transcend', 15, true)).toBe(100);

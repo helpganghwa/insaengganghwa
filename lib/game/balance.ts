@@ -526,6 +526,17 @@ export type BattlePassType = 'enhance' | 'transcend';
 /** 구간 크기 — 강화 100단위, 초월 10단위. */
 export const BP_SEGMENT_SIZE: Record<BattlePassType, number> = { enhance: 100, transcend: 10 };
 
+/**
+ * 보상 마일스톤 간격 — 강화는 10단위(+10,+20,…,+100 = 구간당 10개), 초월은 1단위(매 단계).
+ * 보상은 마일스톤에서만 지급되며, 간격만큼 ×step 해서 **구간 총량은 보존**(10개×10배 = 100개×1배).
+ */
+export const BP_TIER_STEP: Record<BattlePassType, number> = { enhance: 10, transcend: 1 };
+
+/** level이 보상 마일스톤(step 배수)인가. */
+export function bpIsTierLevel(type: BattlePassType, level: number): boolean {
+  return level >= 1 && level % BP_TIER_STEP[type] === 0;
+}
+
 /** 단계(1-index level) → 구간 인덱스(0부터). level<1이면 0. */
 export function bpSegmentIndex(type: BattlePassType, level: number): number {
   if (level < 1) return 0;
@@ -538,18 +549,19 @@ export function bpSegmentEndLevel(type: BattlePassType, segmentIndex: number): n
 }
 
 /**
- * §9.1 단계당 보상량 — 무료 = 프리미엄의 1/5. 구간 스케일: 강화 ×2^c, 초월 ×(c+1).
- * 강화 = 다이아 개수, 초월 = 보급상자 개수. (c = 구간 인덱스)
+ * §9.1 **마일스톤 1개당** 보상량 — 무료 = 프리미엄의 1/5. 구간 스케일: 강화 ×2^c, 초월 ×(c+1).
+ * 간격(step)만큼 ×해서 마일스톤에 몰아줌(구간 총량 보존). 강화 = 다이아, 초월 = 보급상자. (c=구간)
  */
 export function bpTierReward(type: BattlePassType, level: number, premium: boolean): number {
   const c = bpSegmentIndex(type, level);
   const base = premium ? 50 : 10;
-  return type === 'enhance' ? base * 2 ** c : base * (c + 1);
+  const perLevel = type === 'enhance' ? base * 2 ** c : base * (c + 1);
+  return perLevel * BP_TIER_STEP[type];
 }
 
 /**
  * §9.1 (fromLevelExclusive, toLevelInclusive] 범위 보상 합 — 클레임용.
- * 구간 내 단계당 동일하므로 구간 단위로 합산.
+ * **마일스톤(step 배수)에서만** 지급되므로 그 단계들만 합산.
  */
 export function bpRangeReward(
   type: BattlePassType,
@@ -557,16 +569,16 @@ export function bpRangeReward(
   toLevelInclusive: number,
   premium: boolean,
 ): number {
+  const step = BP_TIER_STEP[type];
   const from = Math.max(0, Math.floor(fromLevelExclusive));
   const to = Math.floor(toLevelInclusive);
   if (to <= from) return 0;
   let total = 0;
-  let lv = from + 1;
+  // (from, to] 안의 첫 마일스톤부터 step 간격으로.
+  let lv = (Math.floor(from / step) + 1) * step;
   while (lv <= to) {
-    const segEnd = bpSegmentEndLevel(type, bpSegmentIndex(type, lv));
-    const chunkEnd = Math.min(to, segEnd);
-    total += (chunkEnd - lv + 1) * bpTierReward(type, lv, premium);
-    lv = chunkEnd + 1;
+    total += bpTierReward(type, lv, premium);
+    lv += step;
   }
   return total;
 }

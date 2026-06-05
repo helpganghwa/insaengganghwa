@@ -62,13 +62,6 @@ function ResultCard({
   const grade = `rgb(${st.colorRgb.join(',')})`;
   const spriteSize = big ? 76 : 48;
 
-  // 다음 초월 진행 게이지(간략) — 임계 = transcendLevel+1(선형). 애니 끝난 뒤 표시.
-  const threshold = finalT + 1;
-  const remain = Math.max(0, threshold - r.transcendProgress);
-  const gaugePct = Math.min(100, Math.round((r.transcendProgress / threshold) * 100));
-  const nextGrade = `rgb(${transcendStyle(finalT + 1).colorRgb.join(',')})`;
-  const animDone = shown >= finalT;
-
   return (
     <button
       type="button"
@@ -123,20 +116,6 @@ function ResultCard({
         >
           ✦{shown}
         </span>
-      ) : null}
-      {/* 다음 초월 진행 게이지(간략) — 인벤토리 상세처럼 다음 단계까지 진행도 */}
-      {animDone ? (
-        <div className={`mt-1 ${big ? 'w-24' : 'w-full px-0.5'}`} title={`다음 초월까지 ${remain}`}>
-          <div className="h-1 w-full overflow-hidden rounded-full bg-zinc-200 dark:bg-zinc-800">
-            <div
-              className="h-full rounded-full"
-              style={{ width: `${gaugePct}%`, backgroundColor: nextGrade }}
-            />
-          </div>
-          {big ? (
-            <span className="mt-0.5 block text-[9px] text-zinc-400">다음 초월까지 {remain}</span>
-          ) : null}
-        </div>
       ) : null}
     </button>
   );

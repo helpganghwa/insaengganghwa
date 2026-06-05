@@ -15,6 +15,7 @@ import {
   bpRangeReward,
   bpSegmentPriceKrw,
   BP_SEGMENT_SIZE,
+  BP_TIER_STEP,
 } from '@/lib/game/balance';
 import { getMaxReached } from '@/lib/game/codex/max-reached';
 
@@ -102,6 +103,8 @@ export type BattlePassView = {
   rewardKind: 'diamond' | 'box';
   maxReached: number;
   segmentSize: number;
+  /** 보상 마일스톤 간격 — 강화 10, 초월 1. 클라이언트는 step 배수 단계만 렌더. */
+  tierStep: number;
   free: { claimedThrough: number; claimable: number };
   segments: BattlePassSegmentView[];
 };
@@ -159,6 +162,7 @@ export async function getBattlePassView(
     rewardKind: type === 'enhance' ? 'diamond' : 'box',
     maxReached,
     segmentSize: BP_SEGMENT_SIZE[type],
+    tierStep: BP_TIER_STEP[type],
     free: {
       claimedThrough: freeClaimedThrough,
       claimable: bpRangeReward(type, freeClaimedThrough, maxReached, false),
