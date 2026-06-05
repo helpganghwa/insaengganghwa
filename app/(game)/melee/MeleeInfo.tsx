@@ -71,8 +71,8 @@ export function MeleeInfo({
           <div className="mx-4 overflow-hidden rounded-xl border border-zinc-800 bg-zinc-950">
             <div className="grid grid-cols-[1fr_auto_auto] items-center gap-2 border-b border-zinc-900 px-3 py-2 text-[10px] font-bold text-zinc-500">
               <span>순위</span>
-              <span className="w-16 text-right">다이아</span>
-              <span className="w-14 text-right">보급상자</span>
+              <span className="w-16 text-right text-sm">💎</span>
+              <span className="w-14 text-right text-sm">📦</span>
             </div>
             <ul>
               {MELEE_REWARD_TIERS.map((t) => (

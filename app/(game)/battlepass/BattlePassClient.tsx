@@ -50,20 +50,24 @@ function RewardChip({
     variant === 'claimable'
       ? 'bg-amber-400 text-amber-950 font-bold active:bg-amber-500'
       : variant === 'claimed'
-        ? 'bg-zinc-200 text-zinc-400 dark:bg-zinc-800 dark:text-zinc-500'
+        ? 'bg-zinc-200 text-zinc-500 dark:bg-zinc-800 dark:text-zinc-400'
         : 'bg-zinc-100 text-zinc-400 dark:bg-zinc-900 dark:text-zinc-500';
   const base =
-    'flex w-full items-center justify-center gap-px rounded py-1 text-[9px] leading-none tabular-nums';
-  // 수령 완료는 '받음' 텍스트로(체크·취소선 대신).
-  const body =
-    variant === 'claimed' ? (
-      <span className="font-semibold tracking-tight">받음</span>
-    ) : (
+    'relative flex w-full items-center justify-center gap-px overflow-hidden rounded py-1 text-[9px] leading-none tabular-nums';
+  // 수령 완료 — 뒤에 보상이 보이는 채로 '받음'을 불투명 오버레이로 덮음.
+  const body = (
+    <>
       <span>
         {icon}
         {amount.toLocaleString('ko-KR')}
       </span>
-    );
+      {variant === 'claimed' ? (
+        <span className="absolute inset-0 flex items-center justify-center bg-zinc-900/55 text-[8px] font-bold text-white">
+          받음
+        </span>
+      ) : null}
+    </>
+  );
   if (variant === 'claimable' && onClick) {
     return (
       <button type="button" onClick={onClick} className={`${base} ${cls}`}>
@@ -182,7 +186,7 @@ function PassColumn({
                     type="button"
                     onClick={onPremiumLocked}
                     style={{ width: PREMIUM_W }}
-                    className="absolute inset-y-0 right-0 flex flex-col items-center justify-center gap-0.5 rounded bg-zinc-900/55 text-center text-[9px] font-bold leading-tight text-white"
+                    className="absolute inset-y-0 right-0 flex flex-col items-center justify-center gap-0.5 rounded bg-zinc-900/55 text-center text-[9px] font-bold leading-tight text-white backdrop-blur-sm"
                   >
                     <span>프리미엄</span>
                     <span className="tabular-nums">{won(s.priceKrw)}</span>
