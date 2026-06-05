@@ -93,18 +93,6 @@ export default function RootLayout({ children }: Readonly<{ children: React.Reac
       className={`dark ${geistSans.variable} ${geistMono.variable} h-full overscroll-none antialiased`}
     >
       <body className="flex min-h-full flex-col overscroll-none bg-zinc-950 text-zinc-50">
-        {/* 큰 화면(폴드 펼침·태블릿, screen.width≥600) — width=390 고정 스케일이 2배 이상
-            확대되는 문제 회피. device-width로 전환 → 390 컬럼이 중앙에 정상 크기(양옆 여백).
-            폰(<600)은 Next 출력(width=390) 그대로. 페인트 전 인라인 실행으로 깜빡임 방지. */}
-        <script
-          dangerouslySetInnerHTML={{
-            __html:
-              // 폭 모드(wide/narrow)가 '실제로 바뀔 때'만 viewport 재설정. 안드로이드 크롬은
-              // 스크롤 시 URL바 토글로 resize가 연속 발생 → 무조건 재설정하면 스크롤이 끊김.
-              // screen.width는 스크롤로 안 변하므로 가드(W)로 재설정을 막아 스크롤 보존.
-              "(function(){var m=document.querySelector('meta[name=viewport]');if(!m)return;var o=m.getAttribute('content');var W=null;function a(){var w=(window.screen&&screen.width)||window.innerWidth;var x=w>=600;if(x===W)return;W=x;m.setAttribute('content',x?'width=device-width,initial-scale=1,viewport-fit=cover':o);}a();window.addEventListener('resize',a);window.addEventListener('orientationchange',a);})();",
-          }}
-        />
         {children}
       </body>
     </html>

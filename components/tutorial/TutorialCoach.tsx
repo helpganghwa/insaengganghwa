@@ -221,8 +221,9 @@ export function TutorialCoach({ statePromise }: { statePromise: Promise<Tutorial
   }, [effective, pathname]);
 
   // 구멍 밖 클릭만 캡처 차단(스크롤·터치는 통과). 타겟·코치 UI 허용, 폴백이면 차단 안 함.
+  // 완료 팝업 중엔 비활성 — 모달 버튼(알림/강화하기) 클릭 차단 방지.
   useEffect(() => {
-    if (!effective || preview) return;
+    if (!effective || preview || completed) return;
     const onClickCapture = (e: MouseEvent) => {
       const t = e.target as Element | null;
       if (!t || typeof t.closest !== 'function') return;
@@ -235,7 +236,7 @@ export function TutorialCoach({ statePromise }: { statePromise: Promise<Tutorial
     };
     document.addEventListener('click', onClickCapture, true);
     return () => document.removeEventListener('click', onClickCapture, true);
-  }, [effective, preview]);
+  }, [effective, preview, completed]);
 
   if (typeof window === 'undefined') return null;
 
