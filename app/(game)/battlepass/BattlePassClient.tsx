@@ -54,14 +54,12 @@ function RewardChip({
         : 'bg-zinc-100 text-zinc-400 dark:bg-zinc-900 dark:text-zinc-500';
   const base =
     'flex w-full items-center justify-center gap-px rounded py-1 text-[9px] leading-none tabular-nums';
+  // 수령 완료는 체크표시 대신 취소선 + 회색으로(소진 표현).
   const body = (
-    <>
-      {variant === 'claimed' ? <span>✓</span> : null}
-      <span>
-        {icon}
-        {amount.toLocaleString('ko-KR')}
-      </span>
-    </>
+    <span className={variant === 'claimed' ? 'line-through decoration-2' : ''}>
+      {icon}
+      {amount.toLocaleString('ko-KR')}
+    </span>
   );
   if (variant === 'claimable' && onClick) {
     return (
@@ -181,7 +179,7 @@ function PassColumn({
                     type="button"
                     onClick={onPremiumLocked}
                     style={{ width: PREMIUM_W }}
-                    className="absolute inset-y-0 right-0 flex flex-col items-center justify-center gap-0.5 rounded bg-zinc-900/30 text-center text-[9px] font-bold leading-tight text-white"
+                    className="absolute inset-y-0 right-0 flex flex-col items-center justify-center gap-0.5 rounded bg-zinc-900/38 text-center text-[9px] font-bold leading-tight text-white"
                   >
                     <span>프리미엄</span>
                     <span className="tabular-nums">{won(s.priceKrw)}</span>
