@@ -15,7 +15,26 @@ type State =
   | { kind: 'installed' }
   | { kind: 'ios' }
   | { kind: 'android' }
+  | { kind: 'inapp' } // 카카오톡 등 인앱 브라우저 — 외부 브라우저로 열어야 설치 가능
   | { kind: 'unsupported' };
+
+/** 카카오톡 등 인앱 웹뷰 — PWA 설치/푸시 불가. 외부 브라우저(Chrome) 강제 오픈. */
+function openInExternalBrowser() {
+  const loc = window.location;
+  const ua = window.navigator.userAgent;
+  if (/Android/.test(ua)) {
+    // Android: Chrome intent(미설치 시 fallback URL).
+    const scheme = loc.protocol.replace(':', '');
+    window.location.href =
+      `intent://${loc.host}${loc.pathname}${loc.search}` +
+      `#Intent;scheme=${scheme};package=com.android.chrome;` +
+      `S.browser_fallback_url=${encodeURIComponent(loc.href)};end`;
+  } else {
+    // iOS: Chrome 스킴(설치 시 열림). 미설치/실패면 페이지 유지(안내 텍스트 참조).
+    const chrome = loc.protocol === 'https:' ? 'googlechromes://' : 'googlechrome://';
+    window.location.href = `${chrome}${loc.host}${loc.pathname}${loc.search}`;
+  }
+}
 
 export function InstallAppButton() {
   const [state, setState] = useState<State>({ kind: 'idle' });
@@ -32,8 +51,15 @@ export function InstallAppButton() {
       return;
     }
 
-    // iOS Safari는 beforeinstallprompt 미지원 → 안내 모드
     const ua = window.navigator.userAgent;
+
+    // 카카오톡 등 인앱 웹뷰 — PWA 설치/푸시 불가 → 외부 브라우저 열기 유도.
+    if (/KAKAOTALK|FBAN|FBAV|Instagram|Line\//i.test(ua)) {
+      setState({ kind: 'inapp' });
+      return;
+    }
+
+    // iOS Safari는 beforeinstallprompt 미지원 → 안내 모드
     const isIos = /iPhone|iPad|iPod/.test(ua) && !/CriOS|FxiOS|EdgiOS/.test(ua);
     if (isIos) {
       setState({ kind: 'ios' });
@@ -79,10 +105,13 @@ export function InstallAppButton() {
       if (outcome === 'accepted') setState({ kind: 'installed' });
     } else if (state.kind === 'ios' || state.kind === 'android') {
       setGuideOpen(true);
+    } else if (state.kind === 'inapp') {
+      openInExternalBrowser();
     }
   };
 
-  const label = '📱 홈 화면에 앱으로 추가';
+  const label =
+    state.kind === 'inapp' ? '🌐 Chrome으로 열기 (앱 설치)' : '📱 홈 화면에 앱으로 추가';
   const disabled = state.kind === 'unsupported' || state.kind === 'idle';
 
   return (
@@ -99,9 +128,17 @@ export function InstallAppButton() {
             ? '브라우저 미지원'
             : state.kind === 'installable'
               ? '설치'
-              : '안내'}
+              : state.kind === 'inapp'
+                ? '열기'
+                : '안내'}
         </span>
       </button>
+      {state.kind === 'inapp' ? (
+        <p className="px-3 pb-2 text-[11px] leading-relaxed text-zinc-400">
+          카카오톡 브라우저에서는 앱 설치가 안 돼요. 위 버튼으로 Chrome에서 열어 설치하세요.
+          안 열리면 우측 상단 <strong>⋮ 메뉴 → 다른 브라우저로 열기</strong>를 눌러주세요.
+        </p>
+      ) : null}
 
       {guideOpen ? (
         <div
