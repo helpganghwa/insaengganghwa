@@ -106,18 +106,16 @@ function ResultCard({
       >
         {r.name}
       </span>
-      {shown > 0 ? (
-        <span
-          key={`p${stepKey}`}
-          className={`font-semibold tabular-nums ${big ? 'text-[13px]' : 'text-[9px]'}`}
-          style={{
-            color: grade,
-            animation: stepKey > 0 ? 'gacha-transcend-tick 360ms ease-out' : undefined,
-          }}
-        >
-          ✦{shown}
-        </span>
-      ) : null}
+      <span
+        key={`p${stepKey}`}
+        className={`font-semibold tabular-nums ${big ? 'text-[13px]' : 'text-[9px]'}`}
+        style={{
+          color: grade,
+          animation: stepKey > 0 ? 'gacha-transcend-tick 360ms ease-out' : undefined,
+        }}
+      >
+        ✦{shown}
+      </span>
     </button>
   );
 }

@@ -132,9 +132,7 @@ export function EquipmentDetailSheet({
               {/* 이름 아래줄 — 강화수치 + 초월수치 함께 표기. */}
               <div className="mt-0.5 flex items-center gap-1.5 text-[12px] font-bold tabular-nums">
                 <span className="text-amber-600 dark:text-amber-400">+{item.enhanceLevel}</span>
-                {item.transcendLevel > 0 ? (
-                  <span style={{ color: tColor }}>✦{item.transcendLevel}</span>
-                ) : null}
+                <span style={{ color: tColor }}>✦{item.transcendLevel}</span>
               </div>
             </div>
             <div className="text-[11px] tabular-nums">

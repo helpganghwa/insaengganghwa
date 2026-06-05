@@ -496,16 +496,14 @@ export function EnhanceSlotCard({
                 break-keep), ✦라벨은 등급 색상으로 이름 옆 수직 중앙에 붙음. */}
             <div className="flex items-center gap-1.5 text-sm font-bold leading-tight">
               <span className="min-w-0 break-keep">{activeJob.name}</span>
-              {activeJob.transcendLevel > 0 ? (
-                <span
-                  className="shrink-0 text-[10px] font-bold tabular-nums"
-                  style={{
-                    color: `rgb(${transcendStyle(activeJob.transcendLevel).colorRgb.join(',')})`,
-                  }}
-                >
-                  ✦{activeJob.transcendLevel}
-                </span>
-              ) : null}
+              <span
+                className="shrink-0 text-[10px] font-bold tabular-nums"
+                style={{
+                  color: `rgb(${transcendStyle(activeJob.transcendLevel).colorRgb.join(',')})`,
+                }}
+              >
+                ✦{activeJob.transcendLevel}
+              </span>
             </div>
             {/* 2줄: 확률 — 짧으니 잘릴 일 없음. */}
             <div className="flex gap-2 text-[11px] font-semibold tabular-nums whitespace-nowrap">

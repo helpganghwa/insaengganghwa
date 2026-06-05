@@ -103,12 +103,11 @@ export function rarityTextColor(level: number): string | null {
   return `rgb(${r},${g},${b})`;
 }
 
-/** 강화 수치(+N) 옆에 붙는 초월 태그 — ✦N(등급색). 초월 0이면 렌더 없음. */
+/** 강화 수치(+N) 옆에 붙는 초월 태그 — ✦N(등급색). 0단계도 ✦0(중립 회색)으로 노출. */
 export function TranscendTag({ level, className }: { level: number; className?: string }) {
-  const color = rarityTextColor(level);
-  if (!color) return null;
+  const [r, g, b] = transcendStyle(level).colorRgb;
   return (
-    <span className={className} style={{ color }}>
+    <span className={className} style={{ color: `rgb(${r},${g},${b})` }}>
       ✦{level}
     </span>
   );
