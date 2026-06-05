@@ -118,11 +118,6 @@ export function EquipmentDetailSheet({
             <div className="min-w-0">
               <div className="flex items-center gap-1 text-[10px] text-zinc-500">
                 <span>{SLOT_LABEL[item.slot]}</span>
-                {item.transcendLevel > 0 ? (
-                  <span className="font-semibold" style={{ color: tColor }}>
-                    · ✦{item.transcendLevel}
-                  </span>
-                ) : null}
                 {item.equipped ? (
                   <span className="text-emerald-600 dark:text-emerald-400">· 장착</span>
                 ) : null}
@@ -131,7 +126,14 @@ export function EquipmentDetailSheet({
                 ) : null}
               </div>
               <div className="mt-0.5 break-keep text-sm font-semibold leading-tight">
-                {item.name} <span className="text-zinc-400">+{item.enhanceLevel}</span>
+                {item.name}
+              </div>
+              {/* 이름 아래줄 — 강화수치 + 초월수치 함께 표기. */}
+              <div className="mt-0.5 flex items-center gap-1.5 text-[12px] font-bold tabular-nums">
+                <span className="text-amber-600 dark:text-amber-400">+{item.enhanceLevel}</span>
+                {item.transcendLevel > 0 ? (
+                  <span style={{ color: tColor }}>✦{item.transcendLevel}</span>
+                ) : null}
               </div>
             </div>
             <div className="text-[11px] tabular-nums">
