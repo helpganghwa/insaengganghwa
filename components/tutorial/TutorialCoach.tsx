@@ -4,7 +4,6 @@ import { useEffect, useRef, useState } from 'react';
 import { usePathname, useSearchParams } from 'next/navigation';
 
 import type { TutorialStep } from '@/lib/game/tutorial';
-import { skipTutorialAction } from '@/app/(game)/tutorial/actions';
 import { TutorialCompleteModal } from './TutorialCompleteModal';
 
 /**
@@ -20,32 +19,41 @@ type Candidate = { sel: string; copy: string };
 
 const STEP_TARGETS: Record<TutorialStep, Candidate[]> = {
   open: [
-    { sel: '[data-tut="gacha-confirm"]', copy: '확인 버튼을 클릭해 주세요.' },
-    { sel: '[data-tut="open-box"]', copy: '1회 열기 버튼을 클릭하세요.' },
-    { sel: '[data-tut="goto-gacha"]', copy: '보급에서 상자를 열어 장비를 획득하세요.' },
+    { sel: '[data-tut="gacha-confirm"]', copy: '두근두근… 어떤 장비가 나왔을까요? ‘확인’을 눌러봐요!' },
+    { sel: '[data-tut="open-box"]', copy: '좋아요! 여기 ‘1회 열기’를 눌러 상자를 열어볼까요?' },
+    { sel: '[data-tut="goto-gacha"]', copy: '먼저 보급소에서 첫 장비를 얻어볼게요. 여길 눌러 들어가요!' },
   ],
   equip: [
-    { sel: '[data-tut="gacha-confirm"]', copy: '확인 버튼을 클릭해 주세요.' },
-    { sel: '[data-tut="equip-btn"]', copy: '이 장비를 장착해 보세요.' },
-    { sel: '[data-tut="inv-item"]', copy: '장비를 클릭해 상세정보를 확인하세요.' },
-    { sel: '[data-tut="nav-inventory"]', copy: '인벤토리로 이동하세요.' },
+    { sel: '[data-tut="gacha-confirm"]', copy: '두근두근… 어떤 장비가 나왔을까요? ‘확인’을 눌러봐요!' },
+    { sel: '[data-tut="equip-btn"]', copy: '이 장비를 ‘장착’해서 바로 착용해볼게요!' },
+    {
+      sel: '[data-tut="inv-item"]',
+      copy: '축하해요, 첫 장비를 얻었어요! 🎉 장비를 콕 눌러 자세히 볼까요?',
+    },
+    { sel: '[data-tut="nav-inventory"]', copy: '획득한 장비는 인벤토리에 있어요. 인벤토리로 가볼까요?' },
   ],
   enhance: [
-    { sel: '[data-tut="enhance-btn"]', copy: '강화 버튼을 눌러 강화를 시작하세요!' },
-    { sel: '[data-tut="inv-item"]', copy: '장비를 클릭해 강화하세요.' },
-    { sel: '[data-tut="nav-inventory"]', copy: '인벤토리로 이동하세요.' },
+    { sel: '[data-tut="enhance-btn"]', copy: '준비 끝! ‘강화’ 버튼을 눌러 강화를 시작해요 ⚒️' },
+    {
+      sel: '[data-tut="inv-item"]',
+      copy: '장착 완료! ✨ 이번엔 이 장비를 더 강하게 만들어볼까요? 장비를 눌러요!',
+    },
+    { sel: '[data-tut="nav-inventory"]', copy: '강화할 장비를 고르러 인벤토리로 가볼게요!' },
   ],
   attempt: [
-    { sel: '[data-tut="enhance-attempt"]', copy: '강화 슬롯을 눌러 강화를 시도하세요!' },
-    { sel: '[data-tut="nav-enhance"]', copy: '강화 탭으로 이동하세요.' },
+    {
+      sel: '[data-tut="enhance-attempt"]',
+      copy: '거의 다 왔어요! 강화 슬롯을 눌러 첫 강화에 도전해봐요 ⚒️',
+    },
+    { sel: '[data-tut="nav-enhance"]', copy: '강화소로 이동해 강화를 시도해볼까요?' },
   ],
 };
 
 const FALLBACK: Record<TutorialStep, string> = {
-  open: '홈 → 보급에서 상자를 열어 장비를 획득하세요.',
-  equip: '인벤토리에서 장비를 장착하세요.',
-  enhance: '인벤토리에서 장비를 강화하세요.',
-  attempt: '강화 탭에서 강화를 시도하세요.',
+  open: '홈에서 ‘보급’으로 가서 첫 장비를 얻어볼까요?',
+  equip: '인벤토리에서 방금 얻은 장비를 장착해봐요!',
+  enhance: '인벤토리에서 장비를 골라 강화해볼까요?',
+  attempt: '강화소에서 첫 강화에 도전해봐요 ⚒️',
 };
 
 const STEP_NO: Record<TutorialStep, number> = { open: 1, equip: 2, enhance: 3, attempt: 4 };
@@ -81,7 +89,6 @@ const asStep = (v: string | null): TutorialStep | null =>
 export function TutorialCoach({ step }: { step: TutorialStep | null }) {
   const pathname = usePathname();
   const search = useSearchParams();
-  const [skipped, setSkipped] = useState(false);
   // 프리뷰는 URL(?tut=)로 1회 시드 후 상태로 유지(레이아웃 마운트 지속 → 화면 이동에도 보존).
   const [preview, setPreview] = useState<TutorialStep | null>(() => asStep(search.get('tut')));
   const [rect, setRect] = useState<DOMRect | null>(null);
@@ -121,7 +128,7 @@ export function TutorialCoach({ step }: { step: TutorialStep | null }) {
   }, [step, preview, optimistic]);
 
   useEffect(() => {
-    if (!effective || skipped) return;
+    if (!effective) return;
     let alive = true;
     const measure = () => {
       if (!alive) return;
@@ -156,20 +163,11 @@ export function TutorialCoach({ step }: { step: TutorialStep | null }) {
       window.removeEventListener('scroll', measure, true);
       window.removeEventListener('resize', measure);
     };
-  }, [effective, skipped, pathname]);
+  }, [effective, pathname]);
 
   if (typeof window === 'undefined') return null;
   if (completed) return <TutorialCompleteModal onClose={() => setCompleted(false)} />;
-  if (!effective || skipped) return null;
-
-  const onSkip = () => {
-    if (isPreview) {
-      setPreview(null);
-      return;
-    }
-    setSkipped(true);
-    void skipTutorialAction();
-  };
+  if (!effective) return null;
 
   const vw = window.innerWidth;
   const vh = window.innerHeight;
@@ -246,14 +244,16 @@ export function TutorialCoach({ step }: { step: TutorialStep | null }) {
         </div>
       </div>
 
-      {/* 건너뛰기 / 미리보기 종료 */}
-      <button
-        type="button"
-        onClick={onSkip}
-        className="pointer-events-auto absolute right-3 top-[calc(env(safe-area-inset-top)+14px)] rounded-full bg-black/60 px-3 py-1.5 text-[11px] font-semibold text-white backdrop-blur-sm"
-      >
-        {isPreview ? '미리보기 종료 ✕' : '건너뛰기 ✕'}
-      </button>
+      {/* 스킵 불가(실제 튜토리얼). 미리보기(QA)에서만 종료 버튼 노출. */}
+      {isPreview ? (
+        <button
+          type="button"
+          onClick={() => setPreview(null)}
+          className="pointer-events-auto absolute right-3 top-[calc(env(safe-area-inset-top)+14px)] rounded-full bg-black/60 px-3 py-1.5 text-[11px] font-semibold text-white backdrop-blur-sm"
+        >
+          미리보기 종료 ✕
+        </button>
+      ) : null}
 
       {/* QA 전역 플로팅 바 — 단계 전환(테스트용). 프리뷰일 때만. */}
       {isPreview ? (
