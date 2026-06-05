@@ -93,18 +93,6 @@ export default function RootLayout({ children }: Readonly<{ children: React.Reac
       className={`dark ${geistSans.variable} ${geistMono.variable} h-full overscroll-none antialiased`}
     >
       <body className="flex min-h-full flex-col overscroll-none bg-zinc-950 text-zinc-50">
-        {/* 큰 화면(폴드 펼침·태블릿, screen.width≥600) — width=390 고정 스케일 과확대 회피.
-            폭 모드가 실제로 바뀔 때만 viewport 재설정(가드 W) → 스크롤 중 resize로 인한
-            재설정·끊김 방지. 폰(<600)은 Next 출력(width=390) 그대로. */}
-        <script
-          dangerouslySetInnerHTML={{
-            __html:
-              // 큰 화면(≥520)은 device-width로 전환(폴드/태블릿 과확대 방지). setAttribute는
-              // 안드 크롬이 초기 스케일을 캐시해 반영 안 되는 경우가 있어, meta를 제거+재생성해
-              // viewport를 강제 재계산. 폰(<520)은 width=390 유지.
-              "(function(){function w(){return Math.max((window.screen&&screen.width)||0,window.innerWidth||0);}function a(){var width=w();try{document.documentElement.dataset.vw=String(width);}catch(e){}var c=width>=520?'width=device-width, initial-scale=1, viewport-fit=cover':'width=390';var m=document.querySelector('meta[name=viewport]');if(m&&m.getAttribute('content')===c)return;if(m&&m.parentNode)m.parentNode.removeChild(m);m=document.createElement('meta');m.setAttribute('name','viewport');m.setAttribute('content',c);document.head.appendChild(m);}a();window.addEventListener('resize',a);window.addEventListener('orientationchange',a);})();",
-          }}
-        />
         {children}
       </body>
     </html>
