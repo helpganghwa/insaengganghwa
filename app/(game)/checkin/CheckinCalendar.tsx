@@ -28,11 +28,26 @@ const SLOT_EMOJI: Record<SupplySlot, string> = {
   accessory: '💍',
 };
 
-/** 보상 종류별 단일 이모지(셀 대표). */
-function rewardEmoji(r: CheckinReward): string {
-  if (r.kind === 'diamond') return '💎';
-  if (r.kind === 'supply') return SLOT_EMOJI[r.slot];
-  return '📦';
+/**
+ * 보상 종류별 대표 이모지(셀/카드). 3종 보급은 📦 대신 무기/방어구/장신구
+ * 이모지를 겹쳐 표현 — 크기는 부모 font-size에 비례(em 단위 오버랩).
+ */
+function RewardEmoji({ r }: { r: CheckinReward }) {
+  if (r.kind === 'diamond') return <>💎</>;
+  if (r.kind === 'supply') return <>{SLOT_EMOJI[r.slot]}</>;
+  return (
+    <span className="inline-flex items-center">
+      {SUPPLY_SLOTS.map((s, i) => (
+        <span
+          key={s}
+          className={i === 0 ? '' : '-ml-[0.42em]'}
+          style={{ filter: 'drop-shadow(0 0 1.5px rgba(0,0,0,0.35))' }}
+        >
+          {SLOT_EMOJI[s]}
+        </span>
+      ))}
+    </span>
+  );
 }
 
 /** 셀 우하단 작은 수량 라벨. */
@@ -175,7 +190,7 @@ export function CheckinCalendar({
                 }`}
                 aria-hidden
               >
-                {rewardEmoji(r)}
+                <RewardEmoji r={r} />
               </div>
 
               <div
@@ -208,7 +223,7 @@ export function CheckinCalendar({
       <section className="rounded-2xl border border-zinc-200 bg-white p-4 dark:border-zinc-800 dark:bg-zinc-950">
         <div className="flex items-center gap-3">
           <span className="text-3xl" aria-hidden>
-            {rewardEmoji(cardReward)}
+            <RewardEmoji r={cardReward} />
           </span>
           <div className="flex-1">
             <div className="text-base font-semibold">{rewardLongLabel(cardReward)}</div>
