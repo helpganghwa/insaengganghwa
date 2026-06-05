@@ -42,10 +42,15 @@ const STEP_TARGETS: Record<TutorialStep, Candidate[]> = {
     { sel: '[data-tut="nav-inventory"]', copy: '강화할 장비를 고르러 인벤토리로 가볼게요!' },
   ],
   // nav-enhance(바텀 탭)는 제외 — 강화 버튼이 자동으로 /enhance로 이동하므로 '이동' 단계 불필요.
+  // enhance-confirm: 첫 탭 후 '확인' 오버레이가 뜬 상태(한 번 더 탭해야 강화). 우선순위 위.
   attempt: [
     {
+      sel: '[data-tut="enhance-confirm"]',
+      copy: '한 번 더 눌러 강화를 시작하세요! ⚒️',
+    },
+    {
       sel: '[data-tut="enhance-attempt"]',
-      copy: '강화는 시간이 지날수록 성공 확률이 올라가요! 슬롯을 눌러 바로 도전하거나, 더 기다렸다 해도 좋아요 ⚒️',
+      copy: '강화 슬롯을 두 번 탭해요! 첫 탭은 확인, 한 번 더 누르면 강화 시작 — 시간이 지날수록 성공 확률이 올라가요 ⚒️',
     },
   ],
 };
