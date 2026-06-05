@@ -99,7 +99,7 @@ export default function RootLayout({ children }: Readonly<{ children: React.Reac
         <script
           dangerouslySetInnerHTML={{
             __html:
-              "(function(){var m=document.querySelector('meta[name=viewport]');if(!m)return;var o=m.getAttribute('content');var W=null;function a(){var w=(window.screen&&screen.width)||window.innerWidth;var x=w>=600;if(x===W)return;W=x;m.setAttribute('content',x?'width=device-width,initial-scale=1,viewport-fit=cover':o);}a();window.addEventListener('resize',a);window.addEventListener('orientationchange',a);})();",
+              "(function(){var m=document.querySelector('meta[name=viewport]');if(!m)return;var o=m.getAttribute('content');var W=null;function a(){var w=Math.max((window.screen&&screen.width)||0,window.innerWidth||0);try{document.documentElement.dataset.vw=String(w);}catch(e){}var x=w>=520;if(x===W)return;W=x;m.setAttribute('content',x?'width=device-width,initial-scale=1,viewport-fit=cover':o);}a();window.addEventListener('resize',a);window.addEventListener('orientationchange',a);})();",
           }}
         />
         {children}
