@@ -90,7 +90,7 @@ export function TutorialCompleteModal({ onClose }: { onClose: () => void }) {
           onClick={onClose}
           className="mt-4 w-full rounded-xl bg-gradient-to-r from-amber-500 to-orange-500 px-3 py-3 text-[14px] font-extrabold text-amber-950"
         >
-          마지막으로, 인생강화에 도전하세요 ⚒️
+          인생강화 계속하기 ⚒️
         </button>
       </div>
     </div>

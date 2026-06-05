@@ -1,10 +1,12 @@
 'use client';
 
-import { useEffect, useRef, useState } from 'react';
+import { useEffect, useRef, useState, useTransition } from 'react';
 import { usePathname, useSearchParams } from 'next/navigation';
 
 import type { TutorialStep } from '@/lib/game/tutorial';
+import { startTutorialAction, skipTutorialAction } from '@/app/(game)/tutorial/actions';
 import { TutorialCompleteModal } from './TutorialCompleteModal';
+import { TutorialIntroModal } from './TutorialIntroModal';
 
 /**
  * 신규 튜토리얼 스포트라이트 코치마크 — 전역 오버레이.
@@ -19,12 +21,12 @@ type Candidate = { sel: string; copy: string };
 
 const STEP_TARGETS: Record<TutorialStep, Candidate[]> = {
   open: [
-    { sel: '[data-tut="gacha-confirm"]', copy: '두근두근… 어떤 장비가 나왔을까요? ‘확인’을 눌러봐요!' },
+    { sel: '[data-tut="gacha-confirm"]', copy: '장비를 획득했어요! 🎉 ‘확인’을 눌러 마무리해요.' },
     { sel: '[data-tut="open-box"]', copy: '좋아요! 여기 ‘1회 열기’를 눌러 상자를 열어볼까요?' },
     { sel: '[data-tut="goto-gacha"]', copy: '먼저 보급소에서 첫 장비를 얻어볼게요. 여길 눌러 들어가요!' },
   ],
   equip: [
-    { sel: '[data-tut="gacha-confirm"]', copy: '두근두근… 어떤 장비가 나왔을까요? ‘확인’을 눌러봐요!' },
+    { sel: '[data-tut="gacha-confirm"]', copy: '장비를 획득했어요! 🎉 ‘확인’을 눌러 마무리해요.' },
     { sel: '[data-tut="equip-btn"]', copy: '이 장비를 ‘장착’해서 바로 착용해볼게요!' },
     {
       sel: '[data-tut="inv-item"]',
@@ -43,7 +45,7 @@ const STEP_TARGETS: Record<TutorialStep, Candidate[]> = {
   attempt: [
     {
       sel: '[data-tut="enhance-attempt"]',
-      copy: '거의 다 왔어요! 강화 슬롯을 눌러 첫 강화에 도전해봐요 ⚒️',
+      copy: '강화는 시간이 지날수록 성공 확률이 올라가요! 슬롯을 눌러 바로 도전하거나, 더 기다렸다 해도 좋아요 ⚒️',
     },
     { sel: '[data-tut="nav-enhance"]', copy: '강화소로 이동해 강화를 시도해볼까요?' },
   ],
@@ -86,9 +88,17 @@ function roundRectPath(x: number, y: number, w: number, h: number, r: number): s
 const asStep = (v: string | null): TutorialStep | null =>
   v && (PREVIEW_STEPS as string[]).includes(v) ? (v as TutorialStep) : null;
 
-export function TutorialCoach({ step }: { step: TutorialStep | null }) {
+export function TutorialCoach({
+  intro,
+  step,
+}: {
+  intro: boolean;
+  step: TutorialStep | null;
+}) {
   const pathname = usePathname();
   const search = useSearchParams();
+  const [, startAction] = useTransition();
+  const [introDone, setIntroDone] = useState(false); // 인트로 선택 후 즉시 닫기(낙관)
   // 프리뷰는 URL(?tut=)로 1회 시드 후 상태로 유지(레이아웃 마운트 지속 → 화면 이동에도 보존).
   const [preview, setPreview] = useState<TutorialStep | null>(() => asStep(search.get('tut')));
   const [rect, setRect] = useState<DOMRect | null>(null);
@@ -166,6 +176,26 @@ export function TutorialCoach({ step }: { step: TutorialStep | null }) {
   }, [effective, pathname]);
 
   if (typeof window === 'undefined') return null;
+  // 인트로 — 메인페이지 첫 진입 시 시작/건너뛰기(프리뷰 제외).
+  if (intro && !introDone && !isPreview && pathname === '/') {
+    return (
+      <TutorialIntroModal
+        pending={false}
+        onStart={() => {
+          setIntroDone(true);
+          startAction(() => {
+            void startTutorialAction();
+          });
+        }}
+        onSkip={() => {
+          setIntroDone(true);
+          startAction(() => {
+            void skipTutorialAction();
+          });
+        }}
+      />
+    );
+  }
   if (completed) return <TutorialCompleteModal onClose={() => setCompleted(false)} />;
   if (!effective) return null;
 
