@@ -9,7 +9,7 @@ import { db } from '@/lib/db/client';
 import { type Slot } from '@/lib/db/schema/equipment';
 import { userSupplyBoxes } from '@/lib/db/schema/supply';
 import { openSupplyBoxes, SupplyError } from '@/lib/game/supply';
-import { getActiveCatalog } from '@/lib/game/catalog';
+import { getActiveCatalog, completeCatalog } from '@/lib/game/catalog';
 import { liberatedItemRanks } from '@/lib/game/codex/ranking';
 import { loreTeaser } from '@/lib/game/equipment/lore';
 
@@ -61,6 +61,8 @@ export async function openAction(slot: Slot, count: number): Promise<OpenActionR
         .limit(1),
     ]);
     const metaMap = new Map(catalog.map((m) => [m.id, m]));
+    // 캐시에 없는 신규 카탈로그(추가 직후) 보강 — 개봉 결과 메타 누락 방지.
+    await completeCatalog(metaMap, opened.map((o) => o.catalogItemId));
     const boxRow = boxRows[0];
 
     revalidatePath('/gacha');

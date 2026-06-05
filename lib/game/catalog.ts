@@ -1,7 +1,7 @@
 import 'server-only';
 
 import { unstable_cache } from 'next/cache';
-import { eq } from 'drizzle-orm';
+import { eq, inArray } from 'drizzle-orm';
 
 import { db } from '@/lib/db/client';
 import { catalogItems, type Slot } from '@/lib/db/schema/equipment';
@@ -50,4 +50,28 @@ const getAllCatalog = unstable_cache(
 
 export async function getCatalogMap(): Promise<Map<number, CatalogItem>> {
   return new Map((await getAllCatalog()).map((c) => [c.id, c]));
+}
+
+/**
+ * 캐시 맵에 없는 id(= 캐시 revalidate 전에 **새로 추가된** 카탈로그)를 DB로 보강.
+ * 카탈로그는 추가만 되고 삭제는 없다는 전제 — 캐시에 다 있으면 DB를 치지 않고(공통),
+ * 신규 아이템을 막 획득한 경우에만 누락분만 타깃 조회해 **절대 누락되지 않게** 한다.
+ * map은 getCatalogMap이 매번 새로 만든 Map이므로 직접 set해도 캐시에 영향 없음.
+ */
+export async function completeCatalog(
+  map: Map<number, CatalogItem>,
+  ids: Iterable<number>,
+): Promise<void> {
+  const missing = [...new Set([...ids])].filter((id) => !map.has(id));
+  if (missing.length === 0) return;
+  const rows = await db
+    .select({
+      id: catalogItems.id,
+      code: catalogItems.code,
+      name: catalogItems.name,
+      slot: catalogItems.slot,
+    })
+    .from(catalogItems)
+    .where(inArray(catalogItems.id, missing));
+  for (const r of rows) map.set(r.id, r);
 }

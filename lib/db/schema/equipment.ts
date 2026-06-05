@@ -86,6 +86,10 @@ export const userEquipment = pgTable(
     uniqueIndex('ue_user_catalog_uq').on(t.userId, t.catalogItemId),
     // 슬롯 그리드/장착 조회.
     index('ue_user_slot_idx').on(t.userId, t.equippedSlot).where(sql`${t.equippedSlot} is not null`),
+    // 최고강화자 셀프조인(championCatalogIds/liberatedItemRanks NOT EXISTS) — 0026 수동 적용.
+    index('ue_catalog_rank_idx')
+      .on(t.catalogItemId, t.maxEnhanceLevel, t.maxEnhanceReachedAt, t.userId)
+      .where(sql`${t.maxEnhanceLevel} > 0`),
     // 강화/초월 0 이상.
     check('ue_enhance_min', sql`${t.enhanceLevel} >= 0`),
     check('ue_transcend_min', sql`${t.transcendLevel} >= 0`),

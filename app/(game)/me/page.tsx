@@ -5,11 +5,12 @@ import { getSessionUserId } from '@/lib/auth/session';
 import { db } from '@/lib/db/client';
 import { withTimeout } from '@/lib/db/with-timeout';
 import { profiles } from '@/lib/db/schema/profiles';
-import { catalogItems, userEquipment, type Slot } from '@/lib/db/schema/equipment';
+import { userEquipment, type Slot } from '@/lib/db/schema/equipment';
 import { userProfiles } from '@/lib/db/schema/avatar';
 import { CharacterStage } from '@/components/CharacterStage';
 import { combatPowerFromOwned } from '@/lib/game/equipment/combat-power';
 import { liberatedItemRanks } from '@/lib/game/codex/ranking';
+import { getCatalogMap, completeCatalog } from '@/lib/game/catalog';
 
 import { BoastLauncher } from '@/components/BoastModal';
 import { TranscendSprite } from '@/components/TranscendSprite';
@@ -48,16 +49,13 @@ export default async function ProfilePage() {
       .where(eq(profiles.id, userId))
       .limit(1),
     db
+      // 착용 — 카탈로그 메타는 캐시(getCatalogMap)에서 in-memory 결합.
       .select({
-        slot: catalogItems.slot,
-        catalogItemId: catalogItems.id,
-        code: catalogItems.code,
-        name: catalogItems.name,
+        catalogItemId: userEquipment.catalogItemId,
         enhanceLevel: userEquipment.enhanceLevel,
         transcendLevel: userEquipment.transcendLevel,
       })
       .from(userEquipment)
-      .innerJoin(catalogItems, eq(userEquipment.catalogItemId, catalogItems.id))
       .where(
         and(eq(userEquipment.userId, userId), isNotNull(userEquipment.equippedSlot)),
       ),
@@ -81,20 +79,28 @@ export default async function ProfilePage() {
       .where(and(eq(userProfiles.userId, userId), isNull(userProfiles.hiddenAt)))
       .orderBy(desc(userProfiles.createdAt)),
     getReferralStats(userId),
+    getCatalogMap(),
     ]),
     3500,
     'me.page',
   ).catch(() => null);
   const prof = _r?.[0] ?? [];
-  const equipped = _r?.[1] ?? [];
+  const equippedRaw = _r?.[1] ?? [];
   const ownedAll = _r?.[2] ?? [];
   const libRanks = _r?.[3] ?? new Map<number, number>();
   const myProfiles = _r?.[4] ?? [];
   const referralStats = _r?.[5] ?? { totalReferrals: 0, totalDiamondEarned: 0, totalBoxEarned: 0 };
+  const catMap = _r?.[6] ?? new Map();
+  await completeCatalog(catMap, equippedRaw.map((e) => e.catalogItemId));
 
   const nickname = prof[0]?.nickname ?? '플레이어';
   const publicCode = prof[0]?.publicCode ?? '';
   const total = combatPowerFromOwned(ownedAll);
+  // 캐시 메타로 착용 아이템에 slot/code/name 결합.
+  const equipped = equippedRaw.flatMap((e) => {
+    const cat = catMap.get(e.catalogItemId);
+    return cat ? [{ ...e, slot: cat.slot, code: cat.code, name: cat.name }] : [];
+  });
   const bySlot = new Map(equipped.map((e) => [e.slot, e]));
 
   const activeProfileId = prof[0]?.activeProfileId ?? null;

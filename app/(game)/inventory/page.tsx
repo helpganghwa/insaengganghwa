@@ -6,7 +6,7 @@ import { withTimeout } from '@/lib/db/with-timeout';
 import { userEquipment, type Slot } from '@/lib/db/schema/equipment';
 import { enhancementJobs } from '@/lib/db/schema/enhance';
 import { profiles } from '@/lib/db/schema/profiles';
-import { getCatalogMap } from '@/lib/game/catalog';
+import { getCatalogMap, completeCatalog } from '@/lib/game/catalog';
 import { liberatedItemRanks } from '@/lib/game/codex/ranking';
 import { loreByCode } from '@/lib/game/equipment/lore';
 
@@ -58,6 +58,8 @@ export default async function InventoryPage({
   const prof = _r?.[2] ?? [];
   const libRanks = _r?.[3] ?? new Map<number, number>();
   const catMap = _r?.[4] ?? new Map();
+  // 캐시에 없는 신규 카탈로그 보강 — 추가돼도 인벤에서 누락되지 않게.
+  await completeCatalog(catMap, rows.map((r) => r.catalogItemId));
   const nickname = prof[0]?.nickname ?? '플레이어';
 
   const busy = new Set(runningJobs.map((r) => r.instanceId.toString()));
