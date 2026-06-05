@@ -3,23 +3,10 @@
 import { revalidatePath } from 'next/cache';
 import { eq } from 'drizzle-orm';
 
-import { getSessionUserId } from '@/lib/auth/session';
+import { requireAdmin } from '@/lib/auth/require-admin';
 import { db } from '@/lib/db/client';
 import { profiles } from '@/lib/db/schema/profiles';
 import { mailbox } from '@/lib/db/schema/mailbox';
-
-/** 어드민 가드 — is_admin true가 아니면 throw. */
-async function requireAdmin(): Promise<string> {
-  const userId = await getSessionUserId();
-  if (!userId) throw new Error('UNAUTHENTICATED');
-  const [p] = await db
-    .select({ isAdmin: profiles.isAdmin })
-    .from(profiles)
-    .where(eq(profiles.id, userId))
-    .limit(1);
-  if (!p?.isAdmin) throw new Error('FORBIDDEN');
-  return userId;
-}
 
 export interface MailPayload {
   diamond?: number;

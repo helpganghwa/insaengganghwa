@@ -1,7 +1,5 @@
-import { notFound, redirect } from 'next/navigation';
 import { desc, eq, gt, sql } from 'drizzle-orm';
 
-import { getSessionUserId } from '@/lib/auth/session';
 import { db } from '@/lib/db/client';
 import { profiles } from '@/lib/db/schema/profiles';
 import { userProfiles, profileReports } from '@/lib/db/schema/avatar';
@@ -18,15 +16,7 @@ const REASON_LABEL: Record<string, string> = {
 };
 
 export default async function AdminReportsPage() {
-  const userId = await getSessionUserId();
-  if (!userId) redirect('/login'); // 미로그인 → 로그인으로(비관리자 로그인 사용자는 아래서 404)
-  const [me] = await db
-    .select({ isAdmin: profiles.isAdmin })
-    .from(profiles)
-    .where(eq(profiles.id, userId))
-    .limit(1);
-  if (!me?.isAdmin) notFound();
-
+  // 진입 가드는 (admin)/layout.tsx 일원화.
   const [reported, reasonRows] = await Promise.all([
     db
       .select({

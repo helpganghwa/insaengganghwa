@@ -1,13 +1,8 @@
-import { notFound, redirect } from 'next/navigation';
-import { eq } from 'drizzle-orm';
 import Link from 'next/link';
 import type { Metadata } from 'next';
 import { existsSync, readFileSync } from 'node:fs';
 import { resolve as resolvePath } from 'node:path';
 
-import { getSessionUserId } from '@/lib/auth/session';
-import { db } from '@/lib/db/client';
-import { profiles } from '@/lib/db/schema/profiles';
 import {
   baseAttemptDurationMs,
   baseSuccessRateBp,
@@ -69,15 +64,7 @@ const LEVEL_SAMPLES_CYCLE_0 = [0, 5, 9, 10, 20, 30, 40, 51, 52, 60, 75, 90, 99];
 const CUM_REACH_SAMPLES = [10, 20, 30, 40, 50, 51, 52, 60, 70, 75, 80, 90, 95, 99] as const;
 
 export default async function BalanceReviewPage() {
-  const userId = await getSessionUserId();
-  if (!userId) redirect('/login'); // 미로그인 → 로그인으로(비관리자 로그인 사용자는 아래서 404)
-  const [p] = await db
-    .select({ isAdmin: profiles.isAdmin })
-    .from(profiles)
-    .where(eq(profiles.id, userId))
-    .limit(1);
-  if (!p?.isAdmin) notFound();
-
+  // 진입 가드는 (admin)/layout.tsx 일원화.
   const sim = loadSimulation();
   const cycle0 = computeCycleZeroReach();
 

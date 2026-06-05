@@ -3,25 +3,11 @@
 import { revalidatePath } from 'next/cache';
 import { eq, sql } from 'drizzle-orm';
 
-import { getSessionUserId } from '@/lib/auth/session';
+import { requireAdmin } from '@/lib/auth/require-admin';
 import { db } from '@/lib/db/client';
-import { profiles } from '@/lib/db/schema/profiles';
 import { userProfiles, profileReports } from '@/lib/db/schema/avatar';
 
-/** PROFILE §7.2 — 운영자 신고 처리. isAdmin만. */
-async function requireAdmin(): Promise<string> {
-  const userId = await getSessionUserId();
-  if (!userId) throw new Error('FORBIDDEN');
-  const [p] = await db
-    .select({ isAdmin: profiles.isAdmin })
-    .from(profiles)
-    .where(eq(profiles.id, userId))
-    .limit(1);
-  if (!p?.isAdmin) throw new Error('FORBIDDEN');
-  return userId;
-}
-
-/** 비공개 — hidden_at 설정. 자랑카드·hub·랭킹에서 fallback 처리됨. */
+/** 비공개 — hidden_at 설정. 자랑카드·hub·랭킹에서 fallback 처리됨. PROFILE §7.2 */
 export async function hideProfile(profileId: string): Promise<void> {
   await requireAdmin();
   await db
