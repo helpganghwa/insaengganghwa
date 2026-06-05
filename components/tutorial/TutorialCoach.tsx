@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { usePathname, useSearchParams } from 'next/navigation';
 
 import type { TutorialStep } from '@/lib/game/tutorial';
@@ -19,30 +19,43 @@ type Candidate = { sel: string; copy: string };
 
 const STEP_TARGETS: Record<TutorialStep, Candidate[]> = {
   open: [
-    { sel: '[data-tut="open-box"]', copy: '여기서 보급 상자를 열어 첫 장비를 얻어보세요.' },
-    { sel: '[data-tut="goto-gacha"]', copy: '보급소로 가서 상자를 열어보세요.' },
+    { sel: '[data-tut="gacha-confirm"]', copy: '확인 버튼을 클릭해 주세요.' },
+    { sel: '[data-tut="open-box"]', copy: '1회 열기 버튼을 클릭하세요.' },
+    { sel: '[data-tut="goto-gacha"]', copy: '보급에서 상자를 열어 장비를 획득하세요.' },
   ],
   equip: [
+    { sel: '[data-tut="gacha-confirm"]', copy: '확인 버튼을 클릭해 주세요.' },
     { sel: '[data-tut="equip-btn"]', copy: '이 장비를 장착해 보세요.' },
-    { sel: '[data-tut="inv-item"]', copy: '장비를 눌러 상세를 열고 장착하세요.' },
+    { sel: '[data-tut="inv-item"]', copy: '장비를 클릭해 상세정보를 확인하세요.' },
     { sel: '[data-tut="nav-inventory"]', copy: '인벤토리로 이동하세요.' },
   ],
   enhance: [
-    { sel: '[data-tut="enhance-btn"]', copy: '강화 버튼을 눌러 첫 강화를 시작하세요!' },
-    { sel: '[data-tut="inv-item"]', copy: '장비를 눌러 강화해 보세요.' },
+    { sel: '[data-tut="enhance-btn"]', copy: '강화 버튼을 눌러 강화를 시작하세요!' },
+    { sel: '[data-tut="inv-item"]', copy: '장비를 클릭해 강화하세요.' },
     { sel: '[data-tut="nav-inventory"]', copy: '인벤토리로 이동하세요.' },
+  ],
+  attempt: [
+    { sel: '[data-tut="enhance-attempt"]', copy: '강화 슬롯을 눌러 강화를 시도하세요!' },
+    { sel: '[data-tut="nav-enhance"]', copy: '강화 탭으로 이동하세요.' },
   ],
 };
 
 const FALLBACK: Record<TutorialStep, string> = {
-  open: '홈 → 보급에서 상자를 열어 첫 장비를 얻으세요.',
+  open: '홈 → 보급에서 상자를 열어 장비를 획득하세요.',
   equip: '인벤토리에서 장비를 장착하세요.',
-  enhance: '인벤토리에서 장비를 강화해 보세요.',
+  enhance: '인벤토리에서 장비를 강화하세요.',
+  attempt: '강화 탭에서 강화를 시도하세요.',
 };
 
-const STEP_NO: Record<TutorialStep, number> = { open: 1, equip: 2, enhance: 3 };
-const PREVIEW_STEPS: TutorialStep[] = ['open', 'equip', 'enhance'];
-const PREVIEW_LABEL: Record<TutorialStep, string> = { open: '보급', equip: '장착', enhance: '강화' };
+const STEP_NO: Record<TutorialStep, number> = { open: 1, equip: 2, enhance: 3, attempt: 4 };
+const STEP_TOTAL = 4;
+const PREVIEW_STEPS: TutorialStep[] = ['open', 'equip', 'enhance', 'attempt'];
+const PREVIEW_LABEL: Record<TutorialStep, string> = {
+  open: '보급',
+  equip: '장착',
+  enhance: '강화',
+  attempt: '시도',
+};
 const PAD = 0;
 const DIM = 'rgba(0,0,0,0.62)';
 const TOOLTIP_W = 220;
@@ -58,6 +71,7 @@ export function TutorialCoach({ step }: { step: TutorialStep | null }) {
   const [preview, setPreview] = useState<TutorialStep | null>(() => asStep(search.get('tut')));
   const [rect, setRect] = useState<DOMRect | null>(null);
   const [copy, setCopy] = useState('');
+  const lastSel = useRef<string | null>(null); // 타겟이 바뀔 때만 스크롤(루프 방지)
 
   const effective = preview ?? step;
   const isPreview = preview !== null;
@@ -72,12 +86,18 @@ export function TutorialCoach({ step }: { step: TutorialStep | null }) {
         if (el) {
           const r = el.getBoundingClientRect();
           if (r.width > 0 && r.height > 0) {
+            // 새 타겟이면 1회 스크롤 — 바텀네비 등에 가리지 않게 화면 중앙으로.
+            if (lastSel.current !== c.sel) {
+              lastSel.current = c.sel;
+              el.scrollIntoView({ block: 'center', behavior: 'smooth' });
+            }
             setRect(r);
             setCopy(c.copy);
             return;
           }
         }
       }
+      lastSel.current = null;
       setRect(null);
       setCopy(FALLBACK[effective]);
     };
@@ -128,7 +148,7 @@ export function TutorialCoach({ step }: { step: TutorialStep | null }) {
   }
 
   return (
-    <div className="pointer-events-none fixed inset-0 z-50">
+    <div className="pointer-events-none fixed inset-0 z-[61]">
       {spot ? (
         <>
           {/* 4분할 딤 마스크 — 구멍(타겟) 밖은 pointer-events-auto로 클릭 차단, 구멍은 통과. */}
@@ -175,7 +195,7 @@ export function TutorialCoach({ step }: { step: TutorialStep | null }) {
       >
         <div className="rounded-xl bg-amber-400 px-3.5 py-2.5 text-amber-950 shadow-xl">
           <div className="mb-0.5 text-[10px] font-bold opacity-70">
-            {isPreview ? '미리보기' : '튜토리얼'} {STEP_NO[effective]}/3
+            {isPreview ? '미리보기' : '튜토리얼'} {STEP_NO[effective]}/{STEP_TOTAL}
           </div>
           <p className="text-[13px] font-bold leading-snug break-keep">{copy}</p>
         </div>

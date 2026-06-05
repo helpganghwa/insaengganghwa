@@ -18,7 +18,7 @@ import { enhancementJobs, enhancementLogs } from '@/lib/db/schema/enhance';
 export const TUTORIAL_ACTIVE = 1;
 export const TUTORIAL_DONE = 9;
 
-export type TutorialStep = 'open' | 'equip' | 'enhance';
+export type TutorialStep = 'open' | 'equip' | 'enhance' | 'attempt';
 
 async function rowCount(table: PgTable, where: SQL | undefined): Promise<number> {
   const [r] = await db.select({ c: count() }).from(table).where(where);
@@ -46,7 +46,8 @@ export async function getTutorialStep(userId: string): Promise<TutorialStep | nu
 
     if (eqC <= 0) return 'open';
     if (equippedC <= 0) return 'equip';
-    if (jobC + logC <= 0) return 'enhance';
+    if (jobC <= 0 && logC <= 0) return 'enhance'; // 강화 버튼으로 큐 등록 전
+    if (logC <= 0) return 'attempt'; // 등록됨(job) but 미수행(log 없음) → /enhance에서 시도
 
     // 전 단계 충족 → 완료 마킹(1회). 조건부 update로 경쟁 안전.
     await db

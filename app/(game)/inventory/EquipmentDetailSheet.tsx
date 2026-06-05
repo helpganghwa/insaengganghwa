@@ -208,12 +208,15 @@ export function EquipmentDetailSheet({
           <button
             type="button"
             data-tut={item.equipped ? undefined : 'equip-btn'}
-            onClick={() =>
+            onClick={() => {
+              const equipping = !item.equipped;
               run(
-                () => (item.equipped ? unequipAction(item.id) : equipAction(item.id)),
+                () => (equipping ? equipAction(item.id) : unequipAction(item.id)),
                 () => onOptimisticEquip?.(item.id),
-              )
-            }
+              );
+              // 장착 직후 시트 닫기 — 인벤토리로 복귀해 다음 흐름(강화) 자연 진행.
+              if (equipping) onClose();
+            }}
             className={BTN}
           >
             <BtnBg src={assetUrl('/sprites/ui/btn-equip.png')} label={item.equipped ? '해제' : '장착'} />

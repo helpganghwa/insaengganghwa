@@ -247,6 +247,7 @@ export function GachaResultModal({
         </div>
         <button
           type="button"
+          data-tut="gacha-confirm"
           onClick={onClose}
           className="mt-2 w-full rounded-full bg-zinc-900 px-3 py-2.5 text-xs font-medium text-white dark:bg-zinc-50 dark:text-zinc-950"
         >

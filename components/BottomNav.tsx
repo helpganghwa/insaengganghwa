@@ -31,7 +31,13 @@ export function BottomNav({ hasCompletedEnhance = false }: Props) {
           <Link
             key={item.href}
             href={item.href}
-            data-tut={item.href === '/inventory' ? 'nav-inventory' : undefined}
+            data-tut={
+              item.href === '/inventory'
+                ? 'nav-inventory'
+                : item.href === '/enhance'
+                  ? 'nav-enhance'
+                  : undefined
+            }
             className={
               active
                 ? 'relative flex flex-col items-center justify-center gap-0.5 text-xs font-semibold text-zinc-900 dark:text-zinc-50'

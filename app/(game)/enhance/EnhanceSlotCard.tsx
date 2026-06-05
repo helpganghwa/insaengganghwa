@@ -442,6 +442,7 @@ export function EnhanceSlotCard({
     <div className="relative">
       <div
         role="button"
+        data-tut="enhance-attempt"
         tabIndex={pending ? -1 : 0}
         aria-label={`강화 시도 — 현재 성공률 ${(effBp / 100).toFixed(1)}%`}
         onClick={() => {
