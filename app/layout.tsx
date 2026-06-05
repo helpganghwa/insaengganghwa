@@ -99,7 +99,10 @@ export default function RootLayout({ children }: Readonly<{ children: React.Reac
         <script
           dangerouslySetInnerHTML={{
             __html:
-              "(function(){var m=document.querySelector('meta[name=viewport]');if(!m)return;var o=m.getAttribute('content');function a(){var w=(window.screen&&screen.width)||window.innerWidth;m.setAttribute('content',w>=600?'width=device-width,initial-scale=1,viewport-fit=cover':o);}a();window.addEventListener('resize',a);})();",
+              // 폭 모드(wide/narrow)가 '실제로 바뀔 때'만 viewport 재설정. 안드로이드 크롬은
+              // 스크롤 시 URL바 토글로 resize가 연속 발생 → 무조건 재설정하면 스크롤이 끊김.
+              // screen.width는 스크롤로 안 변하므로 가드(W)로 재설정을 막아 스크롤 보존.
+              "(function(){var m=document.querySelector('meta[name=viewport]');if(!m)return;var o=m.getAttribute('content');var W=null;function a(){var w=(window.screen&&screen.width)||window.innerWidth;var x=w>=600;if(x===W)return;W=x;m.setAttribute('content',x?'width=device-width,initial-scale=1,viewport-fit=cover':o);}a();window.addEventListener('resize',a);window.addEventListener('orientationchange',a);})();",
           }}
         />
         {children}

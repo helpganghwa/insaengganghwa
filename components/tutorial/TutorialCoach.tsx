@@ -1,7 +1,7 @@
 'use client';
 
 import { useEffect, useRef, useState, useTransition } from 'react';
-import { usePathname, useSearchParams } from 'next/navigation';
+import { usePathname, useRouter, useSearchParams } from 'next/navigation';
 
 import type { TutorialStep } from '@/lib/game/tutorial';
 import { startTutorialAction, skipTutorialAction } from '@/app/(game)/tutorial/actions';
@@ -97,6 +97,7 @@ export function TutorialCoach({
   step: TutorialStep | null;
 }) {
   const pathname = usePathname();
+  const router = useRouter();
   const search = useSearchParams();
   const [, startAction] = useTransition();
   const [introDone, setIntroDone] = useState(false); // 인트로 선택 후 즉시 닫기(낙관)
@@ -108,6 +109,8 @@ export function TutorialCoach({
   const [optimistic, setOptimistic] = useState<TutorialStep | null>(null); // 액션 기반 낙관 전진
   const [completed, setCompleted] = useState(false); // 마무리 팝업
   const lastSel = useRef<string | null>(null); // 타겟이 바뀔 때만 스크롤(루프 방지)
+  const navAtRef = useRef(0); // 마지막 화면 이동 시각 — 이동 직후 정착 윈도(전환 플래시 방지)
+  const mountedRef = useRef(false);
 
   // 낙관치가 서버 step보다 앞서면 그걸 사용 → 서버 파생 지연 동안 이전 단계 플래시 방지.
   const effective =
@@ -138,11 +141,27 @@ export function TutorialCoach({
     };
   }, [step, preview, optimistic]);
 
+  // 화면 이동 시각 기록(최초 마운트 제외) — 이동 직후 이전 페이지 DOM이 매칭돼
+  // 잘못된 문구가 깜빡이는 것 방지(아래 measure가 정착 윈도 동안 코치 숨김).
+  useEffect(() => {
+    if (!mountedRef.current) {
+      mountedRef.current = true;
+      return;
+    }
+    navAtRef.current = Date.now();
+  }, [pathname]);
+
   useEffect(() => {
     if (!effective) return;
     let alive = true;
     const measure = () => {
       if (!alive) return;
+      if (Date.now() - navAtRef.current < 300) {
+        // 화면 이동 직후 정착 윈도 — 숨김(stale DOM 매칭 방지).
+        setRect(null);
+        setCopy('');
+        return;
+      }
       for (const c of STEP_TARGETS[effective]) {
         const el = document.querySelector(c.sel);
         if (el) {
@@ -202,16 +221,18 @@ export function TutorialCoach({
         pending={false}
         onStart={() => {
           setIntroDone(true);
-          // 트랜지션 안에서 await — revalidate 새로고침이 트랜지션에 포함돼 Suspense
-          // fallback(코치 언마운트)을 막음(인트로 재노출·스크롤 잠금 방지).
+          // 트랜지션 안에서 await + router.refresh — revalidate만으론 클라이언트 재렌더가
+          // 간헐적으로 누락돼 시작이 안 되던 문제. refresh로 강제(트랜지션이라 fallback 없음).
           startAction(async () => {
             await startTutorialAction();
+            router.refresh();
           });
         }}
         onSkip={() => {
           setIntroDone(true);
           startAction(async () => {
             await skipTutorialAction();
+            router.refresh();
           });
         }}
       />
@@ -219,6 +240,7 @@ export function TutorialCoach({
   }
   if (completed) return <TutorialCompleteModal onClose={() => setCompleted(false)} />;
   if (!effective) return null;
+  if (!copy) return null; // 정착 윈도(이동 직후)·초기 프레임 — 잘못된 문구 깜빡임 방지
 
   const vw = window.innerWidth;
   const vh = window.innerHeight;

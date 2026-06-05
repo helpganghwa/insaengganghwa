@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 
 import {
   checkPushSupport,
@@ -20,6 +20,16 @@ type PushState = 'idle' | 'pending' | 'done' | 'error' | 'unsupported';
 
 export function TutorialCompleteModal({ onClose }: { onClose: () => void }) {
   const [push, setPush] = useState<PushState>('idle');
+
+  // 이 팝업이 이미 알림을 안내하므로, 강화페이지의 기존 푸시 권한 prompt는 억제.
+  // PushPermissionPrompt가 보는 dismiss 윈도(7일) 키를 설정.
+  useEffect(() => {
+    try {
+      localStorage.setItem('push_dismiss_at', String(Date.now()));
+    } catch {
+      /* localStorage 차단 환경 — 무시 */
+    }
+  }, []);
 
   const enablePush = async () => {
     const support = checkPushSupport();
