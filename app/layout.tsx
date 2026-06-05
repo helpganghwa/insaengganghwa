@@ -1,6 +1,9 @@
-import type { Metadata } from 'next';
+import type { Metadata, Viewport } from 'next';
+import { cookies } from 'next/headers';
 import { Geist, Geist_Mono } from 'next/font/google';
 import './globals.css';
+
+import { ViewportSync } from '@/components/ViewportSync';
 
 const geistSans = Geist({
   variable: '--font-geist-sans',
@@ -75,11 +78,15 @@ export const metadata: Metadata = {
 //   재발. `initialScale: undefined`로 기본값 1을 덮어써야 출력에서 빠진다. 이것이
 //   metadata API로 순수 width=390을 내는 유일한 방법(리터럴 <meta>는 Next 주입분과
 //   중복되어 불가). CLAUDE §5.2.
-export const viewport = {
-  themeColor: '#151518',
-  width: 390,
-  initialScale: undefined,
-};
+// 쿠키 vw로 viewport 분기(ViewportSync가 CSR 감지 후 설정+reload). 기본(없음)=width=390.
+// 큰 화면만 device-width(정상 크기). initialScale: undefined는 width=390에서 순수 width=390
+// 출력을 위해 필수(기본값 1을 덮어씀, CLAUDE §5.2).
+export async function generateViewport(): Promise<Viewport> {
+  const wide = (await cookies()).get('vw')?.value === 'wide';
+  return wide
+    ? { themeColor: '#151518', width: 'device-width', initialScale: 1 }
+    : { themeColor: '#151518', width: 390, initialScale: undefined };
+}
 
 export default function RootLayout({ children }: Readonly<{ children: React.ReactNode }>) {
   // ⚠ html/body에 overflow-x(예: overflow-x-hidden) 절대 금지. overflow가 한 축에만
@@ -93,6 +100,7 @@ export default function RootLayout({ children }: Readonly<{ children: React.Reac
       className={`dark ${geistSans.variable} ${geistMono.variable} h-full overscroll-none antialiased`}
     >
       <body className="flex min-h-full flex-col overscroll-none bg-zinc-950 text-zinc-50">
+        <ViewportSync />
         {children}
       </body>
     </html>
