@@ -1,12 +1,12 @@
 'use server';
 
 import { revalidatePath } from 'next/cache';
-import { eq } from 'drizzle-orm';
+import { eq, sql } from 'drizzle-orm';
 
 import { requireAdmin } from '@/lib/auth/require-admin';
 import { db } from '@/lib/db/client';
 import { profiles } from '@/lib/db/schema/profiles';
-import { mailbox } from '@/lib/db/schema/mailbox';
+import { mailbox, adminMailLogs } from '@/lib/db/schema/mailbox';
 
 export interface MailPayload {
   diamond?: number;
@@ -38,7 +38,7 @@ export async function sendMailToUserAction(opts: {
   payload: MailPayload;
 }): Promise<OkOne | ErrorState> {
   try {
-    await requireAdmin();
+    const adminId = await requireAdmin();
     let recipientId: string | null = null;
     if (opts.toNickname?.trim()) {
       const [r] = await db
@@ -62,13 +62,23 @@ export async function sendMailToUserAction(opts: {
     }
     if (!recipientId) return { status: 'error', message: '수신자를 찾을 수 없습니다.' };
 
-    await db.insert(mailbox).values({
-      userId: recipientId,
-      type: 'admin',
-      title: (opts.title || '').slice(0, 100),
-      body: (opts.body || '').slice(0, 1000),
-      senderLabel: '운영자',
-      payload: clampPayload(opts.payload),
+    const title = (opts.title || '').slice(0, 100);
+    const body = (opts.body || '').slice(0, 1000);
+    const payload = clampPayload(opts.payload);
+    // 우편 + 감사 로그 원자 발송.
+    await db.transaction(async (tx) => {
+      await tx
+        .insert(mailbox)
+        .values({ userId: recipientId, type: 'admin', title, body, senderLabel: '운영자', payload });
+      await tx.insert(adminMailLogs).values({
+        adminId,
+        mode: 'one',
+        recipientCount: 1,
+        targetLabel: (opts.toNickname?.trim() || opts.toUserId?.trim() || '').slice(0, 200),
+        title,
+        body,
+        payload,
+      });
     });
     revalidatePath('/admin/mail');
     return { status: 'success', count: 1 };
@@ -88,7 +98,7 @@ export async function broadcastMailAction(opts: {
   payload: MailPayload;
 }): Promise<OkBroadcast | ErrorState> {
   try {
-    await requireAdmin();
+    const adminId = await requireAdmin();
     const all = await db.select({ id: profiles.id }).from(profiles);
     if (all.length === 0) return { status: 'success', count: 0 };
 
@@ -114,6 +124,16 @@ export async function broadcastMailAction(opts: {
         );
         inserted += slice.length;
       }
+      // 감사 로그도 같은 트랜잭션 — 발송 롤백 시 로그도 롤백(거짓 기록 방지).
+      await tx.insert(adminMailLogs).values({
+        adminId,
+        mode: 'broadcast',
+        recipientCount: inserted,
+        targetLabel: '전체',
+        title,
+        body,
+        payload,
+      });
     });
     revalidatePath('/admin/mail');
     return { status: 'success', count: inserted };
@@ -124,4 +144,11 @@ export async function broadcastMailAction(opts: {
     console.error('[admin.mail.broadcast]', e);
     return { status: 'error', message: '알 수 없는 오류' };
   }
+}
+
+/** 전체 발송 대상 수 — broadcast 발송 전 미리보기용(가입자 수). */
+export async function getBroadcastRecipientCountAction(): Promise<{ count: number }> {
+  await requireAdmin();
+  const [row] = await db.select({ c: sql<number>`count(*)::int` }).from(profiles);
+  return { count: row?.c ?? 0 };
 }

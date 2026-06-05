@@ -14,6 +14,7 @@ import {
   bigint,
   bigserial,
   date,
+  integer,
   jsonb,
   primaryKey,
   text,
@@ -96,6 +97,33 @@ export const mailClaimLogs = pgTable('mail_claim_logs', {
 });
 
 export type MailClaimLog = typeof mailClaimLogs.$inferSelect;
+
+/**
+ * 어드민 발송 감사 로그 — 누가/언제/무엇을 발송했는지 append-only 기록.
+ * mailbox 행만으로는 운영 추적이 어려워 별도 적재(5년 운영 + 재화 지급 안전망).
+ * admin_id는 발송자 삭제 시에도 로그 보존 위해 set null.
+ */
+export const adminMailLogs = pgTable(
+  'admin_mail_logs',
+  {
+    id: bigserial('id', { mode: 'bigint' }).primaryKey(),
+    adminId: uuid('admin_id').references(() => profiles.id, { onDelete: 'set null' }),
+    /** 'one' | 'broadcast'. */
+    mode: text('mode').notNull(),
+    /** 실제 발송된 수신자 수(broadcast는 inserted, 단건은 1). */
+    recipientCount: integer('recipient_count').notNull().default(0),
+    /** 단건: 닉네임/userId, broadcast: '전체'. 가독용 라벨. */
+    targetLabel: text('target_label').notNull().default(''),
+    title: text('title').notNull().default(''),
+    body: text('body').notNull().default(''),
+    /** clampPayload 결과(다이아/상자). */
+    payload: jsonb('payload').notNull(),
+    createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
+  },
+  (t) => [index('admin_mail_logs_created_idx').on(t.createdAt)],
+);
+
+export type AdminMailLog = typeof adminMailLogs.$inferSelect;
 
 /**
  * 일일 보급 — 매일 KST 자정 기준 1회 자동 발송 멱등 가드.

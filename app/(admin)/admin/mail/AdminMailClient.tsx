@@ -1,8 +1,13 @@
 'use client';
 
-import { useState, useTransition } from 'react';
+import { useEffect, useState, useTransition } from 'react';
 
-import { sendMailToUserAction, broadcastMailAction, type MailPayload } from './actions';
+import {
+  sendMailToUserAction,
+  broadcastMailAction,
+  getBroadcastRecipientCountAction,
+  type MailPayload,
+} from './actions';
 
 type Mode = 'one' | 'broadcast';
 
@@ -24,8 +29,23 @@ export function AdminMailClient() {
   const [ba, setBa] = useState('');
   const [bc, setBc] = useState('');
   const [confirmBcast, setConfirmBcast] = useState('');
+  const [bcastCount, setBcastCount] = useState<number | null>(null);
   const [pending, startTransition] = useTransition();
   const [flash, setFlash] = useState<{ ok: boolean; msg: string } | null>(null);
+
+  // 전체 발송 모드 진입 시 대상 인원 조회(발송 전 미리보기).
+  useEffect(() => {
+    if (mode !== 'broadcast') return;
+    let alive = true;
+    getBroadcastRecipientCountAction()
+      .then((r) => {
+        if (alive) setBcastCount(r.count);
+      })
+      .catch(() => {});
+    return () => {
+      alive = false;
+    };
+  }, [mode]);
 
   const payload: MailPayload = {
     diamond: Number(diamond) || 0,
@@ -129,7 +149,11 @@ export function AdminMailClient() {
         </section>
       ) : (
         <section className="mb-3 rounded-lg border border-amber-300 bg-amber-50 p-2.5 text-[11px] text-amber-900 dark:border-amber-800 dark:bg-amber-950/40 dark:text-amber-200">
-          ⚠ 전체 발송: 가입한 모든 유저에게 같은 우편을 발송합니다. 청크 500/배치.
+          ⚠ 전체 발송: 현재 가입자{' '}
+          <strong className="tabular-nums">
+            {bcastCount === null ? '조회 중…' : `${bcastCount.toLocaleString()}명`}
+          </strong>
+          에게 같은 우편을 발송합니다. 청크 500/배치.
         </section>
       )}
 
