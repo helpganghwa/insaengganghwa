@@ -25,6 +25,7 @@ const MAX_ATTEMPTS = 3;
 const GEN_TIMEOUT_MIN = 20; // 'generating' 정체 시 타임아웃 → 재시도.
 
 // 팔레트 off + 최소 프롬프트(원본 충실도↑) — 얼굴 가리는 두손 머리위 제외(검증됨).
+// 표정 유지는 createState의 PRESERVE_FACE 접미로 공통 적용.
 const POSE_POOL = [
   { tag: 'onehand', edit: 'raising a golden trophy cup high overhead with one hand' },
   { tag: 'chest', edit: 'holding a golden trophy cup against the chest with both arms' },
@@ -81,6 +82,10 @@ async function getSourceChar(userId: string): Promise<string | null> {
   return anyP?.cid ?? null;
 }
 
+// 포즈만 바꾸고 원본 얼굴/표정은 그대로 유지 — 트로피 생성 시 표정이 바뀌어 우승자
+// 본인과 달라지는 문제 보완(2026-06-05). 모든 포즈 edit에 공통 적용.
+const PRESERVE_FACE = ", keeping the character's original face and facial expression unchanged";
+
 async function createState(sourceChar: string, edit: string): Promise<string> {
   const key = process.env.PIXELLAB_API_KEY!;
   const res = await fetch(`${PIXELLAB_BASE}/create-character-state`, {
@@ -88,7 +93,7 @@ async function createState(sourceChar: string, edit: string): Promise<string> {
     headers: { 'content-type': 'application/json', authorization: `Bearer ${key}` },
     body: JSON.stringify({
       character_id: sourceChar,
-      edit_description: edit,
+      edit_description: edit + PRESERVE_FACE,
       no_background: true,
       use_color_palette_from_reference: false,
     }),
