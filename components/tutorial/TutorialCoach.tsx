@@ -43,7 +43,8 @@ const FALLBACK: Record<TutorialStep, string> = {
 const STEP_NO: Record<TutorialStep, number> = { open: 1, equip: 2, enhance: 3 };
 const PREVIEW_STEPS: TutorialStep[] = ['open', 'equip', 'enhance'];
 const PREVIEW_LABEL: Record<TutorialStep, string> = { open: '보급', equip: '장착', enhance: '강화' };
-const PAD = 8;
+const PAD = 4;
+const DIM = 'rgba(0,0,0,0.62)';
 const TOOLTIP_W = 220;
 
 const asStep = (v: string | null): TutorialStep | null =>
@@ -130,24 +131,32 @@ export function TutorialCoach({ step }: { step: TutorialStep | null }) {
     <div className="pointer-events-none fixed inset-0 z-50">
       {spot ? (
         <>
+          {/* 4분할 딤 마스크 — 구멍(타겟) 밖은 pointer-events-auto로 클릭 차단, 구멍은 통과. */}
           <div
-            className="absolute rounded-xl"
-            style={{
-              top: spot.top,
-              left: spot.left,
-              width: spot.width,
-              height: spot.height,
-              boxShadow: '0 0 0 9999px rgba(0,0,0,0.62)',
-              transition: 'all 140ms ease-out',
-            }}
+            className="pointer-events-auto absolute left-0 right-0 top-0"
+            style={{ height: spot.top, background: DIM }}
           />
           <div
-            className="absolute animate-pulse rounded-xl ring-2 ring-amber-400"
+            className="pointer-events-auto absolute bottom-0 left-0 right-0"
+            style={{ top: spot.top + spot.height, background: DIM }}
+          />
+          <div
+            className="pointer-events-auto absolute left-0"
+            style={{ top: spot.top, width: spot.left, height: spot.height, background: DIM }}
+          />
+          <div
+            className="pointer-events-auto absolute right-0"
+            style={{ top: spot.top, left: spot.left + spot.width, height: spot.height, background: DIM }}
+          />
+          {/* 펄스 링 — 클릭은 타겟으로 통과(pointer-events-none). */}
+          <div
+            className="pointer-events-none absolute animate-pulse rounded-md ring-2 ring-amber-400"
             style={{ top: spot.top, left: spot.left, width: spot.width, height: spot.height }}
           />
         </>
       ) : (
-        <div className="absolute inset-0 bg-black/55" />
+        // 타겟 미발견 — 화면 이동이 필요하므로 클릭 차단하지 않음(pointer-events-none 유지).
+        <div className="absolute inset-0 bg-black/45" />
       )}
 
       {/* 말풍선 */}

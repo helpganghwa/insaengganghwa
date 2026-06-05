@@ -54,7 +54,7 @@ function RewardChip({
         : 'bg-zinc-100 text-zinc-400 dark:bg-zinc-900 dark:text-zinc-500';
   const base =
     'relative flex w-full items-center justify-center gap-px overflow-hidden rounded py-1 text-[9px] leading-none tabular-nums';
-  // 수령 완료 — 보상이 보이는 채로 얇은 대각선 취소선을 덮음.
+  // 수령 완료 — 보상이 보이는 채로 '완료' 도장을 비스듬히 찍음.
   const body = (
     <>
       <span>
@@ -62,7 +62,11 @@ function RewardChip({
         {amount.toLocaleString('ko-KR')}
       </span>
       {variant === 'claimed' ? (
-        <span className="pointer-events-none absolute left-0.5 right-0.5 top-1/2 h-px -translate-y-1/2 -rotate-[14deg] bg-zinc-500/80 dark:bg-zinc-400/80" />
+        <span className="pointer-events-none absolute inset-0 flex items-center justify-center">
+          <span className="-rotate-[18deg] rounded-sm border border-zinc-500/70 px-0.5 text-[8px] font-extrabold leading-none text-zinc-500/85 dark:border-zinc-400/70 dark:text-zinc-300/85">
+            완료
+          </span>
+        </span>
       ) : null}
     </>
   );
@@ -184,7 +188,7 @@ function PassColumn({
                     type="button"
                     onClick={onPremiumLocked}
                     style={{ width: PREMIUM_W }}
-                    className="absolute inset-y-0 right-0 flex flex-col items-center justify-center gap-0.5 rounded bg-zinc-900/55 text-center text-[9px] font-bold leading-tight text-white backdrop-blur-[1px]"
+                    className="absolute inset-y-0 right-0 flex flex-col items-center justify-center gap-0.5 rounded bg-zinc-900/50 text-center text-[9px] font-bold leading-tight text-white backdrop-blur-[1px]"
                   >
                     <span>프리미엄</span>
                     <span className="tabular-nums">{won(s.priceKrw)}</span>
