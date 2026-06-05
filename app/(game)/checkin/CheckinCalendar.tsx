@@ -82,7 +82,11 @@ export function CheckinCalendar({
 
   const claimedToday = lastClaimed === kstToday;
   const todayCellDay = nextCheckinDay1Indexed(dayProgress);
-  const todayReward = CHECKIN_CALENDAR[todayCellDay - 1]!;
+  // 카드 표시 보상 — 오늘 도장 찍었으면 방금 받은 칸(todayCellDay는 내일을 가리킴), 아니면 오늘 칸.
+  const cardDay = claimedToday
+    ? ((todayCellDay - 2 + CHECKIN_CYCLE_DAYS) % CHECKIN_CYCLE_DAYS) + 1
+    : todayCellDay;
+  const cardReward = CHECKIN_CALENDAR[cardDay - 1]!;
 
   useEffect(() => {
     if (justClaimedDay === null) return;
@@ -166,7 +170,7 @@ export function CheckinCalendar({
               </div>
 
               <div
-                className={`flex flex-1 items-center justify-center text-2xl leading-none ${
+                className={`flex flex-1 items-center justify-center text-lg leading-none ${
                   showCheck ? 'opacity-40' : ''
                 }`}
                 aria-hidden
@@ -202,26 +206,12 @@ export function CheckinCalendar({
 
       {/* 오늘 카드 + 액션 */}
       <section className="rounded-2xl border border-zinc-200 bg-white p-4 dark:border-zinc-800 dark:bg-zinc-950">
-        <div className="text-xs text-zinc-500">
-          {claimedToday
-            ? '오늘 수령 완료'
-            : `오늘 (D${todayCellDay}${
-                todayCellDay === CHECKIN_CYCLE_DAYS
-                  ? ' · 최종'
-                  : isCheckinMilestone(todayCellDay)
-                    ? ' · 마일스톤'
-                    : ''
-              })`}
-        </div>
-        <div className="mt-1 flex items-center gap-3">
+        <div className="flex items-center gap-3">
           <span className="text-3xl" aria-hidden>
-            {rewardEmoji(todayReward)}
+            {rewardEmoji(cardReward)}
           </span>
           <div className="flex-1">
-            <div className="text-base font-semibold">{rewardLongLabel(todayReward)}</div>
-            <div className="text-[11px] text-zinc-400">
-              {claimedToday ? '자정 이후 다음 칸 활성화' : '오늘 1회 수령'}
-            </div>
+            <div className="text-base font-semibold">{rewardLongLabel(cardReward)}</div>
           </div>
         </div>
         <button
@@ -230,11 +220,7 @@ export function CheckinCalendar({
           disabled={claimedToday || pending}
           className="mt-3 w-full rounded-xl bg-amber-600 px-4 py-3 text-sm font-bold text-white shadow-md transition active:scale-[0.99] disabled:cursor-not-allowed disabled:bg-zinc-300 disabled:text-zinc-500 dark:disabled:bg-zinc-800 dark:disabled:text-zinc-500"
         >
-          {claimedToday
-            ? '오늘 도장 완료 · 자정 이후 다음 칸'
-            : pending
-              ? '도장 찍는 중…'
-              : '출석 도장 찍기'}
+          {claimedToday ? '오늘 도장 완료' : pending ? '도장 찍는 중…' : '출석 도장 찍기'}
         </button>
       </section>
     </div>
