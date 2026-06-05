@@ -5,6 +5,7 @@ import { usePathname, useSearchParams } from 'next/navigation';
 
 import type { TutorialStep } from '@/lib/game/tutorial';
 import { skipTutorialAction } from '@/app/(game)/tutorial/actions';
+import { TutorialCompleteModal } from './TutorialCompleteModal';
 
 /**
  * 신규 튜토리얼 스포트라이트 코치마크 — 전역 오버레이.
@@ -49,6 +50,8 @@ const FALLBACK: Record<TutorialStep, string> = {
 
 const STEP_NO: Record<TutorialStep, number> = { open: 1, equip: 2, enhance: 3, attempt: 4 };
 const STEP_TOTAL = 4;
+const STEP_ORDER: TutorialStep[] = ['open', 'equip', 'enhance', 'attempt'];
+const idxOf = (s: TutorialStep | null) => (s ? STEP_ORDER.indexOf(s) : -1);
 const PREVIEW_STEPS: TutorialStep[] = ['open', 'equip', 'enhance', 'attempt'];
 const PREVIEW_LABEL: Record<TutorialStep, string> = {
   open: '보급',
@@ -84,10 +87,38 @@ export function TutorialCoach({ step }: { step: TutorialStep | null }) {
   const [rect, setRect] = useState<DOMRect | null>(null);
   const [radius, setRadius] = useState(0); // 타겟 요소의 border-radius(px)
   const [copy, setCopy] = useState('');
+  const [optimistic, setOptimistic] = useState<TutorialStep | null>(null); // 액션 기반 낙관 전진
+  const [completed, setCompleted] = useState(false); // 마무리 팝업
   const lastSel = useRef<string | null>(null); // 타겟이 바뀔 때만 스크롤(루프 방지)
 
-  const effective = preview ?? step;
+  // 낙관치가 서버 step보다 앞서면 그걸 사용 → 서버 파생 지연 동안 이전 단계 플래시 방지.
+  const effective =
+    preview ??
+    (step !== null && optimistic && idxOf(optimistic) > idxOf(step) ? optimistic : step);
   const isPreview = preview !== null;
+
+  // 액션 신호 — 즉시 다음 단계로(advance) / 마무리 팝업(complete).
+  useEffect(() => {
+    const onAdvance = () => {
+      setOptimistic((cur) => {
+        const i = idxOf(cur ?? step);
+        return i >= 0 && i < STEP_ORDER.length - 1 ? STEP_ORDER[i + 1] : cur;
+      });
+      window.setTimeout(() => setOptimistic(null), 4000); // 실패/지연 대비 안전 해제
+    };
+    const onComplete = () => {
+      if (preview) return;
+      const eff =
+        step !== null && optimistic && idxOf(optimistic) > idxOf(step) ? optimistic : step;
+      if (eff === 'attempt') setCompleted(true);
+    };
+    window.addEventListener('tutorial:advance', onAdvance);
+    window.addEventListener('tutorial:complete', onComplete);
+    return () => {
+      window.removeEventListener('tutorial:advance', onAdvance);
+      window.removeEventListener('tutorial:complete', onComplete);
+    };
+  }, [step, preview, optimistic]);
 
   useEffect(() => {
     if (!effective || skipped) return;
@@ -102,7 +133,7 @@ export function TutorialCoach({ step }: { step: TutorialStep | null }) {
             // 새 타겟이면 1회 스크롤 — 바텀네비 등에 가리지 않게 화면 중앙으로.
             if (lastSel.current !== c.sel) {
               lastSel.current = c.sel;
-              el.scrollIntoView({ block: 'center', behavior: 'smooth' });
+              el.scrollIntoView({ block: 'center', behavior: 'instant' as ScrollBehavior });
             }
             setRect(r);
             setRadius(parseFloat(getComputedStyle(el).borderTopLeftRadius) || 0);
@@ -127,7 +158,9 @@ export function TutorialCoach({ step }: { step: TutorialStep | null }) {
     };
   }, [effective, skipped, pathname]);
 
-  if (!effective || skipped || typeof window === 'undefined') return null;
+  if (typeof window === 'undefined') return null;
+  if (completed) return <TutorialCompleteModal onClose={() => setCompleted(false)} />;
+  if (!effective || skipped) return null;
 
   const onSkip = () => {
     if (isPreview) {
@@ -238,6 +271,13 @@ export function TutorialCoach({ step }: { step: TutorialStep | null }) {
               {STEP_NO[s]} {PREVIEW_LABEL[s]}
             </button>
           ))}
+          <button
+            type="button"
+            onClick={() => setCompleted(true)}
+            className="rounded-full bg-white/10 px-2 py-1 text-[11px] font-bold text-white"
+          >
+            완료
+          </button>
           <button
             type="button"
             onClick={() => setPreview(null)}

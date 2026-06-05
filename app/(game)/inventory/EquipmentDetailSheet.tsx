@@ -14,6 +14,7 @@ import { TranscendSprite } from '@/components/TranscendSprite';
 import { RarityFrame, rarityBorderStyle, hasRarityBorder } from '@/components/RarityFrame';
 import { transcendStyle } from '@/lib/game/equipment/transcend';
 import { assetUrl } from '@/lib/asset-versions';
+import { advanceTutorial } from '@/components/tutorial/events';
 
 const SLOT_LABEL: Record<Slot, string> = { weapon: '무기', armor: '방어구', accessory: '장신구' };
 
@@ -196,6 +197,7 @@ export function EquipmentDetailSheet({
                   return;
                 }
                 onOptimisticStartEnhance?.(item.id);
+                advanceTutorial();
                 onClose();
                 router.push('/enhance');
               });
@@ -215,7 +217,10 @@ export function EquipmentDetailSheet({
                 () => onOptimisticEquip?.(item.id),
               );
               // 장착 직후 시트 닫기 — 인벤토리로 복귀해 다음 흐름(강화) 자연 진행.
-              if (equipping) onClose();
+              if (equipping) {
+                advanceTutorial();
+                onClose();
+              }
             }}
             className={BTN}
           >

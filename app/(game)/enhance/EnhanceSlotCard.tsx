@@ -16,6 +16,7 @@ import { transcendStyle } from '@/lib/game/equipment/transcend';
 import { useResourceToast } from '@/components/ResourceToast';
 
 import { finalizeEnhance, reduceTimeWithGems, cancelEnhanceAction } from './actions';
+import { completeTutorial } from '@/components/tutorial/events';
 import { useDiamond } from '@/components/DiamondContext';
 import { EnhanceFX, type FxKind } from './EnhanceFX';
 
@@ -323,6 +324,8 @@ export function EnhanceSlotCard({
         alert(r.message);
         return;
       }
+      // 튜토리얼: 첫 강화 시도 완료 신호(코치가 attempt 단계일 때만 마무리 팝업).
+      completeTutorial();
       // 강화 결과 토스트 — 누적(last-wins)만 하고, 결과 오버레이 종료 시 노출.
       // 이 슬롯 오버레이 시작 신호(begin) → 종료 setTimeout에서 end → 모든 슬롯 0이면 토스트.
       showRanking(r.ranksBefore, r.ranksAfter);
