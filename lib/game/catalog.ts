@@ -27,3 +27,27 @@ export const getActiveCatalog = unstable_cache(
   ['active-catalog-v1'],
   { revalidate: 600, tags: ['catalog'] },
 );
+
+/**
+ * 전체 카탈로그(active 무관) — 보유 아이템이 비활성 카탈로그여도 메타 조인이 되도록.
+ * 핫패스(인벤·강화·내프로필)에서 userEquipment ⨝ catalogItems 조인을 제거하고 이 캐시 맵으로
+ * in-memory 조인 → DB는 per-user user_equipment 단일 테이블만 조회(불변 카탈로그 read 제거).
+ * 게임 상태 아님·per-user 아님이라 낙관적 UI/치팅방지에 무영향.
+ */
+const getAllCatalog = unstable_cache(
+  async (): Promise<CatalogItem[]> =>
+    db
+      .select({
+        id: catalogItems.id,
+        code: catalogItems.code,
+        name: catalogItems.name,
+        slot: catalogItems.slot,
+      })
+      .from(catalogItems),
+  ['all-catalog-v1'],
+  { revalidate: 600, tags: ['catalog'] },
+);
+
+export async function getCatalogMap(): Promise<Map<number, CatalogItem>> {
+  return new Map((await getAllCatalog()).map((c) => [c.id, c]));
+}

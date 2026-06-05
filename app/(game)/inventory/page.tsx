@@ -3,9 +3,10 @@ import { and, eq } from 'drizzle-orm';
 import { getSessionUserId } from '@/lib/auth/session';
 import { db } from '@/lib/db/client';
 import { withTimeout } from '@/lib/db/with-timeout';
-import { catalogItems, userEquipment, type Slot } from '@/lib/db/schema/equipment';
+import { userEquipment, type Slot } from '@/lib/db/schema/equipment';
 import { enhancementJobs } from '@/lib/db/schema/enhance';
 import { profiles } from '@/lib/db/schema/profiles';
+import { getCatalogMap } from '@/lib/game/catalog';
 import { liberatedItemRanks } from '@/lib/game/codex/ranking';
 import { loreByCode } from '@/lib/game/equipment/lore';
 
@@ -29,9 +30,6 @@ export default async function InventoryPage({
       .select({
         id: userEquipment.id,
         catalogItemId: userEquipment.catalogItemId,
-        code: catalogItems.code,
-        name: catalogItems.name,
-        slot: catalogItems.slot,
         enhanceLevel: userEquipment.enhanceLevel,
         transcendLevel: userEquipment.transcendLevel,
         transcendProgress: userEquipment.transcendProgress,
@@ -39,7 +37,6 @@ export default async function InventoryPage({
         acquiredAt: userEquipment.firstAcquiredAt,
       })
       .from(userEquipment)
-      .innerJoin(catalogItems, eq(userEquipment.catalogItemId, catalogItems.id))
       .where(eq(userEquipment.userId, userId)),
     db
       .select({ instanceId: enhancementJobs.userEquipmentId })
@@ -51,6 +48,7 @@ export default async function InventoryPage({
       .where(eq(profiles.id, userId))
       .limit(1),
     liberatedItemRanks(userId),
+    getCatalogMap(), // 불변 카탈로그(캐시) — 조인 제거, in-memory 결합.
     ]),
     3500,
     'inventory.page',
@@ -59,24 +57,31 @@ export default async function InventoryPage({
   const runningJobs = _r?.[1] ?? [];
   const prof = _r?.[2] ?? [];
   const libRanks = _r?.[3] ?? new Map<number, number>();
+  const catMap = _r?.[4] ?? new Map();
   const nickname = prof[0]?.nickname ?? '플레이어';
 
   const busy = new Set(runningJobs.map((r) => r.instanceId.toString()));
-  const items: InvItem[] = rows.map((r) => ({
-    id: r.id.toString(),
-    catalogItemId: r.catalogItemId,
-    code: r.code,
-    name: r.name,
-    slot: r.slot,
-    enhanceLevel: r.enhanceLevel,
-    transcendLevel: r.transcendLevel,
-    transcendProgress: r.transcendProgress,
-    equipped: r.equippedSlot != null,
-    acquiredAtMs: r.acquiredAt.getTime(),
-    busy: busy.has(r.id.toString()),
-    championRank: libRanks.get(r.catalogItemId) ?? null,
-    lore: loreByCode(r.code),
-  }));
+  const items: InvItem[] = rows.flatMap((r) => {
+    const cat = catMap.get(r.catalogItemId);
+    if (!cat) return [];
+    return [
+      {
+        id: r.id.toString(),
+        catalogItemId: r.catalogItemId,
+        code: cat.code,
+        name: cat.name,
+        slot: cat.slot,
+        enhanceLevel: r.enhanceLevel,
+        transcendLevel: r.transcendLevel,
+        transcendProgress: r.transcendProgress,
+        equipped: r.equippedSlot != null,
+        acquiredAtMs: r.acquiredAt.getTime(),
+        busy: busy.has(r.id.toString()),
+        championRank: libRanks.get(r.catalogItemId) ?? null,
+        lore: loreByCode(cat.code),
+      },
+    ];
+  });
 
   return (
     <div className="px-4 py-4">
