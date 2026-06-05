@@ -43,7 +43,8 @@ export function InventoryGrid({
   nickname: string;
 }) {
   const [filter, setFilter] = useState<SlotFilter>(initialSlot);
-  const [sortBy, setSortBy] = useState<SortBy>('enhance');
+  // 정렬 UI 제거 — 항상 '강화순' 고정(2026-06-05 피드백).
+  const sortBy: SortBy = 'enhance';
   const [openId, setOpenId] = useState<string | null>(null);
   const [, startTransition] = useTransition();
   // 낙관적 items — 최적조합 클릭 시 클라이언트에서 같은 알고리즘으로 시뮬레이션 후
@@ -120,16 +121,6 @@ export function InventoryGrid({
             </button>
           ))}
         </div>
-        <select
-          value={sortBy}
-          onChange={(e) => setSortBy(e.target.value as SortBy)}
-          aria-label="정렬"
-          className="rounded-full border border-zinc-300 bg-white px-3 py-1.5 text-base dark:border-zinc-700 dark:bg-zinc-950"
-        >
-          <option value="recent">최근순</option>
-          <option value="enhance">강화순</option>
-          <option value="transcend">초월순</option>
-        </select>
       </div>
 
       {equipped.length > 0 ? (
