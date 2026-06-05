@@ -1,7 +1,7 @@
 'use client';
 
 import { useEffect, useState } from 'react';
-import { usePathname } from 'next/navigation';
+import { usePathname, useSearchParams } from 'next/navigation';
 
 import type { TutorialStep } from '@/lib/game/tutorial';
 import { skipTutorialAction } from '@/app/(game)/tutorial/actions';
@@ -11,6 +11,9 @@ import { skipTutorialAction } from '@/app/(game)/tutorial/actions';
  * 서버가 파생한 단계(step)를 받아, 현재 화면(pathname)에 존재하는 타겟 요소를
  * data-tut 속성으로 찾아 딤+컷아웃으로 강조하고 말풍선으로 다음 행동을 유도.
  * 타겟이 실제 버튼이라 클릭은 그대로 통과(오버레이는 pointer-events-none).
+ *
+ * QA 프리뷰: ?tut=open|equip|enhance 로 진입하면(자원 미지급) 강제 노출 + 전역
+ * 플로팅 바로 단계 전환. 상태는 레이아웃 마운트 유지로 화면 이동 간 지속.
  */
 type Candidate = { sel: string; copy: string };
 
@@ -38,21 +41,32 @@ const FALLBACK: Record<TutorialStep, string> = {
 };
 
 const STEP_NO: Record<TutorialStep, number> = { open: 1, equip: 2, enhance: 3 };
+const PREVIEW_STEPS: TutorialStep[] = ['open', 'equip', 'enhance'];
+const PREVIEW_LABEL: Record<TutorialStep, string> = { open: '보급', equip: '장착', enhance: '강화' };
 const PAD = 8;
 const TOOLTIP_W = 220;
 
+const asStep = (v: string | null): TutorialStep | null =>
+  v && (PREVIEW_STEPS as string[]).includes(v) ? (v as TutorialStep) : null;
+
 export function TutorialCoach({ step }: { step: TutorialStep | null }) {
   const pathname = usePathname();
+  const search = useSearchParams();
   const [skipped, setSkipped] = useState(false);
+  // 프리뷰는 URL(?tut=)로 1회 시드 후 상태로 유지(레이아웃 마운트 지속 → 화면 이동에도 보존).
+  const [preview, setPreview] = useState<TutorialStep | null>(() => asStep(search.get('tut')));
   const [rect, setRect] = useState<DOMRect | null>(null);
   const [copy, setCopy] = useState('');
 
+  const effective = preview ?? step;
+  const isPreview = preview !== null;
+
   useEffect(() => {
-    if (!step || skipped) return;
+    if (!effective || skipped) return;
     let alive = true;
     const measure = () => {
       if (!alive) return;
-      for (const c of STEP_TARGETS[step]) {
+      for (const c of STEP_TARGETS[effective]) {
         const el = document.querySelector(c.sel);
         if (el) {
           const r = el.getBoundingClientRect();
@@ -64,7 +78,7 @@ export function TutorialCoach({ step }: { step: TutorialStep | null }) {
         }
       }
       setRect(null);
-      setCopy(FALLBACK[step]);
+      setCopy(FALLBACK[effective]);
     };
     measure();
     const id = window.setInterval(measure, 180);
@@ -76,11 +90,15 @@ export function TutorialCoach({ step }: { step: TutorialStep | null }) {
       window.removeEventListener('scroll', measure, true);
       window.removeEventListener('resize', measure);
     };
-  }, [step, skipped, pathname]);
+  }, [effective, skipped, pathname]);
 
-  if (!step || skipped || typeof window === 'undefined') return null;
+  if (!effective || skipped || typeof window === 'undefined') return null;
 
   const onSkip = () => {
+    if (isPreview) {
+      setPreview(null);
+      return;
+    }
     setSkipped(true);
     void skipTutorialAction();
   };
@@ -148,20 +166,46 @@ export function TutorialCoach({ step }: { step: TutorialStep | null }) {
       >
         <div className="rounded-xl bg-amber-400 px-3.5 py-2.5 text-amber-950 shadow-xl">
           <div className="mb-0.5 text-[10px] font-bold opacity-70">
-            튜토리얼 {STEP_NO[step]}/3
+            {isPreview ? '미리보기' : '튜토리얼'} {STEP_NO[effective]}/3
           </div>
           <p className="text-[13px] font-bold leading-snug break-keep">{copy}</p>
         </div>
       </div>
 
-      {/* 건너뛰기 */}
+      {/* 건너뛰기 / 미리보기 종료 */}
       <button
         type="button"
         onClick={onSkip}
         className="pointer-events-auto absolute right-3 top-[calc(env(safe-area-inset-top)+14px)] rounded-full bg-black/60 px-3 py-1.5 text-[11px] font-semibold text-white backdrop-blur-sm"
       >
-        건너뛰기 ✕
+        {isPreview ? '미리보기 종료 ✕' : '건너뛰기 ✕'}
       </button>
+
+      {/* QA 전역 플로팅 바 — 단계 전환(테스트용). 프리뷰일 때만. */}
+      {isPreview ? (
+        <div className="pointer-events-auto fixed bottom-[calc(env(safe-area-inset-bottom)+70px)] left-1/2 flex -translate-x-1/2 items-center gap-1 rounded-full bg-zinc-900/90 px-2 py-1.5 shadow-xl ring-1 ring-amber-400/40 backdrop-blur-sm">
+          <span className="px-1 text-[10px] font-bold text-amber-300">QA</span>
+          {PREVIEW_STEPS.map((s) => (
+            <button
+              key={s}
+              type="button"
+              onClick={() => setPreview(s)}
+              className={`rounded-full px-2.5 py-1 text-[11px] font-bold ${
+                effective === s ? 'bg-amber-400 text-amber-950' : 'bg-white/10 text-white'
+              }`}
+            >
+              {STEP_NO[s]} {PREVIEW_LABEL[s]}
+            </button>
+          ))}
+          <button
+            type="button"
+            onClick={() => setPreview(null)}
+            className="ml-0.5 rounded-full bg-white/10 px-2 py-1 text-[11px] font-bold text-white"
+          >
+            종료
+          </button>
+        </div>
+      ) : null}
     </div>
   );
 }
