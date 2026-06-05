@@ -15,6 +15,7 @@ import { KakaoSdkLoader } from '@/components/KakaoSdkLoader';
 import { ResourceToastProvider } from '@/components/ResourceToast';
 import { VersionUpdateToast } from '@/components/VersionUpdateToast';
 import { DiamondProvider } from '@/components/DiamondContext';
+import { TutorialCoachAsync } from '@/components/tutorial/TutorialCoachAsync';
 
 /**
  * 인증 필요 라우트 그룹 — WIREFRAMES §0 셸.
@@ -62,6 +63,10 @@ export default async function GameLayout({ children }: { children: React.ReactNo
         </ResourceToastProvider>
         <Suspense fallback={<BottomNav />}>
           <BottomNavAsync dataPromise={layoutData} />
+        </Suspense>
+        {/* 신규 튜토리얼 코치마크 — 비차단 스트리밍(완료/스킵 시 렌더 없음). */}
+        <Suspense fallback={null}>
+          <TutorialCoachAsync userId={userId} />
         </Suspense>
       </div>
     </DiamondProvider>

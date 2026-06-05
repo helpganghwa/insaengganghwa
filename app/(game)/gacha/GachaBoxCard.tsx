@@ -102,6 +102,7 @@ export function GachaBoxCard({
           <div className="ml-auto grid w-44 grid-cols-2 gap-1.5">
             <button
               type="button"
+              data-tut="open-box"
               disabled={drawing || displayCount < 1}
               onClick={() => pull(1)}
               className="rounded-md bg-white/95 px-3 py-1.5 text-center text-[11px] font-semibold text-zinc-900 shadow-sm transition-transform active:scale-95 disabled:opacity-40"

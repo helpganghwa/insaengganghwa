@@ -188,6 +188,7 @@ const Tile = memo(function Tile({
   return (
     <button
       type="button"
+      data-tut="inv-item"
       onClick={() => onOpen(item.id)}
       style={{
         ...rarityBorderStyle(item.transcendLevel),

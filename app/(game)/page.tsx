@@ -232,6 +232,7 @@ export default async function HomePage() {
             <Link
               key={m.href}
               href={m.href}
+              data-tut={m.href === '/gacha' ? 'goto-gacha' : undefined}
               style={{ backgroundColor: m.tint }}
               className="relative flex aspect-[5/3] overflow-hidden rounded-2xl border border-zinc-800 transition active:scale-[0.98]"
             >

@@ -180,6 +180,7 @@ export function EquipmentDetailSheet({
           {/* 강화 — SLOT_BUSY 시 SwapPickerModal 열어 교체. */}
           <button
             type="button"
+            data-tut="enhance-btn"
             disabled={!canEnhance}
             onClick={() => {
               if (pending || !canEnhance) return;
@@ -206,6 +207,7 @@ export function EquipmentDetailSheet({
           {/* 장착/해제 */}
           <button
             type="button"
+            data-tut={item.equipped ? undefined : 'equip-btn'}
             onClick={() =>
               run(
                 () => (item.equipped ? unequipAction(item.id) : equipAction(item.id)),
