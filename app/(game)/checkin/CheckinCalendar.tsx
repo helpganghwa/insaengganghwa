@@ -32,16 +32,23 @@ const SLOT_EMOJI: Record<SupplySlot, string> = {
  * 보상 종류별 대표 이모지(셀/카드). 3종 보급은 📦 대신 무기/방어구/장신구
  * 이모지를 겹쳐 표현 — 크기는 부모 font-size에 비례(em 단위 오버랩).
  */
+const FAN_ROT = [-24, 0, 24]; // 부채꼴 회전각(좌·중·우)
 function RewardEmoji({ r }: { r: CheckinReward }) {
   if (r.kind === 'diamond') return <>💎</>;
   if (r.kind === 'supply') return <>{SLOT_EMOJI[r.slot]}</>;
+  // 3종 보급 — 작게 축소 + 강하게 겹쳐 부채꼴(영역 최소).
   return (
-    <span className="inline-flex items-center">
+    <span className="inline-flex items-end justify-center text-[0.66em] leading-none">
       {SUPPLY_SLOTS.map((s, i) => (
         <span
           key={s}
-          className={i === 0 ? '' : '-ml-[0.42em]'}
-          style={{ filter: 'drop-shadow(0 0 1.5px rgba(0,0,0,0.35))' }}
+          className={i === 0 ? '' : '-ml-[0.66em]'}
+          style={{
+            transform: `rotate(${FAN_ROT[i]}deg)`,
+            transformOrigin: 'bottom center',
+            zIndex: i === 1 ? 2 : 1,
+            filter: 'drop-shadow(0 0 1px rgba(0,0,0,0.4))',
+          }}
         >
           {SLOT_EMOJI[s]}
         </span>
