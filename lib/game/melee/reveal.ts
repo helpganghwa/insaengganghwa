@@ -38,11 +38,11 @@ export async function revealMelee(): Promise<{ revealed: boolean; battleId?: str
     .innerJoin(profiles, eq(profiles.id, meleeParticipants.userId))
     .where(and(eq(meleeParticipants.battleId, battleId), inArray(meleeParticipants.finalRank, [1, 2, 3])))
     .orderBy(meleeParticipants.finalRank);
-  const MEDAL = ['🥇', '🥈', '🥉'];
+  const RANK_LABEL = ['🏆우승', '2등', '3등'];
   const podiumStr =
     podium.length > 0
-      ? podium.map((p) => `${MEDAL[p.rank - 1] ?? `${p.rank}위`} ${p.nick}`).join(' · ')
-      : '🥇 챔피언';
+      ? podium.map((p) => `${RANK_LABEL[p.rank - 1] ?? `${p.rank}위`} ${p.nick}`).join(' · ')
+      : '🏆우승 챔피언';
 
   // 결과 우편 — 참가자 전원 1행씩 DB측 일괄 적재(reward type, 다이아+상자 payload).
   await db.execute(sql`

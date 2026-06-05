@@ -170,7 +170,7 @@ export function CheckinCalendar({
               </div>
 
               <div
-                className={`flex flex-1 items-center justify-center text-lg leading-none ${
+                className={`flex flex-1 items-center justify-center text-base leading-none ${
                   showCheck ? 'opacity-40' : ''
                 }`}
                 aria-hidden
