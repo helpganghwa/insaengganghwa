@@ -1,5 +1,5 @@
 import { ImageResponse } from 'next/og';
-import { and, eq, isNotNull, or, sql } from 'drizzle-orm';
+import { and, eq, isNotNull, or } from 'drizzle-orm';
 
 import { db } from '@/lib/db/client';
 import { profiles } from '@/lib/db/schema/profiles';
@@ -16,17 +16,8 @@ const SLOTS = ['weapon', 'armor', 'accessory'] as const;
 /** Pixellab 배경 아트 풀 — public/og/og-1..N.png. 부재 시 그라데이션 폴백. */
 const BG_POOL = 8;
 
-// 해방 아이템(강화랭킹 1~3위) 후광 색 — TranscendSprite와 동일(1 골드/2 실버/3 브론즈).
-const RANK_GLOW: Record<number, readonly [number, number, number]> = {
-  1: [255, 216, 120],
-  2: [226, 232, 240],
-  3: [216, 150, 96],
-};
-const rankGlowShadow = (rank: number | null | undefined): string => {
-  if (rank !== 1 && rank !== 2 && rank !== 3) return 'none';
-  const [r, g, b] = RANK_GLOW[rank]!;
-  return `0 0 60px rgba(${r},${g},${b},0.65), 0 0 26px rgba(${r},${g},${b},0.5)`;
-};
+// 해방 후광은 OG(satori)에서 제외 — satori는 box-shadow(사각/원형)만 지원해 아이템 실루엣을
+// 따라가는 후광이 불가(filter: drop-shadow 미지원). 박스/원형 후광은 아이템과 안 맞아 제거.
 
 // 초월 별 장식 — 4 모서리 등급색 별. Satori 호환을 위해 단순 SVG <polygon>
 // (transform 없음). sub=1(짝수 등급)이면 인벤토리 RarityFrame과 동일하게 위성 별
@@ -219,28 +210,6 @@ export async function GET(_req: Request, { params }: { params: Promise<{ shareCo
 
   const bySlot = new Map(equipped.map((e) => [e.slot, e]));
 
-  // 해방 등수(강화랭킹 1~3위) — 후광 색용. 카드 경로라 cache() 의존 없이 인라인 조회.
-  const libRanks = new Map<number, number>();
-  if (prof && equipped.length > 0) {
-    const rows = (await db.execute(sql`
-      select uc.catalog_item_id as cid,
-        (select count(*) from user_equipment o
-         where o.catalog_item_id = uc.catalog_item_id
-           and (
-             o.max_enhance_level > uc.max_enhance_level
-             or (o.max_enhance_level = uc.max_enhance_level and o.max_enhance_reached_at < uc.max_enhance_reached_at)
-             or (o.max_enhance_level = uc.max_enhance_level and o.max_enhance_reached_at = uc.max_enhance_reached_at and o.user_id < uc.user_id)
-           )
-        )::int as ahead
-      from user_equipment uc
-      where uc.user_id = ${prof.id}::uuid and uc.max_enhance_level > 0
-    `)) as unknown as { cid: number; ahead: number }[];
-    for (const r of rows) {
-      const ahead = Number(r.ahead);
-      if (ahead < 3) libRanks.set(Number(r.cid), ahead + 1);
-    }
-  }
-
   // 대표 프로필 캐릭터 이미지(rotations[active_direction]) — 있으면 OG에 합성.
   let charUri: string | null = null;
   if (prof?.activeProfileId) {
@@ -276,9 +245,6 @@ export async function GET(_req: Request, { params }: { params: Promise<{ shareCo
     const sprUri = await dataUri(`${origin}${spritePath(focusCode) ?? ''}`);
     const ts = focusT > 0 ? transcendStyle(focusT) : null;
     const [tr, tg, tb] = ts?.colorRgb ?? [0, 0, 0];
-    // 해방 등수(후광용) — 공유 아이템이 착용 중이면 그 catalog의 등수.
-    const focusCatId = equipped.find((e) => e.code === focusCode)?.catalogItemId;
-    const focusRank = focusCatId != null ? libRanks.get(focusCatId) ?? null : null;
     const transcendHeadline = focusT >= 1;
     const headlineText = transcendHeadline
       ? `초월 ${focusT}`
@@ -320,8 +286,6 @@ export async function GET(_req: Request, { params }: { params: Promise<{ shareCo
               width: 360, height: 360, display: 'flex', alignItems: 'center', justifyContent: 'center',
               borderRadius: 32, background: 'rgba(0,0,0,0.32)',
               border: ts ? `8px solid rgb(${tr},${tg},${tb})` : '3px solid rgba(255,255,255,0.10)',
-              // 후광은 해방 등수색(골드/실버/브론즈). 초월 등급 후광은 폐지.
-              boxShadow: rankGlowShadow(focusRank),
               overflow: 'hidden',
             }}
           >
@@ -471,7 +435,6 @@ export async function GET(_req: Request, { params }: { params: Promise<{ shareCo
           const spr = it ? sprite.get(s) : null;
           const ts = it && it.transcendLevel > 0 ? transcendStyle(it.transcendLevel) : null;
           const [tr, tg, tb] = ts?.colorRgb ?? [0, 0, 0];
-          const rank = it ? libRanks.get(it.catalogItemId) ?? null : null;
           const spriteBox = 116;
           if (!it) {
             return (
@@ -537,9 +500,6 @@ export async function GET(_req: Request, { params }: { params: Promise<{ shareCo
                   alignItems: 'center',
                   justifyContent: 'center',
                   flexShrink: 0,
-                  // 후광은 슬롯 카드가 아니라 아이템(스프라이트) 뒤에.
-                  boxShadow: rankGlowShadow(rank),
-                  borderRadius: spriteBox / 2,
                 }}
               >
                 {spr ? (
