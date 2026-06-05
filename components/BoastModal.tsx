@@ -180,7 +180,9 @@ export function BoastModal({
       params.set('cp', String(set.total));
     }
     const imageUrl = `${origin}/og/${encodeURIComponent(publicCode)}?${params.toString()}`;
-    const startUrl = `${origin}/`;
+    // '인생강화 시작' — /s/[code]?start=1로 보내 pending_referral 쿠키를 세팅(추천 귀속) 후
+    // 앱 시작(/)으로 리다이렉트. 직접 '/'로 보내면 쿠키가 없어 추천인 리워드가 누락됨.
+    const startUrl = `${origin}/s/${encodeURIComponent(publicCode)}?start=1`;
     k.Share.sendDefault({
       objectType: 'feed',
       content: {

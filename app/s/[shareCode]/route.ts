@@ -47,8 +47,12 @@ export async function GET(
     }
   }
 
-  // 2) 닉네임 분기 — 공개 프로필 + referral 쿠키.
-  const res = NextResponse.redirect(new URL(`/u/${shareCode}`, req.nextUrl.origin), 307);
+  // 2) 닉네임 분기 — referral 쿠키 세팅 후 리다이렉트.
+  //    ?start=1('인생강화 시작' 버튼) → 앱 시작(/), 그 외(카드 클릭) → 공개 프로필(/u/[code]).
+  //    두 경우 모두 쿠키를 세팅하므로 가입 시 추천 귀속됨.
+  const start = req.nextUrl.searchParams.get('start') === '1';
+  const target = start ? '/' : `/u/${shareCode}`;
+  const res = NextResponse.redirect(new URL(target, req.nextUrl.origin), 307);
   res.cookies.set('pending_referral', shareCode, {
     path: '/',
     maxAge: SEVEN_DAYS,
