@@ -61,7 +61,17 @@ export async function sendMailToUserAction(opts: {
         .limit(1);
       recipientId = r?.id ?? null;
     } else if (opts.toUserId?.trim()) {
-      recipientId = opts.toUserId.trim();
+      // userId도 실제 profiles에 존재하는지 확인 — 오타 UUID로 고아 우편 생성 방지.
+      const id = opts.toUserId.trim();
+      if (!/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(id)) {
+        return { status: 'error', message: '유효한 userId(uuid)가 아닙니다.' };
+      }
+      const [r] = await db
+        .select({ id: profiles.id })
+        .from(profiles)
+        .where(eq(profiles.id, id))
+        .limit(1);
+      recipientId = r?.id ?? null;
     }
     if (!recipientId) return { status: 'error', message: '수신자를 찾을 수 없습니다.' };
 
@@ -100,20 +110,24 @@ export async function broadcastMailAction(opts: {
     const body = (opts.body || '').slice(0, 1000);
     const CHUNK = 500;
     let inserted = 0;
-    for (let i = 0; i < all.length; i += CHUNK) {
-      const slice = all.slice(i, i + CHUNK);
-      await db.insert(mailbox).values(
-        slice.map((p) => ({
-          userId: p.id,
-          type: 'admin' as const,
-          title,
-          body,
-          senderLabel: '운영자',
-          payload,
-        })),
-      );
-      inserted += slice.length;
-    }
+    // 단일 트랜잭션 — 중간 청크에서 실패하면 전체 롤백. 부분 발송 상태가 남지 않으므로
+    // 재실행해도 이중 지급이 없다(원자적: 전부 또는 전무).
+    await db.transaction(async (tx) => {
+      for (let i = 0; i < all.length; i += CHUNK) {
+        const slice = all.slice(i, i + CHUNK);
+        await tx.insert(mailbox).values(
+          slice.map((p) => ({
+            userId: p.id,
+            type: 'admin' as const,
+            title,
+            body,
+            senderLabel: '운영자',
+            payload,
+          })),
+        );
+        inserted += slice.length;
+      }
+    });
     revalidatePath('/admin/mail');
     return { status: 'success', count: inserted };
   } catch (e) {
