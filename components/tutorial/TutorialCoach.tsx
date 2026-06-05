@@ -60,6 +60,18 @@ const PAD = 0;
 const DIM = 'rgba(0,0,0,0.62)';
 const TOOLTIP_W = 220;
 
+/** 둥근 사각형 path(시계방향). r는 코너 반경. */
+function roundRectPath(x: number, y: number, w: number, h: number, r: number): string {
+  const rr = Math.max(0, Math.min(r, w / 2, h / 2));
+  if (rr <= 0) return `M${x} ${y}H${x + w}V${y + h}H${x}Z`;
+  return (
+    `M${x + rr} ${y}H${x + w - rr}A${rr} ${rr} 0 0 1 ${x + w} ${y + rr}` +
+    `V${y + h - rr}A${rr} ${rr} 0 0 1 ${x + w - rr} ${y + h}` +
+    `H${x + rr}A${rr} ${rr} 0 0 1 ${x} ${y + h - rr}` +
+    `V${y + rr}A${rr} ${rr} 0 0 1 ${x + rr} ${y}Z`
+  );
+}
+
 const asStep = (v: string | null): TutorialStep | null =>
   v && (PREVIEW_STEPS as string[]).includes(v) ? (v as TutorialStep) : null;
 
@@ -70,6 +82,7 @@ export function TutorialCoach({ step }: { step: TutorialStep | null }) {
   // 프리뷰는 URL(?tut=)로 1회 시드 후 상태로 유지(레이아웃 마운트 지속 → 화면 이동에도 보존).
   const [preview, setPreview] = useState<TutorialStep | null>(() => asStep(search.get('tut')));
   const [rect, setRect] = useState<DOMRect | null>(null);
+  const [radius, setRadius] = useState(0); // 타겟 요소의 border-radius(px)
   const [copy, setCopy] = useState('');
   const lastSel = useRef<string | null>(null); // 타겟이 바뀔 때만 스크롤(루프 방지)
 
@@ -92,6 +105,7 @@ export function TutorialCoach({ step }: { step: TutorialStep | null }) {
               el.scrollIntoView({ block: 'center', behavior: 'smooth' });
             }
             setRect(r);
+            setRadius(parseFloat(getComputedStyle(el).borderTopLeftRadius) || 0);
             setCopy(c.copy);
             return;
           }
@@ -151,27 +165,25 @@ export function TutorialCoach({ step }: { step: TutorialStep | null }) {
     <div className="pointer-events-none fixed inset-0 z-[61]">
       {spot ? (
         <>
-          {/* 4분할 딤 마스크 — 구멍(타겟) 밖은 pointer-events-auto로 클릭 차단, 구멍은 통과. */}
+          {/* SVG 딤 마스크 — 타겟 radius를 따르는 둥근 구멍. 딤(path)은 클릭 차단, 구멍은 통과. */}
+          <svg className="pointer-events-none absolute inset-0 h-full w-full">
+            <path
+              pointerEvents="auto"
+              fill={DIM}
+              fillRule="evenodd"
+              d={`M0 0H${vw}V${vh}H0Z${roundRectPath(spot.left, spot.top, spot.width, spot.height, radius)}`}
+            />
+          </svg>
+          {/* 펄스 링 — 타겟 radius와 동일. 클릭은 타겟으로 통과(pointer-events-none). */}
           <div
-            className="pointer-events-auto absolute left-0 right-0 top-0"
-            style={{ height: spot.top, background: DIM }}
-          />
-          <div
-            className="pointer-events-auto absolute bottom-0 left-0 right-0"
-            style={{ top: spot.top + spot.height, background: DIM }}
-          />
-          <div
-            className="pointer-events-auto absolute left-0"
-            style={{ top: spot.top, width: spot.left, height: spot.height, background: DIM }}
-          />
-          <div
-            className="pointer-events-auto absolute right-0"
-            style={{ top: spot.top, left: spot.left + spot.width, height: spot.height, background: DIM }}
-          />
-          {/* 펄스 링 — 클릭은 타겟으로 통과(pointer-events-none). */}
-          <div
-            className="pointer-events-none absolute animate-pulse rounded-md ring-2 ring-amber-400"
-            style={{ top: spot.top, left: spot.left, width: spot.width, height: spot.height }}
+            className="pointer-events-none absolute animate-pulse ring-2 ring-amber-400"
+            style={{
+              top: spot.top,
+              left: spot.left,
+              width: spot.width,
+              height: spot.height,
+              borderRadius: Math.max(0, Math.min(radius, spot.width / 2, spot.height / 2)),
+            }}
           />
         </>
       ) : (
