@@ -137,6 +137,15 @@ function rarityStarsOG(
   return els;
 }
 
+/** 인라인 SVG 별 — satori 기본 폰트엔 ✦(U+2726)가 없어 깨지므로 텍스트 대신 별 도형을 쓴다. */
+function starSvg(color: string, px: number) {
+  return (
+    <svg width={px} height={px} viewBox="0 0 100 100" style={{ display: 'flex' }}>
+      <polygon points={STAR_POINTS} fill={color} />
+    </svg>
+  );
+}
+
 /** 같은 배포의 정적 에셋 → base64 data URI(Satori가 안정적으로 임베드). 실패=null. */
 async function dataUri(url: string): Promise<string | null> {
   try {
@@ -270,14 +279,14 @@ export async function GET(_req: Request, { params }: { params: Promise<{ shareCo
     // 해방 등수(후광용) — 공유 아이템이 착용 중이면 그 catalog의 등수.
     const focusCatId = equipped.find((e) => e.code === focusCode)?.catalogItemId;
     const focusRank = focusCatId != null ? libRanks.get(focusCatId) ?? null : null;
-    const headline =
-      focusT >= 1
-        ? `초월 ✦${focusT}`
-        : focusLvl >= 99
-          ? `전설의 +99`
-          : focusLvl >= 50
-            ? `✨ +${focusLvl}`
-            : `+${focusLvl}`;
+    const transcendHeadline = focusT >= 1;
+    const headlineText = transcendHeadline
+      ? `초월 ${focusT}`
+      : focusLvl >= 99
+        ? `전설의 +99`
+        : focusLvl >= 50
+          ? `✨ +${focusLvl}`
+          : `+${focusLvl}`;
     return new ImageResponse(
       <div
         style={
@@ -326,7 +335,10 @@ export async function GET(_req: Request, { params }: { params: Promise<{ shareCo
           </div>
         </div>
         <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', marginTop: 'auto' }}>
-          <div style={{ display: 'flex', fontSize: 96, fontWeight: 800, color: '#ffd47a' }}>{headline}</div>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 18, fontSize: 96, fontWeight: 800, color: '#ffd47a' }}>
+            {transcendHeadline ? starSvg(ts ? `rgb(${tr},${tg},${tb})` : '#ffd47a', 80) : null}
+            <span style={{ display: 'flex' }}>{headlineText}</span>
+          </div>
         </div>
       </div>,
       { ...size, headers: { 'cache-control': 'no-store, max-age=0, must-revalidate' } },
@@ -515,7 +527,6 @@ export async function GET(_req: Request, { params }: { params: Promise<{ shareCo
                   ? `3px solid rgb(${tr},${tg},${tb})`
                   : '2px solid rgba(255,255,255,0.10)',
                 background: 'rgba(255,255,255,0.05)',
-                boxShadow: rankGlowShadow(rank),
               }}
             >
               <div
@@ -526,6 +537,9 @@ export async function GET(_req: Request, { params }: { params: Promise<{ shareCo
                   alignItems: 'center',
                   justifyContent: 'center',
                   flexShrink: 0,
+                  // 후광은 슬롯 카드가 아니라 아이템(스프라이트) 뒤에.
+                  boxShadow: rankGlowShadow(rank),
+                  borderRadius: spriteBox / 2,
                 }}
               >
                 {spr ? (
@@ -556,14 +570,17 @@ export async function GET(_req: Request, { params }: { params: Promise<{ shareCo
                 >
                   {it.name}
                 </div>
-                <div style={{ display: 'flex', alignItems: 'baseline', gap: 14 }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
                   <span style={{ display: 'flex', fontSize: 38, fontWeight: 800, color: '#ffffff' }}>
                     +{it.enhanceLevel}
                   </span>
                   {ts ? (
-                    <span style={{ display: 'flex', fontSize: 34, fontWeight: 800, color: `rgb(${tr},${tg},${tb})` }}>
-                      ✦{it.transcendLevel}
-                    </span>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
+                      {starSvg(`rgb(${tr},${tg},${tb})`, 30)}
+                      <span style={{ display: 'flex', fontSize: 34, fontWeight: 800, color: `rgb(${tr},${tg},${tb})` }}>
+                        {it.transcendLevel}
+                      </span>
+                    </div>
                   ) : null}
                 </div>
               </div>
