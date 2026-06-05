@@ -22,12 +22,14 @@ export default async function LoginPage({
         </div>
 
         <form action={signInWithKakao} className="w-full">
+          {/* 카카오 공식 디자인 가이드 버튼(complete/ko) — 변형 금지(색·로고·비율 유지). */}
           <button
             type="submit"
-            className="flex h-12 w-full items-center justify-center gap-2 rounded-full bg-[#FEE500] text-sm font-medium text-[#181600] hover:brightness-95"
+            aria-label="카카오로 시작하기"
+            className="block w-full transition active:scale-[0.99] hover:brightness-95"
           >
-            <span aria-hidden>💬</span>
-            카카오로 시작하기
+            {/* eslint-disable-next-line @next/next/no-img-element */}
+            <img src="/kakao/kakao_login.png" alt="카카오로 시작하기" className="block w-full" />
           </button>
         </form>
 
