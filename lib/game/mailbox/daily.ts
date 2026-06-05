@@ -12,7 +12,7 @@ import { TEST_REWARD_MULTIPLIER } from '@/lib/game/test-mode';
  * 동시 N 요청 시 첫 INSERT만 성공(ON CONFLICT DO NOTHING), 나머지 메일
  * INSERT 0행(WHERE g 비어있음). 다음 KST day에 다시 활성.
  *
- * 보상(기본): 300 다이아 + 슬롯별 보급권 5장(weapon/armor/accessory).
+ * 보상(기본): 300 다이아 + 슬롯별 보급 상자 5개(weapon/armor/accessory).
  * 테스트 기간에는 ×TEST_REWARD_MULTIPLIER로 지급.
  */
 const BASE_DIAMOND = 300;
