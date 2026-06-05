@@ -93,6 +93,15 @@ export default function RootLayout({ children }: Readonly<{ children: React.Reac
       className={`dark ${geistSans.variable} ${geistMono.variable} h-full overscroll-none antialiased`}
     >
       <body className="flex min-h-full flex-col overscroll-none bg-zinc-950 text-zinc-50">
+        {/* 큰 화면(폴드 펼침·태블릿, screen.width≥600) — width=390 고정 스케일 과확대 회피.
+            폭 모드가 실제로 바뀔 때만 viewport 재설정(가드 W) → 스크롤 중 resize로 인한
+            재설정·끊김 방지. 폰(<600)은 Next 출력(width=390) 그대로. */}
+        <script
+          dangerouslySetInnerHTML={{
+            __html:
+              "(function(){var m=document.querySelector('meta[name=viewport]');if(!m)return;var o=m.getAttribute('content');var W=null;function a(){var w=(window.screen&&screen.width)||window.innerWidth;var x=w>=600;if(x===W)return;W=x;m.setAttribute('content',x?'width=device-width,initial-scale=1,viewport-fit=cover':o);}a();window.addEventListener('resize',a);window.addEventListener('orientationchange',a);})();",
+          }}
+        />
         {children}
       </body>
     </html>

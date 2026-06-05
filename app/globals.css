@@ -8,11 +8,9 @@
   --foreground: #171717;
 }
 
-/* 모바일 탭 300ms 지연 제거 + 더블탭/핀치 줌 비활성(스크롤 pan은 유지). CSS라
-   viewport 무관 → width=390 자동 핏 유지(user-scalable=no 부작용 회피, CLAUDE §5.2). */
-html {
-  touch-action: pan-x pan-y;
-}
+/* (제거 2026-06-06) html { touch-action: pan-x pan-y } — 안드로이드 크롬에서 중첩
+   스크롤러(main overflow-y-auto + h-dvh)와 함께 스크롤이 막히는 원인으로 의심.
+   기본값 auto로 복귀(핀치줌 허용은 CLAUDE §5.2 권장과도 일치). */
 
 /* 스크롤바 전역 숨김(2026-06-01 사용자 결정). 데스크톱 Chrome/Firefox/Safari
    에서 페이지·모달·캐러셀 모두 깨끗하게. iOS Safari·PWA는 원래 overlay라 무영향.

@@ -52,13 +52,6 @@ const STEP_TARGETS: Record<TutorialStep, Candidate[]> = {
   ],
 };
 
-const FALLBACK: Record<TutorialStep, string> = {
-  open: '홈에서 ‘보급’으로 가서 첫 장비를 얻어볼까요?',
-  equip: '인벤토리에서 방금 얻은 장비를 장착해봐요!',
-  enhance: '인벤토리에서 장비를 골라 강화해볼까요?',
-  attempt: '강화소에서 첫 강화에 도전해봐요 ⚒️',
-};
-
 const STEP_NO: Record<TutorialStep, number> = { open: 1, equip: 2, enhance: 3, attempt: 4 };
 const STEP_TOTAL = 4;
 const STEP_ORDER: TutorialStep[] = ['open', 'equip', 'enhance', 'attempt'];
@@ -204,9 +197,10 @@ export function TutorialCoach({ statePromise }: { statePromise: Promise<Tutorial
           }
         }
       }
+      // 타겟 미발견 — 중앙 안내(FALLBACK) 노출 안 함(빈 copy → 코치 숨김).
       lastSel.current = null;
       setRect(null);
-      setCopy(FALLBACK[effective]);
+      setCopy('');
     };
     measure();
     const id = window.setInterval(measure, 180);
