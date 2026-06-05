@@ -15,9 +15,13 @@ export default async function LoginPage({
     <div className="flex min-h-dvh flex-col items-center justify-center bg-zinc-50 px-6 dark:bg-black">
       <main className="flex w-full max-w-[360px] flex-col items-center gap-8 text-center">
         <div>
-          <div className="mx-auto flex h-20 w-20 items-center justify-center rounded-2xl bg-zinc-900 text-4xl dark:bg-zinc-100">
-            ⚒️
-          </div>
+          {/* eslint-disable-next-line @next/next/no-img-element */}
+          <img
+            src="/icons/icon-192.png"
+            alt="인생강화"
+            className="mx-auto h-20 w-20 rounded-2xl shadow-sm"
+            style={{ imageRendering: 'pixelated' }}
+          />
           <h1 className="mt-4 text-3xl font-semibold tracking-tight">인생강화</h1>
         </div>
 
