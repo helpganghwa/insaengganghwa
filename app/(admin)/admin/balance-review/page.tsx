@@ -1,4 +1,4 @@
-import { notFound } from 'next/navigation';
+import { notFound, redirect } from 'next/navigation';
 import { eq } from 'drizzle-orm';
 import Link from 'next/link';
 import type { Metadata } from 'next';
@@ -70,7 +70,7 @@ const CUM_REACH_SAMPLES = [10, 20, 30, 40, 50, 51, 52, 60, 70, 75, 80, 90, 95, 9
 
 export default async function BalanceReviewPage() {
   const userId = await getSessionUserId();
-  if (!userId) notFound();
+  if (!userId) redirect('/login'); // 미로그인 → 로그인으로(비관리자 로그인 사용자는 아래서 404)
   const [p] = await db
     .select({ isAdmin: profiles.isAdmin })
     .from(profiles)

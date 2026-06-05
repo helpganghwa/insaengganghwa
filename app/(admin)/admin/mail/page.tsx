@@ -1,4 +1,4 @@
-import { notFound } from 'next/navigation';
+import { notFound, redirect } from 'next/navigation';
 import { eq } from 'drizzle-orm';
 
 import { getSessionUserId } from '@/lib/auth/session';
@@ -13,7 +13,7 @@ import { AdminMailClient } from './AdminMailClient';
  */
 export default async function AdminMailPage() {
   const userId = await getSessionUserId();
-  if (!userId) notFound();
+  if (!userId) redirect('/login'); // 미로그인 → 로그인으로(비관리자 로그인 사용자는 아래서 404)
   const [p] = await db
     .select({ isAdmin: profiles.isAdmin })
     .from(profiles)
