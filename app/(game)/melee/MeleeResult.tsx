@@ -96,8 +96,8 @@ function MyRankChip({ me }: { me: MeleeResultView['me'] }) {
   }
   const totalBoxes = me.boxes.weapon + me.boxes.armor + me.boxes.accessory;
   const reward = [
-    me.diamond > 0 ? `다이아 ${me.diamond.toLocaleString()}` : null,
-    totalBoxes > 0 ? `상자 ${totalBoxes}` : null,
+    me.diamond > 0 ? `💎 ${me.diamond.toLocaleString()}` : null,
+    totalBoxes > 0 ? `📦 ${totalBoxes}` : null, // 섞인 보급 상자 총 개수
   ]
     .filter(Boolean)
     .join(' · ');
