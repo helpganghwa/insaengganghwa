@@ -495,7 +495,7 @@ function RoundCard({
   const killed = hp <= 0;
   const isMe = (n: string) => n === me;
   return (
-    <li className="border-b border-zinc-900/60 last:border-b-0">
+    <li className="border-b border-zinc-900/60">
       <button
         type="button"
         onClick={onClick}

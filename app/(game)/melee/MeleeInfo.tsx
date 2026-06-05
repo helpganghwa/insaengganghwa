@@ -133,7 +133,7 @@ export function MeleeInfo({
                 </>
               );
               return (
-                <li key={h.edition} className="border-b border-zinc-900/60 last:border-b-0">
+                <li key={h.edition} className="border-b border-zinc-900/60">
                   {/* 회차(카드) 클릭 → 그날 결과로 이동. */}
                   <Link
                     href={`/melee/battle/${h.battleId}`}

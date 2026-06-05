@@ -98,11 +98,11 @@ export function MeleeCountdown({
           <div className="font-mono text-5xl font-extrabold tabular-nums text-white text-pixel-outline">
             {fmt(timerMs)}
           </div>
-          <div className="mt-1 rounded-full bg-black/55 px-3 py-1 text-[11px] font-medium text-zinc-100 backdrop-blur-sm">
-            {participantCount != null
-              ? `참가 ${participantCount.toLocaleString()}명`
-              : '강화 1회 이상이면 자동 참가'}
-          </div>
+          {participantCount != null ? (
+            <div className="mt-1 rounded-full bg-black/55 px-3 py-1 text-[11px] font-medium text-zinc-100 backdrop-blur-sm">
+              참가 {participantCount.toLocaleString()}명
+            </div>
+          ) : null}
         </div>
       </div>
 
