@@ -14,11 +14,12 @@ type State =
   | { kind: 'installable'; ev: BeforeInstallPromptEvent }
   | { kind: 'installed' }
   | { kind: 'ios' }
+  | { kind: 'android' }
   | { kind: 'unsupported' };
 
 export function InstallAppButton() {
   const [state, setState] = useState<State>({ kind: 'idle' });
-  const [iosOpen, setIosOpen] = useState(false);
+  const [guideOpen, setGuideOpen] = useState(false);
 
   useEffect(() => {
     // 이미 standalone(설치돼 실행 중)이면 안내 자체 숨김
@@ -47,10 +48,14 @@ export function InstallAppButton() {
     window.addEventListener('beforeinstallprompt', onBeforePrompt);
     window.addEventListener('appinstalled', onInstalled);
 
-    // 이벤트 안 오면 unsupported(이미 설치됐거나 PWA 기준 미충족)
+    // 이벤트 안 오면: Android(Chrome)는 시크릿·기준 미충족 등으로 prompt 미발생 →
+    // '브라우저 미지원' 대신 수동 안내(메뉴 → 홈 화면에 추가). 그 외는 unsupported.
+    const isAndroid = /Android/.test(ua);
     const t = window.setTimeout(() => {
-      setState((s) => (s.kind === 'idle' ? { kind: 'unsupported' } : s));
-    }, 1500);
+      setState((s) =>
+        s.kind === 'idle' ? (isAndroid ? { kind: 'android' } : { kind: 'unsupported' }) : s,
+      );
+    }, 1800);
 
     return () => {
       window.removeEventListener('beforeinstallprompt', onBeforePrompt);
@@ -72,18 +77,12 @@ export function InstallAppButton() {
       await state.ev.prompt();
       const { outcome } = await state.ev.userChoice;
       if (outcome === 'accepted') setState({ kind: 'installed' });
-    } else if (state.kind === 'ios') {
-      setIosOpen(true);
+    } else if (state.kind === 'ios' || state.kind === 'android') {
+      setGuideOpen(true);
     }
   };
 
-  const label =
-    state.kind === 'installable'
-      ? '📱 홈 화면에 앱으로 추가'
-      : state.kind === 'ios'
-        ? '📱 홈 화면에 앱으로 추가 (iOS 안내)'
-        : '📱 홈 화면에 앱으로 추가';
-
+  const label = '📱 홈 화면에 앱으로 추가';
   const disabled = state.kind === 'unsupported' || state.kind === 'idle';
 
   return (
@@ -104,35 +103,58 @@ export function InstallAppButton() {
         </span>
       </button>
 
-      {iosOpen ? (
+      {guideOpen ? (
         <div
-          className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 p-4 backdrop-blur-md"
-          onClick={() => setIosOpen(false)}
+          className="fixed inset-0 z-[63] flex items-center justify-center bg-black/70 p-4 backdrop-blur-md"
+          onClick={() => setGuideOpen(false)}
         >
           <div
             className="m-4 max-w-sm rounded-xl bg-white p-4 text-sm shadow-[0_0_40px_rgba(245,158,11,0.18)] ring-1 ring-amber-700/40 dark:bg-zinc-950"
             onClick={(e) => e.stopPropagation()}
           >
-            <h3 className="mb-2 text-base font-semibold">iOS 홈 화면 추가</h3>
-            <ol className="space-y-2 text-[13px] leading-relaxed text-zinc-700 dark:text-zinc-300">
-              <li>
-                1. Safari 하단의 <strong>공유 버튼</strong> <span className="font-mono">⎙</span>
-                {' '}탭
-              </li>
-              <li>
-                2. 메뉴에서 <strong>“홈 화면에 추가”</strong> 선택
-              </li>
-              <li>
-                3. 이름 확인 후 우상단 <strong>추가</strong> 탭
-              </li>
-              <li>4. 홈 화면에서 인생강화 아이콘으로 실행</li>
-            </ol>
-            <p className="mt-3 text-[11px] text-zinc-500">
-              iOS에서는 보안 정책상 버튼으로 자동 설치가 불가능합니다.
-            </p>
+            {state.kind === 'android' ? (
+              <>
+                <h3 className="mb-2 text-base font-semibold">홈 화면에 추가 (Android)</h3>
+                <ol className="space-y-2 text-[13px] leading-relaxed text-zinc-700 dark:text-zinc-300">
+                  <li>
+                    1. Chrome 우측 상단 <strong>⋮ 메뉴</strong> 탭
+                  </li>
+                  <li>
+                    2. <strong>“홈 화면에 추가”</strong>(또는 “앱 설치”) 선택
+                  </li>
+                  <li>
+                    3. <strong>추가/설치</strong> 확인
+                  </li>
+                  <li>4. 홈 화면의 인생강화 아이콘으로 실행</li>
+                </ol>
+                <p className="mt-3 text-[11px] text-zinc-500">
+                  시크릿 모드에서는 설치가 제한될 수 있어요. 일반 탭에서 시도해 주세요.
+                </p>
+              </>
+            ) : (
+              <>
+                <h3 className="mb-2 text-base font-semibold">iOS 홈 화면 추가</h3>
+                <ol className="space-y-2 text-[13px] leading-relaxed text-zinc-700 dark:text-zinc-300">
+                  <li>
+                    1. Safari 하단의 <strong>공유 버튼</strong>{' '}
+                    <span className="font-mono">⎙</span> 탭
+                  </li>
+                  <li>
+                    2. 메뉴에서 <strong>“홈 화면에 추가”</strong> 선택
+                  </li>
+                  <li>
+                    3. 이름 확인 후 우상단 <strong>추가</strong> 탭
+                  </li>
+                  <li>4. 홈 화면에서 인생강화 아이콘으로 실행</li>
+                </ol>
+                <p className="mt-3 text-[11px] text-zinc-500">
+                  iOS에서는 보안 정책상 버튼으로 자동 설치가 불가능합니다.
+                </p>
+              </>
+            )}
             <button
               type="button"
-              onClick={() => setIosOpen(false)}
+              onClick={() => setGuideOpen(false)}
               className="mt-4 w-full rounded-lg bg-zinc-900 py-2.5 text-sm font-medium text-white dark:bg-zinc-100 dark:text-zinc-900"
             >
               확인

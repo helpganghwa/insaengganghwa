@@ -93,6 +93,15 @@ export default function RootLayout({ children }: Readonly<{ children: React.Reac
       className={`dark ${geistSans.variable} ${geistMono.variable} h-full overscroll-none antialiased`}
     >
       <body className="flex min-h-full flex-col overscroll-none bg-zinc-950 text-zinc-50">
+        {/* 큰 화면(폴드 펼침·태블릿, screen.width≥600) — width=390 고정 스케일이 2배 이상
+            확대되는 문제 회피. device-width로 전환 → 390 컬럼이 중앙에 정상 크기(양옆 여백).
+            폰(<600)은 Next 출력(width=390) 그대로. 페인트 전 인라인 실행으로 깜빡임 방지. */}
+        <script
+          dangerouslySetInnerHTML={{
+            __html:
+              "(function(){var m=document.querySelector('meta[name=viewport]');if(!m)return;var o=m.getAttribute('content');function a(){var w=(window.screen&&screen.width)||window.innerWidth;m.setAttribute('content',w>=600?'width=device-width,initial-scale=1,viewport-fit=cover':o);}a();window.addEventListener('resize',a);})();",
+          }}
+        />
         {children}
       </body>
     </html>

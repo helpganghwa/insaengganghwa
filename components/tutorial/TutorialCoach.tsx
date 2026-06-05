@@ -175,6 +175,24 @@ export function TutorialCoach({
     };
   }, [effective, pathname]);
 
+  // 구멍 밖 클릭만 캡처 차단(스크롤·터치는 통과). 타겟·코치 UI는 허용, 폴백(타겟 없음)이면
+  // 화면 이동을 위해 차단 안 함. 프리뷰(QA)에서도 자유 이동 위해 비활성.
+  useEffect(() => {
+    if (!effective || preview) return;
+    const onClickCapture = (e: MouseEvent) => {
+      const t = e.target as Element | null;
+      if (!t || typeof t.closest !== 'function') return;
+      if (t.closest('[data-tut-ui]')) return; // 말풍선 등 코치 UI
+      const sel = lastSel.current;
+      if (!sel) return; // 타겟 미발견(폴백) — 차단 안 함
+      if (t.closest(sel)) return; // 하이라이트된 타겟
+      e.preventDefault();
+      e.stopPropagation();
+    };
+    document.addEventListener('click', onClickCapture, true);
+    return () => document.removeEventListener('click', onClickCapture, true);
+  }, [effective, preview]);
+
   if (typeof window === 'undefined') return null;
   // 인트로 — 메인페이지 첫 진입 시 시작/건너뛰기(프리뷰 제외).
   if (intro && !introDone && !isPreview && pathname === '/') {
@@ -227,9 +245,10 @@ export function TutorialCoach({
       {spot ? (
         <>
           {/* SVG 딤 마스크 — 타겟 radius를 따르는 둥근 구멍. 딤(path)은 클릭 차단, 구멍은 통과. */}
+          {/* 딤은 터치/스크롤 통과(pointer-events-none) — 모바일 스크롤 보존. 구멍 밖
+              클릭만 캡처 단계에서 차단(아래 useEffect). */}
           <svg className="pointer-events-none absolute inset-0 h-full w-full">
             <path
-              pointerEvents="auto"
               fill={DIM}
               fillRule="evenodd"
               d={`M0 0H${vw}V${vh}H0Z${roundRectPath(spot.left, spot.top, spot.width, spot.height, radius)}`}
@@ -254,6 +273,7 @@ export function TutorialCoach({
 
       {/* 말풍선 */}
       <div
+        data-tut-ui
         className="pointer-events-auto absolute"
         style={
           tip

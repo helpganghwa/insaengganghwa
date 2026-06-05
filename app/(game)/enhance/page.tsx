@@ -7,6 +7,7 @@ import { profiles } from '@/lib/db/schema/profiles';
 import { catalogItems, userEquipment, type Slot } from '@/lib/db/schema/equipment';
 import { enhancementJobs } from '@/lib/db/schema/enhance';
 import { liberatedItemRanks } from '@/lib/game/codex/ranking';
+import { TUTORIAL_DONE } from '@/lib/game/tutorial';
 
 import { type ActiveJob } from './EnhanceSlotCard';
 import { type EnhanceCandidate } from './EnhanceSlotPicker';
@@ -45,7 +46,11 @@ export default async function EnhancePage() {
       .innerJoin(catalogItems, eq(userEquipment.catalogItemId, catalogItems.id))
       .where(and(eq(enhancementJobs.userId, userId), eq(enhancementJobs.status, 'running'))),
     db
-      .select({ diamond: profiles.diamond, nickname: profiles.nickname })
+      .select({
+        diamond: profiles.diamond,
+        nickname: profiles.nickname,
+        tutorialStep: profiles.tutorialStep,
+      })
       .from(profiles)
       .where(eq(profiles.id, userId))
       .limit(1),
@@ -106,7 +111,9 @@ export default async function EnhancePage() {
 
   // 진행 중 강화 큐가 1개 이상이면 푸시 권한 contextual prompt 노출(첫 진입 시).
   // 이미 권한 있음/거부/7일 dismiss 윈도는 컴포넌트가 자체 가드.
-  const hasRunningJob = jobs.length > 0;
+  // 단, 튜토리얼 진행 중엔 억제 — 마무리 팝업이 알림/설치를 따로 안내(충돌 방지).
+  const tutorialDone = (profRow[0]?.tutorialStep ?? TUTORIAL_DONE) === TUTORIAL_DONE;
+  const hasRunningJob = jobs.length > 0 && tutorialDone;
 
   return (
     <div className="space-y-5 px-4 py-4">
