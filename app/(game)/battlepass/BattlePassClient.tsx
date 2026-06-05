@@ -188,7 +188,7 @@ function PassColumn({
                     type="button"
                     onClick={onPremiumLocked}
                     style={{ width: PREMIUM_W }}
-                    className="absolute inset-y-0 right-0 flex flex-col items-center justify-center gap-0.5 rounded bg-zinc-900/50 text-center text-[9px] font-bold leading-tight text-white backdrop-blur-[1px]"
+                    className="absolute inset-y-0 right-0 flex flex-col items-center justify-center gap-0.5 rounded bg-zinc-900/50 text-center text-[9px] font-bold leading-tight text-white backdrop-blur-[0.5px]"
                   >
                     <span>프리미엄</span>
                     <span className="tabular-nums">{won(s.priceKrw)}</span>

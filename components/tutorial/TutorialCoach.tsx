@@ -43,7 +43,7 @@ const FALLBACK: Record<TutorialStep, string> = {
 const STEP_NO: Record<TutorialStep, number> = { open: 1, equip: 2, enhance: 3 };
 const PREVIEW_STEPS: TutorialStep[] = ['open', 'equip', 'enhance'];
 const PREVIEW_LABEL: Record<TutorialStep, string> = { open: '보급', equip: '장착', enhance: '강화' };
-const PAD = 4;
+const PAD = 0;
 const DIM = 'rgba(0,0,0,0.62)';
 const TOOLTIP_W = 220;
 
