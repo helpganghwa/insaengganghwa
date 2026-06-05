@@ -356,6 +356,81 @@ export function claimPremiumTier(
   });
 }
 
+/** 한 **구간**의 받을 수 있는 무료 + 프리미엄 마일스톤을 한 트랜잭션에 일괄 수령. */
+export function claimSegment(
+  userId: string,
+  type: BattlePassType,
+  segmentIndex: number,
+): Promise<{ granted: number; rewardKind: 'diamond' | 'box' }> {
+  return db.transaction(async (tx) => {
+    const maxReached = await reachedFor(userId, type);
+    const startLevel = segmentIndex * BP_SEGMENT_SIZE[type] + 1;
+    const cap = Math.min(maxReached, bpSegmentEndLevel(type, segmentIndex));
+    const levels = tierLevelsIn(type, startLevel, cap);
+    if (levels.length === 0) throw new BattlePassErr('NOTHING_TO_CLAIM');
+
+    const [s] = await tx
+      .select({ tiers: battlePassState.freeClaimedTiers })
+      .from(battlePassState)
+      .where(and(eq(battlePassState.userId, userId), eq(battlePassState.passType, type)))
+      .for('update');
+    const freeClaimed = new Set(s?.tiers ?? []);
+
+    const [seg] = await tx
+      .select({ tiers: battlePassSegments.premiumClaimedTiers })
+      .from(battlePassSegments)
+      .where(
+        and(
+          eq(battlePassSegments.userId, userId),
+          eq(battlePassSegments.passType, type),
+          eq(battlePassSegments.segmentIndex, segmentIndex),
+        ),
+      )
+      .for('update');
+
+    let granted = 0;
+    const freeNew: number[] = [];
+    const premNew: number[] = [];
+    for (const l of levels) {
+      if (!freeClaimed.has(l)) {
+        freeNew.push(l);
+        granted += bpTierReward(type, l, false);
+      }
+      if (seg && !seg.tiers.includes(l)) {
+        premNew.push(l);
+        granted += bpTierReward(type, l, true);
+      }
+    }
+    if (granted <= 0) throw new BattlePassErr('NOTHING_TO_CLAIM');
+    await grantReward(tx, userId, type, granted);
+
+    if (freeNew.length > 0) {
+      const merged = sorted([...freeClaimed, ...freeNew]);
+      await tx
+        .insert(battlePassState)
+        .values({ userId, passType: type, freeClaimedTiers: merged })
+        .onConflictDoUpdate({
+          target: [battlePassState.userId, battlePassState.passType],
+          set: { freeClaimedTiers: merged },
+        });
+    }
+    if (seg && premNew.length > 0) {
+      const merged = sorted([...seg.tiers, ...premNew]);
+      await tx
+        .update(battlePassSegments)
+        .set({ premiumClaimedTiers: merged })
+        .where(
+          and(
+            eq(battlePassSegments.userId, userId),
+            eq(battlePassSegments.passType, type),
+            eq(battlePassSegments.segmentIndex, segmentIndex),
+          ),
+        );
+    }
+    return { granted, rewardKind: type === 'enhance' ? 'diamond' : 'box' };
+  });
+}
+
 // ── 프리미엄 구간 구매(결제 성공 후 지급 — 소급 포함) ─────────────────────────
 // 결제 백엔드(포트원) 연동 시 결제 검증 후 호출. 구매 즉시 이미 넘긴 단계 소급 수령.
 

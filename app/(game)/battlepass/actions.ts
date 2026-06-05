@@ -9,6 +9,7 @@ import {
   claimPremium,
   claimFreeTier,
   claimPremiumTier,
+  claimSegment,
   BattlePassErr,
 } from '@/lib/game/battlepass';
 import type { BattlePassType } from '@/lib/game/balance';
@@ -82,6 +83,22 @@ export async function claimAllAction(type: BattlePassType) {
   if (granted <= 0) return err('NOTHING_TO_CLAIM');
   revalidate();
   return { status: 'success' as const, granted, rewardKind };
+}
+
+/** 구간 단위 일괄 수령 — 그 구간의 무료 + 프리미엄 받을 수 있는 단계 전부. */
+export async function claimSegmentAction(type: BattlePassType, segmentIndex: number) {
+  const u = await getSessionUserId();
+  if (!u) return err('UNAUTHENTICATED');
+  if (await rateLimited(u, 'battlepass')) return err('RATE_LIMITED');
+  try {
+    const r = await claimSegment(u, type, segmentIndex);
+    revalidate();
+    return { status: 'success' as const, granted: r.granted, rewardKind: r.rewardKind };
+  } catch (e) {
+    if (e instanceof BattlePassErr) return err(e.code);
+    console.error('[battlepass.claimSegment]', e);
+    return err('UNKNOWN');
+  }
 }
 
 /** 개별 단계 수령 — 무료/프리미엄 라인의 특정 단계(level)까지. 프리미엄은 구간(segmentIndex) 필요. */

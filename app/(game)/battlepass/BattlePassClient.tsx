@@ -8,10 +8,16 @@ import { assetUrl } from '@/lib/asset-versions';
 import { useResourceToast } from '@/components/ResourceToast';
 import { useDiamond } from '@/components/DiamondContext';
 
-import { claimAllAction, claimTierAction } from './actions';
+import { claimSegmentAction, claimTierAction } from './actions';
 
 const won = (n: number) => `₩${n.toLocaleString('ko-KR')}`;
 type Line = 'free' | 'premium';
+
+// 레벨 칸은 강화 +1000 / 초월 ✦100(최대 5글자)까지 안 깨지게 고정폭. 무료·프리미엄은 1fr 동일폭.
+const LV_COL = 40; // px
+const GRID = 'grid grid-cols-[40px_1fr_1fr] gap-1';
+// 프리미엄(맨 오른쪽 1fr) 칸 폭 = (전체 - 레벨칸 - 양 gap)/2. gap-1=4px ×2.
+const PREMIUM_W = `calc((100% - ${LV_COL}px - 8px) / 2)`;
 
 /** 그 구간에서 maxReached 이하인 마일스톤 단계 목록. */
 function tierLevels(view: BattlePassView, s: BattlePassSegmentView): number[] {
@@ -46,7 +52,8 @@ function RewardChip({
       : variant === 'claimed'
         ? 'bg-zinc-200 text-zinc-400 dark:bg-zinc-800 dark:text-zinc-500'
         : 'bg-zinc-100 text-zinc-400 dark:bg-zinc-900 dark:text-zinc-500';
-  const base = 'flex w-full items-center justify-center gap-px rounded py-1 text-[9px] leading-none tabular-nums';
+  const base =
+    'flex w-full items-center justify-center gap-px rounded py-1 text-[9px] leading-none tabular-nums';
   const body = (
     <>
       {variant === 'claimed' ? <span>✓</span> : null}
@@ -70,16 +77,14 @@ function PassColumn({
   view,
   isClaimed,
   onClaimTier,
-  onClaimAll,
+  onClaimSegment,
   onPremiumLocked,
-  claimable,
 }: {
   view: BattlePassView;
   isClaimed: (line: Line, segIndex: number, level: number) => boolean;
   onClaimTier: (line: Line, level: number, s: BattlePassSegmentView) => void;
-  onClaimAll: () => void;
+  onClaimSegment: (s: BattlePassSegmentView) => void;
   onPremiumLocked: () => void;
-  claimable: number;
 }) {
   const icon = view.rewardKind === 'diamond' ? '💎' : '📦';
   const lvLabel = (l: number) => (view.passType === 'enhance' ? `+${l}` : `✦${l}`);
@@ -99,7 +104,7 @@ function PassColumn({
           {view.maxReached >= 1 ? lvLabel(view.maxReached) : '—'}
         </span>
       </div>
-      <div className="grid grid-cols-[20px_1fr_52px] gap-1 px-0.5 pb-1 text-center text-[8px] font-semibold text-zinc-400">
+      <div className={`${GRID} px-0.5 pb-1 text-center text-[8px] font-semibold text-zinc-400`}>
         <span>단계</span>
         <span>무료</span>
         <span>프리미엄</span>
@@ -109,14 +114,22 @@ function PassColumn({
         {view.segments.map((s) => {
           const levels = allTierLevels(view, s);
           const first = levels[0] ?? s.startLevel;
+          // 이 구간에서 지금 받을 수 있는 총량(무료 + 산 경우 프리미엄).
+          let segClaimable = 0;
+          for (const tl of tierLevels(view, s)) {
+            if (!isClaimed('free', s.index, tl)) segClaimable += s.freePerTier;
+            if (s.purchased && !isClaimed('premium', s.index, tl)) segClaimable += s.premiumPerTier;
+          }
           return (
-            <section key={s.index} className="mb-2.5">
+            <section key={s.index} className="mb-3">
               <div className="mb-1 flex items-center gap-1">
                 <span className="rounded bg-zinc-100 px-1 py-0.5 text-[8px] font-bold tabular-nums text-zinc-500 dark:bg-zinc-900 dark:text-zinc-400">
                   {lvLabel(first)}~{lvLabel(s.endLevel)}
                 </span>
                 {s.purchased ? (
-                  <span className="text-[8px] font-bold text-amber-600 dark:text-amber-400">프리미엄✓</span>
+                  <span className="text-[8px] font-bold text-amber-600 dark:text-amber-400">
+                    프리미엄✓
+                  </span>
                 ) : null}
               </div>
               <div className="relative">
@@ -132,14 +145,9 @@ function PassColumn({
                           ? 'claimable'
                           : 'preview';
                     return (
-                      <div
-                        key={tl}
-                        className={`grid grid-cols-[20px_1fr_52px] items-center gap-1 ${
-                          cur ? 'rounded ring-1 ring-amber-400' : ''
-                        }`}
-                      >
+                      <div key={tl} className={`${GRID} items-center`}>
                         <span
-                          className={`text-center text-[9px] font-semibold leading-none tabular-nums ${
+                          className={`truncate text-center text-[9px] font-semibold leading-none tabular-nums ${
                             cur
                               ? 'text-amber-600 dark:text-amber-400'
                               : tl <= view.maxReached
@@ -159,38 +167,42 @@ function PassColumn({
                           icon={icon}
                           amount={s.premiumPerTier}
                           variant={pv}
-                          onClick={pv === 'claimable' ? () => onClaimTier('premium', tl, s) : undefined}
+                          onClick={
+                            pv === 'claimable' ? () => onClaimTier('premium', tl, s) : undefined
+                          }
                         />
                       </div>
                     );
                   })}
                 </div>
-                {/* 미결제 — 프리미엄 컬럼(보상 보이는 채로) 위에 dim 오버레이 + 가격 */}
+                {/* 미결제 — 프리미엄 컬럼(보상 보이는 채로) 위에 연한 dim 오버레이 + 가격 */}
                 {!s.purchased ? (
                   <button
                     type="button"
                     onClick={onPremiumLocked}
-                    className="absolute inset-y-0 right-0 flex w-[52px] flex-col items-center justify-center gap-0.5 rounded bg-zinc-900/45 text-center text-[9px] font-bold leading-tight text-white backdrop-blur-[1px]"
+                    style={{ width: PREMIUM_W }}
+                    className="absolute inset-y-0 right-0 flex flex-col items-center justify-center gap-0.5 rounded bg-zinc-900/30 text-center text-[9px] font-bold leading-tight text-white"
                   >
                     <span>프리미엄</span>
                     <span className="tabular-nums">{won(s.priceKrw)}</span>
                   </button>
                 ) : null}
               </div>
+
+              {/* 구간(티어) 하단 — 그 구간에서 받을 수 있는 만큼만 한번에 받기 */}
+              <button
+                type="button"
+                disabled={segClaimable <= 0}
+                onClick={() => onClaimSegment(s)}
+                className="mt-1.5 w-full rounded-md bg-gradient-to-r from-amber-500 to-orange-500 py-1.5 text-[10px] font-extrabold text-amber-950 shadow-sm disabled:bg-none disabled:bg-zinc-200 disabled:text-zinc-400 dark:disabled:bg-zinc-800 dark:disabled:text-zinc-500"
+              >
+                한번에 받기
+                {segClaimable > 0 ? ` ${icon}${segClaimable.toLocaleString('ko-KR')}` : ''}
+              </button>
             </section>
           );
         })}
       </div>
-
-      {/* 컬럼 하단 — 이 패스만의 '한번에 받기' */}
-      <button
-        type="button"
-        disabled={claimable <= 0}
-        onClick={onClaimAll}
-        className="mt-1 w-full rounded-md bg-gradient-to-r from-amber-500 to-orange-500 py-2 text-[11px] font-extrabold text-amber-950 shadow-sm disabled:opacity-40"
-      >
-        한번에 받기{claimable > 0 ? ` ${icon}${claimable.toLocaleString('ko-KR')}` : ''}
-      </button>
     </div>
   );
 }
@@ -219,16 +231,6 @@ export function BattlePassClient({
       const seg = view.segments.find((s) => s.index === segIndex);
       return seg ? seg.premiumClaimedTiers.includes(level) : false;
     };
-  };
-
-  const liveClaimable = (view: BattlePassView, isClaimed: ReturnType<typeof makeIsClaimed>) => {
-    let total = 0;
-    for (const s of view.segments)
-      for (const l of tierLevels(view, s)) {
-        if (!isClaimed('free', s.index, l)) total += s.freePerTier;
-        if (s.purchased && !isClaimed('premium', s.index, l)) total += s.premiumPerTier;
-      }
-    return total;
   };
 
   // 낙관적 수령 — 즉시 UI 반영(로딩 없음), 서버 실패 시 롤백.
@@ -265,17 +267,19 @@ export function BattlePassClient({
     });
   };
 
-  const onClaimTier = (view: BattlePassView) => (line: Line, level: number, s: BattlePassSegmentView) => {
-    const reward = line === 'free' ? s.freePerTier : s.premiumPerTier;
-    claimOptimistic(view, [{ line, segIndex: s.index, level }], reward, () =>
-      claimTierAction(view.passType, line, level, s.index),
-    );
-  };
+  const onClaimTier =
+    (view: BattlePassView) => (line: Line, level: number, s: BattlePassSegmentView) => {
+      const reward = line === 'free' ? s.freePerTier : s.premiumPerTier;
+      claimOptimistic(view, [{ line, segIndex: s.index, level }], reward, () =>
+        claimTierAction(view.passType, line, level, s.index),
+      );
+    };
 
-  const onClaimAll = (view: BattlePassView, isClaimed: ReturnType<typeof makeIsClaimed>) => () => {
-    const items: { line: Line; segIndex: number; level: number }[] = [];
-    let sum = 0;
-    for (const s of view.segments)
+  const onClaimSegment =
+    (view: BattlePassView, isClaimed: ReturnType<typeof makeIsClaimed>) =>
+    (s: BattlePassSegmentView) => {
+      const items: { line: Line; segIndex: number; level: number }[] = [];
+      let sum = 0;
       for (const l of tierLevels(view, s)) {
         if (!isClaimed('free', s.index, l)) {
           items.push({ line: 'free', segIndex: s.index, level: l });
@@ -286,15 +290,12 @@ export function BattlePassClient({
           sum += s.premiumPerTier;
         }
       }
-    claimOptimistic(view, items, sum, () => claimAllAction(view.passType));
-  };
+      claimOptimistic(view, items, sum, () => claimSegmentAction(view.passType, s.index));
+    };
 
   const onPremiumLocked = () => setError('프리미엄 결제는 준비 중입니다.');
 
-  const cols = [enhance, transcend].map((view) => {
-    const isClaimed = makeIsClaimed(view);
-    return { view, isClaimed, claimable: liveClaimable(view, isClaimed) };
-  });
+  const cols = [enhance, transcend].map((view) => ({ view, isClaimed: makeIsClaimed(view) }));
 
   return (
     <div className="flex h-full flex-col">
@@ -327,18 +328,16 @@ export function BattlePassClient({
           <PassColumn
             view={cols[0]!.view}
             isClaimed={cols[0]!.isClaimed}
-            claimable={cols[0]!.claimable}
             onClaimTier={onClaimTier(cols[0]!.view)}
-            onClaimAll={onClaimAll(cols[0]!.view, cols[0]!.isClaimed)}
+            onClaimSegment={onClaimSegment(cols[0]!.view, cols[0]!.isClaimed)}
             onPremiumLocked={onPremiumLocked}
           />
           <div className="w-px shrink-0 self-stretch bg-zinc-200 dark:bg-zinc-800" />
           <PassColumn
             view={cols[1]!.view}
             isClaimed={cols[1]!.isClaimed}
-            claimable={cols[1]!.claimable}
             onClaimTier={onClaimTier(cols[1]!.view)}
-            onClaimAll={onClaimAll(cols[1]!.view, cols[1]!.isClaimed)}
+            onClaimSegment={onClaimSegment(cols[1]!.view, cols[1]!.isClaimed)}
             onPremiumLocked={onPremiumLocked}
           />
         </div>
