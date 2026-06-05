@@ -15,7 +15,8 @@ import { KakaoSdkLoader } from '@/components/KakaoSdkLoader';
 import { ResourceToastProvider } from '@/components/ResourceToast';
 import { VersionUpdateToast } from '@/components/VersionUpdateToast';
 import { DiamondProvider } from '@/components/DiamondContext';
-import { TutorialCoachAsync } from '@/components/tutorial/TutorialCoachAsync';
+import { getTutorialState } from '@/lib/game/tutorial';
+import { TutorialCoach } from '@/components/tutorial/TutorialCoach';
 
 /**
  * 인증 필요 라우트 그룹 — WIREFRAMES §0 셸.
@@ -64,10 +65,9 @@ export default async function GameLayout({ children }: { children: React.ReactNo
         <Suspense fallback={<BottomNav />}>
           <BottomNavAsync dataPromise={layoutData} />
         </Suspense>
-        {/* 신규 튜토리얼 코치마크 — 비차단 스트리밍(완료/스킵 시 렌더 없음). */}
-        <Suspense fallback={null}>
-          <TutorialCoachAsync userId={userId} />
-        </Suspense>
+        {/* 신규 튜토리얼 코치마크 — 상태를 promise로 전달(Suspense 미사용 → 항상 마운트,
+            인트로/진행 상태 리셋 방지). 비차단(클라가 effect로 해소). */}
+        <TutorialCoach statePromise={getTutorialState(userId)} />
       </div>
     </DiamondProvider>
   );

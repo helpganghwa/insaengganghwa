@@ -19,24 +19,27 @@ export const TUTORIAL_ACTIVE = 2;
 export const TUTORIAL_DONE = 9;
 
 export type TutorialStep = 'open' | 'equip' | 'enhance' | 'attempt';
-export type TutorialState = { intro: boolean; step: TutorialStep | null };
+export type TutorialPhase = 'intro' | 'active' | 'done';
+/** 서버는 **첫 진입 1회**만 호출 — 이후 진행은 클라 상태머신(로컬). step은 재개용 초기값. */
+export type TutorialState = { phase: TutorialPhase; step: TutorialStep | null };
 
 async function rowCount(table: PgTable, where: SQL | undefined): Promise<number> {
   const [r] = await db.select({ c: count() }).from(table).where(where);
   return Number(r?.c ?? 0);
 }
 
-/** 현재 튜토리얼 상태(인트로 노출 여부 + 코치 단계). 실패 시 비활성(앱 안전). */
+/** 튜토리얼 진입 상태(1회). intro=팝업, active=진행(재개 단계 포함), done=없음. 실패 시 done. */
 export async function getTutorialState(userId: string): Promise<TutorialState> {
   try {
     const [p] = await db
       .select({ s: profiles.tutorialStep })
       .from(profiles)
       .where(eq(profiles.id, userId));
-    if (!p) return { intro: false, step: null };
-    if (p.s === TUTORIAL_INTRO) return { intro: true, step: null };
-    if (p.s !== TUTORIAL_ACTIVE) return { intro: false, step: null };
+    if (!p) return { phase: 'done', step: null };
+    if (p.s === TUTORIAL_INTRO) return { phase: 'intro', step: null };
+    if (p.s !== TUTORIAL_ACTIVE) return { phase: 'done', step: null };
 
+    // active — localStorage가 비었을 때의 재개 단계만 파생(클라가 우선).
     const [eqC, equippedC, jobC, logC] = await Promise.all([
       rowCount(userEquipment, eq(userEquipment.userId, userId)),
       rowCount(
@@ -47,19 +50,13 @@ export async function getTutorialState(userId: string): Promise<TutorialState> {
       rowCount(enhancementLogs, eq(enhancementLogs.userId, userId)),
     ]);
 
-    if (eqC <= 0) return { intro: false, step: 'open' };
-    if (equippedC <= 0) return { intro: false, step: 'equip' };
-    if (jobC <= 0 && logC <= 0) return { intro: false, step: 'enhance' }; // 큐 등록 전
-    if (logC <= 0) return { intro: false, step: 'attempt' }; // 등록됨(job) but 미수행
-
-    // 전 단계 충족 → 완료 마킹(1회).
-    await db
-      .update(profiles)
-      .set({ tutorialStep: TUTORIAL_DONE })
-      .where(and(eq(profiles.id, userId), eq(profiles.tutorialStep, TUTORIAL_ACTIVE)));
-    return { intro: false, step: null };
+    if (eqC <= 0) return { phase: 'active', step: 'open' };
+    if (equippedC <= 0) return { phase: 'active', step: 'equip' };
+    if (jobC <= 0 && logC <= 0) return { phase: 'active', step: 'enhance' };
+    if (logC <= 0) return { phase: 'active', step: 'attempt' };
+    return { phase: 'active', step: 'attempt' }; // 마킹은 완료 액션이 담당(클라 주도)
   } catch {
-    return { intro: false, step: null };
+    return { phase: 'done', step: null };
   }
 }
 

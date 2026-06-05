@@ -1,21 +1,22 @@
 'use client';
 
 import { useEffect, useRef, useState, useTransition } from 'react';
-import { usePathname, useRouter, useSearchParams } from 'next/navigation';
+import { usePathname, useSearchParams } from 'next/navigation';
 
-import type { TutorialStep } from '@/lib/game/tutorial';
+import type { TutorialStep, TutorialState } from '@/lib/game/tutorial';
 import { startTutorialAction, skipTutorialAction } from '@/app/(game)/tutorial/actions';
 import { TutorialCompleteModal } from './TutorialCompleteModal';
 import { TutorialIntroModal } from './TutorialIntroModal';
 
 /**
  * 신규 튜토리얼 스포트라이트 코치마크 — 전역 오버레이.
- * 서버가 파생한 단계(step)를 받아, 현재 화면(pathname)에 존재하는 타겟 요소를
- * data-tut 속성으로 찾아 딤+컷아웃으로 강조하고 말풍선으로 다음 행동을 유도.
- * 타겟이 실제 버튼이라 클릭은 그대로 통과(오버레이는 pointer-events-none).
  *
- * QA 프리뷰: ?tut=open|equip|enhance 로 진입하면(자원 미지급) 강제 노출 + 전역
- * 플로팅 바로 단계 전환. 상태는 레이아웃 마운트 유지로 화면 이동 간 지속.
+ * 서버 통신은 **첫 진입 1회**(intro/active/done 판별 + 재개용 단계)만. 이후 진행은
+ * 전부 클라 상태머신(localStep) — 액션 이벤트(advance/complete)로 단계 전진, localStorage에
+ * 저장(새로고침 재개). 시작/스킵/완료만 서버에 fire-and-forget 마킹. → 단계마다 서버
+ * 파생을 안 해 lag·깜빡임·리마운트가 없다.
+ *
+ * QA 프리뷰: ?tut=open|equip|enhance|attempt 로 강제 노출 + 하단 플로팅 바로 단계 전환.
  */
 type Candidate = { sel: string; copy: string };
 
@@ -42,8 +43,7 @@ const STEP_TARGETS: Record<TutorialStep, Candidate[]> = {
     },
     { sel: '[data-tut="nav-inventory"]', copy: '강화할 장비를 고르러 인벤토리로 가볼게요!' },
   ],
-  // nav-enhance(바텀 탭)는 제외 — /enhance 로딩 중 슬롯이 아직 없을 때 바텀 탭으로
-  // 깜빡이는 것을 방지(없으면 중앙 안내 FALLBACK 노출 후 슬롯 등장 시 강조).
+  // nav-enhance(바텀 탭)는 제외 — 강화 버튼이 자동으로 /enhance로 이동하므로 '이동' 단계 불필요.
   attempt: [
     {
       sel: '[data-tut="enhance-attempt"]',
@@ -63,16 +63,19 @@ const STEP_NO: Record<TutorialStep, number> = { open: 1, equip: 2, enhance: 3, a
 const STEP_TOTAL = 4;
 const STEP_ORDER: TutorialStep[] = ['open', 'equip', 'enhance', 'attempt'];
 const idxOf = (s: TutorialStep | null) => (s ? STEP_ORDER.indexOf(s) : -1);
-const PREVIEW_STEPS: TutorialStep[] = ['open', 'equip', 'enhance', 'attempt'];
 const PREVIEW_LABEL: Record<TutorialStep, string> = {
   open: '보급',
   equip: '장착',
   enhance: '강화',
   attempt: '시도',
 };
+const LS_STEP = 'tut_step';
 const PAD = 0;
 const DIM = 'rgba(0,0,0,0.62)';
 const TOOLTIP_W = 220;
+
+const isStep = (v: string | null): v is TutorialStep =>
+  !!v && (STEP_ORDER as string[]).includes(v);
 
 /** 둥근 사각형 path(시계방향). r는 코너 반경. */
 function roundRectPath(x: number, y: number, w: number, h: number, r: number): string {
@@ -86,52 +89,77 @@ function roundRectPath(x: number, y: number, w: number, h: number, r: number): s
   );
 }
 
-const asStep = (v: string | null): TutorialStep | null =>
-  v && (PREVIEW_STEPS as string[]).includes(v) ? (v as TutorialStep) : null;
-
-export function TutorialCoach({
-  intro,
-  step,
-}: {
-  intro: boolean;
-  step: TutorialStep | null;
-}) {
+export function TutorialCoach({ statePromise }: { statePromise: Promise<TutorialState> }) {
   const pathname = usePathname();
-  const router = useRouter();
   const search = useSearchParams();
   const [, startAction] = useTransition();
-  const [introDone, setIntroDone] = useState(false); // 인트로 선택 후 즉시 닫기(낙관)
-  // 프리뷰는 URL(?tut=)로 1회 시드 후 상태로 유지(레이아웃 마운트 지속 → 화면 이동에도 보존).
-  const [preview, setPreview] = useState<TutorialStep | null>(() => asStep(search.get('tut')));
-  const [rect, setRect] = useState<DOMRect | null>(null);
-  const [radius, setRadius] = useState(0); // 타겟 요소의 border-radius(px)
-  const [copy, setCopy] = useState('');
-  const [optimistic, setOptimistic] = useState<TutorialStep | null>(null); // 액션 기반 낙관 전진
+
+  const [phase, setPhase] = useState<TutorialState['phase']>('done'); // 서버 1회
+  const [started, setStarted] = useState(false); // 인트로 '시작' 낙관(즉시 active)
   const [completed, setCompleted] = useState(false); // 마무리 팝업
-  const lastSel = useRef<string | null>(null); // 타겟이 바뀔 때만 스크롤(루프 방지)
-  const navAtRef = useRef(0); // 마지막 화면 이동 시각 — 이동 직후 정착 윈도(전환 플래시 방지)
+  // 클라 단계 머신 — localStorage에서 복원(새로고침 재개).
+  const [localStep, setLocalStep] = useState<TutorialStep | null>(() => {
+    if (typeof window === 'undefined') return null;
+    try {
+      const v = localStorage.getItem(LS_STEP);
+      return isStep(v) ? v : null;
+    } catch {
+      return null;
+    }
+  });
+  const [preview, setPreview] = useState<TutorialStep | null>(() => {
+    const v = search.get('tut');
+    return isStep(v) ? v : null;
+  });
+  const [rect, setRect] = useState<DOMRect | null>(null);
+  const [radius, setRadius] = useState(0);
+  const [copy, setCopy] = useState('');
+  const lastSel = useRef<string | null>(null);
+  const navAtRef = useRef(0);
   const mountedRef = useRef(false);
 
-  // 낙관치가 서버 step보다 앞서면 그걸 사용 → 서버 파생 지연 동안 이전 단계 플래시 방지.
-  const effective =
-    preview ??
-    (step !== null && optimistic && idxOf(optimistic) > idxOf(step) ? optimistic : step);
-  const isPreview = preview !== null;
+  // 서버 상태 1회 해소 — Suspense 미사용(코치 항상 마운트 → 상태 리셋 없음).
+  useEffect(() => {
+    let alive = true;
+    Promise.resolve(statePromise)
+      .then((s) => {
+        if (!alive) return;
+        setPhase(s.phase);
+        // localStorage가 비어 있고 active면 서버 파생 step으로 재개(이후엔 로컬 우선).
+        if (s.phase === 'active' && s.step) setLocalStep((cur) => cur ?? s.step);
+      })
+      .catch(() => {});
+    return () => {
+      alive = false;
+    };
+  }, [statePromise]);
 
-  // 액션 신호 — 즉시 다음 단계로(advance) / 마무리 팝업(complete).
+  const isPreview = preview !== null;
+  const active = started || phase === 'active';
+  const effective = preview ?? (active ? (localStep ?? 'open') : null);
+
+  const persist = (s: TutorialStep | null) => {
+    try {
+      if (s) localStorage.setItem(LS_STEP, s);
+      else localStorage.removeItem(LS_STEP);
+    } catch {
+      /* noop */
+    }
+  };
+
+  // 액션 신호 — 클라 단계 머신 전진 / 마무리 팝업(서버 통신 없음).
   useEffect(() => {
     const onAdvance = () => {
-      setOptimistic((cur) => {
-        const i = idxOf(cur ?? step);
-        return i >= 0 && i < STEP_ORDER.length - 1 ? STEP_ORDER[i + 1] : cur;
+      setLocalStep((cur) => {
+        const i = idxOf(cur ?? 'open');
+        const next = i >= 0 && i < STEP_ORDER.length - 1 ? STEP_ORDER[i + 1] : cur ?? 'open';
+        persist(next);
+        return next;
       });
-      window.setTimeout(() => setOptimistic(null), 4000); // 실패/지연 대비 안전 해제
     };
     const onComplete = () => {
       if (preview) return;
-      const eff =
-        step !== null && optimistic && idxOf(optimistic) > idxOf(step) ? optimistic : step;
-      if (eff === 'attempt') setCompleted(true);
+      if (started || phase === 'active') setCompleted(true);
     };
     window.addEventListener('tutorial:advance', onAdvance);
     window.addEventListener('tutorial:complete', onComplete);
@@ -139,10 +167,9 @@ export function TutorialCoach({
       window.removeEventListener('tutorial:advance', onAdvance);
       window.removeEventListener('tutorial:complete', onComplete);
     };
-  }, [step, preview, optimistic]);
+  }, [preview, phase, started]);
 
-  // 화면 이동 시각 기록(최초 마운트 제외) — 이동 직후 이전 페이지 DOM이 매칭돼
-  // 잘못된 문구가 깜빡이는 것 방지(아래 measure가 정착 윈도 동안 코치 숨김).
+  // 화면 이동 시각 기록(최초 마운트 제외) — 이동 직후 정착 윈도(전환 플래시 방지).
   useEffect(() => {
     if (!mountedRef.current) {
       mountedRef.current = true;
@@ -157,7 +184,6 @@ export function TutorialCoach({
     const measure = () => {
       if (!alive) return;
       if (Date.now() - navAtRef.current < 300) {
-        // 화면 이동 직후 정착 윈도 — 숨김(stale DOM 매칭 방지).
         setRect(null);
         setCopy('');
         return;
@@ -167,7 +193,6 @@ export function TutorialCoach({
         if (el) {
           const r = el.getBoundingClientRect();
           if (r.width > 0 && r.height > 0) {
-            // 새 타겟이면 1회 스크롤 — 바텀네비 등에 가리지 않게 화면 중앙으로.
             if (lastSel.current !== c.sel) {
               lastSel.current = c.sel;
               el.scrollIntoView({ block: 'center', behavior: 'instant' as ScrollBehavior });
@@ -195,17 +220,16 @@ export function TutorialCoach({
     };
   }, [effective, pathname]);
 
-  // 구멍 밖 클릭만 캡처 차단(스크롤·터치는 통과). 타겟·코치 UI는 허용, 폴백(타겟 없음)이면
-  // 화면 이동을 위해 차단 안 함. 프리뷰(QA)에서도 자유 이동 위해 비활성.
+  // 구멍 밖 클릭만 캡처 차단(스크롤·터치는 통과). 타겟·코치 UI 허용, 폴백이면 차단 안 함.
   useEffect(() => {
     if (!effective || preview) return;
     const onClickCapture = (e: MouseEvent) => {
       const t = e.target as Element | null;
       if (!t || typeof t.closest !== 'function') return;
-      if (t.closest('[data-tut-ui]')) return; // 말풍선 등 코치 UI
+      if (t.closest('[data-tut-ui]')) return;
       const sel = lastSel.current;
-      if (!sel) return; // 타겟 미발견(폴백) — 차단 안 함
-      if (t.closest(sel)) return; // 하이라이트된 타겟
+      if (!sel) return;
+      if (t.closest(sel)) return;
       e.preventDefault();
       e.stopPropagation();
     };
@@ -214,38 +238,53 @@ export function TutorialCoach({
   }, [effective, preview]);
 
   if (typeof window === 'undefined') return null;
-  // 인트로 — 메인페이지 첫 진입 시 시작/건너뛰기(프리뷰 제외).
-  if (intro && !introDone && !isPreview && pathname === '/') {
+
+  // 인트로 — 메인페이지 첫 진입(프리뷰 제외). 시작/건너뛰기는 즉시 클라 반영 + 서버 fire-and-forget.
+  if (phase === 'intro' && !started && !isPreview && pathname === '/') {
     return (
       <TutorialIntroModal
         pending={false}
         onStart={() => {
-          setIntroDone(true);
-          // 트랜지션 안에서 await + router.refresh — revalidate만으론 클라이언트 재렌더가
-          // 간헐적으로 누락돼 시작이 안 되던 문제. refresh로 강제(트랜지션이라 fallback 없음).
+          setStarted(true);
+          setLocalStep('open');
+          persist('open');
           startAction(async () => {
             await startTutorialAction();
-            router.refresh();
           });
         }}
         onSkip={() => {
-          setIntroDone(true);
+          setPhase('done');
+          persist(null);
           startAction(async () => {
             await skipTutorialAction();
-            router.refresh();
           });
         }}
       />
     );
   }
-  if (completed) return <TutorialCompleteModal onClose={() => setCompleted(false)} />;
+
+  if (completed) {
+    return (
+      <TutorialCompleteModal
+        onClose={() => {
+          setCompleted(false);
+          setPhase('done');
+          setStarted(false);
+          persist(null);
+          startAction(async () => {
+            await skipTutorialAction(); // 완료 = DONE 마킹
+          });
+        }}
+      />
+    );
+  }
+
   if (!effective) return null;
-  if (!copy) return null; // 정착 윈도(이동 직후)·초기 프레임 — 잘못된 문구 깜빡임 방지
+  if (!copy) return null; // 정착 윈도·초기 프레임 — 잘못된 문구 깜빡임 방지
 
   const vw = window.innerWidth;
   const vh = window.innerHeight;
 
-  // 스포트라이트 컷아웃(box-shadow로 주변 딤).
   const spot = rect
     ? {
         top: Math.max(0, rect.top - PAD),
@@ -255,11 +294,10 @@ export function TutorialCoach({
       }
     : null;
 
-  // 말풍선 위치 — 타겟 아래 우선, 공간 없으면 위. 가로는 타겟 중심 정렬(뷰포트 클램프).
   let tip: { top: number; left: number; above: boolean } | null = null;
   if (spot) {
     const below = spot.top + spot.height + 10;
-    const above = below + 110 > vh; // 아래 공간 부족하면 위로
+    const above = below + 110 > vh;
     const centerX = rect!.left + rect!.width / 2;
     const left = Math.min(Math.max(8, centerX - TOOLTIP_W / 2), vw - 8 - TOOLTIP_W);
     tip = { top: above ? spot.top - 10 : below, left, above };
@@ -269,9 +307,7 @@ export function TutorialCoach({
     <div className="pointer-events-none fixed inset-0 z-[61]">
       {spot ? (
         <>
-          {/* SVG 딤 마스크 — 타겟 radius를 따르는 둥근 구멍. 딤(path)은 클릭 차단, 구멍은 통과. */}
-          {/* 딤은 터치/스크롤 통과(pointer-events-none) — 모바일 스크롤 보존. 구멍 밖
-              클릭만 캡처 단계에서 차단(아래 useEffect). */}
+          {/* 딤은 터치/스크롤 통과(pointer-events-none). 구멍 밖 클릭만 캡처 차단. */}
           <svg className="pointer-events-none absolute inset-0 h-full w-full">
             <path
               fill={DIM}
@@ -279,7 +315,6 @@ export function TutorialCoach({
               d={`M0 0H${vw}V${vh}H0Z${roundRectPath(spot.left, spot.top, spot.width, spot.height, radius)}`}
             />
           </svg>
-          {/* 펄스 링 — 타겟 radius와 동일. 클릭은 타겟으로 통과(pointer-events-none). */}
           <div
             className="pointer-events-none absolute animate-pulse ring-2 ring-amber-400"
             style={{
@@ -292,7 +327,6 @@ export function TutorialCoach({
           />
         </>
       ) : (
-        // 타겟 미발견 — 화면 이동이 필요하므로 클릭 차단하지 않음(pointer-events-none 유지).
         <div className="absolute inset-0 bg-black/45" />
       )}
 
@@ -319,48 +353,39 @@ export function TutorialCoach({
         </div>
       </div>
 
-      {/* 스킵 불가(실제 튜토리얼). 미리보기(QA)에서만 종료 버튼 노출. */}
+      {/* QA 미리보기 — 종료/단계전환 바(프리뷰일 때만). */}
       {isPreview ? (
-        <button
-          type="button"
-          onClick={() => setPreview(null)}
-          className="pointer-events-auto absolute right-3 top-[calc(env(safe-area-inset-top)+14px)] rounded-full bg-black/60 px-3 py-1.5 text-[11px] font-semibold text-white backdrop-blur-sm"
-        >
-          미리보기 종료 ✕
-        </button>
-      ) : null}
-
-      {/* QA 전역 플로팅 바 — 단계 전환(테스트용). 프리뷰일 때만. */}
-      {isPreview ? (
-        <div className="pointer-events-auto fixed bottom-[calc(env(safe-area-inset-bottom)+70px)] left-1/2 flex -translate-x-1/2 items-center gap-1 rounded-full bg-zinc-900/90 px-2 py-1.5 shadow-xl ring-1 ring-amber-400/40 backdrop-blur-sm">
-          <span className="px-1 text-[10px] font-bold text-amber-300">QA</span>
-          {PREVIEW_STEPS.map((s) => (
-            <button
-              key={s}
-              type="button"
-              onClick={() => setPreview(s)}
-              className={`rounded-full px-2.5 py-1 text-[11px] font-bold ${
-                effective === s ? 'bg-amber-400 text-amber-950' : 'bg-white/10 text-white'
-              }`}
-            >
-              {STEP_NO[s]} {PREVIEW_LABEL[s]}
-            </button>
-          ))}
-          <button
-            type="button"
-            onClick={() => setCompleted(true)}
-            className="rounded-full bg-white/10 px-2 py-1 text-[11px] font-bold text-white"
-          >
-            완료
-          </button>
+        <>
           <button
             type="button"
             onClick={() => setPreview(null)}
-            className="ml-0.5 rounded-full bg-white/10 px-2 py-1 text-[11px] font-bold text-white"
+            className="pointer-events-auto absolute right-3 top-[calc(env(safe-area-inset-top)+14px)] rounded-full bg-black/60 px-3 py-1.5 text-[11px] font-semibold text-white backdrop-blur-sm"
           >
-            종료
+            미리보기 종료 ✕
           </button>
-        </div>
+          <div className="pointer-events-auto fixed bottom-[calc(env(safe-area-inset-bottom)+70px)] left-1/2 flex -translate-x-1/2 items-center gap-1 rounded-full bg-zinc-900/90 px-2 py-1.5 shadow-xl ring-1 ring-amber-400/40 backdrop-blur-sm">
+            <span className="px-1 text-[10px] font-bold text-amber-300">QA</span>
+            {STEP_ORDER.map((s) => (
+              <button
+                key={s}
+                type="button"
+                onClick={() => setPreview(s)}
+                className={`rounded-full px-2.5 py-1 text-[11px] font-bold ${
+                  effective === s ? 'bg-amber-400 text-amber-950' : 'bg-white/10 text-white'
+                }`}
+              >
+                {STEP_NO[s]} {PREVIEW_LABEL[s]}
+              </button>
+            ))}
+            <button
+              type="button"
+              onClick={() => setCompleted(true)}
+              className="rounded-full bg-white/10 px-2 py-1 text-[11px] font-bold text-white"
+            >
+              완료
+            </button>
+          </div>
+        </>
       ) : null}
     </div>
   );
