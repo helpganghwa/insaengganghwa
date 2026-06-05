@@ -13,6 +13,17 @@ const nextConfig: NextConfig = {
   async headers() {
     return [
       {
+        // 클라이언트 힌트로 기기 모델 요청 — 크롬 UA 감축(모델→'K')으로 User-Agent에
+        // 모델이 안 보여도 Sec-CH-UA-Model로 폴더블 판별(generateViewport). Critical-CH로
+        // 첫 내비게이션에 즉시 힌트 포함(브라우저 1회 재요청), Vary로 캐시 분기.
+        source: '/:path*',
+        headers: [
+          { key: 'Accept-CH', value: 'Sec-CH-UA-Model' },
+          { key: 'Critical-CH', value: 'Sec-CH-UA-Model' },
+          { key: 'Vary', value: 'Sec-CH-UA-Model' },
+        ],
+      },
+      {
         source: '/sprites/:path*',
         headers: [{ key: 'Cache-Control', value: LONG_CACHE }],
       },

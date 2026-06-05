@@ -83,8 +83,11 @@ export const metadata: Metadata = {
 const FOLDABLE_UA = /SM-F9\d{2}|SM-W(?:9|20|21|22|23|24)\d{2}|Pixel Fold|Oppo Find N|vivo X Fold/i;
 
 export async function generateViewport(): Promise<Viewport> {
-  const ua = (await headers()).get('user-agent') ?? '';
-  const fold = FOLDABLE_UA.test(ua);
+  const h = await headers();
+  // UA(비감축) + Sec-CH-UA-Model 힌트(감축 시) 둘 다 확인.
+  const ua = h.get('user-agent') ?? '';
+  const model = h.get('sec-ch-ua-model') ?? '';
+  const fold = FOLDABLE_UA.test(ua) || FOLDABLE_UA.test(model);
   return fold
     ? { themeColor: '#151518', width: 'device-width', initialScale: 1 }
     : { themeColor: '#151518', width: 390, initialScale: undefined };
