@@ -1,9 +1,7 @@
 import type { Metadata, Viewport } from 'next';
-import { cookies } from 'next/headers';
+import { headers } from 'next/headers';
 import { Geist, Geist_Mono } from 'next/font/google';
 import './globals.css';
-
-import { ViewportSync } from '@/components/ViewportSync';
 
 const geistSans = Geist({
   variable: '--font-geist-sans',
@@ -78,12 +76,16 @@ export const metadata: Metadata = {
 //   재발. `initialScale: undefined`로 기본값 1을 덮어써야 출력에서 빠진다. 이것이
 //   metadata API로 순수 width=390을 내는 유일한 방법(리터럴 <meta>는 Next 주입분과
 //   중복되어 불가). CLAUDE §5.2.
-// 쿠키 vw로 viewport 분기(ViewportSync가 CSR 감지 후 설정+reload). 기본(없음)=width=390.
-// 큰 화면만 device-width(정상 크기). initialScale: undefined는 width=390에서 순수 width=390
-// 출력을 위해 필수(기본값 1을 덮어씀, CLAUDE §5.2).
+// SSR에서 User-Agent로 폴더블(갤럭시 Z Fold·Pixel Fold) 기기 판별 → device-width(정상 크기).
+// 펼침/접힘 상태는 구분 안 함(UA로 불가) — 폴드 기기면 항상 device-width. 그 외(일반 폰·
+// 데스크톱)는 width=390 자동핏 유지. initialScale: undefined는 순수 width=390 출력에 필수(§5.2).
+// ⚠ 최신 크롬 UA 감축(모델→'K')이 적용되면 모델이 안 보여 감지 불가할 수 있음.
+const FOLDABLE_UA = /SM-F9\d{2}|SM-W(?:9|20|21|22|23|24)\d{2}|Pixel Fold|Oppo Find N|vivo X Fold/i;
+
 export async function generateViewport(): Promise<Viewport> {
-  const wide = (await cookies()).get('vw')?.value === 'wide';
-  return wide
+  const ua = (await headers()).get('user-agent') ?? '';
+  const fold = FOLDABLE_UA.test(ua);
+  return fold
     ? { themeColor: '#151518', width: 'device-width', initialScale: 1 }
     : { themeColor: '#151518', width: 390, initialScale: undefined };
 }
@@ -100,7 +102,6 @@ export default function RootLayout({ children }: Readonly<{ children: React.Reac
       className={`dark ${geistSans.variable} ${geistMono.variable} h-full overscroll-none antialiased`}
     >
       <body className="flex min-h-full flex-col overscroll-none bg-zinc-950 text-zinc-50">
-        <ViewportSync />
         {children}
       </body>
     </html>
