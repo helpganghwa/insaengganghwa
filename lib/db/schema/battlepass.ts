@@ -12,6 +12,7 @@ import {
   pgEnum,
   uuid,
   integer,
+  jsonb,
   timestamp,
   primaryKey,
 } from 'drizzle-orm/pg-core';
@@ -28,8 +29,10 @@ export const battlePassState = pgTable(
       .notNull()
       .references(() => profiles.id, { onDelete: 'cascade' }),
     passType: battlePassTypeEnum('pass_type').notNull(),
-    /** 무료 보상 수령 완료한 최고 단계(level). 0 = 미수령. */
+    /** (레거시) 무료 수령 high-water. 개별 수령 도입(2026-06-05)으로 미사용 — claimedTiers가 진실. */
     freeClaimedThrough: integer('free_claimed_through').notNull().default(0),
+    /** 무료 라인에서 **개별 수령 완료한 마일스톤 단계(level) 집합**. 비순차 수령 지원. */
+    freeClaimedTiers: jsonb('free_claimed_tiers').$type<number[]>().notNull().default([]),
   },
   (t) => [primaryKey({ columns: [t.userId, t.passType] })],
 );
@@ -44,8 +47,10 @@ export const battlePassSegments = pgTable(
     passType: battlePassTypeEnum('pass_type').notNull(),
     /** 구간 인덱스(0부터). 강화 c=+1~100·+101~200…, 초월 c=T1~10·T11~20… */
     segmentIndex: integer('segment_index').notNull(),
-    /** 그 구간 프리미엄 수령 완료한 최고 단계(level). 구매 시 c×size로 초기화 후 소급 수령. */
+    /** (레거시) 프리미엄 수령 high-water. 개별 수령 도입으로 미사용 — claimedTiers가 진실. */
     premiumClaimedThrough: integer('premium_claimed_through').notNull().default(0),
+    /** 그 구간 프리미엄에서 **개별 수령 완료한 마일스톤 단계(level) 집합**. */
+    premiumClaimedTiers: jsonb('premium_claimed_tiers').$type<number[]>().notNull().default([]),
     purchasedAt: timestamp('purchased_at', { withTimezone: true }).notNull().defaultNow(),
   },
   (t) => [primaryKey({ columns: [t.userId, t.passType, t.segmentIndex] })],

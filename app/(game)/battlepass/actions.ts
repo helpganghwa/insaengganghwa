@@ -7,8 +7,8 @@ import { rateLimited } from '@/lib/ratelimit';
 import {
   claimFree,
   claimPremium,
-  claimFreeUpTo,
-  claimPremiumUpTo,
+  claimFreeTier,
+  claimPremiumTier,
   BattlePassErr,
 } from '@/lib/game/battlepass';
 import type { BattlePassType } from '@/lib/game/balance';
@@ -97,8 +97,8 @@ export async function claimTierAction(
   try {
     const r =
       line === 'free'
-        ? await claimFreeUpTo(u, type, level)
-        : await claimPremiumUpTo(u, type, segmentIndex ?? 0, level);
+        ? await claimFreeTier(u, type, level)
+        : await claimPremiumTier(u, type, segmentIndex ?? 0, level);
     revalidate();
     return { status: 'success' as const, granted: r.granted, rewardKind: r.rewardKind };
   } catch (e) {
