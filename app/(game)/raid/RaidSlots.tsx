@@ -202,7 +202,7 @@ export function RaidSlots({
               type="button"
               disabled={exhausted}
               onClick={() => setPicking(true)}
-              className="flex w-full items-center justify-center gap-2 rounded-xl border-2 border-dashed border-zinc-300 p-5 text-xs text-zinc-500 disabled:opacity-40 dark:border-zinc-700"
+              className="flex h-[84px] w-full items-center justify-center gap-2 rounded-xl border-2 border-dashed border-zinc-300 px-5 text-xs text-zinc-500 disabled:opacity-40 dark:border-zinc-700"
             >
               <span className="text-base">＋</span> {exhausted ? '오늘 한도 소진' : '레이드 개설'}
             </button>
