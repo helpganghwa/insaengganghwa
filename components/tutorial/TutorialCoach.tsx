@@ -1,7 +1,7 @@
 'use client';
 
 import { useEffect, useRef, useState, useTransition } from 'react';
-import { usePathname, useSearchParams } from 'next/navigation';
+import { usePathname } from 'next/navigation';
 
 import type { TutorialStep, TutorialState } from '@/lib/game/tutorial';
 import { startTutorialAction, skipTutorialAction } from '@/app/(game)/tutorial/actions';
@@ -15,8 +15,6 @@ import { TutorialIntroModal } from './TutorialIntroModal';
  * 전부 클라 상태머신(localStep) — 액션 이벤트(advance/complete)로 단계 전진, localStorage에
  * 저장(새로고침 재개). 시작/스킵/완료만 서버에 fire-and-forget 마킹. → 단계마다 서버
  * 파생을 안 해 lag·깜빡임·리마운트가 없다.
- *
- * QA 프리뷰: ?tut=open|equip|enhance|attempt 로 강제 노출 + 하단 플로팅 바로 단계 전환.
  */
 type Candidate = { sel: string; copy: string };
 
@@ -56,12 +54,6 @@ const STEP_NO: Record<TutorialStep, number> = { open: 1, equip: 2, enhance: 3, a
 const STEP_TOTAL = 4;
 const STEP_ORDER: TutorialStep[] = ['open', 'equip', 'enhance', 'attempt'];
 const idxOf = (s: TutorialStep | null) => (s ? STEP_ORDER.indexOf(s) : -1);
-const PREVIEW_LABEL: Record<TutorialStep, string> = {
-  open: '보급',
-  equip: '장착',
-  enhance: '강화',
-  attempt: '시도',
-};
 const LS_STEP = 'tut_step';
 const PAD = 0;
 const DIM = 'rgba(0,0,0,0.62)';
@@ -84,7 +76,6 @@ function roundRectPath(x: number, y: number, w: number, h: number, r: number): s
 
 export function TutorialCoach({ statePromise }: { statePromise: Promise<TutorialState> }) {
   const pathname = usePathname();
-  const search = useSearchParams();
   const [, startAction] = useTransition();
 
   const [phase, setPhase] = useState<TutorialState['phase']>('done'); // 서버 1회
@@ -99,10 +90,6 @@ export function TutorialCoach({ statePromise }: { statePromise: Promise<Tutorial
     } catch {
       return null;
     }
-  });
-  const [preview, setPreview] = useState<TutorialStep | null>(() => {
-    const v = search.get('tut');
-    return isStep(v) ? v : null;
   });
   const [rect, setRect] = useState<DOMRect | null>(null);
   const [radius, setRadius] = useState(0);
@@ -127,9 +114,8 @@ export function TutorialCoach({ statePromise }: { statePromise: Promise<Tutorial
     };
   }, [statePromise]);
 
-  const isPreview = preview !== null;
   const active = started || phase === 'active';
-  const effective = preview ?? (active ? (localStep ?? 'open') : null);
+  const effective = active ? (localStep ?? 'open') : null;
 
   const persist = (s: TutorialStep | null) => {
     try {
@@ -151,7 +137,6 @@ export function TutorialCoach({ statePromise }: { statePromise: Promise<Tutorial
       });
     };
     const onComplete = () => {
-      if (preview) return;
       if (started || phase === 'active') setCompleted(true);
     };
     window.addEventListener('tutorial:advance', onAdvance);
@@ -160,7 +145,7 @@ export function TutorialCoach({ statePromise }: { statePromise: Promise<Tutorial
       window.removeEventListener('tutorial:advance', onAdvance);
       window.removeEventListener('tutorial:complete', onComplete);
     };
-  }, [preview, phase, started]);
+  }, [phase, started]);
 
   // 화면 이동 시각 기록(최초 마운트 제외) — 이동 직후 정착 윈도(전환 플래시 방지).
   useEffect(() => {
@@ -197,7 +182,7 @@ export function TutorialCoach({ statePromise }: { statePromise: Promise<Tutorial
           }
         }
       }
-      // 타겟 미발견 — 중앙 안내(FALLBACK) 노출 안 함(빈 copy → 코치 숨김).
+      // 타겟 미발견 — 중앙 안내 노출 안 함(빈 copy → 코치 숨김).
       lastSel.current = null;
       setRect(null);
       setCopy('');
@@ -217,7 +202,7 @@ export function TutorialCoach({ statePromise }: { statePromise: Promise<Tutorial
   // 구멍 밖 클릭만 캡처 차단(스크롤·터치는 통과). 타겟·코치 UI 허용, 폴백이면 차단 안 함.
   // 완료 팝업 중엔 비활성 — 모달 버튼(알림/강화하기) 클릭 차단 방지.
   useEffect(() => {
-    if (!effective || preview || completed) return;
+    if (!effective || completed) return;
     const onClickCapture = (e: MouseEvent) => {
       const t = e.target as Element | null;
       if (!t || typeof t.closest !== 'function') return;
@@ -230,12 +215,12 @@ export function TutorialCoach({ statePromise }: { statePromise: Promise<Tutorial
     };
     document.addEventListener('click', onClickCapture, true);
     return () => document.removeEventListener('click', onClickCapture, true);
-  }, [effective, preview, completed]);
+  }, [effective, completed]);
 
   if (typeof window === 'undefined') return null;
 
-  // 인트로 — 메인페이지 첫 진입(프리뷰 제외). 시작/건너뛰기는 즉시 클라 반영 + 서버 fire-and-forget.
-  if (phase === 'intro' && !started && !isPreview && pathname === '/') {
+  // 인트로 — 메인페이지 첫 진입. 시작/건너뛰기는 즉시 클라 반영 + 서버 fire-and-forget.
+  if (phase === 'intro' && !started && pathname === '/') {
     return (
       <TutorialIntroModal
         pending={false}
@@ -342,46 +327,11 @@ export function TutorialCoach({ statePromise }: { statePromise: Promise<Tutorial
       >
         <div className="rounded-xl bg-amber-400 px-3.5 py-2.5 text-amber-950 shadow-xl">
           <div className="mb-0.5 text-[10px] font-bold opacity-70">
-            {isPreview ? '미리보기' : '튜토리얼'} {STEP_NO[effective]}/{STEP_TOTAL}
+            튜토리얼 {STEP_NO[effective]}/{STEP_TOTAL}
           </div>
           <p className="text-[13px] font-bold leading-snug break-keep">{copy}</p>
         </div>
       </div>
-
-      {/* QA 미리보기 — 종료/단계전환 바(프리뷰일 때만). */}
-      {isPreview ? (
-        <>
-          <button
-            type="button"
-            onClick={() => setPreview(null)}
-            className="pointer-events-auto absolute right-3 top-[calc(env(safe-area-inset-top)+14px)] rounded-full bg-black/60 px-3 py-1.5 text-[11px] font-semibold text-white backdrop-blur-sm"
-          >
-            미리보기 종료 ✕
-          </button>
-          <div className="pointer-events-auto fixed bottom-[calc(env(safe-area-inset-bottom)+70px)] left-1/2 flex -translate-x-1/2 items-center gap-1 rounded-full bg-zinc-900/90 px-2 py-1.5 shadow-xl ring-1 ring-amber-400/40 backdrop-blur-sm">
-            <span className="px-1 text-[10px] font-bold text-amber-300">QA</span>
-            {STEP_ORDER.map((s) => (
-              <button
-                key={s}
-                type="button"
-                onClick={() => setPreview(s)}
-                className={`rounded-full px-2.5 py-1 text-[11px] font-bold ${
-                  effective === s ? 'bg-amber-400 text-amber-950' : 'bg-white/10 text-white'
-                }`}
-              >
-                {STEP_NO[s]} {PREVIEW_LABEL[s]}
-              </button>
-            ))}
-            <button
-              type="button"
-              onClick={() => setCompleted(true)}
-              className="rounded-full bg-white/10 px-2 py-1 text-[11px] font-bold text-white"
-            >
-              완료
-            </button>
-          </div>
-        </>
-      ) : null}
     </div>
   );
 }

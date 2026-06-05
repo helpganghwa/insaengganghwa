@@ -76,19 +76,28 @@ export const metadata: Metadata = {
 //   재발. `initialScale: undefined`로 기본값 1을 덮어써야 출력에서 빠진다. 이것이
 //   metadata API로 순수 width=390을 내는 유일한 방법(리터럴 <meta>는 Next 주입분과
 //   중복되어 불가). CLAUDE §5.2.
-// SSR에서 User-Agent로 폴더블(갤럭시 Z Fold·Pixel Fold) 기기 판별 → device-width(정상 크기).
-// 펼침/접힘 상태는 구분 안 함(UA로 불가) — 폴드 기기면 항상 device-width. 그 외(일반 폰·
-// 데스크톱)는 width=390 자동핏 유지. initialScale: undefined는 순수 width=390 출력에 필수(§5.2).
-// ⚠ 최신 크롬 UA 감축(모델→'K')이 적용되면 모델이 안 보여 감지 불가할 수 있음.
+// SSR에서 User-Agent로 '넓은 모바일 기기'(폴더블·태블릿) 판별 → device-width(정상 크기).
+// width=390은 모바일에서 화면폭에 맞춰 스케일업하므로 폴드/태블릿은 과확대됨. 데스크톱은
+// 스케일업 안 하므로 영향 없음(그대로 width=390, 390 컬럼 중앙). 펼침/접힘은 UA로 불가라 구분 안 함.
+// initialScale: undefined는 순수 width=390 출력에 필수(§5.2).
+// ⚠ 최신 크롬 UA 감축(모델→'K')은 Sec-CH-UA-Model 힌트로 보완. ⚠ iPadOS 13+는 Mac UA로
+//   위장해 SSR 감지 불가(이 경우 width=390 유지 → 과확대, 클라 감지가 필요하면 추후 보완).
 const FOLDABLE_UA = /SM-F9\d{2}|SM-W(?:9|20|21|22|23|24)\d{2}|Pixel Fold|Oppo Find N|vivo X Fold/i;
+
+function isWideMobile(ua: string, model: string): boolean {
+  if (FOLDABLE_UA.test(ua) || FOLDABLE_UA.test(model)) return true; // 폴더블
+  if (/\bAndroid\b/i.test(ua) && !/\bMobile\b/i.test(ua)) return true; // 안드로이드 태블릿(폰엔 Mobile)
+  if (/\biPad\b/i.test(ua)) return true; // 구형 iPad(신형은 Mac UA → 미감지)
+  return false;
+}
 
 export async function generateViewport(): Promise<Viewport> {
   const h = await headers();
   // UA(비감축) + Sec-CH-UA-Model 힌트(감축 시) 둘 다 확인.
   const ua = h.get('user-agent') ?? '';
   const model = h.get('sec-ch-ua-model') ?? '';
-  const fold = FOLDABLE_UA.test(ua) || FOLDABLE_UA.test(model);
-  return fold
+  const wide = isWideMobile(ua, model);
+  return wide
     ? { themeColor: '#151518', width: 'device-width', initialScale: 1 }
     : { themeColor: '#151518', width: 390, initialScale: undefined };
 }
