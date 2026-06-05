@@ -42,12 +42,13 @@ const STEP_TARGETS: Record<TutorialStep, Candidate[]> = {
     },
     { sel: '[data-tut="nav-inventory"]', copy: '강화할 장비를 고르러 인벤토리로 가볼게요!' },
   ],
+  // nav-enhance(바텀 탭)는 제외 — /enhance 로딩 중 슬롯이 아직 없을 때 바텀 탭으로
+  // 깜빡이는 것을 방지(없으면 중앙 안내 FALLBACK 노출 후 슬롯 등장 시 강조).
   attempt: [
     {
       sel: '[data-tut="enhance-attempt"]',
       copy: '강화는 시간이 지날수록 성공 확률이 올라가요! 슬롯을 눌러 바로 도전하거나, 더 기다렸다 해도 좋아요 ⚒️',
     },
-    { sel: '[data-tut="nav-enhance"]', copy: '강화소로 이동해 강화를 시도해볼까요?' },
   ],
 };
 
@@ -201,14 +202,16 @@ export function TutorialCoach({
         pending={false}
         onStart={() => {
           setIntroDone(true);
-          startAction(() => {
-            void startTutorialAction();
+          // 트랜지션 안에서 await — revalidate 새로고침이 트랜지션에 포함돼 Suspense
+          // fallback(코치 언마운트)을 막음(인트로 재노출·스크롤 잠금 방지).
+          startAction(async () => {
+            await startTutorialAction();
           });
         }}
         onSkip={() => {
           setIntroDone(true);
-          startAction(() => {
-            void skipTutorialAction();
+          startAction(async () => {
+            await skipTutorialAction();
           });
         }}
       />
