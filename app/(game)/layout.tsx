@@ -18,6 +18,7 @@ import { VersionUpdateToast } from '@/components/VersionUpdateToast';
 import { DiamondProvider } from '@/components/DiamondContext';
 import { getTutorialState } from '@/lib/game/tutorial';
 import { TutorialCoach } from '@/components/tutorial/TutorialCoach';
+import { InstallStrip } from '@/components/install/InstallStrip';
 
 /**
  * 인증 필요 라우트 그룹 — WIREFRAMES §0 셸.
@@ -61,6 +62,9 @@ export default async function GameLayout({ children }: { children: React.ReactNo
         <SpritePreloader />
         <KakaoSdkLoader />
         <RouteTransitionOverlay />
+        {/* 앱 설치 권유 띠지 — 웹(비설치) 실행 시 헤더 위 전체폭 상시 노출, 닫으면 5일 뒤 재노출.
+            standalone(설치됨)이면 클라에서 자동 숨김. */}
+        <InstallStrip />
         <Suspense fallback={<AppHeaderShell />}>
           <AppHeader dataPromise={layoutData} />
         </Suspense>
