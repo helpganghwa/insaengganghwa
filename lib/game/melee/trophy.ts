@@ -25,11 +25,18 @@ const STORAGE_BUCKET = 'profiles';
 const MAX_ATTEMPTS = 3;
 const GEN_TIMEOUT_MIN = 20; // 'generating' 정체 시 타임아웃 → 재시도.
 
-// 팔레트 off + 최소 프롬프트(원본 충실도↑) — 얼굴 가리는 두손 머리위 제외(검증됨).
-// 표정 유지는 createState의 PRESERVE_FACE 접미로 공통 적용.
+// 최소 변경 프롬프트(2026-06-06) — 머리부터 발끝까지·자세·바라보는 방향 전부 원본
+// 그대로 보존하고 한쪽 팔만 수정해 무늬 없는 매끈한 트로피를 들게 한다. 전신 포즈를
+// 바꾸면 우승자 본인과 달라지고 얼굴이 가려져서(검증됨) 팔만 변경. 보존 강제는 PRESERVE.
 const POSE_POOL = [
-  { tag: 'onehand', edit: 'raising a golden trophy cup high overhead with one hand' },
-  { tag: 'chest', edit: 'holding a golden trophy cup against the chest with both arms' },
+  {
+    tag: 'onehand',
+    edit: 'only one arm is raised to hold up a plain smooth golden trophy cup with no engravings or patterns',
+  },
+  {
+    tag: 'onehand-side',
+    edit: 'only one arm is lifted at the side to hold a plain smooth golden trophy cup with no engravings or patterns',
+  },
 ] as const;
 
 const REVIEW_DESCRIPTION =
@@ -83,9 +90,28 @@ async function getSourceChar(userId: string): Promise<string | null> {
   return anyP?.cid ?? null;
 }
 
-// 포즈만 바꾸고 원본 얼굴/표정은 그대로 유지 — 트로피 생성 시 표정이 바뀌어 우승자
-// 본인과 달라지는 문제 보완(2026-06-05). 모든 포즈 edit에 공통 적용.
-const PRESERVE_FACE = ", keeping the character's original face and facial expression unchanged";
+/** 우승자 아바타의 표시 방향(active_direction) — 트로피도 같은 방향 노출. 없으면 south. */
+async function getChampionDirection(userId: string): Promise<string> {
+  const [p] = await db
+    .select({ active: profiles.activeProfileId })
+    .from(profiles)
+    .where(eq(profiles.id, userId))
+    .limit(1);
+  if (p?.active) {
+    const [ap] = await db
+      .select({ dir: userProfiles.activeDirection })
+      .from(userProfiles)
+      .where(eq(userProfiles.id, p.active))
+      .limit(1);
+    if (ap?.dir) return ap.dir;
+  }
+  return 'south';
+}
+
+// 한쪽 팔만 바꾸고 나머지(얼굴·표정·머리·복장·몸·자세·바라보는 방향)는 머리부터 발끝까지
+// 원본 그대로 유지 — 우승자 본인과 동일하게(2026-06-06). 모든 포즈 edit에 공통 접미.
+const PRESERVE =
+  ", while keeping the character's face, expression, hair, outfit, body, stance and facing direction exactly the same as the original from head to toe; change only the single arm that holds the trophy and nothing else";
 
 async function createState(sourceChar: string, edit: string): Promise<string> {
   const key = process.env.PIXELLAB_API_KEY!;
@@ -94,7 +120,7 @@ async function createState(sourceChar: string, edit: string): Promise<string> {
     headers: { 'content-type': 'application/json', authorization: `Bearer ${key}` },
     body: JSON.stringify({
       character_id: sourceChar,
-      edit_description: edit + PRESERVE_FACE,
+      edit_description: edit + PRESERVE,
       no_background: true,
       use_color_palette_from_reference: false,
     }),
@@ -194,13 +220,15 @@ async function startAttempt(b: TrophyBattle, nextAttempt: number): Promise<void>
 /** 통과 — 미러 + finale.trophyAvatar 저장 → done. 우승자 지급(우편/푸시) 없음 — 트로피는 대난투 표시 전용. */
 async function finalize(b: TrophyBattle, _images: ReadyImages, _charId: string): Promise<void> {
   const rotations = await mirror(b.id, _images);
-  const south = rotations.south;
-  if (!south) throw new Error('mirror missing south');
+  // 표시 방향 = 우승자 아바타의 active_direction(같은 방향). 없으면 south 폴백.
+  const dir = await getChampionDirection(b.championUserId);
+  const chosen = rotations[dir] ?? rotations.south;
+  if (!chosen) throw new Error('mirror missing chosen/south');
 
   // 트로피 아바타는 finale.trophyAvatar에만 저장 — 대난투 포디움/우승카드/역대우승자 표시 전용.
   // 우승자에게 아바타로 지급하지 않음(2026-06-04 피드백 — 우편/앱알림 폐기). 전투 재생은 원본 아바타.
   const finale = b.finale;
-  if (finale) finale.trophyAvatar = south;
+  if (finale) finale.trophyAvatar = chosen;
   await db
     .update(meleeBattles)
     .set({ finale, trophyStatus: 'done', trophyUpdatedAt: new Date() })
