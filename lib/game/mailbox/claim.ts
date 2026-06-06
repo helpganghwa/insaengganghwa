@@ -29,18 +29,29 @@ export class MailError extends Error {
   }
 }
 
+/**
+ * jsonb payload의 diamond/box 수치는 number 또는 string(큰 수 인용 — 일부 생산자가
+ * `::text`로 저장)일 수 있다. string을 누적기에 `+=`하면 JS 문자열 연결로 값이
+ * 폭증(예: 1500 + "2000" = "15002000")하므로, 반드시 Number()로 강제 정수화한다.
+ */
+const toInt = (v: unknown): number => {
+  const n = Math.trunc(Number(v));
+  return Number.isFinite(n) && n > 0 ? n : 0;
+};
+
 type Tx = Parameters<Parameters<typeof db.transaction>[0]>[0];
 
 async function applyPayload(tx: Tx, userId: string, p: MailPayload, acc: ClaimResult) {
-  if (p.diamond && p.diamond > 0) {
+  const d = toInt(p.diamond);
+  if (d > 0) {
     await tx
       .update(profiles)
-      .set({ diamond: sql`${profiles.diamond} + ${BigInt(p.diamond)}` })
+      .set({ diamond: sql`${profiles.diamond} + ${BigInt(d)}` })
       .where(eq(profiles.id, userId));
-    acc.diamond += p.diamond;
+    acc.diamond += d;
   }
   for (const slot of SUPPLY_SLOTS) {
-    const n = p.boxes?.[slot] ?? 0;
+    const n = toInt(p.boxes?.[slot]);
     if (n > 0) {
       await tx
         .insert(userSupplyBoxes)
@@ -115,11 +126,11 @@ export function claimAllMail(input: { userId: string }): Promise<ClaimResult> {
     const claimedAt = new Date();
     const logValues = rows.map((m) => {
       const p = (m.payload as MailPayload | null) ?? {};
-      const d = p.diamond && p.diamond > 0 ? p.diamond : 0;
+      const d = toInt(p.diamond); // string('::text') 안전 정수화 — 문자열 연결 폭증 방지
       const b = {
-        weapon: p.boxes?.weapon ?? 0,
-        armor: p.boxes?.armor ?? 0,
-        accessory: p.boxes?.accessory ?? 0,
+        weapon: toInt(p.boxes?.weapon),
+        armor: toInt(p.boxes?.armor),
+        accessory: toInt(p.boxes?.accessory),
       };
       total.diamond += d;
       total.boxes.weapon += b.weapon;
