@@ -18,6 +18,13 @@ const WHITE = 200;
 const MAX_BRIGHT_NEIGHBORS = 3;
 const BLOB_ALPHA_THRESHOLD = 16;
 const BLOB_SIZE_MAX = 500;
+/**
+ * 분리 덩어리 제거 상대 임계 — 본체(최대 컴포넌트) 크기 대비 이 비율 미만이면 제거.
+ * 절대값(BLOB_SIZE_MAX)만으로는 큰 캐릭터의 떠있는 결함(예: 751px 해골·519px 검 =
+ * 본체 ~7,900px의 7~10%)이 500을 넘겨 빠져나감. 비율을 더해 캐릭터 크기에 강건하게.
+ * 단 이 비율 이상 큰 분리 부속(망토·대형 무기)은 의도된 것으로 보존.
+ */
+const BLOB_REL_MAX = 0.12;
 
 export async function cleanupSprite(pngBuf: Buffer): Promise<Buffer> {
   const { data, info } = await sharp(pngBuf)
@@ -96,9 +103,12 @@ export async function cleanupSprite(pngBuf: Buffer): Promise<Buffer> {
   }
   if (components.length > 1) {
     components.sort((a, b) => b.size - a.size);
+    const main = components[0]!;
+    // 절대(BLOB_SIZE_MAX) + 상대(본체 대비 BLOB_REL_MAX) 중 큰 값 미만이면 제거.
+    const sizeLimit = Math.max(BLOB_SIZE_MAX, Math.floor(main.size * BLOB_REL_MAX));
     for (let i = 1; i < components.length; i++) {
       const c = components[i]!;
-      if (c.size >= BLOB_SIZE_MAX) continue;
+      if (c.size >= sizeLimit) continue;
       for (const p of c.pixels) data[p * 4 + 3] = 0;
       changed = true;
     }
