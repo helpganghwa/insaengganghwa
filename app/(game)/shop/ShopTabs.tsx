@@ -8,7 +8,7 @@ import { useDiamond } from '@/components/DiamondContext';
 
 import { claimFreeAction, devPurchaseAction, buyBoxAction } from './actions';
 import type { FreeSlot } from '@/lib/game/shop/free';
-import { BOX, CASH, PREMIUM, PREMIUM_TOTAL, DIAMONDS, productPeriod } from '@/lib/game/shop/catalog';
+import { BOX, CASH, PREMIUM, DIAMONDS, productPeriod } from '@/lib/game/shop/catalog';
 
 /**
  * 상점 — 상단 배너 + 탭(일일/주간/월간/충전). 담백.
@@ -64,6 +64,14 @@ const FREE_DESC: Record<FreeSlot, string> = {
   monthly: '달마다 찾아오는 선물',
   signup: '처음 온 당신께 드리는 선물',
 };
+// 다이아 충전(충전 탭) — 티어별 설명. 배경 키는 `dia-${id}`.
+const DIAMOND_DESC: Record<string, string> = {
+  starter: '가볍게 시작하는 한 줌',
+  small: '알차게 채운 보석함',
+  medium: '두둑한 다이아 더미',
+  large: '넘치게 빛나는 보고',
+  mega: '최고의 다이아 광맥',
+};
 // 현금 카드 종류 → 배경/캐릭터 에셋 키.
 const CASH_ART: Record<string, { bg: string; char: string }> = {
   '왕의 금고': { bg: 'vault', char: 'vault' },
@@ -73,108 +81,6 @@ const CASH_ART: Record<string, { bg: string; char: string }> = {
 
 const won = (n: number) => `₩${n.toLocaleString('ko-KR')}`;
 const dia = (n: number) => `💎${n.toLocaleString('ko-KR')}`;
-
-/** 수령/구매 완료 표시 — 텍스트 대신 초록 체크. */
-function CheckBadge() {
-  return (
-    <span className="flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-emerald-500/90">
-      <svg viewBox="0 0 24 24" className="h-3.5 w-3.5" fill="none" stroke="white" strokeWidth={3} strokeLinecap="round" strokeLinejoin="round" aria-label="완료">
-        <path d="M5 13l4 4L19 7" />
-      </svg>
-    </span>
-  );
-}
-
-function PaidCard({
-  name,
-  detail,
-  price,
-  onClick,
-  purchased,
-}: {
-  name: string;
-  detail: string;
-  price: string;
-  onClick: () => void;
-  purchased?: boolean;
-}) {
-  if (purchased) {
-    return (
-      <li className="flex w-full items-center gap-3 rounded-xl border border-zinc-200 bg-zinc-50/70 px-3.5 py-2.5 opacity-60 dark:border-zinc-800 dark:bg-zinc-900/30">
-        <div className="min-w-0 flex-1">
-          <div className="text-[13px] font-bold">{name}</div>
-          <div className="mt-0.5 text-[11px] tabular-nums text-zinc-500">{detail}</div>
-        </div>
-        <CheckBadge />
-      </li>
-    );
-  }
-  return (
-    <li>
-      <button
-        type="button"
-        onClick={onClick}
-        className="flex w-full items-center gap-3 rounded-xl border border-zinc-200 bg-white px-3.5 py-2.5 text-left transition active:bg-zinc-50 dark:border-zinc-800 dark:bg-zinc-900/50 dark:active:bg-zinc-900"
-      >
-        <div className="min-w-0 flex-1">
-          <div className="text-[13px] font-bold">{name}</div>
-          <div className="mt-0.5 text-[11px] tabular-nums text-zinc-500">{detail}</div>
-        </div>
-        <span className="shrink-0 text-[12px] font-bold tabular-nums text-zinc-700 dark:text-zinc-200">
-          {price}
-        </span>
-      </button>
-    </li>
-  );
-}
-
-function FreeRow({
-  slot,
-  available,
-  busy,
-  onClaim,
-}: {
-  slot: FreeSlot;
-  available: boolean;
-  busy: boolean;
-  onClaim: () => void;
-}) {
-  const d = FREE_DISPLAY[slot];
-  const clickable = available && !busy;
-  return (
-    <li>
-      <button
-        type="button"
-        onClick={clickable ? onClaim : undefined}
-        disabled={!clickable}
-        className={`flex w-full items-center gap-3 rounded-xl border border-emerald-300 bg-emerald-50/70 px-3.5 py-2.5 text-left transition dark:border-emerald-800/60 dark:bg-emerald-950/25 ${
-          clickable ? 'active:bg-emerald-100 dark:active:bg-emerald-900/40' : 'opacity-80'
-        }`}
-      >
-        <div className="min-w-0 flex-1">
-          <div className="flex items-center gap-1.5 text-[13px] font-bold">
-            무료
-            {d.period ? (
-              <span className="text-[10px] font-medium text-emerald-600 dark:text-emerald-400">
-                {d.period}
-              </span>
-            ) : null}
-          </div>
-          <div className="mt-0.5 text-[11px] tabular-nums text-zinc-500">{d.reward}</div>
-        </div>
-        {busy ? (
-          <span className="shrink-0 text-[12px] font-bold text-zinc-400">수령 중…</span>
-        ) : available ? (
-          <span className="shrink-0 text-[12px] font-bold text-emerald-600 dark:text-emerald-400">
-            받기
-          </span>
-        ) : (
-          <CheckBadge />
-        )}
-      </button>
-    </li>
-  );
-}
 
 /**
  * 상점 배너 카드 — DailySupply식 CSS 레이어(배경 씬 / 테마 캐릭터(선택) / 좌측 그라데이션 / 텍스트).
@@ -191,6 +97,7 @@ function BannerCard({
   price,
   grayscale,
   confirming,
+  tall,
   onClick,
 }: {
   bg: string;
@@ -202,6 +109,7 @@ function BannerCard({
   price?: string;
   grayscale?: boolean;
   confirming?: boolean;
+  tall?: boolean;
   onClick: () => void;
 }) {
   const titleColor = accent === 'emerald' ? 'text-emerald-300' : 'text-amber-300';
@@ -211,7 +119,7 @@ function BannerCard({
       <button
         type="button"
         onClick={onClick}
-        className={`relative block h-[76px] w-full overflow-hidden rounded-xl border ${border} text-left shadow-md shadow-black/30 transition active:scale-[0.99] ${
+        className={`relative block ${tall ? 'h-[96px]' : 'h-[76px]'} w-full overflow-hidden rounded-xl border ${border} text-left shadow-md shadow-black/30 transition active:scale-[0.99] ${
           grayscale ? 'grayscale' : ''
         }`}
       >
@@ -424,30 +332,23 @@ export function ShopTabs({
   return (
     <div className="flex h-full flex-col">
       <div className="min-h-0 flex-1 overflow-y-auto overscroll-contain px-3 py-3">
-        {/* 프리미엄 상단 배너 */}
-        <button
-          type="button"
-          onClick={() => onBuy(PREMIUM.id)}
-          className={`mb-3 block w-full overflow-hidden rounded-2xl border border-amber-400/60 bg-gradient-to-br from-amber-100 to-amber-50 px-4 py-3 text-left shadow-[0_0_20px_rgba(245,158,11,0.12)] transition active:opacity-90 dark:border-amber-600/50 dark:from-amber-950/50 dark:to-zinc-950 ${
-            premiumBought ? 'opacity-70' : ''
-          }`}
-        >
-          <div className="flex items-center justify-between gap-2">
-            <div className="min-w-0">
-              <div className="text-[14px] font-extrabold">👑 성장 프리미엄</div>
-              <div className="mt-0.5 text-[11px] tabular-nums text-zinc-600 dark:text-zinc-300">
-                즉시 {dia(PREMIUM.instant.diamond)}·📦{PREMIUM.instant.boxes} + 매일{' '}
-                {dia(PREMIUM.daily.diamond)}·📦{PREMIUM.daily.boxes} ×{PREMIUM.daily.days}
-              </div>
-              <div className="mt-0.5 text-[10px] tabular-nums text-zinc-400">
-                총 {dia(PREMIUM_TOTAL.diamond)}·📦{PREMIUM_TOTAL.boxes}
-              </div>
-            </div>
-            <span className="shrink-0 text-[12px] font-bold tabular-nums">
-              {premiumBought ? '구매함' : won(PREMIUM.krw)}
-            </span>
-          </div>
-        </button>
+        {/* 프리미엄 상단 배너 — 약간 큰 배너 카드 */}
+        <ul className="mb-3">
+          <BannerCard
+            bg="premium"
+            char="premium"
+            tall
+            title="👑 성장 프리미엄"
+            desc="한 달간 매일 보상이 쏟아지는 패스"
+            detail={`즉시 ${dia(PREMIUM.instant.diamond)}·📦${PREMIUM.instant.boxes} · 매일 ${dia(
+              PREMIUM.daily.diamond,
+            )}·📦${PREMIUM.daily.boxes}`}
+            price={won(PREMIUM.krw)}
+            grayscale={premiumBought}
+            confirming={confirm === PREMIUM.id}
+            onClick={() => tapPaid(PREMIUM.id, isAdmin, () => onBuy(PREMIUM.id))}
+          />
+        </ul>
 
         {/* 탭 */}
         <div className="mb-3 flex gap-1 rounded-xl bg-zinc-100 p-1 dark:bg-zinc-900">
@@ -526,19 +427,35 @@ export function ShopTabs({
           </ul>
         ) : (
           <ul className="space-y-2">
-            <FreeRow
-              slot="signup"
-              available={free.signup}
-              busy={claiming === 'signup'}
-              onClaim={() => claimFreeSlot('signup')}
+            {/* 가입 환영 무료 */}
+            <BannerCard
+              bg="free"
+              char="gift"
+              accent="emerald"
+              title="무료"
+              desc={FREE_DESC.signup}
+              detail={FREE_DISPLAY.signup.reward}
+              grayscale={!free.signup}
+              onClick={() => {
+                if (claiming) return;
+                if (!free.signup) {
+                  showHeaderToast({ icon: '🎁', title: '이미 수령했습니다' });
+                  return;
+                }
+                claimFreeSlot('signup');
+              }}
             />
+            {/* 다이아 충전 5종 — 반복 구매(흑백 없음), 1탭 확인 2탭 구매 */}
             {DIAMONDS.map((d) => (
-              <PaidCard
+              <BannerCard
                 key={d.id}
-                name={dia(d.total)}
+                bg={`dia-${d.id}`}
+                title={dia(d.total)}
+                desc={DIAMOND_DESC[d.id] ?? ''}
                 detail="다이아 충전"
                 price={won(d.krw)}
-                onClick={() => onBuy(d.id)}
+                confirming={confirm === d.id}
+                onClick={() => tapPaid(d.id, isAdmin, () => onBuy(d.id))}
               />
             ))}
           </ul>
