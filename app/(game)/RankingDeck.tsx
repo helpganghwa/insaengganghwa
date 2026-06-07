@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useRef, useState } from 'react';
 import Link from 'next/link';
 
 import type { LeaderboardEntry, LeaderboardMetric } from '@/lib/game/leaderboard/queries';
@@ -30,13 +30,34 @@ export function RankingDeck({
   const multi = decks.length > 1;
   const go = (delta: number) => setI((cur) => (cur + delta + decks.length) % decks.length);
 
+  // 좌우 스와이프로 타입 전환 — 수평 이동이 수직보다 크고 임계 초과 시.
+  const start = useRef<{ x: number; y: number } | null>(null);
+  const onTouchStart = (e: React.TouchEvent) => {
+    const t = e.touches[0]!;
+    start.current = { x: t.clientX, y: t.clientY };
+  };
+  const onTouchEnd = (e: React.TouchEvent) => {
+    const s = start.current;
+    start.current = null;
+    if (!s || !multi) return;
+    const t = e.changedTouches[0]!;
+    const dx = t.clientX - s.x;
+    const dy = t.clientY - s.y;
+    if (Math.abs(dx) > 40 && Math.abs(dx) > Math.abs(dy)) go(dx < 0 ? 1 : -1);
+  };
+
   return (
     <section
       aria-label={`${label} 랭킹`}
+      onTouchStart={onTouchStart}
+      onTouchEnd={onTouchEnd}
       className="overflow-hidden rounded-xl border border-amber-900/50 shadow-lg shadow-black/40"
     >
-      {/* 헤더 — ◀ · 타이틀(랭킹 진입) · ▶ */}
-      <div className="relative flex items-center border-b border-amber-700/40">
+      {/* 헤더 — 타이틀(랭킹 진입). 좌우 스와이프로 타입 전환. */}
+      <Link
+        href={`/leaderboard?tab=${metric}`}
+        className="relative flex items-center justify-center overflow-hidden border-b border-amber-700/40 px-3.5 py-1.5 transition hover:brightness-110"
+      >
         {/* eslint-disable-next-line @next/next/no-img-element */}
         <img
           src={HEADER_BG}
@@ -46,39 +67,20 @@ export function RankingDeck({
           style={{ imageRendering: 'pixelated' }}
         />
         <div className="absolute inset-0 bg-black/35" />
+        <span className="relative z-10 text-[10px] font-bold text-amber-100 text-pixel-outline">
+          {label} 랭킹
+        </span>
         {multi ? (
-          <button
-            type="button"
-            onClick={() => go(-1)}
-            aria-label="이전 랭킹"
-            className="relative z-10 px-3 py-1.5 text-[12px] font-bold text-amber-100 text-pixel-outline transition active:scale-90 hover:brightness-125"
-          >
-            {'◀︎'}
-          </button>
-        ) : (
-          <span className="w-9 shrink-0" />
-        )}
-        <Link
-          href={`/leaderboard?tab=${metric}`}
-          className="relative z-10 flex-1 py-1.5 text-center transition hover:brightness-110"
-        >
-          <span className="text-[10px] font-bold text-amber-100 text-pixel-outline">
-            {label} 랭킹
+          <span className="absolute right-2 z-10 flex items-center gap-1">
+            {decks.map((d, idx) => (
+              <span
+                key={d.metric}
+                className={`h-1 w-1 rounded-full ${idx === i ? 'bg-amber-300' : 'bg-white/40'}`}
+              />
+            ))}
           </span>
-        </Link>
-        {multi ? (
-          <button
-            type="button"
-            onClick={() => go(1)}
-            aria-label="다음 랭킹"
-            className="relative z-10 px-3 py-1.5 text-[12px] font-bold text-amber-100 text-pixel-outline transition active:scale-90 hover:brightness-125"
-          >
-            {'▶︎'}
-          </button>
-        ) : (
-          <span className="w-9 shrink-0" />
-        )}
-      </div>
+        ) : null}
+      </Link>
 
       <div className="relative w-full" style={{ aspectRatio: '400 / 174' }}>
         {/* eslint-disable-next-line @next/next/no-img-element */}
