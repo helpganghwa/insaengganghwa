@@ -139,6 +139,75 @@ function FreeRow({
   );
 }
 
+/**
+ * 등급 배너 카드 — DailySupply식 CSS 레이어(배경 씬 / 테마 캐릭터 / 좌측 그라데이션 / 텍스트).
+ * 구매 완료 시 흑백(grayscale)만 적용 — 클릭은 유지(상위에서 '이미 구매' 토스트).
+ */
+function BannerCard({
+  theme,
+  name,
+  detail,
+  price,
+  purchased,
+  onClick,
+}: {
+  theme: 'vault' | 'knight';
+  name: string;
+  detail: string;
+  price: string;
+  purchased?: boolean;
+  onClick: () => void;
+}) {
+  return (
+    <li>
+      <button
+        type="button"
+        onClick={onClick}
+        className={`relative block h-24 w-full overflow-hidden rounded-xl border border-amber-900/40 text-left shadow-md shadow-black/30 transition active:scale-[0.99] ${
+          purchased ? 'grayscale' : ''
+        }`}
+      >
+        {/* 배경 씬 */}
+        {/* eslint-disable-next-line @next/next/no-img-element */}
+        <img
+          src={assetUrl(`/sprites/shop/${theme}-bg.png`)}
+          alt=""
+          aria-hidden
+          draggable={false}
+          className="absolute inset-0 h-full w-full object-cover"
+          style={{ imageRendering: 'pixelated' }}
+        />
+        {/* 테마 캐릭터 — 우측 하단, 위로 살짝 넘침 */}
+        {/* eslint-disable-next-line @next/next/no-img-element */}
+        <img
+          src={assetUrl(`/sprites/shop/${theme}-char.png`)}
+          alt=""
+          aria-hidden
+          draggable={false}
+          className="pointer-events-none absolute top-0 right-1 h-[136%] w-auto drop-shadow-[0_2px_4px_rgba(0,0,0,0.6)]"
+          style={{ imageRendering: 'pixelated' }}
+        />
+        {/* 좌→우 그라데이션(텍스트 가독성) */}
+        <div className="pointer-events-none absolute inset-0 bg-gradient-to-r from-black/85 via-black/45 to-transparent" />
+        {/* 텍스트 + 가격 */}
+        <div className="relative z-10 flex h-full flex-col justify-center px-3.5">
+          <div className="text-[15px] font-extrabold text-amber-300 text-pixel-outline drop-shadow-[0_1px_2px_rgba(0,0,0,0.9)]">
+            {name}
+          </div>
+          <div className="mt-0.5 text-[11px] font-medium tabular-nums text-white/90 drop-shadow-[0_1px_2px_rgba(0,0,0,0.9)]">
+            {detail}
+          </div>
+          <div className="mt-1.5">
+            <span className="inline-block rounded-md bg-amber-500/90 px-2 py-0.5 text-[12px] font-bold tabular-nums text-black shadow">
+              {price}
+            </span>
+          </div>
+        </div>
+      </button>
+    </li>
+  );
+}
+
 export function ShopTabs({
   free: initialFree,
   isAdmin,
@@ -326,16 +395,38 @@ export function ShopTabs({
               onClick={() => onBuyBox(`box_${tab}`, BOX[tab].cost)}
               purchased={purchased.has(`box_${tab}`)}
             />
-            {CASH[tab].map((c) => (
-              <PaidCard
-                key={c.id}
-                name={c.name}
-                detail={`${dia(c.diamond)} · 📦${c.boxes}`}
-                price={won(c.krw)}
-                onClick={() => onBuy(c.id)}
-                purchased={purchased.has(c.id)}
-              />
-            ))}
+            {CASH[tab].map((c) => {
+              const theme =
+                c.name === '왕의 금고' ? 'vault' : c.name === '기사의 상자' ? 'knight' : null;
+              const detail = `${dia(c.diamond)} · 📦${c.boxes}`;
+              if (theme) {
+                return (
+                  <BannerCard
+                    key={c.id}
+                    theme={theme}
+                    name={c.name}
+                    detail={detail}
+                    price={won(c.krw)}
+                    purchased={purchased.has(c.id)}
+                    onClick={() =>
+                      purchased.has(c.id)
+                        ? showHeaderToast({ icon: '🛒', title: '이미 구매완료한 상품입니다' })
+                        : onBuy(c.id)
+                    }
+                  />
+                );
+              }
+              return (
+                <PaidCard
+                  key={c.id}
+                  name={c.name}
+                  detail={detail}
+                  price={won(c.krw)}
+                  onClick={() => onBuy(c.id)}
+                  purchased={purchased.has(c.id)}
+                />
+              );
+            })}
           </ul>
         ) : (
           <ul className="space-y-2">
