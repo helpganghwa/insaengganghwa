@@ -119,33 +119,39 @@ function FreeRow({
   onClaim: () => void;
 }) {
   const d = FREE_DISPLAY[slot];
+  const clickable = available && !busy;
   return (
-    <li className="flex items-center gap-3 rounded-xl border border-emerald-300 bg-emerald-50/70 px-3.5 py-2.5 dark:border-emerald-800/60 dark:bg-emerald-950/25">
-      <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-emerald-500/15 text-lg">
-        {d.icon}
-      </span>
-      <div className="min-w-0 flex-1">
-        <div className="flex items-center gap-1.5 text-[13px] font-bold">
-          무료
-          {d.period ? (
-            <span className="text-[10px] font-medium text-emerald-600 dark:text-emerald-400">
-              {d.period}
-            </span>
-          ) : null}
-        </div>
-        <div className="mt-0.5 text-[11px] tabular-nums text-zinc-500">{d.reward}</div>
-      </div>
+    <li>
       <button
         type="button"
-        onClick={onClaim}
-        disabled={!available || busy}
-        className={`shrink-0 rounded-full px-3.5 py-1.5 text-[11px] font-bold transition active:scale-95 ${
-          available && !busy
-            ? 'bg-emerald-500 text-white'
-            : 'bg-zinc-200 text-zinc-400 dark:bg-zinc-800'
+        onClick={clickable ? onClaim : undefined}
+        disabled={!clickable}
+        className={`flex w-full items-center gap-3 rounded-xl border border-emerald-300 bg-emerald-50/70 px-3.5 py-2.5 text-left transition dark:border-emerald-800/60 dark:bg-emerald-950/25 ${
+          clickable ? 'active:bg-emerald-100 dark:active:bg-emerald-900/40' : 'opacity-80'
         }`}
       >
-        {busy ? '수령 중…' : available ? '받기' : '받음'}
+        <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-emerald-500/15 text-lg">
+          {d.icon}
+        </span>
+        <div className="min-w-0 flex-1">
+          <div className="flex items-center gap-1.5 text-[13px] font-bold">
+            무료
+            {d.period ? (
+              <span className="text-[10px] font-medium text-emerald-600 dark:text-emerald-400">
+                {d.period}
+              </span>
+            ) : null}
+          </div>
+          <div className="mt-0.5 text-[11px] tabular-nums text-zinc-500">{d.reward}</div>
+        </div>
+        <span
+          className={`shrink-0 text-[12px] font-bold ${
+            available ? 'text-emerald-600 dark:text-emerald-400' : 'text-zinc-400'
+          }`}
+        >
+          {busy ? '수령 중…' : available ? '받기' : '받음'}
+        </span>
+        {clickable ? <span className="shrink-0 text-emerald-400">›</span> : null}
       </button>
     </li>
   );
