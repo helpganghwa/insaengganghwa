@@ -98,6 +98,7 @@ function BannerCard({
   grayscale,
   confirming,
   tall,
+  compact,
   onClick,
 }: {
   bg: string;
@@ -110,16 +111,19 @@ function BannerCard({
   grayscale?: boolean;
   confirming?: boolean;
   tall?: boolean;
+  compact?: boolean;
   onClick: () => void;
 }) {
   const titleColor = accent === 'emerald' ? 'text-emerald-300' : 'text-amber-300';
   const border = accent === 'emerald' ? 'border-emerald-900/40' : 'border-amber-900/40';
+  const height = compact ? 'h-[62px]' : tall ? 'h-[96px]' : 'h-[76px]';
+  const rightValue = price ?? detail; // compact: 우측에 가격(없으면 보상) 한 가지만
   return (
     <li>
       <button
         type="button"
         onClick={onClick}
-        className={`relative block ${tall ? 'h-[96px]' : 'h-[76px]'} w-full overflow-hidden rounded-xl border ${border} text-left shadow-md shadow-black/30 transition active:scale-[0.99] ${
+        className={`relative block ${height} w-full overflow-hidden rounded-xl border ${border} text-left shadow-md shadow-black/30 transition active:scale-[0.99] ${
           grayscale ? 'grayscale' : ''
         }`}
       >
@@ -147,26 +151,52 @@ function BannerCard({
         ) : null}
         {/* 좌→우 그라데이션(텍스트 가독성) */}
         <div className="pointer-events-none absolute inset-0 bg-gradient-to-r from-black/85 via-black/45 to-transparent" />
-        {/* 정보 — 제목 → 설명 → 보상 (가격은 우측 중앙 별도 배치) */}
-        <div className="relative z-10 flex h-full flex-col justify-center px-3.5">
-          <div
-            className={`text-[14px] font-extrabold ${titleColor} text-pixel-outline drop-shadow-[0_1px_2px_rgba(0,0,0,0.9)]`}
-          >
-            {title}
-          </div>
-          <div className="mt-0.5 truncate text-[10px] font-medium text-white/85 drop-shadow-[0_1px_2px_rgba(0,0,0,0.9)]">
-            {desc}
-          </div>
-          <div className="mt-1 text-[11px] font-semibold tabular-nums text-white/80 drop-shadow-[0_1px_2px_rgba(0,0,0,0.9)]">
-            {detail}
-          </div>
-        </div>
-        {/* 가격 — 배너 우측 중앙 */}
-        {price ? (
-          <div className="absolute right-3 top-1/2 z-10 -translate-y-1/2 text-[14px] font-extrabold tabular-nums text-white drop-shadow-[0_1px_3px_rgba(0,0,0,1)]">
-            {price}
-          </div>
-        ) : null}
+        {compact ? (
+          <>
+            {/* 심플 — 제목 + (있으면) 설명 한 줄 */}
+            <div className="relative z-10 flex h-full flex-col justify-center px-3.5">
+              <div
+                className={`text-[14px] font-extrabold ${titleColor} text-pixel-outline drop-shadow-[0_1px_2px_rgba(0,0,0,0.9)]`}
+              >
+                {title}
+              </div>
+              {desc ? (
+                <div className="mt-0.5 truncate text-[10px] font-medium text-white/80 drop-shadow-[0_1px_2px_rgba(0,0,0,0.9)]">
+                  {desc}
+                </div>
+              ) : null}
+            </div>
+            {/* 우측 값(가격 또는 보상) */}
+            {rightValue ? (
+              <div className="absolute right-3 top-1/2 z-10 -translate-y-1/2 text-[13px] font-extrabold tabular-nums text-white drop-shadow-[0_1px_3px_rgba(0,0,0,1)]">
+                {rightValue}
+              </div>
+            ) : null}
+          </>
+        ) : (
+          <>
+            {/* 정보 — 제목 → 설명 → 보상 (가격은 우측 중앙 별도 배치) */}
+            <div className="relative z-10 flex h-full flex-col justify-center px-3.5">
+              <div
+                className={`text-[14px] font-extrabold ${titleColor} text-pixel-outline drop-shadow-[0_1px_2px_rgba(0,0,0,0.9)]`}
+              >
+                {title}
+              </div>
+              <div className="mt-0.5 truncate text-[10px] font-medium text-white/85 drop-shadow-[0_1px_2px_rgba(0,0,0,0.9)]">
+                {desc}
+              </div>
+              <div className="mt-1 text-[11px] font-semibold tabular-nums text-white/80 drop-shadow-[0_1px_2px_rgba(0,0,0,0.9)]">
+                {detail}
+              </div>
+            </div>
+            {/* 가격 — 배너 우측 중앙 */}
+            {price ? (
+              <div className="absolute right-3 top-1/2 z-10 -translate-y-1/2 text-[14px] font-extrabold tabular-nums text-white drop-shadow-[0_1px_3px_rgba(0,0,0,1)]">
+                {price}
+              </div>
+            ) : null}
+          </>
+        )}
         {/* 구매 확인 오버레이(3초) — 다시 탭하면 구매 확정 */}
         {confirming ? (
           <div className="absolute inset-0 z-20 flex flex-col items-center justify-center gap-0.5 bg-black/80 px-3 text-center backdrop-blur-[1px]">
@@ -338,7 +368,7 @@ export function ShopTabs({
             bg="premium"
             char="premium"
             tall
-            title="👑 성장 프리미엄"
+            title="성장 프리미엄"
             desc="한 달간 매일 보상이 쏟아지는 패스"
             detail={`즉시 ${dia(PREMIUM.instant.diamond)}·📦${PREMIUM.instant.boxes} · 매일 ${dia(
               PREMIUM.daily.diamond,
@@ -427,11 +457,12 @@ export function ShopTabs({
           </ul>
         ) : (
           <ul className="space-y-2">
-            {/* 가입 환영 무료 */}
+            {/* 가입 환영 무료 — 심플(62px) */}
             <BannerCard
               bg="free"
               char="gift"
               accent="emerald"
+              compact
               title="무료"
               desc={FREE_DESC.signup}
               detail={FREE_DISPLAY.signup.reward}
@@ -445,14 +476,15 @@ export function ShopTabs({
                 claimFreeSlot('signup');
               }}
             />
-            {/* 다이아 충전 5종 — 반복 구매(흑백 없음), 1탭 확인 2탭 구매 */}
+            {/* 다이아 충전 5종 — 심플(62px), 반복 구매(흑백 없음), 1탭 확인 2탭 구매 */}
             {DIAMONDS.map((d) => (
               <BannerCard
                 key={d.id}
                 bg={`dia-${d.id}`}
+                compact
                 title={dia(d.total)}
                 desc={DIAMOND_DESC[d.id] ?? ''}
-                detail="다이아 충전"
+                detail=""
                 price={won(d.krw)}
                 confirming={confirm === d.id}
                 onClick={() => tapPaid(d.id, isAdmin, () => onBuy(d.id))}
