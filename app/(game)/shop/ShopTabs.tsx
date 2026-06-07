@@ -233,25 +233,18 @@ function BannerCard({
             alt=""
             aria-hidden
             draggable={false}
-            className="pointer-events-none absolute top-0 right-1 h-[140%] w-auto drop-shadow-[0_2px_4px_rgba(0,0,0,0.6)]"
+            className="pointer-events-none absolute left-1/2 top-0 h-[140%] w-auto -translate-x-1/2 drop-shadow-[0_2px_4px_rgba(0,0,0,0.6)]"
             style={{ imageRendering: 'pixelated' }}
           />
         ) : null}
         {/* 좌→우 그라데이션(텍스트 가독성) */}
         <div className="pointer-events-none absolute inset-0 bg-gradient-to-r from-black/85 via-black/45 to-transparent" />
-        {/* 정보 — 제목 옆 가격(강조) → 설명 → 보상 */}
+        {/* 정보 — 제목 → 설명 → 보상 (가격은 우측 중앙 별도 배치) */}
         <div className="relative z-10 flex h-full flex-col justify-center px-3.5">
-          <div className="flex items-center gap-2">
-            <span
-              className={`text-[14px] font-extrabold ${titleColor} text-pixel-outline drop-shadow-[0_1px_2px_rgba(0,0,0,0.9)]`}
-            >
-              {title}
-            </span>
-            {price ? (
-              <span className="text-[12px] font-bold tabular-nums text-white drop-shadow-[0_1px_2px_rgba(0,0,0,0.95)]">
-                {price}
-              </span>
-            ) : null}
+          <div
+            className={`text-[14px] font-extrabold ${titleColor} text-pixel-outline drop-shadow-[0_1px_2px_rgba(0,0,0,0.9)]`}
+          >
+            {title}
           </div>
           <div className="mt-0.5 truncate text-[10px] font-medium text-white/85 drop-shadow-[0_1px_2px_rgba(0,0,0,0.9)]">
             {desc}
@@ -260,6 +253,12 @@ function BannerCard({
             {detail}
           </div>
         </div>
+        {/* 가격 — 배너 우측 중앙 */}
+        {price ? (
+          <div className="absolute right-3 top-1/2 z-10 -translate-y-1/2 text-[14px] font-extrabold tabular-nums text-white drop-shadow-[0_1px_3px_rgba(0,0,0,1)]">
+            {price}
+          </div>
+        ) : null}
         {/* 구매 확인 오버레이(3초) — 다시 탭하면 구매 확정 */}
         {confirming ? (
           <div className="absolute inset-0 z-20 flex flex-col items-center justify-center gap-0.5 bg-black/80 px-3 text-center backdrop-blur-[1px]">
@@ -424,22 +423,6 @@ export function ShopTabs({
 
   return (
     <div className="flex h-full flex-col">
-      {/* 헤더 배너 — 상점 hub 이미지 */}
-      <div className="relative h-14 shrink-0 overflow-hidden border-b border-zinc-200 dark:border-zinc-800">
-        {/* eslint-disable-next-line @next/next/no-img-element */}
-        <img
-          src={assetUrl('/sprites/hub/shop.png')}
-          alt=""
-          aria-hidden
-          className="absolute inset-0 h-full w-full object-cover object-center"
-          style={{ imageRendering: 'pixelated' }}
-        />
-        <div className="pointer-events-none absolute inset-0 bg-gradient-to-r from-black/65 via-black/35 to-black/65" />
-        <div className="relative z-10 flex h-full items-center px-4">
-          <h1 className="text-base font-extrabold text-white text-pixel-outline">상점</h1>
-        </div>
-      </div>
-
       <div className="min-h-0 flex-1 overflow-y-auto overscroll-contain px-3 py-3">
         {/* 프리미엄 상단 배너 */}
         <button
