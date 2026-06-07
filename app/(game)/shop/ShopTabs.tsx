@@ -28,10 +28,10 @@ const FREE_DISPLAY: Record<
   FreeSlot,
   { period: string; reward: string; diamond: number; boxes: number }
 > = {
-  daily: { period: '매일', reward: '📦 1개', diamond: 0, boxes: 1 },
-  weekly: { period: '매주', reward: '💎200', diamond: 200, boxes: 0 },
-  monthly: { period: '매월', reward: '💎500', diamond: 500, boxes: 0 },
-  signup: { period: '', reward: '📦 10개', diamond: 0, boxes: 10 },
+  daily: { period: '매일', reward: '📦 3개', diamond: 0, boxes: 3 },
+  weekly: { period: '매주', reward: '📦 20개', diamond: 0, boxes: 20 },
+  monthly: { period: '매월', reward: '📦 100개', diamond: 0, boxes: 100 },
+  signup: { period: '', reward: '💎 1,000', diamond: 1000, boxes: 0 },
 };
 
 // 카드·기간별 한 줄 설명(플레이버). 기간(일일/주간/월간) × 카드 종류마다 다르게.
@@ -99,6 +99,7 @@ function BannerCard({
   confirming,
   tall,
   compact,
+  charCenter,
   onClick,
 }: {
   bg: string;
@@ -112,6 +113,7 @@ function BannerCard({
   confirming?: boolean;
   tall?: boolean;
   compact?: boolean;
+  charCenter?: boolean;
   onClick: () => void;
 }) {
   const titleColor = accent === 'emerald' ? 'text-emerald-300' : 'text-amber-300';
@@ -145,7 +147,9 @@ function BannerCard({
             alt=""
             aria-hidden
             draggable={false}
-            className="pointer-events-none absolute left-1/2 top-0 h-[140%] w-auto -translate-x-1/2 drop-shadow-[0_2px_4px_rgba(0,0,0,0.6)]"
+            className={`pointer-events-none absolute top-0 h-[140%] w-auto drop-shadow-[0_2px_4px_rgba(0,0,0,0.6)] ${
+              charCenter ? 'left-1/2 -translate-x-1/2' : 'right-1'
+            }`}
             style={{ imageRendering: 'pixelated' }}
           />
         ) : null}
@@ -368,6 +372,7 @@ export function ShopTabs({
             bg="premium"
             char="premium"
             tall
+            charCenter
             title="성장 프리미엄"
             desc="한 달간 매일 보상이 쏟아지는 패스"
             detail={`즉시 ${dia(PREMIUM.instant.diamond)}·📦${PREMIUM.instant.boxes} · 매일 ${dia(
