@@ -30,19 +30,19 @@ const BOX: Record<Period, { cost: number; boxes: number }> = {
 type Cash = { id: string; name: string; krw: number; diamond: number; boxes: number };
 const CASH: Record<Period, Cash[]> = {
   daily: [
-    { id: 'd1', name: '주머니', krw: 1200, diamond: 290, boxes: 3 },
-    { id: 'd2', name: '꾸러미', krw: 2500, diamond: 610, boxes: 7 },
-    { id: 'd3', name: '금고', krw: 4900, diamond: 1200, boxes: 15 },
+    { id: 'd1', name: '모험가의 자루', krw: 1200, diamond: 290, boxes: 3 },
+    { id: 'd2', name: '기사의 상자', krw: 2500, diamond: 610, boxes: 7 },
+    { id: 'd3', name: '왕의 금고', krw: 4900, diamond: 1200, boxes: 15 },
   ],
   weekly: [
-    { id: 'w1', name: '주머니', krw: 4900, diamond: 1360, boxes: 18 },
-    { id: 'w2', name: '꾸러미', krw: 9900, diamond: 2750, boxes: 40 },
-    { id: 'w3', name: '금고', krw: 19900, diamond: 5550, boxes: 90 },
+    { id: 'w1', name: '모험가의 자루', krw: 4900, diamond: 1360, boxes: 18 },
+    { id: 'w2', name: '기사의 상자', krw: 9900, diamond: 2750, boxes: 40 },
+    { id: 'w3', name: '왕의 금고', krw: 19900, diamond: 5550, boxes: 90 },
   ],
   monthly: [
-    { id: 'm1', name: '주머니', krw: 9900, diamond: 3200, boxes: 55 },
-    { id: 'm2', name: '꾸러미', krw: 19900, diamond: 6450, boxes: 120 },
-    { id: 'm3', name: '금고', krw: 39900, diamond: 12900, boxes: 260 },
+    { id: 'm1', name: '모험가의 자루', krw: 9900, diamond: 3200, boxes: 55 },
+    { id: 'm2', name: '기사의 상자', krw: 19900, diamond: 6450, boxes: 120 },
+    { id: 'm3', name: '왕의 금고', krw: 39900, diamond: 12900, boxes: 260 },
   ],
 };
 const PREMIUM = {
@@ -255,7 +255,7 @@ export function ShopTabs({ free: initialFree }: { free: Record<FreeSlot, boolean
             />
             <PaidCard
               icon="📦"
-              name="보급상자"
+              name="견습의 주머니"
               detail={`보급상자 ${BOX[tab].boxes}개`}
               price={dia(BOX[tab].cost)}
               onClick={soon}
