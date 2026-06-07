@@ -21,6 +21,7 @@ const PERIOD_TITLE: Record<Period, string> = {
   monthly: '월간 특가',
 };
 const PERIOD_LABEL: Record<Period, string> = { daily: '매일 1회', weekly: '주 1회', monthly: '월 1회' };
+const PERIOD_VALUE: Record<Period, string> = { daily: '이득', weekly: '더 이득', monthly: '최대 이득' };
 
 // 일반 다이아 충전 — 기준선(₩4.25~5.0/💎). total = diamond + bonus.
 const DIAMOND_PACKAGES = [
@@ -50,15 +51,12 @@ type CashPackage = {
   tag: string | null;
 };
 const CASH_PACKAGES: CashPackage[] = [
-  // 일일 (~₩4.1/💎 — 일반 충전보다 이득)
   { period: 'daily', id: 'cash_daily_s', tier: '소', krw: 1200, diamond: 290, boxes: 3, tag: null },
   { period: 'daily', id: 'cash_daily_m', tier: '중', krw: 2500, diamond: 610, boxes: 7, tag: null },
   { period: 'daily', id: 'cash_daily_l', tier: '대', krw: 4900, diamond: 1200, boxes: 15, tag: null },
-  // 주간 (~₩3.6/💎)
   { period: 'weekly', id: 'cash_weekly_s', tier: '소', krw: 4900, diamond: 1360, boxes: 18, tag: null },
   { period: 'weekly', id: 'cash_weekly_m', tier: '중', krw: 9900, diamond: 2750, boxes: 40, tag: '인기' },
   { period: 'weekly', id: 'cash_weekly_l', tier: '대', krw: 19900, diamond: 5550, boxes: 90, tag: null },
-  // 월간 (~₩3.1/💎)
   { period: 'monthly', id: 'cash_monthly_s', tier: '소', krw: 9900, diamond: 3200, boxes: 55, tag: null },
   { period: 'monthly', id: 'cash_monthly_m', tier: '중', krw: 19900, diamond: 6450, boxes: 120, tag: '인기' },
   { period: 'monthly', id: 'cash_monthly_l', tier: '대', krw: 39900, diamond: 12900, boxes: 260, tag: null },
@@ -66,7 +64,6 @@ const CASH_PACKAGES: CashPackage[] = [
 
 // 월간 프리미엄 — 매일 💎+📦 drip(30일). 최고 효율(~₩2.3/💎) + 박스 대량.
 const PREMIUM = {
-  id: 'monthly_premium',
   krw: 29900,
   instant: { diamond: 4000, boxes: 30 },
   daily: { diamond: 300, boxes: 3, days: 30 },
@@ -76,18 +73,14 @@ const PREMIUM_TOTAL = {
   boxes: PREMIUM.instant.boxes + PREMIUM.daily.boxes * PREMIUM.daily.days,
 };
 
-function Tag({ text, amber }: { text: string; amber?: boolean }) {
-  return (
-    <span
-      className={`rounded-full px-1.5 py-0.5 text-[9px] font-bold ${
-        amber
-          ? 'bg-amber-500 text-amber-950'
-          : 'bg-zinc-100 font-medium text-zinc-500 dark:bg-zinc-800 dark:text-zinc-400'
-      }`}
-    >
-      {text}
-    </span>
-  );
+function Chip({ text, tone = 'muted' }: { text: string; tone?: 'muted' | 'amber' | 'emerald' }) {
+  const cls =
+    tone === 'amber'
+      ? 'bg-amber-500 text-amber-950'
+      : tone === 'emerald'
+        ? 'bg-emerald-500/15 text-emerald-600 ring-1 ring-emerald-500/30 dark:text-emerald-400'
+        : 'bg-zinc-100 text-zinc-500 dark:bg-zinc-800 dark:text-zinc-400';
+  return <span className={`rounded-full px-1.5 py-0.5 text-[9px] font-bold ${cls}`}>{text}</span>;
 }
 
 function SoonButton() {
@@ -95,12 +88,46 @@ function SoonButton() {
     <button
       type="button"
       disabled
-      className="shrink-0 rounded-full bg-zinc-200 px-3 py-1.5 text-xs font-bold text-zinc-500 dark:bg-zinc-800"
+      className="shrink-0 rounded-full bg-zinc-200/80 px-3 py-1.5 text-[11px] font-bold text-zinc-500 dark:bg-zinc-800"
     >
       준비 중
     </button>
   );
 }
+
+/** 공통 패키지 행 — 좌(아이콘)·중(제목/내용)·우(가격+버튼). */
+function Row({
+  icon,
+  title,
+  chips,
+  detail,
+  price,
+}: {
+  icon: string;
+  title: string;
+  chips?: React.ReactNode;
+  detail: string;
+  price?: string;
+}) {
+  return (
+    <li className="flex items-center gap-3 px-3.5 py-3">
+      <span className="text-2xl leading-none">{icon}</span>
+      <div className="min-w-0 flex-1">
+        <div className="flex items-center gap-1.5 text-[13px] font-bold">
+          {title}
+          {chips}
+        </div>
+        <div className="mt-0.5 text-[11px] tabular-nums text-zinc-500">{detail}</div>
+      </div>
+      <div className="flex shrink-0 flex-col items-end gap-1">
+        {price ? <span className="text-[12px] font-bold tabular-nums">{price}</span> : null}
+        <SoonButton />
+      </div>
+    </li>
+  );
+}
+
+const won = (n: number) => `₩${n.toLocaleString('ko-KR')}`;
 
 export default async function ShopPage() {
   const userId = await getSessionUserId();
@@ -123,59 +150,67 @@ export default async function ShopPage() {
   const periods: Period[] = ['daily', 'weekly', 'monthly'];
 
   return (
-    <div className="space-y-5 px-4 py-4">
-      <div className="flex items-baseline justify-between px-1">
-        <h1 className="text-sm font-bold">상점</h1>
-        <span className="font-mono text-[11px] tabular-nums text-zinc-500">
-          보유 💎 {diamond.toLocaleString('ko-KR')}
-        </span>
+    <div className="space-y-4 px-3 py-3">
+      {/* 헤로 배너 — 보물 + 보유 다이아 + 효율 안내 */}
+      <div className="relative overflow-hidden rounded-2xl border border-amber-700/40 bg-gradient-to-br from-amber-950/70 via-zinc-900 to-zinc-950 px-4 py-4 shadow-[0_0_30px_rgba(245,158,11,0.12)]">
+        {/* eslint-disable-next-line @next/next/no-img-element */}
+        <img
+          src="/sprites/shop-hero.png?v=1"
+          alt=""
+          aria-hidden
+          className="pointer-events-none absolute -bottom-3 -right-3 h-32 w-32 object-contain opacity-90 drop-shadow-[0_0_12px_rgba(245,158,11,0.4)]"
+          style={{ imageRendering: 'pixelated' }}
+        />
+        <div className="relative max-w-[64%]">
+          <h1 className="text-base font-extrabold text-amber-50">상점</h1>
+          <p className="mt-1 text-[11px] leading-relaxed text-amber-200/70">
+            기간 특가는 일반 충전보다 이득 — 길게 약속할수록 혜택 ↑
+          </p>
+          <div className="mt-2.5 inline-flex items-center gap-1 rounded-full bg-black/40 px-2.5 py-1 text-[12px] font-bold tabular-nums text-amber-100 ring-1 ring-amber-500/30">
+            💎 {diamond.toLocaleString('ko-KR')}
+          </div>
+        </div>
       </div>
-      <p className="rounded-xl border border-dashed border-zinc-300 bg-zinc-50 px-3 py-2 text-[11px] leading-relaxed text-zinc-500 dark:border-zinc-700 dark:bg-zinc-900">
-        기간 특가는 일반 충전보다 이득 — 길게 약속할수록(일&lt;주&lt;월&lt;프리미엄) 더 큰 혜택.
-      </p>
 
       {/* 기간 특가 — 각 기간: 보급상자(💎 구매) 1종 + 현금 3티어 */}
       {periods.map((period) => {
         const box = BOX_PACKAGES.find((b) => b.period === period)!;
         const cash = CASH_PACKAGES.filter((c) => c.period === period);
         return (
-          <section key={period} className="space-y-2">
-            <h2 className="px-1 text-xs font-semibold text-zinc-500">{PERIOD_TITLE[period]}</h2>
-            <ul className="space-y-2">
-              {/* 💎로 구매하는 보급상자 */}
-              <li className="flex items-center gap-3 rounded-xl border border-zinc-200 bg-white px-3 py-3 dark:border-zinc-800 dark:bg-zinc-950">
-                <span className="text-2xl">📦</span>
-                <div className="min-w-0 flex-1">
-                  <div className="flex items-center gap-1.5 text-sm font-semibold">
-                    보급상자 <Tag text={PERIOD_LABEL[period]} />
-                    {box.tag ? <Tag text={box.tag} amber /> : null}
-                  </div>
-                  <div className="text-[11px] tabular-nums text-zinc-500">
-                    💎{box.diamondCost.toLocaleString('ko-KR')} → 보급상자 {box.boxes}개
-                  </div>
-                </div>
-                <SoonButton />
-              </li>
-
-              {/* 현금 3티어(💎+📦) */}
+          <section
+            key={period}
+            className="overflow-hidden rounded-2xl border border-zinc-200 bg-white dark:border-zinc-800 dark:bg-zinc-950"
+          >
+            <div className="flex items-center justify-between border-b border-zinc-100 bg-zinc-50 px-3.5 py-2.5 dark:border-zinc-800/70 dark:bg-zinc-900/50">
+              <h2 className="text-[13px] font-bold">{PERIOD_TITLE[period]}</h2>
+              <Chip text={`일반보다 ${PERIOD_VALUE[period]}`} tone="emerald" />
+            </div>
+            <ul className="divide-y divide-zinc-100 dark:divide-zinc-800/60">
+              <Row
+                icon="📦"
+                title="보급상자"
+                chips={
+                  <>
+                    <Chip text={PERIOD_LABEL[period]} />
+                    {box.tag ? <Chip text={box.tag} tone="amber" /> : null}
+                  </>
+                }
+                detail={`💎${box.diamondCost.toLocaleString('ko-KR')} → 보급상자 ${box.boxes}개`}
+              />
               {cash.map((c) => (
-                <li
+                <Row
                   key={c.id}
-                  className="flex items-center gap-3 rounded-xl border border-zinc-200 bg-white px-3 py-3 dark:border-zinc-800 dark:bg-zinc-950"
-                >
-                  <span className="text-2xl">💎</span>
-                  <div className="min-w-0 flex-1">
-                    <div className="flex items-center gap-1.5 text-sm font-semibold">
-                      {c.tier} <Tag text={PERIOD_LABEL[period]} />
-                      {c.tag ? <Tag text={c.tag} amber /> : null}
-                    </div>
-                    <div className="text-[11px] tabular-nums text-zinc-500">
-                      💎{c.diamond.toLocaleString('ko-KR')} + 보급상자 {c.boxes}개 · ₩
-                      {c.krw.toLocaleString('ko-KR')}
-                    </div>
-                  </div>
-                  <SoonButton />
-                </li>
+                  icon="💎"
+                  title={c.tier}
+                  chips={
+                    <>
+                      <Chip text={PERIOD_LABEL[period]} />
+                      {c.tag ? <Chip text={c.tag} tone="amber" /> : null}
+                    </>
+                  }
+                  detail={`💎${c.diamond.toLocaleString('ko-KR')} + 보급상자 ${c.boxes}개`}
+                  price={won(c.krw)}
+                />
               ))}
             </ul>
           </section>
@@ -183,29 +218,32 @@ export default async function ShopPage() {
       })}
 
       {/* 월간 프리미엄 — 매일 💎+📦 수령(drip) */}
-      <section className="space-y-2">
-        <h2 className="px-1 text-xs font-semibold text-zinc-500">월간 프리미엄</h2>
-        <div className="rounded-xl border border-amber-400 bg-amber-50/50 px-3 py-3 dark:border-amber-700/60 dark:bg-amber-950/20">
-          <div className="flex items-center gap-1.5">
-            <span className="text-sm font-bold">월간 프리미엄 성장 펀드</span>
-            <Tag text="30일" />
-            <Tag text="최고 혜택" amber />
+      <section className="overflow-hidden rounded-2xl border-2 border-amber-400/70 bg-gradient-to-br from-amber-50/60 to-white shadow-[0_0_24px_rgba(245,158,11,0.15)] dark:border-amber-600/50 dark:from-amber-950/30 dark:to-zinc-950">
+        <div className="flex items-center justify-between border-b border-amber-200/60 px-3.5 py-2.5 dark:border-amber-800/40">
+          <h2 className="flex items-center gap-1.5 text-[13px] font-extrabold">
+            👑 월간 프리미엄
+          </h2>
+          <Chip text="최고 혜택" tone="amber" />
+        </div>
+        <div className="px-3.5 py-3">
+          <div className="grid grid-cols-2 gap-2 text-[11px]">
+            <div className="rounded-xl bg-black/[0.03] px-3 py-2 dark:bg-white/[0.04]">
+              <div className="text-[10px] font-semibold text-zinc-500">즉시</div>
+              <div className="mt-0.5 font-bold tabular-nums">
+                💎{PREMIUM.instant.diamond.toLocaleString('ko-KR')} · 📦{PREMIUM.instant.boxes}
+              </div>
+            </div>
+            <div className="rounded-xl bg-black/[0.03] px-3 py-2 dark:bg-white/[0.04]">
+              <div className="text-[10px] font-semibold text-zinc-500">매일 ×{PREMIUM.daily.days}일</div>
+              <div className="mt-0.5 font-bold tabular-nums">
+                💎{PREMIUM.daily.diamond.toLocaleString('ko-KR')} · 📦{PREMIUM.daily.boxes}
+              </div>
+            </div>
           </div>
-          <div className="mt-1.5 space-y-0.5 text-[11px] text-zinc-600 dark:text-zinc-300">
-            <div>
-              즉시 💎{PREMIUM.instant.diamond.toLocaleString('ko-KR')} · 📦{PREMIUM.instant.boxes}
-            </div>
-            <div>
-              매일 💎{PREMIUM.daily.diamond.toLocaleString('ko-KR')} · 📦{PREMIUM.daily.boxes} ×{' '}
-              {PREMIUM.daily.days}일
-            </div>
-            <div className="text-[10px] text-zinc-400">
-              총 💎{PREMIUM_TOTAL.diamond.toLocaleString('ko-KR')} · 📦{PREMIUM_TOTAL.boxes}
-            </div>
-          </div>
-          <div className="mt-2 flex items-center justify-between">
-            <span className="text-[11px] font-semibold tabular-nums text-zinc-500">
-              ₩{PREMIUM.krw.toLocaleString('ko-KR')}
+          <div className="mt-2.5 flex items-center justify-between">
+            <span className="text-[11px] tabular-nums text-zinc-500">
+              총 💎{PREMIUM_TOTAL.diamond.toLocaleString('ko-KR')} · 📦{PREMIUM_TOTAL.boxes} ·{' '}
+              <span className="font-bold text-zinc-700 dark:text-zinc-200">{won(PREMIUM.krw)}</span>
             </span>
             <SoonButton />
           </div>
@@ -213,38 +251,32 @@ export default async function ShopPage() {
       </section>
 
       {/* 다이아 충전 — 기준선 */}
-      <section className="space-y-2">
-        <h2 className="px-1 text-xs font-semibold text-zinc-500">다이아 충전</h2>
+      <section className="overflow-hidden rounded-2xl border border-zinc-200 bg-white dark:border-zinc-800 dark:bg-zinc-950">
+        <div className="border-b border-zinc-100 bg-zinc-50 px-3.5 py-2.5 dark:border-zinc-800/70 dark:bg-zinc-900/50">
+          <h2 className="text-[13px] font-bold">다이아 충전</h2>
+        </div>
         {!verified ? (
-          <p className="rounded-xl border border-dashed border-zinc-300 bg-zinc-50 px-3 py-2.5 text-[11px] leading-relaxed text-zinc-500 dark:border-zinc-700 dark:bg-zinc-900">
+          <p className="border-b border-zinc-100 px-3.5 py-2 text-[11px] leading-relaxed text-zinc-500 dark:border-zinc-800/60">
             ℹ️ 최초 결제 시 휴대폰 본인인증이 필요합니다(미성년자 보호·전자상거래법).
           </p>
         ) : null}
-        <ul className="space-y-2">
+        <ul className="divide-y divide-zinc-100 dark:divide-zinc-800/60">
           {DIAMOND_PACKAGES.map((pkg) => {
             const total = pkg.diamond + pkg.bonus;
             return (
-              <li
+              <Row
                 key={pkg.id}
-                className="flex items-center gap-3 rounded-xl border border-zinc-200 bg-white px-3 py-3 dark:border-zinc-800 dark:bg-zinc-950"
-              >
-                <span className="text-2xl">💎</span>
-                <div className="min-w-0 flex-1">
-                  <div className="flex items-center gap-1.5 text-sm font-semibold tabular-nums">
-                    {total.toLocaleString('ko-KR')}
-                    {pkg.bonus > 0 ? (
-                      <span className="text-[11px] font-medium text-emerald-600 dark:text-emerald-400">
-                        (+{pkg.bonus.toLocaleString('ko-KR')} 보너스)
-                      </span>
-                    ) : null}
-                    {pkg.tag ? <Tag text={pkg.tag} amber /> : null}
-                  </div>
-                  <div className="text-[11px] tabular-nums text-zinc-500">
-                    ₩{pkg.krw.toLocaleString('ko-KR')}
-                  </div>
-                </div>
-                <SoonButton />
-              </li>
+                icon="💎"
+                title={total.toLocaleString('ko-KR')}
+                chips={
+                  <>
+                    {pkg.bonus > 0 ? <Chip text={`+${pkg.bonus.toLocaleString('ko-KR')}`} tone="emerald" /> : null}
+                    {pkg.tag ? <Chip text={pkg.tag} tone="amber" /> : null}
+                  </>
+                }
+                detail={`다이아 ${pkg.diamond.toLocaleString('ko-KR')}${pkg.bonus > 0 ? ` + 보너스 ${pkg.bonus.toLocaleString('ko-KR')}` : ''}`}
+                price={won(pkg.krw)}
+              />
             );
           })}
         </ul>
