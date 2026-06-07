@@ -29,6 +29,8 @@ export async function GET(
   const { shareCode } = await params;
 
   // 1) 레이드 shareCode 우선 매칭 — 영숫자 10자 + DB 조회. 못 찾으면 닉네임 분기로.
+  //    공개 풀페이지 초대 랜딩(/raid-invite/<shareCode>)으로 — 헤더/네비 없는 전체 화면.
+  //    비로그인도 보스·남은시간 보고 로그인 후 참여 가능(랜딩에서 분기).
   if (RAID_SHARE_RE.test(shareCode)) {
     try {
       const [r] = await db
@@ -38,7 +40,7 @@ export async function GET(
         .limit(1);
       if (r) {
         return NextResponse.redirect(
-          new URL(`/raid/${r.id.toString()}`, req.nextUrl.origin),
+          new URL(`/raid-invite/${shareCode}`, req.nextUrl.origin),
           307,
         );
       }

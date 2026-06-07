@@ -1,4 +1,4 @@
-import { notFound } from 'next/navigation';
+import { notFound, redirect } from 'next/navigation';
 import { and, eq } from 'drizzle-orm';
 import { preload } from 'react-dom';
 
@@ -13,7 +13,6 @@ import { assetUrl } from '@/lib/asset-versions';
 
 import { settleRaidAction } from '../actions';
 import { RaidSessionCard, type RaidView } from '../RaidSessionCard';
-import { RaidJoinConfirm } from './RaidJoinConfirm';
 
 export default async function RaidDetail({ params }: { params: Promise<{ raidId: string }> }) {
   const userId = await getSessionUserId();
@@ -91,20 +90,8 @@ export default async function RaidDetail({ params }: { params: Promise<{ raidId:
   const total = parts.reduce((s, p) => s + Number(p.totalDamage), 0);
   const me = parts.find((p) => p.userId === userId) ?? null;
 
-  // 비참가자는 상세(세션) 진입 차단 — 참가 컨펌 화면만(보스·스토리·남은시간·참가하기).
-  if (!me) {
-    return (
-      <div className="flex-1">
-        <RaidJoinConfirm
-          bossCode={raid.bossCode}
-          expireAtIso={raid.expireAt.toISOString()}
-          status={raid.status}
-          shareCode={raid.shareCode}
-          participantCount={parts.length}
-        />
-      </div>
-    );
-  }
+  // 비참가자는 세션 진입 차단 — 헤더/네비 없는 공개 풀페이지 초대 랜딩으로.
+  if (!me) redirect(`/raid-invite/${raid.shareCode}`);
 
   // 정산된 레이드면 내 결산 보상(미수령/수령 여부 포함) 조회.
   let myReward: RaidView['myReward'] = null;
