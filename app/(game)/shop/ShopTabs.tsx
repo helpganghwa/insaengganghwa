@@ -34,6 +34,43 @@ const FREE_DISPLAY: Record<
   signup: { period: '', reward: '📦 10개', diamond: 0, boxes: 10 },
 };
 
+// 카드·기간별 한 줄 설명(플레이버). 기간(일일/주간/월간) × 카드 종류마다 다르게.
+type ShopPeriod = 'daily' | 'weekly' | 'monthly';
+const CASH_DESC: Record<ShopPeriod, Record<string, string>> = {
+  daily: {
+    '모험가의 자루': '오늘의 가벼운 보급 — 모험가의 자루',
+    '기사의 상자': '오늘의 든든한 보급 — 기사의 보물상자',
+    '왕의 금고': '오늘의 최고 보급 — 황금이 가득한 금고',
+  },
+  weekly: {
+    '모험가의 자루': '이번 주 가벼운 보급 — 모험가의 자루',
+    '기사의 상자': '주간 든든한 보급 — 기사의 보물상자',
+    '왕의 금고': '주간 최고 보급 — 황금이 가득한 금고',
+  },
+  monthly: {
+    '모험가의 자루': '이달의 가벼운 보급 — 모험가의 자루',
+    '기사의 상자': '월간 든든한 보급 — 기사의 보물상자',
+    '왕의 금고': '매달 최고의 보상 — 황금이 가득한 금고',
+  },
+};
+const BOX_DESC: Record<ShopPeriod, string> = {
+  daily: '오늘의 보급 상자 묶음 — 견습의 주머니',
+  weekly: '이번 주 보급 상자 묶음 — 견습의 주머니',
+  monthly: '이달의 보급 상자 묶음 — 견습의 주머니',
+};
+const FREE_DESC: Record<FreeSlot, string> = {
+  daily: '매일 받는 무료 보급 — 출석 선물',
+  weekly: '매주 받는 무료 보급 — 주간 선물',
+  monthly: '매월 받는 무료 보급 — 월간 선물',
+  signup: '가입 환영 무료 보급 — 첫 선물',
+};
+// 현금 카드 종류 → 배경/캐릭터 에셋 키(왕의 금고/기사의 상자만 캐릭터).
+const CASH_ART: Record<string, { bg: string; char?: 'knight' | 'vault' }> = {
+  '왕의 금고': { bg: 'vault', char: 'vault' },
+  '기사의 상자': { bg: 'knight', char: 'knight' },
+  '모험가의 자루': { bg: 'adventurer' },
+};
+
 const won = (n: number) => `₩${n.toLocaleString('ko-KR')}`;
 const dia = (n: number) => `💎${n.toLocaleString('ko-KR')}`;
 
@@ -140,68 +177,91 @@ function FreeRow({
 }
 
 /**
- * 등급 배너 카드 — DailySupply식 CSS 레이어(배경 씬 / 테마 캐릭터 / 좌측 그라데이션 / 텍스트).
- * 구매 완료 시 흑백(grayscale)만 적용 — 클릭은 유지(상위에서 '이미 구매' 토스트).
+ * 상점 배너 카드 — DailySupply식 CSS 레이어(배경 씬 / 테마 캐릭터(선택) / 좌측 그라데이션 / 텍스트).
+ * 정보 배치: 제목 → 설명(카드·기간별) → 보상·가격(가격은 약하게). 우측 CTA는 무료 수령용(선택).
+ * 완료(구매/수령) 시 흑백(grayscale)만 — 클릭은 유지(상위에서 안내 토스트).
  */
 function BannerCard({
-  theme,
-  name,
+  bg,
+  char,
+  accent = 'amber',
+  title,
+  desc,
   detail,
   price,
-  purchased,
+  cta,
+  grayscale,
   onClick,
 }: {
-  theme: 'vault' | 'knight';
-  name: string;
+  bg: string;
+  char?: 'knight' | 'vault';
+  accent?: 'amber' | 'emerald';
+  title: string;
+  desc: string;
   detail: string;
-  price: string;
-  purchased?: boolean;
+  price?: string;
+  cta?: React.ReactNode;
+  grayscale?: boolean;
   onClick: () => void;
 }) {
+  const titleColor = accent === 'emerald' ? 'text-emerald-300' : 'text-amber-300';
+  const border = accent === 'emerald' ? 'border-emerald-900/40' : 'border-amber-900/40';
   return (
     <li>
       <button
         type="button"
         onClick={onClick}
-        className={`relative block h-24 w-full overflow-hidden rounded-xl border border-amber-900/40 text-left shadow-md shadow-black/30 transition active:scale-[0.99] ${
-          purchased ? 'grayscale' : ''
+        className={`relative block h-[82px] w-full overflow-hidden rounded-xl border ${border} text-left shadow-md shadow-black/30 transition active:scale-[0.99] ${
+          grayscale ? 'grayscale' : ''
         }`}
       >
         {/* 배경 씬 */}
         {/* eslint-disable-next-line @next/next/no-img-element */}
         <img
-          src={assetUrl(`/sprites/shop/${theme}-bg.png`)}
+          src={assetUrl(`/sprites/shop/${bg}-bg.png`)}
           alt=""
           aria-hidden
           draggable={false}
           className="absolute inset-0 h-full w-full object-cover"
           style={{ imageRendering: 'pixelated' }}
         />
-        {/* 테마 캐릭터 — 우측 하단, 위로 살짝 넘침 */}
-        {/* eslint-disable-next-line @next/next/no-img-element */}
-        <img
-          src={assetUrl(`/sprites/shop/${theme}-char.png`)}
-          alt=""
-          aria-hidden
-          draggable={false}
-          className="pointer-events-none absolute top-0 right-1 h-[136%] w-auto drop-shadow-[0_2px_4px_rgba(0,0,0,0.6)]"
-          style={{ imageRendering: 'pixelated' }}
-        />
+        {/* 테마 캐릭터(선택) — 우측 상단 정렬, 다리쪽이 아래로 넘침 */}
+        {char ? (
+          // eslint-disable-next-line @next/next/no-img-element
+          <img
+            src={assetUrl(`/sprites/shop/${char}-char.png`)}
+            alt=""
+            aria-hidden
+            draggable={false}
+            className="pointer-events-none absolute top-0 right-1 h-[140%] w-auto drop-shadow-[0_2px_4px_rgba(0,0,0,0.6)]"
+            style={{ imageRendering: 'pixelated' }}
+          />
+        ) : null}
         {/* 좌→우 그라데이션(텍스트 가독성) */}
         <div className="pointer-events-none absolute inset-0 bg-gradient-to-r from-black/85 via-black/45 to-transparent" />
-        {/* 텍스트 + 가격 */}
-        <div className="relative z-10 flex h-full flex-col justify-center px-3.5">
-          <div className="text-[15px] font-extrabold text-amber-300 text-pixel-outline drop-shadow-[0_1px_2px_rgba(0,0,0,0.9)]">
-            {name}
+        {/* 정보 */}
+        <div className="relative z-10 flex h-full items-center gap-2 px-3.5">
+          <div className="min-w-0 flex-1">
+            <div
+              className={`text-[14px] font-extrabold ${titleColor} text-pixel-outline drop-shadow-[0_1px_2px_rgba(0,0,0,0.9)]`}
+            >
+              {title}
+            </div>
+            <div className="mt-0.5 truncate text-[10px] font-medium text-white/85 drop-shadow-[0_1px_2px_rgba(0,0,0,0.9)]">
+              {desc}
+            </div>
+            <div className="mt-1 flex items-baseline gap-2">
+              <span className="text-[11px] font-semibold tabular-nums text-white/80 drop-shadow-[0_1px_2px_rgba(0,0,0,0.9)]">
+                {detail}
+              </span>
+              {price ? (
+                <span className="text-[10px] tabular-nums text-white/45 drop-shadow-[0_1px_2px_rgba(0,0,0,0.9)]">
+                  {price}
+                </span>
+              ) : null}
+            </div>
           </div>
-          <div className="mt-0.5 text-[11px] font-medium tabular-nums text-white/90 drop-shadow-[0_1px_2px_rgba(0,0,0,0.9)]">
-            {detail}
-          </div>
-          <div className="mt-1.5">
-            <span className="inline-block rounded-md bg-amber-500/90 px-2 py-0.5 text-[12px] font-bold tabular-nums text-black shadow">
-              {price}
-            </span>
-          </div>
+          {cta ? <div className="relative z-10 shrink-0">{cta}</div> : null}
         </div>
       </button>
     </li>
@@ -382,48 +442,70 @@ export function ShopTabs({
         {/* 탭 내용 */}
         {tab !== 'charge' ? (
           <ul className="space-y-2">
-            <FreeRow
-              slot={tab}
-              available={free[tab]}
-              busy={claiming === tab}
-              onClaim={() => claimFreeSlot(tab)}
+            {/* 무료 수령 */}
+            <BannerCard
+              bg="free"
+              accent="emerald"
+              title="무료"
+              desc={FREE_DESC[tab]}
+              detail={FREE_DISPLAY[tab].reward}
+              grayscale={!free[tab]}
+              cta={
+                claiming === tab ? (
+                  <span className="text-[12px] font-bold text-zinc-100 drop-shadow-[0_1px_2px_rgba(0,0,0,0.9)]">
+                    수령 중…
+                  </span>
+                ) : free[tab] ? (
+                  <span className="rounded-md bg-emerald-500/90 px-2.5 py-1 text-[12px] font-bold text-white shadow">
+                    받기
+                  </span>
+                ) : (
+                  <span className="text-[11px] font-bold text-emerald-300 drop-shadow-[0_1px_2px_rgba(0,0,0,0.9)]">
+                    수령 완료
+                  </span>
+                )
+              }
+              onClick={() => {
+                if (claiming) return;
+                if (!free[tab]) {
+                  showHeaderToast({ icon: '🎁', title: '이미 수령했습니다' });
+                  return;
+                }
+                claimFreeSlot(tab);
+              }}
             />
-            <PaidCard
-              name="견습의 주머니"
+            {/* 견습의 주머니(💎로 구매) */}
+            <BannerCard
+              bg="box"
+              title="견습의 주머니"
+              desc={BOX_DESC[tab]}
               detail={`📦 ${BOX[tab].boxes}개`}
               price={dia(BOX[tab].cost)}
-              onClick={() => onBuyBox(`box_${tab}`, BOX[tab].cost)}
-              purchased={purchased.has(`box_${tab}`)}
-            />
-            {CASH[tab].map((c) => {
-              const theme =
-                c.name === '왕의 금고' ? 'vault' : c.name === '기사의 상자' ? 'knight' : null;
-              const detail = `${dia(c.diamond)} · 📦${c.boxes}`;
-              if (theme) {
-                return (
-                  <BannerCard
-                    key={c.id}
-                    theme={theme}
-                    name={c.name}
-                    detail={detail}
-                    price={won(c.krw)}
-                    purchased={purchased.has(c.id)}
-                    onClick={() =>
-                      purchased.has(c.id)
-                        ? showHeaderToast({ icon: '🛒', title: '이미 구매완료한 상품입니다' })
-                        : onBuy(c.id)
-                    }
-                  />
-                );
+              grayscale={purchased.has(`box_${tab}`)}
+              onClick={() =>
+                purchased.has(`box_${tab}`)
+                  ? showHeaderToast({ icon: '🛒', title: '이미 구매완료한 상품입니다' })
+                  : onBuyBox(`box_${tab}`, BOX[tab].cost)
               }
+            />
+            {/* 현금 패키지 3종 */}
+            {CASH[tab].map((c) => {
+              const art = CASH_ART[c.name] ?? { bg: 'adventurer' };
               return (
-                <PaidCard
+                <BannerCard
                   key={c.id}
-                  name={c.name}
-                  detail={detail}
+                  bg={art.bg}
+                  char={art.char}
+                  title={c.name}
+                  desc={CASH_DESC[tab][c.name] ?? ''}
+                  detail={`${dia(c.diamond)} · 📦${c.boxes}`}
                   price={won(c.krw)}
-                  onClick={() => onBuy(c.id)}
-                  purchased={purchased.has(c.id)}
+                  grayscale={purchased.has(c.id)}
+                  onClick={() =>
+                    purchased.has(c.id)
+                      ? showHeaderToast({ icon: '🛒', title: '이미 구매완료한 상품입니다' })
+                      : onBuy(c.id)
+                  }
                 />
               );
             })}
