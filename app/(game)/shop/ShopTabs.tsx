@@ -72,24 +72,41 @@ function Soon() {
 }
 
 function Item({
-  icon,
+  img,
   name,
   detail,
   price,
 }: {
-  icon: string;
+  img: string;
   name: string;
   detail: string;
   price: string;
 }) {
+  const src = assetUrl(img);
   return (
-    <li className="flex items-center gap-3 rounded-xl border border-zinc-200 bg-white px-3.5 py-2.5 dark:border-zinc-800 dark:bg-zinc-950">
-      <span className="text-xl leading-none">{icon}</span>
-      <div className="min-w-0 flex-1">
+    <li className="relative flex items-center gap-3 overflow-hidden rounded-xl border border-zinc-200 bg-white px-3.5 py-2.5 dark:border-zinc-800 dark:bg-zinc-950">
+      {/* 옅은 테마 배경(우측) — 가독성 위해 13% + 좌측 솔리드 그라데이션 */}
+      {/* eslint-disable-next-line @next/next/no-img-element */}
+      <img
+        src={src}
+        alt=""
+        aria-hidden
+        className="pointer-events-none absolute -right-2 top-1/2 h-[210%] w-auto -translate-y-1/2 object-contain opacity-[0.13]"
+        style={{ imageRendering: 'pixelated' }}
+      />
+      <div className="absolute inset-0 bg-gradient-to-r from-white via-white/85 to-transparent dark:from-zinc-950 dark:via-zinc-950/80" />
+      {/* eslint-disable-next-line @next/next/no-img-element */}
+      <img
+        src={src}
+        alt=""
+        className="relative z-10 h-9 w-9 shrink-0 object-contain"
+        style={{ imageRendering: 'pixelated' }}
+      />
+      <div className="relative z-10 min-w-0 flex-1">
         <div className="text-[13px] font-bold">{name}</div>
         <div className="mt-0.5 text-[11px] tabular-nums text-zinc-500">{detail}</div>
       </div>
-      <div className="flex shrink-0 flex-col items-end gap-1">
+      <div className="relative z-10 flex shrink-0 flex-col items-end gap-1">
         <span className="text-[12px] font-bold tabular-nums">{price}</span>
         <Soon />
       </div>
@@ -97,15 +114,26 @@ function Item({
   );
 }
 
+const CASH_IMG: Record<string, string> = {
+  주머니: '/sprites/shop/pouch.png',
+  꾸러미: '/sprites/shop/bundle.png',
+  금고: '/sprites/shop/vault.png',
+};
+
 function PeriodList({ period }: { period: Period }) {
   const box = BOX[period];
   return (
     <ul className="space-y-2">
-      <Item icon="📦" name="보급상자" detail={`보급상자 ${box.boxes}개`} price={dia(box.cost)} />
+      <Item
+        img="/sprites/shop/box.png"
+        name="보급상자"
+        detail={`보급상자 ${box.boxes}개`}
+        price={dia(box.cost)}
+      />
       {CASH[period].map((c) => (
         <Item
           key={c.id}
-          icon="💎"
+          img={CASH_IMG[c.name] ?? '/sprites/shop/pouch.png'}
           name={c.name}
           detail={`${dia(c.diamond)} · 📦${c.boxes}`}
           price={won(c.krw)}
@@ -165,10 +193,21 @@ export function ShopTabs({ verified }: { verified: boolean }) {
         {tab === 'daily' || tab === 'weekly' || tab === 'monthly' ? <PeriodList period={tab} /> : null}
 
         {tab === 'premium' ? (
-          <div className="rounded-2xl border border-amber-300 bg-amber-50/50 p-4 dark:border-amber-700/50 dark:bg-amber-950/20">
-            <div className="text-[14px] font-extrabold">성장 펀드</div>
-            <p className="mt-0.5 text-[11px] text-zinc-500">30일간 매일 다이아와 보급상자를 받습니다.</p>
-            <div className="mt-3 grid grid-cols-2 gap-2 text-[11px]">
+          <div className="relative overflow-hidden rounded-2xl border border-amber-300 bg-amber-50/50 p-4 dark:border-amber-700/50 dark:bg-amber-950/20">
+            {/* eslint-disable-next-line @next/next/no-img-element */}
+            <img
+              src={assetUrl('/sprites/shop/premium.png')}
+              alt=""
+              aria-hidden
+              className="pointer-events-none absolute -right-3 -top-3 h-24 w-24 object-contain opacity-25 drop-shadow-[0_0_10px_rgba(245,158,11,0.4)]"
+              style={{ imageRendering: 'pixelated' }}
+            />
+            <div className="absolute inset-0 bg-gradient-to-r from-amber-50/60 via-amber-50/30 to-transparent dark:from-amber-950/30 dark:via-amber-950/10" />
+            <div className="relative z-10 text-[14px] font-extrabold">성장 프리미엄</div>
+            <p className="relative z-10 mt-0.5 text-[11px] text-zinc-500">
+              30일간 매일 다이아와 보급상자를 받습니다.
+            </p>
+            <div className="relative z-10 mt-3 grid grid-cols-2 gap-2 text-[11px]">
               <div className="rounded-xl bg-black/[0.03] px-3 py-2 dark:bg-white/[0.05]">
                 <div className="text-[10px] font-semibold text-zinc-500">즉시</div>
                 <div className="mt-0.5 font-bold tabular-nums">
@@ -182,11 +221,11 @@ export function ShopTabs({ verified }: { verified: boolean }) {
                 </div>
               </div>
             </div>
-            <div className="mt-3 flex items-center justify-between">
+            <div className="relative z-10 mt-3 flex items-center justify-between">
               <span className="text-[12px] font-bold tabular-nums">{won(PREMIUM.krw)}</span>
               <Soon />
             </div>
-            <p className="mt-2 text-[10px] tabular-nums text-zinc-400">
+            <p className="relative z-10 mt-2 text-[10px] tabular-nums text-zinc-400">
               총 {dia(premiumTotal.diamond)} · 📦{premiumTotal.boxes}
             </p>
           </div>
@@ -201,7 +240,13 @@ export function ShopTabs({ verified }: { verified: boolean }) {
             ) : null}
             <ul className="space-y-2">
               {DIAMONDS.map((d) => (
-                <Item key={d.id} icon="💎" name={dia(d.total)} detail="다이아 충전" price={won(d.krw)} />
+                <Item
+                  key={d.id}
+                  img="/sprites/shop/charge.png"
+                  name={dia(d.total)}
+                  detail="다이아 충전"
+                  price={won(d.krw)}
+                />
               ))}
             </ul>
           </div>
