@@ -4,14 +4,16 @@ import { useState, useTransition } from 'react';
 import { useRouter } from 'next/navigation';
 
 import { assetUrl } from '@/lib/asset-versions';
+import { useResourceToast } from '@/components/ResourceToast';
 
 import { claimFreeAction } from './actions';
 import type { FreeSlot } from '@/lib/game/shop/free';
 
 /**
  * 상점 — 상단 프리미엄 배너 + 탭(일일/주간/월간/충전). 담백·컴팩트.
- * 각 탭 최상단에 무료 수령(주기 멱등·결제 불필요) — 수령 가능하면 탭에 빨간 점.
- * 현금/박스 상품은 결제 백엔드 연동 전 '준비 중'. 수치는 시작값(시뮬 후 조정).
+ * 각 카드 배경 = 테마 픽셀아트(object-cover 꽉 채움) + 어두운 오버레이(가독성).
+ * 각 탭 최상단 무료 수령(주기 멱등·결제 불필요) — 수령 가능 시 탭 빨간점.
+ * 유료/박스 상품은 결제 연동 전 — 클릭 시 '준비 중입니다' 토스트. 수치는 시작값.
  */
 type Tab = 'daily' | 'weekly' | 'monthly' | 'charge';
 const TABS: { key: Tab; label: string; free: FreeSlot }[] = [
@@ -62,26 +64,76 @@ const CASH_IMG: Record<string, string> = {
   꾸러미: '/sprites/shop/bundle.png',
   금고: '/sprites/shop/vault.png',
 };
-// 무료 수령 표시(슬롯별). 보상은 free.ts FREE_REWARDS와 1:1.
 const FREE_DISPLAY: Record<FreeSlot, { period: string; reward: string; img: string }> = {
   daily: { period: '매일', reward: '보급상자 1개', img: '/sprites/shop/box.png' },
   weekly: { period: '매주', reward: '💎200', img: '/sprites/shop/charge.png' },
   monthly: { period: '매월', reward: '💎500', img: '/sprites/shop/charge.png' },
-  signup: { period: '가입 1회', reward: '보급상자 10개', img: '/sprites/shop/box.png' },
+  signup: { period: '', reward: '보급상자 10개', img: '/sprites/shop/box.png' },
 };
 
 const won = (n: number) => `₩${n.toLocaleString('ko-KR')}`;
 const dia = (n: number) => `💎${n.toLocaleString('ko-KR')}`;
+const DARK = 'bg-gradient-to-r from-zinc-950/92 via-zinc-950/72 to-zinc-950/55';
 
-function Soon() {
+/** 테마 이미지를 카드 전체 배경으로 깐 카드 — onClick 있으면 버튼, 없으면 정적. */
+function BgCard({
+  img,
+  overlay = DARK,
+  onClick,
+  children,
+}: {
+  img: string;
+  overlay?: string;
+  onClick?: () => void;
+  children: React.ReactNode;
+}) {
+  const inner = (
+    <>
+      {/* eslint-disable-next-line @next/next/no-img-element */}
+      <img
+        src={assetUrl(img)}
+        alt=""
+        aria-hidden
+        className="pointer-events-none absolute inset-0 h-full w-full object-cover opacity-50"
+        style={{ imageRendering: 'pixelated' }}
+      />
+      <div className={`pointer-events-none absolute inset-0 ${overlay}`} />
+      <div className="relative z-10 flex items-center gap-3 px-3.5 py-3">{children}</div>
+    </>
+  );
+  const cls = 'relative block w-full overflow-hidden rounded-xl border border-white/10 text-left';
+  return onClick ? (
+    <li>
+      <button type="button" onClick={onClick} className={`${cls} active:opacity-90`}>
+        {inner}
+      </button>
+    </li>
+  ) : (
+    <li className={cls}>{inner}</li>
+  );
+}
+
+function PaidItem({
+  img,
+  name,
+  detail,
+  price,
+  onClick,
+}: {
+  img: string;
+  name: string;
+  detail: string;
+  price: string;
+  onClick: () => void;
+}) {
   return (
-    <button
-      type="button"
-      disabled
-      className="shrink-0 rounded-full bg-zinc-200/80 px-3 py-1.5 text-[11px] font-bold text-zinc-500 dark:bg-zinc-800"
-    >
-      준비 중
-    </button>
+    <BgCard img={img} onClick={onClick}>
+      <div className="min-w-0 flex-1">
+        <div className="text-[13px] font-bold text-white">{name}</div>
+        <div className="mt-0.5 text-[11px] tabular-nums text-zinc-300">{detail}</div>
+      </div>
+      <span className="shrink-0 text-[12px] font-bold tabular-nums text-white">{price}</span>
+    </BgCard>
   );
 }
 
@@ -98,74 +150,40 @@ function FreeRow({
 }) {
   const d = FREE_DISPLAY[slot];
   return (
-    <li className="relative flex items-center gap-3 overflow-hidden rounded-xl border border-emerald-300 bg-emerald-50/60 px-3.5 py-2.5 dark:border-emerald-800/50 dark:bg-emerald-950/20">
-      {/* eslint-disable-next-line @next/next/no-img-element */}
-      <img
-        src={assetUrl(d.img)}
-        alt=""
-        className="relative z-10 h-9 w-9 shrink-0 object-contain"
-        style={{ imageRendering: 'pixelated' }}
-      />
-      <div className="relative z-10 min-w-0 flex-1">
-        <div className="flex items-center gap-1.5 text-[13px] font-bold">
+    <BgCard
+      img={d.img}
+      overlay="bg-gradient-to-r from-emerald-950/92 via-emerald-950/74 to-emerald-950/55"
+    >
+      <div className="min-w-0 flex-1">
+        <div className="flex items-center gap-1.5 text-[13px] font-bold text-white">
           무료
-          <span className="text-[10px] font-medium text-emerald-600 dark:text-emerald-400">{d.period}</span>
+          {d.period ? <span className="text-[10px] font-medium text-emerald-300">{d.period}</span> : null}
         </div>
-        <div className="mt-0.5 text-[11px] tabular-nums text-zinc-500">{d.reward}</div>
+        <div className="mt-0.5 text-[11px] tabular-nums text-emerald-100/90">{d.reward}</div>
       </div>
       <button
         type="button"
         onClick={onClaim}
         disabled={!available || busy}
-        className={`relative z-10 shrink-0 rounded-full px-3 py-1.5 text-[11px] font-bold transition active:scale-95 ${
-          available && !busy ? 'bg-emerald-500 text-white' : 'bg-zinc-200 text-zinc-500 dark:bg-zinc-800'
+        className={`shrink-0 rounded-full px-3 py-1.5 text-[11px] font-bold transition active:scale-95 ${
+          available && !busy ? 'bg-emerald-500 text-white' : 'bg-zinc-700/80 text-zinc-400'
         }`}
       >
         {busy ? '수령 중…' : available ? '받기' : '받음'}
       </button>
-    </li>
+    </BgCard>
   );
 }
 
-function Item({ img, name, detail, price }: { img: string; name: string; detail: string; price: string }) {
-  const src = assetUrl(img);
-  return (
-    <li className="relative flex items-center gap-3 overflow-hidden rounded-xl border border-zinc-200 bg-white px-3.5 py-2.5 dark:border-zinc-800 dark:bg-zinc-950">
-      {/* eslint-disable-next-line @next/next/no-img-element */}
-      <img
-        src={src}
-        alt=""
-        aria-hidden
-        className="pointer-events-none absolute -right-2 top-1/2 h-[210%] w-auto -translate-y-1/2 object-contain opacity-[0.13]"
-        style={{ imageRendering: 'pixelated' }}
-      />
-      <div className="absolute inset-0 bg-gradient-to-r from-white via-white/85 to-transparent dark:from-zinc-950 dark:via-zinc-950/80" />
-      {/* eslint-disable-next-line @next/next/no-img-element */}
-      <img src={src} alt="" className="relative z-10 h-9 w-9 shrink-0 object-contain" style={{ imageRendering: 'pixelated' }} />
-      <div className="relative z-10 min-w-0 flex-1">
-        <div className="text-[13px] font-bold">{name}</div>
-        <div className="mt-0.5 text-[11px] tabular-nums text-zinc-500">{detail}</div>
-      </div>
-      <div className="relative z-10 flex shrink-0 flex-col items-end gap-1">
-        <span className="text-[12px] font-bold tabular-nums">{price}</span>
-        <Soon />
-      </div>
-    </li>
-  );
-}
-
-export function ShopTabs({
-  verified,
-  free: initialFree,
-}: {
-  verified: boolean;
-  free: Record<FreeSlot, boolean>;
-}) {
+export function ShopTabs({ free: initialFree }: { free: Record<FreeSlot, boolean> }) {
   const router = useRouter();
+  const { showHeaderToast } = useResourceToast();
   const [tab, setTab] = useState<Tab>('daily');
   const [free, setFree] = useState(initialFree);
   const [claiming, setClaiming] = useState<FreeSlot | null>(null);
   const [, startTransition] = useTransition();
+
+  const soon = () => showHeaderToast({ icon: '🛒', title: '준비 중입니다' });
 
   const claimFreeSlot = (slot: FreeSlot) => {
     if (claiming || !free[slot]) return;
@@ -174,7 +192,7 @@ export function ShopTabs({
       const r = await claimFreeAction(slot);
       if (r.status === 'success') {
         setFree((f) => ({ ...f, [slot]: false }));
-        router.refresh(); // 헤더 다이아·상태 갱신
+        router.refresh();
       }
       setClaiming(null);
     });
@@ -205,33 +223,36 @@ export function ShopTabs({
 
       <div className="min-h-0 flex-1 overflow-y-auto overscroll-contain px-3 py-3">
         {/* 프리미엄 상단 배너 */}
-        <div className="relative mb-3 overflow-hidden rounded-2xl border border-amber-300 bg-gradient-to-r from-amber-100/70 to-amber-50/20 px-4 py-3 dark:border-amber-700/50 dark:from-amber-950/40 dark:to-amber-950/10">
+        <button
+          type="button"
+          onClick={soon}
+          className="relative mb-3 block w-full overflow-hidden rounded-2xl border border-amber-500/40 text-left active:opacity-90"
+        >
           {/* eslint-disable-next-line @next/next/no-img-element */}
           <img
             src={assetUrl('/sprites/shop/premium.png')}
             alt=""
             aria-hidden
-            className="pointer-events-none absolute -right-2 top-1/2 h-[150%] w-auto -translate-y-1/2 object-contain opacity-30 drop-shadow-[0_0_10px_rgba(245,158,11,0.4)]"
+            className="pointer-events-none absolute inset-0 h-full w-full object-cover opacity-55"
             style={{ imageRendering: 'pixelated' }}
           />
-          <div className="absolute inset-0 bg-gradient-to-r from-amber-50/70 via-amber-50/30 to-transparent dark:from-amber-950/40 dark:via-amber-950/10" />
-          <div className="relative z-10 flex items-center justify-between gap-2">
+          <div className="pointer-events-none absolute inset-0 bg-gradient-to-r from-amber-950/92 via-amber-950/72 to-amber-950/50" />
+          <div className="relative z-10 flex items-center justify-between gap-2 px-4 py-3">
             <div className="min-w-0">
-              <div className="text-[14px] font-extrabold">👑 성장 프리미엄</div>
-              <div className="mt-0.5 text-[11px] tabular-nums text-zinc-600 dark:text-zinc-300">
+              <div className="text-[14px] font-extrabold text-amber-50">👑 성장 프리미엄</div>
+              <div className="mt-0.5 text-[11px] tabular-nums text-amber-100/90">
                 즉시 {dia(PREMIUM.instant.diamond)}·📦{PREMIUM.instant.boxes} + 매일{' '}
                 {dia(PREMIUM.daily.diamond)}·📦{PREMIUM.daily.boxes} ×{PREMIUM.daily.days}
               </div>
-              <div className="mt-0.5 text-[10px] tabular-nums text-zinc-400">
+              <div className="mt-0.5 text-[10px] tabular-nums text-amber-200/60">
                 총 {dia(premiumTotal.diamond)}·📦{premiumTotal.boxes}
               </div>
             </div>
-            <div className="flex shrink-0 flex-col items-end gap-1">
-              <span className="text-[12px] font-bold tabular-nums">{won(PREMIUM.krw)}</span>
-              <Soon />
-            </div>
+            <span className="shrink-0 text-[12px] font-bold tabular-nums text-amber-50">
+              {won(PREMIUM.krw)}
+            </span>
           </div>
-        </div>
+        </button>
 
         {/* 탭 */}
         <div className="mb-3 flex gap-1 rounded-xl bg-zinc-100 p-1 dark:bg-zinc-900">
@@ -254,7 +275,7 @@ export function ShopTabs({
           ))}
         </div>
 
-        {/* 탭 내용 — 최상단 무료 수령 + 상품 */}
+        {/* 탭 내용 */}
         {tab !== 'charge' ? (
           <ul className="space-y-2">
             <FreeRow
@@ -263,19 +284,21 @@ export function ShopTabs({
               busy={claiming === tab}
               onClaim={() => claimFreeSlot(tab)}
             />
-            <Item
+            <PaidItem
               img="/sprites/shop/box.png"
               name="보급상자"
               detail={`보급상자 ${BOX[tab].boxes}개`}
               price={dia(BOX[tab].cost)}
+              onClick={soon}
             />
             {CASH[tab].map((c) => (
-              <Item
+              <PaidItem
                 key={c.id}
                 img={CASH_IMG[c.name] ?? '/sprites/shop/pouch.png'}
                 name={c.name}
                 detail={`${dia(c.diamond)} · 📦${c.boxes}`}
                 price={won(c.krw)}
+                onClick={soon}
               />
             ))}
           </ul>
@@ -287,18 +310,14 @@ export function ShopTabs({
               busy={claiming === 'signup'}
               onClaim={() => claimFreeSlot('signup')}
             />
-            {!verified ? (
-              <li className="rounded-xl border border-dashed border-zinc-300 px-3 py-2 text-[11px] leading-relaxed text-zinc-500 dark:border-zinc-700">
-                최초 결제 시 휴대폰 본인인증이 필요합니다.
-              </li>
-            ) : null}
             {DIAMONDS.map((d) => (
-              <Item
+              <PaidItem
                 key={d.id}
                 img="/sprites/shop/charge.png"
                 name={dia(d.total)}
                 detail="다이아 충전"
                 price={won(d.krw)}
+                onClick={soon}
               />
             ))}
           </ul>
