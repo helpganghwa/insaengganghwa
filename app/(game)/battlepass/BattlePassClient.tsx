@@ -63,7 +63,7 @@ function RewardChip({
       </span>
       {variant === 'claimed' ? (
         <span className="pointer-events-none absolute inset-0 flex items-center justify-center">
-          <span className="-rotate-[18deg] rounded-sm border border-zinc-500/70 px-0.5 text-[8px] font-extrabold leading-none text-zinc-500/85 dark:border-zinc-400/70 dark:text-zinc-300/85">
+          <span className="-rotate-[18deg] rounded-sm border border-red-600/80 px-0.5 text-[8px] font-extrabold leading-none text-red-600/90 dark:border-red-500/80 dark:text-red-400">
             완료
           </span>
         </span>
