@@ -10,6 +10,7 @@ import { mailbox } from '@/lib/db/schema/mailbox';
 import { raidRewards } from '@/lib/db/schema/raid';
 import { userSupplyBoxes } from '@/lib/db/schema/supply';
 import { userCheckinState } from '@/lib/db/schema/checkin';
+import { getFreeStatus } from '@/lib/game/shop/free';
 import { kstDateString } from '@/lib/kst';
 
 import { BattlePassBanner } from './BattlePassBanner';
@@ -74,7 +75,7 @@ const MENU = [
   {
     href: '/shop',
     label: '상점',
-    desc: '다이아·아이템 (준비 중)',
+    desc: '다이아·보급상자 구매',
     bg: '/sprites/hub/shop.png',
     tint: '#1c2238',
     scale: 1,
@@ -92,6 +93,7 @@ export default async function HomePage() {
     '/gacha': 0,
     '/mail': 0,
     '/raid': 0,
+    '/shop': 0,
   };
 
   // 대난투 카드 상태 문구 — KST 09:00 개시 / 09:30 발표(MELEE §3).
@@ -108,7 +110,7 @@ export default async function HomePage() {
     // 일일 보급 + 출석 state + 4종 알림 카운트 — 핫패스 1RTT(병렬, CLAUDE §11.4).
     // 콜드 DB 커넥션 hang 시 페이지가 무한 대기하지 않도록 가드.
     try {
-      const [dailyRow, checkinRow, enhanceRow, supplyRow, mailRow, raidRow, meleeRow] =
+      const [dailyRow, checkinRow, enhanceRow, supplyRow, mailRow, raidRow, meleeRow, freeStatus] =
         await withTimeout(
           Promise.all([
           db
@@ -186,6 +188,8 @@ export default async function HomePage() {
               edition: number;
             }>
           >,
+          // 상점 무료 수령 가능 슬롯(빨간 배지 = 받을 수 있는 무료 수).
+          getFreeStatus(userId),
           ]),
           3000,
           'home.cards',
@@ -197,6 +201,7 @@ export default async function HomePage() {
       counts['/gacha'] = supplyRow[0]?.n ?? 0;
       counts['/mail'] = mailRow[0]?.n ?? 0;
       counts['/raid'] = raidRow[0]?.n ?? 0;
+      counts['/shop'] = Object.values(freeStatus).filter(Boolean).length;
       // phase별 문구. 발표 후(after) + revealed면 우승자, 닉 미상(더미)이면 발표 문구.
       const melee = meleeRow[0];
       if (melee) {

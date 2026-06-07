@@ -16,9 +16,11 @@ const items = [
 type Props = {
   /** /enhance 탭 알림 dot — 완료 시점 도달 강화 1건 이상. */
   hasCompletedEnhance?: boolean;
+  /** /shop 탭 알림 dot — 받을 수 있는 무료 1건 이상. */
+  hasShopFree?: boolean;
 };
 
-export function BottomNav({ hasCompletedEnhance = false }: Props) {
+export function BottomNav({ hasCompletedEnhance = false, hasShopFree = false }: Props) {
   const pathname = usePathname();
 
   return (
@@ -26,7 +28,9 @@ export function BottomNav({ hasCompletedEnhance = false }: Props) {
       {items.map((item) => {
         const active =
           item.href === '/' ? pathname === '/' : pathname.startsWith(item.href);
-        const dot = item.href === '/enhance' && hasCompletedEnhance;
+        const dot =
+          (item.href === '/enhance' && hasCompletedEnhance) ||
+          (item.href === '/shop' && hasShopFree);
         return (
           <Link
             key={item.href}

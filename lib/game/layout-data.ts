@@ -1,6 +1,7 @@
 import 'server-only';
 
 import { pgGuard } from '@/lib/db/guarded';
+import { periodKey } from '@/lib/game/shop/period';
 
 /**
  * (game) 셸(헤더·하단 네비)에 필요한 최소 데이터.
@@ -12,6 +13,8 @@ export interface LayoutData {
   diamond: bigint;
   hasUnreadMail: boolean;
   hasCompletedEnhance: boolean;
+  /** 상점 무료 수령 가능(빨간점) — daily/weekly/monthly/signup 중 하나라도 미수령. */
+  hasShopFree: boolean;
   /** 헤더 머리 아이콘용 — 활성 프로필 south rotation URL. 없으면 null(폴백 아이콘). */
   profileSouth: string | null;
 }
@@ -21,6 +24,7 @@ const DEFAULTS: LayoutData = {
   diamond: 0n,
   hasUnreadMail: false,
   hasCompletedEnhance: false,
+  hasShopFree: false,
   profileSouth: null,
 };
 
@@ -30,8 +34,12 @@ const DEFAULTS: LayoutData = {
  */
 export async function loadLayoutData(userId: string): Promise<LayoutData> {
   try {
+    // 상점 무료 주기키(KST) — 슬롯별 현재 주기. claim row가 이 키면 이미 수령.
+    const dailyK = periodKey('daily');
+    const weeklyK = periodKey('weekly');
+    const monthlyK = periodKey('monthly');
     // pgGuard: 타임아웃 시 쿼리 취소 → 풀 커넥션 즉시 회수(모든 페이지가 호출하는 핫패스).
-    const [profileRows, mailRows, enhRows] = await Promise.all([
+    const [profileRows, mailRows, enhRows, freeRows] = await Promise.all([
       pgGuard(
         (sql) => sql`
           select p.nickname, p.diamond, up.rotations
@@ -59,6 +67,20 @@ export async function loadLayoutData(userId: string): Promise<LayoutData> {
         4000,
         'layout.enhance',
       ),
+      // 4슬롯 중 현재 주기로 이미 받은 수. 4 미만이면 받을 수 있는 무료 존재.
+      pgGuard(
+        (sql) => sql`
+          select count(*)::int as n from shop_free_claims
+          where user_id = ${userId}::uuid
+            and (
+              (slot = 'daily' and period_key = ${dailyK}) or
+              (slot = 'weekly' and period_key = ${weeklyK}) or
+              (slot = 'monthly' and period_key = ${monthlyK}) or
+              (slot = 'signup' and period_key = 'once')
+            )`,
+        4000,
+        'layout.shopfree',
+      ),
     ]);
     const p = profileRows[0] as
       | { nickname?: string; diamond?: string | number | bigint; rotations?: unknown }
@@ -77,6 +99,7 @@ export async function loadLayoutData(userId: string): Promise<LayoutData> {
       diamond: p?.diamond != null ? BigInt(p.diamond as string) : 0n,
       hasUnreadMail: mailRows.length > 0,
       hasCompletedEnhance: Number((enhRows[0] as { n?: number | string } | undefined)?.n ?? 0) > 0,
+      hasShopFree: Number((freeRows[0] as { n?: number | string } | undefined)?.n ?? 0) < 4,
       profileSouth: (rot as Record<string, string> | null)?.south ?? null,
     };
   } catch (e) {
