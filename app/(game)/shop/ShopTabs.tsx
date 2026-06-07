@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useTransition } from 'react';
+import { useRef, useState, useTransition } from 'react';
 
 import { assetUrl } from '@/lib/asset-versions';
 import { useResourceToast, type HeaderReward } from '@/components/ResourceToast';
@@ -38,31 +38,31 @@ const FREE_DISPLAY: Record<
 type ShopPeriod = 'daily' | 'weekly' | 'monthly';
 const CASH_DESC: Record<ShopPeriod, Record<string, string>> = {
   daily: {
-    '모험가의 자루': '하루치 여비를 챙겨서 — 모험가의 자루',
-    '기사의 상자': '오늘 하루를 든든히 무장 — 기사의 상자',
-    '왕의 금고': '하루를 황금빛으로 물들여 — 왕의 금고',
+    '모험가의 자루': '하루치 여비를 챙겨서',
+    '기사의 상자': '오늘 하루를 든든히 무장',
+    '왕의 금고': '하루를 황금빛으로 물들여',
   },
   weekly: {
-    '모험가의 자루': '한 주를 함께할 보따리 — 모험가의 자루',
-    '기사의 상자': '일주일을 버티는 군량 — 기사의 상자',
-    '왕의 금고': '이번 주, 왕처럼 누리기 — 왕의 금고',
+    '모험가의 자루': '한 주를 함께할 넉넉한 보따리',
+    '기사의 상자': '일주일을 버티는 든든한 군량',
+    '왕의 금고': '이번 주, 왕처럼 누리기',
   },
   monthly: {
-    '모험가의 자루': '한 달 여정을 위한 짐 꾸러미 — 모험가의 자루',
-    '기사의 상자': '한 달간 흔들림 없는 보급 — 기사의 상자',
-    '왕의 금고': '한 달을 지배하는 최고의 보상 — 왕의 금고',
+    '모험가의 자루': '한 달 여정을 위한 짐 꾸러미',
+    '기사의 상자': '한 달간 흔들림 없는 보급',
+    '왕의 금고': '한 달을 지배하는 최고의 보상',
   },
 };
 const BOX_DESC: Record<ShopPeriod, string> = {
-  daily: '오늘 쓸 상자 한 줌 — 견습의 주머니',
-  weekly: '한 주를 채울 상자 꾸러미 — 견습의 주머니',
-  monthly: '한 달치 상자를 가득 담아 — 견습의 주머니',
+  daily: '오늘 쓸 상자 한 줌',
+  weekly: '한 주를 채울 상자 꾸러미',
+  monthly: '한 달치 상자를 가득 담아',
 };
 const FREE_DESC: Record<FreeSlot, string> = {
-  daily: '매일 문 여는 작은 선물 — 출석 보급',
-  weekly: '한 주를 여는 깜짝 선물 — 주간 보급',
-  monthly: '달마다 찾아오는 선물 — 월간 보급',
-  signup: '처음 온 당신께 드리는 선물 — 환영 보급',
+  daily: '매일 문 여는 작은 선물',
+  weekly: '한 주를 여는 깜짝 선물',
+  monthly: '달마다 찾아오는 선물',
+  signup: '처음 온 당신께 드리는 선물',
 };
 // 현금 카드 종류 → 배경/캐릭터 에셋 키.
 const CASH_ART: Record<string, { bg: string; char: string }> = {
@@ -190,6 +190,7 @@ function BannerCard({
   detail,
   price,
   grayscale,
+  confirming,
   onClick,
 }: {
   bg: string;
@@ -200,6 +201,7 @@ function BannerCard({
   detail: string;
   price?: string;
   grayscale?: boolean;
+  confirming?: boolean;
   onClick: () => void;
 }) {
   const titleColor = accent === 'emerald' ? 'text-emerald-300' : 'text-amber-300';
@@ -246,7 +248,7 @@ function BannerCard({
               {title}
             </span>
             {price ? (
-              <span className="rounded-md bg-amber-400/95 px-1.5 py-0.5 text-[12px] font-extrabold tabular-nums text-black shadow-sm">
+              <span className="text-[12px] font-bold tabular-nums text-white drop-shadow-[0_1px_2px_rgba(0,0,0,0.95)]">
                 {price}
               </span>
             ) : null}
@@ -258,6 +260,14 @@ function BannerCard({
             {detail}
           </div>
         </div>
+        {/* 구매 확인 오버레이(3초) — 다시 탭하면 구매 확정 */}
+        {confirming ? (
+          <div className="absolute inset-0 z-20 flex flex-col items-center justify-center gap-0.5 bg-black/80 px-3 text-center backdrop-blur-[1px]">
+            <div className="text-[13px] font-extrabold tabular-nums text-amber-300">{price}</div>
+            <div className="text-[12px] font-bold text-white">정말 구매하시겠습니까?</div>
+            <div className="text-[10px] text-white/70">구매하려면 다시 탭하세요</div>
+          </div>
+        ) : null}
       </button>
     </li>
   );
@@ -278,10 +288,42 @@ export function ShopTabs({
   const [free, setFree] = useState(initialFree);
   const [claiming, setClaiming] = useState<FreeSlot | null>(null);
   const [purchased, setPurchased] = useState<Set<string>>(() => new Set(initialPurchased));
+  const [confirm, setConfirm] = useState<string | null>(null); // 구매 확인 대기 중인 상품
+  const confirmTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
   const [, startTransition] = useTransition();
 
   const soon = () => showHeaderToast({ icon: '🛒', title: '준비 중입니다' });
   const isLimited = (id: string) => productPeriod(id) !== null;
+
+  // 구매 확인 무장(3초) — 같은 상품을 그 안에 다시 탭하면 확정.
+  const armConfirm = (id: string) => {
+    if (confirmTimer.current) clearTimeout(confirmTimer.current);
+    setConfirm(id);
+    confirmTimer.current = setTimeout(() => setConfirm(null), 3000);
+  };
+  const clearConfirm = () => {
+    if (confirmTimer.current) clearTimeout(confirmTimer.current);
+    confirmTimer.current = null;
+    setConfirm(null);
+  };
+  // 유료 카드 탭: 구매완료→토스트 / 미구매→1탭 오버레이, 2탭 확정.
+  const tapPaid = (id: string, sellable: boolean, exec: () => void) => {
+    if (purchased.has(id)) {
+      clearConfirm();
+      showHeaderToast({ icon: '🛒', title: '이미 구매완료한 상품입니다' });
+      return;
+    }
+    if (!sellable) {
+      soon();
+      return;
+    }
+    if (confirm === id) {
+      clearConfirm();
+      exec();
+    } else {
+      armConfirm(id);
+    }
+  };
 
   // 어드민: 결제 단계 없이 테스트 즉시 구매(바로 지급). 일반 유저: '준비 중' 토스트.
   const onBuy = (productId: string) => {
@@ -466,7 +508,7 @@ export function ShopTabs({
                 claimFreeSlot(tab);
               }}
             />
-            {/* 견습의 주머니(💎로 구매) */}
+            {/* 견습의 주머니(💎로 구매) — 1탭 확인, 2탭 구매 */}
             <BannerCard
               bg="box"
               char="apprentice"
@@ -475,13 +517,12 @@ export function ShopTabs({
               detail={`📦 ${BOX[tab].boxes}개`}
               price={dia(BOX[tab].cost)}
               grayscale={purchased.has(`box_${tab}`)}
+              confirming={confirm === `box_${tab}`}
               onClick={() =>
-                purchased.has(`box_${tab}`)
-                  ? showHeaderToast({ icon: '🛒', title: '이미 구매완료한 상품입니다' })
-                  : onBuyBox(`box_${tab}`, BOX[tab].cost)
+                tapPaid(`box_${tab}`, true, () => onBuyBox(`box_${tab}`, BOX[tab].cost))
               }
             />
-            {/* 현금 패키지 3종 */}
+            {/* 현금 패키지 3종 — 1탭 확인, 2탭 구매(어드민만 즉시구매) */}
             {CASH[tab].map((c) => {
               const art = CASH_ART[c.name] ?? { bg: 'adventurer' };
               return (
@@ -494,11 +535,8 @@ export function ShopTabs({
                   detail={`${dia(c.diamond)} · 📦${c.boxes}`}
                   price={won(c.krw)}
                   grayscale={purchased.has(c.id)}
-                  onClick={() =>
-                    purchased.has(c.id)
-                      ? showHeaderToast({ icon: '🛒', title: '이미 구매완료한 상품입니다' })
-                      : onBuy(c.id)
-                  }
+                  confirming={confirm === c.id}
+                  onClick={() => tapPaid(c.id, isAdmin, () => onBuy(c.id))}
                 />
               );
             })}
