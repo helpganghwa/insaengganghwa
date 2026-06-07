@@ -5,8 +5,9 @@ import { useState, useTransition } from 'react';
 import { useResourceToast, type HeaderReward } from '@/components/ResourceToast';
 import { useDiamond } from '@/components/DiamondContext';
 
-import { claimFreeAction } from './actions';
+import { claimFreeAction, devPurchaseAction } from './actions';
 import type { FreeSlot } from '@/lib/game/shop/free';
+import { BOX, CASH, PREMIUM, PREMIUM_TOTAL, DIAMONDS } from '@/lib/game/shop/catalog';
 
 /**
  * 상점 — 상단 프리미엄 배너 + 탭(일일/주간/월간/충전). CSS-only(배경 이미지 없음)·담백.
@@ -21,42 +22,6 @@ const TABS: { key: Tab; label: string; free: FreeSlot }[] = [
   { key: 'charge', label: '충전', free: 'signup' },
 ];
 
-type Period = 'daily' | 'weekly' | 'monthly';
-const BOX: Record<Period, { cost: number; boxes: number }> = {
-  daily: { cost: 200, boxes: 8 },
-  weekly: { cost: 1200, boxes: 60 },
-  monthly: { cost: 4000, boxes: 240 },
-};
-type Cash = { id: string; name: string; krw: number; diamond: number; boxes: number };
-const CASH: Record<Period, Cash[]> = {
-  daily: [
-    { id: 'd1', name: '모험가의 자루', krw: 1200, diamond: 290, boxes: 3 },
-    { id: 'd2', name: '기사의 상자', krw: 2500, diamond: 610, boxes: 7 },
-    { id: 'd3', name: '왕의 금고', krw: 4900, diamond: 1200, boxes: 15 },
-  ],
-  weekly: [
-    { id: 'w1', name: '모험가의 자루', krw: 4900, diamond: 1360, boxes: 18 },
-    { id: 'w2', name: '기사의 상자', krw: 9900, diamond: 2750, boxes: 40 },
-    { id: 'w3', name: '왕의 금고', krw: 19900, diamond: 5550, boxes: 90 },
-  ],
-  monthly: [
-    { id: 'm1', name: '모험가의 자루', krw: 9900, diamond: 3200, boxes: 55 },
-    { id: 'm2', name: '기사의 상자', krw: 19900, diamond: 6450, boxes: 120 },
-    { id: 'm3', name: '왕의 금고', krw: 39900, diamond: 12900, boxes: 260 },
-  ],
-};
-const PREMIUM = {
-  krw: 29900,
-  instant: { diamond: 4000, boxes: 30 },
-  daily: { diamond: 300, boxes: 3, days: 30 },
-};
-const DIAMONDS = [
-  { id: 'starter', total: 300, krw: 1500 },
-  { id: 'small', total: 1200, krw: 6000 },
-  { id: 'medium', total: 2800, krw: 13000 },
-  { id: 'large', total: 6400, krw: 28000 },
-  { id: 'mega', total: 16000, krw: 68000 },
-];
 const FREE_DISPLAY: Record<
   FreeSlot,
   { period: string; reward: string; icon: string; diamond: number; boxes: number }
@@ -157,7 +122,13 @@ function FreeRow({
   );
 }
 
-export function ShopTabs({ free: initialFree }: { free: Record<FreeSlot, boolean> }) {
+export function ShopTabs({
+  free: initialFree,
+  isAdmin,
+}: {
+  free: Record<FreeSlot, boolean>;
+  isAdmin: boolean;
+}) {
   const { showHeaderToast } = useResourceToast();
   const { optimisticAdjust } = useDiamond();
   const [tab, setTab] = useState<Tab>('daily');
@@ -166,6 +137,26 @@ export function ShopTabs({ free: initialFree }: { free: Record<FreeSlot, boolean
   const [, startTransition] = useTransition();
 
   const soon = () => showHeaderToast({ icon: '🛒', title: '준비 중입니다' });
+
+  // 어드민: 결제 단계 없이 테스트 즉시 구매(바로 지급). 일반 유저: '준비 중' 토스트.
+  const onBuy = (productId: string) => {
+    if (!isAdmin) {
+      soon();
+      return;
+    }
+    startTransition(async () => {
+      const r = await devPurchaseAction(productId);
+      if (r.status === 'success') {
+        if (r.diamond) optimisticAdjust(BigInt(r.diamond));
+        const rewards: HeaderReward[] = [];
+        if (r.diamond) rewards.push({ icon: '💎', amount: r.diamond });
+        if (r.boxes) rewards.push({ icon: '📦', amount: r.boxes });
+        showHeaderToast({ icon: '🧪', title: '테스트 구매', rewards });
+      } else {
+        showHeaderToast({ icon: '⚠️', title: '구매 실패' });
+      }
+    });
+  };
 
   const claimFreeSlot = (slot: FreeSlot) => {
     if (claiming || !free[slot]) return;
@@ -192,11 +183,6 @@ export function ShopTabs({ free: initialFree }: { free: Record<FreeSlot, boolean
     });
   };
 
-  const premiumTotal = {
-    diamond: PREMIUM.instant.diamond + PREMIUM.daily.diamond * PREMIUM.daily.days,
-    boxes: PREMIUM.instant.boxes + PREMIUM.daily.boxes * PREMIUM.daily.days,
-  };
-
   return (
     <div className="flex h-full flex-col">
       {/* CSS 헤더 — 이미지 없음, 앰버 글로우 액센트 */}
@@ -211,7 +197,7 @@ export function ShopTabs({ free: initialFree }: { free: Record<FreeSlot, boolean
         {/* 프리미엄 상단 배너 — CSS 그라데이션 */}
         <button
           type="button"
-          onClick={soon}
+          onClick={() => onBuy(PREMIUM.id)}
           className="mb-3 block w-full overflow-hidden rounded-2xl border border-amber-400/60 bg-gradient-to-br from-amber-100 to-amber-50 px-4 py-3 text-left shadow-[0_0_20px_rgba(245,158,11,0.12)] transition active:opacity-90 dark:border-amber-600/50 dark:from-amber-950/50 dark:to-zinc-950"
         >
           <div className="flex items-center justify-between gap-2">
@@ -222,7 +208,7 @@ export function ShopTabs({ free: initialFree }: { free: Record<FreeSlot, boolean
                 {dia(PREMIUM.daily.diamond)}·📦{PREMIUM.daily.boxes} ×{PREMIUM.daily.days}
               </div>
               <div className="mt-0.5 text-[10px] tabular-nums text-zinc-400">
-                총 {dia(premiumTotal.diamond)}·📦{premiumTotal.boxes}
+                총 {dia(PREMIUM_TOTAL.diamond)}·📦{PREMIUM_TOTAL.boxes}
               </div>
             </div>
             <span className="shrink-0 text-[12px] font-bold tabular-nums">{won(PREMIUM.krw)}</span>
@@ -273,7 +259,7 @@ export function ShopTabs({ free: initialFree }: { free: Record<FreeSlot, boolean
                 name={c.name}
                 detail={`${dia(c.diamond)} · 📦${c.boxes}`}
                 price={won(c.krw)}
-                onClick={soon}
+                onClick={() => onBuy(c.id)}
               />
             ))}
           </ul>
@@ -292,7 +278,7 @@ export function ShopTabs({ free: initialFree }: { free: Record<FreeSlot, boolean
                 name={dia(d.total)}
                 detail="다이아 충전"
                 price={won(d.krw)}
-                onClick={soon}
+                onClick={() => onBuy(d.id)}
               />
             ))}
           </ul>
