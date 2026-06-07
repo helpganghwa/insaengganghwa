@@ -64,6 +64,18 @@ export function shopGrant(productId: string): { diamond: number; boxes: number }
   return null;
 }
 
+/** 💎로 구매하는 보급상자(견습의 주머니) — id box_daily/weekly/monthly → 💎 비용 + 박스 수. */
+const BOX_ID: Record<string, Period> = {
+  box_daily: 'daily',
+  box_weekly: 'weekly',
+  box_monthly: 'monthly',
+};
+export function boxGrant(productId: string): { cost: number; boxes: number } | null {
+  const p = BOX_ID[productId];
+  if (!p) return null;
+  return { cost: BOX[p].cost, boxes: BOX[p].boxes };
+}
+
 /**
  * 상품의 구매 제한 주기 — 일일/주간/월간 상품은 그 기간 1회만. null = 무제한(다이아 충전).
  * 프리미엄 = 월간. 보급상자(💎)도 탭 기간 따라 제한.

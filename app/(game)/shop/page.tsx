@@ -15,12 +15,10 @@ export default async function ShopPage() {
   if (!userId) return null;
 
   const noFree = Object.fromEntries(FREE_SLOTS.map((s) => [s, false])) as Record<FreeSlot, boolean>;
+  // 견습의 주머니(💎)는 전 유저 구매 가능 → 구매현황은 모두 로드. 현금/프리미엄은 어드민만 구매.
   const [free, purchased] = await Promise.all([
     withTimeout(getFreeStatus(userId), 3500, 'shop.free').catch(() => noFree),
-    // 구매현황은 즉시구매 가능한 어드민만 필요.
-    isAdmin
-      ? withTimeout(getPurchaseStatus(userId), 3500, 'shop.purchased').catch(() => [] as string[])
-      : Promise.resolve([] as string[]),
+    withTimeout(getPurchaseStatus(userId), 3500, 'shop.purchased').catch(() => [] as string[]),
   ]);
 
   return <ShopTabs free={free} isAdmin={isAdmin} purchased={purchased} />;

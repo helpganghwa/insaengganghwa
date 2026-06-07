@@ -6,7 +6,7 @@ import { assetUrl } from '@/lib/asset-versions';
 import { useResourceToast, type HeaderReward } from '@/components/ResourceToast';
 import { useDiamond } from '@/components/DiamondContext';
 
-import { claimFreeAction, devPurchaseAction } from './actions';
+import { claimFreeAction, devPurchaseAction, buyBoxAction } from './actions';
 import type { FreeSlot } from '@/lib/game/shop/free';
 import { BOX, CASH, PREMIUM, PREMIUM_TOTAL, DIAMONDS, productPeriod } from '@/lib/game/shop/catalog';
 
@@ -37,6 +37,17 @@ const FREE_DISPLAY: Record<
 const won = (n: number) => `₩${n.toLocaleString('ko-KR')}`;
 const dia = (n: number) => `💎${n.toLocaleString('ko-KR')}`;
 
+/** 수령/구매 완료 표시 — 텍스트 대신 초록 체크. */
+function CheckBadge() {
+  return (
+    <span className="flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-emerald-500/90">
+      <svg viewBox="0 0 24 24" className="h-3.5 w-3.5" fill="none" stroke="white" strokeWidth={3} strokeLinecap="round" strokeLinejoin="round" aria-label="완료">
+        <path d="M5 13l4 4L19 7" />
+      </svg>
+    </span>
+  );
+}
+
 function PaidCard({
   name,
   detail,
@@ -52,14 +63,12 @@ function PaidCard({
 }) {
   if (purchased) {
     return (
-      <li className="flex w-full items-center gap-3 rounded-xl border border-zinc-200 bg-zinc-50/70 px-3.5 py-2.5 opacity-70 dark:border-zinc-800 dark:bg-zinc-900/30">
+      <li className="flex w-full items-center gap-3 rounded-xl border border-zinc-200 bg-zinc-50/70 px-3.5 py-2.5 opacity-60 dark:border-zinc-800 dark:bg-zinc-900/30">
         <div className="min-w-0 flex-1">
           <div className="text-[13px] font-bold">{name}</div>
           <div className="mt-0.5 text-[11px] tabular-nums text-zinc-500">{detail}</div>
         </div>
-        <span className="shrink-0 rounded-full bg-zinc-200 px-2.5 py-1 text-[10px] font-bold text-zinc-500 dark:bg-zinc-800">
-          구매함
-        </span>
+        <CheckBadge />
       </li>
     );
   }
@@ -77,7 +86,6 @@ function PaidCard({
         <span className="shrink-0 text-[12px] font-bold tabular-nums text-zinc-700 dark:text-zinc-200">
           {price}
         </span>
-        <span className="shrink-0 text-zinc-300 dark:text-zinc-600">›</span>
       </button>
     </li>
   );
@@ -117,14 +125,15 @@ function FreeRow({
           </div>
           <div className="mt-0.5 text-[11px] tabular-nums text-zinc-500">{d.reward}</div>
         </div>
-        <span
-          className={`shrink-0 text-[12px] font-bold ${
-            available ? 'text-emerald-600 dark:text-emerald-400' : 'text-zinc-400'
-          }`}
-        >
-          {busy ? '수령 중…' : available ? '받기' : '받음'}
-        </span>
-        {clickable ? <span className="shrink-0 text-emerald-400">›</span> : null}
+        {busy ? (
+          <span className="shrink-0 text-[12px] font-bold text-zinc-400">수령 중…</span>
+        ) : available ? (
+          <span className="shrink-0 text-[12px] font-bold text-emerald-600 dark:text-emerald-400">
+            받기
+          </span>
+        ) : (
+          <CheckBadge />
+        )}
       </button>
     </li>
   );
@@ -140,7 +149,7 @@ export function ShopTabs({
   purchased: string[];
 }) {
   const { showHeaderToast } = useResourceToast();
-  const { optimisticAdjust } = useDiamond();
+  const { diamond, optimisticAdjust } = useDiamond();
   const [tab, setTab] = useState<Tab>('daily');
   const [free, setFree] = useState(initialFree);
   const [claiming, setClaiming] = useState<FreeSlot | null>(null);
@@ -174,6 +183,37 @@ export function ShopTabs({
         showHeaderToast({ icon: '🛒', title: '이번 기간에 이미 구매했습니다' });
       } else {
         showHeaderToast({ icon: '⚠️', title: '구매 실패' });
+      }
+    });
+  };
+
+  // 💎로 보급상자 구매(견습의 주머니) — 전 유저. 잔액 사전체크 + 낙관 차감, 실패 시 복원.
+  const onBuyBox = (productId: string, cost: number) => {
+    if (purchased.has(productId)) {
+      showHeaderToast({ icon: '🛒', title: '이번 기간에 이미 구매했습니다' });
+      return;
+    }
+    if (diamond < BigInt(cost)) {
+      showHeaderToast({ icon: '💎', title: '다이아가 부족합니다' });
+      return;
+    }
+    optimisticAdjust(-BigInt(cost));
+    startTransition(async () => {
+      const r = await buyBoxAction(productId);
+      if (r.status === 'success') {
+        showHeaderToast({ icon: '📦', title: '구매 완료', rewards: [{ icon: '📦', amount: r.boxes }] });
+        setPurchased((p) => new Set(p).add(productId));
+      } else {
+        optimisticAdjust(BigInt(cost)); // 복원
+        if (r.code === 'ALREADY_PURCHASED') {
+          setPurchased((p) => new Set(p).add(productId));
+          showHeaderToast({ icon: '🛒', title: '이번 기간에 이미 구매했습니다' });
+        } else {
+          showHeaderToast({
+            icon: r.code === 'INSUFFICIENT_DIAMOND' ? '💎' : '⚠️',
+            title: r.code === 'INSUFFICIENT_DIAMOND' ? '다이아가 부족합니다' : '구매 실패',
+          });
+        }
       }
     });
   };
@@ -283,7 +323,8 @@ export function ShopTabs({
               name="견습의 주머니"
               detail={`📦 ${BOX[tab].boxes}개`}
               price={dia(BOX[tab].cost)}
-              onClick={soon}
+              onClick={() => onBuyBox(`box_${tab}`, BOX[tab].cost)}
+              purchased={purchased.has(`box_${tab}`)}
             />
             {CASH[tab].map((c) => (
               <PaidCard
