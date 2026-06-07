@@ -70,16 +70,6 @@ export function RankingDeck({
         <span className="relative z-10 text-[10px] font-bold text-amber-100 text-pixel-outline">
           {label} 랭킹
         </span>
-        {multi ? (
-          <span className="absolute right-2 z-10 flex items-center gap-1">
-            {decks.map((d, idx) => (
-              <span
-                key={d.metric}
-                className={`h-1 w-1 rounded-full ${idx === i ? 'bg-amber-300' : 'bg-white/40'}`}
-              />
-            ))}
-          </span>
-        ) : null}
       </Link>
 
       <div className="relative w-full" style={{ aspectRatio: '400 / 174' }}>
