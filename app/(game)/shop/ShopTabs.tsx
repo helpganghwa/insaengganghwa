@@ -1,10 +1,10 @@
 'use client';
 
 import { useState, useTransition } from 'react';
-import { useRouter } from 'next/navigation';
 
 import { assetUrl } from '@/lib/asset-versions';
-import { useResourceToast } from '@/components/ResourceToast';
+import { useResourceToast, type HeaderReward } from '@/components/ResourceToast';
+import { useDiamond } from '@/components/DiamondContext';
 
 import { claimFreeAction } from './actions';
 import type { FreeSlot } from '@/lib/game/shop/free';
@@ -64,16 +64,20 @@ const CASH_IMG: Record<string, string> = {
   꾸러미: '/sprites/shop/bundle.png',
   금고: '/sprites/shop/vault.png',
 };
-const FREE_DISPLAY: Record<FreeSlot, { period: string; reward: string; img: string }> = {
-  daily: { period: '매일', reward: '보급상자 1개', img: '/sprites/shop/box.png' },
-  weekly: { period: '매주', reward: '💎200', img: '/sprites/shop/charge.png' },
-  monthly: { period: '매월', reward: '💎500', img: '/sprites/shop/charge.png' },
-  signup: { period: '', reward: '보급상자 10개', img: '/sprites/shop/box.png' },
+// reward(text)/diamond/boxes — 서버 FREE_REWARDS와 1:1(낙관적 반영용).
+const FREE_DISPLAY: Record<
+  FreeSlot,
+  { period: string; reward: string; img: string; diamond: number; boxes: number }
+> = {
+  daily: { period: '매일', reward: '보급상자 1개', img: '/sprites/shop/box.png', diamond: 0, boxes: 1 },
+  weekly: { period: '매주', reward: '💎200', img: '/sprites/shop/charge.png', diamond: 200, boxes: 0 },
+  monthly: { period: '매월', reward: '💎500', img: '/sprites/shop/charge.png', diamond: 500, boxes: 0 },
+  signup: { period: '', reward: '보급상자 10개', img: '/sprites/shop/box.png', diamond: 0, boxes: 10 },
 };
 
 const won = (n: number) => `₩${n.toLocaleString('ko-KR')}`;
 const dia = (n: number) => `💎${n.toLocaleString('ko-KR')}`;
-const DARK = 'bg-gradient-to-r from-zinc-950/92 via-zinc-950/72 to-zinc-950/55';
+const DARK = 'bg-gradient-to-r from-zinc-950/92 via-zinc-950/76 to-zinc-950/62';
 
 /** 테마 이미지를 카드 전체 배경으로 깐 카드 — onClick 있으면 버튼, 없으면 정적. */
 function BgCard({
@@ -94,7 +98,7 @@ function BgCard({
         src={assetUrl(img)}
         alt=""
         aria-hidden
-        className="pointer-events-none absolute inset-0 h-full w-full object-cover opacity-50"
+        className="pointer-events-none absolute inset-0 h-full w-full object-cover opacity-[0.7]"
         style={{ imageRendering: 'pixelated' }}
       />
       <div className={`pointer-events-none absolute inset-0 ${overlay}`} />
@@ -176,8 +180,8 @@ function FreeRow({
 }
 
 export function ShopTabs({ free: initialFree }: { free: Record<FreeSlot, boolean> }) {
-  const router = useRouter();
   const { showHeaderToast } = useResourceToast();
+  const { optimisticAdjust } = useDiamond();
   const [tab, setTab] = useState<Tab>('daily');
   const [free, setFree] = useState(initialFree);
   const [claiming, setClaiming] = useState<FreeSlot | null>(null);
@@ -185,14 +189,27 @@ export function ShopTabs({ free: initialFree }: { free: Record<FreeSlot, boolean
 
   const soon = () => showHeaderToast({ icon: '🛒', title: '준비 중입니다' });
 
+  // 낙관적 수령 — 즉시 빨간점 제거 + 헤더 다이아 반영, 서버 실패 시 롤백.
   const claimFreeSlot = (slot: FreeSlot) => {
     if (claiming || !free[slot]) return;
+    const d = FREE_DISPLAY[slot];
     setClaiming(slot);
+    setFree((f) => ({ ...f, [slot]: false }));
+    if (d.diamond) optimisticAdjust(BigInt(d.diamond));
     startTransition(async () => {
       const r = await claimFreeAction(slot);
       if (r.status === 'success') {
-        setFree((f) => ({ ...f, [slot]: false }));
-        router.refresh();
+        const rewards: HeaderReward[] = [];
+        if (d.diamond) rewards.push({ icon: '💎', amount: d.diamond });
+        if (d.boxes) rewards.push({ icon: '📦', amount: d.boxes });
+        showHeaderToast({ icon: '🎁', title: '무료 수령', rewards });
+      } else {
+        setFree((f) => ({ ...f, [slot]: true }));
+        if (d.diamond) optimisticAdjust(BigInt(-d.diamond));
+        showHeaderToast({
+          icon: '⚠️',
+          title: r.code === 'ALREADY_CLAIMED' ? '이미 수령했습니다' : '수령 실패',
+        });
       }
       setClaiming(null);
     });
@@ -233,7 +250,7 @@ export function ShopTabs({ free: initialFree }: { free: Record<FreeSlot, boolean
             src={assetUrl('/sprites/shop/premium.png')}
             alt=""
             aria-hidden
-            className="pointer-events-none absolute inset-0 h-full w-full object-cover opacity-55"
+            className="pointer-events-none absolute inset-0 h-full w-full object-cover opacity-[0.7]"
             style={{ imageRendering: 'pixelated' }}
           />
           <div className="pointer-events-none absolute inset-0 bg-gradient-to-r from-amber-950/92 via-amber-950/72 to-amber-950/50" />
