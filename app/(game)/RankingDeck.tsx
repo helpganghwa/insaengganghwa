@@ -53,7 +53,7 @@ export function RankingDeck({
             aria-label="이전 랭킹"
             className="relative z-10 px-3 py-1.5 text-[12px] font-bold text-amber-100 text-pixel-outline transition active:scale-90 hover:brightness-125"
           >
-            ◀
+            {'◀︎'}
           </button>
         ) : (
           <span className="w-9 shrink-0" />
@@ -73,7 +73,7 @@ export function RankingDeck({
             aria-label="다음 랭킹"
             className="relative z-10 px-3 py-1.5 text-[12px] font-bold text-amber-100 text-pixel-outline transition active:scale-90 hover:brightness-125"
           >
-            ▶
+            {'▶︎'}
           </button>
         ) : (
           <span className="w-9 shrink-0" />
