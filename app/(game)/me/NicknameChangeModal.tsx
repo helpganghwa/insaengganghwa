@@ -10,7 +10,7 @@ import { useResourceToast } from '@/components/ResourceToast';
 import { changeNicknameAction } from './actions';
 
 /**
- * 닉네임 변경 팝업. 첫 변경 무료 / 이후 1000다이아.
+ * 닉네임 변경 팝업. 첫 변경 무료 / 이후 NICKNAME_CHANGE_COST_DIAMOND(=300) 차감.
  * 진입: 프로필 페이지의 닉네임(클릭) · 설정 페이지의 닉네임 row(클릭).
  */
 export function NicknameChangeModal({

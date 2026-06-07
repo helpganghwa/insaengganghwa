@@ -181,7 +181,7 @@ export default function ProbabilityPage() {
           ))}
         </Table>
         <P>
-          추가 공격 비용 = 50 × ⌈n/10⌉ 다이아 (10번 단위 계단). 보상: 페이즈 돌파마다 참여 전원에게
+          추가 공격 비용 = {raidExtraAttackCost(1)} × ⌈n/10⌉ 다이아 (10번 단위 계단). 보상: 페이즈 돌파마다 참여 전원에게
           보급 상자 {RAID_PHASE_DROP_BOXES}개 — 슬롯 무작위(무기/방어구/장신구 각 1/3 균등). 다이아 드롭 없음.
         </P>
       </Sec>

@@ -15,10 +15,11 @@ import {
   RaidError,
   type RaidBoss,
 } from '@/lib/game/raid';
+import { RAID_OPEN_COST_DIAMOND } from '@/lib/game/balance';
 
 type Err = { status: 'error'; code: string; message: string };
 const MSG: Record<string, string> = {
-  INSUFFICIENT_DIAMOND: '다이아가 부족합니다 (소환 1,000).',
+  INSUFFICIENT_DIAMOND: `다이아가 부족합니다 (소환 ${RAID_OPEN_COST_DIAMOND.toLocaleString('ko-KR')}).`,
   DAILY_CAP_REACHED: '오늘 레이드 한도(5회)를 모두 사용했습니다.',
   CONCURRENT_LIMIT: '동시 진행 레이드는 3개까지입니다.',
   RAID_NOT_FOUND: '레이드를 찾을 수 없습니다.',

@@ -491,7 +491,7 @@ export type MeleeReward = { diamond: number; boxes: number };
 
 /**
  * 등수(1-base) + 총 참가자 N → 보상. 티어 배타(스캔 순서로 첫 매칭 1개만). MELEE §6.
- * 1위 💎1000+10 · 2~3위 💎500+5 · 상위5% 💎200+3 · 상위20% 💎100+2 · 상위50% 💎50+2 · 나머지 상자1.
+ * 1위 💎2000+30 · 2~3위 💎1000+15 · 상위5% 💎400+10 · 상위20% 💎150+10 · 상위50% 💎100+5 · 그외 💎50+3.
  */
 export function meleeRewardForRank(rank: number, n: number): MeleeReward {
   if (rank <= 1) return { diamond: 2000, boxes: 30 };
