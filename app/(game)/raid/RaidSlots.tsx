@@ -204,7 +204,7 @@ export function RaidSlots({
               onClick={() => setPicking(true)}
               className="flex h-[84px] w-full items-center justify-center gap-2 rounded-xl border-2 border-dashed border-zinc-300 px-5 text-xs text-zinc-500 disabled:opacity-40 dark:border-zinc-700"
             >
-              <span className="text-base">＋</span> {exhausted ? '오늘 한도 소진' : '레이드 개설'}
+              <span className="text-base">＋</span> {exhausted ? '오늘 한도 소진' : '레이드 소환'}
             </button>
           ),
         )}
@@ -256,9 +256,6 @@ export function RaidSlots({
                 <p className="mt-2 rounded-xl bg-amber-50/60 p-3 text-[11px] leading-relaxed break-keep text-zinc-600 dark:bg-amber-950/20 dark:text-zinc-300">
                   {RAID_BOSSES[picked].story}
                 </p>
-                <p className="mt-2 text-center text-[10px] text-zinc-500">
-                  6시간 레이드를 엽니다.
-                </p>
                 <div className="mt-3 space-y-1.5">
                   <button
                     type="button"
@@ -266,7 +263,7 @@ export function RaidSlots({
                     onClick={() => open(picked)}
                     className="w-full rounded-full bg-zinc-900 px-3 py-2.5 text-xs font-bold text-white disabled:opacity-50 dark:bg-zinc-50 dark:text-zinc-950"
                   >
-                    {pending ? '개설 중…' : `💎 ${RAID_OPEN_COST_DIAMOND.toLocaleString()} 지불하고 개설`}
+                    {pending ? '소환 중…' : `💎 ${RAID_OPEN_COST_DIAMOND.toLocaleString()} 지불하고 소환`}
                   </button>
                   <button
                     type="button"
