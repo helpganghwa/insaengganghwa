@@ -1,6 +1,7 @@
 import { getAdminStatus } from '@/lib/auth/require-admin';
 import { withTimeout } from '@/lib/db/with-timeout';
 import { getFreeStatus, FREE_SLOTS, type FreeSlot } from '@/lib/game/shop/free';
+import { getPurchaseStatus } from '@/lib/game/shop/dev-purchase';
 
 import { ShopTabs } from './ShopTabs';
 
@@ -14,7 +15,13 @@ export default async function ShopPage() {
   if (!userId) return null;
 
   const noFree = Object.fromEntries(FREE_SLOTS.map((s) => [s, false])) as Record<FreeSlot, boolean>;
-  const free = await withTimeout(getFreeStatus(userId), 3500, 'shop.free').catch(() => noFree);
+  const [free, purchased] = await Promise.all([
+    withTimeout(getFreeStatus(userId), 3500, 'shop.free').catch(() => noFree),
+    // 구매현황은 즉시구매 가능한 어드민만 필요.
+    isAdmin
+      ? withTimeout(getPurchaseStatus(userId), 3500, 'shop.purchased').catch(() => [] as string[])
+      : Promise.resolve([] as string[]),
+  ]);
 
-  return <ShopTabs free={free} isAdmin={isAdmin} />;
+  return <ShopTabs free={free} isAdmin={isAdmin} purchased={purchased} />;
 }

@@ -7,7 +7,7 @@ import { profiles } from '@/lib/db/schema/profiles';
 import { userSupplyBoxes } from '@/lib/db/schema/supply';
 import { shopFreeClaims } from '@/lib/db/schema/shop';
 import { SUPPLY_SLOTS, type SupplySlot } from '@/lib/game/balance';
-import { kstDateString, kstMonthString } from '@/lib/kst';
+import { periodKey as resetKey } from './period';
 
 /**
  * 상점 무료 수령 — 슬롯별 주기(KST) 멱등. 결제 불필요.
@@ -24,17 +24,10 @@ export const FREE_REWARDS: Record<FreeSlot, { diamond: number; boxes: number }> 
   signup: { diamond: 0, boxes: 10 },
 };
 
-/** 현재 주기 키(KST). 같은 키 = 이미 받은 주기. */
+/** 현재 주기 키(KST). 같은 키 = 이미 받은 주기. signup=once, 그 외는 공용 주기키. */
 function periodKey(slot: FreeSlot): string {
   if (slot === 'signup') return 'once';
-  if (slot === 'daily') return kstDateString();
-  if (slot === 'monthly') return kstMonthString();
-  // weekly — KST 날짜에서 그 주 월요일을 키로(주기 경계 결정론).
-  const ds = kstDateString();
-  const dt = new Date(`${ds}T00:00:00Z`);
-  const dow = (dt.getUTCDay() + 6) % 7; // Mon=0
-  const monday = new Date(dt.getTime() - dow * 86_400_000);
-  return `W${monday.toISOString().slice(0, 10)}`;
+  return resetKey(slot); // daily/weekly/monthly (주간=월요일·월간=1일)
 }
 
 export class ShopFreeError extends Error {

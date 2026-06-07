@@ -2,17 +2,19 @@
 
 import { useState, useTransition } from 'react';
 
+import { assetUrl } from '@/lib/asset-versions';
 import { useResourceToast, type HeaderReward } from '@/components/ResourceToast';
 import { useDiamond } from '@/components/DiamondContext';
 
 import { claimFreeAction, devPurchaseAction } from './actions';
 import type { FreeSlot } from '@/lib/game/shop/free';
-import { BOX, CASH, PREMIUM, PREMIUM_TOTAL, DIAMONDS } from '@/lib/game/shop/catalog';
+import { BOX, CASH, PREMIUM, PREMIUM_TOTAL, DIAMONDS, productPeriod } from '@/lib/game/shop/catalog';
 
 /**
- * 상점 — 상단 프리미엄 배너 + 탭(일일/주간/월간/충전). CSS-only(배경 이미지 없음)·담백.
+ * 상점 — 상단 배너 + 탭(일일/주간/월간/충전). 담백.
  * 각 탭 최상단 무료 수령(주기 멱등·결제 불필요) — 수령 가능 시 탭 빨간점.
- * 유료/박스 상품은 결제 연동 전 — 클릭 시 '준비 중입니다' 토스트. 수치는 시작값.
+ * 유료 상품: 일반 유저는 클릭 시 '준비 중' 토스트, 어드민은 테스트 즉시 구매(결제 없이 지급).
+ * 일일/주간/월간 상품은 그 기간 1회만 — 구매하면 '구매함'(비활성). 수치는 시작값.
  */
 type Tab = 'daily' | 'weekly' | 'monthly' | 'charge';
 const TABS: { key: Tab; label: string; free: FreeSlot }[] = [
@@ -24,31 +26,43 @@ const TABS: { key: Tab; label: string; free: FreeSlot }[] = [
 
 const FREE_DISPLAY: Record<
   FreeSlot,
-  { period: string; reward: string; icon: string; diamond: number; boxes: number }
+  { period: string; reward: string; diamond: number; boxes: number }
 > = {
-  daily: { period: '매일', reward: '보급상자 1개', icon: '📦', diamond: 0, boxes: 1 },
-  weekly: { period: '매주', reward: '💎200', icon: '💎', diamond: 200, boxes: 0 },
-  monthly: { period: '매월', reward: '💎500', icon: '💎', diamond: 500, boxes: 0 },
-  signup: { period: '', reward: '보급상자 10개', icon: '📦', diamond: 0, boxes: 10 },
+  daily: { period: '매일', reward: '📦 1개', diamond: 0, boxes: 1 },
+  weekly: { period: '매주', reward: '💎200', diamond: 200, boxes: 0 },
+  monthly: { period: '매월', reward: '💎500', diamond: 500, boxes: 0 },
+  signup: { period: '', reward: '📦 10개', diamond: 0, boxes: 10 },
 };
 
 const won = (n: number) => `₩${n.toLocaleString('ko-KR')}`;
 const dia = (n: number) => `💎${n.toLocaleString('ko-KR')}`;
 
-/** 결제 대기 상품 카드 — 클릭 시 '준비 중' 토스트. */
 function PaidCard({
-  icon,
   name,
   detail,
   price,
   onClick,
+  purchased,
 }: {
-  icon: string;
   name: string;
   detail: string;
   price: string;
   onClick: () => void;
+  purchased?: boolean;
 }) {
+  if (purchased) {
+    return (
+      <li className="flex w-full items-center gap-3 rounded-xl border border-zinc-200 bg-zinc-50/70 px-3.5 py-2.5 opacity-70 dark:border-zinc-800 dark:bg-zinc-900/30">
+        <div className="min-w-0 flex-1">
+          <div className="text-[13px] font-bold">{name}</div>
+          <div className="mt-0.5 text-[11px] tabular-nums text-zinc-500">{detail}</div>
+        </div>
+        <span className="shrink-0 rounded-full bg-zinc-200 px-2.5 py-1 text-[10px] font-bold text-zinc-500 dark:bg-zinc-800">
+          구매함
+        </span>
+      </li>
+    );
+  }
   return (
     <li>
       <button
@@ -56,9 +70,6 @@ function PaidCard({
         onClick={onClick}
         className="flex w-full items-center gap-3 rounded-xl border border-zinc-200 bg-white px-3.5 py-2.5 text-left transition active:bg-zinc-50 dark:border-zinc-800 dark:bg-zinc-900/50 dark:active:bg-zinc-900"
       >
-        <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-zinc-100 text-lg dark:bg-zinc-800">
-          {icon}
-        </span>
         <div className="min-w-0 flex-1">
           <div className="text-[13px] font-bold">{name}</div>
           <div className="mt-0.5 text-[11px] tabular-nums text-zinc-500">{detail}</div>
@@ -95,9 +106,6 @@ function FreeRow({
           clickable ? 'active:bg-emerald-100 dark:active:bg-emerald-900/40' : 'opacity-80'
         }`}
       >
-        <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-emerald-500/15 text-lg">
-          {d.icon}
-        </span>
         <div className="min-w-0 flex-1">
           <div className="flex items-center gap-1.5 text-[13px] font-bold">
             무료
@@ -125,23 +133,31 @@ function FreeRow({
 export function ShopTabs({
   free: initialFree,
   isAdmin,
+  purchased: initialPurchased,
 }: {
   free: Record<FreeSlot, boolean>;
   isAdmin: boolean;
+  purchased: string[];
 }) {
   const { showHeaderToast } = useResourceToast();
   const { optimisticAdjust } = useDiamond();
   const [tab, setTab] = useState<Tab>('daily');
   const [free, setFree] = useState(initialFree);
   const [claiming, setClaiming] = useState<FreeSlot | null>(null);
+  const [purchased, setPurchased] = useState<Set<string>>(() => new Set(initialPurchased));
   const [, startTransition] = useTransition();
 
   const soon = () => showHeaderToast({ icon: '🛒', title: '준비 중입니다' });
+  const isLimited = (id: string) => productPeriod(id) !== null;
 
   // 어드민: 결제 단계 없이 테스트 즉시 구매(바로 지급). 일반 유저: '준비 중' 토스트.
   const onBuy = (productId: string) => {
     if (!isAdmin) {
       soon();
+      return;
+    }
+    if (isLimited(productId) && purchased.has(productId)) {
+      showHeaderToast({ icon: '🛒', title: '이번 기간에 이미 구매했습니다' });
       return;
     }
     startTransition(async () => {
@@ -152,6 +168,10 @@ export function ShopTabs({
         if (r.diamond) rewards.push({ icon: '💎', amount: r.diamond });
         if (r.boxes) rewards.push({ icon: '📦', amount: r.boxes });
         showHeaderToast({ icon: '🧪', title: '테스트 구매', rewards });
+        if (isLimited(productId)) setPurchased((p) => new Set(p).add(productId));
+      } else if (r.code === 'ALREADY_PURCHASED') {
+        setPurchased((p) => new Set(p).add(productId));
+        showHeaderToast({ icon: '🛒', title: '이번 기간에 이미 구매했습니다' });
       } else {
         showHeaderToast({ icon: '⚠️', title: '구매 실패' });
       }
@@ -183,22 +203,34 @@ export function ShopTabs({
     });
   };
 
+  const premiumBought = purchased.has(PREMIUM.id);
+
   return (
     <div className="flex h-full flex-col">
-      {/* CSS 헤더 — 이미지 없음, 앰버 글로우 액센트 */}
-      <div className="relative h-14 shrink-0 overflow-hidden border-b border-zinc-200 bg-gradient-to-r from-zinc-100 to-white dark:border-zinc-800 dark:from-zinc-900 dark:to-zinc-950">
-        <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(circle_at_85%_30%,rgba(245,158,11,0.18),transparent_55%)]" />
-        <div className="relative flex h-full items-center px-4">
-          <h1 className="text-base font-extrabold">🛒 상점</h1>
+      {/* 헤더 배너 — 상점 hub 이미지 */}
+      <div className="relative h-14 shrink-0 overflow-hidden border-b border-zinc-200 dark:border-zinc-800">
+        {/* eslint-disable-next-line @next/next/no-img-element */}
+        <img
+          src={assetUrl('/sprites/hub/shop.png')}
+          alt=""
+          aria-hidden
+          className="absolute inset-0 h-full w-full object-cover object-center"
+          style={{ imageRendering: 'pixelated' }}
+        />
+        <div className="pointer-events-none absolute inset-0 bg-gradient-to-r from-black/65 via-black/35 to-black/65" />
+        <div className="relative z-10 flex h-full items-center px-4">
+          <h1 className="text-base font-extrabold text-white text-pixel-outline">상점</h1>
         </div>
       </div>
 
       <div className="min-h-0 flex-1 overflow-y-auto overscroll-contain px-3 py-3">
-        {/* 프리미엄 상단 배너 — CSS 그라데이션 */}
+        {/* 프리미엄 상단 배너 */}
         <button
           type="button"
           onClick={() => onBuy(PREMIUM.id)}
-          className="mb-3 block w-full overflow-hidden rounded-2xl border border-amber-400/60 bg-gradient-to-br from-amber-100 to-amber-50 px-4 py-3 text-left shadow-[0_0_20px_rgba(245,158,11,0.12)] transition active:opacity-90 dark:border-amber-600/50 dark:from-amber-950/50 dark:to-zinc-950"
+          className={`mb-3 block w-full overflow-hidden rounded-2xl border border-amber-400/60 bg-gradient-to-br from-amber-100 to-amber-50 px-4 py-3 text-left shadow-[0_0_20px_rgba(245,158,11,0.12)] transition active:opacity-90 dark:border-amber-600/50 dark:from-amber-950/50 dark:to-zinc-950 ${
+            premiumBought ? 'opacity-70' : ''
+          }`}
         >
           <div className="flex items-center justify-between gap-2">
             <div className="min-w-0">
@@ -211,7 +243,9 @@ export function ShopTabs({
                 총 {dia(PREMIUM_TOTAL.diamond)}·📦{PREMIUM_TOTAL.boxes}
               </div>
             </div>
-            <span className="shrink-0 text-[12px] font-bold tabular-nums">{won(PREMIUM.krw)}</span>
+            <span className="shrink-0 text-[12px] font-bold tabular-nums">
+              {premiumBought ? '구매함' : won(PREMIUM.krw)}
+            </span>
           </div>
         </button>
 
@@ -246,20 +280,19 @@ export function ShopTabs({
               onClaim={() => claimFreeSlot(tab)}
             />
             <PaidCard
-              icon="📦"
               name="견습의 주머니"
-              detail={`보급상자 ${BOX[tab].boxes}개`}
+              detail={`📦 ${BOX[tab].boxes}개`}
               price={dia(BOX[tab].cost)}
               onClick={soon}
             />
             {CASH[tab].map((c) => (
               <PaidCard
                 key={c.id}
-                icon="💎"
                 name={c.name}
                 detail={`${dia(c.diamond)} · 📦${c.boxes}`}
                 price={won(c.krw)}
                 onClick={() => onBuy(c.id)}
+                purchased={purchased.has(c.id)}
               />
             ))}
           </ul>
@@ -274,7 +307,6 @@ export function ShopTabs({
             {DIAMONDS.map((d) => (
               <PaidCard
                 key={d.id}
-                icon="💎"
                 name={dia(d.total)}
                 detail="다이아 충전"
                 price={won(d.krw)}

@@ -63,3 +63,16 @@ export function shopGrant(productId: string): { diamond: number; boxes: number }
   }
   return null;
 }
+
+/**
+ * 상품의 구매 제한 주기 — 일일/주간/월간 상품은 그 기간 1회만. null = 무제한(다이아 충전).
+ * 프리미엄 = 월간. 보급상자(💎)도 탭 기간 따라 제한.
+ */
+export function productPeriod(productId: string): Period | null {
+  if (productId === PREMIUM.id) return 'monthly';
+  if (DIAMONDS.some((d) => d.id === productId)) return null;
+  if (productId === 'box_daily' || CASH.daily.some((c) => c.id === productId)) return 'daily';
+  if (productId === 'box_weekly' || CASH.weekly.some((c) => c.id === productId)) return 'weekly';
+  if (productId === 'box_monthly' || CASH.monthly.some((c) => c.id === productId)) return 'monthly';
+  return null;
+}
