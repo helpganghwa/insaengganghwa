@@ -38,37 +38,37 @@ const FREE_DISPLAY: Record<
 type ShopPeriod = 'daily' | 'weekly' | 'monthly';
 const CASH_DESC: Record<ShopPeriod, Record<string, string>> = {
   daily: {
-    '모험가의 자루': '오늘의 가벼운 보급 — 모험가의 자루',
-    '기사의 상자': '오늘의 든든한 보급 — 기사의 보물상자',
-    '왕의 금고': '오늘의 최고 보급 — 황금이 가득한 금고',
+    '모험가의 자루': '하루치 여비를 챙겨서 — 모험가의 자루',
+    '기사의 상자': '오늘 하루를 든든히 무장 — 기사의 상자',
+    '왕의 금고': '하루를 황금빛으로 물들여 — 왕의 금고',
   },
   weekly: {
-    '모험가의 자루': '이번 주 가벼운 보급 — 모험가의 자루',
-    '기사의 상자': '주간 든든한 보급 — 기사의 보물상자',
-    '왕의 금고': '주간 최고 보급 — 황금이 가득한 금고',
+    '모험가의 자루': '한 주를 함께할 보따리 — 모험가의 자루',
+    '기사의 상자': '일주일을 버티는 군량 — 기사의 상자',
+    '왕의 금고': '이번 주, 왕처럼 누리기 — 왕의 금고',
   },
   monthly: {
-    '모험가의 자루': '이달의 가벼운 보급 — 모험가의 자루',
-    '기사의 상자': '월간 든든한 보급 — 기사의 보물상자',
-    '왕의 금고': '매달 최고의 보상 — 황금이 가득한 금고',
+    '모험가의 자루': '한 달 여정을 위한 짐 꾸러미 — 모험가의 자루',
+    '기사의 상자': '한 달간 흔들림 없는 보급 — 기사의 상자',
+    '왕의 금고': '한 달을 지배하는 최고의 보상 — 왕의 금고',
   },
 };
 const BOX_DESC: Record<ShopPeriod, string> = {
-  daily: '오늘의 보급 상자 묶음 — 견습의 주머니',
-  weekly: '이번 주 보급 상자 묶음 — 견습의 주머니',
-  monthly: '이달의 보급 상자 묶음 — 견습의 주머니',
+  daily: '오늘 쓸 상자 한 줌 — 견습의 주머니',
+  weekly: '한 주를 채울 상자 꾸러미 — 견습의 주머니',
+  monthly: '한 달치 상자를 가득 담아 — 견습의 주머니',
 };
 const FREE_DESC: Record<FreeSlot, string> = {
-  daily: '매일 받는 무료 보급 — 출석 선물',
-  weekly: '매주 받는 무료 보급 — 주간 선물',
-  monthly: '매월 받는 무료 보급 — 월간 선물',
-  signup: '가입 환영 무료 보급 — 첫 선물',
+  daily: '매일 문 여는 작은 선물 — 출석 보급',
+  weekly: '한 주를 여는 깜짝 선물 — 주간 보급',
+  monthly: '달마다 찾아오는 선물 — 월간 보급',
+  signup: '처음 온 당신께 드리는 선물 — 환영 보급',
 };
-// 현금 카드 종류 → 배경/캐릭터 에셋 키(왕의 금고/기사의 상자만 캐릭터).
-const CASH_ART: Record<string, { bg: string; char?: 'knight' | 'vault' }> = {
+// 현금 카드 종류 → 배경/캐릭터 에셋 키.
+const CASH_ART: Record<string, { bg: string; char: string }> = {
   '왕의 금고': { bg: 'vault', char: 'vault' },
   '기사의 상자': { bg: 'knight', char: 'knight' },
-  '모험가의 자루': { bg: 'adventurer' },
+  '모험가의 자루': { bg: 'adventurer', char: 'adventurer' },
 };
 
 const won = (n: number) => `₩${n.toLocaleString('ko-KR')}`;
@@ -189,18 +189,16 @@ function BannerCard({
   desc,
   detail,
   price,
-  cta,
   grayscale,
   onClick,
 }: {
   bg: string;
-  char?: 'knight' | 'vault';
+  char?: string;
   accent?: 'amber' | 'emerald';
   title: string;
   desc: string;
   detail: string;
   price?: string;
-  cta?: React.ReactNode;
   grayscale?: boolean;
   onClick: () => void;
 }) {
@@ -211,7 +209,7 @@ function BannerCard({
       <button
         type="button"
         onClick={onClick}
-        className={`relative block h-[82px] w-full overflow-hidden rounded-xl border ${border} text-left shadow-md shadow-black/30 transition active:scale-[0.99] ${
+        className={`relative block h-[76px] w-full overflow-hidden rounded-xl border ${border} text-left shadow-md shadow-black/30 transition active:scale-[0.99] ${
           grayscale ? 'grayscale' : ''
         }`}
       >
@@ -225,7 +223,7 @@ function BannerCard({
           className="absolute inset-0 h-full w-full object-cover"
           style={{ imageRendering: 'pixelated' }}
         />
-        {/* 테마 캐릭터(선택) — 우측 상단 정렬, 다리쪽이 아래로 넘침 */}
+        {/* 테마 캐릭터 — 우측 상단 정렬, 다리쪽이 아래로 넘침 */}
         {char ? (
           // eslint-disable-next-line @next/next/no-img-element
           <img
@@ -239,29 +237,26 @@ function BannerCard({
         ) : null}
         {/* 좌→우 그라데이션(텍스트 가독성) */}
         <div className="pointer-events-none absolute inset-0 bg-gradient-to-r from-black/85 via-black/45 to-transparent" />
-        {/* 정보 */}
-        <div className="relative z-10 flex h-full items-center gap-2 px-3.5">
-          <div className="min-w-0 flex-1">
-            <div
+        {/* 정보 — 제목 옆 가격(강조) → 설명 → 보상 */}
+        <div className="relative z-10 flex h-full flex-col justify-center px-3.5">
+          <div className="flex items-center gap-2">
+            <span
               className={`text-[14px] font-extrabold ${titleColor} text-pixel-outline drop-shadow-[0_1px_2px_rgba(0,0,0,0.9)]`}
             >
               {title}
-            </div>
-            <div className="mt-0.5 truncate text-[10px] font-medium text-white/85 drop-shadow-[0_1px_2px_rgba(0,0,0,0.9)]">
-              {desc}
-            </div>
-            <div className="mt-1 flex items-baseline gap-2">
-              <span className="text-[11px] font-semibold tabular-nums text-white/80 drop-shadow-[0_1px_2px_rgba(0,0,0,0.9)]">
-                {detail}
+            </span>
+            {price ? (
+              <span className="rounded-md bg-amber-400/95 px-1.5 py-0.5 text-[12px] font-extrabold tabular-nums text-black shadow-sm">
+                {price}
               </span>
-              {price ? (
-                <span className="text-[10px] tabular-nums text-white/45 drop-shadow-[0_1px_2px_rgba(0,0,0,0.9)]">
-                  {price}
-                </span>
-              ) : null}
-            </div>
+            ) : null}
           </div>
-          {cta ? <div className="relative z-10 shrink-0">{cta}</div> : null}
+          <div className="mt-0.5 truncate text-[10px] font-medium text-white/85 drop-shadow-[0_1px_2px_rgba(0,0,0,0.9)]">
+            {desc}
+          </div>
+          <div className="mt-1 text-[11px] font-semibold tabular-nums text-white/80 drop-shadow-[0_1px_2px_rgba(0,0,0,0.9)]">
+            {detail}
+          </div>
         </div>
       </button>
     </li>
@@ -294,10 +289,12 @@ export function ShopTabs({
       soon();
       return;
     }
-    if (isLimited(productId) && purchased.has(productId)) {
-      showHeaderToast({ icon: '🛒', title: '이번 기간에 이미 구매했습니다' });
+    const limited = isLimited(productId);
+    if (limited && purchased.has(productId)) {
+      showHeaderToast({ icon: '🛒', title: '이미 구매완료한 상품입니다' });
       return;
     }
+    if (limited) setPurchased((p) => new Set(p).add(productId)); // 낙관적 흑백
     startTransition(async () => {
       const r = await devPurchaseAction(productId);
       if (r.status === 'success') {
@@ -306,11 +303,16 @@ export function ShopTabs({
         if (r.diamond) rewards.push({ icon: '💎', amount: r.diamond });
         if (r.boxes) rewards.push({ icon: '📦', amount: r.boxes });
         showHeaderToast({ icon: '🧪', title: '테스트 구매', rewards });
-        if (isLimited(productId)) setPurchased((p) => new Set(p).add(productId));
       } else if (r.code === 'ALREADY_PURCHASED') {
         setPurchased((p) => new Set(p).add(productId));
-        showHeaderToast({ icon: '🛒', title: '이번 기간에 이미 구매했습니다' });
+        showHeaderToast({ icon: '🛒', title: '이미 구매완료한 상품입니다' });
       } else {
+        if (limited)
+          setPurchased((p) => {
+            const n = new Set(p);
+            n.delete(productId);
+            return n;
+          }); // 복원
         showHeaderToast({ icon: '⚠️', title: '구매 실패' });
       }
     });
@@ -319,7 +321,7 @@ export function ShopTabs({
   // 💎로 보급상자 구매(견습의 주머니) — 전 유저. 잔액 사전체크 + 낙관 차감, 실패 시 복원.
   const onBuyBox = (productId: string, cost: number) => {
     if (purchased.has(productId)) {
-      showHeaderToast({ icon: '🛒', title: '이번 기간에 이미 구매했습니다' });
+      showHeaderToast({ icon: '🛒', title: '이미 구매완료한 상품입니다' });
       return;
     }
     if (diamond < BigInt(cost)) {
@@ -327,17 +329,21 @@ export function ShopTabs({
       return;
     }
     optimisticAdjust(-BigInt(cost));
+    setPurchased((p) => new Set(p).add(productId)); // 낙관적 흑백
     startTransition(async () => {
       const r = await buyBoxAction(productId);
       if (r.status === 'success') {
         showHeaderToast({ icon: '📦', title: '구매 완료', rewards: [{ icon: '📦', amount: r.boxes }] });
-        setPurchased((p) => new Set(p).add(productId));
       } else {
-        optimisticAdjust(BigInt(cost)); // 복원
+        optimisticAdjust(BigInt(cost)); // 💎 복원
         if (r.code === 'ALREADY_PURCHASED') {
-          setPurchased((p) => new Set(p).add(productId));
-          showHeaderToast({ icon: '🛒', title: '이번 기간에 이미 구매했습니다' });
+          showHeaderToast({ icon: '🛒', title: '이미 구매완료한 상품입니다' });
         } else {
+          setPurchased((p) => {
+            const n = new Set(p);
+            n.delete(productId);
+            return n;
+          }); // 복원
           showHeaderToast({
             icon: r.code === 'INSUFFICIENT_DIAMOND' ? '💎' : '⚠️',
             title: r.code === 'INSUFFICIENT_DIAMOND' ? '다이아가 부족합니다' : '구매 실패',
@@ -442,29 +448,15 @@ export function ShopTabs({
         {/* 탭 내용 */}
         {tab !== 'charge' ? (
           <ul className="space-y-2">
-            {/* 무료 수령 */}
+            {/* 무료 수령 — 받기/수령완료 표기 없음. 클릭 시 낙관적 수령(완료=흑백). */}
             <BannerCard
               bg="free"
+              char="gift"
               accent="emerald"
               title="무료"
               desc={FREE_DESC[tab]}
               detail={FREE_DISPLAY[tab].reward}
               grayscale={!free[tab]}
-              cta={
-                claiming === tab ? (
-                  <span className="text-[12px] font-bold text-zinc-100 drop-shadow-[0_1px_2px_rgba(0,0,0,0.9)]">
-                    수령 중…
-                  </span>
-                ) : free[tab] ? (
-                  <span className="rounded-md bg-emerald-500/90 px-2.5 py-1 text-[12px] font-bold text-white shadow">
-                    받기
-                  </span>
-                ) : (
-                  <span className="text-[11px] font-bold text-emerald-300 drop-shadow-[0_1px_2px_rgba(0,0,0,0.9)]">
-                    수령 완료
-                  </span>
-                )
-              }
               onClick={() => {
                 if (claiming) return;
                 if (!free[tab]) {
@@ -477,6 +469,7 @@ export function ShopTabs({
             {/* 견습의 주머니(💎로 구매) */}
             <BannerCard
               bg="box"
+              char="apprentice"
               title="견습의 주머니"
               desc={BOX_DESC[tab]}
               detail={`📦 ${BOX[tab].boxes}개`}
