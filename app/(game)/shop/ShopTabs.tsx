@@ -457,15 +457,15 @@ export function ShopTabs({
           </ul>
         ) : (
           <ul className="space-y-2">
-            {/* 가입 환영 무료 — 심플(62px) */}
+            {/* 가입 환영 무료 — 심플(62px). 좌: 보상 / 우: '무료' */}
             <BannerCard
-              bg="free"
-              char="gift"
+              bg="dia-free"
               accent="emerald"
               compact
-              title="무료"
+              title={FREE_DISPLAY.signup.reward}
               desc={FREE_DESC.signup}
-              detail={FREE_DISPLAY.signup.reward}
+              detail=""
+              price="무료"
               grayscale={!free.signup}
               onClick={() => {
                 if (claiming) return;
