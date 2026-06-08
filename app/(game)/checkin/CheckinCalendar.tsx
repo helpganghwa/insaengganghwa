@@ -12,6 +12,7 @@ import {
 } from '@/lib/game/balance';
 import { useResourceToast, type HeaderReward } from '@/components/ResourceToast';
 import { useDiamond } from '@/components/DiamondContext';
+import { assetUrl } from '@/lib/asset-versions';
 import * as haptic from '@/lib/game/haptic';
 import { sounds } from '@/lib/game/sound';
 
@@ -125,8 +126,22 @@ export function CheckinCalendar({
 
   return (
     <div className="space-y-4">
-      {/* 4×7 그리드 — emoji + CSS */}
-      <div className="grid grid-cols-7 gap-1.5" role="list" aria-label="28일 출석 캘린더">
+      {/* 출석판 — 책상 텍스처 배경 위에 4×7 그리드(셀은 반투명으로 나뭇결이 비침) */}
+      <div className="relative overflow-hidden rounded-2xl border border-amber-900/30 p-4 shadow-sm">
+        {/* eslint-disable-next-line @next/next/no-img-element */}
+        <img
+          src={assetUrl('/sprites/checkin/board.png')}
+          alt=""
+          aria-hidden
+          draggable={false}
+          className="absolute inset-0 h-full w-full object-cover"
+          style={{ imageRendering: 'pixelated' }}
+        />
+        <div
+          className="relative grid grid-cols-7 gap-1.5"
+          role="list"
+          aria-label="28일 출석 캘린더"
+        >
         {CHECKIN_CALENDAR.map((r, idx) => {
           const day = idx + 1;
           const isMilestone = isCheckinMilestone(day);
@@ -144,11 +159,12 @@ export function CheckinCalendar({
             : isMilestone
               ? 'border-amber-500/70 ring-1 ring-amber-400/30'
               : 'border-zinc-200 dark:border-zinc-800';
+          // 셀 반투명 — 출석판(나뭇결) 배경이 비치도록.
           const stateCls = isToday
-            ? 'bg-amber-500/15 dark:bg-amber-400/10 shadow-[inset_0_0_0_2px_rgba(245,158,11,0.55)]'
+            ? 'bg-amber-500/30 dark:bg-amber-400/20 shadow-[inset_0_0_0_2px_rgba(245,158,11,0.6)]'
             : showCheck
-              ? 'bg-zinc-100 dark:bg-zinc-900'
-              : 'bg-white dark:bg-zinc-950';
+              ? 'bg-zinc-100/70 dark:bg-zinc-900/65'
+              : 'bg-white/82 dark:bg-zinc-950/65';
 
           return (
             <div
@@ -203,26 +219,41 @@ export function CheckinCalendar({
             </div>
           );
         })}
+        </div>
       </div>
 
-      {/* 오늘 카드 + 액션 */}
-      <section className="rounded-2xl border border-zinc-200 bg-white p-4 dark:border-zinc-800 dark:bg-zinc-950">
-        <div className="flex items-center gap-3">
-          <span className="text-3xl" aria-hidden>
-            <RewardEmoji r={cardReward} />
-          </span>
-          <div className="flex-1">
-            <div className="text-base font-semibold">{rewardLongLabel(cardReward)}</div>
+      {/* 오늘 카드 + 액션 — 보물상자 배경 + 일반 버튼(버튼엔 배경 이미지 X) */}
+      <section className="relative overflow-hidden rounded-2xl border border-amber-900/30 p-4 shadow-sm">
+        {/* eslint-disable-next-line @next/next/no-img-element */}
+        <img
+          src={assetUrl('/sprites/checkin/claim.png')}
+          alt=""
+          aria-hidden
+          draggable={false}
+          className="absolute inset-0 h-full w-full object-cover"
+          style={{ imageRendering: 'pixelated' }}
+        />
+        <div className="pointer-events-none absolute inset-0 bg-gradient-to-t from-black/65 via-black/35 to-black/15" />
+        <div className="relative">
+          <div className="flex items-center gap-3">
+            <span className="text-3xl drop-shadow-[0_1px_3px_rgba(0,0,0,0.8)]" aria-hidden>
+              <RewardEmoji r={cardReward} />
+            </span>
+            <div className="flex-1">
+              <div className="text-base font-semibold text-white drop-shadow-[0_1px_2px_rgba(0,0,0,0.9)]">
+                {rewardLongLabel(cardReward)}
+              </div>
+            </div>
           </div>
+          <button
+            type="button"
+            onClick={onClaim}
+            disabled={claimedToday || pending}
+            className="mt-3 w-full rounded-xl bg-amber-600 px-4 py-3 text-sm font-bold text-white shadow-md transition active:scale-[0.99] disabled:cursor-not-allowed disabled:bg-zinc-400 disabled:text-zinc-200 dark:disabled:bg-zinc-700 dark:disabled:text-zinc-400"
+          >
+            {claimedToday ? '오늘 도장 완료' : pending ? '도장 찍는 중…' : '출석 도장 찍기'}
+          </button>
         </div>
-        <button
-          type="button"
-          onClick={onClaim}
-          disabled={claimedToday || pending}
-          className="mt-3 w-full rounded-xl bg-amber-600 px-4 py-3 text-sm font-bold text-white shadow-md transition active:scale-[0.99] disabled:cursor-not-allowed disabled:bg-zinc-300 disabled:text-zinc-500 dark:disabled:bg-zinc-800 dark:disabled:text-zinc-500"
-        >
-          {claimedToday ? '오늘 도장 완료' : pending ? '도장 찍는 중…' : '출석 도장 찍기'}
-        </button>
       </section>
     </div>
   );
