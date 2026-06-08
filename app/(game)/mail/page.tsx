@@ -117,6 +117,8 @@ export default async function MailPage({
     senderLabel: r.senderLabel,
     payload: r.payload as MailItem['payload'],
     avatar: resolveAvatar(r),
+    // 풀바디 스프라이트(프로필·트로피)는 크게 확대. 마스코트(일일 보급)는 이미 상반신이라 작게.
+    avatarFull: r.type === 'profile_accepted' || r.senderLabel === '대난투',
     claimedAtIso: r.claimedAt ? r.claimedAt.toISOString() : null,
     expiresAtIso: r.expiresAt.toISOString(),
     createdAtIso: r.createdAt.toISOString(),

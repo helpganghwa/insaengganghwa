@@ -25,6 +25,8 @@ export type MailItem = {
   payload: { diamond?: number | string; boxes?: Partial<Record<Slot, number>> };
   /** 우측 배경 아바타(종류별) — 일일보급 마스코트/프로필 본인/대난투 트로피. 없으면 미표시. */
   avatar?: string | null;
+  /** 풀바디 스프라이트(트로피·프로필) 여부 — true면 상반신이 보이게 크게 확대. */
+  avatarFull?: boolean;
   claimedAtIso: string | null;
   expiresAtIso: string;
   createdAtIso: string;
@@ -374,7 +376,9 @@ export function MailList({
                       alt=""
                       aria-hidden
                       draggable={false}
-                      className="pointer-events-none absolute right-1 top-0 z-0 h-[128%] w-auto opacity-95"
+                      className={`pointer-events-none absolute right-1 top-0 z-0 w-auto opacity-95 ${
+                        m.avatarFull ? 'h-[240%]' : 'h-[128%]'
+                      }`}
                       style={{ imageRendering: 'pixelated' }}
                     />
                     <div

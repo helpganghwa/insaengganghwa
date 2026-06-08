@@ -37,7 +37,7 @@ export const ASSET_VERSIONS: Record<string, string> = {
   "/sprites/boss/bg/dragon_west.png": "b28cf8da",
   "/sprites/boss/stone_golem__anim.png": "c7d8270a",
   "/sprites/boss/dragon_west.png": "a7d0385c",
-  "/sprites/characters/mascot-supply-bust-south-west.png": "1770b51f",
+  "/sprites/characters/mascot-supply-bust-south-west.png": "4c00a431",
   "/sprites/shop/dia-starter-bg.png": "7ccdf35d",
   "/sprites/shop/dia-free-bg.png": "f83c853a",
   "/sprites/shop/premium-char.png": "e7bf2d5e",
