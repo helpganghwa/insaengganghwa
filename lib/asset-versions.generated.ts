@@ -72,6 +72,8 @@ export const ASSET_VERSIONS: Record<string, string> = {
   "/sprites/shop/pouch.png": "7aba967e",
   "/sprites/checkin/teacher.png": "b8c25ab1",
   "/sprites/checkin/claim.png": "0a66f79f",
+  "/sprites/checkin/academy.png": "4c7f4a8b",
+  "/sprites/checkin/stamp.png": "627a5427",
   "/sprites/checkin/board.png": "cd644798",
   "/sprites/checkin/classroom.png": "c44cb43a",
   "/og/og-8.png": "6e1b2b9f",

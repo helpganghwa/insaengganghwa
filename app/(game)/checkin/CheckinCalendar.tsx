@@ -126,37 +126,21 @@ export function CheckinCalendar({
 
   return (
     <div className="space-y-4">
-      {/* 출석판 — 왕실 교실. 칠판 위 4×4 출석부 + 다크엘프 교수님(좌하단, 지시봉으로 칠판 가리킴). */}
-      <div className="relative aspect-square overflow-hidden rounded-2xl border border-amber-900/40 shadow-md">
-        {/* 교실 배경 */}
+      {/* 출석판 — 황실 아카데미 외관 위 4×4 출석부(셀 반투명으로 배경이 비침).
+          좌상단·우하단 칸은 비워 배경 노출. 수령 완료 칸엔 도장(출석 도장)이 찍힘. */}
+      <div className="relative overflow-hidden rounded-2xl border border-amber-900/40 p-4 shadow-md">
         {/* eslint-disable-next-line @next/next/no-img-element */}
         <img
-          src={assetUrl('/sprites/checkin/classroom.png')}
+          src={assetUrl('/sprites/checkin/academy.png')}
           alt=""
           aria-hidden
           draggable={false}
           className="absolute inset-0 h-full w-full object-cover"
           style={{ imageRendering: 'pixelated' }}
         />
-        {/* 교수님 — 좌하단, 좌우반전(지시봉이 우상단 칠판 향함) */}
-        {/* eslint-disable-next-line @next/next/no-img-element */}
-        <img
-          src={assetUrl('/sprites/checkin/teacher.png')}
-          alt=""
-          aria-hidden
-          draggable={false}
-          className="pointer-events-none absolute bottom-0 left-[1%] z-10 h-[60%] w-auto -scale-x-100 drop-shadow-[0_2px_4px_rgba(0,0,0,0.5)]"
-          style={{ imageRendering: 'pixelated' }}
-        />
-        {/* 출석부 그리드 — 칠판 위 */}
-        <div
-          className="absolute z-20 grid grid-cols-4 gap-1.5"
-          style={{ left: '31%', top: '11%', width: '58%' }}
-          role="list"
-          aria-label="14일 출석 캘린더"
-        >
+        <div className="relative grid grid-cols-4 gap-2" role="list" aria-label="14일 출석 캘린더">
           {Array.from({ length: 16 }, (_, pos) => {
-            // 4×4 = 16칸. pos 0(좌상)·15(우하)은 빈 칸 → 칠판 노출.
+            // 4×4 = 16칸. pos 0(좌상)·15(우하)은 빈 칸 → 배경 노출.
             if (pos === 0 || pos === 15) {
               return <div key={`empty-${pos}`} aria-hidden className="aspect-square" />;
             }
@@ -175,16 +159,17 @@ export function CheckinCalendar({
               ? 'border-amber-400 ring-2 ring-amber-400/70 shadow-[0_0_14px_rgba(245,158,11,0.55)]'
               : isMilestone
                 ? 'border-amber-400/80 ring-1 ring-amber-400/50 shadow-[0_0_8px_rgba(245,158,11,0.3)]'
-                : 'border-zinc-300/70';
+                : 'border-white/60';
+            // 셀 반투명(b) — 아카데미 배경이 칸 뒤로 비치게.
             const stateCls = isToday
-              ? 'bg-amber-500/40 shadow-[inset_0_0_0_2px_rgba(245,158,11,0.7)]'
+              ? 'bg-amber-400/45 shadow-[inset_0_0_0_2px_rgba(245,158,11,0.75)]'
               : isMilestone
                 ? showCheck
-                  ? 'bg-amber-200/60'
-                  : 'bg-amber-100/88'
+                  ? 'bg-amber-200/45'
+                  : 'bg-amber-100/62'
                 : showCheck
-                  ? 'bg-zinc-100/70'
-                  : 'bg-white/88';
+                  ? 'bg-white/40'
+                  : 'bg-white/58';
 
             return (
               <div
@@ -195,16 +180,16 @@ export function CheckinCalendar({
                 className={`relative flex aspect-square flex-col items-center justify-between rounded-md border ${borderCls} ${stateCls} p-1 text-center`}
               >
                 <div
-                  className={`text-[9px] leading-none font-bold ${
-                    isGrand ? 'text-amber-700' : isMilestone ? 'text-amber-600' : 'text-zinc-400'
-                  } ${showCheck ? 'opacity-50' : ''}`}
+                  className={`text-[9px] leading-none font-bold drop-shadow-[0_1px_1px_rgba(255,255,255,0.7)] ${
+                    isGrand ? 'text-amber-700' : isMilestone ? 'text-amber-700' : 'text-zinc-600'
+                  } ${showCheck ? 'opacity-40' : ''}`}
                 >
                   {isGrand ? '★최종' : isMilestone ? `★${day}` : `${day}`}
                 </div>
 
                 <div
                   className={`flex flex-1 items-center justify-center text-[15px] leading-none ${
-                    showCheck ? 'opacity-40' : ''
+                    showCheck ? 'opacity-25' : ''
                   }`}
                   aria-hidden
                 >
@@ -212,21 +197,27 @@ export function CheckinCalendar({
                 </div>
 
                 <div
-                  className={`text-[9px] leading-none font-semibold ${
-                    showCheck ? 'opacity-50' : ''
-                  } ${r.kind === 'diamond' ? 'text-sky-700' : 'text-zinc-600'}`}
+                  className={`text-[9px] leading-none font-bold drop-shadow-[0_1px_1px_rgba(255,255,255,0.7)] ${
+                    showCheck ? 'opacity-40' : ''
+                  } ${r.kind === 'diamond' ? 'text-sky-700' : 'text-zinc-700'}`}
                 >
                   {quantityLabel(r)}
                 </div>
 
+                {/* 수령 완료 — 도장이 찍힘 */}
                 {showCheck && (
-                  <div
-                    className="pointer-events-none absolute right-0.5 top-0.5 flex h-4 w-4 items-center justify-center rounded-full bg-amber-500 text-[9px] leading-none font-bold text-white shadow"
-                    style={justClaimed ? { animation: 'checkin-stamp 520ms ease-out' } : undefined}
+                  // eslint-disable-next-line @next/next/no-img-element
+                  <img
+                    src={assetUrl('/sprites/checkin/stamp.png')}
+                    alt=""
                     aria-hidden
-                  >
-                    ✓
-                  </div>
+                    draggable={false}
+                    className="pointer-events-none absolute left-1/2 top-1/2 z-10 h-[92%] w-auto -translate-x-1/2 -translate-y-1/2 drop-shadow-[0_1px_2px_rgba(0,0,0,0.4)]"
+                    style={{
+                      imageRendering: 'pixelated',
+                      ...(justClaimed ? { animation: 'checkin-stamp 520ms ease-out' } : {}),
+                    }}
+                  />
                 )}
               </div>
             );
