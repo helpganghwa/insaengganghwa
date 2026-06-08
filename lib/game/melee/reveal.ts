@@ -52,7 +52,7 @@ export async function revealMelee(): Promise<{ revealed: boolean; battleId?: str
            '대난투 결과',
            '오늘 대난투 ' || mp.final_rank || '위!' || E'\n' || ${podiumStr},
            '대난투',
-           jsonb_build_object('diamond', mp.reward_diamond, 'boxes', mp.reward_boxes),
+           jsonb_build_object('diamond', mp.reward_diamond, 'boxes', mp.reward_boxes, 'battleId', ${battleId}::text),
            now() + interval '7 days'
     from melee_participants mp
     where mp.battle_id = ${battleId}
