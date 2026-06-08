@@ -126,8 +126,8 @@ export function CheckinCalendar({
 
   return (
     <div className="space-y-4">
-      {/* 출석판 — 책상 텍스처 배경 위에 4×7 그리드(셀은 반투명으로 나뭇결이 비침) */}
-      <div className="relative overflow-hidden rounded-2xl border border-amber-900/30 p-4 shadow-sm">
+      {/* 출석판 — 판타지 프레임 배경 위 4×4 그리드. 첫칸·마지막칸은 비움(배경·캐릭터 노출). */}
+      <div className="relative overflow-hidden rounded-2xl border border-amber-900/40 p-4 shadow-md">
         {/* eslint-disable-next-line @next/next/no-img-element */}
         <img
           src={assetUrl('/sprites/checkin/board.png')}
@@ -138,87 +138,90 @@ export function CheckinCalendar({
           style={{ imageRendering: 'pixelated' }}
         />
         <div
-          className="relative grid grid-cols-7 gap-1.5"
+          className="relative grid grid-cols-4 gap-2"
           role="list"
-          aria-label="28일 출석 캘린더"
+          aria-label="14일 출석 캘린더"
         >
-        {CHECKIN_CALENDAR.map((r, idx) => {
-          const day = idx + 1;
-          const isMilestone = isCheckinMilestone(day);
-          const isGrand = day === CHECKIN_CYCLE_DAYS;
-          const isClaimed = day <= dayProgress;
-          // 오늘 수령 후 todayCellDay는 '내일 칸'을 가리킴 → 체크/오늘강조 모두 안 함.
-          // (이전 isTodayClaimed가 다음 칸을 수령완료로 오표시하던 버그 수정 2026-06-01)
-          const isToday = day === todayCellDay && !claimedToday;
-          const justClaimed = justClaimedDay === day;
-          const showCheck = isClaimed;
-          const state = isToday ? 'today' : isClaimed ? 'past' : 'future';
+          {Array.from({ length: 16 }, (_, pos) => {
+            // 4×4 = 16칸. pos 0(좌상)·15(우하)은 빈 칸 → 배경/캐릭터 노출용.
+            if (pos === 0 || pos === 15) {
+              return <div key={`empty-${pos}`} aria-hidden className="aspect-square" />;
+            }
+            const day = pos; // pos 1..14 = day 1..14
+            const r = CHECKIN_CALENDAR[day - 1]!;
+            const isMilestone = isCheckinMilestone(day);
+            const isGrand = day === CHECKIN_CYCLE_DAYS;
+            const isClaimed = day <= dayProgress;
+            const isToday = day === todayCellDay && !claimedToday;
+            const justClaimed = justClaimedDay === day;
+            const showCheck = isClaimed;
+            const state = isToday ? 'today' : isClaimed ? 'past' : 'future';
 
-          const borderCls = isGrand
-            ? 'border-amber-500 ring-2 ring-amber-400/60 shadow-[0_0_10px_rgba(245,158,11,0.35)]'
-            : isMilestone
-              ? 'border-amber-500/70 ring-1 ring-amber-400/30'
-              : 'border-zinc-200 dark:border-zinc-800';
-          // 셀 반투명 — 출석판(나뭇결) 배경이 비치도록.
-          const stateCls = isToday
-            ? 'bg-amber-500/30 dark:bg-amber-400/20 shadow-[inset_0_0_0_2px_rgba(245,158,11,0.6)]'
-            : showCheck
-              ? 'bg-zinc-100/70 dark:bg-zinc-900/65'
-              : 'bg-white/82 dark:bg-zinc-950/65';
+            // 마일스톤(7·14) 강조 — 골드 테두리·글로우·틴트.
+            const borderCls = isGrand
+              ? 'border-amber-400 ring-2 ring-amber-400/70 shadow-[0_0_16px_rgba(245,158,11,0.55)]'
+              : isMilestone
+                ? 'border-amber-400/80 ring-1 ring-amber-400/50 shadow-[0_0_10px_rgba(245,158,11,0.3)]'
+                : 'border-zinc-300/70 dark:border-zinc-600/60';
+            const stateCls = isToday
+              ? 'bg-amber-500/35 shadow-[inset_0_0_0_2px_rgba(245,158,11,0.65)]'
+              : isMilestone
+                ? showCheck
+                  ? 'bg-amber-200/55'
+                  : 'bg-amber-100/82'
+                : showCheck
+                  ? 'bg-zinc-100/65 dark:bg-zinc-900/60'
+                  : 'bg-white/82 dark:bg-zinc-950/62';
 
-          return (
-            <div
-              key={day}
-              role="listitem"
-              aria-label={cellAriaLabel(day, r, state, isMilestone, isGrand)}
-              style={justClaimed ? { animation: 'checkin-glow 700ms ease-out' } : undefined}
-              className={`relative flex aspect-square flex-col items-center justify-between rounded-md border ${borderCls} ${stateCls} p-0.5 text-center`}
-            >
+            return (
               <div
-                className={`text-[9px] leading-none font-bold ${
-                  isGrand
-                    ? 'text-amber-700 dark:text-amber-300'
-                    : isMilestone
-                      ? 'text-amber-600 dark:text-amber-400'
-                      : 'text-zinc-400'
-                } ${showCheck ? 'opacity-50' : ''}`}
+                key={day}
+                role="listitem"
+                aria-label={cellAriaLabel(day, r, state, isMilestone, isGrand)}
+                style={justClaimed ? { animation: 'checkin-glow 700ms ease-out' } : undefined}
+                className={`relative flex aspect-square flex-col items-center justify-between rounded-lg border ${borderCls} ${stateCls} p-1.5 text-center`}
               >
-                {isGrand ? '최종' : `${day}`}
-              </div>
-
-              <div
-                className={`flex flex-1 items-center justify-center text-[13px] leading-none ${
-                  showCheck ? 'opacity-40' : ''
-                }`}
-                aria-hidden
-              >
-                <RewardEmoji r={r} />
-              </div>
-
-              <div
-                className={`text-[9px] leading-none font-semibold ${
-                  showCheck ? 'opacity-50' : ''
-                } ${
-                  r.kind === 'diamond'
-                    ? 'text-sky-700 dark:text-sky-300'
-                    : 'text-zinc-600 dark:text-zinc-400'
-                }`}
-              >
-                {quantityLabel(r)}
-              </div>
-
-              {showCheck && (
                 <div
-                  className="pointer-events-none absolute right-0.5 top-0.5 flex h-3.5 w-3.5 items-center justify-center rounded-full bg-amber-500 text-[9px] leading-none font-bold text-white shadow-sm"
-                  style={justClaimed ? { animation: 'checkin-stamp 520ms ease-out' } : undefined}
+                  className={`text-[11px] leading-none font-bold ${
+                    isGrand
+                      ? 'text-amber-700'
+                      : isMilestone
+                        ? 'text-amber-600'
+                        : 'text-zinc-400'
+                  } ${showCheck ? 'opacity-50' : ''}`}
+                >
+                  {isGrand ? '★ 최종' : isMilestone ? `★ ${day}` : `${day}`}
+                </div>
+
+                <div
+                  className={`flex flex-1 items-center justify-center text-2xl leading-none ${
+                    showCheck ? 'opacity-40' : ''
+                  }`}
                   aria-hidden
                 >
-                  ✓
+                  <RewardEmoji r={r} />
                 </div>
-              )}
-            </div>
-          );
-        })}
+
+                <div
+                  className={`text-[11px] leading-none font-semibold ${
+                    showCheck ? 'opacity-50' : ''
+                  } ${r.kind === 'diamond' ? 'text-sky-700 dark:text-sky-300' : 'text-zinc-600 dark:text-zinc-300'}`}
+                >
+                  {quantityLabel(r)}
+                </div>
+
+                {showCheck && (
+                  <div
+                    className="pointer-events-none absolute right-1 top-1 flex h-5 w-5 items-center justify-center rounded-full bg-amber-500 text-[11px] leading-none font-bold text-white shadow"
+                    style={justClaimed ? { animation: 'checkin-stamp 520ms ease-out' } : undefined}
+                    aria-hidden
+                  >
+                    ✓
+                  </div>
+                )}
+              </div>
+            );
+          })}
         </div>
       </div>
 

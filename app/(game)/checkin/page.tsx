@@ -6,7 +6,7 @@ import { kstDateString } from '@/lib/kst';
 import { CheckinCalendar } from './CheckinCalendar';
 
 /**
- * /checkin — 28일 출석 캘린더 (WIREFRAMES §1.1).
+ * /checkin — 14일 출석 캘린더 (WIREFRAMES §1.1).
  *
  * 누적 출석(끊겨도 자리 유지). state.dayProgress=0~27, 다음 칸 1-index = dp+1.
  * 1일 1회 KST 자정 기준 멱등(BALANCE §7.3, SCHEMA §12).
