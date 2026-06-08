@@ -175,6 +175,8 @@
 **B. 영토 / 구역**
 - `zones`(구역): id, region(`volcano|temple|swamp|sky|orc`), name, map_x, map_y(오버레이 좌표), owner_guild_id(nullable=중립), lord_user_id(nullable, 영주 상시 지정), captured_at, tax_points(미수집 누적), last_tax_collected_at(1h 쿨다운)
   - 영주(lord_user_id)는 **상시 필드**(전투 외에도 세금 수집·자동 방어). 소유 시 ≥1 필수.
+- `zone_adjacency`(인접 그래프 — **현재 미사용·미래 대비**): zone_a, zone_b(무방향 간선, 정규형 `a<b`). 좌표 배치 시 함께 author.
+  - **현 FFA 점령전은 인접 무시**(어디든 공격). 정의만 보유 → 후일 ① 확장형 점령(인접만 공격) ② 맵 연결선 표시 ③ 경로/그룹핑 전환 시 즉시 활용. 코드/규칙에 결합하지 않아 유지비 0.
 
 **C. 거주 / 세금**
 - 거주: `profiles.residence_zone_id`(유저당 1구역, 최초 랜덤). 강화 성공 시 `zones[거주].tax_points += 성공단계`(강화 resolve 훅에서 가산).
