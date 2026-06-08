@@ -27,7 +27,7 @@ const ERR: Record<string, string> = {
   NOT_FOUND: '유저를 찾을 수 없습니다',
   ALREADY_FRIEND: '이미 친구입니다',
   ALREADY_REQUESTED: '이미 요청했습니다',
-  CAP_REACHED: '친구가 가득 찼습니다 (최대 100)',
+  CAP_REACHED: '친구가 가득 찼습니다 (최대 30)',
   NO_REQUEST: '요청이 없습니다',
   UNAUTHENTICATED: '로그인이 필요합니다',
   UNKNOWN: '잠시 후 다시 시도해주세요',
@@ -267,7 +267,8 @@ export function FriendsTabs({
                 onChange={(e) => setQ(e.target.value)}
                 onKeyDown={(e) => e.key === 'Enter' && doSearch()}
                 placeholder="닉네임 또는 코드 검색"
-                className="min-w-0 flex-1 rounded-lg border border-zinc-300 bg-white px-3 py-2 text-sm outline-none focus:border-amber-400 dark:border-zinc-700 dark:bg-zinc-900"
+                /* text-base(16px) — iOS 포커스 자동 확대 방지 */
+                className="min-w-0 flex-1 rounded-lg border border-zinc-300 bg-white px-3 py-2 text-base outline-none focus:border-amber-400 dark:border-zinc-700 dark:bg-zinc-900"
               />
               <button
                 type="button"

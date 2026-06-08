@@ -11,7 +11,7 @@ import { userProfiles } from '@/lib/db/schema/avatar';
  * 친구 — 검색→요청→수락(친구 선물 없음). 방향 1행 저장(requester→addressee).
  * 친구 = status='accepted' & (requester or addressee = 나). 받은 요청 = pending & addressee=나.
  */
-export const FRIEND_CAP = 100;
+export const FRIEND_CAP = 30;
 
 export class FriendError extends Error {
   constructor(
