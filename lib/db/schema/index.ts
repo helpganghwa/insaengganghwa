@@ -18,3 +18,4 @@ export * from './avatar'; // PROFILE — 캐릭터 프로필(8방향 rotations +
 export * from './melee'; // §13 대난투 (Grand Melee) — 단일 글로벌 결정론 난투
 export * from './battlepass'; // §14 배틀패스 (성장 패스 — 강화/초월, 만료 없음)
 export * from './shop'; // §15 상점 무료 수령 (일일/주간/월간/가입 주기 멱등)
+export * from './friends'; // §16 친구 (검색→요청→수락)

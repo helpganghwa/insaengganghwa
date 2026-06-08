@@ -19,10 +19,12 @@ import { rarityBorderStyle, hasRarityBorder, TranscendTag } from '@/components/R
 import { NicknameEditor } from './NicknameEditor';
 import { ReferralSection } from './ReferralSection';
 import { getReferralStats } from '@/lib/game/referral/stats';
+import { getIncomingRequestCount } from '@/lib/game/friends';
 
 const SLOT_LABEL: Record<Slot, string> = { weapon: '무기', armor: '방어구', accessory: '장신구' };
 const SLOT_EMOJI: Record<Slot, string> = { weapon: '⚔️', armor: '🛡️', accessory: '💍' };
 const MENU = [
+  { href: '/friends', icon: '👥', label: '친구' },
   { href: '/me/profiles', icon: '✨', label: '아바타 관리' },
   { href: '/checkin', icon: '⚡', label: '출석 캘린더' },
   { href: '/me/codex', icon: '📖', label: '도감' },
@@ -80,6 +82,7 @@ export default async function ProfilePage() {
       .orderBy(desc(userProfiles.createdAt)),
     getReferralStats(userId),
     getCatalogMap(),
+    getIncomingRequestCount(userId),
     ]),
     3500,
     'me.page',
@@ -91,6 +94,7 @@ export default async function ProfilePage() {
   const myProfiles = _r?.[4] ?? [];
   const referralStats = _r?.[5] ?? { totalReferrals: 0, totalDiamondEarned: 0, totalBoxEarned: 0 };
   const catMap = _r?.[6] ?? new Map();
+  const friendReqCount = _r?.[7] ?? 0;
   await completeCatalog(catMap, equippedRaw.map((e) => e.catalogItemId));
 
   const nickname = prof[0]?.nickname ?? '플레이어';
@@ -227,6 +231,14 @@ export default async function ProfilePage() {
                 {m.icon}
               </span>
               <span className="text-sm font-medium">{m.label}</span>
+              {m.href === '/friends' && friendReqCount > 0 ? (
+                <span
+                  aria-label={`친구 요청 ${friendReqCount}건`}
+                  className="inline-flex min-w-[18px] items-center justify-center rounded-full bg-red-600 px-1.5 py-0.5 text-[10px] font-bold text-white tabular-nums"
+                >
+                  {friendReqCount > 99 ? '99+' : friendReqCount}
+                </span>
+              ) : null}
             </span>
             <span className="text-zinc-400">›</span>
           </Link>

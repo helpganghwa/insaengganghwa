@@ -15,6 +15,8 @@ export interface LayoutData {
   hasCompletedEnhance: boolean;
   /** 상점 무료 수령 가능(빨간점) — daily/weekly/monthly/signup 중 하나라도 미수령. */
   hasShopFree: boolean;
+  /** 친구 받은 요청 있음(프로필 탭 빨간점). */
+  hasFriendRequest: boolean;
   /** 헤더 머리 아이콘용 — 활성 프로필 south rotation URL. 없으면 null(폴백 아이콘). */
   profileSouth: string | null;
 }
@@ -25,6 +27,7 @@ const DEFAULTS: LayoutData = {
   hasUnreadMail: false,
   hasCompletedEnhance: false,
   hasShopFree: false,
+  hasFriendRequest: false,
   profileSouth: null,
 };
 
@@ -39,7 +42,7 @@ export async function loadLayoutData(userId: string): Promise<LayoutData> {
     const weeklyK = periodKey('weekly');
     const monthlyK = periodKey('monthly');
     // pgGuard: 타임아웃 시 쿼리 취소 → 풀 커넥션 즉시 회수(모든 페이지가 호출하는 핫패스).
-    const [profileRows, mailRows, enhRows, freeRows] = await Promise.all([
+    const [profileRows, mailRows, enhRows, freeRows, friendReqRows] = await Promise.all([
       pgGuard(
         (sql) => sql`
           select p.nickname, p.diamond, up.rotations
@@ -81,6 +84,15 @@ export async function loadLayoutData(userId: string): Promise<LayoutData> {
         4000,
         'layout.shopfree',
       ),
+      // 친구 받은 요청 존재 여부.
+      pgGuard(
+        (sql) => sql`
+          select 1 from friend_links
+          where addressee_id = ${userId}::uuid and status = 'pending'
+          limit 1`,
+        4000,
+        'layout.friendreq',
+      ),
     ]);
     const p = profileRows[0] as
       | { nickname?: string; diamond?: string | number | bigint; rotations?: unknown }
@@ -100,6 +112,7 @@ export async function loadLayoutData(userId: string): Promise<LayoutData> {
       hasUnreadMail: mailRows.length > 0,
       hasCompletedEnhance: Number((enhRows[0] as { n?: number | string } | undefined)?.n ?? 0) > 0,
       hasShopFree: Number((freeRows[0] as { n?: number | string } | undefined)?.n ?? 0) < 4,
+      hasFriendRequest: friendReqRows.length > 0,
       profileSouth: (rot as Record<string, string> | null)?.south ?? null,
     };
   } catch (e) {
