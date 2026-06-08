@@ -376,10 +376,10 @@ export function MailList({
                       alt=""
                       aria-hidden
                       draggable={false}
-                      className={`pointer-events-none absolute z-0 w-auto ${
+                      className={`pointer-events-none absolute z-0 w-auto max-w-[90%] ${
                         m.avatarFull
-                          ? 'right-[-42%] top-[calc(-42%_-_20px)] h-[350%]'
-                          : 'right-1 top-0 h-[128%]'
+                          ? 'right-[-33%] top-[calc(-40%_-_20px)] h-[350%]'
+                          : 'right-1 top-0 h-[90%]'
                       }`}
                       style={{ imageRendering: 'pixelated' }}
                     />
