@@ -378,7 +378,7 @@ export function MailList({
                       draggable={false}
                       className={`pointer-events-none absolute z-0 w-auto opacity-95 ${
                         m.avatarFull
-                          ? 'right-[-34%] top-[-42%] h-[350%]'
+                          ? 'right-[-20%] top-[calc(-42%_-_20px)] h-[350%]'
                           : 'right-1 top-0 h-[128%]'
                       }`}
                       style={{ imageRendering: 'pixelated' }}
