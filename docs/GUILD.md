@@ -162,6 +162,32 @@
 - ⓓ **세수 상한 없음.** 대신 **점령 구역마다 영주(대표) 1명 이상 지정 필수**(§5.4) → 멤버 수(30 cap)가 **자연 상한**(여러 구역 동시 점령은 인력상 어려움).
 - ⓔ **환산율 시뮬 튜닝**: 기본 100pt:1💎, 세수가 과하면 **1000:1 등으로 하향**해 경제(1,440💎/일 앵커) 교란 방지. 💎는 ratio로 캡되는 소량 faucet.
 
+### 5.6 데이터 구조 (DB 설계)
+
+> Drizzle 스키마 + 수동 마이그레이션으로 구현 예정. 인접 규칙이 없어 **그래프 불필요** — 구역은 좌표만 가진 평면 리스트.
+> 구역 수는 `zones` 행 수로 자유 — **지역별 개수 달라도 됨**, 총수도 조절 가능(출시엔 DAU 고려해 적게 시작, 예 총 50±, 이후 확장).
+
+**A. 길드 코어**
+- `guilds`: id, name, emblem_preset, notice(≤60자), level, xp, leader_user_id, created_at
+- `guild_members`: guild_id, user_id, role(`leader|vice|member`), contribution_points(누적 기여도), joined_at, daily_donation_count, last_donation_kst_day
+  - 유니크(user_id) — 1유저 1길드. 탈퇴 24h 재가입 제한은 별도 `guild_leave_log(user_id, left_at)` 또는 멤버 행 soft-delete + 타임스탬프.
+
+**B. 영토 / 구역**
+- `zones`(구역): id, region(`volcano|temple|swamp|sky|orc`), name, map_x, map_y(오버레이 좌표), owner_guild_id(nullable=중립), lord_user_id(nullable, 영주 상시 지정), captured_at, tax_points(미수집 누적), last_tax_collected_at(1h 쿨다운)
+  - 영주(lord_user_id)는 **상시 필드**(전투 외에도 세금 수집·자동 방어). 소유 시 ≥1 필수.
+
+**C. 거주 / 세금**
+- 거주: `profiles.residence_zone_id`(유저당 1구역, 최초 랜덤). 강화 성공 시 `zones[거주].tax_points += 성공단계`(강화 resolve 훅에서 가산).
+- 길드 세금 풀: `guilds.tax_pool_points`(영주가 수집 시 zone→길드 이전). 분배 액션이 `100:N💎` 환산 후 균등/특정 지급(기존 다이아 grant·우편 재사용).
+
+**D. 일일 배치 / 전투**
+- `guild_battle_deployments`: id, battle_kst_day, user_id, guild_id, zone_id, role(`attack|defend`), created_at. **유니크(user_id, battle_kst_day)** = 1인 1배치. 12:00 잠금. (영주는 자기 구역 방어로 자동 포함 → 별도 공격 배치 불가.)
+- `conquest_battles`: id, battle_kst_day, zone_id, winner_guild_id, finale(jsonb: 참가자·전투력·리플레이), created_at. **유니크(zone_id, battle_kst_day)**. **대난투 결정론 엔진 재사용**(영주 ×3, 일반 방어 +20%, 같은 길드 비공격, 최후 1길드 생존=승).
+
+**재사용·통합 지점**: 전투력 산식·결정론 시뮬 = `melee`(대난투) 재사용 / 💎 지급 = 기존 grant·mail / 거주 세금 가산 = `enhance/resolve` 훅 / 정산 cron = KST 12:00.
+
+**구현 TBD(엣지)**: 점령 직후 영주 미지정 시 처리(유예/중립 복귀), 영주 잠수·탈퇴 시 승계, 거주 구역이 소멸/리밸런싱될 때 마이그레이션.
+
 ---
 
 ## 6. 수익화 (BM)
