@@ -208,7 +208,7 @@ export function CheckinCalendar({
       </div>
 
       {/* 오늘 카드 + 액션 — 보물상자 배경 위(상단)으로 노출, 콘텐츠는 하단 어둠 영역에 */}
-      <section className="relative h-[132px] isolate overflow-hidden rounded-2xl border border-amber-900/30 shadow-sm">
+      <section className="relative h-[100px] isolate overflow-hidden rounded-2xl border border-amber-900/30 shadow-sm">
         {/* eslint-disable-next-line @next/next/no-img-element */}
         <img
           src={assetUrl('/sprites/checkin/claim.png')}
@@ -218,17 +218,19 @@ export function CheckinCalendar({
           className="absolute inset-0 h-full w-full object-cover"
           style={{ imageRendering: 'pixelated' }}
         />
-        <div className="pointer-events-none absolute inset-0 bg-gradient-to-t from-black/85 via-black/35 to-transparent" />
-        <div className="relative flex h-full flex-col justify-end gap-2 p-3.5">
-          <div className="flex items-center gap-2">
-            <span className="text-xl drop-shadow-[0_1px_3px_rgba(0,0,0,0.9)]" aria-hidden>
+        {/* 하단 절반만 어둡게 — 상단 배경(보상 단상·기둥·빛기둥) 노출 */}
+        <div className="pointer-events-none absolute inset-x-0 bottom-0 h-3/5 bg-gradient-to-t from-black/85 via-black/45 to-transparent" />
+        {/* 단일 하단 바 — 좌 보상 라벨 + 우 자동폭 버튼(풀폭 X로 배경 가림 최소화) */}
+        <div className="relative flex h-full items-end justify-between gap-2 p-2.5">
+          <div className="flex min-w-0 flex-1 items-center gap-1.5">
+            <span className="text-base drop-shadow-[0_1px_3px_rgba(0,0,0,0.9)]" aria-hidden>
               <RewardEmoji r={cardReward} />
             </span>
-            <div className="min-w-0 flex-1">
-              <div className="text-[10px] font-semibold text-amber-300 drop-shadow-[0_1px_2px_rgba(0,0,0,0.95)]">
+            <div className="min-w-0">
+              <div className="text-[9px] font-semibold leading-tight text-amber-300 drop-shadow-[0_1px_2px_rgba(0,0,0,0.95)]">
                 오늘의 보상
               </div>
-              <div className="truncate text-[13px] font-bold text-white drop-shadow-[0_1px_2px_rgba(0,0,0,0.95)]">
+              <div className="truncate text-xs font-bold leading-tight text-white drop-shadow-[0_1px_2px_rgba(0,0,0,0.95)]">
                 {rewardLongLabel(cardReward)}
               </div>
             </div>
@@ -237,9 +239,9 @@ export function CheckinCalendar({
             type="button"
             onClick={onClaim}
             disabled={claimedToday || pending}
-            className="w-full rounded-xl bg-amber-600 px-4 py-2.5 text-sm font-bold text-white shadow-md transition active:scale-[0.99] disabled:cursor-not-allowed disabled:bg-zinc-600/80 disabled:text-zinc-300"
+            className="shrink-0 rounded-lg bg-amber-600 px-3.5 py-2 text-[13px] font-bold text-white shadow-md transition active:scale-[0.99] disabled:cursor-not-allowed disabled:bg-zinc-600/80 disabled:text-zinc-300"
           >
-            {claimedToday ? '오늘 도장 완료' : pending ? '도장 찍는 중…' : '출석 도장 찍기'}
+            {claimedToday ? '오늘 완료' : pending ? '찍는 중…' : '도장 찍기'}
           </button>
         </div>
       </section>
