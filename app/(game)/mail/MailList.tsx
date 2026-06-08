@@ -23,10 +23,6 @@ export type MailItem = {
   body: string;
   senderLabel: string;
   payload: { diamond?: number | string; boxes?: Partial<Record<Slot, number>> };
-  /** 우측 배경 아바타(종류별) — 일일보급 마스코트/프로필 본인/대난투 트로피. 없으면 미표시. */
-  avatar?: string | null;
-  /** 풀바디 스프라이트(트로피·프로필) 여부 — true면 상반신이 보이게 크게 확대. */
-  avatarFull?: boolean;
   claimedAtIso: string | null;
   expiresAtIso: string;
   createdAtIso: string;
@@ -367,30 +363,7 @@ export function MailList({
                   className={`absolute left-0 top-0 h-full w-[3px] ${meta.bar}`}
                   aria-hidden
                 />
-                {/* 우측 배경 아바타(종류별) — 좌→우 그라데이션으로 텍스트 가독성 유지 */}
-                {m.avatar ? (
-                  <>
-                    {/* eslint-disable-next-line @next/next/no-img-element */}
-                    <img
-                      src={m.avatar}
-                      alt=""
-                      aria-hidden
-                      draggable={false}
-                      className={`pointer-events-none absolute z-0 w-auto max-w-[90%] ${
-                        m.avatarFull
-                          ? 'right-[-33%] top-[calc(-40%_-_20px)] h-[350%]'
-                          : 'right-1 top-0 h-[90%]'
-                      }`}
-                      style={{ imageRendering: 'pixelated' }}
-                    />
-                    {/* 좌측 텍스트 가독용 — 우측(아바타)은 transparent로 빠져 필터/워시 없이 또렷 */}
-                    <div
-                      className="pointer-events-none absolute inset-0 z-0 bg-gradient-to-r from-white via-white/45 to-transparent to-[72%] dark:from-zinc-950 dark:via-zinc-950/45"
-                      aria-hidden
-                    />
-                  </>
-                ) : null}
-                <div className="relative z-10 p-3 pl-3.5">
+                <div className="p-3 pl-3.5">
                   <div className="flex items-baseline justify-between gap-2">
                     <div className="min-w-0 flex-1">
 {/* 메타 행 — 발신 출처 1종만 노출(2026-06-01 중복 정리).

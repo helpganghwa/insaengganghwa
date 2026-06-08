@@ -1,18 +1,11 @@
-import { and, desc, eq, gt, inArray, isNotNull, isNull, sql } from 'drizzle-orm';
+import { and, desc, eq, gt, isNotNull, isNull, sql } from 'drizzle-orm';
 
 import { getSessionUserId } from '@/lib/auth/session';
 import { db } from '@/lib/db/client';
 import { withTimeout } from '@/lib/db/with-timeout';
 import { mailbox } from '@/lib/db/schema/mailbox';
-import { profiles } from '@/lib/db/schema/profiles';
-import { userProfiles } from '@/lib/db/schema/avatar';
-import { meleeBattles } from '@/lib/db/schema/melee';
-import { assetUrl } from '@/lib/asset-versions';
 
 import { MailList, type MailItem } from './MailList';
-
-// 메일 종류별 우측 아바타용 정적 에셋.
-const MASCOT_SUPPLY = '/sprites/characters/mascot-supply-bust-south-west.png';
 
 const PAGE_SIZE = 50;
 
@@ -59,56 +52,6 @@ export default async function MailPage({
   const hasMore = rows.length > PAGE_SIZE;
   const pageRows = rows.slice(0, PAGE_SIZE);
 
-  // 우측 아바타 resolve(생성 없이 기존 에셋·데이터) —
-  //  일일 보급→보급 마스코트 / 프로필 통과→본인 아바타 / 대난투→우승 트로피 아바타.
-  const battleIds = [
-    ...new Set(
-      pageRows
-        .filter((r) => r.senderLabel === '대난투')
-        .map((r) => (r.payload as { battleId?: string | number } | null)?.battleId)
-        .filter((v): v is string | number => v != null)
-        .map((v) => v.toString()),
-    ),
-  ];
-  const trophyByBattle = new Map<string, string>();
-  if (battleIds.length) {
-    const battles = await withTimeout(
-      db
-        .select({ id: meleeBattles.id, finale: meleeBattles.finale })
-        .from(meleeBattles)
-        .where(inArray(meleeBattles.id, battleIds.map((s) => BigInt(s)))),
-      2500,
-      'mail.trophy',
-    ).catch(() => [] as { id: bigint; finale: unknown }[]);
-    for (const b of battles) {
-      const t = (b.finale as { trophyAvatar?: string | null } | null)?.trophyAvatar;
-      if (t) trophyByBattle.set(b.id.toString(), t);
-    }
-  }
-  let myProfileSouth: string | null = null;
-  if (pageRows.some((r) => r.type === 'profile_accepted')) {
-    const prof = await withTimeout(
-      db
-        .select({ south: sql<string | null>`${userProfiles.rotations} ->> 'south'` })
-        .from(profiles)
-        .leftJoin(userProfiles, eq(userProfiles.id, profiles.activeProfileId))
-        .where(eq(profiles.id, userId))
-        .limit(1),
-      2500,
-      'mail.profile',
-    ).catch(() => [] as { south: string | null }[]);
-    myProfileSouth = prof[0]?.south ?? null;
-  }
-  const resolveAvatar = (r: (typeof pageRows)[number]): string | null => {
-    if (r.senderLabel === '일일 보급') return assetUrl(MASCOT_SUPPLY);
-    if (r.type === 'profile_accepted') return myProfileSouth;
-    if (r.senderLabel === '대난투') {
-      const id = (r.payload as { battleId?: string | number } | null)?.battleId;
-      return id != null ? (trophyByBattle.get(id.toString()) ?? null) : null;
-    }
-    return null;
-  };
-
   const items: MailItem[] = pageRows.map((r) => ({
     id: r.id.toString(),
     type: r.type,
@@ -116,9 +59,6 @@ export default async function MailPage({
     body: r.body || '',
     senderLabel: r.senderLabel,
     payload: r.payload as MailItem['payload'],
-    avatar: resolveAvatar(r),
-    // 풀바디 스프라이트(프로필·트로피)는 크게 확대. 마스코트(일일 보급)는 이미 상반신이라 작게.
-    avatarFull: r.type === 'profile_accepted' || r.senderLabel === '대난투',
     claimedAtIso: r.claimedAt ? r.claimedAt.toISOString() : null,
     expiresAtIso: r.expiresAt.toISOString(),
     createdAtIso: r.createdAt.toISOString(),
