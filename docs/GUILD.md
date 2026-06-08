@@ -113,7 +113,7 @@
 4. **타락한 천사들의 하늘섬** — 중앙 (대륙 심연 위 부유섬, 부서진 신성 유적·천사상)
 5. **오크 부락** — 동(東)
 
-- 레이드 보스(slime_king·orc_chief·stone_golem·dragon_west·fallen_angel)와의 1:1 매핑은 테마적이며 엄밀 대응은 TBD.
+- **레이드 보스 1:1 매핑**: 드래곤화산=dragon_west · 잊힌신전=**stone_golem(신전 수호 석상 골렘)** · 슬라임늪=slime_king · 타락천사하늘섬=fallen_angel · 오크부락=orc_chief. (신전 보스 스프라이트를 더 신전 테마로 재생성할지는 선택 — 미정 시 현 stone_golem 유지.)
 
 ### 5.2 점령 단위 — 확정: 다중 거점, 총 50구역
 
