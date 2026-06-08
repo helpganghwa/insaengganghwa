@@ -376,15 +376,16 @@ export function MailList({
                       alt=""
                       aria-hidden
                       draggable={false}
-                      className={`pointer-events-none absolute z-0 w-auto opacity-95 ${
+                      className={`pointer-events-none absolute z-0 w-auto ${
                         m.avatarFull
-                          ? 'right-[-28%] top-[calc(-42%_-_20px)] h-[350%]'
+                          ? 'right-[-42%] top-[calc(-42%_-_20px)] h-[350%]'
                           : 'right-1 top-0 h-[128%]'
                       }`}
                       style={{ imageRendering: 'pixelated' }}
                     />
+                    {/* 좌측 텍스트 가독용 — 우측(아바타)은 transparent로 빠져 필터/워시 없이 또렷 */}
                     <div
-                      className="pointer-events-none absolute inset-0 z-0 bg-gradient-to-r from-white via-white/85 to-white/25 dark:from-zinc-950 dark:via-zinc-950/85 dark:to-zinc-950/25"
+                      className="pointer-events-none absolute inset-0 z-0 bg-gradient-to-r from-white via-white/45 to-transparent to-[72%] dark:from-zinc-950 dark:via-zinc-950/45"
                       aria-hidden
                     />
                   </>
