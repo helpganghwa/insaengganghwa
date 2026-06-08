@@ -376,8 +376,10 @@ export function MailList({
                       alt=""
                       aria-hidden
                       draggable={false}
-                      className={`pointer-events-none absolute right-1 z-0 w-auto opacity-95 ${
-                        m.avatarFull ? 'top-[-34%] h-[300%]' : 'top-0 h-[128%]'
+                      className={`pointer-events-none absolute z-0 w-auto opacity-95 ${
+                        m.avatarFull
+                          ? 'right-[-34%] top-[-42%] h-[350%]'
+                          : 'right-1 top-0 h-[128%]'
                       }`}
                       style={{ imageRendering: 'pixelated' }}
                     />
