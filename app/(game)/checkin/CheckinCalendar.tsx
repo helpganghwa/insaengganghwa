@@ -126,24 +126,37 @@ export function CheckinCalendar({
 
   return (
     <div className="space-y-4">
-      {/* 출석판 — 판타지 프레임 배경 위 4×4 그리드. 첫칸·마지막칸은 비움(배경·캐릭터 노출). */}
-      <div className="relative overflow-hidden rounded-2xl border border-amber-900/40 p-4 shadow-md">
+      {/* 출석판 — 왕실 교실. 칠판 위 4×4 출석부 + 다크엘프 교수님(좌하단, 지시봉으로 칠판 가리킴). */}
+      <div className="relative aspect-square overflow-hidden rounded-2xl border border-amber-900/40 shadow-md">
+        {/* 교실 배경 */}
         {/* eslint-disable-next-line @next/next/no-img-element */}
         <img
-          src={assetUrl('/sprites/checkin/board.png')}
+          src={assetUrl('/sprites/checkin/classroom.png')}
           alt=""
           aria-hidden
           draggable={false}
           className="absolute inset-0 h-full w-full object-cover"
           style={{ imageRendering: 'pixelated' }}
         />
+        {/* 교수님 — 좌하단, 좌우반전(지시봉이 우상단 칠판 향함) */}
+        {/* eslint-disable-next-line @next/next/no-img-element */}
+        <img
+          src={assetUrl('/sprites/checkin/teacher.png')}
+          alt=""
+          aria-hidden
+          draggable={false}
+          className="pointer-events-none absolute bottom-0 left-[1%] z-10 h-[60%] w-auto -scale-x-100 drop-shadow-[0_2px_4px_rgba(0,0,0,0.5)]"
+          style={{ imageRendering: 'pixelated' }}
+        />
+        {/* 출석부 그리드 — 칠판 위 */}
         <div
-          className="relative grid grid-cols-4 gap-2"
+          className="absolute z-20 grid grid-cols-4 gap-1.5"
+          style={{ left: '31%', top: '11%', width: '58%' }}
           role="list"
           aria-label="14일 출석 캘린더"
         >
           {Array.from({ length: 16 }, (_, pos) => {
-            // 4×4 = 16칸. pos 0(좌상)·15(우하)은 빈 칸 → 배경/캐릭터 노출용.
+            // 4×4 = 16칸. pos 0(좌상)·15(우하)은 빈 칸 → 칠판 노출.
             if (pos === 0 || pos === 15) {
               return <div key={`empty-${pos}`} aria-hidden className="aspect-square" />;
             }
@@ -159,19 +172,19 @@ export function CheckinCalendar({
 
             // 마일스톤(7·14) 강조 — 골드 테두리·글로우·틴트.
             const borderCls = isGrand
-              ? 'border-amber-400 ring-2 ring-amber-400/70 shadow-[0_0_16px_rgba(245,158,11,0.55)]'
+              ? 'border-amber-400 ring-2 ring-amber-400/70 shadow-[0_0_14px_rgba(245,158,11,0.55)]'
               : isMilestone
-                ? 'border-amber-400/80 ring-1 ring-amber-400/50 shadow-[0_0_10px_rgba(245,158,11,0.3)]'
-                : 'border-zinc-300/70 dark:border-zinc-600/60';
+                ? 'border-amber-400/80 ring-1 ring-amber-400/50 shadow-[0_0_8px_rgba(245,158,11,0.3)]'
+                : 'border-zinc-300/70';
             const stateCls = isToday
-              ? 'bg-amber-500/35 shadow-[inset_0_0_0_2px_rgba(245,158,11,0.65)]'
+              ? 'bg-amber-500/40 shadow-[inset_0_0_0_2px_rgba(245,158,11,0.7)]'
               : isMilestone
                 ? showCheck
-                  ? 'bg-amber-200/55'
-                  : 'bg-amber-100/82'
+                  ? 'bg-amber-200/60'
+                  : 'bg-amber-100/88'
                 : showCheck
-                  ? 'bg-zinc-100/65 dark:bg-zinc-900/60'
-                  : 'bg-white/82 dark:bg-zinc-950/62';
+                  ? 'bg-zinc-100/70'
+                  : 'bg-white/88';
 
             return (
               <div
@@ -179,22 +192,18 @@ export function CheckinCalendar({
                 role="listitem"
                 aria-label={cellAriaLabel(day, r, state, isMilestone, isGrand)}
                 style={justClaimed ? { animation: 'checkin-glow 700ms ease-out' } : undefined}
-                className={`relative flex aspect-square flex-col items-center justify-between rounded-lg border ${borderCls} ${stateCls} p-1.5 text-center`}
+                className={`relative flex aspect-square flex-col items-center justify-between rounded-md border ${borderCls} ${stateCls} p-1 text-center`}
               >
                 <div
-                  className={`text-[11px] leading-none font-bold ${
-                    isGrand
-                      ? 'text-amber-700'
-                      : isMilestone
-                        ? 'text-amber-600'
-                        : 'text-zinc-400'
+                  className={`text-[9px] leading-none font-bold ${
+                    isGrand ? 'text-amber-700' : isMilestone ? 'text-amber-600' : 'text-zinc-400'
                   } ${showCheck ? 'opacity-50' : ''}`}
                 >
-                  {isGrand ? '★ 최종' : isMilestone ? `★ ${day}` : `${day}`}
+                  {isGrand ? '★최종' : isMilestone ? `★${day}` : `${day}`}
                 </div>
 
                 <div
-                  className={`flex flex-1 items-center justify-center text-2xl leading-none ${
+                  className={`flex flex-1 items-center justify-center text-[15px] leading-none ${
                     showCheck ? 'opacity-40' : ''
                   }`}
                   aria-hidden
@@ -203,16 +212,16 @@ export function CheckinCalendar({
                 </div>
 
                 <div
-                  className={`text-[11px] leading-none font-semibold ${
+                  className={`text-[9px] leading-none font-semibold ${
                     showCheck ? 'opacity-50' : ''
-                  } ${r.kind === 'diamond' ? 'text-sky-700 dark:text-sky-300' : 'text-zinc-600 dark:text-zinc-300'}`}
+                  } ${r.kind === 'diamond' ? 'text-sky-700' : 'text-zinc-600'}`}
                 >
                   {quantityLabel(r)}
                 </div>
 
                 {showCheck && (
                   <div
-                    className="pointer-events-none absolute right-1 top-1 flex h-5 w-5 items-center justify-center rounded-full bg-amber-500 text-[11px] leading-none font-bold text-white shadow"
+                    className="pointer-events-none absolute right-0.5 top-0.5 flex h-4 w-4 items-center justify-center rounded-full bg-amber-500 text-[9px] leading-none font-bold text-white shadow"
                     style={justClaimed ? { animation: 'checkin-stamp 520ms ease-out' } : undefined}
                     aria-hidden
                   >
