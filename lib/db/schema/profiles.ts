@@ -57,6 +57,11 @@ export const profiles = pgTable('profiles', {
    * 전역 1개 — 캐릭터와 무관하게 대표 카드·OG·랭킹에 공통 적용. PROFILE §8.
    */
   activeBackground: text('active_background'),
+  /**
+   * 거주 구역(GUILD §5.5) — 강화 성공 시 그 구역에 세금 포인트 가산. null=미배정(최초 랜덤 배정).
+   * FK(`zones.id`)는 마이그레이션에서 ALTER 추가(순환 import 회피, activeProfileId와 동일 패턴).
+   */
+  residenceZoneId: integer('residence_zone_id'),
   createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
   updatedAt: timestamp('updated_at', { withTimezone: true }).notNull().defaultNow(),
 });
