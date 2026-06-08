@@ -125,9 +125,9 @@ export function CheckinCalendar({
   };
 
   return (
-    <div className="space-y-4">
-      {/* 상단 배너 — 황실 아카데미(장식). 컴팩트. */}
-      <div className="relative h-20 overflow-hidden rounded-xl border border-zinc-200 shadow-sm dark:border-zinc-800">
+    <div>
+      {/* 상단 배너 — 황실 아카데미, 가로 풀폭(성장패스 패턴). 타이틀 없음. */}
+      <div className="relative h-24 overflow-hidden border-b border-zinc-200 dark:border-zinc-800">
         {/* eslint-disable-next-line @next/next/no-img-element */}
         <img
           src={assetUrl('/sprites/checkin/academy.png')}
@@ -137,14 +137,10 @@ export function CheckinCalendar({
           className="absolute inset-0 h-full w-full object-cover object-center"
           style={{ imageRendering: 'pixelated' }}
         />
-        <div className="pointer-events-none absolute inset-0 bg-gradient-to-t from-black/55 via-transparent to-transparent" />
-        <div className="relative flex h-full items-end p-2.5">
-          <span className="text-[13px] font-extrabold text-white text-pixel-outline drop-shadow-[0_1px_3px_rgba(0,0,0,0.9)]">
-            출석부
-          </span>
-        </div>
+        <div className="pointer-events-none absolute inset-0 bg-gradient-to-t from-black/35 to-transparent" />
       </div>
 
+      <div className="space-y-3 px-4 py-4">
       {/* 출석 그리드 — 7×4(28칸) 솔리드·심플·컴팩트. 수령 완료 칸엔 출석 도장. */}
       <div className="rounded-xl border border-zinc-200 bg-white p-2 dark:border-zinc-800 dark:bg-zinc-950">
         <div className="grid grid-cols-7 gap-1" role="list" aria-label="28일 출석 캘린더">
@@ -247,6 +243,7 @@ export function CheckinCalendar({
           </button>
         </div>
       </section>
+      </div>
     </div>
   );
 }

@@ -23,12 +23,10 @@ export default async function CheckinPage() {
   const kstToday = kstDateString();
 
   return (
-    <div className="px-4 py-4">
-      <CheckinCalendar
-        initialDayProgress={state.dayProgress}
-        initialLastClaimedKstDay={state.lastClaimedKstDay}
-        kstToday={kstToday}
-      />
-    </div>
+    <CheckinCalendar
+      initialDayProgress={state.dayProgress}
+      initialLastClaimedKstDay={state.lastClaimedKstDay}
+      kstToday={kstToday}
+    />
   );
 }
