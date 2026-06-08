@@ -137,7 +137,11 @@ export function CheckinCalendar({
           className="absolute inset-0 h-full w-full object-cover object-center"
           style={{ imageRendering: 'pixelated' }}
         />
-        <div className="pointer-events-none absolute inset-0 bg-gradient-to-t from-black/35 to-transparent" />
+        <div className="pointer-events-none absolute inset-0 bg-gradient-to-b from-black/40 via-black/20 to-black/45" />
+        {/* 중앙 타이틀 — 대난투 정보 배너와 동일 스타일(text-pixel-outline) */}
+        <div className="relative z-10 flex h-full flex-col items-center justify-center">
+          <h1 className="text-lg font-extrabold text-white text-pixel-outline">출석 캘린더</h1>
+        </div>
       </div>
 
       <div className="space-y-3 px-4 py-4">
