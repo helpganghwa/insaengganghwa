@@ -218,10 +218,12 @@ export function ShopTabs({
   free: initialFree,
   isAdmin,
   purchased: initialPurchased,
+  premiumDays: initialPremiumDays,
 }: {
   free: Record<FreeSlot, boolean>;
   isAdmin: boolean;
   purchased: string[];
+  premiumDays: number | null;
 }) {
   const { showHeaderToast } = useResourceToast();
   const { diamond, optimisticAdjust } = useDiamond();
@@ -229,6 +231,7 @@ export function ShopTabs({
   const [free, setFree] = useState(initialFree);
   const [claiming, setClaiming] = useState<FreeSlot | null>(null);
   const [purchased, setPurchased] = useState<Set<string>>(() => new Set(initialPurchased));
+  const [premiumDays, setPremiumDays] = useState<number | null>(initialPremiumDays);
   const [confirm, setConfirm] = useState<string | null>(null); // 구매 확인 대기 중인 상품
   const confirmTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
   const [, startTransition] = useTransition();
@@ -277,7 +280,8 @@ export function ShopTabs({
       showHeaderToast({ icon: '🛒', title: '이미 구매완료한 상품입니다' });
       return;
     }
-    if (limited) setPurchased((p) => new Set(p).add(productId)); // 낙관적 흑백
+    if (limited && productId !== PREMIUM.id) setPurchased((p) => new Set(p).add(productId)); // 낙관적 흑백
+    if (productId === PREMIUM.id) setPremiumDays(PREMIUM.daily.days); // 낙관적 잔여일수
     startTransition(async () => {
       const r = await devPurchaseAction(productId);
       if (r.status === 'success') {
@@ -361,8 +365,6 @@ export function ShopTabs({
     });
   };
 
-  const premiumBought = purchased.has(PREMIUM.id);
-
   return (
     <div className="flex h-full flex-col">
       <div className="min-h-0 flex-1 overflow-y-auto overscroll-contain px-3 py-3">
@@ -378,10 +380,13 @@ export function ShopTabs({
             detail={`즉시 ${dia(PREMIUM.instant.diamond)}·📦${PREMIUM.instant.boxes} · 매일 ${dia(
               PREMIUM.daily.diamond,
             )}·📦${PREMIUM.daily.boxes}`}
-            price={won(PREMIUM.krw)}
-            grayscale={premiumBought}
+            price={premiumDays != null ? `잔여 ${premiumDays}일` : won(PREMIUM.krw)}
             confirming={confirm === PREMIUM.id}
-            onClick={() => tapPaid(PREMIUM.id, isAdmin, () => onBuy(PREMIUM.id))}
+            onClick={() =>
+              premiumDays != null
+                ? showHeaderToast({ icon: '👑', title: `이용 중 — 잔여 ${premiumDays}일` })
+                : tapPaid(PREMIUM.id, isAdmin, () => onBuy(PREMIUM.id))
+            }
           />
         </ul>
 
