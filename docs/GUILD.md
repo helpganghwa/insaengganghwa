@@ -49,12 +49,15 @@
 - **① 모양(1택, 6)**: 라운드 방패 / 카이트 방패(세로) / 문장 배너 / 사각 문장판 / 날개 문장 / 마름모
 - **② 색상톤(1택, 7) = `emblem_color`**: 핏빛 적 / 황금 / 심해 청 / 독성 녹 / 마력 보라 / 흑철 / 백은 (유저 선택색이 곧 맵 소유 틴트)
 - **③ 키워드(1~3택, 20)**: 용 · 늑대 · 뱀 · 까마귀 · 그리핀 · 교차검 · 해골 · 투구 · 도끼 · 왕관 · 사자 · 눈 · 크리스탈 · 별·달 · 불꽃 · 화산 · 천사 날개 · 슬라임 · 오크 토템 · 신전
-- **생성 시점·비용**: 길드 결성 시 **무료 생성**. **무료 생성 횟수는 예시 품질 검증 후 결정** — 결과가 일정하면 **1회 고정**, 들쭉날쭉하면 **2~3개 생성 후 택1**. 이후 **재생성 = 5,000💎**(💎 sink·외형 BM).
+- **생성 시점·비용**: 길드 결성 시 **무료 1회 생성(고정)** — 3축 검증 결과 스타일 일관성 충분(유저가 모양·색·키워드로 제어). 이후 **재생성 = 5,000💎**(💎 sink·외형 BM). 마음에 안 들면 재생성으로 커버.
 - **길드명 변경 불가**(결성 시 확정). 문양만 재생성 가능.
 - **일관성·품질 안전장치(설계)**: 모양·색상톤은 변수, **스타일만 고정 앵커**(픽셀아트 · 오르네이트 테두리 처리 · **중앙 단일 볼드 모티브** · 투명배경) → **소형(맵 노드 16~24px) 가독성**. 키워드가 많아도 "중앙 1개 모티브"로 단순화.
 - **용도**: 길드 프로필 · 멤버 목록 · 검색 · **월드맵 구역 소유 표시(작게)** · 점령전 UI. **맵 소유 색** = 유저가 고른 **색상톤(`emblem_color`)** 직접 사용(추출 불필요).
 - **기술**: 생성물 저장 `public/sprites/guild/emblems/<guildId>.png`(또는 blob), `guilds.emblem_url`. 서버에서 Pixellab 호출 → **"문양 생성 중" 로딩 + 실패 재시도 + 기본 문양 폴백**(API 장애 대비). 생성비 ~$0.02는 결성 10,000💎 / 재생성 5,000💎로 충분 상회.
 - **모더레이션**: 키워드 풀이 고정이라 부적절 생성 위험 낮음(자유텍스트 없음). 생성물 사전검수 없이 **신고 기반 사후 대응**(§7).
+- **프롬프트 템플릿(검증됨)**: `generate-image-pixflux`, 128×128, `no_background:true` —
+  > `a dark fantasy pixel art guild heraldic emblem, a {모양} crest in a {색상톤} color palette, featuring {키워드들}, a single bold central symmetrical motif, ornate metal border, clean strong silhouette, bold and readable at small sizes, centered, transparent background, no text`
+  - 모양→`round shield`/`tall vertical kite shield`/`heraldic banner pennant`/`square heraldic crest plaque`/`winged crest`/`diamond lozenge crest`, 색상톤→`crimson blood-red`/`golden`/`deep ocean blue`/`toxic green`/`arcane purple`/`dark iron black`/`silver white`.
 
 ---
 
