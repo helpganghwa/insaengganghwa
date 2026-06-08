@@ -2,7 +2,7 @@ import { transcendStyle } from '@/lib/game/equipment/transcend';
 
 /**
  * 카드 4 모서리에 등급별 별(Star Trio) overlay.
- * 부모는 `position: relative` + overflow-hidden(rounded면) 필요.
+ * 부모는 `position: relative` + isolate overflow-hidden(rounded면) 필요.
  *
  * 등급 규칙(확정):
  *   +0 (none)         → null (overlay 없음, 부모 카드는 회색 기본 보더 유지)

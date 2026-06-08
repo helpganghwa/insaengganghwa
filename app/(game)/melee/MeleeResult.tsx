@@ -234,7 +234,7 @@ function Fighter({
       <div className="max-w-[150px] truncate text-[11px] font-bold text-white drop-shadow">{name}</div>
       {/* HP바 — 양쪽 동일 높이 확보(공격자는 빈 자리 placeholder). */}
       {maxHp != null ? (
-        <div className="h-1.5 w-24 overflow-hidden rounded-full bg-zinc-800 ring-1 ring-black/40">
+        <div className="h-1.5 w-24 isolate overflow-hidden rounded-full bg-zinc-800 ring-1 ring-black/40">
           <div
             className={`h-full ${hpColor(pct)}`}
             style={{ width: `${pct}%`, transition: 'width 650ms ease-out' }}

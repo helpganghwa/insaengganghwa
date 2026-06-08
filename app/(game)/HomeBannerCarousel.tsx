@@ -20,7 +20,7 @@ export function HomeBannerCarousel({ children }: { children: ReactNode }) {
   // 공통 outer — h-16 + border/rounded. 자식 카드는 frameless(h-full)로 그림만 채움.
   // 슬라이드 콘텐츠만 좌우로 슬라이드하고 outer 테두리는 고정.
   const outerClass =
-    'relative h-16 w-full min-w-0 overflow-hidden rounded-xl border border-amber-600/40';
+    'relative h-16 w-full min-w-0 isolate overflow-hidden rounded-xl border border-amber-600/40';
   if (slides.length === 1) {
     return <div className={outerClass}>{slides[0]}</div>;
   }

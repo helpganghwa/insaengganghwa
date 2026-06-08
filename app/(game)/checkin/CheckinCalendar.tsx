@@ -208,7 +208,7 @@ export function CheckinCalendar({
       </div>
 
       {/* 오늘 카드 + 액션 — 보물상자 배경 위(상단)으로 노출, 콘텐츠는 하단 어둠 영역에 */}
-      <section className="relative h-[132px] overflow-hidden rounded-2xl border border-amber-900/30 shadow-sm">
+      <section className="relative h-[132px] isolate overflow-hidden rounded-2xl border border-amber-900/30 shadow-sm">
         {/* eslint-disable-next-line @next/next/no-img-element */}
         <img
           src={assetUrl('/sprites/checkin/claim.png')}

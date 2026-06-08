@@ -51,7 +51,7 @@ export function RankingDeck({
       aria-label={`${label} 랭킹`}
       onTouchStart={onTouchStart}
       onTouchEnd={onTouchEnd}
-      className="overflow-hidden rounded-xl border border-amber-900/50 shadow-lg shadow-black/40"
+      className="isolate overflow-hidden rounded-xl border border-amber-900/50 shadow-lg shadow-black/40"
     >
       {/* 헤더 — 타이틀(랭킹 진입). 좌우 스와이프로 타입 전환. */}
       <Link

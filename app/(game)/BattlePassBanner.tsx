@@ -10,7 +10,7 @@ export function BattlePassBanner() {
   return (
     <Link
       href="/battlepass"
-      className="relative flex h-16 w-full min-w-0 items-center overflow-hidden rounded-xl border border-amber-600/40 transition active:scale-[0.99]"
+      className="relative flex h-16 w-full min-w-0 items-center isolate overflow-hidden rounded-xl border border-amber-600/40 transition active:scale-[0.99]"
     >
       {/* 배너 전체 덮는 불투명 이미지 */}
       {/* eslint-disable-next-line @next/next/no-img-element */}

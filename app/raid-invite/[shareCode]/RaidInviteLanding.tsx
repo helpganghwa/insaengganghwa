@@ -85,7 +85,7 @@ export function RaidInviteLanding({
     <main className="mx-auto flex min-h-dvh w-full max-w-[420px] flex-col justify-center gap-4 px-5 py-8">
       {/* 보스 히어로 */}
       <div
-        className={`relative flex h-60 items-center justify-center overflow-hidden rounded-2xl border border-zinc-800 ${getBossBgClass(bossCode)}`}
+        className={`relative flex h-60 items-center justify-center isolate overflow-hidden rounded-2xl border border-zinc-800 ${getBossBgClass(bossCode)}`}
       >
         {bg ? (
           // eslint-disable-next-line @next/next/no-img-element
@@ -153,7 +153,7 @@ export function RaidInviteLanding({
             <button
               type="submit"
               aria-label="카카오로 로그인하고 참여"
-              className="block w-full overflow-hidden rounded-xl transition active:scale-[0.99] hover:brightness-95"
+              className="block w-full isolate overflow-hidden rounded-xl transition active:scale-[0.99] hover:brightness-95"
             >
               {/* eslint-disable-next-line @next/next/no-img-element */}
               <img src="/kakao/kakao_login.png" alt="카카오로 로그인하고 참여" className="block w-full" />

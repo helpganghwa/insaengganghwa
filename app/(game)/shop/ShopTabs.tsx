@@ -138,7 +138,7 @@ function BannerCard({
       <button
         type="button"
         onClick={onClick}
-        className={`relative block ${height} w-full overflow-hidden rounded-xl border ${border} text-left shadow-md shadow-black/30 transition active:scale-[0.99] ${
+        className={`relative block ${height} w-full isolate overflow-hidden rounded-xl border ${border} text-left shadow-md shadow-black/30 transition active:scale-[0.99] ${
           grayscale ? 'grayscale' : ''
         }`}
       >

@@ -167,7 +167,7 @@ export function ProfileSelector({
             onClick={doDelete}
             disabled={pending}
             aria-label="선택한 아바타 삭제"
-            className={`absolute right-2 top-2 z-10 overflow-hidden rounded-full px-2.5 py-1 text-[11px] font-bold backdrop-blur-sm transition active:scale-95 disabled:opacity-50 ${
+            className={`absolute right-2 top-2 z-10 isolate overflow-hidden rounded-full px-2.5 py-1 text-[11px] font-bold backdrop-blur-sm transition active:scale-95 disabled:opacity-50 ${
               confirmDelete ? 'bg-red-600 text-white' : 'bg-black/55 text-red-300'
             }`}
           >
@@ -185,7 +185,7 @@ export function ProfileSelector({
           </button>
         ) : null}
         <div
-          className="relative mx-auto flex aspect-square w-full max-w-[256px] cursor-grab touch-pan-y select-none items-center justify-center overflow-hidden rounded-xl active:cursor-grabbing"
+          className="relative mx-auto flex aspect-square w-full max-w-[256px] cursor-grab touch-pan-y select-none items-center justify-center isolate overflow-hidden rounded-xl active:cursor-grabbing"
           onPointerDown={onPointerDown}
           onPointerMove={onPointerMove}
           onPointerUp={endDrag}
@@ -225,7 +225,7 @@ export function ProfileSelector({
             key={p.id}
             type="button"
             onClick={() => selectChar(p)}
-            className={`relative flex aspect-square w-16 shrink-0 items-center justify-center overflow-hidden rounded-lg border-2 bg-white dark:bg-zinc-950 ${
+            className={`relative flex aspect-square w-16 shrink-0 items-center justify-center isolate overflow-hidden rounded-lg border-2 bg-white dark:bg-zinc-950 ${
               p.id === selectedId
                 ? 'border-violet-500'
                 : 'border-zinc-200 dark:border-zinc-800'

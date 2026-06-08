@@ -20,7 +20,7 @@ const SLOT_LABEL: Record<Slot, string> = { weapon: '무기', armor: '방어구',
 
 // 공통 버튼 — Pixellab 배경 이미지 + 그라데이션 overlay + 라벨 간략.
 const BTN =
-  'relative flex h-16 flex-col items-center justify-end overflow-hidden rounded-lg border border-zinc-800 px-1 pb-1.5 text-white disabled:opacity-40 transition-transform active:scale-[0.97]';
+  'relative flex h-16 flex-col items-center justify-end isolate overflow-hidden rounded-lg border border-zinc-800 px-1 pb-1.5 text-white disabled:opacity-40 transition-transform active:scale-[0.97]';
 
 function BtnBg({ src, label }: { src: string; label: string }) {
   return (
@@ -100,7 +100,7 @@ export function EquipmentDetailSheet({
         {/* ── 상단: sprite + 정보(이름/슬롯/상태/전투력) ── */}
         <section className="flex items-stretch gap-3">
           <span
-            className={`relative flex h-[76px] w-[76px] shrink-0 items-center justify-center overflow-hidden rounded-xl border-2 ${
+            className={`relative flex h-[76px] w-[76px] shrink-0 items-center justify-center isolate overflow-hidden rounded-xl border-2 ${
               hasRarityBorder(item.transcendLevel) ? '' : 'border-zinc-200 dark:border-zinc-800'
             }`}
             style={rarityBorderStyle(item.transcendLevel)}
@@ -157,7 +157,7 @@ export function EquipmentDetailSheet({
               {item.transcendLevel + 1 - item.transcendProgress}개
             </span>
           </div>
-          <div className="h-1.5 w-full overflow-hidden rounded-full bg-zinc-200 dark:bg-zinc-800">
+          <div className="h-1.5 w-full isolate overflow-hidden rounded-full bg-zinc-200 dark:bg-zinc-800">
             <div
               className="h-full rounded-full"
               style={{

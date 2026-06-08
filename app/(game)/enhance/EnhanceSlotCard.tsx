@@ -461,7 +461,7 @@ export function EnhanceSlotCard({
             else setConfirm(true);
           }
         }}
-        className={`relative h-[92px] cursor-pointer overflow-hidden rounded-xl border-2 bg-zinc-950 text-zinc-100 transition active:scale-[0.99] ${
+        className={`relative h-[92px] cursor-pointer isolate overflow-hidden rounded-xl border-2 bg-zinc-950 text-zinc-100 transition active:scale-[0.99] ${
           ready ? 'border-emerald-500' : 'border-zinc-700'
         } ${flash ? FLASH_CLASS[flash] : ''}`}
       >
@@ -476,7 +476,7 @@ export function EnhanceSlotCard({
         />
         <div className="relative z-10 flex h-full items-center gap-3 px-3">
           <span
-            className={`relative flex h-16 w-16 shrink-0 items-center justify-center overflow-hidden rounded-lg border bg-black/40 ${
+            className={`relative flex h-16 w-16 shrink-0 items-center justify-center isolate overflow-hidden rounded-lg border bg-black/40 ${
               hasRarityBorder(activeJob.transcendLevel) ? '' : 'border-zinc-700'
             }`}
             style={rarityBorderStyle(activeJob.transcendLevel)}

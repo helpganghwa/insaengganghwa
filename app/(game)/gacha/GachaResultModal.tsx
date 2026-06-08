@@ -69,7 +69,7 @@ function ResultCard({
       onClick={onClick}
       title={r.name}
       style={{ ...rarityBorderStyle(shown), transition: 'border-color 400ms ease-out' }}
-      className={`relative flex aspect-square flex-col items-center justify-center gap-0.5 overflow-hidden rounded-xl border-2 bg-white px-1 text-center dark:bg-zinc-950 ${
+      className={`relative flex aspect-square flex-col items-center justify-center gap-0.5 isolate overflow-hidden rounded-xl border-2 bg-white px-1 text-center dark:bg-zinc-950 ${
         big ? 'w-full' : ''
       } ${hasRarityBorder(shown) ? '' : 'border-zinc-200 dark:border-zinc-800'}`}
     >

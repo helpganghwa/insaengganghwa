@@ -91,7 +91,7 @@ export function TutorialCompleteModal({ onClose }: { onClose: () => void }) {
           {pushLabel}
         </button>
 
-        <div className="mt-2 overflow-hidden rounded-xl border border-zinc-200 dark:border-zinc-700">
+        <div className="mt-2 isolate overflow-hidden rounded-xl border border-zinc-200 dark:border-zinc-700">
           <InstallAppButton />
         </div>
 

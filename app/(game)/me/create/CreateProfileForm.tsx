@@ -199,7 +199,7 @@ export function CreateProfileForm({
         type="button"
         onClick={onClick}
         disabled={disabled}
-        className={`relative w-full overflow-hidden rounded-xl py-3.5 text-sm font-bold transition-colors ${
+        className={`relative w-full isolate overflow-hidden rounded-xl py-3.5 text-sm font-bold transition-colors ${
           disabled
             ? 'bg-zinc-200 text-zinc-400 dark:bg-zinc-800 dark:text-zinc-600'
             : confirm

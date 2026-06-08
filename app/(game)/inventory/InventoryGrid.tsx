@@ -195,7 +195,7 @@ const Tile = memo(function Tile({
         contentVisibility: 'auto',
         containIntrinsicSize: 'auto 116px',
       }}
-      className={`relative flex aspect-square flex-col items-center justify-center gap-0.5 overflow-hidden rounded-xl border-2 bg-white px-1 text-center dark:bg-zinc-950 ${
+      className={`relative flex aspect-square flex-col items-center justify-center gap-0.5 isolate overflow-hidden rounded-xl border-2 bg-white px-1 text-center dark:bg-zinc-950 ${
         hasRarityBorder(item.transcendLevel) ? '' : 'border-zinc-200 dark:border-zinc-800'
       }`}
     >

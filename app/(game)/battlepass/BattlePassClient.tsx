@@ -53,7 +53,7 @@ function RewardChip({
         ? 'bg-zinc-200 text-zinc-500 dark:bg-zinc-800 dark:text-zinc-400'
         : 'bg-zinc-100 text-zinc-400 dark:bg-zinc-900 dark:text-zinc-500';
   const base =
-    'relative flex w-full items-center justify-center gap-px overflow-hidden rounded py-1 text-[9px] leading-none tabular-nums';
+    'relative flex w-full items-center justify-center gap-px isolate overflow-hidden rounded py-1 text-[9px] leading-none tabular-nums';
   // 수령 완료 — 보상이 보이는 채로 '완료' 도장을 비스듬히 찍음.
   const body = (
     <>

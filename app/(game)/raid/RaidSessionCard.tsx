@@ -457,7 +457,7 @@ export function RaidSessionCard({ view: v }: { view: RaidView }) {
               누적 {v.totalDamage.toLocaleString()}
             </span>
           </div>
-          <div className="mt-1 h-2.5 overflow-hidden rounded-full bg-zinc-800">
+          <div className="mt-1 h-2.5 isolate overflow-hidden rounded-full bg-zinc-800">
             <div
               key={gPhase}
               className={`h-full ${pal.bar} shadow-[0_0_10px] ${pal.glow}`}
@@ -474,7 +474,7 @@ export function RaidSessionCard({ view: v }: { view: RaidView }) {
             </div>
           ) : (
             <div
-              className={`relative overflow-hidden rounded-xl border-2 p-3 text-center transition ${
+              className={`relative isolate overflow-hidden rounded-xl border-2 p-3 text-center transition ${
                 rewardClaimed
                   ? 'border-zinc-700 bg-zinc-800/40'
                   : 'border-amber-500/60 bg-gradient-to-br from-amber-900/40 to-yellow-900/30'
@@ -601,7 +601,7 @@ export function RaidSessionCard({ view: v }: { view: RaidView }) {
               return (
                 <li
                   key={i}
-                  className={`relative overflow-hidden rounded-lg px-2.5 py-1.5 text-[11px] ${
+                  className={`relative isolate overflow-hidden rounded-lg px-2.5 py-1.5 text-[11px] ${
                     p.isMe ? 'bg-amber-900/40 ring-1 ring-amber-500/50' : 'bg-zinc-900'
                   }`}
                 >

@@ -122,7 +122,7 @@ function Section({ title, children }: { title: string; children: React.ReactNode
   return (
     <section>
       <h2 className="mb-1.5 px-1 text-xs font-semibold text-zinc-500">{title}</h2>
-      <div className="overflow-hidden rounded-xl border border-zinc-200 bg-white dark:border-zinc-800 dark:bg-zinc-950">
+      <div className="isolate overflow-hidden rounded-xl border border-zinc-200 bg-white dark:border-zinc-800 dark:bg-zinc-950">
         {children}
       </div>
     </section>

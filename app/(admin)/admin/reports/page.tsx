@@ -67,7 +67,7 @@ export default async function AdminReportsPage() {
                   : 'border-zinc-200 dark:border-zinc-800'
               }`}
             >
-              <div className="relative h-20 w-20 shrink-0 overflow-hidden rounded-lg bg-gradient-to-b from-zinc-700 to-zinc-950">
+              <div className="relative h-20 w-20 shrink-0 isolate overflow-hidden rounded-lg bg-gradient-to-b from-zinc-700 to-zinc-950">
                 {charImg && (
                   // eslint-disable-next-line @next/next/no-img-element
                   <img src={charImg} alt="" aria-hidden className="absolute inset-0 h-full w-full object-contain object-bottom" style={{ imageRendering: 'pixelated', transform: 'scale(1.4)', transformOrigin: 'center bottom' }} />

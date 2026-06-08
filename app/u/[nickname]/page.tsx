@@ -408,7 +408,7 @@ export default async function PublicProfilePage({
                 <div
                   key={s}
                   style={rarityBorderStyle(it.transcendLevel)}
-                  className={`relative flex aspect-square flex-col items-center justify-center gap-0.5 overflow-hidden rounded-lg border-2 bg-zinc-950 px-1 text-center ${
+                  className={`relative flex aspect-square flex-col items-center justify-center gap-0.5 isolate overflow-hidden rounded-lg border-2 bg-zinc-950 px-1 text-center ${
                     hasRarityBorder(it.transcendLevel) ? '' : 'border-zinc-800'
                   }`}
                 >

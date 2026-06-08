@@ -226,7 +226,7 @@ export function BoastModal({
       onClick={onClose}
     >
       <div
-        className="flex max-h-[calc(100dvh-2rem)] w-full max-w-sm flex-col overflow-hidden rounded-2xl bg-zinc-950 shadow-[0_0_40px_rgba(245,158,11,0.18)] ring-1 ring-amber-700/40"
+        className="flex max-h-[calc(100dvh-2rem)] w-full max-w-sm flex-col isolate overflow-hidden rounded-2xl bg-zinc-950 shadow-[0_0_40px_rgba(245,158,11,0.18)] ring-1 ring-amber-700/40"
         onClick={(e) => e.stopPropagation()}
       >
         {/* 카톡 헤더 — 카카오 노란 톤 */}

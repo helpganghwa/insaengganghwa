@@ -1,10 +1,7 @@
 import Link from 'next/link';
 
 import { getSessionUserId } from '@/lib/auth/session';
-import {
-  getLeaderboardPayload,
-  type LeaderboardMetric,
-} from '@/lib/game/leaderboard/queries';
+import { getLeaderboardPayload, type LeaderboardMetric } from '@/lib/game/leaderboard/queries';
 import { LeaderboardTabs } from './LeaderboardTabs';
 
 const LABEL: Record<LeaderboardMetric, string> = {
@@ -45,9 +42,7 @@ export default async function LeaderboardPage({
       <LeaderboardTabs active={metric} />
 
       <section className="flex items-center justify-between gap-2 rounded-xl border border-amber-300 bg-amber-50 px-3 py-2 dark:border-amber-700 dark:bg-amber-950/50">
-        <span className="text-xs text-amber-700 dark:text-amber-300">
-          내 {LABEL[metric]} 순위
-        </span>
+        <span className="text-xs text-amber-700 dark:text-amber-300">내 {LABEL[metric]} 순위</span>
         <span className="font-mono text-sm font-bold text-amber-900 dark:text-amber-100">
           {mine
             ? `#${mine.rank.toLocaleString('ko-KR')} · ${fmt(mine.value)}`
@@ -62,7 +57,7 @@ export default async function LeaderboardPage({
       ) : (
         <>
           {/* Top 3 — 명예의 전당 (pixellab 배경 + 전신 높이차) */}
-          <section className="overflow-hidden rounded-xl border border-amber-900/50 shadow-lg shadow-black/40">
+          <section className="isolate overflow-hidden rounded-xl border border-amber-900/50 shadow-lg shadow-black/40">
             <div className="relative w-full" style={{ aspectRatio: '400 / 174' }}>
               {/* eslint-disable-next-line @next/next/no-img-element */}
               <img
@@ -90,15 +85,15 @@ export default async function LeaderboardPage({
                         }`}
                       >
                         <div className="flex w-full items-center justify-center gap-0.5 px-0.5 pt-1">
-                          <span className="font-mono text-[11px] tabular-nums leading-none text-white/55 text-pixel-outline">
+                          <span className="text-pixel-outline font-mono text-[11px] leading-none text-white/55 tabular-nums">
                             #{slot}
                           </span>
-                          <span className="truncate text-[11px] font-medium text-white/55 text-pixel-outline">
+                          <span className="text-pixel-outline truncate text-[11px] font-medium text-white/55">
                             —
                           </span>
                         </div>
                         <div className="relative w-full flex-1" aria-hidden />
-                        <span className="pb-1 font-mono text-[11px] font-bold tabular-nums text-amber-200/55 text-pixel-outline">
+                        <span className="text-pixel-outline pb-1 font-mono text-[11px] font-bold text-amber-200/55 tabular-nums">
                           —
                         </span>
                       </div>
@@ -113,10 +108,10 @@ export default async function LeaderboardPage({
                       }`}
                     >
                       <div className="flex w-full items-center justify-center gap-0.5 px-0.5 pt-1">
-                        <span className="font-mono text-[11px] font-bold leading-none tabular-nums text-amber-300 text-pixel-outline">
+                        <span className="text-pixel-outline font-mono text-[11px] leading-none font-bold text-amber-300 tabular-nums">
                           #{entry.rank}
                         </span>
-                        <span className="truncate text-[11px] font-medium text-white text-pixel-outline">
+                        <span className="text-pixel-outline truncate text-[11px] font-medium text-white">
                           {entry.nickname}
                         </span>
                       </div>
@@ -138,7 +133,7 @@ export default async function LeaderboardPage({
                           />
                         )}
                       </div>
-                      <span className="pb-1 font-mono text-[11px] font-bold tabular-nums text-amber-200 text-pixel-outline">
+                      <span className="text-pixel-outline pb-1 font-mono text-[11px] font-bold text-amber-200 tabular-nums">
                         {fmt(entry.value)}
                       </span>
                     </Link>
@@ -150,7 +145,7 @@ export default async function LeaderboardPage({
 
           {/* 4위~ — 텍스트 목록 */}
           {top.length > 3 && (
-            <section className="overflow-hidden rounded-xl border border-zinc-800 bg-zinc-900">
+            <section className="isolate overflow-hidden rounded-xl border border-zinc-800 bg-zinc-900">
               <ul>
                 {top.slice(3).map((e) => {
                   const me = e.userId === userId;
@@ -159,16 +154,16 @@ export default async function LeaderboardPage({
                       <Link
                         href={`/u/${encodeURIComponent(e.publicCode)}`}
                         className={`flex h-12 items-center gap-2.5 border-b border-zinc-800 px-3 last:border-b-0 ${
-                          me ? 'bg-amber-400/10 ring-1 ring-inset ring-amber-400/60' : ''
+                          me ? 'bg-amber-400/10 ring-1 ring-amber-400/60 ring-inset' : ''
                         }`}
                       >
-                        <span className="w-7 shrink-0 text-center font-mono text-sm tabular-nums text-zinc-400">
+                        <span className="w-7 shrink-0 text-center font-mono text-sm text-zinc-400 tabular-nums">
                           #{e.rank}
                         </span>
                         <span className="flex-1 truncate text-sm font-medium text-white">
                           {e.nickname}
                         </span>
-                        <span className="font-mono text-sm tabular-nums text-amber-200">
+                        <span className="font-mono text-sm text-amber-200 tabular-nums">
                           {fmt(e.value)}
                         </span>
                       </Link>

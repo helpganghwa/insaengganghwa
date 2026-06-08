@@ -76,7 +76,7 @@ export function GachaBoxCard({
           backgroundColor: tint,
           animation: shake ? 'gacha-box-shake 360ms ease-in-out' : undefined,
         }}
-        className="relative overflow-hidden rounded-2xl border border-zinc-800"
+        className="relative isolate overflow-hidden rounded-2xl border border-zinc-800"
       >
         {/* eslint-disable-next-line @next/next/no-img-element */}
         <img

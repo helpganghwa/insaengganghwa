@@ -127,7 +127,7 @@ export function RaidSlots({
                 key={s.raidId}
                 href={`/raid/${s.raidId}`}
                 style={{ boxShadow: getBossShadow(s.bossCode) }}
-                className={`relative flex items-center gap-3 overflow-hidden rounded-xl border-2 border-amber-700/60 bg-gradient-to-r p-3 text-zinc-100 transition active:scale-[0.99] ${getBossBgClass(s.bossCode)}`}
+                className={`relative flex items-center gap-3 isolate overflow-hidden rounded-xl border-2 border-amber-700/60 bg-gradient-to-r p-3 text-zinc-100 transition active:scale-[0.99] ${getBossBgClass(s.bossCode)}`}
               >
                 {getBossBg(s.bossCode) ? (
                   // eslint-disable-next-line @next/next/no-img-element
@@ -174,7 +174,7 @@ export function RaidSlots({
               key={s.raidId}
               href={`/raid/${s.raidId}`}
               style={{ boxShadow: getBossShadow(s.bossCode) }}
-              className={`relative flex items-center gap-3 overflow-hidden rounded-xl border-2 border-amber-700/60 bg-gradient-to-r p-3 text-zinc-100 transition active:scale-[0.99] ${getBossBgClass(s.bossCode)}`}
+              className={`relative flex items-center gap-3 isolate overflow-hidden rounded-xl border-2 border-amber-700/60 bg-gradient-to-r p-3 text-zinc-100 transition active:scale-[0.99] ${getBossBgClass(s.bossCode)}`}
             >
               {/* 보스 배경 이미지(있으면) — opacity 35로 부드럽게 깔고 어둠 overlay로 가독성 확보 (grow 패턴). */}
               {getBossBg(s.bossCode) ? (
@@ -246,7 +246,7 @@ export function RaidSlots({
                 disabled={pending}
                 onClick={() => join(f.shareCode)}
                 style={{ boxShadow: getBossShadow(f.bossCode) }}
-                className={`relative flex w-full items-center gap-3 overflow-hidden rounded-xl border-2 border-emerald-700/50 bg-gradient-to-r p-3 text-left text-zinc-100 transition active:scale-[0.99] disabled:opacity-60 ${getBossBgClass(f.bossCode)}`}
+                className={`relative flex w-full items-center gap-3 isolate overflow-hidden rounded-xl border-2 border-emerald-700/50 bg-gradient-to-r p-3 text-left text-zinc-100 transition active:scale-[0.99] disabled:opacity-60 ${getBossBgClass(f.bossCode)}`}
               >
                 {getBossBg(f.bossCode) ? (
                   // eslint-disable-next-line @next/next/no-img-element

@@ -142,7 +142,7 @@ function EnhanceSlotPicker({
                 disabled={pending}
                 onClick={() => pick(c.id)}
                 style={rarityBorderStyle(c.transcendLevel)}
-                className={`relative flex aspect-square flex-col items-center justify-center gap-0.5 overflow-hidden rounded-xl border-2 bg-white px-1 text-center disabled:opacity-40 dark:bg-zinc-950 ${
+                className={`relative flex aspect-square flex-col items-center justify-center gap-0.5 isolate overflow-hidden rounded-xl border-2 bg-white px-1 text-center disabled:opacity-40 dark:bg-zinc-950 ${
                   hasRarityBorder(c.transcendLevel) ? '' : 'border-zinc-200 dark:border-zinc-800'
                 }`}
               >

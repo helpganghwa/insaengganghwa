@@ -360,7 +360,7 @@ export function MailList({
             return (
               <li
                 key={m.id}
-                className="relative overflow-hidden rounded-xl border border-zinc-200 bg-white dark:border-zinc-800 dark:bg-zinc-950"
+                className="relative isolate overflow-hidden rounded-xl border border-zinc-200 bg-white dark:border-zinc-800 dark:bg-zinc-950"
               >
                 {/* 좌측 컬러바 — type별 시각 anchor */}
                 <span
@@ -460,7 +460,7 @@ export function MailList({
           {Array.from({ length: loadingSkeletons }, (_, i) => (
             <li
               key={`sk-${i}`}
-              className="relative overflow-hidden rounded-xl border border-zinc-200 bg-white dark:border-zinc-800 dark:bg-zinc-950"
+              className="relative isolate overflow-hidden rounded-xl border border-zinc-200 bg-white dark:border-zinc-800 dark:bg-zinc-950"
               aria-hidden
             >
               <span className="absolute left-0 top-0 h-full w-[3px] bg-zinc-300 dark:bg-zinc-700" />
