@@ -53,6 +53,17 @@ const BOX_DESC: Record<ShopPeriod, string> = {
   weekly: '한 주를 채울 상자 꾸러미',
   monthly: '한 달치 상자를 가득 담아',
 };
+// 견습의 주머니(💎 보급상자) — 기간별 이름·배경(작은/기본/큰). 주간은 기존 box 배경 재사용.
+const BOX_NAME: Record<ShopPeriod, string> = {
+  daily: '견습의 작은 주머니',
+  weekly: '견습의 주머니',
+  monthly: '견습의 큰 주머니',
+};
+const BOX_BG: Record<ShopPeriod, string> = {
+  daily: 'box-sm',
+  weekly: 'box',
+  monthly: 'box-lg',
+};
 const FREE_DESC: Record<FreeSlot, string> = {
   daily: '매일 문 여는 작은 선물',
   weekly: '한 주를 여는 깜짝 선물',
@@ -434,11 +445,11 @@ export function ShopTabs({
                 claimFreeSlot(tab);
               }}
             />
-            {/* 견습의 주머니(💎로 구매) — 1탭 확인, 2탭 구매 */}
+            {/* 견습의 주머니(💎로 구매) — 기간별 이름·배경, 1탭 확인 2탭 구매 */}
             <BannerCard
-              bg="box"
+              bg={BOX_BG[tab]}
               char="apprentice"
-              title="견습의 주머니"
+              title={BOX_NAME[tab]}
               desc={BOX_DESC[tab]}
               detail={`📦 ${BOX[tab].boxes}개`}
               price={dia(BOX[tab].cost)}
