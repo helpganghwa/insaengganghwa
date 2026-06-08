@@ -1,7 +1,6 @@
 'use client';
 
 import { useState, useTransition } from 'react';
-import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 
 import { useResourceToast } from '@/components/ResourceToast';
@@ -34,9 +33,10 @@ const ERR: Record<string, string> = {
   UNKNOWN: '잠시 후 다시 시도해주세요',
 };
 
+// 헤더와 동일 — 영역(테두리/배경) 없이 스프라이트를 확대해 상반신만 노출.
 function Avatar({ src }: { src: string | null }) {
   return (
-    <div className="h-10 w-10 shrink-0 overflow-hidden rounded-full border border-zinc-700 bg-zinc-800">
+    <div className="relative h-11 w-11 shrink-0 overflow-hidden">
       {src ? (
         // eslint-disable-next-line @next/next/no-img-element
         <img
@@ -44,25 +44,40 @@ function Avatar({ src }: { src: string | null }) {
           alt=""
           aria-hidden
           draggable={false}
-          className="h-full w-full object-cover"
-          style={{ imageRendering: 'pixelated' }}
+          className="absolute inset-0 h-full w-full"
+          style={{
+            imageRendering: 'pixelated',
+            objectFit: 'cover',
+            objectPosition: '50% 0%',
+            transform: 'scale(3.6)',
+            transformOrigin: '50% 22%',
+          }}
         />
       ) : (
-        <div className="flex h-full w-full items-center justify-center text-zinc-500">👤</div>
+        <span className="absolute inset-0 flex items-center justify-center text-xl">👤</span>
       )}
     </div>
   );
 }
 
-function Row({ u, right }: { u: FriendUser; right: React.ReactNode }) {
+// 카드 클릭 → 프로필 상세(/u/code). 우측 버튼은 전파 차단.
+function Row({ u, onOpen, right }: { u: FriendUser; onOpen: () => void; right: React.ReactNode }) {
   return (
-    <li className="flex items-center gap-3 rounded-xl border border-zinc-200 bg-white px-3 py-2.5 dark:border-zinc-800 dark:bg-zinc-950">
-      <Avatar src={u.profileSouth} />
-      <div className="min-w-0 flex-1">
-        <div className="truncate text-sm font-bold">{u.nickname}</div>
-        <div className="truncate font-mono text-[11px] text-zinc-500">#{u.publicCode}</div>
+    <li>
+      <div
+        role="button"
+        tabIndex={0}
+        onClick={onOpen}
+        className="flex cursor-pointer items-center gap-3 rounded-xl border border-zinc-200 bg-white px-3 py-2.5 transition active:bg-zinc-50 dark:border-zinc-800 dark:bg-zinc-950 dark:active:bg-zinc-900"
+      >
+        <Avatar src={u.profileSouth} />
+        <div className="min-w-0 flex-1">
+          <div className="truncate text-sm font-bold">{u.nickname}</div>
+        </div>
+        <div className="flex shrink-0 items-center gap-1.5" onClick={(e) => e.stopPropagation()}>
+          {right}
+        </div>
       </div>
-      <div className="flex shrink-0 items-center gap-1.5">{right}</div>
     </li>
   );
 }
@@ -96,6 +111,7 @@ export function FriendsTabs({
   const fail = (code?: string) => toast(ERR[code ?? 'UNKNOWN'] ?? ERR.UNKNOWN, '⚠️');
   const setRel = (id: string, relation: FriendRelation) =>
     setResults((prev) => prev?.map((x) => (x.userId === id ? { ...x, relation } : x)) ?? prev);
+  const openProfile = (u: FriendUser) => router.push(`/u/${encodeURIComponent(u.publicCode)}`);
 
   const doSearch = () => {
     const term = q.trim();
@@ -252,23 +268,16 @@ export function FriendsTabs({
                 <Row
                   key={u.userId}
                   u={u}
+                  onOpen={() => openProfile(u)}
                   right={
-                    <>
-                      <Link
-                        href={`/u/${encodeURIComponent(u.publicCode)}`}
-                        className={`${btn} bg-zinc-100 text-zinc-700 dark:bg-zinc-800 dark:text-zinc-200`}
-                      >
-                        자랑
-                      </Link>
-                      <button
-                        type="button"
-                        disabled={busy}
-                        onClick={() => unfriend(u)}
-                        className={`${btn} bg-zinc-100 text-zinc-500 dark:bg-zinc-800`}
-                      >
-                        삭제
-                      </button>
-                    </>
+                    <button
+                      type="button"
+                      disabled={busy}
+                      onClick={() => unfriend(u)}
+                      className={`${btn} bg-zinc-100 text-zinc-500 dark:bg-zinc-800`}
+                    >
+                      삭제
+                    </button>
                   }
                 />
               ))}
@@ -288,6 +297,7 @@ export function FriendsTabs({
                     <Row
                       key={u.userId}
                       u={u}
+                      onOpen={() => openProfile(u)}
                       right={
                         <>
                           <button
@@ -323,6 +333,7 @@ export function FriendsTabs({
                     <Row
                       key={u.userId}
                       u={u}
+                      onOpen={() => openProfile(u)}
                       right={
                         <button
                           type="button"
@@ -371,6 +382,7 @@ export function FriendsTabs({
                   <Row
                     key={u.userId}
                     u={u}
+                    onOpen={() => openProfile(u)}
                     right={
                       u.relation === 'friend' ? (
                         <span className="text-[12px] font-bold text-emerald-500">친구</span>
