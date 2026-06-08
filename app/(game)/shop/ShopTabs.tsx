@@ -232,15 +232,18 @@ export function ShopTabs({
   isAdmin,
   purchased: initialPurchased,
   premiumDays: initialPremiumDays,
+  initialTab = 'daily',
 }: {
   free: Record<FreeSlot, boolean>;
   isAdmin: boolean;
   purchased: string[];
   premiumDays: number | null;
+  /** 딥링크용 초기 탭(예: 헤더 다이아 클릭 → ?tab=charge). */
+  initialTab?: Tab;
 }) {
   const { showHeaderToast } = useResourceToast();
   const { diamond, optimisticAdjust } = useDiamond();
-  const [tab, setTab] = useState<Tab>('daily');
+  const [tab, setTab] = useState<Tab>(initialTab);
   const [free, setFree] = useState(initialFree);
   const [claiming, setClaiming] = useState<FreeSlot | null>(null);
   const [purchased, setPurchased] = useState<Set<string>>(() => new Set(initialPurchased));

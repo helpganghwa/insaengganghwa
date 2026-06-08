@@ -58,7 +58,7 @@ export function AppHeaderShell({
       <div className="flex shrink-0 items-center gap-1.5 text-xs">
         {diamondSlot ?? (
           <Link
-            href="/shop"
+            href="/shop?tab=charge"
             aria-label={`다이아 ${diamond} · 충전`}
             className="inline-flex items-center gap-1 text-zinc-700 dark:text-zinc-100"
           >
