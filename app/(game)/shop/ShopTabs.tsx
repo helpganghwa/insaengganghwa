@@ -36,22 +36,17 @@ const FREE_DISPLAY: Record<
 
 // 카드·기간별 한 줄 설명(플레이버). 기간(일일/주간/월간) × 카드 종류마다 다르게.
 type ShopPeriod = 'daily' | 'weekly' | 'monthly';
-const CASH_DESC: Record<ShopPeriod, Record<string, string>> = {
-  daily: {
-    '모험가의 자루': '하루치 여비를 챙겨서',
-    '기사의 상자': '오늘 하루를 든든히 무장',
-    '왕의 금고': '하루를 황금빛으로 물들여',
-  },
-  weekly: {
-    '모험가의 자루': '한 주를 함께할 넉넉한 보따리',
-    '기사의 상자': '일주일을 버티는 든든한 군량',
-    '왕의 금고': '이번 주, 왕처럼 누리기',
-  },
-  monthly: {
-    '모험가의 자루': '한 달 여정을 위한 짐 꾸러미',
-    '기사의 상자': '한 달간 흔들림 없는 보급',
-    '왕의 금고': '한 달을 지배하는 최고의 보상',
-  },
+// 현금 상품 설명 — 상품 id별로 쉬운 말로 모두 다르게.
+const CASH_DESC: Record<string, string> = {
+  d1: '하루 모험에 딱 맞는 한 줌',
+  d2: '오늘 하루 든든하게',
+  d3: '오늘 누리는 작은 사치',
+  w1: '일주일 여행 밑천',
+  w2: '한 주를 버티는 보급',
+  w3: '일주일을 넉넉하게',
+  m1: '한 달치 두둑한 짐',
+  m2: '한 달을 든든하게',
+  m3: '한 달 최고의 보상',
 };
 const BOX_DESC: Record<ShopPeriod, string> = {
   daily: '오늘 쓸 상자 한 줌',
@@ -72,11 +67,18 @@ const DIAMOND_DESC: Record<string, string> = {
   large: '넘치게 빛나는 보고',
   mega: '최고의 다이아 광맥',
 };
-// 현금 카드 종류 → 배경/캐릭터 에셋 키.
+// 현금 상품 id → 배경/캐릭터 에셋 키. 캐릭터는 등급(모험가/기사/왕) 공용, 배경은 기간별로 다름.
+// 주간(w*)은 기존 배경 재사용, 일일(*-sm)=단출/월간(*-lg)=풍성.
 const CASH_ART: Record<string, { bg: string; char: string }> = {
-  '왕의 금고': { bg: 'vault', char: 'vault' },
-  '기사의 상자': { bg: 'knight', char: 'knight' },
-  '모험가의 자루': { bg: 'adventurer', char: 'adventurer' },
+  d1: { bg: 'adventurer-sm', char: 'adventurer' },
+  d2: { bg: 'knight-sm', char: 'knight' },
+  d3: { bg: 'vault-sm', char: 'vault' },
+  w1: { bg: 'adventurer', char: 'adventurer' },
+  w2: { bg: 'knight', char: 'knight' },
+  w3: { bg: 'vault', char: 'vault' },
+  m1: { bg: 'adventurer-lg', char: 'adventurer' },
+  m2: { bg: 'knight-lg', char: 'knight' },
+  m3: { bg: 'vault-lg', char: 'vault' },
 };
 
 const won = (n: number) => `₩${n.toLocaleString('ko-KR')}`;
@@ -448,14 +450,14 @@ export function ShopTabs({
             />
             {/* 현금 패키지 3종 — 1탭 확인, 2탭 구매(어드민만 즉시구매) */}
             {CASH[tab].map((c) => {
-              const art = CASH_ART[c.name] ?? { bg: 'adventurer' };
+              const art = CASH_ART[c.id] ?? { bg: 'adventurer', char: 'adventurer' };
               return (
                 <BannerCard
                   key={c.id}
                   bg={art.bg}
                   char={art.char}
                   title={c.name}
-                  desc={CASH_DESC[tab][c.name] ?? ''}
+                  desc={CASH_DESC[c.id] ?? ''}
                   detail={`${dia(c.diamond)} · 📦${c.boxes}`}
                   price={won(c.krw)}
                   grayscale={purchased.has(c.id)}
