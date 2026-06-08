@@ -398,7 +398,7 @@ export const PROFILE_GENERATION_DIAMOND = 2_000;
 // ─────────────────────────────────────────────────────────────────────────────
 
 /** §7.1 28일 1사이클 길이. 28칸 완료 후 다음 접속일 1칸으로 롤. */
-export const CHECKIN_CYCLE_DAYS = 14;
+export const CHECKIN_CYCLE_DAYS = 28;
 
 export type CheckinReward =
   | { kind: 'diamond'; amount: number }
@@ -406,9 +406,9 @@ export type CheckinReward =
   | { kind: 'supply_set'; perSlot: number };
 
 /**
- * §7.1 출석 캘린더 보상 — 1-index(1~14, 14일 로테이션). BALANCE.md §7.1 표와 1:1.
- * 평일 6일 순환(무기→💎300→방어구→💎300→장신구→💎300) + 7일째 마일스톤(보급세트 30),
- * 14일째 최종 마일스톤(💎2,000).
+ * §7.1 출석 캘린더 보상 — 1-index(1~28). BALANCE.md §7.1 표와 1:1.
+ * 평일 6일 순환(무기→💎300→방어구→💎300→장신구→💎300) + 7일째마다 마일스톤 4종 순환
+ * (보급세트 30 → 💎2,000 → 보급세트 60 → 💎3,000).
  */
 export const CHECKIN_CALENDAR: readonly CheckinReward[] = [
   { kind: 'supply', slot: 'weapon', count: 10 }, // 1
@@ -424,7 +424,21 @@ export const CHECKIN_CALENDAR: readonly CheckinReward[] = [
   { kind: 'diamond', amount: 300 }, // 11
   { kind: 'supply', slot: 'accessory', count: 10 }, // 12
   { kind: 'diamond', amount: 300 }, // 13
-  { kind: 'diamond', amount: 2000 }, // 14 ★ 최종
+  { kind: 'diamond', amount: 2000 }, // 14 ★
+  { kind: 'supply', slot: 'weapon', count: 10 }, // 15
+  { kind: 'diamond', amount: 300 }, // 16
+  { kind: 'supply', slot: 'armor', count: 10 }, // 17
+  { kind: 'diamond', amount: 300 }, // 18
+  { kind: 'supply', slot: 'accessory', count: 10 }, // 19
+  { kind: 'diamond', amount: 300 }, // 20
+  { kind: 'supply_set', perSlot: 20 }, // 21 ★
+  { kind: 'supply', slot: 'weapon', count: 10 }, // 22
+  { kind: 'diamond', amount: 300 }, // 23
+  { kind: 'supply', slot: 'armor', count: 10 }, // 24
+  { kind: 'diamond', amount: 300 }, // 25
+  { kind: 'supply', slot: 'accessory', count: 10 }, // 26
+  { kind: 'diamond', amount: 300 }, // 27
+  { kind: 'diamond', amount: 3000 }, // 28 ★
 ] as const;
 
 /** §7.1 7일째 마일스톤 칸(1-index)인지 — UI 강조용. */

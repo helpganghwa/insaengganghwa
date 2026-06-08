@@ -126,85 +126,71 @@ export function CheckinCalendar({
 
   return (
     <div className="space-y-4">
-      {/* 출석판 — 황실 아카데미 외관 위 4×4 출석부(셀 반투명으로 배경이 비침).
-          좌상단·우하단 칸은 비워 배경 노출. 수령 완료 칸엔 도장(출석 도장)이 찍힘. */}
-      <div className="relative overflow-hidden rounded-2xl border border-amber-900/40 p-4 shadow-md">
+      {/* 상단 배너 — 황실 아카데미(장식). 컴팩트. */}
+      <div className="relative h-20 overflow-hidden rounded-xl border border-zinc-200 shadow-sm dark:border-zinc-800">
         {/* eslint-disable-next-line @next/next/no-img-element */}
         <img
           src={assetUrl('/sprites/checkin/academy.png')}
           alt=""
           aria-hidden
           draggable={false}
-          className="absolute inset-0 h-full w-full object-cover"
+          className="absolute inset-0 h-full w-full object-cover object-center"
           style={{ imageRendering: 'pixelated' }}
         />
-        <div className="relative grid grid-cols-4 gap-2" role="list" aria-label="14일 출석 캘린더">
-          {Array.from({ length: 16 }, (_, pos) => {
-            // 4×4 = 16칸. pos 0(좌상)·15(우하)은 빈 칸 → 배경 노출.
-            if (pos === 0 || pos === 15) {
-              return <div key={`empty-${pos}`} aria-hidden className="aspect-square" />;
-            }
-            const day = pos; // pos 1..14 = day 1..14
-            const r = CHECKIN_CALENDAR[day - 1]!;
-            const isMilestone = isCheckinMilestone(day);
-            const isGrand = day === CHECKIN_CYCLE_DAYS;
+        <div className="pointer-events-none absolute inset-0 bg-gradient-to-t from-black/55 via-transparent to-transparent" />
+        <div className="relative flex h-full items-end p-2.5">
+          <span className="text-[13px] font-extrabold text-white text-pixel-outline drop-shadow-[0_1px_3px_rgba(0,0,0,0.9)]">
+            출석부
+          </span>
+        </div>
+      </div>
+
+      {/* 출석 그리드 — 7×4(28칸) 솔리드·심플·컴팩트. 수령 완료 칸엔 출석 도장. */}
+      <div className="rounded-xl border border-zinc-200 bg-white p-2 dark:border-zinc-800 dark:bg-zinc-950">
+        <div className="grid grid-cols-7 gap-1" role="list" aria-label="28일 출석 캘린더">
+          {CHECKIN_CALENDAR.map((r, idx) => {
+            const day = idx + 1;
             const isClaimed = day <= dayProgress;
             const isToday = day === todayCellDay && !claimedToday;
             const justClaimed = justClaimedDay === day;
             const showCheck = isClaimed;
             const state = isToday ? 'today' : isClaimed ? 'past' : 'future';
 
-            // 마일스톤(7·14) 강조 — 골드 테두리·글로우·틴트.
-            const borderCls = isGrand
-              ? 'border-amber-400 ring-2 ring-amber-400/70 shadow-[0_0_14px_rgba(245,158,11,0.55)]'
-              : isMilestone
-                ? 'border-amber-400/80 ring-1 ring-amber-400/50 shadow-[0_0_8px_rgba(245,158,11,0.3)]'
-                : 'border-white/60';
-            // 셀 반투명(b) — 아카데미 배경이 칸 뒤로 비치게.
+            // 심플·균일 — 마일스톤 강조 없음. 오늘만 강조, 완료는 도장.
             const stateCls = isToday
-              ? 'bg-amber-400/45 shadow-[inset_0_0_0_2px_rgba(245,158,11,0.75)]'
-              : isMilestone
-                ? showCheck
-                  ? 'bg-amber-200/45'
-                  : 'bg-amber-100/62'
-                : showCheck
-                  ? 'bg-white/40'
-                  : 'bg-white/58';
+              ? 'bg-amber-500/15 dark:bg-amber-400/10 shadow-[inset_0_0_0_2px_rgba(245,158,11,0.5)]'
+              : showCheck
+                ? 'bg-zinc-100 dark:bg-zinc-900'
+                : 'bg-white dark:bg-zinc-950';
 
             return (
               <div
                 key={day}
                 role="listitem"
-                aria-label={cellAriaLabel(day, r, state, isMilestone, isGrand)}
+                aria-label={cellAriaLabel(day, r, state, isCheckinMilestone(day), day === CHECKIN_CYCLE_DAYS)}
                 style={justClaimed ? { animation: 'checkin-glow 700ms ease-out' } : undefined}
-                className={`relative flex aspect-square flex-col items-center justify-between rounded-md border ${borderCls} ${stateCls} p-1 text-center`}
+                className={`relative flex aspect-square flex-col items-center justify-between rounded border border-zinc-200 dark:border-zinc-800 ${stateCls} p-0.5 text-center`}
               >
                 <div
-                  className={`text-[9px] leading-none font-bold drop-shadow-[0_1px_1px_rgba(255,255,255,0.7)] ${
-                    isGrand ? 'text-amber-700' : isMilestone ? 'text-amber-700' : 'text-zinc-600'
-                  } ${showCheck ? 'opacity-40' : ''}`}
+                  className={`text-[9px] leading-none font-bold text-zinc-400 ${showCheck ? 'opacity-30' : ''}`}
                 >
-                  {isGrand ? '★최종' : isMilestone ? `★${day}` : `${day}`}
+                  {day}
                 </div>
-
                 <div
-                  className={`flex flex-1 items-center justify-center text-[15px] leading-none ${
-                    showCheck ? 'opacity-25' : ''
-                  }`}
+                  className={`flex flex-1 items-center justify-center text-[13px] leading-none ${showCheck ? 'opacity-20' : ''}`}
                   aria-hidden
                 >
                   <RewardEmoji r={r} />
                 </div>
-
                 <div
-                  className={`text-[9px] leading-none font-bold drop-shadow-[0_1px_1px_rgba(255,255,255,0.7)] ${
-                    showCheck ? 'opacity-40' : ''
-                  } ${r.kind === 'diamond' ? 'text-sky-700' : 'text-zinc-700'}`}
+                  className={`text-[9px] leading-none font-semibold ${showCheck ? 'opacity-30' : ''} ${
+                    r.kind === 'diamond' ? 'text-sky-700 dark:text-sky-300' : 'text-zinc-600 dark:text-zinc-400'
+                  }`}
                 >
                   {quantityLabel(r)}
                 </div>
 
-                {/* 수령 완료 — 도장이 찍힘 */}
+                {/* 수령 완료 — 출석 도장 */}
                 {showCheck && (
                   // eslint-disable-next-line @next/next/no-img-element
                   <img
@@ -212,7 +198,7 @@ export function CheckinCalendar({
                     alt=""
                     aria-hidden
                     draggable={false}
-                    className="pointer-events-none absolute left-1/2 top-1/2 z-10 h-[92%] w-auto -translate-x-1/2 -translate-y-1/2 drop-shadow-[0_1px_2px_rgba(0,0,0,0.4)]"
+                    className="pointer-events-none absolute left-1/2 top-1/2 z-10 h-[98%] w-auto -translate-x-1/2 -translate-y-1/2 drop-shadow-[0_1px_2px_rgba(0,0,0,0.4)]"
                     style={{
                       imageRendering: 'pixelated',
                       ...(justClaimed ? { animation: 'checkin-stamp 520ms ease-out' } : {}),
