@@ -393,11 +393,11 @@ export function ShopTabs({
             detail={`즉시 ${dia(PREMIUM.instant.diamond)}·📦${PREMIUM.instant.boxes} · 매일 ${dia(
               PREMIUM.daily.diamond,
             )}·📦${PREMIUM.daily.boxes}`}
-            price={premiumDays != null ? `잔여 ${premiumDays}일` : won(PREMIUM.krw)}
+            price={premiumDays != null ? `${premiumDays}일 남음` : won(PREMIUM.krw)}
             confirming={confirm === PREMIUM.id}
             onClick={() =>
               premiumDays != null
-                ? showHeaderToast({ icon: '👑', title: `이용 중 — 잔여 ${premiumDays}일` })
+                ? showHeaderToast({ icon: '👑', title: `이용 중 — ${premiumDays}일 남음` })
                 : tapPaid(PREMIUM.id, isAdmin, () => onBuy(PREMIUM.id))
             }
           />
