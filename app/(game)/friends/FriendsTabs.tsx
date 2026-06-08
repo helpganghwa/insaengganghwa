@@ -17,7 +17,8 @@ import type { FriendUser, FriendRelation } from '@/lib/game/friends';
 
 /**
  * 친구 — 목록 / 요청(받은·보낸) / 찾기. 선물 없음.
- * 변경(요청·수락·삭제) 후 router.refresh()로 서버 상태 동기화.
+ * 낙관적 UI: 목록을 로컬 상태로 두고 액션 즉시 반영, 실패 시 복원. 성공 시 router.refresh()로
+ * 외부 배지(바텀네비/me)만 동기화(로컬 상태가 권위라 props 재동기화 effect 불필요).
  */
 type Tab = 'list' | 'requests' | 'find';
 type SearchRow = FriendUser & { relation: FriendRelation };
@@ -53,13 +54,7 @@ function Avatar({ src }: { src: string | null }) {
   );
 }
 
-function Row({
-  u,
-  right,
-}: {
-  u: FriendUser;
-  right: React.ReactNode;
-}) {
+function Row({ u, right }: { u: FriendUser; right: React.ReactNode }) {
   return (
     <li className="flex items-center gap-3 rounded-xl border border-zinc-200 bg-white px-3 py-2.5 dark:border-zinc-800 dark:bg-zinc-950">
       <Avatar src={u.profileSouth} />
@@ -76,9 +71,9 @@ const btn =
   'rounded-lg px-2.5 py-1.5 text-[12px] font-bold transition active:scale-95 disabled:opacity-50';
 
 export function FriendsTabs({
-  friends,
-  incoming,
-  outgoing,
+  friends: initFriends,
+  incoming: initIncoming,
+  outgoing: initOutgoing,
 }: {
   friends: FriendUser[];
   incoming: FriendUser[];
@@ -92,7 +87,15 @@ export function FriendsTabs({
   const [results, setResults] = useState<SearchRow[] | null>(null);
   const [busy, setBusy] = useState(false);
 
+  // 낙관적 로컬 상태(권위) — 마운트 후 서버 props는 무시(로컬이 즉시 반영분).
+  const [friends, setFriends] = useState(initFriends);
+  const [incoming, setIncoming] = useState(initIncoming);
+  const [outgoing, setOutgoing] = useState(initOutgoing);
+
   const toast = (t: string, icon = '👥') => showHeaderToast({ icon, title: t });
+  const fail = (code?: string) => toast(ERR[code ?? 'UNKNOWN'] ?? ERR.UNKNOWN, '⚠️');
+  const setRel = (id: string, relation: FriendRelation) =>
+    setResults((prev) => prev?.map((x) => (x.userId === id ? { ...x, relation } : x)) ?? prev);
 
   const doSearch = () => {
     const term = q.trim();
@@ -105,24 +108,103 @@ export function FriendsTabs({
       const r = await searchAction(term);
       setBusy(false);
       if (r.status === 'success') setResults(r.results);
-      else toast(ERR[r.code] ?? ERR.UNKNOWN, '⚠️');
+      else fail(r.code);
     });
   };
 
-  const run = (
-    fn: () => Promise<{ status: string; code?: string; result?: string }>,
-    okMsg: string,
-  ) => {
+  // 요청 보내기(검색) — 낙관적: none→outgoing, 목록에도 추가. 실패 시 복원.
+  const send = (u: FriendUser) => {
+    setRel(u.userId, 'outgoing');
+    setOutgoing((p) => [u, ...p]);
     setBusy(true);
     startTransition(async () => {
-      const r = await fn();
+      const r = await sendRequestAction(u.userId);
       setBusy(false);
       if (r.status === 'success') {
-        toast(r.result === 'accepted' ? '친구가 되었습니다' : okMsg);
+        if (r.result === 'accepted') {
+          setRel(u.userId, 'friend');
+          setOutgoing((p) => p.filter((x) => x.userId !== u.userId));
+          setFriends((p) => [u, ...p]);
+          toast('친구가 되었습니다');
+        } else toast('요청을 보냈어요');
         router.refresh();
-        if (results) doSearch();
       } else {
-        toast(ERR[r.code ?? 'UNKNOWN'] ?? ERR.UNKNOWN, '⚠️');
+        setRel(u.userId, 'none');
+        setOutgoing((p) => p.filter((x) => x.userId !== u.userId));
+        fail(r.code);
+      }
+    });
+  };
+
+  // 수락 — 낙관적: incoming 제거 + friends 추가(+검색행 friend). 실패 시 복원.
+  const accept = (u: FriendUser, fromSearch = false) => {
+    setIncoming((p) => p.filter((x) => x.userId !== u.userId));
+    setFriends((p) => [u, ...p]);
+    if (fromSearch) setRel(u.userId, 'friend');
+    setBusy(true);
+    startTransition(async () => {
+      const r = await respondAction(u.userId, 'accept');
+      setBusy(false);
+      if (r.status === 'success') {
+        toast('친구가 되었습니다');
+        router.refresh();
+      } else {
+        setFriends((p) => p.filter((x) => x.userId !== u.userId));
+        setIncoming((p) => [u, ...p]);
+        if (fromSearch) setRel(u.userId, 'incoming');
+        fail(r.code);
+      }
+    });
+  };
+
+  const decline = (u: FriendUser) => {
+    setIncoming((p) => p.filter((x) => x.userId !== u.userId));
+    setBusy(true);
+    startTransition(async () => {
+      const r = await respondAction(u.userId, 'decline');
+      setBusy(false);
+      if (r.status === 'success') {
+        toast('요청을 거절했어요');
+        router.refresh();
+      } else {
+        setIncoming((p) => [u, ...p]);
+        fail(r.code);
+      }
+    });
+  };
+
+  const cancel = (u: FriendUser) => {
+    setOutgoing((p) => p.filter((x) => x.userId !== u.userId));
+    setRel(u.userId, 'none');
+    setBusy(true);
+    startTransition(async () => {
+      const r = await cancelAction(u.userId);
+      setBusy(false);
+      if (r.status === 'success') {
+        toast('요청을 취소했어요');
+        router.refresh();
+      } else {
+        setOutgoing((p) => [u, ...p]);
+        setRel(u.userId, 'outgoing');
+        fail(r.code);
+      }
+    });
+  };
+
+  const unfriend = (u: FriendUser) => {
+    setFriends((p) => p.filter((x) => x.userId !== u.userId));
+    setRel(u.userId, 'none');
+    setBusy(true);
+    startTransition(async () => {
+      const r = await removeFriendAction(u.userId);
+      setBusy(false);
+      if (r.status === 'success') {
+        toast('친구를 삭제했어요');
+        router.refresh();
+      } else {
+        setFriends((p) => [u, ...p]);
+        setRel(u.userId, 'friend');
+        fail(r.code);
       }
     });
   };
@@ -181,7 +263,7 @@ export function FriendsTabs({
                       <button
                         type="button"
                         disabled={busy}
-                        onClick={() => run(() => removeFriendAction(u.userId), '친구를 삭제했어요')}
+                        onClick={() => unfriend(u)}
                         className={`${btn} bg-zinc-100 text-zinc-500 dark:bg-zinc-800`}
                       >
                         삭제
@@ -211,7 +293,7 @@ export function FriendsTabs({
                           <button
                             type="button"
                             disabled={busy}
-                            onClick={() => run(() => respondAction(u.userId, 'accept'), '친구가 되었습니다')}
+                            onClick={() => accept(u)}
                             className={`${btn} bg-emerald-500 text-white`}
                           >
                             수락
@@ -219,7 +301,7 @@ export function FriendsTabs({
                           <button
                             type="button"
                             disabled={busy}
-                            onClick={() => run(() => respondAction(u.userId, 'decline'), '요청을 거절했어요')}
+                            onClick={() => decline(u)}
                             className={`${btn} bg-zinc-100 text-zinc-500 dark:bg-zinc-800`}
                           >
                             거절
@@ -245,7 +327,7 @@ export function FriendsTabs({
                         <button
                           type="button"
                           disabled={busy}
-                          onClick={() => run(() => cancelAction(u.userId), '요청을 취소했어요')}
+                          onClick={() => cancel(u)}
                           className={`${btn} bg-zinc-100 text-zinc-500 dark:bg-zinc-800`}
                         >
                           취소
@@ -298,7 +380,7 @@ export function FriendsTabs({
                         <button
                           type="button"
                           disabled={busy}
-                          onClick={() => run(() => respondAction(u.userId, 'accept'), '친구가 되었습니다')}
+                          onClick={() => accept(u, true)}
                           className={`${btn} bg-emerald-500 text-white`}
                         >
                           수락
@@ -307,7 +389,7 @@ export function FriendsTabs({
                         <button
                           type="button"
                           disabled={busy}
-                          onClick={() => run(() => sendRequestAction(u.userId), '요청을 보냈어요')}
+                          onClick={() => send(u)}
                           className={`${btn} bg-amber-500 text-white`}
                         >
                           친구 추가
