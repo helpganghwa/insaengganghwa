@@ -374,7 +374,7 @@ export function MailList({
                       alt=""
                       aria-hidden
                       draggable={false}
-                      className="pointer-events-none absolute right-1 top-0 z-0 h-[150%] w-auto opacity-95"
+                      className="pointer-events-none absolute right-1 top-0 z-0 h-[128%] w-auto opacity-95"
                       style={{ imageRendering: 'pixelated' }}
                     />
                     <div
