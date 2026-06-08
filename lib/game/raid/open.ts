@@ -82,8 +82,9 @@ export async function bumpDailyOrThrow(tx: Tx, userId: string) {
 export function openRaid(input: {
   userId: string;
   bossCode: RaidBoss;
+  visibleToFriends?: boolean;
 }): Promise<{ raidId: bigint; shareCode: string }> {
-  const { userId, bossCode } = input;
+  const { userId, bossCode, visibleToFriends = false } = input;
 
   return db.transaction(async (tx) => {
     if ((await activeRaidCount(tx, userId)) >= RAID_MAX_CONCURRENT_PER_USER) {
@@ -116,6 +117,7 @@ export function openRaid(input: {
         shareCode: genShareCode(),
         expireAt: new Date(now + RAID_WINDOW_MS),
         status: 'active',
+        visibleToFriends,
       })
       .returning({ id: raids.id, shareCode: raids.shareCode });
 

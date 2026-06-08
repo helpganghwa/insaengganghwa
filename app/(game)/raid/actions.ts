@@ -41,12 +41,12 @@ function rev(raidId?: string) {
 }
 const uid = () => getSessionUserId();
 
-export async function openRaidAction(bossCode: RaidBoss) {
+export async function openRaidAction(bossCode: RaidBoss, visibleToFriends = false) {
   const u = await uid();
   if (!u) return err('UNAUTHENTICATED');
   if (await rateLimited(u, 'raid')) return err('RATE_LIMITED');
   try {
-    const r = await openRaid({ userId: u, bossCode });
+    const r = await openRaid({ userId: u, bossCode, visibleToFriends });
     rev();
     return { status: 'success' as const, raidId: r.raidId.toString(), shareCode: r.shareCode };
   } catch (e) {

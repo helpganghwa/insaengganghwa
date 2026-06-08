@@ -50,6 +50,8 @@ export const raids = pgTable(
     phasesCleared: integer('phases_cleared').notNull().default(0),
     status: raidStatusEnum('status').notNull().default('active'),
     settledAt: timestamp('settled_at', { withTimezone: true }),
+    /** true = 친구 목록(/raid '친구가 소환한 레이드')에 노출. 기본 false(링크로만). */
+    visibleToFriends: boolean('visible_to_friends').notNull().default(false),
   },
   (t) => [index('raid_status_expire_idx').on(t.status, t.expireAt)],
 );

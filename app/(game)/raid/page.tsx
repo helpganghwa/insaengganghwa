@@ -1,18 +1,20 @@
-import { and, eq, inArray, isNull } from 'drizzle-orm';
+import { and, eq, gt, inArray, isNull, sql } from 'drizzle-orm';
 
 import { getSessionUserId } from '@/lib/auth/session';
 import { db } from '@/lib/db/client';
 import { withTimeout } from '@/lib/db/with-timeout';
+import { profiles } from '@/lib/db/schema/profiles';
 import { raids, raidParticipants, raidRewards, raidDailyCounts } from '@/lib/db/schema/raid';
 import {
   RAID_BASE_ATTACKS,
   RAID_DAILY_CAP,
   RAID_MAX_CONCURRENT_PER_USER,
 } from '@/lib/game/balance';
+import { getFriendIds } from '@/lib/game/friends';
 import { kstDateString } from '@/lib/kst';
 import type { RaidBoss } from '@/lib/game/raid/bosses';
 
-import { RaidSlots, type RaidSlotCell } from './RaidSlots';
+import { RaidSlots, type RaidSlotCell, type FriendRaid } from './RaidSlots';
 
 export default async function RaidPage() {
   const userId = await getSessionUserId();
@@ -130,6 +132,51 @@ export default async function RaidPage() {
   // 합계가 슬롯 한도 초과 시(정산 안 한 채 새 레이드 개설 등) 모두 노출.
   const slotCount = Math.max(RAID_MAX_CONCURRENT_PER_USER, cells.length);
 
+  // 친구가 소환한 레이드 — 친구 공개·활성·미만료, 내가 이미 참여 중인 건 제외.
+  const friendIds = await withTimeout(getFriendIds(userId), 3500, 'raid.friendIds').catch(
+    () => [] as string[],
+  );
+  let friendRaids: FriendRaid[] = [];
+  if (friendIds.length) {
+    const myRaidIds = new Set(rows.map((r) => r.id.toString()));
+    const fr = await withTimeout(
+      db
+        .select({
+          id: raids.id,
+          bossCode: raids.bossCode,
+          shareCode: raids.shareCode,
+          expireAt: raids.expireAt,
+          phasesCleared: raids.phasesCleared,
+          hostNickname: profiles.nickname,
+          participantCount: sql<number>`(select count(*) from raid_participants rp where rp.raid_id = ${raids.id})::int`,
+        })
+        .from(raids)
+        .innerJoin(profiles, eq(profiles.id, raids.hostUserId))
+        .where(
+          and(
+            eq(raids.status, 'active'),
+            eq(raids.visibleToFriends, true),
+            gt(raids.expireAt, sql`now()`),
+            inArray(raids.hostUserId, friendIds),
+          ),
+        )
+        .limit(20),
+      3500,
+      'raid.friendRaids',
+    ).catch(() => [] as never[]);
+    friendRaids = fr
+      .filter((r) => !myRaidIds.has(r.id.toString()))
+      .map((r) => ({
+        raidId: r.id.toString(),
+        bossCode: r.bossCode as RaidBoss,
+        shareCode: r.shareCode,
+        expireAtIso: r.expireAt.toISOString(),
+        phasesCleared: r.phasesCleared,
+        hostNickname: r.hostNickname,
+        participantCount: r.participantCount,
+      }));
+  }
+
   return (
     <div className="px-4 py-4">
       <RaidSlots
@@ -137,6 +184,7 @@ export default async function RaidPage() {
         slots={slotCount}
         dailyUsed={dailyRow[0]?.c ?? 0}
         dailyCap={RAID_DAILY_CAP}
+        friendRaids={friendRaids}
       />
     </div>
   );
