@@ -100,7 +100,8 @@ export function FriendsTabs({
   const [, startTransition] = useTransition();
   const [q, setQ] = useState('');
   const [results, setResults] = useState<SearchRow[] | null>(null);
-  const [busy, setBusy] = useState(false);
+  // 검색(네트워크 조회) 전용 로딩. 목록 액션은 낙관적 반영이라 별도 pending 불필요.
+  const [searching, setSearching] = useState(false);
 
   // 낙관적 로컬 상태(권위) — 마운트 후 서버 props는 무시(로컬이 즉시 반영분).
   const [friends, setFriends] = useState(initFriends);
@@ -119,10 +120,10 @@ export function FriendsTabs({
       setResults(null);
       return;
     }
-    setBusy(true);
+    setSearching(true);
     startTransition(async () => {
       const r = await searchAction(term);
-      setBusy(false);
+      setSearching(false);
       if (r.status === 'success') setResults(r.results);
       else fail(r.code);
     });
@@ -132,10 +133,8 @@ export function FriendsTabs({
   const send = (u: FriendUser) => {
     setRel(u.userId, 'outgoing');
     setOutgoing((p) => [u, ...p]);
-    setBusy(true);
     startTransition(async () => {
       const r = await sendRequestAction(u.userId);
-      setBusy(false);
       if (r.status === 'success') {
         if (r.result === 'accepted') {
           setRel(u.userId, 'friend');
@@ -157,10 +156,8 @@ export function FriendsTabs({
     setIncoming((p) => p.filter((x) => x.userId !== u.userId));
     setFriends((p) => [u, ...p]);
     if (fromSearch) setRel(u.userId, 'friend');
-    setBusy(true);
     startTransition(async () => {
       const r = await respondAction(u.userId, 'accept');
-      setBusy(false);
       if (r.status === 'success') {
         toast('친구가 되었습니다');
         router.refresh();
@@ -175,10 +172,8 @@ export function FriendsTabs({
 
   const decline = (u: FriendUser) => {
     setIncoming((p) => p.filter((x) => x.userId !== u.userId));
-    setBusy(true);
     startTransition(async () => {
       const r = await respondAction(u.userId, 'decline');
-      setBusy(false);
       if (r.status === 'success') {
         toast('요청을 거절했어요');
         router.refresh();
@@ -192,10 +187,8 @@ export function FriendsTabs({
   const cancel = (u: FriendUser) => {
     setOutgoing((p) => p.filter((x) => x.userId !== u.userId));
     setRel(u.userId, 'none');
-    setBusy(true);
     startTransition(async () => {
       const r = await cancelAction(u.userId);
-      setBusy(false);
       if (r.status === 'success') {
         toast('요청을 취소했어요');
         router.refresh();
@@ -210,10 +203,8 @@ export function FriendsTabs({
   const unfriend = (u: FriendUser) => {
     setFriends((p) => p.filter((x) => x.userId !== u.userId));
     setRel(u.userId, 'none');
-    setBusy(true);
     startTransition(async () => {
       const r = await removeFriendAction(u.userId);
-      setBusy(false);
       if (r.status === 'success') {
         toast('친구를 삭제했어요');
         router.refresh();
@@ -272,7 +263,7 @@ export function FriendsTabs({
                   right={
                     <button
                       type="button"
-                      disabled={busy}
+                      disabled={searching}
                       onClick={() => unfriend(u)}
                       className={`${btn} bg-zinc-100 text-zinc-500 dark:bg-zinc-800`}
                     >
@@ -302,7 +293,7 @@ export function FriendsTabs({
                         <>
                           <button
                             type="button"
-                            disabled={busy}
+                            disabled={searching}
                             onClick={() => accept(u)}
                             className={`${btn} bg-emerald-500 text-white`}
                           >
@@ -310,7 +301,7 @@ export function FriendsTabs({
                           </button>
                           <button
                             type="button"
-                            disabled={busy}
+                            disabled={searching}
                             onClick={() => decline(u)}
                             className={`${btn} bg-zinc-100 text-zinc-500 dark:bg-zinc-800`}
                           >
@@ -337,7 +328,7 @@ export function FriendsTabs({
                       right={
                         <button
                           type="button"
-                          disabled={busy}
+                          disabled={searching}
                           onClick={() => cancel(u)}
                           className={`${btn} bg-zinc-100 text-zinc-500 dark:bg-zinc-800`}
                         >
@@ -365,7 +356,7 @@ export function FriendsTabs({
               />
               <button
                 type="button"
-                disabled={busy}
+                disabled={searching}
                 onClick={doSearch}
                 className={`${btn} bg-amber-500 px-3.5 text-white`}
               >
@@ -391,7 +382,7 @@ export function FriendsTabs({
                       ) : u.relation === 'incoming' ? (
                         <button
                           type="button"
-                          disabled={busy}
+                          disabled={searching}
                           onClick={() => accept(u, true)}
                           className={`${btn} bg-emerald-500 text-white`}
                         >
@@ -400,7 +391,7 @@ export function FriendsTabs({
                       ) : (
                         <button
                           type="button"
-                          disabled={busy}
+                          disabled={searching}
                           onClick={() => send(u)}
                           className={`${btn} bg-amber-500 text-white`}
                         >
