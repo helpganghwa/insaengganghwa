@@ -96,9 +96,4 @@ DO $$ BEGIN
 EXCEPTION WHEN duplicate_object THEN null; END $$;
 CREATE INDEX IF NOT EXISTS profiles_residence_zone_idx ON profiles (residence_zone_id);
 
--- ── zones 50구역 시드 (좌표 배치 후 별도 적용) ──
--- worldmap.png 위 노드 좌표(map_x/map_y, %)를 정한 뒤 아래 형태로 INSERT:
---   INSERT INTO zones (id, region, name, map_x, map_y) VALUES
---     (1,'volcano','용암 능선',  12.5, 34.0), ... (50,'sky','천공 제단', 49.0, 40.0)
---   ON CONFLICT (id) DO NOTHING;
--- (region 배분: volcano/temple/swamp/orc 각 11 + sky 6 = 50)
+-- ── zones 50구역 시드 → 0037_zones_seed.sql (좌표 배치 완료, 별도 적용) ──
