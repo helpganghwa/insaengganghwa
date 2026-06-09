@@ -3,14 +3,14 @@ import Link from 'next/link';
 import { assetUrl } from '@/lib/asset-versions';
 
 /**
- * 홈 §1 — 배틀패스 상시 배너. 오늘의 보급/출석 배너 아래에 항상 노출(만료 없는 성장 패스).
- * 배너 전체를 덮는 불투명 Pixellab 이미지 + 좌측 fade로 텍스트 가독성 확보.
+ * 홈 §1 — 배틀패스 상시 배너(만료 없는 성장 패스). 홈 배너 carousel의 마지막 슬라이드로 노출.
+ * 프레임리스(h-full) — 테두리/라운드는 carousel outer가 제공. 배너 전체를 덮는 불투명 이미지 + 좌측 fade.
  */
 export function BattlePassBanner() {
   return (
     <Link
       href="/battlepass"
-      className="relative flex h-16 w-full min-w-0 items-center isolate overflow-hidden rounded-xl border border-amber-600/40 transition active:scale-[0.99]"
+      className="relative flex h-full w-full min-w-0 items-center isolate overflow-hidden transition active:scale-[0.99]"
     >
       {/* 배너 전체 덮는 불투명 이미지 */}
       {/* eslint-disable-next-line @next/next/no-img-element */}

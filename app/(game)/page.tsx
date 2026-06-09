@@ -241,8 +241,9 @@ export default async function HomePage() {
       <HomeBannerCarousel>
         {hasUnclaimedDaily ? <DailySupplyCard /> : null}
         {hasUnclaimedCheckin ? <HubCheckinCard /> : null}
+        {/* 성장패스 상시 배너 — 캐러셀 마지막 슬라이드 */}
+        <BattlePassBanner />
       </HomeBannerCarousel>
-      <BattlePassBanner />
       <div className="grid grid-cols-2 gap-3">
         {MENU.map((m) => {
           const count = counts[m.href] ?? 0;
@@ -255,7 +256,7 @@ export default async function HomePage() {
               href={m.href}
               data-tut={m.href === '/gacha' ? 'goto-gacha' : undefined}
               style={{ backgroundColor: m.tint }}
-              className="relative flex aspect-[5/3] isolate overflow-hidden rounded-2xl border border-zinc-800 transition active:scale-[0.98]"
+              className="relative flex aspect-[50/21] isolate overflow-hidden rounded-2xl border border-zinc-800 transition active:scale-[0.98]"
             >
               {/* eslint-disable-next-line @next/next/no-img-element */}
               <img
