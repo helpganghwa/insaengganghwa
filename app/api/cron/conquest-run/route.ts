@@ -1,5 +1,5 @@
 /**
- * 점령전 정산 cron — GUILD §5.8⑧. KST 12:00 = UTC `0 3 * * *`(vercel.json).
+ * 점령전 정산 cron — GUILD §5.8⑧. KST 11:00 = UTC `0 2 * * *`(vercel.json).
  * 경합 구역(공격 배치 ≥1) 결정론 정산 → 소유권/집행관 갱신. 멱등(zone×day UNIQUE).
  * 인증 = CRON_SECRET / x-vercel-cron.
  */

@@ -12,7 +12,7 @@ import { conquestPowerMult } from '../balance';
 import { simulateConquest, type ConquestUnit } from './simulate';
 
 /**
- * 점령전 정산 — GUILD §5.8⑧. KST 12:00 cron. 그날(오늘 KST) 전투를 결정론 정산.
+ * 점령전 정산 — GUILD §5.8⑧. KST 11:00 cron. 그날(오늘 KST) 전투를 결정론 정산.
  *  - 경합 구역(공격 배치 ≥1)만 순회. 참가 = 배치(공/수) + 집행관(자동 ×3 방어).
  *  - effCp = 장비 전투력 스냅샷 × 역할 배수. simulateConquest → 승자 → 소유권/집행관 갱신.
  *  - 멱등: conquest_battles UNIQUE(zone_id, battle_kst_day) + 선조회. 구역별 트랜잭션.

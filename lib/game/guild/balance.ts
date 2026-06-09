@@ -11,6 +11,8 @@ export const GUILD_EMBLEM_REROLL_COST_DIAMOND = 5_000;
 export const GUILD_NAME_MIN_LEN = 2;
 export const GUILD_NAME_MAX_LEN = 10;
 export const GUILD_NOTICE_MAX_LEN = 60;
+/** 가입 방식 — open(자유: 즉시 가입) | approval(승인: 길드장/부길드장 승인). */
+export type GuildJoinPolicy = 'open' | 'approval';
 
 // ── 수용 / 레벨 (§2.3) ──
 /** 수용 인원 = min(50, 10 + level). L0=10명 … L40=50명(상한). */
@@ -45,8 +47,8 @@ export const GUILD_LEADER_HANDOVER_WARN_DAYS = 5;
 export const GUILD_REJOIN_LOCK_HOURS = 24;
 
 // ── 점령전 (§5.4) ──
-/** 일일 전투 시각(KST 시). 12:00 배치 잠금 → 결정론 정산. */
-export const CONQUEST_BATTLE_KST_HOUR = 12;
+/** 일일 전투 시각(KST 시). 11:00 배치 잠금 → 결정론 정산(전투창 11:00~12:00). */
+export const CONQUEST_BATTLE_KST_HOUR = 11;
 /** 일반 방어 인원 전투력 보너스(+20%). */
 export const CONQUEST_DEFENDER_BONUS = 0.2;
 /** 집행관 전투력 배수(×3, 방어 거점 앵커). */

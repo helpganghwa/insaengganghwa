@@ -35,7 +35,7 @@ export default async function WorldMapPage() {
     membership ? getMyGuildDeployments(membership.guildId) : Promise.resolve([]),
     isOfficer && membership ? getGuildMembers(membership.guildId) : Promise.resolve([]),
   ]);
-  const battleDayLabel = nextBattleKstDay() === kstDateString() ? '오늘 12:00' : '내일 12:00';
+  const battleDayLabel = nextBattleKstDay() === kstDateString() ? '오늘 11:00' : '내일 11:00';
 
   return (
     <WorldMapView
