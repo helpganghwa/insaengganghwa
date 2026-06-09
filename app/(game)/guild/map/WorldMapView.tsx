@@ -228,21 +228,21 @@ export function WorldMapView({
                 zIndex: isResidence ? 20 : owned ? 10 : 1,
               }}
             >
-              {/* 내 거주 — 펄스 링(눈에 띄게) */}
+              {/* 내 거주 — 은은한 펄스 링 */}
               {isResidence && (
-                <span className="pointer-events-none absolute left-1/2 top-1/2 h-[18px] w-[18px] -translate-x-1/2 -translate-y-1/2 animate-ping rounded-[5px] bg-amber-400/70" />
+                <span className="pointer-events-none absolute left-1/2 top-1/2 h-[17px] w-[17px] -translate-x-1/2 -translate-y-1/2 animate-pulse rounded-[5px] bg-amber-300/30" />
               )}
               <span
-                className="relative block h-[18px] w-[18px] overflow-hidden rounded-[4px] ring-1 ring-black/70 transition"
+                className="relative block h-[17px] w-[17px] overflow-hidden rounded-[4px] ring-1 ring-black/70 transition"
                 style={{
                   backgroundColor: owned ? color : 'rgba(10,12,20,0.45)',
                   boxShadow: isResidence
-                    ? '0 0 10px 3px rgba(251,191,36,0.95)'
+                    ? '0 0 6px 1px rgba(251,191,36,0.65)'
                     : owned
                       ? `0 0 5px ${color}aa`
                       : 'none',
                   outline: isResidence
-                    ? '2px solid #fde047'
+                    ? '2px solid #fbbf24'
                     : mine
                       ? '2px solid #ffffff'
                       : `1px solid ${color}88`,
@@ -287,38 +287,53 @@ export function WorldMapView({
           onClick={() => setSelectedId(null)}
         >
           <div
-            className="max-h-[85vh] w-full max-w-[390px] overflow-y-auto rounded-2xl bg-white p-4 dark:bg-zinc-950"
+            className="max-h-[85vh] w-full max-w-[390px] overflow-y-auto rounded-2xl bg-white dark:bg-zinc-950"
             onClick={(e) => e.stopPropagation()}
           >
-            <h2 className="truncate text-sm font-bold">{selected.name}</h2>
-
-            <dl className="mt-3 space-y-1 text-[12px]">
-              <div className="flex justify-between">
-                <dt className="text-zinc-500">소유 길드</dt>
-                <dd className="font-semibold">
-                  {selected.ownerGuildName ?? <span className="text-zinc-400">중립</span>}
-                </dd>
-              </div>
-              <div className="flex justify-between">
-                <dt className="text-zinc-500">집행관</dt>
-                <dd className="font-semibold">
-                  {selected.executorNickname ?? <span className="text-zinc-400">공석</span>}
-                </dd>
-              </div>
-              <div className="flex justify-between">
-                <dt className="text-zinc-500">누적 세금</dt>
-                <dd className="font-mono tabular-nums">💎 {selected.taxDiamond}</dd>
-              </div>
-            </dl>
-
-            <button
-              type="button"
-              onClick={() => openBattle(selected.id)}
-              disabled={pending}
-              className="mt-2 text-[11px] font-semibold text-sky-600 disabled:opacity-50 dark:text-sky-400"
+            {/* 헤더 — 지역(6종) 배경 + 지역이름 + 전투보기 */}
+            <div
+              className="relative h-20 w-full"
+              style={{ background: `linear-gradient(135deg, ${REGION[selected.region].color}, #0b0e16)` }}
             >
-              최근 전투 기록 보기 →
-            </button>
+              <div
+                className="absolute inset-0 bg-cover bg-center"
+                style={{ backgroundImage: `url(/sprites/guild/region/${selected.region}.png)` }}
+              />
+              <div className="absolute inset-0 bg-gradient-to-t from-black/75 via-black/25 to-black/10" />
+              <div className="relative flex h-full items-end justify-between gap-2 p-3">
+                <h2 className="truncate text-base font-bold text-white drop-shadow-[0_1px_3px_rgba(0,0,0,0.95)]">
+                  {selected.name}
+                </h2>
+                <button
+                  type="button"
+                  onClick={() => openBattle(selected.id)}
+                  disabled={pending}
+                  className="shrink-0 rounded-full bg-black/45 px-2.5 py-1 text-[11px] font-semibold text-white ring-1 ring-white/30 backdrop-blur-sm disabled:opacity-50"
+                >
+                  전투 기록
+                </button>
+              </div>
+            </div>
+
+            <div className="px-4 pb-4 pt-3">
+              <dl className="space-y-1 text-[12px]">
+                <div className="flex justify-between">
+                  <dt className="text-zinc-500">소유 길드</dt>
+                  <dd className="font-semibold">
+                    {selected.ownerGuildName ?? <span className="text-zinc-400">중립</span>}
+                  </dd>
+                </div>
+                <div className="flex justify-between">
+                  <dt className="text-zinc-500">집행관</dt>
+                  <dd className="font-semibold">
+                    {selected.executorNickname ?? <span className="text-zinc-400">공석</span>}
+                  </dd>
+                </div>
+                <div className="flex justify-between">
+                  <dt className="text-zinc-500">누적 세금</dt>
+                  <dd className="font-mono tabular-nums">💎 {selected.taxDiamond}</dd>
+                </div>
+              </dl>
 
             {canSetResidence &&
               (selected.id === residence ? (
@@ -430,6 +445,7 @@ export function WorldMapView({
                   </div>
                 );
               })()}
+            </div>
           </div>
         </div>
       )}
