@@ -30,7 +30,14 @@ import { sql } from 'drizzle-orm';
 import { profiles } from './profiles';
 
 export const guildRoleEnum = pgEnum('guild_role', ['leader', 'vice', 'member']);
-export const zoneRegionEnum = pgEnum('zone_region', ['volcano', 'temple', 'swamp', 'sky', 'orc']);
+export const zoneRegionEnum = pgEnum('zone_region', [
+  'volcano',
+  'temple',
+  'swamp',
+  'orc',
+  'kingdom', // 중앙 인간 왕국(6)
+  'angel', // 분리된 타락 천사 부유섬(4)
+]); // 'sky'(구 중앙 천사섬)는 폐기 — DB enum엔 잔존하나 미사용
 export const guildDeployRoleEnum = pgEnum('guild_deploy_role', ['attack', 'defend']);
 
 /** §1·§2 guilds. name 변경불가. level=수용(10+level, L40서 50상한)+무제한(L41+ 과시, 혜택0). */
