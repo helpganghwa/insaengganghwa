@@ -5,11 +5,18 @@ import { useRouter } from 'next/navigation';
 
 import { useResourceToast } from '@/components/ResourceToast';
 
-import { setResidenceAction, deployAction, cancelDeployAction } from '../actions';
+import {
+  setResidenceAction,
+  deployAction,
+  cancelDeployAction,
+  setLordAction,
+  clearLordAction,
+} from '../actions';
 import { guildErrMsg } from '../errors-msg';
 
 type Region = 'volcano' | 'temple' | 'swamp' | 'orc' | 'kingdom' | 'angel';
 type DeployRole = 'attack' | 'defend';
+type Member = { userId: string; nickname: string };
 
 type Zone = {
   id: number;
@@ -19,6 +26,7 @@ type Zone = {
   mapY: number;
   ownerGuildId: string | null;
   ownerGuildName: string | null;
+  lordUserId: string | null;
   lordNickname: string | null;
   taxDiamond: string;
 };
@@ -35,20 +43,24 @@ const REGION: Record<Region, { label: string; color: string }> = {
 export function WorldMapView({
   mapSrc,
   myGuildId,
+  isOfficer,
   residenceZoneId,
   canSetResidence,
   battleDayLabel,
   myDeployment,
   guildDeploys,
+  members,
   zones,
 }: {
   mapSrc: string;
   myGuildId: string | null;
+  isOfficer: boolean;
   residenceZoneId: number | null;
   canSetResidence: boolean;
   battleDayLabel: string;
   myDeployment: { zoneId: number; role: DeployRole } | null;
   guildDeploys: Array<{ zoneId: number; role: DeployRole }>;
+  members: Member[];
   zones: Zone[];
 }) {
   const router = useRouter();
@@ -90,6 +102,25 @@ export function WorldMapView({
       const r = await cancelDeployAction();
       if (r.status !== 'success') return showError(guildErrMsg(r.code));
       showHeaderToast({ title: '배치 취소' });
+      router.refresh();
+    });
+  };
+
+  const assignLord = (zoneId: number, targetUserId: string) => {
+    if (!targetUserId) return;
+    start(async () => {
+      const r = await setLordAction(zoneId, targetUserId);
+      if (r.status !== 'success') return showError(guildErrMsg(r.code));
+      showHeaderToast({ title: '영주 지정 완료' });
+      router.refresh();
+    });
+  };
+
+  const removeLord = (zoneId: number) => {
+    start(async () => {
+      const r = await clearLordAction(zoneId);
+      if (r.status !== 'success') return showError(guildErrMsg(r.code));
+      showHeaderToast({ title: '영주 해제' });
       router.refresh();
     });
   };
@@ -249,6 +280,41 @@ export function WorldMapView({
                         </p>
                       )}
                     </>
+                  )}
+
+                  {/* 영주 지정(길드장/부길드장 · 자기 길드 소유 구역) */}
+                  {ownedByMe && isOfficer && (
+                    <div className="mt-3 rounded-lg bg-zinc-100 p-2.5 dark:bg-zinc-900">
+                      <div className="flex items-center justify-between">
+                        <span className="text-[11px] font-semibold">영주 관리</span>
+                        {selected.lordUserId && (
+                          <button
+                            type="button"
+                            onClick={() => removeLord(selected.id)}
+                            disabled={pending}
+                            className="text-[10px] font-semibold text-red-500 disabled:opacity-50"
+                          >
+                            해제
+                          </button>
+                        )}
+                      </div>
+                      <select
+                        value={selected.lordUserId ?? ''}
+                        onChange={(e) => assignLord(selected.id, e.target.value)}
+                        disabled={pending}
+                        className="mt-1.5 w-full rounded-lg border border-zinc-300 bg-white px-2 py-2 text-[12px] dark:border-zinc-700 dark:bg-zinc-950"
+                      >
+                        <option value="">영주 공석 (지정 안 함)</option>
+                        {members.map((m) => (
+                          <option key={m.userId} value={m.userId}>
+                            {m.nickname}
+                          </option>
+                        ))}
+                      </select>
+                      <p className="mt-1 text-[10px] text-zinc-500">
+                        영주는 ×3 자동 방어 + 세금 수금권. 공석이면 세금이 동결됩니다.
+                      </p>
+                    </div>
                   )}
                 </div>
               );
