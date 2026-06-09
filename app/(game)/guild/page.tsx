@@ -16,6 +16,7 @@ import { kstDateString } from '@/lib/kst';
 
 import { GuildBrowse } from './GuildBrowse';
 import { GuildHome } from './GuildHome';
+import { GuildMemberTabs } from './GuildMemberTabs';
 
 export const dynamic = 'force-dynamic';
 
@@ -48,11 +49,12 @@ export default async function GuildPage() {
   if (!membership) return browseView(userId);
 
   const isOfficer = membership.role === 'leader' || membership.role === 'vice';
-  const [guild, members, residenceZoneId, joinRequests] = await Promise.all([
+  const [guild, members, residenceZoneId, joinRequests, ranking] = await Promise.all([
     getGuild(membership.guildId),
     getGuildMembers(membership.guildId),
     getResidence(userId),
     isOfficer ? getJoinRequests(membership.guildId) : Promise.resolve([]),
+    getGuildRanking(),
   ]);
 
   if (!guild) {
@@ -74,9 +76,18 @@ export default async function GuildPage() {
     membership.lastDonationKstDay === kstDateString() ? membership.dailyDonationCount : 0;
 
   return (
-    <div className="px-4 py-4">
-      <GuildHome
-        guild={{
+    <GuildMemberTabs
+      ranking={ranking.map((g) => ({
+        id: g.id.toString(),
+        name: g.name,
+        level: g.level,
+        memberCount: g.memberCount,
+        emblemUrl: g.emblemUrl,
+        emblemColor: g.emblemColor,
+      }))}
+      home={
+        <GuildHome
+          guild={{
           name: guild.name,
           level: guild.level,
           notice: guild.notice,
@@ -93,12 +104,13 @@ export default async function GuildPage() {
           nickname: m.nickname,
           contributionPoints: Number(m.contributionPoints),
         }))}
-        joinRequests={joinRequests.map((r) => ({ userId: r.userId, nickname: r.nickname }))}
-        myUserId={userId}
-        myRole={membership.role}
-        usedToday={usedToday}
-        residence={residenceName}
-      />
-    </div>
+          joinRequests={joinRequests.map((r) => ({ userId: r.userId, nickname: r.nickname }))}
+          myUserId={userId}
+          myRole={membership.role}
+          usedToday={usedToday}
+          residence={residenceName}
+        />
+      }
+    />
   );
 }
