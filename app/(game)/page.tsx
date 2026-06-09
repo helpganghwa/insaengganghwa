@@ -35,7 +35,7 @@ const MENU = [
     href: '/guild/map',
     label: '월드맵',
     desc: '지역 점령전',
-    bg: '/sprites/hub/worldmap.png',
+    bg: '/sprites/guild/worldmap.png', // 실제 점령 지도 재활용(카드=실제 맵 일치)
     tint: '#1a2330',
     scale: 1,
   },

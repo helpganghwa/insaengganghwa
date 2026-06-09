@@ -19,15 +19,8 @@ const COMMON =
   'high detail, fully filled solid background, edge-to-edge composition, ' +
   'no transparent areas, no empty space';
 
+// 월드맵 카드는 실제 점령 지도(public/sprites/guild/worldmap.png)를 재활용 → 생성 대상은 길드홀만.
 const MENUS: { name: string; prompt: string }[] = [
-  {
-    name: 'worldmap',
-    prompt:
-      'ancient fantasy world map spread on a war strategy table, carved continents ' +
-      'with volcano mountains, dark forests, swamps and a central kingdom, small ' +
-      'banner flags marking conquered territories, candlelit, sepia parchment and ' +
-      'gold tones filling the entire scene, ' + COMMON,
-  },
   {
     name: 'guild',
     prompt:
