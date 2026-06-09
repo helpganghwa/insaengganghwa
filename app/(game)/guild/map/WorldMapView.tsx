@@ -5,10 +5,11 @@ import { useRouter } from 'next/navigation';
 
 import { useResourceToast } from '@/components/ResourceToast';
 
-import { setResidenceAction } from '../actions';
+import { setResidenceAction, deployAction, cancelDeployAction } from '../actions';
 import { guildErrMsg } from '../errors-msg';
 
 type Region = 'volcano' | 'temple' | 'swamp' | 'orc' | 'kingdom' | 'angel';
+type DeployRole = 'attack' | 'defend';
 
 type Zone = {
   id: number;
@@ -36,12 +37,18 @@ export function WorldMapView({
   myGuildId,
   residenceZoneId,
   canSetResidence,
+  battleDayLabel,
+  myDeployment,
+  guildDeploys,
   zones,
 }: {
   mapSrc: string;
   myGuildId: string | null;
   residenceZoneId: number | null;
   canSetResidence: boolean;
+  battleDayLabel: string;
+  myDeployment: { zoneId: number; role: DeployRole } | null;
+  guildDeploys: Array<{ zoneId: number; role: DeployRole }>;
   zones: Zone[];
 }) {
   const router = useRouter();
@@ -51,12 +58,38 @@ export function WorldMapView({
   const [pending, start] = useTransition();
   const selected = zones.find((z) => z.id === selectedId) ?? null;
 
+  // 자기 길드 배치 집계(안개 — 자기 길드만): zoneId → {attack, defend}.
+  const guildDeployByZone = new Map<number, { attack: number; defend: number }>();
+  for (const d of guildDeploys) {
+    const e = guildDeployByZone.get(d.zoneId) ?? { attack: 0, defend: 0 };
+    e[d.role] += 1;
+    guildDeployByZone.set(d.zoneId, e);
+  }
+
   const moveResidence = (zoneId: number) => {
     start(async () => {
       const r = await setResidenceAction(zoneId);
       if (r.status !== 'success') return showError(guildErrMsg(r.code));
       setResidence(zoneId); // 낙관적 — router.refresh로 서버 상태 재동기화
       showHeaderToast({ title: '거주지 이동 완료' });
+      router.refresh();
+    });
+  };
+
+  const deploy = (zoneId: number, role: DeployRole) => {
+    start(async () => {
+      const r = await deployAction(zoneId, role);
+      if (r.status !== 'success') return showError(guildErrMsg(r.code));
+      showHeaderToast({ title: role === 'attack' ? '공격 배치 완료' : '수비 배치 완료' });
+      router.refresh();
+    });
+  };
+
+  const cancelDeploy = () => {
+    start(async () => {
+      const r = await cancelDeployAction();
+      if (r.status !== 'success') return showError(guildErrMsg(r.code));
+      showHeaderToast({ title: '배치 취소' });
       router.refresh();
     });
   };
@@ -165,6 +198,61 @@ export function WorldMapView({
               이곳을 거주지로 설정
             </button>
           ) : null}
+
+          {/* 점령전 배치(길드원만) */}
+          {myGuildId &&
+            (() => {
+              const ownedByMe = selected.ownerGuildId === myGuildId;
+              const here = myDeployment?.zoneId === selected.id ? myDeployment.role : null;
+              const elsewhere = myDeployment && myDeployment.zoneId !== selected.id;
+              const fog = guildDeployByZone.get(selected.id);
+              return (
+                <div className="mt-3 border-t border-zinc-200 pt-3 dark:border-zinc-800">
+                  <div className="flex items-center justify-between">
+                    <h3 className="text-xs font-bold">점령전 · {battleDayLabel}</h3>
+                    {fog && (
+                      <span className="text-[10px] text-zinc-500">
+                        우리 길드 공격 {fog.attack} · 수비 {fog.defend}
+                      </span>
+                    )}
+                  </div>
+
+                  {here ? (
+                    <div className="mt-2 flex items-center gap-2">
+                      <span className="flex-1 rounded-lg bg-emerald-500/10 px-2 py-2 text-center text-[12px] font-semibold text-emerald-700 dark:text-emerald-300">
+                        {here === 'attack' ? '공격 배치됨' : '수비 배치됨'}
+                      </span>
+                      <button
+                        type="button"
+                        onClick={cancelDeploy}
+                        disabled={pending}
+                        className="rounded-lg border border-zinc-300 px-3 py-2 text-[12px] font-semibold text-zinc-600 disabled:opacity-50 dark:border-zinc-700 dark:text-zinc-400"
+                      >
+                        취소
+                      </button>
+                    </div>
+                  ) : (
+                    <>
+                      <button
+                        type="button"
+                        onClick={() => deploy(selected.id, ownedByMe ? 'defend' : 'attack')}
+                        disabled={pending}
+                        className={`mt-2 w-full rounded-lg py-2.5 text-sm font-bold text-white disabled:opacity-50 ${
+                          ownedByMe ? 'bg-sky-600' : 'bg-red-600'
+                        }`}
+                      >
+                        {ownedByMe ? '이 구역 수비' : '이 구역 공격'}
+                      </button>
+                      {elsewhere && (
+                        <p className="mt-1.5 text-[10px] text-zinc-500">
+                          현재 다른 구역에 배치 중 — 배치하면 이동합니다.
+                        </p>
+                      )}
+                    </>
+                  )}
+                </div>
+              );
+            })()}
         </div>
       )}
     </div>
