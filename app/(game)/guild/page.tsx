@@ -9,6 +9,8 @@ import {
   getGuildMembers,
   getResidence,
   getGuildRanking,
+  getMyJoinRequest,
+  getJoinRequests,
 } from '@/lib/game/guild';
 import { kstDateString } from '@/lib/kst';
 
@@ -18,10 +20,11 @@ import { GuildHome } from './GuildHome';
 export const dynamic = 'force-dynamic';
 
 /** 미가입 첫화면 — 랭킹/찾기 탭 + 생성 FAB. */
-async function browseView() {
-  const ranking = await getGuildRanking();
+async function browseView(userId: string) {
+  const [ranking, myRequest] = await Promise.all([getGuildRanking(), getMyJoinRequest(userId)]);
   return (
     <GuildBrowse
+      myRequestGuildId={myRequest?.toString() ?? null}
       ranking={ranking.map((g) => ({
         id: g.id.toString(),
         name: g.name,
@@ -42,17 +45,19 @@ export default async function GuildPage() {
 
   const membership = await getMyMembership(userId);
 
-  if (!membership) return browseView();
+  if (!membership) return browseView(userId);
 
-  const [guild, members, residenceZoneId] = await Promise.all([
+  const isOfficer = membership.role === 'leader' || membership.role === 'vice';
+  const [guild, members, residenceZoneId, joinRequests] = await Promise.all([
     getGuild(membership.guildId),
     getGuildMembers(membership.guildId),
     getResidence(userId),
+    isOfficer ? getJoinRequests(membership.guildId) : Promise.resolve([]),
   ]);
 
   if (!guild) {
     // 멤버십은 있으나 길드 행이 사라진 비정상 상태 — 브라우즈로.
-    return browseView();
+    return browseView(userId);
   }
 
   let residenceName: string | null = null;
@@ -80,6 +85,7 @@ export default async function GuildPage() {
           taxPool: guild.taxPoolDiamond.toString(),
           emblemUrl: guild.emblemUrl,
           emblemColor: guild.emblemColor,
+          joinPolicy: guild.joinPolicy === 'approval' ? 'approval' : 'open',
         }}
         members={members.map((m) => ({
           userId: m.userId,
@@ -87,6 +93,7 @@ export default async function GuildPage() {
           nickname: m.nickname,
           contributionPoints: Number(m.contributionPoints),
         }))}
+        joinRequests={joinRequests.map((r) => ({ userId: r.userId, nickname: r.nickname }))}
         myUserId={userId}
         myRole={membership.role}
         usedToday={usedToday}

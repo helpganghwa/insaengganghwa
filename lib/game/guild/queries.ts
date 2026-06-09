@@ -3,7 +3,13 @@ import 'server-only';
 import { desc, eq, ilike, sql } from 'drizzle-orm';
 
 import { db } from '@/lib/db/client';
-import { guilds, guildMembers, zones, conquestBattles } from '@/lib/db/schema/guild';
+import {
+  guilds,
+  guildMembers,
+  zones,
+  conquestBattles,
+  guildJoinRequests,
+} from '@/lib/db/schema/guild';
 import { profiles } from '@/lib/db/schema/profiles';
 
 import { guildCapacity } from './balance';
@@ -33,6 +39,30 @@ export async function getGuild(guildId: bigint) {
     .from(guildMembers)
     .where(eq(guildMembers.guildId, guildId));
   return { ...g, memberCount: cnt?.n ?? 0, capacity: guildCapacity(g.level) };
+}
+
+/** 길드 가입 신청 목록(승인제) — 임원 UI용. 신청자 닉·신청시각. */
+export async function getJoinRequests(guildId: bigint) {
+  return db
+    .select({
+      userId: guildJoinRequests.userId,
+      nickname: profiles.nickname,
+      createdAt: guildJoinRequests.createdAt,
+    })
+    .from(guildJoinRequests)
+    .innerJoin(profiles, eq(profiles.id, guildJoinRequests.userId))
+    .where(eq(guildJoinRequests.guildId, guildId))
+    .orderBy(guildJoinRequests.createdAt);
+}
+
+/** 내 가입 신청(있으면 신청 길드 id) — 미가입 첫화면 '신청됨' 표시. */
+export async function getMyJoinRequest(userId: string): Promise<bigint | null> {
+  const [r] = await db
+    .select({ guildId: guildJoinRequests.guildId })
+    .from(guildJoinRequests)
+    .where(eq(guildJoinRequests.userId, userId))
+    .limit(1);
+  return r?.guildId ?? null;
 }
 
 /** 길드 랭킹 — 레벨↓·XP↓ 순. 미가입 첫화면 랭킹 탭. 문양·인원 포함. */

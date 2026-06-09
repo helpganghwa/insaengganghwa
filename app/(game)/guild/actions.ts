@@ -7,7 +7,10 @@ import {
   GuildError,
   createGuild,
   searchGuilds,
-  joinGuild,
+  requestOrJoinGuild,
+  approveJoinRequest,
+  rejectJoinRequest,
+  setJoinPolicy,
   leaveGuild,
   disbandGuild,
   donateToGuild,
@@ -22,7 +25,7 @@ import {
   generateAndStoreEmblem,
   rerollEmblem,
 } from '@/lib/game/guild';
-import type { GuildTaxDistribution, ConquestRole } from '@/lib/game/guild/balance';
+import type { GuildTaxDistribution, ConquestRole, GuildJoinPolicy } from '@/lib/game/guild/balance';
 import type { ConquestFinale } from '@/lib/game/guild/conquest/simulate';
 import {
   isValidEmblemSelection,
@@ -89,11 +92,50 @@ export async function joinGuildAction(guildId: string) {
   const u = await getSessionUserId();
   if (!u) return unauth;
   try {
-    await joinGuild({ userId: u, guildId: BigInt(guildId) });
+    const r = await requestOrJoinGuild({ userId: u, guildId: BigInt(guildId) });
+    revalidatePath('/guild');
+    return { status: 'success', joined: r.joined } as const;
+  } catch (e) {
+    return fail(e, 'join');
+  }
+}
+
+export async function approveJoinAction(requestUserId: string) {
+  const u = await getSessionUserId();
+  if (!u) return unauth;
+  try {
+    await approveJoinRequest({ actorUserId: u, requestUserId });
     revalidatePath('/guild');
     return { status: 'success' } as const;
   } catch (e) {
-    return fail(e, 'join');
+    return fail(e, 'approveJoin');
+  }
+}
+
+export async function rejectJoinAction(requestUserId: string) {
+  const u = await getSessionUserId();
+  if (!u) return unauth;
+  try {
+    await rejectJoinRequest({ actorUserId: u, requestUserId });
+    revalidatePath('/guild');
+    return { status: 'success' } as const;
+  } catch (e) {
+    return fail(e, 'rejectJoin');
+  }
+}
+
+export async function setJoinPolicyAction(policy: GuildJoinPolicy) {
+  const u = await getSessionUserId();
+  if (!u) return unauth;
+  if (policy !== 'open' && policy !== 'approval') {
+    return { status: 'error', code: 'UNKNOWN' } as const;
+  }
+  try {
+    await setJoinPolicy({ userId: u, policy });
+    revalidatePath('/guild');
+    return { status: 'success' } as const;
+  } catch (e) {
+    return fail(e, 'setJoinPolicy');
   }
 }
 

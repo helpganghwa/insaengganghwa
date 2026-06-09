@@ -32,7 +32,13 @@ function EmblemThumb({ url, color }: { url: string | null; color: string | null 
   );
 }
 
-export function GuildBrowse({ ranking }: { ranking: GuildRow[] }) {
+export function GuildBrowse({
+  ranking,
+  myRequestGuildId,
+}: {
+  ranking: GuildRow[];
+  myRequestGuildId: string | null;
+}) {
   const router = useRouter();
   const { showHeaderToast, showError } = useResourceToast();
   const [tab, setTab] = useState<'ranking' | 'search'>('ranking');
@@ -52,7 +58,7 @@ export function GuildBrowse({ ranking }: { ranking: GuildRow[] }) {
     start(async () => {
       const r = await joinGuildAction(id);
       if (r.status !== 'success') return showError(guildErrMsg(r.code));
-      showHeaderToast({ title: '길드 가입 완료' });
+      showHeaderToast({ title: r.joined ? '길드 가입 완료' : '가입 신청 완료' });
       router.refresh();
     });
   };
@@ -69,14 +75,20 @@ export function GuildBrowse({ ranking }: { ranking: GuildRow[] }) {
           Lv.{g.level} · {g.memberCount}명
         </div>
       </div>
-      <button
-        type="button"
-        onClick={() => join(g.id)}
-        disabled={pending}
-        className="shrink-0 rounded-full bg-amber-600 px-3 py-1.5 text-[11px] font-bold text-white disabled:opacity-50"
-      >
-        가입
-      </button>
+      {g.id === myRequestGuildId ? (
+        <span className="shrink-0 rounded-full bg-zinc-100 px-3 py-1.5 text-[11px] font-bold text-zinc-400 dark:bg-zinc-800">
+          신청됨
+        </span>
+      ) : (
+        <button
+          type="button"
+          onClick={() => join(g.id)}
+          disabled={pending}
+          className="shrink-0 rounded-full bg-amber-600 px-3 py-1.5 text-[11px] font-bold text-white disabled:opacity-50"
+        >
+          가입
+        </button>
+      )}
     </li>
   );
 

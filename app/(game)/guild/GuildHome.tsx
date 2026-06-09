@@ -9,6 +9,7 @@ import {
   GUILD_DONATIONS_PER_DAY,
   GUILD_DONATION_TIERS,
   GUILD_EMBLEM_REROLL_COST_DIAMOND,
+  type GuildJoinPolicy,
 } from '@/lib/game/guild/balance';
 import type { EmblemSelection } from '@/lib/game/guild/emblem-vocab';
 
@@ -18,6 +19,9 @@ import {
   disbandGuildAction,
   distributeTaxAction,
   rerollEmblemAction,
+  setJoinPolicyAction,
+  approveJoinAction,
+  rejectJoinAction,
 } from './actions';
 import { EmblemPicker, DEFAULT_EMBLEM } from './EmblemPicker';
 import { guildErrMsg } from './errors-msg';
@@ -37,7 +41,9 @@ type GuildView = {
   taxPool: string;
   emblemUrl: string | null;
   emblemColor: string | null;
+  joinPolicy: GuildJoinPolicy;
 };
+type JoinRequest = { userId: string; nickname: string };
 
 const ROLE_BADGE: Record<Member['role'], { label: string; cls: string } | null> = {
   leader: { label: '길드장', cls: 'bg-amber-500/15 text-amber-700 dark:text-amber-300' },
@@ -48,6 +54,7 @@ const ROLE_BADGE: Record<Member['role'], { label: string; cls: string } | null> 
 export function GuildHome({
   guild,
   members,
+  joinRequests,
   myUserId,
   myRole,
   usedToday,
@@ -55,6 +62,7 @@ export function GuildHome({
 }: {
   guild: GuildView;
   members: Member[];
+  joinRequests: JoinRequest[];
   myUserId: string;
   myRole: Member['role'];
   usedToday: number;
@@ -66,8 +74,37 @@ export function GuildHome({
   const [pending, start] = useTransition();
   const [rerollOpen, setRerollOpen] = useState(false);
   const [emblem, setEmblem] = useState<EmblemSelection>(DEFAULT_EMBLEM);
+  const isOfficer = myRole === 'leader' || myRole === 'vice';
 
   const nextTier = usedToday < GUILD_DONATIONS_PER_DAY ? GUILD_DONATION_TIERS[usedToday]! : null;
+
+  const changePolicy = (policy: GuildJoinPolicy) => {
+    if (policy === guild.joinPolicy) return;
+    start(async () => {
+      const r = await setJoinPolicyAction(policy);
+      if (r.status !== 'success') return showError(guildErrMsg(r.code));
+      showHeaderToast({ title: policy === 'open' ? '자유 가입으로 변경' : '승인 가입으로 변경' });
+      router.refresh();
+    });
+  };
+
+  const approve = (userId: string) => {
+    start(async () => {
+      const r = await approveJoinAction(userId);
+      if (r.status !== 'success') return showError(guildErrMsg(r.code));
+      showHeaderToast({ title: '가입 승인' });
+      router.refresh();
+    });
+  };
+
+  const reject = (userId: string) => {
+    start(async () => {
+      const r = await rejectJoinAction(userId);
+      if (r.status !== 'success') return showError(guildErrMsg(r.code));
+      showHeaderToast({ title: '가입 거절' });
+      router.refresh();
+    });
+  };
 
   const reroll = () => {
     start(async () => {
@@ -205,6 +242,77 @@ export function GuildHome({
           >
             균등 분배
           </button>
+        </section>
+      )}
+
+      {/* 가입 관리 (길드장/부길드장) */}
+      {isOfficer && (
+        <section className="rounded-xl border border-zinc-200 bg-white p-4 dark:border-zinc-800 dark:bg-zinc-950">
+          <div className="flex items-center justify-between gap-2">
+            <h3 className="text-sm font-bold">가입 방식</h3>
+            <div className="flex gap-1 rounded-lg bg-zinc-100 p-0.5 dark:bg-zinc-900">
+              {(
+                [
+                  ['open', '자유'],
+                  ['approval', '승인'],
+                ] as const
+              ).map(([key, label]) => (
+                <button
+                  key={key}
+                  type="button"
+                  onClick={() => changePolicy(key)}
+                  disabled={pending}
+                  className={`rounded-md px-3 py-1 text-[12px] font-bold transition disabled:opacity-50 ${
+                    guild.joinPolicy === key
+                      ? 'bg-white text-zinc-900 shadow-sm dark:bg-zinc-950 dark:text-zinc-50'
+                      : 'text-zinc-500'
+                  }`}
+                >
+                  {label}
+                </button>
+              ))}
+            </div>
+          </div>
+          <p className="mt-1 text-[11px] text-zinc-500">
+            {guild.joinPolicy === 'open'
+              ? '신청 즉시 가입됩니다.'
+              : '신청을 길드장·부길드장이 승인해야 가입됩니다.'}
+          </p>
+
+          {guild.joinPolicy === 'approval' && (
+            <div className="mt-3 border-t border-zinc-200 pt-3 dark:border-zinc-800">
+              <p className="text-[11px] font-semibold text-zinc-500">가입 신청 ({joinRequests.length})</p>
+              {joinRequests.length === 0 ? (
+                <p className="mt-1.5 text-[11px] text-zinc-400">대기 중인 신청이 없습니다.</p>
+              ) : (
+                <ul className="mt-2 space-y-1.5">
+                  {joinRequests.map((r) => (
+                    <li key={r.userId} className="flex items-center justify-between gap-2">
+                      <span className="min-w-0 truncate text-[13px] font-semibold">{r.nickname}</span>
+                      <div className="flex shrink-0 gap-1.5">
+                        <button
+                          type="button"
+                          onClick={() => approve(r.userId)}
+                          disabled={pending}
+                          className="rounded-full bg-amber-600 px-3 py-1 text-[11px] font-bold text-white disabled:opacity-50"
+                        >
+                          승인
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => reject(r.userId)}
+                          disabled={pending}
+                          className="rounded-full border border-zinc-300 px-3 py-1 text-[11px] font-semibold text-zinc-500 disabled:opacity-50 dark:border-zinc-700"
+                        >
+                          거절
+                        </button>
+                      </div>
+                    </li>
+                  ))}
+                </ul>
+              )}
+            </div>
+          )}
         </section>
       )}
 
