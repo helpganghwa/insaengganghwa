@@ -13,6 +13,11 @@ export type GuildErrorCode =
   | 'DONATION_CAP_REACHED' // 일일 기부 한도 소진
   | 'TARGET_NOT_IN_GUILD' // 대상이 같은 길드원이 아님
   | 'INVALID_TARGET' // 자기 자신/길드장 대상 등 불가
+  | 'ZONE_NOT_FOUND' // 구역 없음(거주 변경 등)
+  | 'NOT_LORD' // 영주 아님(세금 수금)
+  | 'COLLECT_COOLDOWN' // 수금 쿨다운 미경과
+  | 'NOTHING_TO_COLLECT' // 수금할 💎 없음
+  | 'NOTHING_TO_DISTRIBUTE'
   | 'FORBIDDEN';
 
 export class GuildError extends Error {
