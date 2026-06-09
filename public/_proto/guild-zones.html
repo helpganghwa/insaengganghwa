@@ -1,69 +1,34 @@
 <!doctype html>
-<html lang="ko">
-<head>
-<meta charset="utf-8" />
-<meta name="viewport" content="width=device-width, initial-scale=1" />
-<title>길드 월드맵 — 50구역</title>
+<html lang="ko"><head><meta charset="utf-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1"/>
+<title>길드 월드맵 — 50구역 (왕국 맵)</title>
 <style>
-  :root { color-scheme: dark; }
-  * { box-sizing: border-box; }
-  body { margin:0; background:#0c0f17; color:#cbd5e1; font-family:ui-sans-serif,system-ui,sans-serif;
-    display:flex; flex-direction:column; align-items:center; gap:12px; padding:14px; }
-  h1 { font-size:15px; margin:2px 0; }
-  .legend { display:flex; flex-wrap:wrap; gap:10px; justify-content:center; font-size:12px; }
-  .legend span { display:flex; gap:5px; align-items:center; }
-  .legend .sw { width:12px; height:12px; border-radius:3px; }
-  .bar { display:flex; gap:8px; }
-  .bar button { font-size:12px; padding:5px 12px; border-radius:8px; cursor:pointer; border:1px solid #334155; background:#1e293b; color:#cbd5e1; }
-  .bar button.off { opacity:.5; }
-
-  .stage { position:relative; width:min(94vw,820px); aspect-ratio:1/1; border-radius:14px;
-    overflow:hidden; isolation:isolate; border:1px solid #1e293b; box-shadow:0 10px 40px rgba(0,0,0,.5); }
-  .stage img { position:absolute; inset:0; width:100%; height:100%; image-rendering:pixelated; }
-  .node { position:absolute; transform:translate(-50%,-50%); display:flex; flex-direction:column; align-items:center;
-    pointer-events:none; }
-  .node .dot { width:16px; height:16px; border-radius:50%; border:2px solid #000; display:flex;
-    align-items:center; justify-content:center; font-size:9px; font-weight:800; color:#fff; }
-  .node .nm { margin-top:2px; font-size:11px; font-weight:700; color:#fff; white-space:nowrap;
-    text-shadow:0 0 3px #000,0 0 3px #000,0 1px 2px #000; }
-  body.nonames .node .nm { display:none; }
-</style>
-</head>
-<body>
-  <h1>길드 월드맵 — 50구역 (좌표 + 로어 지명)</h1>
+  :root{color-scheme:dark}*{box-sizing:border-box}
+  body{margin:0;background:#0c0f17;color:#cbd5e1;font-family:ui-sans-serif,system-ui,sans-serif;display:flex;flex-direction:column;align-items:center;gap:12px;padding:14px}
+  h1{font-size:15px;margin:2px 0}.legend{display:flex;flex-wrap:wrap;gap:10px;justify-content:center;font-size:12px}
+  .legend span{display:flex;gap:5px;align-items:center}.legend .sw{width:12px;height:12px;border-radius:3px}
+  .bar button{font-size:12px;padding:5px 12px;border-radius:8px;cursor:pointer;border:1px solid #334155;background:#1e293b;color:#cbd5e1}
+  .bar button.off{opacity:.5}
+  .stage{position:relative;width:min(94vw,820px);aspect-ratio:1/1;border-radius:14px;overflow:hidden;isolation:isolate;border:1px solid #1e293b}
+  .stage img{position:absolute;inset:0;width:100%;height:100%;image-rendering:pixelated}
+  .node{position:absolute;transform:translate(-50%,-50%);display:flex;flex-direction:column;align-items:center;pointer-events:none}
+  .node .dot{width:16px;height:16px;border-radius:50%;border:2px solid #000;display:flex;align-items:center;justify-content:center;font-size:9px;font-weight:800;color:#fff}
+  .node .nm{margin-top:2px;font-size:11px;font-weight:700;color:#fff;white-space:nowrap;text-shadow:0 0 3px #000,0 0 3px #000,0 1px 2px #000}
+  body.nonames .node .nm{display:none}
+</style></head><body>
+  <h1>길드 월드맵 — 50구역 (중앙 왕국 맵)</h1>
   <div class="legend" id="legend"></div>
-  <div class="bar">
-    <button id="toggleNames">이름 끄기</button>
-  </div>
-  <div class="stage" id="stage">
-    <img src="/sprites/guild/worldmap.png" alt="worldmap" draggable="false" />
-  </div>
-
+  <div class="bar"><button id="t">이름 끄기</button></div>
+  <div class="stage" id="stage"><img src="/sprites/guild/worldmap.png" alt="" draggable="false"/></div>
 <script>
-  const COLOR = { volcano:'#ef4444', temple:'#93c5fd', swamp:'#84cc16', orc:'#d97706', sky:'#c084fc' };
-  const LABEL = { volcano:'화산', temple:'신전', swamp:'늪', orc:'오크', sky:'천공' };
-  const Z = [[1,"volcano","용암 능선",18.2,48.6],[2,"volcano","잿빛 분화구",25.1,39.1],[3,"volcano","불꽃 협곡",36.8,26.5],[4,"volcano","흑요석 절벽",15.9,56.9],[5,"volcano","불꽃 분지",30.6,53.6],[6,"volcano","용의 둥지",22.3,16.7],[7,"volcano","마그마 동굴",11.3,34.8],[8,"volcano","그을린 황무지",29.8,26.9],[9,"volcano","화산재 평원",17.3,28.9],[10,"volcano","불의 제단",35.6,37.5],[11,"volcano","숯빛 첨봉",30.1,44.4],[12,"temple","잊힌 대신전",50.5,5.9],[13,"temple","백석 회랑",38.4,16.2],[14,"temple","설산 성소",67.7,22],[15,"temple","무너진 기둥",66.6,33.1],[16,"temple","침묵의 회당",76.6,32.5],[17,"temple","성좌의 폐허",80.1,25.8],[18,"temple","서리 사원",53.9,21.1],[19,"temple","옛 사제의 길",62.5,16.1],[20,"temple","대리석 묘소",47.2,25.3],[21,"temple","빛바랜 신상",76.6,15.1],[22,"temple","눈 덮인 안뜰",57.8,28.7],[23,"swamp","독안개 늪",34.8,63.3],[24,"swamp","부패의 웅덩이",48,71.9],[25,"swamp","고사목 습지",58.1,78.1],[26,"swamp","형광 수렁",46.2,84],[27,"swamp","점액 호수",32.5,78.1],[28,"swamp","썩은 뿌리 골",39.2,72.6],[29,"swamp","안개 늪지",55.5,63.7],[30,"swamp","독초 군락",63.9,72.6],[31,"swamp","잠긴 묘지",48,77.9],[32,"swamp","녹빛 진창",28.4,70.5],[33,"swamp","죽은 갈대밭",44.4,62.2],[34,"orc","오크 대요새",75,67.7],[35,"orc","뼈 토템 언덕",86.9,64.6],[36,"orc","약탈의 둔덕",68.5,61.6],[37,"orc","약탈자 야영지",83.8,54.9],[38,"orc","핏빛 투기장",75.2,49.9],[39,"orc","가시 목책",89.8,42.8],[40,"orc","모닥불 평원",80.1,39.1],[41,"orc","해골 무덤",76.1,75.4],[42,"orc","도끼날 고개",68.6,54.3],[43,"orc","야만의 고지",92.9,50.5],[44,"orc","전사의 화톳불",69.7,43.3],[45,"sky","추락한 성소",54.5,34.5],[46,"sky","천사의 묘",49.5,38.8],[47,"sky","부유 제단",43.6,34.2],[48,"sky","검은 깃털 폐허",43,41.9],[49,"sky","심연의 옥좌",50.9,45.5],[50,"sky","타락한 빛의 신단",57.7,39.9]];
-
-  const stage = document.getElementById('stage');
-  for (const [id,r,name,x,y] of Z) {
-    const el = document.createElement('div');
-    el.className = 'node';
-    el.style.left = x+'%'; el.style.top = y+'%';
-    el.innerHTML = `<div class="dot" style="background:${COLOR[r]}">${id}</div><div class="nm">${name}</div>`;
-    stage.appendChild(el);
-  }
-  const legend = document.getElementById('legend');
-  for (const k of Object.keys(COLOR)) {
-    const cnt = Z.filter(z=>z[1]===k).length;
-    const s = document.createElement('span');
-    s.innerHTML = `<span class="sw" style="background:${COLOR[k]}"></span>${LABEL[k]} ${cnt}`;
-    legend.appendChild(s);
-  }
-  document.getElementById('toggleNames').onclick = (e) => {
-    document.body.classList.toggle('nonames');
-    const off = document.body.classList.contains('nonames');
-    e.target.classList.toggle('off', off); e.target.textContent = off ? '이름 켜기' : '이름 끄기';
-  };
-</script>
-</body>
-</html>
+  const COLOR={volcano:'#ef4444',temple:'#93c5fd',swamp:'#84cc16',orc:'#d97706',kingdom:'#fbbf24',angel:'#c084fc'};
+  const LABEL={volcano:'화산',temple:'신전',swamp:'늪',orc:'오크',kingdom:'왕국',angel:'천사'};
+  const Z=[[1,"volcano","검은 첨봉",12.1,14.2],[2,"volcano","분노의 분화구",12,29.4],[3,"volcano","잿더미 폐허",26.1,53.6],[4,"volcano","흑요석 보루",13.8,47.5],[5,"volcano","용의 해골",19.7,40.8],[6,"volcano","재의 길목",31.9,40.7],[7,"volcano","불탄 마을",27.8,32.1],[8,"volcano","그을린 고목",20.8,19.5],[9,"volcano","용암 하구",9.4,59.8],[10,"volcano","연기 비탈",18.2,26.4],[11,"temple","눈 덮인 숲",36.5,20.6],[12,"temple","설봉 대신전",47.6,6.1],[13,"temple","무너진 기둥",43.3,16.2],[14,"temple","대리석 성소",50.9,16.6],[15,"temple","침묵의 회랑",53.3,25.9],[16,"temple","성좌의 폐허",64.6,28.2],[17,"temple","서리 개울",64.9,35],[18,"temple","얼어붙은 샘",51.5,34],[19,"temple","잊힌 사당",62,15.3],[20,"temple","서리 숲길",33.6,13.4],[21,"swamp","버섯 군락",12.1,77.9],[22,"swamp","독성 늪지",34.6,68.5],[23,"swamp","포자 습지",17.8,71.4],[24,"swamp","형광 수렁",41.3,86],[25,"swamp","썩은 잔교",64.1,75.6],[26,"swamp","늪지 오두막",58.2,68.9],[27,"swamp","안개 다리",54.4,80.1],[28,"swamp","점액 못",35.9,76.6],[29,"swamp","고사목 숲",49.5,73.1],[30,"swamp","독안개 골",25.2,63.9],[31,"orc","오크 대요새",88.8,65.8],[32,"orc","전사의 막사",79.8,78.5],[33,"orc","변경 초소",65.5,62.6],[34,"orc","뼈 토템 언덕",73.3,41],[35,"orc","약탈자 야영지",86.2,43.6],[36,"orc","감시 망루",81.2,54.8],[37,"orc","전쟁 토템",78.3,64.1],[38,"orc","잿빛 첨석",73.3,49],[39,"orc","피의 막사",73.1,71.2],[40,"orc","모닥불 평원",78.4,45.2],[41,"kingdom","왕성",45,45.2],[42,"kingdom","상인 거리",42.9,53],[43,"kingdom","성문 망루",60.6,58.3],[44,"kingdom","대성당",55.2,45.7],[45,"kingdom","기사 연무장",60.5,50.7],[46,"kingdom","중앙 광장",50.5,56.6],[47,"angel","타락한 성소",87.1,13],[48,"angel","타락의 심연",89.7,20.4],[49,"angel","황금 회랑",79.5,13.1],[50,"angel","검은 깃털 제단",81.5,19.2]];
+  const stage=document.getElementById('stage');
+  for(const[id,r,name,x,y]of Z){const el=document.createElement('div');el.className='node';el.style.left=x+'%';el.style.top=y+'%';
+    el.innerHTML=`<div class="dot" style="background:${COLOR[r]}">${id}</div><div class="nm">${name}</div>`;stage.appendChild(el);}
+  const lg=document.getElementById('legend');
+  for(const k of Object.keys(COLOR)){const c=Z.filter(z=>z[1]===k).length;const s=document.createElement('span');
+    s.innerHTML=`<span class="sw" style="background:${COLOR[k]}"></span>${LABEL[k]} ${c}`;lg.appendChild(s);}
+  document.getElementById('t').onclick=e=>{document.body.classList.toggle('nonames');const o=document.body.classList.contains('nonames');e.target.classList.toggle('off',o);e.target.textContent=o?'이름 켜기':'이름 끄기';};
+</script></body></html>
