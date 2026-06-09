@@ -4,6 +4,7 @@ import { useMemo, useState, useTransition } from 'react';
 import { useRouter } from 'next/navigation';
 
 import { useResourceToast } from '@/components/ResourceToast';
+import { assetUrl } from '@/lib/asset-versions';
 
 import {
   setResidenceAction,
@@ -255,7 +256,7 @@ export function WorldMapView({
             >
               <div
                 className="absolute inset-0 bg-cover bg-center"
-                style={{ backgroundImage: `url(/sprites/guild/region/${selected.region}.png)` }}
+                style={{ backgroundImage: `url(${assetUrl(`/sprites/guild/region/${selected.region}.png`)})` }}
               />
               <div className="absolute inset-0 bg-gradient-to-t from-black/75 via-black/25 to-black/10" />
               <div className="relative flex h-full items-end justify-between gap-2 p-3">
