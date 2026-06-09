@@ -1,6 +1,6 @@
 import 'server-only';
 
-import { desc, eq, ilike, sql } from 'drizzle-orm';
+import { desc, eq, ilike, inArray, sql } from 'drizzle-orm';
 
 import { db } from '@/lib/db/client';
 import {
@@ -11,6 +11,9 @@ import {
   guildJoinRequests,
 } from '@/lib/db/schema/guild';
 import { profiles } from '@/lib/db/schema/profiles';
+import { userEquipment, catalogItems } from '@/lib/db/schema/equipment';
+import { userProfiles } from '@/lib/db/schema/avatar';
+import { combatPowerFromOwned } from '@/lib/game/equipment/combat-power';
 
 import { guildCapacity } from './balance';
 import { nextBattleKstDay } from './conquest/schedule';
@@ -178,6 +181,77 @@ export async function getDeployBoard(guildId: bigint) {
     .orderBy(zones.id);
 
   return { battleKstDay, members, zones: zoneRows };
+}
+
+type EquippedIcon = { slot: 'weapon' | 'armor' | 'accessory'; code: string; enhance: number };
+
+/**
+ * 길드원 리치 목록 — 아바타·장착 3종·전투력/최고강화/합산강화/기여도. 정렬은 클라에서.
+ * 멤버 기본(아바타) 1쿼리 + 보유 장비 1쿼리(전 멤버) → 앱에서 메트릭·장착 산출.
+ */
+export async function getGuildMembersRich(guildId: bigint) {
+  const base = await db
+    .select({
+      userId: guildMembers.userId,
+      nickname: profiles.nickname,
+      role: guildMembers.role,
+      contribution: guildMembers.contributionPoints,
+      avatar: sql<string | null>`${userProfiles.rotations} ->> 'south'`,
+    })
+    .from(guildMembers)
+    .innerJoin(profiles, eq(profiles.id, guildMembers.userId))
+    .leftJoin(userProfiles, eq(userProfiles.id, profiles.activeProfileId))
+    .where(eq(guildMembers.guildId, guildId));
+
+  const ids = base.map((b) => b.userId);
+  const eqRows = ids.length
+    ? await db
+        .select({
+          uid: userEquipment.userId,
+          cid: userEquipment.catalogItemId,
+          el: userEquipment.enhanceLevel,
+          tl: userEquipment.transcendLevel,
+          eslot: userEquipment.equippedSlot,
+          code: catalogItems.code,
+          slot: catalogItems.slot,
+        })
+        .from(userEquipment)
+        .innerJoin(catalogItems, eq(catalogItems.id, userEquipment.catalogItemId))
+        .where(inArray(userEquipment.userId, ids))
+    : [];
+
+  // uid별 보유 묶기 → 전투력/최고/합산/장착 3종.
+  const owned = new Map<string, { catalogItemId: number; enhanceLevel: number; transcendLevel: number }[]>();
+  const equipped = new Map<string, EquippedIcon[]>();
+  for (const r of eqRows) {
+    (owned.get(r.uid) ?? owned.set(r.uid, []).get(r.uid)!).push({
+      catalogItemId: r.cid,
+      enhanceLevel: r.el,
+      transcendLevel: r.tl,
+    });
+    if (r.eslot) {
+      (equipped.get(r.uid) ?? equipped.set(r.uid, []).get(r.uid)!).push({
+        slot: r.eslot,
+        code: r.code,
+        enhance: r.el,
+      });
+    }
+  }
+
+  return base.map((b) => {
+    const own = owned.get(b.userId) ?? [];
+    return {
+      userId: b.userId,
+      nickname: b.nickname,
+      role: b.role,
+      avatar: b.avatar,
+      contribution: Number(b.contribution),
+      combat: combatPowerFromOwned(own),
+      maxEnhance: own.reduce((mx, o) => Math.max(mx, o.enhanceLevel), 0),
+      totalEnhance: own.reduce((s, o) => s + o.enhanceLevel, 0),
+      equipped: equipped.get(b.userId) ?? [],
+    };
+  });
 }
 
 /** 길드원 목록 — 기여도 내림차순(무임승차 판단·표시용). */

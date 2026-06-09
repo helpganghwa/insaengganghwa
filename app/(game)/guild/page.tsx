@@ -6,7 +6,7 @@ import { zones } from '@/lib/db/schema/guild';
 import {
   getMyMembership,
   getGuild,
-  getGuildMembers,
+  getGuildMembersRich,
   getResidence,
   getGuildRanking,
   getMyJoinRequest,
@@ -49,7 +49,7 @@ export default async function GuildPage() {
 
   const [guild, members, residenceZoneId, ranking] = await Promise.all([
     getGuild(membership.guildId),
-    getGuildMembers(membership.guildId),
+    getGuildMembersRich(membership.guildId),
     getResidence(userId),
     getGuildRanking(),
   ]);
@@ -93,12 +93,7 @@ export default async function GuildPage() {
             emblemUrl: guild.emblemUrl,
             emblemColor: guild.emblemColor,
           }}
-          members={members.map((m) => ({
-            userId: m.userId,
-            role: m.role,
-            nickname: m.nickname,
-            contributionPoints: Number(m.contributionPoints),
-          }))}
+          members={members}
           myUserId={userId}
           myRole={membership.role}
           usedToday={usedToday}

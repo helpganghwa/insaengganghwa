@@ -10,13 +10,9 @@ import { GUILD_DONATIONS_PER_DAY, GUILD_DONATION_TIERS } from '@/lib/game/guild/
 
 import { donateAction, leaveGuildAction } from './actions';
 import { guildErrMsg } from './errors-msg';
+import { GuildMemberList, type RichMember } from './GuildMemberList';
 
-type Member = {
-  userId: string;
-  role: 'leader' | 'vice' | 'member';
-  nickname: string;
-  contributionPoints: number;
-};
+type GuildRole = 'leader' | 'vice' | 'member';
 type GuildView = {
   name: string;
   level: number;
@@ -25,12 +21,6 @@ type GuildView = {
   capacity: number;
   emblemUrl: string | null;
   emblemColor: string | null;
-};
-
-const ROLE_BADGE: Record<Member['role'], { label: string; cls: string } | null> = {
-  leader: { label: '길드장', cls: 'bg-amber-500/15 text-amber-700 dark:text-amber-300' },
-  vice: { label: '부길드장', cls: 'bg-sky-500/15 text-sky-700 dark:text-sky-300' },
-  member: null,
 };
 
 export function GuildHome({
@@ -42,9 +32,9 @@ export function GuildHome({
   residence,
 }: {
   guild: GuildView;
-  members: Member[];
+  members: RichMember[];
   myUserId: string;
-  myRole: Member['role'];
+  myRole: GuildRole;
   usedToday: number;
   residence: string | null;
 }) {
@@ -172,32 +162,8 @@ export function GuildHome({
         <span className="text-zinc-400">→</span>
       </Link>
 
-      {/* 길드원 명단 */}
-      <section className="rounded-xl border border-zinc-200 bg-white p-4 dark:border-zinc-800 dark:bg-zinc-950">
-        <h3 className="text-sm font-bold">길드원 ({members.length})</h3>
-        <ul className="mt-2 space-y-1.5">
-          {members.map((m) => {
-            const badge = ROLE_BADGE[m.role];
-            return (
-              <li key={m.userId} className="flex items-center justify-between gap-2 text-[13px]">
-                <div className="flex min-w-0 items-center gap-1.5">
-                  <span className={`truncate font-semibold ${m.userId === myUserId ? 'text-amber-700 dark:text-amber-300' : ''}`}>
-                    {m.nickname}
-                  </span>
-                  {badge && (
-                    <span className={`shrink-0 rounded-full px-1.5 py-0 text-[9px] font-bold ${badge.cls}`}>
-                      {badge.label}
-                    </span>
-                  )}
-                </div>
-                <span className="shrink-0 font-mono text-[11px] tabular-nums text-zinc-500">
-                  {m.contributionPoints.toLocaleString('ko-KR')} 기여
-                </span>
-              </li>
-            );
-          })}
-        </ul>
-      </section>
+      {/* 길드원 명단(아바타·장비·전투력/강화/기여도 정렬) */}
+      <GuildMemberList members={members} myUserId={myUserId} />
 
       {/* 탈퇴 */}
       <button
