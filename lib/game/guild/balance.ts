@@ -57,10 +57,14 @@ export const CONQUEST_DEFENDER_BONUS = 0.2;
 export const CONQUEST_LORD_POWER_MULT = 3;
 export const ZONE_TOTAL = 50;
 
-// ── 세금 (§5.5) ──
-/** 세금 포인트 → 💎 환산비(100pt = 1💎). 과하면 1000:1 등으로 하향(시뮬). */
-export const TAX_POINTS_PER_DIAMOND = 100;
-/** 영주 세금 수집 쿨다운(분). */
+// ── 세금 (§5.5) — 지역에 💎 직접 누적(포인트·환산 없음) ──
+/** 영주 수금 시 영주 몫 비율(10%). 나머지 90%는 길드 풀로. */
+export const GUILD_LORD_TAX_CUT = 0.1;
+/** 영주 세금 수금 쿨다운(분). */
 export const TAX_COLLECT_COOLDOWN_MIN = 60;
+/** 거주 구역 강화 성공 시 누적되는 💎 산식 — 도달 레벨 기반 소액. 시뮬 튜닝(경제 정합, 미확정). */
+export function taxDiamondForEnhanceSuccess(reachedLevel: number): number {
+  return Math.max(1, Math.floor(reachedLevel / 10)); // 시작 테스트값: 레벨/10
+}
 /** 분배 방식. */
 export type GuildTaxDistribution = 'equal' | 'target';

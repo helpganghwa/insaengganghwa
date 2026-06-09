@@ -53,8 +53,8 @@ export const guilds = pgTable('guilds', {
   /** 0+. 무제한 — 수용은 min(50,10+level), L41+는 과시·랭킹용(버프·전투력 영향 0). */
   level: integer('level').notNull().default(0),
   xp: bigint('xp', { mode: 'bigint' }).notNull().default(sql`0`),
-  /** 영주 수집으로 누적된 미분배 세금 포인트(100:1💎 환산 전). */
-  taxPoolPoints: bigint('tax_pool_points', { mode: 'bigint' }).notNull().default(sql`0`),
+  /** 영주 수금으로 누적된 미분배 세금 💎(영주 90% 몫). */
+  taxPoolDiamond: bigint('tax_pool_diamond', { mode: 'bigint' }).notNull().default(sql`0`),
   leaderUserId: uuid('leader_user_id')
     .notNull()
     .references(() => profiles.id),
@@ -110,9 +110,9 @@ export const zones = pgTable(
     }),
     /** 영주(상시) — 세금 수집권·자동 방어(×3). 소유 시 ≥1 필수. */
     lordUserId: uuid('lord_user_id').references(() => profiles.id, { onDelete: 'set null' }),
-    /** 미수집 누적 세금 포인트(점령 시 신 소유자로 이전). */
-    taxPoints: bigint('tax_points', { mode: 'bigint' }).notNull().default(sql`0`),
-    /** 영주 수집 1h 쿨다운 기준. */
+    /** 미수금 누적 세금 💎(거주자 강화 성공 시 직접 누적, 점령 시 신 소유자로 이전). */
+    taxDiamond: bigint('tax_diamond', { mode: 'bigint' }).notNull().default(sql`0`),
+    /** 영주 수금 1h 쿨다운 기준. */
     lastTaxCollectedAt: timestamp('last_tax_collected_at', { withTimezone: true }),
     capturedAt: timestamp('captured_at', { withTimezone: true }),
   },
