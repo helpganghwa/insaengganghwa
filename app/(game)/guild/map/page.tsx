@@ -22,6 +22,7 @@ export default async function WorldMapPage() {
       mapSrc={assetUrl('/sprites/guild/worldmap.png')}
       myGuildId={myGuildId}
       residenceZoneId={residenceZoneId}
+      canSetResidence={userId != null}
       zones={zones.map((z) => ({
         id: z.id,
         region: z.region,
