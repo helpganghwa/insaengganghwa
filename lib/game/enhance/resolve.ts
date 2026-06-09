@@ -8,6 +8,8 @@ import {
   downRateBp,
   levelAfterFail,
 } from '@/lib/game/balance';
+import { accrueResidenceTax } from '@/lib/game/guild/tax';
+
 import { EnhanceError } from './queue';
 
 /**
@@ -158,6 +160,16 @@ export async function resolveEnhance(input: ResolveInput): Promise<ResolveResult
 
   // 푸시 알림은 '결과 시점' 아닌 'complete_at 도달 시점'(=최대확률)에 cron이 처리(2026-05-26).
   // resolveEnhance는 결과 트랜잭션만 담당, 알림 책임 없음.
+
+  // 길드 세금 누적(GUILD §5.5) — 성공/mega(레벨 상승) 시 거주 구역에 도달레벨 포인트.
+  // **강화 원자 트랜잭션과 분리(best-effort)**: 실패해도 강화 정산엔 영향 없음.
+  if (toLevel > fromLevel) {
+    try {
+      await accrueResidenceTax(String(job.user_id), toLevel);
+    } catch {
+      // 세금 누적 실패는 무시(강화 결과 보존).
+    }
+  }
 
   return { jobId, userEquipmentId, outcome, fromLevel, toLevel, effectiveRateBp: effBp };
 }
