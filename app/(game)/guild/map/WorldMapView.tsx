@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useTransition } from 'react';
+import { useMemo, useState, useTransition } from 'react';
 import { useRouter } from 'next/navigation';
 
 import { useResourceToast } from '@/components/ResourceToast';
@@ -81,7 +81,14 @@ export function WorldMapView({
   const [selectedId, setSelectedId] = useState<number | null>(null);
   const [replay, setReplay] = useState<Battle | null>(null);
   const [pending, start] = useTransition();
-  const selected = zones.find((z) => z.id === selectedId) ?? null;
+  // 낙관적 상태 — 내 배치 / 구역 집행관 오버라이드(서버 응답 전 즉시 반영, 실패 시 롤백).
+  const [myDep, setMyDep] = useState(myDeployment);
+  const [execOverride, setExecOverride] = useState<
+    Map<number, { executorUserId: string | null; executorNickname: string | null }>
+  >(new Map());
+
+  const base = zones.find((z) => z.id === selectedId) ?? null;
+  const selected = base ? { ...base, ...(execOverride.get(base.id) ?? {}) } : null;
 
   const openBattle = (zoneId: number) => {
     start(async () => {
@@ -92,56 +99,100 @@ export function WorldMapView({
     });
   };
 
-  // 자기 길드 배치 집계(안개 — 자기 길드만): zoneId → {attack, defend}.
-  const guildDeployByZone = new Map<number, { attack: number; defend: number }>();
-  for (const d of guildDeploys) {
-    const e = guildDeployByZone.get(d.zoneId) ?? { attack: 0, defend: 0 };
-    e[d.role] += 1;
-    guildDeployByZone.set(d.zoneId, e);
-  }
+  // 자기 길드 배치 집계(안개) — 낙관적 내 배치 반영(서버 배치 빼고 낙관 배치 더함).
+  const guildDeployByZone = useMemo(() => {
+    const m = new Map<number, { attack: number; defend: number }>();
+    const bump = (zoneId: number, role: DeployRole, n: number) => {
+      const e = m.get(zoneId) ?? { attack: 0, defend: 0 };
+      e[role] += n;
+      m.set(zoneId, e);
+    };
+    for (const d of guildDeploys) bump(d.zoneId, d.role, 1);
+    if (myDep !== myDeployment) {
+      if (myDeployment) bump(myDeployment.zoneId, myDeployment.role, -1);
+      if (myDep) bump(myDep.zoneId, myDep.role, 1);
+    }
+    return m;
+  }, [guildDeploys, myDep, myDeployment]);
 
   const moveResidence = (zoneId: number) => {
+    const prev = residence;
+    setResidence(zoneId); // 낙관적
     start(async () => {
       const r = await setResidenceAction(zoneId);
-      if (r.status !== 'success') return showError(guildErrMsg(r.code));
-      setResidence(zoneId); // 낙관적 — router.refresh로 서버 상태 재동기화
+      if (r.status !== 'success') {
+        setResidence(prev);
+        return showError(guildErrMsg(r.code));
+      }
       showHeaderToast({ title: '거주지 이동 완료' });
       router.refresh();
     });
   };
 
   const deploy = (zoneId: number, role: DeployRole) => {
+    const prev = myDep;
+    setMyDep({ zoneId, role }); // 낙관적
     start(async () => {
       const r = await deployAction(zoneId, role);
-      if (r.status !== 'success') return showError(guildErrMsg(r.code));
+      if (r.status !== 'success') {
+        setMyDep(prev);
+        return showError(guildErrMsg(r.code));
+      }
       showHeaderToast({ title: role === 'attack' ? '공격 배치 완료' : '수비 배치 완료' });
       router.refresh();
     });
   };
 
   const cancelDeploy = () => {
+    const prev = myDep;
+    setMyDep(null); // 낙관적
     start(async () => {
       const r = await cancelDeployAction();
-      if (r.status !== 'success') return showError(guildErrMsg(r.code));
+      if (r.status !== 'success') {
+        setMyDep(prev);
+        return showError(guildErrMsg(r.code));
+      }
       showHeaderToast({ title: '배치 취소' });
       router.refresh();
     });
   };
 
+  const restoreExec = (
+    zoneId: number,
+    prev: { executorUserId: string | null; executorNickname: string | null } | undefined,
+  ) =>
+    setExecOverride((o) => {
+      const n = new Map(o);
+      if (prev) n.set(zoneId, prev);
+      else n.delete(zoneId);
+      return n;
+    });
+
   const assignExecutor = (zoneId: number, targetUserId: string) => {
     if (!targetUserId) return;
+    const prev = execOverride.get(zoneId);
+    const nickname = members.find((m) => m.userId === targetUserId)?.nickname ?? null;
+    setExecOverride((o) => new Map(o).set(zoneId, { executorUserId: targetUserId, executorNickname: nickname })); // 낙관적
     start(async () => {
       const r = await setExecutorAction(zoneId, targetUserId);
-      if (r.status !== 'success') return showError(guildErrMsg(r.code));
+      if (r.status !== 'success') {
+        restoreExec(zoneId, prev);
+        return showError(guildErrMsg(r.code));
+      }
       showHeaderToast({ title: '집행관 지정 완료' });
       router.refresh();
     });
   };
 
   const removeExecutor = (zoneId: number) => {
+    const prev = execOverride.get(zoneId);
+    setExecOverride((o) => new Map(o).set(zoneId, { executorUserId: null, executorNickname: null })); // 낙관적
     start(async () => {
       const r = await clearExecutorAction(zoneId);
-      if (r.status !== 'success') return showError(guildErrMsg(r.code));
+      if (r.status !== 'success') {
+        restoreExec(zoneId, prev);
+        return showError(guildErrMsg(r.code));
+      }
       showHeaderToast({ title: '집행관 해제' });
       router.refresh();
     });
@@ -294,8 +345,8 @@ export function WorldMapView({
             {myGuildId &&
               (() => {
                 const ownedByMe = selected.ownerGuildId === myGuildId;
-                const here = myDeployment?.zoneId === selected.id ? myDeployment.role : null;
-                const elsewhere = myDeployment && myDeployment.zoneId !== selected.id;
+                const here = myDep?.zoneId === selected.id ? myDep.role : null;
+                const elsewhere = myDep && myDep.zoneId !== selected.id;
                 const fog = guildDeployByZone.get(selected.id);
                 return (
                   <div className="mt-3 border-t border-zinc-200 pt-3 dark:border-zinc-800">
