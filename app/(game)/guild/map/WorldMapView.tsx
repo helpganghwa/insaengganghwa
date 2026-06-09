@@ -16,6 +16,8 @@ import {
 import { guildErrMsg } from '../errors-msg';
 import { ConquestReplay } from './ConquestReplay';
 
+import { ZONE_LORE } from '@/lib/game/guild/zone-lore';
+
 import type { ConquestFinale } from '@/lib/game/guild/conquest/simulate';
 
 type Battle = {
@@ -326,7 +328,7 @@ export function WorldMapView({
 
             <div className="px-4 pb-4 pt-3">
               <p className="mb-3 text-[12px] leading-relaxed text-zinc-500">
-                {REGION_STORY[selected.region]}
+                {ZONE_LORE[selected.id] ?? REGION_STORY[selected.region]}
               </p>
               <dl className="space-y-1 text-[12px]">
                 <div className="flex justify-between">
