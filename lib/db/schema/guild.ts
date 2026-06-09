@@ -178,6 +178,25 @@ export const conquestBattles = pgTable(
   (t) => [uniqueIndex('conquest_zone_day_uq').on(t.zoneId, t.battleKstDay)],
 );
 
+/** §5.5 세금 분배 로그(공개) — 길드장 분배 시 1행(리더 독식 견제). */
+export const guildTaxDistributions = pgTable(
+  'guild_tax_distributions',
+  {
+    id: bigserial('id', { mode: 'bigint' }).primaryKey(),
+    guildId: bigint('guild_id', { mode: 'bigint' })
+      .notNull()
+      .references(() => guilds.id, { onDelete: 'cascade' }),
+    byUserId: uuid('by_user_id')
+      .notNull()
+      .references(() => profiles.id),
+    mode: text('mode').notNull(), // 'equal' | 'target'
+    total: bigint('total', { mode: 'bigint' }).notNull(), // 분배 총 💎
+    targetUserId: uuid('target_user_id'), // target 모드 수령자
+    createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
+  },
+  (t) => [index('guild_tax_dist_idx').on(t.guildId, t.createdAt)],
+);
+
 export type Guild = typeof guilds.$inferSelect;
 export type GuildMember = typeof guildMembers.$inferSelect;
 export type Zone = typeof zones.$inferSelect;
