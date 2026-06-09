@@ -1,10 +1,11 @@
 import 'server-only';
 
-import { eq } from 'drizzle-orm';
+import { and, eq, sql } from 'drizzle-orm';
 
 import { db } from '@/lib/db/client';
 import { guilds, guildMembers, guildLeaveLog } from '@/lib/db/schema/guild';
 
+import { GUILD_MAX_VICE } from './balance';
 import { GuildError } from './errors';
 
 type Tx = Parameters<Parameters<typeof db.transaction>[0]>[0];
@@ -51,6 +52,15 @@ export function setViceRole(input: {
     const target = await lockMember(tx, input.targetUserId);
     if (!target || target.guildId !== leader.guildId) throw new GuildError('TARGET_NOT_IN_GUILD');
     if (target.role === 'leader') throw new GuildError('INVALID_TARGET');
+
+    // 부길드장 상한(5명) — 신규 임명(현재 vice 아님) 시에만 검사.
+    if (input.makeVice && target.role !== 'vice') {
+      const [cnt] = await tx
+        .select({ n: sql<number>`count(*)::int` })
+        .from(guildMembers)
+        .where(and(eq(guildMembers.guildId, leader.guildId), eq(guildMembers.role, 'vice')));
+      if ((cnt?.n ?? 0) >= GUILD_MAX_VICE) throw new GuildError('VICE_LIMIT');
+    }
 
     await tx
       .update(guildMembers)

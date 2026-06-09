@@ -24,6 +24,7 @@ export type GuildErrorCode =
   | 'TARGET_ALREADY_EXECUTOR' // 대상이 이미 다른 구역 집행관
   | 'NOT_OFFICER' // 길드장/부길드장 아님(집행관 지정·가입 승인)
   | 'NO_JOIN_REQUEST' // 승인/거절 대상 가입 신청 없음
+  | 'VICE_LIMIT' // 부길드장 임명 상한(5명) 초과
   | 'EMBLEM_INVALID' // 문양 3축 선택 위반(모양/톤/키워드 1~3)
   | 'EMBLEM_GEN_FAILED' // 문양 생성 외부 실패(환불됨)
   | 'FORBIDDEN';

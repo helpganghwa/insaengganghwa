@@ -40,6 +40,8 @@ export const GUILD_DONATION_TIERS = [
 ] as const;
 
 // ── 직책 / 운영 (§1, §4) ──
+/** 부길드장 임명 상한(길드당). */
+export const GUILD_MAX_VICE = 5;
 /** 길드장 미접속 자동 위임(일). 경고 알림은 WARN_DAYS차. */
 export const GUILD_LEADER_HANDOVER_DAYS = 7;
 export const GUILD_LEADER_HANDOVER_WARN_DAYS = 5;
