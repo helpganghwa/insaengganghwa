@@ -9,7 +9,7 @@ export const GUILD_CREATE_COST_DIAMOND = 10_000;
 /** 문양 재생성 비용(💎). 결성 시 1회 무료, 이후 재생성 과금(외형 BM). */
 export const GUILD_EMBLEM_REROLL_COST_DIAMOND = 5_000;
 export const GUILD_NAME_MIN_LEN = 2;
-export const GUILD_NAME_MAX_LEN = 12;
+export const GUILD_NAME_MAX_LEN = 10;
 export const GUILD_NOTICE_MAX_LEN = 60;
 
 // ── 수용 / 레벨 (§2.3) ──
@@ -36,10 +36,6 @@ export const GUILD_DONATION_TIERS = [
   { cost: 50, xp: 30 },
   { cost: 100, xp: 70 },
 ] as const;
-
-// ── 미션 (§2.2) — 자동 집계. 세부 항목 TBD ──
-export const GUILD_MISSION_DAILY_XP = 50;
-export const GUILD_MISSION_WEEKLY_XP = 250;
 
 // ── 직책 / 운영 (§1, §4) ──
 /** 길드장 미접속 자동 위임(일). 경고 알림은 WARN_DAYS차. */

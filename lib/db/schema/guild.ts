@@ -61,7 +61,7 @@ export const guilds = pgTable('guilds', {
   createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
 });
 
-/** §1 guild_members — user_id PK = 1유저 1길드. 기여도=기부+미션(점령전 제외, §3). */
+/** §1 guild_members — user_id PK = 1유저 1길드. 기여도=기부(점령전 제외, §3). */
 export const guildMembers = pgTable(
   'guild_members',
   {

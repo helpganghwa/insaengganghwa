@@ -8,10 +8,16 @@ import { profiles } from '@/lib/db/schema/profiles';
 
 import { guildCapacity } from './balance';
 
-/** 내 길드 소속(1유저 1길드). 미소속이면 null. */
+/** 내 길드 소속(1유저 1길드) + 기여도·일일 기부 카운터. 미소속이면 null. */
 export async function getMyMembership(userId: string) {
   const [m] = await db
-    .select({ guildId: guildMembers.guildId, role: guildMembers.role })
+    .select({
+      guildId: guildMembers.guildId,
+      role: guildMembers.role,
+      contributionPoints: guildMembers.contributionPoints,
+      dailyDonationCount: guildMembers.dailyDonationCount,
+      lastDonationKstDay: guildMembers.lastDonationKstDay,
+    })
     .from(guildMembers)
     .where(eq(guildMembers.userId, userId))
     .limit(1);
