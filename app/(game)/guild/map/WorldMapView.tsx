@@ -251,12 +251,12 @@ export function WorldMapView({
               <div className="flex justify-between">
                 <dt className="text-zinc-500">집행관</dt>
                 <dd className="font-semibold">
-                  {selected.executorNickname ?? <span className="text-zinc-400">—</span>}
+                  {selected.executorNickname ?? <span className="text-zinc-400">공석</span>}
                 </dd>
               </div>
               <div className="flex justify-between">
                 <dt className="text-zinc-500">누적 세금</dt>
-                <dd className="font-mono tabular-nums">{selected.taxDiamond}💎</dd>
+                <dd className="font-mono tabular-nums">💎 {selected.taxDiamond}</dd>
               </div>
             </dl>
 
