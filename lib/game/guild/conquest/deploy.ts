@@ -93,6 +93,90 @@ export async function getMyDeployment(
   return d ? { zoneId: d.zoneId, role: d.role as ConquestRole, battleKstDay } : null;
 }
 
+/** actor가 임원(길드장/부길드장)인지 검증하고 길드 id 반환. */
+async function assertOfficer(
+  tx: Parameters<Parameters<typeof db.transaction>[0]>[0],
+  userId: string,
+): Promise<bigint> {
+  const [m] = await tx
+    .select({ guildId: guildMembers.guildId, role: guildMembers.role })
+    .from(guildMembers)
+    .where(eq(guildMembers.userId, userId))
+    .limit(1);
+  if (!m) throw new GuildError('NOT_IN_GUILD');
+  if (m.role !== 'leader' && m.role !== 'vice') throw new GuildError('NOT_OFFICER');
+  return m.guildId;
+}
+
+/**
+ * 길드원 배치(임원 전용) — GUILD §5.8⑥. 길드장/부길드장이 길드원 1명을 공격/수비 구역에 배치.
+ *  - 대상은 같은 길드원. 집행관은 자동 방어라 배치 불가(IS_EXECUTOR).
+ *  - 수비=자기 길드 소유 구역, 공격=비소유 구역. 1인 1배치(upsert), 11:00 잠금(날짜 롤).
+ */
+export async function deployMember(input: {
+  actorUserId: string;
+  targetUserId: string;
+  zoneId: number;
+  role: ConquestRole;
+}): Promise<{ battleKstDay: string }> {
+  return db.transaction(async (tx) => {
+    const guildId = await assertOfficer(tx, input.actorUserId);
+
+    const [target] = await tx
+      .select({ guildId: guildMembers.guildId })
+      .from(guildMembers)
+      .where(eq(guildMembers.userId, input.targetUserId))
+      .limit(1);
+    if (!target || target.guildId !== guildId) throw new GuildError('TARGET_NOT_IN_GUILD');
+
+    const [ex] = await tx
+      .select({ id: zones.id })
+      .from(zones)
+      .where(eq(zones.executorUserId, input.targetUserId))
+      .limit(1);
+    if (ex) throw new GuildError('IS_EXECUTOR');
+
+    const [z] = await tx
+      .select({ ownerGuildId: zones.ownerGuildId })
+      .from(zones)
+      .where(eq(zones.id, input.zoneId))
+      .limit(1);
+    if (!z) throw new GuildError('ZONE_NOT_FOUND');
+    const owned = z.ownerGuildId === guildId;
+    if (input.role === 'defend' && !owned) throw new GuildError('ZONE_NOT_OWNED');
+    if (input.role === 'attack' && owned) throw new GuildError('CANNOT_ATTACK_OWN');
+
+    const battleKstDay = nextBattleKstDay();
+    await tx
+      .insert(guildBattleDeployments)
+      .values({ battleKstDay, userId: input.targetUserId, guildId, zoneId: input.zoneId, role: input.role })
+      .onConflictDoUpdate({
+        target: [guildBattleDeployments.userId, guildBattleDeployments.battleKstDay],
+        set: { guildId, zoneId: input.zoneId, role: input.role, createdAt: sql`now()` },
+      });
+    return { battleKstDay };
+  });
+}
+
+/** 길드원 배치 해제(임원 전용) — 자기 길드원 배치만 삭제. */
+export async function clearMemberDeployment(input: {
+  actorUserId: string;
+  targetUserId: string;
+}): Promise<void> {
+  await db.transaction(async (tx) => {
+    const guildId = await assertOfficer(tx, input.actorUserId);
+    await tx
+      .delete(guildBattleDeployments)
+      .where(
+        and(
+          eq(guildBattleDeployments.userId, input.targetUserId),
+          eq(guildBattleDeployments.guildId, guildId),
+          eq(guildBattleDeployments.battleKstDay, nextBattleKstDay()),
+        ),
+      );
+  });
+}
+
 /** 자기 길드의 다음 전투 배치 목록(안개 — 자기 길드만 열람). 구역별 공/수 집계용. */
 export async function getMyGuildDeployments(guildId: bigint) {
   const battleKstDay = nextBattleKstDay();

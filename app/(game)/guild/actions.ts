@@ -20,6 +20,8 @@ import {
   distributeGuildTax,
   deployToZone,
   cancelDeployment,
+  deployMember,
+  clearMemberDeployment,
   setZoneExecutor,
   clearZoneExecutor,
   getZoneLatestBattle,
@@ -245,6 +247,32 @@ export async function cancelDeployAction() {
     return { status: 'success', cancelled: r.cancelled } as const;
   } catch (e) {
     return fail(e, 'cancelDeploy');
+  }
+}
+
+export async function deployMemberAction(targetUserId: string, zoneId: number, role: ConquestRole) {
+  const u = await getSessionUserId();
+  if (!u) return unauth;
+  try {
+    await deployMember({ actorUserId: u, targetUserId, zoneId, role });
+    revalidatePath('/guild/deploy');
+    revalidatePath('/guild/map');
+    return { status: 'success' } as const;
+  } catch (e) {
+    return fail(e, 'deployMember');
+  }
+}
+
+export async function clearMemberDeploymentAction(targetUserId: string) {
+  const u = await getSessionUserId();
+  if (!u) return unauth;
+  try {
+    await clearMemberDeployment({ actorUserId: u, targetUserId });
+    revalidatePath('/guild/deploy');
+    revalidatePath('/guild/map');
+    return { status: 'success' } as const;
+  } catch (e) {
+    return fail(e, 'clearMemberDeployment');
   }
 }
 

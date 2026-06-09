@@ -13,6 +13,18 @@ import {
 import { profiles } from '@/lib/db/schema/profiles';
 
 import { guildCapacity } from './balance';
+import { nextBattleKstDay } from './conquest/schedule';
+
+type DeployBoardMember = {
+  uid: string;
+  nickname: string;
+  mrole: 'leader' | 'vice' | 'member';
+  dep_zone_id: number | null;
+  dep_zone_name: string | null;
+  dep_role: 'attack' | 'defend' | null;
+  exec_zone_id: number | null;
+  exec_zone_name: string | null;
+};
 
 /** 내 길드 소속(1유저 1길드) + 기여도·일일 기부 카운터. 미소속이면 null. */
 export async function getMyMembership(userId: string) {
@@ -137,6 +149,35 @@ export async function getZoneLatestBattle(zoneId: number) {
     .orderBy(desc(conquestBattles.battleKstDay))
     .limit(1);
   return b ?? null;
+}
+
+/** 점령전 배치 보드(임원 배치/전원 조회) — 길드원별 현재 배치·집행관 + 구역 목록(픽커). */
+export async function getDeployBoard(guildId: bigint) {
+  const battleKstDay = nextBattleKstDay();
+  const members = (await db.execute(sql`
+    select gm.user_id::text uid, p.nickname, gm.role::text mrole,
+           d.zone_id dep_zone_id, dz.name dep_zone_name, d.role::text dep_role,
+           ez.id exec_zone_id, ez.name exec_zone_name
+    from guild_members gm
+    join profiles p on p.id = gm.user_id
+    left join guild_battle_deployments d on d.user_id = gm.user_id and d.battle_kst_day = ${battleKstDay}
+    left join zones dz on dz.id = d.zone_id
+    left join zones ez on ez.executor_user_id = gm.user_id
+    where gm.guild_id = ${guildId}
+    order by case gm.role when 'leader' then 0 when 'vice' then 1 else 2 end, p.nickname
+  `)) as unknown as DeployBoardMember[];
+
+  const zoneRows = await db
+    .select({
+      id: zones.id,
+      name: zones.name,
+      region: zones.region,
+      ownerGuildId: zones.ownerGuildId,
+    })
+    .from(zones)
+    .orderBy(zones.id);
+
+  return { battleKstDay, members, zones: zoneRows };
 }
 
 /** 길드원 목록 — 기여도 내림차순(무임승차 판단·표시용). */

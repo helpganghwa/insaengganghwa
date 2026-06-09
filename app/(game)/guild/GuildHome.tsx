@@ -2,6 +2,7 @@
 
 import { useEffect, useRef, useState, useTransition } from 'react';
 import { useRouter } from 'next/navigation';
+import Link from 'next/link';
 
 import { useResourceToast } from '@/components/ResourceToast';
 import { useDiamond } from '@/components/DiamondContext';
@@ -216,6 +217,20 @@ export function GuildHome({
           </p>
         )}
       </section>
+
+      {/* 점령전 배치 진입 */}
+      <Link
+        href="/guild/deploy"
+        className="flex items-center justify-between rounded-xl border border-zinc-200 bg-white px-4 py-3 dark:border-zinc-800 dark:bg-zinc-950"
+      >
+        <div>
+          <span className="text-sm font-bold">점령전 배치</span>
+          <p className="text-[11px] text-zinc-500">
+            {isOfficer ? '길드원 공격/수비 지정' : '우리 길드 배치 현황'}
+          </p>
+        </div>
+        <span className="text-zinc-400">→</span>
+      </Link>
 
       {/* 기부 */}
       <section className="rounded-xl border border-zinc-200 bg-white p-4 dark:border-zinc-800 dark:bg-zinc-950">

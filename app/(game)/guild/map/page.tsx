@@ -4,7 +4,6 @@ import {
   getWorldmapZones,
   getMyMembership,
   getResidence,
-  getMyDeployment,
   getMyGuildDeployments,
   getGuildMembers,
   nextBattleKstDay,
@@ -28,10 +27,8 @@ export default async function WorldMapPage() {
   const myRole = membership?.role ?? null;
   const isOfficer = myRole === 'leader' || myRole === 'vice';
 
-  // 점령전 배치 상태(길드원만): 내 배치 + 자기 길드 배치(안개 — 자기 길드만).
-  // 집행관 지정은 길드장/부길드장만 → 그 경우에만 길드원 목록 전달.
-  const [myDeployment, guildDeploys, members] = await Promise.all([
-    userId && membership ? getMyDeployment(userId) : Promise.resolve(null),
+  // 자기 길드 배치(안개 — 자기 길드만) + 집행관 지정용 길드원 목록(임원만).
+  const [guildDeploys, members] = await Promise.all([
     membership ? getMyGuildDeployments(membership.guildId) : Promise.resolve([]),
     isOfficer && membership ? getGuildMembers(membership.guildId) : Promise.resolve([]),
   ]);
@@ -45,7 +42,6 @@ export default async function WorldMapPage() {
       residenceZoneId={residenceZoneId}
       canSetResidence={userId != null}
       battleDayLabel={battleDayLabel}
-      myDeployment={myDeployment ? { zoneId: myDeployment.zoneId, role: myDeployment.role } : null}
       guildDeploys={guildDeploys.map((d) => ({ zoneId: d.zoneId, role: d.role as 'attack' | 'defend' }))}
       members={members.map((m) => ({ userId: m.userId, nickname: m.nickname }))}
       zones={zones.map((z) => ({

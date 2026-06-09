@@ -2,13 +2,12 @@
 
 import { useMemo, useState, useTransition } from 'react';
 import { useRouter } from 'next/navigation';
+import Link from 'next/link';
 
 import { useResourceToast } from '@/components/ResourceToast';
 
 import {
   setResidenceAction,
-  deployAction,
-  cancelDeployAction,
   setExecutorAction,
   clearExecutorAction,
   getZoneBattleAction,
@@ -76,7 +75,6 @@ export function WorldMapView({
   residenceZoneId,
   canSetResidence,
   battleDayLabel,
-  myDeployment,
   guildDeploys,
   members,
   zones,
@@ -87,7 +85,6 @@ export function WorldMapView({
   residenceZoneId: number | null;
   canSetResidence: boolean;
   battleDayLabel: string;
-  myDeployment: { zoneId: number; role: DeployRole } | null;
   guildDeploys: Array<{ zoneId: number; role: DeployRole }>;
   members: Member[];
   zones: Zone[];
@@ -98,8 +95,7 @@ export function WorldMapView({
   const [selectedId, setSelectedId] = useState<number | null>(null);
   const [replay, setReplay] = useState<Battle | null>(null);
   const [pending, start] = useTransition();
-  // 낙관적 상태 — 내 배치 / 구역 집행관 오버라이드(서버 응답 전 즉시 반영, 실패 시 롤백).
-  const [myDep, setMyDep] = useState(myDeployment);
+  // 낙관적 상태 — 구역 집행관 오버라이드(서버 응답 전 즉시 반영, 실패 시 롤백).
   const [execOverride, setExecOverride] = useState<
     Map<number, { executorUserId: string | null; executorNickname: string | null }>
   >(new Map());
@@ -116,21 +112,16 @@ export function WorldMapView({
     });
   };
 
-  // 자기 길드 배치 집계(안개) — 낙관적 내 배치 반영(서버 배치 빼고 낙관 배치 더함).
+  // 자기 길드 배치 집계(안개 — 자기 길드만 열람).
   const guildDeployByZone = useMemo(() => {
     const m = new Map<number, { attack: number; defend: number }>();
-    const bump = (zoneId: number, role: DeployRole, n: number) => {
-      const e = m.get(zoneId) ?? { attack: 0, defend: 0 };
-      e[role] += n;
-      m.set(zoneId, e);
-    };
-    for (const d of guildDeploys) bump(d.zoneId, d.role, 1);
-    if (myDep !== myDeployment) {
-      if (myDeployment) bump(myDeployment.zoneId, myDeployment.role, -1);
-      if (myDep) bump(myDep.zoneId, myDep.role, 1);
+    for (const d of guildDeploys) {
+      const e = m.get(d.zoneId) ?? { attack: 0, defend: 0 };
+      e[d.role] += 1;
+      m.set(d.zoneId, e);
     }
     return m;
-  }, [guildDeploys, myDep, myDeployment]);
+  }, [guildDeploys]);
 
   const moveResidence = (zoneId: number) => {
     const prev = residence;
@@ -146,33 +137,6 @@ export function WorldMapView({
     });
   };
 
-  const deploy = (zoneId: number, role: DeployRole) => {
-    const prev = myDep;
-    setMyDep({ zoneId, role }); // 낙관적
-    start(async () => {
-      const r = await deployAction(zoneId, role);
-      if (r.status !== 'success') {
-        setMyDep(prev);
-        return showError(guildErrMsg(r.code));
-      }
-      showHeaderToast({ title: role === 'attack' ? '공격 배치 완료' : '수비 배치 완료' });
-      router.refresh();
-    });
-  };
-
-  const cancelDeploy = () => {
-    const prev = myDep;
-    setMyDep(null); // 낙관적
-    start(async () => {
-      const r = await cancelDeployAction();
-      if (r.status !== 'success') {
-        setMyDep(prev);
-        return showError(guildErrMsg(r.code));
-      }
-      showHeaderToast({ title: '배치 취소' });
-      router.refresh();
-    });
-  };
 
   const restoreExec = (
     zoneId: number,
@@ -374,8 +338,6 @@ export function WorldMapView({
             {myGuildId &&
               (() => {
                 const ownedByMe = selected.ownerGuildId === myGuildId;
-                const here = myDep?.zoneId === selected.id ? myDep.role : null;
-                const elsewhere = myDep && myDep.zoneId !== selected.id;
                 const fog = guildDeployByZone.get(selected.id);
                 return (
                   <div className="mt-3 border-t border-zinc-200 pt-3 dark:border-zinc-800">
@@ -387,40 +349,12 @@ export function WorldMapView({
                         </span>
                       )}
                     </div>
-
-                    {here ? (
-                      <div className="mt-2 flex items-center gap-2">
-                        <span className="flex-1 rounded-lg bg-emerald-500/10 px-2 py-2 text-center text-[12px] font-semibold text-emerald-700 dark:text-emerald-300">
-                          {here === 'attack' ? '공격 배치됨' : '수비 배치됨'}
-                        </span>
-                        <button
-                          type="button"
-                          onClick={cancelDeploy}
-                          disabled={pending}
-                          className="rounded-lg border border-zinc-300 px-3 py-2 text-[12px] font-semibold text-zinc-600 disabled:opacity-50 dark:border-zinc-700 dark:text-zinc-400"
-                        >
-                          취소
-                        </button>
-                      </div>
-                    ) : (
-                      <>
-                        <button
-                          type="button"
-                          onClick={() => deploy(selected.id, ownedByMe ? 'defend' : 'attack')}
-                          disabled={pending}
-                          className={`mt-2 w-full rounded-lg py-2.5 text-sm font-bold text-white disabled:opacity-50 ${
-                            ownedByMe ? 'bg-sky-600' : 'bg-red-600'
-                          }`}
-                        >
-                          {ownedByMe ? '이 구역 수비' : '이 구역 공격'}
-                        </button>
-                        {elsewhere && (
-                          <p className="mt-1.5 text-[10px] text-zinc-500">
-                            현재 다른 구역에 배치 중 — 배치하면 이동합니다.
-                          </p>
-                        )}
-                      </>
-                    )}
+                    <Link
+                      href="/guild/deploy"
+                      className="mt-2 inline-block text-[11px] font-semibold text-sky-600 dark:text-sky-400"
+                    >
+                      배치 관리 →
+                    </Link>
 
                     {/* 집행관 지정(길드장/부길드장 · 자기 길드 소유 구역) */}
                     {ownedByMe && isOfficer && (
