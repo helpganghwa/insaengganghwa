@@ -87,6 +87,7 @@ export default async function GuildPage() {
           guild={{
             name: guild.name,
             level: guild.level,
+            xp: Number(guild.xp),
             notice: guild.notice,
             memberCount: guild.memberCount,
             capacity: guild.capacity,

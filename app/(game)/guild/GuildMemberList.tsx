@@ -20,10 +20,10 @@ export type RichMember = {
 
 type SortKey = 'combat' | 'maxEnhance' | 'totalEnhance' | 'contribution';
 const SORTS: { key: SortKey; label: string }[] = [
+  { key: 'contribution', label: '기여도' },
   { key: 'combat', label: '전투력' },
   { key: 'maxEnhance', label: '최고강화' },
   { key: 'totalEnhance', label: '합산강화' },
-  { key: 'contribution', label: '기여도' },
 ];
 const SLOT_ORDER: Slot[] = ['weapon', 'armor', 'accessory'];
 const ROLE_BADGE: Record<RichMember['role'], { label: string; cls: string } | null> = {
@@ -47,10 +47,10 @@ function metricText(m: RichMember, key: SortKey): string {
 
 function EquipIcon({ item }: { item: Equipped | undefined }) {
   if (!item) {
-    return <span className="h-7 w-7 shrink-0 rounded bg-zinc-100 dark:bg-zinc-800" />;
+    return <span className="h-10 w-10 shrink-0 rounded-md bg-zinc-100 dark:bg-zinc-800" />;
   }
   return (
-    <span className="relative h-7 w-7 shrink-0 overflow-hidden rounded bg-zinc-100 dark:bg-zinc-800">
+    <span className="relative h-10 w-10 shrink-0 overflow-hidden rounded-md bg-zinc-100 dark:bg-zinc-800">
       {/* eslint-disable-next-line @next/next/no-img-element */}
       <img
         src={`/sprites/${item.slot}/${item.code}.png`}
@@ -60,7 +60,7 @@ function EquipIcon({ item }: { item: Equipped | undefined }) {
         style={{ imageRendering: 'pixelated' }}
       />
       {item.enhance > 0 && (
-        <span className="absolute bottom-0 right-0 rounded-tl bg-black/65 px-0.5 text-[8px] font-bold leading-tight text-amber-300">
+        <span className="absolute bottom-0 right-0 rounded-tl bg-black/65 px-0.5 text-[9px] font-bold leading-tight text-amber-300">
           +{item.enhance}
         </span>
       )}
@@ -86,7 +86,7 @@ function MemberRow({ m, myUserId, sort, sortLabel }: { m: RichMember; myUserId: 
               alt=""
               aria-hidden
               className="h-full w-full object-contain"
-              style={{ imageRendering: 'pixelated' }}
+              style={{ imageRendering: 'pixelated', transform: 'scale(1.1)' }}
             />
           ) : null}
         </span>
@@ -125,7 +125,7 @@ function MemberRow({ m, myUserId, sort, sortLabel }: { m: RichMember; myUserId: 
 const ROLE_RANK: Record<RichMember['role'], number> = { leader: 0, vice: 1, member: 2 };
 
 export function GuildMemberList({ members, myUserId }: { members: RichMember[]; myUserId: string }) {
-  const [sort, setSort] = useState<SortKey>('combat');
+  const [sort, setSort] = useState<SortKey>('contribution');
   const sortLabel = SORTS.find((s) => s.key === sort)!.label;
 
   // 운영진(길드장/부길드장) — 정렬 무관 상단 고정(직책순). 일반 길드원 — 선택 메트릭 정렬.

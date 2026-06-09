@@ -6,7 +6,11 @@ import Link from 'next/link';
 
 import { useResourceToast } from '@/components/ResourceToast';
 import { useDiamond } from '@/components/DiamondContext';
-import { GUILD_DONATIONS_PER_DAY, GUILD_DONATION_TIERS } from '@/lib/game/guild/balance';
+import {
+  GUILD_DONATIONS_PER_DAY,
+  GUILD_DONATION_TIERS,
+  guildXpToNext,
+} from '@/lib/game/guild/balance';
 
 import { donateAction, leaveGuildAction } from './actions';
 import { guildErrMsg } from './errors-msg';
@@ -16,6 +20,7 @@ type GuildRole = 'leader' | 'vice' | 'member';
 type GuildView = {
   name: string;
   level: number;
+  xp: number;
   notice: string | null;
   memberCount: number;
   capacity: number;
@@ -105,14 +110,14 @@ export function GuildHome({
   };
 
   const donateLabel = pending
-    ? '기부 중…'
+    ? '기부중'
     : !nextTier
-      ? '오늘 기부 완료'
+      ? '완료'
       : confirm
-        ? `한 번 더 누르면 기부 (${confirmLeft}s)`
+        ? `한번더 ${confirmLeft}s`
         : nextTier.cost === 0
           ? '기부'
-          : `기부 (${nextTier.cost}💎)`;
+          : `기부 ${nextTier.cost}💎`;
 
   return (
     <div className="space-y-4">
@@ -152,28 +157,44 @@ export function GuildHome({
           </p>
         )}
 
-        {/* 기부 버튼(인-버튼 컨펌) */}
-        <button
-          type="button"
-          onClick={onDonate}
-          disabled={pending || !nextTier}
-          className={`relative isolate mt-3 w-full overflow-hidden rounded-lg py-2.5 text-sm font-bold transition-colors ${
-            !nextTier
-              ? 'bg-zinc-200 text-zinc-400 dark:bg-zinc-800 dark:text-zinc-600'
-              : confirm
-                ? 'bg-amber-700 text-white'
-                : 'bg-amber-600 text-white'
-          }`}
-        >
-          {confirm ? (
-            <span
-              aria-hidden
-              className="absolute inset-0 bg-amber-500"
-              style={{ animation: 'confirm-bg-pulse 1.2s ease-in-out infinite' }}
-            />
-          ) : null}
-          <span className="relative">{donateLabel}</span>
-        </button>
+        {/* 길드 경험치바 + 컴팩트 기부 버튼 */}
+        <div className="mt-3 flex items-center gap-2.5 border-t border-zinc-200 pt-3 dark:border-zinc-800">
+          <div className="min-w-0 flex-1">
+            <div className="flex items-baseline justify-between text-[10px] text-zinc-500">
+              <span className="font-semibold">길드 경험치</span>
+              <span className="font-mono tabular-nums">
+                {guild.xp.toLocaleString('ko-KR')}/{guildXpToNext(guild.level).toLocaleString('ko-KR')}
+              </span>
+            </div>
+            <div className="mt-1 h-1.5 w-full overflow-hidden rounded-full bg-zinc-200 dark:bg-zinc-800">
+              <div
+                className="h-full rounded-full bg-amber-500"
+                style={{ width: `${Math.min(100, (guild.xp / guildXpToNext(guild.level)) * 100)}%` }}
+              />
+            </div>
+          </div>
+          <button
+            type="button"
+            onClick={onDonate}
+            disabled={pending || !nextTier}
+            className={`relative isolate shrink-0 overflow-hidden rounded-lg px-3 py-1.5 text-[12px] font-bold transition-colors ${
+              !nextTier
+                ? 'bg-zinc-200 text-zinc-400 dark:bg-zinc-800 dark:text-zinc-600'
+                : confirm
+                  ? 'bg-amber-700 text-white'
+                  : 'bg-amber-600 text-white'
+            }`}
+          >
+            {confirm ? (
+              <span
+                aria-hidden
+                className="absolute inset-0 bg-amber-500"
+                style={{ animation: 'confirm-bg-pulse 1.2s ease-in-out infinite' }}
+              />
+            ) : null}
+            <span className="relative">{donateLabel}</span>
+          </button>
+        </div>
       </section>
 
       {/* 길드 관리(임원, 정보 영역과 분리) */}
