@@ -5,6 +5,7 @@ import {
   EMBLEM_TONES,
   EMBLEM_KEYWORDS,
   EMBLEM_KEYWORDS_MAX,
+  EMBLEM_KEYWORDS_MIN,
   type EmblemSelection,
 } from '@/lib/game/guild/emblem-vocab';
 
@@ -20,9 +21,12 @@ export function EmblemPicker({
 }) {
   const toggleKeyword = (id: string) => {
     const has = value.keywordIds.includes(id);
-    if (has) onChange({ ...value, keywordIds: value.keywordIds.filter((k) => k !== id) });
-    else if (value.keywordIds.length < EMBLEM_KEYWORDS_MAX)
+    if (has) {
+      if (value.keywordIds.length <= EMBLEM_KEYWORDS_MIN) return; // 최소 1개 유지
+      onChange({ ...value, keywordIds: value.keywordIds.filter((k) => k !== id) });
+    } else if (value.keywordIds.length < EMBLEM_KEYWORDS_MAX) {
       onChange({ ...value, keywordIds: [...value.keywordIds, id] });
+    }
   };
 
   return (

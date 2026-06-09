@@ -33,8 +33,8 @@ import { RankingTop3Card } from './RankingTop3Card';
 const MENU = [
   {
     href: '/guild/map',
-    label: '월드맵',
-    desc: '세계지도',
+    label: '세계지도',
+    desc: '지역 점령전',
     bg: '/sprites/guild/worldmap.png', // 실제 점령 지도 재활용(카드=실제 맵 일치)
     tint: '#1a2330',
     scale: 1.5, // 정사각 지도를 가로 카드에 꽉 차게 — 좌우 바다 여백 제거(중앙 왕국 확대)
