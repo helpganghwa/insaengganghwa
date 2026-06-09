@@ -18,6 +18,11 @@ const MAP: Record<string, string> = {
   COLLECT_COOLDOWN: '아직 수금 쿨다운입니다.',
   NOTHING_TO_COLLECT: '수금할 다이아가 없습니다.',
   NOTHING_TO_DISTRIBUTE: '분배할 다이아가 없습니다.',
+  ZONE_NOT_OWNED: '자기 길드 소유 구역만 수비할 수 있습니다.',
+  CANNOT_ATTACK_OWN: '자기 길드 구역은 공격할 수 없습니다.',
+  IS_LORD: '영주는 자동 방어 중이라 배치할 수 없습니다.',
+  TARGET_ALREADY_LORD: '이미 다른 구역의 영주입니다.',
+  NOT_OFFICER: '길드장·부길드장만 영주를 지정할 수 있습니다.',
   UNAUTHENTICATED: '로그인이 필요합니다.',
   UNKNOWN: '오류가 발생했습니다.',
 };

@@ -12,3 +12,6 @@ export * from './residence';
 export * from './tax';
 export * from './collect';
 export * from './distribute';
+export * from './conquest/schedule';
+export * from './conquest/deploy';
+export * from './conquest/lord';

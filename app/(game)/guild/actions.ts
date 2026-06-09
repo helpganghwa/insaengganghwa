@@ -14,8 +14,12 @@ import {
   setResidence,
   collectZoneTax,
   distributeGuildTax,
+  deployToZone,
+  cancelDeployment,
+  setZoneLord,
+  clearZoneLord,
 } from '@/lib/game/guild';
-import type { GuildTaxDistribution } from '@/lib/game/guild/balance';
+import type { GuildTaxDistribution, ConquestRole } from '@/lib/game/guild/balance';
 
 type Fail = { status: 'error'; code: string };
 const unauth = { status: 'error', code: 'UNAUTHENTICATED' } as const;
@@ -137,5 +141,59 @@ export async function distributeTaxAction(mode: GuildTaxDistribution, targetUser
     } as const;
   } catch (e) {
     return fail(e, 'distribute');
+  }
+}
+
+// ── 점령전 (§5.8) ──
+
+export async function deployAction(zoneId: number, role: ConquestRole) {
+  const u = await getSessionUserId();
+  if (!u) return unauth;
+  try {
+    const r = await deployToZone({ userId: u, zoneId, role });
+    revalidatePath('/guild/map');
+    revalidatePath('/guild');
+    return { status: 'success', battleKstDay: r.battleKstDay } as const;
+  } catch (e) {
+    return fail(e, 'deploy');
+  }
+}
+
+export async function cancelDeployAction() {
+  const u = await getSessionUserId();
+  if (!u) return unauth;
+  try {
+    const r = await cancelDeployment({ userId: u });
+    revalidatePath('/guild/map');
+    revalidatePath('/guild');
+    return { status: 'success', cancelled: r.cancelled } as const;
+  } catch (e) {
+    return fail(e, 'cancelDeploy');
+  }
+}
+
+export async function setLordAction(zoneId: number, targetUserId: string) {
+  const u = await getSessionUserId();
+  if (!u) return unauth;
+  try {
+    await setZoneLord({ actorUserId: u, zoneId, targetUserId });
+    revalidatePath('/guild/map');
+    revalidatePath('/guild');
+    return { status: 'success' } as const;
+  } catch (e) {
+    return fail(e, 'setLord');
+  }
+}
+
+export async function clearLordAction(zoneId: number) {
+  const u = await getSessionUserId();
+  if (!u) return unauth;
+  try {
+    await clearZoneLord({ actorUserId: u, zoneId });
+    revalidatePath('/guild/map');
+    revalidatePath('/guild');
+    return { status: 'success' } as const;
+  } catch (e) {
+    return fail(e, 'clearLord');
   }
 }

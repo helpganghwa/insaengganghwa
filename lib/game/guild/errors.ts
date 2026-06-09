@@ -18,6 +18,11 @@ export type GuildErrorCode =
   | 'COLLECT_COOLDOWN' // 수금 쿨다운 미경과
   | 'NOTHING_TO_COLLECT' // 수금할 💎 없음
   | 'NOTHING_TO_DISTRIBUTE'
+  | 'ZONE_NOT_OWNED' // 수비 배치 — 자기 길드 소유 구역 아님
+  | 'CANNOT_ATTACK_OWN' // 공격 배치 — 자기 길드 소유 구역
+  | 'IS_LORD' // 영주는 배치 불가(자동 방어로 슬롯 점유)
+  | 'TARGET_ALREADY_LORD' // 대상이 이미 다른 구역 영주
+  | 'NOT_OFFICER' // 길드장/부길드장 아님(영주 지정)
   | 'FORBIDDEN';
 
 export class GuildError extends Error {

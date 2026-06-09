@@ -27,6 +27,11 @@ export function kstDateString(at: Date = new Date()): string {
   return `${y}-${String(m).padStart(2, '0')}-${String(d).padStart(2, '0')}`;
 }
 
+/** KST 벽시계 시(0~23) — 점령전 12:00 잠금 등 시각 분기. */
+export function kstHour(at: Date = new Date()): number {
+  return new Date(at.getTime() + KST_OFFSET_MS).getUTCHours();
+}
+
 /** `YYYYMM` (KST) — monthly_purchase_limits 키 (미성년 월 한도). */
 export function kstMonthString(at: Date = new Date()): string {
   const { y, m } = kstParts(at);
