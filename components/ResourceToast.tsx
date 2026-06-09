@@ -243,10 +243,8 @@ export function ResourceToastProvider({ children }: { children: React.ReactNode 
 function CountUp({ from, to, delay = 0 }: { from: number; to: number; delay?: number }) {
   const [v, setV] = useState(from);
   useEffect(() => {
-    if (from === to) {
-      setV(to);
-      return;
-    }
+    // 변화 없음 — v는 마운트 시 from(=to)으로 이미 정답(토스트는 매번 새 마운트).
+    if (from === to) return;
     const diff = Math.abs(to - from);
     const duration = Math.min(1400, 800 + Math.log10(1 + diff) * 300);
     const startAt = performance.now() + delay;
