@@ -68,12 +68,79 @@ function EquipIcon({ item }: { item: Equipped | undefined }) {
   );
 }
 
+function MemberRow({ m, myUserId, sort, sortLabel }: { m: RichMember; myUserId: string; sort: SortKey; sortLabel: string }) {
+  const badge = ROLE_BADGE[m.role];
+  const bySlot = new Map(m.equipped.map((e) => [e.slot, e]));
+  return (
+    <li>
+      <Link
+        href={`/u/${encodeURIComponent(m.publicCode)}`}
+        className="flex items-center gap-3 py-2 active:opacity-70"
+      >
+        {/* 왼쪽: 아바타 + (닉네임 / 메트릭) */}
+        <span className="h-12 w-12 shrink-0 overflow-hidden rounded-lg bg-zinc-100 dark:bg-zinc-800">
+          {m.avatar ? (
+            // eslint-disable-next-line @next/next/no-img-element
+            <img
+              src={m.avatar}
+              alt=""
+              aria-hidden
+              className="h-full w-full object-contain"
+              style={{ imageRendering: 'pixelated' }}
+            />
+          ) : null}
+        </span>
+        <div className="min-w-0 flex-1">
+          <div className="flex min-w-0 items-center gap-1">
+            <span
+              className={`truncate text-[13px] font-semibold ${m.userId === myUserId ? 'text-amber-700 dark:text-amber-300' : ''}`}
+            >
+              {m.nickname}
+            </span>
+            {badge && (
+              <span className={`shrink-0 rounded-full px-1.5 py-0 text-[9px] font-bold ${badge.cls}`}>
+                {badge.label}
+              </span>
+            )}
+          </div>
+          <p className="mt-0.5 text-[11px] text-zinc-500">
+            {sortLabel}{' '}
+            <span className="font-mono font-bold tabular-nums text-zinc-700 dark:text-zinc-300">
+              {metricText(m, sort)}
+            </span>
+          </p>
+        </div>
+
+        {/* 오른쪽: 장비 3종 가로 */}
+        <div className="flex shrink-0 gap-1.5">
+          {SLOT_ORDER.map((slot) => (
+            <EquipIcon key={slot} item={bySlot.get(slot)} />
+          ))}
+        </div>
+      </Link>
+    </li>
+  );
+}
+
+const ROLE_RANK: Record<RichMember['role'], number> = { leader: 0, vice: 1, member: 2 };
+
 export function GuildMemberList({ members, myUserId }: { members: RichMember[]; myUserId: string }) {
   const [sort, setSort] = useState<SortKey>('combat');
   const sortLabel = SORTS.find((s) => s.key === sort)!.label;
 
-  const sorted = useMemo(
-    () => [...members].sort((a, b) => b[sort] - a[sort] || a.nickname.localeCompare(b.nickname)),
+  // 운영진(길드장/부길드장) — 정렬 무관 상단 고정(직책순). 일반 길드원 — 선택 메트릭 정렬.
+  const officers = useMemo(
+    () =>
+      members
+        .filter((m) => m.role !== 'member')
+        .sort((a, b) => ROLE_RANK[a.role] - ROLE_RANK[b.role] || a.nickname.localeCompare(b.nickname)),
+    [members],
+  );
+  const regulars = useMemo(
+    () =>
+      members
+        .filter((m) => m.role === 'member')
+        .sort((a, b) => b[sort] - a[sort] || a.nickname.localeCompare(b.nickname)),
     [members, sort],
   );
 
@@ -99,60 +166,20 @@ export function GuildMemberList({ members, myUserId }: { members: RichMember[]; 
         </div>
       </div>
 
-      <ul className="mt-2 divide-y divide-zinc-100 dark:divide-zinc-800/70">
-        {sorted.map((m) => {
-          const badge = ROLE_BADGE[m.role];
-          const bySlot = new Map(m.equipped.map((e) => [e.slot, e]));
-          return (
-            <li key={m.userId}>
-              <Link
-                href={`/u/${encodeURIComponent(m.publicCode)}`}
-                className="flex items-center gap-3 py-2 active:opacity-70"
-              >
-                {/* 왼쪽: 아바타 + (닉네임 / 메트릭) */}
-                <span className="h-12 w-12 shrink-0 overflow-hidden rounded-lg bg-zinc-100 dark:bg-zinc-800">
-                  {m.avatar ? (
-                    // eslint-disable-next-line @next/next/no-img-element
-                    <img
-                      src={m.avatar}
-                      alt=""
-                      aria-hidden
-                      className="h-full w-full object-contain"
-                      style={{ imageRendering: 'pixelated' }}
-                    />
-                  ) : null}
-                </span>
-                <div className="min-w-0 flex-1">
-                  <div className="flex min-w-0 items-center gap-1">
-                    <span
-                      className={`truncate text-[13px] font-semibold ${m.userId === myUserId ? 'text-amber-700 dark:text-amber-300' : ''}`}
-                    >
-                      {m.nickname}
-                    </span>
-                    {badge && (
-                      <span className={`shrink-0 rounded-full px-1.5 py-0 text-[9px] font-bold ${badge.cls}`}>
-                        {badge.label}
-                      </span>
-                    )}
-                  </div>
-                  <p className="mt-0.5 text-[11px] text-zinc-500">
-                    {sortLabel}{' '}
-                    <span className="font-mono font-bold tabular-nums text-zinc-700 dark:text-zinc-300">
-                      {metricText(m, sort)}
-                    </span>
-                  </p>
-                </div>
+      {/* 운영진 — 상단 고정 별도 섹션 */}
+      {officers.length > 0 && (
+        <ul className="mt-2 rounded-lg bg-amber-50/70 px-2 ring-1 ring-amber-200/60 dark:bg-amber-500/[0.06] dark:ring-amber-500/15">
+          {officers.map((m) => (
+            <MemberRow key={m.userId} m={m} myUserId={myUserId} sort={sort} sortLabel={sortLabel} />
+          ))}
+        </ul>
+      )}
 
-                {/* 오른쪽: 장비 3종 가로 */}
-                <div className="flex shrink-0 gap-1.5">
-                  {SLOT_ORDER.map((slot) => (
-                    <EquipIcon key={slot} item={bySlot.get(slot)} />
-                  ))}
-                </div>
-              </Link>
-            </li>
-          );
-        })}
+      {/* 일반 길드원 — 정렬 적용 */}
+      <ul className="mt-1 divide-y divide-zinc-100 dark:divide-zinc-800/70">
+        {regulars.map((m) => (
+          <MemberRow key={m.userId} m={m} myUserId={myUserId} sort={sort} sortLabel={sortLabel} />
+        ))}
       </ul>
     </section>
   );
