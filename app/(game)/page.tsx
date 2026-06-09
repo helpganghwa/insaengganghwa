@@ -98,6 +98,16 @@ const MENU = [
   },
 ] as const;
 
+/** 지역색 — 월드맵 노드와 일치(WorldMapView REGION). 거주지 카드 강조용. */
+const REGION_COLOR: Record<string, string> = {
+  volcano: '#ef4444',
+  temple: '#60a5fa',
+  swamp: '#22c55e',
+  orc: '#f97316',
+  kingdom: '#fbbf24',
+  angel: '#c084fc',
+};
+
 export default async function HomePage() {
   const userId = await getSessionUserId();
   // (game) layout이 가드하므로 정상 흐름엔 null 아님. 폴백 안전.
@@ -120,8 +130,9 @@ export default async function HomePage() {
   let meleeChampion: string | null = null;
   /** 발표 후 회차(제N회 우승). */
   let meleeEdition = 0;
-  /** 월드맵 카드 — 현재 거주 구역명(색상 강조). 미배정/미소속이면 null. */
+  /** 월드맵 카드 — 현재 거주 구역명(지역색 강조). 미배정/미소속이면 null. */
   let residenceName: string | null = null;
+  let residenceRegion: string | null = null;
 
   if (userId) {
     const kstToday = kstDateString();
@@ -217,12 +228,12 @@ export default async function HomePage() {
           >,
           // 상점 무료 수령 가능 슬롯(빨간 배지 = 받을 수 있는 무료 수).
           getFreeStatus(userId),
-          // 월드맵 카드 — 현재 거주 구역명.
+          // 월드맵 카드 — 현재 거주 구역명 + 지역(색상).
           db.execute(sql`
-            select z.name from profiles p
+            select z.name, z.region::text region from profiles p
             join zones z on z.id = p.residence_zone_id
             where p.id = ${userId} limit 1
-          `) as unknown as Promise<Array<{ name: string }>>,
+          `) as unknown as Promise<Array<{ name: string; region: string }>>,
           ]),
           3000,
           'home.cards',
@@ -236,6 +247,7 @@ export default async function HomePage() {
       counts['/raid'] = raidRow[0]?.n ?? 0;
       counts['/shop'] = Object.values(freeStatus).filter(Boolean).length;
       residenceName = residenceRow[0]?.name ?? null;
+      residenceRegion = residenceRow[0]?.region ?? null;
       // phase별 문구. 발표 후(after) + revealed면 우승자, 닉 미상(더미)이면 발표 문구.
       const melee = meleeRow[0];
       if (melee) {
@@ -315,7 +327,10 @@ export default async function HomePage() {
                   ) : isResidenceCard ? (
                     <>
                       <span className="text-white/70">내 위치 · </span>
-                      <span className="font-extrabold text-amber-300 drop-shadow-[0_1px_2px_rgba(0,0,0,0.9)]">
+                      <span
+                        className="font-extrabold drop-shadow-[0_1px_2px_rgba(0,0,0,0.95)]"
+                        style={{ color: REGION_COLOR[residenceRegion ?? ''] ?? '#fcd34d' }}
+                      >
                         {residenceName}
                       </span>
                     </>
