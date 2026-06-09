@@ -181,7 +181,11 @@ export function WorldMapView({
                 className="relative block h-5 w-5 overflow-hidden rounded-[4px] ring-1 ring-black/70 transition"
                 style={{
                   backgroundColor: owned ? color : 'rgba(10,12,20,0.45)',
-                  boxShadow: owned ? `0 0 5px ${color}aa` : 'none',
+                  boxShadow: isResidence
+                    ? '0 0 8px 2px rgba(251,191,36,0.85)'
+                    : owned
+                      ? `0 0 5px ${color}aa`
+                      : 'none',
                   outline: isResidence
                     ? '2px solid #fbbf24'
                     : mine
@@ -202,12 +206,6 @@ export function WorldMapView({
                   />
                 ) : null}
               </span>
-              {/* 내 거주 표시 */}
-              {isResidence && (
-                <span className="absolute -top-1.5 -right-1.5 rounded-full bg-amber-500 px-0.5 text-[8px] leading-tight shadow">
-                  🏠
-                </span>
-              )}
             </button>
           );
         })}
@@ -216,7 +214,7 @@ export function WorldMapView({
       {/* 세계 정세(하단) — 매일 AI 갱신 예정. 현재는 UI 셸. */}
       <section className="mt-3 rounded-xl border border-zinc-200 bg-white p-4 dark:border-zinc-800 dark:bg-zinc-950">
         <div className="flex items-center justify-between">
-          <h2 className="text-xs font-bold">🌍 세계는 지금</h2>
+          <h2 className="text-xs font-bold">세계는 지금</h2>
           <span className="rounded-full bg-zinc-100 px-1.5 py-0.5 text-[9px] font-semibold text-zinc-400 dark:bg-zinc-900">
             매일 갱신 예정
           </span>
@@ -286,7 +284,7 @@ export function WorldMapView({
 
             {selected.id === residence ? (
               <p className="mt-2 rounded-lg bg-amber-500/10 px-2 py-1 text-[11px] text-amber-700 dark:text-amber-300">
-                🏠 내 거주 구역 — 강화 성공 시 이곳에 세금 포인트가 쌓입니다.
+                내 거주 구역 — 강화 성공 시 이곳에 세금 포인트가 쌓입니다.
               </p>
             ) : canSetResidence ? (
               <button
