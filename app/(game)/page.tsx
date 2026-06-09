@@ -120,14 +120,25 @@ export default async function HomePage() {
   let meleeChampion: string | null = null;
   /** 발표 후 회차(제N회 우승). */
   let meleeEdition = 0;
+  /** 월드맵 카드 — 현재 거주 구역명(색상 강조). 미배정/미소속이면 null. */
+  let residenceName: string | null = null;
 
   if (userId) {
     const kstToday = kstDateString();
     // 일일 보급 + 출석 state + 4종 알림 카운트 — 핫패스 1RTT(병렬, CLAUDE §11.4).
     // 콜드 DB 커넥션 hang 시 페이지가 무한 대기하지 않도록 가드.
     try {
-      const [dailyRow, checkinRow, enhanceRow, supplyRow, mailRow, raidRow, meleeRow, freeStatus] =
-        await withTimeout(
+      const [
+        dailyRow,
+        checkinRow,
+        enhanceRow,
+        supplyRow,
+        mailRow,
+        raidRow,
+        meleeRow,
+        freeStatus,
+        residenceRow,
+      ] = await withTimeout(
           Promise.all([
           db
             .select({ n: sql<number>`count(*)::int` })
@@ -206,6 +217,12 @@ export default async function HomePage() {
           >,
           // 상점 무료 수령 가능 슬롯(빨간 배지 = 받을 수 있는 무료 수).
           getFreeStatus(userId),
+          // 월드맵 카드 — 현재 거주 구역명.
+          db.execute(sql`
+            select z.name from profiles p
+            join zones z on z.id = p.residence_zone_id
+            where p.id = ${userId} limit 1
+          `) as unknown as Promise<Array<{ name: string }>>,
           ]),
           3000,
           'home.cards',
@@ -218,6 +235,7 @@ export default async function HomePage() {
       counts['/mail'] = mailRow[0]?.n ?? 0;
       counts['/raid'] = raidRow[0]?.n ?? 0;
       counts['/shop'] = Object.values(freeStatus).filter(Boolean).length;
+      residenceName = residenceRow[0]?.name ?? null;
       // phase별 문구. 발표 후(after) + revealed면 우승자, 닉 미상(더미)이면 발표 문구.
       const melee = meleeRow[0];
       if (melee) {
@@ -249,6 +267,7 @@ export default async function HomePage() {
           const count = counts[m.href] ?? 0;
           const badge = count > 99 ? '99+' : count > 0 ? String(count) : null;
           const isMeleeChamp = m.href === '/melee' && meleeChampion;
+          const isResidenceCard = m.href === '/guild/map' && residenceName;
           const desc = m.href === '/melee' ? meleeDesc : m.desc;
           return (
             <Link
@@ -291,6 +310,13 @@ export default async function HomePage() {
                       </span>
                       <span className="font-extrabold text-amber-300 drop-shadow-[0_1px_2px_rgba(0,0,0,0.9)]">
                         {meleeChampion}
+                      </span>
+                    </>
+                  ) : isResidenceCard ? (
+                    <>
+                      <span className="text-white/70">내 위치 · </span>
+                      <span className="font-extrabold text-amber-300 drop-shadow-[0_1px_2px_rgba(0,0,0,0.9)]">
+                        {residenceName}
                       </span>
                     </>
                   ) : (
