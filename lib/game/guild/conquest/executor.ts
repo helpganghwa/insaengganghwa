@@ -33,11 +33,11 @@ async function assertOfficerOfZoneOwner(
 }
 
 /**
- * 영주 지정 — GUILD §5.8⑦. 소유 길드 길드장/부길드장이 길드원 1명을 그 구역 영주로.
- *  - 대상은 같은 길드원이어야 하고, 이미 다른 구역 영주면 거부(1유저 1영주).
- *  - 영주는 자동 방어로 슬롯 점유 → 대상의 다음 전투 배치는 제거.
+ * 집행관 지정 — GUILD §5.8⑦. 소유 길드 길드장/부길드장이 길드원 1명을 그 구역 집행관으로.
+ *  - 대상은 같은 길드원이어야 하고, 이미 다른 구역 집행관이면 거부(1유저 1집행관).
+ *  - 집행관은 자동 방어로 슬롯 점유 → 대상의 다음 전투 배치는 제거.
  */
-export async function setZoneLord(input: {
+export async function setZoneExecutor(input: {
   actorUserId: string;
   zoneId: number;
   targetUserId: string;
@@ -52,17 +52,17 @@ export async function setZoneLord(input: {
       .limit(1);
     if (!target || target.guildId !== guildId) throw new GuildError('TARGET_NOT_IN_GUILD');
 
-    // 1유저 1영주 — 다른 구역 영주면 거부(먼저 해제 필요).
+    // 1유저 1집행관 — 다른 구역 집행관이면 거부(먼저 해제 필요).
     const [other] = await tx
       .select({ id: zones.id })
       .from(zones)
-      .where(and(eq(zones.lordUserId, input.targetUserId), ne(zones.id, input.zoneId)))
+      .where(and(eq(zones.executorUserId, input.targetUserId), ne(zones.id, input.zoneId)))
       .limit(1);
-    if (other) throw new GuildError('TARGET_ALREADY_LORD');
+    if (other) throw new GuildError('TARGET_ALREADY_EXECUTOR');
 
-    await tx.update(zones).set({ lordUserId: input.targetUserId }).where(eq(zones.id, input.zoneId));
+    await tx.update(zones).set({ executorUserId: input.targetUserId }).where(eq(zones.id, input.zoneId));
 
-    // 영주는 자동 방어 — 다음 전투의 일반 배치 제거(슬롯 점유 일원화).
+    // 집행관은 자동 방어 — 다음 전투의 일반 배치 제거(슬롯 점유 일원화).
     await tx
       .delete(guildBattleDeployments)
       .where(
@@ -74,10 +74,10 @@ export async function setZoneLord(input: {
   });
 }
 
-/** 영주 해제 — 소유 길드 길드장/부길드장. 구역을 영주 공석으로(자동 방어·수금 중단). */
-export async function clearZoneLord(input: { actorUserId: string; zoneId: number }): Promise<void> {
+/** 집행관 해제 — 소유 길드 길드장/부길드장. 구역을 집행관 공석으로(자동 방어·수금 중단). */
+export async function clearZoneExecutor(input: { actorUserId: string; zoneId: number }): Promise<void> {
   await db.transaction(async (tx) => {
     await assertOfficerOfZoneOwner(tx, input.actorUserId, input.zoneId);
-    await tx.update(zones).set({ lordUserId: null }).where(eq(zones.id, input.zoneId));
+    await tx.update(zones).set({ executorUserId: null }).where(eq(zones.id, input.zoneId));
   });
 }

@@ -14,15 +14,15 @@ export type GuildErrorCode =
   | 'TARGET_NOT_IN_GUILD' // 대상이 같은 길드원이 아님
   | 'INVALID_TARGET' // 자기 자신/길드장 대상 등 불가
   | 'ZONE_NOT_FOUND' // 구역 없음(거주 변경 등)
-  | 'NOT_LORD' // 영주 아님(세금 수금)
+  | 'NOT_EXECUTOR' // 집행관 아님(세금 수금)
   | 'COLLECT_COOLDOWN' // 수금 쿨다운 미경과
   | 'NOTHING_TO_COLLECT' // 수금할 💎 없음
   | 'NOTHING_TO_DISTRIBUTE'
   | 'ZONE_NOT_OWNED' // 수비 배치 — 자기 길드 소유 구역 아님
   | 'CANNOT_ATTACK_OWN' // 공격 배치 — 자기 길드 소유 구역
-  | 'IS_LORD' // 영주는 배치 불가(자동 방어로 슬롯 점유)
-  | 'TARGET_ALREADY_LORD' // 대상이 이미 다른 구역 영주
-  | 'NOT_OFFICER' // 길드장/부길드장 아님(영주 지정)
+  | 'IS_EXECUTOR' // 집행관은 배치 불가(자동 방어로 슬롯 점유)
+  | 'TARGET_ALREADY_EXECUTOR' // 대상이 이미 다른 구역 집행관
+  | 'NOT_OFFICER' // 길드장/부길드장 아님(집행관 지정)
   | 'EMBLEM_INVALID' // 문양 3축 선택 위반(모양/톤/키워드 1~3)
   | 'EMBLEM_GEN_FAILED' // 문양 생성 외부 실패(환불됨)
   | 'FORBIDDEN';

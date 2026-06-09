@@ -14,5 +14,5 @@ export * from './collect';
 export * from './distribute';
 export * from './conquest/schedule';
 export * from './conquest/deploy';
-export * from './conquest/lord';
+export * from './conquest/executor';
 export * from './emblem';

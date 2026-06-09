@@ -49,18 +49,18 @@ export const GUILD_REJOIN_LOCK_HOURS = 24;
 export const CONQUEST_BATTLE_KST_HOUR = 12;
 /** 일반 방어 인원 전투력 보너스(+20%). */
 export const CONQUEST_DEFENDER_BONUS = 0.2;
-/** 영주 전투력 배수(×3, 방어 거점 앵커). */
-export const CONQUEST_LORD_POWER_MULT = 3;
+/** 집행관 전투력 배수(×3, 방어 거점 앵커). */
+export const CONQUEST_EXECUTOR_POWER_MULT = 3;
 export const ZONE_TOTAL = 50;
 
-/** 배치 역할 — 공격/수비. 영주는 배치행 없이 자동 수비(별도). */
+/** 배치 역할 — 공격/수비. 집행관은 배치행 없이 자동 수비(별도). */
 export type ConquestRole = 'attack' | 'defend';
 /**
  * 유효 전투력 배수(§5.8②) — 보정은 effCP에 적용(HP·데미지 둘 다). 시뮬 튜닝값.
- *  공격 ×1.0 · 수비 ×1.2 · 영주 ×3.0(영주는 자동 수비, isLord로 구분).
+ *  공격 ×1.0 · 수비 ×1.2 · 집행관 ×3.0(집행관은 자동 수비, isExecutor로 구분).
  */
-export function conquestPowerMult(role: ConquestRole, isLord: boolean): number {
-  if (isLord) return CONQUEST_LORD_POWER_MULT;
+export function conquestPowerMult(role: ConquestRole, isExecutor: boolean): number {
+  if (isExecutor) return CONQUEST_EXECUTOR_POWER_MULT;
   return role === 'defend' ? 1 + CONQUEST_DEFENDER_BONUS : 1;
 }
 /** HP = effCP × 배수(대난투 정합). */
@@ -71,16 +71,16 @@ export const CONQUEST_DMG_MAX = 1.2;
 /** 리플레이 보존 라운드(링버퍼, 클라이맥스 마지막 N). */
 export const CONQUEST_REPLAY_ROUNDS = 1000;
 
-// ── 세금 (§5.5) — 포인트 누적 → 100pt마다 구역 💎 +1 → 영주 수금(10%/90%) ──
+// ── 세금 (§5.5) — 포인트 누적 → 100pt마다 구역 💎 +1 → 집행관 수금(10%/90%) ──
 /** 거주 구역 강화 성공 시 누적되는 포인트 = 도달 강화 레벨(예 +99 성공 → 99pt). */
 export function taxPointsForEnhanceSuccess(reachedLevel: number): number {
   return Math.max(0, reachedLevel);
 }
 /** 구역 포인트 → 💎 환산비(100pt = 1💎). 잔여 포인트는 carry. 시뮬 튜닝(과하면 상향). */
 export const TAX_POINTS_PER_DIAMOND = 100;
-/** 영주 수금 시 영주 몫 비율(10%). 나머지 90%는 길드 풀로. */
-export const GUILD_LORD_TAX_CUT = 0.1;
-/** 영주 세금 수금 쿨다운(분). */
+/** 집행관 수금 시 집행관 몫 비율(10%). 나머지 90%는 길드 풀로. */
+export const GUILD_EXECUTOR_TAX_CUT = 0.1;
+/** 집행관 세금 수금 쿨다운(분). */
 export const TAX_COLLECT_COOLDOWN_MIN = 60;
 /** 분배 방식. */
 export type GuildTaxDistribution = 'equal' | 'target';

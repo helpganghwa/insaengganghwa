@@ -9,8 +9,8 @@ import {
   setResidenceAction,
   deployAction,
   cancelDeployAction,
-  setLordAction,
-  clearLordAction,
+  setExecutorAction,
+  clearExecutorAction,
   getZoneBattleAction,
 } from '../actions';
 import { guildErrMsg } from '../errors-msg';
@@ -38,8 +38,8 @@ type Zone = {
   ownerGuildId: string | null;
   ownerGuildName: string | null;
   ownerEmblemUrl: string | null;
-  lordUserId: string | null;
-  lordNickname: string | null;
+  executorUserId: string | null;
+  executorNickname: string | null;
   taxDiamond: string;
 };
 
@@ -128,21 +128,21 @@ export function WorldMapView({
     });
   };
 
-  const assignLord = (zoneId: number, targetUserId: string) => {
+  const assignExecutor = (zoneId: number, targetUserId: string) => {
     if (!targetUserId) return;
     start(async () => {
-      const r = await setLordAction(zoneId, targetUserId);
+      const r = await setExecutorAction(zoneId, targetUserId);
       if (r.status !== 'success') return showError(guildErrMsg(r.code));
-      showHeaderToast({ title: '영주 지정 완료' });
+      showHeaderToast({ title: '집행관 지정 완료' });
       router.refresh();
     });
   };
 
-  const removeLord = (zoneId: number) => {
+  const removeExecutor = (zoneId: number) => {
     start(async () => {
-      const r = await clearLordAction(zoneId);
+      const r = await clearExecutorAction(zoneId);
       if (r.status !== 'success') return showError(guildErrMsg(r.code));
-      showHeaderToast({ title: '영주 해제' });
+      showHeaderToast({ title: '집행관 해제' });
       router.refresh();
     });
   };
@@ -262,9 +262,9 @@ export function WorldMapView({
                 </dd>
               </div>
               <div className="flex justify-between">
-                <dt className="text-zinc-500">영주</dt>
+                <dt className="text-zinc-500">집행관</dt>
                 <dd className="font-semibold">
-                  {selected.lordNickname ?? <span className="text-zinc-400">—</span>}
+                  {selected.executorNickname ?? <span className="text-zinc-400">—</span>}
                 </dd>
               </div>
               <div className="flex justify-between">
@@ -349,15 +349,15 @@ export function WorldMapView({
                       </>
                     )}
 
-                    {/* 영주 지정(길드장/부길드장 · 자기 길드 소유 구역) */}
+                    {/* 집행관 지정(길드장/부길드장 · 자기 길드 소유 구역) */}
                     {ownedByMe && isOfficer && (
                       <div className="mt-3 rounded-lg bg-zinc-100 p-2.5 dark:bg-zinc-900">
                         <div className="flex items-center justify-between">
-                          <span className="text-[11px] font-semibold">영주 관리</span>
-                          {selected.lordUserId && (
+                          <span className="text-[11px] font-semibold">집행관 관리</span>
+                          {selected.executorUserId && (
                             <button
                               type="button"
-                              onClick={() => removeLord(selected.id)}
+                              onClick={() => removeExecutor(selected.id)}
                               disabled={pending}
                               className="text-[10px] font-semibold text-red-500 disabled:opacity-50"
                             >
@@ -366,12 +366,12 @@ export function WorldMapView({
                           )}
                         </div>
                         <select
-                          value={selected.lordUserId ?? ''}
-                          onChange={(e) => assignLord(selected.id, e.target.value)}
+                          value={selected.executorUserId ?? ''}
+                          onChange={(e) => assignExecutor(selected.id, e.target.value)}
                           disabled={pending}
                           className="mt-1.5 w-full rounded-lg border border-zinc-300 bg-white px-2 py-2 text-[12px] dark:border-zinc-700 dark:bg-zinc-950"
                         >
-                          <option value="">영주 공석 (지정 안 함)</option>
+                          <option value="">집행관 공석 (지정 안 함)</option>
                           {members.map((m) => (
                             <option key={m.userId} value={m.userId}>
                               {m.nickname}
@@ -379,7 +379,7 @@ export function WorldMapView({
                           ))}
                         </select>
                         <p className="mt-1 text-[10px] text-zinc-500">
-                          영주는 ×3 자동 방어 + 세금 수금권. 공석이면 세금이 동결됩니다.
+                          집행관은 ×3 자동 방어 + 세금 수금권. 공석이면 세금이 동결됩니다.
                         </p>
                       </div>
                     )}

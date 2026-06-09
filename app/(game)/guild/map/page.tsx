@@ -29,7 +29,7 @@ export default async function WorldMapPage() {
   const isOfficer = myRole === 'leader' || myRole === 'vice';
 
   // 점령전 배치 상태(길드원만): 내 배치 + 자기 길드 배치(안개 — 자기 길드만).
-  // 영주 지정은 길드장/부길드장만 → 그 경우에만 길드원 목록 전달.
+  // 집행관 지정은 길드장/부길드장만 → 그 경우에만 길드원 목록 전달.
   const [myDeployment, guildDeploys, members] = await Promise.all([
     userId && membership ? getMyDeployment(userId) : Promise.resolve(null),
     membership ? getMyGuildDeployments(membership.guildId) : Promise.resolve([]),
@@ -57,8 +57,8 @@ export default async function WorldMapPage() {
         ownerGuildId: z.ownerGuildId?.toString() ?? null,
         ownerGuildName: z.ownerGuildName,
         ownerEmblemUrl: z.ownerEmblemUrl,
-        lordUserId: z.lordUserId,
-        lordNickname: z.lordNickname,
+        executorUserId: z.executorUserId,
+        executorNickname: z.executorNickname,
         taxDiamond: z.taxDiamond.toString(),
       }))}
     />

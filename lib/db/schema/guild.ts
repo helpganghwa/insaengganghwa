@@ -2,8 +2,8 @@
  * GUILD.md §1~§5.6. 길드 — 협력 성장 + 월드맵 점령전.
  *
  * 마지막 콘텐츠(출시·DAU 이후 투입). 점령은 결정론·비동기(KST 12:00 정산, 별도 팀전 엔진).
- * 수용 = min(50, 10+level)·레벨 무제한(L41+ 과시). 50명=50구역=이론상 천하통일(영주제로 자연 견제).
- * 세금: 거주 구역 강화 성공 → 구역 포인트 누적 → 영주 수집(1h) → 길드 풀 → 100:1💎 분배(균등/특정).
+ * 수용 = min(50, 10+level)·레벨 무제한(L41+ 과시). 50명=50구역=이론상 천하통일(집행관제로 자연 견제).
+ * 세금: 거주 구역 강화 성공 → 구역 포인트 누적 → 집행관 수집(1h) → 길드 풀 → 100:1💎 분배(균등/특정).
  * 수치(레벨 XP·수비 ±·환산율)는 BALANCE/시뮬 튜닝 — 본 스키마는 구조만.
  *
  * ⚠ 본 스키마의 실제 테이블 생성은 **별도 수동 마이그레이션**(아직 미작성/미적용) — 적용 전엔 inert.
@@ -53,7 +53,7 @@ export const guilds = pgTable('guilds', {
   /** 0+. 무제한 — 수용은 min(50,10+level), L41+는 과시·랭킹용(버프·전투력 영향 0). */
   level: integer('level').notNull().default(0),
   xp: bigint('xp', { mode: 'bigint' }).notNull().default(sql`0`),
-  /** 영주 수금으로 누적된 미분배 세금 💎(영주 90% 몫). */
+  /** 집행관 수금으로 누적된 미분배 세금 💎(집행관 90% 몫). */
   taxPoolDiamond: bigint('tax_pool_diamond', { mode: 'bigint' }).notNull().default(sql`0`),
   leaderUserId: uuid('leader_user_id')
     .notNull()
@@ -94,7 +94,7 @@ export const guildLeaveLog = pgTable(
   (t) => [index('guild_leave_user_idx').on(t.userId, t.leftAt)],
 );
 
-/** §5.2·§5.6 zones — 총 50(시드 고정 id). 좌표만(인접은 zone_adjacency). owner/lord nullable=중립. */
+/** §5.2·§5.6 zones — 총 50(시드 고정 id). 좌표만(인접은 zone_adjacency). owner/executor nullable=중립. */
 export const zones = pgTable(
   'zones',
   {
@@ -108,13 +108,13 @@ export const zones = pgTable(
     ownerGuildId: bigint('owner_guild_id', { mode: 'bigint' }).references(() => guilds.id, {
       onDelete: 'set null',
     }),
-    /** 영주(상시) — 세금 수집권·자동 방어(×3). 소유 시 ≥1 필수. */
-    lordUserId: uuid('lord_user_id').references(() => profiles.id, { onDelete: 'set null' }),
+    /** 집행관(상시) — 세금 수집권·자동 방어(×3). 소유 시 ≥1 필수. */
+    executorUserId: uuid('executor_user_id').references(() => profiles.id, { onDelete: 'set null' }),
     /** 세금 포인트 누적기 — 강화 성공=도달레벨 가산, 100pt마다 tax_diamond +1로 환산(잔여 carry). */
     taxPoints: bigint('tax_points', { mode: 'bigint' }).notNull().default(sql`0`),
-    /** 미수금 누적 세금 💎(포인트 100당 +1, 영주 수금 대상, 점령 시 신 소유자로 이전). */
+    /** 미수금 누적 세금 💎(포인트 100당 +1, 집행관 수금 대상, 점령 시 신 소유자로 이전). */
     taxDiamond: bigint('tax_diamond', { mode: 'bigint' }).notNull().default(sql`0`),
-    /** 영주 수금 1h 쿨다운 기준. */
+    /** 집행관 수금 1h 쿨다운 기준. */
     lastTaxCollectedAt: timestamp('last_tax_collected_at', { withTimezone: true }),
     capturedAt: timestamp('captured_at', { withTimezone: true }),
   },
@@ -135,7 +135,7 @@ export const zoneAdjacency = pgTable(
   (t) => [primaryKey({ columns: [t.zoneA, t.zoneB] })],
 );
 
-/** §5.4 guild_battle_deployments — 1인 1배치/일(KST). 12:00 잠금. 영주는 자동 방어(미기록). */
+/** §5.4 guild_battle_deployments — 1인 1배치/일(KST). 12:00 잠금. 집행관은 자동 방어(미기록). */
 export const guildBattleDeployments = pgTable(
   'guild_battle_deployments',
   {

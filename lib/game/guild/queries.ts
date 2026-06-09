@@ -52,7 +52,7 @@ export async function searchGuilds(q: string) {
     .limit(20);
 }
 
-/** 월드맵 50구역 + 소유 길드명/영주 닉(중립=null). 읽기전용 뷰어용. */
+/** 월드맵 50구역 + 소유 길드명/집행관 닉(중립=null). 읽기전용 뷰어용. */
 export async function getWorldmapZones() {
   const ownerGuild = guilds;
   return db
@@ -65,13 +65,13 @@ export async function getWorldmapZones() {
       ownerGuildId: zones.ownerGuildId,
       ownerGuildName: ownerGuild.name,
       ownerEmblemUrl: ownerGuild.emblemUrl,
-      lordUserId: zones.lordUserId,
-      lordNickname: profiles.nickname,
+      executorUserId: zones.executorUserId,
+      executorNickname: profiles.nickname,
       taxDiamond: zones.taxDiamond,
     })
     .from(zones)
     .leftJoin(ownerGuild, eq(ownerGuild.id, zones.ownerGuildId))
-    .leftJoin(profiles, eq(profiles.id, zones.lordUserId))
+    .leftJoin(profiles, eq(profiles.id, zones.executorUserId))
     .orderBy(zones.id);
 }
 

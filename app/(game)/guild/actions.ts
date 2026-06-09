@@ -16,8 +16,8 @@ import {
   distributeGuildTax,
   deployToZone,
   cancelDeployment,
-  setZoneLord,
-  clearZoneLord,
+  setZoneExecutor,
+  clearZoneExecutor,
   getZoneLatestBattle,
   generateAndStoreEmblem,
   rerollEmblem,
@@ -151,7 +151,7 @@ export async function collectTaxAction(zoneId: number) {
   try {
     const r = await collectZoneTax({ userId: u, zoneId });
     revalidatePath('/guild');
-    return { status: 'success', lordGain: r.lordGain.toString(), guildGain: r.guildGain.toString() } as const;
+    return { status: 'success', executorGain: r.executorGain.toString(), guildGain: r.guildGain.toString() } as const;
   } catch (e) {
     return fail(e, 'collect');
   }
@@ -201,29 +201,29 @@ export async function cancelDeployAction() {
   }
 }
 
-export async function setLordAction(zoneId: number, targetUserId: string) {
+export async function setExecutorAction(zoneId: number, targetUserId: string) {
   const u = await getSessionUserId();
   if (!u) return unauth;
   try {
-    await setZoneLord({ actorUserId: u, zoneId, targetUserId });
+    await setZoneExecutor({ actorUserId: u, zoneId, targetUserId });
     revalidatePath('/guild/map');
     revalidatePath('/guild');
     return { status: 'success' } as const;
   } catch (e) {
-    return fail(e, 'setLord');
+    return fail(e, 'setExecutor');
   }
 }
 
-export async function clearLordAction(zoneId: number) {
+export async function clearExecutorAction(zoneId: number) {
   const u = await getSessionUserId();
   if (!u) return unauth;
   try {
-    await clearZoneLord({ actorUserId: u, zoneId });
+    await clearZoneExecutor({ actorUserId: u, zoneId });
     revalidatePath('/guild/map');
     revalidatePath('/guild');
     return { status: 'success' } as const;
   } catch (e) {
-    return fail(e, 'clearLord');
+    return fail(e, 'clearExecutor');
   }
 }
 

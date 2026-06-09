@@ -12,7 +12,7 @@ import { nextBattleKstDay } from './schedule';
 /**
  * 점령전 배치 — GUILD §5.8⑥. 다음 전투(KST 12:00)에 공격/수비 1곳 배치. 1인 1배치/일(unique).
  *  - 수비(defend): 자기 길드 소유 구역만. 공격(attack): 자기 길드 **비소유** 구역(중립·적).
- *  - 영주는 자동 방어로 슬롯 점유 → 배치 불가(IS_LORD).
+ *  - 집행관은 자동 방어로 슬롯 점유 → 배치 불가(IS_EXECUTOR).
  *  - battle_kst_day는 서버가 결정(12:00 잠금 = 날짜 롤). 기존 배치는 덮어씀(upsert).
  */
 export async function deployToZone(input: {
@@ -39,13 +39,13 @@ export async function deployToZone(input: {
     if (input.role === 'defend' && !owned) throw new GuildError('ZONE_NOT_OWNED');
     if (input.role === 'attack' && owned) throw new GuildError('CANNOT_ATTACK_OWN');
 
-    // 영주는 배치 불가(자동 방어). 어느 구역이든 영주면 거부.
-    const [lord] = await tx
+    // 집행관은 배치 불가(자동 방어). 어느 구역이든 집행관이면 거부.
+    const [executor] = await tx
       .select({ id: zones.id })
       .from(zones)
-      .where(eq(zones.lordUserId, input.userId))
+      .where(eq(zones.executorUserId, input.userId))
       .limit(1);
-    if (lord) throw new GuildError('IS_LORD');
+    if (executor) throw new GuildError('IS_EXECUTOR');
 
     const battleKstDay = nextBattleKstDay();
     await tx
