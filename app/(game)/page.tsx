@@ -279,7 +279,7 @@ export default async function HomePage() {
           const count = counts[m.href] ?? 0;
           const badge = count > 99 ? '99+' : count > 0 ? String(count) : null;
           const isMeleeChamp = m.href === '/melee' && meleeChampion;
-          const isResidenceCard = m.href === '/guild/map' && residenceName;
+          const isWorldmapCard = m.href === '/guild/map';
           const desc = m.href === '/melee' ? meleeDesc : m.desc;
           return (
             <Link
@@ -324,15 +324,17 @@ export default async function HomePage() {
                         {meleeChampion}
                       </span>
                     </>
-                  ) : isResidenceCard ? (
+                  ) : isWorldmapCard ? (
                     <>
                       <span className="text-white/70">내 위치 · </span>
-                      <span
-                        className="font-extrabold drop-shadow-[0_1px_2px_rgba(0,0,0,0.95)]"
-                        style={{ color: REGION_COLOR[residenceRegion ?? ''] ?? '#fcd34d' }}
-                      >
-                        {residenceName}
-                      </span>
+                      {residenceName ? (
+                        <span
+                          className="font-extrabold drop-shadow-[0_1px_2px_rgba(0,0,0,0.95)]"
+                          style={{ color: REGION_COLOR[residenceRegion ?? ''] ?? '#fcd34d' }}
+                        >
+                          {residenceName}
+                        </span>
+                      ) : null}
                     </>
                   ) : (
                     desc
