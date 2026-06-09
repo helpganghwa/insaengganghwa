@@ -2,7 +2,6 @@
 
 import { useMemo, useState, useTransition } from 'react';
 import { useRouter } from 'next/navigation';
-import Link from 'next/link';
 
 import { useResourceToast } from '@/components/ResourceToast';
 
@@ -53,20 +52,6 @@ const REGION: Record<Region, { label: string; color: string }> = {
   angel: { label: '타락 천사 부유섬', color: '#c084fc' },
 };
 
-/** 지역 스토리(세계관) — 구역 상세 팝업 설명. */
-const REGION_STORY: Record<Region, string> = {
-  volcano:
-    '서쪽 끝, 흑요석 절벽 사이로 용암이 붉은 강을 이룬다. 잠든 용들의 숨결이 땅을 데우는 이곳은 가장 뜨거운 보물과 가장 용맹한 자들의 고향이다.',
-  temple:
-    '북녘 설원에 잊힌 신전이 잠들어 있다. 눈에 덮인 대리석 기둥과 침묵의 회랑 사이로, 오래된 수호 골렘이 여전히 별빛을 지킨다.',
-  swamp:
-    '남쪽 저지대를 가득 채운 안개의 늪. 발광 버섯과 슬라임이 어둠 속에서 은은히 빛나, 독을 머금은 물 위로 신비로운 초록 등불을 밝힌다.',
-  orc: '동쪽 거친 땅에 오크들의 부락이 늘어선다. 뼈 토템과 전쟁기가 바람에 흔들리고, 모닥불 둘레로 우렁찬 노래와 도끼 부딪는 소리가 끊이지 않는다.',
-  kingdom:
-    '대륙 한가운데 흰 성벽의 인간 왕국이 빛난다. 네 변경의 위협에 둘러싸였어도, 왕좌의 도시는 세계의 심장으로서 결코 빛을 잃지 않는다.',
-  angel:
-    '구름 위 외딴 부유섬, 부서진 신성 유적이 떠 있다. 타락했어도 여전히 성스러운 이 땅에서, 검은 깃털의 천사들이 황금 노을을 굽어본다.',
-};
 
 export function WorldMapView({
   mapSrc,
@@ -74,7 +59,6 @@ export function WorldMapView({
   isOfficer,
   residenceZoneId,
   canSetResidence,
-  battleDayLabel,
   guildDeploys,
   members,
   zones,
@@ -84,7 +68,6 @@ export function WorldMapView({
   isOfficer: boolean;
   residenceZoneId: number | null;
   canSetResidence: boolean;
-  battleDayLabel: string;
   guildDeploys: Array<{ zoneId: number; role: DeployRole }>;
   members: Member[];
   zones: Zone[];
@@ -276,9 +259,14 @@ export function WorldMapView({
               />
               <div className="absolute inset-0 bg-gradient-to-t from-black/75 via-black/25 to-black/10" />
               <div className="relative flex h-full items-end justify-between gap-2 p-3">
-                <h2 className="truncate text-base font-bold text-white drop-shadow-[0_1px_3px_rgba(0,0,0,0.95)]">
-                  {selected.name}
-                </h2>
+                <div className="min-w-0">
+                  <h2 className="truncate text-base font-bold text-white drop-shadow-[0_1px_3px_rgba(0,0,0,0.95)]">
+                    {selected.name}
+                  </h2>
+                  <p className="truncate text-[10px] text-white/80 drop-shadow-[0_1px_2px_rgba(0,0,0,0.95)]">
+                    {ZONE_LORE[selected.id]}
+                  </p>
+                </div>
                 <button
                   type="button"
                   onClick={() => openBattle(selected.id)}
@@ -291,9 +279,6 @@ export function WorldMapView({
             </div>
 
             <div className="px-4 pb-4 pt-3">
-              <p className="mb-3 text-[12px] leading-relaxed text-zinc-500">
-                {ZONE_LORE[selected.id] ?? REGION_STORY[selected.region]}
-              </p>
               <dl className="space-y-1 text-[12px]">
                 <div className="flex justify-between">
                   <dt className="text-zinc-500">소유 길드</dt>
@@ -339,22 +324,14 @@ export function WorldMapView({
               (() => {
                 const ownedByMe = selected.ownerGuildId === myGuildId;
                 const fog = guildDeployByZone.get(selected.id);
+                if (!fog && !(ownedByMe && isOfficer)) return null;
                 return (
                   <div className="mt-3 border-t border-zinc-200 pt-3 dark:border-zinc-800">
-                    <div className="flex items-center justify-between">
-                      <h3 className="text-xs font-bold">점령전 · {battleDayLabel}</h3>
-                      {fog && (
-                        <span className="text-[10px] text-zinc-500">
-                          우리 길드 공격 {fog.attack} · 수비 {fog.defend}
-                        </span>
-                      )}
-                    </div>
-                    <Link
-                      href="/guild/deploy"
-                      className="mt-2 inline-block text-[11px] font-semibold text-sky-600 dark:text-sky-400"
-                    >
-                      배치 관리 →
-                    </Link>
+                    {fog && (
+                      <p className="text-[11px] text-zinc-500">
+                        우리 길드 배치 — 공격 {fog.attack} · 수비 {fog.defend}
+                      </p>
+                    )}
 
                     {/* 집행관 지정(길드장/부길드장 · 자기 길드 소유 구역) */}
                     {ownedByMe && isOfficer && (

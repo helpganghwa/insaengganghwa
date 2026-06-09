@@ -6,9 +6,7 @@ import {
   getResidence,
   getMyGuildDeployments,
   getGuildMembers,
-  nextBattleKstDay,
 } from '@/lib/game/guild';
-import { kstDateString } from '@/lib/kst';
 
 import { WorldMapView } from './WorldMapView';
 
@@ -32,7 +30,6 @@ export default async function WorldMapPage() {
     membership ? getMyGuildDeployments(membership.guildId) : Promise.resolve([]),
     isOfficer && membership ? getGuildMembers(membership.guildId) : Promise.resolve([]),
   ]);
-  const battleDayLabel = nextBattleKstDay() === kstDateString() ? '오늘 11:00' : '내일 11:00';
 
   return (
     <WorldMapView
@@ -41,7 +38,6 @@ export default async function WorldMapPage() {
       isOfficer={isOfficer}
       residenceZoneId={residenceZoneId}
       canSetResidence={userId != null}
-      battleDayLabel={battleDayLabel}
       guildDeploys={guildDeploys.map((d) => ({ zoneId: d.zoneId, role: d.role as 'attack' | 'defend' }))}
       members={members.map((m) => ({ userId: m.userId, nickname: m.nickname }))}
       zones={zones.map((z) => ({
