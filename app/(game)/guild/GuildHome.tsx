@@ -1,30 +1,14 @@
 'use client';
 
-import { useEffect, useRef, useState, useTransition } from 'react';
+import { useEffect, useRef, useTransition } from 'react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 
 import { useResourceToast } from '@/components/ResourceToast';
 import { useDiamond } from '@/components/DiamondContext';
-import {
-  GUILD_DONATIONS_PER_DAY,
-  GUILD_DONATION_TIERS,
-  GUILD_EMBLEM_REROLL_COST_DIAMOND,
-  type GuildJoinPolicy,
-} from '@/lib/game/guild/balance';
-import type { EmblemSelection } from '@/lib/game/guild/emblem-vocab';
+import { GUILD_DONATIONS_PER_DAY, GUILD_DONATION_TIERS } from '@/lib/game/guild/balance';
 
-import {
-  donateAction,
-  leaveGuildAction,
-  disbandGuildAction,
-  distributeTaxAction,
-  rerollEmblemAction,
-  setJoinPolicyAction,
-  approveJoinAction,
-  rejectJoinAction,
-} from './actions';
-import { EmblemPicker, DEFAULT_EMBLEM } from './EmblemPicker';
+import { donateAction, leaveGuildAction } from './actions';
 import { guildErrMsg } from './errors-msg';
 
 type Member = {
@@ -39,12 +23,9 @@ type GuildView = {
   notice: string | null;
   memberCount: number;
   capacity: number;
-  taxPool: string;
   emblemUrl: string | null;
   emblemColor: string | null;
-  joinPolicy: GuildJoinPolicy;
 };
-type JoinRequest = { userId: string; nickname: string };
 
 const ROLE_BADGE: Record<Member['role'], { label: string; cls: string } | null> = {
   leader: { label: '길드장', cls: 'bg-amber-500/15 text-amber-700 dark:text-amber-300' },
@@ -55,7 +36,6 @@ const ROLE_BADGE: Record<Member['role'], { label: string; cls: string } | null> 
 export function GuildHome({
   guild,
   members,
-  joinRequests,
   myUserId,
   myRole,
   usedToday,
@@ -63,7 +43,6 @@ export function GuildHome({
 }: {
   guild: GuildView;
   members: Member[];
-  joinRequests: JoinRequest[];
   myUserId: string;
   myRole: Member['role'];
   usedToday: number;
@@ -73,9 +52,8 @@ export function GuildHome({
   const { showHeaderToast, showError } = useResourceToast();
   const { optimisticAdjust } = useDiamond();
   const [pending, start] = useTransition();
-  const [rerollOpen, setRerollOpen] = useState(false);
-  const [emblem, setEmblem] = useState<EmblemSelection>(DEFAULT_EMBLEM);
   const isOfficer = myRole === 'leader' || myRole === 'vice';
+  const nextTier = usedToday < GUILD_DONATIONS_PER_DAY ? GUILD_DONATION_TIERS[usedToday]! : null;
 
   // 결성 직후 문양은 after()로 비동기 생성(~수초) → 폴백 표시 중이면 1회 자동 새로고침해 픽업.
   const emblemPolledRef = useRef(false);
@@ -87,47 +65,6 @@ export function GuildHome({
     }, 4000);
     return () => clearTimeout(t);
   }, [guild.emblemUrl, router]);
-
-  const nextTier = usedToday < GUILD_DONATIONS_PER_DAY ? GUILD_DONATION_TIERS[usedToday]! : null;
-
-  const changePolicy = (policy: GuildJoinPolicy) => {
-    if (policy === guild.joinPolicy) return;
-    start(async () => {
-      const r = await setJoinPolicyAction(policy);
-      if (r.status !== 'success') return showError(guildErrMsg(r.code));
-      showHeaderToast({ title: policy === 'open' ? '자유 가입으로 변경' : '승인 가입으로 변경' });
-      router.refresh();
-    });
-  };
-
-  const approve = (userId: string) => {
-    start(async () => {
-      const r = await approveJoinAction(userId);
-      if (r.status !== 'success') return showError(guildErrMsg(r.code));
-      showHeaderToast({ title: '가입 승인' });
-      router.refresh();
-    });
-  };
-
-  const reject = (userId: string) => {
-    start(async () => {
-      const r = await rejectJoinAction(userId);
-      if (r.status !== 'success') return showError(guildErrMsg(r.code));
-      showHeaderToast({ title: '가입 거절' });
-      router.refresh();
-    });
-  };
-
-  const reroll = () => {
-    start(async () => {
-      const r = await rerollEmblemAction(emblem);
-      if (r.status !== 'success') return showError(guildErrMsg(r.code));
-      optimisticAdjust(BigInt(-GUILD_EMBLEM_REROLL_COST_DIAMOND));
-      showHeaderToast({ title: '문양 재생성 완료' });
-      setRerollOpen(false);
-      router.refresh();
-    });
-  };
 
   const donate = () => {
     if (!nextTier) return;
@@ -150,32 +87,11 @@ export function GuildHome({
     });
   };
 
-  const disband = () => {
-    if (!confirm('길드를 해산할까요? 되돌릴 수 없습니다.')) return;
-    start(async () => {
-      const r = await disbandGuildAction();
-      if (r.status !== 'success') return showError(guildErrMsg(r.code));
-      showHeaderToast({ title: '길드 해산됨' });
-      router.refresh();
-    });
-  };
-
-  const distribute = () => {
-    start(async () => {
-      const r = await distributeTaxAction('equal');
-      if (r.status !== 'success') return showError(guildErrMsg(r.code));
-      if (r.perMember) optimisticAdjust(BigInt(r.perMember)); // 본인 몫 즉시 반영
-      showHeaderToast({ title: `세금 균등 분배 (총 ${r.total}💎)` });
-      router.refresh();
-    });
-  };
-
   return (
     <div className="space-y-4">
-      {/* 정보 */}
+      {/* 길드 정보 + 기부 */}
       <section className="rounded-xl border border-zinc-200 bg-white p-4 dark:border-zinc-800 dark:bg-zinc-950">
         <div className="flex items-center gap-3">
-          {/* 문양(없으면 톤색 폴백 방패) */}
           <div
             className="flex h-14 w-14 shrink-0 items-center justify-center overflow-hidden rounded-xl"
             style={{ backgroundColor: guild.emblemColor ?? '#3f3f46' }}
@@ -195,27 +111,51 @@ export function GuildHome({
           <div className="min-w-0 flex-1">
             <div className="flex items-baseline justify-between gap-2">
               <h2 className="truncate text-base font-bold">{guild.name}</h2>
-              <span className="shrink-0 text-xs text-zinc-500">Lv.{guild.level}</span>
+              <div className="flex shrink-0 items-center gap-2">
+                <span className="text-xs text-zinc-500">Lv.{guild.level}</span>
+                {isOfficer && (
+                  <Link
+                    href="/guild/settings"
+                    aria-label="길드 설정"
+                    className="rounded-full border border-zinc-300 px-2 py-0.5 text-[11px] font-semibold text-zinc-500 dark:border-zinc-700"
+                  >
+                    설정
+                  </Link>
+                )}
+              </div>
             </div>
             <p className="mt-0.5 text-[11px] text-zinc-500">
               멤버 {guild.memberCount}/{guild.capacity} · 거주 {residence ?? '미배정'}
             </p>
-            {myRole === 'leader' && (
-              <button
-                type="button"
-                onClick={() => setRerollOpen(true)}
-                className="mt-1 text-[11px] font-semibold text-amber-600 dark:text-amber-400"
-              >
-                문양 재생성 ({GUILD_EMBLEM_REROLL_COST_DIAMOND.toLocaleString('ko-KR')}💎)
-              </button>
-            )}
           </div>
         </div>
+
         {guild.notice && (
           <p className="mt-2 rounded-lg bg-zinc-100 px-3 py-2 text-[12px] text-zinc-700 dark:bg-zinc-900 dark:text-zinc-300">
             {guild.notice}
           </p>
         )}
+
+        {/* 기부 — 길드 정보란 내 */}
+        <div className="mt-3 flex items-center justify-between gap-2 border-t border-zinc-200 pt-3 dark:border-zinc-800">
+          <div>
+            <span className="text-[13px] font-bold">길드 기부</span>
+            <p className="text-[11px] text-zinc-500">
+              오늘 {usedToday}/{GUILD_DONATIONS_PER_DAY}
+              {nextTier
+                ? ` · 다음 ${nextTier.cost === 0 ? '무료' : `${nextTier.cost}💎`} → +${nextTier.xp} XP`
+                : ' · 완료'}
+            </p>
+          </div>
+          <button
+            type="button"
+            onClick={donate}
+            disabled={pending || !nextTier}
+            className="shrink-0 rounded-lg bg-amber-600 px-4 py-2 text-sm font-bold text-white disabled:opacity-50"
+          >
+            {nextTier ? '기부' : '완료'}
+          </button>
+        </div>
       </section>
 
       {/* 점령전 배치 진입 */}
@@ -232,117 +172,7 @@ export function GuildHome({
         <span className="text-zinc-400">→</span>
       </Link>
 
-      {/* 기부 */}
-      <section className="rounded-xl border border-zinc-200 bg-white p-4 dark:border-zinc-800 dark:bg-zinc-950">
-        <div className="flex items-center justify-between gap-2">
-          <div>
-            <h3 className="text-sm font-bold">길드 기부</h3>
-            <p className="text-[11px] text-zinc-500">
-              오늘 {usedToday}/{GUILD_DONATIONS_PER_DAY}
-              {nextTier ? ` · 다음 ${nextTier.cost === 0 ? '무료' : `${nextTier.cost}💎`} → +${nextTier.xp} XP` : ' · 완료'}
-            </p>
-          </div>
-          <button
-            type="button"
-            onClick={donate}
-            disabled={pending || !nextTier}
-            className="shrink-0 rounded-lg bg-amber-600 px-4 py-2 text-sm font-bold text-white disabled:opacity-50"
-          >
-            {nextTier ? '기부' : '완료'}
-          </button>
-        </div>
-      </section>
-
-      {/* 세금 풀 (길드장 분배) */}
-      {myRole === 'leader' && (
-        <section className="flex items-center justify-between gap-2 rounded-xl border border-zinc-200 bg-white p-4 dark:border-zinc-800 dark:bg-zinc-950">
-          <div>
-            <h3 className="text-sm font-bold">길드 세금 풀</h3>
-            <p className="text-[11px] text-zinc-500">{guild.taxPool}💎 누적</p>
-          </div>
-          <button
-            type="button"
-            onClick={distribute}
-            disabled={pending}
-            className="shrink-0 rounded-lg bg-emerald-600 px-3 py-2 text-sm font-bold text-white disabled:opacity-50"
-          >
-            균등 분배
-          </button>
-        </section>
-      )}
-
-      {/* 가입 관리 (길드장/부길드장) */}
-      {isOfficer && (
-        <section className="rounded-xl border border-zinc-200 bg-white p-4 dark:border-zinc-800 dark:bg-zinc-950">
-          <div className="flex items-center justify-between gap-2">
-            <h3 className="text-sm font-bold">가입 방식</h3>
-            <div className="flex gap-1 rounded-lg bg-zinc-100 p-0.5 dark:bg-zinc-900">
-              {(
-                [
-                  ['open', '자유'],
-                  ['approval', '승인'],
-                ] as const
-              ).map(([key, label]) => (
-                <button
-                  key={key}
-                  type="button"
-                  onClick={() => changePolicy(key)}
-                  disabled={pending}
-                  className={`rounded-md px-3 py-1 text-[12px] font-bold transition disabled:opacity-50 ${
-                    guild.joinPolicy === key
-                      ? 'bg-white text-zinc-900 shadow-sm dark:bg-zinc-950 dark:text-zinc-50'
-                      : 'text-zinc-500'
-                  }`}
-                >
-                  {label}
-                </button>
-              ))}
-            </div>
-          </div>
-          <p className="mt-1 text-[11px] text-zinc-500">
-            {guild.joinPolicy === 'open'
-              ? '신청 즉시 가입됩니다.'
-              : '신청을 길드장·부길드장이 승인해야 가입됩니다.'}
-          </p>
-
-          {guild.joinPolicy === 'approval' && (
-            <div className="mt-3 border-t border-zinc-200 pt-3 dark:border-zinc-800">
-              <p className="text-[11px] font-semibold text-zinc-500">가입 신청 ({joinRequests.length})</p>
-              {joinRequests.length === 0 ? (
-                <p className="mt-1.5 text-[11px] text-zinc-400">대기 중인 신청이 없습니다.</p>
-              ) : (
-                <ul className="mt-2 space-y-1.5">
-                  {joinRequests.map((r) => (
-                    <li key={r.userId} className="flex items-center justify-between gap-2">
-                      <span className="min-w-0 truncate text-[13px] font-semibold">{r.nickname}</span>
-                      <div className="flex shrink-0 gap-1.5">
-                        <button
-                          type="button"
-                          onClick={() => approve(r.userId)}
-                          disabled={pending}
-                          className="rounded-full bg-amber-600 px-3 py-1 text-[11px] font-bold text-white disabled:opacity-50"
-                        >
-                          승인
-                        </button>
-                        <button
-                          type="button"
-                          onClick={() => reject(r.userId)}
-                          disabled={pending}
-                          className="rounded-full border border-zinc-300 px-3 py-1 text-[11px] font-semibold text-zinc-500 disabled:opacity-50 dark:border-zinc-700"
-                        >
-                          거절
-                        </button>
-                      </div>
-                    </li>
-                  ))}
-                </ul>
-              )}
-            </div>
-          )}
-        </section>
-      )}
-
-      {/* 멤버 */}
+      {/* 길드원 명단 */}
       <section className="rounded-xl border border-zinc-200 bg-white p-4 dark:border-zinc-800 dark:bg-zinc-950">
         <h3 className="text-sm font-bold">길드원 ({members.length})</h3>
         <ul className="mt-2 space-y-1.5">
@@ -369,61 +199,15 @@ export function GuildHome({
         </ul>
       </section>
 
-      {/* 탈퇴 / 해산 */}
-      <div className="flex gap-2">
-        <button
-          type="button"
-          onClick={leave}
-          disabled={pending}
-          className="flex-1 rounded-lg border border-zinc-300 py-2.5 text-sm font-semibold text-zinc-600 disabled:opacity-50 dark:border-zinc-700 dark:text-zinc-400"
-        >
-          탈퇴
-        </button>
-        {myRole === 'leader' && (
-          <button
-            type="button"
-            onClick={disband}
-            disabled={pending}
-            className="flex-1 rounded-lg border border-red-300 py-2.5 text-sm font-semibold text-red-600 disabled:opacity-50 dark:border-red-900/60 dark:text-red-400"
-          >
-            해산
-          </button>
-        )}
-      </div>
-
-      {/* 문양 재생성 모달(길드장) */}
-      {rerollOpen && (
-        <div
-          className="fixed inset-0 z-50 flex items-end justify-center bg-black/60 p-3"
-          onClick={() => setRerollOpen(false)}
-        >
-          <div
-            className="max-h-[85vh] w-full max-w-[390px] overflow-y-auto rounded-2xl bg-white p-4 dark:bg-zinc-950"
-            onClick={(e) => e.stopPropagation()}
-          >
-            <div className="flex items-baseline justify-between">
-              <h2 className="text-sm font-bold">문양 재생성</h2>
-              <button type="button" onClick={() => setRerollOpen(false)} className="text-xs text-zinc-500">
-                닫기
-              </button>
-            </div>
-            <p className="mt-0.5 text-[11px] text-zinc-500">
-              비용 {GUILD_EMBLEM_REROLL_COST_DIAMOND.toLocaleString('ko-KR')}💎 · 생성 실패 시 환불
-            </p>
-            <div className="mt-3">
-              <EmblemPicker value={emblem} onChange={setEmblem} disabled={pending} />
-            </div>
-            <button
-              type="button"
-              onClick={reroll}
-              disabled={pending}
-              className="mt-3 w-full rounded-lg bg-amber-600 py-2.5 text-sm font-bold text-white disabled:opacity-50"
-            >
-              {pending ? '생성 중…' : '재생성'}
-            </button>
-          </div>
-        </div>
-      )}
+      {/* 탈퇴 */}
+      <button
+        type="button"
+        onClick={leave}
+        disabled={pending}
+        className="w-full rounded-lg border border-zinc-300 py-2.5 text-sm font-semibold text-zinc-600 disabled:opacity-50 dark:border-zinc-700 dark:text-zinc-400"
+      >
+        길드 탈퇴
+      </button>
     </div>
   );
 }

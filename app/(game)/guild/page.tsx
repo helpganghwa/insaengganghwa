@@ -10,7 +10,6 @@ import {
   getResidence,
   getGuildRanking,
   getMyJoinRequest,
-  getJoinRequests,
 } from '@/lib/game/guild';
 import { kstDateString } from '@/lib/kst';
 
@@ -48,12 +47,10 @@ export default async function GuildPage() {
 
   if (!membership) return browseView(userId);
 
-  const isOfficer = membership.role === 'leader' || membership.role === 'vice';
-  const [guild, members, residenceZoneId, joinRequests, ranking] = await Promise.all([
+  const [guild, members, residenceZoneId, ranking] = await Promise.all([
     getGuild(membership.guildId),
     getGuildMembers(membership.guildId),
     getResidence(userId),
-    isOfficer ? getJoinRequests(membership.guildId) : Promise.resolve([]),
     getGuildRanking(),
   ]);
 
@@ -88,23 +85,20 @@ export default async function GuildPage() {
       home={
         <GuildHome
           guild={{
-          name: guild.name,
-          level: guild.level,
-          notice: guild.notice,
-          memberCount: guild.memberCount,
-          capacity: guild.capacity,
-          taxPool: guild.taxPoolDiamond.toString(),
-          emblemUrl: guild.emblemUrl,
-          emblemColor: guild.emblemColor,
-          joinPolicy: guild.joinPolicy === 'approval' ? 'approval' : 'open',
-        }}
-        members={members.map((m) => ({
-          userId: m.userId,
-          role: m.role,
-          nickname: m.nickname,
-          contributionPoints: Number(m.contributionPoints),
-        }))}
-          joinRequests={joinRequests.map((r) => ({ userId: r.userId, nickname: r.nickname }))}
+            name: guild.name,
+            level: guild.level,
+            notice: guild.notice,
+            memberCount: guild.memberCount,
+            capacity: guild.capacity,
+            emblemUrl: guild.emblemUrl,
+            emblemColor: guild.emblemColor,
+          }}
+          members={members.map((m) => ({
+            userId: m.userId,
+            role: m.role,
+            nickname: m.nickname,
+            contributionPoints: Number(m.contributionPoints),
+          }))}
           myUserId={userId}
           myRole={membership.role}
           usedToday={usedToday}
