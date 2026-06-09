@@ -11,6 +11,8 @@ export type GuildErrorCode =
   | 'NOT_LEADER'
   | 'LEADER_MUST_TRANSFER' // 길드장이 멤버 남은 채 탈퇴 시도(위임/해산 필요)
   | 'DONATION_CAP_REACHED' // 일일 기부 한도 소진
+  | 'TARGET_NOT_IN_GUILD' // 대상이 같은 길드원이 아님
+  | 'INVALID_TARGET' // 자기 자신/길드장 대상 등 불가
   | 'FORBIDDEN';
 
 export class GuildError extends Error {
