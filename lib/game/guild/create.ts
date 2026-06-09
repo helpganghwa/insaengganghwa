@@ -21,6 +21,8 @@ export function normalizeGuildName(raw: string): string {
 export function createGuild(input: {
   userId: string;
   name: string;
+  /** 선택 톤의 UI 악센트 색(emblem_color). 문양 이미지 생성은 액션 레이어에서 best-effort. */
+  emblemColor?: string | null;
 }): Promise<{ guildId: bigint }> {
   const name = normalizeGuildName(input.name);
   if (name.length < GUILD_NAME_MIN_LEN || name.length > GUILD_NAME_MAX_LEN) {
@@ -60,7 +62,7 @@ export function createGuild(input: {
     // 길드 + 리더 멤버.
     const [g] = await tx
       .insert(guilds)
-      .values({ name, leaderUserId: input.userId })
+      .values({ name, leaderUserId: input.userId, emblemColor: input.emblemColor ?? null })
       .returning({ id: guilds.id });
     await tx.insert(guildMembers).values({ userId: input.userId, guildId: g!.id, role: 'leader' });
 

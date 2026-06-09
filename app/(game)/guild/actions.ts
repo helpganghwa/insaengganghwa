@@ -19,9 +19,16 @@ import {
   setZoneLord,
   clearZoneLord,
   getZoneLatestBattle,
+  generateAndStoreEmblem,
+  rerollEmblem,
 } from '@/lib/game/guild';
 import type { GuildTaxDistribution, ConquestRole } from '@/lib/game/guild/balance';
 import type { ConquestFinale } from '@/lib/game/guild/conquest/simulate';
+import {
+  isValidEmblemSelection,
+  toneColor,
+  type EmblemSelection,
+} from '@/lib/game/guild/emblem-vocab';
 
 type Fail = { status: 'error'; code: string };
 const unauth = { status: 'error', code: 'UNAUTHENTICATED' } as const;
@@ -32,15 +39,35 @@ function fail(e: unknown, tag: string): Fail {
   return { status: 'error', code: 'UNKNOWN' };
 }
 
-export async function createGuildAction(name: string) {
+export async function createGuildAction(name: string, emblem: EmblemSelection) {
   const u = await getSessionUserId();
   if (!u) return unauth;
+  if (!isValidEmblemSelection(emblem)) return { status: 'error', code: 'EMBLEM_INVALID' } as const;
   try {
-    const { guildId } = await createGuild({ userId: u, name });
+    const { guildId } = await createGuild({ userId: u, name, emblemColor: toneColor(emblem.toneId) });
+    // 문양 생성은 best-effort — 실패해도 길드는 유지(폴백 문양·재생성으로 커버).
+    try {
+      await generateAndStoreEmblem({ guildId, selection: emblem });
+    } catch (ge) {
+      console.error('[guild.create.emblem]', ge);
+    }
     revalidatePath('/guild');
     return { status: 'success', guildId: guildId.toString() } as const;
   } catch (e) {
     return fail(e, 'create');
+  }
+}
+
+export async function rerollEmblemAction(emblem: EmblemSelection) {
+  const u = await getSessionUserId();
+  if (!u) return unauth;
+  if (!isValidEmblemSelection(emblem)) return { status: 'error', code: 'EMBLEM_INVALID' } as const;
+  try {
+    await rerollEmblem({ userId: u, selection: emblem });
+    revalidatePath('/guild');
+    return { status: 'success' } as const;
+  } catch (e) {
+    return fail(e, 'rerollEmblem');
   }
 }
 

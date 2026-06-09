@@ -65,6 +65,8 @@ export default async function GuildPage() {
           memberCount: guild.memberCount,
           capacity: guild.capacity,
           taxPool: guild.taxPoolDiamond.toString(),
+          emblemUrl: guild.emblemUrl,
+          emblemColor: guild.emblemColor,
         }}
         members={members.map((m) => ({
           userId: m.userId,

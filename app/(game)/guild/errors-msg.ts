@@ -23,6 +23,8 @@ const MAP: Record<string, string> = {
   IS_LORD: '영주는 자동 방어 중이라 배치할 수 없습니다.',
   TARGET_ALREADY_LORD: '이미 다른 구역의 영주입니다.',
   NOT_OFFICER: '길드장·부길드장만 영주를 지정할 수 있습니다.',
+  EMBLEM_INVALID: '문양은 모양·색상 각 1개, 키워드 1~3개를 선택하세요.',
+  EMBLEM_GEN_FAILED: '문양 생성에 실패했습니다. 다이아는 환불되었습니다.',
   UNAUTHENTICATED: '로그인이 필요합니다.',
   UNKNOWN: '오류가 발생했습니다.',
 };

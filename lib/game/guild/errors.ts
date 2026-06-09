@@ -23,6 +23,8 @@ export type GuildErrorCode =
   | 'IS_LORD' // 영주는 배치 불가(자동 방어로 슬롯 점유)
   | 'TARGET_ALREADY_LORD' // 대상이 이미 다른 구역 영주
   | 'NOT_OFFICER' // 길드장/부길드장 아님(영주 지정)
+  | 'EMBLEM_INVALID' // 문양 3축 선택 위반(모양/톤/키워드 1~3)
+  | 'EMBLEM_GEN_FAILED' // 문양 생성 외부 실패(환불됨)
   | 'FORBIDDEN';
 
 export class GuildError extends Error {
