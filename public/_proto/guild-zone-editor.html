@@ -1,0 +1,134 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>길드 50구역 에디터 (드래그 + 이름)</title>
+<style>
+  :root { color-scheme: dark; } * { box-sizing: border-box; }
+  body { margin:0; background:#0c0f17; color:#cbd5e1; font-family:ui-sans-serif,system-ui,sans-serif;
+    display:flex; flex-direction:column; align-items:center; gap:10px; padding:14px; }
+  h1 { font-size:15px; margin:2px 0; } .hint{ font-size:11px; color:#64748b; margin:0; text-align:center; }
+  .panel { display:flex; gap:8px; align-items:center; flex-wrap:wrap; justify-content:center;
+    background:#11151f; border:1px solid #1e293b; border-radius:10px; padding:8px 12px; min-height:44px; }
+  .panel .tag { font-size:12px; font-weight:700; padding:2px 8px; border-radius:6px; color:#0c0f17; }
+  .panel input { background:#0d1018; color:#e2e8f0; border:1px solid #334155; border-radius:6px; padding:6px 10px; font-size:13px; width:200px; }
+  .panel .xy { font-size:11px; color:#64748b; font-variant-numeric:tabular-nums; }
+  .panel .none { font-size:12px; color:#64748b; }
+  .legend { display:flex; flex-wrap:wrap; gap:8px; justify-content:center; font-size:11px; }
+  .legend span { display:flex; gap:4px; align-items:center; } .legend .sw{ width:11px; height:11px; border-radius:3px; }
+
+  .stage { position:relative; width:min(94vw,760px); aspect-ratio:1/1; border-radius:12px; overflow:hidden;
+    isolation:isolate; border:1px solid #1e293b; touch-action:none; }
+  .stage img { position:absolute; inset:0; width:100%; height:100%; image-rendering:pixelated; user-select:none; -webkit-user-drag:none; }
+  .node { position:absolute; transform:translate(-50%,-50%); display:flex; flex-direction:column; align-items:center; cursor:grab; }
+  .node.drag { cursor:grabbing; }
+  .node .dot { width:18px; height:18px; border-radius:50%; border:2px solid #fff; display:flex; align-items:center; justify-content:center;
+    font-size:9px; font-weight:800; color:#fff; box-shadow:0 1px 3px rgba(0,0,0,.8); }
+  .node.sel .dot { border-color:#fde047; box-shadow:0 0 0 3px rgba(253,224,71,.5); }
+  .node .nm { margin-top:1px; font-size:10px; font-weight:700; color:#fff; white-space:nowrap; text-shadow:0 0 3px #000,0 0 3px #000; pointer-events:none; }
+  body.nonames .node .nm{ display:none; }
+
+  .bar { display:flex; gap:8px; flex-wrap:wrap; justify-content:center; }
+  .bar button { font-size:12px; padding:6px 12px; border-radius:8px; cursor:pointer; border:1px solid #334155; background:#1e293b; color:#cbd5e1; }
+  .bar button.primary { background:#2563eb; border-color:#2563eb; color:#fff; }
+  textarea { width:min(94vw,760px); height:160px; background:#0d1018; color:#a7f3d0; border:1px solid #1e293b; border-radius:8px; padding:10px; font-family:ui-monospace,monospace; font-size:11px; }
+</style>
+</head>
+<body>
+  <h1>길드 50구역 에디터 — 핀 드래그 + 이름 편집</h1>
+  <p class="hint">핀을 <b>드래그</b>해 위치 이동 · <b>클릭</b>하면 아래 패널에서 이름 수정 · Export로 SQL 복사해서 주세요</p>
+
+  <div class="panel" id="panel"><span class="none">핀을 클릭하면 여기서 이름을 수정합니다.</span></div>
+  <div class="legend" id="legend"></div>
+
+  <div class="stage" id="stage">
+    <img id="map" src="/sprites/guild/worldmap.png" alt="" draggable="false" />
+  </div>
+
+  <div class="bar">
+    <button id="toggle">이름 끄기</button>
+    <button class="primary" id="exportSql">Export SQL</button>
+    <button id="exportJson">Export JSON</button>
+  </div>
+  <textarea id="out" placeholder="Export 누르면 여기에 INSERT문이 나옵니다 — 전체 복사해서 주세요"></textarea>
+
+<script>
+  const COLOR={volcano:'#ef4444',temple:'#93c5fd',swamp:'#84cc16',orc:'#d97706',kingdom:'#fbbf24',angel:'#c084fc'};
+  const LABEL={volcano:'화산',temple:'신전',swamp:'늪',orc:'오크',kingdom:'왕국',angel:'천사'};
+  // 현재 50구역 (0038)
+  const Z=[[1,"volcano","검은 첨봉",12.1,14.6],[2,"volcano","분노의 분화구",11.8,30.3],[3,"volcano","잿더미 폐허",26.8,54.5],[4,"volcano","흑요석 보루",13.5,49],[5,"volcano","용의 해골",18.3,40.2],[6,"volcano","재의 길목",31.9,40.7],[7,"volcano","불탄 마을",27.8,33.2],[8,"volcano","그을린 고목",21.7,27.2],[9,"volcano","용암 하구",9.1,60.6],[10,"volcano","연기 평원",15.6,23.1],[11,"temple","눈 덮인 숲",32.9,14.4],[12,"temple","대설봉",47.6,6.1],[13,"temple","잊힌 신전",43.3,16.2],[14,"temple","대리석 성소",50.7,17.7],[15,"temple","침묵의 회랑",39.4,23.3],[16,"temple","성좌의 폐허",63.9,28.7],[17,"temple","서리 관문",64.9,35.7],[18,"temple","얼어붙은 샘",52.5,34.4],[19,"temple","잊힌 숲길",62.4,15.1],[20,"temple","얼음 여울",51.6,26.3],[21,"swamp","버섯 군락",12.4,79],[22,"swamp","독성 늪지",34.3,69.6],[23,"swamp","포자 습지",18.2,72.4],[24,"swamp","형광 수렁",41.3,87.4],[25,"swamp","썩은 잔교",64.5,76.2],[26,"swamp","늪지 오두막",58.9,69.9],[27,"swamp","안개 다리",54.9,81.2],[28,"swamp","점액 못",35.3,76.8],[29,"swamp","고사목 숲",50.7,73.5],[30,"swamp","독안개 골",28.4,64.7],[31,"orc","오크 대요새",88.7,66.9],[32,"orc","전사의 막사",83.1,76.4],[33,"orc","변경 초소",66.8,64.7],[34,"orc","뼈 토템 언덕",75.8,41.7],[35,"orc","약탈자 야영지",86.8,45.4],[36,"orc","감시 망루",86.2,55.9],[37,"orc","전쟁 토템",73.7,67.5],[38,"orc","잿빛 첨석",77.5,59.6],[39,"orc","피의 막사",76.4,79.3],[40,"orc","모닥불 평원",78.1,47.7],[41,"kingdom","왕성",45,45.2],[42,"kingdom","상인 거리",43.5,53.8],[43,"kingdom","성문",60.5,59.1],[44,"kingdom","대성당",59.6,52],[45,"kingdom","기사 연무장",55.3,46.5],[46,"kingdom","남쪽 주거지",50.5,56.8],[47,"angel","타락한 성소",86.8,14.5],[48,"angel","타락의 심연",92.7,21.9],[49,"angel","황금 회랑",80.1,15.2],[50,"angel","검은 깃털 제단",85.4,22.2]];
+  const zones = Z.map(([id,region,name,x,y])=>({id,region,name,x,y}));
+
+  const stage=document.getElementById('stage');
+  const map=document.getElementById('map');
+  const panel=document.getElementById('panel');
+  const out=document.getElementById('out');
+  let selected=null;
+
+  function render(){
+    stage.querySelectorAll('.node').forEach(n=>n.remove());
+    for(const z of zones){
+      const el=document.createElement('div');
+      el.className='node'+(selected===z?' sel':'');
+      el.style.left=z.x+'%'; el.style.top=z.y+'%';
+      el.dataset.id=z.id;
+      el.innerHTML=`<div class="dot" style="background:${COLOR[z.region]}">${z.id}</div><div class="nm">${z.name}</div>`;
+      attachDrag(el, z);
+      stage.appendChild(el);
+    }
+  }
+  function attachDrag(el, z){
+    let moved=false, startX=0, startY=0;
+    el.addEventListener('pointerdown',(e)=>{
+      e.preventDefault(); el.setPointerCapture(e.pointerId); el.classList.add('drag');
+      moved=false; startX=e.clientX; startY=e.clientY;
+      const move=(ev)=>{
+        if(Math.abs(ev.clientX-startX)>2||Math.abs(ev.clientY-startY)>2) moved=true;
+        const r=map.getBoundingClientRect();
+        let x=((ev.clientX-r.left)/r.width)*100, y=((ev.clientY-r.top)/r.height)*100;
+        x=Math.max(0,Math.min(100,x)); y=Math.max(0,Math.min(100,y));
+        z.x=Math.round(x*10)/10; z.y=Math.round(y*10)/10;
+        el.style.left=z.x+'%'; el.style.top=z.y+'%';
+        if(selected===z) updatePanel();
+      };
+      const up=(ev)=>{
+        el.releasePointerCapture(e.pointerId); el.classList.remove('drag');
+        el.removeEventListener('pointermove',move); el.removeEventListener('pointerup',up);
+        if(!moved){ selected=z; render(); updatePanel(); }
+      };
+      el.addEventListener('pointermove',move); el.addEventListener('pointerup',up);
+    });
+  }
+  function updatePanel(){
+    if(!selected){ panel.innerHTML='<span class="none">핀을 클릭하면 여기서 이름을 수정합니다.</span>'; return; }
+    const z=selected;
+    panel.innerHTML='';
+    const tag=document.createElement('span'); tag.className='tag'; tag.style.background=COLOR[z.region];
+    tag.textContent=`#${z.id} ${LABEL[z.region]}`; panel.appendChild(tag);
+    const inp=document.createElement('input'); inp.value=z.name; inp.placeholder='구역 이름';
+    inp.oninput=()=>{ z.name=inp.value; const n=stage.querySelector(`.node[data-id="${z.id}"] .nm`); if(n)n.textContent=z.name; };
+    inp.onkeydown=(e)=>{ if(e.key==='Enter') inp.blur(); };
+    panel.appendChild(inp);
+    const xy=document.createElement('span'); xy.className='xy'; xy.textContent=`(${z.x}, ${z.y})`; panel.appendChild(xy);
+    inp.focus();
+  }
+  function exportSql(){
+    const r=[...zones].sort((a,b)=>a.id-b.id);
+    const vals=r.map(z=>`  (${z.id},'${z.region}','${z.name.replace(/'/g,"''")}',${z.x},${z.y})`).join(',\n');
+    out.value=`DELETE FROM zones;\nINSERT INTO zones (id, region, name, map_x, map_y) VALUES\n${vals}\nON CONFLICT (id) DO NOTHING;`;
+    out.select();
+  }
+  document.getElementById('exportSql').onclick=exportSql;
+  document.getElementById('exportJson').onclick=()=>{ out.value=JSON.stringify([...zones].sort((a,b)=>a.id-b.id),null,2); out.select(); };
+  document.getElementById('toggle').onclick=(e)=>{ document.body.classList.toggle('nonames');
+    const o=document.body.classList.contains('nonames'); e.target.textContent=o?'이름 켜기':'이름 끄기'; };
+
+  // 범례
+  const lg=document.getElementById('legend');
+  for(const k of Object.keys(COLOR)){ const c=zones.filter(z=>z.region===k).length; const s=document.createElement('span');
+    s.innerHTML=`<span class="sw" style="background:${COLOR[k]}"></span>${LABEL[k]} ${c}`; lg.appendChild(s); }
+  render();
+</script>
+</body>
+</html>
