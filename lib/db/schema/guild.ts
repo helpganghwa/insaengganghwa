@@ -110,7 +110,9 @@ export const zones = pgTable(
     }),
     /** 영주(상시) — 세금 수집권·자동 방어(×3). 소유 시 ≥1 필수. */
     lordUserId: uuid('lord_user_id').references(() => profiles.id, { onDelete: 'set null' }),
-    /** 미수금 누적 세금 💎(거주자 강화 성공 시 직접 누적, 점령 시 신 소유자로 이전). */
+    /** 세금 포인트 누적기 — 강화 성공=도달레벨 가산, 100pt마다 tax_diamond +1로 환산(잔여 carry). */
+    taxPoints: bigint('tax_points', { mode: 'bigint' }).notNull().default(sql`0`),
+    /** 미수금 누적 세금 💎(포인트 100당 +1, 영주 수금 대상, 점령 시 신 소유자로 이전). */
     taxDiamond: bigint('tax_diamond', { mode: 'bigint' }).notNull().default(sql`0`),
     /** 영주 수금 1h 쿨다운 기준. */
     lastTaxCollectedAt: timestamp('last_tax_collected_at', { withTimezone: true }),
