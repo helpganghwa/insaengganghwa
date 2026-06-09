@@ -27,6 +27,9 @@ import {
   getZoneLatestBattle,
   generateAndStoreEmblem,
   rerollEmblem,
+  setViceRole,
+  kickMember,
+  transferLeadership,
 } from '@/lib/game/guild';
 import type { GuildTaxDistribution, ConquestRole, GuildJoinPolicy } from '@/lib/game/guild/balance';
 import type { ConquestFinale } from '@/lib/game/guild/conquest/simulate';
@@ -155,6 +158,45 @@ export async function leaveGuildAction() {
     return { status: 'success', disbanded: r.disbanded } as const;
   } catch (e) {
     return fail(e, 'leave');
+  }
+}
+
+export async function setViceAction(targetUserId: string, makeVice: boolean) {
+  const u = await getSessionUserId();
+  if (!u) return unauth;
+  try {
+    await setViceRole({ leaderUserId: u, targetUserId, makeVice });
+    revalidatePath('/guild');
+    revalidatePath('/guild/settings');
+    return { status: 'success' } as const;
+  } catch (e) {
+    return fail(e, 'setVice');
+  }
+}
+
+export async function kickMemberAction(targetUserId: string) {
+  const u = await getSessionUserId();
+  if (!u) return unauth;
+  try {
+    await kickMember({ actorUserId: u, targetUserId });
+    revalidatePath('/guild');
+    revalidatePath('/guild/settings');
+    return { status: 'success' } as const;
+  } catch (e) {
+    return fail(e, 'kick');
+  }
+}
+
+export async function transferLeadershipAction(targetUserId: string) {
+  const u = await getSessionUserId();
+  if (!u) return unauth;
+  try {
+    await transferLeadership({ leaderUserId: u, targetUserId });
+    revalidatePath('/guild');
+    revalidatePath('/guild/settings');
+    return { status: 'success' } as const;
+  } catch (e) {
+    return fail(e, 'transfer');
   }
 }
 

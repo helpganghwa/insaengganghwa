@@ -19,11 +19,16 @@ import {
   approveJoinAction,
   rejectJoinAction,
   disbandGuildAction,
+  setViceAction,
+  kickMemberAction,
+  transferLeadershipAction,
 } from '../actions';
 import { EmblemPicker, DEFAULT_EMBLEM } from '../EmblemPicker';
 import { guildErrMsg } from '../errors-msg';
 
+type Role = 'leader' | 'vice' | 'member';
 type JoinRequest = { userId: string; nickname: string };
+type MemberLite = { userId: string; nickname: string; role: Role };
 type SettingsView = {
   taxPool: string;
   joinPolicy: GuildJoinPolicy;
@@ -34,11 +39,15 @@ type SettingsView = {
 export function GuildSettings({
   guild,
   joinRequests,
+  members,
+  myUserId,
   myRole,
 }: {
   guild: SettingsView;
   joinRequests: JoinRequest[];
-  myRole: 'leader' | 'vice' | 'member';
+  members: MemberLite[];
+  myUserId: string;
+  myRole: Role;
 }) {
   const router = useRouter();
   const { showHeaderToast, showError } = useResourceToast();
@@ -47,6 +56,36 @@ export function GuildSettings({
   const [rerollOpen, setRerollOpen] = useState(false);
   const [emblem, setEmblem] = useState<EmblemSelection>(DEFAULT_EMBLEM);
   const isLeader = myRole === 'leader';
+
+  const setVice = (userId: string, makeVice: boolean) =>
+    start(async () => {
+      const r = await setViceAction(userId, makeVice);
+      if (r.status !== 'success') return showError(guildErrMsg(r.code));
+      showHeaderToast({ title: makeVice ? '부길드장 임명' : '부길드장 해제' });
+      router.refresh();
+    });
+
+  const kick = (userId: string, nickname: string) => {
+    if (!confirm(`${nickname}님을 추방할까요? (24시간 재가입 불가)`)) return;
+    start(async () => {
+      const r = await kickMemberAction(userId);
+      if (r.status !== 'success') return showError(guildErrMsg(r.code));
+      showHeaderToast({ title: '추방 완료' });
+      router.refresh();
+    });
+  };
+
+  const transfer = (userId: string, nickname: string) => {
+    if (!confirm(`${nickname}님에게 길드장을 위임할까요? 되돌릴 수 없습니다.`)) return;
+    start(async () => {
+      const r = await transferLeadershipAction(userId);
+      if (r.status !== 'success') return showError(guildErrMsg(r.code));
+      showHeaderToast({ title: '길드장 위임 완료' });
+      router.refresh();
+    });
+  };
+
+  const manageable = members.filter((m) => m.userId !== myUserId && m.role !== 'leader');
 
   const changePolicy = (policy: GuildJoinPolicy) => {
     if (policy === guild.joinPolicy) return;
@@ -118,6 +157,75 @@ export function GuildSettings({
         </div>
         <span className="text-zinc-400">→</span>
       </Link>
+
+      {/* 구성원 관리 */}
+      <section className="rounded-xl border border-zinc-200 bg-white p-4 dark:border-zinc-800 dark:bg-zinc-950">
+        <h3 className="text-sm font-bold">구성원 관리</h3>
+        <p className="mt-0.5 text-[11px] text-zinc-500">
+          {isLeader ? '부길드장 임명·추방·길드장 위임' : '길드원 추방'}
+        </p>
+        {manageable.length === 0 ? (
+          <p className="mt-3 text-[12px] text-zinc-400">관리할 구성원이 없습니다.</p>
+        ) : (
+          <ul className="mt-2 space-y-1.5">
+            {manageable.map((m) => (
+              <li key={m.userId} className="flex items-center justify-between gap-2">
+                <div className="flex min-w-0 items-center gap-1.5">
+                  <span className="truncate text-[13px] font-semibold">{m.nickname}</span>
+                  {m.role === 'vice' && (
+                    <span className="shrink-0 rounded-full bg-sky-500/15 px-1.5 py-0 text-[9px] font-bold text-sky-700 dark:text-sky-300">
+                      부길드장
+                    </span>
+                  )}
+                </div>
+                <div className="flex shrink-0 items-center gap-1">
+                  {isLeader &&
+                    (m.role === 'vice' ? (
+                      <button
+                        type="button"
+                        onClick={() => setVice(m.userId, false)}
+                        disabled={pending}
+                        className="rounded-md border border-zinc-300 px-2 py-1 text-[10px] font-semibold text-zinc-600 disabled:opacity-50 dark:border-zinc-700 dark:text-zinc-300"
+                      >
+                        부길드장 해제
+                      </button>
+                    ) : (
+                      <button
+                        type="button"
+                        onClick={() => setVice(m.userId, true)}
+                        disabled={pending}
+                        className="rounded-md border border-sky-300 px-2 py-1 text-[10px] font-semibold text-sky-600 disabled:opacity-50 dark:border-sky-800 dark:text-sky-400"
+                      >
+                        부길드장 임명
+                      </button>
+                    ))}
+                  {isLeader && (
+                    <button
+                      type="button"
+                      onClick={() => transfer(m.userId, m.nickname)}
+                      disabled={pending}
+                      className="rounded-md border border-amber-300 px-2 py-1 text-[10px] font-semibold text-amber-600 disabled:opacity-50 dark:border-amber-800 dark:text-amber-400"
+                    >
+                      위임
+                    </button>
+                  )}
+                  {/* 부길드장은 일반 멤버만 추방 가능 */}
+                  {(isLeader || m.role === 'member') && (
+                    <button
+                      type="button"
+                      onClick={() => kick(m.userId, m.nickname)}
+                      disabled={pending}
+                      className="rounded-md border border-red-300 px-2 py-1 text-[10px] font-semibold text-red-500 disabled:opacity-50 dark:border-red-900/60"
+                    >
+                      추방
+                    </button>
+                  )}
+                </div>
+              </li>
+            ))}
+          </ul>
+        )}
+      </section>
 
       {/* 가입 방식 + 신청 */}
       <section className="rounded-xl border border-zinc-200 bg-white p-4 dark:border-zinc-800 dark:bg-zinc-950">
