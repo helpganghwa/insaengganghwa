@@ -11,8 +11,19 @@ import {
   cancelDeployAction,
   setLordAction,
   clearLordAction,
+  getZoneBattleAction,
 } from '../actions';
 import { guildErrMsg } from '../errors-msg';
+import { ConquestReplay } from './ConquestReplay';
+
+import type { ConquestFinale } from '@/lib/game/guild/conquest/simulate';
+
+type Battle = {
+  battleKstDay: string;
+  winnerGuildId: string | null;
+  winnerName: string | null;
+  finale: ConquestFinale;
+};
 
 type Region = 'volcano' | 'temple' | 'swamp' | 'orc' | 'kingdom' | 'angel';
 type DeployRole = 'attack' | 'defend';
@@ -67,8 +78,18 @@ export function WorldMapView({
   const { showHeaderToast, showError } = useResourceToast();
   const [residence, setResidence] = useState<number | null>(residenceZoneId);
   const [selectedId, setSelectedId] = useState<number | null>(residenceZoneId);
+  const [replay, setReplay] = useState<Battle | null>(null);
   const [pending, start] = useTransition();
   const selected = zones.find((z) => z.id === selectedId) ?? null;
+
+  const openBattle = (zoneId: number) => {
+    start(async () => {
+      const r = await getZoneBattleAction(zoneId);
+      if (r.status !== 'success') return showError(guildErrMsg(r.code));
+      if (!r.battle) return showError('전투 기록이 없습니다.');
+      setReplay(r.battle);
+    });
+  };
 
   // 자기 길드 배치 집계(안개 — 자기 길드만): zoneId → {attack, defend}.
   const guildDeployByZone = new Map<number, { attack: number; defend: number }>();
@@ -215,6 +236,15 @@ export function WorldMapView({
               <dd className="font-mono tabular-nums">{selected.taxDiamond}💎</dd>
             </div>
           </dl>
+
+          <button
+            type="button"
+            onClick={() => openBattle(selected.id)}
+            disabled={pending}
+            className="mt-2 text-[11px] font-semibold text-sky-600 disabled:opacity-50 dark:text-sky-400"
+          >
+            최근 전투 기록 보기 →
+          </button>
           {selected.id === residence ? (
             <p className="mt-2 rounded-lg bg-amber-500/10 px-2 py-1 text-[11px] text-amber-700 dark:text-amber-300">
               내 거주 구역 — 강화 성공 시 이곳에 세금 포인트가 쌓입니다.
@@ -321,6 +351,8 @@ export function WorldMapView({
             })()}
         </div>
       )}
+
+      {replay && <ConquestReplay battle={replay} onClose={() => setReplay(null)} />}
     </div>
   );
 }

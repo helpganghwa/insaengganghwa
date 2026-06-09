@@ -3,7 +3,7 @@ import 'server-only';
 import { desc, eq, ilike, sql } from 'drizzle-orm';
 
 import { db } from '@/lib/db/client';
-import { guilds, guildMembers, zones } from '@/lib/db/schema/guild';
+import { guilds, guildMembers, zones, conquestBattles } from '@/lib/db/schema/guild';
 import { profiles } from '@/lib/db/schema/profiles';
 
 import { guildCapacity } from './balance';
@@ -73,6 +73,23 @@ export async function getWorldmapZones() {
     .leftJoin(ownerGuild, eq(ownerGuild.id, zones.ownerGuildId))
     .leftJoin(profiles, eq(profiles.id, zones.lordUserId))
     .orderBy(zones.id);
+}
+
+/** 구역의 최근 점령 전투(없으면 null) — 결과/리플레이용. finale jsonb 포함. */
+export async function getZoneLatestBattle(zoneId: number) {
+  const [b] = await db
+    .select({
+      battleKstDay: conquestBattles.battleKstDay,
+      winnerGuildId: conquestBattles.winnerGuildId,
+      winnerName: guilds.name,
+      finale: conquestBattles.finale,
+    })
+    .from(conquestBattles)
+    .leftJoin(guilds, eq(guilds.id, conquestBattles.winnerGuildId))
+    .where(eq(conquestBattles.zoneId, zoneId))
+    .orderBy(desc(conquestBattles.battleKstDay))
+    .limit(1);
+  return b ?? null;
 }
 
 /** 길드원 목록 — 기여도 내림차순(무임승차 판단·표시용). */

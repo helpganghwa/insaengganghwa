@@ -18,8 +18,10 @@ import {
   cancelDeployment,
   setZoneLord,
   clearZoneLord,
+  getZoneLatestBattle,
 } from '@/lib/game/guild';
 import type { GuildTaxDistribution, ConquestRole } from '@/lib/game/guild/balance';
+import type { ConquestFinale } from '@/lib/game/guild/conquest/simulate';
 
 type Fail = { status: 'error'; code: string };
 const unauth = { status: 'error', code: 'UNAUTHENTICATED' } as const;
@@ -195,5 +197,26 @@ export async function clearLordAction(zoneId: number) {
     return { status: 'success' } as const;
   } catch (e) {
     return fail(e, 'clearLord');
+  }
+}
+
+/** 구역 최근 전투 결과/리플레이 조회(없으면 battle null). */
+export async function getZoneBattleAction(zoneId: number) {
+  const u = await getSessionUserId();
+  if (!u) return unauth;
+  try {
+    const b = await getZoneLatestBattle(zoneId);
+    if (!b) return { status: 'success', battle: null } as const;
+    return {
+      status: 'success',
+      battle: {
+        battleKstDay: b.battleKstDay,
+        winnerGuildId: b.winnerGuildId?.toString() ?? null,
+        winnerName: b.winnerName,
+        finale: (b.finale as ConquestFinale) ?? { roster: [], events: [] },
+      },
+    } as const;
+  } catch (e) {
+    return fail(e, 'zoneBattle');
   }
 }
