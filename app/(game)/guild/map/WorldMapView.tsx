@@ -277,11 +277,11 @@ export function WorldMapView({
       {/* 구역 상세 모달 */}
       {selected && (
         <div
-          className="fixed inset-0 z-50 flex items-end justify-center bg-black/60 p-3"
+          className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-4 backdrop-blur-sm"
           onClick={() => setSelectedId(null)}
         >
           <div
-            className="max-h-[85vh] w-full max-w-[390px] overflow-y-auto rounded-2xl bg-white dark:bg-zinc-950"
+            className="max-h-[85vh] w-full max-w-[340px] overflow-y-auto rounded-2xl bg-white dark:bg-zinc-950"
             onClick={(e) => e.stopPropagation()}
           >
             {/* 헤더 — 지역(6종) 배경 + 지역이름 + 전투보기 */}
@@ -439,6 +439,14 @@ export function WorldMapView({
                   </div>
                 );
               })()}
+
+              <button
+                type="button"
+                onClick={() => setSelectedId(null)}
+                className="mt-3 w-full py-1.5 text-[11px] text-zinc-500"
+              >
+                닫기
+              </button>
             </div>
           </div>
         </div>
