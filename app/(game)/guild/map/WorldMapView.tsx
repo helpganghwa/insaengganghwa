@@ -52,6 +52,21 @@ const REGION: Record<Region, { label: string; color: string }> = {
   angel: { label: '타락 천사 부유섬', color: '#c084fc' },
 };
 
+/** 지역 스토리(세계관) — 구역 상세 팝업 설명. */
+const REGION_STORY: Record<Region, string> = {
+  volcano:
+    '서쪽 끝, 흑요석 절벽 사이로 용암이 붉은 강을 이룬다. 잠든 용들의 숨결이 땅을 데우는 이곳은 가장 뜨거운 보물과 가장 용맹한 자들의 고향이다.',
+  temple:
+    '북녘 설원에 잊힌 신전이 잠들어 있다. 눈에 덮인 대리석 기둥과 침묵의 회랑 사이로, 오래된 수호 골렘이 여전히 별빛을 지킨다.',
+  swamp:
+    '남쪽 저지대를 가득 채운 안개의 늪. 발광 버섯과 슬라임이 어둠 속에서 은은히 빛나, 독을 머금은 물 위로 신비로운 초록 등불을 밝힌다.',
+  orc: '동쪽 거친 땅에 오크들의 부락이 늘어선다. 뼈 토템과 전쟁기가 바람에 흔들리고, 모닥불 둘레로 우렁찬 노래와 도끼 부딪는 소리가 끊이지 않는다.',
+  kingdom:
+    '대륙 한가운데 흰 성벽의 인간 왕국이 빛난다. 네 변경의 위협에 둘러싸였어도, 왕좌의 도시는 세계의 심장으로서 결코 빛을 잃지 않는다.',
+  angel:
+    '구름 위 외딴 부유섬, 부서진 신성 유적이 떠 있다. 타락했어도 여전히 성스러운 이 땅에서, 검은 깃털의 천사들이 황금 노을을 굽어본다.',
+};
+
 export function WorldMapView({
   mapSrc,
   myGuildId,
@@ -228,9 +243,9 @@ export function WorldMapView({
                 zIndex: isResidence ? 20 : owned ? 10 : 1,
               }}
             >
-              {/* 내 거주 — 은은한 펄스 링 */}
+              {/* 내 거주 — 노드를 감싸는 은은한 펄스 헤일로(살짝 큰 링) */}
               {isResidence && (
-                <span className="pointer-events-none absolute left-1/2 top-1/2 h-[17px] w-[17px] -translate-x-1/2 -translate-y-1/2 animate-pulse rounded-[5px] bg-amber-300/30" />
+                <span className="pointer-events-none absolute left-1/2 top-1/2 h-[23px] w-[23px] -translate-x-1/2 -translate-y-1/2 animate-pulse rounded-[7px] bg-amber-400/35" />
               )}
               <span
                 className="relative block h-[17px] w-[17px] overflow-hidden rounded-[4px] ring-1 ring-black/70 transition"
@@ -246,7 +261,7 @@ export function WorldMapView({
                     : mine
                       ? '2px solid #ffffff'
                       : `1px solid ${color}88`,
-                  outlineOffset: 1,
+                  outlineOffset: isResidence ? 0 : 1,
                 }}
               >
                 {/* 점령 길드 문양(있으면) */}
@@ -310,6 +325,9 @@ export function WorldMapView({
             </div>
 
             <div className="px-4 pb-4 pt-3">
+              <p className="mb-3 text-[12px] leading-relaxed text-zinc-500">
+                {REGION_STORY[selected.region]}
+              </p>
               <dl className="space-y-1 text-[12px]">
                 <div className="flex justify-between">
                   <dt className="text-zinc-500">소유 길드</dt>
