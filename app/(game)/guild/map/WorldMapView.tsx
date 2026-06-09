@@ -266,15 +266,9 @@ export function WorldMapView({
         })}
       </div>
 
-      {/* 세계 정세(하단) — 매일 AI 갱신 예정. 현재는 UI 셸. */}
+      {/* 세계 정세(하단) — 매일 AI 갱신 예정. 현재는 UI 셸(내용만 담백하게). */}
       <section className="mt-3 rounded-xl border border-zinc-200 bg-white p-4 dark:border-zinc-800 dark:bg-zinc-950">
-        <div className="flex items-center justify-between">
-          <h2 className="text-xs font-bold">세계는 지금</h2>
-          <span className="rounded-full bg-zinc-100 px-1.5 py-0.5 text-[9px] font-semibold text-zinc-400 dark:bg-zinc-900">
-            매일 갱신 예정
-          </span>
-        </div>
-        <p className="mt-2 text-[13px] leading-relaxed text-zinc-500">
+        <p className="text-[13px] leading-relaxed text-zinc-500">
           대륙의 정세 브리핑이 매일 이곳에 전해질 예정입니다. 어느 길드가 어느 땅을 차지했는지,
           전장의 불길이 어디로 번지는지 — 곧 만나보세요.
         </p>

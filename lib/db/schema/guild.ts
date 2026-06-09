@@ -50,6 +50,8 @@ export const guilds = pgTable('guilds', {
   emblemColor: text('emblem_color'),
   /** 길드 공지 ≤60자(길드장/부길드장만 편집). */
   notice: text('notice'),
+  /** 가입 방식 — 'open'(자유: 신청 즉시 가입) | 'approval'(승인: 길드장/부길드장 승인 필요). */
+  joinPolicy: text('join_policy').notNull().default('open'),
   /** 0+. 무제한 — 수용은 min(50,10+level), L41+는 과시·랭킹용(버프·전투력 영향 0). */
   level: integer('level').notNull().default(0),
   xp: bigint('xp', { mode: 'bigint' }).notNull().default(sql`0`),
@@ -79,6 +81,21 @@ export const guildMembers = pgTable(
     joinedAt: timestamp('joined_at', { withTimezone: true }).notNull().defaultNow(),
   },
   (t) => [index('guild_member_guild_idx').on(t.guildId)],
+);
+
+/** §1 가입 신청 — 승인제(approval) 길드 전용. user_id PK = 1유저 1신청. 승인/거절/가입 시 삭제. */
+export const guildJoinRequests = pgTable(
+  'guild_join_requests',
+  {
+    userId: uuid('user_id')
+      .primaryKey()
+      .references(() => profiles.id, { onDelete: 'cascade' }),
+    guildId: bigint('guild_id', { mode: 'bigint' })
+      .notNull()
+      .references(() => guilds.id, { onDelete: 'cascade' }),
+    createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
+  },
+  (t) => [index('guild_join_req_guild_idx').on(t.guildId)],
 );
 
 /** §1 탈퇴 로그 — 24h 재가입 제한(가장 최근 left_at 기준). append-only. */
