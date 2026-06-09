@@ -1,5 +1,6 @@
 import 'server-only';
 
+import sharp from 'sharp';
 import { eq } from 'drizzle-orm';
 import { createClient, type SupabaseClient } from '@supabase/supabase-js';
 
@@ -35,6 +36,26 @@ function isPng(buf: Buffer): boolean {
   return buf.length >= 8 && buf[0] === 0x89 && buf[1] === 0x50 && buf[2] === 0x4e && buf[3] === 0x47;
 }
 
+// 경량 품질 가드(§1.6) — AI 검수 불필요(고정 어휘). 빈/깨진(거의 투명) · 투명배경 실패(거의 꽉 참)만 거름.
+const MIN_OPAQUE_RATIO = 0.03; // 미만 = 빈/깨진 이미지
+const MAX_OPAQUE_RATIO = 0.98; // 초과 = no_background 실패(사각 덩어리)
+const OPAQUE_ALPHA = 24; // 이 alpha 초과면 불투명 픽셀로 카운트
+
+/** 불투명 픽셀 비율이 정상 범위인지(빈/꽉참 결함 검출). 디코드 실패도 결함으로 간주. */
+async function emblemQualityOk(png: Buffer): Promise<boolean> {
+  try {
+    const { data, info } = await sharp(png).ensureAlpha().raw().toBuffer({ resolveWithObject: true });
+    const total = info.width * info.height;
+    if (total === 0) return false;
+    let opaque = 0;
+    for (let i = 3; i < data.length; i += info.channels) if (data[i]! > OPAQUE_ALPHA) opaque++;
+    const ratio = opaque / total;
+    return ratio >= MIN_OPAQUE_RATIO && ratio <= MAX_OPAQUE_RATIO;
+  } catch {
+    return false;
+  }
+}
+
 /** pixflux 128² no_background 생성 → PNG Buffer. 429는 백오프 재시도, 그 외 실패는 throw. */
 async function generateEmblemPng(prompt: string): Promise<Buffer> {
   const key = process.env.PIXELLAB_API_KEY;
@@ -61,6 +82,12 @@ async function generateEmblemPng(prompt: string): Promise<Buffer> {
     if (!b64) throw new Error('pixflux no base64');
     const buf = Buffer.from(b64, 'base64');
     if (!isPng(buf)) throw new Error('pixflux returned non-PNG');
+    // 경량 품질 가드 — 빈/깨진·꽉찬 결함이면 재생성(무료 1회·재생성 모두 결함 저장 회피).
+    if (!(await emblemQualityOk(buf))) {
+      lastErr = 'low quality (empty/full)';
+      console.warn(`[guild.emblem] 품질 미달 재생성 (attempt ${attempt})`);
+      continue;
+    }
     return buf;
   }
   throw new Error(`pixflux retries exhausted: ${lastErr}`);
