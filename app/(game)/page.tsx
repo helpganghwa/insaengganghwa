@@ -29,8 +29,24 @@ import { RankingTop3Card } from './RankingTop3Card';
  *  - 본 페이지는 "오늘 KST 발급분 중 미수령 1건 이상"이면 wide 카드 노출.
  *  - 수령 완료(claimed_at) 시 카드 숨김 → 다음 KST 00:00에 재등장.
  */
-// 메뉴 6카드 — 대난투/레이드/강화/보급/우편함/상점. 인벤토리는 바텀네비로 이동.
+// 메뉴 8카드 — 월드맵/길드(최상단) + 대난투/레이드/강화/보급/우편함/상점. 인벤토리는 바텀네비로 이동.
 const MENU = [
+  {
+    href: '/guild/map',
+    label: '월드맵',
+    desc: '지역 점령전',
+    bg: '/sprites/hub/worldmap.png',
+    tint: '#1a2330',
+    scale: 1,
+  },
+  {
+    href: '/guild',
+    label: '길드',
+    desc: '함께 성장·점령',
+    bg: '/sprites/hub/guild.png',
+    tint: '#2a2012',
+    scale: 1,
+  },
   {
     href: '/melee',
     label: '대난투',

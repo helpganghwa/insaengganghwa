@@ -3,13 +3,14 @@
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 
-// WIREFRAMES §0 — 5탭: 홈/인벤토리/강화/상점/프로필.
-// 레이드·대난투·보급·우편함은 홈 그리드 진입(BottomNav 제외).
+// WIREFRAMES §0 — 6탭: 홈/인벤토리/강화/상점/길드/프로필.
+// 레이드·대난투·보급·우편함·월드맵은 홈 그리드 진입(BottomNav 제외).
 const items = [
   { href: '/', label: '홈', icon: '🏠' },
   { href: '/inventory', label: '인벤토리', icon: '🎒' },
   { href: '/enhance', label: '강화', icon: '⚒️' },
   { href: '/shop', label: '상점', icon: '💎' },
+  { href: '/guild', label: '길드', icon: '🏰' },
   { href: '/me', label: '프로필', icon: '👤' },
 ] as const;
 
@@ -30,7 +31,7 @@ export function BottomNav({
   const pathname = usePathname();
 
   return (
-    <nav className="sticky bottom-0 z-30 box-content grid h-14 grid-cols-5 border-t border-zinc-200 bg-white pb-[env(safe-area-inset-bottom)] dark:border-zinc-800 dark:bg-zinc-950">
+    <nav className="sticky bottom-0 z-30 box-content grid h-14 grid-cols-6 border-t border-zinc-200 bg-white pb-[env(safe-area-inset-bottom)] dark:border-zinc-800 dark:bg-zinc-950">
       {items.map((item) => {
         const active =
           item.href === '/' ? pathname === '/' : pathname.startsWith(item.href);

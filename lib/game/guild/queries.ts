@@ -3,7 +3,7 @@ import 'server-only';
 import { desc, eq, ilike, sql } from 'drizzle-orm';
 
 import { db } from '@/lib/db/client';
-import { guilds, guildMembers } from '@/lib/db/schema/guild';
+import { guilds, guildMembers, zones } from '@/lib/db/schema/guild';
 import { profiles } from '@/lib/db/schema/profiles';
 
 import { guildCapacity } from './balance';
@@ -50,6 +50,28 @@ export async function searchGuilds(q: string) {
     .from(guilds)
     .where(ilike(guilds.name, `%${term}%`))
     .limit(20);
+}
+
+/** 월드맵 50구역 + 소유 길드명/영주 닉(중립=null). 읽기전용 뷰어용. */
+export async function getWorldmapZones() {
+  const ownerGuild = guilds;
+  return db
+    .select({
+      id: zones.id,
+      region: zones.region,
+      name: zones.name,
+      mapX: zones.mapX,
+      mapY: zones.mapY,
+      ownerGuildId: zones.ownerGuildId,
+      ownerGuildName: ownerGuild.name,
+      ownerEmblemUrl: ownerGuild.emblemUrl,
+      lordNickname: profiles.nickname,
+      taxDiamond: zones.taxDiamond,
+    })
+    .from(zones)
+    .leftJoin(ownerGuild, eq(ownerGuild.id, zones.ownerGuildId))
+    .leftJoin(profiles, eq(profiles.id, zones.lordUserId))
+    .orderBy(zones.id);
 }
 
 /** 길드원 목록 — 기여도 내림차순(무임승차 판단·표시용). */
