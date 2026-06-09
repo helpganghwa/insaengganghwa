@@ -13,12 +13,6 @@ type ResourceToast = {
   delta?: number;
 };
 
-type ErrorToast = {
-  id: number;
-  kind: 'error';
-  message: string;
-};
-
 type RankingToast = {
   id: number;
   kind: 'ranking';
@@ -36,9 +30,11 @@ type HeaderToast = {
   rewards?: HeaderReward[];
   /** 보상 칩 대신/추가로 │ 뒤에 노출하는 자유 텍스트(상태 변화·알림 등 비보상 용도). */
   detail?: string;
+  /** 'error' = 공용 헤더 바를 에러 스타일(적색)로 — showError가 사용. */
+  tone?: 'error';
 };
 
-type ToastEntry = ResourceToast | ErrorToast | RankingToast | HeaderToast;
+type ToastEntry = ResourceToast | RankingToast | HeaderToast;
 
 type ToastContextValue = {
   showResource: (icon: string, label: string, delta?: number) => void;
@@ -110,14 +106,12 @@ export function ResourceToastProvider({ children }: { children: React.ReactNode 
     [dismiss],
   );
 
-  const showError = useCallback(
-    (message: string) => {
-      const id = ++counterRef.current;
-      setToasts((prev) => [...prev, { id, kind: 'error', message }]);
-      setTimeout(() => dismiss(id), 4000);
-    },
-    [dismiss],
-  );
+  // 에러 — 공용 헤더 바(showHeaderToast와 동일 컴포넌트)를 에러 톤(적색)으로 노출.
+  const showError = useCallback((message: string) => {
+    const id = ++counterRef.current;
+    headerActiveRef.current += 1; // 헤더 바 — 종료(dismissHeader) 시 차감.
+    setToasts((prev) => [...prev, { id, kind: 'header', title: message, tone: 'error', icon: '⚠️' }]);
+  }, []);
 
   // 공용 헤더 토스트 — 진입/이탈 슬라이드는 HeaderBar가 자체 타이머로 구동(이탈 애니메이션
   // 위해 provider는 dismiss만 위임). 노출 후 HeaderBar가 onDone으로 self-unmount.
@@ -207,7 +201,7 @@ export function ResourceToastProvider({ children }: { children: React.ReactNode 
   // 헤더 슬라이드 바(랭킹/공용 헤더)와 중앙 상단 토스트(자원/에러) 위치 분리.
   const rankingToasts = toasts.filter((t): t is RankingToast => t.kind === 'ranking');
   const headerToasts = toasts.filter((t): t is HeaderToast => t.kind === 'header');
-  const otherToasts = toasts.filter((t) => t.kind === 'resource' || t.kind === 'error');
+  const otherToasts = toasts.filter((t): t is ResourceToast => t.kind === 'resource');
 
   return (
     <ToastContext.Provider
@@ -237,13 +231,9 @@ export function ResourceToastProvider({ children }: { children: React.ReactNode 
         style={{ top: 'calc(env(safe-area-inset-top) + 4rem)' }}
         aria-live="polite"
       >
-        {otherToasts.map((t) =>
-          t.kind === 'resource' ? (
-            <ResourceItem key={t.id} entry={t} />
-          ) : (
-            <ErrorItem key={t.id} entry={t} onDismiss={() => dismiss(t.id)} />
-          ),
-        )}
+        {otherToasts.map((t) => (
+          <ResourceItem key={t.id} entry={t} />
+        ))}
       </div>
     </ToastContext.Provider>
   );
@@ -384,8 +374,13 @@ function HeaderBar({ entry, onDismiss }: { entry: HeaderToast; onDismiss: (id: n
       }}
     >
       {/* 헤더 정확히 덮기 — 셸 폭(max-w-390) + safe-area pad + h-12 (AppHeader와 동일 구조). */}
+      {/* 에러 톤이면 적색 바, 기본은 다크 바(공용 동일 컴포넌트). */}
       <div
-        className="mx-auto max-w-[390px] border-b border-zinc-700/60 bg-zinc-950/95 shadow-[0_4px_16px_rgba(0,0,0,0.5)] backdrop-blur-sm"
+        className={`mx-auto max-w-[390px] border-b shadow-[0_4px_16px_rgba(0,0,0,0.5)] backdrop-blur-sm ${
+          entry.tone === 'error'
+            ? 'border-red-900/70 bg-red-700/95'
+            : 'border-zinc-700/60 bg-zinc-950/95'
+        }`}
         style={{ paddingTop: 'env(safe-area-inset-top)' }}
       >
         <div className="flex h-12 items-center justify-center gap-2 px-3">
@@ -438,23 +433,3 @@ function ResourceItem({ entry }: { entry: ResourceToast }) {
   );
 }
 
-function ErrorItem({ entry, onDismiss }: { entry: ErrorToast; onDismiss: () => void }) {
-  return (
-    <div
-      className="pointer-events-auto flex max-w-xs items-center gap-2 rounded-xl bg-red-600 px-4 py-2 text-sm font-medium text-white shadow-lg dark:bg-red-700/90"
-      role="alert"
-      style={{ animation: 'toast-pop 0.3s ease-out' }}
-    >
-      <span aria-hidden>⚠️</span>
-      <span className="flex-1">{entry.message}</span>
-      <button
-        type="button"
-        onClick={onDismiss}
-        className="rounded-full px-1 text-white/80 hover:text-white"
-        aria-label="닫기"
-      >
-        ✕
-      </button>
-    </div>
-  );
-}
