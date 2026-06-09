@@ -35,6 +35,22 @@ export async function getGuild(guildId: bigint) {
   return { ...g, memberCount: cnt?.n ?? 0, capacity: guildCapacity(g.level) };
 }
 
+/** 길드 랭킹 — 레벨↓·XP↓ 순. 미가입 첫화면 랭킹 탭. 문양·인원 포함. */
+export async function getGuildRanking(limit = 50) {
+  return db
+    .select({
+      id: guilds.id,
+      name: guilds.name,
+      level: guilds.level,
+      emblemUrl: guilds.emblemUrl,
+      emblemColor: guilds.emblemColor,
+      memberCount: sql<number>`(select count(*)::int from guild_members gm where gm.guild_id = ${guilds.id})`,
+    })
+    .from(guilds)
+    .orderBy(desc(guilds.level), desc(guilds.xp))
+    .limit(limit);
+}
+
 /** 길드 검색(이름 부분일치) — 가입 브라우즈용. 인원/수용 포함. */
 export async function searchGuilds(q: string) {
   const term = q.trim();
@@ -45,6 +61,7 @@ export async function searchGuilds(q: string) {
       name: guilds.name,
       level: guilds.level,
       emblemUrl: guilds.emblemUrl,
+      emblemColor: guilds.emblemColor,
       memberCount: sql<number>`(select count(*)::int from guild_members gm where gm.guild_id = ${guilds.id})`,
     })
     .from(guilds)

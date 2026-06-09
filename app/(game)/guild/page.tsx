@@ -3,13 +3,36 @@ import { eq } from 'drizzle-orm';
 import { getSessionUserId } from '@/lib/auth/session';
 import { db } from '@/lib/db/client';
 import { zones } from '@/lib/db/schema/guild';
-import { getMyMembership, getGuild, getGuildMembers, getResidence } from '@/lib/game/guild';
+import {
+  getMyMembership,
+  getGuild,
+  getGuildMembers,
+  getResidence,
+  getGuildRanking,
+} from '@/lib/game/guild';
 import { kstDateString } from '@/lib/kst';
 
-import { GuildLobby } from './GuildLobby';
+import { GuildBrowse } from './GuildBrowse';
 import { GuildHome } from './GuildHome';
 
 export const dynamic = 'force-dynamic';
+
+/** 미가입 첫화면 — 랭킹/찾기 탭 + 생성 FAB. */
+async function browseView() {
+  const ranking = await getGuildRanking();
+  return (
+    <GuildBrowse
+      ranking={ranking.map((g) => ({
+        id: g.id.toString(),
+        name: g.name,
+        level: g.level,
+        memberCount: g.memberCount,
+        emblemUrl: g.emblemUrl,
+        emblemColor: g.emblemColor,
+      }))}
+    />
+  );
+}
 
 export default async function GuildPage() {
   const userId = await getSessionUserId();
@@ -19,13 +42,7 @@ export default async function GuildPage() {
 
   const membership = await getMyMembership(userId);
 
-  if (!membership) {
-    return (
-      <div className="px-4 py-4">
-        <GuildLobby />
-      </div>
-    );
-  }
+  if (!membership) return browseView();
 
   const [guild, members, residenceZoneId] = await Promise.all([
     getGuild(membership.guildId),
@@ -34,12 +51,8 @@ export default async function GuildPage() {
   ]);
 
   if (!guild) {
-    // 멤버십은 있으나 길드 행이 사라진 비정상 상태 — 로비로.
-    return (
-      <div className="px-4 py-4">
-        <GuildLobby />
-      </div>
-    );
+    // 멤버십은 있으나 길드 행이 사라진 비정상 상태 — 브라우즈로.
+    return browseView();
   }
 
   let residenceName: string | null = null;
