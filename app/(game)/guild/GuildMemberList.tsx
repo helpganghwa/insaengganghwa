@@ -1,12 +1,14 @@
 'use client';
 
 import { useMemo, useState } from 'react';
+import Link from 'next/link';
 
 type Slot = 'weapon' | 'armor' | 'accessory';
 type Equipped = { slot: Slot; code: string; enhance: number };
 export type RichMember = {
   userId: string;
   nickname: string;
+  publicCode: string;
   role: 'leader' | 'vice' | 'member';
   avatar: string | null;
   contribution: number;
@@ -45,10 +47,10 @@ function metricText(m: RichMember, key: SortKey): string {
 
 function EquipIcon({ item }: { item: Equipped | undefined }) {
   if (!item) {
-    return <span className="h-5 w-5 shrink-0 rounded bg-zinc-100 dark:bg-zinc-800" />;
+    return <span className="h-7 w-7 shrink-0 rounded bg-zinc-100 dark:bg-zinc-800" />;
   }
   return (
-    <span className="relative h-5 w-5 shrink-0 overflow-hidden rounded bg-zinc-100 dark:bg-zinc-800">
+    <span className="relative h-7 w-7 shrink-0 overflow-hidden rounded bg-zinc-100 dark:bg-zinc-800">
       {/* eslint-disable-next-line @next/next/no-img-element */}
       <img
         src={`/sprites/${item.slot}/${item.code}.png`}
@@ -58,7 +60,7 @@ function EquipIcon({ item }: { item: Equipped | undefined }) {
         style={{ imageRendering: 'pixelated' }}
       />
       {item.enhance > 0 && (
-        <span className="absolute bottom-0 right-0 rounded-tl bg-black/65 px-0.5 text-[7px] font-bold leading-tight text-amber-300">
+        <span className="absolute bottom-0 right-0 rounded-tl bg-black/65 px-0.5 text-[8px] font-bold leading-tight text-amber-300">
           +{item.enhance}
         </span>
       )}
@@ -68,6 +70,7 @@ function EquipIcon({ item }: { item: Equipped | undefined }) {
 
 export function GuildMemberList({ members, myUserId }: { members: RichMember[]; myUserId: string }) {
   const [sort, setSort] = useState<SortKey>('combat');
+  const sortLabel = SORTS.find((s) => s.key === sort)!.label;
 
   const sorted = useMemo(
     () => [...members].sort((a, b) => b[sort] - a[sort] || a.nickname.localeCompare(b.nickname)),
@@ -96,51 +99,57 @@ export function GuildMemberList({ members, myUserId }: { members: RichMember[]; 
         </div>
       </div>
 
-      <ul className="mt-2 space-y-1">
+      <ul className="mt-2 divide-y divide-zinc-100 dark:divide-zinc-800/70">
         {sorted.map((m) => {
           const badge = ROLE_BADGE[m.role];
           const bySlot = new Map(m.equipped.map((e) => [e.slot, e]));
           return (
-            <li key={m.userId} className="flex items-center gap-2 py-1">
-              {/* 아바타 */}
-              <span className="h-9 w-9 shrink-0 overflow-hidden rounded-lg bg-zinc-100 dark:bg-zinc-800">
-                {m.avatar ? (
-                  // eslint-disable-next-line @next/next/no-img-element
-                  <img
-                    src={m.avatar}
-                    alt=""
-                    aria-hidden
-                    className="h-full w-full object-contain"
-                    style={{ imageRendering: 'pixelated' }}
-                  />
-                ) : null}
-              </span>
-
-              {/* 닉 + 장비 3종 */}
-              <div className="min-w-0 flex-1">
-                <div className="flex min-w-0 items-center gap-1">
-                  <span
-                    className={`truncate text-[13px] font-semibold ${m.userId === myUserId ? 'text-amber-700 dark:text-amber-300' : ''}`}
-                  >
-                    {m.nickname}
-                  </span>
-                  {badge && (
-                    <span className={`shrink-0 rounded-full px-1.5 py-0 text-[9px] font-bold ${badge.cls}`}>
-                      {badge.label}
+            <li key={m.userId}>
+              <Link
+                href={`/u/${encodeURIComponent(m.publicCode)}`}
+                className="flex items-center gap-3 py-2 active:opacity-70"
+              >
+                {/* 왼쪽: 아바타 + (닉네임 / 메트릭) */}
+                <span className="h-12 w-12 shrink-0 overflow-hidden rounded-lg bg-zinc-100 dark:bg-zinc-800">
+                  {m.avatar ? (
+                    // eslint-disable-next-line @next/next/no-img-element
+                    <img
+                      src={m.avatar}
+                      alt=""
+                      aria-hidden
+                      className="h-full w-full object-contain"
+                      style={{ imageRendering: 'pixelated' }}
+                    />
+                  ) : null}
+                </span>
+                <div className="min-w-0 flex-1">
+                  <div className="flex min-w-0 items-center gap-1">
+                    <span
+                      className={`truncate text-[13px] font-semibold ${m.userId === myUserId ? 'text-amber-700 dark:text-amber-300' : ''}`}
+                    >
+                      {m.nickname}
                     </span>
-                  )}
+                    {badge && (
+                      <span className={`shrink-0 rounded-full px-1.5 py-0 text-[9px] font-bold ${badge.cls}`}>
+                        {badge.label}
+                      </span>
+                    )}
+                  </div>
+                  <p className="mt-0.5 text-[11px] text-zinc-500">
+                    {sortLabel}{' '}
+                    <span className="font-mono font-bold tabular-nums text-zinc-700 dark:text-zinc-300">
+                      {metricText(m, sort)}
+                    </span>
+                  </p>
                 </div>
-                <div className="mt-0.5 flex gap-1">
+
+                {/* 오른쪽: 장비 3종 가로 */}
+                <div className="flex shrink-0 gap-1.5">
                   {SLOT_ORDER.map((slot) => (
                     <EquipIcon key={slot} item={bySlot.get(slot)} />
                   ))}
                 </div>
-              </div>
-
-              {/* 정렬 메트릭 */}
-              <span className="shrink-0 text-right font-mono text-[12px] font-bold tabular-nums text-zinc-700 dark:text-zinc-300">
-                {metricText(m, sort)}
-              </span>
+              </Link>
             </li>
           );
         })}

@@ -2,6 +2,7 @@
 
 import { useState, useTransition } from 'react';
 import { useRouter } from 'next/navigation';
+import Link from 'next/link';
 
 import { useResourceToast } from '@/components/ResourceToast';
 import { useDiamond } from '@/components/DiamondContext';
@@ -104,7 +105,19 @@ export function GuildSettings({
 
   return (
     <div className="space-y-4 px-4 py-4">
-      <h1 className="text-base font-bold">길드 설정</h1>
+      <h1 className="text-base font-bold">길드 관리</h1>
+
+      {/* 점령전 배치 진입 */}
+      <Link
+        href="/guild/deploy"
+        className="flex items-center justify-between rounded-xl border border-zinc-200 bg-white px-4 py-3 dark:border-zinc-800 dark:bg-zinc-950"
+      >
+        <div>
+          <span className="text-sm font-bold">점령전 배치</span>
+          <p className="text-[11px] text-zinc-500">길드원 공격/수비 지정</p>
+        </div>
+        <span className="text-zinc-400">→</span>
+      </Link>
 
       {/* 가입 방식 + 신청 */}
       <section className="rounded-xl border border-zinc-200 bg-white p-4 dark:border-zinc-800 dark:bg-zinc-950">

@@ -194,6 +194,7 @@ export async function getGuildMembersRich(guildId: bigint) {
     .select({
       userId: guildMembers.userId,
       nickname: profiles.nickname,
+      publicCode: profiles.publicCode,
       role: guildMembers.role,
       contribution: guildMembers.contributionPoints,
       // 유저 지정 방향(active_direction, enum→text) 우선, 없으면 정면(south) 폴백.
@@ -244,6 +245,7 @@ export async function getGuildMembersRich(guildId: bigint) {
     return {
       userId: b.userId,
       nickname: b.nickname,
+      publicCode: b.publicCode,
       role: b.role,
       avatar: b.avatar,
       contribution: Number(b.contribution),

@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useRef, useTransition } from 'react';
+import { useEffect, useRef, useState, useTransition } from 'react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 
@@ -42,6 +42,8 @@ export function GuildHome({
   const { showHeaderToast, showError } = useResourceToast();
   const { optimisticAdjust } = useDiamond();
   const [pending, start] = useTransition();
+  const [confirm, setConfirm] = useState(false);
+  const [confirmLeft, setConfirmLeft] = useState(0);
   const isOfficer = myRole === 'leader' || myRole === 'vice';
   const nextTier = usedToday < GUILD_DONATIONS_PER_DAY ? GUILD_DONATION_TIERS[usedToday]! : null;
 
@@ -56,8 +58,22 @@ export function GuildHome({
     return () => clearTimeout(t);
   }, [guild.emblemUrl, router]);
 
-  const donate = () => {
-    if (!nextTier) return;
+  // 유료 기부 인-버튼 3초 컨펌(만료 자동 해제).
+  useEffect(() => {
+    if (!confirm) return;
+    const id = setInterval(() => {
+      setConfirmLeft((s) => {
+        if (s <= 1) {
+          setConfirm(false);
+          return 0;
+        }
+        return s - 1;
+      });
+    }, 1000);
+    return () => clearInterval(id);
+  }, [confirm]);
+
+  const runDonate = () =>
     start(async () => {
       const r = await donateAction();
       if (r.status !== 'success') return showError(guildErrMsg(r.code));
@@ -65,10 +81,21 @@ export function GuildHome({
       showHeaderToast({ title: `기부 완료 +${r.xp} XP` });
       router.refresh();
     });
+
+  const onDonate = () => {
+    if (pending || !nextTier) return;
+    if (nextTier.cost === 0) return runDonate(); // 1회차 무료 — 즉시
+    if (!confirm) {
+      setConfirmLeft(3);
+      setConfirm(true);
+      return;
+    }
+    setConfirm(false);
+    runDonate();
   };
 
   const leave = () => {
-    if (!confirm('길드를 탈퇴할까요? (24시간 재가입 불가)')) return;
+    if (!window.confirm('길드를 탈퇴할까요? (24시간 재가입 불가)')) return;
     start(async () => {
       const r = await leaveGuildAction();
       if (r.status !== 'success') return showError(guildErrMsg(r.code));
@@ -76,6 +103,16 @@ export function GuildHome({
       router.refresh();
     });
   };
+
+  const donateLabel = pending
+    ? '기부 중…'
+    : !nextTier
+      ? '오늘 기부 완료'
+      : confirm
+        ? `한 번 더 누르면 기부 (${confirmLeft}s)`
+        : nextTier.cost === 0
+          ? '기부'
+          : `기부 (${nextTier.cost}💎)`;
 
   return (
     <div className="space-y-4">
@@ -101,18 +138,7 @@ export function GuildHome({
           <div className="min-w-0 flex-1">
             <div className="flex items-baseline justify-between gap-2">
               <h2 className="truncate text-base font-bold">{guild.name}</h2>
-              <div className="flex shrink-0 items-center gap-2">
-                <span className="text-xs text-zinc-500">Lv.{guild.level}</span>
-                {isOfficer && (
-                  <Link
-                    href="/guild/settings"
-                    aria-label="길드 설정"
-                    className="rounded-full border border-zinc-300 px-2 py-0.5 text-[11px] font-semibold text-zinc-500 dark:border-zinc-700"
-                  >
-                    설정
-                  </Link>
-                )}
-              </div>
+              <span className="shrink-0 text-xs text-zinc-500">Lv.{guild.level}</span>
             </div>
             <p className="mt-0.5 text-[11px] text-zinc-500">
               멤버 {guild.memberCount}/{guild.capacity} · 거주 {residence ?? '미배정'}
@@ -126,43 +152,42 @@ export function GuildHome({
           </p>
         )}
 
-        {/* 기부 — 길드 정보란 내 */}
-        <div className="mt-3 flex items-center justify-between gap-2 border-t border-zinc-200 pt-3 dark:border-zinc-800">
-          <div>
-            <span className="text-[13px] font-bold">길드 기부</span>
-            <p className="text-[11px] text-zinc-500">
-              오늘 {usedToday}/{GUILD_DONATIONS_PER_DAY}
-              {nextTier
-                ? ` · 다음 ${nextTier.cost === 0 ? '무료' : `${nextTier.cost}💎`} → +${nextTier.xp} XP`
-                : ' · 완료'}
-            </p>
-          </div>
-          <button
-            type="button"
-            onClick={donate}
-            disabled={pending || !nextTier}
-            className="shrink-0 rounded-lg bg-amber-600 px-4 py-2 text-sm font-bold text-white disabled:opacity-50"
-          >
-            {nextTier ? '기부' : '완료'}
-          </button>
-        </div>
+        {/* 기부 버튼(인-버튼 컨펌) */}
+        <button
+          type="button"
+          onClick={onDonate}
+          disabled={pending || !nextTier}
+          className={`relative isolate mt-3 w-full overflow-hidden rounded-lg py-2.5 text-sm font-bold transition-colors ${
+            !nextTier
+              ? 'bg-zinc-200 text-zinc-400 dark:bg-zinc-800 dark:text-zinc-600'
+              : confirm
+                ? 'bg-amber-700 text-white'
+                : 'bg-amber-600 text-white'
+          }`}
+        >
+          {confirm ? (
+            <span
+              aria-hidden
+              className="absolute inset-0 bg-amber-500"
+              style={{ animation: 'confirm-bg-pulse 1.2s ease-in-out infinite' }}
+            />
+          ) : null}
+          <span className="relative">{donateLabel}</span>
+        </button>
       </section>
 
-      {/* 점령전 배치 진입 */}
-      <Link
-        href="/guild/deploy"
-        className="flex items-center justify-between rounded-xl border border-zinc-200 bg-white px-4 py-3 dark:border-zinc-800 dark:bg-zinc-950"
-      >
-        <div>
-          <span className="text-sm font-bold">점령전 배치</span>
-          <p className="text-[11px] text-zinc-500">
-            {isOfficer ? '길드원 공격/수비 지정' : '우리 길드 배치 현황'}
-          </p>
-        </div>
-        <span className="text-zinc-400">→</span>
-      </Link>
+      {/* 길드 관리(임원, 정보 영역과 분리) */}
+      {isOfficer && (
+        <Link
+          href="/guild/settings"
+          className="flex items-center justify-between rounded-xl border border-zinc-200 bg-white px-4 py-3 dark:border-zinc-800 dark:bg-zinc-950"
+        >
+          <span className="text-sm font-bold">길드 관리</span>
+          <span className="text-zinc-400">→</span>
+        </Link>
+      )}
 
-      {/* 길드원 명단(아바타·장비·전투력/강화/기여도 정렬) */}
+      {/* 길드원 명단(아바타·장비·정렬 메트릭, 클릭 시 프로필) */}
       <GuildMemberList members={members} myUserId={myUserId} />
 
       {/* 탈퇴 */}
