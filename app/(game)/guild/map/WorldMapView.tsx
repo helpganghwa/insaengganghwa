@@ -294,8 +294,8 @@ export function WorldMapView({
                   </dd>
                 </div>
                 <div className="flex justify-between">
-                  <dt className="text-zinc-500">누적 세금</dt>
-                  <dd className="font-mono tabular-nums">💎 {selected.taxDiamond}</dd>
+                  <dt className="text-zinc-500">누적 세금 💎</dt>
+                  <dd className="font-mono tabular-nums">{selected.taxDiamond}</dd>
                 </div>
               </dl>
 
