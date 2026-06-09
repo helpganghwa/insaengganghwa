@@ -10,6 +10,7 @@ export type GuildErrorCode =
   | 'REJOIN_LOCKED' // 탈퇴 후 24h 미경과
   | 'NOT_LEADER'
   | 'LEADER_MUST_TRANSFER' // 길드장이 멤버 남은 채 탈퇴 시도(위임/해산 필요)
+  | 'DONATION_CAP_REACHED' // 일일 기부 한도 소진
   | 'FORBIDDEN';
 
 export class GuildError extends Error {
