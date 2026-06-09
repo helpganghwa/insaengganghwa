@@ -53,6 +53,24 @@ export const CONQUEST_DEFENDER_BONUS = 0.2;
 export const CONQUEST_LORD_POWER_MULT = 3;
 export const ZONE_TOTAL = 50;
 
+/** 배치 역할 — 공격/수비. 영주는 배치행 없이 자동 수비(별도). */
+export type ConquestRole = 'attack' | 'defend';
+/**
+ * 유효 전투력 배수(§5.8②) — 보정은 effCP에 적용(HP·데미지 둘 다). 시뮬 튜닝값.
+ *  공격 ×1.0 · 수비 ×1.2 · 영주 ×3.0(영주는 자동 수비, isLord로 구분).
+ */
+export function conquestPowerMult(role: ConquestRole, isLord: boolean): number {
+  if (isLord) return CONQUEST_LORD_POWER_MULT;
+  return role === 'defend' ? 1 + CONQUEST_DEFENDER_BONUS : 1;
+}
+/** HP = effCP × 배수(대난투 정합). */
+export const CONQUEST_HP_MULT = 2;
+/** 데미지 = 공격자 effCP × U(MIN,MAX)(최소 1). */
+export const CONQUEST_DMG_MIN = 0.5;
+export const CONQUEST_DMG_MAX = 1.2;
+/** 리플레이 보존 라운드(링버퍼, 클라이맥스 마지막 N). */
+export const CONQUEST_REPLAY_ROUNDS = 1000;
+
 // ── 세금 (§5.5) — 포인트 누적 → 100pt마다 구역 💎 +1 → 영주 수금(10%/90%) ──
 /** 거주 구역 강화 성공 시 누적되는 포인트 = 도달 강화 레벨(예 +99 성공 → 99pt). */
 export function taxPointsForEnhanceSuccess(reachedLevel: number): number {
