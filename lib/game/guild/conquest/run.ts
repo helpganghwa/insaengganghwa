@@ -1,0 +1,146 @@
+import 'server-only';
+
+import { eq, inArray, sql } from 'drizzle-orm';
+
+import { db } from '@/lib/db/client';
+import { zones, conquestBattles } from '@/lib/db/schema/guild';
+import { userEquipment } from '@/lib/db/schema/equipment';
+import { profiles } from '@/lib/db/schema/profiles';
+import { combatPowerFromOwned, type OwnedRow } from '@/lib/game/equipment/combat-power';
+
+import { conquestPowerMult } from '../balance';
+import { simulateConquest, type ConquestUnit } from './simulate';
+
+/**
+ * 점령전 정산 — GUILD §5.8⑧. KST 12:00 cron. 그날(오늘 KST) 전투를 결정론 정산.
+ *  - 경합 구역(공격 배치 ≥1)만 순회. 참가 = 배치(공/수) + 영주(자동 ×3 방어).
+ *  - effCp = 장비 전투력 스냅샷 × 역할 배수. simulateConquest → 승자 → 소유권/영주 갱신.
+ *  - 멱등: conquest_battles UNIQUE(zone_id, battle_kst_day) + 선조회. 구역별 트랜잭션.
+ */
+type DepRow = { zone_id: number; uid: string; guild_id: string; gname: string; role: 'attack' | 'defend' };
+type ZoneRow = { id: number; owner_guild_id: string | null; lord: string | null; owner_name: string | null };
+
+export async function runConquest(): Promise<{ battleDay: string; resolved: number }> {
+  const [todayRow] = (await db.execute(
+    sql`select (now() at time zone 'Asia/Seoul')::date::text d`,
+  )) as unknown as { d: string }[];
+  const battleDay = todayRow!.d;
+
+  // 그날 배치 전부(길드명 포함).
+  const deps = (await db.execute(sql`
+    select d.zone_id, d.user_id::text uid, d.guild_id::text guild_id, g.name gname, d.role::text role
+    from guild_battle_deployments d
+    join guilds g on g.id = d.guild_id
+    where d.battle_kst_day = ${battleDay}
+  `)) as unknown as DepRow[];
+
+  // 경합 구역 = 공격 배치가 있는 구역만.
+  const contested = new Set<number>();
+  for (const d of deps) if (d.role === 'attack') contested.add(d.zone_id);
+  if (contested.size === 0) return { battleDay, resolved: 0 };
+  const contestedArr = [...contested];
+
+  // 경합 구역 정보(소유·영주).
+  const zoneRows = (await db.execute(sql`
+    select z.id, z.owner_guild_id::text owner_guild_id, z.lord_user_id::text lord, og.name owner_name
+    from zones z left join guilds og on og.id = z.owner_guild_id
+    where z.id = any(${contestedArr})
+  `)) as unknown as ZoneRow[];
+  const zoneInfo = new Map(zoneRows.map((z) => [z.id, z]));
+
+  // 참가 유저(경합 구역 배치 + 영주) → 장비/닉.
+  const userIds = new Set<string>();
+  for (const d of deps) if (contested.has(d.zone_id)) userIds.add(d.uid);
+  for (const z of zoneRows) if (z.lord) userIds.add(z.lord);
+  if (userIds.size === 0) return { battleDay, resolved: 0 };
+  const idList = [...userIds];
+
+  const eqRows = await db
+    .select({
+      uid: userEquipment.userId,
+      cid: userEquipment.catalogItemId,
+      el: userEquipment.enhanceLevel,
+      tl: userEquipment.transcendLevel,
+    })
+    .from(userEquipment)
+    .where(inArray(userEquipment.userId, idList));
+  const ownedByUser = new Map<string, OwnedRow[]>();
+  for (const r of eqRows) {
+    const row: OwnedRow = { catalogItemId: r.cid, enhanceLevel: r.el, transcendLevel: r.tl };
+    const arr = ownedByUser.get(r.uid);
+    if (arr) arr.push(row);
+    else ownedByUser.set(r.uid, [row]);
+  }
+  const cpOf = (uid: string): number => combatPowerFromOwned(ownedByUser.get(uid) ?? []);
+
+  const nickRows = await db
+    .select({ uid: profiles.id, nick: profiles.nickname })
+    .from(profiles)
+    .where(inArray(profiles.id, idList));
+  const nickOf = new Map(nickRows.map((r) => [r.uid, r.nick]));
+
+  // 구역별 배치 묶기.
+  const depsByZone = new Map<number, DepRow[]>();
+  for (const d of deps) {
+    if (!contested.has(d.zone_id)) continue;
+    const arr = depsByZone.get(d.zone_id);
+    if (arr) arr.push(d);
+    else depsByZone.set(d.zone_id, [d]);
+  }
+
+  let resolved = 0;
+  for (const zoneId of contestedArr) {
+    const z = zoneInfo.get(zoneId);
+    if (!z) continue;
+    const units: ConquestUnit[] = [];
+    const seen = new Set<string>();
+    for (const d of depsByZone.get(zoneId) ?? []) {
+      seen.add(d.uid);
+      units.push({
+        userId: d.uid,
+        nickname: nickOf.get(d.uid) ?? '플레이어',
+        guildId: d.guild_id,
+        guildName: d.gname,
+        effCp: Math.round(cpOf(d.uid) * conquestPowerMult(d.role, false)),
+      });
+    }
+    // 영주 자동 방어(×3) — 배치행 없이 포함(중복 방지).
+    if (z.lord && z.owner_guild_id && !seen.has(z.lord)) {
+      units.push({
+        userId: z.lord,
+        nickname: nickOf.get(z.lord) ?? '영주',
+        guildId: z.owner_guild_id,
+        guildName: z.owner_name ?? '길드',
+        effCp: Math.round(cpOf(z.lord) * conquestPowerMult('defend', true)),
+      });
+    }
+
+    const result = simulateConquest(units, `conquest:${battleDay}:${zoneId}`);
+    const winner = result.winnerGuildId;
+
+    await db.transaction(async (tx) => {
+      const ins = await tx
+        .insert(conquestBattles)
+        .values({
+          battleKstDay: battleDay,
+          zoneId,
+          winnerGuildId: winner ? BigInt(winner) : null,
+          finale: result.finale,
+        })
+        .onConflictDoNothing({ target: [conquestBattles.zoneId, conquestBattles.battleKstDay] })
+        .returning({ id: conquestBattles.id });
+      if (ins.length === 0) return; // 이미 정산(멱등) — 소유권도 손대지 않음
+
+      // 승자 = 소유 길드 → 방어 성공(유지). 승자 = 공격/중립 점령 → 소유 이전 + 영주 공석.
+      if (winner && winner !== z.owner_guild_id) {
+        await tx
+          .update(zones)
+          .set({ ownerGuildId: BigInt(winner), lordUserId: null, capturedAt: new Date() })
+          .where(eq(zones.id, zoneId));
+      }
+      resolved++;
+    });
+  }
+
+  return { battleDay, resolved };
+}
