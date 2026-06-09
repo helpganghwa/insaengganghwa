@@ -177,17 +177,21 @@ export function WorldMapView({
                 zIndex: isResidence ? 20 : owned ? 10 : 1,
               }}
             >
+              {/* 내 거주 — 펄스 링(눈에 띄게) */}
+              {isResidence && (
+                <span className="pointer-events-none absolute left-1/2 top-1/2 h-[18px] w-[18px] -translate-x-1/2 -translate-y-1/2 animate-ping rounded-[5px] bg-amber-400/70" />
+              )}
               <span
-                className="relative block h-5 w-5 overflow-hidden rounded-[4px] ring-1 ring-black/70 transition"
+                className="relative block h-[18px] w-[18px] overflow-hidden rounded-[4px] ring-1 ring-black/70 transition"
                 style={{
                   backgroundColor: owned ? color : 'rgba(10,12,20,0.45)',
                   boxShadow: isResidence
-                    ? '0 0 8px 2px rgba(251,191,36,0.85)'
+                    ? '0 0 10px 3px rgba(251,191,36,0.95)'
                     : owned
                       ? `0 0 5px ${color}aa`
                       : 'none',
                   outline: isResidence
-                    ? '2px solid #fbbf24'
+                    ? '2px solid #fde047'
                     : mine
                       ? '2px solid #ffffff'
                       : `1px solid ${color}88`,
@@ -235,24 +239,7 @@ export function WorldMapView({
             className="max-h-[85vh] w-full max-w-[390px] overflow-y-auto rounded-2xl bg-white p-4 dark:bg-zinc-950"
             onClick={(e) => e.stopPropagation()}
           >
-            <div className="flex items-baseline justify-between gap-2">
-              <h2 className="truncate text-sm font-bold">{selected.name}</h2>
-              <div className="flex shrink-0 items-center gap-1.5">
-                <span
-                  className="rounded-full px-2 py-0.5 text-[10px] font-semibold text-white"
-                  style={{ backgroundColor: REGION[selected.region].color }}
-                >
-                  {REGION[selected.region].label}
-                </span>
-                <button
-                  type="button"
-                  onClick={() => setSelectedId(null)}
-                  className="text-xs text-zinc-500"
-                >
-                  닫기
-                </button>
-              </div>
-            </div>
+            <h2 className="truncate text-sm font-bold">{selected.name}</h2>
 
             <dl className="mt-3 space-y-1 text-[12px]">
               <div className="flex justify-between">
@@ -282,20 +269,26 @@ export function WorldMapView({
               최근 전투 기록 보기 →
             </button>
 
-            {selected.id === residence ? (
-              <p className="mt-2 rounded-lg bg-amber-500/10 px-2 py-1 text-[11px] text-amber-700 dark:text-amber-300">
-                내 거주 구역 — 강화 성공 시 이곳에 세금 포인트가 쌓입니다.
-              </p>
-            ) : canSetResidence ? (
-              <button
-                type="button"
-                onClick={() => moveResidence(selected.id)}
-                disabled={pending}
-                className="mt-3 w-full rounded-lg bg-amber-600 py-2.5 text-sm font-bold text-white disabled:opacity-50"
-              >
-                이곳을 거주지로 설정
-              </button>
-            ) : null}
+            {canSetResidence &&
+              (selected.id === residence ? (
+                // 현재 위치 — '이동' 버튼과 동일 크기(레이아웃 시프트 방지)
+                <button
+                  type="button"
+                  disabled
+                  className="mt-3 w-full cursor-default rounded-lg bg-amber-500/15 py-2.5 text-sm font-bold text-amber-700 dark:text-amber-300"
+                >
+                  현재 위치
+                </button>
+              ) : (
+                <button
+                  type="button"
+                  onClick={() => moveResidence(selected.id)}
+                  disabled={pending}
+                  className="mt-3 w-full rounded-lg bg-amber-600 py-2.5 text-sm font-bold text-white disabled:opacity-50"
+                >
+                  이동
+                </button>
+              ))}
 
             {/* 점령전 배치(길드원만) */}
             {myGuildId &&
