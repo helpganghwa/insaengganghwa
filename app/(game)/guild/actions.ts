@@ -1,6 +1,7 @@
 'use server';
 
 import { revalidatePath } from 'next/cache';
+import { after } from 'next/server';
 
 import { getSessionUserId } from '@/lib/auth/session';
 import {
@@ -48,12 +49,16 @@ export async function createGuildAction(name: string, emblem: EmblemSelection) {
   if (!isValidEmblemSelection(emblem)) return { status: 'error', code: 'EMBLEM_INVALID' } as const;
   try {
     const { guildId } = await createGuild({ userId: u, name, emblemColor: toneColor(emblem.toneId) });
-    // 문양 생성은 best-effort — 실패해도 길드는 유지(폴백 문양·재생성으로 커버).
-    try {
-      await generateAndStoreEmblem({ guildId, selection: emblem });
-    } catch (ge) {
-      console.error('[guild.create.emblem]', ge);
-    }
+    // 문양 생성(Pixellab ~수초)은 응답 이후로 미뤄 결성을 즉시 반환(낙관적 UX).
+    // best-effort — 실패해도 길드는 유지(폴백 문양·재생성으로 커버). 완료 시 /guild 무효화.
+    after(async () => {
+      try {
+        await generateAndStoreEmblem({ guildId, selection: emblem });
+        revalidatePath('/guild');
+      } catch (ge) {
+        console.error('[guild.create.emblem]', ge);
+      }
+    });
     revalidatePath('/guild');
     return { status: 'success', guildId: guildId.toString() } as const;
   } catch (e) {

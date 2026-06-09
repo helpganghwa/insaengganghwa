@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useTransition } from 'react';
+import { useEffect, useRef, useState, useTransition } from 'react';
 import { useRouter } from 'next/navigation';
 
 import { useResourceToast } from '@/components/ResourceToast';
@@ -75,6 +75,17 @@ export function GuildHome({
   const [rerollOpen, setRerollOpen] = useState(false);
   const [emblem, setEmblem] = useState<EmblemSelection>(DEFAULT_EMBLEM);
   const isOfficer = myRole === 'leader' || myRole === 'vice';
+
+  // 결성 직후 문양은 after()로 비동기 생성(~수초) → 폴백 표시 중이면 1회 자동 새로고침해 픽업.
+  const emblemPolledRef = useRef(false);
+  useEffect(() => {
+    if (guild.emblemUrl || emblemPolledRef.current) return;
+    const t = setTimeout(() => {
+      emblemPolledRef.current = true;
+      router.refresh();
+    }, 4000);
+    return () => clearTimeout(t);
+  }, [guild.emblemUrl, router]);
 
   const nextTier = usedToday < GUILD_DONATIONS_PER_DAY ? GUILD_DONATION_TIERS[usedToday]! : null;
 
