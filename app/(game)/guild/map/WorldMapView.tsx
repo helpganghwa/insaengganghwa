@@ -134,9 +134,9 @@ export function WorldMapView({
 
 
   return (
-    <div className="px-4 py-4">
-      {/* 지도 + 네모 노드 오버레이 */}
-      <div className="relative aspect-square w-full overflow-hidden rounded-2xl border border-zinc-800 bg-zinc-950">
+    <div className="flex min-h-full flex-col">
+      {/* 지도 + 네모 노드 오버레이 — 풀폭 플러시(좌우 여백·모서리 제거). */}
+      <div className="relative aspect-square w-full shrink-0 overflow-hidden border-b border-zinc-800 bg-zinc-950">
         {/* eslint-disable-next-line @next/next/no-img-element */}
         <img
           src={mapSrc}
@@ -191,7 +191,7 @@ export function WorldMapView({
               {/* 내 위치 — 네모 상단에 둥둥 떠 있는 amber 핀(부유 + 글로우 펄스) */}
               {isResidence && (
                 <span className="pointer-events-none absolute bottom-full left-1/2 mb-1 -translate-x-1/2">
-                  <span className="block" style={{ animation: 'marker-bob 1.5s ease-in-out infinite' }}>
+                  <span className="block" style={{ animation: 'marker-bob 2s ease-in-out infinite' }}>
                     <span
                       className="relative block h-[11px] w-[11px] border-[1.5px] border-white"
                       style={{
@@ -220,8 +220,9 @@ export function WorldMapView({
         })}
       </div>
 
-      {/* 세계 연대기 — 점령전 발표(KST 12:00)와 함께 매일 AI 갱신(큰 사건 있는 날만). [오늘]=긴 기록 / [전체]=날짜별 한 줄. */}
-      <section className="mt-3 rounded-xl border border-zinc-200 bg-white p-4 dark:border-zinc-800 dark:bg-zinc-950">
+      {/* 세계 연대기 — 점령전 발표(KST 12:00)와 함께 매일 AI 갱신(큰 사건 있는 날만). [오늘]=긴 기록 / [전체]=날짜별 한 줄.
+          남은 세로 영역을 가득 채워(flex-1) 페이지에 빈 공간이 없게. */}
+      <section className="flex flex-1 flex-col bg-white px-4 pb-4 pt-3 dark:bg-zinc-950">
         <div className="mb-2 flex items-center justify-between gap-2">
           <h3 className="text-sm font-bold">세계 연대기</h3>
           {hasChronicle ? (
