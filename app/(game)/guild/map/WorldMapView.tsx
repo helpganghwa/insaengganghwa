@@ -6,12 +6,7 @@ import { useRouter } from 'next/navigation';
 import { useResourceToast } from '@/components/ResourceToast';
 import { assetUrl } from '@/lib/asset-versions';
 
-import {
-  setResidenceAction,
-  setExecutorAction,
-  clearExecutorAction,
-  getZoneBattleAction,
-} from '../actions';
+import { setResidenceAction, getZoneBattleAction } from '../actions';
 import { guildErrMsg } from '../errors-msg';
 import { ConquestReplay } from './ConquestReplay';
 
@@ -28,7 +23,6 @@ type Battle = {
 
 type Region = 'volcano' | 'temple' | 'swamp' | 'orc' | 'kingdom' | 'angel';
 type DeployRole = 'attack' | 'defend';
-type Member = { userId: string; nickname: string };
 
 type Zone = {
   id: number;
@@ -58,20 +52,16 @@ const REGION: Record<Region, { label: string; color: string }> = {
 export function WorldMapView({
   mapSrc,
   myGuildId,
-  isOfficer,
   residenceZoneId,
   canSetResidence,
   guildDeploys,
-  members,
   zones,
 }: {
   mapSrc: string;
   myGuildId: string | null;
-  isOfficer: boolean;
   residenceZoneId: number | null;
   canSetResidence: boolean;
   guildDeploys: Array<{ zoneId: number; role: DeployRole }>;
-  members: Member[];
   zones: Zone[];
 }) {
   const router = useRouter();
@@ -80,13 +70,8 @@ export function WorldMapView({
   const [selectedId, setSelectedId] = useState<number | null>(null);
   const [replay, setReplay] = useState<Battle | null>(null);
   const [pending, start] = useTransition();
-  // 낙관적 상태 — 구역 집행관 오버라이드(서버 응답 전 즉시 반영, 실패 시 롤백).
-  const [execOverride, setExecOverride] = useState<
-    Map<number, { executorUserId: string | null; executorNickname: string | null }>
-  >(new Map());
 
-  const base = zones.find((z) => z.id === selectedId) ?? null;
-  const selected = base ? { ...base, ...(execOverride.get(base.id) ?? {}) } : null;
+  const selected = zones.find((z) => z.id === selectedId) ?? null;
 
   const openBattle = (zoneId: number) => {
     start(async () => {
@@ -123,46 +108,6 @@ export function WorldMapView({
   };
 
 
-  const restoreExec = (
-    zoneId: number,
-    prev: { executorUserId: string | null; executorNickname: string | null } | undefined,
-  ) =>
-    setExecOverride((o) => {
-      const n = new Map(o);
-      if (prev) n.set(zoneId, prev);
-      else n.delete(zoneId);
-      return n;
-    });
-
-  const assignExecutor = (zoneId: number, targetUserId: string) => {
-    if (!targetUserId) return;
-    const prev = execOverride.get(zoneId);
-    const nickname = members.find((m) => m.userId === targetUserId)?.nickname ?? null;
-    setExecOverride((o) => new Map(o).set(zoneId, { executorUserId: targetUserId, executorNickname: nickname })); // 낙관적
-    start(async () => {
-      const r = await setExecutorAction(zoneId, targetUserId);
-      if (r.status !== 'success') {
-        restoreExec(zoneId, prev);
-        return showError(guildErrMsg(r.code));
-      }
-      showHeaderToast({ title: '집행관 지정 완료' });
-      router.refresh();
-    });
-  };
-
-  const removeExecutor = (zoneId: number) => {
-    const prev = execOverride.get(zoneId);
-    setExecOverride((o) => new Map(o).set(zoneId, { executorUserId: null, executorNickname: null })); // 낙관적
-    start(async () => {
-      const r = await clearExecutorAction(zoneId);
-      if (r.status !== 'success') {
-        restoreExec(zoneId, prev);
-        return showError(guildErrMsg(r.code));
-      }
-      showHeaderToast({ title: '집행관 해제' });
-      router.refresh();
-    });
-  };
 
   return (
     <div className="px-4 py-4">
@@ -178,7 +123,6 @@ export function WorldMapView({
         />
         {zones.map((z) => {
           const owned = z.ownerGuildId != null;
-          const mine = owned && z.ownerGuildId === myGuildId;
           const isResidence = z.id === residence;
           const color = REGION[z.region].color;
           return (
@@ -194,25 +138,14 @@ export function WorldMapView({
                 zIndex: isResidence ? 20 : owned ? 10 : 1,
               }}
             >
-              {/* 내 거주 — 노드를 감싸는 은은한 펄스 헤일로(살짝 큰 링) */}
-              {isResidence && (
-                <span className="pointer-events-none absolute left-1/2 top-1/2 h-[23px] w-[23px] -translate-x-1/2 -translate-y-1/2 animate-pulse rounded-[7px] bg-amber-400/35" />
-              )}
               <span
                 className="relative block h-[17px] w-[17px] overflow-hidden rounded-[4px] ring-1 ring-black/70 transition"
                 style={{
-                  backgroundColor: owned ? color : 'rgba(10,12,20,0.45)',
-                  boxShadow: isResidence
-                    ? '0 0 6px 1px rgba(251,191,36,0.65)'
-                    : owned
-                      ? `0 0 5px ${color}aa`
-                      : 'none',
-                  outline: isResidence
-                    ? '2px solid #fbbf24'
-                    : mine
-                      ? '2px solid #ffffff'
-                      : `1px solid ${color}88`,
-                  outlineOffset: isResidence ? 0 : 1,
+                  // 점령 시: 배경 투명(문양만) + 얇은 지역색 보더. 중립: 어두운 배경 + 흐린 지역색.
+                  backgroundColor: owned ? 'transparent' : 'rgba(10,12,20,0.45)',
+                  boxShadow: owned ? `0 0 4px ${color}88` : 'none',
+                  outline: `1px solid ${color}${owned ? '' : '88'}`,
+                  outlineOffset: 1,
                 }}
               >
                 {/* 점령 길드 문양(있으면) */}
@@ -227,6 +160,14 @@ export function WorldMapView({
                   />
                 ) : null}
               </span>
+              {/* 내 위치 — 네모 상단에 둥둥 떠 있는 까만 다이아 마커(둥둥 애니메이션) */}
+              {isResidence && (
+                <span className="pointer-events-none absolute bottom-full left-1/2 mb-1 -translate-x-1/2">
+                  <span className="block" style={{ animation: 'marker-bob 1.4s ease-in-out infinite' }}>
+                    <span className="block h-[7px] w-[7px] rotate-45 bg-black shadow-[0_1px_2px_rgba(0,0,0,0.55)] ring-1 ring-white/70" />
+                  </span>
+                </span>
+              )}
             </button>
           );
         })}
@@ -282,10 +223,26 @@ export function WorldMapView({
 
             <div className="px-4 pb-4 pt-3">
               <dl className="space-y-1 text-[12px]">
-                <div className="flex justify-between">
+                <div className="flex justify-between gap-2">
                   <dt className="text-zinc-500">소유 길드</dt>
-                  <dd className="font-semibold">
-                    {selected.ownerGuildName ?? <span className="text-zinc-400">중립</span>}
+                  <dd className="flex min-w-0 items-center gap-1.5 font-semibold">
+                    {selected.ownerGuildName ? (
+                      <>
+                        {selected.ownerEmblemUrl && (
+                          // eslint-disable-next-line @next/next/no-img-element
+                          <img
+                            src={selected.ownerEmblemUrl}
+                            alt=""
+                            aria-hidden
+                            className="h-4 w-4 shrink-0 object-contain"
+                            style={{ imageRendering: 'pixelated' }}
+                          />
+                        )}
+                        <span className="truncate">{selected.ownerGuildName}</span>
+                      </>
+                    ) : (
+                      <span className="text-zinc-400">중립</span>
+                    )}
                   </dd>
                 </div>
                 <div className="flex justify-between">
@@ -325,54 +282,16 @@ export function WorldMapView({
                 </button>
               ))}
 
-            {/* 점령전 배치(길드원만) */}
+            {/* 점령전 배치 안개 — 우리 길드 배치 현황만 열람 */}
             {myGuildId &&
               (() => {
-                const ownedByMe = selected.ownerGuildId === myGuildId;
                 const fog = guildDeployByZone.get(selected.id);
-                if (!fog && !(ownedByMe && isOfficer)) return null;
+                if (!fog) return null;
                 return (
                   <div className="mt-3 border-t border-zinc-200 pt-3 dark:border-zinc-800">
-                    {fog && (
-                      <p className="text-[11px] text-zinc-500">
-                        우리 길드 배치 — 공격 {fog.attack} · 수비 {fog.defend}
-                      </p>
-                    )}
-
-                    {/* 집행관 지정(길드장/부길드장 · 자기 길드 소유 구역) */}
-                    {ownedByMe && isOfficer && (
-                      <div className="mt-3 rounded-lg bg-zinc-100 p-2.5 dark:bg-zinc-900">
-                        <div className="flex items-center justify-between">
-                          <span className="text-[11px] font-semibold">집행관 관리</span>
-                          {selected.executorUserId && (
-                            <button
-                              type="button"
-                              onClick={() => removeExecutor(selected.id)}
-                              disabled={pending}
-                              className="text-[10px] font-semibold text-red-500 disabled:opacity-50"
-                            >
-                              해제
-                            </button>
-                          )}
-                        </div>
-                        <select
-                          value={selected.executorUserId ?? ''}
-                          onChange={(e) => assignExecutor(selected.id, e.target.value)}
-                          disabled={pending}
-                          className="mt-1.5 w-full rounded-lg border border-zinc-300 bg-white px-2 py-2 text-[12px] dark:border-zinc-700 dark:bg-zinc-950"
-                        >
-                          <option value="">집행관 공석 (지정 안 함)</option>
-                          {members.map((m) => (
-                            <option key={m.userId} value={m.userId}>
-                              {m.nickname}
-                            </option>
-                          ))}
-                        </select>
-                        <p className="mt-1 text-[10px] text-zinc-500">
-                          집행관은 ×3 자동 방어 + 세금 수금권. 공석이면 세금이 동결됩니다.
-                        </p>
-                      </div>
-                    )}
+                    <p className="text-[11px] text-zinc-500">
+                      우리 길드 배치 — 공격 {fog.attack} · 수비 {fog.defend}
+                    </p>
                   </div>
                 );
               })()}

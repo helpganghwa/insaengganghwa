@@ -5,7 +5,6 @@ import {
   getMyMembership,
   getResidence,
   getMyGuildDeployments,
-  getGuildMembers,
 } from '@/lib/game/guild';
 
 import { WorldMapView } from './WorldMapView';
@@ -22,24 +21,17 @@ export default async function WorldMapPage() {
   ]);
 
   const myGuildId = membership?.guildId.toString() ?? null;
-  const myRole = membership?.role ?? null;
-  const isOfficer = myRole === 'leader' || myRole === 'vice';
 
-  // 자기 길드 배치(안개 — 자기 길드만) + 집행관 지정용 길드원 목록(임원만).
-  const [guildDeploys, members] = await Promise.all([
-    membership ? getMyGuildDeployments(membership.guildId) : Promise.resolve([]),
-    isOfficer && membership ? getGuildMembers(membership.guildId) : Promise.resolve([]),
-  ]);
+  // 자기 길드 배치 안개(자기 길드만 열람 — 세계지도는 거주 이동 외 조회 전용).
+  const guildDeploys = membership ? await getMyGuildDeployments(membership.guildId) : [];
 
   return (
     <WorldMapView
       mapSrc={assetUrl('/sprites/guild/worldmap.png')}
       myGuildId={myGuildId}
-      isOfficer={isOfficer}
       residenceZoneId={residenceZoneId}
       canSetResidence={userId != null}
       guildDeploys={guildDeploys.map((d) => ({ zoneId: d.zoneId, role: d.role as 'attack' | 'defend' }))}
-      members={members.map((m) => ({ userId: m.userId, nickname: m.nickname }))}
       zones={zones.map((z) => ({
         id: z.id,
         region: z.region,
