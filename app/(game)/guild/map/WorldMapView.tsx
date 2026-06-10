@@ -90,6 +90,8 @@ export function WorldMapView({
   const [replay, setReplay] = useState<Battle | null>(null);
   const [showNames, setShowNames] = useState(true);
   const [chronicleTab, setChronicleTab] = useState<'today' | 'full'>('today');
+  // 행이 없으면 getChronicle가 {today:null,list:[]}를 반환 — 이 경우도 placeholder로 처리.
+  const hasChronicle = !!chronicle && (chronicle.today != null || chronicle.list.length > 0);
   const [pending, start] = useTransition();
 
   const selected = zones.find((z) => z.id === selectedId) ?? null;
@@ -222,7 +224,7 @@ export function WorldMapView({
       <section className="mt-3 rounded-xl border border-zinc-200 bg-white p-4 dark:border-zinc-800 dark:bg-zinc-950">
         <div className="mb-2 flex items-center justify-between gap-2">
           <h3 className="text-sm font-bold">세계 연대기</h3>
-          {chronicle ? (
+          {hasChronicle ? (
             <div className="flex gap-0.5 rounded-lg bg-zinc-100 p-0.5 dark:bg-zinc-900">
               {(
                 [
@@ -246,18 +248,20 @@ export function WorldMapView({
             </div>
           ) : null}
         </div>
-        {chronicle ? (
+        {hasChronicle ? (
           chronicleTab === 'today' ? (
-            chronicle.today ? (
+            chronicle!.today ? (
               <p className="whitespace-pre-line text-[13px] leading-relaxed text-zinc-600 dark:text-zinc-300">
-                <ChronicleText text={chronicle.today} />
+                <ChronicleText text={chronicle!.today} />
               </p>
             ) : (
-              <p className="text-[13px] leading-relaxed text-zinc-400">아직 기록된 오늘의 역사가 없습니다.</p>
+              <p className="text-[13px] leading-relaxed text-zinc-400">
+                오늘은 기록된 역사가 없습니다. [전체]에서 지난 기록을 확인하세요.
+              </p>
             )
           ) : (
             <ul className="flex flex-col divide-y divide-zinc-100 dark:divide-zinc-900">
-              {chronicle.list.map((e) => (
+              {chronicle!.list.map((e) => (
                 <li key={e.kstDay} className="flex gap-2.5 py-2 text-[13px] leading-relaxed">
                   <span className="shrink-0 pt-px font-mono text-[11px] tabular-nums text-zinc-400">
                     {e.kstDay.slice(5).replace('-', '.')}
