@@ -145,8 +145,8 @@ export function WorldMapView({
           className="absolute inset-0 h-full w-full object-cover"
           style={{ imageRendering: 'pixelated' }}
         />
-        {/* 지역 이름 오버레이 토글 — 텍스트 없이 스위치만(좌상단). */}
-        <span className="absolute left-2 top-2 z-30 inline-flex rounded-full bg-black/45 p-1 backdrop-blur-sm">
+        {/* 지역 이름 오버레이 토글 — 텍스트 없이 스위치만(우하단). */}
+        <span className="absolute bottom-2 right-2 z-30 inline-flex rounded-full bg-black/45 p-1 backdrop-blur-sm">
           <ToggleSwitch on={showNames} onToggle={() => setShowNames((v) => !v)} small label="지역 이름 표시" />
         </span>
         {zones.map((z) => {
@@ -191,14 +191,13 @@ export function WorldMapView({
               {/* 내 위치 — 네모 상단에 둥둥 떠 있는 amber 핀(부유 + 글로우 펄스) */}
               {isResidence && (
                 <span className="pointer-events-none absolute bottom-full left-1/2 mb-1 -translate-x-1/2">
-                  <span className="block" style={{ animation: 'marker-bob 2s ease-in-out infinite' }}>
+                  <span className="block animate-marker-bob">
                     <span
-                      className="relative block h-[11px] w-[11px] border-[1.5px] border-white"
+                      className="relative block h-[11px] w-[11px] border-[1.5px] border-white animate-marker-pin-glow"
                       style={{
                         background: 'linear-gradient(135deg, #fcd34d, #f59e0b)',
                         borderRadius: '50% 50% 50% 0',
                         transform: 'rotate(-45deg)',
-                        animation: 'marker-pin-glow 1.5s ease-in-out infinite',
                       }}
                     >
                       <span className="absolute left-1/2 top-1/2 h-[3.5px] w-[3.5px] -translate-x-1/2 -translate-y-1/2 rounded-full bg-white" />

@@ -53,6 +53,10 @@ html {
   --animate-fx-counter-pop: fx-counter-pop 0.6s cubic-bezier(0.34, 1.56, 0.64, 1) forwards;
   /* 레이드 보스 부유(정적 스프라이트 전용 — APNG는 자체 재생). 8px 부드러운 상하. */
   --animate-boss-float: boss-float 3.2s ease-in-out infinite;
+  /* 세계지도 내 위치 마커 — 부유(상하)·핀 글로우. 토큰 등록 필수: 인라인 style로만 쓰면
+     @theme 안 @keyframes가 트리셰이크돼 누락된다(utility 참조 시에만 emit). */
+  --animate-marker-bob: marker-bob 2s ease-in-out infinite;
+  --animate-marker-pin-glow: marker-pin-glow 1.5s ease-in-out infinite;
   /* 레이드 — 타격/치명타 화면 셰이크·플래시, 데미지 부유, 페이즈 돌파 ripple. */
   --animate-hit-shake: hit-shake 0.32s ease-in-out;
   --animate-crit-shake: crit-shake 0.5s ease-in-out;
