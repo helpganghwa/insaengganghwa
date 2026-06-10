@@ -1,15 +1,18 @@
 import { redirect } from 'next/navigation';
 
-import { signInWithKakao } from '@/lib/auth/actions';
+import { signInWithKakao, signInWithTestAccount } from '@/lib/auth/actions';
 import { getSessionUserId } from '@/lib/auth/session';
+import { isTestLoginEnabled, TEST_ACCOUNTS } from '@/lib/auth/test-accounts';
 
 export default async function LoginPage({
   searchParams,
 }: {
-  searchParams: Promise<{ error?: string }>;
+  searchParams: Promise<{ error?: string; test?: string }>;
 }) {
   if (await getSessionUserId()) redirect('/'); // 로컬 JWT 검증 (CLAUDE §11.1)
-  const { error } = await searchParams;
+  const { error, test } = await searchParams;
+  // 테스트 로그인 — /login?test=true + env 스위치 둘 다 켜져야 노출(실운영 전환 시 env로 차단).
+  const testMode = test === 'true' && isTestLoginEnabled();
 
   return (
     <div className="flex min-h-dvh flex-col items-center justify-center bg-zinc-50 px-6 dark:bg-black">
@@ -25,17 +28,36 @@ export default async function LoginPage({
           <h1 className="mt-4 text-3xl font-semibold tracking-tight">인생강화</h1>
         </div>
 
-        <form action={signInWithKakao} className="w-full">
-          {/* 카카오 공식 디자인 가이드 버튼(complete/ko) — 변형 금지(색·로고·비율 유지). */}
-          <button
-            type="submit"
-            aria-label="카카오로 시작하기"
-            className="block w-full transition active:scale-[0.99] hover:brightness-95"
-          >
-            {/* eslint-disable-next-line @next/next/no-img-element */}
-            <img src="/kakao/kakao_login.png" alt="카카오로 시작하기" className="block w-full" />
-          </button>
-        </form>
+        {testMode ? (
+          <div className="w-full space-y-2">
+            <p className="text-xs font-semibold text-amber-600 dark:text-amber-400">
+              🧪 테스트 로그인 (실운영 전 제거 예정)
+            </p>
+            {TEST_ACCOUNTS.map((a) => (
+              <form action={signInWithTestAccount} key={a.email} className="w-full">
+                <input type="hidden" name="email" value={a.email} />
+                <button
+                  type="submit"
+                  className="block w-full rounded-xl border border-zinc-300 bg-white py-3 text-sm font-bold text-zinc-800 transition active:scale-[0.99] hover:bg-zinc-50 dark:border-zinc-700 dark:bg-zinc-900 dark:text-zinc-100 dark:hover:bg-zinc-800"
+                >
+                  {a.label}(으)로 로그인
+                </button>
+              </form>
+            ))}
+          </div>
+        ) : (
+          <form action={signInWithKakao} className="w-full">
+            {/* 카카오 공식 디자인 가이드 버튼(complete/ko) — 변형 금지(색·로고·비율 유지). */}
+            <button
+              type="submit"
+              aria-label="카카오로 시작하기"
+              className="block w-full transition active:scale-[0.99] hover:brightness-95"
+            >
+              {/* eslint-disable-next-line @next/next/no-img-element */}
+              <img src="/kakao/kakao_login.png" alt="카카오로 시작하기" className="block w-full" />
+            </button>
+          </form>
+        )}
 
         {error ? (
           <p className="text-sm text-red-600 dark:text-red-400">

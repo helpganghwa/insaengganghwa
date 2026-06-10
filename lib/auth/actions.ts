@@ -3,7 +3,8 @@
 import { redirect } from 'next/navigation';
 import { headers } from 'next/headers';
 
-import { createSupabaseServerClient } from './supabase-server';
+import { createSupabaseServerClient, createSupabaseServiceClient } from './supabase-server';
+import { isTestLoginEnabled, TEST_ACCOUNTS, TEST_PASSWORD } from './test-accounts';
 
 /** 내부 경로만 허용 — open-redirect 방지(절대 URL·//호스트 차단). */
 function safeNext(raw: unknown): string {
@@ -31,6 +32,32 @@ export async function signInWithKakao(formData?: FormData) {
 
   if (error) redirect(`/login?error=${encodeURIComponent(error.message)}`);
   if (data.url) redirect(data.url);
+}
+
+/**
+ * 테스트 계정 로그인 — `ALLOW_TEST_LOGIN=true`일 때만 동작(실운영 전환 시 env로 즉시 차단).
+ * 해당 email의 Supabase Auth 유저를 (없으면) admin으로 생성 → 비번 로그인(세션 쿠키 설정).
+ */
+export async function signInWithTestAccount(formData: FormData) {
+  if (!isTestLoginEnabled()) redirect('/login?error=test_login_disabled');
+  const email = String(formData.get('email') ?? '');
+  if (!TEST_ACCOUNTS.some((a) => a.email === email)) {
+    redirect('/login?error=invalid_test_account');
+  }
+
+  // 1) 계정 보장 — 이미 있으면 createUser가 에러를 내지만 무시하고 로그인 시도.
+  try {
+    const admin = createSupabaseServiceClient();
+    await admin.auth.admin.createUser({ email, password: TEST_PASSWORD, email_confirm: true });
+  } catch {
+    // 이미 가입됨 등 — 로그인 단계에서 검증.
+  }
+
+  // 2) 비번 로그인 — 요청 스코프 클라이언트라야 세션 쿠키가 설정됨.
+  const supabase = await createSupabaseServerClient();
+  const { error } = await supabase.auth.signInWithPassword({ email, password: TEST_PASSWORD });
+  if (error) redirect(`/login?error=${encodeURIComponent(error.message)}`);
+  redirect('/');
 }
 
 export async function signOut() {
