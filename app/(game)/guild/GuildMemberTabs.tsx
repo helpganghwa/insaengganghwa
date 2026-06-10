@@ -9,8 +9,8 @@ export function GuildMemberTabs({ home, ranking }: { home: ReactNode; ranking: G
   const [tab, setTab] = useState<'home' | 'ranking'>('home');
 
   return (
-    <div className="px-4 py-4">
-      <div className="mb-3 flex gap-1 rounded-xl bg-zinc-100 p-1 dark:bg-zinc-900">
+    <div className="px-3 py-3">
+      <div className="mb-2.5 flex gap-1 rounded-xl bg-zinc-100 p-1 dark:bg-zinc-900">
         {(
           [
             ['home', '길드 홈'],

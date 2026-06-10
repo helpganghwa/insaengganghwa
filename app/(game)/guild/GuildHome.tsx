@@ -130,11 +130,11 @@ export function GuildHome({
         : `기부 ${nextTier.cost}💎`;
 
   return (
-    <div className="space-y-4">
+    <div className="space-y-3">
       {/* 길드 정보 + 기부 */}
-      <section className="rounded-xl border border-zinc-200 bg-white p-4 dark:border-zinc-800 dark:bg-zinc-950">
-        <div className="flex items-center gap-3">
-          <div className="flex h-14 w-14 shrink-0 items-center justify-center overflow-hidden rounded-xl">
+      <section className="rounded-xl border border-zinc-200 bg-white p-3 dark:border-zinc-800 dark:bg-zinc-950">
+        <div className="flex items-center gap-2.5">
+          <div className="flex h-12 w-12 shrink-0 items-center justify-center overflow-hidden rounded-xl">
             {guild.emblemUrl ? (
               // eslint-disable-next-line @next/next/no-img-element
               <img
@@ -148,7 +148,7 @@ export function GuildHome({
             )}
           </div>
           <div className="min-w-0 flex-1">
-            <h2 className="truncate text-base font-bold">{guild.name}</h2>
+            <h2 className="truncate text-sm font-bold">{guild.name}</h2>
             <p className="mt-0.5 text-[11px] text-zinc-500">
               멤버 {guild.memberCount}/{guild.capacity}
             </p>
@@ -179,7 +179,7 @@ export function GuildHome({
         )}
 
         {/* 길드 경험치바 + 컴팩트 기부 버튼 */}
-        <div className="mt-3 flex items-center gap-2.5 border-t border-zinc-200 pt-3 dark:border-zinc-800">
+        <div className="mt-2.5 flex items-center gap-2.5 border-t border-zinc-200 pt-2.5 dark:border-zinc-800">
           <div className="min-w-0 flex-1">
             <div className="flex items-baseline justify-between text-[10px] text-zinc-500">
               <span className="font-bold text-zinc-700 dark:text-zinc-300">Lv.{guild.level}</span>

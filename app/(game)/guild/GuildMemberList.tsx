@@ -43,10 +43,10 @@ function sortValue(m: RichMember, key: SortKey): number {
 
 function EquipIcon({ item }: { item: Equipped | undefined }) {
   if (!item) {
-    return <span className="h-10 w-10 shrink-0 rounded-md bg-zinc-100 dark:bg-zinc-800" />;
+    return <span className="h-9 w-9 shrink-0 rounded-md bg-zinc-100 dark:bg-zinc-800" />;
   }
   return (
-    <span className="relative h-10 w-10 shrink-0 overflow-hidden rounded-md bg-zinc-100 dark:bg-zinc-800">
+    <span className="relative h-9 w-9 shrink-0 overflow-hidden rounded-md bg-zinc-100 dark:bg-zinc-800">
       {/* eslint-disable-next-line @next/next/no-img-element */}
       <img
         src={`/sprites/${item.slot}/${item.code}.png`}
@@ -74,10 +74,10 @@ function MemberRow({ m, myUserId, sort }: { m: RichMember; myUserId: string; sor
     <li>
       <Link
         href={`/u/${encodeURIComponent(m.publicCode)}`}
-        className="flex items-center gap-3 py-2 active:opacity-70"
+        className="flex items-center gap-2.5 py-1.5 active:opacity-70"
       >
         {/* 왼쪽: 아바타 + (닉네임 / 메트릭). 직책은 섹션 라벨로 표시(행엔 배지 없음). */}
-        <span className="h-12 w-12 shrink-0 overflow-hidden rounded-lg bg-zinc-100 dark:bg-zinc-800">
+        <span className="h-11 w-11 shrink-0 overflow-hidden rounded-lg bg-zinc-100 dark:bg-zinc-800">
           {m.avatar ? (
             // eslint-disable-next-line @next/next/no-img-element
             <img
@@ -145,7 +145,7 @@ export function GuildMemberList({ members, myUserId }: { members: RichMember[]; 
   }, [members, sort]);
 
   return (
-    <section className="rounded-xl border border-zinc-200 bg-white p-4 dark:border-zinc-800 dark:bg-zinc-950">
+    <section className="rounded-xl border border-zinc-200 bg-white p-3 dark:border-zinc-800 dark:bg-zinc-950">
       <div className="flex items-center justify-between gap-2">
         <h3 className="text-sm font-bold">길드원 ({members.length})</h3>
         <div className="flex gap-1 rounded-lg bg-zinc-100 p-0.5 dark:bg-zinc-900">

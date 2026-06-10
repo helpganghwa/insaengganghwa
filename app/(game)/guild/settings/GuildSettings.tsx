@@ -180,11 +180,11 @@ export function GuildSettings({
   };
 
   return (
-    <div className="space-y-4 px-4 py-4">
+    <div className="space-y-3 px-3 py-3">
       <h1 className="text-base font-bold">길드 관리</h1>
 
       {/* 구성원 관리 */}
-      <section className="rounded-xl border border-zinc-200 bg-white p-4 dark:border-zinc-800 dark:bg-zinc-950">
+      <section className="rounded-xl border border-zinc-200 bg-white p-3 dark:border-zinc-800 dark:bg-zinc-950">
         <h3 className="text-sm font-bold">구성원 관리</h3>
         <p className="mt-0.5 text-[11px] text-zinc-500">
           {isLeader ? '부길드장 임명·추방·길드장 위임' : '길드원 추방'}
@@ -253,7 +253,7 @@ export function GuildSettings({
       </section>
 
       {/* 가입 방식 + 신청 */}
-      <section className="rounded-xl border border-zinc-200 bg-white p-4 dark:border-zinc-800 dark:bg-zinc-950">
+      <section className="rounded-xl border border-zinc-200 bg-white p-3 dark:border-zinc-800 dark:bg-zinc-950">
         <div className="flex items-center justify-between gap-2">
           <h3 className="text-sm font-bold">가입 방식</h3>
           <div className="flex gap-1 rounded-lg bg-zinc-100 p-0.5 dark:bg-zinc-900">
@@ -323,7 +323,7 @@ export function GuildSettings({
 
       {/* 세금 풀 분배 (길드장) */}
       {isLeader && (
-        <section className="flex items-center justify-between gap-2 rounded-xl border border-zinc-200 bg-white p-4 dark:border-zinc-800 dark:bg-zinc-950">
+        <section className="flex items-center justify-between gap-2 rounded-xl border border-zinc-200 bg-white p-3 dark:border-zinc-800 dark:bg-zinc-950">
           <div>
             <h3 className="text-sm font-bold">길드 세금 풀</h3>
             <p className="text-[11px] text-zinc-500">{guild.taxPool}💎 누적</p>
@@ -341,7 +341,7 @@ export function GuildSettings({
 
       {/* 길드 문양 보관함 (길드장) — 최대 3개 보관, 1개 선택 사용. */}
       {isLeader && (
-        <section className="rounded-xl border border-zinc-200 bg-white p-4 dark:border-zinc-800 dark:bg-zinc-950">
+        <section className="rounded-xl border border-zinc-200 bg-white p-3 dark:border-zinc-800 dark:bg-zinc-950">
           <div className="mb-2 flex items-baseline justify-between">
             <h3 className="text-sm font-bold">
               길드 문양{' '}
