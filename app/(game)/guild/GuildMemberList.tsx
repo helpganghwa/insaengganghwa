@@ -64,65 +64,52 @@ function EquipIcon({ item }: { item: Equipped | undefined }) {
   );
 }
 
-const emph = 'font-bold text-amber-700 dark:text-amber-300';
-
-function MemberRow({ m, myUserId, sort }: { m: RichMember; myUserId: string; sort: SortKey }) {
+function MemberRow({ m, myUserId }: { m: RichMember; myUserId: string }) {
   const bySlot = new Map(m.equipped.map((e) => [e.slot, e]));
   const isMe = m.userId === myUserId;
-  const showSeen = isMe || m.lastSeenAt != null; // 표시 여부는 렌더 시점 데이터로 판정(분리자 정합).
   return (
     <li>
       <Link
         href={`/u/${encodeURIComponent(m.publicCode)}`}
-        className="flex items-center gap-2.5 py-1.5 active:opacity-70"
+        className="flex flex-col gap-1 py-1.5 active:opacity-70"
       >
-        {/* 왼쪽: 아바타 + (닉네임 / 메트릭). 직책은 섹션 라벨로 표시(행엔 배지 없음). */}
-        <span className="h-11 w-11 shrink-0 overflow-hidden rounded-lg bg-zinc-100 dark:bg-zinc-800">
-          {m.avatar ? (
-            // eslint-disable-next-line @next/next/no-img-element
-            <img
-              src={m.avatar}
-              alt=""
-              aria-hidden
-              className="h-full w-full object-contain"
-              style={{ imageRendering: 'pixelated', transform: 'scale(1.2)' }}
-            />
-          ) : null}
-        </span>
-        <div className="min-w-0 flex-1">
-          {/* 1줄: 닉네임 단독(전체 폭 — 잘림 방지). */}
-          <span
-            className={`block truncate text-[13px] font-semibold ${isMe ? 'text-amber-700 dark:text-amber-300' : ''}`}
-          >
-            {m.nickname}
+        {/* 윗줄: 아바타 + 닉네임(가변, 잘림) + 장비 3종 */}
+        <div className="flex items-center gap-2.5">
+          <span className="h-11 w-11 shrink-0 overflow-hidden rounded-lg bg-zinc-100 dark:bg-zinc-800">
+            {m.avatar ? (
+              // eslint-disable-next-line @next/next/no-img-element
+              <img
+                src={m.avatar}
+                alt=""
+                aria-hidden
+                className="h-full w-full object-contain"
+                style={{ imageRendering: 'pixelated', transform: 'scale(1.2)' }}
+              />
+            ) : null}
           </span>
-          {/* 2줄: 기여 · 전투 · 접속(컴팩트, 줄바꿈 허용 → 무엇도 안 잘림). 현재 정렬 기준 강조. */}
-          <div className="mt-0.5 flex flex-wrap items-center gap-x-1.5 gap-y-0.5 text-[11px] text-zinc-500">
-            <span className={sort === 'contribution' ? emph : ''}>
-              기여 <span className="tabular-nums">{fmtNum(m.contribution)}</span>
-            </span>
-            <span className="text-zinc-300 dark:text-zinc-700">·</span>
-            <span className={sort === 'combat' ? emph : ''}>
-              전투 <span className="tabular-nums">{fmtNum(m.combat)}</span>
-            </span>
-            {showSeen && (
-              <>
-                <span className="text-zinc-300 dark:text-zinc-700">·</span>
-                <LastSeen
-                  at={m.lastSeenAt}
-                  forceOnline={isMe}
-                  className={sort === 'lastSeen' ? emph : 'text-zinc-400'}
-                />
-              </>
-            )}
+          <span className="min-w-0 flex-1 truncate text-[13px] font-semibold">{m.nickname}</span>
+          <div className="flex shrink-0 gap-1.5">
+            {SLOT_ORDER.map((slot) => (
+              <EquipIcon key={slot} item={bySlot.get(slot)} />
+            ))}
           </div>
         </div>
 
-        {/* 오른쪽: 장비 3종 가로 */}
-        <div className="flex shrink-0 gap-1.5">
-          {SLOT_ORDER.map((slot) => (
-            <EquipIcon key={slot} item={bySlot.get(slot)} />
-          ))}
+        {/* 아랫줄: 기여·전투·접속 — 3등분 고정 영역(각자 영역 밖으로 안 넘침 → 레이아웃 시프트 없음). */}
+        <div className="grid grid-cols-3 gap-1 pl-[54px] text-[11px] text-zinc-500">
+          <span className="truncate">
+            기여 <span className="font-semibold tabular-nums text-zinc-700 dark:text-zinc-300">{fmtNum(m.contribution)}</span>
+          </span>
+          <span className="truncate">
+            전투 <span className="font-semibold tabular-nums text-zinc-700 dark:text-zinc-300">{fmtNum(m.combat)}</span>
+          </span>
+          <span className="truncate">
+            {isMe || m.lastSeenAt != null ? (
+              <LastSeen at={m.lastSeenAt} forceOnline={isMe} className="text-zinc-500 dark:text-zinc-400" />
+            ) : (
+              <span className="text-zinc-300 dark:text-zinc-600">—</span>
+            )}
+          </span>
         </div>
       </Link>
     </li>
@@ -175,7 +162,7 @@ export function GuildMemberList({ members, myUserId }: { members: RichMember[]; 
             </p>
             <ul>
               {rows.map((m) => (
-                <MemberRow key={m.userId} m={m} myUserId={myUserId} sort={sort} />
+                <MemberRow key={m.userId} m={m} myUserId={myUserId} />
               ))}
             </ul>
           </div>
