@@ -43,10 +43,10 @@ function sortValue(m: RichMember, key: SortKey): number {
 
 function EquipIcon({ item }: { item: Equipped | undefined }) {
   if (!item) {
-    return <span className="h-11 w-11 shrink-0 rounded-md bg-zinc-100 dark:bg-zinc-800" />;
+    return <span className="h-10 w-10 shrink-0 rounded-md bg-zinc-100 dark:bg-zinc-800" />;
   }
   return (
-    <span className="relative h-11 w-11 shrink-0 overflow-hidden rounded-md bg-zinc-100 dark:bg-zinc-800">
+    <span className="relative h-10 w-10 shrink-0 overflow-hidden rounded-md bg-zinc-100 dark:bg-zinc-800">
       {/* eslint-disable-next-line @next/next/no-img-element */}
       <img
         src={`/sprites/${item.slot}/${item.code}.png`}
@@ -74,7 +74,7 @@ function MemberRow({ m, myUserId }: { m: RichMember; myUserId: string }) {
         className="flex items-center gap-2.5 py-1.5 active:opacity-70"
       >
         {/* 아바타 */}
-        <span className="h-11 w-11 shrink-0 overflow-hidden rounded-lg bg-zinc-100 dark:bg-zinc-800">
+        <span className="h-10 w-10 shrink-0 overflow-hidden rounded-lg bg-zinc-100 dark:bg-zinc-800">
           {m.avatar ? (
             // eslint-disable-next-line @next/next/no-img-element
             <img
@@ -90,7 +90,7 @@ function MemberRow({ m, myUserId }: { m: RichMember; myUserId: string }) {
         {/* 가운데: (닉네임 + 최근접속) / (기여 · 전투) */}
         <div className="min-w-0 flex-1">
           <div className="flex items-center gap-1.5">
-            <span className="min-w-0 flex-1 truncate text-[12px] font-semibold">{m.nickname}</span>
+            <span className="min-w-0 flex-1 truncate text-[11px] font-semibold">{m.nickname}</span>
             {/* 최근접속 — 닉네임 오른쪽 고정 슬롯(최대 '999일 전'까지 한 줄). */}
             <span className="w-[52px] shrink-0 text-right text-[10px] text-zinc-400">
               {isMe || m.lastSeenAt != null ? (
