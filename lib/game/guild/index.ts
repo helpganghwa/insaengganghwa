@@ -2,6 +2,7 @@
 // (client는 상수만 필요하면 `./balance`를 직접 import — 서버 전용 모듈 혼입 방지.)
 export * from './errors';
 export * from './queries';
+export * from './badge';
 export * from './create';
 export * from './join';
 export * from './join-requests';

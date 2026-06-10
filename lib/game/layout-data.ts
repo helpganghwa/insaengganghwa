@@ -16,6 +16,8 @@ export interface LayoutData {
   hasFriendRequest: boolean;
   /** 헤더 머리 아이콘용 — 활성 프로필 south rotation URL. 없으면 null(폴백 아이콘). */
   profileSouth: string | null;
+  /** 헤더 우측 길드 문양 — 미소속/생성중이면 null(미표시). */
+  guildEmblemUrl: string | null;
 }
 
 const DEFAULTS: LayoutData = {
@@ -25,6 +27,7 @@ const DEFAULTS: LayoutData = {
   hasCompletedEnhance: false,
   hasFriendRequest: false,
   profileSouth: null,
+  guildEmblemUrl: null,
 };
 
 /**
@@ -37,9 +40,11 @@ export async function loadLayoutData(userId: string): Promise<LayoutData> {
     const [profileRows, mailRows, enhRows, friendReqRows] = await Promise.all([
       pgGuard(
         (sql) => sql`
-          select p.nickname, p.diamond, up.rotations
+          select p.nickname, p.diamond, up.rotations, g.emblem_url as guild_emblem_url
           from profiles p
           left join user_profiles up on up.id = p.active_profile_id
+          left join guild_members gm on gm.user_id = p.id
+          left join guilds g on g.id = gm.guild_id
           where p.id = ${userId}::uuid
           limit 1`,
         4000,
@@ -73,7 +78,12 @@ export async function loadLayoutData(userId: string): Promise<LayoutData> {
       ),
     ]);
     const p = profileRows[0] as
-      | { nickname?: string; diamond?: string | number | bigint; rotations?: unknown }
+      | {
+          nickname?: string;
+          diamond?: string | number | bigint;
+          rotations?: unknown;
+          guild_emblem_url?: string | null;
+        }
       | undefined;
     // rotations(jsonb)는 postgres.js 기본 파서가 객체로 파싱하나, 문자열일 경우 방어적 파싱.
     let rot = p?.rotations as Record<string, string> | string | null | undefined;
@@ -91,6 +101,7 @@ export async function loadLayoutData(userId: string): Promise<LayoutData> {
       hasCompletedEnhance: Number((enhRows[0] as { n?: number | string } | undefined)?.n ?? 0) > 0,
       hasFriendRequest: friendReqRows.length > 0,
       profileSouth: (rot as Record<string, string> | null)?.south ?? null,
+      guildEmblemUrl: p?.guild_emblem_url ?? null,
     };
   } catch (e) {
     console.warn('[layout] data load failed — defaults', (e as Error).message);

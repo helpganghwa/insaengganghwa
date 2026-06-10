@@ -7,6 +7,8 @@ import { and, eq, inArray, isNotNull, or } from 'drizzle-orm';
 import { db } from '@/lib/db/client';
 import { withTimeout } from '@/lib/db/with-timeout';
 import { getSessionUserId } from '@/lib/auth/session';
+import { getUserGuildBrief } from '@/lib/game/guild';
+import { GuildBadge } from '@/components/GuildBadge';
 import { profiles } from '@/lib/db/schema/profiles';
 import { userProfiles } from '@/lib/db/schema/avatar';
 import { catalogItems, userEquipment, type Slot } from '@/lib/db/schema/equipment';
@@ -149,6 +151,7 @@ const loadProfile = cache(async (handle: string) => {
     sumEnhance,
     maxEnhance,
     champItems,
+    guild: await getUserGuildBrief(prof.id),
   };
 });
 
@@ -356,11 +359,17 @@ export default async function PublicProfilePage({
           </div>
         )}
         <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(circle_at_50%_55%,transparent_30%,rgba(0,0,0,0.55))]" />
-        {/* 닉네임 — 상단 가운데, 아바타 머리 위 */}
-        <div className="absolute inset-x-0 top-3 z-10 text-center">
+        {/* 닉네임 — 상단 가운데, 아바타 머리 위. 그 아래 길드 문양+이름(있으면). */}
+        <div className="absolute inset-x-0 top-3 z-10 flex flex-col items-center text-center">
           <h1 className="text-xl font-extrabold tracking-tight text-white drop-shadow-[0_2px_3px_rgba(0,0,0,0.7)]">
             {data.nickname}
           </h1>
+          <GuildBadge
+            emblemUrl={data.guild?.emblemUrl ?? null}
+            name={data.guild?.name ?? null}
+            size={15}
+            className="mt-0.5 max-w-[80%] text-[11px] font-semibold text-white/80 drop-shadow-[0_1px_2px_rgba(0,0,0,0.8)]"
+          />
         </div>
       </section>
 

@@ -6,6 +6,7 @@ import { db } from '@/lib/db/client';
 import { withTimeout } from '@/lib/db/with-timeout';
 import { type Slot } from '@/lib/db/schema/equipment';
 import { CharacterStage } from '@/components/CharacterStage';
+import { GuildBadge } from '@/components/GuildBadge';
 import { combatPowerFromOwned } from '@/lib/game/equipment/combat-power';
 import { liberatedItemRanks } from '@/lib/game/codex/ranking';
 import { getCatalogMap, completeCatalog } from '@/lib/game/catalog';
@@ -43,6 +44,8 @@ export default async function ProfilePage() {
     diamond: string | null;
     nickname_changed_count: number | null;
     active_profile_id: string | null;
+    guild_emblem_url: string | null;
+    guild_name: string | null;
     referral_count: number;
     friend_req_count: number;
     equipment: {
@@ -59,6 +62,7 @@ export default async function ProfilePage() {
         select
           p.nickname, p.public_code, p.diamond::text as diamond,
           p.nickname_changed_count, p.active_profile_id,
+          g.emblem_url as guild_emblem_url, g.name as guild_name,
           (select count(*)::int from referral_attributions where referrer_user_id = ${userId}::uuid) as referral_count,
           (select count(*)::int from friend_links where status = 'pending' and addressee_id = ${userId}::uuid) as friend_req_count,
           coalesce((select json_agg(json_build_object(
@@ -68,7 +72,10 @@ export default async function ProfilePage() {
           coalesce((select json_agg(json_build_object(
               'id', id, 'rotations', rotations, 'activeDirection', active_direction) order by created_at desc)
             from user_profiles where user_id = ${userId}::uuid and hidden_at is null), '[]'::json) as avatars
-        from profiles p where p.id = ${userId}::uuid limit 1
+        from profiles p
+          left join guild_members gm on gm.user_id = p.id
+          left join guilds g on g.id = gm.guild_id
+        where p.id = ${userId}::uuid limit 1
       `) as unknown as Promise<MeRow[]>,
       liberatedItemRanks(userId),
       getCatalogMap(),
@@ -119,6 +126,12 @@ export default async function ProfilePage() {
               changedCount={row?.nickname_changed_count ?? 0}
               diamond={row?.diamond ?? '0'}
               className="relative z-10 text-white text-xs font-normal"
+            />
+            <GuildBadge
+              emblemUrl={row?.guild_emblem_url ?? null}
+              name={row?.guild_name ?? null}
+              size={14}
+              className="relative z-10 max-w-full text-[11px] text-white/70"
             />
             {activeProfile ? (
               <Link

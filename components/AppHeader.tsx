@@ -3,6 +3,7 @@ import Link from 'next/link';
 import type { LayoutData } from '@/lib/game/layout-data';
 import { DiamondInitializer } from '@/components/DiamondContext';
 import { HeaderDiamond } from '@/components/HeaderDiamond';
+import { GuildBadge } from '@/components/GuildBadge';
 
 /**
  * WIREFRAMES §0 — 좌: ⚒️ 인생강화 / 우: 📬(미수령 dot) · 닉네임 · 💎 다이아.
@@ -13,11 +14,13 @@ export function AppHeaderShell({
   nickname = '플레이어',
   diamond = 0n,
   profileSouth = null,
+  guildEmblemUrl = null,
   diamondSlot,
 }: {
   nickname?: string;
   diamond?: bigint;
   profileSouth?: string | null;
+  guildEmblemUrl?: string | null;
   /** AppHeader(server)가 client HeaderDiamond를 주입 — Suspense fallback은 정적 표시. */
   diamondSlot?: React.ReactNode;
 }) {
@@ -56,6 +59,7 @@ export function AppHeaderShell({
       </Link>
 
       <div className="flex shrink-0 items-center gap-1.5 text-xs">
+        <GuildBadge emblemUrl={guildEmblemUrl} size={20} />
         {diamondSlot ?? (
           <Link
             href="/shop?tab=charge"
@@ -84,6 +88,7 @@ export async function AppHeader({ dataPromise }: { dataPromise: Promise<LayoutDa
         nickname={d.nickname}
         diamond={d.diamond}
         profileSouth={d.profileSouth}
+        guildEmblemUrl={d.guildEmblemUrl}
         diamondSlot={<HeaderDiamond />}
       />
     </>
