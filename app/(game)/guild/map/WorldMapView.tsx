@@ -200,7 +200,8 @@ export function WorldMapView({
                   backgroundColor: owned ? 'transparent' : 'rgba(10,12,20,0.45)',
                   boxShadow: owned ? `0 0 4px ${color}88` : 'none',
                   outline: `1px solid ${color}${owned ? '' : '88'}`,
-                  outlineOffset: 1,
+                  // 0: 색상 보더를 요소 가장자리에 붙여 배경↔보더 빈공간 제거(배경이 보더까지 꽉 참).
+                  outlineOffset: 0,
                 }}
               >
                 {/* 점령 길드 문양(있으면) */}
