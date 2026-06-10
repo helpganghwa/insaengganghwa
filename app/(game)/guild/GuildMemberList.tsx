@@ -26,9 +26,11 @@ const SORTS: { key: SortKey; label: string }[] = [
   { key: 'totalEnhance', label: '합산강화' },
 ];
 const SLOT_ORDER: Slot[] = ['weapon', 'armor', 'accessory'];
-const ROLE_BADGE: Record<RichMember['role'], { label: string; cls: string } | null> = {
-  leader: { label: '길드장', cls: 'bg-amber-500/15 text-amber-700 dark:text-amber-300' },
-  vice: { label: '부길드장', cls: 'bg-sky-500/15 text-sky-700 dark:text-sky-300' },
+// 직책 — 아바타 코너 배지(단일 글자). 이름 옆 텍스트 배지는 긴 닉네임에서 줄바꿈/잘림
+// 문제가 있어, 공간을 차지하지 않는 아바타 코너 마크로 표시(장=길드장, 부=부길드장).
+const ROLE_MARK: Record<RichMember['role'], { char: string; cls: string; title: string } | null> = {
+  leader: { char: '장', cls: 'bg-amber-500 text-white', title: '길드장' },
+  vice: { char: '부', cls: 'bg-sky-500 text-white', title: '부길드장' },
   member: null,
 };
 
@@ -69,7 +71,7 @@ function EquipIcon({ item }: { item: Equipped | undefined }) {
 }
 
 function MemberRow({ m, myUserId, sort, sortLabel }: { m: RichMember; myUserId: string; sort: SortKey; sortLabel: string }) {
-  const badge = ROLE_BADGE[m.role];
+  const mark = ROLE_MARK[m.role];
   const bySlot = new Map(m.equipped.map((e) => [e.slot, e]));
   return (
     <li>
@@ -77,8 +79,8 @@ function MemberRow({ m, myUserId, sort, sortLabel }: { m: RichMember; myUserId: 
         href={`/u/${encodeURIComponent(m.publicCode)}`}
         className="flex items-center gap-3 py-2 active:opacity-70"
       >
-        {/* 왼쪽: 아바타 + (닉네임 / 메트릭) */}
-        <span className="h-12 w-12 shrink-0 overflow-hidden rounded-lg bg-zinc-100 dark:bg-zinc-800">
+        {/* 왼쪽: 아바타(직책 코너 배지) + (닉네임 / 메트릭) */}
+        <span className="relative h-12 w-12 shrink-0 overflow-hidden rounded-lg bg-zinc-100 dark:bg-zinc-800">
           {m.avatar ? (
             // eslint-disable-next-line @next/next/no-img-element
             <img
@@ -86,9 +88,17 @@ function MemberRow({ m, myUserId, sort, sortLabel }: { m: RichMember; myUserId: 
               alt=""
               aria-hidden
               className="h-full w-full object-contain"
-              style={{ imageRendering: 'pixelated', transform: 'scale(1.1)' }}
+              style={{ imageRendering: 'pixelated', transform: 'scale(1.2)' }}
             />
           ) : null}
+          {mark && (
+            <span
+              title={mark.title}
+              className={`absolute left-0.5 top-0.5 z-10 flex h-4 w-4 items-center justify-center rounded-full text-[9px] font-bold shadow-[0_1px_2px_rgba(0,0,0,0.4)] ${mark.cls}`}
+            >
+              {mark.char}
+            </span>
+          )}
         </span>
         <div className="min-w-0 flex-1">
           <div className="flex min-w-0 items-center gap-1">
@@ -97,11 +107,6 @@ function MemberRow({ m, myUserId, sort, sortLabel }: { m: RichMember; myUserId: 
             >
               {m.nickname}
             </span>
-            {badge && (
-              <span className={`shrink-0 rounded-full px-1.5 py-0 text-[9px] font-bold ${badge.cls}`}>
-                {badge.label}
-              </span>
-            )}
           </div>
           <p className="mt-0.5 text-[11px] text-zinc-500">
             {sortLabel}{' '}
@@ -166,17 +171,20 @@ export function GuildMemberList({ members, myUserId }: { members: RichMember[]; 
         </div>
       </div>
 
-      {/* 운영진 — 상단 고정 별도 섹션 */}
+      {/* 운영진 — 상단 고정(직책순). 일반 길드원과 divider로 심플 구분. */}
       {officers.length > 0 && (
-        <ul className="mt-2 rounded-lg bg-amber-50/70 px-2 ring-1 ring-amber-200/60 dark:bg-amber-500/[0.06] dark:ring-amber-500/15">
+        <ul className="mt-2 divide-y divide-zinc-100 dark:divide-zinc-800/70">
           {officers.map((m) => (
             <MemberRow key={m.userId} m={m} myUserId={myUserId} sort={sort} sortLabel={sortLabel} />
           ))}
         </ul>
       )}
+      {officers.length > 0 && regulars.length > 0 && (
+        <div className="my-1 border-t-2 border-dashed border-zinc-200 dark:border-zinc-800" />
+      )}
 
       {/* 일반 길드원 — 정렬 적용 */}
-      <ul className="mt-1 divide-y divide-zinc-100 dark:divide-zinc-800/70">
+      <ul className="divide-y divide-zinc-100 dark:divide-zinc-800/70">
         {regulars.map((m) => (
           <MemberRow key={m.userId} m={m} myUserId={myUserId} sort={sort} sortLabel={sortLabel} />
         ))}

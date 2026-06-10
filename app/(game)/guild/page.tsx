@@ -1,13 +1,8 @@
-import { eq } from 'drizzle-orm';
-
 import { getSessionUserId } from '@/lib/auth/session';
-import { db } from '@/lib/db/client';
-import { zones } from '@/lib/db/schema/guild';
 import {
   getMyMembership,
   getGuild,
   getGuildMembersRich,
-  getResidence,
   getGuildRanking,
   getMyJoinRequest,
 } from '@/lib/game/guild';
@@ -47,26 +42,15 @@ export default async function GuildPage() {
 
   if (!membership) return browseView(userId);
 
-  const [guild, members, residenceZoneId, ranking] = await Promise.all([
+  const [guild, members, ranking] = await Promise.all([
     getGuild(membership.guildId),
     getGuildMembersRich(membership.guildId),
-    getResidence(userId),
     getGuildRanking(),
   ]);
 
   if (!guild) {
     // 멤버십은 있으나 길드 행이 사라진 비정상 상태 — 브라우즈로.
     return browseView(userId);
-  }
-
-  let residenceName: string | null = null;
-  if (residenceZoneId != null) {
-    const [z] = await db
-      .select({ name: zones.name })
-      .from(zones)
-      .where(eq(zones.id, residenceZoneId))
-      .limit(1);
-    residenceName = z?.name ?? null;
   }
 
   const usedToday =
@@ -98,7 +82,6 @@ export default async function GuildPage() {
           myUserId={userId}
           myRole={membership.role}
           usedToday={usedToday}
-          residence={residenceName}
         />
       }
     />

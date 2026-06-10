@@ -34,14 +34,12 @@ export function GuildHome({
   myUserId,
   myRole,
   usedToday,
-  residence,
 }: {
   guild: GuildView;
   members: RichMember[];
   myUserId: string;
   myRole: GuildRole;
   usedToday: number;
-  residence: string | null;
 }) {
   const router = useRouter();
   const { showHeaderToast, showError } = useResourceToast();
@@ -124,10 +122,7 @@ export function GuildHome({
       {/* 길드 정보 + 기부 */}
       <section className="rounded-xl border border-zinc-200 bg-white p-4 dark:border-zinc-800 dark:bg-zinc-950">
         <div className="flex items-center gap-3">
-          <div
-            className="flex h-14 w-14 shrink-0 items-center justify-center overflow-hidden rounded-xl"
-            style={{ backgroundColor: guild.emblemColor ?? '#3f3f46' }}
-          >
+          <div className="flex h-14 w-14 shrink-0 items-center justify-center overflow-hidden rounded-xl">
             {guild.emblemUrl ? (
               // eslint-disable-next-line @next/next/no-img-element
               <img
@@ -146,7 +141,7 @@ export function GuildHome({
               <span className="shrink-0 text-xs text-zinc-500">Lv.{guild.level}</span>
             </div>
             <p className="mt-0.5 text-[11px] text-zinc-500">
-              멤버 {guild.memberCount}/{guild.capacity} · 거주 {residence ?? '미배정'}
+              멤버 {guild.memberCount}/{guild.capacity}
             </p>
           </div>
         </div>
@@ -177,7 +172,7 @@ export function GuildHome({
             type="button"
             onClick={onDonate}
             disabled={pending || !nextTier}
-            className={`relative isolate shrink-0 overflow-hidden rounded-lg px-3 py-1.5 text-[12px] font-bold transition-colors ${
+            className={`relative isolate flex w-[84px] shrink-0 items-center justify-center overflow-hidden rounded-lg py-1.5 text-[12px] font-bold transition-colors ${
               !nextTier
                 ? 'bg-zinc-200 text-zinc-400 dark:bg-zinc-800 dark:text-zinc-600'
                 : confirm

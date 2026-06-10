@@ -33,10 +33,11 @@ export function guildXpToNext(level: number): number {
 // ── 기부 (§2.1) — 일 3회, KST 자정 리셋. 개인 기여도 = 길드 XP와 1:1 ──
 export const GUILD_DONATIONS_PER_DAY = 3;
 /** index 0=1회차(무료) … 2=3회차. cost=💎, xp=길드 XP(=개인 기여도). */
+// 단계별 비용은 0/50/100💎로 증가하되, 기여도·길드 경험치 보상은 단계 무관 30 고정.
 export const GUILD_DONATION_TIERS = [
-  { cost: 0, xp: 10 },
+  { cost: 0, xp: 30 },
   { cost: 50, xp: 30 },
-  { cost: 100, xp: 70 },
+  { cost: 100, xp: 30 },
 ] as const;
 
 // ── 직책 / 운영 (§1, §4) ──
