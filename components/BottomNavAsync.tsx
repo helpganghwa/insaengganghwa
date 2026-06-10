@@ -8,7 +8,6 @@ export async function BottomNavAsync({ dataPromise }: { dataPromise: Promise<Lay
   return (
     <BottomNav
       hasCompletedEnhance={d.hasCompletedEnhance}
-      hasShopFree={d.hasShopFree}
       hasFriendRequest={d.hasFriendRequest}
     />
   );
