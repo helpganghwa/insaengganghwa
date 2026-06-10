@@ -56,6 +56,26 @@ async function emblemQualityOk(png: Buffer): Promise<boolean> {
   }
 }
 
+/**
+ * 프레임 채우기 — 투명 여백 trim → (size-2*pad) 박스에 비율 유지로 꽉 차게(contain) → pad 둘러 중앙 정렬.
+ * 깃발(세로 길쭉)·날개(중앙 작음) 등이 작게 떠 보이던 문제 해결 — 맵 노드(16~24px) 가시성↑.
+ * trim 실패(거의 균일 등) 시 원본 그대로.
+ */
+async function fitEmblemToFrame(png: Buffer, size = 128, pad = 6): Promise<Buffer> {
+  let trimmed: Buffer;
+  try {
+    trimmed = await sharp(png).trim({ threshold: 10 }).toBuffer();
+  } catch {
+    return png;
+  }
+  const inner = size - pad * 2;
+  return sharp(trimmed)
+    .resize(inner, inner, { fit: 'contain', background: { r: 0, g: 0, b: 0, alpha: 0 }, kernel: 'nearest' })
+    .extend({ top: pad, bottom: pad, left: pad, right: pad, background: { r: 0, g: 0, b: 0, alpha: 0 } })
+    .png()
+    .toBuffer();
+}
+
 /** pixflux 128² no_background 생성 → PNG Buffer. 429는 백오프 재시도, 그 외 실패는 throw. */
 async function generateEmblemPng(prompt: string): Promise<Buffer> {
   const key = process.env.PIXELLAB_API_KEY;
@@ -117,7 +137,8 @@ export async function generateAndStoreEmblem(input: {
   selection: EmblemSelection;
 }): Promise<{ emblemUrl: string }> {
   const prompt = buildEmblemPrompt(input.selection);
-  const png = await generateEmblemPng(prompt);
+  const raw = await generateEmblemPng(prompt);
+  const png = await fitEmblemToFrame(raw); // 투명 여백 제거·프레임 채움(가시성↑)
   const emblemUrl = await uploadEmblem(input.guildId, png);
   await db
     .update(guilds)
