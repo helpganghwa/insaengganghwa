@@ -8,6 +8,7 @@ import { withTimeout } from '@/lib/db/with-timeout';
 import { profiles } from '@/lib/db/schema/profiles';
 import { raids, raidParticipants, raidRewards } from '@/lib/db/schema/raid';
 import { raidPhasesCleared } from '@/lib/game/raid';
+import { getGuildBriefsByUsers } from '@/lib/game/guild';
 import { getBossBg, getBossSprite } from '@/lib/game/raid/boss-sprites';
 import { assetUrl } from '@/lib/asset-versions';
 
@@ -87,6 +88,11 @@ export default async function RaidDetail({ params }: { params: Promise<{ raidId:
     publicCode: string;
   }[]);
 
+  // 참가자 길드 문양 일괄(닉네임 옆 노출용) — 실패해도 레이드는 표시.
+  const guildBriefs = await getGuildBriefsByUsers(parts.map((p) => p.userId)).catch(
+    () => new Map<string, { emblemUrl: string | null; name: string }>(),
+  );
+
   const total = parts.reduce((s, p) => s + Number(p.totalDamage), 0);
   const me = parts.find((p) => p.userId === userId) ?? null;
 
@@ -138,6 +144,7 @@ export default async function RaidDetail({ params }: { params: Promise<{ raidId:
         publicCode: p.publicCode,
         totalDamage: Number(p.totalDamage),
         isMe: p.userId === userId,
+        guildEmblemUrl: guildBriefs.get(p.userId)?.emblemUrl ?? null,
       }))
       .sort((a, b) => b.totalDamage - a.totalDamage),
   };

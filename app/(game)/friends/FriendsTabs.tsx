@@ -4,6 +4,7 @@ import { useState, useTransition } from 'react';
 import { useRouter } from 'next/navigation';
 
 import { useResourceToast } from '@/components/ResourceToast';
+import { GuildBadge } from '@/components/GuildBadge';
 
 import {
   searchAction,
@@ -72,7 +73,10 @@ function Row({ u, onOpen, right }: { u: FriendUser; onOpen: () => void; right: R
       >
         <Avatar src={u.profileSouth} />
         <div className="min-w-0 flex-1">
-          <div className="truncate text-sm font-bold">{u.nickname}</div>
+          <div className="flex min-w-0 items-center gap-1">
+            <span className="truncate text-sm font-bold">{u.nickname}</span>
+            <GuildBadge emblemUrl={u.guildEmblemUrl ?? null} size={14} className="shrink-0" />
+          </div>
         </div>
         <div className="flex shrink-0 items-center gap-1.5" onClick={(e) => e.stopPropagation()}>
           {right}

@@ -1,6 +1,7 @@
 import { getSessionUserId } from '@/lib/auth/session';
 import { withTimeout } from '@/lib/db/with-timeout';
 import { getFriends, getRequests, type FriendUser } from '@/lib/game/friends';
+import { getGuildBriefsByUsers } from '@/lib/game/guild';
 
 import { FriendsTabs } from './FriendsTabs';
 
@@ -18,5 +19,21 @@ export default async function FriendsPage() {
     withTimeout(getRequests(userId), 3500, 'friends.requests').catch(() => empty),
   ]);
 
-  return <FriendsTabs friends={friends} incoming={requests.incoming} outgoing={requests.outgoing} />;
+  // 길드 문양 일괄 부착(목록·받은·보낸 전체 1쿼리). 실패해도 목록은 표시.
+  const ids = [...friends, ...requests.incoming, ...requests.outgoing].map((u) => u.userId);
+  const guildMap = await getGuildBriefsByUsers(ids).catch(
+    () => new Map<string, { emblemUrl: string | null; name: string }>(),
+  );
+  const attach = (u: FriendUser): FriendUser => ({
+    ...u,
+    guildEmblemUrl: guildMap.get(u.userId)?.emblemUrl ?? null,
+  });
+
+  return (
+    <FriendsTabs
+      friends={friends.map(attach)}
+      incoming={requests.incoming.map(attach)}
+      outgoing={requests.outgoing.map(attach)}
+    />
+  );
 }

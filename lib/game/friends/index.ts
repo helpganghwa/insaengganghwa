@@ -28,6 +28,8 @@ export interface FriendUser {
   nickname: string;
   publicCode: string;
   profileSouth: string | null;
+  /** 닉네임 옆 길드 문양 — page에서 batch 부착(미소속/생성중이면 null). */
+  guildEmblemUrl?: string | null;
 }
 
 const SOUTH = sql<string | null>`${userProfiles.rotations} ->> 'south'`;

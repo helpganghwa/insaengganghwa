@@ -4,6 +4,7 @@ import { useRef, useState } from 'react';
 import Link from 'next/link';
 
 import type { LeaderboardEntry, LeaderboardMetric } from '@/lib/game/leaderboard/queries';
+import { GuildBadge } from '@/components/GuildBadge';
 
 /**
  * 홈 §1 — Top 3 명예의 전당 카드(클라이언트). 5종 덱을 미리 받아 표시 타입을 state로 소유 →
@@ -127,6 +128,7 @@ export function RankingDeck({
                   <span className="truncate text-[11px] font-medium text-white text-pixel-outline">
                     {entry.nickname}
                   </span>
+                  <GuildBadge emblemUrl={entry.guildEmblemUrl ?? null} size={12} className="shrink-0" />
                 </div>
                 <div className="relative w-full flex-1">
                   {entry.profileImg ? (

@@ -2,6 +2,7 @@ import Link from 'next/link';
 
 import { getSessionUserId } from '@/lib/auth/session';
 import { getLeaderboardPayload, type LeaderboardMetric } from '@/lib/game/leaderboard/queries';
+import { GuildBadge } from '@/components/GuildBadge';
 import { LeaderboardTabs } from './LeaderboardTabs';
 
 const LABEL: Record<LeaderboardMetric, string> = {
@@ -114,6 +115,7 @@ export default async function LeaderboardPage({
                         <span className="text-pixel-outline truncate text-[11px] font-medium text-white">
                           {entry.nickname}
                         </span>
+                        <GuildBadge emblemUrl={entry.guildEmblemUrl ?? null} size={12} className="shrink-0" />
                       </div>
                       <div className="relative w-full flex-1">
                         {entry.profileImg && (
@@ -160,8 +162,9 @@ export default async function LeaderboardPage({
                         <span className="w-7 shrink-0 text-center font-mono text-sm text-zinc-400 tabular-nums">
                           #{e.rank}
                         </span>
-                        <span className="flex-1 truncate text-sm font-medium text-white">
-                          {e.nickname}
+                        <span className="flex min-w-0 flex-1 items-center gap-1">
+                          <span className="truncate text-sm font-medium text-white">{e.nickname}</span>
+                          <GuildBadge emblemUrl={e.guildEmblemUrl ?? null} size={14} className="shrink-0" />
                         </span>
                         <span className="font-mono text-sm text-amber-200 tabular-nums">
                           {fmt(e.value)}

@@ -16,6 +16,7 @@ import { BossSprite } from '@/components/BossSprite';
 import { getBossBg, getBossBgClass } from '@/lib/game/raid/boss-sprites';
 import { assetUrl } from '@/lib/asset-versions';
 import { useResourceToast, type HeaderReward } from '@/components/ResourceToast';
+import { GuildBadge } from '@/components/GuildBadge';
 import * as haptic from '@/lib/game/haptic';
 import { sounds } from '@/lib/game/sound';
 
@@ -44,7 +45,13 @@ export type RaidView = {
     boxes: Record<SupplySlot, number>;
     claimed: boolean;
   } | null;
-  participants: { nickname: string; publicCode: string; totalDamage: number; isMe: boolean }[];
+  participants: {
+    nickname: string;
+    publicCode: string;
+    totalDamage: number;
+    isMe: boolean;
+    guildEmblemUrl: string | null;
+  }[];
 };
 
 const MEDAL = ['🥇', '🥈', '🥉'];
@@ -616,10 +623,13 @@ export function RaidSessionCard({ view: v }: { view: RaidView }) {
                     {/* 닉네임 클릭 → 본인 포함 모두 /u/<code> 공개 프로필(불변 코드). */}
                     <Link
                       href={`/u/${encodeURIComponent(p.publicCode)}`}
-                      className="min-w-0 flex-1 truncate font-medium hover:underline"
+                      className="flex min-w-0 flex-1 items-center gap-1 font-medium hover:underline"
                     >
-                      {p.nickname}
-                      {p.isMe ? ' (나)' : ''}
+                      <span className="truncate">
+                        {p.nickname}
+                        {p.isMe ? ' (나)' : ''}
+                      </span>
+                      <GuildBadge emblemUrl={p.guildEmblemUrl ?? null} size={13} className="shrink-0" />
                     </Link>
                     <span className="shrink-0 font-mono tabular-nums text-zinc-300">
                       {p.totalDamage.toLocaleString()}

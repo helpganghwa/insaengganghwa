@@ -11,6 +11,7 @@ import { userEquipment } from '@/lib/db/schema/equipment';
 import { raids, raidParticipants } from '@/lib/db/schema/raid';
 import { meleeBattles } from '@/lib/db/schema/melee';
 import { combatPowerFromOwned } from '@/lib/game/equipment/combat-power';
+import { getGuildBriefsByUsers } from '@/lib/game/guild/badge';
 
 /**
  * 랭킹 — BALANCE §3.3. **시즌제 없음·상시 누적·Top 100**.
@@ -27,6 +28,8 @@ export type LeaderboardEntry = {
   rank: number;
   /** 대표 프로필 이미지 URL(없으면 null) */
   profileImg?: string | null;
+  /** 길드 문양 URL(미소속/생성중이면 null) — 닉네임 옆 노출용. */
+  guildEmblemUrl?: string | null;
 };
 const TOP = 100;
 
@@ -53,7 +56,7 @@ async function attachProfiles(entries: LeaderboardEntry[]): Promise<LeaderboardE
     );
   } catch {
     // 콜드/hang → 이미지 없이 순위만 반환(페이지 응답 보장).
-    return entries.map((e) => ({ ...e, profileImg: null }));
+    return entries.map((e) => ({ ...e, profileImg: null, guildEmblemUrl: null }));
   }
   const map = new Map(
     rows.map((r) => {
@@ -62,7 +65,18 @@ async function attachProfiles(entries: LeaderboardEntry[]): Promise<LeaderboardE
       return [r.userId, img] as const;
     }),
   );
-  return entries.map((e) => ({ ...e, profileImg: map.get(e.userId) ?? null }));
+  // 길드 문양 batch(실패해도 순위는 반환).
+  let guildMap = new Map<string, { emblemUrl: string | null; name: string }>();
+  try {
+    guildMap = await getGuildBriefsByUsers(entries.map((e) => e.userId));
+  } catch {
+    // 무시 — 문양 없이 진행.
+  }
+  return entries.map((e) => ({
+    ...e,
+    profileImg: map.get(e.userId) ?? null,
+    guildEmblemUrl: guildMap.get(e.userId)?.emblemUrl ?? null,
+  }));
 }
 
 async function maxRows() {
