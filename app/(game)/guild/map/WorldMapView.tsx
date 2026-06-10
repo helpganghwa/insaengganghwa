@@ -39,22 +39,47 @@ type Zone = {
   residentCount: number;
 };
 
-/** 연대기 본문 — AI가 길드/유저 이름을 **이름** 마커로 감싼 것을 강조 스팬으로 렌더. */
-function ChronicleText({ text }: { text: string }) {
-  const parts = text.split(/(\*\*[^*]+\*\*)/g);
-  return (
-    <>
-      {parts.map((p, i) =>
-        p.startsWith('**') && p.endsWith('**') ? (
-          <strong key={i} className="font-bold text-amber-600 dark:text-amber-400">
-            {p.slice(2, -2)}
-          </strong>
-        ) : (
-          <span key={i}>{p}</span>
-        ),
-      )}
-    </>
-  );
+/**
+ * 연대기 본문 — AI가 감싼 마커를 종류별 강조 스팬으로 렌더.
+ *   {g|이름}=길드(앰버 굵게) · {u|이름}=인물(스카이) · {z|이름}=구역(해당 구역의 지역색).
+ * zoneColor: 구역 이름 → 색(zones 기반). 미매칭이면 null(기본 색 유지). 지역 카테고리는 마커 없이 일반 텍스트.
+ */
+// \}+ — AI가 닫는 중괄호를 겹쳐 쓰는 경우({z|왕성}}) 여분까지 흡수.
+const CHRONICLE_TOKEN_RE = /\{([guz])\|([^}]+)\}+/g;
+function ChronicleText({ text, zoneColor }: { text: string; zoneColor: (name: string) => string | null }) {
+  const out: React.ReactNode[] = [];
+  let last = 0;
+  let key = 0;
+  CHRONICLE_TOKEN_RE.lastIndex = 0;
+  let m: RegExpExecArray | null;
+  while ((m = CHRONICLE_TOKEN_RE.exec(text)) !== null) {
+    if (m.index > last) out.push(<span key={key++}>{text.slice(last, m.index)}</span>);
+    const type = m[1];
+    const name = m[2];
+    if (type === 'g') {
+      out.push(
+        <strong key={key++} className="font-bold text-amber-600 dark:text-amber-400">
+          {name}
+        </strong>,
+      );
+    } else if (type === 'u') {
+      out.push(
+        <strong key={key++} className="font-semibold text-sky-600 dark:text-sky-400">
+          {name}
+        </strong>,
+      );
+    } else {
+      const c = zoneColor(name);
+      out.push(
+        <strong key={key++} className="font-semibold" style={c ? { color: c } : undefined}>
+          {name}
+        </strong>,
+      );
+    }
+    last = m.index + m[0].length;
+  }
+  if (last < text.length) out.push(<span key={key++}>{text.slice(last)}</span>);
+  return <>{out}</>;
 }
 
 const REGION: Record<Region, { label: string; color: string }> = {
@@ -92,6 +117,14 @@ export function WorldMapView({
   const [chronicleTab, setChronicleTab] = useState<'today' | 'full'>('today');
   // 행이 없으면 getChronicle가 {today:null,list:[]}를 반환 — 이 경우도 placeholder로 처리.
   const hasChronicle = !!chronicle && (chronicle.today != null || chronicle.list.length > 0);
+
+  // 연대기 {z|이름} 강조용 — 개별 구역 이름 → 그 구역의 지역색. (지역 카테고리는 색칠 안 함.)
+  const zoneColorMap = useMemo(() => {
+    const m = new Map<string, string>();
+    for (const z of zones) m.set(z.name, REGION[z.region].color);
+    return m;
+  }, [zones]);
+  const zoneColor = (name: string) => zoneColorMap.get(name) ?? null;
   const [pending, start] = useTransition();
 
   const selected = zones.find((z) => z.id === selectedId) ?? null;
@@ -251,9 +284,16 @@ export function WorldMapView({
         {hasChronicle ? (
           chronicleTab === 'today' ? (
             chronicle!.today ? (
-              <p className="whitespace-pre-line text-[13px] leading-relaxed text-zinc-600 dark:text-zinc-300">
-                <ChronicleText text={chronicle!.today} />
-              </p>
+              <div className="flex flex-col gap-2.5">
+                {chronicle!.today.split(/\n{2,}/).map((para, idx) => (
+                  <p
+                    key={idx}
+                    className="whitespace-pre-line text-[13px] leading-relaxed text-zinc-600 dark:text-zinc-300"
+                  >
+                    <ChronicleText text={para.trim()} zoneColor={zoneColor} />
+                  </p>
+                ))}
+              </div>
             ) : (
               <p className="text-[13px] leading-relaxed text-zinc-400">
                 오늘은 기록된 역사가 없습니다. [전체]에서 지난 기록을 확인하세요.
@@ -264,10 +304,10 @@ export function WorldMapView({
               {chronicle!.list.map((e) => (
                 <li key={e.kstDay} className="flex gap-2.5 py-2 text-[13px] leading-relaxed">
                   <span className="shrink-0 pt-px font-mono text-[11px] tabular-nums text-zinc-400">
-                    {e.kstDay.slice(5).replace('-', '.')}
+                    {e.kstDay.replace(/-/g, '.')}
                   </span>
                   <span className="text-zinc-600 dark:text-zinc-300">
-                    <ChronicleText text={e.headline} />
+                    <ChronicleText text={e.headline} zoneColor={zoneColor} />
                   </span>
                 </li>
               ))}

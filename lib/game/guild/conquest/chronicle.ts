@@ -30,13 +30,14 @@ export type ConquestDaySummary = {
   feats: { nickname: string; guild: string; kind: '수비' | '공격'; count: number }[];
 };
 
+// 지역 풀네임(줄임말 금지) — 세계지도 REGION 라벨과 일치.
 const REGION_KO: Record<string, string> = {
-  volcano: '화산',
-  temple: '신전',
-  swamp: '늪지',
-  orc: '오크',
+  volcano: '드래곤 화산',
+  temple: '잊힌 신전',
+  swamp: '슬라임 늪',
+  orc: '오크 부락',
   kingdom: '왕국',
-  angel: '천사',
+  angel: '타락 천사 부유섬',
 };
 
 /** 그날(kstDay) 점령전 결과를 집계 — 사건 없으면 battleCount 0. */
@@ -130,17 +131,22 @@ export async function aggregateConquestDay(kstDay: string): Promise<ConquestDayS
   };
 }
 
-const SYSTEM_PROMPT = `너는 대륙의 정복 전쟁을 기록하는 사관(史官)이다. 길드들이 매일 정오 구역을 두고 다투는 역사를 담담하게 적는다.
+const SYSTEM_PROMPT = `너는 대륙의 정복 전쟁을 기록하는 사관(史官)이다. 길드들이 구역을 두고 다투는 역사를 담담하게 적는다.
 
 규칙:
 - 한국어. 사료를 적듯 담담하고 절제된 역사 기록 톤. 과장·감탄·미사여구·영웅 서사시 톤 금지.
-- 길드 이름과 인물(사용자) 이름은 반드시 **이름** 형태(별표 두 개)로 감싼다(강조용). 구역 이름은 감싸지 않는다.
-- '인생강화'라는 단어는 절대 쓰지 않는다. 대륙·세계는 고유명 없이 '대륙' 등으로만 칭한다.
-- 이모지·이모티콘을 절대 쓰지 않는다.
+- 이름은 종류별 마커로 감싼다(강조용). 마커 안에는 이름 토큰만 넣고, 조사·'전역'·'일대' 같은 수식어는 마커 밖에 둔다.
+  마커는 여는 중괄호 1개 + 닫는 중괄호 1개로 끝낸다(겹쳐 쓰지 말 것: {z|왕성}} 금지, {z|왕성} 만):
+  - 길드 이름 → {g|이름}
+  - 인물(사용자) 이름 → {u|이름}
+  - 개별 구역 이름 → {z|이름}   (예: {z|왕성}, {z|대성당}, {z|성문})
+  - 지역(왕국·드래곤 화산·잊힌 신전·슬라임 늪·오크 부락·타락 천사 부유섬)에는 마커를 쓰지 않는다(일반 텍스트). 지역명은 주어진 이름 그대로 쓴다.
+- 시각·시간대 표현 금지(정오·아침·저녁·새벽·밤·자정, '종이 울리자' 등). 날짜·하루 단위 서술만 허용.
+- '인생강화'라는 단어, 이모지·이모티콘 절대 금지. 대륙·세계는 고유명 없이 '대륙' 등으로만 칭한다.
 - 주어진 '그날 사건'만 근거로 쓴다. 없는 사실을 지어내지 않는다.
 - 반드시 JSON만 출력: {"today": "...", "headline": "..."}.
-  - today: 그날의 역사를 이야기처럼 풀어 쓴 긴 기록(6~10문장). 담담한 기록체.
-  - headline: 그날을 한 줄로 압축한 핵심 사건(25자 내외, **이름** 마커 포함). 예: "**천둥길드**가 왕국 일대를 장악".`;
+  - today: 그날의 역사를 풀어 쓴 기록. 2~3개 문단으로 나누고 문단 사이는 빈 줄(\\n\\n)로 구분(가독성). 각 문단 3~5문장.
+  - headline: 그날을 한 줄로 압축한 핵심 사건(25자 내외, 마커 포함). 예: "{g|천둥길드}가 {z|왕성}을 점령".`;
 
 /** 그날 사건이 '큰 사건'인지 — 점령(영토 변동) 또는 주목할 개인 활약이 있으면 기록 대상. */
 function isNotable(s: ConquestDaySummary): boolean {
@@ -171,7 +177,7 @@ export async function generateAndStoreChronicle(
     messages: [
       {
         role: 'user',
-        content: `그날(${kstDay}) 점령전 사건(JSON):\n${JSON.stringify(summary)}\n\n위 규칙대로 JSON({today, headline})만 출력하라.`,
+        content: `그날(${kstDay}) 점령전 사건(JSON):\n${JSON.stringify(summary)}\n\n참고: winner·owner·from·standings[].guild·feats[].guild = 길드 이름({g|}), feats[].nickname = 인물 이름({u|}), zone·region = 지역·구역 이름({r|}).\n\n위 규칙대로 JSON({today, headline})만 출력하라.`,
       },
     ],
   });

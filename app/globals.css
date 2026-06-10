@@ -82,7 +82,7 @@ html {
   /* 세계지도 내 위치 마커 — 네모 상단에 둥둥 뜨는 부유 애니메이션(작게 위아래) */
   @keyframes marker-bob {
     0%, 100% { transform: translateY(0); }
-    50% { transform: translateY(-4px); }
+    50% { transform: translateY(-2.5px); }
   }
   /* 내 위치 핀 글로우 펄스(transform은 인라인 rotate 유지 — box-shadow만 애니메이트) */
   @keyframes marker-pin-glow {

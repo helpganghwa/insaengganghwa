@@ -217,7 +217,7 @@ export const guildTaxDistributions = pgTable(
 /**
  * 0046/0047 세계 연대기(AI) — 큰 사건 있는 날만 1행(점령전 발표 KST 12:00).
  * today_text='오늘'(긴 사관 스토리), headline='전체' 리스트용 그날 핵심 사건 한 줄.
- * 길드/유저 이름은 본문에 **...** 마커로 감싸 강조 렌더.
+ * 본문은 종류별 마커로 강조 렌더: {g|길드}·{u|인물}·{r|지역}(지역색).
  */
 export const worldChronicle = pgTable('world_chronicle', {
   kstDay: date('kst_day').primaryKey(),
