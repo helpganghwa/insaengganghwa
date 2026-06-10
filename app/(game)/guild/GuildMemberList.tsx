@@ -22,12 +22,11 @@ export type RichMember = {
   equipped: Equipped[];
 };
 
-type SortKey = 'combat' | 'maxEnhance' | 'totalEnhance' | 'contribution';
+type SortKey = 'combat' | 'contribution' | 'lastSeen';
 const SORTS: { key: SortKey; label: string }[] = [
   { key: 'contribution', label: '기여도' },
   { key: 'combat', label: '전투력' },
-  { key: 'maxEnhance', label: '최고강화' },
-  { key: 'totalEnhance', label: '합산강화' },
+  { key: 'lastSeen', label: '최근접속' },
 ];
 const SLOT_ORDER: Slot[] = ['weapon', 'armor', 'accessory'];
 
@@ -35,13 +34,17 @@ function metricText(m: RichMember, key: SortKey): string {
   switch (key) {
     case 'combat':
       return m.combat.toLocaleString('ko-KR');
-    case 'maxEnhance':
-      return `+${m.maxEnhance}`;
-    case 'totalEnhance':
-      return `+${m.totalEnhance.toLocaleString('ko-KR')}`;
     case 'contribution':
       return m.contribution.toLocaleString('ko-KR');
+    case 'lastSeen':
+      return ''; // 최근접속은 <LastSeen> 컴포넌트로 렌더(여기선 미사용).
   }
+}
+
+/** 정렬용 수치 — 최근접속은 epoch(최신 우선, 기록 없으면 0=맨 뒤). 그 외는 메트릭 값. */
+function sortValue(m: RichMember, key: SortKey): number {
+  if (key === 'lastSeen') return m.lastSeenAt ? Date.parse(m.lastSeenAt) : 0;
+  return m[key];
 }
 
 function EquipIcon({ item }: { item: Equipped | undefined }) {
@@ -89,19 +92,25 @@ function MemberRow({ m, myUserId, sort, sortLabel }: { m: RichMember; myUserId: 
           ) : null}
         </span>
         <div className="min-w-0 flex-1">
-          <div className="flex min-w-0 items-center gap-1.5">
+          <div className="flex min-w-0 items-center gap-1">
             <span
               className={`truncate text-[13px] font-semibold ${m.userId === myUserId ? 'text-amber-700 dark:text-amber-300' : ''}`}
             >
               {m.nickname}
             </span>
-            <LastSeen at={m.lastSeenAt} className="shrink-0 text-[10px] text-zinc-400" />
           </div>
           <p className="mt-0.5 text-[11px] text-zinc-500">
             {sortLabel}{' '}
-            <span className="font-mono font-bold tabular-nums text-zinc-700 dark:text-zinc-300">
-              {metricText(m, sort)}
-            </span>
+            {sort === 'lastSeen' ? (
+              <LastSeen
+                at={m.lastSeenAt}
+                className="align-middle font-medium text-zinc-700 dark:text-zinc-300"
+              />
+            ) : (
+              <span className="font-mono font-bold tabular-nums text-zinc-700 dark:text-zinc-300">
+                {metricText(m, sort)}
+              </span>
+            )}
           </p>
         </div>
 
@@ -123,7 +132,7 @@ export function GuildMemberList({ members, myUserId }: { members: RichMember[]; 
   // 직책별 그룹(길드장/부길드장/길드원) — 각 그룹 내부는 선택한 메트릭으로 정렬.
   const groups = useMemo(() => {
     const byMetric = (a: RichMember, b: RichMember) =>
-      b[sort] - a[sort] || a.nickname.localeCompare(b.nickname);
+      sortValue(b, sort) - sortValue(a, sort) || a.nickname.localeCompare(b.nickname);
     const of = (role: RichMember['role']) => members.filter((m) => m.role === role).sort(byMetric);
     return [
       { label: '길드장', rows: of('leader') },
