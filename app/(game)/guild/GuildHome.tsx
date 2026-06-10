@@ -46,9 +46,14 @@ export function GuildHome({
   const { optimisticAdjust } = useDiamond();
   const [pending, start] = useTransition();
   const [confirm, setConfirm] = useState(false);
-  const [confirmLeft, setConfirmLeft] = useState(0);
+  // 기부 낙관적 상태 — 즉시 반영('기부중' 미노출), 실패 시 롤백.
+  const [optDonations, setOptDonations] = useState(0);
+  const [optXp, setOptXp] = useState(0);
   const isOfficer = myRole === 'leader' || myRole === 'vice';
-  const nextTier = usedToday < GUILD_DONATIONS_PER_DAY ? GUILD_DONATION_TIERS[usedToday]! : null;
+  const effectiveUsed = usedToday + optDonations;
+  const nextTier =
+    effectiveUsed < GUILD_DONATIONS_PER_DAY ? (GUILD_DONATION_TIERS[effectiveUsed] ?? null) : null;
+  const displayXp = guild.xp + optXp;
 
   // 결성 직후 문양은 after()로 비동기 생성(~수초) → 폴백 표시 중이면 1회 자동 새로고침해 픽업.
   const emblemPolledRef = useRef(false);
@@ -61,40 +66,39 @@ export function GuildHome({
     return () => clearTimeout(t);
   }, [guild.emblemUrl, router]);
 
-  // 유료 기부 인-버튼 3초 컨펌(만료 자동 해제).
+  // 유료 기부 인-버튼 3초 컨펌(만료 자동 해제) — 펄스 애니메이션이 타이머를 시각 표현.
   useEffect(() => {
     if (!confirm) return;
-    const id = setInterval(() => {
-      setConfirmLeft((s) => {
-        if (s <= 1) {
-          setConfirm(false);
-          return 0;
-        }
-        return s - 1;
-      });
-    }, 1000);
-    return () => clearInterval(id);
+    const t = setTimeout(() => setConfirm(false), 3000);
+    return () => clearTimeout(t);
   }, [confirm]);
 
-  const runDonate = () =>
+  // 낙관적 기부 — 경험치바·다이아·단계를 즉시 반영하고 서버는 백그라운드 처리. 실패 시 롤백.
+  const runDonate = (tier: { cost: number; xp: number }) => {
+    setOptDonations((n) => n + 1);
+    setOptXp((x) => x + tier.xp);
+    if (tier.cost > 0) optimisticAdjust(BigInt(-tier.cost));
+    showHeaderToast({ title: `기부 완료 +${tier.xp} XP` });
     start(async () => {
       const r = await donateAction();
-      if (r.status !== 'success') return showError(guildErrMsg(r.code));
-      if (r.cost > 0) optimisticAdjust(BigInt(-r.cost));
-      showHeaderToast({ title: `기부 완료 +${r.xp} XP` });
-      router.refresh();
+      if (r.status !== 'success') {
+        setOptDonations((n) => Math.max(0, n - 1));
+        setOptXp((x) => Math.max(0, x - tier.xp));
+        if (tier.cost > 0) optimisticAdjust(BigInt(tier.cost));
+        showError(guildErrMsg(r.code));
+      }
     });
+  };
 
   const onDonate = () => {
     if (pending || !nextTier) return;
-    if (nextTier.cost === 0) return runDonate(); // 1회차 무료 — 즉시
+    if (nextTier.cost === 0) return runDonate(nextTier); // 1회차 무료 — 즉시
     if (!confirm) {
-      setConfirmLeft(3);
       setConfirm(true);
       return;
     }
     setConfirm(false);
-    runDonate();
+    runDonate(nextTier);
   };
 
   const leave = () => {
@@ -107,15 +111,13 @@ export function GuildHome({
     });
   };
 
-  const donateLabel = pending
-    ? '기부중'
-    : !nextTier
-      ? '완료'
-      : confirm
-        ? `한번더 ${confirmLeft}s`
-        : nextTier.cost === 0
-          ? '기부'
-          : `기부 ${nextTier.cost}💎`;
+  const donateLabel = !nextTier
+    ? '완료'
+    : confirm
+      ? `💎${nextTier.cost}` // 컨펌 오버레이(3s) — 비용 표시
+      : nextTier.cost === 0
+        ? '기부'
+        : `기부 ${nextTier.cost}💎`;
 
   return (
     <div className="space-y-4">
@@ -136,9 +138,16 @@ export function GuildHome({
             )}
           </div>
           <div className="min-w-0 flex-1">
-            <div className="flex items-baseline justify-between gap-2">
+            <div className="flex items-center justify-between gap-2">
               <h2 className="truncate text-base font-bold">{guild.name}</h2>
-              <span className="shrink-0 text-xs text-zinc-500">Lv.{guild.level}</span>
+              {isOfficer && (
+                <Link
+                  href="/guild/settings"
+                  className="shrink-0 rounded-md bg-zinc-100 px-2 py-0.5 text-[11px] font-bold text-zinc-700 active:opacity-70 dark:bg-zinc-800 dark:text-zinc-200"
+                >
+                  길드 관리
+                </Link>
+              )}
             </div>
             <p className="mt-0.5 text-[11px] text-zinc-500">
               멤버 {guild.memberCount}/{guild.capacity}
@@ -156,15 +165,15 @@ export function GuildHome({
         <div className="mt-3 flex items-center gap-2.5 border-t border-zinc-200 pt-3 dark:border-zinc-800">
           <div className="min-w-0 flex-1">
             <div className="flex items-baseline justify-between text-[10px] text-zinc-500">
-              <span className="font-semibold">길드 경험치</span>
+              <span className="font-bold text-zinc-700 dark:text-zinc-300">Lv.{guild.level}</span>
               <span className="font-mono tabular-nums">
-                {guild.xp.toLocaleString('ko-KR')}/{guildXpToNext(guild.level).toLocaleString('ko-KR')}
+                {displayXp.toLocaleString('ko-KR')}/{guildXpToNext(guild.level).toLocaleString('ko-KR')}
               </span>
             </div>
             <div className="mt-1 h-1.5 w-full overflow-hidden rounded-full bg-zinc-200 dark:bg-zinc-800">
               <div
-                className="h-full rounded-full bg-amber-500"
-                style={{ width: `${Math.min(100, (guild.xp / guildXpToNext(guild.level)) * 100)}%` }}
+                className="h-full rounded-full bg-amber-500 transition-[width] duration-300"
+                style={{ width: `${Math.min(100, (displayXp / guildXpToNext(guild.level)) * 100)}%` }}
               />
             </div>
           </div>
@@ -192,16 +201,6 @@ export function GuildHome({
         </div>
       </section>
 
-      {/* 길드 관리(임원, 정보 영역과 분리) */}
-      {isOfficer && (
-        <Link
-          href="/guild/settings"
-          className="flex items-center justify-between rounded-xl border border-zinc-200 bg-white px-4 py-3 dark:border-zinc-800 dark:bg-zinc-950"
-        >
-          <span className="text-sm font-bold">길드 관리</span>
-          <span className="text-zinc-400">→</span>
-        </Link>
-      )}
 
       {/* 길드원 명단(아바타·장비·정렬 메트릭, 클릭 시 프로필) */}
       <GuildMemberList members={members} myUserId={myUserId} />
