@@ -52,6 +52,7 @@ export default async function WorldMapPage() {
         executorUserId: z.executorUserId,
         executorNickname: z.executorNickname,
         taxDiamond: z.taxDiamond.toString(),
+        residentCount: z.residentCount,
       }))}
     />
   );

@@ -42,6 +42,7 @@ type Zone = {
   executorUserId: string | null;
   executorNickname: string | null;
   taxDiamond: string;
+  residentCount: number;
 };
 
 const REGION: Record<Region, { label: string; color: string }> = {
@@ -292,6 +293,10 @@ export function WorldMapView({
                   <dd className="font-semibold">
                     {selected.executorNickname ?? <span className="text-zinc-400">공석</span>}
                   </dd>
+                </div>
+                <div className="flex justify-between">
+                  <dt className="text-zinc-500">거주 인원</dt>
+                  <dd className="font-mono tabular-nums">{selected.residentCount.toLocaleString('ko-KR')}명</dd>
                 </div>
                 <div className="flex justify-between">
                   <dt className="text-zinc-500">누적 세금 💎</dt>
