@@ -27,6 +27,7 @@ export default async function FriendsPage() {
   const attach = (u: FriendUser): FriendUser => ({
     ...u,
     guildEmblemUrl: guildMap.get(u.userId)?.emblemUrl ?? null,
+    guildName: guildMap.get(u.userId)?.name ?? null,
   });
 
   return (

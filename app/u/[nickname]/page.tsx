@@ -368,7 +368,7 @@ export default async function PublicProfilePage({
             emblemUrl={data.guild?.emblemUrl ?? null}
             name={data.guild?.name ?? null}
             size={15}
-            pinEmblemLeft
+            pinEmblemRight
             className="mt-0.5 max-w-[80%] text-[11px] font-semibold text-white/80 drop-shadow-[0_1px_2px_rgba(0,0,0,0.8)]"
           />
         </div>

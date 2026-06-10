@@ -6,6 +6,7 @@ import { db } from '@/lib/db/client';
 import { friendLinks } from '@/lib/db/schema/friends';
 import { profiles } from '@/lib/db/schema/profiles';
 import { userProfiles } from '@/lib/db/schema/avatar';
+import { getGuildBriefsByUsers } from '@/lib/game/guild/badge';
 
 /**
  * 친구 — 검색→요청→수락(친구 선물 없음). 방향 1행 저장(requester→addressee).
@@ -28,8 +29,9 @@ export interface FriendUser {
   nickname: string;
   publicCode: string;
   profileSouth: string | null;
-  /** 닉네임 옆 길드 문양 — page에서 batch 부착(미소속/생성중이면 null). */
+  /** 닉네임 아래 길드(이름+문양) — 미소속/생성중이면 null. page(목록·요청) 또는 searchUsers(찾기)에서 부착. */
   guildEmblemUrl?: string | null;
+  guildName?: string | null;
 }
 
 const SOUTH = sql<string | null>`${userProfiles.rotations} ->> 'south'`;
@@ -83,7 +85,16 @@ export async function searchUsers(
     if (l.status === 'accepted') rel.set(other, 'friend');
     else rel.set(other, l.requesterId === meId ? 'outgoing' : 'incoming');
   }
-  return rows.map((r) => ({ ...r, relation: rel.get(r.userId) ?? 'none' }));
+  // 길드(이름+문양) 일괄 부착 — 찾기 결과도 닉네임 아래 길드 노출. 실패해도 진행.
+  const guildMap = await getGuildBriefsByUsers(ids).catch(
+    () => new Map<string, { emblemUrl: string | null; name: string }>(),
+  );
+  return rows.map((r) => ({
+    ...r,
+    relation: rel.get(r.userId) ?? 'none',
+    guildEmblemUrl: guildMap.get(r.userId)?.emblemUrl ?? null,
+    guildName: guildMap.get(r.userId)?.name ?? null,
+  }));
 }
 
 async function countAcceptedTx(

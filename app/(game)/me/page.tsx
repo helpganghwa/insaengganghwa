@@ -131,7 +131,7 @@ export default async function ProfilePage() {
               emblemUrl={row?.guild_emblem_url ?? null}
               name={row?.guild_name ?? null}
               size={14}
-              pinEmblemLeft
+              pinEmblemRight
               className="z-10 max-w-full text-[11px] text-white/70"
             />
             {activeProfile ? (

@@ -73,10 +73,14 @@ function Row({ u, onOpen, right }: { u: FriendUser; onOpen: () => void; right: R
       >
         <Avatar src={u.profileSouth} />
         <div className="min-w-0 flex-1">
-          <div className="flex min-w-0 items-center gap-1">
-            <span className="truncate text-sm font-bold">{u.nickname}</span>
-            <GuildBadge emblemUrl={u.guildEmblemUrl ?? null} size={14} className="shrink-0" />
-          </div>
+          <div className="truncate text-sm font-bold">{u.nickname}</div>
+          {/* 닉네임 아래 길드(이름 + 문양). 미소속/생성중이면 GuildBadge가 null → 영역 비움. */}
+          <GuildBadge
+            emblemUrl={u.guildEmblemUrl ?? null}
+            name={u.guildName ?? null}
+            size={13}
+            className="mt-0.5 max-w-full text-[11px] font-medium text-zinc-500 dark:text-zinc-400"
+          />
         </div>
         <div className="flex shrink-0 items-center gap-1.5" onClick={(e) => e.stopPropagation()}>
           {right}

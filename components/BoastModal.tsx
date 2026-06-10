@@ -252,7 +252,7 @@ export function BoastModal({
                   emblemUrl={guildEmblemUrl}
                   name={guildName}
                   size={13}
-                  pinEmblemLeft
+                  pinEmblemRight
                   className="max-w-full text-[10px] text-white/70"
                 />
                 <div className="relative aspect-[3/4] h-36 overflow-visible">
