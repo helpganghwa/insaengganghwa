@@ -17,9 +17,24 @@ function fmt(iso: string): { online: boolean; label: string } {
   return { online: false, label: `${Math.floor(diff / d)}일 전` };
 }
 
-export function LastSeen({ at, className = '' }: { at: string | null; className?: string }) {
-  const [info, setInfo] = useState<{ online: boolean; label: string } | null>(null);
+export function LastSeen({
+  at,
+  forceOnline = false,
+  className = '',
+}: {
+  at: string | null;
+  /** 본인 행 등 — 저장값과 무관하게 '접속 중'으로 표시(렌더가 하트비트보다 앞서는 지연 회피). */
+  forceOnline?: boolean;
+  className?: string;
+}) {
+  const [info, setInfo] = useState<{ online: boolean; label: string } | null>(
+    forceOnline ? { online: true, label: '접속 중' } : null,
+  );
   useEffect(() => {
+    if (forceOnline) {
+      setInfo({ online: true, label: '접속 중' });
+      return;
+    }
     if (!at) {
       setInfo(null);
       return;
@@ -28,7 +43,7 @@ export function LastSeen({ at, className = '' }: { at: string | null; className?
     tick();
     const id = setInterval(tick, 60_000);
     return () => clearInterval(id);
-  }, [at]);
+  }, [at, forceOnline]);
   if (!info) return null;
   return (
     <span className={`inline-flex items-center gap-1 ${className}`}>

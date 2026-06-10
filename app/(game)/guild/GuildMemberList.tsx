@@ -30,15 +30,9 @@ const SORTS: { key: SortKey; label: string }[] = [
 ];
 const SLOT_ORDER: Slot[] = ['weapon', 'armor', 'accessory'];
 
-function metricText(m: RichMember, key: SortKey): string {
-  switch (key) {
-    case 'combat':
-      return m.combat.toLocaleString('ko-KR');
-    case 'contribution':
-      return m.contribution.toLocaleString('ko-KR');
-    case 'lastSeen':
-      return ''; // 최근접속은 <LastSeen> 컴포넌트로 렌더(여기선 미사용).
-  }
+/** 좁은 카드용 컴팩트 수치(예: 53,000 → 5.3만). */
+function fmtNum(n: number): string {
+  return new Intl.NumberFormat('ko-KR', { notation: 'compact', maximumFractionDigits: 1 }).format(n);
 }
 
 /** 정렬용 수치 — 최근접속은 epoch(최신 우선, 기록 없으면 0=맨 뒤). 그 외는 메트릭 값. */
@@ -92,24 +86,28 @@ function MemberRow({ m, myUserId, sort }: { m: RichMember; myUserId: string; sor
           ) : null}
         </span>
         <div className="min-w-0 flex-1">
-          <div className="flex min-w-0 items-center gap-1">
+          {/* 1줄: 닉네임 + 접속 상태(본인은 항상 '접속 중'). */}
+          <div className="flex min-w-0 items-center gap-1.5">
             <span
               className={`truncate text-[13px] font-semibold ${m.userId === myUserId ? 'text-amber-700 dark:text-amber-300' : ''}`}
             >
               {m.nickname}
             </span>
+            <LastSeen
+              at={m.lastSeenAt}
+              forceOnline={m.userId === myUserId}
+              className={`shrink-0 text-[10px] ${sort === 'lastSeen' ? 'font-semibold text-zinc-600 dark:text-zinc-300' : 'text-zinc-400'}`}
+            />
           </div>
-          <p className="mt-0.5 text-[11px] text-zinc-500">
-            {sort === 'lastSeen' ? (
-              <LastSeen
-                at={m.lastSeenAt}
-                className="align-middle font-medium text-zinc-700 dark:text-zinc-300"
-              />
-            ) : (
-              <span className="font-mono font-bold tabular-nums text-zinc-700 dark:text-zinc-300">
-                {metricText(m, sort)}
-              </span>
-            )}
+          {/* 2줄: 기여도 · 전투력(현재 정렬 기준 강조). */}
+          <p className="mt-0.5 flex items-center gap-1.5 text-[11px] text-zinc-500">
+            <span className={sort === 'contribution' ? 'font-bold text-amber-700 dark:text-amber-300' : ''}>
+              기여 <span className="tabular-nums">{fmtNum(m.contribution)}</span>
+            </span>
+            <span className="text-zinc-300 dark:text-zinc-700">·</span>
+            <span className={sort === 'combat' ? 'font-bold text-amber-700 dark:text-amber-300' : ''}>
+              전투 <span className="tabular-nums">{fmtNum(m.combat)}</span>
+            </span>
           </p>
         </div>
 
