@@ -22,7 +22,6 @@ type Battle = {
 };
 
 type Region = 'volcano' | 'temple' | 'swamp' | 'orc' | 'kingdom' | 'angel';
-type DeployRole = 'attack' | 'defend';
 
 type Zone = {
   id: number;
@@ -104,18 +103,14 @@ const REGION: Record<Region, { label: string; color: string }> = {
 
 export function WorldMapView({
   mapSrc,
-  myGuildId,
   residenceZoneId,
   canSetResidence,
-  guildDeploys,
   chronicle,
   zones,
 }: {
   mapSrc: string;
-  myGuildId: string | null;
   residenceZoneId: number | null;
   canSetResidence: boolean;
-  guildDeploys: Array<{ zoneId: number; role: DeployRole }>;
   chronicle: { today: string | null; list: { kstDay: string; headline: string }[] } | null;
   zones: Zone[];
 }) {
@@ -147,17 +142,6 @@ export function WorldMapView({
       setReplay(r.battle);
     });
   };
-
-  // 자기 길드 배치 집계(안개 — 자기 길드만 열람).
-  const guildDeployByZone = useMemo(() => {
-    const m = new Map<number, { attack: number; defend: number }>();
-    for (const d of guildDeploys) {
-      const e = m.get(d.zoneId) ?? { attack: 0, defend: 0 };
-      e[d.role] += 1;
-      m.set(d.zoneId, e);
-    }
-    return m;
-  }, [guildDeploys]);
 
   // 거주 이동 — 낙관적(즉시 반영, 서버 백그라운드). router.refresh를 transition 안에서
   // 호출하면 refresh 동안 pending이 묶여 다음 이동이 막혔음 → 제거해 연속 이동 가능.
@@ -429,20 +413,6 @@ export function WorldMapView({
                   이동
                 </button>
               ))}
-
-            {/* 점령전 배치 안개 — 우리 길드 배치 현황만 열람 */}
-            {myGuildId &&
-              (() => {
-                const fog = guildDeployByZone.get(selected.id);
-                if (!fog) return null;
-                return (
-                  <div className="mt-3 border-t border-zinc-200 pt-3 dark:border-zinc-800">
-                    <p className="text-[11px] text-zinc-500">
-                      우리 길드 배치 — 공격 {fog.attack} · 수비 {fog.defend}
-                    </p>
-                  </div>
-                );
-              })()}
 
               <button
                 type="button"
