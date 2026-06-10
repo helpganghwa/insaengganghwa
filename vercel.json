@@ -49,6 +49,10 @@
     {
       "path": "/api/cron/conquest-run",
       "schedule": "*/5 2 * * *"
+    },
+    {
+      "path": "/api/cron/conquest-chronicle",
+      "schedule": "*/5 3 * * *"
     }
   ]
 }

@@ -17,4 +17,9 @@ export * from './distribute';
 export * from './conquest/schedule';
 export * from './conquest/deploy';
 export * from './conquest/executor';
+export {
+  generateAndStoreChronicle,
+  getLatestChronicle,
+  aggregateConquestDay,
+} from './conquest/chronicle';
 export * from './emblem';

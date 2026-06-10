@@ -55,6 +55,7 @@ export function WorldMapView({
   residenceZoneId,
   canSetResidence,
   guildDeploys,
+  chronicle,
   zones,
 }: {
   mapSrc: string;
@@ -62,6 +63,7 @@ export function WorldMapView({
   residenceZoneId: number | null;
   canSetResidence: boolean;
   guildDeploys: Array<{ zoneId: number; role: DeployRole }>;
+  chronicle: { todayText: string; fullNarrative: string } | null;
   zones: Zone[];
 }) {
   const { showHeaderToast, showError } = useResourceToast();
@@ -69,6 +71,7 @@ export function WorldMapView({
   const [selectedId, setSelectedId] = useState<number | null>(null);
   const [replay, setReplay] = useState<Battle | null>(null);
   const [showNames, setShowNames] = useState(true);
+  const [chronicleTab, setChronicleTab] = useState<'today' | 'full'>('today');
   const [pending, start] = useTransition();
 
   const selected = zones.find((z) => z.id === selectedId) ?? null;
@@ -197,11 +200,40 @@ export function WorldMapView({
         })}
       </div>
 
-      {/* 세계 정세(하단) — 매일 AI 갱신 예정. 현재는 UI 셸(내용만 담백하게). */}
+      {/* 세계 연대기 — 점령전 발표(KST 12:00)와 함께 매일 AI 갱신. [오늘]/[전체] 탭. */}
       <section className="mt-3 rounded-xl border border-zinc-200 bg-white p-4 dark:border-zinc-800 dark:bg-zinc-950">
-        <p className="text-[13px] leading-relaxed text-zinc-500">
-          대륙의 정세 브리핑이 매일 이곳에 전해질 예정입니다. 어느 길드가 어느 땅을 차지했는지,
-          전장의 불길이 어디로 번지는지 — 곧 만나보세요.
+        <div className="mb-2 flex items-center justify-between gap-2">
+          <h3 className="text-sm font-bold">📜 세계 연대기</h3>
+          {chronicle ? (
+            <div className="flex gap-0.5 rounded-lg bg-zinc-100 p-0.5 dark:bg-zinc-900">
+              {(
+                [
+                  ['today', '오늘'],
+                  ['full', '전체'],
+                ] as const
+              ).map(([k, label]) => (
+                <button
+                  key={k}
+                  type="button"
+                  onClick={() => setChronicleTab(k)}
+                  className={`rounded-md px-2 py-0.5 text-[11px] font-bold transition ${
+                    chronicleTab === k
+                      ? 'bg-white text-zinc-900 shadow-sm dark:bg-zinc-950 dark:text-zinc-50'
+                      : 'text-zinc-500'
+                  }`}
+                >
+                  {label}
+                </button>
+              ))}
+            </div>
+          ) : null}
+        </div>
+        <p className="whitespace-pre-line text-[13px] leading-relaxed text-zinc-600 dark:text-zinc-300">
+          {chronicle
+            ? chronicleTab === 'today'
+              ? chronicle.todayText
+              : chronicle.fullNarrative
+            : '대륙의 정세 브리핑이 매일 정오 점령전 발표와 함께 이곳에 전해집니다. 첫 전쟁의 불길이 일면, 그 역사가 기록될 것입니다.'}
         </p>
       </section>
 

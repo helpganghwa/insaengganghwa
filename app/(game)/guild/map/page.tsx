@@ -5,6 +5,7 @@ import {
   getMyMembership,
   getResidence,
   getMyGuildDeployments,
+  getLatestChronicle,
 } from '@/lib/game/guild';
 
 import { WorldMapView } from './WorldMapView';
@@ -14,10 +15,11 @@ export const dynamic = 'force-dynamic';
 export default async function WorldMapPage() {
   const userId = await getSessionUserId();
 
-  const [zones, membership, residenceZoneId] = await Promise.all([
+  const [zones, membership, residenceZoneId, chronicle] = await Promise.all([
     getWorldmapZones(),
     userId ? getMyMembership(userId) : Promise.resolve(null),
     userId ? getResidence(userId) : Promise.resolve(null),
+    getLatestChronicle().catch(() => null),
   ]);
 
   const myGuildId = membership?.guildId.toString() ?? null;
@@ -31,6 +33,7 @@ export default async function WorldMapPage() {
       myGuildId={myGuildId}
       residenceZoneId={residenceZoneId}
       canSetResidence={userId != null}
+      chronicle={chronicle}
       guildDeploys={guildDeploys.map((d) => ({ zoneId: d.zoneId, role: d.role as 'attack' | 'defend' }))}
       zones={zones.map((z) => ({
         id: z.id,
