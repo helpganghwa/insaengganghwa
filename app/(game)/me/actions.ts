@@ -1,12 +1,12 @@
 'use server';
 
 import { revalidatePath } from 'next/cache';
-import { eq, sql } from 'drizzle-orm';
+import { sql } from 'drizzle-orm';
 import { unstable_cache } from 'next/cache';
 
 import { getSessionUserId } from '@/lib/auth/session';
 import { db } from '@/lib/db/client';
-import { enhancementJobs } from '@/lib/db/schema/enhance';
+import { profiles } from '@/lib/db/schema/profiles';
 import { NICKNAME_CHANGE_COST_DIAMOND } from '@/lib/game/balance';
 import { validateNickname } from '@/lib/game/nickname';
 import { rateLimited } from '@/lib/ratelimit';
@@ -104,18 +104,15 @@ export async function updateNickname(formData: FormData) {
 }
 
 /**
- * 현재 강화 진행 중인 distinct 사용자 수 — 카카오 공유 description("N명이 인생 강화중") 용.
+ * 전체 가입 유저 수 — 카카오 공유 description("N명이 인생 강화중") 용(텍스트는 유지, 숫자만 전체 유저).
  * 60s unstable_cache로 부하 낮춤(공유 모달 매 오픈마다 fresh fetch 회피).
  */
 const cachedEnhancingUsers = unstable_cache(
   async () => {
-    const r = await db
-      .select({ c: sql<number>`count(distinct ${enhancementJobs.userId})::int` })
-      .from(enhancementJobs)
-      .where(eq(enhancementJobs.status, 'running'));
+    const r = await db.select({ c: sql<number>`count(*)::int` }).from(profiles);
     return Number(r[0]?.c ?? 0);
   },
-  ['boast:enhancing-users'],
+  ['boast:total-users'],
   { revalidate: 60, tags: ['leaderboard'] },
 );
 
