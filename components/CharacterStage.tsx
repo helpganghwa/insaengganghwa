@@ -26,7 +26,8 @@ export function CharacterStage({
             className="absolute inset-0 h-full w-full object-contain object-bottom"
             style={{
               imageRendering: 'pixelated',
-              transform: 'scale(1.8) translateY(10%)',
+              // 1.8→2.1: 캐릭터를 키워 머리를 닉네임 쪽으로 올려 상단 여백 축소(발은 바닥 고정).
+              transform: 'scale(2.1) translateY(10%)',
               transformOrigin: 'center bottom',
             }}
           />

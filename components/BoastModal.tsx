@@ -266,7 +266,8 @@ export function BoastModal({
                       className="absolute inset-0 h-full w-full object-contain object-bottom"
                       style={{
                         imageRendering: 'pixelated',
-                        transform: 'scale(1.8) translateY(10%)',
+                        // 1.8→2.1: 아바타를 키워 닉네임과의 상단 여백 축소(CharacterStage와 동일).
+                        transform: 'scale(2.1) translateY(10%)',
                         transformOrigin: 'center bottom',
                       }}
                     />
