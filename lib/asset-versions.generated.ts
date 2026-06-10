@@ -78,15 +78,11 @@ export const ASSET_VERSIONS: Record<string, string> = {
   "/sprites/checkin/board.png": "cd644798",
   "/sprites/checkin/classroom.png": "c44cb43a",
   "/sprites/guild/region/temple.png": "c0445870",
-  "/sprites/guild/region/temple.bak.png": "bac247dc",
   "/sprites/guild/region/swamp.png": "b8e643e4",
   "/sprites/guild/region/orc.png": "78e88ba1",
-  "/sprites/guild/region/orc.bak.png": "ddda6ed0",
-  "/sprites/guild/region/angel.png": "a5c17547",
+  "/sprites/guild/region/angel.png": "ca27681b",
   "/sprites/guild/region/volcano.png": "038981e9",
-  "/sprites/guild/region/swamp.bak.png": "cd385a53",
   "/sprites/guild/region/kingdom.png": "62046231",
-  "/sprites/guild/region/angel.bak.png": "c4666c89",
   "/sprites/guild/worldmap.png": "505d8a5f",
   "/og/og-8.png": "6e1b2b9f",
   "/og/og-6.png": "15ff8e08",
@@ -101,5 +97,5 @@ export const ASSET_VERSIONS: Record<string, string> = {
   "/og/raid/dragon_west.png": "430425cb",
   "/og/og-3.png": "f0e47cd0",
   "/og/og-2.png": "c8c24cc5",
-  "/sprites/atlas.webp": "e25741ed"
+  "/sprites/atlas.webp": "9b7b287f"
 };

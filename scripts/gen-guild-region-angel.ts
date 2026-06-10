@@ -19,11 +19,11 @@ const COMMON =
   'edge-to-edge composition, no transparent areas, no text';
 
 const prompt =
-  'a floating island of ancient fallen-angel ruins drifting above the clouds, seen from a distance; ' +
-  'crumbling marble shrine with broken classical columns and toppled arches, ' +
-  'two large weathered stone angel statues with spread wings flanking a cracked altar, ' +
-  'scattered dark feathers drifting in the air, NO intact cathedral, NO castle, only ruined holy shrine; ' +
-  'eerie violet and pale gold dusk glow, soft clouds below the island edges, ' + COMMON;
+  'a massive floating sky island citadel drifting high above a vast sea of clouds, seen from a distance; ' +
+  'at its center a grand golden temple with shining gilded roofs, domes and tall marble columns; ' +
+  'towering over the temple stands a colossal fallen-angel statue with huge spread BLACK feathered wings; ' +
+  'dark feathers drifting through the air, broken halo, ominous yet majestic; ' +
+  'eerie violet and deep gold dusk glow, glowing clouds spilling over the island edges, ' + COMMON;
 
 async function gen(): Promise<boolean> {
   const file = join(OUT, 'angel.png');
