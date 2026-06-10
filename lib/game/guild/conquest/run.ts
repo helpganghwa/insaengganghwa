@@ -41,10 +41,13 @@ export async function runConquest(): Promise<{ battleDay: string; resolved: numb
   const contestedArr = [...contested];
 
   // 경합 구역 정보(소유·집행관).
+  // ⚠ Drizzle는 JS 배열 `${arr}`를 `($1,$2,…)` 튜플로 펼친다 — `= any(${arr})`는
+  // `any(($1,$2,…))`가 되어 무효(any는 배열 인자). `in ${arr}` = `in ($1,$2,…)`로 써야 함.
+  // (이 경로는 공격 배치가 있는 날만 실행돼 첫 경합일에야 노출된 잠복 버그였음.)
   const zoneRows = (await db.execute(sql`
     select z.id, z.owner_guild_id::text owner_guild_id, z.executor_user_id::text executor, og.name owner_name
     from zones z left join guilds og on og.id = z.owner_guild_id
-    where z.id = any(${contestedArr})
+    where z.id in ${contestedArr}
   `)) as unknown as ZoneRow[];
   const zoneInfo = new Map(zoneRows.map((z) => [z.id, z]));
 
