@@ -26,7 +26,7 @@ const REGION_LABEL: Record<Region, string> = {
   temple: '잊힌 신전',
   swamp: '슬라임 늪',
   orc: '오크 부락',
-  kingdom: '인간 왕국',
+  kingdom: '왕국',
   angel: '타락 천사 부유섬',
 };
 const REGIONS: Region[] = ['volcano', 'temple', 'swamp', 'orc', 'kingdom', 'angel'];

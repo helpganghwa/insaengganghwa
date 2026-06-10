@@ -41,7 +41,9 @@ type Zone = {
 
 /**
  * 연대기 본문 — AI가 감싼 마커를 종류별 강조 스팬으로 렌더.
- *   {g|이름}=길드(앰버 굵게) · {u|이름}=인물(스카이) · {z|이름}=구역(해당 구역의 지역색).
+ *   {g|이름}=길드(배경 칩) · {u|이름}=인물(점선 밑줄) · {z|이름}=구역(해당 구역의 지역색).
+ *   길드/유저는 색을 쓰지 않는다 — 구역의 지역색(왕국=앰버, 신전=블루 등)과 색이 겹치지 않도록
+ *   칩/밑줄로 구분(색이 아닌 형태로 강조).
  * zoneColor: 구역 이름 → 색(zones 기반). 미매칭이면 null(기본 색 유지). 지역 카테고리는 마커 없이 일반 텍스트.
  */
 // \}+ — AI가 닫는 중괄호를 겹쳐 쓰는 경우({z|왕성}}) 여분까지 흡수.
@@ -57,14 +59,22 @@ function ChronicleText({ text, zoneColor }: { text: string; zoneColor: (name: st
     const type = m[1];
     const name = m[2];
     if (type === 'g') {
+      // 길드 — 배경 칩(태그처럼). 색 대신 형태로 강조.
       out.push(
-        <strong key={key++} className="font-bold text-amber-600 dark:text-amber-400">
+        <strong
+          key={key++}
+          className="rounded-[3px] bg-zinc-200/70 px-1 font-bold text-zinc-800 dark:bg-zinc-700/60 dark:text-zinc-100"
+        >
           {name}
         </strong>,
       );
     } else if (type === 'u') {
+      // 인물 — 점선 밑줄(사람 이름 느낌). 색 대신 형태로 강조.
       out.push(
-        <strong key={key++} className="font-semibold text-sky-600 dark:text-sky-400">
+        <strong
+          key={key++}
+          className="font-semibold text-zinc-800 underline decoration-zinc-400 decoration-dotted underline-offset-2 dark:text-zinc-100 dark:decoration-zinc-500"
+        >
           {name}
         </strong>,
       );
@@ -87,7 +97,7 @@ const REGION: Record<Region, { label: string; color: string }> = {
   temple: { label: '잊힌 신전', color: '#60a5fa' },
   swamp: { label: '슬라임 늪', color: '#22c55e' },
   orc: { label: '오크 부락', color: '#f97316' },
-  kingdom: { label: '인간 왕국', color: '#fbbf24' },
+  kingdom: { label: '왕국', color: '#fbbf24' },
   angel: { label: '타락 천사 부유섬', color: '#c084fc' },
 };
 
@@ -255,9 +265,8 @@ export function WorldMapView({
       {/* 세계 연대기 — 점령전 발표(KST 12:00)와 함께 매일 AI 갱신(큰 사건 있는 날만). [오늘]=긴 기록 / [전체]=날짜별 한 줄.
           남은 세로 영역을 가득 채워(flex-1) 페이지에 빈 공간이 없게. */}
       <section className="flex flex-1 flex-col bg-white px-4 pb-4 pt-3 dark:bg-zinc-950">
-        <div className="mb-2 flex items-center justify-between gap-2">
-          <h3 className="text-sm font-bold">세계 연대기</h3>
-          {hasChronicle ? (
+        {hasChronicle ? (
+          <div className="mb-2 flex justify-end">
             <div className="flex gap-0.5 rounded-lg bg-zinc-100 p-0.5 dark:bg-zinc-900">
               {(
                 [
@@ -279,8 +288,8 @@ export function WorldMapView({
                 </button>
               ))}
             </div>
-          ) : null}
-        </div>
+          </div>
+        ) : null}
         {hasChronicle ? (
           chronicleTab === 'today' ? (
             chronicle!.today ? (
