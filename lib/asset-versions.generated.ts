@@ -80,7 +80,7 @@ export const ASSET_VERSIONS: Record<string, string> = {
   "/sprites/guild/region/temple.png": "c0445870",
   "/sprites/guild/region/swamp.png": "b8e643e4",
   "/sprites/guild/region/orc.png": "78e88ba1",
-  "/sprites/guild/region/angel.png": "ca27681b",
+  "/sprites/guild/region/angel.png": "c1515536",
   "/sprites/guild/region/volcano.png": "038981e9",
   "/sprites/guild/region/kingdom.png": "62046231",
   "/sprites/guild/worldmap.png": "505d8a5f",
@@ -97,5 +97,5 @@ export const ASSET_VERSIONS: Record<string, string> = {
   "/og/raid/dragon_west.png": "430425cb",
   "/og/og-3.png": "f0e47cd0",
   "/og/og-2.png": "c8c24cc5",
-  "/sprites/atlas.webp": "9b7b287f"
+  "/sprites/atlas.webp": "50b30f1c"
 };
