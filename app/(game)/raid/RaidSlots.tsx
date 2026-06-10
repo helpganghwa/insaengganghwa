@@ -57,25 +57,26 @@ const SHARE_OPTS: { v: ShareMode; label: string }[] = [
   { v: 'free', label: '자유' },
   { v: 'approval', label: '수락' },
 ];
+// 상태별 활성 배경: 비공개=회색 · 자유=초록 · 수락=앰버.
+const SHARE_ACTIVE: Record<ShareMode, string> = {
+  off: 'bg-zinc-500 text-white',
+  free: 'bg-emerald-500 text-white',
+  approval: 'bg-amber-500 text-white',
+};
 
-/** 공개 범위 행 — 비공개/자유(즉시)/수락(요청) 세그먼트. */
+/** 공개 범위 행 — 비공개/자유(즉시)/수락(요청) 세그먼트(상태별 색상 구분). */
 function ShareModeRow({
   title,
-  hint,
   value,
   onChange,
 }: {
   title: string;
-  hint: string;
   value: ShareMode;
   onChange: (v: ShareMode) => void;
 }) {
   return (
     <div className="flex items-center justify-between gap-2 rounded-xl border border-zinc-200 px-3 py-2 dark:border-zinc-700">
-      <span className="text-[12px] font-medium">
-        {title}
-        <span className="ml-1 text-[10px] text-zinc-400">{hint}</span>
-      </span>
+      <span className="text-[12px] font-medium">{title}</span>
       <div className="flex shrink-0 gap-0.5 rounded-lg bg-zinc-100 p-0.5 dark:bg-zinc-800">
         {SHARE_OPTS.map((o) => (
           <button
@@ -83,7 +84,7 @@ function ShareModeRow({
             type="button"
             onClick={() => onChange(o.v)}
             className={`rounded-md px-2 py-0.5 text-[11px] font-bold transition ${
-              value === o.v ? 'bg-amber-500 text-white' : 'text-zinc-500'
+              value === o.v ? SHARE_ACTIVE[o.v] : 'text-zinc-500'
             }`}
           >
             {o.label}
@@ -412,21 +413,8 @@ export function RaidSlots({
                   {RAID_BOSSES[picked].story}
                 </p>
                 <div className="mt-3 space-y-1.5">
-                  <ShareModeRow
-                    title="친구 공개"
-                    hint="자유=즉시 · 수락=요청"
-                    value={friendShare}
-                    onChange={setFriendShare}
-                  />
-                  <ShareModeRow
-                    title="길드원 공개"
-                    hint="자유=즉시 · 수락=요청"
-                    value={guildShare}
-                    onChange={setGuildShare}
-                  />
-                  <p className="px-1 text-[10px] text-zinc-400">
-                    공유 링크 참가는 항상 개설자 수락이 필요합니다.
-                  </p>
+                  <ShareModeRow title="친구 공개" value={friendShare} onChange={setFriendShare} />
+                  <ShareModeRow title="길드원 공개" value={guildShare} onChange={setGuildShare} />
                 </div>
                 <div className="mt-2 space-y-1.5">
                   <button

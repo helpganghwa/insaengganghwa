@@ -6,12 +6,14 @@ export function ToggleSwitch({
   onToggle,
   label,
   disabled = false,
+  small = false,
   className = '',
 }: {
   on: boolean;
   onToggle: () => void;
   label?: string;
   disabled?: boolean;
+  small?: boolean;
   className?: string;
 }) {
   return (
@@ -22,14 +24,14 @@ export function ToggleSwitch({
       aria-label={label}
       disabled={disabled}
       onClick={onToggle}
-      className={`relative h-5 w-9 shrink-0 rounded-full transition-colors disabled:opacity-50 ${
-        on ? 'bg-emerald-500' : 'bg-zinc-300 dark:bg-zinc-700'
-      } ${className}`}
+      className={`relative shrink-0 rounded-full transition-colors disabled:opacity-50 ${
+        small ? 'h-3.5 w-6' : 'h-5 w-9'
+      } ${on ? 'bg-emerald-500' : 'bg-zinc-300 dark:bg-zinc-700'} ${className}`}
     >
       <span
-        className={`absolute top-0.5 h-4 w-4 rounded-full bg-white shadow transition-all ${
-          on ? 'left-[18px]' : 'left-0.5'
-        }`}
+        className={`absolute top-0.5 rounded-full bg-white shadow transition-all ${
+          small ? 'h-2.5 w-2.5' : 'h-4 w-4'
+        } ${on ? (small ? 'left-[13px]' : 'left-[18px]') : 'left-0.5'}`}
       />
     </button>
   );

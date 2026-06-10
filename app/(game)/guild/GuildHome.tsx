@@ -158,14 +158,14 @@ export function GuildHome({
             {isOfficer && (
               <Link
                 href="/guild/settings"
-                className="flex w-[94px] items-center justify-center gap-1 rounded-md bg-zinc-100 px-2 py-1.5 text-[11px] font-bold text-zinc-700 active:opacity-70 dark:bg-zinc-800 dark:text-zinc-200"
+                className="flex w-[82px] items-center justify-center gap-1 rounded-md bg-zinc-100 px-1.5 py-1 text-[10px] font-bold text-zinc-700 active:opacity-70 dark:bg-zinc-800 dark:text-zinc-200"
               >
                 ⚙️ 길드 관리
               </Link>
             )}
             <Link
               href="/guild/deploy"
-              className="flex w-[94px] items-center justify-center gap-1 rounded-md bg-zinc-100 px-2 py-1.5 text-[11px] font-bold text-zinc-700 active:opacity-70 dark:bg-zinc-800 dark:text-zinc-200"
+              className="flex w-[82px] items-center justify-center gap-1 rounded-md bg-zinc-100 px-1.5 py-1 text-[10px] font-bold text-zinc-700 active:opacity-70 dark:bg-zinc-800 dark:text-zinc-200"
             >
               점령지 관리
             </Link>
@@ -198,7 +198,7 @@ export function GuildHome({
             type="button"
             onClick={onDonate}
             disabled={pending || !nextTier}
-            className={`relative isolate flex w-[92px] shrink-0 items-center justify-center overflow-hidden rounded-lg py-1.5 text-[12px] font-bold transition-colors ${
+            className={`relative isolate flex w-[82px] shrink-0 items-center justify-center overflow-hidden rounded-lg py-1 text-[11px] font-bold transition-colors ${
               !nextTier
                 ? 'bg-zinc-200 text-zinc-400 dark:bg-zinc-800 dark:text-zinc-600'
                 : confirm

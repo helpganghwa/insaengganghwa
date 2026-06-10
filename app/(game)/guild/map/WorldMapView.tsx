@@ -124,7 +124,7 @@ export function WorldMapView({
         />
         {/* 지역 이름 오버레이 토글 — 텍스트 없이 스위치만(좌상단). */}
         <span className="absolute left-2 top-2 z-30 inline-flex rounded-full bg-black/45 p-1 backdrop-blur-sm">
-          <ToggleSwitch on={showNames} onToggle={() => setShowNames((v) => !v)} label="지역 이름 표시" />
+          <ToggleSwitch on={showNames} onToggle={() => setShowNames((v) => !v)} small label="지역 이름 표시" />
         </span>
         {zones.map((z) => {
           const owned = z.ownerGuildId != null;

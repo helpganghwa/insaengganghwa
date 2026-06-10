@@ -153,10 +153,10 @@ export function GuildMemberList({ members, myUserId }: { members: RichMember[]; 
       {groups.map(({ label, rows }) =>
         rows.length === 0 ? null : (
           <div key={label} className="mt-3">
-            <p className="px-1 pb-1 text-[10px] font-bold uppercase tracking-wide text-zinc-400">
+            <p className="px-1 pb-0.5 text-[10px] font-bold uppercase tracking-wide text-zinc-400">
               {label}
             </p>
-            <ul className="divide-y divide-zinc-100 rounded-xl border border-zinc-200 px-3 dark:divide-zinc-800/70 dark:border-zinc-800">
+            <ul>
               {rows.map((m) => (
                 <MemberRow key={m.userId} m={m} myUserId={myUserId} sort={sort} sortLabel={sortLabel} />
               ))}
