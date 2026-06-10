@@ -21,26 +21,14 @@
  */
 import { sql } from 'drizzle-orm';
 
+import { isCronAuthorized } from '@/lib/auth/cron-auth';
 import { db } from '@/lib/db/client';
 
 export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
 
-function isAuthorized(req: Request): boolean {
-  const secret = process.env.CRON_SECRET;
-  if (secret) {
-    const auth = req.headers.get('authorization');
-    if (auth === `Bearer ${secret}`) return true;
-  }
-  // Vercel cron 자동 호출 — secret 미설정 환경에서도 작동.
-  if (req.headers.get('x-vercel-cron')) return true;
-  const ua = req.headers.get('user-agent') ?? '';
-  if (ua.startsWith('vercel-cron/')) return true;
-  return false;
-}
-
 export async function GET(req: Request) {
-  if (!isAuthorized(req)) {
+  if (!isCronAuthorized(req)) {
     return new Response('forbidden', { status: 403 });
   }
   // (a) 미수령+만료 OR (b) 발송 후 30일 경과 row 삭제.

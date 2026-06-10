@@ -13,6 +13,7 @@
  */
 import { sql } from 'drizzle-orm';
 
+import { isCronAuthorized } from '@/lib/auth/cron-auth';
 import { db } from '@/lib/db/client';
 import { sendPushToUser } from '@/lib/push/send';
 
@@ -22,22 +23,10 @@ export const dynamic = 'force-dynamic';
 // 모드별 묶음 윈도(batched=30분 / batched_1h=60분)는 아래 SQL에 인라인.
 // instant 모드는 push_pending을 거치지 않음.
 
-function isAuthorized(req: Request): boolean {
-  const secret = process.env.CRON_SECRET;
-  if (secret) {
-    const auth = req.headers.get('authorization');
-    if (auth === `Bearer ${secret}`) return true;
-  }
-  if (req.headers.get('x-vercel-cron')) return true;
-  const ua = req.headers.get('user-agent') ?? '';
-  if (ua.startsWith('vercel-cron/')) return true;
-  return false;
-}
-
 type FlushRow = { user_id: string; items: unknown[] };
 
 export async function GET(req: Request) {
-  if (!isAuthorized(req)) return new Response('forbidden', { status: 403 });
+  if (!isCronAuthorized(req)) return new Response('forbidden', { status: 403 });
 
   // DELETE … RETURNING — row를 먼저 빼낸 뒤 발송. 누적 버그(2026-05-30) 방지:
   // 이전엔 SELECT 후 발송 + 성공 시 DELETE였는데, 윈도 직전 신규 적재가 ON CONFLICT로

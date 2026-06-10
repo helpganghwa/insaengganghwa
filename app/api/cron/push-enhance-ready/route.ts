@@ -15,6 +15,7 @@
  */
 import { sql } from 'drizzle-orm';
 
+import { isCronAuthorized } from '@/lib/auth/cron-auth';
 import { db } from '@/lib/db/client';
 import { appendEnhanceReady } from '@/lib/push/pending';
 
@@ -22,18 +23,6 @@ export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
 
 const CHUNK = 50;
-
-function isAuthorized(req: Request): boolean {
-  const secret = process.env.CRON_SECRET;
-  if (secret) {
-    const auth = req.headers.get('authorization');
-    if (auth === `Bearer ${secret}`) return true;
-  }
-  if (req.headers.get('x-vercel-cron')) return true;
-  const ua = req.headers.get('user-agent') ?? '';
-  if (ua.startsWith('vercel-cron/')) return true;
-  return false;
-}
 
 type ReadyRow = {
   job_id: string;
@@ -46,7 +35,7 @@ type ReadyRow = {
 };
 
 export async function GET(req: Request) {
-  if (!isAuthorized(req)) return new Response('forbidden', { status: 403 });
+  if (!isCronAuthorized(req)) return new Response('forbidden', { status: 403 });
 
   // 원자 클레임: 단일 UPDATE 문으로 push_sent=true 마킹하면서 발송 대상 RETURNING.
   // 같은 잡이 동시 cron에서 두 번 select되지 않도록 FOR UPDATE SKIP LOCKED.

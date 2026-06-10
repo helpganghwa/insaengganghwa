@@ -11,6 +11,7 @@
  */
 import { and, eq, lte, sql, asc } from 'drizzle-orm';
 
+import { isCronAuthorized } from '@/lib/auth/cron-auth';
 import { db } from '@/lib/db/client';
 import { enhancementJobs } from '@/lib/db/schema/enhance';
 import { resolveEnhance } from '@/lib/game/enhance/resolve';
@@ -22,20 +23,8 @@ export const dynamic = 'force-dynamic';
 const CHUNK = 50;
 const STALE_HOURS = 24;
 
-function isAuthorized(req: Request): boolean {
-  const secret = process.env.CRON_SECRET;
-  if (secret) {
-    const auth = req.headers.get('authorization');
-    if (auth === `Bearer ${secret}`) return true;
-  }
-  if (req.headers.get('x-vercel-cron')) return true;
-  const ua = req.headers.get('user-agent') ?? '';
-  if (ua.startsWith('vercel-cron/')) return true;
-  return false;
-}
-
 export async function GET(req: Request) {
-  if (!isAuthorized(req)) return new Response('forbidden', { status: 403 });
+  if (!isCronAuthorized(req)) return new Response('forbidden', { status: 403 });
 
   // complete_at + STALE_HOURS 이상 지난 미정산 잡만 — 즉 24시간+ 방치된 잡.
   const due = await db

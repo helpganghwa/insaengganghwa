@@ -9,6 +9,7 @@
  */
 import { sql } from 'drizzle-orm';
 
+import { isCronAuthorized } from '@/lib/auth/cron-auth';
 import { db } from '@/lib/db/client';
 import { sendPushToUsers } from '@/lib/push/send';
 
@@ -17,22 +18,10 @@ export const dynamic = 'force-dynamic';
 
 const CHUNK = 200;
 
-function isAuthorized(req: Request): boolean {
-  const secret = process.env.CRON_SECRET;
-  if (secret) {
-    const auth = req.headers.get('authorization');
-    if (auth === `Bearer ${secret}`) return true;
-  }
-  if (req.headers.get('x-vercel-cron')) return true;
-  const ua = req.headers.get('user-agent') ?? '';
-  if (ua.startsWith('vercel-cron/')) return true;
-  return false;
-}
-
 type Row = { user_id: string };
 
 export async function GET(req: Request) {
-  if (!isAuthorized(req)) return new Response('forbidden', { status: 403 });
+  if (!isCronAuthorized(req)) return new Response('forbidden', { status: 403 });
 
   // 멱등 게이트 — 오늘 KST 이미 발송했으면 skip. 매 30분 fallback cron이 안전하게 재시도 가능.
   // INSERT ON CONFLICT DO NOTHING 결과 0 row면 이미 발송됨(=skip).

@@ -11,6 +11,7 @@
  */
 import { and, eq, lte, sql, asc } from 'drizzle-orm';
 
+import { isCronAuthorized } from '@/lib/auth/cron-auth';
 import { db } from '@/lib/db/client';
 import { raids } from '@/lib/db/schema/raid';
 import { settleRaid } from '@/lib/game/raid/settle';
@@ -20,20 +21,8 @@ export const dynamic = 'force-dynamic';
 
 const CHUNK = 20;
 
-function isAuthorized(req: Request): boolean {
-  const secret = process.env.CRON_SECRET;
-  if (secret) {
-    const auth = req.headers.get('authorization');
-    if (auth === `Bearer ${secret}`) return true;
-  }
-  if (req.headers.get('x-vercel-cron')) return true;
-  const ua = req.headers.get('user-agent') ?? '';
-  if (ua.startsWith('vercel-cron/')) return true;
-  return false;
-}
-
 export async function GET(req: Request) {
-  if (!isAuthorized(req)) return new Response('forbidden', { status: 403 });
+  if (!isCronAuthorized(req)) return new Response('forbidden', { status: 403 });
 
   const due = await db
     .select({ id: raids.id })
