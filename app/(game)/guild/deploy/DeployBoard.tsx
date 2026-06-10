@@ -94,7 +94,7 @@ export function DeployBoard({
   return (
     <div className="px-4 py-4">
       <div className="mb-3">
-        <h1 className="text-base font-bold">점령전 배치 · {battleDayLabel}</h1>
+        <h1 className="text-base font-bold">점령지 관리 · {battleDayLabel}</h1>
         <p className="mt-0.5 text-[11px] text-zinc-500">
           {isOfficer
             ? '길드장·부길드장이 길드원의 공격/수비를 지정합니다.'

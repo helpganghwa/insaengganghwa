@@ -46,6 +46,7 @@ export function GuildHome({
   const { optimisticAdjust } = useDiamond();
   const [pending, start] = useTransition();
   const [confirm, setConfirm] = useState(false);
+  const [confirmLeft, setConfirmLeft] = useState(0);
   // 기부 낙관적 상태 — 즉시 반영('기부중' 미노출), 실패 시 롤백.
   const [optDonations, setOptDonations] = useState(0);
   const [optXp, setOptXp] = useState(0);
@@ -66,11 +67,19 @@ export function GuildHome({
     return () => clearTimeout(t);
   }, [guild.emblemUrl, router]);
 
-  // 유료 기부 인-버튼 3초 컨펌(만료 자동 해제) — 펄스 애니메이션이 타이머를 시각 표현.
+  // 유료 기부 인-버튼 3초 컨펌(만료 자동 해제) — 남은 초(3s/2s/1s)를 라벨에 표기.
   useEffect(() => {
     if (!confirm) return;
-    const t = setTimeout(() => setConfirm(false), 3000);
-    return () => clearTimeout(t);
+    const id = setInterval(() => {
+      setConfirmLeft((s) => {
+        if (s <= 1) {
+          setConfirm(false);
+          return 0;
+        }
+        return s - 1;
+      });
+    }, 1000);
+    return () => clearInterval(id);
   }, [confirm]);
 
   // 낙관적 기부 — 경험치바·다이아·단계를 즉시 반영하고 서버는 백그라운드 처리. 실패 시 롤백.
@@ -94,6 +103,7 @@ export function GuildHome({
     if (pending || !nextTier) return;
     if (nextTier.cost === 0) return runDonate(nextTier); // 1회차 무료 — 즉시
     if (!confirm) {
+      setConfirmLeft(3);
       setConfirm(true);
       return;
     }
@@ -114,7 +124,7 @@ export function GuildHome({
   const donateLabel = !nextTier
     ? '완료'
     : confirm
-      ? `💎${nextTier.cost}` // 컨펌 오버레이(3s) — 비용 표시
+      ? `💎${nextTier.cost} ${confirmLeft}s` // 컨펌 오버레이 — 비용 + 남은 초
       : nextTier.cost === 0
         ? '기부'
         : `기부 ${nextTier.cost}💎`;
@@ -138,20 +148,27 @@ export function GuildHome({
             )}
           </div>
           <div className="min-w-0 flex-1">
-            <div className="flex items-center justify-between gap-2">
-              <h2 className="truncate text-base font-bold">{guild.name}</h2>
-              {isOfficer && (
-                <Link
-                  href="/guild/settings"
-                  className="shrink-0 rounded-md bg-zinc-100 px-2 py-0.5 text-[11px] font-bold text-zinc-700 active:opacity-70 dark:bg-zinc-800 dark:text-zinc-200"
-                >
-                  길드 관리
-                </Link>
-              )}
-            </div>
+            <h2 className="truncate text-base font-bold">{guild.name}</h2>
             <p className="mt-0.5 text-[11px] text-zinc-500">
               멤버 {guild.memberCount}/{guild.capacity}
             </p>
+          </div>
+          {/* 관리 버튼 — 길드 관리(임원만) / 점령지 관리(전원, 임원만 편집). 같은 크기. */}
+          <div className="flex shrink-0 flex-col gap-1">
+            {isOfficer && (
+              <Link
+                href="/guild/settings"
+                className="flex w-[94px] items-center justify-center gap-1 rounded-md bg-zinc-100 px-2 py-1.5 text-[11px] font-bold text-zinc-700 active:opacity-70 dark:bg-zinc-800 dark:text-zinc-200"
+              >
+                ⚙️ 길드 관리
+              </Link>
+            )}
+            <Link
+              href="/guild/deploy"
+              className="flex w-[94px] items-center justify-center gap-1 rounded-md bg-zinc-100 px-2 py-1.5 text-[11px] font-bold text-zinc-700 active:opacity-70 dark:bg-zinc-800 dark:text-zinc-200"
+            >
+              점령지 관리
+            </Link>
           </div>
         </div>
 
@@ -181,7 +198,7 @@ export function GuildHome({
             type="button"
             onClick={onDonate}
             disabled={pending || !nextTier}
-            className={`relative isolate flex w-[84px] shrink-0 items-center justify-center overflow-hidden rounded-lg py-1.5 text-[12px] font-bold transition-colors ${
+            className={`relative isolate flex w-[92px] shrink-0 items-center justify-center overflow-hidden rounded-lg py-1.5 text-[12px] font-bold transition-colors ${
               !nextTier
                 ? 'bg-zinc-200 text-zinc-400 dark:bg-zinc-800 dark:text-zinc-600'
                 : confirm

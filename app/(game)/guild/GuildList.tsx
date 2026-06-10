@@ -9,12 +9,9 @@ export type GuildRow = {
   emblemColor: string | null;
 };
 
-export function EmblemThumb({ url, color }: { url: string | null; color: string | null }) {
+export function EmblemThumb({ url }: { url: string | null }) {
   return (
-    <div
-      className="flex h-9 w-9 shrink-0 items-center justify-center overflow-hidden rounded-lg"
-      style={{ backgroundColor: color ?? '#3f3f46' }}
-    >
+    <div className="flex h-9 w-9 shrink-0 items-center justify-center overflow-hidden rounded-lg">
       {url ? (
         // eslint-disable-next-line @next/next/no-img-element
         <img src={url} alt="" aria-hidden className="h-full w-full object-contain" style={{ imageRendering: 'pixelated' }} />
@@ -58,7 +55,7 @@ export function GuildList({
               {i + 1}
             </span>
           )}
-          <EmblemThumb url={g.emblemUrl} color={g.emblemColor} />
+          <EmblemThumb url={g.emblemUrl} />
           <div className="min-w-0 flex-1">
             <div className="truncate text-sm font-semibold">{g.name}</div>
             <div className="text-[11px] text-zinc-500">
