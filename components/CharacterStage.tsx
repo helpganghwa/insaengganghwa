@@ -7,10 +7,16 @@ export function CharacterStage({
   charSrc,
   className,
   rounded = true,
+  scale = 2.1,
+  offsetY = 0,
 }: {
   charSrc?: string | null;
   className?: string;
   rounded?: boolean;
+  /** 캐릭터 확대 배율(기본 2.1=/me·내정보). /u 공개프로필은 1.8(이전 크기 — 길드명 안 가리게). */
+  scale?: number;
+  /** 아바타를 아래로 N px 이동(스케일 무관 절대값). */
+  offsetY?: number;
 }) {
   return (
     <div className={`relative isolate overflow-hidden ${rounded ? 'rounded-2xl' : ''} ${className ?? ''}`}>
@@ -26,8 +32,7 @@ export function CharacterStage({
             className="absolute inset-0 h-full w-full object-contain object-bottom"
             style={{
               imageRendering: 'pixelated',
-              // 1.8→2.1: 캐릭터를 키워 머리를 닉네임 쪽으로 올려 상단 여백 축소(발은 바닥 고정).
-              transform: 'scale(2.1) translateY(10%)',
+              transform: `translateY(${offsetY}px) scale(${scale}) translateY(10%)`,
               transformOrigin: 'center bottom',
             }}
           />
