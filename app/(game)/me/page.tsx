@@ -131,7 +131,8 @@ export default async function ProfilePage() {
               emblemUrl={row?.guild_emblem_url ?? null}
               name={row?.guild_name ?? null}
               size={14}
-              className="relative z-10 max-w-full text-[11px] text-white/70"
+              pinEmblemLeft
+              className="z-10 max-w-full text-[11px] text-white/70"
             />
             {activeProfile ? (
               <Link
@@ -141,13 +142,13 @@ export default async function ProfilePage() {
               >
                 <CharacterStage
                   charSrc={dirImg(activeProfile)}
-                  className="aspect-[3/4] h-36 overflow-visible"
+                  className="aspect-[3/4] h-44 overflow-visible"
                 />
               </Link>
             ) : (
               <Link
                 href="/me/create"
-                className="flex aspect-[3/4] h-36 flex-col items-center justify-center gap-1 rounded-2xl border-2 border-dashed border-white/25 text-white/60"
+                className="flex aspect-[3/4] h-44 flex-col items-center justify-center gap-1 rounded-2xl border-2 border-dashed border-white/25 text-white/60"
               >
                 <span className="text-2xl" aria-hidden>✨</span>
                 <span className="text-[11px]">생성</span>

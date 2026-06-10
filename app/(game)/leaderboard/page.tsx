@@ -112,10 +112,10 @@ export default async function LeaderboardPage({
                         <span className="text-pixel-outline font-mono text-[11px] leading-none font-bold text-amber-300 tabular-nums">
                           #{entry.rank}
                         </span>
-                        <span className="text-pixel-outline truncate text-[11px] font-medium text-white">
+                        <span className="text-pixel-outline truncate text-[10px] font-medium leading-tight text-white">
                           {entry.nickname}
                         </span>
-                        <GuildBadge emblemUrl={entry.guildEmblemUrl ?? null} size={12} className="shrink-0" />
+                        <GuildBadge emblemUrl={entry.guildEmblemUrl ?? null} size={11} className="shrink-0" />
                       </div>
                       <div className="relative w-full flex-1">
                         {entry.profileImg && (

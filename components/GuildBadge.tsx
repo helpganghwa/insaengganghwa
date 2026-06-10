@@ -12,25 +12,49 @@ export function GuildBadge({
   name = null,
   size = 16,
   className = '',
+  pinEmblemLeft = false,
 }: {
   emblemUrl: string | null;
   name?: string | null;
   size?: number;
   className?: string;
+  /** true=이름을 중앙정렬하고 문양을 이름 왼쪽에 절대배치(이름 중심 유지). 내정보/공개프로필용. */
+  pinEmblemLeft?: boolean;
 }) {
   if (!emblemUrl && !name) return null;
+  const img = emblemUrl ? (
+    // eslint-disable-next-line @next/next/no-img-element
+    <img
+      src={emblemUrl}
+      alt=""
+      aria-hidden
+      className="shrink-0 object-contain"
+      style={{ width: size, height: size, imageRendering: 'pixelated' }}
+    />
+  ) : null;
+
+  // 이름 중앙정렬 + 문양은 이름 왼쪽 절대배치(문양이 이름 중심을 밀지 않음).
+  if (pinEmblemLeft && name) {
+    return (
+      <span className={`relative inline-flex max-w-full items-center ${className}`}>
+        {emblemUrl ? (
+          // eslint-disable-next-line @next/next/no-img-element
+          <img
+            src={emblemUrl}
+            alt=""
+            aria-hidden
+            className="absolute right-full top-1/2 mr-1 -translate-y-1/2 object-contain"
+            style={{ width: size, height: size, imageRendering: 'pixelated' }}
+          />
+        ) : null}
+        <span className="truncate">{name}</span>
+      </span>
+    );
+  }
+
   return (
     <span className={`inline-flex min-w-0 items-center gap-1 ${className}`}>
-      {emblemUrl ? (
-        // eslint-disable-next-line @next/next/no-img-element
-        <img
-          src={emblemUrl}
-          alt=""
-          aria-hidden
-          className="shrink-0 object-contain"
-          style={{ width: size, height: size, imageRendering: 'pixelated' }}
-        />
-      ) : null}
+      {img}
       {name ? <span className="truncate">{name}</span> : null}
     </span>
   );

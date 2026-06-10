@@ -56,10 +56,10 @@ export function AppHeaderShell({
         <span className="truncate text-[13px] font-semibold text-zinc-800 dark:text-zinc-100">
           {nickname}
         </span>
+        <GuildBadge emblemUrl={guildEmblemUrl} size={18} className="shrink-0" />
       </Link>
 
       <div className="flex shrink-0 items-center gap-1.5 text-xs">
-        <GuildBadge emblemUrl={guildEmblemUrl} size={20} />
         {diamondSlot ?? (
           <Link
             href="/shop?tab=charge"

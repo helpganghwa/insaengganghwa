@@ -125,10 +125,10 @@ export function RankingDeck({
                   <span className="font-mono text-[11px] font-bold leading-none tabular-nums text-amber-300 text-pixel-outline">
                     #{entry.rank}
                   </span>
-                  <span className="truncate text-[11px] font-medium text-white text-pixel-outline">
+                  <span className="truncate text-[10px] font-medium leading-tight text-white text-pixel-outline">
                     {entry.nickname}
                   </span>
-                  <GuildBadge emblemUrl={entry.guildEmblemUrl ?? null} size={12} className="shrink-0" />
+                  <GuildBadge emblemUrl={entry.guildEmblemUrl ?? null} size={11} className="shrink-0" />
                 </div>
                 <div className="relative w-full flex-1">
                   {entry.profileImg ? (
