@@ -30,7 +30,9 @@ export type RaidErrorCode =
   | 'NOT_PARTICIPANT'
   | 'NO_ATTACKS'
   | 'NOT_SETTLEABLE'
-  | 'REWARD_ALREADY_CLAIMED';
+  | 'REWARD_ALREADY_CLAIMED'
+  | 'NOT_HOST'
+  | 'REQUEST_NOT_FOUND';
 
 export class RaidError extends Error {
   constructor(public code: RaidErrorCode) {
@@ -79,12 +81,15 @@ export async function bumpDailyOrThrow(tx: Tx, userId: string) {
     });
 }
 
+export type RaidShareMode = 'off' | 'free' | 'approval';
+
 export function openRaid(input: {
   userId: string;
   bossCode: RaidBoss;
-  visibleToFriends?: boolean;
+  friendShare?: RaidShareMode;
+  guildShare?: RaidShareMode;
 }): Promise<{ raidId: bigint; shareCode: string }> {
-  const { userId, bossCode, visibleToFriends = false } = input;
+  const { userId, bossCode, friendShare = 'off', guildShare = 'off' } = input;
 
   return db.transaction(async (tx) => {
     if ((await activeRaidCount(tx, userId)) >= RAID_MAX_CONCURRENT_PER_USER) {
@@ -117,7 +122,8 @@ export function openRaid(input: {
         shareCode: genShareCode(),
         expireAt: new Date(now + RAID_WINDOW_MS),
         status: 'active',
-        visibleToFriends,
+        friendShare,
+        guildShare,
       })
       .returning({ id: raids.id, shareCode: raids.shareCode });
 

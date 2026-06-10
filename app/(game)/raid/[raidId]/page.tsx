@@ -7,7 +7,7 @@ import { db } from '@/lib/db/client';
 import { withTimeout } from '@/lib/db/with-timeout';
 import { profiles } from '@/lib/db/schema/profiles';
 import { raids, raidParticipants, raidRewards } from '@/lib/db/schema/raid';
-import { raidPhasesCleared } from '@/lib/game/raid';
+import { raidPhasesCleared, getPendingJoinRequests } from '@/lib/game/raid';
 import { getGuildBriefsByUsers } from '@/lib/game/guild';
 import { getBossBg, getBossSprite } from '@/lib/game/raid/boss-sprites';
 import { assetUrl } from '@/lib/asset-versions';
@@ -124,13 +124,20 @@ export default async function RaidDetail({ params }: { params: Promise<{ raidId:
     }
   }
 
+  const isHost = raid.hostUserId === userId;
+  // 개설자만 — pending 참가요청(수락/거절 UI).
+  const pendingRequests = isHost
+    ? await getPendingJoinRequests(BigInt(raidId)).catch(() => [])
+    : [];
+
   const view: RaidView = {
     raidId,
     bossCode: raid.bossCode,
     status: raid.status,
     expireAtIso: raid.expireAt.toISOString(),
     shareCode: raid.shareCode,
-    isHost: raid.hostUserId === userId,
+    isHost,
+    pendingRequests,
     phase1Hp: Number(raid.phase1Hp),
     totalDamage: total,
     phasesCleared: raidPhasesCleared(Number(raid.phase1Hp), total),

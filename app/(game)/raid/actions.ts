@@ -6,7 +6,9 @@ import { getSessionUserId } from '@/lib/auth/session';
 import { rateLimited } from '@/lib/ratelimit';
 import {
   openRaid,
-  joinRaid,
+  joinOrRequestRaid,
+  requestJoinRaid,
+  decideJoinRequest,
   attackRaid,
   buyExtraAttack,
   gemAttackRaid,
@@ -14,6 +16,8 @@ import {
   claimRaidReward,
   RaidError,
   type RaidBoss,
+  type RaidShareMode,
+  type JoinScope,
 } from '@/lib/game/raid';
 import { RAID_OPEN_COST_DIAMOND } from '@/lib/game/balance';
 
@@ -27,6 +31,8 @@ const MSG: Record<string, string> = {
   RAID_FULL: '인원이 가득 찼습니다 (최대 10명).',
   ALREADY_JOINED: '이미 참여 중입니다.',
   NOT_PARTICIPANT: '참여자가 아닙니다.',
+  NOT_HOST: '개설자만 처리할 수 있습니다.',
+  REQUEST_NOT_FOUND: '참가 요청을 찾을 수 없습니다.',
   NO_ATTACKS: '공격 횟수를 모두 사용했습니다 (추가 공격 구매 가능).',
   REWARD_ALREADY_CLAIMED: '이미 보상을 받았습니다.',
   UNAUTHENTICATED: '로그인이 필요합니다.',
@@ -41,12 +47,16 @@ function rev(raidId?: string) {
 }
 const uid = () => getSessionUserId();
 
-export async function openRaidAction(bossCode: RaidBoss, visibleToFriends = false) {
+export async function openRaidAction(
+  bossCode: RaidBoss,
+  friendShare: RaidShareMode = 'off',
+  guildShare: RaidShareMode = 'off',
+) {
   const u = await uid();
   if (!u) return err('UNAUTHENTICATED');
   if (await rateLimited(u, 'raid')) return err('RATE_LIMITED');
   try {
-    const r = await openRaid({ userId: u, bossCode, visibleToFriends });
+    const r = await openRaid({ userId: u, bossCode, friendShare, guildShare });
     rev();
     return { status: 'success' as const, raidId: r.raidId.toString(), shareCode: r.shareCode };
   } catch (e) {
@@ -56,14 +66,56 @@ export async function openRaidAction(bossCode: RaidBoss, visibleToFriends = fals
   }
 }
 
-export async function joinRaidAction(shareCode: string) {
+/** 공유링크 참가 — 즉시 X, 요청 생성(개설자 수락 대기). 호스트/기참가자는 'joined'. */
+export async function requestJoinRaidAction(shareCode: string) {
   const u = await uid();
   if (!u) return err('UNAUTHENTICATED');
   if (await rateLimited(u, 'raid')) return err('RATE_LIMITED');
   try {
-    const r = await joinRaid({ userId: u, shareCode });
+    const r = await requestJoinRaid({ userId: u, shareCode });
     rev(r.raidId.toString());
-    return { status: 'success' as const, raidId: r.raidId.toString() };
+    return { status: 'success' as const, raidId: r.raidId.toString(), state: r.state };
+  } catch (e) {
+    if (e instanceof RaidError) return err(e.code);
+    console.error('[raid.requestJoin]', e);
+    return err('UNKNOWN');
+  }
+}
+
+/** 개설자의 참가요청 수락/거절. */
+export async function decideJoinRequestAction(
+  raidId: string,
+  requesterUserId: string,
+  approve: boolean,
+) {
+  const u = await uid();
+  if (!u) return err('UNAUTHENTICATED');
+  if (await rateLimited(u, 'raid')) return err('RATE_LIMITED');
+  try {
+    const r = await decideJoinRequest({
+      hostUserId: u,
+      raidId: BigInt(raidId),
+      requesterUserId,
+      approve,
+    });
+    rev(raidId);
+    return { status: 'success' as const, approved: r.approved };
+  } catch (e) {
+    if (e instanceof RaidError) return err(e.code);
+    console.error('[raid.decideJoin]', e);
+    return err('UNKNOWN');
+  }
+}
+
+/** 친구/길드 목록 참가 — scope의 공개 모드가 free면 즉시, approval이면 요청. */
+export async function joinRaidAction(shareCode: string, scope: JoinScope = 'friend') {
+  const u = await uid();
+  if (!u) return err('UNAUTHENTICATED');
+  if (await rateLimited(u, 'raid')) return err('RATE_LIMITED');
+  try {
+    const r = await joinOrRequestRaid({ userId: u, shareCode, scope });
+    rev(r.raidId.toString());
+    return { status: 'success' as const, raidId: r.raidId.toString(), state: r.state };
   } catch (e) {
     if (e instanceof RaidError) return err(e.code);
     console.error('[raid.join]', e);

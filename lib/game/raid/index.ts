@@ -3,8 +3,16 @@
  * open/join/attack/buyExtraAttack/settle + 파생(phasesCleared/phase drop).
  */
 export { openRaid, RaidError } from './open';
-export type { RaidErrorCode, RaidBoss } from './open';
+export type { RaidErrorCode, RaidBoss, RaidShareMode } from './open';
 export { joinRaid } from './join';
+export {
+  requestJoinRaid,
+  joinOrRequestRaid,
+  decideJoinRequest,
+  getPendingJoinRequests,
+  getMyJoinRequestStatus,
+} from './join-request';
+export type { JoinScope, JoinRequestState } from './join-request';
 export { attackRaid, buyExtraAttack, gemAttackRaid } from './attack';
 export { settleRaid } from './settle';
 export { claimRaidReward } from './claim';

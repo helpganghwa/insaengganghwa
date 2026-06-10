@@ -40,7 +40,7 @@ export type RaidSlotCell =
       participantCount: number;
     };
 
-/** 친구가 소환한(친구 공개) 활성 레이드 — /raid 하단 목록. */
+/** 친구/길드가 소환한 활성 레이드 — /raid 하단 목록. */
 export type FriendRaid = {
   raidId: string;
   bossCode: RaidBoss;
@@ -50,6 +50,116 @@ export type FriendRaid = {
   hostNickname: string;
   participantCount: number;
 };
+
+type ShareMode = 'off' | 'free' | 'approval';
+const SHARE_OPTS: { v: ShareMode; label: string }[] = [
+  { v: 'off', label: '비공개' },
+  { v: 'free', label: '자유' },
+  { v: 'approval', label: '수락' },
+];
+
+/** 공개 범위 행 — 비공개/자유(즉시)/수락(요청) 세그먼트. */
+function ShareModeRow({
+  title,
+  hint,
+  value,
+  onChange,
+}: {
+  title: string;
+  hint: string;
+  value: ShareMode;
+  onChange: (v: ShareMode) => void;
+}) {
+  return (
+    <div className="flex items-center justify-between gap-2 rounded-xl border border-zinc-200 px-3 py-2 dark:border-zinc-700">
+      <span className="text-[12px] font-medium">
+        {title}
+        <span className="ml-1 text-[10px] text-zinc-400">{hint}</span>
+      </span>
+      <div className="flex shrink-0 gap-0.5 rounded-lg bg-zinc-100 p-0.5 dark:bg-zinc-800">
+        {SHARE_OPTS.map((o) => (
+          <button
+            key={o.v}
+            type="button"
+            onClick={() => onChange(o.v)}
+            className={`rounded-md px-2 py-0.5 text-[11px] font-bold transition ${
+              value === o.v ? 'bg-amber-500 text-white' : 'text-zinc-500'
+            }`}
+          >
+            {o.label}
+          </button>
+        ))}
+      </div>
+    </div>
+  );
+}
+
+/** 친구/길드 소환 레이드 목록 섹션 — 비면 미노출. onJoin(shareCode)로 참가/요청. */
+function RaidListSection({
+  title,
+  raids,
+  pending,
+  onJoin,
+}: {
+  title: string;
+  raids: FriendRaid[];
+  pending: boolean;
+  onJoin: (shareCode: string) => void;
+}) {
+  if (raids.length === 0) return null;
+  return (
+    <section className="mt-5">
+      <h2 className="mb-2 text-[12px] font-bold text-zinc-500">{title}</h2>
+      <div className="space-y-2">
+        {raids.map((f) => (
+          <button
+            key={f.raidId}
+            type="button"
+            disabled={pending}
+            onClick={() => onJoin(f.shareCode)}
+            style={{ boxShadow: getBossShadow(f.bossCode) }}
+            className={`relative flex w-full items-center gap-3 isolate overflow-hidden rounded-xl border-2 border-emerald-700/50 bg-gradient-to-r p-3 text-left text-zinc-100 transition active:scale-[0.99] disabled:opacity-60 ${getBossBgClass(f.bossCode)}`}
+          >
+            {getBossBg(f.bossCode) ? (
+              // eslint-disable-next-line @next/next/no-img-element
+              <img
+                src={assetUrl(getBossBg(f.bossCode)!)}
+                alt=""
+                aria-hidden
+                className="pointer-events-none absolute inset-0 h-full w-full object-cover opacity-30"
+                style={{ imageRendering: 'pixelated' }}
+              />
+            ) : null}
+            <div className="pointer-events-none absolute inset-0 bg-gradient-to-r from-black/75 via-black/45 to-black/70" />
+            <div className="relative shrink-0">
+              <BossSprite code={f.bossCode} size={48} />
+            </div>
+            <span className="relative min-w-0 flex-1">
+              <span className="block truncate text-sm font-bold drop-shadow">
+                {RAID_BOSSES[f.bossCode].name}
+                <span className="ml-1 text-[11px] font-medium text-emerald-300">
+                  {f.hostNickname}
+                </span>
+              </span>
+              <span className="mt-0.5 flex flex-wrap gap-x-2 text-[10px] text-zinc-300">
+                <Countdown iso={f.expireAtIso} />
+                <span>
+                  페이즈 <span className="font-mono font-bold">{f.phasesCleared}</span>
+                </span>
+                <span>
+                  인원 <span className="font-mono font-bold">{f.participantCount}/10</span>
+                </span>
+              </span>
+            </span>
+            <span className="relative shrink-0 rounded-lg bg-emerald-500 px-2.5 py-1.5 text-[12px] font-bold text-white">
+              참가
+            </span>
+          </button>
+        ))}
+      </div>
+    </section>
+  );
+}
 
 function Countdown({ iso }: { iso: string }) {
   const [now, setNow] = useState(() => Date.now());
@@ -74,25 +184,28 @@ export function RaidSlots({
   dailyUsed,
   dailyCap,
   friendRaids = [],
+  guildRaids = [],
 }: {
   cells: RaidSlotCell[];
   slots: number;
   dailyUsed: number;
   dailyCap: number;
   friendRaids?: FriendRaid[];
+  guildRaids?: FriendRaid[];
 }) {
   const router = useRouter();
   const [pending, startTransition] = useTransition();
   const [picking, setPicking] = useState(false);
   const [picked, setPicked] = useState<RaidBoss | null>(null);
-  const [shareToFriends, setShareToFriends] = useState(false);
+  const [friendShare, setFriendShare] = useState<ShareMode>('off');
+  const [guildShare, setGuildShare] = useState<ShareMode>('off');
   const exhausted = dailyUsed >= dailyCap;
 
   const cells = Array.from({ length: slots }, (_, i) => cellsIn[i] ?? null);
 
   const open = (code: RaidBoss) =>
     startTransition(async () => {
-      const r = await openRaidAction(code, shareToFriends);
+      const r = await openRaidAction(code, friendShare, guildShare);
       if (r.status === 'error') {
         alert(r.message);
         return;
@@ -101,11 +214,15 @@ export function RaidSlots({
       router.push(`/raid/${r.raidId}`);
     });
 
-  const join = (shareCode: string) =>
+  const join = (shareCode: string, scope: 'friend' | 'guild') =>
     startTransition(async () => {
-      const r = await joinRaidAction(shareCode);
+      const r = await joinRaidAction(shareCode, scope);
       if (r.status === 'error') {
         alert(r.message);
+        return;
+      }
+      if (r.state === 'requested') {
+        alert('참가 요청을 보냈습니다. 개설자가 수락하면 참여됩니다.');
         return;
       }
       router.push(`/raid/${r.raidId}`);
@@ -234,59 +351,19 @@ export function RaidSlots({
         )}
       </div>
 
-      {/* 친구가 소환한 레이드 — 친구 공개·활성. 카톡 링크 없이 바로 참가. */}
-      {friendRaids.length > 0 ? (
-        <section className="mt-5">
-          <h2 className="mb-2 text-[12px] font-bold text-zinc-500">친구가 소환한 레이드</h2>
-          <div className="space-y-2">
-            {friendRaids.map((f) => (
-              <button
-                key={f.raidId}
-                type="button"
-                disabled={pending}
-                onClick={() => join(f.shareCode)}
-                style={{ boxShadow: getBossShadow(f.bossCode) }}
-                className={`relative flex w-full items-center gap-3 isolate overflow-hidden rounded-xl border-2 border-emerald-700/50 bg-gradient-to-r p-3 text-left text-zinc-100 transition active:scale-[0.99] disabled:opacity-60 ${getBossBgClass(f.bossCode)}`}
-              >
-                {getBossBg(f.bossCode) ? (
-                  // eslint-disable-next-line @next/next/no-img-element
-                  <img
-                    src={assetUrl(getBossBg(f.bossCode)!)}
-                    alt=""
-                    aria-hidden
-                    className="pointer-events-none absolute inset-0 h-full w-full object-cover opacity-30"
-                    style={{ imageRendering: 'pixelated' }}
-                  />
-                ) : null}
-                <div className="pointer-events-none absolute inset-0 bg-gradient-to-r from-black/75 via-black/45 to-black/70" />
-                <div className="relative shrink-0">
-                  <BossSprite code={f.bossCode} size={48} />
-                </div>
-                <span className="relative min-w-0 flex-1">
-                  <span className="block truncate text-sm font-bold drop-shadow">
-                    {RAID_BOSSES[f.bossCode].name}
-                    <span className="ml-1 text-[11px] font-medium text-emerald-300">
-                      {f.hostNickname}
-                    </span>
-                  </span>
-                  <span className="mt-0.5 flex flex-wrap gap-x-2 text-[10px] text-zinc-300">
-                    <Countdown iso={f.expireAtIso} />
-                    <span>
-                      페이즈 <span className="font-mono font-bold">{f.phasesCleared}</span>
-                    </span>
-                    <span>
-                      인원 <span className="font-mono font-bold">{f.participantCount}/10</span>
-                    </span>
-                  </span>
-                </span>
-                <span className="relative shrink-0 rounded-lg bg-emerald-500 px-2.5 py-1.5 text-[12px] font-bold text-white">
-                  참가
-                </span>
-              </button>
-            ))}
-          </div>
-        </section>
-      ) : null}
+      {/* 친구/길드가 소환한 레이드 — 공개·활성. 자유=즉시, 수락=요청. */}
+      <RaidListSection
+        title="친구가 소환한 레이드"
+        raids={friendRaids}
+        pending={pending}
+        onJoin={(sc) => join(sc, 'friend')}
+      />
+      <RaidListSection
+        title="길드가 소환한 레이드"
+        raids={guildRaids}
+        pending={pending}
+        onJoin={(sc) => join(sc, 'guild')}
+      />
 
       {picking ? (
         <div
@@ -334,18 +411,23 @@ export function RaidSlots({
                 <p className="mt-2 rounded-xl bg-amber-50/60 p-3 text-[11px] leading-relaxed break-keep text-zinc-600 dark:bg-amber-950/20 dark:text-zinc-300">
                   {RAID_BOSSES[picked].story}
                 </p>
-                <label className="mt-3 flex cursor-pointer items-center justify-between rounded-xl border border-zinc-200 px-3 py-2 dark:border-zinc-700">
-                  <span className="text-[12px] font-medium">
-                    친구에게 공개
-                    <span className="ml-1 text-[10px] text-zinc-400">친구 목록에서 참가 가능</span>
-                  </span>
-                  <input
-                    type="checkbox"
-                    checked={shareToFriends}
-                    onChange={(e) => setShareToFriends(e.target.checked)}
-                    className="h-4 w-4 accent-amber-500"
+                <div className="mt-3 space-y-1.5">
+                  <ShareModeRow
+                    title="친구 공개"
+                    hint="자유=즉시 · 수락=요청"
+                    value={friendShare}
+                    onChange={setFriendShare}
                   />
-                </label>
+                  <ShareModeRow
+                    title="길드원 공개"
+                    hint="자유=즉시 · 수락=요청"
+                    value={guildShare}
+                    onChange={setGuildShare}
+                  />
+                  <p className="px-1 text-[10px] text-zinc-400">
+                    공유 링크 참가는 항상 개설자 수락이 필요합니다.
+                  </p>
+                </div>
                 <div className="mt-2 space-y-1.5">
                   <button
                     type="button"

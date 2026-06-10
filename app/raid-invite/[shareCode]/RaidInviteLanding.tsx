@@ -12,7 +12,7 @@ import { assetUrl } from '@/lib/asset-versions';
 import { signInWithKakao } from '@/lib/auth/actions';
 import * as haptic from '@/lib/game/haptic';
 
-import { joinRaidAction } from '../../(game)/raid/actions';
+import { requestJoinRaidAction } from '../../(game)/raid/actions';
 
 /**
  * 레이드 초대 풀페이지 — 비로그인/참가전/꽉참/종료 분기.
@@ -63,21 +63,23 @@ export function RaidInviteLanding({
   const full = participantCount >= RAID_MAX_PARTICIPANTS;
   const [pending, startTransition] = useTransition();
   const [error, setError] = useState<string | null>(null);
+  const [requested, setRequested] = useState(false);
 
   const enter = () => router.push(`/raid/${raidId}`);
 
+  // 공유링크 참가 — 즉시 X, 개설자 수락 필요(링크 유출 대비). 호스트/기참가자는 바로 입장.
   const handleJoin = () => {
-    if (pending || ended || full) return;
+    if (pending || ended || full || requested) return;
     haptic.success();
     setError(null);
     startTransition(async () => {
-      const r = await joinRaidAction(shareCode);
+      const r = await requestJoinRaidAction(shareCode);
       if (r.status === 'error') {
-        if (r.code === 'ALREADY_JOINED') return enter(); // 이미 참가 상태면 그냥 입장
         setError(r.message);
         return;
       }
-      enter();
+      if (r.state === 'joined') return enter();
+      setRequested(true); // 'requested' — 수락 대기
     });
   };
 
@@ -161,22 +163,31 @@ export function RaidInviteLanding({
           </form>
         </div>
       ) : (
-        <button
-          type="button"
-          onClick={handleJoin}
-          disabled={pending || full}
-          className={`w-full rounded-xl py-3.5 text-sm font-extrabold transition active:scale-[0.99] ${
-            pending || full
-              ? 'bg-zinc-800 text-zinc-500'
-              : 'bg-gradient-to-r from-red-600 to-orange-500 text-white shadow-lg shadow-red-900/40'
-          }`}
-        >
-          {full
-            ? `인원이 가득 찼습니다 (최대 ${RAID_MAX_PARTICIPANTS}명)`
-            : pending
-              ? '참가 중…'
-              : '⚔️ 레이드 참가하기'}
-        </button>
+        <div className="space-y-2">
+          <button
+            type="button"
+            onClick={handleJoin}
+            disabled={pending || full || requested}
+            className={`w-full rounded-xl py-3.5 text-sm font-extrabold transition active:scale-[0.99] ${
+              pending || full || requested
+                ? 'bg-zinc-800 text-zinc-300'
+                : 'bg-gradient-to-r from-red-600 to-orange-500 text-white shadow-lg shadow-red-900/40'
+            }`}
+          >
+            {requested
+              ? '✅ 참가 요청됨 · 개설자 수락 대기'
+              : full
+                ? `인원이 가득 찼습니다 (최대 ${RAID_MAX_PARTICIPANTS}명)`
+                : pending
+                  ? '요청 중…'
+                  : '⚔️ 레이드 참가 요청'}
+          </button>
+          {requested ? (
+            <p className="text-center text-[11px] text-zinc-400">
+              개설자가 수락하면 자동으로 참여됩니다. 잠시 후 다시 확인해 주세요.
+            </p>
+          ) : null}
+        </div>
       )}
     </main>
   );

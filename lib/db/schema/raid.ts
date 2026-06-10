@@ -50,10 +50,35 @@ export const raids = pgTable(
     phasesCleared: integer('phases_cleared').notNull().default(0),
     status: raidStatusEnum('status').notNull().default('active'),
     settledAt: timestamp('settled_at', { withTimezone: true }),
-    /** true = 친구 목록(/raid '친구가 소환한 레이드')에 노출. 기본 false(링크로만). */
+    /** (legacy) 0045 이전 친구 공개 플래그 — 현재는 friendShare로 대체(미사용). */
     visibleToFriends: boolean('visible_to_friends').notNull().default(false),
+    /** 친구 공개·참가 모드: 'off' | 'free'(즉시) | 'approval'(요청→수락). */
+    friendShare: text('friend_share').notNull().default('off'),
+    /** 길드 공개·참가 모드: 'off' | 'free' | 'approval'. */
+    guildShare: text('guild_share').notNull().default('off'),
   },
   (t) => [index('raid_status_expire_idx').on(t.status, t.expireAt)],
+);
+
+/**
+ * 공유링크 참가 요청 — 0045. 링크(/raid-invite) 참가는 즉시 X, 개설자 수락 필요(링크 유출 대비).
+ * 친구/길드 목록 참가는 신뢰 경로라 요청 없이 즉시. status: pending|approved|rejected.
+ */
+export const raidJoinRequests = pgTable(
+  'raid_join_requests',
+  {
+    id: bigserial('id', { mode: 'bigint' }).primaryKey(),
+    raidId: bigint('raid_id', { mode: 'bigint' })
+      .notNull()
+      .references(() => raids.id, { onDelete: 'cascade' }),
+    userId: uuid('user_id')
+      .notNull()
+      .references(() => profiles.id, { onDelete: 'cascade' }),
+    status: text('status').notNull().default('pending'),
+    createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
+    decidedAt: timestamp('decided_at', { withTimezone: true }),
+  },
+  (t) => [uniqueIndex('raid_join_request_uq').on(t.raidId, t.userId)],
 );
 
 /** §6.2 raid_participants. totalDamage = 표시용(보상 가중 아님). */

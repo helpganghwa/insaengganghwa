@@ -1,4 +1,4 @@
-import { and, eq, gt, inArray, isNull, sql } from 'drizzle-orm';
+import { and, eq, gt, inArray, isNull, ne, sql } from 'drizzle-orm';
 
 import { getSessionUserId } from '@/lib/auth/session';
 import { db } from '@/lib/db/client';
@@ -155,7 +155,7 @@ export default async function RaidPage() {
         .where(
           and(
             eq(raids.status, 'active'),
-            eq(raids.visibleToFriends, true),
+            ne(raids.friendShare, 'off'),
             gt(raids.expireAt, sql`now()`),
             inArray(raids.hostUserId, friendIds),
           ),
@@ -177,6 +177,45 @@ export default async function RaidPage() {
       }));
   }
 
+  // 길드가 소환한 레이드 — guild_share != 'off' + 호스트가 나와 같은 길드. 내 레이드 제외.
+  const myRaidIds2 = new Set(rows.map((r) => r.id.toString()));
+  const guildRaids: FriendRaid[] = (
+    (await withTimeout(
+      db.execute(sql`
+        select r.id::text as id, r.boss_code as boss_code, r.share_code as share_code,
+               r.expire_at as expire_at, r.phases_cleared as phases_cleared,
+               p.nickname as host_nickname,
+               (select count(*) from raid_participants rp where rp.raid_id = r.id)::int as participant_count
+        from raids r
+        join guild_members hg on hg.user_id = r.host_user_id
+        join guild_members mg on mg.guild_id = hg.guild_id and mg.user_id = ${userId}::uuid
+        join profiles p on p.id = r.host_user_id
+        where r.status = 'active' and r.guild_share <> 'off' and r.expire_at > now()
+        limit 20
+      `),
+      3500,
+      'raid.guildRaids',
+    ).catch(() => [])) as unknown as {
+      id: string;
+      boss_code: string;
+      share_code: string;
+      expire_at: Date;
+      phases_cleared: number;
+      host_nickname: string;
+      participant_count: number;
+    }[]
+  )
+    .filter((r) => !myRaidIds2.has(r.id))
+    .map((r) => ({
+      raidId: r.id,
+      bossCode: r.boss_code as RaidBoss,
+      shareCode: r.share_code,
+      expireAtIso: new Date(r.expire_at).toISOString(),
+      phasesCleared: r.phases_cleared,
+      hostNickname: r.host_nickname,
+      participantCount: r.participant_count,
+    }));
+
   return (
     <div className="px-4 py-4">
       <RaidSlots
@@ -185,6 +224,7 @@ export default async function RaidPage() {
         dailyUsed={dailyRow[0]?.c ?? 0}
         dailyCap={RAID_DAILY_CAP}
         friendRaids={friendRaids}
+        guildRaids={guildRaids}
       />
     </div>
   );

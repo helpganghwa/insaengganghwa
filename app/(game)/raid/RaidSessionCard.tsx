@@ -24,6 +24,7 @@ import {
   attackRaidAction,
   gemAttackRaidAction,
   claimRaidRewardAction,
+  decideJoinRequestAction,
 } from './actions';
 
 export type RaidView = {
@@ -52,6 +53,8 @@ export type RaidView = {
     isMe: boolean;
     guildEmblemUrl: string | null;
   }[];
+  /** 개설자만 — 대기 중 참가 요청(공유링크 등). */
+  pendingRequests: { userId: string; nickname: string; publicCode: string }[];
 };
 
 const MEDAL = ['🥇', '🥈', '🥉'];
@@ -164,6 +167,26 @@ export function RaidSessionCard({ view: v }: { view: RaidView }) {
     null,
   );
   const fxKey = useRef(0);
+  // 개설자 참가요청 수락/거절 — 낙관적 제거(서버 확정 후 refresh).
+  const [handledReqs, setHandledReqs] = useState<Set<string>>(new Set());
+  const decideReq = (requesterId: string, approve: boolean) => {
+    setHandledReqs((s) => new Set(s).add(requesterId));
+    void (async () => {
+      const r = await decideJoinRequestAction(v.raidId, requesterId, approve);
+      if (r.status !== 'success') {
+        setHandledReqs((s) => {
+          const n = new Set(s);
+          n.delete(requesterId);
+          return n;
+        });
+        showError(r.message);
+        return;
+      }
+      showHeaderToast({ title: approve ? '참가 수락' : '요청 거절' });
+      router.refresh();
+    })();
+  };
+  const visibleReqs = v.pendingRequests.filter((r) => !handledReqs.has(r.userId));
   // 보석 공격 — 1탭 시 3초 컨펌(카운트+로어), 그 안에 2탭하면 실행.
   const [gemConfirm, setGemConfirm] = useState(false);
   const [gemLeft, setGemLeft] = useState(0);
@@ -593,6 +616,41 @@ export function RaidSessionCard({ view: v }: { view: RaidView }) {
             ) : (
               <span className="text-zinc-500">아직 없음</span>
             )}
+          </div>
+        ) : null}
+
+        {/* ── 참가 요청(개설자만) — 공유링크 등 요청 수락/거절 ── */}
+        {v.isHost && visibleReqs.length > 0 ? (
+          <div className="rounded-xl border border-amber-500/40 bg-amber-950/20 p-2.5">
+            <div className="mb-1.5 text-[10px] font-semibold tracking-widest text-amber-300">
+              참가 요청 {visibleReqs.length}건
+            </div>
+            <ul className="space-y-1">
+              {visibleReqs.map((req) => (
+                <li key={req.userId} className="flex items-center gap-2 text-[12px]">
+                  <Link
+                    href={`/u/${encodeURIComponent(req.publicCode)}`}
+                    className="min-w-0 flex-1 truncate font-medium hover:underline"
+                  >
+                    {req.nickname}
+                  </Link>
+                  <button
+                    type="button"
+                    onClick={() => decideReq(req.userId, true)}
+                    className="shrink-0 rounded-md bg-emerald-500 px-2.5 py-1 text-[11px] font-bold text-white active:scale-95"
+                  >
+                    수락
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => decideReq(req.userId, false)}
+                    className="shrink-0 rounded-md bg-zinc-700 px-2.5 py-1 text-[11px] font-bold text-zinc-200 active:scale-95"
+                  >
+                    거절
+                  </button>
+                </li>
+              ))}
+            </ul>
           </div>
         ) : null}
 
