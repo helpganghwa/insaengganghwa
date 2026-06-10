@@ -62,6 +62,8 @@ export const profiles = pgTable('profiles', {
    * FK(`zones.id`)는 마이그레이션에서 ALTER 추가(순환 import 회피, activeProfileId와 동일 패턴).
    */
   residenceZoneId: integer('residence_zone_id'),
+  /** 마지막 접속 시각 — 쿠키 게이트 하트비트(2분 스로틀)로 갱신. 길드원·친구 목록 접속 상태 표시용. */
+  lastSeenAt: timestamp('last_seen_at', { withTimezone: true }),
   createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
   updatedAt: timestamp('updated_at', { withTimezone: true }).notNull().defaultNow(),
 });

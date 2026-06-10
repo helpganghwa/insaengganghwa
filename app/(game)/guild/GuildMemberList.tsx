@@ -3,6 +3,8 @@
 import { useMemo, useState } from 'react';
 import Link from 'next/link';
 
+import { LastSeen } from '@/components/LastSeen';
+
 type Slot = 'weapon' | 'armor' | 'accessory';
 type Equipped = { slot: Slot; code: string; enhance: number };
 export type RichMember = {
@@ -11,6 +13,8 @@ export type RichMember = {
   publicCode: string;
   role: 'leader' | 'vice' | 'member';
   avatar: string | null;
+  /** 마지막 접속(ISO) — 접속 상태 표시. 없으면 null. */
+  lastSeenAt: string | null;
   contribution: number;
   combat: number;
   maxEnhance: number;
@@ -85,12 +89,13 @@ function MemberRow({ m, myUserId, sort, sortLabel }: { m: RichMember; myUserId: 
           ) : null}
         </span>
         <div className="min-w-0 flex-1">
-          <div className="flex min-w-0 items-center gap-1">
+          <div className="flex min-w-0 items-center gap-1.5">
             <span
               className={`truncate text-[13px] font-semibold ${m.userId === myUserId ? 'text-amber-700 dark:text-amber-300' : ''}`}
             >
               {m.nickname}
             </span>
+            <LastSeen at={m.lastSeenAt} className="shrink-0 text-[10px] text-zinc-400" />
           </div>
           <p className="mt-0.5 text-[11px] text-zinc-500">
             {sortLabel}{' '}

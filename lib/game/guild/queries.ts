@@ -199,6 +199,7 @@ export async function getGuildMembersRich(guildId: bigint) {
       publicCode: profiles.publicCode,
       role: guildMembers.role,
       contribution: guildMembers.contributionPoints,
+      lastSeenAt: profiles.lastSeenAt,
       // 유저 지정 방향(active_direction, enum→text) 우선, 없으면 정면(south) 폴백.
       avatar: sql<string | null>`coalesce(${userProfiles.rotations} ->> ${userProfiles.activeDirection}::text, ${userProfiles.rotations} ->> 'south')`,
     })
@@ -250,6 +251,7 @@ export async function getGuildMembersRich(guildId: bigint) {
       publicCode: b.publicCode,
       role: b.role,
       avatar: b.avatar,
+      lastSeenAt: b.lastSeenAt ? b.lastSeenAt.toISOString() : null,
       contribution: Number(b.contribution),
       combat: combatPowerFromOwned(own),
       maxEnhance: own.reduce((mx, o) => Math.max(mx, o.enhanceLevel), 0),

@@ -5,6 +5,7 @@ import { useRouter } from 'next/navigation';
 
 import { useResourceToast } from '@/components/ResourceToast';
 import { GuildBadge } from '@/components/GuildBadge';
+import { LastSeen } from '@/components/LastSeen';
 
 import {
   searchAction,
@@ -73,7 +74,10 @@ function Row({ u, onOpen, right }: { u: FriendUser; onOpen: () => void; right: R
       >
         <Avatar src={u.profileSouth} />
         <div className="min-w-0 flex-1">
-          <div className="truncate text-sm font-bold">{u.nickname}</div>
+          <div className="flex min-w-0 items-center gap-1.5">
+            <span className="truncate text-sm font-bold">{u.nickname}</span>
+            <LastSeen at={u.lastSeenAt ?? null} className="shrink-0 text-[10px] text-zinc-400" />
+          </div>
           {/* 닉네임 아래 길드(이름 + 문양). 미소속/생성중이면 GuildBadge가 null → 영역 비움. */}
           <GuildBadge
             emblemUrl={u.guildEmblemUrl ?? null}

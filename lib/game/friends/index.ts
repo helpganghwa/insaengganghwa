@@ -32,22 +32,26 @@ export interface FriendUser {
   /** 닉네임 아래 길드(이름+문양) — 미소속/생성중이면 null. page(목록·요청) 또는 searchUsers(찾기)에서 부착. */
   guildEmblemUrl?: string | null;
   guildName?: string | null;
+  /** 마지막 접속(ISO) — 접속 상태 표시용. 기록 없으면 null. */
+  lastSeenAt?: string | null;
 }
 
 const SOUTH = sql<string | null>`${userProfiles.rotations} ->> 'south'`;
 
 async function profilesByIds(ids: string[]): Promise<FriendUser[]> {
   if (ids.length === 0) return [];
-  return db
+  const rows = await db
     .select({
       userId: profiles.id,
       nickname: profiles.nickname,
       publicCode: profiles.publicCode,
       profileSouth: SOUTH,
+      lastSeenAt: profiles.lastSeenAt,
     })
     .from(profiles)
     .leftJoin(userProfiles, eq(userProfiles.id, profiles.activeProfileId))
     .where(inArray(profiles.id, ids));
+  return rows.map((r) => ({ ...r, lastSeenAt: r.lastSeenAt ? r.lastSeenAt.toISOString() : null }));
 }
 
 /** 닉네임(부분)·공개코드(정확) 검색 — 본인 제외, 관계 라벨 포함. */
@@ -63,6 +67,7 @@ export async function searchUsers(
       nickname: profiles.nickname,
       publicCode: profiles.publicCode,
       profileSouth: SOUTH,
+      lastSeenAt: profiles.lastSeenAt,
     })
     .from(profiles)
     .leftJoin(userProfiles, eq(userProfiles.id, profiles.activeProfileId))
@@ -91,6 +96,7 @@ export async function searchUsers(
   );
   return rows.map((r) => ({
     ...r,
+    lastSeenAt: r.lastSeenAt ? r.lastSeenAt.toISOString() : null,
     relation: rel.get(r.userId) ?? 'none',
     guildEmblemUrl: guildMap.get(r.userId)?.emblemUrl ?? null,
     guildName: guildMap.get(r.userId)?.name ?? null,

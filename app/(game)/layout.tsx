@@ -15,6 +15,7 @@ import { AppHeader, AppHeaderShell } from '@/components/AppHeader';
 import { BottomNav } from '@/components/BottomNav';
 import { BottomNavAsync } from '@/components/BottomNavAsync';
 import { SpritePreloader } from '@/components/SpritePreloader';
+import { PresenceHeartbeat } from '@/components/PresenceHeartbeat';
 import { RouteTransitionOverlay } from '@/components/RouteTransitionOverlay';
 import { KakaoSdkLoader } from '@/components/KakaoSdkLoader';
 import { ResourceToastProvider } from '@/components/ResourceToast';
@@ -68,6 +69,7 @@ export default async function GameLayout({ children }: { children: React.ReactNo
           주면 left/right-0과 over-constraint돼 좌측 정렬되므로 넣지 않는다(큰 화면 letterbox). */}
       <div className="fixed inset-0 mx-auto flex max-w-[390px] flex-col shadow-sm">
         <SpritePreloader />
+        <PresenceHeartbeat />
         <KakaoSdkLoader />
         <RouteTransitionOverlay />
         {/* 앱 설치 권유 띠지 — 웹(비설치) 실행 시 헤더 위 전체폭 상시 노출, 닫으면 5일 뒤 재노출.
