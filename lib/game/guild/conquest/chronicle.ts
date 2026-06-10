@@ -130,20 +130,26 @@ export async function aggregateConquestDay(kstDay: string): Promise<ConquestDayS
   };
 }
 
-const SYSTEM_PROMPT = `너는 판타지 대륙 '인생강화'의 연대기 사관이다. 길드들이 매일 정오 구역을 두고 다투는 정복 전쟁의 역사를 기록한다.
+const SYSTEM_PROMPT = `너는 대륙의 정복 전쟁을 기록하는 사관(史官)이다. 길드들이 매일 정오 구역을 두고 다투는 역사를 담담하게 적는다.
 
 규칙:
-- 한국어. 판타지 연대기/서사 톤. 담백하거나 일상적인 말투 금지.
-- 길드 이름과 구역 이름을 그대로 인용해 생동감을 준다.
-- 짧고 강렬하게. 과장된 미사여구 남발 금지. 밝음·기개와 비장함을 균형 있게(밝음 우세).
-- 주어진 '그날 사건'만 근거로 쓴다. 사건이 없으면 고요한 하루로 담담히 적는다.
-- 반드시 JSON만 출력: {"today": "...", "full": "..."}.
-  - today: 그날의 정세 브리핑 2~4문장.
-  - full: '이전 연대기'를 이어받아 그날 사건을 더해 갱신한 통합 서사. 오래된 사건은 압축·전설화하고 최근은 구체적으로. 전체 8~14문장 이내로 유지(무한히 늘리지 말 것).`;
+- 한국어. 사료를 적듯 담담하고 절제된 역사 기록 톤. 과장·감탄·미사여구·영웅 서사시 톤 금지.
+- 길드 이름과 인물(사용자) 이름은 반드시 **이름** 형태(별표 두 개)로 감싼다(강조용). 구역 이름은 감싸지 않는다.
+- '인생강화'라는 단어는 절대 쓰지 않는다. 대륙·세계는 고유명 없이 '대륙' 등으로만 칭한다.
+- 이모지·이모티콘을 절대 쓰지 않는다.
+- 주어진 '그날 사건'만 근거로 쓴다. 없는 사실을 지어내지 않는다.
+- 반드시 JSON만 출력: {"today": "...", "headline": "..."}.
+  - today: 그날의 역사를 이야기처럼 풀어 쓴 긴 기록(6~10문장). 담담한 기록체.
+  - headline: 그날을 한 줄로 압축한 핵심 사건(25자 내외, **이름** 마커 포함). 예: "**천둥길드**가 왕국 일대를 장악".`;
+
+/** 그날 사건이 '큰 사건'인지 — 점령(영토 변동) 또는 주목할 개인 활약이 있으면 기록 대상. */
+function isNotable(s: ConquestDaySummary): boolean {
+  return s.captures.length > 0 || s.feats.length > 0;
+}
 
 /**
- * 그날 연대기 생성·저장(멱등) — 직전 통합 서사 + 그날 점령전 요약을 AI가 이어 써 갱신.
- * 이미 그날 행이 있으면 skip. ANTHROPIC_API_KEY 없으면 throw.
+ * 그날 연대기 생성·저장(멱등) — 그날 점령전 요약을 AI가 기록.
+ * 이미 그날 행이 있으면 skip. 큰 사건 없으면 기록 안 함(별일 없는 날). KEY 없으면 throw.
  */
 export async function generateAndStoreChronicle(
   kstDay: string,
@@ -155,14 +161,8 @@ export async function generateAndStoreChronicle(
     .limit(1);
   if (existing) return { created: false, reason: 'already' };
 
-  const [prev] = await db
-    .select({ full: worldChronicle.fullNarrative })
-    .from(worldChronicle)
-    .orderBy(sql`${worldChronicle.kstDay} desc`)
-    .limit(1);
-  const prevNarrative = prev?.full ?? '(아직 기록된 역사가 없다. 이번이 첫 장이다.)';
-
   const summary = await aggregateConquestDay(kstDay);
+  if (!isNotable(summary)) return { created: false, reason: 'no-event' };
 
   const res = await client().messages.create({
     model: MODEL_ID,
@@ -171,7 +171,7 @@ export async function generateAndStoreChronicle(
     messages: [
       {
         role: 'user',
-        content: `이전 연대기:\n${prevNarrative}\n\n그날(${kstDay}) 점령전 사건(JSON):\n${JSON.stringify(summary)}\n\n위 규칙대로 JSON({today, full})만 출력하라.`,
+        content: `그날(${kstDay}) 점령전 사건(JSON):\n${JSON.stringify(summary)}\n\n위 규칙대로 JSON({today, headline})만 출력하라.`,
       },
     ],
   });
@@ -179,24 +179,38 @@ export async function generateAndStoreChronicle(
   const raw = block && 'text' in block ? block.text : '';
   const m = raw.match(/\{[\s\S]*\}/);
   if (!m) throw new Error(`CHRONICLE_PARSE_FAIL: ${raw.slice(0, 200)}`);
-  const parsed = JSON.parse(m[0]) as { today?: string; full?: string };
+  const parsed = JSON.parse(m[0]) as { today?: string; headline?: string };
   const today = (parsed.today ?? '').trim();
-  const full = (parsed.full ?? '').trim();
-  if (!today || !full) throw new Error('CHRONICLE_EMPTY');
+  const headline = (parsed.headline ?? '').trim();
+  if (!today || !headline) throw new Error('CHRONICLE_EMPTY');
 
   await db
     .insert(worldChronicle)
-    .values({ kstDay, todayText: today, fullNarrative: full })
+    .values({ kstDay, todayText: today, headline })
     .onConflictDoNothing({ target: worldChronicle.kstDay });
   return { created: true };
 }
 
-/** 최신 연대기(오늘/전체) — 세계지도 하단 표시용. 없으면 null. */
-export async function getLatestChronicle(): Promise<{ todayText: string; fullNarrative: string } | null> {
-  const [r] = await db
-    .select({ todayText: worldChronicle.todayText, fullNarrative: worldChronicle.fullNarrative })
+export type ChronicleData = {
+  /** '오늘' — 최신 기록일의 긴 스토리(없으면 null). */
+  today: string | null;
+  /** '전체' — 큰 사건이 있던 날들의 (날짜·한 줄) 리스트(최신순). */
+  list: { kstDay: string; headline: string }[];
+};
+
+/** 세계지도 하단 표시용 — 오늘(최신 스토리) + 전체(날짜별 헤드라인 리스트). */
+export async function getChronicle(): Promise<ChronicleData> {
+  const rows = await db
+    .select({
+      kstDay: worldChronicle.kstDay,
+      todayText: worldChronicle.todayText,
+      headline: worldChronicle.headline,
+    })
     .from(worldChronicle)
     .orderBy(sql`${worldChronicle.kstDay} desc`)
-    .limit(1);
-  return r ?? null;
+    .limit(120);
+  return {
+    today: rows[0]?.todayText ?? null,
+    list: rows.map((r) => ({ kstDay: String(r.kstDay), headline: r.headline })),
+  };
 }

@@ -5,7 +5,7 @@ import {
   getMyMembership,
   getResidence,
   getMyGuildDeployments,
-  getLatestChronicle,
+  getChronicle,
 } from '@/lib/game/guild';
 
 import { WorldMapView } from './WorldMapView';
@@ -19,7 +19,7 @@ export default async function WorldMapPage() {
     getWorldmapZones(),
     userId ? getMyMembership(userId) : Promise.resolve(null),
     userId ? getResidence(userId) : Promise.resolve(null),
-    getLatestChronicle().catch(() => null),
+    getChronicle().catch(() => null),
   ]);
 
   const myGuildId = membership?.guildId.toString() ?? null;

@@ -39,6 +39,24 @@ type Zone = {
   residentCount: number;
 };
 
+/** 연대기 본문 — AI가 길드/유저 이름을 **이름** 마커로 감싼 것을 강조 스팬으로 렌더. */
+function ChronicleText({ text }: { text: string }) {
+  const parts = text.split(/(\*\*[^*]+\*\*)/g);
+  return (
+    <>
+      {parts.map((p, i) =>
+        p.startsWith('**') && p.endsWith('**') ? (
+          <strong key={i} className="font-bold text-amber-600 dark:text-amber-400">
+            {p.slice(2, -2)}
+          </strong>
+        ) : (
+          <span key={i}>{p}</span>
+        ),
+      )}
+    </>
+  );
+}
+
 const REGION: Record<Region, { label: string; color: string }> = {
   volcano: { label: '드래곤 화산', color: '#ef4444' },
   temple: { label: '잊힌 신전', color: '#60a5fa' },
@@ -63,7 +81,7 @@ export function WorldMapView({
   residenceZoneId: number | null;
   canSetResidence: boolean;
   guildDeploys: Array<{ zoneId: number; role: DeployRole }>;
-  chronicle: { todayText: string; fullNarrative: string } | null;
+  chronicle: { today: string | null; list: { kstDay: string; headline: string }[] } | null;
   zones: Zone[];
 }) {
   const { showHeaderToast, showError } = useResourceToast();
@@ -200,10 +218,10 @@ export function WorldMapView({
         })}
       </div>
 
-      {/* 세계 연대기 — 점령전 발표(KST 12:00)와 함께 매일 AI 갱신. [오늘]/[전체] 탭. */}
+      {/* 세계 연대기 — 점령전 발표(KST 12:00)와 함께 매일 AI 갱신(큰 사건 있는 날만). [오늘]=긴 기록 / [전체]=날짜별 한 줄. */}
       <section className="mt-3 rounded-xl border border-zinc-200 bg-white p-4 dark:border-zinc-800 dark:bg-zinc-950">
         <div className="mb-2 flex items-center justify-between gap-2">
-          <h3 className="text-sm font-bold">📜 세계 연대기</h3>
+          <h3 className="text-sm font-bold">세계 연대기</h3>
           {chronicle ? (
             <div className="flex gap-0.5 rounded-lg bg-zinc-100 p-0.5 dark:bg-zinc-900">
               {(
@@ -228,13 +246,34 @@ export function WorldMapView({
             </div>
           ) : null}
         </div>
-        <p className="whitespace-pre-line text-[13px] leading-relaxed text-zinc-600 dark:text-zinc-300">
-          {chronicle
-            ? chronicleTab === 'today'
-              ? chronicle.todayText
-              : chronicle.fullNarrative
-            : '대륙의 정세 브리핑이 매일 정오 점령전 발표와 함께 이곳에 전해집니다. 첫 전쟁의 불길이 일면, 그 역사가 기록될 것입니다.'}
-        </p>
+        {chronicle ? (
+          chronicleTab === 'today' ? (
+            chronicle.today ? (
+              <p className="whitespace-pre-line text-[13px] leading-relaxed text-zinc-600 dark:text-zinc-300">
+                <ChronicleText text={chronicle.today} />
+              </p>
+            ) : (
+              <p className="text-[13px] leading-relaxed text-zinc-400">아직 기록된 오늘의 역사가 없습니다.</p>
+            )
+          ) : (
+            <ul className="flex flex-col divide-y divide-zinc-100 dark:divide-zinc-900">
+              {chronicle.list.map((e) => (
+                <li key={e.kstDay} className="flex gap-2.5 py-2 text-[13px] leading-relaxed">
+                  <span className="shrink-0 pt-px font-mono text-[11px] tabular-nums text-zinc-400">
+                    {e.kstDay.slice(5).replace('-', '.')}
+                  </span>
+                  <span className="text-zinc-600 dark:text-zinc-300">
+                    <ChronicleText text={e.headline} />
+                  </span>
+                </li>
+              ))}
+            </ul>
+          )
+        ) : (
+          <p className="text-[13px] leading-relaxed text-zinc-600 dark:text-zinc-300">
+            첫 전쟁의 불길이 일면, 그 역사가 기록될 것입니다.
+          </p>
+        )}
       </section>
 
       {/* 구역 상세 모달 */}

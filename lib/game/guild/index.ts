@@ -19,7 +19,8 @@ export * from './conquest/deploy';
 export * from './conquest/executor';
 export {
   generateAndStoreChronicle,
-  getLatestChronicle,
+  getChronicle,
   aggregateConquestDay,
 } from './conquest/chronicle';
+export type { ChronicleData } from './conquest/chronicle';
 export * from './emblem';

@@ -215,13 +215,14 @@ export const guildTaxDistributions = pgTable(
 );
 
 /**
- * 0046 세계 연대기(AI) — 점령전 발표(KST 12:00) 시 매일 1행. today_text='오늘' 정세,
- * full_narrative='전체' 통합 서사(롤링: 직전 서사 + 그날 점령전을 AI가 이어 씀).
+ * 0046/0047 세계 연대기(AI) — 큰 사건 있는 날만 1행(점령전 발표 KST 12:00).
+ * today_text='오늘'(긴 사관 스토리), headline='전체' 리스트용 그날 핵심 사건 한 줄.
+ * 길드/유저 이름은 본문에 **...** 마커로 감싸 강조 렌더.
  */
 export const worldChronicle = pgTable('world_chronicle', {
   kstDay: date('kst_day').primaryKey(),
   todayText: text('today_text').notNull(),
-  fullNarrative: text('full_narrative').notNull(),
+  headline: text('headline').notNull(),
   createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
 });
 
