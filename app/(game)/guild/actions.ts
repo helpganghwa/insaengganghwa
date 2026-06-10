@@ -60,6 +60,7 @@ export async function createGuildAction(name: string, emblem: EmblemSelection) {
       try {
         await generateAndStoreEmblem({ guildId, selection: emblem });
         revalidatePath('/guild');
+        revalidatePath('/', 'layout'); // 헤더(공유 레이아웃) 문양 반영
       } catch (ge) {
         console.error('[guild.create.emblem]', ge);
       }
@@ -78,6 +79,9 @@ export async function rerollEmblemAction(emblem: EmblemSelection) {
   try {
     await rerollEmblem({ userId: u, selection: emblem });
     revalidatePath('/guild');
+    // 헤더 문양은 (game) 공유 레이아웃(URL '/')에 있음 — page 리밸리데이트론 안 바뀜.
+    // 루트 layout 리밸리데이트로 모든 라우트의 헤더가 새 문양을 즉시 반영.
+    revalidatePath('/', 'layout');
     return { status: 'success' } as const;
   } catch (e) {
     return fail(e, 'rerollEmblem');

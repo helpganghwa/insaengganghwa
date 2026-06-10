@@ -53,10 +53,13 @@ export function AppHeaderShell({
             </span>
           )}
         </div>
-        <span className="truncate text-[13px] font-semibold text-zinc-800 dark:text-zinc-100">
-          {nickname}
+        {/* 이름↔문양은 좁게(gap-1), 아바타↔이름은 기존 gap-2 유지. */}
+        <span className="flex min-w-0 items-center gap-1">
+          <span className="truncate text-[13px] font-semibold text-zinc-800 dark:text-zinc-100">
+            {nickname}
+          </span>
+          <GuildBadge emblemUrl={guildEmblemUrl} size={18} className="shrink-0" />
         </span>
-        <GuildBadge emblemUrl={guildEmblemUrl} size={18} className="shrink-0" />
       </Link>
 
       <div className="flex shrink-0 items-center gap-1.5 text-xs">

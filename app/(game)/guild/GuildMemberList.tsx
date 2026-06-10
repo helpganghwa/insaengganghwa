@@ -70,7 +70,7 @@ function EquipIcon({ item }: { item: Equipped | undefined }) {
   );
 }
 
-function MemberRow({ m, myUserId, sort, sortLabel }: { m: RichMember; myUserId: string; sort: SortKey; sortLabel: string }) {
+function MemberRow({ m, myUserId, sort }: { m: RichMember; myUserId: string; sort: SortKey }) {
   const bySlot = new Map(m.equipped.map((e) => [e.slot, e]));
   return (
     <li>
@@ -100,7 +100,6 @@ function MemberRow({ m, myUserId, sort, sortLabel }: { m: RichMember; myUserId: 
             </span>
           </div>
           <p className="mt-0.5 text-[11px] text-zinc-500">
-            {sortLabel}{' '}
             {sort === 'lastSeen' ? (
               <LastSeen
                 at={m.lastSeenAt}
@@ -127,7 +126,6 @@ function MemberRow({ m, myUserId, sort, sortLabel }: { m: RichMember; myUserId: 
 
 export function GuildMemberList({ members, myUserId }: { members: RichMember[]; myUserId: string }) {
   const [sort, setSort] = useState<SortKey>('contribution');
-  const sortLabel = SORTS.find((s) => s.key === sort)!.label;
 
   // 직책별 그룹(길드장/부길드장/길드원) — 각 그룹 내부는 선택한 메트릭으로 정렬.
   const groups = useMemo(() => {
@@ -172,7 +170,7 @@ export function GuildMemberList({ members, myUserId }: { members: RichMember[]; 
             </p>
             <ul>
               {rows.map((m) => (
-                <MemberRow key={m.userId} m={m} myUserId={myUserId} sort={sort} sortLabel={sortLabel} />
+                <MemberRow key={m.userId} m={m} myUserId={myUserId} sort={sort} />
               ))}
             </ul>
           </div>

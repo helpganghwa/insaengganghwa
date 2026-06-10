@@ -85,6 +85,7 @@ export function buildEmblemPrompt(s: EmblemSelection): string {
   return (
     `dark fantasy pixel art guild emblem, the overall shape is ${shape}, in a ${tone} color palette, ` +
     `featuring ${kws} as a single bold central symmetrical motif, an ornate border that traces the outer silhouette of the shape, ` +
+    `the emblem is large and fills the entire frame edge to edge with minimal empty margin, ` +
     `clean strong silhouette, bold and readable at small sizes, centered, transparent background, no text`
   );
 }
