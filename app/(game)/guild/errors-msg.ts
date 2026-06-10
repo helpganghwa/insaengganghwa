@@ -27,6 +27,9 @@ const MAP: Record<string, string> = {
   VICE_LIMIT: '부길드장은 최대 5명까지 임명할 수 있습니다.',
   EMBLEM_INVALID: '문양은 모양·색상 각 1개, 키워드 1~3개를 선택하세요.',
   EMBLEM_GEN_FAILED: '문양 생성에 실패했습니다. 다이아는 환불되었습니다.',
+  EMBLEM_MAX: '문양은 최대 3개까지 보관할 수 있어요. 하나를 삭제한 뒤 생성하세요.',
+  EMBLEM_MIN: '문양은 최소 1개는 남겨야 해요.',
+  EMBLEM_NOT_FOUND: '문양을 찾을 수 없습니다.',
   UNAUTHENTICATED: '로그인이 필요합니다.',
   UNKNOWN: '오류가 발생했습니다.',
 };

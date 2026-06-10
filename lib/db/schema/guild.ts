@@ -48,6 +48,12 @@ export const guilds = pgTable('guilds', {
   emblemUrl: text('emblem_url'),
   /** 선택 색상톤 — UI 악센트(맵 구분은 문양 썸네일). */
   emblemColor: text('emblem_color'),
+  /**
+   * 활성 문양(`guild_emblems.id`) — 보관 문양(최대 3) 중 사용 중. null=미설정/생성 전.
+   * emblem_url·emblem_color는 이 활성 문양의 **비정규화 미러**(모든 읽기 코드 호환 유지).
+   * FK는 마이그레이션에서 ALTER 추가(guilds↔guild_emblems 상호참조 회피, residence와 동일 패턴).
+   */
+  activeEmblemId: bigint('active_emblem_id', { mode: 'bigint' }),
   /** 길드 공지 ≤60자(길드장/부길드장만 편집). */
   notice: text('notice'),
   /** 가입 방식 — 'open'(자유: 신청 즉시 가입) | 'approval'(승인: 길드장/부길드장 승인 필요). */
@@ -226,7 +232,28 @@ export const worldChronicle = pgTable('world_chronicle', {
   createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
 });
 
+/**
+ * 0049 길드 문양 보관함 — 길드당 최대 3개(앱 로직 제한, 최소 1). 아바타 다중 프로필 패턴 미러.
+ * 활성 문양은 guilds.active_emblem_id가 가리키고, guilds.emblem_url/color에 비정규화 미러.
+ */
+export const guildEmblems = pgTable(
+  'guild_emblems',
+  {
+    id: bigserial('id', { mode: 'bigint' }).primaryKey(),
+    guildId: bigint('guild_id', { mode: 'bigint' })
+      .notNull()
+      .references(() => guilds.id, { onDelete: 'cascade' }),
+    /** Pixellab 생성물 public URL(+캐시버스트). 생성 직후 채워짐. */
+    emblemUrl: text('emblem_url'),
+    /** 선택 색상톤(emblem 3축 중 tone). */
+    emblemColor: text('emblem_color'),
+    createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
+  },
+  (t) => [index('guild_emblem_guild_idx').on(t.guildId)],
+);
+
 export type Guild = typeof guilds.$inferSelect;
+export type GuildEmblem = typeof guildEmblems.$inferSelect;
 export type GuildMember = typeof guildMembers.$inferSelect;
 export type Zone = typeof zones.$inferSelect;
 export type GuildBattleDeployment = typeof guildBattleDeployments.$inferSelect;

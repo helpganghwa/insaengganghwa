@@ -26,7 +26,9 @@ import {
   clearZoneExecutor,
   getZoneLatestBattle,
   generateAndStoreEmblem,
-  rerollEmblem,
+  generateEmblem,
+  setActiveEmblem,
+  deleteEmblem,
   setViceRole,
   kickMember,
   transferLeadership,
@@ -72,19 +74,51 @@ export async function createGuildAction(name: string, emblem: EmblemSelection) {
   }
 }
 
-export async function rerollEmblemAction(emblem: EmblemSelection) {
+// 헤더 문양은 (game) 공유 레이아웃(URL '/')에 있음 — page 리밸리데이트론 안 바뀜.
+// 루트 layout 리밸리데이트로 모든 라우트의 헤더가 새 활성 문양을 즉시 반영.
+function revalidateGuildAndHeader() {
+  revalidatePath('/guild');
+  revalidatePath('/guild/settings');
+  revalidatePath('/', 'layout');
+}
+
+/** 새 문양 생성·보관(최대 3, 5,000💎). 길드장. */
+export async function generateEmblemAction(emblem: EmblemSelection) {
   const u = await getSessionUserId();
   if (!u) return unauth;
   if (!isValidEmblemSelection(emblem)) return { status: 'error', code: 'EMBLEM_INVALID' } as const;
   try {
-    await rerollEmblem({ userId: u, selection: emblem });
-    revalidatePath('/guild');
-    // 헤더 문양은 (game) 공유 레이아웃(URL '/')에 있음 — page 리밸리데이트론 안 바뀜.
-    // 루트 layout 리밸리데이트로 모든 라우트의 헤더가 새 문양을 즉시 반영.
-    revalidatePath('/', 'layout');
+    await generateEmblem({ userId: u, selection: emblem });
+    revalidateGuildAndHeader();
     return { status: 'success' } as const;
   } catch (e) {
-    return fail(e, 'rerollEmblem');
+    return fail(e, 'generateEmblem');
+  }
+}
+
+/** 보관 문양 중 활성 선택(무료). 길드장. */
+export async function setActiveEmblemAction(emblemId: string) {
+  const u = await getSessionUserId();
+  if (!u) return unauth;
+  try {
+    await setActiveEmblem({ userId: u, emblemId: BigInt(emblemId) });
+    revalidateGuildAndHeader();
+    return { status: 'success' } as const;
+  } catch (e) {
+    return fail(e, 'setActiveEmblem');
+  }
+}
+
+/** 보관 문양 삭제(무료, 최소 1). 길드장. */
+export async function deleteEmblemAction(emblemId: string) {
+  const u = await getSessionUserId();
+  if (!u) return unauth;
+  try {
+    await deleteEmblem({ userId: u, emblemId: BigInt(emblemId) });
+    revalidateGuildAndHeader();
+    return { status: 'success' } as const;
+  } catch (e) {
+    return fail(e, 'deleteEmblem');
   }
 }
 

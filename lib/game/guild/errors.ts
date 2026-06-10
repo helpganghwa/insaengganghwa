@@ -27,6 +27,9 @@ export type GuildErrorCode =
   | 'VICE_LIMIT' // 부길드장 임명 상한(5명) 초과
   | 'EMBLEM_INVALID' // 문양 3축 선택 위반(모양/톤/키워드 1~3)
   | 'EMBLEM_GEN_FAILED' // 문양 생성 외부 실패(환불됨)
+  | 'EMBLEM_MAX' // 보관 문양 최대(3개) 초과 — 삭제 후 생성
+  | 'EMBLEM_MIN' // 최소 1개 유지(마지막 문양 삭제 불가)
+  | 'EMBLEM_NOT_FOUND' // 해당 길드의 문양이 아님/없음
   | 'FORBIDDEN';
 
 export class GuildError extends Error {

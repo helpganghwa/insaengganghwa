@@ -1,7 +1,13 @@
 import { redirect } from 'next/navigation';
 
 import { getSessionUserId } from '@/lib/auth/session';
-import { getMyMembership, getGuild, getJoinRequests, getGuildMembers } from '@/lib/game/guild';
+import {
+  getMyMembership,
+  getGuild,
+  getJoinRequests,
+  getGuildMembers,
+  getGuildEmblems,
+} from '@/lib/game/guild';
 
 import { GuildSettings } from './GuildSettings';
 
@@ -17,10 +23,11 @@ export default async function GuildSettingsPage() {
   const isOfficer = membership.role === 'leader' || membership.role === 'vice';
   if (!isOfficer) redirect('/guild');
 
-  const [guild, joinRequests, members] = await Promise.all([
+  const [guild, joinRequests, members, emblems] = await Promise.all([
     getGuild(membership.guildId),
     getJoinRequests(membership.guildId),
     getGuildMembers(membership.guildId),
+    getGuildEmblems(membership.guildId),
   ]);
   if (!guild) redirect('/guild');
 
@@ -34,6 +41,7 @@ export default async function GuildSettingsPage() {
         emblemUrl: guild.emblemUrl,
         emblemColor: guild.emblemColor,
       }}
+      emblems={emblems}
       joinRequests={joinRequests.map((r) => ({ userId: r.userId, nickname: r.nickname }))}
       members={members.map((m) => ({ userId: m.userId, nickname: m.nickname, role: m.role }))}
     />

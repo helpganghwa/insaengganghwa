@@ -7,12 +7,15 @@ import { useResourceToast } from '@/components/ResourceToast';
 import { useDiamond } from '@/components/DiamondContext';
 import {
   GUILD_EMBLEM_REROLL_COST_DIAMOND,
+  MAX_GUILD_EMBLEMS,
   type GuildJoinPolicy,
 } from '@/lib/game/guild/balance';
 import type { EmblemSelection } from '@/lib/game/guild/emblem-vocab';
 
 import {
-  rerollEmblemAction,
+  generateEmblemAction,
+  setActiveEmblemAction,
+  deleteEmblemAction,
   distributeTaxAction,
   setJoinPolicyAction,
   approveJoinAction,
@@ -34,15 +37,18 @@ type SettingsView = {
   emblemUrl: string | null;
   emblemColor: string | null;
 };
+type EmblemItem = { id: string; emblemUrl: string | null; emblemColor: string | null; isActive: boolean };
 
 export function GuildSettings({
   guild,
+  emblems,
   joinRequests,
   members,
   myUserId,
   myRole,
 }: {
   guild: SettingsView;
+  emblems: EmblemItem[];
   joinRequests: JoinRequest[];
   members: MemberLite[];
   myUserId: string;
@@ -52,7 +58,9 @@ export function GuildSettings({
   const { showHeaderToast, showError } = useResourceToast();
   const { optimisticAdjust } = useDiamond();
   const [pending, start] = useTransition();
-  const [rerollOpen, setRerollOpen] = useState(false);
+  const [genOpen, setGenOpen] = useState(false);
+  const [genPending, setGenPending] = useState(false); // 낙관적 '생성 중' 슬롯
+  const [delConfirm, setDelConfirm] = useState<string | null>(null);
   const [emblem, setEmblem] = useState<EmblemSelection>(DEFAULT_EMBLEM);
   const isLeader = myRole === 'leader';
 
@@ -112,15 +120,45 @@ export function GuildSettings({
       router.refresh();
     });
 
-  const reroll = () =>
+  // 생성 — 낙관적: '생성 중' 슬롯 즉시 표시 + 다이아 선차감, 실패 시 롤백.
+  const generate = () => {
+    setGenOpen(false);
+    setGenPending(true);
+    optimisticAdjust(BigInt(-GUILD_EMBLEM_REROLL_COST_DIAMOND));
     start(async () => {
-      const r = await rerollEmblemAction(emblem);
-      if (r.status !== 'success') return showError(guildErrMsg(r.code));
-      optimisticAdjust(BigInt(-GUILD_EMBLEM_REROLL_COST_DIAMOND));
-      showHeaderToast({ title: '문양 재생성 완료' });
-      setRerollOpen(false);
+      const r = await generateEmblemAction(emblem);
+      setGenPending(false);
+      if (r.status !== 'success') {
+        optimisticAdjust(BigInt(GUILD_EMBLEM_REROLL_COST_DIAMOND));
+        return showError(guildErrMsg(r.code));
+      }
+      showHeaderToast({ title: '문양 생성 완료' });
       router.refresh();
     });
+  };
+
+  const selectEmblem = (id: string) =>
+    start(async () => {
+      const r = await setActiveEmblemAction(id);
+      if (r.status !== 'success') return showError(guildErrMsg(r.code));
+      router.refresh();
+    });
+
+  // 삭제 — 1차 탭=확인 대기(3s), 2차 탭=실행.
+  const removeEmblem = (id: string) => {
+    if (delConfirm !== id) {
+      setDelConfirm(id);
+      setTimeout(() => setDelConfirm((c) => (c === id ? null : c)), 3000);
+      return;
+    }
+    setDelConfirm(null);
+    start(async () => {
+      const r = await deleteEmblemAction(id);
+      if (r.status !== 'success') return showError(guildErrMsg(r.code));
+      showHeaderToast({ title: '문양 삭제됨' });
+      router.refresh();
+    });
+  };
 
   const distribute = () =>
     start(async () => {
@@ -301,30 +339,89 @@ export function GuildSettings({
         </section>
       )}
 
-      {/* 문양 재생성 (길드장) */}
+      {/* 길드 문양 보관함 (길드장) — 최대 3개 보관, 1개 선택 사용. */}
       {isLeader && (
-        <section className="flex items-center justify-between gap-3 rounded-xl border border-zinc-200 bg-white p-4 dark:border-zinc-800 dark:bg-zinc-950">
-          <div className="flex items-center gap-3">
-            <div className="flex h-10 w-10 shrink-0 items-center justify-center overflow-hidden rounded-lg">
-              {guild.emblemUrl ? (
-                // eslint-disable-next-line @next/next/no-img-element
-                <img src={guild.emblemUrl} alt="" aria-hidden className="h-full w-full object-contain" style={{ imageRendering: 'pixelated' }} />
-              ) : null}
-            </div>
-            <div>
-              <h3 className="text-sm font-bold">길드 문양</h3>
-              <p className="text-[11px] text-zinc-500">
-                재생성 {GUILD_EMBLEM_REROLL_COST_DIAMOND.toLocaleString('ko-KR')}💎
-              </p>
-            </div>
+        <section className="rounded-xl border border-zinc-200 bg-white p-4 dark:border-zinc-800 dark:bg-zinc-950">
+          <div className="mb-2 flex items-baseline justify-between">
+            <h3 className="text-sm font-bold">
+              길드 문양{' '}
+              <span className="text-[11px] font-medium text-zinc-400">
+                {emblems.length + (genPending ? 1 : 0)}/{MAX_GUILD_EMBLEMS}
+              </span>
+            </h3>
+            <p className="text-[11px] text-zinc-500">
+              생성 {GUILD_EMBLEM_REROLL_COST_DIAMOND.toLocaleString('ko-KR')}💎 · 선택/삭제 무료
+            </p>
           </div>
-          <button
-            type="button"
-            onClick={() => setRerollOpen(true)}
-            className="shrink-0 rounded-lg border border-amber-400 px-3 py-2 text-sm font-bold text-amber-600 dark:border-amber-700 dark:text-amber-400"
-          >
-            재생성
-          </button>
+          <div className="flex flex-wrap gap-2.5">
+            {emblems.map((e) => {
+              const confirming = delConfirm === e.id;
+              return (
+                <div key={e.id} className="relative">
+                  <button
+                    type="button"
+                    onClick={() => !e.isActive && selectEmblem(e.id)}
+                    disabled={pending}
+                    aria-label={e.isActive ? '사용 중 문양' : '이 문양 사용'}
+                    className={`flex h-16 w-16 items-center justify-center overflow-hidden rounded-xl border-2 bg-zinc-50 transition disabled:opacity-60 dark:bg-zinc-900 ${
+                      e.isActive
+                        ? 'border-amber-500 ring-2 ring-amber-500/30'
+                        : 'border-zinc-200 active:scale-95 dark:border-zinc-700'
+                    }`}
+                  >
+                    {e.emblemUrl ? (
+                      // eslint-disable-next-line @next/next/no-img-element
+                      <img
+                        src={e.emblemUrl}
+                        alt=""
+                        aria-hidden
+                        className="h-full w-full object-contain"
+                        style={{ imageRendering: 'pixelated' }}
+                      />
+                    ) : null}
+                  </button>
+                  {e.isActive && (
+                    <span className="absolute -left-1 -top-1 rounded-full bg-amber-500 px-1.5 py-px text-[9px] font-bold text-white shadow">
+                      사용
+                    </span>
+                  )}
+                  {emblems.length > 1 && (
+                    <button
+                      type="button"
+                      onClick={() => removeEmblem(e.id)}
+                      disabled={pending}
+                      aria-label="문양 삭제"
+                      className={`absolute -right-1.5 -top-1.5 flex h-5 items-center justify-center rounded-full text-[10px] font-bold text-white shadow transition ${
+                        confirming ? 'w-auto bg-red-600 px-1.5' : 'w-5 bg-zinc-700/90'
+                      }`}
+                    >
+                      {confirming ? '삭제?' : '×'}
+                    </button>
+                  )}
+                </div>
+              );
+            })}
+
+            {/* 낙관적 '생성 중' 슬롯 */}
+            {genPending && (
+              <div className="flex h-16 w-16 items-center justify-center rounded-xl border-2 border-dashed border-amber-400 bg-amber-50 dark:bg-amber-950/30">
+                <span className="text-[10px] font-semibold text-amber-600 dark:text-amber-400">생성 중…</span>
+              </div>
+            )}
+
+            {/* 새 문양 생성 슬롯 (3개 미만일 때) */}
+            {emblems.length + (genPending ? 1 : 0) < MAX_GUILD_EMBLEMS && (
+              <button
+                type="button"
+                onClick={() => setGenOpen(true)}
+                disabled={pending}
+                className="flex h-16 w-16 flex-col items-center justify-center gap-0.5 rounded-xl border-2 border-dashed border-zinc-300 text-zinc-400 transition active:scale-95 disabled:opacity-50 dark:border-zinc-700"
+              >
+                <span className="text-xl leading-none">+</span>
+                <span className="text-[9px] font-semibold">생성</span>
+              </button>
+            )}
+          </div>
         </section>
       )}
 
@@ -340,35 +437,35 @@ export function GuildSettings({
         </button>
       )}
 
-      {/* 문양 재생성 모달 */}
-      {rerollOpen && (
+      {/* 새 문양 생성 모달 */}
+      {genOpen && (
         <div
           className="fixed inset-0 z-50 flex items-end justify-center bg-black/60 p-3"
-          onClick={() => setRerollOpen(false)}
+          onClick={() => setGenOpen(false)}
         >
           <div
             className="max-h-[85vh] w-full max-w-[390px] overflow-y-auto rounded-2xl bg-white p-4 dark:bg-zinc-950"
             onClick={(e) => e.stopPropagation()}
           >
             <div className="flex items-baseline justify-between">
-              <h2 className="text-sm font-bold">문양 재생성</h2>
-              <button type="button" onClick={() => setRerollOpen(false)} className="text-xs text-zinc-500">
+              <h2 className="text-sm font-bold">새 문양 생성</h2>
+              <button type="button" onClick={() => setGenOpen(false)} className="text-xs text-zinc-500">
                 닫기
               </button>
             </div>
             <p className="mt-0.5 text-[11px] text-zinc-500">
-              비용 {GUILD_EMBLEM_REROLL_COST_DIAMOND.toLocaleString('ko-KR')}💎 · 생성 실패 시 환불
+              비용 {GUILD_EMBLEM_REROLL_COST_DIAMOND.toLocaleString('ko-KR')}💎 · 생성 실패 시 환불 · 보관 후 선택해 사용
             </p>
             <div className="mt-3">
               <EmblemPicker value={emblem} onChange={setEmblem} disabled={pending} />
             </div>
             <button
               type="button"
-              onClick={reroll}
+              onClick={generate}
               disabled={pending}
               className="mt-3 w-full rounded-lg bg-amber-600 py-2.5 text-sm font-bold text-white disabled:opacity-50"
             >
-              {pending ? '생성 중…' : '재생성'}
+              생성
             </button>
           </div>
         </div>

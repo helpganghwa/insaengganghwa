@@ -1,15 +1,14 @@
 import 'server-only';
 
 import sharp from 'sharp';
-import { eq } from 'drizzle-orm';
+import { and, eq, desc, sql } from 'drizzle-orm';
 import { createClient, type SupabaseClient } from '@supabase/supabase-js';
 
 import { db } from '@/lib/db/client';
-import { guilds, guildMembers } from '@/lib/db/schema/guild';
+import { guilds, guildMembers, guildEmblems } from '@/lib/db/schema/guild';
 import { profiles } from '@/lib/db/schema/profiles';
-import { sql } from 'drizzle-orm';
 
-import { GUILD_EMBLEM_REROLL_COST_DIAMOND } from './balance';
+import { GUILD_EMBLEM_REROLL_COST_DIAMOND, MAX_GUILD_EMBLEMS } from './balance';
 import { GuildError } from './errors';
 import { buildEmblemPrompt, toneColor, type EmblemSelection } from './emblem-vocab';
 
@@ -113,49 +112,109 @@ async function generateEmblemPng(prompt: string): Promise<Buffer> {
   throw new Error(`pixflux retries exhausted: ${lastErr}`);
 }
 
-/** 버킷 보장(멱등) → 업로드(upsert) → public URL(+캐시버스트). */
-async function uploadEmblem(guildId: bigint, png: Buffer): Promise<string> {
+/** 버킷 보장(멱등) → 지정 경로 업로드(upsert) → public URL(+캐시버스트). */
+async function uploadEmblem(path: string, png: Buffer): Promise<string> {
   const supabase = serviceClient();
-  // 멱등 — 이미 있으면 에러 무시.
   await supabase.storage.createBucket(BUCKET, { public: true }).catch(() => {});
-  const path = `${guildId}.png`;
   const { error } = await supabase.storage
     .from(BUCKET)
     .upload(path, png, { contentType: 'image/png', upsert: true });
   if (error) throw new Error(`storage upload: ${error.message}`);
   const { data } = supabase.storage.from(BUCKET).getPublicUrl(path);
-  // 재생성 시 동일 경로 → CDN 캐시 버스트(시각 쿼리). 생성 시각은 서버 런타임 Date 허용.
   return `${data.publicUrl}?v=${Date.now()}`;
 }
 
+/** 활성 문양 지정 + guilds.emblem_url/color 비정규화 미러 동기화(읽기 코드 호환). */
+async function setGuildActiveEmblem(
+  guildId: bigint,
+  emblem: { id: bigint; emblemUrl: string | null; emblemColor: string | null },
+): Promise<void> {
+  await db
+    .update(guilds)
+    .set({ activeEmblemId: emblem.id, emblemUrl: emblem.emblemUrl, emblemColor: emblem.emblemColor })
+    .where(eq(guilds.id, guildId));
+}
+
 /**
- * 3축 선택 → 생성 → 업로드 → guilds 갱신. 성공 시 emblem_url/emblem_color 갱신.
- * 호출자는 try/catch로 best-effort 처리(실패해도 길드는 유지, 폴백 문양 노출).
+ * 길드에 새 문양 1개 생성·보관 + 활성 지정. 행 먼저 insert(경로용 id 확보) → 생성/업로드 →
+ * url 갱신 → 활성화. 생성/업로드 실패 시 빈 행 정리 후 rethrow. (비용/권한은 호출부 책임)
+ */
+async function createEmblemForGuild(
+  guildId: bigint,
+  selection: EmblemSelection,
+): Promise<{ emblemId: bigint; emblemUrl: string }> {
+  const color = toneColor(selection.toneId);
+  const [row] = await db
+    .insert(guildEmblems)
+    .values({ guildId, emblemUrl: null, emblemColor: color })
+    .returning({ id: guildEmblems.id });
+  const emblemId = row!.id;
+  try {
+    const raw = await generateEmblemPng(buildEmblemPrompt(selection));
+    const png = await fitEmblemToFrame(raw); // 투명 여백 제거·프레임 채움(가시성↑)
+    const emblemUrl = await uploadEmblem(`${guildId}/${emblemId}.png`, png);
+    await db.update(guildEmblems).set({ emblemUrl }).where(eq(guildEmblems.id, emblemId));
+    await setGuildActiveEmblem(guildId, { id: emblemId, emblemUrl, emblemColor: color });
+    return { emblemId, emblemUrl };
+  } catch (e) {
+    await db.delete(guildEmblems).where(eq(guildEmblems.id, emblemId)).catch(() => {});
+    throw e;
+  }
+}
+
+/**
+ * 결성 시 첫 문양 — best-effort(실패해도 길드 유지). guild_emblems 1행 생성 + 활성 지정.
  */
 export async function generateAndStoreEmblem(input: {
   guildId: bigint;
   selection: EmblemSelection;
 }): Promise<{ emblemUrl: string }> {
-  const prompt = buildEmblemPrompt(input.selection);
-  const raw = await generateEmblemPng(prompt);
-  const png = await fitEmblemToFrame(raw); // 투명 여백 제거·프레임 채움(가시성↑)
-  const emblemUrl = await uploadEmblem(input.guildId, png);
-  await db
-    .update(guilds)
-    .set({ emblemUrl, emblemColor: toneColor(input.selection.toneId) })
-    .where(eq(guilds.id, input.guildId));
+  const { emblemUrl } = await createEmblemForGuild(input.guildId, input.selection);
   return { emblemUrl };
 }
 
+/** 길드 보관 문양 목록(활성 표시 포함) — 설정 화면용. 최신순. */
+export async function getGuildEmblems(
+  guildId: bigint,
+): Promise<{ id: string; emblemUrl: string | null; emblemColor: string | null; isActive: boolean }[]> {
+  const [g] = await db
+    .select({ activeId: guilds.activeEmblemId })
+    .from(guilds)
+    .where(eq(guilds.id, guildId))
+    .limit(1);
+  const rows = await db
+    .select({ id: guildEmblems.id, emblemUrl: guildEmblems.emblemUrl, emblemColor: guildEmblems.emblemColor })
+    .from(guildEmblems)
+    .where(eq(guildEmblems.guildId, guildId))
+    .orderBy(desc(guildEmblems.id));
+  return rows.map((r) => ({
+    id: r.id.toString(),
+    emblemUrl: r.emblemUrl,
+    emblemColor: r.emblemColor,
+    isActive: g?.activeId != null && g.activeId === r.id,
+  }));
+}
+
+/** 길드장 + 길드 id 확인(공통 가드). */
+async function requireLeaderGuild(userId: string): Promise<bigint> {
+  const [m] = await db
+    .select({ guildId: guildMembers.guildId, role: guildMembers.role })
+    .from(guildMembers)
+    .where(eq(guildMembers.userId, userId))
+    .limit(1);
+  if (!m) throw new GuildError('NOT_IN_GUILD');
+  if (m.role !== 'leader') throw new GuildError('NOT_LEADER');
+  return m.guildId;
+}
+
 /**
- * 문양 재생성 — GUILD §1.6. 길드장만, 5,000💎 차감(💎 sink·외형 BM). 생성 실패 시 환불.
- * 차감→생성→실패시 환불 패턴(외부 호출을 트랜잭션 밖에 둠).
+ * 새 문양 생성·보관 — 길드장만, 5,000💎(💎 sink·외형 BM). 보관 3개 미만일 때만. 생성 실패 시 환불.
+ * 차감 트랜잭션(잔액+슬롯수 검증) → 외부 생성 → 실패 시 환불.
  */
-export async function rerollEmblem(input: {
+export async function generateEmblem(input: {
   userId: string;
   selection: EmblemSelection;
-}): Promise<{ emblemUrl: string }> {
-  // 차감(길드장·잔액 검증) — 단일 트랜잭션.
+}): Promise<{ emblemId: bigint; emblemUrl: string }> {
   const guildId = await db.transaction(async (tx) => {
     const [m] = await tx
       .select({ guildId: guildMembers.guildId, role: guildMembers.role })
@@ -164,6 +223,12 @@ export async function rerollEmblem(input: {
       .limit(1);
     if (!m) throw new GuildError('NOT_IN_GUILD');
     if (m.role !== 'leader') throw new GuildError('NOT_LEADER');
+
+    const [{ n }] = await tx
+      .select({ n: sql<number>`count(*)::int` })
+      .from(guildEmblems)
+      .where(eq(guildEmblems.guildId, m.guildId));
+    if (n >= MAX_GUILD_EMBLEMS) throw new GuildError('EMBLEM_MAX');
 
     const [prof] = await tx
       .select({ diamond: profiles.diamond })
@@ -181,13 +246,52 @@ export async function rerollEmblem(input: {
   });
 
   try {
-    return await generateAndStoreEmblem({ guildId, selection: input.selection });
+    return await createEmblemForGuild(guildId, input.selection);
   } catch (e) {
-    // 생성 실패 → 환불.
     await db
       .update(profiles)
       .set({ diamond: sql`${profiles.diamond} + ${BigInt(GUILD_EMBLEM_REROLL_COST_DIAMOND)}` })
       .where(eq(profiles.id, input.userId));
     throw e instanceof GuildError ? e : new GuildError('EMBLEM_GEN_FAILED');
   }
+}
+
+/** 보관 문양 중 하나를 활성으로 선택 — 길드장만, 무료. */
+export async function setActiveEmblem(input: { userId: string; emblemId: bigint }): Promise<void> {
+  const guildId = await requireLeaderGuild(input.userId);
+  const [em] = await db
+    .select({ id: guildEmblems.id, emblemUrl: guildEmblems.emblemUrl, emblemColor: guildEmblems.emblemColor })
+    .from(guildEmblems)
+    .where(and(eq(guildEmblems.id, input.emblemId), eq(guildEmblems.guildId, guildId)))
+    .limit(1);
+  if (!em) throw new GuildError('EMBLEM_NOT_FOUND');
+  await setGuildActiveEmblem(guildId, em);
+}
+
+/** 보관 문양 삭제 — 길드장만, 무료. 최소 1개 유지. 활성 삭제 시 다른 문양으로 활성 이전. */
+export async function deleteEmblem(input: { userId: string; emblemId: bigint }): Promise<void> {
+  const guildId = await requireLeaderGuild(input.userId);
+  const rows = await db
+    .select({ id: guildEmblems.id, emblemUrl: guildEmblems.emblemUrl, emblemColor: guildEmblems.emblemColor })
+    .from(guildEmblems)
+    .where(eq(guildEmblems.guildId, guildId))
+    .orderBy(desc(guildEmblems.id));
+  if (rows.length <= 1) throw new GuildError('EMBLEM_MIN');
+  const target = rows.find((r) => r.id === input.emblemId);
+  if (!target) throw new GuildError('EMBLEM_NOT_FOUND');
+
+  const [g] = await db
+    .select({ activeId: guilds.activeEmblemId })
+    .from(guilds)
+    .where(eq(guilds.id, guildId))
+    .limit(1);
+
+  // 활성 문양을 지우면 남은 것 중 최신을 활성으로.
+  if (g?.activeId === input.emblemId) {
+    const next = rows.find((r) => r.id !== input.emblemId)!;
+    await setGuildActiveEmblem(guildId, next);
+  }
+  await db.delete(guildEmblems).where(eq(guildEmblems.id, input.emblemId));
+  // 스토리지 파일 정리(best-effort).
+  await serviceClient().storage.from(BUCKET).remove([`${guildId}/${input.emblemId}.png`]).catch(() => {});
 }
