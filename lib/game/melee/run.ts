@@ -7,7 +7,6 @@ import { meleeBattles, meleeParticipants } from '@/lib/db/schema/melee';
 import { profiles } from '@/lib/db/schema/profiles';
 import { userProfiles } from '@/lib/db/schema/avatar';
 import { combatPowerFromOwned, type OwnedRow } from '@/lib/game/equipment/combat-power';
-import { getGuildBriefsByUsers } from '@/lib/game/guild/badge';
 import { meleeRewardForRank, SUPPLY_SLOTS, type SupplySlot } from '@/lib/game/balance';
 
 import { simulateMelee, type MeleeParticipantInput } from './simulate';
@@ -101,12 +100,6 @@ export async function runMelee(): Promise<{ ran: boolean; battleId?: string; par
       if (url) avOf.set(a.uid, url);
     }
     for (const r of result.finale.roster) r.avatar = avOf.get(r.userId) ?? null;
-
-    // 길드 문양 스냅샷 — 그 시점 소속 길드 문양을 finale에 박제(현재가 아닌 당시 마크). 실패해도 진행.
-    const guildOf = await getGuildBriefsByUsers(rosterIds).catch(
-      () => new Map<string, { emblemUrl: string | null; name: string }>(),
-    );
-    for (const r of result.finale.roster) r.guildEmblemUrl = guildOf.get(r.userId)?.emblemUrl ?? null;
   }
 
   // 배틀 행 — 멱등 insert. race로 이미 있으면 skip.

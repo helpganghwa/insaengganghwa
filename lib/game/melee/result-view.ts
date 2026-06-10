@@ -7,7 +7,6 @@ import { withTimeout } from '@/lib/db/with-timeout';
 import { meleeBattles, meleeParticipants, type MeleeFinale } from '@/lib/db/schema/melee';
 import { profiles } from '@/lib/db/schema/profiles';
 import { userProfiles } from '@/lib/db/schema/avatar';
-import { getGuildBriefsByUsers } from '@/lib/game/guild';
 import type { MeleeResultView } from '@/app/(game)/melee/MeleeResult';
 
 const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
@@ -70,18 +69,6 @@ export async function buildMeleeResultView(
       if (a.code) codeOf.set(a.uid, a.code);
     }
   }
-  // 로스터 길드 문양(닉네임 옆) — finale 스냅샷(그 시점 마크) 우선. 스냅샷 도입 이전 배틀만 live 폴백.
-  const hasGuildSnapshot = finale.roster.some((r) => 'guildEmblemUrl' in r);
-  const guildOf =
-    !hasGuildSnapshot && rosterIds.length > 0
-      ? await getGuildBriefsByUsers(rosterIds).catch(
-          () => new Map<string, { emblemUrl: string | null; name: string }>(),
-        )
-      : new Map<string, { emblemUrl: string | null; name: string }>();
-  const snapGuildEmblem = new Map(finale.roster.map((r) => [r.userId, r.guildEmblemUrl ?? null]));
-  const guildEmblem = (uid: string) =>
-    hasGuildSnapshot ? (snapGuildEmblem.get(uid) ?? null) : (guildOf.get(uid)?.emblemUrl ?? null);
-
   // 스냅샷(그 시점) 닉·아바타 — finale.roster. 아바타 스냅샷이 있으면 live보다 우선(과거 회차 고정).
   const snapNick = new Map(finale.roster.map((r) => [r.userId, r.nickname]));
   // 전투 재생용 — 스냅샷 덮어쓰기 전의 live 아바타(과거 배틀 챔피언 roster.avatar가 트로피로
@@ -132,7 +119,6 @@ export async function buildMeleeResultView(
         : (avatarOf.get(r.uid) ?? dft(r.rank)),
     attackSuccess: kills.get(r.uid) ?? 0,
     defenseSuccess: survives.get(r.uid) ?? 0,
-    guildEmblemUrl: guildEmblem(r.uid),
   }));
   // 전투 재생 — 챔피언은 live 아바타(트로피 회피), 나머지는 스냅샷. 모두 유저의 실제 아바타.
   const rosterAvatars = finale.roster.map(
@@ -141,7 +127,6 @@ export async function buildMeleeResultView(
       dft(i),
   );
   const rosterCodes = finale.roster.map((r) => codeOf.get(r.userId) ?? null);
-  const rosterGuildEmblems = finale.roster.map((r) => guildEmblem(r.userId));
 
   const [meRow] = await withTimeout(
     db
@@ -174,11 +159,9 @@ export async function buildMeleeResultView(
     myAvatar: avatarOf.get(userId) ?? null,
     myPublicCode: meRow?.code ?? null,
     myCp: meRow ? Number(meRow.cp) : 0,
-    myGuildEmblemUrl: guildEmblem(userId),
     totalRounds: battle.totalRounds,
     finale,
     rosterAvatars,
     rosterCodes,
-    rosterGuildEmblems,
   };
 }

@@ -7,7 +7,6 @@ import { withTimeout } from '@/lib/db/with-timeout';
 import { meleeBattles, meleeParticipants, type MeleeFinale } from '@/lib/db/schema/melee';
 import { profiles } from '@/lib/db/schema/profiles';
 import { userProfiles } from '@/lib/db/schema/avatar';
-import { getGuildBriefsByUsers } from '@/lib/game/guild';
 
 const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 
@@ -20,8 +19,6 @@ export type MeleeHistoryRow = {
   championAvatar: string | null;
   championCp: number;
   participantCount: number;
-  /** 우승자 닉네임 옆 길드 문양(미소속/생성중이면 null). */
-  championGuildEmblemUrl: string | null;
 };
 
 /**
@@ -95,22 +92,6 @@ export async function loadMeleeHistory(): Promise<MeleeHistoryRow[]> {
     champOf.set(c.uid, { nick: c.nick, code: c.code, avatar });
   }
   const cpOf = new Map(champCpRows.map((r) => [r.battleId.toString(), Number(r.cp)]));
-  // 우승자 길드 문양 — finale 스냅샷(그 시점 마크) 우선. 스냅샷 도입 이전 배틀만 live 폴백.
-  const champSnapGuild = new Map<string, string | null>(); // battleId → 스냅샷 문양
-  const legacyChampIds: string[] = [];
-  for (const b of battles) {
-    const champRoster = b.finale?.roster?.find((r) => r.rank === 1);
-    if (champRoster && 'guildEmblemUrl' in champRoster) {
-      champSnapGuild.set(b.id.toString(), champRoster.guildEmblemUrl ?? null);
-    } else if (b.champ && UUID_RE.test(b.champ)) {
-      legacyChampIds.push(b.champ);
-    }
-  }
-  const champGuild = legacyChampIds.length
-    ? await getGuildBriefsByUsers(legacyChampIds).catch(
-        () => new Map<string, { emblemUrl: string | null; name: string }>(),
-      )
-    : new Map<string, { emblemUrl: string | null; name: string }>();
 
   return battles
     .map((b, i) => {
@@ -123,11 +104,6 @@ export async function loadMeleeHistory(): Promise<MeleeHistoryRow[]> {
         championAvatar: trophyOf.get(b.id.toString()) ?? c?.avatar ?? null,
         championCp: cpOf.get(b.id.toString()) ?? 0,
         participantCount: b.pc,
-        championGuildEmblemUrl: champSnapGuild.has(b.id.toString())
-          ? champSnapGuild.get(b.id.toString())!
-          : b.champ
-            ? (champGuild.get(b.champ)?.emblemUrl ?? null)
-            : null,
       } satisfies MeleeHistoryRow;
     })
     .reverse(); // 최신 회차가 위로

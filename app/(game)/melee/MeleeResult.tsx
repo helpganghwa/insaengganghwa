@@ -7,7 +7,6 @@ import { josa } from 'es-hangul';
 
 import { MELEE_REPLAY_ROUNDS, MELEE_HP_MULT } from '@/lib/game/balance';
 import { assetUrl } from '@/lib/asset-versions';
-import { GuildBadge } from '@/components/GuildBadge';
 import type { MeleeFinale, MeleeMyEvent } from '@/lib/db/schema/melee';
 
 export type MeleeResultView = {
@@ -26,8 +25,6 @@ export type MeleeResultView = {
     attackSuccess: number;
     /** 방어 성공 = 공격받고도 버텨낸 횟수(피격 − 탈락당함). */
     defenseSuccess: number;
-    /** 닉네임 옆 길드 문양(미소속/생성중이면 null). */
-    guildEmblemUrl: string | null;
   }[];
   me: {
     rank: number;
@@ -40,21 +37,16 @@ export type MeleeResultView = {
   /** 내 공개 코드 — 내 전투 리플레이에서 내 아바타 → 프로필 상세. */
   myPublicCode: string | null;
   myCp: number;
-  /** 내 길드 문양(내 전투 재생에서 내 이름 옆). */
-  myGuildEmblemUrl: string | null;
   finale: MeleeFinale;
   rosterAvatars: (string | null)[];
   /** finale 로스터 로컬 인덱스별 공개 코드(아바타 클릭 링크용). */
   rosterCodes: (string | null)[];
-  /** finale 로스터 로컬 인덱스별 길드 문양(전투 재생 이름 옆 노출). */
-  rosterGuildEmblems: (string | null)[];
 };
 
 type Fight = {
   round: number;
   atkName: string;
   atkAvatar: string | null;
-  atkEmblem?: string | null;
   /** 공격자 프로필 상세 경로(/u/<code|nick>) — 아바타 클릭 이동. */
   atkHref?: string | null;
   /** 공격자 현재/최대 HP(양쪽 HP바 영역 일치 + 정보 표시). */
@@ -62,7 +54,6 @@ type Fight = {
   atkMaxHp?: number;
   tgtName: string;
   tgtAvatar: string | null;
-  tgtEmblem?: string | null;
   tgtHref?: string | null;
   dmg: number;
   hpAfter: number;
@@ -137,7 +128,6 @@ function hpColor(pct: number): string {
 function Fighter({
   name,
   avatar,
-  emblem,
   href,
   side,
   role,
@@ -149,7 +139,6 @@ function Fighter({
 }: {
   name: string;
   avatar: string | null;
-  emblem?: string | null;
   /** 있으면 아바타 클릭 시 프로필 상세로 이동. */
   href?: string | null;
   side: 'l' | 'r';
@@ -245,7 +234,6 @@ function Fighter({
       </div>
       <div className="flex max-w-[150px] items-center gap-1">
         <span className="truncate text-[11px] font-bold text-white drop-shadow">{name}</span>
-        <GuildBadge emblemUrl={emblem ?? null} size={12} className="shrink-0" />
       </div>
       {/* HP바 — 양쪽 동일 높이 확보(공격자는 빈 자리 placeholder). */}
       {maxHp != null ? (
@@ -347,7 +335,6 @@ function FightStage({
           <Fighter
             name={fight.atkName}
             avatar={fight.atkAvatar}
-            emblem={fight.atkEmblem}
             href={fight.atkHref}
             side="l"
             role="atk"
@@ -362,7 +349,6 @@ function FightStage({
           <Fighter
             name={fight.tgtName}
             avatar={fight.tgtAvatar}
-            emblem={fight.tgtEmblem}
             href={fight.tgtHref}
             side="r"
             role="def"
@@ -424,10 +410,9 @@ function RankingView({
                 <span className="font-mono text-[11px] font-bold tabular-nums text-amber-300 text-pixel-outline">
                   #{slot}
                 </span>
-                <span className="max-w-[66px] truncate text-[9px] font-medium leading-tight text-white text-pixel-outline">
+                <span className="max-w-[66px] truncate text-[10px] font-medium leading-tight text-white text-pixel-outline">
                   {p?.nickname ?? '—'}
                 </span>
-                <GuildBadge emblemUrl={p?.guildEmblemUrl ?? null} size={11} className="shrink-0" />
               </div>
               {/* object-bottom + 동일 박스 하단선(items-end) → 발끝 통일. scale은 origin bottom이라 발끝 고정. */}
               {/* 아바타 클릭 → 프로필 상세(/u/<code>). */}
@@ -622,10 +607,8 @@ export function MeleeResult({ view }: { view: MeleeResultView }) {
     myAvatar,
     myPublicCode,
     myCp,
-    myGuildEmblemUrl,
     rosterAvatars,
     rosterCodes,
-    rosterGuildEmblems,
   } = view;
   /** 핸들(코드 또는 닉네임)로 프로필 상세 경로. 없으면 null(링크 없음). */
   const hrefOf = (handle: string | null | undefined) =>
@@ -696,13 +679,11 @@ export function MeleeResult({ view }: { view: MeleeResultView }) {
         round,
         atkName: atk,
         atkAvatar: rosterAvatars[e[0]] ?? null,
-        atkEmblem: rosterGuildEmblems[e[0]] ?? null,
         atkHref: hrefOf(rosterCodes[e[0]]),
         atkHp,
         atkMaxHp,
         tgtName: tgt,
         tgtAvatar: rosterAvatars[e[1]] ?? null,
-        tgtEmblem: rosterGuildEmblems[e[1]] ?? null,
         tgtHref: hrefOf(rosterCodes[e[1]]),
         dmg: e[2],
         hpAfter: e[3],
@@ -720,15 +701,11 @@ export function MeleeResult({ view }: { view: MeleeResultView }) {
 
   // 폴백 — finale 윈도 밖(초대규모 절단 시 내 라운드가 윈도 밖)이면 per-user myEvents로 복원.
   //  닉네임→로스터 메타(아바타·코드)로 상대 프로필 복원 + 내 HP 추적(공격 시 잔여 HP 표시).
-  const byNick = new Map<
-    string,
-    { avatar: string | null; code: string | null; emblem: string | null }
-  >();
+  const byNick = new Map<string, { avatar: string | null; code: string | null }>();
   finale.roster.forEach((r, i) =>
     byNick.set(r.nickname, {
       avatar: rosterAvatars[i] ?? null,
       code: rosterCodes[i] ?? null,
-      emblem: rosterGuildEmblems[i] ?? null,
     }),
   );
   const myMax = myCp > 0 ? myCp * MELEE_HP_MULT : undefined;
@@ -763,13 +740,11 @@ export function MeleeResult({ view }: { view: MeleeResultView }) {
         round,
         atkName: atk,
         atkAvatar: role === 0 ? myAvatar ?? DEFAULT_AVATAR : oppAvatar,
-        atkEmblem: role === 0 ? myGuildEmblemUrl : (oppMeta?.emblem ?? null),
         atkHref: role === 0 ? meHref : oppHref,
         atkHp: atkHpNow,
         atkMaxHp: role === 0 ? myMax : undefined,
         tgtName: tgt,
         tgtAvatar: role === 0 ? oppAvatar : myAvatar ?? DEFAULT_AVATAR,
-        tgtEmblem: role === 0 ? (oppMeta?.emblem ?? null) : myGuildEmblemUrl,
         tgtHref: role === 0 ? oppHref : meHref,
         dmg,
         hpAfter: hp,
