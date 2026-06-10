@@ -69,6 +69,7 @@ export function WorldMapView({
   const [residence, setResidence] = useState<number | null>(residenceZoneId);
   const [selectedId, setSelectedId] = useState<number | null>(null);
   const [replay, setReplay] = useState<Battle | null>(null);
+  const [showNames, setShowNames] = useState(false);
   const [pending, start] = useTransition();
 
   const selected = zones.find((z) => z.id === selectedId) ?? null;
@@ -121,6 +122,18 @@ export function WorldMapView({
           className="absolute inset-0 h-full w-full object-cover"
           style={{ imageRendering: 'pixelated' }}
         />
+        {/* 지역 이름 오버레이 토글 — 켜면 50개 라벨 노출(좁아서 겹칠 수 있어 기본 꺼짐). */}
+        <button
+          type="button"
+          onClick={() => setShowNames((v) => !v)}
+          className={`absolute right-2 top-2 z-30 rounded-lg px-2 py-1 text-[10px] font-bold ring-1 backdrop-blur-sm transition active:scale-95 ${
+            showNames
+              ? 'bg-amber-600 text-white ring-amber-300/60'
+              : 'bg-black/55 text-white/90 ring-white/25'
+          }`}
+        >
+          지역 이름
+        </button>
         {zones.map((z) => {
           const owned = z.ownerGuildId != null;
           const isResidence = z.id === residence;
@@ -160,12 +173,28 @@ export function WorldMapView({
                   />
                 ) : null}
               </span>
-              {/* 내 위치 — 네모 상단에 둥둥 떠 있는 까만 다이아 마커(둥둥 애니메이션) */}
+              {/* 내 위치 — 네모 상단에 둥둥 떠 있는 amber 핀(부유 + 글로우 펄스) */}
               {isResidence && (
                 <span className="pointer-events-none absolute bottom-full left-1/2 mb-1 -translate-x-1/2">
-                  <span className="block" style={{ animation: 'marker-bob 1.4s ease-in-out infinite' }}>
-                    <span className="block h-[7px] w-[7px] rotate-45 bg-black shadow-[0_1px_2px_rgba(0,0,0,0.55)] ring-1 ring-white/70" />
+                  <span className="block" style={{ animation: 'marker-bob 1.5s ease-in-out infinite' }}>
+                    <span
+                      className="relative block h-[11px] w-[11px] border-[1.5px] border-white"
+                      style={{
+                        background: 'linear-gradient(135deg, #fcd34d, #f59e0b)',
+                        borderRadius: '50% 50% 50% 0',
+                        transform: 'rotate(45deg)',
+                        animation: 'marker-pin-glow 1.5s ease-in-out infinite',
+                      }}
+                    >
+                      <span className="absolute left-1/2 top-1/2 h-[3.5px] w-[3.5px] -translate-x-1/2 -translate-y-1/2 rounded-full bg-white" />
+                    </span>
                   </span>
+                </span>
+              )}
+              {/* 지역 이름 라벨(토글 시) — 노드 하단, 클릭 통과(pointer-events-none) */}
+              {showNames && (
+                <span className="pointer-events-none absolute left-1/2 top-full mt-[3px] -translate-x-1/2 whitespace-nowrap rounded bg-black/75 px-1 text-[7px] font-semibold leading-[1.5] text-white shadow-[0_1px_2px_rgba(0,0,0,0.7)]">
+                  {z.name}
                 </span>
               )}
             </button>

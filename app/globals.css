@@ -80,6 +80,11 @@ html {
     0%, 100% { transform: translateY(0); }
     50% { transform: translateY(-3px); }
   }
+  /* 내 위치 핀 글로우 펄스(transform은 인라인 rotate 유지 — box-shadow만 애니메이트) */
+  @keyframes marker-pin-glow {
+    0%, 100% { box-shadow: 0 0 3px 0 rgba(245,158,11,0.65), 0 1px 2px rgba(0,0,0,0.55); }
+    50% { box-shadow: 0 0 8px 2px rgba(251,191,36,0.95), 0 1px 2px rgba(0,0,0,0.55); }
+  }
 
   @keyframes flash-success {
     0% { box-shadow: 0 0 0 0 rgba(52, 211, 153, 0); }
