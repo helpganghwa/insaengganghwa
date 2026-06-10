@@ -43,10 +43,10 @@ function sortValue(m: RichMember, key: SortKey): number {
 
 function EquipIcon({ item }: { item: Equipped | undefined }) {
   if (!item) {
-    return <span className="h-9 w-9 shrink-0 rounded-md bg-zinc-100 dark:bg-zinc-800" />;
+    return <span className="h-11 w-11 shrink-0 rounded-md bg-zinc-100 dark:bg-zinc-800" />;
   }
   return (
-    <span className="relative h-9 w-9 shrink-0 overflow-hidden rounded-md bg-zinc-100 dark:bg-zinc-800">
+    <span className="relative h-11 w-11 shrink-0 overflow-hidden rounded-md bg-zinc-100 dark:bg-zinc-800">
       {/* eslint-disable-next-line @next/next/no-img-element */}
       <img
         src={`/sprites/${item.slot}/${item.code}.png`}
@@ -71,45 +71,49 @@ function MemberRow({ m, myUserId }: { m: RichMember; myUserId: string }) {
     <li>
       <Link
         href={`/u/${encodeURIComponent(m.publicCode)}`}
-        className="flex flex-col gap-1 py-1.5 active:opacity-70"
+        className="flex items-center gap-2.5 py-1.5 active:opacity-70"
       >
-        {/* 윗줄: 아바타 + 닉네임(가변, 잘림) + 장비 3종 */}
-        <div className="flex items-center gap-2.5">
-          <span className="h-11 w-11 shrink-0 overflow-hidden rounded-lg bg-zinc-100 dark:bg-zinc-800">
-            {m.avatar ? (
-              // eslint-disable-next-line @next/next/no-img-element
-              <img
-                src={m.avatar}
-                alt=""
-                aria-hidden
-                className="h-full w-full object-contain"
-                style={{ imageRendering: 'pixelated', transform: 'scale(1.2)' }}
-              />
-            ) : null}
-          </span>
-          <span className="min-w-0 flex-1 truncate text-[13px] font-semibold">{m.nickname}</span>
-          <div className="flex shrink-0 gap-1.5">
-            {SLOT_ORDER.map((slot) => (
-              <EquipIcon key={slot} item={bySlot.get(slot)} />
-            ))}
+        {/* 아바타 */}
+        <span className="h-11 w-11 shrink-0 overflow-hidden rounded-lg bg-zinc-100 dark:bg-zinc-800">
+          {m.avatar ? (
+            // eslint-disable-next-line @next/next/no-img-element
+            <img
+              src={m.avatar}
+              alt=""
+              aria-hidden
+              className="h-full w-full object-contain"
+              style={{ imageRendering: 'pixelated', transform: 'scale(1.2)' }}
+            />
+          ) : null}
+        </span>
+
+        {/* 가운데: (닉네임 + 최근접속) / (기여 · 전투) */}
+        <div className="min-w-0 flex-1">
+          <div className="flex items-center gap-1.5">
+            <span className="min-w-0 flex-1 truncate text-[12px] font-semibold">{m.nickname}</span>
+            {/* 최근접속 — 닉네임 오른쪽 고정 슬롯(최대 '999일 전'까지 한 줄). */}
+            <span className="w-[52px] shrink-0 text-right text-[10px] text-zinc-400">
+              {isMe || m.lastSeenAt != null ? (
+                <LastSeen at={m.lastSeenAt} forceOnline={isMe} className="justify-end" />
+              ) : null}
+            </span>
+          </div>
+          <div className="mt-0.5 flex items-center gap-1.5 text-[11px] text-zinc-500">
+            <span className="truncate">
+              기여 <span className="font-semibold tabular-nums text-zinc-700 dark:text-zinc-300">{fmtNum(m.contribution)}</span>
+            </span>
+            <span className="text-zinc-300 dark:text-zinc-700">·</span>
+            <span className="truncate">
+              전투 <span className="font-semibold tabular-nums text-zinc-700 dark:text-zinc-300">{fmtNum(m.combat)}</span>
+            </span>
           </div>
         </div>
 
-        {/* 아랫줄: 기여·전투·접속 — 3등분 고정 영역(각자 영역 밖으로 안 넘침 → 레이아웃 시프트 없음). */}
-        <div className="grid grid-cols-3 gap-1 pl-[54px] text-[11px] text-zinc-500">
-          <span className="truncate">
-            기여 <span className="font-semibold tabular-nums text-zinc-700 dark:text-zinc-300">{fmtNum(m.contribution)}</span>
-          </span>
-          <span className="truncate">
-            전투 <span className="font-semibold tabular-nums text-zinc-700 dark:text-zinc-300">{fmtNum(m.combat)}</span>
-          </span>
-          <span className="truncate">
-            {isMe || m.lastSeenAt != null ? (
-              <LastSeen at={m.lastSeenAt} forceOnline={isMe} className="text-zinc-500 dark:text-zinc-400" />
-            ) : (
-              <span className="text-zinc-300 dark:text-zinc-600">—</span>
-            )}
-          </span>
+        {/* 장비 3종 — 아바타와 동일 크기 */}
+        <div className="flex shrink-0 gap-1">
+          {SLOT_ORDER.map((slot) => (
+            <EquipIcon key={slot} item={bySlot.get(slot)} />
+          ))}
         </div>
       </Link>
     </li>
