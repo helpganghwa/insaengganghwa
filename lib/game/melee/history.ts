@@ -95,9 +95,19 @@ export async function loadMeleeHistory(): Promise<MeleeHistoryRow[]> {
     champOf.set(c.uid, { nick: c.nick, code: c.code, avatar });
   }
   const cpOf = new Map(champCpRows.map((r) => [r.battleId.toString(), Number(r.cp)]));
-  // 우승자 길드 문양 batch(실패해도 진행).
-  const champGuild = champIds.length
-    ? await getGuildBriefsByUsers(champIds).catch(
+  // 우승자 길드 문양 — finale 스냅샷(그 시점 마크) 우선. 스냅샷 도입 이전 배틀만 live 폴백.
+  const champSnapGuild = new Map<string, string | null>(); // battleId → 스냅샷 문양
+  const legacyChampIds: string[] = [];
+  for (const b of battles) {
+    const champRoster = b.finale?.roster?.find((r) => r.rank === 1);
+    if (champRoster && 'guildEmblemUrl' in champRoster) {
+      champSnapGuild.set(b.id.toString(), champRoster.guildEmblemUrl ?? null);
+    } else if (b.champ && UUID_RE.test(b.champ)) {
+      legacyChampIds.push(b.champ);
+    }
+  }
+  const champGuild = legacyChampIds.length
+    ? await getGuildBriefsByUsers(legacyChampIds).catch(
         () => new Map<string, { emblemUrl: string | null; name: string }>(),
       )
     : new Map<string, { emblemUrl: string | null; name: string }>();
@@ -113,7 +123,11 @@ export async function loadMeleeHistory(): Promise<MeleeHistoryRow[]> {
         championAvatar: trophyOf.get(b.id.toString()) ?? c?.avatar ?? null,
         championCp: cpOf.get(b.id.toString()) ?? 0,
         participantCount: b.pc,
-        championGuildEmblemUrl: b.champ ? (champGuild.get(b.champ)?.emblemUrl ?? null) : null,
+        championGuildEmblemUrl: champSnapGuild.has(b.id.toString())
+          ? champSnapGuild.get(b.id.toString())!
+          : b.champ
+            ? (champGuild.get(b.champ)?.emblemUrl ?? null)
+            : null,
       } satisfies MeleeHistoryRow;
     })
     .reverse(); // 최신 회차가 위로

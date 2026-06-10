@@ -70,14 +70,17 @@ export async function buildMeleeResultView(
       if (a.code) codeOf.set(a.uid, a.code);
     }
   }
-  // 로스터 길드 문양(닉네임 옆 노출) — batch, 실패해도 진행.
+  // 로스터 길드 문양(닉네임 옆) — finale 스냅샷(그 시점 마크) 우선. 스냅샷 도입 이전 배틀만 live 폴백.
+  const hasGuildSnapshot = finale.roster.some((r) => 'guildEmblemUrl' in r);
   const guildOf =
-    rosterIds.length > 0
+    !hasGuildSnapshot && rosterIds.length > 0
       ? await getGuildBriefsByUsers(rosterIds).catch(
           () => new Map<string, { emblemUrl: string | null; name: string }>(),
         )
       : new Map<string, { emblemUrl: string | null; name: string }>();
-  const guildEmblem = (uid: string) => guildOf.get(uid)?.emblemUrl ?? null;
+  const snapGuildEmblem = new Map(finale.roster.map((r) => [r.userId, r.guildEmblemUrl ?? null]));
+  const guildEmblem = (uid: string) =>
+    hasGuildSnapshot ? (snapGuildEmblem.get(uid) ?? null) : (guildOf.get(uid)?.emblemUrl ?? null);
 
   // 스냅샷(그 시점) 닉·아바타 — finale.roster. 아바타 스냅샷이 있으면 live보다 우선(과거 회차 고정).
   const snapNick = new Map(finale.roster.map((r) => [r.userId, r.nickname]));
