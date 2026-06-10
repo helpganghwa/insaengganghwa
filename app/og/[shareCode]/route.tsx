@@ -386,17 +386,25 @@ export async function GET(_req: Request, { params }: { params: Promise<{ shareCo
           {nickname}
         </div>
         {guild ? (
+          // 이름 중앙정렬 + 문양은 이름 왼쪽 절대배치(GuildBadge pinEmblemLeft와 동일 — 문양이
+          // 이름 중심을 밀지 않게). 컨테이너 폭=이름 폭(문양은 absolute로 흐름 제외)이라 부모
+          // alignItems:center가 '이름'을 가운데 둔다.
           <div
             style={{
+              position: 'relative',
               display: 'flex',
               alignItems: 'center',
-              gap: 8,
               maxWidth: leftW - 8,
               height: guildRowH,
             }}
           >
             {guild.emblemUrl ? (
-              <img src={guild.emblemUrl} width={30} height={30} style={{ objectFit: 'contain' }} />
+              <img
+                src={guild.emblemUrl}
+                width={30}
+                height={30}
+                style={{ position: 'absolute', right: '100%', marginRight: 8, objectFit: 'contain' }}
+              />
             ) : null}
             <div style={{ display: 'flex', fontSize: 24, color: 'rgba(255,255,255,0.78)', overflow: 'hidden' }}>
               {guild.name}
