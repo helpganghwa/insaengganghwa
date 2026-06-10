@@ -3,6 +3,7 @@ import { eq } from 'drizzle-orm';
 
 import { db } from '@/lib/db/client';
 import { raids } from '@/lib/db/schema/raid';
+import { PENDING_REFERRAL_COOKIE } from '@/lib/game/referral/auto-attribute';
 
 /**
  * 짧은 공유 링크 — WIREFRAMES §10.
@@ -55,7 +56,7 @@ export async function GET(
   const start = req.nextUrl.searchParams.get('start') === '1';
   const target = start ? '/' : `/u/${shareCode}`;
   const res = NextResponse.redirect(new URL(target, req.nextUrl.origin), 307);
-  res.cookies.set('pending_referral', shareCode, {
+  res.cookies.set(PENDING_REFERRAL_COOKIE, shareCode, {
     path: '/',
     maxAge: SEVEN_DAYS,
     sameSite: 'lax',

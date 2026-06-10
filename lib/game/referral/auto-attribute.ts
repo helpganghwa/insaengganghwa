@@ -1,50 +1,28 @@
-'use server';
+import 'server-only';
 
-import { cookies } from 'next/headers';
 import { eq } from 'drizzle-orm';
 
 import { db } from '@/lib/db/client';
 import { referralAttributions } from '@/lib/db/schema/social';
-import { attributeReferralFromShare } from './redeem';
+import { attributeReferralFromShare, ReferralError } from './redeem';
 
-const COOKIE_NAME = 'pending_referral';
-const FLASH_COOKIE = 'referral_flash';
+/** 카카오 공유 링크 가입 귀속용 쿠키명 — `/s/[shareCode]` route handler가 7일 TTL로 설정. */
+export const PENDING_REFERRAL_COOKIE = 'pending_referral';
 
 /**
- * (game) 레이아웃 진입 시 호출.
- * 1. pending_referral 쿠키가 있고
- * 2. 이 사용자가 아직 귀속 안 됐으면
- * 3. shareCode(=nickname) → attribute + 보상 지급
- * 4. flash 쿠키 세팅 (UI에서 1회 toast 표시 후 클라이언트가 삭제)
+ * (game) 레이아웃 진입 시 호출 — 공유 링크 가입 귀속(멱등).
  *
- * 모든 단계는 silent — 핫패스(layout)가 깨지지 않도록 try/catch로 흡수.
+ * shareCode는 **호출자가 요청 스코프에서 쿠키를 읽어** 전달한다. `cookies()`를 `after()`
+ * 안에서 호출하면 Next가 throw(동적 쿠키 API는 요청 스코프 한정)하므로, 여기서는 cookies()를
+ * 일절 쓰지 않고 DB 귀속만 수행 → after()에서 안전하게 응답 후 보장 실행.
+ *
+ * 멱등: referral_attributions.new_user_id UNIQUE + 사전 existing 체크. 쿠키 삭제는 RSC/after에서
+ * 불가하나 7일 TTL + 멱등이라 재방문 시 existing 체크가 싼 no-op으로 끝난다.
  */
-type CookieStore = Awaited<ReturnType<typeof cookies>>;
-
-function safeCookieSet(
-  store: CookieStore,
-  name: string,
-  value: string,
-  opts: { path: string; maxAge: number },
-): void {
+export async function processPendingReferral(userId: string, shareCode: string): Promise<void> {
+  if (!shareCode) return;
   try {
-    store.set(name, value, opts);
-  } catch (e) {
-    // Server Component render phase에서는 read-only일 수 있음 — 무시.
-    console.warn('[cookie.set]', name, (e as Error).message);
-  }
-}
-
-export async function processPendingReferral(userId: string): Promise<void> {
-  try {
-    const store = await cookies();
-    const shareCode = store.get(COOKIE_NAME)?.value;
-    if (!shareCode) return;
-
-    // 항상 처리 후 쿠키 삭제(성공/실패 무관) — 무한 재시도 방지.
-    safeCookieSet(store, COOKIE_NAME, '', { path: '/', maxAge: 0 });
-
-    // 이미 귀속된 유저는 skip(referral_attributions.new_user_id UNIQUE).
+    // 이미 귀속된 유저는 skip(UNIQUE 위반 전에 빠르게 차단).
     const [existing] = await db
       .select({ id: referralAttributions.id })
       .from(referralAttributions)
@@ -52,32 +30,9 @@ export async function processPendingReferral(userId: string): Promise<void> {
       .limit(1);
     if (existing) return;
 
-    try {
-      const r = await attributeReferralFromShare(userId, shareCode);
-      if (r) {
-        safeCookieSet(store, FLASH_COOKIE, encodeURIComponent(r.referrerNickname), {
-          path: '/',
-          maxAge: 60,
-        });
-      }
-    } catch (e) {
-      console.error('[auto-referral.attribute]', e);
-    }
+    await attributeReferralFromShare(userId, shareCode);
   } catch (e) {
-    console.error('[processPendingReferral]', e);
-  }
-}
-
-/** flash 쿠키 1회 읽기 + 삭제 — 가입 후 1회 안내 toast용. */
-export async function consumeReferralFlash(): Promise<string | null> {
-  try {
-    const store = await cookies();
-    const flash = store.get(FLASH_COOKIE)?.value;
-    if (!flash) return null;
-    safeCookieSet(store, FLASH_COOKIE, '', { path: '/', maxAge: 0 });
-    return decodeURIComponent(flash);
-  } catch (e) {
-    console.error('[consumeReferralFlash]', e);
-    return null;
+    // ReferralError(SELF_REFERRAL/ALREADY_REDEEMED 등)는 정상 흐름 — 조용히. 그 외만 기록.
+    if (!(e instanceof ReferralError)) console.error('[processPendingReferral]', e);
   }
 }

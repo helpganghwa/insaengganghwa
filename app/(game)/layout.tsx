@@ -1,4 +1,5 @@
 import { Suspense } from 'react';
+import { cookies } from 'next/headers';
 import { redirect } from 'next/navigation';
 import { after } from 'next/server';
 
@@ -6,7 +7,10 @@ import { getSessionUserId } from '@/lib/auth/session';
 import { withTimeout, DbTimeoutError } from '@/lib/db/with-timeout';
 import { ensureDailyMail } from '@/lib/game/mailbox';
 import { loadLayoutData } from '@/lib/game/layout-data';
-import { processPendingReferral } from '@/lib/game/referral/auto-attribute';
+import {
+  processPendingReferral,
+  PENDING_REFERRAL_COOKIE,
+} from '@/lib/game/referral/auto-attribute';
 import { AppHeader, AppHeaderShell } from '@/components/AppHeader';
 import { BottomNav } from '@/components/BottomNav';
 import { BottomNavAsync } from '@/components/BottomNavAsync';
@@ -40,15 +44,19 @@ export default async function GameLayout({ children }: { children: React.ReactNo
   });
 
   // 카카오 공유 링크 가입 귀속 — pending_referral 쿠키 있으면 1회 처리(멱등).
-  // after()로 응답 후 보장 실행 — fire-and-forget은 Vercel이 응답 후 함수를 종료하면
+  // 쿠키는 **요청 스코프에서 먼저 읽는다**(cookies()를 after() 안에서 호출하면 Next가 throw).
+  // 값만 after()로 넘겨 응답 후 보장 실행 — fire-and-forget은 Vercel이 응답 후 함수를 종료하면
   // 트랜잭션·푸시가 끊겨 리워드가 누락될 수 있음(추천 보상은 누락되면 안 됨). 핫패스 비차단.
-  after(async () => {
-    try {
-      await processPendingReferral(userId);
-    } catch (e) {
-      console.warn('[layout] referral error', e);
-    }
-  });
+  const referralCode = (await cookies()).get(PENDING_REFERRAL_COOKIE)?.value;
+  if (referralCode) {
+    after(async () => {
+      try {
+        await processPendingReferral(userId, referralCode);
+      } catch (e) {
+        console.warn('[layout] referral error', e);
+      }
+    });
+  }
 
   // 헤더/네비 데이터 — 여기서 await하지 않음(Suspense 스트리밍). 두 자식이 같은 promise 공유.
   const layoutData = loadLayoutData(userId);
