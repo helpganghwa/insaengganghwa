@@ -1,7 +1,6 @@
 'use client';
 
 import { useMemo, useState, useTransition } from 'react';
-import { useRouter } from 'next/navigation';
 
 import { useResourceToast } from '@/components/ResourceToast';
 import { assetUrl } from '@/lib/asset-versions';
@@ -64,12 +63,11 @@ export function WorldMapView({
   guildDeploys: Array<{ zoneId: number; role: DeployRole }>;
   zones: Zone[];
 }) {
-  const router = useRouter();
   const { showHeaderToast, showError } = useResourceToast();
   const [residence, setResidence] = useState<number | null>(residenceZoneId);
   const [selectedId, setSelectedId] = useState<number | null>(null);
   const [replay, setReplay] = useState<Battle | null>(null);
-  const [showNames, setShowNames] = useState(false);
+  const [showNames, setShowNames] = useState(true);
   const [pending, start] = useTransition();
 
   const selected = zones.find((z) => z.id === selectedId) ?? null;
@@ -94,17 +92,18 @@ export function WorldMapView({
     return m;
   }, [guildDeploys]);
 
+  // 거주 이동 — 낙관적(즉시 반영, 서버 백그라운드). router.refresh를 transition 안에서
+  // 호출하면 refresh 동안 pending이 묶여 다음 이동이 막혔음 → 제거해 연속 이동 가능.
   const moveResidence = (zoneId: number) => {
     const prev = residence;
     setResidence(zoneId); // 낙관적
+    showHeaderToast({ title: '거주지 이동 완료' });
     start(async () => {
       const r = await setResidenceAction(zoneId);
       if (r.status !== 'success') {
         setResidence(prev);
-        return showError(guildErrMsg(r.code));
+        showError(guildErrMsg(r.code));
       }
-      showHeaderToast({ title: '거주지 이동 완료' });
-      router.refresh();
     });
   };
 
@@ -126,13 +125,13 @@ export function WorldMapView({
         <button
           type="button"
           onClick={() => setShowNames((v) => !v)}
-          className={`absolute left-2 top-2 z-30 rounded-lg px-2 py-1 text-[10px] font-bold ring-1 backdrop-blur-sm transition active:scale-95 ${
+          className={`absolute left-2 top-2 z-30 w-[78px] rounded-lg py-1 text-center text-[10px] font-bold ring-1 backdrop-blur-sm transition active:scale-95 ${
             showNames
               ? 'bg-amber-600 text-white ring-amber-300/60'
               : 'bg-black/55 text-white/90 ring-white/25'
           }`}
         >
-          지역 이름
+          지역 이름 {showNames ? 'ON' : 'OFF'}
         </button>
         {zones.map((z) => {
           const owned = z.ownerGuildId != null;
@@ -182,7 +181,7 @@ export function WorldMapView({
                       style={{
                         background: 'linear-gradient(135deg, #fcd34d, #f59e0b)',
                         borderRadius: '50% 50% 50% 0',
-                        transform: 'rotate(135deg)',
+                        transform: 'rotate(-45deg)',
                         animation: 'marker-pin-glow 1.5s ease-in-out infinite',
                       }}
                     >
@@ -194,7 +193,7 @@ export function WorldMapView({
               {/* 지역 이름 라벨(토글 시) — 노드 하단, 지역색 텍스트, 클릭 통과 */}
               {showNames && (
                 <span
-                  className="pointer-events-none absolute left-1/2 top-full mt-[2px] -translate-x-1/2 whitespace-nowrap rounded-sm bg-black/70 px-0.5 text-[6px] font-bold leading-[1.4] shadow-[0_1px_2px_rgba(0,0,0,0.75)]"
+                  className="pointer-events-none absolute left-1/2 top-full mt-[2px] -translate-x-1/2 whitespace-nowrap rounded-sm bg-black/70 px-0.5 text-[5px] font-bold leading-[1.4] shadow-[0_1px_2px_rgba(0,0,0,0.75)]"
                   style={{ color }}
                 >
                   {z.name}
