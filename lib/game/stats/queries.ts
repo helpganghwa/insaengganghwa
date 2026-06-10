@@ -10,28 +10,25 @@ import { withTimeout } from '@/lib/db/with-timeout';
  * "지금 인생강화는" 사회적 증거 통계. /u 프로필 카드 전용.
  *
  * 두 종류:
- *  - active: 지금 큐(`enhancement_jobs.status='running'`)의 distinct user 수.
- *    인덱스 부분(running only) 있어 가벼움. 90s 캐시.
+ *  - totalUsers: 전체 가입 유저 수(`profiles` 행 수). 천천히 변해 90s 캐시면 충분.
  *  - totals: `enhancement_logs` 누적 성공/유지/하락. 운영 5년에 수억 row까지
  *    커질 수 있어 10분 캐시 + withTimeout. 'mega'는 'success'에 합산(GDD §3.2).
  */
 export type EnhanceLive = {
-  activeUsers: number;
+  totalUsers: number;
   success: number;
   hold: number;
   down: number;
 };
 
-async function rawActiveUsers(): Promise<number> {
+async function rawTotalUsers(): Promise<number> {
   const rows = (await db.execute(sql`
-    select count(distinct user_id)::bigint as c
-    from enhancement_jobs
-    where status = 'running'
+    select count(*)::bigint as c from profiles
   `)) as unknown as { c: string | bigint }[];
   return Number(rows[0]?.c ?? 0);
 }
 
-async function rawEnhanceTotals(): Promise<Omit<EnhanceLive, 'activeUsers'>> {
+async function rawEnhanceTotals(): Promise<Omit<EnhanceLive, 'totalUsers'>> {
   const rows = (await db.execute(sql`
     select
       coalesce(sum(case when result in ('success','mega') then 1 else 0 end), 0)::bigint as success,
@@ -47,8 +44,8 @@ async function rawEnhanceTotals(): Promise<Omit<EnhanceLive, 'activeUsers'>> {
   };
 }
 
-// 활성자 90s — '지금'의 가독성 ↑(분 단위 변화 반영). 인덱스 hit이라 비용 낮음.
-const cachedActiveUsers = unstable_cache(rawActiveUsers, ['stats:active-users'], {
+// 전체 유저 수 90s — 천천히 변해 캐시 충분. count(*)이라 비용 낮음.
+const cachedTotalUsers = unstable_cache(rawTotalUsers, ['stats:total-users'], {
   revalidate: 90,
   tags: ['stats'],
 });
@@ -60,13 +57,13 @@ const cachedEnhanceTotals = unstable_cache(rawEnhanceTotals, ['stats:enhance-tot
 });
 
 export async function getEnhanceLive(): Promise<EnhanceLive> {
-  const [activeUsers, totals] = await Promise.all([
-    withTimeout(cachedActiveUsers(), 1500, 'stats.activeUsers').catch(() => 0),
+  const [totalUsers, totals] = await Promise.all([
+    withTimeout(cachedTotalUsers(), 1500, 'stats.totalUsers').catch(() => 0),
     withTimeout(cachedEnhanceTotals(), 3000, 'stats.enhanceTotals').catch(() => ({
       success: 0,
       hold: 0,
       down: 0,
     })),
   ]);
-  return { activeUsers, ...totals };
+  return { totalUsers, ...totals };
 }

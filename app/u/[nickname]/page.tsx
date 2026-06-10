@@ -251,7 +251,7 @@ function KpiRowFallback({
 
 /**
  * "지금 인생강화는" 카드 — grow 풍 가로 4타일.
- * 강화중(라이브, 90s) + 누적 성공/유지/하락(10분). 색 톤으로 의미 구분.
+ * 전체 유저(90s) + 누적 성공/유지/하락(10분). 색 톤으로 의미 구분.
  * <Suspense> stream — 첫 페인트 차단 없음.
  */
 function fmtCompact(n: number): string {
@@ -305,7 +305,7 @@ async function EnhanceStatsCard() {
   const s = await getEnhanceLive();
   return (
     <StatsShell>
-      <StatTile tone="live" value={`${s.activeUsers.toLocaleString('ko-KR')}명`} label="인생강화중" />
+      <StatTile tone="live" value={`${s.totalUsers.toLocaleString('ko-KR')}명`} label="인생강화중" />
       <StatTile tone="success" value={fmtCompact(s.success)} label="강화 성공" />
       <StatTile tone="hold" value={fmtCompact(s.hold)} label="강화 유지" />
       <StatTile tone="down" value={fmtCompact(s.down)} label="강화 하락" />
