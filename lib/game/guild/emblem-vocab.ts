@@ -7,14 +7,14 @@ export type EmblemShape = { id: string; ko: string; en: string };
 export type EmblemTone = { id: string; ko: string; en: string; color: string };
 export type EmblemKeyword = { id: string; ko: string; en: string };
 
-/** ① 모양(1택, 6). */
+/** ① 모양(1택, 6). en = 실루엣 단정 묘사(방패형 디폴트로 뭉개지지 않게 — 배너/사각판은 비방패임을 강조). */
 export const EMBLEM_SHAPES: readonly EmblemShape[] = [
-  { id: 'round', ko: '라운드 방패', en: 'round shield' },
-  { id: 'kite', ko: '카이트 방패', en: 'tall vertical kite shield' },
-  { id: 'banner', ko: '문장 배너', en: 'heraldic banner pennant' },
-  { id: 'plaque', ko: '사각 문장판', en: 'square heraldic crest plaque' },
-  { id: 'winged', ko: '날개 문장', en: 'winged crest' },
-  { id: 'lozenge', ko: '마름모', en: 'diamond lozenge crest' },
+  { id: 'round', ko: '라운드 방패', en: 'a round shield' },
+  { id: 'kite', ko: '카이트 방패', en: 'a tall narrow pointed kite shield' },
+  { id: 'banner', ko: '전쟁 깃발', en: 'a hanging rectangular cloth war banner with a forked swallowtail bottom edge, not a shield' },
+  { id: 'plaque', ko: '사각 문장판', en: 'a flat square stone heraldic plaque with straight edges, not a shield' },
+  { id: 'winged', ko: '날개 문장', en: 'a shield flanked by a pair of large spread feathered wings' },
+  { id: 'lozenge', ko: '마름모', en: 'a diamond-shaped lozenge standing on one point' },
 ] as const;
 
 /** ② 색상톤(1택, 7). color = UI 악센트(emblem_color로 저장). */
@@ -83,8 +83,8 @@ export function buildEmblemPrompt(s: EmblemSelection): string {
     .filter(Boolean)
     .join(', ');
   return (
-    `a dark fantasy pixel art guild heraldic emblem, a ${shape} crest in a ${tone} color palette, ` +
-    `featuring ${kws}, a single bold central symmetrical motif, ornate metal border, ` +
+    `dark fantasy pixel art guild emblem, the overall shape is ${shape}, in a ${tone} color palette, ` +
+    `featuring ${kws} as a single bold central symmetrical motif, an ornate border that traces the outer silhouette of the shape, ` +
     `clean strong silhouette, bold and readable at small sizes, centered, transparent background, no text`
   );
 }
