@@ -96,10 +96,12 @@ export async function loadMeleeHistory(): Promise<MeleeHistoryRow[]> {
   return battles
     .map((b, i) => {
       const c = b.champ ? champOf.get(b.champ) : undefined;
+      // 우승자 닉네임은 그 회차 스냅샷(finale.roster rank 1) 우선 — 현재 닉 변경과 무관히 고정.
+      const snapNick = b.finale?.roster?.find((r) => r.rank === 1)?.nickname ?? null;
       return {
         battleId: b.id.toString(),
         edition: i + 1,
-        championNick: c?.nick ?? '챔피언',
+        championNick: snapNick ?? c?.nick ?? '챔피언',
         championCode: c?.code ?? null,
         championAvatar: trophyOf.get(b.id.toString()) ?? c?.avatar ?? null,
         championCp: cpOf.get(b.id.toString()) ?? 0,
