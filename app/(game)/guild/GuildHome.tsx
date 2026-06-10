@@ -47,6 +47,7 @@ export function GuildHome({
   const [pending, start] = useTransition();
   const [confirm, setConfirm] = useState(false);
   const [confirmLeft, setConfirmLeft] = useState(0);
+  const [leaveOpen, setLeaveOpen] = useState(false);
   // 기부 낙관적 상태 — 즉시 반영('기부중' 미노출), 실패 시 롤백.
   const [optDonations, setOptDonations] = useState(0);
   const [optXp, setOptXp] = useState(0);
@@ -112,7 +113,7 @@ export function GuildHome({
   };
 
   const leave = () => {
-    if (!window.confirm('길드를 탈퇴할까요? (24시간 재가입 불가)')) return;
+    setLeaveOpen(false);
     start(async () => {
       const r = await leaveGuildAction();
       if (r.status !== 'success') return showError(guildErrMsg(r.code));
@@ -189,7 +190,7 @@ export function GuildHome({
             </div>
             <div className="mt-1 h-1.5 w-full overflow-hidden rounded-full bg-zinc-200 dark:bg-zinc-800">
               <div
-                className="h-full rounded-full bg-amber-500 transition-[width] duration-300"
+                className="h-full rounded-full bg-emerald-500 transition-[width] duration-300"
                 style={{ width: `${Math.min(100, (displayXp / guildXpToNext(guild.level)) * 100)}%` }}
               />
             </div>
@@ -222,15 +223,52 @@ export function GuildHome({
       {/* 길드원 명단(아바타·장비·정렬 메트릭, 클릭 시 프로필) */}
       <GuildMemberList members={members} myUserId={myUserId} />
 
-      {/* 탈퇴 */}
+      {/* 탈퇴 — 보더 없이 빨강 텍스트, 컨펌은 팝업 */}
       <button
         type="button"
-        onClick={leave}
+        onClick={() => setLeaveOpen(true)}
         disabled={pending}
-        className="w-full rounded-lg border border-zinc-300 py-2.5 text-sm font-semibold text-zinc-600 disabled:opacity-50 dark:border-zinc-700 dark:text-zinc-400"
+        className="w-full rounded-lg py-2.5 text-sm font-semibold text-red-600 disabled:opacity-50 dark:text-red-400"
       >
         길드 탈퇴
       </button>
+
+      {/* 탈퇴 확인 팝업 */}
+      {leaveOpen && (
+        <div
+          className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-5 backdrop-blur-sm"
+          onClick={() => setLeaveOpen(false)}
+        >
+          <div
+            className="w-full max-w-[300px] rounded-2xl bg-white p-5 dark:bg-zinc-950"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <h2 className="text-base font-bold">길드 탈퇴</h2>
+            <p className="mt-1.5 text-[13px] leading-relaxed text-zinc-500 dark:text-zinc-400">
+              정말 길드를 탈퇴할까요?
+              <br />
+              탈퇴 후 24시간 동안 재가입할 수 없습니다.
+            </p>
+            <div className="mt-4 flex gap-2">
+              <button
+                type="button"
+                onClick={() => setLeaveOpen(false)}
+                className="flex-1 rounded-lg bg-zinc-100 py-2.5 text-sm font-bold text-zinc-700 active:opacity-70 dark:bg-zinc-800 dark:text-zinc-200"
+              >
+                취소
+              </button>
+              <button
+                type="button"
+                onClick={leave}
+                disabled={pending}
+                className="flex-1 rounded-lg bg-red-600 py-2.5 text-sm font-bold text-white active:opacity-90 disabled:opacity-50"
+              >
+                탈퇴
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
