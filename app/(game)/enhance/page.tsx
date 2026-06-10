@@ -1,11 +1,9 @@
-import { and, desc, eq, isNull } from 'drizzle-orm';
+import { sql } from 'drizzle-orm';
 
 import { getSessionUserId } from '@/lib/auth/session';
 import { db } from '@/lib/db/client';
 import { withTimeout } from '@/lib/db/with-timeout';
-import { profiles } from '@/lib/db/schema/profiles';
-import { catalogItems, userEquipment, type Slot } from '@/lib/db/schema/equipment';
-import { enhancementJobs } from '@/lib/db/schema/enhance';
+import { type Slot } from '@/lib/db/schema/equipment';
 import { liberatedItemRanks } from '@/lib/game/codex/ranking';
 import { TUTORIAL_DONE } from '@/lib/game/tutorial';
 
@@ -22,74 +20,78 @@ export default async function EnhancePage() {
   const userId = await getSessionUserId();
   if (!userId) return null; // (game) layout이 가드
 
-  // 콜드 DB 커넥션 hang 시 페이지 무한 대기 방지 — 실패 시 빈 결과로 degrade(2026-05-29).
+  // 진행중 강화 큐·프로필·강화후보를 **단일 SQL 1왕복**으로(json 동봉, catalog_items 조인 인라인).
+  // 후보: status='running' LEFT JOIN으로 진행 중 제외(ej.id IS NULL). bigint id=text, 타임스탬프=
+  // ISO 문자열. liberatedItemRanks(캐시)만 병렬 → 3 DB왕복 → 2. 콜드/hang 시 빈 결과 degrade.
+  type EnhRow = {
+    diamond: string | null;
+    nickname: string | null;
+    tutorial_step: number | null;
+    jobs: {
+      jobId: string;
+      equipmentInstanceId: string;
+      slot: Slot;
+      slotLane: number;
+      fromLevel: number;
+      targetLevel: number;
+      baseRateBp: number;
+      startedAtIso: string;
+      completeAtIso: string;
+      transcendLevel: number;
+      catalogItemId: number;
+      code: string;
+      name: string;
+    }[];
+    candidates: {
+      id: string;
+      catalogItemId: number;
+      enhanceLevel: number;
+      transcendLevel: number;
+      equippedSlot: string | null;
+      code: string;
+      name: string;
+      slot: Slot;
+    }[];
+  };
   const _r = await withTimeout(
     Promise.all([
-    db
-      .select({
-        jobId: enhancementJobs.id,
-        equipmentInstanceId: enhancementJobs.userEquipmentId,
-        slot: enhancementJobs.slot,
-        slotLane: enhancementJobs.slotLane,
-        fromLevel: enhancementJobs.fromLevel,
-        targetLevel: enhancementJobs.targetLevel,
-        baseRateBp: enhancementJobs.baseRateBp,
-        startedAt: enhancementJobs.startedAt,
-        completeAt: enhancementJobs.completeAt,
-        transcendLevel: userEquipment.transcendLevel,
-        catalogItemId: userEquipment.catalogItemId,
-        code: catalogItems.code,
-        name: catalogItems.name,
-      })
-      .from(enhancementJobs)
-      .innerJoin(userEquipment, eq(enhancementJobs.userEquipmentId, userEquipment.id))
-      .innerJoin(catalogItems, eq(userEquipment.catalogItemId, catalogItems.id))
-      .where(and(eq(enhancementJobs.userId, userId), eq(enhancementJobs.status, 'running'))),
-    db
-      .select({
-        diamond: profiles.diamond,
-        nickname: profiles.nickname,
-        tutorialStep: profiles.tutorialStep,
-      })
-      .from(profiles)
-      .where(eq(profiles.id, userId))
-      .limit(1),
-    liberatedItemRanks(userId),
-    // 강화 가능 후보: 잠금 X, 진행 중 X. equipped 무관(equippedSlot 포함).
-    // LEFT JOIN status='running' ej → ej.id IS NULL 로 진행 중 제외.
-    db
-      .select({
-        id: userEquipment.id,
-        catalogItemId: userEquipment.catalogItemId,
-        enhanceLevel: userEquipment.enhanceLevel,
-        transcendLevel: userEquipment.transcendLevel,
-        equippedSlot: userEquipment.equippedSlot,
-        code: catalogItems.code,
-        name: catalogItems.name,
-        slot: catalogItems.slot,
-      })
-      .from(userEquipment)
-      .innerJoin(catalogItems, eq(userEquipment.catalogItemId, catalogItems.id))
-      .leftJoin(
-        enhancementJobs,
-        and(
-          eq(enhancementJobs.userEquipmentId, userEquipment.id),
-          eq(enhancementJobs.status, 'running'),
-        ),
-      )
-      .where(and(eq(userEquipment.userId, userId), isNull(enhancementJobs.id)))
-      .orderBy(desc(userEquipment.enhanceLevel), desc(userEquipment.firstAcquiredAt)),
+      db.execute(sql`
+        select
+          p.diamond::text as diamond, p.nickname, p.tutorial_step,
+          coalesce((select json_agg(json_build_object(
+              'jobId', ej.id::text, 'equipmentInstanceId', ej.user_equipment_id::text,
+              'slot', ej.slot, 'slotLane', ej.slot_lane, 'fromLevel', ej.from_level,
+              'targetLevel', ej.target_level, 'baseRateBp', ej.base_rate_bp,
+              'startedAtIso', ej.started_at, 'completeAtIso', ej.complete_at,
+              'transcendLevel', ue.transcend_level, 'catalogItemId', ue.catalog_item_id,
+              'code', ci.code, 'name', ci.name))
+            from enhancement_jobs ej
+            join user_equipment ue on ue.id = ej.user_equipment_id
+            join catalog_items ci on ci.id = ue.catalog_item_id
+            where ej.user_id = ${userId}::uuid and ej.status = 'running'), '[]'::json) as jobs,
+          coalesce((select json_agg(json_build_object(
+              'id', ue.id::text, 'catalogItemId', ue.catalog_item_id, 'enhanceLevel', ue.enhance_level,
+              'transcendLevel', ue.transcend_level, 'equippedSlot', ue.equipped_slot,
+              'code', ci.code, 'name', ci.name, 'slot', ci.slot)
+              order by ue.enhance_level desc, ue.first_acquired_at desc)
+            from user_equipment ue
+            join catalog_items ci on ci.id = ue.catalog_item_id
+            left join enhancement_jobs ej on ej.user_equipment_id = ue.id and ej.status = 'running'
+            where ue.user_id = ${userId}::uuid and ej.id is null), '[]'::json) as candidates
+        from profiles p where p.id = ${userId}::uuid limit 1
+      `) as unknown as Promise<EnhRow[]>,
+      liberatedItemRanks(userId),
     ]),
     3500,
     'enhance.page',
   ).catch(() => null);
-  const jobs = _r?.[0] ?? [];
-  const profRow = _r?.[1] ?? [];
-  const libRanks = _r?.[2] ?? new Map<number, number>();
-  const candidatesRaw = _r?.[3] ?? [];
+  const row = _r?.[0]?.[0] ?? null;
+  const libRanks = _r?.[1] ?? new Map<number, number>();
+  const jobs = row?.jobs ?? [];
+  const candidatesRaw = row?.candidates ?? [];
 
-  const diamond = profRow[0]?.diamond ?? 0n;
-  const nickname = profRow[0]?.nickname ?? '플레이어';
+  const diamond = row?.diamond ?? '0';
+  const nickname = row?.nickname ?? '플레이어';
   const byLane = new Map<string, (typeof jobs)[number]>();
   for (const j of jobs) byLane.set(`${j.slot}:${j.slotLane}`, j);
 
@@ -98,7 +100,7 @@ export default async function EnhancePage() {
   for (const s of SLOTS) candidatesBySlot.set(s, []);
   for (const c of candidatesRaw) {
     candidatesBySlot.get(c.slot)!.push({
-      id: c.id.toString(),
+      id: c.id,
       code: c.code,
       name: c.name,
       slot: c.slot,
@@ -112,7 +114,7 @@ export default async function EnhancePage() {
   // 진행 중 강화 큐가 1개 이상이면 푸시 권한 contextual prompt 노출(첫 진입 시).
   // 이미 권한 있음/거부/7일 dismiss 윈도는 컴포넌트가 자체 가드.
   // 단, 튜토리얼 진행 중엔 억제 — 마무리 팝업이 알림/설치를 따로 안내(충돌 방지).
-  const tutorialDone = (profRow[0]?.tutorialStep ?? TUTORIAL_DONE) === TUTORIAL_DONE;
+  const tutorialDone = (row?.tutorial_step ?? TUTORIAL_DONE) === TUTORIAL_DONE;
   const hasRunningJob = jobs.length > 0 && tutorialDone;
 
   return (
@@ -125,7 +127,7 @@ export default async function EnhancePage() {
             const j = byLane.get(`${slot}:${lane}`);
             const active: ActiveJob | null = j
               ? {
-                  jobId: j.jobId.toString(),
+                  jobId: j.jobId,
                   code: j.code,
                   name: j.name,
                   slot: j.slot,
@@ -134,8 +136,8 @@ export default async function EnhancePage() {
                   transcendLevel: j.transcendLevel,
                   championRank: libRanks.get(j.catalogItemId) ?? null,
                   baseRateBp: j.baseRateBp,
-                  startedAtIso: j.startedAt.toISOString(),
-                  completeAtIso: j.completeAt.toISOString(),
+                  startedAtIso: j.startedAtIso,
+                  completeAtIso: j.completeAtIso,
                 }
               : null;
             return (
@@ -144,7 +146,7 @@ export default async function EnhancePage() {
                 initialActive={active}
                 candidates={candidatesBySlot.get(slot) ?? []}
                 slot={slot}
-                diamond={diamond.toString()}
+                diamond={diamond}
                 nickname={nickname}
               />
             );
