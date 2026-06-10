@@ -5,6 +5,7 @@ import { db } from '@/lib/db/client';
 import { profiles } from '@/lib/db/schema/profiles';
 import { userProfiles } from '@/lib/db/schema/avatar';
 import { catalogItems, userEquipment } from '@/lib/db/schema/equipment';
+import { getUserGuildBrief } from '@/lib/game/guild';
 import { spritePath } from '@/lib/game/equipment/sprite-manifest';
 import { transcendStyle } from '@/lib/game/equipment/transcend';
 
@@ -180,6 +181,8 @@ export async function GET(_req: Request, { params }: { params: Promise<{ shareCo
 
   // 카드 표시 닉네임 — 조회된 현재 닉(없으면 핸들 폴백).
   const nickname = prof?.nickname ?? handle;
+  // 길드 문양+이름(있으면 닉네임 밑). 실패해도 카드는 생성.
+  const guild = prof ? await getUserGuildBrief(prof.id).catch(() => null) : null;
 
   // 사용자 결정: OG 카드에는 타이틀+닉네임+장비 정보만 노출(전투력·도메인 제거).
   // 따라서 codex 합계 쿼리 + total 계산 제거 — OG 응답 빠르게.
@@ -329,7 +332,9 @@ export async function GET(_req: Request, { params }: { params: Promise<{ shareCo
   const slotGap = 16;
   const slotH = Math.round((innerH - slotGap * 2) / 3); // ≈ 167
   const nicknameH = 44;
-  const charBoxH = innerH - nicknameH - 12; // 478 — gap 12 빼고
+  // 길드 문양+이름 행(있으면) 높이만큼 캐릭터 박스를 줄여 1200×630 레이아웃 유지.
+  const guildRowH = guild ? 34 : 0;
+  const charBoxH = innerH - nicknameH - guildRowH - 12 - (guild ? 12 : 0);
   const charBoxW = leftW;
   // 캐릭터를 박스보다 크게 그리되 우측 장비 박스 시작점(rootPad+leftW+gap = 504px)
   // 침범 최소화. Satori는 img transform: scale + translateY가 의도대로 적용 안 되는
@@ -380,6 +385,24 @@ export async function GET(_req: Request, { params }: { params: Promise<{ shareCo
         >
           {nickname}
         </div>
+        {guild ? (
+          <div
+            style={{
+              display: 'flex',
+              alignItems: 'center',
+              gap: 8,
+              maxWidth: leftW - 8,
+              height: guildRowH,
+            }}
+          >
+            {guild.emblemUrl ? (
+              <img src={guild.emblemUrl} width={30} height={30} style={{ objectFit: 'contain' }} />
+            ) : null}
+            <div style={{ display: 'flex', fontSize: 24, color: 'rgba(255,255,255,0.78)', overflow: 'hidden' }}>
+              {guild.name}
+            </div>
+          </div>
+        ) : null}
         <div
           style={{
             position: 'relative',

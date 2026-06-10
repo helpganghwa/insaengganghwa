@@ -210,6 +210,8 @@ export default async function ProfilePage() {
         publicCode={publicCode}
         total={total}
         profileImg={activeProfile ? dirImg(activeProfile) : null}
+        guildEmblemUrl={row?.guild_emblem_url ?? null}
+        guildName={row?.guild_name ?? null}
         pieces={equipped.map((e) => ({
           slot: e.slot,
           code: e.code,

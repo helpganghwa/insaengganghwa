@@ -5,6 +5,7 @@ import { createPortal } from 'react-dom';
 
 import { TranscendSprite } from '@/components/TranscendSprite';
 import { rarityBorderStyle, hasRarityBorder, TranscendTag } from '@/components/RarityFrame';
+import { GuildBadge } from '@/components/GuildBadge';
 import { getEnhancingUserCount } from '@/app/(game)/me/actions';
 
 // 공유는 **카카오톡 전용** — 사용자 결정. 링크 복사·navigator.share 분기 제거.
@@ -41,6 +42,8 @@ export function BoastModal({
   piece,
   headline,
   profileImg,
+  guildEmblemUrl = null,
+  guildName = null,
 }: {
   open: boolean;
   onClose: () => void;
@@ -53,6 +56,9 @@ export function BoastModal({
   headline?: string;
   /** 미리보기에 그릴 활성 프로필 캐릭터 이미지(me/page profileImg). null이면 폴백. */
   profileImg?: string | null;
+  /** 닉네임 밑 길드 문양+이름(미소속/생성중이면 미표시). */
+  guildEmblemUrl?: string | null;
+  guildName?: string | null;
 }) {
   const [shareUrl, setShareUrl] = useState('');
   // 카카오 SDK는 next/script afterInteractive로 비동기 로드 → 첫 모달 오픈 시점에
@@ -242,6 +248,12 @@ export function BoastModal({
               {/* 좌(4) — 닉네임 + 캐릭터(머리위 닉네임은 작게) */}
               <div className="flex basis-2/5 flex-col items-center gap-1">
                 <span className="truncate text-xs font-normal text-white">{nickname}</span>
+                <GuildBadge
+                  emblemUrl={guildEmblemUrl}
+                  name={guildName}
+                  size={13}
+                  className="max-w-full text-[10px] text-white/70"
+                />
                 <div className="relative aspect-[3/4] h-36 overflow-visible">
                   {profileImg ? (
                     // eslint-disable-next-line @next/next/no-img-element
@@ -383,6 +395,8 @@ export function BoastLauncher({
   profileImg,
   compact = false,
   label,
+  guildEmblemUrl = null,
+  guildName = null,
 }: {
   nickname: string;
   /** 불변 공개 코드 — 공유/OG 링크 식별자. */
@@ -393,6 +407,8 @@ export function BoastLauncher({
   compact?: boolean;
   /** 풀 버튼 라벨 — 기본 '내 프로필 자랑하기'. 타인 프로필은 '프로필 공유하기' 등. */
   label?: string;
+  guildEmblemUrl?: string | null;
+  guildName?: string | null;
 }) {
   const [open, setOpen] = useState(false);
   return (
@@ -426,6 +442,8 @@ export function BoastLauncher({
         kind="set"
         set={{ pieces, total }}
         profileImg={profileImg ?? null}
+        guildEmblemUrl={guildEmblemUrl}
+        guildName={guildName}
       />
     </>
   );
