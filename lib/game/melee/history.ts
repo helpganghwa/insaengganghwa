@@ -7,6 +7,7 @@ import { withTimeout } from '@/lib/db/with-timeout';
 import { meleeBattles, meleeParticipants, type MeleeFinale } from '@/lib/db/schema/melee';
 import { profiles } from '@/lib/db/schema/profiles';
 import { userProfiles } from '@/lib/db/schema/avatar';
+import { getGuildBriefsByUsers } from '@/lib/game/guild';
 
 const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 
@@ -19,6 +20,8 @@ export type MeleeHistoryRow = {
   championAvatar: string | null;
   championCp: number;
   participantCount: number;
+  /** 우승자 닉네임 옆 길드 문양(미소속/생성중이면 null). */
+  championGuildEmblemUrl: string | null;
 };
 
 /**
@@ -92,6 +95,12 @@ export async function loadMeleeHistory(): Promise<MeleeHistoryRow[]> {
     champOf.set(c.uid, { nick: c.nick, code: c.code, avatar });
   }
   const cpOf = new Map(champCpRows.map((r) => [r.battleId.toString(), Number(r.cp)]));
+  // 우승자 길드 문양 batch(실패해도 진행).
+  const champGuild = champIds.length
+    ? await getGuildBriefsByUsers(champIds).catch(
+        () => new Map<string, { emblemUrl: string | null; name: string }>(),
+      )
+    : new Map<string, { emblemUrl: string | null; name: string }>();
 
   return battles
     .map((b, i) => {
@@ -104,6 +113,7 @@ export async function loadMeleeHistory(): Promise<MeleeHistoryRow[]> {
         championAvatar: trophyOf.get(b.id.toString()) ?? c?.avatar ?? null,
         championCp: cpOf.get(b.id.toString()) ?? 0,
         participantCount: b.pc,
+        championGuildEmblemUrl: b.champ ? (champGuild.get(b.champ)?.emblemUrl ?? null) : null,
       } satisfies MeleeHistoryRow;
     })
     .reverse(); // 최신 회차가 위로

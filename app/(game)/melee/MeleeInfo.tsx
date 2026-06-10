@@ -5,6 +5,7 @@ import Link from 'next/link';
 
 import { MELEE_REWARD_TIERS } from '@/lib/game/balance';
 import { assetUrl } from '@/lib/asset-versions';
+import { GuildBadge } from '@/components/GuildBadge';
 import type { MeleeHistoryRow } from '@/lib/game/melee/history';
 
 export type { MeleeHistoryRow };
@@ -121,6 +122,7 @@ export function MeleeInfo({
                       <span className="min-w-0 truncate text-[13px] font-bold text-white">
                         {h.championNick}
                       </span>
+                      <GuildBadge emblemUrl={h.championGuildEmblemUrl} size={14} className="shrink-0" />
                     </div>
                     <div className="mt-1.5 flex flex-wrap items-center gap-x-2 gap-y-0.5 text-[10px] text-zinc-400">
                       <span>
