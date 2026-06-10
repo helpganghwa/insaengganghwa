@@ -71,7 +71,7 @@ function MemberRow({ m, myUserId }: { m: RichMember; myUserId: string }) {
     <li>
       <Link
         href={`/u/${encodeURIComponent(m.publicCode)}`}
-        className="flex items-center gap-2.5 py-1.5 active:opacity-70"
+        className="flex items-center gap-2 py-1.5 active:opacity-70"
       >
         {/* 아바타 */}
         <span className="h-10 w-10 shrink-0 overflow-hidden rounded-lg bg-zinc-100 dark:bg-zinc-800">
@@ -90,21 +90,21 @@ function MemberRow({ m, myUserId }: { m: RichMember; myUserId: string }) {
         {/* 가운데: (닉네임 + 최근접속) / (기여 · 전투) */}
         <div className="min-w-0 flex-1">
           <div className="flex items-center gap-1.5">
-            <span className="min-w-0 flex-1 truncate text-[11px] font-semibold">{m.nickname}</span>
-            {/* 최근접속 — 닉네임 오른쪽 고정 슬롯(최대 '999일 전'까지 한 줄). */}
-            <span className="w-[52px] shrink-0 text-right text-[10px] text-zinc-400">
+            <span className="min-w-0 flex-1 text-[10px] font-semibold">{m.nickname}</span>
+            {/* 최근접속 — 닉네임 오른쪽 고정 슬롯(좌측 정렬). */}
+            <span className="w-[52px] shrink-0 text-left text-[10px] text-zinc-400">
               {isMe || m.lastSeenAt != null ? (
-                <LastSeen at={m.lastSeenAt} forceOnline={isMe} className="justify-end" />
+                <LastSeen at={m.lastSeenAt} forceOnline={isMe} className="justify-start" />
               ) : null}
             </span>
           </div>
           <div className="mt-0.5 flex items-center gap-1.5 text-[11px] text-zinc-500">
             <span className="truncate">
-              기여 <span className="font-semibold tabular-nums text-zinc-700 dark:text-zinc-300">{fmtNum(m.contribution)}</span>
+              기여도 <span className="font-semibold tabular-nums text-zinc-700 dark:text-zinc-300">{fmtNum(m.contribution)}</span>
             </span>
             <span className="text-zinc-300 dark:text-zinc-700">·</span>
             <span className="truncate">
-              전투 <span className="font-semibold tabular-nums text-zinc-700 dark:text-zinc-300">{fmtNum(m.combat)}</span>
+              전투력 <span className="font-semibold tabular-nums text-zinc-700 dark:text-zinc-300">{fmtNum(m.combat)}</span>
             </span>
           </div>
         </div>
