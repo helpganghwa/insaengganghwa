@@ -304,6 +304,10 @@ export function WorldMapView({
                   </span>
                 </li>
               ))}
+              {/* 로어 마감 — 더 오래된 기록은 소실됨을 암시. */}
+              <li className="pt-3 text-center text-[11px] italic leading-relaxed text-zinc-400 dark:text-zinc-600">
+                그 이전의 기록은 세월에 바래어, 이제는 아무도 알지 못한다.
+              </li>
             </ul>
           )
         ) : (
