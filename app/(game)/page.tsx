@@ -163,7 +163,16 @@ export default async function HomePage() {
               else 'after'
             end as melee_phase,
             b.status::text as melee_status,
-            cp.nickname as melee_champ,
+            -- 우승자 닉네임은 그 회차 스냅샷(finale.roster rank 1) 우선 — 현재 닉 변경과 무관. 없으면 현재닉 폴백.
+            coalesce(
+              (select elem->>'nickname'
+                 from jsonb_array_elements(
+                   case when jsonb_typeof(b.finale->'roster') = 'array' then b.finale->'roster' else '[]'::jsonb end
+                 ) elem
+                 where (elem->>'rank')::int = 1
+                 limit 1),
+              cp.nickname
+            ) as melee_champ,
             (select count(*)::int from melee_battles where battle_date <= n.kst::date) as melee_edition,
             rz.name as residence_name,
             rz.region::text as residence_region,
