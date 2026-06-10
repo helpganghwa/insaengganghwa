@@ -3,6 +3,7 @@
 import { useMemo, useState, useTransition } from 'react';
 
 import { useResourceToast } from '@/components/ResourceToast';
+import { ToggleSwitch } from '@/components/ToggleSwitch';
 import { assetUrl } from '@/lib/asset-versions';
 
 import { setResidenceAction, getZoneBattleAction } from '../actions';
@@ -121,18 +122,10 @@ export function WorldMapView({
           className="absolute inset-0 h-full w-full object-cover"
           style={{ imageRendering: 'pixelated' }}
         />
-        {/* 지역 이름 오버레이 토글 — 켜면 50개 라벨 노출(좁아서 겹칠 수 있어 기본 꺼짐). */}
-        <button
-          type="button"
-          onClick={() => setShowNames((v) => !v)}
-          className={`absolute left-2 top-2 z-30 w-[78px] rounded-lg py-1 text-center text-[10px] font-bold ring-1 backdrop-blur-sm transition active:scale-95 ${
-            showNames
-              ? 'bg-amber-600 text-white ring-amber-300/60'
-              : 'bg-black/55 text-white/90 ring-white/25'
-          }`}
-        >
-          지역 이름 {showNames ? 'ON' : 'OFF'}
-        </button>
+        {/* 지역 이름 오버레이 토글 — 텍스트 없이 스위치만(좌상단). */}
+        <span className="absolute left-2 top-2 z-30 inline-flex rounded-full bg-black/45 p-1 backdrop-blur-sm">
+          <ToggleSwitch on={showNames} onToggle={() => setShowNames((v) => !v)} label="지역 이름 표시" />
+        </span>
         {zones.map((z) => {
           const owned = z.ownerGuildId != null;
           const isResidence = z.id === residence;

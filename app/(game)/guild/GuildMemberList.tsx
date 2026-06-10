@@ -149,14 +149,14 @@ export function GuildMemberList({ members, myUserId }: { members: RichMember[]; 
         </div>
       </div>
 
-      {/* 직책별 섹션(길드장/부길드장/길드원) — 라벨로 직책 표시, 각 그룹 내부 메트릭 정렬. */}
+      {/* 직책별 섹션(길드장/부길드장/길드원) — 섹션마다 테두리 박스, 내부는 divider로 유저 구분. */}
       {groups.map(({ label, rows }) =>
         rows.length === 0 ? null : (
-          <div key={label} className="mt-2.5">
-            <p className="px-1 pb-0.5 text-[10px] font-bold uppercase tracking-wide text-zinc-400">
+          <div key={label} className="mt-3">
+            <p className="px-1 pb-1 text-[10px] font-bold uppercase tracking-wide text-zinc-400">
               {label}
             </p>
-            <ul className="divide-y divide-zinc-100 dark:divide-zinc-800/70">
+            <ul className="divide-y divide-zinc-100 rounded-xl border border-zinc-200 px-3 dark:divide-zinc-800/70 dark:border-zinc-800">
               {rows.map((m) => (
                 <MemberRow key={m.userId} m={m} myUserId={myUserId} sort={sort} sortLabel={sortLabel} />
               ))}
