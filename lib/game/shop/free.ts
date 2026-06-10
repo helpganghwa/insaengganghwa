@@ -37,16 +37,26 @@ export class ShopFreeError extends Error {
   }
 }
 
+/**
+ * 클레임 행 → 슬롯별 수령 가능 여부(순수·DB 무관). 주기 비교 단일 진실 원천.
+ * 홈 핫패스의 통합 1쿼리(shop_free_claims를 json으로 동봉)에서도 재사용.
+ */
+export function freeStatusFromClaims(
+  claims: { slot: string; periodKey: string }[],
+): Record<FreeSlot, boolean> {
+  const claimed = new Map(claims.map((r) => [r.slot, r.periodKey]));
+  const out = {} as Record<FreeSlot, boolean>;
+  for (const s of FREE_SLOTS) out[s] = claimed.get(s) !== periodKey(s);
+  return out;
+}
+
 /** 각 슬롯이 지금 수령 가능한지(빨간점 표시용). */
 export async function getFreeStatus(userId: string): Promise<Record<FreeSlot, boolean>> {
   const rows = await db
     .select({ slot: shopFreeClaims.slot, periodKey: shopFreeClaims.periodKey })
     .from(shopFreeClaims)
     .where(eq(shopFreeClaims.userId, userId));
-  const claimed = new Map(rows.map((r) => [r.slot, r.periodKey]));
-  const out = {} as Record<FreeSlot, boolean>;
-  for (const s of FREE_SLOTS) out[s] = claimed.get(s) !== periodKey(s);
-  return out;
+  return freeStatusFromClaims(rows);
 }
 
 function splitBoxes(n: number): Record<SupplySlot, number> {

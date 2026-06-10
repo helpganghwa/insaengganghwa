@@ -1,16 +1,11 @@
 import Link from 'next/link';
-import { and, eq, gt, isNull, lte, or, sql } from 'drizzle-orm';
+import { sql } from 'drizzle-orm';
 
 import { assetUrl } from '@/lib/asset-versions';
 import { getSessionUserId } from '@/lib/auth/session';
 import { db } from '@/lib/db/client';
 import { withTimeout } from '@/lib/db/with-timeout';
-import { enhancementJobs } from '@/lib/db/schema/enhance';
-import { mailbox } from '@/lib/db/schema/mailbox';
-import { raidRewards } from '@/lib/db/schema/raid';
-import { userSupplyBoxes } from '@/lib/db/schema/supply';
-import { userCheckinState } from '@/lib/db/schema/checkin';
-import { getFreeStatus } from '@/lib/game/shop/free';
+import { freeStatusFromClaims } from '@/lib/game/shop/free';
 import { kstDateString } from '@/lib/kst';
 
 import { BattlePassBanner } from './BattlePassBanner';
@@ -136,127 +131,93 @@ export default async function HomePage() {
 
   if (userId) {
     const kstToday = kstDateString();
-    // 일일 보급 + 출석 state + 4종 알림 카운트 — 핫패스 1RTT(병렬, CLAUDE §11.4).
-    // 콜드 DB 커넥션 hang 시 페이지가 무한 대기하지 않도록 가드.
+    // 홈 카드/배지 전체를 **단일 SQL 1왕복**으로 — 일일보급·출석·강화/보급/우편/레이드
+    // 배지·대난투 phase·거주지·상점 무료 클레임을 스칼라 서브쿼리로 한 행에 모음.
+    // (이전: Promise.all 9쿼리 → 커넥션 9개 동시 요구로 콜드/포화 시 타임아웃 빈발.
+    //  이제 핸드셰이크 1회·~30ms. 콜드/hang 시 가드로 무한대기 방지, CLAUDE §11.4.)
     try {
-      const [
-        dailyRow,
-        checkinRow,
-        enhanceRow,
-        supplyRow,
-        mailRow,
-        raidRow,
-        meleeRow,
-        freeStatus,
-        residenceRow,
-      ] = await withTimeout(
-          Promise.all([
-          db
-            .select({ n: sql<number>`count(*)::int` })
-            .from(mailbox)
-            .where(
-              and(
-                eq(mailbox.userId, userId),
-                eq(mailbox.senderLabel, '일일 보급'),
-                isNull(mailbox.claimedAt),
-                sql`(${mailbox.createdAt} at time zone 'Asia/Seoul')::date = (now() at time zone 'Asia/Seoul')::date`,
-              ),
-            )
-            .limit(1) as unknown as Promise<Array<{ n: number }>>,
-          db
-            .select({ lastClaimedKstDay: userCheckinState.lastClaimedKstDay })
-            .from(userCheckinState)
-            .where(eq(userCheckinState.userId, userId))
-            .limit(1),
-          // 강화: complete_at 도달한 running job 수.
-          db
-            .select({ n: sql<number>`count(*)::int` })
-            .from(enhancementJobs)
-            .where(
-              and(
-                eq(enhancementJobs.userId, userId),
-                eq(enhancementJobs.status, 'running'),
-                lte(enhancementJobs.completeAt, sql`now()`),
-              ),
-            ) as unknown as Promise<Array<{ n: number }>>,
-          // 보급: 슬롯 3종 보급상자 총합.
-          db
-            .select({ n: sql<number>`coalesce(sum(${userSupplyBoxes.count}),0)::int` })
-            .from(userSupplyBoxes)
-            .where(eq(userSupplyBoxes.userId, userId)) as unknown as Promise<Array<{ n: number }>>,
-          // 우편함: 미수령(미만료) 메일 수.
-          db
-            .select({ n: sql<number>`count(*)::int` })
-            .from(mailbox)
-            .where(
-              and(
-                eq(mailbox.userId, userId),
-                isNull(mailbox.claimedAt),
-                or(isNull(mailbox.expiresAt), gt(mailbox.expiresAt, sql`now()`)),
-              ),
-            ) as unknown as Promise<Array<{ n: number }>>,
-          // 레이드: 미수령 보상 수.
-          db
-            .select({ n: sql<number>`count(*)::int` })
-            .from(raidRewards)
-            .where(
-              and(eq(raidRewards.userId, userId), isNull(raidRewards.claimedAt)),
-            ) as unknown as Promise<Array<{ n: number }>>,
-          // 대난투: 서버 시계로 phase(개시 전/진행/발표 후) + 오늘 배틀 상태·우승자 닉.
-          // now() 서브쿼리 기준이라 오늘 배틀이 없어도(09:00 전) 항상 1행 반환.
-          db.execute(sql`
-            select
-              case
-                when n.kst::time < time '09:00' then 'before'
-                when n.kst::time < time '09:30' then 'running'
-                else 'after'
-              end as phase,
-              b.status::text status,
-              p.nickname champ_nick,
-              (select count(*)::int from melee_battles where battle_date <= n.kst::date) edition
-            from (select (now() at time zone 'Asia/Seoul') kst) n
-            left join melee_battles b on b.battle_date = n.kst::date
-            left join profiles p on p.id = b.champion_user_id
-            limit 1
-          `) as unknown as Promise<
-            Array<{
-              phase: 'before' | 'running' | 'after';
-              status: string | null;
-              champ_nick: string | null;
-              edition: number;
-            }>
-          >,
-          // 상점 무료 수령 가능 슬롯(빨간 배지 = 받을 수 있는 무료 수).
-          getFreeStatus(userId),
-          // 월드맵 카드 — 현재 거주 구역명 + 지역(색상).
-          db.execute(sql`
-            select z.name, z.region::text region from profiles p
-            join zones z on z.id = p.residence_zone_id
-            where p.id = ${userId} limit 1
-          `) as unknown as Promise<Array<{ name: string; region: string }>>,
-          ]),
-          3000,
-          'home.cards',
-        );
-      hasUnclaimedDaily = (dailyRow[0]?.n ?? 0) > 0;
-      const last = checkinRow[0]?.lastClaimedKstDay ?? null;
-      hasUnclaimedCheckin = last !== kstToday;
-      counts['/enhance'] = enhanceRow[0]?.n ?? 0;
-      counts['/gacha'] = supplyRow[0]?.n ?? 0;
-      counts['/mail'] = mailRow[0]?.n ?? 0;
-      counts['/raid'] = raidRow[0]?.n ?? 0;
-      counts['/shop'] = Object.values(freeStatus).filter(Boolean).length;
-      residenceName = residenceRow[0]?.name ?? null;
-      residenceRegion = residenceRow[0]?.region ?? null;
-      // phase별 문구. 발표 후(after) + revealed면 우승자, 닉 미상(더미)이면 발표 문구.
-      const melee = meleeRow[0];
-      if (melee) {
-        if (melee.phase === 'before') meleeDesc = '오늘 오전 9시 개시';
-        else if (melee.phase === 'running') meleeDesc = '난투 진행 중';
-        else if (melee.status === 'revealed') {
-          if (melee.champ_nick) {
-            meleeChampion = melee.champ_nick;
-            meleeEdition = melee.edition ?? 0;
+      const [row] = (await withTimeout(
+        db.execute(sql`
+          select
+            (select count(*)::int from mailbox
+               where user_id = ${userId}::uuid and sender_label = '일일 보급' and claimed_at is null
+                 and (created_at at time zone 'Asia/Seoul')::date = (now() at time zone 'Asia/Seoul')::date)
+              as daily_unclaimed,
+            (select last_claimed_kst_day::text from user_checkin_state where user_id = ${userId}::uuid)
+              as checkin_last,
+            (select count(*)::int from enhancement_jobs
+               where user_id = ${userId}::uuid and status = 'running' and complete_at <= now())
+              as enhance_ready,
+            (select coalesce(sum(count),0)::int from user_supply_boxes where user_id = ${userId}::uuid)
+              as supply_sum,
+            (select count(*)::int from mailbox
+               where user_id = ${userId}::uuid and claimed_at is null
+                 and (expires_at is null or expires_at > now()))
+              as mail_unclaimed,
+            (select count(*)::int from raid_rewards where user_id = ${userId}::uuid and claimed_at is null)
+              as raid_unclaimed,
+            -- 대난투: 서버 시계로 phase(개시 전/진행/발표 후) + 오늘 배틀 상태·우승자 닉.
+            case
+              when n.kst::time < time '09:00' then 'before'
+              when n.kst::time < time '09:30' then 'running'
+              else 'after'
+            end as melee_phase,
+            b.status::text as melee_status,
+            cp.nickname as melee_champ,
+            (select count(*)::int from melee_battles where battle_date <= n.kst::date) as melee_edition,
+            rz.name as residence_name,
+            rz.region::text as residence_region,
+            -- 상점 무료 클레임 — 주기 비교는 JS(freeStatusFromClaims, 단일 진실).
+            coalesce(
+              (select json_agg(json_build_array(slot, period_key)) from shop_free_claims where user_id = ${userId}::uuid),
+              '[]'::json
+            ) as free_claims
+          from (select (now() at time zone 'Asia/Seoul') kst) n
+          left join melee_battles b on b.battle_date = n.kst::date
+          left join profiles cp on cp.id = b.champion_user_id
+          left join profiles me on me.id = ${userId}::uuid
+          left join zones rz on rz.id = me.residence_zone_id
+          limit 1
+        `),
+        3000,
+        'home.cards',
+      )) as unknown as Array<{
+        daily_unclaimed: number;
+        checkin_last: string | null;
+        enhance_ready: number;
+        supply_sum: number;
+        mail_unclaimed: number;
+        raid_unclaimed: number;
+        melee_phase: 'before' | 'running' | 'after';
+        melee_status: string | null;
+        melee_champ: string | null;
+        melee_edition: number;
+        residence_name: string | null;
+        residence_region: string | null;
+        free_claims: [string, string][];
+      }>;
+
+      if (row) {
+        hasUnclaimedDaily = (row.daily_unclaimed ?? 0) > 0;
+        hasUnclaimedCheckin = (row.checkin_last ?? null) !== kstToday;
+        counts['/enhance'] = row.enhance_ready ?? 0;
+        counts['/gacha'] = row.supply_sum ?? 0;
+        counts['/mail'] = row.mail_unclaimed ?? 0;
+        counts['/raid'] = row.raid_unclaimed ?? 0;
+        counts['/shop'] = Object.values(
+          freeStatusFromClaims(
+            (row.free_claims ?? []).map(([slot, periodKey]) => ({ slot, periodKey })),
+          ),
+        ).filter(Boolean).length;
+        residenceName = row.residence_name ?? null;
+        residenceRegion = row.residence_region ?? null;
+        // phase별 문구. 발표 후(after) + revealed면 우승자, 닉 미상(더미)이면 발표 문구.
+        if (row.melee_phase === 'before') meleeDesc = '오늘 오전 9시 개시';
+        else if (row.melee_phase === 'running') meleeDesc = '난투 진행 중';
+        else if (row.melee_status === 'revealed') {
+          if (row.melee_champ) {
+            meleeChampion = row.melee_champ;
+            meleeEdition = row.melee_edition ?? 0;
           } else meleeDesc = '오늘의 결과 발표';
         } else meleeDesc = '결과 집계 중';
       }
