@@ -1,12 +1,10 @@
 import Link from 'next/link';
-import { and, desc, eq, isNotNull, isNull } from 'drizzle-orm';
+import { sql } from 'drizzle-orm';
 
 import { getSessionUserId } from '@/lib/auth/session';
 import { db } from '@/lib/db/client';
 import { withTimeout } from '@/lib/db/with-timeout';
-import { profiles } from '@/lib/db/schema/profiles';
-import { userEquipment, type Slot } from '@/lib/db/schema/equipment';
-import { userProfiles } from '@/lib/db/schema/avatar';
+import { type Slot } from '@/lib/db/schema/equipment';
 import { CharacterStage } from '@/components/CharacterStage';
 import { combatPowerFromOwned } from '@/lib/game/equipment/combat-power';
 import { liberatedItemRanks } from '@/lib/game/codex/ranking';
@@ -18,8 +16,7 @@ import { rarityBorderStyle, hasRarityBorder, TranscendTag } from '@/components/R
 
 import { NicknameEditor } from './NicknameEditor';
 import { ReferralSection } from './ReferralSection';
-import { getReferralStats } from '@/lib/game/referral/stats';
-import { getIncomingRequestCount } from '@/lib/game/friends';
+import { INVITE_DIAMOND_PER_REFERRAL, INVITE_BOX_PER_REFERRAL } from '@/lib/game/referral/stats';
 
 const SLOT_LABEL: Record<Slot, string> = { weapon: '무기', armor: '방어구', accessory: '장신구' };
 const SLOT_EMOJI: Record<Slot, string> = { weapon: '⚔️', armor: '🛡️', accessory: '💍' };
@@ -36,70 +33,68 @@ export default async function ProfilePage() {
   const userId = await getSessionUserId();
   if (!userId) return null;
 
-  // 콜드 DB 커넥션 hang 시 페이지 무한 대기 방지 — 실패 시 빈 결과로 degrade(2026-05-29).
+  // 프로필·장비·아바타·추천수·친구요청수를 **단일 SQL 1왕복**으로(json 동봉). 장비는 보유
+  // 전 인스턴스를 한 번만 스캔해 착용분(equippedSlot)을 JS에서 분기(이전: 착용/전체 2회 스캔).
+  // liberatedItemRanks(캐시 쿼리)·getCatalogMap(캐시)만 병렬 → 7 DB왕복 → 2.
+  // 콜드/hang 시 빈 결과로 degrade(가드, CLAUDE §11.4).
+  type MeRow = {
+    nickname: string | null;
+    public_code: string | null;
+    diamond: string | null;
+    nickname_changed_count: number | null;
+    active_profile_id: string | null;
+    referral_count: number;
+    friend_req_count: number;
+    equipment: {
+      catalogItemId: number;
+      enhanceLevel: number;
+      transcendLevel: number;
+      equippedSlot: string | null;
+    }[];
+    avatars: { id: string; rotations: unknown; activeDirection: string }[];
+  };
   const _r = await withTimeout(
     Promise.all([
-    db
-      .select({
-        nickname: profiles.nickname,
-        publicCode: profiles.publicCode,
-        diamond: profiles.diamond,
-        nicknameChangedCount: profiles.nicknameChangedCount,
-        activeProfileId: profiles.activeProfileId,
-      })
-      .from(profiles)
-      .where(eq(profiles.id, userId))
-      .limit(1),
-    db
-      // 착용 — 카탈로그 메타는 캐시(getCatalogMap)에서 in-memory 결합.
-      .select({
-        catalogItemId: userEquipment.catalogItemId,
-        enhanceLevel: userEquipment.enhanceLevel,
-        transcendLevel: userEquipment.transcendLevel,
-      })
-      .from(userEquipment)
-      .where(
-        and(eq(userEquipment.userId, userId), isNotNull(userEquipment.equippedSlot)),
-      ),
-    db
-      // 총 전투력용 — 보유 전 인스턴스(착용 무관). 카탈로그 dedup·합산은 앱에서.
-      .select({
-        catalogItemId: userEquipment.catalogItemId,
-        enhanceLevel: userEquipment.enhanceLevel,
-        transcendLevel: userEquipment.transcendLevel,
-      })
-      .from(userEquipment)
-      .where(eq(userEquipment.userId, userId)),
-    liberatedItemRanks(userId),
-    db
-      .select({
-        id: userProfiles.id,
-        rotations: userProfiles.rotations,
-        activeDirection: userProfiles.activeDirection,
-      })
-      .from(userProfiles)
-      .where(and(eq(userProfiles.userId, userId), isNull(userProfiles.hiddenAt)))
-      .orderBy(desc(userProfiles.createdAt)),
-    getReferralStats(userId),
-    getCatalogMap(),
-    getIncomingRequestCount(userId),
+      db.execute(sql`
+        select
+          p.nickname, p.public_code, p.diamond::text as diamond,
+          p.nickname_changed_count, p.active_profile_id,
+          (select count(*)::int from referral_attributions where referrer_user_id = ${userId}::uuid) as referral_count,
+          (select count(*)::int from friend_links where status = 'pending' and addressee_id = ${userId}::uuid) as friend_req_count,
+          coalesce((select json_agg(json_build_object(
+              'catalogItemId', catalog_item_id, 'enhanceLevel', enhance_level,
+              'transcendLevel', transcend_level, 'equippedSlot', equipped_slot))
+            from user_equipment where user_id = ${userId}::uuid), '[]'::json) as equipment,
+          coalesce((select json_agg(json_build_object(
+              'id', id, 'rotations', rotations, 'activeDirection', active_direction) order by created_at desc)
+            from user_profiles where user_id = ${userId}::uuid and hidden_at is null), '[]'::json) as avatars
+        from profiles p where p.id = ${userId}::uuid limit 1
+      `) as unknown as Promise<MeRow[]>,
+      liberatedItemRanks(userId),
+      getCatalogMap(),
     ]),
     3500,
     'me.page',
   ).catch(() => null);
-  const prof = _r?.[0] ?? [];
-  const equippedRaw = _r?.[1] ?? [];
-  const ownedAll = _r?.[2] ?? [];
-  const libRanks = _r?.[3] ?? new Map<number, number>();
-  const myProfiles = _r?.[4] ?? [];
-  const referralStats = _r?.[5] ?? { totalReferrals: 0, totalDiamondEarned: 0, totalBoxEarned: 0 };
-  const catMap = _r?.[6] ?? new Map();
-  const friendReqCount = _r?.[7] ?? 0;
+  const row = _r?.[0]?.[0] ?? null;
+  const libRanks = _r?.[1] ?? new Map<number, number>();
+  const catMap = _r?.[2] ?? new Map();
+
+  const allEquipment = row?.equipment ?? [];
+  const equippedRaw = allEquipment.filter((e) => e.equippedSlot != null);
+  const myProfiles = row?.avatars ?? [];
+  const refN = row?.referral_count ?? 0;
+  const referralStats = {
+    totalReferrals: refN,
+    totalDiamondEarned: refN * INVITE_DIAMOND_PER_REFERRAL,
+    totalBoxEarned: refN * INVITE_BOX_PER_REFERRAL,
+  };
+  const friendReqCount = row?.friend_req_count ?? 0;
   await completeCatalog(catMap, equippedRaw.map((e) => e.catalogItemId));
 
-  const nickname = prof[0]?.nickname ?? '플레이어';
-  const publicCode = prof[0]?.publicCode ?? '';
-  const total = combatPowerFromOwned(ownedAll);
+  const nickname = row?.nickname ?? '플레이어';
+  const publicCode = row?.public_code ?? '';
+  const total = combatPowerFromOwned(allEquipment);
   // 캐시 메타로 착용 아이템에 slot/code/name 결합.
   const equipped = equippedRaw.flatMap((e) => {
     const cat = catMap.get(e.catalogItemId);
@@ -107,7 +102,7 @@ export default async function ProfilePage() {
   });
   const bySlot = new Map(equipped.map((e) => [e.slot, e]));
 
-  const activeProfileId = prof[0]?.activeProfileId ?? null;
+  const activeProfileId = row?.active_profile_id ?? null;
   const activeProfile = myProfiles.find((p) => p.id === activeProfileId) ?? null;
   const dirImg = (p: { rotations: unknown; activeDirection: string }) =>
     (p.rotations as Record<string, string>)[p.activeDirection];
@@ -121,8 +116,8 @@ export default async function ProfilePage() {
           <div className="flex basis-2/5 flex-col items-center gap-1">
             <NicknameEditor
               current={nickname}
-              changedCount={prof[0]?.nicknameChangedCount ?? 0}
-              diamond={String(prof[0]?.diamond ?? 0n)}
+              changedCount={row?.nickname_changed_count ?? 0}
+              diamond={row?.diamond ?? '0'}
               className="relative z-10 text-white text-xs font-normal"
             />
             {activeProfile ? (

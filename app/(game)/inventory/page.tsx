@@ -1,11 +1,9 @@
-import { and, eq } from 'drizzle-orm';
+import { sql } from 'drizzle-orm';
 
 import { getSessionUserId } from '@/lib/auth/session';
 import { db } from '@/lib/db/client';
 import { withTimeout } from '@/lib/db/with-timeout';
-import { userEquipment, type Slot } from '@/lib/db/schema/equipment';
-import { enhancementJobs } from '@/lib/db/schema/enhance';
-import { profiles } from '@/lib/db/schema/profiles';
+import { type Slot } from '@/lib/db/schema/equipment';
 import { getCatalogMap, completeCatalog } from '@/lib/game/catalog';
 import { liberatedItemRanks } from '@/lib/game/codex/ranking';
 import { loreByCode } from '@/lib/game/equipment/lore';
@@ -23,52 +21,57 @@ export default async function InventoryPage({
   const initialSlot: Slot | 'all' =
     slot === 'weapon' || slot === 'armor' || slot === 'accessory' ? slot : 'all';
 
-  // 콜드 DB 커넥션 hang 시 페이지 무한 대기 방지 — 실패 시 빈 결과로 degrade(2026-05-29).
+  // 장비 인스턴스·진행중 강화·닉네임을 **단일 SQL 1왕복**으로(json 동봉). bigint id는 text,
+  // 취득시각은 epoch ms로 직렬화(json은 Date 미보존). liberatedItemRanks(캐시 쿼리)·
+  // getCatalogMap(캐시)만 병렬 → 4 DB왕복 → 2. 콜드/hang 시 빈 결과로 degrade(CLAUDE §11.4).
+  type InvRow = {
+    nickname: string | null;
+    equipment: {
+      id: string;
+      catalogItemId: number;
+      enhanceLevel: number;
+      transcendLevel: number;
+      transcendProgress: number;
+      equippedSlot: string | null;
+      acquiredAtMs: number;
+    }[];
+    running: string[];
+  };
   const _r = await withTimeout(
     Promise.all([
-    db
-      .select({
-        id: userEquipment.id,
-        catalogItemId: userEquipment.catalogItemId,
-        enhanceLevel: userEquipment.enhanceLevel,
-        transcendLevel: userEquipment.transcendLevel,
-        transcendProgress: userEquipment.transcendProgress,
-        equippedSlot: userEquipment.equippedSlot,
-        acquiredAt: userEquipment.firstAcquiredAt,
-      })
-      .from(userEquipment)
-      .where(eq(userEquipment.userId, userId)),
-    db
-      .select({ instanceId: enhancementJobs.userEquipmentId })
-      .from(enhancementJobs)
-      .where(and(eq(enhancementJobs.userId, userId), eq(enhancementJobs.status, 'running'))),
-    db
-      .select({ nickname: profiles.nickname })
-      .from(profiles)
-      .where(eq(profiles.id, userId))
-      .limit(1),
-    liberatedItemRanks(userId),
-    getCatalogMap(), // 불변 카탈로그(캐시) — 조인 제거, in-memory 결합.
+      db.execute(sql`
+        select
+          (select nickname from profiles where id = ${userId}::uuid) as nickname,
+          coalesce((select json_agg(json_build_object(
+              'id', id::text, 'catalogItemId', catalog_item_id, 'enhanceLevel', enhance_level,
+              'transcendLevel', transcend_level, 'transcendProgress', transcend_progress,
+              'equippedSlot', equipped_slot,
+              'acquiredAtMs', (extract(epoch from first_acquired_at) * 1000)::bigint))
+            from user_equipment where user_id = ${userId}::uuid), '[]'::json) as equipment,
+          coalesce((select json_agg(user_equipment_id::text)
+            from enhancement_jobs where user_id = ${userId}::uuid and status = 'running'), '[]'::json) as running
+      `) as unknown as Promise<InvRow[]>,
+      liberatedItemRanks(userId),
+      getCatalogMap(), // 불변 카탈로그(캐시) — 조인 제거, in-memory 결합.
     ]),
     3500,
     'inventory.page',
   ).catch(() => null);
-  const rows = _r?.[0] ?? [];
-  const runningJobs = _r?.[1] ?? [];
-  const prof = _r?.[2] ?? [];
-  const libRanks = _r?.[3] ?? new Map<number, number>();
-  const catMap = _r?.[4] ?? new Map();
+  const row = _r?.[0]?.[0] ?? null;
+  const libRanks = _r?.[1] ?? new Map<number, number>();
+  const catMap = _r?.[2] ?? new Map();
+  const equipmentRows = row?.equipment ?? [];
   // 캐시에 없는 신규 카탈로그 보강 — 추가돼도 인벤에서 누락되지 않게.
-  await completeCatalog(catMap, rows.map((r) => r.catalogItemId));
-  const nickname = prof[0]?.nickname ?? '플레이어';
+  await completeCatalog(catMap, equipmentRows.map((r) => r.catalogItemId));
+  const nickname = row?.nickname ?? '플레이어';
 
-  const busy = new Set(runningJobs.map((r) => r.instanceId.toString()));
-  const items: InvItem[] = rows.flatMap((r) => {
+  const busy = new Set(row?.running ?? []);
+  const items: InvItem[] = equipmentRows.flatMap((r) => {
     const cat = catMap.get(r.catalogItemId);
     if (!cat) return [];
     return [
       {
-        id: r.id.toString(),
+        id: r.id,
         catalogItemId: r.catalogItemId,
         code: cat.code,
         name: cat.name,
@@ -77,8 +80,8 @@ export default async function InventoryPage({
         transcendLevel: r.transcendLevel,
         transcendProgress: r.transcendProgress,
         equipped: r.equippedSlot != null,
-        acquiredAtMs: r.acquiredAt.getTime(),
-        busy: busy.has(r.id.toString()),
+        acquiredAtMs: r.acquiredAtMs,
+        busy: busy.has(r.id),
         championRank: libRanks.get(r.catalogItemId) ?? null,
         lore: loreByCode(cat.code),
       },
