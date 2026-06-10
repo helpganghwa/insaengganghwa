@@ -64,8 +64,12 @@ function EquipIcon({ item }: { item: Equipped | undefined }) {
   );
 }
 
+const emph = 'font-bold text-amber-700 dark:text-amber-300';
+
 function MemberRow({ m, myUserId, sort }: { m: RichMember; myUserId: string; sort: SortKey }) {
   const bySlot = new Map(m.equipped.map((e) => [e.slot, e]));
+  const isMe = m.userId === myUserId;
+  const showSeen = isMe || m.lastSeenAt != null; // 표시 여부는 렌더 시점 데이터로 판정(분리자 정합).
   return (
     <li>
       <Link
@@ -86,29 +90,32 @@ function MemberRow({ m, myUserId, sort }: { m: RichMember; myUserId: string; sor
           ) : null}
         </span>
         <div className="min-w-0 flex-1">
-          {/* 1줄: 닉네임 + 접속 상태(본인은 항상 '접속 중'). */}
-          <div className="flex min-w-0 items-center gap-1.5">
-            <span
-              className={`truncate text-[13px] font-semibold ${m.userId === myUserId ? 'text-amber-700 dark:text-amber-300' : ''}`}
-            >
-              {m.nickname}
-            </span>
-            <LastSeen
-              at={m.lastSeenAt}
-              forceOnline={m.userId === myUserId}
-              className={`shrink-0 text-[10px] ${sort === 'lastSeen' ? 'font-semibold text-zinc-600 dark:text-zinc-300' : 'text-zinc-400'}`}
-            />
-          </div>
-          {/* 2줄: 기여도 · 전투력(현재 정렬 기준 강조). */}
-          <p className="mt-0.5 flex items-center gap-1.5 text-[11px] text-zinc-500">
-            <span className={sort === 'contribution' ? 'font-bold text-amber-700 dark:text-amber-300' : ''}>
+          {/* 1줄: 닉네임 단독(전체 폭 — 잘림 방지). */}
+          <span
+            className={`block truncate text-[13px] font-semibold ${isMe ? 'text-amber-700 dark:text-amber-300' : ''}`}
+          >
+            {m.nickname}
+          </span>
+          {/* 2줄: 기여 · 전투 · 접속(컴팩트, 줄바꿈 허용 → 무엇도 안 잘림). 현재 정렬 기준 강조. */}
+          <div className="mt-0.5 flex flex-wrap items-center gap-x-1.5 gap-y-0.5 text-[11px] text-zinc-500">
+            <span className={sort === 'contribution' ? emph : ''}>
               기여 <span className="tabular-nums">{fmtNum(m.contribution)}</span>
             </span>
             <span className="text-zinc-300 dark:text-zinc-700">·</span>
-            <span className={sort === 'combat' ? 'font-bold text-amber-700 dark:text-amber-300' : ''}>
+            <span className={sort === 'combat' ? emph : ''}>
               전투 <span className="tabular-nums">{fmtNum(m.combat)}</span>
             </span>
-          </p>
+            {showSeen && (
+              <>
+                <span className="text-zinc-300 dark:text-zinc-700">·</span>
+                <LastSeen
+                  at={m.lastSeenAt}
+                  forceOnline={isMe}
+                  className={sort === 'lastSeen' ? emph : 'text-zinc-400'}
+                />
+              </>
+            )}
+          </div>
         </div>
 
         {/* 오른쪽: 장비 3종 가로 */}
