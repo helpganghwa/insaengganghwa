@@ -126,7 +126,7 @@ export function WorldMapView({
         <button
           type="button"
           onClick={() => setShowNames((v) => !v)}
-          className={`absolute right-2 top-2 z-30 rounded-lg px-2 py-1 text-[10px] font-bold ring-1 backdrop-blur-sm transition active:scale-95 ${
+          className={`absolute left-2 top-2 z-30 rounded-lg px-2 py-1 text-[10px] font-bold ring-1 backdrop-blur-sm transition active:scale-95 ${
             showNames
               ? 'bg-amber-600 text-white ring-amber-300/60'
               : 'bg-black/55 text-white/90 ring-white/25'
@@ -182,7 +182,7 @@ export function WorldMapView({
                       style={{
                         background: 'linear-gradient(135deg, #fcd34d, #f59e0b)',
                         borderRadius: '50% 50% 50% 0',
-                        transform: 'rotate(45deg)',
+                        transform: 'rotate(135deg)',
                         animation: 'marker-pin-glow 1.5s ease-in-out infinite',
                       }}
                     >
@@ -191,9 +191,12 @@ export function WorldMapView({
                   </span>
                 </span>
               )}
-              {/* 지역 이름 라벨(토글 시) — 노드 하단, 클릭 통과(pointer-events-none) */}
+              {/* 지역 이름 라벨(토글 시) — 노드 하단, 지역색 텍스트, 클릭 통과 */}
               {showNames && (
-                <span className="pointer-events-none absolute left-1/2 top-full mt-[3px] -translate-x-1/2 whitespace-nowrap rounded bg-black/75 px-1 text-[7px] font-semibold leading-[1.5] text-white shadow-[0_1px_2px_rgba(0,0,0,0.7)]">
+                <span
+                  className="pointer-events-none absolute left-1/2 top-full mt-[2px] -translate-x-1/2 whitespace-nowrap rounded-sm bg-black/70 px-0.5 text-[6px] font-bold leading-[1.4] shadow-[0_1px_2px_rgba(0,0,0,0.75)]"
+                  style={{ color }}
+                >
                   {z.name}
                 </span>
               )}
