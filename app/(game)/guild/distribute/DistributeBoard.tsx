@@ -132,7 +132,7 @@ export function DistributeBoard({
                   value={amounts[m.userId] ?? ''}
                   onChange={(e) => setAmt(m.userId, e.target.value)}
                   placeholder="0"
-                  className={`w-20 rounded-lg border bg-white px-2 py-1.5 text-right text-[13px] tabular-nums outline-none focus:border-zinc-400 dark:bg-zinc-900 ${
+                  className={`w-20 rounded-lg border bg-white px-2 py-1.5 text-right text-base tabular-nums outline-none focus:border-zinc-400 dark:bg-zinc-900 ${
                     amt > 0
                       ? 'border-amber-400 dark:border-amber-500/60'
                       : 'border-zinc-300 dark:border-zinc-700'
