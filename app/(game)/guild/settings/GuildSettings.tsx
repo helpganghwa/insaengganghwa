@@ -342,85 +342,84 @@ export function GuildSettings({
       {/* 길드 문양 보관함 (길드장) — 최대 3개 보관, 1개 선택 사용. */}
       {isLeader && (
         <section className="rounded-xl border border-zinc-200 bg-white p-3 dark:border-zinc-800 dark:bg-zinc-950">
-          <div className="mb-2 flex items-baseline justify-between">
-            <h3 className="text-sm font-bold">
-              길드 문양{' '}
-              <span className="text-[11px] font-medium text-zinc-400">
-                {emblems.length + (genPending ? 1 : 0)}/{MAX_GUILD_EMBLEMS}
-              </span>
-            </h3>
-            <p className="text-[11px] text-zinc-500">
-              생성 {GUILD_EMBLEM_REROLL_COST_DIAMOND.toLocaleString('ko-KR')}💎 · 선택/삭제 무료
-            </p>
-          </div>
-          <div className="flex flex-wrap gap-2.5">
-            {emblems.map((e) => {
-              const confirming = delConfirm === e.id;
-              return (
-                <div key={e.id} className="relative">
-                  <button
-                    type="button"
-                    onClick={() => !e.isActive && selectEmblem(e.id)}
-                    disabled={pending}
-                    aria-label={e.isActive ? '사용 중 문양' : '이 문양 사용'}
-                    className={`flex h-16 w-16 items-center justify-center overflow-hidden rounded-xl border-2 bg-zinc-50 transition disabled:opacity-60 dark:bg-zinc-900 ${
-                      e.isActive
-                        ? 'border-amber-500 ring-2 ring-amber-500/30'
-                        : 'border-zinc-200 active:scale-95 dark:border-zinc-700'
-                    }`}
-                  >
-                    {e.emblemUrl ? (
-                      // eslint-disable-next-line @next/next/no-img-element
-                      <img
-                        src={e.emblemUrl}
-                        alt=""
-                        aria-hidden
-                        className="h-full w-full object-contain"
-                        style={{ imageRendering: 'pixelated' }}
-                      />
-                    ) : null}
-                  </button>
-                  {e.isActive && (
-                    <span className="absolute -left-1 -top-1 rounded-full bg-amber-500 px-1.5 py-px text-[9px] font-bold text-white shadow">
-                      사용
-                    </span>
-                  )}
-                  {emblems.length > 1 && (
-                    <button
-                      type="button"
-                      onClick={() => removeEmblem(e.id)}
-                      disabled={pending}
-                      aria-label="문양 삭제"
-                      className={`absolute -right-1.5 -top-1.5 flex h-5 items-center justify-center rounded-full text-[10px] font-bold text-white shadow transition ${
-                        confirming ? 'w-auto bg-red-600 px-1.5' : 'w-5 bg-zinc-700/90'
+          <h3 className="mb-2 text-sm font-bold">길드 문양</h3>
+          {/* 항상 5칸 고정 — 채워진 칸은 아래 [사용]/[삭제], 빈칸은 클릭해 생성(💎비용 표시). */}
+          <div className="grid grid-cols-5 gap-1.5">
+            {Array.from({ length: MAX_GUILD_EMBLEMS }).map((_, i) => {
+              const filled = i < emblems.length ? emblems[i] : null;
+              const pendingSlot = !filled && i === emblems.length && genPending;
+              if (filled) {
+                return (
+                  <div key={filled.id} className="flex flex-col items-center gap-1">
+                    <div
+                      className={`aspect-square w-full overflow-hidden rounded-lg border-2 bg-zinc-50 dark:bg-zinc-900 ${
+                        filled.isActive
+                          ? 'border-amber-500 ring-2 ring-amber-500/30'
+                          : 'border-zinc-200 dark:border-zinc-700'
                       }`}
                     >
-                      {confirming ? '삭제?' : '×'}
+                      {filled.emblemUrl ? (
+                        // eslint-disable-next-line @next/next/no-img-element
+                        <img
+                          src={filled.emblemUrl}
+                          alt=""
+                          aria-hidden
+                          className="h-full w-full object-contain"
+                          style={{ imageRendering: 'pixelated' }}
+                        />
+                      ) : null}
+                    </div>
+                    {filled.isActive ? (
+                      <span className="w-full rounded bg-amber-500 py-0.5 text-center text-[9px] font-bold text-white">
+                        사용중
+                      </span>
+                    ) : (
+                      <button
+                        type="button"
+                        onClick={() => selectEmblem(filled.id)}
+                        disabled={pending}
+                        className="w-full rounded bg-zinc-100 py-0.5 text-center text-[9px] font-bold text-zinc-700 active:opacity-70 disabled:opacity-50 dark:bg-zinc-800 dark:text-zinc-200"
+                      >
+                        사용
+                      </button>
+                    )}
+                    {emblems.length > 1 && (
+                      <button
+                        type="button"
+                        onClick={() => removeEmblem(filled.id)}
+                        disabled={pending}
+                        className="w-full rounded py-0.5 text-center text-[9px] font-bold text-red-600 active:opacity-70 disabled:opacity-50 dark:text-red-400"
+                      >
+                        {delConfirm === filled.id ? '삭제?' : '삭제'}
+                      </button>
+                    )}
+                  </div>
+                );
+              }
+              return (
+                <div key={`empty-${i}`} className="flex flex-col items-center gap-1">
+                  {pendingSlot ? (
+                    <div className="flex aspect-square w-full items-center justify-center rounded-lg border-2 border-dashed border-amber-400 bg-amber-50 dark:bg-amber-950/30">
+                      <span className="text-[8px] font-semibold text-amber-600 dark:text-amber-400">
+                        생성 중…
+                      </span>
+                    </div>
+                  ) : (
+                    <button
+                      type="button"
+                      onClick={() => setGenOpen(true)}
+                      disabled={pending}
+                      className="flex aspect-square w-full flex-col items-center justify-center gap-0.5 rounded-lg border-2 border-dashed border-zinc-300 text-zinc-400 transition active:scale-95 disabled:opacity-50 dark:border-zinc-700"
+                    >
+                      <span className="text-lg leading-none">+</span>
+                      <span className="text-[8px] font-bold">
+                        💎{GUILD_EMBLEM_REROLL_COST_DIAMOND.toLocaleString('ko-KR')}
+                      </span>
                     </button>
                   )}
                 </div>
               );
             })}
-
-            {/* 낙관적 '생성 중' 슬롯 */}
-            {genPending && (
-              <div className="flex h-16 w-16 items-center justify-center rounded-xl border-2 border-dashed border-amber-400 bg-amber-50 dark:bg-amber-950/30">
-                <span className="text-[10px] font-semibold text-amber-600 dark:text-amber-400">생성 중…</span>
-              </div>
-            )}
-
-            {/* 새 문양 생성 슬롯 (3개 미만일 때) */}
-            {emblems.length + (genPending ? 1 : 0) < MAX_GUILD_EMBLEMS && (
-              <button
-                type="button"
-                onClick={() => setGenOpen(true)}
-                disabled={pending}
-                className="flex h-16 w-16 flex-col items-center justify-center gap-0.5 rounded-xl border-2 border-dashed border-zinc-300 text-zinc-400 transition active:scale-95 disabled:opacity-50 dark:border-zinc-700"
-              >
-                <span className="text-xl leading-none">+</span>
-                <span className="text-[9px] font-semibold">생성</span>
-              </button>
-            )}
           </div>
         </section>
       )}
