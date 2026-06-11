@@ -62,7 +62,9 @@ export function GuildSettings({
   const [pending, start] = useTransition();
   const [genOpen, setGenOpen] = useState(false);
   const [genPending, setGenPending] = useState(false); // 낙관적 '생성 중' 슬롯
-  const [delConfirm, setDelConfirm] = useState<string | null>(null);
+  // 문양 사용/삭제 3초 인-버튼 컨펌(만료 자동 해제) — { action, id } + 남은 초.
+  const [armed, setArmed] = useState<{ action: 'use' | 'del'; id: string } | null>(null);
+  const [armedLeft, setArmedLeft] = useState(0);
   const [genConfirm, setGenConfirm] = useState(false); // 생성 3초 인-버튼 컨펌
   const [genConfirmLeft, setGenConfirmLeft] = useState(0);
 
@@ -80,6 +82,32 @@ export function GuildSettings({
     }, 1000);
     return () => clearInterval(id);
   }, [genConfirm]);
+
+  // 사용/삭제 버튼 3초 컨펌(만료 자동 해제) — 남은 초 표기.
+  useEffect(() => {
+    if (!armed) return;
+    const id = setInterval(() => {
+      setArmedLeft((s) => {
+        if (s <= 1) {
+          setArmed(null);
+          return 0;
+        }
+        return s - 1;
+      });
+    }, 1000);
+    return () => clearInterval(id);
+  }, [armed]);
+  const isArmed = (action: 'use' | 'del', id: string) => armed?.action === action && armed?.id === id;
+  const armOr = (action: 'use' | 'del', id: string, run: () => void) => {
+    if (isArmed(action, id)) {
+      setArmed(null);
+      run();
+      return;
+    }
+    setArmed({ action, id });
+    setArmedLeft(3);
+  };
+
   const [emblem, setEmblem] = useState<EmblemSelection>(DEFAULT_EMBLEM);
   const [tab, setTab] = useState<'settings' | 'members' | 'joins'>('settings');
   const isLeader = myRole === 'leader';
@@ -261,7 +289,8 @@ export function GuildSettings({
     generate();
   };
 
-  const selectEmblem = (id: string) => {
+  // 사용(활성화) — 3초 컨펌(armOr)을 거쳐 실행. 낙관적 활성.
+  const doSelect = (id: string) => {
     const prev = emblemList;
     setEmblemList((l) => l.map((e) => ({ ...e, isActive: e.id === id }))); // 낙관적
     start(async () => {
@@ -273,14 +302,8 @@ export function GuildSettings({
     });
   };
 
-  // 삭제 — 1차 탭=확인 대기(3s), 2차 탭=실행(낙관적 제거).
-  const removeEmblem = (id: string) => {
-    if (delConfirm !== id) {
-      setDelConfirm(id);
-      setTimeout(() => setDelConfirm((c) => (c === id ? null : c)), 3000);
-      return;
-    }
-    setDelConfirm(null);
+  // 삭제 — 3초 컨펌(armOr)을 거쳐 실행. 낙관적 제거.
+  const doDelete = (id: string) => {
     const prev = emblemList;
     setEmblemList((l) => l.filter((e) => e.id !== id)); // 낙관적
     start(async () => {
@@ -530,8 +553,8 @@ export function GuildSettings({
       {tab === 'settings' && isLeader && (
         <section className="flex items-center justify-between gap-2 rounded-xl border border-zinc-200 bg-white p-3 dark:border-zinc-800 dark:bg-zinc-950">
           <div>
-            <h3 className="text-sm font-bold">길드 세금 풀</h3>
-            <p className="text-[11px] text-zinc-500">{taxPool}💎 누적</p>
+            <h3 className="text-sm font-bold">길드 세금</h3>
+            <p className="text-[11px] text-zinc-500">💎 {taxPool}</p>
           </div>
           <button
             type="button"
@@ -581,21 +604,45 @@ export function GuildSettings({
                     ) : (
                       <button
                         type="button"
-                        onClick={() => selectEmblem(filled.id)}
+                        onClick={() => armOr('use', filled.id, () => doSelect(filled.id))}
                         disabled={pending}
-                        className="w-full rounded bg-zinc-100 py-0.5 text-center text-[9px] font-bold text-zinc-700 active:opacity-70 disabled:opacity-50 dark:bg-zinc-800 dark:text-zinc-200"
+                        className={`relative isolate w-full overflow-hidden rounded py-0.5 text-center text-[9px] font-bold transition-colors active:opacity-70 disabled:opacity-50 ${
+                          isArmed('use', filled.id)
+                            ? 'bg-amber-600 text-white'
+                            : 'bg-zinc-100 text-zinc-700 dark:bg-zinc-800 dark:text-zinc-200'
+                        }`}
                       >
-                        사용
+                        {isArmed('use', filled.id) && (
+                          <span
+                            aria-hidden
+                            className="absolute inset-0 bg-amber-400"
+                            style={{ animation: 'confirm-bg-pulse 1.2s ease-in-out infinite' }}
+                          />
+                        )}
+                        <span className="relative">
+                          {isArmed('use', filled.id) ? `사용 ${armedLeft}s` : '사용'}
+                        </span>
                       </button>
                     )}
                     {emblemList.length > 1 && (
                       <button
                         type="button"
-                        onClick={() => removeEmblem(filled.id)}
+                        onClick={() => armOr('del', filled.id, () => doDelete(filled.id))}
                         disabled={pending}
-                        className="w-full rounded py-0.5 text-center text-[9px] font-bold text-red-600 active:opacity-70 disabled:opacity-50 dark:text-red-400"
+                        className={`relative isolate w-full overflow-hidden rounded py-0.5 text-center text-[9px] font-bold transition-colors active:opacity-70 disabled:opacity-50 ${
+                          isArmed('del', filled.id) ? 'bg-red-600 text-white' : 'text-red-600 dark:text-red-400'
+                        }`}
                       >
-                        {delConfirm === filled.id ? '삭제?' : '삭제'}
+                        {isArmed('del', filled.id) && (
+                          <span
+                            aria-hidden
+                            className="absolute inset-0 bg-red-500"
+                            style={{ animation: 'confirm-bg-pulse 1.2s ease-in-out infinite' }}
+                          />
+                        )}
+                        <span className="relative">
+                          {isArmed('del', filled.id) ? `삭제 ${armedLeft}s` : '삭제'}
+                        </span>
                       </button>
                     )}
                   </div>
