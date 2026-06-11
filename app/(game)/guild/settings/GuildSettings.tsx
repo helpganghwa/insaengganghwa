@@ -490,7 +490,7 @@ export function GuildSettings({
         </div>
 
         {policy === 'approval' && (
-          <div className="mt-3 border-t border-zinc-200 pt-3 dark:border-zinc-800">
+          <div className="mt-3">
             <p className="text-[11px] font-semibold text-zinc-500">가입 신청 ({requests.length})</p>
             {requests.length === 0 ? (
               <p className="mt-1.5 text-[11px] text-zinc-400">대기 중인 신청이 없습니다.</p>
