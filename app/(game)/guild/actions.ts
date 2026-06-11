@@ -18,6 +18,7 @@ import {
   setResidence,
   collectZoneTax,
   distributeGuildTax,
+  distributeGuildTaxManual,
   deployToZone,
   cancelDeployment,
   deployMember,
@@ -301,6 +302,21 @@ export async function distributeTaxAction(mode: GuildTaxDistribution, targetUser
     } as const;
   } catch (e) {
     return fail(e, 'distribute');
+  }
+}
+
+/** 세금 풀 수동 분배 — 길드장. 길드원별 지정 금액 지급. */
+export async function distributeTaxManualAction(amounts: { userId: string; amount: number }[]) {
+  const u = await getSessionUserId();
+  if (!u) return unauth;
+  if (!Array.isArray(amounts)) return { status: 'error', code: 'UNKNOWN' } as const;
+  try {
+    const r = await distributeGuildTaxManual({ leaderUserId: u, amounts });
+    revalidatePath('/guild');
+    revalidatePath('/guild/distribute');
+    return { status: 'success', total: r.total.toString() } as const;
+  } catch (e) {
+    return fail(e, 'distributeManual');
   }
 }
 

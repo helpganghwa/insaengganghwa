@@ -2,6 +2,7 @@
 
 import { useEffect, useState, useTransition } from 'react';
 import { useRouter } from 'next/navigation';
+import Link from 'next/link';
 
 import { useResourceToast } from '@/components/ResourceToast';
 import { useDiamond } from '@/components/DiamondContext';
@@ -16,7 +17,6 @@ import type { EmblemSelection } from '@/lib/game/guild/emblem-vocab';
 import {
   setActiveEmblemAction,
   deleteEmblemAction,
-  distributeTaxAction,
   setJoinPolicyAction,
   setGuildNoticeAction,
   approveJoinAction,
@@ -316,19 +316,6 @@ export function GuildSettings({
     });
   };
 
-  const distribute = () => {
-    const prevTax = taxPool;
-    setTaxPool('0'); // 낙관적 — 풀 비워짐
-    start(async () => {
-      const r = await distributeTaxAction('equal');
-      if (r.status !== 'success') {
-        setTaxPool(prevTax);
-        return showError(guildErrMsg(r.code));
-      }
-      if (r.perMember) optimisticAdjust(BigInt(r.perMember));
-      showHeaderToast({ title: `세금 균등 분배 (총 ${r.total}💎)` });
-    });
-  };
 
   const doDisband = () =>
     start(async () => {
@@ -556,14 +543,12 @@ export function GuildSettings({
             <h3 className="text-sm font-bold">길드 세금</h3>
             <p className="text-[11px] text-zinc-500">💎 {taxPool}</p>
           </div>
-          <button
-            type="button"
-            onClick={distribute}
-            disabled={pending}
-            className="shrink-0 rounded-lg bg-emerald-600 px-3 py-2 text-sm font-bold text-white disabled:opacity-50"
+          <Link
+            href="/guild/distribute"
+            className="shrink-0 rounded-lg bg-emerald-600 px-4 py-2 text-sm font-bold text-white active:opacity-90"
           >
-            균등 분배
-          </button>
+            분배
+          </Link>
         </section>
       )}
 

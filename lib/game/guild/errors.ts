@@ -18,6 +18,7 @@ export type GuildErrorCode =
   | 'COLLECT_COOLDOWN' // 수금 쿨다운 미경과
   | 'NOTHING_TO_COLLECT' // 수금할 💎 없음
   | 'NOTHING_TO_DISTRIBUTE'
+  | 'DISTRIBUTE_OVER_POOL' // 수동 분배 — 분배 총액이 세금 풀 초과
   | 'ZONE_NOT_OWNED' // 수비 배치 — 자기 길드 소유 구역 아님
   | 'CANNOT_ATTACK_OWN' // 공격 배치 — 자기 길드 소유 구역
   | 'NOT_ADJACENT' // 공격 배치 — 내 영토에 인접하지 않은 구역(영토 0개면 자유)

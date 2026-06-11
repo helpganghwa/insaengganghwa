@@ -88,3 +88,66 @@ export function distributeGuildTax(input: {
     return { total: distributed, perMember: per };
   });
 }
+
+/**
+ * 길드 세금 풀 수동 분배 — 길드장만. 길드원별 지정 금액(💎)을 각자에게 지급, 총액만큼 풀 차감.
+ * 잔여는 풀에 carry. 분배 페이지(입력란)에서 사용.
+ */
+export function distributeGuildTaxManual(input: {
+  leaderUserId: string;
+  amounts: { userId: string; amount: number }[];
+}): Promise<{ total: bigint }> {
+  return db.transaction(async (tx) => {
+    const [leader] = await tx
+      .select({ guildId: guildMembers.guildId, role: guildMembers.role })
+      .from(guildMembers)
+      .where(eq(guildMembers.userId, input.leaderUserId))
+      .for('update');
+    if (!leader) throw new GuildError('NOT_IN_GUILD');
+    if (leader.role !== 'leader') throw new GuildError('NOT_LEADER');
+    const gid = leader.guildId;
+
+    // 양수·정수만, 같은 유저 합산.
+    const byUser = new Map<string, bigint>();
+    for (const a of input.amounts) {
+      const amt = Math.floor(Number(a.amount));
+      if (!Number.isFinite(amt) || amt <= 0) continue;
+      byUser.set(a.userId, (byUser.get(a.userId) ?? 0n) + BigInt(amt));
+    }
+    if (byUser.size === 0) throw new GuildError('NOTHING_TO_DISTRIBUTE');
+    const total = [...byUser.values()].reduce((s, v) => s + v, 0n);
+
+    const [g] = await tx
+      .select({ pool: guilds.taxPoolDiamond })
+      .from(guilds)
+      .where(eq(guilds.id, gid))
+      .for('update');
+    if (total > g!.pool) throw new GuildError('DISTRIBUTE_OVER_POOL');
+
+    // 모든 대상이 길드원인지 검증.
+    const memberRows = await tx
+      .select({ u: guildMembers.userId })
+      .from(guildMembers)
+      .where(eq(guildMembers.guildId, gid));
+    const memberSet = new Set(memberRows.map((r) => r.u));
+    for (const uid of byUser.keys()) if (!memberSet.has(uid)) throw new GuildError('TARGET_NOT_IN_GUILD');
+
+    for (const [uid, amt] of byUser) {
+      await tx
+        .update(profiles)
+        .set({ diamond: sql`${profiles.diamond} + ${amt}` })
+        .where(eq(profiles.id, uid));
+    }
+    await tx
+      .update(guilds)
+      .set({ taxPoolDiamond: sql`${guilds.taxPoolDiamond} - ${total}` })
+      .where(eq(guilds.id, gid));
+    await tx.insert(guildTaxDistributions).values({
+      guildId: gid,
+      byUserId: input.leaderUserId,
+      mode: 'manual',
+      total,
+    });
+    return { total };
+  });
+}
