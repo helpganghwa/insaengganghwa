@@ -20,6 +20,7 @@ const MAP: Record<string, string> = {
   NOTHING_TO_DISTRIBUTE: '분배할 다이아가 없습니다.',
   ZONE_NOT_OWNED: '자기 길드 소유 구역만 수비할 수 있습니다.',
   CANNOT_ATTACK_OWN: '자기 길드 구역은 공격할 수 없습니다.',
+  NOT_ADJACENT: '내 길드 영토에 인접한 구역만 공격할 수 있습니다.',
   IS_EXECUTOR: '집행관은 자동 방어 중이라 배치할 수 없습니다.',
   TARGET_ALREADY_EXECUTOR: '이미 다른 구역의 집행관입니다.',
   NOT_OFFICER: '길드장·부길드장만 할 수 있습니다.',

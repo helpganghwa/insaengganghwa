@@ -20,6 +20,7 @@ export type GuildErrorCode =
   | 'NOTHING_TO_DISTRIBUTE'
   | 'ZONE_NOT_OWNED' // 수비 배치 — 자기 길드 소유 구역 아님
   | 'CANNOT_ATTACK_OWN' // 공격 배치 — 자기 길드 소유 구역
+  | 'NOT_ADJACENT' // 공격 배치 — 내 영토에 인접하지 않은 구역(영토 0개면 자유)
   | 'IS_EXECUTOR' // 집행관은 배치 불가(자동 방어로 슬롯 점유)
   | 'TARGET_ALREADY_EXECUTOR' // 대상이 이미 다른 구역 집행관
   | 'NOT_OFFICER' // 길드장/부길드장 아님(집행관 지정·가입 승인)

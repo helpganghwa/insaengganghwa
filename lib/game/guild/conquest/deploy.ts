@@ -1,13 +1,36 @@
 import 'server-only';
 
-import { and, eq, sql } from 'drizzle-orm';
+import { and, eq, inArray, or, sql } from 'drizzle-orm';
 
 import { db } from '@/lib/db/client';
-import { guildMembers, zones, guildBattleDeployments } from '@/lib/db/schema/guild';
+import { guildMembers, zones, guildBattleDeployments, zoneAdjacency } from '@/lib/db/schema/guild';
 
 import type { ConquestRole } from '../balance';
 import { GuildError } from '../errors';
 import { nextBattleKstDay } from './schedule';
+
+type Tx = Parameters<Parameters<typeof db.transaction>[0]>[0];
+
+/**
+ * 공격 인접 규칙 — 길드가 소유한 구역에 인접한 구역만 공격 가능.
+ *  단, 소유 구역이 0개면 어디든 첫 상륙 가능(부트스트랩). 수비는 인접 무관(이미 소유).
+ */
+async function assertAttackable(tx: Tx, guildId: bigint, targetZoneId: number): Promise<void> {
+  const owned = await tx.select({ id: zones.id }).from(zones).where(eq(zones.ownerGuildId, guildId));
+  if (owned.length === 0) return; // 영토 0개 — 첫 상륙 자유
+  const ownedIds = owned.map((o) => o.id);
+  const [adj] = await tx
+    .select({ a: zoneAdjacency.zoneA })
+    .from(zoneAdjacency)
+    .where(
+      or(
+        and(eq(zoneAdjacency.zoneA, targetZoneId), inArray(zoneAdjacency.zoneB, ownedIds)),
+        and(eq(zoneAdjacency.zoneB, targetZoneId), inArray(zoneAdjacency.zoneA, ownedIds)),
+      ),
+    )
+    .limit(1);
+  if (!adj) throw new GuildError('NOT_ADJACENT');
+}
 
 /**
  * 점령전 배치 — GUILD §5.8⑥. 다음 전투(KST 12:00)에 공격/수비 1곳 배치. 1인 1배치/일(unique).
@@ -38,6 +61,7 @@ export async function deployToZone(input: {
     const owned = z.ownerGuildId === m.guildId;
     if (input.role === 'defend' && !owned) throw new GuildError('ZONE_NOT_OWNED');
     if (input.role === 'attack' && owned) throw new GuildError('CANNOT_ATTACK_OWN');
+    if (input.role === 'attack') await assertAttackable(tx, m.guildId, input.zoneId);
 
     // 집행관은 배치 불가(자동 방어). 어느 구역이든 집행관이면 거부.
     const [executor] = await tx
@@ -145,6 +169,7 @@ export async function deployMember(input: {
     const owned = z.ownerGuildId === guildId;
     if (input.role === 'defend' && !owned) throw new GuildError('ZONE_NOT_OWNED');
     if (input.role === 'attack' && owned) throw new GuildError('CANNOT_ATTACK_OWN');
+    if (input.role === 'attack') await assertAttackable(tx, guildId, input.zoneId);
 
     const battleKstDay = nextBattleKstDay();
     await tx
