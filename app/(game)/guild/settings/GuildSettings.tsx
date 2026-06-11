@@ -81,6 +81,7 @@ export function GuildSettings({
     return () => clearInterval(id);
   }, [genConfirm]);
   const [emblem, setEmblem] = useState<EmblemSelection>(DEFAULT_EMBLEM);
+  const [tab, setTab] = useState<'settings' | 'members' | 'joins'>('settings');
   const isLeader = myRole === 'leader';
 
   const setVice = (userId: string, makeVice: boolean) =>
@@ -236,9 +237,37 @@ export function GuildSettings({
 
   return (
     <div className="space-y-3 px-3 py-3">
-      <h1 className="text-base font-bold">길드 관리</h1>
+      {/* 탭 — 길드 설정 / 구성원 관리 / 가입 관리 */}
+      <div className="flex gap-1 rounded-xl bg-zinc-100 p-1 dark:bg-zinc-900">
+        {(
+          [
+            ['settings', '길드 설정'],
+            ['members', '구성원 관리'],
+            ['joins', '가입 관리'],
+          ] as const
+        ).map(([k, label]) => (
+          <button
+            key={k}
+            type="button"
+            onClick={() => setTab(k)}
+            className={`relative flex-1 rounded-lg py-1.5 text-[12px] font-bold transition ${
+              tab === k
+                ? 'bg-white text-zinc-900 shadow-sm dark:bg-zinc-800 dark:text-zinc-50'
+                : 'text-zinc-500'
+            }`}
+          >
+            {label}
+            {k === 'joins' && guild.joinPolicy === 'approval' && joinRequests.length > 0 ? (
+              <span className="absolute right-1 top-0.5 rounded-full bg-amber-600 px-1 text-[9px] font-bold leading-tight text-white">
+                {joinRequests.length}
+              </span>
+            ) : null}
+          </button>
+        ))}
+      </div>
 
       {/* 길드 공지 — 길드정보 섹션에 노출됨(임원 편집) */}
+      {tab === 'settings' && (
       <section className="rounded-xl border border-zinc-200 bg-white p-3 dark:border-zinc-800 dark:bg-zinc-950">
         <div className="flex items-center justify-between gap-2">
           <h3 className="text-sm font-bold">길드 공지</h3>
@@ -274,8 +303,10 @@ export function GuildSettings({
           </button>
         </div>
       </section>
+      )}
 
       {/* 구성원 관리 */}
+      {tab === 'members' && (
       <section className="rounded-xl border border-zinc-200 bg-white p-3 dark:border-zinc-800 dark:bg-zinc-950">
         <h3 className="text-sm font-bold">구성원 관리</h3>
         <p className="mt-0.5 text-[11px] text-zinc-500">
@@ -343,8 +374,10 @@ export function GuildSettings({
           </ul>
         )}
       </section>
+      )}
 
       {/* 가입 방식 + 신청 */}
+      {tab === 'joins' && (
       <section className="rounded-xl border border-zinc-200 bg-white p-3 dark:border-zinc-800 dark:bg-zinc-950">
         <div className="flex items-center justify-between gap-2">
           <h3 className="text-sm font-bold">가입 방식</h3>
@@ -412,9 +445,10 @@ export function GuildSettings({
           </div>
         )}
       </section>
+      )}
 
       {/* 세금 풀 분배 (길드장) */}
-      {isLeader && (
+      {tab === 'settings' && isLeader && (
         <section className="flex items-center justify-between gap-2 rounded-xl border border-zinc-200 bg-white p-3 dark:border-zinc-800 dark:bg-zinc-950">
           <div>
             <h3 className="text-sm font-bold">길드 세금 풀</h3>
@@ -432,7 +466,7 @@ export function GuildSettings({
       )}
 
       {/* 길드 문양 보관함 (길드장) — 최대 3개 보관, 1개 선택 사용. */}
-      {isLeader && (
+      {tab === 'settings' && isLeader && (
         <section className="rounded-xl border border-zinc-200 bg-white p-3 dark:border-zinc-800 dark:bg-zinc-950">
           <h3 className="mb-2 text-sm font-bold">길드 문양</h3>
           {/* 항상 5칸 고정 — 채워진 칸은 아래 [사용]/[삭제], 빈칸은 클릭해 생성(💎비용 표시). */}
@@ -520,7 +554,7 @@ export function GuildSettings({
       )}
 
       {/* 해산 (길드장) */}
-      {isLeader && (
+      {tab === 'settings' && isLeader && (
         <button
           type="button"
           onClick={disband}
