@@ -6,10 +6,11 @@ import { useMemo, useState, useTransition } from 'react';
 import { josa } from 'es-hangul';
 
 import { useResourceToast } from '@/components/ResourceToast';
+import { useDiamond } from '@/components/DiamondContext';
 import { ToggleSwitch } from '@/components/ToggleSwitch';
 import { assetUrl } from '@/lib/asset-versions';
 
-import { setResidenceAction, getZoneBattleAction } from '../actions';
+import { setResidenceAction, getZoneBattleAction, collectTaxAction } from '../actions';
 import { guildErrMsg } from '../errors-msg';
 
 import { ZONE_LORE } from '@/lib/game/guild/zone-lore';
@@ -143,6 +144,7 @@ export function WorldMapView({
   mapSrc,
   residenceZoneId,
   canSetResidence,
+  myUserId,
   chronicle,
   zones,
   adjacency,
@@ -150,11 +152,13 @@ export function WorldMapView({
   mapSrc: string;
   residenceZoneId: number | null;
   canSetResidence: boolean;
+  myUserId: string | null;
   chronicle: { today: string | null; list: { kstDay: string; headline: string }[] } | null;
   zones: Zone[];
   adjacency: { a: number; b: number }[];
 }) {
   const { showHeaderToast, showError } = useResourceToast();
+  const { optimisticAdjust } = useDiamond();
   const router = useRouter();
   const [residence, setResidence] = useState<number | null>(residenceZoneId);
   const [selectedId, setSelectedId] = useState<number | null>(null);
@@ -208,6 +212,17 @@ export function WorldMapView({
         setResidence(prev);
         showError(guildErrMsg(r.code));
       }
+    });
+  };
+
+  // 집행관 세금 수금 — 그 구역 집행관 본인만(72h 쿨다운, 집행관 10%·길드 풀 90%).
+  const collect = (zoneId: number) => {
+    start(async () => {
+      const r = await collectTaxAction(zoneId);
+      if (r.status !== 'success') return showError(guildErrMsg(r.code));
+      optimisticAdjust(BigInt(r.executorGain));
+      showHeaderToast({ title: `세금 수금 +${Number(r.executorGain).toLocaleString('ko-KR')}💎` });
+      router.refresh();
     });
   };
 
@@ -504,7 +519,11 @@ export function WorldMapView({
                 <div className="flex justify-between">
                   <dt className="text-zinc-500">집행관</dt>
                   <dd className="font-semibold">
-                    {selected.executorNickname ?? <span className="text-zinc-400">공석</span>}
+                    {selected.executorNickname ? (
+                      <span className="text-amber-600 dark:text-amber-400">{selected.executorNickname}</span>
+                    ) : (
+                      <span className="text-zinc-400">공석</span>
+                    )}
                   </dd>
                 </div>
                 <div className="flex justify-between">
@@ -516,6 +535,20 @@ export function WorldMapView({
                   <dd className="font-mono tabular-nums">{selected.taxDiamond}</dd>
                 </div>
               </dl>
+
+              {/* 세금 수금 — 그 구역 집행관 본인만(72h 쿨다운). 집행관 10%·길드 풀 90%. */}
+              {myUserId != null &&
+                selected.executorUserId === myUserId &&
+                Number(selected.taxDiamond) > 0 && (
+                  <button
+                    type="button"
+                    onClick={() => collect(selected.id)}
+                    disabled={pending}
+                    className="mt-3 w-full rounded-lg bg-emerald-600 py-2.5 text-sm font-bold text-white disabled:opacity-50"
+                  >
+                    세금 수금 (💎 {selected.taxDiamond})
+                  </button>
+                )}
 
             {canSetResidence &&
               (selected.id === residence ? (
