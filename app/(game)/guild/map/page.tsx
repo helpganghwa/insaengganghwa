@@ -1,6 +1,6 @@
 import { assetUrl } from '@/lib/asset-versions';
 import { getSessionUserId } from '@/lib/auth/session';
-import { getWorldmapZones, getResidence, getChronicle } from '@/lib/game/guild';
+import { getWorldmapZones, getResidence, getChronicle, getZoneAdjacency } from '@/lib/game/guild';
 
 import { WorldMapView } from './WorldMapView';
 
@@ -9,10 +9,11 @@ export const dynamic = 'force-dynamic';
 export default async function WorldMapPage() {
   const userId = await getSessionUserId();
 
-  const [zones, residenceZoneId, chronicle] = await Promise.all([
+  const [zones, residenceZoneId, chronicle, adjacency] = await Promise.all([
     getWorldmapZones(),
     userId ? getResidence(userId) : Promise.resolve(null),
     getChronicle().catch(() => null),
+    getZoneAdjacency().catch(() => []),
   ]);
 
   return (
@@ -21,6 +22,7 @@ export default async function WorldMapPage() {
       residenceZoneId={residenceZoneId}
       canSetResidence={userId != null}
       chronicle={chronicle}
+      adjacency={adjacency}
       zones={zones.map((z) => ({
         id: z.id,
         region: z.region,

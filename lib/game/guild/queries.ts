@@ -9,6 +9,7 @@ import {
   zones,
   conquestBattles,
   guildJoinRequests,
+  zoneAdjacency,
 } from '@/lib/db/schema/guild';
 import { profiles } from '@/lib/db/schema/profiles';
 import { userEquipment, catalogItems } from '@/lib/db/schema/equipment';
@@ -137,6 +138,14 @@ export async function getWorldmapZones() {
     .leftJoin(ownerGuild, eq(ownerGuild.id, zones.ownerGuildId))
     .leftJoin(profiles, eq(profiles.id, zones.executorUserId))
     .orderBy(zones.id);
+}
+
+/** 구역 인접 간선(무방향, 정규형 a<b) — 지도 연결선·인접 공격 규칙 표시용. */
+export async function getZoneAdjacency(): Promise<{ a: number; b: number }[]> {
+  const rows = await db
+    .select({ a: zoneAdjacency.zoneA, b: zoneAdjacency.zoneB })
+    .from(zoneAdjacency);
+  return rows;
 }
 
 /** 구역의 최근 점령 전투 id(없으면 null) — 전투 기록 페이지 진입용. */

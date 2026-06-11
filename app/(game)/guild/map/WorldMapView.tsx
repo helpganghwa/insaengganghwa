@@ -145,12 +145,14 @@ export function WorldMapView({
   canSetResidence,
   chronicle,
   zones,
+  adjacency,
 }: {
   mapSrc: string;
   residenceZoneId: number | null;
   canSetResidence: boolean;
   chronicle: { today: string | null; list: { kstDay: string; headline: string }[] } | null;
   zones: Zone[];
+  adjacency: { a: number; b: number }[];
 }) {
   const { showHeaderToast, showError } = useResourceToast();
   const router = useRouter();
@@ -168,6 +170,19 @@ export function WorldMapView({
     return m;
   }, [zones]);
   const zoneColor = (name: string) => zoneColorMap.get(name) ?? null;
+
+  // 인접 간선(길) — 좌표로 선분 산출. 선택 구역에 연결된 길은 강조.
+  const edges = useMemo(() => {
+    const pos = new Map(zones.map((z) => [z.id, { x: z.mapX, y: z.mapY }]));
+    return adjacency
+      .map(({ a, b }) => {
+        const pa = pos.get(a);
+        const pb = pos.get(b);
+        return pa && pb ? { a, b, x1: pa.x, y1: pa.y, x2: pb.x, y2: pb.y } : null;
+      })
+      .filter((e): e is NonNullable<typeof e> => e != null);
+  }, [adjacency, zones]);
+
   const [pending, start] = useTransition();
 
   const selected = zones.find((z) => z.id === selectedId) ?? null;
@@ -210,6 +225,29 @@ export function WorldMapView({
           className="absolute inset-0 h-full w-full object-cover"
           style={{ imageRendering: 'pixelated' }}
         />
+        {/* 길(인접 연결선) — 좌표(0~100%)를 viewBox로 직접 매핑. 노드 아래, 클릭 통과. */}
+        <svg
+          viewBox="0 0 100 100"
+          preserveAspectRatio="none"
+          className="pointer-events-none absolute inset-0 h-full w-full"
+        >
+          {edges.map((e) => {
+            const sel = selectedId != null && (e.a === selectedId || e.b === selectedId);
+            return (
+              <line
+                key={`${e.a}-${e.b}`}
+                x1={e.x1}
+                y1={e.y1}
+                x2={e.x2}
+                y2={e.y2}
+                stroke={sel ? '#fcd34d' : '#ffffff'}
+                strokeOpacity={sel ? 0.85 : 0.16}
+                strokeWidth={sel ? 0.7 : 0.4}
+                strokeLinecap="round"
+              />
+            );
+          })}
+        </svg>
         {/* 지역 이름 오버레이 토글 — 텍스트 없이 스위치만(우하단). */}
         <span className="absolute bottom-2 right-2 z-30 inline-flex rounded-full bg-black/45 p-1 backdrop-blur-sm">
           <ToggleSwitch on={showNames} onToggle={() => setShowNames((v) => !v)} small label="지역 이름 표시" />
