@@ -1,6 +1,6 @@
 import 'server-only';
 
-import { desc, eq, ilike, inArray, sql } from 'drizzle-orm';
+import { desc, eq, ilike, inArray, or, sql } from 'drizzle-orm';
 
 import { db } from '@/lib/db/client';
 import {
@@ -146,6 +146,31 @@ export async function getZoneAdjacency(): Promise<{ a: number; b: number }[]> {
     .select({ a: zoneAdjacency.zoneA, b: zoneAdjacency.zoneB })
     .from(zoneAdjacency);
   return rows;
+}
+
+/**
+ * 길드가 공격 가능한 구역 id 목록 — 소유 구역에 인접한 비소유 구역.
+ *  소유 구역이 0개면 모든 구역 공격 가능(첫 상륙 자유). 배치 UI 필터용(서버 검증과 동일 규칙).
+ */
+export async function getAttackableZoneIds(guildId: bigint): Promise<number[]> {
+  const owned = await db.select({ id: zones.id }).from(zones).where(eq(zones.ownerGuildId, guildId));
+  if (owned.length === 0) {
+    const all = await db.select({ id: zones.id }).from(zones);
+    return all.map((z) => z.id);
+  }
+  const ownedIds = owned.map((o) => o.id);
+  const ownedSet = new Set(ownedIds);
+  const adj = await db
+    .select({ a: zoneAdjacency.zoneA, b: zoneAdjacency.zoneB })
+    .from(zoneAdjacency)
+    .where(or(inArray(zoneAdjacency.zoneA, ownedIds), inArray(zoneAdjacency.zoneB, ownedIds)));
+  const set = new Set<number>();
+  for (const e of adj) {
+    if (ownedSet.has(e.a)) set.add(e.b);
+    if (ownedSet.has(e.b)) set.add(e.a);
+  }
+  for (const id of ownedIds) set.delete(id); // 자기 소유는 공격 대상 아님
+  return [...set];
 }
 
 /** 구역의 최근 점령 전투 id(없으면 null) — 전투 기록 페이지 진입용. */

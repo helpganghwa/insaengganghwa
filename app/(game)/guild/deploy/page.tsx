@@ -1,7 +1,7 @@
 import { redirect } from 'next/navigation';
 
 import { getSessionUserId } from '@/lib/auth/session';
-import { getMyMembership, getDeployBoard } from '@/lib/game/guild';
+import { getMyMembership, getDeployBoard, getAttackableZoneIds } from '@/lib/game/guild';
 import { kstDateString } from '@/lib/kst';
 
 import { DeployBoard } from './DeployBoard';
@@ -17,7 +17,10 @@ export default async function DeployPage() {
   if (!membership) redirect('/guild');
 
   const isOfficer = membership.role === 'leader' || membership.role === 'vice';
-  const board = await getDeployBoard(membership.guildId);
+  const [board, attackable] = await Promise.all([
+    getDeployBoard(membership.guildId),
+    getAttackableZoneIds(membership.guildId),
+  ]);
   const battleDayLabel = board.battleKstDay === kstDateString() ? '오늘 11:00' : '내일 11:00';
 
   return (
@@ -25,6 +28,7 @@ export default async function DeployPage() {
       isOfficer={isOfficer}
       myGuildId={membership.guildId.toString()}
       battleDayLabel={battleDayLabel}
+      attackableZoneIds={attackable}
       members={board.members.map((m) => ({
         userId: m.uid,
         nickname: m.nickname,

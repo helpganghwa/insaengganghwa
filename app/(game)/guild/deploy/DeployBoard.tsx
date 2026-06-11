@@ -42,12 +42,14 @@ export function DeployBoard({
   battleDayLabel,
   members: initialMembers,
   zones,
+  attackableZoneIds,
 }: {
   isOfficer: boolean;
   myGuildId: string;
   battleDayLabel: string;
   members: Member[];
   zones: Zone[];
+  attackableZoneIds: number[];
 }) {
   const router = useRouter();
   const { showHeaderToast, showError } = useResourceToast();
@@ -173,6 +175,7 @@ export function DeployBoard({
           member={editing}
           zones={zones}
           myGuildId={myGuildId}
+          attackableZoneIds={attackableZoneIds}
           pending={pending}
           onClose={() => setEditing(null)}
           onAssign={(zoneId, role) => assign(editing.userId, zoneId, role)}
@@ -186,6 +189,7 @@ function AssignModal({
   member,
   zones,
   myGuildId,
+  attackableZoneIds,
   pending,
   onClose,
   onAssign,
@@ -193,13 +197,16 @@ function AssignModal({
   member: Member;
   zones: Zone[];
   myGuildId: string;
+  attackableZoneIds: number[];
   pending: boolean;
   onClose: () => void;
   onAssign: (zoneId: number, role: DeployRole) => void;
 }) {
   const [role, setRole] = useState<DeployRole>(member.depRole ?? 'attack');
+  const attackable = new Set(attackableZoneIds);
   const owned = zones.filter((z) => z.ownerGuildId === myGuildId);
-  const enemy = zones.filter((z) => z.ownerGuildId !== myGuildId);
+  // 공격 가능 = 비소유 + 인접(영토 0개면 전체가 attackable). 인접 규칙을 UI에서도 적용.
+  const enemy = zones.filter((z) => z.ownerGuildId !== myGuildId && attackable.has(z.id));
   const pool = role === 'defend' ? owned : enemy;
   const [zoneId, setZoneId] = useState<number | ''>(
     member.depZoneId && pool.some((z) => z.id === member.depZoneId) ? member.depZoneId : '',
@@ -248,9 +255,15 @@ function AssignModal({
           ))}
         </div>
 
+        {role === 'attack' && (
+          <p className="mt-2 text-[11px] text-zinc-500">
+            내 길드 영토에 인접한 구역만 공격할 수 있어요{owned.length === 0 ? ' (영토가 없어 어디든 첫 점령 가능)' : ''}.
+          </p>
+        )}
+
         {pool.length === 0 ? (
           <p className="mt-3 rounded-lg bg-zinc-100 px-3 py-3 text-center text-[12px] text-zinc-500 dark:bg-zinc-900">
-            {role === 'defend' ? '수비할 소유 구역이 없습니다.' : '공격할 구역이 없습니다.'}
+            {role === 'defend' ? '수비할 소유 구역이 없습니다.' : '인접한 공격 가능 구역이 없습니다.'}
           </p>
         ) : (
           <select
