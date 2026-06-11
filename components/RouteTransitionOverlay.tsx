@@ -6,7 +6,9 @@ import { usePathname, useSearchParams } from 'next/navigation';
 import { atlasBgStyle, ATLAS_CODES } from '@/lib/game/equipment/sprite-atlas';
 
 const CYCLE_MS = 200; // grow식 — 표시 동안 여러 이미지 랜덤 순환 주기
-const SAFETY_MS = 8000; // 멈춤 방지 자동 해제
+const SAFETY_MS = 4000; // 멈춤 방지 자동 해제
+// 뒤로/앞으로는 같은 라우트로 가거나 bfcache 복원이라 pathname이 안 바뀔 수 있음 → 짧게 자동 해제.
+const POP_SAFETY_MS = 1500;
 
 function pick(prev?: string | null): string | null {
   return ATLAS_CODES[Math.floor(Math.random() * ATLAS_CODES.length)] ?? prev ?? null;
@@ -48,10 +50,10 @@ export function RouteTransitionOverlay() {
   }, [active]);
 
   useEffect(() => {
-    const show = () => {
+    const show = (safetyMs = SAFETY_MS) => {
       setActive(true);
       if (safety.current) clearTimeout(safety.current);
-      safety.current = setTimeout(() => setActive(false), SAFETY_MS);
+      safety.current = setTimeout(() => setActive(false), safetyMs);
     };
 
     const onClick = (e: MouseEvent) => {
@@ -80,17 +82,24 @@ export function RouteTransitionOverlay() {
       return origPush(...args);
     };
     history.replaceState = (...args: Parameters<typeof origReplace>) => origReplace(...args);
-    const onPop = () => show();
+    // 뒤로/앞으로 — 같은 라우트일 수 있어 짧은 안전타이머로(무한 표시 방지).
+    const onPop = () => show(POP_SAFETY_MS);
     window.addEventListener('popstate', onPop);
+    // bfcache 복원(뒤로/앞으로) 시 잔류 오버레이 강제 해제.
+    const onPageShow = (e: PageTransitionEvent) => {
+      if (e.persisted) stop();
+    };
+    window.addEventListener('pageshow', onPageShow);
 
     return () => {
       document.removeEventListener('click', onClick, true);
       history.pushState = origPush;
       history.replaceState = origReplace;
       window.removeEventListener('popstate', onPop);
+      window.removeEventListener('pageshow', onPageShow);
       if (safety.current) clearTimeout(safety.current);
     };
-  }, []);
+  }, [stop]);
 
   if (!active || !code) return null;
   const bg = atlasBgStyle(code, 72);

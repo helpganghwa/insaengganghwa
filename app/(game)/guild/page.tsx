@@ -1,4 +1,5 @@
 import { getSessionUserId } from '@/lib/auth/session';
+import { withTimeout } from '@/lib/db/with-timeout';
 import {
   getMyMembership,
   getGuild,
@@ -8,6 +9,9 @@ import {
 } from '@/lib/game/guild';
 import { kstDateString } from '@/lib/kst';
 
+// 풀 포화 시 무한 대기 방지 — 각 쿼리 타임아웃(초과 시 쿼리 취소·풀 회수, 에러바운더리로 degrade).
+const DB_GUARD_MS = 4000;
+
 import { GuildBrowse } from './GuildBrowse';
 import { GuildHome } from './GuildHome';
 import { GuildMemberTabs } from './GuildMemberTabs';
@@ -16,7 +20,10 @@ export const dynamic = 'force-dynamic';
 
 /** 미가입 첫화면 — 랭킹/찾기 탭 + 생성 FAB. */
 async function browseView(userId: string) {
-  const [ranking, myRequest] = await Promise.all([getGuildRanking(), getMyJoinRequest(userId)]);
+  const [ranking, myRequest] = await Promise.all([
+    withTimeout(getGuildRanking(), DB_GUARD_MS, 'guild.browse.ranking'),
+    withTimeout(getMyJoinRequest(userId), DB_GUARD_MS, 'guild.browse.req'),
+  ]);
   return (
     <GuildBrowse
       myRequestGuildId={myRequest?.toString() ?? null}
@@ -38,14 +45,14 @@ export default async function GuildPage() {
     return <div className="px-4 py-8 text-center text-sm text-zinc-500">로그인이 필요합니다.</div>;
   }
 
-  const membership = await getMyMembership(userId);
+  const membership = await withTimeout(getMyMembership(userId), DB_GUARD_MS, 'guild.membership');
 
   if (!membership) return browseView(userId);
 
   const [guild, members, ranking] = await Promise.all([
-    getGuild(membership.guildId),
-    getGuildMembersRich(membership.guildId),
-    getGuildRanking(),
+    withTimeout(getGuild(membership.guildId), DB_GUARD_MS, 'guild.guild'),
+    withTimeout(getGuildMembersRich(membership.guildId), DB_GUARD_MS, 'guild.members'),
+    withTimeout(getGuildRanking(), DB_GUARD_MS, 'guild.ranking'),
   ]);
 
   if (!guild) {
