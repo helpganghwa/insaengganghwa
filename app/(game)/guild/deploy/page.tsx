@@ -42,6 +42,7 @@ export default async function DeployPage() {
         userId: m.uid,
         nickname: m.nickname,
         role: m.mrole,
+        combat: board.combat[m.uid] ?? 0,
         depZoneId: m.dep_zone_id,
         depZoneName: m.dep_zone_name,
         depRole: m.dep_role,

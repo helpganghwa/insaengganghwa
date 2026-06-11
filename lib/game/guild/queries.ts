@@ -236,7 +236,31 @@ export async function getDeployBoard(guildId: bigint) {
     .leftJoin(guilds, eq(guilds.id, zones.ownerGuildId))
     .orderBy(zones.id);
 
-  return { battleKstDay, members, zones: zoneRows };
+  // 길드원 전투력 — 보유 장비 1쿼리 → combatPowerFromOwned. userId→전투력.
+  const ids = members.map((m) => m.uid);
+  const combat: Record<string, number> = {};
+  if (ids.length) {
+    const eqRows = await db
+      .select({
+        uid: userEquipment.userId,
+        cid: userEquipment.catalogItemId,
+        el: userEquipment.enhanceLevel,
+        tl: userEquipment.transcendLevel,
+      })
+      .from(userEquipment)
+      .where(inArray(userEquipment.userId, ids));
+    const owned = new Map<string, { catalogItemId: number; enhanceLevel: number; transcendLevel: number }[]>();
+    for (const r of eqRows) {
+      (owned.get(r.uid) ?? owned.set(r.uid, []).get(r.uid)!).push({
+        catalogItemId: r.cid,
+        enhanceLevel: r.el,
+        transcendLevel: r.tl,
+      });
+    }
+    for (const id of ids) combat[id] = combatPowerFromOwned(owned.get(id) ?? []);
+  }
+
+  return { battleKstDay, members, zones: zoneRows, combat };
 }
 
 type EquippedIcon = { slot: 'weapon' | 'armor' | 'accessory'; code: string; enhance: number };
