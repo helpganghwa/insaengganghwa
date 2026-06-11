@@ -96,7 +96,7 @@ export default async function InventoryPage({
           href="/gacha"
           className="block rounded-2xl border-2 border-dashed border-amber-300 bg-amber-50/40 p-8 text-center text-sm transition active:opacity-70 dark:border-amber-800 dark:bg-amber-950/20"
         >
-          첫 장비가 없습니다. <span className="font-bold text-amber-700 dark:text-amber-300">보급 상자를 받아보세요</span> →
+          첫 장비가 없습니다. <span className="font-bold text-amber-700 dark:text-amber-300">보급 상자를 열어보세요</span>
         </Link>
       ) : (
         <InventoryGrid items={items} initialSlot={initialSlot} nickname={nickname} />
