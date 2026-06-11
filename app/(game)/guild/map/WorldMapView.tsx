@@ -570,7 +570,7 @@ export function WorldMapView({
                       </button>
                     )}
                   </dt>
-                  <dd className="font-mono tabular-nums">💎 {selected.taxDiamond}</dd>
+                  <dd className="font-mono tabular-nums">💎{selected.taxDiamond}</dd>
                 </div>
               </dl>
 
