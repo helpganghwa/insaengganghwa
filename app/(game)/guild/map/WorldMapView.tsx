@@ -83,33 +83,30 @@ function ChronicleText({ text, zoneColor }: { text: string; zoneColor: (name: st
     const type = m[1];
     const name = m[2];
     if (type === 'g') {
-      // 길드 — 굵게 + 텍스트 쉐도우(형태로 강조).
+      // 길드 — 색으로만 구분(굵기·스타일 없음). 브랜드 앰버.
       out.push(
-        <strong
-          key={key++}
-          className="font-extrabold italic text-zinc-900 [text-shadow:0_1px_2px_rgb(0_0_0/0.22)] dark:text-zinc-50 dark:[text-shadow:0_1px_3px_rgb(0_0_0/0.7)]"
-        >
+        <span key={key++} className="text-amber-600 dark:text-amber-400">
           {name}
-        </strong>,
+        </span>,
       );
     } else if (type === 'u') {
-      // 인물 — 밑줄 + 클릭 시 프로필 상세(/u/[nickname])로 이동.
+      // 인물 — 색(스카이)으로 구분 + 밑줄 + 클릭 시 프로필 상세(/u/[nickname]). 굵기 없음.
       out.push(
         <Link
           key={key++}
           href={`/u/${encodeURIComponent(name)}`}
-          className="font-semibold italic text-zinc-800 underline decoration-zinc-400 underline-offset-2 dark:text-zinc-100 dark:decoration-zinc-500"
+          className="text-sky-600 underline decoration-sky-400/50 underline-offset-2 dark:text-sky-400"
         >
           {name}
         </Link>,
       );
     } else {
-      // 구역 — 지도 노드처럼 지역색 배경 칩(옅은 채움 + 얇은 테두리). 본문보다 1px 작게(13→12px).
+      // 구역 — 지도 노드처럼 지역색 배경 칩(옅은 채움 + 얇은 테두리). 본문보다 2px 작게(13→11px).
       const c = zoneColor(name);
       out.push(
         <strong
           key={key++}
-          className="mx-px rounded-[3px] px-1 align-baseline text-[12px] font-semibold"
+          className="mx-px rounded-[3px] px-1 align-baseline text-[11px] font-semibold"
           style={
             c
               ? { color: c, backgroundColor: `${c}1f`, boxShadow: `inset 0 0 0 1px ${c}55` }
