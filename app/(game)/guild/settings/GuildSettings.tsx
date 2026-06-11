@@ -84,43 +84,100 @@ export function GuildSettings({
   const [tab, setTab] = useState<'settings' | 'members' | 'joins'>('settings');
   const isLeader = myRole === 'leader';
 
-  const setVice = (userId: string, makeVice: boolean) =>
+  // 낙관적 UI — 서버 응답 전 즉시 반영, 실패 시 롤백.
+  const [memberList, setMemberList] = useState(members);
+  const [requests, setRequests] = useState(joinRequests);
+  const [policy, setPolicy] = useState<GuildJoinPolicy>(guild.joinPolicy);
+  const [taxPool, setTaxPool] = useState(guild.taxPool);
+  const [emblemList, setEmblemList] = useState(emblems);
+  // 서버 props가 바뀌면(refresh) 로컬 낙관 상태를 서버 값으로 재동기화(렌더 중 가드 — useEffect 캐스케이드 회피).
+  const [synced, setSynced] = useState({ members, joinRequests, emblems, p: guild.joinPolicy, t: guild.taxPool });
+  if (
+    synced.members !== members ||
+    synced.joinRequests !== joinRequests ||
+    synced.emblems !== emblems ||
+    synced.p !== guild.joinPolicy ||
+    synced.t !== guild.taxPool
+  ) {
+    setSynced({ members, joinRequests, emblems, p: guild.joinPolicy, t: guild.taxPool });
+    setMemberList(members);
+    setRequests(joinRequests);
+    setEmblemList(emblems);
+    setPolicy(guild.joinPolicy);
+    setTaxPool(guild.taxPool);
+  }
+
+  // 확인 팝업(위임·추방·해산) — alert 대신 중앙 모달(길드 탈퇴와 동일 패턴).
+  const [confirmModal, setConfirmModal] = useState<{
+    title: string;
+    message: string;
+    confirmLabel: string;
+    onConfirm: () => void;
+  } | null>(null);
+
+  const setVice = (userId: string, makeVice: boolean) => {
+    const prev = memberList;
+    setMemberList((l) =>
+      l.map((m) => (m.userId === userId ? { ...m, role: makeVice ? 'vice' : 'member' } : m)),
+    );
     start(async () => {
       const r = await setViceAction(userId, makeVice);
-      if (r.status !== 'success') return showError(guildErrMsg(r.code));
+      if (r.status !== 'success') {
+        setMemberList(prev);
+        return showError(guildErrMsg(r.code));
+      }
       showHeaderToast({ title: makeVice ? '부길드장 임명' : '부길드장 해제' });
-      router.refresh();
-    });
-
-  const kick = (userId: string, nickname: string) => {
-    if (!confirm(`${nickname}님을 추방할까요? (24시간 재가입 불가)`)) return;
-    start(async () => {
-      const r = await kickMemberAction(userId);
-      if (r.status !== 'success') return showError(guildErrMsg(r.code));
-      showHeaderToast({ title: '추방 완료' });
-      router.refresh();
     });
   };
 
-  const transfer = (userId: string, nickname: string) => {
-    if (!confirm(`${nickname}님에게 길드장을 위임할까요? 되돌릴 수 없습니다.`)) return;
+  const doKick = (userId: string) => {
+    const prev = memberList;
+    setMemberList((l) => l.filter((m) => m.userId !== userId)); // 낙관적 제거
+    start(async () => {
+      const r = await kickMemberAction(userId);
+      if (r.status !== 'success') {
+        setMemberList(prev);
+        return showError(guildErrMsg(r.code));
+      }
+      showHeaderToast({ title: '추방 완료' });
+    });
+  };
+  const kick = (userId: string, nickname: string) =>
+    setConfirmModal({
+      title: '구성원 추방',
+      message: `${nickname}님을 추방할까요?\n24시간 동안 다시 가입할 수 없습니다.`,
+      confirmLabel: '추방',
+      onConfirm: () => doKick(userId),
+    });
+
+  const doTransfer = (userId: string) =>
     start(async () => {
       const r = await transferLeadershipAction(userId);
       if (r.status !== 'success') return showError(guildErrMsg(r.code));
       showHeaderToast({ title: '길드장 위임 완료' });
-      router.refresh();
+      router.replace('/guild'); // 위임 후 임원 아님 — 길드 홈으로
     });
-  };
+  const transfer = (userId: string, nickname: string) =>
+    setConfirmModal({
+      title: '길드장 위임',
+      message: `${nickname}님에게 길드장을 위임할까요?\n되돌릴 수 없습니다.`,
+      confirmLabel: '위임',
+      onConfirm: () => doTransfer(userId),
+    });
 
-  const manageable = members.filter((m) => m.userId !== myUserId && m.role !== 'leader');
+  const manageable = memberList.filter((m) => m.userId !== myUserId && m.role !== 'leader');
 
-  const changePolicy = (policy: GuildJoinPolicy) => {
-    if (policy === guild.joinPolicy) return;
+  const changePolicy = (next: GuildJoinPolicy) => {
+    if (next === policy) return;
+    const prev = policy;
+    setPolicy(next); // 낙관적
     start(async () => {
-      const r = await setJoinPolicyAction(policy);
-      if (r.status !== 'success') return showError(guildErrMsg(r.code));
-      showHeaderToast({ title: policy === 'open' ? '자유 가입으로 변경' : '승인 가입으로 변경' });
-      router.refresh();
+      const r = await setJoinPolicyAction(next);
+      if (r.status !== 'success') {
+        setPolicy(prev);
+        return showError(guildErrMsg(r.code));
+      }
+      showHeaderToast({ title: next === 'open' ? '자유 가입으로 변경' : '승인 가입으로 변경' });
     });
   };
 
@@ -135,21 +192,32 @@ export function GuildSettings({
       router.refresh();
     });
 
-  const approve = (userId: string) =>
+  const approve = (userId: string) => {
+    const prev = requests;
+    setRequests((l) => l.filter((r) => r.userId !== userId)); // 낙관적
     start(async () => {
       const r = await approveJoinAction(userId);
-      if (r.status !== 'success') return showError(guildErrMsg(r.code));
+      if (r.status !== 'success') {
+        setRequests(prev);
+        return showError(guildErrMsg(r.code));
+      }
       showHeaderToast({ title: '가입 승인' });
-      router.refresh();
+      router.refresh(); // 새 구성원 목록 반영
     });
+  };
 
-  const reject = (userId: string) =>
+  const reject = (userId: string) => {
+    const prev = requests;
+    setRequests((l) => l.filter((r) => r.userId !== userId)); // 낙관적
     start(async () => {
       const r = await rejectJoinAction(userId);
-      if (r.status !== 'success') return showError(guildErrMsg(r.code));
+      if (r.status !== 'success') {
+        setRequests(prev);
+        return showError(guildErrMsg(r.code));
+      }
       showHeaderToast({ title: '가입 거절' });
-      router.refresh();
     });
+  };
 
   // 생성 — 라우트 핸들러 fetch(서버 액션 트랜지션 밖)로 호출해 생성 중에도 앱이 안 멈춤.
   //  낙관적: '생성 중' 슬롯 즉시 표시 + 다이아 선차감, 실패 시 롤백.
@@ -193,14 +261,19 @@ export function GuildSettings({
     generate();
   };
 
-  const selectEmblem = (id: string) =>
+  const selectEmblem = (id: string) => {
+    const prev = emblemList;
+    setEmblemList((l) => l.map((e) => ({ ...e, isActive: e.id === id }))); // 낙관적
     start(async () => {
       const r = await setActiveEmblemAction(id);
-      if (r.status !== 'success') return showError(guildErrMsg(r.code));
-      router.refresh();
+      if (r.status !== 'success') {
+        setEmblemList(prev);
+        return showError(guildErrMsg(r.code));
+      }
     });
+  };
 
-  // 삭제 — 1차 탭=확인 대기(3s), 2차 탭=실행.
+  // 삭제 — 1차 탭=확인 대기(3s), 2차 탭=실행(낙관적 제거).
   const removeEmblem = (id: string) => {
     if (delConfirm !== id) {
       setDelConfirm(id);
@@ -208,32 +281,46 @@ export function GuildSettings({
       return;
     }
     setDelConfirm(null);
+    const prev = emblemList;
+    setEmblemList((l) => l.filter((e) => e.id !== id)); // 낙관적
     start(async () => {
       const r = await deleteEmblemAction(id);
-      if (r.status !== 'success') return showError(guildErrMsg(r.code));
+      if (r.status !== 'success') {
+        setEmblemList(prev);
+        return showError(guildErrMsg(r.code));
+      }
       showHeaderToast({ title: '문양 삭제됨' });
-      router.refresh();
     });
   };
 
-  const distribute = () =>
+  const distribute = () => {
+    const prevTax = taxPool;
+    setTaxPool('0'); // 낙관적 — 풀 비워짐
     start(async () => {
       const r = await distributeTaxAction('equal');
-      if (r.status !== 'success') return showError(guildErrMsg(r.code));
+      if (r.status !== 'success') {
+        setTaxPool(prevTax);
+        return showError(guildErrMsg(r.code));
+      }
       if (r.perMember) optimisticAdjust(BigInt(r.perMember));
       showHeaderToast({ title: `세금 균등 분배 (총 ${r.total}💎)` });
-      router.refresh();
     });
+  };
 
-  const disband = () => {
-    if (!confirm('길드를 해산할까요? 되돌릴 수 없습니다.')) return;
+  const doDisband = () =>
     start(async () => {
       const r = await disbandGuildAction();
       if (r.status !== 'success') return showError(guildErrMsg(r.code));
       showHeaderToast({ title: '길드 해산됨' });
       router.replace('/guild');
     });
-  };
+  const disband = () =>
+    setConfirmModal({
+      title: '길드 해산',
+      message: '길드를 해산할까요?\n되돌릴 수 없습니다.',
+      confirmLabel: '해산',
+      onConfirm: doDisband,
+    });
 
   return (
     <div className="space-y-3 px-3 py-3">
@@ -257,9 +344,9 @@ export function GuildSettings({
             }`}
           >
             {label}
-            {k === 'joins' && guild.joinPolicy === 'approval' && joinRequests.length > 0 ? (
+            {k === 'joins' && policy === 'approval' && requests.length > 0 ? (
               <span className="absolute right-1 top-0.5 rounded-full bg-amber-600 px-1 text-[9px] font-bold leading-tight text-white">
-                {joinRequests.length}
+                {requests.length}
               </span>
             ) : null}
           </button>
@@ -309,9 +396,6 @@ export function GuildSettings({
       {tab === 'members' && (
       <section className="rounded-xl border border-zinc-200 bg-white p-3 dark:border-zinc-800 dark:bg-zinc-950">
         <h3 className="text-sm font-bold">구성원 관리</h3>
-        <p className="mt-0.5 text-[11px] text-zinc-500">
-          {isLeader ? '부길드장 임명·추방·길드장 위임' : '길드원 추방'}
-        </p>
         {manageable.length === 0 ? (
           <p className="mt-3 text-[12px] text-zinc-400">관리할 구성원이 없습니다.</p>
         ) : (
@@ -354,7 +438,7 @@ export function GuildSettings({
                       disabled={pending}
                       className="rounded-md border border-amber-300 px-2 py-1 text-[10px] font-semibold text-amber-600 disabled:opacity-50 dark:border-amber-800 dark:text-amber-400"
                     >
-                      위임
+                      길드장 위임
                     </button>
                   )}
                   {/* 부길드장은 일반 멤버만 추방 가능 */}
@@ -394,7 +478,7 @@ export function GuildSettings({
                 onClick={() => changePolicy(key)}
                 disabled={pending}
                 className={`rounded-md px-3 py-1 text-[12px] font-bold transition disabled:opacity-50 ${
-                  guild.joinPolicy === key
+                  policy === key
                     ? 'bg-white text-zinc-900 shadow-sm dark:bg-zinc-950 dark:text-zinc-50'
                     : 'text-zinc-500'
                 }`}
@@ -404,20 +488,15 @@ export function GuildSettings({
             ))}
           </div>
         </div>
-        <p className="mt-1 text-[11px] text-zinc-500">
-          {guild.joinPolicy === 'open'
-            ? '신청 즉시 가입됩니다.'
-            : '신청을 길드장·부길드장이 승인해야 가입됩니다.'}
-        </p>
 
-        {guild.joinPolicy === 'approval' && (
+        {policy === 'approval' && (
           <div className="mt-3 border-t border-zinc-200 pt-3 dark:border-zinc-800">
-            <p className="text-[11px] font-semibold text-zinc-500">가입 신청 ({joinRequests.length})</p>
-            {joinRequests.length === 0 ? (
+            <p className="text-[11px] font-semibold text-zinc-500">가입 신청 ({requests.length})</p>
+            {requests.length === 0 ? (
               <p className="mt-1.5 text-[11px] text-zinc-400">대기 중인 신청이 없습니다.</p>
             ) : (
               <ul className="mt-2 space-y-1.5">
-                {joinRequests.map((r) => (
+                {requests.map((r) => (
                   <li key={r.userId} className="flex items-center justify-between gap-2">
                     <span className="min-w-0 truncate text-[13px] font-semibold">{r.nickname}</span>
                     <div className="flex shrink-0 gap-1.5">
@@ -452,7 +531,7 @@ export function GuildSettings({
         <section className="flex items-center justify-between gap-2 rounded-xl border border-zinc-200 bg-white p-3 dark:border-zinc-800 dark:bg-zinc-950">
           <div>
             <h3 className="text-sm font-bold">길드 세금 풀</h3>
-            <p className="text-[11px] text-zinc-500">{guild.taxPool}💎 누적</p>
+            <p className="text-[11px] text-zinc-500">{taxPool}💎 누적</p>
           </div>
           <button
             type="button"
@@ -472,8 +551,8 @@ export function GuildSettings({
           {/* 항상 5칸 고정 — 채워진 칸은 아래 [사용]/[삭제], 빈칸은 클릭해 생성(💎비용 표시). */}
           <div className="grid grid-cols-5 gap-1.5">
             {Array.from({ length: MAX_GUILD_EMBLEMS }).map((_, i) => {
-              const filled = i < emblems.length ? emblems[i] : null;
-              const pendingSlot = !filled && i === emblems.length && genPending;
+              const filled = i < emblemList.length ? emblemList[i] : null;
+              const pendingSlot = !filled && i === emblemList.length && genPending;
               if (filled) {
                 return (
                   <div key={filled.id} className="flex flex-col items-center gap-1">
@@ -509,7 +588,7 @@ export function GuildSettings({
                         사용
                       </button>
                     )}
-                    {emblems.length > 1 && (
+                    {emblemList.length > 1 && (
                       <button
                         type="button"
                         onClick={() => removeEmblem(filled.id)}
@@ -615,6 +694,44 @@ export function GuildSettings({
                   : `생성하기 💎${GUILD_EMBLEM_REROLL_COST_DIAMOND.toLocaleString('ko-KR')}`}
               </span>
             </button>
+          </div>
+        </div>
+      )}
+
+      {/* 확인 팝업 — 위임·추방·해산(alert 대체) */}
+      {confirmModal && (
+        <div
+          className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-4 backdrop-blur-sm"
+          onClick={() => setConfirmModal(null)}
+        >
+          <div
+            className="w-full max-w-[320px] rounded-2xl bg-white p-4 dark:bg-zinc-950"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <h2 className="text-sm font-bold">{confirmModal.title}</h2>
+            <p className="mt-2 whitespace-pre-line text-[13px] leading-relaxed text-zinc-600 dark:text-zinc-300">
+              {confirmModal.message}
+            </p>
+            <div className="mt-4 flex gap-2">
+              <button
+                type="button"
+                onClick={() => setConfirmModal(null)}
+                className="flex-1 rounded-lg border border-zinc-300 py-2 text-sm font-semibold text-zinc-600 dark:border-zinc-700 dark:text-zinc-300"
+              >
+                취소
+              </button>
+              <button
+                type="button"
+                onClick={() => {
+                  const fn = confirmModal.onConfirm;
+                  setConfirmModal(null);
+                  fn();
+                }}
+                className="flex-1 rounded-lg bg-red-600 py-2 text-sm font-bold text-white"
+              >
+                {confirmModal.confirmLabel}
+              </button>
+            </div>
           </div>
         </div>
       )}
