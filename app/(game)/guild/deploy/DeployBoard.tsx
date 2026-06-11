@@ -322,9 +322,9 @@ export function DeployBoard({
       </div>
 
       {/* 하단 — 좌: 선택 구역 / 우: 길드원 전체 */}
-      <div className="grid grid-cols-2 gap-2 p-3">
+      <div className="grid grid-cols-2 divide-x divide-zinc-200 dark:divide-zinc-800">
         {/* 좌: 선택 구역 배치 */}
-        <section className="min-w-0 rounded-xl border border-zinc-200 bg-white p-2.5 dark:border-zinc-800 dark:bg-zinc-950">
+        <section className="min-w-0 p-3">
           {selected ? (
             <>
               <div className="flex items-baseline gap-1.5">
@@ -411,7 +411,7 @@ export function DeployBoard({
         </section>
 
         {/* 우: 길드원 전체 */}
-        <section className="min-w-0 rounded-xl border border-zinc-200 bg-white p-2.5 dark:border-zinc-800 dark:bg-zinc-950">
+        <section className="min-w-0 p-3">
           <div className="flex items-baseline justify-between gap-1">
             <h3 className="text-[13px] font-bold">길드원 ({members.length})</h3>
             <span className="shrink-0 text-[9px] font-semibold text-zinc-400">
