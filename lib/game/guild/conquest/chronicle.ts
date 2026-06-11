@@ -1,7 +1,7 @@
 import 'server-only';
 
 import Anthropic from '@anthropic-ai/sdk';
-import { eq, sql } from 'drizzle-orm';
+import { and, desc, eq, lt, sql } from 'drizzle-orm';
 
 import { db } from '@/lib/db/client';
 import { worldChronicle } from '@/lib/db/schema/guild';
@@ -29,6 +29,18 @@ export type ConquestDaySummary = {
   /** 주목할 개인 활약(그날 finale 기준 — 최다 수비/공격). */
   feats: { nickname: string; guild: string; kind: '수비' | '공격'; count: number }[];
 };
+
+/** kstDay(YYYY-MM-DD)에 일수 가감 — 날짜 문자열 산술(UTC 정오 기준, DST 무관). */
+function addDaysToKstDay(kstDay: string, delta: number): string {
+  const d = new Date(`${kstDay}T12:00:00Z`);
+  d.setUTCDate(d.getUTCDate() + delta);
+  return d.toISOString().slice(0, 10);
+}
+
+/** 연대기 마커 제거 — {g|이름}/{u|이름}/{z|이름} → 이름(맥락 전달용 평문화). */
+function stripMarkers(s: string): string {
+  return s.replace(/\{[guz]\|([^}]+)\}+/g, '$1');
+}
 
 // 지역 풀네임(줄임말 금지) — 세계지도 REGION 라벨과 일치.
 const REGION_KO: Record<string, string> = {
@@ -142,7 +154,8 @@ const SYSTEM_PROMPT = `너는 대륙의 정복 전쟁을 듣는 이에게 들려
   - 개별 구역 이름 → {z|이름}   (예: {z|왕성}, {z|대성당}, {z|성문})
   - 지역(왕국·드래곤 화산·잊힌 신전·슬라임 늪·오크 부락·타락 천사 부유섬)에는 마커를 쓰지 않는다(일반 텍스트). 지역명은 주어진 이름 그대로 쓴다.
 - 시각·시간대 표현 금지(정오·아침·저녁·새벽·밤·자정, '종이 울리자' 등).
-- 시간을 가리키는 지시어('그날·이날·오늘·그 날·하루·당일' 등)를 쓰지 말 것. 특히 문단·문장을 그런 단어로 시작하지 말고, 바로 사건·길드·구역으로 시작한다.
+- 시간을 가리키는 지시어('그날·이날·오늘·그 날·하루·당일' 등)를 쓰지 말 것. 특히 문단·문장을 그런 단어로 시작하지 말고, 바로 사건·길드·구역으로 시작한다. 오늘 일어난 일은 '오늘' 대신 '이번 전투·이번에' 또는 그냥 동사로 서술한다.
+- 단, 전날과의 연속성을 말할 때는 '어제·전날·이전'을 써도 된다(흐름 표현용). 이때도 현재 일은 '오늘'이 아니라 '이번에·이번 전투'로 받는다(예: "어제 세 곳에 이어 이번에 두 곳을 더해").
 - '인생강화'라는 단어, 이모지·이모티콘 절대 금지. 대륙·세계는 고유명 없이 '대륙' 등으로만 칭한다.
 - 주어진 '점령전 정리'만 근거로 쓴다. 없는 사실을 지어내지 않는다.
 - **점령(captures)은 각 구역의 winner(점령 길드)를 그대로 따른다. 서로 다른 길드가 각자 다른 구역을 점령했으면 길드별로 구분해서 쓴다 — 여러 길드의 점령을 한 길드가 모두 한 것처럼 절대 합치지 않는다.** (예: 한 길드가 두 구역, 다른 길드가 한 구역을 점령했으면 둘 다 기록.)
@@ -208,6 +221,40 @@ export async function generateAndStoreChronicle(
     `[점령전 정리 — 이 귀속을 그대로 따를 것]\n` +
     `■ 신규 점령(길드별):\n${capLines}\n■ 방어(점령 아님):\n${defLines}\n■ 개인 활약:\n${featLines}`;
 
+  // ── 연속성 맥락(참고용) — 오늘의 사실은 위 정리만 따르되, 흐름·판도는 아래를 참고해 이어 쓴다. ──
+  // 현재 영토 현황(누적 점령 결과) — '정세' 문단 근거.
+  const standLines =
+    summary.standings.map((s) => `· ${s.guild}: ${s.zones}곳 보유`).join('\n') || '· (보유 길드 없음)';
+
+  // 어제 점령전 결과(있으면) — 전날과의 연속성.
+  const prevDay = addDaysToKstDay(kstDay, -1);
+  const y = await aggregateConquestDay(prevDay);
+  const yCapByGuild = new Map<string, string[]>();
+  for (const c of y.captures) {
+    const arr = yCapByGuild.get(c.winner) ?? [];
+    arr.push(c.zone);
+    yCapByGuild.set(c.winner, arr);
+  }
+  const yCapLines = [...yCapByGuild.entries()].map(([g, zs]) => `· ${g}: ${zs.join(', ')}`).join('\n');
+  const yDefLines = y.defenses.map((d) => `· ${d.owner}: ${d.zone} 방어`).join('\n');
+  const yesterdayBlock =
+    y.battleCount === 0
+      ? `· (어제 점령전 없음)`
+      : `■ 점령:\n${yCapLines || '· (없음)'}\n■ 방어:\n${yDefLines || '· (없음)'}`;
+
+  // 어제까지 누적 역사 연표(헤드라인) — 마커 제거한 평문, 최신순.
+  const histRows = await db
+    .select({ kstDay: worldChronicle.kstDay, headline: worldChronicle.headline })
+    .from(worldChronicle)
+    .where(and(lt(worldChronicle.kstDay, kstDay), sql`length(${worldChronicle.headline}) > 0`))
+    .orderBy(desc(worldChronicle.kstDay))
+    .limit(20);
+  const histLines = histRows.map((h) => `· ${String(h.kstDay)}: ${stripMarkers(h.headline)}`).join('\n');
+  const context =
+    `[현재 영토 현황 — '정세' 문단 근거(누적 점령 결과)]\n${standLines}\n\n` +
+    `[어제(${prevDay}) 점령전 결과 — 연속성 참고용]\n${yesterdayBlock}\n\n` +
+    `[지난 역사 — 어제까지 누적, 흐름 참고용]\n${histLines || '· (이전 기록 없음)'}`;
+
   const bigChange = isBigChange(summary);
   const res = await client().messages.create({
     model: MODEL_ID,
@@ -217,8 +264,10 @@ export async function generateAndStoreChronicle(
       {
         role: 'user',
         content:
-          `${kstDay} 점령전 기록.\n\n${digest}\n\n` +
+          `${kstDay} 점령전 기록.\n\n${digest}\n\n${context}\n\n` +
           `위 '신규 점령(길드별)'을 정확히 따라라 — 한 길드의 점령을 다른 길드로 옮기거나 여러 길드 점령을 한 길드로 합치지 말 것. 방어는 점령으로 세지 말 것.\n` +
+          `[현재 영토 현황]·[어제 점령전 결과]·[지난 역사]는 흐름·판도 참고용이다. 오늘의 사실(점령/방어/활약)은 반드시 '[점령전 정리]'만 따르고, 어제·과거의 점령을 오늘 것으로 적지 말 것.\n` +
+          `'정세' 문단은 '[현재 영토 현황]'(누적 보유 구역 수)을 반영하고, 어제·지난 역사와 자연스럽게 이어지도록 연속성 있게 쓴다. 현재 일은 '오늘' 대신 '이번에·이번 전투'로 받는다(예: "어제 세 곳에 이어 이번에 두 곳을 더해 현재 다섯 곳을 보유").\n` +
           `today는 정확히 4문단(주요사건→결과→평가→정세), 각 문단 라벨 없이 말하듯이. '그날·이날·오늘' 같은 시간 지시어로 문단을 시작하지 말 것.\n` +
           (bigChange
             ? `이번 전투는 정세가 크게 바뀐 경우 — headline에 핵심 사건 한 줄을 쓴다.\n`
