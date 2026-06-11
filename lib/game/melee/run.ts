@@ -20,7 +20,6 @@ import { makeRng } from './rng';
  * 스케일: 로스터 CP 일괄(set-based) + 참가자 청크 insert. 초대규모는 청크/스트림/배치 큐 필요(MELEE §9).
  */
 type EqRow = { uid: string; cid: number; el: number; tl: number };
-type NickRow = { uid: string; nick: string };
 
 /** 보급 상자 count개를 슬롯에 결정론 분배(seed+userId). */
 function distributeBoxes(count: number, seed: string, userId: string): Record<SupplySlot, number> {
@@ -47,11 +46,11 @@ export async function runMelee(): Promise<{ ran: boolean; battleId?: string; par
     .limit(1);
   if (existing) return { ran: false };
 
-  // 로스터(강화 1회+) 장비 일괄 → 유저별 CP. set-based(거대 IN 리스트 회피).
+  // 참가 자격: **전투력 > 0**(장비 보유로 CP가 잡히는 유저)이면 자동 참가. CP 0 = 미참가.
+  //  전 유저 장비 일괄 로드 → JS에서 유저별 CP 산출 → 0 초과만 로스터.
   const eqRows = (await db.execute(sql`
     select ei.user_id::text uid, ei.catalog_item_id cid, ei.enhance_level el, ei.transcend_level tl
     from user_equipment ei
-    where ei.user_id in (select distinct user_id from enhancement_logs)
   `)) as unknown as EqRow[];
   if (eqRows.length === 0) return { ran: false };
 
@@ -63,16 +62,23 @@ export async function runMelee(): Promise<{ ran: boolean; battleId?: string; par
     else byUser.set(r.uid, [row]);
   }
 
-  const nickRows = (await db.execute(sql`
-    select id::text uid, nickname nick from profiles
-    where id in (select distinct user_id from enhancement_logs)
-  `)) as unknown as NickRow[];
+  // 유저별 CP 산출 후 CP > 0 만 참가자로.
+  const withCp = [...byUser.entries()]
+    .map(([uid, owned]) => ({ uid, cp: combatPowerFromOwned(owned) }))
+    .filter((x) => x.cp > 0);
+  if (withCp.length === 0) return { ran: false };
+
+  const ids = withCp.map((x) => x.uid);
+  const nickRows = await db
+    .select({ uid: profiles.id, nick: profiles.nickname })
+    .from(profiles)
+    .where(inArray(profiles.id, ids));
   const nickOf = new Map(nickRows.map((r) => [r.uid, r.nick]));
 
-  const participants: MeleeParticipantInput[] = [...byUser.entries()].map(([uid, owned]) => ({
-    userId: uid,
-    nickname: nickOf.get(uid) ?? '플레이어',
-    cp: combatPowerFromOwned(owned),
+  const participants: MeleeParticipantInput[] = withCp.map((x) => ({
+    userId: x.uid,
+    nickname: nickOf.get(x.uid) ?? '플레이어',
+    cp: x.cp,
   }));
   const cpOf = new Map(participants.map((p) => [p.userId, p.cp]));
   const n = participants.length;
