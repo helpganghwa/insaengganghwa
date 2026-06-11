@@ -136,40 +136,43 @@ async function setGuildActiveEmblem(
 }
 
 /**
- * 길드에 새 문양 1개 생성·보관 + 활성 지정. 행 먼저 insert(경로용 id 확보) → 생성/업로드 →
- * url 갱신 → 활성화. 생성/업로드 실패 시 빈 행 정리 후 rethrow. (비용/권한은 호출부 책임)
+ * 문양 이미지 생성 + 스토리지 업로드(DB 미접근). **DB 행/차감 전에** 수행해야 함 —
+ * 생성이 실패/타임아웃해도 빈 행이나 잘못된 차감이 남지 않게(2026-06-11 버그 수정).
+ * 경로는 uuid 키(빈 행 선삽입으로 id를 미리 확보할 필요 없음).
  */
-async function createEmblemForGuild(
+async function generateEmblemAsset(
   guildId: bigint,
   selection: EmblemSelection,
-): Promise<{ emblemId: bigint; emblemUrl: string }> {
+): Promise<{ emblemUrl: string; color: string | null }> {
   const color = mainColor(selection.mainToneId);
-  const [row] = await db
-    .insert(guildEmblems)
-    .values({ guildId, emblemUrl: null, emblemColor: color })
-    .returning({ id: guildEmblems.id });
-  const emblemId = row!.id;
-  try {
-    const raw = await generateEmblemPng(buildEmblemPrompt(selection));
-    const png = await fitEmblemToFrame(raw); // 투명 여백 제거·프레임 채움(가시성↑)
-    const emblemUrl = await uploadEmblem(`${guildId}/${emblemId}.png`, png);
-    await db.update(guildEmblems).set({ emblemUrl }).where(eq(guildEmblems.id, emblemId));
-    await setGuildActiveEmblem(guildId, { id: emblemId, emblemUrl, emblemColor: color });
-    return { emblemId, emblemUrl };
-  } catch (e) {
-    await db.delete(guildEmblems).where(eq(guildEmblems.id, emblemId)).catch(() => {});
-    throw e;
-  }
+  const raw = await generateEmblemPng(buildEmblemPrompt(selection));
+  const png = await fitEmblemToFrame(raw); // 투명 여백 제거·프레임 채움(가시성↑)
+  const emblemUrl = await uploadEmblem(`${guildId}/${crypto.randomUUID()}.png`, png);
+  return { emblemUrl, color };
+}
+
+/** url에서 스토리지 키 추출(삭제 정리용). 못 찾으면 null. */
+function storageKeyFromUrl(url: string | null): string | null {
+  if (!url) return null;
+  const marker = `/${BUCKET}/`;
+  const i = url.indexOf(marker);
+  if (i < 0) return null;
+  return url.slice(i + marker.length).split('?')[0] || null;
 }
 
 /**
- * 결성 시 첫 문양 — best-effort(실패해도 길드 유지). guild_emblems 1행 생성 + 활성 지정.
+ * 결성 시 첫 문양(무료) — best-effort. 생성·업로드 성공 후에만 행 삽입 + 활성 지정(빈 행 방지).
  */
 export async function generateAndStoreEmblem(input: {
   guildId: bigint;
   selection: EmblemSelection;
 }): Promise<{ emblemUrl: string }> {
-  const { emblemUrl } = await createEmblemForGuild(input.guildId, input.selection);
+  const { emblemUrl, color } = await generateEmblemAsset(input.guildId, input.selection);
+  const [row] = await db
+    .insert(guildEmblems)
+    .values({ guildId: input.guildId, emblemUrl, emblemColor: color })
+    .returning({ id: guildEmblems.id });
+  await setGuildActiveEmblem(input.guildId, { id: row!.id, emblemUrl, emblemColor: color });
   return { emblemUrl };
 }
 
@@ -208,52 +211,56 @@ async function requireLeaderGuild(userId: string): Promise<bigint> {
 }
 
 /**
- * 새 문양 생성·보관 — 길드장만, 5,000💎(💎 sink·외형 BM). 보관 3개 미만일 때만. 생성 실패 시 환불.
- * 차감 트랜잭션(잔액+슬롯수 검증) → 외부 생성 → 실패 시 환불.
+ * 새 문양 생성·보관 — 길드장만, 5,000💎(💎 sink·외형 BM). 보관 최대 미만일 때만.
+ * **생성·업로드 성공 후에만** 차감+행 삽입+활성화를 한 트랜잭션으로(2026-06-11 버그 수정):
+ *  생성/타임아웃 실패 시 차감·빈 행이 전혀 남지 않음(환불 로직 불필요).
  */
 export async function generateEmblem(input: {
   userId: string;
   selection: EmblemSelection;
 }): Promise<{ emblemId: bigint; emblemUrl: string }> {
-  const guildId = await db.transaction(async (tx) => {
-    const [m] = await tx
-      .select({ guildId: guildMembers.guildId, role: guildMembers.role })
-      .from(guildMembers)
-      .where(eq(guildMembers.userId, input.userId))
-      .limit(1);
-    if (!m) throw new GuildError('NOT_IN_GUILD');
-    if (m.role !== 'leader') throw new GuildError('NOT_LEADER');
+  const cost = BigInt(GUILD_EMBLEM_REROLL_COST_DIAMOND);
+  // 1) 사전 검증(차감 없음) — 길드장·보유 한도·잔액. 비싼 생성 전에 빠르게 실패.
+  const guildId = await requireLeaderGuild(input.userId);
+  const [{ n }] = await db
+    .select({ n: sql<number>`count(*)::int` })
+    .from(guildEmblems)
+    .where(eq(guildEmblems.guildId, guildId));
+  if (n >= MAX_GUILD_EMBLEMS) throw new GuildError('EMBLEM_MAX');
+  const [pre] = await db
+    .select({ diamond: profiles.diamond })
+    .from(profiles)
+    .where(eq(profiles.id, input.userId))
+    .limit(1);
+  if (!pre || pre.diamond < cost) throw new GuildError('INSUFFICIENT_DIAMOND');
 
-    const [{ n }] = await tx
+  // 2) 생성·업로드(느림·과금 전). 실패하면 여기서 throw — DB 변경 전이라 차감/빈 행 없음.
+  const { emblemUrl, color } = await generateEmblemAsset(guildId, input.selection);
+
+  // 3) 성공 시에만 원자적으로 차감 + 행 삽입 + 활성화(시점 재검증).
+  return db.transaction(async (tx) => {
+    const [{ n: n2 }] = await tx
       .select({ n: sql<number>`count(*)::int` })
       .from(guildEmblems)
-      .where(eq(guildEmblems.guildId, m.guildId));
-    if (n >= MAX_GUILD_EMBLEMS) throw new GuildError('EMBLEM_MAX');
-
+      .where(eq(guildEmblems.guildId, guildId));
+    if (n2 >= MAX_GUILD_EMBLEMS) throw new GuildError('EMBLEM_MAX');
     const [prof] = await tx
       .select({ diamond: profiles.diamond })
       .from(profiles)
       .where(eq(profiles.id, input.userId))
       .for('update');
-    if (!prof || prof.diamond < BigInt(GUILD_EMBLEM_REROLL_COST_DIAMOND)) {
-      throw new GuildError('INSUFFICIENT_DIAMOND');
-    }
+    if (!prof || prof.diamond < cost) throw new GuildError('INSUFFICIENT_DIAMOND');
+    await tx.update(profiles).set({ diamond: sql`${profiles.diamond} - ${cost}` }).where(eq(profiles.id, input.userId));
+    const [row] = await tx
+      .insert(guildEmblems)
+      .values({ guildId, emblemUrl, emblemColor: color })
+      .returning({ id: guildEmblems.id });
     await tx
-      .update(profiles)
-      .set({ diamond: sql`${profiles.diamond} - ${BigInt(GUILD_EMBLEM_REROLL_COST_DIAMOND)}` })
-      .where(eq(profiles.id, input.userId));
-    return m.guildId;
+      .update(guilds)
+      .set({ activeEmblemId: row!.id, emblemUrl, emblemColor: color })
+      .where(eq(guilds.id, guildId));
+    return { emblemId: row!.id, emblemUrl };
   });
-
-  try {
-    return await createEmblemForGuild(guildId, input.selection);
-  } catch (e) {
-    await db
-      .update(profiles)
-      .set({ diamond: sql`${profiles.diamond} + ${BigInt(GUILD_EMBLEM_REROLL_COST_DIAMOND)}` })
-      .where(eq(profiles.id, input.userId));
-    throw e instanceof GuildError ? e : new GuildError('EMBLEM_GEN_FAILED');
-  }
 }
 
 /** 보관 문양 중 하나를 활성으로 선택 — 길드장만, 무료. */
@@ -292,6 +299,7 @@ export async function deleteEmblem(input: { userId: string; emblemId: bigint }):
     await setGuildActiveEmblem(guildId, next);
   }
   await db.delete(guildEmblems).where(eq(guildEmblems.id, input.emblemId));
-  // 스토리지 파일 정리(best-effort).
-  await serviceClient().storage.from(BUCKET).remove([`${guildId}/${input.emblemId}.png`]).catch(() => {});
+  // 스토리지 파일 정리(best-effort) — url에서 키 추출(경로=uuid).
+  const key = storageKeyFromUrl(target.emblemUrl);
+  if (key) await serviceClient().storage.from(BUCKET).remove([key]).catch(() => {});
 }

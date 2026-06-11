@@ -12,7 +12,9 @@ import { GuildError } from '@/lib/game/guild/errors';
  */
 export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
-export const maxDuration = 60;
+// pixflux 재시도(최악 ~40s) + sharp + 업로드 여유 — 60s는 짧아 타임아웃-kill로 빈 행/차감 손실
+// 유발(2026-06-11). 충분히 상향(생성은 이제 성공 후에만 차감/삽입이라 kill돼도 안전하지만 여유 확보).
+export const maxDuration = 180;
 
 export async function POST(req: Request) {
   const userId = await getSessionUserId();
