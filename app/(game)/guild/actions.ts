@@ -24,7 +24,7 @@ import {
   clearMemberDeployment,
   setZoneExecutor,
   clearZoneExecutor,
-  getZoneLatestBattle,
+  getZoneLatestBattleId,
   generateAndStoreEmblem,
   setActiveEmblem,
   deleteEmblem,
@@ -33,7 +33,6 @@ import {
   transferLeadership,
 } from '@/lib/game/guild';
 import type { GuildTaxDistribution, ConquestRole, GuildJoinPolicy } from '@/lib/game/guild/balance';
-import type { ConquestFinale } from '@/lib/game/guild/conquest/simulate';
 import {
   isValidEmblemSelection,
   mainColor,
@@ -370,22 +369,13 @@ export async function clearExecutorAction(zoneId: number) {
   }
 }
 
-/** 구역 최근 전투 결과/리플레이 조회(없으면 battle null). */
+/** 구역 최근 전투 id 조회(없으면 battleId null) — 상세 전투 기록 페이지로 진입. */
 export async function getZoneBattleAction(zoneId: number) {
   const u = await getSessionUserId();
   if (!u) return unauth;
   try {
-    const b = await getZoneLatestBattle(zoneId);
-    if (!b) return { status: 'success', battle: null } as const;
-    return {
-      status: 'success',
-      battle: {
-        battleKstDay: b.battleKstDay,
-        winnerGuildId: b.winnerGuildId?.toString() ?? null,
-        winnerName: b.winnerName,
-        finale: (b.finale as ConquestFinale) ?? { roster: [], events: [] },
-      },
-    } as const;
+    const id = await getZoneLatestBattleId(zoneId);
+    return { status: 'success', battleId: id != null ? id.toString() : null } as const;
   } catch (e) {
     return fail(e, 'zoneBattle');
   }

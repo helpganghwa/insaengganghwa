@@ -139,19 +139,35 @@ export async function getWorldmapZones() {
     .orderBy(zones.id);
 }
 
-/** 구역의 최근 점령 전투(없으면 null) — 결과/리플레이용. finale jsonb 포함. */
-export async function getZoneLatestBattle(zoneId: number) {
+/** 구역의 최근 점령 전투 id(없으면 null) — 전투 기록 페이지 진입용. */
+export async function getZoneLatestBattleId(zoneId: number) {
+  const [b] = await db
+    .select({ id: conquestBattles.id })
+    .from(conquestBattles)
+    .where(eq(conquestBattles.zoneId, zoneId))
+    .orderBy(desc(conquestBattles.battleKstDay))
+    .limit(1);
+  return b?.id ?? null;
+}
+
+/** 점령 전투 1건(id) — 상세 전투 기록 페이지용. 구역/지역/승자(문양) + finale jsonb. 공개 읽기. */
+export async function getConquestBattleById(id: bigint) {
   const [b] = await db
     .select({
+      id: conquestBattles.id,
       battleKstDay: conquestBattles.battleKstDay,
+      zoneId: conquestBattles.zoneId,
+      zoneName: zones.name,
+      zoneRegion: zones.region,
       winnerGuildId: conquestBattles.winnerGuildId,
       winnerName: guilds.name,
+      winnerEmblemUrl: guilds.emblemUrl,
       finale: conquestBattles.finale,
     })
     .from(conquestBattles)
+    .innerJoin(zones, eq(zones.id, conquestBattles.zoneId))
     .leftJoin(guilds, eq(guilds.id, conquestBattles.winnerGuildId))
-    .where(eq(conquestBattles.zoneId, zoneId))
-    .orderBy(desc(conquestBattles.battleKstDay))
+    .where(eq(conquestBattles.id, id))
     .limit(1);
   return b ?? null;
 }

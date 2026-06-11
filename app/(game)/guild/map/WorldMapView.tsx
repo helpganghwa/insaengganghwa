@@ -1,5 +1,6 @@
 'use client';
 
+import { useRouter } from 'next/navigation';
 import { useMemo, useState, useTransition } from 'react';
 
 import { useResourceToast } from '@/components/ResourceToast';
@@ -8,18 +9,8 @@ import { assetUrl } from '@/lib/asset-versions';
 
 import { setResidenceAction, getZoneBattleAction } from '../actions';
 import { guildErrMsg } from '../errors-msg';
-import { ConquestReplay } from './ConquestReplay';
 
 import { ZONE_LORE } from '@/lib/game/guild/zone-lore';
-
-import type { ConquestFinale } from '@/lib/game/guild/conquest/simulate';
-
-type Battle = {
-  battleKstDay: string;
-  winnerGuildId: string | null;
-  winnerName: string | null;
-  finale: ConquestFinale;
-};
 
 type Region = 'volcano' | 'temple' | 'swamp' | 'orc' | 'kingdom' | 'angel';
 
@@ -115,9 +106,9 @@ export function WorldMapView({
   zones: Zone[];
 }) {
   const { showHeaderToast, showError } = useResourceToast();
+  const router = useRouter();
   const [residence, setResidence] = useState<number | null>(residenceZoneId);
   const [selectedId, setSelectedId] = useState<number | null>(null);
-  const [replay, setReplay] = useState<Battle | null>(null);
   const [showNames, setShowNames] = useState(true);
   const [chronicleTab, setChronicleTab] = useState<'today' | 'full'>('today');
   // 행이 없으면 getChronicle가 {today:null,list:[]}를 반환 — 이 경우도 placeholder로 처리.
@@ -138,8 +129,8 @@ export function WorldMapView({
     start(async () => {
       const r = await getZoneBattleAction(zoneId);
       if (r.status !== 'success') return showError(guildErrMsg(r.code));
-      if (!r.battle) return showError('전투 기록이 없습니다.');
-      setReplay(r.battle);
+      if (!r.battleId) return showError('전투 기록이 없습니다.');
+      router.push(`/guild/battle/${r.battleId}`);
     });
   };
 
@@ -431,7 +422,6 @@ export function WorldMapView({
         </div>
       )}
 
-      {replay && <ConquestReplay battle={replay} onClose={() => setReplay(null)} />}
     </div>
   );
 }
