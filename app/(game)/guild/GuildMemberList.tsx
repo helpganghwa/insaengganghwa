@@ -89,20 +89,18 @@ function MemberRow({ m, myUserId }: { m: RichMember; myUserId: string }) {
 
         {/* 가운데: (닉네임 + 최근접속) / (기여 · 전투) */}
         <div className="min-w-0 flex-1">
-          <div className="flex items-center gap-1.5">
-            <span className="min-w-0 flex-1 text-[10px] font-semibold">{m.nickname}</span>
-            {/* 최근접속 — 닉네임 오른쪽 고정 슬롯(좌측 정렬). */}
-            <span className="w-[52px] shrink-0 text-left text-[10px] text-zinc-400">
-              {isMe || m.lastSeenAt != null ? (
-                <LastSeen at={m.lastSeenAt} forceOnline={isMe} className="justify-start" />
-              ) : null}
-            </span>
+          {/* 닉네임 + 최근접속(이름 바로 뒤) */}
+          <div className="flex items-baseline gap-1.5">
+            <span className="text-[10px] font-semibold">{m.nickname}</span>
+            {isMe || m.lastSeenAt != null ? (
+              <LastSeen at={m.lastSeenAt} forceOnline={isMe} className="shrink-0 text-[10px] text-zinc-400" />
+            ) : null}
           </div>
-          <div className="mt-0.5 flex items-center gap-1.5 text-[11px] text-zinc-500">
+          {/* 기여도 · 전투력 — 줄을 2분할(grid)해 정렬 */}
+          <div className="mt-0.5 grid grid-cols-2 gap-1 text-[11px] text-zinc-500">
             <span className="truncate">
               기여도 <span className="font-semibold tabular-nums text-zinc-700 dark:text-zinc-300">{fmtNum(m.contribution)}</span>
             </span>
-            <span className="text-zinc-300 dark:text-zinc-700">·</span>
             <span className="truncate">
               전투력 <span className="font-semibold tabular-nums text-zinc-700 dark:text-zinc-300">{fmtNum(m.combat)}</span>
             </span>
