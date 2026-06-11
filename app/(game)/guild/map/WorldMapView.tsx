@@ -83,19 +83,19 @@ function ChronicleText({ text, zoneColor }: { text: string; zoneColor: (name: st
     const type = m[1];
     const name = m[2];
     if (type === 'g') {
-      // 길드 — 색으로만 구분(굵기·스타일 없음). 브랜드 앰버.
+      // 길드 — 색으로만 구분(굵기·스타일 없음). 지역색(빨/주/앰버/초록/하늘/보라)과 겹치지 않는 틸.
       out.push(
-        <span key={key++} className="text-amber-600 dark:text-amber-400">
+        <span key={key++} className="text-teal-600 dark:text-teal-400">
           {name}
         </span>,
       );
     } else if (type === 'u') {
-      // 인물 — 색(스카이)으로 구분 + 밑줄 + 클릭 시 프로필 상세(/u/[nickname]). 굵기 없음.
+      // 인물 — 지역색과 겹치지 않는 핑크 + 밑줄 + 클릭 시 프로필 상세(/u/[nickname]). 굵기 없음.
       out.push(
         <Link
           key={key++}
           href={`/u/${encodeURIComponent(name)}`}
-          className="text-sky-600 underline decoration-sky-400/50 underline-offset-2 dark:text-sky-400"
+          className="text-pink-600 underline decoration-pink-400/50 underline-offset-2 dark:text-pink-400"
         >
           {name}
         </Link>,
