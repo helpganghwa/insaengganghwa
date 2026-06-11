@@ -255,10 +255,18 @@ export async function generateEmblem(input: {
       .insert(guildEmblems)
       .values({ guildId, emblemUrl, emblemColor: color })
       .returning({ id: guildEmblems.id });
-    await tx
-      .update(guilds)
-      .set({ activeEmblemId: row!.id, emblemUrl, emblemColor: color })
-      .where(eq(guilds.id, guildId));
+    // 사용 중 문양 유지 — 생성은 보관함에만 추가(활성은 그대로). 단 활성이 없을 때만 새 문양으로 설정.
+    const [g] = await tx
+      .select({ activeId: guilds.activeEmblemId })
+      .from(guilds)
+      .where(eq(guilds.id, guildId))
+      .limit(1);
+    if (g?.activeId == null) {
+      await tx
+        .update(guilds)
+        .set({ activeEmblemId: row!.id, emblemUrl, emblemColor: color })
+        .where(eq(guilds.id, guildId));
+    }
     return { emblemId: row!.id, emblemUrl };
   });
 }
