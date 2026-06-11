@@ -1,7 +1,6 @@
 'use client';
 
 import { useMemo, useState, useTransition } from 'react';
-import { useRouter } from 'next/navigation';
 
 import { useResourceToast } from '@/components/ResourceToast';
 
@@ -55,7 +54,6 @@ export function DeployBoard({
   members: Member[];
   zones: Zone[];
 }) {
-  const router = useRouter();
   const { showHeaderToast, showError } = useResourceToast();
   const [members, setMembers] = useState(initialMembers);
   const [selectedId, setSelectedId] = useState<number | null>(null);
@@ -94,7 +92,7 @@ export function DeployBoard({
       depZoneId: selected.id,
       depZoneName: selected.name,
       depRole: selectedRole,
-    }); // 낙관
+    }); // 낙관 — 좌/우 패널 즉시 반영
     start(async () => {
       const r = await deployMemberAction(m.userId, selected.id, selectedRole);
       if (r.status !== 'success') {
@@ -102,7 +100,6 @@ export function DeployBoard({
         return showError(guildErrMsg(r.code));
       }
       showHeaderToast({ title: selectedRole === 'attack' ? '공격 배치' : '수비 배치' });
-      router.refresh();
     });
   };
 
@@ -116,7 +113,6 @@ export function DeployBoard({
         return showError(guildErrMsg(r.code));
       }
       showHeaderToast({ title: '배치 해제' });
-      router.refresh();
     });
   };
 
