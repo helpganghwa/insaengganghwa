@@ -4,20 +4,21 @@ import { sql } from 'drizzle-orm';
 
 import { db } from '@/lib/db/client';
 
-/** 닉네임 옆/아래 표시용 길드 요약(문양·이름). 길드 미소속이면 null. */
-export type GuildBrief = { emblemUrl: string | null; name: string };
+/** 닉네임 옆/아래 표시용 길드 요약(문양·이름·집행관 구역). 길드 미소속이면 null. */
+export type GuildBrief = { emblemUrl: string | null; name: string; executorZone: string | null };
 
-/** 한 유저의 길드 brief(미소속 null). */
+/** 한 유저의 길드 brief(미소속 null). executorZone: 그 유저가 집행관인 구역명(없으면 null, 1유저 1집행관). */
 export async function getUserGuildBrief(userId: string): Promise<GuildBrief | null> {
   const rows = (await db.execute(sql`
-    select g.name, g.emblem_url as emblem_url
+    select g.name, g.emblem_url as emblem_url,
+           (select z.name from zones z where z.executor_user_id = gm.user_id limit 1) as executor_zone
     from guild_members gm
     join guilds g on g.id = gm.guild_id
     where gm.user_id = ${userId}::uuid
     limit 1
-  `)) as unknown as { name: string; emblem_url: string | null }[];
+  `)) as unknown as { name: string; emblem_url: string | null; executor_zone: string | null }[];
   const r = rows[0];
-  return r ? { name: r.name, emblemUrl: r.emblem_url } : null;
+  return r ? { name: r.name, emblemUrl: r.emblem_url, executorZone: r.executor_zone } : null;
 }
 
 /** 여러 유저의 길드 brief 일괄 조회 → userId별 Map(미소속은 키 없음). 랭킹·레이드·친구 등 목록용. */
@@ -30,6 +31,6 @@ export async function getGuildBriefsByUsers(userIds: string[]): Promise<Map<stri
     where gm.user_id in ${userIds}
   `)) as unknown as { uid: string; name: string; emblem_url: string | null }[];
   const m = new Map<string, GuildBrief>();
-  for (const r of rows) m.set(r.uid, { name: r.name, emblemUrl: r.emblem_url });
+  for (const r of rows) m.set(r.uid, { name: r.name, emblemUrl: r.emblem_url, executorZone: null });
   return m;
 }

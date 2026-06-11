@@ -372,6 +372,11 @@ export default async function PublicProfilePage({
             pinEmblemRight
             className="mt-0.5 max-w-[80%] text-[11px] font-semibold text-white/80 drop-shadow-[0_1px_2px_rgba(0,0,0,0.8)]"
           />
+          {data.guild?.executorZone && (
+            <span className="mt-1 inline-flex items-center rounded-full bg-amber-500/25 px-2 py-0.5 text-[10px] font-bold text-amber-200 ring-1 ring-amber-300/40 drop-shadow-[0_1px_2px_rgba(0,0,0,0.85)]">
+              {data.guild.executorZone} 집행관
+            </span>
+          )}
         </div>
       </section>
 
