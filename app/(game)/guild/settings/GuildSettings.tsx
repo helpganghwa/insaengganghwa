@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useTransition } from 'react';
+import { useEffect, useState, useTransition } from 'react';
 import { useRouter } from 'next/navigation';
 
 import { useResourceToast } from '@/components/ResourceToast';
@@ -60,6 +60,23 @@ export function GuildSettings({
   const [genOpen, setGenOpen] = useState(false);
   const [genPending, setGenPending] = useState(false); // 낙관적 '생성 중' 슬롯
   const [delConfirm, setDelConfirm] = useState<string | null>(null);
+  const [genConfirm, setGenConfirm] = useState(false); // 생성 3초 인-버튼 컨펌
+  const [genConfirmLeft, setGenConfirmLeft] = useState(0);
+
+  // 생성 버튼 3초 컨펌(만료 자동 해제) — 남은 초 표기.
+  useEffect(() => {
+    if (!genConfirm) return;
+    const id = setInterval(() => {
+      setGenConfirmLeft((s) => {
+        if (s <= 1) {
+          setGenConfirm(false);
+          return 0;
+        }
+        return s - 1;
+      });
+    }, 1000);
+    return () => clearInterval(id);
+  }, [genConfirm]);
   const [emblem, setEmblem] = useState<EmblemSelection>(DEFAULT_EMBLEM);
   const isLeader = myRole === 'leader';
 
@@ -144,6 +161,18 @@ export function GuildSettings({
       optimisticAdjust(BigInt(GUILD_EMBLEM_REROLL_COST_DIAMOND));
       showError(guildErrMsg('UNKNOWN'));
     }
+  };
+
+  // 생성 버튼 — 1차 탭=3초 컨펌 무장, 2차 탭(3초 내)=실제 생성.
+  const armGenerate = () => {
+    if (genPending) return;
+    if (!genConfirm) {
+      setGenConfirmLeft(3);
+      setGenConfirm(true);
+      return;
+    }
+    setGenConfirm(false);
+    generate();
   };
 
   const selectEmblem = (id: string) =>
@@ -416,7 +445,10 @@ export function GuildSettings({
                   ) : (
                     <button
                       type="button"
-                      onClick={() => setGenOpen(true)}
+                      onClick={() => {
+                        setGenConfirm(false);
+                        setGenOpen(true);
+                      }}
                       disabled={pending || genPending}
                       className="flex aspect-square w-full flex-col items-center justify-center gap-0.5 rounded-lg border-2 border-dashed border-zinc-300 text-zinc-400 transition active:scale-95 disabled:opacity-50 dark:border-zinc-700"
                     >
@@ -445,35 +477,55 @@ export function GuildSettings({
         </button>
       )}
 
-      {/* 새 문양 생성 모달 */}
+      {/* 새 문양 생성 모달 — 중앙 모달 */}
       {genOpen && (
         <div
-          className="fixed inset-0 z-50 flex items-end justify-center bg-black/60 p-3"
-          onClick={() => setGenOpen(false)}
+          className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-4 backdrop-blur-sm"
+          onClick={() => {
+            setGenOpen(false);
+            setGenConfirm(false);
+          }}
         >
           <div
-            className="max-h-[85vh] w-full max-w-[390px] overflow-y-auto rounded-2xl bg-white p-4 dark:bg-zinc-950"
+            className="max-h-[85vh] w-full max-w-[340px] overflow-y-auto rounded-2xl bg-white p-4 dark:bg-zinc-950"
             onClick={(e) => e.stopPropagation()}
           >
             <div className="flex items-baseline justify-between">
               <h2 className="text-sm font-bold">새 문양 생성</h2>
-              <button type="button" onClick={() => setGenOpen(false)} className="text-xs text-zinc-500">
+              <button
+                type="button"
+                onClick={() => {
+                  setGenOpen(false);
+                  setGenConfirm(false);
+                }}
+                className="text-xs text-zinc-500"
+              >
                 닫기
               </button>
             </div>
-            <p className="mt-0.5 text-[11px] text-zinc-500">
-              비용 {GUILD_EMBLEM_REROLL_COST_DIAMOND.toLocaleString('ko-KR')}💎 · 생성 실패 시 환불 · 보관 후 선택해 사용
-            </p>
             <div className="mt-3">
               <EmblemPicker value={emblem} onChange={setEmblem} disabled={pending} />
             </div>
             <button
               type="button"
-              onClick={generate}
+              onClick={armGenerate}
               disabled={pending}
-              className="mt-3 w-full rounded-lg bg-amber-600 py-2.5 text-sm font-bold text-white disabled:opacity-50"
+              className={`relative isolate mt-3 w-full overflow-hidden rounded-lg py-2.5 text-sm font-bold text-white transition-colors disabled:opacity-50 ${
+                genConfirm ? 'bg-amber-700' : 'bg-amber-600'
+              }`}
             >
-              생성
+              {genConfirm ? (
+                <span
+                  aria-hidden
+                  className="absolute inset-0 bg-amber-500"
+                  style={{ animation: 'confirm-bg-pulse 1.2s ease-in-out infinite' }}
+                />
+              ) : null}
+              <span className="relative">
+                {genConfirm
+                  ? `한번 더 💎${GUILD_EMBLEM_REROLL_COST_DIAMOND.toLocaleString('ko-KR')} ${genConfirmLeft}s`
+                  : `생성하기 💎${GUILD_EMBLEM_REROLL_COST_DIAMOND.toLocaleString('ko-KR')}`}
+              </span>
             </button>
           </div>
         </div>
