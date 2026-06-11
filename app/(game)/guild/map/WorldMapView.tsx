@@ -542,7 +542,7 @@ export function WorldMapView({
                   <dt className="text-zinc-500">집행관</dt>
                   <dd className="font-semibold">
                     {selected.executorNickname ? (
-                      <span className="text-amber-600 dark:text-amber-400">{selected.executorNickname}</span>
+                      <span className="text-indigo-500 dark:text-indigo-400">{selected.executorNickname}</span>
                     ) : (
                       <span className="text-zinc-400">공석</span>
                     )}
@@ -553,10 +553,9 @@ export function WorldMapView({
                   <dd className="font-mono tabular-nums">{selected.residentCount.toLocaleString('ko-KR')}명</dd>
                 </div>
                 <div className="flex items-center justify-between gap-2">
-                  <dt className="text-zinc-500">누적 세금 💎</dt>
-                  <dd className="flex items-center gap-1.5">
-                    <span className="font-mono tabular-nums">{selected.taxDiamond}</span>
-                    {/* 수금 — 그 구역 집행관 본인만(누적 세금 오른쪽 작은 버튼) */}
+                  <dt className="flex items-center gap-1.5 text-zinc-500">
+                    누적 세금
+                    {/* 수금 — 그 구역 집행관 본인만(라벨 오른쪽 작은 버튼) */}
                     {myUserId != null && selected.executorUserId === myUserId && (
                       <button
                         type="button"
@@ -570,7 +569,8 @@ export function WorldMapView({
                         수금
                       </button>
                     )}
-                  </dd>
+                  </dt>
+                  <dd className="font-mono tabular-nums">💎 {selected.taxDiamond}</dd>
                 </div>
               </dl>
 
@@ -630,41 +630,29 @@ export function WorldMapView({
               onClick={close}
             >
               <div
-                className="w-full max-w-[300px] rounded-2xl bg-white p-5 dark:bg-zinc-950"
+                className="w-full max-w-[260px] rounded-2xl bg-white p-4 dark:bg-zinc-950"
                 onClick={(e) => e.stopPropagation()}
               >
-                <h2 className="text-base font-bold">세금 수금</h2>
-                <p className="mt-0.5 text-[12px] text-zinc-500">
-                  {cz.name} · 누적 <span className="font-mono font-bold text-zinc-700 dark:text-zinc-300">💎{tax.toLocaleString('ko-KR')}</span>
-                </p>
-                <div className="mt-3 flex items-center justify-center gap-3 rounded-xl bg-zinc-100 py-3 text-[13px] font-bold dark:bg-zinc-900">
-                  <span>
-                    길드 <span className="font-mono text-emerald-600 dark:text-emerald-400">💎{guildCut.toLocaleString('ko-KR')}</span>
-                    <span className="ml-0.5 text-[9px] font-medium text-zinc-400">90%</span>
-                  </span>
-                  <span className="text-zinc-300 dark:text-zinc-700">|</span>
-                  <span>
-                    집행관 <span className="font-mono text-amber-600 dark:text-amber-400">💎{execCut.toLocaleString('ko-KR')}</span>
-                    <span className="ml-0.5 text-[9px] font-medium text-zinc-400">10%</span>
-                  </span>
+                <h2 className="text-sm font-bold">{cz.name} 세금 수금</h2>
+                <div className="mt-3 grid grid-cols-2 gap-2 text-center">
+                  <div className="rounded-lg bg-zinc-100 py-2 dark:bg-zinc-900">
+                    <p className="text-[10px] text-zinc-400">길드 90%</p>
+                    <p className="font-mono text-[13px] font-bold text-emerald-600 dark:text-emerald-400">
+                      💎 {guildCut.toLocaleString('ko-KR')}
+                    </p>
+                  </div>
+                  <div className="rounded-lg bg-zinc-100 py-2 dark:bg-zinc-900">
+                    <p className="text-[10px] text-zinc-400">집행관 10%</p>
+                    <p className="font-mono text-[13px] font-bold text-indigo-500 dark:text-indigo-400">
+                      💎 {execCut.toLocaleString('ko-KR')}
+                    </p>
+                  </div>
                 </div>
 
                 {onCd ? (
-                  <button
-                    type="button"
-                    disabled
-                    className="mt-4 w-full cursor-default rounded-lg bg-zinc-200 py-2.5 text-sm font-bold text-zinc-500 dark:bg-zinc-800 dark:text-zinc-400"
-                  >
+                  <p className="mt-3 rounded-lg bg-zinc-100 py-2 text-center text-[12px] font-semibold text-zinc-500 dark:bg-zinc-900">
                     {hh > 0 ? `${hh}시간 ` : ''}{mm}분 후 수금 가능
-                  </button>
-                ) : tax <= 0 ? (
-                  <button
-                    type="button"
-                    disabled
-                    className="mt-4 w-full cursor-default rounded-lg bg-zinc-200 py-2.5 text-sm font-bold text-zinc-500 dark:bg-zinc-800 dark:text-zinc-400"
-                  >
-                    수금할 세금이 없습니다
-                  </button>
+                  </p>
                 ) : (
                   <button
                     type="button"
@@ -676,8 +664,8 @@ export function WorldMapView({
                         setCollectConfirm(true);
                       }
                     }}
-                    disabled={pending}
-                    className={`relative isolate mt-4 w-full overflow-hidden rounded-lg py-2.5 text-sm font-bold text-white transition-colors disabled:opacity-50 ${
+                    disabled={pending || tax <= 0}
+                    className={`relative isolate mt-3 w-full overflow-hidden rounded-lg py-2 text-sm font-bold text-white transition-colors disabled:opacity-50 ${
                       collectConfirm ? 'bg-emerald-700' : 'bg-emerald-600'
                     }`}
                   >
@@ -691,7 +679,7 @@ export function WorldMapView({
                     <span className="relative">{collectConfirm ? `한번 더 ${collectLeft}s` : '수금'}</span>
                   </button>
                 )}
-                <button type="button" onClick={close} className="mt-2 w-full py-1.5 text-[11px] text-zinc-500">
+                <button type="button" onClick={close} className="mt-1.5 w-full py-1 text-[11px] text-zinc-500">
                   닫기
                 </button>
               </div>

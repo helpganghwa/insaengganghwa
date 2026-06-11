@@ -347,7 +347,7 @@ export default async function PublicProfilePage({
       {/* ── 히어로: 닉네임(머리 위) + 캐릭터 풀블리드 + 그라데이션 ── */}
       <section className="relative h-[250px] overflow-hidden bg-gradient-to-b from-amber-900/30 via-zinc-900 to-zinc-950">
         {data.charImg ? (
-          <div className="absolute inset-0 flex items-end justify-center py-[15px]">
+          <div className="absolute inset-0 flex items-end justify-center pb-[10px] pt-[15px]">
             <CharacterStage
               charSrc={data.charImg}
               scale={1.8}
@@ -365,18 +365,20 @@ export default async function PublicProfilePage({
           <h1 className="text-xl font-extrabold tracking-tight text-white drop-shadow-[0_2px_3px_rgba(0,0,0,0.7)]">
             {data.nickname}
           </h1>
-          <GuildBadge
-            emblemUrl={data.guild?.emblemUrl ?? null}
-            name={data.guild?.name ?? null}
-            size={15}
-            pinEmblemRight
-            className="mt-0.5 max-w-[80%] text-[11px] font-semibold text-white/80 drop-shadow-[0_1px_2px_rgba(0,0,0,0.8)]"
-          />
-          {data.guild?.executorZone && (
-            <span className="mt-1 inline-flex items-center rounded-full bg-amber-500/25 px-2 py-0.5 text-[10px] font-bold text-amber-200 ring-1 ring-amber-300/40 drop-shadow-[0_1px_2px_rgba(0,0,0,0.85)]">
-              {data.guild.executorZone} 집행관
-            </span>
-          )}
+          <div className="mt-0.5 flex max-w-[92%] items-center justify-center gap-1.5">
+            <GuildBadge
+              emblemUrl={data.guild?.emblemUrl ?? null}
+              name={data.guild?.name ?? null}
+              size={15}
+              pinEmblemRight
+              className="min-w-0 text-[11px] font-semibold text-white/80 drop-shadow-[0_1px_2px_rgba(0,0,0,0.8)]"
+            />
+            {data.guild?.executorZone && (
+              <span className="shrink-0 text-[11px] font-semibold text-indigo-400 drop-shadow-[0_1px_2px_rgba(0,0,0,0.85)]">
+                {data.guild.executorZone} 집행관
+              </span>
+            )}
+          </div>
         </div>
       </section>
 
