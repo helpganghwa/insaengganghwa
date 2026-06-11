@@ -91,7 +91,7 @@ function MemberRow({ m, myUserId }: { m: RichMember; myUserId: string }) {
         <div className="min-w-0 flex-1">
           {/* 닉네임 + 최근접속(이름 바로 뒤) */}
           <div className="flex items-baseline gap-1.5">
-            <span className="text-[10px] font-semibold">{m.nickname}</span>
+            <span className="text-[13px] font-semibold">{m.nickname}</span>
             {isMe || m.lastSeenAt != null ? (
               <LastSeen at={m.lastSeenAt} forceOnline={isMe} className="shrink-0 text-[10px] text-zinc-400" />
             ) : null}
