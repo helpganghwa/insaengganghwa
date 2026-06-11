@@ -87,7 +87,7 @@ function ChronicleText({ text, zoneColor }: { text: string; zoneColor: (name: st
       out.push(
         <strong
           key={key++}
-          className="font-extrabold text-zinc-900 [text-shadow:0_1px_2px_rgb(0_0_0/0.22)] dark:text-zinc-50 dark:[text-shadow:0_1px_3px_rgb(0_0_0/0.7)]"
+          className="font-extrabold italic text-zinc-900 [text-shadow:0_1px_2px_rgb(0_0_0/0.22)] dark:text-zinc-50 dark:[text-shadow:0_1px_3px_rgb(0_0_0/0.7)]"
         >
           {name}
         </strong>,
@@ -98,7 +98,7 @@ function ChronicleText({ text, zoneColor }: { text: string; zoneColor: (name: st
         <Link
           key={key++}
           href={`/u/${encodeURIComponent(name)}`}
-          className="font-semibold text-zinc-800 underline decoration-zinc-400 underline-offset-2 dark:text-zinc-100 dark:decoration-zinc-500"
+          className="font-semibold italic text-zinc-800 underline decoration-zinc-400 underline-offset-2 dark:text-zinc-100 dark:decoration-zinc-500"
         >
           {name}
         </Link>,
