@@ -623,10 +623,8 @@ export function ConquestBattleView({ view }: { view: View }) {
       <div className="min-h-0 flex-1 overflow-y-auto overscroll-contain bg-zinc-950">
         {displayRows.length === 0 ? (
           <div className="px-4 py-10 text-center text-[12px] text-zinc-500">
-            {tab === 'guild'
-              ? myGuildId == null
-                ? '길드에 가입하면 우리 길드 전투가 표시됩니다.'
-                : '이 전투에 우리 길드가 참전하지 않았습니다.'
+            {tab === 'guild' && myGuildId == null
+              ? '길드에 가입하면 우리 길드 전투가 표시됩니다.'
               : '전투 기록이 없습니다.'}
           </div>
         ) : (
