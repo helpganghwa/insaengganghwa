@@ -131,6 +131,7 @@ export async function getWorldmapZones() {
       executorUserId: zones.executorUserId,
       executorNickname: profiles.nickname,
       taxDiamond: zones.taxDiamond,
+      lastTaxCollectedAt: zones.lastTaxCollectedAt,
       // 거주 인원 — 이 구역을 거주지로 둔 유저 수(상관 서브쿼리, executor 조인과 별개 스코프).
       residentCount: sql<number>`(select count(*)::int from profiles rp where rp.residence_zone_id = ${zones.id})`,
     })

@@ -204,7 +204,7 @@ export function DeployBoard({
   }, [adjacency, zoneById, ownedIds, attackable]);
 
   return (
-    <div className="flex flex-col">
+    <div className="flex min-h-full flex-col">
       {/* 지도 — 상단 전체. 우리 점령지·공격 가능만 또렷, 그 외 흐릿(보이되 비활성) */}
       <div className="relative aspect-square w-full shrink-0 overflow-hidden border-b border-zinc-800 bg-zinc-950">
         {/* eslint-disable-next-line @next/next/no-img-element */}
@@ -322,7 +322,7 @@ export function DeployBoard({
       </div>
 
       {/* 하단 — 좌: 선택 구역 / 우: 길드원 전체 */}
-      <div className="grid grid-cols-2 divide-x divide-zinc-200 dark:divide-zinc-800">
+      <div className="grid flex-1 grid-cols-2 divide-x divide-zinc-200 dark:divide-zinc-800">
         {/* 좌: 선택 구역 배치 */}
         <section className="min-w-0 p-3">
           {selected ? (
@@ -341,29 +341,8 @@ export function DeployBoard({
                 총 전투력 <span className="font-mono font-bold text-zinc-700 dark:text-zinc-200">{fmt(totalPower)}</span>
               </p>
 
-              {/* 집행관 지정(수비 구역·임원) — 길드원 누구나 지정. 집행관은 자동 수비(×3). */}
-              {isDefend && isOfficer && (
-                <div className="mt-2 flex items-center gap-1.5 rounded-lg bg-indigo-500/10 px-2 py-1.5">
-                  <span className="shrink-0 text-[10px] font-bold text-indigo-600 dark:text-indigo-300">집행관</span>
-                  <select
-                    value={execHere[0]?.userId ?? ''}
-                    onChange={(e) => {
-                      const v = e.target.value;
-                      if (!v) return clearExec();
-                      const mm = members.find((x) => x.userId === v);
-                      if (mm) setExec(mm);
-                    }}
-                    disabled={pending}
-                    className="min-w-0 flex-1 rounded-md border border-indigo-300 bg-white px-1.5 py-1 text-[11px] outline-none dark:border-indigo-500/40 dark:bg-zinc-900"
-                  >
-                    <option value="">지정 안 함</option>
-                    {members.map((m) => (
-                      <option key={m.userId} value={m.userId}>
-                        {m.nickname}
-                      </option>
-                    ))}
-                  </select>
-                </div>
+              {isDefend && (
+                <p className="mt-1 text-[9px] text-zinc-400">수비 배치 후 ‘집행관’ 버튼으로 지정(자동 수비·×3).</p>
               )}
 
               {execHere.length === 0 && deployedHere.length === 0 ? (
@@ -378,6 +357,16 @@ export function DeployBoard({
                           집행관 · 전투력 {fmt(Math.round(m.combat * CONQUEST_EXECUTOR_POWER_MULT))}
                         </span>
                       </div>
+                      {isOfficer && (
+                        <button
+                          type="button"
+                          onClick={clearExec}
+                          disabled={pending}
+                          className="shrink-0 rounded-md px-1.5 py-0.5 text-[10px] font-bold text-red-500 disabled:opacity-50"
+                        >
+                          해제
+                        </button>
+                      )}
                     </li>
                   ))}
                   {deployedHere.map((m) => (
@@ -389,14 +378,26 @@ export function DeployBoard({
                         </span>
                       </div>
                       {isOfficer && (
-                        <button
-                          type="button"
-                          onClick={() => remove(m)}
-                          disabled={pending}
-                          className="shrink-0 rounded-md px-1.5 py-0.5 text-[10px] font-bold text-red-500 disabled:opacity-50"
-                        >
-                          해제
-                        </button>
+                        <div className="flex shrink-0 items-center gap-0.5">
+                          {isDefend && (
+                            <button
+                              type="button"
+                              onClick={() => setExec(m)}
+                              disabled={pending}
+                              className="rounded-md px-1.5 py-0.5 text-[10px] font-bold text-indigo-500 disabled:opacity-50"
+                            >
+                              집행관
+                            </button>
+                          )}
+                          <button
+                            type="button"
+                            onClick={() => remove(m)}
+                            disabled={pending}
+                            className="rounded-md px-1.5 py-0.5 text-[10px] font-bold text-red-500 disabled:opacity-50"
+                          >
+                            해제
+                          </button>
+                        </div>
                       )}
                     </li>
                   ))}

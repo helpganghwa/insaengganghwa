@@ -36,6 +36,7 @@ export default async function WorldMapPage() {
         executorUserId: z.executorUserId,
         executorNickname: z.executorNickname,
         taxDiamond: z.taxDiamond.toString(),
+        lastTaxAt: z.lastTaxCollectedAt ? z.lastTaxCollectedAt.getTime() : null,
         residentCount: z.residentCount,
       }))}
     />
