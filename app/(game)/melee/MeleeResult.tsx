@@ -410,7 +410,7 @@ function RankingView({
                 <span className="font-mono text-[11px] font-bold tabular-nums text-amber-300 text-pixel-outline">
                   #{slot}
                 </span>
-                <span className="max-w-[66px] truncate text-[10px] font-medium leading-tight text-white text-pixel-outline">
+                <span className="whitespace-nowrap text-[9px] font-medium leading-tight text-white text-pixel-outline">
                   {p?.nickname ?? '—'}
                 </span>
               </div>
