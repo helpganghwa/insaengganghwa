@@ -144,9 +144,13 @@ const SYSTEM_PROMPT = `너는 대륙의 정복 전쟁을 기록하는 사관(史
 - 시각·시간대 표현 금지(정오·아침·저녁·새벽·밤·자정, '종이 울리자' 등). 날짜·하루 단위 서술만 허용.
 - '인생강화'라는 단어, 이모지·이모티콘 절대 금지. 대륙·세계는 고유명 없이 '대륙' 등으로만 칭한다.
 - 주어진 '그날 사건'만 근거로 쓴다. 없는 사실을 지어내지 않는다.
+- **점령(captures)은 각 구역의 winner(점령 길드)를 그대로 따른다. 서로 다른 길드가 각자 다른 구역을 점령했으면 길드별로 구분해서 쓴다 — 여러 길드의 점령을 한 길드가 모두 한 것처럼 절대 합치지 않는다.** (예: 한 길드가 두 구역, 다른 길드가 한 구역을 점령했으면 둘 다 기록.)
+- 방어(defenses)는 '점령'이 아니다(이미 소유한 구역을 지켜낸 것). 점령 수에 포함하지 말고, 방어는 방어로만 서술한다.
+- 점령전 결과(누가 어느 구역을 점령했는지·누가 막아냈는지)와 개인 활약(feats)을 엮어 그날 전투를 실제로 본 듯 구체적으로 서술하되, 톤은 담담하게.
+- '대륙 지배', '천하', '제패' 같은 과장된 총평·결론 금지. 그날 일어난 사실만 적는다.
 - 반드시 JSON만 출력: {"today": "...", "headline": "..."}.
   - today: 그날의 역사를 풀어 쓴 기록. 2~3개 문단으로 나누고 문단 사이는 빈 줄(\\n\\n)로 구분(가독성). 각 문단 3~5문장.
-  - headline: 그날을 한 줄로 압축한 핵심 사건(25자 내외, 마커 포함). 예: "{g|천둥길드}가 {z|왕성}을 점령".`;
+  - headline: 그날을 한 줄로 압축한 핵심 사건(25자 내외, 마커 포함). 점령 길드가 여럿이면 가장 많이 점령한 쪽 위주로 쓰되 다른 길드의 점령도 가능하면 한 줄에 담는다. 예: "{g|천둥길드}가 {z|왕성} 외 2곳 점령".`;
 
 /** 그날 사건이 '큰 사건'인지 — 점령(영토 변동) 또는 주목할 개인 활약이 있으면 기록 대상. */
 function isNotable(s: ConquestDaySummary): boolean {
@@ -170,6 +174,22 @@ export async function generateAndStoreChronicle(
   const summary = await aggregateConquestDay(kstDay);
   if (!isNotable(summary)) return { created: false, reason: 'no-event' };
 
+  // 길드별로 미리 그룹핑한 명확한 요약 — 작은 모델이 captures를 한 길드로 합치지 않게(정확 귀속).
+  const capByGuild = new Map<string, string[]>();
+  for (const c of summary.captures) {
+    const arr = capByGuild.get(c.winner) ?? [];
+    arr.push(c.zone);
+    capByGuild.set(c.winner, arr);
+  }
+  const capLines =
+    [...capByGuild.entries()].map(([g, zs]) => `· ${g}: ${zs.join(', ')} (총 ${zs.length}곳 점령)`).join('\n') ||
+    '· (신규 점령 없음)';
+  const defLines = summary.defenses.map((d) => `· ${d.owner}: ${d.zone} 방어`).join('\n') || '· (방어 없음)';
+  const featLines = summary.feats.map((f) => `· ${f.nickname}(${f.guild}) ${f.kind} ${f.count}회`).join('\n') || '· (없음)';
+  const digest =
+    `[그날 점령전 정리 — 이 귀속을 그대로 따를 것]\n` +
+    `■ 신규 점령(길드별):\n${capLines}\n■ 방어(점령 아님):\n${defLines}\n■ 개인 활약:\n${featLines}`;
+
   const res = await client().messages.create({
     model: MODEL_ID,
     max_tokens: 900,
@@ -177,7 +197,11 @@ export async function generateAndStoreChronicle(
     messages: [
       {
         role: 'user',
-        content: `그날(${kstDay}) 점령전 사건(JSON):\n${JSON.stringify(summary)}\n\n참고: winner·owner·from·standings[].guild·feats[].guild = 길드 이름({g|}), feats[].nickname = 인물 이름({u|}), zone·region = 지역·구역 이름({r|}).\n\n위 규칙대로 JSON({today, headline})만 출력하라.`,
+        content:
+          `그날(${kstDay}) 점령전.\n\n${digest}\n\n` +
+          `위 '신규 점령(길드별)'을 정확히 따라라 — 한 길드의 점령을 다른 길드로 옮기거나 여러 길드 점령을 한 길드로 합치지 말 것. 방어는 점령으로 세지 말 것.\n` +
+          `마커: 길드={g|}, 인물={u|}, 개별 구역(zone)={z|}. 지역은 마커 없이.\n\n` +
+          `위 규칙대로 JSON({today, headline})만 출력하라.`,
       },
     ],
   });
@@ -186,8 +210,10 @@ export async function generateAndStoreChronicle(
   const m = raw.match(/\{[\s\S]*\}/);
   if (!m) throw new Error(`CHRONICLE_PARSE_FAIL: ${raw.slice(0, 200)}`);
   const parsed = JSON.parse(m[0]) as { today?: string; headline?: string };
-  const today = (parsed.today ?? '').trim();
-  const headline = (parsed.headline ?? '').trim();
+  // 마커 닫는 중괄호 겹침({g|신화}}) 정규화 — 마커 뒤 여분 } 제거(저장 깔끔).
+  const fixBraces = (s: string) => s.replace(/(\{[guz]\|[^}]+)\}{2,}/g, '$1}');
+  const today = fixBraces((parsed.today ?? '').trim());
+  const headline = fixBraces((parsed.headline ?? '').trim());
   if (!today || !headline) throw new Error('CHRONICLE_EMPTY');
 
   await db
