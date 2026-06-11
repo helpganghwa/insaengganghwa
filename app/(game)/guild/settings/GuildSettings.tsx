@@ -13,7 +13,6 @@ import {
 import type { EmblemSelection } from '@/lib/game/guild/emblem-vocab';
 
 import {
-  generateEmblemAction,
   setActiveEmblemAction,
   deleteEmblemAction,
   distributeTaxAction,
@@ -120,21 +119,31 @@ export function GuildSettings({
       router.refresh();
     });
 
-  // 생성 — 낙관적: '생성 중' 슬롯 즉시 표시 + 다이아 선차감, 실패 시 롤백.
-  const generate = () => {
+  // 생성 — 라우트 핸들러 fetch(서버 액션 트랜지션 밖)로 호출해 생성 중에도 앱이 안 멈춤.
+  //  낙관적: '생성 중' 슬롯 즉시 표시 + 다이아 선차감, 실패 시 롤백.
+  const generate = async () => {
     setGenOpen(false);
     setGenPending(true);
     optimisticAdjust(BigInt(-GUILD_EMBLEM_REROLL_COST_DIAMOND));
-    start(async () => {
-      const r = await generateEmblemAction(emblem);
+    try {
+      const res = await fetch('/api/guild/emblem', {
+        method: 'POST',
+        headers: { 'content-type': 'application/json' },
+        body: JSON.stringify({ selection: emblem }),
+      });
+      const r = (await res.json()) as { status: string; code?: string };
       setGenPending(false);
       if (r.status !== 'success') {
         optimisticAdjust(BigInt(GUILD_EMBLEM_REROLL_COST_DIAMOND));
-        return showError(guildErrMsg(r.code));
+        return showError(guildErrMsg(r.code ?? 'UNKNOWN'));
       }
       showHeaderToast({ title: '문양 생성 완료' });
       router.refresh();
-    });
+    } catch {
+      setGenPending(false);
+      optimisticAdjust(BigInt(GUILD_EMBLEM_REROLL_COST_DIAMOND));
+      showError(guildErrMsg('UNKNOWN'));
+    }
   };
 
   const selectEmblem = (id: string) =>
@@ -408,7 +417,7 @@ export function GuildSettings({
                     <button
                       type="button"
                       onClick={() => setGenOpen(true)}
-                      disabled={pending}
+                      disabled={pending || genPending}
                       className="flex aspect-square w-full flex-col items-center justify-center gap-0.5 rounded-lg border-2 border-dashed border-zinc-300 text-zinc-400 transition active:scale-95 disabled:opacity-50 dark:border-zinc-700"
                     >
                       <span className="text-lg leading-none">+</span>

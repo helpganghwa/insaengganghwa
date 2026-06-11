@@ -26,7 +26,6 @@ import {
   clearZoneExecutor,
   getZoneLatestBattle,
   generateAndStoreEmblem,
-  generateEmblem,
   setActiveEmblem,
   deleteEmblem,
   setViceRole,
@@ -82,19 +81,8 @@ function revalidateGuildAndHeader() {
   revalidatePath('/', 'layout');
 }
 
-/** 새 문양 생성·보관(최대 3, 5,000💎). 길드장. */
-export async function generateEmblemAction(emblem: EmblemSelection) {
-  const u = await getSessionUserId();
-  if (!u) return unauth;
-  if (!isValidEmblemSelection(emblem)) return { status: 'error', code: 'EMBLEM_INVALID' } as const;
-  try {
-    await generateEmblem({ userId: u, selection: emblem });
-    revalidateGuildAndHeader();
-    return { status: 'success' } as const;
-  } catch (e) {
-    return fail(e, 'generateEmblem');
-  }
-}
+// 문양 생성은 라우트 핸들러(/api/guild/emblem)로 분리 — pixflux 생성이 서버 액션
+// 트랜지션을 막아 앱이 멈추던 문제 회피. 선택/삭제만 액션으로 남김.
 
 /** 보관 문양 중 활성 선택(무료). 길드장. */
 export async function setActiveEmblemAction(emblemId: string) {
