@@ -1,3 +1,4 @@
+import Link from 'next/link';
 import { sql } from 'drizzle-orm';
 
 import { getSessionUserId } from '@/lib/auth/session';
@@ -91,9 +92,12 @@ export default async function InventoryPage({
   return (
     <div className="px-4 py-4">
       {items.length === 0 ? (
-        <div className="rounded-2xl border-2 border-dashed border-amber-300 bg-amber-50/40 p-8 text-center text-sm dark:border-amber-800 dark:bg-amber-950/20">
-          첫 장비가 없습니다. 보급 상자를 받아보세요.
-        </div>
+        <Link
+          href="/gacha"
+          className="block rounded-2xl border-2 border-dashed border-amber-300 bg-amber-50/40 p-8 text-center text-sm transition active:opacity-70 dark:border-amber-800 dark:bg-amber-950/20"
+        >
+          첫 장비가 없습니다. <span className="font-bold text-amber-700 dark:text-amber-300">보급 상자를 받아보세요</span> →
+        </Link>
       ) : (
         <InventoryGrid items={items} initialSlot={initialSlot} nickname={nickname} />
       )}
