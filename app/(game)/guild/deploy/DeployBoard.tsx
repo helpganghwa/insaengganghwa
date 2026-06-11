@@ -78,6 +78,10 @@ export function DeployBoard({
     : null;
   const isDefend = selectedRole === 'defend';
 
+  const attackCount = members.filter((m) => m.depRole === 'attack').length;
+  const defendCount = members.filter((m) => m.depRole === 'defend' || m.execZoneId != null).length;
+  const idleCount = members.filter((m) => m.depZoneId == null && m.execZoneId == null).length;
+
   const deployedHere = useMemo(
     () => (selectedId != null ? members.filter((m) => m.depZoneId === selectedId) : []),
     [members, selectedId],
@@ -408,7 +412,15 @@ export function DeployBoard({
 
         {/* 우: 길드원 전체 */}
         <section className="min-w-0 rounded-xl border border-zinc-200 bg-white p-2.5 dark:border-zinc-800 dark:bg-zinc-950">
-          <h3 className="text-[13px] font-bold">길드원 ({members.length})</h3>
+          <div className="flex items-baseline justify-between gap-1">
+            <h3 className="text-[13px] font-bold">길드원 ({members.length})</h3>
+            <span className="shrink-0 text-[9px] font-semibold text-zinc-400">
+              <span className="text-red-500">공{attackCount}</span> · <span className="text-sky-500">수{defendCount}</span> · 대기{idleCount}
+            </span>
+          </div>
+          {!selected && (
+            <p className="mt-1 text-[9px] text-zinc-400">구역을 선택하면 공격/수비 배치할 수 있어요.</p>
+          )}
           <ul className="mt-2 space-y-1">
             {members.map((m) => {
               const isExec = m.execZoneId != null;
