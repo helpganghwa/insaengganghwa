@@ -251,7 +251,7 @@ export function GuildSettings({
           onChange={(e) => setNotice(e.target.value.slice(0, GUILD_NOTICE_MAX_LEN))}
           placeholder="길드원에게 보일 공지를 입력하세요 (길드 정보에 노출)"
           rows={2}
-          className="mt-2 w-full resize-none rounded-lg border border-zinc-200 bg-zinc-50 px-2.5 py-2 text-[12px] outline-none focus:border-zinc-400 dark:border-zinc-700 dark:bg-zinc-900 dark:focus:border-zinc-500"
+          className="mt-2 w-full resize-none rounded-lg border border-zinc-200 bg-zinc-50 px-2.5 py-2 text-base outline-none focus:border-zinc-400 dark:border-zinc-700 dark:bg-zinc-900 dark:focus:border-zinc-500"
         />
         <div className="mt-2 flex justify-end gap-1.5">
           {notice.length > 0 && (
