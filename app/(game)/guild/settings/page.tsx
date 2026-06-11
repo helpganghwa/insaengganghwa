@@ -38,6 +38,7 @@ export default async function GuildSettingsPage() {
       guild={{
         taxPool: guild.taxPoolDiamond.toString(),
         joinPolicy: guild.joinPolicy === 'approval' ? 'approval' : 'open',
+        notice: guild.notice ?? '',
         emblemUrl: guild.emblemUrl,
         emblemColor: guild.emblemColor,
       }}

@@ -24,6 +24,7 @@ import {
   clearMemberDeployment,
   setZoneExecutor,
   clearZoneExecutor,
+  setGuildNotice,
   getZoneLatestBattleId,
   generateAndStoreEmblem,
   setActiveEmblem,
@@ -171,6 +172,20 @@ export async function setJoinPolicyAction(policy: GuildJoinPolicy) {
     return { status: 'success' } as const;
   } catch (e) {
     return fail(e, 'setJoinPolicy');
+  }
+}
+
+/** 길드 공지 설정/해제 — 길드장·부길드장. 길드정보 섹션에 노출. */
+export async function setGuildNoticeAction(notice: string) {
+  const u = await getSessionUserId();
+  if (!u) return unauth;
+  try {
+    await setGuildNotice({ userId: u, notice });
+    revalidatePath('/guild');
+    revalidatePath('/guild/settings');
+    return { status: 'success' } as const;
+  } catch (e) {
+    return fail(e, 'setGuildNotice');
   }
 }
 

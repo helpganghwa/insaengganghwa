@@ -174,9 +174,14 @@ export function GuildHome({
         </div>
 
         {guild.notice && (
-          <p className="mt-2 rounded-lg bg-zinc-100 px-3 py-2 text-[12px] text-zinc-700 dark:bg-zinc-900 dark:text-zinc-300">
-            {guild.notice}
-          </p>
+          <div className="mt-2 flex items-start gap-2 rounded-lg bg-amber-50 px-3 py-2 dark:bg-amber-500/10">
+            <span className="shrink-0 rounded bg-amber-500/15 px-1.5 py-0.5 text-[10px] font-bold text-amber-700 dark:text-amber-300">
+              공지
+            </span>
+            <p className="min-w-0 flex-1 whitespace-pre-wrap break-words text-[12px] leading-relaxed text-zinc-700 dark:text-zinc-200">
+              {guild.notice}
+            </p>
+          </div>
         )}
 
         {/* 길드 경험치바 + 컴팩트 기부 버튼 */}

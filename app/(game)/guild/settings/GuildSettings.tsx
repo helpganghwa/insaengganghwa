@@ -7,6 +7,7 @@ import { useResourceToast } from '@/components/ResourceToast';
 import { useDiamond } from '@/components/DiamondContext';
 import {
   GUILD_EMBLEM_REROLL_COST_DIAMOND,
+  GUILD_NOTICE_MAX_LEN,
   MAX_GUILD_EMBLEMS,
   type GuildJoinPolicy,
 } from '@/lib/game/guild/balance';
@@ -17,6 +18,7 @@ import {
   deleteEmblemAction,
   distributeTaxAction,
   setJoinPolicyAction,
+  setGuildNoticeAction,
   approveJoinAction,
   rejectJoinAction,
   disbandGuildAction,
@@ -33,6 +35,7 @@ type MemberLite = { userId: string; nickname: string; role: Role };
 type SettingsView = {
   taxPool: string;
   joinPolicy: GuildJoinPolicy;
+  notice: string;
   emblemUrl: string | null;
   emblemColor: string | null;
 };
@@ -119,6 +122,17 @@ export function GuildSettings({
       router.refresh();
     });
   };
+
+  // 길드 공지 — 임원(길드장·부길드장) 편집. 저장 시에만 반영(낙관적 X).
+  const [notice, setNotice] = useState(guild.notice);
+  const noticeDirty = notice.trim() !== guild.notice.trim();
+  const saveNotice = () =>
+    start(async () => {
+      const r = await setGuildNoticeAction(notice.trim());
+      if (r.status !== 'success') return showError(guildErrMsg(r.code));
+      showHeaderToast({ title: '공지 저장 완료' });
+      router.refresh();
+    });
 
   const approve = (userId: string) =>
     start(async () => {
@@ -223,6 +237,43 @@ export function GuildSettings({
   return (
     <div className="space-y-3 px-3 py-3">
       <h1 className="text-base font-bold">길드 관리</h1>
+
+      {/* 길드 공지 — 길드정보 섹션에 노출됨(임원 편집) */}
+      <section className="rounded-xl border border-zinc-200 bg-white p-3 dark:border-zinc-800 dark:bg-zinc-950">
+        <div className="flex items-center justify-between gap-2">
+          <h3 className="text-sm font-bold">길드 공지</h3>
+          <span className="text-[10px] tabular-nums text-zinc-400">
+            {notice.length}/{GUILD_NOTICE_MAX_LEN}
+          </span>
+        </div>
+        <textarea
+          value={notice}
+          onChange={(e) => setNotice(e.target.value.slice(0, GUILD_NOTICE_MAX_LEN))}
+          placeholder="길드원에게 보일 공지를 입력하세요 (길드 정보에 노출)"
+          rows={2}
+          className="mt-2 w-full resize-none rounded-lg border border-zinc-200 bg-zinc-50 px-2.5 py-2 text-[12px] outline-none focus:border-zinc-400 dark:border-zinc-700 dark:bg-zinc-900 dark:focus:border-zinc-500"
+        />
+        <div className="mt-2 flex justify-end gap-1.5">
+          {notice.length > 0 && (
+            <button
+              type="button"
+              onClick={() => setNotice('')}
+              disabled={pending}
+              className="rounded-lg px-3 py-1.5 text-[12px] font-semibold text-zinc-500 disabled:opacity-50"
+            >
+              비우기
+            </button>
+          )}
+          <button
+            type="button"
+            onClick={saveNotice}
+            disabled={pending || !noticeDirty}
+            className="rounded-lg bg-amber-600 px-4 py-1.5 text-[12px] font-bold text-white disabled:opacity-40"
+          >
+            저장
+          </button>
+        </div>
+      </section>
 
       {/* 구성원 관리 */}
       <section className="rounded-xl border border-zinc-200 bg-white p-3 dark:border-zinc-800 dark:bg-zinc-950">

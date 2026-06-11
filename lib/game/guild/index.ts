@@ -6,6 +6,7 @@ export * from './badge';
 export * from './create';
 export * from './join';
 export * from './join-requests';
+export * from './notice';
 export * from './leave';
 export * from './disband';
 export * from './donate';
