@@ -2,7 +2,6 @@
 
 import { useEffect, useState } from 'react';
 import Link from 'next/link';
-import { useRouter } from 'next/navigation';
 import { josa } from 'es-hangul';
 
 import { assetUrl } from '@/lib/asset-versions';
@@ -51,17 +50,43 @@ type Fight = {
   atkAvatar: string;
   atkHref: string | null;
   atkColor: string;
+  atkEmblem: string | null;
+  atkGuild: string;
   atkHp: number;
   atkMaxHp: number;
   tgtName: string;
   tgtAvatar: string;
   tgtHref: string | null;
   tgtColor: string;
+  tgtEmblem: string | null;
+  tgtGuild: string;
   dmg: number;
   hpAfter: number;
   tgtMaxHp: number;
   survivors: number;
 };
+
+// 길드 표식 — 문양 있으면 문양, 없으면 색 점(공수 구분).
+function GuildMark({ emblem, color, size = 14 }: { emblem: string | null; color: string; size?: number }) {
+  if (emblem) {
+    return (
+      // eslint-disable-next-line @next/next/no-img-element
+      <img
+        src={emblem}
+        alt=""
+        aria-hidden
+        className="shrink-0 object-contain"
+        style={{ width: size, height: size, imageRendering: 'pixelated' }}
+      />
+    );
+  }
+  return (
+    <span
+      className="shrink-0 rounded-full"
+      style={{ width: Math.round(size * 0.6), height: Math.round(size * 0.6), backgroundColor: color }}
+    />
+  );
+}
 
 // ── 단일 파이터(아바타·HP·공방 라벨) — melee 무대와 동일 톤 ──
 function Fighter({
@@ -71,6 +96,8 @@ function Fighter({
   side,
   role,
   color,
+  emblem,
+  guild,
   shake,
   dmg,
   hp,
@@ -83,6 +110,8 @@ function Fighter({
   side: 'l' | 'r';
   role: 'atk' | 'def';
   color: string;
+  emblem: string | null;
+  guild: string;
   shake: boolean;
   dmg?: number;
   hp: number;
@@ -150,10 +179,14 @@ function Fighter({
         <div className="pointer-events-none absolute -bottom-0.5 left-1/2 h-2 w-24 -translate-x-1/2 rounded-[50%] bg-black/55 blur-[3px]" />
       </div>
       <div className="flex max-w-[150px] items-center gap-1">
-        <span className="h-2 w-2 shrink-0 rounded-full" style={{ backgroundColor: color }} />
         <span className="truncate text-[11px] font-bold text-white drop-shadow">{name}</span>
       </div>
-      <div className="h-1.5 w-24 isolate overflow-hidden rounded-full bg-zinc-800 ring-1 ring-black/40">
+      {/* 길드 정보 — 문양(없으면 색점) + 길드명 */}
+      <div className="flex max-w-[150px] items-center gap-1">
+        <GuildMark emblem={emblem} color={color} size={13} />
+        <span className="truncate text-[10px] font-medium text-zinc-300 drop-shadow">{guild}</span>
+      </div>
+      <div className="mt-0.5 h-1.5 w-24 isolate overflow-hidden rounded-full bg-zinc-800 ring-1 ring-black/40">
         <div className={`h-full ${hpColor(pct)}`} style={{ width: `${pct}%`, transition: 'width 650ms ease-out' }} />
       </div>
     </div>
@@ -195,6 +228,8 @@ function FightStage({
             side="l"
             role="atk"
             color={fight.atkColor}
+            emblem={fight.atkEmblem}
+            guild={fight.atkGuild}
             shake={false}
             hp={fight.atkHp}
             hpBefore={fight.atkHp}
@@ -209,6 +244,8 @@ function FightStage({
             side="r"
             role="def"
             color={fight.tgtColor}
+            emblem={fight.tgtEmblem}
+            guild={fight.tgtGuild}
             shake
             dmg={fight.dmg}
             hp={fight.hpAfter}
@@ -234,7 +271,15 @@ function FightStage({
 }
 
 // ── 무대 기본 뷰(전투 미선택) — 구역·승자·길드 대진 요약 ──
-function IntroView({ view, colorOf }: { view: View; colorOf: (gid: string) => string }) {
+function IntroView({
+  view,
+  colorOf,
+  emblemOf,
+}: {
+  view: View;
+  colorOf: (gid: string) => string;
+  emblemOf: (gid: string) => string | null;
+}) {
   const region = REGION[view.zoneRegion] ?? { label: view.zoneRegion, color: '#71717a' };
   return (
     <div className="relative z-10 flex h-full flex-col px-4 pt-2.5 pb-9">
@@ -243,7 +288,11 @@ function IntroView({ view, colorOf }: { view: View; colorOf: (gid: string) => st
       </p>
       <h1 className="text-base font-extrabold text-white text-pixel-outline">{view.zoneName} 점령전</h1>
       {view.winner ? (
-        <div className="mt-1 inline-flex w-fit items-center gap-1.5 rounded-full bg-black/45 py-0.5 pl-1 pr-2.5 ring-1 ring-amber-400/40 backdrop-blur-sm">
+        <div className="mt-1 inline-flex w-fit items-center gap-1.5 rounded-full bg-black/45 px-2.5 py-0.5 ring-1 ring-amber-400/40 backdrop-blur-sm">
+          {/* 길드문양을 길드이름 오른쪽에 — '점령 {이름} [문양]' */}
+          <span className="text-[11px] font-bold text-white text-pixel-outline">
+            <span className="text-amber-300">점령</span> {view.winner.name}
+          </span>
           {view.winner.emblemUrl ? (
             // eslint-disable-next-line @next/next/no-img-element
             <img
@@ -254,23 +303,20 @@ function IntroView({ view, colorOf }: { view: View; colorOf: (gid: string) => st
               style={{ imageRendering: 'pixelated' }}
             />
           ) : null}
-          <span className="text-[11px] font-bold text-white text-pixel-outline">
-            <span className="text-amber-300">점령</span> {view.winner.name}
-          </span>
         </div>
       ) : (
         <div className="mt-1 inline-flex w-fit rounded-full bg-black/45 px-2.5 py-0.5 text-[11px] font-semibold text-zinc-200 ring-1 ring-white/20">
           무혈 · 승자 없음
         </div>
       )}
-      {/* 길드 대진 — 생존/처치 */}
+      {/* 길드 대진 — 문양 + 생존/처치 */}
       <div className="mt-auto space-y-1">
         {view.guilds.slice(0, 4).map((g) => (
           <div
             key={g.guildId}
             className="flex items-center gap-2 rounded-lg bg-black/45 px-2.5 py-1 text-[10px] backdrop-blur-sm"
           >
-            <span className="h-2 w-2 shrink-0 rounded-full" style={{ backgroundColor: colorOf(g.guildId) }} />
+            <GuildMark emblem={emblemOf(g.guildId)} color={colorOf(g.guildId)} size={14} />
             <span className="min-w-0 flex-1 truncate font-bold text-white text-pixel-outline">{g.guildName}</span>
             {g.isWinner && <span className="shrink-0 font-bold text-amber-300">점령</span>}
             <span className="shrink-0 text-zinc-300">
@@ -286,7 +332,7 @@ function IntroView({ view, colorOf }: { view: View; colorOf: (gid: string) => st
   );
 }
 
-// ── 로그 라운드 카드 — 라운드 + 공격/방어 2행 ──
+// ── 로그 라운드 카드 — 라운드 + 공격/방어 2행(길드 문양·길드명 노출) ──
 function RoundCard({
   round,
   atk,
@@ -295,6 +341,10 @@ function RoundCard({
   hp,
   atkColor,
   tgtColor,
+  atkEmblem,
+  tgtEmblem,
+  atkGuild,
+  tgtGuild,
   atkMine,
   tgtMine,
   killed,
@@ -307,6 +357,10 @@ function RoundCard({
   hp: number;
   atkColor: string;
   tgtColor: string;
+  atkEmblem: string | null;
+  tgtEmblem: string | null;
+  atkGuild: string;
+  tgtGuild: string;
   atkMine: boolean;
   tgtMine: boolean;
   killed: boolean;
@@ -327,21 +381,23 @@ function RoundCard({
         </div>
         <div className="w-px shrink-0 bg-zinc-800/80" />
         <div className="min-w-0 flex-1 space-y-1">
-          <div className="flex items-center gap-2">
-            <span className="h-1.5 w-1.5 shrink-0 rounded-full" style={{ backgroundColor: atkColor }} />
-            <span className="min-w-0 truncate text-[12px]">
+          <div className="flex items-center gap-1.5">
+            <GuildMark emblem={atkEmblem} color={atkColor} size={15} />
+            <span className="min-w-0 flex-1 truncate text-[12px]">
               <span className={`font-bold ${atkMine ? 'text-amber-300' : 'text-white'}`}>{atk}</span>
-              <span className="text-zinc-500">의 공격</span>
+              <span className="text-zinc-500"> · {atkGuild}</span>
+              <span className="text-zinc-500"> 공격</span>
             </span>
             <span className="ml-auto shrink-0 font-mono text-[11px] font-semibold text-red-300">
               -{dmg.toLocaleString()}
             </span>
           </div>
-          <div className="flex items-center gap-2">
-            <span className="h-1.5 w-1.5 shrink-0 rounded-full" style={{ backgroundColor: tgtColor }} />
-            <span className="min-w-0 truncate text-[12px]">
+          <div className="flex items-center gap-1.5">
+            <GuildMark emblem={tgtEmblem} color={tgtColor} size={15} />
+            <span className="min-w-0 flex-1 truncate text-[12px]">
               <span className={`font-bold ${tgtMine ? 'text-amber-300' : 'text-zinc-200'}`}>{tgt}</span>
-              <span className="text-zinc-500">의 방어</span>
+              <span className="text-zinc-500"> · {tgtGuild}</span>
+              <span className="text-zinc-500"> 방어</span>
             </span>
             <span className="ml-auto shrink-0 text-[11px]">
               {killed ? (
@@ -358,7 +414,6 @@ function RoundCard({
 }
 
 export function ConquestBattleView({ view }: { view: View }) {
-  const router = useRouter();
   const { roster, events, myGuildId } = view;
   const [tab, setTab] = useState<'all' | 'guild'>('all');
   const [fight, setFight] = useState<Fight | null>(null);
@@ -376,6 +431,9 @@ export function ConquestBattleView({ view }: { view: View }) {
   })();
   const colorOf = (gid: string) => colorMap.get(gid) ?? '#71717a';
   const hrefOf = (code: string | null) => (code ? `/u/${encodeURIComponent(code)}` : null);
+  // 길드 → 문양 URL(공수 표식).
+  const emblemMap = new Map(view.guilds.map((g) => [g.guildId, g.emblemUrl]));
+  const emblemOf = (gid: string) => emblemMap.get(gid) ?? null;
 
   const maxHp = roster.map((r) => Math.max(1, r.effCp * CONQUEST_HP_MULT));
 
@@ -389,6 +447,10 @@ export function ConquestBattleView({ view }: { view: View }) {
     hp: number;
     atkColor: string;
     tgtColor: string;
+    atkEmblem: string | null;
+    tgtEmblem: string | null;
+    atkGuild: string;
+    tgtGuild: string;
     atkMine: boolean;
     tgtMine: boolean;
     killed: boolean;
@@ -414,6 +476,10 @@ export function ConquestBattleView({ view }: { view: View }) {
       hp: hpAfter,
       atkColor: colorOf(a.guildId),
       tgtColor: colorOf(t.guildId),
+      atkEmblem: emblemOf(a.guildId),
+      tgtEmblem: emblemOf(t.guildId),
+      atkGuild: a.guildName,
+      tgtGuild: t.guildName,
       atkMine: myGuildId != null && a.guildId === myGuildId,
       tgtMine: myGuildId != null && t.guildId === myGuildId,
       killed: hpAfter <= 0,
@@ -423,12 +489,16 @@ export function ConquestBattleView({ view }: { view: View }) {
         atkAvatar: a.avatar || DEFAULT_AVATAR,
         atkHref: hrefOf(a.publicCode),
         atkColor: colorOf(a.guildId),
+        atkEmblem: emblemOf(a.guildId),
+        atkGuild: a.guildName,
         atkHp,
         atkMaxHp: maxHp[ai]!,
         tgtName: t.nickname,
         tgtAvatar: t.avatar || DEFAULT_AVATAR,
         tgtHref: hrefOf(t.publicCode),
         tgtColor: colorOf(t.guildId),
+        tgtEmblem: emblemOf(t.guildId),
+        tgtGuild: t.guildName,
         dmg,
         hpAfter,
         tgtMaxHp: maxHp[ti]!,
@@ -498,16 +568,8 @@ export function ConquestBattleView({ view }: { view: View }) {
             }}
           />
         ) : (
-          <IntroView view={view} colorOf={colorOf} />
+          <IntroView view={view} colorOf={colorOf} emblemOf={emblemOf} />
         )}
-        {/* 뒤로(세계지도) — 항상 노출 */}
-        <button
-          type="button"
-          onClick={() => router.back()}
-          className="absolute left-1.5 top-1.5 z-20 rounded-full bg-black/55 px-2.5 py-0.5 text-[10px] font-bold text-zinc-200 backdrop-blur-sm"
-        >
-          ← 세계지도
-        </button>
       </div>
 
       {/* 필터·컨트롤 — 고정 */}
@@ -579,6 +641,10 @@ export function ConquestBattleView({ view }: { view: View }) {
                 hp={r.hp}
                 atkColor={r.atkColor}
                 tgtColor={r.tgtColor}
+                atkEmblem={r.atkEmblem}
+                tgtEmblem={r.tgtEmblem}
+                atkGuild={r.atkGuild}
+                tgtGuild={r.tgtGuild}
                 atkMine={r.atkMine}
                 tgtMine={r.tgtMine}
                 killed={r.killed}

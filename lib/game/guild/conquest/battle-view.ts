@@ -6,7 +6,7 @@ import { db } from '@/lib/db/client';
 import { withTimeout } from '@/lib/db/with-timeout';
 import { profiles } from '@/lib/db/schema/profiles';
 import { userProfiles } from '@/lib/db/schema/avatar';
-import { guildMembers } from '@/lib/db/schema/guild';
+import { guilds, guildMembers } from '@/lib/db/schema/guild';
 
 import type { ConquestFinale } from './simulate';
 
@@ -42,6 +42,8 @@ export type ConquestFighter = {
 export type ConquestGuildSummary = {
   guildId: string;
   guildName: string;
+  /** 길드 문양 URL — 로그·무대에서 공수 표시(없으면 null). */
+  emblemUrl: string | null;
   memberCount: number;
   survivors: number;
   kills: number;
@@ -153,6 +155,7 @@ export async function buildConquestBattleView(
       g = {
         guildId: r.guildId,
         guildName: r.guildName,
+        emblemUrl: null,
         memberCount: 0,
         survivors: 0,
         kills: 0,
@@ -164,8 +167,23 @@ export async function buildConquestBattleView(
     g.kills += kills[i];
     if (!finalDead[i]) g.survivors++;
   });
+
+  // 길드 문양 — 참전 길드들의 emblemUrl 조회(로그·무대 공수 표시용).
+  const guildIds = [...gmap.keys()].filter((id) => /^\d+$/.test(id)).map((id) => BigInt(id));
+  if (guildIds.length > 0) {
+    const emb = await withTimeout(
+      db.select({ id: guilds.id, emblemUrl: guilds.emblemUrl }).from(guilds).where(inArray(guilds.id, guildIds)),
+      2000,
+      'conquest.guildEmblems',
+    ).catch(() => []);
+    for (const e of emb) {
+      const g = gmap.get(e.id.toString());
+      if (g) g.emblemUrl = e.emblemUrl;
+    }
+  }
+
   // 승자 길드 먼저, 그다음 생존자 수 desc.
-  const guilds = [...gmap.values()].sort(
+  const guildList = [...gmap.values()].sort(
     (a, b) => Number(b.isWinner) - Number(a.isWinner) || b.survivors - a.survivors,
   );
 
@@ -181,7 +199,7 @@ export async function buildConquestBattleView(
     participantCount: roster.length,
     guildCount: gmap.size,
     rounds: events.length,
-    guilds,
+    guilds: guildList,
     roster: fighters,
     events,
   };
