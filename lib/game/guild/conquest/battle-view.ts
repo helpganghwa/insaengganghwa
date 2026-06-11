@@ -6,6 +6,7 @@ import { db } from '@/lib/db/client';
 import { withTimeout } from '@/lib/db/with-timeout';
 import { profiles } from '@/lib/db/schema/profiles';
 import { userProfiles } from '@/lib/db/schema/avatar';
+import { guildMembers } from '@/lib/db/schema/guild';
 
 import type { ConquestFinale } from './simulate';
 
@@ -31,6 +32,8 @@ export type ConquestFighter = {
   effCp: number;
   rank: number;
   avatar: string;
+  /** 불변 공개 코드 — 아바타/이름 클릭 시 /u/<code> 프로필 상세(없으면 null). */
+  publicCode: string | null;
   kills: number;
   survives: number;
   isMe: boolean;
@@ -51,6 +54,8 @@ export type ConquestBattleView = {
   zoneName: string;
   zoneRegion: string;
   winner: { guildId: string; name: string; emblemUrl: string | null } | null;
+  /** 조회 유저의 현재 길드 id('우리 길드' 필터용, 없으면 null). */
+  myGuildId: string | null;
   participantCount: number;
   guildCount: number;
   rounds: number;
@@ -71,14 +76,24 @@ export async function buildConquestBattleView(
   const finale = (row.finale as ConquestFinale) ?? { roster: [], events: [] };
   const { roster, events } = finale;
 
+  // 조회 유저의 현재 길드 — '우리 길드' 필터(내가 직접 출전 안 해도 우리 길드 전투를 본다).
+  const [mg] = await withTimeout(
+    db.select({ gid: guildMembers.guildId }).from(guildMembers).where(eq(guildMembers.userId, userId)).limit(1),
+    2000,
+    'conquest.myGuild',
+  ).catch(() => []);
+  const myGuildId = mg?.gid != null ? mg.gid.toString() : null;
+
   // 로스터 아바타(uuid만 조회) — 유저가 설정한 방향 우선, 없으면 south.
   const rosterIds = roster.map((r) => r.userId).filter((id) => UUID_RE.test(id));
   const avatarOf = new Map<string, string>();
+  const codeOf = new Map<string, string>();
   if (rosterIds.length > 0) {
     const av = await withTimeout(
       db
         .select({
           uid: profiles.id,
+          code: profiles.publicCode,
           rotations: userProfiles.rotations,
           dir: userProfiles.activeDirection,
         })
@@ -92,6 +107,7 @@ export async function buildConquestBattleView(
       const rot = a.rotations as Record<string, string>;
       const url = (a.dir ? rot[a.dir] : undefined) ?? rot.south;
       if (url) avatarOf.set(a.uid, url);
+      if (a.code) codeOf.set(a.uid, a.code);
     }
   }
   const dft = (i: number) =>
@@ -116,6 +132,7 @@ export async function buildConquestBattleView(
     effCp: r.effCp,
     rank: r.rank,
     avatar: avatarOf.get(r.userId) ?? dft(i),
+    publicCode: codeOf.get(r.userId) ?? null,
     kills: kills[i],
     survives: survives[i],
     isMe: r.userId === userId,
@@ -160,6 +177,7 @@ export async function buildConquestBattleView(
     winner: winnerGuildId
       ? { guildId: winnerGuildId, name: row.winnerName ?? '???', emblemUrl: row.winnerEmblemUrl }
       : null,
+    myGuildId,
     participantCount: roster.length,
     guildCount: gmap.size,
     rounds: events.length,
