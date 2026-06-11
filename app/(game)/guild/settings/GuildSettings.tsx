@@ -142,25 +142,28 @@ export function GuildSettings({
     setGenOpen(false);
     setGenPending(true);
     optimisticAdjust(BigInt(-GUILD_EMBLEM_REROLL_COST_DIAMOND));
+    // 생성은 수십초 걸릴 수 있어 긴 요청이 끊길 수 있음 — 응답을 단정적 실패로 보지 않고,
+    // 명시적 에러 코드만 토스트, 그 외(네트워크/지연)는 새로고침으로 실제 상태 반영(서버가
+    // 성공했으면 새 문양·차감이 반영됨). 다이아는 일단 되돌리고 refresh로 실값 재동기화.
+    let r: { status?: string; code?: string } | null = null;
     try {
       const res = await fetch('/api/guild/emblem', {
         method: 'POST',
         headers: { 'content-type': 'application/json' },
         body: JSON.stringify({ selection: emblem }),
       });
-      const r = (await res.json()) as { status: string; code?: string };
-      setGenPending(false);
-      if (r.status !== 'success') {
-        optimisticAdjust(BigInt(GUILD_EMBLEM_REROLL_COST_DIAMOND));
-        return showError(guildErrMsg(r.code ?? 'UNKNOWN'));
-      }
-      showHeaderToast({ title: '문양 생성 완료' });
-      router.refresh();
+      r = (await res.json()) as { status?: string; code?: string };
     } catch {
-      setGenPending(false);
-      optimisticAdjust(BigInt(GUILD_EMBLEM_REROLL_COST_DIAMOND));
-      showError(guildErrMsg('UNKNOWN'));
+      r = null; // 네트워크/파싱 실패 — 서버는 성공했을 수 있음.
     }
+    setGenPending(false);
+    if (r?.status === 'success') {
+      showHeaderToast({ title: '문양 생성 완료' });
+    } else {
+      optimisticAdjust(BigInt(GUILD_EMBLEM_REROLL_COST_DIAMOND)); // 비성공 추정 — 일단 복원(refresh가 실값으로 재동기화)
+      if (r?.status === 'error') showError(guildErrMsg(r.code ?? 'UNKNOWN')); // 명시적 에러만 안내
+    }
+    router.refresh(); // 성공/불명확 모두 실제 상태 반영.
   };
 
   // 생성 버튼 — 1차 탭=3초 컨펌 무장, 2차 탭(3초 내)=실제 생성.

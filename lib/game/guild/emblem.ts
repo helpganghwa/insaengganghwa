@@ -91,7 +91,7 @@ async function generateEmblemPng(prompt: string): Promise<Buffer> {
       }),
     });
     if (res.status === 429) {
-      await new Promise((r) => setTimeout(r, 1500 * 2 ** attempt));
+      await new Promise((r) => setTimeout(r, 700 * 2 ** attempt)); // 백오프 단축(긴 요청 단축)
       lastErr = '429 rate limit';
       continue;
     }
