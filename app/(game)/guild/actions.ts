@@ -37,7 +37,7 @@ import type { GuildTaxDistribution, ConquestRole, GuildJoinPolicy } from '@/lib/
 import type { ConquestFinale } from '@/lib/game/guild/conquest/simulate';
 import {
   isValidEmblemSelection,
-  toneColor,
+  mainColor,
   type EmblemSelection,
 } from '@/lib/game/guild/emblem-vocab';
 
@@ -55,7 +55,7 @@ export async function createGuildAction(name: string, emblem: EmblemSelection) {
   if (!u) return unauth;
   if (!isValidEmblemSelection(emblem)) return { status: 'error', code: 'EMBLEM_INVALID' } as const;
   try {
-    const { guildId } = await createGuild({ userId: u, name, emblemColor: toneColor(emblem.toneId) });
+    const { guildId } = await createGuild({ userId: u, name, emblemColor: mainColor(emblem.mainToneId) });
     // 문양 생성(Pixellab ~수초)은 응답 이후로 미뤄 결성을 즉시 반환(낙관적 UX).
     // best-effort — 실패해도 길드는 유지(폴백 문양·재생성으로 커버). 완료 시 /guild 무효화.
     after(async () => {

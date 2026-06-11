@@ -10,11 +10,12 @@ const PIXFLUX_URL = 'https://api.pixellab.ai/v1/generate-image-pixflux';
 const key = process.env.PIXELLAB_API_KEY;
 if (!key) throw new Error('PIXELLAB_API_KEY missing');
 
-const toneId = 'iron';
+const mainToneId = 'iron';
+const subToneId = 'gold';
 const keywordIds = ['dragon'];
 
 for (const shape of EMBLEM_SHAPES) {
-  const sel = { shapeId: shape.id, toneId, keywordIds };
+  const sel = { shapeId: shape.id, mainToneId, subToneId, keywordIds };
   const prompt = buildEmblemPrompt(sel);
   console.log(`\n[${shape.id}] ${shape.ko} (${shape.en})`);
   console.log(`  prompt: ${prompt}`);

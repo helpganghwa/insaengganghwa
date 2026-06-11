@@ -10,7 +10,7 @@ import { profiles } from '@/lib/db/schema/profiles';
 
 import { GUILD_EMBLEM_REROLL_COST_DIAMOND, MAX_GUILD_EMBLEMS } from './balance';
 import { GuildError } from './errors';
-import { buildEmblemPrompt, toneColor, type EmblemSelection } from './emblem-vocab';
+import { buildEmblemPrompt, mainColor, type EmblemSelection } from './emblem-vocab';
 
 /**
  * 길드 문양 런타임 생성 — GUILD §1.6. pixflux(동기, base64) → Supabase Storage 업로드 →
@@ -143,7 +143,7 @@ async function createEmblemForGuild(
   guildId: bigint,
   selection: EmblemSelection,
 ): Promise<{ emblemId: bigint; emblemUrl: string }> {
-  const color = toneColor(selection.toneId);
+  const color = mainColor(selection.mainToneId);
   const [row] = await db
     .insert(guildEmblems)
     .values({ guildId, emblemUrl: null, emblemColor: color })
