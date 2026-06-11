@@ -83,9 +83,9 @@ function ChronicleText({ text, zoneColor }: { text: string; zoneColor: (name: st
     const type = m[1];
     const name = m[2];
     if (type === 'g') {
-      // 길드 — 색으로만 구분(굵기·스타일 없음). 지역색(빨/주/앰버/초록/하늘/보라)과 겹치지 않는 틸.
+      // 길드 — 색으로만 구분(굵기·스타일 없음). 지역색·유저(핑크)와 겹치지 않는 중성 회청(슬레이트).
       out.push(
-        <span key={key++} className="text-teal-600 dark:text-teal-400">
+        <span key={key++} className="text-slate-600 dark:text-slate-400">
           {name}
         </span>,
       );
