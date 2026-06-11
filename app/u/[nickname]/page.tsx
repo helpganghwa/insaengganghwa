@@ -8,7 +8,6 @@ import { db } from '@/lib/db/client';
 import { withTimeout } from '@/lib/db/with-timeout';
 import { getSessionUserId } from '@/lib/auth/session';
 import { getUserGuildBrief } from '@/lib/game/guild';
-import { GuildBadge } from '@/components/GuildBadge';
 import { profiles } from '@/lib/db/schema/profiles';
 import { userProfiles } from '@/lib/db/schema/avatar';
 import { catalogItems, userEquipment, type Slot } from '@/lib/db/schema/equipment';
@@ -365,17 +364,23 @@ export default async function PublicProfilePage({
           <h1 className="text-xl font-extrabold tracking-tight text-white drop-shadow-[0_2px_3px_rgba(0,0,0,0.7)]">
             {data.nickname}
           </h1>
-          <GuildBadge
-            emblemUrl={data.guild?.emblemUrl ?? null}
-            name={data.guild?.name ?? null}
-            size={15}
-            pinEmblemRight
-            className="mt-0.5 max-w-[80%] text-[11px] font-semibold text-white/80 drop-shadow-[0_1px_2px_rgba(0,0,0,0.8)]"
-          />
-          {data.guild?.executorZone && (
-            <span className="mt-0.5 text-[11px] font-semibold text-indigo-300 drop-shadow-[0_1px_2px_rgba(0,0,0,0.85)]">
-              {data.guild.executorZone} 집행관
-            </span>
+          {data.guild && (
+            <div className="mt-0.5 flex max-w-[88%] items-center justify-center gap-1 text-[11px] font-semibold drop-shadow-[0_1px_2px_rgba(0,0,0,0.8)]">
+              {data.guild.executorZone && (
+                <span className="shrink-0 text-indigo-300">{data.guild.executorZone} 집행관 ·</span>
+              )}
+              {data.guild.name && <span className="truncate text-white/80">{data.guild.name}</span>}
+              {data.guild.emblemUrl && (
+                // eslint-disable-next-line @next/next/no-img-element
+                <img
+                  src={data.guild.emblemUrl}
+                  alt=""
+                  aria-hidden
+                  className="shrink-0 object-contain"
+                  style={{ width: 15, height: 15, imageRendering: 'pixelated' }}
+                />
+              )}
+            </div>
           )}
         </div>
       </section>
