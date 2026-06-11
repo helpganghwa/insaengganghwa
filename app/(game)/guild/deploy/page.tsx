@@ -1,7 +1,13 @@
 import { redirect } from 'next/navigation';
 
 import { getSessionUserId } from '@/lib/auth/session';
-import { getMyMembership, getDeployBoard, getAttackableZoneIds } from '@/lib/game/guild';
+import { assetUrl } from '@/lib/asset-versions';
+import {
+  getMyMembership,
+  getDeployBoard,
+  getAttackableZoneIds,
+  getZoneAdjacency,
+} from '@/lib/game/guild';
 import { kstDateString } from '@/lib/kst';
 
 import { DeployBoard } from './DeployBoard';
@@ -17,9 +23,10 @@ export default async function DeployPage() {
   if (!membership) redirect('/guild');
 
   const isOfficer = membership.role === 'leader' || membership.role === 'vice';
-  const [board, attackable] = await Promise.all([
+  const [board, attackable, adjacency] = await Promise.all([
     getDeployBoard(membership.guildId),
     getAttackableZoneIds(membership.guildId),
+    getZoneAdjacency(),
   ]);
   const battleDayLabel = board.battleKstDay === kstDateString() ? '오늘 11:00' : '내일 11:00';
 
@@ -28,7 +35,9 @@ export default async function DeployPage() {
       isOfficer={isOfficer}
       myGuildId={membership.guildId.toString()}
       battleDayLabel={battleDayLabel}
+      mapSrc={assetUrl('/sprites/guild/worldmap.png')}
       attackableZoneIds={attackable}
+      adjacency={adjacency}
       members={board.members.map((m) => ({
         userId: m.uid,
         nickname: m.nickname,
@@ -36,13 +45,17 @@ export default async function DeployPage() {
         depZoneId: m.dep_zone_id,
         depZoneName: m.dep_zone_name,
         depRole: m.dep_role,
+        execZoneId: m.exec_zone_id,
         execZoneName: m.exec_zone_name,
       }))}
       zones={board.zones.map((z) => ({
         id: z.id,
         name: z.name,
         region: z.region,
+        mapX: z.mapX,
+        mapY: z.mapY,
         ownerGuildId: z.ownerGuildId?.toString() ?? null,
+        ownerEmblemUrl: z.ownerEmblemUrl,
       }))}
     />
   );

@@ -227,9 +227,13 @@ export async function getDeployBoard(guildId: bigint) {
       id: zones.id,
       name: zones.name,
       region: zones.region,
+      mapX: zones.mapX,
+      mapY: zones.mapY,
       ownerGuildId: zones.ownerGuildId,
+      ownerEmblemUrl: guilds.emblemUrl,
     })
     .from(zones)
+    .leftJoin(guilds, eq(guilds.id, zones.ownerGuildId))
     .orderBy(zones.id);
 
   return { battleKstDay, members, zones: zoneRows };
