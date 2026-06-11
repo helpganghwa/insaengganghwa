@@ -10,7 +10,7 @@ import { GUILD_EXECUTOR_TAX_CUT, TAX_COLLECT_COOLDOWN_MIN } from './balance';
 import { GuildError } from './errors';
 
 /**
- * 집행관 세금 수금 — GUILD §5.5. 그 구역 집행관만, 1시간 쿨다운. 구역 누적 💎 →
+ * 집행관 세금 수금 — GUILD §5.5. 그 구역 집행관만, 3일(72h) 쿨다운. 구역 누적 💎 →
  * 집행관 10% + 소유 길드 풀 90%. 단일 트랜잭션, 구역 행 for update.
  */
 export function collectZoneTax(input: {

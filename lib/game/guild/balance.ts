@@ -87,7 +87,7 @@ export function taxPointsForEnhanceSuccess(reachedLevel: number): number {
 export const TAX_POINTS_PER_DIAMOND = 100;
 /** 집행관 수금 시 집행관 몫 비율(10%). 나머지 90%는 길드 풀로. */
 export const GUILD_EXECUTOR_TAX_CUT = 0.1;
-/** 집행관 세금 수금 쿨다운(분). */
-export const TAX_COLLECT_COOLDOWN_MIN = 60;
+/** 집행관 세금 수금 쿨다운(분) — 3일(72시간). */
+export const TAX_COLLECT_COOLDOWN_MIN = 72 * 60;
 /** 분배 방식. */
 export type GuildTaxDistribution = 'equal' | 'target';
