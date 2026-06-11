@@ -365,20 +365,18 @@ export default async function PublicProfilePage({
           <h1 className="text-xl font-extrabold tracking-tight text-white drop-shadow-[0_2px_3px_rgba(0,0,0,0.7)]">
             {data.nickname}
           </h1>
-          <div className="mt-0.5 flex max-w-[92%] items-center justify-center gap-1.5">
-            <GuildBadge
-              emblemUrl={data.guild?.emblemUrl ?? null}
-              name={data.guild?.name ?? null}
-              size={15}
-              pinEmblemRight
-              className="min-w-0 text-[11px] font-semibold text-white/80 drop-shadow-[0_1px_2px_rgba(0,0,0,0.8)]"
-            />
-            {data.guild?.executorZone && (
-              <span className="shrink-0 text-[11px] font-semibold text-indigo-400 drop-shadow-[0_1px_2px_rgba(0,0,0,0.85)]">
-                {data.guild.executorZone} 집행관
-              </span>
-            )}
-          </div>
+          <GuildBadge
+            emblemUrl={data.guild?.emblemUrl ?? null}
+            name={data.guild?.name ?? null}
+            size={15}
+            pinEmblemRight
+            className="mt-0.5 max-w-[80%] text-[11px] font-semibold text-white/80 drop-shadow-[0_1px_2px_rgba(0,0,0,0.8)]"
+          />
+          {data.guild?.executorZone && (
+            <span className="mt-0.5 text-[11px] font-semibold text-indigo-300 drop-shadow-[0_1px_2px_rgba(0,0,0,0.85)]">
+              {data.guild.executorZone} 집행관
+            </span>
+          )}
         </div>
       </section>
 
