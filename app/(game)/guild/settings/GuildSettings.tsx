@@ -337,9 +337,9 @@ export function GuildSettings({
             key={k}
             type="button"
             onClick={() => setTab(k)}
-            className={`relative flex-1 rounded-lg py-1.5 text-[12px] font-bold transition ${
+            className={`relative flex-1 rounded-lg py-2 text-[13px] font-bold transition ${
               tab === k
-                ? 'bg-white text-zinc-900 shadow-sm dark:bg-zinc-800 dark:text-zinc-50'
+                ? 'bg-white text-zinc-900 shadow-sm dark:bg-zinc-950 dark:text-zinc-50'
                 : 'text-zinc-500'
             }`}
           >
@@ -638,7 +638,7 @@ export function GuildSettings({
           type="button"
           onClick={disband}
           disabled={pending}
-          className="w-full rounded-lg border border-red-300 py-2.5 text-sm font-semibold text-red-600 disabled:opacity-50 dark:border-red-900/60 dark:text-red-400"
+          className="w-full rounded-lg py-2.5 text-sm font-semibold text-red-600 disabled:opacity-50 dark:text-red-400"
         >
           길드 해산
         </button>
