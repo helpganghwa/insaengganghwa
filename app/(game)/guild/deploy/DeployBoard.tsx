@@ -341,10 +341,6 @@ export function DeployBoard({
                 총 전투력 <span className="font-mono font-bold text-zinc-700 dark:text-zinc-200">{fmt(totalPower)}</span>
               </p>
 
-              {isDefend && (
-                <p className="mt-1 text-[9px] text-zinc-400">수비 배치 후 ‘집행관’ 버튼으로 지정(자동 수비·×3).</p>
-              )}
-
               {execHere.length === 0 && deployedHere.length === 0 ? (
                 <p className="mt-2 text-[11px] text-zinc-400">배치된 길드원이 없습니다.</p>
               ) : (
