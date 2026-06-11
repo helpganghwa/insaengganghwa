@@ -284,6 +284,10 @@ export function WorldMapView({
                 오늘은 기록된 역사가 없습니다. [전체]에서 지난 기록을 확인하세요.
               </p>
             )
+          ) : chronicle!.list.length === 0 ? (
+            <p className="text-[13px] leading-relaxed text-zinc-400">
+              아직 대륙의 정세를 뒤흔든 큰 사건은 없었습니다. 판도가 바뀌는 날, 이곳에 기록됩니다.
+            </p>
           ) : (
             <ul className="flex flex-col divide-y divide-zinc-100 dark:divide-zinc-900">
               {chronicle!.list.map((e) => (

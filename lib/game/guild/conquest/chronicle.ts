@@ -131,10 +131,10 @@ export async function aggregateConquestDay(kstDay: string): Promise<ConquestDayS
   };
 }
 
-const SYSTEM_PROMPT = `너는 대륙의 정복 전쟁을 기록하는 사관(史官)이다. 길드들이 구역을 두고 다투는 역사를 담담하게 적는다.
+const SYSTEM_PROMPT = `너는 대륙의 정복 전쟁을 듣는 이에게 들려주는 이야기꾼이다. 그날 길드들이 구역을 두고 벌인 일을 말하듯이 풀어 전한다.
 
 규칙:
-- 한국어. 사료를 적듯 담담하고 절제된 역사 기록 톤. 과장·감탄·미사여구·영웅 서사시 톤 금지.
+- 한국어. 듣는 사람에게 그날의 전말을 차근차근 들려주듯 자연스러운 구어체. 다만 과장·감탄 남발·영웅 서사시·미사여구 도배는 금지(담담하되 말하듯).
 - 이름은 종류별 마커로 감싼다(강조용). 마커 안에는 이름 토큰만 넣고, 조사·'전역'·'일대' 같은 수식어는 마커 밖에 둔다.
   마커는 여는 중괄호 1개 + 닫는 중괄호 1개로 끝낸다(겹쳐 쓰지 말 것: {z|왕성}} 금지, {z|왕성} 만):
   - 길드 이름 → {g|이름}
@@ -146,15 +146,32 @@ const SYSTEM_PROMPT = `너는 대륙의 정복 전쟁을 기록하는 사관(史
 - 주어진 '그날 사건'만 근거로 쓴다. 없는 사실을 지어내지 않는다.
 - **점령(captures)은 각 구역의 winner(점령 길드)를 그대로 따른다. 서로 다른 길드가 각자 다른 구역을 점령했으면 길드별로 구분해서 쓴다 — 여러 길드의 점령을 한 길드가 모두 한 것처럼 절대 합치지 않는다.** (예: 한 길드가 두 구역, 다른 길드가 한 구역을 점령했으면 둘 다 기록.)
 - 방어(defenses)는 '점령'이 아니다(이미 소유한 구역을 지켜낸 것). 점령 수에 포함하지 말고, 방어는 방어로만 서술한다.
-- 점령전 결과(누가 어느 구역을 점령했는지·누가 막아냈는지)와 개인 활약(feats)을 엮어 그날 전투를 실제로 본 듯 구체적으로 서술하되, 톤은 담담하게.
 - '대륙 지배', '천하', '제패' 같은 과장된 총평·결론 금지. 그날 일어난 사실만 적는다.
 - 반드시 JSON만 출력: {"today": "...", "headline": "..."}.
-  - today: 그날의 역사를 풀어 쓴 기록. 2~3개 문단으로 나누고 문단 사이는 빈 줄(\\n\\n)로 구분(가독성). 각 문단 3~5문장.
-  - headline: 그날을 한 줄로 압축한 핵심 사건(25자 내외, 마커 포함). 점령 길드가 여럿이면 가장 많이 점령한 쪽 위주로 쓰되 다른 길드의 점령도 가능하면 한 줄에 담는다. 예: "{g|천둥길드}가 {z|왕성} 외 2곳 점령".`;
+  - today: 그날의 이야기를 정확히 4개 문단으로 나눠 쓴다. 문단 사이는 빈 줄(\\n\\n)로 구분. 각 문단은 2~4문장, 말하듯이. 문단마다 '주요사건:' 같은 라벨을 붙이지 말고 내용만 자연스럽게 쓴다. 네 문단의 순서와 역할은 고정:
+    1) 주요 사건 — 그날 어떤 길드가 어느 구역을 노리고 부딪혔는지, 전투의 시작과 흐름.
+    2) 결과 — 누가 어느 구역을 점령했고 누가 막아냈는지(점령/방어 구분).
+    3) 평가 — 개인 활약(feats)·전투가 어떻게 갈렸는지·승패를 가른 지점.
+    4) 정세 — 그날 이후 대륙의 형세(영토 순위·기세). 과장 없이 사실만.
+  - headline: 그날을 한 줄로 압축한 핵심 사건(25자 내외, 마커 포함, 말하듯이). 점령 길드가 여럿이면 가장 많이 점령한 쪽 위주로 쓰되 다른 길드의 점령도 가능하면 담는다. 예: "{g|천둥길드}가 {z|왕성} 등 세 곳을 휩쓸었다". 정세가 크게 바뀐 날이 아니면 빈 문자열("")로 둔다.`;
 
-/** 그날 사건이 '큰 사건'인지 — 점령(영토 변동) 또는 주목할 개인 활약이 있으면 기록 대상. */
+/** 그날 사건이 '큰 사건'인지 — 점령(영토 변동) 또는 주목할 개인 활약이 있으면 기록 대상('오늘' 스토리). */
 function isNotable(s: ConquestDaySummary): boolean {
   return s.captures.length > 0 || s.feats.length > 0;
+}
+
+/**
+ * '전체'(헤드라인) 기록 대상 — 대륙의 정세가 크게 바뀌거나 특별한 기록이 있는 날만.
+ *  · 길드 간 영토 탈취(from!=null: 한 길드가 다른 길드 구역을 빼앗음 = 전선 이동)
+ *  · 하루 2곳 이상 점령(대규모 변동)
+ *  · 특별한 개인 활약(단일 전투 다수 처치/수비 — 임계 5회 이상)
+ *  단발 중립 점령·소소한 방어만 있는 날은 '오늘'엔 남되 '전체' 연표엔 올리지 않는다.
+ */
+function isBigChange(s: ConquestDaySummary): boolean {
+  const takenFromGuild = s.captures.some((c) => c.from != null);
+  const multiCapture = s.captures.length >= 2;
+  const specialFeat = s.feats.some((f) => f.count >= 5);
+  return takenFromGuild || multiCapture || specialFeat;
 }
 
 /**
@@ -190,9 +207,10 @@ export async function generateAndStoreChronicle(
     `[그날 점령전 정리 — 이 귀속을 그대로 따를 것]\n` +
     `■ 신규 점령(길드별):\n${capLines}\n■ 방어(점령 아님):\n${defLines}\n■ 개인 활약:\n${featLines}`;
 
+  const bigChange = isBigChange(summary);
   const res = await client().messages.create({
     model: MODEL_ID,
-    max_tokens: 900,
+    max_tokens: 1100,
     system: [{ type: 'text', text: SYSTEM_PROMPT, cache_control: { type: 'ephemeral' } }],
     messages: [
       {
@@ -200,6 +218,10 @@ export async function generateAndStoreChronicle(
         content:
           `그날(${kstDay}) 점령전.\n\n${digest}\n\n` +
           `위 '신규 점령(길드별)'을 정확히 따라라 — 한 길드의 점령을 다른 길드로 옮기거나 여러 길드 점령을 한 길드로 합치지 말 것. 방어는 점령으로 세지 말 것.\n` +
+          `today는 정확히 4문단(주요사건→결과→평가→정세), 각 문단 라벨 없이 말하듯이.\n` +
+          (bigChange
+            ? `오늘은 정세가 크게 바뀐 날 — headline에 핵심 사건 한 줄을 쓴다.\n`
+            : `오늘은 정세가 크게 바뀐 날이 아님 — headline은 반드시 빈 문자열("")로 둔다.\n`) +
           `마커: 길드={g|}, 인물={u|}, 개별 구역(zone)={z|}. 지역은 마커 없이.\n\n` +
           `위 규칙대로 JSON({today, headline})만 출력하라.`,
       },
@@ -213,8 +235,10 @@ export async function generateAndStoreChronicle(
   // 마커 닫는 중괄호 겹침({g|신화}}) 정규화 — 마커 뒤 여분 } 제거(저장 깔끔).
   const fixBraces = (s: string) => s.replace(/(\{[guz]\|[^}]+)\}{2,}/g, '$1}');
   const today = fixBraces((parsed.today ?? '').trim());
-  const headline = fixBraces((parsed.headline ?? '').trim());
-  if (!today || !headline) throw new Error('CHRONICLE_EMPTY');
+  // 헤드라인('전체' 연표)은 정세가 크게 바뀐 날만 — 아니면 빈 문자열(연표 미노출).
+  const headline = bigChange ? fixBraces((parsed.headline ?? '').trim()) : '';
+  if (!today) throw new Error('CHRONICLE_EMPTY');
+  if (bigChange && !headline) throw new Error('CHRONICLE_EMPTY');
 
   await db
     .insert(worldChronicle)
@@ -243,6 +267,9 @@ export async function getChronicle(): Promise<ChronicleData> {
     .limit(120);
   return {
     today: rows[0]?.todayText ?? null,
-    list: rows.map((r) => ({ kstDay: String(r.kstDay), headline: r.headline })),
+    // '전체' 연표 — 헤드라인이 있는 날(정세가 크게 바뀐 날)만 노출.
+    list: rows
+      .filter((r) => r.headline && r.headline.trim().length > 0)
+      .map((r) => ({ kstDay: String(r.kstDay), headline: r.headline })),
   };
 }
