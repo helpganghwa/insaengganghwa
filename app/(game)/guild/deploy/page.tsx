@@ -8,8 +8,6 @@ import {
   getAttackableZoneIds,
   getZoneAdjacency,
 } from '@/lib/game/guild';
-import { kstDateString } from '@/lib/kst';
-
 import { DeployBoard } from './DeployBoard';
 
 export const dynamic = 'force-dynamic';
@@ -28,13 +26,11 @@ export default async function DeployPage() {
     getAttackableZoneIds(membership.guildId),
     getZoneAdjacency(),
   ]);
-  const battleDayLabel = board.battleKstDay === kstDateString() ? '오늘 11:00' : '내일 11:00';
 
   return (
     <DeployBoard
       isOfficer={isOfficer}
       myGuildId={membership.guildId.toString()}
-      battleDayLabel={battleDayLabel}
       mapSrc={assetUrl('/sprites/guild/worldmap.png')}
       attackableZoneIds={attackable}
       adjacency={adjacency}
