@@ -237,7 +237,7 @@ export function WorldMapView({
               selectedId != null && (e.a === selectedId || e.b === selectedId);
             return (
               <>
-                {/* 1) 어두운 외곽 — 가독성 확보 */}
+                {/* 1) 어두운 외곽 — 가독성(중간 강도) */}
                 {edges.map((e) => (
                   <line
                     key={`h${e.a}-${e.b}`}
@@ -246,12 +246,12 @@ export function WorldMapView({
                     x2={e.x2}
                     y2={e.y2}
                     stroke="#000000"
-                    strokeOpacity={0.5}
-                    strokeWidth={isSel(e) ? 1.5 : 1.1}
+                    strokeOpacity={0.32}
+                    strokeWidth={isSel(e) ? 1.2 : 0.85}
                     strokeLinecap="round"
                   />
                 ))}
-                {/* 2) 본선 — 비선택(따뜻한 앰버) */}
+                {/* 2) 본선 — 비선택(따뜻한 앰버, 중간 강도) */}
                 {edges
                   .filter((e) => !isSel(e))
                   .map((e) => (
@@ -262,8 +262,8 @@ export function WorldMapView({
                       x2={e.x2}
                       y2={e.y2}
                       stroke="#fcd34d"
-                      strokeOpacity={0.75}
-                      strokeWidth={0.55}
+                      strokeOpacity={0.5}
+                      strokeWidth={0.5}
                       strokeLinecap="round"
                     />
                   ))}
@@ -278,8 +278,8 @@ export function WorldMapView({
                       x2={e.x2}
                       y2={e.y2}
                       stroke="#fde047"
-                      strokeOpacity={1}
-                      strokeWidth={1}
+                      strokeOpacity={0.92}
+                      strokeWidth={0.85}
                       strokeLinecap="round"
                     />
                   ))}

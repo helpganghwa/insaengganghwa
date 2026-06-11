@@ -194,9 +194,10 @@
 **B. 영토 / 구역**
 - `zones`(구역): id, region(`volcano|temple|swamp|orc|kingdom|angel`), name, map_x, map_y(오버레이 좌표), owner_guild_id(nullable=중립), executor_user_id(nullable, 집행관 상시 지정), captured_at, tax_points(포인트 누적기, 100당 →💎), tax_diamond(미수금 누적 💎), last_tax_collected_at(1h 쿨다운)
   - 집행관(executor_user_id)는 **상시 필드**(전투 외에도 세금 수집·자동 방어). **nullable=공석 허용**(점령 직후 공석, 길드장/부길드장이 지정).
-- `zone_adjacency`(인접 그래프): zone_a, zone_b(무방향 간선, 정규형 `a<b`). 좌표 기반 근접 그래프(대칭 kNN + 연결성 보정)로 author.
+- `zone_adjacency`(인접 그래프): zone_a, zone_b(무방향 간선, 정규형 `a<b`). 좌표 기반 **전략적 희소 평면 그래프**(RNG=상대 이웃 그래프 — 평면·연결·희소, 불필요한 삼각 메시 없이 길목/전략성). 교차 0.
+  - **성벽 구역**: 왕성은 성벽으로 둘러싸여 **성문으로만 진입**(왕성–성문 단일 간선). 수도 점령은 성문 통제가 선결.
   - **인접 공격 규칙의 근거**(§5.5): 공격 대상은 길드 소유 구역에 인접해야 함(영토 0개 길드는 예외 — 첫 상륙 자유). 배치 검증(`deployToZone`/`deployMember`)·배치 UI 필터(`getAttackableZoneIds`)가 동일 그래프 사용.
-  - **세계지도 연결선**: 간선을 지도에 길(은은한 선)로 상시 표시, 선택 구역의 인접 길은 강조.
+  - **세계지도 연결선**: 간선을 지도에 길(은은한 앰버 선 + 어두운 외곽)로 상시 표시, 선택 구역의 인접 길은 강조.
 
 **C. 거주 / 세금**
 - 거주(**구역 단위 확정**): `profiles.residence_zone_id`(유저당 1구역, 최초 랜덤, 이동 자유). 강화 성공 시 `zones[거주].tax_points += 도달레벨`, 100pt마다 `tax_diamond +1`(강화 resolve 훅).
