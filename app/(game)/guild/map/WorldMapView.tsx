@@ -90,12 +90,12 @@ function ChronicleText({ text, zoneColor }: { text: string; zoneColor: (name: st
         </span>,
       );
     } else if (type === 'u') {
-      // 인물 — 지역색과 겹치지 않는 핑크 + 밑줄 + 클릭 시 프로필 상세(/u/[nickname]). 굵기 없음.
+      // 인물 — 차분한 웜 그레이(스톤) + 밑줄 + 클릭 시 프로필 상세(/u/[nickname]). 길드(쿨 슬레이트)와 톤 구분.
       out.push(
         <Link
           key={key++}
           href={`/u/${encodeURIComponent(name)}`}
-          className="text-pink-600 underline decoration-pink-400/50 underline-offset-2 dark:text-pink-400"
+          className="text-stone-500 underline decoration-stone-400/60 underline-offset-2 dark:text-stone-400"
         >
           {name}
         </Link>,
