@@ -225,28 +225,67 @@ export function WorldMapView({
           className="absolute inset-0 h-full w-full object-cover"
           style={{ imageRendering: 'pixelated' }}
         />
-        {/* 길(인접 연결선) — 좌표(0~100%)를 viewBox로 직접 매핑. 노드 아래, 클릭 통과. */}
+        {/* 길(인접 연결선) — 좌표(0~100%)를 viewBox로 직접 매핑. 노드 아래, 클릭 통과.
+            어두운 외곽선 + 따뜻한 앰버 본선(밝은·어두운 지형 모두에서 또렷). 선택 구역의 길은 강조. */}
         <svg
           viewBox="0 0 100 100"
           preserveAspectRatio="none"
           className="pointer-events-none absolute inset-0 h-full w-full"
         >
-          {edges.map((e) => {
-            const sel = selectedId != null && (e.a === selectedId || e.b === selectedId);
+          {(() => {
+            const isSel = (e: { a: number; b: number }) =>
+              selectedId != null && (e.a === selectedId || e.b === selectedId);
             return (
-              <line
-                key={`${e.a}-${e.b}`}
-                x1={e.x1}
-                y1={e.y1}
-                x2={e.x2}
-                y2={e.y2}
-                stroke={sel ? '#fcd34d' : '#ffffff'}
-                strokeOpacity={sel ? 0.85 : 0.16}
-                strokeWidth={sel ? 0.7 : 0.4}
-                strokeLinecap="round"
-              />
+              <>
+                {/* 1) 어두운 외곽 — 가독성 확보 */}
+                {edges.map((e) => (
+                  <line
+                    key={`h${e.a}-${e.b}`}
+                    x1={e.x1}
+                    y1={e.y1}
+                    x2={e.x2}
+                    y2={e.y2}
+                    stroke="#000000"
+                    strokeOpacity={0.5}
+                    strokeWidth={isSel(e) ? 1.5 : 1.1}
+                    strokeLinecap="round"
+                  />
+                ))}
+                {/* 2) 본선 — 비선택(따뜻한 앰버) */}
+                {edges
+                  .filter((e) => !isSel(e))
+                  .map((e) => (
+                    <line
+                      key={`m${e.a}-${e.b}`}
+                      x1={e.x1}
+                      y1={e.y1}
+                      x2={e.x2}
+                      y2={e.y2}
+                      stroke="#fcd34d"
+                      strokeOpacity={0.75}
+                      strokeWidth={0.55}
+                      strokeLinecap="round"
+                    />
+                  ))}
+                {/* 3) 선택 구역 길 — 강조(맨 위) */}
+                {edges
+                  .filter(isSel)
+                  .map((e) => (
+                    <line
+                      key={`s${e.a}-${e.b}`}
+                      x1={e.x1}
+                      y1={e.y1}
+                      x2={e.x2}
+                      y2={e.y2}
+                      stroke="#fde047"
+                      strokeOpacity={1}
+                      strokeWidth={1}
+                      strokeLinecap="round"
+                    />
+                  ))}
+              </>
             );
-          })}
+          })()}
         </svg>
         {/* 지역 이름 오버레이 토글 — 텍스트 없이 스위치만(우하단). */}
         <span className="absolute bottom-2 right-2 z-30 inline-flex rounded-full bg-black/45 p-1 backdrop-blur-sm">
