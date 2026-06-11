@@ -5,7 +5,11 @@ import { useRouter } from 'next/navigation';
 
 import { useResourceToast } from '@/components/ResourceToast';
 import { useDiamond } from '@/components/DiamondContext';
-import { GUILD_CREATE_COST_DIAMOND, GUILD_NAME_MAX_LEN } from '@/lib/game/guild/balance';
+import {
+  GUILD_CREATE_COST_DIAMOND,
+  GUILD_NAME_MAX_LEN,
+  GUILD_NAME_MIN_LEN,
+} from '@/lib/game/guild/balance';
 import type { EmblemSelection } from '@/lib/game/guild/emblem-vocab';
 
 import { createGuildAction } from '../actions';
@@ -69,7 +73,9 @@ export function CreateGuildForm() {
       <section className="rounded-xl border border-zinc-200 bg-white p-4 dark:border-zinc-800 dark:bg-zinc-950">
         <div className="flex items-center gap-1.5">
           <span className="text-sm font-bold">길드 이름</span>
-          <span className="text-[10px] text-zinc-400">2~10자 · 변경 불가</span>
+          <span className="text-[10px] text-zinc-400">
+            {GUILD_NAME_MIN_LEN}~{GUILD_NAME_MAX_LEN}자 · 변경 불가
+          </span>
         </div>
         <input
           value={name}

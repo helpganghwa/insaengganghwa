@@ -11,7 +11,7 @@ export const GUILD_EMBLEM_REROLL_COST_DIAMOND = 5_000;
 /** 길드당 보관 가능한 문양 최대 수(최소 1). 아바타 다중 프로필 패턴. */
 export const MAX_GUILD_EMBLEMS = 3;
 export const GUILD_NAME_MIN_LEN = 2;
-export const GUILD_NAME_MAX_LEN = 10;
+export const GUILD_NAME_MAX_LEN = 8;
 export const GUILD_NOTICE_MAX_LEN = 60;
 /** 가입 방식 — open(자유: 즉시 가입) | approval(승인: 길드장/부길드장 승인). */
 export type GuildJoinPolicy = 'open' | 'approval';
