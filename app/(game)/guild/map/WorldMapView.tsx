@@ -104,9 +104,18 @@ function ChronicleText({ text, zoneColor }: { text: string; zoneColor: (name: st
         </Link>,
       );
     } else {
+      // 구역 — 지도 노드처럼 지역색 배경 칩(옅은 채움 + 얇은 테두리). 본문보다 1px 작게(13→12px).
       const c = zoneColor(name);
       out.push(
-        <strong key={key++} className="font-semibold" style={c ? { color: c } : undefined}>
+        <strong
+          key={key++}
+          className="mx-px rounded-[3px] px-1 align-baseline text-[12px] font-semibold"
+          style={
+            c
+              ? { color: c, backgroundColor: `${c}1f`, boxShadow: `inset 0 0 0 1px ${c}55` }
+              : undefined
+          }
+        >
           {name}
         </strong>,
       );
