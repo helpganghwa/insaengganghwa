@@ -44,36 +44,48 @@ export const EMBLEM_TONES: readonly EmblemTone[] = [
   { id: 'silver', ko: '백은', en: 'silver white', color: '#94a3b8' },
 ] as const;
 
-/** ③ 키워드 카테고리 — 카테고리별 0~1 선택, 합계 ≥1. */
+/** ③ 키워드 그룹 — 그룹별 0~1 선택, 합계 ≥1. */
 export const EMBLEM_KEYWORD_CATEGORIES: readonly { id: string; ko: string }[] = [
-  { id: 'beast', ko: '생물' },
-  { id: 'arms', ko: '무기·장비' },
-  { id: 'symbol', ko: '상징' },
-  { id: 'nature', ko: '자연' },
+  { id: 'kw1', ko: '키워드 1' },
+  { id: 'kw2', ko: '키워드 2' },
+  { id: 'kw3', ko: '키워드 3' },
 ] as const;
 
-/** ③ 키워드(20) — cat으로 카테고리 분류. */
+/** ③ 키워드(30) — 그룹(cat)별 10개. 키워드1=생물 / 키워드2=무기·장비 / 키워드3=상징·자연. */
 export const EMBLEM_KEYWORDS: readonly EmblemKeyword[] = [
-  { id: 'dragon', ko: '용', en: 'a dragon', cat: 'beast' },
-  { id: 'wolf', ko: '늑대', en: 'a wolf', cat: 'beast' },
-  { id: 'serpent', ko: '뱀', en: 'a serpent', cat: 'beast' },
-  { id: 'raven', ko: '까마귀', en: 'a raven', cat: 'beast' },
-  { id: 'griffin', ko: '그리핀', en: 'a griffin', cat: 'beast' },
-  { id: 'lion', ko: '사자', en: 'a lion', cat: 'beast' },
-  { id: 'slime', ko: '슬라임', en: 'a slime', cat: 'beast' },
-  { id: 'swords', ko: '교차검', en: 'crossed swords', cat: 'arms' },
-  { id: 'axe', ko: '도끼', en: 'a battle axe', cat: 'arms' },
-  { id: 'helmet', ko: '투구', en: 'a knight helmet', cat: 'arms' },
-  { id: 'crown', ko: '왕관', en: 'a crown', cat: 'arms' },
-  { id: 'skull', ko: '해골', en: 'a skull', cat: 'symbol' },
-  { id: 'eye', ko: '눈', en: 'an eye', cat: 'symbol' },
-  { id: 'crystal', ko: '크리스탈', en: 'a crystal', cat: 'symbol' },
-  { id: 'starmoon', ko: '별·달', en: 'a star and moon', cat: 'symbol' },
-  { id: 'flame', ko: '불꽃', en: 'a flame', cat: 'nature' },
-  { id: 'volcano', ko: '화산', en: 'a volcano', cat: 'nature' },
-  { id: 'wings', ko: '천사 날개', en: 'angel wings', cat: 'nature' },
-  { id: 'totem', ko: '오크 토템', en: 'an orc totem', cat: 'nature' },
-  { id: 'temple', ko: '신전', en: 'a temple', cat: 'nature' },
+  // 키워드 1 — 생물
+  { id: 'dragon', ko: '용', en: 'a dragon', cat: 'kw1' },
+  { id: 'wolf', ko: '늑대', en: 'a wolf', cat: 'kw1' },
+  { id: 'serpent', ko: '뱀', en: 'a serpent', cat: 'kw1' },
+  { id: 'raven', ko: '까마귀', en: 'a raven', cat: 'kw1' },
+  { id: 'griffin', ko: '그리핀', en: 'a griffin', cat: 'kw1' },
+  { id: 'lion', ko: '사자', en: 'a lion', cat: 'kw1' },
+  { id: 'phoenix', ko: '불사조', en: 'a phoenix', cat: 'kw1' },
+  { id: 'eagle', ko: '독수리', en: 'an eagle', cat: 'kw1' },
+  { id: 'bear', ko: '곰', en: 'a bear', cat: 'kw1' },
+  { id: 'slime', ko: '슬라임', en: 'a slime', cat: 'kw1' },
+  // 키워드 2 — 무기·장비
+  { id: 'swords', ko: '교차검', en: 'crossed swords', cat: 'kw2' },
+  { id: 'axe', ko: '도끼', en: 'a battle axe', cat: 'kw2' },
+  { id: 'spear', ko: '창', en: 'a spear', cat: 'kw2' },
+  { id: 'bow', ko: '활', en: 'a bow', cat: 'kw2' },
+  { id: 'hammer', ko: '전투 망치', en: 'a war hammer', cat: 'kw2' },
+  { id: 'dagger', ko: '단검', en: 'a dagger', cat: 'kw2' },
+  { id: 'helmet', ko: '투구', en: 'a knight helmet', cat: 'kw2' },
+  { id: 'gauntlet', ko: '건틀릿', en: 'an armored gauntlet', cat: 'kw2' },
+  { id: 'crown', ko: '왕관', en: 'a crown', cat: 'kw2' },
+  { id: 'warbanner', ko: '전투 깃발', en: 'a war banner', cat: 'kw2' },
+  // 키워드 3 — 상징·자연
+  { id: 'skull', ko: '해골', en: 'a skull', cat: 'kw3' },
+  { id: 'eye', ko: '눈', en: 'an eye', cat: 'kw3' },
+  { id: 'crystal', ko: '크리스탈', en: 'a crystal', cat: 'kw3' },
+  { id: 'starmoon', ko: '별·달', en: 'a star and moon', cat: 'kw3' },
+  { id: 'thunder', ko: '번개', en: 'a lightning bolt', cat: 'kw3' },
+  { id: 'flame', ko: '불꽃', en: 'a flame', cat: 'kw3' },
+  { id: 'volcano', ko: '화산', en: 'a volcano', cat: 'kw3' },
+  { id: 'wings', ko: '천사 날개', en: 'angel wings', cat: 'kw3' },
+  { id: 'totem', ko: '오크 토템', en: 'an orc totem', cat: 'kw3' },
+  { id: 'temple', ko: '신전', en: 'a temple', cat: 'kw3' },
 ] as const;
 
 export type EmblemSelection = {

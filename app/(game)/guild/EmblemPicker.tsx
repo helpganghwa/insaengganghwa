@@ -103,9 +103,7 @@ export function EmblemPicker({
 
       {/* 키워드 — 카테고리별 0~1, 합계 ≥1 */}
       <div>
-        <p className="mb-1 text-[11px] font-semibold text-zinc-500">
-          키워드 <span className="font-normal text-zinc-400">카테고리별 최대 1개 · 1개 이상</span>
-        </p>
+        <p className="mb-1 text-[11px] font-semibold text-zinc-500">키워드</p>
         <div className="space-y-2">
           {EMBLEM_KEYWORD_CATEGORIES.map((cat) => (
             <div key={cat.id}>
