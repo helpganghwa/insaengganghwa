@@ -189,6 +189,9 @@ export function WorldMapView({
   // 행이 없으면 getChronicle가 {today:null,list:[]}를 반환 — 이 경우도 placeholder로 처리.
   const hasChronicle = !!chronicle && (chronicle.today != null || chronicle.list.length > 0);
 
+  const fogSrc = assetUrl('/sprites/guild/fog.png');
+  const fogHazeSrc = assetUrl('/sprites/guild/fog2.png');
+
   // 연대기 {z|이름} 강조용 — 개별 구역 이름 → 그 구역의 지역색. (지역 카테고리는 색칠 안 함.)
   const zoneColorMap = useMemo(() => {
     const m = new Map<string, string>();
@@ -332,25 +335,41 @@ export function WorldMapView({
         <span className="absolute bottom-2 right-2 z-30 inline-flex rounded-full bg-black/45 p-1 backdrop-blur-sm">
           <ToggleSwitch on={showNames} onToggle={() => setShowNames((v) => !v)} small label="지역 이름 표시" />
         </span>
-        {/* 미개방 지역 안개(단계 개방) — 잠긴 존 좌표마다 radial 안개를 겹쳐 구름띠 형성.
-            이미지 에셋 없이 코드 마스킹: 서버별 개방 상태를 그대로 렌더, 지도 수정에도 무관. */}
-        {zones.filter((z) => z.locked).map((z) => (
-          <span
-            key={`fog-${z.id}`}
-            aria-hidden
-            className="pointer-events-none absolute -translate-x-1/2 -translate-y-1/2"
-            style={{
-              left: `${z.mapX}%`,
-              top: `${z.mapY}%`,
-              width: '24%',
-              aspectRatio: '1',
-              zIndex: 25,
-              background:
-                'radial-gradient(circle, rgba(148,155,170,0.92) 0%, rgba(132,140,156,0.78) 42%, rgba(120,128,146,0.32) 68%, transparent 100%)',
-              filter: 'blur(1px)',
-            }}
-          />
-        ))}
+        {/* 미개방 지역 안개(단계 개방) — 픽셀 구름 스프라이트 2겹(코드 배치, 서버별 상태 렌더). */}
+        {zones.filter((z) => z.locked).map((z) => {
+          // 존 id 기반 결정적 변형(뒤집기·크기·기울기) — 반복감 제거, 렌더마다 동일.
+          const flip = z.id % 2 === 0 ? -1 : 1;
+          const size = 22 + (z.id % 3) * 5; // 지도 폭의 22~32%
+          const tilt = ((z.id % 5) - 2) * 4; // -8°~8°
+          return (
+            <span
+              key={`fog-${z.id}`}
+              aria-hidden
+              className="pointer-events-none absolute aspect-square -translate-x-1/2 -translate-y-1/2"
+              style={{ left: `${z.mapX}%`, top: `${z.mapY}%`, width: `${size}%`, zIndex: 25 }}
+            >
+              {/* 하층 안개(은은한 깔림) */}
+              {/* eslint-disable-next-line @next/next/no-img-element */}
+              <img
+                src={fogHazeSrc}
+                alt=""
+                className="absolute left-1/2 top-1/2 w-[170%] max-w-none -translate-x-1/2 -translate-y-1/2 opacity-50"
+                style={{ imageRendering: 'pixelated' }}
+              />
+              {/* 구름 덩어리(픽셀 텍스처) */}
+              {/* eslint-disable-next-line @next/next/no-img-element */}
+              <img
+                src={fogSrc}
+                alt=""
+                className="absolute left-1/2 top-1/2 w-full max-w-none opacity-95"
+                style={{
+                  transform: `translate(-50%, -50%) scaleX(${flip}) rotate(${tilt}deg)`,
+                  imageRendering: 'pixelated',
+                }}
+              />
+            </span>
+          );
+        })}
         {zones.map((z) => {
           if (z.locked) return null; // 미개방 — 노드 미노출(안개 오버레이가 덮음)
           const owned = z.ownerGuildId != null;

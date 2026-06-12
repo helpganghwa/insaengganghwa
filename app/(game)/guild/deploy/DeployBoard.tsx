@@ -3,6 +3,7 @@
 import { useEffect, useMemo, useState, useTransition } from 'react';
 
 import { useResourceToast } from '@/components/ResourceToast';
+import { assetUrl } from '@/lib/asset-versions';
 import {
   CONQUEST_DEFENDER_BONUS,
   CONQUEST_EXECUTOR_POWER_MULT,
@@ -68,6 +69,8 @@ export function DeployBoard({
   const [selectedId, setSelectedId] = useState<number | null>(null);
   const [pending, start] = useTransition();
 
+  const fogSrc = assetUrl('/sprites/guild/fog.png');
+  const fogHazeSrc = assetUrl('/sprites/guild/fog2.png');
   const zoneById = useMemo(() => new Map(zones.map((z) => [z.id, z])), [zones]);
   const attackable = useMemo(() => new Set(attackableZoneIds), [attackableZoneIds]);
   const ownedIds = useMemo(
@@ -277,24 +280,41 @@ export function DeployBoard({
             />
           ))}
         </svg>
-        {/* 미개방 지역 안개(단계 개방) — 코드 마스킹(이미지 에셋 불요). */}
-        {zones.filter((z) => z.locked).map((z) => (
-          <span
-            key={`fog-${z.id}`}
-            aria-hidden
-            className="pointer-events-none absolute -translate-x-1/2 -translate-y-1/2"
-            style={{
-              left: `${z.mapX}%`,
-              top: `${z.mapY}%`,
-              width: '24%',
-              aspectRatio: '1',
-              zIndex: 25,
-              background:
-                'radial-gradient(circle, rgba(148,155,170,0.92) 0%, rgba(132,140,156,0.78) 42%, rgba(120,128,146,0.32) 68%, transparent 100%)',
-              filter: 'blur(1px)',
-            }}
-          />
-        ))}
+        {/* 미개방 지역 안개(단계 개방) — 픽셀 구름 스프라이트 2겹. */}
+        {zones.filter((z) => z.locked).map((z) => {
+          // 존 id 기반 결정적 변형(뒤집기·크기·기울기) — 반복감 제거, 렌더마다 동일.
+          const flip = z.id % 2 === 0 ? -1 : 1;
+          const size = 22 + (z.id % 3) * 5; // 지도 폭의 22~32%
+          const tilt = ((z.id % 5) - 2) * 4; // -8°~8°
+          return (
+            <span
+              key={`fog-${z.id}`}
+              aria-hidden
+              className="pointer-events-none absolute aspect-square -translate-x-1/2 -translate-y-1/2"
+              style={{ left: `${z.mapX}%`, top: `${z.mapY}%`, width: `${size}%`, zIndex: 25 }}
+            >
+              {/* 하층 안개(은은한 깔림) */}
+              {/* eslint-disable-next-line @next/next/no-img-element */}
+              <img
+                src={fogHazeSrc}
+                alt=""
+                className="absolute left-1/2 top-1/2 w-[170%] max-w-none -translate-x-1/2 -translate-y-1/2 opacity-50"
+                style={{ imageRendering: 'pixelated' }}
+              />
+              {/* 구름 덩어리(픽셀 텍스처) */}
+              {/* eslint-disable-next-line @next/next/no-img-element */}
+              <img
+                src={fogSrc}
+                alt=""
+                className="absolute left-1/2 top-1/2 w-full max-w-none opacity-95"
+                style={{
+                  transform: `translate(-50%, -50%) scaleX(${flip}) rotate(${tilt}deg)`,
+                  imageRendering: 'pixelated',
+                }}
+              />
+            </span>
+          );
+        })}
         {zones.map((z) => {
           if (z.locked) return null; // 미개방 — 노드 미노출
           const mine = z.ownerGuildId === myGuildId;
