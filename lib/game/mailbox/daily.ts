@@ -26,17 +26,18 @@ const PAYLOAD = JSON.stringify({
   },
 });
 
-export async function ensureDailyMail(userId: string): Promise<boolean> {
+export async function ensureDailyMail(userId: string, serverId: number): Promise<boolean> {
   // KST today를 SQL에서 계산해 race 없음. 성공 시 1행 RETURNING.
   const r = (await db.execute(sql`
     with g as (
-      insert into daily_supply_grants (user_id, kst_day)
-      values (${userId}::uuid, (now() at time zone 'Asia/Seoul')::date)
+      insert into daily_supply_grants (user_id, server_id, kst_day)
+      values (${userId}::uuid, ${serverId}, (now() at time zone 'Asia/Seoul')::date)
       on conflict do nothing
       returning kst_day
     )
-    insert into mailbox (user_id, type, title, body, sender_label, payload, expires_at)
+    insert into mailbox (user_id, server_id, type, title, body, sender_label, payload, expires_at)
     select ${userId}::uuid,
+           ${serverId},
            'reward'::mailbox_type,
            '오늘의 보급',
            '동트는 종소리와 함께 보급이 닿았습니다. 7일 안에 받으세요.',

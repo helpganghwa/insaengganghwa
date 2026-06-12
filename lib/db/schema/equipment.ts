@@ -10,6 +10,7 @@
  */
 import {
   pgTable,
+  smallint,
   pgEnum,
   uuid,
   text,
@@ -53,6 +54,8 @@ export const userEquipment = pgTable(
   'user_equipment',
   {
     id: bigserial('id', { mode: 'bigint' }).primaryKey(),
+    /** 소속 서버(SERVER.md P3b) — 캐릭터 단위 스코프. */
+    serverId: smallint('server_id').notNull().default(1),
     userId: uuid('user_id')
       .notNull()
       .references(() => profiles.id, { onDelete: 'cascade' }),
@@ -83,7 +86,7 @@ export const userEquipment = pgTable(
   },
   (t) => [
     // 카탈로그당 1레코드.
-    uniqueIndex('ue_user_catalog_uq').on(t.userId, t.catalogItemId),
+    uniqueIndex('ue_user_catalog_uq').on(t.userId, t.serverId, t.catalogItemId),
     // 슬롯 그리드/장착 조회.
     index('ue_user_slot_idx').on(t.userId, t.equippedSlot).where(sql`${t.equippedSlot} is not null`),
     // 최고강화자 셀프조인(championCatalogIds/liberatedItemRanks NOT EXISTS) — 0026 수동 적용.

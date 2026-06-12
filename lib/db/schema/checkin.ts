@@ -6,6 +6,7 @@
  */
 import {
   pgTable,
+  primaryKey,
   uuid,
   bigint,
   bigserial,
@@ -20,10 +21,14 @@ import { sql } from 'drizzle-orm';
 import { profiles } from './profiles';
 
 /** §12.1 user_checkin_state — 1행/유저. UPSERT로 첫 수령 시 생성. */
-export const userCheckinState = pgTable('user_checkin_state', {
+export const userCheckinState = pgTable(
+  'user_checkin_state',
+  {
   userId: uuid('user_id')
-    .primaryKey()
+    .notNull()
     .references(() => profiles.id, { onDelete: 'cascade' }),
+  /** 소속 서버(SERVER.md P3b). */
+  serverId: smallint('server_id').notNull().default(1),
   /** 마지막 수령 칸의 0-index(0~27). 다음 받을 칸 1-index = (dp % 28) + 1. */
   dayProgress: smallint('day_progress').notNull().default(0),
   /** KST 일자. 같은 KST day 재수령 차단. null = 한 번도 수령 안 함. */
@@ -32,7 +37,9 @@ export const userCheckinState = pgTable('user_checkin_state', {
     .notNull()
     .default(sql`0`),
   updatedAt: timestamp('updated_at', { withTimezone: true }).notNull().defaultNow(),
-});
+  },
+  (t) => [primaryKey({ columns: [t.userId, t.serverId] })],
+);
 
 export type UserCheckinState = typeof userCheckinState.$inferSelect;
 
@@ -41,6 +48,8 @@ export const checkinClaimLogs = pgTable(
   'checkin_claim_logs',
   {
     id: bigserial('id', { mode: 'bigint' }).primaryKey(),
+    /** 소속 서버(SERVER.md P3b). */
+    serverId: smallint('server_id').notNull().default(1),
     userId: uuid('user_id')
       .notNull()
       .references(() => profiles.id, { onDelete: 'cascade' }),
@@ -54,7 +63,7 @@ export const checkinClaimLogs = pgTable(
     boxesGranted: jsonb('boxes_granted').notNull().default(sql`'{}'::jsonb`),
     claimedAt: timestamp('claimed_at', { withTimezone: true }).notNull().defaultNow(),
   },
-  (t) => [uniqueIndex('checkin_logs_user_day_uniq').on(t.userId, t.kstDay)],
+  (t) => [uniqueIndex('checkin_logs_user_day_uniq').on(t.userId, t.serverId, t.kstDay)],
 );
 
 export type CheckinClaimLog = typeof checkinClaimLogs.$inferSelect;

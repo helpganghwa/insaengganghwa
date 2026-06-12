@@ -42,13 +42,26 @@ export async function getTutorialState(userId: string): Promise<TutorialState> {
 
     // active — localStorage가 비었을 때의 재개 단계만 파생(클라가 우선).
     const [eqC, equippedC, jobC, logC] = await Promise.all([
-      rowCount(userEquipment, eq(userEquipment.userId, userId)),
       rowCount(
         userEquipment,
-        and(eq(userEquipment.userId, userId), isNotNull(userEquipment.equippedSlot)),
+        and(eq(userEquipment.userId, userId), eq(userEquipment.serverId, DEFAULT_SERVER_ID)),
       ),
-      rowCount(enhancementJobs, eq(enhancementJobs.userId, userId)),
-      rowCount(enhancementLogs, eq(enhancementLogs.userId, userId)),
+      rowCount(
+        userEquipment,
+        and(
+          eq(userEquipment.userId, userId),
+          eq(userEquipment.serverId, DEFAULT_SERVER_ID),
+          isNotNull(userEquipment.equippedSlot),
+        ),
+      ),
+      rowCount(
+        enhancementJobs,
+        and(eq(enhancementJobs.userId, userId), eq(enhancementJobs.serverId, DEFAULT_SERVER_ID)),
+      ),
+      rowCount(
+        enhancementLogs,
+        and(eq(enhancementLogs.userId, userId), eq(enhancementLogs.serverId, DEFAULT_SERVER_ID)),
+      ),
     ]);
 
     if (eqC <= 0) return { phase: 'active', step: 'open' };

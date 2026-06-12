@@ -41,17 +41,24 @@ function rngU32(): number {
 
 export function openSupplyBoxes(input: {
   userId: string;
+  serverId: number;
   slot: Slot;
   count?: number;
 }): Promise<OpenResult[]> {
-  const { userId, slot } = input;
+  const { userId, serverId, slot } = input;
   const n = Math.max(1, Math.floor(input.count ?? 1));
 
   return db.transaction(async (tx) => {
     const [box] = await tx
       .select({ count: userSupplyBoxes.count })
       .from(userSupplyBoxes)
-      .where(and(eq(userSupplyBoxes.userId, userId), eq(userSupplyBoxes.slot, slot)))
+      .where(
+        and(
+          eq(userSupplyBoxes.userId, userId),
+          eq(userSupplyBoxes.serverId, serverId),
+          eq(userSupplyBoxes.slot, slot),
+        ),
+      )
       .for('update');
     if (!box || box.count < BigInt(n)) throw new SupplyError('NO_BOX');
 
@@ -75,7 +82,13 @@ export function openSupplyBoxes(input: {
           maxTranscendLevel: userEquipment.maxTranscendLevel,
         })
         .from(userEquipment)
-        .where(and(eq(userEquipment.userId, userId), eq(userEquipment.catalogItemId, catalogItemId)))
+        .where(
+          and(
+            eq(userEquipment.userId, userId),
+            eq(userEquipment.serverId, serverId),
+            eq(userEquipment.catalogItemId, catalogItemId),
+          ),
+        )
         .for('update');
 
       let isNew = false;
@@ -87,7 +100,7 @@ export function openSupplyBoxes(input: {
         // 최초 획득 — 도감 해금.
         await tx
           .insert(userEquipment)
-          .values({ userId, catalogItemId })
+          .values({ userId, serverId, catalogItemId })
           .onConflictDoNothing();
         isNew = true;
       } else {
@@ -120,6 +133,7 @@ export function openSupplyBoxes(input: {
         for (const fromT of fromTByStep) {
           await tx.insert(transcendLogs).values({
             userId,
+            serverId,
             userEquipmentId: existing.id,
             catalogItemId,
             fromT,
@@ -129,7 +143,7 @@ export function openSupplyBoxes(input: {
         }
       }
 
-      await tx.insert(supplyOpenLogs).values({ userId, slot, catalogItemId, isNew });
+      await tx.insert(supplyOpenLogs).values({ userId, serverId, slot, catalogItemId, isNew });
 
       results.push({ catalogItemId, isNew, transcended, transcendLevel, transcendProgress });
     }
@@ -137,7 +151,13 @@ export function openSupplyBoxes(input: {
     await tx
       .update(userSupplyBoxes)
       .set({ count: sql`${userSupplyBoxes.count} - ${BigInt(n)}` })
-      .where(and(eq(userSupplyBoxes.userId, userId), eq(userSupplyBoxes.slot, slot)));
+      .where(
+        and(
+          eq(userSupplyBoxes.userId, userId),
+          eq(userSupplyBoxes.serverId, serverId),
+          eq(userSupplyBoxes.slot, slot),
+        ),
+      );
 
     return results;
   });

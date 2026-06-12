@@ -51,11 +51,11 @@ export function freeStatusFromClaims(
 }
 
 /** 각 슬롯이 지금 수령 가능한지(빨간점 표시용). */
-export async function getFreeStatus(userId: string): Promise<Record<FreeSlot, boolean>> {
+export async function getFreeStatus(userId: string, serverId: number): Promise<Record<FreeSlot, boolean>> {
   const rows = await db
     .select({ slot: shopFreeClaims.slot, periodKey: shopFreeClaims.periodKey })
     .from(shopFreeClaims)
-    .where(eq(shopFreeClaims.userId, userId));
+    .where(and(eq(shopFreeClaims.userId, userId), eq(shopFreeClaims.serverId, serverId)));
   return freeStatusFromClaims(rows);
 }
 
@@ -75,12 +75,18 @@ export function claimFree(userId: string, serverId: number, slot: FreeSlot): Pro
     // 1) row 보장(없으면 빈 키로 생성) → 2) FOR UPDATE 잠금 → 3) 주기 비교.
     await tx
       .insert(shopFreeClaims)
-      .values({ userId, slot, periodKey: '' })
+      .values({ userId, serverId, slot, periodKey: '' })
       .onConflictDoNothing();
     const [row] = await tx
       .select({ periodKey: shopFreeClaims.periodKey })
       .from(shopFreeClaims)
-      .where(and(eq(shopFreeClaims.userId, userId), eq(shopFreeClaims.slot, slot)))
+      .where(
+        and(
+          eq(shopFreeClaims.userId, userId),
+          eq(shopFreeClaims.serverId, serverId),
+          eq(shopFreeClaims.slot, slot),
+        ),
+      )
       .for('update');
     if (row?.periodKey === cur) throw new ShopFreeError('ALREADY_CLAIMED');
 
@@ -94,9 +100,9 @@ export function claimFree(userId: string, serverId: number, slot: FreeSlot): Pro
         if (n > 0) {
           await tx
             .insert(userSupplyBoxes)
-            .values({ userId, slot: s, count: BigInt(n) })
+            .values({ userId, serverId, slot: s, count: BigInt(n) })
             .onConflictDoUpdate({
-              target: [userSupplyBoxes.userId, userSupplyBoxes.slot],
+              target: [userSupplyBoxes.userId, userSupplyBoxes.serverId, userSupplyBoxes.slot],
               set: { count: sql`${userSupplyBoxes.count} + ${BigInt(n)}` },
             });
         }
@@ -105,7 +111,13 @@ export function claimFree(userId: string, serverId: number, slot: FreeSlot): Pro
     await tx
       .update(shopFreeClaims)
       .set({ periodKey: cur, updatedAt: new Date() })
-      .where(and(eq(shopFreeClaims.userId, userId), eq(shopFreeClaims.slot, slot)));
+      .where(
+        and(
+          eq(shopFreeClaims.userId, userId),
+          eq(shopFreeClaims.serverId, serverId),
+          eq(shopFreeClaims.slot, slot),
+        ),
+      );
 
     return { diamond: reward.diamond, boxes: reward.boxes };
   });

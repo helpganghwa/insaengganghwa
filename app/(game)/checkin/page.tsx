@@ -1,4 +1,5 @@
 import { getSessionUserId } from '@/lib/auth/session';
+import { getActiveServerId } from '@/lib/game/servers';
 import { withTimeout } from '@/lib/db/with-timeout';
 import { getCheckinState } from '@/lib/game/checkin';
 import { kstDateString } from '@/lib/kst';
@@ -15,7 +16,7 @@ export default async function CheckinPage() {
   const userId = await getSessionUserId();
   if (!userId) return null; // (game) layout이 가드 — 폴백
   // 콜드 DB 커넥션 hang 시 페이지 무한 대기 방지 — 실패 시 신규 유저 기본값으로 degrade(2026-05-29).
-  const state = await withTimeout(getCheckinState(userId), 3500, 'checkin.state').catch(() => ({
+  const state = await withTimeout(getCheckinState(userId, await getActiveServerId()), 3500, 'checkin.state').catch(() => ({
     dayProgress: 0,
     lastClaimedKstDay: null,
     totalClaimedCount: 0n,

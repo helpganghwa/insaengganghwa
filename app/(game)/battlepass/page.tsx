@@ -1,4 +1,5 @@
 import { getSessionUserId } from '@/lib/auth/session';
+import { getActiveServerId } from '@/lib/game/servers';
 import { withTimeout } from '@/lib/db/with-timeout';
 import { getBattlePassView } from '@/lib/game/battlepass';
 
@@ -10,12 +11,13 @@ import { BattlePassClient } from './BattlePassClient';
  */
 export default async function BattlePassPage() {
   const userId = await getSessionUserId();
+  const serverId = await getActiveServerId();
   if (!userId) return null;
 
   const data = await withTimeout(
     Promise.all([
-      getBattlePassView(userId, 'enhance'),
-      getBattlePassView(userId, 'transcend'),
+      getBattlePassView(userId, serverId, 'enhance'),
+      getBattlePassView(userId, serverId, 'transcend'),
     ]),
     3500,
     'battlepass.page',

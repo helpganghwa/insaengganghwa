@@ -178,7 +178,7 @@ export default async function HomePage() {
             rz.region::text as residence_region,
             -- 상점 무료 클레임 — 주기 비교는 JS(freeStatusFromClaims, 단일 진실).
             coalesce(
-              (select json_agg(json_build_array(slot, period_key)) from shop_free_claims where user_id = ${userId}::uuid),
+              (select json_agg(json_build_array(slot, period_key)) from shop_free_claims where user_id = ${userId}::uuid and server_id = 1),
               '[]'::json
             ) as free_claims
           from (select (now() at time zone 'Asia/Seoul') kst) n

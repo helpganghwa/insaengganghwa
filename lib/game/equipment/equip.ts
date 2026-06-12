@@ -16,7 +16,7 @@ export class EquipError extends Error {
 export function equipItem(userId: string, userEquipmentId: bigint): Promise<void> {
   return db.transaction(async (tx) => {
     const [equip] = await tx
-      .select({ id: userEquipment.id, slot: catalogItems.slot })
+      .select({ id: userEquipment.id, serverId: userEquipment.serverId, slot: catalogItems.slot })
       .from(userEquipment)
       .innerJoin(catalogItems, eq(userEquipment.catalogItemId, catalogItems.id))
       .where(and(eq(userEquipment.id, userEquipmentId), eq(userEquipment.userId, userId)))
@@ -27,7 +27,13 @@ export function equipItem(userId: string, userEquipmentId: bigint): Promise<void
     await tx
       .update(userEquipment)
       .set({ equippedSlot: null })
-      .where(and(eq(userEquipment.userId, userId), eq(userEquipment.equippedSlot, equip.slot)));
+      .where(
+        and(
+          eq(userEquipment.userId, userId),
+          eq(userEquipment.serverId, equip.serverId),
+          eq(userEquipment.equippedSlot, equip.slot),
+        ),
+      );
     await tx
       .update(userEquipment)
       .set({ equippedSlot: equip.slot })

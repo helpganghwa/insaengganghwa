@@ -9,6 +9,7 @@
  */
 import {
   pgTable,
+  smallint,
   pgEnum,
   uuid,
   bigint,
@@ -49,6 +50,8 @@ export const mailbox = pgTable(
   'mailbox',
   {
     id: bigserial('id', { mode: 'bigint' }).primaryKey(),
+    /** 소속 서버(SERVER.md P3b) — 보상이 서버 지갑/상자로 귀속. */
+    serverId: smallint('server_id').notNull().default(1),
     userId: uuid('user_id')
       .notNull()
       .references(() => profiles.id, { onDelete: 'cascade' }),
@@ -84,6 +87,8 @@ export type Mail = typeof mailbox.$inferSelect;
  */
 export const mailClaimLogs = pgTable('mail_claim_logs', {
   id: bigserial('id', { mode: 'bigint' }).primaryKey(),
+  /** 소속 서버(SERVER.md P3b). */
+  serverId: smallint('server_id').notNull().default(1),
   mailId: bigint('mail_id', { mode: 'bigint' })
     .notNull()
     .references(() => mailbox.id, { onDelete: 'set null' }),
@@ -136,10 +141,12 @@ export const dailySupplyGrants = pgTable(
     userId: uuid('user_id')
       .notNull()
       .references(() => profiles.id, { onDelete: 'cascade' }),
+    /** 소속 서버(SERVER.md P3b). */
+    serverId: smallint('server_id').notNull().default(1),
     /** Asia/Seoul 기준 날짜. KST 자정에 갱신. */
     kstDay: date('kst_day', { mode: 'string' }).notNull(),
     grantedAt: timestamp('granted_at', { withTimezone: true }).notNull().defaultNow(),
   },
-  (t) => [primaryKey({ columns: [t.userId, t.kstDay] })],
+  (t) => [primaryKey({ columns: [t.userId, t.serverId, t.kstDay] })],
 );
 

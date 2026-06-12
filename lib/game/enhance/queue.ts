@@ -55,6 +55,7 @@ export async function queueEnhanceInTx(
   const [equip] = await tx
     .select({
       id: userEquipment.id,
+      serverId: userEquipment.serverId,
       catalogItemId: userEquipment.catalogItemId,
       enhanceLevel: userEquipment.enhanceLevel,
       slot: catalogItems.slot,
@@ -90,6 +91,7 @@ export async function queueEnhanceInTx(
     .where(
       and(
         eq(enhancementJobs.userId, userId),
+        eq(enhancementJobs.serverId, equip.serverId),
         eq(enhancementJobs.slot, slot),
         eq(enhancementJobs.status, 'running'),
       ),
@@ -107,6 +109,7 @@ export async function queueEnhanceInTx(
       .insert(enhancementJobs)
       .values({
         userId,
+        serverId: equip.serverId,
         userEquipmentId,
         slot,
         slotLane,

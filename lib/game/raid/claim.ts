@@ -65,9 +65,9 @@ export function claimRaidReward(input: {
       if (n > 0) {
         await tx
           .insert(userSupplyBoxes)
-          .values({ userId, slot, count: BigInt(n) })
+          .values({ userId, serverId: input.serverId, slot, count: BigInt(n) })
           .onConflictDoUpdate({
-            target: [userSupplyBoxes.userId, userSupplyBoxes.slot],
+            target: [userSupplyBoxes.userId, userSupplyBoxes.serverId, userSupplyBoxes.slot],
             set: { count: sql`${userSupplyBoxes.count} + ${BigInt(n)}` },
           });
         boxes[slot] = n;

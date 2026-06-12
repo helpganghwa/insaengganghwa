@@ -46,9 +46,9 @@ async function grant(
       if (n > 0) {
         await tx
           .insert(userSupplyBoxes)
-          .values({ userId, slot, count: BigInt(n) })
+          .values({ userId, serverId, slot, count: BigInt(n) })
           .onConflictDoUpdate({
-            target: [userSupplyBoxes.userId, userSupplyBoxes.slot],
+            target: [userSupplyBoxes.userId, userSupplyBoxes.serverId, userSupplyBoxes.slot],
             set: { count: sql`${userSupplyBoxes.count} + ${BigInt(n)}` },
           });
       }
@@ -73,18 +73,33 @@ export async function devPurchase(
     }
     // 주기 1회 제한 — row 잠금 후 현재 주기와 비교(이미 구매면 차단).
     const cur = periodKey(period);
-    await tx.insert(shopPurchases).values({ userId, productId, periodKey: '' }).onConflictDoNothing();
+    await tx
+      .insert(shopPurchases)
+      .values({ userId, serverId, productId, periodKey: '' })
+      .onConflictDoNothing();
     const [row] = await tx
       .select({ periodKey: shopPurchases.periodKey })
       .from(shopPurchases)
-      .where(and(eq(shopPurchases.userId, userId), eq(shopPurchases.productId, productId)))
+      .where(
+        and(
+          eq(shopPurchases.userId, userId),
+          eq(shopPurchases.serverId, serverId),
+          eq(shopPurchases.productId, productId),
+        ),
+      )
       .for('update');
     if (row?.periodKey === cur) throw new ShopBuyError('ALREADY_PURCHASED');
     await grant(tx, userId, serverId, g);
     await tx
       .update(shopPurchases)
       .set({ periodKey: cur, updatedAt: new Date() })
-      .where(and(eq(shopPurchases.userId, userId), eq(shopPurchases.productId, productId)));
+      .where(
+        and(
+          eq(shopPurchases.userId, userId),
+          eq(shopPurchases.serverId, serverId),
+          eq(shopPurchases.productId, productId),
+        ),
+      );
   });
 
   return g;
@@ -95,11 +110,17 @@ export async function devPurchase(
  * 구매일 = 30, 이후 KST 자정마다 -1, 0 이하면 만료(null). 30일 드립 창.
  */
 const kstDay = (ms: number) => new Date(ms + 9 * 3_600_000).toISOString().slice(0, 10);
-export async function getPremiumRemainingDays(userId: string): Promise<number | null> {
+export async function getPremiumRemainingDays(userId: string, serverId: number): Promise<number | null> {
   const rows = await db
     .select({ updatedAt: shopPurchases.updatedAt })
     .from(shopPurchases)
-    .where(and(eq(shopPurchases.userId, userId), eq(shopPurchases.productId, 'premium')));
+    .where(
+      and(
+        eq(shopPurchases.userId, userId),
+        eq(shopPurchases.serverId, serverId),
+        eq(shopPurchases.productId, 'premium'),
+      ),
+    );
   const r = rows[0];
   if (!r) return null;
   const buyDay = kstDay(new Date(r.updatedAt).getTime());
@@ -110,11 +131,11 @@ export async function getPremiumRemainingDays(userId: string): Promise<number | 
 }
 
 /** 이번 주기에 이미 구매한 상품 id 집합(UI 비활성화용). */
-export async function getPurchaseStatus(userId: string): Promise<string[]> {
+export async function getPurchaseStatus(userId: string, serverId: number): Promise<string[]> {
   const rows = await db
     .select({ productId: shopPurchases.productId, periodKey: shopPurchases.periodKey })
     .from(shopPurchases)
-    .where(eq(shopPurchases.userId, userId));
+    .where(and(eq(shopPurchases.userId, userId), eq(shopPurchases.serverId, serverId)));
   const out: string[] = [];
   for (const r of rows) {
     const p = productPeriod(r.productId);

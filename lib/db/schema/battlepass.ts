@@ -10,6 +10,7 @@
 import {
   pgTable,
   pgEnum,
+  smallint,
   uuid,
   integer,
   jsonb,
@@ -28,13 +29,15 @@ export const battlePassState = pgTable(
     userId: uuid('user_id')
       .notNull()
       .references(() => profiles.id, { onDelete: 'cascade' }),
+    /** 소속 서버(SERVER.md P3b). */
+    serverId: smallint('server_id').notNull().default(1),
     passType: battlePassTypeEnum('pass_type').notNull(),
     /** (레거시) 무료 수령 high-water. 개별 수령 도입(2026-06-05)으로 미사용 — claimedTiers가 진실. */
     freeClaimedThrough: integer('free_claimed_through').notNull().default(0),
     /** 무료 라인에서 **개별 수령 완료한 마일스톤 단계(level) 집합**. 비순차 수령 지원. */
     freeClaimedTiers: jsonb('free_claimed_tiers').$type<number[]>().notNull().default([]),
   },
-  (t) => [primaryKey({ columns: [t.userId, t.passType] })],
+  (t) => [primaryKey({ columns: [t.userId, t.serverId, t.passType] })],
 );
 
 /** §14.2 battlepass_segments — 구매한 프리미엄 구간(존재 = 구매). PK user+type+segment. */
@@ -44,6 +47,8 @@ export const battlePassSegments = pgTable(
     userId: uuid('user_id')
       .notNull()
       .references(() => profiles.id, { onDelete: 'cascade' }),
+    /** 소속 서버(SERVER.md P3b). */
+    serverId: smallint('server_id').notNull().default(1),
     passType: battlePassTypeEnum('pass_type').notNull(),
     /** 구간 인덱스(0부터). 강화 c=+1~100·+101~200…, 초월 c=T1~10·T11~20… */
     segmentIndex: integer('segment_index').notNull(),
@@ -53,7 +58,7 @@ export const battlePassSegments = pgTable(
     premiumClaimedTiers: jsonb('premium_claimed_tiers').$type<number[]>().notNull().default([]),
     purchasedAt: timestamp('purchased_at', { withTimezone: true }).notNull().defaultNow(),
   },
-  (t) => [primaryKey({ columns: [t.userId, t.passType, t.segmentIndex] })],
+  (t) => [primaryKey({ columns: [t.userId, t.serverId, t.passType, t.segmentIndex] })],
 );
 
 export type BattlePassState = typeof battlePassState.$inferSelect;

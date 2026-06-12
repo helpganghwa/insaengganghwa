@@ -68,13 +68,13 @@ function applyRewardToAcc(reward: CheckinReward, acc: Acc) {
 }
 
 export function claimCheckin(input: { userId: string; serverId: number }): Promise<CheckinClaimResult> {
-  const { userId } = input;
+  const { userId, serverId } = input;
   return db.transaction(async (tx) => {
     // 1) state UPSERT — 신규는 dp=0/last=null 생성, 기존은 그대로(NO-OP). `for update`는
     //    INSERT … ON CONFLICT DO UPDATE 후 별도 SELECT FOR UPDATE로 잠금 확보.
     await tx
       .insert(userCheckinState)
-      .values({ userId, dayProgress: 0, lastClaimedKstDay: null, totalClaimedCount: 0n })
+      .values({ userId, serverId, dayProgress: 0, lastClaimedKstDay: null, totalClaimedCount: 0n })
       .onConflictDoNothing();
 
     // 2) 잠금 + KST 가드.
@@ -85,7 +85,7 @@ export function claimCheckin(input: { userId: string; serverId: number }): Promi
         totalClaimedCount: userCheckinState.totalClaimedCount,
       })
       .from(userCheckinState)
-      .where(eq(userCheckinState.userId, userId))
+      .where(and(eq(userCheckinState.userId, userId), eq(userCheckinState.serverId, serverId)))
       .for('update');
 
     if (!state) throw new Error('CHECKIN_STATE_MISSING'); // upsert 직후 → 없을 수 없음
@@ -113,9 +113,9 @@ export function claimCheckin(input: { userId: string; serverId: number }): Promi
       if (n > 0) {
         await tx
           .insert(userSupplyBoxes)
-          .values({ userId, slot, count: BigInt(n) })
+          .values({ userId, serverId: serverId, slot, count: BigInt(n) })
           .onConflictDoUpdate({
-            target: [userSupplyBoxes.userId, userSupplyBoxes.slot],
+            target: [userSupplyBoxes.userId, userSupplyBoxes.serverId, userSupplyBoxes.slot],
             set: { count: sql`${userSupplyBoxes.count} + ${BigInt(n)}` },
           });
       }
@@ -132,10 +132,17 @@ export function claimCheckin(input: { userId: string; serverId: number }): Promi
         totalClaimedCount: newTotal,
         updatedAt: new Date(),
       })
-      .where(and(eq(userCheckinState.userId, userId), eq(userCheckinState.dayProgress, state.dayProgress)));
+      .where(
+        and(
+          eq(userCheckinState.userId, userId),
+          eq(userCheckinState.serverId, serverId),
+          eq(userCheckinState.dayProgress, state.dayProgress),
+        ),
+      );
 
     await tx.insert(checkinClaimLogs).values({
       userId,
+      serverId,
       kstDay: kstToday,
       cycleDay,
       diamondGranted: BigInt(acc.diamond),
@@ -152,7 +159,7 @@ export function claimCheckin(input: { userId: string; serverId: number }): Promi
 }
 
 /** UI 조회 — 현재 state. 없으면 dp=0/last=null/total=0n. */
-export async function getCheckinState(userId: string): Promise<{
+export async function getCheckinState(userId: string, serverId: number): Promise<{
   dayProgress: number;
   lastClaimedKstDay: string | null;
   totalClaimedCount: bigint;
@@ -164,7 +171,7 @@ export async function getCheckinState(userId: string): Promise<{
       totalClaimedCount: userCheckinState.totalClaimedCount,
     })
     .from(userCheckinState)
-    .where(eq(userCheckinState.userId, userId))
+    .where(and(eq(userCheckinState.userId, userId), eq(userCheckinState.serverId, serverId)))
     .limit(1);
   if (!r) return { dayProgress: 0, lastClaimedKstDay: null, totalClaimedCount: 0n };
   return r;

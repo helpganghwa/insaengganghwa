@@ -74,9 +74,9 @@ async function grantReward(
     if (dist[slot] <= 0) continue;
     await tx
       .insert(userSupplyBoxes)
-      .values({ userId, slot, count: BigInt(dist[slot]) })
+      .values({ userId, serverId, slot, count: BigInt(dist[slot]) })
       .onConflictDoUpdate({
-        target: [userSupplyBoxes.userId, userSupplyBoxes.slot],
+        target: [userSupplyBoxes.userId, userSupplyBoxes.serverId, userSupplyBoxes.slot],
         set: { count: sql`${userSupplyBoxes.count} + ${dist[slot]}` },
       });
   }
@@ -121,15 +121,16 @@ function tierLevelsIn(type: BattlePassType, startLevel: number, cap: number): nu
 
 export async function getBattlePassView(
   userId: string,
+  serverId: number,
   type: BattlePassType,
 ): Promise<BattlePassView> {
-  const reached = await getMaxReached(userId);
+  const reached = await getMaxReached(userId, serverId);
   const maxReached = type === 'enhance' ? reached.maxEnhance : reached.maxTranscend;
 
   const [stateRow] = await db
     .select({ tiers: battlePassState.freeClaimedTiers })
     .from(battlePassState)
-    .where(and(eq(battlePassState.userId, userId), eq(battlePassState.passType, type)));
+    .where(and(eq(battlePassState.userId, userId), eq(battlePassState.serverId, serverId), eq(battlePassState.passType, type)));
   const freeClaimed = new Set(stateRow?.tiers ?? []);
 
   const segRows = await db
@@ -138,7 +139,7 @@ export async function getBattlePassView(
       tiers: battlePassSegments.premiumClaimedTiers,
     })
     .from(battlePassSegments)
-    .where(and(eq(battlePassSegments.userId, userId), eq(battlePassSegments.passType, type)));
+    .where(and(eq(battlePassSegments.userId, userId), eq(battlePassSegments.serverId, serverId), eq(battlePassSegments.passType, type)));
   const premMap = new Map(segRows.map((r) => [r.idx, r.tiers]));
 
   // 현재 속한 구간까지만 노출(다음 구간 미노출 — 2026-06-04 피드백).
@@ -184,8 +185,8 @@ export async function getBattlePassView(
   };
 }
 
-const reachedFor = async (userId: string, type: BattlePassType) => {
-  const r = await getMaxReached(userId);
+const reachedFor = async (userId: string, serverId: number, type: BattlePassType) => {
+  const r = await getMaxReached(userId, serverId);
   return type === 'enhance' ? r.maxEnhance : r.maxTranscend;
 };
 const sorted = (a: number[]) => [...a].sort((x, y) => x - y);
@@ -202,10 +203,10 @@ export function claimFree(
     const [s] = await tx
       .select({ tiers: battlePassState.freeClaimedTiers })
       .from(battlePassState)
-      .where(and(eq(battlePassState.userId, userId), eq(battlePassState.passType, type)))
+      .where(and(eq(battlePassState.userId, userId), eq(battlePassState.serverId, serverId), eq(battlePassState.passType, type)))
       .for('update');
     const claimed = new Set(s?.tiers ?? []);
-    const maxReached = await reachedFor(userId, type);
+    const maxReached = await reachedFor(userId, serverId, type);
     const top = maxReached >= 1 ? bpSegmentIndex(type, maxReached) : 0;
     const newly: number[] = [];
     let granted = 0;
@@ -223,9 +224,9 @@ export function claimFree(
     const merged = sorted([...claimed, ...newly]);
     await tx
       .insert(battlePassState)
-      .values({ userId, passType: type, freeClaimedTiers: merged })
+      .values({ userId, serverId, passType: type, freeClaimedTiers: merged })
       .onConflictDoUpdate({
-        target: [battlePassState.userId, battlePassState.passType],
+        target: [battlePassState.userId, battlePassState.serverId, battlePassState.passType],
         set: { freeClaimedTiers: merged },
       });
     return { granted, rewardKind: type === 'enhance' ? 'diamond' : 'box' };
@@ -243,10 +244,10 @@ export function claimFreeTier(
     const [s] = await tx
       .select({ tiers: battlePassState.freeClaimedTiers })
       .from(battlePassState)
-      .where(and(eq(battlePassState.userId, userId), eq(battlePassState.passType, type)))
+      .where(and(eq(battlePassState.userId, userId), eq(battlePassState.serverId, serverId), eq(battlePassState.passType, type)))
       .for('update');
     const claimed = new Set(s?.tiers ?? []);
-    const maxReached = await reachedFor(userId, type);
+    const maxReached = await reachedFor(userId, serverId, type);
     const lv = Math.floor(level);
     if (lv < 1 || lv % BP_TIER_STEP[type] !== 0 || lv > maxReached || claimed.has(lv))
       throw new BattlePassErr('NOTHING_TO_CLAIM');
@@ -255,9 +256,9 @@ export function claimFreeTier(
     const merged = sorted([...claimed, lv]);
     await tx
       .insert(battlePassState)
-      .values({ userId, passType: type, freeClaimedTiers: merged })
+      .values({ userId, serverId, passType: type, freeClaimedTiers: merged })
       .onConflictDoUpdate({
-        target: [battlePassState.userId, battlePassState.passType],
+        target: [battlePassState.userId, battlePassState.serverId, battlePassState.passType],
         set: { freeClaimedTiers: merged },
       });
     return { granted, rewardKind: type === 'enhance' ? 'diamond' : 'box' };
@@ -273,14 +274,14 @@ export function claimPremium(
   type: BattlePassType,
 ): Promise<{ granted: number; rewardKind: 'diamond' | 'box' }> {
   return db.transaction(async (tx) => {
-    const maxReached = await reachedFor(userId, type);
+    const maxReached = await reachedFor(userId, serverId, type);
     const segs = await tx
       .select({
         idx: battlePassSegments.segmentIndex,
         tiers: battlePassSegments.premiumClaimedTiers,
       })
       .from(battlePassSegments)
-      .where(and(eq(battlePassSegments.userId, userId), eq(battlePassSegments.passType, type)))
+      .where(and(eq(battlePassSegments.userId, userId), eq(battlePassSegments.serverId, serverId), eq(battlePassSegments.passType, type)))
       .for('update');
 
     let granted = 0;
@@ -334,7 +335,7 @@ export function claimPremiumTier(
       )
       .for('update');
     if (!seg) throw new BattlePassErr('NOT_PURCHASED');
-    const maxReached = await reachedFor(userId, type);
+    const maxReached = await reachedFor(userId, serverId, type);
     const lv = Math.floor(level);
     const startLevel = segmentIndex * BP_SEGMENT_SIZE[type] + 1;
     const cap = Math.min(maxReached, bpSegmentEndLevel(type, segmentIndex));
@@ -366,7 +367,7 @@ export function claimSegment(
   segmentIndex: number,
 ): Promise<{ granted: number; rewardKind: 'diamond' | 'box' }> {
   return db.transaction(async (tx) => {
-    const maxReached = await reachedFor(userId, type);
+    const maxReached = await reachedFor(userId, serverId, type);
     const startLevel = segmentIndex * BP_SEGMENT_SIZE[type] + 1;
     const cap = Math.min(maxReached, bpSegmentEndLevel(type, segmentIndex));
     const levels = tierLevelsIn(type, startLevel, cap);
@@ -375,7 +376,7 @@ export function claimSegment(
     const [s] = await tx
       .select({ tiers: battlePassState.freeClaimedTiers })
       .from(battlePassState)
-      .where(and(eq(battlePassState.userId, userId), eq(battlePassState.passType, type)))
+      .where(and(eq(battlePassState.userId, userId), eq(battlePassState.serverId, serverId), eq(battlePassState.passType, type)))
       .for('update');
     const freeClaimed = new Set(s?.tiers ?? []);
 
@@ -411,9 +412,9 @@ export function claimSegment(
       const merged = sorted([...freeClaimed, ...freeNew]);
       await tx
         .insert(battlePassState)
-        .values({ userId, passType: type, freeClaimedTiers: merged })
+        .values({ userId, serverId, passType: type, freeClaimedTiers: merged })
         .onConflictDoUpdate({
-          target: [battlePassState.userId, battlePassState.passType],
+          target: [battlePassState.userId, battlePassState.serverId, battlePassState.passType],
           set: { freeClaimedTiers: merged },
         });
     }
@@ -447,7 +448,7 @@ export function grantSegmentPurchase(
     const startMinusOne = segmentIndex * BP_SEGMENT_SIZE[type];
     const endLevel = bpSegmentEndLevel(type, segmentIndex);
 
-    const reached = await getMaxReached(userId);
+    const reached = await getMaxReached(userId, serverId);
     const maxReached = type === 'enhance' ? reached.maxEnhance : reached.maxTranscend;
     const target = Math.min(maxReached, endLevel);
     const granted = bpRangeReward(type, startMinusOne, target, true);

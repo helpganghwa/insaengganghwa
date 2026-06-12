@@ -6,6 +6,7 @@
  */
 import {
   pgTable,
+  smallint,
   uuid,
   bigint,
   bigserial,
@@ -26,15 +27,19 @@ export const userSupplyBoxes = pgTable(
     userId: uuid('user_id')
       .notNull()
       .references(() => profiles.id, { onDelete: 'cascade' }),
+    /** 소속 서버(SERVER.md P3b). */
+    serverId: smallint('server_id').notNull().default(1),
     slot: slotEnum('slot').notNull(),
     count: bigint('count', { mode: 'bigint' }).notNull().default(sql`0`),
   },
-  (t) => [primaryKey({ columns: [t.userId, t.slot] })],
+  (t) => [primaryKey({ columns: [t.userId, t.serverId, t.slot] })],
 );
 
 /** §5.2 supply_open_logs — append-only 감사·공시 정합. */
 export const supplyOpenLogs = pgTable('supply_open_logs', {
   id: bigserial('id', { mode: 'bigint' }).primaryKey(),
+  /** 소속 서버(SERVER.md P3b). */
+  serverId: smallint('server_id').notNull().default(1),
   userId: uuid('user_id').notNull(),
   slot: slotEnum('slot').notNull(),
   catalogItemId: integer('catalog_item_id')

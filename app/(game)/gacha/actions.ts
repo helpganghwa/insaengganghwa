@@ -4,6 +4,7 @@ import { revalidatePath } from 'next/cache';
 import { and, eq } from 'drizzle-orm';
 
 import { getSessionUserId } from '@/lib/auth/session';
+import { getActiveServerId } from '@/lib/game/servers';
 import { rateLimited } from '@/lib/ratelimit';
 import { db } from '@/lib/db/client';
 import { type Slot } from '@/lib/db/schema/equipment';
@@ -49,7 +50,7 @@ export async function openAction(slot: Slot, count: number): Promise<OpenActionR
   // count 1~10 범위 클램프 — UI에서도 동일 보장(보유량 < 10이면 보유량까지).
   const n = Math.max(1, Math.min(10, Math.floor(count)));
   try {
-    const opened = await openSupplyBoxes({ userId, slot, count: n });
+    const opened = await openSupplyBoxes({ userId, serverId: await getActiveServerId(), slot, count: n });
     // 개봉 아이템은 항상 active 풀에서 나오므로 캐시된 활성 카탈로그로 메타 조회(DB 왕복 제거).
     const [catalog, libRanks, boxRows] = await Promise.all([
       getActiveCatalog(),

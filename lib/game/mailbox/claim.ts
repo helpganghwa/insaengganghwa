@@ -52,9 +52,9 @@ async function applyPayload(tx: Tx, userId: string, serverId: number, p: MailPay
     if (n > 0) {
       await tx
         .insert(userSupplyBoxes)
-        .values({ userId, slot, count: BigInt(n) })
+        .values({ userId, serverId, slot, count: BigInt(n) })
         .onConflictDoUpdate({
-          target: [userSupplyBoxes.userId, userSupplyBoxes.slot],
+          target: [userSupplyBoxes.userId, userSupplyBoxes.serverId, userSupplyBoxes.slot],
           set: { count: sql`${userSupplyBoxes.count} + ${BigInt(n)}` },
         });
       acc.boxes[slot] += n;
@@ -72,7 +72,7 @@ export function claimMail(input: { userId: string; serverId: number; mailId: big
   const { userId, mailId } = input;
   return db.transaction(async (tx) => {
     const [m] = await tx
-      .select({ id: mailbox.id, payload: mailbox.payload })
+      .select({ id: mailbox.id, serverId: mailbox.serverId, payload: mailbox.payload })
       .from(mailbox)
       .where(
         and(
@@ -87,12 +87,14 @@ export function claimMail(input: { userId: string; serverId: number; mailId: big
 
     const payload = m.payload as MailPayload;
     const acc = emptyResult();
-    await applyPayload(tx, userId, input.serverId, payload, acc);
+    // 보상은 메일이 귀속된 서버 지갑/상자로(발생 서버 — 활성 서버와 무관, SERVER.md).
+    await applyPayload(tx, userId, m.serverId, payload, acc);
     await tx.update(mailbox).set({ claimedAt: new Date() }).where(eq(mailbox.id, mailId));
     // 감사 — diamond/boxes 분배 결과 기록(mailbox cron 삭제 후에도 추적 가능).
     await tx.insert(mailClaimLogs).values({
       mailId,
       userId,
+      serverId: m.serverId,
       diamondGranted: BigInt(acc.diamond),
       boxesGranted: acc.boxes,
     });
@@ -109,6 +111,7 @@ export function claimAllMail(input: { userId: string; serverId: number }): Promi
       .where(
         and(
           eq(mailbox.userId, userId),
+          eq(mailbox.serverId, input.serverId),
           isNull(mailbox.claimedAt),
           gt(mailbox.expiresAt, sql`now()`),
         ),
@@ -133,7 +136,7 @@ export function claimAllMail(input: { userId: string; serverId: number }): Promi
       total.boxes.weapon += b.weapon;
       total.boxes.armor += b.armor;
       total.boxes.accessory += b.accessory;
-      return { mailId: m.id, userId, diamondGranted: BigInt(d), boxesGranted: b };
+      return { mailId: m.id, userId, serverId: input.serverId, diamondGranted: BigInt(d), boxesGranted: b };
     });
 
     if (total.diamond > 0) {
@@ -144,9 +147,9 @@ export function claimAllMail(input: { userId: string; serverId: number }): Promi
       if (n > 0) {
         await tx
           .insert(userSupplyBoxes)
-          .values({ userId, slot, count: BigInt(n) })
+          .values({ userId, serverId: input.serverId, slot, count: BigInt(n) })
           .onConflictDoUpdate({
-            target: [userSupplyBoxes.userId, userSupplyBoxes.slot],
+            target: [userSupplyBoxes.userId, userSupplyBoxes.serverId, userSupplyBoxes.slot],
             set: { count: sql`${userSupplyBoxes.count} + ${BigInt(n)}` },
           });
       }

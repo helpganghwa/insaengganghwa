@@ -1,4 +1,5 @@
 import { getAdminStatus } from '@/lib/auth/require-admin';
+import { getActiveServerId } from '@/lib/game/servers';
 import { withTimeout } from '@/lib/db/with-timeout';
 import { getFreeStatus, FREE_SLOTS, type FreeSlot } from '@/lib/game/shop/free';
 import { getPurchaseStatus, getPremiumRemainingDays } from '@/lib/game/shop/dev-purchase';
@@ -20,6 +21,7 @@ export default async function ShopPage({
 }) {
   const { userId, isAdmin } = await getAdminStatus();
   if (!userId) return null;
+  const serverId = await getActiveServerId();
 
   const tabParam = (await searchParams).tab;
   const initialTab: ShopTab = SHOP_TABS.includes(tabParam as ShopTab)
@@ -29,9 +31,9 @@ export default async function ShopPage({
   const noFree = Object.fromEntries(FREE_SLOTS.map((s) => [s, false])) as Record<FreeSlot, boolean>;
   // 견습의 주머니(💎)는 전 유저 구매 가능 → 구매현황은 모두 로드. 현금/프리미엄은 어드민만 구매.
   const [free, purchased, premiumDays] = await Promise.all([
-    withTimeout(getFreeStatus(userId), 3500, 'shop.free').catch(() => noFree),
-    withTimeout(getPurchaseStatus(userId), 3500, 'shop.purchased').catch(() => [] as string[]),
-    withTimeout(getPremiumRemainingDays(userId), 3500, 'shop.premium').catch(() => null),
+    withTimeout(getFreeStatus(userId, serverId), 3500, 'shop.free').catch(() => noFree),
+    withTimeout(getPurchaseStatus(userId, serverId), 3500, 'shop.purchased').catch(() => [] as string[]),
+    withTimeout(getPremiumRemainingDays(userId, serverId), 3500, 'shop.premium').catch(() => null),
   ]);
 
   return (

@@ -36,6 +36,8 @@ export const enhancementJobs = pgTable(
   'enhancement_jobs',
   {
     id: bigserial('id', { mode: 'bigint' }).primaryKey(),
+    /** 소속 서버(SERVER.md P3b) — 캐릭터 단위 스코프. */
+    serverId: smallint('server_id').notNull().default(1),
     userId: uuid('user_id')
       .notNull()
       .references(() => profiles.id, { onDelete: 'cascade' }),
@@ -63,7 +65,7 @@ export const enhancementJobs = pgTable(
   (t) => [
     // lane 점유 (SLOT_BUSY) — 슬롯·lane에 running 1건.
     uniqueIndex('ej_user_slot_lane_running_uq')
-      .on(t.userId, t.slot, t.slotLane)
+      .on(t.userId, t.serverId, t.slot, t.slotLane)
       .where(sql`${t.status} = 'running'`),
     // 같은 장비(카탈로그) 중복 큐 차단.
     uniqueIndex('ej_equipment_running_uq')
@@ -78,6 +80,8 @@ export const enhancementJobs = pgTable(
 /** §3.2 enhancement_logs — append-only 감사(5년). UPDATE/DELETE 금지. */
 export const enhancementLogs = pgTable('enhancement_logs', {
   id: bigserial('id', { mode: 'bigint' }).primaryKey(),
+  /** 소속 서버(SERVER.md P3b). */
+  serverId: smallint('server_id').notNull().default(1),
   userId: uuid('user_id').notNull(),
   userEquipmentId: bigint('user_equipment_id', { mode: 'bigint' }).notNull(),
   catalogItemId: integer('catalog_item_id').notNull(),
@@ -98,6 +102,8 @@ export const enhancementLogs = pgTable('enhancement_logs', {
 /** §3.3 gem_time_reductions — 보석 단축 이력(인플레이션·어뷰징 추적, GDD §8). */
 export const gemTimeReductions = pgTable('gem_time_reductions', {
   id: bigserial('id', { mode: 'bigint' }).primaryKey(),
+  /** 소속 서버(SERVER.md P3b). */
+  serverId: smallint('server_id').notNull().default(1),
   jobId: bigint('job_id', { mode: 'bigint' })
     .notNull()
     .references(() => enhancementJobs.id, { onDelete: 'cascade' }),

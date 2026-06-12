@@ -1,7 +1,7 @@
 import 'server-only';
 
 import { cache } from 'react';
-import { eq, sql } from 'drizzle-orm';
+import { and, eq, sql } from 'drizzle-orm';
 
 import { db } from '@/lib/db/client';
 import { userEquipment } from '@/lib/db/schema/equipment';
@@ -14,13 +14,13 @@ import { userEquipment } from '@/lib/db/schema/equipment';
  */
 export type MaxReached = { maxEnhance: number; maxTranscend: number };
 
-export const getMaxReached = cache(async (userId: string): Promise<MaxReached> => {
+export const getMaxReached = cache(async (userId: string, serverId: number): Promise<MaxReached> => {
   const [row] = await db
     .select({
       maxEnhance: sql<number>`coalesce(max(${userEquipment.maxEnhanceLevel}), 0)`,
       maxTranscend: sql<number>`coalesce(max(${userEquipment.maxTranscendLevel}), 0)`,
     })
     .from(userEquipment)
-    .where(eq(userEquipment.userId, userId));
+    .where(and(eq(userEquipment.userId, userId), eq(userEquipment.serverId, serverId)));
   return { maxEnhance: row?.maxEnhance ?? 0, maxTranscend: row?.maxTranscend ?? 0 };
 });

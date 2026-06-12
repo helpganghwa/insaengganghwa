@@ -41,7 +41,7 @@ export default async function GameLayout({ children }: { children: React.ReactNo
   // 프로필/스타터 지급은 DB 트리거(handle_new_user) + 백필 마이그레이션 담당 — 핫패스 부트스트랩 없음.
 
   // 일일 보급 — KST 자정 1회 자동 발송(멱등 PK). fire-and-forget(핫패스 비차단).
-  withTimeout(ensureDailyMail(userId), 2000, 'layout.dailyMail').catch((e) => {
+  withTimeout(ensureDailyMail(userId, await getActiveServerId()), 2000, 'layout.dailyMail').catch((e) => {
     if (!(e instanceof DbTimeoutError)) console.warn('[layout] dailyMail error', e);
   });
 

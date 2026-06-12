@@ -56,6 +56,7 @@ export function reduceEnhanceTime(input: ReduceTimeInput): Promise<ReduceTimeRes
     await tx.insert(gemTimeReductions).values({
       jobId,
       userId,
+      serverId: input.serverId,
       gemsSpent: BigInt(diamonds),
       reducedMs: BigInt(effectiveReducedMs),
       conversionMsPerDiamond: BigInt(GEM_TO_MS), // 등록 시점 환산률 스냅샷

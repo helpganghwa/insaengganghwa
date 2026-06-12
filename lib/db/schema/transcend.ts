@@ -4,11 +4,13 @@
  * 박스 열기로 같은 카탈로그 중복이 누적(user_equipment.transcend_progress)되어 임계 도달 시
  * 자동으로 transcend_level +1. 본 로그는 그 발생을 append-only 기록(단일 트랜잭션, CLAUDE §3.3).
  */
-import { pgTable, uuid, integer, bigint, bigserial, timestamp } from 'drizzle-orm/pg-core';
+import { pgTable, smallint, uuid, integer, bigint, bigserial, timestamp } from 'drizzle-orm/pg-core';
 
 /** §4.1 transcend_logs — append-only 감사. 자동 초월 1단계당 1행. */
 export const transcendLogs = pgTable('transcend_logs', {
   id: bigserial('id', { mode: 'bigint' }).primaryKey(),
+  /** 소속 서버(SERVER.md P3b). */
+  serverId: smallint('server_id').notNull().default(1),
   userId: uuid('user_id').notNull(),
   userEquipmentId: bigint('user_equipment_id', { mode: 'bigint' }).notNull(),
   catalogItemId: integer('catalog_item_id').notNull(),

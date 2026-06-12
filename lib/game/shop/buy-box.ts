@@ -42,11 +42,20 @@ export async function buyBox(
 
   await db.transaction(async (tx) => {
     // 1) 주기 1회 제한 — row 잠금 후 비교.
-    await tx.insert(shopPurchases).values({ userId, productId, periodKey: '' }).onConflictDoNothing();
+    await tx
+      .insert(shopPurchases)
+      .values({ userId, serverId, productId, periodKey: '' })
+      .onConflictDoNothing();
     const [row] = await tx
       .select({ periodKey: shopPurchases.periodKey })
       .from(shopPurchases)
-      .where(and(eq(shopPurchases.userId, userId), eq(shopPurchases.productId, productId)))
+      .where(
+        and(
+          eq(shopPurchases.userId, userId),
+          eq(shopPurchases.serverId, serverId),
+          eq(shopPurchases.productId, productId),
+        ),
+      )
       .for('update');
     if (row?.periodKey === cur) throw new BuyBoxError('ALREADY_PURCHASED');
 
@@ -61,9 +70,9 @@ export async function buyBox(
       if (n > 0) {
         await tx
           .insert(userSupplyBoxes)
-          .values({ userId, slot, count: BigInt(n) })
+          .values({ userId, serverId, slot, count: BigInt(n) })
           .onConflictDoUpdate({
-            target: [userSupplyBoxes.userId, userSupplyBoxes.slot],
+            target: [userSupplyBoxes.userId, userSupplyBoxes.serverId, userSupplyBoxes.slot],
             set: { count: sql`${userSupplyBoxes.count} + ${BigInt(n)}` },
           });
       }
@@ -73,7 +82,13 @@ export async function buyBox(
     await tx
       .update(shopPurchases)
       .set({ periodKey: cur, updatedAt: new Date() })
-      .where(and(eq(shopPurchases.userId, userId), eq(shopPurchases.productId, productId)));
+      .where(
+        and(
+          eq(shopPurchases.userId, userId),
+          eq(shopPurchases.serverId, serverId),
+          eq(shopPurchases.productId, productId),
+        ),
+      );
   });
 
   return g;

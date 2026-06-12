@@ -128,7 +128,7 @@ export async function resolveEnhance(input: ResolveInput): Promise<ResolveResult
       update enhancement_jobs
       set status = 'completed'
       where id = ${jid}::bigint and status = 'running'
-      returning user_id, user_equipment_id
+      returning user_id, user_equipment_id, server_id
     ),
     ue as (
       update user_equipment u
@@ -143,9 +143,9 @@ export async function resolveEnhance(input: ResolveInput): Promise<ResolveResult
     ),
     lg as (
       insert into enhancement_logs
-        (user_id, user_equipment_id, catalog_item_id, from_level, to_level, result,
+        (user_id, server_id, user_equipment_id, catalog_item_id, from_level, to_level, result,
          base_rate_bp, effective_rate_bp, elapsed_ms, duration_ms, reduced_ms, rolled)
-      select j.user_id, j.user_equipment_id, ${catalogItemId}, ${fromLevel}, ${toLevel},
+      select j.user_id, j.server_id, j.user_equipment_id, ${catalogItemId}, ${fromLevel}, ${toLevel},
              ${outcome}::enhance_result, ${baseRateBp}, ${effBp}, ${elapsedMs}::bigint,
              ${durationMs}::bigint, ${reducedMs}::bigint, ${rolled}
       from j

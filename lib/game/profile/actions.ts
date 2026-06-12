@@ -15,7 +15,7 @@
  */
 import 'server-only';
 
-import { and, count, eq, isNotNull, sql } from 'drizzle-orm';
+import { and, count, eq, isNotNull } from 'drizzle-orm';
 import { z } from 'zod';
 
 import { db } from '@/lib/db/client';
