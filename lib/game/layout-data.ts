@@ -40,7 +40,7 @@ export async function loadLayoutData(userId: string, serverId: number): Promise<
     const [profileRows, mailRows, enhRows, friendReqRows] = await Promise.all([
       pgGuard(
         (sql) => sql`
-          select p.nickname, c.diamond, up.rotations, g.emblem_url as guild_emblem_url
+          select c.nickname, c.diamond, up.rotations, g.emblem_url as guild_emblem_url
           from profiles p
           left join characters c on c.user_id = p.id and c.server_id = ${serverId}
           left join user_profiles up on up.id = c.active_profile_id

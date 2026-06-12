@@ -44,15 +44,16 @@ export default async function InventoryPage({
     Promise.all([
       db.execute(sql`
         select
-          (select nickname from profiles where id = ${userId}::uuid) as nickname,
+          (select nickname from characters where user_id = ${userId}::uuid and server_id = ${serverId}) as nickname,
           coalesce((select json_agg(json_build_object(
               'id', id::text, 'catalogItemId', catalog_item_id, 'enhanceLevel', enhance_level,
               'transcendLevel', transcend_level, 'transcendProgress', transcend_progress,
               'equippedSlot', equipped_slot,
               'acquiredAtMs', (extract(epoch from first_acquired_at) * 1000)::bigint))
-            from user_equipment where user_id = ${userId}::uuid), '[]'::json) as equipment,
+            from user_equipment where user_id = ${userId}::uuid and server_id = ${serverId}), '[]'::json) as equipment,
           coalesce((select json_agg(user_equipment_id::text)
-            from enhancement_jobs where user_id = ${userId}::uuid and status = 'running'), '[]'::json) as running
+            from enhancement_jobs
+            where user_id = ${userId}::uuid and server_id = ${serverId} and status = 'running'), '[]'::json) as running
       `) as unknown as Promise<InvRow[]>,
       liberatedItemRanks(userId, serverId),
       getCatalogMap(), // 불변 카탈로그(캐시) — 조인 제거, in-memory 결합.
