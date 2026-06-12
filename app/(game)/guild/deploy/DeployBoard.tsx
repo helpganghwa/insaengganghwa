@@ -346,7 +346,7 @@ export function DeployBoard({
               ) : (
                 <ul className="mt-2 space-y-1">
                   {execHere.map((m) => (
-                    <li key={m.userId} className="flex items-center justify-between gap-1">
+                    <li key={m.userId} className="flex min-h-[38px] items-center justify-between gap-1">
                       <div className="flex min-w-0 flex-col">
                         <span className="truncate text-[12px] font-semibold">{m.nickname}</span>
                         <span className="text-[9px] font-bold text-indigo-500">
@@ -366,7 +366,7 @@ export function DeployBoard({
                     </li>
                   ))}
                   {deployedHere.map((m) => (
-                    <li key={m.userId} className="flex items-center justify-between gap-1">
+                    <li key={m.userId} className="flex min-h-[38px] items-center justify-between gap-1">
                       <div className="flex min-w-0 flex-col">
                         <span className="truncate text-[12px] font-semibold">{m.nickname}</span>
                         <span className="text-[9px] font-medium text-zinc-400">
@@ -409,7 +409,9 @@ export function DeployBoard({
 
         {/* 우: 길드원 전체 */}
         <section className="min-w-0 p-3">
-          <h3 className="text-[13px] font-bold">길드원 ({members.length})</h3>
+          <div className="flex items-baseline gap-1.5">
+            <h3 className="text-[13px] font-bold">길드원 ({members.length})</h3>
+          </div>
           <p className="mt-0.5 text-[10px] text-zinc-500">
             <span className="font-semibold text-red-500">공 {attackCount}</span> ·{' '}
             <span className="font-semibold text-sky-500">수 {defendCount}</span> ·{' '}
@@ -427,7 +429,7 @@ export function DeployBoard({
                   : '미배치';
               const canAssign = isOfficer && selected != null && !isExec && !here;
               return (
-                <li key={m.userId} className="flex items-center gap-1">
+                <li key={m.userId} className="flex min-h-[38px] items-center gap-1">
                   <button
                     type="button"
                     onClick={() => deployedZoneId != null && setSelectedId(deployedZoneId)}
