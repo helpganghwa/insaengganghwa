@@ -68,7 +68,13 @@ export default async function RaidPage() {
       })
       .from(raidRewards)
       .innerJoin(raids, eq(raids.id, raidRewards.raidId))
-      .where(and(eq(raidRewards.userId, userId), isNull(raidRewards.claimedAt))),
+      .where(
+        and(
+          eq(raidRewards.userId, userId),
+          eq(raids.serverId, serverId),
+          isNull(raidRewards.claimedAt),
+        ),
+      ),
     ]),
     3500,
     'raid.page',

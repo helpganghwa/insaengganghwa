@@ -73,7 +73,12 @@ export async function getUnreadMailsAction(): Promise<MailItem[]> {
     })
     .from(mailbox)
     .where(
-      and(eq(mailbox.userId, userId), isNull(mailbox.claimedAt), gt(mailbox.expiresAt, sql`now()`)),
+      and(
+        eq(mailbox.userId, userId),
+        eq(mailbox.serverId, await getActiveServerId()),
+        isNull(mailbox.claimedAt),
+        gt(mailbox.expiresAt, sql`now()`),
+      ),
     )
     .orderBy(desc(mailbox.createdAt))
     .limit(50);
@@ -125,7 +130,14 @@ export async function loadMoreMailsAction(
       createdAt: mailbox.createdAt,
     })
     .from(mailbox)
-    .where(and(eq(mailbox.userId, userId), tabClause, lt(mailbox.createdAt, before)))
+    .where(
+      and(
+        eq(mailbox.userId, userId),
+        eq(mailbox.serverId, await getActiveServerId()),
+        tabClause,
+        lt(mailbox.createdAt, before),
+      ),
+    )
     .orderBy(desc(mailbox.createdAt))
     .limit(PAGE_SIZE + 1);
   const hasMore = rows.length > PAGE_SIZE;

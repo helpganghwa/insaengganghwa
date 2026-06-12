@@ -213,6 +213,7 @@ export async function getActiveJobsForSlot(slot: Slot) {
     .where(
       and(
         eq(enhancementJobs.userId, userId),
+        eq(enhancementJobs.serverId, await getActiveServerId()),
         eq(enhancementJobs.status, 'running'),
         eq(catalogItems.slot, slot),
       ),

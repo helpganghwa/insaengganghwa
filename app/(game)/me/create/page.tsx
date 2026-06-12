@@ -30,7 +30,11 @@ export default async function CreateProfilePage() {
       .from(userEquipment)
       .innerJoin(catalogItems, eq(userEquipment.catalogItemId, catalogItems.id))
       .where(
-        and(eq(userEquipment.userId, userId), isNotNull(userEquipment.equippedSlot)),
+        and(
+          eq(userEquipment.userId, userId),
+          eq(userEquipment.serverId, serverId),
+          isNotNull(userEquipment.equippedSlot),
+        ),
       ),
     db
       .select({

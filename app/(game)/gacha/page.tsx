@@ -1,4 +1,5 @@
-import { eq } from 'drizzle-orm';
+import { and, eq } from 'drizzle-orm';
+import { getActiveServerId } from '@/lib/game/servers';
 import { preload } from 'react-dom';
 
 import { getSessionUserId } from '@/lib/auth/session';
@@ -25,6 +26,7 @@ export default async function GachaPage() {
   preload(assetUrl(BOXES[0].bg), { as: 'image', fetchPriority: 'high' });
 
   const userId = await getSessionUserId();
+  const serverId = await getActiveServerId();
   if (!userId) return null;
 
   // 콜드 DB 커넥션 hang 시 페이지 무한 대기 방지 — 실패 시 보유 수량 0으로 degrade(2026-05-29).
@@ -32,7 +34,7 @@ export default async function GachaPage() {
     db
       .select({ slot: userSupplyBoxes.slot, count: userSupplyBoxes.count })
       .from(userSupplyBoxes)
-      .where(eq(userSupplyBoxes.userId, userId)),
+      .where(and(eq(userSupplyBoxes.userId, userId), eq(userSupplyBoxes.serverId, serverId))),
     3500,
     'gacha.boxes',
   ).catch(() => []);

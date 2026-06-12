@@ -1,4 +1,5 @@
 import { and, desc, eq, gt, isNotNull, isNull, sql } from 'drizzle-orm';
+import { getActiveServerId } from '@/lib/game/servers';
 
 import { getSessionUserId } from '@/lib/auth/session';
 import { db } from '@/lib/db/client';
@@ -19,6 +20,7 @@ export default async function MailPage({
   searchParams: Promise<{ tab?: string }>;
 }) {
   const userId = await getSessionUserId();
+  const serverId = await getActiveServerId();
   if (!userId) return null;
   const tab = (await searchParams).tab === 'done' ? 'done' : 'unread';
 
@@ -40,8 +42,17 @@ export default async function MailPage({
       .from(mailbox)
       .where(
         tab === 'unread'
-          ? and(eq(mailbox.userId, userId), isNull(mailbox.claimedAt), gt(mailbox.expiresAt, sql`now()`))
-          : and(eq(mailbox.userId, userId), isNotNull(mailbox.claimedAt)),
+          ? and(
+              eq(mailbox.userId, userId),
+              eq(mailbox.serverId, serverId),
+              isNull(mailbox.claimedAt),
+              gt(mailbox.expiresAt, sql`now()`),
+            )
+          : and(
+              eq(mailbox.userId, userId),
+              eq(mailbox.serverId, serverId),
+              isNotNull(mailbox.claimedAt),
+            ),
       )
       .orderBy(desc(mailbox.createdAt))
       .limit(PAGE_SIZE + 1),
@@ -78,6 +89,7 @@ export default async function MailPage({
               coalesce(sum((payload->'boxes'->>'accessory')::int), 0)::int as accessory
             from mailbox
             where user_id = ${userId}::uuid
+              and server_id = ${serverId}
               and claimed_at is null
               and expires_at > now()
           `),

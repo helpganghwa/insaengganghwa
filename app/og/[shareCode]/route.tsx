@@ -213,7 +213,11 @@ export async function GET(_req: Request, { params }: { params: Promise<{ shareCo
       .from(userEquipment)
       .innerJoin(catalogItems, eq(userEquipment.catalogItemId, catalogItems.id))
       .where(
-        and(eq(userEquipment.userId, prof.id), isNotNull(userEquipment.equippedSlot)),
+        and(
+          eq(userEquipment.userId, prof.id),
+          eq(userEquipment.serverId, DEFAULT_SERVER_ID),
+          isNotNull(userEquipment.equippedSlot),
+        ),
       );
   }
 

@@ -86,11 +86,17 @@ export async function deleteProfile(profileId: string): Promise<ActionState> {
   if (!(await ownedProfileId(userId, profileId)))
     return { status: 'error', message: '아바타를 찾을 수 없습니다.' };
 
-  // 최소 1개 보유 — 마지막 프로필은 삭제 불가.
+  // 최소 1개 보유(같은 서버 내) — 마지막 프로필은 삭제 불가.
+  const [target] = await db
+    .select({ serverId: userProfiles.serverId })
+    .from(userProfiles)
+    .where(and(eq(userProfiles.id, profileId), eq(userProfiles.userId, userId)))
+    .limit(1);
+  if (!target) return { status: 'error', message: '아바타를 찾을 수 없습니다.' };
   const [c] = await db
     .select({ n: count() })
     .from(userProfiles)
-    .where(eq(userProfiles.userId, userId));
+    .where(and(eq(userProfiles.userId, userId), eq(userProfiles.serverId, target.serverId)));
   if ((c?.n ?? 0) <= 1)
     return { status: 'error', message: '아바타는 최소 1개 이상 보유해야 합니다.' };
 

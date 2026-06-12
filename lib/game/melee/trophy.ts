@@ -69,11 +69,11 @@ function isPng(b: Buffer): boolean {
 }
 
 /** 우승자 source 캐릭터 — 현재 활성 프로필의 pixellab 캐릭터(없으면 최근 프로필). */
-async function getSourceChar(userId: string): Promise<string | null> {
+async function getSourceChar(userId: string, serverId: number): Promise<string | null> {
   const [p] = await db
     .select({ active: characters.activeProfileId })
     .from(characters)
-    .where(eq(characters.userId, userId))
+    .where(and(eq(characters.userId, userId), eq(characters.serverId, serverId)))
     .limit(1);
   if (p?.active) {
     const [ap] = await db
@@ -92,11 +92,11 @@ async function getSourceChar(userId: string): Promise<string | null> {
 }
 
 /** 우승자 아바타의 표시 방향(active_direction) — 트로피도 같은 방향 노출. 없으면 south. */
-async function getChampionDirection(userId: string): Promise<string> {
+async function getChampionDirection(userId: string, serverId: number): Promise<string> {
   const [p] = await db
     .select({ active: characters.activeProfileId })
     .from(characters)
-    .where(eq(characters.userId, userId))
+    .where(and(eq(characters.userId, userId), eq(characters.serverId, serverId)))
     .limit(1);
   if (p?.active) {
     const [ap] = await db
@@ -179,6 +179,7 @@ async function mirror(battleId: bigint, images: ReadyImages): Promise<Record<str
 
 type TrophyBattle = {
   id: bigint;
+  serverId: number;
   championUserId: string;
   finale: MeleeFinale;
   trophyStatus: string | null;
@@ -197,7 +198,7 @@ async function startAttempt(b: TrophyBattle, nextAttempt: number): Promise<void>
     console.warn(`[melee.trophy] battle ${b.id} FAILED (attempts > ${MAX_ATTEMPTS})`);
     return;
   }
-  const source = await getSourceChar(b.championUserId);
+  const source = await getSourceChar(b.championUserId, b.serverId);
   if (!source) {
     await db
       .update(meleeBattles)
@@ -225,7 +226,7 @@ async function startAttempt(b: TrophyBattle, nextAttempt: number): Promise<void>
 async function finalize(b: TrophyBattle, _images: ReadyImages, _charId: string): Promise<void> {
   const rotations = await mirror(b.id, _images);
   // 표시 방향 = 우승자 아바타의 active_direction(같은 방향). 없으면 south 폴백.
-  const dir = await getChampionDirection(b.championUserId);
+  const dir = await getChampionDirection(b.championUserId, b.serverId);
   const chosen = rotations[dir] ?? rotations.south;
   if (!chosen) throw new Error('mirror missing chosen/south');
 
@@ -291,6 +292,7 @@ export async function processTrophies(): Promise<{ processed: number }> {
   const rows = await db
     .select({
       id: meleeBattles.id,
+      serverId: meleeBattles.serverId,
       championUserId: meleeBattles.championUserId,
       finale: meleeBattles.finale,
       trophyStatus: meleeBattles.trophyStatus,

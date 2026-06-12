@@ -1,4 +1,5 @@
 import Link from 'next/link';
+import { getActiveServerId } from '@/lib/game/servers';
 import { sql } from 'drizzle-orm';
 
 import { assetUrl } from '@/lib/asset-versions';
@@ -105,6 +106,7 @@ const REGION_COLOR: Record<string, string> = {
 
 export default async function HomePage() {
   const userId = await getSessionUserId();
+  const serverId = await getActiveServerId();
   // (game) layout이 가드하므로 정상 흐름엔 null 아님. 폴백 안전.
   let hasUnclaimedDaily = false;
   let hasUnclaimedCheckin = false;
@@ -140,21 +142,21 @@ export default async function HomePage() {
         db.execute(sql`
           select
             (select count(*)::int from mailbox
-               where user_id = ${userId}::uuid and sender_label = '일일 보급' and claimed_at is null
+               where user_id = ${userId}::uuid and server_id = ${serverId} and sender_label = '일일 보급' and claimed_at is null
                  and (created_at at time zone 'Asia/Seoul')::date = (now() at time zone 'Asia/Seoul')::date)
               as daily_unclaimed,
-            (select last_claimed_kst_day::text from user_checkin_state where user_id = ${userId}::uuid)
+            (select last_claimed_kst_day::text from user_checkin_state where user_id = ${userId}::uuid and server_id = ${serverId})
               as checkin_last,
             (select count(*)::int from enhancement_jobs
-               where user_id = ${userId}::uuid and status = 'running' and complete_at <= now())
+               where user_id = ${userId}::uuid and server_id = ${serverId} and status = 'running' and complete_at <= now())
               as enhance_ready,
-            (select coalesce(sum(count),0)::int from user_supply_boxes where user_id = ${userId}::uuid)
+            (select coalesce(sum(count),0)::int from user_supply_boxes where user_id = ${userId}::uuid and server_id = ${serverId})
               as supply_sum,
             (select count(*)::int from mailbox
-               where user_id = ${userId}::uuid and claimed_at is null
+               where user_id = ${userId}::uuid and server_id = ${serverId} and claimed_at is null
                  and (expires_at is null or expires_at > now()))
               as mail_unclaimed,
-            (select count(*)::int from raid_rewards where user_id = ${userId}::uuid and claimed_at is null)
+            (select count(*)::int from raid_rewards rr join raids r on r.id = rr.raid_id where rr.user_id = ${userId}::uuid and r.server_id = ${serverId} and rr.claimed_at is null)
               as raid_unclaimed,
             -- 대난투: 서버 시계로 phase(개시 전/진행/발표 후) + 오늘 배틀 상태·우승자 닉.
             case
@@ -173,18 +175,18 @@ export default async function HomePage() {
                  limit 1),
               cc.nickname
             ) as melee_champ,
-            (select count(*)::int from melee_battles where server_id = 1 and battle_date <= n.kst::date) as melee_edition,
+            (select count(*)::int from melee_battles where server_id = ${serverId} and battle_date <= n.kst::date) as melee_edition,
             rz.name as residence_name,
             rz.region::text as residence_region,
             -- 상점 무료 클레임 — 주기 비교는 JS(freeStatusFromClaims, 단일 진실).
             coalesce(
-              (select json_agg(json_build_array(slot, period_key)) from shop_free_claims where user_id = ${userId}::uuid and server_id = 1),
+              (select json_agg(json_build_array(slot, period_key)) from shop_free_claims where user_id = ${userId}::uuid and server_id = ${serverId}),
               '[]'::json
             ) as free_claims
           from (select (now() at time zone 'Asia/Seoul') kst) n
-          left join melee_battles b on b.battle_date = n.kst::date and b.server_id = 1
-          left join characters cc on cc.user_id = b.champion_user_id and cc.server_id = 1
-          left join characters me on me.user_id = ${userId}::uuid and me.server_id = 1
+          left join melee_battles b on b.battle_date = n.kst::date and b.server_id = ${serverId}
+          left join characters cc on cc.user_id = b.champion_user_id and cc.server_id = ${serverId}
+          left join characters me on me.user_id = ${userId}::uuid and me.server_id = ${serverId}
           left join zones rz on rz.id = me.residence_zone_id
           limit 1
         `),

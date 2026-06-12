@@ -1,6 +1,6 @@
 import Link from 'next/link';
 import { getActiveServerId } from '@/lib/game/servers';
-import { eq } from 'drizzle-orm';
+import { and, eq } from 'drizzle-orm';
 
 import { getSessionUserId } from '@/lib/auth/session';
 import { db } from '@/lib/db/client';
@@ -28,7 +28,7 @@ export default async function CodexPage() {
       db
         .select({ catalogItemId: userEquipment.catalogItemId, max: userEquipment.maxEnhanceLevel })
         .from(userEquipment)
-        .where(eq(userEquipment.userId, userId)),
+        .where(and(eq(userEquipment.userId, userId), eq(userEquipment.serverId, serverId))),
       liberatedItemRanks(userId, serverId),
     ]),
     3500,

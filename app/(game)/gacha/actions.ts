@@ -58,7 +58,13 @@ export async function openAction(slot: Slot, count: number): Promise<OpenActionR
       db
         .select({ c: userSupplyBoxes.count })
         .from(userSupplyBoxes)
-        .where(and(eq(userSupplyBoxes.userId, userId), eq(userSupplyBoxes.slot, slot)))
+        .where(
+          and(
+            eq(userSupplyBoxes.userId, userId),
+            eq(userSupplyBoxes.serverId, await getActiveServerId()),
+            eq(userSupplyBoxes.slot, slot),
+          ),
+        )
         .limit(1),
     ]);
     const metaMap = new Map(catalog.map((m) => [m.id, m]));

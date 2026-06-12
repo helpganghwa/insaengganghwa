@@ -57,7 +57,7 @@ export async function createProfileJob(
   const [pc] = await db
     .select({ n: count() })
     .from(userProfiles)
-    .where(eq(userProfiles.userId, userId));
+    .where(and(eq(userProfiles.userId, userId), eq(userProfiles.serverId, serverId)));
   if ((pc?.n ?? 0) >= 20) throw new CreateProfileJobError('PROFILE_LIMIT');
 
   const parsed = ProfileOptionsSchema.safeParse(rawOptions);
@@ -81,6 +81,7 @@ export async function createProfileJob(
     .where(
       and(
         eq(userEquipment.userId, userId),
+        eq(userEquipment.serverId, serverId),
         isNotNull(userEquipment.equippedSlot),
       ),
     );

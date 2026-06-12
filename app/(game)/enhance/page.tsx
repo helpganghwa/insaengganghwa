@@ -70,7 +70,7 @@ export default async function EnhancePage() {
             from enhancement_jobs ej
             join user_equipment ue on ue.id = ej.user_equipment_id
             join catalog_items ci on ci.id = ue.catalog_item_id
-            where ej.user_id = ${userId}::uuid and ej.status = 'running'), '[]'::json) as jobs,
+            where ej.user_id = ${userId}::uuid and ej.server_id = ${serverId} and ej.status = 'running'), '[]'::json) as jobs,
           coalesce((select json_agg(json_build_object(
               'id', ue.id::text, 'catalogItemId', ue.catalog_item_id, 'enhanceLevel', ue.enhance_level,
               'transcendLevel', ue.transcend_level, 'equippedSlot', ue.equipped_slot,
@@ -79,7 +79,7 @@ export default async function EnhancePage() {
             from user_equipment ue
             join catalog_items ci on ci.id = ue.catalog_item_id
             left join enhancement_jobs ej on ej.user_equipment_id = ue.id and ej.status = 'running'
-            where ue.user_id = ${userId}::uuid and ej.id is null), '[]'::json) as candidates
+            where ue.user_id = ${userId}::uuid and ue.server_id = ${serverId} and ej.id is null), '[]'::json) as candidates
         from profiles p
           left join characters c on c.user_id = p.id and c.server_id = ${serverId}
         where p.id = ${userId}::uuid limit 1

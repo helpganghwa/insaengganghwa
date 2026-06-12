@@ -12,6 +12,7 @@ import { ProfileSelector } from './ProfileSelector';
 
 export default async function ProfileSelectPage() {
   const userId = await getSessionUserId();
+  const serverId = await getActiveServerId();
   if (!userId) return null;
 
   // 콜드 DB 커넥션 hang 시 페이지 무한 대기 방지 — 실패 시 빈 결과로 degrade(2026-05-29).
@@ -24,12 +25,18 @@ export default async function ProfileSelectPage() {
         activeDirection: userProfiles.activeDirection,
       })
       .from(userProfiles)
-      .where(and(eq(userProfiles.userId, userId), isNull(userProfiles.hiddenAt)))
+      .where(
+        and(
+          eq(userProfiles.userId, userId),
+          eq(userProfiles.serverId, serverId),
+          isNull(userProfiles.hiddenAt),
+        ),
+      )
       .orderBy(desc(userProfiles.createdAt)),
     db
       .select({ activeProfileId: characters.activeProfileId })
       .from(characters)
-      .where(and(eq(characters.userId, userId), eq(characters.serverId, await getActiveServerId())))
+      .where(and(eq(characters.userId, userId), eq(characters.serverId, serverId)))
       .limit(1),
     ]),
     3500,
