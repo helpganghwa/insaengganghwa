@@ -1,6 +1,7 @@
 import 'server-only';
 
 import sharp from 'sharp';
+import Anthropic from '@anthropic-ai/sdk';
 import { and, eq, desc, sql } from 'drizzle-orm';
 import { createClient, type SupabaseClient } from '@supabase/supabase-js';
 
@@ -10,7 +11,62 @@ import { profiles } from '@/lib/db/schema/profiles';
 
 import { GUILD_EMBLEM_REROLL_COST_DIAMOND, MAX_GUILD_EMBLEMS } from './balance';
 import { GuildError } from './errors';
-import { buildEmblemPrompt, mainColor, type EmblemSelection } from './emblem-vocab';
+import {
+  buildEmblemPrompt,
+  mainColor,
+  EMBLEM_SHAPES,
+  EMBLEM_TONES,
+  EMBLEM_KEYWORDS,
+  type EmblemSelection,
+} from './emblem-vocab';
+
+// ── AI 프롬프트 생성(Haiku) — 선택값을 코히어런트한 픽셀 엠블럼 영문 프롬프트로 변환. 실패 시 템플릿 폴백. ──
+const EMBLEM_PROMPT_MODEL = 'claude-haiku-4-5-20251001';
+let _anthropic: Anthropic | null = null;
+function anthropic(): Anthropic {
+  const key = process.env.ANTHROPIC_API_KEY;
+  if (!key) throw new Error('ANTHROPIC_API_KEY missing');
+  return (_anthropic ??= new Anthropic({ apiKey: key }));
+}
+const EMBLEM_PROMPT_SYSTEM = `You write a single-line English image prompt for a pixel-art guild emblem generator (Pixellab pixflux).
+Given a shape, two colors, a main keyword and an optional sub keyword, compose ONE coherent dark-fantasy guild emblem.
+Rules:
+- Output ONLY the prompt text (English, one line, <120 words). No quotes, no preamble, no explanation.
+- The MAIN keyword is the single bold central motif (large, clear). The SUB keyword (if any) is only a small secondary accent — never a second competing focal point.
+- Use the given shape as the overall silhouette. Main color as the palette, sub color as accents.
+- Merge everything into ONE unified motif — do NOT scatter multiple separate objects.
+- Always include: pixel art, dark fantasy, bold clean readable silhouette, fills the frame, centered, transparent background, no text, no lettering.`;
+
+async function buildEmblemPromptAI(s: EmblemSelection): Promise<string> {
+  try {
+    const shape = EMBLEM_SHAPES.find((x) => x.id === s.shapeId)?.en ?? 'a round shield';
+    const main = EMBLEM_TONES.find((x) => x.id === s.mainToneId)?.en ?? 'crimson';
+    const sub = EMBLEM_TONES.find((x) => x.id === s.subToneId)?.en ?? 'gold';
+    const mainKw = EMBLEM_KEYWORDS.find((x) => x.id === s.mainKeywordId)?.en ?? 'a dragon';
+    const subKw = s.subKeywordId ? EMBLEM_KEYWORDS.find((x) => x.id === s.subKeywordId)?.en : null;
+    const res = await anthropic().messages.create({
+      model: EMBLEM_PROMPT_MODEL,
+      max_tokens: 220,
+      system: [{ type: 'text', text: EMBLEM_PROMPT_SYSTEM, cache_control: { type: 'ephemeral' } }],
+      messages: [
+        {
+          role: 'user',
+          content:
+            `Shape: ${shape}\nMain color: ${main}\nSub color: ${sub}\n` +
+            `Main keyword (central motif): ${mainKw}\nSub keyword (small accent): ${subKw ?? 'none'}\n\n` +
+            `Write the one-line pixel guild emblem prompt.`,
+        },
+      ],
+    });
+    const block = res.content.find((b) => b.type === 'text');
+    const text = block && 'text' in block ? block.text.trim().replace(/^["']|["']$/g, '') : '';
+    if (text.length < 20) return buildEmblemPrompt(s); // 너무 짧음 → 폴백
+    return text.slice(0, 1000);
+  } catch (e) {
+    console.warn('[guild.emblem] AI 프롬프트 실패 — 템플릿 폴백', e);
+    return buildEmblemPrompt(s);
+  }
+}
 
 /**
  * 길드 문양 런타임 생성 — GUILD §1.6. pixflux(동기, base64) → Supabase Storage 업로드 →
@@ -145,7 +201,7 @@ async function generateEmblemAsset(
   selection: EmblemSelection,
 ): Promise<{ emblemUrl: string; color: string | null }> {
   const color = mainColor(selection.mainToneId);
-  const raw = await generateEmblemPng(buildEmblemPrompt(selection));
+  const raw = await generateEmblemPng(await buildEmblemPromptAI(selection));
   const png = await fitEmblemToFrame(raw); // 투명 여백 제거·프레임 채움(가시성↑)
   const emblemUrl = await uploadEmblem(`${guildId}/${crypto.randomUUID()}.png`, png);
   return { emblemUrl, color };
