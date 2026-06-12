@@ -36,6 +36,8 @@ type Zone = {
   region: Region;
   mapX: number;
   mapY: number;
+  /** 미개방(단계 개방 — 안개). */
+  locked: boolean;
   ownerGuildId: string | null;
   ownerEmblemUrl: string | null;
 };
@@ -72,7 +74,8 @@ export function DeployBoard({
     () => new Set(zones.filter((z) => z.ownerGuildId === myGuildId).map((z) => z.id)),
     [zones, myGuildId],
   );
-  const usable = (id: number) => ownedIds.has(id) || attackable.has(id);
+  const lockedIds = useMemo(() => new Set(zones.filter((z) => z.locked).map((z) => z.id)), [zones]);
+  const usable = (id: number) => !lockedIds.has(id) && (ownedIds.has(id) || attackable.has(id));
 
   const selected = selectedId != null ? (zoneById.get(selectedId) ?? null) : null;
   const selectedRole: DeployRole | null = selected
@@ -211,7 +214,7 @@ export function DeployBoard({
       .map(({ a, b }) => {
         const za = zoneById.get(a);
         const zb = zoneById.get(b);
-        if (!za || !zb) return null;
+        if (!za || !zb || za.locked || zb.locked) return null; // 안개 속 길 미노출
         return { a, b, x1: za.mapX, y1: za.mapY, x2: zb.mapX, y2: zb.mapY, active: usable(a) && usable(b) };
       })
       .filter((e): e is NonNullable<typeof e> => e != null);
@@ -274,7 +277,26 @@ export function DeployBoard({
             />
           ))}
         </svg>
+        {/* 미개방 지역 안개(단계 개방) — 코드 마스킹(이미지 에셋 불요). */}
+        {zones.filter((z) => z.locked).map((z) => (
+          <span
+            key={`fog-${z.id}`}
+            aria-hidden
+            className="pointer-events-none absolute -translate-x-1/2 -translate-y-1/2"
+            style={{
+              left: `${z.mapX}%`,
+              top: `${z.mapY}%`,
+              width: '24%',
+              aspectRatio: '1',
+              zIndex: 25,
+              background:
+                'radial-gradient(circle, rgba(148,155,170,0.92) 0%, rgba(132,140,156,0.78) 42%, rgba(120,128,146,0.32) 68%, transparent 100%)',
+              filter: 'blur(1px)',
+            }}
+          />
+        ))}
         {zones.map((z) => {
+          if (z.locked) return null; // 미개방 — 노드 미노출
           const mine = z.ownerGuildId === myGuildId;
           const canAttack = !mine && attackable.has(z.id);
           const isUsable = mine || canAttack;

@@ -14,6 +14,7 @@ const MAP: Record<string, string> = {
   TARGET_NOT_IN_GUILD: '대상이 같은 길드원이 아닙니다.',
   INVALID_TARGET: '대상이 올바르지 않습니다.',
   ZONE_NOT_FOUND: '구역을 찾을 수 없습니다.',
+  ZONE_LOCKED: '아직 개방되지 않은 지역입니다.',
   NOT_EXECUTOR: '해당 구역의 집행관이 아닙니다.',
   COLLECT_COOLDOWN: '아직 수금 쿨다운입니다.',
   NOTHING_TO_COLLECT: '수금할 다이아가 없습니다.',

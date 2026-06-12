@@ -11,6 +11,7 @@
  */
 import {
   pgTable,
+  boolean,
   smallint,
   pgEnum,
   uuid,
@@ -150,6 +151,8 @@ export const zones = pgTable(
     taxPoints: bigint('tax_points', { mode: 'bigint' }).notNull().default(sql`0`),
     /** 미수금 누적 세금 💎(포인트 100당 +1, 집행관 수금 대상, 점령 시 신 소유자로 이전). */
     taxDiamond: bigint('tax_diamond', { mode: 'bigint' }).notNull().default(sql`0`),
+    /** 단계 개방(콜드스타트) — true면 미개방(안개): 배치·거주 불가, 운영이 순차 개방. */
+    locked: boolean('locked').notNull().default(false),
     /** 집행관 수금 1h 쿨다운 기준. */
     lastTaxCollectedAt: timestamp('last_tax_collected_at', { withTimezone: true }),
     capturedAt: timestamp('captured_at', { withTimezone: true }),

@@ -24,6 +24,8 @@ type Zone = {
   name: string;
   mapX: number;
   mapY: number;
+  /** 미개방(단계 개방 — 안개). 클릭 불가·이름 미노출. */
+  locked: boolean;
   ownerGuildId: string | null;
   ownerGuildName: string | null;
   ownerEmblemUrl: string | null;
@@ -198,8 +200,10 @@ export function WorldMapView({
   // 인접 간선(길) — 좌표로 선분 산출. 선택 구역에 연결된 길은 강조.
   const edges = useMemo(() => {
     const pos = new Map(zones.map((z) => [z.id, { x: z.mapX, y: z.mapY }]));
+    const lockedIds = new Set(zones.filter((z) => z.locked).map((z) => z.id));
     return adjacency
       .map(({ a, b }) => {
+        if (lockedIds.has(a) || lockedIds.has(b)) return null; // 안개 속 길 미노출
         const pa = pos.get(a);
         const pb = pos.get(b);
         return pa && pb ? { a, b, x1: pa.x, y1: pa.y, x2: pb.x, y2: pb.y } : null;
@@ -328,7 +332,27 @@ export function WorldMapView({
         <span className="absolute bottom-2 right-2 z-30 inline-flex rounded-full bg-black/45 p-1 backdrop-blur-sm">
           <ToggleSwitch on={showNames} onToggle={() => setShowNames((v) => !v)} small label="지역 이름 표시" />
         </span>
+        {/* 미개방 지역 안개(단계 개방) — 잠긴 존 좌표마다 radial 안개를 겹쳐 구름띠 형성.
+            이미지 에셋 없이 코드 마스킹: 서버별 개방 상태를 그대로 렌더, 지도 수정에도 무관. */}
+        {zones.filter((z) => z.locked).map((z) => (
+          <span
+            key={`fog-${z.id}`}
+            aria-hidden
+            className="pointer-events-none absolute -translate-x-1/2 -translate-y-1/2"
+            style={{
+              left: `${z.mapX}%`,
+              top: `${z.mapY}%`,
+              width: '24%',
+              aspectRatio: '1',
+              zIndex: 25,
+              background:
+                'radial-gradient(circle, rgba(148,155,170,0.92) 0%, rgba(132,140,156,0.78) 42%, rgba(120,128,146,0.32) 68%, transparent 100%)',
+              filter: 'blur(1px)',
+            }}
+          />
+        ))}
         {zones.map((z) => {
+          if (z.locked) return null; // 미개방 — 노드 미노출(안개 오버레이가 덮음)
           const owned = z.ownerGuildId != null;
           const isResidence = z.id === residence;
           const color = REGION[z.region].color;

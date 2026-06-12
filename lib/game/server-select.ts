@@ -124,7 +124,7 @@ export async function createCharacter(input: {
     const [rz] = await tx
       .select({ id: zones.id })
       .from(zones)
-      .where(eq(zones.serverId, input.serverId))
+      .where(and(eq(zones.serverId, input.serverId), eq(zones.locked, false)))
       .orderBy(sql`random()`)
       .limit(1);
 

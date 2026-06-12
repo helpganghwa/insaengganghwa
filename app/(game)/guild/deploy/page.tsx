@@ -53,6 +53,7 @@ export default async function DeployPage() {
         region: z.region,
         mapX: z.mapX,
         mapY: z.mapY,
+        locked: z.locked,
         ownerGuildId: z.ownerGuildId?.toString() ?? null,
         ownerEmblemUrl: z.ownerEmblemUrl,
       }))}
