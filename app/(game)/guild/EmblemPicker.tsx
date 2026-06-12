@@ -10,9 +10,11 @@ import {
 
 /**
  * 길드 문양 선택 — GUILD §1.6.
- *  모양(SVG 미리보기·1택) · 컬러(메인/서브 각 1택) · 키워드(카테고리별 0~1, 합계 ≥1).
- *  생성 전이라 실제 이미지 미리보기는 없음(모양은 대략 실루엣).
+ *  모양(텍스트·1택) · 컬러(메인/서브 각 1택) · 키워드(메인 1 + 서브 0~1).
+ *  생성 시 선택값을 AI가 받아 최적 프롬프트로 변환(생성 전 미리보기 없음).
  */
+const KW_SELECT_CLS =
+  'w-full rounded-lg border border-zinc-200 bg-zinc-50 px-2.5 py-2 text-[13px] outline-none focus:border-zinc-400 dark:border-zinc-700 dark:bg-zinc-900 dark:focus:border-zinc-500';
 function ColorRow({
   label,
   selectedId,
@@ -50,24 +52,20 @@ export function EmblemPicker({
   onChange: (s: EmblemSelection) => void;
   disabled?: boolean;
 }) {
-  // 키워드 토글 — 같은 카테고리는 1개로 교체(0~1), 합계 ≥1 유지(마지막 1개는 해제 불가).
-  const toggleKeyword = (id: string) => {
-    const k = EMBLEM_KEYWORDS.find((x) => x.id === id);
-    if (!k) return;
-    const on = value.keywordIds.includes(id);
-    if (on) {
-      if (value.keywordIds.length <= 1) return; // 최소 1개
-      onChange({ ...value, keywordIds: value.keywordIds.filter((x) => x !== id) });
-    } else {
-      const sameCat = EMBLEM_KEYWORDS.filter((x) => x.cat === k.cat).map((x) => x.id);
-      const next = value.keywordIds.filter((x) => !sameCat.includes(x)).concat(id);
-      onChange({ ...value, keywordIds: next });
-    }
-  };
+  const kwOptions = (excludeId?: string) =>
+    EMBLEM_KEYWORD_CATEGORIES.map((cat) => (
+      <optgroup key={cat.id} label={cat.ko}>
+        {EMBLEM_KEYWORDS.filter((k) => k.cat === cat.id && k.id !== excludeId).map((k) => (
+          <option key={k.id} value={k.id}>
+            {k.ko}
+          </option>
+        ))}
+      </optgroup>
+    ));
 
   return (
     <div className={`space-y-3 ${disabled ? 'pointer-events-none opacity-50' : ''}`}>
-      {/* 모양 — SVG 실루엣 + 이름 */}
+      {/* 모양 — 텍스트 1택(실제 외형은 AI가 해석) */}
       <div>
         <p className="mb-1 text-[11px] font-semibold text-zinc-500">모양</p>
         <div className="grid grid-cols-3 gap-1.5">
@@ -78,16 +76,13 @@ export function EmblemPicker({
                 key={s.id}
                 type="button"
                 onClick={() => onChange({ ...value, shapeId: s.id })}
-                className={`flex items-center gap-1.5 rounded-lg border px-2 py-1.5 text-[11px] font-semibold transition ${
+                className={`rounded-lg border px-2 py-1.5 text-center text-[11px] font-semibold transition ${
                   on
                     ? 'border-amber-500 bg-amber-50 text-amber-700 dark:bg-amber-950/30 dark:text-amber-300'
                     : 'border-zinc-200 text-zinc-600 dark:border-zinc-700 dark:text-zinc-300'
                 }`}
               >
-                <svg viewBox="0 0 24 24" className="h-5 w-5 shrink-0" aria-hidden>
-                  <path d={s.svg} fill="currentColor" />
-                </svg>
-                <span className="truncate">{s.ko}</span>
+                {s.ko}
               </button>
             );
           })}
@@ -101,34 +96,36 @@ export function EmblemPicker({
         <ColorRow label="서브" selectedId={value.subToneId} onPick={(id) => onChange({ ...value, subToneId: id })} />
       </div>
 
-      {/* 키워드 — 카테고리별 0~1, 합계 ≥1 */}
-      <div>
-        <p className="mb-1 text-[11px] font-semibold text-zinc-500">키워드</p>
-        <div className="space-y-2">
-          {EMBLEM_KEYWORD_CATEGORIES.map((cat) => (
-            <div key={cat.id}>
-              <p className="mb-1 text-[10px] font-medium text-zinc-400">{cat.ko}</p>
-              <div className="flex flex-wrap gap-1.5">
-                {EMBLEM_KEYWORDS.filter((k) => k.cat === cat.id).map((k) => {
-                  const on = value.keywordIds.includes(k.id);
-                  return (
-                    <button
-                      key={k.id}
-                      type="button"
-                      onClick={() => toggleKeyword(k.id)}
-                      className={`rounded-full px-2.5 py-1 text-[11px] font-semibold ${
-                        on
-                          ? 'bg-amber-600 text-white'
-                          : 'bg-zinc-100 text-zinc-600 dark:bg-zinc-800 dark:text-zinc-300'
-                      }`}
-                    >
-                      {k.ko}
-                    </button>
-                  );
-                })}
-              </div>
-            </div>
-          ))}
+      {/* 키워드 — 메인(필수) / 서브(선택) */}
+      <div className="space-y-2">
+        <div>
+          <p className="mb-1 text-[11px] font-semibold text-zinc-500">메인 키워드</p>
+          <select
+            value={value.mainKeywordId}
+            onChange={(e) =>
+              onChange({
+                ...value,
+                mainKeywordId: e.target.value,
+                subKeywordId: value.subKeywordId === e.target.value ? null : value.subKeywordId,
+              })
+            }
+            className={KW_SELECT_CLS}
+          >
+            {kwOptions()}
+          </select>
+        </div>
+        <div>
+          <p className="mb-1 text-[11px] font-semibold text-zinc-500">
+            서브 키워드 <span className="font-normal text-zinc-400">선택</span>
+          </p>
+          <select
+            value={value.subKeywordId ?? ''}
+            onChange={(e) => onChange({ ...value, subKeywordId: e.target.value || null })}
+            className={KW_SELECT_CLS}
+          >
+            <option value="">없음</option>
+            {kwOptions(value.mainKeywordId)}
+          </select>
         </div>
       </div>
     </div>
@@ -139,5 +136,6 @@ export const DEFAULT_EMBLEM: EmblemSelection = {
   shapeId: 'round',
   mainToneId: 'crimson',
   subToneId: 'gold',
-  keywordIds: ['dragon'],
+  mainKeywordId: 'dragon',
+  subKeywordId: null,
 };

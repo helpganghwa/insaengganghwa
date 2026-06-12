@@ -12,10 +12,10 @@ if (!key) throw new Error('PIXELLAB_API_KEY missing');
 
 const mainToneId = 'iron';
 const subToneId = 'gold';
-const keywordIds = ['dragon'];
+const mainKeywordId = 'dragon';
 
 for (const shape of EMBLEM_SHAPES) {
-  const sel = { shapeId: shape.id, mainToneId, subToneId, keywordIds };
+  const sel = { shapeId: shape.id, mainToneId, subToneId, mainKeywordId, subKeywordId: null };
   const prompt = buildEmblemPrompt(sel);
   console.log(`\n[${shape.id}] ${shape.ko} (${shape.en})`);
   console.log(`  prompt: ${prompt}`);
