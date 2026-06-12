@@ -285,7 +285,7 @@ export async function setResidenceAction(zoneId: number) {
   const u = await getSessionUserId();
   if (!u) return unauth;
   try {
-    await setResidence(u, zoneId);
+    await setResidence(u, await getActiveServerId(), zoneId);
     revalidatePath('/guild');
     return { status: 'success' } as const;
   } catch (e) {

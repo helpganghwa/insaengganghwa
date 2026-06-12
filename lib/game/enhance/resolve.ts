@@ -65,6 +65,7 @@ export async function resolveEnhance(input: ResolveInput): Promise<ResolveResult
   const dueCond = requireComplete ? sql` and j.complete_at <= now()` : sql``;
   const r1 = (await db.execute(sql`
     select j.user_equipment_id::text         as user_equipment_id,
+           j.server_id                       as job_server_id,
            j.user_id::text                   as user_id,
            j.from_level                      as from_level,
            j.base_rate_bp                    as base_rate_bp,
@@ -165,7 +166,7 @@ export async function resolveEnhance(input: ResolveInput): Promise<ResolveResult
   // **강화 원자 트랜잭션과 분리(best-effort)**: 실패해도 강화 정산엔 영향 없음.
   if (toLevel > fromLevel) {
     try {
-      await accrueResidenceTax(String(job.user_id), toLevel);
+      await accrueResidenceTax(String(job.user_id), Number(job.job_server_id), toLevel);
     } catch {
       // 세금 누적 실패는 무시(강화 결과 보존).
     }

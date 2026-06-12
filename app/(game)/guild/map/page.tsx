@@ -13,7 +13,7 @@ export default async function WorldMapPage() {
 
   const [zones, residenceZoneId, chronicle, adjacency] = await Promise.all([
     getWorldmapZones(serverId),
-    userId ? getResidence(userId) : Promise.resolve(null),
+    userId ? getResidence(userId, serverId) : Promise.resolve(null),
     getChronicle(serverId).catch(() => null),
     getZoneAdjacency(serverId).catch(() => []),
   ]);

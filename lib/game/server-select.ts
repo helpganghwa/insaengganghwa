@@ -4,6 +4,7 @@ import { and, eq, sql } from 'drizzle-orm';
 
 import { db } from '@/lib/db/client';
 import { servers, characters } from '@/lib/db/schema/server';
+import { zones } from '@/lib/db/schema/guild';
 import { userSupplyBoxes } from '@/lib/db/schema/supply';
 import { userProfiles } from '@/lib/db/schema/avatar';
 import { profiles } from '@/lib/db/schema/profiles';
@@ -119,6 +120,14 @@ export async function createCharacter(input: {
       .limit(1);
     if (dup) throw new CharacterError('ALREADY_EXISTS');
 
+    // 거주지 랜덤 배정(GUILD §5.5 — 생성 시점) — 그 서버의 구역 중 하나.
+    const [rz] = await tx
+      .select({ id: zones.id })
+      .from(zones)
+      .where(eq(zones.serverId, input.serverId))
+      .orderBy(sql`random()`)
+      .limit(1);
+
     try {
       await tx.insert(characters).values({
         userId: input.userId,
@@ -126,6 +135,7 @@ export async function createCharacter(input: {
         nickname,
         diamond: BigInt(SIGNUP_DIAMOND),
         tutorialStep: 9, // 신서버 재시작 — 코어 튜토리얼 재노출 없음(기존 유저)
+        residenceZoneId: rz?.id ?? null,
         lastSeenAt: new Date(),
       });
     } catch (e) {

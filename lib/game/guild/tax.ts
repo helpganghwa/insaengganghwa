@@ -13,11 +13,11 @@ import { ensureResidence } from './residence';
  * 100pt마다 구역 💎 +1(잔여 carry). **강화 핵심 트랜잭션과 분리(best-effort)** —
  * 실패해도 강화 성공엔 영향 없음(세금 1회 손실은 허용). 거주 미배정이면 랜덤 배정.
  */
-export async function accrueResidenceTax(userId: string, reachedLevel: number): Promise<void> {
+export async function accrueResidenceTax(userId: string, serverId: number, reachedLevel: number): Promise<void> {
   const pts = taxPointsForEnhanceSuccess(reachedLevel);
   if (pts <= 0) return;
   await db.transaction(async (tx) => {
-    const zoneId = await ensureResidence(tx, userId);
+    const zoneId = await ensureResidence(tx, userId, serverId);
     if (!zoneId) return;
     // tax_points += pts → 100당 tax_diamond +1, 잔여 carry. (bigint / int = 정수 나눗셈)
     await tx
