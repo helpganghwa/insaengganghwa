@@ -169,7 +169,15 @@ export async function getZoneAdjacency(serverId: number): Promise<{ a: number; b
 export async function getAttackableZoneIds(guildId: bigint): Promise<number[]> {
   const owned = await db.select({ id: zones.id }).from(zones).where(eq(zones.ownerGuildId, guildId));
   if (owned.length === 0) {
-    const all = await db.select({ id: zones.id }).from(zones);
+    const [g] = await db
+      .select({ serverId: guilds.serverId })
+      .from(guilds)
+      .where(eq(guilds.id, guildId))
+      .limit(1);
+    const all = await db
+      .select({ id: zones.id })
+      .from(zones)
+      .where(eq(zones.serverId, g?.serverId ?? 1));
     return all.map((z) => z.id);
   }
   const ownedIds = owned.map((o) => o.id);
@@ -223,6 +231,9 @@ export async function getConquestBattleById(id: bigint) {
 /** 점령전 배치 보드(임원 배치/전원 조회) — 길드원별 현재 배치·집행관 + 구역 목록(픽커). */
 export async function getDeployBoard(guildId: bigint) {
   const battleKstDay = nextBattleKstDay();
+  // 길드의 서버 — 존 목록·전투력 스코프 기준(길드는 서버에 묶임).
+  const [g] = await db.select({ serverId: guilds.serverId }).from(guilds).where(eq(guilds.id, guildId)).limit(1);
+  const gServerId = g?.serverId ?? 1;
   const members = (await db.execute(sql`
     select gm.user_id::text uid, c.nickname, gm.role::text mrole,
            d.zone_id dep_zone_id, dz.name dep_zone_name, d.role::text dep_role,
@@ -248,6 +259,7 @@ export async function getDeployBoard(guildId: bigint) {
     })
     .from(zones)
     .leftJoin(guilds, eq(guilds.id, zones.ownerGuildId))
+    .where(eq(zones.serverId, gServerId))
     .orderBy(zones.id);
 
   // 길드원 전투력 — 보유 장비 1쿼리 → combatPowerFromOwned. userId→전투력.
@@ -262,7 +274,7 @@ export async function getDeployBoard(guildId: bigint) {
         tl: userEquipment.transcendLevel,
       })
       .from(userEquipment)
-      .where(inArray(userEquipment.userId, ids));
+      .where(and(eq(userEquipment.serverId, gServerId), inArray(userEquipment.userId, ids)));
     const owned = new Map<string, { catalogItemId: number; enhanceLevel: number; transcendLevel: number }[]>();
     for (const r of eqRows) {
       (owned.get(r.uid) ?? owned.set(r.uid, []).get(r.uid)!).push({

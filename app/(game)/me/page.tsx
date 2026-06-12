@@ -212,6 +212,7 @@ export default async function ProfilePage() {
       </section>
 
       <BoastLauncher
+        serverId={serverId}
         nickname={nickname}
         publicCode={publicCode}
         total={total}

@@ -1,8 +1,9 @@
 import 'server-only';
 
-import { and, eq, gte, sql } from 'drizzle-orm';
+import { inArray, and, eq, gte, sql } from 'drizzle-orm';
 
 import { db } from '@/lib/db/client';
+import { profiles } from '@/lib/db/schema/profiles';
 import { raids, raidParticipants, raidRewards } from '@/lib/db/schema/raid';
 import { sendPushToUsers } from '@/lib/push/send';
 import { aggregatePhaseDrops, raidPhasesCleared } from './drops';
@@ -23,6 +24,7 @@ export async function settleRaid(
     const [raid] = await tx
       .select({
         id: raids.id,
+        serverId: raids.serverId,
         status: raids.status,
         expireAt: raids.expireAt,
         phase1Hp: raids.phase1Hp,
@@ -34,10 +36,24 @@ export async function settleRaid(
 
     // 멱등 no-op — 없거나 이미 정산됨.
     if (!raid || raid.status !== 'active') {
-      return { settled: false, phasesCleared: 0, rewarded: 0, winnerIds: [] as string[], bossCode: null as null | typeof raid.bossCode };
+      return {
+        settled: false,
+        phasesCleared: 0,
+        rewarded: 0,
+        winnerIds: [] as string[],
+        bossCode: null as null | typeof raid.bossCode,
+        serverId: null as number | null,
+      };
     }
     if (raid.expireAt.getTime() > Date.now()) {
-      return { settled: false, phasesCleared: 0, rewarded: 0, winnerIds: [] as string[], bossCode: null as null | typeof raid.bossCode }; // 아직 진행 중
+      return {
+        settled: false,
+        phasesCleared: 0,
+        rewarded: 0,
+        winnerIds: [] as string[],
+        bossCode: null as null | typeof raid.bossCode,
+        serverId: null as number | null,
+      }; // 아직 진행 중
     }
 
     const [{ total }] = await tx
@@ -76,13 +92,21 @@ export async function settleRaid(
       rewarded: winners.length,
       winnerIds: winners.map((w) => w.userId),
       bossCode: raid.bossCode,
+      serverId: raid.serverId as number | null,
     };
   });
 
   // 트랜잭션 커밋 후 푸시 발송(best-effort). 토글·구독 없는 유저는 자동 스킵.
   if (result.settled && (result.winnerIds?.length ?? 0) > 0) {
     const bossName = RAID_BOSSES[result.bossCode!]?.name ?? '보스';
-    sendPushToUsers(result.winnerIds!, {
+    // 경계규칙 1 — 레이드 서버가 활성(last_server_id)인 참가자에게만 푸시.
+    const targets = await db
+      .select({ uid: profiles.id })
+      .from(profiles)
+      .where(
+        and(inArray(profiles.id, result.winnerIds!), eq(profiles.lastServerId, result.serverId!)),
+      );
+    sendPushToUsers(targets.map((t) => t.uid), {
       title: '레이드 종료',
       body: `${bossName} 레이드가 종료되었습니다 — 보상 확인 (페이즈 ${result.phasesCleared}돌파)`,
       url: `/raid/${input.raidId.toString()}`,

@@ -15,7 +15,6 @@ import { GuildError } from './errors';
  */
 export function collectZoneTax(input: {
   userId: string;
-  serverId: number;
   zoneId: number;
 }): Promise<{ executorGain: bigint; guildGain: bigint }> {
   return db.transaction(async (tx) => {
@@ -23,6 +22,7 @@ export function collectZoneTax(input: {
       .select({
         executor: zones.executorUserId,
         owner: zones.ownerGuildId,
+        serverId: zones.serverId,
         tax: zones.taxDiamond,
         lastAt: zones.lastTaxCollectedAt,
       })
@@ -44,7 +44,8 @@ export function collectZoneTax(input: {
     const executorGain = (tax * BigInt(Math.round(GUILD_EXECUTOR_TAX_CUT * 100))) / 100n;
     const guildGain = tax - executorGain;
 
-    await walletAdd(tx, input.userId, input.serverId, executorGain);
+    // 집행관 몫은 존이 속한 서버 지갑으로(활성 서버 무관).
+    await walletAdd(tx, input.userId, z.serverId, executorGain);
     await tx
       .update(guilds)
       .set({ taxPoolDiamond: sql`${guilds.taxPoolDiamond} + ${guildGain}` })

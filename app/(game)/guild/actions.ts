@@ -297,7 +297,7 @@ export async function collectTaxAction(zoneId: number) {
   const u = await getSessionUserId();
   if (!u) return unauth;
   try {
-    const r = await collectZoneTax({ userId: u, serverId: await getActiveServerId(), zoneId });
+    const r = await collectZoneTax({ userId: u, zoneId });
     revalidatePath('/guild');
     return { status: 'success', executorGain: r.executorGain.toString(), guildGain: r.guildGain.toString() } as const;
   } catch (e) {

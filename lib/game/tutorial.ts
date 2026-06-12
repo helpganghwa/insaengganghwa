@@ -5,7 +5,6 @@ import type { PgTable } from 'drizzle-orm/pg-core';
 
 import { db } from '@/lib/db/client';
 import { characters } from '@/lib/db/schema/server';
-import { DEFAULT_SERVER_ID } from '@/lib/game/servers';
 import { userEquipment } from '@/lib/db/schema/equipment';
 import { enhancementJobs, enhancementLogs } from '@/lib/db/schema/enhance';
 
@@ -30,12 +29,12 @@ async function rowCount(table: PgTable, where: SQL | undefined): Promise<number>
 }
 
 /** 튜토리얼 진입 상태(1회). intro=팝업, active=진행(재개 단계 포함), done=없음. 실패 시 done. */
-export async function getTutorialState(userId: string): Promise<TutorialState> {
+export async function getTutorialState(userId: string, serverId: number): Promise<TutorialState> {
   try {
     const [p] = await db
       .select({ s: characters.tutorialStep })
       .from(characters)
-      .where(and(eq(characters.userId, userId), eq(characters.serverId, DEFAULT_SERVER_ID)));
+      .where(and(eq(characters.userId, userId), eq(characters.serverId, serverId)));
     if (!p) return { phase: 'done', step: null };
     if (p.s === TUTORIAL_INTRO) return { phase: 'intro', step: null };
     if (p.s !== TUTORIAL_ACTIVE) return { phase: 'done', step: null };
@@ -44,23 +43,23 @@ export async function getTutorialState(userId: string): Promise<TutorialState> {
     const [eqC, equippedC, jobC, logC] = await Promise.all([
       rowCount(
         userEquipment,
-        and(eq(userEquipment.userId, userId), eq(userEquipment.serverId, DEFAULT_SERVER_ID)),
+        and(eq(userEquipment.userId, userId), eq(userEquipment.serverId, serverId)),
       ),
       rowCount(
         userEquipment,
         and(
           eq(userEquipment.userId, userId),
-          eq(userEquipment.serverId, DEFAULT_SERVER_ID),
+          eq(userEquipment.serverId, serverId),
           isNotNull(userEquipment.equippedSlot),
         ),
       ),
       rowCount(
         enhancementJobs,
-        and(eq(enhancementJobs.userId, userId), eq(enhancementJobs.serverId, DEFAULT_SERVER_ID)),
+        and(eq(enhancementJobs.userId, userId), eq(enhancementJobs.serverId, serverId)),
       ),
       rowCount(
         enhancementLogs,
-        and(eq(enhancementLogs.userId, userId), eq(enhancementLogs.serverId, DEFAULT_SERVER_ID)),
+        and(eq(enhancementLogs.userId, userId), eq(enhancementLogs.serverId, serverId)),
       ),
     ]);
 
@@ -77,7 +76,7 @@ export async function getTutorialState(userId: string): Promise<TutorialState> {
       .where(
         and(
           eq(characters.userId, userId),
-          eq(characters.serverId, DEFAULT_SERVER_ID),
+          eq(characters.serverId, serverId),
           eq(characters.tutorialStep, TUTORIAL_ACTIVE),
         ),
       );
@@ -88,28 +87,28 @@ export async function getTutorialState(userId: string): Promise<TutorialState> {
 }
 
 /** 인트로 '시작' — ACTIVE로 전환(코치 시작). */
-export async function startTutorial(userId: string): Promise<void> {
+export async function startTutorial(userId: string, serverId: number): Promise<void> {
   await db
     .update(characters)
     .set({ tutorialStep: TUTORIAL_ACTIVE })
     .where(
       and(
         eq(characters.userId, userId),
-        eq(characters.serverId, DEFAULT_SERVER_ID),
+        eq(characters.serverId, serverId),
         eq(characters.tutorialStep, TUTORIAL_INTRO),
       ),
     );
 }
 
 /** '건너뛰기'/완료 — DONE으로 마킹(인트로·진행 중 모두). */
-export async function finishTutorial(userId: string): Promise<void> {
+export async function finishTutorial(userId: string, serverId: number): Promise<void> {
   await db
     .update(characters)
     .set({ tutorialStep: TUTORIAL_DONE })
     .where(
       and(
         eq(characters.userId, userId),
-        eq(characters.serverId, DEFAULT_SERVER_ID),
+        eq(characters.serverId, serverId),
         inArray(characters.tutorialStep, [TUTORIAL_INTRO, TUTORIAL_ACTIVE]),
       ),
     );

@@ -13,7 +13,7 @@ import { EnhanceError } from './queue';
  * 환산률은 **이 작업 스냅샷 영구**(소급 금지). completeAt 하한 = now(과단축 방지).
  * 단일 트랜잭션: job 잠금 → 지갑 차감(서버별, SERVER.md) → completeAt 단축 → 이력 기록.
  */
-export type ReduceTimeInput = { userId: string; serverId: number; jobId: bigint; diamonds: number };
+export type ReduceTimeInput = { userId: string; jobId: bigint; diamonds: number };
 export type ReduceTimeResult = { completeAt: Date; reducedMs: number; ready: boolean };
 
 export function reduceEnhanceTime(input: ReduceTimeInput): Promise<ReduceTimeResult> {
@@ -23,7 +23,7 @@ export function reduceEnhanceTime(input: ReduceTimeInput): Promise<ReduceTimeRes
 
   return db.transaction(async (tx) => {
     const [job] = await tx
-      .select({ id: enhancementJobs.id, completeAt: enhancementJobs.completeAt })
+      .select({ id: enhancementJobs.id, serverId: enhancementJobs.serverId, completeAt: enhancementJobs.completeAt })
       .from(enhancementJobs)
       .where(
         and(
@@ -36,7 +36,8 @@ export function reduceEnhanceTime(input: ReduceTimeInput): Promise<ReduceTimeRes
     if (!job) throw new EnhanceError('JOB_NOT_FOUND');
 
     // 지갑 차감 — 조건부 UPDATE(부족 시 미차감·false). 실패 경로는 tx 롤백으로 원복.
-    const paid = await walletTrySpend(tx, userId, input.serverId, diamonds);
+    // 차감은 잡이 속한 서버 지갑(잡 행 파생) — 활성 서버 위조 요청 무해화.
+    const paid = await walletTrySpend(tx, userId, job.serverId, diamonds);
     if (!paid) throw new EnhanceError('INSUFFICIENT_DIAMOND');
 
     const now = Date.now();
@@ -56,7 +57,7 @@ export function reduceEnhanceTime(input: ReduceTimeInput): Promise<ReduceTimeRes
     await tx.insert(gemTimeReductions).values({
       jobId,
       userId,
-      serverId: input.serverId,
+      serverId: job.serverId,
       gemsSpent: BigInt(diamonds),
       reducedMs: BigInt(effectiveReducedMs),
       conversionMsPerDiamond: BigInt(GEM_TO_MS), // 등록 시점 환산률 스냅샷

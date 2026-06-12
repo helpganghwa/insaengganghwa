@@ -22,7 +22,6 @@ export type ClaimRaidResult = {
  */
 export function claimRaidReward(input: {
   userId: string;
-  serverId: number;
   raidId: bigint;
 }): Promise<ClaimRaidResult> {
   const { userId, raidId } = input;
@@ -42,7 +41,7 @@ export function claimRaidReward(input: {
     if (reward.claimedAt) throw new RaidError('REWARD_ALREADY_CLAIMED');
 
     const [raid] = await tx
-      .select({ status: raids.status })
+      .select({ status: raids.status, serverId: raids.serverId })
       .from(raids)
       .where(eq(raids.id, raidId));
     if (!raid || raid.status !== 'settled') throw new RaidError('RAID_CLOSED');
@@ -56,7 +55,8 @@ export function claimRaidReward(input: {
 
     const totalDiamond = Number(reward.phaseDiamond);
     if (totalDiamond > 0) {
-      await walletAdd(tx, userId, input.serverId, totalDiamond);
+      // 보상은 참여한 레이드의 서버 지갑으로(활성 서버 무관 — 공유 링크 교차 참여 대비).
+      await walletAdd(tx, userId, raid.serverId, totalDiamond);
     }
 
     const boxes: Record<SupplySlot, number> = { weapon: 0, armor: 0, accessory: 0 };
@@ -65,7 +65,7 @@ export function claimRaidReward(input: {
       if (n > 0) {
         await tx
           .insert(userSupplyBoxes)
-          .values({ userId, serverId: input.serverId, slot, count: BigInt(n) })
+          .values({ userId, serverId: raid.serverId, slot, count: BigInt(n) })
           .onConflictDoUpdate({
             target: [userSupplyBoxes.userId, userSupplyBoxes.serverId, userSupplyBoxes.slot],
             set: { count: sql`${userSupplyBoxes.count} + ${BigInt(n)}` },

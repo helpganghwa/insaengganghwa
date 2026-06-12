@@ -1,6 +1,7 @@
 'use server';
 
 import { revalidatePath } from 'next/cache';
+import { getActiveServerId } from '@/lib/game/servers';
 
 import { getSessionUserId } from '@/lib/auth/session';
 import { finishTutorial, startTutorial } from '@/lib/game/tutorial';
@@ -9,7 +10,7 @@ import { finishTutorial, startTutorial } from '@/lib/game/tutorial';
 export async function startTutorialAction() {
   const u = await getSessionUserId();
   if (!u) return { status: 'error' as const };
-  await startTutorial(u);
+  await startTutorial(u, await getActiveServerId());
   revalidatePath('/', 'layout');
   return { status: 'success' as const };
 }
@@ -18,7 +19,7 @@ export async function startTutorialAction() {
 export async function skipTutorialAction() {
   const u = await getSessionUserId();
   if (!u) return { status: 'error' as const };
-  await finishTutorial(u);
+  await finishTutorial(u, await getActiveServerId());
   revalidatePath('/', 'layout');
   return { status: 'success' as const };
 }

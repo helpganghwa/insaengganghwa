@@ -54,7 +54,10 @@ export async function GET(
   //    ?start=1('인생강화 시작' 버튼) → 앱 시작(/), 그 외(카드 클릭) → 공개 프로필(/u/[code]).
   //    두 경우 모두 쿠키를 세팅하므로 가입 시 추천 귀속됨.
   const start = req.nextUrl.searchParams.get('start') === '1';
-  const target = start ? '/' : `/u/${shareCode}`;
+  // 서버 파라미터 전파(서버별 캐릭터 카드 — SERVER.md).
+  const sParam = req.nextUrl.searchParams.get('s');
+  const sfx = sParam && /^\d+$/.test(sParam) ? `?s=${sParam}` : '';
+  const target = start ? '/' : `/u/${shareCode}${sfx}`;
   const res = NextResponse.redirect(new URL(target, req.nextUrl.origin), 307);
   res.cookies.set(PENDING_REFERRAL_COOKIE, shareCode, {
     path: '/',

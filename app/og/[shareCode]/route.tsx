@@ -168,6 +168,9 @@ export async function GET(_req: Request, { params }: { params: Promise<{ shareCo
   // 카카오 공유 query — focus=piece면 sprite 1개 강조 모드(아래 분기).
   const focus = url.searchParams.get('focus'); // 'piece' | 'set' | null
   const focusCode = url.searchParams.get('code') ?? '';
+  // 서버 파라미터(SERVER.md §1) — 서버별 캐릭터 카드. 비정상/미지정 = 기본 1.
+  const sRaw = Number(url.searchParams.get('s'));
+  const serverId = Number.isInteger(sRaw) && sRaw >= 1 && sRaw <= 32767 ? sRaw : DEFAULT_SERVER_ID;
   const focusLvl = Number(url.searchParams.get('lvl') ?? 0);
   const focusT = Number(url.searchParams.get('t') ?? 0);
 
@@ -180,7 +183,7 @@ export async function GET(_req: Request, { params }: { params: Promise<{ shareCo
     .from(profiles)
     .innerJoin(
       characters,
-      and(eq(characters.userId, profiles.id), eq(characters.serverId, DEFAULT_SERVER_ID)),
+      and(eq(characters.userId, profiles.id), eq(characters.serverId, serverId)),
     )
     .where(or(eq(profiles.publicCode, handle), eq(characters.nickname, handle)))
     .limit(1);
@@ -188,7 +191,7 @@ export async function GET(_req: Request, { params }: { params: Promise<{ shareCo
   // 카드 표시 닉네임 — 조회된 현재 닉(없으면 핸들 폴백).
   const nickname = prof?.nickname ?? handle;
   // 길드 문양+이름(있으면 닉네임 밑). 실패해도 카드는 생성.
-  const guild = prof ? await getUserGuildBrief(prof.id, DEFAULT_SERVER_ID).catch(() => null) : null;
+  const guild = prof ? await getUserGuildBrief(prof.id, serverId).catch(() => null) : null;
 
   // 사용자 결정: OG 카드에는 타이틀+닉네임+장비 정보만 노출(전투력·도메인 제거).
   // 따라서 codex 합계 쿼리 + total 계산 제거 — OG 응답 빠르게.
@@ -215,7 +218,7 @@ export async function GET(_req: Request, { params }: { params: Promise<{ shareCo
       .where(
         and(
           eq(userEquipment.userId, prof.id),
-          eq(userEquipment.serverId, DEFAULT_SERVER_ID),
+          eq(userEquipment.serverId, serverId),
           isNotNull(userEquipment.equippedSlot),
         ),
       );

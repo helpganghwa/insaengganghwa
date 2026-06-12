@@ -176,7 +176,7 @@ export async function claimRaidRewardAction(raidId: string) {
   if (!u) return err('UNAUTHENTICATED');
   if (await rateLimited(u, 'raid')) return err('RATE_LIMITED');
   try {
-    const r = await claimRaidReward({ userId: u, serverId: await getActiveServerId(), raidId: BigInt(raidId) });
+    const r = await claimRaidReward({ userId: u, raidId: BigInt(raidId) });
     rev(raidId);
     return { status: 'success' as const, result: r };
   } catch (e) {

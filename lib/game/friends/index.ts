@@ -6,7 +6,6 @@ import { db } from '@/lib/db/client';
 import { friendLinks } from '@/lib/db/schema/friends';
 import { profiles } from '@/lib/db/schema/profiles';
 import { characters } from '@/lib/db/schema/server';
-import { DEFAULT_SERVER_ID } from '@/lib/game/servers';
 import { userProfiles } from '@/lib/db/schema/avatar';
 import { getGuildBriefsByUsers } from '@/lib/game/guild/badge';
 
@@ -40,7 +39,7 @@ export interface FriendUser {
 
 const SOUTH = sql<string | null>`${userProfiles.rotations} ->> 'south'`;
 
-async function profilesByIds(ids: string[]): Promise<FriendUser[]> {
+async function profilesByIds(ids: string[], serverId: number): Promise<FriendUser[]> {
   if (ids.length === 0) return [];
   const rows = await db
     .select({
@@ -53,7 +52,7 @@ async function profilesByIds(ids: string[]): Promise<FriendUser[]> {
     .from(profiles)
     .innerJoin(
       characters,
-      and(eq(characters.userId, profiles.id), eq(characters.serverId, DEFAULT_SERVER_ID)),
+      and(eq(characters.userId, profiles.id), eq(characters.serverId, serverId)),
     )
     .leftJoin(userProfiles, eq(userProfiles.id, characters.activeProfileId))
     .where(inArray(profiles.id, ids));
@@ -79,7 +78,7 @@ export async function searchUsers(
     .from(profiles)
     .innerJoin(
       characters,
-      and(eq(characters.userId, profiles.id), eq(characters.serverId, DEFAULT_SERVER_ID)),
+      and(eq(characters.userId, profiles.id), eq(characters.serverId, serverId)),
     )
     .leftJoin(userProfiles, eq(userProfiles.id, characters.activeProfileId))
     .where(
@@ -281,7 +280,10 @@ export async function getFriends(meId: string, serverId: number): Promise<Friend
         or(eq(friendLinks.requesterId, meId), eq(friendLinks.addresseeId, meId)),
       ),
     );
-  return profilesByIds(rows.map((r) => (r.requesterId === meId ? r.addresseeId : r.requesterId)));
+  return profilesByIds(
+    rows.map((r) => (r.requesterId === meId ? r.addresseeId : r.requesterId)),
+    serverId,
+  );
 }
 
 export async function getRequests(
@@ -301,8 +303,8 @@ export async function getRequests(
   const incomingIds = rows.filter((r) => r.addresseeId === meId).map((r) => r.requesterId);
   const outgoingIds = rows.filter((r) => r.requesterId === meId).map((r) => r.addresseeId);
   const [incoming, outgoing] = await Promise.all([
-    profilesByIds(incomingIds),
-    profilesByIds(outgoingIds),
+    profilesByIds(incomingIds, serverId),
+    profilesByIds(outgoingIds, serverId),
   ]);
   return { incoming, outgoing };
 }

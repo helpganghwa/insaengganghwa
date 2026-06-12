@@ -44,6 +44,7 @@ export function BoastModal({
   profileImg,
   guildEmblemUrl = null,
   guildName = null,
+  serverId = 1,
 }: {
   open: boolean;
   onClose: () => void;
@@ -58,6 +59,8 @@ export function BoastModal({
   profileImg?: string | null;
   /** 닉네임 밑 길드 문양+이름(미소속/생성중이면 미표시). */
   guildEmblemUrl?: string | null;
+  /** 캐릭터의 서버(SERVER.md) — 1이 아니면 공유/OG 링크에 ?s= 전파. */
+  serverId?: number;
   guildName?: string | null;
 }) {
   const [shareUrl, setShareUrl] = useState('');
@@ -74,9 +77,10 @@ export function BoastModal({
 
   useEffect(() => {
     if (typeof window !== 'undefined') {
-      setShareUrl(`${window.location.origin}/s/${encodeURIComponent(publicCode)}`);
+      const sfx = serverId !== 1 ? `?s=${serverId}` : '';
+      setShareUrl(`${window.location.origin}/s/${encodeURIComponent(publicCode)}${sfx}`);
     }
-  }, [publicCode]);
+  }, [publicCode, serverId]);
 
   useEffect(() => {
     if (!open) return;
@@ -117,9 +121,10 @@ export function BoastModal({
       params.set('focus', 'set');
       params.set('cp', String(set.total));
     }
+    if (serverId !== 1) params.set('s', String(serverId));
     return `${origin}/og/${encodeURIComponent(publicCode)}?${params.toString()}`;
   }, [
-    open, kind, publicCode,
+    open, kind, publicCode, serverId,
     piece?.p.code, piece?.p.enhanceLevel, piece?.p.transcendLevel,
     set?.total,
   ]);
@@ -185,10 +190,11 @@ export function BoastModal({
       params.set('focus', 'set');
       params.set('cp', String(set.total));
     }
+    if (serverId !== 1) params.set('s', String(serverId));
     const imageUrl = `${origin}/og/${encodeURIComponent(publicCode)}?${params.toString()}`;
     // '인생강화 시작' — /s/[code]?start=1로 보내 pending_referral 쿠키를 세팅(추천 귀속) 후
     // 앱 시작(/)으로 리다이렉트. 직접 '/'로 보내면 쿠키가 없어 추천인 리워드가 누락됨.
-    const startUrl = `${origin}/s/${encodeURIComponent(publicCode)}?start=1`;
+    const startUrl = `${origin}/s/${encodeURIComponent(publicCode)}?start=1${serverId !== 1 ? `&s=${serverId}` : ''}`;
     k.Share.sendDefault({
       objectType: 'feed',
       content: {
@@ -398,6 +404,7 @@ export function BoastLauncher({
   compact = false,
   label,
   guildEmblemUrl = null,
+  serverId = 1,
   guildName = null,
 }: {
   nickname: string;
@@ -411,6 +418,8 @@ export function BoastLauncher({
   label?: string;
   guildEmblemUrl?: string | null;
   guildName?: string | null;
+  /** 캐릭터의 서버 — 공유/OG 링크 ?s= 전파(기본 1). */
+  serverId?: number;
 }) {
   const [open, setOpen] = useState(false);
   return (
@@ -446,6 +455,7 @@ export function BoastLauncher({
         profileImg={profileImg ?? null}
         guildEmblemUrl={guildEmblemUrl}
         guildName={guildName}
+        serverId={serverId}
       />
     </>
   );

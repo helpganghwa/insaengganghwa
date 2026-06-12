@@ -158,8 +158,7 @@ export async function reduceTimeWithGems(jobId: string, diamonds: number) {
   if (!userId) return err('UNAUTHENTICATED');
   if (await rateLimited(userId, 'enhance')) return err('RATE_LIMITED');
   try {
-    const serverId = await getActiveServerId();
-    const result = await reduceEnhanceTime({ userId, serverId, jobId: BigInt(jobId), diamonds });
+    const result = await reduceEnhanceTime({ userId, jobId: BigInt(jobId), diamonds });
     revalidateAll();
     return {
       status: 'success' as const,

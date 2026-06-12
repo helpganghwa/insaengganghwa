@@ -174,19 +174,27 @@ const loadProfile = cache(async (handle: string, serverId: number) => {
   };
 });
 
+function parseServerParam(v: string | string[] | undefined): number {
+  const n = Number(Array.isArray(v) ? v[0] : v);
+  return Number.isInteger(n) && n >= 1 && n <= 32767 ? n : DEFAULT_SERVER_ID;
+}
+
 export async function generateMetadata({
   params,
+  searchParams,
 }: {
   params: Promise<{ nickname: string }>;
+  searchParams: Promise<{ s?: string | string[] }>;
 }): Promise<Metadata> {
   const { nickname: raw } = await params;
   const handle = decodeURIComponent(raw);
-  const data = await loadProfile(handle, DEFAULT_SERVER_ID);
+  const serverId = parseServerParam((await searchParams).s);
+  const data = await loadProfile(handle, serverId);
   if (!data) return { title: '인생강화' };
   const title = `${data.nickname} — 인생강화`;
   const description = `총 전투력 ${data.total.toLocaleString('ko-KR')}.`;
-  // OG는 불변 코드로 — 닉 변경/링크 캐시에도 안정.
-  const ogImage = `/og/${encodeURIComponent(data.publicCode)}`;
+  // OG는 불변 코드로 — 닉 변경/링크 캐시에도 안정. 서버는 쿼리로 전파.
+  const ogImage = `/og/${encodeURIComponent(data.publicCode)}${serverId !== DEFAULT_SERVER_ID ? `?s=${serverId}` : ''}`;
   return {
     title,
     description,
@@ -346,10 +354,6 @@ function EnhanceStatsFallback() {
   );
 }
 
-function parseServerParam(v: string | string[] | undefined): number {
-  const n = Number(Array.isArray(v) ? v[0] : v);
-  return Number.isInteger(n) && n >= 1 && n <= 32767 ? n : DEFAULT_SERVER_ID;
-}
 
 export default async function PublicProfilePage({
   params,
@@ -542,6 +546,7 @@ export default async function PublicProfilePage({
 
         {mode === 'self' ? (
           <BoastLauncher
+            serverId={serverId}
             nickname={data.nickname}
             publicCode={data.publicCode}
             total={data.total}
@@ -563,6 +568,7 @@ export default async function PublicProfilePage({
         {mode === 'other' ? (
           <>
             <BoastLauncher
+            serverId={serverId}
               nickname={data.nickname}
               publicCode={data.publicCode}
               total={data.total}
