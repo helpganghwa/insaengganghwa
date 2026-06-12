@@ -48,11 +48,11 @@
     },
     {
       "path": "/api/cron/conquest-run",
-      "schedule": "*/5 2 * * *"
+      "schedule": "*/5 14 * * *"
     },
     {
       "path": "/api/cron/conquest-chronicle",
-      "schedule": "*/5 3 * * *"
+      "schedule": "*/5 15 * * *"
     }
   ]
 }

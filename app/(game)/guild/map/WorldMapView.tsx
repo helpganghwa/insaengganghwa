@@ -399,7 +399,7 @@ export function WorldMapView({
         })}
       </div>
 
-      {/* 세계 연대기 — 점령전 발표(KST 12:00)와 함께 매일 AI 갱신(큰 사건 있는 날만). [오늘]=긴 기록 / [전체]=날짜별 한 줄.
+      {/* 세계 연대기 — 점령전 발표(KST 자정)와 함께 매일 AI 갱신(큰 사건 있는 날만). [오늘]=긴 기록 / [전체]=날짜별 한 줄.
           남은 세로 영역을 가득 채워(flex-1) 페이지에 빈 공간이 없게. */}
       <section className="flex flex-1 flex-col bg-white px-4 pb-4 pt-3 dark:bg-zinc-950">
         {hasChronicle ? (

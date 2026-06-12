@@ -1,7 +1,7 @@
 /**
  * GUILD.md §1~§5.6. 길드 — 협력 성장 + 월드맵 점령전.
  *
- * 마지막 콘텐츠(출시·DAU 이후 투입). 점령은 결정론·비동기(KST 12:00 정산, 별도 팀전 엔진).
+ * 마지막 콘텐츠(출시·DAU 이후 투입). 점령은 결정론·비동기(KST 23:00 정산, 별도 팀전 엔진).
  * 수용 = min(50, 10+level)·레벨 무제한(L41+ 과시). 50명=50구역=이론상 천하통일(집행관제로 자연 견제).
  * 세금: 거주 구역 강화 성공 → 구역 포인트 누적 → 집행관 수집(1h) → 길드 풀 → 100:1💎 분배(균등/특정).
  * 수치(레벨 XP·수비 ±·환산율)는 BALANCE/시뮬 튜닝 — 본 스키마는 구조만.
@@ -158,7 +158,7 @@ export const zoneAdjacency = pgTable(
   (t) => [primaryKey({ columns: [t.zoneA, t.zoneB] })],
 );
 
-/** §5.4 guild_battle_deployments — 1인 1배치/일(KST). 12:00 잠금. 집행관은 자동 방어(미기록). */
+/** §5.4 guild_battle_deployments — 1인 1배치/일(KST). 23:00 잠금. 집행관은 자동 방어(미기록). */
 export const guildBattleDeployments = pgTable(
   'guild_battle_deployments',
   {
@@ -221,7 +221,7 @@ export const guildTaxDistributions = pgTable(
 );
 
 /**
- * 0046/0047 세계 연대기(AI) — 큰 사건 있는 날만 1행(점령전 발표 KST 12:00).
+ * 0046/0047 세계 연대기(AI) — 큰 사건 있는 날만 1행(점령전 발표 KST 자정(00:00)).
  * today_text='오늘'(긴 사관 스토리), headline='전체' 리스트용 그날 핵심 사건 한 줄.
  * 본문은 종류별 마커로 강조 렌더: {g|길드}·{u|인물}·{r|지역}(지역색).
  */

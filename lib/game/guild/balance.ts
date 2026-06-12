@@ -52,8 +52,8 @@ export const GUILD_LEADER_HANDOVER_WARN_DAYS = 5;
 export const GUILD_REJOIN_LOCK_HOURS = 24;
 
 // ── 점령전 (§5.4) ──
-/** 일일 전투 시각(KST 시). 11:00 배치 잠금 → 결정론 정산(전투창 11:00~12:00). */
-export const CONQUEST_BATTLE_KST_HOUR = 11;
+/** 일일 전투 시각(KST 시). 23:00 배치 잠금·정산 → 자정(00:00) 연대기(전투창 23:00~24:00). */
+export const CONQUEST_BATTLE_KST_HOUR = 23;
 /** 일반 방어 인원 전투력 보너스(+20%). */
 export const CONQUEST_DEFENDER_BONUS = 0.2;
 /** 집행관 전투력 배수(×3, 방어 거점 앵커). */

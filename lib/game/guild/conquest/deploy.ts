@@ -33,10 +33,10 @@ async function assertAttackable(tx: Tx, guildId: bigint, targetZoneId: number): 
 }
 
 /**
- * 점령전 배치 — GUILD §5.8⑥. 다음 전투(KST 12:00)에 공격/수비 1곳 배치. 1인 1배치/일(unique).
+ * 점령전 배치 — GUILD §5.8⑥. 다음 전투(KST 23:00)에 공격/수비 1곳 배치. 1인 1배치/일(unique).
  *  - 수비(defend): 자기 길드 소유 구역만. 공격(attack): 자기 길드 **비소유** 구역(중립·적).
  *  - 집행관은 자동 방어로 슬롯 점유 → 배치 불가(IS_EXECUTOR).
- *  - battle_kst_day는 서버가 결정(12:00 잠금 = 날짜 롤). 기존 배치는 덮어씀(upsert).
+ *  - battle_kst_day는 서버가 결정(23:00 잠금 = 날짜 롤). 기존 배치는 덮어씀(upsert).
  */
 export async function deployToZone(input: {
   userId: string;
@@ -84,7 +84,7 @@ export async function deployToZone(input: {
   });
 }
 
-/** 다음 전투 배치 취소(있으면 삭제). 12:00 이후엔 날짜가 롤되어 오늘 배치는 동결(취소 불가). */
+/** 다음 전투 배치 취소(있으면 삭제). 23:00 이후엔 날짜가 롤되어 오늘 배치는 동결(취소 불가). */
 export async function cancelDeployment(input: { userId: string }): Promise<{ cancelled: boolean }> {
   const battleKstDay = nextBattleKstDay();
   const rows = await db
@@ -135,7 +135,7 @@ async function assertOfficer(
 /**
  * 길드원 배치(임원 전용) — GUILD §5.8⑥. 길드장/부길드장이 길드원 1명을 공격/수비 구역에 배치.
  *  - 대상은 같은 길드원. 집행관은 자동 방어라 배치 불가(IS_EXECUTOR).
- *  - 수비=자기 길드 소유 구역, 공격=비소유 구역. 1인 1배치(upsert), 11:00 잠금(날짜 롤).
+ *  - 수비=자기 길드 소유 구역, 공격=비소유 구역. 1인 1배치(upsert), 23:00 잠금(날짜 롤).
  */
 export async function deployMember(input: {
   actorUserId: string;
