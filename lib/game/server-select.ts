@@ -128,13 +128,22 @@ export async function createCharacter(input: {
       .orderBy(sql`random()`)
       .limit(1);
 
+    // 진짜 신규(다른 서버에도 캐릭터가 사실상 없음 — 가입 트리거 직후 1개뿐이고 그 캐릭터를
+    // 아직 안 키움)면 코어 튜토리얼 노출, 기존 유저의 서버 이동이면 스킵.
+    const [other] = await tx
+      .select({ tut: characters.tutorialStep })
+      .from(characters)
+      .where(and(eq(characters.userId, input.userId), sql`${characters.serverId} <> ${input.serverId}`))
+      .orderBy(characters.createdAt)
+      .limit(1);
+    const isFresh = !other || other.tut === 1; // 트리거 생성분이 미진행(step 1)이면 신규로 간주
     try {
       await tx.insert(characters).values({
         userId: input.userId,
         serverId: input.serverId,
         nickname,
         diamond: BigInt(SIGNUP_DIAMOND),
-        tutorialStep: 9, // 신서버 재시작 — 코어 튜토리얼 재노출 없음(기존 유저)
+        tutorialStep: isFresh ? 1 : 9,
         residenceZoneId: rz?.id ?? null,
         lastSeenAt: new Date(),
       });

@@ -387,6 +387,7 @@ async function acceptJob(
 
     await tx.insert(mailbox).values({
       userId,
+      serverId,
       type: 'profile_accepted',
       title: '프로필 생성 완료',
       body: '새 프로필이 목록에 추가되었습니다. 상세 화면에서 8방향을 둘러보세요.',
@@ -422,6 +423,7 @@ async function rejectJob(
 
     await tx.insert(mailbox).values({
       userId,
+      serverId,
       type: 'profile_rejected_ai',
       title: '프로필 검토 미통과',
       body: `사유(${reasonsKr}): ${notes}\n\n다이아는 전액 환불되었습니다.`,
@@ -458,6 +460,7 @@ async function markFailedAndRefund(jobId: bigint, userId: string, reason: string
 
     await tx.insert(mailbox).values({
       userId,
+      serverId: job.serverId,
       type: 'profile_failed',
       title: '프로필 생성 시스템 오류',
       body: `생성 도중 시스템 오류가 발생해 다이아가 전액 환불되었습니다.\n다시 시도해 주세요.\n\n(내부 사유: ${reason.slice(0, 200)})`,

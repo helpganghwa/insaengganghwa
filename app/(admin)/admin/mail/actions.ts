@@ -68,9 +68,21 @@ export async function sendMailToUserAction(opts: {
     const payload = clampPayload(opts.payload);
     // 우편 + 감사 로그 원자 발송.
     await db.transaction(async (tx) => {
-      await tx
-        .insert(mailbox)
-        .values({ userId: recipientId, type: 'admin', title, body, senderLabel: '운영자', payload });
+      // 수신자의 활성 서버 우편함으로(SERVER.md — 우편은 서버별).
+      const [rp] = await tx
+        .select({ sid: profiles.lastServerId })
+        .from(profiles)
+        .where(eq(profiles.id, recipientId))
+        .limit(1);
+      await tx.insert(mailbox).values({
+        userId: recipientId,
+        serverId: rp?.sid ?? 1,
+        type: 'admin',
+        title,
+        body,
+        senderLabel: '운영자',
+        payload,
+      });
       await tx.insert(adminMailLogs).values({
         adminId,
         mode: 'one',
@@ -100,7 +112,7 @@ export async function broadcastMailAction(opts: {
 }): Promise<OkBroadcast | ErrorState> {
   try {
     const adminId = await requireAdmin();
-    const all = await db.select({ id: profiles.id }).from(profiles);
+    const all = await db.select({ id: profiles.id, sid: profiles.lastServerId }).from(profiles);
     if (all.length === 0) return { status: 'success', count: 0 };
 
     const payload = clampPayload(opts.payload);
@@ -116,6 +128,7 @@ export async function broadcastMailAction(opts: {
         await tx.insert(mailbox).values(
           slice.map((p) => ({
             userId: p.id,
+            serverId: p.sid,
             type: 'admin' as const,
             title,
             body,
