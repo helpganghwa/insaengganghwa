@@ -41,6 +41,21 @@ type SettingsView = {
 };
 type EmblemItem = { id: string; emblemUrl: string | null; emblemColor: string | null; isActive: boolean };
 
+// 통일 버튼 스타일 — 모두 rounded-lg. 섹션 주버튼(md) / 인라인 액션(sm, 색만 변형).
+const BTN = {
+  primary: 'rounded-lg bg-amber-600 px-3.5 py-1.5 text-[12px] font-bold text-white active:opacity-90 disabled:opacity-40',
+  ghost: 'rounded-lg px-3 py-1.5 text-[12px] font-semibold text-zinc-500 disabled:opacity-50',
+  smPrimary: 'rounded-lg bg-amber-600 px-2.5 py-1 text-[11px] font-bold text-white disabled:opacity-50',
+  smNeutral:
+    'rounded-lg border border-zinc-300 px-2.5 py-1 text-[11px] font-semibold text-zinc-600 disabled:opacity-50 dark:border-zinc-700 dark:text-zinc-300',
+  smSky:
+    'rounded-lg border border-sky-300 px-2.5 py-1 text-[11px] font-semibold text-sky-600 disabled:opacity-50 dark:border-sky-800 dark:text-sky-400',
+  smAmber:
+    'rounded-lg border border-amber-300 px-2.5 py-1 text-[11px] font-semibold text-amber-600 disabled:opacity-50 dark:border-amber-800 dark:text-amber-400',
+  smDanger:
+    'rounded-lg border border-red-300 px-2.5 py-1 text-[11px] font-semibold text-red-500 disabled:opacity-50 dark:border-red-900/60',
+} as const;
+
 export function GuildSettings({
   guild,
   emblems,
@@ -381,21 +396,11 @@ export function GuildSettings({
         />
         <div className="mt-2 flex justify-end gap-1.5">
           {notice.length > 0 && (
-            <button
-              type="button"
-              onClick={() => setNotice('')}
-              disabled={pending}
-              className="rounded-lg px-3 py-1.5 text-[12px] font-semibold text-zinc-500 disabled:opacity-50"
-            >
+            <button type="button" onClick={() => setNotice('')} disabled={pending} className={BTN.ghost}>
               비우기
             </button>
           )}
-          <button
-            type="button"
-            onClick={saveNotice}
-            disabled={pending || !noticeDirty}
-            className="rounded-lg bg-amber-600 px-4 py-1.5 text-[12px] font-bold text-white disabled:opacity-40"
-          >
+          <button type="button" onClick={saveNotice} disabled={pending || !noticeDirty} className={BTN.primary}>
             저장
           </button>
         </div>
@@ -423,42 +428,22 @@ export function GuildSettings({
                 <div className="flex shrink-0 items-center gap-1">
                   {isLeader &&
                     (m.role === 'vice' ? (
-                      <button
-                        type="button"
-                        onClick={() => setVice(m.userId, false)}
-                        disabled={pending}
-                        className="rounded-md border border-zinc-300 px-2 py-1 text-[10px] font-semibold text-zinc-600 disabled:opacity-50 dark:border-zinc-700 dark:text-zinc-300"
-                      >
+                      <button type="button" onClick={() => setVice(m.userId, false)} disabled={pending} className={BTN.smNeutral}>
                         부길드장 해제
                       </button>
                     ) : (
-                      <button
-                        type="button"
-                        onClick={() => setVice(m.userId, true)}
-                        disabled={pending}
-                        className="rounded-md border border-sky-300 px-2 py-1 text-[10px] font-semibold text-sky-600 disabled:opacity-50 dark:border-sky-800 dark:text-sky-400"
-                      >
+                      <button type="button" onClick={() => setVice(m.userId, true)} disabled={pending} className={BTN.smSky}>
                         부길드장 임명
                       </button>
                     ))}
                   {isLeader && (
-                    <button
-                      type="button"
-                      onClick={() => transfer(m.userId, m.nickname)}
-                      disabled={pending}
-                      className="rounded-md border border-amber-300 px-2 py-1 text-[10px] font-semibold text-amber-600 disabled:opacity-50 dark:border-amber-800 dark:text-amber-400"
-                    >
+                    <button type="button" onClick={() => transfer(m.userId, m.nickname)} disabled={pending} className={BTN.smAmber}>
                       길드장 위임
                     </button>
                   )}
                   {/* 부길드장은 일반 멤버만 추방 가능 */}
                   {(isLeader || m.role === 'member') && (
-                    <button
-                      type="button"
-                      onClick={() => kick(m.userId, m.nickname)}
-                      disabled={pending}
-                      className="rounded-md border border-red-300 px-2 py-1 text-[10px] font-semibold text-red-500 disabled:opacity-50 dark:border-red-900/60"
-                    >
+                    <button type="button" onClick={() => kick(m.userId, m.nickname)} disabled={pending} className={BTN.smDanger}>
                       추방
                     </button>
                   )}
@@ -510,20 +495,10 @@ export function GuildSettings({
                   <li key={r.userId} className="flex items-center justify-between gap-2">
                     <span className="min-w-0 truncate text-[13px] font-semibold">{r.nickname}</span>
                     <div className="flex shrink-0 gap-1.5">
-                      <button
-                        type="button"
-                        onClick={() => approve(r.userId)}
-                        disabled={pending}
-                        className="rounded-full bg-amber-600 px-3 py-1 text-[11px] font-bold text-white disabled:opacity-50"
-                      >
+                      <button type="button" onClick={() => approve(r.userId)} disabled={pending} className={BTN.smPrimary}>
                         승인
                       </button>
-                      <button
-                        type="button"
-                        onClick={() => reject(r.userId)}
-                        disabled={pending}
-                        className="rounded-full border border-zinc-300 px-3 py-1 text-[11px] font-semibold text-zinc-500 disabled:opacity-50 dark:border-zinc-700"
-                      >
+                      <button type="button" onClick={() => reject(r.userId)} disabled={pending} className={BTN.smNeutral}>
                         거절
                       </button>
                     </div>
@@ -543,10 +518,7 @@ export function GuildSettings({
             <h3 className="text-sm font-bold">길드 세금</h3>
             <p className="text-[11px] text-zinc-500">💎 {taxPool}</p>
           </div>
-          <Link
-            href="/guild/distribute"
-            className="shrink-0 rounded-lg bg-emerald-600 px-4 py-2 text-sm font-bold text-white active:opacity-90"
-          >
+          <Link href="/guild/distribute" className={`shrink-0 ${BTN.primary}`}>
             분배
           </Link>
         </section>
@@ -583,7 +555,7 @@ export function GuildSettings({
                       ) : null}
                     </div>
                     {filled.isActive ? (
-                      <span className="w-full rounded bg-amber-500 py-0.5 text-center text-[9px] font-bold text-white">
+                      <span className="w-full rounded-md bg-amber-500 py-0.5 text-center text-[9px] font-bold text-white">
                         사용중
                       </span>
                     ) : (
@@ -591,7 +563,7 @@ export function GuildSettings({
                         type="button"
                         onClick={() => armOr('use', filled.id, () => doSelect(filled.id))}
                         disabled={pending}
-                        className={`relative isolate w-full overflow-hidden rounded py-0.5 text-center text-[9px] font-bold transition-colors active:opacity-70 disabled:opacity-50 ${
+                        className={`relative isolate w-full overflow-hidden rounded-md py-0.5 text-center text-[9px] font-bold transition-colors active:opacity-70 disabled:opacity-50 ${
                           isArmed('use', filled.id)
                             ? 'bg-amber-600 text-white'
                             : 'bg-zinc-100 text-zinc-700 dark:bg-zinc-800 dark:text-zinc-200'
@@ -614,7 +586,7 @@ export function GuildSettings({
                         type="button"
                         onClick={() => armOr('del', filled.id, () => doDelete(filled.id))}
                         disabled={pending}
-                        className={`relative isolate w-full overflow-hidden rounded py-0.5 text-center text-[9px] font-bold transition-colors active:opacity-70 disabled:opacity-50 ${
+                        className={`relative isolate w-full overflow-hidden rounded-md py-0.5 text-center text-[9px] font-bold transition-colors active:opacity-70 disabled:opacity-50 ${
                           isArmed('del', filled.id) ? 'bg-red-600 text-white' : 'text-red-600 dark:text-red-400'
                         }`}
                       >
