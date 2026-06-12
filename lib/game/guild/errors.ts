@@ -23,6 +23,7 @@ export type GuildErrorCode =
   | 'CANNOT_ATTACK_OWN' // 공격 배치 — 자기 길드 소유 구역
   | 'NOT_ADJACENT' // 공격 배치 — 내 영토에 인접하지 않은 구역(영토 0개면 자유)
   | 'IS_EXECUTOR' // 집행관은 배치 불가(자동 방어로 슬롯 점유)
+  | 'BATTLE_IN_PROGRESS' // 점령전 진행 중(KST 23:00~24:00) — 배치/집행관 변경 잠금
   | 'TARGET_ALREADY_EXECUTOR' // 대상이 이미 다른 구역 집행관
   | 'NOT_OFFICER' // 길드장/부길드장 아님(집행관 지정·가입 승인)
   | 'NO_JOIN_REQUEST' // 승인/거절 대상 가입 신청 없음

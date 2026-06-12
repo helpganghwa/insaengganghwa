@@ -3,7 +3,11 @@
 import { useEffect, useMemo, useState, useTransition } from 'react';
 
 import { useResourceToast } from '@/components/ResourceToast';
-import { CONQUEST_DEFENDER_BONUS, CONQUEST_EXECUTOR_POWER_MULT } from '@/lib/game/guild/balance';
+import {
+  CONQUEST_DEFENDER_BONUS,
+  CONQUEST_EXECUTOR_POWER_MULT,
+  CONQUEST_BATTLE_KST_HOUR,
+} from '@/lib/game/guild/balance';
 
 import {
   deployMemberAction,
@@ -191,6 +195,17 @@ export function DeployBoard({
     return () => clearInterval(t);
   }, []);
 
+  // 전투 윈도 잠금(KST 23:00~24:00) — 라이브 시계로 판정. Date.now()는 UTC epoch라 단말 표준시 무관.
+  // UX 차단일 뿐 권위는 서버(BATTLE_IN_PROGRESS). 하이드레이션 불일치 회피 위해 false로 시작 후 마운트 시 갱신.
+  const [locked, setLocked] = useState(false);
+  useEffect(() => {
+    const check = () =>
+      setLocked(Math.floor((Date.now() + 9 * 3_600_000) / 3_600_000) % 24 === CONQUEST_BATTLE_KST_HOUR);
+    check();
+    const t = setInterval(check, 15_000);
+    return () => clearInterval(t);
+  }, []);
+
   const edges = useMemo(() => {
     return adjacency
       .map(({ a, b }) => {
@@ -216,6 +231,21 @@ export function DeployBoard({
           style={{ imageRendering: 'pixelated' }}
         />
         <div className="pointer-events-none absolute inset-0 bg-black/30" />
+        {/* 점령전 시각 안내 — 평시: 등록 마감/전투 시각, 전투 윈도: 진행 중·배치 잠금 */}
+        <div className="pointer-events-none absolute inset-x-0 top-0 z-20 flex justify-center p-2">
+          {locked ? (
+            <div className="flex items-center gap-1.5 rounded-lg border border-red-400/60 bg-red-950/85 px-2.5 py-1 text-[10px] font-bold text-red-100 shadow-lg backdrop-blur-sm">
+              <span className="inline-block h-1.5 w-1.5 animate-pulse rounded-full bg-red-400" />
+              점령전 진행 중 · {CONQUEST_BATTLE_KST_HOUR}:00~24:00 · 배치 변경 잠금
+            </div>
+          ) : (
+            <div className="rounded-lg bg-black/60 px-2.5 py-1 text-center text-[9px] font-semibold leading-[1.5] text-white/90 shadow-lg backdrop-blur-sm">
+              매일 {CONQUEST_BATTLE_KST_HOUR}:00 공격·수비 등록 마감
+              <br />
+              {CONQUEST_BATTLE_KST_HOUR}:00~24:00 점령전 전투
+            </div>
+          )}
+        </div>
         <svg viewBox="0 0 100 100" preserveAspectRatio="none" className="pointer-events-none absolute inset-0 h-full w-full">
           {edges.map((e) => (
             <line
@@ -356,7 +386,7 @@ export function DeployBoard({
                         </span>
                         <span className="text-[9px] font-medium text-indigo-500">집행관</span>
                       </div>
-                      {isOfficer && (
+                      {isOfficer && !locked && (
                         <button
                           type="button"
                           onClick={clearExec}
@@ -381,7 +411,7 @@ export function DeployBoard({
                           {isDefend ? '수비' : '공격'}
                         </span>
                       </div>
-                      {isOfficer && (
+                      {isOfficer && !locked && (
                         <div className="flex shrink-0 items-center gap-0.5">
                           {isDefend && (
                             <button
@@ -435,7 +465,7 @@ export function DeployBoard({
                 : m.depRole
                   ? `${m.depRole === 'attack' ? '공격' : '수비'}·${m.depZoneName}`
                   : '미배치';
-              const canAssign = isOfficer && selected != null && !isExec && !here;
+              const canAssign = isOfficer && !locked && selected != null && !isExec && !here;
               return (
                 <li key={m.userId} className="flex min-h-[38px] items-center gap-1">
                   <button

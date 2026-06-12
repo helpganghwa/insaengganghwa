@@ -11,3 +11,11 @@ export function nextBattleKstDay(at: Date = new Date()): string {
   if (kstHour(at) < CONQUEST_BATTLE_KST_HOUR) return kstDateString(at);
   return kstDateString(new Date(at.getTime() + 24 * 60 * 60 * 1000));
 }
+
+/**
+ * 점령전 진행(잠금) 윈도 여부 — KST 23:00~23:59. 이 시간대엔 배치/집행관 등록·해제 금지.
+ * 23:00 정산 cron이 도는 한 시간이라, 정산 중 배치 변경을 막아 결정론 스냅샷을 보호한다.
+ */
+export function isConquestLocked(at: Date = new Date()): boolean {
+  return kstHour(at) === CONQUEST_BATTLE_KST_HOUR;
+}

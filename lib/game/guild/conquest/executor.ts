@@ -6,7 +6,7 @@ import { db } from '@/lib/db/client';
 import { guildMembers, zones, guildBattleDeployments } from '@/lib/db/schema/guild';
 
 import { GuildError } from '../errors';
-import { nextBattleKstDay } from './schedule';
+import { nextBattleKstDay, isConquestLocked } from './schedule';
 
 /** actor가 zone 소유 길드의 길드장/부길드장인지 검증하고 소유 길드 id 반환. */
 async function assertOfficerOfZoneOwner(
@@ -42,6 +42,7 @@ export async function setZoneExecutor(input: {
   zoneId: number;
   targetUserId: string;
 }): Promise<void> {
+  if (isConquestLocked()) throw new GuildError('BATTLE_IN_PROGRESS'); // 전투 윈도(23:00~24:00) 잠금
   await db.transaction(async (tx) => {
     const guildId = await assertOfficerOfZoneOwner(tx, input.actorUserId, input.zoneId);
 
@@ -76,6 +77,7 @@ export async function setZoneExecutor(input: {
 
 /** 집행관 해제 — 소유 길드 길드장/부길드장. 구역을 집행관 공석으로(자동 방어·수금 중단). */
 export async function clearZoneExecutor(input: { actorUserId: string; zoneId: number }): Promise<void> {
+  if (isConquestLocked()) throw new GuildError('BATTLE_IN_PROGRESS'); // 전투 윈도 잠금
   await db.transaction(async (tx) => {
     await assertOfficerOfZoneOwner(tx, input.actorUserId, input.zoneId);
     await tx.update(zones).set({ executorUserId: null }).where(eq(zones.id, input.zoneId));
