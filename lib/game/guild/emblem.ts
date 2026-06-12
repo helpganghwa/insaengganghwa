@@ -29,13 +29,16 @@ function anthropic(): Anthropic {
   return (_anthropic ??= new Anthropic({ apiKey: key }));
 }
 const EMBLEM_PROMPT_SYSTEM = `You write a single-line English image prompt for a pixel-art guild emblem generator (Pixellab pixflux).
-Given a shape, two colors, a main keyword and an optional sub keyword, compose ONE coherent dark-fantasy guild emblem.
+The emblem must look like a classic OLD MEDIEVAL HERALDIC COAT OF ARMS / family crest — ornate, symmetrical, vintage, ceremonial. Not a modern logo, not a flat icon.
+Given a shape, two colors, a main keyword and an optional sub keyword, compose ONE coherent heraldic crest.
 Rules:
 - Output ONLY the prompt text (English, one line, <120 words). No quotes, no preamble, no explanation.
-- The MAIN keyword is the single bold central motif (large, clear). The SUB keyword (if any) is only a small secondary accent — never a second competing focal point.
-- Use the given shape as the overall silhouette. Main color as the palette, sub color as accents.
-- Merge everything into ONE unified motif — do NOT scatter multiple separate objects.
-- Always include: pixel art, dark fantasy, bold clean readable silhouette, fills the frame, centered, transparent background, no text, no lettering.`;
+- Style anchors (always include the spirit): medieval heraldry, coat of arms, family crest, ornate, symmetrical, vintage emblem, dark fantasy, pixel art.
+- The MAIN keyword is the central heraldic charge: large, bold, the clear focal point.
+- The SUB keyword (if any) MUST be clearly visible too — place it as a secondary heraldic element such as supporters flanking the main on BOTH sides, or crossed behind it, or a charge on a chief/base band. Smaller than the main but distinctly rendered, NEVER omitted or dissolved into texture.
+- Use the given shape as the overall shield/crest silhouette. Main color as the field, sub color as the accents, border and trim.
+- Compose everything into ONE unified crest — do NOT scatter unrelated floating objects.
+- Always include: bold clean readable silhouette, fills the frame, centered, transparent background, no text, no lettering.`;
 
 async function buildEmblemPromptAI(s: EmblemSelection): Promise<string> {
   try {
@@ -52,9 +55,10 @@ async function buildEmblemPromptAI(s: EmblemSelection): Promise<string> {
         {
           role: 'user',
           content:
-            `Shape: ${shape}\nMain color: ${main}\nSub color: ${sub}\n` +
-            `Main keyword (central motif): ${mainKw}\nSub keyword (small accent): ${subKw ?? 'none'}\n\n` +
-            `Write the one-line pixel guild emblem prompt.`,
+            `Shape (overall crest silhouette): ${shape}\nMain color (field): ${main}\nSub color (accents/trim): ${sub}\n` +
+            `Main keyword (central charge, focal point): ${mainKw}\n` +
+            `Sub keyword (secondary charge, must be clearly visible — e.g. flanking supporters): ${subKw ?? 'none'}\n\n` +
+            `Write the one-line heraldic coat-of-arms pixel guild crest prompt.`,
         },
       ],
     });

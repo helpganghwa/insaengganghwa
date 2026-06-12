@@ -13,7 +13,6 @@ export const EMBLEM_SHAPES: readonly EmblemShape[] = [
   { id: 'round', ko: '라운드 방패', en: 'a round shield' },
   { id: 'heater', ko: '기사 방패', en: 'a classic heater shield with a flat top and a pointed bottom' },
   { id: 'kite', ko: '카이트 방패', en: 'a tall pointed kite shield' },
-  { id: 'wreath', ko: '월계관', en: 'a circular laurel wreath frame, two curved leafy branches meeting at the bottom and open in the center' },
   { id: 'banner', ko: '전투 깃발', en: 'a hanging cloth war banner with a forked swallowtail bottom edge' },
   { id: 'lozenge', ko: '마름모', en: 'a diamond-shaped lozenge standing on one point' },
 ] as const;
@@ -58,6 +57,7 @@ export const EMBLEM_KEYWORDS: readonly EmblemKeyword[] = [
   { id: 'flame', ko: '불꽃', en: 'a flame', cat: 'kw3' },
   { id: 'star', ko: '별', en: 'a star', cat: 'kw3' },
   { id: 'wings', ko: '날개', en: 'a pair of wings', cat: 'kw3' },
+  { id: 'laurel', ko: '월계수', en: 'a laurel wreath', cat: 'kw3' },
 ] as const;
 
 export type EmblemSelection = {
@@ -100,11 +100,11 @@ export function buildEmblemPrompt(s: EmblemSelection): string {
   const sub = EMBLEM_TONES.find((x) => x.id === s.subToneId)!.en;
   const mainKw = keywordById(s.mainKeywordId)?.en ?? 'a heraldic beast';
   const subKw = s.subKeywordId ? keywordById(s.subKeywordId)?.en : null;
-  const accent = subKw ? `, with ${subKw} as a small secondary accent` : '';
+  const accent = subKw ? `, flanked by ${subKw} as a clearly visible secondary heraldic charge` : '';
   return (
-    `dark fantasy pixel art guild emblem shaped like ${shape}, ` +
-    `${mainKw} as one bold central motif${accent}, ` +
-    `${main} color palette with ${sub} accents, ` +
-    `strong clean silhouette filling the frame, readable at small size, centered, transparent background, no text`
+    `pixel art medieval heraldic coat of arms, an old family guild crest shaped like ${shape}, ` +
+    `${mainKw} as the bold central heraldic charge${accent}, ` +
+    `ornate symmetrical vintage emblem, ${main} field with ${sub} accents and trim, ` +
+    `bold clean silhouette filling the frame, centered, dark fantasy, transparent background, no text`
   );
 }
