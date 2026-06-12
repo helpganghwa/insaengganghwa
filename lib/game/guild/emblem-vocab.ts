@@ -12,7 +12,6 @@ export type EmblemKeyword = { id: string; ko: string; en: string; cat: string };
 export const EMBLEM_SHAPES: readonly EmblemShape[] = [
   { id: 'round', ko: '라운드 방패', en: 'a round shield' },
   { id: 'heater', ko: '기사 방패', en: 'a classic heater shield with a flat top and a pointed bottom' },
-  { id: 'kite', ko: '카이트 방패', en: 'a tall pointed kite shield' },
   { id: 'banner', ko: '전투 깃발', en: 'a hanging cloth war banner with a forked swallowtail bottom edge' },
   { id: 'lozenge', ko: '마름모', en: 'a diamond-shaped lozenge standing on one point' },
 ] as const;
@@ -59,6 +58,37 @@ export const EMBLEM_KEYWORDS: readonly EmblemKeyword[] = [
   { id: 'wings', ko: '날개', en: 'a pair of wings', cat: 'kw3' },
   { id: 'laurel', ko: '월계수', en: 'a laurel wreath', cat: 'kw3' },
 ] as const;
+
+/**
+ * 키워드 궁합 — 메인 키워드별로 함께 두면 의미 있는 서브 키워드(문장 조합). 서브는 미선택도 가능.
+ * 생물은 무기·상징과, 무기는 생물·왕관·월계수 등과 조합되도록 큐레이션(중복·난잡 회피).
+ */
+const EMBLEM_KEYWORD_PAIRS: Record<string, readonly string[]> = {
+  dragon: ['swords', 'crown', 'flame', 'skull', 'crystal', 'star', 'wings', 'laurel'],
+  wolf: ['swords', 'axe', 'spear', 'skull', 'crown', 'flame', 'star', 'eye', 'laurel'],
+  lion: ['crown', 'swords', 'spear', 'laurel', 'star', 'wings', 'flame'],
+  eagle: ['crown', 'swords', 'spear', 'star', 'laurel', 'flame', 'crystal'],
+  serpent: ['crown', 'eye', 'crystal', 'skull', 'flame', 'swords', 'star'],
+  phoenix: ['crown', 'star', 'crystal', 'laurel', 'swords', 'flame'],
+  swords: ['crown', 'lion', 'wolf', 'dragon', 'eagle', 'laurel', 'wings', 'flame', 'skull', 'star'],
+  axe: ['wolf', 'skull', 'flame', 'crown', 'laurel', 'star', 'helmet'],
+  spear: ['eagle', 'lion', 'wings', 'laurel', 'crown', 'star', 'flame'],
+  helmet: ['swords', 'wings', 'crown', 'laurel', 'lion', 'eagle', 'star'],
+  crown: ['lion', 'eagle', 'dragon', 'swords', 'laurel', 'wings', 'star', 'crystal'],
+  skull: ['swords', 'axe', 'crown', 'flame', 'serpent', 'wings', 'eye'],
+  eye: ['serpent', 'crystal', 'wings', 'flame', 'star', 'crown'],
+  crystal: ['dragon', 'serpent', 'eye', 'star', 'wings', 'crown', 'flame'],
+  flame: ['dragon', 'phoenix', 'wings', 'skull', 'crown', 'swords', 'eagle', 'lion'],
+  star: ['crown', 'wings', 'eagle', 'lion', 'laurel', 'crystal'],
+  wings: ['swords', 'crown', 'helmet', 'flame', 'star', 'skull', 'lion', 'eagle'],
+  laurel: ['crown', 'swords', 'star', 'lion', 'eagle', 'wings', 'crystal'],
+};
+
+/** 메인 키워드와 어울리는 서브 키워드 목록(궁합 맵 기준, 메인 제외). 정의 없으면 빈 배열. */
+export function subKeywordsFor(mainId: string): EmblemKeyword[] {
+  const ids = EMBLEM_KEYWORD_PAIRS[mainId] ?? [];
+  return ids.map((id) => EMBLEM_KEYWORDS.find((k) => k.id === id)).filter((k): k is EmblemKeyword => !!k);
+}
 
 export type EmblemSelection = {
   shapeId: string;

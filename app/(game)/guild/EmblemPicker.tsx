@@ -5,6 +5,7 @@ import {
   EMBLEM_TONES,
   EMBLEM_KEYWORDS,
   EMBLEM_KEYWORD_CATEGORIES,
+  subKeywordsFor,
   type EmblemSelection,
 } from '@/lib/game/guild/emblem-vocab';
 
@@ -52,16 +53,30 @@ export function EmblemPicker({
   onChange: (s: EmblemSelection) => void;
   disabled?: boolean;
 }) {
-  const kwOptions = (excludeId?: string) =>
-    EMBLEM_KEYWORD_CATEGORIES.map((cat) => (
+  // 메인: 전체 키워드(테마 그룹). 서브: 메인 궁합 키워드만(테마 그룹, 빈 그룹 제외).
+  const mainOptions = EMBLEM_KEYWORD_CATEGORIES.map((cat) => (
+    <optgroup key={cat.id} label={cat.ko}>
+      {EMBLEM_KEYWORDS.filter((k) => k.cat === cat.id).map((k) => (
+        <option key={k.id} value={k.id}>
+          {k.ko}
+        </option>
+      ))}
+    </optgroup>
+  ));
+  const subPool = subKeywordsFor(value.mainKeywordId);
+  const subOptions = EMBLEM_KEYWORD_CATEGORIES.map((cat) => {
+    const items = subPool.filter((k) => k.cat === cat.id);
+    if (items.length === 0) return null;
+    return (
       <optgroup key={cat.id} label={cat.ko}>
-        {EMBLEM_KEYWORDS.filter((k) => k.cat === cat.id && k.id !== excludeId).map((k) => (
+        {items.map((k) => (
           <option key={k.id} value={k.id}>
             {k.ko}
           </option>
         ))}
       </optgroup>
-    ));
+    );
+  }).filter(Boolean);
 
   return (
     <div className={`space-y-3 ${disabled ? 'pointer-events-none opacity-50' : ''}`}>
@@ -102,21 +117,20 @@ export function EmblemPicker({
           <p className="mb-1 text-[11px] font-semibold text-zinc-500">메인 키워드</p>
           <select
             value={value.mainKeywordId}
-            onChange={(e) =>
-              onChange({
-                ...value,
-                mainKeywordId: e.target.value,
-                subKeywordId: value.subKeywordId === e.target.value ? null : value.subKeywordId,
-              })
-            }
+            onChange={(e) => {
+              const nextMain = e.target.value;
+              // 새 메인과 어울리지 않는 서브는 해제.
+              const ok = subKeywordsFor(nextMain).some((k) => k.id === value.subKeywordId);
+              onChange({ ...value, mainKeywordId: nextMain, subKeywordId: ok ? value.subKeywordId : null });
+            }}
             className={KW_SELECT_CLS}
           >
-            {kwOptions()}
+            {mainOptions}
           </select>
         </div>
         <div>
           <p className="mb-1 text-[11px] font-semibold text-zinc-500">
-            서브 키워드 <span className="font-normal text-zinc-400">선택</span>
+            서브 키워드 <span className="font-normal text-zinc-400">메인과 어울리는 것 · 선택</span>
           </p>
           <select
             value={value.subKeywordId ?? ''}
@@ -124,7 +138,7 @@ export function EmblemPicker({
             className={KW_SELECT_CLS}
           >
             <option value="">없음</option>
-            {kwOptions(value.mainKeywordId)}
+            {subOptions}
           </select>
         </div>
       </div>
