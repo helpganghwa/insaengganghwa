@@ -3,7 +3,6 @@
 import { useEffect, useMemo, useState, useTransition } from 'react';
 
 import { useResourceToast } from '@/components/ResourceToast';
-import { assetUrl } from '@/lib/asset-versions';
 import {
   CONQUEST_DEFENDER_BONUS,
   CONQUEST_EXECUTOR_POWER_MULT,
@@ -69,34 +68,8 @@ export function DeployBoard({
   const [selectedId, setSelectedId] = useState<number | null>(null);
   const [pending, start] = useTransition();
 
-  const fogSrc = assetUrl('/sprites/guild/fog.png');
-  // 포그 오브 워 — 개방 존 중심을 뚫는 마스크(잠긴 존 없으면 null) + 지역당 구름 1개.
-  const fogMask = useMemo(() => {
-    if (!zones.some((z) => z.locked)) return null;
-    return zones
-      .filter((z) => !z.locked)
-      .map(
-        (z) =>
-          `radial-gradient(ellipse 14% 14% at ${z.mapX}% ${z.mapY}%, transparent 52%, black 100%)`,
-      )
-      .join(', ');
-  }, [zones]);
-  const fogClouds = useMemo(() => {
-    const byRegion = new Map<string, { xs: number[]; ys: number[] }>();
-    for (const z of zones) {
-      if (!z.locked) continue;
-      const e = byRegion.get(z.region) ?? { xs: [], ys: [] };
-      e.xs.push(z.mapX);
-      e.ys.push(z.mapY);
-      byRegion.set(z.region, e);
-    }
-    return [...byRegion.entries()].map(([region, e], i) => ({
-      region,
-      x: e.xs.reduce((a, b) => a + b, 0) / e.xs.length,
-      y: e.ys.reduce((a, b) => a + b, 0) / e.ys.length,
-      flip: i % 2 === 0 ? 1 : -1,
-    }));
-  }, [zones]);
+  // 포그 오브 워 — 잠긴 존이 있을 때만 장막 렌더(SVG 마스크가 개방 존을 뚫음).
+  const hasFog = zones.some((z) => z.locked);
 
   const zoneById = useMemo(() => new Map(zones.map((z) => [z.id, z])), [zones]);
   const attackable = useMemo(() => new Set(attackableZoneIds), [attackableZoneIds]);
@@ -307,40 +280,41 @@ export function DeployBoard({
             />
           ))}
         </svg>
-        {/* 미개방 안개(포그 오브 워) — 풀맵 다크 베일 + 개방 존 중심 마스크 홀(union).
-            mask 레이어는 알파 곱이라 '모든 레이어가 가린 곳'만 남음 → 개방 구역 주변이 뚫린다.
-            지형이 어둡게 비쳐 '미지의 땅' 연출 — 지도 그림체·축척 보존, 반복/경계 아티팩트 없음. */}
-        {fogMask && (
-          <div
+        {/* 미개방 안개(포그 오브 워) — SVG 마스크: 흰 장막에 개방 존 중심을 radial로 뚫고
+            feTurbulence 변위로 경계를 일렁이게(유기적 안개선). CSS 다중 mask의 add 합성 함정 회피. */}
+        {hasFog && (
+          <svg
+            viewBox="0 0 100 100"
+            preserveAspectRatio="none"
+            className="pointer-events-none absolute inset-0 h-full w-full"
+            style={{ zIndex: 25 }}
             aria-hidden
-            className="pointer-events-none absolute inset-0"
-            style={{
-              zIndex: 25,
-              backgroundColor: 'rgba(28, 33, 48, 0.84)',
-              maskImage: fogMask,
-              WebkitMaskImage: fogMask,
-            }}
-          />
+          >
+            <defs>
+              <filter id="dbfog-wobble" x="-20%" y="-20%" width="140%" height="140%">
+                <feTurbulence type="fractalNoise" baseFrequency="0.18" numOctaves="2" seed="7" />
+                <feDisplacementMap in="SourceGraphic" scale="5" />
+              </filter>
+              <radialGradient id="dbfog-hole">
+                <stop offset="58%" stopColor="black" />
+                <stop offset="100%" stopColor="white" />
+              </radialGradient>
+              <mask id="dbfog-mask" maskUnits="userSpaceOnUse" x="0" y="0" width="100" height="100">
+                <rect width="100" height="100" fill="white" />
+                <g filter="url(#dbfog-wobble)">
+                  {zones
+                    .filter((z) => !z.locked)
+                    .map((z) => (
+                      <circle key={z.id} cx={z.mapX} cy={z.mapY} r={12} fill="url(#dbfog-hole)" />
+                    ))}
+                </g>
+              </mask>
+            </defs>
+            {/* 2겹 장막 — 깊은 베이스 + 옅은 상층(턴버런스 질감) */}
+            <rect width="100" height="100" fill="rgb(22, 26, 38)" opacity={0.93} mask="url(#dbfog-mask)" />
+            <rect width="100" height="100" fill="rgb(94, 104, 128)" opacity={0.22} mask="url(#dbfog-mask)" filter="url(#dbfog-wobble)" />
+          </svg>
         )}
-        {/* 안개 속 구름 포인트 — 잠긴 지역당 1개(소형, 픽셀 스프라이트). */}
-        {fogClouds.map((c) => (
-          // eslint-disable-next-line @next/next/no-img-element
-          <img
-            key={`fogc-${c.region}`}
-            src={fogSrc}
-            alt=""
-            aria-hidden
-            className="pointer-events-none absolute max-w-none opacity-90"
-            style={{
-              left: `${c.x}%`,
-              top: `${c.y}%`,
-              width: '13%',
-              zIndex: 26,
-              transform: `translate(-50%, -50%) scaleX(${c.flip})`,
-              imageRendering: 'pixelated',
-            }}
-          />
-        ))}
         {zones.map((z) => {
           if (z.locked) return null; // 미개방 — 노드 미노출
           const mine = z.ownerGuildId === myGuildId;
