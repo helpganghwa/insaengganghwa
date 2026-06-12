@@ -110,7 +110,7 @@ export async function finalizeEnhance(jobId: string): Promise<
   if (await rateLimited(userId, 'enhance')) return err('RATE_LIMITED');
   try {
     // 강화 직전 — 캐시 시점 본인 3 메트릭 + 순위(토스트 before).
-    const ranksBefore = await getMyRanks(userId);
+    const ranksBefore = await getMyRanks(userId, await getActiveServerId());
 
     // 결과 판정·저장 원자 트랜잭션(CLAUDE §3.1/§3.3/§3.4).
     const r = await resolveEnhance({ jobId: BigInt(jobId), userId, requireComplete: false });
@@ -127,7 +127,7 @@ export async function finalizeEnhance(jobId: string): Promise<
       if (!(re instanceof EnhanceError)) console.error('[enhance.requeue]', re);
     }
     // 강화 직후 — 본인 새 stat 직접 fetch + 캐시 sorted bisect(토스트 after).
-    const ranksAfter = await getMyRanksAfter(userId);
+    const ranksAfter = await getMyRanksAfter(userId, await getActiveServerId());
     // 묶음 알림에서 이미 처리된 잡 제거 — best-effort. 다음 cron이 빈 묶음 발송 안 함.
     await cleanupPushPendingJob(userId, jobId);
     // 변경 데이터만 무효화(홈 '/'은 다음 방문 시 자연 갱신 — 핫패스 축소).

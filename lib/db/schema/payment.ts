@@ -5,6 +5,7 @@
  * 분기 5만원 환불 보호, 환불 시 재화 자동 회수. 본인인증 결과 요약은 profiles(§1).
  */
 import {
+  smallint,
   pgTable,
   pgEnum,
   uuid,
@@ -30,6 +31,8 @@ export const identityProviderEnum = pgEnum('identity_provider', ['kmc', 'pass'])
 /** §9.1 iap_orders. */
 export const iapOrders = pgTable('iap_orders', {
   id: bigserial('id', { mode: 'bigint' }).primaryKey(),
+  /** 지급 대상 지갑 서버(SERVER.md §4) — 미성년 월 한도는 계정 합산(서버 무관). */
+  serverId: smallint('server_id').notNull().default(1),
   userId: uuid('user_id')
     .notNull()
     .references(() => profiles.id),

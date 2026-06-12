@@ -5,6 +5,7 @@ import { preload } from 'react-dom';
 
 import { getSessionUserId } from '@/lib/auth/session';
 import { db } from '@/lib/db/client';
+import { characters } from '@/lib/db/schema/server';
 import { withTimeout } from '@/lib/db/with-timeout';
 import { profiles } from '@/lib/db/schema/profiles';
 import { raids, raidParticipants, raidRewards } from '@/lib/db/schema/raid';
@@ -72,11 +73,16 @@ export default async function RaidDetail({ params }: { params: Promise<{ raidId:
         totalDamage: raidParticipants.totalDamage,
         attacksUsed: raidParticipants.attacksUsed,
         extraAttacks: raidParticipants.extraAttacks,
-        nickname: profiles.nickname,
+        nickname: characters.nickname,
         publicCode: profiles.publicCode,
       })
       .from(raidParticipants)
       .innerJoin(profiles, eq(profiles.id, raidParticipants.userId))
+      .innerJoin(raids, eq(raids.id, raidParticipants.raidId))
+      .innerJoin(
+        characters,
+        and(eq(characters.userId, raidParticipants.userId), eq(characters.serverId, raids.serverId)),
+      )
       .where(eq(raidParticipants.raidId, BigInt(raidId))),
     3000,
     'raid.parts',

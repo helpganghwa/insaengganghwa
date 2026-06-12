@@ -83,6 +83,8 @@ export const userProfiles = pgTable(
      * Pixellab v2 8방향 시트를 Supabase Storage에 미러링한 결과. 자랑카드·hub·랭킹은
      * `rotations[active_direction]` 단일 이미지 사용. 상세 화면에서 8방향 회전 가능.
      */
+    /** 소속 서버(SERVER.md P6) — 아바타는 캐릭터 자산. */
+    serverId: smallint('server_id').notNull().default(1),
     rotations: jsonb('rotations').notNull(),
     /** 현재 active 방향 — 유저가 상세에서 선택. default 'south'(정면). */
     activeDirection: profileDirectionEnum('active_direction').notNull().default('south'),

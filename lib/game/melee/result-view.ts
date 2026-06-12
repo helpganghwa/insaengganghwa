@@ -52,14 +52,15 @@ export async function buildMeleeResultView(
     const av = await withTimeout(
       db
         .select({
-          uid: profiles.id,
+          uid: characters.userId,
           code: profiles.publicCode,
           rotations: userProfiles.rotations,
           dir: userProfiles.activeDirection,
         })
-        .from(profiles)
-        .innerJoin(userProfiles, eq(userProfiles.id, profiles.activeProfileId))
-        .where(inArray(profiles.id, rosterIds)),
+        .from(characters)
+        .innerJoin(profiles, eq(profiles.id, characters.userId))
+        .innerJoin(userProfiles, eq(userProfiles.id, characters.activeProfileId))
+        .where(and(eq(characters.serverId, battle.serverId), inArray(characters.userId, rosterIds))),
       3000,
       'melee.avatars',
     ).catch(() => []);
@@ -142,11 +143,15 @@ export async function buildMeleeResultView(
         boxes: meleeParticipants.rewardBoxes,
         myEvents: meleeParticipants.myEvents,
         cp: meleeParticipants.cpSnapshot,
-        nickname: profiles.nickname,
+        nickname: characters.nickname,
         code: profiles.publicCode,
       })
       .from(meleeParticipants)
       .innerJoin(profiles, eq(profiles.id, meleeParticipants.userId))
+      .innerJoin(
+        characters,
+        and(eq(characters.userId, meleeParticipants.userId), eq(characters.serverId, battle.serverId)),
+      )
       .where(and(eq(meleeParticipants.battleId, battle.id), eq(meleeParticipants.userId, userId)))
       .limit(1),
     3000,

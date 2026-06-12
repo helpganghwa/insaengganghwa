@@ -62,8 +62,8 @@ export default async function ProfilePage() {
     Promise.all([
       db.execute(sql`
         select
-          p.nickname, p.public_code, c.diamond::text as diamond,
-          p.nickname_changed_count, p.active_profile_id,
+          c.nickname, p.public_code, c.diamond::text as diamond,
+          c.nickname_changed_count, c.active_profile_id,
           g.emblem_url as guild_emblem_url, g.name as guild_name,
           (select count(*)::int from referral_attributions where referrer_user_id = ${userId}::uuid) as referral_count,
           (select count(*)::int from friend_links where status = 'pending' and addressee_id = ${userId}::uuid and server_id = ${serverId}) as friend_req_count,
@@ -80,7 +80,7 @@ export default async function ProfilePage() {
           left join guilds g on g.id = gm.guild_id
         where p.id = ${userId}::uuid limit 1
       `) as unknown as Promise<MeRow[]>,
-      liberatedItemRanks(userId),
+      liberatedItemRanks(userId, serverId),
       getCatalogMap(),
     ]),
     3500,

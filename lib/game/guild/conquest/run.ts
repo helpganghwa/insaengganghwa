@@ -5,7 +5,7 @@ import { and, eq, inArray, sql } from 'drizzle-orm';
 import { db } from '@/lib/db/client';
 import { zones, conquestBattles } from '@/lib/db/schema/guild';
 import { userEquipment } from '@/lib/db/schema/equipment';
-import { profiles } from '@/lib/db/schema/profiles';
+import { characters } from '@/lib/db/schema/server';
 import { combatPowerFromOwned, type OwnedRow } from '@/lib/game/equipment/combat-power';
 
 import { conquestPowerMult } from '../balance';
@@ -77,9 +77,9 @@ export async function runConquest(serverId: number): Promise<{ battleDay: string
   const cpOf = (uid: string): number => combatPowerFromOwned(ownedByUser.get(uid) ?? []);
 
   const nickRows = await db
-    .select({ uid: profiles.id, nick: profiles.nickname })
-    .from(profiles)
-    .where(inArray(profiles.id, idList));
+    .select({ uid: characters.userId, nick: characters.nickname })
+    .from(characters)
+    .where(and(eq(characters.serverId, serverId), inArray(characters.userId, idList)));
   const nickOf = new Map(nickRows.map((r) => [r.uid, r.nick]));
 
   // 구역별 배치 묶기.

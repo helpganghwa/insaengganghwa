@@ -3,6 +3,7 @@ import 'server-only';
 import { and, eq, sql } from 'drizzle-orm';
 
 import { db } from '@/lib/db/client';
+import { characters } from '@/lib/db/schema/server';
 import { raids, raidParticipants, raidJoinRequests } from '@/lib/db/schema/raid';
 import { profiles } from '@/lib/db/schema/profiles';
 import { RAID_MAX_PARTICIPANTS, RAID_MAX_CONCURRENT_PER_USER } from '@/lib/game/balance';
@@ -175,11 +176,16 @@ export async function getPendingJoinRequests(
   return db
     .select({
       userId: raidJoinRequests.userId,
-      nickname: profiles.nickname,
+      nickname: characters.nickname,
       publicCode: profiles.publicCode,
     })
     .from(raidJoinRequests)
     .innerJoin(profiles, eq(profiles.id, raidJoinRequests.userId))
+    .innerJoin(raids, eq(raids.id, raidJoinRequests.raidId))
+    .innerJoin(
+      characters,
+      and(eq(characters.userId, raidJoinRequests.userId), eq(characters.serverId, raids.serverId)),
+    )
     .where(and(eq(raidJoinRequests.raidId, raidId), eq(raidJoinRequests.status, 'pending')))
     .orderBy(raidJoinRequests.createdAt);
 }

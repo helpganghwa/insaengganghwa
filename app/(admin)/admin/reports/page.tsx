@@ -1,7 +1,7 @@
 import { desc, eq, gt, sql } from 'drizzle-orm';
 
 import { db } from '@/lib/db/client';
-import { profiles } from '@/lib/db/schema/profiles';
+import { characters } from '@/lib/db/schema/server';
 import { userProfiles, profileReports } from '@/lib/db/schema/avatar';
 
 import { AdminReportActions } from './AdminReportActions';
@@ -21,14 +21,14 @@ export default async function AdminReportsPage() {
     db
       .select({
         id: userProfiles.id,
-        nickname: profiles.nickname,
+        nickname: characters.nickname,
         rotations: userProfiles.rotations,
         activeDirection: userProfiles.activeDirection,
         reportCount: userProfiles.reportCount,
         hiddenAt: userProfiles.hiddenAt,
       })
       .from(userProfiles)
-      .innerJoin(profiles, eq(profiles.id, userProfiles.userId))
+      .innerJoin(characters, eq(characters.userId, userProfiles.userId))
       .where(gt(userProfiles.reportCount, 0))
       .orderBy(desc(userProfiles.reportCount)),
     db

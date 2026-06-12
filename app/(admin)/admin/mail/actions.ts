@@ -6,6 +6,7 @@ import { eq, sql } from 'drizzle-orm';
 import { requireAdmin } from '@/lib/auth/require-admin';
 import { db } from '@/lib/db/client';
 import { profiles } from '@/lib/db/schema/profiles';
+import { characters } from '@/lib/db/schema/server';
 import { mailbox, adminMailLogs } from '@/lib/db/schema/mailbox';
 
 export interface MailPayload {
@@ -42,9 +43,9 @@ export async function sendMailToUserAction(opts: {
     let recipientId: string | null = null;
     if (opts.toNickname?.trim()) {
       const [r] = await db
-        .select({ id: profiles.id })
-        .from(profiles)
-        .where(eq(profiles.nickname, opts.toNickname.trim()))
+        .select({ id: characters.userId })
+        .from(characters)
+        .where(eq(characters.nickname, opts.toNickname.trim()))
         .limit(1);
       recipientId = r?.id ?? null;
     } else if (opts.toUserId?.trim()) {

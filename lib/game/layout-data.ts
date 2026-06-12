@@ -43,7 +43,7 @@ export async function loadLayoutData(userId: string, serverId: number): Promise<
           select p.nickname, c.diamond, up.rotations, g.emblem_url as guild_emblem_url
           from profiles p
           left join characters c on c.user_id = p.id and c.server_id = ${serverId}
-          left join user_profiles up on up.id = p.active_profile_id
+          left join user_profiles up on up.id = c.active_profile_id
           left join guild_members gm on gm.user_id = p.id and gm.server_id = ${serverId}
           left join guilds g on g.id = gm.guild_id
           where p.id = ${userId}::uuid

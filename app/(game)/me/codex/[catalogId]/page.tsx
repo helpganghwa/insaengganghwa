@@ -1,4 +1,5 @@
 import Link from 'next/link';
+import { getActiveServerId } from '@/lib/game/servers';
 import { notFound } from 'next/navigation';
 import { eq } from 'drizzle-orm';
 
@@ -22,6 +23,7 @@ export default async function CodexItemPage({
   params: Promise<{ catalogId: string }>;
 }) {
   const userId = await getSessionUserId();
+  const serverId = await getActiveServerId();
   if (!userId) return null;
 
   const catalogId = Number((await params).catalogId);
@@ -45,7 +47,7 @@ export default async function CodexItemPage({
   const [item] = itemRows;
   if (!item) notFound();
 
-  const top = await withTimeout(getItemTop10(item.id), 3500, 'codex.top10').catch(
+  const top = await withTimeout(getItemTop10(item.id, serverId), 3500, 'codex.top10').catch(
     () => [] as Awaited<ReturnType<typeof getItemTop10>>,
   );
   const lore = loreByCode(item.code);

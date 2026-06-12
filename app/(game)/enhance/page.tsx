@@ -59,7 +59,7 @@ export default async function EnhancePage() {
     Promise.all([
       db.execute(sql`
         select
-          c.diamond::text as diamond, p.nickname, c.tutorial_step,
+          c.diamond::text as diamond, c.nickname, c.tutorial_step,
           coalesce((select json_agg(json_build_object(
               'jobId', ej.id::text, 'equipmentInstanceId', ej.user_equipment_id::text,
               'slot', ej.slot, 'slotLane', ej.slot_lane, 'fromLevel', ej.from_level,
@@ -84,7 +84,7 @@ export default async function EnhancePage() {
           left join characters c on c.user_id = p.id and c.server_id = ${serverId}
         where p.id = ${userId}::uuid limit 1
       `) as unknown as Promise<EnhRow[]>,
-      liberatedItemRanks(userId),
+      liberatedItemRanks(userId, serverId),
     ]),
     3500,
     'enhance.page',

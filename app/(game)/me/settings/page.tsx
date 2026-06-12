@@ -26,10 +26,10 @@ export default async function SettingsPage() {
   const pRows = await withTimeout(
     db
       .select({
-        nickname: profiles.nickname,
+        nickname: characters.nickname,
         verifiedAt: profiles.identityVerifiedAt,
         diamond: characters.diamond,
-        nicknameChangedCount: profiles.nicknameChangedCount,
+        nicknameChangedCount: characters.nicknameChangedCount,
         pushEnhance: profiles.pushEnhance,
         pushRaid: profiles.pushRaid,
         pushProfile: profiles.pushProfile,

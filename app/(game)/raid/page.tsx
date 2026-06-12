@@ -3,8 +3,8 @@ import { and, eq, gt, inArray, isNull, ne, sql } from 'drizzle-orm';
 import { getSessionUserId } from '@/lib/auth/session';
 import { getActiveServerId } from '@/lib/game/servers';
 import { db } from '@/lib/db/client';
+import { characters } from '@/lib/db/schema/server';
 import { withTimeout } from '@/lib/db/with-timeout';
-import { profiles } from '@/lib/db/schema/profiles';
 import { raids, raidParticipants, raidRewards, raidDailyCounts } from '@/lib/db/schema/raid';
 import {
   RAID_BASE_ATTACKS,
@@ -159,11 +159,14 @@ export default async function RaidPage() {
           shareCode: raids.shareCode,
           expireAt: raids.expireAt,
           phasesCleared: raids.phasesCleared,
-          hostNickname: profiles.nickname,
+          hostNickname: characters.nickname,
           participantCount: sql<number>`(select count(*) from raid_participants rp where rp.raid_id = ${raids.id})::int`,
         })
         .from(raids)
-        .innerJoin(profiles, eq(profiles.id, raids.hostUserId))
+        .innerJoin(
+          characters,
+          and(eq(characters.userId, raids.hostUserId), eq(characters.serverId, raids.serverId)),
+        )
         .where(
           and(
             eq(raids.serverId, serverId),
@@ -197,12 +200,12 @@ export default async function RaidPage() {
       db.execute(sql`
         select r.id::text as id, r.boss_code as boss_code, r.share_code as share_code,
                r.expire_at as expire_at, r.phases_cleared as phases_cleared,
-               p.nickname as host_nickname,
+               hc.nickname as host_nickname,
                (select count(*) from raid_participants rp where rp.raid_id = r.id)::int as participant_count
         from raids r
         join guild_members hg on hg.user_id = r.host_user_id
         join guild_members mg on mg.guild_id = hg.guild_id and mg.user_id = ${userId}::uuid
-        join profiles p on p.id = r.host_user_id
+        join characters hc on hc.user_id = r.host_user_id and hc.server_id = r.server_id
         where r.server_id = ${serverId} and r.status = 'active' and r.guild_share <> 'off' and r.expire_at > now()
         limit 20
       `),

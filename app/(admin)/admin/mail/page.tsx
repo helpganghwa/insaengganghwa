@@ -1,7 +1,7 @@
 import { desc, eq } from 'drizzle-orm';
 
 import { db } from '@/lib/db/client';
-import { profiles } from '@/lib/db/schema/profiles';
+import { characters } from '@/lib/db/schema/server';
 import { adminMailLogs } from '@/lib/db/schema/mailbox';
 
 import { AdminMailClient } from './AdminMailClient';
@@ -43,10 +43,10 @@ export default async function AdminMailPage() {
       targetLabel: adminMailLogs.targetLabel,
       title: adminMailLogs.title,
       payload: adminMailLogs.payload,
-      adminNickname: profiles.nickname,
+      adminNickname: characters.nickname,
     })
     .from(adminMailLogs)
-    .leftJoin(profiles, eq(profiles.id, adminMailLogs.adminId))
+    .leftJoin(characters, eq(characters.userId, adminMailLogs.adminId))
     .orderBy(desc(adminMailLogs.createdAt))
     .limit(30);
 

@@ -10,6 +10,7 @@ import { withTimeout } from '@/lib/db/with-timeout';
 import { getSessionUserId } from '@/lib/auth/session';
 import { getUserGuildBrief } from '@/lib/game/guild';
 import { profiles } from '@/lib/db/schema/profiles';
+import { characters } from '@/lib/db/schema/server';
 import { userProfiles } from '@/lib/db/schema/avatar';
 import { catalogItems, userEquipment, type Slot } from '@/lib/db/schema/equipment';
 import { combatPowerFromOwned } from '@/lib/game/equipment/combat-power';
@@ -45,12 +46,16 @@ const loadProfile = cache(async (handle: string) => {
   const [prof] = await db
     .select({
       id: profiles.id,
-      nickname: profiles.nickname,
+      nickname: characters.nickname,
       publicCode: profiles.publicCode,
-      activeProfileId: profiles.activeProfileId,
+      activeProfileId: characters.activeProfileId,
     })
     .from(profiles)
-    .where(or(eq(profiles.publicCode, handle), eq(profiles.nickname, handle)))
+    .innerJoin(
+      characters,
+      and(eq(characters.userId, profiles.id), eq(characters.serverId, DEFAULT_SERVER_ID)),
+    )
+    .where(or(eq(profiles.publicCode, handle), eq(characters.nickname, handle)))
     .limit(1);
   if (!prof) return null;
 
@@ -118,7 +123,7 @@ const loadProfile = cache(async (handle: string) => {
     ).catch(
       () => [] as { catalogItemId: number; enhanceLevel: number; transcendLevel: number }[],
     ),
-    withTimeout(liberatedItemRanks(prof.id), 2000, 'u.liberated').catch(
+    withTimeout(liberatedItemRanks(prof.id, DEFAULT_SERVER_ID), 2000, 'u.liberated').catch(
       () => new Map<number, number>(),
     ),
   ]);
@@ -219,7 +224,10 @@ async function KpiRowWithRanks({
   sumEnhance: number;
   maxEnhance: number;
 }) {
-  const [ranks, counts] = await Promise.all([getMyRanks(userId), getMyCountRanks(userId)]);
+  const [ranks, counts] = await Promise.all([
+    getMyRanks(userId, DEFAULT_SERVER_ID),
+    getMyCountRanks(userId, DEFAULT_SERVER_ID),
+  ]);
   return (
     <section className="-mt-3 grid grid-cols-5 gap-1">
       <KpiCard label="전투력" value={fmtCompact(total)} rank={rankBadgeStreamed(ranks.combat?.rank)} />

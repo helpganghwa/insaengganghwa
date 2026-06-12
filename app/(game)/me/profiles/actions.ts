@@ -6,6 +6,8 @@ import { z } from 'zod';
 
 import { getSessionUserId } from '@/lib/auth/session';
 import { db } from '@/lib/db/client';
+import { characters } from '@/lib/db/schema/server';
+import { getActiveServerId } from '@/lib/game/servers';
 import { userProfiles } from '@/lib/db/schema/avatar';
 import { profiles } from '@/lib/db/schema/profiles';
 
@@ -67,7 +69,15 @@ export async function setActiveProfile(profileId: string): Promise<ActionState> 
   if (!(await ownedProfileId(userId, profileId)))
     return { status: 'error', message: '아바타를 찾을 수 없습니다.' };
 
-  await db.update(profiles).set({ activeProfileId: profileId }).where(eq(profiles.id, userId));
+  const serverId = await getActiveServerId();
+  await db.transaction(async (tx) => {
+    await tx
+      .update(characters)
+      .set({ activeProfileId: profileId })
+      .where(and(eq(characters.userId, userId), eq(characters.serverId, serverId)));
+    // 전환기 미러(구코드 호환) — 0062에서 컬럼과 함께 제거.
+    await tx.update(profiles).set({ activeProfileId: profileId }).where(eq(profiles.id, userId));
+  });
 
   revalidatePath('/me');
   revalidatePath('/me/profiles');
@@ -90,6 +100,10 @@ export async function deleteProfile(profileId: string): Promise<ActionState> {
     return { status: 'error', message: '아바타는 최소 1개 이상 보유해야 합니다.' };
 
   await db.transaction(async (tx) => {
+    await tx
+      .update(characters)
+      .set({ activeProfileId: null })
+      .where(and(eq(characters.userId, userId), eq(characters.activeProfileId, profileId)));
     await tx
       .update(profiles)
       .set({ activeProfileId: null })

@@ -6,6 +6,7 @@ import { db } from '@/lib/db/client';
 import { withTimeout } from '@/lib/db/with-timeout';
 import { meleeBattles, meleeParticipants, type MeleeFinale } from '@/lib/db/schema/melee';
 import { profiles } from '@/lib/db/schema/profiles';
+import { characters } from '@/lib/db/schema/server';
 import { userProfiles } from '@/lib/db/schema/avatar';
 
 const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
@@ -62,15 +63,16 @@ export async function loadMeleeHistory(serverId: number): Promise<MeleeHistoryRo
       ? withTimeout(
           db
             .select({
-              uid: profiles.id,
-              nick: profiles.nickname,
+              uid: characters.userId,
+              nick: characters.nickname,
               code: profiles.publicCode,
               rotations: userProfiles.rotations,
               dir: userProfiles.activeDirection,
             })
-            .from(profiles)
-            .leftJoin(userProfiles, eq(userProfiles.id, profiles.activeProfileId))
-            .where(inArray(profiles.id, champIds)),
+            .from(characters)
+            .innerJoin(profiles, eq(profiles.id, characters.userId))
+            .leftJoin(userProfiles, eq(userProfiles.id, characters.activeProfileId))
+            .where(and(eq(characters.serverId, serverId), inArray(characters.userId, champIds))),
           3000,
           'melee.history.champ',
         ).catch(() => [])

@@ -1,4 +1,5 @@
 import Link from 'next/link';
+import { getActiveServerId } from '@/lib/game/servers';
 
 import { getSessionUserId } from '@/lib/auth/session';
 import { getLeaderboardPayload, type LeaderboardMetric } from '@/lib/game/leaderboard/queries';
@@ -36,7 +37,7 @@ export default async function LeaderboardPage({
   const userId = await getSessionUserId();
   if (!userId) return null;
   const metric = parse((await searchParams).tab);
-  const { top, mine } = await getLeaderboardPayload(metric, userId);
+  const { top, mine } = await getLeaderboardPayload(metric, await getActiveServerId(), userId);
 
   return (
     <div className="space-y-4 px-4 py-4">

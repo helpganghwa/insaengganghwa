@@ -51,6 +51,8 @@ export const characters = pgTable(
     residenceZoneId: integer('residence_zone_id'),
     /** 마지막 활동(캐릭터별) — 친구 표시·길드장 7일 자동위임 판정. */
     lastSeenAt: timestamp('last_seen_at', { withTimezone: true }),
+    /** 활성 아바타(user_profiles.id, P6 이관) — null=기본 아이콘 폴백. FK는 0061 ALTER. */
+    activeProfileId: uuid('active_profile_id'),
     createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
   },
   (t) => [

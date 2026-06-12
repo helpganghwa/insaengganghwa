@@ -171,7 +171,7 @@ export default async function HomePage() {
                  ) elem
                  where (elem->>'rank')::int = 1
                  limit 1),
-              cp.nickname
+              cc.nickname
             ) as melee_champ,
             (select count(*)::int from melee_battles where server_id = 1 and battle_date <= n.kst::date) as melee_edition,
             rz.name as residence_name,
@@ -183,7 +183,7 @@ export default async function HomePage() {
             ) as free_claims
           from (select (now() at time zone 'Asia/Seoul') kst) n
           left join melee_battles b on b.battle_date = n.kst::date and b.server_id = 1
-          left join profiles cp on cp.id = b.champion_user_id
+          left join characters cc on cc.user_id = b.champion_user_id and cc.server_id = 1
           left join characters me on me.user_id = ${userId}::uuid and me.server_id = 1
           left join zones rz on rz.id = me.residence_zone_id
           limit 1

@@ -4,7 +4,6 @@ import { and, desc, eq, ilike, inArray, or, sql } from 'drizzle-orm';
 
 import { db } from '@/lib/db/client';
 import { characters } from '@/lib/db/schema/server';
-import { DEFAULT_SERVER_ID } from '@/lib/game/servers';
 import {
   guilds,
   guildMembers,
@@ -64,11 +63,17 @@ export async function getJoinRequests(guildId: bigint) {
   return db
     .select({
       userId: guildJoinRequests.userId,
-      nickname: profiles.nickname,
+      nickname: characters.nickname,
       createdAt: guildJoinRequests.createdAt,
     })
     .from(guildJoinRequests)
-    .innerJoin(profiles, eq(profiles.id, guildJoinRequests.userId))
+    .innerJoin(
+      characters,
+      and(
+        eq(characters.userId, guildJoinRequests.userId),
+        eq(characters.serverId, guildJoinRequests.serverId),
+      ),
+    )
     .where(eq(guildJoinRequests.guildId, guildId))
     .orderBy(guildJoinRequests.createdAt);
 }
@@ -132,7 +137,7 @@ export async function getWorldmapZones(serverId: number) {
       ownerGuildName: ownerGuild.name,
       ownerEmblemUrl: ownerGuild.emblemUrl,
       executorUserId: zones.executorUserId,
-      executorNickname: profiles.nickname,
+      executorNickname: characters.nickname,
       taxDiamond: zones.taxDiamond,
       lastTaxCollectedAt: zones.lastTaxCollectedAt,
       // 거주 인원 — 이 구역을 거주지로 둔 유저 수(상관 서브쿼리, executor 조인과 별개 스코프).
@@ -140,7 +145,10 @@ export async function getWorldmapZones(serverId: number) {
     })
     .from(zones)
     .leftJoin(ownerGuild, eq(ownerGuild.id, zones.ownerGuildId))
-    .leftJoin(profiles, eq(profiles.id, zones.executorUserId))
+    .leftJoin(
+      characters,
+      and(eq(characters.userId, zones.executorUserId), eq(characters.serverId, zones.serverId)),
+    )
     .where(eq(zones.serverId, serverId))
     .orderBy(zones.id);
 }
@@ -216,16 +224,16 @@ export async function getConquestBattleById(id: bigint) {
 export async function getDeployBoard(guildId: bigint) {
   const battleKstDay = nextBattleKstDay();
   const members = (await db.execute(sql`
-    select gm.user_id::text uid, p.nickname, gm.role::text mrole,
+    select gm.user_id::text uid, c.nickname, gm.role::text mrole,
            d.zone_id dep_zone_id, dz.name dep_zone_name, d.role::text dep_role,
            ez.id exec_zone_id, ez.name exec_zone_name
     from guild_members gm
-    join profiles p on p.id = gm.user_id
-    left join guild_battle_deployments d on d.user_id = gm.user_id and d.battle_kst_day = ${battleKstDay}
+    join characters c on c.user_id = gm.user_id and c.server_id = gm.server_id
+    left join guild_battle_deployments d on d.user_id = gm.user_id and d.server_id = gm.server_id and d.battle_kst_day = ${battleKstDay}
     left join zones dz on dz.id = d.zone_id
     left join zones ez on ez.executor_user_id = gm.user_id
     where gm.guild_id = ${guildId}
-    order by case gm.role when 'leader' then 0 when 'vice' then 1 else 2 end, p.nickname
+    order by case gm.role when 'leader' then 0 when 'vice' then 1 else 2 end, c.nickname
   `)) as unknown as DeployBoardMember[];
 
   const zoneRows = await db
@@ -279,7 +287,7 @@ export async function getGuildMembersRich(guildId: bigint) {
   const base = await db
     .select({
       userId: guildMembers.userId,
-      nickname: profiles.nickname,
+      nickname: characters.nickname,
       publicCode: profiles.publicCode,
       role: guildMembers.role,
       contribution: guildMembers.contributionPoints,
@@ -291,9 +299,9 @@ export async function getGuildMembersRich(guildId: bigint) {
     .innerJoin(profiles, eq(profiles.id, guildMembers.userId))
     .innerJoin(
       characters,
-      and(eq(characters.userId, guildMembers.userId), eq(characters.serverId, DEFAULT_SERVER_ID)),
+      and(eq(characters.userId, guildMembers.userId), eq(characters.serverId, guildMembers.serverId)),
     )
-    .leftJoin(userProfiles, eq(userProfiles.id, profiles.activeProfileId))
+    .leftJoin(userProfiles, eq(userProfiles.id, characters.activeProfileId))
     .where(eq(guildMembers.guildId, guildId));
 
   const ids = base.map((b) => b.userId);
@@ -357,10 +365,13 @@ export async function getGuildMembers(guildId: bigint) {
       role: guildMembers.role,
       contributionPoints: guildMembers.contributionPoints,
       joinedAt: guildMembers.joinedAt,
-      nickname: profiles.nickname,
+      nickname: characters.nickname,
     })
     .from(guildMembers)
-    .innerJoin(profiles, eq(profiles.id, guildMembers.userId))
+    .innerJoin(
+      characters,
+      and(eq(characters.userId, guildMembers.userId), eq(characters.serverId, guildMembers.serverId)),
+    )
     .where(eq(guildMembers.guildId, guildId))
     .orderBy(desc(guildMembers.contributionPoints));
 }

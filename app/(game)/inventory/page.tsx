@@ -1,4 +1,5 @@
 import Link from 'next/link';
+import { getActiveServerId } from '@/lib/game/servers';
 import { sql } from 'drizzle-orm';
 
 import { getSessionUserId } from '@/lib/auth/session';
@@ -17,6 +18,7 @@ export default async function InventoryPage({
   searchParams: Promise<{ slot?: string }>;
 }) {
   const userId = await getSessionUserId();
+  const serverId = await getActiveServerId();
   if (!userId) return null;
   const { slot } = await searchParams;
   const initialSlot: Slot | 'all' =
@@ -52,7 +54,7 @@ export default async function InventoryPage({
           coalesce((select json_agg(user_equipment_id::text)
             from enhancement_jobs where user_id = ${userId}::uuid and status = 'running'), '[]'::json) as running
       `) as unknown as Promise<InvRow[]>,
-      liberatedItemRanks(userId),
+      liberatedItemRanks(userId, serverId),
       getCatalogMap(), // 불변 카탈로그(캐시) — 조인 제거, in-memory 결합.
     ]),
     3500,

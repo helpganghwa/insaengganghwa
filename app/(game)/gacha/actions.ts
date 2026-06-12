@@ -54,7 +54,7 @@ export async function openAction(slot: Slot, count: number): Promise<OpenActionR
     // 개봉 아이템은 항상 active 풀에서 나오므로 캐시된 활성 카탈로그로 메타 조회(DB 왕복 제거).
     const [catalog, libRanks, boxRows] = await Promise.all([
       getActiveCatalog(),
-      liberatedItemRanks(userId),
+      liberatedItemRanks(userId, await getActiveServerId()),
       db
         .select({ c: userSupplyBoxes.count })
         .from(userSupplyBoxes)

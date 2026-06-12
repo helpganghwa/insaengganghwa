@@ -4,7 +4,6 @@ import { and, eq, inArray, sql } from 'drizzle-orm';
 
 import { db } from '@/lib/db/client';
 import { meleeBattles, meleeParticipants } from '@/lib/db/schema/melee';
-import { profiles } from '@/lib/db/schema/profiles';
 import { characters } from '@/lib/db/schema/server';
 import { userProfiles } from '@/lib/db/schema/avatar';
 import { combatPowerFromOwned, type OwnedRow } from '@/lib/game/equipment/combat-power';
@@ -93,13 +92,13 @@ export async function runMelee(serverId: number): Promise<{ ran: boolean; battle
   if (rosterIds.length > 0) {
     const avRows = await db
       .select({
-        uid: profiles.id,
+        uid: characters.userId,
         rotations: userProfiles.rotations,
         dir: userProfiles.activeDirection,
       })
-      .from(profiles)
-      .innerJoin(userProfiles, eq(userProfiles.id, profiles.activeProfileId))
-      .where(inArray(profiles.id, rosterIds));
+      .from(characters)
+      .innerJoin(userProfiles, eq(userProfiles.id, characters.activeProfileId))
+      .where(and(eq(characters.serverId, serverId), inArray(characters.userId, rosterIds)));
     const avOf = new Map<string, string>();
     for (const a of avRows) {
       const rot = a.rotations as Record<string, string>;

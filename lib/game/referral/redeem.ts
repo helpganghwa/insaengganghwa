@@ -4,6 +4,7 @@ import { eq, or } from 'drizzle-orm';
 
 import { db } from '@/lib/db/client';
 import { profiles } from '@/lib/db/schema/profiles';
+import { characters } from '@/lib/db/schema/server';
 import { mailbox } from '@/lib/db/schema/mailbox';
 import { referralAttributions } from '@/lib/db/schema/social';
 import { sendPushToUser } from '@/lib/push/send';
@@ -40,10 +41,12 @@ export async function attributeReferralFromShare(
 ): Promise<{ referrerNickname: string } | null> {
   // 1. tx — attribute + mailbox 적재.
   const result = await db.transaction(async (tx) => {
+    // 닉네임은 전 캐릭터 전역 유일(characters) — 코드(profiles)와 함께 매칭.
     const [referrer] = await tx
-      .select({ id: profiles.id, nickname: profiles.nickname })
+      .select({ id: profiles.id, nickname: characters.nickname })
       .from(profiles)
-      .where(or(eq(profiles.publicCode, shareCode), eq(profiles.nickname, shareCode)))
+      .innerJoin(characters, eq(characters.userId, profiles.id))
+      .where(or(eq(profiles.publicCode, shareCode), eq(characters.nickname, shareCode)))
       .limit(1);
     if (!referrer) return null;
 
@@ -53,9 +56,9 @@ export async function attributeReferralFromShare(
 
     // 신규 가입자 nickname — 알림·우편함 메시지에 표시.
     const [newUser] = await tx
-      .select({ nickname: profiles.nickname })
-      .from(profiles)
-      .where(eq(profiles.id, newUserId))
+      .select({ nickname: characters.nickname })
+      .from(characters)
+      .where(eq(characters.userId, newUserId))
       .limit(1);
     const newUserNickname = newUser?.nickname ?? '친구';
 

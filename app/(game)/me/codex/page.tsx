@@ -1,4 +1,5 @@
 import Link from 'next/link';
+import { getActiveServerId } from '@/lib/game/servers';
 import { eq } from 'drizzle-orm';
 
 import { getSessionUserId } from '@/lib/auth/session';
@@ -16,6 +17,7 @@ const SLOTS: Slot[] = ['weapon', 'armor', 'accessory'];
 /** 도감 — GDD §5 / WIREFRAMES §7. 수집 + 최고 강화 표기. **보상 수령 없음**(전투력 보너스로 반영). */
 export default async function CodexPage() {
   const userId = await getSessionUserId();
+  const serverId = await getActiveServerId();
   if (!userId) return null;
 
   // 콜드 DB 커넥션 hang 시 페이지 무한 대기 방지 — 실패 시 빈 결과로 degrade(2026-05-29).
@@ -27,7 +29,7 @@ export default async function CodexPage() {
         .select({ catalogItemId: userEquipment.catalogItemId, max: userEquipment.maxEnhanceLevel })
         .from(userEquipment)
         .where(eq(userEquipment.userId, userId)),
-      liberatedItemRanks(userId),
+      liberatedItemRanks(userId, serverId),
     ]),
     3500,
     'codex.page',

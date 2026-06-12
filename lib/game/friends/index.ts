@@ -45,7 +45,7 @@ async function profilesByIds(ids: string[]): Promise<FriendUser[]> {
   const rows = await db
     .select({
       userId: profiles.id,
-      nickname: profiles.nickname,
+      nickname: characters.nickname,
       publicCode: profiles.publicCode,
       profileSouth: SOUTH,
       lastSeenAt: characters.lastSeenAt,
@@ -55,7 +55,7 @@ async function profilesByIds(ids: string[]): Promise<FriendUser[]> {
       characters,
       and(eq(characters.userId, profiles.id), eq(characters.serverId, DEFAULT_SERVER_ID)),
     )
-    .leftJoin(userProfiles, eq(userProfiles.id, profiles.activeProfileId))
+    .leftJoin(userProfiles, eq(userProfiles.id, characters.activeProfileId))
     .where(inArray(profiles.id, ids));
   return rows.map((r) => ({ ...r, lastSeenAt: r.lastSeenAt ? r.lastSeenAt.toISOString() : null }));
 }
@@ -71,7 +71,7 @@ export async function searchUsers(
   const rows = await db
     .select({
       userId: profiles.id,
-      nickname: profiles.nickname,
+      nickname: characters.nickname,
       publicCode: profiles.publicCode,
       profileSouth: SOUTH,
       lastSeenAt: characters.lastSeenAt,
@@ -81,8 +81,13 @@ export async function searchUsers(
       characters,
       and(eq(characters.userId, profiles.id), eq(characters.serverId, DEFAULT_SERVER_ID)),
     )
-    .leftJoin(userProfiles, eq(userProfiles.id, profiles.activeProfileId))
-    .where(and(ne(profiles.id, meId), or(ilike(profiles.nickname, `%${q}%`), eq(profiles.publicCode, q))))
+    .leftJoin(userProfiles, eq(userProfiles.id, characters.activeProfileId))
+    .where(
+      and(
+        ne(profiles.id, meId),
+        or(ilike(characters.nickname, `%${q}%`), eq(profiles.publicCode, q)),
+      ),
+    )
     .limit(20);
   if (rows.length === 0) return [];
   const ids = rows.map((r) => r.userId);

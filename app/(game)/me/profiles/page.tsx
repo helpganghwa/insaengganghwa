@@ -3,6 +3,8 @@ import { and, desc, eq, isNull } from 'drizzle-orm';
 
 import { getSessionUserId } from '@/lib/auth/session';
 import { db } from '@/lib/db/client';
+import { characters } from '@/lib/db/schema/server';
+import { getActiveServerId } from '@/lib/game/servers';
 import { withTimeout } from '@/lib/db/with-timeout';
 import { userProfiles } from '@/lib/db/schema/avatar';
 import { profiles } from '@/lib/db/schema/profiles';
@@ -26,9 +28,9 @@ export default async function ProfileSelectPage() {
       .where(and(eq(userProfiles.userId, userId), isNull(userProfiles.hiddenAt)))
       .orderBy(desc(userProfiles.createdAt)),
     db
-      .select({ activeProfileId: profiles.activeProfileId })
-      .from(profiles)
-      .where(eq(profiles.id, userId))
+      .select({ activeProfileId: characters.activeProfileId })
+      .from(characters)
+      .where(and(eq(characters.userId, userId), eq(characters.serverId, await getActiveServerId())))
       .limit(1),
     ]),
     3500,

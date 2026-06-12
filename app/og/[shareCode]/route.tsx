@@ -4,6 +4,7 @@ import { and, eq, isNotNull, or } from 'drizzle-orm';
 
 import { db } from '@/lib/db/client';
 import { profiles } from '@/lib/db/schema/profiles';
+import { characters } from '@/lib/db/schema/server';
 import { userProfiles } from '@/lib/db/schema/avatar';
 import { catalogItems, userEquipment } from '@/lib/db/schema/equipment';
 import { getUserGuildBrief } from '@/lib/game/guild';
@@ -173,11 +174,15 @@ export async function GET(_req: Request, { params }: { params: Promise<{ shareCo
   const [prof] = await db
     .select({
       id: profiles.id,
-      nickname: profiles.nickname,
-      activeProfileId: profiles.activeProfileId,
+      nickname: characters.nickname,
+      activeProfileId: characters.activeProfileId,
     })
     .from(profiles)
-    .where(or(eq(profiles.publicCode, handle), eq(profiles.nickname, handle)))
+    .innerJoin(
+      characters,
+      and(eq(characters.userId, profiles.id), eq(characters.serverId, DEFAULT_SERVER_ID)),
+    )
+    .where(or(eq(profiles.publicCode, handle), eq(characters.nickname, handle)))
     .limit(1);
 
   // 카드 표시 닉네임 — 조회된 현재 닉(없으면 핸들 폴백).

@@ -6,6 +6,7 @@
  */
 import {
   pgTable,
+  smallint,
   pgEnum,
   uuid,
   text,
@@ -33,6 +34,8 @@ export const shares = pgTable('shares', {
   userId: uuid('user_id')
     .notNull()
     .references(() => profiles.id, { onDelete: 'cascade' }),
+  /** 생성 시점 서버 박제(SERVER.md P6) — 스냅샷과 동일 원칙. */
+  serverId: smallint('server_id').notNull().default(1),
   unit: shareUnitEnum('unit').notNull(),
   trigger: shareTriggerEnum('trigger').notNull(),
   shareCode: text('share_code').notNull().unique(),

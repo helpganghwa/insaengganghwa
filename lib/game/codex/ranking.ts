@@ -7,6 +7,7 @@ import { db } from '@/lib/db/client';
 import { withTimeout, DbTimeoutError } from '@/lib/db/with-timeout';
 import { pgGuard } from '@/lib/db/guarded';
 import { profiles } from '@/lib/db/schema/profiles';
+import { characters } from '@/lib/db/schema/server';
 import { userEquipment } from '@/lib/db/schema/equipment';
 
 /**
@@ -28,17 +29,27 @@ export type ItemRankEntry = {
 };
 
 /** 해당 아이템 Top10 (강화 ≥ 1만, 동률은 먼저 달성 순). */
-export async function getItemTop10(catalogItemId: number): Promise<ItemRankEntry[]> {
+export async function getItemTop10(catalogItemId: number, serverId: number): Promise<ItemRankEntry[]> {
   const rows = await db
     .select({
       userId: userEquipment.userId,
-      nickname: profiles.nickname,
+      nickname: characters.nickname,
       publicCode: profiles.publicCode,
       maxLevel: userEquipment.maxEnhanceLevel,
     })
     .from(userEquipment)
     .innerJoin(profiles, eq(profiles.id, userEquipment.userId))
-    .where(and(eq(userEquipment.catalogItemId, catalogItemId), sql`${userEquipment.maxEnhanceLevel} > 0`))
+    .innerJoin(
+      characters,
+      and(eq(characters.userId, userEquipment.userId), eq(characters.serverId, serverId)),
+    )
+    .where(
+      and(
+        eq(userEquipment.serverId, serverId),
+        eq(userEquipment.catalogItemId, catalogItemId),
+        sql`${userEquipment.maxEnhanceLevel} > 0`,
+      ),
+    )
     .orderBy(
       sql`${userEquipment.maxEnhanceLevel} desc, ${userEquipment.maxEnhanceReachedAt} asc, ${userEquipment.userId} asc`,
     )
@@ -50,11 +61,18 @@ export async function getItemTop10(catalogItemId: number): Promise<ItemRankEntry
 export async function getMyItemRank(
   catalogItemId: number,
   userId: string,
+  serverId: number,
 ): Promise<{ rank: number; maxLevel: number } | null> {
   const [me] = await db
     .select({ maxLevel: userEquipment.maxEnhanceLevel })
     .from(userEquipment)
-    .where(and(eq(userEquipment.userId, userId), eq(userEquipment.catalogItemId, catalogItemId)))
+    .where(
+      and(
+        eq(userEquipment.userId, userId),
+        eq(userEquipment.serverId, serverId),
+        eq(userEquipment.catalogItemId, catalogItemId),
+      ),
+    )
     .limit(1);
   if (!me || me.maxLevel <= 0) return null;
 
@@ -65,8 +83,9 @@ export async function getMyItemRank(
     select count(*)::int as ahead
     from user_equipment o
     join user_equipment me
-      on me.user_id = ${userId}::uuid and me.catalog_item_id = ${catalogItemId}
+      on me.user_id = ${userId}::uuid and me.server_id = ${serverId} and me.catalog_item_id = ${catalogItemId}
     where o.catalog_item_id = ${catalogItemId}
+      and o.server_id = ${serverId}
       and o.max_enhance_level > 0
       and (
         o.max_enhance_level > me.max_enhance_level
@@ -82,13 +101,14 @@ export async function getMyItemRank(
  * 앞선 사람 수 < 3이면 해방(rank = ahead+1). 추후 등수별 이펙트 차등 적용용.
  * champion(1위)도 여기 rank=1로 포함. 타임아웃 가드 동일(빈 맵 폴백).
  */
-export const liberatedItemRanks = cache(async (userId: string): Promise<Map<number, number>> => {
+export const liberatedItemRanks = cache(async (userId: string, serverId: number): Promise<Map<number, number>> => {
   try {
     const rows = (await withTimeout(
       db.execute(sql`
         select uc.catalog_item_id as cid,
           (select count(*) from user_equipment o
            where o.catalog_item_id = uc.catalog_item_id
+             and o.server_id = ${serverId}
              and (
                o.max_enhance_level > uc.max_enhance_level
                or (o.max_enhance_level = uc.max_enhance_level and o.max_enhance_reached_at < uc.max_enhance_reached_at)
@@ -96,7 +116,7 @@ export const liberatedItemRanks = cache(async (userId: string): Promise<Map<numb
              )
           )::int as ahead
         from user_equipment uc
-        where uc.user_id = ${userId}::uuid and uc.max_enhance_level > 0
+        where uc.user_id = ${userId}::uuid and uc.server_id = ${serverId} and uc.max_enhance_level > 0
       `),
       3000,
       'liberatedItemRanks',

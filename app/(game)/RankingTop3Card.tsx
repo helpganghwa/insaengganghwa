@@ -1,4 +1,5 @@
 import { getRankingTop, type LeaderboardMetric } from '@/lib/game/leaderboard/queries';
+import { getActiveServerId } from '@/lib/game/servers';
 
 import { RankingDeck } from './RankingDeck';
 
@@ -16,7 +17,9 @@ const METRICS: { metric: LeaderboardMetric; label: string }[] = [
 
 export async function RankingTop3Card() {
   const decks = (
-    await Promise.all(METRICS.map(async (m) => ({ ...m, top: await getRankingTop(m.metric, 3) })))
+    await Promise.all(
+      METRICS.map(async (m) => ({ ...m, top: await getRankingTop(m.metric, await getActiveServerId(), 3) })),
+    )
   ).filter((d) => d.top.length > 0);
   if (decks.length === 0) return null;
 
