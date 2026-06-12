@@ -62,7 +62,7 @@ characters (user_id FK profiles, server_id FK servers, diamond, residence_zone_i
 - **활성 서버** = `srv` 쿠키(서버 선택 화면에서 설정, httpOnly) → `getActiveServerId()`. 미설정/비정상 = 1.
 - 서버 액션·RSC는 `(userId, serverId)` 컨텍스트로 동작 — 기존 `getSessionUserId()` 옆에 serverId 헬퍼 추가, 도메인 함수는 serverId를 **명시 인자**로 받는다(크론과 시그니처 통일).
 - **크론** = 활성 서버 루프: `for (const s of openServers) await run(s.id)` — 크론 엔트리 수는 불변(서버 수와 무관).
-- **서버 선택 화면**: 로그인 후(또는 설정에서) 서버 목록 + 내 캐릭터 유무/전투력 표시. 다중 서버 오픈 전에는 화면 자체를 숨긴다(자동 1서버).
+- **서버 선택 화면**(`/servers`): 서버 목록 + 내 캐릭터(닉네임·💎) 표시, 입장(srv 쿠키 + last_server_id) / 캐릭터 생성(새 닉네임 — 자동 제안·전역 유일 + 가입 보너스 + 기본 아바타 2종·active 랜덤). 단일 서버 운영 중엔 홈으로 리다이렉트, 설정의 진입점도 2서버+에서만 노출.
 
 ---
 
@@ -95,6 +95,6 @@ characters (user_id FK profiles, server_id FK servers, diamond, residence_zone_i
 ## 6. 신서버 오픈 (운영)
 
 - **오픈 트리거(권고)**: 1서버 점령전 포화(활성 길드가 구역 경합을 상시 채움) + DAU 임계(예: 5,000) 동시 충족. 단순 인구만으로 열지 않는다(인구 분산 = 콜드스타트 역행).
-- 오픈 절차: `servers` INSERT → zones 시드(50구역) → 공지/이벤트(신서버 부스트). 코드 배포 불필요.
+- 오픈 절차: `bun run scripts/open-server.ts <id> <이름>` — servers INSERT + zones 50구역·인접 간선 복제 시드(1서버 템플릿). 이후 공지/이벤트(신서버 부스트). 코드 배포 불필요.
 - `status=full` = 신규 캐릭터 생성 제한(기존 캐릭터는 정상) · `closed` = 준비 중/통합 대비.
 - 서버 통합(인구 감소 시)은 v2 과제 — characters PK가 (user_id, server_id)라 단순 UPDATE 통합은 충돌 처리 필요(별도 설계).

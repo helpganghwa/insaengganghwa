@@ -9,7 +9,6 @@ import { db } from '@/lib/db/client';
 import { characters } from '@/lib/db/schema/server';
 import { getActiveServerId } from '@/lib/game/servers';
 import { userProfiles } from '@/lib/db/schema/avatar';
-import { profiles } from '@/lib/db/schema/profiles';
 
 /**
  * PROFILE §8.2 — 프로필 선택화면 액션. 모두 본인 소유 프로필만 대상.
@@ -70,14 +69,10 @@ export async function setActiveProfile(profileId: string): Promise<ActionState> 
     return { status: 'error', message: '아바타를 찾을 수 없습니다.' };
 
   const serverId = await getActiveServerId();
-  await db.transaction(async (tx) => {
-    await tx
-      .update(characters)
-      .set({ activeProfileId: profileId })
-      .where(and(eq(characters.userId, userId), eq(characters.serverId, serverId)));
-    // 전환기 미러(구코드 호환) — 0062에서 컬럼과 함께 제거.
-    await tx.update(profiles).set({ activeProfileId: profileId }).where(eq(profiles.id, userId));
-  });
+  await db
+    .update(characters)
+    .set({ activeProfileId: profileId })
+    .where(and(eq(characters.userId, userId), eq(characters.serverId, serverId)));
 
   revalidatePath('/me');
   revalidatePath('/me/profiles');
@@ -104,10 +99,6 @@ export async function deleteProfile(profileId: string): Promise<ActionState> {
       .update(characters)
       .set({ activeProfileId: null })
       .where(and(eq(characters.userId, userId), eq(characters.activeProfileId, profileId)));
-    await tx
-      .update(profiles)
-      .set({ activeProfileId: null })
-      .where(and(eq(profiles.id, userId), eq(profiles.activeProfileId, profileId)));
     await tx
       .delete(userProfiles)
       .where(and(eq(userProfiles.id, profileId), eq(userProfiles.userId, userId)));

@@ -47,8 +47,7 @@ export async function changeNicknameAction(
   try {
     // 단일 트랜잭션 — 첫 변경(count=0)이면 free, 아니면 1000 차감.
     // RETURNING으로 결과 산출. 다이아 부족 또는 닉네임 중복 시 row 0 → 에러.
-    // 권위 = characters(닉네임·카운트·지갑 한 UPDATE). profiles.nickname은 전환기 미러
-    // (가입 트리거와 네임스페이스 동기 유지 — SERVER.md §5 P3, 컬럼 drop 시 미러 제거).
+    // 권위 = characters(닉네임·카운트·지갑 한 UPDATE) — SERVER.md §5.
     const rows = (await db.execute(sql`
       with curr as (
         select c.user_id, c.diamond, c.nickname_changed_count as cnt
@@ -69,13 +68,6 @@ export async function changeNicknameAction(
         where ch.user_id = curr.user_id and ch.server_id = ${serverId}
           and curr.diamond >= cost.c
         returning ch.nickname_changed_count as cnt, ch.diamond, cost.c as charged
-      ),
-      mirror as (
-        update profiles p
-        set nickname = ${next}, updated_at = now()
-        from upd
-        where p.id = ${userId}::uuid
-        returning p.id
       )
       select cnt, diamond::text as diamond, charged from upd
     `)) as unknown as { cnt: number; diamond: string; charged: number }[];

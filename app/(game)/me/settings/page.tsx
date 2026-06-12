@@ -3,6 +3,7 @@ import { and, eq } from 'drizzle-orm';
 
 import { getSessionUserId } from '@/lib/auth/session';
 import { getActiveServerId } from '@/lib/game/servers';
+import { countServers, listServersForUser } from '@/lib/game/server-select';
 import { db } from '@/lib/db/client';
 import { withTimeout } from '@/lib/db/with-timeout';
 import { profiles } from '@/lib/db/schema/profiles';
@@ -21,6 +22,12 @@ export default async function SettingsPage() {
   const userId = await getSessionUserId();
   if (!userId) return null;
   const serverId = await getActiveServerId();
+  const serverCount = await countServers().catch(() => 1);
+  const serverName =
+    serverCount > 1
+      ? ((await listServersForUser(userId).catch(() => [])).find((sv) => sv.id === serverId)?.name ??
+        `${serverId}서버`)
+      : '';
 
   // 콜드 DB 커넥션 hang 시 페이지 무한 대기 방지 — 실패 시 기본값으로 degrade(2026-05-29).
   const pRows = await withTimeout(
@@ -65,6 +72,16 @@ export default async function SettingsPage() {
           initialEnhanceMode={p?.pushEnhanceMode ?? 'instant'}
         />
       </Section>
+
+      {serverCount > 1 && (
+        <Section title="서버">
+          <Row label="현재 서버">
+            <a href="/servers" className="text-sm font-semibold text-amber-600 dark:text-amber-400">
+              {serverName} · 변경 →
+            </a>
+          </Row>
+        </Section>
+      )}
 
       <Section title="계정">
         <Row label="닉네임">

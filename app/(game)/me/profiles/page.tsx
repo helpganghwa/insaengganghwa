@@ -7,7 +7,6 @@ import { characters } from '@/lib/db/schema/server';
 import { getActiveServerId } from '@/lib/game/servers';
 import { withTimeout } from '@/lib/db/with-timeout';
 import { userProfiles } from '@/lib/db/schema/avatar';
-import { profiles } from '@/lib/db/schema/profiles';
 
 import { ProfileSelector } from './ProfileSelector';
 

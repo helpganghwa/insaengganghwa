@@ -42,7 +42,7 @@ const REGION_COLOR: Record<string, string> = {
  * React cache로 generateMetadata + page render 사이 dedupe — 한 요청 내
  * DB 쿼리 1번만 실행(이전엔 무한 로딩 원인이었음, 2026-06-01).
  */
-const loadProfile = cache(async (handle: string) => {
+const loadProfile = cache(async (handle: string, serverId: number) => {
   const [prof] = await db
     .select({
       id: profiles.id,
@@ -53,7 +53,7 @@ const loadProfile = cache(async (handle: string) => {
     .from(profiles)
     .innerJoin(
       characters,
-      and(eq(characters.userId, profiles.id), eq(characters.serverId, DEFAULT_SERVER_ID)),
+      and(eq(characters.userId, profiles.id), eq(characters.serverId, serverId)),
     )
     .where(or(eq(profiles.publicCode, handle), eq(characters.nickname, handle)))
     .limit(1);
@@ -97,7 +97,11 @@ const loadProfile = cache(async (handle: string) => {
         .from(userEquipment)
         .innerJoin(catalogItems, eq(userEquipment.catalogItemId, catalogItems.id))
         .where(
-          and(eq(userEquipment.userId, prof.id), isNotNull(userEquipment.equippedSlot)),
+          and(
+            eq(userEquipment.userId, prof.id),
+            eq(userEquipment.serverId, serverId),
+            isNotNull(userEquipment.equippedSlot),
+          ),
         ),
       2500,
       'u.equipped',
@@ -123,7 +127,7 @@ const loadProfile = cache(async (handle: string) => {
     ).catch(
       () => [] as { catalogItemId: number; enhanceLevel: number; transcendLevel: number }[],
     ),
-    withTimeout(liberatedItemRanks(prof.id, DEFAULT_SERVER_ID), 2000, 'u.liberated').catch(
+    withTimeout(liberatedItemRanks(prof.id, serverId), 2000, 'u.liberated').catch(
       () => new Map<number, number>(),
     ),
   ]);
@@ -166,7 +170,7 @@ const loadProfile = cache(async (handle: string) => {
     sumEnhance,
     maxEnhance,
     champItems,
-    guild: await getUserGuildBrief(prof.id, DEFAULT_SERVER_ID),
+    guild: await getUserGuildBrief(prof.id, serverId),
   };
 });
 
@@ -177,7 +181,7 @@ export async function generateMetadata({
 }): Promise<Metadata> {
   const { nickname: raw } = await params;
   const handle = decodeURIComponent(raw);
-  const data = await loadProfile(handle);
+  const data = await loadProfile(handle, DEFAULT_SERVER_ID);
   if (!data) return { title: '인생강화' };
   const title = `${data.nickname} — 인생강화`;
   const description = `총 전투력 ${data.total.toLocaleString('ko-KR')}.`;
@@ -342,13 +346,21 @@ function EnhanceStatsFallback() {
   );
 }
 
+function parseServerParam(v: string | string[] | undefined): number {
+  const n = Number(Array.isArray(v) ? v[0] : v);
+  return Number.isInteger(n) && n >= 1 && n <= 32767 ? n : DEFAULT_SERVER_ID;
+}
+
 export default async function PublicProfilePage({
   params,
+  searchParams,
 }: {
   params: Promise<{ nickname: string }>;
+  searchParams: Promise<{ s?: string | string[] }>;
 }) {
   const { nickname: raw } = await params;
-  const data = await loadProfile(decodeURIComponent(raw));
+  const serverId = parseServerParam((await searchParams).s);
+  const data = await loadProfile(decodeURIComponent(raw), serverId);
   if (!data) notFound();
 
   const bySlot = new Map(data.equipped.map((e) => [e.slot, e]));

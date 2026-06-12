@@ -18,10 +18,10 @@ import { and, eq, sql } from 'drizzle-orm';
 import { createClient, type SupabaseClient } from '@supabase/supabase-js';
 
 import { db } from '@/lib/db/client';
+import { characters } from '@/lib/db/schema/server';
 import { walletAdd } from '@/lib/game/wallet';
 import { profileGenerationJobs, userProfiles } from '@/lib/db/schema/avatar';
 import { mailbox } from '@/lib/db/schema/mailbox';
-import { profiles } from '@/lib/db/schema/profiles';
 
 import { sendPushToUser } from '@/lib/push/send';
 
@@ -288,7 +288,7 @@ export async function pollAndProcessDownloading(limit = 5): Promise<{
       });
 
       if (review.verdict.pass) {
-        await acceptJob(job.id, job.userId, rotations, job.characterId, job.options, job.equipmentSnapshot, job.description, review.verdict);
+        await acceptJob(job.id, job.serverId, job.userId, rotations, job.characterId, job.options, job.equipmentSnapshot, job.description, review.verdict);
         accepted += 1;
       } else {
         await rejectJob(job.id, job.userId, job.serverId, job.diamondEscrow, review.verdict);
@@ -339,6 +339,7 @@ async function mirrorRotations(
 
 async function acceptJob(
   jobId: bigint,
+  serverId: number,
   userId: string,
   rotations: Record<string, string>,
   characterId: string,
@@ -352,6 +353,7 @@ async function acceptJob(
       .insert(userProfiles)
       .values({
         userId,
+        serverId,
         rotations,
         activeDirection: 'south',
         pixellabCharacterId: characterId,
@@ -371,11 +373,17 @@ async function acceptJob(
       })
       .where(eq(profileGenerationJobs.id, jobId));
 
-    // 첫 프로필이면 자동 active.
+    // 첫 프로필이면 자동 active — escrow 차감 서버의 캐릭터에.
     await tx
-      .update(profiles)
+      .update(characters)
       .set({ activeProfileId: profile!.id })
-      .where(and(eq(profiles.id, userId), sql`${profiles.activeProfileId} IS NULL`));
+      .where(
+        and(
+          eq(characters.userId, userId),
+          eq(characters.serverId, serverId),
+          sql`${characters.activeProfileId} IS NULL`,
+        ),
+      );
 
     await tx.insert(mailbox).values({
       userId,

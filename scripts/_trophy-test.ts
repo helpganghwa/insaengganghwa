@@ -12,7 +12,7 @@ import { drizzle } from 'drizzle-orm/postgres-js';
 
 import * as schema from '../lib/db/schema';
 import { meleeBattles } from '../lib/db/schema/melee';
-import { profiles } from '../lib/db/schema/profiles';
+import { characters } from '@/lib/db/schema/server';
 import { userProfiles } from '../lib/db/schema/avatar';
 
 const client = postgres(process.env.DIRECT_URL ?? process.env.DATABASE_URL!, {
@@ -51,9 +51,9 @@ async function main() {
 
   // 우승자 닉 + 현재 활성 프로필의 pixellab 캐릭터(없으면 가장 최근 프로필).
   const [prof] = await db
-    .select({ nick: profiles.nickname, activeProfileId: profiles.activeProfileId })
-    .from(profiles)
-    .where(eq(profiles.id, championUserId))
+    .select({ nick: characters.nickname, activeProfileId: characters.activeProfileId })
+    .from(characters)
+    .where(eq(characters.userId, championUserId))
     .limit(1);
 
   let sourceCharacterId: string | null = null;

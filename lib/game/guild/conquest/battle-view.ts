@@ -5,6 +5,7 @@ import { eq, inArray } from 'drizzle-orm';
 import { db } from '@/lib/db/client';
 import { withTimeout } from '@/lib/db/with-timeout';
 import { profiles } from '@/lib/db/schema/profiles';
+import { characters } from '@/lib/db/schema/server';
 import { userProfiles } from '@/lib/db/schema/avatar';
 import { guilds, guildMembers } from '@/lib/db/schema/guild';
 
@@ -100,7 +101,8 @@ export async function buildConquestBattleView(
           dir: userProfiles.activeDirection,
         })
         .from(profiles)
-        .innerJoin(userProfiles, eq(userProfiles.id, profiles.activeProfileId))
+        .innerJoin(characters, eq(characters.userId, profiles.id))
+        .innerJoin(userProfiles, eq(userProfiles.id, characters.activeProfileId))
         .where(inArray(profiles.id, rosterIds)),
       3000,
       'conquest.avatars',

@@ -9,14 +9,10 @@ import {
   pgTable,
   pgEnum,
   uuid,
-  text,
-  bigint,
-  boolean,
-  integer,
+  text,  boolean,
   timestamp,
   smallint,
 } from 'drizzle-orm/pg-core';
-import { sql } from 'drizzle-orm';
 
 /** 강화 푸시 모드 — instant(슬롯별 즉시) | batched(30분 그룹화) | batched_1h(1시간 그룹화). 기본 instant. */
 export const pushEnhanceModeEnum = pgEnum('push_enhance_mode', ['instant', 'batched', 'batched_1h']);
@@ -24,7 +20,6 @@ export const pushEnhanceModeEnum = pgEnum('push_enhance_mode', ['instant', 'batc
 export const profiles = pgTable('profiles', {
   /** = auth.users.id (Supabase). FK는 DB 레벨에서 auth.users 참조(마이그레이션에서 설정). */
   id: uuid('id').primaryKey(),
-  nickname: text('nickname').notNull().unique(),
   /**
    * 불변 공개 식별자(base62 8자) — /u·/og·/s·추천 링크의 안정 URL 키.
    * 닉네임은 변경/재사용 가능 → 외부 공유·OG·추천 링크가 깨지므로 코드로 식별.
@@ -32,16 +27,12 @@ export const profiles = pgTable('profiles', {
    */
   publicCode: text('public_code').notNull().unique(),
   /** 단일 프리미엄 재화(=보석, BALANCE §6.1). int32 회피 위해 bigint. */
-  diamond: bigint('diamond', { mode: 'bigint' }).notNull().default(sql`0`),
   isAdult: boolean('is_adult').notNull().default(false),
   identityVerifiedAt: timestamp('identity_verified_at', { withTimezone: true }),
   /** 해시만 — 원본 미저장 (REGULATORY). */
   birthYearHash: text('birth_year_hash'),
-  representativeTitleCode: text('representative_title_code'),
   /** 닉네임 변경 횟수. 첫 변경 무료, 이후 1000 다이아 차감(NICKNAME_CHANGE_COST_DIAMOND). */
-  nicknameChangedCount: integer('nickname_changed_count').notNull().default(0),
   /** Day1 온보딩 진행 (GDD §4). */
-  tutorialStep: integer('tutorial_step').notNull().default(0),
   /** 어드민 권한(우편함 발송 등). 1인 운영 — 본인 계정만 직접 SQL로 true 설정. */
   isAdmin: boolean('is_admin').notNull().default(false),
   /** PWA Push 카테고리 토글(GDD §3.10 v1) — 기본 ON. 토글 OFF 시 해당 카테고리 발송 skip. */
@@ -61,7 +52,6 @@ export const profiles = pgTable('profiles', {
    * FK는 마이그레이션에서 `ON DELETE SET NULL`로 ALTER 추가(순환 import 회피).
    * PROFILE §3.3.
    */
-  activeProfileId: uuid('active_profile_id'),
   /**
    * 활성 프로필 배경 key(`lib/game/profile/backgrounds.ts`). null = 배경 없음(기본).
    * 전역 1개 — 캐릭터와 무관하게 대표 카드·OG·랭킹에 공통 적용. PROFILE §8.
@@ -71,9 +61,7 @@ export const profiles = pgTable('profiles', {
    * 거주 구역(GUILD §5.5) — 강화 성공 시 그 구역에 세금 포인트 가산. null=미배정(최초 랜덤 배정).
    * FK(`zones.id`)는 마이그레이션에서 ALTER 추가(순환 import 회피, activeProfileId와 동일 패턴).
    */
-  residenceZoneId: integer('residence_zone_id'),
   /** 마지막 접속 시각 — 쿠키 게이트 하트비트(2분 스로틀)로 갱신. 길드원·친구 목록 접속 상태 표시용. */
-  lastSeenAt: timestamp('last_seen_at', { withTimezone: true }),
   /** 마지막 활성 서버(SERVER.md 경계규칙1) — 푸시는 이 서버의 이벤트만 발송. */
   lastServerId: smallint('last_server_id').notNull().default(1),
   createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),

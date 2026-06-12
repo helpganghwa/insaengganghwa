@@ -4,6 +4,7 @@ import { and, desc, eq, isNotNull, isNull, or, sql } from 'drizzle-orm';
 import { createClient, type SupabaseClient } from '@supabase/supabase-js';
 
 import { db } from '@/lib/db/client';
+import { characters } from '@/lib/db/schema/server';
 import { meleeBattles, type MeleeFinale } from '@/lib/db/schema/melee';
 import { profiles } from '@/lib/db/schema/profiles';
 import { userProfiles } from '@/lib/db/schema/avatar';
@@ -70,9 +71,9 @@ function isPng(b: Buffer): boolean {
 /** 우승자 source 캐릭터 — 현재 활성 프로필의 pixellab 캐릭터(없으면 최근 프로필). */
 async function getSourceChar(userId: string): Promise<string | null> {
   const [p] = await db
-    .select({ active: profiles.activeProfileId })
-    .from(profiles)
-    .where(eq(profiles.id, userId))
+    .select({ active: characters.activeProfileId })
+    .from(characters)
+    .where(eq(characters.userId, userId))
     .limit(1);
   if (p?.active) {
     const [ap] = await db
@@ -93,9 +94,9 @@ async function getSourceChar(userId: string): Promise<string | null> {
 /** 우승자 아바타의 표시 방향(active_direction) — 트로피도 같은 방향 노출. 없으면 south. */
 async function getChampionDirection(userId: string): Promise<string> {
   const [p] = await db
-    .select({ active: profiles.activeProfileId })
-    .from(profiles)
-    .where(eq(profiles.id, userId))
+    .select({ active: characters.activeProfileId })
+    .from(characters)
+    .where(eq(characters.userId, userId))
     .limit(1);
   if (p?.active) {
     const [ap] = await db
