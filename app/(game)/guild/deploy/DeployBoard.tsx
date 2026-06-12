@@ -3,7 +3,6 @@
 import { useEffect, useMemo, useState, useTransition } from 'react';
 
 import { useResourceToast } from '@/components/ResourceToast';
-import { assetUrl } from '@/lib/asset-versions';
 import {
   CONQUEST_DEFENDER_BONUS,
   CONQUEST_EXECUTOR_POWER_MULT,
@@ -17,6 +16,7 @@ import {
   clearExecutorAction,
 } from '../actions';
 import { guildErrMsg } from '../errors-msg';
+import { fogMapSrc } from '../fog-map';
 
 type Region = 'volcano' | 'temple' | 'swamp' | 'orc' | 'kingdom' | 'angel';
 type DeployRole = 'attack' | 'defend';
@@ -69,8 +69,8 @@ export function DeployBoard({
   const [selectedId, setSelectedId] = useState<number | null>(null);
   const [pending, start] = useTransition();
 
-  // 포그 오브 워 — 잠긴 존이 있을 때만 장막 렌더(SVG 마스크가 개방 존을 뚫음).
-  const hasFog = zones.some((z) => z.locked);
+  // 단계 개방 안개 — 잠긴 지역이 있으면 구름 덮인 지도 일러스트로 교체(fog-map.ts).
+  const displayMapSrc = fogMapSrc(zones, mapSrc);
 
   const zoneById = useMemo(() => new Map(zones.map((z) => [z.id, z])), [zones]);
   const attackable = useMemo(() => new Set(attackableZoneIds), [attackableZoneIds]);
@@ -231,7 +231,7 @@ export function DeployBoard({
       <div className="relative aspect-square w-full shrink-0 overflow-hidden border-b border-zinc-800 bg-zinc-950">
         {/* eslint-disable-next-line @next/next/no-img-element */}
         <img
-          src={mapSrc}
+          src={displayMapSrc}
           alt="월드맵"
           draggable={false}
           className="absolute inset-0 h-full w-full object-cover"
@@ -281,46 +281,6 @@ export function DeployBoard({
             />
           ))}
         </svg>
-        {/* 미개방 안개(포그 오브 워) — 구름바다 일러스트(fog-clouds.webp, 월드맵 기반 생성·틈새
-            지형은 그늘 디밍)로 잠긴 지형 차폐. 개방 존 홀은 radial '알파 페이드'(luminance 흰
-            가장자리는 겹칠 때 이웃 홀을 도로 메움 — 곱 합성이라 안전) + 변위로 경계 일렁임. */}
-        {hasFog && (
-          <svg
-            viewBox="0 0 100 100"
-            preserveAspectRatio="none"
-            className="pointer-events-none absolute inset-0 h-full w-full"
-            style={{ zIndex: 25 }}
-            aria-hidden
-          >
-            <defs>
-              <filter id="dbfog-wobble" x="-20%" y="-20%" width="140%" height="140%">
-                <feTurbulence type="fractalNoise" baseFrequency="0.18" numOctaves="2" seed="7" />
-                <feDisplacementMap in="SourceGraphic" scale="7" />
-              </filter>
-              <radialGradient id="dbfog-hole">
-                <stop offset="55%" stopColor="black" stopOpacity={1} />
-                <stop offset="100%" stopColor="black" stopOpacity={0} />
-              </radialGradient>
-              <mask id="dbfog-mask" maskUnits="userSpaceOnUse" x="0" y="0" width="100" height="100">
-                <rect width="100" height="100" fill="white" />
-                <g filter="url(#dbfog-wobble)">
-                  {zones
-                    .filter((z) => !z.locked)
-                    .map((z) => (
-                      <circle key={z.id} cx={z.mapX} cy={z.mapY} r={14.5} fill="url(#dbfog-hole)" />
-                    ))}
-                </g>
-              </mask>
-            </defs>
-            <image
-              href={assetUrl('/sprites/guild/fog-clouds.webp')}
-              width="100"
-              height="100"
-              preserveAspectRatio="none"
-              mask="url(#dbfog-mask)"
-            />
-          </svg>
-        )}
         {zones.map((z) => {
           if (z.locked) return null; // 미개방 — 노드 미노출
           const mine = z.ownerGuildId === myGuildId;

@@ -11,6 +11,7 @@ import { ToggleSwitch } from '@/components/ToggleSwitch';
 import { assetUrl } from '@/lib/asset-versions';
 import { GUILD_EXECUTOR_TAX_CUT, TAX_COLLECT_COOLDOWN_MIN } from '@/lib/game/guild/balance';
 
+import { fogMapSrc } from '../fog-map';
 import { setResidenceAction, getZoneBattleAction, collectTaxAction } from '../actions';
 import { guildErrMsg } from '../errors-msg';
 
@@ -189,8 +190,8 @@ export function WorldMapView({
   // 행이 없으면 getChronicle가 {today:null,list:[]}를 반환 — 이 경우도 placeholder로 처리.
   const hasChronicle = !!chronicle && (chronicle.today != null || chronicle.list.length > 0);
 
-  // 포그 오브 워 — 잠긴 존이 있을 때만 장막 렌더(SVG 마스크가 개방 존을 뚫음).
-  const hasFog = zones.some((z) => z.locked);
+  // 단계 개방 안개 — 잠긴 지역이 있으면 구름 덮인 지도 일러스트로 교체(fog-map.ts).
+  const displayMapSrc = fogMapSrc(zones, mapSrc);
 
 
   // 연대기 {z|이름} 강조용 — 개별 구역 이름 → 그 구역의 지역색. (지역 카테고리는 색칠 안 함.)
@@ -264,7 +265,7 @@ export function WorldMapView({
       <div className="relative aspect-square w-full shrink-0 overflow-hidden border-b border-zinc-800 bg-zinc-950">
         {/* eslint-disable-next-line @next/next/no-img-element */}
         <img
-          src={mapSrc}
+          src={displayMapSrc}
           alt="월드맵"
           draggable={false}
           className="absolute inset-0 h-full w-full object-cover"
@@ -336,48 +337,8 @@ export function WorldMapView({
         <span className="absolute bottom-2 right-2 z-30 inline-flex rounded-full bg-black/45 p-1 backdrop-blur-sm">
           <ToggleSwitch on={showNames} onToggle={() => setShowNames((v) => !v)} small label="지역 이름 표시" />
         </span>
-        {/* 미개방 안개(포그 오브 워) — 구름바다 일러스트(fog-clouds.webp, 월드맵 기반 생성·틈새
-            지형은 그늘 디밍)로 잠긴 지형 차폐. 개방 존 홀은 radial '알파 페이드'(luminance 흰
-            가장자리는 겹칠 때 이웃 홀을 도로 메움 — 곱 합성이라 안전) + 변위로 경계 일렁임. */}
-        {hasFog && (
-          <svg
-            viewBox="0 0 100 100"
-            preserveAspectRatio="none"
-            className="pointer-events-none absolute inset-0 h-full w-full"
-            style={{ zIndex: 25 }}
-            aria-hidden
-          >
-            <defs>
-              <filter id="wmfog-wobble" x="-20%" y="-20%" width="140%" height="140%">
-                <feTurbulence type="fractalNoise" baseFrequency="0.18" numOctaves="2" seed="7" />
-                <feDisplacementMap in="SourceGraphic" scale="7" />
-              </filter>
-              <radialGradient id="wmfog-hole">
-                <stop offset="55%" stopColor="black" stopOpacity={1} />
-                <stop offset="100%" stopColor="black" stopOpacity={0} />
-              </radialGradient>
-              <mask id="wmfog-mask" maskUnits="userSpaceOnUse" x="0" y="0" width="100" height="100">
-                <rect width="100" height="100" fill="white" />
-                <g filter="url(#wmfog-wobble)">
-                  {zones
-                    .filter((z) => !z.locked)
-                    .map((z) => (
-                      <circle key={z.id} cx={z.mapX} cy={z.mapY} r={14.5} fill="url(#wmfog-hole)" />
-                    ))}
-                </g>
-              </mask>
-            </defs>
-            <image
-              href={assetUrl('/sprites/guild/fog-clouds.webp')}
-              width="100"
-              height="100"
-              preserveAspectRatio="none"
-              mask="url(#wmfog-mask)"
-            />
-          </svg>
-        )}
         {zones.map((z) => {
-          if (z.locked) return null; // 미개방 — 노드 미노출(안개 오버레이가 덮음)
+          if (z.locked) return null; // 미개방 — 노드 미노출(구름 지도가 덮음)
           const owned = z.ownerGuildId != null;
           const isResidence = z.id === residence;
           const color = REGION[z.region].color;
