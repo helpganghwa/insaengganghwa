@@ -28,6 +28,7 @@ export default async function LoginPage({
   const servers = await listServersPublic().catch(() => [] as { id: number; name: string; status: string }[]);
   const showServers = servers.length > 1;
   const defaultSrv = showServers ? await defaultServerId(servers) : 1;
+  const recommendedId = showServers ? await latestOpenServerId() : 1;
   // 테스트 로그인 — /login?test=true + env 스위치 둘 다 켜져야 노출(실운영 전환 시 env로 차단).
   const testMode = test === 'true' && isTestLoginEnabled();
 
@@ -45,7 +46,7 @@ export default async function LoginPage({
           <h1 className="mt-4 text-3xl font-semibold tracking-tight">인생강화</h1>
         </div>
 
-        {showServers && <ServerPicker servers={servers} defaultSrv={defaultSrv} />}
+        {showServers && <ServerPicker servers={servers} defaultSrv={defaultSrv} recommendedId={recommendedId} />}
 
         {testMode ? (
           <div className="w-full space-y-2">
