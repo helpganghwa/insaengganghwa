@@ -24,6 +24,16 @@ import { ReportButton } from './ReportButton';
 
 const SLOT_LABEL: Record<Slot, string> = { weapon: '무기', armor: '방어구', accessory: '장신구' };
 
+// 집행관 구역 지역색(세계지도 REGION과 동일). 미매칭이면 인디고 폴백.
+const REGION_COLOR: Record<string, string> = {
+  volcano: '#ef4444',
+  temple: '#60a5fa',
+  swamp: '#22c55e',
+  orc: '#f97316',
+  kingdom: '#fbbf24',
+  angel: '#c084fc',
+};
+
 /**
  * 핸들(공개 코드 또는 닉네임) → 공개 프로필 데이터(착용 세트 + KPI + 챔피언). 미존재 시 null.
  * publicCode(불변) 우선 + nickname(레거시 공유 링크 하위호환) 둘 다 허용.
@@ -367,7 +377,12 @@ export default async function PublicProfilePage({
           {data.guild && (
             <div className="mt-0.5 flex max-w-[88%] items-center justify-center gap-1 text-[11px] font-semibold drop-shadow-[0_1px_2px_rgba(0,0,0,0.8)]">
               {data.guild.executorZone && (
-                <span className="shrink-0 text-indigo-300">{data.guild.executorZone} 집행관 ·</span>
+                <span className="shrink-0">
+                  <span style={{ color: REGION_COLOR[data.guild.executorZoneRegion ?? ''] ?? '#a5b4fc' }}>
+                    {data.guild.executorZone}
+                  </span>
+                  <span className="text-indigo-300"> 집행관 ·</span>
+                </span>
               )}
               {data.guild.name && <span className="truncate text-white/80">{data.guild.name}</span>}
               {data.guild.emblemUrl && (
