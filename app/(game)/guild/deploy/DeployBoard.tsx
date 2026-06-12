@@ -280,8 +280,9 @@ export function DeployBoard({
             />
           ))}
         </svg>
-        {/* 미개방 안개(포그 오브 워) — SVG 마스크: 흰 장막에 개방 존 중심을 radial로 뚫고
-            feTurbulence 변위로 경계를 일렁이게(유기적 안개선). CSS 다중 mask의 add 합성 함정 회피. */}
+        {/* 미개방 안개(포그 오브 워) — RTS 문법: 미탐사 = 무채색. 같은 지도를 마스크 안에서
+            한 번 더 그려 잠긴 영역만 흑백·어둡게(개방 경계가 '색이 빠지는' 전환 — 발광 헤일로 없음),
+            그 위에 feTurbulence 안개 김 한 겹. CSS 다중 mask의 add 합성 함정 회피(SVG mask). */}
         {hasFog && (
           <svg
             viewBox="0 0 100 100"
@@ -293,10 +294,24 @@ export function DeployBoard({
             <defs>
               <filter id="dbfog-wobble" x="-20%" y="-20%" width="140%" height="140%">
                 <feTurbulence type="fractalNoise" baseFrequency="0.18" numOctaves="2" seed="7" />
-                <feDisplacementMap in="SourceGraphic" scale="5" />
+                <feDisplacementMap in="SourceGraphic" scale="7" />
+              </filter>
+              {/* 흑백 + 한랭 톤다운 — B 채널만 덜 깎아 차가운 '미탐사' 색. sRGB 고정(linearRGB 밝아짐 방지) */}
+              <filter id="dbfog-desat" x="0%" y="0%" width="100%" height="100%" colorInterpolationFilters="sRGB">
+                <feColorMatrix type="saturate" values="0.08" />
+                <feComponentTransfer>
+                  <feFuncR type="linear" slope="0.38" intercept="0.015" />
+                  <feFuncG type="linear" slope="0.4" intercept="0.02" />
+                  <feFuncB type="linear" slope="0.48" intercept="0.045" />
+                </feComponentTransfer>
+              </filter>
+              {/* 안개 김 — 노이즈 R 채널을 옅은 청회색 구름 알파로 변환 */}
+              <filter id="dbfog-tex" x="0%" y="0%" width="100%" height="100%" colorInterpolationFilters="sRGB">
+                <feTurbulence type="fractalNoise" baseFrequency="0.045" numOctaves="3" seed="11" />
+                <feColorMatrix type="matrix" values="0 0 0 0 0.62  0 0 0 0 0.66  0 0 0 0 0.74  0.9 0 0 0 -0.3" />
               </filter>
               <radialGradient id="dbfog-hole">
-                <stop offset="58%" stopColor="black" />
+                <stop offset="60%" stopColor="black" />
                 <stop offset="100%" stopColor="white" />
               </radialGradient>
               <mask id="dbfog-mask" maskUnits="userSpaceOnUse" x="0" y="0" width="100" height="100">
@@ -310,9 +325,18 @@ export function DeployBoard({
                 </g>
               </mask>
             </defs>
-            {/* 2겹 장막 — 깊은 베이스 + 옅은 상층(턴버런스 질감) */}
-            <rect width="100" height="100" fill="rgb(22, 26, 38)" opacity={0.93} mask="url(#dbfog-mask)" />
-            <rect width="100" height="100" fill="rgb(94, 104, 128)" opacity={0.22} mask="url(#dbfog-mask)" filter="url(#dbfog-wobble)" />
+            {/* 1) 잠긴 지형 — 흑백 고스트(윤곽은 남겨 기대감 유지) 2) 한랭 남색 틴트 3) 안개 김 */}
+            <image
+              href={mapSrc}
+              width="100"
+              height="100"
+              preserveAspectRatio="xMidYMid slice"
+              filter="url(#dbfog-desat)"
+              mask="url(#dbfog-mask)"
+              style={{ imageRendering: 'pixelated' }}
+            />
+            <rect width="100" height="100" fill="rgb(24, 30, 48)" opacity={0.3} mask="url(#dbfog-mask)" />
+            <rect width="100" height="100" filter="url(#dbfog-tex)" mask="url(#dbfog-mask)" opacity={0.55} />
           </svg>
         )}
         {zones.map((z) => {
