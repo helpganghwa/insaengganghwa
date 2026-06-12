@@ -231,18 +231,18 @@ export function DeployBoard({
           style={{ imageRendering: 'pixelated' }}
         />
         <div className="pointer-events-none absolute inset-0 bg-black/30" />
-        {/* 점령전 시각 안내 — 평시: 등록 마감/전투 시각, 전투 윈도: 진행 중·배치 잠금 */}
-        <div className="pointer-events-none absolute inset-x-0 top-0 z-20 flex justify-center p-2">
+        {/* 점령전 시각 안내 — 지도 우하단(지도 안 가림). 평시: 전투 시각·등록 불가 / 전투 윈도: 진행 중 */}
+        <div className="pointer-events-none absolute bottom-2 right-2 z-20 max-w-[58%] text-right">
           {locked ? (
-            <div className="flex items-center gap-1.5 rounded-lg border border-red-400/60 bg-red-950/85 px-2.5 py-1 text-[10px] font-bold text-red-100 shadow-lg backdrop-blur-sm">
+            <div className="inline-flex items-center gap-1.5 rounded-lg border border-red-400/60 bg-red-950/85 px-2 py-1 text-[9px] font-bold text-red-100 shadow-lg backdrop-blur-sm">
               <span className="inline-block h-1.5 w-1.5 animate-pulse rounded-full bg-red-400" />
-              점령전 진행 중 · {CONQUEST_BATTLE_KST_HOUR}:00~24:00 · 배치 변경 잠금
+              점령전 진행 중 · 배치 변경 잠금
             </div>
           ) : (
-            <div className="rounded-lg bg-black/60 px-2.5 py-1 text-center text-[9px] font-semibold leading-[1.5] text-white/90 shadow-lg backdrop-blur-sm">
-              매일 {CONQUEST_BATTLE_KST_HOUR}:00 공격·수비 등록 마감
+            <div className="inline-block rounded-lg bg-black/60 px-2 py-1 text-[9px] font-semibold leading-[1.5] text-white/90 shadow-lg backdrop-blur-sm">
+              매일 {CONQUEST_BATTLE_KST_HOUR}:00~24:00 점령전 전투
               <br />
-              {CONQUEST_BATTLE_KST_HOUR}:00~24:00 점령전 전투
+              <span className="text-white/70">전투 시간 동안 공격·수비 등록 불가</span>
             </div>
           )}
         </div>
