@@ -129,9 +129,7 @@ export function EmblemPicker({
           </select>
         </div>
         <div>
-          <p className="mb-1 text-[11px] font-semibold text-zinc-500">
-            서브 키워드 <span className="font-normal text-zinc-400">메인과 어울리는 것 · 선택</span>
-          </p>
+          <p className="mb-1 text-[11px] font-semibold text-zinc-500">서브 키워드</p>
           <select
             value={value.subKeywordId ?? ''}
             onChange={(e) => onChange({ ...value, subKeywordId: e.target.value || null })}
