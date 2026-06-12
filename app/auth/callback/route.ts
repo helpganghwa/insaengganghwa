@@ -4,6 +4,7 @@ import { eq } from 'drizzle-orm';
 import { createSupabaseServerClient } from '@/lib/auth/supabase-server';
 import { db } from '@/lib/db/client';
 import { profiles } from '@/lib/db/schema/profiles';
+import { canEnterServer, createCharacterAuto, touchLastServer } from '@/lib/game/server-select';
 
 /**
  * Kakao OAuth 콜백 — Supabase 토큰 교환 후 이 경로로 리다이렉트.
@@ -28,21 +29,35 @@ export async function GET(request: NextRequest) {
       const userId = data.session?.user.id;
       if (userId) {
         try {
-          const [p] = await db
-            .select({ sid: profiles.lastServerId })
-            .from(profiles)
-            .where(eq(profiles.id, userId))
-            .limit(1);
-          if (p?.sid) {
-            res.cookies.set('srv', String(p.sid), {
+          // 우선순위: 로그인 화면 선택(login_srv) > 마지막 접속(last_server_id).
+          const picked = Number(request.cookies.get('login_srv')?.value);
+          let sid: number | null =
+            Number.isInteger(picked) && picked >= 1 && picked <= 32767 ? picked : null;
+          if (sid) {
+            // 선택 서버에 캐릭터 없으면 자동 생성(가입과 동일 무마찰 — SERVER.md §3).
+            if (!(await canEnterServer(userId, sid))) {
+              await createCharacterAuto({ userId, serverId: sid });
+            }
+            await touchLastServer(userId, sid);
+          } else {
+            const [p] = await db
+              .select({ sid: profiles.lastServerId })
+              .from(profiles)
+              .where(eq(profiles.id, userId))
+              .limit(1);
+            sid = p?.sid ?? null;
+          }
+          if (sid) {
+            res.cookies.set('srv', String(sid), {
               httpOnly: true,
               sameSite: 'lax',
               path: '/',
               maxAge: 60 * 60 * 24 * 365,
             });
           }
+          res.cookies.delete('login_srv');
         } catch (e) {
-          console.warn('[auth.callback] srv restore skipped', (e as Error).message);
+          console.warn('[auth.callback] srv select skipped', (e as Error).message);
         }
       }
       return res;

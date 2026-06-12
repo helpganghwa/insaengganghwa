@@ -35,15 +35,22 @@ export async function GET(
   if (RAID_SHARE_RE.test(shareCode)) {
     try {
       const [r] = await db
-        .select({ id: raids.id })
+        .select({ id: raids.id, serverId: raids.serverId })
         .from(raids)
         .where(eq(raids.shareCode, shareCode))
         .limit(1);
       if (r) {
-        return NextResponse.redirect(
+        const res = NextResponse.redirect(
           new URL(`/raid-invite/${shareCode}`, req.nextUrl.origin),
           307,
         );
+        // 공유된 서버를 로그인 기본 선택으로(SERVER.md §3 — 초대받은 서버에서 시작).
+        res.cookies.set('pending_server', String(r.serverId), {
+          sameSite: 'lax',
+          path: '/',
+          maxAge: SEVEN_DAYS,
+        });
+        return res;
       }
     } catch (e) {
       console.warn('[s/route.raid-lookup]', (e as Error).message);
@@ -59,6 +66,10 @@ export async function GET(
   const sfx = sParam && /^\d+$/.test(sParam) ? `?s=${sParam}` : '';
   const target = start ? '/' : `/u/${shareCode}${sfx}`;
   const res = NextResponse.redirect(new URL(target, req.nextUrl.origin), 307);
+  if (sParam && /^\d+$/.test(sParam)) {
+    // 공유된 서버를 로그인 기본 선택으로.
+    res.cookies.set('pending_server', sParam, { sameSite: 'lax', path: '/', maxAge: SEVEN_DAYS });
+  }
   res.cookies.set(PENDING_REFERRAL_COOKIE, shareCode, {
     path: '/',
     maxAge: SEVEN_DAYS,

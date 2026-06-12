@@ -1,8 +1,21 @@
 import { redirect } from 'next/navigation';
+import { cookies } from 'next/headers';
 
 import { signInWithKakao, signInWithTestAccount } from '@/lib/auth/actions';
 import { getSessionUserId } from '@/lib/auth/session';
 import { isTestLoginEnabled, TEST_ACCOUNTS } from '@/lib/auth/test-accounts';
+import { listServersPublic, latestOpenServerId } from '@/lib/game/server-select';
+import { ServerPicker } from './ServerPicker';
+
+/** 로그인 화면 서버 기본 선택 — 공유된 서버 > 직전 접속 서버(srv 잔존) > 최신 open 서버. */
+async function defaultServerId(open: { id: number; status: string }[]): Promise<number> {
+  const jar = await cookies();
+  const cand = [Number(jar.get('pending_server')?.value), Number(jar.get('srv')?.value)];
+  for (const c of cand) {
+    if (Number.isInteger(c) && open.some((s) => s.id === c && s.status === 'open')) return c;
+  }
+  return latestOpenServerId();
+}
 
 export default async function LoginPage({
   searchParams,
@@ -11,6 +24,10 @@ export default async function LoginPage({
 }) {
   if (await getSessionUserId()) redirect('/'); // 로컬 JWT 검증 (CLAUDE §11.1)
   const { error, test } = await searchParams;
+  // 서버 선택(SERVER.md §3) — 2서버+에서만 셀렉터 노출. 변경은 로그아웃 후 여기서.
+  const servers = await listServersPublic().catch(() => [] as { id: number; name: string; status: string }[]);
+  const showServers = servers.length > 1;
+  const defaultSrv = showServers ? await defaultServerId(servers) : 1;
   // 테스트 로그인 — /login?test=true + env 스위치 둘 다 켜져야 노출(실운영 전환 시 env로 차단).
   const testMode = test === 'true' && isTestLoginEnabled();
 
@@ -27,6 +44,8 @@ export default async function LoginPage({
           />
           <h1 className="mt-4 text-3xl font-semibold tracking-tight">인생강화</h1>
         </div>
+
+        {showServers && <ServerPicker servers={servers} defaultSrv={defaultSrv} />}
 
         {testMode ? (
           <div className="w-full space-y-2">

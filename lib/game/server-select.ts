@@ -220,3 +220,21 @@ export async function createCharacterAuto(input: {
   }
   throw new CharacterError('NICKNAME_TAKEN');
 }
+
+
+/** 공개 서버 목록(비로그인 — 로그인 화면 셀렉터용). 이름·상태만. */
+export async function listServersPublic(): Promise<{ id: number; name: string; status: string }[]> {
+  return db
+    .select({ id: servers.id, name: servers.name, status: servers.status })
+    .from(servers)
+    .orderBy(servers.id);
+}
+
+/** 최신 open 서버 id — 신규 기본 선택(가입 트리거와 동일 규칙). */
+export async function latestOpenServerId(): Promise<number> {
+  const [r] = await db
+    .select({ id: sql<number>`coalesce(max(${servers.id}), 1)` })
+    .from(servers)
+    .where(eq(servers.status, 'open'));
+  return r?.id ?? 1;
+}

@@ -76,10 +76,12 @@ export default async function SettingsPage() {
       {serverCount > 1 && (
         <Section title="서버">
           <Row label="현재 서버">
-            <a href="/servers" className="text-sm font-semibold text-amber-600 dark:text-amber-400">
-              {serverName} · 변경 →
-            </a>
+            <span className="text-sm font-semibold">{serverName}</span>
           </Row>
+          <Divider />
+          <p className="px-3 py-2 text-[11px] leading-relaxed text-zinc-500">
+            서버 변경은 로그아웃 후 로그인 화면에서 선택하세요.
+          </p>
         </Section>
       )}
 

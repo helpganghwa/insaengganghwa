@@ -1,8 +1,9 @@
 'use server';
 
 import { redirect } from 'next/navigation';
-import { headers } from 'next/headers';
+import { cookies, headers } from 'next/headers';
 
+import { canEnterServer, createCharacterAuto, touchLastServer } from '@/lib/game/server-select';
 import { createSupabaseServerClient, createSupabaseServiceClient } from './supabase-server';
 import { isTestLoginEnabled, TEST_ACCOUNTS, TEST_PASSWORD } from './test-accounts';
 
@@ -57,6 +58,27 @@ export async function signInWithTestAccount(formData: FormData) {
   const supabase = await createSupabaseServerClient();
   const { error } = await supabase.auth.signInWithPassword({ email, password: TEST_PASSWORD });
   if (error) redirect(`/login?error=${encodeURIComponent(error.message)}`);
+
+  // 서버 선택 적용(콜백 미경유 경로) — ServerPicker가 기록한 login_srv 쿠키.
+  const srvRaw = Number((await cookies()).get('login_srv')?.value);
+  if (Number.isInteger(srvRaw) && srvRaw >= 1 && srvRaw <= 32767) {
+    const { data } = await supabase.auth.getUser();
+    const uid = data.user?.id;
+    if (uid) {
+      try {
+        if (!(await canEnterServer(uid, srvRaw))) await createCharacterAuto({ userId: uid, serverId: srvRaw });
+        await touchLastServer(uid, srvRaw);
+        (await cookies()).set('srv', String(srvRaw), {
+          httpOnly: true,
+          sameSite: 'lax',
+          path: '/',
+          maxAge: 60 * 60 * 24 * 365,
+        });
+      } catch (e) {
+        console.warn('[login.test] server select skipped', (e as Error).message);
+      }
+    }
+  }
   redirect('/');
 }
 
