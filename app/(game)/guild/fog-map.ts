@@ -13,6 +13,7 @@ import { assetUrl } from '@/lib/asset-versions';
  */
 const FOG_STAGE_SRC: Record<number, string> = {
   1: '/sprites/guild/worldmap-fog-stage1.webp', // 왕국만 개방
+  2: '/sprites/guild/worldmap-fog-stage2.webp', // +오크 부락
 };
 
 export function fogMapSrc(
