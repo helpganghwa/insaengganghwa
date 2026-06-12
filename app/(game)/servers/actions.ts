@@ -5,10 +5,9 @@ import { revalidatePath } from 'next/cache';
 
 import { getSessionUserId } from '@/lib/auth/session';
 import {
-  createCharacter,
+  createCharacterAuto,
   canEnterServer,
   touchLastServer,
-  suggestNickname,
   CharacterError,
 } from '@/lib/game/server-select';
 
@@ -22,38 +21,26 @@ async function setSrvCookie(serverId: number) {
   });
 }
 
-/** 서버 입장 — 캐릭터 보유 서버만. 쿠키 + last_server_id 갱신. */
+/**
+ * 서버 이동 — 캐릭터 없으면 **자동 생성**(자동 닉네임, 가입과 동일 무마찰) 후 입장.
+ * 쿠키(srv) + last_server_id 갱신. 반환 created에 새 캐릭터 닉(안내 토스트용).
+ */
 export async function enterServerAction(serverId: number) {
   const u = await getSessionUserId();
   if (!u) return { status: 'error', code: 'UNAUTHENTICATED' } as const;
   if (!Number.isInteger(serverId) || serverId < 1) return { status: 'error', code: 'INVALID' } as const;
-  if (!(await canEnterServer(u, serverId))) return { status: 'error', code: 'NO_CHARACTER' } as const;
-  await setSrvCookie(serverId);
-  await touchLastServer(u, serverId).catch(() => {});
-  revalidatePath('/', 'layout');
-  return { status: 'success' } as const;
-}
-
-/** 캐릭터 생성 + 즉시 입장. */
-export async function createCharacterAction(serverId: number, nickname: string) {
-  const u = await getSessionUserId();
-  if (!u) return { status: 'error', code: 'UNAUTHENTICATED' } as const;
-  try {
-    await createCharacter({ userId: u, serverId, nickname });
-  } catch (e) {
-    if (e instanceof CharacterError) return { status: 'error', code: e.code } as const;
-    console.error('[servers.create]', e);
-    return { status: 'error', code: 'UNKNOWN' } as const;
+  let created: string | null = null;
+  if (!(await canEnterServer(u, serverId))) {
+    try {
+      created = (await createCharacterAuto({ userId: u, serverId })).nickname;
+    } catch (e) {
+      if (e instanceof CharacterError) return { status: 'error', code: e.code } as const;
+      console.error('[servers.enter.create]', e);
+      return { status: 'error', code: 'UNKNOWN' } as const;
+    }
   }
   await setSrvCookie(serverId);
   await touchLastServer(u, serverId).catch(() => {});
   revalidatePath('/', 'layout');
-  return { status: 'success' } as const;
-}
-
-/** 닉네임 자동 제안(생성 폼 초기값/재추첨). */
-export async function suggestNicknameAction() {
-  const u = await getSessionUserId();
-  if (!u) return { status: 'error', code: 'UNAUTHENTICATED' } as const;
-  return { status: 'success', nickname: await suggestNickname() } as const;
+  return { status: 'success', created } as const;
 }

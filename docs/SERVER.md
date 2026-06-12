@@ -62,7 +62,9 @@ characters (user_id FK profiles, server_id FK servers, diamond, residence_zone_i
 - **활성 서버** = `srv` 쿠키(서버 선택 화면에서 설정, httpOnly) → `getActiveServerId()`. 미설정/비정상 = 1.
 - 서버 액션·RSC는 `(userId, serverId)` 컨텍스트로 동작 — 기존 `getSessionUserId()` 옆에 serverId 헬퍼 추가, 도메인 함수는 serverId를 **명시 인자**로 받는다(크론과 시그니처 통일).
 - **크론** = 활성 서버 루프: `for (const s of openServers) await run(s.id)` — 크론 엔트리 수는 불변(서버 수와 무관).
-- **서버 선택 화면**(`/servers`): 서버 목록 + 내 캐릭터(닉네임·💎) 표시, 입장(srv 쿠키 + last_server_id) / 캐릭터 생성(새 닉네임 — 자동 제안·전역 유일 + 가입 보너스 + 기본 아바타 2종·active 랜덤). 단일 서버 운영 중엔 홈으로 리다이렉트, 설정의 진입점도 2서버+에서만 노출.
+- **신규 가입 = 최신 open 서버 자동 배정**(트리거) — 닉네임 자동 생성으로 무마찰 시작(단일 서버 시절과 동일 UX). last_server_id도 배정 서버. 테스트/모집 제외 서버는 status를 'full'/'closed'로.
+- **서버 선택 화면**(`/servers`): 서버 목록 + 내 캐릭터(닉네임·💎) 표시. **버튼은 '이동' 하나** — 캐릭터 없는 서버로 이동하면 자동 닉네임으로 새 캐릭터 생성 후 바로 시작(3초 컨펌으로 오터치만 방지, 닉은 첫 닉변 무료로 교체). 단일 서버 운영 중엔 홈 리다이렉트, 설정 진입점도 2서버+에서만 노출.
+- **로그인 시 srv 쿠키 복원** — OAuth 콜백이 last_server_id로 쿠키 설정(신규 배정·기기 변경에도 마지막 서버에서 시작).
 
 ---
 

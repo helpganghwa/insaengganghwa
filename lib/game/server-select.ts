@@ -184,3 +184,29 @@ export async function touchLastServer(userId: string, serverId: number): Promise
     .set({ lastServerId: serverId })
     .where(eq(profiles.id, userId));
 }
+
+
+/**
+ * 자동 닉네임으로 캐릭터 생성 — 가입 플로우와 동일(자동 한글 닉, 충돌 시 재추첨).
+ * 서버 이동 시 무마찰 시작(SERVER.md §3): 닉이 마음에 안 들면 첫 닉변 무료로 교체.
+ */
+export async function createCharacterAuto(input: {
+  userId: string;
+  serverId: number;
+}): Promise<{ nickname: string }> {
+  for (let i = 0; i < 10; i++) {
+    const candidate =
+      i < 8
+        ? await suggestNickname()
+        : `${(await suggestNickname()).slice(0, 4)}${Math.floor(Math.random() * 9000) + 1000}`;
+    try {
+      await createCharacter({ userId: input.userId, serverId: input.serverId, nickname: candidate });
+      return { nickname: candidate };
+    } catch (e) {
+      if (e instanceof CharacterError && e.code === 'NICKNAME_TAKEN') continue; // 재추첨
+      if (e instanceof CharacterError && e.code === 'NICKNAME_INVALID') continue; // 생성기 이상치 방어
+      throw e;
+    }
+  }
+  throw new CharacterError('NICKNAME_TAKEN');
+}
