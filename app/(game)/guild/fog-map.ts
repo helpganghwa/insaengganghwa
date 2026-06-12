@@ -14,7 +14,8 @@ import { assetUrl } from '@/lib/asset-versions';
 const FOG_STAGE_SRC: Record<number, string> = {
   1: '/sprites/guild/worldmap-fog-stage1.webp', // 왕국만 개방
   2: '/sprites/guild/worldmap-fog-stage2.webp', // +오크 부락
-  4: '/sprites/guild/worldmap-fog-stage4.webp', // +늪+신전 (3단계는 생성 중)
+  3: '/sprites/guild/worldmap-fog-stage3.webp', // +슬라임 늪
+  4: '/sprites/guild/worldmap-fog-stage4.webp', // +잊힌 신전
 };
 
 export function fogMapSrc(
