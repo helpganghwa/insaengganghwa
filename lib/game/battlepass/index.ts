@@ -3,7 +3,7 @@ import 'server-only';
 import { and, eq, sql } from 'drizzle-orm';
 
 import { db } from '@/lib/db/client';
-import { profiles } from '@/lib/db/schema/profiles';
+import { walletAdd } from '@/lib/game/wallet';
 import { userSupplyBoxes } from '@/lib/db/schema/supply';
 import { battlePassState, battlePassSegments } from '@/lib/db/schema/battlepass';
 import { type Slot } from '@/lib/db/schema/equipment';
@@ -60,15 +60,13 @@ function splitBoxes(n: number): Record<Slot, number> {
 async function grantReward(
   tx: Parameters<Parameters<typeof db.transaction>[0]>[0],
   userId: string,
+  serverId: number,
   type: BattlePassType,
   amount: number,
 ): Promise<void> {
   if (amount <= 0) return;
   if (type === 'enhance') {
-    await tx
-      .update(profiles)
-      .set({ diamond: sql`${profiles.diamond} + ${amount}` })
-      .where(eq(profiles.id, userId));
+    await walletAdd(tx, userId, serverId, amount);
     return;
   }
   const dist = splitBoxes(amount);
@@ -197,6 +195,7 @@ const sorted = (a: number[]) => [...a].sort((x, y) => x - y);
 /** 무료 — 받을 수 있는 모든 마일스톤 일괄 수령(컬럼 하단 '한번에 받기'). */
 export function claimFree(
   userId: string,
+  serverId: number,
   type: BattlePassType,
 ): Promise<{ granted: number; rewardKind: 'diamond' | 'box' }> {
   return db.transaction(async (tx) => {
@@ -220,7 +219,7 @@ export function claimFree(
         }
     }
     if (granted <= 0) throw new BattlePassErr('NOTHING_TO_CLAIM');
-    await grantReward(tx, userId, type, granted);
+    await grantReward(tx, userId, serverId, type, granted);
     const merged = sorted([...claimed, ...newly]);
     await tx
       .insert(battlePassState)
@@ -236,6 +235,7 @@ export function claimFree(
 /** 무료 — **클릭한 단계 하나만** 수령. 마일스톤·도달·미수령 검증. */
 export function claimFreeTier(
   userId: string,
+  serverId: number,
   type: BattlePassType,
   level: number,
 ): Promise<{ granted: number; rewardKind: 'diamond' | 'box' }> {
@@ -251,7 +251,7 @@ export function claimFreeTier(
     if (lv < 1 || lv % BP_TIER_STEP[type] !== 0 || lv > maxReached || claimed.has(lv))
       throw new BattlePassErr('NOTHING_TO_CLAIM');
     const granted = bpTierReward(type, lv, false);
-    await grantReward(tx, userId, type, granted);
+    await grantReward(tx, userId, serverId, type, granted);
     const merged = sorted([...claimed, lv]);
     await tx
       .insert(battlePassState)
@@ -269,6 +269,7 @@ export function claimFreeTier(
 /** 프리미엄 — 산 구간들에서 받을 수 있는 모든 마일스톤 일괄 수령. */
 export function claimPremium(
   userId: string,
+  serverId: number,
   type: BattlePassType,
 ): Promise<{ granted: number; rewardKind: 'diamond' | 'box' }> {
   return db.transaction(async (tx) => {
@@ -307,7 +308,7 @@ export function claimPremium(
         );
     }
     if (granted <= 0) throw new BattlePassErr('NOTHING_TO_CLAIM');
-    await grantReward(tx, userId, type, granted);
+    await grantReward(tx, userId, serverId, type, granted);
     return { granted, rewardKind: type === 'enhance' ? 'diamond' : 'box' };
   });
 }
@@ -315,6 +316,7 @@ export function claimPremium(
 /** 프리미엄 — 산 구간에서 **클릭한 단계 하나만** 수령. 미구매면 NOT_PURCHASED. */
 export function claimPremiumTier(
   userId: string,
+  serverId: number,
   type: BattlePassType,
   segmentIndex: number,
   level: number,
@@ -340,7 +342,7 @@ export function claimPremiumTier(
     if (lv % BP_TIER_STEP[type] !== 0 || lv < startLevel || lv > cap || claimed.has(lv))
       throw new BattlePassErr('NOTHING_TO_CLAIM');
     const granted = bpTierReward(type, lv, true);
-    await grantReward(tx, userId, type, granted);
+    await grantReward(tx, userId, serverId, type, granted);
     const merged = sorted([...seg.tiers, lv]);
     await tx
       .update(battlePassSegments)
@@ -359,6 +361,7 @@ export function claimPremiumTier(
 /** 한 **구간**의 받을 수 있는 무료 + 프리미엄 마일스톤을 한 트랜잭션에 일괄 수령. */
 export function claimSegment(
   userId: string,
+  serverId: number,
   type: BattlePassType,
   segmentIndex: number,
 ): Promise<{ granted: number; rewardKind: 'diamond' | 'box' }> {
@@ -402,7 +405,7 @@ export function claimSegment(
       }
     }
     if (granted <= 0) throw new BattlePassErr('NOTHING_TO_CLAIM');
-    await grantReward(tx, userId, type, granted);
+    await grantReward(tx, userId, serverId, type, granted);
 
     if (freeNew.length > 0) {
       const merged = sorted([...freeClaimed, ...freeNew]);
@@ -436,6 +439,7 @@ export function claimSegment(
 
 export function grantSegmentPurchase(
   userId: string,
+  serverId: number,
   type: BattlePassType,
   segmentIndex: number,
 ): Promise<{ granted: number; rewardKind: 'diamond' | 'box' }> {
@@ -461,7 +465,7 @@ export function grantSegmentPurchase(
       .returning({ idx: battlePassSegments.segmentIndex });
     if (ins.length === 0) throw new BattlePassErr('ALREADY_PURCHASED');
 
-    await grantReward(tx, userId, type, granted);
+    await grantReward(tx, userId, serverId, type, granted);
     return { granted, rewardKind: type === 'enhance' ? 'diamond' : 'box' };
   });
 }

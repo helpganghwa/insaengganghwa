@@ -19,11 +19,12 @@ import { and, count, eq, isNotNull, sql } from 'drizzle-orm';
 import { z } from 'zod';
 
 import { db } from '@/lib/db/client';
+import { walletTrySpend } from '@/lib/game/wallet';
 import { profileGenerationJobs, userProfiles } from '@/lib/db/schema/avatar';
 import { catalogItems, userEquipment } from '@/lib/db/schema/equipment';
-import { profiles } from '@/lib/db/schema/profiles';
 import { PROFILE_GENERATION_DIAMOND } from '@/lib/game/balance';
 import { getSessionUserId } from '@/lib/auth/session';
+import { getActiveServerId } from '@/lib/game/servers';
 
 import {
   composeEditDescription,
@@ -50,6 +51,7 @@ export async function createProfileJob(
 ): Promise<CreateProfileJobResult> {
   const userId = await getSessionUserId();
   if (!userId) throw new CreateProfileJobError('UNAUTHORIZED');
+  const serverId = await getActiveServerId();
 
   // 프로필 최대 20개 — 초과 시 생성 차단(기본 2개 포함).
   const [pc] = await db
@@ -97,18 +99,9 @@ export async function createProfileJob(
   const description = await composeEditDescription(opts, equipmentSnapshot);
 
   return db.transaction(async (tx) => {
-    // 3. 다이아 escrow — 조건부 update. 부족 시 0행 반환.
-    const deducted = await tx
-      .update(profiles)
-      .set({ diamond: sql`${profiles.diamond} - ${PROFILE_GENERATION_DIAMOND}` })
-      .where(
-        and(
-          eq(profiles.id, userId),
-          sql`${profiles.diamond} >= ${PROFILE_GENERATION_DIAMOND}`,
-        ),
-      )
-      .returning({ diamond: profiles.diamond });
-    if (deducted.length === 0) {
+    // 3. 다이아 escrow — 조건부 차감(서버별 지갑). 부족 시 미차감.
+    const paid = await walletTrySpend(tx, userId, serverId, PROFILE_GENERATION_DIAMOND);
+    if (!paid) {
       throw new CreateProfileJobError('INSUFFICIENT_DIAMOND');
     }
 

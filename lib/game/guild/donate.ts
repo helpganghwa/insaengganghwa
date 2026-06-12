@@ -3,7 +3,7 @@ import 'server-only';
 import { eq, sql } from 'drizzle-orm';
 
 import { db } from '@/lib/db/client';
-import { profiles } from '@/lib/db/schema/profiles';
+import { walletTrySpend } from '@/lib/game/wallet';
 import { guilds, guildMembers } from '@/lib/db/schema/guild';
 import { kstDateString } from '@/lib/kst';
 
@@ -27,6 +27,7 @@ function applyLevelUp(level: number, xp: bigint): { level: number; xp: bigint } 
  */
 export function donateToGuild(input: {
   userId: string;
+  serverId: number;
 }): Promise<{ tierIndex: number; xp: number; cost: number; level: number }> {
   return db.transaction(async (tx) => {
     const [m] = await tx
@@ -47,16 +48,8 @@ export function donateToGuild(input: {
     const { cost, xp } = tier;
 
     if (cost > 0) {
-      const [prof] = await tx
-        .select({ diamond: profiles.diamond })
-        .from(profiles)
-        .where(eq(profiles.id, input.userId))
-        .for('update');
-      if (!prof || prof.diamond < BigInt(cost)) throw new GuildError('INSUFFICIENT_DIAMOND');
-      await tx
-        .update(profiles)
-        .set({ diamond: sql`${profiles.diamond} - ${BigInt(cost)}` })
-        .where(eq(profiles.id, input.userId));
+      const paid = await walletTrySpend(tx, input.userId, input.serverId, cost);
+      if (!paid) throw new GuildError('INSUFFICIENT_DIAMOND');
     }
 
     // 개인 기여도 + 일일 카운터.

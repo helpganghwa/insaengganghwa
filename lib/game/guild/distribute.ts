@@ -3,7 +3,8 @@ import 'server-only';
 import { and, eq, sql } from 'drizzle-orm';
 
 import { db } from '@/lib/db/client';
-import { profiles } from '@/lib/db/schema/profiles';
+import { characters } from '@/lib/db/schema/server';
+import { walletAdd } from '@/lib/game/wallet';
 import { guilds, guildMembers, guildTaxDistributions } from '@/lib/db/schema/guild';
 
 import type { GuildTaxDistribution } from './balance';
@@ -16,6 +17,7 @@ import { GuildError } from './errors';
  */
 export function distributeGuildTax(input: {
   leaderUserId: string;
+  serverId: number;
   mode: GuildTaxDistribution;
   targetUserId?: string;
 }): Promise<{ total: bigint; perMember: bigint | null }> {
@@ -45,10 +47,7 @@ export function distributeGuildTax(input: {
         .where(and(eq(guildMembers.userId, input.targetUserId), eq(guildMembers.guildId, gid)))
         .limit(1);
       if (!t) throw new GuildError('TARGET_NOT_IN_GUILD');
-      await tx
-        .update(profiles)
-        .set({ diamond: sql`${profiles.diamond} + ${pool}` })
-        .where(eq(profiles.id, input.targetUserId));
+      await walletAdd(tx, input.targetUserId, input.serverId, pool);
       await tx.update(guilds).set({ taxPoolDiamond: 0n }).where(eq(guilds.id, gid));
       await tx.insert(guildTaxDistributions).values({
         guildId: gid,
@@ -72,9 +71,11 @@ export function distributeGuildTax(input: {
     const distributed = per * n;
 
     await tx
-      .update(profiles)
-      .set({ diamond: sql`${profiles.diamond} + ${per}` })
-      .where(sql`${profiles.id} IN (SELECT user_id FROM guild_members WHERE guild_id = ${gid})`);
+      .update(characters)
+      .set({ diamond: sql`${characters.diamond} + ${per}` })
+      .where(
+        sql`${characters.serverId} = ${input.serverId} AND ${characters.userId} IN (SELECT user_id FROM guild_members WHERE guild_id = ${gid})`,
+      );
     await tx
       .update(guilds)
       .set({ taxPoolDiamond: sql`${guilds.taxPoolDiamond} - ${distributed}` })
@@ -95,6 +96,7 @@ export function distributeGuildTax(input: {
  */
 export function distributeGuildTaxManual(input: {
   leaderUserId: string;
+  serverId: number;
   amounts: { userId: string; amount: number }[];
 }): Promise<{ total: bigint }> {
   return db.transaction(async (tx) => {
@@ -133,10 +135,7 @@ export function distributeGuildTaxManual(input: {
     for (const uid of byUser.keys()) if (!memberSet.has(uid)) throw new GuildError('TARGET_NOT_IN_GUILD');
 
     for (const [uid, amt] of byUser) {
-      await tx
-        .update(profiles)
-        .set({ diamond: sql`${profiles.diamond} + ${amt}` })
-        .where(eq(profiles.id, uid));
+      await walletAdd(tx, uid, input.serverId, amt);
     }
     await tx
       .update(guilds)

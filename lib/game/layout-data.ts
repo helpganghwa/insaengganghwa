@@ -34,14 +34,15 @@ const DEFAULTS: LayoutData = {
  * 프로필(닉네임·다이아) + 우편 미수령 dot + 강화완료 dot을 단일 왕복(Promise.all)으로.
  * 4s 가드 + catch — 콜드 DB 커넥션이 max:1 풀에서 hang해도 기본값으로 graceful degrade.
  */
-export async function loadLayoutData(userId: string): Promise<LayoutData> {
+export async function loadLayoutData(userId: string, serverId: number): Promise<LayoutData> {
   try {
     // pgGuard: 타임아웃 시 쿼리 취소 → 풀 커넥션 즉시 회수(모든 페이지가 호출하는 핫패스).
     const [profileRows, mailRows, enhRows, friendReqRows] = await Promise.all([
       pgGuard(
         (sql) => sql`
-          select p.nickname, p.diamond, up.rotations, g.emblem_url as guild_emblem_url
+          select p.nickname, c.diamond, up.rotations, g.emblem_url as guild_emblem_url
           from profiles p
+          left join characters c on c.user_id = p.id and c.server_id = ${serverId}
           left join user_profiles up on up.id = p.active_profile_id
           left join guild_members gm on gm.user_id = p.id
           left join guilds g on g.id = gm.guild_id

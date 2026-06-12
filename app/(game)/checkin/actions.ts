@@ -5,6 +5,7 @@ import { revalidatePath } from 'next/cache';
 import { getSessionUserId } from '@/lib/auth/session';
 import { rateLimited } from '@/lib/ratelimit';
 import { claimCheckin, CheckinError, type CheckinClaimResult } from '@/lib/game/checkin';
+import { getActiveServerId } from '@/lib/game/servers';
 
 type ErrorState = { status: 'error'; code: string; message: string };
 
@@ -26,7 +27,7 @@ export async function claimCheckinAction(): Promise<
   if (!userId) return err('UNAUTHENTICATED');
   if (await rateLimited(userId, 'checkin')) return err('RATE_LIMITED');
   try {
-    const result = await claimCheckin({ userId });
+    const result = await claimCheckin({ userId, serverId: await getActiveServerId() });
     revalidatePath('/checkin');
     revalidatePath('/'); // 홈 진입 카드
     return { status: 'success', result };

@@ -1,4 +1,5 @@
-import { pgTable, smallint, text, timestamp, uuid, primaryKey, index } from 'drizzle-orm/pg-core';
+import { sql } from 'drizzle-orm';
+import { pgTable, smallint, text, timestamp, uuid, primaryKey, index, bigint } from 'drizzle-orm/pg-core';
 
 import { profiles } from './profiles';
 
@@ -27,6 +28,8 @@ export const characters = pgTable(
     serverId: smallint('server_id')
       .notNull()
       .references(() => servers.id),
+    /** 서버별 다이아 지갑(P2 이관) — 증감은 lib/game/wallet.ts 단일 경로로만. */
+    diamond: bigint('diamond', { mode: 'bigint' }).notNull().default(sql`0`),
     createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
   },
   (t) => [primaryKey({ columns: [t.userId, t.serverId] }), index('characters_server_idx').on(t.serverId)],

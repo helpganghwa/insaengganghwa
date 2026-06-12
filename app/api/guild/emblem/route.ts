@@ -1,6 +1,7 @@
 import { revalidatePath } from 'next/cache';
 
 import { getSessionUserId } from '@/lib/auth/session';
+import { getActiveServerId } from '@/lib/game/servers';
 import { generateEmblem } from '@/lib/game/guild';
 import { isValidEmblemSelection, type EmblemSelection } from '@/lib/game/guild/emblem-vocab';
 import { GuildError } from '@/lib/game/guild/errors';
@@ -31,7 +32,7 @@ export async function POST(req: Request) {
   }
 
   try {
-    await generateEmblem({ userId, selection });
+    await generateEmblem({ userId, serverId: await getActiveServerId(), selection });
     revalidatePath('/guild');
     revalidatePath('/guild/settings');
     revalidatePath('/', 'layout'); // 헤더(공유 레이아웃) 활성 문양 반영

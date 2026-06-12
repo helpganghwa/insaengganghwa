@@ -3,7 +3,7 @@ import 'server-only';
 import { and, eq, sql } from 'drizzle-orm';
 
 import { db } from '@/lib/db/client';
-import { profiles } from '@/lib/db/schema/profiles';
+import { walletTrySpend } from '@/lib/game/wallet';
 import { userEquipment } from '@/lib/db/schema/equipment';
 import { raids, raidParticipants, raidAttacks } from '@/lib/db/schema/raid';
 import {
@@ -116,6 +116,7 @@ export function attackRaid(input: {
 /** 추가 공격 구매 — n번째 비용 50×⌈n/10⌉ 다이아 (10번 단위 계단, BALANCE §5.5). */
 export function buyExtraAttack(input: {
   userId: string;
+  serverId: number;
   raidId: bigint;
 }): Promise<{ cost: number; extraAttacks: number }> {
   const { userId, raidId } = input;
@@ -141,17 +142,9 @@ export function buyExtraAttack(input: {
     const nth = part.extraAttacks + 1;
     const cost = raidExtraAttackCost(nth);
 
-    const [prof] = await tx
-      .select({ diamond: profiles.diamond })
-      .from(profiles)
-      .where(eq(profiles.id, userId))
-      .for('update');
-    if (!prof || prof.diamond < BigInt(cost)) throw new RaidError('INSUFFICIENT_DIAMOND');
+    const paid = await walletTrySpend(tx, userId, input.serverId, cost);
+    if (!paid) throw new RaidError('INSUFFICIENT_DIAMOND');
 
-    await tx
-      .update(profiles)
-      .set({ diamond: sql`${profiles.diamond} - ${BigInt(cost)}` })
-      .where(eq(profiles.id, userId));
     await tx
       .update(raidParticipants)
       .set({ extraAttacks: nth })
@@ -164,6 +157,7 @@ export function buyExtraAttack(input: {
 /** 보석 공격 — 추가 공격 1회분 보석 차감 + 즉시 공격(단일 트랜잭션). 충전 단계 생략. */
 export function gemAttackRaid(input: {
   userId: string;
+  serverId: number;
   raidId: bigint;
 }): Promise<{ damage: number; isCrit: boolean; phasesCleared: number; cost: number }> {
   const { userId, raidId } = input;
@@ -199,16 +193,8 @@ export function gemAttackRaid(input: {
     // 보석 결제(추가 공격 1회분) — for update로 다이아 조건부 차감.
     const nth = part.extraAttacks + 1;
     const cost = raidExtraAttackCost(nth);
-    const [prof] = await tx
-      .select({ diamond: profiles.diamond })
-      .from(profiles)
-      .where(eq(profiles.id, userId))
-      .for('update');
-    if (!prof || prof.diamond < BigInt(cost)) throw new RaidError('INSUFFICIENT_DIAMOND');
-    await tx
-      .update(profiles)
-      .set({ diamond: sql`${profiles.diamond} - ${BigInt(cost)}` })
-      .where(eq(profiles.id, userId));
+    const paid = await walletTrySpend(tx, userId, input.serverId, cost);
+    if (!paid) throw new RaidError('INSUFFICIENT_DIAMOND');
 
     const totalCP = await userTotalCP(tx, userId);
     const isCrit = rngU32() % 10000 < RAID_CRIT_RATE_BP;

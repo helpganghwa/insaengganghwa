@@ -1,9 +1,10 @@
 import { and, eq, inArray, isNotNull } from 'drizzle-orm';
 
 import { getSessionUserId } from '@/lib/auth/session';
+import { getActiveServerId } from '@/lib/game/servers';
+import { getWalletDiamond } from '@/lib/game/wallet';
 import { db } from '@/lib/db/client';
 import { withTimeout } from '@/lib/db/with-timeout';
-import { profiles } from '@/lib/db/schema/profiles';
 import { catalogItems, userEquipment, type Slot } from '@/lib/db/schema/equipment';
 import { profileGenerationJobs } from '@/lib/db/schema/avatar';
 import { PROFILE_GENERATION_DIAMOND } from '@/lib/game/balance';
@@ -13,15 +14,12 @@ import { CreateProfileForm } from './CreateProfileForm';
 export default async function CreateProfilePage() {
   const userId = await getSessionUserId();
   if (!userId) return null;
+  const serverId = await getActiveServerId();
 
   // 콜드 DB 커넥션 hang 시 페이지 무한 대기 방지 — 실패 시 빈 결과로 degrade(2026-05-29).
   const _r = await withTimeout(
     Promise.all([
-    db
-      .select({ diamond: profiles.diamond })
-      .from(profiles)
-      .where(eq(profiles.id, userId))
-      .limit(1),
+    getWalletDiamond(db, userId, serverId).then((d) => [{ diamond: d }]),
     db
       .select({
         slot: catalogItems.slot,

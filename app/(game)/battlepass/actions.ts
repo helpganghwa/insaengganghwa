@@ -3,6 +3,7 @@
 import { revalidatePath } from 'next/cache';
 
 import { getSessionUserId } from '@/lib/auth/session';
+import { getActiveServerId } from '@/lib/game/servers';
 import { rateLimited } from '@/lib/ratelimit';
 import {
   claimFree,
@@ -38,7 +39,7 @@ export async function claimFreeAction(type: BattlePassType) {
   if (!u) return err('UNAUTHENTICATED');
   if (await rateLimited(u, 'battlepass')) return err('RATE_LIMITED');
   try {
-    const r = await claimFree(u, type);
+    const r = await claimFree(u, await getActiveServerId(), type);
     revalidate();
     return { status: 'success' as const, granted: r.granted, rewardKind: r.rewardKind };
   } catch (e) {
@@ -53,7 +54,7 @@ export async function claimPremiumAction(type: BattlePassType) {
   if (!u) return err('UNAUTHENTICATED');
   if (await rateLimited(u, 'battlepass')) return err('RATE_LIMITED');
   try {
-    const r = await claimPremium(u, type);
+    const r = await claimPremium(u, await getActiveServerId(), type);
     revalidate();
     return { status: 'success' as const, granted: r.granted, rewardKind: r.rewardKind };
   } catch (e) {
@@ -72,7 +73,7 @@ export async function claimAllAction(type: BattlePassType) {
   let granted = 0;
   for (const claim of [claimFree, claimPremium]) {
     try {
-      const r = await claim(u, type);
+      const r = await claim(u, await getActiveServerId(), type);
       granted += r.granted;
     } catch (e) {
       if (e instanceof BattlePassErr && e.code === 'NOTHING_TO_CLAIM') continue;
@@ -91,7 +92,7 @@ export async function claimSegmentAction(type: BattlePassType, segmentIndex: num
   if (!u) return err('UNAUTHENTICATED');
   if (await rateLimited(u, 'battlepass')) return err('RATE_LIMITED');
   try {
-    const r = await claimSegment(u, type, segmentIndex);
+    const r = await claimSegment(u, await getActiveServerId(), type, segmentIndex);
     revalidate();
     return { status: 'success' as const, granted: r.granted, rewardKind: r.rewardKind };
   } catch (e) {
@@ -114,8 +115,8 @@ export async function claimTierAction(
   try {
     const r =
       line === 'free'
-        ? await claimFreeTier(u, type, level)
-        : await claimPremiumTier(u, type, segmentIndex ?? 0, level);
+        ? await claimFreeTier(u, await getActiveServerId(), type, level)
+        : await claimPremiumTier(u, await getActiveServerId(), type, segmentIndex ?? 0, level);
     revalidate();
     return { status: 'success' as const, granted: r.granted, rewardKind: r.rewardKind };
   } catch (e) {

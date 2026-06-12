@@ -3,7 +3,7 @@ import 'server-only';
 import { and, eq, sql } from 'drizzle-orm';
 
 import { db } from '@/lib/db/client';
-import { profiles } from '@/lib/db/schema/profiles';
+import { walletTrySpend } from '@/lib/game/wallet';
 import { raids, raidParticipants, raidDailyCounts } from '@/lib/db/schema/raid';
 import {
   RAID_DAILY_CAP,
@@ -85,6 +85,7 @@ export type RaidShareMode = 'off' | 'free' | 'approval';
 
 export function openRaid(input: {
   userId: string;
+  serverId: number;
   bossCode: RaidBoss;
   friendShare?: RaidShareMode;
   guildShare?: RaidShareMode;
@@ -97,18 +98,9 @@ export function openRaid(input: {
     }
     await bumpDailyOrThrow(tx, userId);
 
-    const [prof] = await tx
-      .select({ diamond: profiles.diamond })
-      .from(profiles)
-      .where(eq(profiles.id, userId))
-      .for('update');
-    if (!prof || prof.diamond < BigInt(RAID_OPEN_COST_DIAMOND)) {
-      throw new RaidError('INSUFFICIENT_DIAMOND');
-    }
-    await tx
-      .update(profiles)
-      .set({ diamond: sql`${profiles.diamond} - ${BigInt(RAID_OPEN_COST_DIAMOND)}` })
-      .where(eq(profiles.id, userId));
+    // 개설비 차감 — 서버별 지갑 조건부 UPDATE(부족 시 미차감).
+    const paid = await walletTrySpend(tx, userId, input.serverId, RAID_OPEN_COST_DIAMOND);
+    if (!paid) throw new RaidError('INSUFFICIENT_DIAMOND');
 
     const phase1Hp =
       RAID_PHASE1_HP_MIN + (rngU32() % (RAID_PHASE1_HP_MAX - RAID_PHASE1_HP_MIN + 1));

@@ -4,6 +4,7 @@ import { revalidatePath } from 'next/cache';
 import { after } from 'next/server';
 
 import { getSessionUserId } from '@/lib/auth/session';
+import { getActiveServerId } from '@/lib/game/servers';
 import {
   GuildError,
   createGuild,
@@ -56,7 +57,7 @@ export async function createGuildAction(name: string, emblem: EmblemSelection) {
   if (!u) return unauth;
   if (!isValidEmblemSelection(emblem)) return { status: 'error', code: 'EMBLEM_INVALID' } as const;
   try {
-    const { guildId } = await createGuild({ userId: u, name, emblemColor: mainColor(emblem.mainToneId) });
+    const { guildId } = await createGuild({ userId: u, serverId: await getActiveServerId(), name, emblemColor: mainColor(emblem.mainToneId) });
     // 문양 생성(Pixellab ~수초)은 응답 이후로 미뤄 결성을 즉시 반환(낙관적 UX).
     // best-effort — 실패해도 길드는 유지(폴백 문양·재생성으로 커버). 완료 시 /guild 무효화.
     after(async () => {
@@ -272,7 +273,7 @@ export async function donateAction() {
   const u = await getSessionUserId();
   if (!u) return unauth;
   try {
-    const r = await donateToGuild({ userId: u });
+    const r = await donateToGuild({ userId: u, serverId: await getActiveServerId() });
     revalidatePath('/guild');
     return { status: 'success', ...r } as const;
   } catch (e) {
@@ -296,7 +297,7 @@ export async function collectTaxAction(zoneId: number) {
   const u = await getSessionUserId();
   if (!u) return unauth;
   try {
-    const r = await collectZoneTax({ userId: u, zoneId });
+    const r = await collectZoneTax({ userId: u, serverId: await getActiveServerId(), zoneId });
     revalidatePath('/guild');
     return { status: 'success', executorGain: r.executorGain.toString(), guildGain: r.guildGain.toString() } as const;
   } catch (e) {
@@ -308,7 +309,7 @@ export async function distributeTaxAction(mode: GuildTaxDistribution, targetUser
   const u = await getSessionUserId();
   if (!u) return unauth;
   try {
-    const r = await distributeGuildTax({ leaderUserId: u, mode, targetUserId });
+    const r = await distributeGuildTax({ leaderUserId: u, serverId: await getActiveServerId(), mode, targetUserId });
     revalidatePath('/guild');
     return {
       status: 'success',
@@ -326,7 +327,7 @@ export async function distributeTaxManualAction(amounts: { userId: string; amoun
   if (!u) return unauth;
   if (!Array.isArray(amounts)) return { status: 'error', code: 'UNKNOWN' } as const;
   try {
-    const r = await distributeGuildTaxManual({ leaderUserId: u, amounts });
+    const r = await distributeGuildTaxManual({ leaderUserId: u, serverId: await getActiveServerId(), amounts });
     revalidatePath('/guild');
     revalidatePath('/guild/distribute');
     return { status: 'success', total: r.total.toString() } as const;

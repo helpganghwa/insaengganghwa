@@ -3,7 +3,7 @@ import 'server-only';
 import { and, eq, sql } from 'drizzle-orm';
 
 import { db } from '@/lib/db/client';
-import { profiles } from '@/lib/db/schema/profiles';
+import { walletAdd } from '@/lib/game/wallet';
 import { userSupplyBoxes } from '@/lib/db/schema/supply';
 import { userCheckinState, checkinClaimLogs } from '@/lib/db/schema/checkin';
 import {
@@ -67,7 +67,7 @@ function applyRewardToAcc(reward: CheckinReward, acc: Acc) {
   }
 }
 
-export function claimCheckin(input: { userId: string }): Promise<CheckinClaimResult> {
+export function claimCheckin(input: { userId: string; serverId: number }): Promise<CheckinClaimResult> {
   const { userId } = input;
   return db.transaction(async (tx) => {
     // 1) state UPSERT — 신규는 dp=0/last=null 생성, 기존은 그대로(NO-OP). `for update`는
@@ -106,10 +106,7 @@ export function claimCheckin(input: { userId: string }): Promise<CheckinClaimRes
     applyRewardToAcc(reward, acc);
 
     if (acc.diamond > 0) {
-      await tx
-        .update(profiles)
-        .set({ diamond: sql`${profiles.diamond} + ${BigInt(acc.diamond)}` })
-        .where(eq(profiles.id, userId));
+      await walletAdd(tx, userId, input.serverId, acc.diamond);
     }
     for (const slot of SUPPLY_SLOTS) {
       const n = acc.boxes[slot];

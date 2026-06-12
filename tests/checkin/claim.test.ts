@@ -40,7 +40,7 @@ describe.skipIf(skip)('claimCheckin — DB 통합', () => {
   });
 
   it('첫 수령: D1 → 무기 보급권 10장 + state 전진(dp=1, last=KST today)', async () => {
-    const r = await claimCheckin({ userId: TEST_USER_ID });
+    const r = await claimCheckin({ userId: TEST_USER_ID, serverId: 1 });
     expect(r.cycleDay).toBe(1);
     expect(r.reward).toEqual({ kind: 'supply', slot: 'weapon', count: 10 });
     expect(r.totalClaimedCount).toBe(1);
@@ -62,8 +62,8 @@ describe.skipIf(skip)('claimCheckin — DB 통합', () => {
   });
 
   it('같은 KST day 재수령 → CHECKIN_ALREADY_CLAIMED', async () => {
-    await claimCheckin({ userId: TEST_USER_ID });
-    await expect(claimCheckin({ userId: TEST_USER_ID })).rejects.toMatchObject({
+    await claimCheckin({ userId: TEST_USER_ID, serverId: 1 });
+    await expect(claimCheckin({ userId: TEST_USER_ID, serverId: 1 })).rejects.toMatchObject({
       code: 'CHECKIN_ALREADY_CLAIMED',
     });
   });
@@ -79,7 +79,7 @@ describe.skipIf(skip)('claimCheckin — DB 통합', () => {
       where user_id = ${TEST_USER_ID}::uuid
     `);
 
-    const r = await claimCheckin({ userId: TEST_USER_ID });
+    const r = await claimCheckin({ userId: TEST_USER_ID, serverId: 1 });
     expect(r.cycleDay).toBe(7);
     expect(r.reward).toEqual({ kind: 'supply_set', perSlot: 10 });
   });
@@ -94,7 +94,7 @@ describe.skipIf(skip)('claimCheckin — DB 통합', () => {
       where user_id = ${TEST_USER_ID}::uuid
     `);
 
-    const r = await claimCheckin({ userId: TEST_USER_ID });
+    const r = await claimCheckin({ userId: TEST_USER_ID, serverId: 1 });
     expect(r.cycleDay).toBe(28);
     expect(r.cycleCompleted).toBe(true);
 

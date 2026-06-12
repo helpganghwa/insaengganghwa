@@ -3,7 +3,7 @@ import 'server-only';
 import { and, eq, isNull, sql } from 'drizzle-orm';
 
 import { db } from '@/lib/db/client';
-import { profiles } from '@/lib/db/schema/profiles';
+import { walletAdd } from '@/lib/game/wallet';
 import { userSupplyBoxes } from '@/lib/db/schema/supply';
 import { raids, raidRewards } from '@/lib/db/schema/raid';
 import { SUPPLY_SLOTS, type SupplySlot } from '@/lib/game/balance';
@@ -22,6 +22,7 @@ export type ClaimRaidResult = {
  */
 export function claimRaidReward(input: {
   userId: string;
+  serverId: number;
   raidId: bigint;
 }): Promise<ClaimRaidResult> {
   const { userId, raidId } = input;
@@ -55,10 +56,7 @@ export function claimRaidReward(input: {
 
     const totalDiamond = Number(reward.phaseDiamond);
     if (totalDiamond > 0) {
-      await tx
-        .update(profiles)
-        .set({ diamond: sql`${profiles.diamond} + ${BigInt(totalDiamond)}` })
-        .where(eq(profiles.id, userId));
+      await walletAdd(tx, userId, input.serverId, totalDiamond);
     }
 
     const boxes: Record<SupplySlot, number> = { weapon: 0, armor: 0, accessory: 0 };

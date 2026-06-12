@@ -4,6 +4,7 @@ import { revalidatePath } from 'next/cache';
 import { and, desc, eq, gt, isNotNull, isNull, lt, sql } from 'drizzle-orm';
 
 import { getSessionUserId } from '@/lib/auth/session';
+import { getActiveServerId } from '@/lib/game/servers';
 import { db } from '@/lib/db/client';
 import { mailbox } from '@/lib/db/schema/mailbox';
 import { rateLimited } from '@/lib/ratelimit';
@@ -44,7 +45,7 @@ export async function claimMailAction(
   if (!userId) return err('UNAUTHENTICATED');
   if (await rateLimited(userId, 'mail')) return err('RATE_LIMITED');
   try {
-    const result = await claimMail({ userId, mailId: BigInt(mailId) });
+    const result = await claimMail({ userId, serverId: await getActiveServerId(), mailId: BigInt(mailId) });
     revalidate();
     return { status: 'success', result };
   } catch (e) {
@@ -149,7 +150,7 @@ export async function claimAllMailAction(): Promise<
   if (!userId) return err('UNAUTHENTICATED');
   if (await rateLimited(userId, 'mail')) return err('RATE_LIMITED');
   try {
-    const result = await claimAllMail({ userId });
+    const result = await claimAllMail({ userId, serverId: await getActiveServerId() });
     revalidate();
     return { status: 'success', result };
   } catch (e) {

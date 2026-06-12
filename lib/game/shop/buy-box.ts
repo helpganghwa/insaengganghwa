@@ -3,7 +3,7 @@ import 'server-only';
 import { and, eq, sql } from 'drizzle-orm';
 
 import { db } from '@/lib/db/client';
-import { profiles } from '@/lib/db/schema/profiles';
+import { walletTrySpend } from '@/lib/game/wallet';
 import { userSupplyBoxes } from '@/lib/db/schema/supply';
 import { shopPurchases } from '@/lib/db/schema/shop';
 import { SUPPLY_SLOTS } from '@/lib/game/balance';
@@ -32,6 +32,7 @@ function splitBoxes(n: number): Record<string, number> {
 
 export async function buyBox(
   userId: string,
+  serverId: number,
   productId: string,
 ): Promise<{ cost: number; boxes: number }> {
   const g = boxGrant(productId);
@@ -49,13 +50,9 @@ export async function buyBox(
       .for('update');
     if (row?.periodKey === cur) throw new BuyBoxError('ALREADY_PURCHASED');
 
-    // 2) 💎 차감(잔액 충분할 때만 — 조건부 update).
-    const deducted = await tx
-      .update(profiles)
-      .set({ diamond: sql`${profiles.diamond} - ${BigInt(g.cost)}` })
-      .where(and(eq(profiles.id, userId), sql`${profiles.diamond} >= ${BigInt(g.cost)}`))
-      .returning({ id: profiles.id });
-    if (deducted.length === 0) throw new BuyBoxError('INSUFFICIENT_DIAMOND');
+    // 2) 💎 차감(잔액 충분할 때만 — 조건부 update, 서버별 지갑).
+    const paid = await walletTrySpend(tx, userId, serverId, g.cost);
+    if (!paid) throw new BuyBoxError('INSUFFICIENT_DIAMOND');
 
     // 3) 박스 지급(슬롯 분배).
     const dist = splitBoxes(g.boxes);

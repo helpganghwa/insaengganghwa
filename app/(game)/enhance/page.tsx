@@ -1,6 +1,7 @@
 import { sql } from 'drizzle-orm';
 
 import { getSessionUserId } from '@/lib/auth/session';
+import { getActiveServerId } from '@/lib/game/servers';
 import { db } from '@/lib/db/client';
 import { withTimeout } from '@/lib/db/with-timeout';
 import { type Slot } from '@/lib/db/schema/equipment';
@@ -18,6 +19,7 @@ const SLOT_LABEL: Record<Slot, string> = { weapon: '무기', armor: '방어구',
 
 export default async function EnhancePage() {
   const userId = await getSessionUserId();
+  const serverId = await getActiveServerId();
   if (!userId) return null; // (game) layout이 가드
 
   // 진행중 강화 큐·프로필·강화후보를 **단일 SQL 1왕복**으로(json 동봉, catalog_items 조인 인라인).
@@ -57,7 +59,7 @@ export default async function EnhancePage() {
     Promise.all([
       db.execute(sql`
         select
-          p.diamond::text as diamond, p.nickname, p.tutorial_step,
+          c.diamond::text as diamond, p.nickname, p.tutorial_step,
           coalesce((select json_agg(json_build_object(
               'jobId', ej.id::text, 'equipmentInstanceId', ej.user_equipment_id::text,
               'slot', ej.slot, 'slotLane', ej.slot_lane, 'fromLevel', ej.from_level,
@@ -78,7 +80,9 @@ export default async function EnhancePage() {
             join catalog_items ci on ci.id = ue.catalog_item_id
             left join enhancement_jobs ej on ej.user_equipment_id = ue.id and ej.status = 'running'
             where ue.user_id = ${userId}::uuid and ej.id is null), '[]'::json) as candidates
-        from profiles p where p.id = ${userId}::uuid limit 1
+        from profiles p
+          left join characters c on c.user_id = p.id and c.server_id = ${serverId}
+        where p.id = ${userId}::uuid limit 1
       `) as unknown as Promise<EnhRow[]>,
       liberatedItemRanks(userId),
     ]),

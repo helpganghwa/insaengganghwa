@@ -7,6 +7,7 @@ import { getSessionUserId } from '@/lib/auth/session';
 import { withTimeout, DbTimeoutError } from '@/lib/db/with-timeout';
 import { ensureDailyMail } from '@/lib/game/mailbox';
 import { loadLayoutData } from '@/lib/game/layout-data';
+import { getActiveServerId } from '@/lib/game/servers';
 import {
   processPendingReferral,
   PENDING_REFERRAL_COOKIE,
@@ -60,7 +61,7 @@ export default async function GameLayout({ children }: { children: React.ReactNo
   }
 
   // 헤더/네비 데이터 — 여기서 await하지 않음(Suspense 스트리밍). 두 자식이 같은 promise 공유.
-  const layoutData = loadLayoutData(userId);
+  const layoutData = getActiveServerId().then((sid) => loadLayoutData(userId, sid));
 
   return (
     <DiamondProvider>

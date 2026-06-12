@@ -1,10 +1,12 @@
 import Link from 'next/link';
-import { eq } from 'drizzle-orm';
+import { and, eq } from 'drizzle-orm';
 
 import { getSessionUserId } from '@/lib/auth/session';
+import { getActiveServerId } from '@/lib/game/servers';
 import { db } from '@/lib/db/client';
 import { withTimeout } from '@/lib/db/with-timeout';
 import { profiles } from '@/lib/db/schema/profiles';
+import { characters } from '@/lib/db/schema/server';
 import { signOut } from '@/lib/auth/actions';
 
 import { LocalToggle } from './SettingsControls';
@@ -18,6 +20,7 @@ const APP_VERSION = '0.1.0'; // 출시 전 v0
 export default async function SettingsPage() {
   const userId = await getSessionUserId();
   if (!userId) return null;
+  const serverId = await getActiveServerId();
 
   // 콜드 DB 커넥션 hang 시 페이지 무한 대기 방지 — 실패 시 기본값으로 degrade(2026-05-29).
   const pRows = await withTimeout(
@@ -25,7 +28,7 @@ export default async function SettingsPage() {
       .select({
         nickname: profiles.nickname,
         verifiedAt: profiles.identityVerifiedAt,
-        diamond: profiles.diamond,
+        diamond: characters.diamond,
         nicknameChangedCount: profiles.nicknameChangedCount,
         pushEnhance: profiles.pushEnhance,
         pushRaid: profiles.pushRaid,
@@ -34,6 +37,10 @@ export default async function SettingsPage() {
         pushEnhanceMode: profiles.pushEnhanceMode,
       })
       .from(profiles)
+      .leftJoin(
+        characters,
+        and(eq(characters.userId, profiles.id), eq(characters.serverId, serverId)),
+      )
       .where(eq(profiles.id, userId))
       .limit(1),
     3500,

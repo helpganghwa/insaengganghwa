@@ -5,6 +5,7 @@ import { and, eq, sql } from 'drizzle-orm';
 
 import { getSessionUserId } from '@/lib/auth/session';
 import { rateLimited } from '@/lib/ratelimit';
+import { getActiveServerId } from '@/lib/game/servers';
 import { db } from '@/lib/db/client';
 import { enhancementJobs } from '@/lib/db/schema/enhance';
 import { catalogItems, userEquipment, type Slot } from '@/lib/db/schema/equipment';
@@ -157,7 +158,8 @@ export async function reduceTimeWithGems(jobId: string, diamonds: number) {
   if (!userId) return err('UNAUTHENTICATED');
   if (await rateLimited(userId, 'enhance')) return err('RATE_LIMITED');
   try {
-    const result = await reduceEnhanceTime({ userId, jobId: BigInt(jobId), diamonds });
+    const serverId = await getActiveServerId();
+    const result = await reduceEnhanceTime({ userId, serverId, jobId: BigInt(jobId), diamonds });
     revalidateAll();
     return {
       status: 'success' as const,

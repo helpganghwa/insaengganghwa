@@ -3,7 +3,7 @@ import 'server-only';
 import { and, eq, sql } from 'drizzle-orm';
 
 import { db } from '@/lib/db/client';
-import { profiles } from '@/lib/db/schema/profiles';
+import { walletAdd } from '@/lib/game/wallet';
 import { userSupplyBoxes } from '@/lib/db/schema/supply';
 import { shopPurchases } from '@/lib/db/schema/shop';
 import { SUPPLY_SLOTS } from '@/lib/game/balance';
@@ -33,13 +33,11 @@ function splitBoxes(n: number): Record<string, number> {
 async function grant(
   tx: Parameters<Parameters<typeof db.transaction>[0]>[0],
   userId: string,
+  serverId: number,
   g: { diamond: number; boxes: number },
 ): Promise<void> {
   if (g.diamond > 0) {
-    await tx
-      .update(profiles)
-      .set({ diamond: sql`${profiles.diamond} + ${BigInt(g.diamond)}` })
-      .where(eq(profiles.id, userId));
+    await walletAdd(tx, userId, serverId, g.diamond);
   }
   if (g.boxes > 0) {
     const dist = splitBoxes(g.boxes);
@@ -60,6 +58,7 @@ async function grant(
 
 export async function devPurchase(
   userId: string,
+  serverId: number,
   productId: string,
 ): Promise<{ diamond: number; boxes: number }> {
   const g = shopGrant(productId);
@@ -69,7 +68,7 @@ export async function devPurchase(
   await db.transaction(async (tx) => {
     if (!period) {
       // 무제한(다이아 충전) — 기록 없이 지급.
-      await grant(tx, userId, g);
+      await grant(tx, userId, serverId, g);
       return;
     }
     // 주기 1회 제한 — row 잠금 후 현재 주기와 비교(이미 구매면 차단).
@@ -81,7 +80,7 @@ export async function devPurchase(
       .where(and(eq(shopPurchases.userId, userId), eq(shopPurchases.productId, productId)))
       .for('update');
     if (row?.periodKey === cur) throw new ShopBuyError('ALREADY_PURCHASED');
-    await grant(tx, userId, g);
+    await grant(tx, userId, serverId, g);
     await tx
       .update(shopPurchases)
       .set({ periodKey: cur, updatedAt: new Date() })

@@ -3,7 +3,7 @@ import 'server-only';
 import { and, eq, sql } from 'drizzle-orm';
 
 import { db } from '@/lib/db/client';
-import { profiles } from '@/lib/db/schema/profiles';
+import { walletAdd } from '@/lib/game/wallet';
 import { userSupplyBoxes } from '@/lib/db/schema/supply';
 import { shopFreeClaims } from '@/lib/db/schema/shop';
 import { SUPPLY_SLOTS, type SupplySlot } from '@/lib/game/balance';
@@ -68,7 +68,7 @@ function splitBoxes(n: number): Record<SupplySlot, number> {
 }
 
 /** 무료 수령 — 주기 멱등(row 잠금 후 주기 비교). 통과 시 보상 지급 + 주기 기록. */
-export function claimFree(userId: string, slot: FreeSlot): Promise<{ diamond: number; boxes: number }> {
+export function claimFree(userId: string, serverId: number, slot: FreeSlot): Promise<{ diamond: number; boxes: number }> {
   const cur = periodKey(slot);
   const reward = FREE_REWARDS[slot];
   return db.transaction(async (tx) => {
@@ -85,10 +85,7 @@ export function claimFree(userId: string, slot: FreeSlot): Promise<{ diamond: nu
     if (row?.periodKey === cur) throw new ShopFreeError('ALREADY_CLAIMED');
 
     if (reward.diamond > 0) {
-      await tx
-        .update(profiles)
-        .set({ diamond: sql`${profiles.diamond} + ${BigInt(reward.diamond)}` })
-        .where(eq(profiles.id, userId));
+      await walletAdd(tx, userId, serverId, reward.diamond);
     }
     if (reward.boxes > 0) {
       const dist = splitBoxes(reward.boxes);

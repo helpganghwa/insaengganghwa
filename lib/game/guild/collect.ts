@@ -3,7 +3,7 @@ import 'server-only';
 import { eq, sql } from 'drizzle-orm';
 
 import { db } from '@/lib/db/client';
-import { profiles } from '@/lib/db/schema/profiles';
+import { walletAdd } from '@/lib/game/wallet';
 import { guilds, zones } from '@/lib/db/schema/guild';
 
 import { GUILD_EXECUTOR_TAX_CUT, TAX_COLLECT_COOLDOWN_MIN } from './balance';
@@ -15,6 +15,7 @@ import { GuildError } from './errors';
  */
 export function collectZoneTax(input: {
   userId: string;
+  serverId: number;
   zoneId: number;
 }): Promise<{ executorGain: bigint; guildGain: bigint }> {
   return db.transaction(async (tx) => {
@@ -43,10 +44,7 @@ export function collectZoneTax(input: {
     const executorGain = (tax * BigInt(Math.round(GUILD_EXECUTOR_TAX_CUT * 100))) / 100n;
     const guildGain = tax - executorGain;
 
-    await tx
-      .update(profiles)
-      .set({ diamond: sql`${profiles.diamond} + ${executorGain}` })
-      .where(eq(profiles.id, input.userId));
+    await walletAdd(tx, input.userId, input.serverId, executorGain);
     await tx
       .update(guilds)
       .set({ taxPoolDiamond: sql`${guilds.taxPoolDiamond} + ${guildGain}` })

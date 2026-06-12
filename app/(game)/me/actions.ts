@@ -5,6 +5,7 @@ import { sql } from 'drizzle-orm';
 import { unstable_cache } from 'next/cache';
 
 import { getSessionUserId } from '@/lib/auth/session';
+import { getActiveServerId } from '@/lib/game/servers';
 import { db } from '@/lib/db/client';
 import { profiles } from '@/lib/db/schema/profiles';
 import { NICKNAME_CHANGE_COST_DIAMOND } from '@/lib/game/balance';
@@ -36,6 +37,7 @@ export async function changeNicknameAction(
   if (!userId) return { status: 'error', code: 'UNAUTH', message: '로그인이 필요합니다.' };
   if (await rateLimited(userId, 'nickname'))
     return { status: 'error', code: 'RATE_LIMIT', message: '요청이 너무 빠릅니다.' };
+  const serverId = await getActiveServerId();
   const next = String(raw ?? '').trim();
   const v = validateNickname(next);
   if (!v.ok) {
@@ -47,23 +49,32 @@ export async function changeNicknameAction(
     // RETURNING으로 결과 산출. 다이아 부족 또는 닉네임 중복 시 row 0 → 에러.
     const rows = (await db.execute(sql`
       with curr as (
-        select id, diamond, nickname_changed_count as cnt
-        from profiles where id = ${userId}::uuid for update
+        select p.id, c.diamond, p.nickname_changed_count as cnt
+        from profiles p
+        join characters c on c.user_id = p.id and c.server_id = ${serverId}
+        where p.id = ${userId}::uuid
+        for update of p, c
       ),
       cost as (
         select case when cnt = 0 then 0 else ${NICKNAME_CHANGE_COST_DIAMOND} end as c
         from curr
       ),
+      pay as (
+        update characters ch
+        set diamond = ch.diamond - (select c from cost)
+        from curr, cost
+        where ch.user_id = curr.id and ch.server_id = ${serverId}
+          and curr.diamond >= cost.c
+        returning ch.diamond
+      ),
       upd as (
         update profiles p
         set nickname = ${next},
             nickname_changed_count = p.nickname_changed_count + 1,
-            diamond = p.diamond - (select c from cost),
             updated_at = now()
-        from curr, cost
+        from curr, pay, cost
         where p.id = curr.id
-          and curr.diamond >= cost.c
-        returning p.nickname_changed_count as cnt, p.diamond, cost.c as charged
+        returning p.nickname_changed_count as cnt, pay.diamond, cost.c as charged
       )
       select cnt, diamond::text as diamond, charged from upd
     `)) as unknown as { cnt: number; diamond: string; charged: number }[];

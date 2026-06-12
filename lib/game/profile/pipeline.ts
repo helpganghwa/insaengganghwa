@@ -18,6 +18,8 @@ import { and, eq, sql } from 'drizzle-orm';
 import { createClient, type SupabaseClient } from '@supabase/supabase-js';
 
 import { db } from '@/lib/db/client';
+import { walletAdd } from '@/lib/game/wallet';
+import { DEFAULT_SERVER_ID } from '@/lib/game/servers';
 import { profileGenerationJobs, userProfiles } from '@/lib/db/schema/avatar';
 import { mailbox } from '@/lib/db/schema/mailbox';
 import { profiles } from '@/lib/db/schema/profiles';
@@ -396,10 +398,8 @@ async function rejectJob(
   const reasonsKr = verdict.reasons.length > 0 ? verdict.reasons.join(', ') : 'unspecified';
   const notes = verdict.notes || '검토 기준에 부합하지 않습니다.';
   await db.transaction(async (tx) => {
-    await tx
-      .update(profiles)
-      .set({ diamond: sql`${profiles.diamond} + ${escrow}` })
-      .where(eq(profiles.id, userId));
+    // 환불 — escrow를 지갑으로(크론 컨텍스트: 기본 서버. P3+에서 job에 server_id 기록).
+    await walletAdd(tx, userId, DEFAULT_SERVER_ID, escrow);
 
     await tx
       .update(profileGenerationJobs)
@@ -432,10 +432,7 @@ async function markFailedAndRefund(jobId: bigint, userId: string, reason: string
   if (!job || job.status === 'failed' || job.status === 'rejected_ai' || job.status === 'accepted') return;
 
   await db.transaction(async (tx) => {
-    await tx
-      .update(profiles)
-      .set({ diamond: sql`${profiles.diamond} + ${job.escrow}` })
-      .where(eq(profiles.id, userId));
+    await walletAdd(tx, userId, DEFAULT_SERVER_ID, job.escrow);
 
     await tx
       .update(profileGenerationJobs)

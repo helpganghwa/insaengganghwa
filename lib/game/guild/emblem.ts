@@ -6,8 +6,8 @@ import { and, eq, desc, sql } from 'drizzle-orm';
 import { createClient, type SupabaseClient } from '@supabase/supabase-js';
 
 import { db } from '@/lib/db/client';
+import { getWalletDiamond, walletTrySpend } from '@/lib/game/wallet';
 import { guilds, guildMembers, guildEmblems } from '@/lib/db/schema/guild';
-import { profiles } from '@/lib/db/schema/profiles';
 
 import { GUILD_EMBLEM_REROLL_COST_DIAMOND, MAX_GUILD_EMBLEMS } from './balance';
 import { GuildError } from './errors';
@@ -283,6 +283,7 @@ async function requireLeaderGuild(userId: string): Promise<bigint> {
  */
 export async function generateEmblem(input: {
   userId: string;
+  serverId: number;
   selection: EmblemSelection;
 }): Promise<{ emblemId: bigint; emblemUrl: string }> {
   const cost = BigInt(GUILD_EMBLEM_REROLL_COST_DIAMOND);
@@ -293,12 +294,8 @@ export async function generateEmblem(input: {
     .from(guildEmblems)
     .where(eq(guildEmblems.guildId, guildId));
   if (n >= MAX_GUILD_EMBLEMS) throw new GuildError('EMBLEM_MAX');
-  const [pre] = await db
-    .select({ diamond: profiles.diamond })
-    .from(profiles)
-    .where(eq(profiles.id, input.userId))
-    .limit(1);
-  if (!pre || pre.diamond < cost) throw new GuildError('INSUFFICIENT_DIAMOND');
+  const pre = await getWalletDiamond(db, input.userId, input.serverId);
+  if (pre < cost) throw new GuildError('INSUFFICIENT_DIAMOND');
 
   // 2) 생성·업로드(느림·과금 전). 실패하면 여기서 throw — DB 변경 전이라 차감/빈 행 없음.
   const { emblemUrl, color } = await generateEmblemAsset(guildId, input.selection);
@@ -310,13 +307,8 @@ export async function generateEmblem(input: {
       .from(guildEmblems)
       .where(eq(guildEmblems.guildId, guildId));
     if (n2 >= MAX_GUILD_EMBLEMS) throw new GuildError('EMBLEM_MAX');
-    const [prof] = await tx
-      .select({ diamond: profiles.diamond })
-      .from(profiles)
-      .where(eq(profiles.id, input.userId))
-      .for('update');
-    if (!prof || prof.diamond < cost) throw new GuildError('INSUFFICIENT_DIAMOND');
-    await tx.update(profiles).set({ diamond: sql`${profiles.diamond} - ${cost}` }).where(eq(profiles.id, input.userId));
+    const paid = await walletTrySpend(tx, input.userId, input.serverId, cost);
+    if (!paid) throw new GuildError('INSUFFICIENT_DIAMOND');
     const [row] = await tx
       .insert(guildEmblems)
       .values({ guildId, emblemUrl, emblemColor: color })

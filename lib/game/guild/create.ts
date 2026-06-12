@@ -3,7 +3,7 @@ import 'server-only';
 import { eq, sql } from 'drizzle-orm';
 
 import { db } from '@/lib/db/client';
-import { profiles } from '@/lib/db/schema/profiles';
+import { walletTrySpend } from '@/lib/game/wallet';
 import { guilds, guildMembers } from '@/lib/db/schema/guild';
 
 import { GUILD_CREATE_COST_DIAMOND, GUILD_NAME_MAX_LEN, GUILD_NAME_MIN_LEN } from './balance';
@@ -20,6 +20,7 @@ export function normalizeGuildName(raw: string): string {
  */
 export function createGuild(input: {
   userId: string;
+  serverId: number;
   name: string;
   /** 선택 톤의 UI 악센트 색(emblem_color). 문양 이미지 생성은 액션 레이어에서 best-effort. */
   emblemColor?: string | null;
@@ -45,19 +46,9 @@ export function createGuild(input: {
       .limit(1);
     if (dup) throw new GuildError('NAME_TAKEN');
 
-    // 💎 차감(조건부).
-    const [prof] = await tx
-      .select({ diamond: profiles.diamond })
-      .from(profiles)
-      .where(eq(profiles.id, input.userId))
-      .for('update');
-    if (!prof || prof.diamond < BigInt(GUILD_CREATE_COST_DIAMOND)) {
-      throw new GuildError('INSUFFICIENT_DIAMOND');
-    }
-    await tx
-      .update(profiles)
-      .set({ diamond: sql`${profiles.diamond} - ${BigInt(GUILD_CREATE_COST_DIAMOND)}` })
-      .where(eq(profiles.id, input.userId));
+    // 💎 차감(조건부, 서버별 지갑).
+    const paid = await walletTrySpend(tx, input.userId, input.serverId, GUILD_CREATE_COST_DIAMOND);
+    if (!paid) throw new GuildError('INSUFFICIENT_DIAMOND');
 
     // 길드 + 리더 멤버.
     const [g] = await tx

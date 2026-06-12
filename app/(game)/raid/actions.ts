@@ -3,6 +3,7 @@
 import { revalidatePath } from 'next/cache';
 
 import { getSessionUserId } from '@/lib/auth/session';
+import { getActiveServerId } from '@/lib/game/servers';
 import { rateLimited } from '@/lib/ratelimit';
 import {
   openRaid,
@@ -56,7 +57,7 @@ export async function openRaidAction(
   if (!u) return err('UNAUTHENTICATED');
   if (await rateLimited(u, 'raid')) return err('RATE_LIMITED');
   try {
-    const r = await openRaid({ userId: u, bossCode, friendShare, guildShare });
+    const r = await openRaid({ userId: u, serverId: await getActiveServerId(), bossCode, friendShare, guildShare });
     rev();
     return { status: 'success' as const, raidId: r.raidId.toString(), shareCode: r.shareCode };
   } catch (e) {
@@ -143,7 +144,7 @@ export async function buyExtraAttackAction(raidId: string) {
   if (!u) return err('UNAUTHENTICATED');
   if (await rateLimited(u, 'raid')) return err('RATE_LIMITED');
   try {
-    const r = await buyExtraAttack({ userId: u, raidId: BigInt(raidId) });
+    const r = await buyExtraAttack({ userId: u, serverId: await getActiveServerId(), raidId: BigInt(raidId) });
     rev(raidId);
     return { status: 'success' as const, ...r };
   } catch (e) {
@@ -159,7 +160,7 @@ export async function gemAttackRaidAction(raidId: string) {
   if (!u) return err('UNAUTHENTICATED');
   if (await rateLimited(u, 'raid')) return err('RATE_LIMITED');
   try {
-    const r = await gemAttackRaid({ userId: u, raidId: BigInt(raidId) });
+    const r = await gemAttackRaid({ userId: u, serverId: await getActiveServerId(), raidId: BigInt(raidId) });
     rev(raidId);
     return { status: 'success' as const, ...r };
   } catch (e) {
@@ -175,7 +176,7 @@ export async function claimRaidRewardAction(raidId: string) {
   if (!u) return err('UNAUTHENTICATED');
   if (await rateLimited(u, 'raid')) return err('RATE_LIMITED');
   try {
-    const r = await claimRaidReward({ userId: u, raidId: BigInt(raidId) });
+    const r = await claimRaidReward({ userId: u, serverId: await getActiveServerId(), raidId: BigInt(raidId) });
     rev(raidId);
     return { status: 'success' as const, result: r };
   } catch (e) {

@@ -2,6 +2,7 @@ import Link from 'next/link';
 import { sql } from 'drizzle-orm';
 
 import { getSessionUserId } from '@/lib/auth/session';
+import { getActiveServerId } from '@/lib/game/servers';
 import { db } from '@/lib/db/client';
 import { withTimeout } from '@/lib/db/with-timeout';
 import { type Slot } from '@/lib/db/schema/equipment';
@@ -32,6 +33,7 @@ const MENU = [
 
 export default async function ProfilePage() {
   const userId = await getSessionUserId();
+  const serverId = await getActiveServerId();
   if (!userId) return null;
 
   // 프로필·장비·아바타·추천수·친구요청수를 **단일 SQL 1왕복**으로(json 동봉). 장비는 보유
@@ -60,7 +62,7 @@ export default async function ProfilePage() {
     Promise.all([
       db.execute(sql`
         select
-          p.nickname, p.public_code, p.diamond::text as diamond,
+          p.nickname, p.public_code, c.diamond::text as diamond,
           p.nickname_changed_count, p.active_profile_id,
           g.emblem_url as guild_emblem_url, g.name as guild_name,
           (select count(*)::int from referral_attributions where referrer_user_id = ${userId}::uuid) as referral_count,
@@ -73,6 +75,7 @@ export default async function ProfilePage() {
               'id', id, 'rotations', rotations, 'activeDirection', active_direction) order by created_at desc)
             from user_profiles where user_id = ${userId}::uuid and hidden_at is null), '[]'::json) as avatars
         from profiles p
+          left join characters c on c.user_id = p.id and c.server_id = ${serverId}
           left join guild_members gm on gm.user_id = p.id
           left join guilds g on g.id = gm.guild_id
         where p.id = ${userId}::uuid limit 1
