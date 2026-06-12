@@ -20,3 +20,4 @@ export * from './battlepass'; // §14 배틀패스 (성장 패스 — 강화/초
 export * from './shop'; // §15 상점 무료 수령 (일일/주간/월간/가입 주기 멱등)
 export * from './friends'; // §16 친구 (검색→요청→수락)
 export * from './guild'; // §17 길드 (협력 성장 + 월드맵 점령전) — GUILD.md. ⚠ 마이그레이션 미적용 시 inert
+export * from './server'; // §18 서버 (논리 분리 — 계정 전역/캐릭터 서버별) — SERVER.md
