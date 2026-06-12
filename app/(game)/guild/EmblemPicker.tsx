@@ -19,17 +19,19 @@ const KW_SELECT_CLS =
 function ColorRow({
   label,
   selectedId,
+  exclude,
   onPick,
 }: {
   label: string;
   selectedId: string;
+  exclude?: string;
   onPick: (id: string) => void;
 }) {
   return (
     <div className="flex items-center gap-2">
       <span className="w-10 shrink-0 text-[11px] font-semibold text-zinc-500">{label}</span>
       <div className="flex flex-wrap gap-1.5">
-        {EMBLEM_TONES.map((t) => (
+        {EMBLEM_TONES.filter((t) => t.id !== exclude).map((t) => (
           <button
             key={t.id}
             type="button"
@@ -107,8 +109,24 @@ export function EmblemPicker({
       {/* 컬러 — 메인 / 서브 */}
       <div className="space-y-1.5">
         <p className="text-[11px] font-semibold text-zinc-500">컬러</p>
-        <ColorRow label="메인" selectedId={value.mainToneId} onPick={(id) => onChange({ ...value, mainToneId: id })} />
-        <ColorRow label="서브" selectedId={value.subToneId} onPick={(id) => onChange({ ...value, subToneId: id })} />
+        <ColorRow
+          label="메인"
+          selectedId={value.mainToneId}
+          onPick={(id) =>
+            onChange({
+              ...value,
+              mainToneId: id,
+              // 메인이 서브와 같아지면 서브를 다른 색으로 이동(2색 강제).
+              subToneId: value.subToneId === id ? (EMBLEM_TONES.find((t) => t.id !== id)?.id ?? id) : value.subToneId,
+            })
+          }
+        />
+        <ColorRow
+          label="서브"
+          selectedId={value.subToneId}
+          exclude={value.mainToneId}
+          onPick={(id) => onChange({ ...value, subToneId: id })}
+        />
       </div>
 
       {/* 키워드 — 메인(필수) / 서브(선택) */}

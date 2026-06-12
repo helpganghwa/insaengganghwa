@@ -107,6 +107,7 @@ export function isValidEmblemSelection(s: EmblemSelection): boolean {
   if (!EMBLEM_SHAPES.some((x) => x.id === s.shapeId)) return false;
   if (!EMBLEM_TONES.some((x) => x.id === s.mainToneId)) return false;
   if (!EMBLEM_TONES.some((x) => x.id === s.subToneId)) return false;
+  if (s.mainToneId === s.subToneId) return false; // 메인·서브 색은 달라야 함(2색 팔레트)
   if (!keywordById(s.mainKeywordId)) return false;
   if (s.subKeywordId != null) {
     if (!keywordById(s.subKeywordId)) return false;
@@ -134,7 +135,9 @@ export function buildEmblemPrompt(s: EmblemSelection): string {
   return (
     `pixel art medieval heraldic coat of arms, an old family guild crest shaped like ${shape}, ` +
     `${mainKw} as the bold central heraldic charge${accent}, ` +
-    `ornate symmetrical vintage emblem, ${main} field with ${sub} accents and trim, ` +
+    `ornate symmetrical vintage emblem, highly detailed intricate filigree and fine engraved linework, rich metallic shading and embossed relief, ` +
+    `strict two-tone palette: only ${main} and ${sub} plus their shades, no other colors, ` +
+    `${main} field with ${sub} accents and trim, ` +
     `bold clean silhouette filling the frame, centered, dark fantasy, transparent background, no text`
   );
 }
