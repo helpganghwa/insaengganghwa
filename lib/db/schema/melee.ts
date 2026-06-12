@@ -7,6 +7,7 @@
  */
 import {
   pgTable,
+  smallint,
   pgEnum,
   uuid,
   text,
@@ -54,8 +55,10 @@ export type MeleeMyEvent = [0 | 1, string, number, number, number];
 /** §13.1 melee_battles — 하루 1행. */
 export const meleeBattles = pgTable('melee_battles', {
   id: bigserial('id', { mode: 'bigint' }).primaryKey(),
+  /** 소속 서버(SERVER.md P4) — 서버별 일일 1배틀·서버별 챔피언. */
+  serverId: smallint('server_id').notNull().default(1),
   /** KST 기준 날짜. 하루 1배틀 멱등 키. */
-  battleDate: date('battle_date', { mode: 'string' }).notNull().unique(),
+  battleDate: date('battle_date', { mode: 'string' }).notNull(),
   /** 결정론 시드(날짜 파생). 동일 입력=동일 결과 재현. */
   seed: text('seed').notNull(),
   status: meleeStatusEnum('status').notNull().default('running'),

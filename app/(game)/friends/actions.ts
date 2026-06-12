@@ -3,6 +3,7 @@
 import { revalidatePath } from 'next/cache';
 
 import { getSessionUserId } from '@/lib/auth/session';
+import { getActiveServerId } from '@/lib/game/servers';
 import {
   searchUsers,
   sendRequest,
@@ -20,7 +21,7 @@ export async function searchAction(q: string) {
   const u = await getSessionUserId();
   if (!u) return { status: 'error', code: 'UNAUTHENTICATED' } as const;
   try {
-    return { status: 'success', results: await searchUsers(u, q) as SearchRow[] } as const;
+    return { status: 'success', results: await searchUsers(u, await getActiveServerId(), q) as SearchRow[] } as const;
   } catch (e) {
     console.error('[friends.search]', e);
     return { status: 'error', code: 'UNKNOWN' } as const;
@@ -31,7 +32,7 @@ export async function sendRequestAction(targetId: string) {
   const u = await getSessionUserId();
   if (!u) return { status: 'error', code: 'UNAUTHENTICATED' } as const;
   try {
-    const r = await sendRequest(u, targetId);
+    const r = await sendRequest(u, await getActiveServerId(), targetId);
     revalidatePath('/friends');
     return { status: 'success', result: r.status } as const;
   } catch (e) {
@@ -45,7 +46,7 @@ export async function respondAction(requesterId: string, action: 'accept' | 'dec
   const u = await getSessionUserId();
   if (!u) return { status: 'error', code: 'UNAUTHENTICATED' } as const;
   try {
-    await respondRequest(u, requesterId, action);
+    await respondRequest(u, await getActiveServerId(), requesterId, action);
     revalidatePath('/friends');
     return { status: 'success' } as const;
   } catch (e) {
@@ -59,7 +60,7 @@ export async function cancelAction(targetId: string) {
   const u = await getSessionUserId();
   if (!u) return { status: 'error', code: 'UNAUTHENTICATED' } as const;
   try {
-    await cancelRequest(u, targetId);
+    await cancelRequest(u, await getActiveServerId(), targetId);
     revalidatePath('/friends');
     return { status: 'success' } as const;
   } catch (e) {
@@ -72,7 +73,7 @@ export async function removeFriendAction(otherId: string) {
   const u = await getSessionUserId();
   if (!u) return { status: 'error', code: 'UNAUTHENTICATED' } as const;
   try {
-    await removeFriend(u, otherId);
+    await removeFriend(u, await getActiveServerId(), otherId);
     revalidatePath('/friends');
     return { status: 'success' } as const;
   } catch (e) {

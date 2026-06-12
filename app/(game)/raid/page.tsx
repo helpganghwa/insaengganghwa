@@ -1,6 +1,7 @@
 import { and, eq, gt, inArray, isNull, ne, sql } from 'drizzle-orm';
 
 import { getSessionUserId } from '@/lib/auth/session';
+import { getActiveServerId } from '@/lib/game/servers';
 import { db } from '@/lib/db/client';
 import { withTimeout } from '@/lib/db/with-timeout';
 import { profiles } from '@/lib/db/schema/profiles';
@@ -18,6 +19,7 @@ import { RaidSlots, type RaidSlotCell, type FriendRaid } from './RaidSlots';
 
 export default async function RaidPage() {
   const userId = await getSessionUserId();
+  const serverId = await getActiveServerId();
   if (!userId) return null;
 
   // 콜드 DB 커넥션 hang 시 페이지 무한 대기 방지 — 실패 시 빈 결과로 degrade(2026-05-29).
@@ -35,12 +37,22 @@ export default async function RaidPage() {
       })
       .from(raidParticipants)
       .innerJoin(raids, eq(raids.id, raidParticipants.raidId))
-      .where(and(eq(raidParticipants.userId, userId), eq(raids.status, 'active'))),
+      .where(
+        and(
+          eq(raidParticipants.userId, userId),
+          eq(raids.serverId, serverId),
+          eq(raids.status, 'active'),
+        ),
+      ),
     db
       .select({ c: raidDailyCounts.startedCount })
       .from(raidDailyCounts)
       .where(
-        and(eq(raidDailyCounts.userId, userId), eq(raidDailyCounts.kstDate, kstDateString())),
+        and(
+          eq(raidDailyCounts.userId, userId),
+          eq(raidDailyCounts.serverId, serverId),
+          eq(raidDailyCounts.kstDate, kstDateString()),
+        ),
       )
       .limit(1),
     // 정산 완료(status='settled')되었지만 미수령(claimed_at IS NULL)인 내 보상.
@@ -133,7 +145,7 @@ export default async function RaidPage() {
   const slotCount = Math.max(RAID_MAX_CONCURRENT_PER_USER, cells.length);
 
   // 친구가 소환한 레이드 — 친구 공개·활성·미만료, 내가 이미 참여 중인 건 제외.
-  const friendIds = await withTimeout(getFriendIds(userId), 3500, 'raid.friendIds').catch(
+  const friendIds = await withTimeout(getFriendIds(userId, serverId), 3500, 'raid.friendIds').catch(
     () => [] as string[],
   );
   let friendRaids: FriendRaid[] = [];
@@ -154,6 +166,7 @@ export default async function RaidPage() {
         .innerJoin(profiles, eq(profiles.id, raids.hostUserId))
         .where(
           and(
+            eq(raids.serverId, serverId),
             eq(raids.status, 'active'),
             ne(raids.friendShare, 'off'),
             gt(raids.expireAt, sql`now()`),
@@ -190,7 +203,7 @@ export default async function RaidPage() {
         join guild_members hg on hg.user_id = r.host_user_id
         join guild_members mg on mg.guild_id = hg.guild_id and mg.user_id = ${userId}::uuid
         join profiles p on p.id = r.host_user_id
-        where r.status = 'active' and r.guild_share <> 'off' and r.expire_at > now()
+        where r.server_id = ${serverId} and r.status = 'active' and r.guild_share <> 'off' and r.expire_at > now()
         limit 20
       `),
       3500,

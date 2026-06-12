@@ -6,6 +6,7 @@ import { db } from '@/lib/db/client';
 import { withTimeout } from '@/lib/db/with-timeout';
 import { meleeBattles, meleeParticipants, type MeleeFinale } from '@/lib/db/schema/melee';
 import { profiles } from '@/lib/db/schema/profiles';
+import { characters } from '@/lib/db/schema/server';
 import { userProfiles } from '@/lib/db/schema/avatar';
 import type { MeleeResultView } from '@/app/(game)/melee/MeleeResult';
 
@@ -13,6 +14,7 @@ const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/
 
 export type MeleeBattleRow = {
   id: bigint;
+  serverId: number;
   battleDate: string;
   participantCount: number;
   totalRounds: number;
@@ -36,7 +38,7 @@ export async function buildMeleeResultView(
     db
       .select({ n: sql<number>`count(*)::int` })
       .from(meleeBattles)
-      .where(lte(meleeBattles.battleDate, battle.battleDate)),
+      .where(and(eq(meleeBattles.serverId, battle.serverId), lte(meleeBattles.battleDate, battle.battleDate))),
     2000,
     'melee.edition',
   ).catch(() => [] as { n: number }[]);
@@ -97,12 +99,16 @@ export async function buildMeleeResultView(
     db
       .select({
         rank: meleeParticipants.finalRank,
-        nickname: profiles.nickname,
+        nickname: characters.nickname,
         code: profiles.publicCode,
         uid: meleeParticipants.userId,
       })
       .from(meleeParticipants)
       .innerJoin(profiles, eq(profiles.id, meleeParticipants.userId))
+      .innerJoin(
+        characters,
+        and(eq(characters.userId, meleeParticipants.userId), eq(characters.serverId, battle.serverId)),
+      )
       .where(and(eq(meleeParticipants.battleId, battle.id), lte(meleeParticipants.finalRank, 3)))
       .orderBy(meleeParticipants.finalRank),
     3000,

@@ -1,4 +1,5 @@
 import { getSessionUserId } from '@/lib/auth/session';
+import { getActiveServerId } from '@/lib/game/servers';
 import { loadMeleeHistory } from '@/lib/game/melee/history';
 
 import { MeleeInfo } from '../MeleeInfo';
@@ -17,6 +18,6 @@ export default async function MeleeInfoPage({
   const { tab } = await searchParams;
   const initialTab = tab === 'history' ? 'history' : 'reward';
 
-  const history = await loadMeleeHistory();
+  const history = await loadMeleeHistory(await getActiveServerId());
   return <MeleeInfo history={history} initialTab={initialTab} />;
 }

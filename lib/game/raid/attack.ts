@@ -24,6 +24,7 @@ function rngU32(): number {
 async function userTotalCP(
   tx: Parameters<Parameters<typeof db.transaction>[0]>[0],
   userId: string,
+  serverId: number,
 ): Promise<number> {
   // 보유 전체(착용 무관) → 카탈로그별 최강 1개 합산(BALANCE §3.2).
   const owned = await tx
@@ -33,7 +34,7 @@ async function userTotalCP(
       transcendLevel: userEquipment.transcendLevel,
     })
     .from(userEquipment)
-    .where(eq(userEquipment.userId, userId));
+    .where(and(eq(userEquipment.userId, userId), eq(userEquipment.serverId, serverId)));
   return combatPowerFromOwned(owned);
 }
 
@@ -48,6 +49,7 @@ export function attackRaid(input: {
     const [raid] = await tx
       .select({
         id: raids.id,
+        serverId: raids.serverId,
         status: raids.status,
         expireAt: raids.expireAt,
         phase1Hp: raids.phase1Hp,
@@ -75,7 +77,7 @@ export function attackRaid(input: {
     const allowed = RAID_BASE_ATTACKS + part.extraAttacks;
     if (part.attacksUsed >= allowed) throw new RaidError('NO_ATTACKS');
 
-    const totalCP = await userTotalCP(tx, userId);
+    const totalCP = await userTotalCP(tx, userId, raid.serverId);
     const isCrit = rngU32() % 10000 < RAID_CRIT_RATE_BP;
     const u = rngU32() / 0x1_0000_0000; // [0,1)
     const varFactor = 1 - RAID_DAMAGE_VARIANCE + u * (2 * RAID_DAMAGE_VARIANCE);
@@ -123,7 +125,7 @@ export function buyExtraAttack(input: {
 
   return db.transaction(async (tx) => {
     const [raid] = await tx
-      .select({ status: raids.status, expireAt: raids.expireAt })
+      .select({ serverId: raids.serverId, status: raids.status, expireAt: raids.expireAt })
       .from(raids)
       .where(eq(raids.id, raidId))
       .for('update');
@@ -166,6 +168,7 @@ export function gemAttackRaid(input: {
     const [raid] = await tx
       .select({
         id: raids.id,
+        serverId: raids.serverId,
         status: raids.status,
         expireAt: raids.expireAt,
         phase1Hp: raids.phase1Hp,
@@ -196,7 +199,7 @@ export function gemAttackRaid(input: {
     const paid = await walletTrySpend(tx, userId, input.serverId, cost);
     if (!paid) throw new RaidError('INSUFFICIENT_DIAMOND');
 
-    const totalCP = await userTotalCP(tx, userId);
+    const totalCP = await userTotalCP(tx, userId, raid.serverId);
     const isCrit = rngU32() % 10000 < RAID_CRIT_RATE_BP;
     const u = rngU32() / 0x1_0000_0000;
     const varFactor = 1 - RAID_DAMAGE_VARIANCE + u * (2 * RAID_DAMAGE_VARIANCE);

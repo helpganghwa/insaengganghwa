@@ -9,6 +9,7 @@
  * 마이그레이션에서 ALTER로 처리).
  */
 import {
+  smallint,
   pgTable,
   pgEnum,
   uuid,
@@ -121,6 +122,8 @@ export const profileGenerationJobs = pgTable(
     userId: uuid('user_id')
       .notNull()
       .references(() => profiles.id, { onDelete: 'cascade' }),
+  /** escrow 차감 서버(SERVER.md P4) — 환불 정합. */
+  serverId: smallint('server_id').notNull().default(1),
     /** Pixellab 큐 등록 후 채워짐 (character 다운로드용). */
     pixellabCharacterId: text('pixellab_character_id'),
     /** Pixellab background job ID — status polling 키(/v2/background-jobs/{id}). */

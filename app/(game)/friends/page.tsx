@@ -1,4 +1,5 @@
 import { getSessionUserId } from '@/lib/auth/session';
+import { getActiveServerId } from '@/lib/game/servers';
 import { withTimeout } from '@/lib/db/with-timeout';
 import { getFriends, getRequests, type FriendUser } from '@/lib/game/friends';
 import { getGuildBriefsByUsers } from '@/lib/game/guild';
@@ -12,11 +13,12 @@ import { FriendsTabs } from './FriendsTabs';
 export default async function FriendsPage() {
   const userId = await getSessionUserId();
   if (!userId) return null;
+  const serverId = await getActiveServerId();
 
   const empty = { incoming: [] as FriendUser[], outgoing: [] as FriendUser[] };
   const [friends, requests] = await Promise.all([
-    withTimeout(getFriends(userId), 3500, 'friends.list').catch(() => [] as FriendUser[]),
-    withTimeout(getRequests(userId), 3500, 'friends.requests').catch(() => empty),
+    withTimeout(getFriends(userId, serverId), 3500, 'friends.list').catch(() => [] as FriendUser[]),
+    withTimeout(getRequests(userId, serverId), 3500, 'friends.requests').catch(() => empty),
   ]);
 
   // 길드 문양 일괄 부착(목록·받은·보낸 전체 1쿼리). 실패해도 목록은 표시.

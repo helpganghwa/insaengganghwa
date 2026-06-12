@@ -19,7 +19,7 @@ export function joinRaid(input: {
 
   return db.transaction(async (tx) => {
     const [raid] = await tx
-      .select({ id: raids.id, status: raids.status, expireAt: raids.expireAt })
+      .select({ id: raids.id, serverId: raids.serverId, status: raids.status, expireAt: raids.expireAt })
       .from(raids)
       .where(eq(raids.shareCode, shareCode))
       .for('update');
@@ -44,7 +44,7 @@ export function joinRaid(input: {
     if ((await activeRaidCount(tx, userId)) >= RAID_MAX_CONCURRENT_PER_USER) {
       throw new RaidError('CONCURRENT_LIMIT');
     }
-    await bumpDailyOrThrow(tx, userId);
+    await bumpDailyOrThrow(tx, userId, raid.serverId);
 
     await tx.insert(raidParticipants).values({ raidId: raid.id, userId });
     return { raidId: raid.id };

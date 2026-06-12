@@ -4,6 +4,7 @@
  */
 import { isCronAuthorized } from '@/lib/auth/cron-auth';
 import { revealMelee } from '@/lib/game/melee/reveal';
+import { openServerIds } from '@/lib/game/server-list';
 
 export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
@@ -12,8 +13,9 @@ export const maxDuration = 300;
 export async function GET(req: Request) {
   if (!isCronAuthorized(req)) return new Response('forbidden', { status: 403 });
   try {
-    const r = await revealMelee();
-    return Response.json({ ok: true, ...r, kind: 'melee-reveal' });
+    const results = [];
+    for (const sid of await openServerIds()) results.push({ serverId: sid, ...(await revealMelee(sid)) });
+    return Response.json({ ok: true, results, kind: 'melee-reveal' });
   } catch (e) {
     console.error('[melee-reveal]', e);
     return Response.json({ ok: false, error: (e as Error).message, kind: 'melee-reveal' }, { status: 500 });

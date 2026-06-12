@@ -1,6 +1,7 @@
-import { eq, lt, sql } from 'drizzle-orm';
+import { and, eq, lt, sql } from 'drizzle-orm';
 
 import { getSessionUserId } from '@/lib/auth/session';
+import { getActiveServerId } from '@/lib/game/servers';
 import { db } from '@/lib/db/client';
 import { withTimeout } from '@/lib/db/with-timeout';
 import { meleeBattles } from '@/lib/db/schema/melee';
@@ -20,6 +21,7 @@ import { MeleeResult } from './MeleeResult';
  */
 export default async function MeleePage() {
   const userId = await getSessionUserId();
+  const serverId = await getActiveServerId();
   if (!userId) return null;
   const battleDate = kstDateString();
 
@@ -34,7 +36,7 @@ export default async function MeleePage() {
         finale: meleeBattles.finale,
       })
       .from(meleeBattles)
-      .where(eq(meleeBattles.battleDate, battleDate))
+      .where(and(eq(meleeBattles.serverId, serverId), eq(meleeBattles.battleDate, battleDate)))
       .limit(1),
     3000,
     'melee.battle',
@@ -57,12 +59,12 @@ export default async function MeleePage() {
       db
         .select({ n: sql<number>`count(*)::int` })
         .from(meleeBattles)
-        .where(lt(meleeBattles.battleDate, battleDate)),
+        .where(and(eq(meleeBattles.serverId, serverId), lt(meleeBattles.battleDate, battleDate))),
       2000,
       'melee.edition',
     ).catch(() => [] as { n: number }[]);
     const edition = (edRows[0]?.n ?? 0) + 1;
-    const history = await loadMeleeHistory();
+    const history = await loadMeleeHistory(serverId);
     return (
       <MeleeCountdown
         edition={edition}
@@ -76,6 +78,6 @@ export default async function MeleePage() {
   }
 
   // ── 발표됨 — 결과 뷰(오늘/과거 공용 빌더) ──
-  const view = await buildMeleeResultView({ ...battle, battleDate }, userId);
+  const view = await buildMeleeResultView({ ...battle, serverId, battleDate }, userId);
   return <MeleeResult view={view} />;
 }

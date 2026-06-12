@@ -5,6 +5,7 @@ import { and, eq, inArray, sql } from 'drizzle-orm';
 import { db } from '@/lib/db/client';
 import { meleeBattles, meleeParticipants } from '@/lib/db/schema/melee';
 import { profiles } from '@/lib/db/schema/profiles';
+import { characters } from '@/lib/db/schema/server';
 import { sendPushToUsers } from '@/lib/push/send';
 
 /**
@@ -15,7 +16,7 @@ import { sendPushToUsers } from '@/lib/push/send';
  * 우편 적재는 단일 SQL(insert…select from melee_participants)로 N행 한 번에 — DB측 처리.
  * 푸시는 sendPushToUsers(배치, 동일 본문·시상대, 토글 OFF 자동 스킵). 초대규모는 청크 필요.
  */
-export async function revealMelee(): Promise<{ revealed: boolean; battleId?: string; mailed?: number }> {
+export async function revealMelee(serverId: number): Promise<{ revealed: boolean; battleId?: string; mailed?: number }> {
   const [today] = (await db.execute(
     sql`select (now() at time zone 'Asia/Seoul')::date::text d`,
   )) as unknown as { d: string }[];
@@ -25,7 +26,13 @@ export async function revealMelee(): Promise<{ revealed: boolean; battleId?: str
   const flipped = await db
     .update(meleeBattles)
     .set({ status: 'revealed', revealedAt: new Date() })
-    .where(and(eq(meleeBattles.battleDate, battleDate), eq(meleeBattles.status, 'computed')))
+    .where(
+      and(
+        eq(meleeBattles.serverId, serverId),
+        eq(meleeBattles.battleDate, battleDate),
+        eq(meleeBattles.status, 'computed'),
+      ),
+    )
     .returning({ id: meleeBattles.id, champ: meleeBattles.championUserId });
   if (flipped.length === 0) return { revealed: false };
 
@@ -33,9 +40,12 @@ export async function revealMelee(): Promise<{ revealed: boolean; battleId?: str
 
   // 시상대 Top3(1·2·3위) — 우편/푸시 공통 본문. 참가자 적으면 있는 만큼만(🥇 폴백).
   const podium = await db
-    .select({ rank: meleeParticipants.finalRank, nick: profiles.nickname })
+    .select({ rank: meleeParticipants.finalRank, nick: characters.nickname })
     .from(meleeParticipants)
-    .innerJoin(profiles, eq(profiles.id, meleeParticipants.userId))
+    .innerJoin(
+      characters,
+      and(eq(characters.userId, meleeParticipants.userId), eq(characters.serverId, serverId)),
+    )
     .where(and(eq(meleeParticipants.battleId, battleId), inArray(meleeParticipants.finalRank, [1, 2, 3])))
     .orderBy(meleeParticipants.finalRank);
   const RANK_LABEL = ['🏆우승', '2등', '3등'];
@@ -46,8 +56,9 @@ export async function revealMelee(): Promise<{ revealed: boolean; battleId?: str
 
   // 결과 우편 — 참가자 전원 1행씩 DB측 일괄 적재(reward type, 다이아+상자 payload).
   await db.execute(sql`
-    insert into mailbox (user_id, type, title, body, sender_label, payload, expires_at)
+    insert into mailbox (user_id, server_id, type, title, body, sender_label, payload, expires_at)
     select mp.user_id,
+           ${serverId},
            'reward'::mailbox_type,
            '대난투 결과',
            '오늘 대난투 ' || mp.final_rank || '위!' || E'\n' || ${podiumStr},
@@ -59,10 +70,12 @@ export async function revealMelee(): Promise<{ revealed: boolean; battleId?: str
   `);
 
   // 푸시 — 참가자 전원(토글 ON만 내부 필터). 본문은 시상대 Top3(개인 순위는 우편/페이지).
+  // 경계규칙 1 — 발송은 활성 서버(last_server_id) 참가자에게만(타 서버 푸시 억제).
   const parts = await db
     .select({ uid: meleeParticipants.userId })
     .from(meleeParticipants)
-    .where(eq(meleeParticipants.battleId, battleId));
+    .innerJoin(profiles, eq(profiles.id, meleeParticipants.userId))
+    .where(and(eq(meleeParticipants.battleId, battleId), eq(profiles.lastServerId, serverId)));
   const userIds = parts.map((p) => p.uid);
   await sendPushToUsers(userIds, {
     title: '대난투 결과 발표',

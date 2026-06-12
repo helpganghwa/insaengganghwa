@@ -63,6 +63,7 @@ async function profilesByIds(ids: string[]): Promise<FriendUser[]> {
 /** 닉네임(부분)·공개코드(정확) 검색 — 본인 제외, 관계 라벨 포함. */
 export async function searchUsers(
   meId: string,
+  serverId: number,
   qRaw: string,
 ): Promise<Array<FriendUser & { relation: FriendRelation }>> {
   const q = qRaw.trim();
@@ -90,8 +91,16 @@ export async function searchUsers(
     .from(friendLinks)
     .where(
       or(
-        and(eq(friendLinks.requesterId, meId), inArray(friendLinks.addresseeId, ids)),
-        and(eq(friendLinks.addresseeId, meId), inArray(friendLinks.requesterId, ids)),
+        and(
+          eq(friendLinks.serverId, serverId),
+          eq(friendLinks.requesterId, meId),
+          inArray(friendLinks.addresseeId, ids),
+        ),
+        and(
+          eq(friendLinks.serverId, serverId),
+          eq(friendLinks.addresseeId, meId),
+          inArray(friendLinks.requesterId, ids),
+        ),
       ),
     );
   const rel = new Map<string, FriendRelation>();
@@ -116,12 +125,14 @@ export async function searchUsers(
 async function countAcceptedTx(
   tx: Parameters<Parameters<typeof db.transaction>[0]>[0],
   userId: string,
+  serverId: number,
 ): Promise<number> {
   const [r] = await tx
     .select({ n: sql<number>`count(*)::int` })
     .from(friendLinks)
     .where(
       and(
+        eq(friendLinks.serverId, serverId),
         eq(friendLinks.status, 'accepted'),
         or(eq(friendLinks.requesterId, userId), eq(friendLinks.addresseeId, userId)),
       ),
@@ -132,6 +143,7 @@ async function countAcceptedTx(
 /** 친구 요청 — 역방향 pending이 있으면 즉시 수락. */
 export async function sendRequest(
   meId: string,
+  serverId: number,
   targetId: string,
 ): Promise<{ status: 'requested' | 'accepted' }> {
   if (meId === targetId) throw new FriendError('SELF');
@@ -142,9 +154,12 @@ export async function sendRequest(
       .select()
       .from(friendLinks)
       .where(
-        or(
-          and(eq(friendLinks.requesterId, meId), eq(friendLinks.addresseeId, targetId)),
-          and(eq(friendLinks.requesterId, targetId), eq(friendLinks.addresseeId, meId)),
+        and(
+          eq(friendLinks.serverId, serverId),
+          or(
+            and(eq(friendLinks.requesterId, meId), eq(friendLinks.addresseeId, targetId)),
+            and(eq(friendLinks.requesterId, targetId), eq(friendLinks.addresseeId, meId)),
+          ),
         ),
       )
       .for('update');
@@ -152,15 +167,23 @@ export async function sendRequest(
       if (existing.status === 'accepted') throw new FriendError('ALREADY_FRIEND');
       if (existing.requesterId === meId) throw new FriendError('ALREADY_REQUESTED');
       // 상대가 내게 보낸 요청 → 수락 성립.
-      if ((await countAcceptedTx(tx, meId)) >= FRIEND_CAP) throw new FriendError('CAP_REACHED');
+      if ((await countAcceptedTx(tx, meId, serverId)) >= FRIEND_CAP) throw new FriendError('CAP_REACHED');
       await tx
         .update(friendLinks)
         .set({ status: 'accepted', updatedAt: new Date() })
-        .where(and(eq(friendLinks.requesterId, targetId), eq(friendLinks.addresseeId, meId)));
+        .where(
+          and(
+            eq(friendLinks.serverId, serverId),
+            eq(friendLinks.requesterId, targetId),
+            eq(friendLinks.addresseeId, meId),
+          ),
+        );
       return { status: 'accepted' };
     }
-    if ((await countAcceptedTx(tx, meId)) >= FRIEND_CAP) throw new FriendError('CAP_REACHED');
-    await tx.insert(friendLinks).values({ requesterId: meId, addresseeId: targetId, status: 'pending' });
+    if ((await countAcceptedTx(tx, meId, serverId)) >= FRIEND_CAP) throw new FriendError('CAP_REACHED');
+    await tx
+      .insert(friendLinks)
+      .values({ requesterId: meId, serverId, addresseeId: targetId, status: 'pending' });
     return { status: 'requested' };
   });
 }
@@ -168,6 +191,7 @@ export async function sendRequest(
 /** 받은 요청 응답 — accept(수락)/decline(거절). */
 export async function respondRequest(
   meId: string,
+  serverId: number,
   requesterId: string,
   action: 'accept' | 'decline',
 ): Promise<void> {
@@ -177,6 +201,7 @@ export async function respondRequest(
       .from(friendLinks)
       .where(
         and(
+          eq(friendLinks.serverId, serverId),
           eq(friendLinks.requesterId, requesterId),
           eq(friendLinks.addresseeId, meId),
           eq(friendLinks.status, 'pending'),
@@ -187,23 +212,36 @@ export async function respondRequest(
     if (action === 'decline') {
       await tx
         .delete(friendLinks)
-        .where(and(eq(friendLinks.requesterId, requesterId), eq(friendLinks.addresseeId, meId)));
+        .where(
+        and(
+          eq(friendLinks.serverId, serverId),
+          eq(friendLinks.requesterId, requesterId),
+          eq(friendLinks.addresseeId, meId),
+        ),
+      );
       return;
     }
-    if ((await countAcceptedTx(tx, meId)) >= FRIEND_CAP) throw new FriendError('CAP_REACHED');
+    if ((await countAcceptedTx(tx, meId, serverId)) >= FRIEND_CAP) throw new FriendError('CAP_REACHED');
     await tx
       .update(friendLinks)
       .set({ status: 'accepted', updatedAt: new Date() })
-      .where(and(eq(friendLinks.requesterId, requesterId), eq(friendLinks.addresseeId, meId)));
+      .where(
+        and(
+          eq(friendLinks.serverId, serverId),
+          eq(friendLinks.requesterId, requesterId),
+          eq(friendLinks.addresseeId, meId),
+        ),
+      );
   });
 }
 
 /** 보낸 요청 취소. */
-export async function cancelRequest(meId: string, targetId: string): Promise<void> {
+export async function cancelRequest(meId: string, serverId: number, targetId: string): Promise<void> {
   await db
     .delete(friendLinks)
     .where(
       and(
+        eq(friendLinks.serverId, serverId),
         eq(friendLinks.requesterId, meId),
         eq(friendLinks.addresseeId, targetId),
         eq(friendLinks.status, 'pending'),
@@ -212,11 +250,12 @@ export async function cancelRequest(meId: string, targetId: string): Promise<voi
 }
 
 /** 친구 삭제(방향 무관). */
-export async function removeFriend(meId: string, otherId: string): Promise<void> {
+export async function removeFriend(meId: string, serverId: number, otherId: string): Promise<void> {
   await db
     .delete(friendLinks)
     .where(
       and(
+        eq(friendLinks.serverId, serverId),
         eq(friendLinks.status, 'accepted'),
         or(
           and(eq(friendLinks.requesterId, meId), eq(friendLinks.addresseeId, otherId)),
@@ -226,12 +265,13 @@ export async function removeFriend(meId: string, otherId: string): Promise<void>
     );
 }
 
-export async function getFriends(meId: string): Promise<FriendUser[]> {
+export async function getFriends(meId: string, serverId: number): Promise<FriendUser[]> {
   const rows = await db
     .select({ requesterId: friendLinks.requesterId, addresseeId: friendLinks.addresseeId })
     .from(friendLinks)
     .where(
       and(
+        eq(friendLinks.serverId, serverId),
         eq(friendLinks.status, 'accepted'),
         or(eq(friendLinks.requesterId, meId), eq(friendLinks.addresseeId, meId)),
       ),
@@ -241,12 +281,14 @@ export async function getFriends(meId: string): Promise<FriendUser[]> {
 
 export async function getRequests(
   meId: string,
+  serverId: number,
 ): Promise<{ incoming: FriendUser[]; outgoing: FriendUser[] }> {
   const rows = await db
     .select({ requesterId: friendLinks.requesterId, addresseeId: friendLinks.addresseeId })
     .from(friendLinks)
     .where(
       and(
+        eq(friendLinks.serverId, serverId),
         eq(friendLinks.status, 'pending'),
         or(eq(friendLinks.requesterId, meId), eq(friendLinks.addresseeId, meId)),
       ),
@@ -261,21 +303,28 @@ export async function getRequests(
 }
 
 /** 받은 요청 수(알림 배지용). */
-export async function getIncomingRequestCount(meId: string): Promise<number> {
+export async function getIncomingRequestCount(meId: string, serverId: number): Promise<number> {
   const [r] = await db
     .select({ n: sql<number>`count(*)::int` })
     .from(friendLinks)
-    .where(and(eq(friendLinks.status, 'pending'), eq(friendLinks.addresseeId, meId)));
+    .where(
+      and(
+        eq(friendLinks.serverId, serverId),
+        eq(friendLinks.status, 'pending'),
+        eq(friendLinks.addresseeId, meId),
+      ),
+    );
   return r?.n ?? 0;
 }
 
 /** 내 친구 id 목록 — 레이드 친구 공개 등 재사용. */
-export async function getFriendIds(meId: string): Promise<string[]> {
+export async function getFriendIds(meId: string, serverId: number): Promise<string[]> {
   const rows = await db
     .select({ requesterId: friendLinks.requesterId, addresseeId: friendLinks.addresseeId })
     .from(friendLinks)
     .where(
       and(
+        eq(friendLinks.serverId, serverId),
         eq(friendLinks.status, 'accepted'),
         or(eq(friendLinks.requesterId, meId), eq(friendLinks.addresseeId, meId)),
       ),

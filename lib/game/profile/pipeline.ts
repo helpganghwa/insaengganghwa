@@ -19,7 +19,6 @@ import { createClient, type SupabaseClient } from '@supabase/supabase-js';
 
 import { db } from '@/lib/db/client';
 import { walletAdd } from '@/lib/game/wallet';
-import { DEFAULT_SERVER_ID } from '@/lib/game/servers';
 import { profileGenerationJobs, userProfiles } from '@/lib/db/schema/avatar';
 import { mailbox } from '@/lib/db/schema/mailbox';
 import { profiles } from '@/lib/db/schema/profiles';
@@ -209,6 +208,7 @@ export async function pollAndProcessDownloading(limit = 5): Promise<{
       options: profileGenerationJobs.options,
       equipmentSnapshot: profileGenerationJobs.equipmentSnapshot,
       diamondEscrow: profileGenerationJobs.diamondEscrow,
+      serverId: profileGenerationJobs.serverId,
       createdAt: profileGenerationJobs.createdAt,
     })
     .from(profileGenerationJobs)
@@ -291,7 +291,7 @@ export async function pollAndProcessDownloading(limit = 5): Promise<{
         await acceptJob(job.id, job.userId, rotations, job.characterId, job.options, job.equipmentSnapshot, job.description, review.verdict);
         accepted += 1;
       } else {
-        await rejectJob(job.id, job.userId, job.diamondEscrow, review.verdict);
+        await rejectJob(job.id, job.userId, job.serverId, job.diamondEscrow, review.verdict);
         rejected += 1;
       }
     } catch (e) {
@@ -392,14 +392,15 @@ async function acceptJob(
 async function rejectJob(
   jobId: bigint,
   userId: string,
+  serverId: number,
   escrow: bigint,
   verdict: ReviewVerdict,
 ): Promise<void> {
   const reasonsKr = verdict.reasons.length > 0 ? verdict.reasons.join(', ') : 'unspecified';
   const notes = verdict.notes || '검토 기준에 부합하지 않습니다.';
   await db.transaction(async (tx) => {
-    // 환불 — escrow를 지갑으로(크론 컨텍스트: 기본 서버. P3+에서 job에 server_id 기록).
-    await walletAdd(tx, userId, DEFAULT_SERVER_ID, escrow);
+    // 환불 — escrow가 차감된 서버(잡 행 기록)로 반환.
+    await walletAdd(tx, userId, serverId, escrow);
 
     await tx
       .update(profileGenerationJobs)
@@ -426,13 +427,17 @@ async function rejectJob(
 async function markFailedAndRefund(jobId: bigint, userId: string, reason: string): Promise<void> {
   // 작업 정보 조회.
   const [job] = await db
-    .select({ escrow: profileGenerationJobs.diamondEscrow, status: profileGenerationJobs.status })
+    .select({
+      escrow: profileGenerationJobs.diamondEscrow,
+      status: profileGenerationJobs.status,
+      serverId: profileGenerationJobs.serverId,
+    })
     .from(profileGenerationJobs)
     .where(eq(profileGenerationJobs.id, jobId));
   if (!job || job.status === 'failed' || job.status === 'rejected_ai' || job.status === 'accepted') return;
 
   await db.transaction(async (tx) => {
-    await walletAdd(tx, userId, DEFAULT_SERVER_ID, job.escrow);
+    await walletAdd(tx, userId, job.serverId, job.escrow);
 
     await tx
       .update(profileGenerationJobs)

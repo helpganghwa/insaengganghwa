@@ -6,6 +6,7 @@
  */
 import {
   pgTable,
+  smallint,
   pgEnum,
   uuid,
   text,
@@ -38,6 +39,8 @@ export const raids = pgTable(
   'raids',
   {
     id: bigserial('id', { mode: 'bigint' }).primaryKey(),
+    /** 소속 서버(SERVER.md P4). */
+    serverId: smallint('server_id').notNull().default(1),
     hostUserId: uuid('host_user_id')
       .notNull()
       .references(() => profiles.id),
@@ -143,10 +146,12 @@ export const raidDailyCounts = pgTable(
     userId: uuid('user_id')
       .notNull()
       .references(() => profiles.id, { onDelete: 'cascade' }),
+    /** 소속 서버(SERVER.md P4) — 일일 한도는 서버별. */
+    serverId: smallint('server_id').notNull().default(1),
     kstDate: date('kst_date').notNull(),
     startedCount: integer('started_count').notNull().default(0),
   },
-  (t) => [primaryKey({ columns: [t.userId, t.kstDate] })],
+  (t) => [primaryKey({ columns: [t.userId, t.serverId, t.kstDate] })],
 );
 
 export type Raid = typeof raids.$inferSelect;

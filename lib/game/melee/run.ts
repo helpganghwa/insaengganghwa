@@ -1,10 +1,11 @@
 import 'server-only';
 
-import { eq, inArray, sql } from 'drizzle-orm';
+import { and, eq, inArray, sql } from 'drizzle-orm';
 
 import { db } from '@/lib/db/client';
 import { meleeBattles, meleeParticipants } from '@/lib/db/schema/melee';
 import { profiles } from '@/lib/db/schema/profiles';
+import { characters } from '@/lib/db/schema/server';
 import { userProfiles } from '@/lib/db/schema/avatar';
 import { combatPowerFromOwned, type OwnedRow } from '@/lib/game/equipment/combat-power';
 import { meleeRewardForRank, SUPPLY_SLOTS, type SupplySlot } from '@/lib/game/balance';
@@ -32,7 +33,7 @@ function distributeBoxes(count: number, seed: string, userId: string): Record<Su
   return boxes;
 }
 
-export async function runMelee(): Promise<{ ran: boolean; battleId?: string; participants?: number }> {
+export async function runMelee(serverId: number): Promise<{ ran: boolean; battleId?: string; participants?: number }> {
   const [today] = (await db.execute(
     sql`select (now() at time zone 'Asia/Seoul')::date::text d`,
   )) as unknown as { d: string }[];
@@ -42,7 +43,7 @@ export async function runMelee(): Promise<{ ran: boolean; battleId?: string; par
   const [existing] = await db
     .select({ id: meleeBattles.id })
     .from(meleeBattles)
-    .where(eq(meleeBattles.battleDate, battleDate))
+    .where(and(eq(meleeBattles.serverId, serverId), eq(meleeBattles.battleDate, battleDate)))
     .limit(1);
   if (existing) return { ran: false };
 
@@ -51,6 +52,7 @@ export async function runMelee(): Promise<{ ran: boolean; battleId?: string; par
   const eqRows = (await db.execute(sql`
     select ei.user_id::text uid, ei.catalog_item_id cid, ei.enhance_level el, ei.transcend_level tl
     from user_equipment ei
+    where ei.server_id = ${serverId}
   `)) as unknown as EqRow[];
   if (eqRows.length === 0) return { ran: false };
 
@@ -70,9 +72,9 @@ export async function runMelee(): Promise<{ ran: boolean; battleId?: string; par
 
   const ids = withCp.map((x) => x.uid);
   const nickRows = await db
-    .select({ uid: profiles.id, nick: profiles.nickname })
-    .from(profiles)
-    .where(inArray(profiles.id, ids));
+    .select({ uid: characters.userId, nick: characters.nickname })
+    .from(characters)
+    .where(and(eq(characters.serverId, serverId), inArray(characters.userId, ids)));
   const nickOf = new Map(nickRows.map((r) => [r.uid, r.nick]));
 
   const participants: MeleeParticipantInput[] = withCp.map((x) => ({
@@ -112,6 +114,7 @@ export async function runMelee(): Promise<{ ran: boolean; battleId?: string; par
   const inserted = await db
     .insert(meleeBattles)
     .values({
+      serverId,
       battleDate,
       seed: battleDate,
       status: 'computed',
@@ -121,7 +124,7 @@ export async function runMelee(): Promise<{ ran: boolean; battleId?: string; par
       finale: result.finale,
       computedAt: new Date(),
     })
-    .onConflictDoNothing({ target: meleeBattles.battleDate })
+    .onConflictDoNothing({ target: [meleeBattles.serverId, meleeBattles.battleDate] })
     .returning({ id: meleeBattles.id });
   if (inserted.length === 0) return { ran: false };
   const battleId = inserted[0]!.id;

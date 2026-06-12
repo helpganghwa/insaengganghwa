@@ -66,7 +66,7 @@ export default async function ProfilePage() {
           p.nickname_changed_count, p.active_profile_id,
           g.emblem_url as guild_emblem_url, g.name as guild_name,
           (select count(*)::int from referral_attributions where referrer_user_id = ${userId}::uuid) as referral_count,
-          (select count(*)::int from friend_links where status = 'pending' and addressee_id = ${userId}::uuid) as friend_req_count,
+          (select count(*)::int from friend_links where status = 'pending' and addressee_id = ${userId}::uuid and server_id = ${serverId}) as friend_req_count,
           coalesce((select json_agg(json_build_object(
               'catalogItemId', catalog_item_id, 'enhanceLevel', enhance_level,
               'transcendLevel', transcend_level, 'equippedSlot', equipped_slot))

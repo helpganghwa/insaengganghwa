@@ -5,7 +5,17 @@
  * Drizzle은 `public`만 다룬다(`id`는 auth.users.id 값을 그대로 PK로 사용).
  * 등급/시즌/천장/자가통계 컬럼 없음. `diamond` 변동은 항상 트랜잭션+감사(직접 UPDATE 금지).
  */
-import { pgTable, pgEnum, uuid, text, bigint, boolean, integer, timestamp } from 'drizzle-orm/pg-core';
+import {
+  pgTable,
+  pgEnum,
+  uuid,
+  text,
+  bigint,
+  boolean,
+  integer,
+  timestamp,
+  smallint,
+} from 'drizzle-orm/pg-core';
 import { sql } from 'drizzle-orm';
 
 /** 강화 푸시 모드 — instant(슬롯별 즉시) | batched(30분 그룹화) | batched_1h(1시간 그룹화). 기본 instant. */
@@ -64,6 +74,8 @@ export const profiles = pgTable('profiles', {
   residenceZoneId: integer('residence_zone_id'),
   /** 마지막 접속 시각 — 쿠키 게이트 하트비트(2분 스로틀)로 갱신. 길드원·친구 목록 접속 상태 표시용. */
   lastSeenAt: timestamp('last_seen_at', { withTimezone: true }),
+  /** 마지막 활성 서버(SERVER.md 경계규칙1) — 푸시는 이 서버의 이벤트만 발송. */
+  lastServerId: smallint('last_server_id').notNull().default(1),
   createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
   updatedAt: timestamp('updated_at', { withTimezone: true }).notNull().defaultNow(),
 });

@@ -64,19 +64,25 @@ export async function activeRaidCount(tx: Tx, userId: string) {
 }
 
 /** 일일 한도(KST) 체크 + 증가 (open/join 공통, 호스팅+참여 합산). */
-export async function bumpDailyOrThrow(tx: Tx, userId: string) {
+export async function bumpDailyOrThrow(tx: Tx, userId: string, serverId: number) {
   const kstDate = kstDateString();
   const [row] = await tx
     .select({ c: raidDailyCounts.startedCount })
     .from(raidDailyCounts)
-    .where(and(eq(raidDailyCounts.userId, userId), eq(raidDailyCounts.kstDate, kstDate)))
+    .where(
+      and(
+        eq(raidDailyCounts.userId, userId),
+        eq(raidDailyCounts.serverId, serverId),
+        eq(raidDailyCounts.kstDate, kstDate),
+      ),
+    )
     .for('update');
   if ((row?.c ?? 0) >= RAID_DAILY_CAP) throw new RaidError('DAILY_CAP_REACHED');
   await tx
     .insert(raidDailyCounts)
-    .values({ userId, kstDate, startedCount: 1 })
+    .values({ userId, serverId, kstDate, startedCount: 1 })
     .onConflictDoUpdate({
-      target: [raidDailyCounts.userId, raidDailyCounts.kstDate],
+      target: [raidDailyCounts.userId, raidDailyCounts.serverId, raidDailyCounts.kstDate],
       set: { startedCount: sql`${raidDailyCounts.startedCount} + 1` },
     });
 }
@@ -96,7 +102,7 @@ export function openRaid(input: {
     if ((await activeRaidCount(tx, userId)) >= RAID_MAX_CONCURRENT_PER_USER) {
       throw new RaidError('CONCURRENT_LIMIT');
     }
-    await bumpDailyOrThrow(tx, userId);
+    await bumpDailyOrThrow(tx, userId, input.serverId);
 
     // 개설비 차감 — 서버별 지갑 조건부 UPDATE(부족 시 미차감).
     const paid = await walletTrySpend(tx, userId, input.serverId, RAID_OPEN_COST_DIAMOND);
@@ -108,6 +114,7 @@ export function openRaid(input: {
     const [raid] = await tx
       .insert(raids)
       .values({
+        serverId: input.serverId,
         hostUserId: userId,
         bossCode,
         phase1Hp: BigInt(phase1Hp),

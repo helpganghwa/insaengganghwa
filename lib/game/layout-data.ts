@@ -55,6 +55,7 @@ export async function loadLayoutData(userId: string, serverId: number): Promise<
         (sql) => sql`
           select 1 from mailbox
           where user_id = ${userId}::uuid
+            and server_id = ${serverId}
             and claimed_at is null
             and (expires_at is null or expires_at > now())
           limit 1`,
@@ -64,7 +65,8 @@ export async function loadLayoutData(userId: string, serverId: number): Promise<
       pgGuard(
         (sql) => sql`
           select count(*)::int as n from enhancement_jobs
-          where user_id = ${userId}::uuid and status = 'running' and complete_at <= now()`,
+          where user_id = ${userId}::uuid and server_id = ${serverId}
+            and status = 'running' and complete_at <= now()`,
         4000,
         'layout.enhance',
       ),
@@ -72,7 +74,7 @@ export async function loadLayoutData(userId: string, serverId: number): Promise<
       pgGuard(
         (sql) => sql`
           select 1 from friend_links
-          where addressee_id = ${userId}::uuid and status = 'pending'
+          where addressee_id = ${userId}::uuid and server_id = ${serverId} and status = 'pending'
           limit 1`,
         4000,
         'layout.friendreq',

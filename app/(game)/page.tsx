@@ -173,7 +173,7 @@ export default async function HomePage() {
                  limit 1),
               cp.nickname
             ) as melee_champ,
-            (select count(*)::int from melee_battles where battle_date <= n.kst::date) as melee_edition,
+            (select count(*)::int from melee_battles where server_id = 1 and battle_date <= n.kst::date) as melee_edition,
             rz.name as residence_name,
             rz.region::text as residence_region,
             -- 상점 무료 클레임 — 주기 비교는 JS(freeStatusFromClaims, 단일 진실).
@@ -182,7 +182,7 @@ export default async function HomePage() {
               '[]'::json
             ) as free_claims
           from (select (now() at time zone 'Asia/Seoul') kst) n
-          left join melee_battles b on b.battle_date = n.kst::date
+          left join melee_battles b on b.battle_date = n.kst::date and b.server_id = 1
           left join profiles cp on cp.id = b.champion_user_id
           left join characters me on me.user_id = ${userId}::uuid and me.server_id = 1
           left join zones rz on rz.id = me.residence_zone_id

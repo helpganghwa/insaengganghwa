@@ -25,7 +25,7 @@ export type MeleeHistoryRow = {
  * 역대 우승자 목록 — 발표된 배틀(날짜 오름차순=회차) + 챔피언(아바타·CP)·참가자수.
  * /melee/info 와 대기/진행중 화면(MeleeCountdown)에서 공용. 최신 회차가 위로(reverse).
  */
-export async function loadMeleeHistory(): Promise<MeleeHistoryRow[]> {
+export async function loadMeleeHistory(serverId: number): Promise<MeleeHistoryRow[]> {
   const battles = await withTimeout(
     db
       .select({
@@ -35,7 +35,7 @@ export async function loadMeleeHistory(): Promise<MeleeHistoryRow[]> {
         finale: meleeBattles.finale,
       })
       .from(meleeBattles)
-      .where(eq(meleeBattles.status, 'revealed'))
+      .where(and(eq(meleeBattles.serverId, serverId), eq(meleeBattles.status, 'revealed')))
       .orderBy(asc(meleeBattles.battleDate)),
     3000,
     'melee.history.battles',

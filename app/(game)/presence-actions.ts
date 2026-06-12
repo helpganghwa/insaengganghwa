@@ -22,4 +22,11 @@ export async function heartbeatAction(): Promise<void> {
             and (last_seen_at is null or last_seen_at < now() - interval '110 seconds')`,
     )
     .catch(() => {});
+  // 활성 서버 추적(SERVER.md 경계규칙1 — 푸시 필터). 변경시에만 쓰기.
+  await db
+    .execute(
+      sql`update profiles set last_server_id = ${serverId}
+          where id = ${userId} and last_server_id is distinct from ${serverId}`,
+    )
+    .catch(() => {});
 }

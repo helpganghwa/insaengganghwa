@@ -111,6 +111,7 @@ export async function createProfileJob(
       const [job] = await tx
         .insert(profileGenerationJobs)
         .values({
+          serverId,
           userId,
           descriptionPrompt: description,
           options: opts,

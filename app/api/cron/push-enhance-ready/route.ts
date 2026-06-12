@@ -49,6 +49,7 @@ export async function GET(req: Request) {
         and j.push_sent = false
         and j.complete_at <= now()
         and p.push_enhance = true
+        and p.last_server_id = j.server_id -- 활성 서버 이벤트만 푸시(SERVER.md 경계규칙1)
       order by j.complete_at asc
       limit ${CHUNK}
       for update of j skip locked

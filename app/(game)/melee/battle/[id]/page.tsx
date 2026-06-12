@@ -25,6 +25,7 @@ export default async function MeleeBattlePage({ params }: { params: Promise<{ id
         id: meleeBattles.id,
         battleDate: meleeBattles.battleDate,
         status: meleeBattles.status,
+        serverId: meleeBattles.serverId,
         participantCount: meleeBattles.participantCount,
         totalRounds: meleeBattles.totalRounds,
         championUserId: meleeBattles.championUserId,

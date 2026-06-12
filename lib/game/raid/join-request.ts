@@ -56,6 +56,7 @@ export function requestJoinRaid(input: {
         status: raids.status,
         expireAt: raids.expireAt,
         hostUserId: raids.hostUserId,
+        serverId: raids.serverId,
       })
       .from(raids)
       .where(eq(raids.shareCode, shareCode))
@@ -104,6 +105,7 @@ export function decideJoinRequest(input: {
     const [raid] = await tx
       .select({
         id: raids.id,
+        serverId: raids.serverId,
         status: raids.status,
         expireAt: raids.expireAt,
         hostUserId: raids.hostUserId,
@@ -155,7 +157,7 @@ export function decideJoinRequest(input: {
       if ((await activeRaidCount(tx, requesterUserId)) >= RAID_MAX_CONCURRENT_PER_USER) {
         throw new RaidError('CONCURRENT_LIMIT');
       }
-      await bumpDailyOrThrow(tx, requesterUserId);
+      await bumpDailyOrThrow(tx, requesterUserId, raid.serverId);
       await tx.insert(raidParticipants).values({ raidId, userId: requesterUserId });
     }
     await tx
