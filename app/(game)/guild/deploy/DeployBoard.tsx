@@ -307,7 +307,7 @@ export function DeployBoard({
                   {zones
                     .filter((z) => !z.locked)
                     .map((z) => (
-                      <circle key={z.id} cx={z.mapX} cy={z.mapY} r={12} fill="url(#dbfog-hole)" />
+                      <circle key={z.id} cx={z.mapX} cy={z.mapY} r={14.5} fill="url(#dbfog-hole)" />
                     ))}
                 </g>
               </mask>
