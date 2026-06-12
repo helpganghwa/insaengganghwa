@@ -11,7 +11,7 @@ export type EmblemKeyword = { id: string; ko: string; en: string; cat: string };
 /** ① 모양(1택) — 작은 픽셀 엠블럼에서 또렷하게 렌더되는 아이코닉한 실루엣만 선별. en = 프롬프트 힌트. */
 export const EMBLEM_SHAPES: readonly EmblemShape[] = [
   { id: 'round', ko: '라운드 방패', en: 'a round shield' },
-  { id: 'heater', ko: '히터 방패', en: 'a classic heater shield with a flat top and a pointed bottom' },
+  { id: 'heater', ko: '기사 방패', en: 'a classic heater shield with a flat top and a pointed bottom' },
   { id: 'kite', ko: '카이트 방패', en: 'a tall pointed kite shield' },
   { id: 'crest', ko: '문장 방패', en: 'an ornate heraldic crest shield with a decorative scrolled border' },
   { id: 'medallion', ko: '원형 메달', en: 'a round medallion seal with a beaded rim' },
