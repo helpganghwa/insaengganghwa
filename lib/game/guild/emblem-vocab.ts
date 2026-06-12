@@ -136,8 +136,7 @@ export function buildEmblemPrompt(s: EmblemSelection): string {
     `pixel art medieval heraldic coat of arms, an old family guild crest shaped like ${shape}, ` +
     `${mainKw} as the bold central heraldic charge${accent}, ` +
     `ornate symmetrical vintage emblem, highly detailed intricate filigree and fine engraved linework, rich metallic shading and embossed relief, ` +
-    `strict two-tone palette: only ${main} and ${sub} plus their shades, no other colors, ` +
-    `${main} field with ${sub} accents and trim, ` +
+    `mostly a ${main} and ${sub} palette with these two colors dominating, ${main} field with ${sub} accents and trim, ` +
     `bold clean silhouette filling the frame, centered, dark fantasy, transparent background, no text`
   );
 }

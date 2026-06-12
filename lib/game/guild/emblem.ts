@@ -37,7 +37,7 @@ Rules:
 - The MAIN keyword is the central heraldic charge: large, bold, the clear focal point.
 - The SUB keyword (if any) MUST be clearly visible too — place it as a secondary heraldic element such as supporters flanking the main on BOTH sides, or crossed behind it, or a charge on a chief/base band. Smaller than the main but distinctly rendered, NEVER omitted or dissolved into texture.
 - Use the given shape as the overall shield/crest silhouette. Main color as the field, sub color as the accents, border and trim.
-- STRICT palette: use ONLY the two given colors plus their darker/lighter shades for shading and metallic highlights. NO other hues, no rainbow, no extra colors.
+- Palette: the two given colors clearly dominate (field = main color, accents/border/trim = sub color); a few small additional accent colors are okay, just keep it cohesive — not a busy rainbow.
 - Detail: highly detailed, intricate ornate filigree and fine engraved linework, crisp clean pixel detail, rich shading and metallic depth, embossed relief.
 - Compose everything into ONE unified crest — do NOT scatter unrelated floating objects.
 - Always include: bold clean readable silhouette, fills the frame, centered, transparent background, no text, no lettering.`;
@@ -153,7 +153,7 @@ async function generateEmblemPng(prompt: string): Promise<Buffer> {
         no_background: true,
         text_guidance_scale: 9,
         negative_description:
-          'extra colors, rainbow, multicolor, gradient background, blurry, low detail, flat, plain, messy, cluttered, text, letters, watermark, signature',
+          'blurry, low detail, flat, plain, messy, cluttered, busy rainbow, text, letters, watermark, signature',
       }),
     });
     if (res.status === 429) {
