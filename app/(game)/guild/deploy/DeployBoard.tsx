@@ -281,9 +281,9 @@ export function DeployBoard({
             />
           ))}
         </svg>
-        {/* 미개방 안개(포그 오브 워) — 구름바다 텍스처(scripts/bake-fog-texture.ts 절차 베이킹)로
-            잠긴 지형 완전 차폐. 개방 존 홀은 radial '알파 페이드'(luminance 흰 가장자리는 겹칠 때
-            이웃 홀을 도로 메움 — 알파는 곱 합성이라 안전) + feTurbulence 변위로 경계가 일렁임. */}
+        {/* 미개방 안개(포그 오브 워) — 구름바다 일러스트(fog-clouds.webp, 월드맵 기반 생성·틈새
+            지형은 그늘 디밍)로 잠긴 지형 차폐. 개방 존 홀은 radial '알파 페이드'(luminance 흰
+            가장자리는 겹칠 때 이웃 홀을 도로 메움 — 곱 합성이라 안전) + 변위로 경계 일렁임. */}
         {hasFog && (
           <svg
             viewBox="0 0 100 100"
@@ -312,16 +312,13 @@ export function DeployBoard({
                 </g>
               </mask>
             </defs>
-            <g mask="url(#dbfog-mask)">
-              <rect width="100" height="100" fill="rgb(22, 27, 41)" />
-              <image
-                href={assetUrl('/sprites/guild/fog-clouds.png')}
-                width="100"
-                height="100"
-                preserveAspectRatio="none"
-                style={{ imageRendering: 'pixelated' }}
-              />
-            </g>
+            <image
+              href={assetUrl('/sprites/guild/fog-clouds.webp')}
+              width="100"
+              height="100"
+              preserveAspectRatio="none"
+              mask="url(#dbfog-mask)"
+            />
           </svg>
         )}
         {zones.map((z) => {
