@@ -336,9 +336,9 @@ export function WorldMapView({
         <span className="absolute bottom-2 right-2 z-30 inline-flex rounded-full bg-black/45 p-1 backdrop-blur-sm">
           <ToggleSwitch on={showNames} onToggle={() => setShowNames((v) => !v)} small label="지역 이름 표시" />
         </span>
-        {/* 미개방 안개(포그 오브 워) — RTS 문법: 미탐사 = 무채색. 같은 지도를 마스크 안에서
-            한 번 더 그려 잠긴 영역만 흑백·어둡게(개방 경계가 '색이 빠지는' 전환 — 발광 헤일로 없음),
-            그 위에 feTurbulence 안개 김 한 겹. CSS 다중 mask의 add 합성 함정 회피(SVG mask). */}
+        {/* 미개방 안개(포그 오브 워) — 구름바다 텍스처(scripts/bake-fog-texture.ts 절차 베이킹)로
+            잠긴 지형 완전 차폐. 개방 존 홀은 radial '알파 페이드'(luminance 흰 가장자리는 겹칠 때
+            이웃 홀을 도로 메움 — 알파는 곱 합성이라 안전) + feTurbulence 변위로 경계가 일렁임. */}
         {hasFog && (
           <svg
             viewBox="0 0 100 100"
@@ -352,23 +352,9 @@ export function WorldMapView({
                 <feTurbulence type="fractalNoise" baseFrequency="0.18" numOctaves="2" seed="7" />
                 <feDisplacementMap in="SourceGraphic" scale="7" />
               </filter>
-              {/* 흑백 + 한랭 톤다운 — B 채널만 덜 깎아 차가운 '미탐사' 색. sRGB 고정(linearRGB 밝아짐 방지) */}
-              <filter id="wmfog-desat" x="0%" y="0%" width="100%" height="100%" colorInterpolationFilters="sRGB">
-                <feColorMatrix type="saturate" values="0.08" />
-                <feComponentTransfer>
-                  <feFuncR type="linear" slope="0.38" intercept="0.015" />
-                  <feFuncG type="linear" slope="0.4" intercept="0.02" />
-                  <feFuncB type="linear" slope="0.48" intercept="0.045" />
-                </feComponentTransfer>
-              </filter>
-              {/* 안개 김 — 노이즈 R 채널을 옅은 청회색 구름 알파로 변환 */}
-              <filter id="wmfog-tex" x="0%" y="0%" width="100%" height="100%" colorInterpolationFilters="sRGB">
-                <feTurbulence type="fractalNoise" baseFrequency="0.045" numOctaves="3" seed="11" />
-                <feColorMatrix type="matrix" values="0 0 0 0 0.62  0 0 0 0 0.66  0 0 0 0 0.74  0.9 0 0 0 -0.3" />
-              </filter>
               <radialGradient id="wmfog-hole">
-                <stop offset="60%" stopColor="black" />
-                <stop offset="100%" stopColor="white" />
+                <stop offset="55%" stopColor="black" stopOpacity={1} />
+                <stop offset="100%" stopColor="black" stopOpacity={0} />
               </radialGradient>
               <mask id="wmfog-mask" maskUnits="userSpaceOnUse" x="0" y="0" width="100" height="100">
                 <rect width="100" height="100" fill="white" />
@@ -381,18 +367,16 @@ export function WorldMapView({
                 </g>
               </mask>
             </defs>
-            {/* 1) 잠긴 지형 — 흑백 고스트(윤곽은 남겨 기대감 유지) 2) 한랭 남색 틴트 3) 안개 김 */}
-            <image
-              href={mapSrc}
-              width="100"
-              height="100"
-              preserveAspectRatio="xMidYMid slice"
-              filter="url(#wmfog-desat)"
-              mask="url(#wmfog-mask)"
-              style={{ imageRendering: 'pixelated' }}
-            />
-            <rect width="100" height="100" fill="rgb(24, 30, 48)" opacity={0.3} mask="url(#wmfog-mask)" />
-            <rect width="100" height="100" filter="url(#wmfog-tex)" mask="url(#wmfog-mask)" opacity={0.55} />
+            <g mask="url(#wmfog-mask)">
+              <rect width="100" height="100" fill="rgb(22, 27, 41)" />
+              <image
+                href={assetUrl('/sprites/guild/fog-clouds.png')}
+                width="100"
+                height="100"
+                preserveAspectRatio="none"
+                style={{ imageRendering: 'pixelated' }}
+              />
+            </g>
           </svg>
         )}
         {zones.map((z) => {
