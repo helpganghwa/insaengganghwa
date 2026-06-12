@@ -14,7 +14,6 @@ export const EMBLEM_SHAPES: readonly EmblemShape[] = [
   { id: 'heater', ko: '기사 방패', en: 'a classic heater shield with a flat top and a pointed bottom' },
   { id: 'kite', ko: '카이트 방패', en: 'a tall pointed kite shield' },
   { id: 'wreath', ko: '월계관', en: 'a circular laurel wreath frame, two curved leafy branches meeting at the bottom and open in the center' },
-  { id: 'medallion', ko: '원형 메달', en: 'a round medallion seal with a beaded rim' },
   { id: 'banner', ko: '전투 깃발', en: 'a hanging cloth war banner with a forked swallowtail bottom edge' },
   { id: 'lozenge', ko: '마름모', en: 'a diamond-shaped lozenge standing on one point' },
 ] as const;
