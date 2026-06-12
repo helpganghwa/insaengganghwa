@@ -59,7 +59,7 @@ export default async function EnhancePage() {
     Promise.all([
       db.execute(sql`
         select
-          c.diamond::text as diamond, p.nickname, p.tutorial_step,
+          c.diamond::text as diamond, p.nickname, c.tutorial_step,
           coalesce((select json_agg(json_build_object(
               'jobId', ej.id::text, 'equipmentInstanceId', ej.user_equipment_id::text,
               'slot', ej.slot, 'slotLane', ej.slot_lane, 'fromLevel', ej.from_level,

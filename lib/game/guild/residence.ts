@@ -1,9 +1,10 @@
 import 'server-only';
 
-import { eq, sql } from 'drizzle-orm';
+import { and, eq, sql } from 'drizzle-orm';
 
 import { db } from '@/lib/db/client';
-import { profiles } from '@/lib/db/schema/profiles';
+import { characters } from '@/lib/db/schema/server';
+import { DEFAULT_SERVER_ID } from '@/lib/game/servers';
 import { zones } from '@/lib/db/schema/guild';
 
 import { GuildError } from './errors';
@@ -13,9 +14,9 @@ type Tx = Parameters<Parameters<typeof db.transaction>[0]>[0];
 /** 거주 구역 조회(미배정이면 null). */
 export async function getResidence(userId: string): Promise<number | null> {
   const [p] = await db
-    .select({ zoneId: profiles.residenceZoneId })
-    .from(profiles)
-    .where(eq(profiles.id, userId))
+    .select({ zoneId: characters.residenceZoneId })
+    .from(characters)
+    .where(and(eq(characters.userId, userId), eq(characters.serverId, DEFAULT_SERVER_ID)))
     .limit(1);
   return p?.zoneId ?? null;
 }
@@ -24,7 +25,10 @@ export async function getResidence(userId: string): Promise<number | null> {
 export async function setResidence(userId: string, zoneId: number): Promise<void> {
   const [z] = await db.select({ id: zones.id }).from(zones).where(eq(zones.id, zoneId)).limit(1);
   if (!z) throw new GuildError('ZONE_NOT_FOUND');
-  await db.update(profiles).set({ residenceZoneId: zoneId }).where(eq(profiles.id, userId));
+  await db
+    .update(characters)
+    .set({ residenceZoneId: zoneId })
+    .where(and(eq(characters.userId, userId), eq(characters.serverId, DEFAULT_SERVER_ID)));
 }
 
 /**
@@ -33,13 +37,16 @@ export async function setResidence(userId: string, zoneId: number): Promise<void
  */
 export async function ensureResidence(tx: Tx, userId: string): Promise<number | null> {
   const [p] = await tx
-    .select({ zoneId: profiles.residenceZoneId })
-    .from(profiles)
-    .where(eq(profiles.id, userId))
+    .select({ zoneId: characters.residenceZoneId })
+    .from(characters)
+    .where(and(eq(characters.userId, userId), eq(characters.serverId, DEFAULT_SERVER_ID)))
     .for('update');
   if (p?.zoneId) return p.zoneId;
   const [z] = await tx.select({ id: zones.id }).from(zones).orderBy(sql`random()`).limit(1);
   if (!z) return null;
-  await tx.update(profiles).set({ residenceZoneId: z.id }).where(eq(profiles.id, userId));
+  await tx
+    .update(characters)
+    .set({ residenceZoneId: z.id })
+    .where(and(eq(characters.userId, userId), eq(characters.serverId, DEFAULT_SERVER_ID)));
   return z.id;
 }

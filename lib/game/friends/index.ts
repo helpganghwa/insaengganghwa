@@ -5,6 +5,8 @@ import { and, or, eq, ne, ilike, inArray, sql } from 'drizzle-orm';
 import { db } from '@/lib/db/client';
 import { friendLinks } from '@/lib/db/schema/friends';
 import { profiles } from '@/lib/db/schema/profiles';
+import { characters } from '@/lib/db/schema/server';
+import { DEFAULT_SERVER_ID } from '@/lib/game/servers';
 import { userProfiles } from '@/lib/db/schema/avatar';
 import { getGuildBriefsByUsers } from '@/lib/game/guild/badge';
 
@@ -46,9 +48,13 @@ async function profilesByIds(ids: string[]): Promise<FriendUser[]> {
       nickname: profiles.nickname,
       publicCode: profiles.publicCode,
       profileSouth: SOUTH,
-      lastSeenAt: profiles.lastSeenAt,
+      lastSeenAt: characters.lastSeenAt,
     })
     .from(profiles)
+    .innerJoin(
+      characters,
+      and(eq(characters.userId, profiles.id), eq(characters.serverId, DEFAULT_SERVER_ID)),
+    )
     .leftJoin(userProfiles, eq(userProfiles.id, profiles.activeProfileId))
     .where(inArray(profiles.id, ids));
   return rows.map((r) => ({ ...r, lastSeenAt: r.lastSeenAt ? r.lastSeenAt.toISOString() : null }));
@@ -67,9 +73,13 @@ export async function searchUsers(
       nickname: profiles.nickname,
       publicCode: profiles.publicCode,
       profileSouth: SOUTH,
-      lastSeenAt: profiles.lastSeenAt,
+      lastSeenAt: characters.lastSeenAt,
     })
     .from(profiles)
+    .innerJoin(
+      characters,
+      and(eq(characters.userId, profiles.id), eq(characters.serverId, DEFAULT_SERVER_ID)),
+    )
     .leftJoin(userProfiles, eq(userProfiles.id, profiles.activeProfileId))
     .where(and(ne(profiles.id, meId), or(ilike(profiles.nickname, `%${q}%`), eq(profiles.publicCode, q))))
     .limit(20);

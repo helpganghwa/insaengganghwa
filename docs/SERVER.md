@@ -81,7 +81,8 @@ characters (user_id FK profiles, server_id FK servers, diamond, residence_zone_i
 |---|---|---|
 | **P1 기반** | `servers`·`characters` 골격 + 1서버 시드 + 전 유저 백필 + `getActiveServerId()` | 무파괴(행동 변화 0) |
 | **P2 지갑** | `profiles.diamond` → `characters.diamond` 이관 — 모든 차감/지급 경로 전환 | 전 도메인 다이아 참조 |
-| **P3 정체성·코어** | **닉네임 → `characters` 이관**(전역 `UNIQUE(nickname)` — publicCode는 전역 유지) + 칭호·튜토리얼·거주지·lastSeen 이관 + 장비·강화·초월·보급·출석·우편 `server_id` 스코핑 | 코어 쿼리·닉네임 참조 전반 |
+| **P3a 정체성** | **닉네임 → `characters` 권위 이관**(전역 `UNIQUE(nickname)`·닉변카운트 포함, publicCode는 전역 유지) + 튜토리얼·거주지·lastSeen 이관(쓰기·읽기 전환). **전환기 미러**: 가입/닉변이 profiles.nickname에도 동기 기록(두 네임스페이스 일치 유지) — 닉네임 *읽기*는 미러 덕에 정확하므로 각 도메인 스코핑 단계(P4~P6)에서 한 번에 전환, profiles.nickname drop이 잔존 검출(typecheck) | 정체성 쓰기 경로·비미러 읽기 |
+| **P3b 코어** | 장비·강화·초월·보급·출석·우편 `server_id` 스코핑(컬럼 default 1 + 복합 유니크 + 쿼리 전환) | 코어 쿼리 전반 |
 | **P4 일일·소셜** | 레이드·대난투·**친구**·**AI 아바타**(active 선택 포함) 스코핑 + 크론 서버 루프 + **푸시 활성 서버 필터**(`last_server_id`) | 크론·정산·소셜·푸시 |
 | **P5 월드** | 길드·점령전·zones 상태·연대기 스코핑 | 길드 도메인 전체 |
 | **P6 표면** | 서버 선택 UI(친구 있는 서버 힌트·`last_server_id` 갱신)·**서버별 캐릭터 생성 플로우(새 닉네임 입력 — 자동 생성 제안 + 가입 보너스)**·어드민 서버 관리·리더보드/OG 스코프·**공개 프로필 `/u/[code]?s=N` 전환**·결제 server_id | UI·신서버 오픈 준비 |

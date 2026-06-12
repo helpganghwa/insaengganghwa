@@ -24,7 +24,7 @@ export async function getWalletDiamond(dbx: WalletDb, userId: string, serverId: 
   return r?.d ?? 0n;
 }
 
-/** 지급(증가) — 캐릭터 행 없으면 생성(가입 트리거 밖 경로 안전망). */
+/** 지급(증가) — 캐릭터 행은 가입 트리거/백필로 보장. 부재 시 조용한 유실 대신 명시 실패(tx 롤백). */
 export async function walletAdd(
   dbx: WalletDb,
   userId: string,
@@ -32,13 +32,12 @@ export async function walletAdd(
   amount: bigint | number,
 ): Promise<void> {
   const amt = BigInt(amount);
-  await dbx
-    .insert(characters)
-    .values({ userId, serverId, diamond: amt })
-    .onConflictDoUpdate({
-      target: [characters.userId, characters.serverId],
-      set: { diamond: sql`${characters.diamond} + ${amt}` },
-    });
+  const rows = await dbx
+    .update(characters)
+    .set({ diamond: sql`${characters.diamond} + ${amt}` })
+    .where(and(eq(characters.userId, userId), eq(characters.serverId, serverId)))
+    .returning({ userId: characters.userId });
+  if (rows.length === 0) throw new Error(`WALLET_CHARACTER_MISSING:${userId}@s${serverId}`);
 }
 
 /** 조건부 차감 — 잔액 부족(캐릭터 없음 포함)이면 false·차감 없음. 성공 시 true. */

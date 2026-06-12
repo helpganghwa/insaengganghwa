@@ -4,7 +4,8 @@ import { and, count, eq, inArray, isNotNull, type SQL } from 'drizzle-orm';
 import type { PgTable } from 'drizzle-orm/pg-core';
 
 import { db } from '@/lib/db/client';
-import { profiles } from '@/lib/db/schema/profiles';
+import { characters } from '@/lib/db/schema/server';
+import { DEFAULT_SERVER_ID } from '@/lib/game/servers';
 import { userEquipment } from '@/lib/db/schema/equipment';
 import { enhancementJobs, enhancementLogs } from '@/lib/db/schema/enhance';
 
@@ -32,9 +33,9 @@ async function rowCount(table: PgTable, where: SQL | undefined): Promise<number>
 export async function getTutorialState(userId: string): Promise<TutorialState> {
   try {
     const [p] = await db
-      .select({ s: profiles.tutorialStep })
-      .from(profiles)
-      .where(eq(profiles.id, userId));
+      .select({ s: characters.tutorialStep })
+      .from(characters)
+      .where(and(eq(characters.userId, userId), eq(characters.serverId, DEFAULT_SERVER_ID)));
     if (!p) return { phase: 'done', step: null };
     if (p.s === TUTORIAL_INTRO) return { phase: 'intro', step: null };
     if (p.s !== TUTORIAL_ACTIVE) return { phase: 'done', step: null };
@@ -58,9 +59,15 @@ export async function getTutorialState(userId: string): Promise<TutorialState> {
     // 강화 수행 완료(log 존재) → DONE 마킹(완료 모달을 못 닫은 경우·다른 브라우저처럼
     // localStorage가 없는 경우의 안전망). 이후 어느 브라우저에서도 튜토리얼 미노출.
     await db
-      .update(profiles)
+      .update(characters)
       .set({ tutorialStep: TUTORIAL_DONE })
-      .where(and(eq(profiles.id, userId), eq(profiles.tutorialStep, TUTORIAL_ACTIVE)));
+      .where(
+        and(
+          eq(characters.userId, userId),
+          eq(characters.serverId, DEFAULT_SERVER_ID),
+          eq(characters.tutorialStep, TUTORIAL_ACTIVE),
+        ),
+      );
     return { phase: 'done', step: null };
   } catch {
     return { phase: 'done', step: null };
@@ -70,20 +77,27 @@ export async function getTutorialState(userId: string): Promise<TutorialState> {
 /** 인트로 '시작' — ACTIVE로 전환(코치 시작). */
 export async function startTutorial(userId: string): Promise<void> {
   await db
-    .update(profiles)
+    .update(characters)
     .set({ tutorialStep: TUTORIAL_ACTIVE })
-    .where(and(eq(profiles.id, userId), eq(profiles.tutorialStep, TUTORIAL_INTRO)));
+    .where(
+      and(
+        eq(characters.userId, userId),
+        eq(characters.serverId, DEFAULT_SERVER_ID),
+        eq(characters.tutorialStep, TUTORIAL_INTRO),
+      ),
+    );
 }
 
 /** '건너뛰기'/완료 — DONE으로 마킹(인트로·진행 중 모두). */
 export async function finishTutorial(userId: string): Promise<void> {
   await db
-    .update(profiles)
+    .update(characters)
     .set({ tutorialStep: TUTORIAL_DONE })
     .where(
       and(
-        eq(profiles.id, userId),
-        inArray(profiles.tutorialStep, [TUTORIAL_INTRO, TUTORIAL_ACTIVE]),
+        eq(characters.userId, userId),
+        eq(characters.serverId, DEFAULT_SERVER_ID),
+        inArray(characters.tutorialStep, [TUTORIAL_INTRO, TUTORIAL_ACTIVE]),
       ),
     );
 }

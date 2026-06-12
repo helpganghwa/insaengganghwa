@@ -184,7 +184,7 @@ export default async function HomePage() {
           from (select (now() at time zone 'Asia/Seoul') kst) n
           left join melee_battles b on b.battle_date = n.kst::date
           left join profiles cp on cp.id = b.champion_user_id
-          left join profiles me on me.id = ${userId}::uuid
+          left join characters me on me.user_id = ${userId}::uuid and me.server_id = 1
           left join zones rz on rz.id = me.residence_zone_id
           limit 1
         `),

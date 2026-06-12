@@ -1,8 +1,10 @@
 import 'server-only';
 
-import { desc, eq, ilike, inArray, or, sql } from 'drizzle-orm';
+import { and, desc, eq, ilike, inArray, or, sql } from 'drizzle-orm';
 
 import { db } from '@/lib/db/client';
+import { characters } from '@/lib/db/schema/server';
+import { DEFAULT_SERVER_ID } from '@/lib/game/servers';
 import {
   guilds,
   guildMembers,
@@ -133,7 +135,7 @@ export async function getWorldmapZones() {
       taxDiamond: zones.taxDiamond,
       lastTaxCollectedAt: zones.lastTaxCollectedAt,
       // 거주 인원 — 이 구역을 거주지로 둔 유저 수(상관 서브쿼리, executor 조인과 별개 스코프).
-      residentCount: sql<number>`(select count(*)::int from profiles rp where rp.residence_zone_id = ${zones.id})`,
+      residentCount: sql<number>`(select count(*)::int from characters rc where rc.residence_zone_id = ${zones.id})`,
     })
     .from(zones)
     .leftJoin(ownerGuild, eq(ownerGuild.id, zones.ownerGuildId))
@@ -278,12 +280,16 @@ export async function getGuildMembersRich(guildId: bigint) {
       publicCode: profiles.publicCode,
       role: guildMembers.role,
       contribution: guildMembers.contributionPoints,
-      lastSeenAt: profiles.lastSeenAt,
+      lastSeenAt: characters.lastSeenAt,
       // 유저 지정 방향(active_direction, enum→text) 우선, 없으면 정면(south) 폴백.
       avatar: sql<string | null>`coalesce(${userProfiles.rotations} ->> ${userProfiles.activeDirection}::text, ${userProfiles.rotations} ->> 'south')`,
     })
     .from(guildMembers)
     .innerJoin(profiles, eq(profiles.id, guildMembers.userId))
+    .innerJoin(
+      characters,
+      and(eq(characters.userId, guildMembers.userId), eq(characters.serverId, DEFAULT_SERVER_ID)),
+    )
     .leftJoin(userProfiles, eq(userProfiles.id, profiles.activeProfileId))
     .where(eq(guildMembers.guildId, guildId));
 

@@ -3,6 +3,7 @@
 import { sql } from 'drizzle-orm';
 
 import { getSessionUserId } from '@/lib/auth/session';
+import { getActiveServerId } from '@/lib/game/servers';
 import { db } from '@/lib/db/client';
 
 /**
@@ -13,10 +14,11 @@ import { db } from '@/lib/db/client';
 export async function heartbeatAction(): Promise<void> {
   const userId = await getSessionUserId();
   if (!userId) return;
+  const serverId = await getActiveServerId();
   await db
     .execute(
-      sql`update profiles set last_seen_at = now()
-          where id = ${userId}
+      sql`update characters set last_seen_at = now()
+          where user_id = ${userId} and server_id = ${serverId}
             and (last_seen_at is null or last_seen_at < now() - interval '110 seconds')`,
     )
     .catch(() => {});
