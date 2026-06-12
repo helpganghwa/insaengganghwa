@@ -28,14 +28,14 @@ function ColorRow({
   return (
     <div className="flex items-center gap-2">
       <span className="w-10 shrink-0 text-[11px] font-semibold text-zinc-500">{label}</span>
-      <div className="flex flex-wrap gap-2">
+      <div className="flex flex-wrap gap-1.5">
         {EMBLEM_TONES.map((t) => (
           <button
             key={t.id}
             type="button"
             onClick={() => onPick(t.id)}
             aria-label={`${label} ${t.ko}`}
-            className={`h-7 w-7 rounded-full ring-2 ${selectedId === t.id ? 'ring-amber-500' : 'ring-transparent'}`}
+            className={`h-6 w-6 rounded-full ring-2 ${selectedId === t.id ? 'ring-amber-500' : 'ring-transparent'}`}
             style={{ backgroundColor: t.color }}
           />
         ))}
@@ -79,11 +79,11 @@ export function EmblemPicker({
   }).filter(Boolean);
 
   return (
-    <div className={`space-y-3 ${disabled ? 'pointer-events-none opacity-50' : ''}`}>
+    <div className={`space-y-2.5 ${disabled ? 'pointer-events-none opacity-50' : ''}`}>
       {/* 모양 — 텍스트 1택(실제 외형은 AI가 해석) */}
       <div>
         <p className="mb-1 text-[11px] font-semibold text-zinc-500">모양</p>
-        <div className="grid grid-cols-3 gap-1.5">
+        <div className="grid grid-cols-4 gap-1">
           {EMBLEM_SHAPES.map((s) => {
             const on = value.shapeId === s.id;
             return (
@@ -91,7 +91,7 @@ export function EmblemPicker({
                 key={s.id}
                 type="button"
                 onClick={() => onChange({ ...value, shapeId: s.id })}
-                className={`rounded-lg border px-2 py-1.5 text-center text-[11px] font-semibold transition ${
+                className={`whitespace-nowrap rounded-lg border px-1 py-1.5 text-center text-[10px] font-semibold transition ${
                   on
                     ? 'border-amber-500 bg-amber-50 text-amber-700 dark:bg-amber-950/30 dark:text-amber-300'
                     : 'border-zinc-200 text-zinc-600 dark:border-zinc-700 dark:text-zinc-300'
@@ -112,7 +112,7 @@ export function EmblemPicker({
       </div>
 
       {/* 키워드 — 메인(필수) / 서브(선택) */}
-      <div className="space-y-2">
+      <div className="grid grid-cols-2 gap-2">
         <div>
           <p className="mb-1 text-[11px] font-semibold text-zinc-500">메인 키워드</p>
           <select
