@@ -25,7 +25,7 @@ export function distributeGuildTax(input: {
     const [leader] = await tx
       .select({ guildId: guildMembers.guildId, role: guildMembers.role })
       .from(guildMembers)
-      .where(eq(guildMembers.userId, input.leaderUserId))
+      .where(and(eq(guildMembers.userId, input.leaderUserId), eq(guildMembers.serverId, input.serverId)))
       .for('update');
     if (!leader) throw new GuildError('NOT_IN_GUILD');
     if (leader.role !== 'leader') throw new GuildError('NOT_LEADER');
@@ -103,7 +103,7 @@ export function distributeGuildTaxManual(input: {
     const [leader] = await tx
       .select({ guildId: guildMembers.guildId, role: guildMembers.role })
       .from(guildMembers)
-      .where(eq(guildMembers.userId, input.leaderUserId))
+      .where(and(eq(guildMembers.userId, input.leaderUserId), eq(guildMembers.serverId, input.serverId)))
       .for('update');
     if (!leader) throw new GuildError('NOT_IN_GUILD');
     if (leader.role !== 'leader') throw new GuildError('NOT_LEADER');

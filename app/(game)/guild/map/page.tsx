@@ -1,4 +1,5 @@
 import { assetUrl } from '@/lib/asset-versions';
+import { getActiveServerId } from '@/lib/game/servers';
 import { getSessionUserId } from '@/lib/auth/session';
 import { getWorldmapZones, getResidence, getChronicle, getZoneAdjacency } from '@/lib/game/guild';
 
@@ -8,12 +9,13 @@ export const dynamic = 'force-dynamic';
 
 export default async function WorldMapPage() {
   const userId = await getSessionUserId();
+  const serverId = await getActiveServerId();
 
   const [zones, residenceZoneId, chronicle, adjacency] = await Promise.all([
-    getWorldmapZones(),
+    getWorldmapZones(serverId),
     userId ? getResidence(userId) : Promise.resolve(null),
-    getChronicle().catch(() => null),
-    getZoneAdjacency().catch(() => []),
+    getChronicle(serverId).catch(() => null),
+    getZoneAdjacency(serverId).catch(() => []),
   ]);
 
   return (

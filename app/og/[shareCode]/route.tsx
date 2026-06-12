@@ -1,4 +1,5 @@
 import { ImageResponse } from 'next/og';
+import { DEFAULT_SERVER_ID } from '@/lib/game/servers';
 import { and, eq, isNotNull, or } from 'drizzle-orm';
 
 import { db } from '@/lib/db/client';
@@ -182,7 +183,7 @@ export async function GET(_req: Request, { params }: { params: Promise<{ shareCo
   // 카드 표시 닉네임 — 조회된 현재 닉(없으면 핸들 폴백).
   const nickname = prof?.nickname ?? handle;
   // 길드 문양+이름(있으면 닉네임 밑). 실패해도 카드는 생성.
-  const guild = prof ? await getUserGuildBrief(prof.id).catch(() => null) : null;
+  const guild = prof ? await getUserGuildBrief(prof.id, DEFAULT_SERVER_ID).catch(() => null) : null;
 
   // 사용자 결정: OG 카드에는 타이틀+닉네임+장비 정보만 노출(전투력·도메인 제거).
   // 따라서 codex 합계 쿼리 + total 계산 제거 — OG 응답 빠르게.

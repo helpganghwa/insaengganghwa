@@ -1,4 +1,5 @@
 import { notFound, redirect } from 'next/navigation';
+import { getActiveServerId } from '@/lib/game/servers';
 import { and, eq } from 'drizzle-orm';
 import { preload } from 'react-dom';
 
@@ -89,7 +90,7 @@ export default async function RaidDetail({ params }: { params: Promise<{ raidId:
   }[]);
 
   // 참가자 길드 문양 일괄(닉네임 옆 노출용) — 실패해도 레이드는 표시.
-  const guildBriefs = await getGuildBriefsByUsers(parts.map((p) => p.userId)).catch(
+  const guildBriefs = await getGuildBriefsByUsers(parts.map((p) => p.userId), await getActiveServerId()).catch(
     () => new Map<string, { emblemUrl: string | null; name: string }>(),
   );
 

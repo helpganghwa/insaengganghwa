@@ -1,6 +1,6 @@
 import 'server-only';
 
-import { eq, inArray, sql } from 'drizzle-orm';
+import { and, eq, inArray, sql } from 'drizzle-orm';
 
 import { db } from '@/lib/db/client';
 import { zones, conquestBattles } from '@/lib/db/schema/guild';
@@ -20,7 +20,7 @@ import { simulateConquest, type ConquestUnit } from './simulate';
 type DepRow = { zone_id: number; uid: string; guild_id: string; gname: string; role: 'attack' | 'defend' };
 type ZoneRow = { id: number; owner_guild_id: string | null; executor: string | null; owner_name: string | null };
 
-export async function runConquest(): Promise<{ battleDay: string; resolved: number }> {
+export async function runConquest(serverId: number): Promise<{ battleDay: string; resolved: number }> {
   const [todayRow] = (await db.execute(
     sql`select (now() at time zone 'Asia/Seoul')::date::text d`,
   )) as unknown as { d: string }[];
@@ -31,7 +31,7 @@ export async function runConquest(): Promise<{ battleDay: string; resolved: numb
     select d.zone_id, d.user_id::text uid, d.guild_id::text guild_id, g.name gname, d.role::text role
     from guild_battle_deployments d
     join guilds g on g.id = d.guild_id
-    where d.battle_kst_day = ${battleDay}
+    where d.battle_kst_day = ${battleDay} and d.server_id = ${serverId}
   `)) as unknown as DepRow[];
 
   // 경합 구역 = 공격 배치가 있는 구역만.
@@ -66,7 +66,7 @@ export async function runConquest(): Promise<{ battleDay: string; resolved: numb
       tl: userEquipment.transcendLevel,
     })
     .from(userEquipment)
-    .where(inArray(userEquipment.userId, idList));
+    .where(and(eq(userEquipment.serverId, serverId), inArray(userEquipment.userId, idList)));
   const ownedByUser = new Map<string, OwnedRow[]>();
   for (const r of eqRows) {
     const row: OwnedRow = { catalogItemId: r.cid, enhanceLevel: r.el, transcendLevel: r.tl };
@@ -125,6 +125,7 @@ export async function runConquest(): Promise<{ battleDay: string; resolved: numb
       const ins = await tx
         .insert(conquestBattles)
         .values({
+          serverId,
           battleKstDay: battleDay,
           zoneId,
           winnerGuildId: winner ? BigInt(winner) : null,

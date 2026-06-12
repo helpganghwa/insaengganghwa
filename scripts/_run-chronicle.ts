@@ -12,6 +12,6 @@ const { kstDateString } = await import('@/lib/kst');
 
 const kstDay = process.argv[2] ?? kstDateString();
 console.log(`[chronicle] 실행 — kstDay=${kstDay}`);
-const r = await generateAndStoreChronicle(kstDay);
+const r = await generateAndStoreChronicle(kstDay, 1);
 console.log('[chronicle] 결과:', JSON.stringify(r));
 process.exit(0);

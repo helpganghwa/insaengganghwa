@@ -23,7 +23,7 @@ export default async function FriendsPage() {
 
   // 길드 문양 일괄 부착(목록·받은·보낸 전체 1쿼리). 실패해도 목록은 표시.
   const ids = [...friends, ...requests.incoming, ...requests.outgoing].map((u) => u.userId);
-  const guildMap = await getGuildBriefsByUsers(ids).catch(
+  const guildMap = await getGuildBriefsByUsers(ids, serverId).catch(
     () => new Map<string, { emblemUrl: string | null; name: string }>(),
   );
   const attach = (u: FriendUser): FriendUser => ({

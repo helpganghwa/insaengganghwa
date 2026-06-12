@@ -1,6 +1,6 @@
 import 'server-only';
 
-import { eq } from 'drizzle-orm';
+import { and, eq } from 'drizzle-orm';
 
 import { db } from '@/lib/db/client';
 import { walletTrySpend } from '@/lib/game/wallet';
@@ -34,7 +34,7 @@ export function createGuild(input: {
     const [existing] = await tx
       .select({ g: guildMembers.guildId })
       .from(guildMembers)
-      .where(eq(guildMembers.userId, input.userId))
+      .where(and(eq(guildMembers.userId, input.userId), eq(guildMembers.serverId, input.serverId)))
       .for('update');
     if (existing) throw new GuildError('ALREADY_IN_GUILD');
 
@@ -42,7 +42,7 @@ export function createGuild(input: {
     const [dup] = await tx
       .select({ id: guilds.id })
       .from(guilds)
-      .where(eq(guilds.name, name))
+      .where(and(eq(guilds.serverId, input.serverId), eq(guilds.name, name)))
       .limit(1);
     if (dup) throw new GuildError('NAME_TAKEN');
 
@@ -53,9 +53,11 @@ export function createGuild(input: {
     // 길드 + 리더 멤버.
     const [g] = await tx
       .insert(guilds)
-      .values({ name, leaderUserId: input.userId, emblemColor: input.emblemColor ?? null })
+      .values({ name, serverId: input.serverId, leaderUserId: input.userId, emblemColor: input.emblemColor ?? null })
       .returning({ id: guilds.id });
-    await tx.insert(guildMembers).values({ userId: input.userId, guildId: g!.id, role: 'leader' });
+    await tx
+      .insert(guildMembers)
+      .values({ userId: input.userId, serverId: input.serverId, guildId: g!.id, role: 'leader' });
 
     return { guildId: g!.id };
   });

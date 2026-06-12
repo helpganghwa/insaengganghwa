@@ -92,7 +92,7 @@ export async function setActiveEmblemAction(emblemId: string) {
   const u = await getSessionUserId();
   if (!u) return unauth;
   try {
-    await setActiveEmblem({ userId: u, emblemId: BigInt(emblemId) });
+    await setActiveEmblem({ userId: u, serverId: await getActiveServerId(), emblemId: BigInt(emblemId) });
     revalidateGuildAndHeader();
     return { status: 'success' } as const;
   } catch (e) {
@@ -105,7 +105,7 @@ export async function deleteEmblemAction(emblemId: string) {
   const u = await getSessionUserId();
   if (!u) return unauth;
   try {
-    await deleteEmblem({ userId: u, emblemId: BigInt(emblemId) });
+    await deleteEmblem({ userId: u, serverId: await getActiveServerId(), emblemId: BigInt(emblemId) });
     revalidateGuildAndHeader();
     return { status: 'success' } as const;
   } catch (e) {
@@ -117,7 +117,7 @@ export async function searchGuildsAction(q: string) {
   const u = await getSessionUserId();
   if (!u) return unauth;
   try {
-    const rows = await searchGuilds(q);
+    const rows = await searchGuilds(await getActiveServerId(), q);
     return {
       status: 'success',
       results: rows.map((r) => ({ ...r, id: r.id.toString() })),
@@ -143,7 +143,7 @@ export async function approveJoinAction(requestUserId: string) {
   const u = await getSessionUserId();
   if (!u) return unauth;
   try {
-    await approveJoinRequest({ actorUserId: u, requestUserId });
+    await approveJoinRequest({ actorUserId: u, serverId: await getActiveServerId(), requestUserId });
     revalidatePath('/guild');
     return { status: 'success' } as const;
   } catch (e) {
@@ -155,7 +155,7 @@ export async function rejectJoinAction(requestUserId: string) {
   const u = await getSessionUserId();
   if (!u) return unauth;
   try {
-    await rejectJoinRequest({ actorUserId: u, requestUserId });
+    await rejectJoinRequest({ actorUserId: u, serverId: await getActiveServerId(), requestUserId });
     revalidatePath('/guild');
     return { status: 'success' } as const;
   } catch (e) {
@@ -170,7 +170,7 @@ export async function setJoinPolicyAction(policy: GuildJoinPolicy) {
     return { status: 'error', code: 'UNKNOWN' } as const;
   }
   try {
-    await setJoinPolicy({ userId: u, policy });
+    await setJoinPolicy({ userId: u, serverId: await getActiveServerId(), policy });
     revalidatePath('/guild');
     return { status: 'success' } as const;
   } catch (e) {
@@ -183,7 +183,7 @@ export async function setGuildNoticeAction(notice: string) {
   const u = await getSessionUserId();
   if (!u) return unauth;
   try {
-    await setGuildNotice({ userId: u, notice });
+    await setGuildNotice({ userId: u, serverId: await getActiveServerId(), notice });
     revalidatePath('/guild');
     revalidatePath('/guild/settings');
     return { status: 'success' } as const;
@@ -197,7 +197,7 @@ export async function setGuildOpenchatAction(url: string) {
   const u = await getSessionUserId();
   if (!u) return unauth;
   try {
-    await setGuildOpenchat({ userId: u, url });
+    await setGuildOpenchat({ userId: u, serverId: await getActiveServerId(), url });
     revalidatePath('/guild');
     revalidatePath('/guild/settings');
     return { status: 'success' } as const;
@@ -210,7 +210,7 @@ export async function leaveGuildAction() {
   const u = await getSessionUserId();
   if (!u) return unauth;
   try {
-    const r = await leaveGuild({ userId: u });
+    const r = await leaveGuild({ userId: u, serverId: await getActiveServerId() });
     revalidatePath('/guild');
     return { status: 'success', disbanded: r.disbanded } as const;
   } catch (e) {
@@ -222,7 +222,7 @@ export async function setViceAction(targetUserId: string, makeVice: boolean) {
   const u = await getSessionUserId();
   if (!u) return unauth;
   try {
-    await setViceRole({ leaderUserId: u, targetUserId, makeVice });
+    await setViceRole({ leaderUserId: u, serverId: await getActiveServerId(), targetUserId, makeVice });
     revalidatePath('/guild');
     revalidatePath('/guild/settings');
     return { status: 'success' } as const;
@@ -235,7 +235,7 @@ export async function kickMemberAction(targetUserId: string) {
   const u = await getSessionUserId();
   if (!u) return unauth;
   try {
-    await kickMember({ actorUserId: u, targetUserId });
+    await kickMember({ actorUserId: u, serverId: await getActiveServerId(), targetUserId });
     revalidatePath('/guild');
     revalidatePath('/guild/settings');
     return { status: 'success' } as const;
@@ -248,7 +248,7 @@ export async function transferLeadershipAction(targetUserId: string) {
   const u = await getSessionUserId();
   if (!u) return unauth;
   try {
-    await transferLeadership({ leaderUserId: u, targetUserId });
+    await transferLeadership({ leaderUserId: u, serverId: await getActiveServerId(), targetUserId });
     revalidatePath('/guild');
     revalidatePath('/guild/settings');
     return { status: 'success' } as const;
@@ -261,7 +261,7 @@ export async function disbandGuildAction() {
   const u = await getSessionUserId();
   if (!u) return unauth;
   try {
-    await disbandGuild({ userId: u });
+    await disbandGuild({ userId: u, serverId: await getActiveServerId() });
     revalidatePath('/guild');
     return { status: 'success' } as const;
   } catch (e) {
@@ -342,7 +342,7 @@ export async function deployAction(zoneId: number, role: ConquestRole) {
   const u = await getSessionUserId();
   if (!u) return unauth;
   try {
-    const r = await deployToZone({ userId: u, zoneId, role });
+    const r = await deployToZone({ userId: u, serverId: await getActiveServerId(), zoneId, role });
     revalidatePath('/guild/map');
     revalidatePath('/guild');
     return { status: 'success', battleKstDay: r.battleKstDay } as const;
@@ -355,7 +355,7 @@ export async function cancelDeployAction() {
   const u = await getSessionUserId();
   if (!u) return unauth;
   try {
-    const r = await cancelDeployment({ userId: u });
+    const r = await cancelDeployment({ userId: u, serverId: await getActiveServerId() });
     revalidatePath('/guild/map');
     revalidatePath('/guild');
     return { status: 'success', cancelled: r.cancelled } as const;
@@ -368,7 +368,7 @@ export async function deployMemberAction(targetUserId: string, zoneId: number, r
   const u = await getSessionUserId();
   if (!u) return unauth;
   try {
-    await deployMember({ actorUserId: u, targetUserId, zoneId, role });
+    await deployMember({ actorUserId: u, serverId: await getActiveServerId(), targetUserId, zoneId, role });
     revalidatePath('/guild/deploy');
     revalidatePath('/guild/map');
     return { status: 'success' } as const;
@@ -381,7 +381,7 @@ export async function clearMemberDeploymentAction(targetUserId: string) {
   const u = await getSessionUserId();
   if (!u) return unauth;
   try {
-    await clearMemberDeployment({ actorUserId: u, targetUserId });
+    await clearMemberDeployment({ actorUserId: u, serverId: await getActiveServerId(), targetUserId });
     revalidatePath('/guild/deploy');
     revalidatePath('/guild/map');
     return { status: 'success' } as const;

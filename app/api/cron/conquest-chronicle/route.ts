@@ -6,6 +6,7 @@
  */
 import { isCronAuthorized } from '@/lib/auth/cron-auth';
 import { generateAndStoreChronicle } from '@/lib/game/guild';
+import { openServerIds } from '@/lib/game/server-list';
 import { kstDateString } from '@/lib/kst';
 
 export const runtime = 'nodejs';
@@ -17,7 +18,9 @@ export async function GET(req: Request) {
   // 자정(KST 00시대) 실행 → 전투가 일어난 어제 날짜를 대상으로 생성(24h 전 KST 날짜).
   const kstDay = kstDateString(new Date(Date.now() - 24 * 60 * 60 * 1000));
   try {
-    const r = await generateAndStoreChronicle(kstDay);
+    const results = [];
+    for (const sid of await openServerIds()) results.push({ serverId: sid, ...(await generateAndStoreChronicle(kstDay, sid)) });
+    const r = { results };
     return Response.json({ ok: true, kstDay, ...r, kind: 'conquest-chronicle' });
   } catch (e) {
     console.error('[conquest-chronicle]', e);

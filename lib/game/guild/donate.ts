@@ -1,6 +1,6 @@
 import 'server-only';
 
-import { eq, sql } from 'drizzle-orm';
+import { and, eq, sql } from 'drizzle-orm';
 
 import { db } from '@/lib/db/client';
 import { walletTrySpend } from '@/lib/game/wallet';
@@ -37,7 +37,7 @@ export function donateToGuild(input: {
         day: guildMembers.lastDonationKstDay,
       })
       .from(guildMembers)
-      .where(eq(guildMembers.userId, input.userId))
+      .where(and(eq(guildMembers.userId, input.userId), eq(guildMembers.serverId, input.serverId)))
       .for('update');
     if (!m) throw new GuildError('NOT_IN_GUILD');
 
@@ -60,7 +60,7 @@ export function donateToGuild(input: {
         dailyDonationCount: usedToday + 1,
         lastDonationKstDay: today,
       })
-      .where(eq(guildMembers.userId, input.userId));
+      .where(and(eq(guildMembers.userId, input.userId), eq(guildMembers.serverId, input.serverId)));
 
     // 길드 XP + 레벨업.
     const [g] = await tx

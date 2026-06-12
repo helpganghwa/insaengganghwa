@@ -110,7 +110,7 @@ export async function searchUsers(
     else rel.set(other, l.requesterId === meId ? 'outgoing' : 'incoming');
   }
   // 길드(이름+문양) 일괄 부착 — 찾기 결과도 닉네임 아래 길드 노출. 실패해도 진행.
-  const guildMap = await getGuildBriefsByUsers(ids).catch(
+  const guildMap = await getGuildBriefsByUsers(ids, serverId).catch(
     () => new Map<string, { emblemUrl: string | null; name: string }>(),
   );
   return rows.map((r) => ({

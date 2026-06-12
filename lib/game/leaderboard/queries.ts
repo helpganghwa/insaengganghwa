@@ -4,6 +4,7 @@ import { unstable_cache } from 'next/cache';
 import { and, eq, inArray, sql } from 'drizzle-orm';
 
 import { db } from '@/lib/db/client';
+import { DEFAULT_SERVER_ID } from '@/lib/game/servers';
 import { withTimeout } from '@/lib/db/with-timeout';
 import { profiles } from '@/lib/db/schema/profiles';
 import { userProfiles } from '@/lib/db/schema/avatar';
@@ -68,7 +69,7 @@ async function attachProfiles(entries: LeaderboardEntry[]): Promise<LeaderboardE
   // 길드 문양 batch(실패해도 순위는 반환).
   let guildMap = new Map<string, { emblemUrl: string | null; name: string }>();
   try {
-    guildMap = await getGuildBriefsByUsers(entries.map((e) => e.userId));
+    guildMap = await getGuildBriefsByUsers(entries.map((e) => e.userId), DEFAULT_SERVER_ID); // P6: 리더보드 서버 스코프와 함께 전환
   } catch {
     // 무시 — 문양 없이 진행.
   }

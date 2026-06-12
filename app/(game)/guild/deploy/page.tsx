@@ -1,4 +1,5 @@
 import { redirect } from 'next/navigation';
+import { getActiveServerId } from '@/lib/game/servers';
 
 import { getSessionUserId } from '@/lib/auth/session';
 import { assetUrl } from '@/lib/asset-versions';
@@ -14,17 +15,18 @@ export const dynamic = 'force-dynamic';
 
 export default async function DeployPage() {
   const userId = await getSessionUserId();
+  const serverId = await getActiveServerId();
   if (!userId) {
     return <div className="px-4 py-8 text-center text-sm text-zinc-500">로그인이 필요합니다.</div>;
   }
-  const membership = await getMyMembership(userId);
+  const membership = await getMyMembership(userId, serverId);
   if (!membership) redirect('/guild');
 
   const isOfficer = membership.role === 'leader' || membership.role === 'vice';
   const [board, attackable, adjacency] = await Promise.all([
     getDeployBoard(membership.guildId),
     getAttackableZoneIds(membership.guildId),
-    getZoneAdjacency(),
+    getZoneAdjacency(serverId),
   ]);
 
   return (

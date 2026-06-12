@@ -4,6 +4,7 @@
  * 인증 = CRON_SECRET / x-vercel-cron.
  */
 import { isCronAuthorized } from '@/lib/auth/cron-auth';
+import { openServerIds } from '@/lib/game/server-list';
 import { runConquest } from '@/lib/game/guild/conquest/run';
 
 export const runtime = 'nodejs';
@@ -13,7 +14,9 @@ export const maxDuration = 300;
 export async function GET(req: Request) {
   if (!isCronAuthorized(req)) return new Response('forbidden', { status: 403 });
   try {
-    const r = await runConquest();
+    const results = [];
+    for (const sid of await openServerIds()) results.push({ serverId: sid, ...(await runConquest(sid)) });
+    const r = { results };
     return Response.json({ ok: true, ...r, kind: 'conquest-run' });
   } catch (e) {
     console.error('[conquest-run]', e);

@@ -1,6 +1,6 @@
 import 'server-only';
 
-import { desc, eq, sql } from 'drizzle-orm';
+import { and, desc, eq, sql } from 'drizzle-orm';
 
 import { db } from '@/lib/db/client';
 import { guilds, guildMembers, guildLeaveLog } from '@/lib/db/schema/guild';
@@ -14,18 +14,26 @@ import { GuildError } from './errors';
  */
 export function joinGuild(input: { userId: string; guildId: bigint }): Promise<void> {
   return db.transaction(async (tx) => {
+    // 길드의 서버가 스코프 기준(SERVER.md P5) — 멤버십·재가입 잠금·insert 전부 이 서버 내.
+    const [g] = await tx
+      .select({ id: guilds.id, serverId: guilds.serverId, level: guilds.level })
+      .from(guilds)
+      .where(eq(guilds.id, input.guildId))
+      .for('update');
+    if (!g) throw new GuildError('GUILD_NOT_FOUND');
+
     const [m] = await tx
       .select({ g: guildMembers.guildId })
       .from(guildMembers)
-      .where(eq(guildMembers.userId, input.userId))
+      .where(and(eq(guildMembers.userId, input.userId), eq(guildMembers.serverId, g.serverId)))
       .for('update');
     if (m) throw new GuildError('ALREADY_IN_GUILD');
 
-    // 탈퇴 후 24h 재가입 잠금(가장 최근 탈퇴 기준).
+    // 탈퇴 후 24h 재가입 잠금(가장 최근 탈퇴 기준, 서버별).
     const [lastLeave] = await tx
       .select({ leftAt: guildLeaveLog.leftAt })
       .from(guildLeaveLog)
-      .where(eq(guildLeaveLog.userId, input.userId))
+      .where(and(eq(guildLeaveLog.userId, input.userId), eq(guildLeaveLog.serverId, g.serverId)))
       .orderBy(desc(guildLeaveLog.leftAt))
       .limit(1);
     if (
@@ -35,13 +43,6 @@ export function joinGuild(input: { userId: string; guildId: bigint }): Promise<v
       throw new GuildError('REJOIN_LOCKED');
     }
 
-    const [g] = await tx
-      .select({ id: guilds.id, level: guilds.level })
-      .from(guilds)
-      .where(eq(guilds.id, input.guildId))
-      .for('update');
-    if (!g) throw new GuildError('GUILD_NOT_FOUND');
-
     const [cnt] = await tx
       .select({ n: sql<number>`count(*)::int` })
       .from(guildMembers)
@@ -50,6 +51,6 @@ export function joinGuild(input: { userId: string; guildId: bigint }): Promise<v
 
     await tx
       .insert(guildMembers)
-      .values({ userId: input.userId, guildId: input.guildId, role: 'member' });
+      .values({ userId: input.userId, serverId: g.serverId, guildId: input.guildId, role: 'member' });
   });
 }

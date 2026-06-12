@@ -17,11 +17,11 @@ import { joinGuild } from './join';
 type Tx = Parameters<Parameters<typeof db.transaction>[0]>[0];
 
 /** actor가 길드 임원(길드장/부길드장)인지 검증하고 길드 id 반환. */
-async function assertOfficer(tx: Tx, userId: string): Promise<bigint> {
+async function assertOfficer(tx: Tx, userId: string, serverId: number): Promise<bigint> {
   const [m] = await tx
     .select({ guildId: guildMembers.guildId, role: guildMembers.role })
     .from(guildMembers)
-    .where(eq(guildMembers.userId, userId))
+    .where(and(eq(guildMembers.userId, userId), eq(guildMembers.serverId, serverId)))
     .limit(1);
   if (!m) throw new GuildError('NOT_IN_GUILD');
   if (m.role !== 'leader' && m.role !== 'vice') throw new GuildError('NOT_OFFICER');
@@ -29,18 +29,18 @@ async function assertOfficer(tx: Tx, userId: string): Promise<bigint> {
 }
 
 /** 비소속 + 24h 재가입 잠금 검사(요청/즉시가입 공통). */
-async function assertJoinable(tx: Tx, userId: string): Promise<void> {
+async function assertJoinable(tx: Tx, userId: string, serverId: number): Promise<void> {
   const [m] = await tx
     .select({ g: guildMembers.guildId })
     .from(guildMembers)
-    .where(eq(guildMembers.userId, userId))
+    .where(and(eq(guildMembers.userId, userId), eq(guildMembers.serverId, serverId)))
     .limit(1);
   if (m) throw new GuildError('ALREADY_IN_GUILD');
 
   const [lastLeave] = await tx
     .select({ leftAt: guildLeaveLog.leftAt })
     .from(guildLeaveLog)
-    .where(eq(guildLeaveLog.userId, userId))
+    .where(and(eq(guildLeaveLog.userId, userId), eq(guildLeaveLog.serverId, serverId)))
     .orderBy(desc(guildLeaveLog.leftAt))
     .limit(1);
   if (lastLeave && Date.now() - lastLeave.leftAt.getTime() < GUILD_REJOIN_LOCK_HOURS * 3_600_000) {
@@ -58,7 +58,7 @@ export async function requestOrJoinGuild(input: {
   guildId: bigint;
 }): Promise<{ joined: boolean }> {
   const [g] = await db
-    .select({ joinPolicy: guilds.joinPolicy })
+    .select({ joinPolicy: guilds.joinPolicy, serverId: guilds.serverId })
     .from(guilds)
     .where(eq(guilds.id, input.guildId))
     .limit(1);
@@ -71,12 +71,12 @@ export async function requestOrJoinGuild(input: {
 
   // 승인제 — 신청만 등록.
   await db.transaction(async (tx) => {
-    await assertJoinable(tx, input.userId);
+    await assertJoinable(tx, input.userId, g.serverId);
     await tx
       .insert(guildJoinRequests)
-      .values({ userId: input.userId, guildId: input.guildId })
+      .values({ userId: input.userId, serverId: g.serverId, guildId: input.guildId })
       .onConflictDoUpdate({
-        target: guildJoinRequests.userId,
+        target: [guildJoinRequests.userId, guildJoinRequests.serverId],
         set: { guildId: input.guildId, createdAt: sql`now()` },
       });
   });
@@ -86,19 +86,25 @@ export async function requestOrJoinGuild(input: {
 /** 가입 신청 승인 — 길드장/부길드장. 정원·재가입 잠금 재검사 후 멤버 등록 + 신청 삭제. */
 export async function approveJoinRequest(input: {
   actorUserId: string;
+  serverId: number;
   requestUserId: string;
 }): Promise<void> {
   await db.transaction(async (tx) => {
-    const guildId = await assertOfficer(tx, input.actorUserId);
+    const guildId = await assertOfficer(tx, input.actorUserId, input.serverId);
 
     const [req] = await tx
       .select({ guildId: guildJoinRequests.guildId })
       .from(guildJoinRequests)
-      .where(eq(guildJoinRequests.userId, input.requestUserId))
+      .where(
+        and(
+          eq(guildJoinRequests.userId, input.requestUserId),
+          eq(guildJoinRequests.serverId, input.serverId),
+        ),
+      )
       .for('update');
     if (!req || req.guildId !== guildId) throw new GuildError('NO_JOIN_REQUEST');
 
-    await assertJoinable(tx, input.requestUserId); // 그 사이 타 길드 가입/탈퇴 잠금 재검사
+    await assertJoinable(tx, input.requestUserId, input.serverId); // 그 사이 타 길드 가입/탈퇴 잠금 재검사
 
     const [g] = await tx
       .select({ level: guilds.level })
@@ -112,18 +118,28 @@ export async function approveJoinRequest(input: {
       .where(eq(guildMembers.guildId, guildId));
     if ((cnt?.n ?? 0) >= guildCapacity(g.level)) throw new GuildError('GUILD_FULL');
 
-    await tx.insert(guildMembers).values({ userId: input.requestUserId, guildId, role: 'member' });
-    await tx.delete(guildJoinRequests).where(eq(guildJoinRequests.userId, input.requestUserId));
+    await tx
+      .insert(guildMembers)
+      .values({ userId: input.requestUserId, serverId: input.serverId, guildId, role: 'member' });
+    await tx
+      .delete(guildJoinRequests)
+      .where(
+        and(
+          eq(guildJoinRequests.userId, input.requestUserId),
+          eq(guildJoinRequests.serverId, input.serverId),
+        ),
+      );
   });
 }
 
 /** 가입 신청 거절 — 길드장/부길드장. 자기 길드 신청만 삭제. */
 export async function rejectJoinRequest(input: {
   actorUserId: string;
+  serverId: number;
   requestUserId: string;
 }): Promise<void> {
   await db.transaction(async (tx) => {
-    const guildId = await assertOfficer(tx, input.actorUserId);
+    const guildId = await assertOfficer(tx, input.actorUserId, input.serverId);
     const rows = await tx
       .delete(guildJoinRequests)
       .where(
@@ -140,10 +156,11 @@ export async function rejectJoinRequest(input: {
 /** 가입 방식 변경 — 길드장/부길드장. */
 export async function setJoinPolicy(input: {
   userId: string;
+  serverId: number;
   policy: GuildJoinPolicy;
 }): Promise<void> {
   await db.transaction(async (tx) => {
-    const guildId = await assertOfficer(tx, input.userId);
+    const guildId = await assertOfficer(tx, input.userId, input.serverId);
     await tx.update(guilds).set({ joinPolicy: input.policy }).where(eq(guilds.id, guildId));
   });
 }

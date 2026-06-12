@@ -1,4 +1,5 @@
 import { getSessionUserId } from '@/lib/auth/session';
+import { getActiveServerId } from '@/lib/game/servers';
 import { withTimeout } from '@/lib/db/with-timeout';
 import {
   getMyMembership,
@@ -19,10 +20,10 @@ import { GuildMemberTabs } from './GuildMemberTabs';
 export const dynamic = 'force-dynamic';
 
 /** 미가입 첫화면 — 랭킹/찾기 탭 + 생성 FAB. */
-async function browseView(userId: string) {
+async function browseView(userId: string, serverId: number) {
   const [ranking, myRequest] = await Promise.all([
-    withTimeout(getGuildRanking(), DB_GUARD_MS, 'guild.browse.ranking'),
-    withTimeout(getMyJoinRequest(userId), DB_GUARD_MS, 'guild.browse.req'),
+    withTimeout(getGuildRanking(serverId), DB_GUARD_MS, 'guild.browse.ranking'),
+    withTimeout(getMyJoinRequest(userId, serverId), DB_GUARD_MS, 'guild.browse.req'),
   ]);
   return (
     <GuildBrowse
@@ -41,23 +42,24 @@ async function browseView(userId: string) {
 
 export default async function GuildPage() {
   const userId = await getSessionUserId();
+  const serverId = await getActiveServerId();
   if (!userId) {
     return <div className="px-4 py-8 text-center text-sm text-zinc-500">로그인이 필요합니다.</div>;
   }
 
-  const membership = await withTimeout(getMyMembership(userId), DB_GUARD_MS, 'guild.membership');
+  const membership = await withTimeout(getMyMembership(userId, serverId), DB_GUARD_MS, 'guild.membership');
 
-  if (!membership) return browseView(userId);
+  if (!membership) return browseView(userId, serverId);
 
   const [guild, members, ranking] = await Promise.all([
     withTimeout(getGuild(membership.guildId), DB_GUARD_MS, 'guild.guild'),
     withTimeout(getGuildMembersRich(membership.guildId), DB_GUARD_MS, 'guild.members'),
-    withTimeout(getGuildRanking(), DB_GUARD_MS, 'guild.ranking'),
+    withTimeout(getGuildRanking(serverId), DB_GUARD_MS, 'guild.ranking'),
   ]);
 
   if (!guild) {
     // 멤버십은 있으나 길드 행이 사라진 비정상 상태 — 브라우즈로.
-    return browseView(userId);
+    return browseView(userId, serverId);
   }
 
   const usedToday =

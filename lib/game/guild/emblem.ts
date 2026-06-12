@@ -265,11 +265,11 @@ export async function getGuildEmblems(
 }
 
 /** 길드장 + 길드 id 확인(공통 가드). */
-async function requireLeaderGuild(userId: string): Promise<bigint> {
+async function requireLeaderGuild(userId: string, serverId: number): Promise<bigint> {
   const [m] = await db
     .select({ guildId: guildMembers.guildId, role: guildMembers.role })
     .from(guildMembers)
-    .where(eq(guildMembers.userId, userId))
+    .where(and(eq(guildMembers.userId, userId), eq(guildMembers.serverId, serverId)))
     .limit(1);
   if (!m) throw new GuildError('NOT_IN_GUILD');
   if (m.role !== 'leader') throw new GuildError('NOT_LEADER');
@@ -288,7 +288,7 @@ export async function generateEmblem(input: {
 }): Promise<{ emblemId: bigint; emblemUrl: string }> {
   const cost = BigInt(GUILD_EMBLEM_REROLL_COST_DIAMOND);
   // 1) 사전 검증(차감 없음) — 길드장·보유 한도·잔액. 비싼 생성 전에 빠르게 실패.
-  const guildId = await requireLeaderGuild(input.userId);
+  const guildId = await requireLeaderGuild(input.userId, input.serverId);
   const [{ n }] = await db
     .select({ n: sql<number>`count(*)::int` })
     .from(guildEmblems)
@@ -330,8 +330,8 @@ export async function generateEmblem(input: {
 }
 
 /** 보관 문양 중 하나를 활성으로 선택 — 길드장만, 무료. */
-export async function setActiveEmblem(input: { userId: string; emblemId: bigint }): Promise<void> {
-  const guildId = await requireLeaderGuild(input.userId);
+export async function setActiveEmblem(input: { userId: string; serverId: number; emblemId: bigint }): Promise<void> {
+  const guildId = await requireLeaderGuild(input.userId, input.serverId);
   const [em] = await db
     .select({ id: guildEmblems.id, emblemUrl: guildEmblems.emblemUrl, emblemColor: guildEmblems.emblemColor })
     .from(guildEmblems)
@@ -342,8 +342,8 @@ export async function setActiveEmblem(input: { userId: string; emblemId: bigint 
 }
 
 /** 보관 문양 삭제 — 길드장만, 무료. 최소 1개 유지. 활성 삭제 시 다른 문양으로 활성 이전. */
-export async function deleteEmblem(input: { userId: string; emblemId: bigint }): Promise<void> {
-  const guildId = await requireLeaderGuild(input.userId);
+export async function deleteEmblem(input: { userId: string; serverId: number; emblemId: bigint }): Promise<void> {
+  const guildId = await requireLeaderGuild(input.userId, input.serverId);
   const rows = await db
     .select({ id: guildEmblems.id, emblemUrl: guildEmblems.emblemUrl, emblemColor: guildEmblems.emblemColor })
     .from(guildEmblems)

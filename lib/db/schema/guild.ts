@@ -11,6 +11,7 @@
  */
 import {
   pgTable,
+  smallint,
   pgEnum,
   uuid,
   text,
@@ -43,6 +44,8 @@ export const guildDeployRoleEnum = pgEnum('guild_deploy_role', ['attack', 'defen
 /** §1·§2 guilds. name 변경불가. level=수용(10+level, L40서 50상한)+무제한(L41+ 과시, 혜택0). */
 export const guilds = pgTable('guilds', {
   id: bigserial('id', { mode: 'bigint' }).primaryKey(),
+  /** 소속 서버(SERVER.md P5) — 길드명 유일성은 서버별(guilds_server_name_uq). */
+  serverId: smallint('server_id').notNull().default(1),
   name: text('name').notNull().unique(),
   /** 3축(모양·색상톤·키워드) Pixellab 생성물(§1.6). 생성 전/실패 시 null → 폴백 문양. */
   emblemUrl: text('emblem_url'),
@@ -76,8 +79,10 @@ export const guildMembers = pgTable(
   'guild_members',
   {
     userId: uuid('user_id')
-      .primaryKey()
+      .notNull()
       .references(() => profiles.id, { onDelete: 'cascade' }),
+    /** 소속 서버(SERVER.md P5) — 1유저 1길드는 서버별. */
+    serverId: smallint('server_id').notNull().default(1),
     guildId: bigint('guild_id', { mode: 'bigint' })
       .notNull()
       .references(() => guilds.id, { onDelete: 'cascade' }),
@@ -88,7 +93,7 @@ export const guildMembers = pgTable(
     lastDonationKstDay: date('last_donation_kst_day'),
     joinedAt: timestamp('joined_at', { withTimezone: true }).notNull().defaultNow(),
   },
-  (t) => [index('guild_member_guild_idx').on(t.guildId)],
+  (t) => [primaryKey({ columns: [t.userId, t.serverId] }), index('guild_member_guild_idx').on(t.guildId)],
 );
 
 /** §1 가입 신청 — 승인제(approval) 길드 전용. user_id PK = 1유저 1신청. 승인/거절/가입 시 삭제. */
@@ -96,14 +101,16 @@ export const guildJoinRequests = pgTable(
   'guild_join_requests',
   {
     userId: uuid('user_id')
-      .primaryKey()
+      .notNull()
       .references(() => profiles.id, { onDelete: 'cascade' }),
+    /** 소속 서버(SERVER.md P5) — 1유저 1신청은 서버별. */
+    serverId: smallint('server_id').notNull().default(1),
     guildId: bigint('guild_id', { mode: 'bigint' })
       .notNull()
       .references(() => guilds.id, { onDelete: 'cascade' }),
     createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
   },
-  (t) => [index('guild_join_req_guild_idx').on(t.guildId)],
+  (t) => [primaryKey({ columns: [t.userId, t.serverId] }), index('guild_join_req_guild_idx').on(t.guildId)],
 );
 
 /** §1 탈퇴 로그 — 24h 재가입 제한(가장 최근 left_at 기준). append-only. */
@@ -114,6 +121,8 @@ export const guildLeaveLog = pgTable(
     userId: uuid('user_id')
       .notNull()
       .references(() => profiles.id, { onDelete: 'cascade' }),
+    /** 소속 서버(SERVER.md P5) — 24h 재가입 제한은 서버별. */
+    serverId: smallint('server_id').notNull().default(1),
     leftAt: timestamp('left_at', { withTimezone: true }).notNull().defaultNow(),
   },
   (t) => [index('guild_leave_user_idx').on(t.userId, t.leftAt)],
@@ -124,6 +133,8 @@ export const zones = pgTable(
   'zones',
   {
     id: integer('id').primaryKey(),
+    /** 소속 서버(SERVER.md P5) — 서버별 월드(신서버 = 새 50행 시드). */
+    serverId: smallint('server_id').notNull().default(1),
     region: zoneRegionEnum('region').notNull(),
     name: text('name').notNull(),
     /** 오버레이 % 좌표(0~100, 해상도 독립). */
@@ -165,6 +176,8 @@ export const guildBattleDeployments = pgTable(
   'guild_battle_deployments',
   {
     id: bigserial('id', { mode: 'bigint' }).primaryKey(),
+    /** 소속 서버(SERVER.md P5). */
+    serverId: smallint('server_id').notNull().default(1),
     battleKstDay: date('battle_kst_day').notNull(),
     userId: uuid('user_id')
       .notNull()
@@ -179,7 +192,7 @@ export const guildBattleDeployments = pgTable(
     createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
   },
   (t) => [
-    uniqueIndex('deploy_user_day_uq').on(t.userId, t.battleKstDay),
+    uniqueIndex('deploy_user_day_uq').on(t.userId, t.serverId, t.battleKstDay),
     index('deploy_zone_day_idx').on(t.zoneId, t.battleKstDay),
   ],
 );
@@ -189,6 +202,8 @@ export const conquestBattles = pgTable(
   'conquest_battles',
   {
     id: bigserial('id', { mode: 'bigint' }).primaryKey(),
+    /** 소속 서버(SERVER.md P5) — zone 파생값의 명시 컬럼(조회 효율). */
+    serverId: smallint('server_id').notNull().default(1),
     battleKstDay: date('battle_kst_day').notNull(),
     zoneId: integer('zone_id')
       .notNull()
@@ -227,12 +242,18 @@ export const guildTaxDistributions = pgTable(
  * today_text='오늘'(긴 사관 스토리), headline='전체' 리스트용 그날 핵심 사건 한 줄.
  * 본문은 종류별 마커로 강조 렌더: {g|길드}·{u|인물}·{r|지역}(지역색).
  */
-export const worldChronicle = pgTable('world_chronicle', {
-  kstDay: date('kst_day').primaryKey(),
-  todayText: text('today_text').notNull(),
-  headline: text('headline').notNull(),
-  createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
-});
+export const worldChronicle = pgTable(
+  'world_chronicle',
+  {
+    /** 소속 서버(SERVER.md P5) — 서버별 일일 연대기. */
+    serverId: smallint('server_id').notNull().default(1),
+    kstDay: date('kst_day').notNull(),
+    todayText: text('today_text').notNull(),
+    headline: text('headline').notNull(),
+    createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
+  },
+  (t) => [primaryKey({ columns: [t.serverId, t.kstDay] })],
+);
 
 /**
  * 0049 길드 문양 보관함 — 길드당 최대 3개(앱 로직 제한, 최소 1). 아바타 다중 프로필 패턴 미러.

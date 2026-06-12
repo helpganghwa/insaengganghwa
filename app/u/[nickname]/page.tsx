@@ -1,4 +1,5 @@
 import { Suspense, cache } from 'react';
+import { DEFAULT_SERVER_ID } from '@/lib/game/servers';
 import Link from 'next/link';
 import { notFound } from 'next/navigation';
 import type { Metadata } from 'next';
@@ -160,7 +161,7 @@ const loadProfile = cache(async (handle: string) => {
     sumEnhance,
     maxEnhance,
     champItems,
-    guild: await getUserGuildBrief(prof.id),
+    guild: await getUserGuildBrief(prof.id, DEFAULT_SERVER_ID),
   };
 });
 

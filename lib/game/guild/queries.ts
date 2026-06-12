@@ -33,7 +33,7 @@ type DeployBoardMember = {
 };
 
 /** 내 길드 소속(1유저 1길드) + 기여도·일일 기부 카운터. 미소속이면 null. */
-export async function getMyMembership(userId: string) {
+export async function getMyMembership(userId: string, serverId: number) {
   const [m] = await db
     .select({
       guildId: guildMembers.guildId,
@@ -43,7 +43,7 @@ export async function getMyMembership(userId: string) {
       lastDonationKstDay: guildMembers.lastDonationKstDay,
     })
     .from(guildMembers)
-    .where(eq(guildMembers.userId, userId))
+    .where(and(eq(guildMembers.userId, userId), eq(guildMembers.serverId, serverId)))
     .limit(1);
   return m ?? null;
 }
@@ -74,17 +74,17 @@ export async function getJoinRequests(guildId: bigint) {
 }
 
 /** 내 가입 신청(있으면 신청 길드 id) — 미가입 첫화면 '신청됨' 표시. */
-export async function getMyJoinRequest(userId: string): Promise<bigint | null> {
+export async function getMyJoinRequest(userId: string, serverId: number): Promise<bigint | null> {
   const [r] = await db
     .select({ guildId: guildJoinRequests.guildId })
     .from(guildJoinRequests)
-    .where(eq(guildJoinRequests.userId, userId))
+    .where(and(eq(guildJoinRequests.userId, userId), eq(guildJoinRequests.serverId, serverId)))
     .limit(1);
   return r?.guildId ?? null;
 }
 
 /** 길드 랭킹 — 레벨↓·XP↓ 순. 미가입 첫화면 랭킹 탭. 문양·인원 포함. */
-export async function getGuildRanking(limit = 50) {
+export async function getGuildRanking(serverId: number, limit = 50) {
   return db
     .select({
       id: guilds.id,
@@ -95,12 +95,13 @@ export async function getGuildRanking(limit = 50) {
       memberCount: sql<number>`(select count(*)::int from guild_members gm where gm.guild_id = ${guilds.id})`,
     })
     .from(guilds)
+    .where(eq(guilds.serverId, serverId))
     .orderBy(desc(guilds.level), desc(guilds.xp))
     .limit(limit);
 }
 
 /** 길드 검색(이름 부분일치) — 가입 브라우즈용. 인원/수용 포함. */
-export async function searchGuilds(q: string) {
+export async function searchGuilds(serverId: number, q: string) {
   const term = q.trim();
   if (!term) return [];
   return db
@@ -113,12 +114,12 @@ export async function searchGuilds(q: string) {
       memberCount: sql<number>`(select count(*)::int from guild_members gm where gm.guild_id = ${guilds.id})`,
     })
     .from(guilds)
-    .where(ilike(guilds.name, `%${term}%`))
+    .where(and(eq(guilds.serverId, serverId), ilike(guilds.name, `%${term}%`)))
     .limit(20);
 }
 
 /** 월드맵 50구역 + 소유 길드명/집행관 닉(중립=null). 읽기전용 뷰어용. */
-export async function getWorldmapZones() {
+export async function getWorldmapZones(serverId: number) {
   const ownerGuild = guilds;
   return db
     .select({
@@ -140,14 +141,16 @@ export async function getWorldmapZones() {
     .from(zones)
     .leftJoin(ownerGuild, eq(ownerGuild.id, zones.ownerGuildId))
     .leftJoin(profiles, eq(profiles.id, zones.executorUserId))
+    .where(eq(zones.serverId, serverId))
     .orderBy(zones.id);
 }
 
 /** 구역 인접 간선(무방향, 정규형 a<b) — 지도 연결선·인접 공격 규칙 표시용. */
-export async function getZoneAdjacency(): Promise<{ a: number; b: number }[]> {
+export async function getZoneAdjacency(serverId: number): Promise<{ a: number; b: number }[]> {
   const rows = await db
     .select({ a: zoneAdjacency.zoneA, b: zoneAdjacency.zoneB })
-    .from(zoneAdjacency);
+    .from(zoneAdjacency)
+    .innerJoin(zones, and(eq(zones.id, zoneAdjacency.zoneA), eq(zones.serverId, serverId)));
   return rows;
 }
 

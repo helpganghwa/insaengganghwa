@@ -14,21 +14,23 @@ async function assertOfficerOfZoneOwner(
   actorUserId: string,
   zoneId: number,
 ): Promise<bigint> {
-  const [m] = await tx
-    .select({ guildId: guildMembers.guildId, role: guildMembers.role })
-    .from(guildMembers)
-    .where(eq(guildMembers.userId, actorUserId))
-    .limit(1);
-  if (!m) throw new GuildError('NOT_IN_GUILD');
-  if (m.role !== 'leader' && m.role !== 'vice') throw new GuildError('NOT_OFFICER');
-
+  // 존 소유 길드를 먼저 잠그고, actor 멤버십을 (user, guild)로 앵커 — 길드가 서버에 묶여
+  // 서버 식별이 내재됨(SERVER.md P5: 다서버에서도 정확).
   const [z] = await tx
     .select({ ownerGuildId: zones.ownerGuildId })
     .from(zones)
     .where(eq(zones.id, zoneId))
     .for('update');
   if (!z) throw new GuildError('ZONE_NOT_FOUND');
-  if (z.ownerGuildId !== m.guildId) throw new GuildError('FORBIDDEN'); // 자기 길드 소유 구역 아님
+  if (z.ownerGuildId == null) throw new GuildError('FORBIDDEN');
+
+  const [m] = await tx
+    .select({ guildId: guildMembers.guildId, role: guildMembers.role })
+    .from(guildMembers)
+    .where(and(eq(guildMembers.userId, actorUserId), eq(guildMembers.guildId, z.ownerGuildId)))
+    .limit(1);
+  if (!m) throw new GuildError('FORBIDDEN'); // 자기 길드 소유 구역 아님
+  if (m.role !== 'leader' && m.role !== 'vice') throw new GuildError('NOT_OFFICER');
   return m.guildId;
 }
 
@@ -49,9 +51,9 @@ export async function setZoneExecutor(input: {
     const [target] = await tx
       .select({ guildId: guildMembers.guildId })
       .from(guildMembers)
-      .where(eq(guildMembers.userId, input.targetUserId))
+      .where(and(eq(guildMembers.userId, input.targetUserId), eq(guildMembers.guildId, guildId)))
       .limit(1);
-    if (!target || target.guildId !== guildId) throw new GuildError('TARGET_NOT_IN_GUILD');
+    if (!target) throw new GuildError('TARGET_NOT_IN_GUILD');
 
     // 1유저 1집행관 — 다른 구역 집행관이면 거부(먼저 해제 필요).
     const [other] = await tx
@@ -69,6 +71,7 @@ export async function setZoneExecutor(input: {
       .where(
         and(
           eq(guildBattleDeployments.userId, input.targetUserId),
+          eq(guildBattleDeployments.guildId, guildId),
           eq(guildBattleDeployments.battleKstDay, nextBattleKstDay()),
         ),
       );

@@ -53,7 +53,7 @@ const REGION_KO: Record<string, string> = {
 };
 
 /** 그날(kstDay) 점령전 결과를 집계 — 사건 없으면 battleCount 0. */
-export async function aggregateConquestDay(kstDay: string): Promise<ConquestDaySummary> {
+export async function aggregateConquestDay(kstDay: string, serverId: number): Promise<ConquestDaySummary> {
   const battles = (await db.execute(sql`
     select z.name as zone, z.region::text as region, z.captured_at as captured_at,
            g.name as winner, cb.finale as finale,
@@ -64,7 +64,7 @@ export async function aggregateConquestDay(kstDay: string): Promise<ConquestDayS
     from conquest_battles cb
     join zones z on z.id = cb.zone_id
     left join guilds g on g.id = cb.winner_guild_id
-    where cb.battle_kst_day = ${kstDay}
+    where cb.battle_kst_day = ${kstDay} and cb.server_id = ${serverId}
   `)) as unknown as {
     zone: string;
     region: string;
@@ -122,6 +122,7 @@ export async function aggregateConquestDay(kstDay: string): Promise<ConquestDayS
   const standingsRows = (await db.execute(sql`
     select g.name as guild, count(*)::int as zones
     from zones z join guilds g on g.id = z.owner_guild_id
+    where z.server_id = ${serverId}
     group by g.name order by zones desc limit 6
   `)) as unknown as { guild: string; zones: number }[];
 
@@ -194,15 +195,16 @@ function isBigChange(s: ConquestDaySummary): boolean {
  */
 export async function generateAndStoreChronicle(
   kstDay: string,
+  serverId: number,
 ): Promise<{ created: boolean; reason?: string }> {
   const [existing] = await db
     .select({ kstDay: worldChronicle.kstDay })
     .from(worldChronicle)
-    .where(eq(worldChronicle.kstDay, kstDay))
+    .where(and(eq(worldChronicle.serverId, serverId), eq(worldChronicle.kstDay, kstDay)))
     .limit(1);
   if (existing) return { created: false, reason: 'already' };
 
-  const summary = await aggregateConquestDay(kstDay);
+  const summary = await aggregateConquestDay(kstDay, serverId);
   if (!isNotable(summary)) return { created: false, reason: 'no-event' };
 
   // 길드별로 미리 그룹핑한 명확한 요약 — 작은 모델이 captures를 한 길드로 합치지 않게(정확 귀속).
@@ -228,7 +230,7 @@ export async function generateAndStoreChronicle(
 
   // 어제 점령전 결과(있으면) — 전날과의 연속성.
   const prevDay = addDaysToKstDay(kstDay, -1);
-  const y = await aggregateConquestDay(prevDay);
+  const y = await aggregateConquestDay(prevDay, serverId);
   const yCapByGuild = new Map<string, string[]>();
   for (const c of y.captures) {
     const arr = yCapByGuild.get(c.winner) ?? [];
@@ -246,7 +248,13 @@ export async function generateAndStoreChronicle(
   const histRows = await db
     .select({ kstDay: worldChronicle.kstDay, headline: worldChronicle.headline })
     .from(worldChronicle)
-    .where(and(lt(worldChronicle.kstDay, kstDay), sql`length(${worldChronicle.headline}) > 0`))
+    .where(
+      and(
+        eq(worldChronicle.serverId, serverId),
+        lt(worldChronicle.kstDay, kstDay),
+        sql`length(${worldChronicle.headline}) > 0`,
+      ),
+    )
     .orderBy(desc(worldChronicle.kstDay))
     .limit(20);
   const histLines = histRows.map((h) => `· ${String(h.kstDay)}: ${stripMarkers(h.headline)}`).join('\n');
@@ -292,7 +300,8 @@ export async function generateAndStoreChronicle(
 
   await db
     .insert(worldChronicle)
-    .values({ kstDay, todayText: today, headline })
+    .values({
+      serverId, kstDay, todayText: today, headline })
     .onConflictDoNothing({ target: worldChronicle.kstDay });
   return { created: true };
 }
@@ -305,7 +314,7 @@ export type ChronicleData = {
 };
 
 /** 세계지도 하단 표시용 — 오늘(최신 스토리) + 전체(날짜별 헤드라인 리스트). */
-export async function getChronicle(): Promise<ChronicleData> {
+export async function getChronicle(serverId: number): Promise<ChronicleData> {
   const rows = await db
     .select({
       kstDay: worldChronicle.kstDay,
@@ -313,6 +322,7 @@ export async function getChronicle(): Promise<ChronicleData> {
       headline: worldChronicle.headline,
     })
     .from(worldChronicle)
+    .where(eq(worldChronicle.serverId, serverId))
     .orderBy(sql`${worldChronicle.kstDay} desc`)
     .limit(120);
   return {

@@ -44,7 +44,7 @@ export async function loadLayoutData(userId: string, serverId: number): Promise<
           from profiles p
           left join characters c on c.user_id = p.id and c.server_id = ${serverId}
           left join user_profiles up on up.id = p.active_profile_id
-          left join guild_members gm on gm.user_id = p.id
+          left join guild_members gm on gm.user_id = p.id and gm.server_id = ${serverId}
           left join guilds g on g.id = gm.guild_id
           where p.id = ${userId}::uuid
           limit 1`,

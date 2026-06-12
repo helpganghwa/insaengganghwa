@@ -13,14 +13,14 @@ export type GuildBrief = {
 };
 
 /** 한 유저의 길드 brief(미소속 null). executorZone/Region: 그 유저가 집행관인 구역명·지역(없으면 null, 1유저 1집행관). */
-export async function getUserGuildBrief(userId: string): Promise<GuildBrief | null> {
+export async function getUserGuildBrief(userId: string, serverId: number): Promise<GuildBrief | null> {
   const rows = (await db.execute(sql`
     select g.name, g.emblem_url as emblem_url,
            z.name as executor_zone, z.region::text as executor_zone_region
     from guild_members gm
     join guilds g on g.id = gm.guild_id
     left join zones z on z.executor_user_id = gm.user_id
-    where gm.user_id = ${userId}::uuid
+    where gm.user_id = ${userId}::uuid and gm.server_id = ${serverId}
     limit 1
   `)) as unknown as {
     name: string;
@@ -40,13 +40,13 @@ export async function getUserGuildBrief(userId: string): Promise<GuildBrief | nu
 }
 
 /** 여러 유저의 길드 brief 일괄 조회 → userId별 Map(미소속은 키 없음). 랭킹·레이드·친구 등 목록용. */
-export async function getGuildBriefsByUsers(userIds: string[]): Promise<Map<string, GuildBrief>> {
+export async function getGuildBriefsByUsers(userIds: string[], serverId: number): Promise<Map<string, GuildBrief>> {
   if (userIds.length === 0) return new Map();
   const rows = (await db.execute(sql`
     select gm.user_id::text as uid, g.name, g.emblem_url as emblem_url
     from guild_members gm
     join guilds g on g.id = gm.guild_id
-    where gm.user_id in ${userIds}
+    where gm.user_id in ${userIds} and gm.server_id = ${serverId}
   `)) as unknown as { uid: string; name: string; emblem_url: string | null }[];
   const m = new Map<string, GuildBrief>();
   for (const r of rows)

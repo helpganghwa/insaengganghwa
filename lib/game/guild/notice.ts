@@ -1,6 +1,6 @@
 import 'server-only';
 
-import { eq } from 'drizzle-orm';
+import { and, eq } from 'drizzle-orm';
 
 import { db } from '@/lib/db/client';
 import { guilds, guildMembers } from '@/lib/db/schema/guild';
@@ -12,13 +12,13 @@ import { GuildError } from './errors';
  * 길드 공지 설정/해제 — 길드장·부길드장만. 빈 문자열이면 공지 제거(null).
  * 길이는 GUILD_NOTICE_MAX_LEN로 방어 절단(클라가 이미 제한하지만 서버 권위).
  */
-export async function setGuildNotice(input: { userId: string; notice: string }): Promise<void> {
+export async function setGuildNotice(input: { userId: string; serverId: number; notice: string }): Promise<void> {
   const text = input.notice.trim().slice(0, GUILD_NOTICE_MAX_LEN);
   await db.transaction(async (tx) => {
     const [m] = await tx
       .select({ guildId: guildMembers.guildId, role: guildMembers.role })
       .from(guildMembers)
-      .where(eq(guildMembers.userId, input.userId))
+      .where(and(eq(guildMembers.userId, input.userId), eq(guildMembers.serverId, input.serverId)))
       .limit(1);
     if (!m) throw new GuildError('NOT_IN_GUILD');
     if (m.role !== 'leader' && m.role !== 'vice') throw new GuildError('NOT_OFFICER');

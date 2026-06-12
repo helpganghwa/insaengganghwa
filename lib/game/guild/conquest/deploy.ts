@@ -40,6 +40,7 @@ async function assertAttackable(tx: Tx, guildId: bigint, targetZoneId: number): 
  */
 export async function deployToZone(input: {
   userId: string;
+  serverId: number;
   zoneId: number;
   role: ConquestRole;
 }): Promise<{ battleKstDay: string }> {
@@ -48,12 +49,12 @@ export async function deployToZone(input: {
     const [m] = await tx
       .select({ guildId: guildMembers.guildId })
       .from(guildMembers)
-      .where(eq(guildMembers.userId, input.userId))
+      .where(and(eq(guildMembers.userId, input.userId), eq(guildMembers.serverId, input.serverId)))
       .limit(1);
     if (!m) throw new GuildError('NOT_IN_GUILD');
 
     const [z] = await tx
-      .select({ ownerGuildId: zones.ownerGuildId })
+      .select({ ownerGuildId: zones.ownerGuildId, serverId: zones.serverId })
       .from(zones)
       .where(eq(zones.id, input.zoneId))
       .limit(1);
@@ -75,9 +76,20 @@ export async function deployToZone(input: {
     const battleKstDay = nextBattleKstDay();
     await tx
       .insert(guildBattleDeployments)
-      .values({ battleKstDay, userId: input.userId, guildId: m.guildId, zoneId: input.zoneId, role: input.role })
+      .values({
+        battleKstDay,
+        userId: input.userId,
+        serverId: input.serverId,
+        guildId: m.guildId,
+        zoneId: input.zoneId,
+        role: input.role,
+      })
       .onConflictDoUpdate({
-        target: [guildBattleDeployments.userId, guildBattleDeployments.battleKstDay],
+        target: [
+          guildBattleDeployments.userId,
+          guildBattleDeployments.serverId,
+          guildBattleDeployments.battleKstDay,
+        ],
         set: { guildId: m.guildId, zoneId: input.zoneId, role: input.role, createdAt: sql`now()` },
       });
 
@@ -86,7 +98,7 @@ export async function deployToZone(input: {
 }
 
 /** 다음 전투 배치 취소(있으면 삭제). 23:00 이후엔 날짜가 롤되어 오늘 배치는 동결(취소 불가). */
-export async function cancelDeployment(input: { userId: string }): Promise<{ cancelled: boolean }> {
+export async function cancelDeployment(input: { userId: string; serverId: number }): Promise<{ cancelled: boolean }> {
   if (isConquestLocked()) throw new GuildError('BATTLE_IN_PROGRESS'); // 전투 윈도 잠금
   const battleKstDay = nextBattleKstDay();
   const rows = await db
@@ -94,6 +106,7 @@ export async function cancelDeployment(input: { userId: string }): Promise<{ can
     .where(
       and(
         eq(guildBattleDeployments.userId, input.userId),
+        eq(guildBattleDeployments.serverId, input.serverId),
         eq(guildBattleDeployments.battleKstDay, battleKstDay),
       ),
     )
@@ -104,6 +117,7 @@ export async function cancelDeployment(input: { userId: string }): Promise<{ can
 /** 내 다음 전투 배치(없으면 null) — UI 현재 상태 표시용. */
 export async function getMyDeployment(
   userId: string,
+  serverId: number,
 ): Promise<{ zoneId: number; role: ConquestRole; battleKstDay: string } | null> {
   const battleKstDay = nextBattleKstDay();
   const [d] = await db
@@ -112,6 +126,7 @@ export async function getMyDeployment(
     .where(
       and(
         eq(guildBattleDeployments.userId, userId),
+        eq(guildBattleDeployments.serverId, serverId),
         eq(guildBattleDeployments.battleKstDay, battleKstDay),
       ),
     )
@@ -123,11 +138,12 @@ export async function getMyDeployment(
 async function assertOfficer(
   tx: Parameters<Parameters<typeof db.transaction>[0]>[0],
   userId: string,
+  serverId: number,
 ): Promise<bigint> {
   const [m] = await tx
     .select({ guildId: guildMembers.guildId, role: guildMembers.role })
     .from(guildMembers)
-    .where(eq(guildMembers.userId, userId))
+    .where(and(eq(guildMembers.userId, userId), eq(guildMembers.serverId, serverId)))
     .limit(1);
   if (!m) throw new GuildError('NOT_IN_GUILD');
   if (m.role !== 'leader' && m.role !== 'vice') throw new GuildError('NOT_OFFICER');
@@ -141,18 +157,19 @@ async function assertOfficer(
  */
 export async function deployMember(input: {
   actorUserId: string;
+  serverId: number;
   targetUserId: string;
   zoneId: number;
   role: ConquestRole;
 }): Promise<{ battleKstDay: string }> {
   if (isConquestLocked()) throw new GuildError('BATTLE_IN_PROGRESS'); // 전투 윈도 잠금
   return db.transaction(async (tx) => {
-    const guildId = await assertOfficer(tx, input.actorUserId);
+    const guildId = await assertOfficer(tx, input.actorUserId, input.serverId);
 
     const [target] = await tx
       .select({ guildId: guildMembers.guildId })
       .from(guildMembers)
-      .where(eq(guildMembers.userId, input.targetUserId))
+      .where(and(eq(guildMembers.userId, input.targetUserId), eq(guildMembers.serverId, input.serverId)))
       .limit(1);
     if (!target || target.guildId !== guildId) throw new GuildError('TARGET_NOT_IN_GUILD');
 
@@ -177,9 +194,20 @@ export async function deployMember(input: {
     const battleKstDay = nextBattleKstDay();
     await tx
       .insert(guildBattleDeployments)
-      .values({ battleKstDay, userId: input.targetUserId, guildId, zoneId: input.zoneId, role: input.role })
+      .values({
+        battleKstDay,
+        userId: input.targetUserId,
+        serverId: input.serverId,
+        guildId,
+        zoneId: input.zoneId,
+        role: input.role,
+      })
       .onConflictDoUpdate({
-        target: [guildBattleDeployments.userId, guildBattleDeployments.battleKstDay],
+        target: [
+          guildBattleDeployments.userId,
+          guildBattleDeployments.serverId,
+          guildBattleDeployments.battleKstDay,
+        ],
         set: { guildId, zoneId: input.zoneId, role: input.role, createdAt: sql`now()` },
       });
     return { battleKstDay };
@@ -189,11 +217,12 @@ export async function deployMember(input: {
 /** 길드원 배치 해제(임원 전용) — 자기 길드원 배치만 삭제. */
 export async function clearMemberDeployment(input: {
   actorUserId: string;
+  serverId: number;
   targetUserId: string;
 }): Promise<void> {
   if (isConquestLocked()) throw new GuildError('BATTLE_IN_PROGRESS'); // 전투 윈도 잠금
   await db.transaction(async (tx) => {
-    const guildId = await assertOfficer(tx, input.actorUserId);
+    const guildId = await assertOfficer(tx, input.actorUserId, input.serverId);
     await tx
       .delete(guildBattleDeployments)
       .where(
