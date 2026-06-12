@@ -347,11 +347,14 @@ export function DeployBoard({
                 <ul className="mt-2 space-y-1">
                   {execHere.map((m) => (
                     <li key={m.userId} className="flex min-h-[38px] items-center justify-between gap-1">
-                      <div className="flex min-w-0 flex-col">
-                        <span className="truncate text-[12px] font-semibold">{m.nickname}</span>
-                        <span className="text-[9px] font-bold text-indigo-500">
-                          집행관 · 전투력 {fmt(Math.round(m.combat * CONQUEST_EXECUTOR_POWER_MULT))}
+                      <div className="flex min-w-0 flex-1 flex-col">
+                        <span className="flex w-full items-center gap-1">
+                          <span className="truncate text-[12px] font-semibold">{m.nickname}</span>
+                          <span className="shrink-0 font-mono text-[9px] text-zinc-400">
+                            {fmt(Math.round(m.combat * CONQUEST_EXECUTOR_POWER_MULT))}
+                          </span>
                         </span>
+                        <span className="text-[9px] font-medium text-indigo-500">집행관</span>
                       </div>
                       {isOfficer && (
                         <button
@@ -367,10 +370,15 @@ export function DeployBoard({
                   ))}
                   {deployedHere.map((m) => (
                     <li key={m.userId} className="flex min-h-[38px] items-center justify-between gap-1">
-                      <div className="flex min-w-0 flex-col">
-                        <span className="truncate text-[12px] font-semibold">{m.nickname}</span>
-                        <span className="text-[9px] font-medium text-zinc-400">
-                          {isDefend ? '수비' : '공격'} · 전투력 {fmt(Math.round(m.combat * (isDefend ? DEFEND_MULT : 1)))}
+                      <div className="flex min-w-0 flex-1 flex-col">
+                        <span className="flex w-full items-center gap-1">
+                          <span className="truncate text-[12px] font-semibold">{m.nickname}</span>
+                          <span className="shrink-0 font-mono text-[9px] text-zinc-400">
+                            {fmt(Math.round(m.combat * (isDefend ? DEFEND_MULT : 1)))}
+                          </span>
+                        </span>
+                        <span className={`text-[9px] font-medium ${isDefend ? 'text-sky-500' : 'text-red-500'}`}>
+                          {isDefend ? '수비' : '공격'}
                         </span>
                       </div>
                       {isOfficer && (
