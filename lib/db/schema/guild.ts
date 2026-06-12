@@ -56,6 +56,8 @@ export const guilds = pgTable('guilds', {
   activeEmblemId: bigint('active_emblem_id', { mode: 'bigint' }),
   /** 길드 공지 ≤60자(길드장/부길드장만 편집). */
   notice: text('notice'),
+  /** 카카오 오픈채팅 링크(길드장/부길드장만 편집) — 인게임 채팅 대신 외부 소통 채널. null=미설정. */
+  openchatUrl: text('openchat_url'),
   /** 가입 방식 — 'open'(자유: 신청 즉시 가입) | 'approval'(승인: 길드장/부길드장 승인 필요). */
   joinPolicy: text('join_policy').notNull().default('open'),
   /** 0+. 무제한 — 수용은 min(50,10+level), L41+는 과시·랭킹용(버프·전투력 영향 0). */

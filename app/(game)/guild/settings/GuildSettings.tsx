@@ -19,6 +19,7 @@ import {
   deleteEmblemAction,
   setJoinPolicyAction,
   setGuildNoticeAction,
+  setGuildOpenchatAction,
   approveJoinAction,
   rejectJoinAction,
   disbandGuildAction,
@@ -36,6 +37,7 @@ type SettingsView = {
   taxPool: string;
   joinPolicy: GuildJoinPolicy;
   notice: string;
+  openchatUrl: string;
   emblemUrl: string | null;
   emblemColor: string | null;
 };
@@ -235,6 +237,17 @@ export function GuildSettings({
       router.refresh();
     });
 
+  // 오픈채팅 링크 — 임원 편집. 빈 값 저장 = 제거. 형식 검증은 서버 권위(OPENCHAT_INVALID).
+  const [openchat, setOpenchat] = useState(guild.openchatUrl);
+  const openchatDirty = openchat.trim() !== guild.openchatUrl.trim();
+  const saveOpenchat = () =>
+    start(async () => {
+      const r = await setGuildOpenchatAction(openchat.trim());
+      if (r.status !== 'success') return showError(guildErrMsg(r.code));
+      showHeaderToast({ title: openchat.trim() ? '오픈채팅 링크 저장' : '오픈채팅 링크 제거' });
+      router.refresh();
+    });
+
   const approve = (userId: string) => {
     const prev = requests;
     setRequests((l) => l.filter((r) => r.userId !== userId)); // 낙관적
@@ -403,6 +416,32 @@ export function GuildSettings({
           <button type="button" onClick={saveNotice} disabled={pending || !noticeDirty} className={BTN.primary}>
             저장
           </button>
+        </div>
+
+        {/* 오픈채팅 링크 — 인게임 채팅 대신 외부 소통 채널(카카오 위임). 길드 홈에 버튼 노출 */}
+        <div className="mt-3 border-t border-zinc-100 pt-3 dark:border-zinc-900">
+          <h3 className="text-sm font-bold">카카오 오픈채팅</h3>
+          <input
+            type="url"
+            inputMode="url"
+            value={openchat}
+            onChange={(e) => setOpenchat(e.target.value.slice(0, 80))}
+            placeholder="https://open.kakao.com/o/…"
+            className="mt-2 w-full rounded-lg border border-zinc-200 bg-zinc-50 px-2.5 py-2 text-base outline-none focus:border-zinc-400 dark:border-zinc-700 dark:bg-zinc-900 dark:focus:border-zinc-500"
+          />
+          <p className="mt-1 text-[10px] text-zinc-400">
+            등록하면 길드 홈에 입장 버튼이 보입니다. 비우고 저장하면 제거됩니다.
+          </p>
+          <div className="mt-2 flex justify-end gap-1.5">
+            {openchat.length > 0 && (
+              <button type="button" onClick={() => setOpenchat('')} disabled={pending} className={BTN.ghost}>
+                비우기
+              </button>
+            )}
+            <button type="button" onClick={saveOpenchat} disabled={pending || !openchatDirty} className={BTN.primary}>
+              저장
+            </button>
+          </div>
         </div>
       </section>
       )}

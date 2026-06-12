@@ -22,6 +22,7 @@ type GuildView = {
   level: number;
   xp: number;
   notice: string | null;
+  openchatUrl: string | null;
   memberCount: number;
   capacity: number;
   emblemUrl: string | null;
@@ -154,7 +155,7 @@ export function GuildHome({
               멤버 {guild.memberCount}/{guild.capacity}
             </p>
           </div>
-          {/* 관리 버튼 — 길드 관리(임원만) / 점령지 관리(전원, 임원만 편집). 같은 크기. */}
+          {/* 관리 버튼 — 길드 관리(임원만) / 점령지 관리(전원, 임원만 편집) / 오픈채팅(설정 시). 같은 크기. */}
           <div className="flex shrink-0 flex-col gap-1">
             {isOfficer && (
               <Link
@@ -170,6 +171,16 @@ export function GuildHome({
             >
               점령지 관리
             </Link>
+            {guild.openchatUrl && (
+              <a
+                href={guild.openchatUrl}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="flex w-[82px] items-center justify-center gap-1 rounded-md bg-yellow-400/90 px-1.5 py-1 text-[10px] font-bold text-zinc-900 active:opacity-70"
+              >
+                💬 오픈채팅
+              </a>
+            )}
           </div>
         </div>
 

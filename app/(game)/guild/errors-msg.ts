@@ -33,6 +33,7 @@ const MAP: Record<string, string> = {
   EMBLEM_MAX: '문양은 최대 3개까지 보관할 수 있어요. 하나를 삭제한 뒤 생성하세요.',
   EMBLEM_MIN: '문양은 최소 1개는 남겨야 해요.',
   EMBLEM_NOT_FOUND: '문양을 찾을 수 없습니다.',
+  OPENCHAT_INVALID: '카카오 오픈채팅 링크(https://open.kakao.com/o/…)만 등록할 수 있습니다.',
   UNAUTHENTICATED: '로그인이 필요합니다.',
   UNKNOWN: '오류가 발생했습니다.',
 };

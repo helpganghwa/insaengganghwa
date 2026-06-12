@@ -80,6 +80,7 @@ export default async function GuildPage() {
             level: guild.level,
             xp: Number(guild.xp),
             notice: guild.notice,
+            openchatUrl: guild.openchatUrl,
             memberCount: guild.memberCount,
             capacity: guild.capacity,
             emblemUrl: guild.emblemUrl,

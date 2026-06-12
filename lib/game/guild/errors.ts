@@ -33,6 +33,7 @@ export type GuildErrorCode =
   | 'EMBLEM_MAX' // 보관 문양 최대(3개) 초과 — 삭제 후 생성
   | 'EMBLEM_MIN' // 최소 1개 유지(마지막 문양 삭제 불가)
   | 'EMBLEM_NOT_FOUND' // 해당 길드의 문양이 아님/없음
+  | 'OPENCHAT_INVALID' // 오픈채팅 링크 형식 위반(open.kakao.com만 허용)
   | 'FORBIDDEN';
 
 export class GuildError extends Error {

@@ -26,6 +26,7 @@ import {
   setZoneExecutor,
   clearZoneExecutor,
   setGuildNotice,
+  setGuildOpenchat,
   getZoneLatestBattleId,
   generateAndStoreEmblem,
   setActiveEmblem,
@@ -187,6 +188,20 @@ export async function setGuildNoticeAction(notice: string) {
     return { status: 'success' } as const;
   } catch (e) {
     return fail(e, 'setGuildNotice');
+  }
+}
+
+/** 길드 오픈채팅 링크 설정/해제 — 길드장·부길드장. 길드 홈에 버튼 노출. */
+export async function setGuildOpenchatAction(url: string) {
+  const u = await getSessionUserId();
+  if (!u) return unauth;
+  try {
+    await setGuildOpenchat({ userId: u, url });
+    revalidatePath('/guild');
+    revalidatePath('/guild/settings');
+    return { status: 'success' } as const;
+  } catch (e) {
+    return fail(e, 'setGuildOpenchat');
   }
 }
 

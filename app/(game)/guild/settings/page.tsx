@@ -39,6 +39,7 @@ export default async function GuildSettingsPage() {
         taxPool: guild.taxPoolDiamond.toString(),
         joinPolicy: guild.joinPolicy === 'approval' ? 'approval' : 'open',
         notice: guild.notice ?? '',
+        openchatUrl: guild.openchatUrl ?? '',
         emblemUrl: guild.emblemUrl,
         emblemColor: guild.emblemColor,
       }}
