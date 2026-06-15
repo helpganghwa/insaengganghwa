@@ -44,10 +44,9 @@ try {
     for (let i = 0; i < tpl.length; i++) idMap.set(tpl[i]!.id as number, base + i);
 
     for (const z of tpl) {
-      // 단계 개방(콜드스타트): 신서버는 왕국(kingdom)만 열고 시작 — scripts/open-region.ts로 순차 개방.
       await tx`
-        insert into zones (id, server_id, region, name, map_x, map_y, locked)
-        values (${idMap.get(z.id as number)!}, ${serverId}, ${z.region}, ${z.name}, ${z.map_x}, ${z.map_y}, ${z.region !== 'kingdom'})`;
+        insert into zones (id, server_id, region, name, map_x, map_y)
+        values (${idMap.get(z.id as number)!}, ${serverId}, ${z.region}, ${z.name}, ${z.map_x}, ${z.map_y})`;
     }
 
     const edges = await tx`

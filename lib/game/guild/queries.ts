@@ -138,7 +138,6 @@ export async function getWorldmapZones(serverId: number) {
       ownerEmblemUrl: ownerGuild.emblemUrl,
       executorUserId: zones.executorUserId,
       executorNickname: characters.nickname,
-      locked: zones.locked,
       taxDiamond: zones.taxDiamond,
       lastTaxCollectedAt: zones.lastTaxCollectedAt,
       // 거주 인원 — 이 구역을 거주지로 둔 유저 수(상관 서브쿼리, executor 조인과 별개 스코프).
@@ -178,7 +177,7 @@ export async function getAttackableZoneIds(guildId: bigint): Promise<number[]> {
     const all = await db
       .select({ id: zones.id })
       .from(zones)
-      .where(and(eq(zones.serverId, g?.serverId ?? 1), eq(zones.locked, false)));
+      .where(eq(zones.serverId, g?.serverId ?? 1));
     return all.map((z) => z.id);
   }
   const ownedIds = owned.map((o) => o.id);
@@ -257,7 +256,6 @@ export async function getDeployBoard(guildId: bigint) {
       mapY: zones.mapY,
       ownerGuildId: zones.ownerGuildId,
       ownerEmblemUrl: guilds.emblemUrl,
-      locked: zones.locked,
     })
     .from(zones)
     .leftJoin(guilds, eq(guilds.id, zones.ownerGuildId))

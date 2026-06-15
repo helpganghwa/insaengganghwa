@@ -1,13 +1,8 @@
--- 0065 지역 단계 개방(콜드스타트 완화) — zones.locked. 멱등.
---   신서버는 왕국(kingdom)만 열고 시작 → 운영이 순차 개방(scripts/open-region.ts).
---   1서버(운영 중)는 전부 open 유지. 2서버(테스트)는 왕국 외 잠금 — 안개 UI 검증용.
+-- 0066 지역 단계 개방(콜드스타트) 롤백 — zones.locked 제거 + 가입 트리거 v8 복원. 멱등.
+--   콜드스타트(0065) 폐기: 안개 연출 품질 미달로 기능 전체 철회. 전 구역 즉시 개방으로 복귀.
+--   순서: ① 트리거를 locked 미참조(v8)로 복원 → ② 컬럼 drop(트리거가 참조하지 않게 된 뒤).
 
-alter table zones add column if not exists locked boolean not null default false;
-
--- 2서버: 왕국 외 잠금(테스트 적용).
-update zones set locked = (region <> 'kingdom') where server_id = 2;
-
--- 가입 트리거 v9 — 거주지 랜덤 풀을 개방 구역으로 제한.
+-- ① 가입 트리거 v8 복원 — 거주지 랜덤 풀에서 locked 필터 제거(0064와 동일, 전 구역 대상).
 create or replace function public.handle_new_user()
 returns trigger
 language plpgsql
@@ -25,7 +20,7 @@ declare
 begin
   select coalesce(max(id), 1) into v_server from public.servers where status = 'open';
   select id into v_zone from public.zones
-  where server_id = v_server and locked = false
+  where server_id = v_server
   order by random() limit 1;
 
   insert into public.profiles (id, last_server_id) values (new.id, v_server)
@@ -82,3 +77,6 @@ begin
   return new;
 end;
 $$;
+
+-- ② locked 컬럼 제거 — 트리거가 더는 참조하지 않으므로 안전. 전 구역이 즉시 개방 상태로 복귀.
+alter table zones drop column if exists locked;

@@ -11,7 +11,6 @@ import { ToggleSwitch } from '@/components/ToggleSwitch';
 import { assetUrl } from '@/lib/asset-versions';
 import { GUILD_EXECUTOR_TAX_CUT, TAX_COLLECT_COOLDOWN_MIN } from '@/lib/game/guild/balance';
 
-import { fogMapSrc } from '../fog-map';
 import { setResidenceAction, getZoneBattleAction, collectTaxAction } from '../actions';
 import { guildErrMsg } from '../errors-msg';
 
@@ -25,8 +24,6 @@ type Zone = {
   name: string;
   mapX: number;
   mapY: number;
-  /** 미개방(단계 개방 — 안개). 클릭 불가·이름 미노출. */
-  locked: boolean;
   ownerGuildId: string | null;
   ownerGuildName: string | null;
   ownerEmblemUrl: string | null;
@@ -190,10 +187,6 @@ export function WorldMapView({
   // 행이 없으면 getChronicle가 {today:null,list:[]}를 반환 — 이 경우도 placeholder로 처리.
   const hasChronicle = !!chronicle && (chronicle.today != null || chronicle.list.length > 0);
 
-  // 단계 개방 안개 — 잠긴 지역이 있으면 구름 덮인 지도 일러스트로 교체(fog-map.ts).
-  const displayMapSrc = fogMapSrc(zones, mapSrc);
-
-
   // 연대기 {z|이름} 강조용 — 개별 구역 이름 → 그 구역의 지역색. (지역 카테고리는 색칠 안 함.)
   const zoneColorMap = useMemo(() => {
     const m = new Map<string, string>();
@@ -205,10 +198,8 @@ export function WorldMapView({
   // 인접 간선(길) — 좌표로 선분 산출. 선택 구역에 연결된 길은 강조.
   const edges = useMemo(() => {
     const pos = new Map(zones.map((z) => [z.id, { x: z.mapX, y: z.mapY }]));
-    const lockedIds = new Set(zones.filter((z) => z.locked).map((z) => z.id));
     return adjacency
       .map(({ a, b }) => {
-        if (lockedIds.has(a) || lockedIds.has(b)) return null; // 안개 속 길 미노출
         const pa = pos.get(a);
         const pb = pos.get(b);
         return pa && pb ? { a, b, x1: pa.x, y1: pa.y, x2: pb.x, y2: pb.y } : null;
@@ -265,7 +256,7 @@ export function WorldMapView({
       <div className="relative aspect-square w-full shrink-0 overflow-hidden border-b border-zinc-800 bg-zinc-950">
         {/* eslint-disable-next-line @next/next/no-img-element */}
         <img
-          src={displayMapSrc}
+          src={mapSrc}
           alt="월드맵"
           draggable={false}
           className="absolute inset-0 h-full w-full object-cover"
@@ -338,7 +329,6 @@ export function WorldMapView({
           <ToggleSwitch on={showNames} onToggle={() => setShowNames((v) => !v)} small label="지역 이름 표시" />
         </span>
         {zones.map((z) => {
-          if (z.locked) return null; // 미개방 — 노드 미노출(구름 지도가 덮음)
           const owned = z.ownerGuildId != null;
           const isResidence = z.id === residence;
           const color = REGION[z.region].color;

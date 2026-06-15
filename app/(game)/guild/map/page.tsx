@@ -32,7 +32,6 @@ export default async function WorldMapPage() {
         name: z.name,
         mapX: z.mapX,
         mapY: z.mapY,
-        locked: z.locked,
         ownerGuildId: z.ownerGuildId?.toString() ?? null,
         ownerGuildName: z.ownerGuildName,
         ownerEmblemUrl: z.ownerEmblemUrl,

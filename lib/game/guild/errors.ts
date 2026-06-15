@@ -14,7 +14,6 @@ export type GuildErrorCode =
   | 'TARGET_NOT_IN_GUILD' // 대상이 같은 길드원이 아님
   | 'INVALID_TARGET' // 자기 자신/길드장 대상 등 불가
   | 'ZONE_NOT_FOUND' // 구역 없음(거주 변경 등)
-  | 'ZONE_LOCKED' // 미개방 구역(단계 개방 — 안개)
   | 'NOT_EXECUTOR' // 집행관 아님(세금 수금)
   | 'COLLECT_COOLDOWN' // 수금 쿨다운 미경과
   | 'NOTHING_TO_COLLECT' // 수금할 💎 없음

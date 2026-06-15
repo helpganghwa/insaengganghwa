@@ -16,7 +16,6 @@ import {
   clearExecutorAction,
 } from '../actions';
 import { guildErrMsg } from '../errors-msg';
-import { fogMapSrc } from '../fog-map';
 
 type Region = 'volcano' | 'temple' | 'swamp' | 'orc' | 'kingdom' | 'angel';
 type DeployRole = 'attack' | 'defend';
@@ -37,8 +36,6 @@ type Zone = {
   region: Region;
   mapX: number;
   mapY: number;
-  /** 미개방(단계 개방 — 안개). */
-  locked: boolean;
   ownerGuildId: string | null;
   ownerEmblemUrl: string | null;
 };
@@ -69,17 +66,13 @@ export function DeployBoard({
   const [selectedId, setSelectedId] = useState<number | null>(null);
   const [pending, start] = useTransition();
 
-  // 단계 개방 안개 — 잠긴 지역이 있으면 구름 덮인 지도 일러스트로 교체(fog-map.ts).
-  const displayMapSrc = fogMapSrc(zones, mapSrc);
-
   const zoneById = useMemo(() => new Map(zones.map((z) => [z.id, z])), [zones]);
   const attackable = useMemo(() => new Set(attackableZoneIds), [attackableZoneIds]);
   const ownedIds = useMemo(
     () => new Set(zones.filter((z) => z.ownerGuildId === myGuildId).map((z) => z.id)),
     [zones, myGuildId],
   );
-  const lockedIds = useMemo(() => new Set(zones.filter((z) => z.locked).map((z) => z.id)), [zones]);
-  const usable = (id: number) => !lockedIds.has(id) && (ownedIds.has(id) || attackable.has(id));
+  const usable = (id: number) => ownedIds.has(id) || attackable.has(id);
 
   const selected = selectedId != null ? (zoneById.get(selectedId) ?? null) : null;
   const selectedRole: DeployRole | null = selected
@@ -218,7 +211,7 @@ export function DeployBoard({
       .map(({ a, b }) => {
         const za = zoneById.get(a);
         const zb = zoneById.get(b);
-        if (!za || !zb || za.locked || zb.locked) return null; // 안개 속 길 미노출
+        if (!za || !zb) return null;
         return { a, b, x1: za.mapX, y1: za.mapY, x2: zb.mapX, y2: zb.mapY, active: usable(a) && usable(b) };
       })
       .filter((e): e is NonNullable<typeof e> => e != null);
@@ -231,7 +224,7 @@ export function DeployBoard({
       <div className="relative aspect-square w-full shrink-0 overflow-hidden border-b border-zinc-800 bg-zinc-950">
         {/* eslint-disable-next-line @next/next/no-img-element */}
         <img
-          src={displayMapSrc}
+          src={mapSrc}
           alt="월드맵"
           draggable={false}
           className="absolute inset-0 h-full w-full object-cover"
@@ -282,7 +275,6 @@ export function DeployBoard({
           ))}
         </svg>
         {zones.map((z) => {
-          if (z.locked) return null; // 미개방 — 노드 미노출
           const mine = z.ownerGuildId === myGuildId;
           const canAttack = !mine && attackable.has(z.id);
           const isUsable = mine || canAttack;

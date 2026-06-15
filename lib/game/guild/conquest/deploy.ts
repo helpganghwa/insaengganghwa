@@ -54,12 +54,11 @@ export async function deployToZone(input: {
     if (!m) throw new GuildError('NOT_IN_GUILD');
 
     const [z] = await tx
-      .select({ ownerGuildId: zones.ownerGuildId, serverId: zones.serverId, locked: zones.locked })
+      .select({ ownerGuildId: zones.ownerGuildId, serverId: zones.serverId })
       .from(zones)
       .where(eq(zones.id, input.zoneId))
       .limit(1);
     if (!z || z.serverId !== input.serverId) throw new GuildError('ZONE_NOT_FOUND'); // 타 서버 존 차단
-    if (z.locked) throw new GuildError('ZONE_LOCKED'); // 미개방(안개)
 
     const owned = z.ownerGuildId === m.guildId;
     if (input.role === 'defend' && !owned) throw new GuildError('ZONE_NOT_OWNED');
@@ -182,12 +181,11 @@ export async function deployMember(input: {
     if (ex) throw new GuildError('IS_EXECUTOR');
 
     const [z] = await tx
-      .select({ ownerGuildId: zones.ownerGuildId, serverId: zones.serverId, locked: zones.locked })
+      .select({ ownerGuildId: zones.ownerGuildId, serverId: zones.serverId })
       .from(zones)
       .where(eq(zones.id, input.zoneId))
       .limit(1);
     if (!z || z.serverId !== input.serverId) throw new GuildError('ZONE_NOT_FOUND'); // 타 서버 존 차단
-    if (z.locked) throw new GuildError('ZONE_LOCKED'); // 미개방(안개)
     const owned = z.ownerGuildId === guildId;
     if (input.role === 'defend' && !owned) throw new GuildError('ZONE_NOT_OWNED');
     if (input.role === 'attack' && owned) throw new GuildError('CANNOT_ATTACK_OWN');

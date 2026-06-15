@@ -23,12 +23,11 @@ export async function getResidence(userId: string, serverId: number): Promise<nu
 /** 거주 구역 변경 — GUILD §5.5. 이동 자유(쿨다운 없음). 존재하는 구역만. */
 export async function setResidence(userId: string, serverId: number, zoneId: number): Promise<void> {
   const [z] = await db
-    .select({ id: zones.id, locked: zones.locked })
+    .select({ id: zones.id })
     .from(zones)
     .where(and(eq(zones.id, zoneId), eq(zones.serverId, serverId)))
     .limit(1);
   if (!z) throw new GuildError('ZONE_NOT_FOUND');
-  if (z.locked) throw new GuildError('ZONE_LOCKED');
   await db
     .update(characters)
     .set({ residenceZoneId: zoneId })
@@ -49,7 +48,7 @@ export async function ensureResidence(tx: Tx, userId: string, serverId: number):
   const [z] = await tx
     .select({ id: zones.id })
     .from(zones)
-    .where(and(eq(zones.serverId, serverId), eq(zones.locked, false)))
+    .where(eq(zones.serverId, serverId))
     .orderBy(sql`random()`)
     .limit(1);
   if (!z) return null;

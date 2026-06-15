@@ -98,7 +98,6 @@ characters (user_id FK profiles, server_id FK servers, diamond, residence_zone_i
 ## 6. 신서버 오픈 (운영)
 
 - **오픈 트리거(권고)**: 1서버 점령전 포화(활성 길드가 구역 경합을 상시 채움) + DAU 임계(예: 5,000) 동시 충족. 단순 인구만으로 열지 않는다(인구 분산 = 콜드스타트 역행).
-- 오픈 절차: `bun run scripts/open-server.ts <id> <이름>` — servers INSERT + zones 50구역·간선 복제 시드(1서버 템플릿). **신서버는 왕국(6구역)만 열고 시작**(콜드스타트 — 경합 밀도 집중, 나머지는 안개). 이후 공지/이벤트. 코드 배포 불필요.
-- **지역 순차 개방**: `bun run scripts/open-region.ts <id> <region>` — 권장 순서 kingdom(시작) → orc → swamp → volcano → temple → angel. 잠긴 지역은 배치·거주·공격 불가(`ZONE_LOCKED`) + 지도는 개방 단계별 구름 일러스트로 교체(`app/(game)/guild/fog-map.ts` — 개방 지역 수=단계, 미등록 단계는 원본 폴백). 개방 = 운영 이벤트(공지·연대기 소재).
+- 오픈 절차: `bun run scripts/open-server.ts <id> <이름>` — servers INSERT + zones 50구역·인접 간선 복제 시드(1서버 템플릿). 이후 공지/이벤트(신서버 부스트). 코드 배포 불필요.
 - `status=full` = 신규 캐릭터 생성 제한(기존 캐릭터는 정상) · `closed` = 준비 중/통합 대비.
 - 서버 통합(인구 감소 시)은 v2 과제 — characters PK가 (user_id, server_id)라 단순 UPDATE 통합은 충돌 처리 필요(별도 설계).
