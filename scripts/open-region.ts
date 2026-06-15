@@ -5,7 +5,7 @@
  *   region: orc | swamp | temple | volcano | angel | kingdom
  *   예: bun run scripts/open-region.ts 3 orc
  *
- * 권장 개방 순서(SERVER.md): kingdom(시작) → orc → swamp → temple → volcano → angel
+ * 권장 개방 순서(SERVER.md): kingdom(시작) → orc → swamp → volcano → temple → angel
  */
 import { config } from 'dotenv';
 import postgres from 'postgres';
