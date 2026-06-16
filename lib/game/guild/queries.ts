@@ -197,6 +197,34 @@ export async function getAttackableZoneIds(guildId: bigint): Promise<number[]> {
   return [...set];
 }
 
+/**
+ * 우리 길드가 관여한 최근 점령전 요약(GUILD §5.9) — 길드 홈 카드용. 관여 없으면 null.
+ * 관여 = 그 구역의 승자이거나, 그날 그 구역에 우리 길드원이 배치된 경우(공/수). 최신 전투일 1일치.
+ */
+export async function getGuildRecentConquest(guildId: bigint, serverId: number) {
+  const involved = sql`( cb.winner_guild_id = ${guildId}
+    or exists (select 1 from guild_battle_deployments gd
+               where gd.battle_kst_day = cb.battle_kst_day and gd.zone_id = cb.zone_id and gd.guild_id = ${guildId}) )`;
+  const [dayRow] = (await db.execute(sql`
+    select max(cb.battle_kst_day)::text d
+    from conquest_battles cb
+    where cb.server_id = ${serverId} and ${involved}
+  `)) as unknown as { d: string | null }[];
+  const day = dayRow?.d;
+  if (!day) return null;
+  const rows = (await db.execute(sql`
+    select cb.id::text battle_id, z.name zone, (cb.winner_guild_id = ${guildId}) won
+    from conquest_battles cb
+    join zones z on z.id = cb.zone_id
+    where cb.server_id = ${serverId} and cb.battle_kst_day = ${day} and ${involved}
+    order by won desc, z.name
+  `)) as unknown as { battle_id: string; zone: string; won: boolean }[];
+  return {
+    battleDay: day,
+    results: rows.map((r) => ({ battleId: r.battle_id, zone: r.zone, won: r.won })),
+  };
+}
+
 /** 구역의 최근 점령 전투 id(없으면 null) — 전투 기록 페이지 진입용. */
 export async function getZoneLatestBattleId(zoneId: number) {
   const [b] = await db

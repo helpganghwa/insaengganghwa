@@ -6,6 +6,7 @@ import {
   getGuild,
   getGuildMembersRich,
   getGuildRanking,
+  getGuildRecentConquest,
   getMyJoinRequest,
 } from '@/lib/game/guild';
 import { GUILD_LEADER_HANDOVER_DAYS, GUILD_LEADER_HANDOVER_WARN_DAYS } from '@/lib/game/guild/balance';
@@ -52,10 +53,13 @@ export default async function GuildPage() {
 
   if (!membership) return browseView(userId, serverId);
 
-  const [guild, members, ranking] = await Promise.all([
+  const [guild, members, ranking, recentConquest] = await Promise.all([
     withTimeout(getGuild(membership.guildId), DB_GUARD_MS, 'guild.guild'),
     withTimeout(getGuildMembersRich(membership.guildId), DB_GUARD_MS, 'guild.members'),
     withTimeout(getGuildRanking(serverId), DB_GUARD_MS, 'guild.ranking'),
+    withTimeout(getGuildRecentConquest(membership.guildId, serverId), DB_GUARD_MS, 'guild.conquest').catch(
+      () => null,
+    ),
   ]);
 
   if (!guild) {
@@ -102,6 +106,7 @@ export default async function GuildPage() {
             warnDays: GUILD_LEADER_HANDOVER_WARN_DAYS,
             handoverDays: GUILD_LEADER_HANDOVER_DAYS,
           }}
+          recentConquest={recentConquest}
         />
       }
     />

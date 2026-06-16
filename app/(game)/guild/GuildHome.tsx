@@ -36,6 +36,7 @@ export function GuildHome({
   myRole,
   usedToday,
   leaderHandover,
+  recentConquest,
 }: {
   guild: GuildView;
   members: RichMember[];
@@ -44,6 +45,8 @@ export function GuildHome({
   usedToday: number;
   /** 길드장 위임 위험 — inactiveDays(서버 계산)>=warnDays면 배너. null=접속 기록 없음. */
   leaderHandover: { inactiveDays: number | null; warnDays: number; handoverDays: number };
+  /** 우리 길드가 관여한 최근 점령전 1일치 — 없으면 null(카드 미노출). */
+  recentConquest: { battleDay: string; results: { battleId: string; zone: string; won: boolean }[] } | null;
 }) {
   const router = useRouter();
   const { showHeaderToast, showError } = useResourceToast();
@@ -286,6 +289,45 @@ export function GuildHome({
         </div>
       </section>
 
+      {/* 최근 점령전 요약 — 우리 길드 관여 전투(최신 1일). 카드/구역 클릭 시 전투 기록으로. */}
+      {recentConquest && recentConquest.results.length > 0 && (
+        <section className="rounded-xl border border-zinc-200 bg-white p-3 dark:border-zinc-800 dark:bg-zinc-950">
+          <div className="flex items-baseline justify-between gap-2">
+            <h3 className="text-sm font-bold">최근 점령전</h3>
+            <span className="text-[10px] text-zinc-400">{recentConquest.battleDay.slice(5).replace('-', '.')}</span>
+          </div>
+          <p className="mt-0.5 text-[11px] text-zinc-500">
+            {recentConquest.results.length}건 ·{' '}
+            <span className="font-bold text-emerald-600 dark:text-emerald-400">
+              승 {recentConquest.results.filter((r) => r.won).length}
+            </span>{' '}
+            ·{' '}
+            <span className="font-bold text-red-500">
+              패 {recentConquest.results.filter((r) => !r.won).length}
+            </span>
+          </p>
+          <ul className="mt-2 flex flex-wrap gap-1.5">
+            {recentConquest.results.slice(0, 8).map((r) => (
+              <li key={r.battleId}>
+                <Link
+                  href={`/guild/battle/${r.battleId}`}
+                  className={`inline-flex items-center gap-1 rounded-lg border px-2 py-1 text-[11px] active:opacity-70 ${
+                    r.won
+                      ? 'border-emerald-300 bg-emerald-50 text-emerald-700 dark:border-emerald-500/40 dark:bg-emerald-500/10 dark:text-emerald-300'
+                      : 'border-red-300 bg-red-50 text-red-600 dark:border-red-500/40 dark:bg-red-500/10 dark:text-red-300'
+                  }`}
+                >
+                  <span className="font-bold">{r.won ? '승' : '패'}</span>
+                  <span className="max-w-[88px] truncate">{r.zone}</span>
+                </Link>
+              </li>
+            ))}
+            {recentConquest.results.length > 8 && (
+              <li className="self-center text-[10px] text-zinc-400">+{recentConquest.results.length - 8}</li>
+            )}
+          </ul>
+        </section>
+      )}
 
       {/* 길드원 명단(아바타·장비·정렬 메트릭, 클릭 시 프로필) */}
       <GuildMemberList members={members} myUserId={myUserId} />
