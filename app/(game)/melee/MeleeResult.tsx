@@ -372,7 +372,7 @@ function FightStage({
         onClick={onBack}
         className="absolute right-1.5 top-1.5 z-20 rounded-full bg-black/55 px-2 py-0.5 text-[10px] font-bold text-zinc-200 backdrop-blur-sm"
       >
-        {playing ? `정지 ${playing.idx + 1}/${playing.total}` : '← 랭킹'}
+        {playing ? `정지 ${playing.idx + 1}/${playing.total}` : '랭킹'}
       </button>
     </div>
   );

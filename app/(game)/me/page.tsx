@@ -257,7 +257,6 @@ export default async function ProfilePage() {
                 </span>
               ) : null}
             </span>
-            <span className="text-zinc-400">›</span>
           </Link>
         ))}
       </nav>

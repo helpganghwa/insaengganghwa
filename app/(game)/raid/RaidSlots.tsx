@@ -431,7 +431,7 @@ export function RaidSlots({
                     onClick={() => setPicked(null)}
                     className="w-full py-1.5 text-[11px] text-zinc-500"
                   >
-                    ← 다른 보스
+                    다른 보스
                   </button>
                 </div>
               </>
