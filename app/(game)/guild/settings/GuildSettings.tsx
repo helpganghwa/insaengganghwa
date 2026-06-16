@@ -116,6 +116,38 @@ export function GuildSettings({
     return () => clearInterval(id);
   }, [armed]);
   const isArmed = (action: 'use' | 'del', id: string) => armed?.action === action && armed?.id === id;
+
+  // 생성중 상태 영속 — 생성은 수십초 걸려 재진입 시 로컬 genPending이 사라지는 문제.
+  // localStorage에 시작시각·기준 문양수 저장 → 재진입/타임아웃에도 '생성중' 유지. 새 문양 도착(개수 증가)
+  // 또는 TTL(3분) 경과 시 자동 정리. (단일 기기 길드장 액션이라 브라우저 영속으로 충분, DB 미접근.)
+  useEffect(() => {
+    const sync = () => {
+      let raw: string | null = null;
+      try {
+        raw = localStorage.getItem('guildEmblemGen');
+      } catch {
+        return;
+      }
+      if (!raw) return;
+      let alive = false;
+      try {
+        const { at, base } = JSON.parse(raw) as { at: number; base: number };
+        alive = Date.now() - at < 180_000 && emblems.length <= base;
+      } catch {
+        alive = false;
+      }
+      if (alive) setGenPending(true);
+      else {
+        try {
+          localStorage.removeItem('guildEmblemGen');
+        } catch {
+          /* noop */
+        }
+        setGenPending(false);
+      }
+    };
+    sync();
+  }, [emblems]);
   const armOr = (action: 'use' | 'del', id: string, run: () => void) => {
     if (isArmed(action, id)) {
       setArmed(null);
@@ -280,6 +312,12 @@ export function GuildSettings({
   //  낙관적: '생성 중' 슬롯 즉시 표시 + 다이아 선차감, 실패 시 롤백.
   const generate = async () => {
     setGenOpen(false);
+    // 생성중 영속 플래그(재진입 표시용) — 시작시각 + 기준 문양수.
+    try {
+      localStorage.setItem('guildEmblemGen', JSON.stringify({ at: Date.now(), base: emblemList.length }));
+    } catch {
+      /* noop */
+    }
     setGenPending(true);
     optimisticAdjust(BigInt(-GUILD_EMBLEM_REROLL_COST_DIAMOND));
     // 생성은 수십초 걸릴 수 있어 긴 요청이 끊길 수 있음 — 응답을 단정적 실패로 보지 않고,
@@ -296,12 +334,21 @@ export function GuildSettings({
     } catch {
       r = null; // 네트워크/파싱 실패 — 서버는 성공했을 수 있음.
     }
-    setGenPending(false);
     if (r?.status === 'success') {
       showHeaderToast({ title: '문양 생성 완료' });
+      // 생성중 플래그는 새 문양 도착(emblems 증가) 시 effect가 정리 — 부드러운 전환.
     } else {
-      optimisticAdjust(BigInt(GUILD_EMBLEM_REROLL_COST_DIAMOND)); // 비성공 추정 — 일단 복원(refresh가 실값으로 재동기화)
-      if (r?.status === 'error') showError(guildErrMsg(r.code ?? 'UNKNOWN')); // 명시적 에러만 안내
+      optimisticAdjust(BigInt(GUILD_EMBLEM_REROLL_COST_DIAMOND)); // 비성공 추정 — 복원(refresh가 실값 재동기화)
+      if (r?.status === 'error') {
+        try {
+          localStorage.removeItem('guildEmblemGen'); // 명시적 실패 — 생성중 즉시 해제
+        } catch {
+          /* noop */
+        }
+        setGenPending(false);
+        showError(guildErrMsg(r.code ?? 'UNKNOWN'));
+      }
+      // null(네트워크/타임아웃): 서버가 생성 중일 수 있어 플래그 유지(effect/TTL이 정리).
     }
     router.refresh(); // 성공/불명확 모두 실제 상태 반영.
   };
