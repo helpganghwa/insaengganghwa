@@ -448,14 +448,13 @@ export function RaidSlots({
                       setConfirm(false);
                       open(picked);
                     }}
-                    className={`relative isolate flex w-full items-center justify-center overflow-hidden rounded-full px-3 py-2.5 text-xs font-bold transition-colors disabled:opacity-50 ${
-                      confirm ? 'bg-amber-700 text-white' : 'bg-zinc-900 text-white dark:bg-zinc-50 dark:text-zinc-950'
-                    }`}
+                    className="relative isolate flex w-full items-center justify-center overflow-hidden rounded-full bg-zinc-900 px-3 py-2.5 text-xs font-bold text-white transition-colors disabled:opacity-50 dark:bg-zinc-50 dark:text-zinc-950"
                   >
                     {confirm ? (
+                      // 배경은 기존(흰색) 유지 + 펄스만 — 중성 톤 오버레이로 흰 배경 위 은은한 펄스.
                       <span
                         aria-hidden
-                        className="absolute inset-0 bg-amber-500"
+                        className="absolute inset-0 bg-zinc-900/10"
                         style={{ animation: 'confirm-bg-pulse 1.2s ease-in-out infinite' }}
                       />
                     ) : null}
@@ -463,7 +462,7 @@ export function RaidSlots({
                       {pending
                         ? '소환 중…'
                         : confirm
-                          ? `한번 더 ${confirmLeft}s`
+                          ? `💎 ${RAID_OPEN_COST_DIAMOND.toLocaleString()} 지불하고 소환 ${confirmLeft}s`
                           : `💎 ${RAID_OPEN_COST_DIAMOND.toLocaleString()} 지불하고 소환`}
                     </span>
                   </button>
