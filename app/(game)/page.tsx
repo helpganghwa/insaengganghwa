@@ -46,7 +46,7 @@ const MENU = [
   {
     href: '/melee',
     label: '대난투',
-    desc: '매일 오전 9시 개시', // 실제 문구는 meleeDesc(배틀 상태)로 동적 대체
+    desc: '매일 9시 개시', // 실제 문구는 meleeDesc(배틀 상태)로 동적 대체
 
     bg: '/sprites/hub/melee.png',
     tint: '#3a2e16',
@@ -120,9 +120,9 @@ export default async function HomePage() {
   };
 
   // 대난투 카드 상태 문구 — KST 09:00 개시 / 09:30 발표(MELEE §3).
-  //  발표 전: 진행 전("오늘 오전 9시 개시") / 진행 중 / 집계 중. 발표 후: 우승자 닉네임.
+  //  발표 전: 진행 전("오늘 9시 개시") / 진행 중 / 집계 중. 발표 후: 우승자 닉네임.
   //  시각 판정은 서버 시계(SQL now())로(CLAUDE §3.2) — 아래 melee 조회에서 phase 산출.
-  let meleeDesc = '매일 오전 9시 개시';
+  let meleeDesc = '매일 9시 개시';
   /** 발표 후 우승자 닉네임(있으면 카드에서 색상 강조 렌더). */
   let meleeChampion: string | null = null;
   /** 발표 후 회차(제N회 우승). */
@@ -229,7 +229,7 @@ export default async function HomePage() {
         // 23시대(23:00~24:00) = 점령전 진행중, 그 외 = 오늘 밤 일정 안내.
         conquestStatus = row.kst_hour === 23 ? '점령전 진행중' : '오늘 23시 점령전';
         // phase별 문구. 발표 후(after) + revealed면 우승자, 닉 미상(더미)이면 발표 문구.
-        if (row.melee_phase === 'before') meleeDesc = '오늘 오전 9시 개시';
+        if (row.melee_phase === 'before') meleeDesc = '오늘 9시 개시';
         else if (row.melee_phase === 'running') meleeDesc = '난투 진행 중';
         else if (row.melee_status === 'revealed') {
           if (row.melee_champ) {

@@ -63,7 +63,7 @@ export function MeleeCountdown({
   let label: string;
   let timerMs: number;
   if (now < runAt) {
-    label = '오전 9시 개시';
+    label = '9시 개시';
     timerMs = runAt - now;
   } else if (now < deliverAt) {
     label = '난투 진행 중';
