@@ -14,6 +14,7 @@ import { GuildError } from './errors';
 import {
   buildEmblemPrompt,
   mainColor,
+  isShieldShape,
   EMBLEM_SHAPES,
   EMBLEM_TONES,
   EMBLEM_KEYWORDS,
@@ -36,7 +37,7 @@ Rules:
 - Style anchors (always include the spirit): medieval heraldry, coat of arms, family crest, ornate, symmetrical, vintage emblem, dark fantasy, pixel art.
 - The MAIN keyword is the central heraldic charge: large, bold, the clear focal point.
 - The SUB keyword (if any) MUST be clearly visible too — place it as a secondary heraldic element such as supporters flanking the main on BOTH sides, or crossed behind it, or a charge on a chief/base band. Smaller than the main but distinctly rendered, NEVER omitted or dissolved into texture.
-- Use the given shape as the overall shield/crest silhouette. Main color as the field, sub color as the accents, border and trim.
+- SHAPE FIDELITY (critical): the given shape is the overall OUTER SILHOUETTE of the whole emblem and is MANDATORY — it must be immediately recognizable as that exact shape. If the shape is NOT a shield (e.g. a lozenge/diamond/rhombus, or a hanging banner), do NOT draw a shield or escutcheon — keep the non-shield silhouette. Main color as the field, sub color as the accents, border and trim.
 - Palette: the two given colors clearly dominate (field = main color, accents/border/trim = sub color); a few small additional accent colors are okay, just keep it cohesive — not a busy rainbow.
 - Detail: highly detailed, intricate ornate filigree and fine engraved linework, crisp clean pixel detail, rich shading and metallic depth, embossed relief.
 - Compose everything into ONE unified crest — do NOT scatter unrelated floating objects.
@@ -49,6 +50,10 @@ async function buildEmblemPromptAI(s: EmblemSelection): Promise<string> {
     const sub = EMBLEM_TONES.find((x) => x.id === s.subToneId)?.en ?? 'gold';
     const mainKw = EMBLEM_KEYWORDS.find((x) => x.id === s.mainKeywordId)?.en ?? 'a dragon';
     const subKw = s.subKeywordId ? EMBLEM_KEYWORDS.find((x) => x.id === s.subKeywordId)?.en : null;
+    // 방패가 아닌 모양(마름모·깃발)은 모델 기본값(방패)에 묻히므로 외곽 실루엣을 강하게 못박는다.
+    const shapeNote = isShieldShape(s.shapeId)
+      ? ''
+      : `\nIMPORTANT: this shape is NOT a shield. The entire emblem's outer silhouette MUST be ${shape}. Never draw a shield/escutcheon/heater shield.`;
     const res = await anthropic().messages.create({
       model: EMBLEM_PROMPT_MODEL,
       max_tokens: 220,
@@ -57,10 +62,10 @@ async function buildEmblemPromptAI(s: EmblemSelection): Promise<string> {
         {
           role: 'user',
           content:
-            `Shape (overall crest silhouette): ${shape}\nMain color (field): ${main}\nSub color (accents/trim): ${sub}\n` +
+            `Shape (overall emblem silhouette, mandatory): ${shape}${shapeNote}\nMain color (field): ${main}\nSub color (accents/trim): ${sub}\n` +
             `Main keyword (central charge, focal point): ${mainKw}\n` +
             `Sub keyword (secondary charge, must be clearly visible — e.g. flanking supporters): ${subKw ?? 'none'}\n\n` +
-            `Write the one-line heraldic coat-of-arms pixel guild crest prompt.`,
+            `Write the one-line heraldic pixel guild emblem prompt.`,
         },
       ],
     });
@@ -137,10 +142,14 @@ async function fitEmblemToFrame(png: Buffer, size = 128, pad = 6): Promise<Buffe
     .toBuffer();
 }
 
-/** pixflux 128² no_background 생성 → PNG Buffer. 429는 백오프 재시도, 그 외 실패는 throw. */
-async function generateEmblemPng(prompt: string): Promise<Buffer> {
+/** pixflux 128² no_background 생성 → PNG Buffer. 429는 백오프 재시도, 그 외 실패는 throw.
+ *  shieldLike=false(마름모·깃발)면 negatives에 방패류를 추가해 모델 기본값(방패)을 밀어낸다. */
+async function generateEmblemPng(prompt: string, shieldLike = true): Promise<Buffer> {
   const key = process.env.PIXELLAB_API_KEY;
   if (!key) throw new Error('PIXELLAB_API_KEY missing');
+  const negative =
+    'blurry, low detail, flat, plain, messy, cluttered, busy rainbow, text, letters, watermark, signature' +
+    (shieldLike ? '' : ', shield, heater shield, round shield, escutcheon, shield shape');
   let lastErr = 'unknown';
   for (let attempt = 0; attempt < 4; attempt++) {
     const res = await fetch(PIXFLUX_URL, {
@@ -152,8 +161,7 @@ async function generateEmblemPng(prompt: string): Promise<Buffer> {
         image_size: { width: 160, height: 160 },
         no_background: true,
         text_guidance_scale: 9,
-        negative_description:
-          'blurry, low detail, flat, plain, messy, cluttered, busy rainbow, text, letters, watermark, signature',
+        negative_description: negative,
       }),
     });
     if (res.status === 429) {
@@ -211,7 +219,10 @@ async function generateEmblemAsset(
   selection: EmblemSelection,
 ): Promise<{ emblemUrl: string; color: string | null }> {
   const color = mainColor(selection.mainToneId);
-  const raw = await generateEmblemPng(await buildEmblemPromptAI(selection));
+  const raw = await generateEmblemPng(
+    await buildEmblemPromptAI(selection),
+    isShieldShape(selection.shapeId),
+  );
   const png = await fitEmblemToFrame(raw); // 투명 여백 제거·프레임 채움(가시성↑)
   const emblemUrl = await uploadEmblem(`${guildId}/${crypto.randomUUID()}.png`, png);
   return { emblemUrl, color };

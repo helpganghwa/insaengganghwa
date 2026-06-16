@@ -4,17 +4,23 @@
  * 클라이언트 picker와 서버 생성이 공유(서버 의존 없는 순수 모듈).
  */
 
-export type EmblemShape = { id: string; ko: string; en: string };
+/** shield=true면 방패 계열(모델이 기본으로 방패를 그려도 OK). false면 방패가 아니어야 함(마름모·깃발). */
+export type EmblemShape = { id: string; ko: string; en: string; shield: boolean };
 export type EmblemTone = { id: string; ko: string; en: string; color: string };
 export type EmblemKeyword = { id: string; ko: string; en: string; cat: string };
 
 /** ① 모양(1택) — 작은 픽셀 엠블럼에서 또렷하게 렌더되는 아이코닉한 실루엣만 선별. en = 프롬프트 힌트. */
 export const EMBLEM_SHAPES: readonly EmblemShape[] = [
-  { id: 'round', ko: '라운드 방패', en: 'a round shield' },
-  { id: 'heater', ko: '기사 방패', en: 'a classic heater shield with a flat top and a pointed bottom' },
-  { id: 'banner', ko: '전투 깃발', en: 'a hanging cloth war banner with a forked swallowtail bottom edge' },
-  { id: 'lozenge', ko: '마름모', en: 'a diamond-shaped lozenge standing on one point' },
+  { id: 'round', ko: '라운드 방패', en: 'a round shield', shield: true },
+  { id: 'heater', ko: '기사 방패', en: 'a classic heater shield with a flat top and a pointed bottom', shield: true },
+  { id: 'banner', ko: '전투 깃발', en: 'a hanging cloth war banner with a forked swallowtail bottom edge', shield: false },
+  { id: 'lozenge', ko: '마름모', en: 'a diamond-shaped lozenge (rhombus) standing on one point', shield: false },
 ] as const;
+
+/** 방패 계열 모양인지(아니면 모델의 방패 기본값을 강제로 밀어내야 함). 미정의 id는 방패로 간주(안전). */
+export function isShieldShape(shapeId: string): boolean {
+  return EMBLEM_SHAPES.find((x) => x.id === shapeId)?.shield ?? true;
+}
 
 /** ② 색상톤(7). 메인·서브 각 1택. color = UI 악센트(메인색이 emblem_color로 저장). */
 export const EMBLEM_TONES: readonly EmblemTone[] = [
@@ -126,14 +132,20 @@ export function mainColor(mainToneId: string): string | null {
  * 컬러는 메인 팔레트 + 서브 악센트 2톤.
  */
 export function buildEmblemPrompt(s: EmblemSelection): string {
-  const shape = EMBLEM_SHAPES.find((x) => x.id === s.shapeId)!.en;
+  const shapeDef = EMBLEM_SHAPES.find((x) => x.id === s.shapeId)!;
+  const shape = shapeDef.en;
   const main = EMBLEM_TONES.find((x) => x.id === s.mainToneId)!.en;
   const sub = EMBLEM_TONES.find((x) => x.id === s.subToneId)!.en;
   const mainKw = keywordById(s.mainKeywordId)?.en ?? 'a heraldic beast';
   const subKw = s.subKeywordId ? keywordById(s.subKeywordId)?.en : null;
   const accent = subKw ? `, flanked by ${subKw} as a clearly visible secondary heraldic charge` : '';
+  // 모양이 방패가 아니면(마름모·깃발) "crest/coat of arms" 문맥의 방패 기본값에 묻히지 않도록
+  // 외곽 실루엣을 강하게 못박고 방패를 명시적으로 배제한다.
+  const silhouette = shapeDef.shield
+    ? `an old family guild crest shaped like ${shape}`
+    : `with the whole emblem in the exact outer silhouette of ${shape} (this silhouette is mandatory — NOT a shield)`;
   return (
-    `pixel art medieval heraldic coat of arms, an old family guild crest shaped like ${shape}, ` +
+    `pixel art medieval heraldic emblem, ${silhouette}, ` +
     `${mainKw} as the bold central heraldic charge${accent}, ` +
     `ornate symmetrical vintage emblem, highly detailed intricate filigree and fine engraved linework, rich metallic shading and embossed relief, ` +
     `mostly a ${main} and ${sub} palette with these two colors dominating, ${main} field with ${sub} accents and trim, ` +
