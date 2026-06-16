@@ -289,14 +289,14 @@ export default async function HomePage() {
                 </span>
               ) : null}
               <div className="absolute inset-x-0 bottom-0 bg-gradient-to-t from-black/85 via-black/55 to-transparent px-3 pt-6 pb-2">
-                <div className="flex items-baseline justify-between gap-1.5">
-                  <div className="text-sm leading-tight font-bold text-white drop-shadow-sm">
+                <div className="flex items-baseline gap-1.5">
+                  <div className="shrink-0 text-sm leading-tight font-bold text-white drop-shadow-sm">
                     {m.label}
                   </div>
-                  {/* 세계지도 카드 — 내 거주 구역명을 제목 오른쪽에(라벨 없이). */}
+                  {/* 세계지도 카드 — 내 거주 구역명을 제목 바로 오른쪽에(라벨 없이, 설명과 같은 10px). */}
                   {isWorldmapCard && residenceName ? (
                     <span
-                      className="max-w-[55%] shrink-0 truncate text-[11px] font-extrabold leading-tight drop-shadow-[0_1px_2px_rgba(0,0,0,0.95)]"
+                      className="min-w-0 truncate text-[10px] font-extrabold leading-tight drop-shadow-[0_1px_2px_rgba(0,0,0,0.95)]"
                       style={{ color: REGION_COLOR[residenceRegion ?? ''] ?? '#fcd34d' }}
                     >
                       {residenceName}

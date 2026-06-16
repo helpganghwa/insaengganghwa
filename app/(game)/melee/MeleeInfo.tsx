@@ -23,50 +23,32 @@ export function MeleeInfo({
   showBanner?: boolean;
 }) {
   const [tab, setTab] = useState<'reward' | 'history'>(initialTab);
-  return (
-    <div className="pb-6">
-      {showBanner ? (
-        /* 상단 아레나 배경 배너 */
-        <div className="relative h-28 overflow-hidden">
-          {/* eslint-disable-next-line @next/next/no-img-element */}
-          <img
-            src={assetUrl('/sprites/hub/melee.png')}
-            alt=""
-            aria-hidden
-            className="absolute inset-0 h-full w-full object-cover"
-            style={{ imageRendering: 'pixelated' }}
-          />
-          <div className="pointer-events-none absolute inset-0 bg-gradient-to-b from-black/45 via-black/35 to-black/70" />
-          <div className="relative z-10 flex h-full flex-col items-center justify-center gap-0.5">
-            <h1 className="text-lg font-extrabold text-white text-pixel-outline">대난투 정보</h1>
-            <p className="text-[11px] font-bold text-amber-200 text-pixel-outline">
-              {tab === 'reward' ? '보상 테이블' : '역대 우승자'}
-            </p>
-          </div>
-        </div>
-      ) : null}
 
-      <div className="space-y-3 pt-3">
-        <div className="mx-4 flex gap-1 rounded-xl border border-zinc-800 p-1">
-          {(
-            [
-              ['reward', '보상 테이블'],
-              ['history', '역대 우승자'],
-            ] as const
-          ).map(([t, label]) => (
-            <button
-              key={t}
-              type="button"
-              onClick={() => setTab(t)}
-              className={`flex-1 rounded-lg py-1.5 text-xs font-bold transition ${
-                tab === t ? 'bg-amber-600 text-white' : 'text-zinc-400'
-              }`}
-            >
-              {label}
-            </button>
-          ))}
-        </div>
+  // 필터(탭) — standalone에서는 고정 영역, 임베드에서는 본문 위.
+  const tabBar = (
+    <div className="mx-4 flex gap-1 rounded-xl border border-zinc-800 p-1">
+      {(
+        [
+          ['reward', '보상 테이블'],
+          ['history', '역대 우승자'],
+        ] as const
+      ).map(([t, label]) => (
+        <button
+          key={t}
+          type="button"
+          onClick={() => setTab(t)}
+          className={`flex-1 rounded-lg py-1.5 text-xs font-bold transition ${
+            tab === t ? 'bg-amber-600 text-white' : 'text-zinc-400'
+          }`}
+        >
+          {label}
+        </button>
+      ))}
+    </div>
+  );
 
+  const body = (
+    <>
         {tab === 'reward' ? (
           <div className="mx-4 isolate overflow-hidden rounded-xl border border-zinc-800 bg-zinc-950">
             <div className="grid grid-cols-[1fr_auto_auto] items-center gap-2 border-b border-zinc-900 px-3 py-2 text-[10px] font-bold text-zinc-500">
@@ -146,7 +128,46 @@ export function MeleeInfo({
             })}
           </ul>
         )}
+    </>
+  );
+
+  /* 상단 아레나 배경 배너 — standalone에서 고정. */
+  const banner = (
+    <div className="relative h-28 shrink-0 overflow-hidden border-b border-zinc-800">
+      {/* eslint-disable-next-line @next/next/no-img-element */}
+      <img
+        src={assetUrl('/sprites/hub/melee.png')}
+        alt=""
+        aria-hidden
+        className="absolute inset-0 h-full w-full object-cover"
+        style={{ imageRendering: 'pixelated' }}
+      />
+      <div className="pointer-events-none absolute inset-0 bg-gradient-to-b from-black/45 via-black/35 to-black/70" />
+      <div className="relative z-10 flex h-full flex-col items-center justify-center gap-0.5">
+        <h1 className="text-lg font-extrabold text-white text-pixel-outline">대난투 정보</h1>
+        <p className="text-[11px] font-bold text-amber-200 text-pixel-outline">
+          {tab === 'reward' ? '보상 테이블' : '역대 우승자'}
+        </p>
       </div>
+    </div>
+  );
+
+  // standalone(/melee/info) — 배너+필터를 상단 고정, 본문만 스크롤(대난투 결과 화면과 동일 패턴).
+  if (showBanner) {
+    return (
+      <div className="flex h-full flex-col">
+        {banner}
+        <div className="shrink-0 bg-zinc-950 pb-3 pt-3">{tabBar}</div>
+        <div className="min-h-0 flex-1 space-y-3 overflow-y-auto pb-6">{body}</div>
+      </div>
+    );
+  }
+
+  // 임베드(대기/진행중 무대 아래) — 일반 흐름.
+  return (
+    <div className="space-y-3 pb-6 pt-3">
+      {tabBar}
+      {body}
     </div>
   );
 }
