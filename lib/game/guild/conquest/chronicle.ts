@@ -302,7 +302,7 @@ export async function generateAndStoreChronicle(
     .insert(worldChronicle)
     .values({
       serverId, kstDay, todayText: today, headline })
-    .onConflictDoNothing({ target: worldChronicle.kstDay });
+    .onConflictDoNothing({ target: [worldChronicle.serverId, worldChronicle.kstDay] });
   return { created: true };
 }
 
