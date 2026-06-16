@@ -130,6 +130,8 @@ export default async function HomePage() {
   /** 월드맵 카드 — 현재 거주 구역명(지역색 강조). 미배정/미소속이면 null. */
   let residenceName: string | null = null;
   let residenceRegion: string | null = null;
+  // 세계지도 카드 설명 — 점령전(매일 23:00~24:00 KST) 시간 상태. 기본값=비점령 문구.
+  let conquestStatus = '오늘 23시 점령전';
 
   if (userId) {
     const kstToday = kstDateString();
@@ -178,6 +180,7 @@ export default async function HomePage() {
             (select count(*)::int from melee_battles where server_id = ${serverId} and battle_date <= n.kst::date) as melee_edition,
             rz.name as residence_name,
             rz.region::text as residence_region,
+            extract(hour from n.kst)::int as kst_hour,
             -- 상점 무료 클레임 — 주기 비교는 JS(freeStatusFromClaims, 단일 진실).
             coalesce(
               (select json_agg(json_build_array(slot, period_key)) from shop_free_claims where user_id = ${userId}::uuid and server_id = ${serverId}),
@@ -205,6 +208,7 @@ export default async function HomePage() {
         melee_edition: number;
         residence_name: string | null;
         residence_region: string | null;
+        kst_hour: number;
         free_claims: [string, string][];
       }>;
 
@@ -222,6 +226,8 @@ export default async function HomePage() {
         ).filter(Boolean).length;
         residenceName = row.residence_name ?? null;
         residenceRegion = row.residence_region ?? null;
+        // 23시대(23:00~24:00) = 점령전 진행중, 그 외 = 오늘 밤 일정 안내.
+        conquestStatus = row.kst_hour === 23 ? '⚔️ 점령전 진행중' : '오늘 23시 점령전';
         // phase별 문구. 발표 후(after) + revealed면 우승자, 닉 미상(더미)이면 발표 문구.
         if (row.melee_phase === 'before') meleeDesc = '오늘 오전 9시 개시';
         else if (row.melee_phase === 'running') meleeDesc = '난투 진행 중';
@@ -283,8 +289,19 @@ export default async function HomePage() {
                 </span>
               ) : null}
               <div className="absolute inset-x-0 bottom-0 bg-gradient-to-t from-black/85 via-black/55 to-transparent px-3 pt-6 pb-2">
-                <div className="text-sm leading-tight font-bold text-white drop-shadow-sm">
-                  {m.label}
+                <div className="flex items-baseline justify-between gap-1.5">
+                  <div className="text-sm leading-tight font-bold text-white drop-shadow-sm">
+                    {m.label}
+                  </div>
+                  {/* 세계지도 카드 — 내 거주 구역명을 제목 오른쪽에(라벨 없이). */}
+                  {isWorldmapCard && residenceName ? (
+                    <span
+                      className="max-w-[55%] shrink-0 truncate text-[11px] font-extrabold leading-tight drop-shadow-[0_1px_2px_rgba(0,0,0,0.95)]"
+                      style={{ color: REGION_COLOR[residenceRegion ?? ''] ?? '#fcd34d' }}
+                    >
+                      {residenceName}
+                    </span>
+                  ) : null}
                 </div>
                 <div className="mt-0.5 truncate text-[10px] leading-tight text-white/85">
                   {isMeleeChamp ? (
@@ -297,17 +314,7 @@ export default async function HomePage() {
                       </span>
                     </>
                   ) : isWorldmapCard ? (
-                    <>
-                      <span className="text-white/70">내 위치 · </span>
-                      {residenceName ? (
-                        <span
-                          className="font-extrabold drop-shadow-[0_1px_2px_rgba(0,0,0,0.95)]"
-                          style={{ color: REGION_COLOR[residenceRegion ?? ''] ?? '#fcd34d' }}
-                        >
-                          {residenceName}
-                        </span>
-                      ) : null}
-                    </>
+                    conquestStatus
                   ) : (
                     desc
                   )}
