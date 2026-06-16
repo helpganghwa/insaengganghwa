@@ -299,6 +299,7 @@ export async function getGuildMembersRich(guildId: bigint) {
   const base = await db
     .select({
       userId: guildMembers.userId,
+      serverId: guildMembers.serverId,
       nickname: characters.nickname,
       publicCode: profiles.publicCode,
       role: guildMembers.role,
@@ -317,21 +318,24 @@ export async function getGuildMembersRich(guildId: bigint) {
     .where(eq(guildMembers.guildId, guildId));
 
   const ids = base.map((b) => b.userId);
-  const eqRows = ids.length
-    ? await db
-        .select({
-          uid: userEquipment.userId,
-          cid: userEquipment.catalogItemId,
-          el: userEquipment.enhanceLevel,
-          tl: userEquipment.transcendLevel,
-          eslot: userEquipment.equippedSlot,
-          code: catalogItems.code,
-          slot: catalogItems.slot,
-        })
-        .from(userEquipment)
-        .innerJoin(catalogItems, eq(catalogItems.id, userEquipment.catalogItemId))
-        .where(inArray(userEquipment.userId, ids))
-    : [];
+  // 길드는 서버 종속 → 전 멤버 동일 serverId. 장비를 그 서버로 스코프(멀티서버 유저 타서버 장비 합산 방지).
+  const serverId = base[0]?.serverId;
+  const eqRows =
+    ids.length && serverId != null
+      ? await db
+          .select({
+            uid: userEquipment.userId,
+            cid: userEquipment.catalogItemId,
+            el: userEquipment.enhanceLevel,
+            tl: userEquipment.transcendLevel,
+            eslot: userEquipment.equippedSlot,
+            code: catalogItems.code,
+            slot: catalogItems.slot,
+          })
+          .from(userEquipment)
+          .innerJoin(catalogItems, eq(catalogItems.id, userEquipment.catalogItemId))
+          .where(and(eq(userEquipment.serverId, serverId), inArray(userEquipment.userId, ids)))
+      : [];
 
   // uid별 보유 묶기 → 전투력/최고/합산/장착 3종.
   const owned = new Map<string, { catalogItemId: number; enhanceLevel: number; transcendLevel: number }[]>();
