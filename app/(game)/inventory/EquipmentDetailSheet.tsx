@@ -18,9 +18,9 @@ import { advanceTutorial } from '@/components/tutorial/events';
 
 const SLOT_LABEL: Record<Slot, string> = { weapon: '무기', armor: '방어구', accessory: '장신구' };
 
-// 공통 버튼 — Pixellab 배경 이미지 + 그라데이션 overlay + 라벨 간략.
+// 공통 버튼 — Pixellab 배경 이미지 + 그라데이션 overlay + 라벨 중앙.
 const BTN =
-  'relative flex h-16 flex-col items-center justify-end isolate overflow-hidden rounded-lg border border-zinc-800 px-1 pb-1.5 text-white disabled:opacity-40 transition-transform active:scale-[0.97]';
+  'relative flex h-12 flex-col items-center justify-center isolate overflow-hidden rounded-lg border border-zinc-800 px-1 text-white disabled:opacity-40 transition-transform active:scale-[0.97]';
 
 function BtnBg({ src, label }: { src: string; label: string }) {
   return (
@@ -168,13 +168,20 @@ export function EquipmentDetailSheet({
           </div>
         </section>
 
+        {/* ── 로어(스토리) ── */}
+        {item.lore ? (
+          <p className="mt-2.5 whitespace-pre-line rounded-lg border border-zinc-200 bg-zinc-50 px-2.5 py-2 text-[11px] leading-relaxed text-zinc-600 dark:border-zinc-800 dark:bg-zinc-900 dark:text-zinc-400">
+            📖 {item.lore}
+          </p>
+        ) : null}
+
         {error ? (
-          <p className="mt-2 rounded bg-red-50 px-2 py-1 text-[10px] leading-snug text-red-700 dark:bg-red-950/60 dark:text-red-300">
+          <p className="mt-2.5 rounded bg-red-50 px-2 py-1 text-[10px] leading-snug text-red-700 dark:bg-red-950/60 dark:text-red-300">
             {error}
           </p>
         ) : null}
 
-        {/* ── 액션: 강화 / 장착 (초월은 자동, 분해·잠금 폐기) ── */}
+        {/* ── 액션: 강화 / 장착 (이야기 아래, 초월은 자동, 분해·잠금 폐기) ── */}
         <div className="mt-2.5 grid grid-cols-2 gap-1.5">
           {/* 강화 — SLOT_BUSY 시 SwapPickerModal 열어 교체. */}
           <button
@@ -225,13 +232,6 @@ export function EquipmentDetailSheet({
             <BtnBg src={assetUrl('/sprites/ui/btn-equip.png')} label={item.equipped ? '해제' : '장착'} />
           </button>
         </div>
-
-        {/* ── 로어(스토리) ── */}
-        {item.lore ? (
-          <p className="mt-2.5 whitespace-pre-line rounded-lg border border-zinc-200 bg-zinc-50 px-2.5 py-2 text-[11px] leading-relaxed text-zinc-600 dark:border-zinc-800 dark:bg-zinc-900 dark:text-zinc-400">
-            📖 {item.lore}
-          </p>
-        ) : null}
 
         <button
           type="button"
