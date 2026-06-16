@@ -90,9 +90,47 @@ export async function getMyJoinRequest(userId: string, serverId: number): Promis
   return r?.guildId ?? null;
 }
 
-/** 길드 랭킹 — 레벨↓·XP↓ 순. 미가입 첫화면 랭킹 탭. 문양·인원 포함. */
+/**
+ * 길드별 전투력 합(길드원 전투력 합, BALANCE §3) — guildId→합산 CP. JS 공식(pieceCombatPower)이라
+ * SQL 정렬 불가 → 멤버·장비 로드 후 합산. ⚠ 길드 수가 매우 커지면 비정규화 캐시 고려(현재 소규모라 라이브).
+ */
+async function guildCombatPowers(serverId: number, guildIds: bigint[]): Promise<Map<string, number>> {
+  const cpByGuild = new Map<string, number>();
+  if (guildIds.length === 0) return cpByGuild;
+  for (const g of guildIds) cpByGuild.set(g.toString(), 0); // 0명 길드도 0으로 포함
+  const memberRows = await db
+    .select({ uid: guildMembers.userId, gid: guildMembers.guildId })
+    .from(guildMembers)
+    .where(and(eq(guildMembers.serverId, serverId), inArray(guildMembers.guildId, guildIds)));
+  if (memberRows.length === 0) return cpByGuild;
+  const eqRows = await db
+    .select({
+      uid: userEquipment.userId,
+      cid: userEquipment.catalogItemId,
+      el: userEquipment.enhanceLevel,
+      tl: userEquipment.transcendLevel,
+    })
+    .from(userEquipment)
+    .where(
+      and(eq(userEquipment.serverId, serverId), inArray(userEquipment.userId, memberRows.map((m) => m.uid))),
+    );
+  const byUser = new Map<string, { catalogItemId: number; enhanceLevel: number; transcendLevel: number }[]>();
+  for (const r of eqRows) {
+    const row = { catalogItemId: r.cid, enhanceLevel: r.el, transcendLevel: r.tl };
+    const arr = byUser.get(r.uid);
+    if (arr) arr.push(row);
+    else byUser.set(r.uid, [row]);
+  }
+  for (const m of memberRows) {
+    const gid = m.gid.toString();
+    cpByGuild.set(gid, (cpByGuild.get(gid) ?? 0) + combatPowerFromOwned(byUser.get(m.uid) ?? []));
+  }
+  return cpByGuild;
+}
+
+/** 길드 랭킹 — 전투력(길드원 전투력 합)순, 동률은 레벨순. combat 필드 포함. 미가입 첫화면 랭킹 탭. */
 export async function getGuildRanking(serverId: number, limit = 50) {
-  return db
+  const rows = await db
     .select({
       id: guilds.id,
       name: guilds.name,
@@ -102,16 +140,19 @@ export async function getGuildRanking(serverId: number, limit = 50) {
       memberCount: sql<number>`(select count(*)::int from guild_members gm where gm.guild_id = ${guilds.id})`,
     })
     .from(guilds)
-    .where(eq(guilds.serverId, serverId))
-    .orderBy(desc(guilds.level), desc(guilds.xp))
-    .limit(limit);
+    .where(eq(guilds.serverId, serverId));
+  const cp = await guildCombatPowers(serverId, rows.map((r) => r.id));
+  return rows
+    .map((r) => ({ ...r, combat: cp.get(r.id.toString()) ?? 0 }))
+    .sort((a, b) => b.combat - a.combat || b.level - a.level)
+    .slice(0, limit);
 }
 
-/** 길드 검색(이름 부분일치) — 가입 브라우즈용. 인원/수용 포함. */
+/** 길드 검색(이름 부분일치) — 가입 브라우즈용. combat(전투력 합) 포함. */
 export async function searchGuilds(serverId: number, q: string) {
   const term = q.trim();
   if (!term) return [];
-  return db
+  const rows = await db
     .select({
       id: guilds.id,
       name: guilds.name,
@@ -123,6 +164,8 @@ export async function searchGuilds(serverId: number, q: string) {
     .from(guilds)
     .where(and(eq(guilds.serverId, serverId), ilike(guilds.name, `%${term}%`)))
     .limit(20);
+  const cp = await guildCombatPowers(serverId, rows.map((r) => r.id));
+  return rows.map((r) => ({ ...r, combat: cp.get(r.id.toString()) ?? 0 }));
 }
 
 /** 월드맵 50구역 + 소유 길드명/집행관 닉(중립=null). 읽기전용 뷰어용. */

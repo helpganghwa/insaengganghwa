@@ -7,7 +7,13 @@ export type GuildRow = {
   memberCount: number;
   emblemUrl: string | null;
   emblemColor: string | null;
+  combat: number;
 };
+
+/** 컴팩트 수치(예: 53,000 → 5.3만). */
+function fmtNum(n: number): string {
+  return new Intl.NumberFormat('ko-KR', { notation: 'compact', maximumFractionDigits: 1 }).format(n);
+}
 
 export function EmblemThumb({ url }: { url: string | null }) {
   return (
@@ -60,6 +66,13 @@ export function GuildList({
             <div className="truncate text-sm font-semibold">{g.name}</div>
             <div className="text-[11px] text-zinc-500">
               Lv.{g.level} · {g.memberCount}명
+            </div>
+          </div>
+          {/* 전투력(길드원 전투력 합) — 카드 우측 */}
+          <div className="shrink-0 text-right">
+            <div className="text-[9px] leading-none text-zinc-400">전투력</div>
+            <div className="mt-0.5 text-[13px] font-bold tabular-nums text-amber-600 dark:text-amber-400">
+              {fmtNum(g.combat)}
             </div>
           </div>
           {onJoin &&
