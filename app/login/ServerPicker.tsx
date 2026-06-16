@@ -23,34 +23,38 @@ export function ServerPicker({
     document.cookie = `login_srv=${picked}; path=/; max-age=600; samesite=lax`;
   }, [picked]);
 
+  // 별도 컨테이너(로그인 버튼과 동일 너비 w-full) + 3열 그리드. 높이는 행 수에 따라 자동.
   return (
-    <div className="flex w-full flex-wrap justify-center gap-2">
-      {servers.map((sv) => {
-        const open = sv.status === 'open';
-        const active = sv.id === picked;
-        return (
-          <button
-            key={sv.id}
-            type="button"
-            disabled={!open}
-            onClick={() => setPicked(sv.id)}
-            className={`relative rounded-xl border px-4 py-2 text-[13px] font-bold transition ${
-              active
-                ? 'border-amber-500 bg-amber-500/10 text-amber-700 dark:text-amber-300'
-                : open
-                  ? 'border-zinc-300 bg-white text-zinc-600 dark:border-zinc-700 dark:bg-zinc-900 dark:text-zinc-300'
-                  : 'border-zinc-200 bg-zinc-50 text-zinc-300 dark:border-zinc-800 dark:bg-zinc-950 dark:text-zinc-600'
-            }`}
-          >
-            {sv.name}
-            {sv.id === recommendedId && open && (
-              <span className="absolute -right-1.5 -top-1.5 rounded-full bg-amber-500 px-1.5 py-px text-[9px] font-bold text-white shadow-sm">
-                추천
-              </span>
-            )}
-          </button>
-        );
-      })}
+    <div className="w-full rounded-2xl border border-zinc-200 bg-white p-3 dark:border-zinc-800 dark:bg-zinc-900/50">
+      <p className="mb-2 text-left text-[11px] font-bold text-zinc-400">서버 선택</p>
+      <div className="grid grid-cols-3 gap-2">
+        {servers.map((sv) => {
+          const open = sv.status === 'open';
+          const active = sv.id === picked;
+          return (
+            <button
+              key={sv.id}
+              type="button"
+              disabled={!open}
+              onClick={() => setPicked(sv.id)}
+              className={`relative truncate rounded-xl border px-1 py-2.5 text-[13px] font-bold transition ${
+                active
+                  ? 'border-amber-500 bg-amber-500/10 text-amber-700 dark:text-amber-300'
+                  : open
+                    ? 'border-zinc-300 bg-white text-zinc-600 dark:border-zinc-700 dark:bg-zinc-900 dark:text-zinc-300'
+                    : 'border-zinc-200 bg-zinc-50 text-zinc-300 dark:border-zinc-800 dark:bg-zinc-950 dark:text-zinc-600'
+              }`}
+            >
+              {sv.name}
+              {sv.id === recommendedId && open && (
+                <span className="absolute -right-1.5 -top-1.5 rounded-full bg-amber-500 px-1.5 py-px text-[9px] font-bold text-white shadow-sm">
+                  추천
+                </span>
+              )}
+            </button>
+          );
+        })}
+      </div>
     </div>
   );
 }
