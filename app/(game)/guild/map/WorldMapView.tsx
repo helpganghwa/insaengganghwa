@@ -141,6 +141,8 @@ const REGION: Record<Region, { label: string; color: string }> = {
   kingdom: { label: '왕국', color: '#fbbf24' },
   angel: { label: '타락 천사 부유섬', color: '#c084fc' },
 };
+// 지역 현황 표시 순서(요청) — 왕국·오크·늪·화산·신전·부유섬.
+const REGION_ORDER: Region[] = ['kingdom', 'orc', 'swamp', 'volcano', 'temple', 'angel'];
 
 
 export function WorldMapView({
@@ -200,14 +202,16 @@ export function WorldMapView({
 
   // 점령 현황(OFF 모드) — zones에서 파생. 지역별 구역 묶음 + 길드 순위(점령지 수).
   const regionGroups = useMemo(
-    () => (Object.keys(REGION) as Region[]).map((rg) => ({ region: rg, zoneList: zones.filter((z) => z.region === rg) })),
+    () => REGION_ORDER.map((rg) => ({ region: rg, zoneList: zones.filter((z) => z.region === rg) })),
     [zones],
   );
   const guildRanking = useMemo(() => {
-    const m = new Map<string, { id: string; name: string; count: number }>();
+    const m = new Map<string, { id: string; name: string; emblemUrl: string | null; count: number }>();
     for (const z of zones) {
       if (!z.ownerGuildId) continue;
-      const e = m.get(z.ownerGuildId) ?? { id: z.ownerGuildId, name: z.ownerGuildName ?? '길드', count: 0 };
+      const e =
+        m.get(z.ownerGuildId) ??
+        { id: z.ownerGuildId, name: z.ownerGuildName ?? '길드', emblemUrl: z.ownerEmblemUrl, count: 0 };
       e.count += 1;
       m.set(z.ownerGuildId, e);
     }
@@ -415,7 +419,7 @@ export function WorldMapView({
               {(showConquest ? z.ownerGuildName : z.name) && (
                 <span
                   className="pointer-events-none absolute left-1/2 top-full -mt-1.5 -translate-x-1/2 whitespace-nowrap rounded-sm bg-black/70 px-0.5 text-[5px] font-bold leading-[1.4] shadow-[0_1px_2px_rgba(0,0,0,0.75)]"
-                  style={{ color }}
+                  style={{ color: showConquest ? '#fff' : color }} // 점령현황(길드명)은 지역색 제거 → 흰색
                 >
                   {showConquest ? z.ownerGuildName : z.name}
                 </span>
@@ -553,13 +557,23 @@ export function WorldMapView({
                         <li key={z.id} className="flex items-baseline justify-between gap-1 text-[11px]">
                           <span className="truncate text-zinc-500">{z.name}</span>
                           <span
-                            className={`shrink-0 max-w-[55%] truncate font-semibold ${
+                            className={`flex max-w-[55%] shrink-0 items-center gap-0.5 font-semibold ${
                               z.ownerGuildName
                                 ? 'text-zinc-700 dark:text-zinc-300'
                                 : 'text-zinc-300 dark:text-zinc-600'
                             }`}
                           >
-                            {z.ownerGuildName ?? '중립'}
+                            {z.ownerGuildId && z.ownerEmblemUrl ? (
+                              // eslint-disable-next-line @next/next/no-img-element
+                              <img
+                                src={z.ownerEmblemUrl}
+                                alt=""
+                                aria-hidden
+                                className="h-3 w-3 shrink-0"
+                                style={{ imageRendering: 'pixelated' }}
+                              />
+                            ) : null}
+                            <span className="truncate">{z.ownerGuildName ?? '중립'}</span>
                           </span>
                         </li>
                       ))}
@@ -578,8 +592,18 @@ export function WorldMapView({
                     <span className="w-5 shrink-0 text-center font-bold tabular-nums text-zinc-400">
                       {i + 1}
                     </span>
-                    <span className="min-w-0 flex-1 truncate font-semibold text-zinc-700 dark:text-zinc-200">
-                      {g.name}
+                    <span className="flex min-w-0 flex-1 items-center gap-1 font-semibold text-zinc-700 dark:text-zinc-200">
+                      {g.emblemUrl ? (
+                        // eslint-disable-next-line @next/next/no-img-element
+                        <img
+                          src={g.emblemUrl}
+                          alt=""
+                          aria-hidden
+                          className="h-3.5 w-3.5 shrink-0"
+                          style={{ imageRendering: 'pixelated' }}
+                        />
+                      ) : null}
+                      <span className="truncate">{g.name}</span>
                     </span>
                     <span className="shrink-0 font-mono tabular-nums text-amber-600 dark:text-amber-400">
                       {g.count}곳
