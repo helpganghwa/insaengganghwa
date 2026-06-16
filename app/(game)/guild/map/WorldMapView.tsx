@@ -8,7 +8,6 @@ import { josa } from 'es-hangul';
 import { useResourceToast } from '@/components/ResourceToast';
 import { useDiamond } from '@/components/DiamondContext';
 import { ModalShell } from '@/components/ModalShell';
-import { ToggleSwitch } from '@/components/ToggleSwitch';
 import { assetUrl } from '@/lib/asset-versions';
 import { GUILD_EXECUTOR_TAX_CUT, TAX_COLLECT_COOLDOWN_MIN } from '@/lib/game/guild/balance';
 
@@ -165,7 +164,6 @@ export function WorldMapView({
   const router = useRouter();
   const [residence, setResidence] = useState<number | null>(residenceZoneId);
   const [selectedId, setSelectedId] = useState<number | null>(null);
-  const [showNames, setShowNames] = useState(true);
   const [chronicleTab, setChronicleTab] = useState<'today' | 'full'>('today');
   // 세금 수금 모달 — 열린 구역 + 3초 인-버튼 컨펌.
   const [collectOpen, setCollectOpen] = useState<number | null>(null);
@@ -325,10 +323,6 @@ export function WorldMapView({
             );
           })()}
         </svg>
-        {/* 지역 이름 오버레이 토글 — 텍스트 없이 스위치만(우하단). */}
-        <span className="absolute bottom-2 right-2 z-30 inline-flex rounded-full bg-black/45 p-1 backdrop-blur-sm">
-          <ToggleSwitch on={showNames} onToggle={() => setShowNames((v) => !v)} small label="지역 이름 표시" />
-        </span>
         {zones.map((z) => {
           const owned = z.ownerGuildId != null;
           const isResidence = z.id === residence;
@@ -387,15 +381,13 @@ export function WorldMapView({
                   </span>
                 </span>
               )}
-              {/* 지역 이름 라벨(토글 시) — 노드 하단, 지역색 텍스트, 클릭 통과 */}
-              {showNames && (
-                <span
-                  className="pointer-events-none absolute left-1/2 top-full mt-[2px] -translate-x-1/2 whitespace-nowrap rounded-sm bg-black/70 px-0.5 text-[5px] font-bold leading-[1.4] shadow-[0_1px_2px_rgba(0,0,0,0.75)]"
-                  style={{ color }}
-                >
-                  {z.name}
-                </span>
-              )}
+              {/* 구역 이름 라벨 — 항상 표시. 노드 네모칸 바로 아래(p-2 패딩만큼 -mt 보정), 클릭 통과 */}
+              <span
+                className="pointer-events-none absolute left-1/2 top-full -mt-1.5 -translate-x-1/2 whitespace-nowrap rounded-sm bg-black/70 px-0.5 text-[5px] font-bold leading-[1.4] shadow-[0_1px_2px_rgba(0,0,0,0.75)]"
+                style={{ color }}
+              >
+                {z.name}
+              </span>
             </button>
           );
         })}
