@@ -38,7 +38,6 @@ export function GuildHome({
   myRole,
   usedToday,
   leaderHandover,
-  recentConquest,
 }: {
   guild: GuildView;
   members: RichMember[];
@@ -47,8 +46,6 @@ export function GuildHome({
   usedToday: number;
   /** 길드장 위임 위험 — inactiveDays(서버 계산)>=warnDays면 배너. null=접속 기록 없음. */
   leaderHandover: { inactiveDays: number | null; warnDays: number; handoverDays: number };
-  /** 우리 길드가 관여한 최근 점령전 1일치 — 없으면 null(카드 미노출). */
-  recentConquest: { battleDay: string; results: { battleId: string; zone: string; won: boolean }[] } | null;
 }) {
   const router = useRouter();
   const { showHeaderToast, showError } = useResourceToast();
@@ -131,13 +128,6 @@ export function GuildHome({
     });
   };
 
-  const donateLabel = !nextTier
-    ? '완료'
-    : confirm
-      ? `💎${nextTier.cost} ${confirmLeft}s` // 컨펌 오버레이 — 비용 + 남은 초
-      : nextTier.cost === 0
-        ? '기부'
-        : `기부 ${nextTier.cost}💎`;
 
   const lhDays = leaderHandover.inactiveDays;
   const showHandoverWarn = lhDays != null && lhDays >= leaderHandover.warnDays;
@@ -225,111 +215,63 @@ export function GuildHome({
           </div>
         )}
 
-        {/* 길드 경험치바 + 컴팩트 기부 버튼 */}
-        <div className="mt-2.5 flex items-center gap-2.5 border-t border-zinc-200 pt-2.5 dark:border-zinc-800">
-          <div className="min-w-0 flex-1">
-            <div className="flex items-baseline justify-between text-[10px] text-zinc-500">
-              <span className="font-bold text-zinc-700 dark:text-zinc-300">Lv.{guild.level}</span>
-              <span className="font-mono tabular-nums">
-                {displayXp.toLocaleString('ko-KR')}/{guildXpToNext(guild.level).toLocaleString('ko-KR')}
-              </span>
-            </div>
-            <div className="mt-1 h-1.5 w-full overflow-hidden rounded-full bg-zinc-200 dark:bg-zinc-800">
-              <div
-                className="h-full rounded-full bg-emerald-500 transition-[width] duration-300"
-                style={{ width: `${Math.min(100, (displayXp / guildXpToNext(guild.level)) * 100)}%` }}
-              />
-            </div>
-          </div>
-          <button
-            type="button"
-            onClick={onDonate}
-            disabled={pending || !nextTier}
-            className={`relative isolate flex w-[82px] shrink-0 items-center justify-center overflow-hidden rounded-lg py-1 text-[11px] font-bold transition-colors ${
-              !nextTier
-                ? 'bg-zinc-200 text-zinc-400 dark:bg-zinc-800 dark:text-zinc-600'
-                : confirm
-                  ? 'bg-amber-700 text-white'
-                  : 'bg-amber-600 text-white'
-            }`}
-          >
-            {confirm ? (
-              <span
-                aria-hidden
-                className="absolute inset-0 bg-amber-500"
-                style={{ animation: 'confirm-bg-pulse 1.2s ease-in-out infinite' }}
-              />
-            ) : null}
-            <span className="relative">{donateLabel}</span>
-          </button>
-        </div>
-
-        {/* 오늘 기부 3단 사다리 — 사용/잔여 + 단계별 비용(왜 비용이 오르는지 가시화) */}
-        <div className="mt-2 flex items-center gap-1 text-[10px]">
-          <span className="mr-0.5 shrink-0 text-zinc-400">오늘 기부</span>
-          {GUILD_DONATION_TIERS.map((t, i) => {
-            const done = i < effectiveUsed;
-            const isNext = i === effectiveUsed;
-            return (
-              <span
-                key={i}
-                className={`flex items-center gap-0.5 rounded-full px-1.5 py-0.5 font-semibold ${
-                  done
-                    ? 'bg-amber-500/15 text-amber-700 dark:text-amber-300'
-                    : isNext
-                      ? 'bg-zinc-100 text-zinc-600 ring-1 ring-amber-400/50 dark:bg-zinc-800 dark:text-zinc-300'
-                      : 'bg-zinc-100 text-zinc-400 dark:bg-zinc-800 dark:text-zinc-600'
-                }`}
-              >
-                <span
-                  className={`inline-block h-1.5 w-1.5 rounded-full ${done ? 'bg-amber-500' : 'bg-zinc-300 dark:bg-zinc-600'}`}
-                />
-                {t.cost === 0 ? '무료' : `${t.cost}💎`}
-              </span>
-            );
-          })}
-        </div>
-      </section>
-
-      {/* 최근 점령전 요약 — 우리 길드 관여 전투(최신 1일). 카드/구역 클릭 시 전투 기록으로. */}
-      {recentConquest && recentConquest.results.length > 0 && (
-        <section className="rounded-xl border border-zinc-200 bg-white p-3 dark:border-zinc-800 dark:bg-zinc-950">
-          <div className="flex items-baseline justify-between gap-2">
-            <h3 className="text-sm font-bold">최근 점령전</h3>
-            <span className="text-[10px] text-zinc-400">{recentConquest.battleDay.slice(5).replace('-', '.')}</span>
-          </div>
-          <p className="mt-0.5 text-[11px] text-zinc-500">
-            {recentConquest.results.length}건 ·{' '}
-            <span className="font-bold text-emerald-600 dark:text-emerald-400">
-              승 {recentConquest.results.filter((r) => r.won).length}
-            </span>{' '}
-            ·{' '}
-            <span className="font-bold text-red-500">
-              패 {recentConquest.results.filter((r) => !r.won).length}
+        {/* 길드 경험치바 */}
+        <div className="mt-2.5 border-t border-zinc-200 pt-2.5 dark:border-zinc-800">
+          <div className="flex items-baseline justify-between text-[10px] text-zinc-500">
+            <span className="font-bold text-zinc-700 dark:text-zinc-300">Lv.{guild.level}</span>
+            <span className="font-mono tabular-nums">
+              {displayXp.toLocaleString('ko-KR')}/{guildXpToNext(guild.level).toLocaleString('ko-KR')}
             </span>
-          </p>
-          <ul className="mt-2 flex flex-wrap gap-1.5">
-            {recentConquest.results.slice(0, 8).map((r) => (
-              <li key={r.battleId}>
-                <Link
-                  href={`/guild/battle/${r.battleId}`}
-                  className={`inline-flex items-center gap-1 rounded-lg border px-2 py-1 text-[11px] active:opacity-70 ${
-                    r.won
-                      ? 'border-emerald-300 bg-emerald-50 text-emerald-700 dark:border-emerald-500/40 dark:bg-emerald-500/10 dark:text-emerald-300'
-                      : 'border-red-300 bg-red-50 text-red-600 dark:border-red-500/40 dark:bg-red-500/10 dark:text-red-300'
+          </div>
+          <div className="mt-1 h-1.5 w-full overflow-hidden rounded-full bg-zinc-200 dark:bg-zinc-800">
+            <div
+              className="h-full rounded-full bg-emerald-500 transition-[width] duration-300"
+              style={{ width: `${Math.min(100, (displayXp / guildXpToNext(guild.level)) * 100)}%` }}
+            />
+          </div>
+
+          {/* 단계별 기부 버튼(3개 동일 크기) — 이전 단계 완료해야 다음 활성(나머지 disabled),
+              다이아 단계는 클릭 시 3초 인-버튼 컨펌 후 재클릭으로 기부. */}
+          <div className="mt-2.5 grid grid-cols-3 gap-1.5">
+            {GUILD_DONATION_TIERS.map((t, i) => {
+              const done = i < effectiveUsed;
+              const isNext = i === effectiveUsed;
+              const costLabel = t.cost === 0 ? '무료' : `${t.cost}💎`;
+              const label = done
+                ? '완료'
+                : isNext && confirm
+                  ? `한번 더 ${confirmLeft}s`
+                  : `${i + 1}단계 ${costLabel}`;
+              return (
+                <button
+                  key={i}
+                  type="button"
+                  onClick={isNext ? onDonate : undefined}
+                  disabled={!isNext || pending}
+                  className={`relative isolate flex items-center justify-center overflow-hidden rounded-lg py-1.5 text-[11px] font-bold transition-colors ${
+                    done
+                      ? 'bg-emerald-500/10 text-emerald-600 dark:text-emerald-400'
+                      : isNext
+                        ? confirm
+                          ? 'bg-amber-700 text-white'
+                          : 'bg-amber-600 text-white'
+                        : 'bg-zinc-100 text-zinc-400 dark:bg-zinc-800 dark:text-zinc-600'
                   }`}
                 >
-                  <span className="font-bold">{r.won ? '승' : '패'}</span>
-                  <span className="max-w-[88px] truncate">{r.zone}</span>
-                </Link>
-              </li>
-            ))}
-            {recentConquest.results.length > 8 && (
-              <li className="self-center text-[10px] text-zinc-400">+{recentConquest.results.length - 8}</li>
-            )}
-          </ul>
-        </section>
-      )}
+                  {isNext && confirm ? (
+                    <span
+                      aria-hidden
+                      className="absolute inset-0 bg-amber-500"
+                      style={{ animation: 'confirm-bg-pulse 1.2s ease-in-out infinite' }}
+                    />
+                  ) : null}
+                  <span className="relative">{label}</span>
+                </button>
+              );
+            })}
+          </div>
+        </div>
+      </section>
 
       {/* 길드원 명단(아바타·장비·정렬 메트릭, 클릭 시 프로필) */}
       <GuildMemberList members={members} myUserId={myUserId} />
