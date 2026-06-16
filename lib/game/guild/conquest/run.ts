@@ -26,11 +26,15 @@ export async function runConquest(serverId: number): Promise<{ battleDay: string
   )) as unknown as { d: string }[];
   const battleDay = todayRow!.d;
 
-  // 그날 배치 전부(길드명 포함).
+  // 그날 배치 전부(길드명 포함). guild_members 내부조인으로 **현재 소속이 배치 당시 길드와 일치하는**
+  // 배치만 채택 — 배치 후 길드 이동/탈퇴/추방된 유저가 옛 길드 유닛으로 참전하는 것을 정산 시점에 차단
+  // (이탈 시 clearConquestRoleOnExit가 선삭제하나, 정산 재검증은 방어선).
   const deps = (await db.execute(sql`
     select d.zone_id, d.user_id::text uid, d.guild_id::text guild_id, g.name gname, d.role::text role
     from guild_battle_deployments d
     join guilds g on g.id = d.guild_id
+    join guild_members m
+      on m.user_id = d.user_id and m.server_id = d.server_id and m.guild_id = d.guild_id
     where d.battle_kst_day = ${battleDay} and d.server_id = ${serverId}
   `)) as unknown as DepRow[];
 
