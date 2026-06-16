@@ -6,9 +6,10 @@ import { db } from '@/lib/db/client';
 import { walletAdd } from '@/lib/game/wallet';
 import { userSupplyBoxes } from '@/lib/db/schema/supply';
 import { shopPurchases } from '@/lib/db/schema/shop';
+import { mailbox } from '@/lib/db/schema/mailbox';
 import { SUPPLY_SLOTS } from '@/lib/game/balance';
 
-import { shopGrant, productPeriod } from './catalog';
+import { shopGrant, productPeriod, PREMIUM } from './catalog';
 import { periodKey } from './period';
 
 /**
@@ -28,6 +29,29 @@ function splitBoxes(n: number): Record<string, number> {
   let rem = n - base * SUPPLY_SLOTS.length;
   for (let i = 0; rem > 0; i++, rem--) out[SUPPLY_SLOTS[i % SUPPLY_SLOTS.length]!]! += 1;
   return out;
+}
+
+/** 보상을 우편으로 적재(다이아 + 슬롯 균등 분배 상자). 수령 시 claimMail이 지갑/상자 가산. */
+async function mailReward(
+  tx: Parameters<Parameters<typeof db.transaction>[0]>[0],
+  userId: string,
+  serverId: number,
+  g: { diamond: number; boxes: number },
+  meta: { title: string; body: string },
+): Promise<void> {
+  const dist = splitBoxes(g.boxes);
+  await tx.insert(mailbox).values({
+    userId,
+    serverId,
+    type: 'reward',
+    title: meta.title,
+    body: meta.body,
+    senderLabel: '성장 프리미엄',
+    payload: {
+      diamond: g.diamond,
+      boxes: { weapon: dist.weapon ?? 0, armor: dist.armor ?? 0, accessory: dist.accessory ?? 0 },
+    },
+  });
 }
 
 async function grant(
@@ -89,7 +113,15 @@ export async function devPurchase(
       )
       .for('update');
     if (row?.periodKey === cur) throw new ShopBuyError('ALREADY_PURCHASED');
-    await grant(tx, userId, serverId, g);
+    if (productId === PREMIUM.id) {
+      // 성장 프리미엄 — 즉시 지급분을 우편으로(일일분은 로그인 드립 ensurePremiumDailyMail).
+      await mailReward(tx, userId, serverId, g, {
+        title: '성장 프리미엄 — 즉시 보상',
+        body: '성장 프리미엄 구매 감사합니다. 즉시 보상이 도착했어요. 매일 보상도 우편으로 찾아갑니다.',
+      });
+    } else {
+      await grant(tx, userId, serverId, g);
+    }
     await tx
       .update(shopPurchases)
       .set({ periodKey: cur, updatedAt: new Date() })

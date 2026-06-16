@@ -150,3 +150,20 @@ export const dailySupplyGrants = pgTable(
   (t) => [primaryKey({ columns: [t.userId, t.serverId, t.kstDay] })],
 );
 
+/**
+ * 성장 프리미엄 일일 보상 멱등(0068) — daily_supply_grants와 동일 패턴, 별개 채널.
+ * ensurePremiumDailyMail()이 활성 프리미엄 보유자에게 KST 자정 1회 일일 보상 우편 발송.
+ */
+export const premiumDailyGrants = pgTable(
+  'premium_daily_grants',
+  {
+    userId: uuid('user_id')
+      .notNull()
+      .references(() => profiles.id, { onDelete: 'cascade' }),
+    serverId: smallint('server_id').notNull().default(1),
+    kstDay: date('kst_day', { mode: 'string' }).notNull(),
+    grantedAt: timestamp('granted_at', { withTimezone: true }).notNull().defaultNow(),
+  },
+  (t) => [primaryKey({ columns: [t.userId, t.serverId, t.kstDay] })],
+);
+

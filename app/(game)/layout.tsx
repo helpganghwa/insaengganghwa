@@ -5,7 +5,7 @@ import { after } from 'next/server';
 
 import { getSessionUserId } from '@/lib/auth/session';
 import { withTimeout, DbTimeoutError } from '@/lib/db/with-timeout';
-import { ensureDailyMail } from '@/lib/game/mailbox';
+import { ensureDailyMail, ensurePremiumDailyMail } from '@/lib/game/mailbox';
 import { loadLayoutData } from '@/lib/game/layout-data';
 import { getActiveServerId } from '@/lib/game/servers';
 import {
@@ -41,9 +41,13 @@ export default async function GameLayout({ children }: { children: React.ReactNo
   if (!userId) redirect('/login');
   // 프로필/스타터 지급은 DB 트리거(handle_new_user) + 백필 마이그레이션 담당 — 핫패스 부트스트랩 없음.
 
-  // 일일 보급 — KST 자정 1회 자동 발송(멱등 PK). fire-and-forget(핫패스 비차단).
-  withTimeout(ensureDailyMail(userId, await getActiveServerId()), 2000, 'layout.dailyMail').catch((e) => {
+  // 일일 보급 + 성장 프리미엄 일일 보상 — KST 자정 1회 자동 발송(멱등 PK). fire-and-forget(핫패스 비차단).
+  const dailySid = await getActiveServerId();
+  withTimeout(ensureDailyMail(userId, dailySid), 2000, 'layout.dailyMail').catch((e) => {
     if (!(e instanceof DbTimeoutError)) console.warn('[layout] dailyMail error', e);
+  });
+  withTimeout(ensurePremiumDailyMail(userId, dailySid), 2000, 'layout.premiumDaily').catch((e) => {
+    if (!(e instanceof DbTimeoutError)) console.warn('[layout] premiumDaily error', e);
   });
 
   // 카카오 공유 링크 가입 귀속 — pending_referral 쿠키 있으면 1회 처리(멱등).

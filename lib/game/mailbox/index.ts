@@ -4,3 +4,4 @@
 export { claimMail, claimAllMail, MailError } from './claim';
 export type { MailPayload, ClaimResult } from './claim';
 export { ensureDailyMail } from './daily';
+export { ensurePremiumDailyMail } from './premium-daily';

@@ -32,13 +32,11 @@ export const CASH: Record<Period, Cash[]> = {
 
 export const PREMIUM = {
   id: 'premium',
-  krw: 29900,
-  instant: { diamond: 4000, boxes: 30 },
-  daily: { diamond: 300, boxes: 3, days: 30 },
-};
-export const PREMIUM_TOTAL = {
-  diamond: PREMIUM.instant.diamond + PREMIUM.daily.diamond * PREMIUM.daily.days,
-  boxes: PREMIUM.instant.boxes + PREMIUM.daily.boxes * PREMIUM.daily.days,
+  krw: 14900,
+  // 즉시 지급(구매 시 1회) + 일일 지급(30일). 둘 다 우편으로 전달(즉시=구매 tx, 일일=로그인 드립).
+  // 상자는 무기/방어구/장신구 균등 분배(30→10/10/10, 15→5/5/5).
+  instant: { diamond: 1000, boxes: 30 },
+  daily: { diamond: 300, boxes: 15, days: 30 },
 };
 
 export const DIAMONDS = [
@@ -51,10 +49,10 @@ export const DIAMONDS = [
 
 /**
  * 현금 상품(현금 패키지 + 프리미엄 + 다이아 충전) id → 지급량. 어드민 테스트 즉시구매용.
- * 프리미엄은 drip 미구현이라 전체 합계를 즉시 지급. 보급상자(💎 구매)는 대상 아님(null).
+ * 프리미엄은 '즉시 지급분'만 반환(일일분은 로그인 드립으로 별도 우편). 보급상자(💎 구매)는 대상 아님(null).
  */
 export function shopGrant(productId: string): { diamond: number; boxes: number } | null {
-  if (productId === PREMIUM.id) return { ...PREMIUM_TOTAL };
+  if (productId === PREMIUM.id) return { ...PREMIUM.instant };
   const d = DIAMONDS.find((x) => x.id === productId);
   if (d) return { diamond: d.total, boxes: 0 };
   for (const p of ['daily', 'weekly', 'monthly'] as Period[]) {
