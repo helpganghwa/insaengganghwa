@@ -430,6 +430,9 @@ export function EnhanceSlotCard({
     });
   };
 
+  // 보석 단축/취소 3초 컨펌 중에는 슬롯의 다른 영역(강화 시도·반대 버튼) 클릭 불가 — 오탭/혼선 방지.
+  const otherActionConfirm = confirmReduce || confirmCancel;
+
   if (optimisticCancelled) {
     // 카드를 picker와 동일 외관의 placeholder로 즉시 교체 — 슬롯 2칸 유지.
     // router.refresh() 후 부모 page가 실제 EmptySlotButton(후보 모달 가능)으로 교체.
@@ -449,13 +452,13 @@ export function EnhanceSlotCard({
         tabIndex={pending ? -1 : 0}
         aria-label={`강화 시도 — 현재 성공률 ${(effBp / 100).toFixed(1)}%`}
         onClick={() => {
-          if (pending || flash) return;
+          if (pending || flash || otherActionConfirm) return; // 보석단축/취소 컨펌 중엔 시도 영역 잠금
           // 확인 모드: 두 번째 탭 = 강화. 그 외(기본): 첫 탭 = 확인 진입.
           if (confirm) doAttempt();
           else setConfirm(true);
         }}
         onKeyDown={(e) => {
-          if ((e.key === 'Enter' || e.key === ' ') && !pending && !flash) {
+          if ((e.key === 'Enter' || e.key === ' ') && !pending && !flash && !otherActionConfirm) {
             e.preventDefault();
             if (confirm) doAttempt();
             else setConfirm(true);
@@ -535,6 +538,7 @@ export function EnhanceSlotCard({
                 !instantCost ||
                 !canAfford ||
                 confirm ||
+                confirmCancel || // 취소 컨펌 중엔 단축 잠금
                 attempting ||
                 !!flash
               }
@@ -556,7 +560,7 @@ export function EnhanceSlotCard({
             </button>
             <button
               type="button"
-              disabled={pending || confirm || attempting || !!flash}
+              disabled={pending || confirm || confirmReduce || attempting || !!flash}
               onClick={(e) => {
                 e.stopPropagation();
                 doCancel();
