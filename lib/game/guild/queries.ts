@@ -137,6 +137,7 @@ export async function getGuildRanking(serverId: number, limit = 50) {
       level: guilds.level,
       emblemUrl: guilds.emblemUrl,
       emblemColor: guilds.emblemColor,
+      intro: guilds.intro,
       memberCount: sql<number>`(select count(*)::int from guild_members gm where gm.guild_id = ${guilds.id})`,
     })
     .from(guilds)
@@ -159,6 +160,7 @@ export async function searchGuilds(serverId: number, q: string) {
       level: guilds.level,
       emblemUrl: guilds.emblemUrl,
       emblemColor: guilds.emblemColor,
+      intro: guilds.intro,
       memberCount: sql<number>`(select count(*)::int from guild_members gm where gm.guild_id = ${guilds.id})`,
     })
     .from(guilds)

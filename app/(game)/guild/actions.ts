@@ -27,6 +27,7 @@ import {
   setZoneExecutor,
   clearZoneExecutor,
   setGuildNotice,
+  setGuildIntro,
   setGuildOpenchat,
   getZoneLatestBattleId,
   generateAndStoreEmblem,
@@ -189,6 +190,20 @@ export async function setGuildNoticeAction(notice: string) {
     return { status: 'success' } as const;
   } catch (e) {
     return fail(e, 'setGuildNotice');
+  }
+}
+
+/** 길드 소개(공개) 설정/해제 — 길드장·부길드장. 목록 팝업에 노출. */
+export async function setGuildIntroAction(intro: string) {
+  const u = await getSessionUserId();
+  if (!u) return unauth;
+  try {
+    await setGuildIntro({ userId: u, serverId: await getActiveServerId(), intro });
+    revalidatePath('/guild');
+    revalidatePath('/guild/settings');
+    return { status: 'success' } as const;
+  } catch (e) {
+    return fail(e, 'setGuildIntro');
   }
 }
 

@@ -9,6 +9,7 @@ import { useDiamond } from '@/components/DiamondContext';
 import { ModalShell } from '@/components/ModalShell';
 import {
   GUILD_EMBLEM_REROLL_COST_DIAMOND,
+  GUILD_INTRO_MAX_LEN,
   GUILD_NOTICE_MAX_LEN,
   MAX_GUILD_EMBLEMS,
   type GuildJoinPolicy,
@@ -20,6 +21,7 @@ import {
   deleteEmblemAction,
   setJoinPolicyAction,
   setGuildNoticeAction,
+  setGuildIntroAction,
   setGuildOpenchatAction,
   approveJoinAction,
   rejectJoinAction,
@@ -38,6 +40,7 @@ type SettingsView = {
   taxPool: string;
   joinPolicy: GuildJoinPolicy;
   notice: string;
+  intro: string;
   openchatUrl: string;
   emblemUrl: string | null;
   emblemColor: string | null;
@@ -270,6 +273,17 @@ export function GuildSettings({
       router.refresh();
     });
 
+  // 길드 소개(공개) — 임원 편집. 목록 팝업 노출. 저장 시에만 반영.
+  const [intro, setIntro] = useState(guild.intro);
+  const introDirty = intro.trim() !== guild.intro.trim();
+  const saveIntro = () =>
+    start(async () => {
+      const r = await setGuildIntroAction(intro.trim());
+      if (r.status !== 'success') return showError(guildErrMsg(r.code));
+      showHeaderToast({ title: '소개 저장 완료' });
+      router.refresh();
+    });
+
   // 오픈채팅 링크 — 임원 편집. 빈 값 저장 = 제거. 형식 검증은 서버 권위(OPENCHAT_INVALID).
   const [openchat, setOpenchat] = useState(guild.openchatUrl);
   const openchatDirty = openchat.trim() !== guild.openchatUrl.trim();
@@ -462,6 +476,35 @@ export function GuildSettings({
             </button>
           )}
           <button type="button" onClick={saveNotice} disabled={pending || !noticeDirty} className={BTN.primary}>
+            저장
+          </button>
+        </div>
+      </section>
+      )}
+
+      {/* 길드 소개(공개) — 목록(랭킹/검색) 팝업에 노출. 임원 편집. */}
+      {tab === 'settings' && (
+      <section className="rounded-xl border border-zinc-200 bg-white p-3 dark:border-zinc-800 dark:bg-zinc-950">
+        <div className="flex items-center justify-between gap-2">
+          <h3 className="text-sm font-bold">길드 소개</h3>
+          <span className="text-[10px] tabular-nums text-zinc-400">
+            {intro.length}/{GUILD_INTRO_MAX_LEN}
+          </span>
+        </div>
+        <textarea
+          value={intro}
+          onChange={(e) => setIntro(e.target.value.slice(0, GUILD_INTRO_MAX_LEN))}
+          placeholder="길드 목록에서 보일 공개 소개를 입력하세요 (가입 안내·분위기 등)"
+          rows={3}
+          className="mt-2 w-full resize-none rounded-lg border border-zinc-200 bg-zinc-50 px-2.5 py-2 text-base outline-none focus:border-zinc-400 dark:border-zinc-700 dark:bg-zinc-900 dark:focus:border-zinc-500"
+        />
+        <div className="mt-2 flex justify-end gap-1.5">
+          {intro.length > 0 && (
+            <button type="button" onClick={() => setIntro('')} disabled={pending} className={BTN.ghost}>
+              비우기
+            </button>
+          )}
+          <button type="button" onClick={saveIntro} disabled={pending || !introDirty} className={BTN.primary}>
             저장
           </button>
         </div>

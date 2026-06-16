@@ -57,8 +57,10 @@ export const guilds = pgTable('guilds', {
    * FK는 마이그레이션에서 ALTER 추가(guilds↔guild_emblems 상호참조 회피, residence와 동일 패턴).
    */
   activeEmblemId: bigint('active_emblem_id', { mode: 'bigint' }),
-  /** 길드 공지 ≤60자(길드장/부길드장만 편집). */
+  /** 길드 공지 ≤60자(길드장/부길드장만 편집, 멤버 전용 노출). */
   notice: text('notice'),
+  /** 길드 소개(공개) — 목록 팝업 노출용. 길드장/부길드장 편집. null=미설정. */
+  intro: text('intro'),
   /** 카카오 오픈채팅 링크(길드장/부길드장만 편집) — 인게임 채팅 대신 외부 소통 채널. null=미설정. */
   openchatUrl: text('openchat_url'),
   /** 가입 방식 — 'open'(자유: 신청 즉시 가입) | 'approval'(승인: 길드장/부길드장 승인 필요). */

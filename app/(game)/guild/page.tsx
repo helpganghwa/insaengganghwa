@@ -37,6 +37,7 @@ async function browseView(userId: string, serverId: number) {
         emblemUrl: g.emblemUrl,
         emblemColor: g.emblemColor,
         combat: g.combat,
+        intro: g.intro,
       }))}
     />
   );
@@ -81,6 +82,7 @@ export default async function GuildPage() {
         emblemUrl: g.emblemUrl,
         emblemColor: g.emblemColor,
         combat: g.combat,
+        intro: g.intro,
       }))}
       home={
         <GuildHome
