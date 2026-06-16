@@ -35,12 +35,15 @@ export function GuildHome({
   myUserId,
   myRole,
   usedToday,
+  leaderHandover,
 }: {
   guild: GuildView;
   members: RichMember[];
   myUserId: string;
   myRole: GuildRole;
   usedToday: number;
+  /** 길드장 위임 위험 — inactiveDays(서버 계산)>=warnDays면 배너. null=접속 기록 없음. */
+  leaderHandover: { inactiveDays: number | null; warnDays: number; handoverDays: number };
 }) {
   const router = useRouter();
   const { showHeaderToast, showError } = useResourceToast();
@@ -131,8 +134,30 @@ export function GuildHome({
         ? '기부'
         : `기부 ${nextTier.cost}💎`;
 
+  const lhDays = leaderHandover.inactiveDays;
+  const showHandoverWarn = lhDays != null && lhDays >= leaderHandover.warnDays;
+  const handoverImminent = lhDays != null && lhDays >= leaderHandover.handoverDays;
+
   return (
     <div className="space-y-3">
+      {/* 길드장 위임 위험 배너 — 미접속 경고일↑(투명성: 전 길드원 노출) */}
+      {showHandoverWarn && (
+        <div
+          className={`rounded-xl border p-3 text-[12px] ${
+            handoverImminent
+              ? 'border-red-300 bg-red-50 text-red-700 dark:border-red-500/40 dark:bg-red-500/10 dark:text-red-300'
+              : 'border-amber-300 bg-amber-50 text-amber-800 dark:border-amber-500/40 dark:bg-amber-500/10 dark:text-amber-300'
+          }`}
+        >
+          <p className="font-bold">⚠ 길드장 {lhDays}일째 미접속</p>
+          <p className="mt-0.5 leading-relaxed">
+            {handoverImminent
+              ? '자동 위임 대상입니다 — 곧 활성 길드원(부길드장 우선) 중 기여도 1위에게 길드장이 위임됩니다.'
+              : `${leaderHandover.handoverDays}일 미접속 시 활성 길드원에게 길드장이 자동 위임됩니다.`}
+          </p>
+        </div>
+      )}
+
       {/* 길드 정보 + 기부 */}
       <section className="rounded-xl border border-zinc-200 bg-white p-3 dark:border-zinc-800 dark:bg-zinc-950">
         <div className="flex items-center gap-2.5">

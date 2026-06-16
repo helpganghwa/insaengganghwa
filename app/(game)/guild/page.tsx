@@ -8,7 +8,8 @@ import {
   getGuildRanking,
   getMyJoinRequest,
 } from '@/lib/game/guild';
-import { kstDateString } from '@/lib/kst';
+import { GUILD_LEADER_HANDOVER_DAYS, GUILD_LEADER_HANDOVER_WARN_DAYS } from '@/lib/game/guild/balance';
+import { kstDateString, daysSinceIso } from '@/lib/kst';
 
 // 풀 포화 시 무한 대기 방지 — 각 쿼리 타임아웃(초과 시 쿼리 취소·풀 회수, 에러바운더리로 degrade).
 const DB_GUARD_MS = 4000;
@@ -65,6 +66,10 @@ export default async function GuildPage() {
   const usedToday =
     membership.lastDonationKstDay === kstDateString() ? membership.dailyDonationCount : 0;
 
+  // 길드장 위임 위험 — 길드장 미접속일(서버 계산, lib 헬퍼). 경고일↑이면 GuildHome이 배너 노출.
+  const leaderLastSeen = members.find((m) => m.role === 'leader')?.lastSeenAt ?? null;
+  const leaderInactiveDays = leaderLastSeen ? daysSinceIso(leaderLastSeen) : null;
+
   return (
     <GuildMemberTabs
       ranking={ranking.map((g) => ({
@@ -92,6 +97,11 @@ export default async function GuildPage() {
           myUserId={userId}
           myRole={membership.role}
           usedToday={usedToday}
+          leaderHandover={{
+            inactiveDays: leaderInactiveDays,
+            warnDays: GUILD_LEADER_HANDOVER_WARN_DAYS,
+            handoverDays: GUILD_LEADER_HANDOVER_DAYS,
+          }}
         />
       }
     />

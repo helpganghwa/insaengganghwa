@@ -43,3 +43,8 @@ export function msUntilNextKstMidnight(at: Date = new Date()): number {
   const next = kstStartOfDay(at).getTime() + 24 * 60 * 60 * 1000;
   return Math.max(0, next - at.getTime());
 }
+
+/** ISO 시각 이후 경과 '일'(내림). 접속 경과 등 — 절대 경과라 타임존 무관. */
+export function daysSinceIso(iso: string, at: Date = new Date()): number {
+  return Math.floor((at.getTime() - Date.parse(iso)) / 86_400_000);
+}
