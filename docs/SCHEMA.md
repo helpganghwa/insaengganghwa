@@ -261,7 +261,7 @@ T+1개) 도달 시 **자동으로** `transcend_level +1`(다중 가능) + `max_t
 | `referrer_user_id` | uuid FK | 공유자 |
 | `new_user_id` | uuid FK UNIQUE | 신규 가입자(1회 귀속) |
 | `share_code` | text | |
-| `rewarded` | boolean default false | 멱등 — 공유자 +300 다이아(BALANCE §6.3) |
+| `rewarded` | boolean default false | 멱등 — 공유자 +500 다이아(BALANCE §6.3) |
 | `created_at` | timestamptz | |
 
 - 클릭/펀널 상세는 PostHog. DB는 전환·보상 멱등만 보장

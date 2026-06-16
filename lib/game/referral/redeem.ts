@@ -74,7 +74,7 @@ export async function attributeReferralFromShare(
     }
 
     // mailbox row — referrer가 명시적 수령. claim 시 다이아 + 슬롯별 상자 가산.
-    // INVITE_BOX_PER_REFERRAL=3 = 종류별 1개씩(무기·방어구·장신구).
+    // INVITE_BOX_PER_REFERRAL=10 = 무기4·방어구3·장신구3.
     // 보상 메일은 추천인의 활성 서버 우편함으로(SERVER.md 경계규칙 4).
     await tx.insert(mailbox).values({
       userId: referrer.id,
@@ -85,7 +85,7 @@ export async function attributeReferralFromShare(
       senderLabel: '시스템',
       payload: {
         diamond: INVITE_DIAMOND_PER_REFERRAL,
-        boxes: { weapon: 1, armor: 1, accessory: 1 },
+        boxes: { weapon: 4, armor: 3, accessory: 3 },
       },
     });
 
