@@ -3,7 +3,6 @@ import 'server-only';
 import { and, eq, sql } from 'drizzle-orm';
 
 import { db } from '@/lib/db/client';
-import { characters } from '@/lib/db/schema/server';
 import { walletAdd } from '@/lib/game/wallet';
 import { guilds, guildMembers, guildTaxDistributions } from '@/lib/db/schema/guild';
 
@@ -59,23 +58,19 @@ export function distributeGuildTax(input: {
       return { total: pool, perMember: null };
     }
 
-    // equal
-    const [cnt] = await tx
-      .select({ n: sql<number>`count(*)::int` })
+    // equal — 길드원 userId 수집 후 각자 walletAdd. 차감액 = 실제 지급 합계로 일치(💎 증발 방지),
+    // 캐릭터 행 부재 멤버가 끼면 walletAdd가 명시 실패→tx 롤백(조용한 유실 대신).
+    const members = await tx
+      .select({ u: guildMembers.userId })
       .from(guildMembers)
       .where(eq(guildMembers.guildId, gid));
-    const n = BigInt(cnt?.n ?? 0);
+    const n = BigInt(members.length);
     if (n <= 0n) throw new GuildError('NOTHING_TO_DISTRIBUTE');
     const per = pool / n; // floor
     if (per <= 0n) throw new GuildError('NOTHING_TO_DISTRIBUTE'); // 풀 < 인원
     const distributed = per * n;
 
-    await tx
-      .update(characters)
-      .set({ diamond: sql`${characters.diamond} + ${per}` })
-      .where(
-        sql`${characters.serverId} = ${input.serverId} AND ${characters.userId} IN (SELECT user_id FROM guild_members WHERE guild_id = ${gid})`,
-      );
+    for (const m of members) await walletAdd(tx, m.u, input.serverId, per);
     await tx
       .update(guilds)
       .set({ taxPoolDiamond: sql`${guilds.taxPoolDiamond} - ${distributed}` })
