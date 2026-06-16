@@ -142,7 +142,7 @@ function Fighter({
       className="h-full w-full object-contain object-bottom drop-shadow-[0_2px_5px_rgba(0,0,0,0.85)]"
       style={{
         imageRendering: 'pixelated',
-        transform: `translateY(26px) scale(1.2) scaleX(${side === 'r' ? -1 : 1})`,
+        transform: `translateY(16px) scale(1.2) scaleX(${side === 'r' ? -1 : 1})`,
         transformOrigin: 'center bottom',
       }}
     />
@@ -150,7 +150,7 @@ function Fighter({
   return (
     <div className="flex w-40 flex-col items-center gap-0.5">
       <div
-        className={`relative h-36 w-40 transition-transform duration-200 ${lunge} ${shake ? 'animate-hit-shake' : ''}`}
+        className={`relative h-28 w-40 transition-transform duration-200 ${lunge} ${shake ? 'animate-hit-shake' : ''}`}
       >
         <span
           className={`absolute left-1/2 top-0 z-20 -translate-x-1/2 rounded-full px-2 py-0.5 text-[9px] font-bold text-white text-pixel-outline ${
