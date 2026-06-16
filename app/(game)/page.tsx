@@ -227,7 +227,7 @@ export default async function HomePage() {
         residenceName = row.residence_name ?? null;
         residenceRegion = row.residence_region ?? null;
         // 23시대(23:00~24:00) = 점령전 진행중, 그 외 = 오늘 밤 일정 안내.
-        conquestStatus = row.kst_hour === 23 ? '⚔️ 점령전 진행중' : '오늘 23시 점령전';
+        conquestStatus = row.kst_hour === 23 ? '점령전 진행중' : '오늘 23시 점령전';
         // phase별 문구. 발표 후(after) + revealed면 우승자, 닉 미상(더미)이면 발표 문구.
         if (row.melee_phase === 'before') meleeDesc = '오늘 오전 9시 개시';
         else if (row.melee_phase === 'running') meleeDesc = '난투 진행 중';
