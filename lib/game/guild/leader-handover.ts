@@ -6,6 +6,7 @@ import { db } from '@/lib/db/client';
 import { guilds, guildMembers } from '@/lib/db/schema/guild';
 import { mailbox } from '@/lib/db/schema/mailbox';
 
+import { logGuildAudit } from './audit';
 import { GUILD_LEADER_HANDOVER_DAYS, GUILD_LEADER_HANDOVER_WARN_DAYS } from './balance';
 
 /**
@@ -115,6 +116,14 @@ async function handover(serverId: number, g: GuildRow): Promise<boolean> {
       .update(guilds)
       .set({ leaderUserId: s.userId, leaderHandoverWarnedAt: null })
       .where(eq(guilds.id, BigInt(g.id)));
+    await logGuildAudit(tx, {
+      serverId,
+      guildId: BigInt(g.id),
+      actorUserId: null, // 시스템(cron) 자동 위임
+      action: 'auto_handover',
+      targetUserId: s.userId,
+      detail: { from: g.leader },
+    });
 
     // 통지 우편 — 신임 길드장 + 강등된 전 길드장(복귀 시 확인).
     await tx.insert(mailbox).values([

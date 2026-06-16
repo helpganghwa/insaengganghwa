@@ -5,6 +5,7 @@ import { and, eq } from 'drizzle-orm';
 import { db } from '@/lib/db/client';
 import { guilds, guildMembers, zones } from '@/lib/db/schema/guild';
 
+import { logGuildAudit } from './audit';
 import { GuildError } from './errors';
 
 type Tx = Parameters<Parameters<typeof db.transaction>[0]>[0];
@@ -31,6 +32,13 @@ export function disbandGuild(input: { userId: string; serverId: number }): Promi
       .for('update');
     if (!m) throw new GuildError('NOT_IN_GUILD');
     if (m.role !== 'leader') throw new GuildError('NOT_LEADER');
+    // 로그 먼저(감사 로그는 guilds FK 없음 → 길드 삭제 후에도 잔존).
+    await logGuildAudit(tx, {
+      serverId: input.serverId,
+      guildId: m.guildId,
+      actorUserId: input.userId,
+      action: 'disband',
+    });
     await neutralizeAndDeleteGuild(tx, m.guildId);
   });
 }

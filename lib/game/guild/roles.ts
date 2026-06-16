@@ -5,6 +5,7 @@ import { and, eq, sql } from 'drizzle-orm';
 import { db } from '@/lib/db/client';
 import { guilds, guildMembers, guildLeaveLog } from '@/lib/db/schema/guild';
 
+import { logGuildAudit } from './audit';
 import { GUILD_MAX_VICE } from './balance';
 import { clearConquestRoleOnExit } from './conquest/on-member-exit';
 import { GuildError } from './errors';
@@ -37,6 +38,13 @@ export function transferLeadership(input: {
     await tx.update(guildMembers).set({ role: 'member' }).where(and(eq(guildMembers.userId, input.leaderUserId), eq(guildMembers.serverId, input.serverId)));
     await tx.update(guildMembers).set({ role: 'leader' }).where(and(eq(guildMembers.userId, input.targetUserId), eq(guildMembers.serverId, input.serverId)));
     await tx.update(guilds).set({ leaderUserId: input.targetUserId }).where(eq(guilds.id, leader.guildId));
+    await logGuildAudit(tx, {
+      serverId: input.serverId,
+      guildId: leader.guildId,
+      actorUserId: input.leaderUserId,
+      action: 'transfer_leadership',
+      targetUserId: input.targetUserId,
+    });
   });
 }
 
@@ -69,6 +77,13 @@ export function setViceRole(input: {
       .update(guildMembers)
       .set({ role: input.makeVice ? 'vice' : 'member' })
       .where(and(eq(guildMembers.userId, input.targetUserId), eq(guildMembers.serverId, input.serverId)));
+    await logGuildAudit(tx, {
+      serverId: input.serverId,
+      guildId: leader.guildId,
+      actorUserId: input.leaderUserId,
+      action: input.makeVice ? 'set_vice' : 'unset_vice',
+      targetUserId: input.targetUserId,
+    });
   });
 }
 
@@ -91,5 +106,12 @@ export function kickMember(input: {
     await clearConquestRoleOnExit(tx, input.targetUserId, input.serverId); // 잔류 집행관·미정산 배치 정리
     await tx.delete(guildMembers).where(and(eq(guildMembers.userId, input.targetUserId), eq(guildMembers.serverId, input.serverId)));
     await tx.insert(guildLeaveLog).values({ userId: input.targetUserId, serverId: input.serverId });
+    await logGuildAudit(tx, {
+      serverId: input.serverId,
+      guildId: actor.guildId,
+      actorUserId: input.actorUserId,
+      action: 'kick',
+      targetUserId: input.targetUserId,
+    });
   });
 }

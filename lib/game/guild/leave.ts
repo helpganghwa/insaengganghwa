@@ -5,6 +5,7 @@ import { and, eq, sql } from 'drizzle-orm';
 import { db } from '@/lib/db/client';
 import { guildMembers, guildLeaveLog } from '@/lib/db/schema/guild';
 
+import { logGuildAudit } from './audit';
 import { clearConquestRoleOnExit } from './conquest/on-member-exit';
 import { neutralizeAndDeleteGuild } from './disband';
 import { GuildError } from './errors';
@@ -30,6 +31,13 @@ export function leaveGuild(input: { userId: string; serverId: number }): Promise
         .from(guildMembers)
         .where(eq(guildMembers.guildId, m.guildId));
       if ((cnt?.n ?? 0) > 1) throw new GuildError('LEADER_MUST_TRANSFER');
+      await logGuildAudit(tx, {
+        serverId: input.serverId,
+        guildId: m.guildId,
+        actorUserId: input.userId,
+        action: 'disband',
+        detail: { via: 'leave' },
+      });
       await neutralizeAndDeleteGuild(tx, m.guildId); // 마지막 1인(길드장) → 해산
       await tx.insert(guildLeaveLog).values({ userId: input.userId, serverId: input.serverId });
       return { disbanded: true };

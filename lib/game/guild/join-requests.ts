@@ -10,6 +10,7 @@ import {
   guildJoinRequests,
 } from '@/lib/db/schema/guild';
 
+import { logGuildAudit } from './audit';
 import { GUILD_REJOIN_LOCK_HOURS, guildCapacity, type GuildJoinPolicy } from './balance';
 import { GuildError } from './errors';
 import { joinGuild } from './join';
@@ -162,5 +163,12 @@ export async function setJoinPolicy(input: {
   await db.transaction(async (tx) => {
     const guildId = await assertOfficer(tx, input.userId, input.serverId);
     await tx.update(guilds).set({ joinPolicy: input.policy }).where(eq(guilds.id, guildId));
+    await logGuildAudit(tx, {
+      serverId: input.serverId,
+      guildId,
+      actorUserId: input.userId,
+      action: 'set_join_policy',
+      detail: { policy: input.policy },
+    });
   });
 }
