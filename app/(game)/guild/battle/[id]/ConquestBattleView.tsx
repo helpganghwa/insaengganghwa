@@ -142,13 +142,13 @@ function Fighter({
       className="h-full w-full object-contain object-bottom drop-shadow-[0_2px_5px_rgba(0,0,0,0.85)]"
       style={{
         imageRendering: 'pixelated',
-        transform: `translateY(16px) scale(1.2) scaleX(${side === 'r' ? -1 : 1})`,
+        transform: `translateY(21px) scale(1.2) scaleX(${side === 'r' ? -1 : 1})`,
         transformOrigin: 'center bottom',
       }}
     />
   );
   return (
-    <div className="flex w-40 translate-y-[10px] flex-col items-center gap-0.5">
+    <div className="flex w-40 translate-y-[3px] flex-col items-center gap-0.5">
       <div
         className={`relative h-[117px] w-40 transition-transform duration-200 ${lunge} ${shake ? 'animate-hit-shake' : ''}`}
       >
