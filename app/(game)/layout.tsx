@@ -11,6 +11,7 @@ import { getActiveServerId } from '@/lib/game/servers';
 import {
   processPendingReferral,
   PENDING_REFERRAL_COOKIE,
+  PENDING_REFERRAL_AT_COOKIE,
 } from '@/lib/game/referral/auto-attribute';
 import { AppHeader, AppHeaderShell } from '@/components/AppHeader';
 import { BottomNav } from '@/components/BottomNav';
@@ -49,11 +50,15 @@ export default async function GameLayout({ children }: { children: React.ReactNo
   // 쿠키는 **요청 스코프에서 먼저 읽는다**(cookies()를 after() 안에서 호출하면 Next가 throw).
   // 값만 after()로 넘겨 응답 후 보장 실행 — fire-and-forget은 Vercel이 응답 후 함수를 종료하면
   // 트랜잭션·푸시가 끊겨 리워드가 누락될 수 있음(추천 보상은 누락되면 안 됨). 핫패스 비차단.
-  const referralCode = (await cookies()).get(PENDING_REFERRAL_COOKIE)?.value;
+  const cookieStore = await cookies();
+  const referralCode = cookieStore.get(PENDING_REFERRAL_COOKIE)?.value;
   if (referralCode) {
+    // 클릭 시각(신규 가입 판정용) — 레거시 쿠키엔 없을 수 있어 옵셔널.
+    const atRaw = cookieStore.get(PENDING_REFERRAL_AT_COOKIE)?.value;
+    const clickedAtMs = atRaw && /^\d+$/.test(atRaw) ? Number(atRaw) : undefined;
     after(async () => {
       try {
-        await processPendingReferral(userId, referralCode);
+        await processPendingReferral(userId, referralCode, clickedAtMs);
       } catch (e) {
         console.warn('[layout] referral error', e);
       }

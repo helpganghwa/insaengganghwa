@@ -32,12 +32,21 @@ export class ReferralError extends Error {
  *   referrer는 신규 가입 즉시 push 알림으로 인지.
  *
  * - shareCode = referrer 공개 코드(신규) 또는 닉네임(레거시 링크 하위호환).
+ * - 보상 조건 = **링크 클릭 → 그 이후 회원가입 완료**. clickedAtMs(클릭 시각)보다 늦게
+ *   생성된 계정만 귀속(기존 유저가 링크를 타도 보상 없음). clickedAtMs 없으면(레거시 쿠키)
+ *   "최근 7일 내 가입" 폴백.
  * - 멱등: referral_attributions(new_user_id UNIQUE) — 두 번째 호출 ALREADY_REDEEMED.
  * - 단일 트랜잭션(attribute row + mailbox row + rewarded=true), 푸시는 tx 밖.
  */
+// 쿠키(함수 서버 시계)와 createdAt(DB 시계) 간 오차 허용폭 — 정상 신규는 클릭 후 가입이라
+// createdAt ≥ clickedAt이지만, 시계 스큐로 살짝 빠르게 보일 수 있어 5분 버퍼.
+const SIGNUP_SKEW_MS = 5 * 60 * 1000;
+const LEGACY_MAX_AGE_MS = 7 * 24 * 60 * 60 * 1000; // 레거시 쿠키 폴백: 7일(쿠키 TTL) 내 가입만.
+
 export async function attributeReferralFromShare(
   newUserId: string,
   shareCode: string,
+  clickedAtMs?: number,
 ): Promise<{ referrerNickname: string } | null> {
   // 1. tx — attribute + mailbox 적재.
   const result = await db.transaction(async (tx) => {
@@ -53,6 +62,20 @@ export async function attributeReferralFromShare(
     if (referrer.id === newUserId) {
       throw new ReferralError('SELF_REFERRAL');
     }
+
+    // 신규 가입 가드 — 가입 전환(클릭 후 생성된 계정)만 보상. 기존 계정이 링크를 타면 skip.
+    const [acct] = await tx
+      .select({ createdAt: profiles.createdAt })
+      .from(profiles)
+      .where(eq(profiles.id, newUserId))
+      .limit(1);
+    if (!acct) return null;
+    const createdMs = acct.createdAt.getTime();
+    const isNewSignup =
+      clickedAtMs != null
+        ? createdMs >= clickedAtMs - SIGNUP_SKEW_MS
+        : createdMs >= Date.now() - LEGACY_MAX_AGE_MS;
+    if (!isNewSignup) return null; // 기존 유저 — 보상 없음.
 
     // 신규 가입자 nickname — 알림·우편함 메시지에 표시.
     const [newUser] = await tx

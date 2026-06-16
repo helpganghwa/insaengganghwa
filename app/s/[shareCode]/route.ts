@@ -3,7 +3,7 @@ import { eq } from 'drizzle-orm';
 
 import { db } from '@/lib/db/client';
 import { raids } from '@/lib/db/schema/raid';
-import { PENDING_REFERRAL_COOKIE } from '@/lib/game/referral/auto-attribute';
+import { PENDING_REFERRAL_COOKIE, PENDING_REFERRAL_AT_COOKIE } from '@/lib/game/referral/auto-attribute';
 
 /**
  * 짧은 공유 링크 — WIREFRAMES §10.
@@ -71,6 +71,13 @@ export async function GET(
     res.cookies.set('pending_server', sParam, { sameSite: 'lax', path: '/', maxAge: SEVEN_DAYS });
   }
   res.cookies.set(PENDING_REFERRAL_COOKIE, shareCode, {
+    path: '/',
+    maxAge: SEVEN_DAYS,
+    sameSite: 'lax',
+    httpOnly: false,
+  });
+  // 클릭 시각 — 신규 가입 판정용(이 시각 이후 생성된 계정만 귀속·보상).
+  res.cookies.set(PENDING_REFERRAL_AT_COOKIE, String(Date.now()), {
     path: '/',
     maxAge: SEVEN_DAYS,
     sameSite: 'lax',
