@@ -37,7 +37,7 @@ export function ServerPicker({
               type="button"
               disabled={!open}
               onClick={() => setPicked(sv.id)}
-              className={`relative truncate rounded-xl border px-1 py-2.5 text-[13px] font-bold transition ${
+              className={`relative rounded-xl border px-1 py-2.5 text-[13px] font-bold transition ${
                 active
                   ? 'border-amber-500 bg-amber-500/10 text-amber-700 dark:text-amber-300'
                   : open
@@ -45,7 +45,8 @@ export function ServerPicker({
                     : 'border-zinc-200 bg-zinc-50 text-zinc-300 dark:border-zinc-800 dark:bg-zinc-950 dark:text-zinc-600'
               }`}
             >
-              {sv.name}
+              {/* 이름만 truncate — 버튼에 overflow-hidden을 주면 추천 뱃지(음수 위치)가 잘림 */}
+              <span className="block truncate">{sv.name}</span>
               {sv.id === recommendedId && open && (
                 <span className="absolute -right-1.5 -top-1.5 rounded-full bg-amber-500 px-1.5 py-px text-[9px] font-bold text-white shadow-sm">
                   추천
