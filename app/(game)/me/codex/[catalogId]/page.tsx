@@ -10,6 +10,7 @@ import { catalogItems, type Slot } from '@/lib/db/schema/equipment';
 import { getItemTop10 } from '@/lib/game/codex/ranking';
 import { loreByCode } from '@/lib/game/equipment/lore';
 import { TranscendSprite } from '@/components/TranscendSprite';
+import { GuildBadge } from '@/components/GuildBadge';
 
 const SLOT_LABEL: Record<Slot, string> = { weapon: '무기', armor: '방어구', accessory: '장신구' };
 
@@ -97,7 +98,31 @@ export default async function CodexItemPage({
                     <span className="w-9 shrink-0 text-center font-mono text-sm tabular-nums">
                       {medal ?? `#${e.rank}`}
                     </span>
-                    <span className="flex-1 truncate text-sm font-medium">{e.nickname}</span>
+                    {/* 아바타 — 닉네임 왼쪽(랭킹 페이지와 동일) */}
+                    <span className="h-9 w-9 shrink-0 overflow-hidden rounded-lg bg-zinc-100 dark:bg-zinc-800">
+                      {e.profileImg ? (
+                        // eslint-disable-next-line @next/next/no-img-element
+                        <img
+                          src={e.profileImg}
+                          alt=""
+                          aria-hidden
+                          className="h-full w-full object-contain"
+                          style={{ imageRendering: 'pixelated', transform: 'scale(1.2)' }}
+                        />
+                      ) : null}
+                    </span>
+                    {/* 닉네임(위) + 길드명·문양(아래) */}
+                    <span className="flex min-w-0 flex-1 flex-col justify-center">
+                      <span className="truncate text-sm font-medium">{e.nickname}</span>
+                      {e.guildName || e.guildEmblemUrl ? (
+                        <GuildBadge
+                          emblemUrl={e.guildEmblemUrl ?? null}
+                          name={e.guildName ?? null}
+                          size={11}
+                          className="mt-0.5 max-w-full text-[10px] text-zinc-500 dark:text-zinc-400"
+                        />
+                      ) : null}
+                    </span>
                     <span className="font-mono text-sm tabular-nums text-zinc-700 dark:text-zinc-300">
                       +{e.maxLevel}
                     </span>

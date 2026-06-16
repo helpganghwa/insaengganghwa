@@ -1,14 +1,16 @@
 import 'server-only';
 
 import { cache } from 'react';
-import { and, eq, sql } from 'drizzle-orm';
+import { and, eq, inArray, sql } from 'drizzle-orm';
 
 import { db } from '@/lib/db/client';
 import { withTimeout, DbTimeoutError } from '@/lib/db/with-timeout';
 import { pgGuard } from '@/lib/db/guarded';
 import { profiles } from '@/lib/db/schema/profiles';
 import { characters } from '@/lib/db/schema/server';
+import { userProfiles } from '@/lib/db/schema/avatar';
 import { userEquipment } from '@/lib/db/schema/equipment';
+import { getGuildBriefsByUsers } from '@/lib/game/guild/badge';
 
 /**
  * 아이템별 강화 랭킹 / 챔피언 — BALANCE §3.3 / SCHEMA §2.3 / WIREFRAMES §7.2.
@@ -26,6 +28,12 @@ export type ItemRankEntry = {
   publicCode: string;
   maxLevel: number;
   rank: number;
+  /** 대표 프로필 이미지 URL(없으면 null) — 닉네임 왼쪽 아바타. */
+  profileImg?: string | null;
+  /** 길드 문양 URL(미소속/생성중이면 null) — 닉네임 아래 노출용. */
+  guildEmblemUrl?: string | null;
+  /** 길드명(미소속이면 null) — 닉네임 아래 노출용. */
+  guildName?: string | null;
 };
 
 /** 해당 아이템 Top10 (강화 ≥ 1만, 동률은 먼저 달성 순). */
@@ -54,7 +62,59 @@ export async function getItemTop10(catalogItemId: number, serverId: number): Pro
       sql`${userEquipment.maxEnhanceLevel} desc, ${userEquipment.maxEnhanceReachedAt} asc, ${userEquipment.userId} asc`,
     )
     .limit(TOP);
-  return rows.map((r, i) => ({ ...r, rank: i + 1 }));
+  const base = rows.map((r, i) => ({ ...r, rank: i + 1 }));
+  return attachItemRankProfiles(serverId, base);
+}
+
+/**
+ * Top10에 대표 프로필 이미지 + 길드 brief를 batch로 붙임(랭킹 페이지와 동일 패턴).
+ * 실패해도 순위는 그대로 반환(이미지/문양만 빠짐) — 도감 응답 보장.
+ */
+async function attachItemRankProfiles(
+  serverId: number,
+  entries: ItemRankEntry[],
+): Promise<ItemRankEntry[]> {
+  if (entries.length === 0) return entries;
+  const userIds = entries.map((e) => e.userId);
+  // 아바타: characters.active_profile_id → user_profiles.rotations[activeDirection].
+  let imgMap = new Map<string, string | null>();
+  try {
+    const rows = await withTimeout(
+      db
+        .select({
+          userId: characters.userId,
+          rotations: userProfiles.rotations,
+          activeDirection: userProfiles.activeDirection,
+        })
+        .from(characters)
+        .leftJoin(userProfiles, eq(userProfiles.id, characters.activeProfileId))
+        .where(and(eq(characters.serverId, serverId), inArray(characters.userId, userIds))),
+      3000,
+      'codex.itemRank.profiles',
+    );
+    imgMap = new Map(
+      rows.map((r) => {
+        const rot = r.rotations as Record<string, string> | null;
+        const img = rot && r.activeDirection ? (rot[r.activeDirection] ?? null) : null;
+        return [r.userId, img] as const;
+      }),
+    );
+  } catch {
+    // 콜드/hang → 이미지 없이 순위만.
+  }
+  // 길드 문양 + 길드명 batch(실패해도 순위는 반환).
+  let guildMap = new Map<string, { emblemUrl: string | null; name: string }>();
+  try {
+    guildMap = await getGuildBriefsByUsers(userIds, serverId);
+  } catch {
+    // 무시 — 문양 없이 진행.
+  }
+  return entries.map((e) => ({
+    ...e,
+    profileImg: imgMap.get(e.userId) ?? null,
+    guildEmblemUrl: guildMap.get(e.userId)?.emblemUrl ?? null,
+    guildName: guildMap.get(e.userId)?.name ?? null,
+  }));
 }
 
 /** 내 그 아이템 순위 (미획득·+0뿐 = null). 결정적 타이브레이크로 정확한 #. */
