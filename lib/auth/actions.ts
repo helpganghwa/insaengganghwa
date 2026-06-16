@@ -28,7 +28,10 @@ export async function signInWithKakao(formData?: FormData) {
 
   const { data, error } = await supabase.auth.signInWithOAuth({
     provider: 'kakao',
-    options: { redirectTo: callback },
+    // 앱은 카카오 닉네임·프로필 이미지를 쓰지 않음(닉네임=DB 자동생성, 콜백은 user.id만 사용) →
+    // account_email만 요청해 profile_nickname/profile_image 동의를 강제하지 않는다. 이게 없으면
+    // Supabase 기본/대시보드 scope가 그 동의를 요구해, 카카오 콘솔에서 해당 항목을 끄면 로그인 실패.
+    options: { redirectTo: callback, scopes: 'account_email' },
   });
 
   if (error) redirect(`/login?error=${encodeURIComponent(error.message)}`);
