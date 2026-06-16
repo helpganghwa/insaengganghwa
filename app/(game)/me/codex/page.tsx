@@ -8,6 +8,7 @@ import { withTimeout } from '@/lib/db/with-timeout';
 import { userEquipment, type Slot } from '@/lib/db/schema/equipment';
 import { getActiveCatalog } from '@/lib/game/catalog';
 import { liberatedItemRanks } from '@/lib/game/codex/ranking';
+import { atlasMaskStyle } from '@/lib/game/equipment/sprite-atlas';
 import { TranscendSprite } from '@/components/TranscendSprite';
 
 const SLOT_LABEL: Record<Slot, string> = { weapon: '무기', armor: '방어구', accessory: '장신구' };
@@ -54,15 +55,26 @@ export default async function CodexPage() {
               {items.map((c) => {
                 const got = codexMap.has(c.id);
                 if (!got) {
+                  // 미획득 — 그 장비의 실제 스프라이트를 단색 실루엣(형태만)으로. 색·디테일은
+                  // 마스크로 가려 수집 욕구 자극(도감 미발견 연출). 스프라이트 없으면 슬롯 이모지 폴백.
+                  const mask = atlasMaskStyle(c.code, 40);
                   return (
                     <div
                       key={c.id}
-                      className="flex aspect-square flex-col items-center justify-center gap-0.5 rounded-xl border-2 border-dashed border-zinc-200 bg-zinc-50 p-1 text-center opacity-40 dark:border-zinc-800 dark:bg-zinc-900"
+                      className="flex aspect-square flex-col items-center justify-center gap-0.5 rounded-xl border-2 border-dashed border-zinc-200 bg-zinc-50 p-1 text-center dark:border-zinc-800 dark:bg-zinc-900"
                     >
-                      <span className="text-2xl" style={{ filter: 'grayscale(1)' }}>
-                        {SLOT_EMOJI[s]}
-                      </span>
-                      <span className="px-0.5 text-[9px] leading-tight text-zinc-600 dark:text-zinc-400">
+                      {mask ? (
+                        <div
+                          aria-hidden
+                          className="bg-zinc-400 dark:bg-zinc-600"
+                          style={mask}
+                        />
+                      ) : (
+                        <span className="text-2xl opacity-40" style={{ filter: 'grayscale(1)' }}>
+                          {SLOT_EMOJI[s]}
+                        </span>
+                      )}
+                      <span className="px-0.5 text-[9px] leading-tight text-zinc-500 dark:text-zinc-500">
                         미획득
                       </span>
                     </div>

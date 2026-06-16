@@ -54,6 +54,32 @@ export function atlasBgStyle(code: string, size: number): React.CSSProperties | 
   };
 }
 
+/**
+ * CSS mask-* 속성 객체 — 스프라이트 **형태만** 단색으로 채우는 실루엣용.
+ * `<div style={{ ...atlasMaskStyle(code, size), backgroundColor: '...' }} />` 형태.
+ * 도감 미획득 칸(형태로 정체 짐작, 색·디테일 숨김)에 사용. 좌표/스케일은 atlasBgStyle과 동일.
+ */
+export function atlasMaskStyle(code: string, size: number): React.CSSProperties | null {
+  const c = atlasCoord(code);
+  if (!c) return null;
+  const scale = size / ATLAS_CELL;
+  const maskImage = `url(${ATLAS_URL})`;
+  const maskSize = `${ATLAS_SIZE.w * scale}px ${ATLAS_SIZE.h * scale}px`;
+  const maskPosition = `${-c.x * scale}px ${-c.y * scale}px`;
+  return {
+    width: size,
+    height: size,
+    WebkitMaskImage: maskImage,
+    maskImage,
+    WebkitMaskSize: maskSize,
+    maskSize,
+    WebkitMaskPosition: maskPosition,
+    maskPosition,
+    WebkitMaskRepeat: 'no-repeat',
+    maskRepeat: 'no-repeat',
+  };
+}
+
 /** atlas 이미지 모듈 전역 1회 로드(브라우저 캐시 + decoded 메모리 공유). */
 let atlasPromise: Promise<HTMLImageElement> | null = null;
 export function loadAtlasImage(): Promise<HTMLImageElement> {
