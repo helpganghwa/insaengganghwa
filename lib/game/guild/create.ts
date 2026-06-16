@@ -4,7 +4,7 @@ import { and, eq } from 'drizzle-orm';
 
 import { db } from '@/lib/db/client';
 import { walletTrySpend } from '@/lib/game/wallet';
-import { guilds, guildMembers } from '@/lib/db/schema/guild';
+import { guilds, guildMembers, guildJoinRequests } from '@/lib/db/schema/guild';
 
 import { GUILD_CREATE_COST_DIAMOND, GUILD_NAME_MAX_LEN, GUILD_NAME_MIN_LEN } from './balance';
 import { GuildError } from './errors';
@@ -58,6 +58,11 @@ export function createGuild(input: {
     await tx
       .insert(guildMembers)
       .values({ userId: input.userId, serverId: input.serverId, guildId: g!.id, role: 'leader' });
+
+    // 생성 시 본인 대기 가입신청 정리(타 길드 신청 잔존 방지).
+    await tx
+      .delete(guildJoinRequests)
+      .where(and(eq(guildJoinRequests.userId, input.userId), eq(guildJoinRequests.serverId, input.serverId)));
 
     return { guildId: g!.id };
   });
