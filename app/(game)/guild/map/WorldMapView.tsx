@@ -338,7 +338,8 @@ export function WorldMapView({
               type="button"
               onClick={() => setSelectedId(z.id)}
               aria-label={z.name}
-              className="absolute -translate-x-1/2 -translate-y-1/2"
+              // p-2: 시각 노드(17px)는 그대로 두고 투명 패딩으로 터치 히트영역 확대(~33px, 오탭 완화).
+              className="absolute -translate-x-1/2 -translate-y-1/2 p-2"
               style={{
                 left: `${z.mapX}%`,
                 top: `${z.mapY}%`,
@@ -398,6 +399,17 @@ export function WorldMapView({
           );
         })}
       </div>
+
+      {/* 거주지 미설정 코치 — 보통 가입 시 랜덤 배정되나, 미설정 상태면 설정을 유도(세금 기여 동선). */}
+      {residence == null && (
+        <div className="mx-4 mt-3 rounded-xl border border-emerald-300 bg-emerald-50 p-3 text-[12px] text-emerald-800 dark:border-emerald-500/40 dark:bg-emerald-500/10 dark:text-emerald-300">
+          <p className="font-bold">📍 거주지를 정하세요</p>
+          <p className="mt-0.5 leading-relaxed">
+            구역을 눌러 거주지로 설정하면, 그곳에서 올린 강화 성공이 그 구역 세금으로 쌓여 소유 길드에
+            기여합니다. 이동은 언제든 자유입니다.
+          </p>
+        </div>
+      )}
 
       {/* 세계 연대기 — 점령전 발표(KST 자정)와 함께 매일 AI 갱신(큰 사건 있는 날만). [오늘]=긴 기록 / [전체]=날짜별 한 줄.
           남은 세로 영역을 가득 채워(flex-1) 페이지에 빈 공간이 없게. */}

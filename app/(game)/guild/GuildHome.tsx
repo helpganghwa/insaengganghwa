@@ -258,6 +258,32 @@ export function GuildHome({
             <span className="relative">{donateLabel}</span>
           </button>
         </div>
+
+        {/* 오늘 기부 3단 사다리 — 사용/잔여 + 단계별 비용(왜 비용이 오르는지 가시화) */}
+        <div className="mt-2 flex items-center gap-1 text-[10px]">
+          <span className="mr-0.5 shrink-0 text-zinc-400">오늘 기부</span>
+          {GUILD_DONATION_TIERS.map((t, i) => {
+            const done = i < effectiveUsed;
+            const isNext = i === effectiveUsed;
+            return (
+              <span
+                key={i}
+                className={`flex items-center gap-0.5 rounded-full px-1.5 py-0.5 font-semibold ${
+                  done
+                    ? 'bg-amber-500/15 text-amber-700 dark:text-amber-300'
+                    : isNext
+                      ? 'bg-zinc-100 text-zinc-600 ring-1 ring-amber-400/50 dark:bg-zinc-800 dark:text-zinc-300'
+                      : 'bg-zinc-100 text-zinc-400 dark:bg-zinc-800 dark:text-zinc-600'
+                }`}
+              >
+                <span
+                  className={`inline-block h-1.5 w-1.5 rounded-full ${done ? 'bg-amber-500' : 'bg-zinc-300 dark:bg-zinc-600'}`}
+                />
+                {t.cost === 0 ? '무료' : `${t.cost}💎`}
+              </span>
+            );
+          })}
+        </div>
       </section>
 
 

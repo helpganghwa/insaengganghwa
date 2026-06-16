@@ -289,7 +289,9 @@ export function DeployBoard({
               disabled={!isUsable}
               onClick={() => isUsable && setSelectedId(z.id)}
               aria-label={z.name}
-              className="absolute -translate-x-1/2 -translate-y-1/2"
+              // p-2: 시각 노드(17px)는 유지하고 투명 패딩으로 터치 히트영역 확대(~33px). 사용 가능 노드가
+              // z-index 상위라 비활성 노드 패딩과 겹쳐도 탭이 사용 노드로 간다.
+              className="absolute -translate-x-1/2 -translate-y-1/2 p-2"
               style={{ left: `${z.mapX}%`, top: `${z.mapY}%`, zIndex: isSel ? 30 : isUsable ? 10 : 1 }}
             >
               <span
@@ -316,7 +318,7 @@ export function DeployBoard({
               </span>
               {/* 배치 요약 라벨 — 우리 배치가 있으면 인원↔전투력 토글(노드 하단) */}
               {dep && (
-                <span className="pointer-events-none absolute left-1/2 top-full mt-[2px] -translate-x-1/2 whitespace-nowrap rounded-sm bg-black/75 px-1 text-[7px] font-bold leading-[1.4] text-white shadow-[0_1px_2px_rgba(0,0,0,0.8)]">
+                <span className="pointer-events-none absolute left-1/2 top-full -mt-1.5 -translate-x-1/2 whitespace-nowrap rounded-sm bg-black/75 px-1 text-[7px] font-bold leading-[1.4] text-white shadow-[0_1px_2px_rgba(0,0,0,0.8)]">
                   {showPower ? `전투력 ${fmt(dep.power)}` : `${dep.count}명`}
                 </span>
               )}
