@@ -57,6 +57,14 @@ export function GuildHome({
   // 기부 낙관적 상태 — 즉시 반영('기부중' 미노출), 실패 시 롤백.
   const [optDonations, setOptDonations] = useState(0);
   const [optXp, setOptXp] = useState(0);
+  // 서버 usedToday가 revalidate로 따라잡히면 낙관값 리셋(이중 카운트 방지). effect/ref 아닌
+  // 렌더 중 state 조정(React 권장 패턴) — usedToday 0→1 그 렌더에서 opt=0으로 맞춰 깜빡임 없음.
+  const [prevUsed, setPrevUsed] = useState(usedToday);
+  if (prevUsed !== usedToday) {
+    setPrevUsed(usedToday);
+    setOptDonations(0);
+    setOptXp(0);
+  }
   const isOfficer = myRole === 'leader' || myRole === 'vice';
   const effectiveUsed = usedToday + optDonations;
   const nextTier =
