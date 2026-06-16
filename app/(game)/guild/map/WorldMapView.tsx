@@ -12,7 +12,12 @@ import { ToggleSwitch } from '@/components/ToggleSwitch';
 import { assetUrl } from '@/lib/asset-versions';
 import { GUILD_EXECUTOR_TAX_CUT, TAX_COLLECT_COOLDOWN_MIN } from '@/lib/game/guild/balance';
 
-import { setResidenceAction, getZoneBattleAction, collectTaxAction } from '../actions';
+import {
+  setResidenceAction,
+  getZoneBattleAction,
+  collectTaxAction,
+  getGuildSummaryByNameAction,
+} from '../actions';
 import { guildErrMsg } from '../errors-msg';
 
 import { ZONE_LORE } from '@/lib/game/guild/zone-lore';
@@ -76,7 +81,17 @@ function fixLeadingJosa(name: string, after: string): { josa: string; len: numbe
   return null;
 }
 
-function ChronicleText({ text, zoneColor }: { text: string; zoneColor: (name: string) => string | null }) {
+function ChronicleText({
+  text,
+  zoneColor,
+  onGuild,
+  onZone,
+}: {
+  text: string;
+  zoneColor: (name: string) => string | null;
+  onGuild: (name: string) => void;
+  onZone: (name: string) => void;
+}) {
   const out: React.ReactNode[] = [];
   let last = 0;
   let key = 0;
@@ -87,30 +102,33 @@ function ChronicleText({ text, zoneColor }: { text: string; zoneColor: (name: st
     const type = m[1];
     const name = m[2];
     if (type === 'g') {
-      // 길드 — 색으로만 구분(굵기·스타일 없음). 지역색·유저(핑크)와 겹치지 않는 중성 회청(슬레이트).
+      // 길드 — 회청(슬레이트). 클릭 시 길드 상세 팝업.
       out.push(
-        <span key={key++} className="text-slate-600 dark:text-slate-400">
+        <button
+          key={key++}
+          type="button"
+          onClick={() => onGuild(name)}
+          className="align-baseline font-semibold text-slate-600 active:opacity-60 dark:text-slate-400"
+        >
           {name}
-        </span>,
+        </button>,
       );
     } else if (type === 'u') {
-      // 인물 — 차분한 웜 그레이(스톤) + 밑줄 + 클릭 시 프로필 상세(/u/[nickname]). 길드(쿨 슬레이트)와 톤 구분.
+      // 인물 — 웜 그레이(스톤), 밑줄 없음. 클릭 시 프로필 상세(/u/[nickname]).
       out.push(
-        <Link
-          key={key++}
-          href={`/u/${encodeURIComponent(name)}`}
-          className="text-stone-500 underline decoration-stone-400/60 underline-offset-2 dark:text-stone-400"
-        >
+        <Link key={key++} href={`/u/${encodeURIComponent(name)}`} className="text-stone-500 dark:text-stone-400">
           {name}
         </Link>,
       );
     } else {
-      // 구역 — 지도 노드처럼 지역색 배경 칩(옅은 채움 + 얇은 테두리). 본문보다 2px 작게(13→11px).
+      // 구역 — 지역색 칩. 클릭 시 구역 상세 팝업.
       const c = zoneColor(name);
       out.push(
-        <strong
+        <button
           key={key++}
-          className="mx-px rounded-[3px] px-1 align-baseline text-[11px] font-semibold"
+          type="button"
+          onClick={() => onZone(name)}
+          className="mx-px rounded-[3px] px-1 align-baseline text-[11px] font-semibold active:opacity-60"
           style={
             c
               ? { color: c, backgroundColor: `${c}1f`, boxShadow: `inset 0 0 0 1px ${c}55` }
@@ -118,7 +136,7 @@ function ChronicleText({ text, zoneColor }: { text: string; zoneColor: (name: st
           }
         >
           {name}
-        </strong>,
+        </button>,
       );
     }
     last = mIndex + m[0].length;
@@ -199,6 +217,34 @@ export function WorldMapView({
     return m;
   }, [zones]);
   const zoneColor = (name: string) => zoneColorMap.get(name) ?? null;
+
+  // 연대기 구역명 클릭 → 구역 상세 모달(이름→id). 이름은 50구역 고정이라 항상 매칭.
+  const zoneIdByName = useMemo(() => {
+    const m = new Map<string, number>();
+    for (const z of zones) m.set(z.name, z.id);
+    return m;
+  }, [zones]);
+  const openZoneByName = (name: string) => {
+    const id = zoneIdByName.get(name);
+    if (id != null) setSelectedId(id);
+  };
+  // 연대기 길드명 클릭 → 길드 상세 팝업(이름으로 요약 조회).
+  type GuildPopup = {
+    name: string;
+    level: number;
+    memberCount: number;
+    combat: number;
+    emblemUrl: string | null;
+    intro: string | null;
+  };
+  const [guildPopup, setGuildPopup] = useState<GuildPopup | null>(null);
+  const openGuildByName = (name: string) => {
+    getGuildSummaryByNameAction(name)
+      .then((r) => {
+        if (r.status === 'success' && r.guild) setGuildPopup(r.guild);
+      })
+      .catch(() => {});
+  };
 
   // 점령 현황(OFF 모드) — zones에서 파생. 지역별 구역 묶음 + 길드 순위(점령지 수).
   const regionGroups = useMemo(
@@ -479,7 +525,12 @@ export function WorldMapView({
                     key={idx}
                     className="whitespace-pre-line text-[13px] leading-relaxed text-zinc-600 dark:text-zinc-300"
                   >
-                    <ChronicleText text={para.trim()} zoneColor={zoneColor} />
+                    <ChronicleText
+                      text={para.trim()}
+                      zoneColor={zoneColor}
+                      onGuild={openGuildByName}
+                      onZone={openZoneByName}
+                    />
                   </p>
                 ))}
               </div>
@@ -500,7 +551,12 @@ export function WorldMapView({
                     {e.kstDay.replace(/-/g, '.')}
                   </span>
                   <span className="text-zinc-600 dark:text-zinc-300">
-                    <ChronicleText text={e.headline} zoneColor={zoneColor} />
+                    <ChronicleText
+                      text={e.headline}
+                      zoneColor={zoneColor}
+                      onGuild={openGuildByName}
+                      onZone={openZoneByName}
+                    />
                   </span>
                 </li>
               ))}
@@ -820,6 +876,54 @@ export function WorldMapView({
             </ModalShell>
           );
         })()}
+
+      {/* 길드 상세 팝업 — 연대기 길드명 클릭 시(이름으로 요약 조회) */}
+      {guildPopup && (
+        <ModalShell
+          onClose={() => setGuildPopup(null)}
+          label={`${guildPopup.name} 길드 정보`}
+          className="w-full max-w-[320px] rounded-2xl bg-white p-4 dark:bg-zinc-950"
+        >
+          <div className="flex items-center gap-3">
+            <div className="flex h-12 w-12 shrink-0 items-center justify-center overflow-hidden rounded-xl">
+              {guildPopup.emblemUrl ? (
+                // eslint-disable-next-line @next/next/no-img-element
+                <img
+                  src={guildPopup.emblemUrl}
+                  alt=""
+                  aria-hidden
+                  className="h-full w-full object-contain"
+                  style={{ imageRendering: 'pixelated' }}
+                />
+              ) : (
+                <span className="text-2xl">🛡️</span>
+              )}
+            </div>
+            <div className="min-w-0">
+              <h2 className="truncate text-base font-bold">{guildPopup.name}</h2>
+              <p className="mt-0.5 text-[11px] text-zinc-500">
+                Lv.{guildPopup.level} · {guildPopup.memberCount}명 · 전투력{' '}
+                <span className="font-bold text-amber-600 dark:text-amber-400">
+                  {guildPopup.combat.toLocaleString('ko-KR')}
+                </span>
+              </p>
+            </div>
+          </div>
+          <div className="mt-3 border-t border-zinc-100 pt-3 dark:border-zinc-900">
+            <p className="text-[11px] font-bold text-zinc-400">길드 소개</p>
+            <p className="mt-1 whitespace-pre-wrap break-words text-[13px] leading-relaxed text-zinc-600 dark:text-zinc-300">
+              {guildPopup.intro?.trim() ? guildPopup.intro : '등록된 소개가 없습니다.'}
+            </p>
+          </div>
+          <button
+            type="button"
+            onClick={() => setGuildPopup(null)}
+            className="mt-4 w-full rounded-lg bg-zinc-100 py-2.5 text-sm font-bold text-zinc-700 active:opacity-70 dark:bg-zinc-800 dark:text-zinc-200"
+          >
+            닫기
+          </button>
+        </ModalShell>
+      )}
     </div>
   );
 }

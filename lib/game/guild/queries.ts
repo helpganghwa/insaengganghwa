@@ -170,6 +170,32 @@ export async function searchGuilds(serverId: number, q: string) {
   return rows.map((r) => ({ ...r, combat: cp.get(r.id.toString()) ?? 0 }));
 }
 
+/** 길드 1건 요약(이름 정확일치) — 세계지도 연대기에서 길드명 클릭 팝업용. 없으면 null. */
+export async function getGuildSummaryByName(serverId: number, name: string) {
+  const [g] = await db
+    .select({
+      id: guilds.id,
+      name: guilds.name,
+      level: guilds.level,
+      emblemUrl: guilds.emblemUrl,
+      intro: guilds.intro,
+      memberCount: sql<number>`(select count(*)::int from guild_members gm where gm.guild_id = ${guilds.id})`,
+    })
+    .from(guilds)
+    .where(and(eq(guilds.serverId, serverId), eq(guilds.name, name)))
+    .limit(1);
+  if (!g) return null;
+  const cp = await guildCombatPowers(serverId, [g.id]);
+  return {
+    name: g.name,
+    level: g.level,
+    emblemUrl: g.emblemUrl,
+    intro: g.intro,
+    memberCount: g.memberCount,
+    combat: cp.get(g.id.toString()) ?? 0,
+  };
+}
+
 /** 월드맵 50구역 + 소유 길드명/집행관 닉(중립=null). 읽기전용 뷰어용. */
 export async function getWorldmapZones(serverId: number) {
   const ownerGuild = guilds;

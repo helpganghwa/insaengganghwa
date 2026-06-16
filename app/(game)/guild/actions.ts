@@ -30,6 +30,7 @@ import {
   setGuildIntro,
   setGuildOpenchat,
   getZoneLatestBattleId,
+  getGuildSummaryByName,
   generateAndStoreEmblem,
   setActiveEmblem,
   deleteEmblem,
@@ -440,5 +441,17 @@ export async function getZoneBattleAction(zoneId: number) {
     return { status: 'success', battleId: id != null ? id.toString() : null } as const;
   } catch (e) {
     return fail(e, 'zoneBattle');
+  }
+}
+
+/** 길드 요약(이름) — 세계지도 연대기 길드명 클릭 팝업용. 없으면 guild=null. */
+export async function getGuildSummaryByNameAction(name: string) {
+  const u = await getSessionUserId();
+  if (!u) return unauth;
+  try {
+    const guild = await getGuildSummaryByName(await getActiveServerId(), name);
+    return { status: 'success', guild } as const;
+  } catch (e) {
+    return fail(e, 'guildSummary');
   }
 }
