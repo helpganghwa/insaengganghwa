@@ -8,6 +8,7 @@ import { josa } from 'es-hangul';
 import { useResourceToast } from '@/components/ResourceToast';
 import { useDiamond } from '@/components/DiamondContext';
 import { ModalShell } from '@/components/ModalShell';
+import { ToggleSwitch } from '@/components/ToggleSwitch';
 import { assetUrl } from '@/lib/asset-versions';
 import { GUILD_EXECUTOR_TAX_CUT, TAX_COLLECT_COOLDOWN_MIN } from '@/lib/game/guild/balance';
 
@@ -165,6 +166,9 @@ export function WorldMapView({
   const [residence, setResidence] = useState<number | null>(residenceZoneId);
   const [selectedId, setSelectedId] = useState<number | null>(null);
   const [chronicleTab, setChronicleTab] = useState<'today' | 'full'>('today');
+  // 우하단 스위치 — ON(기본): 노드=구역명 + 하단=역사. OFF: 노드=점령 길드명 + 하단=점령현황.
+  const [showConquest, setShowConquest] = useState(false);
+  const [statusTab, setStatusTab] = useState<'region' | 'ranking'>('region');
   // 세금 수금 모달 — 열린 구역 + 3초 인-버튼 컨펌.
   const [collectOpen, setCollectOpen] = useState<number | null>(null);
   const [collectNow, setCollectNow] = useState(0); // 모달 열 때 캡처한 시각(쿨다운 계산, 렌더 순수성)
@@ -193,6 +197,22 @@ export function WorldMapView({
     return m;
   }, [zones]);
   const zoneColor = (name: string) => zoneColorMap.get(name) ?? null;
+
+  // 점령 현황(OFF 모드) — zones에서 파생. 지역별 구역 묶음 + 길드 순위(점령지 수).
+  const regionGroups = useMemo(
+    () => (Object.keys(REGION) as Region[]).map((rg) => ({ region: rg, zoneList: zones.filter((z) => z.region === rg) })),
+    [zones],
+  );
+  const guildRanking = useMemo(() => {
+    const m = new Map<string, { id: string; name: string; count: number }>();
+    for (const z of zones) {
+      if (!z.ownerGuildId) continue;
+      const e = m.get(z.ownerGuildId) ?? { id: z.ownerGuildId, name: z.ownerGuildName ?? '길드', count: 0 };
+      e.count += 1;
+      m.set(z.ownerGuildId, e);
+    }
+    return [...m.values()].sort((a, b) => b.count - a.count || a.name.localeCompare(b.name));
+  }, [zones]);
 
   // 인접 간선(길) — 좌표로 선분 산출. 선택 구역에 연결된 길은 강조.
   const edges = useMemo(() => {
@@ -323,6 +343,16 @@ export function WorldMapView({
             );
           })()}
         </svg>
+        {/* 우하단 스위치 — ON: 구역명+역사 / OFF: 점령 길드명+점령현황. 현재 모드 라벨 동반. */}
+        <span className="absolute bottom-2 right-2 z-30 inline-flex items-center gap-1.5 rounded-full bg-black/45 px-2 py-1 backdrop-blur-sm">
+          <span className="text-[10px] font-bold text-white/90">{showConquest ? '점령 현황' : '역사'}</span>
+          <ToggleSwitch
+            on={!showConquest}
+            onToggle={() => setShowConquest((v) => !v)}
+            small
+            label="지도 표시 전환 — 켜짐: 구역명·역사 / 꺼짐: 점령 길드명·점령 현황"
+          />
+        </span>
         {zones.map((z) => {
           const owned = z.ownerGuildId != null;
           const isResidence = z.id === residence;
@@ -381,13 +411,15 @@ export function WorldMapView({
                   </span>
                 </span>
               )}
-              {/* 구역 이름 라벨 — 항상 표시. 노드 네모칸 바로 아래(p-2 패딩만큼 -mt 보정), 클릭 통과 */}
-              <span
-                className="pointer-events-none absolute left-1/2 top-full -mt-1.5 -translate-x-1/2 whitespace-nowrap rounded-sm bg-black/70 px-0.5 text-[5px] font-bold leading-[1.4] shadow-[0_1px_2px_rgba(0,0,0,0.75)]"
-                style={{ color }}
-              >
-                {z.name}
-              </span>
+              {/* 노드 라벨 — ON: 구역명 / OFF: 점령 길드명(중립은 라벨 없음). 네모칸 바로 아래(p-2 보정), 클릭 통과 */}
+              {(showConquest ? z.ownerGuildName : z.name) && (
+                <span
+                  className="pointer-events-none absolute left-1/2 top-full -mt-1.5 -translate-x-1/2 whitespace-nowrap rounded-sm bg-black/70 px-0.5 text-[5px] font-bold leading-[1.4] shadow-[0_1px_2px_rgba(0,0,0,0.75)]"
+                  style={{ color }}
+                >
+                  {showConquest ? z.ownerGuildName : z.name}
+                </span>
+              )}
             </button>
           );
         })}
@@ -407,6 +439,8 @@ export function WorldMapView({
       {/* 세계 연대기 — 점령전 발표(KST 자정)와 함께 매일 AI 갱신(큰 사건 있는 날만). [오늘]=긴 기록 / [전체]=날짜별 한 줄.
           남은 세로 영역을 가득 채워(flex-1) 페이지에 빈 공간이 없게. */}
       <section className="flex flex-1 flex-col bg-white px-4 pb-4 pt-3 dark:bg-zinc-950">
+        {!showConquest ? (
+          <>
         {hasChronicle ? (
           <div className="mb-2 flex justify-end">
             <div className="flex gap-0.5 rounded-lg bg-zinc-100 p-0.5 dark:bg-zinc-900">
@@ -476,6 +510,85 @@ export function WorldMapView({
           <p className="text-[13px] leading-relaxed text-zinc-600 dark:text-zinc-300">
             첫 전쟁의 불길이 일면, 그 역사가 기록될 것입니다.
           </p>
+        )}
+          </>
+        ) : (
+          <>
+            {/* 점령 현황(OFF) — 지역 현황 / 길드 순위 탭(역사와 동일 구조). zones에서 파생. */}
+            <div className="mb-2 flex justify-end">
+              <div className="flex gap-0.5 rounded-lg bg-zinc-100 p-0.5 dark:bg-zinc-900">
+                {(
+                  [
+                    ['region', '지역 현황'],
+                    ['ranking', '길드 순위'],
+                  ] as const
+                ).map(([k, label]) => (
+                  <button
+                    key={k}
+                    type="button"
+                    onClick={() => setStatusTab(k)}
+                    className={`rounded-md px-2 py-0.5 text-[11px] font-bold transition ${
+                      statusTab === k
+                        ? 'bg-white text-zinc-900 shadow-sm dark:bg-zinc-950 dark:text-zinc-50'
+                        : 'text-zinc-500'
+                    }`}
+                  >
+                    {label}
+                  </button>
+                ))}
+              </div>
+            </div>
+            {statusTab === 'region' ? (
+              <div className="flex flex-col gap-3">
+                {regionGroups.map(({ region, zoneList }) => (
+                  <div key={region}>
+                    <p className="mb-1 text-[12px] font-bold" style={{ color: REGION[region].color }}>
+                      {REGION[region].label}{' '}
+                      <span className="font-mono text-[10px] tabular-nums text-zinc-400">
+                        {zoneList.filter((z) => z.ownerGuildId).length}/{zoneList.length}
+                      </span>
+                    </p>
+                    <ul className="grid grid-cols-2 gap-x-3 gap-y-0.5">
+                      {zoneList.map((z) => (
+                        <li key={z.id} className="flex items-baseline justify-between gap-1 text-[11px]">
+                          <span className="truncate text-zinc-500">{z.name}</span>
+                          <span
+                            className={`shrink-0 max-w-[55%] truncate font-semibold ${
+                              z.ownerGuildName
+                                ? 'text-zinc-700 dark:text-zinc-300'
+                                : 'text-zinc-300 dark:text-zinc-600'
+                            }`}
+                          >
+                            {z.ownerGuildName ?? '중립'}
+                          </span>
+                        </li>
+                      ))}
+                    </ul>
+                  </div>
+                ))}
+              </div>
+            ) : guildRanking.length === 0 ? (
+              <p className="text-[13px] leading-relaxed text-zinc-400">
+                아직 구역을 점령한 길드가 없습니다.
+              </p>
+            ) : (
+              <ul className="flex flex-col divide-y divide-zinc-100 dark:divide-zinc-900">
+                {guildRanking.map((g, i) => (
+                  <li key={g.id} className="flex items-center gap-2.5 py-2 text-[13px]">
+                    <span className="w-5 shrink-0 text-center font-bold tabular-nums text-zinc-400">
+                      {i + 1}
+                    </span>
+                    <span className="min-w-0 flex-1 truncate font-semibold text-zinc-700 dark:text-zinc-200">
+                      {g.name}
+                    </span>
+                    <span className="shrink-0 font-mono tabular-nums text-amber-600 dark:text-amber-400">
+                      {g.count}곳
+                    </span>
+                  </li>
+                ))}
+              </ul>
+            )}
+          </>
         )}
       </section>
 
