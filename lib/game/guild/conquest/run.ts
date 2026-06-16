@@ -97,9 +97,18 @@ export async function runConquest(serverId: number): Promise<{ battleDay: string
   }
 
   let resolved = 0;
-  // 패배(소유권 이전) 누적 — 빼앗긴 길드별 구역명 목록. 정산 후 길드원 전체에 우편 1건.
+  // 점령전 결과 누적 — 관여 길드별 점령/방어/상실/공격실패 구역명. 정산 후 길드원 전체에 요약 우편 1건.
   // 신규 정산(ins>0)일 때만 기록 → cron 다중 tick 멱등(이미 정산된 재실행은 우편 안 보냄).
-  const losses = new Map<string, string[]>();
+  type GuildResult = { captured: string[]; defended: string[]; lost: string[]; failed: string[] };
+  const results = new Map<string, GuildResult>();
+  const bucketOf = (gid: string): GuildResult => {
+    let r = results.get(gid);
+    if (!r) {
+      r = { captured: [], defended: [], lost: [], failed: [] };
+      results.set(gid, r);
+    }
+    return r;
+  };
   for (const zoneId of contestedArr) {
     const z = zoneInfo.get(zoneId);
     if (!z) continue;
@@ -130,7 +139,7 @@ export async function runConquest(serverId: number): Promise<{ battleDay: string
     const result = simulateConquest(units, `conquest:${battleDay}:${zoneId}`);
     const winner = result.winnerGuildId;
 
-    const lostGuildId = await db.transaction(async (tx) => {
+    const newlySettled = await db.transaction(async (tx) => {
       const ins = await tx
         .insert(conquestBattles)
         .values({
@@ -142,48 +151,71 @@ export async function runConquest(serverId: number): Promise<{ battleDay: string
         })
         .onConflictDoNothing({ target: [conquestBattles.zoneId, conquestBattles.battleKstDay] })
         .returning({ id: conquestBattles.id });
-      if (ins.length === 0) return null; // 이미 정산(멱등) — 소유권도 손대지 않음
+      if (ins.length === 0) return false; // 이미 정산(멱등) — 소유권도 손대지 않음
 
       // 승자 = 소유 길드 → 방어 성공(유지). 승자 = 공격/중립 점령 → 소유 이전 + 집행관 공석.
-      let lost: string | null = null;
       if (winner && winner !== z.owner_guild_id) {
         await tx
           .update(zones)
           .set({ ownerGuildId: BigInt(winner), executorUserId: null, capturedAt: new Date() })
           .where(eq(zones.id, zoneId));
-        if (z.owner_guild_id) lost = z.owner_guild_id; // 이전 소유 길드가 구역을 빼앗김
       }
       resolved++;
-      return lost;
+      return true;
     });
-    if (lostGuildId) {
-      const arr = losses.get(lostGuildId) ?? [];
-      arr.push(z.name);
-      losses.set(lostGuildId, arr);
+    if (!newlySettled) continue;
+
+    // 결과 분류 — 관여 길드(승자·이전 소유·배치 길드)별로 이 구역 결과 귀속(요약 우편용).
+    const prevOwner = z.owner_guild_id;
+    const involved = new Set<string>();
+    if (winner) involved.add(winner);
+    if (prevOwner) involved.add(prevOwner);
+    const attackers = new Set<string>();
+    for (const d of depsByZone.get(zoneId) ?? []) {
+      involved.add(d.guild_id);
+      if (d.role === 'attack') attackers.add(d.guild_id);
+    }
+    for (const g of involved) {
+      const b = bucketOf(g);
+      if (winner && g === winner && g === prevOwner) b.defended.push(z.name); // 방어 성공(소유 유지)
+      else if (winner && g === winner) b.captured.push(z.name); // 점령(탈취/중립 확보)
+      else if (winner && g === prevOwner) b.lost.push(z.name); // 상실(빼앗김)
+      else if (!winner && g === prevOwner) b.defended.push(z.name); // 무승부 = 소유 유지
+      else if (attackers.has(g)) b.failed.push(z.name); // 공격 실패
     }
   }
 
-  // 패배 길드원 전체에 우편 1건(잃은 구역 전부 나열) — best-effort(정산과 분리, 실패해도 정산 유지).
-  if (losses.size > 0) {
+  // 관여 길드원 전체에 결과 요약 우편 1건(점령/방어/상실/공격실패) — best-effort(정산과 분리).
+  if (results.size > 0) {
+    const fmtBody = (r: GuildResult): string => {
+      const lines: string[] = [];
+      if (r.captured.length) lines.push(`🚩 점령: ${r.captured.join(', ')}`);
+      if (r.defended.length) lines.push(`🛡️ 방어 성공: ${r.defended.join(', ')}`);
+      if (r.lost.length) lines.push(`💥 상실: ${r.lost.join(', ')}`);
+      if (r.failed.length) lines.push(`⚔️ 공격 실패: ${r.failed.join(', ')}`);
+      return lines.join('\n');
+    };
     const memberRows = await db
       .select({ uid: guildMembers.userId, guildId: guildMembers.guildId })
       .from(guildMembers)
       .where(
         and(
           eq(guildMembers.serverId, serverId),
-          inArray(guildMembers.guildId, [...losses.keys()].map(BigInt)),
+          inArray(guildMembers.guildId, [...results.keys()].map(BigInt)),
         ),
       );
     const mails = memberRows
       .map((m) => {
-        const zoneNames = losses.get(m.guildId.toString());
-        if (!zoneNames || zoneNames.length === 0) return null;
+        const r = results.get(m.guildId.toString());
+        if (!r) return null;
+        const body = fmtBody(r);
+        if (!body) return null;
         return {
           userId: m.uid,
           serverId,
           type: 'notice' as const,
-          title: '점령전 패배',
-          body: `점령전에서 ${zoneNames.length}개 구역을 잃었습니다: ${zoneNames.join(', ')}.`,
+          title: '점령전 결과',
+          body,
           senderLabel: '시스템',
           payload: {},
         };
