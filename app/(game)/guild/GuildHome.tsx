@@ -12,6 +12,8 @@ import {
   guildXpToNext,
 } from '@/lib/game/guild/balance';
 
+import { ModalShell } from '@/components/ModalShell';
+
 import { donateAction, leaveGuildAction } from './actions';
 import { guildErrMsg } from './errors-msg';
 import { GuildMemberList, type RichMember } from './GuildMemberList';
@@ -348,14 +350,11 @@ export function GuildHome({
           const mustTransfer = myRole === 'leader' && members.length > 1;
           const leaderDisband = myRole === 'leader' && members.length <= 1;
           return (
-            <div
-              className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-5 backdrop-blur-sm"
-              onClick={() => setLeaveOpen(false)}
+            <ModalShell
+              onClose={() => setLeaveOpen(false)}
+              label={mustTransfer ? '길드장 위임 필요' : '길드 탈퇴'}
+              className="w-full max-w-[300px] rounded-2xl bg-white p-5 dark:bg-zinc-950"
             >
-              <div
-                className="w-full max-w-[300px] rounded-2xl bg-white p-5 dark:bg-zinc-950"
-                onClick={(e) => e.stopPropagation()}
-              >
                 <h2 className="text-base font-bold">{mustTransfer ? '길드장 위임 필요' : '길드 탈퇴'}</h2>
                 <p className="mt-1.5 text-[13px] leading-relaxed text-zinc-500 dark:text-zinc-400">
                   {mustTransfer ? (
@@ -405,8 +404,7 @@ export function GuildHome({
                     </button>
                   )}
                 </div>
-              </div>
-            </div>
+            </ModalShell>
           );
         })()}
     </div>

@@ -7,6 +7,7 @@ import { josa } from 'es-hangul';
 
 import { useResourceToast } from '@/components/ResourceToast';
 import { useDiamond } from '@/components/DiamondContext';
+import { ModalShell } from '@/components/ModalShell';
 import { ToggleSwitch } from '@/components/ToggleSwitch';
 import { assetUrl } from '@/lib/asset-versions';
 import { GUILD_EXECUTOR_TAX_CUT, TAX_COLLECT_COOLDOWN_MIN } from '@/lib/game/guild/balance';
@@ -488,14 +489,11 @@ export function WorldMapView({
 
       {/* 구역 상세 모달 */}
       {selected && (
-        <div
-          className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-4 backdrop-blur-sm"
-          onClick={() => setSelectedId(null)}
+        <ModalShell
+          onClose={() => setSelectedId(null)}
+          label={`${selected.name} 구역 정보`}
+          className="max-h-[85vh] w-full max-w-[340px] overflow-y-auto rounded-2xl bg-white dark:bg-zinc-950"
         >
-          <div
-            className="max-h-[85vh] w-full max-w-[340px] overflow-y-auto rounded-2xl bg-white dark:bg-zinc-950"
-            onClick={(e) => e.stopPropagation()}
-          >
             {/* 헤더 — 지역(6종) 배경 + 지역이름 + 전투보기 */}
             <div
               className="relative h-20 w-full"
@@ -615,8 +613,7 @@ export function WorldMapView({
                 닫기
               </button>
             </div>
-          </div>
-        </div>
+        </ModalShell>
       )}
 
       {/* 세금 수금 모달 — 길드 90% / 집행관 10%, 3초 컨펌, 쿨다운 안내 */}
@@ -637,14 +634,11 @@ export function WorldMapView({
             setCollectConfirm(false);
           };
           return (
-            <div
-              className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-5 backdrop-blur-sm"
-              onClick={close}
+            <ModalShell
+              onClose={close}
+              label={`${cz.name} 세금 수금`}
+              className="w-full max-w-[260px] rounded-2xl bg-white p-4 dark:bg-zinc-950"
             >
-              <div
-                className="w-full max-w-[260px] rounded-2xl bg-white p-4 dark:bg-zinc-950"
-                onClick={(e) => e.stopPropagation()}
-              >
                 <h2 className="text-sm font-bold">{cz.name} 세금 수금</h2>
                 <div className="mt-3 grid grid-cols-2 gap-2 text-center">
                   <div className="rounded-lg bg-zinc-100 py-2 dark:bg-zinc-900">
@@ -694,8 +688,7 @@ export function WorldMapView({
                 <button type="button" onClick={close} className="mt-1.5 w-full py-1 text-[11px] text-zinc-500">
                   닫기
                 </button>
-              </div>
-            </div>
+            </ModalShell>
           );
         })()}
     </div>

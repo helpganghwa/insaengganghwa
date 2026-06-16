@@ -6,6 +6,7 @@ import Link from 'next/link';
 
 import { useResourceToast } from '@/components/ResourceToast';
 import { useDiamond } from '@/components/DiamondContext';
+import { ModalShell } from '@/components/ModalShell';
 import {
   GUILD_EMBLEM_REROLL_COST_DIAMOND,
   GUILD_NOTICE_MAX_LEN,
@@ -689,17 +690,14 @@ export function GuildSettings({
 
       {/* 새 문양 생성 모달 — 중앙 모달 */}
       {genOpen && (
-        <div
-          className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-4 backdrop-blur-sm"
-          onClick={() => {
+        <ModalShell
+          onClose={() => {
             setGenOpen(false);
             setGenConfirm(false);
           }}
+          label="새 문양 생성"
+          className="max-h-[85vh] w-full max-w-[340px] overflow-y-auto rounded-2xl bg-white p-4 dark:bg-zinc-950"
         >
-          <div
-            className="max-h-[85vh] w-full max-w-[340px] overflow-y-auto rounded-2xl bg-white p-4 dark:bg-zinc-950"
-            onClick={(e) => e.stopPropagation()}
-          >
             <div className="flex items-baseline justify-between">
               <h2 className="text-sm font-bold">새 문양 생성</h2>
               <button
@@ -737,20 +735,16 @@ export function GuildSettings({
                   : `생성하기 💎${GUILD_EMBLEM_REROLL_COST_DIAMOND.toLocaleString('ko-KR')}`}
               </span>
             </button>
-          </div>
-        </div>
+        </ModalShell>
       )}
 
       {/* 확인 팝업 — 위임·추방·해산(alert 대체) */}
       {confirmModal && (
-        <div
-          className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-4 backdrop-blur-sm"
-          onClick={() => setConfirmModal(null)}
+        <ModalShell
+          onClose={() => setConfirmModal(null)}
+          label={confirmModal.title}
+          className="w-full max-w-[320px] rounded-2xl bg-white p-4 dark:bg-zinc-950"
         >
-          <div
-            className="w-full max-w-[320px] rounded-2xl bg-white p-4 dark:bg-zinc-950"
-            onClick={(e) => e.stopPropagation()}
-          >
             <h2 className="text-sm font-bold">{confirmModal.title}</h2>
             <p className="mt-2 whitespace-pre-line text-[13px] leading-relaxed text-zinc-600 dark:text-zinc-300">
               {confirmModal.message}
@@ -775,8 +769,7 @@ export function GuildSettings({
                 {confirmModal.confirmLabel}
               </button>
             </div>
-          </div>
-        </div>
+        </ModalShell>
       )}
     </div>
   );
