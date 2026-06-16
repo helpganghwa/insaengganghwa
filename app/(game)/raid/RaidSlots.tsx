@@ -200,7 +200,24 @@ export function RaidSlots({
   const [picked, setPicked] = useState<RaidBoss | null>(null);
   const [friendShare, setFriendShare] = useState<ShareMode>('off');
   const [guildShare, setGuildShare] = useState<ShareMode>('off');
+  const [confirm, setConfirm] = useState(false); // 소환(유료) 3초 인-버튼 컨펌
+  const [confirmLeft, setConfirmLeft] = useState(0);
   const exhausted = dailyUsed >= dailyCap;
+
+  // 소환 컨펌 3초 카운트다운(만료 자동 해제). 초기값은 arm 시 핸들러에서 set(effect 내 직접 setState 회피).
+  useEffect(() => {
+    if (!confirm) return;
+    const id = setInterval(() => {
+      setConfirmLeft((s) => {
+        if (s <= 1) {
+          setConfirm(false);
+          return 0;
+        }
+        return s - 1;
+      });
+    }, 1000);
+    return () => clearInterval(id);
+  }, [confirm]);
 
   const cells = Array.from({ length: slots }, (_, i) => cellsIn[i] ?? null);
 
@@ -371,7 +388,7 @@ export function RaidSlots({
           role="dialog"
           aria-modal="true"
           className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 p-4 backdrop-blur-md"
-          onClick={() => !pending && (setPicking(false), setPicked(null))}
+          onClick={() => !pending && (setPicking(false), setPicked(null), setConfirm(false))}
         >
           <div
             className="w-full max-w-xs rounded-2xl border-2 border-amber-300 bg-white p-4 shadow-[0_0_40px_rgba(245,158,11,0.18)] dark:border-amber-800 dark:bg-zinc-950"
@@ -420,15 +437,43 @@ export function RaidSlots({
                   <button
                     type="button"
                     disabled={pending}
-                    onClick={() => open(picked)}
-                    className="w-full rounded-full bg-zinc-900 px-3 py-2.5 text-xs font-bold text-white disabled:opacity-50 dark:bg-zinc-50 dark:text-zinc-950"
+                    onClick={() => {
+                      if (pending) return;
+                      // 1차 탭=3초 컨펌 무장, 2차 탭(3초 내)=실제 소환(다이아 지불).
+                      if (!confirm) {
+                        setConfirm(true);
+                        setConfirmLeft(3);
+                        return;
+                      }
+                      setConfirm(false);
+                      open(picked);
+                    }}
+                    className={`relative isolate flex w-full items-center justify-center overflow-hidden rounded-full px-3 py-2.5 text-xs font-bold transition-colors disabled:opacity-50 ${
+                      confirm ? 'bg-amber-700 text-white' : 'bg-zinc-900 text-white dark:bg-zinc-50 dark:text-zinc-950'
+                    }`}
                   >
-                    {pending ? '소환 중…' : `💎 ${RAID_OPEN_COST_DIAMOND.toLocaleString()} 지불하고 소환`}
+                    {confirm ? (
+                      <span
+                        aria-hidden
+                        className="absolute inset-0 bg-amber-500"
+                        style={{ animation: 'confirm-bg-pulse 1.2s ease-in-out infinite' }}
+                      />
+                    ) : null}
+                    <span className="relative">
+                      {pending
+                        ? '소환 중…'
+                        : confirm
+                          ? `한번 더 ${confirmLeft}s`
+                          : `💎 ${RAID_OPEN_COST_DIAMOND.toLocaleString()} 지불하고 소환`}
+                    </span>
                   </button>
                   <button
                     type="button"
                     disabled={pending}
-                    onClick={() => setPicked(null)}
+                    onClick={() => {
+                      setPicked(null);
+                      setConfirm(false);
+                    }}
                     className="w-full py-1.5 text-[11px] text-zinc-500"
                   >
                     다른 보스
