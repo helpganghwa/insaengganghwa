@@ -26,8 +26,10 @@ export type ConquestDaySummary = {
   defenses: { zone: string; region: string; owner: string }[];
   /** 영토 순위(그날 이후 보유 구역 수, 상위). */
   standings: { guild: string; zones: number }[];
-  /** 주목할 개인 활약(그날 finale 기준 — 최다 수비/공격). */
-  feats: { nickname: string; guild: string; kind: '수비' | '공격'; count: number }[];
+  /** 공격 측 — 그날 각 구역을 공격한(role=attack 배치) 길드(구역×길드 distinct). */
+  attacks: { zone: string; region: string; guild: string }[];
+  /** 주목할 개인 활약(그날 finale 기준 — 최다 수비/처치). '처치'는 공·수 역할 무관 쓰러뜨린 수. */
+  feats: { nickname: string; guild: string; kind: '수비' | '처치'; count: number }[];
 };
 
 /** kstDay(YYYY-MM-DD)에 일수 가감 — 날짜 문자열 산술(UTC 정오 기준, DST 무관). */
@@ -126,13 +128,23 @@ export async function aggregateConquestDay(kstDay: string, serverId: number): Pr
     group by g.name order by zones desc limit 6
   `)) as unknown as { guild: string; zones: number }[];
 
+  // 공격 측 — 그날 공격 배치(role=attack)한 길드(구역×길드 distinct). 누가 공격했는지의 진실 원천.
+  const attackRows = (await db.execute(sql`
+    select distinct z.name as zone, z.region::text as region, g.name as guild
+    from guild_battle_deployments d
+    join zones z on z.id = d.zone_id
+    join guilds g on g.id = d.guild_id
+    where d.battle_kst_day = ${kstDay} and d.server_id = ${serverId} and d.role = 'attack'
+  `)) as unknown as { zone: string; region: string; guild: string }[];
+  const attacks = attackRows.map((a) => ({ zone: a.zone, region: REGION_KO[a.region] ?? a.region, guild: a.guild }));
+
   const topSurvive = [...survives.values()].sort((a, b) => b.n - a.n)[0];
   const topKill = [...kills.values()].sort((a, b) => b.n - a.n)[0];
   const feats: ConquestDaySummary['feats'] = [];
   if (topSurvive && topSurvive.n >= 3)
     feats.push({ nickname: topSurvive.nick, guild: topSurvive.guild, kind: '수비', count: topSurvive.n });
   if (topKill && topKill.n >= 3)
-    feats.push({ nickname: topKill.nick, guild: topKill.guild, kind: '공격', count: topKill.n });
+    feats.push({ nickname: topKill.nick, guild: topKill.guild, kind: '처치', count: topKill.n });
 
   return {
     kstDay,
@@ -140,6 +152,7 @@ export async function aggregateConquestDay(kstDay: string, serverId: number): Pr
     captures,
     defenses,
     standings: standingsRows,
+    attacks,
     feats,
   };
 }
@@ -159,8 +172,10 @@ const SYSTEM_PROMPT = `너는 대륙의 정복 전쟁을 듣는 이에게 들려
 - 단, 전날과의 연속성을 말할 때는 '어제·전날·이전'을 써도 된다(흐름 표현용). 이때도 현재 일은 '오늘'이 아니라 '이번에·이번 전투'로 받는다(예: "어제 세 곳에 이어 이번에 두 곳을 더해").
 - '인생강화'라는 단어, 이모지·이모티콘 절대 금지. 대륙·세계는 고유명 없이 '대륙' 등으로만 칭한다.
 - 주어진 '점령전 정리'만 근거로 쓴다. 없는 사실을 지어내지 않는다.
+- **공격한 길드(공격 측)는 반드시 '공격 측' 목록을 그대로 따른다.** 그 목록에 적힌 길드만이 공격한 길드다. 소유 길드(방어 측)가 공격했다고 절대 쓰지 말 것 — 방어 측은 공격을 '받아낸' 쪽이다. '공격 측'이 비어 있으면 누가 공격했는지 단정하지 말고 막연히 쓰지 말 것.
 - **점령(captures)은 각 구역의 winner(점령 길드)를 그대로 따른다. 서로 다른 길드가 각자 다른 구역을 점령했으면 길드별로 구분해서 쓴다 — 여러 길드의 점령을 한 길드가 모두 한 것처럼 절대 합치지 않는다.** (예: 한 길드가 두 구역, 다른 길드가 한 구역을 점령했으면 둘 다 기록.)
-- 방어(defenses)는 '점령'이 아니다(이미 소유한 구역을 지켜낸 것). 점령 수에 포함하지 말고, 방어는 방어로만 서술한다.
+- 방어(defenses)는 '점령'이 아니다(이미 소유한 구역을 '공격 측'의 공격으로부터 지켜낸 것). 점령 수에 포함하지 말고, 방어는 방어로만 서술한다.
+- **개인 활약(feats)의 '처치'는 적을 쓰러뜨린 수이며 공격·수비 역할과 무관하다 — 방어 측 인물도 처치가 많을 수 있다. '처치'가 많다는 이유로 그 인물·길드를 공격 측으로 단정하지 말 것**(공격 측은 오직 '공격 측' 목록으로만 판단). '수비'는 공격을 받아내고 버틴 횟수다.
 - '대륙 지배', '천하', '제패' 같은 과장된 총평·결론 금지. 일어난 사실만 적는다.
 - 반드시 JSON만 출력: {"today": "...", "headline": "..."}.
   - today: 정확히 4개 문단으로 나눠 쓴다. 문단 사이는 빈 줄(\\n\\n)로 구분. 각 문단은 2~4문장, 말하듯이. 문단마다 '주요사건:' 같은 라벨을 붙이지 말고 내용만 자연스럽게 쓴다. 어느 문단도 '그날·이날·오늘' 같은 시간 지시어로 시작하지 말고 바로 길드·구역·사건으로 시작한다. 네 문단의 순서와 역할은 고정:
@@ -217,11 +232,32 @@ export async function generateAndStoreChronicle(
   const capLines =
     [...capByGuild.entries()].map(([g, zs]) => `· ${g}: ${zs.join(', ')} (총 ${zs.length}곳 점령)`).join('\n') ||
     '· (신규 점령 없음)';
+  // 공격 측(role=attack) — 누가 어느 구역을 공격했는지. 구역별로 길드 묶음(공격 길드 정확 귀속).
+  const atkByZone = new Map<string, string[]>();
+  for (const a of summary.attacks) {
+    const arr = atkByZone.get(a.zone) ?? [];
+    arr.push(a.guild);
+    atkByZone.set(a.zone, arr);
+  }
+  const atkLines =
+    [...atkByZone.entries()].map(([z, gs]) => `· ${z}: ${[...new Set(gs)].join(', ')} 공격`).join('\n') ||
+    '· (공격 측 없음)';
   const defLines = summary.defenses.map((d) => `· ${d.owner}: ${d.zone} 방어`).join('\n') || '· (방어 없음)';
-  const featLines = summary.feats.map((f) => `· ${f.nickname}(${f.guild}) ${f.kind} ${f.count}회`).join('\n') || '· (없음)';
+  // 활약 문구를 자명하게: '처치'=적 N명 쓰러뜨림(공·수 무관), '수비'=공격 N회 받아내고 버팀.
+  const featLines =
+    summary.feats
+      .map((f) =>
+        f.kind === '처치'
+          ? `· ${f.nickname}(${f.guild}): 적 ${f.count}명 처치(공·수 역할 무관, 쓰러뜨린 수)`
+          : `· ${f.nickname}(${f.guild}): 공격 ${f.count}회 받아내고 버팀(수비)`,
+      )
+      .join('\n') || '· (없음)';
   const digest =
     `[점령전 정리 — 이 귀속을 그대로 따를 것]\n` +
-    `■ 신규 점령(길드별):\n${capLines}\n■ 방어(점령 아님):\n${defLines}\n■ 개인 활약:\n${featLines}`;
+    `■ 공격 측(구역을 공격한 길드):\n${atkLines}\n` +
+    `■ 신규 점령(길드별):\n${capLines}\n` +
+    `■ 방어(점령 아님 — 소유 길드가 위 공격을 막아냄):\n${defLines}\n` +
+    `■ 개인 활약:\n${featLines}`;
 
   // ── 연속성 맥락(참고용) — 오늘의 사실은 위 정리만 따르되, 흐름·판도는 아래를 참고해 이어 쓴다. ──
   // 현재 영토 현황(누적 점령 결과) — '정세' 문단 근거.
@@ -273,6 +309,7 @@ export async function generateAndStoreChronicle(
         role: 'user',
         content:
           `${kstDay} 점령전 기록.\n\n${digest}\n\n${context}\n\n` +
+          `공격한 길드는 '공격 측' 목록만 따라라 — 소유(방어) 길드가 공격했다고 쓰지 말 것. 방어 측은 공격을 받아낸 쪽이다. '처치'가 많은 인물도 방어 측일 수 있으니 처치 수로 공격 측을 단정하지 말 것.\n` +
           `위 '신규 점령(길드별)'을 정확히 따라라 — 한 길드의 점령을 다른 길드로 옮기거나 여러 길드 점령을 한 길드로 합치지 말 것. 방어는 점령으로 세지 말 것.\n` +
           `[현재 영토 현황]·[어제 점령전 결과]·[지난 역사]는 흐름·판도 참고용이다. 오늘의 사실(점령/방어/활약)은 반드시 '[점령전 정리]'만 따르고, 어제·과거의 점령을 오늘 것으로 적지 말 것.\n` +
           `'정세' 문단은 '[현재 영토 현황]'(누적 보유 구역 수)을 반영하고, 어제·지난 역사와 자연스럽게 이어지도록 연속성 있게 쓴다. 현재 일은 '오늘' 대신 '이번에·이번 전투'로 받는다(예: "어제 세 곳에 이어 이번에 두 곳을 더해 현재 다섯 곳을 보유").\n` +
