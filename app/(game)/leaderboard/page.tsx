@@ -156,16 +156,37 @@ export default async function LeaderboardPage({
                     <li key={e.userId}>
                       <Link
                         href={`/u/${encodeURIComponent(e.publicCode)}`}
-                        className={`flex h-12 items-center gap-2.5 border-b border-zinc-800 px-3 last:border-b-0 ${
+                        className={`flex h-14 items-center gap-2.5 border-b border-zinc-800 px-3 last:border-b-0 ${
                           me ? 'bg-amber-400/10 ring-1 ring-amber-400/60 ring-inset' : ''
                         }`}
                       >
                         <span className="w-7 shrink-0 text-center font-mono text-sm text-zinc-400 tabular-nums">
                           #{e.rank}
                         </span>
-                        <span className="flex min-w-0 flex-1 items-center gap-1">
+                        {/* 아바타 — 닉네임 왼쪽(길드원 목록과 동일) */}
+                        <span className="h-9 w-9 shrink-0 overflow-hidden rounded-lg bg-zinc-800">
+                          {e.profileImg ? (
+                            // eslint-disable-next-line @next/next/no-img-element
+                            <img
+                              src={e.profileImg}
+                              alt=""
+                              aria-hidden
+                              className="h-full w-full object-contain"
+                              style={{ imageRendering: 'pixelated', transform: 'scale(1.2)' }}
+                            />
+                          ) : null}
+                        </span>
+                        {/* 닉네임(위) + 길드명·문양(아래) */}
+                        <span className="flex min-w-0 flex-1 flex-col justify-center">
                           <span className="truncate text-sm font-medium text-white">{e.nickname}</span>
-                          <GuildBadge emblemUrl={e.guildEmblemUrl ?? null} size={14} className="shrink-0" />
+                          {e.guildName || e.guildEmblemUrl ? (
+                            <GuildBadge
+                              emblemUrl={e.guildEmblemUrl ?? null}
+                              name={e.guildName ?? null}
+                              size={11}
+                              className="mt-0.5 max-w-full text-[10px] text-zinc-400"
+                            />
+                          ) : null}
                         </span>
                         <span className="font-mono text-sm text-amber-200 tabular-nums">
                           {fmt(e.value)}

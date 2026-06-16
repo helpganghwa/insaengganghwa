@@ -31,6 +31,8 @@ export type LeaderboardEntry = {
   profileImg?: string | null;
   /** 길드 문양 URL(미소속/생성중이면 null) — 닉네임 옆 노출용. */
   guildEmblemUrl?: string | null;
+  /** 길드명(미소속이면 null) — 닉네임 아래 노출용. */
+  guildName?: string | null;
 };
 const TOP = 100;
 
@@ -79,6 +81,7 @@ async function attachProfiles(serverId: number, entries: LeaderboardEntry[]): Pr
     ...e,
     profileImg: map.get(e.userId) ?? null,
     guildEmblemUrl: guildMap.get(e.userId)?.emblemUrl ?? null,
+    guildName: guildMap.get(e.userId)?.name ?? null,
   }));
 }
 
