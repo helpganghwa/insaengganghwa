@@ -80,7 +80,7 @@ export async function sendMailToUserAction(opts: {
         type: 'admin',
         title,
         body,
-        senderLabel: '운영자',
+        senderLabel: '인생강화',
         payload,
       });
       await tx.insert(adminMailLogs).values({
@@ -132,7 +132,7 @@ export async function broadcastMailAction(opts: {
             type: 'admin' as const,
             title,
             body,
-            senderLabel: '운영자',
+            senderLabel: '인생강화',
             payload,
           })),
         );

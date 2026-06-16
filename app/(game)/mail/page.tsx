@@ -135,7 +135,7 @@ function defaultTitle(type: string): string {
   // 존재하고 실제 insert 경로 없음(2026-06-01 확인) — fallback 안전망.
   switch (type) {
     case 'admin':
-      return '운영자 메시지';
+      return '인생강화 메시지';
     case 'reward':
       return '보상이 도착했습니다';
     case 'profile_accepted':

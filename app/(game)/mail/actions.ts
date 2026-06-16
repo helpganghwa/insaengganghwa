@@ -85,7 +85,7 @@ export async function getUnreadMailsAction(): Promise<MailItem[]> {
   return rows.map((r) => ({
     id: r.id.toString(),
     type: r.type,
-    title: r.title || (r.type === 'admin' ? '운영자 메시지' : '우편'),
+    title: r.title || (r.type === 'admin' ? '인생강화 메시지' : '우편'),
     body: r.body || '',
     senderLabel: r.senderLabel,
     payload: r.payload as MailItem['payload'],
@@ -144,7 +144,7 @@ export async function loadMoreMailsAction(
   const items: MailItem[] = rows.slice(0, PAGE_SIZE).map((r) => ({
     id: r.id.toString(),
     type: r.type,
-    title: r.title || (r.type === 'admin' ? '운영자 메시지' : '우편'),
+    title: r.title || (r.type === 'admin' ? '인생강화 메시지' : '우편'),
     body: r.body || '',
     senderLabel: r.senderLabel,
     payload: r.payload as MailItem['payload'],

@@ -49,7 +49,7 @@ type TypeMeta = { bar: string; label: string; labelClass: string };
 const TYPE_META: Record<string, TypeMeta> = {
   admin: {
     bar: 'bg-violet-500',
-    label: '운영자',
+    label: '인생강화',
     labelClass:
       'bg-violet-100 text-violet-700 dark:bg-violet-950/60 dark:text-violet-300',
   },
@@ -128,18 +128,19 @@ function PayloadChips({ payload }: { payload: MailItem['payload'] }) {
   );
 }
 
-/** 운영자 우편 신뢰성 배지 — sender 옆 ✓ 운영자. 사칭 신고 회피용. */
+/** 운영자(인생강화) 우편 신뢰성 배지 — sender 옆 ✓ 인장. 사칭 신고 회피용. */
 function VerifiedAdminBadge() {
   return (
     <span className="inline-flex items-center gap-0.5 rounded-full bg-violet-100 px-1 text-[8.5px] font-bold text-violet-700 dark:bg-violet-950/60 dark:text-violet-300">
-      <svg
-        viewBox="0 0 12 12"
-        aria-hidden
-        className="h-2.5 w-2.5 fill-current"
-      >
-        <path d="M6 0l1.5 1.5L9.6 1l.6 2.1 2.1.6-.5 2.1L13 7.5 11.5 9l.6 2.1-2.1.6-.6 2.1L7.5 13 6 14.5 4.5 13l-2.1.6-.6-2.1L0 11.5 1 9 0 7.5 1.5 6 0 4.5 1 2.1 3 1.5 4.5 0 6 1.5z" />
+      {/* 인장형 verified 배지 — 체크는 evenodd 컷아웃으로 펄(pill) 배경이 비쳐 보임. */}
+      <svg viewBox="0 0 24 24" aria-hidden className="h-2.5 w-2.5 fill-current">
+        <path
+          fillRule="evenodd"
+          clipRule="evenodd"
+          d="M8.603 3.799A4.49 4.49 0 0 1 12 2.25c1.357 0 2.573.6 3.397 1.549a4.49 4.49 0 0 1 3.498 1.307 4.491 4.491 0 0 1 1.307 3.497A4.49 4.49 0 0 1 21.75 12a4.49 4.49 0 0 1-1.549 3.397 4.491 4.491 0 0 1-1.307 3.497 4.491 4.491 0 0 1-3.497 1.307A4.49 4.49 0 0 1 12 21.75a4.49 4.49 0 0 1-3.397-1.549 4.49 4.49 0 0 1-3.498-1.306 4.491 4.491 0 0 1-1.307-3.498A4.49 4.49 0 0 1 2.25 12c0-1.357.6-2.573 1.549-3.397a4.49 4.49 0 0 1 1.307-3.497 4.49 4.49 0 0 1 3.497-1.307Zm7.007 6.387a.75.75 0 1 0-1.22-.872l-3.236 4.53L9.53 12.22a.75.75 0 0 0-1.06 1.06l2.25 2.25a.75.75 0 0 0 1.14-.094l3.75-5.25Z"
+        />
       </svg>
-      운영자
+      인생강화
     </span>
   );
 }
@@ -374,7 +375,8 @@ export function MailList({
                         {m.type === 'admin' ? (
                           <>
                             <span className="truncate font-semibold text-zinc-700 dark:text-zinc-300">
-                              {m.senderLabel || '운영자'}
+                              {/* 레거시 '운영자' 저장값도 '인생강화'로 표시(브랜드 통일). */}
+                              {!m.senderLabel || m.senderLabel === '운영자' ? '인생강화' : m.senderLabel}
                             </span>
                             <VerifiedAdminBadge />
                           </>
