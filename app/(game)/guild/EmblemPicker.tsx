@@ -55,7 +55,7 @@ export function EmblemPicker({
   onChange: (s: EmblemSelection) => void;
   disabled?: boolean;
 }) {
-  // 메인: 전체 키워드(테마 그룹). 서브: 메인 궁합 키워드만(테마 그룹, 빈 그룹 제외).
+  // 메인: 전체 키워드(4개 테마 그룹 모두 노출). 서브: 메인과 다른 그룹만(같은 그룹 제외).
   const mainOptions = EMBLEM_KEYWORD_CATEGORIES.map((cat) => (
     <optgroup key={cat.id} label={cat.ko}>
       {EMBLEM_KEYWORDS.filter((k) => k.cat === cat.id).map((k) => (
