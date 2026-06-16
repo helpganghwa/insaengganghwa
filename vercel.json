@@ -53,6 +53,10 @@
     {
       "path": "/api/cron/conquest-chronicle",
       "schedule": "*/5 15 * * *"
+    },
+    {
+      "path": "/api/cron/guild-leader-handover",
+      "schedule": "0 3 * * *"
     }
   ]
 }

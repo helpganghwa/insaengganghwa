@@ -71,6 +71,11 @@ export const guilds = pgTable('guilds', {
   leaderUserId: uuid('leader_user_id')
     .notNull()
     .references(() => profiles.id),
+  /**
+   * 길드장 자동 위임 경고 발송 시각(§4) — 5일차 경고 우편 1회 멱등 키.
+   * 위임 완료 또는 길드장 재활동(미접속<5일) 시 null로 리셋 → 다음 잠수 때 다시 경고.
+   */
+  leaderHandoverWarnedAt: timestamp('leader_handover_warned_at', { withTimezone: true }),
   createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
 });
 
