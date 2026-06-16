@@ -495,7 +495,7 @@ export function GuildSettings({
           value={intro}
           onChange={(e) => setIntro(e.target.value.slice(0, GUILD_INTRO_MAX_LEN))}
           placeholder="공개 소개를 입력하세요"
-          rows={3}
+          rows={2}
           className="mt-2 w-full resize-none rounded-lg border border-zinc-200 bg-zinc-50 px-2.5 py-2 text-base outline-none focus:border-zinc-400 dark:border-zinc-700 dark:bg-zinc-900 dark:focus:border-zinc-500"
         />
         <div className="mt-2 flex justify-end gap-1.5">
