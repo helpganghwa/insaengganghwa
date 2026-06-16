@@ -219,10 +219,11 @@ async function generateEmblemAsset(
   selection: EmblemSelection,
 ): Promise<{ emblemUrl: string; color: string | null }> {
   const color = mainColor(selection.mainToneId);
-  const raw = await generateEmblemPng(
-    await buildEmblemPromptAI(selection),
-    isShieldShape(selection.shapeId),
-  );
+  const shieldLike = isShieldShape(selection.shapeId);
+  // 비방패(마름모·깃발)는 AI 재작성을 건너뛴다 — Haiku가 'coat of arms/crest'를 재주입해
+  // 방패로 회귀시키는 게 주원인(라이브 검증). 결정적 템플릿(heraldry 단어 없음)으로 직행.
+  const prompt = shieldLike ? await buildEmblemPromptAI(selection) : buildEmblemPrompt(selection);
+  const raw = await generateEmblemPng(prompt, shieldLike);
   const png = await fitEmblemToFrame(raw); // 투명 여백 제거·프레임 채움(가시성↑)
   const emblemUrl = await uploadEmblem(`${guildId}/${crypto.randomUUID()}.png`, png);
   return { emblemUrl, color };

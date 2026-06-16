@@ -138,17 +138,27 @@ export function buildEmblemPrompt(s: EmblemSelection): string {
   const sub = EMBLEM_TONES.find((x) => x.id === s.subToneId)!.en;
   const mainKw = keywordById(s.mainKeywordId)?.en ?? 'a heraldic beast';
   const subKw = s.subKeywordId ? keywordById(s.subKeywordId)?.en : null;
-  const accent = subKw ? `, flanked by ${subKw} as a clearly visible secondary heraldic charge` : '';
-  // 모양이 방패가 아니면(마름모·깃발) "crest/coat of arms" 문맥의 방패 기본값에 묻히지 않도록
-  // 외곽 실루엣을 강하게 못박고 방패를 명시적으로 배제한다.
-  const silhouette = shapeDef.shield
-    ? `an old family guild crest shaped like ${shape}`
-    : `with the whole emblem in the exact outer silhouette of ${shape} (this silhouette is mandatory — NOT a shield)`;
-  return (
-    `pixel art medieval heraldic emblem, ${silhouette}, ` +
-    `${mainKw} as the bold central heraldic charge${accent}, ` +
-    `ornate symmetrical vintage emblem, highly detailed intricate filigree and fine engraved linework, rich metallic shading and embossed relief, ` +
+  const palette =
     `mostly a ${main} and ${sub} palette with these two colors dominating, ${main} field with ${sub} accents and trim, ` +
-    `bold clean silhouette filling the frame, centered, dark fantasy, transparent background, no text`
+    `highly detailed intricate filigree and fine engraved linework, rich metallic shading and embossed relief, ` +
+    `bold clean silhouette filling the frame, centered, dark fantasy, transparent background, no text`;
+
+  // 방패 계열(라운드·기사 방패) — 정통 문장(紋章) 프레이밍 유지(모델 기본값과 일치).
+  if (shapeDef.shield) {
+    const accent = subKw ? `, flanked by ${subKw} as a clearly visible secondary heraldic charge` : '';
+    return (
+      `pixel art medieval heraldic coat of arms, an old family guild crest shaped like ${shape}, ` +
+      `${mainKw} as the bold central heraldic charge${accent}, ornate symmetrical vintage emblem, ${palette}`
+    );
+  }
+
+  // 비방패(마름모·깃발) — "heraldic / coat of arms / crest / shield" 단어를 일절 쓰지 않는다.
+  // 모델이 그 단어를 보면 거의 항상 방패를 그리기 때문(검증됨). 모양을 맨 앞에 두고 반복 강조 +
+  // 방패류를 명시 배제. AI 재작성도 비방패는 건너뛰고 이 템플릿을 직접 사용한다(emblem.ts).
+  const accent = subKw ? `, with ${subKw} as a clearly visible secondary figure` : '';
+  return (
+    `pixel art emblem shaped exactly as ${shape}, the whole badge outline is ${shape}, ` +
+    `NOT a shield, not a coat of arms, not an escutcheon, not a crest, ` +
+    `${mainKw} as the large bold central figure${accent}, ornate symmetrical vintage insignia, ${palette}`
   );
 }
