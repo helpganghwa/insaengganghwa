@@ -19,7 +19,8 @@ import {
 
 /**
  * 서버 선택·캐릭터 생성(SERVER.md §3·P6) — 풀 아이솔레이션: 새 서버 = 새 캐릭터(새 닉네임).
- * 가입 보너스·기본 아바타는 가입 트리거(handle_new_user)와 동일 수치 — 변경 시 양쪽 동기.
+ * 가입 보너스·기본 아바타·거주지의 **단일 출처**(0067 이후 트리거는 계정 행만 만들고 캐릭터/
+ * 보너스를 만들지 않음 — 신규 가입·새 서버 합류 모두 이 함수가 고른 서버에 1개 생성).
  */
 const SIGNUP_DIAMOND = 1000 * TEST_REWARD_MULTIPLIER;
 const SIGNUP_BOX_PER_SLOT = 10 * TEST_REWARD_MULTIPLIER;

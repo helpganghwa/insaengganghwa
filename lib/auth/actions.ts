@@ -3,7 +3,16 @@
 import { redirect } from 'next/navigation';
 import { cookies, headers } from 'next/headers';
 
-import { canEnterServer, createCharacterAuto, touchLastServer } from '@/lib/game/server-select';
+import { eq } from 'drizzle-orm';
+
+import { db } from '@/lib/db/client';
+import { profiles } from '@/lib/db/schema/profiles';
+import {
+  canEnterServer,
+  createCharacterAuto,
+  touchLastServer,
+  latestOpenServerId,
+} from '@/lib/game/server-select';
 import { createSupabaseServerClient, createSupabaseServiceClient } from './supabase-server';
 import { isTestLoginEnabled, TEST_ACCOUNTS, TEST_PASSWORD } from './test-accounts';
 
@@ -62,24 +71,37 @@ export async function signInWithTestAccount(formData: FormData) {
   const { error } = await supabase.auth.signInWithPassword({ email, password: TEST_PASSWORD });
   if (error) redirect(`/login?error=${encodeURIComponent(error.message)}`);
 
-  // 서버 선택 적용(콜백 미경유 경로) — ServerPicker가 기록한 login_srv 쿠키.
-  const srvRaw = Number((await cookies()).get('login_srv')?.value);
-  if (Number.isInteger(srvRaw) && srvRaw >= 1 && srvRaw <= 32767) {
-    const { data } = await supabase.auth.getUser();
-    const uid = data.user?.id;
-    if (uid) {
-      try {
-        if (!(await canEnterServer(uid, srvRaw))) await createCharacterAuto({ userId: uid, serverId: srvRaw });
-        await touchLastServer(uid, srvRaw);
-        (await cookies()).set('srv', String(srvRaw), {
+  // 서버 선택 적용(콜백 미경유 경로) — 콜백과 동일하게 "고른 서버에 캐릭터 1개" 보장.
+  // 가입 트리거(0067)가 캐릭터를 안 만들므로, login_srv 없을 때도 last_server>최신open으로
+  // 확정해 반드시 생성한다(가입 보너스 포함).
+  const { data } = await supabase.auth.getUser();
+  const uid = data.user?.id;
+  if (uid) {
+    try {
+      const srvRaw = Number((await cookies()).get('login_srv')?.value);
+      let sid: number | null =
+        Number.isInteger(srvRaw) && srvRaw >= 1 && srvRaw <= 32767 ? srvRaw : null;
+      if (!sid) {
+        const [p] = await db
+          .select({ sid: profiles.lastServerId })
+          .from(profiles)
+          .where(eq(profiles.id, uid))
+          .limit(1);
+        sid = p?.sid ?? null;
+      }
+      if (!sid) sid = await latestOpenServerId();
+      if (sid) {
+        if (!(await canEnterServer(uid, sid))) await createCharacterAuto({ userId: uid, serverId: sid });
+        await touchLastServer(uid, sid);
+        (await cookies()).set('srv', String(sid), {
           httpOnly: true,
           sameSite: 'lax',
           path: '/',
           maxAge: 60 * 60 * 24 * 365,
         });
-      } catch (e) {
-        console.warn('[login.test] server select skipped', (e as Error).message);
       }
+    } catch (e) {
+      console.warn('[login.test] server select skipped', (e as Error).message);
     }
   }
   redirect('/');
