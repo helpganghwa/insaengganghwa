@@ -1,10 +1,19 @@
-import { NextResponse, type NextRequest } from 'next/server';
+import { NextResponse, after, type NextRequest } from 'next/server';
 import { eq } from 'drizzle-orm';
 
 import { createSupabaseServerClient } from '@/lib/auth/supabase-server';
 import { db } from '@/lib/db/client';
 import { profiles } from '@/lib/db/schema/profiles';
 import { canEnterServer, createCharacterAuto, touchLastServer } from '@/lib/game/server-select';
+import { attributeReferralFromShare } from '@/lib/game/referral/redeem';
+import {
+  PENDING_REFERRAL_COOKIE,
+  PENDING_REFERRAL_AT_COOKIE,
+} from '@/lib/game/referral/auto-attribute';
+
+// 콜백 시점 profiles.createdAt이 이 윈도 안이면 "방금 가입"으로 판정(신규 가입 전환).
+// handle_new_user 트리거~콜백 간격은 ms 단위라 5분은 시계 스큐까지 흡수하는 안전폭이다.
+const REFERRAL_NEW_SIGNUP_WINDOW_MS = 5 * 60 * 1000;
 
 /**
  * Kakao OAuth 콜백 — Supabase 토큰 교환 후 이 경로로 리다이렉트.
@@ -58,6 +67,39 @@ export async function GET(request: NextRequest) {
           res.cookies.delete('login_srv');
         } catch (e) {
           console.warn('[auth.callback] srv select skipped', (e as Error).message);
+        }
+
+        // ── 초대 보상 — 가입 성공(이 콜백)이 정확한 지급 시점 ──
+        // 트리거가 방금 만든 profiles.createdAt이 최근(≤윈도)이면 신규 가입 → 추천인 보상.
+        // 기존 유저가 공유 링크를 타도 createdAt이 오래돼 제외. 멱등(redeem new_user_id UNIQUE).
+        const refCode = request.cookies.get(PENDING_REFERRAL_COOKIE)?.value;
+        if (refCode) {
+          try {
+            const [acct] = await db
+              .select({ createdAt: profiles.createdAt })
+              .from(profiles)
+              .where(eq(profiles.id, userId))
+              .limit(1);
+            const isNewSignup =
+              !!acct && Date.now() - acct.createdAt.getTime() <= REFERRAL_NEW_SIGNUP_WINDOW_MS;
+            if (isNewSignup) {
+              const atRaw = request.cookies.get(PENDING_REFERRAL_AT_COOKIE)?.value;
+              const clickedAtMs = atRaw && /^\d+$/.test(atRaw) ? Number(atRaw) : undefined;
+              // after — 리다이렉트 지연 0, 응답 후 보장 실행(보상 누락 방지). 쿠키는 유지해
+              // (game) layout 멱등 백스톱이 드문 after 실패 시 재시도하게 둔다.
+              after(() =>
+                attributeReferralFromShare(userId, refCode, clickedAtMs).catch((e) =>
+                  console.warn('[auth.callback] referral attribute failed', (e as Error).message),
+                ),
+              );
+            } else {
+              // 기존 유저가 링크를 탄 경우 — 귀속 없음. 쿠키 소비(백스톱 무의미한 재시도 제거).
+              res.cookies.set(PENDING_REFERRAL_COOKIE, '', { path: '/', maxAge: 0 });
+              res.cookies.set(PENDING_REFERRAL_AT_COOKIE, '', { path: '/', maxAge: 0 });
+            }
+          } catch (e) {
+            console.warn('[auth.callback] referral skipped', (e as Error).message);
+          }
         }
       }
       return res;
