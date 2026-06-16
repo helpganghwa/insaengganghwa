@@ -99,7 +99,7 @@ export default async function CodexPage() {
                       {c.name}
                     </span>
                     <span className="text-[10px] font-semibold text-amber-600 dark:text-amber-400">
-                      최고 +{codexMap.get(c.id)}
+                      +{codexMap.get(c.id)}
                     </span>
                   </Link>
                 );
