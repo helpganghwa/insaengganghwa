@@ -108,7 +108,8 @@ export async function runConquest(serverId: number): Promise<{ battleDay: string
         nickname: nickOf.get(d.uid) ?? '플레이어',
         guildId: d.guild_id,
         guildName: d.gname,
-        effCp: Math.round(cpOf(d.uid) * conquestPowerMult(d.role, false)),
+        // 하한 1 — 장비 0개(CP 0) 유닛도 hp>0으로 정상 참전(0이면 hp 0 즉사·1뎀 기현상 방지).
+        effCp: Math.max(1, Math.round(cpOf(d.uid) * conquestPowerMult(d.role, false))),
       });
     }
     // 집행관 자동 방어(×3) — 배치행 없이 포함(중복 방지).
@@ -118,7 +119,7 @@ export async function runConquest(serverId: number): Promise<{ battleDay: string
         nickname: nickOf.get(z.executor) ?? '집행관',
         guildId: z.owner_guild_id,
         guildName: z.owner_name ?? '길드',
-        effCp: Math.round(cpOf(z.executor) * conquestPowerMult('defend', true)),
+        effCp: Math.max(1, Math.round(cpOf(z.executor) * conquestPowerMult('defend', true))),
       });
     }
 
