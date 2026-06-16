@@ -101,17 +101,22 @@ async function handover(serverId: number, g: GuildRow): Promise<boolean> {
         and coalesce(c.last_seen_at, m.joined_at) >= now() - interval '${sql.raw(String(GUILD_LEADER_HANDOVER_DAYS))} days'
       order by (m.role = 'vice') desc, m.contribution_points desc, m.joined_at asc
       limit 1
+      for update of m
     `)) as unknown as Successor[];
     if (!s) return false; // 활성 후계자 없음 — 보류(빈 길드는 그대로)
 
+    // ⚠ 승급을 먼저(실패 시 아무것도 안 바꾸고 중단) → 강등. 강등 먼저 하면 승급 실패 시 tx가 그대로
+    // 커밋돼 리더 없는 동결 길드가 된다. 후계자 행은 for update of m로 잠겨 0행이면 동시삭제 케이스.
+    const promoted = await tx
+      .update(guildMembers)
+      .set({ role: 'leader' })
+      .where(and(eq(guildMembers.userId, s.userId), eq(guildMembers.serverId, serverId)))
+      .returning({ uid: guildMembers.userId });
+    if (promoted.length === 0) return false;
     await tx
       .update(guildMembers)
       .set({ role: 'member' })
       .where(and(eq(guildMembers.userId, g.leader), eq(guildMembers.serverId, serverId)));
-    await tx
-      .update(guildMembers)
-      .set({ role: 'leader' })
-      .where(and(eq(guildMembers.userId, s.userId), eq(guildMembers.serverId, serverId)));
     await tx
       .update(guilds)
       .set({ leaderUserId: s.userId, leaderHandoverWarnedAt: null })
