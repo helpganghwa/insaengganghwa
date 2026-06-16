@@ -1,10 +1,10 @@
 import 'server-only';
 
-import { eq, sql } from 'drizzle-orm';
+import { and, eq, sql } from 'drizzle-orm';
 
 import { db } from '@/lib/db/client';
 import { walletAdd } from '@/lib/game/wallet';
-import { guilds, zones } from '@/lib/db/schema/guild';
+import { guilds, guildMembers, zones } from '@/lib/db/schema/guild';
 
 import { GUILD_EXECUTOR_TAX_CUT, TAX_COLLECT_COOLDOWN_MIN } from './balance';
 import { GuildError } from './errors';
@@ -31,6 +31,12 @@ export function collectZoneTax(input: {
       .for('update');
     if (!z) throw new GuildError('ZONE_NOT_FOUND');
     if (z.executor !== input.userId || !z.owner) throw new GuildError('NOT_EXECUTOR');
+    // 집행관이 여전히 소유 길드 소속인지 재검증 — 이탈 정리 누락 등에 대비한 방어선(비길드원 세수 탈취 차단).
+    const [mem] = await tx
+      .select({ guildId: guildMembers.guildId })
+      .from(guildMembers)
+      .where(and(eq(guildMembers.userId, input.userId), eq(guildMembers.serverId, z.serverId)));
+    if (!mem || mem.guildId !== z.owner) throw new GuildError('NOT_EXECUTOR');
     if (
       z.lastAt &&
       Date.now() - z.lastAt.getTime() < TAX_COLLECT_COOLDOWN_MIN * 60_000

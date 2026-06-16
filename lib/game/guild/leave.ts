@@ -5,6 +5,7 @@ import { and, eq, sql } from 'drizzle-orm';
 import { db } from '@/lib/db/client';
 import { guildMembers, guildLeaveLog } from '@/lib/db/schema/guild';
 
+import { clearConquestRoleOnExit } from './conquest/on-member-exit';
 import { neutralizeAndDeleteGuild } from './disband';
 import { GuildError } from './errors';
 
@@ -34,6 +35,7 @@ export function leaveGuild(input: { userId: string; serverId: number }): Promise
       return { disbanded: true };
     }
 
+    await clearConquestRoleOnExit(tx, input.userId, input.serverId); // 잔류 집행관·미정산 배치 정리
     await tx
       .delete(guildMembers)
       .where(and(eq(guildMembers.userId, input.userId), eq(guildMembers.serverId, input.serverId)));

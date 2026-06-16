@@ -6,6 +6,7 @@ import { db } from '@/lib/db/client';
 import { guilds, guildMembers, guildLeaveLog } from '@/lib/db/schema/guild';
 
 import { GUILD_MAX_VICE } from './balance';
+import { clearConquestRoleOnExit } from './conquest/on-member-exit';
 import { GuildError } from './errors';
 
 type Tx = Parameters<Parameters<typeof db.transaction>[0]>[0];
@@ -87,6 +88,7 @@ export function kickMember(input: {
     if (target.role === 'leader') throw new GuildError('INVALID_TARGET');
     if (target.role === 'vice' && actor.role !== 'leader') throw new GuildError('FORBIDDEN');
 
+    await clearConquestRoleOnExit(tx, input.targetUserId, input.serverId); // 잔류 집행관·미정산 배치 정리
     await tx.delete(guildMembers).where(and(eq(guildMembers.userId, input.targetUserId), eq(guildMembers.serverId, input.serverId)));
     await tx.insert(guildLeaveLog).values({ userId: input.targetUserId, serverId: input.serverId });
   });
