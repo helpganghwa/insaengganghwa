@@ -155,14 +155,14 @@ export const zones = pgTable(
     taxPoints: bigint('tax_points', { mode: 'bigint' }).notNull().default(sql`0`),
     /** 미수금 누적 세금 💎(포인트 100당 +1, 집행관 수금 대상, 점령 시 신 소유자로 이전). */
     taxDiamond: bigint('tax_diamond', { mode: 'bigint' }).notNull().default(sql`0`),
-    /** 집행관 수금 1h 쿨다운 기준. */
+    /** 집행관 수금 72h(3일) 쿨다운 기준. */
     lastTaxCollectedAt: timestamp('last_tax_collected_at', { withTimezone: true }),
     capturedAt: timestamp('captured_at', { withTimezone: true }),
   },
   (t) => [index('zone_owner_idx').on(t.ownerGuildId)],
 );
 
-/** §5.6 zone_adjacency — **현재 미사용**(인접 규칙 없음). 정규형 a<b. 미래(확장형 점령/연결선) 대비. */
+/** §5.6 zone_adjacency — 인접 공격 규칙에 사용(deploy.ts assertAttackable·배치 UI 필터). 무방향 간선 정규형 a<b. */
 export const zoneAdjacency = pgTable(
   'zone_adjacency',
   {
