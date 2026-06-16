@@ -79,10 +79,10 @@ function ChronicleText({ text, zoneColor }: { text: string; zoneColor: (name: st
   const out: React.ReactNode[] = [];
   let last = 0;
   let key = 0;
-  CHRONICLE_TOKEN_RE.lastIndex = 0;
-  let m: RegExpExecArray | null;
-  while ((m = CHRONICLE_TOKEN_RE.exec(text)) !== null) {
-    if (m.index > last) out.push(<span key={key++}>{text.slice(last, m.index)}</span>);
+  // matchAll은 전역 정규식을 내부 복제해 순회 — 모듈 공유 정규식의 lastIndex를 건드리지 않음(렌더 순수성).
+  for (const m of text.matchAll(CHRONICLE_TOKEN_RE)) {
+    const mIndex = m.index ?? 0;
+    if (mIndex > last) out.push(<span key={key++}>{text.slice(last, mIndex)}</span>);
     const type = m[1];
     const name = m[2];
     if (type === 'g') {
@@ -120,7 +120,7 @@ function ChronicleText({ text, zoneColor }: { text: string; zoneColor: (name: st
         </strong>,
       );
     }
-    last = m.index + m[0].length;
+    last = mIndex + m[0].length;
     // 마커 직후 조사 보정 — 이름 받침에 맞는 조사로 교체(잘못된 은/는·이/가 등 제거).
     const fixed = fixLeadingJosa(name, text.slice(last));
     if (fixed) {
