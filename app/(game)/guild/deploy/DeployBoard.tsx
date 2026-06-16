@@ -324,7 +324,7 @@ export function DeployBoard({
               )}
               {/* 선택 마크 — 세계지도 '내 위치'처럼 떠 있는 핀 */}
               {isSel && (
-                <span className="pointer-events-none absolute bottom-full left-1/2 mb-1 -translate-x-1/2">
+                <span className="pointer-events-none absolute bottom-full left-1/2 -mb-1 -translate-x-1/2">
                   <span className="block animate-marker-bob">
                     <span
                       className="relative block h-[11px] w-[11px] border-[1.5px] border-white animate-marker-pin-glow"

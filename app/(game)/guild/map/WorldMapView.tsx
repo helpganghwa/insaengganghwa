@@ -446,7 +446,7 @@ export function WorldMapView({
               </span>
               {/* 내 위치 — 네모 상단에 둥둥 떠 있는 amber 핀(부유 + 글로우 펄스) */}
               {isResidence && (
-                <span className="pointer-events-none absolute bottom-full left-1/2 mb-1 -translate-x-1/2">
+                <span className="pointer-events-none absolute bottom-full left-1/2 -mb-1 -translate-x-1/2">
                   <span className="block animate-marker-bob">
                     <span
                       className="relative block h-[11px] w-[11px] border-[1.5px] border-white animate-marker-pin-glow"
