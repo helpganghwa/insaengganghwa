@@ -28,9 +28,10 @@ export async function signInWithKakao(formData?: FormData) {
 
   const { data, error } = await supabase.auth.signInWithOAuth({
     provider: 'kakao',
-    // 수집 항목: 이메일 + 닉네임 + 프로필 이미지. 카카오 콘솔 '동의항목'에서 세 항목이 모두
-    // 사용 설정돼 있어야 함(미설정 scope 요청 시 'KOE006 — 아직 설정하지 않은 동의항목' 에러).
-    options: { redirectTo: callback, scopes: 'account_email profile_nickname profile_image' },
+    // 수집 항목: 이메일만(닉네임·프로필 이미지 제외 — PRIVACY 정책 정합). 앱은 닉네임=DB 자동생성,
+    // 콜백은 user.id만 사용. ⚠ 카카오 콘솔 '동의항목'에서 '카카오계정(이메일)'이 사용 설정돼 있어야
+    // 함(미설정 scope 요청 시 'KOE006 — 아직 설정하지 않은 동의항목' 에러).
+    options: { redirectTo: callback, scopes: 'account_email' },
   });
 
   if (error) redirect(`/login?error=${encodeURIComponent(error.message)}`);
