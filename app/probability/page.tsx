@@ -193,7 +193,7 @@ export default function ProbabilityPage() {
         </P>
         <P>
           친구 초대: 공유 링크로 신규 가입 전환 시 공유자에게 💎{INVITE_DIAMOND_PER_REFERRAL} +
-          보급상자 {INVITE_BOX_PER_REFERRAL}개(무기 4·방어구 3·장신구 3) 지급.
+          보급상자 {INVITE_BOX_PER_REFERRAL}개(무기·방어구·장신구 각 5개) 지급.
         </P>
       </Sec>
 

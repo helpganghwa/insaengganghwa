@@ -9,10 +9,10 @@ import { referralAttributions } from '@/lib/db/schema/social';
  * 초대 보상 정책 — 사용자 결정.
  * 내 공유 링크로 가입한 1명당:
  *   - 💎 500
- *   - 📦 총 10개(무기 4 · 방어구 3 · 장신구 3) — 분배는 redeem.ts payload 참조.
+ *   - 📦 총 15개(무기·방어구·장신구 각 5개) — 분배는 redeem.ts payload 참조.
  */
 export const INVITE_DIAMOND_PER_REFERRAL = 500;
-export const INVITE_BOX_PER_REFERRAL = 10; // 무기4·방어구3·장신구3 = 10
+export const INVITE_BOX_PER_REFERRAL = 15; // 종류별 5개씩 × 3종 = 15
 
 export type ReferralStats = {
   totalReferrals: number;
