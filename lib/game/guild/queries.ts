@@ -1,6 +1,7 @@
 import 'server-only';
 
 import { and, desc, eq, ilike, inArray, or, sql } from 'drizzle-orm';
+import { alias } from 'drizzle-orm/pg-core';
 
 import { db } from '@/lib/db/client';
 import { characters } from '@/lib/db/schema/server';
@@ -10,6 +11,7 @@ import {
   zones,
   conquestBattles,
   guildJoinRequests,
+  guildTaxDistributions,
   zoneAdjacency,
 } from '@/lib/db/schema/guild';
 import { profiles } from '@/lib/db/schema/profiles';
@@ -390,4 +392,39 @@ export async function getGuildMembers(guildId: bigint) {
     )
     .where(eq(guildMembers.guildId, guildId))
     .orderBy(desc(guildMembers.contributionPoints));
+}
+
+/**
+ * 세금 분배 이력 — GUILD §5.5 "분배 내역 로그 공개(리더 독식 견제)". 최신순.
+ * 분배자/수령자(target 모드) 닉을 길드 서버 기준으로 조인. 직렬화(bigint→string, date→ISO).
+ */
+export async function getTaxDistributionHistory(guildId: bigint, serverId: number, limit = 20) {
+  const byChar = alias(characters, 'by_char');
+  const tgtChar = alias(characters, 'tgt_char');
+  const rows = await db
+    .select({
+      id: guildTaxDistributions.id,
+      mode: guildTaxDistributions.mode,
+      total: guildTaxDistributions.total,
+      createdAt: guildTaxDistributions.createdAt,
+      byNick: byChar.nickname,
+      targetNick: tgtChar.nickname,
+    })
+    .from(guildTaxDistributions)
+    .leftJoin(byChar, and(eq(byChar.userId, guildTaxDistributions.byUserId), eq(byChar.serverId, serverId)))
+    .leftJoin(
+      tgtChar,
+      and(eq(tgtChar.userId, guildTaxDistributions.targetUserId), eq(tgtChar.serverId, serverId)),
+    )
+    .where(eq(guildTaxDistributions.guildId, guildId))
+    .orderBy(desc(guildTaxDistributions.createdAt))
+    .limit(limit);
+  return rows.map((r) => ({
+    id: r.id.toString(),
+    mode: r.mode as 'equal' | 'target' | 'manual',
+    total: r.total.toString(),
+    createdAt: r.createdAt.toISOString(),
+    byNick: r.byNick ?? '알 수 없음',
+    targetNick: r.targetNick,
+  }));
 }

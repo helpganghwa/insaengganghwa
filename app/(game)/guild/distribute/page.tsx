@@ -2,7 +2,7 @@ import { redirect } from 'next/navigation';
 import { getActiveServerId } from '@/lib/game/servers';
 
 import { getSessionUserId } from '@/lib/auth/session';
-import { getMyMembership, getGuild, getGuildMembers } from '@/lib/game/guild';
+import { getMyMembership, getGuild, getGuildMembers, getTaxDistributionHistory } from '@/lib/game/guild';
 
 import { DistributeBoard } from './DistributeBoard';
 
@@ -18,9 +18,10 @@ export default async function DistributePage() {
   if (!membership) redirect('/guild');
   if (membership.role !== 'leader') redirect('/guild/settings'); // 분배는 길드장만
 
-  const [guild, members] = await Promise.all([
+  const [guild, members, history] = await Promise.all([
     getGuild(membership.guildId),
     getGuildMembers(membership.guildId),
+    getTaxDistributionHistory(membership.guildId, serverId),
   ]);
   if (!guild) redirect('/guild');
 
@@ -29,6 +30,7 @@ export default async function DistributePage() {
       myUserId={userId}
       pool={guild.taxPoolDiamond.toString()}
       members={members.map((m) => ({ userId: m.userId, nickname: m.nickname, role: m.role }))}
+      history={history}
     />
   );
 }
