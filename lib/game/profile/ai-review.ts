@@ -102,8 +102,11 @@ export async function reviewProfile(input: ReviewInput): Promise<ReviewResult> {
   // 256px 원본은 Haiku 비전이 미세 결함(끊긴 무기 샤프트 등)을 놓치므로 2배(512) nearest 업스케일 후 검수.
   const content: Anthropic.MessageParam['content'] = [];
   for (const img of input.images) {
-    const up = await sharp(img.png)
-      .resize(512, 512, { kernel: 'nearest', fit: 'contain', background: { r: 0, g: 0, b: 0, alpha: 0 } })
+    // 투명 여백 트림(피사체 줌인) 후 768 nearest 업스케일 — 미세 끊긴/분리 무기 검출률↑(실측).
+    let s = sharp(img.png);
+    try { s = sharp(await s.trim({ threshold: 10 }).png().toBuffer()); } catch { s = sharp(img.png); }
+    const up = await s
+      .resize(768, 768, { kernel: 'nearest', fit: 'contain', background: { r: 0, g: 0, b: 0, alpha: 0 } })
       .png()
       .toBuffer();
     content.push({ type: 'text', text: `View: ${img.direction}` });
