@@ -20,11 +20,14 @@
 export type CatalogSlot = 'weapon' | 'armor' | 'accessory';
 
 export type CatalogRegion =
+  | '왕국'
   | '늪지대'
+  | '화산'
+  | '신전'
+  | '타락천사'
   | '오크 부락'
   | '고대 룬 산맥'
   | '서쪽 화산'
-  | '타락천사'
   | '일반';
 
 /** 로어 정서 — 배치 내 고르게 분포(한 톤이 슬롯의 ~1/4 초과 금지). docs/LORE.md §1.
@@ -52,8 +55,8 @@ export interface CatalogItem {
   /** 한국어 표시명 (도감/인벤토리/공유). */
   nameKo: string;
   region: CatalogRegion;
-  /** 로어 정서(다양성 강제용). docs/LORE.md §1. */
-  tone: CatalogTone;
+  /** 로어 정서(다양성 강제용). docs/LORE.md §1. 최종 108종은 미지정(옵셔널). */
+  tone?: CatalogTone;
   /** 한국어 로어 (~120~260자, 2~4문장). 아이템마다 고유 사연·개성. 등급/성능 언급 금지. */
   lore: string;
   /** Pixellab 64×64 생성 키워드 (영문, 글로우/등급 제외). */
