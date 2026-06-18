@@ -155,12 +155,18 @@ export function pickRandomPose(): ProfilePose {
 
 /** 고정 골격(KEEP source·8등신·full body·흰점·pose·Confirm) + 가변 의상절 결합. */
 function assemble(opts: ProfileOptions, outfitClause: string): string {
+  // 성별 강제 — "keep from source"만으로는 헤어/의상 재디자인 중 뒤집히므로 능동적으로 명시(맨 앞 + Confirm).
+  const genderClause =
+    opts.gender === 'male'
+      ? `The character is MALE — a bishōnen boy: masculine boyish face, FLAT chest with absolutely no breasts, lean masculine body and silhouette, masculine hairstyle and masculine clothing. Never feminize into a girl, never a dress/gown/skirt.`
+      : `The character is FEMALE — a bishōjo: feminine face, slim waist and feminine figure, feminine hairstyle.`;
   return [
-    `KEEP unchanged from source: gender, the exact same facial features, the Japanese anime art style, body proportions, and overall vibe.`,
+    genderClause,
+    `KEEP unchanged from source: the sex/gender, the exact same facial features, the Japanese anime art style, body proportions, and overall vibe.`,
     `Full body head-to-feet, pure clean background, character only. Crisp clean silhouette with smooth solid outlines — no stray white dots, specks or noise around the edges.`,
     `Slim tall figure with a small head and long legs.`,
     `${outfitClause} Pose: ${POSE_DESC[opts.pose]}. Expression free — any natural pleasant look.`,
-    `Confirm: keep the same facial features, body and anime style as source; full body with both feet on the ground.`,
+    `Confirm: the character MUST remain ${opts.gender === 'male' ? 'MALE (boy, flat chest, masculine)' : 'FEMALE'}; keep the same facial features, body and anime style as source; full body with both feet on the ground.`,
   ].join(' ');
 }
 
