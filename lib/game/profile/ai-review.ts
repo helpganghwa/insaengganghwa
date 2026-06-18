@@ -66,7 +66,7 @@ OUTPUT — strict JSON only:
 {
   "pass": boolean,
   "reasons": ["nsfw" | "violence" | "hate" | "quality"],
-  "notes": "1-2 sentence Korean explanation for failures (include which view + which body part), empty string for pass"
+  "notes": "MUST be written in KOREAN (한국어로만 작성). 1~2문장으로 실패 사유 설명(어느 뷰·어느 부위인지 포함). pass면 빈 문자열. 영어로 쓰지 말 것."
 }`;
 
 let _client: Anthropic | null = null;

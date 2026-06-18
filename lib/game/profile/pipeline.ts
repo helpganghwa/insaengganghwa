@@ -405,7 +405,15 @@ async function rejectJob(
   escrow: bigint,
   verdict: ReviewVerdict,
 ): Promise<void> {
-  const reasonsKr = verdict.reasons.length > 0 ? verdict.reasons.join(', ') : 'unspecified';
+  // 카테고리 코드(영문) → 한글 라벨. 우편 본문이 영어로 보이지 않게.
+  const REASON_KO: Record<string, string> = {
+    nsfw: '선정성',
+    violence: '폭력성',
+    hate: '혐오 표현',
+    quality: '형태·품질 오류',
+  };
+  const reasonsKr =
+    verdict.reasons.length > 0 ? verdict.reasons.map((r) => REASON_KO[r] ?? r).join(', ') : '미상';
   const notes = verdict.notes || '검토 기준에 부합하지 않습니다.';
   await db.transaction(async (tx) => {
     // 환불 — escrow가 차감된 서버(잡 행 기록)로 반환.
