@@ -24,9 +24,10 @@ export default async function LoginPage({
 }) {
   if (await getSessionUserId()) redirect('/'); // 로컬 JWT 검증 (CLAUDE §11.1)
   const { error, test } = await searchParams;
-  // 서버 선택(SERVER.md §3) — 2서버+에서만 셀렉터 노출. 변경은 로그아웃 후 여기서.
+  // 서버 선택(SERVER.md §3) — 접속 가능한 서버가 1개라도 있으면 셀렉터 노출(0개일 때만 숨김).
+  // 변경은 로그아웃 후 여기서.
   const servers = await listServersPublic().catch(() => [] as { id: number; name: string; status: string }[]);
-  const showServers = servers.length > 1;
+  const showServers = servers.length >= 1;
   const defaultSrv = showServers ? await defaultServerId(servers) : 1;
   const recommendedId = showServers ? await latestOpenServerId() : 1;
   // 테스트 로그인 — /login?test=true + env 스위치 둘 다 켜져야 노출(실운영 전환 시 env로 차단).
