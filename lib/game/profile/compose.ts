@@ -202,30 +202,41 @@ export async function composeEditDescription(
   ].join(', ');
 
   let outfitClause: string;
-  try {
-    const items = [wpn, arm, acc].map((it) => ({
-      slot: it.slot,
-      name: it.nameKo,
-      art: it.art,
-      imageB64: readSpriteB64(it.key),
-    }));
-    const clause = await generateOutfitClause({
-      gender: opts.gender,
-      raceMotif: RACE_MOTIF[opts.race],
-      hairLengthDesc: HAIR_LENGTH_DESC[opts.hairLength],
-      items,
-    });
-    outfitClause = `${OUTFIT_PREFIX}${clause}.`;
-    // 1000자 안전 가드 — 초과 시 절을 단어 경계로 추가 절삭(드문 경우).
-    const over = assemble(opts, outfitClause).length - 1000;
-    if (over > 0) {
-      let t = clause.slice(0, Math.max(0, clause.length - over - 1));
-      const sp = t.lastIndexOf(' ');
-      if (sp > 0) t = t.slice(0, sp);
-      outfitClause = `${OUTFIT_PREFIX}${t.trimEnd()}.`;
+  if (wpn.wornDesc && arm.wornDesc && acc.wornDesc) {
+    // Phase 2: 사전 큐레이션 wornDesc로 결정론적 조립 — 런타임 LLM 변동·스프라이트 오해석·길이초과 제거.
+    // 성별중립 묘사라 남/여 모두 body 골격(성별 강제)에 맞춰 자연 렌더.
+    const hair = `${HAIR_LENGTH_DESC[opts.hairLength]} hair, a fresh new style and color`;
+    outfitClause = `${OUTFIT_PREFIX}wielding ${wpn.wornDesc}, wearing ${arm.wornDesc}, and ${acc.wornDesc}; ${hair}. Make the whole ensemble lavish and cohesive.`;
+    // 안전 가드 — 혹시 1000자 초과면 머리절을 떼어 장비 묘사는 보존.
+    if (assemble(opts, outfitClause).length > 1000) {
+      outfitClause = `${OUTFIT_PREFIX}wielding ${wpn.wornDesc}, wearing ${arm.wornDesc}, and ${acc.wornDesc}.`;
     }
-  } catch {
-    outfitClause = staticOutfitClause(opts, motifsConcept);
+  } else {
+    // 폴백 — wornDesc 미보유 아이템: 기존 outfit-llm(이미지 기반) → 실패 시 정적 절.
+    try {
+      const items = [wpn, arm, acc].map((it) => ({
+        slot: it.slot,
+        name: it.nameKo,
+        art: it.art,
+        imageB64: readSpriteB64(it.key),
+      }));
+      const clause = await generateOutfitClause({
+        gender: opts.gender,
+        raceMotif: RACE_MOTIF[opts.race],
+        hairLengthDesc: HAIR_LENGTH_DESC[opts.hairLength],
+        items,
+      });
+      outfitClause = `${OUTFIT_PREFIX}${clause}.`;
+      const over = assemble(opts, outfitClause).length - 1000;
+      if (over > 0) {
+        let t = clause.slice(0, Math.max(0, clause.length - over - 1));
+        const sp = t.lastIndexOf(' ');
+        if (sp > 0) t = t.slice(0, sp);
+        outfitClause = `${OUTFIT_PREFIX}${t.trimEnd()}.`;
+      }
+    } catch {
+      outfitClause = staticOutfitClause(opts, motifsConcept);
+    }
   }
 
   return assemble(opts, outfitClause);

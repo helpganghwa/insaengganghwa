@@ -61,6 +61,8 @@ export interface CatalogItem {
   lore: string;
   /** Pixellab 64×64 생성 키워드 (영문, 글로우/등급 제외). */
   art: string;
+  /** 아바타 합성용 '착용/장착 외형' 사전 묘사(영문·간결·성별중립). compose가 결정론적 조립에 사용. */
+  wornDesc?: string;
 }
 
 // 2026-05-24: 기존 150종 폐기 + catalog-next.ts의 새 150종 적용.
