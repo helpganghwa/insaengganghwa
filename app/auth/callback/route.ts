@@ -38,6 +38,13 @@ export async function GET(request: NextRequest) {
   if (code) {
     const supabase = await createSupabaseServerClient();
     const { data, error } = await supabase.auth.exchangeCodeForSession(code);
+    if (error) {
+      console.error('[auth.callback] exchange failed', {
+        status: error.status,
+        code: (error as { code?: string }).code,
+        message: error.message,
+      });
+    }
     if (!error) {
       const res = NextResponse.redirect(`${origin}${next}`);
       const userId = data.session?.user.id;
@@ -111,6 +118,8 @@ export async function GET(request: NextRequest) {
       }
       return res;
     }
+  } else {
+    console.error('[auth.callback] no code param', { params: searchParams.toString() });
   }
   return NextResponse.redirect(`${origin}/login?error=oauth_failed`);
 }
