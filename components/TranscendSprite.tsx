@@ -3,6 +3,12 @@
 import { useEffect, useRef } from 'react';
 
 import {
+  animFrames as animFrameCount,
+  animStripUrl,
+  ANIM_CELL,
+  hasAnim,
+} from '@/lib/game/equipment/anim-atlas';
+import {
   atlasBgStyle,
   atlasCoord,
   ATLAS_CELL,
@@ -51,6 +57,26 @@ function loadFrame(): Promise<HTMLImageElement> {
 
 // (color, sub) 별 리컬러+코너처리된 프레임 캔버스 캐시.
 const frameCache = new Map<string, HTMLCanvasElement>();
+
+// 해방 애니 프레임 간격(ms) — 갤러리와 동일 체감.
+const ANIM_FRAME_MS = 120;
+// 코드별 애니 스트립 이미지 로드(모듈 전역 캐시).
+const stripCache = new Map<string, Promise<HTMLImageElement>>();
+function loadStrip(code: string): Promise<HTMLImageElement> {
+  let p = stripCache.get(code);
+  if (!p) {
+    p = new Promise((resolve, reject) => {
+      const url = animStripUrl(code);
+      if (!url) { reject(new Error('no strip')); return; }
+      const img = new Image();
+      img.onload = () => resolve(img);
+      img.onerror = reject;
+      img.src = url;
+    });
+    stripCache.set(code, p);
+  }
+  return p;
+}
 
 function recolorFrame(img: HTMLImageElement, color: RGB, sub: 0 | 1): HTMLCanvasElement {
   const key = `${color[0]},${color[1]},${color[2]}|${sub}`;
@@ -336,6 +362,9 @@ function TranscendCanvas({
     const showFrame = (champOverride ? true : st.hasFrame) && !frameless;
     const showRadiant = rankColor != null;
     const dynamic = animate && (showShine || showRadiant);
+    // 해방 아이템 + 애니 보유 → 본체를 애니 프레임으로 재생(후광/광택/프레임은 idle 기반 유지).
+    const useAnim = dynamic && rank != null && hasAnim(code);
+    const nFrames = useAnim ? animFrameCount(code) : 0;
 
     let frameCanvas: HTMLCanvasElement | null = null;
 
@@ -359,6 +388,11 @@ function TranscendCanvas({
 
     // 정적 레이어 1회 사전합성 (프레임마다 재계산 금지 → 끊김 제거).
     let spriteCv: HTMLCanvasElement | null = null; // 베이스 스프라이트(불변·픽셀)
+    // 해방 애니 — 스트립 이미지 + 프레임별 합성 스크래치.
+    let stripImg: HTMLImageElement | null = null;
+    let animSpriteCv: HTMLCanvasElement | null = null;
+    let animSpriteX: CanvasRenderingContext2D | null = null;
+    let curFrame = -1;
     let brightCv: HTMLCanvasElement | null = null; // glare용 밝아진 sprite(챔피언)
     let frontCv: HTMLCanvasElement | null = null; // 프레임 + 사방 별
     let radiantCv: HTMLCanvasElement | null = null; // 챔피언 발광(블러, 1회)
@@ -370,6 +404,7 @@ function TranscendCanvas({
       // atlas 부분 그리기 — coord.x,y에서 ATLAS_CELL×ATLAS_CELL 영역 → 캔버스 SP,SP에 SW×SW.
       sx.drawImage(atlasImg, coord.x, coord.y, ATLAS_CELL, ATLAS_CELL, SP, SP, SW, SW);
       spriteCv = sc;
+      if (useAnim) { [animSpriteCv, animSpriteX] = mkCanvas(); animSpriteX.imageSmoothingEnabled = false; }
 
       // Glare용 밝아진 sprite 사전합성 — sprite 자체의 밝아진 버전이 띠 영역에만
       // 잠깐 보이는 방식. Canvas 2D `filter` 속성은 iOS Safari 17+ 한정 지원이라
@@ -432,6 +467,7 @@ function TranscendCanvas({
       }
     };
 
+    let drawTs = 0;
     const draw = (ph: number) => {
       o.clearRect(0, 0, FS, FS);
       o.globalCompositeOperation = 'source-over';
@@ -463,8 +499,18 @@ function TranscendCanvas({
         o.globalAlpha = 1;
       }
 
-      // 베이스 스프라이트 (불변).
-      if (spriteCv) o.drawImage(spriteCv, 0, 0);
+      // 베이스 스프라이트 — 해방+애니 보유면 현재 프레임으로 재생, 아니면 idle 고정.
+      let baseSprite = spriteCv;
+      if (useAnim && stripImg && animSpriteCv && animSpriteX && nFrames > 0) {
+        const fi = Math.floor(drawTs / ANIM_FRAME_MS) % nFrames;
+        if (fi !== curFrame) {
+          curFrame = fi;
+          animSpriteX.clearRect(0, 0, FS, FS);
+          animSpriteX.drawImage(stripImg, fi * ANIM_CELL, 0, ANIM_CELL, ANIM_CELL, SP, SP, SW, SW);
+        }
+        baseSprite = animSpriteCv;
+      }
+      if (baseSprite) o.drawImage(baseSprite, 0, 0);
 
       // Glare — 챔피언 표식.
       //   띠 영역의 brightCv(밝아진 sprite)만 sprite 위에 source-over로 덮음.
@@ -523,6 +569,7 @@ function TranscendCanvas({
       if (stopped || !visible) return;
       if (ts - lastDraw >= TRANSCEND_TUNING.fpsIntervalMs) {
         lastDraw = ts;
+        drawTs = ts;
         draw((ts / TRANSCEND_TUNING.animPeriodMs) % 1);
       }
       raf = requestAnimationFrame(loop);
@@ -551,6 +598,9 @@ function TranscendCanvas({
       { rootMargin: '150px' },
     );
     io.observe(canvas);
+
+    // 해방 애니 스트립 병렬 로드(있으면).
+    if (useAnim) loadStrip(code).then((img) => { if (!stopped) stripImg = img; }).catch(() => {});
 
     // atlas 1장(모듈 전역 캐시) + frame 1장 병렬 로드.
     loadAtlasImage()
