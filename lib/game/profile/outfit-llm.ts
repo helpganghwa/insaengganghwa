@@ -9,7 +9,7 @@ import 'server-only';
 import Anthropic from '@anthropic-ai/sdk';
 
 const MODEL_ID = 'claude-haiku-4-5-20251001';
-const MAX_CLAUSE_CHARS = 420; // 장비 3종 묘사라 기존(340)보다 여유. 골격(~560)과 1000 내 공존.
+const MAX_CLAUSE_CHARS = 360; // 골격(~562)+prefix(57)+절(360)=~979 < 1000. 의상절이 가드에 잘려 장비 컨셉이 누락되던 문제 해결.
 
 const SYSTEM_PROMPT = `You are a character designer for "insaengganghwa", an anime/JRPG pixel-art idle RPG. You are shown a character's THREE equipped items as images — a WEAPON, an ARMOR, and an ACCESSORY — each with its name and an art-keyword note. Write ONE English clause describing the character ACTUALLY EQUIPPED with these exact items, for a pixel-art generation prompt.
 
