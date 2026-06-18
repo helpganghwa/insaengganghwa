@@ -1,0 +1,161 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>길드 문양 키워드 고르기</title>
+<style>
+  :root { color-scheme: dark; }
+  * { box-sizing: border-box; }
+  body {
+    margin: 0; padding: 16px 14px 120px;
+    font-family: -apple-system, BlinkMacSystemFont, "Apple SD Gothic Neo", "Malgun Gothic", sans-serif;
+    background: #0c0d12; color: #e7e7ea;
+    max-width: 760px; margin-inline: auto;
+  }
+  h1 { font-size: 19px; margin: 0 0 4px; }
+  .sub { font-size: 13px; color: #9a9aa6; margin: 0 0 18px; line-height: 1.5; }
+  h2 { font-size: 14px; color: #c9a24a; margin: 22px 0 10px; border-bottom: 1px solid #23242c; padding-bottom: 6px; }
+  .grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); gap: 8px; }
+  .card {
+    position: relative; cursor: pointer; user-select: none;
+    border: 1.5px solid #2a2b34; border-radius: 12px; background: #14151c;
+    padding: 10px 10px 9px; transition: transform .06s, border-color .12s, background .12s;
+  }
+  .card:active { transform: scale(.97); }
+  .card.sel { border-color: #d4a017; background: #2a230f; }
+  .card .num { font-size: 11px; color: #6c6d78; font-variant-numeric: tabular-nums; }
+  .card.sel .num { color: #e0b94a; }
+  .card .ko { font-size: 15px; font-weight: 700; margin-top: 2px; }
+  .card .en { font-size: 11px; color: #8a8b97; margin-top: 1px; }
+  .card .have { position: absolute; top: 8px; right: 8px; font-size: 9px; color: #5b8f5b; border: 1px solid #2f4d2f; border-radius: 999px; padding: 1px 5px; }
+  .card.sel .check { position: absolute; top: 7px; right: 7px; width: 18px; height: 18px; border-radius: 50%; background: #d4a017; color: #1a1300; font-size: 12px; font-weight: 900; display: flex; align-items: center; justify-content: center; }
+  .card:not(.sel) .check { display: none; }
+  .card.sel .have { display: none; }
+  .bar {
+    position: fixed; left: 0; right: 0; bottom: 0; z-index: 10;
+    background: rgba(12,13,18,.96); backdrop-filter: blur(8px); border-top: 1px solid #23242c;
+    padding: 10px 14px calc(10px + env(safe-area-inset-bottom));
+    max-width: 760px; margin-inline: auto;
+  }
+  .count { font-size: 14px; font-weight: 700; }
+  .count b { color: #e0b94a; font-size: 17px; }
+  .count.ok b { color: #5fcf7d; }
+  .row { display: flex; align-items: center; gap: 8px; margin-top: 8px; }
+  .out { flex: 1; min-width: 0; font-size: 13px; font-family: ui-monospace, monospace; background: #14151c; border: 1px solid #2a2b34; border-radius: 8px; padding: 8px 10px; color: #d7d7dd; white-space: nowrap; overflow-x: auto; }
+  button { font: inherit; font-size: 13px; font-weight: 700; border: none; border-radius: 8px; padding: 9px 12px; cursor: pointer; white-space: nowrap; }
+  .copy { background: #d4a017; color: #1a1300; }
+  .copy.done { background: #5fcf7d; }
+  .clear { background: #23242c; color: #b6b7c2; }
+  .hint { font-size: 11px; color: #7a7b86; margin-top: 6px; }
+</style>
+</head>
+<body>
+  <h1>길드 문양 키워드 고르기</h1>
+  <p class="sub">
+    아이콘을 눌러 <b>20~30개</b> 고르세요. ✓ = 현재 게임에 이미 있는 것.<br />
+    다 고르면 아래 <b>복사</b>를 눌러 채팅에 붙여넣어 주세요.
+  </p>
+
+  <div id="app"></div>
+
+  <div class="bar">
+    <div class="count" id="count">선택 <b>0</b>개 <span style="color:#7a7b86;font-size:12px;font-weight:400;">(목표 20~30)</span></div>
+    <div class="row">
+      <div class="out" id="out">아직 선택 안 함</div>
+      <button class="copy" id="copy">복사</button>
+      <button class="clear" id="clear">초기화</button>
+    </div>
+    <div class="hint">선택한 번호가 위 칸에 자동으로 모입니다. (예: 1,2,3,9,17 ...)</div>
+  </div>
+
+<script>
+const DATA = [
+  { cat: 'A. 생물·짐승', items: [
+    [1,'용','dragon',1],[2,'늑대','wolf',1],[3,'사자','lion',1],[4,'독수리','eagle',1],
+    [5,'뱀','serpent',1],[6,'불사조','phoenix',1],[7,'곰','bear',0],[8,'호랑이','tiger',0],
+    [9,'그리핀','griffin',0],[10,'까마귀','raven',0],[11,'멧돼지','boar',0],[12,'황소','bull',0],
+    [13,'전갈','scorpion',0],[14,'부엉이','owl',0],[15,'히드라','hydra',0],[16,'크라켄','kraken',0],
+  ]},
+  { cat: 'B. 무기·장비', items: [
+    [17,'교차검','crossed swords',1],[18,'도끼','battle axe',1],[19,'창','spear',1],[20,'투구','knight helmet',1],
+    [21,'활','bow',0],[22,'단검','dagger',0],[23,'전쟁망치','war hammer',0],[24,'삼지창','trident',0],
+    [25,'닻','anchor',0],[26,'교차 열쇠','crossed keys',0],[27,'건틀릿','gauntlet',0],[28,'사슬','chain',0],
+  ]},
+  { cat: 'C. 상징·문장', items: [
+    [29,'왕관','crown',1],[30,'해골','skull',1],[31,'전시안(눈)','all-seeing eye',1],[32,'별','star',1],
+    [33,'날개','wings',1],[34,'월계수','laurel wreath',1],[35,'불꽃','flame',1],[36,'보석','crystal',1],
+    [37,'번개','lightning bolt',0],[38,'초승달','crescent moon',0],[39,'태양','sun',0],[40,'심장','heart',0],
+    [41,'모래시계','hourglass',0],[42,'횃불','torch',0],
+  ]},
+  { cat: 'D. 자연', items: [
+    [43,'세계수(나무)','great tree',0],[44,'산봉우리','mountain peak',0],[45,'떡갈잎','oak leaf',0],
+    [46,'장미','rose',0],[47,'가시덩굴','thorns',0],[48,'깃털','feather',0],[49,'눈송이','snowflake',0],[50,'혜성','comet',0],
+  ]},
+];
+
+const sel = new Set();
+const app = document.getElementById('app');
+
+for (const group of DATA) {
+  const h = document.createElement('h2');
+  h.textContent = group.cat;
+  app.appendChild(h);
+  const grid = document.createElement('div');
+  grid.className = 'grid';
+  for (const [n, ko, en, have] of group.items) {
+    const c = document.createElement('div');
+    c.className = 'card';
+    c.dataset.n = n;
+    c.innerHTML =
+      '<div class="num">#' + n + '</div>' +
+      '<div class="ko">' + ko + '</div>' +
+      '<div class="en">' + en + '</div>' +
+      (have ? '<span class="have">보유</span>' : '') +
+      '<span class="check">✓</span>';
+    c.addEventListener('click', () => {
+      if (sel.has(n)) sel.delete(n); else sel.add(n);
+      c.classList.toggle('sel', sel.has(n));
+      render();
+    });
+    grid.appendChild(c);
+  }
+  app.appendChild(grid);
+}
+
+const countEl = document.getElementById('count');
+const outEl = document.getElementById('out');
+const copyBtn = document.getElementById('copy');
+
+function render() {
+  const arr = [...sel].sort((a, b) => a - b);
+  const ok = arr.length >= 20 && arr.length <= 30;
+  countEl.className = 'count' + (ok ? ' ok' : '');
+  countEl.innerHTML = '선택 <b>' + arr.length + '</b>개 <span style="color:#7a7b86;font-size:12px;font-weight:400;">(목표 20~30)</span>';
+  outEl.textContent = arr.length ? arr.join(',') : '아직 선택 안 함';
+  copyBtn.textContent = '복사';
+  copyBtn.classList.remove('done');
+}
+
+copyBtn.addEventListener('click', async () => {
+  const arr = [...sel].sort((a, b) => a - b);
+  if (!arr.length) return;
+  const text = arr.join(',');
+  try { await navigator.clipboard.writeText(text); } catch (e) {
+    const t = document.createElement('textarea'); t.value = text; document.body.appendChild(t); t.select();
+    document.execCommand('copy'); t.remove();
+  }
+  copyBtn.textContent = '복사됨!';
+  copyBtn.classList.add('done');
+});
+
+document.getElementById('clear').addEventListener('click', () => {
+  sel.clear();
+  document.querySelectorAll('.card.sel').forEach((c) => c.classList.remove('sel'));
+  render();
+});
+
+render();
+</script>
+</body>
+</html>
