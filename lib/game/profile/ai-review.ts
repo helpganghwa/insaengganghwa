@@ -12,7 +12,8 @@ import Anthropic from '@anthropic-ai/sdk';
 import sharp from 'sharp';
 import { z } from 'zod';
 
-const MODEL_ID = 'claude-haiku-4-5-20251001';
+// 검수 모델 — 4.5 Haiku는 미세 결함(끊긴 무기 등) 검출률이 낮아 Sonnet 4.6으로 상향(정확도 1/5→3/5 실측).
+const MODEL_ID = 'claude-sonnet-4-6';
 
 const REVIEW_REASONS = ['nsfw', 'violence', 'hate', 'quality'] as const;
 export type ReviewReason = (typeof REVIEW_REASONS)[number];
@@ -46,7 +47,8 @@ FAIL if any of these is clearly true in ANY view:
   · 3+ eyes, 2+ noses, 2+ mouths, 3+ ears
   · duplicated limbs on the same side, limbs growing from face/torso/wrong places, floating detached limbs
   · grossly extra/fused fingers well beyond five per hand
-  · a held weapon/tool BROKEN INTO 2+ disconnected pieces — e.g. a single polearm/spear/staff whose shaft is split by a gap so it appears as two separate poles, or one intended weapon drawn as multiple separate copies. Cross-check the description's intended weapon count: 1 intended weapon shown as 2+ fragments/copies in any view = FAIL (reason "quality").
+  · a held weapon that is FRAGMENTED — its parts do not connect into one continuous object. HOW TO CHECK (do this for the weapon in the 2-3 clearest views): start at the hand, follow the handle/shaft, and confirm it connects continuously to the weapon's head (axe-head, blade, spearhead, mace-head, skull, etc.). FAIL (reason "quality") if: (a) a weapon-head/blade floats SEPARATED from its handle with empty background visible in the gap between them; or (b) a straight shaft is split into two segments with empty space between them; or (c) one intended weapon appears as two disconnected pieces drifting apart. The tell-tale sign is empty background showing THROUGH the gap between the pieces. Examples that MUST fail: an axe-head detached from its pole; a skull/mace-head separated from its staff with a gap.
+    EXCEPTIONS (NOT broken — do not fail): a BOW (its two curved limbs joined by a string are ONE weapon; the open space inside the bow's curve is normal); and a weapon merely crossed by, overlapped by, or partly hidden BEHIND the body, cape, hair, or arm — if a part disappears behind the character rather than floating in empty background, lean PASS.
 
 NOT a defect (PASS) — do NOT fail for these:
 - A body part hidden by the viewing angle (back view shows no face/eyes; a turned pose hides one arm or one eye). Fewer-than-normal parts due to perspective is NORMAL.
