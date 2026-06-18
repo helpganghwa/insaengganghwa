@@ -16,6 +16,21 @@ for (const s of ALL) for (const it of s.items) {
   const rec = { name: it.name, lore: it.lore || '', dir: it.objAnim ? it.objAnim.dir : null, n: it.objAnim ? it.objAnim.n : 15, st: it.staticSrc, slot: it.slot };
   map[`${s.region}|${it.name}`] = rec; mapName[it.name] = rec;
 }
+// 변경 검토(before/after) 데이터
+const keyMap: Record<string, any> = {};
+for (const s of ALL) for (const it of s.items) keyMap[it.key] = { name: it.name, lore: it.lore || '', dir: it.objAnim ? it.objAnim.dir : null, n: it.objAnim ? it.objAnim.n : 15 };
+let CH: any[] = [];
+try {
+  const raw = JSON.parse(readFileSync('scripts/_changes.json', 'utf8'));
+  CH = raw.map((c: any) => {
+    const km = keyMap[c.key] || {};
+    const r: any = { region: c.region, set: c.set, name: km.name || c.key, field: c.field, before: c.before };
+    if (c.field === '애니') { r.beforeDir = (km.dir || '').replace('anim-obj', 'anim-before'); r.afterDir = km.dir; r.n = km.n; }
+    else if (c.field === '이름') { r.after = km.name; }
+    else { r.after = km.lore; }
+    return r;
+  });
+} catch (e) { console.log('no _changes.json'); }
 const FINAL: [string, string[][]][] = [
   ['왕국', [
     ['무도회의 한 수', '이름 없는 드레스', '이름을 가린 가면'],
@@ -23,7 +38,7 @@ const FINAL: [string, string[][]][] = [
     ['왕을 짊어진 대검', '맹세를 쥔 손', '사자의 증표'],
     ['풀리지 않는 질문', '별을 읽는 외투', '대답하지 않는 나침반'],
     ['동트는 맹세', '여명의 벽', '새벽지기의 표식'],
-    ['매발톱 장갑', '매를 받는 토시', '눈 가린 매 두건'],
+    ['매발톱 장갑', '매를 받는 토시', '방울 달린 매 두건'],
   ]],
   ['늪지대', [
     ['이슬로 벼린 검', '수련이 피는 드레스', '진주를 엮은 화관'],
@@ -31,7 +46,7 @@ const FINAL: [string, string[][]][] = [
     ['퉤! 하는 대롱', '개구리 탈 망토', '반딧불 충전기'],
     ['늪이 건넨 삼지창', '늪빛 흉갑', '부르면 모이는 뿔피리'],
     ['한 방 작살', '도롱이', '반딧불 통발'],
-    ['길잡이 낫', '안갯속 길손의 외투', '고인 물의 증표'],
+    ['길잡이 낫', '안갯속 길손의 외투', '안내인의 증표'],
   ]],
   ['화산', [
     ['춤추는 쌍불꽃', '불길 케이프', '불꽃 부채'],
@@ -112,17 +127,55 @@ const page = `<!DOCTYPE html>
   .rej .ttl{display:flex;gap:4px;align-items:center}
   .rej .ttl .tag{font-size:8px;font-weight:800;border-radius:4px;padding:1px 4px}
   .tag.nm{background:#23303f;color:#8ab6e0}.tag.st{background:#2a2030;color:#c89ae0}.tag.an{background:#16361f;color:#7ee0a0}
+  #cmp{margin-bottom:20px}
+  .cmpc{border:1px solid #2a2b34;border-radius:10px;background:#0f1017;padding:8px;margin-bottom:8px}
+  .cmpc.roll{border-color:#8a8b97;box-shadow:0 0 0 1px #8a8b97}.cmpc.acc{border-color:#2a6b3a;box-shadow:0 0 0 1px #2a6b3a}.cmpc.rj{border-color:#a83a48;box-shadow:0 0 0 1px #a83a48}
+  .cmpc .ch{font-size:12px;color:#c9cad3;margin-bottom:6px}.cmpc .ch .fld{font-size:9px;font-weight:800;background:#23303f;color:#8ab6e0;border-radius:4px;padding:1px 5px;margin-left:4px}
+  .ba{display:grid;grid-template-columns:1fr 1fr;gap:8px}
+  .ba .col{border:1px solid #1c1d24;border-radius:8px;padding:6px;background:#0c0d12;display:flex;flex-direction:column;align-items:center}
+  .ba .lbl{font-size:9px;font-weight:800;color:#e08a8a;margin-bottom:4px;align-self:flex-start}.ba .lbl.aftl{color:#7ee0a0}
+  .ba .txt{font-size:11px;line-height:1.55;color:#b9bac4;white-space:pre-line}.ba .txt.aft{color:#e2eae2}
+  .ba img.shot{width:104px;height:104px;image-rendering:pixelated;object-fit:contain;background-image:linear-gradient(45deg,#23242c 25%,transparent 25%),linear-gradient(-45deg,#23242c 25%,transparent 25%);background-size:12px 12px}
+  .dec{display:flex;gap:6px;margin-top:7px}
+  .dec button{flex:1;font:inherit;font-size:11px;font-weight:700;border:1px solid #2a2b34;border-radius:6px;padding:6px 0;background:#14151c;color:#c9cad3;cursor:pointer}
+  .dec button.on{background:#d4a017;color:#1a1300;border-color:#d4a017}
+  .cmpc .rr{width:100%;box-sizing:border-box;margin-top:0;height:0;opacity:0;overflow:hidden;font:inherit;font-size:10px;border:0;border-radius:5px;background:#0c0d12;color:#f0c8c8;padding:0;resize:vertical}
+  .cmpc.rj .rr{height:auto;min-height:36px;opacity:1;margin-top:6px;padding:4px;border:1px solid #a83a48}
 </style></head><body>
 <h1>최종 108종 검수 폼</h1>
 <p class="sub">지역 × 세트별 정렬 · 각 아이템마다 이름/스토리/애니 리젝사유를 적고 [제출용 복사]로 내보내세요. 입력은 자동 저장됩니다.</p>
-<div class="tool"><span class="ct" id="ct"></span><button id="copy">📋 제출용 복사</button><button id="clr">전체 초기화</button></div>
+<div class="tool"><span class="ct" id="ct"></span><button id="cdcopy">🔧 변경 결정 복사</button><button id="copy">📋 신규 리젝 복사</button><button id="clr">전체 초기화</button></div>
 <textarea id="out" readonly></textarea>
+<h2 id="cmph" style="display:none">🔧 변경 검토 (왕국·늪지대) — 전/후 비교 후 롤백·채택·추가리젝 선택</h2>
+<div id="cmp"></div>
 <div id="app"></div>
 <script>
 const DATA = ${JSON.stringify(DATA)};
+const CHANGES = ${JSON.stringify(CH)};
 const SLOT_KO = {weapon:'무기',armor:'방어구',accessory:'장신구'};
 const LS='finalqa-v1'; const RV=JSON.parse(localStorage.getItem(LS)||'{}'); const save=()=>localStorage.setItem(LS,JSON.stringify(RV));
 const app=document.getElementById('app'); const anims=[];
+// 변경 검토 섹션
+const CD_LS='finalqa-decide-v1'; const CD=JSON.parse(localStorage.getItem(CD_LS)||'{}'); const cds=()=>localStorage.setItem(CD_LS,JSON.stringify(CD));
+if(CHANGES.length){document.getElementById('cmph').style.display='';}
+const cmp=document.getElementById('cmp');
+CHANGES.forEach((c,i)=>{
+  const cid='c'+i; const d=CD[cid]||(CD[cid]={pick:'',rej:''});
+  let bH,aH;
+  if(c.field==='애니'){bH='<img class="shot" src="'+c.beforeDir+'/0.png" data-dir="'+c.beforeDir+'" data-n="'+c.n+'">';aH='<img class="shot" src="'+c.afterDir+'/0.png" data-dir="'+c.afterDir+'" data-n="'+c.n+'">';}
+  else{bH='<div class="txt">'+c.before+'</div>';aH='<div class="txt aft">'+c.after+'</div>';}
+  const card=document.createElement('div'); card.className='cmpc';
+  card.innerHTML='<div class="ch">'+c.region+' · 세트'+c.set+' · <b>'+c.name+'</b><span class="fld">'+c.field+'</span></div>'+
+    '<div class="ba"><div class="col"><div class="lbl">변경 전</div>'+bH+'</div><div class="col"><div class="lbl aftl">변경 후</div>'+aH+'</div></div>'+
+    '<div class="dec"><button data-p="rollback">↩ 롤백</button><button data-p="accept">✓ 채택</button><button data-p="rereject">✗ 추가리젝</button></div>'+
+    '<textarea class="rr" placeholder="추가 리젝 사유를 적어 주세요">'+(d.rej||'')+'</textarea>';
+  cmp.appendChild(card);
+  const refl=()=>{card.querySelectorAll('.dec button').forEach(b=>b.classList.toggle('on',b.dataset.p===d.pick));card.classList.toggle('roll',d.pick==='rollback');card.classList.toggle('acc',d.pick==='accept');card.classList.toggle('rj',d.pick==='rereject');};
+  card.querySelectorAll('.dec button').forEach(b=>b.onclick=()=>{d.pick=b.dataset.p;cds();refl();});
+  const rr=card.querySelector('.rr'); rr.addEventListener('input',()=>{d.rej=rr.value;cds();});
+  refl();
+  if(c.field==='애니')[...card.querySelectorAll('img.shot[data-dir]')].forEach(img=>{img._anim=true;anims.push({img,dir:img.dataset.dir,n:+img.dataset.n,i:0});});
+});
 DATA.forEach((reg,ri)=>{
   const h=document.createElement('h2'); h.textContent=reg.region; app.appendChild(h);
   reg.sets.forEach((items,si)=>{
@@ -173,7 +226,13 @@ document.getElementById('copy').onclick=()=>{
   const o=document.getElementById('out');o.classList.add('show');o.value=txt;o.select();
   if(navigator.clipboard)navigator.clipboard.writeText(txt);
 };
-document.getElementById('clr').onclick=()=>{if(confirm('입력을 모두 지울까요?')){localStorage.removeItem(LS);location.reload();}};
+document.getElementById('cdcopy').onclick=()=>{
+  const L=['[변경 결정 — 왕국·늪지대]'];
+  CHANGES.forEach((c,i)=>{const d=CD['c'+i]||{};const p=d.pick==='rollback'?'↩ 롤백':d.pick==='accept'?'✓ 채택':d.pick==='rereject'?'✗ 추가리젝':'(미정)';
+    L.push('· '+c.region+' 세트'+c.set+' '+c.name+' ['+c.field+']: '+p+(d.pick==='rereject'&&d.rej?(' — '+d.rej):''));});
+  const t=L.join('\\n');const o=document.getElementById('out');o.classList.add('show');o.value=t;o.select();if(navigator.clipboard)navigator.clipboard.writeText(t);
+};
+document.getElementById('clr').onclick=()=>{if(confirm('입력을 모두 지울까요?')){localStorage.removeItem(LS);localStorage.removeItem('finalqa-decide-v1');location.reload();}};
 </script></body></html>`;
 writeFileSync('sprites-test-finalqa.html', page);
 console.log('built sprites-test-finalqa.html · items=' + DATA.reduce((t, r) => t + r.sets.flat().length, 0) + (missing.length ? ' · MISSING ' + missing.length : ' · all matched'));
