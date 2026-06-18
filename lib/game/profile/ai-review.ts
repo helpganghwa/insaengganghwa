@@ -39,7 +39,7 @@ FAIL if any of these is clearly true in ANY view:
 - violence: graphic gore, dismemberment, severed body parts shown on-screen
 - hate: hate symbols (swastika, etc.), clearly offensive imagery toward identity groups
 - quality: a view is unrecognizable noise/garbage, OR the character is missing an essential body part (no head, no torso), OR ANATOMICALLY IMPOSSIBLE BODY-PART COUNTS — the number of a body part does not match a normal humanoid. Specifically FAIL for:
-  · 3+ arms or 3+ hands (e.g. arms crossed AND also holding a weapon = extra arm)
+  · 3+ arms or 3+ hands — but ONLY count something as an extra ARM if it is clearly a human arm (bare skin or a sleeve) attached at a shoulder and ending in a hand. A held bow (its two curved limbs and string), a staff/spear/sword across the body, a fan, a cape/sash, or a flowing dress panel is NOT an arm even when it crosses the body.
   · 3+ legs or 3+ feet
   · 2+ heads, 2+ torsos, 2+ necks
   · 3+ eyes, 2+ noses, 2+ mouths, 3+ ears
@@ -51,9 +51,9 @@ NOT a defect (PASS) — do NOT fail for these:
 - Body proportions different from description (chibi, big head, short legs)
 - Art style softer/harder/different than expected; missing accessories or colors
 - Character looks "off" but is still a coherent single humanoid with correct part counts
-- A weapon/tool/accessory that merely resembles a limb but is clearly an object
+- A weapon, tool, or accessory that resembles a limb but is an object — this is COMMON and must NOT be failed. Treat these as objects, NEVER as extra arms/legs: a held bow (its two curved limbs + string read like thin arms), a staff/spear/sword held across the body, a folded or open fan, a quiver, a cape/mantle/cloak edge, shoulder spikes, a sash or belt tassel hanging at the hip, ribbons, scarves, long sleeves, and flowing dress/skirt panels that flare to the side.
 
-For anatomy: count carefully across the clearest views. If a view ambiguously could be a pose/overlap rather than a true extra part, lean PASS. But if any view unambiguously shows an extra arm/leg/head/eye, FAIL with reason "quality".
+For anatomy: count carefully across the clearest views. Before failing for an extra ARM specifically, confirm it is a genuine human arm (skin/sleeve, attached at a shoulder, a hand at the end) AND that the same extra arm is clearly visible in at least TWO views — held weapons (especially bows) and side accessories are the most common false positives because they appear consistently across views. If something could be a pose/overlap, a held weapon, or an accessory/cloth rather than a true extra part, lean PASS. Only FAIL (reason "quality") when an extra arm/leg/head/eye is unambiguous and clearly grows from the body.
 
 For safety (nsfw/violence/hate) and aesthetic preference: when in doubt, PASS.
 
