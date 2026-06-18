@@ -7,8 +7,15 @@ const km: Record<string, any> = {};
 for (const s of ALL) for (const it of s.items) km[it.key] = { name: it.name, slot: it.slot, region: s.region, dir: it.objAnim ? it.objAnim.dir : null, n: it.objAnim ? it.objAnim.n : 15, st: it.staticSrc };
 const OLD = JSON.parse(readFileSync('scripts/_story-old.json', 'utf8'));
 const NEW = JSON.parse(readFileSync('scripts/_story-new.json', 'utf8'));
+// 현재 HTML에 실제 반영된 최종 lore 추출
+const CUR: Record<string, string> = {};
+{ const re = /key: '([a-z_]+)'[\s\S]*?lore: '((?:[^'\\]|\\.)*)'/g; let m: RegExpExecArray | null; while ((m = re.exec(html))) { CUR[m[1]] = m[2].replace(/\\'/g, "'"); } }
 const SLOT = { weapon: '무기', armor: '방어구', accessory: '장신구' };
-const items = Object.keys(NEW).map((key) => ({ key, ...km[key], mode: NEW[key].mode, old: OLD[key] || '(이전 없음)', neo: NEW[key].new }));
+const items = Object.keys(NEW).map((key) => {
+  const fin = CUR[key] || NEW[key].new;
+  const st = fin === (OLD[key] || '') ? '유지' : (fin === NEW[key].new ? '채택' : '개선');
+  return { key, ...km[key], mode: NEW[key].mode, old: OLD[key] || '(이전 없음)', neo: NEW[key].new, fin, st };
+});
 const DATA = JSON.stringify(items);
 const page = `<!DOCTYPE html><html lang="ko"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">
 <title>스토리 개선 비교·리뷰</title><style>
@@ -30,6 +37,8 @@ h2{font-size:16px;color:#c9a24a;font-weight:800;margin:22px 0 8px;border-bottom:
 .box .lb{font-size:9px;font-weight:800;border-radius:4px;padding:1px 5px;margin-right:5px}
 .box.old{color:#bcbdc7}.box.old .lb{background:#3a2a12;color:#e8c878}
 .box.neo{color:#dfe7df}.box.neo .lb{background:#16361f;color:#7ee0a0}
+.box.fin{color:#fff;border-color:#3a4d2a;background:#101a0e}.box.fin .lb{background:#2a4d16;color:#bfe87e}
+.stb{font-size:9px;font-weight:800;border-radius:5px;padding:1px 6px;margin-left:6px}
 .ch{display:grid;grid-template-columns:1fr 1fr;gap:5px;margin-top:7px}
 .ch label{font-size:11px;font-weight:700;border:1px solid #2a2b34;border-radius:6px;padding:6px 8px;cursor:pointer;color:#c9cad3;display:flex;gap:5px;align-items:center}
 .ch label.on{background:#d4a017;color:#1a1300;border-color:#d4a017}
@@ -39,7 +48,7 @@ h2{font-size:16px;color:#c9a24a;font-weight:800;margin:22px 0 8px;border-bottom:
 </style></head><body>
 <h1>스토리 개선 비교·리뷰 (108종)</h1>
 <p class="sub">세트마다 서술 방식을 다르게 다시 썼습니다. 이전↔개선을 비교하고 4가지 중 하나를 고르세요. (개선 선택 시 사유 입력칸이 열립니다)</p>
-<div class="tool"><span class="ct" id="ct"></span><button id="copy">📋 결정 복사</button><button id="clr">초기화</button></div>
+<div class="tool"><span class="ct" id="ct"></span><button id="fonly">개선만 보기</button><button id="copy">📋 결정 복사</button><button id="clr">초기화</button></div>
 <textarea id="out" readonly></textarea><div id="app"></div>
 <script>
 const DATA=${DATA};const SLOT=${JSON.stringify(SLOT)};
@@ -50,11 +59,13 @@ DATA.forEach((it,i)=>{
  if(it.region!==cur){cur=it.region;const h=document.createElement('h2');h.textContent=it.region;app.appendChild(h);}
  const d=RV[it.key]||(RV[it.key]={pick:'',note:''});
  const hasAnim=!!it.dir;const src=hasAnim?it.dir+'/0.png':it.st;
- const c=document.createElement('div');c.className='card';
+ const c=document.createElement('div');c.className='card';c.dataset.st=it.st;
  c.innerHTML='<div><img class="shot" src="'+src+'" '+(hasAnim?'data-dir="'+it.dir+'" data-n="'+it.n+'"':'')+'></div>'+
-   '<div><div class="nm">'+it.name+'<span class="sl">'+(SLOT[it.slot]||'')+'</span><span class="mode">'+it.mode+'</span></div>'+
+   '<div><div class="nm">'+it.name+'<span class="sl">'+(SLOT[it.slot]||'')+'</span><span class="mode">'+it.mode+'</span>'+
+   '<span class="stb" style="background:'+(it.st==='개선'?'#3a2a12':it.st==='채택'?'#16361f':'#1c2733')+';color:'+(it.st==='개선'?'#f0c060':it.st==='채택'?'#7ee0a0':'#9fb4d0')+'">'+it.st+'</span></div>'+
    '<div class="box old"><span class="lb">이전</span>'+it.old+'</div>'+
-   '<div class="box neo"><span class="lb">개선</span>'+it.neo+'</div>'+
+   '<div class="box neo"><span class="lb">개선안</span>'+it.neo+'</div>'+
+   '<div class="box fin"><span class="lb">최종</span>'+it.fin+'</div>'+
    '<div class="ch">'+CH.map(([v,t])=>'<label data-v="'+v+'"><input type="radio" name="r'+i+'">'+t+'</label>').join('')+'</div>'+
    '<textarea class="note" placeholder="개선 사유 / 추가 요청을 적어 주세요">'+(d.note||'')+'</textarea></div>';
  app.appendChild(c);
@@ -73,6 +84,9 @@ document.getElementById('copy').onclick=()=>{const L=['[스토리 결정 — 108
  DATA.forEach(it=>{const d=RV[it.key]||{};if(!d.pick)return;if(it.region!==r){r=it.region;L.push('');L.push('== '+it.region+' ==');}
   L.push('· '+it.name+': '+(LBL[d.pick]||d.pick)+((d.pick==='impold'||d.pick==='impnew')&&d.note?(' — '+d.note):''));});
  const t=L.length>1?L.join('\\n'):'(선택 없음)';const o=document.getElementById('out');o.classList.add('show');o.value=t;o.select();if(navigator.clipboard)navigator.clipboard.writeText(t);};
+let fo=false;document.getElementById('fonly').onclick=(e)=>{fo=!fo;e.target.style.background=fo?'#d4a017':'';e.target.style.color=fo?'#1a1300':'';
+ document.querySelectorAll('.card').forEach(c=>{c.style.display=(!fo||c.dataset.st==='개선')?'':'none';});
+ document.querySelectorAll('h2').forEach(h=>{let n=h.nextElementSibling,vis=false;while(n&&n.tagName!=='H2'){if(n.classList.contains('card')&&n.style.display!=='none')vis=true;n=n.nextElementSibling;}h.style.display=vis?'':'none';});};
 document.getElementById('clr').onclick=()=>{if(confirm('선택을 모두 지울까요?')){localStorage.removeItem(LS);location.reload();}};
 </script></body></html>`;
 writeFileSync('sprites-test-storyqa.html', page);

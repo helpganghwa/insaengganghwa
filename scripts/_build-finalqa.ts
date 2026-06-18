@@ -126,7 +126,7 @@ const page = `<!DOCTYPE html>
   .rej textarea:focus{border-color:#a83a48;outline:none}
   .rej .ttl{display:flex;gap:4px;align-items:center}
   .rej .ttl .tag{font-size:8px;font-weight:800;border-radius:4px;padding:1px 4px}
-  .tag.nm{background:#23303f;color:#8ab6e0}.tag.st{background:#2a2030;color:#c89ae0}.tag.an{background:#16361f;color:#7ee0a0}
+  .tag.im{background:#23303f;color:#8ab6e0}.tag.an{background:#16361f;color:#7ee0a0}
   #cmp{margin-bottom:20px}
   .cmpc{border:1px solid #2a2b34;border-radius:10px;background:#0f1017;padding:8px;margin-bottom:8px}
   .cmpc.roll{border-color:#8a8b97;box-shadow:0 0 0 1px #8a8b97}.cmpc.acc{border-color:#2a6b3a;box-shadow:0 0 0 1px #2a6b3a}.cmpc.rj{border-color:#a83a48;box-shadow:0 0 0 1px #a83a48}
@@ -143,7 +143,7 @@ const page = `<!DOCTYPE html>
   .cmpc.rj .rr{height:auto;min-height:36px;opacity:1;margin-top:6px;padding:4px;border:1px solid #a83a48}
 </style></head><body>
 <h1>최종 108종 검수 폼</h1>
-<p class="sub">지역 × 세트별 정렬 · 각 아이템마다 이름/스토리/애니 리젝사유를 적고 [제출용 복사]로 내보내세요. 입력은 자동 저장됩니다.</p>
+<p class="sub">지역 × 세트별 정렬 · 각 아이템마다 이미지/애니메이션 리젝사유를 적고 [제출용 복사]로 내보내세요. 입력은 자동 저장됩니다.</p>
 <div class="tool"><span class="ct" id="ct"></span><button id="cdcopy">🔧 변경 결정 복사</button><button id="copy">📋 신규 리젝 복사</button><button id="clr">전체 초기화</button></div>
 <textarea id="out" readonly></textarea>
 <h2 id="cmph" style="display:none">🔧 변경 검토 (왕국·늪지대) — 전/후 비교 후 롤백·채택·추가리젝 선택</h2>
@@ -153,7 +153,7 @@ const page = `<!DOCTYPE html>
 const DATA = ${JSON.stringify(DATA)};
 const CHANGES = ${JSON.stringify(CH)};
 const SLOT_KO = {weapon:'무기',armor:'방어구',accessory:'장신구'};
-const LS='finalqa-v1'; const RV=JSON.parse(localStorage.getItem(LS)||'{}'); const save=()=>localStorage.setItem(LS,JSON.stringify(RV));
+const LS='finalqa-v2'; const RV=JSON.parse(localStorage.getItem(LS)||'{}'); const save=()=>localStorage.setItem(LS,JSON.stringify(RV));
 const app=document.getElementById('app'); const anims=[];
 // 변경 검토 섹션
 const CD_LS='finalqa-decide-v1'; const CD=JSON.parse(localStorage.getItem(CD_LS)||'{}'); const cds=()=>localStorage.setItem(CD_LS,JSON.stringify(CD));
@@ -184,7 +184,7 @@ DATA.forEach((reg,ri)=>{
     const row=document.createElement('div'); row.className='row';
     items.forEach((it,ii)=>{
       const id=ri+'#'+si+'#'+ii;
-      const rv=RV[id]||(RV[id]={nm:'',st:'',an:''});
+      const rv=RV[id]||(RV[id]={im:'',an:''});
       const hasAnim=!!it.dir; const src=hasAnim?it.dir+'/0.png':it.st;
       const c=document.createElement('div'); c.className='card';
       c.innerHTML='<div class="stage"><span class="slot">'+(SLOT_KO[it.slot]||'')+'</span>'+
@@ -192,9 +192,8 @@ DATA.forEach((reg,ri)=>{
         (hasAnim?'<div class="tg"><button class="bA on">애</button><button class="bS">정</button></div>':'')+'</div>'+
         '<div class="meta"><div class="nm">'+it.name+'</div><div class="lore">'+it.lore+'</div>'+
         '<div class="rej">'+
-          '<div class="ttl"><span class="tag nm">이름</span></div><textarea data-f="nm" placeholder="이름 리젝사유 (없으면 비움)">'+rv.nm+'</textarea>'+
-          '<div class="ttl"><span class="tag st">스토리</span></div><textarea data-f="st" placeholder="스토리 리젝사유">'+rv.st+'</textarea>'+
-          '<div class="ttl"><span class="tag an">애니</span></div><textarea data-f="an" placeholder="애니 리젝사유">'+rv.an+'</textarea>'+
+          '<div class="ttl"><span class="tag im">이미지</span></div><textarea data-f="im" placeholder="이미지(정적) 리젝사유 (없으면 비움)">'+(rv.im||'')+'</textarea>'+
+          '<div class="ttl"><span class="tag an">애니</span></div><textarea data-f="an" placeholder="애니메이션 리젝사유 (없으면 비움)">'+(rv.an||'')+'</textarea>'+
         '</div></div>';
       row.appendChild(c);
       const img=c.querySelector('.shot');
@@ -202,7 +201,7 @@ DATA.forEach((reg,ri)=>{
         bA.onclick=()=>{img._anim=true;bA.classList.add('on');bS.classList.remove('on');};
         bS.onclick=()=>{img._anim=false;img.src=img.dataset.static;bS.classList.add('on');bA.classList.remove('on');};
         anims.push({img,dir:it.dir,n:it.n,i:0});}
-      const flag=()=>c.classList.toggle('flag',!!(rv.nm||rv.st||rv.an));
+      const flag=()=>c.classList.toggle('flag',!!(rv.im||rv.an));
       c.querySelectorAll('textarea').forEach(t=>t.addEventListener('input',()=>{rv[t.dataset.f]=t.value;save();flag();upd();}));
       flag();
     });
@@ -210,7 +209,7 @@ DATA.forEach((reg,ri)=>{
   });
 });
 let last=0; function tick(t){if(t-last>=110){last=t;for(const o of anims){if(o.img._anim){o.i=(o.i+1)%o.n;o.img.src=o.dir+'/'+o.i+'.png';}}}requestAnimationFrame(tick);} requestAnimationFrame(tick);
-function count(){let n=0;for(const k in RV){const r=RV[k];if(r.nm||r.st||r.an)n++;}return n;}
+function count(){let n=0;for(const k in RV){const r=RV[k];if(r.im||r.an)n++;}return n;}
 function upd(){document.getElementById('ct').textContent='총 108종 · 리젝 표시 '+count()+'개';}
 upd();
 document.getElementById('copy').onclick=()=>{
@@ -218,7 +217,7 @@ document.getElementById('copy').onclick=()=>{
   DATA.forEach((reg,ri)=>{let rh=false;
     reg.sets.forEach((items,si)=>{let sh=false;
       items.forEach((it,ii)=>{const r=RV[ri+'#'+si+'#'+ii]||{};const parts=[];
-        if(r.nm)parts.push('이름: '+r.nm);if(r.st)parts.push('스토리: '+r.st);if(r.an)parts.push('애니: '+r.an);
+        if(r.im)parts.push('이미지: '+r.im);if(r.an)parts.push('애니: '+r.an);
         if(parts.length){if(!rh){L.push('');L.push('== '+reg.region+' ==');rh=true;}if(!sh){L.push('['+'세트'+(si+1)+']');sh=true;}
           L.push('· '+it.name);parts.forEach(p=>L.push('   - '+p));}
       });});});
