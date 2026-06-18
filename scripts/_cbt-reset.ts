@@ -83,20 +83,32 @@ try {
     process.exit(0);
   }
 
-  // zone_adjacency가 참조하는 zone-id 컬럼(이름에 zone 포함, server_id 제외)
+  // ⚠️ zones는 owner_guild_id/executor_user_id 로 guilds/profiles(WIPE)를 참조 →
+  //    TRUNCATE ... CASCADE 시 zones·zone_adjacency까지 함께 비워진다. 그래서
+  //    KEEP 서버 구역을 미리 스냅샷 떠 두고, 정복상태 초기화(소유주 null)해 재삽입한다.
   const zaZoneCols = zaCols.filter((c) => /zone/i.test(c) && c !== 'server_id');
+  const zSnap = (await sql`select * from zones where server_id = ${KEEP_SERVER}`) as Record<string, unknown>[];
+  const keepIds = new Set(zSnap.map((z) => z.id as number));
+  const zaAll = (await sql`select * from zone_adjacency`) as Record<string, unknown>[];
+  const zaSnap = zaAll.filter((e) =>
+    zaCols.includes('server_id')
+      ? (e.server_id as number) === KEEP_SERVER
+      : zaZoneCols.every((c) => keepIds.has(e[c] as number)),
+  );
+  // 구역 재삽입 시 소유/정복 상태는 초기화(guilds·users 비워졌으므로 무소속이 정상).
+  const RESET_ZONE: Record<string, unknown> = {
+    owner_guild_id: null, executor_user_id: null, tax_diamond: '0',
+    last_tax_collected_at: null, captured_at: null, tax_points: '0',
+  };
+  const zClean = zSnap.map((z) => ({ ...z, ...Object.fromEntries(Object.keys(RESET_ZONE).filter((k) => k in z).map((k) => [k, RESET_ZONE[k]])) }));
 
   await sql.begin(async (tx) => {
     await tx.unsafe(`truncate table ${wipe.map((t) => `"${t}"`).join(', ')} restart identity cascade`);
-    if (zaCols.includes('server_id')) {
-      await tx`delete from zone_adjacency where server_id <> ${KEEP_SERVER}`;
-    } else if (zaZoneCols.length) {
-      const conds = zaZoneCols.map((c) => `"${c}" in (select id from zones where server_id <> ${KEEP_SERVER})`).join(' or ');
-      await tx.unsafe(`delete from zone_adjacency where ${conds}`);
-    }
-    if (zHasSid) await tx`delete from zones where server_id <> ${KEEP_SERVER}`;
     await tx`delete from servers where id <> ${KEEP_SERVER}`;
     await tx`update servers set name = ${NEW_NAME} where id = ${KEEP_SERVER}`;
+    // CASCADE로 비워진 KEEP 서버 구역 복원(소유주 초기화) + 인접그래프 복원.
+    if (zClean.length) await tx`insert into zones ${tx(zClean)}`;
+    if (zaSnap.length) await tx`insert into zone_adjacency ${tx(zaSnap)}`;
     // 신규 108종 카탈로그 시드
     await tx`insert into catalog_items ${tx(CAT108, 'code', 'name', 'slot')}`;
   });
