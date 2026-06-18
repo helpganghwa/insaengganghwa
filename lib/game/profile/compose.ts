@@ -55,7 +55,7 @@ export type ProfileHairLength = 'long' | 'short' | 'natural';
  * 포즈 — 서버 random 가벼운 변형 (2026-05-28 재도입). state가 source 전신을 강하게 보존하므로
  * 팔·손 수준의 가벼운 포즈만(레퍼런스 비율·전신 유지). 실제 반영도는 e2e로 검증.
  */
-export type ProfilePose = 'natural' | 'arms_crossed' | 'hand_wave' | 'peace_sign' | 'hand_on_hip';
+export type ProfilePose = 'natural' | 'hand_wave' | 'peace_sign' | 'hand_on_hip';
 
 /** 합성 옵션 — gender(유저)만 선택. hairLength·pose·race는 서버 random. 표정·얼굴은 source 유지. */
 export interface ProfileOptions {
@@ -137,9 +137,10 @@ export function pickRandomHairLength(): ProfileHairLength {
   return ALL_HAIR_LENGTHS[i]!;
 }
 
+// arms_crossed 제거 — 무기를 손에 들 수 없어 모델이 무기를 몸 앞에 교차 배치 → 팔짱과 겹쳐
+// 4팔 착시(953b60e1). 나머지 포즈는 최소 한 손이 비어 무기를 명확히 쥘 수 있음.
 const POSE_DESC: Record<ProfilePose, string> = {
   natural: 'arms resting naturally at the sides',
-  arms_crossed: 'arms casually crossed over the chest',
   hand_wave: 'one hand raised in a friendly little wave',
   peace_sign: 'one hand making a cute V sign near the face',
   hand_on_hip: 'one hand resting lightly on the hip',
@@ -163,7 +164,7 @@ function assemble(opts: ProfileOptions, outfitClause: string): string {
   return [
     genderClause,
     `Full body head-to-feet, clean transparent background, character only; clean solid outlines, no stray specks.`,
-    `Slim tall figure, small head, long legs.`,
+    `Slim tall figure, small head, long legs; exactly two arms and two legs — no extra or duplicated limbs.`,
     `${outfitClause} Pose: ${POSE_DESC[opts.pose]}. Expression: any natural pleasant look.`,
     `Confirm: stays ${opts.gender === 'male' ? 'MALE (boy, flat chest)' : 'FEMALE'}; same face/body/anime style as source; full body, both feet on the ground.`,
   ].join(' ');
