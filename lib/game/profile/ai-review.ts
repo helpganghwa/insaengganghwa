@@ -9,6 +9,7 @@
 
 import 'server-only';
 import Anthropic from '@anthropic-ai/sdk';
+import sharp from 'sharp';
 import { z } from 'zod';
 
 const MODEL_ID = 'claude-haiku-4-5-20251001';
@@ -26,11 +27,11 @@ export type ReviewVerdict = z.infer<typeof ReviewVerdictSchema>;
 // 서버 상수 — 클라이언트 입력 절대 섞지 않음 (PROFILE §10).
 const SYSTEM_PROMPT = `You are a SAFETY + ANATOMY moderator for character profile generation in "insaengganghwa" — a JRPG-style pixel art idle RPG. The user paid diamonds to generate this profile. Your job is to block objectively harmful images AND anatomically broken characters.
 
-You are NOT an aesthetic-quality judge. You are NOT a description-match judge. The user is the aesthetic judge — if they don't like the look, they pay again to retry. That's already in the system.
+You are NOT an aesthetic-quality judge. The user is the aesthetic judge — if they don't like the look, they pay again to retry. NEVER fail just because the result differs from the description in color, hair, style, proportions, pose, outfit type, or any aesthetic/content way. You MAY use the description for ONE narrow purpose only: to know which objects (and how many weapons/items) are INTENDED, so you (a) don't mistake an intended object for a defect, and (b) can tell when an intended single item was generated broken or duplicated.
 
 INPUT:
 - MULTIPLE images: 8 rotation views (south, south_east, east, north_east, north, north_west, west, south_west) of the SAME pixel art character (~256x256 PNG each), each labeled with its view.
-- Description: optional context (you may IGNORE this for the decision — it's just background).
+- Description: the intended character + equipment (notably which weapon and how many items are meant to be held/worn). Use it ONLY to recognize intended objects and their intended COUNT — never as an aesthetic/style match check.
 
 Treat all 8 views as ONE character. FAIL the whole character if ANY single view clearly shows a defect below — defects often appear only in side/back views (e.g. crossed arms PLUS a held weapon producing a third arm on a side view).
 
@@ -45,13 +46,14 @@ FAIL if any of these is clearly true in ANY view:
   · 3+ eyes, 2+ noses, 2+ mouths, 3+ ears
   · duplicated limbs on the same side, limbs growing from face/torso/wrong places, floating detached limbs
   · grossly extra/fused fingers well beyond five per hand
+  · a held weapon/tool BROKEN INTO 2+ disconnected pieces — e.g. a single polearm/spear/staff whose shaft is split by a gap so it appears as two separate poles, or one intended weapon drawn as multiple separate copies. Cross-check the description's intended weapon count: 1 intended weapon shown as 2+ fragments/copies in any view = FAIL (reason "quality").
 
 NOT a defect (PASS) — do NOT fail for these:
 - A body part hidden by the viewing angle (back view shows no face/eyes; a turned pose hides one arm or one eye). Fewer-than-normal parts due to perspective is NORMAL.
 - Body proportions different from description (chibi, big head, short legs)
 - Art style softer/harder/different than expected; missing accessories or colors
 - Character looks "off" but is still a coherent single humanoid with correct part counts
-- A weapon, tool, or accessory that resembles a limb but is an object — this is COMMON and must NOT be failed. Treat these as objects, NEVER as extra arms/legs: a held bow (its two curved limbs + string read like thin arms), a staff/spear/sword held across the body, a folded or open fan, a quiver, a cape/mantle/cloak edge, shoulder spikes, a sash or belt tassel hanging at the hip, ribbons, scarves, long sleeves, and flowing dress/skirt panels that flare to the side.
+- A weapon, tool, or accessory that resembles a limb but is an object — this is COMMON and must NOT be failed. Treat these as objects, NEVER as extra arms/legs: a held bow (its two curved limbs + string read like thin arms), a staff/spear/sword held across the body, a folded or open fan, a quiver, a cape/mantle/cloak edge, shoulder spikes, a sash or belt tassel hanging at the hip, ribbons, scarves, long sleeves, and flowing dress/skirt panels that flare to the side. This leniency applies ONLY when such an object is a SINGLE INTACT piece — a weapon clearly broken/split into disconnected fragments, or an intended single weapon appearing as two, is still a defect (see the quality list).
 
 For anatomy: count carefully across the clearest views. Before failing for an extra ARM specifically, confirm it is a genuine human arm (skin/sleeve, attached at a shoulder, a hand at the end) AND that the same extra arm is clearly visible in at least TWO views — held weapons (especially bows) and side accessories are the most common false positives because they appear consistently across views. If something could be a pose/overlap, a held weapon, or an accessory/cloth rather than a true extra part, lean PASS. Only FAIL (reason "quality") when an extra arm/leg/head/eye is unambiguous and clearly grows from the body.
 
@@ -95,17 +97,22 @@ export async function reviewProfile(input: ReviewInput): Promise<ReviewResult> {
   if (input.images.length === 0) throw new Error('AI_REVIEW_NO_IMAGES');
 
   // 각 이미지 앞에 방향 라벨 텍스트 → 같은 캐릭터의 회전 뷰임을 모델에 명시.
+  // 256px 원본은 Haiku 비전이 미세 결함(끊긴 무기 샤프트 등)을 놓치므로 2배(512) nearest 업스케일 후 검수.
   const content: Anthropic.MessageParam['content'] = [];
   for (const img of input.images) {
+    const up = await sharp(img.png)
+      .resize(512, 512, { kernel: 'nearest', fit: 'contain', background: { r: 0, g: 0, b: 0, alpha: 0 } })
+      .png()
+      .toBuffer();
     content.push({ type: 'text', text: `View: ${img.direction}` });
     content.push({
       type: 'image',
-      source: { type: 'base64', media_type: 'image/png', data: img.png.toString('base64') },
+      source: { type: 'base64', media_type: 'image/png', data: up.toString('base64') },
     });
   }
   content.push({
     type: 'text',
-    text: `Description used:\n\n${input.descriptionPrompt}\n\nThe ${input.images.length} images above are rotation views of the SAME character. Check every view for anatomical part-count defects. Decide pass/fail. Output JSON only.`,
+    text: `Intended character/equipment description:\n\n${input.descriptionPrompt}\n\nThe ${input.images.length} images above are rotation views of the SAME character. Check every view for: (1) anatomical part-count defects, and (2) held-weapon integrity — is the intended weapon a single intact object, or is it broken into disconnected pieces / drawn more times than intended? Use the description only to know intended objects and counts, never for aesthetic match. Decide pass/fail. Output JSON only.`,
   });
 
   const res = await client().messages.create({
