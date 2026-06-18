@@ -16,21 +16,6 @@ for (const s of ALL) for (const it of s.items) {
   const rec = { name: it.name, lore: it.lore || '', dir: it.objAnim ? it.objAnim.dir : null, n: it.objAnim ? it.objAnim.n : 15, st: it.staticSrc, slot: it.slot };
   map[`${s.region}|${it.name}`] = rec; mapName[it.name] = rec;
 }
-// 변경 검토(before/after) 데이터
-const keyMap: Record<string, any> = {};
-for (const s of ALL) for (const it of s.items) keyMap[it.key] = { name: it.name, lore: it.lore || '', dir: it.objAnim ? it.objAnim.dir : null, n: it.objAnim ? it.objAnim.n : 15 };
-let CH: any[] = [];
-try {
-  const raw = JSON.parse(readFileSync('scripts/_changes.json', 'utf8'));
-  CH = raw.map((c: any) => {
-    const km = keyMap[c.key] || {};
-    const r: any = { region: c.region, set: c.set, name: km.name || c.key, field: c.field, before: c.before };
-    if (c.field === '애니') { r.beforeDir = (km.dir || '').replace('anim-obj', 'anim-before'); r.afterDir = km.dir; r.n = km.n; }
-    else if (c.field === '이름') { r.after = km.name; }
-    else { r.after = km.lore; }
-    return r;
-  });
-} catch (e) { console.log('no _changes.json'); }
 const FINAL: [string, string[][]][] = [
   ['왕국', [
     ['무도회의 한 수', '이름 없는 드레스', '이름을 가린 가면'],
@@ -144,38 +129,14 @@ const page = `<!DOCTYPE html>
 </style></head><body>
 <h1>최종 108종 검수 폼</h1>
 <p class="sub">지역 × 세트별 정렬 · 각 아이템마다 이미지/애니메이션 리젝사유를 적고 [제출용 복사]로 내보내세요. 입력은 자동 저장됩니다.</p>
-<div class="tool"><span class="ct" id="ct"></span><button id="cdcopy">🔧 변경 결정 복사</button><button id="copy">📋 신규 리젝 복사</button><button id="clr">전체 초기화</button></div>
+<div class="tool"><span class="ct" id="ct"></span><button id="copy">📋 리젝 복사</button><button id="clr">전체 초기화</button></div>
 <textarea id="out" readonly></textarea>
-<h2 id="cmph" style="display:none">🔧 변경 검토 (왕국·늪지대) — 전/후 비교 후 롤백·채택·추가리젝 선택</h2>
-<div id="cmp"></div>
 <div id="app"></div>
 <script>
 const DATA = ${JSON.stringify(DATA)};
-const CHANGES = ${JSON.stringify(CH)};
 const SLOT_KO = {weapon:'무기',armor:'방어구',accessory:'장신구'};
 const LS='finalqa-v2'; const RV=JSON.parse(localStorage.getItem(LS)||'{}'); const save=()=>localStorage.setItem(LS,JSON.stringify(RV));
 const app=document.getElementById('app'); const anims=[];
-// 변경 검토 섹션
-const CD_LS='finalqa-decide-v1'; const CD=JSON.parse(localStorage.getItem(CD_LS)||'{}'); const cds=()=>localStorage.setItem(CD_LS,JSON.stringify(CD));
-if(CHANGES.length){document.getElementById('cmph').style.display='';}
-const cmp=document.getElementById('cmp');
-CHANGES.forEach((c,i)=>{
-  const cid='c'+i; const d=CD[cid]||(CD[cid]={pick:'',rej:''});
-  let bH,aH;
-  if(c.field==='애니'){bH='<img class="shot" src="'+c.beforeDir+'/0.png" data-dir="'+c.beforeDir+'" data-n="'+c.n+'">';aH='<img class="shot" src="'+c.afterDir+'/0.png" data-dir="'+c.afterDir+'" data-n="'+c.n+'">';}
-  else{bH='<div class="txt">'+c.before+'</div>';aH='<div class="txt aft">'+c.after+'</div>';}
-  const card=document.createElement('div'); card.className='cmpc';
-  card.innerHTML='<div class="ch">'+c.region+' · 세트'+c.set+' · <b>'+c.name+'</b><span class="fld">'+c.field+'</span></div>'+
-    '<div class="ba"><div class="col"><div class="lbl">변경 전</div>'+bH+'</div><div class="col"><div class="lbl aftl">변경 후</div>'+aH+'</div></div>'+
-    '<div class="dec"><button data-p="rollback">↩ 롤백</button><button data-p="accept">✓ 채택</button><button data-p="rereject">✗ 추가리젝</button></div>'+
-    '<textarea class="rr" placeholder="추가 리젝 사유를 적어 주세요">'+(d.rej||'')+'</textarea>';
-  cmp.appendChild(card);
-  const refl=()=>{card.querySelectorAll('.dec button').forEach(b=>b.classList.toggle('on',b.dataset.p===d.pick));card.classList.toggle('roll',d.pick==='rollback');card.classList.toggle('acc',d.pick==='accept');card.classList.toggle('rj',d.pick==='rereject');};
-  card.querySelectorAll('.dec button').forEach(b=>b.onclick=()=>{d.pick=b.dataset.p;cds();refl();});
-  const rr=card.querySelector('.rr'); rr.addEventListener('input',()=>{d.rej=rr.value;cds();});
-  refl();
-  if(c.field==='애니')[...card.querySelectorAll('img.shot[data-dir]')].forEach(img=>{img._anim=true;anims.push({img,dir:img.dataset.dir,n:+img.dataset.n,i:0});});
-});
 DATA.forEach((reg,ri)=>{
   const h=document.createElement('h2'); h.textContent=reg.region; app.appendChild(h);
   reg.sets.forEach((items,si)=>{
@@ -225,13 +186,7 @@ document.getElementById('copy').onclick=()=>{
   const o=document.getElementById('out');o.classList.add('show');o.value=txt;o.select();
   if(navigator.clipboard)navigator.clipboard.writeText(txt);
 };
-document.getElementById('cdcopy').onclick=()=>{
-  const L=['[변경 결정 — 왕국·늪지대]'];
-  CHANGES.forEach((c,i)=>{const d=CD['c'+i]||{};const p=d.pick==='rollback'?'↩ 롤백':d.pick==='accept'?'✓ 채택':d.pick==='rereject'?'✗ 추가리젝':'(미정)';
-    L.push('· '+c.region+' 세트'+c.set+' '+c.name+' ['+c.field+']: '+p+(d.pick==='rereject'&&d.rej?(' — '+d.rej):''));});
-  const t=L.join('\\n');const o=document.getElementById('out');o.classList.add('show');o.value=t;o.select();if(navigator.clipboard)navigator.clipboard.writeText(t);
-};
-document.getElementById('clr').onclick=()=>{if(confirm('입력을 모두 지울까요?')){localStorage.removeItem(LS);localStorage.removeItem('finalqa-decide-v1');location.reload();}};
+document.getElementById('clr').onclick=()=>{if(confirm('입력을 모두 지울까요?')){localStorage.removeItem(LS);location.reload();}};
 </script></body></html>`;
 writeFileSync('sprites-test-finalqa.html', page);
 console.log('built sprites-test-finalqa.html · items=' + DATA.reduce((t, r) => t + r.sets.flat().length, 0) + (missing.length ? ' · MISSING ' + missing.length : ' · all matched'));
