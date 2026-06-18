@@ -120,42 +120,61 @@ export async function reviewProfile(input: ReviewInput): Promise<ReviewResult> {
     text: `Intended character/equipment description:\n\n${input.descriptionPrompt}\n\nThe ${input.images.length} images above are rotation views of the SAME character. Check every view for: (1) anatomical part-count defects, and (2) held-weapon integrity — is the intended weapon a single intact object, or is it broken into disconnected pieces / drawn more times than intended? Use the description only to know intended objects and counts, never for aesthetic match. Decide pass/fail. Output JSON only.`,
   });
 
-  const res = await client().messages.create({
-    model: MODEL_ID,
-    max_tokens: 512,
-    system: [
-      {
-        type: 'text',
-        text: SYSTEM_PROMPT,
-        cache_control: { type: 'ephemeral' },
-      },
-    ],
-    messages: [{ role: 'user', content }],
-  });
+  // 다수결 검수 — 미세 결함(끊긴 무기 등)은 단일 호출 fail율이 ~0.5(동전던지기)라 과반은
+  // 효과 없음(p=0.5면 majority=50%). 대신 N회 중 "하나라도 fail이면 fail"(any-fail)로 recall↑
+  // (3회 → ~87%, 정상품은 거의 항상 전원 pass라 오탐 영향 미미). 동일 content 재사용·병렬 호출.
+  const SAMPLES = 3;
+  const FAIL_IF_AT_LEAST = 1; // any-fail
+  const callOnce = async () => {
+    const res = await client().messages.create({
+      model: MODEL_ID,
+      max_tokens: 512,
+      system: [{ type: 'text', text: SYSTEM_PROMPT, cache_control: { type: 'ephemeral' } }],
+      messages: [{ role: 'user', content }],
+    });
+    const tb = res.content.find((b) => b.type === 'text');
+    const raw = tb && 'text' in tb ? tb.text : '';
+    let verdict: ReviewVerdict | null = null;
+    const jm = raw.match(/\{[\s\S]*\}/);
+    if (jm) {
+      try {
+        const p = ReviewVerdictSchema.safeParse(JSON.parse(jm[0]));
+        if (p.success) verdict = p.data;
+      } catch {
+        /* 한 샘플 파싱 실패는 무시(나머지로 의결) */
+      }
+    }
+    return { raw, verdict, usage: res.usage };
+  };
 
-  const textBlock = res.content.find((b) => b.type === 'text');
-  const raw = textBlock && 'text' in textBlock ? textBlock.text : '';
+  const samples = await Promise.all(Array.from({ length: SAMPLES }, () => callOnce()));
+  const parsed = samples.map((s) => s.verdict).filter((v): v is ReviewVerdict => v != null);
+  if (parsed.length === 0) {
+    throw new Error(`AI_REVIEW_PARSE_FAIL: no parseable verdict in ${SAMPLES} samples: ${samples[0]?.raw.slice(0, 200) ?? ''}`);
+  }
+  const fails = parsed.filter((v) => !v.pass);
+  // any-fail — N표 중 FAIL_IF_AT_LEAST개 이상이 fail이면 최종 fail.
+  const verdict: ReviewVerdict =
+    fails.length >= FAIL_IF_AT_LEAST
+      ? {
+          pass: false,
+          reasons: [...new Set(fails.flatMap((v) => v.reasons))] as ReviewVerdict['reasons'],
+          notes: fails.find((v) => v.notes)?.notes ?? fails[0]!.notes,
+        }
+      : { pass: true, reasons: [], notes: '' };
 
-  // JSON 추출 — 모델이 fence(```json) 또는 prefix를 붙이는 케이스 방어.
-  const jsonMatch = raw.match(/\{[\s\S]*\}/);
-  if (!jsonMatch) {
-    throw new Error(`AI_REVIEW_PARSE_FAIL: no JSON in response: ${raw.slice(0, 200)}`);
-  }
-  let parsed: unknown;
-  try {
-    parsed = JSON.parse(jsonMatch[0]);
-  } catch (e) {
-    throw new Error(`AI_REVIEW_PARSE_FAIL: invalid JSON: ${(e as Error).message}`);
-  }
-  const verdict = ReviewVerdictSchema.parse(parsed);
+  const usage = samples.reduce(
+    (acc, s) => ({
+      inputTokens: acc.inputTokens + s.usage.input_tokens,
+      outputTokens: acc.outputTokens + s.usage.output_tokens,
+      cacheReadTokens: (acc.cacheReadTokens ?? 0) + (s.usage.cache_read_input_tokens ?? 0),
+    }),
+    { inputTokens: 0, outputTokens: 0, cacheReadTokens: 0 } as ReviewResult['usage'],
+  );
 
   return {
     verdict,
-    raw,
-    usage: {
-      inputTokens: res.usage.input_tokens,
-      outputTokens: res.usage.output_tokens,
-      cacheReadTokens: res.usage.cache_read_input_tokens ?? undefined,
-    },
+    raw: JSON.stringify({ votes: parsed.map((v) => v.pass), fails: fails.length, of: parsed.length }),
+    usage,
   };
 }
