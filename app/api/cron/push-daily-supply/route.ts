@@ -51,7 +51,7 @@ export async function GET(req: Request) {
   const payload = {
     title: '오늘의 보급 도착',
     body: '일일 보급 상자가 도착했어요. 받으러 오세요.',
-    url: '/',
+    url: '/mail',
     tag: 'supply-daily',
     category: 'supply' as const,
   };

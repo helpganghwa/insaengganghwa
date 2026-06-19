@@ -171,7 +171,7 @@ export function EquipmentDetailSheet({
         {/* ── 로어(스토리) ── */}
         {item.lore ? (
           <p className="mt-2.5 whitespace-pre-line rounded-lg border border-zinc-200 bg-zinc-50 px-2.5 py-2 text-[11px] leading-relaxed text-zinc-600 dark:border-zinc-800 dark:bg-zinc-900 dark:text-zinc-400">
-            📖 {item.lore}
+            {item.lore}
           </p>
         ) : null}
 

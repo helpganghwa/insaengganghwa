@@ -183,9 +183,6 @@ export function GachaResultModal({
               </div>
               {single.isNew && single.loreTeaser ? (
                 <div className="mt-3 w-full rounded-xl border border-zinc-200 bg-zinc-50 px-3.5 py-3 text-left dark:border-zinc-800 dark:bg-zinc-900">
-                  <div className="mb-1 text-[10px] font-semibold tracking-wide text-zinc-400">
-                    📖 이야기
-                  </div>
                   <p className="text-[12px] leading-relaxed text-zinc-600 dark:text-zinc-300">
                     {single.loreTeaser}
                   </p>
@@ -211,7 +208,7 @@ export function GachaResultModal({
               {openLoreIdx !== null && sortedResults[openLoreIdx]?.loreTeaser ? (
                 <div className="mt-3 rounded-xl border border-emerald-300 bg-emerald-50 px-3.5 py-3 text-left dark:border-emerald-800 dark:bg-emerald-950/30">
                   <div className="mb-1 text-[10px] font-semibold tracking-wide text-emerald-700 dark:text-emerald-300">
-                    📖 {sortedResults[openLoreIdx]!.name}
+                    {sortedResults[openLoreIdx]!.name}
                   </div>
                   <p className="text-[12px] leading-relaxed text-zinc-700 dark:text-zinc-200">
                     {sortedResults[openLoreIdx]!.loreTeaser}

@@ -66,9 +66,6 @@ export default async function CodexItemPage({
 
       {lore ? (
         <section className="rounded-xl border border-zinc-200 bg-white px-4 py-3.5 dark:border-zinc-800 dark:bg-zinc-950">
-          <div className="mb-1.5 text-[11px] font-semibold tracking-wide text-zinc-400">
-            📖 이야기
-          </div>
           <p className="whitespace-pre-line text-[13px] leading-[1.75] text-zinc-700 dark:text-zinc-300">
             {lore}
           </p>

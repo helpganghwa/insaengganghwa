@@ -537,7 +537,7 @@ async function rejectJob(
       payload: {},
     });
   });
-  await safePush(userId, '프로필 검토 미통과', '검토를 통과하지 못해 다이아를 환불했어요. 우편함을 확인하세요.');
+  await safePush(userId, '프로필 검토 미통과', '검토를 통과하지 못해 다이아를 환불했어요. 우편함을 확인하세요.', '/mail');
 }
 
 export async function markFailedAndRefund(jobId: bigint, userId: string, reason: string): Promise<void> {
@@ -574,5 +574,5 @@ export async function markFailedAndRefund(jobId: bigint, userId: string, reason:
       payload: {},
     });
   });
-  await safePush(userId, '프로필 생성 실패', '시스템 오류로 다이아를 환불했어요. 다시 시도해 주세요.');
+  await safePush(userId, '프로필 생성 실패', '시스템 오류로 다이아를 환불했어요. 다시 시도해 주세요.', '/mail');
 }
