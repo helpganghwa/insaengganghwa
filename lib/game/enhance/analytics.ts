@@ -3,7 +3,7 @@
  * BALANCE §1 모델(사이클 내 random walk + 반사벽 +51 + 흡수벽 +99)의 1차 통과시간을
  * D(ℓ)/T(ℓ) 점화식으로 즉시 계산. Monte Carlo 시뮬 불요.
  *
- * 사용처: `scripts/analyze-enhance.ts` + `/admin/balance-review` 페이지.
+ * 사용처: `scripts/analyze-enhance.ts`.
  */
 
 import {

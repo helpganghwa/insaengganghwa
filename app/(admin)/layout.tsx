@@ -1,6 +1,7 @@
 import { notFound, redirect } from 'next/navigation';
 
 import { getAdminStatus } from '@/lib/auth/require-admin';
+import { AdminBack } from './AdminBack';
 
 /**
  * 어드민 라우트 그룹 게이트 — 모든 /admin/* 페이지 공통.
@@ -11,5 +12,10 @@ export default async function AdminLayout({ children }: { children: React.ReactN
   const { userId, isAdmin } = await getAdminStatus();
   if (!userId) redirect('/login');
   if (!isAdmin) notFound();
-  return <>{children}</>;
+  return (
+    <>
+      <AdminBack />
+      {children}
+    </>
+  );
 }

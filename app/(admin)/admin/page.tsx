@@ -20,23 +20,10 @@ const MENU: { href: string; icon: string; title: string; desc: string; external?
     desc: '신고 누적 프로필 확인 및 비공개 조치',
   },
   {
-    href: '/admin/balance-review',
-    icon: '⚖️',
-    title: '강화 밸런스 리뷰',
-    desc: '강화 확률·기대값 등 밸런스 점검',
-  },
-  {
     href: '/admin/mail',
     icon: '📬',
     title: '운영자 우편 발송',
     desc: '유저에게 다이아·보급상자·공지 우편 발송',
-  },
-  {
-    href: '/worndesc-review.html',
-    icon: '🧪',
-    title: '장비 외형묘사 리뷰',
-    desc: '108종 wornDesc 초안(이미지+영문+한글) 검토 — 정적 페이지',
-    external: true,
   },
 ];
 

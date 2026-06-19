@@ -6,6 +6,7 @@ import { characters } from '@/lib/db/schema/server';
 import { CATALOG_ITEMS } from '@/lib/game/equipment/catalog';
 
 import { AdminProfileGenActions } from './AdminProfileGenActions';
+import { AdminAvatarViewer } from './AdminAvatarViewer';
 
 // 어드민 데이터 + Pixellab 이미지 fetch — 항상 최신.
 export const dynamic = 'force-dynamic';
@@ -30,18 +31,6 @@ const STATUS_CLS: Record<string, string> = {
   rejected_ai: 'bg-red-900/40 text-red-300 border-red-700',
   failed: 'bg-zinc-800 text-zinc-300 border-zinc-600',
 };
-// 정면부터 시계방향.
-const DIRS: { k: string; ko: string }[] = [
-  { k: 'south', ko: '정면' },
-  { k: 'south_east', ko: '정면우' },
-  { k: 'east', ko: '우' },
-  { k: 'north_east', ko: '후우' },
-  { k: 'north', ko: '후면' },
-  { k: 'north_west', ko: '후좌' },
-  { k: 'west', ko: '좌' },
-  { k: 'south_west', ko: '정면좌' },
-];
-
 async function pixellabRotations(charId: string): Promise<Record<string, string>> {
   const key = process.env.PIXELLAB_API_KEY;
   if (!key) return {};
@@ -181,33 +170,8 @@ export default async function AdminProfileGenPage({
                 <span className="ml-auto text-[11px] text-zinc-400">💎 escrow {r.diamondEscrow.toString()}</span>
               </div>
 
-              {/* 8방향 */}
-              <div className="grid grid-cols-8 gap-1">
-                {DIRS.map((d) => {
-                  const url = rot[d.k];
-                  return (
-                    <div key={d.k} className="flex flex-col items-center">
-                      <div
-                        className="aspect-square w-full rounded-md"
-                        style={{
-                          backgroundImage:
-                            'linear-gradient(45deg,#222 25%,transparent 25%),linear-gradient(-45deg,#222 25%,transparent 25%),linear-gradient(45deg,transparent 75%,#222 75%),linear-gradient(-45deg,transparent 75%,#222 75%)',
-                          backgroundSize: '10px 10px',
-                          backgroundPosition: '0 0,0 5px,5px -5px,-5px 0',
-                        }}
-                      >
-                        {url ? (
-                          // eslint-disable-next-line @next/next/no-img-element
-                          <img src={url} alt={d.ko} className="h-full w-full object-contain" style={{ imageRendering: 'pixelated' }} />
-                        ) : (
-                          <div className="flex h-full w-full items-center justify-center text-[9px] text-zinc-600">없음</div>
-                        )}
-                      </div>
-                      <span className="mt-0.5 text-[9px] text-zinc-500">{d.ko}</span>
-                    </div>
-                  );
-                })}
-              </div>
+              {/* 아바타 — 가로 꽉 채운 1:1, 좌우 스와이프로 8방향 회전 */}
+              <AdminAvatarViewer rotations={rot} />
 
               {/* 메타: 성별/장비 */}
               <div className="mt-3 grid grid-cols-2 gap-x-4 gap-y-1 text-xs">
