@@ -386,7 +386,7 @@ export default async function PublicProfilePage({
               charSrc={data.charImg}
               scale={1.15}
               offsetY={-5}
-              className="aspect-[2/3] h-full overflow-hidden"
+              className="aspect-[2/3] h-full"
             />
           </div>
         ) : (

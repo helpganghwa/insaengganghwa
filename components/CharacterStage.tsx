@@ -22,7 +22,7 @@ export function CharacterStage({
   offsetY?: number;
 }) {
   return (
-    <div className={`relative isolate overflow-hidden ${rounded ? 'rounded-2xl' : ''} ${className ?? ''}`}>
+    <div className={`relative isolate ${rounded ? 'rounded-2xl' : ''} ${className ?? ''}`}>
       {charSrc && (
         <>
           {/* 발밑 타원 그림자 — 캐릭터가 바닥에 서 있는 느낌 */}

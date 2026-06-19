@@ -261,7 +261,7 @@ export function BoastModal({
                   pinEmblemRight
                   className="max-w-full text-[10px] text-white/70"
                 />
-                <div className="relative aspect-[3/4] h-36 overflow-hidden">
+                <div className="relative aspect-[3/4] h-36">
                   {profileImg ? (
                     // eslint-disable-next-line @next/next/no-img-element
                     <img
