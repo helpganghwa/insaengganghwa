@@ -63,7 +63,9 @@ export function RarityFrame({ level, className }: { level: number; className?: s
     <div
       aria-hidden
       className={className}
-      style={{ position: 'absolute', inset: 0, pointerEvents: 'none' }}
+      // zIndex — 코너 별이 스프라이트(자식) 위로 오도록. RarityFrame이 DOM상 스프라이트보다
+      // 앞에 와도 별이 뒤로 숨던 문제 해소.
+      style={{ position: 'absolute', inset: 0, pointerEvents: 'none', zIndex: 5 }}
     >
       {corners.map((c, i) => (
         <div
