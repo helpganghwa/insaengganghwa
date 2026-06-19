@@ -10,6 +10,8 @@ import { parseFaceBox, type FaceBox } from '@/components/faceCrop';
  */
 export interface LayoutData {
   nickname: string;
+  /** 닉네임 변경 횟수 — 헤더 이름 클릭 변경 팝업(첫 변경 무료/이후 과금) 계산용. */
+  nicknameChangedCount: number;
   diamond: bigint;
   hasUnreadMail: boolean;
   hasCompletedEnhance: boolean;
@@ -25,6 +27,7 @@ export interface LayoutData {
 
 const DEFAULTS: LayoutData = {
   nickname: '플레이어',
+  nicknameChangedCount: 0,
   diamond: 0n,
   hasUnreadMail: false,
   hasCompletedEnhance: false,
@@ -44,7 +47,7 @@ export async function loadLayoutData(userId: string, serverId: number): Promise<
     const [profileRows, mailRows, enhRows, friendReqRows] = await Promise.all([
       pgGuard(
         (sql) => sql`
-          select c.nickname, c.diamond, up.rotations, up.options as profile_options, g.emblem_url as guild_emblem_url
+          select c.nickname, c.nickname_changed_count, c.diamond, up.rotations, up.options as profile_options, g.emblem_url as guild_emblem_url
           from profiles p
           left join characters c on c.user_id = p.id and c.server_id = ${serverId}
           left join user_profiles up on up.id = c.active_profile_id
@@ -87,6 +90,7 @@ export async function loadLayoutData(userId: string, serverId: number): Promise<
     const p = profileRows[0] as
       | {
           nickname?: string;
+          nickname_changed_count?: number | string;
           diamond?: string | number | bigint;
           rotations?: unknown;
           profile_options?: unknown;
@@ -110,6 +114,7 @@ export async function loadLayoutData(userId: string, serverId: number): Promise<
     }
     return {
       nickname: p?.nickname ?? '플레이어',
+      nicknameChangedCount: Number(p?.nickname_changed_count ?? 0),
       diamond: p?.diamond != null ? BigInt(p.diamond as string) : 0n,
       hasUnreadMail: mailRows.length > 0,
       hasCompletedEnhance: Number((enhRows[0] as { n?: number | string } | undefined)?.n ?? 0) > 0,

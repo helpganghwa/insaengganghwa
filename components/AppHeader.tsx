@@ -2,6 +2,7 @@ import Link from 'next/link';
 
 import type { LayoutData } from '@/lib/game/layout-data';
 import { faceCropStyle, type FaceBox } from '@/components/faceCrop';
+import { NicknameEditor } from '@/app/(game)/me/NicknameEditor';
 import { DiamondInitializer } from '@/components/DiamondContext';
 import { HeaderDiamond } from '@/components/HeaderDiamond';
 import { GuildBadge } from '@/components/GuildBadge';
@@ -13,6 +14,7 @@ import { GuildBadge } from '@/components/GuildBadge';
  */
 export function AppHeaderShell({
   nickname = '플레이어',
+  nicknameChangedCount = 0,
   diamond = 0n,
   profileSouth = null,
   profileFaceBox = null,
@@ -20,6 +22,7 @@ export function AppHeaderShell({
   diamondSlot,
 }: {
   nickname?: string;
+  nicknameChangedCount?: number;
   diamond?: bigint;
   profileSouth?: string | null;
   /** 활성 프로필 얼굴 박스(검수 산출) — 썸네일 정밀 크롭. 없으면 폴백 크롭. */
@@ -30,8 +33,13 @@ export function AppHeaderShell({
 }) {
   return (
     <header className="sticky top-0 z-30 box-content flex h-12 items-center justify-between gap-2 border-b border-zinc-200 bg-white px-3 pt-[env(safe-area-inset-top)] dark:border-zinc-800 dark:bg-zinc-950">
-      <Link href="/me" className="flex min-w-0 items-center gap-2">
-        <div className="relative h-8 w-8 shrink-0 overflow-hidden">
+      {/* 아바타 클릭=아바타 선택(/me/profiles), 이름 클릭=닉네임 변경 팝업. */}
+      <div className="flex min-w-0 items-center gap-2">
+        <Link
+          href="/me/profiles"
+          aria-label="아바타 선택"
+          className="relative h-8 w-8 shrink-0 overflow-hidden"
+        >
           {profileSouth ? (
             // eslint-disable-next-line @next/next/no-img-element
             <img
@@ -50,15 +58,18 @@ export function AppHeaderShell({
               👤
             </span>
           )}
-        </div>
+        </Link>
         {/* 이름↔문양은 좁게(gap-1), 아바타↔이름은 기존 gap-2 유지. */}
         <span className="flex min-w-0 items-center gap-1">
-          <span className="truncate text-[13px] font-semibold text-zinc-800 dark:text-zinc-100">
-            {nickname}
-          </span>
+          <NicknameEditor
+            current={nickname}
+            changedCount={nicknameChangedCount}
+            diamond={String(diamond)}
+            className="!text-[13px] text-zinc-800 dark:text-zinc-100"
+          />
           <GuildBadge emblemUrl={guildEmblemUrl} size={18} className="shrink-0" />
         </span>
-      </Link>
+      </div>
 
       <div className="flex shrink-0 items-center gap-1.5 text-xs">
         {diamondSlot ?? (
@@ -87,6 +98,7 @@ export async function AppHeader({ dataPromise }: { dataPromise: Promise<LayoutDa
       <DiamondInitializer diamond={d.diamond} />
       <AppHeaderShell
         nickname={d.nickname}
+        nicknameChangedCount={d.nicknameChangedCount}
         diamond={d.diamond}
         profileSouth={d.profileSouth}
         profileFaceBox={d.profileFaceBox}
