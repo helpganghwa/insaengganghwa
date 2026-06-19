@@ -26,10 +26,10 @@ const STATUS_KO: Record<string, string> = {
   rejected_ai: 'AI거절',
   failed: '실패',
 };
-const STATUS_CLS: Record<string, string> = {
-  accepted: 'bg-emerald-900/40 text-emerald-300 border-emerald-700',
-  rejected_ai: 'bg-red-900/40 text-red-300 border-red-700',
-  failed: 'bg-zinc-800 text-zinc-300 border-zinc-600',
+const DECISION_KO: Record<string, string> = {
+  confirm: '확인(무조치)',
+  grant: '아바타 지급',
+  reject: '회수+환불',
 };
 async function pixellabRotations(charId: string): Promise<Record<string, string>> {
   const key = process.env.PIXELLAB_API_KEY;
@@ -98,7 +98,25 @@ export default async function AdminProfileGenPage({
     .orderBy(desc(profileGenerationJobs.createdAt))
     .limit(300);
 
-  const rows = status && STATUS_KO[status] ? all.filter((r) => r.status === status) : all;
+  // 4분류 필터: AI 통과 / AI 실패 / 운영자 검수 완료 / 운영자 검수 전.
+  const TERMINAL = ['accepted', 'rejected_ai', 'failed'];
+  type View = 'ai_pass' | 'ai_fail' | 'admin_done' | 'admin_todo';
+  const MATCH: Record<View, (r: (typeof all)[number]) => boolean> = {
+    ai_pass: (r) => r.status === 'accepted',
+    ai_fail: (r) => r.status === 'rejected_ai' || r.status === 'failed',
+    admin_done: (r) => !!r.adminDecision,
+    admin_todo: (r) => TERMINAL.includes(r.status) && !r.adminDecision,
+  };
+  const view: View | null = status && status in MATCH ? (status as View) : null;
+  const rows = view ? all.filter(MATCH[view]) : all;
+  const vcount = (v: View) => all.filter(MATCH[v]).length;
+  const pendingReview = vcount('admin_todo');
+  const FILTERS: { k: View; ko: string; on: string }[] = [
+    { k: 'ai_pass', ko: 'AI 통과', on: 'border-emerald-500 bg-emerald-900/30 text-emerald-300' },
+    { k: 'ai_fail', ko: 'AI 실패', on: 'border-red-500 bg-red-900/30 text-red-300' },
+    { k: 'admin_todo', ko: '운영자 검수 전', on: 'border-amber-500 bg-amber-900/30 text-amber-300' },
+    { k: 'admin_done', ko: '운영자 검수 완료', on: 'border-emerald-500 bg-emerald-900/30 text-emerald-300' },
+  ];
 
   // 8방향 이미지: 통과=저장 rotations, 그 외=Pixellab 캐릭터에서 조회.
   const imgs = await Promise.all(
@@ -108,15 +126,6 @@ export default async function AdminProfileGenPage({
       return {} as Record<string, string>;
     }),
   );
-
-  const counts = all.reduce<Record<string, number>>((a, r) => {
-    a[r.status] = (a[r.status] ?? 0) + 1;
-    return a;
-  }, {});
-
-  // 검수 필요(종료 상태인데 운영자 미결정) 건수 — 날짜별 점검 진척 표시.
-  const TERMINAL = ['accepted', 'rejected_ai', 'failed'];
-  const pendingReview = all.filter((r) => TERMINAL.includes(r.status) && !r.adminDecision).length;
 
   return (
     <div className="mx-auto w-full max-w-[860px] space-y-4 px-4 py-6 text-zinc-100">
@@ -138,12 +147,12 @@ export default async function AdminProfileGenPage({
           <a href={qs(kstToday, status)} className="rounded-lg border border-amber-700 px-3 py-1 text-amber-300">오늘</a>
         )}
       </div>
-      {/* 상태 필터 (날짜 유지) */}
-      <div className="flex flex-wrap gap-2 text-xs">
-        <a href={qs(day)} className={`rounded-full border px-3 py-1 ${!status ? 'border-amber-500 text-amber-300' : 'border-zinc-700 text-zinc-400'}`}>전체 {all.length}</a>
-        {Object.entries(STATUS_KO).map(([k, ko]) => (
-          <a key={k} href={qs(day, k)} className={`rounded-full border px-3 py-1 ${status === k ? 'border-amber-500 text-amber-300' : 'border-zinc-700 text-zinc-400'}`}>
-            {ko} {counts[k] ?? 0}
+      {/* 4분류 필터 (날짜 유지) */}
+      <div className="flex flex-wrap gap-1.5 text-xs">
+        <a href={qs(day)} className={`rounded-full border px-3 py-1 ${!view ? 'border-amber-500 bg-amber-900/30 text-amber-300' : 'border-zinc-700 text-zinc-400'}`}>전체 {all.length}</a>
+        {FILTERS.map((f) => (
+          <a key={f.k} href={qs(day, f.k)} className={`rounded-full border px-3 py-1 ${view === f.k ? f.on : 'border-zinc-700 text-zinc-400'}`}>
+            {f.ko} {vcount(f.k)}
           </a>
         ))}
       </div>
@@ -153,64 +162,99 @@ export default async function AdminProfileGenPage({
       ) : (
         rows.map((r, i) => {
           const rot = imgs[i]!;
-          const opts = (r.options ?? {}) as { gender?: string; race?: string; pose?: string; hairLength?: string };
+          const opts = (r.options ?? {}) as { gender?: string; race?: string; hairLength?: string };
           const eqs = (r.equipmentSnapshot ?? {}) as { weaponKey?: string; armorKey?: string; accessoryKey?: string };
           const verdict = (r.aiVerdict ?? null) as { pass?: boolean; reasons?: string[]; notes?: string } | null;
           const eqName = (key?: string) => (key ? (NAME_BY_CODE.get(key) ?? key) : '-');
+          const reviewed = !!r.adminDecision;
+          const isTerminal = TERMINAL.includes(r.status);
+          const [aiLabel, aiCls] =
+            r.status === 'accepted'
+              ? ['AI 통과', 'bg-emerald-900/40 text-emerald-300 border-emerald-700']
+              : r.status === 'rejected_ai'
+                ? ['AI 실패', 'bg-red-900/40 text-red-300 border-red-700']
+                : r.status === 'failed'
+                  ? ['생성 실패', 'bg-zinc-800 text-zinc-400 border-zinc-600']
+                  : [STATUS_KO[r.status] ?? r.status, 'bg-zinc-800 text-zinc-400 border-zinc-700'];
           return (
-            <div key={String(r.id)} className="rounded-2xl border border-zinc-800 bg-zinc-900/50 p-3">
-              {/* 헤더: 유저 + 상태 */}
-              <div className="mb-2 flex flex-wrap items-center gap-x-3 gap-y-1 text-sm">
-                <span className="font-bold">{r.nickname ?? '(닉네임 없음)'}</span>
-                <span className="text-[11px] text-zinc-500">srv {r.serverId} · {r.userId.slice(0, 8)}</span>
-                <span className={`rounded-md border px-2 py-0.5 text-[11px] font-bold ${STATUS_CLS[r.status] ?? 'border-zinc-600 text-zinc-300'}`}>
-                  {STATUS_KO[r.status] ?? r.status}
-                </span>
-                <span className="text-[11px] text-zinc-500">{new Date(r.createdAt).toLocaleString('ko-KR')}</span>
-                <span className="ml-auto text-[11px] text-zinc-400">💎 escrow {r.diamondEscrow.toString()}</span>
-              </div>
+            <div
+              key={String(r.id)}
+              className={`overflow-hidden rounded-2xl border ${
+                reviewed
+                  ? 'border-emerald-700/50 bg-emerald-950/15'
+                  : isTerminal
+                    ? 'border-amber-700/50 bg-zinc-900/50'
+                    : 'border-zinc-800 bg-zinc-900/40'
+              }`}
+            >
+              {/* 검수 상태 띠 — 한눈에 완료/미검수 구분 */}
+              {reviewed ? (
+                <div className="flex items-center gap-1.5 bg-emerald-900/50 px-3 py-1.5 text-xs font-bold text-emerald-300">
+                  ✓ 운영자 검수완료 · {DECISION_KO[r.adminDecision!] ?? r.adminDecision}
+                </div>
+              ) : isTerminal ? (
+                <div className="flex items-center gap-1.5 bg-amber-900/40 px-3 py-1.5 text-xs font-bold text-amber-300">
+                  ● 운영자 검수 전
+                </div>
+              ) : null}
 
-              {/* 아바타 — 가로 꽉 채운 1:1, 좌우 스와이프로 8방향 회전 */}
-              <AdminAvatarViewer rotations={rot} />
+              <div className={`p-3 ${reviewed ? 'opacity-70' : ''}`}>
+                {/* 헤더(컴팩트): AI배지 · 닉 · 시간 · 다이아 */}
+                <div className="mb-2 flex items-center gap-2">
+                  <span className={`shrink-0 rounded-md border px-1.5 py-0.5 text-[10px] font-bold ${aiCls}`}>{aiLabel}</span>
+                  <span className="truncate text-sm font-bold">{r.nickname ?? '(닉네임 없음)'}</span>
+                  <span className="ml-auto shrink-0 text-[10px] text-zinc-500">💎{r.diamondEscrow.toString()}</span>
+                </div>
+                <div className="mb-2 text-[10px] text-zinc-500">
+                  srv{r.serverId} · {r.userId.slice(0, 8)} · {new Date(r.createdAt).toLocaleString('ko-KR')}
+                </div>
 
-              {/* 메타: 성별/장비 */}
-              <div className="mt-3 grid grid-cols-2 gap-x-4 gap-y-1 text-xs">
-                <div><span className="text-zinc-500">성별</span> {opts.gender === 'male' ? '남성' : opts.gender === 'female' ? '여성' : (opts.gender ?? '-')}{opts.race ? ` · ${opts.race}` : ''}{opts.hairLength ? ` · 머리 ${opts.hairLength}` : ''}{opts.pose ? ` · 포즈 ${opts.pose}` : ''}</div>
-                <div><span className="text-zinc-500">무기</span> {eqName(eqs.weaponKey)}</div>
-                <div><span className="text-zinc-500">방어구</span> {eqName(eqs.armorKey)}</div>
-                <div><span className="text-zinc-500">장신구</span> {eqName(eqs.accessoryKey)}</div>
-              </div>
+                {/* 아바타 — 가로 꽉 채운 1:1, 스와이프 회전 */}
+                <AdminAvatarViewer rotations={rot} />
 
-              {/* AI 판단 */}
-              <div className="mt-2 rounded-lg border border-zinc-800 bg-zinc-950/60 p-2 text-xs">
-                <span className="font-bold">AI 판단: </span>
-                {verdict ? (
-                  <>
-                    <span className={verdict.pass ? 'text-emerald-400' : 'text-red-400'}>{verdict.pass ? '통과' : '거절'}</span>
-                    {verdict.reasons?.length ? <span className="text-zinc-400"> · {verdict.reasons.map((x) => REASON_KO[x] ?? x).join(', ')}</span> : null}
-                    {verdict.notes ? <div className="mt-1 text-zinc-300">{verdict.notes}</div> : null}
-                  </>
-                ) : (
-                  <span className="text-zinc-500">{r.rejectReason ?? '없음'}</span>
-                )}
-                {r.rejectReason && verdict ? <div className="mt-1 text-zinc-500">처리: {r.rejectReason}</div> : null}
-              </div>
+                {/* 메타(컴팩트 인라인) */}
+                <div className="mt-2 space-y-0.5 text-[11px]">
+                  <div className="text-zinc-300">
+                    {opts.gender === 'male' ? '남성' : opts.gender === 'female' ? '여성' : (opts.gender ?? '-')}
+                    {opts.race ? ` · ${opts.race}` : ''}
+                    {opts.hairLength ? ` · 머리 ${opts.hairLength}` : ''}
+                  </div>
+                  <div className="text-zinc-400">
+                    ⚔ {eqName(eqs.weaponKey)} · 🛡 {eqName(eqs.armorKey)} · 💍 {eqName(eqs.accessoryKey)}
+                  </div>
+                </div>
 
-              {/* 스크립트(생성 프롬프트) */}
-              <details className="mt-2">
-                <summary className="cursor-pointer text-xs text-zinc-400">생성 스크립트(프롬프트) 보기</summary>
-                <pre className="mt-1 whitespace-pre-wrap break-words rounded-lg bg-zinc-950/60 p-2 text-[11px] text-zinc-300">{r.descriptionPrompt}</pre>
-              </details>
+                {/* AI 판단(컴팩트 1줄) */}
+                <div className="mt-2 text-[11px]">
+                  <span className="text-zinc-500">AI</span>{' '}
+                  {verdict ? (
+                    <>
+                      <span className={verdict.pass ? 'text-emerald-400' : 'text-red-400'}>{verdict.pass ? '통과' : '거절'}</span>
+                      {verdict.reasons?.length ? <span className="text-zinc-400"> · {verdict.reasons.map((x) => REASON_KO[x] ?? x).join(', ')}</span> : null}
+                      {verdict.notes ? <span className="text-zinc-400"> — {verdict.notes}</span> : null}
+                    </>
+                  ) : (
+                    <span className="text-zinc-500">{r.rejectReason ?? '없음'}</span>
+                  )}
+                  {r.rejectReason && verdict ? <span className="text-zinc-600"> · 처리: {r.rejectReason}</span> : null}
+                </div>
 
-              {/* 조치 */}
-              <div className="mt-3">
-                <AdminProfileGenActions
-                  jobId={String(r.id)}
-                  hasAvatar={!!r.userProfileId}
-                  canGrant={!r.userProfileId && (r.status === 'rejected_ai' || r.status === 'failed')}
-                  escrow={r.diamondEscrow.toString()}
-                  decision={r.adminDecision ?? null}
-                />
+                {/* 스크립트 */}
+                <details className="mt-2">
+                  <summary className="cursor-pointer text-[11px] text-zinc-500">프롬프트 보기</summary>
+                  <pre className="mt-1 whitespace-pre-wrap break-words rounded-lg bg-zinc-950/60 p-2 text-[10px] text-zinc-300">{r.descriptionPrompt}</pre>
+                </details>
+
+                {/* 조치 */}
+                <div className="mt-3">
+                  <AdminProfileGenActions
+                    jobId={String(r.id)}
+                    hasAvatar={!!r.userProfileId}
+                    canGrant={!r.userProfileId && (r.status === 'rejected_ai' || r.status === 'failed')}
+                    escrow={r.diamondEscrow.toString()}
+                    decision={r.adminDecision ?? null}
+                  />
+                </div>
               </div>
             </div>
           );
