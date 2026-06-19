@@ -7,9 +7,11 @@
  *   파생하므로 "소스의 Japanese anime art style·small head·slim proportions 유지"를
  *   genderClause(앞)+Confirm(끝) 이중 앵커. 이를 약화하면 애니풍 상실·머리 커짐·생성마다
  *   들쭉날쭉(2026-06-19 회귀로 검증) → 장비 강조는 "clearly show" 수준까지만(과잉 초점 금지).
- * - 비율(CreateCharacterProRequest엔 proportions·negative_description 없음, 2026-05-27 검증).
- *   남성은 flat masculine chest·masculine build로 성별 뒤집힘 방지(부정형 X — 긍정 묘사만,
- *   이미지 생성기는 no/not을 잘 못 다뤄 오히려 그 개념을 끌어옴, 2026-06-19 사용자).
+ * - 비율: **"heroic proportions" + 7-to-8 heads-tall·small head**를 긍정형으로 앵커(픽셀모델이
+ *   heroic을 8등신 장신으로 해석, 2026-06-19 사용자). 'not chibi' 같은 부정형 없이 머리 큼/치비 방지.
+ * - 부정형은 기본 지양(이미지 생성기가 no/not의 개념을 오히려 끌어옴) — **단, 성별 강제는 예외**:
+ *   남성은 'FLAT chest, no breasts / men's clothing, never a dress·gown·skirt'가 필수(없으면 여성으로
+ *   뒤집힘, 74b7a263 검증). 장비 wornDesc에 gown/dress 단어가 있어 남성은 menswear로 변환 지시.
  */
 import 'server-only';
 
@@ -160,15 +162,15 @@ function assemble(opts: ProfileOptions, outfitClause: string): string {
   // 성별 강제(남=FLAT chest 안티플립)도 유지. 장비는 outfitClause가 정확히 묘사(과잉 초점 X).
   const genderClause =
     opts.gender === 'male'
-      ? `MALE bishōnen boy drawn in clean Japanese anime (cel-shaded) art style, with a masculine boyish face, a flat masculine chest, and a masculine build and hair. KEEP from the source character exactly: the same Japanese anime art style, the same face, and the same tall, slim, long-legged proportions — a small head on a mature 7-to-8 heads-tall body. He stays clearly male, masculine.`
-      : `FEMALE bishōjo drawn in clean Japanese anime (cel-shaded) art style, with a feminine face and figure. KEEP from the source character exactly: the same Japanese anime art style, the same face, and the same tall, slim, long-legged proportions — a small head on a mature 7-to-8 heads-tall body. She stays clearly female.`;
+      ? `MALE bishōnen boy, clean Japanese anime (cel-shaded) art — masculine boyish face, FLAT chest (no breasts), lean masculine body. Dress him in MEN'S clothing (coat/tunic + trousers), never a dress/gown/skirt. KEEP the source's face, anime style, and heroic proportions (small head, 7-to-8 heads tall, long legs). He stays clearly a boy.`
+      : `FEMALE bishōjo, clean Japanese anime (cel-shaded) art — feminine face and figure. KEEP the source's face, anime style, and heroic proportions (small head, 7-to-8 heads tall, long legs). She stays clearly female.`;
   // 포즈 문구 제거 — 포즈가 natural('standing naturally') 1종뿐이라 기본자세와 동일,
   // 명시 불필요(2026-06-19 사용자). 무기 'held in hand'는 outfitClause에 있어 영향 없음.
   return [
     genderClause,
     outfitClause,
     `Full body head-to-feet, both feet on the ground; exactly two arms and two legs with one hand at the end of each arm; on a clean transparent background, character only, with clean solid outlines.`,
-    `Confirm: keep the source's Japanese anime art style, face and mature 7-to-8 heads-tall proportions with a small head and long legs; full body with both feet visible.`,
+    `Confirm: stays clearly ${opts.gender === 'male' ? 'a boy (flat chest, menswear)' : 'female'}; keep the source's anime style, face, and heroic proportions (small head, 7-to-8 heads tall); full body, both feet visible.`,
   ].join(' ');
 }
 
