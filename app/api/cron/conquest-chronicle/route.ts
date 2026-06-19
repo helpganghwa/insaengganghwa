@@ -1,15 +1,15 @@
 /**
- * 점령전 정산+세계 연대기 생성 cron — **자정(KST 00시대)**에 매일 1회.
+ * 점령전 공개(reveal)+세계 연대기 생성 cron — **자정(KST 00시대)**에 매일 1회.
  * 대상 날짜 = 방금 끝난 전투일 = **어제(KST)**. kst_day 멱등(이미 있으면 skip).
- * 연대기 서술 전에 해당 서버의 어제 전투 정산을 먼저 보장한다(runConquest 멱등) — 자정에
- * conquest-run과 동시 실행돼도 zone×day UNIQUE로 중복 없이 안전. 이로써 narrate가
- * 미정산 데이터를 읽는 레이스를 차단(소유권·우편·연대기 모두 자정 발표 일치).
+ * 23:00에 저장만 된(미공개) 어제 전투를 자정에 공개: revealConquest가 소유권 적용·결과 우편을
+ * 발송하고 published_at을 마킹 → 그 뒤 narrate. reveal을 narrate보다 먼저 호출해 연대기가
+ * 공개된(=확정 소유권) 데이터를 읽도록 보장. reveal·narrate 모두 멱등(다중 tick 안전).
  * 스케줄: vercel.json UTC 15시대 5분 간격(= KST 00시대) — 배포 겹침 대비 윈도.
  * 인증: CRON_SECRET Bearer(설정 시) — isCronAuthorized.
  */
 import { isCronAuthorized } from '@/lib/auth/cron-auth';
 import { generateAndStoreChronicle } from '@/lib/game/guild';
-import { runConquest } from '@/lib/game/guild/conquest/run';
+import { revealConquest } from '@/lib/game/guild/conquest/run';
 import { openServerIds } from '@/lib/game/server-list';
 import { kstDateString } from '@/lib/kst';
 
@@ -19,14 +19,14 @@ export const maxDuration = 60;
 
 export async function GET(req: Request) {
   if (!isCronAuthorized(req)) return new Response('forbidden', { status: 403 });
-  // 자정(KST 00시대) 실행 → 전투가 일어난 어제 날짜를 대상으로 생성(24h 전 KST 날짜).
+  // 자정(KST 00시대) 실행 → 어제(전투일) 결과를 공개·발표하고 연대기 생성(24h 전 KST 날짜).
   const kstDay = kstDateString(new Date(Date.now() - 24 * 60 * 60 * 1000));
   try {
     const results = [];
     for (const sid of await openServerIds()) {
-      // narrate 전에 어제 전투 정산 보장(멱등) — 미정산 상태에서 빈 연대기 생성 방지.
-      const settle = await runConquest(sid, kstDay);
-      results.push({ serverId: sid, settled: settle.resolved, ...(await generateAndStoreChronicle(kstDay, sid)) });
+      // narrate 전에 어제 전투 공개(소유권 적용·우편·published 마킹) — 멱등.
+      const rev = await revealConquest(sid, kstDay);
+      results.push({ serverId: sid, revealed: rev.revealed, mailed: rev.mailed, ...(await generateAndStoreChronicle(kstDay, sid)) });
     }
     const r = { results };
     return Response.json({ ok: true, kstDay, ...r, kind: 'conquest-chronicle' });

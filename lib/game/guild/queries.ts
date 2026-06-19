@@ -1,6 +1,6 @@
 import 'server-only';
 
-import { and, desc, eq, ilike, inArray, or, sql } from 'drizzle-orm';
+import { and, desc, eq, ilike, inArray, isNotNull, or, sql } from 'drizzle-orm';
 import { alias } from 'drizzle-orm/pg-core';
 
 import { db } from '@/lib/db/client';
@@ -268,12 +268,13 @@ export async function getAttackableZoneIds(guildId: bigint): Promise<number[]> {
   return [...set];
 }
 
-/** 구역의 최근 점령 전투 id(없으면 null) — 전투 기록 페이지 진입용. */
+/** 구역의 최근 점령 전투 id(없으면 null) — 전투 기록 페이지 진입용. 공개된(published) 전투만. */
 export async function getZoneLatestBattleId(zoneId: number) {
   const [b] = await db
     .select({ id: conquestBattles.id })
     .from(conquestBattles)
-    .where(eq(conquestBattles.zoneId, zoneId))
+    // 23:00 정산분은 24:00 공개 전까지 비노출(published_at IS NULL) — 지연 공개(§5.8).
+    .where(and(eq(conquestBattles.zoneId, zoneId), isNotNull(conquestBattles.publishedAt)))
     .orderBy(desc(conquestBattles.battleKstDay))
     .limit(1);
   return b?.id ?? null;
@@ -296,7 +297,8 @@ export async function getConquestBattleById(id: bigint) {
     .from(conquestBattles)
     .innerJoin(zones, eq(zones.id, conquestBattles.zoneId))
     .leftJoin(guilds, eq(guilds.id, conquestBattles.winnerGuildId))
-    .where(eq(conquestBattles.id, id))
+    // 공개 전(published_at IS NULL) 전투는 직접 id 접근으로도 비노출(지연 공개·§5.8).
+    .where(and(eq(conquestBattles.id, id), isNotNull(conquestBattles.publishedAt)))
     .limit(1);
   return b ?? null;
 }

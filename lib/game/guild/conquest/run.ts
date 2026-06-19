@@ -1,6 +1,6 @@
 import 'server-only';
 
-import { and, eq, inArray, sql } from 'drizzle-orm';
+import { and, eq, inArray, isNull, sql } from 'drizzle-orm';
 
 import { db } from '@/lib/db/client';
 import { zones, conquestBattles, guildMembers } from '@/lib/db/schema/guild';
@@ -13,13 +13,14 @@ import { conquestPowerMult } from '../balance';
 import { simulateConquest, type ConquestUnit } from './simulate';
 
 /**
- * 점령전 정산 — GUILD §5.8⑧. KST 자정(00시대) cron. **직전 전투일(어제 KST)**을 결정론 정산.
- * 배치 마감은 전날 23:00(잠금 윈도 23:00~24:00), 결과 노출은 자정 — 소유권·우편·세계 연대기를
- * 모두 자정에 함께 발표하기 위해 정산 시점을 23:00 → 자정으로 이동(전투일=어제).
+ * 점령전 정산 — GUILD §5.8⑧. **KST 23:00 cron**. 그날(오늘 KST) 전투를 결정론 정산.
+ * 전투력 스냅샷·승자 산출은 23:00에 확정하되, **소유권 적용·우편은 하지 않는다**(지연 공개).
+ * 결과는 conquest_battles에 published_at=NULL로 저장만 → 24:00 revealConquest가 공개·발표.
+ * (대난투 computed→revealed 선례와 동형: 산출=정시, 노출=발표 시각.)
  *  - 경합 구역(공격 배치 ≥1)만 순회. 참가 = 배치(공/수) + 집행관(자동 ×3 방어).
- *  - effCp = 장비 전투력 스냅샷 × 역할 배수. simulateConquest → 승자 → 소유권/집행관 갱신.
- *  - 멱등: conquest_battles UNIQUE(zone_id, battle_kst_day) + 선조회. 구역별 트랜잭션.
- *  - battleDay는 호출자(cron 라우트)가 KST 어제 날짜로 결정(클라 불신·결정론).
+ *  - effCp = 장비 전투력 스냅샷 × 역할 배수. simulateConquest → 승자 → finale 저장.
+ *  - 멱등: conquest_battles UNIQUE(zone_id, battle_kst_day) + onConflictDoNothing.
+ *  - battleDay는 호출자(cron 라우트)가 KST 오늘 날짜로 결정(클라 불신·결정론).
  */
 type DepRow = { zone_id: number; uid: string; guild_id: string; gname: string; role: 'attack' | 'defend' };
 type ZoneRow = { id: number; name: string; owner_guild_id: string | null; executor: string | null; owner_name: string | null };
@@ -95,18 +96,6 @@ export async function runConquest(serverId: number, battleDay: string): Promise<
   }
 
   let resolved = 0;
-  // 점령전 결과 누적 — 관여 길드별 점령/방어/상실/공격실패 구역명. 정산 후 길드원 전체에 요약 우편 1건.
-  // 신규 정산(ins>0)일 때만 기록 → cron 다중 tick 멱등(이미 정산된 재실행은 우편 안 보냄).
-  type GuildResult = { captured: string[]; defended: string[]; lost: string[]; failed: string[] };
-  const results = new Map<string, GuildResult>();
-  const bucketOf = (gid: string): GuildResult => {
-    let r = results.get(gid);
-    if (!r) {
-      r = { captured: [], defended: [], lost: [], failed: [] };
-      results.set(gid, r);
-    }
-    return r;
-  };
   for (const zoneId of contestedArr) {
     const z = zoneInfo.get(zoneId);
     if (!z) continue;
@@ -137,53 +126,110 @@ export async function runConquest(serverId: number, battleDay: string): Promise<
     const result = simulateConquest(units, `conquest:${battleDay}:${zoneId}`);
     const winner = result.winnerGuildId;
 
-    const newlySettled = await db.transaction(async (tx) => {
-      const ins = await tx
-        .insert(conquestBattles)
-        .values({
-          serverId,
-          battleKstDay: battleDay,
-          zoneId,
-          winnerGuildId: winner ? BigInt(winner) : null,
-          finale: result.finale,
-        })
-        .onConflictDoNothing({ target: [conquestBattles.zoneId, conquestBattles.battleKstDay] })
-        .returning({ id: conquestBattles.id });
-      if (ins.length === 0) return false; // 이미 정산(멱등) — 소유권도 손대지 않음
+    // 결과 저장만(published_at=NULL) — 소유권/우편은 24:00 revealConquest로 지연.
+    const ins = await db
+      .insert(conquestBattles)
+      .values({
+        serverId,
+        battleKstDay: battleDay,
+        zoneId,
+        winnerGuildId: winner ? BigInt(winner) : null,
+        finale: result.finale,
+      })
+      .onConflictDoNothing({ target: [conquestBattles.zoneId, conquestBattles.battleKstDay] })
+      .returning({ id: conquestBattles.id });
+    if (ins.length > 0) resolved++;
+  }
 
-      // 승자 = 소유 길드 → 방어 성공(유지). 승자 = 공격/중립 점령 → 소유 이전 + 집행관 공석.
-      if (winner && winner !== z.owner_guild_id) {
+  return { battleDay, resolved };
+}
+
+/**
+ * 점령전 공개 — GUILD §5.8⑨. **KST 자정(00시대) cron**. 23:00에 저장된(미공개) 그 전투일 결과를
+ * 한꺼번에 노출·발표한다: 소유권/집행관 적용 + 관여 길드원 결과 우편 + published_at 마킹.
+ * 전투 기록 조회(getZone…/getConquestBattleById)는 published_at not-null만 보이므로, 공개 전엔 비노출.
+ *  - published_at IS NULL 행만 처리 → 멱등(다중 tick·동시 cron 안전). 조건부 플립으로 우편 1회 보장.
+ *  - prevOwner = 공개 직전 zones 소유(아직 미변경). 분류(점령/방어/상실/공격실패)는 정산 당시와 동일.
+ *  - battleDay = KST 어제(전투일). chronicle cron이 narrate 직전 호출.
+ */
+type RevealRow = { id: string; zid: number; zname: string; winner: string | null; prev: string | null };
+
+export async function revealConquest(serverId: number, battleDay: string): Promise<{ revealed: number; mailed: number }> {
+  // 미공개 전투 + 구역명·현재 소유(공개 직전).
+  const rows = (await db.execute(sql`
+    select cb.id::text id, cb.zone_id zid, z.name zname,
+           cb.winner_guild_id::text winner, z.owner_guild_id::text prev
+    from conquest_battles cb
+    join zones z on z.id = cb.zone_id
+    where cb.server_id = ${serverId} and cb.battle_kst_day = ${battleDay} and cb.published_at is null
+  `)) as unknown as RevealRow[];
+  if (rows.length === 0) return { revealed: 0, mailed: 0 };
+
+  // 그날 공격 배치(우편 분류용) — 구역별 공격 길드.
+  const deps = (await db.execute(sql`
+    select d.zone_id zid, d.guild_id::text guild_id, d.role::text role
+    from guild_battle_deployments d
+    where d.battle_kst_day = ${battleDay} and d.server_id = ${serverId}
+  `)) as unknown as { zid: number; guild_id: string; role: string }[];
+  const deployGuildsByZone = new Map<number, Set<string>>();
+  const attackersByZone = new Map<number, Set<string>>();
+  for (const d of deps) {
+    (deployGuildsByZone.get(d.zid) ?? deployGuildsByZone.set(d.zid, new Set()).get(d.zid)!).add(d.guild_id);
+    if (d.role === 'attack')
+      (attackersByZone.get(d.zid) ?? attackersByZone.set(d.zid, new Set()).get(d.zid)!).add(d.guild_id);
+  }
+
+  type GuildResult = { captured: string[]; defended: string[]; lost: string[]; failed: string[] };
+  const results = new Map<string, GuildResult>();
+  const bucketOf = (gid: string): GuildResult => {
+    let r = results.get(gid);
+    if (!r) {
+      r = { captured: [], defended: [], lost: [], failed: [] };
+      results.set(gid, r);
+    }
+    return r;
+  };
+
+  let revealed = 0;
+  for (const r of rows) {
+    // 조건부 플립(published_at IS NULL → now()) — 동시 cron/다중 tick에서 1회만 적용.
+    const applied = await db.transaction(async (tx) => {
+      const flip = await tx
+        .update(conquestBattles)
+        .set({ publishedAt: new Date() })
+        .where(and(eq(conquestBattles.id, BigInt(r.id)), isNull(conquestBattles.publishedAt)))
+        .returning({ id: conquestBattles.id });
+      if (flip.length === 0) return false; // 다른 실행이 이미 공개
+      // 승자 = 공격/중립 점령 → 소유 이전 + 집행관 공석. 승자 = 소유 길드면 유지(변경 없음).
+      if (r.winner && r.winner !== r.prev) {
         await tx
           .update(zones)
-          .set({ ownerGuildId: BigInt(winner), executorUserId: null, capturedAt: new Date() })
-          .where(eq(zones.id, zoneId));
+          .set({ ownerGuildId: BigInt(r.winner), executorUserId: null, capturedAt: new Date() })
+          .where(eq(zones.id, r.zid));
       }
-      resolved++;
       return true;
     });
-    if (!newlySettled) continue;
+    if (!applied) continue;
+    revealed++;
 
-    // 결과 분류 — 관여 길드(승자·이전 소유·배치 길드)별로 이 구역 결과 귀속(요약 우편용).
-    const prevOwner = z.owner_guild_id;
+    // 결과 분류 — 관여 길드(승자·이전 소유·배치 길드)별 이 구역 결과 귀속(요약 우편용).
     const involved = new Set<string>();
-    if (winner) involved.add(winner);
-    if (prevOwner) involved.add(prevOwner);
-    const attackers = new Set<string>();
-    for (const d of depsByZone.get(zoneId) ?? []) {
-      involved.add(d.guild_id);
-      if (d.role === 'attack') attackers.add(d.guild_id);
-    }
+    if (r.winner) involved.add(r.winner);
+    if (r.prev) involved.add(r.prev);
+    for (const g of deployGuildsByZone.get(r.zid) ?? []) involved.add(g);
+    const attackers = attackersByZone.get(r.zid) ?? new Set<string>();
     for (const g of involved) {
       const b = bucketOf(g);
-      if (winner && g === winner && g === prevOwner) b.defended.push(z.name); // 방어 성공(소유 유지)
-      else if (winner && g === winner) b.captured.push(z.name); // 점령(탈취/중립 확보)
-      else if (winner && g === prevOwner) b.lost.push(z.name); // 상실(빼앗김)
-      else if (!winner && g === prevOwner) b.defended.push(z.name); // 무승부 = 소유 유지
-      else if (attackers.has(g)) b.failed.push(z.name); // 공격 실패
+      if (r.winner && g === r.winner && g === r.prev) b.defended.push(r.zname); // 방어 성공(소유 유지)
+      else if (r.winner && g === r.winner) b.captured.push(r.zname); // 점령(탈취/중립 확보)
+      else if (r.winner && g === r.prev) b.lost.push(r.zname); // 상실(빼앗김)
+      else if (!r.winner && g === r.prev) b.defended.push(r.zname); // 무승부 = 소유 유지
+      else if (attackers.has(g)) b.failed.push(r.zname); // 공격 실패
     }
   }
 
-  // 관여 길드원 전체에 결과 요약 우편 1건(점령/방어/상실/공격실패) — best-effort(정산과 분리).
+  // 관여 길드원 전체에 결과 요약 우편 1건 — best-effort(공개와 분리).
+  let mailed = 0;
   if (results.size > 0) {
     const fmtBody = (r: GuildResult): string => {
       const lines: string[] = [];
@@ -219,8 +265,11 @@ export async function runConquest(serverId: number, battleDay: string): Promise<
         };
       })
       .filter((v): v is NonNullable<typeof v> => v !== null);
-    if (mails.length > 0) await db.insert(mailbox).values(mails);
+    if (mails.length > 0) {
+      await db.insert(mailbox).values(mails);
+      mailed = mails.length;
+    }
   }
 
-  return { battleDay, resolved };
+  return { revealed, mailed };
 }

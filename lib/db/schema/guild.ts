@@ -221,6 +221,11 @@ export const conquestBattles = pgTable(
     }),
     finale: jsonb('finale').$type<unknown>(),
     createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
+    /**
+     * 지연 공개(reveal) 시각 — GUILD §5.8. 23:00 정산은 결과만 저장(null)하고 소유권/우편 미적용,
+     * 24:00 공개 때 소유권 적용·우편 발송 후 stamp. 전투 기록 조회는 not-null 행만 노출.
+     */
+    publishedAt: timestamp('published_at', { withTimezone: true }),
   },
   (t) => [uniqueIndex('conquest_zone_day_uq').on(t.zoneId, t.battleKstDay)],
 );
