@@ -172,7 +172,7 @@ export default async function LeaderboardPage({
                               alt=""
                               aria-hidden
                               className="h-full w-full object-contain"
-                              style={{ imageRendering: 'pixelated', transform: 'scale(1.2)' }}
+                              style={{ imageRendering: 'pixelated', transform: 'scale(1.38)' }}
                             />
                           ) : null}
                         </span>

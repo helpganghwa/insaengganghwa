@@ -54,13 +54,13 @@ function EquipIcon({ item }: { item: Equipped | undefined }) {
   }
   return (
     <span
-      className={`relative h-10 w-10 shrink-0 overflow-hidden rounded-md border bg-zinc-100 dark:bg-zinc-800 ${
+      className={`relative flex h-10 w-10 shrink-0 items-center justify-center overflow-hidden rounded-md border p-0.5 ${
         hasRarityBorder(item.transcendLevel) ? '' : 'border-zinc-300 dark:border-zinc-700'
       }`}
       style={rarityBorderStyle(item.transcendLevel)}
     >
-      {/* 등급 테두리는 CSS border(초월 컬러)만 — 공유 미리보기와 동일. 스프라이트는 frameless. */}
-      <TranscendSprite code={item.code} slot={item.slot} level={item.transcendLevel} size={40} frameless />
+      {/* 배경 투명 + 약간의 패딩(2px)으로 이미지가 꽉 차지 않게. 등급 테두리는 CSS border(초월 컬러)만. */}
+      <TranscendSprite code={item.code} slot={item.slot} level={item.transcendLevel} size={34} frameless />
       {item.enhance > 0 && (
         <span className="absolute bottom-0 right-0 z-10 rounded-tl bg-black/65 px-0.5 text-[9px] font-bold leading-tight text-amber-300">
           +{item.enhance}
@@ -88,7 +88,7 @@ function MemberRow({ m, myUserId }: { m: RichMember; myUserId: string }) {
               alt=""
               aria-hidden
               className="h-full w-full object-contain"
-              style={{ imageRendering: 'pixelated', transform: 'scale(1.2)' }}
+              style={{ imageRendering: 'pixelated', transform: 'scale(1.38)' }}
             />
           ) : null}
         </span>
