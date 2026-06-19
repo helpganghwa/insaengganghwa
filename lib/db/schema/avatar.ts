@@ -144,6 +144,13 @@ export const profileGenerationJobs = pgTable(
     userProfileId: uuid('user_profile_id').references(() => userProfiles.id, {
       onDelete: 'set null',
     }),
+    /**
+     * 운영자 검수(분쟁 처리) 결정 — null=미검수.
+     * 'confirm'(AI 결정 인정·무조치) | 'grant'(보상 다이아 지급) | 'reject'(아바타 회수+환불).
+     */
+    adminDecision: text('admin_decision'),
+    /** 운영자 결정 시각(null=미검수). 날짜별 점검 시 미검수/검수완료 구분. */
+    adminReviewedAt: timestamp('admin_reviewed_at', { withTimezone: true }),
     createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
     resolvedAt: timestamp('resolved_at', { withTimezone: true }),
   },
