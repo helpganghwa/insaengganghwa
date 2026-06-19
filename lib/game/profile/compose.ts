@@ -160,15 +160,15 @@ function assemble(opts: ProfileOptions, outfitClause: string): string {
   // 성별 강제(남=FLAT chest 안티플립)도 유지. 장비는 outfitClause가 정확히 묘사(과잉 초점 X).
   const genderClause =
     opts.gender === 'male'
-      ? `MALE bishōnen boy drawn in clean Japanese anime (cel-shaded) art style, with a masculine boyish face, a flat masculine chest, and a masculine build and hair. KEEP from the source character exactly: the same Japanese anime art style, the same face, and the same slim tall proportions with a small head and long legs. He stays clearly male, masculine.`
-      : `FEMALE bishōjo drawn in clean Japanese anime (cel-shaded) art style, with a feminine face and figure. KEEP from the source character exactly: the same Japanese anime art style, the same face, and the same slim tall proportions with a small head and long legs. She stays clearly female.`;
+      ? `MALE bishōnen boy drawn in clean Japanese anime (cel-shaded) art style, with a masculine boyish face, a flat masculine chest, and a masculine build and hair. KEEP from the source character exactly: the same Japanese anime art style, the same face, and the same tall, slim, long-legged proportions — a small head on a mature 7-to-8 heads-tall body. He stays clearly male, masculine.`
+      : `FEMALE bishōjo drawn in clean Japanese anime (cel-shaded) art style, with a feminine face and figure. KEEP from the source character exactly: the same Japanese anime art style, the same face, and the same tall, slim, long-legged proportions — a small head on a mature 7-to-8 heads-tall body. She stays clearly female.`;
   // 포즈 문구 제거 — 포즈가 natural('standing naturally') 1종뿐이라 기본자세와 동일,
   // 명시 불필요(2026-06-19 사용자). 무기 'held in hand'는 outfitClause에 있어 영향 없음.
   return [
     genderClause,
     outfitClause,
     `Full body head-to-feet, both feet on the ground; exactly two arms and two legs with one hand at the end of each arm; on a clean transparent background, character only, with clean solid outlines.`,
-    `Confirm: keep the source's Japanese anime art style, face and slim tall proportions with a small head; full body with both feet visible.`,
+    `Confirm: keep the source's Japanese anime art style, face and mature 7-to-8 heads-tall proportions with a small head and long legs; full body with both feet visible.`,
   ].join(' ');
 }
 
