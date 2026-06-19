@@ -61,11 +61,10 @@ function EquipIcon({ item }: { item: Equipped | undefined }) {
     >
       {/* 배경 투명 + 약간의 패딩(2px)으로 이미지가 꽉 차지 않게. 등급 테두리는 CSS border(초월 컬러)만. */}
       <TranscendSprite code={item.code} slot={item.slot} level={item.transcendLevel} size={34} frameless />
-      {item.enhance > 0 && (
-        <span className="absolute bottom-0 right-0 z-10 rounded-tl bg-black/65 px-0.5 text-[9px] font-bold leading-tight text-amber-300">
-          +{item.enhance}
-        </span>
-      )}
+      {/* 강화 수치는 항상 표시(+0 포함) — 프로필 섹션과 동일. */}
+      <span className="absolute bottom-0 right-0 z-10 rounded-tl bg-black/65 px-0.5 text-[9px] font-bold leading-tight text-amber-300">
+        +{item.enhance}
+      </span>
     </span>
   );
 }
@@ -80,7 +79,7 @@ function MemberRow({ m, myUserId }: { m: RichMember; myUserId: string }) {
         className="flex items-center gap-2 py-1.5 active:opacity-70"
       >
         {/* 아바타 */}
-        <span className="h-10 w-10 shrink-0 overflow-hidden rounded-lg bg-zinc-100 dark:bg-zinc-800">
+        <span className="h-10 w-10 shrink-0 overflow-hidden rounded-lg">
           {m.avatar ? (
             // eslint-disable-next-line @next/next/no-img-element
             <img

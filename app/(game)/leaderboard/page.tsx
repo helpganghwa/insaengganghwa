@@ -164,7 +164,7 @@ export default async function LeaderboardPage({
                           #{e.rank}
                         </span>
                         {/* 아바타 — 닉네임 왼쪽(길드원 목록과 동일) */}
-                        <span className="h-9 w-9 shrink-0 overflow-hidden rounded-lg bg-zinc-800">
+                        <span className="h-9 w-9 shrink-0 overflow-hidden rounded-lg">
                           {e.profileImg ? (
                             // eslint-disable-next-line @next/next/no-img-element
                             <img
