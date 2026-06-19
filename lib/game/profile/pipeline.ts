@@ -400,6 +400,88 @@ async function acceptJob(
   await safePush(userId, '프로필 생성 완료', '새 프로필이 목록에 추가되었어요. 확인해 보세요!', '/me/profiles');
 }
 
+/**
+ * 운영자 분쟁 처리 — AI가 거절했지만 실제로 문제 없는 아바타를 직접 지급(다이아 차감 없음).
+ * Pixellab 캐릭터에서 8방향을 Storage로 미러링 → user_profiles 생성 → 목록 추가 + 우편.
+ * AI 거절 시 escrow는 이미 환불됐으므로 추가 차감/환불 없음(순수 지급).
+ */
+export async function adminGrantAvatarForJob(jobId: bigint): Promise<{ ok: boolean; msg?: string }> {
+  const [job] = await db
+    .select()
+    .from(profileGenerationJobs)
+    .where(eq(profileGenerationJobs.id, jobId))
+    .limit(1);
+  if (!job) return { ok: false, msg: '작업을 찾을 수 없습니다.' };
+  if (job.userProfileId) return { ok: false, msg: '이미 아바타가 지급되어 있습니다.' };
+  if (!job.pixellabCharacterId) return { ok: false, msg: 'Pixellab 캐릭터 정보가 없어 지급할 수 없습니다.' };
+
+  const key = process.env.PIXELLAB_API_KEY;
+  if (!key) return { ok: false, msg: 'PIXELLAB_API_KEY 미설정' };
+
+  const charRes = await fetch(`${PIXELLAB_BASE}/characters/${job.pixellabCharacterId}`, {
+    headers: { authorization: `Bearer ${key}` },
+  });
+  if (!charRes.ok) return { ok: false, msg: `Pixellab 캐릭터 조회 실패 (HTTP ${charRes.status})` };
+  const char = (await charRes.json()) as PixellabCharacterDetail;
+
+  const remoteRotations: Record<string, string> = {};
+  for (const [k, v] of Object.entries(char.rotation_urls ?? {})) {
+    if (typeof v === 'string' && v.length > 0) remoteRotations[k] = v;
+  }
+  if (Object.keys(remoteRotations).length < 8) {
+    return { ok: false, msg: '8방향 이미지가 완성되지 않아 지급할 수 없습니다.' };
+  }
+
+  const rotations = await mirrorRotations(job.pixellabCharacterId, remoteRotations, job.userId);
+  if (Object.keys(rotations).length === 0) return { ok: false, msg: '이미지 미러링 실패' };
+
+  await db.transaction(async (tx) => {
+    const [profile] = await tx
+      .insert(userProfiles)
+      .values({
+        userId: job.userId,
+        serverId: job.serverId,
+        rotations,
+        activeDirection: 'south',
+        pixellabCharacterId: job.pixellabCharacterId!,
+        options: job.options,
+        equipmentSnapshot: job.equipmentSnapshot,
+        descriptionPrompt: job.descriptionPrompt,
+      })
+      .returning({ id: userProfiles.id });
+
+    // 상태(rejected_ai 등)는 분쟁 이력 보존을 위해 유지 — 지급 사실은 adminDecision으로 기록.
+    await tx
+      .update(profileGenerationJobs)
+      .set({ userProfileId: profile!.id, adminDecision: 'grant', adminReviewedAt: new Date() })
+      .where(eq(profileGenerationJobs.id, jobId));
+
+    // 첫 프로필이면 자동 active.
+    await tx
+      .update(characters)
+      .set({ activeProfileId: profile!.id })
+      .where(
+        and(
+          eq(characters.userId, job.userId),
+          eq(characters.serverId, job.serverId),
+          sql`${characters.activeProfileId} IS NULL`,
+        ),
+      );
+
+    await tx.insert(mailbox).values({
+      userId: job.userId,
+      serverId: job.serverId,
+      type: 'admin',
+      title: '아바타 지급 안내',
+      body: '안녕하세요, 운영팀입니다.\n\n생성하신 아바타를 운영팀이 직접 확인한 결과 문제가 없어 정상 지급해 드렸습니다.\n다이아 추가 차감 없이 프로필 목록에 추가되었으니, 상세 화면에서 8방향을 둘러보세요.\n\n불편을 드려 죄송합니다. 감사합니다.',
+      senderLabel: '운영자',
+      payload: {},
+    });
+  });
+  // 운영자 결정은 우편으로만 통지 — 푸시 없음(사용자 결정).
+  return { ok: true };
+}
+
 async function rejectJob(
   jobId: bigint,
   userId: string,

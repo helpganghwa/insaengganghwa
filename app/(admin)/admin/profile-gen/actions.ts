@@ -9,6 +9,7 @@ import { profileGenerationJobs, userProfiles } from '@/lib/db/schema/avatar';
 import { characters } from '@/lib/db/schema/server';
 import { mailbox } from '@/lib/db/schema/mailbox';
 import { walletAdd } from '@/lib/game/wallet';
+import { adminGrantAvatarForJob } from '@/lib/game/profile/pipeline';
 
 /**
  * 통과 아바타 회수 + 다이아 환불 (분쟁 처리).
@@ -64,36 +65,15 @@ export async function adminRevokeAndRefund(jobId: string): Promise<{ ok: boolean
 }
 
 /**
- * 다이아 보상 지급 (차감 없음) — 실패/분쟁 보상용.
- * escrow 금액을 그대로 지급(walletAdd) + 운영자 우편 통지. 차감 행위 아님(순수 지급).
+ * 아바타 지급 (다이아 차감 없음) — AI가 거절했지만 실제로 문제 없는 아바타를 직접 지급.
+ * Storage 미러링 + user_profiles 생성 + 목록 추가 + 우편(pipeline.adminGrantAvatarForJob).
+ * AI 거절 시 escrow는 이미 환불됐으므로 추가 차감/환불 없음(순수 지급).
  */
-export async function adminGrantDiamonds(jobId: string): Promise<{ ok: boolean; msg?: string }> {
+export async function adminGrantAvatar(jobId: string): Promise<{ ok: boolean; msg?: string }> {
   await requireAdmin();
-  const [job] = await db
-    .select()
-    .from(profileGenerationJobs)
-    .where(eq(profileGenerationJobs.id, BigInt(jobId)))
-    .limit(1);
-  if (!job) return { ok: false, msg: '작업을 찾을 수 없습니다.' };
-
-  await db.transaction(async (tx) => {
-    await walletAdd(tx, job.userId, job.serverId, job.diamondEscrow);
-    await tx
-      .update(profileGenerationJobs)
-      .set({ adminDecision: 'grant', adminReviewedAt: new Date() })
-      .where(eq(profileGenerationJobs.id, job.id));
-    await tx.insert(mailbox).values({
-      userId: job.userId,
-      serverId: job.serverId,
-      type: 'admin',
-      title: '아바타 생성 보상 안내',
-      body: `안녕하세요, 운영팀입니다.\n\n아바타 생성 과정에서 만족스러운 결과를 받지 못하신 점 확인하였습니다.\n불편을 드린 데 대한 보상으로 다이아 ${job.diamondEscrow.toString()}개를 지급해 드렸습니다.\n\n지급된 다이아로 다시 생성에 도전해 주세요. 이용해 주셔서 감사합니다.`,
-      senderLabel: '운영자',
-      payload: {},
-    });
-  });
+  const r = await adminGrantAvatarForJob(BigInt(jobId));
   revalidatePath('/admin/profile-gen');
-  return { ok: true };
+  return r;
 }
 
 /**

@@ -2,11 +2,11 @@
 
 import { useState, useTransition } from 'react';
 
-import { adminConfirmReview, adminGrantDiamonds, adminRevokeAndRefund } from './actions';
+import { adminConfirmReview, adminGrantAvatar, adminRevokeAndRefund } from './actions';
 
 const DECISION_KO: Record<string, string> = {
   confirm: '✓ 확인(무조치)',
-  grant: '💎 보상 지급',
+  grant: '🎁 아바타 지급',
   reject: '↩ 회수+환불',
 };
 
@@ -67,13 +67,13 @@ export function AdminProfileGenActions({
           disabled={pending}
           onClick={() =>
             run(
-              () => adminGrantDiamonds(jobId),
-              `다이아 ${escrow}개를 지급할까요? (차감 없음·순수 보상 + 우편 통지)`,
+              () => adminGrantAvatar(jobId),
+              '이 아바타를 지급할까요?\n(문제 없음 판정 — 다이아 차감 없이 목록 추가 + 우편 통지)',
             )
           }
-          className="rounded-lg border border-amber-700 bg-amber-900/30 px-3 py-1.5 text-xs font-bold text-amber-300 disabled:opacity-50"
+          className="rounded-lg border border-emerald-700 bg-emerald-900/30 px-3 py-1.5 text-xs font-bold text-emerald-300 disabled:opacity-50"
         >
-          지급(차감X)
+          아바타 지급(차감X)
         </button>
       )}
       {msg && <span className="text-xs text-zinc-400">{msg}</span>}
