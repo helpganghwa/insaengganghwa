@@ -170,6 +170,31 @@ function assemble(opts: ProfileOptions, outfitClause: string): string {
   ].join(' ');
 }
 
+/**
+ * 최종 1000자(Pixellab spec) 보장 — 고정 앵커(성별·포맷·포즈·Confirm)는 보존하고
+ * outfit만 남는 예산에 맞춰 단어경계로 절단. 어떤 입력이든 결과 ≤1000을 보장한다.
+ */
+function finalizeUnder1000(opts: ProfileOptions, outfitClause: string): string {
+  let final = assemble(opts, outfitClause);
+  if (final.length <= 1000) return final;
+  // outfit 제외 고정부 길이 → outfit 예산 산출 후 단어경계 절단.
+  const fixedLen = final.length - outfitClause.length;
+  const budget = 1000 - fixedLen - 1;
+  if (budget > 24 && outfitClause.length > budget) {
+    let t = outfitClause.slice(0, budget);
+    const sp = t.lastIndexOf(' ');
+    if (sp > 0) t = t.slice(0, sp);
+    outfitClause = t.trimEnd().replace(/[,;:]+$/, '') + '.';
+    final = assemble(opts, outfitClause);
+  }
+  // 고정부만으로도 초과(이론상 거의 없음) → 단어경계 하드컷.
+  if (final.length > 1000) {
+    const cut = final.slice(0, 1000);
+    final = cut.slice(0, Math.max(1, cut.lastIndexOf(' '))).trimEnd();
+  }
+  return final;
+}
+
 /** Haiku 실패 시 정적 의상절(장르 자유·모티프 느슨) — 기존 동작 보존. */
 function staticOutfitClause(opts: ProfileOptions, motifsConcept: string): string {
   return `Give the character a fresh new hairstyle (${HAIR_LENGTH_DESC[opts.hairLength]}, new color) and a whole new outfit and gear — be creative, ANY genre (casual, school uniform, swimwear, dress, suit, modern, fantasy, etc.), built around the motifs and clearly visible: ${motifsConcept}.`;
@@ -246,5 +271,5 @@ export async function composeEditDescription(
     }
   }
 
-  return assemble(opts, outfitClause);
+  return finalizeUnder1000(opts, outfitClause);
 }

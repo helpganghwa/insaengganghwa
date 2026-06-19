@@ -153,9 +153,20 @@ export async function enqueueOnePixellab(): Promise<
   const optsTyped = job.options as { gender: 'male' | 'female' };
   const sourceCharacterId = SOURCE_BY_GENDER[optsTyped.gender];
 
+  // Pixellab spec: edit_description ≤ 1000자. compose가 보장하지만, 과거 저장분·예외 경로
+  // 대비 요청 직전 최종 하드컷(단어경계) — 절대 1000 초과로 요청하지 않음.
+  let editDescription = job.description;
+  if (editDescription.length > 1000) {
+    const cut = editDescription.slice(0, 1000);
+    editDescription = cut.slice(0, Math.max(1, cut.lastIndexOf(' '))).trimEnd();
+    console.warn(
+      `[profile-enqueue] job ${job.id} edit_description ${job.description.length}>1000 → ${editDescription.length}자로 절단 후 요청`,
+    );
+  }
+
   const body = {
     character_id: sourceCharacterId,
-    edit_description: job.description,
+    edit_description: editDescription,
     no_background: true,
     // use_color_palette_from_reference: true 실험 결과 — 소스 캐릭터 팔레트/디자인을 통째로
     // 덮어써 의도한 장비 색을 무시(2026-06-19). 회전 색 드리프트도 못 고침 → false 유지.
