@@ -26,8 +26,9 @@ const SIGNUP_DIAMOND = 1000 * TEST_REWARD_MULTIPLIER;
 const SIGNUP_BOX_PER_SLOT = 10 * TEST_REWARD_MULTIPLIER;
 /** 기본 아바타(대장장이 남/여) — 트리거와 동일 정적 에셋. */
 const DEFAULT_AVATARS = [
-  { charId: 'ada89510-cb31-49f5-a5ff-94422d4443f0', gender: 'male' },
-  { charId: '8197894c-b042-4f8a-9c8b-6532e6c5c6b5', gender: 'female' },
+  // v3 스타일 재생성(2026-06-20) — 대장장이 견습생 미소년/미소녀, 풀프레임·lineless·7등신.
+  { charId: 'fd767516-0af6-43f7-b6ed-398289e7d54f', gender: 'male' },
+  { charId: '8f13733d-ea39-45a1-b0e3-9e03ede08534', gender: 'female' },
 ] as const;
 const rotationsFor = (g: 'male' | 'female') =>
   Object.fromEntries(
