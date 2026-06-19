@@ -8,23 +8,19 @@ import sharp from 'sharp';
  *  1) 흰점 노이즈 — "흰색인데 주변에 흰색이 적고(고립) 배경(투명) 인접" 픽셀만 투명화.
  *     - 흰 옷/금속(주변도 흰색)·눈 하이라이트(투명 이웃 없음)는 보존.
  *
- *  2) 분리 픽셀 덩어리 — alpha 채널 8-connectivity components 분석 후 가장 큰
- *     컴포넌트(=캐릭터 본체) 외에 BLOB_SIZE_MAX 미만의 작은 덩어리는 통째 제거.
- *     pixellab가 가끔 머리 위·옆 공중에 작은 픽셀 덩어리(예: 16x38, ~300px)를
- *     뱉는 케이스를 처리. 큰 분리 부속(BLOB_SIZE_MAX 이상)은 정상 부속으로 간주해 보존.
+ *  2) 분리 픽셀 잡티 — alpha 8-connectivity components 분석 후 가장 큰 컴포넌트(=본체)
+ *     외의 덩어리 중 **아주 작은 잡티(BLOB_SIZE_MAX 미만)만** 제거.
+ *     ⚠ 의미 있는 분리 요소(머리 위 천사 후광 링, 끊긴 무기 조각 등)는 보존한다.
+ *     - 천사 후광이 잡티로 지워지던 이슈 + 끊긴 무기 조각을 여기서 지우면 검수가 못 잡는
+ *       문제 때문에, 임계를 미세 잡티 수준으로 낮추고 상대 비율 임계(BLOB_REL_MAX)는 제거.
+ *       끊긴 무기·이상 부속은 지우지 말고 그대로 둬서 AI 검수(ai-review)가 판정하게 한다.
  */
 const ALPHA_ON = 40;
 const WHITE = 200;
 const MAX_BRIGHT_NEIGHBORS = 3;
 const BLOB_ALPHA_THRESHOLD = 16;
-const BLOB_SIZE_MAX = 500;
-/**
- * 분리 덩어리 제거 상대 임계 — 본체(최대 컴포넌트) 크기 대비 이 비율 미만이면 제거.
- * 절대값(BLOB_SIZE_MAX)만으로는 큰 캐릭터의 떠있는 결함(예: 751px 해골·519px 검 =
- * 본체 ~7,900px의 7~10%)이 500을 넘겨 빠져나감. 비율을 더해 캐릭터 크기에 강건하게.
- * 단 이 비율 이상 큰 분리 부속(망토·대형 무기)은 의도된 것으로 보존.
- */
-const BLOB_REL_MAX = 0.12;
+// 미세 잡티만 제거(안티에일리어싱 점 수준). 후광 링·무기 조각 등 의미있는 분리 요소는 보존.
+const BLOB_SIZE_MAX = 30;
 
 export async function cleanupSprite(pngBuf: Buffer): Promise<Buffer> {
   const { data, info } = await sharp(pngBuf)
@@ -103,9 +99,8 @@ export async function cleanupSprite(pngBuf: Buffer): Promise<Buffer> {
   }
   if (components.length > 1) {
     components.sort((a, b) => b.size - a.size);
-    const main = components[0]!;
-    // 절대(BLOB_SIZE_MAX) + 상대(본체 대비 BLOB_REL_MAX) 중 큰 값 미만이면 제거.
-    const sizeLimit = Math.max(BLOB_SIZE_MAX, Math.floor(main.size * BLOB_REL_MAX));
+    // 미세 잡티(BLOB_SIZE_MAX 미만)만 제거. 후광 링·무기 조각 등은 보존 → 검수로 넘김.
+    const sizeLimit = BLOB_SIZE_MAX;
     for (let i = 1; i < components.length; i++) {
       const c = components[i]!;
       if (c.size >= sizeLimit) continue;
