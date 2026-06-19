@@ -21,14 +21,14 @@ import type { Appearance } from './appearance-v3';
 const MODEL_ID = 'claude-sonnet-4-6';
 const MAX_CHARS = 1800; // v3 description 한도 2000 — 안전 마진.
 
-const PROP = `PROPORTIONS ARE THE TOP PRIORITY — a balanced 7-heads-tall figure: a small head (about one-seventh of the total body height), a slender neck, a balanced torso, and long legs with a natural waistline. Slim and youthful like an anime key-visual character. Keep ALL head accessories small and neat — ears, horns, crowns and headpieces stay modest so the head reads small.`;
+const PROP = `PROPORTIONS ARE THE TOP PRIORITY — a TALL, slender 7-heads-tall figure (a small head about one-seventh of the total body height), and NEVER shorter than 6 heads. A tall long-legged silhouette like an anime key-visual idol: long legs (roughly half the total height), a high waistline, a slender neck and a compact torso. The youthfulness is in the FACE only — the BODY stays tall and long-legged, never short, stubby or child-like. Even in a long dress or gown, keep the silhouette tall and slim (a slim, floor-length gown, NOT a wide bell that shortens the figure) with long legs implied beneath. Keep ALL head accessories small and neat — ears, horns, crowns and headpieces stay modest, and hair volume restrained, so the head reads small.`;
 
 const MENS = `Render ALL attire as MENSWEAR — a fitted coat or tunic with trousers and boots, in the items' colors, materials and motifs; keep everything masculine and avoid dresses, gowns or skirts.`;
 
 function subjectOf(male: boolean): string {
   return male
-    ? 'a beautiful YOUTHFUL bishonen — a pretty teenage anime boy around 15-16 years old, clearly male with a flat masculine chest and a lean slight youthful build, a soft boyish face with large bright eyes and small delicate features, and a masculine hairstyle'
-    : 'a beautiful YOUTHFUL bishojo — a pretty teenage anime girl around 15-16 years old, with a slim slight youthful build, a soft girlish face with large bright eyes and small delicate features';
+    ? 'a beautiful YOUTHFUL bishonen — a pretty teenage anime boy with a youthful boyish face (large bright eyes, soft delicate features) but a TALL, slim, long-legged 7-heads-tall body; clearly male with a flat masculine chest, and a masculine hairstyle'
+    : 'a beautiful YOUTHFUL bishojo — a pretty teenage anime girl with a youthful girlish face (large bright eyes, soft delicate features) but a TALL, slim, long-legged 7-heads-tall body; never short or stubby';
 }
 
 function systemPrompt(gender: ProfileGender): string {
@@ -38,7 +38,7 @@ ${PROP}
 SUBJECT: ${subjectOf(male)}, of the given race, with the given hair and expression — drawn unmistakably in Japanese anime style with expressive anime eyes.
 YOUTH OVERRIDES THEME: even with regal, heroic or ornate gear, the person stays a YOUTHFUL teen (a young prince/princess-in-training), with a young soft face and a slight youthful build — never a grown adult.
 ${male ? MENS + '\n' : ''}COMPOSITION: full-length from the top of the head to the soles of the feet, centered with clear margin above and below, both feet visible, front view, transparent background, solo.
-POSE: use the given pose for the arms and stance, BUT keep the figure full-length and front-facing with both feet visible — and KEEP THE WEAPON AND ALL THREE SIGNATURE ITEMS CLEARLY HELD AND VISIBLE (the weapon is always firmly held in a hand, never dropped, hidden or omitted).
+POSE: use the given pose for the arms and stance, BUT keep the figure full-length and front-facing with both feet visible. CRITICAL — the weapon must be GRIPPED in one hand with the fingers clearly wrapped around its handle, grip or shaft (the weapon may rest on the shoulder, lean against the body, or have its tip on the ground), and it must NEVER float, hover, or appear detached beside the character. All three signature items stay clearly visible; the weapon is never dropped, hidden or omitted.
 STYLE (EMPHASIZE STRONGLY): authentic Japanese anime / JRPG key-visual aesthetic — clean cel-shading with crisp linework, bright vibrant saturated colors, glossy expressive anime eyes, polished anime rendering. The Japanese-anime look is the most important stylistic goal.
 EQUIPMENT — render the signature items FAITHFULLY to the IMAGES: copy each item's exact silhouette, colors, materials, ornaments and signature features so it is instantly recognizable; describe each item richly and specifically (shape, color, ornament, motif).
 CONCEPT COHESION — the items may come from DIFFERENT sets; use their lore/stories to design the base outfit, layers, color accents, emblem motifs, footwear, mood and stance that blend them into ONE harmonious youthful anime character (not a generic outfit, and not clashing themes).
@@ -115,7 +115,7 @@ export async function composeV3Description(input: ComposeV3Input): Promise<strin
   }
   content.push({
     type: 'text',
-    text: `Race: ${ap.race}. Hair: ${ap.hair} hair. Expression: ${ap.expression}. Pose: ${ap.pose}. Use the equipment images (faithful look) and their lore (concept cohesion). Keep the subject a YOUTHFUL teen (15-16) in strong Japanese anime style, and keep the weapon clearly held. Write the prompt under 1800 characters.`,
+    text: `Race: ${ap.race}. Hair: ${ap.hair} hair. Expression: ${ap.expression}. Pose: ${ap.pose}. Use the equipment images (faithful look) and their lore (concept cohesion). Keep the subject a YOUTHFUL teen (15-16) in strong Japanese anime style, and the weapon GRIPPED in a hand (fingers around the handle, never floating). Write the prompt under 1800 characters.`,
   });
 
   const res = await client().messages.create({
