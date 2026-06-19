@@ -9,7 +9,7 @@ import { withTimeout } from '@/lib/db/with-timeout';
 import { catalogItems, type Slot } from '@/lib/db/schema/equipment';
 import { getItemTop10 } from '@/lib/game/codex/ranking';
 import { loreByCode } from '@/lib/game/equipment/lore';
-import { TranscendSprite } from '@/components/TranscendSprite';
+import { CodexSpritePreview } from './CodexSpritePreview';
 import { GuildBadge } from '@/components/GuildBadge';
 
 const SLOT_LABEL: Record<Slot, string> = { weapon: '무기', armor: '방어구', accessory: '장신구' };
@@ -61,7 +61,7 @@ export default async function CodexItemPage({
       </header>
 
       <div className="flex justify-center py-2">
-        <TranscendSprite code={item.code} slot={item.slot} level={0} size={144} frameless />
+        <CodexSpritePreview code={item.code} slot={item.slot} size={144} />
       </div>
 
       {lore ? (

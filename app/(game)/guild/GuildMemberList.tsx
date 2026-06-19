@@ -5,6 +5,7 @@ import Link from 'next/link';
 
 import { LastSeen } from '@/components/LastSeen';
 import { TranscendSprite } from '@/components/TranscendSprite';
+import { rarityBorderStyle, hasRarityBorder } from '@/components/RarityFrame';
 
 type Slot = 'weapon' | 'armor' | 'accessory';
 type Equipped = {
@@ -12,8 +13,6 @@ type Equipped = {
   code: string;
   enhance: number;
   transcendLevel: number;
-  catalogItemId: number;
-  championRank: number | null;
 };
 export type RichMember = {
   userId: string;
@@ -54,15 +53,14 @@ function EquipIcon({ item }: { item: Equipped | undefined }) {
     return <span className="h-10 w-10 shrink-0 rounded-md bg-zinc-100 dark:bg-zinc-800" />;
   }
   return (
-    <span className="relative h-10 w-10 shrink-0">
-      {/* 다른 화면과 동일하게 등급(초월) 프레임 + 해방 후광(강화랭킹 1~3위) 표시 */}
-      <TranscendSprite
-        code={item.code}
-        slot={item.slot}
-        level={item.transcendLevel}
-        championRank={item.championRank}
-        size={40}
-      />
+    <span
+      className={`relative h-10 w-10 shrink-0 overflow-hidden rounded-md border bg-zinc-100 dark:bg-zinc-800 ${
+        hasRarityBorder(item.transcendLevel) ? '' : 'border-zinc-300 dark:border-zinc-700'
+      }`}
+      style={rarityBorderStyle(item.transcendLevel)}
+    >
+      {/* 등급 테두리는 CSS border(초월 컬러)만 — 공유 미리보기와 동일. 스프라이트는 frameless. */}
+      <TranscendSprite code={item.code} slot={item.slot} level={item.transcendLevel} size={40} frameless />
       {item.enhance > 0 && (
         <span className="absolute bottom-0 right-0 z-10 rounded-tl bg-black/65 px-0.5 text-[9px] font-bold leading-tight text-amber-300">
           +{item.enhance}

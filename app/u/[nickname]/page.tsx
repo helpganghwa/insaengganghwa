@@ -506,7 +506,7 @@ export default async function PublicProfilePage({
                 {data.champItems.length}종
               </div>
             </div>
-            <ul className="flex gap-1.5 overflow-x-auto pb-0.5">
+            <ul className="flex gap-1.5 overflow-x-auto overflow-y-hidden pb-0.5">
               {data.champItems.map((c) => (
                 <li
                   key={c.id}
