@@ -510,17 +510,19 @@ export default async function PublicProfilePage({
               {data.champItems.map((c) => (
                 <li
                   key={c.id}
-                  className={`flex w-12 shrink-0 flex-col items-center gap-0.5 rounded border bg-zinc-950 p-0.5 text-center ${RANK_BORDER[c.rank] ?? 'border-amber-700/60'}`}
+                  className={`relative aspect-square w-16 shrink-0 rounded border bg-zinc-950 ${RANK_BORDER[c.rank] ?? 'border-amber-700/60'}`}
                 >
-                  <TranscendSprite
-                    code={c.code}
-                    slot={c.slot}
-                    level={0}
-                    championRank={c.rank}
-                    size={36}
-                    frameless
-                  />
-                  <span className="line-clamp-1 break-keep text-[8px] leading-tight text-zinc-400">
+                  <div className="flex h-full w-full items-center justify-center">
+                    <TranscendSprite
+                      code={c.code}
+                      slot={c.slot}
+                      level={0}
+                      championRank={c.rank}
+                      size={52}
+                      frameless
+                    />
+                  </div>
+                  <span className="absolute inset-x-0 bottom-0 truncate rounded-b bg-black/60 px-0.5 text-center text-[8px] leading-tight text-zinc-200">
                     {c.name}
                   </span>
                 </li>
