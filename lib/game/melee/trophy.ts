@@ -6,10 +6,8 @@ import { createClient, type SupabaseClient } from '@supabase/supabase-js';
 import { db } from '@/lib/db/client';
 import { characters } from '@/lib/db/schema/server';
 import { meleeBattles, type MeleeFinale } from '@/lib/db/schema/melee';
-import { profiles } from '@/lib/db/schema/profiles';
 import { userProfiles } from '@/lib/db/schema/avatar';
 import { reviewProfile } from '@/lib/game/profile/ai-review';
-import { cleanupSprite } from '@/lib/game/profile/sprite-cleanup';
 
 /**
  * 대난투 우승 트로피 아바타 자동 생성 — MELEE §우승컵.
@@ -166,11 +164,11 @@ async function mirror(battleId: bigint, images: ReadyImages): Promise<Record<str
   const rotations: Record<string, string> = {};
   for (const im of images) {
     const path = `melee-trophy/${battleId.toString()}/${im.direction}.png`;
-    // 프로필과 동일하게 공중 픽셀 노이즈 제거(2026-06-06) — 트로피는 미적용이었음.
-    const cleaned = await cleanupSprite(im.png);
+    // 후보정(픽셀 부스러기 제거) 폐지(2026-06-19) — 의도된 반짝임·미세 디테일을 지워 역효과.
+    // 원본 PNG 그대로 업로드.
     const { error } = await sb.storage
       .from(STORAGE_BUCKET)
-      .upload(path, cleaned, { contentType: 'image/png', upsert: true });
+      .upload(path, im.png, { contentType: 'image/png', upsert: true });
     if (error) throw new Error(`storage ${im.direction}: ${error.message}`);
     rotations[im.direction] = sb.storage.from(STORAGE_BUCKET).getPublicUrl(path).data.publicUrl;
   }
