@@ -10,6 +10,12 @@ const nextConfig: NextConfig = {
   // import.meta.dirname을 undefined로 받아 path TypeError 발생. Next 16에서
   // turbopack은 default이며 root는 자동 추론으로 충분.
   allowedDevOrigins: ['localhost', '127.0.0.1'],
+  // 프로필 생성 cron(v3 compose)이 런타임에 장비 스프라이트 PNG를 readFileSync(vision 입력)로
+  // 읽으므로, 해당 서버리스 함수 번들에 public 스프라이트를 강제 포함(미포함 시 비전이 조용히
+  // 텍스트로 degrade됨). 정적 분석으로는 추적 안 되는 동적 경로라 명시 포함 필요.
+  outputFileTracingIncludes: {
+    '/api/cron/profile-poll': ['./public/sprites/**/*.png'],
+  },
   async headers() {
     return [
       {

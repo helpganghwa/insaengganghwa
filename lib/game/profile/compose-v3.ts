@@ -1,39 +1,47 @@
-// PROFILE v3 — Claude(프롬프트 생성 AI) 조합 단계.
-// 장비 3종(시그니처 묘사) + 성별 + 랜덤 외형(종족/헤어/표정)을 받아, create-character-v3용
-// 단일 영문 description을 작성한다. 규칙:
-//  - 비율 최우선: heroic 8등신·작은 머리·긴 다리·머리 부속(귀·뿔·관) 작게.
-//  - 미소녀(여)/미소년(남) youthful. 남성은 모든 의상을 남성복으로(드레스/가운 금지).
-//  - 장비 "특색"은 충실히 보존(고유 실루엣·색·시그니처). 다양성은 장비 외 주변
-//    (베이스 의상·레이어·포즈·악센트 컬러) + 랜덤 외형에서 — 장비를 흐리지 않는다.
-//  - 부정형 회피, "cute/chibi/adult/mature/grown" 미사용. enhance_prompt는 OFF로 쓰므로
-//    이 description이 최종 프롬프트(서버 확장 없음) — 너무 길면 품질↓이라 간결 유지.
+// PROFILE v3 — Claude(아트 디렉터) 조합 단계.
+// 장비 3종(스프라이트 이미지=비전 + 시그니처 묘사 + 로어/스토리) + 성별 + 랜덤 외형을 받아,
+// create-character-v3용 영문 description을 작성한다. 규칙:
+//  - 비율: 7등신·작은 머리·긴 다리·머리 부속(귀·뿔·관) 작게.
+//  - 미소녀(여)/미소년(남) youthful(15~16): 테마(왕실·영웅·화려)보다 청춘이 우선 — 성인 금지.
+//  - 장비는 IMAGE에 충실(실루엣·색·시그니처 보존), 로어로 주변 의상·악센트·분위기를 테마에 맞춰
+//    응집(서로 다른 세트를 섞어도 하나의 캐릭터로). 다양성은 랜덤 외형 + 로어 응집에서 옴.
+//  - Japanese anime 스타일을 강하게 강조(이 조합에서 품질이 가장 좋음).
+//  - 부정형 회피, "cute/chibi/adult/mature/grown" 미사용. enhance_prompt OFF이므로 이 description이
+//    최종 프롬프트(서버 확장 없음). v3 한도 2000자 — 디테일 여유 위해 1800까지 허용.
 import 'server-only';
 import Anthropic from '@anthropic-ai/sdk';
+import { readFileSync } from 'node:fs';
+import { join } from 'node:path';
 
+import { CATALOG_ITEMS } from '@/lib/game/equipment/catalog';
+import { spritePath } from '@/lib/game/equipment/sprite-manifest';
 import type { ProfileGender } from './refs';
 import type { Appearance } from './appearance-v3';
 
 const MODEL_ID = 'claude-sonnet-4-6';
-// v3 spec 2000자 한도이나, 긴 프롬프트는 품질↓ → 여유 두고 캡.
-const MAX_CHARS = 1400;
+const MAX_CHARS = 1800; // v3 description 한도 2000 — 안전 마진.
 
-const PROP = `PROPORTIONS ARE THE TOP PRIORITY — a statuesque, heroic 8-heads-tall figure: a small head (about one-eighth of the total body height), a slender neck, a compact torso, and very long legs (roughly half the total height) with a high waistline. Tall, slim and elongated like an anime key-visual idol. Keep ALL head accessories small and neat — ears, horns, crowns and headpieces stay modest so the head reads small.`;
+const PROP = `PROPORTIONS ARE THE TOP PRIORITY — a balanced 7-heads-tall figure: a small head (about one-seventh of the total body height), a slender neck, a balanced torso, and long legs with a natural waistline. Slim and youthful like an anime key-visual character. Keep ALL head accessories small and neat — ears, horns, crowns and headpieces stay modest so the head reads small.`;
 
 const MENS = `Render ALL attire as MENSWEAR — a fitted coat or tunic with trousers and boots, in the items' colors, materials and motifs; keep everything masculine and avoid dresses, gowns or skirts.`;
 
+function subjectOf(male: boolean): string {
+  return male
+    ? 'a beautiful YOUTHFUL bishonen — a pretty teenage anime boy around 15-16 years old, clearly male with a flat masculine chest and a lean slight youthful build, a soft boyish face with large bright eyes and small delicate features, and a masculine hairstyle'
+    : 'a beautiful YOUTHFUL bishojo — a pretty teenage anime girl around 15-16 years old, with a slim slight youthful build, a soft girlish face with large bright eyes and small delicate features';
+}
+
 function systemPrompt(gender: ProfileGender): string {
   const male = gender === 'male';
-  return `You are an expert prompt engineer for Pixellab create-character-v3 (pixel-art). Write ONE concise English image prompt (about 520-680 characters) for a single FULL-BODY Japanese-anime pixel-art avatar.
+  return `You are an expert ART DIRECTOR + prompt engineer for Pixellab create-character-v3 (pixel-art). You are given up to THREE equipment sprite images (weapon, armor, accessory) plus each item's visual note and lore/story. Design ONE cohesive FULL-BODY avatar in AUTHENTIC JAPANESE ANIME STYLE (a high-quality Japanese anime / JRPG key-visual character, strong anime aesthetic) and output ONE English image prompt.
 ${PROP}
-SUBJECT: a beautiful YOUTHFUL ${
-    male
-      ? "bishonen, a pretty slender teenage anime boy, clearly male with a flat masculine chest, a lean youthful build and a masculine hairstyle"
-      : 'bishojo, a pretty slender teenage anime girl, clearly female'
-  } of the given race, with the given hair and expression, and a pretty youthful face with big expressive eyes.
+SUBJECT: ${subjectOf(male)}, of the given race, with the given hair and expression — drawn unmistakably in Japanese anime style with expressive anime eyes.
+YOUTH OVERRIDES THEME: even with regal, heroic or ornate gear, the person stays a YOUTHFUL teen (a young prince/princess-in-training), with a young soft face and a slight youthful build — never a grown adult.
 ${male ? MENS + '\n' : ''}COMPOSITION: full-length from the top of the head to the soles of the feet, standing upright, centered with clear margin above and below, both feet visible, front view, transparent background, solo.
-STYLE: clean cel-shaded Japanese anime, bright vibrant flat colors.
-EQUIPMENT (preserve its character): render the three signature items FAITHFULLY and clearly — keep each item's exact silhouette, colors and signature features so it is instantly recognizable. To create variety, freely vary EVERYTHING ELSE around them — the base outfit and layers, secondary accessories, accent colors and stance — so each character feels distinct, while the three items stay faithful.
-Write ONLY positive visual description; never use the words cute, chibi, adult, mature or grown. Output ONLY the prompt text, no preamble or quotes.`;
+STYLE (EMPHASIZE STRONGLY): authentic Japanese anime / JRPG key-visual aesthetic — clean cel-shading with crisp linework, bright vibrant saturated colors, glossy expressive anime eyes, polished anime rendering. The Japanese-anime look is the most important stylistic goal.
+EQUIPMENT — render the signature items FAITHFULLY to the IMAGES: copy each item's exact silhouette, colors, materials, ornaments and signature features so it is instantly recognizable; describe each item richly and specifically (shape, color, ornament, motif).
+CONCEPT COHESION — the items may come from DIFFERENT sets; use their lore/stories to design the base outfit, layers, color accents, emblem motifs, footwear, mood and stance that blend them into ONE harmonious youthful anime character (not a generic outfit, and not clashing themes).
+LENGTH: about 1200-1700 characters — richly detailed but under 1800 (do not exceed). Write ONLY positive visual description; never use the words cute, chibi, adult, mature or grown. Output ONLY the prompt text, no preamble or quotes.`;
 }
 
 let _client: Anthropic | null = null;
@@ -45,28 +53,75 @@ function client(): Anthropic {
   return _client;
 }
 
+type SlotKind = 'weapon' | 'armor' | 'accessory';
+interface ResolvedItem {
+  slot: SlotKind;
+  wornDesc: string;
+  art: string;
+  lore: string;
+  /** 스프라이트 base64(vision). 부재 시 null → 텍스트만. */
+  b64: string | null;
+}
+
+/** 카탈로그 키 → wornDesc/art/lore + 스프라이트 이미지. 스프라이트 부재는 텍스트로 degrade. */
+function resolveItem(slot: SlotKind, key: string | undefined, fallbackText: string | undefined): ResolvedItem | null {
+  if (key) {
+    const it = CATALOG_ITEMS.find((c) => c.key === key);
+    if (it) {
+      let b64: string | null = null;
+      try {
+        const rel = spritePath(key);
+        if (rel) b64 = readFileSync(join(process.cwd(), 'public', rel.replace(/^\//, ''))).toString('base64');
+      } catch {
+        b64 = null; // 런타임 파일 부재 → 텍스트만으로 진행.
+      }
+      return { slot, wornDesc: it.wornDesc ?? it.art ?? '', art: it.art ?? '', lore: it.lore ?? '', b64 };
+    }
+  }
+  if (fallbackText) return { slot, wornDesc: fallbackText, art: '', lore: '', b64: null };
+  return null;
+}
+
 export interface ComposeV3Input {
   gender: ProfileGender;
   appearance: Appearance;
-  /** 장비 시그니처 묘사(특색 보존 — 색·형태·특징). */
-  weapon: string;
-  armor: string;
-  accessory: string;
+  /** 카탈로그 키(이미지·로어 로드용). 우선 사용. */
+  weaponKey?: string;
+  armorKey?: string;
+  accessoryKey?: string;
+  /** 키가 없거나 카탈로그 미존재 시 텍스트 폴백(시그니처 묘사). */
+  weapon?: string;
+  armor?: string;
+  accessory?: string;
 }
 
-/** Claude로 v3용 description 생성. 실패(빈 응답)는 throw — 상위에서 처리. */
+/** Claude로 v3용 description 생성. 비전(스프라이트)+로어 아트디렉팅. 실패(빈 응답)는 throw. */
 export async function composeV3Description(input: ComposeV3Input): Promise<string> {
-  const { gender, appearance: ap, weapon, armor, accessory } = input;
+  const { gender, appearance: ap } = input;
+  const items = [
+    resolveItem('weapon', input.weaponKey, input.weapon),
+    resolveItem('armor', input.armorKey, input.armor),
+    resolveItem('accessory', input.accessoryKey, input.accessory),
+  ].filter((v): v is ResolvedItem => v !== null);
+
+  const label: Record<SlotKind, string> = { weapon: 'WEAPON', armor: 'ARMOR', accessory: 'ACCESSORY' };
+  const content: Anthropic.MessageParam['content'] = [];
+  for (const it of items) {
+    const lore = it.lore ? `\nlore: ${it.lore}` : '';
+    const art = it.art ? `\ndetail: ${it.art}` : '';
+    content.push({ type: 'text', text: `=== ${label[it.slot]} ===\nvisual: ${it.wornDesc}${art}${lore}` });
+    if (it.b64) content.push({ type: 'image', source: { type: 'base64', media_type: 'image/png', data: it.b64 } });
+  }
+  content.push({
+    type: 'text',
+    text: `Race: ${ap.race}. Hair: ${ap.hair} hair. Expression: ${ap.expression}. Use the equipment images (faithful look) and their lore (concept cohesion). Keep the subject a YOUTHFUL teen (15-16) in strong Japanese anime style. Write the prompt under 1800 characters.`,
+  });
+
   const res = await client().messages.create({
     model: MODEL_ID,
-    max_tokens: 600,
+    max_tokens: 800,
     system: [{ type: 'text', text: systemPrompt(gender), cache_control: { type: 'ephemeral' } }],
-    messages: [
-      {
-        role: 'user',
-        content: `Race: ${ap.race}. Hair: ${ap.hair} hair. Expression: ${ap.expression}. Equipment — weapon: ${weapon}; armor: ${armor}; accessory: ${accessory}. Write the prompt.`,
-      },
-    ],
+    messages: [{ role: 'user', content }],
   });
   const block = res.content.find((b) => b.type === 'text');
   let desc = (block && 'text' in block ? block.text : '')

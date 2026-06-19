@@ -25,7 +25,6 @@ const FEMALE = {
     'an elf girl with slender pointed ears',
     'an elegant beautiful cat-girl with small neat cat ears',
     'a fairy girl with small translucent wings',
-    'a dark-elf girl with ashen-grey skin and slender pointed ears',
   ],
   hairStyles: ['long straight', 'long wavy', 'twin-tails', 'a high ponytail', 'a hime-cut'],
   hairColors: ['platinum-blonde', 'silver', 'pink', 'lavender', 'sky-blue', 'black', 'auburn', 'white', 'mint-green'],
@@ -37,7 +36,6 @@ const MALE = {
   races: [
     'a handsome human youth',
     'a noble elf youth with slender pointed ears',
-    'a dark-elf youth with ashen-grey skin and slender pointed ears',
     'a dragonkin youth with small neat horns',
     'a youth with small neat demon horns',
   ],

@@ -24,10 +24,14 @@ const V3_SIZE = 256;
 
 export interface CreateV3Input {
   gender: ProfileGender;
-  /** 장비 시그니처 묘사(특색). 보통 catalog wornDesc. */
-  weapon: string;
-  armor: string;
-  accessory: string;
+  /** 카탈로그 키(이미지·로어 로드용) — compose가 비전+로어로 사용. */
+  weaponKey?: string;
+  armorKey?: string;
+  accessoryKey?: string;
+  /** 키 없거나 카탈로그 미존재 시 텍스트 폴백(시그니처 묘사). */
+  weapon?: string;
+  armor?: string;
+  accessory?: string;
   /** 미지정 시 성별 풀에서 랜덤 부여. */
   appearance?: Appearance;
 }
@@ -41,8 +45,9 @@ export interface CreateV3Result {
 }
 
 /**
- * v3 캐릭터 생성 요청. 외형 랜덤 + Claude 조합 + POST /create-character-v3.
- * 옵션 고정: 256×256 · high detail · outline lineless · enhance_prompt OFF · no_background.
+ * v3 캐릭터 생성 요청. 외형 랜덤 + Claude(비전+로어) 조합 + POST /create-character-v3.
+ * 옵션 고정: 256×256 · high detail · outline=검은 외곽선 · enhance_prompt OFF · no_background.
+ * (검은 외곽선 = 픽셀아트 톤 복원, high detail = 디테일, 256 = 정사각 통합.)
  * 실패(키 없음·API 오류) throw.
  */
 export async function createCharacterV3(input: CreateV3Input): Promise<CreateV3Result> {
@@ -53,6 +58,9 @@ export async function createCharacterV3(input: CreateV3Input): Promise<CreateV3R
   const description = await composeV3Description({
     gender: input.gender,
     appearance,
+    weaponKey: input.weaponKey,
+    armorKey: input.armorKey,
+    accessoryKey: input.accessoryKey,
     weapon: input.weapon,
     armor: input.armor,
     accessory: input.accessory,
@@ -65,7 +73,7 @@ export async function createCharacterV3(input: CreateV3Input): Promise<CreateV3R
       description,
       image_size: { width: V3_SIZE, height: V3_SIZE },
       detail: 'high detail',
-      outline: 'lineless',
+      outline: 'single color black outline',
       enhance_prompt: false,
       no_background: true,
     }),
@@ -119,6 +127,10 @@ export async function enqueueOneV3(): Promise<
   try {
     const out = await createCharacterV3({
       gender,
+      // 키 우선(compose가 비전+로어 로드) + wornDesc 텍스트 폴백.
+      weaponKey: eqs.weaponKey,
+      armorKey: eqs.armorKey,
+      accessoryKey: eqs.accessoryKey,
       weapon: wornOf(eqs.weaponKey),
       armor: wornOf(eqs.armorKey),
       accessory: wornOf(eqs.accessoryKey),
