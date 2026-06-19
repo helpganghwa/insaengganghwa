@@ -157,6 +157,8 @@ export async function enqueueOnePixellab(): Promise<
     character_id: sourceCharacterId,
     edit_description: job.description,
     no_background: true,
+    // use_color_palette_from_reference: true 실험 결과 — 소스 캐릭터 팔레트/디자인을 통째로
+    // 덮어써 의도한 장비 색을 무시(2026-06-19). 회전 색 드리프트도 못 고침 → false 유지.
     use_color_palette_from_reference: false,
   };
 
