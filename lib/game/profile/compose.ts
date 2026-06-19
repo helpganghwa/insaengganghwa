@@ -8,7 +8,8 @@
  *   genderClause(앞)+Confirm(끝) 이중 앵커. 이를 약화하면 애니풍 상실·머리 커짐·생성마다
  *   들쭉날쭉(2026-06-19 회귀로 검증) → 장비 강조는 "clearly show" 수준까지만(과잉 초점 금지).
  * - 비율(CreateCharacterProRequest엔 proportions·negative_description 없음, 2026-05-27 검증).
- *   남성은 FLAT chest·no feminine silhouette로 성별 뒤집힘 방지.
+ *   남성은 flat masculine chest·masculine build로 성별 뒤집힘 방지(부정형 X — 긍정 묘사만,
+ *   이미지 생성기는 no/not을 잘 못 다뤄 오히려 그 개념을 끌어옴, 2026-06-19 사용자).
  */
 import 'server-only';
 
@@ -137,11 +138,11 @@ export function pickRandomHairLength(): ProfileHairLength {
   return ALL_HAIR_LENGTHS[i]!;
 }
 
-// 손을 점유하는 포즈 전부 제거 — arms_crossed(4팔 착시) + hand_wave/peace_sign +
-// hand_on_hip(한 손이 막혀 쌍검·양손무기를 다 못 듦, a37e0269). natural 1종만 유지:
-// 양손이 모두 자유로워 어떤 무기든(쌍검 포함) 확실히 쥐도록 보장.
+// 손 점유 포즈 전부 제거(arms_crossed/hand_wave/peace_sign/hand_on_hip). natural 1종.
+// "arms resting at the sides"는 빈손을 암시해 무기가 사라지는 문제(bf84eaef) → "standing
+// naturally"로 변경. 무기는 wpnPhrase의 'held in hand'로 손에 확실히 쥐도록 명시.
 const POSE_DESC: Record<ProfilePose, string> = {
-  natural: 'arms resting naturally at the sides',
+  natural: 'standing naturally',
 };
 
 const ALL_POSES = Object.keys(POSE_DESC) as ProfilePose[];
@@ -159,14 +160,15 @@ function assemble(opts: ProfileOptions, outfitClause: string): string {
   // 성별 강제(남=FLAT chest 안티플립)도 유지. 장비는 outfitClause가 정확히 묘사(과잉 초점 X).
   const genderClause =
     opts.gender === 'male'
-      ? `MALE bishōnen boy drawn in clean Japanese anime (cel-shaded) art style — masculine face, FLAT chest (no breasts), no feminine silhouette. KEEP from the source character exactly: the same Japanese anime art style, the same face, and the same slim tall proportions with a small head and long legs. He must stay clearly male.`
-      : `FEMALE bishōjo drawn in clean Japanese anime (cel-shaded) art style. KEEP from the source character exactly: the same Japanese anime art style, the same face, and the same slim tall proportions with a small head and long legs. She must stay clearly female.`;
+      ? `MALE bishōnen boy drawn in clean Japanese anime (cel-shaded) art style, with a masculine boyish face, a flat masculine chest, and a masculine build and hair. KEEP from the source character exactly: the same Japanese anime art style, the same face, and the same slim tall proportions with a small head and long legs. He stays clearly male, masculine.`
+      : `FEMALE bishōjo drawn in clean Japanese anime (cel-shaded) art style, with a feminine face and figure. KEEP from the source character exactly: the same Japanese anime art style, the same face, and the same slim tall proportions with a small head and long legs. She stays clearly female.`;
+  // 포즈 문구 제거 — 포즈가 natural('standing naturally') 1종뿐이라 기본자세와 동일,
+  // 명시 불필요(2026-06-19 사용자). 무기 'held in hand'는 outfitClause에 있어 영향 없음.
   return [
     genderClause,
     outfitClause,
-    `Full body head-to-feet, both feet on the ground; exactly two arms and two legs, no extra or duplicated limbs; clean transparent background, character only, clean solid outlines, no stray specks.`,
-    `Pose: ${POSE_DESC[opts.pose]}, with a natural pleasant expression.`,
-    `Confirm: keep the source's Japanese anime art style, face and slim proportions (small head, not chibi); full body, both feet visible.`,
+    `Full body head-to-feet, both feet on the ground; exactly two arms and two legs with one hand at the end of each arm; on a clean transparent background, character only, with clean solid outlines.`,
+    `Confirm: keep the source's Japanese anime art style, face and slim tall proportions with a small head; full body with both feet visible.`,
   ].join(' ');
 }
 
@@ -237,7 +239,8 @@ export async function composeEditDescription(
     // 성별중립 묘사라 남/여 모두 body 골격(성별 강제)에 맞춰 자연 렌더.
     // 쌍검/한 쌍 무기 — 양손에 하나씩 들도록 명시(한 자루로 줄어드는 문제 방지).
     const dual = /\b(pair|twin|dual|matching pair)\b|쌍|두 자루/i.test(wpn.wornDesc!);
-    const wpnPhrase = dual ? `${wpn.wornDesc}, one held in each hand` : wpn.wornDesc;
+    // 무기 'held in hand' 명시 — 빈손 렌더로 무기가 사라지는 문제 방지(bf84eaef).
+    const wpnPhrase = dual ? `${wpn.wornDesc}, one held in each hand` : `${wpn.wornDesc}, held in hand`;
     outfitClause = `Give ${pron} a fresh new ${HAIR_LENGTH_DESC[opts.hairLength]} in a new color and redesign the outfit and gear to clearly show these items: wielding ${wpnPhrase}, wearing ${arm.wornDesc}, and ${acc.wornDesc}.`;
     // 안전 가드 — 1000자 초과 시 머리절을 줄여 장비 3종 묘사는 보존.
     if (assemble(opts, outfitClause).length > 1000) {
