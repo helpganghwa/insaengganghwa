@@ -107,7 +107,7 @@ function MemberRow({ m, myUserId }: { m: RichMember; myUserId: string }) {
           <div className="flex items-baseline gap-1.5">
             <span className="text-[12px] font-semibold">{m.nickname}</span>
             {isMe || m.lastSeenAt != null ? (
-              <LastSeen at={m.lastSeenAt} forceOnline={isMe} className="shrink-0 text-[10px] text-zinc-400" />
+              <LastSeen at={m.lastSeenAt} forceOnline={isMe} badge className="shrink-0" />
             ) : null}
           </div>
           {/* 기여도 · 전투력 — 줄을 2분할(grid)해 정렬 */}

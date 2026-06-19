@@ -20,11 +20,14 @@ function fmt(iso: string): { online: boolean; label: string } {
 export function LastSeen({
   at,
   forceOnline = false,
+  badge = false,
   className = '',
 }: {
   at: string | null;
   /** 본인 행 등 — 저장값과 무관하게 '접속 중'으로 표시(렌더가 하트비트보다 앞서는 지연 회피). */
   forceOnline?: boolean;
+  /** 배지 디자인 — 접속중=초록 pill, 비접속=그레이 pill(더 눈에 띄게). */
+  badge?: boolean;
   className?: string;
 }) {
   const [info, setInfo] = useState<{ online: boolean; label: string } | null>(
@@ -45,6 +48,22 @@ export function LastSeen({
     return () => clearInterval(id);
   }, [at, forceOnline]);
   if (!info) return null;
+  if (badge) {
+    // 접속중=초록 / 비접속=그레이 pill.
+    const tone = info.online
+      ? 'bg-emerald-500/15 text-emerald-600 dark:text-emerald-400'
+      : 'bg-zinc-400/15 text-zinc-500 dark:text-zinc-400';
+    return (
+      <span
+        className={`inline-flex items-center gap-1 rounded-full px-1.5 py-0.5 text-[10px] font-bold leading-none ${tone} ${className}`}
+      >
+        <span
+          className={`inline-block h-1.5 w-1.5 shrink-0 rounded-full ${info.online ? 'bg-emerald-500' : 'bg-zinc-400 dark:bg-zinc-500'}`}
+        />
+        {info.label}
+      </span>
+    );
+  }
   return (
     <span className={`inline-flex items-center gap-1 ${className}`}>
       <span
