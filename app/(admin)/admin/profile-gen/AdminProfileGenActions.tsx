@@ -13,11 +13,14 @@ const DECISION_KO: Record<string, string> = {
 export function AdminProfileGenActions({
   jobId,
   hasAvatar,
+  canGrant,
   escrow,
   decision,
 }: {
   jobId: string;
   hasAvatar: boolean;
+  /** AI 거절(실패) 건이라 운영자가 아바타를 지급할 수 있는 상태. 통과 건엔 false. */
+  canGrant: boolean;
   escrow: string;
   decision: string | null;
 }) {
@@ -61,20 +64,22 @@ export function AdminProfileGenActions({
         >
           리젝(회수+환불)
         </button>
-      ) : (
+      ) : canGrant ? (
         <button
           type="button"
           disabled={pending}
           onClick={() =>
             run(
               () => adminGrantAvatar(jobId),
-              '이 아바타를 지급할까요?\n(문제 없음 판정 — 다이아 차감 없이 목록 추가 + 우편 통지)',
+              '이 아바타를 지급할까요?\n(AI 거절 건 — 문제 없음 판정 시 다이아 차감 없이 목록 추가 + 우편 통지)',
             )
           }
           className="rounded-lg border border-emerald-700 bg-emerald-900/30 px-3 py-1.5 text-xs font-bold text-emerald-300 disabled:opacity-50"
         >
           아바타 지급(차감X)
         </button>
+      ) : (
+        <span className="text-[11px] text-zinc-500">표시할 아바타 없음 (유저 삭제 또는 회수됨)</span>
       )}
       {msg && <span className="text-xs text-zinc-400">{msg}</span>}
     </div>

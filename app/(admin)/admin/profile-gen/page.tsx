@@ -204,7 +204,13 @@ export default async function AdminProfileGenPage({
 
               {/* 조치 */}
               <div className="mt-3">
-                <AdminProfileGenActions jobId={String(r.id)} hasAvatar={!!r.userProfileId} escrow={r.diamondEscrow.toString()} decision={r.adminDecision ?? null} />
+                <AdminProfileGenActions
+                  jobId={String(r.id)}
+                  hasAvatar={!!r.userProfileId}
+                  canGrant={!r.userProfileId && (r.status === 'rejected_ai' || r.status === 'failed')}
+                  escrow={r.diamondEscrow.toString()}
+                  decision={r.adminDecision ?? null}
+                />
               </div>
             </div>
           );
