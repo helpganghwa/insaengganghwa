@@ -26,7 +26,6 @@ import { mailbox } from '@/lib/db/schema/mailbox';
 import { sendPushToUser } from '@/lib/push/send';
 
 import { reviewProfile, type ReviewVerdict } from './ai-review';
-import { cleanupSprite } from './sprite-cleanup';
 
 /** 검토 결과 push — 실패는 무시(전체 흐름 막지 않음). 토글·구독은 sendPushToUser가 처리. */
 async function safePush(
@@ -336,10 +335,10 @@ async function mirrorRotations(
     const raw = Buffer.from(await r.arrayBuffer());
     // 404 JSON/빈 파일을 200으로 받는 케이스 방어 — PNG 아니면 storage에 안 올림.
     if (!isPng(raw)) throw new Error(`rotation ${dir} not a valid PNG (${raw.length}B)`);
-    // 외곽 흰점 노이즈 제거 (2026-05-28 사용자 결정) — 고립 흰 픽셀만 투명화.
-    const buf = await cleanupSprite(raw);
+    // 후보정(픽셀 부스러기 제거) 폐지 (2026-06-19) — v3 고품질 아바타에선 의도된 반짝임·미세
+    // 디테일을 오히려 지워 역효과. 미러링된 원본 PNG를 그대로 업로드.
     const path = `${userId}/${characterId}/${dir}.png`;
-    const { error } = await supabase.storage.from(STORAGE_BUCKET).upload(path, buf, {
+    const { error } = await supabase.storage.from(STORAGE_BUCKET).upload(path, raw, {
       contentType: 'image/png',
       upsert: true,
     });
