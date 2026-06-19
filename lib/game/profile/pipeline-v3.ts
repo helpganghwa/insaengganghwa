@@ -46,8 +46,8 @@ export interface CreateV3Result {
 
 /**
  * v3 캐릭터 생성 요청. 외형 랜덤 + Claude(비전+로어) 조합 + POST /create-character-v3.
- * 옵션 고정: 256×256 · high detail · outline=검은 외곽선 · enhance_prompt OFF · no_background.
- * (검은 외곽선 = 픽셀아트 톤 복원, high detail = 디테일, 256 = 정사각 통합.)
+ * 옵션 고정: 256×256 · high detail · outline=lineless · enhance_prompt OFF · no_background.
+ * (lineless = 검은 외곽선 제거(사용자 선호), high detail = 디테일, 256 = 정사각 통합.)
  * 실패(키 없음·API 오류) throw.
  */
 export async function createCharacterV3(input: CreateV3Input): Promise<CreateV3Result> {
@@ -73,7 +73,7 @@ export async function createCharacterV3(input: CreateV3Input): Promise<CreateV3R
       description,
       image_size: { width: V3_SIZE, height: V3_SIZE },
       detail: 'high detail',
-      outline: 'single color black outline',
+      outline: 'lineless',
       enhance_prompt: false,
       no_background: true,
     }),
