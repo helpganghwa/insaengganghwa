@@ -4,6 +4,7 @@ import { and, desc, eq, ilike, inArray, isNotNull, or, sql } from 'drizzle-orm';
 import { alias } from 'drizzle-orm/pg-core';
 
 import { db } from '@/lib/db/client';
+import { withTimeout } from '@/lib/db/with-timeout';
 import { characters } from '@/lib/db/schema/server';
 import {
   guilds,
@@ -370,6 +371,9 @@ type EquippedIcon = {
   enhance: number;
   /** 초월 등급 — CSS 보더 색(rarityBorderStyle)용. */
   transcendLevel: number;
+  catalogItemId: number;
+  /** 해방 등수(강화랭킹 1~3위) — TranscendSprite 후광. 미해방=null. */
+  championRank: number | null;
 };
 
 /**
@@ -418,6 +422,39 @@ export async function getGuildMembersRich(guildId: bigint) {
           .where(and(eq(userEquipment.serverId, serverId), inArray(userEquipment.userId, ids)))
       : [];
 
+  // 해방 등수(강화랭킹 1~3위) — 길드 전 멤버의 '장착' 아이템에 대해 1쿼리 배치(N+1 금지).
+  //   ahead = 같은 catalog_item에서 자신보다 상위(레벨↑ / 동률·먼저달성 / 동률·동시각·user_id↓) 수.
+  //   ahead<3 → 해방(rank=ahead+1). 타임아웃 시 빈 맵(후광만 생략, 페이지 영향 X). cf. liberatedItemRanks.
+  const libRank = new Map<string, Map<number, number>>();
+  if (ids.length && serverId != null) {
+    try {
+      const libRows = (await withTimeout(
+        db.execute(sql`
+          select uc.user_id as uid, uc.catalog_item_id as cid,
+            (select count(*) from user_equipment o
+             where o.catalog_item_id = uc.catalog_item_id and o.server_id = ${serverId}
+               and (o.max_enhance_level > uc.max_enhance_level
+                 or (o.max_enhance_level = uc.max_enhance_level and o.max_enhance_reached_at < uc.max_enhance_reached_at)
+                 or (o.max_enhance_level = uc.max_enhance_level and o.max_enhance_reached_at = uc.max_enhance_reached_at and o.user_id < uc.user_id)))::int as ahead
+          from user_equipment uc
+          where uc.server_id = ${serverId} and uc.equipped_slot is not null and uc.max_enhance_level > 0
+            and uc.user_id in (${sql.join(ids.map((id) => sql`${id}::uuid`), sql`, `)})
+        `),
+        3000,
+        'guildLiberatedRanks',
+      )) as unknown as { uid: string; cid: number; ahead: number }[];
+      for (const r of libRows) {
+        const ahead = Number(r.ahead);
+        if (ahead < 3) {
+          const mm = libRank.get(r.uid) ?? libRank.set(r.uid, new Map()).get(r.uid)!;
+          mm.set(Number(r.cid), ahead + 1);
+        }
+      }
+    } catch {
+      // 빈 맵 유지 — 후광만 생략.
+    }
+  }
+
   // uid별 보유 묶기 → 전투력/최고/합산/장착 3종.
   const owned = new Map<string, { catalogItemId: number; enhanceLevel: number; transcendLevel: number }[]>();
   const equipped = new Map<string, EquippedIcon[]>();
@@ -433,6 +470,8 @@ export async function getGuildMembersRich(guildId: bigint) {
         code: r.code,
         enhance: r.el,
         transcendLevel: r.tl,
+        catalogItemId: r.cid,
+        championRank: libRank.get(r.uid)?.get(r.cid) ?? null,
       });
     }
   }

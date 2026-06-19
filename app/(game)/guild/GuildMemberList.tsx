@@ -13,6 +13,8 @@ type Equipped = {
   code: string;
   enhance: number;
   transcendLevel: number;
+  /** 해방 등수(강화랭킹 1~3위) — 후광 연출. 미해방=null. */
+  championRank: number | null;
 };
 export type RichMember = {
   userId: string;
@@ -59,8 +61,15 @@ function EquipIcon({ item }: { item: Equipped | undefined }) {
       }`}
       style={rarityBorderStyle(item.transcendLevel)}
     >
-      {/* 배경 투명 + 약간의 패딩(2px)으로 이미지가 꽉 차지 않게. 등급 테두리는 CSS border(초월 컬러)만. */}
-      <TranscendSprite code={item.code} slot={item.slot} level={item.transcendLevel} size={34} frameless />
+      {/* 배경 투명 + 약간의 패딩(2px). 등급 테두리는 CSS border(초월 컬러), 해방(1~3위)이면 후광 연출. */}
+      <TranscendSprite
+        code={item.code}
+        slot={item.slot}
+        level={item.transcendLevel}
+        championRank={item.championRank}
+        size={34}
+        frameless
+      />
       {/* 강화 수치는 항상 표시(+0 포함) — 프로필 섹션과 동일. */}
       <span className="absolute bottom-0 right-0 z-10 rounded-tl bg-black/65 px-0.5 text-[9px] font-bold leading-tight text-amber-300">
         +{item.enhance}
