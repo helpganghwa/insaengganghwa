@@ -51,8 +51,9 @@ function Avatar({ src }: { src: string | null }) {
             imageRendering: 'pixelated',
             objectFit: 'cover',
             objectPosition: '50% 0%',
+            // v3 풀프레임 — 얼굴이 프레임 상단이라 크롭 기준을 위로(46% 7%).
             transform: 'scale(3.6)',
-            transformOrigin: '50% 22%',
+            transformOrigin: '46% 7%',
           }}
         />
       ) : (

@@ -272,7 +272,9 @@ export function BoastModal({
                       className="absolute inset-0 h-full w-full object-contain object-bottom"
                       style={{
                         imageRendering: 'pixelated',
-                        // v3 풀프레임 아바타는 여백이 없어 줌 보정 제거(그대로 영역에 맞춤).
+                        // /me 프로필 섹션(3:4)과 동일 — 풀프레임을 박스에 채우는 scale 1.4.
+                        transform: 'scale(1.4)',
+                        transformOrigin: 'center bottom',
                       }}
                     />
                   ) : (

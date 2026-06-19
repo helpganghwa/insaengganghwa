@@ -349,11 +349,13 @@ export async function GET(_req: Request, { params }: { params: Promise<{ shareCo
   const guildRowH = guild ? 34 : 0;
   const charBoxH = innerH - nicknameH - guildRowH - 12 - (guild ? 12 : 0);
   const charBoxW = leftW;
-  // v3 풀프레임 아바타는 여백이 없어 박스 크기에 그대로 맞춤(object-contain) — 옛 과확대/하향
-  // 보정 제거. Satori는 img transform이 불안정해 픽셀 width/height로 직접 제어.
-  const enlargedW = charBoxW;
-  const enlargedH = charBoxH;
-  const charLeftOffset = 0;
+  // v3 풀프레임 아바타 — /me 프로필 섹션처럼 박스를 꽉 채움. 정사각 아바타를 박스 높이에 맞춰
+  // (세로 풀필) 가로 중앙·하단 정렬(가로 약간 넘치면 카드 안쪽으로 자연 침범). Satori는 img
+  // transform이 불안정해 픽셀 width/height로 직접 제어.
+  const charSide = charBoxH;
+  const enlargedW = charSide;
+  const enlargedH = charSide;
+  const charLeftOffset = Math.round((charBoxW - charSide) / 2);
   const charBottomLift = 0;
 
   return new ImageResponse(

@@ -384,6 +384,8 @@ export default async function PublicProfilePage({
           <div className="absolute inset-0 flex items-end justify-center pb-[10px] pt-[15px]">
             <CharacterStage
               charSrc={data.charImg}
+              scale={1.15}
+              offsetY={-5}
               className="aspect-[2/3] h-full overflow-hidden"
             />
           </div>

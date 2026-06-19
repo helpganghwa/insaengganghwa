@@ -147,6 +147,7 @@ export default async function ProfilePage() {
               >
                 <CharacterStage
                   charSrc={dirImg(activeProfile)}
+                  scale={1.4}
                   className="aspect-[3/4] h-44 overflow-hidden"
                 />
               </Link>
