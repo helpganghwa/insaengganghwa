@@ -4,9 +4,19 @@
 // ※ 아직 라이브 생성 흐름(create-character-state)을 대체하지 않음 — 교체는 별도 단계.
 import 'server-only';
 
+import { eq } from 'drizzle-orm';
+
+import { db } from '@/lib/db/client';
+import { profileGenerationJobs } from '@/lib/db/schema/avatar';
+import { CATALOG_ITEMS } from '@/lib/game/equipment/catalog';
+
 import { composeV3Description } from './compose-v3';
 import { pickRandomAppearance, type Appearance } from './appearance-v3';
+import { markFailedAndRefund } from './pipeline';
 import type { ProfileGender } from './refs';
+
+const WORN_BY_KEY = new Map(CATALOG_ITEMS.map((c) => [c.key, c.wornDesc ?? c.art]));
+const wornOf = (key: string | undefined): string => (key ? (WORN_BY_KEY.get(key) ?? key) : '');
 
 const PIXELLAB_BASE = 'https://api.pixellab.ai/v2';
 // 확정: 256 정사각(최대 area·디테일·기존 정사각 아바타 통합) + 전신은 프롬프트 강제.
@@ -71,4 +81,63 @@ export async function createCharacterV3(input: CreateV3Input): Promise<CreateV3R
     description,
     appearance,
   };
+}
+
+/**
+ * queued 작업 1건 선점 → 장비 wornDesc 조회 → createCharacterV3 → 'downloading' 갱신.
+ * 이후 다운로드/미러링/AI검수는 기존 pipeline.pollAndProcessDownloading가 그대로 처리
+ * (v3도 GET /characters/{id} rotation_urls 동일). create-character-state 대체용 enqueue.
+ * 실패 시 markFailedAndRefund(환불+우편).
+ */
+export async function enqueueOneV3(): Promise<
+  | { kind: 'noop' }
+  | { kind: 'enqueued'; jobId: bigint; characterId: string }
+  | { kind: 'failed'; jobId: bigint; reason: string }
+> {
+  if (!process.env.PIXELLAB_API_KEY) throw new Error('PIXELLAB_API_KEY missing');
+
+  const [job] = await db
+    .select({
+      id: profileGenerationJobs.id,
+      userId: profileGenerationJobs.userId,
+      options: profileGenerationJobs.options,
+      equipmentSnapshot: profileGenerationJobs.equipmentSnapshot,
+    })
+    .from(profileGenerationJobs)
+    .where(eq(profileGenerationJobs.status, 'queued'))
+    .orderBy(profileGenerationJobs.createdAt)
+    .limit(1);
+  if (!job) return { kind: 'noop' };
+
+  const gender = (job.options as { gender: ProfileGender }).gender;
+  const eqs = job.equipmentSnapshot as {
+    weaponKey?: string;
+    armorKey?: string;
+    accessoryKey?: string;
+  };
+
+  try {
+    const out = await createCharacterV3({
+      gender,
+      weapon: wornOf(eqs.weaponKey),
+      armor: wornOf(eqs.armorKey),
+      accessory: wornOf(eqs.accessoryKey),
+    });
+    await db
+      .update(profileGenerationJobs)
+      .set({
+        status: 'downloading',
+        pixellabCharacterId: out.characterId,
+        pixellabBackgroundJobId: out.backgroundJobId,
+        // 실제 전달한 v3 description으로 덮어씀(재현·AI검수 컨텍스트). 외형 랜덤값은 options에 기록.
+        descriptionPrompt: out.description,
+        options: { ...(job.options as Record<string, unknown>), v3Appearance: out.appearance },
+      })
+      .where(eq(profileGenerationJobs.id, job.id));
+    return { kind: 'enqueued', jobId: job.id, characterId: out.characterId };
+  } catch (e) {
+    const reason = (e as Error).message;
+    await markFailedAndRefund(job.id, job.userId, `v3 enqueue: ${reason}`);
+    return { kind: 'failed', jobId: job.id, reason };
+  }
 }

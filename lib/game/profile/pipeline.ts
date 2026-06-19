@@ -537,7 +537,7 @@ async function rejectJob(
   await safePush(userId, '프로필 검토 미통과', '검토를 통과하지 못해 다이아를 환불했어요. 우편함을 확인하세요.');
 }
 
-async function markFailedAndRefund(jobId: bigint, userId: string, reason: string): Promise<void> {
+export async function markFailedAndRefund(jobId: bigint, userId: string, reason: string): Promise<void> {
   // 작업 정보 조회.
   const [job] = await db
     .select({
