@@ -13,20 +13,18 @@ import { conquestPowerMult } from '../balance';
 import { simulateConquest, type ConquestUnit } from './simulate';
 
 /**
- * 점령전 정산 — GUILD §5.8⑧. KST 23:00 cron. 그날(오늘 KST) 전투를 결정론 정산.
+ * 점령전 정산 — GUILD §5.8⑧. KST 자정(00시대) cron. **직전 전투일(어제 KST)**을 결정론 정산.
+ * 배치 마감은 전날 23:00(잠금 윈도 23:00~24:00), 결과 노출은 자정 — 소유권·우편·세계 연대기를
+ * 모두 자정에 함께 발표하기 위해 정산 시점을 23:00 → 자정으로 이동(전투일=어제).
  *  - 경합 구역(공격 배치 ≥1)만 순회. 참가 = 배치(공/수) + 집행관(자동 ×3 방어).
  *  - effCp = 장비 전투력 스냅샷 × 역할 배수. simulateConquest → 승자 → 소유권/집행관 갱신.
  *  - 멱등: conquest_battles UNIQUE(zone_id, battle_kst_day) + 선조회. 구역별 트랜잭션.
+ *  - battleDay는 호출자(cron 라우트)가 KST 어제 날짜로 결정(클라 불신·결정론).
  */
 type DepRow = { zone_id: number; uid: string; guild_id: string; gname: string; role: 'attack' | 'defend' };
 type ZoneRow = { id: number; name: string; owner_guild_id: string | null; executor: string | null; owner_name: string | null };
 
-export async function runConquest(serverId: number): Promise<{ battleDay: string; resolved: number }> {
-  const [todayRow] = (await db.execute(
-    sql`select (now() at time zone 'Asia/Seoul')::date::text d`,
-  )) as unknown as { d: string }[];
-  const battleDay = todayRow!.d;
-
+export async function runConquest(serverId: number, battleDay: string): Promise<{ battleDay: string; resolved: number }> {
   // 그날 배치 전부(길드명 포함). guild_members 내부조인으로 **현재 소속이 배치 당시 길드와 일치하는**
   // 배치만 채택 — 배치 후 길드 이동/탈퇴/추방된 유저가 옛 길드 유닛으로 참전하는 것을 정산 시점에 차단
   // (이탈 시 clearConquestRoleOnExit가 선삭제하나, 정산 재검증은 방어선).

@@ -236,13 +236,13 @@ export function DeployBoard({
           {locked ? (
             <div className="inline-flex items-center gap-1.5 rounded-lg border border-red-400/60 bg-red-950/85 px-2 py-1 text-[9px] font-bold text-red-100 shadow-lg backdrop-blur-sm">
               <span className="inline-block h-1.5 w-1.5 animate-pulse rounded-full bg-red-400" />
-              점령전 진행 중 · 배치 변경 잠금
+              점령전 진행 중 · 자정 결과 발표
             </div>
           ) : (
             <div className="inline-block rounded-lg bg-black/60 px-2 py-1 text-[9px] font-semibold leading-[1.5] text-white/90 shadow-lg backdrop-blur-sm">
-              매일 {CONQUEST_BATTLE_KST_HOUR}:00~24:00 점령전 전투
+              매일 {CONQUEST_BATTLE_KST_HOUR}:00 배치 마감 · 24:00 결과 발표
               <br />
-              <span className="text-white/70">전투 시간 동안 공격·수비 등록 불가</span>
+              <span className="text-white/70">전투 시간({CONQUEST_BATTLE_KST_HOUR}:00~24:00) 등록 불가</span>
             </div>
           )}
         </div>
