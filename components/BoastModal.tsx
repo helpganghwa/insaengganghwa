@@ -261,7 +261,7 @@ export function BoastModal({
                   pinEmblemRight
                   className="max-w-full text-[10px] text-white/70"
                 />
-                <div className="relative aspect-[3/4] h-36 overflow-visible">
+                <div className="relative aspect-[3/4] h-36 overflow-hidden">
                   {profileImg ? (
                     // eslint-disable-next-line @next/next/no-img-element
                     <img
@@ -272,9 +272,7 @@ export function BoastModal({
                       className="absolute inset-0 h-full w-full object-contain object-bottom"
                       style={{
                         imageRendering: 'pixelated',
-                        // scale 2.0(/me 대비 5%↓) + 절대 10px 아래 이동(CharacterStage offsetY와 동일).
-                        transform: 'translateY(10px) scale(2.0) translateY(10%)',
-                        transformOrigin: 'center bottom',
+                        // v3 풀프레임 아바타는 여백이 없어 줌 보정 제거(그대로 영역에 맞춤).
                       }}
                     />
                   ) : (

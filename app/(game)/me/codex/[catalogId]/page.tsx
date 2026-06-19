@@ -107,7 +107,7 @@ export default async function CodexItemPage({
                           alt=""
                           aria-hidden
                           className="h-full w-full object-contain"
-                          style={{ imageRendering: 'pixelated', transform: 'scale(1.38)' }}
+                          style={{ imageRendering: 'pixelated' }}
                         />
                       ) : null}
                     </span>

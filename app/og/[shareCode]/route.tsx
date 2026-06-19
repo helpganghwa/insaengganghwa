@@ -349,17 +349,12 @@ export async function GET(_req: Request, { params }: { params: Promise<{ shareCo
   const guildRowH = guild ? 34 : 0;
   const charBoxH = innerH - nicknameH - guildRowH - 12 - (guild ? 12 : 0);
   const charBoxW = leftW;
-  // 캐릭터를 박스보다 크게 그리되 우측 장비 박스 시작점(rootPad+leftW+gap = 504px)
-  // 침범 최소화. Satori는 img transform: scale + translateY가 의도대로 적용 안 되는
-  // 경우가 있어 픽셀 단위 width/height + absolute bottom으로 직접 제어.
-  // enlargedH(720) > charBoxH(478) → sprite contain의 머리 위 빈 영역이 카드 padding
-  // 위쪽으로 자연스럽게 침범(시각적 무해). bottom -48로 발이 카드 outer bottom 근접.
-  const enlargedW = 660;
-  const enlargedH = 792;
-  const charLeftOffset = Math.round((charBoxW - enlargedW) / 2); // -114
-  // 박스 height(478)의 ~20% — sprite 캔버스 아래쪽 빈 공간을 카드 padding 영역으로
-  // 밀어내 캐릭터 본체를 카드 아래쪽에 가깝게 노출.
-  const charBottomLift = 96;
+  // v3 풀프레임 아바타는 여백이 없어 박스 크기에 그대로 맞춤(object-contain) — 옛 과확대/하향
+  // 보정 제거. Satori는 img transform이 불안정해 픽셀 width/height로 직접 제어.
+  const enlargedW = charBoxW;
+  const enlargedH = charBoxH;
+  const charLeftOffset = 0;
+  const charBottomLift = 0;
 
   return new ImageResponse(
     <div

@@ -129,7 +129,7 @@ export default async function LeaderboardPage({
                             className="absolute inset-0 h-full w-full object-contain object-bottom"
                             style={{
                               imageRendering: 'pixelated',
-                              transform: 'scale(1.49) translateY(calc(5% + 15px))',
+                              // v3 풀프레임 — 줌·하향보정 제거(여백 없어 그대로 영역에 꽉 참).
                               transformOrigin: 'center bottom',
                               filter: 'drop-shadow(0 3px 5px rgba(0,0,0,0.55))',
                             }}
@@ -172,7 +172,7 @@ export default async function LeaderboardPage({
                               alt=""
                               aria-hidden
                               className="h-full w-full object-contain"
-                              style={{ imageRendering: 'pixelated', transform: 'scale(1.38)' }}
+                              style={{ imageRendering: 'pixelated' }}
                             />
                           ) : null}
                         </span>

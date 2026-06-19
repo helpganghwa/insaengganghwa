@@ -205,8 +205,8 @@ function Fighter({
                   className="h-full w-full object-contain object-bottom drop-shadow-[0_2px_5px_rgba(0,0,0,0.85)]"
                   style={{
                     imageRendering: 'pixelated',
-                    // +20% 확대 + 아래로 이동(닉네임~라벨 사이). origin bottom으로 발끝 고정. side r는 좌우반전.
-                    transform: `translateY(26px) scale(1.2) scaleX(${side === 'r' ? -1 : 1})`,
+                    // v3 풀프레임 — 줌·하향보정 제거, 좌우 플립만 유지(side r 반전).
+                    transform: `scaleX(${side === 'r' ? -1 : 1})`,
                     transformOrigin: 'center bottom',
                   }}
                 />
@@ -219,7 +219,8 @@ function Fighter({
                 className="h-full w-full object-contain object-bottom drop-shadow-[0_2px_5px_rgba(0,0,0,0.85)]"
                 style={{
                   imageRendering: 'pixelated',
-                  transform: `translateY(26px) scale(1.2) scaleX(${side === 'r' ? -1 : 1})`,
+                  // v3 풀프레임 — 줌·하향보정 제거, 좌우 플립만 유지.
+                  transform: `scaleX(${side === 'r' ? -1 : 1})`,
                   transformOrigin: 'center bottom',
                 }}
               />
@@ -433,7 +434,7 @@ function RankingView({
                         className="absolute inset-0 h-full w-full object-contain object-bottom"
                         style={{
                           imageRendering: 'pixelated',
-                          transform: 'translateY(25px) scale(1.5)',
+                          // v3 풀프레임 — 줌·하향보정 제거(여백 없어 그대로 영역에 꽉 참).
                           transformOrigin: 'center bottom',
                           filter: 'drop-shadow(0 3px 5px rgba(0,0,0,0.6))',
                         }}
@@ -449,7 +450,7 @@ function RankingView({
                       className="absolute inset-0 h-full w-full object-contain object-bottom"
                       style={{
                         imageRendering: 'pixelated',
-                        transform: 'translateY(25px) scale(1.5)',
+                        // v3 풀프레임 — 줌·하향보정 제거(여백 없어 그대로 영역에 꽉 참).
                         transformOrigin: 'center bottom',
                         filter: 'drop-shadow(0 3px 5px rgba(0,0,0,0.6))',
                       }}

@@ -7,13 +7,16 @@ export function CharacterStage({
   charSrc,
   className,
   rounded = true,
-  scale = 2.1,
+  scale = 1,
   offsetY = 0,
 }: {
   charSrc?: string | null;
   className?: string;
   rounded?: boolean;
-  /** 캐릭터 확대 배율(기본 2.1=/me·내정보). /u 공개프로필은 1.8(이전 크기 — 길드명 안 가리게). */
+  /**
+   * 캐릭터 확대 배율(기본 1 — v3 풀프레임 아바타는 여백이 없어 그대로 영역에 꽉 참).
+   * 옛 여백 아바타는 다소 작게 보이나 오버플로 없음(재생성 시 정상화).
+   */
   scale?: number;
   /** 아바타를 아래로 N px 이동(스케일 무관 절대값). */
   offsetY?: number;
@@ -32,7 +35,7 @@ export function CharacterStage({
             className="absolute inset-0 h-full w-full object-contain object-bottom"
             style={{
               imageRendering: 'pixelated',
-              transform: `translateY(${offsetY}px) scale(${scale}) translateY(10%)`,
+              transform: `translateY(${offsetY}px) scale(${scale})`,
               transformOrigin: 'center bottom',
             }}
           />

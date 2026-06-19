@@ -88,7 +88,7 @@ function MemberRow({ m, myUserId }: { m: RichMember; myUserId: string }) {
               alt=""
               aria-hidden
               className="h-full w-full object-contain"
-              style={{ imageRendering: 'pixelated', transform: 'scale(1.38)' }}
+              style={{ imageRendering: 'pixelated' }}
             />
           ) : null}
         </span>

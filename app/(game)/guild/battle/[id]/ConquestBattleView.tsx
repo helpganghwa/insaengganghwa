@@ -142,7 +142,8 @@ function Fighter({
       className="h-full w-full object-contain object-bottom drop-shadow-[0_2px_5px_rgba(0,0,0,0.85)]"
       style={{
         imageRendering: 'pixelated',
-        transform: `translateY(21px) scale(1.2) scaleX(${side === 'r' ? -1 : 1})`,
+        // v3 풀프레임 — 줌·하향보정 제거, 좌우 플립만 유지.
+        transform: `scaleX(${side === 'r' ? -1 : 1})`,
         transformOrigin: 'center bottom',
       }}
     />
