@@ -55,7 +55,7 @@ export type ProfileHairLength = 'long' | 'short' | 'natural';
  * 포즈 — 서버 random 가벼운 변형 (2026-05-28 재도입). state가 source 전신을 강하게 보존하므로
  * 팔·손 수준의 가벼운 포즈만(레퍼런스 비율·전신 유지). 실제 반영도는 e2e로 검증.
  */
-export type ProfilePose = 'natural' | 'hand_wave' | 'peace_sign' | 'hand_on_hip';
+export type ProfilePose = 'natural' | 'hand_on_hip';
 
 /** 합성 옵션 — gender(유저)만 선택. hairLength·pose·race는 서버 random. 표정·얼굴은 source 유지. */
 export interface ProfileOptions {
@@ -137,12 +137,10 @@ export function pickRandomHairLength(): ProfileHairLength {
   return ALL_HAIR_LENGTHS[i]!;
 }
 
-// arms_crossed 제거 — 무기를 손에 들 수 없어 모델이 무기를 몸 앞에 교차 배치 → 팔짱과 겹쳐
-// 4팔 착시(953b60e1). 나머지 포즈는 최소 한 손이 비어 무기를 명확히 쥘 수 있음.
+// 손을 점유하는 포즈 제거 — arms_crossed(4팔 착시) + hand_wave/peace_sign(한 손이 막혀
+// 쌍검 등 무기를 다 못 듦, a37e0269). 무기를 확실히 쥐도록 양손이 자유로운 포즈만 유지.
 const POSE_DESC: Record<ProfilePose, string> = {
   natural: 'arms resting naturally at the sides',
-  hand_wave: 'one hand raised in a friendly little wave',
-  peace_sign: 'one hand making a cute V sign near the face',
   hand_on_hip: 'one hand resting lightly on the hip',
 };
 
@@ -206,7 +204,10 @@ export async function composeEditDescription(
     // Phase 2: 사전 큐레이션 wornDesc로 결정론적 조립 — 런타임 LLM 변동·스프라이트 오해석·길이초과 제거.
     // 성별중립 묘사라 남/여 모두 body 골격(성별 강제)에 맞춰 자연 렌더.
     const hair = `${HAIR_LENGTH_DESC[opts.hairLength]} hair, a fresh new style and color`;
-    outfitClause = `${OUTFIT_PREFIX}wielding ${wpn.wornDesc}, wearing ${arm.wornDesc}, and ${acc.wornDesc}; ${hair}. Make the whole ensemble lavish and cohesive.`;
+    // 쌍검/한 쌍 무기 — 양손에 하나씩 들도록 명시(한 자루로 줄어드는 문제 방지).
+    const dual = /\b(pair|twin|dual|matching pair)\b|쌍|두 자루/i.test(wpn.wornDesc!);
+    const wpnPhrase = dual ? `${wpn.wornDesc}, one held in each hand` : wpn.wornDesc;
+    outfitClause = `${OUTFIT_PREFIX}wielding ${wpnPhrase}, wearing ${arm.wornDesc}, and ${acc.wornDesc}; ${hair}. Make the whole ensemble lavish and cohesive.`;
     // 안전 가드 — 혹시 1000자 초과면 머리절을 떼어 장비 묘사는 보존.
     if (assemble(opts, outfitClause).length > 1000) {
       outfitClause = `${OUTFIT_PREFIX}wielding ${wpn.wornDesc}, wearing ${arm.wornDesc}, and ${acc.wornDesc}.`;
