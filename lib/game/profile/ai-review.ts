@@ -121,10 +121,9 @@ export async function reviewProfile(input: ReviewInput): Promise<ReviewResult> {
     text: `Intended character/equipment description:\n\n${input.descriptionPrompt}\n\nThe ${input.images.length} images above are rotation views of the SAME character. Check every view for: (1) anatomical part-count defects, and (2) held-weapon integrity — is the intended weapon a single intact object, or is it broken into disconnected pieces / drawn more times than intended? Use the description only to know intended objects and counts, never for aesthetic match. Decide pass/fail. Output JSON only.`,
   });
 
-  // 다수결 검수 — 미세 결함(끊긴 무기 등)은 단일 호출 fail율이 ~0.5(동전던지기)라 과반은
-  // 효과 없음(p=0.5면 majority=50%). 대신 N회 중 "하나라도 fail이면 fail"(any-fail)로 recall↑
-  // (3회 → ~87%, 정상품은 거의 항상 전원 pass라 오탐 영향 미미). 동일 content 재사용·병렬 호출.
-  const SAMPLES = 3;
+  // 검수 호출 횟수 — 비용 절감을 위해 1회(단일 검수)로 운영(2026-06-19 사용자 결정).
+  // any-fail 투표 구조는 유지(SAMPLES만 올리면 다수표 검수로 재전환 가능). N회 중 1+ fail이면 fail.
+  const SAMPLES = 1;
   const FAIL_IF_AT_LEAST = 1; // any-fail
   const callOnce = async () => {
     const res = await client().messages.create({
