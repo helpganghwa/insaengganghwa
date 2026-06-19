@@ -1,6 +1,7 @@
 import 'server-only';
 
 import { pgGuard } from '@/lib/db/guarded';
+import { parseFaceBox, type FaceBox } from '@/components/faceCrop';
 
 /**
  * (game) 셸(헤더·하단 네비)에 필요한 최소 데이터.
@@ -16,6 +17,8 @@ export interface LayoutData {
   hasFriendRequest: boolean;
   /** 헤더 머리 아이콘용 — 활성 프로필 south rotation URL. 없으면 null(폴백 아이콘). */
   profileSouth: string | null;
+  /** 활성 프로필 얼굴 박스(검수 산출) — 헤더 썸네일 정밀 크롭. 없으면 null(폴백 크롭). */
+  profileFaceBox: FaceBox | null;
   /** 헤더 우측 길드 문양 — 미소속/생성중이면 null(미표시). */
   guildEmblemUrl: string | null;
 }
@@ -27,6 +30,7 @@ const DEFAULTS: LayoutData = {
   hasCompletedEnhance: false,
   hasFriendRequest: false,
   profileSouth: null,
+  profileFaceBox: null,
   guildEmblemUrl: null,
 };
 
@@ -40,7 +44,7 @@ export async function loadLayoutData(userId: string, serverId: number): Promise<
     const [profileRows, mailRows, enhRows, friendReqRows] = await Promise.all([
       pgGuard(
         (sql) => sql`
-          select c.nickname, c.diamond, up.rotations, g.emblem_url as guild_emblem_url
+          select c.nickname, c.diamond, up.rotations, up.options as profile_options, g.emblem_url as guild_emblem_url
           from profiles p
           left join characters c on c.user_id = p.id and c.server_id = ${serverId}
           left join user_profiles up on up.id = c.active_profile_id
@@ -85,9 +89,16 @@ export async function loadLayoutData(userId: string, serverId: number): Promise<
           nickname?: string;
           diamond?: string | number | bigint;
           rotations?: unknown;
+          profile_options?: unknown;
           guild_emblem_url?: string | null;
         }
       | undefined;
+    // options(jsonb)도 문자열일 수 있어 방어 파싱 후 faceBox 추출.
+    let opts = p?.profile_options as Record<string, unknown> | string | null | undefined;
+    if (typeof opts === 'string') {
+      try { opts = JSON.parse(opts) as Record<string, unknown>; } catch { opts = null; }
+    }
+    const faceBox = parseFaceBox((opts as Record<string, unknown> | null)?.faceBox);
     // rotations(jsonb)는 postgres.js 기본 파서가 객체로 파싱하나, 문자열일 경우 방어적 파싱.
     let rot = p?.rotations as Record<string, string> | string | null | undefined;
     if (typeof rot === 'string') {
@@ -104,6 +115,7 @@ export async function loadLayoutData(userId: string, serverId: number): Promise<
       hasCompletedEnhance: Number((enhRows[0] as { n?: number | string } | undefined)?.n ?? 0) > 0,
       hasFriendRequest: friendReqRows.length > 0,
       profileSouth: (rot as Record<string, string> | null)?.south ?? null,
+      profileFaceBox: faceBox,
       guildEmblemUrl: p?.guild_emblem_url ?? null,
     };
   } catch (e) {

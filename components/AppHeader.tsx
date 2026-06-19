@@ -1,6 +1,7 @@
 import Link from 'next/link';
 
 import type { LayoutData } from '@/lib/game/layout-data';
+import { faceCropStyle, type FaceBox } from '@/components/faceCrop';
 import { DiamondInitializer } from '@/components/DiamondContext';
 import { HeaderDiamond } from '@/components/HeaderDiamond';
 import { GuildBadge } from '@/components/GuildBadge';
@@ -14,12 +15,15 @@ export function AppHeaderShell({
   nickname = '플레이어',
   diamond = 0n,
   profileSouth = null,
+  profileFaceBox = null,
   guildEmblemUrl = null,
   diamondSlot,
 }: {
   nickname?: string;
   diamond?: bigint;
   profileSouth?: string | null;
+  /** 활성 프로필 얼굴 박스(검수 산출) — 썸네일 정밀 크롭. 없으면 폴백 크롭. */
+  profileFaceBox?: FaceBox | null;
   guildEmblemUrl?: string | null;
   /** AppHeader(server)가 client HeaderDiamond를 주입 — Suspense fallback은 정적 표시. */
   diamondSlot?: React.ReactNode;
@@ -36,14 +40,7 @@ export function AppHeaderShell({
               aria-hidden
               draggable={false}
               className="absolute inset-0 h-full w-full"
-              style={{
-                imageRendering: 'pixelated',
-                objectFit: 'cover',
-                objectPosition: '50% 0%',
-                // v3 풀프레임 — 얼굴이 프레임 상단이라 크롭 기준을 위로(46% 7%).
-                transform: 'scale(3.6)',
-                transformOrigin: '46% 7%',
-              }}
+              style={faceCropStyle(profileFaceBox)}
             />
           ) : (
             <span
@@ -92,6 +89,7 @@ export async function AppHeader({ dataPromise }: { dataPromise: Promise<LayoutDa
         nickname={d.nickname}
         diamond={d.diamond}
         profileSouth={d.profileSouth}
+        profileFaceBox={d.profileFaceBox}
         guildEmblemUrl={d.guildEmblemUrl}
         diamondSlot={<HeaderDiamond />}
       />

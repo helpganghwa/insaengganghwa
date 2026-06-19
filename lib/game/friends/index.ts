@@ -8,6 +8,7 @@ import { profiles } from '@/lib/db/schema/profiles';
 import { characters } from '@/lib/db/schema/server';
 import { userProfiles } from '@/lib/db/schema/avatar';
 import { getGuildBriefsByUsers } from '@/lib/game/guild/badge';
+import { parseFaceBox, type FaceBox } from '@/components/faceCrop';
 
 /**
  * 친구 — 검색→요청→수락(친구 선물 없음). 방향 1행 저장(requester→addressee).
@@ -30,6 +31,8 @@ export interface FriendUser {
   nickname: string;
   publicCode: string;
   profileSouth: string | null;
+  /** 활성 프로필 얼굴 박스(검수 산출) — 썸네일 정밀 크롭. 없으면 null(폴백). */
+  faceBox?: FaceBox | null;
   /** 닉네임 아래 길드(이름+문양) — 미소속/생성중이면 null. page(목록·요청) 또는 searchUsers(찾기)에서 부착. */
   guildEmblemUrl?: string | null;
   guildName?: string | null;
@@ -38,6 +41,7 @@ export interface FriendUser {
 }
 
 const SOUTH = sql<string | null>`${userProfiles.rotations} ->> 'south'`;
+const FACEBOX = sql<unknown>`${userProfiles.options} -> 'faceBox'`;
 
 async function profilesByIds(ids: string[], serverId: number): Promise<FriendUser[]> {
   if (ids.length === 0) return [];
@@ -47,6 +51,7 @@ async function profilesByIds(ids: string[], serverId: number): Promise<FriendUse
       nickname: characters.nickname,
       publicCode: profiles.publicCode,
       profileSouth: SOUTH,
+      faceBoxRaw: FACEBOX,
       lastSeenAt: characters.lastSeenAt,
     })
     .from(profiles)
@@ -56,7 +61,11 @@ async function profilesByIds(ids: string[], serverId: number): Promise<FriendUse
     )
     .leftJoin(userProfiles, eq(userProfiles.id, characters.activeProfileId))
     .where(inArray(profiles.id, ids));
-  return rows.map((r) => ({ ...r, lastSeenAt: r.lastSeenAt ? r.lastSeenAt.toISOString() : null }));
+  return rows.map(({ faceBoxRaw, ...r }) => ({
+    ...r,
+    lastSeenAt: r.lastSeenAt ? r.lastSeenAt.toISOString() : null,
+    faceBox: parseFaceBox(faceBoxRaw),
+  }));
 }
 
 /** 닉네임(부분)·공개코드(정확) 검색 — 본인 제외, 관계 라벨 포함. */
@@ -73,6 +82,7 @@ export async function searchUsers(
       nickname: characters.nickname,
       publicCode: profiles.publicCode,
       profileSouth: SOUTH,
+      faceBoxRaw: FACEBOX,
       lastSeenAt: characters.lastSeenAt,
     })
     .from(profiles)
@@ -117,9 +127,10 @@ export async function searchUsers(
   const guildMap = await getGuildBriefsByUsers(ids, serverId).catch(
     () => new Map<string, { emblemUrl: string | null; name: string }>(),
   );
-  return rows.map((r) => ({
+  return rows.map(({ faceBoxRaw, ...r }) => ({
     ...r,
     lastSeenAt: r.lastSeenAt ? r.lastSeenAt.toISOString() : null,
+    faceBox: parseFaceBox(faceBoxRaw),
     relation: rel.get(r.userId) ?? 'none',
     guildEmblemUrl: guildMap.get(r.userId)?.emblemUrl ?? null,
     guildName: guildMap.get(r.userId)?.name ?? null,

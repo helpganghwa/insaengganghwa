@@ -18,10 +18,20 @@ const MODEL_ID = 'claude-sonnet-4-6';
 const REVIEW_REASONS = ['nsfw', 'violence', 'hate', 'quality'] as const;
 export type ReviewReason = (typeof REVIEW_REASONS)[number];
 
+// 정면(south) 머리 박스 — 얼굴 크롭(헤더/친구 썸네일)용. 0~1 정규화. pass/fail과 무관한 메타.
+const HeadBoxSchema = z.object({
+  cx: z.number().min(0).max(1),
+  cy: z.number().min(0).max(1),
+  h: z.number().min(0).max(1),
+});
+export type HeadBox = z.infer<typeof HeadBoxSchema>;
+
 const ReviewVerdictSchema = z.object({
   pass: z.boolean(),
   reasons: z.array(z.enum(REVIEW_REASONS)).default([]),
   notes: z.string().default(''),
+  /** 정면 머리 중심(cx,cy)·높이(h) 0~1. 모델 미반환 시 생략. */
+  head: HeadBoxSchema.optional(),
 });
 export type ReviewVerdict = z.infer<typeof ReviewVerdictSchema>;
 
@@ -63,11 +73,14 @@ For anatomy: count carefully across the clearest views. Before failing for an ex
 
 For safety (nsfw/violence/hate) and aesthetic preference: when in doubt, PASS.
 
+ALSO (always, even when pass=true) locate the HEAD in the SOUTH (front) view for thumbnail face-cropping. In the SOUTH image, give the head/face bounding region as fractions 0..1 of the image: "head": { "cx": horizontal center of the head, "cy": vertical center of the head (face), "h": head height as a fraction of image height }. Measure the visible head/face only (hair counts, but ignore tall hats/horns extending far above). For a typical full-body character the head is near the top-center: cx≈0.5, cy≈0.08, h≈0.14. If no south view or no visible head, omit "head".
+
 OUTPUT — strict JSON only:
 {
   "pass": boolean,
   "reasons": ["nsfw" | "violence" | "hate" | "quality"],
-  "notes": "MUST be written in KOREAN (한국어로만 작성). 1~2문장으로 실패 사유 설명(어느 뷰·어느 부위인지 포함). pass면 빈 문자열. 영어로 쓰지 말 것."
+  "notes": "MUST be written in KOREAN (한국어로만 작성). 1~2문장으로 실패 사유 설명(어느 뷰·어느 부위인지 포함). pass면 빈 문자열. 영어로 쓰지 말 것.",
+  "head": { "cx": 0.0-1.0, "cy": 0.0-1.0, "h": 0.0-1.0 }
 }`;
 
 let _client: Anthropic | null = null;
@@ -154,6 +167,8 @@ export async function reviewProfile(input: ReviewInput): Promise<ReviewResult> {
     throw new Error(`AI_REVIEW_PARSE_FAIL: no parseable verdict in ${SAMPLES} samples: ${samples[0]?.raw.slice(0, 200) ?? ''}`);
   }
   const fails = parsed.filter((v) => !v.pass);
+  // 얼굴 크롭용 머리 박스 — 샘플 중 반환된 것 채택(없으면 생략, 호출부 폴백).
+  const head = parsed.find((v) => v.head)?.head;
   // any-fail — N표 중 FAIL_IF_AT_LEAST개 이상이 fail이면 최종 fail.
   const verdict: ReviewVerdict =
     fails.length >= FAIL_IF_AT_LEAST
@@ -161,8 +176,9 @@ export async function reviewProfile(input: ReviewInput): Promise<ReviewResult> {
           pass: false,
           reasons: [...new Set(fails.flatMap((v) => v.reasons))] as ReviewVerdict['reasons'],
           notes: fails.find((v) => v.notes)?.notes ?? fails[0]!.notes,
+          ...(head ? { head } : {}),
         }
-      : { pass: true, reasons: [], notes: '' };
+      : { pass: true, reasons: [], notes: '', ...(head ? { head } : {}) };
 
   const usage = samples.reduce(
     (acc, s) => ({

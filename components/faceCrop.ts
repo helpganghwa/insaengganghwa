@@ -1,0 +1,31 @@
+// 아바타 썸네일 얼굴 크롭 — AI 검수가 정면(south)에서 잡은 머리 박스(cx,cy,h, 0~1)로
+// transform-origin·scale을 산출. 박스 없으면 폴백(풀프레임 v3 기준 46% 7%·scale 3.6).
+// object-fit:cover 한 정사각 이미지 위에 적용(헤더·친구 썸네일 공용).
+import type { CSSProperties } from 'react';
+
+export type FaceBox = { cx: number; cy: number; h: number };
+
+/** options.faceBox(unknown)를 안전 파싱. 형식 안 맞으면 null. */
+export function parseFaceBox(v: unknown): FaceBox | null {
+  if (!v || typeof v !== 'object') return null;
+  const o = v as Record<string, unknown>;
+  const cx = o.cx, cy = o.cy, h = o.h;
+  if (typeof cx !== 'number' || typeof cy !== 'number' || typeof h !== 'number') return null;
+  if (!(h > 0)) return null;
+  return { cx, cy, h };
+}
+
+/** 얼굴이 썸네일에 들어오도록 transform-origin·scale 산출. 머리가 박스의 ~절반 차지하도록. */
+export function faceCropStyle(box: FaceBox | null): CSSProperties {
+  const cx = box?.cx ?? 0.46;
+  const cy = box?.cy ?? 0.07;
+  const hf = box?.h ?? 0.14;
+  const scale = Math.min(5, Math.max(2.2, 0.5 / hf));
+  return {
+    imageRendering: 'pixelated',
+    objectFit: 'cover',
+    objectPosition: '50% 0%',
+    transform: `scale(${scale.toFixed(2)})`,
+    transformOrigin: `${(cx * 100).toFixed(1)}% ${(cy * 100).toFixed(1)}%`,
+  };
+}

@@ -360,6 +360,10 @@ async function acceptJob(
   descriptionPrompt: string,
   verdict: ReviewVerdict,
 ): Promise<void> {
+  // 얼굴 크롭용 머리 박스(검수 반환)를 options.faceBox로 동봉 — 헤더/친구 썸네일 정밀 크롭.
+  const optionsWithFace = verdict.head
+    ? { ...(options as Record<string, unknown>), faceBox: verdict.head }
+    : options;
   await db.transaction(async (tx) => {
     const [profile] = await tx
       .insert(userProfiles)
@@ -369,7 +373,7 @@ async function acceptJob(
         rotations,
         activeDirection: 'south',
         pixellabCharacterId: characterId,
-        options,
+        options: optionsWithFace,
         equipmentSnapshot,
         descriptionPrompt,
       })

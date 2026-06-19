@@ -6,6 +6,7 @@ import { useRouter } from 'next/navigation';
 import { useResourceToast } from '@/components/ResourceToast';
 import { GuildBadge } from '@/components/GuildBadge';
 import { LastSeen } from '@/components/LastSeen';
+import { faceCropStyle, type FaceBox } from '@/components/faceCrop';
 
 import {
   searchAction,
@@ -36,7 +37,7 @@ const ERR: Record<string, string> = {
 };
 
 // 헤더와 동일 — 영역(테두리/배경) 없이 스프라이트를 확대해 상반신만 노출.
-function Avatar({ src }: { src: string | null }) {
+function Avatar({ src, box }: { src: string | null; box?: FaceBox | null }) {
   return (
     <div className="relative h-11 w-11 shrink-0 overflow-hidden">
       {src ? (
@@ -47,14 +48,7 @@ function Avatar({ src }: { src: string | null }) {
           aria-hidden
           draggable={false}
           className="absolute inset-0 h-full w-full"
-          style={{
-            imageRendering: 'pixelated',
-            objectFit: 'cover',
-            objectPosition: '50% 0%',
-            // v3 풀프레임 — 얼굴이 프레임 상단이라 크롭 기준을 위로(46% 7%).
-            transform: 'scale(3.6)',
-            transformOrigin: '46% 7%',
-          }}
+          style={faceCropStyle(box ?? null)}
         />
       ) : (
         <span className="absolute inset-0 flex items-center justify-center text-xl">👤</span>
@@ -73,7 +67,7 @@ function Row({ u, onOpen, right }: { u: FriendUser; onOpen: () => void; right: R
         onClick={onOpen}
         className="flex cursor-pointer items-center gap-3 rounded-xl border border-zinc-200 bg-white px-3 py-2.5 transition active:bg-zinc-50 dark:border-zinc-800 dark:bg-zinc-950 dark:active:bg-zinc-900"
       >
-        <Avatar src={u.profileSouth} />
+        <Avatar src={u.profileSouth} box={u.faceBox} />
         <div className="min-w-0 flex-1">
           <div className="flex min-w-0 items-center gap-1.5">
             <span className="truncate text-sm font-bold">{u.nickname}</span>
