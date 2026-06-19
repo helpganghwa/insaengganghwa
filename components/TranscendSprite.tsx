@@ -386,6 +386,29 @@ function TranscendCanvas({
       return [c, c.getContext('2d')!];
     };
 
+    // 해방 후광 합성 — 주어진 sprite 캔버스의 실루엣을 등수색으로 채우고 3겹 shadowBlur로 번짐.
+    // 애니 보유 시 매 프레임 현재 실루엣으로 재합성 → 후광이 idle에 고정되지 않고 본체와 함께 움직임.
+    const makeRadiant = (src: HTMLCanvasElement, [rr, rg, rb]: RGB): HTMLCanvasElement => {
+      const [rc, rx] = mkCanvas();
+      rx.imageSmoothingEnabled = false;
+      rx.drawImage(src, 0, 0);
+      rx.globalCompositeOperation = 'source-in';
+      rx.fillStyle = `rgb(${rr},${rg},${rb})`;
+      rx.fillRect(0, 0, FS, FS);
+      const [bc, bx] = mkCanvas();
+      bx.imageSmoothingEnabled = false;
+      bx.shadowColor = `rgba(${rr},${rg},${rb},1)`;
+      bx.shadowBlur = 14;
+      bx.drawImage(rc, 0, 0);
+      bx.shadowBlur = 24;
+      bx.globalAlpha = 0.6;
+      bx.drawImage(rc, 0, 0);
+      bx.shadowBlur = 32;
+      bx.globalAlpha = 0.35;
+      bx.drawImage(rc, 0, 0);
+      return bc;
+    };
+
     // 정적 레이어 1회 사전합성 (프레임마다 재계산 금지 → 끊김 제거).
     let spriteCv: HTMLCanvasElement | null = null; // 베이스 스프라이트(불변·픽셀)
     // 해방 애니 — 스트립 이미지 + 프레임별 합성 스크래치.
@@ -438,32 +461,9 @@ function TranscendCanvas({
         frontCv = fc;
       }
 
-      // 해방 후광 — 사전합성. Canvas `filter:blur` 모바일 미지원 회피용 `shadowBlur` 3겹.
-      // shadowBlur 22 → 40 → 56 점진 확산. 색은 등수색(rankColor).
-      if (showRadiant && rankColor) {
-        const [rr, rg, rb] = rankColor;
-        const [bc, bx] = mkCanvas();
-        bx.imageSmoothingEnabled = false;
-        // 1) sprite 모양으로 등수색 채움
-        const [rc, rx] = mkCanvas();
-        rx.imageSmoothingEnabled = false;
-        rx.drawImage(atlasImg, coord.x, coord.y, ATLAS_CELL, ATLAS_CELL, SP, SP, SW, SW);
-        rx.globalCompositeOperation = 'source-in';
-        rx.fillStyle = `rgb(${rr},${rg},${rb})`;
-        rx.fillRect(0, 0, FS, FS);
-        bx.shadowColor = `rgba(${rr},${rg},${rb},1)`;
-        // 가까운 본체 글로우 (블러 축소 — 후광 약화 + 캔버스 내 수용)
-        bx.shadowBlur = 14;
-        bx.drawImage(rc, 0, 0);
-        // 중간 외곽 글로우
-        bx.shadowBlur = 24;
-        bx.globalAlpha = 0.6;
-        bx.drawImage(rc, 0, 0);
-        // 가장 멀리 퍼지는 외곽 헤일로
-        bx.shadowBlur = 32;
-        bx.globalAlpha = 0.35;
-        bx.drawImage(rc, 0, 0);
-        radiantCv = bc;
+      // 해방 후광 — idle 실루엣 기준 1회 사전합성(애니 보유 시 draw에서 프레임마다 재합성).
+      if (showRadiant && rankColor && spriteCv) {
+        radiantCv = makeRadiant(spriteCv, rankColor);
       }
     };
 
@@ -491,6 +491,20 @@ function TranscendCanvas({
         o.fillRect(0, 0, FS, FS);
       }
 
+      // 베이스 스프라이트 프레임 결정 — 해방+애니 보유면 현재 프레임으로 재생, 아니면 idle 고정.
+      // 프레임이 바뀌면 후광도 현재 실루엣으로 재합성 → 후광이 본체 애니와 함께 움직임(idle 고정 X).
+      let baseSprite = spriteCv;
+      if (useAnim && stripImg && animSpriteCv && animSpriteX && nFrames > 0) {
+        const fi = Math.floor(drawTs / ANIM_FRAME_MS) % nFrames;
+        if (fi !== curFrame) {
+          curFrame = fi;
+          animSpriteX.clearRect(0, 0, FS, FS);
+          animSpriteX.drawImage(stripImg, fi * ANIM_CELL, 0, ANIM_CELL, ANIM_CELL, SP, SP, SW, SW);
+          if (showRadiant && rankColor) radiantCv = makeRadiant(animSpriteCv, rankColor);
+        }
+        baseSprite = animSpriteCv;
+      }
+
       // 사전합성 블러 발광 (알파만 펄스 — 아이템 뒤). swap 후 T8+ 등급 표식.
       if (radiantCv) {
         // 글로우 강도 ↑ — baseline 0.95 + 펄스 (0.85~1.0). sprite 외곽 노란 빛이 명확히 보임.
@@ -499,17 +513,6 @@ function TranscendCanvas({
         o.globalAlpha = 1;
       }
 
-      // 베이스 스프라이트 — 해방+애니 보유면 현재 프레임으로 재생, 아니면 idle 고정.
-      let baseSprite = spriteCv;
-      if (useAnim && stripImg && animSpriteCv && animSpriteX && nFrames > 0) {
-        const fi = Math.floor(drawTs / ANIM_FRAME_MS) % nFrames;
-        if (fi !== curFrame) {
-          curFrame = fi;
-          animSpriteX.clearRect(0, 0, FS, FS);
-          animSpriteX.drawImage(stripImg, fi * ANIM_CELL, 0, ANIM_CELL, ANIM_CELL, SP, SP, SW, SW);
-        }
-        baseSprite = animSpriteCv;
-      }
       if (baseSprite) o.drawImage(baseSprite, 0, 0);
 
       // Glare — 챔피언 표식.
