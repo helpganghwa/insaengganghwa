@@ -1,14 +1,13 @@
 /**
  * PROFILE §4.2 — description 합성.
  *
- * 블록 결합: HEADER · Face · Hair · Motifs(장비 3종 모티프 통합) · Style.
- * - 장비는 **직접 입거나 들지 않음** — 각 장비의 컨셉·테마가 아바타 의상/실루엣/디테일에
- *   메타포로 녹아듦(2026-05-27 사용자 결정). 예: "드래곤 검" → 어깨 용 날개 모티프,
- *   "개구리 단검" → 초록 leaf 패턴, "팰러딘 흉갑" → 흰·금 oath 엠블럼.
- * - 장비 lore 사용 금지(sprite-prompt-visual-only). `art` 외형 토큰만.
- * - HEADER의 비율·신체 라인 명시가 model 비율을 결정하는 유일한 수단
- *   (CreateCharacterProRequest엔 proportions·negative_description 없음, 2026-05-27 검증).
- * - female은 일본 아니메 신체 라인(가는 허리·풍성한 가슴·curvy thighs) 명시 필수.
+ * 골격: 정체성(성별·소스 보존 1회) · 장비 줄(전면·강조) · 포맷/신체 · 포즈.
+ * - 장비는 **실제로 입고·드는** 형태로 묘사(wielding/wearing + wornDesc). 장비표현이
+ *   소스 보존에 눌리지 않도록 장비절을 앞·강조("bold·distinct·clearly visible·visual focus")로 둠.
+ * - 장비 wornDesc는 외형 토큰만(lore 금지, sprite-prompt-visual-only).
+ * - "소스 유지"는 정체성(얼굴·체형비율·아트스타일)에만 1회 — 의상·머리·장비는 새로 그림.
+ *   비율·신체 라인은 포맷 줄에서 명시(CreateCharacterProRequest엔 proportions·negative_description
+ *   없음, 2026-05-27 검증). 남성은 FLAT chest·no feminine silhouette로 성별 뒤집힘 방지.
  */
 import 'server-only';
 
@@ -152,28 +151,30 @@ export function pickRandomPose(): ProfilePose {
   return ALL_POSES[i]!;
 }
 
-/** 고정 골격(KEEP source·8등신·full body·흰점·pose·Confirm) + 가변 의상절 결합. */
+/** 고정 골격(정체성 1회·포맷/신체·포즈) + 가변 장비 줄(compose가 생성) 결합. */
 function assemble(opts: ProfileOptions, outfitClause: string): string {
-  // 성별 강제(체형 위주로 압축 — 드레스→남성복 변환은 outfit-llm이 담당). 1000자 내 의상절 예산 보호.
+  // 정체성 유지는 소스 1회만(얼굴·체형비율·아트스타일) + 성별 강제(남=FLAT chest 안티플립).
+  // "전부 유지"는 장비표현을 눌러 제외 — 의상·머리·장비는 새로 그리게 둔다.
   const genderClause =
     opts.gender === 'male'
-      ? `MALE bishōnen boy — masculine face, FLAT chest (no breasts), masculine build & hair, no feminine silhouette. KEEP from source: male sex, facial features, anime art style, proportions, vibe.`
-      : `FEMALE bishōjo — feminine face & figure, feminine hair. KEEP from source: female sex, facial features, anime art style, proportions, vibe.`;
+      ? `MALE bishōnen boy with a masculine face, FLAT chest (no breasts) and masculine build — no feminine silhouette. Keep the source character's face, body proportions and anime art style; he must stay clearly male.`
+      : `FEMALE bishōjo with a feminine face and figure. Keep the source character's face, body proportions and anime art style; she must stay clearly female.`;
   return [
     genderClause,
-    `Full body head-to-feet, clean transparent background, character only; clean solid outlines, no stray specks.`,
-    `Slim tall figure, small head, long legs; exactly two arms and two legs — no extra or duplicated limbs.`,
-    `${outfitClause} Pose: ${POSE_DESC[opts.pose]}. Expression: any natural pleasant look.`,
-    `Confirm: stays ${opts.gender === 'male' ? 'MALE (boy, flat chest)' : 'FEMALE'}; same face/body/anime style as source; full body, both feet on the ground.`,
+    outfitClause,
+    `Full body head-to-feet with both feet on the ground; slim tall figure, small head, long legs; exactly two arms and two legs (no extra or duplicated limbs); clean transparent background, character only, clean solid outlines, no stray specks.`,
+    `Pose: ${POSE_DESC[opts.pose]}, with a natural pleasant expression.`,
   ].join(' ');
 }
 
 /** Haiku 실패 시 정적 의상절(장르 자유·모티프 느슨) — 기존 동작 보존. */
 function staticOutfitClause(opts: ProfileOptions, motifsConcept: string): string {
-  return `Redesign ONLY the hairstyle (${HAIR_LENGTH_DESC[opts.hairLength]}, fresh new style & color) and the whole outfit — be creative, ANY genre (casual, school uniform, swimwear, dress, suit, modern, fantasy, etc.), loosely inspired by the motifs (loose only): ${motifsConcept}.`;
+  return `Give the character a fresh new hairstyle (${HAIR_LENGTH_DESC[opts.hairLength]}, new color) and a whole new outfit and gear — be creative, ANY genre (casual, school uniform, swimwear, dress, suit, modern, fantasy, etc.), built around the motifs and clearly visible: ${motifsConcept}.`;
 }
 
-const OUTFIT_PREFIX = 'Redesign ONLY hair & outfit (keep all else from source): ';
+/** 폴백(outfit-llm)용 — 장비 전면·강조 prefix(소스 보존 문구 없음, 장비표현 하한 보호). */
+const EQUIP_PREFIX =
+  'Give the character a fresh new hairstyle and a full, detailed outfit and gear built around these items — make each piece bold, distinct and clearly visible: ';
 
 /**
  * `create_character_state` 용 압축 description (max 1000자, spec).
@@ -199,18 +200,20 @@ export async function composeEditDescription(
     ),
   ].join(', ');
 
+  // 머리·장비를 새로 그리되 장비를 시각 초점으로 — 성별 대명사만 분기.
+  const pron = opts.gender === 'male' ? 'him' : 'her';
+
   let outfitClause: string;
   if (wpn.wornDesc && arm.wornDesc && acc.wornDesc) {
     // Phase 2: 사전 큐레이션 wornDesc로 결정론적 조립 — 런타임 LLM 변동·스프라이트 오해석·길이초과 제거.
     // 성별중립 묘사라 남/여 모두 body 골격(성별 강제)에 맞춰 자연 렌더.
-    const hair = `${HAIR_LENGTH_DESC[opts.hairLength]} hair, a fresh new style and color`;
     // 쌍검/한 쌍 무기 — 양손에 하나씩 들도록 명시(한 자루로 줄어드는 문제 방지).
     const dual = /\b(pair|twin|dual|matching pair)\b|쌍|두 자루/i.test(wpn.wornDesc!);
     const wpnPhrase = dual ? `${wpn.wornDesc}, one held in each hand` : wpn.wornDesc;
-    outfitClause = `${OUTFIT_PREFIX}wielding ${wpnPhrase}, wearing ${arm.wornDesc}, and ${acc.wornDesc}; ${hair}. Make the whole ensemble lavish and cohesive.`;
-    // 안전 가드 — 혹시 1000자 초과면 머리절을 떼어 장비 묘사는 보존.
+    outfitClause = `Give ${pron} fresh new ${HAIR_LENGTH_DESC[opts.hairLength]} in a new color and a full, detailed outfit and gear built around these items — make each piece bold, distinct and clearly visible: wielding ${wpnPhrase}, wearing ${arm.wornDesc}, and ${acc.wornDesc}. The equipment should be the clear visual focus.`;
+    // 안전 가드 — 1000자 초과 시 강조 꼬리를 떼어 장비 묘사는 보존.
     if (assemble(opts, outfitClause).length > 1000) {
-      outfitClause = `${OUTFIT_PREFIX}wielding ${wpn.wornDesc}, wearing ${arm.wornDesc}, and ${acc.wornDesc}.`;
+      outfitClause = `Give ${pron} a new hairstyle and a full outfit built around these items, clearly visible: wielding ${wpnPhrase}, wearing ${arm.wornDesc}, and ${acc.wornDesc}.`;
     }
   } else {
     // 폴백 — wornDesc 미보유 아이템: 기존 outfit-llm(이미지 기반) → 실패 시 정적 절.
@@ -227,13 +230,13 @@ export async function composeEditDescription(
         hairLengthDesc: HAIR_LENGTH_DESC[opts.hairLength],
         items,
       });
-      outfitClause = `${OUTFIT_PREFIX}${clause}.`;
+      outfitClause = `${EQUIP_PREFIX}${clause}. The equipment should be the clear visual focus.`;
       const over = assemble(opts, outfitClause).length - 1000;
       if (over > 0) {
         let t = clause.slice(0, Math.max(0, clause.length - over - 1));
         const sp = t.lastIndexOf(' ');
         if (sp > 0) t = t.slice(0, sp);
-        outfitClause = `${OUTFIT_PREFIX}${t.trimEnd()}.`;
+        outfitClause = `${EQUIP_PREFIX}${t.trimEnd()}.`;
       }
     } catch {
       outfitClause = staticOutfitClause(opts, motifsConcept);
