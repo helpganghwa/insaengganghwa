@@ -4,9 +4,17 @@ import { useMemo, useState } from 'react';
 import Link from 'next/link';
 
 import { LastSeen } from '@/components/LastSeen';
+import { TranscendSprite } from '@/components/TranscendSprite';
 
 type Slot = 'weapon' | 'armor' | 'accessory';
-type Equipped = { slot: Slot; code: string; enhance: number };
+type Equipped = {
+  slot: Slot;
+  code: string;
+  enhance: number;
+  transcendLevel: number;
+  catalogItemId: number;
+  championRank: number | null;
+};
 export type RichMember = {
   userId: string;
   nickname: string;
@@ -46,17 +54,17 @@ function EquipIcon({ item }: { item: Equipped | undefined }) {
     return <span className="h-10 w-10 shrink-0 rounded-md bg-zinc-100 dark:bg-zinc-800" />;
   }
   return (
-    <span className="relative h-10 w-10 shrink-0 overflow-hidden rounded-md bg-zinc-100 dark:bg-zinc-800">
-      {/* eslint-disable-next-line @next/next/no-img-element */}
-      <img
-        src={`/sprites/${item.slot}/${item.code}.png`}
-        alt=""
-        aria-hidden
-        className="h-full w-full object-contain"
-        style={{ imageRendering: 'pixelated' }}
+    <span className="relative h-10 w-10 shrink-0">
+      {/* 다른 화면과 동일하게 등급(초월) 프레임 + 해방 후광(강화랭킹 1~3위) 표시 */}
+      <TranscendSprite
+        code={item.code}
+        slot={item.slot}
+        level={item.transcendLevel}
+        championRank={item.championRank}
+        size={40}
       />
       {item.enhance > 0 && (
-        <span className="absolute bottom-0 right-0 rounded-tl bg-black/65 px-0.5 text-[9px] font-bold leading-tight text-amber-300">
+        <span className="absolute bottom-0 right-0 z-10 rounded-tl bg-black/65 px-0.5 text-[9px] font-bold leading-tight text-amber-300">
           +{item.enhance}
         </span>
       )}
