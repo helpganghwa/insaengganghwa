@@ -28,7 +28,7 @@ const SIGNUP_BOX_PER_SLOT = 10 * TEST_REWARD_MULTIPLIER;
 const DEFAULT_AVATARS = [
   // v3 스타일 재생성(2026-06-20) — 대장장이 견습생 미소년/미소녀, 풀프레임·lineless·7등신.
   { charId: 'fd767516-0af6-43f7-b6ed-398289e7d54f', gender: 'male' },
-  { charId: '8f13733d-ea39-45a1-b0e3-9e03ede08534', gender: 'female' },
+  { charId: '6c079398-6ccf-4610-8f39-f666688ff941', gender: 'female' },
 ] as const;
 const rotationsFor = (g: 'male' | 'female') =>
   Object.fromEntries(
