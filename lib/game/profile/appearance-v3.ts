@@ -12,7 +12,20 @@ export interface Appearance {
   hair: string;
   /** 표정 묘사. */
   expression: string;
+  /** 팔/스탠스 포즈(무기-안전). 무기 든 손은 유지 — compose가 안전절과 함께 사용. */
+  pose: string;
 }
+
+// 무기-안전 포즈 풀 — 무기 든 손은 유지하고 나머지 팔/스탠스만 변주(전신·정면 유지).
+// 손 점유 포즈(허리 등)도 "무기는 다른 손으로 유지" 전제라 무기 유실 위험 낮음(compose 안전절 동반).
+const POSES = [
+  'standing tall in a relaxed confident stance, the weapon held at one side',
+  'resting the weapon on one shoulder, the other hand relaxed',
+  'holding the weapon planted upright in front, both hands resting on it',
+  'one hand on the hip while the other hand firmly holds the weapon at the side',
+  'holding the weapon across the body in a calm ready stance',
+  'presenting the weapon slightly forward in a poised stance',
+] as const;
 
 // 서버 RNG (CLAUDE §3.1).
 const rng = (n: number): number => crypto.getRandomValues(new Uint32Array(1))[0]! % n;
@@ -50,5 +63,6 @@ export function pickRandomAppearance(gender: ProfileGender): Appearance {
     race: pick(p.races),
     hair: `${pick(p.hairColors)} ${pick(p.hairStyles)}`,
     expression: pick(p.expressions),
+    pose: pick(POSES),
   };
 }

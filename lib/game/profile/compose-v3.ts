@@ -37,7 +37,8 @@ function systemPrompt(gender: ProfileGender): string {
 ${PROP}
 SUBJECT: ${subjectOf(male)}, of the given race, with the given hair and expression — drawn unmistakably in Japanese anime style with expressive anime eyes.
 YOUTH OVERRIDES THEME: even with regal, heroic or ornate gear, the person stays a YOUTHFUL teen (a young prince/princess-in-training), with a young soft face and a slight youthful build — never a grown adult.
-${male ? MENS + '\n' : ''}COMPOSITION: full-length from the top of the head to the soles of the feet, standing upright, centered with clear margin above and below, both feet visible, front view, transparent background, solo.
+${male ? MENS + '\n' : ''}COMPOSITION: full-length from the top of the head to the soles of the feet, centered with clear margin above and below, both feet visible, front view, transparent background, solo.
+POSE: use the given pose for the arms and stance, BUT keep the figure full-length and front-facing with both feet visible — and KEEP THE WEAPON AND ALL THREE SIGNATURE ITEMS CLEARLY HELD AND VISIBLE (the weapon is always firmly held in a hand, never dropped, hidden or omitted).
 STYLE (EMPHASIZE STRONGLY): authentic Japanese anime / JRPG key-visual aesthetic — clean cel-shading with crisp linework, bright vibrant saturated colors, glossy expressive anime eyes, polished anime rendering. The Japanese-anime look is the most important stylistic goal.
 EQUIPMENT — render the signature items FAITHFULLY to the IMAGES: copy each item's exact silhouette, colors, materials, ornaments and signature features so it is instantly recognizable; describe each item richly and specifically (shape, color, ornament, motif).
 CONCEPT COHESION — the items may come from DIFFERENT sets; use their lore/stories to design the base outfit, layers, color accents, emblem motifs, footwear, mood and stance that blend them into ONE harmonious youthful anime character (not a generic outfit, and not clashing themes).
@@ -114,7 +115,7 @@ export async function composeV3Description(input: ComposeV3Input): Promise<strin
   }
   content.push({
     type: 'text',
-    text: `Race: ${ap.race}. Hair: ${ap.hair} hair. Expression: ${ap.expression}. Use the equipment images (faithful look) and their lore (concept cohesion). Keep the subject a YOUTHFUL teen (15-16) in strong Japanese anime style. Write the prompt under 1800 characters.`,
+    text: `Race: ${ap.race}. Hair: ${ap.hair} hair. Expression: ${ap.expression}. Pose: ${ap.pose}. Use the equipment images (faithful look) and their lore (concept cohesion). Keep the subject a YOUTHFUL teen (15-16) in strong Japanese anime style, and keep the weapon clearly held. Write the prompt under 1800 characters.`,
   });
 
   const res = await client().messages.create({
