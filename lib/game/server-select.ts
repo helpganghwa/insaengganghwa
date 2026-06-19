@@ -30,10 +30,12 @@ const DEFAULT_AVATARS = [
   { charId: 'fd767516-0af6-43f7-b6ed-398289e7d54f', gender: 'male' },
   { charId: '6c079398-6ccf-4610-8f39-f666688ff941', gender: 'female' },
 ] as const;
+// 기본 아바타 정적 파일 버전 — 재생성 시 올려 캐시 버스트(7일 장기캐시 우회). v2=v3 스타일 재생성.
+const DEFAULT_AVATAR_VER = 2;
 const rotationsFor = (g: 'male' | 'female') =>
   Object.fromEntries(
     ['south', 'south_east', 'east', 'north_east', 'north', 'north_west', 'west', 'south_west'].map(
-      (d) => [d, `/sprites/default/${g}/${d}.png`],
+      (d) => [d, `/sprites/default/${g}/${d}.png?v=${DEFAULT_AVATAR_VER}`],
     ),
   );
 
