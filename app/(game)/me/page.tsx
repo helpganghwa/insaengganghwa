@@ -43,6 +43,7 @@ export default async function ProfilePage() {
   type MeRow = {
     nickname: string | null;
     public_code: string | null;
+    is_admin: boolean | null;
     diamond: string | null;
     nickname_changed_count: number | null;
     active_profile_id: string | null;
@@ -62,7 +63,7 @@ export default async function ProfilePage() {
     Promise.all([
       db.execute(sql`
         select
-          c.nickname, p.public_code, c.diamond::text as diamond,
+          c.nickname, p.public_code, p.is_admin, c.diamond::text as diamond,
           c.nickname_changed_count, c.active_profile_id,
           g.emblem_url as guild_emblem_url, g.name as guild_name,
           (select count(*)::int from referral_attributions where referrer_user_id = ${userId}::uuid) as referral_count,
@@ -100,6 +101,7 @@ export default async function ProfilePage() {
     totalBoxEarned: refN * INVITE_BOX_PER_REFERRAL,
   };
   const friendReqCount = row?.friend_req_count ?? 0;
+  const isAdmin = row?.is_admin ?? false;
   await completeCatalog(catMap, equippedRaw.map((e) => e.catalogItemId));
 
   const nickname = row?.nickname ?? '플레이어';
@@ -259,6 +261,17 @@ export default async function ProfilePage() {
             </span>
           </Link>
         ))}
+        {isAdmin ? (
+          <Link
+            href="/admin"
+            className="flex items-center justify-between rounded-xl border border-amber-500/40 bg-amber-500/5 px-4 py-3 text-amber-700 dark:text-amber-300"
+          >
+            <span className="flex items-center gap-3">
+              <span aria-hidden className="text-xl">🛠️</span>
+              <span className="text-sm font-medium">관리자</span>
+            </span>
+          </Link>
+        ) : null}
       </nav>
     </div>
   );
