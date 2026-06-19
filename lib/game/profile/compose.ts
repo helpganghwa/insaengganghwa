@@ -55,7 +55,7 @@ export type ProfileHairLength = 'long' | 'short' | 'natural';
  * 포즈 — 서버 random 가벼운 변형 (2026-05-28 재도입). state가 source 전신을 강하게 보존하므로
  * 팔·손 수준의 가벼운 포즈만(레퍼런스 비율·전신 유지). 실제 반영도는 e2e로 검증.
  */
-export type ProfilePose = 'natural' | 'hand_on_hip';
+export type ProfilePose = 'natural';
 
 /** 합성 옵션 — gender(유저)만 선택. hairLength·pose·race는 서버 random. 표정·얼굴은 source 유지. */
 export interface ProfileOptions {
@@ -137,11 +137,11 @@ export function pickRandomHairLength(): ProfileHairLength {
   return ALL_HAIR_LENGTHS[i]!;
 }
 
-// 손을 점유하는 포즈 제거 — arms_crossed(4팔 착시) + hand_wave/peace_sign(한 손이 막혀
-// 쌍검 등 무기를 다 못 듦, a37e0269). 무기를 확실히 쥐도록 양손이 자유로운 포즈만 유지.
+// 손을 점유하는 포즈 전부 제거 — arms_crossed(4팔 착시) + hand_wave/peace_sign +
+// hand_on_hip(한 손이 막혀 쌍검·양손무기를 다 못 듦, a37e0269). natural 1종만 유지:
+// 양손이 모두 자유로워 어떤 무기든(쌍검 포함) 확실히 쥐도록 보장.
 const POSE_DESC: Record<ProfilePose, string> = {
   natural: 'arms resting naturally at the sides',
-  hand_on_hip: 'one hand resting lightly on the hip',
 };
 
 const ALL_POSES = Object.keys(POSE_DESC) as ProfilePose[];

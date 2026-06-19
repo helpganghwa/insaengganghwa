@@ -6,7 +6,7 @@ config({ path: '.env.local' });
 const CASES = [
   {
     label: 'orc·dark_elf·남',
-    opts: { gender: 'male', hairLength: 'natural', pose: 'hand_on_hip', race: 'dark_elf' },
+    opts: { gender: 'male', hairLength: 'natural', pose: 'natural', race: 'dark_elf' },
     eq: {
       weaponKey: 'orc_ancestor_twin_tusk_axe',
       armorKey: 'orc_first_chief_armor',
