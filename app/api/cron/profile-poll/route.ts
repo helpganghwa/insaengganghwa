@@ -3,13 +3,14 @@
  *
  * 매 2분 실행 (Pixellab Pro mode ~6분이라 polling 2~3회).
  * 한 iteration:
- *   1. status='queued' 1건 → Pixellab v2 POST → 'downloading'
+ *   1. status='queued' 1건 → create-character-v3(외형 랜덤+Claude 조합) → 'downloading' (enqueueOneV3)
  *   2. status='downloading' 최대 5건 → 폴링 → completed면 다운로드·AI 검토·분기
  *
  * 인증: CRON_SECRET Bearer 또는 x-vercel-cron 헤더 (resolve-enhance 패턴).
  */
 import { isCronAuthorized } from '@/lib/auth/cron-auth';
-import { enqueueOnePixellab, pollAndProcessDownloading } from '@/lib/game/profile/pipeline';
+import { pollAndProcessDownloading } from '@/lib/game/profile/pipeline';
+import { enqueueOneV3 } from '@/lib/game/profile/pipeline-v3';
 
 export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
@@ -19,9 +20,9 @@ export async function GET(req: Request) {
   if (!isCronAuthorized(req)) return new Response('forbidden', { status: 403 });
 
   const t0 = Date.now();
-  let enqueueResult: Awaited<ReturnType<typeof enqueueOnePixellab>> | { kind: 'error'; error: string };
+  let enqueueResult: Awaited<ReturnType<typeof enqueueOneV3>> | { kind: 'error'; error: string };
   try {
-    enqueueResult = await enqueueOnePixellab();
+    enqueueResult = await enqueueOneV3();
   } catch (e) {
     enqueueResult = { kind: 'error', error: (e as Error).message };
   }
