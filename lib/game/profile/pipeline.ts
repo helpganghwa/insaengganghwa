@@ -26,6 +26,7 @@ import { mailbox } from '@/lib/db/schema/mailbox';
 import { sendPushToUser } from '@/lib/push/send';
 
 import { reviewProfile, type ReviewVerdict } from './ai-review';
+import { anyBackgroundOpaque } from './bg-alpha';
 
 /** 검토 결과 push — 실패는 무시(전체 흐름 막지 않음). 토글·구독은 sendPushToUser가 처리. */
 async function safePush(
@@ -299,11 +300,18 @@ export async function pollAndProcessDownloading(limit = 5): Promise<{
         descriptionPrompt: job.description,
       });
 
-      if (review.verdict.pass) {
+      // 배경 투명 검사(결정론) — no_background 실패(불투명 배경)는 AI 비전이 못 잡으므로 alpha로 선차단.
+      // 통과해도 불투명이면 quality reject(환불) — 유저에게 배경 깔린 아바타 전달 방지.
+      const bgOpaque = await anyBackgroundOpaque(images.map((im) => im.png));
+
+      if (review.verdict.pass && !bgOpaque) {
         await acceptJob(job.id, job.serverId, job.userId, rotations, job.characterId, job.options, job.equipmentSnapshot, job.description, review.verdict);
         accepted += 1;
       } else {
-        await rejectJob(job.id, job.userId, job.serverId, job.diamondEscrow, review.verdict);
+        const verdict = bgOpaque
+          ? { ...review.verdict, pass: false, reasons: [...new Set([...review.verdict.reasons, 'quality' as const])], notes: review.verdict.notes || '배경이 투명하지 않습니다(불투명 배경 검출).' }
+          : review.verdict;
+        await rejectJob(job.id, job.userId, job.serverId, job.diamondEscrow, verdict);
         rejected += 1;
       }
     } catch (e) {

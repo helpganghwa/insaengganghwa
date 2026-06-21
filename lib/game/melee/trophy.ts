@@ -8,6 +8,7 @@ import { characters } from '@/lib/db/schema/server';
 import { meleeBattles, type MeleeFinale } from '@/lib/db/schema/melee';
 import { userProfiles } from '@/lib/db/schema/avatar';
 import { reviewProfile } from '@/lib/game/profile/ai-review';
+import { anyBackgroundOpaque } from '@/lib/game/profile/bg-alpha';
 
 /**
  * 대난투 우승 트로피 아바타 자동 생성 — MELEE §우승컵.
@@ -264,7 +265,13 @@ async function processOne(b: TrophyBattle): Promise<void> {
     return;
   }
 
-  // 8방향 완성 → AI 검토.
+  // 8방향 완성 → 배경 투명 검사(결정론) + AI 해부학 검토. 둘 중 하나라도 실패면 재시도.
+  // 배경 불투명(no_background 실패)은 AI 비전이 못 잡으므로 alpha 검사로 선차단.
+  if (await anyBackgroundOpaque(ready.map((im) => im.png))) {
+    console.warn(`[melee.trophy] battle ${b.id} 배경 불투명 → 재시도`);
+    await startAttempt(b, b.trophyAttempts + 1);
+    return;
+  }
   let pass = false;
   try {
     const review = await reviewProfile({
