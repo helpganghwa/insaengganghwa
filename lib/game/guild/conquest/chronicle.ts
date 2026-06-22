@@ -167,6 +167,7 @@ const SYSTEM_PROMPT = `너는 대륙의 정복 전쟁을 듣는 이에게 들려
   - 인물(사용자) 이름 → {u|이름}
   - 개별 구역 이름 → {z|이름}   (예: {z|왕성}, {z|대성당}, {z|성문})
   - 지역(왕국·드래곤 화산·잊힌 신전·슬라임 늪·오크 부락·타락 천사 부유섬)에는 마커를 쓰지 않는다(일반 텍스트). 지역명은 주어진 이름 그대로 쓴다.
+  - ★중요★ '점령전 정리'에서 「」로 감싼 이름은 바로 앞의 분류(길드/구역/인물)를 그대로 따른다: '길드 「X」'는 반드시 {g|X}, '구역 「X」'는 반드시 {z|X}, '인물 「X」'는 반드시 {u|X}. 구역 이름을 절대 {g|}(길드)로 쓰지 말 것 — 구역명과 길드명은 서로 다르며 혼동하면 안 된다. 공격의 주어는 '길드', 목적어는 '구역'이다.
 - 시각·시간대 표현 금지(정오·아침·저녁·새벽·밤·자정, '종이 울리자' 등).
 - 시간을 가리키는 지시어('그날·이날·오늘·그 날·하루·당일' 등)를 쓰지 말 것. 특히 문단·문장을 그런 단어로 시작하지 말고, 바로 사건·길드·구역으로 시작한다. 오늘 일어난 일은 '오늘' 대신 '이번 전투·이번에' 또는 그냥 동사로 서술한다.
 - 단, 전날과의 연속성을 말할 때는 '어제·전날·이전'을 써도 된다(흐름 표현용). 이때도 현재 일은 '오늘'이 아니라 '이번에·이번 전투'로 받는다(예: "어제 세 곳에 이어 이번에 두 곳을 더해").
@@ -229,9 +230,11 @@ export async function generateAndStoreChronicle(
     arr.push(c.zone);
     capByGuild.set(c.winner, arr);
   }
+  // 모든 항목에 (길드)/(구역) 라벨을 붙여 모델이 둘을 혼동·오마킹하지 않게(구역명을 길드로 쓰는 버그 방지).
   const capLines =
-    [...capByGuild.entries()].map(([g, zs]) => `· ${g}: ${zs.join(', ')} (총 ${zs.length}곳 점령)`).join('\n') ||
-    '· (신규 점령 없음)';
+    [...capByGuild.entries()]
+      .map(([g, zs]) => `· 길드 「${g}」 이(가) 구역 ${zs.map((z) => `「${z}」`).join(', ')} 을(를) 점령 (총 ${zs.length}곳)`)
+      .join('\n') || '· (신규 점령 없음)';
   // 공격 측(role=attack) — 누가 어느 구역을 공격했는지. 구역별로 길드 묶음(공격 길드 정확 귀속).
   const atkByZone = new Map<string, string[]>();
   for (const a of summary.attacks) {
@@ -239,17 +242,21 @@ export async function generateAndStoreChronicle(
     arr.push(a.guild);
     atkByZone.set(a.zone, arr);
   }
+  // 주어-목적어 순서 명시: "길드 「G」 이(가) 구역 「Z」 을(를) 공격" — zone:guild 콜론 포맷이 주어 오독을 유발했음.
   const atkLines =
-    [...atkByZone.entries()].map(([z, gs]) => `· ${z}: ${[...new Set(gs)].join(', ')} 공격`).join('\n') ||
-    '· (공격 측 없음)';
-  const defLines = summary.defenses.map((d) => `· ${d.owner}: ${d.zone} 방어`).join('\n') || '· (방어 없음)';
+    [...atkByZone.entries()]
+      .map(([z, gs]) => `· 길드 「${[...new Set(gs)].join('」, 「')}」 이(가) 구역 「${z}」 을(를) 공격`)
+      .join('\n') || '· (공격 측 없음)';
+  const defLines =
+    summary.defenses.map((d) => `· 길드 「${d.owner}」 이(가) 구역 「${d.zone}」 을(를) 방어`).join('\n') ||
+    '· (방어 없음)';
   // 활약 문구를 자명하게: '처치'=적 N명 쓰러뜨림(공·수 무관), '수비'=공격 N회 받아내고 버팀.
   const featLines =
     summary.feats
       .map((f) =>
         f.kind === '처치'
-          ? `· ${f.nickname}(${f.guild}): 적 ${f.count}명 처치(공·수 역할 무관, 쓰러뜨린 수)`
-          : `· ${f.nickname}(${f.guild}): 공격 ${f.count}회 받아내고 버팀(수비)`,
+          ? `· 인물 「${f.nickname}」 (소속 길드 「${f.guild}」): 적 ${f.count}명 처치(공·수 역할 무관, 쓰러뜨린 수)`
+          : `· 인물 「${f.nickname}」 (소속 길드 「${f.guild}」): 공격 ${f.count}회 받아내고 버팀(수비)`,
       )
       .join('\n') || '· (없음)';
   const digest =
@@ -262,7 +269,7 @@ export async function generateAndStoreChronicle(
   // ── 연속성 맥락(참고용) — 오늘의 사실은 위 정리만 따르되, 흐름·판도는 아래를 참고해 이어 쓴다. ──
   // 현재 영토 현황(누적 점령 결과) — '정세' 문단 근거.
   const standLines =
-    summary.standings.map((s) => `· ${s.guild}: ${s.zones}곳 보유`).join('\n') || '· (보유 길드 없음)';
+    summary.standings.map((s) => `· 길드 「${s.guild}」: ${s.zones}곳 보유`).join('\n') || '· (보유 길드 없음)';
 
   // 어제 점령전 결과(있으면) — 전날과의 연속성.
   const prevDay = addDaysToKstDay(kstDay, -1);
