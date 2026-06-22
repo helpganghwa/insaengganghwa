@@ -306,12 +306,6 @@ export const SUPPLY_SLOTS = ['weapon', 'armor', 'accessory'] as const;
 export type SupplySlot = (typeof SUPPLY_SLOTS)[number];
 
 /**
- * 한 번 열기 최대 개수(서버·클라 공유). '모두 열기'는 보유량과 이 상한 중 작은 값을 연다 —
- * 한 트랜잭션 부하·결과 모달 렌더 부담을 막기 위한 청크 상한(초과분은 반복 클릭으로 소진).
- */
-export const SUPPLY_OPEN_MAX = 100;
-
-/**
  * §4.2 슬롯 박스 내 아이템 균등 확률 = 1 / (해당 슬롯 현재 활성 카탈로그 종수).
  * 종수 가변 → 고정 수치 아님, **규칙**. 천장 없음. 게임산업법 §33 공시.
  */

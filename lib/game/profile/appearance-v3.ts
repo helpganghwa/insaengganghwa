@@ -16,15 +16,18 @@ export interface Appearance {
   pose: string;
 }
 
-// 무기-안전 포즈 풀 — 무기 든 손은 유지하고 나머지 팔/스탠스만 변주(전신·정면 유지).
-// 손 점유 포즈(허리 등)도 "무기는 다른 손으로 유지" 전제라 무기 유실 위험 낮음(compose 안전절 동반).
+// 포즈 가중치 풀 — 정적 3종(차분·기본, 높게) + 역동 2종(생동감, 중간) + 히든 1종(희소·특별).
+// 모두 정면 유지(측면/3-4 틀기 없음). 전신·양발·무기그립은 compose 안전절이 보장. pickWeighted 추출.
 const POSES = [
-  'standing tall in a relaxed confident stance, the weapon held at one side',
-  'resting the weapon on one shoulder, the other hand relaxed',
-  'holding the weapon planted upright in front, both hands resting on it',
-  'one hand on the hip while the other hand firmly holds the weapon at the side',
-  'holding the weapon across the body in a calm ready stance',
-  'presenting the weapon slightly forward in a poised stance',
+  // 정적 — 차분한 정면 스탠스
+  { desc: 'standing tall and composed, the weapon held quietly at one side', weight: 22 },
+  { desc: 'standing with the weight shifted onto one leg in a relaxed contrapposto, the weapon resting at one side', weight: 22 },
+  { desc: 'holding the weapon upright in front with both hands resting on it, in a calm and dignified stance', weight: 22 },
+  // 정적(추가) — 다른 결의 차분한 정면 포즈(컨셉 친화, 액션감 X)
+  { desc: 'holding the weapon horizontally in front with both hands, in a calm and composed at-rest stance', weight: 14 },
+  { desc: 'standing poised with one hand resting elegantly on the hip and the weapon held calmly at the other side', weight: 14 },
+  // 히든 — 희소·특별(무기를 머리 위로 들지 않음 — 머리 위 공간 확보)
+  { desc: 'resting the weapon back on one shoulder, head held high with a proud charismatic air, the free hand extended forward in a bold inviting gesture toward the viewer', weight: 6 },
 ] as const;
 
 // 서버 RNG (CLAUDE §3.1).
@@ -94,6 +97,6 @@ export function pickRandomAppearance(gender: ProfileGender): Appearance {
     race: pickWeighted(p.races),
     hair: `${pick(p.hairColors)} ${pick(p.hairStyles)}`,
     expression: pickWeighted(p.expressions),
-    pose: pick(POSES),
+    pose: pickWeighted(POSES),
   };
 }

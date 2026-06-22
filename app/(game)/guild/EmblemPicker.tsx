@@ -156,13 +156,13 @@ export function EmblemPicker({
             <option value="">없음</option>
             {subOptions}
           </select>
-          {value.subKeywordId && (
-            <p className="mt-1 text-[10px] leading-snug text-zinc-400">
-              서브 키워드는 작은 보조 악센트라 문양에 옅게 반영되거나 생략될 수 있어요. 꼭 보이길 원하는 모티브는 메인 키워드로 골라 주세요.
-            </p>
-          )}
         </div>
       </div>
+      {value.subKeywordId && (
+        <p className="mt-1.5 text-[10px] leading-snug text-zinc-400">
+          서브 키워드는 작은 보조 악센트라 문양에 옅게 반영되거나 생략될 수 있어요. 꼭 보이길 원하는 모티브는 메인 키워드로 골라 주세요.
+        </p>
+      )}
     </div>
   );
 }

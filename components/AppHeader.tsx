@@ -38,7 +38,7 @@ export function AppHeaderShell({
         <Link
           href="/me/profiles"
           aria-label="아바타 선택"
-          className="relative h-8 w-8 shrink-0 overflow-hidden"
+          className="relative h-8 w-8 shrink-0 translate-y-[6px] overflow-hidden"
         >
           {profileSouth ? (
             // eslint-disable-next-line @next/next/no-img-element

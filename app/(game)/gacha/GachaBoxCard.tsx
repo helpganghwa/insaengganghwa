@@ -4,7 +4,6 @@ import { useState } from 'react';
 import { useRouter } from 'next/navigation';
 
 import type { Slot } from '@/lib/db/schema/equipment';
-import { SUPPLY_OPEN_MAX } from '@/lib/game/balance';
 
 import { openAction, type OpenActionResult } from './actions';
 import { GachaResultModal } from './GachaResultModal';
@@ -45,8 +44,6 @@ export function GachaBoxCard({
   const displayCount = optimistic ?? count;
 
   const multiN = displayCount >= 2 ? Math.min(10, displayCount) : 10;
-  // '모두 열기' — 보유량과 청크 상한(SUPPLY_OPEN_MAX) 중 작은 값. 초과분은 반복 클릭으로 소진.
-  const allN = Math.min(displayCount, SUPPLY_OPEN_MAX);
 
   const pull = (n: number) => {
     if (drawing || displayCount < 1) return;
@@ -101,37 +98,25 @@ export function GachaBoxCard({
             </span>
           </div>
 
-          {/* 1회 / N회는 grid-cols-2로 폭 동일. 보유 > N일 때만 '모두 열기'를 아래 전폭으로 노출. */}
-          <div className="ml-auto flex w-44 flex-col gap-1.5">
-            <div className="grid grid-cols-2 gap-1.5">
-              <button
-                type="button"
-                data-tut="open-box"
-                disabled={drawing || displayCount < 1}
-                onClick={() => pull(1)}
-                className="rounded-md bg-white/95 px-3 py-1.5 text-center text-[11px] font-semibold text-zinc-900 shadow-sm transition-transform active:scale-95 disabled:opacity-40"
-              >
-                1회 열기
-              </button>
-              <button
-                type="button"
-                disabled={drawing || displayCount < 2}
-                onClick={() => pull(multiN)}
-                className="rounded-md bg-amber-500 px-3 py-1.5 text-center text-[11px] font-semibold text-white shadow-sm transition-transform active:scale-95 disabled:opacity-40"
-              >
-                {multiN}회 열기
-              </button>
-            </div>
-            {displayCount > multiN ? (
-              <button
-                type="button"
-                disabled={drawing || displayCount < 1}
-                onClick={() => pull(allN)}
-                className="rounded-md bg-amber-600 px-3 py-1.5 text-center text-[11px] font-semibold text-white shadow-sm transition-transform active:scale-95 disabled:opacity-40"
-              >
-                모두 열기 ({allN}개)
-              </button>
-            ) : null}
+          {/* 두 버튼 grid-cols-2로 폭 동일 — multiN 라벨 가변에 따른 width 흔들림 방지. */}
+          <div className="ml-auto grid w-44 grid-cols-2 gap-1.5">
+            <button
+              type="button"
+              data-tut="open-box"
+              disabled={drawing || displayCount < 1}
+              onClick={() => pull(1)}
+              className="rounded-md bg-white/95 px-3 py-1.5 text-center text-[11px] font-semibold text-zinc-900 shadow-sm transition-transform active:scale-95 disabled:opacity-40"
+            >
+              1회 열기
+            </button>
+            <button
+              type="button"
+              disabled={drawing || displayCount < 2}
+              onClick={() => pull(multiN)}
+              className="rounded-md bg-amber-500 px-3 py-1.5 text-center text-[11px] font-semibold text-white shadow-sm transition-transform active:scale-95 disabled:opacity-40"
+            >
+              {multiN}회 열기
+            </button>
           </div>
         </div>
 

@@ -68,14 +68,16 @@ export default async function LoginPage({
           </div>
         ) : (
           <form action={signInWithKakao} className="w-full">
-            {/* 카카오 공식 디자인 가이드 버튼(complete/ko) — 변형 금지(색·로고·비율 유지). */}
+            {/* 카카오 로그인 버튼 — 공식 가이드 준수: 컨테이너 #FEE500 / 라벨 "카카오 로그인" /
+                심볼·텍스트 #000(85%) / radius 12px. 심볼은 공식 말풍선(미변형). */}
             <button
               type="submit"
-              aria-label="카카오로 시작하기"
-              className="block w-full transition active:scale-[0.99] hover:brightness-95"
+              aria-label="카카오 로그인"
+              className="flex w-full items-center justify-center gap-2 rounded-[12px] bg-[#FEE500] py-3.5 transition active:scale-[0.99] hover:brightness-95"
             >
               {/* eslint-disable-next-line @next/next/no-img-element */}
-              <img src="/kakao/kakao_login.png" alt="카카오로 시작하기" className="block w-full" />
+              <img src="/kakao/kakao_symbol.png" alt="" aria-hidden className="h-[18px] w-auto" />
+              <span className="text-[15px] font-bold text-black/85">카카오 로그인</span>
             </button>
           </form>
         )}

@@ -97,7 +97,7 @@ export function CreateProfileForm({
         alert(r.message);
         return;
       }
-      showHeaderToast({ title: '아바타 생성 중', detail: '약 10분 소요' });
+      showHeaderToast({ title: '아바타 생성 중', detail: '약 10분 내외 소요' });
       router.refresh();
     });
   };
@@ -109,7 +109,7 @@ export function CreateProfileForm({
         <div className="text-2xl">⏳</div>
         <div className="mt-1 text-sm font-semibold">아바타 {statusText}</div>
         <p className="mt-1 text-xs text-zinc-500">
-          보통 몇 분 정도 걸려요. 완료되면 알림과 우편함으로 알려드릴게요.
+          보통 약 10분 내외 걸려요(혼잡하면 조금 더 걸릴 수 있어요). 완료되면 알림과 우편함으로 알려드릴게요.
         </p>
       </div>
     );

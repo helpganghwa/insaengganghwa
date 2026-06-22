@@ -154,11 +154,12 @@ export function RaidInviteLanding({
             <input type="hidden" name="next" value={`/raid-invite/${shareCode}`} />
             <button
               type="submit"
-              aria-label="카카오로 로그인하고 참여"
-              className="block w-full isolate overflow-hidden rounded-xl transition active:scale-[0.99] hover:brightness-95"
+              aria-label="카카오 로그인"
+              className="flex w-full items-center justify-center gap-2 rounded-[12px] bg-[#FEE500] py-3.5 transition active:scale-[0.99] hover:brightness-95"
             >
               {/* eslint-disable-next-line @next/next/no-img-element */}
-              <img src="/kakao/kakao_login.png" alt="카카오로 로그인하고 참여" className="block w-full" />
+              <img src="/kakao/kakao_symbol.png" alt="" aria-hidden className="h-[18px] w-auto" />
+              <span className="text-[15px] font-bold text-black/85">카카오 로그인</span>
             </button>
           </form>
         </div>

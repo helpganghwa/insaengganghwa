@@ -204,9 +204,11 @@ export function GuildHome({
                 href={guild.openchatUrl}
                 target="_blank"
                 rel="noopener noreferrer"
-                className="flex w-[82px] items-center justify-center gap-1 rounded-md bg-yellow-400/90 px-1.5 py-1 text-[10px] font-bold text-zinc-900 active:opacity-70"
+                className="flex w-[82px] items-center justify-center gap-1 rounded-md bg-[#FEE500] px-1.5 py-1 text-[10px] font-bold text-black/85 active:opacity-70"
               >
-                💬 오픈채팅
+                {/* eslint-disable-next-line @next/next/no-img-element */}
+                <img src="/kakao/kakao_symbol.png" alt="" aria-hidden className="h-3 w-auto" />
+                오픈채팅
               </a>
             )}
           </div>

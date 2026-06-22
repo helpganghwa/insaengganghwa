@@ -224,9 +224,9 @@ export function BoastModal({
   const hasKakao = kakaoReady;
 
   const kakaoIcon = (
-    <svg aria-hidden viewBox="0 0 24 24" className="h-4 w-4" fill="currentColor">
-      <path d="M12 3C6.477 3 2 6.477 2 10.7c0 2.61 1.66 4.92 4.2 6.3l-.83 3.05a.4.4 0 0 0 .6.42l3.66-2.43c.77.12 1.56.19 2.37.19 5.523 0 10-3.477 10-7.74S17.523 3 12 3Z" />
-    </svg>
+    // 카카오 공식 말풍선 심볼(미변형) — 커스텀 SVG 근사치 대신 공식 에셋 사용.
+    // eslint-disable-next-line @next/next/no-img-element
+    <img src="/kakao/kakao_symbol.png" alt="" aria-hidden className="h-4 w-auto" />
   );
 
   return createPortal(
