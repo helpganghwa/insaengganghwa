@@ -16,7 +16,6 @@ const DB_GUARD_MS = 4000;
 
 import { GuildBrowse } from './GuildBrowse';
 import { GuildHome } from './GuildHome';
-import { GuildMemberTabs } from './GuildMemberTabs';
 
 export const dynamic = 'force-dynamic';
 
@@ -54,10 +53,9 @@ export default async function GuildPage() {
 
   if (!membership) return browseView(userId, serverId);
 
-  const [guild, members, ranking] = await Promise.all([
+  const [guild, members] = await Promise.all([
     withTimeout(getGuild(membership.guildId), DB_GUARD_MS, 'guild.guild'),
     withTimeout(getGuildMembersRich(membership.guildId), DB_GUARD_MS, 'guild.members'),
-    withTimeout(getGuildRanking(serverId), DB_GUARD_MS, 'guild.ranking'),
   ]);
 
   if (!guild) {
@@ -73,41 +71,28 @@ export default async function GuildPage() {
   const leaderInactiveDays = leaderLastSeen ? daysSinceIso(leaderLastSeen) : null;
 
   return (
-    <GuildMemberTabs
-      ranking={ranking.map((g) => ({
-        id: g.id.toString(),
-        name: g.name,
-        level: g.level,
-        memberCount: g.memberCount,
-        emblemUrl: g.emblemUrl,
-        emblemColor: g.emblemColor,
-        combat: g.combat,
-        intro: g.intro,
-      }))}
-      home={
-        <GuildHome
-          guild={{
-            name: guild.name,
-            level: guild.level,
-            xp: Number(guild.xp),
-            notice: guild.notice,
-            openchatUrl: guild.openchatUrl,
-            memberCount: guild.memberCount,
-            capacity: guild.capacity,
-            emblemUrl: guild.emblemUrl,
-            emblemColor: guild.emblemColor,
-          }}
-          members={members}
-          myUserId={userId}
-          myRole={membership.role}
-          usedToday={usedToday}
-          leaderHandover={{
-            inactiveDays: leaderInactiveDays,
-            warnDays: GUILD_LEADER_HANDOVER_WARN_DAYS,
-            handoverDays: GUILD_LEADER_HANDOVER_DAYS,
-          }}
-        />
-      }
-    />
+    <div className="px-4 py-4">
+      <GuildHome
+        guild={{
+          name: guild.name,
+          level: guild.level,
+          xp: Number(guild.xp),
+          notice: guild.notice,
+          openchatUrl: guild.openchatUrl,
+          memberCount: guild.memberCount,
+          capacity: guild.capacity,
+          emblemUrl: guild.emblemUrl,
+          emblemColor: guild.emblemColor,
+        }}
+        members={members}
+        myRole={membership.role}
+        usedToday={usedToday}
+        leaderHandover={{
+          inactiveDays: leaderInactiveDays,
+          warnDays: GUILD_LEADER_HANDOVER_WARN_DAYS,
+          handoverDays: GUILD_LEADER_HANDOVER_DAYS,
+        }}
+      />
+    </div>
   );
 }

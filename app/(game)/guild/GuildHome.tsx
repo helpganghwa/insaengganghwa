@@ -14,9 +14,20 @@ import {
 
 import { ModalShell } from '@/components/ModalShell';
 
+import { assetUrl } from '@/lib/asset-versions';
+
 import { donateAction, leaveGuildAction } from './actions';
 import { guildErrMsg } from './errors-msg';
-import { GuildMemberList, type RichMember } from './GuildMemberList';
+import { type RichMember } from './GuildMemberList';
+
+// 길드 홈 메뉴 그리드(홈 패턴) — 각 타일 클릭 시 상세로 이동. 길드 관리는 임원만 노출.
+// 배경 스프라이트: /sprites/guild-menu/{key}.png (없으면 tint 단색으로 graceful).
+const GUILD_MENU = [
+  { key: 'members', href: '/guild/members', label: '길드원', desc: '멤버 명단·전투력', tint: '#1c2238', officerOnly: false },
+  { key: 'deploy', href: '/guild/deploy', label: '점령지', desc: '점령지 배치·관리', tint: '#2a2012', officerOnly: false },
+  { key: 'settings', href: '/guild/settings', label: '길드 관리', desc: '공지·가입·임원', tint: '#3a1419', officerOnly: true },
+  { key: 'ranking', href: '/guild/ranking', label: '길드 랭킹', desc: '서버 길드 순위', tint: '#143a2a', officerOnly: false },
+] as const;
 
 type GuildRole = 'leader' | 'vice' | 'member';
 type GuildView = {
@@ -34,14 +45,12 @@ type GuildView = {
 export function GuildHome({
   guild,
   members,
-  myUserId,
   myRole,
   usedToday,
   leaderHandover,
 }: {
   guild: GuildView;
   members: RichMember[];
-  myUserId: string;
   myRole: GuildRole;
   usedToday: number;
   /** 길드장 위임 위험 — inactiveDays(서버 계산)>=warnDays면 배너. null=접속 기록 없음. */
@@ -183,35 +192,19 @@ export function GuildHome({
               멤버 {guild.memberCount}/{guild.capacity}
             </p>
           </div>
-          {/* 관리 버튼 — 길드 관리(임원만) / 점령지 관리(전원, 임원만 편집) / 오픈채팅(설정 시). 같은 크기. */}
-          <div className="flex shrink-0 flex-col gap-1">
-            {isOfficer && (
-              <Link
-                href="/guild/settings"
-                className="flex w-[82px] items-center justify-center gap-1 rounded-md bg-zinc-100 px-1.5 py-1 text-[10px] font-bold text-zinc-700 active:opacity-70 dark:bg-zinc-800 dark:text-zinc-200"
-              >
-                ⚙️ 길드 관리
-              </Link>
-            )}
-            <Link
-              href="/guild/deploy"
-              className="flex w-[82px] items-center justify-center gap-1 rounded-md bg-zinc-100 px-1.5 py-1 text-[10px] font-bold text-zinc-700 active:opacity-70 dark:bg-zinc-800 dark:text-zinc-200"
+          {/* 오픈채팅 — 설정 시 상단 정보에 그대로 노출(외부 링크). 나머지 메뉴는 하단 그리드로 이동. */}
+          {guild.openchatUrl && (
+            <a
+              href={guild.openchatUrl}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="flex w-[82px] shrink-0 items-center justify-center gap-1 rounded-md bg-[#FEE500] px-1.5 py-1.5 text-[10px] font-bold text-black/85 active:opacity-70"
             >
-              점령지 관리
-            </Link>
-            {guild.openchatUrl && (
-              <a
-                href={guild.openchatUrl}
-                target="_blank"
-                rel="noopener noreferrer"
-                className="flex w-[82px] items-center justify-center gap-1 rounded-md bg-[#FEE500] px-1.5 py-1 text-[10px] font-bold text-black/85 active:opacity-70"
-              >
-                {/* eslint-disable-next-line @next/next/no-img-element */}
-                <img src="/kakao/kakao_symbol.png" alt="" aria-hidden className="h-3 w-auto" />
-                오픈채팅
-              </a>
-            )}
-          </div>
+              {/* eslint-disable-next-line @next/next/no-img-element */}
+              <img src="/kakao/kakao_symbol.png" alt="" aria-hidden className="h-3 w-auto" />
+              오픈채팅
+            </a>
+          )}
         </div>
 
         {guild.notice && (
@@ -283,8 +276,39 @@ export function GuildHome({
         </div>
       </section>
 
-      {/* 길드원 명단(아바타·장비·정렬 메트릭, 클릭 시 프로필) */}
-      <GuildMemberList members={members} myUserId={myUserId} />
+      {/* 메뉴 그리드(홈 패턴) — 길드원/점령지/길드 관리(임원)/길드 랭킹 → 각 상세로 이동. */}
+      <div className="grid grid-cols-2 gap-3">
+        {GUILD_MENU.filter((m) => !m.officerOnly || isOfficer).map((m) => (
+          <Link
+            key={m.href}
+            href={m.href}
+            style={{ backgroundColor: m.tint }}
+            className="relative flex aspect-[50/21] isolate overflow-hidden rounded-2xl border border-zinc-800 transition active:scale-[0.98]"
+          >
+            {/* eslint-disable-next-line @next/next/no-img-element */}
+            <img
+              src={assetUrl(`/sprites/guild-menu/${m.key}.png`)}
+              alt=""
+              aria-hidden
+              draggable={false}
+              className="absolute inset-0 h-full w-full object-cover"
+              style={{ imageRendering: 'pixelated' }}
+            />
+            {m.key === 'members' ? (
+              <span
+                aria-label={`길드원 ${guild.memberCount}명`}
+                className="absolute top-1.5 right-1.5 z-10 inline-flex min-w-[20px] items-center justify-center rounded-full bg-zinc-900/70 px-1.5 py-0.5 text-[10px] font-bold text-white shadow ring-2 ring-zinc-900/40 tabular-nums"
+              >
+                {guild.memberCount}
+              </span>
+            ) : null}
+            <div className="absolute inset-x-0 bottom-0 bg-gradient-to-t from-black/85 via-black/55 to-transparent px-3 pt-6 pb-2">
+              <div className="text-sm leading-tight font-bold text-white drop-shadow-sm">{m.label}</div>
+              <div className="mt-0.5 truncate text-[10px] leading-tight text-white/85">{m.desc}</div>
+            </div>
+          </Link>
+        ))}
+      </div>
 
       {/* 탈퇴 — 보더 없이 빨강 텍스트, 컨펌은 팝업 */}
       <button
