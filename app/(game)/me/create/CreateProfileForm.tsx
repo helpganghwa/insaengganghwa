@@ -46,7 +46,7 @@ export function CreateProfileForm({
 }) {
   const router = useRouter();
   const { optimisticAdjust: adjustDiamond } = useDiamond();
-  const { showHeaderToast } = useResourceToast();
+  const { showHeaderToast, showError } = useResourceToast();
   const [gender, setGender] = useState<'female' | 'male'>('female');
   const [confirm, setConfirm] = useState(false);
   const [confirmLeft, setConfirmLeft] = useState(0); // 3s 재탭 컨펌 카운트다운
@@ -94,7 +94,7 @@ export function CreateProfileForm({
       if (r.status === 'error') {
         adjustDiamond(BigInt(price));
         setSubmitted(false);
-        alert(r.message);
+        showError(r.message);
         return;
       }
       showHeaderToast({ title: '아바타 생성 중', detail: '약 10분 내외 소요' });

@@ -9,6 +9,7 @@ import { db } from '@/lib/db/client';
 import { withTimeout } from '@/lib/db/with-timeout';
 import { getSessionUserId } from '@/lib/auth/session';
 import { getUserGuildBrief } from '@/lib/game/guild';
+import { getEnhancingUserCount } from '@/app/(game)/me/actions';
 import { profiles } from '@/lib/db/schema/profiles';
 import { characters } from '@/lib/db/schema/server';
 import { userProfiles } from '@/lib/db/schema/avatar';
@@ -191,8 +192,15 @@ export async function generateMetadata({
   const serverId = parseServerParam((await searchParams).s);
   const data = await loadProfile(handle, serverId);
   if (!data) return { title: '인생강화' };
-  const title = `${data.nickname} — 인생강화`;
-  const description = `총 전투력 ${data.total.toLocaleString('ko-KR')}.`;
+  // 카카오톡 공유 카드(BoastModal)와 문구 통일(2026-05-31 고정 문구 결정).
+  const title = `${data.nickname} - '강화는 인생이다'`;
+  let description = '인생강화에서 지금도 누군가 인생 강화중';
+  try {
+    const n = await getEnhancingUserCount();
+    if (n > 0) description = `인생강화에서 ${n.toLocaleString('ko-KR')}명이 인생 강화중`;
+  } catch {
+    /* 카운트 조회 실패 시 정적 문구 유지 */
+  }
   // OG는 불변 코드로 — 닉 변경/링크 캐시에도 안정. 서버는 쿼리로 전파.
   const ogImage = `/og/${encodeURIComponent(data.publicCode)}${serverId !== DEFAULT_SERVER_ID ? `?s=${serverId}` : ''}`;
   return {

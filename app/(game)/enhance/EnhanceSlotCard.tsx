@@ -187,7 +187,7 @@ export function EnhanceSlotCard({
   nickname: string;
 }) {
   const router = useRouter();
-  const { showRanking, beginEnhanceOverlay, endEnhanceOverlay } = useResourceToast();
+  const { showRanking, beginEnhanceOverlay, endEnhanceOverlay, showError } = useResourceToast();
   const { optimisticAdjust: adjustDiamond } = useDiamond();
   const [pending, startTransition] = useTransition();
   const [nowMs, setNowMs] = useState(0); // SSR 매칭 위해 0 → mount 후 동기화
@@ -321,7 +321,7 @@ export function EnhanceSlotCard({
       const r = await finalizeEnhance(activeJob.jobId);
       if (r.status === 'error') {
         setAttempting(false);
-        alert(r.message);
+        showError(r.message);
         return;
       }
       // 튜토리얼: 첫 강화 시도 완료 신호(코치가 attempt 단계일 때만 마무리 팝업).
@@ -406,7 +406,7 @@ export function EnhanceSlotCard({
       if (r.status === 'error') {
         setOptimisticDone(false);
         adjustDiamond(debit); // 롤백
-        alert(r.message);
+        showError(r.message);
       } else router.refresh();
     });
   };
@@ -423,7 +423,7 @@ export function EnhanceSlotCard({
     void cancelEnhanceAction(activeJob.jobId).then((r) => {
       if (r.status === 'error') {
         setOptimisticCancelled(false);
-        alert(r.message);
+        showError(r.message);
       } else {
         router.refresh();
       }

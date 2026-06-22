@@ -7,6 +7,7 @@ import { useRouter } from 'next/navigation';
 import { RAID_OPEN_COST_DIAMOND } from '@/lib/game/balance';
 import { RAID_BOSSES, RAID_BOSS_CODES, type RaidBoss } from '@/lib/game/raid/bosses';
 import { BossSprite } from '@/components/BossSprite';
+import { useResourceToast } from '@/components/ResourceToast';
 import { getBossBg, getBossBgClass, getBossShadow } from '@/lib/game/raid/boss-sprites';
 import { assetUrl } from '@/lib/asset-versions';
 
@@ -195,6 +196,7 @@ export function RaidSlots({
   guildRaids?: FriendRaid[];
 }) {
   const router = useRouter();
+  const { showError, showHeaderToast } = useResourceToast();
   const [pending, startTransition] = useTransition();
   const [picking, setPicking] = useState(false);
   const [picked, setPicked] = useState<RaidBoss | null>(null);
@@ -225,7 +227,7 @@ export function RaidSlots({
     startTransition(async () => {
       const r = await openRaidAction(code, friendShare, guildShare);
       if (r.status === 'error') {
-        alert(r.message);
+        showError(r.message);
         return;
       }
       // 팝업은 닫지 않고 상세로 이동 — 페이지 전환 시 자연 unmount(전환 중 깜빡임 방지).
@@ -236,11 +238,11 @@ export function RaidSlots({
     startTransition(async () => {
       const r = await joinRaidAction(shareCode, scope);
       if (r.status === 'error') {
-        alert(r.message);
+        showError(r.message);
         return;
       }
       if (r.state === 'requested') {
-        alert('참가 요청을 보냈습니다. 개설자가 수락하면 참여됩니다.');
+        showHeaderToast({ icon: '📨', title: '참가 요청을 보냈어요', detail: '개설자가 수락하면 참여됩니다' });
         return;
       }
       router.push(`/raid/${r.raidId}`);

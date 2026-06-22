@@ -64,7 +64,7 @@ export function BoastModal({
   serverId?: number;
   guildName?: string | null;
 }) {
-  const { showHeaderToast } = useResourceToast();
+  const { showHeaderToast, showError } = useResourceToast();
   const [shareUrl, setShareUrl] = useState('');
   // 카카오 SDK는 next/script afterInteractive로 비동기 로드 → 첫 모달 오픈 시점에
   // 아직 init 안 됐을 수 있음. open 동안 200ms 폴링(최대 5s)로 ready 감지 후 활성.
@@ -197,7 +197,7 @@ export function BoastModal({
   const doShareKakao = () => {
     const k = (window as unknown as { Kakao?: KakaoApi }).Kakao;
     if (!k || !k.isInitialized()) {
-      alert('카카오톡 공유가 준비되지 않았습니다. 잠시 후 다시 시도해주세요.');
+      showError('카카오톡 공유가 준비되지 않았습니다. 잠시 후 다시 시도해주세요.');
       return;
     }
     const origin = window.location.origin;

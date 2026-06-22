@@ -5,6 +5,8 @@ import { useRouter } from 'next/navigation';
 
 import type { Slot } from '@/lib/db/schema/equipment';
 
+import { useResourceToast } from '@/components/ResourceToast';
+
 import { openAction, type OpenActionResult } from './actions';
 import { GachaResultModal } from './GachaResultModal';
 
@@ -32,6 +34,7 @@ export function GachaBoxCard({
   eager?: boolean;
 }) {
   const router = useRouter();
+  const { showError } = useResourceToast();
   const [result, setResult] = useState<Extract<OpenActionResult, { status: 'success' }> | null>(
     null,
   );
@@ -54,7 +57,7 @@ export function GachaBoxCard({
     openAction(slot, n)
       .then((r) => {
         if (r.status === 'error') {
-          alert(r.message);
+          showError(r.message);
           setOptimistic(null); // 실패 → prop으로 원복
           return;
         }
@@ -63,7 +66,7 @@ export function GachaBoxCard({
         router.refresh(); // 백그라운드 동기화(로딩 게이트에 영향 없음)
       })
       .catch(() => {
-        alert('보급 개봉에 실패했습니다. 잠시 후 다시 시도해주세요.');
+        showError('보급 개봉에 실패했습니다. 잠시 후 다시 시도해주세요.');
         setOptimistic(null);
       })
       .finally(() => setDrawing(false)); // 액션 응답 즉시 로딩 해제(refresh 대기 안 함)

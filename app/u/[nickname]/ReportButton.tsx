@@ -16,14 +16,16 @@ export function ReportButton({ profileId }: { profileId: string }) {
   const [reason, setReason] = useState<string | null>(null);
   const [note, setNote] = useState('');
   const [done, setDone] = useState(false);
+  const [err, setErr] = useState<string | null>(null);
   const [pending, startTransition] = useTransition();
 
   const submit = () => {
     if (!reason) return;
+    setErr(null);
     startTransition(async () => {
       const r = await reportProfile(profileId, reason, reason === 'other' ? note : undefined);
       if (r.status === 'error') {
-        alert(r.message);
+        setErr(r.message);
         return;
       }
       setDone(true);
@@ -94,6 +96,11 @@ export function ReportButton({ profileId }: { profileId: string }) {
                     className="mt-2 w-full rounded-xl border border-zinc-200 p-2 text-base dark:border-zinc-800 dark:bg-zinc-900"
                     rows={2}
                   />
+                )}
+                {err && (
+                  <p className="mt-2 rounded-lg bg-red-50 px-2 py-1 text-xs text-red-600 dark:bg-red-950/40 dark:text-red-300">
+                    {err}
+                  </p>
                 )}
                 <div className="mt-3 flex gap-2">
                   <button

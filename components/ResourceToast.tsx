@@ -1,6 +1,7 @@
 'use client';
 
 import { createContext, useCallback, useContext, useEffect, useRef, useState } from 'react';
+import { createPortal } from 'react-dom';
 
 import type { MyRanks } from '@/lib/game/leaderboard/queries';
 
@@ -83,6 +84,10 @@ const HEADER_TOAST_EXIT_MS = 450;
 
 export function ResourceToastProvider({ children }: { children: React.ReactNode }) {
   const [toasts, setToasts] = useState<ToastEntry[]>([]);
+  // 토스트는 document.body로 portal — 모달(createPortal로 body 직속, z-[100] 등)에 가려지지
+  // 않도록 같은 최상위 stacking context에 올린다(SSR 회피용 mounted 가드).
+  const [mounted, setMounted] = useState(false);
+  useEffect(() => setMounted(true), []);
   const counterRef = useRef(0);
   /** 누적 큐 — 첫 before 보존, 마지막 after 갱신(last-wins). 모든 오버레이 종료 시 release. */
   const rankingPendingRef = useRef<{ before: MyRanks; after: MyRanks } | null>(null);
@@ -215,26 +220,32 @@ export function ResourceToastProvider({ children }: { children: React.ReactNode 
       }}
     >
       {children}
-      {/* 헤더(h-12=48px) 위 슬라이드 바 — sticky 헤더(z-30)를 덮도록 z-40. */}
-      <div className="pointer-events-none fixed inset-x-0 top-0 z-40 overflow-hidden">
-        {rankingToasts.map((t) => (
-          <RankingBar key={t.id} entry={t} />
-        ))}
-      </div>
-      {/* 공용 헤더 토스트 — 헤더 덮는 슬라이드 바(WINNER 토스트와 동일 패턴). 각 바가 자체 fixed. */}
-      {headerToasts.map((t) => (
-        <HeaderBar key={t.id} entry={t} onDismiss={dismissHeader} />
-      ))}
-      {/* 자원/에러 토스트 — 중앙 상단(기존 위치). */}
-      <div
-        className="pointer-events-none fixed left-1/2 z-[75] flex -translate-x-1/2 flex-col items-center gap-2"
-        style={{ top: 'calc(env(safe-area-inset-top) + 4rem)' }}
-        aria-live="polite"
-      >
-        {otherToasts.map((t) => (
-          <ResourceItem key={t.id} entry={t} />
-        ))}
-      </div>
+      {mounted &&
+        createPortal(
+          <>
+            {/* 헤더(h-12=48px) 위 슬라이드 바 — 모달(z-[100]) 위로 z-[150]. */}
+            <div className="pointer-events-none fixed inset-x-0 top-0 z-[150] overflow-hidden">
+              {rankingToasts.map((t) => (
+                <RankingBar key={t.id} entry={t} />
+              ))}
+            </div>
+            {/* 공용 헤더 토스트 — 헤더 덮는 슬라이드 바(WINNER 토스트와 동일 패턴). 각 바가 자체 fixed. */}
+            {headerToasts.map((t) => (
+              <HeaderBar key={t.id} entry={t} onDismiss={dismissHeader} />
+            ))}
+            {/* 자원/에러 토스트 — 중앙 상단(기존 위치). */}
+            <div
+              className="pointer-events-none fixed left-1/2 z-[150] flex -translate-x-1/2 flex-col items-center gap-2"
+              style={{ top: 'calc(env(safe-area-inset-top) + 4rem)' }}
+              aria-live="polite"
+            >
+              {otherToasts.map((t) => (
+                <ResourceItem key={t.id} entry={t} />
+              ))}
+            </div>
+          </>,
+          document.body,
+        )}
     </ToastContext.Provider>
   );
 }
@@ -362,7 +373,7 @@ function HeaderBar({ entry, onDismiss }: { entry: HeaderToast; onDismiss: (id: n
   }, [id, onDismiss]);
   return (
     <div
-      className="pointer-events-none fixed inset-x-0 top-0 z-[60]"
+      className="pointer-events-none fixed inset-x-0 top-0 z-[150]"
       role="status"
       aria-live="polite"
       style={{

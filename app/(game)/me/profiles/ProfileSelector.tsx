@@ -26,7 +26,7 @@ export function ProfileSelector({
   activeProfileId: string | null;
 }) {
   const router = useRouter();
-  const { showHeaderToast } = useResourceToast();
+  const { showHeaderToast, showError } = useResourceToast();
   // 삭제된 프로필은 즉시 목록에서 제외(상세 페이지 유지) — optimistic.
   const [deletedIds, setDeletedIds] = useState<Set<string>>(new Set());
   const list = profiles.filter((p) => !deletedIds.has(p.id));
@@ -76,7 +76,7 @@ export function ProfileSelector({
     router.push('/me');
     void setActiveProfile(selectedId).then((r) => {
       if (r.status === 'error') {
-        alert(r.message);
+        showError(r.message);
         return;
       }
       showHeaderToast({ title: '대표 아바타 변경' });
@@ -93,7 +93,7 @@ export function ProfileSelector({
     setConfirmDelete(false);
     startTransition(async () => {
       const r = await deleteProfile(selectedId);
-      if (r.status === 'error') return alert(r.message);
+      if (r.status === 'error') return showError(r.message);
       // 삭제된 캐릭터는 목록에서 제외하고 남은 프로필로 전환 — 상세 페이지 유지.
       const remaining = list.filter((p) => p.id !== selectedId);
       if (remaining.length === 0) {
