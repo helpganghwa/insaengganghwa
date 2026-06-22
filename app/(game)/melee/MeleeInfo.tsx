@@ -49,85 +49,88 @@ export function MeleeInfo({
 
   const body = (
     <>
-        {tab === 'reward' ? (
-          <div className="mx-4 isolate overflow-hidden rounded-xl border border-zinc-800 bg-zinc-950">
-            <div className="grid grid-cols-[1fr_auto_auto] items-center gap-2 border-b border-zinc-900 px-3 py-2 text-[10px] font-bold text-zinc-500">
-              <span>순위</span>
-              <span className="w-16 text-right text-sm">💎</span>
-              <span className="w-14 text-right text-sm">📦</span>
-            </div>
-            <ul>
-              {MELEE_REWARD_TIERS.map((t) => (
-                <li
-                  key={t.label}
-                  className="grid grid-cols-[1fr_auto_auto] items-center gap-2 border-b border-zinc-900/60 px-3 py-2.5 text-[12px] last:border-b-0"
-                >
-                  <span className="font-bold text-white">{t.label}</span>
-                  <span className="w-16 text-right font-mono text-sky-300">
-                    {t.diamond > 0 ? t.diamond.toLocaleString() : '—'}
-                  </span>
-                  <span className="w-14 text-right font-mono text-amber-300">{t.boxes}</span>
-                </li>
-              ))}
-            </ul>
+      {tab === 'reward' ? (
+        <div className="isolate mx-4 overflow-hidden rounded-xl border border-zinc-800 bg-zinc-950">
+          <div className="grid grid-cols-[1fr_auto_auto] items-center gap-2 border-b border-zinc-900 px-3 py-2 text-[10px] font-bold text-zinc-500">
+            <span>순위</span>
+            <span className="w-16 text-right text-sm">💎</span>
+            <span className="w-14 text-right text-sm">📦</span>
           </div>
-        ) : history.length === 0 ? (
-          <div className="mx-4 rounded-xl border border-zinc-800 px-3 py-10 text-center text-[12px] text-zinc-500">
-            아직 발표된 대난투가 없습니다.
-          </div>
-        ) : (
-          /* 로그처럼 풀폭(엣지-투-엣지, 별도 박스 없음) */
-          <ul className="border-t border-zinc-900/60">
-            {history.map((h) => {
-              const inner = (
-                <>
-                  {/* 챔피언 아바타 — 우측 배경 레이어. height/top으로 상반신·얼굴이 박스 세로 중앙. */}
-                  {h.championAvatar ? (
-                    <div className="pointer-events-none absolute inset-y-0 right-0 w-40 overflow-hidden">
-                      {/* eslint-disable-next-line @next/next/no-img-element */}
-                      <img
-                        src={h.championAvatar}
-                        alt=""
-                        aria-hidden
-                        className="absolute left-1/2 w-auto max-w-none -translate-x-1/2"
-                        style={{ imageRendering: 'pixelated', height: '500%', top: '-100%' }}
-                      />
-                    </div>
-                  ) : null}
-                  {/* 콘텐츠 — 좌측. */}
-                  <div className="relative z-10 px-3 py-3.5">
-                    <div className="flex items-center gap-2">
-                      <span className="shrink-0 rounded bg-amber-500/15 px-1.5 py-0.5 font-mono text-[11px] font-bold text-amber-300">
-                        제{h.edition}회
-                      </span>
-                      <span className="min-w-0 truncate text-[13px] font-bold text-white">
-                        {h.championNick}
-                      </span>
-                    </div>
-                    <div className="mt-1.5 flex flex-wrap items-center gap-x-2 gap-y-0.5 text-[10px] text-zinc-400">
-                      <span>
-                        전투력 <span className="font-mono text-zinc-300">{h.championCp.toLocaleString()}</span>
-                      </span>
-                      <span className="text-zinc-600">·</span>
-                      <span>참가 {h.participantCount.toLocaleString()}명</span>
-                    </div>
-                  </div>
-                </>
-              );
-              return (
-                <li key={h.edition} className="border-b border-zinc-900/60">
-                  {/* 회차(카드) 클릭 → 그날 결과로 이동. */}
-                  <Link
-                    href={`/melee/battle/${h.battleId}`}
-                    className="relative block overflow-hidden transition active:bg-zinc-900/60"
-                  >
-                    {inner}
-                  </Link>
-                </li>
-              );
-            })}
+          <ul>
+            {MELEE_REWARD_TIERS.map((t) => (
+              <li
+                key={t.label}
+                className="grid grid-cols-[1fr_auto_auto] items-center gap-2 border-b border-zinc-900/60 px-3 py-2.5 text-[12px] last:border-b-0"
+              >
+                <span className="font-bold text-white">{t.label}</span>
+                <span className="w-16 text-right font-mono text-sky-300">
+                  {t.diamond > 0 ? t.diamond.toLocaleString() : '—'}
+                </span>
+                <span className="w-14 text-right font-mono text-amber-300">{t.boxes}</span>
+              </li>
+            ))}
           </ul>
-        )}
+        </div>
+      ) : history.length === 0 ? (
+        <div className="mx-4 rounded-xl border border-zinc-800 px-3 py-10 text-center text-[12px] text-zinc-500">
+          아직 발표된 대난투가 없습니다.
+        </div>
+      ) : (
+        /* 로그처럼 풀폭(엣지-투-엣지, 별도 박스 없음) */
+        <ul className="border-t border-zinc-900/60">
+          {history.map((h) => {
+            const inner = (
+              <>
+                {/* 챔피언 아바타 — 우측 배경 레이어. height/top으로 상반신·얼굴이 박스 세로 중앙. */}
+                {h.championAvatar ? (
+                  <div className="pointer-events-none absolute inset-y-0 right-0 w-40">
+                    {/* eslint-disable-next-line @next/next/no-img-element */}
+                    <img
+                      src={h.championAvatar}
+                      alt=""
+                      aria-hidden
+                      className="absolute left-1/2 w-auto max-w-none -translate-x-1/2"
+                      style={{ imageRendering: 'pixelated', height: '500%', top: '-100%' }}
+                    />
+                  </div>
+                ) : null}
+                {/* 콘텐츠 — 좌측. */}
+                <div className="relative z-10 px-3 py-3.5">
+                  <div className="flex items-center gap-2">
+                    <span className="shrink-0 rounded bg-amber-500/15 px-1.5 py-0.5 font-mono text-[11px] font-bold text-amber-300">
+                      제{h.edition}회
+                    </span>
+                    <span className="min-w-0 truncate text-[13px] font-bold text-white">
+                      {h.championNick}
+                    </span>
+                  </div>
+                  <div className="mt-1.5 flex flex-wrap items-center gap-x-2 gap-y-0.5 text-[10px] text-zinc-400">
+                    <span>
+                      전투력{' '}
+                      <span className="font-mono text-zinc-300">
+                        {h.championCp.toLocaleString()}
+                      </span>
+                    </span>
+                    <span className="text-zinc-600">·</span>
+                    <span>참가 {h.participantCount.toLocaleString()}명</span>
+                  </div>
+                </div>
+              </>
+            );
+            return (
+              <li key={h.edition} className="border-b border-zinc-900/60">
+                {/* 회차(카드) 클릭 → 그날 결과로 이동. */}
+                <Link
+                  href={`/melee/battle/${h.battleId}`}
+                  className="relative block overflow-hidden transition active:bg-zinc-900/60"
+                >
+                  {inner}
+                </Link>
+              </li>
+            );
+          })}
+        </ul>
+      )}
     </>
   );
 
@@ -144,8 +147,8 @@ export function MeleeInfo({
       />
       <div className="pointer-events-none absolute inset-0 bg-gradient-to-b from-black/45 via-black/35 to-black/70" />
       <div className="relative z-10 flex h-full flex-col items-center justify-center gap-0.5">
-        <h1 className="text-lg font-extrabold text-white text-pixel-outline">대난투 정보</h1>
-        <p className="text-[11px] font-bold text-amber-200 text-pixel-outline">
+        <h1 className="text-pixel-outline text-lg font-extrabold text-white">대난투 정보</h1>
+        <p className="text-pixel-outline text-[11px] font-bold text-amber-200">
           {tab === 'reward' ? '보상 테이블' : '역대 우승자'}
         </p>
       </div>
@@ -157,7 +160,7 @@ export function MeleeInfo({
     return (
       <div className="flex h-full flex-col">
         {banner}
-        <div className="shrink-0 bg-zinc-950 pb-3 pt-3">{tabBar}</div>
+        <div className="shrink-0 bg-zinc-950 pt-3 pb-3">{tabBar}</div>
         <div className="min-h-0 flex-1 space-y-3 overflow-y-auto pb-6">{body}</div>
       </div>
     );
@@ -165,7 +168,7 @@ export function MeleeInfo({
 
   // 임베드(대기/진행중 무대 아래) — 일반 흐름.
   return (
-    <div className="space-y-3 pb-6 pt-3">
+    <div className="space-y-3 pt-3 pb-6">
       {tabBar}
       {body}
     </div>

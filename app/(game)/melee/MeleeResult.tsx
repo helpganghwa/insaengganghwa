@@ -70,7 +70,8 @@ const DEFAULT_AVATAR = '/sprites/default/male/south.png';
 
 // 전투 내레이션 풀 — 라운드별 결정적 선택(round % len)으로 다양하게(렌더 순수성 유지).
 const KILLED_MSGS: ((a: string, t: string, d: string) => string)[] = [
-  (a, t, d) => `${a}의 일격이 ${josa(t, '을/를')} 꿰뚫는다. ${d}의 치명타 — ${t}, 모래 위에 무너지다.`,
+  (a, t, d) =>
+    `${a}의 일격이 ${josa(t, '을/를')} 꿰뚫는다. ${d}의 치명타 — ${t}, 모래 위에 무너지다.`,
   (a, t, d) => `${a}의 마지막 공격! ${d}의 피해로 ${josa(t, '이/가')} 쓰러진다.`,
   (a, t, d) => `${t}, ${a}의 ${d} 일격을 버티지 못하고 무릎 꿇는다.`,
   (a, t, d) => `${josa(a, '이/가')} 결정타를 꽂는다. ${d} — ${t}, 아레나에서 탈락.`,
@@ -90,7 +91,7 @@ const SURVIVE_MSGS: ((a: string, t: string, d: string, hp: string) => string)[] 
 function MyRankChip({ me }: { me: MeleeResultView['me'] }) {
   if (!me) {
     return (
-      <div className="min-w-0 shrink truncate rounded-full bg-black/55 px-3 py-1 text-[11px] font-medium text-zinc-300 ring-1 ring-zinc-700/50 backdrop-blur-sm text-pixel-outline">
+      <div className="text-pixel-outline min-w-0 shrink truncate rounded-full bg-black/55 px-3 py-1 text-[11px] font-medium text-zinc-300 ring-1 ring-zinc-700/50 backdrop-blur-sm">
         오늘 미참가
       </div>
     );
@@ -105,7 +106,7 @@ function MyRankChip({ me }: { me: MeleeResultView['me'] }) {
   return (
     <Link
       href="/mail"
-      className="inline-flex min-w-0 shrink items-center gap-1.5 truncate rounded-full bg-black/60 px-3 py-1 text-[11px] font-medium text-zinc-100 ring-1 ring-amber-700/40 backdrop-blur-sm text-pixel-outline"
+      className="text-pixel-outline inline-flex min-w-0 shrink items-center gap-1.5 truncate rounded-full bg-black/60 px-3 py-1 text-[11px] font-medium text-zinc-100 ring-1 ring-amber-700/40 backdrop-blur-sm"
     >
       <span className="shrink-0">
         내 순위 <span className="font-mono font-extrabold text-amber-300">{me.rank}위</span>
@@ -178,7 +179,7 @@ function Fighter({
       >
         {/* 공격/방어 라벨 — 머리 위 오버레이(세로 공간 절약) */}
         <span
-          className={`absolute left-1/2 top-0 z-20 -translate-x-1/2 rounded-full px-2 py-0.5 text-[9px] font-bold text-white text-pixel-outline ${
+          className={`text-pixel-outline absolute top-0 left-1/2 z-20 -translate-x-1/2 rounded-full px-2 py-0.5 text-[9px] font-bold text-white ${
             attacking ? 'bg-amber-600/85' : 'bg-sky-700/85'
           }`}
         >
@@ -186,7 +187,7 @@ function Fighter({
         </span>
         {/* 피해량 — 타겟 머리 위 정중앙에서 떠오름 */}
         {dmg != null ? (
-          <div className="animate-dmg-float pointer-events-none absolute left-1/2 top-4 z-20 font-mono text-xl font-extrabold text-red-300 drop-shadow-[0_2px_4px_rgba(0,0,0,0.9)]">
+          <div className="animate-dmg-float pointer-events-none absolute top-4 left-1/2 z-20 font-mono text-xl font-extrabold text-red-300 drop-shadow-[0_2px_4px_rgba(0,0,0,0.9)]">
             -{dmg.toLocaleString()}
           </div>
         ) : null}
@@ -238,7 +239,7 @@ function Fighter({
       </div>
       {/* HP바 — 양쪽 동일 높이 확보(공격자는 빈 자리 placeholder). */}
       {maxHp != null ? (
-        <div className="h-1.5 w-24 isolate overflow-hidden rounded-full bg-zinc-800 ring-1 ring-black/40">
+        <div className="isolate h-1.5 w-24 overflow-hidden rounded-full bg-zinc-800 ring-1 ring-black/40">
           <div
             className={`h-full ${hpColor(pct)}`}
             style={{ width: `${pct}%`, transition: 'width 650ms ease-out' }}
@@ -272,7 +273,12 @@ function FightStage({
     ? `${fight.atkName}의 최후의 일격! 마지막 한 명까지 쓰러뜨리고 대난투를 제패하다 — 우승!`
     : killed
       ? KILLED_MSGS[fight.round % KILLED_MSGS.length]!(fight.atkName, fight.tgtName, dmgStr)
-      : SURVIVE_MSGS[fight.round % SURVIVE_MSGS.length]!(fight.atkName, fight.tgtName, dmgStr, hpStr);
+      : SURVIVE_MSGS[fight.round % SURVIVE_MSGS.length]!(
+          fight.atkName,
+          fight.tgtName,
+          dmgStr,
+          hpStr,
+        );
 
   // 결승 WINNER 토스트 — 공격(HP 드레인 ~650ms + 사망 페이드)이 끝난 뒤 내려오고, 3.8s 뒤 위로 올라가며 사라짐.
   const [winnerShow, setWinnerShow] = useState(false);
@@ -309,7 +315,9 @@ function FightStage({
               }}
             >
               <div className="mx-auto flex h-12 max-w-[390px] items-center justify-center gap-2.5 border-b border-amber-500/40 bg-zinc-950/95 shadow-[0_4px_16px_rgba(0,0,0,0.5)] backdrop-blur-sm">
-                <span className="text-[11px] font-bold tracking-[0.3em] text-amber-400">WINNER</span>
+                <span className="text-[11px] font-bold tracking-[0.3em] text-amber-400">
+                  WINNER
+                </span>
                 <span className="h-3.5 w-px bg-amber-500/30" />
                 <span className="max-w-[200px] truncate text-[13px] font-extrabold text-white">
                   {fight.atkName}
@@ -364,14 +372,14 @@ function FightStage({
       </div>
       {/* 하단: 판타지 내레이션 — 높이 2줄 고정(레이아웃 시프트 방지) + 단어단위 개행 */}
       <div className="relative z-10 flex h-10 shrink-0 items-center justify-center px-4 pb-1">
-        <p className="line-clamp-2 break-keep text-center text-[11px] italic leading-snug text-zinc-100 drop-shadow">
+        <p className="line-clamp-2 text-center text-[11px] leading-snug break-keep text-zinc-100 italic drop-shadow">
           {narration}
         </p>
       </div>
       <button
         type="button"
         onClick={onBack}
-        className="absolute right-1.5 top-1.5 z-20 rounded-full bg-black/55 px-2 py-0.5 text-[10px] font-bold text-zinc-200 backdrop-blur-sm"
+        className="absolute top-1.5 right-1.5 z-20 rounded-full bg-black/55 px-2 py-0.5 text-[10px] font-bold text-zinc-200 backdrop-blur-sm"
       >
         {playing ? `정지 ${playing.idx + 1}/${playing.total}` : '랭킹'}
       </button>
@@ -397,7 +405,7 @@ function RankingView({
   ];
   return (
     <div className="relative z-10 flex h-full flex-col">
-      <div className="pt-1.5 text-center text-[10px] font-semibold text-amber-200 text-pixel-outline">
+      <div className="text-pixel-outline pt-1.5 text-center text-[10px] font-semibold text-amber-200">
         제{edition.toLocaleString()}회 대난투 · 참가 {participantCount.toLocaleString()}명
       </div>
       {/* items-end + 동일 높이 아바타 박스 + object-bottom → 발끝(바닥선) 통일. #1만 scale로 확대. */}
@@ -408,10 +416,10 @@ function RankingView({
           return (
             <div key={slot} className={`flex w-1/3 flex-col items-center ${first ? 'z-10' : ''}`}>
               <div className="flex items-center gap-0.5">
-                <span className="font-mono text-[11px] font-bold tabular-nums text-amber-300 text-pixel-outline">
+                <span className="text-pixel-outline font-mono text-[11px] font-bold text-amber-300 tabular-nums">
                   #{slot}
                 </span>
-                <span className="whitespace-nowrap text-[10px] font-medium leading-tight text-white text-pixel-outline">
+                <span className="text-pixel-outline text-[10px] leading-tight font-medium whitespace-nowrap text-white">
                   {p?.nickname ?? '—'}
                 </span>
               </div>
@@ -458,7 +466,7 @@ function RankingView({
                   )
                 ) : null}
               </div>
-              <span className="pb-0.5 text-[9px] font-medium text-amber-100 text-pixel-outline">
+              <span className="text-pixel-outline pb-0.5 text-[9px] font-medium text-amber-100">
                 {p ? `공격 성공 ${p.attackSuccess} · 방어 성공 ${p.defenseSuccess}` : '—'}
               </span>
             </div>
@@ -507,7 +515,7 @@ function RoundCard({
       >
         {/* 라운드 번호 */}
         <div className="flex w-8 shrink-0 flex-col items-center justify-center">
-          <span className="font-mono text-[13px] font-extrabold leading-none tabular-nums text-zinc-400">
+          <span className="font-mono text-[13px] leading-none font-extrabold text-zinc-400 tabular-nums">
             {round.toLocaleString()}
           </span>
           <span className="mt-0.5 text-[7px] font-bold tracking-[0.15em] text-zinc-600">ROUND</span>
@@ -518,7 +526,9 @@ function RoundCard({
           <div className="flex items-center gap-2">
             <span className="h-1.5 w-1.5 shrink-0 rounded-full bg-amber-400" />
             <span className="min-w-0 truncate text-[12px]">
-              <span className={`font-bold ${isMe(atk) ? 'text-amber-300' : 'text-white'}`}>{atk}</span>
+              <span className={`font-bold ${isMe(atk) ? 'text-amber-300' : 'text-white'}`}>
+                {atk}
+              </span>
               <span className="text-zinc-500">의 {atkSeq.toLocaleString()}번째 공격</span>
             </span>
             <span className="ml-auto shrink-0 font-mono text-[11px] font-semibold text-red-300">
@@ -528,7 +538,9 @@ function RoundCard({
           <div className="flex items-center gap-2">
             <span className="h-1.5 w-1.5 shrink-0 rounded-full bg-sky-400" />
             <span className="min-w-0 truncate text-[12px]">
-              <span className={`font-bold ${isMe(tgt) ? 'text-amber-300' : 'text-zinc-200'}`}>{tgt}</span>
+              <span className={`font-bold ${isMe(tgt) ? 'text-amber-300' : 'text-zinc-200'}`}>
+                {tgt}
+              </span>
               <span className="text-zinc-500">의 {defSeq.toLocaleString()}번째 방어</span>
             </span>
             <span className="ml-auto shrink-0 text-[11px]">
@@ -555,7 +567,7 @@ function FinalCard({ champion, avatar }: { champion: string; avatar: string | nu
     <li className="relative flex min-h-[56px] items-center overflow-hidden border-b border-amber-900/40 pr-3 pl-3">
       {/* 우측 — 챔피언 아바타(배경 레이어). height/top으로 상반신·얼굴이 박스 세로 중앙(여백 보정). */}
       {avatar ? (
-        <div className="pointer-events-none absolute inset-y-0 right-0 w-36 overflow-hidden">
+        <div className="pointer-events-none absolute inset-y-0 right-0 w-36">
           {/* eslint-disable-next-line @next/next/no-img-element */}
           <img
             src={avatar}
@@ -573,7 +585,7 @@ function FinalCard({ champion, avatar }: { champion: string; avatar: string | nu
       {/* 콘텐츠 — 그라데이션 위 */}
       <div className="relative z-10 flex w-full items-center gap-2.5">
         <div className="flex w-8 shrink-0 flex-col items-center justify-center">
-          <span className="font-mono text-[11px] font-extrabold leading-none tracking-[0.1em] text-amber-300 drop-shadow-[0_1px_2px_rgba(0,0,0,0.85)]">
+          <span className="font-mono text-[11px] leading-none font-extrabold tracking-[0.1em] text-amber-300 drop-shadow-[0_1px_2px_rgba(0,0,0,0.85)]">
             FINAL
           </span>
         </div>
@@ -664,7 +676,7 @@ export function MeleeResult({ view }: { view: MeleeResultView }) {
     defSeqMap.set(e[1], defSeq);
     const atkMaxHp = atkCp > 0 ? atkCp * MELEE_HP_MULT : undefined;
     // 공격자 현재 HP — 직전 피격 잔여(없으면 풀). 이번 라운드 공격자는 피격 안 함.
-    const atkHp = atkMaxHp != null ? hpByIdx.get(e[0]) ?? atkMaxHp : undefined;
+    const atkHp = atkMaxHp != null ? (hpByIdx.get(e[0]) ?? atkMaxHp) : undefined;
     hpByIdx.set(e[1], e[3]); // 타겟 HP 갱신(다음 라운드 반영)
     return {
       key: round,
@@ -740,12 +752,12 @@ export function MeleeResult({ view }: { view: MeleeResultView }) {
       fight: {
         round,
         atkName: atk,
-        atkAvatar: role === 0 ? myAvatar ?? DEFAULT_AVATAR : oppAvatar,
+        atkAvatar: role === 0 ? (myAvatar ?? DEFAULT_AVATAR) : oppAvatar,
         atkHref: role === 0 ? meHref : oppHref,
         atkHp: atkHpNow,
         atkMaxHp: role === 0 ? myMax : undefined,
         tgtName: tgt,
-        tgtAvatar: role === 0 ? oppAvatar : myAvatar ?? DEFAULT_AVATAR,
+        tgtAvatar: role === 0 ? oppAvatar : (myAvatar ?? DEFAULT_AVATAR),
         tgtHref: role === 0 ? oppHref : meHref,
         dmg,
         hpAfter: hp,
@@ -823,14 +835,14 @@ export function MeleeResult({ view }: { view: MeleeResultView }) {
           <div className="absolute inset-x-0 bottom-2 z-20 flex items-center justify-between gap-1.5 px-3">
             <Link
               href="/melee/info"
-              className="shrink-0 rounded-full bg-black/55 px-2.5 py-1 text-[10px] font-bold text-amber-200 backdrop-blur-sm text-pixel-outline"
+              className="text-pixel-outline shrink-0 rounded-full bg-black/55 px-2.5 py-1 text-[10px] font-bold text-amber-200 backdrop-blur-sm"
             >
               보상테이블
             </Link>
             <MyRankChip me={me} />
             <Link
               href="/melee/info?tab=history"
-              className="shrink-0 rounded-full bg-black/55 px-2.5 py-1 text-[10px] font-bold text-amber-200 backdrop-blur-sm text-pixel-outline"
+              className="text-pixel-outline shrink-0 rounded-full bg-black/55 px-2.5 py-1 text-[10px] font-bold text-amber-200 backdrop-blur-sm"
             >
               역대우승자
             </Link>
@@ -841,48 +853,48 @@ export function MeleeResult({ view }: { view: MeleeResultView }) {
       {/* 필터·컨트롤 — 헤더/무대처럼 고정(shrink-0, 오버스크롤 영향 없음) */}
       <div className="shrink-0 border-b border-zinc-800 bg-zinc-950">
         <div className="flex gap-1 px-3 pt-2.5">
-            {(
-              [
-                ['log', '전체 전투'],
-                ['mine', '내 전투'],
-              ] as const
-            ).map(([t, label]) => (
-              <button
-                key={t}
-                type="button"
-                onClick={() => selectTab(t)}
-                className={`flex-1 rounded-lg py-1.5 text-xs font-bold transition ${
-                  tab === t ? 'bg-amber-600 text-white' : 'bg-zinc-900 text-zinc-400'
-                }`}
-              >
-                {label}
-              </button>
-            ))}
+          {(
+            [
+              ['log', '전체 전투'],
+              ['mine', '내 전투'],
+            ] as const
+          ).map(([t, label]) => (
+            <button
+              key={t}
+              type="button"
+              onClick={() => selectTab(t)}
+              className={`flex-1 rounded-lg py-1.5 text-xs font-bold transition ${
+                tab === t ? 'bg-amber-600 text-white' : 'bg-zinc-900 text-zinc-400'
+              }`}
+            >
+              {label}
+            </button>
+          ))}
+        </div>
+        <div className="flex items-center justify-between gap-2 px-3 py-2">
+          <span className="truncate text-[10px] text-zinc-500">
+            {tab === 'log' && truncated ? `마지막 ${finale.events.length.toLocaleString()}전` : ''}
+          </span>
+          <div className="flex shrink-0 items-center gap-1.5">
+            <button
+              type="button"
+              onClick={cycleSpeed}
+              className="rounded-lg bg-zinc-800 px-2 py-1 text-[10px] font-bold text-zinc-200 tabular-nums transition active:bg-zinc-700"
+            >
+              {speed}x
+            </button>
+            <button
+              type="button"
+              onClick={() => (autoplay ? stopPlay() : startPlayAll())}
+              disabled={rows.length === 0}
+              className={`rounded-lg px-2.5 py-1 text-[10px] font-bold text-white transition disabled:opacity-40 ${
+                autoplay ? 'bg-zinc-700' : 'bg-amber-600/90'
+              }`}
+            >
+              {autoplay ? `정지 ${autoplay.idx + 1}/${autoplay.list.length}` : '전체 재생'}
+            </button>
           </div>
-          <div className="flex items-center justify-between gap-2 px-3 py-2">
-            <span className="truncate text-[10px] text-zinc-500">
-              {tab === 'log' && truncated ? `마지막 ${finale.events.length.toLocaleString()}전` : ''}
-            </span>
-            <div className="flex shrink-0 items-center gap-1.5">
-              <button
-                type="button"
-                onClick={cycleSpeed}
-                className="rounded-lg bg-zinc-800 px-2 py-1 text-[10px] font-bold text-zinc-200 tabular-nums transition active:bg-zinc-700"
-              >
-                {speed}x
-              </button>
-              <button
-                type="button"
-                onClick={() => (autoplay ? stopPlay() : startPlayAll())}
-                disabled={rows.length === 0}
-                className={`rounded-lg px-2.5 py-1 text-[10px] font-bold text-white transition disabled:opacity-40 ${
-                  autoplay ? 'bg-zinc-700' : 'bg-amber-600/90'
-                }`}
-              >
-                {autoplay ? `정지 ${autoplay.idx + 1}/${autoplay.list.length}` : '전체 재생'}
-              </button>
-            </div>
-          </div>
+        </div>
       </div>
 
       {/* 로그 — 고정 헤더/컨트롤 아래 내부 스크롤(풀폭, 별도 박스 없음) */}
