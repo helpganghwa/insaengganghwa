@@ -11,7 +11,7 @@ import { createHash } from 'node:crypto';
 const PUB = join(process.cwd(), 'public');
 
 // 자주 변경되는 자산 폴더. 자산 추가 시 여기 path 추가.
-const SCAN_DIRS = ['sprites/ui', 'sprites/hub', 'sprites/boss', 'sprites/characters', 'sprites/shop', 'sprites/checkin', 'sprites/guild', 'sprites/anim', 'og'];
+const SCAN_DIRS = ['sprites/ui', 'sprites/hub', 'sprites/boss', 'sprites/characters', 'sprites/shop', 'sprites/checkin', 'sprites/guild', 'sprites/guild-menu', 'sprites/anim', 'og'];
 // atlas 단일 자산도 포함(원자적 갱신).
 const SCAN_FILES = ['sprites/atlas.webp'];
 
