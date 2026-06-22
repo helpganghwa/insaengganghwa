@@ -6,6 +6,7 @@ import {
   getGuild,
   getGuildMembersRich,
   getGuildRanking,
+  getGuildActivityLog,
   getMyJoinRequest,
 } from '@/lib/game/guild';
 import { GUILD_LEADER_HANDOVER_DAYS, GUILD_LEADER_HANDOVER_WARN_DAYS } from '@/lib/game/guild/balance';
@@ -53,9 +54,12 @@ export default async function GuildPage() {
 
   if (!membership) return browseView(userId, serverId);
 
-  const [guild, members] = await Promise.all([
+  const [guild, members, log] = await Promise.all([
     withTimeout(getGuild(membership.guildId), DB_GUARD_MS, 'guild.guild'),
     withTimeout(getGuildMembersRich(membership.guildId), DB_GUARD_MS, 'guild.members'),
+    withTimeout(getGuildActivityLog(membership.guildId, serverId, 100), DB_GUARD_MS, 'guild.log').catch(
+      () => [],
+    ),
   ]);
 
   if (!guild) {
@@ -85,6 +89,7 @@ export default async function GuildPage() {
           emblemColor: guild.emblemColor,
         }}
         members={members}
+        log={log}
         myRole={membership.role}
         usedToday={usedToday}
         leaderHandover={{

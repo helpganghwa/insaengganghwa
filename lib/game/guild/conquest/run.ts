@@ -3,7 +3,7 @@ import 'server-only';
 import { and, eq, inArray, isNull, sql } from 'drizzle-orm';
 
 import { db } from '@/lib/db/client';
-import { zones, conquestBattles, guildMembers } from '@/lib/db/schema/guild';
+import { zones, conquestBattles, guildMembers, guildAuditLog } from '@/lib/db/schema/guild';
 import { mailbox } from '@/lib/db/schema/mailbox';
 import { userEquipment } from '@/lib/db/schema/equipment';
 import { characters } from '@/lib/db/schema/server';
@@ -225,6 +225,31 @@ export async function revealConquest(serverId: number, battleDay: string): Promi
       else if (r.winner && g === r.prev) b.lost.push(r.zname); // 상실(빼앗김)
       else if (!r.winner && g === r.prev) b.defended.push(r.zname); // 무승부 = 소유 유지
       else if (attackers.has(g)) b.failed.push(r.zname); // 공격 실패
+    }
+  }
+
+  // 길드 활동 로그 — 점령/상실만(시스템 액션). best-effort(우편·공개와 분리, 실패해도 무시).
+  const auditRows = [...results.entries()].flatMap(([gid, r]) => [
+    ...r.captured.map((zone) => ({
+      serverId,
+      guildId: BigInt(gid),
+      actorUserId: null,
+      action: 'zone_capture' as const,
+      detail: { zone },
+    })),
+    ...r.lost.map((zone) => ({
+      serverId,
+      guildId: BigInt(gid),
+      actorUserId: null,
+      action: 'zone_lost' as const,
+      detail: { zone },
+    })),
+  ]);
+  if (auditRows.length > 0) {
+    try {
+      await db.insert(guildAuditLog).values(auditRows);
+    } catch {
+      // 로그 기록 실패는 정산/우편에 영향 없음.
     }
   }
 

@@ -48,6 +48,12 @@ export function leaveGuild(input: { userId: string; serverId: number }): Promise
       .delete(guildMembers)
       .where(and(eq(guildMembers.userId, input.userId), eq(guildMembers.serverId, input.serverId)));
     await tx.insert(guildLeaveLog).values({ userId: input.userId, serverId: input.serverId });
+    await logGuildAudit(tx, {
+      serverId: input.serverId,
+      guildId: m.guildId,
+      actorUserId: input.userId,
+      action: 'leave',
+    });
     return { disbanded: false };
   });
 }

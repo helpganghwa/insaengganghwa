@@ -6,6 +6,7 @@ import { db } from '@/lib/db/client';
 import { guilds, guildMembers, guildLeaveLog, guildJoinRequests } from '@/lib/db/schema/guild';
 
 import { GUILD_REJOIN_LOCK_HOURS, guildCapacity } from './balance';
+import { logGuildAudit } from './audit';
 import { GuildError } from './errors';
 
 /**
@@ -52,6 +53,12 @@ export function joinGuild(input: { userId: string; guildId: bigint }): Promise<v
     await tx
       .insert(guildMembers)
       .values({ userId: input.userId, serverId: g.serverId, guildId: input.guildId, role: 'member' });
+    await logGuildAudit(tx, {
+      serverId: g.serverId,
+      guildId: input.guildId,
+      actorUserId: input.userId,
+      action: 'join',
+    });
 
     // 가입 시 본인 대기 가입신청 정리 — 타 길드 신청 잔존(임원 목록 클러터) 방지. 만료 대신 청소.
     await tx

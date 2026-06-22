@@ -8,6 +8,7 @@ import { guilds, guildMembers } from '@/lib/db/schema/guild';
 import { kstDateString } from '@/lib/kst';
 
 import { GUILD_DONATION_TIERS, GUILD_DONATIONS_PER_DAY, guildXpToNext } from './balance';
+import { logGuildAudit } from './audit';
 import { GuildError } from './errors';
 
 /** 누적 XP에 레벨 임계를 차감하며 레벨업 — 수용은 min(50,10+level), 레벨 무제한. */
@@ -73,6 +74,17 @@ export function donateToGuild(input: {
       .update(guilds)
       .set({ level: next.level, xp: next.xp })
       .where(eq(guilds.id, m.guildId));
+
+    // 레벨 상승 시 활동 로그(이 기부로 한 번에 여러 레벨 오를 수 있어 도달 레벨만 기록).
+    if (next.level > g!.level) {
+      await logGuildAudit(tx, {
+        serverId: input.serverId,
+        guildId: m.guildId,
+        actorUserId: input.userId,
+        action: 'levelup',
+        detail: { level: next.level },
+      });
+    }
 
     return { tierIndex: usedToday, xp, cost, level: next.level };
   });

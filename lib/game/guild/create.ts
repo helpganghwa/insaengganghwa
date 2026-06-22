@@ -9,6 +9,7 @@ import { guilds, guildMembers, guildJoinRequests } from '@/lib/db/schema/guild';
 import { containsProfanity } from '@/lib/game/moderation/profanity';
 
 import { GUILD_CREATE_COST_DIAMOND, GUILD_NAME_MAX_LEN, GUILD_NAME_MIN_LEN } from './balance';
+import { logGuildAudit } from './audit';
 import { GuildError } from './errors';
 
 /** 허용 문자: 한글 완성형·영문·숫자만. 공백·특수문자·이모지·자모 차단(닉네임과 동일 정책). */
@@ -69,6 +70,14 @@ export function createGuild(input: {
     await tx
       .insert(guildMembers)
       .values({ userId: input.userId, serverId: input.serverId, guildId: g!.id, role: 'leader' });
+    // 활동 로그 첫 줄 — 결성(가입의 특수 케이스, detail.founder로 문구 구분).
+    await logGuildAudit(tx, {
+      serverId: input.serverId,
+      guildId: g!.id,
+      actorUserId: input.userId,
+      action: 'join',
+      detail: { founder: true },
+    });
 
     // 생성 시 본인 대기 가입신청 정리(타 길드 신청 잔존 방지).
     await tx

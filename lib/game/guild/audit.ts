@@ -5,7 +5,10 @@ import { guildAuditLog } from '@/lib/db/schema/guild';
 
 type Tx = Parameters<Parameters<typeof db.transaction>[0]>[0];
 
-/** 감사 대상 액션 — 임원/시스템 민감 행동(GUILD §4). */
+/**
+ * 길드 활동 로그 액션 — 임원/시스템 민감 행동(GUILD §4) + 길드 홈 활동 피드용 핵심 이벤트.
+ * 길드 홈의 "길드 로그" 섹션(getGuildActivityLog)이 이 테이블을 그대로 노출한다.
+ */
 export type GuildAuditAction =
   | 'kick'
   | 'transfer_leadership'
@@ -13,11 +16,19 @@ export type GuildAuditAction =
   | 'unset_vice'
   | 'disband'
   | 'set_join_policy'
-  | 'auto_handover';
+  | 'auto_handover'
+  // 활동 피드 — 가입/탈퇴/레벨업/세금수금/세금분배/점령·상실.
+  | 'join'
+  | 'leave'
+  | 'levelup'
+  | 'tax_collect'
+  | 'tax_distribute'
+  | 'zone_capture'
+  | 'zone_lost';
 
 /**
- * 길드 감사 로그 1건 기록 — 호출자 트랜잭션(tx) 안에서 액션과 원자적으로 남긴다(기록 전용, 조회 UI 없음).
- * actorUserId=null = 시스템(자동 위임). detail = 부가 맥락(예: { policy }, { from }).
+ * 길드 활동 로그 1건 기록 — 호출자 트랜잭션(tx) 안에서 액션과 원자적으로 남긴다.
+ * actorUserId=null = 시스템(자동 위임·점령 정산). detail = 부가 맥락(예: { policy }, { level }, { amount }).
  */
 export async function logGuildAudit(
   tx: Tx,

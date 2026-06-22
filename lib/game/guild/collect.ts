@@ -7,6 +7,7 @@ import { walletAdd } from '@/lib/game/wallet';
 import { guilds, guildMembers, zones } from '@/lib/db/schema/guild';
 
 import { GUILD_EXECUTOR_TAX_CUT, TAX_COLLECT_COOLDOWN_MIN } from './balance';
+import { logGuildAudit } from './audit';
 import { GuildError } from './errors';
 
 /**
@@ -60,6 +61,15 @@ export function collectZoneTax(input: {
       .update(zones)
       .set({ taxDiamond: 0n, lastTaxCollectedAt: sql`now()` })
       .where(eq(zones.id, input.zoneId));
+
+    // 활동 로그 — 길드 풀로 들어간 몫(90%+) 기준 기록.
+    await logGuildAudit(tx, {
+      serverId: z.serverId,
+      guildId: z.owner,
+      actorUserId: input.userId,
+      action: 'tax_collect',
+      detail: { amount: guildGain.toString(), zoneId: input.zoneId },
+    });
 
     return { executorGain, guildGain };
   });

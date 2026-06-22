@@ -7,6 +7,7 @@ import { walletAdd } from '@/lib/game/wallet';
 import { guilds, guildMembers, guildTaxDistributions } from '@/lib/db/schema/guild';
 
 import type { GuildTaxDistribution } from './balance';
+import { logGuildAudit } from './audit';
 import { GuildError } from './errors';
 
 /**
@@ -55,6 +56,14 @@ export function distributeGuildTax(input: {
         total: pool,
         targetUserId: input.targetUserId,
       });
+      await logGuildAudit(tx, {
+        serverId: input.serverId,
+        guildId: gid,
+        actorUserId: input.leaderUserId,
+        action: 'tax_distribute',
+        targetUserId: input.targetUserId,
+        detail: { amount: pool.toString(), mode: 'target' },
+      });
       return { total: pool, perMember: null };
     }
 
@@ -80,6 +89,13 @@ export function distributeGuildTax(input: {
       byUserId: input.leaderUserId,
       mode: 'equal',
       total: distributed,
+    });
+    await logGuildAudit(tx, {
+      serverId: input.serverId,
+      guildId: gid,
+      actorUserId: input.leaderUserId,
+      action: 'tax_distribute',
+      detail: { amount: distributed.toString(), mode: 'equal' },
     });
     return { total: distributed, perMember: per };
   });
@@ -141,6 +157,13 @@ export function distributeGuildTaxManual(input: {
       byUserId: input.leaderUserId,
       mode: 'manual',
       total,
+    });
+    await logGuildAudit(tx, {
+      serverId: input.serverId,
+      guildId: gid,
+      actorUserId: input.leaderUserId,
+      action: 'tax_distribute',
+      detail: { amount: total.toString(), mode: 'manual' },
     });
     return { total };
   });

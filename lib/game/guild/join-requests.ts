@@ -122,6 +122,12 @@ export async function approveJoinRequest(input: {
     await tx
       .insert(guildMembers)
       .values({ userId: input.requestUserId, serverId: input.serverId, guildId, role: 'member' });
+    await logGuildAudit(tx, {
+      serverId: input.serverId,
+      guildId,
+      actorUserId: input.requestUserId,
+      action: 'join',
+    });
     await tx
       .delete(guildJoinRequests)
       .where(

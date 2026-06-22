@@ -15,10 +15,12 @@ import {
 import { ModalShell } from '@/components/ModalShell';
 
 import { assetUrl } from '@/lib/asset-versions';
+import type { GuildLogEntry } from '@/lib/game/guild/activity-log';
 
 import { donateAction, leaveGuildAction } from './actions';
 import { guildErrMsg } from './errors-msg';
 import { type RichMember } from './GuildMemberList';
+import { GuildLogFeed } from './GuildLogFeed';
 
 // 길드 홈 메뉴 그리드(홈 패턴) — 각 타일 클릭 시 상세로 이동. 길드 관리는 임원만 노출.
 // 배경 스프라이트: /sprites/guild-menu/{key}.png (없으면 tint 단색으로 graceful).
@@ -45,12 +47,14 @@ type GuildView = {
 export function GuildHome({
   guild,
   members,
+  log,
   myRole,
   usedToday,
   leaderHandover,
 }: {
   guild: GuildView;
   members: RichMember[];
+  log: GuildLogEntry[];
   myRole: GuildRole;
   usedToday: number;
   /** 길드장 위임 위험 — inactiveDays(서버 계산)>=warnDays면 배너. null=접속 기록 없음. */
@@ -309,6 +313,12 @@ export function GuildHome({
           </Link>
         ))}
       </div>
+
+      {/* 길드 로그 — 가입/탈퇴/레벨업/세금수금·분배/점령·상실 + 임원행동. 최신순 스크롤. */}
+      <section className="rounded-xl border border-zinc-200 bg-white p-3 dark:border-zinc-800 dark:bg-zinc-950">
+        <h3 className="mb-1 px-1 text-sm font-bold">길드 로그</h3>
+        <GuildLogFeed entries={log} />
+      </section>
 
       {/* 탈퇴 — 보더 없이 빨강 텍스트, 컨펌은 팝업 */}
       <button
