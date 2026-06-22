@@ -13,7 +13,7 @@
 | 파일 | 화면 | Suno 스타일 프롬프트 |
 |---|---|---|
 | `hub.m4a` | 홈·내정보·인벤·우편·출석·패스·친구(기본) | `orchestral video game main theme, memorable hummable melody on strings and woodwinds, gentle pizzicato and light percussion groove, warm adventurous and cozy, harp and celesta flourishes, hopeful JRPG town vibe, catchy motif, ~100bpm, instrumental, loopable` |
-| `enhance.m4a` | 강화소 | `tense orchestral game theme, driving staccato string ostinato, ticking clockwork percussion, a rising suspenseful motif, high-stakes forge gamble, anticipation building to a thrill, dark fantasy, ~95bpm, instrumental, loopable` |
+| `enhance.m4a` | 강화소 | `exciting orchestral game theme, heart-pounding upbeat tension, bright bouncy pizzicato strings and snappy percussion, a thrilling build-up toward a big win, playful suspense and hopeful anticipation, energetic and fun high-stakes gamble, sparkling celesta accents, major key, ~112bpm, instrumental, loopable` |
 | `gacha.m4a` | 보급소 | `playful magical game theme, sparkling celesta and glockenspiel melody, harp arpeggios, bouncy pizzicato and light percussion, wondrous gift-opening excitement, catchy uplifting motif, ~108bpm, instrumental, loopable` |
 | `raid.m4a` | 레이드 | `epic battle game theme, heroic brass melody over driving taiko and timpani, soaring string countermelody, intense and triumphant, boss battle energy, memorable combat motif, ~140bpm, instrumental, loopable` |
 | `melee.m4a` | 대난투 | `aggressive hybrid combat theme, relentless percussive groove, distorted brass and electronic pulses, a punchy competitive riff, PvP arena intensity, driving and adrenaline-fueled, ~150bpm, instrumental, loopable` |
