@@ -4,21 +4,23 @@ import { useEffect, useState } from 'react';
 
 import type { GuildLogEntry } from '@/lib/game/guild/activity-log';
 
-const ICON: Record<string, string> = {
-  join: '🎉',
-  leave: '👋',
-  levelup: '⬆️',
-  tax_collect: '💰',
-  tax_distribute: '🎁',
-  zone_capture: '🚩',
-  zone_lost: '💥',
-  kick: '🚫',
-  transfer_leadership: '👑',
-  set_vice: '⭐',
-  unset_vice: '☆',
-  set_join_policy: '🔧',
-  auto_handover: '👑',
+// 이모지 없이 카테고리 컬러로 구분 — 좌측 점(dot) + 핵심 이벤트는 텍스트 컬러 하이라이트.
+const STYLE: Record<string, { dot: string; text?: string }> = {
+  join: { dot: 'bg-emerald-500' },
+  leave: { dot: 'bg-zinc-400 dark:bg-zinc-500' },
+  levelup: { dot: 'bg-amber-500', text: 'font-semibold text-amber-600 dark:text-amber-400' },
+  tax_collect: { dot: 'bg-yellow-500' },
+  tax_distribute: { dot: 'bg-sky-500' },
+  zone_capture: { dot: 'bg-emerald-500', text: 'font-semibold text-emerald-600 dark:text-emerald-400' },
+  zone_lost: { dot: 'bg-red-500', text: 'font-semibold text-red-600 dark:text-red-400' },
+  kick: { dot: 'bg-red-500', text: 'text-red-600 dark:text-red-400' },
+  transfer_leadership: { dot: 'bg-violet-500', text: 'text-violet-600 dark:text-violet-400' },
+  auto_handover: { dot: 'bg-violet-500', text: 'text-violet-600 dark:text-violet-400' },
+  set_vice: { dot: 'bg-sky-500' },
+  unset_vice: { dot: 'bg-zinc-400 dark:bg-zinc-500' },
+  set_join_policy: { dot: 'bg-zinc-400 dark:bg-zinc-500' },
 };
+const DEFAULT_STYLE = { dot: 'bg-zinc-400 dark:bg-zinc-500' } as const;
 
 function amountOf(detail: Record<string, unknown> | null): string {
   const a = detail?.amount;
@@ -89,17 +91,20 @@ export function GuildLogFeed({ entries }: { entries: GuildLogEntry[] }) {
   }
   return (
     <ul className="max-h-72 space-y-0.5 overflow-y-auto overscroll-contain pr-1">
-      {entries.map((e) => (
-        <li key={e.id} className="flex items-center gap-2 rounded-lg px-1.5 py-1.5 text-[12px]">
-          <span aria-hidden className="shrink-0 text-sm leading-none">
-            {ICON[e.action] ?? '•'}
-          </span>
-          <span className="min-w-0 flex-1 truncate text-zinc-700 dark:text-zinc-300">{message(e)}</span>
-          <span className="shrink-0 text-[10px] tabular-nums text-zinc-400">
-            {nowMs ? relTime(e.createdAtIso, nowMs) : ''}
-          </span>
-        </li>
-      ))}
+      {entries.map((e) => {
+        const st = STYLE[e.action] ?? DEFAULT_STYLE;
+        return (
+          <li key={e.id} className="flex items-center gap-2 rounded-lg px-1.5 py-1.5 text-[12px]">
+            <span aria-hidden className={`h-1.5 w-1.5 shrink-0 rounded-full ${st.dot}`} />
+            <span className={`min-w-0 flex-1 truncate ${st.text ?? 'text-zinc-700 dark:text-zinc-300'}`}>
+              {message(e)}
+            </span>
+            <span className="shrink-0 text-[10px] tabular-nums text-zinc-400">
+              {nowMs ? relTime(e.createdAtIso, nowMs) : ''}
+            </span>
+          </li>
+        );
+      })}
     </ul>
   );
 }
