@@ -38,7 +38,7 @@ export function AppHeaderShell({
         <Link
           href="/me/profiles"
           aria-label="아바타 선택"
-          className="relative h-8 w-8 shrink-0 translate-y-[6px] overflow-hidden"
+          className="relative h-8 w-8 shrink-0 overflow-hidden"
         >
           {profileSouth ? (
             // eslint-disable-next-line @next/next/no-img-element
@@ -47,7 +47,8 @@ export function AppHeaderShell({
               alt=""
               aria-hidden
               draggable={false}
-              className="absolute inset-0 h-full w-full"
+              // 박스는 그대로 두고 이미지만 6px 아래로 — 얼굴이 내려와 상단 짤림 완화.
+              className="absolute inset-x-0 top-[6px] h-full w-full"
               style={faceCropStyle(profileFaceBox)}
             />
           ) : (

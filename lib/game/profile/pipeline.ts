@@ -388,16 +388,11 @@ async function rejectJob(
   escrow: bigint,
   verdict: ReviewVerdict,
 ): Promise<void> {
-  // 카테고리 코드(영문) → 한글 라벨. 우편 본문이 영어로 보이지 않게.
-  const REASON_KO: Record<string, string> = {
-    nsfw: '선정성',
-    violence: '폭력성',
-    hate: '혐오 표현',
-    quality: '형태·품질 오류',
-  };
-  const reasonsKr =
-    verdict.reasons.length > 0 ? verdict.reasons.map((r) => REASON_KO[r] ?? r).join(', ') : '미상';
+  // 상세 사유(notes)는 운영자 분쟁처리(admin)·감사용으로 rejectReason/aiVerdict에만 보존하고,
+  // 유저 우편은 운영자 리젝과 동일한 공통 안내문구로 표시(상세 결함 미노출).
   const notes = verdict.notes || '검토 기준에 부합하지 않습니다.';
+  const userBody =
+    '생성하신 아바타가 검토 기준에 부합하지 않아 적용되지 않았어요.\n사용하신 다이아는 전액 환불해 드렸으니, 환불 다이아로 언제든 다시 생성하실 수 있습니다.\n\n불편을 드려 죄송합니다.';
   await db.transaction(async (tx) => {
     // 환불 — escrow가 차감된 서버(잡 행 기록)로 반환.
     await walletAdd(tx, userId, serverId, escrow);
@@ -417,7 +412,7 @@ async function rejectJob(
       serverId,
       type: 'profile_rejected_ai',
       title: '프로필 검토 미통과',
-      body: `사유(${reasonsKr}): ${notes}\n\n다이아는 전액 환불되었습니다.`,
+      body: userBody,
       senderLabel: '시스템',
       payload: {},
     });
