@@ -13,15 +13,15 @@
 | 파일 | 화면 | Suno 스타일 프롬프트 |
 |---|---|---|
 | `hub.m4a` | 홈·내정보·인벤·우편·출석·패스·친구(기본) | `orchestral video game main theme, memorable hummable melody on strings and woodwinds, gentle pizzicato and light percussion groove, warm adventurous and cozy, harp and celesta flourishes, hopeful JRPG town vibe, catchy motif, ~100bpm, instrumental, loopable` |
-| `enhance.m4a` | 강화소 | `exciting orchestral game theme, heart-pounding upbeat tension, bright bouncy pizzicato strings and snappy percussion, a thrilling build-up toward a big win, playful suspense and hopeful anticipation, energetic and fun high-stakes gamble, sparkling celesta accents, major key, ~112bpm, instrumental, loopable` |
-| `gacha.m4a` | 보급소 | `playful magical game theme, sparkling celesta and glockenspiel melody, harp arpeggios, bouncy pizzicato and light percussion, wondrous gift-opening excitement, catchy uplifting motif, ~108bpm, instrumental, loopable` |
-| `raid.m4a` | 레이드 | `epic battle game theme, heroic brass melody over driving taiko and timpani, soaring string countermelody, intense and triumphant, boss battle energy, memorable combat motif, ~140bpm, instrumental, loopable` |
-| `melee.m4a` | 대난투 | `aggressive hybrid combat theme, relentless percussive groove, distorted brass and electronic pulses, a punchy competitive riff, PvP arena intensity, driving and adrenaline-fueled, ~150bpm, instrumental, loopable` |
-| `guild.m4a` | 길드 홈 | `noble orchestral anthem, proud memorable theme on horns and strings, choir swells, sense of fellowship and grandeur, warm yet stirring, fantasy guild hall, uplifting motif, ~92bpm, instrumental, loopable` |
-| `conquest.m4a` | 정복(deploy) | `tense strategic war theme, militaristic marching snare and low brass, a determined driving motif, territorial conquest pressure, building momentum, cinematic war-room, ~100bpm, instrumental, loopable` |
-| `worldmap.m4a` | 지도(map) | `adventurous exploration theme, soaring woodwind and string melody, gentle rolling rhythm, vast world map wonder and discovery, hopeful journeying motif, orchestral momentum, ~96bpm, instrumental, loopable` |
-| `shop.m4a` | 상점 | `charming merchant shop theme, catchy playful melody on plucked strings and marimba, bouncy swing rhythm, bells and accordion flavor, inviting cozy bazaar, whimsical motif, ~112bpm, instrumental, loopable` |
-| `leaderboard.m4a` | 랭킹 | `triumphant competitive theme, bold brass fanfare motif over driving strings and percussion, prestige and glory, rising heroic energy, ranking showdown, memorable victorious hook, ~104bpm, instrumental, loopable` |
+| `enhance.m4a` | 강화소 | `easygoing orchestral game theme, light heart-pounding anticipation, gentle bouncy pizzicato and soft snappy percussion, a playful hopeful melody building toward a win, warm and fun not aggressive, soft gradual intro that eases in, moderate background dynamics not too loud, ~100bpm, instrumental, loopable` |
+| `gacha.m4a` | 보급소 | `gentle magical game theme, soft sparkling celesta and glockenspiel melody, light harp arpeggios and pizzicato, wondrous and uplifting but calm, soft gradual intro, moderate background dynamics, cozy and not loud, ~96bpm, instrumental, loopable` |
+| `raid.m4a` | 레이드 | `adventurous orchestral battle theme, steady heroic melody on strings and warm brass, light driving percussion not pounding, energetic yet controlled, eases in with a soft intro, moderate background dynamics not too loud, ~110bpm, instrumental, loopable` |
+| `melee.m4a` | 대난투 | `spirited competitive theme, lively rhythmic groove, brass and strings melody with light percussion, energetic and fun but not harsh, smooth gradual intro, moderate background dynamics, ~115bpm, instrumental, loopable` |
+| `guild.m4a` | 길드 홈 | `warm noble orchestral theme, gentle proud melody on horns and strings, soft choir pads, sense of fellowship, calm and stately, soft gradual intro, gentle background dynamics, ~84bpm, instrumental, loopable` |
+| `conquest.m4a` | 정복(deploy) | `restrained strategic theme, steady low strings and soft marching snare, a determined but understated melody, quiet tension and momentum, eases in softly, moderate background dynamics not too loud, ~88bpm, instrumental, loopable` |
+| `worldmap.m4a` | 지도(map) | `gentle exploration theme, soft soaring woodwind and string melody, calm rolling rhythm, vast hopeful wonder, soft gradual intro, light background dynamics, ~80bpm, instrumental, loopable` |
+| `shop.m4a` | 상점 | `charming light shop theme, gentle catchy melody on plucked strings and marimba, soft bouncy rhythm, warm bells, cozy and inviting, soft gradual intro, moderate background dynamics, ~98bpm, instrumental, loopable` |
+| `leaderboard.m4a` | 랭킹 | `dignified triumphant theme, warm brass melody over gentle strings, a sense of prestige, uplifting but not bombastic, soft gradual intro, moderate background dynamics, ~92bpm, instrumental, loopable` |
 
 ## 게임음악답게 — 프롬프트 원칙 (노잼 방지)
 
@@ -30,6 +30,12 @@
 - 가벼운 **리듬·그루브**(pizzicato, light percussion)와 **캐릭터 악기**(harp·celesta·woodwind·marimba)를 넣는다.
 - 장르 태그 추가가 도움: `soundtrack, video game music, JRPG`.
 - 2~3개 생성해 **멜로디가 또렷한 것**을 고르고, 테마가 살아있는 구간을 루프로 사용.
+
+**그러나 과하지 않게 — 어디까지나 배경음악 (hub가 정답 기준):**
+- `soft gradual intro that eases in`으로 **서서히 시작**(갑자기 훅 들어와 깜짝 놀라는 것 방지).
+- `moderate background dynamics, not too loud`로 **음량 절제** — 게임플레이 밑에 깔리도록.
+- bpm을 너무 올리지 말 것(전투곡도 ~110~115 상한). `aggressive·pounding·bombastic·harsh`는 피함.
+- 코드(`lib/audio/bgm.ts`)에 **곡별 게인 맵**으로 음량 편차를 보정 — 생성물이 유난히 크면 그 트랙 게인을 낮춰 균형.
 
 ## 변환 (mp3/wav → m4a)
 

@@ -8,8 +8,10 @@
 // 않는다. 토글: localStorage 'ig:bgm' = '1'(켜짐), 그 외 꺼짐. 기본 꺼짐.
 
 const STORAGE_KEY = 'ig:bgm';
-const BGM_VOLUME = 0.35; // 효과음보다 낮게 — 배경에 깔리도록.
-const FADE_MS = 800;
+const BGM_VOLUME = 0.35; // 기준 음량(hub=게인 1.0 기준). 효과음보다 낮게 — 배경에 깔리도록.
+// 화면 전환 시 새 트랙은 길게 서서히 들어오고(깜짝 시작 방지), 이전 트랙은 약간 빠르게 빠짐.
+const FADE_IN_MS = 1600;
+const FADE_OUT_MS = 700;
 const BASE = '/audio/bgm';
 
 export type BgmTrack =
@@ -23,6 +25,22 @@ export type BgmTrack =
   | 'worldmap'
   | 'shop'
   | 'leaderboard';
+
+// 곡별 상대 게인 — Suno 생성물의 마스터링 음량 편차로 일부 트랙이 튀는 것을 보정.
+// hub(잘 뽑힘)를 1.0 기준으로, 시끄러운 전투/빠른 곡은 낮춤. (생성물 교체 후 미세조정 가능.)
+const TRACK_GAIN: Record<BgmTrack, number> = {
+  hub: 1.0,
+  enhance: 0.85,
+  gacha: 0.8,
+  raid: 0.65,
+  melee: 0.6,
+  guild: 0.9,
+  conquest: 0.75,
+  worldmap: 0.95,
+  shop: 0.8,
+  leaderboard: 0.75,
+};
+const targetVolume = (t: BgmTrack): number => BGM_VOLUME * (TRACK_GAIN[t] ?? 1);
 
 let unlocked = false; // 첫 사용자 제스처 후 true — 이후 라우트 전환은 자유 재생.
 let current: BgmTrack | null = null; // 현재 의도된 트랙(라우트 매핑 결과).
@@ -44,14 +62,14 @@ function makeAudio(track: BgmTrack): HTMLAudioElement {
 
 // rAF 기반 볼륨 램프 — 크로스페이드. 같은 엘리먼트에 새 페이드가 걸리면 토큰으로 이전 것 무효화.
 const fadeTokens = new WeakMap<HTMLAudioElement, number>();
-function fadeTo(el: HTMLAudioElement, target: number, done?: () => void): void {
+function fadeTo(el: HTMLAudioElement, target: number, durationMs: number, done?: () => void): void {
   const token = (fadeTokens.get(el) ?? 0) + 1;
   fadeTokens.set(el, token);
   const start = el.volume;
   const t0 = performance.now();
   const step = (now: number) => {
     if (fadeTokens.get(el) !== token) return; // 더 최신 페이드가 시작됨 — 중단.
-    const p = Math.min(1, (now - t0) / FADE_MS);
+    const p = Math.min(1, (now - t0) / durationMs);
     el.volume = Math.max(0, Math.min(1, start + (target - start) * p));
     if (p < 1) requestAnimationFrame(step);
     else done?.();
@@ -65,16 +83,17 @@ function startCurrent(): void {
   if (active && active.dataset.track === current && !active.paused) return;
 
   const next = makeAudio(current);
+  const target = targetVolume(current);
   const prev = active;
   active = next;
   next
     .play()
-    .then(() => fadeTo(next, BGM_VOLUME))
+    .then(() => fadeTo(next, target, FADE_IN_MS))
     .catch(() => {
       // 자동재생 차단 또는 파일 부재(404) — 조용히 무시(BGM은 선택적 연출).
     });
   if (prev) {
-    fadeTo(prev, 0, () => {
+    fadeTo(prev, 0, FADE_OUT_MS, () => {
       prev.pause();
       prev.src = '';
     });
@@ -106,7 +125,7 @@ export function setBgmEnabled(on: boolean): void {
   } else if (active) {
     const a = active;
     active = null;
-    fadeTo(a, 0, () => {
+    fadeTo(a, 0, FADE_OUT_MS, () => {
       a.pause();
       a.src = '';
     });
