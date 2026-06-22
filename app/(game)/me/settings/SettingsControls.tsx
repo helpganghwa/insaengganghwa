@@ -2,20 +2,25 @@
 
 import { useEffect, useState } from 'react';
 
+import { setBgmEnabled } from '@/lib/audio/bgm';
+
 /**
  * 로컬 환경설정 토글 — 브라우저 localStorage에만 저장(기기별).
- * 실제 사운드 재생/푸시 전송 연동은 후속(사운드 엔진·웹푸시 미구현).
+ * 효과음은 재생 시점마다 localStorage를 읽어 라이브 제어가 불필요하지만, BGM은 연속
+ * 재생이라 토글 즉시 시작/정지가 필요 → liveControl='bgm'이면 BGM 매니저를 직접 호출.
  */
 export function LocalToggle({
   storageKey,
   label,
   hint,
   defaultOn = true,
+  liveControl,
 }: {
   storageKey: string;
   label: string;
   hint?: string;
   defaultOn?: boolean;
+  liveControl?: 'bgm';
 }) {
   const [on, setOn] = useState(defaultOn);
   // 최초 페인트엔 transition을 끄고(rAF 후 활성) localStorage 값 적용 시 모션이 안 보이게.
@@ -31,7 +36,12 @@ export function LocalToggle({
   const toggle = () => {
     const next = !on;
     setOn(next);
-    localStorage.setItem(storageKey, next ? '1' : '0');
+    if (liveControl === 'bgm') {
+      // setBgmEnabled가 localStorage 저장까지 담당(이 클릭이 곧 unlock 제스처).
+      setBgmEnabled(next);
+    } else {
+      localStorage.setItem(storageKey, next ? '1' : '0');
+    }
   };
 
   return (

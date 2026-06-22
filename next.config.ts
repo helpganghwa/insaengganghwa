@@ -34,6 +34,11 @@ const nextConfig: NextConfig = {
         headers: [{ key: 'Cache-Control', value: LONG_CACHE }],
       },
       {
+        // BGM 오디오 — 파일명 불변, 장기 캐시(첫 진입 후 재다운로드 방지).
+        source: '/audio/:path*',
+        headers: [{ key: 'Cache-Control', value: LONG_CACHE }],
+      },
+      {
         source: '/og-bg/:path*',
         headers: [{ key: 'Cache-Control', value: LONG_CACHE }],
       },
