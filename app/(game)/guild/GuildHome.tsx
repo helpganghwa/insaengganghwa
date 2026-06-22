@@ -298,14 +298,6 @@ export function GuildHome({
               className="absolute inset-0 h-full w-full object-cover"
               style={{ imageRendering: 'pixelated' }}
             />
-            {m.key === 'members' ? (
-              <span
-                aria-label={`길드원 ${guild.memberCount}명`}
-                className="absolute top-1.5 right-1.5 z-10 inline-flex min-w-[20px] items-center justify-center rounded-full bg-zinc-900/70 px-1.5 py-0.5 text-[10px] font-bold text-white shadow ring-2 ring-zinc-900/40 tabular-nums"
-              >
-                {guild.memberCount}
-              </span>
-            ) : null}
             <div className="absolute inset-x-0 bottom-0 bg-gradient-to-t from-black/85 via-black/55 to-transparent px-3 pt-6 pb-2">
               <div className="text-sm leading-tight font-bold text-white drop-shadow-sm">{m.label}</div>
               <div className="mt-0.5 truncate text-[10px] leading-tight text-white/85">{m.desc}</div>

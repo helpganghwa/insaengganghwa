@@ -24,29 +24,30 @@ const MENUS: { name: string; prompt: string }[] = [
   {
     name: 'members',
     prompt:
-      'a medieval guild roster wall, rows of small heraldic crest plaques and ' +
-      'engraved name tags hanging on dark stone, hanging banners, warm candlelight ' +
-      'glow filling the scene, deep navy-blue tone, ' + COMMON,
+      'a grand medieval guild hall interior, a long banquet table down the center, ' +
+      'rows of heraldic banners and shields hanging on tall stone walls, warm ' +
+      'chandeliers and torchlight, a welcoming gathering hall, deep navy-blue evening tone, ' +
+      COMMON,
   },
   {
     name: 'deploy',
     prompt:
-      'a war strategy table seen from above-front, a parchment territorial map with ' +
-      'carved flag markers and conquest pieces placed on regions, candles and a compass, ' +
-      'warm brown war-room tone, ' + COMMON,
+      'a hilltop fortress and castle ramparts overlooking a vast conquered valley, ' +
+      'stone battlements flying guild banners, distant territories, roads and rival keeps, ' +
+      'an epic panoramic vista, warm brown-gold dusk tone, ' + COMMON,
   },
   {
     name: 'settings',
     prompt:
-      "a guild master's administrative desk, an open ledger book, wax seal stamp with a " +
-      'crest, quill and inkpot, brass keys and a guild emblem, dim crimson chamber tone, ' +
-      COMMON,
+      "a guild master's throne room, a grand ornate carved throne on a raised dais, tall " +
+      'pillars and hanging banners, regal candlelight, deep crimson royal tone, ' + COMMON,
   },
   {
     name: 'ranking',
     prompt:
-      'a hall of fame ranking monument, a golden tiered podium engraved with guild crests, ' +
-      'laurel wreaths and trophies, prestige and glory, deep emerald-green tone, ' + COMMON,
+      'a grand hall of fame, a towering stone monument and engraved columns with golden ' +
+      'trophies and laurel wreaths, shafts of divine light from high windows, a prestigious ' +
+      'cathedral-like interior, deep emerald-gold tone, ' + COMMON,
   },
 ];
 
