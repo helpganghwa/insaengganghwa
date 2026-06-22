@@ -370,7 +370,7 @@ async function acceptJob(
       serverId,
       type: 'profile_accepted',
       title: '프로필 생성 완료',
-      body: '새 프로필이 목록에 추가되었습니다. 상세 화면에서 8방향을 둘러보세요.',
+      body: '새 프로필이 목록에 추가되었습니다. 아바타 목록에서 확인해 보세요.',
       senderLabel: '시스템',
       payload: {},
     });
@@ -453,7 +453,7 @@ export async function adminGrantAvatarForJob(jobId: bigint): Promise<{ ok: boole
       serverId: job.serverId,
       type: 'admin',
       title: '아바타 지급 안내',
-      body: '안녕하세요, 운영팀입니다.\n\n생성하신 아바타를 운영팀이 직접 확인한 결과 문제가 없어 정상 지급해 드렸습니다.\n다이아 추가 차감 없이 프로필 목록에 추가되었으니, 상세 화면에서 8방향을 둘러보세요.\n\n불편을 드려 죄송합니다. 감사합니다.',
+      body: '안녕하세요, 운영팀입니다.\n\n생성하신 아바타를 운영팀이 직접 확인한 결과 문제가 없어 정상 지급해 드렸습니다.\n다이아 추가 차감 없이 프로필 목록에 추가되었으니, 아바타 목록에서 확인해 보세요.\n\n불편을 드려 죄송합니다. 감사합니다.',
       senderLabel: '운영자',
       payload: {},
     });
