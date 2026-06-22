@@ -13,37 +13,17 @@ import { SwapPickerModal } from './SwapPickerModal';
 import { TranscendSprite } from '@/components/TranscendSprite';
 import { RarityFrame, rarityBorderStyle, hasRarityBorder } from '@/components/RarityFrame';
 import { transcendStyle } from '@/lib/game/equipment/transcend';
-import { assetUrl } from '@/lib/asset-versions';
 import { advanceTutorial } from '@/components/tutorial/events';
 
 const SLOT_LABEL: Record<Slot, string> = { weapon: '무기', armor: '방어구', accessory: '장신구' };
 
-// 공통 버튼 — Pixellab 배경 이미지 + 그라데이션 overlay + 라벨 중앙.
-const BTN =
-  'relative flex h-12 flex-col items-center justify-center isolate overflow-hidden rounded-lg border border-zinc-800 px-1 text-white disabled:opacity-40 transition-transform active:scale-[0.97]';
-
-function BtnBg({ src, label }: { src: string; label: string }) {
-  return (
-    <>
-      {/* eslint-disable-next-line @next/next/no-img-element */}
-      <img
-        src={src}
-        alt=""
-        aria-hidden
-        draggable={false}
-        className="absolute inset-0 h-full w-full object-cover"
-        style={{ imageRendering: 'pixelated' }}
-      />
-      <div className="absolute inset-0 bg-gradient-to-t from-black/90 via-black/40 to-black/15" />
-      <span
-        className="relative text-[13px] font-bold tracking-wide"
-        style={{ textShadow: '1px 1px 2px rgba(0,0,0,0.9)' }}
-      >
-        {label}
-      </span>
-    </>
-  );
-}
+// 액션 버튼 — 배경 스프라이트 제거, CSS 그라데이션 + 라벨로 구성.
+const BTN_BASE =
+  'flex h-12 items-center justify-center rounded-lg border px-1 text-[13px] font-bold tracking-wide text-white shadow-sm transition-transform active:scale-[0.97] disabled:opacity-40 disabled:active:scale-100';
+const BTN_ENHANCE = 'border-amber-700/40 bg-gradient-to-b from-amber-400 to-amber-600';
+const BTN_EQUIP = 'border-emerald-700/40 bg-gradient-to-b from-emerald-400 to-emerald-600';
+const BTN_UNEQUIP = 'border-zinc-800/60 bg-gradient-to-b from-zinc-500 to-zinc-700';
+const BTN_LABEL_SHADOW = { textShadow: '0 1px 2px rgba(0,0,0,0.45)' } as const;
 
 export function EquipmentDetailSheet({
   item,
@@ -207,9 +187,9 @@ export function EquipmentDetailSheet({
                 router.push('/enhance');
               });
             }}
-            className={BTN}
+            className={`${BTN_BASE} ${BTN_ENHANCE}`}
           >
-            <BtnBg src={assetUrl('/sprites/ui/btn-enhance.png')} label="강화" />
+            <span style={BTN_LABEL_SHADOW}>강화</span>
           </button>
           {/* 장착/해제 */}
           <button
@@ -227,9 +207,9 @@ export function EquipmentDetailSheet({
                 onClose();
               }
             }}
-            className={BTN}
+            className={`${BTN_BASE} ${item.equipped ? BTN_UNEQUIP : BTN_EQUIP}`}
           >
-            <BtnBg src={assetUrl('/sprites/ui/btn-equip.png')} label={item.equipped ? '해제' : '장착'} />
+            <span style={BTN_LABEL_SHADOW}>{item.equipped ? '해제' : '장착'}</span>
           </button>
         </div>
 

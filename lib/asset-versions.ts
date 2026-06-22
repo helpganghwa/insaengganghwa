@@ -7,7 +7,7 @@
 
 import { ASSET_VERSIONS } from './asset-versions.generated';
 
-/** `assetUrl('/sprites/ui/btn-enhance.png')` → `/sprites/ui/btn-enhance.png?v=ab3f12c8`. */
+/** `assetUrl('/sprites/hub/enhance.png')` → `/sprites/hub/enhance.png?v=ab3f12c8`. */
 export function assetUrl(path: string): string {
   const v = ASSET_VERSIONS[path];
   return v ? `${path}?v=${v}` : path;

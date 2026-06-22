@@ -10,6 +10,7 @@ import { db } from '@/lib/db/client';
 import { type Slot } from '@/lib/db/schema/equipment';
 import { userSupplyBoxes } from '@/lib/db/schema/supply';
 import { openSupplyBoxes, SupplyError } from '@/lib/game/supply';
+import { SUPPLY_OPEN_MAX } from '@/lib/game/balance';
 import { getActiveCatalog, completeCatalog } from '@/lib/game/catalog';
 import { liberatedItemRanks } from '@/lib/game/codex/ranking';
 import { loreTeaser } from '@/lib/game/equipment/lore';
@@ -47,8 +48,8 @@ export async function openAction(slot: Slot, count: number): Promise<OpenActionR
   if (!userId) return { status: 'error', code: 'UNAUTHENTICATED', message: MSG.UNAUTHENTICATED! };
   if (await rateLimited(userId, 'gacha'))
     return { status: 'error', code: 'RATE_LIMITED', message: MSG.RATE_LIMITED! };
-  // count 1~10 범위 클램프 — UI에서도 동일 보장(보유량 < 10이면 보유량까지).
-  const n = Math.max(1, Math.min(10, Math.floor(count)));
+  // count 1~SUPPLY_OPEN_MAX 범위 클램프(서버 권위) — '모두 열기'도 이 청크 상한까지.
+  const n = Math.max(1, Math.min(SUPPLY_OPEN_MAX, Math.floor(count)));
   try {
     const opened = await openSupplyBoxes({ userId, serverId: await getActiveServerId(), slot, count: n });
     // 개봉 아이템은 항상 active 풀에서 나오므로 캐시된 활성 카탈로그로 메타 조회(DB 왕복 제거).

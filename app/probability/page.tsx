@@ -54,25 +54,31 @@ export default function ProbabilityPage() {
   return (
     <main className="mx-auto min-h-dvh w-full max-w-[390px] bg-white px-4 py-5 text-zinc-900 dark:bg-black dark:text-zinc-50">
       <header className="mb-4">
-        <p className="mt-1 text-[11px] leading-relaxed text-zinc-500">
-          게임산업진흥에 관한 법률 §33에 따른 공시입니다. 본 페이지의 모든 수치는 게임 내 판정
-          로직과 1:1로 일치하며, 변경 시 24시간 전 사전 공지합니다.
+        <h1 className="text-lg font-extrabold">확률 공시</h1>
+        <p className="mt-1.5 text-[12px] leading-relaxed text-zinc-600 dark:text-zinc-300">
+          강화·초월·보급·레이드에 쓰이는 확률과 수치를 빠짐없이 공개합니다. 여기 적힌 값은 실제
+          게임 판정과 <b>항상 똑같이</b> 적용되며, 내용이 바뀔 때는 <b>최소 24시간 전에 미리</b>{' '}
+          알려드립니다.
+        </p>
+        <p className="mt-1 text-[10px] leading-relaxed text-zinc-400">
+          게임산업진흥에 관한 법률 제33조에 따른 확률형 항목 공시입니다.
         </p>
       </header>
 
       <Sec n="1" title="강화">
         <P>
-          강화는 매 시도마다 네 결과로 분기됩니다 — <b>성공</b>(+1 단계) / <b>메가</b>(+2 단계) /{' '}
-          <b>유지</b>(단계 변동 없음) / <b>하락</b>(−1 단계). 실제 성공률 = 공시 성공률 × (경과 시간
-          ÷ 필요 시간)으로 시간에 비례해 오르며, 최대 대기 시 공시 성공률에 도달합니다. 공시
-          성공률 안에서 <b>{pct(MEGA_OF_SUCCESS_BP)}는 메가</b>(+2)로 분리됩니다(예: 공시 70%
-          중 메가 3.50% / 일반 성공 66.50%). <b>하락 확률은 시간에 무관하게 단계별로 고정</b>
-          입니다(일찍 시도해도 하락 확률 동일, 잃은 성공 확률은 유지로 이동).
+          강화는 한 번 시도할 때마다 네 가지 결과 중 하나가 나옵니다 — <b>성공</b>(한 단계 ↑) ·{' '}
+          <b>메가</b>(두 단계 ↑) · <b>유지</b>(그대로) · <b>하락</b>(한 단계 ↓). 오래 기다릴수록
+          성공 확률이 점점 올라가, 필요 시간을 꽉 채우면 아래 표의 공시 성공률에 도달합니다(실제
+          성공률 = 공시 성공률 × 기다린 시간 ÷ 필요 시간). 성공분 중 일부(
+          {pct(MEGA_OF_SUCCESS_BP)})는 한 번에 두 단계 오르는 <b>메가</b>로 나옵니다 — 예를 들어
+          공시 70%면 메가 3.50% · 일반 성공 66.50%. <b>하락 확률은 기다린 시간과 상관없이 단계마다
+          고정</b>이라, 일찍 시도해도 하락 확률은 같고 줄어든 성공분만큼 ‘유지’로 갑니다.
         </P>
         <P>
-          강화는 {CYCLE_LEN}단위 <b>사이클</b>로 진행되며, 각 사이클마다 시도 시간이{' '}
-          {CYCLE_TIME_BASE}배씩 늘어납니다(1배·2배·4배…). 확률 곡선은 사이클마다 동일하게
-          반복됩니다(예: +100 = +0, +152 = +52의 확률).
+          강화는 {CYCLE_LEN}단계를 한 <b>주기</b>로 반복합니다. 주기가 올라갈 때마다 한 번 시도에
+          드는 시간이 {CYCLE_TIME_BASE}배로 늘어나고(1배 → 2배 → 4배…), 확률 곡선은 주기마다 똑같이
+          반복됩니다(예: +100의 확률 = +0의 확률, +152 = +52).
         </P>
         <Table head={['단계', '성공(+1)', '메가(+2)', '하락(고정)', '유지(최대)']}>
           {ENH_SAMPLES.map((lv) => {
@@ -93,18 +99,19 @@ export default function ProbabilityPage() {
           })}
         </Table>
         <P>
-          사이클 내 +0~+{SAFE_MAX_LEVEL}(예: +0~+{SAFE_MAX_LEVEL}, +100~+{100 + SAFE_MAX_LEVEL}):
-          하락 0%. +{SAFE_MAX_LEVEL + 1}부터: 하락 확률 발생, 1단계 하락(사이클 내 +
-          {SAFE_MAX_LEVEL} 하한 — 사이클 경계 가로지름 없음).
+          한 주기의 앞부분 +0~+{SAFE_MAX_LEVEL}(예: +0~+{SAFE_MAX_LEVEL}, +100~+
+          {100 + SAFE_MAX_LEVEL})은 <b>하락이 없습니다(0%)</b>. +{SAFE_MAX_LEVEL + 1}부터 하락이
+          생기며, 하락하더라도 그 주기의 +{SAFE_MAX_LEVEL}까지만 내려갑니다(주기 경계를 넘어 떨어지지
+          않음).
         </P>
       </Sec>
 
       <Sec n="2" title="초월">
         <P>
-          초월은 보급 상자로 <b>같은 카탈로그 아이템 중복</b>을 모으면 <b>자동 진행</b>됩니다.
-          T단계 달성에 중복 <b>T개</b>가 필요하고(선형), <b>상한 없이 무한 진행</b>됩니다. 전투력
-          보너스는 T{MAX_TRANSCEND}에서 +100%이고, T{MAX_TRANSCEND + 1}부터 레벨당 +10%p씩
-          증가합니다.
+          초월은 <b>같은 아이템을 보급 상자로 또 얻으면 자동으로</b> 올라갑니다. T단계까지 가려면 그
+          아이템 중복이 <b>T개</b> 필요하고(T1=1개, T2=2개…), <b>상한 없이 끝없이</b> 올릴 수
+          있습니다. 전투력 보너스는 T{MAX_TRANSCEND}에서 +100%이고, 그 위로는 한 단계마다 +10%p씩
+          더 붙습니다.
         </P>
         <Table head={['초월', '필요 중복', '누적 중복', '전투력 보너스']}>
           {TRANSCEND_SAMPLES.map((t) => (
@@ -120,9 +127,14 @@ export default function ProbabilityPage() {
 
       <Sec n="3" title="전투력">
         <P>
-          기반 전투력 P = round(10 × (1+강화레벨)^1.5). 개별 장비 전투력 = P × (1 + 초월 보너스). 총
-          전투력 = 보유한 모든 카탈로그 아이템(중복 제외)의 개별 전투력 합 — 착용 여부 무관.
+          강화 레벨이 오를수록 전투력이 점점 빠르게 늘어납니다. 아이템 하나의 전투력은 기반 전투력에
+          초월 보너스를 곱한 값이고, <b>총 전투력은 가진 모든 아이템(중복 제외) 전투력의 합</b>
+          입니다 — <b>착용하지 않아도</b> 보유만 하면 합산됩니다.
         </P>
+        <p className="text-[10px] leading-relaxed text-zinc-400">
+          정확한 식: 기반 전투력 = round(10 × (1+강화레벨)^1.5), 아이템 전투력 = 기반 × (1 + 초월
+          보너스).
+        </p>
         <Table head={['강화', '기반 전투력', 'T10 적용']}>
           {CP_SAMPLES.map((lv) => (
             <tr key={lv} className="border-t border-zinc-100 dark:border-zinc-900">
@@ -136,12 +148,12 @@ export default function ProbabilityPage() {
 
       <Sec n="4" title="보급 (보급 상자)">
         <P>
-          슬롯 보급 상자 내 각 아이템 당첨 확률 = 1 ÷ (해당 슬롯 활성 아이템 종 수)로 균등합니다.{' '}
-          활성 종류 수는 게임 내에 표기됩니다.
+          보급 상자를 열면 그 슬롯의 활성 아이템 중 <b>하나가 똑같은 확률로</b> 나옵니다(각 아이템
+          당첨 확률 = 1 ÷ 슬롯 활성 아이템 수). 슬롯별 활성 아이템 수는 게임 안에 표시됩니다.
         </P>
         <P>
-          미보유 카탈로그면 획득(도감 해금), 보유 중이면 그 카탈로그 초월 진행도로 누적됩니다.
-          (보급 열기 자체에는 확률형 보상 없음 — 균등 당첨 외 추가 추첨 없음.)
+          아직 없는 아이템이면 새로 <b>획득(도감 해금)</b>되고, 이미 있는 아이템이면 그 아이템의{' '}
+          <b>초월 진행도</b>로 쌓입니다. 상자 열기에는 이 균등 추첨 외에 숨은 추가 확률이 없습니다.
         </P>
       </Sec>
 
@@ -153,9 +165,9 @@ export default function ProbabilityPage() {
           {Math.round(RAID_WINDOW_MS / 3_600_000)}시간 / 참여자당 기본 {RAID_BASE_ATTACKS}회 공격.
         </P>
         <P>
-          페이즈 1 HP는 [{RAID_PHASE1_HP_MIN.toLocaleString('ko-KR')},{' '}
-          {RAID_PHASE1_HP_MAX.toLocaleString('ko-KR')}] 균등 추첨. 이후 페이즈 HP = 페이즈 1 ×{' '}
-          {RAID_PHASE_HP_MULT}^(n−1).
+          페이즈 1의 보스 체력은 {RAID_PHASE1_HP_MIN.toLocaleString('ko-KR')} ~{' '}
+          {RAID_PHASE1_HP_MAX.toLocaleString('ko-KR')} 사이에서 고르게 정해지고, 페이즈가 올라갈
+          때마다 체력이 {RAID_PHASE_HP_MULT}배씩 커집니다.
         </P>
         <Table head={['페이즈', 'HP (최소)', 'HP (최대)']}>
           {PHASE_SAMPLES.map((n) => (
@@ -167,10 +179,10 @@ export default function ProbabilityPage() {
           ))}
         </Table>
         <P>
-          데미지 = round(총전투력 × {RAID_DAMAGE_K} × 분산계수 × 크리배수). 분산계수는 [
-          {1 - RAID_DAMAGE_VARIANCE}, {1 + RAID_DAMAGE_VARIANCE}] 균등(±
-          {Math.round(RAID_DAMAGE_VARIANCE * 100)}%). 크리티컬 {pct(RAID_CRIT_RATE_BP)} 확률로 ×
-          {RAID_CRIT_MULT}. 미스 없음 · 데미지 캡 없음.
+          한 번 공격의 데미지 = 총 전투력 × {RAID_DAMAGE_K} × 분산 × 크리. <b>분산</b>은 매 공격마다 ±
+          {Math.round(RAID_DAMAGE_VARIANCE * 100)}% 범위에서 고르게 정해지고,{' '}
+          <b>{pct(RAID_CRIT_RATE_BP)}</b> 확률로 <b>크리티컬({RAID_CRIT_MULT}배)</b>이 터집니다.
+          빗나감(미스)이나 데미지 상한은 없습니다.
         </P>
         <Table head={['n번째 추가 공격', '비용(다이아)']}>
           {EXTRA_ATTACK_SAMPLES.map((n) => (
@@ -181,15 +193,17 @@ export default function ProbabilityPage() {
           ))}
         </Table>
         <P>
-          추가 공격 비용 = {raidExtraAttackCost(1)} × ⌈n/10⌉ 다이아 (10번 단위 계단). 보상: 페이즈 돌파마다 참여 전원에게
-          보급 상자 {RAID_PHASE_DROP_BOXES}개 — 슬롯 무작위(무기/방어구/장신구 각 1/3 균등). 다이아 드롭 없음.
+          추가 공격 비용은 10번마다 한 칸씩 오릅니다({raidExtraAttackCost(1)} × ⌈횟수÷10⌉ 다이아).
+          보상은 페이즈를 하나 깰 때마다 참여자 <b>전원</b>에게 보급 상자 {RAID_PHASE_DROP_BOXES}개
+          — 무기·방어구·장신구 중 무작위(각 1/3). 다이아는 드롭되지 않습니다.
         </P>
       </Sec>
 
       <Sec n="6" title="경제·기타">
         <P>
-          강화 시간 단축: 다이아 1개당 {Math.round(GEM_TO_MS / 60_000)}분 단축(등록 시점 환산률
-          영구 고정 — 진행 중 작업에 소급 적용 없음).
+          강화 시간 단축: 다이아 1개로 강화 대기 시간을 {Math.round(GEM_TO_MS / 60_000)}분 줄입니다.
+          단축 비율은 강화를 <b>시작한 시점의 값으로 고정</b>되어, 이미 진행 중인 강화에는 나중에
+          비율이 바뀌어도 소급되지 않습니다.
         </P>
         <P>
           친구 초대: 공유 링크로 신규 가입 전환 시 공유자에게 💎{INVITE_DIAMOND_PER_REFERRAL} +
@@ -198,8 +212,8 @@ export default function ProbabilityPage() {
       </Sec>
 
       <p className="mt-6 text-[10px] leading-relaxed text-zinc-400 dark:text-zinc-500">
-        본 공시의 모든 수치는 <code>lib/game/balance.ts</code>(단일 진실 원천)에서 직접 산출되어
-        게임 내 판정 로직과 1:1 일치합니다. 사양 변경 시 24시간 이전 사전 공지.
+        이 페이지의 모든 확률과 수치는 게임 내부의 실제 판정과 항상 같은 값으로 표시됩니다. 사양이
+        바뀌는 경우 최소 24시간 전에 미리 공지합니다.
       </p>
     </main>
   );
