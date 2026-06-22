@@ -79,9 +79,10 @@ export function CreateGuildForm() {
         </div>
         <input
           value={name}
-          onChange={(e) => setName(e.target.value)}
+          // 한글·영문·숫자만 — 공백·특수문자·이모지·자모는 입력 즉시 제거(서버도 동일 검증).
+          onChange={(e) => setName(e.target.value.replace(/[^A-Za-z0-9가-힣]/g, ''))}
           maxLength={GUILD_NAME_MAX_LEN}
-          placeholder="길드 이름을 입력하세요"
+          placeholder="한글·영문·숫자 (공백·특수문자 불가)"
           className="mt-2 w-full rounded-lg border border-zinc-300 bg-white px-3 py-2 text-base dark:border-zinc-700 dark:bg-zinc-900"
         />
       </section>

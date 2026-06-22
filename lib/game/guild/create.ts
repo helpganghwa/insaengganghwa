@@ -6,12 +6,17 @@ import { db } from '@/lib/db/client';
 import { walletTrySpend } from '@/lib/game/wallet';
 import { guilds, guildMembers, guildJoinRequests } from '@/lib/db/schema/guild';
 
+import { containsProfanity } from '@/lib/game/moderation/profanity';
+
 import { GUILD_CREATE_COST_DIAMOND, GUILD_NAME_MAX_LEN, GUILD_NAME_MIN_LEN } from './balance';
 import { GuildError } from './errors';
 
-/** 공백 정규화(앞뒤 제거 + 연속 공백 1칸). */
+/** 허용 문자: 한글 완성형·영문·숫자만. 공백·특수문자·이모지·자모 차단(닉네임과 동일 정책). */
+const GUILD_NAME_CHAR_REGEX = /^[A-Za-z0-9가-힣]+$/;
+
+/** 앞뒤 공백 제거(내부 공백은 문자셋 검증에서 차단). */
 export function normalizeGuildName(raw: string): string {
-  return raw.trim().replace(/\s+/g, ' ');
+  return raw.trim();
 }
 
 /**
@@ -28,6 +33,12 @@ export function createGuild(input: {
   const name = normalizeGuildName(input.name);
   if (name.length < GUILD_NAME_MIN_LEN || name.length > GUILD_NAME_MAX_LEN) {
     return Promise.reject(new GuildError('NAME_INVALID'));
+  }
+  if (!GUILD_NAME_CHAR_REGEX.test(name)) {
+    return Promise.reject(new GuildError('NAME_CHARSET'));
+  }
+  if (containsProfanity(name)) {
+    return Promise.reject(new GuildError('PROFANITY'));
   }
   return db.transaction(async (tx) => {
     // 1유저 1길드 — guild_members.user_id PK가 최종 방어(동시성 시 두 번째 insert 실패).

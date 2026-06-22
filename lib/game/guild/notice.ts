@@ -5,6 +5,8 @@ import { and, eq } from 'drizzle-orm';
 import { db } from '@/lib/db/client';
 import { guilds, guildMembers } from '@/lib/db/schema/guild';
 
+import { containsProfanity } from '@/lib/game/moderation/profanity';
+
 import { GUILD_INTRO_MAX_LEN, GUILD_NOTICE_MAX_LEN } from './balance';
 import { GuildError } from './errors';
 
@@ -14,6 +16,7 @@ import { GuildError } from './errors';
  */
 export async function setGuildNotice(input: { userId: string; serverId: number; notice: string }): Promise<void> {
   const text = input.notice.trim().slice(0, GUILD_NOTICE_MAX_LEN);
+  if (containsProfanity(text)) throw new GuildError('PROFANITY');
   await db.transaction(async (tx) => {
     const [m] = await tx
       .select({ guildId: guildMembers.guildId, role: guildMembers.role })
@@ -35,6 +38,7 @@ export async function setGuildNotice(input: { userId: string; serverId: number; 
  */
 export async function setGuildIntro(input: { userId: string; serverId: number; intro: string }): Promise<void> {
   const text = input.intro.trim().slice(0, GUILD_INTRO_MAX_LEN);
+  if (containsProfanity(text)) throw new GuildError('PROFANITY');
   await db.transaction(async (tx) => {
     const [m] = await tx
       .select({ guildId: guildMembers.guildId, role: guildMembers.role })

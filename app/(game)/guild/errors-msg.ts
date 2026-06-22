@@ -2,8 +2,10 @@
 const MAP: Record<string, string> = {
   ALREADY_IN_GUILD: '이미 길드에 소속되어 있습니다.',
   NOT_IN_GUILD: '길드에 소속되어 있지 않습니다.',
-  NAME_INVALID: '길드 이름은 2~12자여야 합니다.',
+  NAME_INVALID: '길드 이름은 2~8자여야 합니다.',
+  NAME_CHARSET: '길드 이름은 한글·영문·숫자만 사용할 수 있어요 (공백·특수문자·이모지 불가).',
   NAME_TAKEN: '이미 사용 중인 길드 이름입니다.',
+  PROFANITY: '사용할 수 없는 단어가 포함되어 있습니다.',
   INSUFFICIENT_DIAMOND: '다이아가 부족합니다.',
   GUILD_NOT_FOUND: '길드를 찾을 수 없습니다.',
   GUILD_FULL: '길드 정원이 가득 찼습니다.',

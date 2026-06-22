@@ -10,6 +10,7 @@ import { db } from '@/lib/db/client';
 import { profiles } from '@/lib/db/schema/profiles';
 import { NICKNAME_CHANGE_COST_DIAMOND } from '@/lib/game/balance';
 import { validateNickname } from '@/lib/game/nickname';
+import { containsProfanity } from '@/lib/game/moderation/profanity';
 import { rateLimited } from '@/lib/ratelimit';
 
 export interface NicknameChangeOk {
@@ -42,6 +43,9 @@ export async function changeNicknameAction(
   const v = validateNickname(next);
   if (!v.ok) {
     return { status: 'error', code: 'INVALID', message: v.reason };
+  }
+  if (containsProfanity(next)) {
+    return { status: 'error', code: 'INVALID', message: '사용할 수 없는 단어가 포함되어 있어요.' };
   }
 
   try {

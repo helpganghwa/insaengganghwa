@@ -3,7 +3,9 @@ export type GuildErrorCode =
   | 'ALREADY_IN_GUILD' // 이미 길드 소속(1유저 1길드)
   | 'NOT_IN_GUILD'
   | 'NAME_INVALID' // 길이/형식 위반
+  | 'NAME_CHARSET' // 문자셋 위반(한글·영문·숫자만, 공백·특수문자·이모지 불가)
   | 'NAME_TAKEN' // 이름 중복
+  | 'PROFANITY' // 비속어 포함(이름·공지·소개 공용)
   | 'INSUFFICIENT_DIAMOND'
   | 'GUILD_NOT_FOUND'
   | 'GUILD_FULL' // 수용 인원 초과
