@@ -336,9 +336,28 @@ export async function generateAndStoreChronicle(
   const parsed = JSON.parse(m[0]) as { today?: string; headline?: string };
   // 마커 닫는 중괄호 겹침({g|신화}}) 정규화 — 마커 뒤 여분 } 제거(저장 깔끔).
   const fixBraces = (s: string) => s.replace(/(\{[guz]\|[^}]+)\}{2,}/g, '$1}');
-  const today = fixBraces((parsed.today ?? '').trim());
+  // 결정론 마커 교정 — 코드가 아는 정답(길드/구역 이름)으로 LLM 오마킹 보정.
+  // {g|이름}인데 이름이 구역명에만 있으면 {z|}로, {z|이름}인데 길드명에만 있으면 {g|}로 강제.
+  // 동명(길드명=구역명)이면 모델 출력 유지(어느 쪽인지 코드도 불가). cf. 2026-06-20 '기사 연무장' 버그.
+  const guildNames = new Set<string>();
+  const zoneNames = new Set<string>();
+  for (const c of summary.captures) { guildNames.add(c.winner); zoneNames.add(c.zone); }
+  for (const a of summary.attacks) { guildNames.add(a.guild); zoneNames.add(a.zone); }
+  for (const d of summary.defenses) { guildNames.add(d.owner); zoneNames.add(d.zone); }
+  for (const f of summary.feats) guildNames.add(f.guild);
+  for (const s of summary.standings) guildNames.add(s.guild);
+  const correctMarkers = (s: string) =>
+    s.replace(/\{([gz])\|([^}]+)\}/g, (mm, t: string, name: string) => {
+      const n = name.trim();
+      const isG = guildNames.has(n);
+      const isZ = zoneNames.has(n);
+      if (t === 'g' && isZ && !isG) return `{z|${name}}`;
+      if (t === 'z' && isG && !isZ) return `{g|${name}}`;
+      return mm;
+    });
+  const today = correctMarkers(fixBraces((parsed.today ?? '').trim()));
   // 헤드라인('전체' 연표)은 정세가 크게 바뀐 날만 — 아니면 빈 문자열(연표 미노출).
-  const headline = bigChange ? fixBraces((parsed.headline ?? '').trim()) : '';
+  const headline = bigChange ? correctMarkers(fixBraces((parsed.headline ?? '').trim())) : '';
   if (!today) throw new Error('CHRONICLE_EMPTY');
   if (bigChange && !headline) throw new Error('CHRONICLE_EMPTY');
 
