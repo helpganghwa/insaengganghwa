@@ -3,11 +3,11 @@
  * Storage 미러링 + Claude vision 자동 검토 + 분기(accepted/rejected_ai/failed).
  *
  * cron(`/api/cron/profile-poll`)에서 호출:
- *  - enqueueOnePixellab(): status='queued' 1건 → Pixellab v2 POST → 'downloading'
- *  - pollAndProcessDownloading(): status='downloading' N건 → 폴링 → 완료시 process
+ *  - 큐 등록(status='queued' → 'downloading')은 v3(pipeline-v3.ts enqueueOneV3)가 담당.
+ *  - pollAndProcessDownloading(): status='downloading' N건 → 폴링 → 완료시 process(이 파일).
  *
  * 외부 의존:
- *  - Pixellab v2 API (PIXELLAB_API_KEY)
+ *  - Pixellab v2 API (PIXELLAB_API_KEY) — GET /characters/{id} 폴링
  *  - Supabase Storage bucket `profiles` (public, 사용자 수동 생성)
  *  - Claude Haiku 4.5 vision (ANTHROPIC_API_KEY) — ai-review.ts
  */
@@ -42,18 +42,6 @@ async function safePush(
     console.error('[profile-poll] push failed:', (e as Error).message);
   }
 }
-
-/**
- * 사용자 본인이 pixellab 웹에서 만든·만족 검증한 source character 2장 (2026-05-27 결정).
- * `create_character_state`로 이 두 source에 edit_description을 적용해 새 캐릭터 파생 —
- * 풀바디·아니메 결·체형·사이즈(248×248px) 모두 source 보존. 다양성은 edit_description의
- * 머리·표정·포즈·장비 모티프 조합으로.
- */
-const SOURCE_BY_GENDER: Record<'male' | 'female', string> = {
-  // 2026-05-29 — source 교체.
-  male: '49f210db-1899-4df0-8b2e-bb09537ed7c6',
-  female: 'fa5ff0de-1ab2-4dcf-b1a9-80a08f86f67b',
-};
 
 /**
  * Storage write·read는 service_role 클라이언트 사용. cron/script context엔
@@ -95,95 +83,12 @@ function isPng(buf: Buffer): boolean {
   );
 }
 
-interface PixellabCreateResponse {
-  character_id: string;
-  background_job_id: string;
-  status: 'processing' | 'completed' | 'failed';
-}
-
 interface PixellabCharacterDetail {
   id: string;
   rotation_urls: Record<string, string | null>;
 }
 
-// ─── 1. 큐 등록 — status='queued' 1건 → Pixellab POST → 'downloading' ───
-
-export async function enqueueOnePixellab(): Promise<
-  | { kind: 'noop' }
-  | { kind: 'enqueued'; jobId: bigint; characterId: string }
-  | { kind: 'failed'; jobId: bigint; reason: string }
-> {
-  const key = process.env.PIXELLAB_API_KEY;
-  if (!key) throw new Error('PIXELLAB_API_KEY missing');
-
-  // 1건 선점 (FIFO). state edit_description은 descriptionPrompt에 저장.
-  const [job] = await db
-    .select({
-      id: profileGenerationJobs.id,
-      userId: profileGenerationJobs.userId,
-      description: profileGenerationJobs.descriptionPrompt,
-      options: profileGenerationJobs.options,
-    })
-    .from(profileGenerationJobs)
-    .where(eq(profileGenerationJobs.status, 'queued'))
-    .orderBy(profileGenerationJobs.createdAt)
-    .limit(1);
-
-  if (!job) return { kind: 'noop' };
-
-  // 2026-05-27 결정: create_character_state로 사용자 검증 source 활용.
-  // source = 사용자 본인이 web에서 만든 만족 캐릭터 (gender별 1장). edit_description으로
-  // 머리·표정·포즈·장비 모티프 변형 — source 톤·풀바디·체형 그대로 유지.
-  const optsTyped = job.options as { gender: 'male' | 'female' };
-  const sourceCharacterId = SOURCE_BY_GENDER[optsTyped.gender];
-
-  // Pixellab spec: edit_description ≤ 1000자. compose가 보장하지만, 과거 저장분·예외 경로
-  // 대비 요청 직전 최종 하드컷(단어경계) — 절대 1000 초과로 요청하지 않음.
-  let editDescription = job.description;
-  if (editDescription.length > 1000) {
-    const cut = editDescription.slice(0, 1000);
-    editDescription = cut.slice(0, Math.max(1, cut.lastIndexOf(' '))).trimEnd();
-    console.warn(
-      `[profile-enqueue] job ${job.id} edit_description ${job.description.length}>1000 → ${editDescription.length}자로 절단 후 요청`,
-    );
-  }
-
-  const body = {
-    character_id: sourceCharacterId,
-    edit_description: editDescription,
-    no_background: true,
-    // use_color_palette_from_reference: true 실험 결과 — 소스 캐릭터 팔레트/디자인을 통째로
-    // 덮어써 의도한 장비 색을 무시(2026-06-19). 회전 색 드리프트도 못 고침 → false 유지.
-    use_color_palette_from_reference: false,
-  };
-
-  const res = await fetch(`${PIXELLAB_BASE}/create-character-state`, {
-    method: 'POST',
-    headers: { 'content-type': 'application/json', authorization: `Bearer ${key}` },
-    body: JSON.stringify(body),
-  });
-
-  if (!res.ok) {
-    const text = (await res.text()).slice(0, 300);
-    await markFailedAndRefund(job.id, job.userId, `Pixellab state POST HTTP ${res.status}: ${text}`);
-    return { kind: 'failed', jobId: job.id, reason: text };
-  }
-
-  const json = (await res.json()) as PixellabCreateResponse;
-
-  await db
-    .update(profileGenerationJobs)
-    .set({
-      status: 'downloading',
-      pixellabCharacterId: json.character_id,
-      pixellabBackgroundJobId: json.background_job_id,
-    })
-    .where(eq(profileGenerationJobs.id, job.id));
-
-  return { kind: 'enqueued', jobId: job.id, characterId: json.character_id };
-}
-
-// ─── 2. 폴링 + 처리 — status='downloading' N건 ───
+// ─── 폴링 + 처리 — status='downloading' N건 ───
 
 export async function pollAndProcessDownloading(limit = 5): Promise<{
   polled: number;

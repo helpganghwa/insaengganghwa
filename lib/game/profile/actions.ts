@@ -26,12 +26,7 @@ import { PROFILE_GENERATION_DIAMOND } from '@/lib/game/balance';
 import { getSessionUserId } from '@/lib/auth/session';
 import { getActiveServerId } from '@/lib/game/servers';
 
-import {
-  composeEditDescription,
-  pickRandomHairLength,
-  pickRandomPose,
-  pickRandomRace,
-} from './compose';
+import { pickRandomHairLength, pickRandomPose, pickRandomRace } from './compose';
 import { CreateProfileJobError } from './errors';
 
 // 유저 입력은 gender만 (2026-05-28). hair color/style·pose 폐기, expression·race는 서버 random.
@@ -95,9 +90,9 @@ export async function createProfileJob(
   }
   const equipmentSnapshot = { weaponKey, armorKey, accessoryKey };
 
-  // 2. description 합성 — 의상/헤어 절은 Haiku 호출(수초). tx 밖에서 처리해
-  //    풀러(:6543, max:1) 커넥션을 외부 API 동안 점유하지 않도록 함.
-  const description = await composeEditDescription(opts, equipmentSnapshot);
+  // description은 생성 시점(cron enqueueOneV3)에 compose-v3가 비전+로어로 만들어 채운다.
+  // 여기서는 빈 값으로 enqueue만 — v3가 descriptionPrompt를 덮어씀.
+  const description = '';
 
   return db.transaction(async (tx) => {
     // 3. 다이아 escrow — 조건부 차감(서버별 지갑). 부족 시 미차감.

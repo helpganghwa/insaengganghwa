@@ -31,16 +31,16 @@ const POSES = [
 const rng = (n: number): number => crypto.getRandomValues(new Uint32Array(1))[0]! % n;
 const pick = <T>(a: readonly T[]): T => a[rng(a.length)]!;
 
-/** 가중치 추출 — 인간 비중↑ 등. weight 합 기준 비례. */
-type WeightedRace = { desc: string; weight: number };
-function pickRace(races: readonly WeightedRace[]): string {
-  const total = races.reduce((s, r) => s + r.weight, 0);
+/** 가중치 추출(종족·표정 공용) — weight 합 기준 비례 random. */
+type Weighted = { desc: string; weight: number };
+function pickWeighted(items: readonly Weighted[]): string {
+  const total = items.reduce((s, it) => s + it.weight, 0);
   let r = rng(total);
-  for (const race of races) {
-    if (r < race.weight) return race.desc;
-    r -= race.weight;
+  for (const it of items) {
+    if (r < it.weight) return it.desc;
+    r -= it.weight;
   }
-  return races[races.length - 1]!.desc;
+  return items[items.length - 1]!.desc;
 }
 
 // 종족 가중치(2026-06-22): 인간 50% 주력 + 판타지 5종 각 10%. 머리 부속(귀·뿔·날개)은 항상 작게.
@@ -56,7 +56,14 @@ const FEMALE = {
   ],
   hairStyles: ['long straight', 'long wavy', 'twin-tails', 'a high ponytail', 'a hime-cut'],
   hairColors: ['platinum-blonde', 'silver', 'pink', 'lavender', 'sky-blue', 'black', 'auburn', 'white', 'mint-green'],
-  expressions: ['a soft gentle smile', 'a serene smile', 'a slightly confident look', 'a playful wink'],
+  // 표정 가중치 — 호감·보편 표정 높게, 윙크는 희소 스파이스.
+  expressions: [
+    { desc: 'a soft gentle smile', weight: 35 },
+    { desc: 'a serene elegant smile', weight: 25 },
+    { desc: 'a bright cheerful smile', weight: 20 },
+    { desc: 'a slightly confident look', weight: 12 },
+    { desc: 'a playful wink', weight: 8 },
+  ],
 } as const;
 
 // 남성 헤어: undercut·slicked-back·긴 포니테일 제외(여성스러움/원치 않는 룩 방지).
@@ -71,15 +78,22 @@ const MALE = {
   ],
   hairStyles: ['short tousled', 'medium swept-back', 'shaggy bangs'],
   hairColors: ['black', 'silver', 'white', 'dark-blue', 'ash-brown', 'crimson', 'platinum'],
-  expressions: ['a confident gaze', 'a cool calm look', 'a faint smile'],
+  // 표정 가중치 — 멋짐·쿨 기조 높게, 스머크는 희소 스파이스.
+  expressions: [
+    { desc: 'a confident gaze', weight: 30 },
+    { desc: 'a cool calm look', weight: 28 },
+    { desc: 'a faint smile', weight: 22 },
+    { desc: 'a gentle warm smile', weight: 12 },
+    { desc: 'a slight smirk', weight: 8 },
+  ],
 } as const;
 
 export function pickRandomAppearance(gender: ProfileGender): Appearance {
   const p = gender === 'male' ? MALE : FEMALE;
   return {
-    race: pickRace(p.races),
+    race: pickWeighted(p.races),
     hair: `${pick(p.hairColors)} ${pick(p.hairStyles)}`,
-    expression: pick(p.expressions),
+    expression: pickWeighted(p.expressions),
     pose: pick(POSES),
   };
 }
