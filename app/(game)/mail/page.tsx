@@ -131,8 +131,7 @@ export default async function MailPage({
 }
 
 function defaultTitle(type: string): string {
-  // 실사용 mail type 폴백 타이틀. notice/raid_settlement/enhance_result는 enum에만
-  // 존재하고 실제 insert 경로 없음(2026-06-01 확인) — fallback 안전망.
+  // mail type별 폴백 타이틀(제목 없을 때 안전망).
   switch (type) {
     case 'admin':
       return '인생강화 메시지';
@@ -146,6 +145,12 @@ function defaultTitle(type: string): string {
       return '프로필 처리 실패';
     case 'notice':
       return '공지';
+    case 'melee':
+      return '대난투 결과';
+    case 'conquest':
+      return '점령전 결과';
+    case 'guild':
+      return '길드 알림';
     default:
       return '우편';
   }

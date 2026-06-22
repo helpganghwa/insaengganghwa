@@ -58,7 +58,18 @@ function Avatar({ src, box }: { src: string | null; box?: FaceBox | null }) {
 }
 
 // 카드 클릭 → 프로필 상세(/u/code). 우측 버튼은 전파 차단.
-function Row({ u, onOpen, right }: { u: FriendUser; onOpen: () => void; right: React.ReactNode }) {
+// showSeen: 접속 상태 배지 노출(목록 탭만 — 요청/찾기는 미노출).
+function Row({
+  u,
+  onOpen,
+  right,
+  showSeen = false,
+}: {
+  u: FriendUser;
+  onOpen: () => void;
+  right: React.ReactNode;
+  showSeen?: boolean;
+}) {
   return (
     <li>
       <div
@@ -71,7 +82,7 @@ function Row({ u, onOpen, right }: { u: FriendUser; onOpen: () => void; right: R
         <div className="min-w-0 flex-1">
           <div className="flex min-w-0 items-center gap-1.5">
             <span className="truncate text-sm font-bold">{u.nickname}</span>
-            <LastSeen at={u.lastSeenAt ?? null} className="shrink-0 text-[10px] text-zinc-400" />
+            {showSeen && <LastSeen at={u.lastSeenAt ?? null} badge className="shrink-0" />}
           </div>
           {/* 닉네임 아래 길드(이름 + 문양). 미소속/생성중이면 GuildBadge가 null → 영역 비움. */}
           <GuildBadge
@@ -267,6 +278,7 @@ export function FriendsTabs({
                   key={u.userId}
                   u={u}
                   onOpen={() => openProfile(u)}
+                  showSeen
                   right={
                     <button
                       type="button"

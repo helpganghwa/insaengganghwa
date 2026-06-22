@@ -1,7 +1,7 @@
 /**
  * SCHEMA §7. 우편함 (인게임 인박스)
  *
- * 오프라인 완료 강화 결과 · 레이드 6h 정산 · 비동기 보상 · 운영 공지 적재
+ * 비동기 보상(보급·대난투)·운영 공지·길드/점령전 알림·프로필 검토 결과 적재
  * (lazy + cron 멱등, CLAUDE §3.4).
  *
  * v1 확장(2026-05-20): 운영자 메일(admin) + 만료(30일 통일) + 제목/본문/발신자
@@ -27,9 +27,9 @@ import { sql } from 'drizzle-orm';
 import { profiles } from './profiles';
 
 export const mailboxTypeEnum = pgEnum('mailbox_type', [
-  'enhance_result',
-  'raid_settlement',
+  /** 보상(일일 보급·프리미엄·추천인·개발 지급). */
   'reward',
+  /** 운영 공지(범용). */
   'notice',
   /** 운영자 수동 발송(어드민 대시보드). */
   'admin',
@@ -39,6 +39,12 @@ export const mailboxTypeEnum = pgEnum('mailbox_type', [
   'profile_rejected_ai',
   /** 프로필 시스템 장애 환불 — Anthropic/Pixellab 재시도 다 실패. */
   'profile_failed',
+  /** 대난투 결과 보상. */
+  'melee',
+  /** 점령전 결과 통지. */
+  'conquest',
+  /** 길드 알림(길드장 위임 등). */
+  'guild',
 ]);
 
 /**

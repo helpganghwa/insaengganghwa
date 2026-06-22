@@ -257,7 +257,7 @@ export async function revealConquest(serverId: number, battleDay: string): Promi
         return {
           userId: m.uid,
           serverId,
-          type: 'notice' as const,
+          type: 'conquest' as const,
           title: '점령전 결과',
           body,
           senderLabel: '시스템',

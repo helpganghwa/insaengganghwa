@@ -71,7 +71,7 @@ async function warnLeader(serverId: number, g: GuildRow): Promise<boolean> {
     await tx.insert(mailbox).values({
       userId: g.leader,
       serverId,
-      type: 'notice',
+      type: 'guild',
       title: '길드장 자동 위임 경고',
       body: `장기 미접속이 이어지고 있습니다. ${GUILD_LEADER_HANDOVER_DAYS}일 이상 접속하지 않으면 길드장 직책이 활성 길드원에게 자동으로 위임됩니다(길드에는 멤버로 남습니다). 길드를 계속 이끌려면 접속해 주세요.`,
       senderLabel: '시스템',
@@ -135,7 +135,7 @@ async function handover(serverId: number, g: GuildRow): Promise<boolean> {
       {
         userId: s.userId,
         serverId,
-        type: 'notice' as const,
+        type: 'guild' as const,
         title: '길드장 위임',
         body: '전 길드장의 장기 미접속으로 길드장 직책을 위임받았습니다. 길드 운영을 이어가 주세요.',
         senderLabel: '시스템',
@@ -144,7 +144,7 @@ async function handover(serverId: number, g: GuildRow): Promise<boolean> {
       {
         userId: g.leader,
         serverId,
-        type: 'notice' as const,
+        type: 'guild' as const,
         title: '길드장 자동 위임',
         body: `장기 미접속으로 길드장 직책이 ${s.nickname ?? '활성 길드원'}에게 자동 위임되었습니다. 길드에는 멤버로 남아 있습니다.`,
         senderLabel: '시스템',

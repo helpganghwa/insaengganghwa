@@ -54,12 +54,12 @@ export async function revealMelee(serverId: number): Promise<{ revealed: boolean
       ? podium.map((p) => `${RANK_LABEL[p.rank - 1] ?? `${p.rank}위`} ${p.nick}`).join(' · ')
       : '🏆우승 챔피언';
 
-  // 결과 우편 — 참가자 전원 1행씩 DB측 일괄 적재(reward type, 다이아+상자 payload).
+  // 결과 우편 — 참가자 전원 1행씩 DB측 일괄 적재(melee type, 다이아+상자 payload).
   await db.execute(sql`
     insert into mailbox (user_id, server_id, type, title, body, sender_label, payload, expires_at)
     select mp.user_id,
            ${serverId},
-           'reward'::mailbox_type,
+           'melee'::mailbox_type,
            '대난투 결과',
            '오늘 대난투 ' || mp.final_rank || '위!' || E'\n' || ${podiumStr},
            '대난투',

@@ -80,6 +80,23 @@ const TYPE_META: Record<string, TypeMeta> = {
     label: '공지',
     labelClass: 'bg-sky-100 text-sky-700 dark:bg-sky-950/60 dark:text-sky-300',
   },
+  melee: {
+    bar: 'bg-orange-500',
+    label: '대난투',
+    labelClass:
+      'bg-orange-100 text-orange-700 dark:bg-orange-950/60 dark:text-orange-300',
+  },
+  conquest: {
+    bar: 'bg-indigo-500',
+    label: '점령전',
+    labelClass:
+      'bg-indigo-100 text-indigo-700 dark:bg-indigo-950/60 dark:text-indigo-300',
+  },
+  guild: {
+    bar: 'bg-teal-500',
+    label: '길드',
+    labelClass: 'bg-teal-100 text-teal-700 dark:bg-teal-950/60 dark:text-teal-300',
+  },
 };
 const DEFAULT_TYPE_META: TypeMeta = {
   bar: 'bg-zinc-600',
