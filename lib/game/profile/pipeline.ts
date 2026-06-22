@@ -27,6 +27,7 @@ import { sendPushToUser } from '@/lib/push/send';
 
 import { reviewProfile, type ReviewVerdict } from './ai-review';
 import { anyBackgroundOpaque } from './bg-alpha';
+import { detectFullBodyCrop } from './crop-check';
 
 /** 검토 결과 push — 실패는 무시(전체 흐름 막지 않음). 토글·구독은 sendPushToUser가 처리. */
 async function safePush(
@@ -279,10 +280,13 @@ export async function pollAndProcessDownloading(limit = 5): Promise<{
         descriptionPrompt: job.description,
       });
 
-      // 배경 투명 검사(결정론) — no_background 실패(불투명 배경)는 AI 비전이 못 잡으므로 alpha로 선차단.
-      const bgOpaque = await anyBackgroundOpaque([png]);
+      // 결정론 선차단 — AI 비전이 못 잡는 두 결함을 alpha로 직접 검사:
+      //  ① 불투명 배경(no_background 실패)  ② 전신 잘림(하반신이 프레임 밖으로 잘림).
+      // 검수기(ai-review)는 안전+해부학 모더레이터라 프레이밍/잘림을 판정하지 않는다.
+      const [bgOpaque, cropResult] = await Promise.all([anyBackgroundOpaque([png]), detectFullBodyCrop(png)]);
+      const cropped = cropResult.cropped;
 
-      if (review.verdict.pass && !bgOpaque) {
+      if (review.verdict.pass && !bgOpaque && !cropped) {
         // south 1장만 storage 미러 → rotations={south} (회전 미사용).
         const supabase = serviceClient();
         const path = `${job.userId}/${job.characterId}/south.png`;
@@ -294,9 +298,11 @@ export async function pollAndProcessDownloading(limit = 5): Promise<{
         await acceptJob(job.id, job.serverId, job.userId, rotations, job.characterId, job.options, job.equipmentSnapshot, job.description, review.verdict);
         accepted += 1;
       } else {
-        const verdict = bgOpaque
-          ? { ...review.verdict, pass: false, reasons: [...new Set([...review.verdict.reasons, 'quality' as const])], notes: review.verdict.notes || '배경이 투명하지 않습니다(불투명 배경 검출).' }
-          : review.verdict;
+        let verdict: ReviewVerdict = review.verdict;
+        if (bgOpaque)
+          verdict = { ...verdict, pass: false, reasons: [...new Set([...verdict.reasons, 'quality' as const])], notes: verdict.notes || '배경이 투명하지 않습니다(불투명 배경 검출).' };
+        if (cropped)
+          verdict = { ...verdict, pass: false, reasons: [...new Set([...verdict.reasons, 'quality' as const])], notes: verdict.notes || '전신이 아닌 잘린 캐릭터입니다(하반신이 프레임에서 잘림).' };
         await rejectJob(job.id, job.userId, job.serverId, job.diamondEscrow, verdict);
         rejected += 1;
       }
