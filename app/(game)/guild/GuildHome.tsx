@@ -79,6 +79,8 @@ export function GuildHome({
     setOptXp(0);
   }
   const isOfficer = myRole === 'leader' || myRole === 'vice';
+  // 권한별 표시 타일(길드 관리=임원만) — 홀수면 마지막 1개를 가로 전체로 채워 빈칸 방지.
+  const visibleMenu = GUILD_MENU.filter((m) => !m.officerOnly || isOfficer);
   const effectiveUsed = usedToday + optDonations;
   const nextTier =
     effectiveUsed < GUILD_DONATIONS_PER_DAY ? (GUILD_DONATION_TIERS[effectiveUsed] ?? null) : null;
@@ -282,12 +284,14 @@ export function GuildHome({
 
       {/* 메뉴 그리드(홈 패턴) — 길드원/점령지/길드 관리(임원)/길드 랭킹 → 각 상세로 이동. */}
       <div className="grid grid-cols-2 gap-3">
-        {GUILD_MENU.filter((m) => !m.officerOnly || isOfficer).map((m) => (
+        {visibleMenu.map((m, i) => {
+          const wide = i === visibleMenu.length - 1 && visibleMenu.length % 2 === 1;
+          return (
           <Link
             key={m.href}
             href={m.href}
             style={{ backgroundColor: m.tint }}
-            className="relative flex aspect-[50/21] isolate overflow-hidden rounded-2xl border border-zinc-800 transition active:scale-[0.98]"
+            className={`relative flex isolate overflow-hidden rounded-2xl border border-zinc-800 transition active:scale-[0.98] ${wide ? 'col-span-2 aspect-[100/21]' : 'aspect-[50/21]'}`}
           >
             {/* eslint-disable-next-line @next/next/no-img-element */}
             <img
@@ -303,7 +307,8 @@ export function GuildHome({
               <div className="mt-0.5 truncate text-[10px] leading-tight text-white/85">{m.desc}</div>
             </div>
           </Link>
-        ))}
+          );
+        })}
       </div>
 
       {/* 길드 로그 — 가입/탈퇴/레벨업/세금수금·분배/점령·상실 + 임원행동. 최신순 스크롤. */}
