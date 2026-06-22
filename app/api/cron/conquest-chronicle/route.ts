@@ -9,7 +9,7 @@
  */
 import { isCronAuthorized } from '@/lib/auth/cron-auth';
 import { generateAndStoreChronicle } from '@/lib/game/guild';
-import { revealConquest } from '@/lib/game/guild/conquest/run';
+import { revealConquest, carryOverDefenders } from '@/lib/game/guild/conquest/run';
 import { openServerIds } from '@/lib/game/server-list';
 import { kstDateString } from '@/lib/kst';
 
@@ -26,7 +26,15 @@ export async function GET(req: Request) {
     for (const sid of await openServerIds()) {
       // narrate 전에 어제 전투 공개(소유권 적용·우편·published 마킹) — 멱등.
       const rev = await revealConquest(sid, kstDay);
-      results.push({ serverId: sid, revealed: rev.revealed, mailed: rev.mailed, ...(await generateAndStoreChronicle(kstDay, sid)) });
+      // 공개 후 수비 배치 이월(안 뺏긴 구역만, 공격은 해제) — 재실행 안전. 실패해도 공개/연대기엔 무관.
+      const carry = await carryOverDefenders(sid, kstDay).catch(() => ({ carried: 0 }));
+      results.push({
+        serverId: sid,
+        revealed: rev.revealed,
+        mailed: rev.mailed,
+        carried: carry.carried,
+        ...(await generateAndStoreChronicle(kstDay, sid)),
+      });
     }
     const r = { results };
     return Response.json({ ok: true, kstDay, ...r, kind: 'conquest-chronicle' });

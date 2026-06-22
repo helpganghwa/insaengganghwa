@@ -3,7 +3,7 @@ import 'server-only';
 import { and, eq, inArray, isNull, sql } from 'drizzle-orm';
 
 import { db } from '@/lib/db/client';
-import { zones, conquestBattles, guildMembers, guildAuditLog } from '@/lib/db/schema/guild';
+import { zones, conquestBattles, guildMembers, guildAuditLog, guildBattleDeployments } from '@/lib/db/schema/guild';
 import { mailbox } from '@/lib/db/schema/mailbox';
 import { userEquipment } from '@/lib/db/schema/equipment';
 import { characters } from '@/lib/db/schema/server';
@@ -152,6 +152,51 @@ export async function runConquest(serverId: number, battleDay: string): Promise<
  *  - prevOwner = 공개 직전 zones 소유(아직 미변경). 분류(점령/방어/상실/공격실패)는 정산 당시와 동일.
  *  - battleDay = KST 어제(전투일). chronicle cron이 narrate 직전 호출.
  */
+/**
+ * 점령전 공개 직후(자정) 수비 배치 이월 — GUILD §5.8. 어제(battleDay) 수비 배치 중
+ * **여전히 길드가 소유한 구역 + 아직 그 길드 소속**인 유저만 다음 전투일로 재생성(role=defend).
+ * 공격 배치는 이월 안 함(전원 자동 해제). 집행관은 zones.executor로 유지(자동 ×3 방어).
+ * 재실행 안전 — carryDay에 배치가 이미 있으면(이월 완료 or 유저가 이미 배치 시작) 건너뜀.
+ */
+export async function carryOverDefenders(
+  serverId: number,
+  battleDay: string,
+): Promise<{ carried: number }> {
+  const d = new Date(`${battleDay}T12:00:00Z`); // 정오 기준 날짜 산술(DST 무관)
+  d.setUTCDate(d.getUTCDate() + 1);
+  const carryDay = d.toISOString().slice(0, 10);
+
+  // 길드별 멱등 — 그 길드가 carryDay에 이미 배치가 있으면(이월 완료 or 유저가 이미 배치 시작)
+  // 그 길드는 건너뜀(재실행 안전 + 유저 변경 비복원 + 길드 간 간섭 없음).
+  const rows = (await db.execute(sql`
+    select d.user_id::text user_id, d.guild_id::text guild_id, d.zone_id zone_id
+    from guild_battle_deployments d
+    join zones z on z.id = d.zone_id and z.owner_guild_id = d.guild_id
+    join guild_members gm on gm.user_id = d.user_id and gm.server_id = d.server_id and gm.guild_id = d.guild_id
+    where d.server_id = ${serverId} and d.battle_kst_day = ${battleDay} and d.role = 'defend'
+      and not exists (
+        select 1 from guild_battle_deployments x
+        where x.server_id = ${serverId} and x.battle_kst_day = ${carryDay} and x.guild_id = d.guild_id
+      )
+  `)) as unknown as { user_id: string; guild_id: string; zone_id: number }[];
+  if (rows.length === 0) return { carried: 0 };
+
+  await db
+    .insert(guildBattleDeployments)
+    .values(
+      rows.map((r) => ({
+        userId: r.user_id,
+        serverId,
+        guildId: BigInt(r.guild_id),
+        zoneId: r.zone_id,
+        role: 'defend' as const,
+        battleKstDay: carryDay,
+      })),
+    )
+    .onConflictDoNothing();
+  return { carried: rows.length };
+}
+
 type RevealRow = { id: string; zid: number; zname: string; winner: string | null; prev: string | null };
 
 export async function revealConquest(serverId: number, battleDay: string): Promise<{ revealed: number; mailed: number }> {

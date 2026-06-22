@@ -20,8 +20,10 @@ import { userEquipment, catalogItems } from '@/lib/db/schema/equipment';
 import { userProfiles } from '@/lib/db/schema/avatar';
 import { combatPowerFromOwned } from '@/lib/game/equipment/combat-power';
 
+import { kstDateString } from '@/lib/kst';
+
 import { guildCapacity } from './balance';
-import { nextBattleKstDay } from './conquest/schedule';
+import { nextBattleKstDay, isConquestLocked } from './conquest/schedule';
 
 type DeployBoardMember = {
   uid: string;
@@ -306,7 +308,9 @@ export async function getConquestBattleById(id: bigint) {
 
 /** 점령전 배치 보드(임원 배치/전원 조회) — 길드원별 현재 배치·집행관 + 구역 목록(픽커). */
 export async function getDeployBoard(guildId: bigint) {
-  const battleKstDay = nextBattleKstDay();
+  // 잠금 시간(23:00~23:59)엔 다음 전투(빈 보드) 대신 진행 중(오늘) 전투 배치를 그대로 노출.
+  // 클라(DeployBoard)는 이미 자체 시계로 '진행 중·읽기전용'을 표시 → 여기선 데이터만 맞춤.
+  const battleKstDay = isConquestLocked() ? kstDateString() : nextBattleKstDay();
   // 길드의 서버 — 존 목록·전투력 스코프 기준(길드는 서버에 묶임).
   const [g] = await db.select({ serverId: guilds.serverId }).from(guilds).where(eq(guilds.id, guildId)).limit(1);
   const gServerId = g?.serverId ?? 1;
