@@ -162,7 +162,7 @@ export function GuildSettings({
   };
 
   const [emblem, setEmblem] = useState<EmblemSelection>(DEFAULT_EMBLEM);
-  const [tab, setTab] = useState<'settings' | 'members' | 'joins' | 'emblem'>('settings');
+  const [tab, setTab] = useState<'settings' | 'members' | 'tax' | 'emblem'>('settings');
   const isLeader = myRole === 'leader';
 
   // 낙관적 UI — 서버 응답 전 즉시 반영, 실패 시 롤백.
@@ -430,8 +430,7 @@ export function GuildSettings({
           [
             ['settings', '길드 정보'],
             ['members', '구성원'],
-            ['joins', '가입'],
-            ...(isLeader ? [['emblem', '문양'] as const] : []),
+            ...(isLeader ? [['tax', '세금'] as const, ['emblem', '문양'] as const] : []),
           ] as [typeof tab, string][]
         ).map(([k, label]) => (
           <button
@@ -445,7 +444,7 @@ export function GuildSettings({
             }`}
           >
             {label}
-            {k === 'joins' && policy === 'approval' && requests.length > 0 ? (
+            {k === 'members' && policy === 'approval' && requests.length > 0 ? (
               <span className="absolute right-1 top-0.5 rounded-full bg-amber-600 px-1 text-[9px] font-bold leading-tight text-white">
                 {requests.length}
               </span>
@@ -589,8 +588,8 @@ export function GuildSettings({
       </section>
       )}
 
-      {/* 가입 방식 + 신청 */}
-      {tab === 'joins' && (
+      {/* 가입 방식 + 신청 — 구성원 탭에 통합 */}
+      {tab === 'members' && (
       <section className="rounded-xl border border-zinc-200 bg-white p-3 dark:border-zinc-800 dark:bg-zinc-950">
         <div className="flex items-center justify-between gap-2">
           <h3 className="text-sm font-bold">가입 방식</h3>
@@ -645,8 +644,8 @@ export function GuildSettings({
       </section>
       )}
 
-      {/* 세금 풀 분배 (길드장) */}
-      {tab === 'settings' && isLeader && (
+      {/* 세금 풀 분배 (길드장) — 전용 '세금' 탭 */}
+      {tab === 'tax' && isLeader && (
         <section className="flex items-center justify-between gap-2 rounded-xl border border-zinc-200 bg-white p-3 dark:border-zinc-800 dark:bg-zinc-950">
           <div>
             <h3 className="text-sm font-bold">길드 세금</h3>
@@ -773,8 +772,7 @@ export function GuildSettings({
       {/* 위험 구역 (길드장) — 되돌릴 수 없는 작업을 한 곳에. 길드장 위임은 '구성원' 탭에서. */}
       {tab === 'settings' && isLeader && (
         <section className="rounded-xl border border-red-300 bg-red-50/50 p-3 dark:border-red-500/40 dark:bg-red-950/20">
-          <h3 className="text-sm font-bold text-red-700 dark:text-red-300">위험 구역</h3>
-          <p className="mt-1 text-[11px] leading-relaxed text-red-600/80 dark:text-red-300/70">
+          <p className="text-[11px] leading-relaxed text-red-600/80 dark:text-red-300/70">
             되돌릴 수 없는 작업이에요. 길드장 위임은 ‘구성원’ 탭에서 할 수 있어요.
           </p>
           <button

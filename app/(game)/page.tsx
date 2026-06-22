@@ -252,7 +252,7 @@ export default async function HomePage() {
         {/* 성장패스 상시 배너 — 캐러셀 마지막 슬라이드 */}
         <BattlePassBanner />
       </HomeBannerCarousel>
-      <div className="grid grid-cols-2 gap-3">
+      <div className="grid grid-cols-2 gap-2.5">
         {MENU.map((m) => {
           const count = counts[m.href] ?? 0;
           const badge = count > 99 ? '99+' : count > 0 ? String(count) : null;
@@ -265,7 +265,7 @@ export default async function HomePage() {
               href={m.href}
               data-tut={m.href === '/gacha' ? 'goto-gacha' : undefined}
               style={{ backgroundColor: m.tint }}
-              className="relative flex aspect-[50/21] isolate overflow-hidden rounded-2xl border border-zinc-800 transition active:scale-[0.98]"
+              className="relative flex aspect-[50/17] isolate overflow-hidden rounded-2xl border border-zinc-800 transition active:scale-[0.98]"
             >
               {/* eslint-disable-next-line @next/next/no-img-element */}
               <img
@@ -288,7 +288,7 @@ export default async function HomePage() {
                   {badge}
                 </span>
               ) : null}
-              <div className="absolute inset-x-0 bottom-0 bg-gradient-to-t from-black/85 via-black/55 to-transparent px-3 pt-6 pb-2">
+              <div className="absolute inset-x-0 bottom-0 bg-gradient-to-t from-black/85 via-black/55 to-transparent px-3 pt-5 pb-1.5">
                 <div className="flex items-baseline gap-1.5">
                   <div className="shrink-0 text-sm leading-tight font-bold text-white drop-shadow-sm">
                     {m.label}
