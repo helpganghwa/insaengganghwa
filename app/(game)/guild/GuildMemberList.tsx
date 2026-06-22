@@ -1,6 +1,6 @@
 'use client';
 
-import { useMemo, useState } from 'react';
+import { memo, useMemo, useState } from 'react';
 import Link from 'next/link';
 
 import { LastSeen } from '@/components/LastSeen';
@@ -78,7 +78,9 @@ function EquipIcon({ item }: { item: Equipped | undefined }) {
   );
 }
 
-function MemberRow({ m, myUserId }: { m: RichMember; myUserId: string }) {
+// 정렬 탭 전환 시 그룹 배열만 재정렬됨 — m 참조가 안정적이라 memo로 행 재렌더(특히 스프라이트
+// 캔버스 재드로우 최대 150개) 차단. InventoryGrid Tile과 동일 패턴.
+const MemberRow = memo(function MemberRow({ m, myUserId }: { m: RichMember; myUserId: string }) {
   const bySlot = new Map(m.equipped.map((e) => [e.slot, e]));
   const isMe = m.userId === myUserId;
   return (
@@ -130,7 +132,7 @@ function MemberRow({ m, myUserId }: { m: RichMember; myUserId: string }) {
       </Link>
     </li>
   );
-}
+});
 
 export function GuildMemberList({ members, myUserId }: { members: RichMember[]; myUserId: string }) {
   const [sort, setSort] = useState<SortKey>('contribution');
