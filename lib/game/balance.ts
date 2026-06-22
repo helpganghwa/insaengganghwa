@@ -389,6 +389,9 @@ export const NICKNAME_CHANGE_COST_DIAMOND = 300;
  */
 export const PROFILE_GENERATION_DIAMOND = 2_000;
 
+/** 유저당 보유 프로필(아바타) 최대 개수 — 초과 시 생성 차단(서버·클라 공용 검사). */
+export const PROFILE_MAX = 20;
+
 // §6.4 광고 보상 — v1 미도입(사용자 결정). 모바일 웹은 보상형 광고 SDK SSV
 // 인프라가 약해 치트 방어가 어렵고 1인 운영 부담이 큼. 상점에 광고 제거 IAP는
 // 향후 도입 검토(광고 노출 자체 OFF). 향후 네이티브 wrapper 도입 시 재검토.

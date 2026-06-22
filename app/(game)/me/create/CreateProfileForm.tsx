@@ -8,6 +8,7 @@ import { useDiamond } from '@/components/DiamondContext';
 import { useResourceToast } from '@/components/ResourceToast';
 import * as haptic from '@/lib/game/haptic';
 import { formatCompactKR } from '@/lib/ui/format-number';
+import { PROFILE_MAX } from '@/lib/game/balance';
 import type { Slot } from '@/lib/db/schema/equipment';
 
 import { submitProfileJob } from './actions';
@@ -36,11 +37,13 @@ const GENDERS: { value: 'female' | 'male'; label: string }[] = [
 export function CreateProfileForm({
   diamond,
   price,
+  profileCount,
   equipped,
   activeJob,
 }: {
   diamond: string;
   price: number;
+  profileCount: number;
   equipped: EquippedSlot[];
   activeJob: ActiveJob;
 }) {
@@ -80,6 +83,11 @@ export function CreateProfileForm({
 
   const onClick = () => {
     if (disabled) return;
+    // 요청 전 선검사 — 보유 상한 초과 시 즉시 안내(서버 왕복·confirm 없이).
+    if (profileCount >= PROFILE_MAX) {
+      showError(`프로필은 최대 ${PROFILE_MAX}개까지 보유할 수 있어요`);
+      return;
+    }
     if (!confirm) {
       setConfirm(true);
       return;
