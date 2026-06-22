@@ -20,34 +20,28 @@ const COMMON =
   'high detail, fully filled solid background, edge-to-edge composition, ' +
   'no transparent areas, no empty space';
 
+// 길드원(members)은 마음에 들어 유지 — 3종만 길드원과 통일된 고딕 실내 결로 재생성.
 const MENUS: { name: string; prompt: string }[] = [
-  {
-    name: 'members',
-    prompt:
-      'a grand medieval guild hall interior, a long banquet table down the center, ' +
-      'rows of heraldic banners and shields hanging on tall stone walls, warm ' +
-      'chandeliers and torchlight, a welcoming gathering hall, deep navy-blue evening tone, ' +
-      COMMON,
-  },
   {
     name: 'deploy',
     prompt:
-      'a hilltop fortress and castle ramparts overlooking a vast conquered valley, ' +
-      'stone battlements flying guild banners, distant territories, roads and rival keeps, ' +
-      'an epic panoramic vista, warm brown-gold dusk tone, ' + COMMON,
+      'a grand gothic war room interior, a large illuminated territorial wall map and a central ' +
+      'strategy table with carved flag markers, heraldic banners on tall arched stone walls, ' +
+      'stained glass, warm chandelier and torchlight, deep amber-brown tone, ' + COMMON,
   },
   {
     name: 'settings',
     prompt:
-      "a guild master's throne room, a grand ornate carved throne on a raised dais, tall " +
-      'pillars and hanging banners, regal candlelight, deep crimson royal tone, ' + COMMON,
+      "a grand gothic guild master's chamber interior, an ornate desk with ledgers, a wax seal " +
+      'and a hanging guild emblem banner, a high-backed chair, tall arched stone walls and ' +
+      'stained glass, warm chandelier light, deep crimson tone, ' + COMMON,
   },
   {
     name: 'ranking',
     prompt:
-      'a grand hall of fame, a towering stone monument and engraved columns with golden ' +
-      'trophies and laurel wreaths, shafts of divine light from high windows, a prestigious ' +
-      'cathedral-like interior, deep emerald-gold tone, ' + COMMON,
+      'a grand gothic hall of honor interior, golden trophies and engraved name plaques along ' +
+      'tall arched stone walls, heraldic banners, stained glass windows, shafts of golden light, ' +
+      'deep emerald-gold tone, ' + COMMON,
   },
 ];
 
