@@ -31,13 +31,28 @@ const POSES = [
 const rng = (n: number): number => crypto.getRandomValues(new Uint32Array(1))[0]! % n;
 const pick = <T>(a: readonly T[]): T => a[rng(a.length)]!;
 
-// 네코미미는 "귀만"(꼬리 미언급) + small neat. 부속 작게.
+/** 가중치 추출 — 인간 비중↑ 등. weight 합 기준 비례. */
+type WeightedRace = { desc: string; weight: number };
+function pickRace(races: readonly WeightedRace[]): string {
+  const total = races.reduce((s, r) => s + r.weight, 0);
+  let r = rng(total);
+  for (const race of races) {
+    if (r < race.weight) return race.desc;
+    r -= race.weight;
+  }
+  return races[races.length - 1]!.desc;
+}
+
+// 종족 가중치(2026-06-22): 인간 50% 주력 + 판타지 5종 각 10%. 머리 부속(귀·뿔·날개)은 항상 작게.
+// 네코미미는 "귀만"(꼬리 미언급) + small neat.
 const FEMALE = {
   races: [
-    'a human girl',
-    'an elf girl with slender pointed ears',
-    'an elegant beautiful cat-girl with small neat cat ears',
-    'a fairy girl with small translucent wings',
+    { desc: 'a human girl', weight: 50 },
+    { desc: 'an elf girl with slender pointed ears', weight: 10 },
+    { desc: 'an elegant beautiful cat-girl with small neat cat ears', weight: 10 },
+    { desc: 'a fairy girl with small translucent wings', weight: 10 },
+    { desc: 'a beautiful demon girl with small neat horns', weight: 10 },
+    { desc: 'a beautiful dragon-girl with small neat horns and subtle scale accents', weight: 10 },
   ],
   hairStyles: ['long straight', 'long wavy', 'twin-tails', 'a high ponytail', 'a hime-cut'],
   hairColors: ['platinum-blonde', 'silver', 'pink', 'lavender', 'sky-blue', 'black', 'auburn', 'white', 'mint-green'],
@@ -47,10 +62,12 @@ const FEMALE = {
 // 남성 헤어: undercut·slicked-back·긴 포니테일 제외(여성스러움/원치 않는 룩 방지).
 const MALE = {
   races: [
-    'a handsome human youth',
-    'a noble elf youth with slender pointed ears',
-    'a dragonkin youth with small neat horns',
-    'a youth with small neat demon horns',
+    { desc: 'a handsome human youth', weight: 50 },
+    { desc: 'a noble elf youth with slender pointed ears', weight: 10 },
+    { desc: 'a dragonkin youth with small neat horns', weight: 10 },
+    { desc: 'a youth with small neat demon horns', weight: 10 },
+    { desc: 'a beast-kin youth with small neat wolf ears', weight: 10 },
+    { desc: 'a handsome vampire youth with pale skin, small fangs and crimson eyes', weight: 10 },
   ],
   hairStyles: ['short tousled', 'medium swept-back', 'shaggy bangs'],
   hairColors: ['black', 'silver', 'white', 'dark-blue', 'ash-brown', 'crimson', 'platinum'],
@@ -60,7 +77,7 @@ const MALE = {
 export function pickRandomAppearance(gender: ProfileGender): Appearance {
   const p = gender === 'male' ? MALE : FEMALE;
   return {
-    race: pick(p.races),
+    race: pickRace(p.races),
     hair: `${pick(p.hairColors)} ${pick(p.hairStyles)}`,
     expression: pick(p.expressions),
     pose: pick(POSES),
