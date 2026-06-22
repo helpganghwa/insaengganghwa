@@ -2,7 +2,7 @@
 // 장비 3종(스프라이트 이미지=비전 + 시그니처 묘사 + 로어/스토리) + 성별 + 랜덤 외형을 받아,
 // create-character-v3용 영문 description을 작성한다. 규칙:
 //  - 비율: 7등신·작은 머리·긴 다리·머리 부속(귀·뿔·관) 작게.
-//  - 미소녀(여)/미소년(남) late-teen(17~19): 동안 과교정 방지(중학생 X) + 과성숙도 방지.
+//  - 미소녀(여)/미소년(남) young adult(20~24, early twenties): 동안 방지 + 과성숙 방지.
 //  - 장비는 IMAGE에 충실(실루엣·색·시그니처 보존), 로어로 주변 의상·악센트·분위기를 테마에 맞춰
 //    응집(서로 다른 세트를 섞어도 하나의 캐릭터로). 다양성은 랜덤 외형 + 로어 응집에서 옴.
 //  - Japanese anime 스타일을 강하게 강조(이 조합에서 품질이 가장 좋음).
@@ -27,8 +27,8 @@ const MENS = `Render ALL attire as MENSWEAR — a fitted coat or tunic with trou
 
 function subjectOf(male: boolean): string {
   return male
-    ? 'a good-looking bishonen — a late-teen anime boy about 17-19 years old, with a youthful yet refined face, bright expressive eyes and clean handsome features (not a child or middle-schooler), a TALL slim long-legged 7-heads-tall body; clearly male with a flat masculine chest, and a masculine hairstyle'
-    : 'a beautiful bishojo — a late-teen anime girl about 17-19 years old, with a youthful yet refined face, bright expressive eyes and clean pretty features (not a child or middle-schooler), a TALL slim long-legged 7-heads-tall body; never short or stubby';
+    ? 'a good-looking bishonen — a young man about 20-24 years old (early twenties), with a youthful yet refined face, bright expressive eyes and clean handsome features (a fresh young adult, not a teenager), a TALL slim long-legged 7-heads-tall body; clearly male with a flat masculine chest, and a masculine hairstyle'
+    : 'a beautiful bishojo — a young woman about 20-24 years old (early twenties), with a youthful yet refined face, bright expressive eyes and clean pretty features (a fresh young adult, not a teenager), a TALL slim long-legged 7-heads-tall body; never short or stubby';
 }
 
 function systemPrompt(gender: ProfileGender): string {
@@ -36,7 +36,7 @@ function systemPrompt(gender: ProfileGender): string {
   return `You are an expert ART DIRECTOR + prompt engineer for Pixellab create-character-v3 (pixel-art). You are given up to THREE equipment sprite images (weapon, armor, accessory) plus each item's visual note and lore/story. Design ONE cohesive FULL-BODY avatar in AUTHENTIC JAPANESE ANIME STYLE (a high-quality Japanese anime / JRPG key-visual character, strong anime aesthetic) and output ONE English image prompt.
 ${PROP}
 SUBJECT: ${subjectOf(male)}, of the given race, with the given hair and expression — drawn unmistakably in Japanese anime style with expressive anime eyes.
-AGE — KEEP CONSISTENT: the character is a late teen about 17-19 years old (a young prince/princess in their late teens). Youthful and good-looking, but NOT a young child or middle-schooler (avoid an over-cutesy baby face). Even with regal, heroic or ornate gear, do not age the face up into a clearly older, heavily mature or middle-aged person, nor down into a little kid — keep it a refined late-teen.
+AGE — KEEP CONSISTENT: the character is a young adult in their early twenties, about 20-24 years old (a young prince/princess in their early twenties). Youthful and good-looking, but NOT a teenager or a child (avoid an over-cutesy baby face). Even with regal, heroic or ornate gear, do not age the face up into a clearly older or middle-aged person, nor down into a teen or kid — keep it a fresh young adult in their early twenties.
 ${male ? MENS + '\n' : ''}COMPOSITION: full-length from the top of the head to the soles of the feet, centered with clear margin above and below, both feet visible, front view, transparent background, solo.
 POSE: use the given pose for the arms and stance, BUT keep the figure full-length and front-facing with both feet visible. CRITICAL — the weapon must be GRIPPED in one hand with the fingers clearly wrapped around its handle, grip or shaft (the weapon may rest on the shoulder, lean against the body, or have its tip on the ground), and it must NEVER float, hover, or appear detached beside the character. All three signature items stay clearly visible; the weapon is never dropped, hidden or omitted.
 STYLE (EMPHASIZE STRONGLY): authentic Japanese anime / JRPG key-visual aesthetic — smooth clean cel-shading with soft shape edges and NO outlines (lineless, no dark or white border lines around the character), bright vibrant saturated colors, glossy expressive anime eyes, polished anime rendering. The Japanese-anime look is the most important stylistic goal.
@@ -115,7 +115,7 @@ export async function composeV3Description(input: ComposeV3Input): Promise<strin
   }
   content.push({
     type: 'text',
-    text: `Race: ${ap.race}. Hair: ${ap.hair} hair. Expression: ${ap.expression}. Pose: ${ap.pose}. Use the equipment images (faithful look) and their lore (concept cohesion). Keep the subject a good-looking late teen about 17-19 years old (youthful but not a child) in strong Japanese anime style, and the weapon GRIPPED in a hand (fingers around the handle, never floating). Write the prompt under 1800 characters.`,
+    text: `Race: ${ap.race}. Hair: ${ap.hair} hair. Expression: ${ap.expression}. Pose: ${ap.pose}. Use the equipment images (faithful look) and their lore (concept cohesion). Keep the subject a good-looking young adult in their early twenties about 20-24 years old (youthful, not a teenager) in strong Japanese anime style, and the weapon GRIPPED in a hand (fingers around the handle, never floating). Write the prompt under 1800 characters.`,
   });
 
   const res = await client().messages.create({
