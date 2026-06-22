@@ -6,6 +6,7 @@ import { createPortal } from 'react-dom';
 import { TranscendSprite } from '@/components/TranscendSprite';
 import { rarityBorderStyle, hasRarityBorder, TranscendTag } from '@/components/RarityFrame';
 import { GuildBadge } from '@/components/GuildBadge';
+import { useResourceToast } from '@/components/ResourceToast';
 import { getEnhancingUserCount } from '@/app/(game)/me/actions';
 
 // 공유는 **카카오톡 전용** — 사용자 결정. 링크 복사·navigator.share 분기 제거.
@@ -63,6 +64,7 @@ export function BoastModal({
   serverId?: number;
   guildName?: string | null;
 }) {
+  const { showHeaderToast } = useResourceToast();
   const [shareUrl, setShareUrl] = useState('');
   // 카카오 SDK는 next/script afterInteractive로 비동기 로드 → 첫 모달 오픈 시점에
   // 아직 init 안 됐을 수 있음. open 동안 200ms 폴링(최대 5s)로 ready 감지 후 활성.
@@ -169,6 +171,28 @@ export function BoastModal({
     Share: {
       sendDefault: (opts: unknown) => void;
     };
+  };
+  const doCopyLink = async () => {
+    if (!shareUrl) return;
+    try {
+      await navigator.clipboard.writeText(shareUrl);
+      showHeaderToast({ icon: '🔗', title: '링크를 복사했어요' });
+    } catch {
+      // 비보안 컨텍스트·권한 거부 폴백 — 임시 textarea + execCommand.
+      try {
+        const ta = document.createElement('textarea');
+        ta.value = shareUrl;
+        ta.style.position = 'fixed';
+        ta.style.opacity = '0';
+        document.body.appendChild(ta);
+        ta.select();
+        document.execCommand('copy');
+        document.body.removeChild(ta);
+        showHeaderToast({ icon: '🔗', title: '링크를 복사했어요' });
+      } catch {
+        showHeaderToast({ icon: '⚠️', title: '복사에 실패했어요' });
+      }
+    }
   };
   const doShareKakao = () => {
     const k = (window as unknown as { Kakao?: KakaoApi }).Kakao;
@@ -379,6 +403,13 @@ export function BoastModal({
           >
             {kakaoIcon}
             {hasKakao ? '카카오톡 공유' : '카카오톡 준비 중…'}
+          </button>
+          <button
+            type="button"
+            onClick={doCopyLink}
+            className="flex w-full items-center justify-center gap-2 rounded-xl border border-zinc-700 bg-zinc-900 py-2.5 text-sm font-bold text-zinc-200 active:scale-[0.99]"
+          >
+            🔗 링크 복사
           </button>
           <button
             type="button"
