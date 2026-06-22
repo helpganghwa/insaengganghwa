@@ -1,11 +1,11 @@
 'use client';
 
-import { useEffect, useRef, useState, useTransition } from 'react';
+import { useEffect, useState, useTransition } from 'react';
 import { useRouter } from 'next/navigation';
 
 import * as haptic from '@/lib/game/haptic';
 import { useResourceToast } from '@/components/ResourceToast';
-import { setActiveDirection, setActiveProfile, deleteProfile } from './actions';
+import { setActiveProfile, deleteProfile } from './actions';
 
 type ProfileItem = {
   id: string;
@@ -13,28 +13,10 @@ type ProfileItem = {
   activeDirection: string;
 };
 
-// 시계방향 회전 순서: 정면 → 우앞 → 우 → 우뒤 → 뒤 → 좌뒤 → 좌 → 좌앞.
-const ROT_ORDER = [
-  'south',
-  'south_east',
-  'east',
-  'north_east',
-  'north',
-  'north_west',
-  'west',
-  'south_west',
-] as const;
-
-const DIR_LABEL: Record<string, string> = {
-  south: '정면',
-  south_east: '우측 앞',
-  east: '우측',
-  north_east: '우측 뒤',
-  north: '뒷면',
-  north_west: '좌측 뒤',
-  west: '좌측',
-  south_west: '좌측 앞',
-};
+/** 표시용 정면 이미지 — south 우선, 없으면 activeDirection, 없으면 첫 값(구 8방향 프로필 호환). */
+function frontSrc(p: ProfileItem): string {
+  return p.rotations.south ?? p.rotations[p.activeDirection] ?? Object.values(p.rotations)[0] ?? '';
+}
 
 export function ProfileSelector({
   profiles,
@@ -55,7 +37,6 @@ export function ProfileSelector({
 
   const [selectedId, setSelectedId] = useState<string>(initId);
   const sel = list.find((p) => p.id === selectedId) ?? list[0]!;
-  const [dir, setDir] = useState<string>(sel.activeDirection);
   const [pending, startTransition] = useTransition();
   const [confirmDelete, setConfirmDelete] = useState(false);
   const [confirmDeleteLeft, setConfirmDeleteLeft] = useState(0); // 3s 재탭 컨펌 카운트다운
@@ -83,48 +64,19 @@ export function ProfileSelector({
   const selectChar = (p: ProfileItem) => {
     if (p.id === selectedId) return;
     setSelectedId(p.id);
-    setDir(p.activeDirection);
     setConfirmDelete(false);
   };
 
-  // 스와이프 회전(turntable) — 방향은 로컬 state만 변경.
-  const STEP = 26;
-  const dragRef = useRef<{ startX: number; baseIdx: number } | null>(null);
-  const onPointerDown = (e: React.PointerEvent) => {
-    (e.currentTarget as HTMLElement).setPointerCapture(e.pointerId);
-    dragRef.current = {
-      startX: e.clientX,
-      baseIdx: Math.max(0, ROT_ORDER.indexOf(dir as (typeof ROT_ORDER)[number])),
-    };
-  };
-  const onPointerMove = (e: React.PointerEvent) => {
-    const d = dragRef.current;
-    if (!d) return;
-    const steps = Math.round(-(e.clientX - d.startX) / STEP);
-    const nd = ROT_ORDER[(((d.baseIdx + steps) % 8) + 8) % 8]!;
-    if (nd !== dir) setDir(nd);
-  };
-  const endDrag = () => {
-    dragRef.current = null;
-  };
-
-  // 적용 → 선택 캐릭터·방향을 한 번에 커밋.
-  const activeNow = list.find((p) => p.id === activeProfileId);
-  const dirty = selectedId !== activeProfileId || dir !== (activeNow?.activeDirection ?? '');
+  // 적용 → 선택 캐릭터를 대표로 커밋(방향은 정면 고정 — 회전 미사용).
+  const dirty = selectedId !== activeProfileId;
   const apply = () => {
     if (!dirty) return;
     haptic.success();
-    // 낙관: 로딩 없이 즉시 /me로 이동. 두 갱신은 병렬로 백그라운드 커밋 →
-    // 완료 후 router.refresh로 서버 권위 보정(초기 렌더가 stale이어도 자가 교정).
+    // 낙관: 로딩 없이 즉시 /me로 이동 → 백그라운드 커밋 후 router.refresh로 보정.
     router.push('/me');
-    void Promise.all([
-      setActiveProfile(selectedId),
-      setActiveDirection(selectedId, dir),
-    ]).then(([r1, r2]) => {
-      const msg =
-        r1.status === 'error' ? r1.message : r2.status === 'error' ? r2.message : null;
-      if (msg) {
-        alert(msg);
+    void setActiveProfile(selectedId).then((r) => {
+      if (r.status === 'error') {
+        alert(r.message);
         return;
       }
       showHeaderToast({ title: '대표 아바타 변경' });
@@ -150,7 +102,6 @@ export function ProfileSelector({
       }
       setDeletedIds((s) => new Set(s).add(selectedId));
       setSelectedId(remaining[0]!.id);
-      setDir(remaining[0]!.activeDirection);
       setConfirmDelete(false);
       router.refresh();
     });
@@ -158,7 +109,7 @@ export function ProfileSelector({
 
   return (
     <div className="space-y-4">
-      {/* 선택된 캐릭터 8방향 뷰어 — 스와이프로 회전, 방향은 즉시 적용 */}
+      {/* 선택된 캐릭터 정면 프리뷰(회전 미사용). */}
       <div className="relative rounded-2xl border border-zinc-200 p-3 dark:border-zinc-800">
         {/* 삭제 — 프리뷰 컨테이너 우상단 코너. 3s 재탭 컨펌(마지막 1개 숨김). */}
         {list.length > 1 ? (
@@ -184,35 +135,19 @@ export function ProfileSelector({
             </span>
           </button>
         ) : null}
-        <div
-          className="relative mx-auto flex aspect-square w-full max-w-[256px] cursor-grab touch-pan-y select-none items-center justify-center isolate overflow-hidden rounded-xl active:cursor-grabbing"
-          onPointerDown={onPointerDown}
-          onPointerMove={onPointerMove}
-          onPointerUp={endDrag}
-          onPointerCancel={endDrag}
-        >
+        <div className="relative mx-auto flex aspect-square w-full max-w-[256px] select-none items-center justify-center isolate overflow-hidden rounded-xl">
           {/* 발밑 타원 그림자 */}
           <div className="pointer-events-none absolute bottom-[6%] left-1/2 h-[6%] w-1/2 -translate-x-1/2 rounded-[50%] bg-black/45 blur-[6px]" />
-          {ROT_ORDER.map((d) =>
-            sel.rotations[d] ? (
-              // eslint-disable-next-line @next/next/no-img-element
-              <img
-                key={d}
-                src={sel.rotations[d]}
-                alt={`아바타 ${DIR_LABEL[d] ?? d}`}
-                draggable={false}
-                className="pointer-events-none absolute inset-0 h-full w-full object-contain object-bottom"
-                style={{
-                  imageRendering: 'pixelated',
-                  opacity: d === dir ? 1 : 0,
-                }}
-              />
-            ) : null,
-          )}
-        </div>
-        <p className="mt-2 text-center text-[11px] text-zinc-400">← 좌우로 밀어 돌려보세요 →</p>
-        <div className="mt-1 text-center text-xs font-medium text-zinc-500">
-          {DIR_LABEL[dir] ?? dir}
+          {frontSrc(sel) ? (
+            // eslint-disable-next-line @next/next/no-img-element
+            <img
+              src={frontSrc(sel)}
+              alt="아바타"
+              draggable={false}
+              className="pointer-events-none absolute inset-0 h-full w-full object-contain object-bottom"
+              style={{ imageRendering: 'pixelated' }}
+            />
+          ) : null}
         </div>
       </div>
 
@@ -231,7 +166,7 @@ export function ProfileSelector({
           >
             {/* eslint-disable-next-line @next/next/no-img-element */}
             <img
-              src={p.rotations[p.activeDirection]}
+              src={frontSrc(p)}
               alt="아바타"
               draggable={false}
               className="h-full w-full object-contain"
@@ -241,7 +176,7 @@ export function ProfileSelector({
         ))}
       </div>
 
-      {/* 적용 — 선택 캐릭터 + 방향을 대표 프로필로 커밋 */}
+      {/* 적용 — 선택 캐릭터를 대표 프로필로 커밋 */}
       <button
         type="button"
         onClick={apply}

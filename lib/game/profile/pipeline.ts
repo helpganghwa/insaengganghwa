@@ -94,23 +94,6 @@ function isPng(buf: Buffer): boolean {
   );
 }
 
-const DIRECTIONS = [
-  'south',
-  'east',
-  'north',
-  'west',
-  'south-east',
-  'north-east',
-  'north-west',
-  'south-west',
-] as const;
-type Direction = (typeof DIRECTIONS)[number];
-
-/** Storage path → DB rotations jsonb 키 (DB enum은 snake_case). */
-function dirKey(d: Direction): string {
-  return d.replace('-', '_');
-}
-
 interface PixellabCreateResponse {
   character_id: string;
   background_job_id: string;
@@ -271,40 +254,43 @@ export async function pollAndProcessDownloading(limit = 5): Promise<{
       stillProcessing += 1;
       continue;
     }
-    // rotation_urls의 string|null 필터. 8방향 다 string이어야 completed.
-    const remoteRotations: Record<string, string> = {};
-    for (const [k, v] of Object.entries(char.rotation_urls)) {
-      if (typeof v === 'string' && v.length > 0) remoteRotations[k] = v;
-    }
-    if (Object.keys(remoteRotations).length < 8) {
+    // 정면(south)만 사용 — v3 8방향 중 측/후면 품질이 낮아 정면만 저장·표시(회전 미사용, 2026-06-22).
+    const southUrl = (typeof char.rotation_urls.south === 'string' && char.rotation_urls.south) || '';
+    if (!southUrl) {
       stillProcessing += 1;
       continue;
     }
 
     try {
-      const rotations = await mirrorRotations(job.characterId, remoteRotations, job.userId);
-      const rotEntries = Object.entries(rotations);
-      if (rotEntries.length === 0) throw new Error('no rotations after mirror');
-
-      // 8방향 전부 fetch(병렬) → 멀티 이미지 검토(측면/후면의 신체 개수 결함도 검출).
-      const images = await Promise.all(
-        rotEntries.map(async ([direction, url]) => {
-          const res = await fetch(url);
-          if (!res.ok) throw new Error(`rotation ${direction} fetch HTTP ${res.status}`);
-          return { direction, png: Buffer.from(await res.arrayBuffer()) };
-        }),
-      );
+      const r = await fetch(southUrl);
+      if (!r.ok) {
+        // rotation_urls는 떴지만 실파일 아직 404(검증된 케이스) — 다음 tick 재시도.
+        stillProcessing += 1;
+        continue;
+      }
+      const png = Buffer.from(await r.arrayBuffer());
+      if (!isPng(png)) {
+        stillProcessing += 1;
+        continue;
+      }
 
       const review = await reviewProfile({
-        images,
+        images: [{ direction: 'south', png }],
         descriptionPrompt: job.description,
       });
 
       // 배경 투명 검사(결정론) — no_background 실패(불투명 배경)는 AI 비전이 못 잡으므로 alpha로 선차단.
-      // 통과해도 불투명이면 quality reject(환불) — 유저에게 배경 깔린 아바타 전달 방지.
-      const bgOpaque = await anyBackgroundOpaque(images.map((im) => im.png));
+      const bgOpaque = await anyBackgroundOpaque([png]);
 
       if (review.verdict.pass && !bgOpaque) {
+        // south 1장만 storage 미러 → rotations={south} (회전 미사용).
+        const supabase = serviceClient();
+        const path = `${job.userId}/${job.characterId}/south.png`;
+        const up = await supabase.storage
+          .from(STORAGE_BUCKET)
+          .upload(path, png, { contentType: 'image/png', upsert: true });
+        if (up.error) throw new Error(`storage upload south: ${up.error.message}`);
+        const rotations = { south: supabase.storage.from(STORAGE_BUCKET).getPublicUrl(path).data.publicUrl };
         await acceptJob(job.id, job.serverId, job.userId, rotations, job.characterId, job.options, job.equipmentSnapshot, job.description, review.verdict);
         accepted += 1;
       } else {
@@ -326,36 +312,6 @@ export async function pollAndProcessDownloading(limit = 5): Promise<{
 }
 
 // ─── helpers ───
-
-async function mirrorRotations(
-  characterId: string,
-  remoteRotations: Record<string, string>,
-  userId: string,
-): Promise<Record<string, string>> {
-  const supabase = serviceClient();
-  const result: Record<string, string> = {};
-
-  for (const dir of DIRECTIONS) {
-    const remoteUrl = remoteRotations[dir];
-    if (!remoteUrl) continue;
-    const r = await fetch(remoteUrl);
-    if (!r.ok) throw new Error(`fetch rotation ${dir} HTTP ${r.status}`);
-    const raw = Buffer.from(await r.arrayBuffer());
-    // 404 JSON/빈 파일을 200으로 받는 케이스 방어 — PNG 아니면 storage에 안 올림.
-    if (!isPng(raw)) throw new Error(`rotation ${dir} not a valid PNG (${raw.length}B)`);
-    // 후보정(픽셀 부스러기 제거) 폐지 (2026-06-19) — v3 고품질 아바타에선 의도된 반짝임·미세
-    // 디테일을 오히려 지워 역효과. 미러링된 원본 PNG를 그대로 업로드.
-    const path = `${userId}/${characterId}/${dir}.png`;
-    const { error } = await supabase.storage.from(STORAGE_BUCKET).upload(path, raw, {
-      contentType: 'image/png',
-      upsert: true,
-    });
-    if (error) throw new Error(`storage upload ${dir}: ${error.message}`);
-    const { data } = supabase.storage.from(STORAGE_BUCKET).getPublicUrl(path);
-    result[dirKey(dir)] = data.publicUrl;
-  }
-  return result;
-}
 
 async function acceptJob(
   jobId: bigint,
@@ -446,16 +402,18 @@ export async function adminGrantAvatarForJob(jobId: bigint): Promise<{ ok: boole
   if (!charRes.ok) return { ok: false, msg: `Pixellab 캐릭터 조회 실패 (HTTP ${charRes.status})` };
   const char = (await charRes.json()) as PixellabCharacterDetail;
 
-  const remoteRotations: Record<string, string> = {};
-  for (const [k, v] of Object.entries(char.rotation_urls ?? {})) {
-    if (typeof v === 'string' && v.length > 0) remoteRotations[k] = v;
-  }
-  if (Object.keys(remoteRotations).length < 8) {
-    return { ok: false, msg: '8방향 이미지가 완성되지 않아 지급할 수 없습니다.' };
-  }
-
-  const rotations = await mirrorRotations(job.pixellabCharacterId, remoteRotations, job.userId);
-  if (Object.keys(rotations).length === 0) return { ok: false, msg: '이미지 미러링 실패' };
+  // 정면(south)만 사용 — 회전 미사용(2026-06-22).
+  const southUrl = (typeof char.rotation_urls?.south === 'string' && char.rotation_urls.south) || '';
+  if (!southUrl) return { ok: false, msg: '정면 이미지가 완성되지 않아 지급할 수 없습니다.' };
+  const sres = await fetch(southUrl);
+  if (!sres.ok) return { ok: false, msg: `정면 이미지 다운로드 실패 (HTTP ${sres.status})` };
+  const spng = Buffer.from(await sres.arrayBuffer());
+  if (!isPng(spng)) return { ok: false, msg: '정면 이미지가 유효하지 않습니다.' };
+  const supabase = serviceClient();
+  const spath = `${job.userId}/${job.pixellabCharacterId}/south.png`;
+  const sup = await supabase.storage.from(STORAGE_BUCKET).upload(spath, spng, { contentType: 'image/png', upsert: true });
+  if (sup.error) return { ok: false, msg: `이미지 미러링 실패: ${sup.error.message}` };
+  const rotations = { south: supabase.storage.from(STORAGE_BUCKET).getPublicUrl(spath).data.publicUrl };
 
   await db.transaction(async (tx) => {
     const [profile] = await tx
