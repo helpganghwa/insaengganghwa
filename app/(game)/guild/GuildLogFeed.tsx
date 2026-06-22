@@ -55,7 +55,7 @@ function message(e: GuildLogEntry): string {
     case 'tax_collect':
       return `${actor}님이 세금 ${amountOf(e.detail)}💎를 수금했어요`;
     case 'tax_distribute':
-      return `${actor}님이 세금 ${amountOf(e.detail)}💎를 분배했어요`;
+      return `${target}님에게 세금 ${amountOf(e.detail)}💎 지급`;
     case 'zone_capture':
       return `${zone} 점령!`;
     case 'zone_lost':

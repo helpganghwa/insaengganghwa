@@ -11,44 +11,20 @@ import { guildErrMsg } from '../errors-msg';
 
 type Role = 'leader' | 'vice' | 'member';
 type Member = { userId: string; nickname: string; role: Role };
-type DistRow = {
-  id: string;
-  mode: 'equal' | 'target' | 'manual';
-  total: string;
-  createdAt: string;
-  byNick: string;
-  targetNick: string | null;
-};
-
 const ROLE_BADGE: Record<Role, { label: string; cls: string } | null> = {
   leader: { label: '길드장', cls: 'bg-amber-500/15 text-amber-700 dark:text-amber-300' },
   vice: { label: '부길드장', cls: 'bg-sky-500/15 text-sky-700 dark:text-sky-300' },
   member: null,
 };
 
-const MODE_LABEL: Record<DistRow['mode'], string> = {
-  equal: '균등 분배',
-  target: '특정 지급',
-  manual: '개별 지급',
-};
-
-/** ISO → KST 'MM.DD HH:mm'. 수동 오프셋 계산이라 서버/클라 동일(하이드레이션 안전). */
-function fmtKst(iso: string): string {
-  const d = new Date(Date.parse(iso) + 9 * 3600 * 1000);
-  const p = (n: number) => String(n).padStart(2, '0');
-  return `${p(d.getUTCMonth() + 1)}.${p(d.getUTCDate())} ${p(d.getUTCHours())}:${p(d.getUTCMinutes())}`;
-}
-
 export function DistributeBoard({
   myUserId,
   pool: poolStr,
   members,
-  history,
 }: {
   myUserId: string;
   pool: string;
   members: Member[];
-  history: DistRow[];
 }) {
   const router = useRouter();
   const { showHeaderToast, showError } = useResourceToast();
@@ -167,39 +143,7 @@ export function DistributeBoard({
         })}
       </ul>
 
-      {/* 분배 내역(공개) — 리더 독식 견제. 최신순. */}
-      <div className="mt-5">
-        <h2 className="text-[13px] font-bold">분배 내역</h2>
-        {history.length === 0 ? (
-          <p className="mt-1.5 rounded-lg border border-dashed border-zinc-200 px-3 py-4 text-center text-[11px] text-zinc-400 dark:border-zinc-800">
-            아직 분배 내역이 없습니다.
-          </p>
-        ) : (
-          <ul className="mt-1.5 space-y-1">
-            {history.map((h) => (
-              <li
-                key={h.id}
-                className="flex items-center justify-between gap-2 rounded-lg border border-zinc-200 px-3 py-2 text-[11px] dark:border-zinc-800"
-              >
-                <div className="min-w-0">
-                  <p className="truncate text-zinc-700 dark:text-zinc-200">
-                    <span className="font-semibold">{MODE_LABEL[h.mode]}</span>
-                    {h.mode === 'target' && h.targetNick ? (
-                      <span className="text-zinc-500"> → {h.targetNick}</span>
-                    ) : null}
-                  </p>
-                  <p className="text-[10px] text-zinc-400">
-                    {fmtKst(h.createdAt)} · {h.byNick}
-                  </p>
-                </div>
-                <span className="shrink-0 font-mono font-bold tabular-nums text-amber-600 dark:text-amber-400">
-                  {Number(h.total).toLocaleString('ko-KR')}💎
-                </span>
-              </li>
-            ))}
-          </ul>
-        )}
-      </div>
+      {/* 분배 내역은 길드 홈 '길드 로그'에서 상세 노출(수령자별 1줄) — 여기선 생략. */}
 
       {/* 합계 + 지급 */}
       <div className="sticky bottom-0 z-10 mt-3 border-t border-zinc-200 bg-white/95 py-3 backdrop-blur-sm dark:border-zinc-800 dark:bg-zinc-950/95">

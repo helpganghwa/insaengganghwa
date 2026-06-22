@@ -90,13 +90,17 @@ export function distributeGuildTax(input: {
       mode: 'equal',
       total: distributed,
     });
-    await logGuildAudit(tx, {
-      serverId: input.serverId,
-      guildId: gid,
-      actorUserId: input.leaderUserId,
-      action: 'tax_distribute',
-      detail: { amount: distributed.toString(), mode: 'equal' },
-    });
+    // 활동 로그 — 수령자 1인당 1줄(누구에게 N💎 지급). N명이면 N줄.
+    for (const m of members) {
+      await logGuildAudit(tx, {
+        serverId: input.serverId,
+        guildId: gid,
+        actorUserId: input.leaderUserId,
+        action: 'tax_distribute',
+        targetUserId: m.u,
+        detail: { amount: per.toString(), mode: 'equal' },
+      });
+    }
     return { total: distributed, perMember: per };
   });
 }
@@ -158,13 +162,17 @@ export function distributeGuildTaxManual(input: {
       mode: 'manual',
       total,
     });
-    await logGuildAudit(tx, {
-      serverId: input.serverId,
-      guildId: gid,
-      actorUserId: input.leaderUserId,
-      action: 'tax_distribute',
-      detail: { amount: total.toString(), mode: 'manual' },
-    });
+    // 활동 로그 — 지정 금액 받은 수령자 1인당 1줄(누구에게 N💎 지급).
+    for (const [uid, amt] of byUser) {
+      await logGuildAudit(tx, {
+        serverId: input.serverId,
+        guildId: gid,
+        actorUserId: input.leaderUserId,
+        action: 'tax_distribute',
+        targetUserId: uid,
+        detail: { amount: amt.toString(), mode: 'manual' },
+      });
+    }
     return { total };
   });
 }

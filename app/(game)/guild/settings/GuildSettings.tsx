@@ -162,7 +162,7 @@ export function GuildSettings({
   };
 
   const [emblem, setEmblem] = useState<EmblemSelection>(DEFAULT_EMBLEM);
-  const [tab, setTab] = useState<'settings' | 'members' | 'joins'>('settings');
+  const [tab, setTab] = useState<'settings' | 'members' | 'joins' | 'emblem'>('settings');
   const isLeader = myRole === 'leader';
 
   // 낙관적 UI — 서버 응답 전 즉시 반영, 실패 시 롤백.
@@ -428,10 +428,11 @@ export function GuildSettings({
       <div className="flex gap-1 rounded-xl bg-zinc-100 p-1 dark:bg-zinc-900">
         {(
           [
-            ['settings', '길드 설정'],
-            ['members', '구성원 관리'],
-            ['joins', '가입 관리'],
-          ] as const
+            ['settings', '길드 정보'],
+            ['members', '구성원'],
+            ['joins', '가입'],
+            ...(isLeader ? [['emblem', '문양'] as const] : []),
+          ] as [typeof tab, string][]
         ).map(([k, label]) => (
           <button
             key={k}
@@ -453,88 +454,89 @@ export function GuildSettings({
         ))}
       </div>
 
-      {/* 길드 공지 — 길드정보 섹션에 노출됨(임원 편집) */}
+      {/* 길드 정보 — 공지·소개·오픈채팅(임원 편집). 성격이 같은 텍스트 필드를 한 카드로 묶음. */}
       {tab === 'settings' && (
-      <section className="rounded-xl border border-zinc-200 bg-white p-3 dark:border-zinc-800 dark:bg-zinc-950">
-        <div className="flex items-center justify-between gap-2">
-          <h3 className="text-sm font-bold">길드 공지</h3>
-          <span className="text-[10px] tabular-nums text-zinc-400">
-            {notice.length}/{GUILD_NOTICE_MAX_LEN}
-          </span>
-        </div>
-        <textarea
-          value={notice}
-          onChange={(e) => setNotice(e.target.value.slice(0, GUILD_NOTICE_MAX_LEN))}
-          placeholder="길드원에게 보일 공지를 입력하세요 (길드 정보에 노출)"
-          rows={2}
-          className="mt-2 w-full resize-none rounded-lg border border-zinc-200 bg-zinc-50 px-2.5 py-2 text-base outline-none focus:border-zinc-400 dark:border-zinc-700 dark:bg-zinc-900 dark:focus:border-zinc-500"
-        />
-        <div className="mt-2 flex justify-end gap-1.5">
-          {notice.length > 0 && (
-            <button type="button" onClick={() => setNotice('')} disabled={pending} className={BTN.ghost}>
-              비우기
-            </button>
-          )}
-          <button type="button" onClick={saveNotice} disabled={pending || !noticeDirty} className={BTN.primary}>
-            저장
-          </button>
-        </div>
-      </section>
-      )}
+      <section className="space-y-4 rounded-xl border border-zinc-200 bg-white p-3 dark:border-zinc-800 dark:bg-zinc-950">
+        <h3 className="text-sm font-bold">길드 정보</h3>
 
-      {/* 길드 소개(공개) — 목록(랭킹/검색) 팝업에 노출. 임원 편집. */}
-      {tab === 'settings' && (
-      <section className="rounded-xl border border-zinc-200 bg-white p-3 dark:border-zinc-800 dark:bg-zinc-950">
-        <div className="flex items-center justify-between gap-2">
-          <h3 className="text-sm font-bold">길드 소개</h3>
-          <span className="text-[10px] tabular-nums text-zinc-400">
-            {intro.length}/{GUILD_INTRO_MAX_LEN}
-          </span>
-        </div>
-        <textarea
-          value={intro}
-          onChange={(e) => setIntro(e.target.value.slice(0, GUILD_INTRO_MAX_LEN))}
-          placeholder="공개 소개를 입력하세요"
-          rows={2}
-          className="mt-2 w-full resize-none rounded-lg border border-zinc-200 bg-zinc-50 px-2.5 py-2 text-base outline-none focus:border-zinc-400 dark:border-zinc-700 dark:bg-zinc-900 dark:focus:border-zinc-500"
-        />
-        <div className="mt-2 flex justify-end gap-1.5">
-          {intro.length > 0 && (
-            <button type="button" onClick={() => setIntro('')} disabled={pending} className={BTN.ghost}>
-              비우기
+        {/* 공지 — 길드 홈 정보에 노출 */}
+        <div>
+          <div className="flex items-center justify-between gap-2">
+            <span className="text-[12px] font-semibold text-zinc-600 dark:text-zinc-300">공지</span>
+            <span className="text-[10px] tabular-nums text-zinc-400">
+              {notice.length}/{GUILD_NOTICE_MAX_LEN}
+            </span>
+          </div>
+          <textarea
+            value={notice}
+            onChange={(e) => setNotice(e.target.value.slice(0, GUILD_NOTICE_MAX_LEN))}
+            placeholder="길드원에게 보일 공지를 입력하세요 (길드 정보에 노출)"
+            rows={2}
+            className="mt-1.5 w-full resize-none rounded-lg border border-zinc-200 bg-zinc-50 px-2.5 py-2 text-base outline-none focus:border-zinc-400 dark:border-zinc-700 dark:bg-zinc-900 dark:focus:border-zinc-500"
+          />
+          <div className="mt-2 flex justify-end gap-1.5">
+            {notice.length > 0 && (
+              <button type="button" onClick={() => setNotice('')} disabled={pending} className={BTN.ghost}>
+                비우기
+              </button>
+            )}
+            <button type="button" onClick={saveNotice} disabled={pending || !noticeDirty} className={BTN.primary}>
+              저장
             </button>
-          )}
-          <button type="button" onClick={saveIntro} disabled={pending || !introDirty} className={BTN.primary}>
-            저장
-          </button>
+          </div>
         </div>
-      </section>
-      )}
 
-      {/* 카카오 오픈채팅 — 별도 섹션(문양·세금과 동일). 인게임 채팅 대신 외부 소통(카카오 위임), 길드 홈에 입장 버튼 노출 */}
-      {tab === 'settings' && (
-      <section className="rounded-xl border border-zinc-200 bg-white p-3 dark:border-zinc-800 dark:bg-zinc-950">
-        <h3 className="text-sm font-bold">카카오 오픈채팅</h3>
-        <input
-          type="url"
-          inputMode="url"
-          value={openchat}
-          onChange={(e) => setOpenchat(e.target.value.slice(0, 80))}
-          placeholder="https://open.kakao.com/o/…"
-          className="mt-2 w-full rounded-lg border border-zinc-200 bg-zinc-50 px-2.5 py-2 text-base outline-none focus:border-zinc-400 dark:border-zinc-700 dark:bg-zinc-900 dark:focus:border-zinc-500"
-        />
-        <p className="mt-1 text-[10px] text-zinc-400">
-          등록하면 길드 홈에 입장 버튼이 보입니다. 비우고 저장하면 제거됩니다.
-        </p>
-        <div className="mt-2 flex justify-end gap-1.5">
-          {openchat.length > 0 && (
-            <button type="button" onClick={() => setOpenchat('')} disabled={pending} className={BTN.ghost}>
-              비우기
+        {/* 소개(공개) — 랭킹/검색 목록 팝업에 노출 */}
+        <div className="border-t border-zinc-100 pt-3 dark:border-zinc-900">
+          <div className="flex items-center justify-between gap-2">
+            <span className="text-[12px] font-semibold text-zinc-600 dark:text-zinc-300">소개 (공개)</span>
+            <span className="text-[10px] tabular-nums text-zinc-400">
+              {intro.length}/{GUILD_INTRO_MAX_LEN}
+            </span>
+          </div>
+          <textarea
+            value={intro}
+            onChange={(e) => setIntro(e.target.value.slice(0, GUILD_INTRO_MAX_LEN))}
+            placeholder="공개 소개를 입력하세요"
+            rows={2}
+            className="mt-1.5 w-full resize-none rounded-lg border border-zinc-200 bg-zinc-50 px-2.5 py-2 text-base outline-none focus:border-zinc-400 dark:border-zinc-700 dark:bg-zinc-900 dark:focus:border-zinc-500"
+          />
+          <div className="mt-2 flex justify-end gap-1.5">
+            {intro.length > 0 && (
+              <button type="button" onClick={() => setIntro('')} disabled={pending} className={BTN.ghost}>
+                비우기
+              </button>
+            )}
+            <button type="button" onClick={saveIntro} disabled={pending || !introDirty} className={BTN.primary}>
+              저장
             </button>
-          )}
-          <button type="button" onClick={saveOpenchat} disabled={pending || !openchatDirty} className={BTN.primary}>
-            저장
-          </button>
+          </div>
+        </div>
+
+        {/* 카카오 오픈채팅 — 길드 홈에 입장 버튼 노출 */}
+        <div className="border-t border-zinc-100 pt-3 dark:border-zinc-900">
+          <span className="text-[12px] font-semibold text-zinc-600 dark:text-zinc-300">카카오 오픈채팅</span>
+          <input
+            type="url"
+            inputMode="url"
+            value={openchat}
+            onChange={(e) => setOpenchat(e.target.value.slice(0, 80))}
+            placeholder="https://open.kakao.com/o/…"
+            className="mt-1.5 w-full rounded-lg border border-zinc-200 bg-zinc-50 px-2.5 py-2 text-base outline-none focus:border-zinc-400 dark:border-zinc-700 dark:bg-zinc-900 dark:focus:border-zinc-500"
+          />
+          <p className="mt-1 text-[10px] text-zinc-400">
+            등록하면 길드 홈에 입장 버튼이 보입니다. 비우고 저장하면 제거됩니다.
+          </p>
+          <div className="mt-2 flex justify-end gap-1.5">
+            {openchat.length > 0 && (
+              <button type="button" onClick={() => setOpenchat('')} disabled={pending} className={BTN.ghost}>
+                비우기
+              </button>
+            )}
+            <button type="button" onClick={saveOpenchat} disabled={pending || !openchatDirty} className={BTN.primary}>
+              저장
+            </button>
+          </div>
         </div>
       </section>
       )}
@@ -656,8 +658,8 @@ export function GuildSettings({
         </section>
       )}
 
-      {/* 길드 문양 보관함 (길드장) — 최대 3개 보관, 1개 선택 사용. */}
-      {tab === 'settings' && isLeader && (
+      {/* 길드 문양 보관함 (길드장) — 별도 '문양' 탭. 최대 5개 보관, 1개 선택 사용. */}
+      {tab === 'emblem' && isLeader && (
         <section className="rounded-xl border border-zinc-200 bg-white p-3 dark:border-zinc-800 dark:bg-zinc-950">
           <h3 className="mb-2 text-sm font-bold">길드 문양</h3>
           {/* 항상 5칸 고정 — 채워진 칸은 아래 [사용]/[삭제], 빈칸은 클릭해 생성(💎비용 표시). */}
@@ -768,16 +770,29 @@ export function GuildSettings({
         </section>
       )}
 
-      {/* 해산 (길드장) */}
+      {/* 위험 구역 (길드장) — 되돌릴 수 없는 작업을 한 곳에. 길드장 위임은 '구성원' 탭에서. */}
       {tab === 'settings' && isLeader && (
-        <button
-          type="button"
-          onClick={disband}
-          disabled={pending}
-          className="w-full rounded-lg py-2.5 text-sm font-semibold text-red-600 disabled:opacity-50 dark:text-red-400"
-        >
-          길드 해산
-        </button>
+        <section className="rounded-xl border border-red-300 bg-red-50/50 p-3 dark:border-red-500/40 dark:bg-red-950/20">
+          <h3 className="text-sm font-bold text-red-700 dark:text-red-300">위험 구역</h3>
+          <p className="mt-1 text-[11px] leading-relaxed text-red-600/80 dark:text-red-300/70">
+            되돌릴 수 없는 작업이에요. 길드장 위임은 ‘구성원’ 탭에서 할 수 있어요.
+          </p>
+          <button
+            type="button"
+            onClick={disband}
+            disabled={pending}
+            className="mt-2 w-full rounded-lg border border-red-300 py-2.5 text-sm font-bold text-red-600 active:bg-red-100 disabled:opacity-50 dark:border-red-500/40 dark:text-red-400 dark:active:bg-red-950/40"
+          >
+            길드 해산
+          </button>
+        </section>
+      )}
+
+      {/* 부길드장 안내 — 길드장 전용 항목(세금·문양·해산)이 안 보이는 이유 명시. */}
+      {tab === 'settings' && !isLeader && (
+        <p className="px-1 text-center text-[11px] text-zinc-400">
+          세금·문양·해산은 길드장만 관리할 수 있어요.
+        </p>
       )}
 
       {/* 새 문양 생성 모달 — 중앙 모달 */}
