@@ -130,13 +130,6 @@ const synth = {
     }),
 
   // 강화 ──
-  enhanceStart: () =>
-    play((ac) => {
-      // 망치 클랭크: 금속 노이즈 버스트 + 묵직한 thunk + 짧은 금속 링.
-      noise(ac, { dur: 0.07, vol: 0.22, filter: 'bandpass', freq: 1600, q: 1.2 });
-      tone(ac, { freq: 220, freqEnd: 80, type: 'square', dur: 0.12, vol: 0.16 });
-      tone(ac, { freq: 2600, type: 'sine', dur: 0.09, vol: 0.06, delay: 0.005 });
-    }),
   enhanceSuccess: () =>
     play((ac) => {
       // 밝은 상승 벨 아르페지오 + 반짝.
@@ -257,7 +250,6 @@ export const sounds = {
   toggle: voice('toggle', synth.toggle),
   error: voice('error', synth.error),
   // 강화
-  enhanceStart: voice('enhance-start', synth.enhanceStart),
   enhanceSuccess: voice('enhance-success', synth.enhanceSuccess),
   enhanceJackpot: voice('enhance-jackpot', synth.enhanceJackpot),
   enhanceKeep: voice('enhance-keep', synth.enhanceKeep),

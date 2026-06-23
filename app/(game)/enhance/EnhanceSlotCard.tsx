@@ -318,7 +318,6 @@ export function EnhanceSlotCard({
     setConfirm(false);
     setAttempting(true);
     setAttemptingMsg(lore.attempting);
-    sounds.enhanceStart(); // 망치질 시작음
     startTransition(async () => {
       // 결과 트랜잭션 커밋 즉시 반환(후처리는 서버 after). 이 await만 pending.
       const r = await finalizeEnhance(activeJob.jobId);

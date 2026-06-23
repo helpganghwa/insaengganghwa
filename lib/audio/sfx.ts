@@ -17,7 +17,6 @@ export type SfxName =
   | 'toggle'
   | 'error'
   // 강화 (결과별 차등)
-  | 'enhance-start'
   | 'enhance-success'
   | 'enhance-jackpot'
   | 'enhance-keep'
