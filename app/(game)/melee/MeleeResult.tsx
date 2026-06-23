@@ -186,7 +186,7 @@ function Fighter({
   return (
     <div className="flex w-40 flex-col items-center gap-0.5">
       <div
-        className={`relative h-36 w-40 transition-transform duration-200 ${lunge} ${
+        className={`relative h-28 w-40 transition-transform duration-200 ${lunge} ${
           shake ? 'animate-hit-shake' : ''
         }`}
       >
@@ -206,7 +206,7 @@ function Fighter({
         ) : null}
         {/* 사망 시 색→투명 전환(transition). pt-6: 아바타를 줄이고 아래로 내려 상단 공격/방어 라벨 공간 확보. */}
         <div
-          className="h-full w-full pt-6 transition-all duration-500 ease-out"
+          className="h-full w-full pt-4 transition-all duration-500 ease-out"
           style={{ opacity: faded ? 0.25 : 1, filter: faded ? 'grayscale(1)' : 'none' }}
         >
           {avatar ? (
@@ -447,15 +447,17 @@ function RankingView({
                   {p?.nickname ?? '—'}
                 </span>
               </div>
-              {/* 닉네임 밑 — 길드문양 + 길드명(소속 시) */}
-              {p?.guildName ? (
-                <div className="flex items-center gap-0.5">
-                  <GuildBadge emblemUrl={p.guildEmblemUrl ?? null} size={10} className="shrink-0" />
-                  <span className="text-pixel-outline text-[9px] font-medium leading-none text-amber-100/85">
-                    {p.guildName}
-                  </span>
-                </div>
-              ) : null}
+              {/* 닉네임 밑 — 길드문양+길드명. 미소속도 같은 높이 유지(닉네임 위치 고정, 위로 안 밀림). */}
+              <div className="flex h-[12px] items-center gap-0.5">
+                {p?.guildName ? (
+                  <>
+                    <GuildBadge emblemUrl={p.guildEmblemUrl ?? null} size={10} className="shrink-0" />
+                    <span className="text-pixel-outline text-[9px] font-medium leading-none text-amber-100/85">
+                      {p.guildName}
+                    </span>
+                  </>
+                ) : null}
+              </div>
               {/* object-bottom + 동일 박스 하단선(items-end) → 발끝 통일. scale은 origin bottom이라 발끝 고정. */}
               {/* 아바타 클릭 → 프로필 상세(/u/<code>). */}
               <div className="relative h-36 w-full">

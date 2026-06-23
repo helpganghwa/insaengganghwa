@@ -37,5 +37,9 @@ export function faceCropStyle(box: FaceBox | null): CSSProperties {
  */
 export function meleeFaceCropStyle(box: FaceBox | null): CSSProperties {
   const b = box ?? { cx: 0.5, cy: 0.07, h: 0.14 };
-  return faceCropStyle({ cx: b.cx, cy: b.cy + 0.15, h: Math.max(b.h, 0.3) });
+  // 가로 스트립은 object-cover가 정사각을 '너비'에 맞춰 크롭 → 얼굴의 화면상 세로위치는
+  // 이미지 cy × 스트립 가로세로비(≈2.4)로 비례 확대된다. (정사각 헤더는 비 1.0이라 cy 그대로.)
+  // 따라서 transform-origin Y는 cy를 '곱'으로 보정해야 아바타별 머리 위치가 정확히 중심에 옴.
+  const screenCy = Math.min(0.9, b.cy * 2.4);
+  return faceCropStyle({ cx: b.cx, cy: screenCy, h: Math.max(b.h, 0.3) });
 }

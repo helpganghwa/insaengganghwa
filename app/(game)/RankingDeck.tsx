@@ -73,7 +73,7 @@ export function RankingDeck({
         </span>
       </Link>
 
-      <div className="relative w-full" style={{ aspectRatio: '400 / 192' }}>
+      <div className="relative w-full" style={{ aspectRatio: '400 / 200' }}>
         {/* eslint-disable-next-line @next/next/no-img-element */}
         <img
           src={HOF_BG}

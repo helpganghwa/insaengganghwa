@@ -60,7 +60,7 @@ export default async function LeaderboardPage({
         <>
           {/* Top 3 — 명예의 전당 (pixellab 배경 + 전신 높이차) */}
           <section className="isolate overflow-hidden rounded-xl border border-amber-900/50 shadow-lg shadow-black/40">
-            <div className="relative w-full" style={{ aspectRatio: '400 / 192' }}>
+            <div className="relative w-full" style={{ aspectRatio: '400 / 200' }}>
               {/* eslint-disable-next-line @next/next/no-img-element */}
               <img
                 src={BG[metric]}
