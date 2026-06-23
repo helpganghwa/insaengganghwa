@@ -5,6 +5,7 @@ import Link from 'next/link';
 
 import { MELEE_REWARD_TIERS } from '@/lib/game/balance';
 import { assetUrl } from '@/lib/asset-versions';
+import { faceCropStyle } from '@/components/faceCrop';
 import type { MeleeHistoryRow } from '@/lib/game/melee/history';
 
 export type { MeleeHistoryRow };
@@ -83,14 +84,15 @@ export function MeleeInfo({
               <>
                 {/* 챔피언 아바타 — 우측 배경 레이어. height/top으로 상반신·얼굴이 박스 세로 중앙. */}
                 {h.championAvatar ? (
-                  <div className="pointer-events-none absolute inset-y-0 right-0 w-40">
+                  <div className="pointer-events-none absolute inset-y-0 right-0 w-40 overflow-hidden">
+                    {/* 얼굴중심 크롭 — 헤더 아바타와 동일(faceCropStyle, v3 폴백). */}
                     {/* eslint-disable-next-line @next/next/no-img-element */}
                     <img
                       src={h.championAvatar}
                       alt=""
                       aria-hidden
-                      className="absolute left-1/2 w-auto max-w-none -translate-x-1/2"
-                      style={{ imageRendering: 'pixelated', height: '500%', top: '-100%' }}
+                      className="absolute inset-0 h-full w-full"
+                      style={faceCropStyle(null)}
                     />
                   </div>
                 ) : null}
