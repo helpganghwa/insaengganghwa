@@ -29,8 +29,9 @@ export function PublicFooter() {
         ))}
       </nav>
       <div className="mb-3">
-        <p className="mb-1 font-medium text-zinc-500">상품 안내 (게임 내 재화 ‘다이아’ · 부가세 포함)</p>
-        <ul className="flex flex-wrap gap-x-3 gap-y-0.5 text-zinc-400">
+        {/* 가격 목록은 DOM에만 두고 화면엔 숨김(sr-only) — 크롤러·스크린리더 인식용. 보이는 건 링크만. */}
+        <p className="sr-only">상품 안내 (게임 내 재화 ‘다이아’ · 부가세 포함)</p>
+        <ul className="sr-only">
           {DIAMONDS.map((d) => (
             <li key={d.id}>
               다이아 {d.total.toLocaleString()}개 ₩{d.krw.toLocaleString()}
@@ -38,7 +39,7 @@ export function PublicFooter() {
           ))}
         </ul>
         <Link href="/pricing" className="text-zinc-500 hover:underline">
-          전체 상품·가격 보기 ›
+          상품·가격 안내 ›
         </Link>
       </div>
 
