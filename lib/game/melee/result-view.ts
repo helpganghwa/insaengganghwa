@@ -9,6 +9,7 @@ import { profiles } from '@/lib/db/schema/profiles';
 import { characters } from '@/lib/db/schema/server';
 import { userProfiles } from '@/lib/db/schema/avatar';
 import { parseFaceBox, type FaceBox } from '@/components/faceCrop';
+import { getGuildBriefsByUsers } from '@/lib/game/guild/badge';
 import type { MeleeResultView } from '@/app/(game)/melee/MeleeResult';
 
 const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
@@ -120,6 +121,12 @@ export async function buildMeleeResultView(
     3000,
     'melee.top3',
   ).catch(() => []);
+  const podiumUids = topRows.map((r) => r.uid);
+  const guildBrief = podiumUids.length
+    ? await getGuildBriefsByUsers(podiumUids, battle.serverId).catch(
+        () => new Map<string, { emblemUrl: string | null; name: string }>(),
+      )
+    : new Map<string, { emblemUrl: string | null; name: string }>();
   const podium = topRows.map((r) => ({
     rank: r.rank,
     nickname: snapNick.get(r.uid) ?? r.nickname,
@@ -131,6 +138,8 @@ export async function buildMeleeResultView(
         : (avatarOf.get(r.uid) ?? dft(r.rank)),
     attackSuccess: kills.get(r.uid) ?? 0,
     defenseSuccess: survives.get(r.uid) ?? 0,
+    guildName: guildBrief.get(r.uid)?.name ?? null,
+    guildEmblemUrl: guildBrief.get(r.uid)?.emblemUrl ?? null,
   }));
   // 전투 재생 — 챔피언은 live 아바타(트로피 회피), 나머지는 스냅샷. 모두 유저의 실제 아바타.
   const rosterAvatars = finale.roster.map(

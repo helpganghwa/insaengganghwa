@@ -8,6 +8,7 @@ import { josa } from 'es-hangul';
 import { MELEE_REPLAY_ROUNDS, MELEE_HP_MULT } from '@/lib/game/balance';
 import { assetUrl } from '@/lib/asset-versions';
 import { meleeFaceCropStyle, type FaceBox } from '@/components/faceCrop';
+import { GuildBadge } from '@/components/GuildBadge';
 import type { MeleeFinale, MeleeMyEvent } from '@/lib/db/schema/melee';
 
 export type MeleeResultView = {
@@ -24,6 +25,8 @@ export type MeleeResultView = {
     /** 불변 공개 코드 — 아바타 클릭 시 /u/<code> 프로필 상세. */
     publicCode: string | null;
     avatarUrl: string | null;
+    guildName: string | null;
+    guildEmblemUrl: string | null;
     /** 공격 성공 = 내 공격으로 상대가 쓰러진 횟수(킬). */
     attackSuccess: number;
     /** 방어 성공 = 공격받고도 버텨낸 횟수(피격 − 탈락당함). */
@@ -426,6 +429,15 @@ function RankingView({
                   {p?.nickname ?? '—'}
                 </span>
               </div>
+              {/* 닉네임 밑 — 길드문양 + 길드명(소속 시) */}
+              {p?.guildName ? (
+                <div className="flex items-center gap-0.5">
+                  <GuildBadge emblemUrl={p.guildEmblemUrl ?? null} size={10} className="shrink-0" />
+                  <span className="text-pixel-outline text-[9px] font-medium leading-none text-amber-100/85">
+                    {p.guildName}
+                  </span>
+                </div>
+              ) : null}
               {/* object-bottom + 동일 박스 하단선(items-end) → 발끝 통일. scale은 origin bottom이라 발끝 고정. */}
               {/* 아바타 클릭 → 프로필 상세(/u/<code>). */}
               <div className="relative h-36 w-full">
