@@ -8,7 +8,7 @@ export const BUSINESS_INFO = {
   ceo: '서해남',
   bizRegNo: '479-13-03130',
   mailOrderNo: '[통신판매업신고번호]', // 신고 완료 시 기입
-  address: '울산광역시 중구 신기1길 43, 2층 (태화동)',
+  address: '울산광역시 중구 신기1길 43',
   contact: '[고객문의 연락처]', // 확정 시 기입
   email: '[고객문의 이메일]', // 확정 시 기입
   privacyOfficer: '[성명 / 직책 / 연락처]', // 확정 시 기입

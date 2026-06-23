@@ -44,9 +44,6 @@ export function PublicFooter() {
           </p>
         ) : null}
       </div>
-      <p className="mt-2 text-zinc-400">
-        게임 내 재화는 디지털 콘텐츠로 결제 즉시 지급됩니다. ⓒ {b.company}
-      </p>
     </footer>
   );
 }
