@@ -13,7 +13,7 @@ import { getEnhancingUserCount } from '@/app/(game)/me/actions';
 // 카카오 SDK 미로드 시(앱 외부 또는 로딩 실패) 안내 alert.
 
 // 공유카드 하단 표시용 호스트 — 도메인 이전 대응(NEXT_PUBLIC_SITE_URL). docs/MIGRATION.md.
-const SITE_HOST = (process.env.NEXT_PUBLIC_SITE_URL ?? 'https://insaengganghwa.com').replace(
+const SITE_HOST = (process.env.NEXT_PUBLIC_SITE_URL ?? 'https://ganghwa.app').replace(
   /^https?:\/\//,
   '',
 );

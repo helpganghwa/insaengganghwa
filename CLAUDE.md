@@ -302,16 +302,16 @@ gemTimeReductions.conversionRate = currentRate  // 변경되어도 이 작업은
 |--------|------|------|--------|
 | `dev` | 로컬 작업 기본 (feature 통합 전) | 로컬 (`bun dev`) | localhost:5174 |
 | `master-dev` | 통합·스테이징 — Vercel 자동 배포(검증용) | Vercel preview | `insaengganghwa-git-master-dev-…vercel.app` (Vercel 배정 URL) |
-| `master` | **프로덕션** (Vercel Production Branch) | Vercel production | **insaengganghwa.com** |
+| `master` | **프로덕션** (Vercel Production Branch) | Vercel production | **ganghwa.app** |
 
 ### 규칙
 - 기능 작업: `dev`에서 (또는 `feat/<scope>` 토픽 → `dev`).
 - 스테이징 검증: `dev` → `master-dev` push → Vercel 배정 URL 확인.
-- 프로덕션 배포: `master-dev` → `master` push → **insaengganghwa.com 자동 반영**.
+- 프로덕션 배포: `master-dev` → `master` push → **ganghwa.app 자동 반영**.
 - 커밋: Conventional Commits. `master`는 검증 끝난 변경만(직접 작업 금지, master-dev 경유).
 
 ### Vercel 연결
-- **Production Branch = `master`** (대시보드 → Settings → Git) → `insaengganghwa.com` 자동 매핑.
+- **Production Branch = `master`** (대시보드 → Settings → Build and Deployment / Environments) → `ganghwa.app` 자동 매핑.
 - `master-dev`·기타 = preview(자동 URL). `master-dev` 안정 URL = 스테이징.
 - 환경변수: Vercel Production/Preview 분리 입력, 로컬 `.env.local`과 별개.
 - **git committer 이메일 필수**: 프로젝트 `gitForkProtection` 활성 상태 — push되는 HEAD 커밋의 committer가 GitHub 사용자와 연결되지 않으면 Vercel이 빌드를 `BLOCKED`(빌드 로그 0줄) 처리한다. repo 소유 GitHub User `helpganghwa`(id 296071338)의 noreply 이메일 `296071338+helpganghwa@users.noreply.github.com` 사용(검증 불필요·항상 연결). 신규 클론 시 `git config user.email` 동일 설정.
