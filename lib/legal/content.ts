@@ -9,6 +9,7 @@ export const BUSINESS_INFO = {
   bizRegNo: '479-13-03130',
   mailOrderNo: '[통신판매업신고번호]', // 신고번호 수령 시 기입
   address: '울산광역시 중구 신기1길 43',
+  contact: '010-9033-7615',
   email: 'help@ganghwa.app',
   privacyOfficer: '서해남 (대표) · help@ganghwa.app',
 } as const;

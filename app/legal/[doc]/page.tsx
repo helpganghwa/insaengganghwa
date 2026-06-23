@@ -71,6 +71,7 @@ function BusinessInfo() {
     ['사업자등록번호', b.bizRegNo],
     ['통신판매업신고', b.mailOrderNo],
     ['주소', b.address],
+    ['고객문의', b.contact],
     ['이메일', b.email],
   ].filter((r): r is [string, string] => !r[1].startsWith('[')); // 미확정 placeholder 숨김
   return (
