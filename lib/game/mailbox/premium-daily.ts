@@ -31,7 +31,7 @@ export async function ensurePremiumDailyMail(userId: string, serverId: number): 
         and sp.server_id = ${serverId}
         and sp.product_id = ${PREMIUM.id}
         and (now() at time zone 'Asia/Seoul')::date
-            <= (sp.updated_at at time zone 'Asia/Seoul')::date + ${WINDOW_DAYS}
+            <= (sp.updated_at at time zone 'Asia/Seoul')::date + (${WINDOW_DAYS})::int
     ),
     g as (
       insert into premium_daily_grants (user_id, server_id, kst_day)
