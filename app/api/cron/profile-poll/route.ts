@@ -34,9 +34,13 @@ export async function GET(req: Request) {
     pollResult = { error: (e as Error).message };
   }
 
-  return Response.json({
-    ms: Date.now() - t0,
-    enqueue: enqueueResult,
-    poll: pollResult,
-  });
+  // enqueueResult.jobId 등 bigint 포함 → Response.json(JSON.stringify)이 직렬화 못 함.
+  // bigint→string replacer로 안전 직렬화(크론 응답 500 방지).
+  return new Response(
+    JSON.stringify(
+      { ms: Date.now() - t0, enqueue: enqueueResult, poll: pollResult },
+      (_k, v) => (typeof v === 'bigint' ? v.toString() : v),
+    ),
+    { headers: { 'content-type': 'application/json' } },
+  );
 }
