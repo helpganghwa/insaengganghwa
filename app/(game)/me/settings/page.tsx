@@ -62,15 +62,9 @@ export default async function SettingsPage() {
       </header>
 
       <Section title="알림 / 사운드">
-        <LocalToggle storageKey="ig:sound" label="효과음" hint="강화 결과·연출음" />
+        <LocalToggle storageKey="ig:sound" label="효과음" />
         <Divider />
-        <LocalToggle
-          storageKey="ig:bgm"
-          label="배경음악"
-          hint="화면별 분위기 음악 (기본 꺼짐)"
-          defaultOn={false}
-          liveControl="bgm"
-        />
+        <LocalToggle storageKey="ig:bgm" label="배경음악" defaultOn={false} liveControl="bgm" />
         <Divider />
         <PushSettings
           initialEnhance={p?.pushEnhance ?? true}
