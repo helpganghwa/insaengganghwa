@@ -1,7 +1,6 @@
 import type { Metadata } from 'next';
 import Link from 'next/link';
 
-import { PublicFooter } from '@/components/PublicFooter';
 import { CASH, DIAMONDS, PREMIUM, type Cash } from '@/lib/game/shop/catalog';
 
 export const metadata: Metadata = {
@@ -58,8 +57,6 @@ export default function PricingPage() {
         </Link>
         를 참고하세요. <br />· 미성년 회원은 관련 법령상 월 결제 한도 및 법정대리인 동의 절차가 적용될 수 있습니다.
       </p>
-
-      <PublicFooter />
     </div>
   );
 }

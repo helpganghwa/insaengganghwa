@@ -7,11 +7,11 @@ import { BUSINESS_INFO } from '@/lib/legal/content';
 
 const LINKS: [string, string][] = [
   ['/legal/terms', '이용약관'],
-  ['/legal/privacy', '개인정보처리방침'],
-  ['/legal/refund', '환불·청약철회'],
-  ['/legal/youth', '청소년보호정책'],
-  ['/pricing', '상품 안내'],
-  ['/probability', '확률 공시'],
+  ['/legal/privacy', '개인정보'],
+  ['/legal/refund', '환불'],
+  ['/legal/youth', '청소년보호'],
+  ['/pricing', '상품안내'],
+  ['/probability', '확률공시'],
 ];
 
 const filled = (v: string) => !v.startsWith('[');
@@ -20,9 +20,9 @@ export function PublicFooter() {
   const b = BUSINESS_INFO;
   return (
     <footer className="mx-auto w-full max-w-[390px] border-t border-zinc-200 px-5 py-5 text-[11px] leading-relaxed text-zinc-500 dark:border-zinc-800">
-      <nav className="mb-3 flex flex-wrap gap-x-3 gap-y-1">
+      <nav className="mb-3 flex gap-x-3 overflow-x-auto whitespace-nowrap">
         {LINKS.map(([href, label]) => (
-          <Link key={href} href={href} className="hover:underline">
+          <Link key={href} href={href} className="shrink-0 hover:underline">
             {label}
           </Link>
         ))}
