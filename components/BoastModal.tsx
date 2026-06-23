@@ -12,6 +12,12 @@ import { getEnhancingUserCount } from '@/app/(game)/me/actions';
 // 공유는 **카카오톡 전용** — 사용자 결정. 링크 복사·navigator.share 분기 제거.
 // 카카오 SDK 미로드 시(앱 외부 또는 로딩 실패) 안내 alert.
 
+// 공유카드 하단 표시용 호스트 — 도메인 이전 대응(NEXT_PUBLIC_SITE_URL). docs/MIGRATION.md.
+const SITE_HOST = (process.env.NEXT_PUBLIC_SITE_URL ?? 'https://insaengganghwa.com').replace(
+  /^https?:\/\//,
+  '',
+);
+
 const SLOT_LABEL = { weapon: '무기', armor: '방어구', accessory: '장신구' } as const;
 const SLOT_EMOJI = { weapon: '⚔️', armor: '🛡️', accessory: '💍' } as const;
 
@@ -361,7 +367,7 @@ export function BoastModal({
           <div className="mt-3 space-y-1 px-1">
             <div className="text-sm font-semibold text-zinc-100">{setTitle}</div>
             <div className="text-[12px] leading-relaxed text-zinc-400">{text}</div>
-            <div className="text-[10px] text-zinc-500">insaengganghwa.com</div>
+            <div className="text-[10px] text-zinc-500">{SITE_HOST}</div>
             <div className="mt-2 flex gap-1.5">
               <span className="flex-1 rounded border border-zinc-700 px-2 py-1 text-center text-[11px] text-zinc-300">
                 인생강화 시작

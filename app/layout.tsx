@@ -15,7 +15,8 @@ const geistMono = Geist_Mono({
 
 export const metadata: Metadata = {
   // 절대 URL — manifest·OG·icons가 절대 경로로 직렬화되어야 PWA 설치 정상.
-  metadataBase: new URL('https://insaengganghwa.com'),
+  // 도메인은 NEXT_PUBLIC_SITE_URL로 주입(서비스 주체/도메인 이전 대응 — docs/MIGRATION.md).
+  metadataBase: new URL(process.env.NEXT_PUBLIC_SITE_URL ?? 'https://insaengganghwa.com'),
   title: '인생강화 — insaengganghwa',
   description: '강화는 인생이다.',
   applicationName: 'insaengganghwa',
