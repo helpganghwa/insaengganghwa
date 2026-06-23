@@ -185,7 +185,14 @@ function Fighter({
   const lunge = attacking ? (side === 'l' ? 'translate-x-2' : '-translate-x-2') : '';
   return (
     <div className="flex w-40 flex-col items-center gap-0.5">
-      {/* 순서: 닉네임 / 길드 / 아바타 / 체력바 */}
+      {/* 순서: 공격/방어 라벨 / 닉네임 / 길드 / 아바타 / 체력바 (겹침 없이 위→아래) */}
+      <span
+        className={`text-pixel-outline rounded-full px-2 py-0.5 text-[9px] font-bold text-white ${
+          attacking ? 'bg-amber-600/85' : 'bg-sky-700/85'
+        }`}
+      >
+        {attacking ? '공격' : '방어'}
+      </span>
       <div className="flex max-w-[150px] items-center gap-1">
         <span className="truncate text-[11px] font-bold text-white drop-shadow">{name}</span>
       </div>
@@ -201,27 +208,19 @@ function Fighter({
         ) : null}
       </div>
       <div
-        className={`relative h-32 w-40 transition-transform duration-200 ${lunge} ${
+        className={`relative h-36 w-40 transition-transform duration-200 ${lunge} ${
           shake ? 'animate-hit-shake' : ''
         }`}
       >
-        {/* 공격/방어 라벨 — 머리 위 오버레이(세로 공간 절약) */}
-        <span
-          className={`text-pixel-outline absolute top-0 left-1/2 z-20 -translate-x-1/2 rounded-full px-2 py-0.5 text-[9px] font-bold text-white ${
-            attacking ? 'bg-amber-600/85' : 'bg-sky-700/85'
-          }`}
-        >
-          {attacking ? '공격' : '방어'}
-        </span>
         {/* 피해량 — 타겟 머리 위 정중앙에서 떠오름 */}
         {dmg != null ? (
           <div className="animate-dmg-float pointer-events-none absolute top-4 left-1/2 z-20 font-mono text-xl font-extrabold text-red-300 drop-shadow-[0_2px_4px_rgba(0,0,0,0.9)]">
             -{dmg.toLocaleString()}
           </div>
         ) : null}
-        {/* 사망 시 색→투명 전환(transition). pt-3: 머리 위 공격/방어 라벨 공간. */}
+        {/* 사망 시 색→투명 전환(transition). 라벨이 박스 밖 상단으로 이동해 패딩 불필요. */}
         <div
-          className="h-full w-full pt-3 transition-all duration-500 ease-out"
+          className="h-full w-full transition-all duration-500 ease-out"
           style={{ opacity: faded ? 0.25 : 1, filter: faded ? 'grayscale(1)' : 'none' }}
         >
           {avatar ? (
@@ -361,8 +360,8 @@ function FightStage({
         </span>
         <span />
       </div>
-      {/* 중단: 화면 2분할 — 각 절반 중앙에 파이터 배치 */}
-      <div className="relative z-10 grid min-h-0 flex-1 grid-cols-2 items-center overflow-hidden">
+      {/* 중단: 화면 2분할 — 파이터를 아래로 정렬(체력바를 하단 메세지에 붙여 빈 공간 축소). */}
+      <div className="relative z-10 grid min-h-0 flex-1 grid-cols-2 items-end overflow-hidden">
         <div className="flex justify-center">
           <Fighter
             name={fight.atkName}
@@ -611,7 +610,7 @@ function FinalCard({
     <li className="relative flex min-h-[56px] items-center overflow-hidden border-b border-amber-900/40 pr-3 pl-3">
       {/* 우측 — 챔피언 아바타(배경 레이어). height/top으로 상반신·얼굴이 박스 세로 중앙(여백 보정). */}
       {avatar ? (
-        <div className="pointer-events-none absolute inset-y-0 right-0 w-36 overflow-hidden">
+        <div className="pointer-events-none absolute inset-y-0 right-0 w-36">
           {/* 얼굴중심 크롭 — 아바타별 실제 faceBox(없으면 폴백). 가로 스트립 보정. */}
           {/* eslint-disable-next-line @next/next/no-img-element */}
           <img

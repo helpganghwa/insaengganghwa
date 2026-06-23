@@ -100,9 +100,6 @@ export function GuildBrowse({
             </div>
             {/* 검색 전(results===null)엔 랜덤 추천 길드, 검색 후엔 결과. */}
             <div className="mt-3">
-              {results === null ? (
-                <p className="mb-2 px-1 text-[11px] text-zinc-400">검색어 없이 무작위로 추천한 길드예요.</p>
-              ) : null}
               <GuildList
                 guilds={results ?? defaultGuilds}
                 onJoin={join}

@@ -84,7 +84,7 @@ export function MeleeInfo({
               <>
                 {/* 챔피언 아바타 — 우측 배경 레이어. height/top으로 상반신·얼굴이 박스 세로 중앙. */}
                 {h.championAvatar ? (
-                  <div className="pointer-events-none absolute inset-y-0 right-0 w-40 overflow-hidden">
+                  <div className="pointer-events-none absolute inset-y-0 right-0 w-40">
                     {/* 얼굴중심 크롭 — 아바타별 실제 faceBox(없으면 폴백). 가로 스트립 보정. */}
                     {/* eslint-disable-next-line @next/next/no-img-element */}
                     <img
