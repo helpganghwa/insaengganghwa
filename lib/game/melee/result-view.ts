@@ -171,7 +171,12 @@ export async function buildMeleeResultView(
     edition,
     participantCount: battle.participantCount,
     championNickname,
-    championFaceBox: battle.championUserId ? faceBoxOf.get(battle.championUserId) ?? null : null,
+    // FINAL 카드 아바타 = 트로피(있으면)라 트로피 전용 박스 우선, 없으면 프로필 박스.
+    championFaceBox: finale.trophyAvatar
+      ? ((finale.trophyFaceBox as FaceBox | null) ?? null)
+      : battle.championUserId
+        ? faceBoxOf.get(battle.championUserId) ?? null
+        : null,
     podium,
     me: meRow ? { rank: meRow.rank, diamond: Number(meRow.diamond), boxes: meRow.boxes } : null,
     myEvents: meRow?.myEvents ?? [],

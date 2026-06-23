@@ -48,10 +48,18 @@ export async function loadMeleeHistory(serverId: number): Promise<MeleeHistoryRo
   // 역대 우승자는 **우승컵 트로피 아바타** 우선(2026-06-04 피드백). 신규=finale.trophyAvatar,
   // 과거=roster[챔피언].avatar(박제 트로피). 트로피 미생성 배틀은 아래 live 아바타로 폴백.
   const trophyOf = new Map<string, string>();
+  const trophyBoxOf = new Map<string, FaceBox | null>();
   for (const b of battles) {
     const f = b.finale;
     const t = f?.trophyAvatar ?? f?.roster?.find((r) => r.rank === 1)?.avatar ?? null;
-    if (t) trophyOf.set(b.id.toString(), t);
+    if (t) {
+      trophyOf.set(b.id.toString(), t);
+      // 재생성 트로피 이미지일 때만 트로피 전용 박스 — roster 폴백 스냅샷은 박스 없음(폴백 크롭).
+      trophyBoxOf.set(
+        b.id.toString(),
+        f?.trophyAvatar ? ((f.trophyFaceBox as FaceBox | null) ?? null) : null,
+      );
+    }
   }
 
   if (battles.length === 0) return [];
@@ -114,7 +122,10 @@ export async function loadMeleeHistory(serverId: number): Promise<MeleeHistoryRo
         championNick: snapNick ?? c?.nick ?? '챔피언',
         championCode: c?.code ?? null,
         championAvatar: trophyOf.get(b.id.toString()) ?? c?.avatar ?? null,
-        championFaceBox: c?.faceBox ?? null,
+        // 트로피 표시 중이면 트로피 전용 박스, 아니면(라이브 아바타) 프로필 박스.
+        championFaceBox: trophyOf.has(b.id.toString())
+          ? (trophyBoxOf.get(b.id.toString()) ?? null)
+          : (c?.faceBox ?? null),
         championCp: cpOf.get(b.id.toString()) ?? 0,
         participantCount: b.pc,
       } satisfies MeleeHistoryRow;

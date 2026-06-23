@@ -9,6 +9,7 @@ import { meleeBattles, type MeleeFinale } from '@/lib/db/schema/melee';
 import { userProfiles } from '@/lib/db/schema/avatar';
 import { reviewProfile } from '@/lib/game/profile/ai-review';
 import { anyBackgroundOpaque } from '@/lib/game/profile/bg-alpha';
+import { detectFaceBox } from '@/lib/game/profile/face-box';
 
 /**
  * 대난투 우승 트로피 아바타 자동 생성 — MELEE §우승컵.
@@ -229,10 +230,28 @@ async function finalize(b: TrophyBattle, _images: ReadyImages, _charId: string):
   const chosen = rotations[dir] ?? rotations.south;
   if (!chosen) throw new Error('mirror missing chosen/south');
 
+  // 표시되는 트로피 이미지(dir, 없으면 south) 기준으로 얼굴 박스 detect — 재생성 이미지라
+  // 원본 프로필 박스와 머리 위치가 달라서, 트로피 전용 박스를 함께 저장(얼굴중심 크롭 일관).
+  const chosenPng =
+    _images.find((im) => im.direction === dir)?.png ??
+    _images.find((im) => im.direction === 'south')?.png ??
+    null;
+  let trophyFaceBox: { cx: number; cy: number; h: number } | null = null;
+  if (chosenPng) {
+    try {
+      trophyFaceBox = await detectFaceBox(chosenPng);
+    } catch {
+      trophyFaceBox = null;
+    }
+  }
+
   // 트로피 아바타는 finale.trophyAvatar에만 저장 — 대난투 포디움/우승카드/역대우승자 표시 전용.
   // 우승자에게 아바타로 지급하지 않음(2026-06-04 피드백 — 우편/앱알림 폐기). 전투 재생은 원본 아바타.
   const finale = b.finale;
-  if (finale) finale.trophyAvatar = chosen;
+  if (finale) {
+    finale.trophyAvatar = chosen;
+    finale.trophyFaceBox = trophyFaceBox;
+  }
   await db
     .update(meleeBattles)
     .set({ finale, trophyStatus: 'done', trophyUpdatedAt: new Date() })

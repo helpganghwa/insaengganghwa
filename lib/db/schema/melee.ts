@@ -43,6 +43,9 @@ export type MeleeFinale = {
   events: [number, number, number, number][];
   /** 우승자 트로피 아바타(우승컵 든 정면) — 포디움/우승카드 **표시 전용**. 전투 재생은 roster[].avatar(원본). */
   trophyAvatar?: string | null;
+  /** 트로피 이미지 기준 얼굴 박스 — 트로피는 재생성 이미지라 원본 프로필 박스와 머리 위치가 다르다.
+   *  트로피 아바타 얼굴중심 크롭에 사용(없으면 폴백). */
+  trophyFaceBox?: { cx: number; cy: number; h: number } | null;
 };
 
 /**
