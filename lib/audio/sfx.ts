@@ -8,7 +8,7 @@
 
 const STORAGE_KEY = 'ig:sound';
 const BASE = '/audio/sfx';
-const SFX_VOLUME = 0.6; // 효과음 기준 음량(전경). BGM(0.35)보다 높게 — 또렷하게 들리도록.
+const SFX_VOLUME = 0.85; // 효과음 기준 음량(전경). BGM(0.35)보다 충분히 높게 — 또렷하게 들리도록.
 const EXT = 'webm'; // 작은 용량·넓은 지원. m4a로 바꾸려면 여기 + 파일 확장자만 교체.
 
 export type SfxName =
