@@ -1,5 +1,8 @@
+import Link from 'next/link';
 import { redirect } from 'next/navigation';
 import { cookies } from 'next/headers';
+
+import { PublicFooter } from '@/components/PublicFooter';
 
 import { signInWithKakao, signInWithTestAccount } from '@/lib/auth/actions';
 import { getSessionUserId } from '@/lib/auth/session';
@@ -34,8 +37,8 @@ export default async function LoginPage({
   const testMode = test === 'true' && isTestLoginEnabled();
 
   return (
-    <div className="flex min-h-dvh flex-col items-center justify-center bg-zinc-50 px-6 dark:bg-black">
-      <main className="flex w-full max-w-[360px] flex-col items-center gap-8 text-center">
+    <div className="flex min-h-dvh flex-col bg-zinc-50 dark:bg-black">
+      <main className="mx-auto flex w-full max-w-[360px] flex-1 flex-col items-center justify-center gap-8 px-6 text-center">
         <div>
           {/* eslint-disable-next-line @next/next/no-img-element */}
           <img
@@ -87,9 +90,19 @@ export default async function LoginPage({
             로그인 실패: {decodeURIComponent(error)}
           </p>
         ) : null}
-        {/* TODO(출시 전): 정식 이용약관·개인정보처리방침 페이지(/terms·/privacy) 작성 후
-            "가입 시 …에 동의 간주" 고지 + 링크 복원. 링크가 404라 임시 제거(2026-05-29). */}
+        <p className="text-[11px] leading-relaxed text-zinc-400">
+          로그인 시{' '}
+          <Link href="/legal/terms" className="underline">
+            이용약관
+          </Link>{' '}
+          및{' '}
+          <Link href="/legal/privacy" className="underline">
+            개인정보처리방침
+          </Link>
+          에 동의하는 것으로 간주됩니다.
+        </p>
       </main>
+      <PublicFooter />
     </div>
   );
 }
