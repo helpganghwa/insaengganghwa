@@ -8,6 +8,7 @@ import {
   getGuildRanking,
   getGuildActivityLog,
   getMyJoinRequest,
+  searchGuilds,
 } from '@/lib/game/guild';
 import { GUILD_LEADER_HANDOVER_DAYS, GUILD_LEADER_HANDOVER_WARN_DAYS } from '@/lib/game/guild/balance';
 import { kstDateString, daysSinceIso } from '@/lib/kst';
@@ -22,23 +23,35 @@ export const dynamic = 'force-dynamic';
 
 /** 미가입 첫화면 — 랭킹/찾기 탭 + 생성 FAB. */
 async function browseView(userId: string, serverId: number) {
-  const [ranking, myRequest] = await Promise.all([
+  const [ranking, defaults, myRequest] = await Promise.all([
     withTimeout(getGuildRanking(serverId), DB_GUARD_MS, 'guild.browse.ranking'),
+    withTimeout(searchGuilds(serverId, ''), DB_GUARD_MS, 'guild.browse.random').catch(() => []),
     withTimeout(getMyJoinRequest(userId, serverId), DB_GUARD_MS, 'guild.browse.req'),
   ]);
+  const toRow = (g: {
+    id: bigint;
+    name: string;
+    level: number;
+    memberCount: number;
+    emblemUrl: string | null;
+    emblemColor: string | null;
+    combat: number;
+    intro: string | null;
+  }) => ({
+    id: g.id.toString(),
+    name: g.name,
+    level: g.level,
+    memberCount: g.memberCount,
+    emblemUrl: g.emblemUrl,
+    emblemColor: g.emblemColor,
+    combat: g.combat,
+    intro: g.intro,
+  });
   return (
     <GuildBrowse
       myRequestGuildId={myRequest?.toString() ?? null}
-      ranking={ranking.map((g) => ({
-        id: g.id.toString(),
-        name: g.name,
-        level: g.level,
-        memberCount: g.memberCount,
-        emblemUrl: g.emblemUrl,
-        emblemColor: g.emblemColor,
-        combat: g.combat,
-        intro: g.intro,
-      }))}
+      ranking={ranking.map(toRow)}
+      defaultGuilds={defaults.map(toRow)}
     />
   );
 }

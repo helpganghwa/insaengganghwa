@@ -12,9 +12,12 @@ import { GuildList, type GuildRow } from './GuildList';
 
 export function GuildBrowse({
   ranking,
+  defaultGuilds,
   myRequestGuildId,
 }: {
   ranking: GuildRow[];
+  /** 검색 전 기본 노출(랜덤 추천). */
+  defaultGuilds: GuildRow[];
   myRequestGuildId: string | null;
 }) {
   const router = useRouter();
@@ -95,17 +98,19 @@ export function GuildBrowse({
                 검색
               </button>
             </div>
-            {results && (
-              <div className="mt-3">
-                <GuildList
-                  guilds={results}
-                  onJoin={join}
-                  pending={pending}
-                  myRequestGuildId={myRequestGuildId}
-                  emptyText="검색 결과가 없습니다."
-                />
-              </div>
-            )}
+            {/* 검색 전(results===null)엔 랜덤 추천 길드, 검색 후엔 결과. */}
+            <div className="mt-3">
+              {results === null ? (
+                <p className="mb-2 px-1 text-[11px] text-zinc-400">검색어 없이 무작위로 추천한 길드예요.</p>
+              ) : null}
+              <GuildList
+                guilds={results ?? defaultGuilds}
+                onJoin={join}
+                pending={pending}
+                myRequestGuildId={myRequestGuildId}
+                emptyText={results === null ? '아직 결성된 길드가 없습니다.' : '검색 결과가 없습니다.'}
+              />
+            </div>
           </>
         )}
       </div>

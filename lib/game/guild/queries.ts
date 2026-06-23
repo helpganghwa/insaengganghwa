@@ -152,23 +152,31 @@ export async function getGuildRanking(serverId: number, limit = 50) {
     .slice(0, limit);
 }
 
-/** 길드 검색(이름 부분일치) — 가입 브라우즈용. combat(전투력 합) 포함. */
+/** 길드 검색(이름 부분일치) — 가입 브라우즈용. combat(전투력 합) 포함.
+ *  검색어 없으면 랜덤 10개(검색 전 기본 추천 노출). */
 export async function searchGuilds(serverId: number, q: string) {
   const term = q.trim();
-  if (!term) return [];
-  const rows = await db
-    .select({
-      id: guilds.id,
-      name: guilds.name,
-      level: guilds.level,
-      emblemUrl: guilds.emblemUrl,
-      emblemColor: guilds.emblemColor,
-      intro: guilds.intro,
-      memberCount: sql<number>`(select count(*)::int from guild_members gm where gm.guild_id = ${guilds.id})`,
-    })
-    .from(guilds)
-    .where(and(eq(guilds.serverId, serverId), ilike(guilds.name, `%${term}%`)))
-    .limit(20);
+  const sel = {
+    id: guilds.id,
+    name: guilds.name,
+    level: guilds.level,
+    emblemUrl: guilds.emblemUrl,
+    emblemColor: guilds.emblemColor,
+    intro: guilds.intro,
+    memberCount: sql<number>`(select count(*)::int from guild_members gm where gm.guild_id = ${guilds.id})`,
+  } as const;
+  const rows = term
+    ? await db
+        .select(sel)
+        .from(guilds)
+        .where(and(eq(guilds.serverId, serverId), ilike(guilds.name, `%${term}%`)))
+        .limit(20)
+    : await db
+        .select(sel)
+        .from(guilds)
+        .where(eq(guilds.serverId, serverId))
+        .orderBy(sql`random()`)
+        .limit(10);
   const cp = await guildCombatPowers(serverId, rows.map((r) => r.id));
   return rows.map((r) => ({ ...r, combat: cp.get(r.id.toString()) ?? 0 }));
 }
