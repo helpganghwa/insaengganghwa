@@ -223,25 +223,32 @@ async function startAttempt(b: TrophyBattle, nextAttempt: number): Promise<void>
 }
 
 /** 통과 — 미러 + finale.trophyAvatar 저장 → done. 우승자 지급(우편/푸시) 없음 — 트로피는 대난투 표시 전용. */
-async function finalize(b: TrophyBattle, _images: ReadyImages, _charId: string): Promise<void> {
+async function finalize(
+  b: TrophyBattle,
+  _images: ReadyImages,
+  _charId: string,
+  aiHead: { cx: number; cy: number; h: number } | null,
+): Promise<void> {
   const rotations = await mirror(b.id, _images);
   // 표시 방향 = 우승자 아바타의 active_direction(같은 방향). 없으면 south 폴백.
   const dir = await getChampionDirection(b.championUserId, b.serverId);
   const chosen = rotations[dir] ?? rotations.south;
   if (!chosen) throw new Error('mirror missing chosen/south');
 
-  // 표시되는 트로피 이미지(dir, 없으면 south) 기준으로 얼굴 박스 detect — 재생성 이미지라
-  // 원본 프로필 박스와 머리 위치가 달라서, 트로피 전용 박스를 함께 저장(얼굴중심 크롭 일관).
-  const chosenPng =
-    _images.find((im) => im.direction === dir)?.png ??
-    _images.find((im) => im.direction === 'south')?.png ??
-    null;
-  let trophyFaceBox: { cx: number; cy: number; h: number } | null = null;
-  if (chosenPng) {
-    try {
-      trophyFaceBox = await detectFaceBox(chosenPng);
-    } catch {
-      trophyFaceBox = null;
+  // 트로피 얼굴중심 크롭용 박스 — AI 비전 머리 박스(모자·뿔 무시, 정확) 우선,
+  // 없으면 표시 이미지 실루엣 detectFaceBox 폴백.
+  let trophyFaceBox = aiHead;
+  if (!trophyFaceBox) {
+    const chosenPng =
+      _images.find((im) => im.direction === dir)?.png ??
+      _images.find((im) => im.direction === 'south')?.png ??
+      null;
+    if (chosenPng) {
+      try {
+        trophyFaceBox = await detectFaceBox(chosenPng);
+      } catch {
+        trophyFaceBox = null;
+      }
     }
   }
 
@@ -292,12 +299,15 @@ async function processOne(b: TrophyBattle): Promise<void> {
     return;
   }
   let pass = false;
+  // AI 비전이 잡은 정면 머리 박스(모자·뿔 무시) — 트로피 얼굴중심 크롭에 사용(실루엣보다 정확).
+  let aiHead: { cx: number; cy: number; h: number } | null = null;
   try {
     const review = await reviewProfile({
       images: ready.map((im) => ({ direction: im.direction, png: im.png })),
       descriptionPrompt: REVIEW_DESCRIPTION,
     });
     pass = review.verdict.pass;
+    aiHead = review.verdict.head ?? null;
     if (!pass) console.warn(`[melee.trophy] battle ${b.id} AI reject: ${review.verdict.notes}`);
   } catch (e) {
     console.warn(`[melee.trophy] battle ${b.id} review error`, (e as Error).message);
@@ -305,7 +315,7 @@ async function processOne(b: TrophyBattle): Promise<void> {
   }
 
   if (pass) {
-    await finalize(b, ready, b.trophyCharId);
+    await finalize(b, ready, b.trophyCharId, aiHead);
   } else {
     await startAttempt(b, b.trophyAttempts + 1);
   }

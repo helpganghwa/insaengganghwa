@@ -36,9 +36,10 @@ export function faceCropStyle(box: FaceBox | null): CSSProperties {
  * 박스 없으면 v3 표준 머리 위치(cy 0.07) 가정 후 동일 보정 → 폴백도 일관.
  */
 export function meleeFaceCropStyle(box: FaceBox | null): CSSProperties {
-  // 박스 cy(세로)는 뿔·투구 등 머리장식 때문에 얼굴보다 위로 잡혀 부정확 → 신뢰 X.
-  // v3는 7등신 풀프레임이라 얼굴의 화면상 세로위치가 일정 → 세로는 고정(가로 스트립 보정 포함),
-  // 가로(cx)만 박스 사용(얼굴 좌우 중심). origin Y 0.42 ≈ 가로 스트립에서 얼굴이 중앙에 오는 값.
-  const cx = box?.cx ?? 0.5;
-  return faceCropStyle({ cx, cy: 0.42, h: 0.3 });
+  // 가로 스트립은 object-cover가 정사각을 '너비'에 맞춰 크롭 → 얼굴의 화면상 세로위치는
+  // 이미지 cy × 스트립 가로세로비(≈2.4)로 비례 확대된다. 박스가 AI 비전 기반(모자·뿔 무시,
+  // 정확)일 때 cy를 곱 보정하면 아바타별 머리 위치가 정확히 중심에 온다.
+  const b = box ?? { cx: 0.5, cy: 0.25, h: 0.2 };
+  const screenCy = Math.min(0.9, b.cy * 1.8);
+  return faceCropStyle({ cx: b.cx, cy: screenCy, h: Math.max(b.h, 0.3) });
 }
