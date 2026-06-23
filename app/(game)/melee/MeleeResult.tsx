@@ -208,7 +208,7 @@ function Fighter({
         ) : null}
       </div>
       <div
-        className={`relative h-36 w-40 transition-transform duration-200 ${lunge} ${
+        className={`relative h-28 w-40 transition-transform duration-200 ${lunge} ${
           shake ? 'animate-hit-shake' : ''
         }`}
       >
