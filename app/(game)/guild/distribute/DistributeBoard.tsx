@@ -72,14 +72,14 @@ export function DistributeBoard({
   };
 
   return (
-    <div>
-      <h1 className="text-base font-bold">세금 분배</h1>
+    <section className="rounded-xl border border-zinc-200 bg-white p-3 dark:border-zinc-800 dark:bg-zinc-950">
+      <h3 className="text-sm font-bold">세금 분배</h3>
       <p className="mt-0.5 text-[11px] text-zinc-500">
         길드원별 금액을 입력해 지급합니다. ‘균등 분배’는 세금을 인원수로 나눠 자동 입력(잔여는 그대로 남음).
       </p>
 
-      {/* 풀 + 균등/지우기 */}
-      <div className="mt-3 flex items-center justify-between gap-2 rounded-xl border border-zinc-200 bg-white p-3 dark:border-zinc-800 dark:bg-zinc-950">
+      {/* 세금 잔액 + 균등/지우기 — 카드 내부라 테두리 없이 옅은 배경 행 */}
+      <div className="mt-3 flex items-center justify-between gap-2 rounded-lg bg-zinc-50 px-3 py-2.5 dark:bg-zinc-900">
         <div>
           <p className="text-[11px] text-zinc-500">세금</p>
           <p className="text-base font-bold tabular-nums">💎 {pool.toLocaleString('ko-KR')}</p>
@@ -105,13 +105,13 @@ export function DistributeBoard({
       </div>
 
       {/* 길드원 입력 목록 */}
-      <ul className="mt-3 space-y-1.5">
+      <ul className="mt-2 divide-y divide-zinc-100 dark:divide-zinc-900">
         {parsed.map(({ m, amt }) => {
           const badge = ROLE_BADGE[m.role];
           return (
             <li
               key={m.userId}
-              className="flex items-center gap-2 rounded-lg border border-zinc-200 px-3 py-2 dark:border-zinc-800"
+              className="flex items-center gap-2 px-1 py-2"
             >
               <div className="flex min-w-0 flex-1 items-center gap-1.5">
                 <span className="truncate text-[13px] font-semibold">{m.nickname}</span>
@@ -146,7 +146,7 @@ export function DistributeBoard({
       {/* 분배 내역은 길드 홈 '길드 로그'에서 상세 노출(수령자별 1줄) — 여기선 생략. */}
 
       {/* 합계 + 지급 */}
-      <div className="sticky bottom-0 z-10 mt-3 border-t border-zinc-200 bg-white/95 py-3 backdrop-blur-sm dark:border-zinc-800 dark:bg-zinc-950/95">
+      <div className="mt-3 border-t border-zinc-200 pt-3 dark:border-zinc-800">
         <div className="flex items-center justify-between text-[12px]">
           <span className="text-zinc-500">
             분배 합계 <span className="font-mono font-bold text-zinc-700 dark:text-zinc-200">{total.toLocaleString('ko-KR')}💎</span>
@@ -164,6 +164,6 @@ export function DistributeBoard({
           {over ? '세금을 초과했습니다' : `지급${total > 0 ? ` (${total.toLocaleString('ko-KR')}💎)` : ''}`}
         </button>
       </div>
-    </div>
+    </section>
   );
 }

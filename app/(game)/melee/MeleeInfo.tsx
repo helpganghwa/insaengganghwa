@@ -85,14 +85,14 @@ export function MeleeInfo({
                 {/* 챔피언 아바타 — 우측 배경 레이어. height/top으로 상반신·얼굴이 박스 세로 중앙. */}
                 {h.championAvatar ? (
                   <div className="pointer-events-none absolute inset-y-0 right-0 w-40 overflow-hidden">
-                    {/* 얼굴중심 크롭 — 헤더 아바타와 동일(faceCropStyle, v3 폴백). */}
+                    {/* 얼굴중심 크롭 — 초점을 얼굴(22%)로 내리고 줌 완화(머리끝만 보이던 문제 보정). */}
                     {/* eslint-disable-next-line @next/next/no-img-element */}
                     <img
                       src={h.championAvatar}
                       alt=""
                       aria-hidden
                       className="absolute inset-0 h-full w-full"
-                      style={faceCropStyle(null)}
+                      style={faceCropStyle({ cx: 0.5, cy: 0.22, h: 0.34 })}
                     />
                   </div>
                 ) : null}

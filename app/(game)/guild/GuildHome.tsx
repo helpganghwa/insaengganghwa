@@ -282,35 +282,42 @@ export function GuildHome({
         </div>
       </section>
 
-      {/* 메뉴 — 세로 깃발형 4칸. 제비꼬리(swallowtail) 클립 + 고딕 배경 + 라벨.
-          길드 관리(임원)만 빠지면 멤버는 3깃발 → 마지막 칸이 비어도 자연스러움(나란히 걸린 배너). */}
-      <div className="grid grid-cols-4 gap-2">
-        {visibleMenu.map((m) => (
-          <Link
-            key={m.href}
-            href={m.href}
-            style={{
-              backgroundColor: m.tint,
-              clipPath: 'polygon(0 0, 100% 0, 100% 86%, 50% 100%, 0 86%)',
-            }}
-            className="relative flex aspect-[5/8] flex-col justify-end isolate overflow-hidden transition active:scale-[0.97]"
-          >
-            {/* eslint-disable-next-line @next/next/no-img-element */}
-            <img
-              src={assetUrl(`/sprites/guild-menu/${m.key}.png`)}
-              alt=""
-              aria-hidden
-              draggable={false}
-              className="absolute inset-0 h-full w-full object-cover"
-              style={{ imageRendering: 'pixelated' }}
-            />
-            <div className="relative z-10 bg-gradient-to-t from-black/90 via-black/55 to-transparent px-1 pb-[20%] pt-5 text-center">
-              <div className="break-keep text-[11px] font-bold leading-tight text-white drop-shadow-[0_1px_2px_rgba(0,0,0,0.9)]">
-                {m.label}
-              </div>
+      {/* 메뉴 — 길드 정보에 매달린 세로 깃발 4칸. 상단 봉(rod)+고리에서 깃발이 내려옴(제비꼬리 클립).
+          길드 관리(임원)만 빠지면 멤버는 3깃발 → 비어도 나란히 걸린 배너처럼 자연스러움. */}
+      <div className="relative -mt-1">
+        {/* 봉 — 깃발 고리 높이를 가로지르는 가로대(정보 카드에 매단 느낌). */}
+        <div className="absolute inset-x-1 top-[5px] h-[3px] rounded-full bg-gradient-to-r from-amber-900/30 via-amber-700/80 to-amber-900/30" />
+        <div className="grid grid-cols-4 gap-2">
+          {visibleMenu.map((m) => (
+            <div key={m.href} className="flex flex-col items-center">
+              {/* 고리 — 봉에 매달린 링 */}
+              <span className="relative z-10 h-2.5 w-2.5 shrink-0 rounded-full border-2 border-amber-700/90 bg-zinc-900" />
+              <Link
+                href={m.href}
+                style={{
+                  backgroundColor: m.tint,
+                  clipPath: 'polygon(0 0, 100% 0, 100% 86%, 50% 100%, 0 86%)',
+                }}
+                className="relative -mt-1 flex aspect-[5/8] w-full flex-col justify-end isolate overflow-hidden transition active:scale-[0.97]"
+              >
+                {/* eslint-disable-next-line @next/next/no-img-element */}
+                <img
+                  src={assetUrl(`/sprites/guild-menu/${m.key}.png`)}
+                  alt=""
+                  aria-hidden
+                  draggable={false}
+                  className="absolute inset-0 h-full w-full object-cover"
+                  style={{ imageRendering: 'pixelated' }}
+                />
+                <div className="relative z-10 bg-gradient-to-t from-black/90 via-black/55 to-transparent px-0.5 pb-[20%] pt-6 text-center">
+                  <div className="break-keep text-[13px] font-extrabold leading-tight tracking-tight text-white drop-shadow-[0_1px_3px_rgba(0,0,0,0.95)]">
+                    {m.label}
+                  </div>
+                </div>
+              </Link>
             </div>
-          </Link>
-        ))}
+          ))}
+        </div>
       </div>
 
       {/* 길드 로그 — 가입/탈퇴/레벨업/세금수금·분배/점령·상실 + 임원행동. 최신순 스크롤. */}
