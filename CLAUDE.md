@@ -314,7 +314,7 @@ gemTimeReductions.conversionRate = currentRate  // 변경되어도 이 작업은
 - **Production Branch = `master`** (대시보드 → Settings → Git) → `insaengganghwa.com` 자동 매핑.
 - `master-dev`·기타 = preview(자동 URL). `master-dev` 안정 URL = 스테이징.
 - 환경변수: Vercel Production/Preview 분리 입력, 로컬 `.env.local`과 별개.
-- **git committer 이메일 필수**: 프로젝트 `gitForkProtection` 활성 상태 — push되는 HEAD 커밋의 committer가 GitHub 사용자와 연결되지 않으면 Vercel이 빌드를 `BLOCKED`(빌드 로그 0줄) 처리한다. repo 소유 GitHub User `insaengganghwa`(id 285582749)의 noreply 이메일 `285582749+insaengganghwa@users.noreply.github.com` 사용(검증 불필요·항상 연결). 신규 클론 시 `git config user.email` 동일 설정.
+- **git committer 이메일 필수**: 프로젝트 `gitForkProtection` 활성 상태 — push되는 HEAD 커밋의 committer가 GitHub 사용자와 연결되지 않으면 Vercel이 빌드를 `BLOCKED`(빌드 로그 0줄) 처리한다. repo 소유 GitHub User `helpganghwa`(id 296071338)의 noreply 이메일 `296071338+helpganghwa@users.noreply.github.com` 사용(검증 불필요·항상 연결). 신규 클론 시 `git config user.email` 동일 설정.
 
 ### 8.1 Supabase 환경 분리 (선택)
 master/master-dev로 DB도 나눌 수 있는가 — **가능**. 두 방식:
