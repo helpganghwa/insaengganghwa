@@ -1,16 +1,8 @@
 import type { BgmTrack } from './bgm';
 
-// 라우트 → BGM 트랙 매핑. 더 구체적인 경로(/guild/deploy)를 일반 경로(/guild)보다 먼저 검사.
-// 매핑 안 되는 화면(내정보·인벤·우편·출석·패스·친구·튜토리얼 등)은 'hub'로 폴백.
-export function trackForPath(pathname: string): BgmTrack {
-  if (pathname.startsWith('/enhance')) return 'enhance';
-  if (pathname.startsWith('/gacha')) return 'gacha';
-  if (pathname.startsWith('/raid')) return 'raid';
-  if (pathname.startsWith('/melee')) return 'melee';
-  if (pathname.startsWith('/guild/deploy')) return 'conquest';
-  if (pathname.startsWith('/guild/map')) return 'worldmap';
-  if (pathname.startsWith('/guild')) return 'guild';
-  if (pathname.startsWith('/shop')) return 'shop';
-  if (pathname.startsWith('/leaderboard')) return 'leaderboard';
+// 전 화면 공통 BGM(단일 메인 테마). 모든 라우트가 같은 트랙이라 화면 전환 시 매니저가
+// 재시작하지 않고 끊김 없이 이어서 재생한다(idle 게임 특성상 한 테마를 길게 트는 게 자연스러움).
+// 파일: public/audio/bgm/hub.m4a. (화면별 트랙 분리는 보류 — 도입 시 경로별 분기 추가.)
+export function trackForPath(_pathname: string): BgmTrack {
   return 'hub';
 }
