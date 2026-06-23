@@ -73,7 +73,7 @@ export function RankingDeck({
         </span>
       </Link>
 
-      <div className="relative w-full" style={{ aspectRatio: '400 / 174' }}>
+      <div className="relative w-full" style={{ aspectRatio: '400 / 192' }}>
         {/* eslint-disable-next-line @next/next/no-img-element */}
         <img
           src={HOF_BG}
@@ -106,6 +106,8 @@ export function RankingDeck({
                       —
                     </span>
                   </div>
+                  {/* 길드 행 placeholder — 칸 높이 통일(아바타 크기 동일 유지). */}
+                  <div className="h-[13px] w-full" aria-hidden />
                   <div className="relative w-full flex-1" aria-hidden />
                   <span className="pb-1 font-mono text-[11px] font-bold tabular-nums text-amber-200/55 text-pixel-outline">
                     —
@@ -128,7 +130,17 @@ export function RankingDeck({
                   <span className="truncate text-[10px] font-medium leading-tight text-white text-pixel-outline">
                     {entry.nickname}
                   </span>
-                  <GuildBadge emblemUrl={entry.guildEmblemUrl ?? null} size={11} className="shrink-0" />
+                </div>
+                {/* 길드 — 이름 밑(문양 + 길드명). 미소속이면 빈 줄로 높이만 유지. */}
+                <div className="flex h-[13px] w-full items-center justify-center gap-0.5 px-0.5">
+                  {entry.guildName ? (
+                    <>
+                      <GuildBadge emblemUrl={entry.guildEmblemUrl ?? null} size={11} className="shrink-0" />
+                      <span className="truncate text-[9px] font-medium leading-none text-amber-100/90 text-pixel-outline">
+                        {entry.guildName}
+                      </span>
+                    </>
+                  ) : null}
                 </div>
                 <div className="relative w-full flex-1">
                   {entry.profileImg ? (
