@@ -113,15 +113,17 @@ export default async function SettingsPage() {
       </Section>
 
       <Section title="약관 / 문의">
-        <DisabledRow label="이용약관" />
+        <SettingLink href="/legal/terms" label="이용약관" />
         <Divider />
-        <DisabledRow label="개인정보처리방침" />
+        <SettingLink href="/legal/privacy" label="개인정보처리방침" />
+        <Divider />
+        <SettingLink href="/legal/refund" label="환불·청약철회 안내" />
+        <Divider />
+        <SettingLink href="/legal/youth" label="청소년보호정책" />
+        <Divider />
+        <SettingLink href="/probability" label="확률 공시" />
         <Divider />
         <DisabledRow label="고객센터 문의" />
-        <Divider />
-        <Link href="/probability" className="flex items-center justify-between px-3 py-2.5">
-          <span className="text-sm text-zinc-400">확률 공시</span>
-        </Link>
       </Section>
 
       <Section title="앱 정보">
@@ -161,6 +163,17 @@ function Row({ label, children }: { label: string; children: React.ReactNode }) 
       <span className="text-sm">{label}</span>
       {children}
     </div>
+  );
+}
+
+function SettingLink({ href, label }: { href: string; label: string }) {
+  return (
+    <Link href={href} className="flex items-center justify-between px-3 py-2.5">
+      <span className="text-sm">{label}</span>
+      <span aria-hidden className="text-zinc-400">
+        ›
+      </span>
+    </Link>
   );
 }
 
