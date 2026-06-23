@@ -5,6 +5,7 @@ import { usePathname } from 'next/navigation';
 
 import { setTrack, unlock } from '@/lib/audio/bgm';
 import { trackForPath } from '@/lib/audio/bgm-map';
+import { unlockSfx } from '@/lib/audio/sfx';
 
 /**
  * BGM 컨트롤러 — 마운트 전용(렌더 없음). 라우트가 바뀔 때마다 매핑된 트랙으로 크로스페이드.
@@ -19,7 +20,10 @@ export function BgmController() {
   }, [pathname]);
 
   useEffect(() => {
-    const onGesture = () => unlock();
+    const onGesture = () => {
+      unlock();
+      unlockSfx(); // 효과음 AudioContext도 첫 제스처에 resume — 첫 클릭음 지연 제거.
+    };
     window.addEventListener('pointerdown', onGesture, { once: true });
     return () => window.removeEventListener('pointerdown', onGesture);
   }, []);
