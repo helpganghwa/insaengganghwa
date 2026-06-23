@@ -36,13 +36,7 @@ export function PublicFooter() {
           {filled(b.mailOrderNo) ? ` · 통신판매업신고 ${b.mailOrderNo}` : ''}
         </p>
         {filled(b.address) ? <p>{b.address}</p> : null}
-        {filled(b.contact) || filled(b.email) ? (
-          <p>
-            문의 {[filled(b.contact) ? b.contact : null, filled(b.email) ? b.email : null]
-              .filter(Boolean)
-              .join(' · ')}
-          </p>
-        ) : null}
+        {filled(b.email) ? <p>문의 {b.email}</p> : null}
       </div>
     </footer>
   );
