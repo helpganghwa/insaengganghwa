@@ -111,11 +111,15 @@ export const sounds = {
   // 보급/가챠
   gachaOpen: voice('gacha-open'),
   gachaReveal: voice('gacha-reveal', synth.success),
-  // 전투
+  // 전투 — 레이드
   raidHit: voice('raid-hit', synth.raidHit),
   raidCrit: voice('raid-crit', synth.raidCrit),
   raidBlock: voice('raid-block'),
   raidVictory: voice('raid-victory', synth.levelup),
+  // 전투 — 대난투
+  meleeHit: voice('melee-hit', synth.raidHit),
+  meleeKo: voice('melee-ko', synth.raidCrit),
+  meleeVictory: voice('melee-victory', synth.levelup),
   // 보상/알림
   coin: voice('coin', synth.coin),
   gem: voice('gem', synth.coin),

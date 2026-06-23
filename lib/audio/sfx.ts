@@ -25,11 +25,15 @@ export type SfxName =
   // 보급/가챠
   | 'gacha-open'
   | 'gacha-reveal'
-  // 전투(레이드·대난투)
+  // 전투 — 레이드
   | 'raid-hit'
   | 'raid-crit'
   | 'raid-block'
   | 'raid-victory'
+  // 전투 — 대난투
+  | 'melee-hit'
+  | 'melee-ko'
+  | 'melee-victory'
   // 보상/알림
   | 'coin'
   | 'gem'

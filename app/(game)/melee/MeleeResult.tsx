@@ -9,6 +9,7 @@ import { MELEE_REPLAY_ROUNDS, MELEE_HP_MULT } from '@/lib/game/balance';
 import { assetUrl } from '@/lib/asset-versions';
 import { meleeFaceCropStyle, type FaceBox } from '@/components/faceCrop';
 import { GuildBadge } from '@/components/GuildBadge';
+import { sounds } from '@/lib/game/sound';
 import type { MeleeFinale, MeleeMyEvent } from '@/lib/db/schema/melee';
 
 export type MeleeResultView = {
@@ -307,7 +308,10 @@ function FightStage({
   const [winnerExit, setWinnerExit] = useState(false);
   useEffect(() => {
     if (!isFinal) return;
-    const t1 = setTimeout(() => setWinnerShow(true), 1100);
+    const t1 = setTimeout(() => {
+      setWinnerShow(true);
+      sounds.meleeVictory(); // 우승 팡파레 — WINNER 토스트와 동시
+    }, 1100);
     const t2 = setTimeout(() => setWinnerExit(true), 1100 + 3800);
     const t3 = setTimeout(() => setWinnerShow(false), 1100 + 3800 + 450);
     return () => {
@@ -690,6 +694,10 @@ export function MeleeResult({ view }: { view: MeleeResultView }) {
   const play = (f: Fight) => {
     setFight(f);
     setFightKey((k) => k + 1);
+    // 효과음 — 결승 최후의 일격은 배속 무관히 재생(우승 팡파레는 FightStage 토스트와 맞춰 별도).
+    // 일반 라운드는 고속(8x↑) 자동재생 시 연사 방지로 생략.
+    if (f.isFinal) sounds.meleeKo();
+    else if (speed <= 4) f.hpAfter <= 0 ? sounds.meleeKo() : sounds.meleeHit();
   };
 
   // 행 데이터(시간순) — 표시는 역순, 전체 재생은 시간순으로 사용.
