@@ -282,14 +282,18 @@ export function GuildHome({
         </div>
       </section>
 
-      {/* 메뉴 그리드(홈 패턴) — 길드원/점령지/길드 관리(임원)/길드 랭킹 → 각 상세로 이동. */}
-      <div className="space-y-3">
+      {/* 메뉴 — 세로 깃발형 4칸. 제비꼬리(swallowtail) 클립 + 고딕 배경 + 라벨.
+          길드 관리(임원)만 빠지면 멤버는 3깃발 → 마지막 칸이 비어도 자연스러움(나란히 걸린 배너). */}
+      <div className="grid grid-cols-4 gap-2">
         {visibleMenu.map((m) => (
           <Link
             key={m.href}
             href={m.href}
-            style={{ backgroundColor: m.tint }}
-            className="relative flex aspect-[50/21] w-full isolate overflow-hidden rounded-2xl border border-zinc-800 transition active:scale-[0.98]"
+            style={{
+              backgroundColor: m.tint,
+              clipPath: 'polygon(0 0, 100% 0, 100% 86%, 50% 100%, 0 86%)',
+            }}
+            className="relative flex aspect-[5/8] flex-col justify-end isolate overflow-hidden transition active:scale-[0.97]"
           >
             {/* eslint-disable-next-line @next/next/no-img-element */}
             <img
@@ -300,9 +304,10 @@ export function GuildHome({
               className="absolute inset-0 h-full w-full object-cover"
               style={{ imageRendering: 'pixelated' }}
             />
-            <div className="absolute inset-x-0 bottom-0 bg-gradient-to-t from-black/85 via-black/55 to-transparent px-3 pt-6 pb-2">
-              <div className="text-sm leading-tight font-bold text-white drop-shadow-sm">{m.label}</div>
-              <div className="mt-0.5 truncate text-[10px] leading-tight text-white/85">{m.desc}</div>
+            <div className="relative z-10 bg-gradient-to-t from-black/90 via-black/55 to-transparent px-1 pb-[20%] pt-5 text-center">
+              <div className="break-keep text-[11px] font-bold leading-tight text-white drop-shadow-[0_1px_2px_rgba(0,0,0,0.9)]">
+                {m.label}
+              </div>
             </div>
           </Link>
         ))}
