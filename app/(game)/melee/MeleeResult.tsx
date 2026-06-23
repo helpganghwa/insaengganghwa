@@ -47,6 +47,8 @@ export type MeleeResultView = {
   rosterAvatars: (string | null)[];
   /** finale 로스터 로컬 인덱스별 공개 코드(아바타 클릭 링크용). */
   rosterCodes: (string | null)[];
+  /** finale 로스터 로컬 인덱스별 길드(닉네임 밑 표시) — 미소속 null. */
+  rosterGuilds: ({ name: string; emblemUrl: string | null } | null)[];
 };
 
 type Fight = {
@@ -61,6 +63,9 @@ type Fight = {
   tgtName: string;
   tgtAvatar: string | null;
   tgtHref?: string | null;
+  /** 닉네임 밑 길드(문양+이름) — 미소속/미상 null. */
+  atkGuild?: { name: string; emblemUrl: string | null } | null;
+  tgtGuild?: { name: string; emblemUrl: string | null } | null;
   dmg: number;
   hpAfter: number;
   tgtMaxHp?: number;
@@ -135,6 +140,7 @@ function hpColor(pct: number): string {
 function Fighter({
   name,
   avatar,
+  guild,
   href,
   side,
   role,
@@ -146,6 +152,7 @@ function Fighter({
 }: {
   name: string;
   avatar: string | null;
+  guild?: { name: string; emblemUrl: string | null } | null;
   /** 있으면 아바타 클릭 시 프로필 상세로 이동. */
   href?: string | null;
   side: 'l' | 'r';
@@ -197,9 +204,9 @@ function Fighter({
             -{dmg.toLocaleString()}
           </div>
         ) : null}
-        {/* 사망 시 색→투명 전환(transition) */}
+        {/* 사망 시 색→투명 전환(transition). pt-6: 아바타를 줄이고 아래로 내려 상단 공격/방어 라벨 공간 확보. */}
         <div
-          className="h-full w-full transition-all duration-500 ease-out"
+          className="h-full w-full pt-6 transition-all duration-500 ease-out"
           style={{ opacity: faded ? 0.25 : 1, filter: faded ? 'grayscale(1)' : 'none' }}
         >
           {avatar ? (
@@ -243,6 +250,15 @@ function Fighter({
       <div className="flex max-w-[150px] items-center gap-1">
         <span className="truncate text-[11px] font-bold text-white drop-shadow">{name}</span>
       </div>
+      {/* 닉네임 밑 길드(문양+이름) — 점령전 재생과 동일. 미소속이면 미표시. */}
+      {guild ? (
+        <div className="flex max-w-[150px] items-center gap-0.5">
+          <GuildBadge emblemUrl={guild.emblemUrl ?? null} size={10} className="shrink-0" />
+          <span className="truncate text-[9px] font-medium text-amber-100/85 drop-shadow">
+            {guild.name}
+          </span>
+        </div>
+      ) : null}
       {/* HP바 — 양쪽 동일 높이 확보(공격자는 빈 자리 placeholder). */}
       {maxHp != null ? (
         <div className="isolate h-1.5 w-24 overflow-hidden rounded-full bg-zinc-800 ring-1 ring-black/40">
@@ -350,6 +366,7 @@ function FightStage({
           <Fighter
             name={fight.atkName}
             avatar={fight.atkAvatar}
+            guild={fight.atkGuild}
             href={fight.atkHref}
             side="l"
             role="atk"
@@ -364,6 +381,7 @@ function FightStage({
           <Fighter
             name={fight.tgtName}
             avatar={fight.tgtAvatar}
+            guild={fight.tgtGuild}
             href={fight.tgtHref}
             side="r"
             role="def"
@@ -647,6 +665,7 @@ export function MeleeResult({ view }: { view: MeleeResultView }) {
     myCp,
     rosterAvatars,
     rosterCodes,
+    rosterGuilds,
   } = view;
   /** 핸들(코드 또는 닉네임)로 프로필 상세 경로. 없으면 null(링크 없음). */
   const hrefOf = (handle: string | null | undefined) =>
@@ -718,11 +737,13 @@ export function MeleeResult({ view }: { view: MeleeResultView }) {
         atkName: atk,
         atkAvatar: rosterAvatars[e[0]] ?? null,
         atkHref: hrefOf(rosterCodes[e[0]]),
+        atkGuild: rosterGuilds[e[0]] ?? null,
         atkHp,
         atkMaxHp,
         tgtName: tgt,
         tgtAvatar: rosterAvatars[e[1]] ?? null,
         tgtHref: hrefOf(rosterCodes[e[1]]),
+        tgtGuild: rosterGuilds[e[1]] ?? null,
         dmg: e[2],
         hpAfter: e[3],
         tgtMaxHp: tgtCp > 0 ? tgtCp * MELEE_HP_MULT : undefined,

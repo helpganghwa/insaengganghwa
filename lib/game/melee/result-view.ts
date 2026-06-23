@@ -120,9 +120,9 @@ export async function buildMeleeResultView(
     3000,
     'melee.top3',
   ).catch(() => []);
-  const podiumUids = topRows.map((r) => r.uid);
-  const guildBrief = podiumUids.length
-    ? await getGuildBriefsByUsers(podiumUids, battle.serverId).catch(
+  // 길드 brief — 포디움 + 전투 재생(전 로스터)에서 닉네임 밑 길드명·문양 표시에 사용.
+  const rosterGuild = rosterIds.length
+    ? await getGuildBriefsByUsers(rosterIds, battle.serverId).catch(
         () => new Map<string, { emblemUrl: string | null; name: string }>(),
       )
     : new Map<string, { emblemUrl: string | null; name: string }>();
@@ -137,12 +137,17 @@ export async function buildMeleeResultView(
         : (avatarOf.get(r.uid) ?? dft(r.rank)),
     attackSuccess: kills.get(r.uid) ?? 0,
     defenseSuccess: survives.get(r.uid) ?? 0,
-    guildName: guildBrief.get(r.uid)?.name ?? null,
-    guildEmblemUrl: guildBrief.get(r.uid)?.emblemUrl ?? null,
+    guildName: rosterGuild.get(r.uid)?.name ?? null,
+    guildEmblemUrl: rosterGuild.get(r.uid)?.emblemUrl ?? null,
   }));
   // 전투 재생 — 전원 그 회차 스냅샷 아바타(현재 아바타가 아니라 당시 모습). 챔피언도 동일.
   const rosterAvatars = finale.roster.map((r, i) => avatarOf.get(r.userId) ?? dft(i));
   const rosterCodes = finale.roster.map((r) => codeOf.get(r.userId) ?? null);
+  // 닉네임 밑 길드명·문양(점령전 재생과 동일). 미소속/조회실패는 null.
+  const rosterGuilds = finale.roster.map((r) => {
+    const g = rosterGuild.get(r.userId);
+    return g ? { name: g.name, emblemUrl: g.emblemUrl } : null;
+  });
 
   const [meRow] = await withTimeout(
     db
@@ -189,5 +194,6 @@ export async function buildMeleeResultView(
     finale,
     rosterAvatars,
     rosterCodes,
+    rosterGuilds,
   };
 }
