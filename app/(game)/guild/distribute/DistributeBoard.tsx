@@ -72,16 +72,16 @@ export function DistributeBoard({
   };
 
   return (
-    <div className="px-4 py-4">
+    <div>
       <h1 className="text-base font-bold">세금 분배</h1>
       <p className="mt-0.5 text-[11px] text-zinc-500">
-        길드원별 금액을 입력해 지급합니다. ‘균등 분배’는 풀을 인원수로 나눠 자동 입력(잔여는 풀에 남음).
+        길드원별 금액을 입력해 지급합니다. ‘균등 분배’는 세금을 인원수로 나눠 자동 입력(잔여는 그대로 남음).
       </p>
 
       {/* 풀 + 균등/지우기 */}
       <div className="mt-3 flex items-center justify-between gap-2 rounded-xl border border-zinc-200 bg-white p-3 dark:border-zinc-800 dark:bg-zinc-950">
         <div>
-          <p className="text-[11px] text-zinc-500">세금 풀</p>
+          <p className="text-[11px] text-zinc-500">세금</p>
           <p className="text-base font-bold tabular-nums">💎 {pool.toLocaleString('ko-KR')}</p>
         </div>
         <div className="flex shrink-0 gap-1.5">
@@ -152,7 +152,7 @@ export function DistributeBoard({
             분배 합계 <span className="font-mono font-bold text-zinc-700 dark:text-zinc-200">{total.toLocaleString('ko-KR')}💎</span>
           </span>
           <span className={over ? 'font-bold text-red-500' : 'text-zinc-500'}>
-            남은 풀 <span className="font-mono font-bold tabular-nums">{remaining.toLocaleString('ko-KR')}💎</span>
+            남은 세금 <span className="font-mono font-bold tabular-nums">{remaining.toLocaleString('ko-KR')}💎</span>
           </span>
         </div>
         <button
@@ -161,7 +161,7 @@ export function DistributeBoard({
           disabled={!canPay}
           className="mt-2 w-full rounded-lg bg-amber-600 py-2.5 text-sm font-bold text-white disabled:opacity-40"
         >
-          {over ? '풀을 초과했습니다' : `지급${total > 0 ? ` (${total.toLocaleString('ko-KR')}💎)` : ''}`}
+          {over ? '세금을 초과했습니다' : `지급${total > 0 ? ` (${total.toLocaleString('ko-KR')}💎)` : ''}`}
         </button>
       </div>
     </div>

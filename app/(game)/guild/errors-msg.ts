@@ -20,7 +20,7 @@ const MAP: Record<string, string> = {
   COLLECT_COOLDOWN: '아직 수금 쿨다운입니다.',
   NOTHING_TO_COLLECT: '수금할 다이아가 없습니다.',
   NOTHING_TO_DISTRIBUTE: '분배할 다이아가 없습니다.',
-  DISTRIBUTE_OVER_POOL: '분배 총액이 세금 풀을 초과합니다.',
+  DISTRIBUTE_OVER_POOL: '분배 총액이 세금을 초과합니다.',
   ZONE_NOT_OWNED: '자기 길드 소유 구역만 수비할 수 있습니다.',
   CANNOT_ATTACK_OWN: '자기 길드 구역은 공격할 수 없습니다.',
   NOT_ADJACENT: '내 길드 영토에 인접한 구역만 공격할 수 있습니다.',

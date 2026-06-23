@@ -2,7 +2,8 @@
 
 import { useEffect, useState, useTransition } from 'react';
 import { useRouter } from 'next/navigation';
-import Link from 'next/link';
+
+import { DistributeBoard } from '../distribute/DistributeBoard';
 
 import { useResourceToast } from '@/components/ResourceToast';
 import { useDiamond } from '@/components/DiamondContext';
@@ -644,17 +645,9 @@ export function GuildSettings({
       </section>
       )}
 
-      {/* 세금 풀 분배 (길드장) — 전용 '세금' 탭 */}
+      {/* 세금 (길드장) — 분배 상세를 탭 안에 바로 노출(별도 페이지 이동 없이). */}
       {tab === 'tax' && isLeader && (
-        <section className="flex items-center justify-between gap-2 rounded-xl border border-zinc-200 bg-white p-3 dark:border-zinc-800 dark:bg-zinc-950">
-          <div>
-            <h3 className="text-sm font-bold">길드 세금</h3>
-            <p className="text-[11px] text-zinc-500">💎 {taxPool}</p>
-          </div>
-          <Link href="/guild/distribute" className={`shrink-0 ${BTN.primary}`}>
-            분배
-          </Link>
-        </section>
+        <DistributeBoard myUserId={myUserId} pool={taxPool} members={members} />
       )}
 
       {/* 길드 문양 보관함 (길드장) — 별도 '문양' 탭. 최대 5개 보관, 1개 선택 사용. */}

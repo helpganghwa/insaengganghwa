@@ -25,10 +25,12 @@ export default async function DistributePage() {
   if (!guild) redirect('/guild');
 
   return (
-    <DistributeBoard
-      myUserId={userId}
-      pool={guild.taxPoolDiamond.toString()}
-      members={members.map((m) => ({ userId: m.userId, nickname: m.nickname, role: m.role }))}
-    />
+    <div className="px-4 py-4">
+      <DistributeBoard
+        myUserId={userId}
+        pool={guild.taxPoolDiamond.toString()}
+        members={members.map((m) => ({ userId: m.userId, nickname: m.nickname, role: m.role }))}
+      />
+    </div>
   );
 }
