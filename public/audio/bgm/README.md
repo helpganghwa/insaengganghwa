@@ -30,6 +30,17 @@
   완화어를 넣지 않는다**(밋밋해짐). 생성물이 유난히 크면 그 트랙의 게인 숫자만 낮춘다.
 - 토글: 설정 > "배경음악"(기본 꺼짐). 첫 사용자 탭 이후 재생(자동재생 정책).
 
+## 메인 테마 — 대안 스타일 5종 (전 화면 공통 BGM 후보)
+
+현재 hub가 "잔잔 오케스트라"라 재생성 시 비슷하게만 나올 때, **장르·악기 팔레트를 바꾼** 후보들.
+하나 골라 `hub.m4a`로 넣으면 전 화면에 적용. 전부 차분·루프 적합·멜로디 중심 유지.
+
+1. **코지 로파이** — `cozy lo-fi fantasy game main theme, a warm hummable melody on mellow electric piano and soft synth bells, laid-back lo-fi hip-hop groove with soft vinyl crackle and gentle boom-bap drums, warm bass, chill and nostalgic, peaceful and heart-fluttering, ~75bpm, instrumental, loopable`
+2. **켈틱 포크** — `warm celtic folk fantasy main theme, a memorable hummable melody on tin whistle and fiddle, gentle harp and acoustic guitar, soft bodhran hand-drum groove, cozy and adventurous yet calm, hopeful village warmth, ~88bpm, instrumental, loopable`
+3. **오르골 & 솔로 피아노** — `tender music box and solo piano fantasy main theme, a delicate nostalgic hummable melody, soft sustained strings underneath, intimate and heart-fluttering, gentle and serene, a quiet emotional lullaby, ~72bpm, instrumental, loopable`
+4. **동양 전통 퓨전(가야금·대금)** — `serene east-asian fantasy main theme, a graceful hummable melody on gayageum and daegeum (korean zither and bamboo flute), soft warm pad and gentle hand percussion, meditative and peaceful with a hopeful lift, ~80bpm, instrumental, loopable`
+5. **지브리풍 오케스트라(무가사 보컬)** — `whimsical studio-ghibli style orchestral main theme, a soaring yet gentle hummable melody on piano and strings with a soft wordless female vocal aah, warm woodwinds and harp, nostalgic and heartwarming, emotional but calm, ~84bpm, instrumental, loopable`
+
 ## 파일명 ↔ 화면 ↔ Suno 프롬프트
 
 | 파일 | 화면 | Suno 스타일 프롬프트 |
