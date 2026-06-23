@@ -7,6 +7,7 @@ import { TranscendSprite } from '@/components/TranscendSprite';
 import { RarityFrame, rarityBorderStyle, hasRarityBorder } from '@/components/RarityFrame';
 import { transcendStyle } from '@/lib/game/equipment/transcend';
 import { advanceTutorial } from '@/components/tutorial/events';
+import { sounds } from '@/lib/game/sound';
 
 import type { OpenedItem } from './actions';
 
@@ -53,6 +54,7 @@ function ResultCard({
           cur += 1;
           setShown(cur);
           setStepKey((k) => k + 1);
+          sounds.gachaReveal(); // 등급 상승(초월) 공개음
         }, base + TREM),
       );
     }

@@ -18,6 +18,8 @@ import { useResourceToast } from '@/components/ResourceToast';
 import { finalizeEnhance, reduceTimeWithGems, cancelEnhanceAction } from './actions';
 import { completeTutorial } from '@/components/tutorial/events';
 import { useDiamond } from '@/components/DiamondContext';
+import { sounds } from '@/lib/game/sound';
+
 import { EnhanceFX, type FxKind } from './EnhanceFX';
 
 /** §10 자랑 자동 트리거 강화 단계(GDD §6 / 사용자 확정 델타). */
@@ -316,6 +318,7 @@ export function EnhanceSlotCard({
     setConfirm(false);
     setAttempting(true);
     setAttemptingMsg(lore.attempting);
+    sounds.enhanceStart(); // 망치질 시작음
     startTransition(async () => {
       // 결과 트랜잭션 커밋 즉시 반환(후처리는 서버 after). 이 await만 pending.
       const r = await finalizeEnhance(activeJob.jobId);
@@ -345,6 +348,7 @@ export function EnhanceSlotCard({
         setFlashFromLevel(fromLv);
         setFlashToLevel(fromLv + 1);
         setFlashMsg(lore.success);
+        sounds.enhanceSuccess(); // Phase 1 — 성공음
         if (!reduceMotion && typeof navigator !== 'undefined' && 'vibrate' in navigator) {
           navigator.vibrate(30); // Phase 1 — success 햅틱
         }
@@ -354,6 +358,7 @@ export function EnhanceSlotCard({
           setFlashFromLevel(fromLv + 1);
           setFlashToLevel(toLv);
           setFlashMsg(lore.mega ?? lore.success);
+          sounds.enhanceJackpot(); // Phase 2 — 대박(메가) 팡파레
           if (!reduceMotion && typeof navigator !== 'undefined' && 'vibrate' in navigator) {
             navigator.vibrate([0, 50, 80, 50, 80, 100]); // mega 햅틱
           }
@@ -372,6 +377,10 @@ export function EnhanceSlotCard({
         setFlashFromLevel(fromLv);
         setFlashToLevel(toLv);
         setFlashMsg(lore[oc] ?? lore.success);
+        // 결과음 — reduceMotion과 무관(소리는 모션 감소 대상 아님).
+        if (oc === 'success') sounds.enhanceSuccess();
+        else if (oc === 'down') sounds.enhanceDown();
+        else sounds.enhanceKeep(); // hold(유지)
         if (!reduceMotion && typeof navigator !== 'undefined' && 'vibrate' in navigator) {
           if (oc === 'success') navigator.vibrate(30);
           else if (oc === 'down') navigator.vibrate([0, 30, 50, 30]);

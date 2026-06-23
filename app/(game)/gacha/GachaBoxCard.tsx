@@ -6,6 +6,7 @@ import { useRouter } from 'next/navigation';
 import type { Slot } from '@/lib/db/schema/equipment';
 
 import { useResourceToast } from '@/components/ResourceToast';
+import { sounds } from '@/lib/game/sound';
 
 import { openAction, type OpenActionResult } from './actions';
 import { GachaResultModal } from './GachaResultModal';
@@ -62,6 +63,7 @@ export function GachaBoxCard({
           return;
         }
         setResult(r);
+        sounds.gachaOpen(); // 상자 개봉음
         setOptimistic(r.remaining); // 서버 권위 잔여
         router.refresh(); // 백그라운드 동기화(로딩 게이트에 영향 없음)
       })
