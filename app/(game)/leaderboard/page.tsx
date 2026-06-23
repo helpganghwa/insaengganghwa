@@ -60,7 +60,7 @@ export default async function LeaderboardPage({
         <>
           {/* Top 3 — 명예의 전당 (pixellab 배경 + 전신 높이차) */}
           <section className="isolate overflow-hidden rounded-xl border border-amber-900/50 shadow-lg shadow-black/40">
-            <div className="relative w-full" style={{ aspectRatio: '400 / 200' }}>
+            <div className="relative w-full" style={{ aspectRatio: '400 / 174' }}>
               {/* eslint-disable-next-line @next/next/no-img-element */}
               <img
                 src={BG[metric]}
@@ -70,7 +70,7 @@ export default async function LeaderboardPage({
                 style={{ imageRendering: 'pixelated' }}
               />
               {/* 1·2·3위 전신 — 2위(좌)·1위(중앙, 큼)·3위(우). 텍스트는 drop-shadow로 가독 확보 */}
-              <div className="absolute inset-0 flex items-end justify-center gap-0.5 px-1 py-1.5">
+              <div className="absolute inset-0 flex items-end justify-center gap-0.5 px-1 pb-0.5 pt-1">
                 {/* 항상 3분할 — 2/1/3 자리. 데이터 없으면 placeholder로 슬롯 유지. */}
                 {[
                   { slot: 2 as const, entry: top[1] ?? null },
@@ -95,9 +95,9 @@ export default async function LeaderboardPage({
                           </span>
                         </div>
                         {/* 길드 행 placeholder — 칸 높이 통일(아바타 크기 동일). */}
-                        <div className="h-[13px] w-full" aria-hidden />
+                        <div className="h-[12px] w-full" aria-hidden />
                         <div className="relative w-full flex-1" aria-hidden />
-                        <span className="text-pixel-outline pb-1 font-mono text-[11px] font-bold text-amber-200/55 tabular-nums">
+                        <span className="text-pixel-outline pb-0 font-mono text-[11px] font-bold text-amber-200/55 tabular-nums">
                           —
                         </span>
                       </div>
@@ -120,7 +120,7 @@ export default async function LeaderboardPage({
                         </span>
                       </div>
                       {/* 길드 — 이름 밑(문양 + 길드명). 미소속이면 빈 줄로 높이만 유지. */}
-                      <div className="flex h-[13px] w-full items-center justify-center gap-0.5 px-0.5">
+                      <div className="flex h-[12px] w-full items-center justify-center gap-0.5 px-0.5">
                         {entry.guildName ? (
                           <>
                             <GuildBadge emblemUrl={entry.guildEmblemUrl ?? null} size={11} className="shrink-0" />
@@ -148,7 +148,7 @@ export default async function LeaderboardPage({
                           />
                         )}
                       </div>
-                      <span className="text-pixel-outline pb-1 font-mono text-[11px] font-bold text-amber-200 tabular-nums">
+                      <span className="text-pixel-outline pb-0 font-mono text-[11px] font-bold text-amber-200 tabular-nums">
                         {fmt(entry.value)}
                       </span>
                     </Link>

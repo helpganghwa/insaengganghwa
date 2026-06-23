@@ -73,7 +73,7 @@ export function RankingDeck({
         </span>
       </Link>
 
-      <div className="relative w-full" style={{ aspectRatio: '400 / 200' }}>
+      <div className="relative w-full" style={{ aspectRatio: '400 / 174' }}>
         {/* eslint-disable-next-line @next/next/no-img-element */}
         <img
           src={HOF_BG}
@@ -82,7 +82,8 @@ export function RankingDeck({
           className="absolute inset-0 h-[105%] w-full object-fill"
           style={{ imageRendering: 'pixelated' }}
         />
-        <div className="absolute inset-0 flex items-end justify-center gap-0.5 px-1 py-1.5">
+        {/* 카드 높이 고정 — 길드 행은 상하 패딩·수치 여백을 줄여 흡수(카드 안 키움). */}
+        <div className="absolute inset-0 flex items-end justify-center gap-0.5 px-1 pb-0.5 pt-1">
           {/* 항상 3분할 — 2/1/3 자리. 데이터 없으면 placeholder로 슬롯 유지. */}
           {[
             { slot: 2 as const, entry: top[1] ?? null },
@@ -107,9 +108,9 @@ export function RankingDeck({
                     </span>
                   </div>
                   {/* 길드 행 placeholder — 칸 높이 통일(아바타 크기 동일 유지). */}
-                  <div className="h-[13px] w-full" aria-hidden />
+                  <div className="h-[12px] w-full" aria-hidden />
                   <div className="relative w-full flex-1" aria-hidden />
-                  <span className="pb-1 font-mono text-[11px] font-bold tabular-nums text-amber-200/55 text-pixel-outline">
+                  <span className="pb-0 font-mono text-[11px] font-bold tabular-nums text-amber-200/55 text-pixel-outline">
                     —
                   </span>
                 </div>
@@ -132,7 +133,7 @@ export function RankingDeck({
                   </span>
                 </div>
                 {/* 길드 — 이름 밑(문양 + 길드명). 미소속이면 빈 줄로 높이만 유지. */}
-                <div className="flex h-[13px] w-full items-center justify-center gap-0.5 px-0.5">
+                <div className="flex h-[12px] w-full items-center justify-center gap-0.5 px-0.5">
                   {entry.guildName ? (
                     <>
                       <GuildBadge emblemUrl={entry.guildEmblemUrl ?? null} size={11} className="shrink-0" />
@@ -160,7 +161,7 @@ export function RankingDeck({
                     />
                   ) : null}
                 </div>
-                <span className="pb-1 font-mono text-[11px] font-bold tabular-nums text-amber-200 text-pixel-outline">
+                <span className="pb-0 font-mono text-[11px] font-bold tabular-nums text-amber-200 text-pixel-outline">
                   {entry.value.toLocaleString('ko-KR')}
                 </span>
               </Link>

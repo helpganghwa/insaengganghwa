@@ -185,8 +185,23 @@ function Fighter({
   const lunge = attacking ? (side === 'l' ? 'translate-x-2' : '-translate-x-2') : '';
   return (
     <div className="flex w-40 flex-col items-center gap-0.5">
+      {/* 순서: 닉네임 / 길드 / 아바타 / 체력바 */}
+      <div className="flex max-w-[150px] items-center gap-1">
+        <span className="truncate text-[11px] font-bold text-white drop-shadow">{name}</span>
+      </div>
+      {/* 길드(문양+이름) — 미소속도 고정 높이로 예약(일관성·체력바 가림 방지). */}
+      <div className="flex h-[12px] max-w-[150px] items-center gap-0.5">
+        {guild ? (
+          <>
+            <GuildBadge emblemUrl={guild.emblemUrl ?? null} size={10} className="shrink-0" />
+            <span className="truncate text-[9px] font-medium text-amber-100/85 drop-shadow">
+              {guild.name}
+            </span>
+          </>
+        ) : null}
+      </div>
       <div
-        className={`relative h-28 w-40 transition-transform duration-200 ${lunge} ${
+        className={`relative h-32 w-40 transition-transform duration-200 ${lunge} ${
           shake ? 'animate-hit-shake' : ''
         }`}
       >
@@ -204,9 +219,9 @@ function Fighter({
             -{dmg.toLocaleString()}
           </div>
         ) : null}
-        {/* 사망 시 색→투명 전환(transition). pt-6: 아바타를 줄이고 아래로 내려 상단 공격/방어 라벨 공간 확보. */}
+        {/* 사망 시 색→투명 전환(transition). pt-3: 머리 위 공격/방어 라벨 공간. */}
         <div
-          className="h-full w-full pt-4 transition-all duration-500 ease-out"
+          className="h-full w-full pt-3 transition-all duration-500 ease-out"
           style={{ opacity: faded ? 0.25 : 1, filter: faded ? 'grayscale(1)' : 'none' }}
         >
           {avatar ? (
@@ -219,7 +234,6 @@ function Fighter({
                   className="h-full w-full object-contain object-bottom drop-shadow-[0_2px_5px_rgba(0,0,0,0.85)]"
                   style={{
                     imageRendering: 'pixelated',
-                    // v3 풀프레임 — 줌·하향보정 제거, 좌우 플립만 유지(side r 반전).
                     transform: `scaleX(${side === 'r' ? -1 : 1})`,
                     transformOrigin: 'center bottom',
                   }}
@@ -233,7 +247,6 @@ function Fighter({
                 className="h-full w-full object-contain object-bottom drop-shadow-[0_2px_5px_rgba(0,0,0,0.85)]"
                 style={{
                   imageRendering: 'pixelated',
-                  // v3 풀프레임 — 줌·하향보정 제거, 좌우 플립만 유지.
                   transform: `scaleX(${side === 'r' ? -1 : 1})`,
                   transformOrigin: 'center bottom',
                 }}
@@ -247,18 +260,6 @@ function Fighter({
         </div>
         <div className="pointer-events-none absolute -bottom-0.5 left-1/2 h-2 w-24 -translate-x-1/2 rounded-[50%] bg-black/55 blur-[3px]" />
       </div>
-      <div className="flex max-w-[150px] items-center gap-1">
-        <span className="truncate text-[11px] font-bold text-white drop-shadow">{name}</span>
-      </div>
-      {/* 닉네임 밑 길드(문양+이름) — 점령전 재생과 동일. 미소속이면 미표시. */}
-      {guild ? (
-        <div className="flex max-w-[150px] items-center gap-0.5">
-          <GuildBadge emblemUrl={guild.emblemUrl ?? null} size={10} className="shrink-0" />
-          <span className="truncate text-[9px] font-medium text-amber-100/85 drop-shadow">
-            {guild.name}
-          </span>
-        </div>
-      ) : null}
       {/* HP바 — 양쪽 동일 높이 확보(공격자는 빈 자리 placeholder). */}
       {maxHp != null ? (
         <div className="isolate h-1.5 w-24 overflow-hidden rounded-full bg-zinc-800 ring-1 ring-black/40">
@@ -459,8 +460,8 @@ function RankingView({
                 ) : null}
               </div>
               {/* object-bottom + 동일 박스 하단선(items-end) → 발끝 통일. scale은 origin bottom이라 발끝 고정. */}
-              {/* 아바타 클릭 → 프로필 상세(/u/<code>). */}
-              <div className="relative h-36 w-full">
+              {/* 아바타 클릭 → 프로필 상세(/u/<code>). -mt-2.5: 닉네임/길드와의 간격 축소(아바타 위로 당김). */}
+              <div className="relative -mt-2.5 h-36 w-full">
                 {p?.avatarUrl ? (
                   p.publicCode ? (
                     <Link
