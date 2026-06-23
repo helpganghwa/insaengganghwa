@@ -3,12 +3,12 @@
 // 효과음(SFX) 파일 재생 매니저 — Web Audio 버퍼 풀로 저지연 재생(클릭 반응성).
 // ElevenLabs/jsfxr로 만든 샘플을 public/audio/sfx/<name>.webm 에 두면 자동 적용된다.
 // 파일이 없으면 'missing'을 반환 → 호출측(lib/game/sound.ts 파사드)이 8-bit 합성음으로 폴백.
-// 토글: BGM과 별개인 효과음 토글 localStorage 'ig:sound'. 값이 없으면 켜짐(기본 ON).
+// 토글: 효과음 localStorage 'ig:sound'. 값이 없으면 켜짐(기본 ON).
 // 자동재생 정책: AudioContext는 첫 사용자 제스처 후 resume — playSfx/unlockSfx 모두 제스처 맥락에서 호출.
 
 const STORAGE_KEY = 'ig:sound';
 const BASE = '/audio/sfx';
-const SFX_VOLUME = 0.85; // 효과음 기준 음량(전경). BGM(0.35)보다 충분히 높게 — 또렷하게 들리도록.
+const SFX_VOLUME = 0.85; // 효과음 기준 음량(전경) — 또렷하게 들리도록.
 const EXT = 'webm'; // 작은 용량·넓은 지원. m4a로 바꾸려면 여기 + 파일 확장자만 교체.
 
 export type SfxName =

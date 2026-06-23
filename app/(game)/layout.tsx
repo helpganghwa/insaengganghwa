@@ -17,7 +17,7 @@ import { AppHeader, AppHeaderShell } from '@/components/AppHeader';
 import { BottomNav } from '@/components/BottomNav';
 import { BottomNavAsync } from '@/components/BottomNavAsync';
 import { SpritePreloader } from '@/components/SpritePreloader';
-import { BgmController } from '@/components/audio/BgmController';
+import { SfxUnlock } from '@/components/audio/SfxUnlock';
 import { PresenceHeartbeat } from '@/components/PresenceHeartbeat';
 import { PushAutoSync } from '@/components/PushAutoSync';
 import { RouteTransitionOverlay } from '@/components/RouteTransitionOverlay';
@@ -81,7 +81,7 @@ export default async function GameLayout({ children }: { children: React.ReactNo
           주면 left/right-0과 over-constraint돼 좌측 정렬되므로 넣지 않는다(큰 화면 letterbox). */}
       <div className="fixed inset-0 mx-auto flex max-w-[390px] flex-col shadow-sm">
         <SpritePreloader />
-        <BgmController />
+        <SfxUnlock />
         <PresenceHeartbeat />
         <PushAutoSync />
         <KakaoSdkLoader />

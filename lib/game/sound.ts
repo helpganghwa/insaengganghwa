@@ -22,7 +22,7 @@ let noiseBuf: AudioBuffer | null = null;
 
 function master(ac: AudioContext): GainNode {
   if (masterGain) return masterGain;
-  // 합성음 전체 부스트 — 짧은 트랜지언트라 BGM(0.35 지속음)보다 크게 키워야 또렷이 들린다.
+  // 합성음 전체 부스트 — 짧은 트랜지언트라 게인을 크게 키워야 또렷이 들린다.
   // 크게 올리되 리미터(컴프레서)로 피크를 잡아 레이어 많은 효과(잭팟 등)의 클리핑을 방지.
   const g = ac.createGain();
   g.gain.value = 2.6;
