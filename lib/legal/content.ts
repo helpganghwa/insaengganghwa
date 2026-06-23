@@ -4,14 +4,14 @@
 
 /** 전자상거래법 표시 의무 사업자정보. 통신판매업 신고·사업자정보 확정 시 값 채울 것. */
 export const BUSINESS_INFO = {
-  company: '[상호]',
-  ceo: '[대표자]',
-  bizRegNo: '[사업자등록번호]',
-  mailOrderNo: '[통신판매업신고번호]',
-  address: '[사업장 주소]',
-  contact: '[고객문의 연락처]',
-  email: '[고객문의 이메일]',
-  privacyOfficer: '[성명 / 직책 / 연락처]',
+  company: '인생강화',
+  ceo: '서해남',
+  bizRegNo: '479-13-03130',
+  mailOrderNo: '[통신판매업신고번호]', // 신고 완료 시 기입
+  address: '울산광역시 중구 신기1길 43, 2층 (태화동)',
+  contact: '[고객문의 연락처]', // 확정 시 기입
+  email: '[고객문의 이메일]', // 확정 시 기입
+  privacyOfficer: '[성명 / 직책 / 연락처]', // 확정 시 기입
 } as const;
 
 export type LegalSlug = 'terms' | 'privacy' | 'refund' | 'youth';
