@@ -7,7 +7,7 @@ import { josa } from 'es-hangul';
 
 import { MELEE_REPLAY_ROUNDS, MELEE_HP_MULT } from '@/lib/game/balance';
 import { assetUrl } from '@/lib/asset-versions';
-import { faceCropStyle } from '@/components/faceCrop';
+import { meleeFaceCropStyle, type FaceBox } from '@/components/faceCrop';
 import type { MeleeFinale, MeleeMyEvent } from '@/lib/db/schema/melee';
 
 export type MeleeResultView = {
@@ -16,6 +16,8 @@ export type MeleeResultView = {
   participantCount: number;
   totalRounds: number;
   championNickname: string;
+  /** 챔피언 아바타 얼굴 박스 — FINAL 카드 얼굴중심 크롭(없으면 폴백). */
+  championFaceBox: FaceBox | null;
   podium: {
     rank: number;
     nickname: string;
@@ -563,20 +565,28 @@ function RoundCard({
 }
 
 // ── 로그 최상단 FINAL 카드 — 우승 축하(round 자리에 FINAL) + 챔피언 아바타 배경. 표시 전용(비클릭). ──
-function FinalCard({ champion, avatar }: { champion: string; avatar: string | null }) {
+function FinalCard({
+  champion,
+  avatar,
+  faceBox,
+}: {
+  champion: string;
+  avatar: string | null;
+  faceBox: FaceBox | null;
+}) {
   return (
     <li className="relative flex min-h-[56px] items-center overflow-hidden border-b border-amber-900/40 pr-3 pl-3">
       {/* 우측 — 챔피언 아바타(배경 레이어). height/top으로 상반신·얼굴이 박스 세로 중앙(여백 보정). */}
       {avatar ? (
         <div className="pointer-events-none absolute inset-y-0 right-0 w-36 overflow-hidden">
-          {/* 얼굴중심 크롭 — 초점을 얼굴(22%)로 내리고 줌 완화(머리끝만 보이던 문제 보정). */}
+          {/* 얼굴중심 크롭 — 아바타별 실제 faceBox(없으면 폴백). 가로 스트립 보정. */}
           {/* eslint-disable-next-line @next/next/no-img-element */}
           <img
             src={avatar}
             alt=""
             aria-hidden
             className="absolute inset-0 h-full w-full"
-            style={faceCropStyle({ cx: 0.5, cy: 0.22, h: 0.34 })}
+            style={meleeFaceCropStyle(faceBox)}
           />
         </div>
       ) : null}
@@ -614,6 +624,7 @@ export function MeleeResult({ view }: { view: MeleeResultView }) {
     me,
     finale,
     championNickname,
+    championFaceBox,
     edition,
     participantCount,
     totalRounds,
@@ -912,6 +923,7 @@ export function MeleeResult({ view }: { view: MeleeResultView }) {
               <FinalCard
                 champion={championNickname}
                 avatar={podium.find((p) => p.rank === 1)?.avatarUrl ?? null}
+                faceBox={championFaceBox}
               />
             ) : null}
             {displayRows.map((r) => (

@@ -5,7 +5,7 @@ import Link from 'next/link';
 
 import { MELEE_REWARD_TIERS } from '@/lib/game/balance';
 import { assetUrl } from '@/lib/asset-versions';
-import { faceCropStyle } from '@/components/faceCrop';
+import { meleeFaceCropStyle } from '@/components/faceCrop';
 import type { MeleeHistoryRow } from '@/lib/game/melee/history';
 
 export type { MeleeHistoryRow };
@@ -85,14 +85,14 @@ export function MeleeInfo({
                 {/* 챔피언 아바타 — 우측 배경 레이어. height/top으로 상반신·얼굴이 박스 세로 중앙. */}
                 {h.championAvatar ? (
                   <div className="pointer-events-none absolute inset-y-0 right-0 w-40 overflow-hidden">
-                    {/* 얼굴중심 크롭 — 초점을 얼굴(22%)로 내리고 줌 완화(머리끝만 보이던 문제 보정). */}
+                    {/* 얼굴중심 크롭 — 아바타별 실제 faceBox(없으면 폴백). 가로 스트립 보정. */}
                     {/* eslint-disable-next-line @next/next/no-img-element */}
                     <img
                       src={h.championAvatar}
                       alt=""
                       aria-hidden
                       className="absolute inset-0 h-full w-full"
-                      style={faceCropStyle({ cx: 0.5, cy: 0.22, h: 0.34 })}
+                      style={meleeFaceCropStyle(h.championFaceBox)}
                     />
                   </div>
                 ) : null}

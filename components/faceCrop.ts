@@ -29,3 +29,13 @@ export function faceCropStyle(box: FaceBox | null): CSSProperties {
     transformOrigin: `${(cx * 100).toFixed(1)}% ${(cy * 100).toFixed(1)}%`,
   };
 }
+
+/**
+ * 대난투 챔피언 배경 스트립(가로형)용 — 정사각 헤더와 달리 세로로 눌린 영역이라,
+ * 실제 박스의 얼굴 위치(cx/cy)는 쓰되 초점을 약간 내리고(가로 비율 보정) 줌을 완화한다.
+ * 박스 없으면 v3 표준 머리 위치(cy 0.07) 가정 후 동일 보정 → 폴백도 일관.
+ */
+export function meleeFaceCropStyle(box: FaceBox | null): CSSProperties {
+  const b = box ?? { cx: 0.5, cy: 0.07, h: 0.14 };
+  return faceCropStyle({ cx: b.cx, cy: b.cy + 0.15, h: Math.max(b.h, 0.3) });
+}

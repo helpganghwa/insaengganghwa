@@ -8,6 +8,7 @@ import { meleeBattles, meleeParticipants, type MeleeFinale } from '@/lib/db/sche
 import { profiles } from '@/lib/db/schema/profiles';
 import { characters } from '@/lib/db/schema/server';
 import { userProfiles } from '@/lib/db/schema/avatar';
+import { parseFaceBox, type FaceBox } from '@/components/faceCrop';
 import type { MeleeResultView } from '@/app/(game)/melee/MeleeResult';
 
 const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
@@ -48,6 +49,7 @@ export async function buildMeleeResultView(
   const rosterIds = finale.roster.map((r) => r.userId).filter((id) => UUID_RE.test(id));
   const avatarOf = new Map<string, string>();
   const codeOf = new Map<string, string>();
+  const faceBoxOf = new Map<string, FaceBox>();
   if (rosterIds.length > 0) {
     const av = await withTimeout(
       db
@@ -56,6 +58,7 @@ export async function buildMeleeResultView(
           code: profiles.publicCode,
           rotations: userProfiles.rotations,
           dir: userProfiles.activeDirection,
+          options: userProfiles.options,
         })
         .from(characters)
         .innerJoin(profiles, eq(profiles.id, characters.userId))
@@ -70,6 +73,8 @@ export async function buildMeleeResultView(
       const url = (a.dir ? rot[a.dir] : undefined) ?? rot.south;
       if (url) avatarOf.set(a.uid, url);
       if (a.code) codeOf.set(a.uid, a.code);
+      const fb = parseFaceBox((a.options as Record<string, unknown> | null)?.faceBox);
+      if (fb) faceBoxOf.set(a.uid, fb);
     }
   }
   // 스냅샷(그 시점) 닉·아바타 — finale.roster. 아바타 스냅샷이 있으면 live보다 우선(과거 회차 고정).
@@ -162,6 +167,7 @@ export async function buildMeleeResultView(
     edition,
     participantCount: battle.participantCount,
     championNickname,
+    championFaceBox: battle.championUserId ? faceBoxOf.get(battle.championUserId) ?? null : null,
     podium,
     me: meRow ? { rank: meRow.rank, diamond: Number(meRow.diamond), boxes: meRow.boxes } : null,
     myEvents: meRow?.myEvents ?? [],

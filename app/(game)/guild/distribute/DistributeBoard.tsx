@@ -74,9 +74,6 @@ export function DistributeBoard({
   return (
     <section className="rounded-xl border border-zinc-200 bg-white p-3 dark:border-zinc-800 dark:bg-zinc-950">
       <h3 className="text-sm font-bold">세금 분배</h3>
-      <p className="mt-0.5 text-[11px] text-zinc-500">
-        길드원별 금액을 입력해 지급합니다. ‘균등 분배’는 세금을 인원수로 나눠 자동 입력(잔여는 그대로 남음).
-      </p>
 
       {/* 세금 잔액 + 균등/지우기 — 카드 내부라 테두리 없이 옅은 배경 행 */}
       <div className="mt-3 flex items-center justify-between gap-2 rounded-lg bg-zinc-50 px-3 py-2.5 dark:bg-zinc-900">

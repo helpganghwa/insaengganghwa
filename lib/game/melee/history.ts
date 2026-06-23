@@ -8,6 +8,7 @@ import { meleeBattles, meleeParticipants, type MeleeFinale } from '@/lib/db/sche
 import { profiles } from '@/lib/db/schema/profiles';
 import { characters } from '@/lib/db/schema/server';
 import { userProfiles } from '@/lib/db/schema/avatar';
+import { parseFaceBox, type FaceBox } from '@/components/faceCrop';
 
 const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 
@@ -18,6 +19,8 @@ export type MeleeHistoryRow = {
   championNick: string;
   championCode: string | null;
   championAvatar: string | null;
+  /** 챔피언 아바타 얼굴 박스 — 얼굴중심 크롭(없으면 폴백). */
+  championFaceBox: FaceBox | null;
   championCp: number;
   participantCount: number;
 };
@@ -68,6 +71,7 @@ export async function loadMeleeHistory(serverId: number): Promise<MeleeHistoryRo
               code: profiles.publicCode,
               rotations: userProfiles.rotations,
               dir: userProfiles.activeDirection,
+              options: userProfiles.options,
             })
             .from(characters)
             .innerJoin(profiles, eq(profiles.id, characters.userId))
@@ -87,11 +91,15 @@ export async function loadMeleeHistory(serverId: number): Promise<MeleeHistoryRo
     ).catch(() => []),
   ]);
 
-  const champOf = new Map<string, { nick: string; code: string | null; avatar: string | null }>();
+  const champOf = new Map<
+    string,
+    { nick: string; code: string | null; avatar: string | null; faceBox: FaceBox | null }
+  >();
   for (const c of champRows) {
     const rot = (c.rotations as Record<string, string> | null) ?? null;
     const avatar = rot ? rot.south ?? (c.dir ? rot[c.dir] ?? null : null) : null;
-    champOf.set(c.uid, { nick: c.nick, code: c.code, avatar });
+    const faceBox = parseFaceBox((c.options as Record<string, unknown> | null)?.faceBox);
+    champOf.set(c.uid, { nick: c.nick, code: c.code, avatar, faceBox });
   }
   const cpOf = new Map(champCpRows.map((r) => [r.battleId.toString(), Number(r.cp)]));
 
@@ -106,6 +114,7 @@ export async function loadMeleeHistory(serverId: number): Promise<MeleeHistoryRo
         championNick: snapNick ?? c?.nick ?? '챔피언',
         championCode: c?.code ?? null,
         championAvatar: trophyOf.get(b.id.toString()) ?? c?.avatar ?? null,
+        championFaceBox: c?.faceBox ?? null,
         championCp: cpOf.get(b.id.toString()) ?? 0,
         participantCount: b.pc,
       } satisfies MeleeHistoryRow;
