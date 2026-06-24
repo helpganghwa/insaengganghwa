@@ -78,6 +78,10 @@ export const guilds = pgTable('guilds', {
    * 위임 완료 또는 길드장 재활동(미접속<5일) 시 null로 리셋 → 다음 잠수 때 다시 경고.
    */
   leaderHandoverWarnedAt: timestamp('leader_handover_warned_at', { withTimezone: true }),
+  /** 직전 전투력 랭킹(1~3, 그 외 null) — 랭킹 업적 중복 로깅 방지(변동 시만 피드 기록). */
+  lastPowerRank: smallint('last_power_rank'),
+  /** 직전 점령지 랭킹(1~3, 그 외 null). */
+  lastZoneRank: smallint('last_zone_rank'),
   createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
 });
 

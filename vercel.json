@@ -59,6 +59,10 @@
       "schedule": "*/5 15 * * *"
     },
     {
+      "path": "/api/cron/guild-rank-achv",
+      "schedule": "40 15 * * *"
+    },
+    {
       "path": "/api/cron/guild-leader-handover",
       "schedule": "0 3 * * *"
     }
