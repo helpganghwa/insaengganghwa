@@ -11,6 +11,7 @@ import { GuildBadge } from '@/components/GuildBadge';
 import { combatPowerFromOwned } from '@/lib/game/equipment/combat-power';
 import { liberatedItemRanks } from '@/lib/game/codex/ranking';
 import { getCatalogMap, completeCatalog } from '@/lib/game/catalog';
+import { profileHref } from '@/lib/game/profile/href';
 
 import { BoastLauncher } from '@/components/BoastModal';
 import { TranscendSprite } from '@/components/TranscendSprite';
@@ -141,7 +142,7 @@ export default async function ProfilePage() {
             />
             {activeProfile ? (
               <Link
-                href={`/u/${encodeURIComponent(publicCode)}`}
+                href={profileHref(publicCode, serverId)}
                 aria-label="내 프로필 상세"
                 className="block"
               >

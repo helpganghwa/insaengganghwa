@@ -1,5 +1,6 @@
 import Link from 'next/link';
 import { getActiveServerId } from '@/lib/game/servers';
+import { profileHref } from '@/lib/game/profile/href';
 
 import { getSessionUserId } from '@/lib/auth/session';
 import { getLeaderboardPayload, type LeaderboardMetric } from '@/lib/game/leaderboard/queries';
@@ -37,7 +38,8 @@ export default async function LeaderboardPage({
   const userId = await getSessionUserId();
   if (!userId) return null;
   const metric = parse((await searchParams).tab);
-  const { top, mine } = await getLeaderboardPayload(metric, await getActiveServerId(), userId);
+  const serverId = await getActiveServerId();
+  const { top, mine } = await getLeaderboardPayload(metric, serverId, userId);
 
   return (
     <div className="space-y-4 px-4 py-4">
@@ -106,7 +108,7 @@ export default async function LeaderboardPage({
                   return (
                     <Link
                       key={entry.userId}
-                      href={`/u/${encodeURIComponent(entry.publicCode)}`}
+                      href={profileHref(entry.publicCode, serverId)}
                       className={`flex min-w-0 flex-1 flex-col items-center self-stretch ${
                         first ? 'z-10' : ''
                       }`}
@@ -167,7 +169,7 @@ export default async function LeaderboardPage({
                   return (
                     <li key={e.userId}>
                       <Link
-                        href={`/u/${encodeURIComponent(e.publicCode)}`}
+                        href={profileHref(e.publicCode, serverId)}
                         className={`flex h-14 items-center gap-2.5 border-b border-zinc-800 px-3 last:border-b-0 ${
                           me ? 'bg-amber-400/10 ring-1 ring-amber-400/60 ring-inset' : ''
                         }`}
