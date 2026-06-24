@@ -4,6 +4,7 @@ import { useState, useTransition } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 
+import { AdminSearch } from '../AdminSearch';
 import { refundOrderAction } from './actions';
 
 export type OrderRow = {
@@ -54,13 +55,16 @@ export function PaymentsClient({
   prevDate,
   nextDate,
   today,
+  query,
 }: {
   orders: OrderRow[];
   date: string;
   prevDate: string;
   nextDate: string;
   today: string;
+  query: string;
 }) {
+  const searching = query.length > 0;
   const router = useRouter();
   const [orders, setOrders] = useState(initial);
   const [pendingId, setPendingId] = useState<string | null>(null);
@@ -106,8 +110,18 @@ export function PaymentsClient({
     <div className="mx-auto w-full max-w-[860px] space-y-4 px-4 py-6 text-zinc-100">
       <div>
         <h1 className="text-xl font-bold">결제 내역 · 환불</h1>
-        {/* 날짜 네비 — 전/다음날 + 날짜 선택. 오늘이면 다음날 비활성. */}
-        <div className="mt-2 flex items-center gap-2">
+        {/* 검색 — 유저코드/닉네임/거래ID. 검색 중엔 날짜 무시. */}
+        <div className="mt-2">
+          <AdminSearch basePath="/admin/payments" initialQuery={query} />
+        </div>
+        {searching ? (
+          <p className="mt-2 text-xs text-zinc-500">
+            검색 “{query}” · {orders.length}건
+          </p>
+        ) : (
+          <>
+            {/* 날짜 네비 — 전/다음날 + 날짜 선택. 오늘이면 다음날 비활성. */}
+            <div className="mt-2 flex items-center gap-2">
           <Link
             href={`/admin/payments?date=${prevDate}`}
             className="rounded-lg border border-zinc-700 bg-zinc-900 px-2.5 py-1 text-sm hover:bg-zinc-800"
@@ -144,10 +158,12 @@ export function PaymentsClient({
             </Link>
           ) : null}
         </div>
-        <p className="mt-2 text-xs text-zinc-500">
-          {date} · 총 {orders.length}건 · 환불가능 {refundable} · 결제완료 {counts.paid ?? 0} · 환불{' '}
-          {counts.refunded ?? 0} · 대기 {counts.pending ?? 0}
-        </p>
+            <p className="mt-2 text-xs text-zinc-500">
+              {date} · 총 {orders.length}건 · 환불가능 {refundable} · 결제완료 {counts.paid ?? 0} · 환불{' '}
+              {counts.refunded ?? 0} · 대기 {counts.pending ?? 0}
+            </p>
+          </>
+        )}
       </div>
 
       {msg ? (

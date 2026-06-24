@@ -1,4 +1,4 @@
-import { and, desc, eq, inArray, sql } from 'drizzle-orm';
+import { and, desc, eq, ilike, inArray, or, sql } from 'drizzle-orm';
 
 import { db } from '@/lib/db/client';
 import { iapOrders } from '@/lib/db/schema/payment';
@@ -26,10 +26,20 @@ function shiftDay(date: string, delta: number): string {
 export default async function AdminPaymentsPage({
   searchParams,
 }: {
-  searchParams: Promise<{ date?: string }>;
+  searchParams: Promise<{ date?: string; q?: string }>;
 }) {
   const sp = await searchParams;
   const date = sp.date && DATE_RE.test(sp.date) ? sp.date : kstDateString();
+  const q = sp.q?.trim() ?? '';
+  const searching = q.length > 0;
+  // 검색 모드: 날짜 무시, 유저코드(정확)·닉네임·거래ID(부분)로 전체 조회. 아니면 KST 하루치.
+  const whereClause = searching
+    ? or(
+        ilike(profiles.publicCode, q),
+        ilike(characters.nickname, `%${q}%`),
+        ilike(iapOrders.portoneOrderId, `%${q}%`),
+      )
+    : sql`(${iapOrders.createdAt} at time zone 'Asia/Seoul')::date = ${date}::date`;
 
   const rows = await db
     .select({
@@ -52,9 +62,9 @@ export default async function AdminPaymentsPage({
       and(eq(characters.userId, iapOrders.userId), eq(characters.serverId, iapOrders.serverId)),
     )
     .leftJoin(profiles, eq(profiles.id, iapOrders.userId))
-    // KST 달력일 기준 하루치(created_at을 서울 시각으로 변환한 날짜가 date와 같은 것).
-    .where(sql`(${iapOrders.createdAt} at time zone 'Asia/Seoul')::date = ${date}::date`)
-    .orderBy(desc(iapOrders.id));
+    .where(whereClause)
+    .orderBy(desc(iapOrders.id))
+    .limit(searching ? 100 : 500);
 
   // 배틀패스 주문의 수령 여부 — 프리미엄 보상을 하나라도 수령(claimedTiers 비지 않음)했으면 환불 불가.
   const bpUserIds = [...new Set(rows.filter((r) => r.product.startsWith('bp_')).map((r) => r.userId))];
@@ -99,12 +109,13 @@ export default async function AdminPaymentsPage({
 
   return (
     <PaymentsClient
-      key={date}
+      key={searching ? `q:${q}` : date}
       orders={orders}
       date={date}
       prevDate={shiftDay(date, -1)}
       nextDate={shiftDay(date, 1)}
       today={kstDateString()}
+      query={q}
     />
   );
 }

@@ -1,10 +1,12 @@
-import { and, desc, eq, gte, lt } from 'drizzle-orm';
+import { and, desc, eq, gte, ilike, lt, or, type SQL } from 'drizzle-orm';
 
 import { db } from '@/lib/db/client';
 import { profileGenerationJobs, userProfiles } from '@/lib/db/schema/avatar';
 import { characters } from '@/lib/db/schema/server';
+import { profiles } from '@/lib/db/schema/profiles';
 import { CATALOG_ITEMS } from '@/lib/game/equipment/catalog';
 
+import { AdminSearch } from '../AdminSearch';
 import { AdminProfileGenActions } from './AdminProfileGenActions';
 import { AdminAvatarViewer } from './AdminAvatarViewer';
 
@@ -52,10 +54,13 @@ async function pixellabRotations(charId: string): Promise<Record<string, string>
 export default async function AdminProfileGenPage({
   searchParams,
 }: {
-  searchParams: Promise<{ status?: string; date?: string }>;
+  searchParams: Promise<{ status?: string; date?: string; q?: string }>;
 }) {
   // 진입 가드는 (admin)/layout.tsx 일원화.
   const { status, date } = await searchParams;
+  const sp = await searchParams;
+  const q = sp.q?.trim() ?? '';
+  const searching = q.length > 0;
   // 날짜 필터(KST 하루). 기본 = 오늘(KST). createdAt(UTC timestamptz)을 KST 일자 범위로 조회.
   const kstToday = new Date(Date.now() + 9 * 3600 * 1000).toISOString().slice(0, 10);
   const day = /^\d{4}-\d{2}-\d{2}$/.test(date ?? '') ? date! : kstToday;
@@ -66,6 +71,14 @@ export default async function AdminProfileGenPage({
   const prevDay = fmtKst(dayMs - 24 * 3600 * 1000);
   const nextDay = fmtKst(dayMs + 24 * 3600 * 1000);
   const qs = (d: string, s?: string) => `?date=${d}${s ? `&status=${s}` : ''}`;
+
+  // 검색 모드: 날짜 무시, 유저코드(정확)·닉네임(부분)·거래(job)ID(숫자면 정확)로 전체 조회.
+  const searchConds: SQL[] = [ilike(profiles.publicCode, q), ilike(characters.nickname, `%${q}%`)];
+  if (/^\d+$/.test(q)) searchConds.push(eq(profileGenerationJobs.id, BigInt(q)));
+  const whereClause = searching
+    ? or(...searchConds)
+    : and(gte(profileGenerationJobs.createdAt, start), lt(profileGenerationJobs.createdAt, end));
+
   const all = await db
     .select({
       id: profileGenerationJobs.id,
@@ -83,6 +96,7 @@ export default async function AdminProfileGenPage({
       adminDecision: profileGenerationJobs.adminDecision,
       createdAt: profileGenerationJobs.createdAt,
       nickname: characters.nickname,
+      code: profiles.publicCode,
       rotations: userProfiles.rotations,
     })
     .from(profileGenerationJobs)
@@ -93,8 +107,9 @@ export default async function AdminProfileGenPage({
         eq(characters.serverId, profileGenerationJobs.serverId),
       ),
     )
+    .leftJoin(profiles, eq(profiles.id, profileGenerationJobs.userId))
     .leftJoin(userProfiles, eq(userProfiles.id, profileGenerationJobs.userProfileId))
-    .where(and(gte(profileGenerationJobs.createdAt, start), lt(profileGenerationJobs.createdAt, end)))
+    .where(whereClause)
     .orderBy(desc(profileGenerationJobs.createdAt))
     .limit(300);
 
@@ -128,34 +143,42 @@ export default async function AdminProfileGenPage({
   );
 
   return (
-    <div className="mx-auto w-full max-w-[860px] space-y-4 px-4 py-6 text-zinc-100">
+    <div className="mx-auto w-full max-w-[860px] space-y-3 px-4 py-6 text-zinc-100">
       <h1 className="text-lg font-bold">🎨 아바타 생성 내역 ({rows.length})</h1>
-      {/* 날짜 네비 (KST 하루) */}
-      <div className="flex flex-wrap items-center gap-2 text-sm">
-        <a href={qs(prevDay, status)} className="rounded-lg border border-zinc-700 px-3 py-1 text-zinc-300">◀ {prevDay}</a>
-        <span className="font-bold text-amber-300">{day}</span>
-        <span className="text-[11px] text-zinc-500">(KST · 그날 {all.length}건)</span>
-        {pendingReview > 0 && (
-          <span className="rounded-full bg-amber-900/40 px-2 py-0.5 text-[11px] font-bold text-amber-300">미검수 {pendingReview}</span>
-        )}
-        {nextDay <= kstToday ? (
-          <a href={qs(nextDay, status)} className="rounded-lg border border-zinc-700 px-3 py-1 text-zinc-300">{nextDay} ▶</a>
-        ) : (
-          <span className="rounded-lg border border-zinc-800 px-3 py-1 text-zinc-600">{nextDay} ▶</span>
-        )}
-        {day !== kstToday && (
-          <a href={qs(kstToday, status)} className="rounded-lg border border-amber-700 px-3 py-1 text-amber-300">오늘</a>
-        )}
-      </div>
-      {/* 4분류 필터 (날짜 유지) */}
-      <div className="flex flex-wrap gap-1.5 text-xs">
-        <a href={qs(day)} className={`rounded-full border px-3 py-1 ${!view ? 'border-amber-500 bg-amber-900/30 text-amber-300' : 'border-zinc-700 text-zinc-400'}`}>전체 {all.length}</a>
-        {FILTERS.map((f) => (
-          <a key={f.k} href={qs(day, f.k)} className={`rounded-full border px-3 py-1 ${view === f.k ? f.on : 'border-zinc-700 text-zinc-400'}`}>
-            {f.ko} {vcount(f.k)}
-          </a>
-        ))}
-      </div>
+      {/* 검색 — 유저코드/닉네임/거래(job)ID. 검색 중엔 날짜·필터 숨김. */}
+      <AdminSearch basePath="/admin/profile-gen" initialQuery={q} />
+      {searching ? (
+        <p className="text-xs text-zinc-500">검색 “{q}” · {rows.length}건</p>
+      ) : (
+        <>
+          {/* 날짜 네비 (KST 하루) */}
+          <div className="flex flex-wrap items-center gap-2 text-sm">
+            <a href={qs(prevDay, status)} className="rounded-lg border border-zinc-700 px-3 py-1 text-zinc-300">◀ {prevDay}</a>
+            <span className="font-bold text-amber-300">{day}</span>
+            <span className="text-[11px] text-zinc-500">(KST · 그날 {all.length}건)</span>
+            {pendingReview > 0 && (
+              <span className="rounded-full bg-amber-900/40 px-2 py-0.5 text-[11px] font-bold text-amber-300">미검수 {pendingReview}</span>
+            )}
+            {nextDay <= kstToday ? (
+              <a href={qs(nextDay, status)} className="rounded-lg border border-zinc-700 px-3 py-1 text-zinc-300">{nextDay} ▶</a>
+            ) : (
+              <span className="rounded-lg border border-zinc-800 px-3 py-1 text-zinc-600">{nextDay} ▶</span>
+            )}
+            {day !== kstToday && (
+              <a href={qs(kstToday, status)} className="rounded-lg border border-amber-700 px-3 py-1 text-amber-300">오늘</a>
+            )}
+          </div>
+          {/* 4분류 필터 (날짜 유지) */}
+          <div className="flex flex-wrap gap-1.5 text-xs">
+            <a href={qs(day)} className={`rounded-full border px-3 py-1 ${!view ? 'border-amber-500 bg-amber-900/30 text-amber-300' : 'border-zinc-700 text-zinc-400'}`}>전체 {all.length}</a>
+            {FILTERS.map((f) => (
+              <a key={f.k} href={qs(day, f.k)} className={`rounded-full border px-3 py-1 ${view === f.k ? f.on : 'border-zinc-700 text-zinc-400'}`}>
+                {f.ko} {vcount(f.k)}
+              </a>
+            ))}
+          </div>
+        </>
+      )}
 
       {rows.length === 0 ? (
         <p className="py-10 text-center text-sm text-zinc-500">내역이 없습니다.</p>
@@ -203,10 +226,11 @@ export default async function AdminProfileGenPage({
                 <div className="mb-2 flex items-center gap-2">
                   <span className={`shrink-0 rounded-md border px-1.5 py-0.5 text-[10px] font-bold ${aiCls}`}>{aiLabel}</span>
                   <span className="truncate text-sm font-bold">{r.nickname ?? '(닉네임 없음)'}</span>
+                  {r.code ? <span className="shrink-0 font-mono text-[10px] text-sky-400">#{r.code}</span> : null}
                   <span className="ml-auto shrink-0 text-[10px] text-zinc-500">💎{r.diamondEscrow.toString()}</span>
                 </div>
                 <div className="mb-2 text-[10px] text-zinc-500">
-                  srv{r.serverId} · {r.userId.slice(0, 8)} · {new Date(r.createdAt).toLocaleString('ko-KR')}
+                  srv{r.serverId} · job {String(r.id)} · {new Date(r.createdAt).toLocaleString('ko-KR')}
                 </div>
 
                 {/* 아바타 — 가로 꽉 채운 1:1, 스와이프 회전 */}
