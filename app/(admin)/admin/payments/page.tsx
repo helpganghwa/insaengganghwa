@@ -1,9 +1,11 @@
-import { and, desc, eq, sql } from 'drizzle-orm';
+import { and, desc, eq, inArray, sql } from 'drizzle-orm';
 
 import { db } from '@/lib/db/client';
 import { iapOrders } from '@/lib/db/schema/payment';
+import { battlePassSegments } from '@/lib/db/schema/battlepass';
 import { characters } from '@/lib/db/schema/server';
 import { kstDateString } from '@/lib/kst';
+import { parseBpProduct } from '@/lib/payment/purchase';
 
 import { PaymentsClient, type OrderRow } from './PaymentsClient';
 
@@ -31,6 +33,7 @@ export default async function AdminPaymentsPage({
   const rows = await db
     .select({
       id: iapOrders.id,
+      userId: iapOrders.userId,
       serverId: iapOrders.serverId,
       product: iapOrders.productCode,
       krw: iapOrders.amountKrw,
@@ -49,17 +52,43 @@ export default async function AdminPaymentsPage({
     .where(sql`(${iapOrders.createdAt} at time zone 'Asia/Seoul')::date = ${date}::date`)
     .orderBy(desc(iapOrders.id));
 
-  const orders: OrderRow[] = rows.map((r) => ({
-    id: r.id.toString(),
-    serverId: r.serverId,
-    product: r.product,
-    krw: Number(r.krw),
-    diamond: Number(r.diamond),
-    status: r.status,
-    nickname: r.nickname ?? null,
-    paidAt: r.paidAt ? r.paidAt.toISOString() : null,
-    createdAt: r.createdAt.toISOString(),
-  }));
+  // 배틀패스 주문의 수령 여부 — 프리미엄 보상을 하나라도 수령(claimedTiers 비지 않음)했으면 환불 불가.
+  const bpUserIds = [...new Set(rows.filter((r) => r.product.startsWith('bp_')).map((r) => r.userId))];
+  const claimedKeys = new Set<string>();
+  if (bpUserIds.length > 0) {
+    const segs = await db
+      .select({
+        userId: battlePassSegments.userId,
+        serverId: battlePassSegments.serverId,
+        passType: battlePassSegments.passType,
+        segmentIndex: battlePassSegments.segmentIndex,
+        tiers: battlePassSegments.premiumClaimedTiers,
+      })
+      .from(battlePassSegments)
+      .where(inArray(battlePassSegments.userId, bpUserIds));
+    for (const s of segs) {
+      if (s.tiers.length > 0)
+        claimedKeys.add(`${s.userId}:${s.serverId}:${s.passType}:${s.segmentIndex}`);
+    }
+  }
+
+  const orders: OrderRow[] = rows.map((r) => {
+    const bp = parseBpProduct(r.product);
+    return {
+      id: r.id.toString(),
+      serverId: r.serverId,
+      product: r.product,
+      krw: Number(r.krw),
+      diamond: Number(r.diamond),
+      status: r.status,
+      nickname: r.nickname ?? null,
+      paidAt: r.paidAt ? r.paidAt.toISOString() : null,
+      createdAt: r.createdAt.toISOString(),
+      bp: bp != null,
+      // 배틀패스: 프리미엄 수령했으면 환불 불가(true). 비-배틀패스는 false.
+      bpClaimed: bp != null && claimedKeys.has(`${r.userId}:${r.serverId}:${bp.type}:${bp.segmentIndex}`),
+    };
+  });
 
   return (
     <PaymentsClient

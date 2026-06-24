@@ -21,7 +21,9 @@ import { getPortonePayment } from './portone';
  * 가격은 balance(bpSegmentPriceKrw) 권위, 지급은 구간 해금+소급(applyBpSegmentPurchase).
  */
 const BP_RE = /^bp_(enhance|transcend)_(\d+)$/;
-function parseBpProduct(productId: string): { type: BattlePassType; segmentIndex: number } | null {
+export function parseBpProduct(
+  productId: string,
+): { type: BattlePassType; segmentIndex: number } | null {
   const m = BP_RE.exec(productId);
   if (!m) return null;
   return { type: m[1] as BattlePassType, segmentIndex: Number(m[2]) };

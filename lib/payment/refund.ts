@@ -7,8 +7,10 @@ import { iapOrders, iapRefunds, monthlyPurchaseLimits } from '@/lib/db/schema/pa
 import { mailbox } from '@/lib/db/schema/mailbox';
 import { kstMonthString } from '@/lib/kst';
 import { reclaimProductGrant } from '@/lib/game/shop/grant';
+import { reclaimBpSegment } from '@/lib/game/battlepass';
 
 import { getPortonePayment } from './portone';
+import { parseBpProduct } from './purchase';
 
 export type RefundResult =
   | { ok: true; already: boolean }
@@ -58,8 +60,14 @@ export async function refundPurchase(paymentId: string): Promise<RefundResult> {
     await tx.update(iapOrders).set({ status: 'refunded' }).where(eq(iapOrders.id, order.id));
 
     if (wasPaid) {
-      // 지급분 회수 + 미성년 월 한도 누적 되돌리기(0 클램프).
-      await reclaimProductGrant(tx, order.userId, order.serverId, order.productCode);
+      // 지급분 회수 — 배틀패스 구간(구간 row 삭제+보상 회수) vs 상점 상품(다이아·상자·주기마크).
+      const bp = parseBpProduct(order.productCode);
+      if (bp) {
+        await reclaimBpSegment(tx, order.userId, order.serverId, bp.type, bp.segmentIndex);
+      } else {
+        await reclaimProductGrant(tx, order.userId, order.serverId, order.productCode);
+      }
+      // 미성년 월 한도 누적 되돌리기(0 클램프).
       await tx
         .update(monthlyPurchaseLimits)
         .set({ totalKrw: sql`GREATEST(0, ${monthlyPurchaseLimits.totalKrw} - ${order.amountKrw})` })
@@ -70,13 +78,13 @@ export async function refundPurchase(paymentId: string): Promise<RefundResult> {
           ),
         );
 
-      // 환불 안내 우편 — 지급분 회수된 경우에만(notice, 보상 없음). 웹훅·어드민 환불 공통.
+      // 환불 안내 우편(notice, 보상 없음). 웹훅·어드민 환불 공통.
       await tx.insert(mailbox).values({
         userId: order.userId,
         serverId: order.serverId,
         type: 'notice',
         title: '결제 환불 안내',
-        body: `결제(₩${Number(order.amountKrw).toLocaleString('ko-KR')})가 환불 처리되어, 지급되었던 재화를 회수했습니다. 문의는 고객센터로 연락 주세요.`,
+        body: `결제(₩${Number(order.amountKrw).toLocaleString('ko-KR')})가 환불 처리되었습니다. 지급되었던 재화가 있다면 함께 회수됩니다. 문의는 고객센터로 연락 주세요.`,
         senderLabel: '인생강화',
         payload: {},
       });

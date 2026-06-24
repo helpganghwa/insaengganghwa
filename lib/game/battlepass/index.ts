@@ -4,6 +4,7 @@ import { and, eq, sql } from 'drizzle-orm';
 
 import { db } from '@/lib/db/client';
 import { walletAdd } from '@/lib/game/wallet';
+import { characters } from '@/lib/db/schema/server';
 import { userSupplyBoxes } from '@/lib/db/schema/supply';
 import { battlePassState, battlePassSegments } from '@/lib/db/schema/battlepass';
 import { type Slot } from '@/lib/db/schema/equipment';
@@ -488,4 +489,85 @@ export function grantSegmentPurchase(
     if (!r) throw new BattlePassErr('ALREADY_PURCHASED');
     return r;
   });
+}
+
+/**
+ * 그 구간 프리미엄 보상을 하나라도 수령했는지 — 환불 가능성 판정.
+ * 구매 즉시 소급 수령된 구간은 premiumClaimedTiers가 차 있어 true(수령함=환불 불가).
+ * 미수령(미도달 구간을 미리 산 경우 등)이면 false(환불 가능).
+ */
+export async function bpSegmentClaimedAny(
+  userId: string,
+  serverId: number,
+  type: BattlePassType,
+  segmentIndex: number,
+): Promise<boolean> {
+  const [seg] = await db
+    .select({ tiers: battlePassSegments.premiumClaimedTiers })
+    .from(battlePassSegments)
+    .where(
+      and(
+        eq(battlePassSegments.userId, userId),
+        eq(battlePassSegments.serverId, serverId),
+        eq(battlePassSegments.passType, type),
+        eq(battlePassSegments.segmentIndex, segmentIndex),
+      ),
+    )
+    .limit(1);
+  return !!seg && seg.tiers.length > 0;
+}
+
+/**
+ * 배틀패스 구간 환불 회수(tx) — 구간 row 삭제(프리미엄 재잠금) + 받았던 프리미엄 보상 회수(0 클램프).
+ * 미수령(claimedTiers 빈) 구간이면 회수액 0 → row 삭제만(재구매 가능). 결제 환불 tx에서 호출.
+ */
+export async function reclaimBpSegment(
+  tx: Parameters<Parameters<typeof db.transaction>[0]>[0],
+  userId: string,
+  serverId: number,
+  type: BattlePassType,
+  segmentIndex: number,
+): Promise<void> {
+  const cond = and(
+    eq(battlePassSegments.userId, userId),
+    eq(battlePassSegments.serverId, serverId),
+    eq(battlePassSegments.passType, type),
+    eq(battlePassSegments.segmentIndex, segmentIndex),
+  );
+  const [seg] = await tx
+    .select({ tiers: battlePassSegments.premiumClaimedTiers })
+    .from(battlePassSegments)
+    .where(cond)
+    .limit(1);
+  if (!seg) return; // 미구매/이미 환불.
+
+  let total = 0;
+  for (const tl of seg.tiers) total += bpTierReward(type, tl, true);
+
+  await tx.delete(battlePassSegments).where(cond); // 재잠금.
+
+  if (total > 0) {
+    if (type === 'enhance') {
+      await tx
+        .update(characters)
+        .set({ diamond: sql`GREATEST(0, ${characters.diamond} - ${total})` })
+        .where(and(eq(characters.userId, userId), eq(characters.serverId, serverId)));
+    } else {
+      const dist = splitBoxes(total);
+      for (const slot of SLOTS) {
+        if (dist[slot] > 0) {
+          await tx
+            .update(userSupplyBoxes)
+            .set({ count: sql`GREATEST(0, ${userSupplyBoxes.count} - ${dist[slot]})` })
+            .where(
+              and(
+                eq(userSupplyBoxes.userId, userId),
+                eq(userSupplyBoxes.serverId, serverId),
+                eq(userSupplyBoxes.slot, slot),
+              ),
+            );
+        }
+      }
+    }
+  }
 }

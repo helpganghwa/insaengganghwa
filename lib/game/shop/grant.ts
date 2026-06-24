@@ -177,4 +177,17 @@ export async function reclaimProductGrant(
       }
     }
   }
+
+  // 주기 상품(일일/주간/월간)이면 구매 마크 삭제 → 환불 후 같은 주기에 재구매 가능(disabled 해제).
+  if (productPeriod(productId)) {
+    await tx
+      .delete(shopPurchases)
+      .where(
+        and(
+          eq(shopPurchases.userId, userId),
+          eq(shopPurchases.serverId, serverId),
+          eq(shopPurchases.productId, productId),
+        ),
+      );
+  }
 }

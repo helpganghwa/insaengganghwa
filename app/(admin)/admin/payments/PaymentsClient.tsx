@@ -16,6 +16,10 @@ export type OrderRow = {
   nickname: string | null;
   paidAt: string | null;
   createdAt: string;
+  /** 배틀패스 구간 상품 여부. */
+  bp: boolean;
+  /** 배틀패스 프리미엄 보상 수령 여부 — true면 환불 불가. */
+  bpClaimed: boolean;
 };
 
 const won = (n: number) => `₩${n.toLocaleString('ko-KR')}`;
@@ -30,6 +34,7 @@ const STATUS_BADGE: Record<OrderRow['status'], { label: string; cls: string }> =
 const ERR_MSG: Record<string, string> = {
   NOT_FOUND: '주문을 찾을 수 없습니다',
   NOT_REFUNDABLE: '환불 가능한 상태가 아닙니다',
+  BP_NOT_REFUNDABLE: '배틀패스는 수령 후 환불할 수 없습니다',
   NOT_CANCELLED: '포트원에서 취소되지 않았습니다(결제 유지 중) — 콘솔 상태 확인',
   AMOUNT_MISMATCH: '금액 불일치',
   BAD_ID: '잘못된 주문',
@@ -59,7 +64,9 @@ export function PaymentsClient({
     (a, o) => ((a[o.status] = (a[o.status] ?? 0) + 1), a),
     {} as Record<string, number>,
   );
-  const refundable = orders.filter((o) => o.status === 'paid').length;
+  // 환불 가능 = 결제완료 + (비-배틀패스 또는 미수령 배틀패스).
+  const isRefundable = (o: OrderRow) => o.status === 'paid' && !(o.bp && o.bpClaimed);
+  const refundable = orders.filter(isRefundable).length;
 
   const onRefund = (o: OrderRow) => {
     if (pendingId) return;
@@ -165,14 +172,21 @@ export function PaymentsClient({
                   </div>
                 </div>
                 {o.status === 'paid' ? (
-                  <button
-                    type="button"
-                    onClick={() => onRefund(o)}
-                    disabled={pendingId !== null}
-                    className="shrink-0 rounded-lg border border-red-700/60 bg-red-900/30 px-3 py-1.5 text-xs font-bold text-red-300 transition hover:bg-red-900/50 disabled:opacity-40"
-                  >
-                    {pendingId === o.id ? '환불 중…' : '환불'}
-                  </button>
+                  o.bp && o.bpClaimed ? (
+                    // 배틀패스 — 프리미엄 보상 수령 후 환불 불가.
+                    <span className="shrink-0 rounded-lg border border-zinc-800 px-3 py-1.5 text-xs font-bold text-zinc-600">
+                      환불불가
+                    </span>
+                  ) : (
+                    <button
+                      type="button"
+                      onClick={() => onRefund(o)}
+                      disabled={pendingId !== null}
+                      className="shrink-0 rounded-lg border border-red-700/60 bg-red-900/30 px-3 py-1.5 text-xs font-bold text-red-300 transition hover:bg-red-900/50 disabled:opacity-40"
+                    >
+                      {pendingId === o.id ? '환불 중…' : '환불'}
+                    </button>
+                  )
                 ) : null}
               </li>
             );
