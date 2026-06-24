@@ -1,9 +1,10 @@
 import 'server-only';
 
-import { sql } from 'drizzle-orm';
+import { and, eq, isNull, sql } from 'drizzle-orm';
 
 import { db } from '@/lib/db/client';
 import { walletAdd } from '@/lib/game/wallet';
+import { characters } from '@/lib/db/schema/server';
 import { userSupplyBoxes } from '@/lib/db/schema/supply';
 import { shopPurchases } from '@/lib/db/schema/shop';
 import { mailbox } from '@/lib/db/schema/mailbox';
@@ -110,4 +111,70 @@ export async function applyProductGrant(
   }
 
   return g;
+}
+
+/**
+ * 상품 지급 회수(환불 시) — applyProductGrant의 역연산. 결제 취소 트랜잭션 안에서 호출.
+ *  - 다이아·상자: GREATEST(0, …) 0 클램프 회수. **이미 소비한 분은 회수 불가(v1 정책: 손실 처리)**.
+ *    음수 잔액은 UI·차감 불변식을 깨므로 의도적으로 만들지 않는다(악용 방지는 추후 정책으로).
+ *  - 프리미엄: 미래 일일 드립 중단(shop_purchases 행 삭제) + **미수령** 프리미엄 우편 회수(claimedAt null).
+ *    이미 수령(지갑 반영)한 분은 자동 회수하지 않는다(운영 수동) — 중복 회수 방지.
+ */
+export async function reclaimProductGrant(
+  tx: Tx,
+  userId: string,
+  serverId: number,
+  productId: string,
+): Promise<void> {
+  if (productId === PREMIUM.id) {
+    await tx
+      .delete(shopPurchases)
+      .where(
+        and(
+          eq(shopPurchases.userId, userId),
+          eq(shopPurchases.serverId, serverId),
+          eq(shopPurchases.productId, PREMIUM.id),
+        ),
+      );
+    await tx
+      .delete(mailbox)
+      .where(
+        and(
+          eq(mailbox.userId, userId),
+          eq(mailbox.serverId, serverId),
+          eq(mailbox.senderLabel, '성장 프리미엄'),
+          isNull(mailbox.claimedAt),
+        ),
+      );
+    return;
+  }
+
+  const g = shopGrant(productId);
+  if (!g) return;
+
+  if (g.diamond > 0) {
+    // 캐릭터 행 없으면 0행 갱신(회수할 것 없음) — walletAdd와 달리 throw하지 않는다.
+    await tx
+      .update(characters)
+      .set({ diamond: sql`GREATEST(0, ${characters.diamond} - ${BigInt(g.diamond)})` })
+      .where(and(eq(characters.userId, userId), eq(characters.serverId, serverId)));
+  }
+  if (g.boxes > 0) {
+    const dist = splitBoxes(g.boxes);
+    for (const slot of SUPPLY_SLOTS) {
+      const n = dist[slot] ?? 0;
+      if (n > 0) {
+        await tx
+          .update(userSupplyBoxes)
+          .set({ count: sql`GREATEST(0, ${userSupplyBoxes.count} - ${BigInt(n)})` })
+          .where(
+            and(
+              eq(userSupplyBoxes.userId, userId),
+              eq(userSupplyBoxes.serverId, serverId),
+              eq(userSupplyBoxes.slot, slot),
+            ),
+          );
+      }
+    }
+  }
 }

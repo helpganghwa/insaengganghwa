@@ -13,6 +13,7 @@
 import * as PortOne from '@portone/server-sdk';
 
 import { completePurchase } from '@/lib/payment/purchase';
+import { refundPurchase } from '@/lib/payment/refund';
 
 export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
@@ -32,23 +33,35 @@ export async function POST(req: Request) {
     return new Response('invalid signature', { status: 400 });
   }
 
-  // 결제 관련 이벤트만 처리. Transaction.Paid → 지급(멱등). 취소/기타는 ack만(환불 회수는 후속).
+  // 결제 관련 이벤트만 처리(모르는 type은 문서 지침대로 무시·ack). data.paymentId 있는 결제 이벤트만.
   if ('data' in webhook && 'paymentId' in webhook.data) {
+    const paymentId = webhook.data.paymentId;
+
     if (webhook.type === 'Transaction.Paid') {
-      const result = await completePurchase(webhook.data.paymentId);
+      const result = await completePurchase(paymentId);
       if (!result.ok) {
         if (result.code === 'NOT_PAID') {
           // 포트원 상태 전파 지연 등 일시적일 수 있음 — 500으로 재전송 유도(멱등하므로 안전).
           //  브라우저가 닫혀 클라 verify가 없을 때 웹훅이 유일 지급 경로라, 일시 실패는 재시도해야 함.
-          console.error('[portone.webhook] NOT_PAID, retrying', webhook.data.paymentId);
+          console.error('[portone.webhook] NOT_PAID, retrying', paymentId);
           return new Response('not paid yet', { status: 500 });
         }
         // ORDER_NOT_FOUND(우리 주문 아님)·AMOUNT_MISMATCH(위변조 의심)는 재전송해도 동일 — 200 ack.
         //  AMOUNT_MISMATCH는 지급하지 않은 채 운영 알림 대상(로그).
         if (result.code === 'AMOUNT_MISMATCH') {
-          console.error('[portone.webhook] AMOUNT_MISMATCH', webhook.data.paymentId);
+          console.error('[portone.webhook] AMOUNT_MISMATCH', paymentId);
         }
       }
+    } else if (webhook.type === 'Transaction.Cancelled') {
+      // 전체 취소(환불) — 지급분 회수(멱등). NOT_CANCELLED(전파 지연)는 500으로 재전송 유도.
+      const result = await refundPurchase(paymentId);
+      if (!result.ok && result.code === 'NOT_CANCELLED') {
+        console.error('[portone.webhook] NOT_CANCELLED, retrying', paymentId);
+        return new Response('not cancelled yet', { status: 500 });
+      }
+    } else if (webhook.type === 'Transaction.PartialCancelled') {
+      // 부분취소 — 고정가 디지털 상품 특성상 드묾. 자동 회수하지 않고 운영 수동 처리(로그만).
+      console.error('[portone.webhook] PartialCancelled (manual ops)', paymentId);
     }
   }
 
