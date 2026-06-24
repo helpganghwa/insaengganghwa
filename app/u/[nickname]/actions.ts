@@ -16,6 +16,8 @@ type ReportState = { status: 'ok' } | { status: 'error'; message: string };
 // 신고 사유 카테고리(2026-06-01) — 부적절 닉네임/아바타/버그 악용/기타 4종.
 const REASONS = ['nickname', 'avatar', 'bug_abuse', 'other'] as const;
 const ReasonSchema = z.enum(REASONS);
+// 상세 내용(note)을 저장하는 사유 — 기타 + 버그 악용.
+const NOTE_REASONS = new Set<(typeof REASONS)[number]>(['other', 'bug_abuse']);
 
 export async function reportProfile(
   profileId: string,
@@ -45,7 +47,8 @@ export async function reportProfile(
         profileId,
         reporterUserId: userId,
         reason: parsed.data,
-        note: parsed.data === 'other' ? (note?.slice(0, 200) ?? null) : null,
+        // 기타·버그 악용은 상세 내용 저장(운영자 판단 근거).
+        note: NOTE_REASONS.has(parsed.data) ? (note?.slice(0, 200) ?? null) : null,
       });
       await tx
         .update(userProfiles)

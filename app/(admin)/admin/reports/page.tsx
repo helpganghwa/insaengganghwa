@@ -1,4 +1,4 @@
-import { desc, eq, gt, sql } from 'drizzle-orm';
+import { desc, eq, gt, isNotNull, sql } from 'drizzle-orm';
 
 import { db } from '@/lib/db/client';
 import { characters } from '@/lib/db/schema/server';
@@ -7,17 +7,21 @@ import { userProfiles, profileReports } from '@/lib/db/schema/avatar';
 import { AdminReportActions } from './AdminReportActions';
 
 const REASON_LABEL: Record<string, string> = {
+  nickname: '닉네임',
+  avatar: '아바타',
+  bug_abuse: '버그 악용',
+  other: '기타',
+  // 레거시 사유(과거 데이터 호환).
   nsfw: '선정',
   violence: '폭력',
   hate: '혐오',
   impersonation: '사칭',
   quality: '부적절',
-  other: '기타',
 };
 
 export default async function AdminReportsPage() {
   // 진입 가드는 (admin)/layout.tsx 일원화.
-  const [reported, reasonRows] = await Promise.all([
+  const [reported, reasonRows, noteRows] = await Promise.all([
     db
       .select({
         id: userProfiles.id,
@@ -39,6 +43,16 @@ export default async function AdminReportsPage() {
       })
       .from(profileReports)
       .groupBy(profileReports.profileId, profileReports.reason),
+    // 상세 내용(버그 악용·기타) — 운영자 판단 근거로 노출.
+    db
+      .select({
+        profileId: profileReports.profileId,
+        reason: profileReports.reason,
+        note: profileReports.note,
+      })
+      .from(profileReports)
+      .where(isNotNull(profileReports.note))
+      .orderBy(desc(profileReports.createdAt)),
   ]);
 
   const reasonMap = new Map<string, { reason: string; c: number }[]>();
@@ -46,6 +60,14 @@ export default async function AdminReportsPage() {
     const arr = reasonMap.get(r.profileId) ?? [];
     arr.push({ reason: r.reason, c: Number(r.c) });
     reasonMap.set(r.profileId, arr);
+  }
+
+  const noteMap = new Map<string, { reason: string; note: string }[]>();
+  for (const r of noteRows) {
+    if (!r.note) continue;
+    const arr = noteMap.get(r.profileId) ?? [];
+    arr.push({ reason: r.reason, note: r.note });
+    noteMap.set(r.profileId, arr);
   }
 
   return (
@@ -58,6 +80,7 @@ export default async function AdminReportsPage() {
           const rot = p.rotations as Record<string, string>;
           const charImg = rot[p.activeDirection] ?? null;
           const reasons = (reasonMap.get(p.id) ?? []).sort((a, b) => b.c - a.c);
+          const notes = noteMap.get(p.id) ?? [];
           return (
             <div
               key={p.id}
@@ -90,6 +113,19 @@ export default async function AdminReportsPage() {
                     </span>
                   ))}
                 </div>
+                {notes.length > 0 && (
+                  <ul className="mt-1 space-y-1">
+                    {notes.map((n, i) => (
+                      <li
+                        key={i}
+                        className="rounded bg-amber-50 px-2 py-1 text-[11px] leading-snug text-amber-900 dark:bg-amber-950/30 dark:text-amber-200"
+                      >
+                        <span className="font-bold">{REASON_LABEL[n.reason] ?? n.reason}:</span>{' '}
+                        {n.note}
+                      </li>
+                    ))}
+                  </ul>
+                )}
                 <AdminReportActions profileId={p.id} hidden={!!p.hiddenAt} />
               </div>
             </div>

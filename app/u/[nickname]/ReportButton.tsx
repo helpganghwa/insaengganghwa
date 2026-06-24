@@ -11,6 +11,13 @@ const REASONS: { value: string; label: string }[] = [
   { value: 'other', label: '기타' },
 ];
 
+// 상세 입력칸을 노출하는 사유 — 기타 + 버그 악용(어떤 버그를 어떻게 악용했는지 필요).
+const NOTE_REASONS = new Set(['other', 'bug_abuse']);
+const NOTE_PLACEHOLDER: Record<string, string> = {
+  bug_abuse: '어떤 버그를 어떻게 악용했는지 적어주세요 (최대 200자)',
+  other: '사유를 간단히 적어주세요 (최대 200자)',
+};
+
 export function ReportButton({ profileId }: { profileId: string }) {
   const [open, setOpen] = useState(false);
   const [reason, setReason] = useState<string | null>(null);
@@ -23,7 +30,7 @@ export function ReportButton({ profileId }: { profileId: string }) {
     if (!reason) return;
     setErr(null);
     startTransition(async () => {
-      const r = await reportProfile(profileId, reason, reason === 'other' ? note : undefined);
+      const r = await reportProfile(profileId, reason, NOTE_REASONS.has(reason) ? note : undefined);
       if (r.status === 'error') {
         setErr(r.message);
         return;
@@ -84,7 +91,7 @@ export function ReportButton({ profileId }: { profileId: string }) {
                     </button>
                   ))}
                 </div>
-                {reason === 'other' && (
+                {reason && NOTE_REASONS.has(reason) && (
                   // text-base(16px) 필수 — iOS Safari는 input font-size<16px에
                   // 포커스 시 자동 줌인. viewport 스케일 잠금이 금지(390 자동핏)
                   // 라 input 자체의 font-size로만 막을 수 있음(2026-06-01).
@@ -92,7 +99,7 @@ export function ReportButton({ profileId }: { profileId: string }) {
                     value={note}
                     onChange={(e) => setNote(e.target.value)}
                     maxLength={200}
-                    placeholder="사유를 간단히 적어주세요 (최대 200자)"
+                    placeholder={NOTE_PLACEHOLDER[reason] ?? '사유를 간단히 적어주세요 (최대 200자)'}
                     className="mt-2 w-full rounded-xl border border-zinc-200 p-2 text-base dark:border-zinc-800 dark:bg-zinc-900"
                     rows={2}
                   />
