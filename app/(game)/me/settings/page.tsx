@@ -60,9 +60,6 @@ export default async function SettingsPage() {
 
   return (
     <div className="space-y-4 px-4 py-4">
-      <header className="flex items-baseline gap-2">
-      </header>
-
       <Section title="알림 / 사운드">
         <LocalToggle storageKey="ig:sound" label="효과음" />
         <Divider />

@@ -48,7 +48,6 @@ export async function registerServiceWorker(): Promise<ServiceWorkerRegistration
   }
 }
 
-/** base64url(VAPID public key) → ArrayBuffer. PushManager.subscribe 요구 포맷(BufferSource). */
 /** 두 키 바이트 동일 여부 — 기존 구독 공개키 vs 현재 VAPID 공개키 비교(키 교체 감지). */
 function sameKeyBytes(a: ArrayBuffer, b: ArrayBuffer): boolean {
   if (a.byteLength !== b.byteLength) return false;
@@ -58,6 +57,7 @@ function sameKeyBytes(a: ArrayBuffer, b: ArrayBuffer): boolean {
   return true;
 }
 
+/** base64url(VAPID public key) → ArrayBuffer. PushManager.subscribe 요구 포맷(BufferSource). */
 function urlBase64ToBuffer(b64: string): ArrayBuffer {
   const padding = '='.repeat((4 - (b64.length % 4)) % 4);
   const base64 = (b64 + padding).replace(/-/g, '+').replace(/_/g, '/');

@@ -303,6 +303,7 @@ export function claimPremium(
         .where(
           and(
             eq(battlePassSegments.userId, userId),
+            eq(battlePassSegments.serverId, serverId),
             eq(battlePassSegments.passType, type),
             eq(battlePassSegments.segmentIndex, seg.idx),
           ),
@@ -329,6 +330,7 @@ export function claimPremiumTier(
       .where(
         and(
           eq(battlePassSegments.userId, userId),
+          eq(battlePassSegments.serverId, serverId),
           eq(battlePassSegments.passType, type),
           eq(battlePassSegments.segmentIndex, segmentIndex),
         ),
@@ -351,6 +353,7 @@ export function claimPremiumTier(
       .where(
         and(
           eq(battlePassSegments.userId, userId),
+          eq(battlePassSegments.serverId, serverId),
           eq(battlePassSegments.passType, type),
           eq(battlePassSegments.segmentIndex, segmentIndex),
         ),
@@ -386,6 +389,7 @@ export function claimSegment(
       .where(
         and(
           eq(battlePassSegments.userId, userId),
+          eq(battlePassSegments.serverId, serverId),
           eq(battlePassSegments.passType, type),
           eq(battlePassSegments.segmentIndex, segmentIndex),
         ),
@@ -426,6 +430,7 @@ export function claimSegment(
         .where(
           and(
             eq(battlePassSegments.userId, userId),
+            eq(battlePassSegments.serverId, serverId),
             eq(battlePassSegments.passType, type),
             eq(battlePassSegments.segmentIndex, segmentIndex),
           ),
@@ -460,20 +465,6 @@ export async function applyBpSegmentPurchase(
   if (ins.length === 0) return null;
 
   return { rewardKind: type === 'enhance' ? 'diamond' : 'box' };
-}
-
-/** 직접 구매(결제 미경유 테스트) — 자체 트랜잭션. 해금만(보상 수동 수령). 이미 구매면 ALREADY_PURCHASED. */
-export function grantSegmentPurchase(
-  userId: string,
-  serverId: number,
-  type: BattlePassType,
-  segmentIndex: number,
-): Promise<{ rewardKind: 'diamond' | 'box' }> {
-  return db.transaction(async (tx) => {
-    const r = await applyBpSegmentPurchase(tx, userId, serverId, type, segmentIndex);
-    if (!r) throw new BattlePassErr('ALREADY_PURCHASED');
-    return r;
-  });
 }
 
 /**

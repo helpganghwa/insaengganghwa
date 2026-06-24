@@ -247,6 +247,7 @@ export function BattlePassClient({
     window.history.replaceState(null, '', '/battlepass');
     if (returnCode) {
       if (returnCode !== 'PAY_CANCEL' && returnCode !== 'PAY_PROCESS_CANCELED') {
+        // eslint-disable-next-line react-hooks/set-state-in-effect
         setError('결제가 완료되지 않았습니다.');
       }
       return;

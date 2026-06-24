@@ -267,11 +267,13 @@ export function ShopTabs({
   const returnHandled = useRef(false);
 
   // 서버 권위 상태 동기화 — router.refresh()로 prop이 갱신되면 로컬 state에 반영(결제 복귀 후 즉시
-  //  구매함 비활성). lazy useState는 prop 변경을 안 받으므로 prop 변경 시 명시 동기화.
+  //  구매함 비활성). lazy useState는 prop 변경을 안 받으므로 prop 변경 시 명시 동기화(의도된 prop→state 싱크).
   useEffect(() => {
+    // eslint-disable-next-line react-hooks/set-state-in-effect
     setPurchased(new Set(initialPurchased));
   }, [initialPurchased]);
   useEffect(() => {
+    // eslint-disable-next-line react-hooks/set-state-in-effect
     setPremiumDays(initialPremiumDays);
   }, [initialPremiumDays]);
 
