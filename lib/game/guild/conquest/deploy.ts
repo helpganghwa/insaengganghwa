@@ -234,21 +234,3 @@ export async function clearMemberDeployment(input: {
       );
   });
 }
-
-/** 자기 길드의 다음 전투 배치 목록(안개 — 자기 길드만 열람). 구역별 공/수 집계용. */
-export async function getMyGuildDeployments(guildId: bigint) {
-  const battleKstDay = nextBattleKstDay();
-  return db
-    .select({
-      userId: guildBattleDeployments.userId,
-      zoneId: guildBattleDeployments.zoneId,
-      role: guildBattleDeployments.role,
-    })
-    .from(guildBattleDeployments)
-    .where(
-      and(
-        eq(guildBattleDeployments.guildId, guildId),
-        eq(guildBattleDeployments.battleKstDay, battleKstDay),
-      ),
-    );
-}

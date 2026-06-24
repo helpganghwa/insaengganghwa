@@ -11,13 +11,9 @@ export type TranscendTier = 'none' | 'normal' | 'rare' | 'heroic' | 'legend' | '
 
 /** 시각 튜닝 상수 — 디자인 확정 후 변경은 여기 숫자만. (transcend-visual-system 메모리 §락) */
 export const TRANSCEND_TUNING = {
-  /** 글로우(뒤 색 후광) 사용 여부. false면 모든 등급 글로우 없음 */
-  glowEnabled: false,
   /** 배경 패널: 'tinted'=등급색 소폭 틴트 / 'none'=배경색 없음(투명) */
   panelBg: 'none' as 'tinted' | 'none',
-  /** 글로우 최대 알파 (등급) / 챔피언. 낮을수록 투명 — 아이템 가독 우선.
-   *  finalZ2 승인 형태(부드러운 중앙 라디얼)를 유지하되 알파만 낮춤. 헤일로/링 금지(흰띠 아티팩트). */
-  glowAlpha: 0.18,
+  /** 챔피언 glare 글로우 알파 — 낮을수록 투명(아이템 가독 우선). 헤일로/링 금지(흰띠 아티팩트). */
   championGlowAlpha: 0.16,
   /** 챔피언 glare 피크 알파 — brightCv mask 방식이라 충분히 강해야 보임. */
   shineAlpha: 0.95,
@@ -53,10 +49,6 @@ export interface TranscendStyle {
   sub: 0 | 1 | null;
   /** 프레임 표시 여부 (+0 = false) */
   hasFrame: boolean;
-  /** 배경 글로우 표시 여부 (신화 등급) */
-  hasGlow: boolean;
-  /** 최상위 외관(신화 후반) — 광택 스윕 연출 대상 */
-  isMax: boolean;
 }
 
 const NEUTRAL: readonly [number, number, number] = [150, 156, 166];
@@ -85,8 +77,6 @@ export function transcendStyle(rawLevel: number): TranscendStyle {
       colorRgb: NEUTRAL,
       sub: null,
       hasFrame: false,
-      hasGlow: false,
-      isMax: false,
     };
   }
   const tier = TIERS[Math.min(TIERS.length - 1, Math.floor((level - 1) / LEVELS_PER_TIER))]!;
@@ -100,7 +90,5 @@ export function transcendStyle(rawLevel: number): TranscendStyle {
     colorRgb: def.rgb,
     sub,
     hasFrame: true,
-    hasGlow: tier === 'mythic',
-    isMax: tier === 'mythic' && sub === 1,
   };
 }

@@ -139,7 +139,6 @@ export function InventoryGrid({
       {openItem ? (
         <EquipmentDetailSheet
           item={openItem}
-          all={displayItems}
           nickname={nickname}
           onClose={() => setOpenId(null)}
           onOptimisticEquip={(id) => {

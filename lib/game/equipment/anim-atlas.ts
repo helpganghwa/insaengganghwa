@@ -24,24 +24,3 @@ export function hasAnim(code: string): boolean {
 export function animStripUrl(code: string): string | null {
   return ANIM.items[code] ? assetUrl(`/sprites/anim/${code}.webp`) : null;
 }
-
-/**
- * 특정 프레임(0-based)의 CSS background 스타일 — 스트립을 background-position으로 재생.
- * `<div style={animBgStyle(code, size, frame)} />`, frame을 타이머로 증가시켜 애니.
- */
-export function animBgStyle(code: string, size: number, frame: number): React.CSSProperties | null {
-  const m = ANIM.items[code];
-  if (!m) return null;
-  const url = assetUrl(`/sprites/anim/${code}.webp`);
-  const scale = size / ANIM.cell;
-  const f = ((frame % m.frames) + m.frames) % m.frames;
-  return {
-    width: size,
-    height: size,
-    backgroundImage: `url(${url})`,
-    backgroundSize: `${m.frames * ANIM.cell * scale}px ${ANIM.cell * scale}px`,
-    backgroundPosition: `${-f * ANIM.cell * scale}px 0px`,
-    backgroundRepeat: 'no-repeat',
-    imageRendering: 'pixelated',
-  };
-}

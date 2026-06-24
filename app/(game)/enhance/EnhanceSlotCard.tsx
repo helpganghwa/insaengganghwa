@@ -182,11 +182,9 @@ function fmtRemaining(ms: number): string {
 export function EnhanceSlotCard({
   activeJob,
   diamond,
-  nickname,
 }: {
   activeJob: ActiveJob;
   diamond: string;
-  nickname: string;
 }) {
   const router = useRouter();
   const { showRanking, beginEnhanceOverlay, endEnhanceOverlay, showError } = useResourceToast();

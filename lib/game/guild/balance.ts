@@ -25,8 +25,6 @@ export const GUILD_MAX_CAPACITY = 50;
 export function guildCapacity(level: number): number {
   return Math.min(GUILD_MAX_CAPACITY, GUILD_BASE_CAPACITY + Math.max(0, level));
 }
-/** 수용 상한 도달 레벨(이후 레벨은 무제한·과시·혜택 0). */
-export const GUILD_CAPACITY_MAX_LEVEL = 40;
 /** 다음 레벨까지 필요 XP — 앞 싸게/뒤 비싸게(L0~9 400 · L10~24 1.5k · L25+ 5k). */
 export function guildXpToNext(level: number): number {
   if (level < 10) return 400;
@@ -60,7 +58,6 @@ export const CONQUEST_BATTLE_KST_HOUR = 23;
 export const CONQUEST_DEFENDER_BONUS = 0.2;
 /** 집행관 전투력 배수(×3, 방어 거점 앵커). */
 export const CONQUEST_EXECUTOR_POWER_MULT = 3;
-export const ZONE_TOTAL = 50;
 
 /** 배치 역할 — 공격/수비. 집행관은 배치행 없이 자동 수비(별도). */
 export type ConquestRole = 'attack' | 'defend';

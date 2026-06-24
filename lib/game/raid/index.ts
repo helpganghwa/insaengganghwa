@@ -10,7 +10,6 @@ export {
   joinOrRequestRaid,
   decideJoinRequest,
   getPendingJoinRequests,
-  getMyJoinRequestStatus,
 } from './join-request';
 export type { JoinScope, JoinRequestState } from './join-request';
 export { attackRaid, buyExtraAttack, gemAttackRaid } from './attack';

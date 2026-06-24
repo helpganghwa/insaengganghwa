@@ -29,8 +29,6 @@ export type BoastPiece = {
   transcendLevel: number;
   /** 해방 등수(강화랭킹 1~3위) — 후광 색용. null=해방 아님. */
   championRank: number | null;
-  /** 미리보기 sprite 식별용. me/page에서 전달, 다른 경로는 optional. */
-  catalogItemId?: number;
 };
 
 /**

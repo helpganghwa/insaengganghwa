@@ -53,7 +53,6 @@ export function EquipmentDetailSheet({
   onOptimisticEquip,
 }: {
   item: InvItem;
-  all?: InvItem[];
   nickname: string;
   onClose: () => void;
   /** 강화 시작 직후 busy=true 낙관 반영(페이지 이동 직전). */

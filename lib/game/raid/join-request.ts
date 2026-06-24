@@ -189,16 +189,3 @@ export async function getPendingJoinRequests(
     .where(and(eq(raidJoinRequests.raidId, raidId), eq(raidJoinRequests.status, 'pending')))
     .orderBy(raidJoinRequests.createdAt);
 }
-
-/** 요청자 UI — 내 요청 상태(없으면 null). */
-export async function getMyJoinRequestStatus(
-  userId: string,
-  raidId: bigint,
-): Promise<'pending' | 'approved' | 'rejected' | null> {
-  const [r] = await db
-    .select({ status: raidJoinRequests.status })
-    .from(raidJoinRequests)
-    .where(and(eq(raidJoinRequests.raidId, raidId), eq(raidJoinRequests.userId, userId)))
-    .limit(1);
-  return (r?.status as 'pending' | 'approved' | 'rejected' | undefined) ?? null;
-}

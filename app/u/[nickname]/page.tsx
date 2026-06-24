@@ -571,7 +571,6 @@ export default async function PublicProfilePage({
               enhanceLevel: e.enhanceLevel,
               transcendLevel: e.transcendLevel,
               championRank: e.championRank,
-              catalogItemId: e.catalogItemId,
             }))}
           />
         ) : null}
@@ -593,7 +592,6 @@ export default async function PublicProfilePage({
                 enhanceLevel: e.enhanceLevel,
                 transcendLevel: e.transcendLevel,
                 championRank: e.championRank,
-                catalogItemId: e.catalogItemId,
               }))}
               label="프로필 공유하기"
             />

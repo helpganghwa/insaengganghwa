@@ -23,13 +23,11 @@ export function SlotLane({
   candidates,
   slot,
   diamond,
-  nickname,
 }: {
   initialActive: ActiveJob | null;
   candidates: EnhanceCandidate[];
   slot: Slot;
   diamond: string;
-  nickname: string;
 }) {
   const [optimisticActive, setOptimisticActive] = useOptimistic(initialActive);
 
@@ -59,7 +57,6 @@ export function SlotLane({
     <EnhanceSlotCard
       activeJob={optimisticActive}
       diamond={diamond}
-      nickname={nickname}
     />
   ) : (
     <EmptySlotButton

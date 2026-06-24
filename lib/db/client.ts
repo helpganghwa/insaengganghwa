@@ -79,5 +79,3 @@ export const db = new Proxy({} as DrizzleDb, {
     return Reflect.get(_db, prop, receiver);
   },
 });
-
-export type Db = DrizzleDb;

@@ -320,21 +320,6 @@ export async function getRequests(
   return { incoming, outgoing };
 }
 
-/** 받은 요청 수(알림 배지용). */
-export async function getIncomingRequestCount(meId: string, serverId: number): Promise<number> {
-  const [r] = await db
-    .select({ n: sql<number>`count(*)::int` })
-    .from(friendLinks)
-    .where(
-      and(
-        eq(friendLinks.serverId, serverId),
-        eq(friendLinks.status, 'pending'),
-        eq(friendLinks.addresseeId, meId),
-      ),
-    );
-  return r?.n ?? 0;
-}
-
 /** 내 친구 id 목록 — 레이드 친구 공개 등 재사용. */
 export async function getFriendIds(meId: string, serverId: number): Promise<string[]> {
   const rows = await db

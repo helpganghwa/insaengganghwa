@@ -69,6 +69,3 @@ export interface CatalogItem {
 import { CATALOG_NEXT } from './catalog-next';
 
 export const CATALOG_ITEMS: CatalogItem[] = CATALOG_NEXT;
-
-export const CATALOG_BY_SLOT = (slot: CatalogSlot): CatalogItem[] =>
-  CATALOG_ITEMS.filter((c) => c.slot === slot);

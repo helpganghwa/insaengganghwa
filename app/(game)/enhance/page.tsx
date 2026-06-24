@@ -27,7 +27,6 @@ export default async function EnhancePage() {
   // ISO 문자열. liberatedItemRanks(캐시)만 병렬 → 3 DB왕복 → 2. 콜드/hang 시 빈 결과 degrade.
   type EnhRow = {
     diamond: string | null;
-    nickname: string | null;
     tutorial_step: number | null;
     jobs: {
       jobId: string;
@@ -59,7 +58,7 @@ export default async function EnhancePage() {
     Promise.all([
       db.execute(sql`
         select
-          c.diamond::text as diamond, c.nickname, c.tutorial_step,
+          c.diamond::text as diamond, c.tutorial_step,
           coalesce((select json_agg(json_build_object(
               'jobId', ej.id::text, 'equipmentInstanceId', ej.user_equipment_id::text,
               'slot', ej.slot, 'slotLane', ej.slot_lane, 'fromLevel', ej.from_level,
@@ -95,7 +94,6 @@ export default async function EnhancePage() {
   const candidatesRaw = row?.candidates ?? [];
 
   const diamond = row?.diamond ?? '0';
-  const nickname = row?.nickname ?? '플레이어';
   const byLane = new Map<string, (typeof jobs)[number]>();
   for (const j of jobs) byLane.set(`${j.slot}:${j.slotLane}`, j);
 
@@ -151,7 +149,6 @@ export default async function EnhancePage() {
                 candidates={candidatesBySlot.get(slot) ?? []}
                 slot={slot}
                 diamond={diamond}
-                nickname={nickname}
               />
             );
           })}
