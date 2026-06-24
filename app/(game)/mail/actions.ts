@@ -8,6 +8,7 @@ import { getActiveServerId } from '@/lib/game/servers';
 import { db } from '@/lib/db/client';
 import { mailbox } from '@/lib/db/schema/mailbox';
 import { rateLimited } from '@/lib/ratelimit';
+import { getMaintenanceState } from '@/lib/game/system-mode';
 import {
   claimMail,
   claimAllMail,
@@ -22,6 +23,7 @@ const MSG: Record<string, string> = {
   MAIL_NOT_FOUND: '이미 수령했거나 만료된 우편입니다.',
   UNAUTHENTICATED: '로그인이 필요합니다.',
   RATE_LIMITED: '요청이 너무 빠릅니다. 잠시 후 다시 시도해 주세요.',
+  MAINTENANCE: '서버 점검 중입니다. 잠시 후 다시 시도해 주세요.',
   UNKNOWN: '알 수 없는 오류',
 };
 
@@ -44,6 +46,7 @@ export async function claimMailAction(
   const userId = await uid();
   if (!userId) return err('UNAUTHENTICATED');
   if (await rateLimited(userId, 'mail')) return err('RATE_LIMITED');
+  if ((await getMaintenanceState()).active) return err('MAINTENANCE');
   try {
     const result = await claimMail({ userId, serverId: await getActiveServerId(), mailId: BigInt(mailId) });
     revalidate();
@@ -161,6 +164,7 @@ export async function claimAllMailAction(): Promise<
   const userId = await uid();
   if (!userId) return err('UNAUTHENTICATED');
   if (await rateLimited(userId, 'mail')) return err('RATE_LIMITED');
+  if ((await getMaintenanceState()).active) return err('MAINTENANCE');
   try {
     const result = await claimAllMail({ userId, serverId: await getActiveServerId() });
     revalidate();

@@ -17,6 +17,9 @@ import { useResourceToast } from '@/components/ResourceToast';
 
 const POLL_INTERVAL_MS = 60_000;
 const UPDATED_FLAG = 'ig:auto-updated';
+const RELOAD_TS = 'ig:last-auto-reload';
+// 롤링 배포 중 인스턴스별 dpl이 엇갈리면(핑퐁) 무한 새로고침 위험 → 브라우저당 쿨다운 1회.
+const RELOAD_COOLDOWN_MS = 10 * 60_000;
 
 export function VersionUpdateToast() {
   const { showHeaderToast } = useResourceToast();
@@ -47,7 +50,14 @@ export function VersionUpdateToast() {
           return;
         }
         if (cur !== firstDpl && !reloaded) {
+          // 쿨다운 내면 핑퐁 가능성 — 새로고침 대신 기준만 갱신해 루프 차단.
+          const last = Number(localStorage.getItem(RELOAD_TS) ?? '0');
+          if (Date.now() - last < RELOAD_COOLDOWN_MS) {
+            firstDpl = cur;
+            return;
+          }
           reloaded = true;
+          localStorage.setItem(RELOAD_TS, String(Date.now()));
           sessionStorage.setItem(UPDATED_FLAG, '1'); // 새로고침 후 토스트용
           window.location.reload();
         }

@@ -5,6 +5,7 @@ import { revalidatePath } from 'next/cache';
 import { getSessionUserId } from '@/lib/auth/session';
 import { getActiveServerId } from '@/lib/game/servers';
 import { rateLimited } from '@/lib/ratelimit';
+import { getMaintenanceState } from '@/lib/game/system-mode';
 import {
   claimFree,
   claimPremium,
@@ -25,6 +26,7 @@ const MSG: Record<string, string> = {
   NOT_PURCHASED: '프리미엄 미구매 구간입니다.',
   UNAUTHENTICATED: '로그인이 필요합니다.',
   RATE_LIMITED: '요청이 너무 빠릅니다. 잠시 후 다시 시도해 주세요.',
+  MAINTENANCE: '서버 점검 중입니다. 잠시 후 다시 시도해 주세요.',
   UNKNOWN: '알 수 없는 오류',
 };
 const err = (c: string): ErrorState => ({ status: 'error', code: c, message: MSG[c] ?? c });
@@ -38,6 +40,7 @@ export async function claimFreeAction(type: BattlePassType) {
   const u = await getSessionUserId();
   if (!u) return err('UNAUTHENTICATED');
   if (await rateLimited(u, 'battlepass')) return err('RATE_LIMITED');
+  if ((await getMaintenanceState()).active) return err('MAINTENANCE');
   try {
     const r = await claimFree(u, await getActiveServerId(), type);
     revalidate();
@@ -53,6 +56,7 @@ export async function claimPremiumAction(type: BattlePassType) {
   const u = await getSessionUserId();
   if (!u) return err('UNAUTHENTICATED');
   if (await rateLimited(u, 'battlepass')) return err('RATE_LIMITED');
+  if ((await getMaintenanceState()).active) return err('MAINTENANCE');
   try {
     const r = await claimPremium(u, await getActiveServerId(), type);
     revalidate();
@@ -91,6 +95,7 @@ export async function claimSegmentAction(type: BattlePassType, segmentIndex: num
   const u = await getSessionUserId();
   if (!u) return err('UNAUTHENTICATED');
   if (await rateLimited(u, 'battlepass')) return err('RATE_LIMITED');
+  if ((await getMaintenanceState()).active) return err('MAINTENANCE');
   try {
     const r = await claimSegment(u, await getActiveServerId(), type, segmentIndex);
     revalidate();
@@ -112,6 +117,7 @@ export async function claimTierAction(
   const u = await getSessionUserId();
   if (!u) return err('UNAUTHENTICATED');
   if (await rateLimited(u, 'battlepass')) return err('RATE_LIMITED');
+  if ((await getMaintenanceState()).active) return err('MAINTENANCE');
   try {
     const r =
       line === 'free'

@@ -6,6 +6,7 @@ import { after } from 'next/server';
 import { getSessionUserId } from '@/lib/auth/session';
 import { getActiveServerId } from '@/lib/game/servers';
 import { rateLimited } from '@/lib/ratelimit';
+import { getMaintenanceState } from '@/lib/game/system-mode';
 import {
   GuildError,
   createGuild,
@@ -59,6 +60,7 @@ export async function createGuildAction(name: string, emblem: EmblemSelection) {
   const u = await getSessionUserId();
   if (!u) return unauth;
   if (await rateLimited(u, 'guild')) return { status: 'error', code: 'RATE_LIMITED' } as const;
+  if ((await getMaintenanceState()).active) return { status: 'error', code: 'MAINTENANCE' } as const;
   if (!isValidEmblemSelection(emblem)) return { status: 'error', code: 'EMBLEM_INVALID' } as const;
   try {
     const { guildId } = await createGuild({ userId: u, serverId: await getActiveServerId(), name, emblemColor: mainColor(emblem.mainToneId) });
@@ -96,6 +98,7 @@ export async function setActiveEmblemAction(emblemId: string) {
   const u = await getSessionUserId();
   if (!u) return unauth;
   if (await rateLimited(u, 'guild')) return { status: 'error', code: 'RATE_LIMITED' } as const;
+  if ((await getMaintenanceState()).active) return { status: 'error', code: 'MAINTENANCE' } as const;
   try {
     await setActiveEmblem({ userId: u, serverId: await getActiveServerId(), emblemId: BigInt(emblemId) });
     revalidateGuildAndHeader();
@@ -110,6 +113,7 @@ export async function deleteEmblemAction(emblemId: string) {
   const u = await getSessionUserId();
   if (!u) return unauth;
   if (await rateLimited(u, 'guild')) return { status: 'error', code: 'RATE_LIMITED' } as const;
+  if ((await getMaintenanceState()).active) return { status: 'error', code: 'MAINTENANCE' } as const;
   try {
     await deleteEmblem({ userId: u, serverId: await getActiveServerId(), emblemId: BigInt(emblemId) });
     revalidateGuildAndHeader();
@@ -137,6 +141,7 @@ export async function joinGuildAction(guildId: string) {
   const u = await getSessionUserId();
   if (!u) return unauth;
   if (await rateLimited(u, 'guild')) return { status: 'error', code: 'RATE_LIMITED' } as const;
+  if ((await getMaintenanceState()).active) return { status: 'error', code: 'MAINTENANCE' } as const;
   try {
     const r = await requestOrJoinGuild({ userId: u, guildId: BigInt(guildId) });
     revalidatePath('/guild');
@@ -150,6 +155,7 @@ export async function approveJoinAction(requestUserId: string) {
   const u = await getSessionUserId();
   if (!u) return unauth;
   if (await rateLimited(u, 'guild')) return { status: 'error', code: 'RATE_LIMITED' } as const;
+  if ((await getMaintenanceState()).active) return { status: 'error', code: 'MAINTENANCE' } as const;
   try {
     await approveJoinRequest({ actorUserId: u, serverId: await getActiveServerId(), requestUserId });
     revalidatePath('/guild');
@@ -163,6 +169,7 @@ export async function rejectJoinAction(requestUserId: string) {
   const u = await getSessionUserId();
   if (!u) return unauth;
   if (await rateLimited(u, 'guild')) return { status: 'error', code: 'RATE_LIMITED' } as const;
+  if ((await getMaintenanceState()).active) return { status: 'error', code: 'MAINTENANCE' } as const;
   try {
     await rejectJoinRequest({ actorUserId: u, serverId: await getActiveServerId(), requestUserId });
     revalidatePath('/guild');
@@ -176,6 +183,7 @@ export async function setJoinPolicyAction(policy: GuildJoinPolicy) {
   const u = await getSessionUserId();
   if (!u) return unauth;
   if (await rateLimited(u, 'guild')) return { status: 'error', code: 'RATE_LIMITED' } as const;
+  if ((await getMaintenanceState()).active) return { status: 'error', code: 'MAINTENANCE' } as const;
   if (policy !== 'open' && policy !== 'approval') {
     return { status: 'error', code: 'UNKNOWN' } as const;
   }
@@ -193,6 +201,7 @@ export async function setGuildNoticeAction(notice: string) {
   const u = await getSessionUserId();
   if (!u) return unauth;
   if (await rateLimited(u, 'guild')) return { status: 'error', code: 'RATE_LIMITED' } as const;
+  if ((await getMaintenanceState()).active) return { status: 'error', code: 'MAINTENANCE' } as const;
   try {
     await setGuildNotice({ userId: u, serverId: await getActiveServerId(), notice });
     revalidatePath('/guild');
@@ -208,6 +217,7 @@ export async function setGuildIntroAction(intro: string) {
   const u = await getSessionUserId();
   if (!u) return unauth;
   if (await rateLimited(u, 'guild')) return { status: 'error', code: 'RATE_LIMITED' } as const;
+  if ((await getMaintenanceState()).active) return { status: 'error', code: 'MAINTENANCE' } as const;
   try {
     await setGuildIntro({ userId: u, serverId: await getActiveServerId(), intro });
     revalidatePath('/guild');
@@ -223,6 +233,7 @@ export async function setGuildOpenchatAction(url: string) {
   const u = await getSessionUserId();
   if (!u) return unauth;
   if (await rateLimited(u, 'guild')) return { status: 'error', code: 'RATE_LIMITED' } as const;
+  if ((await getMaintenanceState()).active) return { status: 'error', code: 'MAINTENANCE' } as const;
   try {
     await setGuildOpenchat({ userId: u, serverId: await getActiveServerId(), url });
     revalidatePath('/guild');
@@ -237,6 +248,7 @@ export async function leaveGuildAction() {
   const u = await getSessionUserId();
   if (!u) return unauth;
   if (await rateLimited(u, 'guild')) return { status: 'error', code: 'RATE_LIMITED' } as const;
+  if ((await getMaintenanceState()).active) return { status: 'error', code: 'MAINTENANCE' } as const;
   try {
     const r = await leaveGuild({ userId: u, serverId: await getActiveServerId() });
     revalidatePath('/guild');
@@ -250,6 +262,7 @@ export async function setViceAction(targetUserId: string, makeVice: boolean) {
   const u = await getSessionUserId();
   if (!u) return unauth;
   if (await rateLimited(u, 'guild')) return { status: 'error', code: 'RATE_LIMITED' } as const;
+  if ((await getMaintenanceState()).active) return { status: 'error', code: 'MAINTENANCE' } as const;
   try {
     await setViceRole({ leaderUserId: u, serverId: await getActiveServerId(), targetUserId, makeVice });
     revalidatePath('/guild');
@@ -264,6 +277,7 @@ export async function kickMemberAction(targetUserId: string) {
   const u = await getSessionUserId();
   if (!u) return unauth;
   if (await rateLimited(u, 'guild')) return { status: 'error', code: 'RATE_LIMITED' } as const;
+  if ((await getMaintenanceState()).active) return { status: 'error', code: 'MAINTENANCE' } as const;
   try {
     await kickMember({ actorUserId: u, serverId: await getActiveServerId(), targetUserId });
     revalidatePath('/guild');
@@ -278,6 +292,7 @@ export async function transferLeadershipAction(targetUserId: string) {
   const u = await getSessionUserId();
   if (!u) return unauth;
   if (await rateLimited(u, 'guild')) return { status: 'error', code: 'RATE_LIMITED' } as const;
+  if ((await getMaintenanceState()).active) return { status: 'error', code: 'MAINTENANCE' } as const;
   try {
     await transferLeadership({ leaderUserId: u, serverId: await getActiveServerId(), targetUserId });
     revalidatePath('/guild');
@@ -292,6 +307,7 @@ export async function disbandGuildAction() {
   const u = await getSessionUserId();
   if (!u) return unauth;
   if (await rateLimited(u, 'guild')) return { status: 'error', code: 'RATE_LIMITED' } as const;
+  if ((await getMaintenanceState()).active) return { status: 'error', code: 'MAINTENANCE' } as const;
   try {
     await disbandGuild({ userId: u, serverId: await getActiveServerId() });
     revalidatePath('/guild');
@@ -305,6 +321,7 @@ export async function donateAction() {
   const u = await getSessionUserId();
   if (!u) return unauth;
   if (await rateLimited(u, 'guild')) return { status: 'error', code: 'RATE_LIMITED' } as const;
+  if ((await getMaintenanceState()).active) return { status: 'error', code: 'MAINTENANCE' } as const;
   try {
     const r = await donateToGuild({ userId: u, serverId: await getActiveServerId() });
     revalidatePath('/guild');
@@ -318,6 +335,7 @@ export async function setResidenceAction(zoneId: number) {
   const u = await getSessionUserId();
   if (!u) return unauth;
   if (await rateLimited(u, 'guild')) return { status: 'error', code: 'RATE_LIMITED' } as const;
+  if ((await getMaintenanceState()).active) return { status: 'error', code: 'MAINTENANCE' } as const;
   try {
     await setResidence(u, await getActiveServerId(), zoneId);
     revalidatePath('/guild');
@@ -331,6 +349,7 @@ export async function collectTaxAction(zoneId: number) {
   const u = await getSessionUserId();
   if (!u) return unauth;
   if (await rateLimited(u, 'guild')) return { status: 'error', code: 'RATE_LIMITED' } as const;
+  if ((await getMaintenanceState()).active) return { status: 'error', code: 'MAINTENANCE' } as const;
   try {
     const r = await collectZoneTax({ userId: u, zoneId });
     revalidatePath('/guild');
@@ -344,6 +363,7 @@ export async function distributeTaxAction(mode: GuildTaxDistribution, targetUser
   const u = await getSessionUserId();
   if (!u) return unauth;
   if (await rateLimited(u, 'guild')) return { status: 'error', code: 'RATE_LIMITED' } as const;
+  if ((await getMaintenanceState()).active) return { status: 'error', code: 'MAINTENANCE' } as const;
   try {
     const r = await distributeGuildTax({ leaderUserId: u, serverId: await getActiveServerId(), mode, targetUserId });
     revalidatePath('/guild');
@@ -362,6 +382,7 @@ export async function distributeTaxManualAction(amounts: { userId: string; amoun
   const u = await getSessionUserId();
   if (!u) return unauth;
   if (await rateLimited(u, 'guild')) return { status: 'error', code: 'RATE_LIMITED' } as const;
+  if ((await getMaintenanceState()).active) return { status: 'error', code: 'MAINTENANCE' } as const;
   if (!Array.isArray(amounts)) return { status: 'error', code: 'UNKNOWN' } as const;
   try {
     const r = await distributeGuildTaxManual({ leaderUserId: u, serverId: await getActiveServerId(), amounts });
@@ -379,6 +400,7 @@ export async function deployAction(zoneId: number, role: ConquestRole) {
   const u = await getSessionUserId();
   if (!u) return unauth;
   if (await rateLimited(u, 'guild')) return { status: 'error', code: 'RATE_LIMITED' } as const;
+  if ((await getMaintenanceState()).active) return { status: 'error', code: 'MAINTENANCE' } as const;
   try {
     const r = await deployToZone({ userId: u, serverId: await getActiveServerId(), zoneId, role });
     revalidatePath('/guild/map');
@@ -393,6 +415,7 @@ export async function cancelDeployAction() {
   const u = await getSessionUserId();
   if (!u) return unauth;
   if (await rateLimited(u, 'guild')) return { status: 'error', code: 'RATE_LIMITED' } as const;
+  if ((await getMaintenanceState()).active) return { status: 'error', code: 'MAINTENANCE' } as const;
   try {
     const r = await cancelDeployment({ userId: u, serverId: await getActiveServerId() });
     revalidatePath('/guild/map');
@@ -407,6 +430,7 @@ export async function deployMemberAction(targetUserId: string, zoneId: number, r
   const u = await getSessionUserId();
   if (!u) return unauth;
   if (await rateLimited(u, 'guild')) return { status: 'error', code: 'RATE_LIMITED' } as const;
+  if ((await getMaintenanceState()).active) return { status: 'error', code: 'MAINTENANCE' } as const;
   try {
     await deployMember({ actorUserId: u, serverId: await getActiveServerId(), targetUserId, zoneId, role });
     revalidatePath('/guild/deploy');
@@ -421,6 +445,7 @@ export async function clearMemberDeploymentAction(targetUserId: string) {
   const u = await getSessionUserId();
   if (!u) return unauth;
   if (await rateLimited(u, 'guild')) return { status: 'error', code: 'RATE_LIMITED' } as const;
+  if ((await getMaintenanceState()).active) return { status: 'error', code: 'MAINTENANCE' } as const;
   try {
     await clearMemberDeployment({ actorUserId: u, serverId: await getActiveServerId(), targetUserId });
     revalidatePath('/guild/deploy');
@@ -435,6 +460,7 @@ export async function setExecutorAction(zoneId: number, targetUserId: string) {
   const u = await getSessionUserId();
   if (!u) return unauth;
   if (await rateLimited(u, 'guild')) return { status: 'error', code: 'RATE_LIMITED' } as const;
+  if ((await getMaintenanceState()).active) return { status: 'error', code: 'MAINTENANCE' } as const;
   try {
     await setZoneExecutor({ actorUserId: u, zoneId, targetUserId });
     revalidatePath('/guild/map');
@@ -449,6 +475,7 @@ export async function clearExecutorAction(zoneId: number) {
   const u = await getSessionUserId();
   if (!u) return unauth;
   if (await rateLimited(u, 'guild')) return { status: 'error', code: 'RATE_LIMITED' } as const;
+  if ((await getMaintenanceState()).active) return { status: 'error', code: 'MAINTENANCE' } as const;
   try {
     await clearZoneExecutor({ actorUserId: u, zoneId });
     revalidatePath('/guild/map');
