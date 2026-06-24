@@ -53,7 +53,7 @@ export const EMBLEM_KEYWORDS: readonly EmblemKeyword[] = [
   { id: 'bear', ko: '곰', en: 'a bear', cat: 'kw1' },
   { id: 'tiger', ko: '호랑이', en: 'a tiger', cat: 'kw1' },
   { id: 'raven', ko: '까마귀', en: 'a raven', cat: 'kw1' },
-  { id: 'bull', ko: '황소', en: 'a bull', cat: 'kw1' },
+  { id: 'bull', ko: '황소', en: 'a bull head with large curved horns', cat: 'kw1' },
   { id: 'scorpion', ko: '전갈', en: 'a scorpion', cat: 'kw1' },
   // 무기
   { id: 'axe', ko: '도끼', en: 'a battle axe', cat: 'kw2' },
