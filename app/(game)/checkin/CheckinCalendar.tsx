@@ -222,19 +222,19 @@ export function CheckinCalendar({
           className="absolute inset-0 h-full w-full object-cover"
           style={{ imageRendering: 'pixelated' }}
         />
-        {/* 하단 절반만 어둡게 — 상단 배경(보상 단상·기둥·빛기둥) 노출 */}
-        <div className="pointer-events-none absolute inset-x-0 bottom-0 h-3/5 bg-gradient-to-t from-black/85 via-black/45 to-transparent" />
-        {/* 단일 하단 바 — 좌 보상 라벨 + 우 자동폭 버튼(풀폭 X로 배경 가림 최소화) */}
-        <div className="relative flex h-full items-end justify-between gap-2 p-2.5">
-          <div className="flex min-w-0 flex-1 items-center gap-1.5">
-            <span className="text-base drop-shadow-[0_1px_3px_rgba(0,0,0,0.9)]" aria-hidden>
+        {/* 하단을 더 넓게 어둡게 — 커진 보상 텍스트 가독성 확보, 상단 단상·빛기둥은 노출 유지 */}
+        <div className="pointer-events-none absolute inset-x-0 bottom-0 h-2/3 bg-gradient-to-t from-black/90 via-black/55 to-transparent" />
+        {/* 하단 바 — 좌 보상(아이콘·라벨·값) + 우 버튼. 영역에 맞게 크고 균형있게. */}
+        <div className="relative flex h-full items-center justify-between gap-2.5 px-3.5 pb-3 pt-2">
+          <div className="flex min-w-0 flex-1 items-center gap-2.5 self-end">
+            <span className="text-[26px] leading-none drop-shadow-[0_2px_4px_rgba(0,0,0,0.9)]" aria-hidden>
               <RewardEmoji r={cardReward} />
             </span>
             <div className="min-w-0">
-              <div className="text-[9px] font-semibold leading-tight text-amber-300 drop-shadow-[0_1px_2px_rgba(0,0,0,0.95)]">
+              <div className="text-[11px] font-bold leading-tight tracking-wide text-amber-300 drop-shadow-[0_1px_2px_rgba(0,0,0,0.95)]">
                 오늘의 보상
               </div>
-              <div className="truncate text-xs font-bold leading-tight text-white drop-shadow-[0_1px_2px_rgba(0,0,0,0.95)]">
+              <div className="truncate text-base font-extrabold leading-tight text-white drop-shadow-[0_1px_3px_rgba(0,0,0,0.95)]">
                 {rewardLongLabel(cardReward)}
               </div>
             </div>
@@ -243,7 +243,7 @@ export function CheckinCalendar({
             type="button"
             onClick={onClaim}
             disabled={claimedToday || pending}
-            className="shrink-0 rounded-lg bg-amber-600 px-3.5 py-2 text-[13px] font-bold text-white shadow-md transition active:scale-[0.99] disabled:cursor-not-allowed disabled:bg-zinc-600/80 disabled:text-zinc-300"
+            className="shrink-0 self-end rounded-lg bg-amber-600 px-4 py-2.5 text-sm font-bold text-white shadow-md transition active:scale-[0.99] disabled:cursor-not-allowed disabled:bg-zinc-600/80 disabled:text-zinc-300"
           >
             {claimedToday ? '오늘 완료' : pending ? '찍는 중…' : '도장 찍기'}
           </button>
