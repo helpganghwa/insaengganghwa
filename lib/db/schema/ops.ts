@@ -10,9 +10,14 @@ import {
   uuid,
   text,
   bigserial,
+  integer,
+  boolean,
   jsonb,
   timestamp,
+  index,
+  uniqueIndex,
 } from 'drizzle-orm/pg-core';
+import { sql } from 'drizzle-orm';
 
 export const systemModeValueEnum = pgEnum('system_mode_value', [
   'live',
@@ -44,6 +49,35 @@ export const systemMode = pgTable('system_mode', {
 });
 
 // §10.3 ad_views — 광고 보상 v1 미도입. 향후 SSV 지원 광고 환경 도입 시 재검토.
+
+/**
+ * §10.5 client_errors — 클라이언트 전역 에러 수집(/api/client-error).
+ *
+ * fingerprint(kind:message)로 그룹화 — 동일 에러는 count 증가(테이블 폭주 방지). 미해결 동일
+ * fingerprint는 부분 유니크로 1행. 어드민 /admin/client-errors에서 조회·해결.
+ */
+export const clientErrors = pgTable(
+  'client_errors',
+  {
+    id: bigserial('id', { mode: 'bigint' }).primaryKey(),
+    /** kind:message 정규화 키 — 그룹 식별. */
+    fingerprint: text('fingerprint').notNull(),
+    kind: text('kind').notNull(),
+    message: text('message').notNull(),
+    url: text('url'),
+    ua: text('ua'),
+    stack: text('stack'),
+    /** 동일 fingerprint 발생 횟수. */
+    count: integer('count').notNull().default(1),
+    resolved: boolean('resolved').notNull().default(false),
+    firstSeen: timestamp('first_seen', { withTimezone: true }).notNull().defaultNow(),
+    lastSeen: timestamp('last_seen', { withTimezone: true }).notNull().defaultNow(),
+  },
+  (t) => [
+    uniqueIndex('client_errors_open_uq').on(t.fingerprint).where(sql`${t.resolved} = false`),
+    index('client_errors_open_idx').on(t.resolved, t.lastSeen),
+  ],
+);
 
 /** §10.4 admin_actions — 운영 감사 로그. */
 export const adminActions = pgTable('admin_actions', {

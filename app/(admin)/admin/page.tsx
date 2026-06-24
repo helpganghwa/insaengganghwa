@@ -3,6 +3,7 @@ import { and, eq, gt, gte, inArray, isNull, lt, sql } from 'drizzle-orm';
 
 import { db } from '@/lib/db/client';
 import { paymentAlerts } from '@/lib/db/schema/payment';
+import { clientErrors } from '@/lib/db/schema/ops';
 import { userProfiles, profileGenerationJobs } from '@/lib/db/schema/avatar';
 
 /**
@@ -19,7 +20,7 @@ async function pendingCounts(): Promise<Record<string, number>> {
   const dayMs = new Date(`${kstToday}T00:00:00+09:00`).getTime();
   const dayStart = new Date(dayMs);
   const dayEnd = new Date(dayMs + 24 * 3600 * 1000);
-  const [alerts, reports, genTodo] = await Promise.all([
+  const [alerts, reports, genTodo, cerrors] = await Promise.all([
     // 미해결 결제 사고.
     one(
       db
@@ -48,11 +49,19 @@ async function pendingCounts(): Promise<Record<string, number>> {
           ),
         ),
     ),
+    // 미해결 클라이언트 에러 그룹.
+    one(
+      db
+        .select({ n: sql<number>`count(*)::int` })
+        .from(clientErrors)
+        .where(eq(clientErrors.resolved, false)),
+    ),
   ]);
   return {
     '/admin/alerts': alerts,
     '/admin/reports': reports,
     '/admin/profile-gen': genTodo,
+    '/admin/client-errors': cerrors,
   };
 }
 
@@ -92,6 +101,12 @@ const MENU: { href: string; icon: string; title: string; desc: string; external?
     icon: '🔧',
     title: '서버 점검',
     desc: '점검/긴급정지 토글(시간지정·무기한). 일반 유저는 점검화면, 어드민은 정상 접근',
+  },
+  {
+    href: '/admin/client-errors',
+    icon: '🐞',
+    title: '클라이언트 에러',
+    desc: '사용자 기기 전역 에러 수집(그룹화·발생횟수). 해결 처리',
   },
 ];
 
