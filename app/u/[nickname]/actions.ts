@@ -42,7 +42,7 @@ export async function reportProfile(
 
   try {
     await db.transaction(async (tx) => {
-      // UNIQUE(profile_id, reporter_user_id) — 중복 신고 시 23505.
+      // UNIQUE(profile_id, reporter_user_id, reason) — 같은 사유 중복만 23505(사유 다르면 허용).
       await tx.insert(profileReports).values({
         profileId,
         reporterUserId: userId,
@@ -57,7 +57,7 @@ export async function reportProfile(
     });
   } catch (e) {
     if ((e as { code?: string }).code === '23505') {
-      return { status: 'error', message: '이미 신고한 프로필입니다.' };
+      return { status: 'error', message: '이미 같은 사유로 신고한 프로필입니다.' };
     }
     throw e;
   }

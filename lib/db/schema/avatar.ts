@@ -188,7 +188,12 @@ export const profileReports = pgTable(
     createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
   },
   (t) => [
-    uniqueIndex('profile_reports_profile_reporter_uq').on(t.profileId, t.reporterUserId),
+    // 같은 신고자라도 사유가 다르면 재신고 허용 — (프로필, 신고자, 사유) 단위 1회.
+    uniqueIndex('profile_reports_profile_reporter_reason_uq').on(
+      t.profileId,
+      t.reporterUserId,
+      t.reason,
+    ),
     index('profile_reports_profile_created_idx').on(t.profileId, t.createdAt.desc()),
   ],
 );
