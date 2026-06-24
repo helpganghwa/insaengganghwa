@@ -15,6 +15,8 @@ import {
   boolean,
   timestamp,
   primaryKey,
+  index,
+  uniqueIndex,
 } from 'drizzle-orm/pg-core';
 import { sql } from 'drizzle-orm';
 
@@ -70,6 +72,38 @@ export const monthlyPurchaseLimits = pgTable(
     totalKrw: bigint('total_krw', { mode: 'bigint' }).notNull().default(sql`0`),
   },
   (t) => [primaryKey({ columns: [t.userId, t.kstMonth] })],
+);
+
+/**
+ * §9.5 payment_alerts — 결제 사고 감지/알림(PAYMENT-SAFETY.md).
+ *
+ * 인라인(웹훅)·정합성 cron이 위험 이벤트를 영속 기록. 같은 (kind, payment_id) 미해결 건은
+ * 1회만 생성·발송(중복 알림 방지) — 운영자가 resolved 처리 후 재발하면 새 row.
+ */
+export const paymentAlerts = pgTable(
+  'payment_alerts',
+  {
+    id: bigserial('id', { mode: 'bigint' }).primaryKey(),
+    /** 사고 유형 — PAID_NOT_GRANTED / REFUND_RECLAIM_FAILED / AMOUNT_MISMATCH / WEBHOOK_VERIFY_FAILED / MINOR_LIMIT_EXCEEDED / ORPHAN_PENDING / COMPLETE_EXCEPTION / PARTIAL_CANCELLED. */
+    kind: text('kind').notNull(),
+    /** critical / high / warn. */
+    severity: text('severity').notNull(),
+    /** 관련 주문(있으면). PortOne 결제 id = portone_order_id. 미파싱 이벤트는 ''. */
+    paymentId: text('payment_id').notNull().default(''),
+    orderId: bigint('order_id', { mode: 'bigint' }),
+    detail: text('detail').notNull(),
+    resolved: boolean('resolved').notNull().default(false),
+    createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
+    resolvedAt: timestamp('resolved_at', { withTimezone: true }),
+  },
+  (t) => [
+    // 미해결 동일 (kind, payment_id) 중복 차단 — 알림 1회. resolved 후엔 재생성 허용(부분 유니크).
+    uniqueIndex('payment_alerts_open_uq')
+      .on(t.kind, t.paymentId)
+      .where(sql`${t.resolved} = false`),
+    // 어드민 패널 — 미해결 최신순.
+    index('payment_alerts_open_idx').on(t.resolved, t.createdAt),
+  ],
 );
 
 /** §9.4 identity_verifications — append-only 감사. */

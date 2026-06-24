@@ -14,6 +14,7 @@ import * as PortOne from '@portone/server-sdk';
 
 import { completePurchase } from '@/lib/payment/purchase';
 import { refundPurchase } from '@/lib/payment/refund';
+import { raisePaymentAlert } from '@/lib/payment/alert';
 
 export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
@@ -29,7 +30,10 @@ export async function POST(req: Request) {
   try {
     webhook = await PortOne.Webhook.verify(secret, raw, headers);
   } catch {
-    // 서명 불일치 — 위조/오설정. 재전송해도 동일하니 400으로 중단.
+    // 서명 불일치 — 위조/오설정(시크릿 회전 사고면 전 결제 사일런트 실패). 운영 알림 후 400 중단.
+    await raisePaymentAlert('WEBHOOK_VERIFY_FAILED', {
+      detail: '웹훅 서명 검증 실패. 위조이거나 PORTONE_WEBHOOK_SECRET/PG 설정 불일치 가능 — 즉시 점검.',
+    });
     return new Response('invalid signature', { status: 400 });
   }
 
@@ -38,7 +42,17 @@ export async function POST(req: Request) {
     const paymentId = webhook.data.paymentId;
 
     if (webhook.type === 'Transaction.Paid') {
-      const result = await completePurchase(paymentId);
+      let result;
+      try {
+        result = await completePurchase(paymentId);
+      } catch (e) {
+        // 지급 처리 중 예외 — 운영 알림 후 throw(500)로 재전송 유도(멱등하므로 안전).
+        await raisePaymentAlert('COMPLETE_EXCEPTION', {
+          paymentId,
+          detail: `결제 지급 처리 중 예외: ${e instanceof Error ? e.message : String(e)}`,
+        });
+        throw e;
+      }
       if (!result.ok) {
         if (result.code === 'NOT_PAID') {
           // 포트원 상태 전파 지연 등 일시적일 수 있음 — 500으로 재전송 유도(멱등하므로 안전).
@@ -47,21 +61,37 @@ export async function POST(req: Request) {
           return new Response('not paid yet', { status: 500 });
         }
         // ORDER_NOT_FOUND(우리 주문 아님)·AMOUNT_MISMATCH(위변조 의심)는 재전송해도 동일 — 200 ack.
-        //  AMOUNT_MISMATCH는 지급하지 않은 채 운영 알림 대상(로그).
+        //  AMOUNT_MISMATCH는 지급하지 않은 채 운영 알림 대상.
         if (result.code === 'AMOUNT_MISMATCH') {
-          console.error('[portone.webhook] AMOUNT_MISMATCH', paymentId);
+          await raisePaymentAlert('AMOUNT_MISMATCH', {
+            paymentId,
+            detail: '결제 금액/통화가 주문과 불일치 — 위변조 의심. 지급하지 않음.',
+          });
         }
       }
     } else if (webhook.type === 'Transaction.Cancelled') {
       // 전체 취소(환불) — 지급분 회수(멱등). NOT_CANCELLED(전파 지연)는 500으로 재전송 유도.
-      const result = await refundPurchase(paymentId);
+      let result;
+      try {
+        result = await refundPurchase(paymentId);
+      } catch (e) {
+        // 회수 중 예외 — 환불받고 재화 유지 위험. 운영 알림 후 throw(500)로 재전송 유도.
+        await raisePaymentAlert('REFUND_RECLAIM_FAILED', {
+          paymentId,
+          detail: `환불 회수 중 예외: ${e instanceof Error ? e.message : String(e)}`,
+        });
+        throw e;
+      }
       if (!result.ok && result.code === 'NOT_CANCELLED') {
         console.error('[portone.webhook] NOT_CANCELLED, retrying', paymentId);
         return new Response('not cancelled yet', { status: 500 });
       }
     } else if (webhook.type === 'Transaction.PartialCancelled') {
-      // 부분취소 — 고정가 디지털 상품 특성상 드묾. 자동 회수하지 않고 운영 수동 처리(로그만).
-      console.error('[portone.webhook] PartialCancelled (manual ops)', paymentId);
+      // 부분취소 — 고정가 디지털 상품 특성상 드묾. 자동 회수하지 않고 운영 수동 처리.
+      await raisePaymentAlert('PARTIAL_CANCELLED', {
+        paymentId,
+        detail: '부분취소 수신 — 자동 회수 대상 아님. 운영 수동 처리 필요.',
+      });
     }
   }
 
