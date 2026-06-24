@@ -349,8 +349,10 @@ export function BattlePassClient({
             onPremiumLocked={onPremiumLocked}
           />
         </div>
+      </div>
 
-        {/* 전자상거래법 표시 — 결제(프리미엄 패스) 페이지 하단 사업자정보·약관·환불 링크. */}
+      {/* 전자상거래법 표시 — 스크롤 컨텐츠 밖, 컬럼 하단 고정(사업자정보·약관·환불 링크). */}
+      <div className="shrink-0">
         <PublicFooter />
       </div>
     </div>

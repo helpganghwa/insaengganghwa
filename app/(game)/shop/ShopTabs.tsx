@@ -564,8 +564,10 @@ export function ShopTabs({
             ))}
           </ul>
         )}
+      </div>
 
-        {/* 전자상거래법 표시 — 결제 페이지 하단 사업자정보·약관·환불 링크 노출(심사 요건). */}
+      {/* 전자상거래법 표시 — 스크롤 컨텐츠 밖, 컬럼 하단 고정(사업자정보·약관·환불 링크, 심사 요건). */}
+      <div className="shrink-0">
         <PublicFooter />
       </div>
     </div>
