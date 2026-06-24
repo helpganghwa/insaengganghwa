@@ -152,18 +152,34 @@ async function generateEmblemPng(prompt: string, shieldLike = true): Promise<Buf
     (shieldLike ? '' : ', shield, heater shield, round shield, escutcheon, shield shape');
   let lastErr = 'unknown';
   for (let attempt = 0; attempt < 4; attempt++) {
-    const res = await fetch(PIXFLUX_URL, {
-      method: 'POST',
-      headers: { 'content-type': 'application/json', authorization: `Bearer ${key}` },
-      body: JSON.stringify({
-        description: prompt,
-        // 디테일↑(더 큰 캔버스 → 다운스케일), 프롬프트 충실도↑(색 팔레트·디테일 반영), 잡색·노이즈 회피.
-        image_size: { width: 160, height: 160 },
-        no_background: true,
-        text_guidance_scale: 9,
-        negative_description: negative,
-      }),
-    });
+    // 행 방지 — Pixellab 무응답/쿼터초과 시 25초 후 abort(과거 300초 함수 타임아웃 유발). 빠른 실패→폴백.
+    const ctrl = new AbortController();
+    const timer = setTimeout(() => ctrl.abort(), 25_000);
+    let res: Response;
+    try {
+      res = await fetch(PIXFLUX_URL, {
+        method: 'POST',
+        headers: { 'content-type': 'application/json', authorization: `Bearer ${key}` },
+        body: JSON.stringify({
+          description: prompt,
+          // 디테일↑(더 큰 캔버스 → 다운스케일), 프롬프트 충실도↑(색 팔레트·디테일 반영), 잡색·노이즈 회피.
+          image_size: { width: 160, height: 160 },
+          no_background: true,
+          text_guidance_scale: 9,
+          negative_description: negative,
+        }),
+        signal: ctrl.signal,
+      });
+    } catch (e) {
+      lastErr =
+        (e as Error)?.name === 'AbortError'
+          ? 'timeout(25s)'
+          : `fetch: ${(e as Error)?.message ?? 'unknown'}`;
+      console.warn(`[guild.emblem] 요청 실패 재시도 (attempt ${attempt}) — ${lastErr}`);
+      continue;
+    } finally {
+      clearTimeout(timer);
+    }
     if (res.status === 429) {
       await new Promise((r) => setTimeout(r, 700 * 2 ** attempt)); // 백오프 단축(긴 요청 단축)
       lastErr = '429 rate limit';
@@ -289,7 +305,8 @@ async function requireLeaderGuild(userId: string, serverId: number): Promise<big
 }
 
 /**
- * 새 문양 생성·보관 — 길드장만, 3,000💎(💎 sink·외형 BM). 보관 최대 미만일 때만.
+ * 새 문양 생성·보관 — 길드장만. **첫 문양은 무료**(결성 시 무료 문양이 best-effort로 실패한
+ * 길드의 복구 경로), 2번째+(재생성)는 3,000💎(💎 sink·외형 BM). 보관 최대 미만일 때만.
  * **생성·업로드 성공 후에만** 차감+행 삽입+활성화를 한 트랜잭션으로(2026-06-11 버그 수정):
  *  생성/타임아웃 실패 시 차감·빈 행이 전혀 남지 않음(환불 로직 불필요).
  */
@@ -298,7 +315,7 @@ export async function generateEmblem(input: {
   serverId: number;
   selection: EmblemSelection;
 }): Promise<{ emblemId: bigint; emblemUrl: string }> {
-  const cost = BigInt(GUILD_EMBLEM_REROLL_COST_DIAMOND);
+  const rerollCost = BigInt(GUILD_EMBLEM_REROLL_COST_DIAMOND);
   // 1) 사전 검증(차감 없음) — 길드장·보유 한도·잔액. 비싼 생성 전에 빠르게 실패.
   const guildId = await requireLeaderGuild(input.userId, input.serverId);
   const [{ n }] = await db
@@ -306,8 +323,12 @@ export async function generateEmblem(input: {
     .from(guildEmblems)
     .where(eq(guildEmblems.guildId, guildId));
   if (n >= MAX_GUILD_EMBLEMS) throw new GuildError('EMBLEM_MAX');
-  const pre = await getWalletDiamond(db, input.userId, input.serverId);
-  if (pre < cost) throw new GuildError('INSUFFICIENT_DIAMOND');
+  // 첫 문양은 무료 — 결성 무료 문양(after best-effort)이 실패한 길드의 복구 경로. 2번째+만 과금.
+  const cost = n === 0 ? 0n : rerollCost;
+  if (cost > 0n) {
+    const pre = await getWalletDiamond(db, input.userId, input.serverId);
+    if (pre < cost) throw new GuildError('INSUFFICIENT_DIAMOND');
+  }
 
   // 2) 생성·업로드(느림·과금 전). 실패하면 여기서 throw — DB 변경 전이라 차감/빈 행 없음.
   const { emblemUrl, color } = await generateEmblemAsset(guildId, input.selection);
@@ -319,8 +340,11 @@ export async function generateEmblem(input: {
       .from(guildEmblems)
       .where(eq(guildEmblems.guildId, guildId));
     if (n2 >= MAX_GUILD_EMBLEMS) throw new GuildError('EMBLEM_MAX');
-    const paid = await walletTrySpend(tx, input.userId, input.serverId, cost);
-    if (!paid) throw new GuildError('INSUFFICIENT_DIAMOND');
+    const txCost = n2 === 0 ? 0n : rerollCost; // 커밋 시점 재평가 — 첫 문양 무료
+    if (txCost > 0n) {
+      const paid = await walletTrySpend(tx, input.userId, input.serverId, txCost);
+      if (!paid) throw new GuildError('INSUFFICIENT_DIAMOND');
+    }
     const [row] = await tx
       .insert(guildEmblems)
       .values({ guildId, emblemUrl, emblemColor: color })

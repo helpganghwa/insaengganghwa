@@ -334,7 +334,9 @@ export function GuildSettings({
       /* noop */
     }
     setGenPending(true);
-    optimisticAdjust(BigInt(-GUILD_EMBLEM_REROLL_COST_DIAMOND));
+    // 첫 문양은 무료(결성 무료문양 실패 복구) — 차감/낙관조정 없음.
+    const wasFree = emblemList.length === 0;
+    if (!wasFree) optimisticAdjust(BigInt(-GUILD_EMBLEM_REROLL_COST_DIAMOND));
     // 생성은 수십초 걸릴 수 있어 긴 요청이 끊길 수 있음 — 응답을 단정적 실패로 보지 않고,
     // 명시적 에러 코드만 토스트, 그 외(네트워크/지연)는 새로고침으로 실제 상태 반영(서버가
     // 성공했으면 새 문양·차감이 반영됨). 다이아는 일단 되돌리고 refresh로 실값 재동기화.
@@ -353,7 +355,7 @@ export function GuildSettings({
       showHeaderToast({ title: '문양 생성 완료' });
       // 생성중 플래그는 새 문양 도착(emblems 증가) 시 effect가 정리 — 부드러운 전환.
     } else {
-      optimisticAdjust(BigInt(GUILD_EMBLEM_REROLL_COST_DIAMOND)); // 비성공 추정 — 복원(refresh가 실값 재동기화)
+      if (!wasFree) optimisticAdjust(BigInt(GUILD_EMBLEM_REROLL_COST_DIAMOND)); // 비성공 추정 — 복원(refresh가 실값 재동기화)
       if (r?.status === 'error') {
         try {
           localStorage.removeItem('guildEmblemGen'); // 명시적 실패 — 생성중 즉시 해제
@@ -751,7 +753,9 @@ export function GuildSettings({
                     >
                       <span className="text-lg leading-none">+</span>
                       <span className="text-[8px] font-bold">
-                        💎{GUILD_EMBLEM_REROLL_COST_DIAMOND.toLocaleString('ko-KR')}
+                        {emblemList.length === 0
+                          ? '무료'
+                          : `💎${GUILD_EMBLEM_REROLL_COST_DIAMOND.toLocaleString('ko-KR')}`}
                       </span>
                     </button>
                   )}
@@ -828,9 +832,13 @@ export function GuildSettings({
                 />
               ) : null}
               <span className="relative">
-                {genConfirm
-                  ? `한번 더 💎${GUILD_EMBLEM_REROLL_COST_DIAMOND.toLocaleString('ko-KR')} ${genConfirmLeft}s`
-                  : `생성하기 💎${GUILD_EMBLEM_REROLL_COST_DIAMOND.toLocaleString('ko-KR')}`}
+                {(() => {
+                  const price =
+                    emblemList.length === 0
+                      ? '무료'
+                      : `💎${GUILD_EMBLEM_REROLL_COST_DIAMOND.toLocaleString('ko-KR')}`;
+                  return genConfirm ? `한번 더 ${price} ${genConfirmLeft}s` : `생성하기 ${price}`;
+                })()}
               </span>
             </button>
         </ModalShell>
