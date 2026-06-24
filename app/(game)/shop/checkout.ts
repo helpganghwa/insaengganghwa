@@ -4,7 +4,7 @@ import { createOrderAction, verifyPurchaseAction } from './actions';
 
 /**
  * 포트원 V2 결제창 호출 — 서버 주문 생성 → 결제창 → (팝업 복귀 시) 서버 검증·지급.
- *  PC는 팝업 모드로 여기서 끝까지 처리, 모바일은 redirectUrl로 페이지 이동 후 /shop/pay/complete가 검증.
+ *  PC는 팝업 모드로 여기서 끝까지 처리, 모바일은 redirectUrl(/shop)로 복귀 후 ShopTabs가 검증.
  *  어느 경로든 최종 지급 권위는 서버(웹훅 + verify) — 이 함수 반환은 UX 표시용.
  */
 export type CheckoutResult =

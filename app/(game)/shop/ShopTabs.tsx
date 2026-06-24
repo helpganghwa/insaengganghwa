@@ -1,6 +1,6 @@
 'use client';
 
-import { useRef, useState, useTransition } from 'react';
+import { useEffect, useRef, useState, useTransition } from 'react';
 import { useRouter } from 'next/navigation';
 
 import { assetUrl } from '@/lib/asset-versions';
@@ -8,7 +8,7 @@ import { useResourceToast, type HeaderReward } from '@/components/ResourceToast'
 import { useDiamond } from '@/components/DiamondContext';
 import { PublicFooter } from '@/components/PublicFooter';
 
-import { claimFreeAction, devPurchaseAction, buyBoxAction } from './actions';
+import { claimFreeAction, devPurchaseAction, buyBoxAction, verifyPurchaseAction } from './actions';
 import { runCheckout } from './checkout';
 import type { FreeSlot } from '@/lib/game/shop/free';
 import { BOX, CASH, PREMIUM, DIAMONDS, productPeriod } from '@/lib/game/shop/catalog';
@@ -237,6 +237,8 @@ export function ShopTabs({
   purchased: initialPurchased,
   premiumDays: initialPremiumDays,
   initialTab = 'daily',
+  returnPaymentId = null,
+  returnCode = null,
 }: {
   free: Record<FreeSlot, boolean>;
   isAdmin: boolean;
@@ -246,6 +248,9 @@ export function ShopTabs({
   premiumDays: number | null;
   /** 딥링크용 초기 탭(예: 헤더 다이아 클릭 → ?tab=charge). */
   initialTab?: Tab;
+  /** 모바일 결제 복귀 — 포트원이 /shop?paymentId=…(&code=…)로 리다이렉트. 화면 내에서 검증 처리. */
+  returnPaymentId?: string | null;
+  returnCode?: string | null;
 }) {
   const router = useRouter();
   const { showHeaderToast } = useResourceToast();
@@ -259,6 +264,39 @@ export function ShopTabs({
   const [confirm, setConfirm] = useState<string | null>(null); // 구매 확인 대기 중인 상품
   const confirmTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
   const [, startTransition] = useTransition();
+  const returnHandled = useRef(false);
+
+  // 모바일 결제 복귀 — 포트원이 /shop?paymentId=…(&code=…)로 돌아오면 화면 내에서 검증·지급 확인.
+  //  별도 페이지 없이 상점에서 처리. 처리 후 쿼리 제거(새로고침 시 재처리 방지). 지급 권위는 서버(웹훅 포함).
+  useEffect(() => {
+    if (returnHandled.current) return;
+    if (!returnPaymentId && !returnCode) return;
+    returnHandled.current = true;
+    window.history.replaceState(null, '', '/shop'); // 쿼리 정리(결제 파라미터 제거)
+    if (returnCode) {
+      // 실패/취소 — 취소는 조용히, 그 외만 안내.
+      if (returnCode !== 'PAY_CANCEL' && returnCode !== 'PAY_PROCESS_CANCELED') {
+        showHeaderToast({ icon: '⚠️', title: '결제가 완료되지 않았습니다' });
+      }
+      return;
+    }
+    if (returnPaymentId) {
+      void (async () => {
+        const v = await verifyPurchaseAction(returnPaymentId);
+        if (v.status === 'success') {
+          router.refresh(); // 다이아·상자·프리미엄 등 서버 권위 상태 동기화.
+          showHeaderToast({ icon: '✅', title: v.already ? '이미 지급된 결제입니다' : '구매 완료' });
+        } else {
+          showHeaderToast({
+            icon: '⚠️',
+            title: v.code === 'AMOUNT_MISMATCH' ? '결제 금액 오류 — 문의 바랍니다' : '결제 확인 실패',
+          });
+        }
+      })();
+    }
+    // 마운트 1회만 — returnPaymentId/Code는 초기 URL 파생값.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   const soon = () => showHeaderToast({ icon: '🛒', title: '준비 중입니다' });
   const isLimited = (id: string) => productPeriod(id) !== null;
@@ -333,7 +371,7 @@ export function ShopTabs({
   };
 
   // 실결제(포트원) — 전 유저. 주문 생성 → 결제창 → 서버 검증·지급. 지급 권위는 서버(웹훅+verify).
-  //  모바일은 결제창에서 페이지가 이동(/shop/pay/complete가 검증) → 아래 ok 분기는 PC 팝업 경로.
+  //  모바일은 결제창에서 /shop으로 페이지 복귀(아래 useEffect가 검증) → 이 ok 분기는 PC 팝업 경로.
   const onPay = (productId: string) => {
     if (paying) return;
     const limited = isLimited(productId);
@@ -343,7 +381,8 @@ export function ShopTabs({
     }
     setPaying(true);
     void (async () => {
-      const r = await runCheckout(productId, `${window.location.origin}/shop/pay/complete`);
+      // 복귀 URL = 상점 자신(별도 페이지 없음). 포트원이 ?paymentId=…(&code=…)를 덧붙여 복귀.
+      const r = await runCheckout(productId, `${window.location.origin}/shop`);
       setPaying(false);
       if (r.ok) {
         if (limited && productId !== PREMIUM.id) setPurchased((p) => new Set(p).add(productId));

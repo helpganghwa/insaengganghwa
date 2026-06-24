@@ -18,13 +18,14 @@ type ShopTab = (typeof SHOP_TABS)[number];
 export default async function ShopPage({
   searchParams,
 }: {
-  searchParams: Promise<{ tab?: string }>;
+  searchParams: Promise<{ tab?: string; paymentId?: string; code?: string }>;
 }) {
   const { userId, isAdmin } = await getAdminStatus();
   if (!userId) return null;
   const serverId = await getActiveServerId();
 
-  const tabParam = (await searchParams).tab;
+  const sp = await searchParams;
+  const tabParam = sp.tab;
   const initialTab: ShopTab = SHOP_TABS.includes(tabParam as ShopTab)
     ? (tabParam as ShopTab)
     : 'daily';
@@ -45,6 +46,8 @@ export default async function ShopPage({
       purchased={purchased}
       premiumDays={premiumDays}
       initialTab={initialTab}
+      returnPaymentId={sp.paymentId ?? null}
+      returnCode={sp.code ?? null}
     />
   );
 }
