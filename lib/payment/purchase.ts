@@ -4,6 +4,7 @@ import { and, desc, eq, sql } from 'drizzle-orm';
 
 import { db } from '@/lib/db/client';
 import { iapOrders, monthlyPurchaseLimits, identityVerifications } from '@/lib/db/schema/payment';
+import { characters } from '@/lib/db/schema/server';
 import { shopPurchases } from '@/lib/db/schema/shop';
 import { kstMonthString } from '@/lib/kst';
 import { paidProduct, shopGrant, productPeriod } from '@/lib/game/shop/catalog';
@@ -75,6 +76,8 @@ export type CreatedOrder = {
   amountKrw: number;
   storeId: string;
   channelKey: string;
+  /** 구매자 이름 — 이니시스 V2 일반결제 필수(customer.fullName). 닉네임 사용. */
+  customerName: string;
 };
 
 /**
@@ -116,6 +119,14 @@ export async function createOrder(
     throw new PurchaseError('MINOR_LIMIT');
   }
 
+  // 구매자 이름 — 이니시스 V2 일반결제 필수. 캐릭터 닉네임 사용(없으면 '구매자' 폴백).
+  const [ch] = await db
+    .select({ nickname: characters.nickname })
+    .from(characters)
+    .where(and(eq(characters.userId, userId), eq(characters.serverId, serverId)))
+    .limit(1);
+  const customerName = ch?.nickname?.trim() || '구매자';
+
   const paymentId = `payment-${crypto.randomUUID()}`;
   await db.insert(iapOrders).values({
     serverId,
@@ -133,6 +144,7 @@ export async function createOrder(
     amountKrw: info.krw,
     storeId: cfg.storeId,
     channelKey: cfg.channelKey,
+    customerName,
   };
 }
 

@@ -95,14 +95,14 @@ export default async function LoginPage({
               name="email"
               autoComplete="username"
               placeholder="아이디(이메일)"
-              className="w-full rounded-xl border border-zinc-300 bg-white px-3 py-2.5 text-sm dark:border-zinc-700 dark:bg-zinc-900"
+              className="w-full rounded-xl border border-zinc-300 bg-white px-3 py-2.5 text-base dark:border-zinc-700 dark:bg-zinc-900"
             />
             <input
               type="password"
               name="password"
               autoComplete="current-password"
               placeholder="비밀번호"
-              className="w-full rounded-xl border border-zinc-300 bg-white px-3 py-2.5 text-sm dark:border-zinc-700 dark:bg-zinc-900"
+              className="w-full rounded-xl border border-zinc-300 bg-white px-3 py-2.5 text-base dark:border-zinc-700 dark:bg-zinc-900"
             />
             <button
               type="submit"

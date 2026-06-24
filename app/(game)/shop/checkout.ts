@@ -15,7 +15,7 @@ export async function runCheckout(productId: string, redirectUrl: string): Promi
   const r = await createOrderAction(productId);
   if (r.status !== 'success') return { ok: false, reason: 'create', code: r.code };
 
-  const { paymentId, orderName, amountKrw, storeId, channelKey } = r.order;
+  const { paymentId, orderName, amountKrw, storeId, channelKey, customerName } = r.order;
   const resp = await PortOne.requestPayment({
     storeId,
     channelKey,
@@ -24,6 +24,8 @@ export async function runCheckout(productId: string, redirectUrl: string): Promi
     totalAmount: amountKrw,
     currency: 'CURRENCY_KRW',
     payMethod: 'CARD',
+    // 이니시스 V2 일반결제는 구매자 이름 필수 — 닉네임을 customer.fullName으로 전달.
+    customer: { fullName: customerName },
     redirectUrl, // 모바일: 결제 후 이 URL로 복귀(complete 페이지가 검증). PC 팝업은 미사용.
   });
 
