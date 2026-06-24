@@ -29,6 +29,12 @@ export function parseBpProduct(
   if (!m) return null;
   return { type: m[1] as BattlePassType, segmentIndex: Number(m[2]) };
 }
+/** 상품코드 → 표시명(어드민·로그용). 배틀패스 구간 vs 상점 상품. 미상이면 코드 그대로. */
+export function productDisplayName(productCode: string): string {
+  const bp = parseBpProduct(productCode);
+  if (bp) return bpOrderName(bp.type, bp.segmentIndex);
+  return paidProduct(productCode)?.orderName ?? productCode;
+}
 function bpOrderName(type: BattlePassType, segmentIndex: number): string {
   return `성장 ${type === 'enhance' ? '강화' : '초월'} 패스 ${segmentIndex + 1}구간`;
 }

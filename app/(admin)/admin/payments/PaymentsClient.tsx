@@ -11,7 +11,10 @@ export type OrderRow = {
   serverId: number;
   /** 포트원 거래번호(paymentId) — 콘솔 대조용. */
   portoneOrderId: string;
+  /** 상품 코드(예: starter, bp_enhance_0). */
   product: string;
+  /** 상품 표시명(예: 입문 다이아 꾸러미 300💎). */
+  productName: string;
   krw: number;
   diamond: number;
   status: 'pending' | 'paid' | 'refunded';
@@ -178,9 +181,10 @@ export function PaymentsClient({
                     ) : null}
                   </div>
                   <div className="mt-0.5 truncate text-[11px] text-zinc-400">
-                    {o.product} · {won(o.krw)}
+                    {o.productName} · {won(o.krw)}
                     {o.diamond > 0 ? ` · 💎${o.diamond.toLocaleString('ko-KR')}` : ''}
                   </div>
+                  <div className="truncate font-mono text-[10px] text-zinc-600">{o.product}</div>
                   {/* 거래번호 — 포트원 콘솔 대조용. 클릭 시 복사. */}
                   <button
                     type="button"

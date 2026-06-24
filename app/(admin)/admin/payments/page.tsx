@@ -6,7 +6,7 @@ import { battlePassSegments } from '@/lib/db/schema/battlepass';
 import { characters } from '@/lib/db/schema/server';
 import { profiles } from '@/lib/db/schema/profiles';
 import { kstDateString } from '@/lib/kst';
-import { parseBpProduct } from '@/lib/payment/purchase';
+import { parseBpProduct, productDisplayName } from '@/lib/payment/purchase';
 
 import { PaymentsClient, type OrderRow } from './PaymentsClient';
 
@@ -83,6 +83,7 @@ export default async function AdminPaymentsPage({
       serverId: r.serverId,
       portoneOrderId: r.portoneOrderId,
       product: r.product,
+      productName: productDisplayName(r.product),
       krw: Number(r.krw),
       diamond: Number(r.diamond),
       status: r.status,
