@@ -17,7 +17,7 @@ import { PushSettings } from './PushSettings';
 
 const APP_VERSION = '0.1.0'; // 출시 전 v0
 
-/** 설정 — WIREFRAMES §9. 화면/알림/계정/약관/로그아웃. 영수증 이메일은 의무(토글 불가). */
+/** 설정 — WIREFRAMES §9. 화면/알림/계정/약관/로그아웃. */
 export default async function SettingsPage() {
   const userId = await getSessionUserId();
   if (!userId) return null;
@@ -105,13 +105,6 @@ export default async function SettingsPage() {
         </Row>
       </Section>
 
-      <Section title="결제 / 영수증">
-        <p className="px-3 py-2.5 text-[11px] leading-relaxed text-zinc-500">
-          결제 영수증은 전자상거래법에 따라 가입 이메일로 자동 발송되며 끌 수 없습니다. 결제·환불
-          문의는 고객센터를 이용해 주세요.
-        </p>
-      </Section>
-
       <Section title="약관 / 문의">
         <SettingLink href="/legal/terms" label="이용약관" />
         <Divider />
@@ -168,11 +161,8 @@ function Row({ label, children }: { label: string; children: React.ReactNode }) 
 
 function SettingLink({ href, label }: { href: string; label: string }) {
   return (
-    <Link href={href} className="flex items-center justify-between px-3 py-2.5">
+    <Link href={href} className="flex items-center px-3 py-2.5">
       <span className="text-sm">{label}</span>
-      <span aria-hidden className="text-zinc-400">
-        ›
-      </span>
     </Link>
   );
 }
