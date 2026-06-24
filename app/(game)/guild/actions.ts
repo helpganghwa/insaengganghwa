@@ -122,7 +122,6 @@ export async function deleteEmblemAction(emblemId: string) {
 export async function searchGuildsAction(q: string) {
   const u = await getSessionUserId();
   if (!u) return unauth;
-  if (await rateLimited(u, 'guild')) return { status: 'error', code: 'RATE_LIMITED' } as const;
   try {
     const rows = await searchGuilds(await getActiveServerId(), q);
     return {
@@ -464,7 +463,6 @@ export async function clearExecutorAction(zoneId: number) {
 export async function getZoneBattleAction(zoneId: number) {
   const u = await getSessionUserId();
   if (!u) return unauth;
-  if (await rateLimited(u, 'guild')) return { status: 'error', code: 'RATE_LIMITED' } as const;
   try {
     const id = await getZoneLatestBattleId(zoneId);
     return { status: 'success', battleId: id != null ? id.toString() : null } as const;
@@ -477,7 +475,6 @@ export async function getZoneBattleAction(zoneId: number) {
 export async function getGuildSummaryByNameAction(name: string) {
   const u = await getSessionUserId();
   if (!u) return unauth;
-  if (await rateLimited(u, 'guild')) return { status: 'error', code: 'RATE_LIMITED' } as const;
   try {
     const guild = await getGuildSummaryByName(await getActiveServerId(), name);
     return { status: 'success', guild } as const;

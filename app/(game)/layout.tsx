@@ -54,13 +54,19 @@ export default async function GameLayout({ children }: { children: React.ReactNo
     if (!isAdmin) return <MaintenanceScreen state={maint} />;
   }
 
-  // 일일 보급 + 성장 프리미엄 일일 보상 — KST 자정 1회 자동 발송(멱등 PK). fire-and-forget(핫패스 비차단).
+  // 일일 보급 + 성장 프리미엄 일일 보상 — KST 자정 1회 자동 발송(멱등 PK). 핫패스 비차단.
+  //  after()로 응답 후 보장 실행 — bare non-await는 Fluid가 응답 후 인스턴스 회수 시 INSERT가
+  //  끊겨 그날 보급이 누락될 수 있음(referral 패턴과 통일). 멱등이라 재진입 시 안전.
   const dailySid = await getActiveServerId();
-  withTimeout(ensureDailyMail(userId, dailySid), 2000, 'layout.dailyMail').catch((e) => {
-    if (!(e instanceof DbTimeoutError)) console.warn('[layout] dailyMail error', e);
-  });
-  withTimeout(ensurePremiumDailyMail(userId, dailySid), 2000, 'layout.premiumDaily').catch((e) => {
-    if (!(e instanceof DbTimeoutError)) console.warn('[layout] premiumDaily error', e);
+  after(async () => {
+    await withTimeout(ensureDailyMail(userId, dailySid), 2000, 'layout.dailyMail').catch((e) => {
+      if (!(e instanceof DbTimeoutError)) console.warn('[layout] dailyMail error', e);
+    });
+    await withTimeout(ensurePremiumDailyMail(userId, dailySid), 2000, 'layout.premiumDaily').catch(
+      (e) => {
+        if (!(e instanceof DbTimeoutError)) console.warn('[layout] premiumDaily error', e);
+      },
+    );
   });
 
   // 카카오 공유 링크 가입 귀속 — pending_referral 쿠키 있으면 1회 처리(멱등).

@@ -97,6 +97,12 @@ const CASH_ART: Record<string, { bg: string; char: string }> = {
 
 const won = (n: number) => `₩${n.toLocaleString('ko-KR')}`;
 const dia = (n: number) => `💎${n.toLocaleString('ko-KR')}`;
+/** 공용 에러코드 → 안내(레이트리밋·점검). 해당 없으면 null → 호출부 폴백 사용. */
+function commonErrTitle(code: string | undefined): string | null {
+  if (code === 'RATE_LIMITED') return '요청이 너무 빠릅니다. 잠시 후 다시 시도해 주세요.';
+  if (code === 'MAINTENANCE') return '서버 점검 중입니다. 잠시 후 다시 시도해 주세요.';
+  return null;
+}
 
 /**
  * 상점 배너 카드 — DailySupply식 CSS 레이어(배경 씬 / 테마 캐릭터(선택) / 좌측 그라데이션 / 텍스트).
@@ -299,7 +305,9 @@ export function ShopTabs({
           showHeaderToast({ title: '구매 완료' });
         } else {
           showHeaderToast({
-            title: v.code === 'AMOUNT_MISMATCH' ? '결제 금액 오류 — 문의 바랍니다' : '결제 확인 실패',
+            title:
+              commonErrTitle(v.code) ??
+              (v.code === 'AMOUNT_MISMATCH' ? '결제 금액 오류 — 문의 바랍니다' : '결제 확인 실패'),
           });
         }
       })();
@@ -403,13 +411,14 @@ export function ShopTabs({
         // 사용자 취소 — 조용히 무시.
       } else {
         const title =
-          r.code === 'MINOR_LIMIT'
+          commonErrTitle(r.code) ??
+          (r.code === 'MINOR_LIMIT'
             ? '미성년 월 구매한도를 초과했습니다'
             : r.code === 'ALREADY_PURCHASED'
               ? '이미 구매완료한 상품입니다'
               : r.code === 'AMOUNT_MISMATCH'
                 ? '결제 금액 오류 — 고객센터로 문의해 주세요'
-                : '결제에 실패했습니다';
+                : '결제에 실패했습니다');
         if (r.code === 'ALREADY_PURCHASED') setPurchased((p) => new Set(p).add(productId));
         showHeaderToast({ title });
       }
@@ -444,7 +453,9 @@ export function ShopTabs({
           }); // 복원
           showHeaderToast({
             icon: r.code === 'INSUFFICIENT_DIAMOND' ? '💎' : undefined,
-            title: r.code === 'INSUFFICIENT_DIAMOND' ? '다이아가 부족합니다' : '구매 실패',
+            title:
+              commonErrTitle(r.code) ??
+              (r.code === 'INSUFFICIENT_DIAMOND' ? '다이아가 부족합니다' : '구매 실패'),
           });
         }
       }
@@ -468,7 +479,7 @@ export function ShopTabs({
         setFree((f) => ({ ...f, [slot]: true }));
         if (d.diamond) optimisticAdjust(BigInt(-d.diamond));
         showHeaderToast({
-          title: r.code === 'ALREADY_CLAIMED' ? '이미 수령했습니다' : '수령 실패',
+          title: commonErrTitle(r.code) ?? (r.code === 'ALREADY_CLAIMED' ? '이미 수령했습니다' : '수령 실패'),
         });
       }
       setClaiming(null);

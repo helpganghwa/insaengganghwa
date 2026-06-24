@@ -36,6 +36,8 @@ const MAP: Record<string, string> = {
   EMBLEM_NOT_FOUND: '문양을 찾을 수 없습니다.',
   OPENCHAT_INVALID: '카카오 오픈채팅 링크(https://open.kakao.com/o/…)만 등록할 수 있습니다.',
   UNAUTHENTICATED: '로그인이 필요합니다.',
+  RATE_LIMITED: '요청이 너무 빠릅니다. 잠시 후 다시 시도해 주세요.',
+  MAINTENANCE: '서버 점검 중입니다. 잠시 후 다시 시도해 주세요.',
   UNKNOWN: '오류가 발생했습니다.',
 };
 
