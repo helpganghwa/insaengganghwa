@@ -15,9 +15,14 @@ import { portoneConfig } from '@/lib/payment/purchase';
 export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
 
-export async function GET() {
+// 진단 접근 토큰(임시) — 어드민 플래그가 없어도 ?key= 로 열람 가능. 노출 데이터는 env 존재여부(boolean)뿐.
+// ⚠ 심사/디버그 후 이 라우트 파일 삭제. env 의존 없이 코드 상수라 env 누락 상황에서도 동작.
+const DIAG_KEY = 'cbt-env-7x29q';
+
+export async function GET(req: Request) {
+  const key = new URL(req.url).searchParams.get('key');
   const { isAdmin } = await getAdminStatus();
-  if (!isAdmin) return new NextResponse('forbidden', { status: 403 });
+  if (!isAdmin && key !== DIAG_KEY) return new NextResponse('forbidden', { status: 403 });
 
   // 동적 키 접근(process.env[k])이라 NEXT_PUBLIC도 빌드 인라인 없이 런타임 값을 본다(존재여부만).
   const has = (k: string) => Boolean(process.env[k]);
