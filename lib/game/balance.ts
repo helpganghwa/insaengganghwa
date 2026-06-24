@@ -64,7 +64,7 @@ export function cycleTimeMultiplier(level: number): number {
  * 사이클 시간 배수 2^cycle 적용:
  *   d(L) = d₀(ℓ) × 2^cycle
  *
- * +99 도달 ≈ 4주 설계 유지 — 후반 구간(+10~+99) 끝점은 변동 없음.
+ * +99 도달 ≈ 14일(2026-05-31 시도시간 2배 적용 후). 곡선 형태는 유지, 끝점 시간만 단축.
  */
 export const ENHANCE_BASE_DURATION_MIN_MS = 10 * SEC;
 export const ENHANCE_BASE_DURATION_AT_10_MS = 10 * MIN;
@@ -112,7 +112,7 @@ export const CUMULATIVE_REACH_ANCHORS_MS = {
 /**
  * §1.3 사이클 내 공시 성공률 baseRate(ℓ) — bp. 모든 사이클 동일 곡선(ℓ만의 함수).
  * 안전 구간(ℓ 0~51)은 종전 곡선(100→50%). 위험 구간(ℓ 52~99)은 high-level up 상향:
- * +99 = 25%·+90 = 30%·+75 = 40%. 사이클 0에서 +99 도달 평균 ≈ 15일(BALANCE §1.1).
+ * +99 = 25%·+90 = 30%·+75 = 40%. 사이클 0에서 +99 도달 평균 ≈ 14일(BALANCE §1.1).
  */
 const BASE_RATE_ANCHORS = [
   [10, 10000],
@@ -139,7 +139,7 @@ export const SAFE_MAX_LEVEL = 51;
 /**
  * §1.3 사이클 내 하락 확률 downRate(ℓ) — bp **고정**(시간에 무관).
  * ℓ ≤ 51 = 0%(안전). 위험 구간은 +52=8% → +99=15% — up 곡선과 독립으로 설계해
- * 모든 ℓ에서 drift(up−down) > 0 유지(=+99 도달 평균 ≈ 15일). 불변식: up+down ≤ 100%.
+ * 모든 ℓ에서 drift(up−down) > 0 유지(=+99 도달 평균 ≈ 14일). 불변식: up+down ≤ 100%.
  */
 const DOWN_RATE_ANCHORS = [
   [52, 800],

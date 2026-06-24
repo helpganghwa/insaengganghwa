@@ -10,7 +10,7 @@ import * as schema from './schema';
  *
  * 성능 아키텍처 (CLAUDE §11.3) — 협상 불가:
  *  - `prepare: false`        : Supabase 트랜잭션 풀러(pgbouncer :6543) 정합
- *  - `max: 1`                : 서버리스 인스턴스당 1커넥션 (풀러가 팬아웃)
+ *  - `max: 8`                : 인스턴스당 커넥션 상한(단일 커넥션 SPOF 회피 — 1→5→8, 풀러가 팬아웃)
  *  - `idle_timeout`          : 유휴 커넥션 조기 회수
  *  - `connect_timeout`       : 콜드 커넥션 무한 대기 방지
  *  - 모듈 싱글톤              : 인스턴스 웜 재사용·dev HMR 커넥션 폭발 방지

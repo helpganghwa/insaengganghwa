@@ -9,12 +9,12 @@
  *
  * 규칙 (GDD §3.1 / docs/LORE.md):
  *  - 등급·희소성·성능 차등 **없음**. 아이템 차이는 외관·도감·로어뿐.
- *  - `key`: 영문 snake. `public/sprites/<slot>/<key>.png` 파일명 = `catalogItems.spriteKey`.
- *  - `lore`: 보스 스토리 톤(장엄·서사·간결, ~60~120자). 등급/성능 표현 금지.
+ *  - `key`: 영문 snake. `public/sprites/<slot>/<key>.png` 파일명 = `catalogItems.code`(seed에서 code = key).
+ *  - `lore`: 보스 스토리 톤(장엄·서사·간결). 등급/성능 표현 금지. (길이 가이드는 docs/LORE.md 참조)
  *  - `art`: Pixellab 64×64 생성 키워드(형태·재질·색·분위기). 글로우/등급 제외(GDD §6 — 코드가 강화 글로우 부여).
  *  - 세계관 연결은 느슨하게(~40%): region 이 5권역이면 보스의 땅과 엮임, '자유'면 권역 무관.
  *
- * 목표: 슬롯당 50종(무기/방어구/장신구 = 150), 이후 가변 추가(GDD §10).
+ * 현재: 슬롯당 36종(무기/방어구/장신구 = 108), 이후 가변 추가(GDD §10).
  */
 
 export type CatalogSlot = 'weapon' | 'armor' | 'accessory';
@@ -65,8 +65,7 @@ export interface CatalogItem {
   wornDesc?: string;
 }
 
-// 2026-05-24: 기존 150종 폐기 + catalog-next.ts의 새 150종 적용.
-// entries는 catalog-next.ts에서 단일 source로 관리.
+// 카탈로그 108종은 catalog-next.ts에서 단일 source로 관리.
 import { CATALOG_NEXT } from './catalog-next';
 
 export const CATALOG_ITEMS: CatalogItem[] = CATALOG_NEXT;

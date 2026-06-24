@@ -23,7 +23,7 @@ function applyLevelUp(level: number, xp: bigint): { level: number; xp: bigint } 
 }
 
 /**
- * 길드 기부 — GUILD §2.1. 일 3회(KST 자정 리셋), 회차별 무료/50💎/70XP·100💎/... 체증.
+ * 길드 기부 — GUILD §2.1. 일 3회(KST 자정 리셋), 회차별 비용 체증(무료 / 50💎 / 100💎). XP는 회차 무관 동일.
  * 단일 트랜잭션: 일일 카운터 검사 + 💎 차감(유료 회차) + 개인 기여도·길드 XP 가산 + 레벨업.
  */
 export function donateToGuild(input: {

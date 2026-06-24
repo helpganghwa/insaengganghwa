@@ -1,7 +1,6 @@
-// PROFILE v3 — create-character-v3 호출 헬퍼(골격).
+// PROFILE v3 — create-character-v3 호출 헬퍼. **라이브 큐 등록의 단일 경로**(cron profile-poll → enqueueOneV3).
 // 흐름: 랜덤 외형(appearance-v3) → Claude 조합(compose-v3) → create-character-v3 POST.
-// 폴링/다운로드/미러링은 기존 pipeline.ts의 rotation_urls 처리를 재사용(v3도 동일 GET 사용).
-// ※ 아직 라이브 생성 흐름(create-character-state)을 대체하지 않음 — 교체는 별도 단계.
+// 폴링/다운로드/미러링은 pipeline.ts의 rotation_urls 처리를 재사용(v3도 동일 GET 사용).
 import 'server-only';
 
 import { eq } from 'drizzle-orm';

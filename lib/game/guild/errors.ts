@@ -30,9 +30,8 @@ export type GuildErrorCode =
   | 'NOT_OFFICER' // 길드장/부길드장 아님(집행관 지정·가입 승인)
   | 'NO_JOIN_REQUEST' // 승인/거절 대상 가입 신청 없음
   | 'VICE_LIMIT' // 부길드장 임명 상한(5명) 초과
-  | 'EMBLEM_INVALID' // 문양 3축 선택 위반(모양/톤/키워드 1~3)
-  | 'EMBLEM_GEN_FAILED' // 문양 생성 외부 실패(환불됨)
-  | 'EMBLEM_MAX' // 보관 문양 최대(3개) 초과 — 삭제 후 생성
+  | 'EMBLEM_INVALID' // 문양 선택 위반(모양/톤/메인 키워드 필수 + 서브 선택 = 키워드 1~2)
+  | 'EMBLEM_MAX' // 보관 문양 최대(5개) 초과 — 삭제 후 생성
   | 'EMBLEM_MIN' // 최소 1개 유지(마지막 문양 삭제 불가)
   | 'EMBLEM_NOT_FOUND' // 해당 길드의 문양이 아님/없음
   | 'OPENCHAT_INVALID' // 오픈채팅 링크 형식 위반(open.kakao.com만 허용)

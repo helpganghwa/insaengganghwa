@@ -30,7 +30,7 @@ export const probabilitySnapshots = pgTable('probability_snapshots', {
   createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
 });
 
-/** §10.2 system_mode — 단일 행(key='global'). 모든 게임 API 진입 미들웨어가 참조. */
+/** §10.2 system_mode — 단일 행(key='global'). 점검 모드 설계 테이블(현재 코드 read/write 미연결). */
 export const systemMode = pgTable('system_mode', {
   key: text('key').primaryKey().default('global'),
   mode: systemModeValueEnum('mode').notNull().default('live'),

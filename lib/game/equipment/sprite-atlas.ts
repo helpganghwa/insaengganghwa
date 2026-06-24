@@ -2,7 +2,7 @@
 // 빌드 스크립트(scripts/build-sprite-atlas.ts)가 public/sprites/atlas.webp +
 // atlas.json 생성. 이 파일은 JSON을 import해 컴파일 타임 정적 매핑으로 사용.
 //
-// 150 PNG 개별 다운로드(이전: 1 요청 × 150) → atlas 1요청. 페이지 전환·인벤
+// 108 PNG 개별 다운로드(개별 요청 × 108) → atlas 1요청. 페이지 전환·인벤
 // 마운트 시 sprite 단위 fetch/디코드 사라짐.
 
 import { assetUrl } from '@/lib/asset-versions';

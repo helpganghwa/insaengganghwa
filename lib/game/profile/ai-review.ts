@@ -114,7 +114,6 @@ export async function reviewProfile(input: ReviewInput): Promise<ReviewResult> {
   if (input.images.length === 0) throw new Error('AI_REVIEW_NO_IMAGES');
 
   // 각 이미지 앞에 방향 라벨 텍스트 → 같은 캐릭터의 회전 뷰임을 모델에 명시.
-  // 256px 원본은 Haiku 비전이 미세 결함(끊긴 무기 샤프트 등)을 놓치므로 2배(512) nearest 업스케일 후 검수.
   const content: Anthropic.MessageParam['content'] = [];
   for (const img of input.images) {
     // 투명 여백 트림(피사체 줌인) 후 768 nearest 업스케일 — 미세 끊긴/분리 무기 검출률↑(실측).

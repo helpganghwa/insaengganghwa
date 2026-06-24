@@ -32,7 +32,8 @@ export async function createSupabaseServerClient() {
 }
 
 /**
- * 게임 로직(강화/초월/보급/레이드) 트랜잭션용 — RLS 우회 service role.
+ * Supabase admin(service role) 클라이언트 — RLS 우회. 현재 용도: 테스트/심사 계정 Auth 유저 생성
+ * (lib/auth/actions.ts). 게임 트랜잭션은 Drizzle(lib/db/client.ts)을 쓴다.
  * **trusted server-side 전용. 절대 클라이언트 노출 금지.**
  */
 export function createSupabaseServiceClient() {

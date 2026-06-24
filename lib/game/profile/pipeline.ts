@@ -1,5 +1,5 @@
 /**
- * PROFILE §2 핵심 흐름 — Pixellab v2 큐 등록 + 폴링 + 8방향 다운로드 + Supabase
+ * PROFILE §2 핵심 흐름 — Pixellab v2 큐 등록 + 폴링 + south 정면 다운로드 + Supabase
  * Storage 미러링 + Claude vision 자동 검토 + 분기(accepted/rejected_ai/failed).
  *
  * cron(`/api/cron/profile-poll`)에서 호출:
@@ -9,7 +9,7 @@
  * 외부 의존:
  *  - Pixellab v2 API (PIXELLAB_API_KEY) — GET /characters/{id} 폴링
  *  - Supabase Storage bucket `profiles` (public, 사용자 수동 생성)
- *  - Claude Haiku 4.5 vision (ANTHROPIC_API_KEY) — ai-review.ts
+ *  - Claude vision (ANTHROPIC_API_KEY) — ai-review.ts (모델 ID는 ai-review.ts MODEL_ID 단일 출처)
  */
 import 'server-only';
 
