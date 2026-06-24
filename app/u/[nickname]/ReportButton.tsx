@@ -26,6 +26,15 @@ export function ReportButton({ profileId }: { profileId: string }) {
   const [err, setErr] = useState<string | null>(null);
   const [pending, startTransition] = useTransition();
 
+  const openModal = () => {
+    // 재오픈 시 이전 완료/선택 상태 초기화(완료팝업 잔존 버그 방지).
+    setDone(false);
+    setReason(null);
+    setNote('');
+    setErr(null);
+    setOpen(true);
+  };
+
   const submit = () => {
     if (!reason) return;
     setErr(null);
@@ -43,7 +52,7 @@ export function ReportButton({ profileId }: { profileId: string }) {
     <>
       <button
         type="button"
-        onClick={() => setOpen(true)}
+        onClick={openModal}
         className="flex w-full items-center justify-center rounded-xl bg-transparent py-2.5 text-sm font-semibold text-zinc-400 transition active:scale-[0.98] hover:bg-zinc-900/40"
       >
         신고
