@@ -33,6 +33,27 @@ export type PortonePayment = {
 };
 
 /**
+ * 결제 전체 취소(환불) — 관리자 환불에서 호출. POST /payments/{paymentId}/cancel, 필수 reason.
+ * 이미 취소된 결제면 포트원이 4xx(PAYMENT_ALREADY_CANCELLED 등) → throw. 호출부가 무시/분기.
+ * 취소 성공 후 재화 회수는 refundPurchase(웹훅과 멱등)로 별도 수행.
+ */
+export async function cancelPortonePayment(paymentId: string, reason: string): Promise<void> {
+  const res = await fetch(`${API_BASE}/payments/${encodeURIComponent(paymentId)}/cancel`, {
+    method: 'POST',
+    headers: {
+      Authorization: `PortOne ${apiSecret()}`,
+      'Content-Type': 'application/json',
+    },
+    body: JSON.stringify({ reason }),
+    cache: 'no-store',
+  });
+  if (!res.ok) {
+    const body = await res.text().catch(() => '');
+    throw new Error(`portone cancel ${res.status}: ${body.slice(0, 300)}`);
+  }
+}
+
+/**
  * 결제 단건 조회. 미존재(404)·미결제는 null이 아니라 status로 구분 — 호출부가 PAID 검증.
  * 네트워크/HTTP 오류는 throw(웹훅 재시도·액션 에러로 노출).
  */

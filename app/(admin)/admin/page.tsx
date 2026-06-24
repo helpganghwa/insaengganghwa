@@ -25,6 +25,12 @@ const MENU: { href: string; icon: string; title: string; desc: string; external?
     title: '운영자 우편 발송',
     desc: '유저에게 다이아·보급상자·공지 우편 발송',
   },
+  {
+    href: '/admin/payments',
+    icon: '💳',
+    title: '결제 내역 · 환불',
+    desc: '결제건 조회, 결제완료 건 환불(포트원 취소 + 재화 회수)',
+  },
 ];
 
 export default function AdminHubPage() {
