@@ -4,9 +4,9 @@ import { cookies } from 'next/headers';
 
 import { PublicFooter } from '@/components/PublicFooter';
 
-import { signInWithKakao, signInWithTestAccount } from '@/lib/auth/actions';
+import { signInWithKakao, signInWithTestAccount, signInWithCredentials } from '@/lib/auth/actions';
 import { getSessionUserId } from '@/lib/auth/session';
-import { isTestLoginEnabled, TEST_ACCOUNTS } from '@/lib/auth/test-accounts';
+import { isTestLoginEnabled, TEST_ACCOUNTS, REVIEW_ACCOUNT_EMAIL } from '@/lib/auth/test-accounts';
 import { listServersPublic, latestOpenServerId } from '@/lib/game/server-select';
 import { ServerPicker } from './ServerPicker';
 
@@ -35,6 +35,8 @@ export default async function LoginPage({
   const recommendedId = showServers ? await latestOpenServerId() : 1;
   // 테스트 로그인 — /login?test=true + env 스위치 둘 다 켜져야 노출(실운영 전환 시 env로 차단).
   const testMode = test === 'true' && isTestLoginEnabled();
+  // 심사용 ID/PW 로그인 — env만 켜지면 노출(심사관이 ?test 없이 접근). 실운영 전환 시 env로 차단.
+  const reviewLogin = isTestLoginEnabled();
 
   return (
     <div className="flex min-h-dvh flex-col bg-zinc-50 dark:bg-black">
@@ -84,6 +86,36 @@ export default async function LoginPage({
             </button>
           </form>
         )}
+
+        {/* 심사용 ID/PW 로그인 — 포트원·게임위 심사관이 카카오 없이 로그인. env로만 노출/차단. */}
+        {reviewLogin ? (
+          <form action={signInWithCredentials} className="w-full space-y-2 text-left">
+            <p className="text-center text-xs font-semibold text-amber-600 dark:text-amber-400">
+              🔑 심사용 로그인 (실운영 전 비활성)
+            </p>
+            <input
+              type="email"
+              name="email"
+              autoComplete="username"
+              defaultValue={REVIEW_ACCOUNT_EMAIL}
+              placeholder="아이디(이메일)"
+              className="w-full rounded-xl border border-zinc-300 bg-white px-3 py-2.5 text-sm dark:border-zinc-700 dark:bg-zinc-900"
+            />
+            <input
+              type="password"
+              name="password"
+              autoComplete="current-password"
+              placeholder="비밀번호"
+              className="w-full rounded-xl border border-zinc-300 bg-white px-3 py-2.5 text-sm dark:border-zinc-700 dark:bg-zinc-900"
+            />
+            <button
+              type="submit"
+              className="block w-full rounded-xl bg-zinc-800 py-3 text-sm font-bold text-white transition active:scale-[0.99] hover:bg-zinc-700 dark:bg-zinc-200 dark:text-zinc-900 dark:hover:bg-white"
+            >
+              로그인
+            </button>
+          </form>
+        ) : null}
 
         {error ? (
           <p className="text-sm text-red-600 dark:text-red-400">

@@ -48,8 +48,52 @@ export async function signInWithKakao(formData?: FormData) {
 }
 
 /**
- * 테스트 계정 로그인 — `ALLOW_TEST_LOGIN=true`일 때만 동작(실운영 전환 시 env로 즉시 차단).
- * 해당 email의 Supabase Auth 유저를 (없으면) admin으로 생성 → 비번 로그인(세션 쿠키 설정).
+ * 로그인 후 서버 선택 적용(콜백 미경유 경로 공용) — 콜백과 동일하게 "고른 서버에 캐릭터 1개" 보장.
+ * 가입 트리거(0067)가 캐릭터를 안 만들므로, login_srv 없을 때도 last_server>최신open으로
+ * 확정해 반드시 생성한다(가입 보너스 포함). 테스트/심사 로그인 양쪽이 호출.
+ */
+async function applyServerSelect(uid: string): Promise<void> {
+  try {
+    const srvRaw = Number((await cookies()).get('login_srv')?.value);
+    let sid: number | null =
+      Number.isInteger(srvRaw) && srvRaw >= 1 && srvRaw <= 32767 ? srvRaw : null;
+    if (!sid) {
+      const [p] = await db
+        .select({ sid: profiles.lastServerId })
+        .from(profiles)
+        .where(eq(profiles.id, uid))
+        .limit(1);
+      sid = p?.sid ?? null;
+    }
+    if (!sid) sid = await latestOpenServerId();
+    if (sid) {
+      if (!(await canEnterServer(uid, sid))) await createCharacterAuto({ userId: uid, serverId: sid });
+      await touchLastServer(uid, sid);
+      (await cookies()).set('srv', String(sid), {
+        httpOnly: true,
+        sameSite: 'lax',
+        path: '/',
+        maxAge: 60 * 60 * 24 * 365,
+      });
+    }
+  } catch (e) {
+    console.warn('[login] server select skipped', (e as Error).message);
+  }
+}
+
+/** 테스트/심사 계정 email의 Supabase Auth 유저 보장(없으면 생성) — 이미 있으면 무시. */
+async function ensureTestUser(email: string): Promise<void> {
+  try {
+    const admin = createSupabaseServiceClient();
+    await admin.auth.admin.createUser({ email, password: TEST_PASSWORD, email_confirm: true });
+  } catch {
+    // 이미 가입됨 등 — 로그인 단계에서 검증.
+  }
+}
+
+/**
+ * 테스트 계정 로그인(버튼식) — `ALLOW_TEST_LOGIN=true`일 때만 동작(실운영 전환 시 env로 즉시 차단).
+ * 해당 email의 Supabase Auth 유저를 (없으면) admin으로 생성 → 고정 비번 로그인(세션 쿠키 설정).
  */
 export async function signInWithTestAccount(formData: FormData) {
   if (!isTestLoginEnabled()) redirect('/login?error=test_login_disabled');
@@ -58,52 +102,42 @@ export async function signInWithTestAccount(formData: FormData) {
     redirect('/login?error=invalid_test_account');
   }
 
-  // 1) 계정 보장 — 이미 있으면 createUser가 에러를 내지만 무시하고 로그인 시도.
-  try {
-    const admin = createSupabaseServiceClient();
-    await admin.auth.admin.createUser({ email, password: TEST_PASSWORD, email_confirm: true });
-  } catch {
-    // 이미 가입됨 등 — 로그인 단계에서 검증.
-  }
-
-  // 2) 비번 로그인 — 요청 스코프 클라이언트라야 세션 쿠키가 설정됨.
+  await ensureTestUser(email);
+  // 요청 스코프 클라이언트라야 세션 쿠키가 설정됨.
   const supabase = await createSupabaseServerClient();
   const { error } = await supabase.auth.signInWithPassword({ email, password: TEST_PASSWORD });
   if (error) redirect(`/login?error=${encodeURIComponent(error.message)}`);
 
-  // 서버 선택 적용(콜백 미경유 경로) — 콜백과 동일하게 "고른 서버에 캐릭터 1개" 보장.
-  // 가입 트리거(0067)가 캐릭터를 안 만들므로, login_srv 없을 때도 last_server>최신open으로
-  // 확정해 반드시 생성한다(가입 보너스 포함).
   const { data } = await supabase.auth.getUser();
-  const uid = data.user?.id;
-  if (uid) {
-    try {
-      const srvRaw = Number((await cookies()).get('login_srv')?.value);
-      let sid: number | null =
-        Number.isInteger(srvRaw) && srvRaw >= 1 && srvRaw <= 32767 ? srvRaw : null;
-      if (!sid) {
-        const [p] = await db
-          .select({ sid: profiles.lastServerId })
-          .from(profiles)
-          .where(eq(profiles.id, uid))
-          .limit(1);
-        sid = p?.sid ?? null;
-      }
-      if (!sid) sid = await latestOpenServerId();
-      if (sid) {
-        if (!(await canEnterServer(uid, sid))) await createCharacterAuto({ userId: uid, serverId: sid });
-        await touchLastServer(uid, sid);
-        (await cookies()).set('srv', String(sid), {
-          httpOnly: true,
-          sameSite: 'lax',
-          path: '/',
-          maxAge: 60 * 60 * 24 * 365,
-        });
-      }
-    } catch (e) {
-      console.warn('[login.test] server select skipped', (e as Error).message);
-    }
+  if (data.user?.id) await applyServerSelect(data.user.id);
+  redirect('/');
+}
+
+/**
+ * 심사용 ID/PW 입력 로그인 — 포트원·게임위 심사관이 카카오 없이 자격증명으로 로그인.
+ * `ALLOW_TEST_LOGIN=true`일 때만 동작(실운영 전환 시 env로 즉시 차단). 사전 등록된 테스트/심사
+ * 계정 email만 허용하고, 비밀번호는 입력값으로 검증(signInWithPassword) — 틀리면 실패.
+ */
+export async function signInWithCredentials(formData: FormData) {
+  if (!isTestLoginEnabled()) redirect('/login?test=cred&error=test_login_disabled');
+  const email = String(formData.get('email') ?? '')
+    .trim()
+    .toLowerCase();
+  const password = String(formData.get('password') ?? '');
+  // 임의 Supabase 계정 비번 로그인 방지 — 사전 등록된 테스트/심사 계정만 허용.
+  if (!TEST_ACCOUNTS.some((a) => a.email === email)) {
+    redirect('/login?test=cred&error=' + encodeURIComponent('등록되지 않은 심사 계정입니다'));
   }
+
+  await ensureTestUser(email); // 첫 로그인 시 계정 보장(비번은 고정값으로 생성됨).
+  const supabase = await createSupabaseServerClient();
+  const { error } = await supabase.auth.signInWithPassword({ email, password });
+  if (error) {
+    redirect('/login?test=cred&error=' + encodeURIComponent('아이디 또는 비밀번호가 올바르지 않습니다'));
+  }
+
+  const { data } = await supabase.auth.getUser();
+  if (data.user?.id) await applyServerSelect(data.user.id);
   redirect('/');
 }
 
