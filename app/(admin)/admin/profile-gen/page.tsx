@@ -222,54 +222,58 @@ export default async function AdminProfileGenPage({
               ) : null}
 
               <div className={`p-3 ${reviewed ? 'opacity-70' : ''}`}>
-                {/* 헤더(컴팩트): AI배지 · 닉 · 시간 · 다이아 */}
-                <div className="mb-2 flex items-center gap-2">
-                  <span className={`shrink-0 rounded-md border px-1.5 py-0.5 text-[10px] font-bold ${aiCls}`}>{aiLabel}</span>
-                  <span className="truncate text-sm font-bold">{r.nickname ?? '(닉네임 없음)'}</span>
-                  {r.code ? <span className="shrink-0 font-mono text-[10px] text-sky-400">#{r.code}</span> : null}
-                  <span className="ml-auto shrink-0 text-[10px] text-zinc-500">💎{r.diamondEscrow.toString()}</span>
-                </div>
-                <div className="mb-2 text-[10px] text-zinc-500">
-                  srv{r.serverId} · job {String(r.id)} · {new Date(r.createdAt).toLocaleString('ko-KR')}
-                </div>
-
-                {/* 아바타 — 가로 꽉 채운 1:1, 스와이프 회전 */}
-                <AdminAvatarViewer rotations={rot} />
-
-                {/* 메타(컴팩트 인라인) */}
-                <div className="mt-2 space-y-0.5 text-[11px]">
-                  <div className="text-zinc-300">
-                    {opts.gender === 'male' ? '남성' : opts.gender === 'female' ? '여성' : (opts.gender ?? '-')}
-                    {opts.race ? ` · ${opts.race}` : ''}
-                    {opts.hairLength ? ` · 머리 ${opts.hairLength}` : ''}
+                {/* 2분할 — 좌: 아바타 / 우: 정보 */}
+                <div className="flex gap-3">
+                  <div className="w-[120px] shrink-0">
+                    <AdminAvatarViewer rotations={rot} />
                   </div>
-                  <div className="text-zinc-400">
-                    ⚔ {eqName(eqs.weaponKey)} · 🛡 {eqName(eqs.armorKey)} · 💍 {eqName(eqs.accessoryKey)}
+                  <div className="min-w-0 flex-1 space-y-1">
+                    {/* 헤더: AI배지 · 닉네임 */}
+                    <div className="flex items-center gap-1.5">
+                      <span className={`shrink-0 rounded-md border px-1.5 py-0.5 text-[10px] font-bold ${aiCls}`}>{aiLabel}</span>
+                      <span className="truncate text-sm font-bold">{r.nickname ?? '(닉네임 없음)'}</span>
+                    </div>
+                    {/* 식별: 코드 · 다이아 · 서버 · job */}
+                    <div className="flex flex-wrap items-center gap-x-2 gap-y-0.5 text-[10px] text-zinc-500">
+                      {r.code ? <span className="font-mono text-sky-400">#{r.code}</span> : null}
+                      <span>💎{r.diamondEscrow.toString()}</span>
+                      <span>srv{r.serverId}</span>
+                      <span>job {String(r.id)}</span>
+                    </div>
+                    <div className="text-[10px] text-zinc-500">{new Date(r.createdAt).toLocaleString('ko-KR')}</div>
+                    {/* 옵션 · 장비 */}
+                    <div className="text-[11px] text-zinc-300">
+                      {opts.gender === 'male' ? '남성' : opts.gender === 'female' ? '여성' : (opts.gender ?? '-')}
+                      {opts.race ? ` · ${opts.race}` : ''}
+                      {opts.hairLength ? ` · 머리 ${opts.hairLength}` : ''}
+                    </div>
+                    <div className="text-[11px] text-zinc-400">
+                      ⚔ {eqName(eqs.weaponKey)} · 🛡 {eqName(eqs.armorKey)} · 💍 {eqName(eqs.accessoryKey)}
+                    </div>
+                    {/* AI 판단 */}
+                    <div className="text-[11px]">
+                      <span className="text-zinc-500">AI</span>{' '}
+                      {verdict ? (
+                        <>
+                          <span className={verdict.pass ? 'text-emerald-400' : 'text-red-400'}>{verdict.pass ? '통과' : '거절'}</span>
+                          {verdict.reasons?.length ? <span className="text-zinc-400"> · {verdict.reasons.map((x) => REASON_KO[x] ?? x).join(', ')}</span> : null}
+                          {verdict.notes ? <span className="text-zinc-400"> — {verdict.notes}</span> : null}
+                        </>
+                      ) : (
+                        <span className="text-zinc-500">{r.rejectReason ?? '없음'}</span>
+                      )}
+                      {r.rejectReason && verdict ? <span className="text-zinc-600"> · 처리: {r.rejectReason}</span> : null}
+                    </div>
                   </div>
                 </div>
 
-                {/* AI 판단(컴팩트 1줄) */}
-                <div className="mt-2 text-[11px]">
-                  <span className="text-zinc-500">AI</span>{' '}
-                  {verdict ? (
-                    <>
-                      <span className={verdict.pass ? 'text-emerald-400' : 'text-red-400'}>{verdict.pass ? '통과' : '거절'}</span>
-                      {verdict.reasons?.length ? <span className="text-zinc-400"> · {verdict.reasons.map((x) => REASON_KO[x] ?? x).join(', ')}</span> : null}
-                      {verdict.notes ? <span className="text-zinc-400"> — {verdict.notes}</span> : null}
-                    </>
-                  ) : (
-                    <span className="text-zinc-500">{r.rejectReason ?? '없음'}</span>
-                  )}
-                  {r.rejectReason && verdict ? <span className="text-zinc-600"> · 처리: {r.rejectReason}</span> : null}
-                </div>
-
-                {/* 스크립트 */}
+                {/* 스크립트(전체폭) */}
                 <details className="mt-2">
                   <summary className="cursor-pointer text-[11px] text-zinc-500">프롬프트 보기</summary>
                   <pre className="mt-1 whitespace-pre-wrap break-words rounded-lg bg-zinc-950/60 p-2 text-[10px] text-zinc-300">{r.descriptionPrompt}</pre>
                 </details>
 
-                {/* 조치 */}
+                {/* 조치(전체폭) */}
                 <div className="mt-3">
                   <AdminProfileGenActions
                     jobId={String(r.id)}
