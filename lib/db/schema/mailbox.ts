@@ -80,8 +80,9 @@ export const mailbox = pgTable(
   },
   (t) => [
     index('mailbox_user_claimed_idx').on(t.userId, t.claimedAt),
-    // 미수령·미만료 메일 빠른 조회용 partial index.
-    index('mailbox_user_unclaimed_idx').on(t.userId, t.expiresAt),
+    // 미수령·미만료 메일 빠른 조회용 partial index. 라이브 SQL(0003)과 동일하게 부분조건 명시
+    // (누락 시 drizzle-kit이 부분→비부분으로 재생성해 배지 쿼리 퇴화).
+    index('mailbox_user_unclaimed_idx').on(t.userId, t.expiresAt).where(sql`${t.claimedAt} is null`),
   ],
 );
 
