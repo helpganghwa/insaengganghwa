@@ -23,12 +23,14 @@ export function CreateGuildForm() {
   const router = useRouter();
   const { showHeaderToast, showError } = useResourceToast();
   const { optimisticAdjust } = useDiamond();
-  const [name, setName] = useState('');
   const [emblem, setEmblem] = useState<EmblemSelection>(DEFAULT_EMBLEM);
   const [confirm, setConfirm] = useState(false);
   const [confirmLeft, setConfirmLeft] = useState(0);
   const [pending, start] = useTransition();
-  const composing = useRef(false); // 한글 IME 조합 중 여부 — 조합 중엔 자모 필터링 스킵.
+  // ⚠ uncontrolled input — controlled value={name}는 한글 IME 조합 중 React 재렌더가 value를 덮어써
+  //   조합을 깨뜨린다(모바일 한글 입력 불가). ref로 읽고 정제는 blur·제출 시에만(서버도 동일 검증).
+  const inputRef = useRef<HTMLInputElement>(null);
+  const clean = (s: string) => s.replace(/[^A-Za-z0-9가-힣]/g, '');
 
   // 인-버튼 컨펌 — 강화/아바타 생성과 동일 3초 재탭 컨펌(오탭 보호). 만료 시 자동 해제.
   useEffect(() => {
@@ -47,7 +49,8 @@ export function CreateGuildForm() {
 
   const onClick = () => {
     if (pending) return;
-    if (!name.trim()) return showError('길드 이름을 입력하세요.');
+    const cleaned = clean(inputRef.current?.value ?? '');
+    if (!cleaned) return showError('길드 이름을 입력하세요.');
     if (!confirm) {
       setConfirmLeft(CONFIRM_SECONDS);
       setConfirm(true);
@@ -56,7 +59,7 @@ export function CreateGuildForm() {
     setConfirm(false);
     optimisticAdjust(BigInt(-GUILD_CREATE_COST_DIAMOND)); // 낙관 차감(실패 시 롤백)
     start(async () => {
-      const r = await createGuildAction(name.trim(), emblem);
+      const r = await createGuildAction(cleaned, emblem);
       if (r.status !== 'success') {
         optimisticAdjust(BigInt(GUILD_CREATE_COST_DIAMOND));
         return showError(guildErrMsg(r.code));
@@ -79,19 +82,11 @@ export function CreateGuildForm() {
           </span>
         </div>
         <input
-          value={name}
-          // 한글·영문·숫자만. ⚠ IME 조합 중엔 자모(ㄱ,ㅏ…)가 완성형이 아니라 필터하면 한글이 깨짐 →
-          // 조합 중엔 원본 유지, compositionEnd·비조합 입력에서만 정제(서버도 동일 검증).
-          onChange={(e) => {
-            const v = e.target.value;
-            setName(composing.current ? v : v.replace(/[^A-Za-z0-9가-힣]/g, ''));
-          }}
-          onCompositionStart={() => {
-            composing.current = true;
-          }}
-          onCompositionEnd={(e) => {
-            composing.current = false;
-            setName((e.target as HTMLInputElement).value.replace(/[^A-Za-z0-9가-힣]/g, ''));
+          ref={inputRef}
+          // uncontrolled(value 바인딩 없음) — 한글 IME 조합을 React가 끊지 않음.
+          // 정제는 포커스 아웃(DOM 직접, 재렌더 없음) + 제출(onClick clean). 공백·특수문자 제거.
+          onBlur={(e) => {
+            e.currentTarget.value = clean(e.currentTarget.value);
           }}
           maxLength={GUILD_NAME_MAX_LEN}
           placeholder="한글·영문·숫자 (공백·특수문자 불가)"
