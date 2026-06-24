@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useState, useTransition } from 'react';
+import { useEffect, useRef, useState, useTransition } from 'react';
 import { useRouter } from 'next/navigation';
 
 import { useResourceToast } from '@/components/ResourceToast';
@@ -28,6 +28,7 @@ export function CreateGuildForm() {
   const [confirm, setConfirm] = useState(false);
   const [confirmLeft, setConfirmLeft] = useState(0);
   const [pending, start] = useTransition();
+  const composing = useRef(false); // 한글 IME 조합 중 여부 — 조합 중엔 자모 필터링 스킵.
 
   // 인-버튼 컨펌 — 강화/아바타 생성과 동일 3초 재탭 컨펌(오탭 보호). 만료 시 자동 해제.
   useEffect(() => {
@@ -79,8 +80,19 @@ export function CreateGuildForm() {
         </div>
         <input
           value={name}
-          // 한글·영문·숫자만 — 공백·특수문자·이모지·자모는 입력 즉시 제거(서버도 동일 검증).
-          onChange={(e) => setName(e.target.value.replace(/[^A-Za-z0-9가-힣]/g, ''))}
+          // 한글·영문·숫자만. ⚠ IME 조합 중엔 자모(ㄱ,ㅏ…)가 완성형이 아니라 필터하면 한글이 깨짐 →
+          // 조합 중엔 원본 유지, compositionEnd·비조합 입력에서만 정제(서버도 동일 검증).
+          onChange={(e) => {
+            const v = e.target.value;
+            setName(composing.current ? v : v.replace(/[^A-Za-z0-9가-힣]/g, ''));
+          }}
+          onCompositionStart={() => {
+            composing.current = true;
+          }}
+          onCompositionEnd={(e) => {
+            composing.current = false;
+            setName((e.target as HTMLInputElement).value.replace(/[^A-Za-z0-9가-힣]/g, ''));
+          }}
           maxLength={GUILD_NAME_MAX_LEN}
           placeholder="한글·영문·숫자 (공백·특수문자 불가)"
           className="mt-2 w-full rounded-lg border border-zinc-300 bg-white px-3 py-2 text-base dark:border-zinc-700 dark:bg-zinc-900"
