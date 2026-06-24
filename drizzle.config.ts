@@ -8,7 +8,7 @@ config({ path: '.env', override: false });
 
 if (!process.env.DATABASE_URL && !process.env.DIRECT_URL) {
   throw new Error(
-    'DATABASE_URL (또는 DIRECT_URL) 환경 변수가 필요합니다. .env.local 또는 .env 확인. — docs/SETUP.md 참조',
+    'DATABASE_URL (또는 DIRECT_URL) 환경 변수가 필요합니다. .env.local 또는 .env 확인(.env.example 템플릿 참조).',
   );
 }
 

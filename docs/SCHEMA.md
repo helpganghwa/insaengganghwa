@@ -186,7 +186,7 @@ T+1개) 도달 시 **자동으로** `transcend_level +1`(다중 가능) + `max_t
 | `status` | enum(`active`,`settled`) default `active` | |
 | `settled_at` | timestamptz null | |
 
-- 인덱스 `(status, expire_at)` — lazy/cron 정산. 개설 시 host diamond −1,000(환불 없음)
+- 인덱스 `(status, expire_at)` — lazy/cron 정산. 개설 시 host diamond −300(RAID_OPEN_COST_DIAMOND, 환불 없음)
 
 ### 6.2 raid_participants
 
@@ -195,7 +195,7 @@ T+1개) 도달 시 **자동으로** `transcend_level +1`(다중 가능) + `max_t
 | `id` | bigserial PK | |
 | `raid_id` FK · `user_id` FK | | UNIQUE `(raid_id, user_id)` |
 | `attacks_used` | int default 0 | 기본 10 한도 |
-| `extra_attacks` | int default 0 | 다이아 추가 구매분(50+10·(n−1)) |
+| `extra_attacks` | int default 0 | 다이아 추가 구매분(n번째 비용 25×⌈n/10⌉, raidExtraAttackCost) |
 | `total_damage` | bigint default 0 | **표시용만** — 보상 가중 아님(GDD §3.5) |
 | `joined_at` | timestamptz | |
 
@@ -209,12 +209,11 @@ T+1개) 도달 시 **자동으로** `transcend_level +1`(다중 가능) + `max_t
 |------|------|------|
 | `id` | bigserial PK | |
 | `raid_id` FK · `user_id` FK | | UNIQUE `(raid_id, user_id)` — 멱등 |
-| `base_diamond` | bigint | 100(1회+ 공격) |
-| `phase_diamond` | bigint | 페이즈 추첨 50%→100 합 |
-| `boxes` | jsonb | 슬롯별 지급 보급 상자 수(50%→슬롯 1/3) |
+| `phase_diamond` | bigint default 0 | (레거시·미사용 — 다이아 드롭 폐기, 보상은 박스 전용) |
+| `boxes` | jsonb | 슬롯별 지급 보급 상자 수(페이즈당 1개·슬롯 1/3, RAID_PHASE_DROP_BOXES) |
 | `created_at` | timestamptz | |
 
-- 페이즈 돌파마다 1회 추첨 → **전원 동일 적용**. 정산은 6h 만료 시 lazy + cron, `(raid_id,user_id)` UNIQUE로 멱등(CLAUDE §3.4)
+- 페이즈 돌파마다 보급 상자 1개 지급 → **전원 동일 적용**. 정산은 6h 만료 시 lazy + cron, `(raid_id,user_id)` UNIQUE로 멱등(CLAUDE §3.4)
 
 ### 6.5 raid_daily_counts (일일 5회 한도)
 

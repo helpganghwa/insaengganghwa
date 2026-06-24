@@ -9,7 +9,7 @@ import sharp from 'sharp';
  *
  * @returns true = 배경 불투명(결함). 디코드 실패 시 false(다른 검수에 위임, 과차단 방지).
  */
-export async function isBackgroundOpaque(png: Buffer): Promise<boolean> {
+async function isBackgroundOpaque(png: Buffer): Promise<boolean> {
   try {
     const { data, info } = await sharp(png).ensureAlpha().raw().toBuffer({ resolveWithObject: true });
     const { width, height, channels } = info;

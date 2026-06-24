@@ -192,9 +192,9 @@ bun run db:generate    # 스키마 → 마이그레이션 SQL 생성
 bun run db:migrate     # 마이그레이션 적용
 bun run db:studio      # GUI 인스펙터
 
-# 테스트
-bun test                 # Vitest 전체
-bun test balance         # 밸런스 시뮬레이션만
+# 테스트 — 러너는 package.json "test": "vitest run" (Bun 네이티브 `bun test`는 server-only stub 미적용으로 일부 fail)
+bun run test             # Vitest 전체
+bun run test balance     # 밸런스 시뮬레이션만
 
 # 시드 / 시뮬
 bun run scripts/seed-catalog.ts

@@ -22,7 +22,7 @@ export type Grant = { diamond: number; boxes: number };
 type Tx = Parameters<Parameters<typeof db.transaction>[0]>[0];
 
 /** 보급 상자 n개를 슬롯(무기/방어구/장신구) 균등 분배 — 나머지는 슬롯 순서대로 1개씩. */
-export function splitBoxes(n: number): Record<string, number> {
+function splitBoxes(n: number): Record<string, number> {
   const base = Math.floor(n / SUPPLY_SLOTS.length);
   const out: Record<string, number> = { weapon: base, armor: base, accessory: base };
   let rem = n - base * SUPPLY_SLOTS.length;
@@ -31,7 +31,7 @@ export function splitBoxes(n: number): Record<string, number> {
 }
 
 /** 다이아 → 지갑 가산, 상자 → 슬롯별 보유량 가산. 즉시 반영(비-우편). */
-export async function creditGrant(tx: Tx, userId: string, serverId: number, g: Grant): Promise<void> {
+async function creditGrant(tx: Tx, userId: string, serverId: number, g: Grant): Promise<void> {
   if (g.diamond > 0) {
     await walletAdd(tx, userId, serverId, g.diamond);
   }
@@ -53,7 +53,7 @@ export async function creditGrant(tx: Tx, userId: string, serverId: number, g: G
 }
 
 /** 성장 프리미엄 즉시 보상을 우편으로 적재(다이아 + 균등 분배 상자). 수령 시 claimMail이 지갑/상자 가산. */
-export async function mailPremiumInstant(
+async function mailPremiumInstant(
   tx: Tx,
   userId: string,
   serverId: number,
