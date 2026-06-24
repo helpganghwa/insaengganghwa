@@ -14,7 +14,7 @@ import {
   latestOpenServerId,
 } from '@/lib/game/server-select';
 import { createSupabaseServerClient, createSupabaseServiceClient } from './supabase-server';
-import { isTestLoginEnabled, TEST_ACCOUNTS, TEST_PASSWORD } from './test-accounts';
+import { isTestLoginEnabled, TEST_ACCOUNTS, passwordForTestAccount } from './test-accounts';
 
 /** 내부 경로만 허용 — open-redirect 방지(절대 URL·//호스트 차단). */
 function safeNext(raw: unknown): string {
@@ -85,7 +85,11 @@ async function applyServerSelect(uid: string): Promise<void> {
 async function ensureTestUser(email: string): Promise<void> {
   try {
     const admin = createSupabaseServiceClient();
-    await admin.auth.admin.createUser({ email, password: TEST_PASSWORD, email_confirm: true });
+    await admin.auth.admin.createUser({
+      email,
+      password: passwordForTestAccount(email),
+      email_confirm: true,
+    });
   } catch {
     // 이미 가입됨 등 — 로그인 단계에서 검증.
   }
@@ -105,7 +109,10 @@ export async function signInWithTestAccount(formData: FormData) {
   await ensureTestUser(email);
   // 요청 스코프 클라이언트라야 세션 쿠키가 설정됨.
   const supabase = await createSupabaseServerClient();
-  const { error } = await supabase.auth.signInWithPassword({ email, password: TEST_PASSWORD });
+  const { error } = await supabase.auth.signInWithPassword({
+    email,
+    password: passwordForTestAccount(email),
+  });
   if (error) redirect(`/login?error=${encodeURIComponent(error.message)}`);
 
   const { data } = await supabase.auth.getUser();

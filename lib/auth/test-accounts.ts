@@ -14,19 +14,26 @@ export function isTestLoginEnabled(): boolean {
   return process.env.ALLOW_TEST_LOGIN === 'true';
 }
 
+/**
+ * 심사 제출용 계정(ID/PW 입력 로그인) — 포트원·게임물 등급심의에 기재하는 단일 자격증명.
+ * 심사관은 카카오 없이 이 ID/PW로 로그인. env ALLOW_TEST_LOGIN=true일 때만 폼 노출.
+ * 외우기 쉬운 값(CBT 테마) — 게이트가 env라 단순값으로 충분.
+ */
+export const REVIEW_ACCOUNT_EMAIL = 'cbt@ganghwa.app';
+export const REVIEW_ACCOUNT_PASSWORD = 'cbt123456';
+
 /** 고정 테스트 계정 — 심사관(포트원·게임위) 제출용 1개 + 길드/친구/대난투 등 다인 기능 검수용 3개. */
 export const TEST_ACCOUNTS: { email: string; label: string }[] = [
-  { email: 'review@ganghwa.app', label: '심사용' },
+  { email: REVIEW_ACCOUNT_EMAIL, label: '심사용' },
   { email: 'tester1@insaeng.test', label: '테스터 1' },
   { email: 'tester2@insaeng.test', label: '테스터 2' },
   { email: 'tester3@insaeng.test', label: '테스터 3' },
 ];
 
-/**
- * 심사 제출용 계정(ID/PW 입력 로그인) — 포트원·게임물 등급심의에 기재하는 단일 자격증명.
- * 심사관은 카카오 없이 이 ID/PW로 로그인. env ALLOW_TEST_LOGIN=true일 때만 폼 노출.
- */
-export const REVIEW_ACCOUNT_EMAIL = 'review@ganghwa.app';
-
-/** 전 테스트 계정 공용 비밀번호(게이트가 env라 단순 고정으로 충분). */
+/** 테스터(다인 검수)용 공용 비밀번호 — 심사 계정은 REVIEW_ACCOUNT_PASSWORD 별도. */
 export const TEST_PASSWORD = 'insaeng-test-9f3a2b';
+
+/** 계정 email별 비밀번호 — 심사 계정만 쉬운 비번, 나머지는 테스터 공용 비번. */
+export function passwordForTestAccount(email: string): string {
+  return email === REVIEW_ACCOUNT_EMAIL ? REVIEW_ACCOUNT_PASSWORD : TEST_PASSWORD;
+}

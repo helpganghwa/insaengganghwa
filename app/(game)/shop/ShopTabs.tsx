@@ -6,6 +6,7 @@ import { useRouter } from 'next/navigation';
 import { assetUrl } from '@/lib/asset-versions';
 import { useResourceToast, type HeaderReward } from '@/components/ResourceToast';
 import { useDiamond } from '@/components/DiamondContext';
+import { PublicFooter } from '@/components/PublicFooter';
 
 import { claimFreeAction, devPurchaseAction, buyBoxAction } from './actions';
 import { runCheckout } from './checkout';
@@ -563,6 +564,9 @@ export function ShopTabs({
             ))}
           </ul>
         )}
+
+        {/* 전자상거래법 표시 — 결제 페이지 하단 사업자정보·약관·환불 링크 노출(심사 요건). */}
+        <PublicFooter />
       </div>
     </div>
   );

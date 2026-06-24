@@ -7,6 +7,7 @@ import type { BattlePassType } from '@/lib/game/balance';
 import { assetUrl } from '@/lib/asset-versions';
 import { useResourceToast } from '@/components/ResourceToast';
 import { useDiamond } from '@/components/DiamondContext';
+import { PublicFooter } from '@/components/PublicFooter';
 
 import { claimSegmentAction, claimTierAction } from './actions';
 
@@ -348,6 +349,9 @@ export function BattlePassClient({
             onPremiumLocked={onPremiumLocked}
           />
         </div>
+
+        {/* 전자상거래법 표시 — 결제(프리미엄 패스) 페이지 하단 사업자정보·약관·환불 링크. */}
+        <PublicFooter />
       </div>
     </div>
   );

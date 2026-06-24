@@ -28,10 +28,16 @@ export class PurchaseError extends Error {
   }
 }
 
-/** 포트원 공개 설정(클라 결제창에 필요) — 미설정이면 결제 비활성. */
+/**
+ * 포트원 결제창 설정(storeId·channelKey) — 미설정이면 결제 비활성(payEnabled=false).
+ * 값은 클라가 직접 읽지 않고 createOrder 응답으로 전달되므로 **런타임 서버 env**(비-public)를 우선 읽는다.
+ * 비-public은 빌드 인라인이 아니라 env 설정 후 재배포만으로 즉시 반영(NEXT_PUBLIC 인라인 함정 회피).
+ * 구버전 호환을 위해 NEXT_PUBLIC_* 도 폴백으로 본다(빌드타임에 값이 있었던 경우).
+ */
 export function portoneConfig(): { storeId: string; channelKey: string } | null {
-  const storeId = process.env.NEXT_PUBLIC_PORTONE_STORE_ID;
-  const channelKey = process.env.NEXT_PUBLIC_PORTONE_CHANNEL_KEY;
+  const storeId = process.env.PORTONE_STORE_ID || process.env.NEXT_PUBLIC_PORTONE_STORE_ID;
+  const channelKey =
+    process.env.PORTONE_CHANNEL_KEY || process.env.NEXT_PUBLIC_PORTONE_CHANNEL_KEY;
   if (!storeId || !channelKey) return null;
   return { storeId, channelKey };
 }
