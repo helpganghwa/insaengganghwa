@@ -186,6 +186,8 @@ export async function createCharacter(input: {
         .set({ activeProfileId: pick.id })
         .where(and(eq(characters.userId, input.userId), eq(characters.serverId, input.serverId)));
     }
+    // 재가입(탈퇴 후 새 시작) — 탈퇴 마킹 해제. 신규 유저는 이미 null이라 무해.
+    await tx.update(profiles).set({ withdrawnAt: null }).where(eq(profiles.id, input.userId));
   });
 }
 

@@ -64,6 +64,8 @@ export const profiles = pgTable('profiles', {
   /** 마지막 접속 시각 — 쿠키 게이트 하트비트(2분 스로틀)로 갱신. 길드원·친구 목록 접속 상태 표시용. */
   /** 마지막 활성 서버(SERVER.md 경계규칙1) — 푸시는 이 서버의 이벤트만 발송. */
   lastServerId: smallint('last_server_id').notNull().default(1),
+  /** 회원탈퇴 시각(null=활성). 게임데이터 파기 후 마킹, 결제기록은 보존. 재로그인 시 createCharacter가 해제. */
+  withdrawnAt: timestamp('withdrawn_at', { withTimezone: true }),
   createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
   updatedAt: timestamp('updated_at', { withTimezone: true }).notNull().defaultNow(),
 });

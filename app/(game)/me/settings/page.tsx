@@ -15,6 +15,7 @@ import { NicknameRow } from './NicknameRow';
 import { InstallAppButton } from './InstallAppButton';
 import { PushSettings } from './PushSettings';
 import { SupportModal } from './SupportModal';
+import { WithdrawButton } from './WithdrawButton';
 
 const APP_VERSION = '0.1.0'; // 출시 전 v0
 
@@ -138,6 +139,8 @@ export default async function SettingsPage() {
           로그아웃
         </button>
       </form>
+
+      <WithdrawButton />
     </div>
   );
 }
