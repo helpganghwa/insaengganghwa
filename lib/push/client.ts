@@ -49,6 +49,15 @@ export async function registerServiceWorker(): Promise<ServiceWorkerRegistration
 }
 
 /** base64url(VAPID public key) → ArrayBuffer. PushManager.subscribe 요구 포맷(BufferSource). */
+/** 두 키 바이트 동일 여부 — 기존 구독 공개키 vs 현재 VAPID 공개키 비교(키 교체 감지). */
+function sameKeyBytes(a: ArrayBuffer, b: ArrayBuffer): boolean {
+  if (a.byteLength !== b.byteLength) return false;
+  const ua = new Uint8Array(a);
+  const ub = new Uint8Array(b);
+  for (let i = 0; i < ua.length; i++) if (ua[i] !== ub[i]) return false;
+  return true;
+}
+
 function urlBase64ToBuffer(b64: string): ArrayBuffer {
   const padding = '='.repeat((4 - (b64.length % 4)) % 4);
   const base64 = (b64 + padding).replace(/-/g, '+').replace(/_/g, '/');
@@ -79,12 +88,22 @@ export async function requestAndSubscribe(vapidPublicKey: string): Promise<Subsc
     const reg = await registerServiceWorker();
     if (!reg) return { kind: 'error', message: 'sw-register-failed' };
 
-    // 기존 구독이 있으면 재사용(idempotent — 백엔드도 endpoint UNIQUE).
+    // 기존 구독 재사용(idempotent) — 단, **공개키(VAPID)가 현재 키와 다르면 폐기 후 재구독**.
+    //  키 교체 시 옛 키로 만든 구독은 서버 서명과 안 맞아 영구 실패(VapidPkHashMismatch)하므로,
+    //  getSubscription을 그냥 재사용하면 절대 복구되지 않는다(이전 버그).
+    const desiredKey = urlBase64ToBuffer(vapidPublicKey);
     let sub = await reg.pushManager.getSubscription();
+    if (sub) {
+      const cur = sub.options?.applicationServerKey ?? null;
+      if (!cur || !sameKeyBytes(cur, desiredKey)) {
+        await sub.unsubscribe().catch(() => {});
+        sub = null;
+      }
+    }
     if (!sub) {
       sub = await reg.pushManager.subscribe({
         userVisibleOnly: true,
-        applicationServerKey: urlBase64ToBuffer(vapidPublicKey),
+        applicationServerKey: desiredKey,
       });
     }
     return { kind: 'ok', subscription: sub };
