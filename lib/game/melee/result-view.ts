@@ -9,7 +9,6 @@ import { profiles } from '@/lib/db/schema/profiles';
 import { characters } from '@/lib/db/schema/server';
 import { userProfiles } from '@/lib/db/schema/avatar';
 import { parseFaceBox, type FaceBox } from '@/components/faceCrop';
-import { getGuildBriefsByUsers } from '@/lib/game/guild/badge';
 import type { MeleeResultView } from '@/app/(game)/melee/MeleeResult';
 
 const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
@@ -120,13 +119,8 @@ export async function buildMeleeResultView(
     3000,
     'melee.top3',
   ).catch(() => []);
-  // 길드 brief — 포디움 + 전투 재생(전 로스터)에서 닉네임 밑 길드명·문양 표시에 사용.
-  const rosterGuild = rosterIds.length
-    ? await getGuildBriefsByUsers(rosterIds, battle.serverId).catch(
-        () => new Map<string, { emblemUrl: string | null; name: string }>(),
-      )
-    : new Map<string, { emblemUrl: string | null; name: string }>();
-  // 길드 = finale 스냅샷 우선(있으면 당시 길드, null=당시 미소속). 스냅샷 없는 구버전 회차만 실시간 폴백.
+  // 길드 = finale 스냅샷만 신뢰(있으면 당시 길드, null=당시 미소속). **현재 길드로 폴백하지 않는다** —
+  //  회차 스냅샷에 현재 길드 정보가 새는 문제 때문(스냅샷 없는 구버전 회차는 길드 미표시).
   const snapGuild = new Map<string, { name: string | null; emblemUrl: string | null }>();
   for (const r of finale.roster) {
     if (r.guildName !== undefined || r.guildEmblemUrl !== undefined) {
@@ -134,12 +128,8 @@ export async function buildMeleeResultView(
     }
   }
   const guildFor = (uid: string): { name: string; emblemUrl: string | null } | null => {
-    if (snapGuild.has(uid)) {
-      const sg = snapGuild.get(uid)!;
-      return sg.name ? { name: sg.name, emblemUrl: sg.emblemUrl } : null;
-    }
-    const g = rosterGuild.get(uid);
-    return g ? { name: g.name, emblemUrl: g.emblemUrl } : null;
+    const sg = snapGuild.get(uid);
+    return sg && sg.name ? { name: sg.name, emblemUrl: sg.emblemUrl } : null;
   };
   const podium = topRows.map((r) => ({
     rank: r.rank,
