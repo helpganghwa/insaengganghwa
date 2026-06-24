@@ -115,7 +115,7 @@ export function ResourceToastProvider({ children }: { children: React.ReactNode 
   const showError = useCallback((message: string) => {
     const id = ++counterRef.current;
     headerActiveRef.current += 1; // 헤더 바 — 종료(dismissHeader) 시 차감.
-    setToasts((prev) => [...prev, { id, kind: 'header', title: message, tone: 'error', icon: '⚠️' }]);
+    setToasts((prev) => [...prev, { id, kind: 'header', title: message, tone: 'error' }]);
   }, []);
 
   // 공용 헤더 토스트 — 진입/이탈 슬라이드는 HeaderBar가 자체 타이머로 구동(이탈 애니메이션

@@ -409,7 +409,7 @@ export function RaidSessionCard({ view: v }: { view: RaidView }) {
     // 폴백 — SDK 미로드/init 시 링크 복사.
     if (typeof navigator !== 'undefined' && navigator.clipboard) {
       void navigator.clipboard.writeText(url);
-      showResource('🔗', '초대 링크를 복사했어요');
+      showResource('', '초대 링크를 복사했어요');
     }
   };
 

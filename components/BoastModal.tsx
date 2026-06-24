@@ -182,7 +182,7 @@ export function BoastModal({
     if (!shareUrl) return;
     try {
       await navigator.clipboard.writeText(shareUrl);
-      showHeaderToast({ icon: '🔗', title: '링크를 복사했어요' });
+      showHeaderToast({ title: '링크를 복사했어요' });
     } catch {
       // 비보안 컨텍스트·권한 거부 폴백 — 임시 textarea + execCommand.
       try {
@@ -194,9 +194,9 @@ export function BoastModal({
         ta.select();
         document.execCommand('copy');
         document.body.removeChild(ta);
-        showHeaderToast({ icon: '🔗', title: '링크를 복사했어요' });
+        showHeaderToast({ title: '링크를 복사했어요' });
       } catch {
-        showHeaderToast({ icon: '⚠️', title: '복사에 실패했어요' });
+        showHeaderToast({ title: '복사에 실패했어요' });
       }
     }
   };

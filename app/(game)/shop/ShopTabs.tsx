@@ -276,7 +276,7 @@ export function ShopTabs({
     if (returnCode) {
       // 실패/취소 — 취소는 조용히, 그 외만 안내.
       if (returnCode !== 'PAY_CANCEL' && returnCode !== 'PAY_PROCESS_CANCELED') {
-        showHeaderToast({ icon: '⚠️', title: '결제가 완료되지 않았습니다' });
+        showHeaderToast({ title: '결제가 완료되지 않았습니다' });
       }
       return;
     }
@@ -285,10 +285,9 @@ export function ShopTabs({
         const v = await verifyPurchaseAction(returnPaymentId);
         if (v.status === 'success') {
           router.refresh(); // 다이아·상자·프리미엄 등 서버 권위 상태 동기화.
-          showHeaderToast({ icon: '✅', title: v.already ? '이미 지급된 결제입니다' : '구매 완료' });
+          showHeaderToast({ title: v.already ? '이미 지급된 결제입니다' : '구매 완료' });
         } else {
           showHeaderToast({
-            icon: '⚠️',
             title: v.code === 'AMOUNT_MISMATCH' ? '결제 금액 오류 — 문의 바랍니다' : '결제 확인 실패',
           });
         }
@@ -298,7 +297,7 @@ export function ShopTabs({
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
-  const soon = () => showHeaderToast({ icon: '🛒', title: '준비 중입니다' });
+  const soon = () => showHeaderToast({ title: '준비 중입니다' });
   const isLimited = (id: string) => productPeriod(id) !== null;
   // 결제 설정이 되어 있으면 전 유저 실결제, 아니면 어드민 테스트 즉시구매만 판매 가능.
   const canSell = payEnabled || isAdmin;
@@ -319,7 +318,7 @@ export function ShopTabs({
   const tapPaid = (id: string, sellable: boolean, exec: () => void) => {
     if (purchased.has(id)) {
       clearConfirm();
-      showHeaderToast({ icon: '🛒', title: '이미 구매완료한 상품입니다' });
+      showHeaderToast({ title: '이미 구매완료한 상품입니다' });
       return;
     }
     if (!sellable) {
@@ -342,7 +341,7 @@ export function ShopTabs({
     }
     const limited = isLimited(productId);
     if (limited && purchased.has(productId)) {
-      showHeaderToast({ icon: '🛒', title: '이미 구매완료한 상품입니다' });
+      showHeaderToast({ title: '이미 구매완료한 상품입니다' });
       return;
     }
     if (limited && productId !== PREMIUM.id) setPurchased((p) => new Set(p).add(productId)); // 낙관적 흑백
@@ -353,11 +352,11 @@ export function ShopTabs({
         if (r.diamond) optimisticAdjust(BigInt(r.diamond));
         const rewards: HeaderReward[] = [];
         if (r.diamond) rewards.push({ icon: '💎', amount: r.diamond });
-        if (r.boxes) rewards.push({ icon: '📦', amount: r.boxes });
-        showHeaderToast({ icon: '🧪', title: '테스트 구매', rewards });
+        if (r.boxes) rewards.push({ icon: '', amount: r.boxes });
+        showHeaderToast({ title: '테스트 구매', rewards });
       } else if (r.code === 'ALREADY_PURCHASED') {
         setPurchased((p) => new Set(p).add(productId));
-        showHeaderToast({ icon: '🛒', title: '이미 구매완료한 상품입니다' });
+        showHeaderToast({ title: '이미 구매완료한 상품입니다' });
       } else {
         if (limited)
           setPurchased((p) => {
@@ -365,7 +364,7 @@ export function ShopTabs({
             n.delete(productId);
             return n;
           }); // 복원
-        showHeaderToast({ icon: '⚠️', title: '구매 실패' });
+        showHeaderToast({ title: '구매 실패' });
       }
     });
   };
@@ -376,7 +375,7 @@ export function ShopTabs({
     if (paying) return;
     const limited = isLimited(productId);
     if (limited && purchased.has(productId)) {
-      showHeaderToast({ icon: '🛒', title: '이미 구매완료한 상품입니다' });
+      showHeaderToast({ title: '이미 구매완료한 상품입니다' });
       return;
     }
     setPaying(true);
@@ -388,7 +387,7 @@ export function ShopTabs({
         if (limited && productId !== PREMIUM.id) setPurchased((p) => new Set(p).add(productId));
         if (productId === PREMIUM.id) setPremiumDays(PREMIUM.daily.days);
         router.refresh(); // 다이아·보유 상자 등 서버 권위 상태 재동기화.
-        showHeaderToast({ icon: '✅', title: r.already ? '이미 지급된 결제입니다' : '구매 완료' });
+        showHeaderToast({ title: r.already ? '이미 지급된 결제입니다' : '구매 완료' });
       } else if (r.reason === 'cancel') {
         // 사용자 취소 — 조용히 무시.
       } else {
@@ -401,7 +400,7 @@ export function ShopTabs({
                 ? '결제 금액 오류 — 고객센터로 문의해 주세요'
                 : '결제에 실패했습니다';
         if (r.code === 'ALREADY_PURCHASED') setPurchased((p) => new Set(p).add(productId));
-        showHeaderToast({ icon: '⚠️', title });
+        showHeaderToast({ title });
       }
     })();
   };
@@ -409,7 +408,7 @@ export function ShopTabs({
   // 💎로 보급상자 구매(견습의 주머니) — 전 유저. 잔액 사전체크 + 낙관 차감, 실패 시 복원.
   const onBuyBox = (productId: string, cost: number) => {
     if (purchased.has(productId)) {
-      showHeaderToast({ icon: '🛒', title: '이미 구매완료한 상품입니다' });
+      showHeaderToast({ title: '이미 구매완료한 상품입니다' });
       return;
     }
     if (diamond < BigInt(cost)) {
@@ -421,11 +420,11 @@ export function ShopTabs({
     startTransition(async () => {
       const r = await buyBoxAction(productId);
       if (r.status === 'success') {
-        showHeaderToast({ icon: '📦', title: '구매 완료', rewards: [{ icon: '📦', amount: r.boxes }] });
+        showHeaderToast({ title: '구매 완료', rewards: [{ icon: '', amount: r.boxes }] });
       } else {
         optimisticAdjust(BigInt(cost)); // 💎 복원
         if (r.code === 'ALREADY_PURCHASED') {
-          showHeaderToast({ icon: '🛒', title: '이미 구매완료한 상품입니다' });
+          showHeaderToast({ title: '이미 구매완료한 상품입니다' });
         } else {
           setPurchased((p) => {
             const n = new Set(p);
@@ -433,7 +432,7 @@ export function ShopTabs({
             return n;
           }); // 복원
           showHeaderToast({
-            icon: r.code === 'INSUFFICIENT_DIAMOND' ? '💎' : '⚠️',
+            icon: r.code === 'INSUFFICIENT_DIAMOND' ? '💎' : undefined,
             title: r.code === 'INSUFFICIENT_DIAMOND' ? '다이아가 부족합니다' : '구매 실패',
           });
         }
@@ -452,13 +451,12 @@ export function ShopTabs({
       if (r.status === 'success') {
         const rewards: HeaderReward[] = [];
         if (d.diamond) rewards.push({ icon: '💎', amount: d.diamond });
-        if (d.boxes) rewards.push({ icon: '📦', amount: d.boxes });
-        showHeaderToast({ icon: '🎁', title: '무료 수령', rewards });
+        if (d.boxes) rewards.push({ icon: '', amount: d.boxes });
+        showHeaderToast({ title: '무료 수령', rewards });
       } else {
         setFree((f) => ({ ...f, [slot]: true }));
         if (d.diamond) optimisticAdjust(BigInt(-d.diamond));
         showHeaderToast({
-          icon: '⚠️',
           title: r.code === 'ALREADY_CLAIMED' ? '이미 수령했습니다' : '수령 실패',
         });
       }
@@ -487,7 +485,7 @@ export function ShopTabs({
             confirming={confirm === PREMIUM.id}
             onClick={() =>
               premiumDays != null
-                ? showHeaderToast({ icon: '👑', title: `이용 중 — ${premiumDays}일 남음` })
+                ? showHeaderToast({ title: `이용 중 — ${premiumDays}일 남음` })
                 : tapPaid(PREMIUM.id, canSell, () => buy(PREMIUM.id))
             }
           />
@@ -529,7 +527,7 @@ export function ShopTabs({
               onClick={() => {
                 if (claiming) return;
                 if (!free[tab]) {
-                  showHeaderToast({ icon: '🎁', title: '이미 수령했습니다' });
+                  showHeaderToast({ title: '이미 수령했습니다' });
                   return;
                 }
                 claimFreeSlot(tab);
@@ -583,7 +581,7 @@ export function ShopTabs({
               onClick={() => {
                 if (claiming) return;
                 if (!free.signup) {
-                  showHeaderToast({ icon: '🎁', title: '이미 수령했습니다' });
+                  showHeaderToast({ title: '이미 수령했습니다' });
                   return;
                 }
                 claimFreeSlot('signup');

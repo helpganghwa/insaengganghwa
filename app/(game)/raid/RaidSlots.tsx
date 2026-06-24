@@ -242,7 +242,7 @@ export function RaidSlots({
         return;
       }
       if (r.state === 'requested') {
-        showHeaderToast({ icon: '📨', title: '참가 요청을 보냈어요', detail: '개설자가 수락하면 참여됩니다' });
+        showHeaderToast({ title: '참가 요청을 보냈어요', detail: '개설자가 수락하면 참여됩니다' });
         return;
       }
       router.push(`/raid/${r.raidId}`);

@@ -126,8 +126,8 @@ export function FriendsTabs({
   const [incoming, setIncoming] = useState(initIncoming);
   const [outgoing, setOutgoing] = useState(initOutgoing);
 
-  const toast = (t: string, icon = '👥') => showHeaderToast({ icon, title: t });
-  const fail = (code?: string) => toast(ERR[code ?? 'UNKNOWN'] ?? ERR.UNKNOWN, '⚠️');
+  const toast = (t: string) => showHeaderToast({ title: t });
+  const fail = (code?: string) => toast(ERR[code ?? 'UNKNOWN'] ?? ERR.UNKNOWN);
   const setRel = (id: string, relation: FriendRelation) =>
     setResults((prev) => prev?.map((x) => (x.userId === id ? { ...x, relation } : x)) ?? prev);
   const openProfile = (u: FriendUser) => router.push(`/u/${encodeURIComponent(u.publicCode)}`);
