@@ -13,7 +13,6 @@ import {
   bpSegmentIndex,
   bpSegmentEndLevel,
   bpTierReward,
-  bpRangeReward,
   bpSegmentPriceKrw,
   BP_SEGMENT_SIZE,
   BP_TIER_STEP,
@@ -440,9 +439,10 @@ export function claimSegment(
 // 결제 백엔드(포트원) 연동 시 결제 검증 후 호출. 구매 즉시 이미 넘긴 단계 소급 수령.
 
 /**
- * 프리미엄 구간 구매 지급(tx) — 소급 포함. **결제 트랜잭션·직접구매 공용 단일 원천**.
- * 이미 구매한 구간이면 지급 없이 null(멱등) — 결제 컨텍스트는 null을 "이미 보유"로 무해 처리.
- * getMaxReached는 읽기(별도 커넥션, 풀 max>1)라 tx 안에서 호출해도 안전.
+ * 프리미엄 구간 구매(tx) — **해금만**. 보상은 유저가 수동 수령(소급분 포함)하므로 여기선 지급하지 않는다.
+ *  premiumClaimedTiers를 빈 채로 두어 구매 직후엔 미수령 상태(=환불 가능). 이후 유저가 단계/구간
+ *  수령(claimPremiumTier·claimSegment)으로 받는다. 이미 구매한 구간이면 null(멱등).
+ *  **결제 트랜잭션·직접구매 공용 단일 원천.**
  */
 export async function applyBpSegmentPurchase(
   tx: Parameters<Parameters<typeof db.transaction>[0]>[0],
@@ -450,40 +450,25 @@ export async function applyBpSegmentPurchase(
   serverId: number,
   type: BattlePassType,
   segmentIndex: number,
-): Promise<{ granted: number; rewardKind: 'diamond' | 'box' } | null> {
-  const startMinusOne = segmentIndex * BP_SEGMENT_SIZE[type];
-  const endLevel = bpSegmentEndLevel(type, segmentIndex);
-
-  const reached = await getMaxReached(userId, serverId);
-  const maxReached = type === 'enhance' ? reached.maxEnhance : reached.maxTranscend;
-  const target = Math.min(maxReached, endLevel);
-  const granted = bpRangeReward(type, startMinusOne, target, true);
-
-  // 구간 row 생성(이미 있으면 빈 결과 = 이미 구매) — 소급 지급분을 claimed 집합에 표기.
+): Promise<{ rewardKind: 'diamond' | 'box' } | null> {
+  // 구간 row 생성(=해금). 이미 있으면 빈 결과 = 이미 구매. 보상은 미지급(수동 수령).
   const ins = await tx
     .insert(battlePassSegments)
-    .values({
-      userId,
-      serverId,
-      passType: type,
-      segmentIndex,
-      premiumClaimedTiers: tierLevelsIn(type, startMinusOne + 1, target),
-    })
+    .values({ userId, serverId, passType: type, segmentIndex, premiumClaimedTiers: [] })
     .onConflictDoNothing()
     .returning({ idx: battlePassSegments.segmentIndex });
   if (ins.length === 0) return null;
 
-  await grantReward(tx, userId, serverId, type, granted);
-  return { granted, rewardKind: type === 'enhance' ? 'diamond' : 'box' };
+  return { rewardKind: type === 'enhance' ? 'diamond' : 'box' };
 }
 
-/** 직접 구매(결제 미경유 테스트/소급) — 자체 트랜잭션. 이미 구매면 ALREADY_PURCHASED. */
+/** 직접 구매(결제 미경유 테스트) — 자체 트랜잭션. 해금만(보상 수동 수령). 이미 구매면 ALREADY_PURCHASED. */
 export function grantSegmentPurchase(
   userId: string,
   serverId: number,
   type: BattlePassType,
   segmentIndex: number,
-): Promise<{ granted: number; rewardKind: 'diamond' | 'box' }> {
+): Promise<{ rewardKind: 'diamond' | 'box' }> {
   return db.transaction(async (tx) => {
     const r = await applyBpSegmentPurchase(tx, userId, serverId, type, segmentIndex);
     if (!r) throw new BattlePassErr('ALREADY_PURCHASED');
