@@ -12,6 +12,7 @@ import { kstMonthString } from '@/lib/kst';
 import { bpSegmentPriceKrw, type BattlePassType } from '@/lib/game/balance';
 import { paidProduct, shopGrant, productPeriod } from '@/lib/game/shop/catalog';
 import { periodKey } from '@/lib/game/shop/period';
+import { raisePaymentAlert } from './alert';
 import { applyProductGrant } from '@/lib/game/shop/grant';
 import { applyBpSegmentPurchase } from '@/lib/game/battlepass';
 
@@ -235,6 +236,12 @@ export async function completePurchase(paymentId: string): Promise<CompleteResul
   const pay = await getPortonePayment(paymentId);
   if (pay.status !== 'PAID') return { ok: false, code: 'NOT_PAID' };
   if (pay.currency !== 'KRW' || pay.amountTotal !== Number(order.amountKrw)) {
+    // 위변조 의심 — 웹훅·클라 verify 어느 경로로 와도 여기서 1회 알림(중복은 dedup).
+    await raisePaymentAlert('AMOUNT_MISMATCH', {
+      paymentId,
+      orderId: order.id,
+      detail: `결제 금액/통화 불일치 — 주문 ₩${Number(order.amountKrw)} vs PG ${pay.amountTotal}${pay.currency}. 지급하지 않음.`,
+    });
     return { ok: false, code: 'AMOUNT_MISMATCH' };
   }
 

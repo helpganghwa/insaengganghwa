@@ -4,6 +4,7 @@ import { revalidatePath } from 'next/cache';
 
 import { getSessionUserId } from '@/lib/auth/session';
 import { getActiveServerId } from '@/lib/game/servers';
+import { rateLimited } from '@/lib/ratelimit';
 import {
   searchUsers,
   sendRequest,
@@ -20,6 +21,7 @@ type SearchRow = FriendUser & { relation: FriendRelation };
 export async function searchAction(q: string) {
   const u = await getSessionUserId();
   if (!u) return { status: 'error', code: 'UNAUTHENTICATED' } as const;
+  if (await rateLimited(u, 'friend')) return { status: 'error', code: 'RATE_LIMITED' } as const;
   try {
     return { status: 'success', results: await searchUsers(u, await getActiveServerId(), q) as SearchRow[] } as const;
   } catch (e) {
@@ -31,6 +33,7 @@ export async function searchAction(q: string) {
 export async function sendRequestAction(targetId: string) {
   const u = await getSessionUserId();
   if (!u) return { status: 'error', code: 'UNAUTHENTICATED' } as const;
+  if (await rateLimited(u, 'friend')) return { status: 'error', code: 'RATE_LIMITED' } as const;
   try {
     const r = await sendRequest(u, await getActiveServerId(), targetId);
     revalidatePath('/friends');
@@ -45,6 +48,7 @@ export async function sendRequestAction(targetId: string) {
 export async function respondAction(requesterId: string, action: 'accept' | 'decline') {
   const u = await getSessionUserId();
   if (!u) return { status: 'error', code: 'UNAUTHENTICATED' } as const;
+  if (await rateLimited(u, 'friend')) return { status: 'error', code: 'RATE_LIMITED' } as const;
   try {
     await respondRequest(u, await getActiveServerId(), requesterId, action);
     revalidatePath('/friends');
@@ -59,6 +63,7 @@ export async function respondAction(requesterId: string, action: 'accept' | 'dec
 export async function cancelAction(targetId: string) {
   const u = await getSessionUserId();
   if (!u) return { status: 'error', code: 'UNAUTHENTICATED' } as const;
+  if (await rateLimited(u, 'friend')) return { status: 'error', code: 'RATE_LIMITED' } as const;
   try {
     await cancelRequest(u, await getActiveServerId(), targetId);
     revalidatePath('/friends');
@@ -72,6 +77,7 @@ export async function cancelAction(targetId: string) {
 export async function removeFriendAction(otherId: string) {
   const u = await getSessionUserId();
   if (!u) return { status: 'error', code: 'UNAUTHENTICATED' } as const;
+  if (await rateLimited(u, 'friend')) return { status: 'error', code: 'RATE_LIMITED' } as const;
   try {
     await removeFriend(u, await getActiveServerId(), otherId);
     revalidatePath('/friends');

@@ -60,14 +60,8 @@ export async function POST(req: Request) {
           console.error('[portone.webhook] NOT_PAID, retrying', paymentId);
           return new Response('not paid yet', { status: 500 });
         }
-        // ORDER_NOT_FOUND(우리 주문 아님)·AMOUNT_MISMATCH(위변조 의심)는 재전송해도 동일 — 200 ack.
-        //  AMOUNT_MISMATCH는 지급하지 않은 채 운영 알림 대상.
-        if (result.code === 'AMOUNT_MISMATCH') {
-          await raisePaymentAlert('AMOUNT_MISMATCH', {
-            paymentId,
-            detail: '결제 금액/통화가 주문과 불일치 — 위변조 의심. 지급하지 않음.',
-          });
-        }
+        // ORDER_NOT_FOUND(우리 주문 아님)·AMOUNT_MISMATCH는 재전송해도 동일 — 200 ack.
+        //  AMOUNT_MISMATCH 알림은 completePurchase 내부에서 발생(웹훅·클라 verify 공통 보장).
       }
     } else if (webhook.type === 'Transaction.Cancelled') {
       // 전체 취소(환불) — 지급분 회수(멱등). NOT_CANCELLED(전파 지연)는 500으로 재전송 유도.

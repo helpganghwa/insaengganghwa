@@ -46,6 +46,8 @@ export async function cancelPortonePayment(paymentId: string, reason: string): P
     },
     body: JSON.stringify({ reason }),
     cache: 'no-store',
+    // 무응답 시 cron/액션이 maxDuration까지 매달리지 않도록 타임아웃.
+    signal: AbortSignal.timeout(8000),
   });
   if (!res.ok) {
     const body = await res.text().catch(() => '');
@@ -61,6 +63,8 @@ export async function getPortonePayment(paymentId: string): Promise<PortonePayme
   const res = await fetch(`${API_BASE}/payments/${encodeURIComponent(paymentId)}`, {
     headers: { Authorization: `PortOne ${apiSecret()}` },
     cache: 'no-store',
+    // payment-recon이 다건 순차 조회 — 1건 무응답이 run 전체를 막지 않도록 타임아웃.
+    signal: AbortSignal.timeout(8000),
   });
   if (!res.ok) {
     const body = await res.text().catch(() => '');

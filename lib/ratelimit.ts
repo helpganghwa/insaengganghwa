@@ -21,7 +21,10 @@ export type RlBucket =
   | 'nickname'
   | 'mail'
   | 'checkin'
-  | 'battlepass';
+  | 'battlepass'
+  | 'friend'
+  | 'guild'
+  | 'shop';
 
 const WINDOWS: Record<RlBucket, [limit: number, window: `${number} s`]> = {
   enhance: [30, '10 s'],
@@ -32,6 +35,9 @@ const WINDOWS: Record<RlBucket, [limit: number, window: `${number} s`]> = {
   mail: [60, '10 s'],
   checkin: [10, '10 s'],
   battlepass: [20, '10 s'],
+  friend: [20, '10 s'], // 검색·요청·수락 스팸 방어
+  guild: [20, '10 s'], // 기부·배치·가입 자동화 방어
+  shop: [20, '10 s'], // 무료수령·주문·상자구매 연타 방어
 };
 
 const url = process.env.UPSTASH_REDIS_REST_URL;
