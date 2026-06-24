@@ -1,6 +1,8 @@
 'use client';
 
 import { useState, useTransition } from 'react';
+import Link from 'next/link';
+import { useRouter } from 'next/navigation';
 
 import { refundOrderAction } from './actions';
 
@@ -34,7 +36,20 @@ const ERR_MSG: Record<string, string> = {
   UNKNOWN: '오류가 발생했습니다',
 };
 
-export function PaymentsClient({ orders: initial }: { orders: OrderRow[] }) {
+export function PaymentsClient({
+  orders: initial,
+  date,
+  prevDate,
+  nextDate,
+  today,
+}: {
+  orders: OrderRow[];
+  date: string;
+  prevDate: string;
+  nextDate: string;
+  today: string;
+}) {
+  const router = useRouter();
   const [orders, setOrders] = useState(initial);
   const [pendingId, setPendingId] = useState<string | null>(null);
   const [msg, setMsg] = useState<string | null>(null);
@@ -70,8 +85,46 @@ export function PaymentsClient({ orders: initial }: { orders: OrderRow[] }) {
     <div className="mx-auto w-full max-w-[860px] space-y-4 px-4 py-6 text-zinc-100">
       <div>
         <h1 className="text-xl font-bold">결제 내역 · 환불</h1>
-        <p className="mt-1 text-xs text-zinc-500">
-          최근 100건. 환불 가능(결제완료) {refundable}건 · 결제완료 {counts.paid ?? 0} · 환불{' '}
+        {/* 날짜 네비 — 전/다음날 + 날짜 선택. 오늘이면 다음날 비활성. */}
+        <div className="mt-2 flex items-center gap-2">
+          <Link
+            href={`/admin/payments?date=${prevDate}`}
+            className="rounded-lg border border-zinc-700 bg-zinc-900 px-2.5 py-1 text-sm hover:bg-zinc-800"
+          >
+            ‹ 전날
+          </Link>
+          <input
+            type="date"
+            value={date}
+            max={today}
+            onChange={(e) => {
+              if (e.target.value) router.push(`/admin/payments?date=${e.target.value}`);
+            }}
+            className="rounded-lg border border-zinc-700 bg-zinc-900 px-2.5 py-1 text-sm tabular-nums"
+          />
+          {date < today ? (
+            <Link
+              href={`/admin/payments?date=${nextDate}`}
+              className="rounded-lg border border-zinc-700 bg-zinc-900 px-2.5 py-1 text-sm hover:bg-zinc-800"
+            >
+              다음날 ›
+            </Link>
+          ) : (
+            <span className="rounded-lg border border-zinc-800 px-2.5 py-1 text-sm text-zinc-600">
+              다음날 ›
+            </span>
+          )}
+          {date !== today ? (
+            <Link
+              href="/admin/payments"
+              className="ml-auto rounded-lg border border-amber-700/60 bg-amber-900/20 px-2.5 py-1 text-xs font-bold text-amber-300"
+            >
+              오늘
+            </Link>
+          ) : null}
+        </div>
+        <p className="mt-2 text-xs text-zinc-500">
+          {date} · 총 {orders.length}건 · 환불가능 {refundable} · 결제완료 {counts.paid ?? 0} · 환불{' '}
           {counts.refunded ?? 0} · 대기 {counts.pending ?? 0}
         </p>
       </div>

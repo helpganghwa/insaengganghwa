@@ -4,6 +4,7 @@ import { and, eq, sql } from 'drizzle-orm';
 
 import { db } from '@/lib/db/client';
 import { iapOrders, iapRefunds, monthlyPurchaseLimits } from '@/lib/db/schema/payment';
+import { mailbox } from '@/lib/db/schema/mailbox';
 import { kstMonthString } from '@/lib/kst';
 import { reclaimProductGrant } from '@/lib/game/shop/grant';
 
@@ -68,6 +69,17 @@ export async function refundPurchase(paymentId: string): Promise<RefundResult> {
             eq(monthlyPurchaseLimits.kstMonth, paidMonth),
           ),
         );
+
+      // 환불 안내 우편 — 지급분 회수된 경우에만(notice, 보상 없음). 웹훅·어드민 환불 공통.
+      await tx.insert(mailbox).values({
+        userId: order.userId,
+        serverId: order.serverId,
+        type: 'notice',
+        title: '결제 환불 안내',
+        body: `결제(₩${Number(order.amountKrw).toLocaleString('ko-KR')})가 환불 처리되어, 지급되었던 재화를 회수했습니다. 문의는 고객센터로 연락 주세요.`,
+        senderLabel: '인생강화',
+        payload: {},
+      });
     }
 
     // 환불 감사 기록 — clawbackDone은 지급분을 회수했는지(pending 취소면 회수 없음).
