@@ -222,11 +222,12 @@ export function CheckinCalendar({
           className="absolute inset-0 h-full w-full object-cover"
           style={{ imageRendering: 'pixelated' }}
         />
-        {/* 하단을 더 넓게 어둡게 — 커진 보상 텍스트 가독성 확보, 상단 단상·빛기둥은 노출 유지 */}
-        <div className="pointer-events-none absolute inset-x-0 bottom-0 h-2/3 bg-gradient-to-t from-black/90 via-black/55 to-transparent" />
-        {/* 하단 바 — 좌 보상(아이콘·라벨·값) + 우 버튼. 영역에 맞게 크고 균형있게. */}
-        <div className="relative flex h-full items-center justify-between gap-2.5 px-3.5 pb-3 pt-2">
-          <div className="flex min-w-0 flex-1 items-center gap-2.5 self-end">
+        {/* 보상=좌상단, 버튼=우하단. 양쪽에 어둠 깔아 텍스트·버튼 가독성 확보 */}
+        <div className="pointer-events-none absolute inset-x-0 top-0 h-1/2 bg-gradient-to-b from-black/80 via-black/30 to-transparent" />
+        <div className="pointer-events-none absolute inset-x-0 bottom-0 h-1/2 bg-gradient-to-t from-black/85 via-black/40 to-transparent" />
+        {/* 보상(좌상단) ↔ 버튼(우하단) 대각 배치. */}
+        <div className="relative flex h-full items-stretch justify-between gap-2.5 px-3.5 pb-3 pt-2">
+          <div className="flex min-w-0 flex-1 items-center gap-2.5 self-start">
             <span className="text-[26px] leading-none drop-shadow-[0_2px_4px_rgba(0,0,0,0.9)]" aria-hidden>
               <RewardEmoji r={cardReward} />
             </span>
