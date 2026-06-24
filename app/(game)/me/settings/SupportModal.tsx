@@ -1,6 +1,7 @@
 'use client';
 
 import { useState } from 'react';
+import { createPortal } from 'react-dom';
 
 import { BUSINESS_INFO } from '@/lib/legal/content';
 
@@ -76,15 +77,16 @@ export function SupportModal({
         <span className="text-sm">고객센터 문의</span>
       </button>
 
-      {open ? (
-        <div
-          className="fixed inset-0 z-50 flex items-end justify-center bg-black/50 sm:items-center"
-          onClick={() => setOpen(false)}
-        >
-          <div
-            className="w-full max-w-[390px] rounded-t-2xl border border-zinc-200 bg-white p-4 shadow-xl dark:border-zinc-800 dark:bg-zinc-950 sm:rounded-2xl"
-            onClick={(e) => e.stopPropagation()}
-          >
+      {open
+        ? createPortal(
+            <div
+              className="fixed inset-0 z-[100] flex items-center justify-center bg-black/60 p-4 backdrop-blur-sm"
+              onClick={() => setOpen(false)}
+            >
+              <div
+                className="w-full max-w-[340px] rounded-2xl border border-zinc-200 bg-white p-4 shadow-xl dark:border-zinc-800 dark:bg-zinc-950"
+                onClick={(e) => e.stopPropagation()}
+              >
             <div className="mb-1 flex items-center justify-between">
               <h3 className="text-base font-bold">고객센터 문의</h3>
               <button
@@ -118,8 +120,10 @@ export function SupportModal({
               ))}
             </ul>
           </div>
-        </div>
-      ) : null}
+        </div>,
+            document.body,
+          )
+        : null}
     </>
   );
 }
