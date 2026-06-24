@@ -1,6 +1,7 @@
 import type { Metadata, Viewport } from 'next';
 import { headers } from 'next/headers';
 import { Geist, Geist_Mono } from 'next/font/google';
+import { Analytics } from '@vercel/analytics/next';
 import './globals.css';
 
 const geistSans = Geist({
@@ -116,6 +117,8 @@ export default function RootLayout({ children }: Readonly<{ children: React.Reac
     >
       <body className="flex min-h-full flex-col overscroll-none bg-zinc-950 text-zinc-50">
         {children}
+        {/* Vercel Web Analytics — 트래픽·페이지뷰·Web Vitals(쿠키리스). 대시보드 Analytics 활성화 필요. */}
+        <Analytics />
       </body>
     </html>
   );
