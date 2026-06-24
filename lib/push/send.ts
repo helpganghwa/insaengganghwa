@@ -23,11 +23,13 @@ import { profiles } from '@/lib/db/schema/profiles';
 let configured = false;
 function configure() {
   if (configured) return;
-  const publicKey = process.env.VAPID_PUBLIC_KEY;
+  // 공개키는 클라(구독)와 **반드시 동일**해야 한다 — 단일 출처로 일치 보장: VAPID_PUBLIC_KEY가 없으면
+  // 클라가 쓰는 NEXT_PUBLIC_VAPID_PUBLIC_KEY를 그대로 사용(둘이 어긋나 VapidPkHashMismatch 나던 사고 방지).
+  const publicKey = process.env.VAPID_PUBLIC_KEY || process.env.NEXT_PUBLIC_VAPID_PUBLIC_KEY;
   const privateKey = process.env.VAPID_PRIVATE_KEY;
   const subject = process.env.VAPID_SUBJECT ?? 'mailto:help@ganghwa.app';
   if (!publicKey || !privateKey) {
-    throw new Error('VAPID keys missing — set VAPID_PUBLIC_KEY/VAPID_PRIVATE_KEY');
+    throw new Error('VAPID keys missing — set NEXT_PUBLIC_VAPID_PUBLIC_KEY/VAPID_PRIVATE_KEY');
   }
   webpush.setVapidDetails(subject, publicKey, privateKey);
   configured = true;
