@@ -31,6 +31,12 @@ const MENU: { href: string; icon: string; title: string; desc: string; external?
     title: '결제 내역 · 환불',
     desc: '결제건 조회, 결제완료 건 환불(포트원 취소 + 재화 회수)',
   },
+  {
+    href: '/admin/alerts',
+    icon: '🔔',
+    title: '결제 사고 알림',
+    desc: '미지급·환불 미회수·금액불일치 등 사고 감지 내역, 자동치유 재시도/해결 처리',
+  },
 ];
 
 export default function AdminHubPage() {
