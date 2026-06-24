@@ -7,6 +7,7 @@ import { catalogItems, userEquipment, type Slot } from '@/lib/db/schema/equipmen
 import { userSupplyBoxes, supplyOpenLogs } from '@/lib/db/schema/supply';
 import { transcendLogs } from '@/lib/db/schema/transcend';
 import { transcendFodderForStep } from '@/lib/game/balance';
+import { logMemberAchievement } from '@/lib/game/guild/achievement';
 
 /**
  * 보급 상자 열기 — GDD §3.4 / BALANCE §4 / SCHEMA §5.
@@ -39,7 +40,7 @@ function rngU32(): number {
   return crypto.getRandomValues(new Uint32Array(1))[0]!;
 }
 
-export function openSupplyBoxes(input: {
+export async function openSupplyBoxes(input: {
   userId: string;
   serverId: number;
   slot: Slot;
@@ -48,7 +49,7 @@ export function openSupplyBoxes(input: {
   const { userId, serverId, slot } = input;
   const n = Math.max(1, Math.floor(input.count ?? 1));
 
-  return db.transaction(async (tx) => {
+  const opened = await db.transaction(async (tx) => {
     const [box] = await tx
       .select({ count: userSupplyBoxes.count })
       .from(userSupplyBoxes)
@@ -161,4 +162,25 @@ export function openSupplyBoxes(input: {
 
     return results;
   });
+
+  // 길드 업적 — 초월 10단위 돌파 시 길드 피드에 노출(best-effort, 트랜잭션 밖).
+  try {
+    for (const r of opened) {
+      const fromT = r.transcendLevel - r.transcended;
+      if (r.transcended > 0 && Math.floor(r.transcendLevel / 10) > Math.floor(fromT / 10)) {
+        const milestone = Math.floor(r.transcendLevel / 10) * 10;
+        const [ci] = (await db.execute(
+          sql`select name from catalog_items where id = ${r.catalogItemId} limit 1`,
+        )) as unknown as { name: string }[];
+        await logMemberAchievement(userId, serverId, {
+          action: 'achv_transcend',
+          detail: { item: ci?.name ?? '장비', level: milestone },
+        });
+      }
+    }
+  } catch {
+    // 업적 기록 실패 무시.
+  }
+
+  return opened;
 }

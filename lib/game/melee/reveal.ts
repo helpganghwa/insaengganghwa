@@ -7,6 +7,7 @@ import { meleeBattles, meleeParticipants } from '@/lib/db/schema/melee';
 import { profiles } from '@/lib/db/schema/profiles';
 import { characters } from '@/lib/db/schema/server';
 import { sendPushToUsers } from '@/lib/push/send';
+import { logMemberAchievement } from '@/lib/game/guild/achievement';
 
 /**
  * 대난투 10:00 발표 — MELEE §7. KST 오늘 배틀이 'computed'면:
@@ -40,7 +41,7 @@ export async function revealMelee(serverId: number): Promise<{ revealed: boolean
 
   // 시상대 Top3(1·2·3위) — 우편/푸시 공통 본문. 참가자 적으면 있는 만큼만(🥇 폴백).
   const podium = await db
-    .select({ rank: meleeParticipants.finalRank, nick: characters.nickname })
+    .select({ rank: meleeParticipants.finalRank, nick: characters.nickname, userId: meleeParticipants.userId })
     .from(meleeParticipants)
     .innerJoin(
       characters,
@@ -84,6 +85,13 @@ export async function revealMelee(serverId: number): Promise<{ revealed: boolean
     tag: 'melee',
     category: 'melee',
   }).catch((e) => console.warn('[melee.reveal] push failed', e));
+
+  // 길드 업적 — 대난투 1~3위 길드원을 길드 피드에 노출(best-effort).
+  for (const p of podium) {
+    if (p.rank >= 1 && p.rank <= 3) {
+      await logMemberAchievement(p.userId, serverId, { action: 'achv_melee', detail: { rank: p.rank } });
+    }
+  }
 
   return { revealed: true, battleId: battleId.toString(), mailed: userIds.length };
 }

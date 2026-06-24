@@ -9,6 +9,7 @@ import {
   levelAfterFail,
 } from '@/lib/game/balance';
 import { accrueResidenceTax } from '@/lib/game/guild/tax';
+import { logMemberAchievement } from '@/lib/game/guild/achievement';
 
 import { EnhanceError } from './queue';
 
@@ -171,6 +172,25 @@ export async function resolveEnhance(input: ResolveInput): Promise<ResolveResult
       await accrueResidenceTax(String(job.user_id), Number(job.job_server_id), toLevel);
     } catch {
       // 세금 누적 실패는 무시(강화 결과 보존).
+    }
+  }
+
+  // 길드 업적 — 강화 100단위 돌파 시 길드 피드에 노출(best-effort). mega(+2)로 100을 건너뛰어도 경계 통과로 포착.
+  if (
+    (outcome === 'success' || outcome === 'mega') &&
+    Math.floor(toLevel / 100) > Math.floor(fromLevel / 100)
+  ) {
+    try {
+      const milestone = Math.floor(toLevel / 100) * 100;
+      const [ci] = (await db.execute(
+        sql`select name from catalog_items where id = ${catalogItemId} limit 1`,
+      )) as unknown as { name: string }[];
+      await logMemberAchievement(String(job.user_id), Number(job.job_server_id), {
+        action: 'achv_enhance',
+        detail: { item: ci?.name ?? '장비', level: milestone },
+      });
+    } catch {
+      // 업적 기록 실패 무시.
     }
   }
 

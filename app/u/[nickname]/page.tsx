@@ -8,6 +8,7 @@ import { and, eq, inArray, isNotNull, or } from 'drizzle-orm';
 import { db } from '@/lib/db/client';
 import { withTimeout } from '@/lib/db/with-timeout';
 import { getSessionUserId } from '@/lib/auth/session';
+import { getActiveServerId } from '@/lib/game/servers';
 import { getUserGuildBrief } from '@/lib/game/guild';
 import { getEnhancingUserCount } from '@/app/(game)/me/actions';
 import { profiles } from '@/lib/db/schema/profiles';
@@ -179,6 +180,12 @@ function parseServerParam(v: string | string[] | undefined): number {
   const n = Number(Array.isArray(v) ? v[0] : v);
   return Number.isInteger(n) && n >= 1 && n <= 32767 ? n : DEFAULT_SERVER_ID;
 }
+/** ?s 있으면 그 서버, 없으면 조회자 활성 서버(인앱 동일서버 링크 호환) → 비로그인 DEFAULT. */
+async function resolveServerId(v: string | string[] | undefined): Promise<number> {
+  const raw = Array.isArray(v) ? v[0] : v;
+  if (raw == null || raw === '') return getActiveServerId();
+  return parseServerParam(v);
+}
 
 export async function generateMetadata({
   params,
@@ -189,7 +196,7 @@ export async function generateMetadata({
 }): Promise<Metadata> {
   const { nickname: raw } = await params;
   const handle = decodeURIComponent(raw);
-  const serverId = parseServerParam((await searchParams).s);
+  const serverId = await resolveServerId((await searchParams).s);
   const data = await loadProfile(handle, serverId);
   if (!data) return { title: '인생강화' };
   // 카카오톡 공유 카드(BoastModal)와 문구 통일(2026-05-31 고정 문구 결정).
@@ -371,7 +378,7 @@ export default async function PublicProfilePage({
   searchParams: Promise<{ s?: string | string[] }>;
 }) {
   const { nickname: raw } = await params;
-  const serverId = parseServerParam((await searchParams).s);
+  const serverId = await resolveServerId((await searchParams).s);
   const data = await loadProfile(decodeURIComponent(raw), serverId);
   if (!data) notFound();
 

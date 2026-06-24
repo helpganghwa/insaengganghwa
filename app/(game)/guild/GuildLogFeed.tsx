@@ -1,8 +1,10 @@
 'use client';
 
 import type { ReactNode } from 'react';
+import Link from 'next/link';
 
 import type { GuildLogEntry } from '@/lib/game/guild/activity-log';
+import { profileHref } from '@/lib/game/profile/href';
 
 // 강조 색 — 줄 전체가 아니라 '중요 포인트' 토큰에만 적용.
 const C = {
@@ -13,6 +15,20 @@ const C = {
   violet: 'text-violet-600 dark:text-violet-400',
 };
 const hl = (text: string, cls: string) => <span className={`font-semibold ${cls}`}>{text}</span>;
+
+/** 유저 — 클릭 시 프로필 상세(/u/<공개코드>?s=서버). 코드 없으면 일반 텍스트. */
+function user(code: string | null, nick: string | null, serverId: number): ReactNode {
+  const label = nick ?? '알 수 없음';
+  if (!code) return label;
+  return (
+    <Link
+      href={profileHref(code, serverId)}
+      className="font-semibold text-sky-600 hover:underline dark:text-sky-400"
+    >
+      {label}
+    </Link>
+  );
+}
 
 function amountOf(detail: Record<string, unknown> | null): string {
   const a = detail?.amount;
@@ -28,15 +44,19 @@ function fmtFull(iso: string): string {
 }
 
 function message(e: GuildLogEntry): ReactNode {
-  const actor = e.actorNickname ?? '알 수 없음';
-  const target = e.targetNickname ?? '알 수 없음';
+  const actor = user(e.actorCode, e.actorNickname, e.serverId);
+  const target = user(e.targetCode, e.targetNickname, e.serverId);
   const zone = (e.detail?.zone as string) ?? '구역';
   const amt = amountOf(e.detail);
+  const item = (e.detail?.item as string) ?? '장비';
+  const level = (e.detail?.level as number) ?? 0;
+  const rank = (e.detail?.rank as number) ?? 0;
+  const medal = rank === 1 ? '🥇' : rank === 2 ? '🥈' : rank === 3 ? '🥉' : '';
   switch (e.action) {
     case 'join':
-      return e.detail?.founder ? `${actor}님이 길드를 결성했습니다` : `${actor}님이 길드에 가입했습니다`;
+      return e.detail?.founder ? <>{actor}님이 길드를 결성했습니다</> : <>{actor}님이 길드에 가입했습니다</>;
     case 'leave':
-      return `${actor}님이 길드를 떠났습니다`;
+      return <>{actor}님이 길드를 떠났습니다</>;
     case 'levelup':
       return <>길드가 {hl(`Lv.${(e.detail?.level as number) ?? '?'}`, C.amber)}을 달성했습니다</>;
     case 'tax_collect':
@@ -54,11 +74,23 @@ function message(e: GuildLogEntry): ReactNode {
     case 'set_vice':
       return <>{target}님이 {hl('부길드장', C.sky)}이 되었습니다</>;
     case 'unset_vice':
-      return `${target}님의 부길드장이 해제되었습니다`;
+      return <>{target}님의 부길드장이 해제되었습니다</>;
     case 'set_join_policy':
       return '가입 방식이 변경되었습니다';
     case 'auto_handover':
       return <>{target}님에게 {hl('길드장이 자동 위임', C.violet)}되었습니다</>;
+    // 업적 — 멤버.
+    case 'achv_enhance':
+      return <>{actor}님이 {item} {hl(`+${level} 강화`, C.amber)}에 성공했습니다</>;
+    case 'achv_transcend':
+      return <>{actor}님이 {item} {hl(`초월 +${level}`, C.violet)}을 달성했습니다</>;
+    case 'achv_melee':
+      return <>{actor}님이 대난투 {hl(`${medal}${rank}위`, C.amber)}에 올랐습니다</>;
+    // 업적 — 길드.
+    case 'achv_guild_power_rank':
+      return <>길드가 전투력 랭킹 {hl(`${medal}${rank}위`, C.emerald)}를 달성했습니다</>;
+    case 'achv_guild_zone_rank':
+      return <>길드가 점령지 랭킹 {hl(`${medal}${rank}위`, C.emerald)}를 달성했습니다</>;
     default:
       return e.action;
   }

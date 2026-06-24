@@ -24,7 +24,13 @@ export type GuildAuditAction =
   | 'tax_collect'
   | 'tax_distribute'
   | 'zone_capture'
-  | 'zone_lost';
+  | 'zone_lost'
+  // 업적 피드 — 멤버(강화 100단위·초월 10단위·대난투 1~3위) + 길드(전투력·점령지 랭킹 1~3위).
+  | 'achv_enhance'
+  | 'achv_transcend'
+  | 'achv_melee'
+  | 'achv_guild_power_rank'
+  | 'achv_guild_zone_rank';
 
 /**
  * 길드 활동 로그 1건 기록 — 호출자 트랜잭션(tx) 안에서 액션과 원자적으로 남긴다.
