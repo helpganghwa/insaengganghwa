@@ -31,31 +31,39 @@ export async function GET(req: Request) {
   const has = (k: string) => Boolean(process.env[k]);
 
   // 운영 DB(런타임) 주문/환불 현황 — 취소 시 자동 회수(웹훅) 됐는지 판별. PII 없이 상태·수치만.
-  const [statusRows, recentOrders, refundRows] = await Promise.all([
-    db
-      .select({ status: iapOrders.status, n: sql<number>`count(*)::int` })
-      .from(iapOrders)
-      .groupBy(iapOrders.status),
-    db
-      .select({
-        id: iapOrders.id,
-        product: iapOrders.productCode,
-        krw: iapOrders.amountKrw,
-        status: iapOrders.status,
-      })
-      .from(iapOrders)
-      .orderBy(desc(iapOrders.id))
-      .limit(8),
-    db
-      .select({
-        orderId: iapRefunds.orderId,
-        reason: iapRefunds.reason,
-        clawbackDone: iapRefunds.clawbackDone,
-      })
-      .from(iapRefunds)
-      .orderBy(desc(iapRefunds.id))
-      .limit(8),
-  ]).catch(() => [[], [], []] as const);
+  let statusRows: { status: string; n: number }[] = [];
+  let recentOrders: { id: bigint; product: string; krw: bigint; status: string }[] = [];
+  let refundRows: { orderId: bigint; reason: string; clawbackDone: boolean }[] = [];
+  let dbError: string | null = null;
+  try {
+    [statusRows, recentOrders, refundRows] = await Promise.all([
+      db
+        .select({ status: iapOrders.status, n: sql<number>`count(*)::int` })
+        .from(iapOrders)
+        .groupBy(iapOrders.status),
+      db
+        .select({
+          id: iapOrders.id,
+          product: iapOrders.productCode,
+          krw: iapOrders.amountKrw,
+          status: iapOrders.status,
+        })
+        .from(iapOrders)
+        .orderBy(desc(iapOrders.id))
+        .limit(8),
+      db
+        .select({
+          orderId: iapRefunds.orderId,
+          reason: iapRefunds.reason,
+          clawbackDone: iapRefunds.clawbackDone,
+        })
+        .from(iapRefunds)
+        .orderBy(desc(iapRefunds.id))
+        .limit(8),
+    ]);
+  } catch (e) {
+    dbError = (e as Error).message?.slice(0, 300) ?? 'db error';
+  }
 
   const num = (v: unknown) => (typeof v === 'bigint' ? Number(v) : v);
 
@@ -73,11 +81,12 @@ export async function GET(req: Request) {
         PORTONE_API_SECRET: has('PORTONE_API_SECRET'),
         PORTONE_WEBHOOK_SECRET: has('PORTONE_WEBHOOK_SECRET'),
       },
+      dbError, // null이면 정상. 'relation ... does not exist' 등이면 운영 DB 스키마/연결 문제
       orders: {
         byStatus: Object.fromEntries(statusRows.map((r) => [r.status, r.n])),
-        recent: recentOrders.map((o) => ({ ...o, krw: num(o.krw) })),
+        recent: recentOrders.map((o) => ({ ...o, id: num(o.id), krw: num(o.krw) })),
       },
-      refunds: refundRows, // 비어있으면 자동 회수(Cancelled 웹훅) 미작동 = 웹훅 미등록 가능성
+      refunds: refundRows.map((r) => ({ ...r, orderId: num(r.orderId) })), // 비어있으면 자동회수 미작동(웹훅 미등록 가능성)
     },
     { headers: { 'cache-control': 'no-store' } },
   );
