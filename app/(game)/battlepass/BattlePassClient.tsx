@@ -331,7 +331,9 @@ export function BattlePassClient({
       </div>
 
       {/* ── 내부 스크롤 — 강화 | 초월 좌우 ── */}
-      <div className="min-h-0 flex-1 overflow-y-auto overscroll-contain px-3 py-3">
+      <div className="flex min-h-0 flex-1 flex-col overflow-y-auto overscroll-contain">
+        {/* 컨텐츠 영역 — flex-1 유지(짧아도 footer를 하단으로 밀어냄). 함께 스크롤. */}
+        <div className="flex-1 px-3 py-3">
         <div className="flex gap-2.5">
           <PassColumn
             view={cols[0]!.view}
@@ -349,8 +351,9 @@ export function BattlePassClient({
             onPremiumLocked={onPremiumLocked}
           />
         </div>
+        </div>
 
-        {/* 전자상거래법 표시 — 컨텐츠 끝에 위치, 함께 스크롤(사업자정보·약관·환불 링크). */}
+        {/* 전자상거래법 표시 — 컨텐츠 패딩 영역 밖 전체폭, 컨텐츠와 함께 스크롤(사업자정보·약관·환불). */}
         <PublicFooter />
       </div>
     </div>

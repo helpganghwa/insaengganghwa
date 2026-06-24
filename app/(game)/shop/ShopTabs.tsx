@@ -429,7 +429,9 @@ export function ShopTabs({
 
   return (
     <div className="flex h-full flex-col">
-      <div className="min-h-0 flex-1 overflow-y-auto overscroll-contain px-3 py-3">
+      <div className="flex min-h-0 flex-1 flex-col overflow-y-auto overscroll-contain">
+        {/* 컨텐츠 영역 — flex-1 유지(짧아도 footer를 하단으로 밀어냄). 컨텐츠와 footer 모두 함께 스크롤. */}
+        <div className="flex-1 px-3 py-3">
         {/* 프리미엄 상단 배너 — 약간 큰 배너 카드 */}
         <ul className="mb-3">
           <BannerCard
@@ -564,8 +566,9 @@ export function ShopTabs({
             ))}
           </ul>
         )}
+        </div>
 
-        {/* 전자상거래법 표시 — 컨텐츠 끝에 위치, 함께 스크롤(사업자정보·약관·환불 링크, 심사 요건). */}
+        {/* 전자상거래법 표시 — 컨텐츠 패딩 영역 밖 전체폭, 컨텐츠와 함께 스크롤(사업자정보·약관·환불). */}
         <PublicFooter />
       </div>
     </div>
