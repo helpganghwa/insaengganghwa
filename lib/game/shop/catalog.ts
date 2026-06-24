@@ -62,6 +62,32 @@ export function shopGrant(productId: string): { diamond: number; boxes: number }
   return null;
 }
 
+/**
+ * 현금 결제 상품(현금 패키지 + 프리미엄 + 다이아 충전)의 결제 메타 — 가격(₩)·표시명.
+ * 결제 금액은 **서버 권위**(클라가 보낸 금액 무시) — 주문 생성·검증 모두 이 값으로만. null=결제 불가 상품(보급상자 등).
+ */
+const DIAMOND_NAME: Record<string, string> = {
+  starter: '입문 다이아 꾸러미',
+  small: '다이아 꾸러미',
+  medium: '다이아 상자',
+  large: '다이아 금고',
+  mega: '다이아 보물',
+};
+export function paidProduct(productId: string): { krw: number; orderName: string } | null {
+  if (productId === PREMIUM.id) return { krw: PREMIUM.krw, orderName: '성장 프리미엄' };
+  const d = DIAMONDS.find((x) => x.id === productId);
+  if (d)
+    return {
+      krw: d.krw,
+      orderName: `${DIAMOND_NAME[d.id] ?? '다이아 충전'} ${d.total.toLocaleString('ko-KR')}💎`,
+    };
+  for (const p of ['daily', 'weekly', 'monthly'] as Period[]) {
+    const c = CASH[p].find((x) => x.id === productId);
+    if (c) return { krw: c.krw, orderName: c.name };
+  }
+  return null;
+}
+
 /** 💎로 구매하는 보급상자(견습의 주머니) — id box_daily/weekly/monthly → 💎 비용 + 박스 수. */
 const BOX_ID: Record<string, Period> = {
   box_daily: 'daily',

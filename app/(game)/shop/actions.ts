@@ -8,6 +8,7 @@ import { requireAdmin } from '@/lib/auth/require-admin';
 import { claimFree, ShopFreeError, type FreeSlot } from '@/lib/game/shop/free';
 import { devPurchase } from '@/lib/game/shop/dev-purchase';
 import { buyBox, BuyBoxError } from '@/lib/game/shop/buy-box';
+import { createOrder, completePurchase, PurchaseError } from '@/lib/payment/purchase';
 
 /** 상점 무료 수령 — 결제 불필요. 주기 멱등(서버). */
 export async function claimFreeAction(slot: FreeSlot) {
@@ -39,6 +40,42 @@ export async function devPurchaseAction(productId: string) {
   } catch (e) {
     const code = e instanceof Error ? e.message : 'UNKNOWN';
     return { status: 'error', code } as const;
+  }
+}
+
+/**
+ * 실결제 주문 생성 — 포트원 결제창을 띄우기 직전 호출. 금액·지급량은 서버 카탈로그 권위.
+ * 반환값(paymentId·금액·storeId·channelKey)으로 클라가 PortOne.requestPayment 호출.
+ */
+export async function createOrderAction(productId: string) {
+  const u = await getSessionUserId();
+  if (!u) return { status: 'error', code: 'UNAUTHENTICATED' } as const;
+  try {
+    const o = await createOrder(u, await getActiveServerId(), productId);
+    return { status: 'success', order: o } as const;
+  } catch (e) {
+    if (e instanceof PurchaseError) return { status: 'error', code: e.code } as const;
+    console.error('[shop.createOrder]', e);
+    return { status: 'error', code: 'UNKNOWN' } as const;
+  }
+}
+
+/**
+ * 결제 완료 검증·지급 — 클라 결제창이 성공 콜백을 준 직후 호출(웹훅과 멱등 이중 안전망).
+ * 실제 지급은 포트원 서버에서 PAID·금액 재확인한 경우에만. 이미 지급됐으면 already로 무해.
+ */
+export async function verifyPurchaseAction(paymentId: string) {
+  const u = await getSessionUserId();
+  if (!u) return { status: 'error', code: 'UNAUTHENTICATED' } as const;
+  try {
+    const r = await completePurchase(paymentId);
+    if (!r.ok) return { status: 'error', code: r.code } as const;
+    revalidatePath('/shop');
+    revalidatePath('/');
+    return { status: 'success', already: r.already } as const;
+  } catch (e) {
+    console.error('[shop.verifyPurchase]', e);
+    return { status: 'error', code: 'UNKNOWN' } as const;
   }
 }
 

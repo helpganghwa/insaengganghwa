@@ -3,6 +3,7 @@ import { getActiveServerId } from '@/lib/game/servers';
 import { withTimeout } from '@/lib/db/with-timeout';
 import { getFreeStatus, FREE_SLOTS, type FreeSlot } from '@/lib/game/shop/free';
 import { getPurchaseStatus, getPremiumRemainingDays } from '@/lib/game/shop/dev-purchase';
+import { portoneConfig } from '@/lib/payment/purchase';
 
 import { ShopTabs } from './ShopTabs';
 
@@ -40,6 +41,7 @@ export default async function ShopPage({
     <ShopTabs
       free={free}
       isAdmin={isAdmin}
+      payEnabled={portoneConfig() !== null}
       purchased={purchased}
       premiumDays={premiumDays}
       initialTab={initialTab}

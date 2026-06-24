@@ -1,82 +1,23 @@
 import 'server-only';
 
-import { and, eq, sql } from 'drizzle-orm';
+import { and, eq } from 'drizzle-orm';
 
 import { db } from '@/lib/db/client';
-import { walletAdd } from '@/lib/game/wallet';
-import { userSupplyBoxes } from '@/lib/db/schema/supply';
 import { shopPurchases } from '@/lib/db/schema/shop';
-import { mailbox } from '@/lib/db/schema/mailbox';
-import { SUPPLY_SLOTS } from '@/lib/game/balance';
 
-import { shopGrant, productPeriod, PREMIUM } from './catalog';
+import { shopGrant, productPeriod } from './catalog';
 import { periodKey } from './period';
+import { applyProductGrant } from './grant';
 
 /**
  * 어드민 테스트 즉시 구매 — 결제 백엔드(포트원) 연동 전, 현금 상품을 결제 없이 바로 지급.
  * 호출자(action)에서 requireAdmin 가드 필수. 일일/주간/월간 상품은 그 기간 1회만(주기 멱등).
+ * 지급 자체는 실결제와 동일한 applyProductGrant(단일 진실 원천) — dev는 결제 검증만 생략.
  */
 export class ShopBuyError extends Error {
   constructor(public code: 'ALREADY_PURCHASED' | 'UNKNOWN_PRODUCT') {
     super(code);
     this.name = 'ShopBuyError';
-  }
-}
-
-function splitBoxes(n: number): Record<string, number> {
-  const base = Math.floor(n / SUPPLY_SLOTS.length);
-  const out: Record<string, number> = { weapon: base, armor: base, accessory: base };
-  let rem = n - base * SUPPLY_SLOTS.length;
-  for (let i = 0; rem > 0; i++, rem--) out[SUPPLY_SLOTS[i % SUPPLY_SLOTS.length]!]! += 1;
-  return out;
-}
-
-/** 보상을 우편으로 적재(다이아 + 슬롯 균등 분배 상자). 수령 시 claimMail이 지갑/상자 가산. */
-async function mailReward(
-  tx: Parameters<Parameters<typeof db.transaction>[0]>[0],
-  userId: string,
-  serverId: number,
-  g: { diamond: number; boxes: number },
-  meta: { title: string; body: string },
-): Promise<void> {
-  const dist = splitBoxes(g.boxes);
-  await tx.insert(mailbox).values({
-    userId,
-    serverId,
-    type: 'reward',
-    title: meta.title,
-    body: meta.body,
-    senderLabel: '성장 프리미엄',
-    payload: {
-      diamond: g.diamond,
-      boxes: { weapon: dist.weapon ?? 0, armor: dist.armor ?? 0, accessory: dist.accessory ?? 0 },
-    },
-  });
-}
-
-async function grant(
-  tx: Parameters<Parameters<typeof db.transaction>[0]>[0],
-  userId: string,
-  serverId: number,
-  g: { diamond: number; boxes: number },
-): Promise<void> {
-  if (g.diamond > 0) {
-    await walletAdd(tx, userId, serverId, g.diamond);
-  }
-  if (g.boxes > 0) {
-    const dist = splitBoxes(g.boxes);
-    for (const slot of SUPPLY_SLOTS) {
-      const n = dist[slot] ?? 0;
-      if (n > 0) {
-        await tx
-          .insert(userSupplyBoxes)
-          .values({ userId, serverId, slot, count: BigInt(n) })
-          .onConflictDoUpdate({
-            target: [userSupplyBoxes.userId, userSupplyBoxes.serverId, userSupplyBoxes.slot],
-            set: { count: sql`${userSupplyBoxes.count} + ${BigInt(n)}` },
-          });
-      }
-    }
   }
 }
 
@@ -90,48 +31,28 @@ export async function devPurchase(
   const period = productPeriod(productId);
 
   await db.transaction(async (tx) => {
-    if (!period) {
-      // 무제한(다이아 충전) — 기록 없이 지급.
-      await grant(tx, userId, serverId, g);
-      return;
+    if (period) {
+      // 주기 1회 제한 — row 잠금 후 현재 주기와 비교(이미 구매면 차단). 실결제는 createOrder가 사전체크.
+      const cur = periodKey(period);
+      await tx
+        .insert(shopPurchases)
+        .values({ userId, serverId, productId, periodKey: '' })
+        .onConflictDoNothing();
+      const [row] = await tx
+        .select({ periodKey: shopPurchases.periodKey })
+        .from(shopPurchases)
+        .where(
+          and(
+            eq(shopPurchases.userId, userId),
+            eq(shopPurchases.serverId, serverId),
+            eq(shopPurchases.productId, productId),
+          ),
+        )
+        .for('update');
+      if (row?.periodKey === cur) throw new ShopBuyError('ALREADY_PURCHASED');
     }
-    // 주기 1회 제한 — row 잠금 후 현재 주기와 비교(이미 구매면 차단).
-    const cur = periodKey(period);
-    await tx
-      .insert(shopPurchases)
-      .values({ userId, serverId, productId, periodKey: '' })
-      .onConflictDoNothing();
-    const [row] = await tx
-      .select({ periodKey: shopPurchases.periodKey })
-      .from(shopPurchases)
-      .where(
-        and(
-          eq(shopPurchases.userId, userId),
-          eq(shopPurchases.serverId, serverId),
-          eq(shopPurchases.productId, productId),
-        ),
-      )
-      .for('update');
-    if (row?.periodKey === cur) throw new ShopBuyError('ALREADY_PURCHASED');
-    if (productId === PREMIUM.id) {
-      // 성장 프리미엄 — 즉시 지급분을 우편으로(일일분은 로그인 드립 ensurePremiumDailyMail).
-      await mailReward(tx, userId, serverId, g, {
-        title: '성장 프리미엄 — 즉시 보상',
-        body: '성장 프리미엄 구매 감사합니다. 즉시 보상이 도착했어요. 매일 보상도 우편으로 찾아갑니다.',
-      });
-    } else {
-      await grant(tx, userId, serverId, g);
-    }
-    await tx
-      .update(shopPurchases)
-      .set({ periodKey: cur, updatedAt: new Date() })
-      .where(
-        and(
-          eq(shopPurchases.userId, userId),
-          eq(shopPurchases.serverId, serverId),
-          eq(shopPurchases.productId, productId),
-        ),
-      );
+    // 지급 + 주기 마킹 — 실결제(completePurchase)와 동일 경로.
+    await applyProductGrant(tx, userId, serverId, productId);
   });
 
   return g;

@@ -1,12 +1,14 @@
 'use client';
 
 import { useRef, useState, useTransition } from 'react';
+import { useRouter } from 'next/navigation';
 
 import { assetUrl } from '@/lib/asset-versions';
 import { useResourceToast, type HeaderReward } from '@/components/ResourceToast';
 import { useDiamond } from '@/components/DiamondContext';
 
 import { claimFreeAction, devPurchaseAction, buyBoxAction } from './actions';
+import { runCheckout } from './checkout';
 import type { FreeSlot } from '@/lib/game/shop/free';
 import { BOX, CASH, PREMIUM, DIAMONDS, productPeriod } from '@/lib/game/shop/catalog';
 
@@ -230,20 +232,25 @@ function BannerCard({
 export function ShopTabs({
   free: initialFree,
   isAdmin,
+  payEnabled,
   purchased: initialPurchased,
   premiumDays: initialPremiumDays,
   initialTab = 'daily',
 }: {
   free: Record<FreeSlot, boolean>;
   isAdmin: boolean;
+  /** 포트원 결제 설정 완료 여부 — true면 전 유저 실결제, false면 어드민만 테스트 즉시구매. */
+  payEnabled: boolean;
   purchased: string[];
   premiumDays: number | null;
   /** 딥링크용 초기 탭(예: 헤더 다이아 클릭 → ?tab=charge). */
   initialTab?: Tab;
 }) {
+  const router = useRouter();
   const { showHeaderToast } = useResourceToast();
   const { diamond, optimisticAdjust } = useDiamond();
   const [tab, setTab] = useState<Tab>(initialTab);
+  const [paying, setPaying] = useState(false);
   const [free, setFree] = useState(initialFree);
   const [claiming, setClaiming] = useState<FreeSlot | null>(null);
   const [purchased, setPurchased] = useState<Set<string>>(() => new Set(initialPurchased));
@@ -254,6 +261,9 @@ export function ShopTabs({
 
   const soon = () => showHeaderToast({ icon: '🛒', title: '준비 중입니다' });
   const isLimited = (id: string) => productPeriod(id) !== null;
+  // 결제 설정이 되어 있으면 전 유저 실결제, 아니면 어드민 테스트 즉시구매만 판매 가능.
+  const canSell = payEnabled || isAdmin;
+  const buy = (id: string) => (payEnabled ? onPay(id) : onBuy(id));
 
   // 구매 확인 무장(3초) — 같은 상품을 그 안에 다시 탭하면 확정.
   const armConfirm = (id: string) => {
@@ -319,6 +329,41 @@ export function ShopTabs({
         showHeaderToast({ icon: '⚠️', title: '구매 실패' });
       }
     });
+  };
+
+  // 실결제(포트원) — 전 유저. 주문 생성 → 결제창 → 서버 검증·지급. 지급 권위는 서버(웹훅+verify).
+  //  모바일은 결제창에서 페이지가 이동(/shop/pay/complete가 검증) → 아래 ok 분기는 PC 팝업 경로.
+  const onPay = (productId: string) => {
+    if (paying) return;
+    const limited = isLimited(productId);
+    if (limited && purchased.has(productId)) {
+      showHeaderToast({ icon: '🛒', title: '이미 구매완료한 상품입니다' });
+      return;
+    }
+    setPaying(true);
+    void (async () => {
+      const r = await runCheckout(productId, `${window.location.origin}/shop/pay/complete`);
+      setPaying(false);
+      if (r.ok) {
+        if (limited && productId !== PREMIUM.id) setPurchased((p) => new Set(p).add(productId));
+        if (productId === PREMIUM.id) setPremiumDays(PREMIUM.daily.days);
+        router.refresh(); // 다이아·보유 상자 등 서버 권위 상태 재동기화.
+        showHeaderToast({ icon: '✅', title: r.already ? '이미 지급된 결제입니다' : '구매 완료' });
+      } else if (r.reason === 'cancel') {
+        // 사용자 취소 — 조용히 무시.
+      } else {
+        const title =
+          r.code === 'MINOR_LIMIT'
+            ? '미성년 월 구매한도를 초과했습니다'
+            : r.code === 'ALREADY_PURCHASED'
+              ? '이미 구매완료한 상품입니다'
+              : r.code === 'AMOUNT_MISMATCH'
+                ? '결제 금액 오류 — 고객센터로 문의해 주세요'
+                : '결제에 실패했습니다';
+        if (r.code === 'ALREADY_PURCHASED') setPurchased((p) => new Set(p).add(productId));
+        showHeaderToast({ icon: '⚠️', title });
+      }
+    })();
   };
 
   // 💎로 보급상자 구매(견습의 주머니) — 전 유저. 잔액 사전체크 + 낙관 차감, 실패 시 복원.
@@ -401,7 +446,7 @@ export function ShopTabs({
             onClick={() =>
               premiumDays != null
                 ? showHeaderToast({ icon: '👑', title: `이용 중 — ${premiumDays}일 남음` })
-                : tapPaid(PREMIUM.id, isAdmin, () => onBuy(PREMIUM.id))
+                : tapPaid(PREMIUM.id, canSell, () => buy(PREMIUM.id))
             }
           />
         </ul>
@@ -476,7 +521,7 @@ export function ShopTabs({
                   price={won(c.krw)}
                   grayscale={purchased.has(c.id)}
                   confirming={confirm === c.id}
-                  onClick={() => tapPaid(c.id, isAdmin, () => onBuy(c.id))}
+                  onClick={() => tapPaid(c.id, canSell, () => buy(c.id))}
                 />
               );
             })}
@@ -513,7 +558,7 @@ export function ShopTabs({
                 detail=""
                 price={won(d.krw)}
                 confirming={confirm === d.id}
-                onClick={() => tapPaid(d.id, isAdmin, () => onBuy(d.id))}
+                onClick={() => tapPaid(d.id, canSell, () => buy(d.id))}
               />
             ))}
           </ul>

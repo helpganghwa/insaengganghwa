@@ -1,0 +1,194 @@
+import 'server-only';
+
+import { and, desc, eq, sql } from 'drizzle-orm';
+
+import { db } from '@/lib/db/client';
+import { iapOrders, monthlyPurchaseLimits, identityVerifications } from '@/lib/db/schema/payment';
+import { shopPurchases } from '@/lib/db/schema/shop';
+import { kstMonthString } from '@/lib/kst';
+import { paidProduct, shopGrant, productPeriod } from '@/lib/game/shop/catalog';
+import { periodKey } from '@/lib/game/shop/period';
+import { applyProductGrant } from '@/lib/game/shop/grant';
+
+import { getPortonePayment } from './portone';
+
+/** 미성년 월 결제 한도(원) — REGULATORY. 본인인증으로 미성년 확정된 계정만 적용. */
+const MINOR_MONTHLY_LIMIT_KRW = 70_000;
+
+export type PurchaseErrorCode =
+  | 'UNKNOWN_PRODUCT'
+  | 'ALREADY_PURCHASED' // 주기 상품 같은 주기 재구매
+  | 'MINOR_LIMIT' // 미성년 월 한도 초과
+  | 'CONFIG'; // 포트원 env 미설정
+
+export class PurchaseError extends Error {
+  constructor(public code: PurchaseErrorCode) {
+    super(code);
+    this.name = 'PurchaseError';
+  }
+}
+
+/** 포트원 공개 설정(클라 결제창에 필요) — 미설정이면 결제 비활성. */
+export function portoneConfig(): { storeId: string; channelKey: string } | null {
+  const storeId = process.env.NEXT_PUBLIC_PORTONE_STORE_ID;
+  const channelKey = process.env.NEXT_PUBLIC_PORTONE_CHANNEL_KEY;
+  if (!storeId || !channelKey) return null;
+  return { storeId, channelKey };
+}
+
+/** 계정의 미성년 여부 + 이번 달(KST) 누적 결제액. 본인인증 미시행(행 없음)이면 isMinor=false. */
+async function minorStatus(
+  userId: string,
+  kstMonth: string,
+): Promise<{ isMinor: boolean; monthlyKrw: number }> {
+  const [idRow, limitRow] = await Promise.all([
+    db
+      .select({ isAdult: identityVerifications.isAdult })
+      .from(identityVerifications)
+      .where(eq(identityVerifications.userId, userId))
+      .orderBy(desc(identityVerifications.verifiedAt))
+      .limit(1),
+    db
+      .select({ total: monthlyPurchaseLimits.totalKrw })
+      .from(monthlyPurchaseLimits)
+      .where(
+        and(eq(monthlyPurchaseLimits.userId, userId), eq(monthlyPurchaseLimits.kstMonth, kstMonth)),
+      )
+      .limit(1),
+  ]);
+  return {
+    isMinor: idRow[0] ? !idRow[0].isAdult : false,
+    monthlyKrw: Number(limitRow[0]?.total ?? 0n),
+  };
+}
+
+export type CreatedOrder = {
+  /** 포트원 결제창 paymentId(= portone_order_id, 멱등 키). */
+  paymentId: string;
+  orderName: string;
+  amountKrw: number;
+  storeId: string;
+  channelKey: string;
+};
+
+/**
+ * 주문 생성(pending) — 결제창 띄우기 직전. 금액·지급량은 **서버 카탈로그 권위**(클라 입력 무시).
+ *  사전 가드: ① 알 수 없는 상품 ② 주기 상품 같은 주기 재구매 ③ 미성년 월 한도 초과.
+ * 실제 지급은 결제 성사(웹훅/검증) 후 completePurchase에서만. 주기 사전체크는 비원자(드문 동시구매 경쟁은 허용).
+ */
+export async function createOrder(
+  userId: string,
+  serverId: number,
+  productId: string,
+): Promise<CreatedOrder> {
+  const cfg = portoneConfig();
+  if (!cfg) throw new PurchaseError('CONFIG');
+
+  const info = paidProduct(productId);
+  const g = shopGrant(productId);
+  if (!info || !g) throw new PurchaseError('UNKNOWN_PRODUCT');
+
+  const period = productPeriod(productId);
+  if (period) {
+    const [row] = await db
+      .select({ periodKey: shopPurchases.periodKey })
+      .from(shopPurchases)
+      .where(
+        and(
+          eq(shopPurchases.userId, userId),
+          eq(shopPurchases.serverId, serverId),
+          eq(shopPurchases.productId, productId),
+        ),
+      )
+      .limit(1);
+    if (row?.periodKey === periodKey(period)) throw new PurchaseError('ALREADY_PURCHASED');
+  }
+
+  const kstMonth = kstMonthString();
+  const { isMinor, monthlyKrw } = await minorStatus(userId, kstMonth);
+  if (isMinor && monthlyKrw + info.krw > MINOR_MONTHLY_LIMIT_KRW) {
+    throw new PurchaseError('MINOR_LIMIT');
+  }
+
+  const paymentId = `payment-${crypto.randomUUID()}`;
+  await db.insert(iapOrders).values({
+    serverId,
+    userId,
+    portoneOrderId: paymentId,
+    productCode: productId,
+    amountKrw: BigInt(info.krw),
+    diamondGranted: BigInt(g.diamond),
+    status: 'pending',
+  });
+
+  return {
+    paymentId,
+    orderName: info.orderName,
+    amountKrw: info.krw,
+    storeId: cfg.storeId,
+    channelKey: cfg.channelKey,
+  };
+}
+
+export type CompleteResult =
+  | { ok: true; already: boolean }
+  | { ok: false; code: 'ORDER_NOT_FOUND' | 'NOT_PAID' | 'AMOUNT_MISMATCH' };
+
+/**
+ * 결제 완료 처리 — 웹훅·클라 검증 양쪽에서 호출(멱등). portone_order_id로 주문 조회 →
+ * 포트원 서버에서 PAID·금액·통화 재확인 → 트랜잭션으로 주문 paid 전이 + 지급 + 월 누적 가산.
+ *  멱등: 이미 paid면 재지급 없이 already. 동시(웹훅+클라) 호출은 FOR UPDATE + status 가드로 1회만 지급.
+ *  금액 불일치(위변조 의심)는 지급하지 않고 AMOUNT_MISMATCH 반환(운영 알림 대상).
+ */
+export async function completePurchase(paymentId: string): Promise<CompleteResult> {
+  const [order] = await db
+    .select({
+      id: iapOrders.id,
+      userId: iapOrders.userId,
+      serverId: iapOrders.serverId,
+      productCode: iapOrders.productCode,
+      amountKrw: iapOrders.amountKrw,
+      status: iapOrders.status,
+    })
+    .from(iapOrders)
+    .where(eq(iapOrders.portoneOrderId, paymentId))
+    .limit(1);
+  if (!order) return { ok: false, code: 'ORDER_NOT_FOUND' };
+  if (order.status === 'paid') return { ok: true, already: true };
+
+  // 포트원 서버 권위 재확인 — PAID + 원화 + 주문 금액 일치만 지급(가상계좌 발급 단계는 입금 전이라 제외).
+  const pay = await getPortonePayment(paymentId);
+  if (pay.status !== 'PAID') return { ok: false, code: 'NOT_PAID' };
+  if (pay.currency !== 'KRW' || pay.amountTotal !== Number(order.amountKrw)) {
+    return { ok: false, code: 'AMOUNT_MISMATCH' };
+  }
+
+  const kstMonth = kstMonthString();
+  await db.transaction(async (tx) => {
+    // 주문 잠금 + 상태 재확인 — 동시 호출 중 1회만 지급(멱등 핵심).
+    const [locked] = await tx
+      .select({ status: iapOrders.status })
+      .from(iapOrders)
+      .where(eq(iapOrders.id, order.id))
+      .for('update');
+    if (!locked || locked.status === 'paid') return; // 이미 다른 호출이 지급 완료.
+
+    await tx
+      .update(iapOrders)
+      .set({ status: 'paid', paidAt: new Date() })
+      .where(eq(iapOrders.id, order.id));
+
+    await applyProductGrant(tx, order.userId, order.serverId, order.productCode);
+
+    // 월 누적 가산 — 미성년 한도 추적(전 계정 기록, 한도는 미성년만 createOrder서 적용).
+    await tx
+      .insert(monthlyPurchaseLimits)
+      .values({ userId: order.userId, kstMonth, totalKrw: order.amountKrw })
+      .onConflictDoUpdate({
+        target: [monthlyPurchaseLimits.userId, monthlyPurchaseLimits.kstMonth],
+        set: { totalKrw: sql`${monthlyPurchaseLimits.totalKrw} + ${order.amountKrw}` },
+      });
+  });
+
+  return { ok: true, already: false };
+}
