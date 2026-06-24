@@ -266,6 +266,15 @@ export function ShopTabs({
   const [, startTransition] = useTransition();
   const returnHandled = useRef(false);
 
+  // 서버 권위 상태 동기화 — router.refresh()로 prop이 갱신되면 로컬 state에 반영(결제 복귀 후 즉시
+  //  구매함 비활성). lazy useState는 prop 변경을 안 받으므로 prop 변경 시 명시 동기화.
+  useEffect(() => {
+    setPurchased(new Set(initialPurchased));
+  }, [initialPurchased]);
+  useEffect(() => {
+    setPremiumDays(initialPremiumDays);
+  }, [initialPremiumDays]);
+
   // 모바일 결제 복귀 — 포트원이 /shop?paymentId=…(&code=…)로 돌아오면 화면 내에서 검증·지급 확인.
   //  별도 페이지 없이 상점에서 처리. 처리 후 쿼리 제거(새로고침 시 재처리 방지). 지급 권위는 서버(웹훅 포함).
   useEffect(() => {
@@ -285,7 +294,7 @@ export function ShopTabs({
         const v = await verifyPurchaseAction(returnPaymentId);
         if (v.status === 'success') {
           router.refresh(); // 다이아·상자·프리미엄 등 서버 권위 상태 동기화.
-          showHeaderToast({ title: v.already ? '이미 지급된 결제입니다' : '구매 완료' });
+          showHeaderToast({ title: '구매 완료' });
         } else {
           showHeaderToast({
             title: v.code === 'AMOUNT_MISMATCH' ? '결제 금액 오류 — 문의 바랍니다' : '결제 확인 실패',
@@ -387,7 +396,7 @@ export function ShopTabs({
         if (limited && productId !== PREMIUM.id) setPurchased((p) => new Set(p).add(productId));
         if (productId === PREMIUM.id) setPremiumDays(PREMIUM.daily.days);
         router.refresh(); // 다이아·보유 상자 등 서버 권위 상태 재동기화.
-        showHeaderToast({ title: r.already ? '이미 지급된 결제입니다' : '구매 완료' });
+        showHeaderToast({ title: '구매 완료' });
       } else if (r.reason === 'cancel') {
         // 사용자 취소 — 조용히 무시.
       } else {

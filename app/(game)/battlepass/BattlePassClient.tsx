@@ -256,7 +256,7 @@ export function BattlePassClient({
         const v = await verifyPurchaseAction(returnPaymentId);
         if (v.status === 'success') {
           router.refresh();
-          showHeaderToast({ title: v.already ? '이미 처리된 결제입니다' : '성장패스 구매 완료' });
+          showHeaderToast({ title: '성장패스 구매 완료' });
         } else {
           setError('결제 확인에 실패했습니다.');
         }
@@ -275,7 +275,7 @@ export function BattlePassClient({
       setPaying(false);
       if (r.ok) {
         router.refresh();
-        showHeaderToast({ title: r.already ? '이미 구매한 구간입니다' : '성장패스 구매 완료' });
+        showHeaderToast({ title: '성장패스 구매 완료' });
       } else if (r.reason === 'cancel') {
         // 사용자 취소 — 조용히.
       } else {
