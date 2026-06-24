@@ -38,6 +38,10 @@ export type MeleeFinale = {
     cp: number;
     rank: number;
     avatar?: string | null;
+    /** 그 시점 소속 길드명·문장(스냅샷). 우승 후 탈퇴·길드변경·문양변경에도 당시 길드로 표시.
+     *  미소속=null, 구버전(스냅샷 전) 회차=undefined → 그 경우만 실시간 조회 폴백. */
+    guildName?: string | null;
+    guildEmblemUrl?: string | null;
   }[];
   /** [공격자 로컬idx, 타겟 로컬idx, 데미지, 타겟 잔여HP] — 시간순. 잔여HP ≤ 0 = 탈락. */
   events: [number, number, number, number][];

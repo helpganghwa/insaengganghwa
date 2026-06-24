@@ -126,6 +126,21 @@ export async function buildMeleeResultView(
         () => new Map<string, { emblemUrl: string | null; name: string }>(),
       )
     : new Map<string, { emblemUrl: string | null; name: string }>();
+  // 길드 = finale 스냅샷 우선(있으면 당시 길드, null=당시 미소속). 스냅샷 없는 구버전 회차만 실시간 폴백.
+  const snapGuild = new Map<string, { name: string | null; emblemUrl: string | null }>();
+  for (const r of finale.roster) {
+    if (r.guildName !== undefined || r.guildEmblemUrl !== undefined) {
+      snapGuild.set(r.userId, { name: r.guildName ?? null, emblemUrl: r.guildEmblemUrl ?? null });
+    }
+  }
+  const guildFor = (uid: string): { name: string; emblemUrl: string | null } | null => {
+    if (snapGuild.has(uid)) {
+      const sg = snapGuild.get(uid)!;
+      return sg.name ? { name: sg.name, emblemUrl: sg.emblemUrl } : null;
+    }
+    const g = rosterGuild.get(uid);
+    return g ? { name: g.name, emblemUrl: g.emblemUrl } : null;
+  };
   const podium = topRows.map((r) => ({
     rank: r.rank,
     nickname: snapNick.get(r.uid) ?? r.nickname,
@@ -137,17 +152,14 @@ export async function buildMeleeResultView(
         : (avatarOf.get(r.uid) ?? dft(r.rank)),
     attackSuccess: kills.get(r.uid) ?? 0,
     defenseSuccess: survives.get(r.uid) ?? 0,
-    guildName: rosterGuild.get(r.uid)?.name ?? null,
-    guildEmblemUrl: rosterGuild.get(r.uid)?.emblemUrl ?? null,
+    guildName: guildFor(r.uid)?.name ?? null,
+    guildEmblemUrl: guildFor(r.uid)?.emblemUrl ?? null,
   }));
   // 전투 재생 — 전원 그 회차 스냅샷 아바타(현재 아바타가 아니라 당시 모습). 챔피언도 동일.
   const rosterAvatars = finale.roster.map((r, i) => avatarOf.get(r.userId) ?? dft(i));
   const rosterCodes = finale.roster.map((r) => codeOf.get(r.userId) ?? null);
-  // 닉네임 밑 길드명·문양(점령전 재생과 동일). 미소속/조회실패는 null.
-  const rosterGuilds = finale.roster.map((r) => {
-    const g = rosterGuild.get(r.userId);
-    return g ? { name: g.name, emblemUrl: g.emblemUrl } : null;
-  });
+  // 닉네임 밑 길드명·문양(점령전 재생과 동일). 스냅샷 우선, 미소속/조회실패는 null.
+  const rosterGuilds = finale.roster.map((r) => guildFor(r.userId));
 
   const [meRow] = await withTimeout(
     db
