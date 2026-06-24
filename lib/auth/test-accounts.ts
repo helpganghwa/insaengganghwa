@@ -11,7 +11,9 @@ import 'server-only';
  *   프로필·스타터·거주지는 handle_new_user / set_default_residence 트리거가 자동 생성.
  */
 export function isTestLoginEnabled(): boolean {
-  return process.env.ALLOW_TEST_LOGIN === 'true';
+  // 'true' 외에 '1'/'yes'/'on'도 허용 — env에 1로 넣어도 동작(흔한 실수 흡수).
+  const v = (process.env.ALLOW_TEST_LOGIN ?? '').trim().toLowerCase();
+  return v === 'true' || v === '1' || v === 'yes' || v === 'on';
 }
 
 /**
