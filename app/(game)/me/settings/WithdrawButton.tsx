@@ -47,7 +47,7 @@ export function WithdrawButton() {
             <h2 className="mt-2 text-base font-bold">정말 탈퇴하시겠어요?</h2>
             <p className="mt-2 text-xs leading-relaxed text-zinc-500">
               캐릭터·아이템·강화·보급 등 모든 게임 데이터가 즉시 삭제되며 복구할 수 없어요.
-              결제 내역은 법령에 따라 보존됩니다. 같은 카카오로 다시 로그인하면 새로 시작합니다.
+              결제 내역은 법령에 따라 보존됩니다. 마음이 바뀌면 언제든 다시 가입할 수 있어요.
             </p>
             {err && (
               <p className="mt-3 rounded-lg bg-red-50 px-2 py-1.5 text-xs text-red-600 dark:bg-red-950/40 dark:text-red-300">

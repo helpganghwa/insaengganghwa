@@ -139,7 +139,7 @@ export type AdminMailLog = typeof adminMailLogs.$inferSelect;
 
 /**
  * 일일 보급 — 매일 KST 자정 기준 1회 자동 발송 멱등 가드.
- * PK (user_id, kst_day)로 동시·중복 발송 차단. 메일 자체는 mailbox에 별도 적재.
+ * PK (user_id, server_id, kst_day)로 동시·중복 발송 차단(서버별 1회). 메일 자체는 mailbox에 별도 적재.
  * ensureDailyMail()이 lazy 호출 — Cron 의존 X.
  */
 export const dailySupplyGrants = pgTable(

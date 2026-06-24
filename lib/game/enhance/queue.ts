@@ -6,7 +6,7 @@ import type { PgTransaction } from 'drizzle-orm/pg-core';
 import { db } from '@/lib/db/client';
 import { catalogItems, userEquipment } from '@/lib/db/schema/equipment';
 import { enhancementJobs } from '@/lib/db/schema/enhance';
-import { baseSuccessRateBp, enhanceDurationMs } from '@/lib/game/balance';
+import { baseSuccessRateBp, downRateBp, enhanceDurationMs } from '@/lib/game/balance';
 
 /**
  * (A) 강화 큐 등록 — CLAUDE §6.1. **강화 시도는 무료**(자원·제물 비용 없음, BALANCE §1).
@@ -102,6 +102,7 @@ export async function queueEnhanceInTx(
 
   const durationMs = enhanceDurationMs(fromLevel);
   const baseRateBp = baseSuccessRateBp(fromLevel);
+  const downBp = downRateBp(fromLevel);
   const completeAt = new Date(Date.now() + durationMs);
 
   try {
@@ -116,6 +117,7 @@ export async function queueEnhanceInTx(
         fromLevel,
         targetLevel,
         baseRateBp,
+        downRateBp: downBp,
         durationMs: BigInt(durationMs),
         completeAt,
         status: 'running',

@@ -51,6 +51,8 @@ export const enhancementJobs = pgTable(
     targetLevel: integer('target_level').notNull(),
     /** 등록 시점 baseRate 스냅샷(bp, 공시·감사). */
     baseRateBp: integer('base_rate_bp').notNull(),
+    /** 등록 시점 downRate 스냅샷(bp, 소급 금지). null=스냅샷 이전 in-flight 잡(resolve가 코드상수 폴백). */
+    downRateBp: integer('down_rate_bp'),
     /** 등록 시점 산정 d(target) (BALANCE §1.1). */
     durationMs: bigint('duration_ms', { mode: 'bigint' }).notNull(),
     startedAt: timestamp('started_at', { withTimezone: true }).notNull().defaultNow(),

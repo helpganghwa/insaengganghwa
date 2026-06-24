@@ -3,6 +3,7 @@ import { headers } from 'next/headers';
 import { Geist, Geist_Mono } from 'next/font/google';
 import { Analytics } from '@vercel/analytics/next';
 import './globals.css';
+import { ClientErrorReporter } from '@/components/ClientErrorReporter';
 
 const geistSans = Geist({
   variable: '--font-geist-sans',
@@ -117,6 +118,8 @@ export default function RootLayout({ children }: Readonly<{ children: React.Reac
     >
       <body className="flex min-h-full flex-col overscroll-none bg-zinc-950 text-zinc-50">
         {children}
+        {/* 전역 클라 에러 → 서버 로그 수집(Sentry 없이 v1 관측성). */}
+        <ClientErrorReporter />
         {/* Vercel Web Analytics — 트래픽·페이지뷰·Web Vitals(쿠키리스). 대시보드 Analytics 활성화 필요. */}
         <Analytics />
       </body>

@@ -69,6 +69,7 @@ export async function resolveEnhance(input: ResolveInput): Promise<ResolveResult
            j.user_id::text                   as user_id,
            j.from_level                      as from_level,
            j.base_rate_bp                    as base_rate_bp,
+           j.down_rate_bp                    as down_rate_bp,
            j.duration_ms::text               as duration_ms,
            j.total_reduced_ms::text          as total_reduced_ms,
            extract(epoch from j.started_at)  as started_epoch,
@@ -97,9 +98,10 @@ export async function resolveEnhance(input: ResolveInput): Promise<ResolveResult
   const totalMs = Math.max(1, endMs - startMs);
   const elapsedMs = Math.min(totalMs, Math.max(0, now - startMs));
   // BALANCE §1.2 — 3분기 outcome: success(시간 비례) / down(고정) / hold(잔여).
-  // baseRate는 등록 시 스냅샷(소급 금지). downRate는 ℓ만의 함수로 시간 무관 고정이라
-  // 코드 상수에서 산출(스냅샷 불요 — 코드 자체가 단일 진실).
-  const fixedDownBp = downRateBp(fromLevel);
+  // baseRate·downRate 모두 등록 시 스냅샷(소급 금지, CLAUDE §6.3). 스냅샷 이전 in-flight 잡은
+  // down_rate_bp가 null이라 코드 상수로 폴백(점진 마이그레이션).
+  const fixedDownBp =
+    job.down_rate_bp != null ? Number(job.down_rate_bp) : downRateBp(fromLevel);
   const probs = effectiveOutcomeProbsBp(baseRateBp, fixedDownBp, elapsedMs, totalMs);
   const effBp = probs.success;
 
