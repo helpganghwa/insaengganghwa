@@ -14,6 +14,7 @@ import { LocalToggle } from './SettingsControls';
 import { NicknameRow } from './NicknameRow';
 import { InstallAppButton } from './InstallAppButton';
 import { PushSettings } from './PushSettings';
+import { SupportModal } from './SupportModal';
 
 const APP_VERSION = '0.1.0'; // 출시 전 v0
 
@@ -34,6 +35,7 @@ export default async function SettingsPage() {
     db
       .select({
         nickname: characters.nickname,
+        publicCode: profiles.publicCode,
         verifiedAt: profiles.identityVerifiedAt,
         diamond: characters.diamond,
         nicknameChangedCount: characters.nicknameChangedCount,
@@ -116,7 +118,11 @@ export default async function SettingsPage() {
         <Divider />
         <SettingLink href="/probability" label="확률 공시" />
         <Divider />
-        <DisabledRow label="고객센터 문의" />
+        <SupportModal
+          nickname={p?.nickname ?? '플레이어'}
+          publicCode={p?.publicCode ?? '------'}
+          serverName={serverName}
+        />
       </Section>
 
       <Section title="앱 정보">
@@ -164,15 +170,6 @@ function SettingLink({ href, label }: { href: string; label: string }) {
     <Link href={href} className="flex items-center px-3 py-2.5">
       <span className="text-sm">{label}</span>
     </Link>
-  );
-}
-
-function DisabledRow({ label }: { label: string }) {
-  return (
-    <div className="flex items-center justify-between px-3 py-2.5">
-      <span className="text-sm text-zinc-400">{label}</span>
-      <span className="text-[11px] text-zinc-400">준비 중</span>
-    </div>
   );
 }
 
