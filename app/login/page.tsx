@@ -6,7 +6,7 @@ import { PublicFooter } from '@/components/PublicFooter';
 
 import { signInWithKakao, signInWithTestAccount, signInWithCredentials } from '@/lib/auth/actions';
 import { getSessionUserId } from '@/lib/auth/session';
-import { isTestLoginEnabled, TEST_ACCOUNTS, REVIEW_ACCOUNT_EMAIL } from '@/lib/auth/test-accounts';
+import { isTestLoginEnabled, TEST_ACCOUNTS } from '@/lib/auth/test-accounts';
 import { listServersPublic, latestOpenServerId } from '@/lib/game/server-select';
 import { ServerPicker } from './ServerPicker';
 
@@ -90,14 +90,10 @@ export default async function LoginPage({
         {/* 심사용 ID/PW 로그인 — 포트원·게임위 심사관이 카카오 없이 로그인. env로만 노출/차단. */}
         {reviewLogin ? (
           <form action={signInWithCredentials} className="w-full space-y-2 text-left">
-            <p className="text-center text-xs font-semibold text-amber-600 dark:text-amber-400">
-              🔑 심사용 로그인 (실운영 전 비활성)
-            </p>
             <input
               type="email"
               name="email"
               autoComplete="username"
-              defaultValue={REVIEW_ACCOUNT_EMAIL}
               placeholder="아이디(이메일)"
               className="w-full rounded-xl border border-zinc-300 bg-white px-3 py-2.5 text-sm dark:border-zinc-700 dark:bg-zinc-900"
             />
