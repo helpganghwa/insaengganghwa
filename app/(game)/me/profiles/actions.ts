@@ -88,11 +88,15 @@ export async function deleteProfile(profileId: string): Promise<ActionState> {
 
   // 최소 1개 보유(같은 서버 내) — 마지막 프로필은 삭제 불가.
   const [target] = await db
-    .select({ serverId: userProfiles.serverId })
+    .select({ serverId: userProfiles.serverId, options: userProfiles.options })
     .from(userProfiles)
     .where(and(eq(userProfiles.id, profileId), eq(userProfiles.userId, userId)))
     .limit(1);
   if (!target) return { status: 'error', message: '아바타를 찾을 수 없습니다.' };
+  // 기본 아바타(대장장이)는 삭제 불가 — 신고 처리 시 폴백으로 보존.
+  if ((target.options as { isDefault?: boolean } | null)?.isDefault === true) {
+    return { status: 'error', message: '기본 아바타는 삭제할 수 없습니다.' };
+  }
   const [c] = await db
     .select({ n: count() })
     .from(userProfiles)

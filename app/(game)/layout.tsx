@@ -6,8 +6,10 @@ import { after } from 'next/server';
 import { getSessionUserId } from '@/lib/auth/session';
 import { getAdminStatus } from '@/lib/auth/require-admin';
 import { getMaintenanceState } from '@/lib/game/system-mode';
+import { getBanState } from '@/lib/game/account/ban';
 import { withTimeout, DbTimeoutError } from '@/lib/db/with-timeout';
 import { MaintenanceScreen } from './MaintenanceScreen';
+import { BanScreen } from './BanScreen';
 import { ensureDailyMail, ensurePremiumDailyMail } from '@/lib/game/mailbox';
 import { loadLayoutData } from '@/lib/game/layout-data';
 import { getActiveServerId } from '@/lib/game/servers';
@@ -53,6 +55,10 @@ export default async function GameLayout({ children }: { children: React.ReactNo
     const { isAdmin } = await getAdminStatus();
     if (!isAdmin) return <MaintenanceScreen state={maint} />;
   }
+
+  // 계정 정지 게이트 — banned면 게임 대신 정지화면(사유·기간 노출). 조회 실패는 fail-open(통과).
+  const ban = await withTimeout(getBanState(userId), 1500, 'layout.ban').catch(() => null);
+  if (ban?.banned) return <BanScreen state={ban} />;
 
   // 일일 보급 + 성장 프리미엄 일일 보상 — KST 자정 1회 자동 발송(멱등 PK). 핫패스 비차단.
   //  after()로 응답 후 보장 실행 — bare non-await는 Fluid가 응답 후 인스턴스 회수 시 INSERT가
