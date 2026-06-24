@@ -43,8 +43,8 @@ insaengganghwa/
 │   ├── WIREFRAMES.md       # 화면 구조
 │   ├── REGULATORY.md       # 법규/등급분류
 │   ├── ROADMAP.md          # 개발 일정
-│   ├── AUTOMATION.md       # 1인 운영 자동화
-│   ├── ISSUES.md           # 발견 이슈 트래커
+│   ├── AUTOMATION.md       # 1인 운영 자동화 (예정)
+│   ├── ISSUES.md           # 발견 이슈 트래커 (예정)
 │   └── CHANGELOG.md        # (출시 후)
 ├── app/                     # Next.js App Router 라우트
 │   ├── (game)/             # 인증 필요 라우트 그룹
@@ -334,9 +334,9 @@ master/master-dev로 DB도 나눌 수 있는가 — **가능**. 두 방식:
 | 본인인증 | `REGULATORY.md` + `SCHEMA.md` |
 | 광고 | `GDD.md` + `SCHEMA.md` + `REGULATORY.md` |
 | 공유/자랑 | `GDD.md` + `SCHEMA.md` + `WIREFRAMES.md` |
-| 운영/어드민 | `AUTOMATION.md` + `SCHEMA.md` |
+| 운영/어드민 | `SCHEMA.md` (+ `AUTOMATION.md` 예정) |
 | UI/화면 | `WIREFRAMES.md` + `GDD.md` |
-| 새 이슈 발견 | `ISSUES.md`에 추가 + 영향 문서 업데이트 |
+| 새 이슈 발견 | 영향 문서 업데이트 (+ `ISSUES.md` 트래커 예정) |
 
 ---
 

@@ -26,13 +26,13 @@ http://localhost:5174
 | [docs/GDD.md](./docs/GDD.md) | 게임 디자인 ✅ |
 | [docs/BALANCE.md](./docs/BALANCE.md) | 강화/초월/전투력/보급/레이드/경제 수식 ✅ |
 | [docs/SCHEMA.md](./docs/SCHEMA.md) | DB 스키마 ✅ |
-| [docs/WIREFRAMES.md](./docs/WIREFRAMES.md) | 화면 구조 *(작성 예정)* |
-| [docs/ROADMAP.md](./docs/ROADMAP.md) | 개발 일정 *(작성 예정)* |
-| [docs/REGULATORY.md](./docs/REGULATORY.md) | 법규/등급분류 *(작성 예정)* |
+| [docs/WIREFRAMES.md](./docs/WIREFRAMES.md) | 화면 구조 ✅ |
+| [docs/ROADMAP.md](./docs/ROADMAP.md) | 개발 일정 ✅ |
+| [docs/REGULATORY.md](./docs/REGULATORY.md) | 법규/등급분류 ✅ |
 
 ## 진행 상태
 
-부트스트랩 ✅ · 기반 문서 ✅ · GDD ✅ · BALANCE ✅ · SCHEMA ✅ · WIREFRAMES/ROADMAP/REGULATORY ⏳ · 코드 구현 대기
+기반 문서 ✅ · 코드 구현(전 시스템 라이브) ✅ · **CBT 진행 중** · 출시 크리티컬 패스는 `docs/ROADMAP.md` 참조
 
 ## 라이선스
 
