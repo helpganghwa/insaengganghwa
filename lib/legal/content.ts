@@ -119,7 +119,7 @@ const PRIVACY = `
 | 수탁자 | 업무 |
 |--------|------|
 | Supabase | 데이터베이스·인증 호스팅 |
-| Vercel | 인프라·호스팅 |
+| Vercel | 인프라·호스팅·트래픽 분석(Web Analytics) |
 | 카카오 | 로그인 인증 |
 | 코리아포트원(PortOne) | 결제 연동·처리 |
 | PASS/KMC | 본인확인 |
