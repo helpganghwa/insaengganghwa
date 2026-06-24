@@ -6,12 +6,29 @@ import { db } from '@/lib/db/client';
 import { iapOrders, monthlyPurchaseLimits, identityVerifications } from '@/lib/db/schema/payment';
 import { characters } from '@/lib/db/schema/server';
 import { shopPurchases } from '@/lib/db/schema/shop';
+import { battlePassSegments } from '@/lib/db/schema/battlepass';
 import { kstMonthString } from '@/lib/kst';
+import { bpSegmentPriceKrw, type BattlePassType } from '@/lib/game/balance';
 import { paidProduct, shopGrant, productPeriod } from '@/lib/game/shop/catalog';
 import { periodKey } from '@/lib/game/shop/period';
 import { applyProductGrant } from '@/lib/game/shop/grant';
+import { applyBpSegmentPurchase } from '@/lib/game/battlepass';
 
 import { getPortonePayment } from './portone';
+
+/**
+ * 배틀패스(성장패스) 결제 상품코드 — `bp_<type>_<구간index>`(예: bp_enhance_2, bp_transcend_0).
+ * 가격은 balance(bpSegmentPriceKrw) 권위, 지급은 구간 해금+소급(applyBpSegmentPurchase).
+ */
+const BP_RE = /^bp_(enhance|transcend)_(\d+)$/;
+function parseBpProduct(productId: string): { type: BattlePassType; segmentIndex: number } | null {
+  const m = BP_RE.exec(productId);
+  if (!m) return null;
+  return { type: m[1] as BattlePassType, segmentIndex: Number(m[2]) };
+}
+function bpOrderName(type: BattlePassType, segmentIndex: number): string {
+  return `성장 ${type === 'enhance' ? '강화' : '초월'} 패스 ${segmentIndex + 1}구간`;
+}
 
 /** 미성년 월 결제 한도(원) — REGULATORY. 본인인증으로 미성년 확정된 계정만 적용. */
 const MINOR_MONTHLY_LIMIT_KRW = 70_000;
@@ -93,29 +110,57 @@ export async function createOrder(
   const cfg = portoneConfig();
   if (!cfg) throw new PurchaseError('CONFIG');
 
-  const info = paidProduct(productId);
-  const g = shopGrant(productId);
-  if (!info || !g) throw new PurchaseError('UNKNOWN_PRODUCT');
+  // 상품 해석 — 배틀패스 구간(bp_*) vs 상점 상품. 금액·지급은 서버 권위.
+  const bp = parseBpProduct(productId);
+  let krw: number;
+  let orderName: string;
+  let diamondGranted = 0;
 
-  const period = productPeriod(productId);
-  if (period) {
-    const [row] = await db
-      .select({ periodKey: shopPurchases.periodKey })
-      .from(shopPurchases)
+  if (bp) {
+    krw = bpSegmentPriceKrw(bp.type, bp.segmentIndex);
+    orderName = bpOrderName(bp.type, bp.segmentIndex);
+    // 이미 산 구간이면 차단(구간 row 존재 = 구매됨).
+    const [owned] = await db
+      .select({ idx: battlePassSegments.segmentIndex })
+      .from(battlePassSegments)
       .where(
         and(
-          eq(shopPurchases.userId, userId),
-          eq(shopPurchases.serverId, serverId),
-          eq(shopPurchases.productId, productId),
+          eq(battlePassSegments.userId, userId),
+          eq(battlePassSegments.serverId, serverId),
+          eq(battlePassSegments.passType, bp.type),
+          eq(battlePassSegments.segmentIndex, bp.segmentIndex),
         ),
       )
       .limit(1);
-    if (row?.periodKey === periodKey(period)) throw new PurchaseError('ALREADY_PURCHASED');
+    if (owned) throw new PurchaseError('ALREADY_PURCHASED');
+  } else {
+    const info = paidProduct(productId);
+    const g = shopGrant(productId);
+    if (!info || !g) throw new PurchaseError('UNKNOWN_PRODUCT');
+    krw = info.krw;
+    orderName = info.orderName;
+    diamondGranted = g.diamond;
+
+    const period = productPeriod(productId);
+    if (period) {
+      const [row] = await db
+        .select({ periodKey: shopPurchases.periodKey })
+        .from(shopPurchases)
+        .where(
+          and(
+            eq(shopPurchases.userId, userId),
+            eq(shopPurchases.serverId, serverId),
+            eq(shopPurchases.productId, productId),
+          ),
+        )
+        .limit(1);
+      if (row?.periodKey === periodKey(period)) throw new PurchaseError('ALREADY_PURCHASED');
+    }
   }
 
   const kstMonth = kstMonthString();
   const { isMinor, monthlyKrw } = await minorStatus(userId, kstMonth);
-  if (isMinor && monthlyKrw + info.krw > MINOR_MONTHLY_LIMIT_KRW) {
+  if (isMinor && monthlyKrw + krw > MINOR_MONTHLY_LIMIT_KRW) {
     throw new PurchaseError('MINOR_LIMIT');
   }
 
@@ -133,15 +178,15 @@ export async function createOrder(
     userId,
     portoneOrderId: paymentId,
     productCode: productId,
-    amountKrw: BigInt(info.krw),
-    diamondGranted: BigInt(g.diamond),
+    amountKrw: BigInt(krw),
+    diamondGranted: BigInt(diamondGranted),
     status: 'pending',
   });
 
   return {
     paymentId,
-    orderName: info.orderName,
-    amountKrw: info.krw,
+    orderName,
+    amountKrw: krw,
     storeId: cfg.storeId,
     channelKey: cfg.channelKey,
     customerName,
@@ -196,7 +241,13 @@ export async function completePurchase(paymentId: string): Promise<CompleteResul
       .set({ status: 'paid', paidAt: new Date() })
       .where(eq(iapOrders.id, order.id));
 
-    await applyProductGrant(tx, order.userId, order.serverId, order.productCode);
+    // 지급 — 배틀패스 구간 해금(소급 포함) vs 상점 상품. bp는 이미 보유면 null(멱등 무해).
+    const bp = parseBpProduct(order.productCode);
+    if (bp) {
+      await applyBpSegmentPurchase(tx, order.userId, order.serverId, bp.type, bp.segmentIndex);
+    } else {
+      await applyProductGrant(tx, order.userId, order.serverId, order.productCode);
+    }
 
     // 월 누적 가산 — 미성년 한도 추적(전 계정 기록, 한도는 미성년만 createOrder서 적용).
     await tx

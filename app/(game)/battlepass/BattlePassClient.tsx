@@ -1,6 +1,7 @@
 'use client';
 
-import { useState, useTransition } from 'react';
+import { useEffect, useRef, useState, useTransition } from 'react';
+import { useRouter } from 'next/navigation';
 
 import type { BattlePassView, BattlePassSegmentView } from '@/lib/game/battlepass';
 import type { BattlePassType } from '@/lib/game/balance';
@@ -8,6 +9,8 @@ import { assetUrl } from '@/lib/asset-versions';
 import { useResourceToast } from '@/components/ResourceToast';
 import { useDiamond } from '@/components/DiamondContext';
 import { PublicFooter } from '@/components/PublicFooter';
+import { runCheckout } from '@/app/(game)/shop/checkout';
+import { verifyPurchaseAction } from '@/app/(game)/shop/actions';
 
 import { claimSegmentAction, claimTierAction } from './actions';
 
@@ -92,7 +95,7 @@ function PassColumn({
   isClaimed: (line: Line, segIndex: number, level: number) => boolean;
   onClaimTier: (line: Line, level: number, s: BattlePassSegmentView) => void;
   onClaimSegment: (s: BattlePassSegmentView) => void;
-  onPremiumLocked: () => void;
+  onPremiumLocked: (passType: BattlePassType, segmentIndex: number) => void;
 }) {
   const icon = view.rewardKind === 'diamond' ? '💎' : '📦';
   const lvLabel = (l: number) => (view.passType === 'enhance' ? `+${l}` : `✦${l}`);
@@ -187,7 +190,7 @@ function PassColumn({
                 {!s.purchased ? (
                   <button
                     type="button"
-                    onClick={onPremiumLocked}
+                    onClick={() => onPremiumLocked(view.passType, s.index)}
                     style={{ width: PREMIUM_W }}
                     className="absolute inset-y-0 right-0 flex flex-col items-center justify-center gap-0.5 rounded bg-zinc-900/50 text-center text-[9px] font-bold leading-tight text-white backdrop-blur-[0.5px]"
                   >
@@ -218,15 +221,74 @@ function PassColumn({
 export function BattlePassClient({
   enhance,
   transcend,
+  returnPaymentId = null,
+  returnCode = null,
 }: {
   enhance: BattlePassView;
   transcend: BattlePassView;
+  /** 모바일 결제 복귀 — 포트원이 /battlepass?paymentId=…(&code=…)로 리다이렉트. 화면 내 검증. */
+  returnPaymentId?: string | null;
+  returnCode?: string | null;
 }) {
+  const router = useRouter();
   const [, startTransition] = useTransition();
   const [error, setError] = useState<string | null>(null);
   const [claimedKeys, setClaimedKeys] = useState<Set<string>>(new Set());
+  const [paying, setPaying] = useState(false);
+  const returnHandled = useRef(false);
   const { showHeaderToast } = useResourceToast();
   const { optimisticAdjust: adjustDiamond } = useDiamond();
+
+  // 모바일 결제 복귀 — /battlepass?paymentId=…(&code=…)로 돌아오면 화면 내 검증·지급 확인 후 쿼리 정리.
+  useEffect(() => {
+    if (returnHandled.current) return;
+    if (!returnPaymentId && !returnCode) return;
+    returnHandled.current = true;
+    window.history.replaceState(null, '', '/battlepass');
+    if (returnCode) {
+      if (returnCode !== 'PAY_CANCEL' && returnCode !== 'PAY_PROCESS_CANCELED') {
+        setError('결제가 완료되지 않았습니다.');
+      }
+      return;
+    }
+    if (returnPaymentId) {
+      void (async () => {
+        const v = await verifyPurchaseAction(returnPaymentId);
+        if (v.status === 'success') {
+          router.refresh();
+          showHeaderToast({ title: v.already ? '이미 처리된 결제입니다' : '성장패스 구매 완료' });
+        } else {
+          setError('결제 확인에 실패했습니다.');
+        }
+      })();
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  // 프리미엄 구간 결제 — 주문 생성 → 결제창 → 검증·해금(소급). 모바일은 /battlepass 복귀 후 위 useEffect가 처리.
+  const onBuyPremium = (passType: BattlePassType, segmentIndex: number) => {
+    if (paying) return;
+    setError(null);
+    setPaying(true);
+    void (async () => {
+      const r = await runCheckout(`bp_${passType}_${segmentIndex}`, `${window.location.origin}/battlepass`);
+      setPaying(false);
+      if (r.ok) {
+        router.refresh();
+        showHeaderToast({ title: r.already ? '이미 구매한 구간입니다' : '성장패스 구매 완료' });
+      } else if (r.reason === 'cancel') {
+        // 사용자 취소 — 조용히.
+      } else {
+        setError(
+          r.code === 'ALREADY_PURCHASED'
+            ? '이미 구매한 구간입니다.'
+            : r.code === 'MINOR_LIMIT'
+              ? '미성년 월 구매한도를 초과했습니다.'
+              : '결제에 실패했습니다.',
+        );
+      }
+    })();
+  };
 
   const keyOf = (pass: BattlePassType, line: Line, segIndex: number, level: number) =>
     `${pass}:${line}:${segIndex}:${level}`;
@@ -258,7 +320,7 @@ export function BattlePassClient({
     if (view.rewardKind === 'diamond') adjustDiamond(BigInt(amount));
     showHeaderToast({
       title: '성장패스 보상',
-      rewards: [{ icon: view.rewardKind === 'diamond' ? '💎' : '📦', amount }],
+      rewards: [{ icon: view.rewardKind === 'diamond' ? '💎' : '', amount }],
     });
     setError(null);
     startTransition(async () => {
@@ -301,7 +363,6 @@ export function BattlePassClient({
       claimOptimistic(view, items, sum, () => claimSegmentAction(view.passType, s.index));
     };
 
-  const onPremiumLocked = () => setError('프리미엄 결제는 준비 중입니다.');
 
   const cols = [enhance, transcend].map((view) => ({ view, isClaimed: makeIsClaimed(view) }));
 
@@ -340,7 +401,7 @@ export function BattlePassClient({
             isClaimed={cols[0]!.isClaimed}
             onClaimTier={onClaimTier(cols[0]!.view)}
             onClaimSegment={onClaimSegment(cols[0]!.view, cols[0]!.isClaimed)}
-            onPremiumLocked={onPremiumLocked}
+            onPremiumLocked={onBuyPremium}
           />
           <div className="w-px shrink-0 self-stretch bg-zinc-200 dark:bg-zinc-800" />
           <PassColumn
@@ -348,7 +409,7 @@ export function BattlePassClient({
             isClaimed={cols[1]!.isClaimed}
             onClaimTier={onClaimTier(cols[1]!.view)}
             onClaimSegment={onClaimSegment(cols[1]!.view, cols[1]!.isClaimed)}
-            onPremiumLocked={onPremiumLocked}
+            onPremiumLocked={onBuyPremium}
           />
         </div>
         </div>

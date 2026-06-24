@@ -438,6 +438,45 @@ export function claimSegment(
 // ── 프리미엄 구간 구매(결제 성공 후 지급 — 소급 포함) ─────────────────────────
 // 결제 백엔드(포트원) 연동 시 결제 검증 후 호출. 구매 즉시 이미 넘긴 단계 소급 수령.
 
+/**
+ * 프리미엄 구간 구매 지급(tx) — 소급 포함. **결제 트랜잭션·직접구매 공용 단일 원천**.
+ * 이미 구매한 구간이면 지급 없이 null(멱등) — 결제 컨텍스트는 null을 "이미 보유"로 무해 처리.
+ * getMaxReached는 읽기(별도 커넥션, 풀 max>1)라 tx 안에서 호출해도 안전.
+ */
+export async function applyBpSegmentPurchase(
+  tx: Parameters<Parameters<typeof db.transaction>[0]>[0],
+  userId: string,
+  serverId: number,
+  type: BattlePassType,
+  segmentIndex: number,
+): Promise<{ granted: number; rewardKind: 'diamond' | 'box' } | null> {
+  const startMinusOne = segmentIndex * BP_SEGMENT_SIZE[type];
+  const endLevel = bpSegmentEndLevel(type, segmentIndex);
+
+  const reached = await getMaxReached(userId, serverId);
+  const maxReached = type === 'enhance' ? reached.maxEnhance : reached.maxTranscend;
+  const target = Math.min(maxReached, endLevel);
+  const granted = bpRangeReward(type, startMinusOne, target, true);
+
+  // 구간 row 생성(이미 있으면 빈 결과 = 이미 구매) — 소급 지급분을 claimed 집합에 표기.
+  const ins = await tx
+    .insert(battlePassSegments)
+    .values({
+      userId,
+      serverId,
+      passType: type,
+      segmentIndex,
+      premiumClaimedTiers: tierLevelsIn(type, startMinusOne + 1, target),
+    })
+    .onConflictDoNothing()
+    .returning({ idx: battlePassSegments.segmentIndex });
+  if (ins.length === 0) return null;
+
+  await grantReward(tx, userId, serverId, type, granted);
+  return { granted, rewardKind: type === 'enhance' ? 'diamond' : 'box' };
+}
+
+/** 직접 구매(결제 미경유 테스트/소급) — 자체 트랜잭션. 이미 구매면 ALREADY_PURCHASED. */
 export function grantSegmentPurchase(
   userId: string,
   serverId: number,
@@ -445,28 +484,8 @@ export function grantSegmentPurchase(
   segmentIndex: number,
 ): Promise<{ granted: number; rewardKind: 'diamond' | 'box' }> {
   return db.transaction(async (tx) => {
-    const startMinusOne = segmentIndex * BP_SEGMENT_SIZE[type];
-    const endLevel = bpSegmentEndLevel(type, segmentIndex);
-
-    const reached = await getMaxReached(userId, serverId);
-    const maxReached = type === 'enhance' ? reached.maxEnhance : reached.maxTranscend;
-    const target = Math.min(maxReached, endLevel);
-    const granted = bpRangeReward(type, startMinusOne, target, true);
-
-    // 구간 row 생성(이미 있으면 ALREADY_PURCHASED) — 소급 지급분을 claimed 집합에 표기.
-    const ins = await tx
-      .insert(battlePassSegments)
-      .values({
-        userId,
-        passType: type,
-        segmentIndex,
-        premiumClaimedTiers: tierLevelsIn(type, startMinusOne + 1, target),
-      })
-      .onConflictDoNothing()
-      .returning({ idx: battlePassSegments.segmentIndex });
-    if (ins.length === 0) throw new BattlePassErr('ALREADY_PURCHASED');
-
-    await grantReward(tx, userId, serverId, type, granted);
-    return { granted, rewardKind: type === 'enhance' ? 'diamond' : 'box' };
+    const r = await applyBpSegmentPurchase(tx, userId, serverId, type, segmentIndex);
+    if (!r) throw new BattlePassErr('ALREADY_PURCHASED');
+    return r;
   });
 }
