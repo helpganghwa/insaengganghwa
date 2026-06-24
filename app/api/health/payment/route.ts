@@ -8,9 +8,12 @@
  *    비-public(PORTONE_STORE_ID/PORTONE_CHANNEL_KEY) 사용 권장.
  */
 import { NextResponse } from 'next/server';
+import { desc, sql } from 'drizzle-orm';
 
 import { getAdminStatus } from '@/lib/auth/require-admin';
 import { portoneConfig } from '@/lib/payment/purchase';
+import { db } from '@/lib/db/client';
+import { iapOrders, iapRefunds } from '@/lib/db/schema/payment';
 
 export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
@@ -27,6 +30,35 @@ export async function GET(req: Request) {
   // 동적 키 접근(process.env[k])이라 NEXT_PUBLIC도 빌드 인라인 없이 런타임 값을 본다(존재여부만).
   const has = (k: string) => Boolean(process.env[k]);
 
+  // 운영 DB(런타임) 주문/환불 현황 — 취소 시 자동 회수(웹훅) 됐는지 판별. PII 없이 상태·수치만.
+  const [statusRows, recentOrders, refundRows] = await Promise.all([
+    db
+      .select({ status: iapOrders.status, n: sql<number>`count(*)::int` })
+      .from(iapOrders)
+      .groupBy(iapOrders.status),
+    db
+      .select({
+        id: iapOrders.id,
+        product: iapOrders.productCode,
+        krw: iapOrders.amountKrw,
+        status: iapOrders.status,
+      })
+      .from(iapOrders)
+      .orderBy(desc(iapOrders.id))
+      .limit(8),
+    db
+      .select({
+        orderId: iapRefunds.orderId,
+        reason: iapRefunds.reason,
+        clawbackDone: iapRefunds.clawbackDone,
+      })
+      .from(iapRefunds)
+      .orderBy(desc(iapRefunds.id))
+      .limit(8),
+  ]).catch(() => [[], [], []] as const);
+
+  const num = (v: unknown) => (typeof v === 'bigint' ? Number(v) : v);
+
   return NextResponse.json(
     {
       deployment: process.env.VERCEL_DEPLOYMENT_ID ?? 'dev',
@@ -41,6 +73,11 @@ export async function GET(req: Request) {
         PORTONE_API_SECRET: has('PORTONE_API_SECRET'),
         PORTONE_WEBHOOK_SECRET: has('PORTONE_WEBHOOK_SECRET'),
       },
+      orders: {
+        byStatus: Object.fromEntries(statusRows.map((r) => [r.status, r.n])),
+        recent: recentOrders.map((o) => ({ ...o, krw: num(o.krw) })),
+      },
+      refunds: refundRows, // 비어있으면 자동 회수(Cancelled 웹훅) 미작동 = 웹훅 미등록 가능성
     },
     { headers: { 'cache-control': 'no-store' } },
   );
