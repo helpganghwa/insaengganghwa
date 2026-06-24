@@ -3,6 +3,7 @@
 import { useState, useTransition } from 'react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
+import { josa } from 'es-hangul';
 
 import type { Slot } from '@/lib/db/schema/equipment';
 import { TranscendSprite } from '@/components/TranscendSprite';
@@ -128,7 +129,7 @@ function EnhanceSlotPicker({
 
         {candidates.length === 0 ? (
           <div className="rounded-lg border border-dashed border-zinc-300 p-6 text-center text-xs text-zinc-500 dark:border-zinc-700">
-            강화 가능한 {SLOT_LABEL[slot]}이 없습니다.
+            강화 가능한 {josa(SLOT_LABEL[slot], '이/가')} 없습니다.
             <Link href="/gacha" className="mt-2 block text-[11px] text-amber-600 underline dark:text-amber-400">
               🎁 보급에서 획득 →
             </Link>
