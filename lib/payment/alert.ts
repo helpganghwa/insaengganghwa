@@ -4,6 +4,8 @@ import { and, eq } from 'drizzle-orm';
 
 import { db } from '@/lib/db/client';
 import { paymentAlerts } from '@/lib/db/schema/payment';
+import { profiles } from '@/lib/db/schema/profiles';
+import { sendPushToUsers } from '@/lib/push/send';
 
 /**
  * 결제 사고 알림 — PAYMENT-SAFETY.md.
@@ -78,8 +80,41 @@ export async function raisePaymentAlert(
     console.error('[payment-alert] persist failed', e);
   }
 
-  if (created) await notifyWebhook(kind, severity, paymentId, opts.detail);
+  if (created) {
+    // 두 즉시 채널 — 어드민 앱푸시(주 채널) + 선택 webhook. 둘 다 best-effort.
+    await Promise.allSettled([
+      notifyAdmins(kind, severity, opts.detail),
+      notifyWebhook(kind, severity, paymentId, opts.detail),
+    ]);
+  }
   return created;
+}
+
+/** 어드민(profiles.is_admin) 계정에 앱 푸시. category 'admin'=토글 무관 항상 발송. */
+async function notifyAdmins(
+  kind: PaymentAlertKind,
+  severity: Severity,
+  detail: string,
+): Promise<void> {
+  try {
+    const admins = await db
+      .select({ id: profiles.id })
+      .from(profiles)
+      .where(eq(profiles.isAdmin, true));
+    if (admins.length === 0) return;
+    await sendPushToUsers(
+      admins.map((a) => a.id),
+      {
+        title: `${SEV_EMOJI[severity]} 결제 사고: ${kind}`,
+        body: detail,
+        url: '/admin/alerts',
+        tag: 'payment-alert',
+        category: 'admin',
+      },
+    );
+  } catch (e) {
+    console.error('[payment-alert] admin push failed', e);
+  }
 }
 
 async function notifyWebhook(
