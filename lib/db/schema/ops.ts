@@ -30,10 +30,14 @@ export const probabilitySnapshots = pgTable('probability_snapshots', {
   createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
 });
 
-/** §10.2 system_mode — 단일 행(key='global'). 점검 모드 설계 테이블(현재 코드 read/write 미연결). */
+/** §10.2 system_mode — 단일 행(key='global'). 점검/긴급정지 킬스위치(lib/game/system-mode.ts). */
 export const systemMode = pgTable('system_mode', {
   key: text('key').primaryKey().default('global'),
   mode: systemModeValueEnum('mode').notNull().default('live'),
+  /** 점검 시작 예정(null=즉시). 도래 전엔 비활성. */
+  scheduledFrom: timestamp('scheduled_from', { withTimezone: true }),
+  /** 점검 종료 예정(null=무기한). 지나면 자동으로 live 간주. */
+  scheduledUntil: timestamp('scheduled_until', { withTimezone: true }),
   note: text('note'),
   updatedBy: uuid('updated_by'),
   updatedAt: timestamp('updated_at', { withTimezone: true }).notNull().defaultNow(),

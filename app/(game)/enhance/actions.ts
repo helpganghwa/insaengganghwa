@@ -5,6 +5,7 @@ import { and, eq, sql } from 'drizzle-orm';
 
 import { getSessionUserId } from '@/lib/auth/session';
 import { rateLimited } from '@/lib/ratelimit';
+import { getMaintenanceState } from '@/lib/game/system-mode';
 import { getActiveServerId } from '@/lib/game/servers';
 import { db } from '@/lib/db/client';
 import { enhancementJobs } from '@/lib/db/schema/enhance';
@@ -59,6 +60,7 @@ const MSG: Record<string, string> = {
   INSUFFICIENT_DIAMOND: '다이아가 부족합니다.',
   UNAUTHENTICATED: '로그인이 필요합니다.',
   RATE_LIMITED: '요청이 너무 빠릅니다. 잠시 후 다시 시도해 주세요.',
+  MAINTENANCE: '서버 점검 중입니다. 잠시 후 다시 시도해 주세요.',
   UNKNOWN: '알 수 없는 오류',
 };
 
@@ -80,6 +82,7 @@ export async function startEnhance(userEquipmentId: string) {
   const userId = await uid();
   if (!userId) return err('UNAUTHENTICATED');
   if (await rateLimited(userId, 'enhance')) return err('RATE_LIMITED');
+  if ((await getMaintenanceState()).active) return err('MAINTENANCE');
   try {
     const result = await queueEnhance({ userId, userEquipmentId: BigInt(userEquipmentId) });
     revalidateAll();
@@ -157,6 +160,7 @@ export async function reduceTimeWithGems(jobId: string, diamonds: number) {
   const userId = await uid();
   if (!userId) return err('UNAUTHENTICATED');
   if (await rateLimited(userId, 'enhance')) return err('RATE_LIMITED');
+  if ((await getMaintenanceState()).active) return err('MAINTENANCE');
   try {
     const result = await reduceEnhanceTime({ userId, jobId: BigInt(jobId), diamonds });
     revalidateAll();

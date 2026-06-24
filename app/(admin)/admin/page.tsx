@@ -87,6 +87,12 @@ const MENU: { href: string; icon: string; title: string; desc: string; external?
     title: '결제 사고 알림',
     desc: '미지급·환불 미회수·금액불일치 등 사고 감지 내역, 자동치유 재시도/해결 처리',
   },
+  {
+    href: '/admin/maintenance',
+    icon: '🔧',
+    title: '서버 점검',
+    desc: '점검/긴급정지 토글(시간지정·무기한). 일반 유저는 점검화면, 어드민은 정상 접근',
+  },
 ];
 
 export default async function AdminHubPage() {

@@ -4,7 +4,10 @@ import { redirect } from 'next/navigation';
 import { after } from 'next/server';
 
 import { getSessionUserId } from '@/lib/auth/session';
+import { getAdminStatus } from '@/lib/auth/require-admin';
+import { getMaintenanceState } from '@/lib/game/system-mode';
 import { withTimeout, DbTimeoutError } from '@/lib/db/with-timeout';
+import { MaintenanceScreen } from './MaintenanceScreen';
 import { ensureDailyMail, ensurePremiumDailyMail } from '@/lib/game/mailbox';
 import { loadLayoutData } from '@/lib/game/layout-data';
 import { getActiveServerId } from '@/lib/game/servers';
@@ -42,6 +45,14 @@ export default async function GameLayout({ children }: { children: React.ReactNo
   const userId = await getSessionUserId();
   if (!userId) redirect('/login');
   // 프로필/스타터 지급은 DB 트리거(handle_new_user) + 백필 마이그레이션 담당 — 핫패스 부트스트랩 없음.
+
+  // 서버 점검 게이트 — 점검 유효 + 비-어드민이면 게임 대신 풀사이즈 점검화면(로그인은 그룹 밖이라 접속 가능).
+  //  캐시(20s)라 대부분 DB 미접촉. 행 부재/조회 지연은 fail-open(점검 아님)으로 콜드스타트 안전.
+  const maint = await withTimeout(getMaintenanceState(), 1500, 'layout.maint').catch(() => null);
+  if (maint?.active) {
+    const { isAdmin } = await getAdminStatus();
+    if (!isAdmin) return <MaintenanceScreen state={maint} />;
+  }
 
   // 일일 보급 + 성장 프리미엄 일일 보상 — KST 자정 1회 자동 발송(멱등 PK). fire-and-forget(핫패스 비차단).
   const dailySid = await getActiveServerId();
