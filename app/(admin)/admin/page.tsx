@@ -1,5 +1,5 @@
 import Link from 'next/link';
-import { and, eq, gt, isNull, sql } from 'drizzle-orm';
+import { and, eq, gt, gte, inArray, isNull, lt, sql } from 'drizzle-orm';
 
 import { db } from '@/lib/db/client';
 import { paymentAlerts } from '@/lib/db/schema/payment';
@@ -14,7 +14,12 @@ export const dynamic = 'force-dynamic';
 /** 페이지별 미처리(액션 필요) 건수 — href 키로 배지 매핑. */
 async function pendingCounts(): Promise<Record<string, number>> {
   const one = async (q: Promise<{ n: number }[]>) => (await q)[0]?.n ?? 0;
-  const [alerts, reports, genFails] = await Promise.all([
+  // 아바타 검수 배지 = 오늘(KST) 미검수 = 종결 상태(통과/AI거절/실패)인데 운영자 결정 전.
+  const kstToday = new Date(Date.now() + 9 * 3600 * 1000).toISOString().slice(0, 10);
+  const dayMs = new Date(`${kstToday}T00:00:00+09:00`).getTime();
+  const dayStart = new Date(dayMs);
+  const dayEnd = new Date(dayMs + 24 * 3600 * 1000);
+  const [alerts, reports, genTodo] = await Promise.all([
     // 미해결 결제 사고.
     one(
       db
@@ -29,18 +34,25 @@ async function pendingCounts(): Promise<Record<string, number>> {
         .from(userProfiles)
         .where(and(gt(userProfiles.reportCount, 0), isNull(userProfiles.hiddenAt))),
     ),
-    // 생성 실패 + 운영자 미처리(분쟁 대상).
+    // 오늘 미검수(운영자 결정 전 종결 잡).
     one(
       db
         .select({ n: sql<number>`count(*)::int` })
         .from(profileGenerationJobs)
-        .where(and(eq(profileGenerationJobs.status, 'failed'), isNull(profileGenerationJobs.adminDecision))),
+        .where(
+          and(
+            inArray(profileGenerationJobs.status, ['accepted', 'rejected_ai', 'failed']),
+            isNull(profileGenerationJobs.adminDecision),
+            gte(profileGenerationJobs.createdAt, dayStart),
+            lt(profileGenerationJobs.createdAt, dayEnd),
+          ),
+        ),
     ),
   ]);
   return {
     '/admin/alerts': alerts,
     '/admin/reports': reports,
-    '/admin/profile-gen': genFails,
+    '/admin/profile-gen': genTodo,
   };
 }
 

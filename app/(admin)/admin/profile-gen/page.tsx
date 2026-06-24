@@ -5,6 +5,8 @@ import { profileGenerationJobs, userProfiles } from '@/lib/db/schema/avatar';
 import { characters } from '@/lib/db/schema/server';
 import { profiles } from '@/lib/db/schema/profiles';
 import { CATALOG_ITEMS } from '@/lib/game/equipment/catalog';
+import { spritePath } from '@/lib/game/equipment/sprite-manifest';
+import { assetUrl } from '@/lib/asset-versions';
 
 import { AdminSearch } from '../AdminSearch';
 import { AdminProfileGenActions } from './AdminProfileGenActions';
@@ -185,7 +187,6 @@ export default async function AdminProfileGenPage({
       ) : (
         rows.map((r, i) => {
           const rot = imgs[i]!;
-          const opts = (r.options ?? {}) as { gender?: string; race?: string; hairLength?: string };
           const eqs = (r.equipmentSnapshot ?? {}) as { weaponKey?: string; armorKey?: string; accessoryKey?: string };
           const verdict = (r.aiVerdict ?? null) as { pass?: boolean; reasons?: string[]; notes?: string } | null;
           const eqName = (key?: string) => (key ? (NAME_BY_CODE.get(key) ?? key) : '-');
@@ -241,14 +242,30 @@ export default async function AdminProfileGenPage({
                       <span>job {String(r.id)}</span>
                     </div>
                     <div className="text-[10px] text-zinc-500">{new Date(r.createdAt).toLocaleString('ko-KR')}</div>
-                    {/* 옵션 · 장비 */}
-                    <div className="text-[11px] text-zinc-300">
-                      {opts.gender === 'male' ? '남성' : opts.gender === 'female' ? '여성' : (opts.gender ?? '-')}
-                      {opts.race ? ` · ${opts.race}` : ''}
-                      {opts.hairLength ? ` · 머리 ${opts.hairLength}` : ''}
-                    </div>
-                    <div className="text-[11px] text-zinc-400">
-                      ⚔ {eqName(eqs.weaponKey)} · 🛡 {eqName(eqs.armorKey)} · 💍 {eqName(eqs.accessoryKey)}
+                    {/* 장비 3종 — 스프라이트 이미지 가로 배치(무기·방어구·장신구). */}
+                    <div className="flex gap-1.5 pt-0.5">
+                      {[eqs.weaponKey, eqs.armorKey, eqs.accessoryKey].map((k, idx) => {
+                        const p = k ? spritePath(k) : null;
+                        return (
+                          <div
+                            key={idx}
+                            title={eqName(k)}
+                            className="relative h-12 w-12 shrink-0 overflow-hidden rounded-md border border-zinc-800 bg-zinc-900/60"
+                          >
+                            {p ? (
+                              // eslint-disable-next-line @next/next/no-img-element
+                              <img
+                                src={assetUrl(p)}
+                                alt={eqName(k)}
+                                className="absolute inset-0 h-full w-full object-contain"
+                                style={{ imageRendering: 'pixelated' }}
+                              />
+                            ) : (
+                              <span className="flex h-full items-center justify-center text-[9px] text-zinc-600">-</span>
+                            )}
+                          </div>
+                        );
+                      })}
                     </div>
                     {/* AI 판단 */}
                     <div className="text-[11px]">
