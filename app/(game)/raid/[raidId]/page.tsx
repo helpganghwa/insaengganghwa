@@ -95,8 +95,9 @@ export default async function RaidDetail({ params }: { params: Promise<{ raidId:
     publicCode: string;
   }[]);
 
+  const serverId = await getActiveServerId();
   // 참가자 길드 문양 일괄(닉네임 옆 노출용) — 실패해도 레이드는 표시.
-  const guildBriefs = await getGuildBriefsByUsers(parts.map((p) => p.userId), await getActiveServerId()).catch(
+  const guildBriefs = await getGuildBriefsByUsers(parts.map((p) => p.userId), serverId).catch(
     () => new Map<string, { emblemUrl: string | null; name: string }>(),
   );
 
@@ -165,7 +166,7 @@ export default async function RaidDetail({ params }: { params: Promise<{ raidId:
 
   return (
     <div className="flex-1">
-      <RaidSessionCard view={view} />
+      <RaidSessionCard view={view} serverId={serverId} />
     </div>
   );
 }

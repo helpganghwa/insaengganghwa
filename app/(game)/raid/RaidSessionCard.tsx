@@ -1,4 +1,5 @@
 'use client';
+import { profileHref } from '@/lib/game/profile/href';
 
 import { useEffect, useRef, useState } from 'react';
 import { useRouter } from 'next/navigation';
@@ -138,7 +139,7 @@ function useCountdown(expireAtIso: string): { text: string; over: boolean; urgen
   return { text, over: false, urgent: ms < 60_000 };
 }
 
-export function RaidSessionCard({ view: v }: { view: RaidView }) {
+export function RaidSessionCard({ view: v, serverId }: { view: RaidView; serverId: number }) {
   const router = useRouter();
   const { showResource, showError, showHeaderToast } = useResourceToast();
   const { text: countdown, over, urgent } = useCountdown(v.expireAtIso);
@@ -629,7 +630,7 @@ export function RaidSessionCard({ view: v }: { view: RaidView }) {
               {visibleReqs.map((req) => (
                 <li key={req.userId} className="flex items-center gap-2 text-[12px]">
                   <Link
-                    href={`/u/${encodeURIComponent(req.publicCode)}`}
+                    href={profileHref(req.publicCode, serverId)}
                     className="min-w-0 flex-1 truncate font-medium hover:underline"
                   >
                     {req.nickname}
@@ -680,7 +681,7 @@ export function RaidSessionCard({ view: v }: { view: RaidView }) {
                     </span>
                     {/* 닉네임 클릭 → 본인 포함 모두 /u/<code> 공개 프로필(불변 코드). */}
                     <Link
-                      href={`/u/${encodeURIComponent(p.publicCode)}`}
+                      href={profileHref(p.publicCode, serverId)}
                       className="flex min-w-0 flex-1 items-center gap-1 font-medium hover:underline"
                     >
                       <span className="truncate">

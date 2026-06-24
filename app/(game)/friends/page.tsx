@@ -34,6 +34,7 @@ export default async function FriendsPage() {
 
   return (
     <FriendsTabs
+      serverId={serverId}
       friends={friends.map(attach)}
       incoming={requests.incoming.map(attach)}
       outgoing={requests.outgoing.map(attach)}

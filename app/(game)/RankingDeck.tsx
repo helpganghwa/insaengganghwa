@@ -5,6 +5,7 @@ import Link from 'next/link';
 
 import type { LeaderboardEntry, LeaderboardMetric } from '@/lib/game/leaderboard/queries';
 import { GuildBadge } from '@/components/GuildBadge';
+import { profileHref } from '@/lib/game/profile/href';
 
 /**
  * 홈 §1 — Top 3 명예의 전당 카드(클라이언트). 5종 덱을 미리 받아 표시 타입을 state로 소유 →
@@ -19,9 +20,11 @@ export type RankingDeckData = { metric: LeaderboardMetric; label: string; top: L
 export function RankingDeck({
   decks,
   initialIndex,
+  serverId,
 }: {
   decks: RankingDeckData[];
   initialIndex: number;
+  serverId: number;
 }) {
   const [i, setI] = useState(() =>
     Math.min(Math.max(0, Math.floor(initialIndex)), decks.length - 1),
@@ -119,7 +122,7 @@ export function RankingDeck({
             return (
               <Link
                 key={entry.userId}
-                href={`/u/${encodeURIComponent(entry.publicCode)}`}
+                href={profileHref(entry.publicCode, serverId)}
                 className={`flex min-w-0 flex-1 flex-col items-center self-stretch ${
                   first ? 'z-10' : ''
                 }`}

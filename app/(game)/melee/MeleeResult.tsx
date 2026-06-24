@@ -1,4 +1,5 @@
 'use client';
+import { profileHref } from '@/lib/game/profile/href';
 
 import { useEffect, useState } from 'react';
 import { createPortal } from 'react-dom';
@@ -420,10 +421,12 @@ function RankingView({
   podium,
   participantCount,
   edition,
+  serverId,
 }: {
   podium: MeleeResultView['podium'];
   participantCount: number;
   edition: number;
+  serverId: number;
 }) {
   const byRank = new Map(podium.map((p) => [p.rank, p]));
   const slots = [
@@ -468,7 +471,7 @@ function RankingView({
                 {p?.avatarUrl ? (
                   p.publicCode ? (
                     <Link
-                      href={`/u/${encodeURIComponent(p.publicCode)}`}
+                      href={profileHref(p.publicCode, serverId)}
                       aria-label={`${p.nickname} 프로필`}
                       className="absolute inset-0 block"
                     >
@@ -651,7 +654,7 @@ function FinalCard({
   );
 }
 
-export function MeleeResult({ view }: { view: MeleeResultView }) {
+export function MeleeResult({ view, serverId }: { view: MeleeResultView; serverId: number }) {
   const [tab, setTab] = useState<'log' | 'mine'>('log');
   const [fight, setFight] = useState<Fight | null>(null);
   const [fightKey, setFightKey] = useState(0);
@@ -675,7 +678,7 @@ export function MeleeResult({ view }: { view: MeleeResultView }) {
   } = view;
   /** 핸들(코드 또는 닉네임)로 프로필 상세 경로. 없으면 null(링크 없음). */
   const hrefOf = (handle: string | null | undefined) =>
-    handle ? `/u/${encodeURIComponent(handle)}` : null;
+    handle ? profileHref(handle, serverId) : null;
   const roster = finale.roster;
   const truncated = finale.events.length >= MELEE_REPLAY_ROUNDS;
   const finaleStart = totalRounds - finale.events.length;
@@ -884,7 +887,7 @@ export function MeleeResult({ view }: { view: MeleeResultView }) {
             }}
           />
         ) : (
-          <RankingView podium={podium} participantCount={participantCount} edition={edition} />
+          <RankingView podium={podium} participantCount={participantCount} edition={edition} serverId={serverId} />
         )}
         {/* 무대 하단 바 — [보상테이블] · [내 순위] · [역대우승자]. 랭킹 뷰일 때만. */}
         {!fight ? (

@@ -41,5 +41,5 @@ export default async function MeleeBattlePage({ params }: { params: Promise<{ id
   if (!battle || battle.status !== 'revealed') notFound();
 
   const view = await buildMeleeResultView(battle, userId);
-  return <MeleeResult view={view} />;
+  return <MeleeResult view={view} serverId={battle.serverId} />;
 }

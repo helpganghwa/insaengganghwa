@@ -1,6 +1,7 @@
 'use client';
 
 import { memo, useMemo, useState } from 'react';
+import { profileHref } from '@/lib/game/profile/href';
 import Link from 'next/link';
 
 import { LastSeen } from '@/components/LastSeen';
@@ -80,13 +81,13 @@ function EquipIcon({ item }: { item: Equipped | undefined }) {
 
 // 정렬 탭 전환 시 그룹 배열만 재정렬됨 — m 참조가 안정적이라 memo로 행 재렌더(특히 스프라이트
 // 캔버스 재드로우 최대 150개) 차단. InventoryGrid Tile과 동일 패턴.
-const MemberRow = memo(function MemberRow({ m, myUserId }: { m: RichMember; myUserId: string }) {
+const MemberRow = memo(function MemberRow({ m, myUserId, serverId }: { m: RichMember; myUserId: string; serverId: number }) {
   const bySlot = new Map(m.equipped.map((e) => [e.slot, e]));
   const isMe = m.userId === myUserId;
   return (
     <li>
       <Link
-        href={`/u/${encodeURIComponent(m.publicCode)}`}
+        href={profileHref(m.publicCode, serverId)}
         className="flex items-center gap-2 py-1.5 active:opacity-70"
       >
         {/* 아바타 */}
@@ -134,7 +135,7 @@ const MemberRow = memo(function MemberRow({ m, myUserId }: { m: RichMember; myUs
   );
 });
 
-export function GuildMemberList({ members, myUserId }: { members: RichMember[]; myUserId: string }) {
+export function GuildMemberList({ members, myUserId, serverId }: { members: RichMember[]; myUserId: string; serverId: number }) {
   const [sort, setSort] = useState<SortKey>('contribution');
 
   // 직책별 그룹(길드장/부길드장/길드원) — 각 그룹 내부는 선택한 메트릭으로 정렬.
@@ -180,7 +181,7 @@ export function GuildMemberList({ members, myUserId }: { members: RichMember[]; 
             </p>
             <ul>
               {rows.map((m) => (
-                <MemberRow key={m.userId} m={m} myUserId={myUserId} />
+                <MemberRow key={m.userId} m={m} myUserId={myUserId} serverId={serverId} />
               ))}
             </ul>
           </div>

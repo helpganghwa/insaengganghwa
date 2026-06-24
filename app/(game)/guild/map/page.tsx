@@ -24,6 +24,7 @@ export default async function WorldMapPage() {
       residenceZoneId={residenceZoneId}
       canSetResidence={userId != null}
       myUserId={userId}
+      serverId={serverId}
       chronicle={chronicle}
       adjacency={adjacency}
       zones={zones.map((z) => ({

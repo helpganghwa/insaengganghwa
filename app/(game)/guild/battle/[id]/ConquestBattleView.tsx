@@ -1,4 +1,5 @@
 'use client';
+import { profileHref } from '@/lib/game/profile/href';
 
 import { useEffect, useState } from 'react';
 import Link from 'next/link';
@@ -414,7 +415,7 @@ function RoundCard({
   );
 }
 
-export function ConquestBattleView({ view }: { view: View }) {
+export function ConquestBattleView({ view, serverId }: { view: View; serverId: number }) {
   const { roster, events, myGuildId } = view;
   const [tab, setTab] = useState<'all' | 'guild'>('all');
   const [fight, setFight] = useState<Fight | null>(null);
@@ -431,7 +432,7 @@ export function ConquestBattleView({ view }: { view: View }) {
     return m;
   })();
   const colorOf = (gid: string) => colorMap.get(gid) ?? '#71717a';
-  const hrefOf = (code: string | null) => (code ? `/u/${encodeURIComponent(code)}` : null);
+  const hrefOf = (code: string | null) => (code ? profileHref(code, serverId) : null);
   // 길드 → 문양 URL(공수 표식).
   const emblemMap = new Map(view.guilds.map((g) => [g.guildId, g.emblemUrl]));
   const emblemOf = (gid: string) => emblemMap.get(gid) ?? null;

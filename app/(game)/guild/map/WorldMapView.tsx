@@ -1,4 +1,5 @@
 'use client';
+import { profileHref } from '@/lib/game/profile/href';
 
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
@@ -86,11 +87,13 @@ function ChronicleText({
   zoneColor,
   onGuild,
   onZone,
+  serverId,
 }: {
   text: string;
   zoneColor: (name: string) => string | null;
   onGuild: (name: string) => void;
   onZone: (name: string) => void;
+  serverId: number;
 }) {
   const out: React.ReactNode[] = [];
   let last = 0;
@@ -116,7 +119,7 @@ function ChronicleText({
     } else if (type === 'u') {
       // 인물 — 웜 그레이(스톤), 밑줄 없음. 클릭 시 프로필 상세(/u/[nickname]).
       out.push(
-        <Link key={key++} href={`/u/${encodeURIComponent(name)}`} className="text-stone-500 dark:text-stone-400">
+        <Link key={key++} href={profileHref(name, serverId)} className="text-stone-500 dark:text-stone-400">
           {name}
         </Link>,
       );
@@ -168,6 +171,7 @@ export function WorldMapView({
   residenceZoneId,
   canSetResidence,
   myUserId,
+  serverId,
   chronicle,
   zones,
   adjacency,
@@ -176,6 +180,7 @@ export function WorldMapView({
   residenceZoneId: number | null;
   canSetResidence: boolean;
   myUserId: string | null;
+  serverId: number;
   chronicle: { today: string | null; list: { kstDay: string; headline: string }[] } | null;
   zones: Zone[];
   adjacency: { a: number; b: number }[];
@@ -526,6 +531,7 @@ export function WorldMapView({
                     className="whitespace-pre-line text-[13px] leading-relaxed text-zinc-600 dark:text-zinc-300"
                   >
                     <ChronicleText
+                      serverId={serverId}
                       text={para.trim()}
                       zoneColor={zoneColor}
                       onGuild={openGuildByName}
@@ -552,6 +558,7 @@ export function WorldMapView({
                   </span>
                   <span className="text-zinc-600 dark:text-zinc-300">
                     <ChronicleText
+                      serverId={serverId}
                       text={e.headline}
                       zoneColor={zoneColor}
                       onGuild={openGuildByName}

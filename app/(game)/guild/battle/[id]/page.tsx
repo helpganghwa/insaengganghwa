@@ -1,6 +1,7 @@
 import { notFound } from 'next/navigation';
 
 import { getSessionUserId } from '@/lib/auth/session';
+import { getActiveServerId } from '@/lib/game/servers';
 import { getConquestBattleById } from '@/lib/game/guild';
 import { buildConquestBattleView } from '@/lib/game/guild/conquest/battle-view';
 
@@ -19,6 +20,7 @@ export default async function ConquestBattlePage({ params }: { params: Promise<{
   const row = await getConquestBattleById(BigInt(id)).catch(() => null);
   if (!row) notFound();
 
+  const serverId = await getActiveServerId();
   const view = await buildConquestBattleView(row, userId);
-  return <ConquestBattleView view={view} />;
+  return <ConquestBattleView view={view} serverId={serverId} />;
 }

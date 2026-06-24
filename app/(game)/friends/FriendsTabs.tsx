@@ -2,6 +2,7 @@
 
 import { useState, useTransition } from 'react';
 import { useRouter } from 'next/navigation';
+import { profileHref } from '@/lib/game/profile/href';
 
 import { useResourceToast } from '@/components/ResourceToast';
 import { GuildBadge } from '@/components/GuildBadge';
@@ -107,10 +108,12 @@ export function FriendsTabs({
   friends: initFriends,
   incoming: initIncoming,
   outgoing: initOutgoing,
+  serverId,
 }: {
   friends: FriendUser[];
   incoming: FriendUser[];
   outgoing: FriendUser[];
+  serverId: number;
 }) {
   const router = useRouter();
   const { showHeaderToast } = useResourceToast();
@@ -130,7 +133,7 @@ export function FriendsTabs({
   const fail = (code?: string) => toast(ERR[code ?? 'UNKNOWN'] ?? ERR.UNKNOWN);
   const setRel = (id: string, relation: FriendRelation) =>
     setResults((prev) => prev?.map((x) => (x.userId === id ? { ...x, relation } : x)) ?? prev);
-  const openProfile = (u: FriendUser) => router.push(`/u/${encodeURIComponent(u.publicCode)}`);
+  const openProfile = (u: FriendUser) => router.push(profileHref(u.publicCode, serverId));
 
   const doSearch = () => {
     const term = q.trim();

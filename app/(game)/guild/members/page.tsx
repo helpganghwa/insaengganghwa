@@ -24,7 +24,7 @@ export default async function GuildMembersPage() {
 
   return (
     <div className="px-4 py-4">
-      <GuildMemberList members={members} myUserId={userId} />
+      <GuildMemberList members={members} myUserId={userId} serverId={serverId} />
     </div>
   );
 }

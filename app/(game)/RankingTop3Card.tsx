@@ -16,13 +16,14 @@ const METRICS: { metric: LeaderboardMetric; label: string }[] = [
 ];
 
 export async function RankingTop3Card() {
+  const serverId = await getActiveServerId();
   const decks = (
     await Promise.all(
-      METRICS.map(async (m) => ({ ...m, top: await getRankingTop(m.metric, await getActiveServerId(), 3) })),
+      METRICS.map(async (m) => ({ ...m, top: await getRankingTop(m.metric, serverId, 3) })),
     )
   ).filter((d) => d.top.length > 0);
   if (decks.length === 0) return null;
 
   const initialIndex = crypto.getRandomValues(new Uint32Array(1))[0]! % decks.length;
-  return <RankingDeck decks={decks} initialIndex={initialIndex} />;
+  return <RankingDeck decks={decks} initialIndex={initialIndex} serverId={serverId} />;
 }
