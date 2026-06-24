@@ -4,6 +4,7 @@ import { db } from '@/lib/db/client';
 import { iapOrders } from '@/lib/db/schema/payment';
 import { battlePassSegments } from '@/lib/db/schema/battlepass';
 import { characters } from '@/lib/db/schema/server';
+import { profiles } from '@/lib/db/schema/profiles';
 import { kstDateString } from '@/lib/kst';
 import { parseBpProduct } from '@/lib/payment/purchase';
 
@@ -35,6 +36,7 @@ export default async function AdminPaymentsPage({
       id: iapOrders.id,
       userId: iapOrders.userId,
       serverId: iapOrders.serverId,
+      portoneOrderId: iapOrders.portoneOrderId,
       product: iapOrders.productCode,
       krw: iapOrders.amountKrw,
       diamond: iapOrders.diamondGranted,
@@ -42,12 +44,14 @@ export default async function AdminPaymentsPage({
       paidAt: iapOrders.paidAt,
       createdAt: iapOrders.createdAt,
       nickname: characters.nickname,
+      code: profiles.publicCode,
     })
     .from(iapOrders)
     .leftJoin(
       characters,
       and(eq(characters.userId, iapOrders.userId), eq(characters.serverId, iapOrders.serverId)),
     )
+    .leftJoin(profiles, eq(profiles.id, iapOrders.userId))
     // KST 달력일 기준 하루치(created_at을 서울 시각으로 변환한 날짜가 date와 같은 것).
     .where(sql`(${iapOrders.createdAt} at time zone 'Asia/Seoul')::date = ${date}::date`)
     .orderBy(desc(iapOrders.id));
@@ -77,11 +81,13 @@ export default async function AdminPaymentsPage({
     return {
       id: r.id.toString(),
       serverId: r.serverId,
+      portoneOrderId: r.portoneOrderId,
       product: r.product,
       krw: Number(r.krw),
       diamond: Number(r.diamond),
       status: r.status,
       nickname: r.nickname ?? null,
+      code: r.code ?? null,
       paidAt: r.paidAt ? r.paidAt.toISOString() : null,
       createdAt: r.createdAt.toISOString(),
       bp: bp != null,

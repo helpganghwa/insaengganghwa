@@ -9,11 +9,15 @@ import { refundOrderAction } from './actions';
 export type OrderRow = {
   id: string;
   serverId: number;
+  /** 포트원 거래번호(paymentId) — 콘솔 대조용. */
+  portoneOrderId: string;
   product: string;
   krw: number;
   diamond: number;
   status: 'pending' | 'paid' | 'refunded';
   nickname: string | null;
+  /** 유저 고유코드 — 콘솔 주문자명·문의 식별 대조용. */
+  code: string | null;
   paidAt: string | null;
   createdAt: string;
   /** 배틀패스 구간 상품 여부. */
@@ -58,7 +62,14 @@ export function PaymentsClient({
   const [orders, setOrders] = useState(initial);
   const [pendingId, setPendingId] = useState<string | null>(null);
   const [msg, setMsg] = useState<string | null>(null);
+  const [copiedId, setCopiedId] = useState<string | null>(null);
   const [, startTransition] = useTransition();
+
+  const copyTxn = (txn: string) => {
+    void navigator.clipboard?.writeText(txn);
+    setCopiedId(txn);
+    setTimeout(() => setCopiedId((c) => (c === txn ? null : c)), 1500);
+  };
 
   const counts = orders.reduce(
     (a, o) => ((a[o.status] = (a[o.status] ?? 0) + 1), a),
@@ -154,6 +165,9 @@ export function PaymentsClient({
                 <div className="min-w-0 flex-1">
                   <div className="flex items-center gap-2">
                     <span className="truncate text-sm font-bold">{o.nickname ?? '(알수없음)'}</span>
+                    {o.code ? (
+                      <span className="shrink-0 font-mono text-[10px] text-sky-400">#{o.code}</span>
+                    ) : null}
                     <span
                       className={`shrink-0 rounded border px-1.5 py-px text-[10px] font-bold ${badge.cls}`}
                     >
@@ -167,6 +181,16 @@ export function PaymentsClient({
                     {o.product} · {won(o.krw)}
                     {o.diamond > 0 ? ` · 💎${o.diamond.toLocaleString('ko-KR')}` : ''}
                   </div>
+                  {/* 거래번호 — 포트원 콘솔 대조용. 클릭 시 복사. */}
+                  <button
+                    type="button"
+                    onClick={() => copyTxn(o.portoneOrderId)}
+                    title="거래번호 복사"
+                    className="mt-0.5 block max-w-full truncate text-left font-mono text-[10px] text-zinc-500 hover:text-zinc-300"
+                  >
+                    {copiedId === o.portoneOrderId ? '복사됨 ✓ ' : '거래 '}
+                    {o.portoneOrderId}
+                  </button>
                   <div className="mt-0.5 text-[10px] tabular-nums text-zinc-600">
                     {fmt(o.paidAt ?? o.createdAt)}
                   </div>

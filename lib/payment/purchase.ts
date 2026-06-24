@@ -5,6 +5,7 @@ import { and, desc, eq, sql } from 'drizzle-orm';
 import { db } from '@/lib/db/client';
 import { iapOrders, monthlyPurchaseLimits, identityVerifications } from '@/lib/db/schema/payment';
 import { characters } from '@/lib/db/schema/server';
+import { profiles } from '@/lib/db/schema/profiles';
 import { shopPurchases } from '@/lib/db/schema/shop';
 import { battlePassSegments } from '@/lib/db/schema/battlepass';
 import { kstMonthString } from '@/lib/kst';
@@ -166,13 +167,16 @@ export async function createOrder(
     throw new PurchaseError('MINOR_LIMIT');
   }
 
-  // 구매자 이름 — 이니시스 V2 일반결제 필수. 캐릭터 닉네임 사용(없으면 '구매자' 폴백).
+  // 구매자 이름 — 이니시스 V2 일반결제 필수. 닉네임 + 고유코드(포트원 콘솔에서 유저 식별용).
+  //  예: "대장장이1043(A1B2C3)". 닉네임 없으면 '구매자' 폴백.
   const [ch] = await db
-    .select({ nickname: characters.nickname })
+    .select({ nickname: characters.nickname, code: profiles.publicCode })
     .from(characters)
+    .innerJoin(profiles, eq(profiles.id, characters.userId))
     .where(and(eq(characters.userId, userId), eq(characters.serverId, serverId)))
     .limit(1);
-  const customerName = ch?.nickname?.trim() || '구매자';
+  const baseName = ch?.nickname?.trim() || '구매자';
+  const customerName = ch?.code ? `${baseName}(${ch.code})` : baseName;
 
   const paymentId = `payment-${crypto.randomUUID()}`;
   await db.insert(iapOrders).values({
