@@ -152,9 +152,16 @@ async function dispatch(subs: SubRow[], payload: PushPayload): Promise<SendResul
         ok++;
       } catch (e) {
         const status = (e as { statusCode?: number }).statusCode;
-        if (status === 404 || status === 410) {
+        const reason = String((e as { body?: string }).body ?? '');
+        // VAPID 키 불일치(403, 또는 Apple 400 VapidPkHashMismatch)는 영구 실패 — 구독을 다른 공개키로
+        // 만들었다는 뜻이라 현재 키로는 절대 안 간다. 죽은 것으로 보고 삭제 → 다음 방문 시 재구독해 자가복구.
+        const vapidMismatch = status === 403 || (status === 400 && reason.includes('VapidPkHashMismatch'));
+        if (status === 404 || status === 410 || vapidMismatch) {
           gone++;
           dead.push(s.id);
+          if (vapidMismatch) {
+            console.warn('[push] VAPID 키 불일치 — 구독 삭제(재구독 필요)', s.endpoint.slice(0, 40));
+          }
         } else {
           failed++;
           console.warn('[push] send failed', s.endpoint.slice(0, 40), status);
