@@ -72,9 +72,9 @@ export function worldEventMessage(e: WorldEventEntry, opts?: { link?: boolean })
   }
 }
 
-/** KST 'YYYY-MM-DD HH:mm:ss' — 수동 오프셋(서버/클라 동일, 하이드레이션 안전). */
+/** KST 'YYYY-MM-DD HH:mm' — 수동 오프셋(서버/클라 동일, 하이드레이션 안전). 초는 생략. */
 export function fmtWorldTime(iso: string): string {
   const dt = new Date(Date.parse(iso) + 9 * 3600 * 1000);
   const p = (n: number) => String(n).padStart(2, '0');
-  return `${dt.getUTCFullYear()}-${p(dt.getUTCMonth() + 1)}-${p(dt.getUTCDate())} ${p(dt.getUTCHours())}:${p(dt.getUTCMinutes())}:${p(dt.getUTCSeconds())}`;
+  return `${dt.getUTCFullYear()}-${p(dt.getUTCMonth() + 1)}-${p(dt.getUTCDate())} ${p(dt.getUTCHours())}:${p(dt.getUTCMinutes())}`;
 }
