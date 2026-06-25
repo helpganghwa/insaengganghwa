@@ -18,7 +18,7 @@ export type LegalSlug = 'terms' | 'privacy' | 'refund' | 'youth';
 
 export const LEGAL_META: Record<LegalSlug, { title: string; effectiveDate: string }> = {
   terms: { title: '이용약관', effectiveDate: '2026년 6월 23일' },
-  privacy: { title: '개인정보처리방침', effectiveDate: '2026년 6월 23일' },
+  privacy: { title: '개인정보처리방침', effectiveDate: '2026년 6월 25일' },
   refund: { title: '환불·청약철회 안내', effectiveDate: '2026년 6월 23일' },
   youth: { title: '청소년보호정책', effectiveDate: '2026년 6월 23일' },
 };
@@ -93,7 +93,7 @@ const PRIVACY = `
 | 구분 | 항목 | 방법 |
 |------|------|------|
 | 계정 | 카카오 회원번호, 이메일 | 카카오 로그인 |
-| 본인확인(필요 시) | 이름·생년월일·성별·내외국인·통신사·CI·DI | 본인인증기관(PASS/KMC) |
+| 본인확인(필요 시) | 이름·생년월일·성별·내외국인·통신사·휴대폰번호·CI·DI | 본인확인기관(KG이니시스 통합인증, 포트원 경유) |
 | 결제 | 결제 일시·금액·상품·수단 구분·거래 식별자 | 유료 결제 시 |
 | 알림(선택) | 푸시 구독 정보 | 푸시 동의 시 |
 | 자동 수집 | 접속 IP·쿠키·기기 정보·이용 기록 | 이용 중 자동 |
@@ -122,7 +122,7 @@ const PRIVACY = `
 | Vercel | 인프라·호스팅·트래픽 분석(Web Analytics) |
 | 카카오 | 로그인 인증 |
 | 코리아포트원(PortOne) | 결제 연동·처리 |
-| PASS/KMC | 본인확인 |
+| KG이니시스(주) | 통합본인인증 |
 | Resend | 이메일(영수증) 발송 |
 | Upstash | 어뷰징 방지 |
 | Anthropic | 프로필 콘텐츠 검수 |
@@ -143,7 +143,7 @@ const PRIVACY = `
 개인정보분쟁조정위원회(1833-6972) · 개인정보침해신고센터(118) · 경찰청 사이버수사국(182)에 상담·신고할 수 있습니다.
 
 ## 11. 고지
-방침이 변경되면 적용 7일 전에 공지합니다. 시행일: 2026년 6월 23일.
+방침이 변경되면 적용 7일 전에 공지합니다. 시행일: 2026년 6월 25일.
 `;
 
 const REFUND = `
