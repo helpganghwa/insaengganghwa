@@ -20,7 +20,7 @@ export function WorldLogFeed({ entries, full = false }: { entries: WorldEventEnt
       {entries.map((e) => (
         <li
           key={e.id}
-          className={`flex gap-2 ${full ? 'items-start px-3 py-1 text-[12px] leading-snug' : 'items-center py-1 text-[11px] leading-tight'}`}
+          className={`flex gap-2 ${full ? 'items-start px-3 py-1 text-[11px] leading-snug' : 'items-center py-1 text-[11px] leading-tight'}`}
         >
           <span
             className={`min-w-0 flex-1 text-zinc-700 dark:text-zinc-300 ${full ? 'whitespace-normal break-words' : 'truncate'}`}

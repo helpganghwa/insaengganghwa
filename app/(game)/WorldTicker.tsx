@@ -6,7 +6,7 @@ import Link from 'next/link';
 import type { WorldEventEntry } from '@/lib/game/world/event';
 import { worldEventMessage } from './world-message';
 
-const ROLL_MS = 600;
+const ROLL_MS = 700;
 
 /**
  * 월드 소식 티커 — 헤더 하단 고정(sticky top-0, 스크롤 컨테이너=main). 최근 N건을 한 줄씩 세로
@@ -51,8 +51,8 @@ export function WorldTicker({ entries }: { entries: WorldEventEntry[] }) {
           className="block"
           style={{
             transform: rolling ? 'translateY(-100%)' : 'translateY(0)',
-            // 쫄깃하게 — 살짝 오버슈트하는 스프링(back ease-out). 원위치 복귀는 무전환(점프 방지).
-            transition: rolling ? `transform ${ROLL_MS}ms cubic-bezier(0.34, 1.56, 0.64, 1)` : 'none',
+            // 부드럽게 — 오버슈트 없는 표준 이징(두 줄이 같은 속도로 함께 위로). 복귀는 무전환(점프 방지).
+            transition: rolling ? `transform ${ROLL_MS}ms cubic-bezier(0.4, 0, 0.2, 1)` : 'none',
           }}
         >
           <span className={slot}>
