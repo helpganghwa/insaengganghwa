@@ -74,18 +74,6 @@ html {
     100% { box-shadow: 0 0 0 0 rgba(228, 228, 231, 0); }
   }
 
-  /* 월드 소식 티커 — 세로 롤링: 이전 줄은 위로 빠지고 다음 줄이 아래에서 올라옴.
-     쫄깃하게 — 살짝 오버슈트하는 스프링 이징(back ease-out). */
-  --animate-roll-in: roll-in 0.42s cubic-bezier(0.34, 1.56, 0.64, 1);
-  --animate-roll-out: roll-out 0.42s cubic-bezier(0.34, 1.56, 0.64, 1);
-  @keyframes roll-in {
-    0%   { opacity: 0; transform: translateY(110%); }
-    100% { opacity: 1; transform: translateY(0); }
-  }
-  @keyframes roll-out {
-    0%   { opacity: 1; transform: translateY(0); }
-    100% { opacity: 0; transform: translateY(-110%); }
-  }
 
   @keyframes boss-float {
     0%, 100% { transform: translateY(0); }
