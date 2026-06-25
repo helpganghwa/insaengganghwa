@@ -16,7 +16,7 @@ import { DailySupplyCard } from './DailySupplyCard';
 import { HomeBannerCarousel } from './HomeBannerCarousel';
 import { HubCheckinCard } from './HubCheckinCard';
 import { RankingTop3Card } from './RankingTop3Card';
-import { WorldLogFeed } from './WorldLogFeed';
+import { WorldTicker } from './WorldTicker';
 
 /**
  * WIREFRAMES §1 — 홈 (메뉴 허브). 오늘의 보급(미수령 시) + 2×N 메뉴 그리드.
@@ -246,13 +246,15 @@ export default async function HomePage() {
     }
   }
 
-  // 월드 소식 — 서버 전체 주목 사건(홈 하단). 별도 인덱스 1쿼리. 콜드/hang 시 빈 배열로 degrade.
+  // 월드 소식 티커 — 헤더 하단 고정, 최근 10건 롤링(클릭 시 /world 전체). 콜드/hang 시 빈 배열로 degrade.
   const worldFeed = userId
-    ? await withTimeout(getWorldFeed(serverId, 40), 2500, 'home.worldfeed').catch(() => [])
+    ? await withTimeout(getWorldFeed(serverId, 10), 2500, 'home.worldfeed').catch(() => [])
     : [];
 
   return (
-    <div className="flex flex-col gap-3 px-4 py-4">
+    <>
+      {worldFeed.length > 0 && <WorldTicker entries={worldFeed} />}
+      <div className="flex flex-col gap-3 px-4 py-4">
       <RankingTop3Card />
       <HomeBannerCarousel>
         {hasUnclaimedDaily ? <DailySupplyCard /> : null}
@@ -333,12 +335,7 @@ export default async function HomePage() {
         })}
       </div>
 
-      {/* 월드 소식 — 서버 전체 주목 사건(길드 로그의 월드판). 타이틀 없이 로그만. 사건 없으면 미노출. */}
-      {worldFeed.length > 0 && (
-        <section className="rounded-2xl border border-zinc-200 bg-white p-3 dark:border-zinc-800 dark:bg-zinc-950">
-          <WorldLogFeed entries={worldFeed} />
-        </section>
-      )}
-    </div>
+      </div>
+    </>
   );
 }
