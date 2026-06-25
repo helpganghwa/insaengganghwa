@@ -10,6 +10,23 @@ import { useEffect } from 'react';
  */
 const MAX_PER_SESSION = 8;
 
+// Safari/모바일에서 fetch가 내비게이션·탭전환·화면잠금·약전파로 취소될 때 흔한 양성 거부.
+// 실제 코드 버그가 아니라 네트워크 노이즈라 수집에서 제외(패널 신호 보존). 소문자 부분일치.
+const BENIGN_PATTERNS = [
+  'load failed', // Safari: fetch 실패/취소
+  'failed to fetch', // Chrome/Edge: 동일
+  'networkerror', // Firefox 등
+  'network request failed',
+  'the operation was aborted',
+  'aborterror',
+  'cancelled',
+  'the network connection was lost',
+];
+const isBenign = (message: string) => {
+  const m = message.toLowerCase();
+  return BENIGN_PATTERNS.some((b) => m.includes(b));
+};
+
 export function ClientErrorReporter() {
   useEffect(() => {
     let sent = 0;
@@ -17,6 +34,7 @@ export function ClientErrorReporter() {
 
     const report = (kind: string, message: string, stack?: string) => {
       if (sent >= MAX_PER_SESSION) return;
+      if (message && isBenign(message)) return; // 양성 네트워크 노이즈 제외
       const key = `${kind}:${message}`.slice(0, 200);
       if (seen.has(key)) return;
       seen.add(key);
