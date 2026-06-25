@@ -1,12 +1,14 @@
 import 'server-only';
 
-import { and, desc, eq, inArray, sql } from 'drizzle-orm';
+import { and, desc, eq, inArray, isNotNull, sql } from 'drizzle-orm';
 
 import { db } from '@/lib/db/client';
 import { worldEvents, rankingLeaders } from '@/lib/db/schema/world';
 import { characters } from '@/lib/db/schema/server';
 import { profiles } from '@/lib/db/schema/profiles';
+import { guilds, zones } from '@/lib/db/schema/guild';
 import { getRankingTop, type LeaderboardMetric } from '@/lib/game/leaderboard/queries';
+import { getGuildRanking } from '@/lib/game/guild/queries';
 
 /** 월드 피드 사건 종류. detail 스키마는 각 logWorldEvent 호출부 + WorldLogFeed 렌더 참조. */
 export type WorldEventType =
@@ -132,6 +134,49 @@ export async function runRankingLeaders(serverId: number): Promise<number> {
         target: [rankingLeaders.serverId, rankingLeaders.metric],
         set: { userId: leader.userId, updatedAt: sql`now()` },
       });
+  }
+  return logged;
+}
+
+/**
+ * 길드 전투력·점령지 1위 교체 감지(준실시간 cron) — world_events 피드 자체를 "직전 1위" 상태로
+ * 사용(별도 추적 테이블 불필요). 동type 최신 이벤트의 guildId와 현재 1위가 다르면 기록.
+ * 길드 수가 적어 첫 관측도 발표(시드 억제 없음). 일일 길드 업적(top3 feed)과는 분리.
+ */
+export async function runGuildLeaders(serverId: number): Promise<number> {
+  // 전투력 1위 + 점령지(소유 구역 수) 1위.
+  const power = (await getGuildRanking(serverId, 1))[0] ?? null;
+  const [zoneTop] = await db
+    .select({ guildId: zones.ownerGuildId, n: sql<number>`count(*)::int` })
+    .from(zones)
+    .where(and(eq(zones.serverId, serverId), isNotNull(zones.ownerGuildId)))
+    .groupBy(zones.ownerGuildId)
+    .orderBy(desc(sql`count(*)`))
+    .limit(1);
+
+  const targets = [
+    ['guild_power_1', power?.id ?? null],
+    ['guild_zone_1', zoneTop?.guildId ?? null],
+  ] as const;
+
+  let logged = 0;
+  for (const [type, guildId] of targets) {
+    if (guildId == null) continue;
+    // 직전 발표된 1위 = 동type 최신 이벤트의 guildId(피드 = 상태). 같으면 스킵.
+    const [last] = await db
+      .select({ guildId: worldEvents.guildId })
+      .from(worldEvents)
+      .where(and(eq(worldEvents.serverId, serverId), eq(worldEvents.type, type)))
+      .orderBy(desc(worldEvents.id))
+      .limit(1);
+    if (last?.guildId === guildId) continue;
+    const [g] = await db
+      .select({ name: guilds.name })
+      .from(guilds)
+      .where(eq(guilds.id, guildId))
+      .limit(1);
+    await logWorldEvent(serverId, type, { guildName: g?.name ?? '길드' }, { guildId });
+    logged += 1;
   }
   return logged;
 }
