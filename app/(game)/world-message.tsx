@@ -7,7 +7,8 @@ import { profileHref } from '@/lib/game/profile/href';
 // 강조 색 — 핵심 토큰에만(GuildLogFeed와 통일).
 const C = {
   amber: 'text-amber-600 dark:text-amber-400',
-  emerald: 'text-emerald-600 dark:text-emerald-400',
+  // 길드색 — 한 단계 톤다운(눈에 덜 띄게)
+  emerald: 'text-emerald-700 dark:text-emerald-500',
   violet: 'text-violet-600 dark:text-violet-400',
 };
 const hl = (text: string, cls: string) => <span className={`font-semibold ${cls}`}>{text}</span>;
@@ -28,11 +29,12 @@ function userNode(
   link: boolean,
 ): ReactNode {
   const label = nick ?? '알 수 없음';
-  if (!link || !code) return <span className="font-semibold text-sky-600 dark:text-sky-400">{label}</span>;
+  // 유저색 — 한 단계 톤다운(눈에 덜 띄게)
+  if (!link || !code) return <span className="font-semibold text-sky-700 dark:text-sky-500">{label}</span>;
   return (
     <Link
       href={profileHref(code, serverId)}
-      className="font-semibold text-sky-600 hover:underline dark:text-sky-400"
+      className="font-semibold text-sky-700 hover:underline dark:text-sky-500"
     >
       {label}
     </Link>
