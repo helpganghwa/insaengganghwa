@@ -63,6 +63,10 @@
       "schedule": "40 15 * * *"
     },
     {
+      "path": "/api/cron/rank-leader",
+      "schedule": "7,22,37,52 * * * *"
+    },
+    {
       "path": "/api/cron/guild-leader-handover",
       "schedule": "0 3 * * *"
     }
