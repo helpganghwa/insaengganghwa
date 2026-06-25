@@ -16,12 +16,10 @@ export default async function WorldPage() {
   const serverId = await getActiveServerId();
   const feed = await withTimeout(getWorldFeed(serverId, 100), 3000, 'world.feed').catch(() => []);
 
+  // 풀와이드 — 카드/사이드 패딩 없이 화면 폭 전체. 타이틀 없음.
   return (
-    <div className="px-4 py-4">
-      <h1 className="mb-3 px-1 text-base font-bold">월드 소식</h1>
-      <section className="rounded-2xl border border-zinc-200 bg-white p-3 dark:border-zinc-800 dark:bg-zinc-950">
-        <WorldLogFeed entries={feed} full />
-      </section>
+    <div className="py-1">
+      <WorldLogFeed entries={feed} full />
     </div>
   );
 }

@@ -16,23 +16,20 @@ export function WorldTicker({ entries }: { entries: WorldEventEntry[] }) {
 
   useEffect(() => {
     if (n <= 1) return;
-    const id = setInterval(() => setI((p) => (p + 1) % n), 3500);
+    const id = setInterval(() => setI((p) => (p + 1) % n), 5000);
     return () => clearInterval(id);
   }, [n]);
 
   if (n === 0) return null;
   const e = entries[i % n]!;
 
+  // 스크롤 컨테이너는 main(헤더는 그 위 별도 행)이라 top-0이 곧 헤더 바로 아래.
   return (
     <Link
       href="/world"
       aria-label="월드 소식 전체 보기"
-      className="sticky z-20 flex items-center gap-2 border-b border-zinc-200 bg-white/90 px-4 py-2 backdrop-blur active:bg-zinc-50 dark:border-zinc-800 dark:bg-zinc-950/90 dark:active:bg-zinc-900"
-      style={{ top: 'calc(env(safe-area-inset-top) + 3rem)' }}
+      className="sticky top-0 z-20 flex items-center gap-2 border-b border-zinc-200 bg-white/90 px-4 py-2.5 backdrop-blur active:bg-zinc-50 dark:border-zinc-800 dark:bg-zinc-950/90 dark:active:bg-zinc-900"
     >
-      <span aria-hidden className="shrink-0 text-[11px] leading-none">
-        📢
-      </span>
       {/* key=이벤트 id → 회전 시 재마운트되며 등장 애니메이션 재생 */}
       <span
         key={e.id}
