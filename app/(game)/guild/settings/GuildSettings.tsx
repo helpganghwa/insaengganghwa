@@ -38,6 +38,7 @@ type Role = 'leader' | 'vice' | 'member';
 type JoinRequest = { userId: string; nickname: string };
 type MemberLite = { userId: string; nickname: string; role: Role };
 type SettingsView = {
+  name: string;
   taxPool: string;
   joinPolicy: GuildJoinPolicy;
   notice: string;
@@ -48,19 +49,14 @@ type SettingsView = {
 };
 type EmblemItem = { id: string; emblemUrl: string | null; emblemColor: string | null; isActive: boolean };
 
-// 통일 버튼 스타일 — 모두 rounded-lg. 섹션 주버튼(md) / 인라인 액션(sm, 색만 변형).
+// 통일 버튼 스타일 — 모두 rounded-lg. 섹션 주버튼(primary/ghost) + 가입신청 인라인(smPrimary/smNeutral).
+// 구성원 액션은 색버튼 나열 대신 ⋯ 액션시트로 모음(아래 actionMember).
 const BTN = {
   primary: 'rounded-lg bg-amber-600 px-3.5 py-1.5 text-[12px] font-bold text-white active:opacity-90 disabled:opacity-40',
   ghost: 'rounded-lg px-3 py-1.5 text-[12px] font-semibold text-zinc-500 disabled:opacity-50',
   smPrimary: 'rounded-lg bg-amber-600 px-2.5 py-1 text-[11px] font-bold text-white disabled:opacity-50',
   smNeutral:
     'rounded-lg border border-zinc-300 px-2.5 py-1 text-[11px] font-semibold text-zinc-600 disabled:opacity-50 dark:border-zinc-700 dark:text-zinc-300',
-  smSky:
-    'rounded-lg border border-sky-300 px-2.5 py-1 text-[11px] font-semibold text-sky-600 disabled:opacity-50 dark:border-sky-800 dark:text-sky-400',
-  smAmber:
-    'rounded-lg border border-amber-300 px-2.5 py-1 text-[11px] font-semibold text-amber-600 disabled:opacity-50 dark:border-amber-800 dark:text-amber-400',
-  smDanger:
-    'rounded-lg border border-red-300 px-2.5 py-1 text-[11px] font-semibold text-red-500 disabled:opacity-50 dark:border-red-900/60',
 } as const;
 
 export function GuildSettings({
@@ -196,6 +192,9 @@ export function GuildSettings({
     confirmLabel: string;
     onConfirm: () => void;
   } | null>(null);
+
+  // 구성원 액션 시트 — 행에 색버튼 나열 대신 ⋯로 모아 정리(컴팩트·모던·통일).
+  const [actionMember, setActionMember] = useState<MemberLite | null>(null);
 
   const setVice = (userId: string, makeVice: boolean) => {
     const prev = memberList;
@@ -427,6 +426,27 @@ export function GuildSettings({
 
   return (
     <div className="space-y-3 px-3 py-3">
+      {/* 헤더 — 길드 문양 + 이름 + 관리 컨텍스트(다른 상세 화면과 통일). */}
+      <div className="flex items-center gap-2.5 px-0.5">
+        <div className="flex h-10 w-10 shrink-0 items-center justify-center overflow-hidden rounded-xl bg-zinc-100 dark:bg-zinc-900">
+          {guild.emblemUrl ? (
+            // eslint-disable-next-line @next/next/no-img-element
+            <img
+              src={guild.emblemUrl}
+              alt="길드 문양"
+              className="h-full w-full object-contain"
+              style={{ imageRendering: 'pixelated' }}
+            />
+          ) : (
+            <span className="text-xl">🛡️</span>
+          )}
+        </div>
+        <div className="min-w-0">
+          <p className="text-[10px] font-semibold tracking-wide text-zinc-400">길드 관리</p>
+          <h1 className="truncate text-base font-extrabold leading-tight">{guild.name}</h1>
+        </div>
+      </div>
+
       {/* 탭 — 길드 설정 / 구성원 관리 / 가입 관리 */}
       <div className="flex gap-1 rounded-xl bg-zinc-100 p-1 dark:bg-zinc-900">
         {(
@@ -561,29 +581,19 @@ export function GuildSettings({
                     </span>
                   )}
                 </div>
-                <div className="flex shrink-0 items-center gap-1">
-                  {isLeader &&
-                    (m.role === 'vice' ? (
-                      <button type="button" onClick={() => setVice(m.userId, false)} disabled={pending} className={BTN.smNeutral}>
-                        부길드장 해제
-                      </button>
-                    ) : (
-                      <button type="button" onClick={() => setVice(m.userId, true)} disabled={pending} className={BTN.smSky}>
-                        부길드장 임명
-                      </button>
-                    ))}
-                  {isLeader && (
-                    <button type="button" onClick={() => transfer(m.userId, m.nickname)} disabled={pending} className={BTN.smAmber}>
-                      길드장 위임
-                    </button>
-                  )}
-                  {/* 부길드장은 일반 멤버만 추방 가능 */}
-                  {(isLeader || m.role === 'member') && (
-                    <button type="button" onClick={() => kick(m.userId, m.nickname)} disabled={pending} className={BTN.smDanger}>
-                      추방
-                    </button>
-                  )}
-                </div>
+                {/* 액션은 ⋯ 시트로 모음 — 행은 닉네임+역할만, 색버튼 나열 제거(컴팩트·모던).
+                    부길드장은 일반 멤버만 관리 가능하므로 그 외엔 버튼 숨김. */}
+                {(isLeader || m.role === 'member') && (
+                  <button
+                    type="button"
+                    onClick={() => setActionMember(m)}
+                    disabled={pending}
+                    aria-label={`${m.nickname} 관리`}
+                    className="shrink-0 rounded-lg px-2 py-1 text-lg leading-none text-zinc-400 active:bg-zinc-100 disabled:opacity-50 dark:active:bg-zinc-800"
+                  >
+                    ⋯
+                  </button>
+                )}
               </li>
             ))}
           </ul>
@@ -843,6 +853,80 @@ export function GuildSettings({
             </button>
         </ModalShell>
       )}
+
+      {/* 구성원 액션 시트 — ⋯에서 열림. 액션을 행으로 정렬, 위험(추방)은 빨강. */}
+      {actionMember &&
+        (() => {
+          const m = actionMember;
+          const rowCls =
+            'w-full rounded-lg px-3 py-2.5 text-left text-[13px] font-semibold transition active:bg-zinc-100 dark:active:bg-zinc-800';
+          return (
+            <ModalShell
+              onClose={() => setActionMember(null)}
+              label={`${m.nickname} 관리`}
+              className="w-full max-w-[320px] rounded-2xl bg-white p-3 dark:bg-zinc-950"
+            >
+              <div className="flex items-center gap-1.5 px-2 pb-2 pt-1">
+                <span className="truncate text-sm font-bold">{m.nickname}</span>
+                {m.role === 'vice' && (
+                  <span className="shrink-0 rounded-full bg-sky-500/15 px-1.5 py-0 text-[9px] font-bold text-sky-700 dark:text-sky-300">
+                    부길드장
+                  </span>
+                )}
+              </div>
+              <div className="space-y-0.5">
+                {isLeader &&
+                  (m.role === 'vice' ? (
+                    <button
+                      type="button"
+                      className={`${rowCls} text-zinc-700 dark:text-zinc-200`}
+                      onClick={() => {
+                        setVice(m.userId, false);
+                        setActionMember(null);
+                      }}
+                    >
+                      부길드장 해제
+                    </button>
+                  ) : (
+                    <button
+                      type="button"
+                      className={`${rowCls} text-sky-600 dark:text-sky-400`}
+                      onClick={() => {
+                        setVice(m.userId, true);
+                        setActionMember(null);
+                      }}
+                    >
+                      부길드장 임명
+                    </button>
+                  ))}
+                {isLeader && (
+                  <button
+                    type="button"
+                    className={`${rowCls} text-amber-600 dark:text-amber-400`}
+                    onClick={() => {
+                      setActionMember(null);
+                      transfer(m.userId, m.nickname);
+                    }}
+                  >
+                    길드장 위임
+                  </button>
+                )}
+                {(isLeader || m.role === 'member') && (
+                  <button
+                    type="button"
+                    className={`${rowCls} text-red-600 dark:text-red-400`}
+                    onClick={() => {
+                      setActionMember(null);
+                      kick(m.userId, m.nickname);
+                    }}
+                  >
+                    추방
+                  </button>
+                )}
+              </div>
+            </ModalShell>
+          );
+        })()}
 
       {/* 확인 팝업 — 위임·추방·해산(alert 대체) */}
       {confirmModal && (

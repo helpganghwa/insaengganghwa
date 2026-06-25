@@ -90,6 +90,10 @@ export function CheckinCalendar({
     : todayCellDay;
   const cardReward = CHECKIN_CALENDAR[cardDay - 1]!;
 
+  // 진행 요약 — 이번 사이클 수령 수(dayProgress)와 다음 마일스톤까지 남은 일수.
+  const milestoneDays = CHECKIN_CALENDAR.map((_, i) => i + 1).filter(isCheckinMilestone);
+  const nextMilestone = milestoneDays.find((d) => d > dayProgress) ?? null;
+
   useEffect(() => {
     if (justClaimedDay === null) return;
     const t = setTimeout(() => setJustClaimedDay(null), 800);
@@ -147,6 +151,26 @@ export function CheckinCalendar({
       <div className="space-y-3 px-4 py-4">
       {/* 출석 그리드 — 7×4(28칸) 솔리드·심플·컴팩트. 수령 완료 칸엔 출석 도장. */}
       <div className="rounded-xl border border-zinc-200 bg-white p-2 dark:border-zinc-800 dark:bg-zinc-950">
+        {/* 진행 요약 — 이번 사이클 수령/총 + 진행바 + 다음 마일스톤까지 */}
+        <div className="mb-2 flex items-center gap-2.5 px-0.5">
+          <span className="shrink-0 text-[11px] font-semibold text-zinc-500 dark:text-zinc-400">
+            이번 사이클{' '}
+            <span className="tabular-nums font-bold text-zinc-800 dark:text-zinc-100">
+              {dayProgress}/{CHECKIN_CYCLE_DAYS}
+            </span>
+          </span>
+          <div className="h-1.5 flex-1 overflow-hidden rounded-full bg-zinc-200 dark:bg-zinc-800">
+            <div
+              className="h-full rounded-full bg-amber-500 transition-[width] duration-300"
+              style={{ width: `${(dayProgress / CHECKIN_CYCLE_DAYS) * 100}%` }}
+            />
+          </div>
+          {nextMilestone && (
+            <span className="shrink-0 text-[10px] font-bold text-amber-600 dark:text-amber-400">
+              ✦ {nextMilestone - dayProgress}일
+            </span>
+          )}
+        </div>
         <div className="grid grid-cols-7 gap-1" role="list" aria-label="28일 출석 캘린더">
           {CHECKIN_CALENDAR.map((r, idx) => {
             const day = idx + 1;
@@ -155,36 +179,58 @@ export function CheckinCalendar({
             const justClaimed = justClaimedDay === day;
             const showCheck = isClaimed;
             const state = isToday ? 'today' : isClaimed ? 'past' : 'future';
+            const isMs = isCheckinMilestone(day);
+            const isGrand = day === CHECKIN_CYCLE_DAYS;
 
-            // 심플·균일 — 마일스톤 강조 없음. 오늘만 강조, 완료는 도장.
+            // 오늘=앰버 강조, 완료=옅은 회색+도장, 마일스톤(미수령)=골드 프레임, 그 외=옅은 그라데이션.
             const stateCls = isToday
-              ? 'bg-amber-500/15 dark:bg-amber-400/10 shadow-[inset_0_0_0_2px_rgba(245,158,11,0.5)]'
+              ? 'bg-amber-500/15 dark:bg-amber-400/10 shadow-[inset_0_0_0_2px_rgba(245,158,11,0.6)]'
               : showCheck
                 ? 'bg-zinc-100 dark:bg-zinc-900'
-                : 'bg-white dark:bg-zinc-950';
+                : isMs
+                  ? 'bg-gradient-to-b from-amber-50 to-amber-100/50 dark:from-amber-500/12 dark:to-amber-500/5'
+                  : 'bg-gradient-to-b from-white to-zinc-50 dark:from-zinc-950 dark:to-zinc-900';
+            const borderCls = isToday
+              ? 'border-amber-400/70 dark:border-amber-400/40'
+              : isMs && !showCheck
+                ? 'border-amber-300 dark:border-amber-500/40'
+                : 'border-zinc-200 dark:border-zinc-800';
+            const grandCls =
+              isGrand && !showCheck && !isToday
+                ? 'shadow-[0_0_0_1px_rgba(245,158,11,0.55),0_1px_6px_rgba(245,158,11,0.3)]'
+                : '';
 
             return (
               <div
                 key={day}
                 role="listitem"
-                aria-label={cellAriaLabel(day, r, state, isCheckinMilestone(day), day === CHECKIN_CYCLE_DAYS)}
+                aria-label={cellAriaLabel(day, r, state, isMs, isGrand)}
                 style={justClaimed ? { animation: 'checkin-glow 700ms ease-out' } : undefined}
-                className={`relative flex aspect-square flex-col items-center justify-between rounded border border-zinc-200 dark:border-zinc-800 ${stateCls} p-0.5 text-center`}
+                className={`relative flex aspect-square flex-col items-center justify-between rounded border ${borderCls} ${stateCls} ${grandCls} p-0.5 text-center`}
               >
+                {isGrand && !showCheck && (
+                  <span aria-hidden className="absolute right-0.5 top-0.5 text-[8px] leading-none text-amber-500">
+                    ✦
+                  </span>
+                )}
                 <div
-                  className={`text-[9px] leading-none font-bold text-zinc-400 ${showCheck ? 'opacity-30' : ''}`}
+                  className={`text-[10px] leading-none font-bold ${isMs && !showCheck ? 'text-amber-600 dark:text-amber-400' : 'text-zinc-400'} ${showCheck ? 'opacity-30' : ''}`}
                 >
                   {day}
                 </div>
                 <div
-                  className={`flex flex-1 items-center justify-center text-[13px] leading-none ${showCheck ? 'opacity-20' : ''}`}
+                  className={`flex flex-1 items-center justify-center text-[18px] leading-none ${showCheck ? 'opacity-20' : ''}`}
                   aria-hidden
                 >
                   <RewardEmoji r={r} />
                 </div>
                 <div
-                  className={`text-[9px] leading-none font-semibold ${showCheck ? 'opacity-30' : ''} ${
-                    r.kind === 'diamond' ? 'text-sky-700 dark:text-sky-300' : 'text-zinc-600 dark:text-zinc-400'
+                  className={`text-[10px] leading-none font-semibold ${showCheck ? 'opacity-30' : ''} ${
+                    r.kind === 'diamond'
+                      ? 'text-sky-700 dark:text-sky-300'
+                      : isMs
+                        ? 'text-amber-700 dark:text-amber-400'
+                        : 'text-zinc-600 dark:text-zinc-400'
                   }`}
                 >
                   {quantityLabel(r)}

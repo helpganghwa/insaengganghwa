@@ -38,6 +38,7 @@ export default async function GuildSettingsPage() {
       myUserId={userId}
       myRole={membership.role}
       guild={{
+        name: guild.name,
         taxPool: guild.taxPoolDiamond.toString(),
         joinPolicy: guild.joinPolicy === 'approval' ? 'approval' : 'open',
         notice: guild.notice ?? '',
