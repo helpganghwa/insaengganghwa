@@ -8,6 +8,7 @@ import { profiles } from '@/lib/db/schema/profiles';
 import { characters } from '@/lib/db/schema/server';
 import { sendPushToUsers } from '@/lib/push/send';
 import { logMemberAchievement } from '@/lib/game/guild/achievement';
+import { logWorldEvent } from '@/lib/game/world/event';
 
 /**
  * 대난투 10:00 발표 — MELEE §7. KST 오늘 배틀이 'computed'면:
@@ -86,10 +87,11 @@ export async function revealMelee(serverId: number): Promise<{ revealed: boolean
     category: 'melee',
   }).catch((e) => console.warn('[melee.reveal] push failed', e));
 
-  // 길드 업적 — 대난투 1~3위 길드원을 길드 피드에 노출(best-effort).
+  // 길드 업적(길드원) + 월드 피드(전체) — 대난투 1~3위 노출(best-effort).
   for (const p of podium) {
     if (p.rank >= 1 && p.rank <= 3) {
       await logMemberAchievement(p.userId, serverId, { action: 'achv_melee', detail: { rank: p.rank } });
+      await logWorldEvent(serverId, 'melee_rank', { rank: p.rank }, { actorUserId: p.userId });
     }
   }
 

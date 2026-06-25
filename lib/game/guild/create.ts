@@ -12,6 +12,8 @@ import { GUILD_CREATE_COST_DIAMOND, GUILD_NAME_MAX_LEN, GUILD_NAME_MIN_LEN } fro
 import { logGuildAudit } from './audit';
 import { GuildError } from './errors';
 
+import { logWorldEvent } from '@/lib/game/world/event';
+
 /** 허용 문자: 한글 완성형·영문·숫자만. 공백·특수문자·이모지·자모 차단(닉네임과 동일 정책). */
 const GUILD_NAME_CHAR_REGEX = /^[A-Za-z0-9가-힣]+$/;
 
@@ -24,7 +26,7 @@ export function normalizeGuildName(raw: string): string {
  * 길드 결성 — GUILD §1. 단일 트랜잭션: 1유저1길드 검사 + 이름 검증/중복 + 10,000💎 차감 + 길드·리더 멤버 생성.
  * 문양(emblem_url)은 결성 시 런타임 생성(P4) — 일단 null(폴백). 서버 권위·멱등(PK/unique가 최종 방어).
  */
-export function createGuild(input: {
+export async function createGuild(input: {
   userId: string;
   serverId: number;
   name: string;
@@ -41,7 +43,7 @@ export function createGuild(input: {
   if (containsProfanity(name)) {
     return Promise.reject(new GuildError('PROFANITY'));
   }
-  return db.transaction(async (tx) => {
+  const result = await db.transaction(async (tx) => {
     // 1유저 1길드 — guild_members.user_id PK가 최종 방어(동시성 시 두 번째 insert 실패).
     const [existing] = await tx
       .select({ g: guildMembers.guildId })
@@ -86,4 +88,11 @@ export function createGuild(input: {
 
     return { guildId: g!.id };
   });
+
+  // 월드 피드 — 길드 결성(전체 노출, best-effort, 트랜잭션 밖). 실패해도 결성엔 영향 없음.
+  await logWorldEvent(input.serverId, 'guild_create', { guildName: name }, {
+    actorUserId: input.userId,
+    guildId: result.guildId,
+  });
+  return result;
 }

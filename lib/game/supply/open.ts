@@ -8,6 +8,7 @@ import { userSupplyBoxes, supplyOpenLogs } from '@/lib/db/schema/supply';
 import { transcendLogs } from '@/lib/db/schema/transcend';
 import { transcendFodderForStep } from '@/lib/game/balance';
 import { logMemberAchievement } from '@/lib/game/guild/achievement';
+import { logWorldEvent } from '@/lib/game/world/event';
 
 /**
  * 보급 상자 열기 — GDD §3.4 / BALANCE §4 / SCHEMA §5.
@@ -176,6 +177,7 @@ export async function openSupplyBoxes(input: {
           action: 'achv_transcend',
           detail: { item: ci?.name ?? '장비', level: milestone },
         });
+        await logWorldEvent(serverId, 'transcend', { item: ci?.name ?? '장비', level: milestone }, { actorUserId: userId });
       }
     }
   } catch {

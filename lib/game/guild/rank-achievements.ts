@@ -4,6 +4,7 @@ import { and, desc, eq, inArray, isNotNull, sql } from 'drizzle-orm';
 
 import { db } from '@/lib/db/client';
 import { guilds, zones, guildAuditLog } from '@/lib/db/schema/guild';
+import { logWorldEvent } from '@/lib/game/world/event';
 import { getGuildRanking } from './queries';
 
 /**
@@ -43,6 +44,16 @@ async function processCategory(
     });
     await db.update(guilds).set({ [col]: t.rank }).where(eq(guilds.id, t.id));
     logged += 1;
+    // 월드 피드 — 1위로 새로 올라선 길드만 전체 노출(교체 시점, 기존 1위 유지는 위 continue로 스킵).
+    if (t.rank === 1) {
+      const [g] = await db.select({ name: guilds.name }).from(guilds).where(eq(guilds.id, t.id)).limit(1);
+      await logWorldEvent(
+        serverId,
+        action === 'achv_guild_power_rank' ? 'guild_power_1' : 'guild_zone_1',
+        { guildName: g?.name ?? '길드' },
+        { guildId: t.id },
+      );
+    }
   }
 
   // top3에서 빠진 길드 — 저장 랭크 정리(로그 없음).

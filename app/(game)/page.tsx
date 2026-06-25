@@ -9,11 +9,14 @@ import { withTimeout } from '@/lib/db/with-timeout';
 import { freeStatusFromClaims } from '@/lib/game/shop/free';
 import { kstDateString } from '@/lib/kst';
 
+import { getWorldFeed } from '@/lib/game/world/event';
+
 import { BattlePassBanner } from './BattlePassBanner';
 import { DailySupplyCard } from './DailySupplyCard';
 import { HomeBannerCarousel } from './HomeBannerCarousel';
 import { HubCheckinCard } from './HubCheckinCard';
 import { RankingTop3Card } from './RankingTop3Card';
+import { WorldLogFeed } from './WorldLogFeed';
 
 /**
  * WIREFRAMES §1 — 홈 (메뉴 허브). 오늘의 보급(미수령 시) + 2×N 메뉴 그리드.
@@ -243,6 +246,11 @@ export default async function HomePage() {
     }
   }
 
+  // 월드 소식 — 서버 전체 주목 사건(홈 하단). 별도 인덱스 1쿼리. 콜드/hang 시 빈 배열로 degrade.
+  const worldFeed = userId
+    ? await withTimeout(getWorldFeed(serverId, 40), 2500, 'home.worldfeed').catch(() => [])
+    : [];
+
   return (
     <div className="flex flex-col gap-3 px-4 py-4">
       <RankingTop3Card />
@@ -324,6 +332,14 @@ export default async function HomePage() {
           );
         })}
       </div>
+
+      {/* 월드 소식 — 서버 전체 주목 사건(길드 로그의 월드판). 사건 없으면 미노출. */}
+      {worldFeed.length > 0 && (
+        <section className="rounded-2xl border border-zinc-200 bg-white p-3 dark:border-zinc-800 dark:bg-zinc-950">
+          <h3 className="mb-1 px-1 text-sm font-bold">월드 소식</h3>
+          <WorldLogFeed entries={worldFeed} />
+        </section>
+      )}
     </div>
   );
 }

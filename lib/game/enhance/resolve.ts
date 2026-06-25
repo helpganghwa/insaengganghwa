@@ -10,6 +10,7 @@ import {
 } from '@/lib/game/balance';
 import { accrueResidenceTax } from '@/lib/game/guild/tax';
 import { logMemberAchievement } from '@/lib/game/guild/achievement';
+import { logWorldEvent } from '@/lib/game/world/event';
 
 import { EnhanceError } from './queue';
 
@@ -188,6 +189,9 @@ export async function resolveEnhance(input: ResolveInput): Promise<ResolveResult
       await logMemberAchievement(String(job.user_id), Number(job.job_server_id), {
         action: 'achv_enhance',
         detail: { item: ci?.name ?? '장비', level: milestone },
+      });
+      await logWorldEvent(Number(job.job_server_id), 'enhance', { item: ci?.name ?? '장비', level: milestone }, {
+        actorUserId: String(job.user_id),
       });
     } catch {
       // 업적 기록 실패 무시.
