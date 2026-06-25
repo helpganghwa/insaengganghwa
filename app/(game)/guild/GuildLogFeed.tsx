@@ -19,16 +19,26 @@ const hl = (text: string, cls: string) => <span className={`font-semibold ${cls}
 /** 유저 — 클릭 시 프로필 상세(/u/<공개코드>?s=서버). 코드 없으면 일반 텍스트. */
 function user(code: string | null, nick: string | null, serverId: number): ReactNode {
   const label = nick ?? '알 수 없음';
-  if (!code) return label;
+  // 닉네임 색 — 월드 로그/연대기 인물색과 동일(스톤)
+  if (!code) return <span className="font-semibold text-stone-500 dark:text-stone-400">{label}</span>;
   return (
     <Link
       href={profileHref(code, serverId)}
-      className="font-semibold text-sky-600 hover:underline dark:text-sky-400"
+      className="font-semibold text-stone-500 hover:underline dark:text-stone-400"
     >
       {label}
     </Link>
   );
 }
+
+// 개인 랭킹 5종 1위 — 메트릭 라벨(월드 로그와 동일 문구).
+const METRIC_LABEL: Record<string, string> = {
+  max: '최고 강화',
+  sum: '합산 강화',
+  combat: '전투력',
+  raid: '레이드 처치',
+  melee: '대난투 우승',
+};
 
 function amountOf(detail: Record<string, unknown> | null): string {
   const a = detail?.amount;
@@ -51,6 +61,7 @@ function message(e: GuildLogEntry): ReactNode {
   const item = (e.detail?.item as string) ?? '장비';
   const level = (e.detail?.level as number) ?? 0;
   const rank = (e.detail?.rank as number) ?? 0;
+  const metric = (e.detail?.metric as string) ?? '';
   const medal = rank === 1 ? '🥇' : rank === 2 ? '🥈' : rank === 3 ? '🥉' : '';
   switch (e.action) {
     case 'join':
@@ -86,6 +97,8 @@ function message(e: GuildLogEntry): ReactNode {
       return <>{actor}님이 {item} {hl(`초월 +${level}`, C.violet)}을 달성했습니다</>;
     case 'achv_melee':
       return <>{actor}님이 대난투 {hl(`${medal}${rank}위`, C.amber)}에 올랐습니다</>;
+    case 'achv_rank_leader':
+      return <>{actor}님이 {hl(`${METRIC_LABEL[metric] ?? metric} 1위`, C.amber)}에 올랐습니다</>;
     // 업적 — 길드.
     case 'achv_guild_power_rank':
       return <>길드가 전투력 랭킹 {hl(`${medal}${rank}위`, C.emerald)}를 달성했습니다</>;

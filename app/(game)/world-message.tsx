@@ -7,9 +7,9 @@ import { profileHref } from '@/lib/game/profile/href';
 // 강조 색 — 핵심 토큰에만(GuildLogFeed와 통일).
 const C = {
   amber: 'text-amber-600 dark:text-amber-400',
-  // 길드색 — 한 단계 톤다운(눈에 덜 띄게)
-  emerald: 'text-emerald-700 dark:text-emerald-500',
   violet: 'text-violet-600 dark:text-violet-400',
+  // 길드색 — 세계지도 연대기와 동일(슬레이트)
+  guild: 'text-slate-600 dark:text-slate-400',
 };
 const hl = (text: string, cls: string) => <span className={`font-semibold ${cls}`}>{text}</span>;
 
@@ -29,12 +29,12 @@ function userNode(
   link: boolean,
 ): ReactNode {
   const label = nick ?? '알 수 없음';
-  // 유저색 — 한 단계 톤다운(눈에 덜 띄게)
-  if (!link || !code) return <span className="font-semibold text-sky-700 dark:text-sky-500">{label}</span>;
+  // 유저색 — 세계지도 연대기 인물색과 동일(스톤)
+  if (!link || !code) return <span className="font-semibold text-stone-500 dark:text-stone-400">{label}</span>;
   return (
     <Link
       href={profileHref(code, serverId)}
-      className="font-semibold text-sky-700 hover:underline dark:text-sky-500"
+      className="font-semibold text-stone-500 hover:underline dark:text-stone-400"
     >
       {label}
     </Link>
@@ -60,11 +60,11 @@ export function worldEventMessage(e: WorldEventEntry, opts?: { link?: boolean })
     case 'transcend':
       return <>{actor}님이 {item} {hl(`초월 +${level}`, C.violet)}을 달성했습니다</>;
     case 'guild_create':
-      return <>{actor}님이 {hl(guildName, C.emerald)} 길드를 결성했습니다</>;
+      return <>{actor}님이 {hl(guildName, C.guild)} 길드를 결성했습니다</>;
     case 'guild_power_1':
-      return <>{hl(guildName, C.emerald)} 길드가 {hl('전투력 1위', C.amber)}에 올랐습니다</>;
+      return <>{hl(guildName, C.guild)} 길드가 {hl('전투력 1위', C.amber)}에 올랐습니다</>;
     case 'guild_zone_1':
-      return <>{hl(guildName, C.emerald)} 길드가 {hl('점령지 1위', C.emerald)}에 올랐습니다</>;
+      return <>{hl(guildName, C.guild)} 길드가 {hl('점령지 1위', C.amber)}에 올랐습니다</>;
     case 'rank_leader':
       return <>{actor}님이 {hl(`${METRIC_LABEL[metric] ?? metric} 1위`, C.amber)}에 올랐습니다</>;
     default:
@@ -72,9 +72,9 @@ export function worldEventMessage(e: WorldEventEntry, opts?: { link?: boolean })
   }
 }
 
-/** KST 'YYYY-MM-DD HH:mm' — 수동 오프셋(서버/클라 동일, 하이드레이션 안전). 초는 생략. */
+/** KST 'YY-MM-DD HH:mm' — 수동 오프셋(서버/클라 동일, 하이드레이션 안전). 연 2자리·초 생략. */
 export function fmtWorldTime(iso: string): string {
   const dt = new Date(Date.parse(iso) + 9 * 3600 * 1000);
   const p = (n: number) => String(n).padStart(2, '0');
-  return `${dt.getUTCFullYear()}-${p(dt.getUTCMonth() + 1)}-${p(dt.getUTCDate())} ${p(dt.getUTCHours())}:${p(dt.getUTCMinutes())}`;
+  return `${p(dt.getUTCFullYear() % 100)}-${p(dt.getUTCMonth() + 1)}-${p(dt.getUTCDate())} ${p(dt.getUTCHours())}:${p(dt.getUTCMinutes())}`;
 }

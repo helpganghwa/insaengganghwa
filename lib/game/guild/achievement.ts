@@ -14,7 +14,8 @@ import { guildMembers, guildAuditLog } from '@/lib/db/schema/guild';
 export type MemberAchievement =
   | { action: 'achv_enhance'; detail: { item: string; level: number } }
   | { action: 'achv_transcend'; detail: { item: string; level: number } }
-  | { action: 'achv_melee'; detail: { rank: number } };
+  | { action: 'achv_melee'; detail: { rank: number } }
+  | { action: 'achv_rank_leader'; detail: { metric: string } };
 
 export async function logMemberAchievement(
   userId: string,

@@ -9,6 +9,7 @@ import { profiles } from '@/lib/db/schema/profiles';
 import { guilds, zones } from '@/lib/db/schema/guild';
 import { getRankingTop, type LeaderboardMetric } from '@/lib/game/leaderboard/queries';
 import { getGuildRanking } from '@/lib/game/guild/queries';
+import { logMemberAchievement } from '@/lib/game/guild/achievement';
 
 /** 월드 피드 사건 종류. detail 스키마는 각 logWorldEvent 호출부 + WorldLogFeed 렌더 참조. */
 export type WorldEventType =
@@ -125,6 +126,8 @@ export async function runRankingLeaders(serverId: number): Promise<number> {
         { metric, value: leader.value },
         { actorUserId: leader.userId },
       );
+      // 길드원이면 길드 로그에도 노출(월드 로그와 동일 사건). best-effort.
+      await logMemberAchievement(leader.userId, serverId, { action: 'achv_rank_leader', detail: { metric } });
       logged += 1;
     }
     await db
