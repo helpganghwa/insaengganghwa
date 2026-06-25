@@ -90,10 +90,6 @@ export function CheckinCalendar({
     : todayCellDay;
   const cardReward = CHECKIN_CALENDAR[cardDay - 1]!;
 
-  // 진행 요약 — 이번 사이클 수령 수(dayProgress)와 다음 마일스톤까지 남은 일수.
-  const milestoneDays = CHECKIN_CALENDAR.map((_, i) => i + 1).filter(isCheckinMilestone);
-  const nextMilestone = milestoneDays.find((d) => d > dayProgress) ?? null;
-
   useEffect(() => {
     if (justClaimedDay === null) return;
     const t = setTimeout(() => setJustClaimedDay(null), 800);
@@ -151,13 +147,10 @@ export function CheckinCalendar({
       <div className="space-y-3 px-4 py-4">
       {/* 출석 그리드 — 7×4(28칸) 솔리드·심플·컴팩트. 수령 완료 칸엔 출석 도장. */}
       <div className="rounded-xl border border-zinc-200 bg-white p-2 dark:border-zinc-800 dark:bg-zinc-950">
-        {/* 진행 요약 — 이번 사이클 수령/총 + 진행바 + 다음 마일스톤까지 */}
+        {/* 진행 요약 — 수령/총 + 진행바 */}
         <div className="mb-2 flex items-center gap-2.5 px-0.5">
-          <span className="shrink-0 text-[11px] font-semibold text-zinc-500 dark:text-zinc-400">
-            이번 사이클{' '}
-            <span className="tabular-nums font-bold text-zinc-800 dark:text-zinc-100">
-              {dayProgress}/{CHECKIN_CYCLE_DAYS}
-            </span>
+          <span className="shrink-0 text-[11px] font-bold tabular-nums text-zinc-700 dark:text-zinc-200">
+            {dayProgress}/{CHECKIN_CYCLE_DAYS}
           </span>
           <div className="h-1.5 flex-1 overflow-hidden rounded-full bg-zinc-200 dark:bg-zinc-800">
             <div
@@ -165,11 +158,6 @@ export function CheckinCalendar({
               style={{ width: `${(dayProgress / CHECKIN_CYCLE_DAYS) * 100}%` }}
             />
           </div>
-          {nextMilestone && (
-            <span className="shrink-0 text-[10px] font-bold text-amber-600 dark:text-amber-400">
-              ✦ {nextMilestone - dayProgress}일
-            </span>
-          )}
         </div>
         <div className="grid grid-cols-7 gap-1" role="list" aria-label="28일 출석 캘린더">
           {CHECKIN_CALENDAR.map((r, idx) => {

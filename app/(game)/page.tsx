@@ -333,10 +333,9 @@ export default async function HomePage() {
         })}
       </div>
 
-      {/* 월드 소식 — 서버 전체 주목 사건(길드 로그의 월드판). 사건 없으면 미노출. */}
+      {/* 월드 소식 — 서버 전체 주목 사건(길드 로그의 월드판). 타이틀 없이 로그만. 사건 없으면 미노출. */}
       {worldFeed.length > 0 && (
         <section className="rounded-2xl border border-zinc-200 bg-white p-3 dark:border-zinc-800 dark:bg-zinc-950">
-          <h3 className="mb-1 px-1 text-sm font-bold">월드 소식</h3>
           <WorldLogFeed entries={worldFeed} />
         </section>
       )}
