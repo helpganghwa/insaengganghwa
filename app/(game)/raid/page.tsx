@@ -62,7 +62,6 @@ export default async function RaidPage() {
       .select({
         raidId: raidRewards.raidId,
         bossCode: raids.bossCode,
-        phaseDiamond: raidRewards.phaseDiamond,
         boxes: raidRewards.boxes,
         phasesCleared: raids.phasesCleared,
       })
@@ -135,7 +134,6 @@ export default async function RaidPage() {
       kind: 'pending_claim',
       raidId: p.raidId.toString(),
       bossCode: p.bossCode as RaidBoss,
-      diamond: Number(p.phaseDiamond),
       boxes: {
         weapon: p.boxes.weapon ?? 0,
         armor: p.boxes.armor ?? 0,

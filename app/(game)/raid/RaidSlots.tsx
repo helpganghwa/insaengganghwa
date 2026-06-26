@@ -34,7 +34,6 @@ export type RaidSlotCell =
       kind: 'pending_claim';
       raidId: string;
       bossCode: RaidBoss;
-      diamond: number;
       boxes: { weapon: number; armor: number; accessory: number };
       phasesCleared: number;
       myRank: number;
@@ -299,7 +298,6 @@ export function RaidSlots({
                         {s.myRank}/{s.participantCount}
                       </span>
                     </span>
-                    {s.diamond > 0 ? <span>💎 {s.diamond.toLocaleString('ko-KR')}</span> : null}
                     <span>
                       ⚔️{s.boxes.weapon} 🛡️{s.boxes.armor} 💍{s.boxes.accessory}
                     </span>

@@ -43,7 +43,6 @@ export type RaidView = {
   myExtraAttacks: number;
   /** 정산 후에만 set. claimed=true면 수령 완료. */
   myReward: {
-    diamond: number;
     boxes: Record<SupplySlot, number>;
     claimed: boolean;
   } | null;
@@ -365,7 +364,6 @@ export function RaidSessionCard({ view: v, serverId }: { view: RaidView; serverI
       const rw = v.myReward;
       if (rw) {
         const rewards: HeaderReward[] = [
-          ...(rw.diamond > 0 ? [{ icon: '💎', amount: rw.diamond }] : []),
           ...(['weapon', 'armor', 'accessory'] as SupplySlot[])
             .filter((s) => rw.boxes[s] > 0)
             .map((s) => ({ icon: SLOT_EMOJI[s], amount: rw.boxes[s] })),
@@ -523,11 +521,6 @@ export function RaidSessionCard({ view: v, serverId }: { view: RaidView; serverI
                   rewardClaimed ? 'text-zinc-400 opacity-70' : 'text-zinc-100'
                 }`}
               >
-                {v.myReward.diamond > 0 ? (
-                  <span className="font-mono font-bold">
-                    💎 {v.myReward.diamond.toLocaleString()}
-                  </span>
-                ) : null}
                 {(['weapon', 'armor', 'accessory'] as SupplySlot[]).map((s) => (
                   <span key={s}>
                     {SLOT_EMOJI[s]} {SLOT_LABEL[s]}{' '}

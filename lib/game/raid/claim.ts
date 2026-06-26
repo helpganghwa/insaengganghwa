@@ -3,14 +3,12 @@ import 'server-only';
 import { and, eq, isNull, sql } from 'drizzle-orm';
 
 import { db } from '@/lib/db/client';
-import { walletAdd } from '@/lib/game/wallet';
 import { userSupplyBoxes } from '@/lib/db/schema/supply';
 import { raids, raidRewards } from '@/lib/db/schema/raid';
 import { SUPPLY_SLOTS, type SupplySlot } from '@/lib/game/balance';
 import { RaidError } from './open';
 
 export type ClaimRaidResult = {
-  diamond: number;
   boxes: Record<SupplySlot, number>;
 };
 
@@ -18,7 +16,7 @@ export type ClaimRaidResult = {
  * 레이드 결산 보상 수령 — 상세 화면에서 유저 클릭 시 적립(grow 패턴).
  *  - raid_rewards 행 for update 잠금 → status='settled' & claimed_at IS NULL 검증.
  *  - claimed_at 조건부 stamping(`WHERE claimed_at IS NULL`)으로 동시 수령 레이스 차단.
- *  - 다이아 + 슬롯별 보급 상자 단일 트랜잭션 적립.
+ *  - 슬롯별 보급 상자만 단일 트랜잭션 적립(레이드 보상=상자 전용, BALANCE §5.4 — 다이아 없음).
  */
 export function claimRaidReward(input: {
   userId: string;
@@ -29,7 +27,6 @@ export function claimRaidReward(input: {
     const [reward] = await tx
       .select({
         id: raidRewards.id,
-        phaseDiamond: raidRewards.phaseDiamond,
         boxes: raidRewards.boxes,
         claimedAt: raidRewards.claimedAt,
       })
@@ -53,12 +50,7 @@ export function claimRaidReward(input: {
       .returning({ id: raidRewards.id });
     if (stamped.length === 0) throw new RaidError('REWARD_ALREADY_CLAIMED');
 
-    const totalDiamond = Number(reward.phaseDiamond);
-    if (totalDiamond > 0) {
-      // 보상은 참여한 레이드의 서버 지갑으로(활성 서버 무관 — 공유 링크 교차 참여 대비).
-      await walletAdd(tx, userId, raid.serverId, totalDiamond);
-    }
-
+    // 보상은 참여한 레이드의 서버 지갑으로(활성 서버 무관 — 공유 링크 교차 참여 대비).
     const boxes: Record<SupplySlot, number> = { weapon: 0, armor: 0, accessory: 0 };
     for (const slot of SUPPLY_SLOTS) {
       const n = reward.boxes[slot] ?? 0;
@@ -74,6 +66,6 @@ export function claimRaidReward(input: {
       }
     }
 
-    return { diamond: totalDiamond, boxes };
+    return { boxes };
   });
 }
