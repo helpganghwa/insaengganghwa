@@ -97,6 +97,12 @@ const TYPE_META: Record<string, TypeMeta> = {
     label: '길드',
     labelClass: 'bg-teal-100 text-teal-700 dark:bg-teal-950/60 dark:text-teal-300',
   },
+  enhance_result: {
+    bar: 'bg-amber-500',
+    label: '강화 결과',
+    labelClass:
+      'bg-amber-100 text-amber-800 dark:bg-amber-950/60 dark:text-amber-300',
+  },
 };
 const DEFAULT_TYPE_META: TypeMeta = {
   bar: 'bg-zinc-600',

@@ -49,7 +49,8 @@ export async function GET(req: Request) {
   // 순차 처리 — 한 트랜잭션 실패가 다른 것 막지 않음. 큰 부담 X(CHUNK=50, 각 ~50ms).
   for (const { id } of due) {
     try {
-      await resolveEnhance({ jobId: id, requireComplete: true });
+      // mailResult: 24h+ 방치 자동정산분만 결과 우편(GDD §3.10) — lazy(유저)는 토스트로 충분.
+      await resolveEnhance({ jobId: id, requireComplete: true, mailResult: true });
       resolved++;
     } catch (e) {
       if (e instanceof EnhanceError && e.code === 'JOB_NOT_FOUND') {

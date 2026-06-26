@@ -3,6 +3,7 @@ import 'server-only';
 import { sql } from 'drizzle-orm';
 
 import { db } from '@/lib/db/client';
+import { mailbox } from '@/lib/db/schema/mailbox';
 import {
   effectiveOutcomeProbsBp,
   downRateBp,
@@ -37,6 +38,11 @@ export type ResolveInput = {
   userId?: string;
   /** true면 완료 시각 도달한 큐만(cron). false면 조기 시도 허용(유저). */
   requireComplete: boolean;
+  /**
+   * true면 정산 결과를 우편으로 통지(GDD §3.10). **cron 자동정산(24h+ 방치)만 지정** —
+   * lazy(유저) 정산은 페이지 토스트로 결과를 보여주므로 우편 없음(중복·스팸 방지).
+   */
+  mailResult?: boolean;
   /** 테스트용 RNG 주입(0..9999). 기본=crypto. 프로덕션 호출은 절대 지정 금지. */
   rngBp?: () => number;
 };
@@ -195,6 +201,36 @@ export async function resolveEnhance(input: ResolveInput): Promise<ResolveResult
       });
     } catch {
       // 업적 기록 실패 무시.
+    }
+  }
+
+  // 결과 우편(GDD §3.10) — cron 자동정산(24h+ 방치)만. 정보성(보상 payload 없음, 장비는 이미 갱신됨).
+  // best-effort: 우편 실패해도 정산·로그(enhancement_logs)는 이미 원자적으로 확정됐으므로 결과 손실 없음.
+  if (input.mailResult) {
+    try {
+      const [ci] = (await db.execute(
+        sql`select name from catalog_items where id = ${catalogItemId} limit 1`,
+      )) as unknown as { name: string }[];
+      const item = ci?.name ?? '장비';
+      const body =
+        outcome === 'mega'
+          ? `${item} 대성공! +${fromLevel} → +${toLevel} (2단계 상승)`
+          : outcome === 'success'
+            ? `${item} 강화 성공! +${fromLevel} → +${toLevel}`
+            : outcome === 'down'
+              ? `${item} 강화 하락 — +${fromLevel} → +${toLevel}`
+              : `${item} 강화 유지 — +${fromLevel} 그대로입니다.`;
+      await db.insert(mailbox).values({
+        userId: String(job.user_id),
+        serverId: Number(job.job_server_id),
+        type: 'enhance_result',
+        title: '강화 결과',
+        body,
+        senderLabel: '시스템',
+        payload: {},
+      });
+    } catch (e) {
+      console.warn('[enhance.resolve] result mail failed', jid, (e as Error).message);
     }
   }
 
