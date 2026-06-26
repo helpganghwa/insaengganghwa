@@ -307,12 +307,12 @@ describe('배틀패스 — 구간·보상·가격', () => {
     expect(bpSegmentEndLevel('transcend', 0)).toBe(10);
     expect(bpSegmentEndLevel('transcend', 1)).toBe(20);
   });
-  it('bpTierReward: 마일스톤 1개당 보상(강화 ×2^c×step10 / 초월 ×(c+1)×step1)', () => {
-    // 강화는 10단위 마일스톤에 ×10 몰아줌 — c0 무료 100 / 프리미엄 500, c1 1000, c2 2000
+  it('bpTierReward: 마일스톤 1개당 보상(강화·초월 동일 ×(c+1) 선형)', () => {
+    // 강화는 10단위 마일스톤에 ×10 몰아줌 — c0 무료 100 / 프리미엄 500, c1 1000, c2 1500(선형)
     expect(bpTierReward('enhance', 50, false)).toBe(100);
     expect(bpTierReward('enhance', 50, true)).toBe(500);
     expect(bpTierReward('enhance', 150, true)).toBe(1000);
-    expect(bpTierReward('enhance', 250, true)).toBe(2000);
+    expect(bpTierReward('enhance', 250, true)).toBe(1500);
     // 초월은 매 단계(step1) 그대로 — c0 10/50, c1 20/100, c2 30/150
     expect(bpTierReward('transcend', 5, false)).toBe(10);
     expect(bpTierReward('transcend', 5, true)).toBe(50);
@@ -331,13 +331,18 @@ describe('배틀패스 — 구간·보상·가격', () => {
     expect(bpRangeReward('transcend', 0, 10, true)).toBe(500);
     expect(bpRangeReward('enhance', 50, 50, true)).toBe(0); // 빈 범위
   });
-  it('bpSegmentPriceKrw: 강화 ×2계단 / 초월 선형 (no-brainer)', () => {
-    expect(bpSegmentPriceKrw('enhance', 0)).toBe(9900);
-    expect(bpSegmentPriceKrw('enhance', 1)).toBe(19900);
-    expect(bpSegmentPriceKrw('enhance', 2)).toBe(39900);
-    expect(bpSegmentPriceKrw('enhance', 3)).toBe(79900);
-    expect(bpSegmentPriceKrw('transcend', 0)).toBe(9900);
-    expect(bpSegmentPriceKrw('transcend', 1)).toBe(19900);
-    expect(bpSegmentPriceKrw('transcend', 2)).toBe(29900);
+  it('bpSegmentPriceKrw: 강화·초월 동일 선형 9900+c×10000, 상한 59,900', () => {
+    // 강화·초월 같은 선형 — c0~c5: 9900/19900/29900/39900/49900/59900
+    for (const t of ['enhance', 'transcend'] as const) {
+      expect(bpSegmentPriceKrw(t, 0)).toBe(9900);
+      expect(bpSegmentPriceKrw(t, 1)).toBe(19900);
+      expect(bpSegmentPriceKrw(t, 2)).toBe(29900);
+      expect(bpSegmentPriceKrw(t, 3)).toBe(39900);
+      expect(bpSegmentPriceKrw(t, 4)).toBe(49900);
+      expect(bpSegmentPriceKrw(t, 5)).toBe(59900);
+      // c6+ 상한 평탄(PG 등록 최고가 68,000원 이내)
+      expect(bpSegmentPriceKrw(t, 6)).toBe(59900);
+      expect(bpSegmentPriceKrw(t, 50)).toBe(59900);
+    }
   });
 });

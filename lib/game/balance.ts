@@ -552,13 +552,14 @@ export function bpSegmentEndLevel(type: BattlePassType, segmentIndex: number): n
 }
 
 /**
- * §9.1 **마일스톤 1개당** 보상량 — 무료 = 프리미엄의 1/5. 구간 스케일: 강화 ×2^c, 초월 ×(c+1).
- * 간격(step)만큼 ×해서 마일스톤에 몰아줌(구간 총량 보존). 강화 = 다이아, 초월 = 보급상자. (c=구간)
+ * §9.1 **마일스톤 1개당** 보상량 — 무료 = 프리미엄의 1/5. 구간 스케일: 강화·초월 동일 ×(c+1) 선형
+ * (가격이 선형이라 보상도 선형 — 구간별 다이아/원 ≈ 일정). 간격(step)만큼 ×해서 마일스톤에 몰아줌
+ * (구간 총량 보존). 강화 = 다이아, 초월 = 보급상자. (c=구간)
  */
 export function bpTierReward(type: BattlePassType, level: number, premium: boolean): number {
   const c = bpSegmentIndex(type, level);
   const base = premium ? 50 : 10;
-  const perLevel = type === 'enhance' ? base * 2 ** c : base * (c + 1);
+  const perLevel = base * (c + 1);
   return perLevel * BP_TIER_STEP[type];
 }
 
@@ -587,11 +588,17 @@ export function bpRangeReward(
 }
 
 /**
- * §9.2 프리미엄 구간 가격(원, 현금/포트원) — no-brainer(보상가치 ~2.3배).
- * 강화: 9,900 / 19,900 / 39,900 …(×2 계단) = 9900 + (2^c − 1)×10000.
- * 초월: 9,900 / 19,900 / 29,900 …(선형) = 9900 + c×10000.
+ * 프리미엄 구간 단일 결제 상한(원) — PG(이니시스) 등록 최고가 = mega 다이아팩 68,000원 이내.
+ * 성장패스는 만료 없는 무한 패스라 가격이 무한 상승하면 안 됨 → 이 값에서 평탄화.
  */
-export function bpSegmentPriceKrw(type: BattlePassType, segmentIndex: number): number {
+export const BP_SEGMENT_PRICE_CAP_KRW = 59_900;
+
+/**
+ * §9.2 프리미엄 구간 가격(원, 현금/포트원) — no-brainer(보상가치 ~2.1배). 상한 59,900원.
+ * 강화·초월 동일 선형: 9,900 / 19,900 / 29,900 / 39,900 / 49,900 / 59,900 … = 9900 + c×10000.
+ * 둘 다 c5에서 상한 도달 — 강화 +501~600, 초월 +51~60. 이후 구간은 59,900 평탄(무한 패스).
+ */
+export function bpSegmentPriceKrw(_type: BattlePassType, segmentIndex: number): number {
   const c = Math.max(0, Math.floor(segmentIndex));
-  return type === 'enhance' ? 9900 + (2 ** c - 1) * 10000 : 9900 + c * 10000;
+  return Math.min(9900 + c * 10000, BP_SEGMENT_PRICE_CAP_KRW);
 }
