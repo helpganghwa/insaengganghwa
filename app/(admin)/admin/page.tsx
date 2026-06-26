@@ -28,12 +28,12 @@ async function pendingCounts(): Promise<Record<string, number>> {
         .from(paymentAlerts)
         .where(eq(paymentAlerts.resolved, false)),
     ),
-    // 신고 누적 + 아직 비공개 조치 전.
+    // 신고 누적(운영자 미조치) 프로필 수.
     one(
       db
         .select({ n: sql<number>`count(*)::int` })
         .from(userProfiles)
-        .where(and(gt(userProfiles.reportCount, 0), isNull(userProfiles.hiddenAt))),
+        .where(gt(userProfiles.reportCount, 0)),
     ),
     // 오늘 미검수(운영자 결정 전 종결 잡).
     one(

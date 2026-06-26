@@ -35,8 +35,8 @@
 사후 신고:
 ```
 [다른 유저] active 프로필 보고 "부적절" 신고
-   → reports.count 누적 (자동 비공개 X)
-[운영자] /admin/reports 에서 신고 많은 순으로 정렬 → 직접 삭제·복원·기각
+   → reports.count 누적 (자동 차단 X)
+[운영자] /admin/reports 에서 신고 많은 순으로 정렬 → 직접 조치(아바타 초기화·닉네임 초기화·경고·정지)·기각
 ```
 
 장비 변경은 프로필에 영향 X. 다음 생성 시점의 새 장비가 다음 프로필 description에 반영.
@@ -60,10 +60,9 @@
 | `equipment_snapshot` | jsonb | `{ weapon, armor, accessory }` 카탈로그 키 — 디버그·재현용 |
 | `description_prompt` | text | 합성된 최종 description (재현·신고 처리용) |
 | `report_count` | int default 0 | 누적 신고 수 (표시용, 자동 차단 X) |
-| `hidden_at` | timestamptz nullable | 운영자 수동 비공개 시점 |
 | `created_at` | timestamptz | 검토 통과·풀 추가 시점 |
 
-인덱스: `(user_id, created_at desc)`, `(report_count desc) WHERE hidden_at IS NULL`(운영자 신고 대시보드).
+인덱스: `(user_id, created_at desc)`, `(report_count desc)`(운영자 신고 대시보드).
 
 **8방향 활용 의도**: Pixellab v2가 어차피 8방향 풀시트를 반환 — 1장만 쓰면 자원 낭비. 유저가 상세에서 ◀▶로 회전하며 마음에 드는 각도를 active로 선택(§8.2).
 
@@ -333,11 +332,11 @@ Be lenient. Only fail on CLEAR defects. "Could be better" or "head looks big" is
   - 프로필 이미지·소유자 닉네임
   - 누적 신고 수 + reason 카운트 분포
   - 최근 신고 5건의 reason·note·신고자
-  - 액션: **숨김(hidden_at 설정)** / **복원(hidden_at NULL)** / **기각(신고 count 0 리셋, hidden_at 유지/해제 선택)**
+  - 액션: **아바타 초기화**(위반 아바타 삭제 → 기본 아바타로 승계) / **닉네임 초기화** / **경고** / **계정 정지**(기간 지정·해제) / **기각**(신고 count 0 리셋)
 
 권한: `profiles.is_admin = true` (MAIL §2.3과 동일).
 
-**자동 비공개 X** — 신고 누적은 표시·정렬만, 차단은 운영자 직접 조치.
+**자동 차단 X** — 신고 누적은 표시·정렬만, 조치는 운영자 직접.
 
 ### 7.3 신고 어뷰징 방지
 
@@ -386,7 +385,7 @@ Be lenient. Only fail on CLEAR defects. "Could be better" or "head looks big" is
 
 ## 9. 자랑카드 연결 (CLAUDE §3.7)
 
-"장비 전체" OG는 **장비 3종 + 프로필 1장** 합성. 프로필 없거나 `hidden_at IS NOT NULL`이면 fallback. 이 OG는 satori(next/og) — 캔버스 못 씀 → 다운로드된 프로필 PNG를 `<img>` 그대로. 등급 프레임은 `transcend-visual-system` 규칙 그대로 장비에만, 프로필은 무프레임.
+"장비 전체" OG는 **장비 3종 + 프로필 1장** 합성. 프로필 없으면 fallback. 이 OG는 satori(next/og) — 캔버스 못 씀 → 다운로드된 프로필 PNG를 `<img>` 그대로. 등급 프레임은 `transcend-visual-system` 규칙 그대로 장비에만, 프로필은 무프레임.
 
 ---
 

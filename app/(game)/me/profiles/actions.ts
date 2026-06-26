@@ -1,7 +1,7 @@
 'use server';
 
 import { revalidatePath } from 'next/cache';
-import { and, count, desc, eq, isNull, ne } from 'drizzle-orm';
+import { and, count, desc, eq, ne } from 'drizzle-orm';
 import { z } from 'zod';
 
 import { getSessionUserId } from '@/lib/auth/session';
@@ -105,10 +105,10 @@ export async function deleteProfile(profileId: string): Promise<ActionState> {
     return { status: 'error', message: '아바타는 최소 1개 이상 보유해야 합니다.' };
 
   await db.transaction(async (tx) => {
-    // 활성 프로필을 지웠으면 같은 서버 남은 프로필(최신·미숨김)로 자동 승계(감사 P5) — null 방치 시
+    // 활성 프로필을 지웠으면 같은 서버 남은 프로필(최신)로 자동 승계(감사 P5) — null 방치 시
     // 아바타 없음 상태가 됨. ⚠️ characters.active_profile_id FK가 on delete set null이라, 삭제를
     // 먼저 하면 활성이 자동 null로 풀려 승계 조건(activeProfileId=profileId)이 0행이 됨 → 반드시
-    // 삭제 前 재할당. 삭제 대상은 ne로 제외(최소 1개 강제라 승계 대상 보통 존재, 잔여가 전부 hidden이면 null 폴백).
+    // 삭제 前 재할당. 삭제 대상은 ne로 제외(최소 1개 강제라 승계 대상 보통 존재, 마지막 1개면 null 폴백).
     const [next] = await tx
       .select({ id: userProfiles.id })
       .from(userProfiles)
@@ -116,7 +116,6 @@ export async function deleteProfile(profileId: string): Promise<ActionState> {
         and(
           eq(userProfiles.userId, userId),
           eq(userProfiles.serverId, target.serverId),
-          isNull(userProfiles.hiddenAt),
           ne(userProfiles.id, profileId),
         ),
       )

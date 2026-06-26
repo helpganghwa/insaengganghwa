@@ -75,7 +75,7 @@ export default async function ProfilePage() {
             from user_equipment where user_id = ${userId}::uuid and server_id = ${serverId}), '[]'::json) as equipment,
           coalesce((select json_agg(json_build_object(
               'id', id, 'rotations', rotations, 'activeDirection', active_direction) order by created_at desc)
-            from user_profiles where user_id = ${userId}::uuid and server_id = ${serverId} and hidden_at is null), '[]'::json) as avatars
+            from user_profiles where user_id = ${userId}::uuid and server_id = ${serverId}), '[]'::json) as avatars
         from profiles p
           left join characters c on c.user_id = p.id and c.server_id = ${serverId}
           left join guild_members gm on gm.user_id = p.id and gm.server_id = ${serverId}

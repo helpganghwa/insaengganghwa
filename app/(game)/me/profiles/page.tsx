@@ -1,5 +1,5 @@
 import Link from 'next/link';
-import { and, desc, eq, isNull } from 'drizzle-orm';
+import { and, desc, eq } from 'drizzle-orm';
 
 import { getSessionUserId } from '@/lib/auth/session';
 import { db } from '@/lib/db/client';
@@ -25,13 +25,7 @@ export default async function ProfileSelectPage() {
         activeDirection: userProfiles.activeDirection,
       })
       .from(userProfiles)
-      .where(
-        and(
-          eq(userProfiles.userId, userId),
-          eq(userProfiles.serverId, serverId),
-          isNull(userProfiles.hiddenAt),
-        ),
-      )
+      .where(and(eq(userProfiles.userId, userId), eq(userProfiles.serverId, serverId)))
       .orderBy(desc(userProfiles.createdAt)),
     db
       .select({ activeProfileId: characters.activeProfileId })

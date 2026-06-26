@@ -37,7 +37,6 @@ export default async function AdminReportsPage() {
       rotations: userProfiles.rotations,
       activeDirection: userProfiles.activeDirection,
       reportCount: userProfiles.reportCount,
-      hiddenAt: userProfiles.hiddenAt,
       createdAt: userProfiles.createdAt,
       bannedAt: profiles.bannedAt,
       banUntil: profiles.banUntil,
@@ -120,14 +119,7 @@ export default async function AdminReportsPage() {
           const reports = reportsByProfile.get(p.id) ?? [];
           const banned = !!p.bannedAt && (!p.banUntil || p.banUntil.getTime() > Date.now());
           return (
-            <div
-              key={p.id}
-              className={`rounded-xl border p-3 ${
-                p.hiddenAt
-                  ? 'border-zinc-300 bg-zinc-100 dark:border-zinc-700 dark:bg-zinc-900'
-                  : 'border-zinc-200 dark:border-zinc-800'
-              }`}
-            >
+            <div key={p.id} className="rounded-xl border border-zinc-200 p-3 dark:border-zinc-800">
               {/* 신고받은 사람 */}
               <div className="flex gap-3">
                 <div className="relative h-20 w-20 shrink-0 isolate overflow-hidden rounded-lg bg-gradient-to-b from-zinc-700 to-zinc-950">
@@ -143,7 +135,6 @@ export default async function AdminReportsPage() {
                     <span className="shrink-0 rounded-full bg-red-100 px-2 py-0.5 text-[11px] font-bold text-red-700 dark:bg-red-950/50 dark:text-red-300">
                       신고 {p.reportCount}
                     </span>
-                    {p.hiddenAt && <span className="shrink-0 text-[11px] font-semibold text-zinc-500">비공개됨</span>}
                     {banned && <span className="shrink-0 rounded-full bg-zinc-800 px-2 py-0.5 text-[10px] font-bold text-red-400">정지됨</span>}
                   </div>
                   <div className="mt-0.5 text-[10px] text-zinc-500">

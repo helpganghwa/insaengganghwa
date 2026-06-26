@@ -67,7 +67,7 @@ export const profileReportReasonEnum = pgEnum('profile_report_reason', [
 
 /**
  * 검토 통과한 active 프로필. 자랑카드(§3.7)·hub·랭킹에 표시.
- * `hidden_at`은 운영자가 신고 누적 후 수동 비공개 처리(자동 차단 X, PROFILE §7).
+ * 신고 누적 시 운영자는 아바타 초기화(기본 전환)·경고·계정 정지로 조치(PROFILE §7).
  */
 export const userProfiles = pgTable(
   'user_profiles',
@@ -98,16 +98,12 @@ export const userProfiles = pgTable(
     descriptionPrompt: text('description_prompt').notNull(),
     /** 누적 신고 수(표시·정렬용, 자동 차단 X). */
     reportCount: integer('report_count').notNull().default(0),
-    /** 운영자 수동 비공개 시점(null=공개). */
-    hiddenAt: timestamp('hidden_at', { withTimezone: true }),
     createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
   },
   (t) => [
     index('user_profiles_user_id_created_at_idx').on(t.userId, t.createdAt.desc()),
-    // 운영자 신고 대시보드 — 공개 + 신고 많은 순.
-    index('user_profiles_report_count_idx')
-      .on(t.reportCount.desc())
-      .where(sql`${t.hiddenAt} IS NULL`),
+    // 운영자 신고 대시보드 — 신고 많은 순.
+    index('user_profiles_report_count_idx').on(t.reportCount.desc()),
   ],
 );
 export type UserProfile = typeof userProfiles.$inferSelect;
