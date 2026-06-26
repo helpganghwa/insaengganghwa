@@ -58,7 +58,7 @@ export function worldEventMessage(e: WorldEventEntry, opts?: { link?: boolean })
     case 'enhance':
       return <>{actor}님이 {item} {hl(`+${level} 강화`, C.amber)}에 성공했습니다</>;
     case 'transcend':
-      return <>{actor}님이 {item} {hl(`초월 +${level}`, C.violet)}을 달성했습니다</>;
+      return <>{actor}님이 {item} {hl(`초월 +${level}`, C.violet)} 달성했습니다</>;
     case 'guild_create':
       return <>{actor}님이 {hl(guildName, C.guild)} 길드를 결성했습니다</>;
     case 'guild_power_1':

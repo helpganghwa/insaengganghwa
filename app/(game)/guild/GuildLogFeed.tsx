@@ -69,7 +69,7 @@ function message(e: GuildLogEntry): ReactNode {
     case 'leave':
       return <>{actor}님이 길드를 떠났습니다</>;
     case 'levelup':
-      return <>길드가 {hl(`Lv.${(e.detail?.level as number) ?? '?'}`, C.amber)}을 달성했습니다</>;
+      return <>길드가 {hl(`Lv.${(e.detail?.level as number) ?? '?'}`, C.amber)} 달성했습니다</>;
     case 'tax_collect':
       return <>{actor}님이 세금 {hl(`${amt}💎`, C.amber)}를 수금했습니다</>;
     case 'tax_distribute':
@@ -94,7 +94,7 @@ function message(e: GuildLogEntry): ReactNode {
     case 'achv_enhance':
       return <>{actor}님이 {item} {hl(`+${level} 강화`, C.amber)}에 성공했습니다</>;
     case 'achv_transcend':
-      return <>{actor}님이 {item} {hl(`초월 +${level}`, C.violet)}을 달성했습니다</>;
+      return <>{actor}님이 {item} {hl(`초월 +${level}`, C.violet)} 달성했습니다</>;
     case 'achv_melee':
       return <>{actor}님이 대난투 {hl(`${medal}${rank}위`, C.amber)}에 올랐습니다</>;
     case 'achv_rank_leader':
