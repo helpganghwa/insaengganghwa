@@ -21,6 +21,13 @@ const PIXELLAB_BASE = 'https://api.pixellab.ai/v2';
 // 확정: 256 정사각(최대 area·디테일·기존 정사각 아바타 통합) + 전신은 프롬프트 강제.
 const V3_SIZE = 256;
 
+/**
+ * queued 상태 상한(분, createdAt 기준). downloading의 PROFILE_GEN_TIMEOUT_MIN(20분)과 대칭(감사 P2).
+ * createCharacterV3가 hang(throw 아님)하면 oldest queued가 매 tick 재픽업되며 큐 전체를
+ * head-of-line 차단 + 활성잡 unique로 그 유저 영구락·escrow 동결. 1시간 초과 시 fail+환불해 큐 진행.
+ */
+const QUEUED_TIMEOUT_MIN = 60;
+
 export interface CreateV3Input {
   gender: ProfileGender;
   /** 카탈로그 키(이미지·로어 로드용) — compose가 비전+로어로 사용. */
@@ -109,12 +116,21 @@ export async function enqueueOneV3(): Promise<
       userId: profileGenerationJobs.userId,
       options: profileGenerationJobs.options,
       equipmentSnapshot: profileGenerationJobs.equipmentSnapshot,
+      createdAt: profileGenerationJobs.createdAt,
     })
     .from(profileGenerationJobs)
     .where(eq(profileGenerationJobs.status, 'queued'))
     .orderBy(profileGenerationJobs.createdAt)
     .limit(1);
   if (!job) return { kind: 'noop' };
+
+  // queued 타임아웃(감사 P2) — oldest가 1시간 넘게 queued면 createCharacterV3 hang 등으로 막힌
+  // 것이라 처리 대신 fail+환불. 큐 head-of-line 차단 해소 + 유저 영구락·escrow 동결 방지.
+  const ageMin = (Date.now() - new Date(job.createdAt ?? 0).getTime()) / 60_000;
+  if (ageMin > QUEUED_TIMEOUT_MIN) {
+    await markFailedAndRefund(job.id, job.userId, `queued timeout/stall ${ageMin.toFixed(0)}min`);
+    return { kind: 'failed', jobId: job.id, reason: `queued timeout ${ageMin.toFixed(0)}min` };
+  }
 
   const gender = (job.options as { gender: ProfileGender }).gender;
   const eqs = job.equipmentSnapshot as {
