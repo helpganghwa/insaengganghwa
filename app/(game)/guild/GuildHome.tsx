@@ -315,9 +315,14 @@ export function GuildHome({
       </div>
       </div>
 
-      {/* 길드 로그 — 가입/탈퇴/레벨업/세금수금·분배/점령·상실 + 임원행동. 최신순 스크롤. */}
+      {/* 길드 로그 — 미리보기 10건. 전체(100건)는 /guild/log 상세(월드 로그와 동일 패턴). */}
       <section className="rounded-xl border border-zinc-200 bg-white p-3 dark:border-zinc-800 dark:bg-zinc-950">
-        <h3 className="mb-1 px-1 text-sm font-bold">길드 로그</h3>
+        <div className="mb-1 flex items-center justify-between px-1">
+          <h3 className="text-sm font-bold">길드 로그</h3>
+          <Link href="/guild/log" className="text-[11px] font-semibold text-zinc-500 hover:underline">
+            전체 보기 ›
+          </Link>
+        </div>
         <GuildLogFeed entries={log} />
       </section>
 

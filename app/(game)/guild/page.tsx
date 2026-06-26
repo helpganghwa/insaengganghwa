@@ -70,7 +70,8 @@ export default async function GuildPage() {
   const [guild, members, log] = await Promise.all([
     withTimeout(getGuild(membership.guildId), DB_GUARD_MS, 'guild.guild'),
     withTimeout(getGuildMembersRich(membership.guildId), DB_GUARD_MS, 'guild.members'),
-    withTimeout(getGuildActivityLog(membership.guildId, serverId, 100), DB_GUARD_MS, 'guild.log').catch(
+    // 홈은 미리보기 10건만(전체는 /guild/log 상세에서 100건). 월드 로그와 동일 패턴.
+    withTimeout(getGuildActivityLog(membership.guildId, serverId, 10), DB_GUARD_MS, 'guild.log').catch(
       () => [],
     ),
   ]);

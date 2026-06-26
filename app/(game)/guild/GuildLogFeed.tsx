@@ -109,16 +109,30 @@ function message(e: GuildLogEntry): ReactNode {
   }
 }
 
-/** 길드 활동 로그 피드 — 컴팩트(점 없음·작은 폰트), 핵심 토큰만 색상 + 전체 타임스탬프. 최신순 스크롤. */
-export function GuildLogFeed({ entries }: { entries: GuildLogEntry[] }) {
+/**
+ * 길드 활동 로그 피드 — 핵심 토큰만 색상 + 전체 타임스탬프, 최신순. 월드 로그와 동일 패턴:
+ * full=true(상세 /guild/log)면 말줄임 없이 전체 줄바꿈·전건, 기본(미리보기)이면 한 줄 truncate + 스크롤.
+ */
+export function GuildLogFeed({ entries, full = false }: { entries: GuildLogEntry[]; full?: boolean }) {
   if (entries.length === 0) {
     return <p className="px-1 py-3 text-center text-[11px] text-zinc-400">아직 활동 기록이 없습니다.</p>;
   }
   return (
-    <ul className="max-h-80 divide-y divide-zinc-100 overflow-y-auto overscroll-contain dark:divide-zinc-900">
+    <ul
+      className={`divide-y divide-zinc-100 dark:divide-zinc-900 ${
+        full ? '' : 'max-h-80 overflow-y-auto overscroll-contain'
+      }`}
+    >
       {entries.map((e) => (
-        <li key={e.id} className="flex items-center gap-2 py-1 text-[11px] leading-tight">
-          <span className="min-w-0 flex-1 truncate text-zinc-700 dark:text-zinc-300">{message(e)}</span>
+        <li
+          key={e.id}
+          className={`flex gap-2 ${full ? 'items-start px-3 py-1 text-[11px] leading-snug' : 'items-center py-1 text-[11px] leading-tight'}`}
+        >
+          <span
+            className={`min-w-0 flex-1 text-zinc-700 dark:text-zinc-300 ${full ? 'whitespace-normal break-words' : 'truncate'}`}
+          >
+            {message(e)}
+          </span>
           <span className="shrink-0 font-mono text-[9px] tabular-nums text-zinc-400">
             {fmtFull(e.createdAtIso)}
           </span>
