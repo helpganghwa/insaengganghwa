@@ -16,121 +16,12 @@ export const contentType = 'image/png';
 
 const EMOJI = { weapon: '⚔️', armor: '🛡️', accessory: '💍' } as const;
 const SLOTS = ['weapon', 'armor', 'accessory'] as const;
-/** Pixellab 배경 아트 풀 — public/og/og-1..N.png. 부재 시 그라데이션 폴백. */
-const BG_POOL = 8;
 
 // 해방 후광은 OG(satori)에서 제외 — satori는 box-shadow(사각/원형)만 지원해 아이템 실루엣을
 // 따라가는 후광이 불가(filter: drop-shadow 미지원). 박스/원형 후광은 아이템과 안 맞아 제거.
 
-// 초월 별 장식 — 4 모서리 등급색 별. Satori 호환을 위해 단순 SVG <polygon>
-// (transform 없음). sub=1(짝수 등급)이면 인벤토리 RarityFrame과 동일하게 위성 별
-// **3개**(코너 안쪽 우/하/대각). 4 모서리에 같은 구성 + mirror로 안쪽 향함.
-const STAR_POINTS = '50,8 60,42 92,50 60,58 50,92 40,58 8,50 40,42';
-function rarityStarsOG(
-  colorRgb: readonly [number, number, number],
-  sub: 0 | 1,
-  cornerPx: number,
-): React.ReactElement[] {
-  const [r, g, b] = colorRgb;
-  const color = `rgb(${r},${g},${b})`;
-  const accent = `rgb(${Math.round(r + (255 - r) * 0.55)},${Math.round(g + (255 - g) * 0.55)},${Math.round(b + (255 - b) * 0.55)})`;
-  const big = Math.round(cornerPx * 0.7);
-  const sat = Math.round(cornerPx * 0.32); // 위성 별 — 큰 별 절반보다 작게
-  const satTiny = Math.round(cornerPx * 0.24); // 안쪽 대각 위성 — 가장 작게
-  // 위성 별 3개 위치(좌상 코너 기준). 4 모서리는 top/bottom·left/right swap.
-  // 인벤토리 RarityFrame과 같은 구성: (14.5,4.5), (4.5,14.5), (13.5,13.5)을 cornerPx로 환산.
-  const satOff1 = Math.round(cornerPx * 0.48); // 큰 별 안쪽 우측(또는 하단) 위성
-  const satOff2 = Math.round(cornerPx * 0.05); // 큰 별 옆/위 위성의 다른 축 가까운 값
-  const satMidOff = Math.round(cornerPx * 0.42); // 대각 위성
-  // edge map — top:0/left:0 (좌상) 기준. 각 코너별로 top/left 키를 bottom/right로 swap.
-  type Edge = { e1: 'top' | 'bottom'; e2: 'left' | 'right' };
-  const edges: Edge[] = [
-    { e1: 'top', e2: 'left' }, // 좌상
-    { e1: 'top', e2: 'right' }, // 우상
-    { e1: 'bottom', e2: 'left' }, // 좌하
-    { e1: 'bottom', e2: 'right' }, // 우하
-  ];
-  const els: React.ReactElement[] = [];
-  for (let i = 0; i < edges.length; i++) {
-    const { e1, e2 } = edges[i]!;
-    // 큰 별 — 코너에 붙임
-    els.push(
-      <div
-        key={`s${i}`}
-        style={{
-          position: 'absolute',
-          display: 'flex',
-          width: big,
-          height: big,
-          [e1]: 0,
-          [e2]: 0,
-        }}
-      >
-        <svg width={big} height={big} viewBox="0 0 100 100">
-          <polygon points={STAR_POINTS} fill={color} />
-        </svg>
-      </div>,
-    );
-    if (sub === 1) {
-      // 위성 1: 큰 별의 안쪽 e2 방향(좌상이면 우측, 우상이면 좌측 ...)
-      els.push(
-        <div
-          key={`a${i}-1`}
-          style={{
-            position: 'absolute',
-            display: 'flex',
-            width: sat,
-            height: sat,
-            [e1]: satOff2,
-            [e2]: satOff1,
-          }}
-        >
-          <svg width={sat} height={sat} viewBox="0 0 100 100">
-            <polygon points={STAR_POINTS} fill={accent} />
-          </svg>
-        </div>,
-      );
-      // 위성 2: 안쪽 e1 방향(좌상이면 아래, 좌하이면 위 ...)
-      els.push(
-        <div
-          key={`a${i}-2`}
-          style={{
-            position: 'absolute',
-            display: 'flex',
-            width: sat,
-            height: sat,
-            [e1]: satOff1,
-            [e2]: satOff2,
-          }}
-        >
-          <svg width={sat} height={sat} viewBox="0 0 100 100">
-            <polygon points={STAR_POINTS} fill={accent} />
-          </svg>
-        </div>,
-      );
-      // 위성 3: 대각 안쪽(가장 작음) — 큰 별의 카드 중심 쪽 대각
-      els.push(
-        <div
-          key={`a${i}-3`}
-          style={{
-            position: 'absolute',
-            display: 'flex',
-            width: satTiny,
-            height: satTiny,
-            [e1]: satMidOff,
-            [e2]: satMidOff,
-          }}
-        >
-          <svg width={satTiny} height={satTiny} viewBox="0 0 100 100">
-            <polygon points={STAR_POINTS} fill={accent} />
-          </svg>
-        </div>,
-      );
-    }
-  }
-  return els;
-}
 
+const STAR_POINTS = '50,8 60,42 92,50 60,58 50,92 40,58 8,50 40,42';
 /** 인라인 SVG 별 — satori 기본 폰트엔 ✦(U+2726)가 없어 깨지므로 텍스트 대신 별 도형을 쓴다. */
 function starSvg(color: string, px: number) {
   return (
@@ -165,14 +56,9 @@ export async function GET(_req: Request, { params }: { params: Promise<{ shareCo
   // shareCode = 불변 공개 코드(신규) 또는 닉네임(레거시 링크 하위호환).
   const handle = decodeURIComponent(shareCode);
   const origin = url.origin;
-  // 카카오 공유 query — focus=piece면 sprite 1개 강조 모드(아래 분기).
-  const focus = url.searchParams.get('focus'); // 'piece' | 'set' | null
-  const focusCode = url.searchParams.get('code') ?? '';
   // 서버 파라미터(SERVER.md §1) — 서버별 캐릭터 카드. 비정상/미지정 = 기본 1.
   const sRaw = Number(url.searchParams.get('s'));
   const serverId = Number.isInteger(sRaw) && sRaw >= 1 && sRaw <= 32767 ? sRaw : DEFAULT_SERVER_ID;
-  const focusLvl = Number(url.searchParams.get('lvl') ?? 0);
-  const focusT = Number(url.searchParams.get('t') ?? 0);
 
   const [prof] = await db
     .select({
@@ -244,91 +130,6 @@ export async function GET(_req: Request, { params }: { params: Promise<{ shareCo
     }
   }
 
-  // ── focus=piece 모드 — 단일 아이템 강조(sprite 큼 + 레벨 강조). 카카오 공유 query. ──
-  if (focus === 'piece' && focusCode) {
-    // piece 모드 전용 배경(og-pool 랜덤) + root 패딩. set 모드는 카드 컨테이너 사용.
-    const bgUri = await dataUri(`${origin}/og/og-${1 + Math.floor(Math.random() * BG_POOL)}.png`);
-    const rootBase = {
-      width: '100%',
-      height: '100%',
-      display: 'flex',
-      flexDirection: 'column' as const,
-      color: '#fde9c8',
-      padding: '160px 160px',
-      fontFamily: 'sans-serif',
-      position: 'relative' as const,
-    };
-    const sprUri = await dataUri(`${origin}${spritePath(focusCode) ?? ''}`);
-    const ts = focusT > 0 ? transcendStyle(focusT) : null;
-    const [tr, tg, tb] = ts?.colorRgb ?? [0, 0, 0];
-    const transcendHeadline = focusT >= 1;
-    const headlineText = transcendHeadline
-      ? `초월 ${focusT}`
-      : focusLvl >= 99
-        ? `전설의 +99`
-        : focusLvl >= 50
-          ? `✨ +${focusLvl}`
-          : `+${focusLvl}`;
-    return new ImageResponse(
-      <div
-        style={
-          bgUri
-            ? { ...rootBase, background: '#120c08' }
-            : {
-                ...rootBase,
-                background: 'linear-gradient(135deg,#1c1410 0%,#3a2a14 60%,#7a5a1e 100%)',
-              }
-        }
-      >
-        {bgUri ? (
-          <>
-            <img
-              src={bgUri}
-              width={1200}
-              height={630}
-              style={{ position: 'absolute', top: 0, left: 0, width: 1200, height: 630, objectFit: 'cover' }}
-            />
-            {/* scrim 제거(2026-05-20 사용자 결정) — 배경이 자체 분위기로 보이도록 */}
-          </>
-        ) : null}
-        <div
-          style={{
-            display: 'flex', alignItems: 'center', justifyContent: 'center', flex: 1,
-          }}
-        >
-          <div
-            style={{
-              position: 'relative',
-              width: 360, height: 360, display: 'flex', alignItems: 'center', justifyContent: 'center',
-              borderRadius: 32, background: 'rgba(0,0,0,0.32)',
-              border: ts ? `8px solid rgb(${tr},${tg},${tb})` : '3px solid rgba(255,255,255,0.10)',
-              overflow: 'hidden',
-            }}
-          >
-            {sprUri ? (
-              <img src={sprUri} width={320} height={320} style={{ width: 320, height: 320 }} />
-            ) : (
-              <span style={{ fontSize: 200, opacity: 0.5 }}>❔</span>
-            )}
-            {/* 초월 별 장식 — 4 모서리(폰트 ✦, Satori 호환). 큰 카드라 cornerPx 90. */}
-            {ts ? rarityStarsOG(ts.colorRgb, ts.sub as 0 | 1, 90) : null}
-          </div>
-        </div>
-        <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', marginTop: 'auto' }}>
-          <div style={{ display: 'flex', alignItems: 'center', gap: 18, fontSize: 96, fontWeight: 800, color: '#ffd47a' }}>
-            {transcendHeadline ? starSvg(ts ? `rgb(${tr},${tg},${tb})` : '#ffd47a', 80) : null}
-            <span style={{ display: 'flex' }}>{headlineText}</span>
-          </div>
-        </div>
-      </div>,
-      {
-        ...size,
-        // 엣지 캐시 1h + SWR 1d — 카카오/트위터가 같은 공유 URL을 반복 크롤할 때 매번
-        // DB 3쿼리+Satori 렌더 재연산하던 것 차단(스케일 감사 C4). 카드는 준불변 스냅샷.
-        headers: { 'cache-control': 'public, s-maxage=3600, stale-while-revalidate=86400' },
-      },
-    );
-  }
   // 슬롯 스프라이트 data URI 선해결(Satori는 동기 렌더).
   const sprite = new Map<string, string | null>();
   await Promise.all(

@@ -32,8 +32,8 @@ export type BoastPiece = {
 };
 
 /**
- * 자랑/공유 모달 — WIREFRAMES §10. 두 단위: 'set'(3슬롯 세트) / 'piece'(장비 1개).
- * 등급 표기 없음(시스템 미존재) — 강화/초월/전투력으로 표현(CLAUDE §3.7).
+ * 자랑/공유 모달 — WIREFRAMES §10. 장비 전체(3슬롯 세트 + 프로필) 단위 공유.
+ * (장비 단위 piece 자랑은 폐기 — set만 유지.) 등급 표기 없음 — 강화/초월/전투력으로 표현(CLAUDE §3.7).
  * 공유·OG URL은 불변 공개 코드 기반(/s/<code> → /u/<code>) — 닉 변경에도 안 깨짐.
  * 닉네임은 표시(타이틀·미리보기)용으로만 사용.
  */
@@ -42,10 +42,7 @@ export function BoastModal({
   onClose,
   nickname,
   publicCode,
-  kind,
   set,
-  piece,
-  headline,
   profileImg,
   guildEmblemUrl = null,
   guildName = null,
@@ -56,10 +53,7 @@ export function BoastModal({
   nickname: string;
   /** 불변 공개 코드 — 공유/OG 링크 식별자. */
   publicCode: string;
-  kind: 'set' | 'piece';
   set?: { pieces: BoastPiece[]; total: number };
-  piece?: { p: BoastPiece; cp: number };
-  headline?: string;
   /** 미리보기에 그릴 활성 프로필 캐릭터 이미지(me/page profileImg). null이면 폴백. */
   profileImg?: string | null;
   /** 닉네임 밑 길드 문양+이름(미소속/생성중이면 미표시). */
@@ -116,24 +110,11 @@ export function BoastModal({
   const imageUrl = useMemo(() => {
     if (!open || typeof window === 'undefined') return '';
     const origin = window.location.origin;
-    const v = Math.random().toString(36).slice(2, 10);
+    const v = Math.random().toString(36).slice(2, 10); // 카톡 캐시 우회(매 공유 다른 OG).
     const params = new URLSearchParams({ v });
-    if (kind === 'piece' && piece) {
-      params.set('focus', 'piece');
-      params.set('code', piece.p.code);
-      params.set('lvl', String(piece.p.enhanceLevel));
-      params.set('t', String(piece.p.transcendLevel));
-    } else if (kind === 'set' && set) {
-      params.set('focus', 'set');
-      params.set('cp', String(set.total));
-    }
     if (serverId !== 1) params.set('s', String(serverId));
     return `${origin}/og/${encodeURIComponent(publicCode)}?${params.toString()}`;
-  }, [
-    open, kind, publicCode, serverId,
-    piece?.p.code, piece?.p.enhanceLevel, piece?.p.transcendLevel,
-    set?.total,
-  ]);
+  }, [open, publicCode, serverId]);
 
   // 모달 열릴 때마다 에러 상태 리셋(이전 시도의 onError를 다음 시도가 끌고 가지 않게).
   useEffect(() => {
@@ -161,8 +142,7 @@ export function BoastModal({
   // 사용자 결정(2026-05-31): 타이틀·설명을 고정 문구로 통일.
   //   title       = "{nick} - '강화는 인생이다'"
   //   description = "인생강화에서 N명이 인생 강화중" (N=현재 강화중 distinct user)
-  const setTitle =
-    kind === 'set' ? `${nickname} - '강화는 인생이다'` : (headline ?? '✨ 강화 달성');
+  const setTitle = `${nickname} - '강화는 인생이다'`;
   const text =
     enhancingCount !== null
       ? `인생강화에서 ${enhancingCount.toLocaleString('ko-KR')}명이 인생 강화중`
@@ -205,19 +185,9 @@ export function BoastModal({
       return;
     }
     const origin = window.location.origin;
-    // imageUrl에 컨텍스트 query — /og route가 seed로 멘트·시각 분기 가능.
-    // v=random은 카톡 캐시 우회. focus=piece 시 sprite 1개 강조 모드(OG route 분기).
+    // v=random은 카톡 캐시 우회(매 공유마다 다른 OG — 서버 OG는 sprite·배경 랜덤 합성).
     const v = Math.random().toString(36).slice(2, 10);
     const params = new URLSearchParams({ v });
-    if (kind === 'piece' && piece) {
-      params.set('focus', 'piece');
-      params.set('code', piece.p.code);
-      params.set('lvl', String(piece.p.enhanceLevel));
-      params.set('t', String(piece.p.transcendLevel));
-    } else if (kind === 'set' && set) {
-      params.set('focus', 'set');
-      params.set('cp', String(set.total));
-    }
     if (serverId !== 1) params.set('s', String(serverId));
     const imageUrl = `${origin}/og/${encodeURIComponent(publicCode)}?${params.toString()}`;
     // '인생강화 시작' — /s/[code]?start=1로 보내 pending_referral 쿠키를 세팅(추천 귀속) 후
@@ -485,7 +455,6 @@ export function BoastLauncher({
         onClose={() => setOpen(false)}
         nickname={nickname}
         publicCode={publicCode}
-        kind="set"
         set={{ pieces, total }}
         profileImg={profileImg ?? null}
         guildEmblemUrl={guildEmblemUrl}
