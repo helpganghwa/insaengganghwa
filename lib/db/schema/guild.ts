@@ -245,7 +245,7 @@ export const guildTaxDistributions = pgTable(
     byUserId: uuid('by_user_id')
       .notNull()
       .references(() => profiles.id),
-    mode: text('mode').notNull(), // 'equal' | 'target'
+    mode: text('mode').notNull(), // 'equal' | 'target' | 'manual'(distributeGuildTaxManual — 멤버별 수동 지정)
     total: bigint('total', { mode: 'bigint' }).notNull(), // 분배 총 💎
     targetUserId: uuid('target_user_id'), // target 모드 수령자
     createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
