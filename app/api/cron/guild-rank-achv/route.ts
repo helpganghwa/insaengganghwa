@@ -17,10 +17,17 @@ export async function GET(req: Request) {
   if (!isCronAuthorized(req)) return new Response('forbidden', { status: 403 });
   try {
     const results = [];
+    // per-server 에러격리(감사 G1) — 한 서버 실패가 뒤 서버 업적 기록을 막지 않도록. 변동 시에만 기록이라 재시도 안전.
     for (const sid of await openServerIds()) {
-      results.push({ serverId: sid, ...(await runGuildRankAchievements(sid)) });
+      try {
+        results.push({ serverId: sid, ...(await runGuildRankAchievements(sid)) });
+      } catch (se) {
+        console.error('[guild-rank-achv] server', sid, se);
+        results.push({ serverId: sid, error: (se as Error).message });
+      }
     }
-    return Response.json({ ok: true, results, kind: 'guild-rank-achv' });
+    const ok = results.every((r) => !('error' in r));
+    return Response.json({ ok, results, kind: 'guild-rank-achv' }, { status: ok ? 200 : 500 });
   } catch (e) {
     console.error('[guild-rank-achv]', e);
     return Response.json({ ok: false, error: (e as Error).message, kind: 'guild-rank-achv' }, { status: 500 });

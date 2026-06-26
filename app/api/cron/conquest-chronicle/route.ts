@@ -23,21 +23,27 @@ export async function GET(req: Request) {
   const kstDay = kstDateString(new Date(Date.now() - 24 * 60 * 60 * 1000));
   try {
     const results = [];
+    // per-server 에러격리(감사 G1) — 한 서버 공개 실패가 뒤 서버 소유권·보상 우편 누락으로 번지지 않도록. 멱등 재시도 안전.
     for (const sid of await openServerIds()) {
-      // narrate 전에 어제 전투 공개(소유권 적용·우편·published 마킹) — 멱등.
-      const rev = await revealConquest(sid, kstDay);
-      // 공개 후 수비 배치 이월(안 뺏긴 구역만, 공격은 해제) — 재실행 안전. 실패해도 공개/연대기엔 무관.
-      const carry = await carryOverDefenders(sid, kstDay).catch(() => ({ carried: 0 }));
-      results.push({
-        serverId: sid,
-        revealed: rev.revealed,
-        mailed: rev.mailed,
-        carried: carry.carried,
-        ...(await generateAndStoreChronicle(kstDay, sid)),
-      });
+      try {
+        // narrate 전에 어제 전투 공개(소유권 적용·우편·published 마킹) — 멱등.
+        const rev = await revealConquest(sid, kstDay);
+        // 공개 후 수비 배치 이월(안 뺏긴 구역만, 공격은 해제) — 재실행 안전. 실패해도 공개/연대기엔 무관.
+        const carry = await carryOverDefenders(sid, kstDay).catch(() => ({ carried: 0 }));
+        results.push({
+          serverId: sid,
+          revealed: rev.revealed,
+          mailed: rev.mailed,
+          carried: carry.carried,
+          ...(await generateAndStoreChronicle(kstDay, sid)),
+        });
+      } catch (se) {
+        console.error('[conquest-chronicle] server', sid, se);
+        results.push({ serverId: sid, error: (se as Error).message });
+      }
     }
-    const r = { results };
-    return Response.json({ ok: true, kstDay, ...r, kind: 'conquest-chronicle' });
+    const ok = results.every((r) => !('error' in r));
+    return Response.json({ ok, kstDay, results, kind: 'conquest-chronicle' }, { status: ok ? 200 : 500 });
   } catch (e) {
     console.error('[conquest-chronicle]', e);
     return Response.json(

@@ -24,12 +24,19 @@ export async function GET(req: Request) {
     const heavy = new Date().getUTCMinutes() % 15 < 5;
     const metrics = heavy ? ALL : LIGHT;
     const results = [];
+    // per-server 에러격리(감사 G1) — 한 서버 스냅샷 실패가 뒤 서버 랭킹 갱신을 막지 않도록. 멱등 rebuild라 재시도 안전.
     for (const sid of await openServerIds()) {
-      const counts = await rebuildLeaderboardSnapshot(sid, metrics);
-      if (heavy) await rebuildCodexChampions(sid);
-      results.push({ serverId: sid, counts });
+      try {
+        const counts = await rebuildLeaderboardSnapshot(sid, metrics);
+        if (heavy) await rebuildCodexChampions(sid);
+        results.push({ serverId: sid, counts });
+      } catch (se) {
+        console.error('[leaderboard-snapshot] server', sid, se);
+        results.push({ serverId: sid, error: (se as Error).message });
+      }
     }
-    return Response.json({ ok: true, heavy, results, kind: 'leaderboard-snapshot' });
+    const ok = results.every((r) => !('error' in r));
+    return Response.json({ ok, heavy, results, kind: 'leaderboard-snapshot' }, { status: ok ? 200 : 500 });
   } catch (e) {
     console.error('[leaderboard-snapshot]', e);
     return Response.json({ ok: false, error: (e as Error).message, kind: 'leaderboard-snapshot' }, { status: 500 });

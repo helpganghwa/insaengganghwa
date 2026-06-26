@@ -19,12 +19,19 @@ export async function GET(req: Request) {
   if (!isCronAuthorized(req)) return new Response('forbidden', { status: 403 });
   try {
     const results = [];
+    // per-server 에러격리(감사 G1) — 한 서버 실패가 뒤 서버 1위 교체 감지를 막지 않도록. 스냅샷 비교라 재시도 안전.
     for (const sid of await openServerIds()) {
-      const rankLeaders = await runRankingLeaders(sid);
-      const guildLeaders = await runGuildLeaders(sid);
-      results.push({ serverId: sid, rankLeaders, guildLeaders });
+      try {
+        const rankLeaders = await runRankingLeaders(sid);
+        const guildLeaders = await runGuildLeaders(sid);
+        results.push({ serverId: sid, rankLeaders, guildLeaders });
+      } catch (se) {
+        console.error('[rank-leader] server', sid, se);
+        results.push({ serverId: sid, error: (se as Error).message });
+      }
     }
-    return Response.json({ ok: true, results, kind: 'rank-leader' });
+    const ok = results.every((r) => !('error' in r));
+    return Response.json({ ok, results, kind: 'rank-leader' }, { status: ok ? 200 : 500 });
   } catch (e) {
     console.error('[rank-leader]', e);
     return Response.json({ ok: false, error: (e as Error).message, kind: 'rank-leader' }, { status: 500 });

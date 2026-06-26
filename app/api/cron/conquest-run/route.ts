@@ -19,9 +19,18 @@ export async function GET(req: Request) {
   const battleDay = kstDateString(new Date());
   try {
     const results = [];
-    for (const sid of await openServerIds()) results.push({ serverId: sid, ...(await runConquest(sid, battleDay)) });
-    const r = { results };
-    return Response.json({ ok: true, battleDay, ...r, kind: 'conquest-run' });
+    // per-server 에러격리(감사 G1) — 한 서버 실패가 뒤 서버 처리를 막지 않도록 격리. 멱등이라
+    // 다음 tick 재시도 안전. 하나라도 실패하면 ok=false+500으로 알림 보존.
+    for (const sid of await openServerIds()) {
+      try {
+        results.push({ serverId: sid, ...(await runConquest(sid, battleDay)) });
+      } catch (se) {
+        console.error('[conquest-run] server', sid, se);
+        results.push({ serverId: sid, error: (se as Error).message });
+      }
+    }
+    const ok = results.every((r) => !('error' in r));
+    return Response.json({ ok, battleDay, results, kind: 'conquest-run' }, { status: ok ? 200 : 500 });
   } catch (e) {
     console.error('[conquest-run]', e);
     return Response.json({ ok: false, error: (e as Error).message, kind: 'conquest-run' }, { status: 500 });

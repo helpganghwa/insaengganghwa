@@ -15,8 +15,17 @@ export async function GET(req: Request) {
   if (!isCronAuthorized(req)) return new Response('forbidden', { status: 403 });
   try {
     const results = [];
-    for (const sid of await openServerIds()) results.push({ serverId: sid, ...(await runLeaderHandover(sid)) });
-    return Response.json({ ok: true, results, kind: 'guild-leader-handover' });
+    // per-server 에러격리(감사 G1) — 한 서버 실패가 뒤 서버를 막지 않도록. 멱등 재시도 안전.
+    for (const sid of await openServerIds()) {
+      try {
+        results.push({ serverId: sid, ...(await runLeaderHandover(sid)) });
+      } catch (se) {
+        console.error('[guild-leader-handover] server', sid, se);
+        results.push({ serverId: sid, error: (se as Error).message });
+      }
+    }
+    const ok = results.every((r) => !('error' in r));
+    return Response.json({ ok, results, kind: 'guild-leader-handover' }, { status: ok ? 200 : 500 });
   } catch (e) {
     console.error('[guild-leader-handover]', e);
     return Response.json({ ok: false, error: (e as Error).message, kind: 'guild-leader-handover' }, { status: 500 });
