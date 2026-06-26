@@ -13,9 +13,13 @@ export function nextBattleKstDay(at: Date = new Date()): string {
 }
 
 /**
- * 점령전 진행(잠금) 윈도 여부 — KST 23:00~23:59. 이 시간대엔 배치/집행관 등록·해제 금지.
- * 23:00 정산 cron이 도는 한 시간이라, 정산 중 배치 변경을 막아 결정론 스냅샷을 보호한다.
+ * 점령전 진행(잠금) 윈도 여부 — KST 23:00~00:59(정산 23시 + 공개·소유권이전 00시). 배치/집행관
+ * 등록·해제 금지.
+ *  - 23시: conquest-run 정산 cron 중 배치 변경 차단 → 결정론 스냅샷 보호.
+ *  - 00시(감사 G-03): conquest-chronicle reveal이 zones.owner_guild_id를 플립하는 윈도. 잠그지
+ *    않으면 배치가 소유권 플립과 경합해 stale ownership로 attack/defend가 검증되는 TOCTOU 발생.
  */
 export function isConquestLocked(at: Date = new Date()): boolean {
-  return kstHour(at) === CONQUEST_BATTLE_KST_HOUR;
+  const h = kstHour(at);
+  return h === CONQUEST_BATTLE_KST_HOUR || h === (CONQUEST_BATTLE_KST_HOUR + 1) % 24;
 }
