@@ -1,8 +1,10 @@
 /**
  * 우편 만료/보관 정리 — 두 조건 OR:
- *  (a) 미수령 + 만료(`expires_at < now() AND claimed_at IS NULL`) — 종래.
- *  (b) 발송일 기준 30일 경과(`created_at < now() - 30 days`) — 수령 여부 무관(2026-06-01 추가).
- *      claimed mail이 영구 누적되어 DB 비대해지는 문제 방지. 보관 SLA = 30일.
+ *  (a) 미수령 + 만료(`expires_at < now() AND claimed_at IS NULL`) — 미수령은 **만료로만** 삭제.
+ *  (b) 수령완료 + 발송 후 30일 경과(`claimed_at IS NOT NULL AND created_at < now() - 30 days`) —
+ *      수령완료 mail이 영구 누적돼 DB 비대해지는 문제 방지(보관 SLA = 30일). 감사 G1/H2: 미수령
+ *      우편은 절대 (b)로 안 지워지도록 claimed 가드 — 만료(>30일) 우편이 미수령 상태로 조용히
+ *      삭제돼 보상 유실되던 footgun 차단(현재 모든 우편 ≤7일이라 미발현이나 방어).
  *
  * 정책:
  *  - claim 경로(claim.ts)는 이미 `gt(expiresAt, now())` 가드라 만료 우편은 수령 불가.
@@ -31,13 +33,13 @@ export async function GET(req: Request) {
   if (!isCronAuthorized(req)) {
     return new Response('forbidden', { status: 403 });
   }
-  // (a) 미수령+만료 OR (b) 발송 후 30일 경과 row 삭제.
+  // (a) 미수령+만료 OR (b) 수령완료 후 30일 경과 row 삭제.
   // RETURNING id로 삭제 수 산출(서버 로그). 인덱스(mailbox_user_unclaimed_idx)로 (a) 빠름;
   // (b)는 created_at full scan일 수 있으나 매일 1회 KST 03시 호출이라 부담 적음.
   const rows = (await db.execute(sql`
     delete from mailbox
     where (claimed_at is null and expires_at < now())
-       or created_at < now() - interval '30 days'
+       or (claimed_at is not null and created_at < now() - interval '30 days')
     returning id
   `)) as unknown as { id: string }[];
   const deleted = rows.length;

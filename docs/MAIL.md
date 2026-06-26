@@ -22,7 +22,7 @@
 | `sender_label` | text | UI 발신자(`'운영자'` / `'시스템'` 등) |
 | `payload` | jsonb | `{ diamond?: string|number, boxes?: { weapon?, armor?, accessory? } }` |
 | `claimed_at` | timestamptz nullable | 수령 시점 — **null = 미수령**(멱등 키) |
-| `expires_at` | timestamptz | 만료 시점 — default = `sent_at + 30d`(통일) |
+| `expires_at` | timestamptz | 만료 시점 — default = `sent_at + 7d`(통일) |
 | `created_at` | timestamptz | 발송 시점 |
 
 인덱스: `(user_id, claimed_at)`, `(user_id, expires_at)`.
@@ -88,7 +88,10 @@ UPDATE mailbox
 ### 4.4 만료
 
 v1: lazy — 모든 조회에 `expires_at > now()` 필터. cron 없음.
-v2: DB 누적 시 daily cron(`0 18 * * *` UTC = KST 03:00)으로 `delete from mailbox where claimed_at is null and expires_at < now()`.
+v2: daily cron(`0 18 * * *` UTC = KST 03:00) 2조건 OR 삭제:
+ - (a) 미수령 만료: `claimed_at is null and expires_at < now()` — 미수령은 **만료로만** 삭제.
+ - (b) 보관정리: `claimed_at is not null and created_at < now() - interval '30 days'` — **수령완료분만** 30일 후 정리.
+ 미수령 우편은 절대 (b)로 삭제되지 않음(만료 정책이 유일한 미수령 삭제 경로 → 보상 유실 방지).
 
 ## 5. UI 진입점
 

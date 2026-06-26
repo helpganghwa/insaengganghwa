@@ -4,7 +4,7 @@
  * 비동기 보상(보급·대난투)·운영 공지·길드/점령전 알림·프로필 검토 결과 적재
  * (lazy + cron 멱등, CLAUDE §3.4).
  *
- * v1 확장(2026-05-20): 운영자 메일(admin) + 만료(30일 통일) + 제목/본문/발신자
+ * v1 확장(2026-05-20): 운영자 메일(admin) + 만료(7일 통일) + 제목/본문/발신자
  * 라벨 + 감사 로그(mail_claim_logs). 챔피언 자동 보상은 도입 안 함(사용자 결정).
  */
 import {
@@ -74,7 +74,7 @@ export const mailbox = pgTable(
     payload: jsonb('payload').notNull(),
     /** 수령 시각(null = 미수령). claim transition의 멱등 키. */
     claimedAt: timestamp('claimed_at', { withTimezone: true }),
-    /** 만료 시각(default = sentAt + 30일, 통일). 만료 시 수령 불가. */
+    /** 만료 시각(default = sentAt + 7일, 통일). 만료 시 수령 불가. */
     expiresAt: timestamp('expires_at', { withTimezone: true })
       .notNull()
       .default(sql`now() + interval '7 days'`),
