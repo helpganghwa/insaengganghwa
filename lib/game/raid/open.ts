@@ -32,7 +32,8 @@ export type RaidErrorCode =
   | 'NOT_SETTLEABLE'
   | 'REWARD_ALREADY_CLAIMED'
   | 'NOT_HOST'
-  | 'REQUEST_NOT_FOUND';
+  | 'REQUEST_NOT_FOUND'
+  | 'NOT_SHARED';
 
 export class RaidError extends Error {
   constructor(public code: RaidErrorCode) {

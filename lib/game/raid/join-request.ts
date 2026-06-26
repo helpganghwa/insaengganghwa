@@ -37,7 +37,7 @@ export async function joinOrRequestRaid(input: {
     return { raidId: r.raidId, state: 'joined' };
   }
   if (mode === 'approval') return requestJoinRaid({ userId, shareCode });
-  throw new RaidError('RAID_CLOSED'); // 'off' — 목록에 없어야 함
+  throw new RaidError('NOT_SHARED'); // 'off' — 비공개(목록에 없어야 함, 유출 링크/레이스 대비 명시)
 }
 
 /**

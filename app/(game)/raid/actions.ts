@@ -30,6 +30,7 @@ const MSG: Record<string, string> = {
   CONCURRENT_LIMIT: '동시 진행 레이드는 3개까지입니다.',
   RAID_NOT_FOUND: '레이드를 찾을 수 없습니다.',
   RAID_CLOSED: '종료되었거나 만료된 레이드입니다.',
+  NOT_SHARED: '비공개 레이드입니다.',
   RAID_FULL: '인원이 가득 찼습니다 (최대 10명).',
   ALREADY_JOINED: '이미 참여 중입니다.',
   NOT_PARTICIPANT: '참여자가 아닙니다.',
@@ -107,7 +108,16 @@ export async function decideJoinRequestAction(
     rev(raidId);
     return { status: 'success' as const, approved: r.approved };
   } catch (e) {
-    if (e instanceof RaidError) return err(e.code);
+    if (e instanceof RaidError) {
+      // 수락 경로 — 개인 한도 초과는 호스트가 아니라 '요청자' 기준이라 호스트 기준 문구로 오인됨(감사 A4).
+      // 요청자 관점 문구로 재매핑(RAID_FULL은 중립이라 공통 문구 유지).
+      const decideMsg: Record<string, string> = {
+        CONCURRENT_LIMIT: '상대가 동시 진행 한도(3개)를 초과해 수락할 수 없습니다.',
+        DAILY_CAP_REACHED: '상대가 오늘 레이드 한도를 모두 사용해 수락할 수 없습니다.',
+      };
+      const m = decideMsg[e.code];
+      return m ? { status: 'error' as const, code: e.code, message: m } : err(e.code);
+    }
     console.error('[raid.decideJoin]', e);
     return err('UNKNOWN');
   }
