@@ -2,6 +2,7 @@ import { getSessionUserId } from '@/lib/auth/session';
 import { getActiveServerId } from '@/lib/game/servers';
 import { withTimeout } from '@/lib/db/with-timeout';
 import { getBattlePassView } from '@/lib/game/battlepass';
+import { portoneConfig } from '@/lib/payment/purchase';
 
 import { BattlePassClient } from './BattlePassClient';
 
@@ -40,6 +41,7 @@ export default async function BattlePassPage({
     <BattlePassClient
       enhance={data[0]}
       transcend={data[1]}
+      payEnabled={portoneConfig() !== null}
       returnPaymentId={sp.paymentId ?? null}
       returnCode={sp.code ?? null}
     />

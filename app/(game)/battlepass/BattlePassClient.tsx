@@ -90,12 +90,14 @@ function PassColumn({
   onClaimTier,
   onClaimSegment,
   onPremiumLocked,
+  payEnabled,
 }: {
   view: BattlePassView;
   isClaimed: (line: Line, segIndex: number, level: number) => boolean;
   onClaimTier: (line: Line, level: number, s: BattlePassSegmentView) => void;
   onClaimSegment: (s: BattlePassSegmentView) => void;
   onPremiumLocked: (passType: BattlePassType, segmentIndex: number) => void;
+  payEnabled: boolean;
 }) {
   const icon = view.rewardKind === 'diamond' ? '💎' : '📦';
   const lvLabel = (l: number) => (view.passType === 'enhance' ? `+${l}` : `✦${l}`);
@@ -190,12 +192,17 @@ function PassColumn({
                 {!s.purchased ? (
                   <button
                     type="button"
+                    disabled={!payEnabled}
                     onClick={() => onPremiumLocked(view.passType, s.index)}
                     style={{ width: PREMIUM_W }}
-                    className="absolute inset-y-0 right-0 flex flex-col items-center justify-center gap-0.5 rounded bg-zinc-900/50 text-center text-[9px] font-bold leading-tight text-white backdrop-blur-[0.5px]"
+                    className="absolute inset-y-0 right-0 flex flex-col items-center justify-center gap-0.5 rounded bg-zinc-900/50 text-center text-[9px] font-bold leading-tight text-white backdrop-blur-[0.5px] disabled:cursor-default"
                   >
                     <span>프리미엄</span>
-                    <span className="tabular-nums">{won(s.priceKrw)}</span>
+                    {payEnabled ? (
+                      <span className="tabular-nums">{won(s.priceKrw)}</span>
+                    ) : (
+                      <span className="text-[8px] text-white/70">준비 중</span>
+                    )}
                   </button>
                 ) : null}
               </div>
@@ -221,11 +228,14 @@ function PassColumn({
 export function BattlePassClient({
   enhance,
   transcend,
+  payEnabled,
   returnPaymentId = null,
   returnCode = null,
 }: {
   enhance: BattlePassView;
   transcend: BattlePassView;
+  /** 포트원 설정 여부 — false면 프리미엄 결제 비활성('준비 중' 표시, 결제창 진입 차단). */
+  payEnabled: boolean;
   /** 모바일 결제 복귀 — 포트원이 /battlepass?paymentId=…(&code=…)로 리다이렉트. 화면 내 검증. */
   returnPaymentId?: string | null;
   returnCode?: string | null;
@@ -269,6 +279,7 @@ export function BattlePassClient({
   // 프리미엄 구간 결제 — 주문 생성 → 결제창 → 검증·해금(소급). 모바일은 /battlepass 복귀 후 위 useEffect가 처리.
   const onBuyPremium = (passType: BattlePassType, segmentIndex: number) => {
     if (paying) return;
+    if (!payEnabled) return; // 결제 비활성 — '준비 중'. 결제창 진입 차단(서버 createOrder도 CONFIG로 거절).
     setError(null);
     setPaying(true);
     void (async () => {
@@ -403,6 +414,7 @@ export function BattlePassClient({
             onClaimTier={onClaimTier(cols[0]!.view)}
             onClaimSegment={onClaimSegment(cols[0]!.view, cols[0]!.isClaimed)}
             onPremiumLocked={onBuyPremium}
+            payEnabled={payEnabled}
           />
           <div className="w-px shrink-0 self-stretch bg-zinc-200 dark:bg-zinc-800" />
           <PassColumn
@@ -411,6 +423,7 @@ export function BattlePassClient({
             onClaimTier={onClaimTier(cols[1]!.view)}
             onClaimSegment={onClaimSegment(cols[1]!.view, cols[1]!.isClaimed)}
             onPremiumLocked={onBuyPremium}
+            payEnabled={payEnabled}
           />
         </div>
         </div>
