@@ -1,9 +1,8 @@
 import 'server-only';
 
-import { inArray, and, eq, gte, sql } from 'drizzle-orm';
+import { and, eq, gte, sql } from 'drizzle-orm';
 
 import { db } from '@/lib/db/client';
-import { profiles } from '@/lib/db/schema/profiles';
 import { raids, raidParticipants, raidRewards } from '@/lib/db/schema/raid';
 import { sendPushToUsers } from '@/lib/push/send';
 import { aggregatePhaseDrops, raidPhasesCleared } from './drops';
@@ -96,17 +95,13 @@ export async function settleRaid(
     };
   });
 
-  // 트랜잭션 커밋 후 푸시 발송(best-effort). 토글·구독 없는 유저는 자동 스킵.
+  // 트랜잭션 커밋 후 푸시 발송(best-effort). 토글·구독 없는 유저는 sendPushToUsers가 자동 스킵.
   if (result.settled && (result.winnerIds?.length ?? 0) > 0) {
     const bossName = RAID_BOSSES[result.bossCode!]?.name ?? '보스';
-    // 경계규칙 1 — 레이드 서버가 활성(last_server_id)인 참가자에게만 푸시.
-    const targets = await db
-      .select({ uid: profiles.id })
-      .from(profiles)
-      .where(
-        and(inArray(profiles.id, result.winnerIds!), eq(profiles.lastServerId, result.serverId!)),
-      );
-    sendPushToUsers(targets.map((t) => t.uid), {
+    // 승자 **전원**에게 푸시(감사 R-02) — 레이드는 본인이 공격해 참여했고 보상 수령은 서버무관
+    // (claimRaidReward). 과거 last_server_id 필터는 공유링크로 타 서버에서 참가한 승자가 보상
+    // 푸시를 못 받아 보상 존재를 모르던 문제 → 활성 서버 무관하게 알림(melee 우편 모델과 일관).
+    sendPushToUsers(result.winnerIds!, {
       title: '레이드 종료',
       body: `${bossName} 레이드가 종료되었습니다 — 보상 확인 (페이즈 ${result.phasesCleared}돌파)`,
       url: `/raid/${input.raidId.toString()}`,
