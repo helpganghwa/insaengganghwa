@@ -50,7 +50,7 @@ export function claimRaidReward(input: {
       .returning({ id: raidRewards.id });
     if (stamped.length === 0) throw new RaidError('REWARD_ALREADY_CLAIMED');
 
-    // 보상은 참여한 레이드의 서버 지갑으로(활성 서버 무관 — 공유 링크 교차 참여 대비).
+    // 보급 상자는 참여한 레이드의 서버로 적립(활성 서버 무관 — 공유 링크 교차 참여 대비). 레이드 보상=상자 전용.
     const boxes: Record<SupplySlot, number> = { weapon: 0, armor: 0, accessory: 0 };
     for (const slot of SUPPLY_SLOTS) {
       const n = reward.boxes[slot] ?? 0;

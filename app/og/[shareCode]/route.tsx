@@ -142,7 +142,7 @@ export async function GET(_req: Request, { params }: { params: Promise<{ shareCo
 
   // ── set 카드 — me/page 프로필 섹션 + BoastModal 미리보기와 동일 구성 ──
   // root(1200×630) 자체를 카드로 사용해 빈 공간 0(사용자 결정 2026-05-31).
-  // 좌(2/5) 닉네임+캐릭터 · 우(3/5) 장비 3종. 별 장식·rarityStarsOG 사용 안 함(미리보기와 동일).
+  // 좌(2/5) 닉네임+캐릭터 · 우(3/5) 장비 3종. 별 장식 없음(미리보기와 동일).
   const rootPad = 48;
   const innerW = 1200 - rootPad * 2; // 1104
   const innerH = 630 - rootPad * 2; // 534

@@ -103,10 +103,9 @@ export function BoastModal({
     };
   }, [open]);
 
-  // 모달 mount 시점 imageUrl 한 번 계산(매 공유 다른 OG). open=false면 빈 값.
+  // 모달 mount 시점 imageUrl 한 번 계산(매 공유 다른 OG — v=random). open=false면 빈 값.
   // ⚠ React #310 회피 — 모든 hook은 early return(`if (!open) return null`) **이전**에
   // 호출되어야 함. 같은 컴포넌트 인스턴스의 hook 호출 순서·갯수는 매 render 동일.
-  // deps에 piece/set 원시값 추가 — 같은 모달 인스턴스에서 piece 변경 시 stale 회피.
   const imageUrl = useMemo(() => {
     if (!open || typeof window === 'undefined') return '';
     const origin = window.location.origin;
