@@ -105,7 +105,9 @@ export async function resolveEnhance(input: ResolveInput): Promise<ResolveResult
   const fixedDownBp =
     job.down_rate_bp != null ? Number(job.down_rate_bp) : downRateBp(fromLevel);
   const probs = effectiveOutcomeProbsBp(baseRateBp, fixedDownBp, elapsedMs, totalMs);
-  const effBp = probs.success;
+  // 유효 성공률 = success(+1) + mega(+2) 총합 — 화면 표시값(EnhanceSlotCard)과 동일. 감사로그·토스트가
+  // 노출확률과 일치하도록(감사 F4). 분기 판정은 아래에서 probs.success/mega/down을 개별 사용하므로 무영향.
+  const effBp = probs.success + probs.mega;
 
   const rolled = (rngBp ?? rollBp)();
   let outcome: ResolveOutcome;

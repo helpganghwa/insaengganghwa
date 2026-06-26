@@ -67,7 +67,8 @@ export async function getWorldFeed(serverId: number, limit = 40): Promise<WorldE
     })
     .from(worldEvents)
     .where(eq(worldEvents.serverId, serverId))
-    .orderBy(desc(worldEvents.createdAt))
+    // 동일 ms 이벤트(cron 연속 insert) 순서 결정성 — id(bigserial 삽입순) 2차키(감사 F4).
+    .orderBy(desc(worldEvents.createdAt), desc(worldEvents.id))
     .limit(limit);
 
   const ids = [...new Set(rows.map((r) => r.actorUserId).filter((v): v is string => !!v))];
