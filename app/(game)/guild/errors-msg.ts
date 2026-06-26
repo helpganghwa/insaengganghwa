@@ -25,7 +25,7 @@ const MAP: Record<string, string> = {
   CANNOT_ATTACK_OWN: '자기 길드 구역은 공격할 수 없습니다.',
   NOT_ADJACENT: '내 길드 영토에 인접한 구역만 공격할 수 있습니다.',
   IS_EXECUTOR: '집행관은 자동 방어 중이라 배치할 수 없습니다.',
-  BATTLE_IN_PROGRESS: '점령전 진행 중에는 배치를 변경할 수 없습니다. (KST 23:00~01:00)',
+  BATTLE_IN_PROGRESS: '점령전 진행 중에는 배치를 변경할 수 없습니다. 점령전 종료 후 한 시간 뒤부터 변경 가능합니다.',
   TARGET_ALREADY_EXECUTOR: '이미 다른 구역의 집행관입니다.',
   NOT_OFFICER: '길드장·부길드장만 할 수 있습니다.',
   FORBIDDEN: '권한이 없습니다.',

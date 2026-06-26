@@ -44,7 +44,7 @@ export async function deployToZone(input: {
   zoneId: number;
   role: ConquestRole;
 }): Promise<{ battleKstDay: string }> {
-  if (isConquestLocked()) throw new GuildError('BATTLE_IN_PROGRESS'); // 전투 윈도(23:00~24:00) 잠금
+  if (isConquestLocked()) throw new GuildError('BATTLE_IN_PROGRESS'); // 정산·공개 윈도(23:00~01:00) 잠금
   return db.transaction(async (tx) => {
     const [m] = await tx
       .select({ guildId: guildMembers.guildId })
@@ -100,7 +100,7 @@ export async function deployToZone(input: {
 
 /** 다음 전투 배치 취소(있으면 삭제). 23:00 이후엔 날짜가 롤되어 오늘 배치는 동결(취소 불가). */
 export async function cancelDeployment(input: { userId: string; serverId: number }): Promise<{ cancelled: boolean }> {
-  if (isConquestLocked()) throw new GuildError('BATTLE_IN_PROGRESS'); // 전투 윈도 잠금
+  if (isConquestLocked()) throw new GuildError('BATTLE_IN_PROGRESS'); // 정산·공개 윈도 잠금
   const battleKstDay = nextBattleKstDay();
   const rows = await db
     .delete(guildBattleDeployments)
@@ -163,7 +163,7 @@ export async function deployMember(input: {
   zoneId: number;
   role: ConquestRole;
 }): Promise<{ battleKstDay: string }> {
-  if (isConquestLocked()) throw new GuildError('BATTLE_IN_PROGRESS'); // 전투 윈도 잠금
+  if (isConquestLocked()) throw new GuildError('BATTLE_IN_PROGRESS'); // 정산·공개 윈도 잠금
   return db.transaction(async (tx) => {
     const guildId = await assertOfficer(tx, input.actorUserId, input.serverId);
 
@@ -222,7 +222,7 @@ export async function clearMemberDeployment(input: {
   serverId: number;
   targetUserId: string;
 }): Promise<void> {
-  if (isConquestLocked()) throw new GuildError('BATTLE_IN_PROGRESS'); // 전투 윈도 잠금
+  if (isConquestLocked()) throw new GuildError('BATTLE_IN_PROGRESS'); // 정산·공개 윈도 잠금
   await db.transaction(async (tx) => {
     const guildId = await assertOfficer(tx, input.actorUserId, input.serverId);
     await tx
