@@ -65,11 +65,12 @@ export async function deployToZone(input: {
     if (input.role === 'attack' && owned) throw new GuildError('CANNOT_ATTACK_OWN');
     if (input.role === 'attack') await assertAttackable(tx, m.guildId, input.zoneId);
 
-    // 집행관은 배치 불가(자동 방어). 어느 구역이든 집행관이면 거부.
+    // 집행관은 배치 불가(자동 방어). **같은 서버** 어느 구역이든 집행관이면 거부(감사 G-01:
+    // serverId 누락 시 타 서버 집행관이 이 서버 배치를 오차단).
     const [executor] = await tx
       .select({ id: zones.id })
       .from(zones)
-      .where(eq(zones.executorUserId, input.userId))
+      .where(and(eq(zones.executorUserId, input.userId), eq(zones.serverId, input.serverId)))
       .limit(1);
     if (executor) throw new GuildError('IS_EXECUTOR');
 
@@ -173,10 +174,11 @@ export async function deployMember(input: {
       .limit(1);
     if (!target || target.guildId !== guildId) throw new GuildError('TARGET_NOT_IN_GUILD');
 
+    // 같은 서버 집행관이면 배치 불가(감사 G-01: serverId 스코프).
     const [ex] = await tx
       .select({ id: zones.id })
       .from(zones)
-      .where(eq(zones.executorUserId, input.targetUserId))
+      .where(and(eq(zones.executorUserId, input.targetUserId), eq(zones.serverId, input.serverId)))
       .limit(1);
     if (ex) throw new GuildError('IS_EXECUTOR');
 
