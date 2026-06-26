@@ -91,6 +91,19 @@ interface PixellabCharacterDetail {
 
 // ─── 폴링 + 처리 — status='downloading' N건 ───
 
+/**
+ * ⚠️ 동시성 불변식(감사 P1) — 이 함수는 잡을 잠그지 않고 select 후 느린 외부 호출(폴링·다운로드·
+ * AI검토)을 거쳐 terminal 전이(accept/reject/fail)한다. terminal 전이는 각각 단일 트랜잭션이라
+ * **한 번**의 처리는 항상 정확하지만, **두 워커가 같은 downloading 잡을 동시에** 처리하면
+ * 프로필 중복생성·이중환불이 발생한다(accept/reject 전이가 status='downloading' 조건부가 아님).
+ *
+ * 현재 그 동시성은 구조적으로 차단된다: 유일 호출자가 profile-poll cron(2분=120s 간격)이고
+ * route maxDuration=60s라 연속 invocation이 60초 간격으로 절대 겹치지 않으며, 루프 내 처리도 순차다.
+ *
+ * 🔒 **이 불변식을 깨면(maxDuration≥인터벌, 인터벌 단축, 두 번째 호출자 추가, 병렬 처리) 반드시
+ *     먼저 잡 클레임 락(downloading→processing 원자 전이 또는 terminal 전이의 status 조건부화)을
+ *     추가할 것.** 그 전엔 절대 동시 실행 금지.
+ */
 export async function pollAndProcessDownloading(limit = 5): Promise<{
   polled: number;
   accepted: number;
