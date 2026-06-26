@@ -5,18 +5,13 @@ import { useEffect, useState } from 'react';
 import { ModalShell } from '@/components/ModalShell';
 import { MarkdownView } from '@/components/MarkdownView';
 import { assetUrl } from '@/lib/asset-versions';
-import { ANNOUNCEMENT_CATEGORY_LABEL, type AnnouncementView } from '@/lib/game/announcement-shared';
+import {
+  ANNOUNCEMENT_CATEGORY_LABEL,
+  ANNOUNCEMENT_CATEGORY_CLS as CAT_CLS,
+  type AnnouncementView,
+} from '@/lib/game/announcement-shared';
 
 const SEEN_KEY = 'annSeenId';
-
-const CAT_CLS: Record<string, string> = {
-  notice: 'bg-zinc-500/15 text-zinc-600 dark:text-zinc-300',
-  maintenance: 'bg-red-500/15 text-red-600 dark:text-red-400',
-  update: 'bg-sky-500/15 text-sky-600 dark:text-sky-400',
-  event: 'bg-amber-500/15 text-amber-600 dark:text-amber-400',
-  policy: 'bg-violet-500/15 text-violet-600 dark:text-violet-400',
-  probability: 'bg-emerald-500/15 text-emerald-600 dark:text-emerald-400',
-};
 
 function fmtDate(iso: string | null): string {
   if (!iso) return '';

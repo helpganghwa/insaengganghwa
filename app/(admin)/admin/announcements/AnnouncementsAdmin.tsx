@@ -10,6 +10,7 @@ import {
 } from '@/lib/game/announcement-shared';
 
 import { saveAnnouncementAction, deleteAnnouncementAction } from './actions';
+import { AnnouncementPreview } from './AnnouncementPreview';
 
 type Draft = {
   id?: string;
@@ -122,6 +123,14 @@ export function AnnouncementsAdmin({ items }: { items: AnnouncementView[] }) {
           </button>
         </div>
       </section>
+
+      {/* 실시간 미리보기 — 유저 게시판 화면 그대로 */}
+      <AnnouncementPreview
+        category={draft.category}
+        title={draft.title}
+        body={draft.body}
+        pinned={draft.pinned}
+      />
 
       {/* 목록 */}
       <section className="rounded-xl border border-zinc-200 bg-white p-3 dark:border-zinc-800 dark:bg-zinc-950">
