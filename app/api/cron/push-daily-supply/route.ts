@@ -67,11 +67,12 @@ export async function GET(req: Request) {
     failedSum += res.failed;
   }
 
-  // 발송 통계 기록 (이미 INSERT된 row 업데이트)
+  // 발송 통계 기록 (이미 INSERT된 row 업데이트). ⚠ now()::date 재계산 금지 — 발송이 KST 자정을
+  // 넘기면 INSERT(어제)와 UPDATE(오늘) 날짜가 어긋나 0행 매칭 → recipients=0. claim이 반환한 kst_day 재사용.
   await db.execute(sql`
     update daily_supply_broadcasts
     set recipients = ${rows.length}
-    where kst_day = (now() at time zone 'Asia/Seoul')::date
+    where kst_day = ${claim[0]!.kst_day}
   `);
 
   return Response.json({

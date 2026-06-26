@@ -6,7 +6,7 @@ import { createPortal } from 'react-dom';
 import Link from 'next/link';
 import { josa } from 'es-hangul';
 
-import { MELEE_REPLAY_ROUNDS, MELEE_HP_MULT } from '@/lib/game/balance';
+import { MELEE_HP_MULT } from '@/lib/game/balance';
 import { assetUrl } from '@/lib/asset-versions';
 import { meleeFaceCropStyle, type FaceBox } from '@/components/faceCrop';
 import { GuildBadge } from '@/components/GuildBadge';
@@ -680,8 +680,10 @@ export function MeleeResult({ view, serverId }: { view: MeleeResultView; serverI
   const hrefOf = (handle: string | null | undefined) =>
     handle ? profileHref(handle, serverId) : null;
   const roster = finale.roster;
-  const truncated = finale.events.length >= MELEE_REPLAY_ROUNDS;
   const finaleStart = totalRounds - finale.events.length;
+  // 잘림 = finale 윈도 앞에 표시 안 된 라운드가 실제로 존재(>0). `events.length>=MELEE_REPLAY_ROUNDS`는
+  // 총 라운드가 정확히 윈도 크기일 때(전부 표시·미잘림) 오탐하던 off-by-one → finaleStart로 정확화.
+  const truncated = finaleStart > 0;
 
   // 라운드별 아레나 생존자 수(리플레이 상단 표시). finale 윈도 시작 생존자 = 챔피언 + 윈도 내 탈락 예정자.
   const killsInFinale = finale.events.filter((e) => e[3] <= 0).length;
@@ -823,7 +825,9 @@ export function MeleeResult({ view, serverId }: { view: MeleeResultView; serverI
         dmg,
         hpAfter: hp,
         tgtMaxHp: role === 1 ? myMax : undefined,
-        survivors: aliveByRound.get(round) ?? (role === 1 && hp <= 0 ? me?.rank : undefined),
+        // 윈도 밖 라운드는 생존자수 미상 → 라벨 숨김(undefined). 과거엔 me.rank로 폴백해 "생존 N"에
+        // 등수가 잘못 표시되던 버그 제거.
+        survivors: aliveByRound.get(round),
       },
     };
     if (role === 1) myHp = hp; // 내가 피격 → 다음 라운드부터 잔여 HP 반영
