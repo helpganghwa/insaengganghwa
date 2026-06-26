@@ -30,8 +30,17 @@
 | 7 | 결제 안전망(자동 테스트·실패 알림) | ⬜ |
 | 8 | 콜드스타트 플레이북 | ⬜ |
 | 9 | 라이트 구독(MRR) | ⬜ |
+| 10 | 테스트 로그인 제거 | ⬜ 심사 통과 후 |
 
 > 상세 분석은 `docs/PROJECT-REVIEW-2026-06-24.md` 참조.
+>
+> **#10 테스트 로그인 제거**: 카카오 단독 인증이라 스토어 심사용으로 `ALLOW_TEST_LOGIN`
+> env 게이트 + 하드코딩 계정(`lib/auth/test-accounts.ts`)을 둠. 프로덕션 미설정이라 현재
+> 비활성이나, **심사 통과 직후** ① Vercel prod env에서 `ALLOW_TEST_LOGIN` 제거 확인 ②
+> `lib/auth/test-accounts.ts` 삭제 + `lib/auth/actions.ts`의 `signInWithTestAccount`/
+> `signInWithCredentials` + `app/login/page.tsx` test 분기 제거 ③ prod Supabase Auth에
+> 테스트 계정(`cbt@`, `*.insaeng.test`) 생성 여부 점검·삭제. 비밀번호가 소스에 있으므로
+> 레포 기밀이 유일 방어선 — 미루지 말 것(감사 P-A8).
 
 ## 3. 마일스톤
 
