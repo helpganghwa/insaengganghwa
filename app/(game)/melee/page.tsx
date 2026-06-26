@@ -71,6 +71,7 @@ export default async function MeleePage() {
         runAtIso={runAtIso}
         deliverAtIso={deliverAtIso}
         revealAtIso={revealAtIso}
+        hasBattle={battle != null}
         participantCount={battle?.participantCount ?? null}
         history={history}
       />

@@ -1,5 +1,5 @@
 /**
- * 대난투 9시 산출 cron — MELEE §3. KST 09:00 = UTC `0 0 * * *`(vercel.json).
+ * 대난투 9시 산출 cron — MELEE §3. KST 09:00~09:55 = UTC hour0 매 5분 재시도(vercel.json).
  * 로스터(강화1회+) → CP 스냅샷 → 결정론 시뮬 → 저장(status='computed', 10:00 전 비공개).
  * 멱등((server_id, battle_date) UNIQUE)·서버 루프. 인증 = CRON_SECRET / x-vercel-cron.
  */
