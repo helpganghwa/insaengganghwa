@@ -54,7 +54,7 @@ export function AnnouncementsAdmin({ items }: { items: AnnouncementView[] }) {
   };
 
   const input =
-    'w-full rounded-lg border border-zinc-300 bg-white px-2.5 py-2 text-sm outline-none focus:border-zinc-500 dark:border-zinc-700 dark:bg-zinc-900';
+    'rounded-lg border border-zinc-300 bg-white px-2.5 py-2 text-sm outline-none focus:border-zinc-500 dark:border-zinc-700 dark:bg-zinc-900';
 
   return (
     <div className="space-y-4">
@@ -84,7 +84,7 @@ export function AnnouncementsAdmin({ items }: { items: AnnouncementView[] }) {
             value={draft.title}
             onChange={(e) => setDraft((d) => ({ ...d, title: e.target.value }))}
             placeholder="제목"
-            className={input}
+            className={`${input} min-w-0 flex-1`}
           />
         </div>
         <textarea
@@ -92,7 +92,7 @@ export function AnnouncementsAdmin({ items }: { items: AnnouncementView[] }) {
           onChange={(e) => setDraft((d) => ({ ...d, body: e.target.value }))}
           placeholder="내용 (마크다운: ## 제목, - 목록, **굵게**, | 표 |)"
           rows={8}
-          className={`${input} resize-y font-mono text-[13px]`}
+          className={`${input} w-full resize-y font-mono text-[13px]`}
         />
         <label className="flex items-center gap-2 text-[13px] text-zinc-600 dark:text-zinc-300">
           <input

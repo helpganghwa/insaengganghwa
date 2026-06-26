@@ -167,6 +167,13 @@ export function MarkdownView({ source }: { source: string }) {
       para.push(lt);
       i++;
     }
+    // ⚠ 진행 보장 — 위 블록 파서가 소비 못 한 '유사 경계' 줄(예: '####' 같은 h4,
+    // 구분선 없는 단독 '|')이 단락 첫 줄이면 para가 비어 i가 전진하지 않아 무한 루프가 된다.
+    // 그 줄을 일반 텍스트 한 줄로 처리하고 강제 전진(렌더 멈춤 방지).
+    if (para.length === 0) {
+      para.push(t);
+      i++;
+    }
     blocks.push(
       <p key={k()} className="my-1.5 leading-relaxed">
         {inline(para.join(' '), k())}
