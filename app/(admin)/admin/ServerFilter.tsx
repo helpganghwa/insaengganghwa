@@ -1,7 +1,7 @@
 /**
  * 서버 필터 — 관리자 목록을 특정 서버로 좁히는 pill 네비(전체 / srv1 / srv2 …).
  * 서버 분리(쿠키 전환)가 아니라, 전 서버를 한 화면에서 보고 `?srv=`로 필터링하는 방식.
- * 다른 검색 파라미터(date·q·status 등)는 보존. 서버가 1개뿐이면 노이즈라 렌더 생략.
+ * 다른 검색 파라미터(date·q·status 등)는 보존. 서버 목록이 비었을 때만 생략.
  */
 export function ServerFilter({
   basePath,
@@ -14,7 +14,7 @@ export function ServerFilter({
   current: number | null;
   params?: Record<string, string | undefined>;
 }) {
-  if (servers.length < 2) return null; // 단일 서버 운영 중엔 숨김(서버 추가 시 자동 노출)
+  if (servers.length === 0) return null;
 
   const href = (srv: number | null) => {
     const sp = new URLSearchParams();
