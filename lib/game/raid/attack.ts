@@ -21,13 +21,11 @@ function rngU32(): number {
   return crypto.getRandomValues(new Uint32Array(1))[0]!;
 }
 
-async function userTotalCP(
-  tx: Parameters<Parameters<typeof db.transaction>[0]>[0],
-  userId: string,
-  serverId: number,
-): Promise<number> {
+// CP 계산은 raid 행과 무관(유저 장비 read) → 트랜잭션/락 **밖**에서 db로 계산(감사 S2 — 락 보유 중
+// 전 장비 스캔 제거). raid 행 락 보유 시간을 인덱스 ops 몇 개로 단축.
+async function userTotalCP(userId: string, serverId: number): Promise<number> {
   // 보유 전체(착용 무관) → 카탈로그별 최강 1개 합산(BALANCE §3.2).
-  const owned = await tx
+  const owned = await db
     .select({
       catalogItemId: userEquipment.catalogItemId,
       enhanceLevel: userEquipment.enhanceLevel,
@@ -39,17 +37,27 @@ async function userTotalCP(
 }
 
 /** 레이드 1회 공격 — 미스 없음·크리 5%/×1.5·뎀 ±30%·캡 없음 (BALANCE §5.3). */
-export function attackRaid(input: {
+export async function attackRaid(input: {
   userId: string;
   raidId: bigint;
 }): Promise<{ damage: number; isCrit: boolean; phasesCleared: number }> {
   const { userId, raidId } = input;
 
+  // 락 밖 — serverId 가벼운 사전조회(비잠금) + CP 계산(유저 장비 스캔). 게이트는 락 내 재확인.
+  const [meta] = await db
+    .select({ serverId: raids.serverId, status: raids.status, expireAt: raids.expireAt })
+    .from(raids)
+    .where(eq(raids.id, raidId))
+    .limit(1);
+  if (!meta) throw new RaidError('RAID_NOT_FOUND');
+  if (meta.status !== 'active' || meta.expireAt.getTime() <= Date.now()) {
+    throw new RaidError('RAID_CLOSED');
+  }
+  const totalCP = await userTotalCP(userId, meta.serverId);
+
   return db.transaction(async (tx) => {
     const [raid] = await tx
       .select({
-        id: raids.id,
-        serverId: raids.serverId,
         status: raids.status,
         expireAt: raids.expireAt,
         phase1Hp: raids.phase1Hp,
@@ -60,7 +68,7 @@ export function attackRaid(input: {
       .for('update');
     if (!raid) throw new RaidError('RAID_NOT_FOUND');
     if (raid.status !== 'active' || raid.expireAt.getTime() <= Date.now()) {
-      throw new RaidError('RAID_CLOSED');
+      throw new RaidError('RAID_CLOSED'); // 락 내 재확인(레이스)
     }
 
     const [part] = await tx
@@ -77,7 +85,6 @@ export function attackRaid(input: {
     const allowed = RAID_BASE_ATTACKS + part.extraAttacks;
     if (part.attacksUsed >= allowed) throw new RaidError('NO_ATTACKS');
 
-    const totalCP = await userTotalCP(tx, userId, raid.serverId);
     const isCrit = rngU32() % 10000 < RAID_CRIT_RATE_BP;
     const u = rngU32() / 0x1_0000_0000; // [0,1)
     const varFactor = 1 - RAID_DAMAGE_VARIANCE + u * (2 * RAID_DAMAGE_VARIANCE);
@@ -159,17 +166,28 @@ export function buyExtraAttack(input: {
 }
 
 /** 보석 공격 — 추가 공격 1회분 보석 차감 + 즉시 공격(단일 트랜잭션). 충전 단계 생략. */
-export function gemAttackRaid(input: {
+export async function gemAttackRaid(input: {
   userId: string;
   serverId: number;
   raidId: bigint;
 }): Promise<{ damage: number; isCrit: boolean; phasesCleared: number; cost: number }> {
   const { userId, raidId } = input;
 
+  // 락 밖 — serverId 사전조회 + CP 계산(감사 S2). 게이트·결제는 락 내 재확인/수행.
+  const [meta] = await db
+    .select({ serverId: raids.serverId, status: raids.status, expireAt: raids.expireAt })
+    .from(raids)
+    .where(eq(raids.id, raidId))
+    .limit(1);
+  if (!meta) throw new RaidError('RAID_NOT_FOUND');
+  if (meta.status !== 'active' || meta.expireAt.getTime() <= Date.now()) {
+    throw new RaidError('RAID_CLOSED');
+  }
+  const totalCP = await userTotalCP(userId, meta.serverId);
+
   return db.transaction(async (tx) => {
     const [raid] = await tx
       .select({
-        id: raids.id,
         serverId: raids.serverId,
         status: raids.status,
         expireAt: raids.expireAt,
@@ -181,7 +199,7 @@ export function gemAttackRaid(input: {
       .for('update');
     if (!raid) throw new RaidError('RAID_NOT_FOUND');
     if (raid.status !== 'active' || raid.expireAt.getTime() <= Date.now()) {
-      throw new RaidError('RAID_CLOSED');
+      throw new RaidError('RAID_CLOSED'); // 락 내 재확인(레이스)
     }
 
     const [part] = await tx
@@ -195,14 +213,12 @@ export function gemAttackRaid(input: {
       .for('update');
     if (!part) throw new RaidError('NOT_PARTICIPANT');
 
-    // 보석 결제(추가 공격 1회분) — for update로 다이아 조건부 차감.
+    // 보석 결제(추가 공격 1회분) — for update로 다이아 조건부 차감. 결제 서버 = raid.serverId.
     const nth = part.extraAttacks + 1;
     const cost = raidExtraAttackCost(nth);
-    // 결제 서버 = 레이드 서버(쿠키 파생 input.serverId 조작 차단, 감사 LOW). CP·보상과 동일 서버.
     const paid = await walletTrySpend(tx, userId, raid.serverId, cost);
     if (!paid) throw new RaidError('INSUFFICIENT_DIAMOND');
 
-    const totalCP = await userTotalCP(tx, userId, raid.serverId);
     const isCrit = rngU32() % 10000 < RAID_CRIT_RATE_BP;
     const u = rngU32() / 0x1_0000_0000;
     const varFactor = 1 - RAID_DAMAGE_VARIANCE + u * (2 * RAID_DAMAGE_VARIANCE);

@@ -17,6 +17,7 @@ import {
 import { profiles } from '@/lib/db/schema/profiles';
 import { userEquipment, catalogItems } from '@/lib/db/schema/equipment';
 import { userProfiles } from '@/lib/db/schema/avatar';
+import { leaderboardRanks } from '@/lib/db/schema/leaderboard';
 import { combatPowerFromOwned } from '@/lib/game/equipment/combat-power';
 
 import { kstDateString } from '@/lib/kst';
@@ -100,33 +101,25 @@ async function guildCombatPowers(serverId: number, guildIds: bigint[]): Promise<
   const cpByGuild = new Map<string, number>();
   if (guildIds.length === 0) return cpByGuild;
   for (const g of guildIds) cpByGuild.set(g.toString(), 0); // 0명 길드도 0으로 포함
-  const memberRows = await db
-    .select({ uid: guildMembers.userId, gid: guildMembers.guildId })
-    .from(guildMembers)
-    .where(and(eq(guildMembers.serverId, serverId), inArray(guildMembers.guildId, guildIds)));
-  if (memberRows.length === 0) return cpByGuild;
-  const eqRows = await db
+  // 길드 전투력 = 멤버들의 combat 스냅샷(leaderboard_ranks, cron 사전계산) 합 — 라이브 전 장비 스캔
+  // 제거(감사 S1). 멤버가 아직 스냅샷에 없으면(신규·다음 cron 전) left join으로 0 처리.
+  const rows = await db
     .select({
-      uid: userEquipment.userId,
-      cid: userEquipment.catalogItemId,
-      el: userEquipment.enhanceLevel,
-      tl: userEquipment.transcendLevel,
+      gid: guildMembers.guildId,
+      cp: sql<number>`coalesce(sum(${leaderboardRanks.value}), 0)::bigint`,
     })
-    .from(userEquipment)
-    .where(
-      and(eq(userEquipment.serverId, serverId), inArray(userEquipment.userId, memberRows.map((m) => m.uid))),
-    );
-  const byUser = new Map<string, { catalogItemId: number; enhanceLevel: number; transcendLevel: number }[]>();
-  for (const r of eqRows) {
-    const row = { catalogItemId: r.cid, enhanceLevel: r.el, transcendLevel: r.tl };
-    const arr = byUser.get(r.uid);
-    if (arr) arr.push(row);
-    else byUser.set(r.uid, [row]);
-  }
-  for (const m of memberRows) {
-    const gid = m.gid.toString();
-    cpByGuild.set(gid, (cpByGuild.get(gid) ?? 0) + combatPowerFromOwned(byUser.get(m.uid) ?? []));
-  }
+    .from(guildMembers)
+    .leftJoin(
+      leaderboardRanks,
+      and(
+        eq(leaderboardRanks.userId, guildMembers.userId),
+        eq(leaderboardRanks.serverId, guildMembers.serverId),
+        eq(leaderboardRanks.metric, 'combat'),
+      ),
+    )
+    .where(and(eq(guildMembers.serverId, serverId), inArray(guildMembers.guildId, guildIds)))
+    .groupBy(guildMembers.guildId);
+  for (const r of rows) cpByGuild.set(r.gid.toString(), Number(r.cp));
   return cpByGuild;
 }
 

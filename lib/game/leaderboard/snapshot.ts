@@ -6,7 +6,7 @@ import { db } from '@/lib/db/client';
 import { userEquipment } from '@/lib/db/schema/equipment';
 import { raids, raidParticipants } from '@/lib/db/schema/raid';
 import { meleeBattles } from '@/lib/db/schema/melee';
-import { leaderboardRanks } from '@/lib/db/schema/leaderboard';
+import { leaderboardRanks, codexChampions } from '@/lib/db/schema/leaderboard';
 import { combatPowerFromOwned } from '@/lib/game/equipment/combat-power';
 import type { LeaderboardMetric } from './queries';
 
@@ -98,14 +98,15 @@ const ROWS_FN: Record<LeaderboardMetric, (sid: number) => Promise<Row[]>> = {
 const METRICS = Object.keys(ROWS_FN) as LeaderboardMetric[];
 
 /**
- * 한 서버의 5개 메트릭 스냅샷 재계산·적재. 메트릭별로 (server,metric) 전 행을 단일 트랜잭션 내
- * delete+insert로 원자 교체(외부 읽기엔 커밋 전까진 이전 값, 커밋 후 새 값 — 빈 창 없음).
+ * 한 서버의 메트릭 스냅샷 재계산·적재(기본 5종, metrics로 부분 지정 — combat은 무거워 cron에서
+ * 저빈도 tick에만). 메트릭별로 (server,metric) 전 행을 단일 트랜잭션 내 delete+insert로 원자 교체.
  */
 export async function rebuildLeaderboardSnapshot(
   serverId: number,
-): Promise<Record<LeaderboardMetric, number>> {
-  const counts = {} as Record<LeaderboardMetric, number>;
-  for (const metric of METRICS) {
+  metrics: LeaderboardMetric[] = METRICS,
+): Promise<Partial<Record<LeaderboardMetric, number>>> {
+  const counts = {} as Partial<Record<LeaderboardMetric, number>>;
+  for (const metric of metrics) {
     const rows = (await ROWS_FN[metric](serverId)).sort((a, b) => b.value - a.value);
     const ranked = rows.map((r, i) => ({
       serverId,
@@ -125,4 +126,28 @@ export async function rebuildLeaderboardSnapshot(
     counts[metric] = ranked.length;
   }
   return counts;
+}
+
+/**
+ * 아이템(catalog)별 강화랭킹 상위3 스냅샷 재계산(감사 S3). row_number ≤ 3을 DB에서 단일 SQL로
+ * 산출 → (server) 전 행 delete+insert 원자 교체. ue_catalog_rank_idx(max_enhance_level)로 인덱스 정렬.
+ */
+export async function rebuildCodexChampions(serverId: number): Promise<void> {
+  await db.transaction(async (tx) => {
+    await tx.delete(codexChampions).where(eq(codexChampions.serverId, serverId));
+    await tx.execute(sql`
+      insert into codex_champions (server_id, catalog_item_id, user_id, rank)
+      select ${serverId}, catalog_item_id, user_id, rn
+      from (
+        select catalog_item_id, user_id,
+          row_number() over (
+            partition by catalog_item_id
+            order by max_enhance_level desc, max_enhance_reached_at asc, user_id asc
+          ) as rn
+        from user_equipment
+        where server_id = ${serverId} and max_enhance_level > 0
+      ) t
+      where rn <= 3
+    `);
+  });
 }

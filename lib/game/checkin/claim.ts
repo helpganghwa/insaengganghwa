@@ -78,23 +78,20 @@ export function claimCheckin(input: { userId: string; serverId: number }): Promi
       .onConflictDoNothing();
 
     // 2) 잠금 + KST 가드.
+    // 잠금 + KST today를 한 SELECT에 통합 — 별도 now() 왕복 제거(감사 S5). KST는 DB 계산 유지(클럭 드리프트 0).
     const [state] = await tx
       .select({
         dayProgress: userCheckinState.dayProgress,
         lastClaimedKstDay: userCheckinState.lastClaimedKstDay,
         totalClaimedCount: userCheckinState.totalClaimedCount,
+        kstToday: sql<string>`(now() at time zone 'Asia/Seoul')::date::text`,
       })
       .from(userCheckinState)
       .where(and(eq(userCheckinState.userId, userId), eq(userCheckinState.serverId, serverId)))
       .for('update');
 
     if (!state) throw new Error('CHECKIN_STATE_MISSING'); // upsert 직후 → 없을 수 없음
-
-    // KST today를 DB에서 계산해 클럭 드리프트 제거(CLAUDE §3.2/§3.8).
-    const [today] = (await tx.execute(
-      sql`select (now() at time zone 'Asia/Seoul')::date::text as d`,
-    )) as unknown as Array<{ d: string }>;
-    const kstToday = today!.d;
+    const kstToday = state.kstToday;
     if (state.lastClaimedKstDay === kstToday) {
       throw new CheckinError('CHECKIN_ALREADY_CLAIMED');
     }
@@ -108,17 +105,21 @@ export function claimCheckin(input: { userId: string; serverId: number }): Promi
     if (acc.diamond > 0) {
       await walletAdd(tx, userId, input.serverId, acc.diamond);
     }
-    for (const slot of SUPPLY_SLOTS) {
-      const n = acc.boxes[slot];
-      if (n > 0) {
-        await tx
-          .insert(userSupplyBoxes)
-          .values({ userId, serverId: serverId, slot, count: BigInt(n) })
-          .onConflictDoUpdate({
-            target: [userSupplyBoxes.userId, userSupplyBoxes.serverId, userSupplyBoxes.slot],
-            set: { count: sql`${userSupplyBoxes.count} + ${BigInt(n)}` },
-          });
-      }
+    // 보급 상자 — 슬롯별 upsert를 단일 multi-row로(감사 S5, 왕복 최대 3→1).
+    const boxVals = SUPPLY_SLOTS.filter((s) => acc.boxes[s] > 0).map((s) => ({
+      userId,
+      serverId,
+      slot: s,
+      count: BigInt(acc.boxes[s]),
+    }));
+    if (boxVals.length > 0) {
+      await tx
+        .insert(userSupplyBoxes)
+        .values(boxVals)
+        .onConflictDoUpdate({
+          target: [userSupplyBoxes.userId, userSupplyBoxes.serverId, userSupplyBoxes.slot],
+          set: { count: sql`${userSupplyBoxes.count} + excluded.count` },
+        });
     }
 
     // 4) state advance + claim log.

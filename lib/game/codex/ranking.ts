@@ -9,6 +9,7 @@ import { profiles } from '@/lib/db/schema/profiles';
 import { characters } from '@/lib/db/schema/server';
 import { userProfiles } from '@/lib/db/schema/avatar';
 import { userEquipment } from '@/lib/db/schema/equipment';
+import { codexChampions } from '@/lib/db/schema/leaderboard';
 import { getGuildBriefsByUsers } from '@/lib/game/guild/badge';
 
 /**
@@ -123,29 +124,17 @@ async function attachItemRankProfiles(
  */
 export const liberatedItemRanks = cache(async (userId: string, serverId: number): Promise<Map<number, number>> => {
   try {
-    const rows = (await withTimeout(
-      db.execute(sql`
-        select uc.catalog_item_id as cid,
-          (select count(*) from user_equipment o
-           where o.catalog_item_id = uc.catalog_item_id
-             and o.server_id = ${serverId}
-             and (
-               o.max_enhance_level > uc.max_enhance_level
-               or (o.max_enhance_level = uc.max_enhance_level and o.max_enhance_reached_at < uc.max_enhance_reached_at)
-               or (o.max_enhance_level = uc.max_enhance_level and o.max_enhance_reached_at = uc.max_enhance_reached_at and o.user_id < uc.user_id)
-             )
-          )::int as ahead
-        from user_equipment uc
-        where uc.user_id = ${userId}::uuid and uc.server_id = ${serverId} and uc.max_enhance_level > 0
-      `),
+    // 사전계산 스냅샷(codex_champions, cron) 단일 인덱스 조회 — 매 호출 상관 서브쿼리 제거(감사 S3).
+    const rows = await withTimeout(
+      db
+        .select({ cid: codexChampions.catalogItemId, rank: codexChampions.rank })
+        .from(codexChampions)
+        .where(and(eq(codexChampions.serverId, serverId), eq(codexChampions.userId, userId))),
       3000,
       'liberatedItemRanks',
-    )) as unknown as { cid: number; ahead: number }[];
+    );
     const m = new Map<number, number>();
-    for (const r of rows) {
-      const ahead = Number(r.ahead);
-      if (ahead < 3) m.set(Number(r.cid), ahead + 1);
-    }
+    for (const r of rows) m.set(r.cid, r.rank);
     return m;
   } catch (e) {
     if (e instanceof DbTimeoutError) {
