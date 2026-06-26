@@ -2,6 +2,8 @@
 
 import { revalidatePath } from 'next/cache';
 
+import { getSessionUserId } from '@/lib/auth/session';
+import { rateLimited } from '@/lib/ratelimit';
 import { createProfileJob } from '@/lib/game/profile/actions';
 import { CreateProfileJobError } from '@/lib/game/profile/errors';
 
@@ -21,12 +23,18 @@ const MSG: Record<string, string> = {
   INSUFFICIENT_DIAMOND: '다이아가 부족합니다.',
   PROFILE_GEN_IN_PROGRESS: '이미 아바타를 생성하고 있어요. 완료 후 다시 시도해 주세요.',
   PROFILE_LIMIT: '아바타는 최대 20개까지 보유할 수 있습니다.',
+  RATE_LIMITED: '아바타 생성이 너무 잦습니다. 잠시 후 다시 시도해 주세요.',
   UNKNOWN: '알 수 없는 오류가 발생했습니다.',
 };
 
 export async function submitProfileJob(
   gender: 'male' | 'female',
 ): Promise<CreateState> {
+  // 고비용 생성(Claude compose + Pixellab + 비전 리뷰) — 실패-환불 재시도 루프 방어(시간당 5건).
+  const userId = await getSessionUserId();
+  if (!userId) return { status: 'error', code: 'UNAUTHORIZED', message: MSG.UNAUTHORIZED! };
+  if (await rateLimited(userId, 'profile'))
+    return { status: 'error', code: 'RATE_LIMITED', message: MSG.RATE_LIMITED! };
   try {
     const r = await createProfileJob({ gender });
     revalidatePath('/me');

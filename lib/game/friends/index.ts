@@ -74,8 +74,10 @@ export async function searchUsers(
   serverId: number,
   qRaw: string,
 ): Promise<Array<FriendUser & { relation: FriendRelation }>> {
-  const q = qRaw.trim();
+  const q = qRaw.trim().slice(0, 30);
   if (!q) return [];
+  // LIKE 와일드카드(%, _)·이스케이프 문자를 리터럴로 — 봇이 '%' 등으로 풀스캔 유발하는 것 방지(기본 escape=\).
+  const safe = q.replace(/[\\%_]/g, '\\$&');
   const rows = await db
     .select({
       userId: profiles.id,
@@ -94,7 +96,7 @@ export async function searchUsers(
     .where(
       and(
         ne(profiles.id, meId),
-        or(ilike(characters.nickname, `%${q}%`), eq(profiles.publicCode, q)),
+        or(ilike(characters.nickname, `%${safe}%`), eq(profiles.publicCode, q)),
       ),
     )
     .limit(20);

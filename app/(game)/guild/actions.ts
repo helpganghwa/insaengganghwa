@@ -126,6 +126,7 @@ export async function deleteEmblemAction(emblemId: string) {
 export async function searchGuildsAction(q: string) {
   const u = await getSessionUserId();
   if (!u) return unauth;
+  if (await rateLimited(u, 'guild')) return { status: 'error', code: 'RATE_LIMITED' } as const;
   try {
     const rows = await searchGuilds(await getActiveServerId(), q);
     return {

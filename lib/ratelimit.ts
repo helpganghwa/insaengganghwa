@@ -24,7 +24,9 @@ export type RlBucket =
   | 'battlepass'
   | 'friend'
   | 'guild'
-  | 'shop';
+  | 'shop'
+  | 'profile'
+  | 'report';
 
 const WINDOWS: Record<RlBucket, [limit: number, window: `${number} s`]> = {
   enhance: [30, '10 s'],
@@ -36,8 +38,10 @@ const WINDOWS: Record<RlBucket, [limit: number, window: `${number} s`]> = {
   checkin: [10, '10 s'],
   battlepass: [20, '10 s'],
   friend: [20, '10 s'], // 검색·요청·수락 스팸 방어
-  guild: [20, '10 s'], // 기부·배치·가입 자동화 방어
+  guild: [20, '10 s'], // 기부·배치·가입·문양생성 자동화 방어
   shop: [20, '10 s'], // 무료수령·주문·상자구매 연타 방어
+  profile: [5, '3600 s'], // 아바타 생성(Claude+Pixellab 고비용) — 시간당 5건
+  report: [5, '60 s'], // 신고 스팸·reportCount 인플레이션 방어
 };
 
 const url = process.env.UPSTASH_REDIS_REST_URL;

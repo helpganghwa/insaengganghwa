@@ -154,7 +154,9 @@ export async function getGuildRanking(serverId: number, limit = 50) {
 /** 길드 검색(이름 부분일치) — 가입 브라우즈용. combat(전투력 합) 포함.
  *  검색어 없으면 랜덤 10개(검색 전 기본 추천 노출). */
 export async function searchGuilds(serverId: number, q: string) {
-  const term = q.trim();
+  const term = q.trim().slice(0, 30);
+  // LIKE 와일드카드 리터럴화(풀스캔 유발 방지, 기본 escape=\).
+  const safeTerm = term.replace(/[\\%_]/g, '\\$&');
   const sel = {
     id: guilds.id,
     name: guilds.name,
@@ -168,7 +170,7 @@ export async function searchGuilds(serverId: number, q: string) {
     ? await db
         .select(sel)
         .from(guilds)
-        .where(and(eq(guilds.serverId, serverId), ilike(guilds.name, `%${term}%`)))
+        .where(and(eq(guilds.serverId, serverId), ilike(guilds.name, `%${safeTerm}%`)))
         .limit(20)
     : await db
         .select(sel)

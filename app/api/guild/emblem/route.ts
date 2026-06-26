@@ -1,6 +1,7 @@
 import { revalidatePath } from 'next/cache';
 
 import { getSessionUserId } from '@/lib/auth/session';
+import { rateLimited } from '@/lib/ratelimit';
 import { getActiveServerId } from '@/lib/game/servers';
 import { generateEmblem } from '@/lib/game/guild';
 import { isValidEmblemSelection, type EmblemSelection } from '@/lib/game/guild/emblem-vocab';
@@ -20,6 +21,11 @@ export const maxDuration = 180;
 export async function POST(req: Request) {
   const userId = await getSessionUserId();
   if (!userId) return Response.json({ status: 'error', code: 'UNAUTHENTICATED' }, { status: 401 });
+
+  // 고비용 생성(Anthropic+Pixellab 실호출) — 실패 시 캡이 안 올라 무한 재시도 가능하므로 입구에서 차단.
+  if (await rateLimited(userId, 'guild')) {
+    return Response.json({ status: 'error', code: 'RATE_LIMITED' }, { status: 429 });
+  }
 
   let selection: EmblemSelection | undefined;
   try {

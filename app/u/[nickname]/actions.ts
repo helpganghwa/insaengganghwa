@@ -4,6 +4,7 @@ import { eq, sql } from 'drizzle-orm';
 import { z } from 'zod';
 
 import { getSessionUserId } from '@/lib/auth/session';
+import { rateLimited } from '@/lib/ratelimit';
 import { db } from '@/lib/db/client';
 import { userProfiles, profileReports } from '@/lib/db/schema/avatar';
 
@@ -26,6 +27,9 @@ export async function reportProfile(
 ): Promise<ReportState> {
   const userId = await getSessionUserId();
   if (!userId) return { status: 'error', message: '로그인이 필요합니다.' };
+  // 신고 스팸·reportCount 인플레이션 방어(대상만 바꿔 무제한 신고 차단).
+  if (await rateLimited(userId, 'report'))
+    return { status: 'error', message: '신고가 너무 잦습니다. 잠시 후 다시 시도해 주세요.' };
 
   const parsed = ReasonSchema.safeParse(reason);
   if (!parsed.success) return { status: 'error', message: '신고 사유를 선택해 주세요.' };

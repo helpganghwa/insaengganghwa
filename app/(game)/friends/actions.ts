@@ -21,6 +21,7 @@ type SearchRow = FriendUser & { relation: FriendRelation };
 export async function searchAction(q: string) {
   const u = await getSessionUserId();
   if (!u) return { status: 'error', code: 'UNAUTHENTICATED' } as const;
+  if (await rateLimited(u, 'friend')) return { status: 'error', code: 'RATE_LIMITED' } as const;
   try {
     return { status: 'success', results: await searchUsers(u, await getActiveServerId(), q) as SearchRow[] } as const;
   } catch (e) {
