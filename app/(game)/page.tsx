@@ -242,14 +242,13 @@ export default async function HomePage() {
   }
 
   // 월드 소식 티커 — 헤더 하단 고정, 최근 10건 롤링(클릭 시 /world 전체). 콜드/hang 시 빈 배열로 degrade.
-  const worldFeed = userId
-    ? await withTimeout(getWorldFeed(serverId, 10), 2500, 'home.worldfeed').catch(() => [])
-    : [];
-
-  // 게시판(공지) — 발행분 최신순. 홈 카드(강화 자리) + 새 글 강제 팝업용. 콜드/hang 시 빈 배열.
-  const announcements = userId
-    ? await withTimeout(listPublishedAnnouncements(30), 2000, 'home.ann').catch(() => [])
-    : [];
+  // 월드피드 + 게시판(공지) 병렬 조회(독립 — §11.4 왕복 최소화). 콜드/hang 시 각각 빈 배열로 degrade.
+  const [worldFeed, announcements] = userId
+    ? await Promise.all([
+        withTimeout(getWorldFeed(serverId, 10), 2500, 'home.worldfeed').catch(() => []),
+        withTimeout(listPublishedAnnouncements(30), 2000, 'home.ann').catch(() => []),
+      ])
+    : [[], []];
 
   return (
     <>

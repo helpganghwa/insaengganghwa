@@ -6,7 +6,9 @@
  * 가입 보너스는 createCharacter(server-select.ts)가 이 상수로 지급(트리거 desync 없음).
  * server-only 로직에서만 참조(클라 번들 비노출)하므로 비-public 런타임 env로 읽는다.
  */
-export const TEST_MODE = process.env.TEST_MODE === 'true';
+// 프로덕션에선 강제 OFF — 운영 env에 실수로 TEST_MODE=true가 들어가도 ×5 faucet이 안 켜지게 이중 가드.
+export const TEST_MODE =
+  process.env.TEST_MODE === 'true' && process.env.NODE_ENV !== 'production';
 
 /** 테스트 기간 보상 배율 — 출석체크·일일 우편·가입 보너스에 적용. */
 export const TEST_REWARD_MULTIPLIER = TEST_MODE ? 5 : 1;

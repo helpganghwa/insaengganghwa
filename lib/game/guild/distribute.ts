@@ -124,9 +124,9 @@ export function distributeGuildTaxManual(input: {
     if (leader.role !== 'leader') throw new GuildError('NOT_LEADER');
     const gid = leader.guildId;
 
-    // 양수·정수만, 같은 유저 합산.
+    // 거대 배열 루프 비용 방어(감사 LOW) — 정원보다 큰 입력은 잘라냄. 양수·정수만, 같은 유저 합산.
     const byUser = new Map<string, bigint>();
-    for (const a of input.amounts) {
+    for (const a of input.amounts.slice(0, 100)) {
       const amt = Math.floor(Number(a.amount));
       if (!Number.isFinite(amt) || amt <= 0) continue;
       byUser.set(a.userId, (byUser.get(a.userId) ?? 0n) + BigInt(amt));

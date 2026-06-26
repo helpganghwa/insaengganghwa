@@ -24,52 +24,60 @@ export async function revealMelee(serverId: number): Promise<{ revealed: boolean
   )) as unknown as { d: string }[];
   const battleDate = today!.d;
 
-  // computed → revealed 조건부 전이(멱등 — 이미 revealed면 0행).
-  const flipped = await db
-    .update(meleeBattles)
-    .set({ status: 'revealed', revealedAt: new Date() })
-    .where(
-      and(
-        eq(meleeBattles.serverId, serverId),
-        eq(meleeBattles.battleDate, battleDate),
-        eq(meleeBattles.status, 'computed'),
-      ),
-    )
-    .returning({ id: meleeBattles.id, champ: meleeBattles.championUserId });
-  if (flipped.length === 0) return { revealed: false };
-
-  const battleId = flipped[0]!.id;
-
-  // 시상대 Top3(1·2·3위) — 우편/푸시 공통 본문. 참가자 적으면 있는 만큼만(🥇 폴백).
-  const podium = await db
-    .select({ rank: meleeParticipants.finalRank, nick: characters.nickname, userId: meleeParticipants.userId })
-    .from(meleeParticipants)
-    .innerJoin(
-      characters,
-      and(eq(characters.userId, meleeParticipants.userId), eq(characters.serverId, serverId)),
-    )
-    .where(and(eq(meleeParticipants.battleId, battleId), inArray(meleeParticipants.finalRank, [1, 2, 3])))
-    .orderBy(meleeParticipants.finalRank);
   const RANK_LABEL = ['🏆우승', '2등', '3등'];
-  const podiumStr =
-    podium.length > 0
-      ? podium.map((p) => `${RANK_LABEL[p.rank - 1] ?? `${p.rank}위`} ${p.nick}`).join(' · ')
-      : '🏆우승 챔피언';
 
-  // 결과 우편 — 참가자 전원 1행씩 DB측 일괄 적재(melee type, 다이아+상자 payload).
-  await db.execute(sql`
-    insert into mailbox (user_id, server_id, type, title, body, sender_label, payload, expires_at)
-    select mp.user_id,
-           ${serverId},
-           'melee'::mailbox_type,
-           '대난투 결과',
-           '오늘 대난투 ' || mp.final_rank || '위!' || E'\n' || ${podiumStr},
-           '대난투',
-           jsonb_build_object('diamond', mp.reward_diamond, 'boxes', mp.reward_boxes),
-           now() + interval '7 days'
-    from melee_participants mp
-    where mp.battle_id = ${battleId}
-  `);
+  // 트랜잭션 — 상태 플립(computed→revealed, 멱등) + 시상대 조회 + 참가자 결과 우편 일괄 적재를
+  // 원자적으로 처리(감사 M1). 플립만 커밋되고 우편 적재 전에 중단되면, 재시도 시 이미 revealed라
+  // 0행 조기종료 → 보상 우편이 영영 유실되던 문제 방지. 중단 시 롤백되어 재시도가 둘 다 재수행.
+  const result = await db.transaction(async (tx) => {
+    const flipped = await tx
+      .update(meleeBattles)
+      .set({ status: 'revealed', revealedAt: new Date() })
+      .where(
+        and(
+          eq(meleeBattles.serverId, serverId),
+          eq(meleeBattles.battleDate, battleDate),
+          eq(meleeBattles.status, 'computed'),
+        ),
+      )
+      .returning({ id: meleeBattles.id });
+    if (flipped.length === 0) return null;
+    const battleId = flipped[0]!.id;
+
+    // 시상대 Top3(1·2·3위) — 우편/푸시 공통 본문. 참가자 적으면 있는 만큼만(🥇 폴백).
+    const podium = await tx
+      .select({ rank: meleeParticipants.finalRank, nick: characters.nickname, userId: meleeParticipants.userId })
+      .from(meleeParticipants)
+      .innerJoin(
+        characters,
+        and(eq(characters.userId, meleeParticipants.userId), eq(characters.serverId, serverId)),
+      )
+      .where(and(eq(meleeParticipants.battleId, battleId), inArray(meleeParticipants.finalRank, [1, 2, 3])))
+      .orderBy(meleeParticipants.finalRank);
+    const podiumStr =
+      podium.length > 0
+        ? podium.map((p) => `${RANK_LABEL[p.rank - 1] ?? `${p.rank}위`} ${p.nick}`).join(' · ')
+        : '🏆우승 챔피언';
+
+    // 결과 우편 — 참가자 전원 1행씩 DB측 일괄 적재(melee type, 다이아+상자 payload).
+    await tx.execute(sql`
+      insert into mailbox (user_id, server_id, type, title, body, sender_label, payload, expires_at)
+      select mp.user_id,
+             ${serverId},
+             'melee'::mailbox_type,
+             '대난투 결과',
+             '오늘 대난투 ' || mp.final_rank || '위!' || E'\n' || ${podiumStr},
+             '대난투',
+             jsonb_build_object('diamond', mp.reward_diamond, 'boxes', mp.reward_boxes),
+             now() + interval '7 days'
+      from melee_participants mp
+      where mp.battle_id = ${battleId}
+    `);
+    return { battleId, podium, podiumStr };
+  });
+
+  if (!result) return { revealed: false };
+  const { battleId, podium, podiumStr } = result;
 
   // 푸시 — 참가자 전원(토글 ON만 내부 필터). 본문은 시상대 Top3(개인 순위는 우편/페이지).
   // 경계규칙 1 — 발송은 활성 서버(last_server_id) 참가자에게만(타 서버 푸시 억제).

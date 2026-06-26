@@ -92,8 +92,13 @@ export async function attributeReferralFromShare(
         shareCode,
         rewarded: false,
       });
-    } catch {
-      throw new ReferralError('ALREADY_REDEEMED');
+    } catch (e) {
+      // UNIQUE(new_user_id) 위반(23505)만 '이미 사용'으로 — 일시 DB 오류를 ALREADY_REDEEMED로
+      // 오인해 정당한 추천 보상이 조용히 유실되던 문제 방지(감사 LOW). 그 외는 rethrow.
+      if (e && typeof e === 'object' && 'code' in e && (e as { code?: string }).code === '23505') {
+        throw new ReferralError('ALREADY_REDEEMED');
+      }
+      throw e;
     }
 
     // mailbox row — referrer가 명시적 수령. claim 시 다이아 + 슬롯별 상자 가산.
