@@ -7,8 +7,10 @@ import { characters } from '@/lib/db/schema/server';
 import { profiles } from '@/lib/db/schema/profiles';
 import { kstDateString } from '@/lib/kst';
 import { parseBpProduct, productDisplayName } from '@/lib/payment/purchase';
+import { listServers } from '@/lib/game/servers';
 
 import { PaymentsClient, type OrderRow } from './PaymentsClient';
+import { ServerFilter, parseServerFilter } from '../ServerFilter';
 
 /**
  * 관리자 결제 내역 — 날짜별(KST 하루치) 조회 + 환불 가능한 건(paid) 환불 처리.
@@ -26,20 +28,24 @@ function shiftDay(date: string, delta: number): string {
 export default async function AdminPaymentsPage({
   searchParams,
 }: {
-  searchParams: Promise<{ date?: string; q?: string }>;
+  searchParams: Promise<{ date?: string; q?: string; srv?: string }>;
 }) {
   const sp = await searchParams;
   const date = sp.date && DATE_RE.test(sp.date) ? sp.date : kstDateString();
   const q = sp.q?.trim() ?? '';
   const searching = q.length > 0;
+  const srvFilter = parseServerFilter(sp.srv);
+  const servers = await listServers();
   // 검색 모드: 날짜 무시, 유저코드(정확)·닉네임·거래ID(부분)로 전체 조회. 아니면 KST 하루치.
-  const whereClause = searching
+  const baseWhere = searching
     ? or(
         ilike(profiles.publicCode, q),
         ilike(characters.nickname, `%${q}%`),
         ilike(iapOrders.portoneOrderId, `%${q}%`),
       )
     : sql`(${iapOrders.createdAt} at time zone 'Asia/Seoul')::date = ${date}::date`;
+  // 서버 필터 시 AND로 좁힘(전체면 그대로).
+  const whereClause = srvFilter != null ? and(baseWhere, eq(iapOrders.serverId, srvFilter)) : baseWhere;
 
   const rows = await db
     .select({
@@ -116,6 +122,14 @@ export default async function AdminPaymentsPage({
       nextDate={shiftDay(date, 1)}
       today={kstDateString()}
       query={q}
+      filterSlot={
+        <ServerFilter
+          basePath="/admin/payments"
+          servers={servers}
+          current={srvFilter}
+          params={{ date: sp.date, q: sp.q }}
+        />
+      }
     />
   );
 }

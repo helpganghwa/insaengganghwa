@@ -1,10 +1,11 @@
 'use client';
 
-import { useState, useTransition } from 'react';
+import { type ReactNode, useState, useTransition } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 
 import { AdminSearch } from '../AdminSearch';
+import { ServerBadge } from '../ServerBadge';
 import { refundOrderAction } from './actions';
 
 export type OrderRow = {
@@ -56,6 +57,7 @@ export function PaymentsClient({
   nextDate,
   today,
   query,
+  filterSlot,
 }: {
   orders: OrderRow[];
   date: string;
@@ -63,6 +65,7 @@ export function PaymentsClient({
   nextDate: string;
   today: string;
   query: string;
+  filterSlot?: ReactNode;
 }) {
   const searching = query.length > 0;
   const router = useRouter();
@@ -114,6 +117,7 @@ export function PaymentsClient({
         <div className="mt-2">
           <AdminSearch basePath="/admin/payments" initialQuery={query} />
         </div>
+        {filterSlot && <div className="mt-2">{filterSlot}</div>}
         {searching ? (
           <p className="mt-2 text-xs text-zinc-500">
             검색 “{query}” · {orders.length}건
@@ -192,9 +196,7 @@ export function PaymentsClient({
                     >
                       {badge.label}
                     </span>
-                    {o.serverId !== 1 ? (
-                      <span className="shrink-0 text-[10px] text-zinc-500">s{o.serverId}</span>
-                    ) : null}
+                    <ServerBadge serverId={o.serverId} />
                   </div>
                   <div className="mt-0.5 truncate text-[11px] text-zinc-400">
                     {o.productName} · {won(o.krw)}

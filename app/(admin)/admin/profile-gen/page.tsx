@@ -7,10 +7,13 @@ import { profiles } from '@/lib/db/schema/profiles';
 import { CATALOG_ITEMS } from '@/lib/game/equipment/catalog';
 import { spritePath } from '@/lib/game/equipment/sprite-manifest';
 import { assetUrl } from '@/lib/asset-versions';
+import { listServers } from '@/lib/game/servers';
 
 import { AdminSearch } from '../AdminSearch';
 import { AdminProfileGenActions } from './AdminProfileGenActions';
 import { AdminAvatarViewer } from './AdminAvatarViewer';
+import { ServerBadge } from '../ServerBadge';
+import { ServerFilter, parseServerFilter } from '../ServerFilter';
 
 // 어드민 데이터 + Pixellab 이미지 fetch — 항상 최신.
 export const dynamic = 'force-dynamic';
@@ -56,13 +59,16 @@ async function pixellabRotations(charId: string): Promise<Record<string, string>
 export default async function AdminProfileGenPage({
   searchParams,
 }: {
-  searchParams: Promise<{ status?: string; date?: string; q?: string }>;
+  searchParams: Promise<{ status?: string; date?: string; q?: string; srv?: string }>;
 }) {
   // 진입 가드는 (admin)/layout.tsx 일원화.
   const { status, date } = await searchParams;
   const sp = await searchParams;
   const q = sp.q?.trim() ?? '';
   const searching = q.length > 0;
+  const srvFilter = parseServerFilter(sp.srv);
+  const servers = await listServers();
+  const srvQs = srvFilter != null ? `&srv=${srvFilter}` : ''; // 날짜·상태 네비가 서버 필터 보존
   // 날짜 필터(KST 하루). 기본 = 오늘(KST). createdAt(UTC timestamptz)을 KST 일자 범위로 조회.
   const kstToday = new Date(Date.now() + 9 * 3600 * 1000).toISOString().slice(0, 10);
   const day = /^\d{4}-\d{2}-\d{2}$/.test(date ?? '') ? date! : kstToday;
@@ -72,14 +78,17 @@ export default async function AdminProfileGenPage({
   const fmtKst = (ms: number) => new Date(ms + 9 * 3600 * 1000).toISOString().slice(0, 10);
   const prevDay = fmtKst(dayMs - 24 * 3600 * 1000);
   const nextDay = fmtKst(dayMs + 24 * 3600 * 1000);
-  const qs = (d: string, s?: string) => `?date=${d}${s ? `&status=${s}` : ''}`;
+  const qs = (d: string, s?: string) => `?date=${d}${s ? `&status=${s}` : ''}${srvQs}`;
 
   // 검색 모드: 날짜 무시, 유저코드(정확)·닉네임(부분)·거래(job)ID(숫자면 정확)로 전체 조회.
   const searchConds: SQL[] = [ilike(profiles.publicCode, q), ilike(characters.nickname, `%${q}%`)];
   if (/^\d+$/.test(q)) searchConds.push(eq(profileGenerationJobs.id, BigInt(q)));
-  const whereClause = searching
+  const baseWhere = searching
     ? or(...searchConds)
     : and(gte(profileGenerationJobs.createdAt, start), lt(profileGenerationJobs.createdAt, end));
+  // 서버 필터 시 AND로 좁힘(검색·날짜 어느 모드든).
+  const whereClause =
+    srvFilter != null ? and(baseWhere, eq(profileGenerationJobs.serverId, srvFilter)) : baseWhere;
 
   const all = await db
     .select({
@@ -149,6 +158,12 @@ export default async function AdminProfileGenPage({
       <h1 className="text-lg font-bold">🎨 아바타 생성 내역 ({rows.length})</h1>
       {/* 검색 — 유저코드/닉네임/거래(job)ID. 검색 중엔 날짜·필터 숨김. */}
       <AdminSearch basePath="/admin/profile-gen" initialQuery={q} />
+      <ServerFilter
+        basePath="/admin/profile-gen"
+        servers={servers}
+        current={srvFilter}
+        params={{ date: sp.date, status, q: sp.q }}
+      />
       {searching ? (
         <p className="text-xs text-zinc-500">검색 “{q}” · {rows.length}건</p>
       ) : (
@@ -238,7 +253,7 @@ export default async function AdminProfileGenPage({
                     <div className="flex flex-wrap items-center gap-x-2 gap-y-0.5 text-[10px] text-zinc-500">
                       {r.code ? <span className="font-mono text-sky-400">#{r.code}</span> : null}
                       <span>💎{r.diamondEscrow.toString()}</span>
-                      <span>srv{r.serverId}</span>
+                      <ServerBadge serverId={r.serverId} />
                       <span>job {String(r.id)}</span>
                     </div>
                     <div className="text-[10px] text-zinc-500">{new Date(r.createdAt).toLocaleString('ko-KR')}</div>

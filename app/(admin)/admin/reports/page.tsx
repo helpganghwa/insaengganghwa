@@ -4,8 +4,11 @@ import { db } from '@/lib/db/client';
 import { characters } from '@/lib/db/schema/server';
 import { profiles } from '@/lib/db/schema/profiles';
 import { userProfiles, profileReports } from '@/lib/db/schema/avatar';
+import { listServers } from '@/lib/game/servers';
 
 import { AdminReportActions } from './AdminReportActions';
+import { ServerBadge } from '../ServerBadge';
+import { ServerFilter, parseServerFilter } from '../ServerFilter';
 
 const REASON_LABEL: Record<string, string> = {
   nickname: '닉네임',
@@ -24,9 +27,17 @@ function fmt(d: Date): string {
   return d.toLocaleString('ko-KR', { timeZone: 'Asia/Seoul', hour12: false });
 }
 
-export default async function AdminReportsPage() {
+export default async function AdminReportsPage({
+  searchParams,
+}: {
+  searchParams: Promise<{ srv?: string }>;
+}) {
   // 진입 가드는 (admin)/layout.tsx 일원화.
-  // 신고 대상 프로필 + 소유자(닉네임은 해당 서버 캐릭터, 코드는 계정).
+  const { srv } = await searchParams;
+  const srvFilter = parseServerFilter(srv);
+  const servers = await listServers();
+
+  // 신고 대상 프로필 + 소유자(닉네임은 해당 서버 캐릭터, 코드는 계정). 서버 필터 시 해당 서버만.
   const reported = await db
     .select({
       id: userProfiles.id,
@@ -47,7 +58,11 @@ export default async function AdminReportsPage() {
       and(eq(characters.userId, userProfiles.userId), eq(characters.serverId, userProfiles.serverId)),
     )
     .leftJoin(profiles, eq(profiles.id, userProfiles.userId))
-    .where(gt(userProfiles.reportCount, 0))
+    .where(
+      srvFilter != null
+        ? and(gt(userProfiles.reportCount, 0), eq(userProfiles.serverId, srvFilter))
+        : gt(userProfiles.reportCount, 0),
+    )
     .orderBy(desc(userProfiles.reportCount));
 
   const profileIds = reported.map((r) => r.id);
@@ -109,6 +124,7 @@ export default async function AdminReportsPage() {
   return (
     <div className="mx-auto w-full max-w-[560px] space-y-3 px-4 py-6">
       <h1 className="text-lg font-bold">🚩 프로필 신고 ({reported.length})</h1>
+      <ServerFilter basePath="/admin/reports" servers={servers} current={srvFilter} />
       {reported.length === 0 ? (
         <p className="py-10 text-center text-sm text-zinc-500">신고된 프로필이 없습니다.</p>
       ) : (
@@ -132,13 +148,14 @@ export default async function AdminReportsPage() {
                   <div className="flex flex-wrap items-center gap-x-2 gap-y-1">
                     <span className="truncate text-sm font-semibold">{p.nickname ?? '(닉네임 없음)'}</span>
                     {p.code && <span className="font-mono text-[10px] text-sky-600 dark:text-sky-400">#{p.code}</span>}
+                    <ServerBadge serverId={p.serverId} />
                     <span className="shrink-0 rounded-full bg-red-100 px-2 py-0.5 text-[11px] font-bold text-red-700 dark:bg-red-950/50 dark:text-red-300">
                       신고 {p.reportCount}
                     </span>
                     {banned && <span className="shrink-0 rounded-full bg-zinc-800 px-2 py-0.5 text-[10px] font-bold text-red-400">정지됨</span>}
                   </div>
                   <div className="mt-0.5 text-[10px] text-zinc-500">
-                    srv{p.serverId} · 프로필 생성 {fmt(p.createdAt)}
+                    프로필 생성 {fmt(p.createdAt)}
                   </div>
                   <div className="mt-1 flex flex-wrap gap-1">
                     {reasons.map(([reason, c]) => (
