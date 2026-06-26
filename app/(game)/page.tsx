@@ -75,19 +75,19 @@ const MENU = [
     scale: 1,
   },
   {
-    href: '/mail',
-    label: '우편함',
-    desc: '받은 보상 확인',
-    bg: '/sprites/hub/mail.png',
-    tint: '#2a1f0c',
-    scale: 1,
-  },
-  {
     href: '/shop',
     label: '상점',
     desc: '다이아·보급상자 구매',
     bg: '/sprites/hub/shop.png',
     tint: '#1c2238',
+    scale: 1,
+  },
+  {
+    href: '/mail',
+    label: '우편함',
+    desc: '받은 보상 확인',
+    bg: '/sprites/hub/mail.png',
+    tint: '#2a1f0c',
     scale: 1,
   },
 ] as const;
@@ -270,8 +270,8 @@ export default async function HomePage() {
           const desc = m.href === '/melee' ? meleeDesc : m.desc;
           return (
             <Fragment key={m.href}>
-              {/* 게시판 카드 — 강화 자리(index 4). 강화는 하단 네비로 접근. */}
-              {i === 4 && <AnnouncementBoard items={announcements} tint="#2b2147" />}
+              {/* 게시판 카드 — 상점 뒤·우편함 앞(index 6). */}
+              {i === 6 && <AnnouncementBoard items={announcements} tint="#2b2147" />}
               <Link
               href={m.href}
               data-tut={m.href === '/gacha' ? 'goto-gacha' : undefined}
