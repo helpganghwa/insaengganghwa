@@ -245,15 +245,18 @@ async function KpiRowWithRanks({
   total,
   sumEnhance,
   maxEnhance,
+  serverId,
 }: {
   userId: string;
   total: number;
   sumEnhance: number;
   maxEnhance: number;
+  serverId: number;
 }) {
+  // 랭크는 프로필이 속한 서버 기준 — DEFAULT 하드코딩 시 서버≠1 프로필에 서버1 순위가 섞임(감사 P-A2).
   const [ranks, counts] = await Promise.all([
-    getMyRanks(userId, DEFAULT_SERVER_ID),
-    getMyCountRanks(userId, DEFAULT_SERVER_ID),
+    getMyRanks(userId, serverId),
+    getMyCountRanks(userId, serverId),
   ]);
   return (
     <section className="-mt-3 grid grid-cols-5 gap-1">
@@ -457,6 +460,7 @@ export default async function PublicProfilePage({
             total={data.total}
             sumEnhance={data.sumEnhance}
             maxEnhance={data.maxEnhance}
+            serverId={serverId}
           />
         </Suspense>
 
