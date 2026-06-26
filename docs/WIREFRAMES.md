@@ -597,7 +597,7 @@ grow 모달 골격 그대로(중앙·a11y·Kakao 카드 → navigator.share → 
 │      강화 +99 돌파!            │  TITLE (트리거별)
 │  +100 제물 구간 직전 — 카톡에  │  BODY (등급/메이플 문구 제거)
 │  자랑해보세요.                 │
-│  공유 단위: (●장비 단위) 장비전체│  2종 선택(GDD §3.6)
+│  공유 단위: 장비 전체(세트+프로필)│  단일(GDD §3.6)
 │  [💬 자랑하러 가기]           │  Kakao 카드 → /og/{code}
 │  [나중에]                     │
 └───────────────────────────────┘
@@ -605,9 +605,9 @@ grow 모달 골격 그대로(중앙·a11y·Kakao 카드 → navigator.share → 
 
 - **BoastKind**: grow `plus15/plus20/mythic` → **`enh30 · enh50 · enh99 · first_transcend · transcend_max`**(GDD §3.6, SCHEMA §8.1 `shares.trigger`). `mythic` 삭제(등급 없음)
 - TITLE/BODY/EMOJI: 트리거별 신규 카피. "메이플식 위험 구간"/"신화 등급"/"가장 희귀한 등급" 문구 **삭제** → 강화/초월 마일스톤 카피
-- **공유 단위 2종**(GDD §3.6): `장비 단위`(기본, 해당 장비 1개) / `장비 전체`(3슬롯 세트+프로필). 선택 토글
+- **공유 단위**(GDD §3.6): `장비 전체`(3슬롯 세트+프로필) 단일. (장비 1개 단위 자랑은 폐기 — 토글 없음)
 - 공유 흐름: grow `createMyMilestoneShareLink` → `sendShareCard`(title/desc/`/og/{shareCode}`/linkUrl/cta) → 폴백 동일. `dismissBoast` 그대로
-- **OG 이미지**(`/og/[shareCode]`, 1200×630): 등급 표기 **삭제**. 3슬롯+닉네임·총 전투력 카드. 슬롯은 **실제 아이템 스프라이트**(이모지 아님)·**초월 등급색 정적 테두리**(✦T 텍스트 없음, OG는 절차적 프레임 불가→색 테두리로 표현). 챔피언 미표기(👑·텍스트 없음 — raw PNG라 시각 변형 불가). 배경은 **Pixellab 전용 배경 아트 8장 풀에서 요청마다 진한 랜덤**(매 fetch 재추첨 위해 `cache-control: no-store`) + 가독성 스크림. 배경 PNG 부재 시 기존 그라데이션으로 안전 폴백(점진 배포 가능). 공유 단위 2종은 동일(장비 단위/장비 전체, GDD §3.6, SCHEMA §8.1 `snapshot`)
+- **OG 이미지**(`/og/[shareCode]`, 1200×630): 등급 표기 **삭제**. 3슬롯+닉네임·총 전투력 카드. 슬롯은 **실제 아이템 스프라이트**(이모지 아님)·**초월 등급색 정적 테두리**(✦T 텍스트 없음, OG는 절차적 프레임 불가→색 테두리로 표현). 챔피언 미표기(👑·텍스트 없음 — raw PNG라 시각 변형 불가). 배경은 **Pixellab 전용 배경 아트 8장 풀에서 요청마다 진한 랜덤**(매 fetch 재추첨 위해 `cache-control: no-store`) + 가독성 스크림. 배경 PNG 부재 시 기존 그라데이션으로 안전 폴백(점진 배포 가능). 공유 단위는 장비 전체 단일(GDD §3.6, SCHEMA §8.1 `snapshot`)
 - 가입 전환: `/s/{shareCode}` 구경 모드(비로그인 열람)→"나도 강화하기"→가입. 전환 시 공유자 +300 다이아(BALANCE §6.3, SCHEMA §8.2). grow `/s/[shareCode]`·StoreReferralCookie 그대로
 
 ### 10.2 확률 공시 (/probability)
@@ -639,7 +639,7 @@ grow 페이지 골격(Section/Table, 게임산업법 §33, `balance.ts` 1:1, 변
 |------|----------------|
 | BoastKind plus15/plus20/mythic | enh30/enh50/enh99/first_transcend/transcend_max |
 | "메이플식/신화/희귀 등급" 카피 | 강화·초월 마일스톤 카피 |
-| 단일 마일스톤 공유 | 장비 단위 / 장비 전체 2종(GDD §3.6) |
+| 단일 마일스톤 공유 | 장비 전체(세트+프로필) 단일(GDD §3.6) |
 | OG 등급 표기 | 제거 → 강화·초월·전투력 |
 | 확률공시 등급 풀·천장·파괴 표 | 제거 |
 | `GACHA_POOLS`/`GRADE_*`/`RAID_TICKET_GRADE_SPLIT` | 슬롯 균등·전원동일 보상 규칙 |
