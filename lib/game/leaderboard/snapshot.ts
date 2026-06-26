@@ -108,13 +108,16 @@ export async function rebuildLeaderboardSnapshot(
   const counts = {} as Partial<Record<LeaderboardMetric, number>>;
   for (const metric of metrics) {
     const rows = (await ROWS_FN[metric](serverId)).sort((a, b) => b.value - a.value);
-    const ranked = rows.map((r, i) => ({
-      serverId,
-      metric,
-      userId: r.userId,
-      value: r.value,
-      rank: i + 1,
-    }));
+    // 경쟁 순위(1,2,2,4 — 동점은 같은 등수) — queries.rankByValue의 count(value>x)+1과 일치(감사 S3).
+    // 순차(i+1)는 동점에 임의 다른 등수를 줘 before(스냅샷)/after(실시간)가 어긋났음.
+    let prevVal: number | null = null;
+    let prevRank = 0;
+    const ranked = rows.map((r, i) => {
+      const rank = prevVal !== null && r.value === prevVal ? prevRank : i + 1;
+      prevVal = r.value;
+      prevRank = rank;
+      return { serverId, metric, userId: r.userId, value: r.value, rank };
+    });
     await db.transaction(async (tx) => {
       await tx
         .delete(leaderboardRanks)
