@@ -13,7 +13,7 @@
  */
 import 'server-only';
 
-import { and, eq, sql } from 'drizzle-orm';
+import { and, eq, inArray, sql } from 'drizzle-orm';
 
 import { createClient, type SupabaseClient } from '@supabase/supabase-js';
 
@@ -257,6 +257,18 @@ async function acceptJob(
     ? { ...(options as Record<string, unknown>), faceBox }
     : options;
   await db.transaction(async (tx) => {
+    // 조건부 클레임 먼저(감사 #2) — downloading인 경우만 accepted로 전이. 0행이면 다른 워커가
+    // 이미 처리한 것(P1 불변식 위반 시) → 프로필 중복생성 방지로 즉시 종료. userProfileId는
+    // 프로필 insert 후 backfill.
+    const claimed = await tx
+      .update(profileGenerationJobs)
+      .set({ status: 'accepted', aiVerdict: verdict, resolvedAt: sql`now()` })
+      .where(
+        and(eq(profileGenerationJobs.id, jobId), eq(profileGenerationJobs.status, 'downloading')),
+      )
+      .returning({ id: profileGenerationJobs.id });
+    if (claimed.length === 0) return;
+
     const [profile] = await tx
       .insert(userProfiles)
       .values({
@@ -273,12 +285,7 @@ async function acceptJob(
 
     await tx
       .update(profileGenerationJobs)
-      .set({
-        status: 'accepted',
-        aiVerdict: verdict,
-        userProfileId: profile!.id,
-        resolvedAt: sql`now()`,
-      })
+      .set({ userProfileId: profile!.id })
       .where(eq(profileGenerationJobs.id, jobId));
 
     // 첫 프로필이면 자동 active — escrow 차감 서버의 캐릭터에.
@@ -406,11 +413,10 @@ async function rejectJob(
   const notes = verdict.notes || '검토 기준에 부합하지 않습니다.';
   const userBody =
     '생성하신 아바타가 검토 기준에 부합하지 않아 적용되지 않았어요.\n사용하신 다이아는 전액 환불해 드렸으니, 환불 다이아로 언제든 다시 생성하실 수 있습니다.\n\n불편을 드려 죄송합니다.';
-  await db.transaction(async (tx) => {
-    // 환불 — escrow가 차감된 서버(잡 행 기록)로 반환.
-    await walletAdd(tx, userId, serverId, escrow);
-
-    await tx
+  const did = await db.transaction(async (tx) => {
+    // 조건부 클레임 먼저(감사 #2, money path) — downloading일 때만 rejected_ai로 전이. 0행이면
+    // 다른 워커가 이미 처리(P1 불변식 위반 시) → 환불 skip해 이중환불 방지.
+    const claimed = await tx
       .update(profileGenerationJobs)
       .set({
         status: 'rejected_ai',
@@ -418,7 +424,14 @@ async function rejectJob(
         rejectReason: notes,
         resolvedAt: sql`now()`,
       })
-      .where(eq(profileGenerationJobs.id, jobId));
+      .where(
+        and(eq(profileGenerationJobs.id, jobId), eq(profileGenerationJobs.status, 'downloading')),
+      )
+      .returning({ id: profileGenerationJobs.id });
+    if (claimed.length === 0) return false;
+
+    // 환불 — escrow가 차감된 서버(잡 행 기록)로 반환.
+    await walletAdd(tx, userId, serverId, escrow);
 
     await tx.insert(mailbox).values({
       userId,
@@ -429,8 +442,11 @@ async function rejectJob(
       senderLabel: '시스템',
       payload: {},
     });
+    return true;
   });
-  await safePush(userId, '프로필 검토 미통과', '검토를 통과하지 못해 다이아를 환불했어요. 우편함을 확인하세요.', '/mail');
+  if (did) {
+    await safePush(userId, '프로필 검토 미통과', '검토를 통과하지 못해 다이아를 환불했어요. 우편함을 확인하세요.', '/mail');
+  }
 }
 
 export async function markFailedAndRefund(jobId: bigint, userId: string, reason: string): Promise<void> {
@@ -445,17 +461,27 @@ export async function markFailedAndRefund(jobId: bigint, userId: string, reason:
     .where(eq(profileGenerationJobs.id, jobId));
   if (!job || job.status === 'failed' || job.status === 'rejected_ai' || job.status === 'accepted') return;
 
-  await db.transaction(async (tx) => {
-    await walletAdd(tx, userId, job.serverId, job.escrow);
-
-    await tx
+  const did = await db.transaction(async (tx) => {
+    // 조건부 클레임 먼저(감사 #2, money path) — 비종단(queued/downloading)일 때만 failed로 전이.
+    // 0행이면 다른 워커가 이미 처리(P1 불변식 위반·동시 P2 타임아웃 등) → 환불 skip해 이중환불 방지.
+    // markFailedAndRefund는 queued(P2 타임아웃·enqueue 실패)와 downloading(poll 실패) 양쪽에서 호출.
+    const claimed = await tx
       .update(profileGenerationJobs)
       .set({
         status: 'failed',
         rejectReason: reason.slice(0, 500),
         resolvedAt: sql`now()`,
       })
-      .where(eq(profileGenerationJobs.id, jobId));
+      .where(
+        and(
+          eq(profileGenerationJobs.id, jobId),
+          inArray(profileGenerationJobs.status, ['queued', 'downloading']),
+        ),
+      )
+      .returning({ id: profileGenerationJobs.id });
+    if (claimed.length === 0) return false;
+
+    await walletAdd(tx, userId, job.serverId, job.escrow);
 
     await tx.insert(mailbox).values({
       userId,
@@ -466,6 +492,9 @@ export async function markFailedAndRefund(jobId: bigint, userId: string, reason:
       senderLabel: '시스템',
       payload: {},
     });
+    return true;
   });
-  await safePush(userId, '프로필 생성 실패', '시스템 오류로 다이아를 환불했어요. 다시 시도해 주세요.', '/mail');
+  if (did) {
+    await safePush(userId, '프로필 생성 실패', '시스템 오류로 다이아를 환불했어요. 다시 시도해 주세요.', '/mail');
+  }
 }
