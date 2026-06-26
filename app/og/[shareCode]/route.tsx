@@ -46,9 +46,10 @@ async function dataUri(url: string): Promise<string | null> {
 }
 
 /**
- * 동적 OG 카드 — WIREFRAMES §10.1 / CLAUDE §3.7. /u/<nickname> og:image.
- * 닉네임·착용 3슬롯(실제 스프라이트·초월 등급 테두리)·총 전투력 + Pixellab 배경 랜덤(요청마다).
- * 배경/스프라이트 부재 시 그라데이션/이모지로 안전 폴백 — OG는 절대 실패하지 않음.
+ * 동적 OG 카드 — WIREFRAMES §10.1 / CLAUDE §3.7. /u/<publicCode> og:image.
+ * shareCode = 불변 publicCode(신규) 또는 닉네임(레거시 링크 하위호환). 착용 3슬롯(실제 스프라이트·
+ * 초월 등급 테두리)·총 전투력 + Pixellab 배경 랜덤(요청마다). 배경/스프라이트 부재 시
+ * 그라데이션/이모지로 안전 폴백 — OG는 절대 실패하지 않음.
  */
 export async function GET(_req: Request, { params }: { params: Promise<{ shareCode: string }> }) {
   const { shareCode } = await params;

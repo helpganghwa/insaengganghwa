@@ -676,7 +676,7 @@ export function MeleeResult({ view, serverId }: { view: MeleeResultView; serverI
     rosterCodes,
     rosterGuilds,
   } = view;
-  /** 핸들(코드 또는 닉네임)로 프로필 상세 경로. 없으면 null(링크 없음). */
+  /** publicCode로 프로필 상세 경로. 없으면 null(링크 없음 — 닉네임 폴백 금지). */
   const hrefOf = (handle: string | null | undefined) =>
     handle ? profileHref(handle, serverId) : null;
   const roster = finale.roster;
@@ -795,7 +795,9 @@ export function MeleeResult({ view, serverId }: { view: MeleeResultView; serverI
     myDefSeqMap.set(tgt, defSeq);
     const oppMeta = byNick.get(opp);
     const oppAvatar = oppMeta?.avatar ?? DEFAULT_AVATAR;
-    const oppHref = hrefOf(oppMeta?.code ?? opp);
+    // publicCode를 못 찾으면(상대가 finale 로스터 윈도 밖) 닉네임 폴백 대신 링크 없음 —
+    // 프로필 링크는 항상 publicCode 기반(닉은 변경·서버별이라 불안정). href.ts 원칙 일관.
+    const oppHref = hrefOf(oppMeta?.code ?? null);
     const meHref = hrefOf(myPublicCode);
     const atkHpNow = role === 0 ? (myMax != null ? myHp : undefined) : undefined;
     const row: Row = {
