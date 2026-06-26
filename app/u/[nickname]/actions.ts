@@ -7,6 +7,7 @@ import { getSessionUserId } from '@/lib/auth/session';
 import { rateLimited } from '@/lib/ratelimit';
 import { db } from '@/lib/db/client';
 import { userProfiles, profileReports } from '@/lib/db/schema/avatar';
+import { profiles } from '@/lib/db/schema/profiles';
 
 /**
  * PROFILE §7.1 — 프로필 신고. 사후 신고(자동 차단 X), count 누적만.
@@ -36,13 +37,25 @@ export async function reportProfile(
 
   // 대상 프로필 + 소유자 확인 (본인 신고 차단).
   const [p] = await db
-    .select({ ownerId: userProfiles.userId })
+    .select({
+      ownerId: userProfiles.userId,
+      bannedAt: profiles.bannedAt,
+      banUntil: profiles.banUntil,
+    })
     .from(userProfiles)
+    .innerJoin(profiles, eq(profiles.id, userProfiles.userId))
     .where(eq(userProfiles.id, profileId))
     .limit(1);
   if (!p) return { status: 'error', message: '프로필을 찾을 수 없습니다.' };
   if (p.ownerId === userId)
     return { status: 'error', message: '본인 프로필은 신고할 수 없습니다.' };
+
+  // 이미 정지 중인 소유자는 reportCount를 더 쌓지 않음 — 이미 조치된 계정이라 신고 큐
+  // 인플레이션만 유발(reportCount순 정렬 노이즈). 임시정지가 만료(banUntil 경과)되면 다시
+  // 집계. 신고자에겐 정상 접수처럼 응답해 정지 사실을 노출하지 않음(감사 P-A5).
+  const banned =
+    p.bannedAt !== null && (p.banUntil === null || p.banUntil.getTime() > Date.now());
+  if (banned) return { status: 'ok' };
 
   try {
     await db.transaction(async (tx) => {
