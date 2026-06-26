@@ -595,6 +595,10 @@ export async function GET(_req: Request, { params }: { params: Promise<{ shareCo
         })}
       </div>
     </div>,
-    { ...size, headers: { 'cache-control': 'no-store, max-age=0, must-revalidate' } },
+    {
+      ...size,
+      // 엣지 캐시 1h + SWR 1d — 크롤 반복 재연산 차단(감사 C4).
+      headers: { 'cache-control': 'public, s-maxage=3600, stale-while-revalidate=86400' },
+    },
   );
 }
