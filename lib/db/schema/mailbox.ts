@@ -45,7 +45,7 @@ export const mailboxTypeEnum = pgEnum('mailbox_type', [
   'conquest',
   /** 길드 알림(길드장 위임 등). */
   'guild',
-  /** 강화 큐 (B) cron 자동정산분(24h+ 방치) 결과 통지 — 정보성(보상 payload 없음). GDD §3.10. */
+  /** 예약·미사용(inert) — 강화 결과는 인페이지 토스트+완료 푸시로 통지, 우편 미사용(0087로 DB에 값만 존재). */
   'enhance_result',
 ]);
 
