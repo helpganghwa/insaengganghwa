@@ -4,6 +4,7 @@ import { useEffect, useState } from 'react';
 
 import { ModalShell } from '@/components/ModalShell';
 import { MarkdownView } from '@/components/MarkdownView';
+import { assetUrl } from '@/lib/asset-versions';
 import { ANNOUNCEMENT_CATEGORY_LABEL, type AnnouncementView } from '@/lib/game/announcement-shared';
 
 const SEEN_KEY = 'annSeenId';
@@ -109,9 +110,15 @@ export function AnnouncementBoard({ items, tint }: { items: AnnouncementView[]; 
         style={{ backgroundColor: tint }}
         className="relative flex aspect-[50/17] isolate overflow-hidden rounded-2xl border border-zinc-800 transition active:scale-[0.98]"
       >
-        <span aria-hidden className="absolute right-2.5 top-1/2 -translate-y-1/2 text-[34px] leading-none opacity-25">
-          📋
-        </span>
+        {/* eslint-disable-next-line @next/next/no-img-element */}
+        <img
+          src={assetUrl('/sprites/hub/board.png')}
+          alt=""
+          aria-hidden
+          draggable={false}
+          className="absolute inset-0 h-full w-full object-cover"
+          style={{ imageRendering: 'pixelated' }}
+        />
         {mounted && hasNew && (
           <span
             aria-label="새 공지"
