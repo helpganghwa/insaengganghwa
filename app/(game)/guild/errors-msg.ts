@@ -28,6 +28,7 @@ const MAP: Record<string, string> = {
   BATTLE_IN_PROGRESS: '점령전 진행 중에는 배치를 변경할 수 없습니다. (KST 23:00~24:00)',
   TARGET_ALREADY_EXECUTOR: '이미 다른 구역의 집행관입니다.',
   NOT_OFFICER: '길드장·부길드장만 할 수 있습니다.',
+  FORBIDDEN: '권한이 없습니다.',
   NO_JOIN_REQUEST: '처리할 가입 신청이 없습니다.',
   VICE_LIMIT: '부길드장은 최대 5명까지 임명할 수 있습니다.',
   EMBLEM_INVALID: '문양은 모양·색상 각 1개, 키워드 1~2개를 선택하세요.',
