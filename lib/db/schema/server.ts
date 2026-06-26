@@ -60,5 +60,8 @@ export const characters = pgTable(
     index('characters_server_idx').on(t.serverId),
     uniqueIndex('characters_nickname_uq').on(t.nickname),
     index('characters_residence_idx').on(t.residenceZoneId),
+    // 친구 검색 nickname ILIKE '%term%' 부분일치용 trigram GIN(감사 F3-mail, manual 0088).
+    // UNIQUE btree는 양끝 와일드카드엔 무용 → seq scan이던 것을 인덱스 스캔으로.
+    index('characters_nickname_trgm_gin').using('gin', sql`${t.nickname} gin_trgm_ops`),
   ],
 );
