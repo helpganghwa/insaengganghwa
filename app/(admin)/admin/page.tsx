@@ -79,6 +79,12 @@ const MENU: { href: string; icon: string; title: string; desc: string; external?
     desc: '신고 누적 프로필 확인 및 비공개 조치',
   },
   {
+    href: '/admin/announcements',
+    icon: '📋',
+    title: '공지사항',
+    desc: '전역 공지 작성·발행·고정 (홈 게시판·강제 팝업 노출)',
+  },
+  {
     href: '/admin/mail',
     icon: '📬',
     title: '운영자 우편 발송',

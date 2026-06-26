@@ -1,3 +1,4 @@
+import { Fragment } from 'react';
 import Link from 'next/link';
 import { getActiveServerId } from '@/lib/game/servers';
 import { sql } from 'drizzle-orm';
@@ -10,7 +11,9 @@ import { freeStatusFromClaims } from '@/lib/game/shop/free';
 import { kstDateString } from '@/lib/kst';
 
 import { getWorldFeed } from '@/lib/game/world/event';
+import { listPublishedAnnouncements } from '@/lib/game/announcement';
 
+import { AnnouncementBoard } from './AnnouncementBoard';
 import { BattlePassBanner } from './BattlePassBanner';
 import { DailySupplyCard } from './DailySupplyCard';
 import { HomeBannerCarousel } from './HomeBannerCarousel';
@@ -62,14 +65,6 @@ const MENU = [
     bg: '/sprites/hub/raid.png',
     tint: '#3a1419',
     scale: 1,
-  },
-  {
-    href: '/enhance',
-    label: '강화',
-    desc: '장비를 한계까지 단련',
-    bg: '/sprites/hub/enhance.png',
-    tint: '#3d1f0c',
-    scale: 1.3,
   },
   {
     href: '/gacha',
@@ -251,6 +246,11 @@ export default async function HomePage() {
     ? await withTimeout(getWorldFeed(serverId, 10), 2500, 'home.worldfeed').catch(() => [])
     : [];
 
+  // 게시판(공지) — 발행분 최신순. 홈 카드(강화 자리) + 새 글 강제 팝업용. 콜드/hang 시 빈 배열.
+  const announcements = userId
+    ? await withTimeout(listPublishedAnnouncements(30), 2000, 'home.ann').catch(() => [])
+    : [];
+
   return (
     <>
       {worldFeed.length > 0 && <WorldTicker entries={worldFeed} />}
@@ -263,15 +263,17 @@ export default async function HomePage() {
         <BattlePassBanner />
       </HomeBannerCarousel>
       <div className="grid grid-cols-2 gap-2.5">
-        {MENU.map((m) => {
+        {MENU.map((m, i) => {
           const count = counts[m.href] ?? 0;
           const badge = count > 99 ? '99+' : count > 0 ? String(count) : null;
           const isMeleeChamp = m.href === '/melee' && meleeChampion;
           const isWorldmapCard = m.href === '/guild/map';
           const desc = m.href === '/melee' ? meleeDesc : m.desc;
           return (
-            <Link
-              key={m.href}
+            <Fragment key={m.href}>
+              {/* 게시판 카드 — 강화 자리(index 4). 강화는 하단 네비로 접근. */}
+              {i === 4 && <AnnouncementBoard items={announcements} tint="#2b2147" />}
+              <Link
               href={m.href}
               data-tut={m.href === '/gacha' ? 'goto-gacha' : undefined}
               style={{ backgroundColor: m.tint }}
@@ -330,7 +332,8 @@ export default async function HomePage() {
                   )}
                 </div>
               </div>
-            </Link>
+              </Link>
+            </Fragment>
           );
         })}
       </div>
