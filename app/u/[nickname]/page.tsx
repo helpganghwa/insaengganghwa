@@ -39,8 +39,8 @@ const REGION_COLOR: Record<string, string> = {
 };
 
 /**
- * 핸들(공개 코드 또는 닉네임) → 공개 프로필 데이터(착용 세트 + KPI + 챔피언). 미존재 시 null.
- * publicCode(불변) 우선 + nickname(레거시 공유 링크 하위호환) 둘 다 허용.
+ * 핸들(공개 코드) → 공개 프로필 데이터(착용 세트 + KPI + 챔피언). 미존재 시 null.
+ * publicCode(불변) 단일 해석 — 닉네임 폴백 없음(닉변+재취득 오귀속 방지, 아래 where 참조).
  * React cache로 generateMetadata + page render 사이 dedupe — 한 요청 내
  * DB 쿼리 1번만 실행(이전엔 무한 로딩 원인이었음, 2026-06-01).
  */
