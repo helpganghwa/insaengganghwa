@@ -111,6 +111,7 @@ export async function finalizeEnhance(jobId: string): Promise<
   const userId = await uid();
   if (!userId) return err('UNAUTHENTICATED');
   if (await rateLimited(userId, 'enhance')) return err('RATE_LIMITED');
+  const __b = await actionBlock(); if (__b) return err(__b);
   try {
     // 강화 직전 — 캐시 시점 본인 3 메트릭 + 순위(토스트 before).
     const ranksBefore = await getMyRanks(userId, await getActiveServerId());
@@ -181,6 +182,7 @@ export async function cancelEnhanceAction(jobId: string) {
   const userId = await uid();
   if (!userId) return err('UNAUTHENTICATED');
   if (await rateLimited(userId, 'enhance')) return err('RATE_LIMITED');
+  const __b = await actionBlock(); if (__b) return err(__b);
   try {
     await cancelEnhance({ userId, jobId: BigInt(jobId) });
     revalidateAll();
@@ -241,6 +243,7 @@ export async function swapEnhanceAction(cancelJobId: string, userEquipmentId: st
   const userId = await uid();
   if (!userId) return err('UNAUTHENTICATED');
   if (await rateLimited(userId, 'enhance')) return err('RATE_LIMITED');
+  const __b = await actionBlock(); if (__b) return err(__b);
   try {
     const result = await swapEnhance({
       userId,
