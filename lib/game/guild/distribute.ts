@@ -4,7 +4,7 @@ import { and, eq, sql } from 'drizzle-orm';
 
 import { db } from '@/lib/db/client';
 import { walletAdd } from '@/lib/game/wallet';
-import { guilds, guildMembers, guildTaxDistributions } from '@/lib/db/schema/guild';
+import { guilds, guildMembers, guildTaxDistributions, guildAuditLog } from '@/lib/db/schema/guild';
 
 import type { GuildTaxDistribution } from './balance';
 import { logGuildAudit } from './audit';
@@ -90,17 +90,18 @@ export function distributeGuildTax(input: {
       mode: 'equal',
       total: distributed,
     });
-    // 활동 로그 — 수령자 1인당 1줄(누구에게 N💎 지급). N명이면 N줄.
-    for (const m of members) {
-      await logGuildAudit(tx, {
+    // 활동 로그 — 수령자 1인당 1줄(누구에게 N💎 지급). 최대 50인 직렬 insert → 단일 multi-row
+    // insert로(감사 G-05: 락 보유 시간 단축, tx당 왕복 N→1). revealConquest와 동일 패턴.
+    await tx.insert(guildAuditLog).values(
+      members.map((m) => ({
         serverId: input.serverId,
         guildId: gid,
         actorUserId: input.leaderUserId,
-        action: 'tax_distribute',
+        action: 'tax_distribute' as const,
         targetUserId: m.u,
         detail: { amount: per.toString(), mode: 'equal' },
-      });
-    }
+      })),
+    );
     return { total: distributed, perMember: per };
   });
 }
@@ -162,17 +163,17 @@ export function distributeGuildTaxManual(input: {
       mode: 'manual',
       total,
     });
-    // 활동 로그 — 지정 금액 받은 수령자 1인당 1줄(누구에게 N💎 지급).
-    for (const [uid, amt] of byUser) {
-      await logGuildAudit(tx, {
+    // 활동 로그 — 지정 금액 받은 수령자 1인당 1줄. 직렬 insert → 단일 multi-row(감사 G-05).
+    await tx.insert(guildAuditLog).values(
+      [...byUser].map(([uid, amt]) => ({
         serverId: input.serverId,
         guildId: gid,
         actorUserId: input.leaderUserId,
-        action: 'tax_distribute',
+        action: 'tax_distribute' as const,
         targetUserId: uid,
         detail: { amount: amt.toString(), mode: 'manual' },
-      });
-    }
+      })),
+    );
     return { total };
   });
 }
