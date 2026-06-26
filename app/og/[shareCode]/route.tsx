@@ -1,6 +1,6 @@
 import { ImageResponse } from 'next/og';
 import { DEFAULT_SERVER_ID } from '@/lib/game/servers';
-import { and, eq, isNotNull, or } from 'drizzle-orm';
+import { and, eq, isNotNull } from 'drizzle-orm';
 
 import { db } from '@/lib/db/client';
 import { profiles } from '@/lib/db/schema/profiles';
@@ -72,7 +72,8 @@ export async function GET(_req: Request, { params }: { params: Promise<{ shareCo
       characters,
       and(eq(characters.userId, profiles.id), eq(characters.serverId, serverId)),
     )
-    .where(or(eq(profiles.publicCode, handle), eq(characters.nickname, handle)))
+    // publicCode 단일 해석(감사 P-A7) — 닉네임 폴백 제거(닉변+재취득 오귀속 차단). 없으면 폴백 카드.
+    .where(eq(profiles.publicCode, handle))
     .limit(1);
 
   // 카드 표시 닉네임 — 조회된 현재 닉(없으면 핸들 폴백).

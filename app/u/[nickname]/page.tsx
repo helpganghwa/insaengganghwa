@@ -3,7 +3,7 @@ import { DEFAULT_SERVER_ID } from '@/lib/game/servers';
 import Link from 'next/link';
 import { notFound } from 'next/navigation';
 import type { Metadata } from 'next';
-import { and, eq, inArray, isNotNull, or } from 'drizzle-orm';
+import { and, eq, inArray, isNotNull } from 'drizzle-orm';
 
 import { db } from '@/lib/db/client';
 import { withTimeout } from '@/lib/db/with-timeout';
@@ -57,7 +57,9 @@ const loadProfile = cache(async (handle: string, serverId: number) => {
       characters,
       and(eq(characters.userId, profiles.id), eq(characters.serverId, serverId)),
     )
-    .where(or(eq(profiles.publicCode, handle), eq(characters.nickname, handle)))
+    // publicCode 단일 해석(감사 P-A7) — 닉네임 폴백 제거. 닉은 변경·재취득 가능이라 레거시 닉네임
+    // 링크가 닉변+재취득 후 엉뚱한 유저로 오귀속되던 문제 차단(없으면 404). 신규 링크는 전부 publicCode.
+    .where(eq(profiles.publicCode, handle))
     .limit(1);
   if (!prof) return null;
 
