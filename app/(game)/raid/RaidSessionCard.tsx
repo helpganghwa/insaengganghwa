@@ -360,7 +360,7 @@ export function RaidSessionCard({ view: v, serverId }: { view: RaidView; serverI
         showError(r.message);
         return;
       }
-      // 공용 헤더 토스트로 수령 보상(💎 + 상자) 노출 — 값은 이미 화면에 있는 myReward.
+      // 공용 헤더 토스트로 수령 보상(보급 상자) 노출 — 값은 이미 화면에 있는 myReward(레이드=상자 전용).
       const rw = v.myReward;
       if (rw) {
         const rewards: HeaderReward[] = [

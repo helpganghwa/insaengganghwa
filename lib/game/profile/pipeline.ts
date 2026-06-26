@@ -92,17 +92,16 @@ interface PixellabCharacterDetail {
 // ─── 폴링 + 처리 — status='downloading' N건 ───
 
 /**
- * ⚠️ 동시성 불변식(감사 P1) — 이 함수는 잡을 잠그지 않고 select 후 느린 외부 호출(폴링·다운로드·
- * AI검토)을 거쳐 terminal 전이(accept/reject/fail)한다. terminal 전이는 각각 단일 트랜잭션이라
- * **한 번**의 처리는 항상 정확하지만, **두 워커가 같은 downloading 잡을 동시에** 처리하면
- * 프로필 중복생성·이중환불이 발생한다(accept/reject 전이가 status='downloading' 조건부가 아님).
+ * 동시성 — 이 함수는 잡을 잠그지 않고 select 후 느린 외부 호출(폴링·다운로드·AI검토)을 거쳐 terminal
+ * 전이(accept/reject/fail)한다. 두 방어선이 동시처리 시 프로필 중복생성·이중환불을 막는다:
+ *  ① 구조적(주방어, 감사 #2): accept/reject/markFailed 모두 **claim-first 조건부 전이**
+ *     (`update … where status IN(...) returning` → 0행이면 즉시 종료)라, 두 워커가 같은 잡을 잡아도
+ *     지급·환불·프로필생성은 **정확히 1회**만 일어난다.
+ *  ② 운영적(보조): 유일 호출자가 profile-poll cron(2분=120s)이고 maxDuration=60s라 연속 invocation이
+ *     절대 겹치지 않으며 루프 내 처리도 순차 — 애초에 동시 진입이 거의 없다.
  *
- * 현재 그 동시성은 구조적으로 차단된다: 유일 호출자가 profile-poll cron(2분=120s 간격)이고
- * route maxDuration=60s라 연속 invocation이 60초 간격으로 절대 겹치지 않으며, 루프 내 처리도 순차다.
- *
- * 🔒 **이 불변식을 깨면(maxDuration≥인터벌, 인터벌 단축, 두 번째 호출자 추가, 병렬 처리) 반드시
- *     먼저 잡 클레임 락(downloading→processing 원자 전이 또는 terminal 전이의 status 조건부화)을
- *     추가할 것.** 그 전엔 절대 동시 실행 금지.
+ * 🔒 새 호출자/병렬 처리를 추가하더라도 ①의 조건부 전이가 멱등을 보장하나, ②가 깨지면 락 경합·중복
+ *    외부호출(Pixellab/AI 비용) 증가가 따르므로 동시 실행은 여전히 지양할 것.
  */
 export async function pollAndProcessDownloading(limit = 5): Promise<{
   polled: number;
