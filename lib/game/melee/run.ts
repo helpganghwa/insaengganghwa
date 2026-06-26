@@ -120,45 +120,51 @@ export async function runMelee(serverId: number): Promise<{ ran: boolean; battle
     }
   }
 
-  // 배틀 행 — 멱등 insert. race로 이미 있으면 skip.
-  const inserted = await db
-    .insert(meleeBattles)
-    .values({
-      serverId,
-      battleDate,
-      seed: battleDate,
-      status: 'computed',
-      participantCount: n,
-      totalRounds: result.totalRounds,
-      championUserId: result.championUserId || null,
-      finale: result.finale,
-      computedAt: new Date(),
-    })
-    .onConflictDoNothing({ target: [meleeBattles.serverId, meleeBattles.battleDate] })
-    .returning({ id: meleeBattles.id });
-  if (inserted.length === 0) return { ran: false };
-  const battleId = inserted[0]!.id;
-
-  // 참가자 행 청크 insert (등수→보상).
+  // 배틀 행 + 참가자 행을 **단일 트랜잭션**으로(감사 B1). battle만 커밋되고 participants 적재 전
+  // 중단되면, 멱등가드(선조회)가 0명 배틀을 영구화 → reveal의 insert…select가 0행 → 전원 보상
+  // 우편 영구 유실. 두 적재를 원자화해 부분실패 시 롤백·재시도가 둘 다 재수행. race는 onConflict로 skip.
   const CHUNK = 1000;
-  const rows = result.ranks.map((r) => {
-    const reward = meleeRewardForRank(r.finalRank, n);
-    return {
-      battleId,
-      userId: r.userId,
-      cpSnapshot: BigInt(cpOf.get(r.userId) ?? 0),
-      finalRank: r.finalRank,
-      killerUserId: r.killerUserId,
-      rewardDiamond: BigInt(reward.diamond),
-      rewardBoxes: distributeBoxes(reward.boxes, battleDate, r.userId),
-      myEvents: r.events,
-      attackCount: r.attackCount,
-      defenseCount: r.defenseCount,
-    };
-  });
-  for (let i = 0; i < rows.length; i += CHUNK) {
-    await db.insert(meleeParticipants).values(rows.slice(i, i + CHUNK));
-  }
+  const out = await db.transaction(async (tx) => {
+    const inserted = await tx
+      .insert(meleeBattles)
+      .values({
+        serverId,
+        battleDate,
+        seed: battleDate,
+        status: 'computed',
+        participantCount: n,
+        totalRounds: result.totalRounds,
+        championUserId: result.championUserId || null,
+        finale: result.finale,
+        computedAt: new Date(),
+      })
+      .onConflictDoNothing({ target: [meleeBattles.serverId, meleeBattles.battleDate] })
+      .returning({ id: meleeBattles.id });
+    if (inserted.length === 0) return { ran: false as const };
+    const battleId = inserted[0]!.id;
 
-  return { ran: true, battleId: battleId.toString(), participants: n };
+    // 참가자 행 청크 insert (등수→보상).
+    const rows = result.ranks.map((r) => {
+      const reward = meleeRewardForRank(r.finalRank, n);
+      return {
+        battleId,
+        userId: r.userId,
+        cpSnapshot: BigInt(cpOf.get(r.userId) ?? 0),
+        finalRank: r.finalRank,
+        killerUserId: r.killerUserId,
+        rewardDiamond: BigInt(reward.diamond),
+        rewardBoxes: distributeBoxes(reward.boxes, battleDate, r.userId),
+        myEvents: r.events,
+        attackCount: r.attackCount,
+        defenseCount: r.defenseCount,
+      };
+    });
+    for (let i = 0; i < rows.length; i += CHUNK) {
+      await tx.insert(meleeParticipants).values(rows.slice(i, i + CHUNK));
+    }
+
+    return { ran: true as const, battleId: battleId.toString(), participants: n };
+  });
+
+  return out;
 }
