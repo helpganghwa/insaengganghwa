@@ -207,6 +207,7 @@ export async function revealConquest(serverId: number, battleDay: string): Promi
     from conquest_battles cb
     join zones z on z.id = cb.zone_id
     where cb.server_id = ${serverId} and cb.battle_kst_day = ${battleDay} and cb.published_at is null
+    order by cb.id
   `)) as unknown as RevealRow[];
   if (rows.length === 0) return { revealed: 0, mailed: 0 };
 
@@ -235,26 +236,26 @@ export async function revealConquest(serverId: number, battleDay: string): Promi
     return r;
   };
 
+  // 전체 reveal 원자화(감사 #1) — 플립+소유이전+요약우편을 단일 tx로. 중간 크래시 시 전부 롤백되어
+  // 다음 tick이 재수행(우편 유실 방지, revealMelee와 동일). 동시 cron은 조건부 플립(published_at IS
+  // NULL)+행잠금으로 1회만 적용(rows를 cb.id 순으로 잠가 데드락 회피). 감사로그는 tx 밖 best-effort.
+  const out = await db.transaction(async (tx) => {
   let revealed = 0;
   for (const r of rows) {
     // 조건부 플립(published_at IS NULL → now()) — 동시 cron/다중 tick에서 1회만 적용.
-    const applied = await db.transaction(async (tx) => {
-      const flip = await tx
-        .update(conquestBattles)
-        .set({ publishedAt: new Date() })
-        .where(and(eq(conquestBattles.id, BigInt(r.id)), isNull(conquestBattles.publishedAt)))
-        .returning({ id: conquestBattles.id });
-      if (flip.length === 0) return false; // 다른 실행이 이미 공개
-      // 승자 = 공격/중립 점령 → 소유 이전 + 집행관 공석. 승자 = 소유 길드면 유지(변경 없음).
-      if (r.winner && r.winner !== r.prev) {
-        await tx
-          .update(zones)
-          .set({ ownerGuildId: BigInt(r.winner), executorUserId: null, capturedAt: new Date() })
-          .where(eq(zones.id, r.zid));
-      }
-      return true;
-    });
-    if (!applied) continue;
+    const flip = await tx
+      .update(conquestBattles)
+      .set({ publishedAt: new Date() })
+      .where(and(eq(conquestBattles.id, BigInt(r.id)), isNull(conquestBattles.publishedAt)))
+      .returning({ id: conquestBattles.id });
+    if (flip.length === 0) continue; // 다른 실행이 이미 공개
+    // 승자 = 공격/중립 점령 → 소유 이전 + 집행관 공석. 승자 = 소유 길드면 유지(변경 없음).
+    if (r.winner && r.winner !== r.prev) {
+      await tx
+        .update(zones)
+        .set({ ownerGuildId: BigInt(r.winner), executorUserId: null, capturedAt: new Date() })
+        .where(eq(zones.id, r.zid));
+    }
     revealed++;
 
     // 결과 분류 — 관여 길드(승자·이전 소유·배치 길드)별 이 구역 결과 귀속(요약 우편용).
@@ -273,32 +274,7 @@ export async function revealConquest(serverId: number, battleDay: string): Promi
     }
   }
 
-  // 길드 활동 로그 — 점령/상실만(시스템 액션). best-effort(우편·공개와 분리, 실패해도 무시).
-  const auditRows = [...results.entries()].flatMap(([gid, r]) => [
-    ...r.captured.map((zone) => ({
-      serverId,
-      guildId: BigInt(gid),
-      actorUserId: null,
-      action: 'zone_capture' as const,
-      detail: { zone },
-    })),
-    ...r.lost.map((zone) => ({
-      serverId,
-      guildId: BigInt(gid),
-      actorUserId: null,
-      action: 'zone_lost' as const,
-      detail: { zone },
-    })),
-  ]);
-  if (auditRows.length > 0) {
-    try {
-      await db.insert(guildAuditLog).values(auditRows);
-    } catch {
-      // 로그 기록 실패는 정산/우편에 영향 없음.
-    }
-  }
-
-  // 관여 길드원 전체에 결과 요약 우편 1건 — best-effort(공개와 분리).
+  // 요약 우편(관여 길드원) — 플립과 동일 tx로 원자 적재(감사 #1). 크래시 시 플립과 함께 롤백→다음 tick 재수행.
   let mailed = 0;
   if (results.size > 0) {
     const fmtBody = (r: GuildResult): string => {
@@ -309,7 +285,7 @@ export async function revealConquest(serverId: number, battleDay: string): Promi
       if (r.failed.length) lines.push(`⚔️ 공격 실패: ${r.failed.join(', ')}`);
       return lines.join('\n');
     };
-    const memberRows = await db
+    const memberRows = await tx
       .select({ uid: guildMembers.userId, guildId: guildMembers.guildId })
       .from(guildMembers)
       .where(
@@ -336,10 +312,37 @@ export async function revealConquest(serverId: number, battleDay: string): Promi
       })
       .filter((v): v is NonNullable<typeof v> => v !== null);
     if (mails.length > 0) {
-      await db.insert(mailbox).values(mails);
+      await tx.insert(mailbox).values(mails);
       mailed = mails.length;
     }
   }
-
   return { revealed, mailed };
+  });
+
+  // 길드 활동 로그 — 점령/상실만(시스템 액션). best-effort(우편·공개와 분리, 실패해도 무시), tx 밖.
+  const auditRows = [...results.entries()].flatMap(([gid, r]) => [
+    ...r.captured.map((zone) => ({
+      serverId,
+      guildId: BigInt(gid),
+      actorUserId: null,
+      action: 'zone_capture' as const,
+      detail: { zone },
+    })),
+    ...r.lost.map((zone) => ({
+      serverId,
+      guildId: BigInt(gid),
+      actorUserId: null,
+      action: 'zone_lost' as const,
+      detail: { zone },
+    })),
+  ]);
+  if (auditRows.length > 0) {
+    try {
+      await db.insert(guildAuditLog).values(auditRows);
+    } catch {
+      // 로그 기록 실패는 정산/우편에 영향 없음.
+    }
+  }
+
+  return out;
 }
