@@ -42,6 +42,10 @@ function bpOrderName(type: BattlePassType, segmentIndex: number): string {
 
 /** 미성년 월 결제 한도(원) — REGULATORY. 본인인증으로 미성년 확정된 계정만 적용. */
 const MINOR_MONTHLY_LIMIT_KRW = 70_000;
+// 단일 주문 금액 상한(감사 F3-pay) — 비정상 큰 segmentIndex로 enhance 가격식 2^c가 폭주한 주문을
+// 차단하는 sanity 캡. 도달 가능 구간(enhance seg9=5.1M, transcend는 선형)은 전부 통과, 그 위는
+// 도달에 수십년 + 비현실적 금액이라 무해. (실 IAP 단일 결제가 이 값 넘을 일 없음)
+const MAX_ORDER_KRW = 10_000_000;
 
 export type PurchaseErrorCode =
   | 'UNKNOWN_PRODUCT'
@@ -127,7 +131,15 @@ export async function createOrder(
   let diamondGranted = 0;
 
   if (bp) {
+    // segmentIndex 안전 가드(감사 F3-pay) — productId 문자열에서 파싱한 값이라, 비정상 큰 값은
+    // enhance 가격식 2^c가 Infinity로 폭주해 비정상 주문을 만든다. 정수·범위·가격유효성 검증.
+    if (!Number.isInteger(bp.segmentIndex) || bp.segmentIndex < 0) {
+      throw new PurchaseError('UNKNOWN_PRODUCT');
+    }
     krw = bpSegmentPriceKrw(bp.type, bp.segmentIndex);
+    if (!Number.isSafeInteger(krw) || krw <= 0 || krw > MAX_ORDER_KRW) {
+      throw new PurchaseError('UNKNOWN_PRODUCT');
+    }
     orderName = bpOrderName(bp.type, bp.segmentIndex);
     // 이미 산 구간이면 차단(구간 row 존재 = 구매됨).
     const [owned] = await db
