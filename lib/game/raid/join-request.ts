@@ -158,6 +158,8 @@ export function decideJoinRequest(input: {
       if ((await activeRaidCount(tx, requesterUserId)) >= RAID_MAX_CONCURRENT_PER_USER) {
         throw new RaidError('CONCURRENT_LIMIT');
       }
+      // 일일 한도는 '요청 시점'이 아니라 '승인 시점'에 요청자 기준으로 차감(승인일 KST 윈도).
+      // 의도적: 실제 참가가 확정될 때만 1회 소모. 요청만 하고 거절/방치되면 한도 미차감.
       await bumpDailyOrThrow(tx, requesterUserId, raid.serverId);
       await tx.insert(raidParticipants).values({ raidId, userId: requesterUserId });
     }
