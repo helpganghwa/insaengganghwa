@@ -120,7 +120,15 @@ export async function resetReportedAvatar(profileId: string): Promise<Result> {
     await tx
       .update(characters)
       .set({ activeProfileId: def?.id ?? null })
-      .where(and(eq(characters.userId, owner.userId), eq(characters.activeProfileId, profileId)));
+      // serverId 명시(감사 P-A3) — activeProfileId가 UUID 유니크라 실무상 안전하나, 모더레이션
+      // 경로의 잠재 오타깃 방지로 서버 스코프 고정.
+      .where(
+        and(
+          eq(characters.userId, owner.userId),
+          eq(characters.serverId, owner.serverId),
+          eq(characters.activeProfileId, profileId),
+        ),
+      );
     // 신고 cascade로 함께 삭제되지만, 명시적으로 먼저 정리(카운트 0 갱신은 삭제 전 대상 존재 시).
     await tx.delete(profileReports).where(eq(profileReports.profileId, profileId));
     await tx.delete(userProfiles).where(eq(userProfiles.id, profileId));
