@@ -198,7 +198,7 @@ export async function pollAndProcessDownloading(limit = 5): Promise<{
         const path = `${job.userId}/${job.characterId}/south.png`;
         const up = await supabase.storage
           .from(STORAGE_BUCKET)
-          .upload(path, png, { contentType: 'image/png', upsert: true });
+          .upload(path, png, { contentType: 'image/png', upsert: true, cacheControl: '604800' });
         if (up.error) throw new Error(`storage upload south: ${up.error.message}`);
         const rotations = { south: supabase.storage.from(STORAGE_BUCKET).getPublicUrl(path).data.publicUrl };
         // 얼굴 크롭 박스 — 원본 south에서 결정론 검출(실패 시 검수 head 폴백).
@@ -326,7 +326,7 @@ export async function adminGrantAvatarForJob(jobId: bigint): Promise<{ ok: boole
   if (!isPng(spng)) return { ok: false, msg: '정면 이미지가 유효하지 않습니다.' };
   const supabase = serviceClient();
   const spath = `${job.userId}/${job.pixellabCharacterId}/south.png`;
-  const sup = await supabase.storage.from(STORAGE_BUCKET).upload(spath, spng, { contentType: 'image/png', upsert: true });
+  const sup = await supabase.storage.from(STORAGE_BUCKET).upload(spath, spng, { contentType: 'image/png', upsert: true, cacheControl: '604800' });
   if (sup.error) return { ok: false, msg: `이미지 미러링 실패: ${sup.error.message}` };
   const rotations = { south: supabase.storage.from(STORAGE_BUCKET).getPublicUrl(spath).data.publicUrl };
   const faceBox = await detectFaceBox(spng);

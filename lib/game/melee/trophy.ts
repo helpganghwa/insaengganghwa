@@ -170,7 +170,7 @@ async function mirror(battleId: bigint, images: ReadyImages): Promise<Record<str
     // 원본 PNG 그대로 업로드.
     const { error } = await sb.storage
       .from(STORAGE_BUCKET)
-      .upload(path, im.png, { contentType: 'image/png', upsert: true });
+      .upload(path, im.png, { contentType: 'image/png', upsert: true, cacheControl: '604800' });
     if (error) throw new Error(`storage ${im.direction}: ${error.message}`);
     rotations[im.direction] = sb.storage.from(STORAGE_BUCKET).getPublicUrl(path).data.publicUrl;
   }

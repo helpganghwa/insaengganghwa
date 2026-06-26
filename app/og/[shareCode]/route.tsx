@@ -321,7 +321,12 @@ export async function GET(_req: Request, { params }: { params: Promise<{ shareCo
           </div>
         </div>
       </div>,
-      { ...size, headers: { 'cache-control': 'no-store, max-age=0, must-revalidate' } },
+      {
+        ...size,
+        // 엣지 캐시 1h + SWR 1d — 카카오/트위터가 같은 공유 URL을 반복 크롤할 때 매번
+        // DB 3쿼리+Satori 렌더 재연산하던 것 차단(스케일 감사 C4). 카드는 준불변 스냅샷.
+        headers: { 'cache-control': 'public, s-maxage=3600, stale-while-revalidate=86400' },
+      },
     );
   }
   // 슬롯 스프라이트 data URI 선해결(Satori는 동기 렌더).

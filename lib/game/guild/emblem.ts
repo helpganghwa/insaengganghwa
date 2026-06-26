@@ -208,7 +208,7 @@ async function uploadEmblem(path: string, png: Buffer): Promise<string> {
   await supabase.storage.createBucket(BUCKET, { public: true }).catch(() => {});
   const { error } = await supabase.storage
     .from(BUCKET)
-    .upload(path, png, { contentType: 'image/png', upsert: true });
+    .upload(path, png, { contentType: 'image/png', upsert: true, cacheControl: '604800' });
   if (error) throw new Error(`storage upload: ${error.message}`);
   const { data } = supabase.storage.from(BUCKET).getPublicUrl(path);
   return `${data.publicUrl}?v=${Date.now()}`;
