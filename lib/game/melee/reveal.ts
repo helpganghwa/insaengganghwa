@@ -95,11 +95,17 @@ export async function revealMelee(serverId: number): Promise<{ revealed: boolean
     category: 'melee',
   }).catch((e) => console.warn('[melee.reveal] push failed', e));
 
-  // 길드 업적(길드원) + 월드 피드(전체) — 대난투 1~3위 노출(best-effort).
+  // 길드 업적(길드원) + 월드 피드(전체) — 대난투 1~3위 노출(best-effort). 각 호출을 try/catch로
+  // 격리(감사 B8): 1건 throw 시 나머지 등수·함수 전체가 죽어, 멱등 reveal 재시도가 no-op이 되며
+  // 업적/피드가 영구 누락되던 문제 방지(우편·푸시는 이미 완료). 실패는 흡수.
   for (const p of podium) {
     if (p.rank >= 1 && p.rank <= 3) {
-      await logMemberAchievement(p.userId, serverId, { action: 'achv_melee', detail: { rank: p.rank } });
-      await logWorldEvent(serverId, 'melee_rank', { rank: p.rank }, { actorUserId: p.userId });
+      try {
+        await logMemberAchievement(p.userId, serverId, { action: 'achv_melee', detail: { rank: p.rank } });
+        await logWorldEvent(serverId, 'melee_rank', { rank: p.rank }, { actorUserId: p.userId });
+      } catch (e) {
+        console.warn('[melee.reveal] achievement/feed failed', p.userId, (e as Error).message);
+      }
     }
   }
 

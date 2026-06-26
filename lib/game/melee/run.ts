@@ -38,6 +38,9 @@ export async function runMelee(serverId: number): Promise<{ ran: boolean; battle
     sql`select (now() at time zone 'Asia/Seoul')::date::text d`,
   )) as unknown as { d: string }[];
   const battleDate = today!.d;
+  // 결정론 시드 — serverId 포함(감사 B5): 날짜만이면 같은 날 두 서버가 동일 RNG 시퀀스를 공유해
+  // 인덱스별 공격자선택·박스분배가 상관됨. `${serverId}:${battleDate}`로 서버 간 decorrelation.
+  const seed = `${serverId}:${battleDate}`;
 
   // 멱등 선조회
   const [existing] = await db
@@ -85,7 +88,7 @@ export async function runMelee(serverId: number): Promise<{ ran: boolean; battle
   const cpOf = new Map(participants.map((p) => [p.userId, p.cp]));
   const n = participants.length;
 
-  const result = simulateMelee(participants, battleDate);
+  const result = simulateMelee(participants, seed);
 
   // 아바타 스냅샷 — finale 로스터 유저의 그 시점 활성 프로필 정면을 finale에 박제.
   //  과거 회차를 나중에 봐도 당시 아바타로 고정(닉·전투력·등수처럼). 로스터는 윈도 등장 유저만(유계).
@@ -130,7 +133,7 @@ export async function runMelee(serverId: number): Promise<{ ran: boolean; battle
       .values({
         serverId,
         battleDate,
-        seed: battleDate,
+        seed,
         status: 'computed',
         participantCount: n,
         totalRounds: result.totalRounds,
@@ -153,7 +156,7 @@ export async function runMelee(serverId: number): Promise<{ ran: boolean; battle
         finalRank: r.finalRank,
         killerUserId: r.killerUserId,
         rewardDiamond: BigInt(reward.diamond),
-        rewardBoxes: distributeBoxes(reward.boxes, battleDate, r.userId),
+        rewardBoxes: distributeBoxes(reward.boxes, seed, r.userId),
         myEvents: r.events,
         attackCount: r.attackCount,
         defenseCount: r.defenseCount,
