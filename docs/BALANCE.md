@@ -76,18 +76,21 @@ D_MIN = 10s  ·  D_AT_10 = 10m  ·  D_MAX = 215m
 - 강화는 **순수 시간 + RNG** — 자원·제물 비용 없음. 카탈로그당 단일 강화레벨(`user_equipment`).
 - idle 친화: 누적이 길어도 떠나 있는 동안 진행. 보석 단축으로 압축
 
-### 1.2 시간 비례 3분기 outcome 확률
+### 1.2 시간 비례 4분기 outcome 확률 (대성공·성공·하락·유지)
 
 ```
-p_success(L, elapsed, total) = baseRate(ℓ) × clamp(elapsed / total, 0, 1)
+p_success_total(L, elapsed, total) = baseRate(ℓ) × clamp(elapsed / total, 0, 1)
+p_mega   (...)               = ⌊ p_success_total × MEGA_OF_SUCCESS_BP / 10000 ⌋  ← 성공 분량의 5% (+2 대성공)
+p_success(...)               = p_success_total − p_mega                          ← 나머지 성공 (+1)
 p_down   (L)                 = downRate(ℓ)            ← 시간 무관 고정
-p_hold   (L, elapsed, total) = 10000 − p_success − p_down  (bp)
+p_hold   (L, elapsed, total) = 10000 − p_success_total − p_down  (bp)
 ```
 
+- `MEGA_OF_SUCCESS_BP = 500`(5%) — **성공 시 5% 확률로 2단계 상승(+2, 대성공)**, 나머지 95%는 +1. 성공 *총량*은 불변(메가는 성공 분량을 +1/+2로 쪼갠 것뿐)이라 하락·유지 확률엔 영향 없음.
 - `elapsed` = 큐 등록 후 서버 시계 경과 (보석 단축분 포함), `total` = 등록 시점 산정된 총 소요 시간
-- 큐 **완료**(elapsed ≥ total) 시 `p_success = baseRate(ℓ)` (공시 최대치)
+- 큐 **완료**(elapsed ≥ total) 시 `p_success_total = baseRate(ℓ)` (공시 최대치)
 - **하락 확률은 시간에 무관하게 고정** — 일찍 시도해도 동일 down%. 일찍 시도하면 잃은 success는 전부 **유지(hold)** 로 이동
-- 시도 결과: 한 번의 RNG roll을 [0, p_success) → 성공, [p_success, p_success+p_down) → 하락, 나머지 → 유지로 분기
+- 시도 결과: 한 번의 RNG roll을 [0, p_mega) → 대성공(+2), [p_mega, p_mega+p_success) → 성공(+1), 다음 p_down 구간 → 하락, 나머지 → 유지로 분기 (resolve.ts 순서)
 - 불변식: 모든 ℓ에서 `baseRate(ℓ) + downRate(ℓ) ≤ 10000` → `p_hold ≥ 0`
 - RNG는 **시도 시점 서버**에서 `crypto` 기반 결정 (CLAUDE §3.1)
 
