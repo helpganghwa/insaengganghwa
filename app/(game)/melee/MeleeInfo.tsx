@@ -71,6 +71,11 @@ export function MeleeInfo({
               </li>
             ))}
           </ul>
+          {/* 소수 N 유령티어 안내(감사 B6) — 인원 적을 때 상위 % 구간이 1~3위에 흡수돼 별도 적용 안 될 수 있음. */}
+          <p className="px-3 pt-2 text-[10px] leading-relaxed text-zinc-500">
+            ※ 상위 % 구간은 참가 인원에 따라 적용 등수가 달라지며, 인원이 적을 때 일부 구간은 상위
+            등수(1~3위)에 포함되어 별도로 적용되지 않을 수 있습니다.
+          </p>
         </div>
       ) : history.length === 0 ? (
         <div className="mx-4 rounded-xl border border-zinc-800 px-3 py-10 text-center text-[12px] text-zinc-500">
