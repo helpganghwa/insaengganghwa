@@ -4,7 +4,7 @@ import { useEffect, useState } from 'react';
 
 import { ModalShell } from '@/components/ModalShell';
 import { MarkdownView } from '@/components/MarkdownView';
-import { ANNOUNCEMENT_CATEGORY_LABEL, type AnnouncementView } from '@/lib/game/announcement';
+import { ANNOUNCEMENT_CATEGORY_LABEL, type AnnouncementView } from '@/lib/game/announcement-shared';
 
 const SEEN_KEY = 'annSeenId';
 

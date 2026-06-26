@@ -7,7 +7,7 @@ import {
   ANNOUNCEMENT_CATEGORIES,
   ANNOUNCEMENT_CATEGORY_LABEL,
   type AnnouncementView,
-} from '@/lib/game/announcement';
+} from '@/lib/game/announcement-shared';
 
 import { saveAnnouncementAction, deleteAnnouncementAction } from './actions';
 

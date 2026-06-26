@@ -5,33 +5,10 @@ import { desc, eq } from 'drizzle-orm';
 import { db } from '@/lib/db/client';
 import { announcements } from '@/lib/db/schema/announcement';
 
-export const ANNOUNCEMENT_CATEGORIES = [
-  'notice',
-  'maintenance',
-  'update',
-  'event',
-  'policy',
-  'probability',
-] as const;
-export type AnnouncementCategory = (typeof ANNOUNCEMENT_CATEGORIES)[number];
+import type { AnnouncementView } from './announcement-shared';
 
-export const ANNOUNCEMENT_CATEGORY_LABEL: Record<string, string> = {
-  notice: '공지',
-  maintenance: '점검',
-  update: '업데이트',
-  event: '이벤트',
-  policy: '정책',
-  probability: '확률',
-};
-
-export type AnnouncementView = {
-  id: string;
-  category: string;
-  title: string;
-  body: string;
-  pinned: boolean;
-  publishedAtIso: string | null;
-};
+// 상수·타입은 클라 공용 모듈에서(서버 소비자도 여기로 재노출). 클라 컴포넌트는 announcement-shared 직접 import.
+export * from './announcement-shared';
 
 function toView(r: typeof announcements.$inferSelect): AnnouncementView {
   return {
