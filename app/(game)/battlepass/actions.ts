@@ -5,7 +5,7 @@ import { revalidatePath } from 'next/cache';
 import { getSessionUserId } from '@/lib/auth/session';
 import { getActiveServerId } from '@/lib/game/servers';
 import { rateLimited } from '@/lib/ratelimit';
-import { getMaintenanceState } from '@/lib/game/system-mode';
+import { actionBlock } from '@/lib/game/action-gate';
 import {
   claimFree,
   claimPremium,
@@ -40,7 +40,7 @@ export async function claimFreeAction(type: BattlePassType) {
   const u = await getSessionUserId();
   if (!u) return err('UNAUTHENTICATED');
   if (await rateLimited(u, 'battlepass')) return err('RATE_LIMITED');
-  if ((await getMaintenanceState()).active) return err('MAINTENANCE');
+  const __b = await actionBlock(); if (__b) return err(__b);
   try {
     const r = await claimFree(u, await getActiveServerId(), type);
     revalidate();
@@ -56,7 +56,7 @@ export async function claimPremiumAction(type: BattlePassType) {
   const u = await getSessionUserId();
   if (!u) return err('UNAUTHENTICATED');
   if (await rateLimited(u, 'battlepass')) return err('RATE_LIMITED');
-  if ((await getMaintenanceState()).active) return err('MAINTENANCE');
+  const __b = await actionBlock(); if (__b) return err(__b);
   try {
     const r = await claimPremium(u, await getActiveServerId(), type);
     revalidate();
@@ -95,7 +95,7 @@ export async function claimSegmentAction(type: BattlePassType, segmentIndex: num
   const u = await getSessionUserId();
   if (!u) return err('UNAUTHENTICATED');
   if (await rateLimited(u, 'battlepass')) return err('RATE_LIMITED');
-  if ((await getMaintenanceState()).active) return err('MAINTENANCE');
+  const __b = await actionBlock(); if (__b) return err(__b);
   try {
     const r = await claimSegment(u, await getActiveServerId(), type, segmentIndex);
     revalidate();
@@ -117,7 +117,7 @@ export async function claimTierAction(
   const u = await getSessionUserId();
   if (!u) return err('UNAUTHENTICATED');
   if (await rateLimited(u, 'battlepass')) return err('RATE_LIMITED');
-  if ((await getMaintenanceState()).active) return err('MAINTENANCE');
+  const __b = await actionBlock(); if (__b) return err(__b);
   try {
     const r =
       line === 'free'

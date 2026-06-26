@@ -12,6 +12,7 @@ import { NICKNAME_CHANGE_COST_DIAMOND } from '@/lib/game/balance';
 import { validateNickname } from '@/lib/game/nickname';
 import { containsProfanity } from '@/lib/game/moderation/profanity';
 import { rateLimited } from '@/lib/ratelimit';
+import { actionBlock } from '@/lib/game/action-gate';
 
 export interface NicknameChangeOk {
   status: 'success';
@@ -21,7 +22,7 @@ export interface NicknameChangeOk {
 }
 export interface NicknameChangeErr {
   status: 'error';
-  code: 'INVALID' | 'TAKEN' | 'INSUFFICIENT_DIAMOND' | 'RATE_LIMIT' | 'UNAUTH';
+  code: 'INVALID' | 'TAKEN' | 'INSUFFICIENT_DIAMOND' | 'RATE_LIMIT' | 'UNAUTH' | 'MAINTENANCE' | 'BANNED';
   message: string;
 }
 
@@ -38,6 +39,13 @@ export async function changeNicknameAction(
   if (!userId) return { status: 'error', code: 'UNAUTH', message: '로그인이 필요합니다.' };
   if (await rateLimited(userId, 'nickname'))
     return { status: 'error', code: 'RATE_LIMIT', message: '요청이 너무 빠릅니다.' };
+  const __b = await actionBlock();
+  if (__b)
+    return {
+      status: 'error',
+      code: __b,
+      message: __b === 'BANNED' ? '이용이 제한된 계정입니다.' : '점검 중입니다. 잠시 후 다시 시도해 주세요.',
+    };
   const serverId = await getActiveServerId();
   const next = String(raw ?? '').trim();
   const v = validateNickname(next);

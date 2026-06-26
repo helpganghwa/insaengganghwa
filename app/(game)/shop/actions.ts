@@ -6,7 +6,7 @@ import { getSessionUserId } from '@/lib/auth/session';
 import { getActiveServerId } from '@/lib/game/servers';
 import { requireAdmin } from '@/lib/auth/require-admin';
 import { rateLimited } from '@/lib/ratelimit';
-import { getMaintenanceState } from '@/lib/game/system-mode';
+import { actionBlock } from '@/lib/game/action-gate';
 import { claimFree, ShopFreeError, type FreeSlot } from '@/lib/game/shop/free';
 import { devPurchase } from '@/lib/game/shop/dev-purchase';
 import { buyBox, BuyBoxError } from '@/lib/game/shop/buy-box';
@@ -17,7 +17,7 @@ export async function claimFreeAction(slot: FreeSlot) {
   const u = await getSessionUserId();
   if (!u) return { status: 'error', code: 'UNAUTHENTICATED' } as const;
   if (await rateLimited(u, 'shop')) return { status: 'error', code: 'RATE_LIMITED' } as const;
-  if ((await getMaintenanceState()).active) return { status: 'error', code: 'MAINTENANCE' } as const;
+  const __b = await actionBlock(); if (__b) return { status: 'error', code: __b } as const;
   try {
     const r = await claimFree(u, await getActiveServerId(), slot);
     revalidatePath('/shop');
@@ -55,7 +55,7 @@ export async function createOrderAction(productId: string) {
   const u = await getSessionUserId();
   if (!u) return { status: 'error', code: 'UNAUTHENTICATED' } as const;
   if (await rateLimited(u, 'shop')) return { status: 'error', code: 'RATE_LIMITED' } as const;
-  if ((await getMaintenanceState()).active) return { status: 'error', code: 'MAINTENANCE' } as const;
+  const __b = await actionBlock(); if (__b) return { status: 'error', code: __b } as const;
   try {
     const o = await createOrder(u, await getActiveServerId(), productId);
     return { status: 'success', order: o } as const;
@@ -91,7 +91,7 @@ export async function buyBoxAction(productId: string) {
   const u = await getSessionUserId();
   if (!u) return { status: 'error', code: 'UNAUTHENTICATED' } as const;
   if (await rateLimited(u, 'shop')) return { status: 'error', code: 'RATE_LIMITED' } as const;
-  if ((await getMaintenanceState()).active) return { status: 'error', code: 'MAINTENANCE' } as const;
+  const __b = await actionBlock(); if (__b) return { status: 'error', code: __b } as const;
   try {
     const g = await buyBox(u, await getActiveServerId(), productId);
     revalidatePath('/shop');

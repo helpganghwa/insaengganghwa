@@ -5,7 +5,7 @@ import { revalidatePath } from 'next/cache';
 import { getSessionUserId } from '@/lib/auth/session';
 import { getActiveServerId } from '@/lib/game/servers';
 import { rateLimited } from '@/lib/ratelimit';
-import { getMaintenanceState } from '@/lib/game/system-mode';
+import { actionBlock } from '@/lib/game/action-gate';
 import {
   openRaid,
   joinOrRequestRaid,
@@ -58,7 +58,7 @@ export async function openRaidAction(
   const u = await uid();
   if (!u) return err('UNAUTHENTICATED');
   if (await rateLimited(u, 'raid')) return err('RATE_LIMITED');
-  if ((await getMaintenanceState()).active) return err('MAINTENANCE');
+  const __b = await actionBlock(); if (__b) return err(__b);
   try {
     const r = await openRaid({ userId: u, serverId: await getActiveServerId(), bossCode, friendShare, guildShare });
     rev();
@@ -75,7 +75,7 @@ export async function requestJoinRaidAction(shareCode: string) {
   const u = await uid();
   if (!u) return err('UNAUTHENTICATED');
   if (await rateLimited(u, 'raid')) return err('RATE_LIMITED');
-  if ((await getMaintenanceState()).active) return err('MAINTENANCE');
+  const __b = await actionBlock(); if (__b) return err(__b);
   try {
     const r = await requestJoinRaid({ userId: u, shareCode });
     rev(r.raidId.toString());
@@ -96,7 +96,7 @@ export async function decideJoinRequestAction(
   const u = await uid();
   if (!u) return err('UNAUTHENTICATED');
   if (await rateLimited(u, 'raid')) return err('RATE_LIMITED');
-  if ((await getMaintenanceState()).active) return err('MAINTENANCE');
+  const __b = await actionBlock(); if (__b) return err(__b);
   try {
     const r = await decideJoinRequest({
       hostUserId: u,
@@ -118,7 +118,7 @@ export async function joinRaidAction(shareCode: string, scope: JoinScope = 'frie
   const u = await uid();
   if (!u) return err('UNAUTHENTICATED');
   if (await rateLimited(u, 'raid')) return err('RATE_LIMITED');
-  if ((await getMaintenanceState()).active) return err('MAINTENANCE');
+  const __b = await actionBlock(); if (__b) return err(__b);
   try {
     const r = await joinOrRequestRaid({ userId: u, shareCode, scope });
     rev(r.raidId.toString());
@@ -134,7 +134,7 @@ export async function attackRaidAction(raidId: string) {
   const u = await uid();
   if (!u) return err('UNAUTHENTICATED');
   if (await rateLimited(u, 'raid')) return err('RATE_LIMITED');
-  if ((await getMaintenanceState()).active) return err('MAINTENANCE');
+  const __b = await actionBlock(); if (__b) return err(__b);
   try {
     const r = await attackRaid({ userId: u, raidId: BigInt(raidId) });
     rev(raidId);
@@ -150,7 +150,7 @@ export async function buyExtraAttackAction(raidId: string) {
   const u = await uid();
   if (!u) return err('UNAUTHENTICATED');
   if (await rateLimited(u, 'raid')) return err('RATE_LIMITED');
-  if ((await getMaintenanceState()).active) return err('MAINTENANCE');
+  const __b = await actionBlock(); if (__b) return err(__b);
   try {
     const r = await buyExtraAttack({ userId: u, serverId: await getActiveServerId(), raidId: BigInt(raidId) });
     rev(raidId);
@@ -167,7 +167,7 @@ export async function gemAttackRaidAction(raidId: string) {
   const u = await uid();
   if (!u) return err('UNAUTHENTICATED');
   if (await rateLimited(u, 'raid')) return err('RATE_LIMITED');
-  if ((await getMaintenanceState()).active) return err('MAINTENANCE');
+  const __b = await actionBlock(); if (__b) return err(__b);
   try {
     const r = await gemAttackRaid({ userId: u, serverId: await getActiveServerId(), raidId: BigInt(raidId) });
     rev(raidId);
@@ -184,7 +184,7 @@ export async function claimRaidRewardAction(raidId: string) {
   const u = await uid();
   if (!u) return err('UNAUTHENTICATED');
   if (await rateLimited(u, 'raid')) return err('RATE_LIMITED');
-  if ((await getMaintenanceState()).active) return err('MAINTENANCE');
+  const __b = await actionBlock(); if (__b) return err(__b);
   try {
     const r = await claimRaidReward({ userId: u, raidId: BigInt(raidId) });
     rev(raidId);
@@ -201,7 +201,7 @@ export async function settleRaidAction(raidId: string) {
   const u = await uid();
   if (!u) return err('UNAUTHENTICATED');
   if (await rateLimited(u, 'raid')) return err('RATE_LIMITED');
-  if ((await getMaintenanceState()).active) return err('MAINTENANCE');
+  const __b = await actionBlock(); if (__b) return err(__b);
   try {
     const r = await settleRaid({ raidId: BigInt(raidId) });
     rev(raidId);

@@ -8,7 +8,7 @@ import { getActiveServerId } from '@/lib/game/servers';
 import { db } from '@/lib/db/client';
 import { mailbox } from '@/lib/db/schema/mailbox';
 import { rateLimited } from '@/lib/ratelimit';
-import { getMaintenanceState } from '@/lib/game/system-mode';
+import { actionBlock } from '@/lib/game/action-gate';
 import {
   claimMail,
   claimAllMail,
@@ -46,7 +46,7 @@ export async function claimMailAction(
   const userId = await uid();
   if (!userId) return err('UNAUTHENTICATED');
   if (await rateLimited(userId, 'mail')) return err('RATE_LIMITED');
-  if ((await getMaintenanceState()).active) return err('MAINTENANCE');
+  const __b = await actionBlock(); if (__b) return err(__b);
   try {
     const result = await claimMail({ userId, serverId: await getActiveServerId(), mailId: BigInt(mailId) });
     revalidate();
@@ -164,7 +164,7 @@ export async function claimAllMailAction(): Promise<
   const userId = await uid();
   if (!userId) return err('UNAUTHENTICATED');
   if (await rateLimited(userId, 'mail')) return err('RATE_LIMITED');
-  if ((await getMaintenanceState()).active) return err('MAINTENANCE');
+  const __b = await actionBlock(); if (__b) return err(__b);
   try {
     const result = await claimAllMail({ userId, serverId: await getActiveServerId() });
     revalidate();

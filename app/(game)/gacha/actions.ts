@@ -6,6 +6,7 @@ import { and, eq } from 'drizzle-orm';
 import { getSessionUserId } from '@/lib/auth/session';
 import { getActiveServerId } from '@/lib/game/servers';
 import { rateLimited } from '@/lib/ratelimit';
+import { actionBlock } from '@/lib/game/action-gate';
 import { db } from '@/lib/db/client';
 import { type Slot } from '@/lib/db/schema/equipment';
 import { userSupplyBoxes } from '@/lib/db/schema/supply';
@@ -39,6 +40,8 @@ const MSG: Record<string, string> = {
   NO_CATALOG: '해당 슬롯 카탈로그가 없습니다.',
   UNAUTHENTICATED: '로그인이 필요합니다.',
   RATE_LIMITED: '요청이 너무 빠릅니다. 잠시 후 다시 시도해 주세요.',
+  MAINTENANCE: '점검 중입니다. 잠시 후 다시 시도해 주세요.',
+  BANNED: '이용이 제한된 계정입니다.',
   UNKNOWN: '알 수 없는 오류',
 };
 
@@ -47,6 +50,8 @@ export async function openAction(slot: Slot, count: number): Promise<OpenActionR
   if (!userId) return { status: 'error', code: 'UNAUTHENTICATED', message: MSG.UNAUTHENTICATED! };
   if (await rateLimited(userId, 'gacha'))
     return { status: 'error', code: 'RATE_LIMITED', message: MSG.RATE_LIMITED! };
+  const __b = await actionBlock();
+  if (__b) return { status: 'error', code: __b, message: MSG[__b] ?? __b };
   // count 1~10 범위 클램프 — UI에서도 동일 보장(보유량 < 10이면 보유량까지).
   const n = Math.max(1, Math.min(10, Math.floor(count)));
   try {

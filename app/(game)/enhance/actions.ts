@@ -5,7 +5,7 @@ import { and, eq, sql } from 'drizzle-orm';
 
 import { getSessionUserId } from '@/lib/auth/session';
 import { rateLimited } from '@/lib/ratelimit';
-import { getMaintenanceState } from '@/lib/game/system-mode';
+import { actionBlock } from '@/lib/game/action-gate';
 import { getActiveServerId } from '@/lib/game/servers';
 import { db } from '@/lib/db/client';
 import { enhancementJobs } from '@/lib/db/schema/enhance';
@@ -82,7 +82,7 @@ export async function startEnhance(userEquipmentId: string) {
   const userId = await uid();
   if (!userId) return err('UNAUTHENTICATED');
   if (await rateLimited(userId, 'enhance')) return err('RATE_LIMITED');
-  if ((await getMaintenanceState()).active) return err('MAINTENANCE');
+  const __b = await actionBlock(); if (__b) return err(__b);
   try {
     const result = await queueEnhance({ userId, userEquipmentId: BigInt(userEquipmentId) });
     revalidateAll();
@@ -160,7 +160,7 @@ export async function reduceTimeWithGems(jobId: string, diamonds: number) {
   const userId = await uid();
   if (!userId) return err('UNAUTHENTICATED');
   if (await rateLimited(userId, 'enhance')) return err('RATE_LIMITED');
-  if ((await getMaintenanceState()).active) return err('MAINTENANCE');
+  const __b = await actionBlock(); if (__b) return err(__b);
   try {
     const result = await reduceEnhanceTime({ userId, jobId: BigInt(jobId), diamonds });
     revalidateAll();

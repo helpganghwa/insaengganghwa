@@ -4,7 +4,7 @@ import { revalidatePath } from 'next/cache';
 
 import { getSessionUserId } from '@/lib/auth/session';
 import { rateLimited } from '@/lib/ratelimit';
-import { getMaintenanceState } from '@/lib/game/system-mode';
+import { actionBlock } from '@/lib/game/action-gate';
 import { claimCheckin, CheckinError, type CheckinClaimResult } from '@/lib/game/checkin';
 import { getActiveServerId } from '@/lib/game/servers';
 
@@ -28,7 +28,7 @@ export async function claimCheckinAction(): Promise<
   const userId = await getSessionUserId();
   if (!userId) return err('UNAUTHENTICATED');
   if (await rateLimited(userId, 'checkin')) return err('RATE_LIMITED');
-  if ((await getMaintenanceState()).active) return err('MAINTENANCE');
+  const __b = await actionBlock(); if (__b) return err(__b);
   try {
     const result = await claimCheckin({ userId, serverId: await getActiveServerId() });
     revalidatePath('/checkin');
