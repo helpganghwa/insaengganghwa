@@ -75,7 +75,8 @@ export async function verifyPurchaseAction(paymentId: string) {
   if (!u) return { status: 'error', code: 'UNAUTHENTICATED' } as const;
   if (await rateLimited(u, 'shop')) return { status: 'error', code: 'RATE_LIMITED' } as const;
   try {
-    const r = await completePurchase(paymentId);
+    // 세션 userId 전달 → 내 주문만 검증(감사 F1-pay). 웹훅·recon·admin은 서버 권위라 미전달.
+    const r = await completePurchase(paymentId, u);
     if (!r.ok) return { status: 'error', code: r.code } as const;
     revalidatePath('/shop');
     revalidatePath('/');

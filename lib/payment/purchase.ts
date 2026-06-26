@@ -216,7 +216,15 @@ export type CompleteResult =
  *  멱등: 이미 paid면 재지급 없이 already. 동시(웹훅+클라) 호출은 FOR UPDATE + status 가드로 1회만 지급.
  *  금액 불일치(위변조 의심)는 지급하지 않고 AMOUNT_MISMATCH 반환(운영 알림 대상).
  */
-export async function completePurchase(paymentId: string): Promise<CompleteResult> {
+/**
+ * @param expectedUserId 클라 경로(verifyPurchaseAction)는 세션 userId를 넘긴다 — 주문 소유자와
+ *   불일치하면 처리 거부(감사 F1-pay: 임의 paymentId로 타인 주문의 PG조회·금액불일치 알림을
+ *   트리거하던 인가 갭). 웹훅·recon·admin 재지급은 서버 권위라 생략(undefined).
+ */
+export async function completePurchase(
+  paymentId: string,
+  expectedUserId?: string,
+): Promise<CompleteResult> {
   const [order] = await db
     .select({
       id: iapOrders.id,
@@ -230,6 +238,8 @@ export async function completePurchase(paymentId: string): Promise<CompleteResul
     .where(eq(iapOrders.portoneOrderId, paymentId))
     .limit(1);
   if (!order) return { ok: false, code: 'ORDER_NOT_FOUND' };
+  // 소유권 게이트(클라 경로만) — 불일치면 존재 비노출 위해 ORDER_NOT_FOUND. PG조회·알림 이전에 차단.
+  if (expectedUserId && order.userId !== expectedUserId) return { ok: false, code: 'ORDER_NOT_FOUND' };
   if (order.status === 'paid') return { ok: true, already: true };
 
   // 포트원 서버 권위 재확인 — PAID + 원화 + 주문 금액 일치만 지급(가상계좌 발급 단계는 입금 전이라 제외).
