@@ -1,7 +1,7 @@
 // 1차(150)/2차(108)/3차(56) 통합 비교·선택 페이지 → public/catalog-compare.html
 // 카드: 정적이미지 + (2차만)애니 + 이름. 슬롯 탭(무기/방어구/장신구)으로 3세대 통합 표시·선택.
 // 모바일 최적화, 이미지 크게. 1차 이미지는 worktree(/tmp/cmp-v1)에서 public/_compare/v1로 복사.
-import { readFileSync, writeFileSync, existsSync, mkdirSync, copyFileSync } from 'node:fs';
+import { readFileSync, writeFileSync, existsSync } from 'node:fs';
 import { join } from 'node:path';
 
 const ROOT = process.cwd();
@@ -17,18 +17,14 @@ function parseCatalog(src: string): { key: string; slot: string; name: string }[
 }
 
 function buildV1(): Item[] {
-  const cat = '/tmp/cmp-v1/lib/game/equipment/catalog-next.ts';
-  if (!existsSync(cat)) return [];
-  const items = parseCatalog(readFileSync(cat, 'utf8'));
-  for (const s of ['weapon', 'armor', 'accessory']) mkdirSync(join(ROOT, 'public/_compare/v1', s), { recursive: true });
-  const out: Item[] = [];
-  for (const it of items) {
-    const src = `/tmp/cmp-v1/public/sprites/${it.slot}/${it.key}.png`;
+  // 1차 데이터는 git(067ea4cb)에서 추출해 둔 scripts/v1-catalog.json, 이미지는 커밋된 public/_compare/v1.
+  const cf = join(ROOT, 'scripts/v1-catalog.json');
+  if (!existsSync(cf)) return [];
+  const items = JSON.parse(readFileSync(cf, 'utf8')) as { key: string; slot: string; name: string }[];
+  return items.map((it) => {
     const rel = `_compare/v1/${it.slot}/${it.key}.png`;
-    if (existsSync(src)) copyFileSync(src, join(ROOT, 'public', rel));
-    out.push({ gen: '1차', uid: 'v1:' + it.key, slot: it.slot, name: it.name, stat: existsSync(src) ? rel : '', anim: '' });
-  }
-  return out;
+    return { gen: '1차' as const, uid: 'v1:' + it.key, slot: it.slot, name: it.name, stat: existsSync(join(ROOT, 'public', rel)) ? rel : '', anim: '' };
+  });
 }
 
 function buildV2(): Item[] {
@@ -96,11 +92,11 @@ h1{font-size:14px;margin:0 0 6px}
 main{padding:10px}
 .genh{font-size:13px;font-weight:700;margin:14px 0 8px;border-left:4px solid #d97706;padding-left:8px;color:#e7e7ea}
 .genh small{color:#888;font-weight:400}
-.grid{display:grid;grid-template-columns:1fr;gap:12px}
+.grid{display:grid;grid-template-columns:1fr 1fr;gap:12px}
 .card{background:#15151a;border:1px solid #26262e;border-radius:14px;padding:10px;display:flex;flex-direction:column;gap:8px}
 .card.on{outline:3px solid #22c55e;border-color:#22c55e}
 .imgs{display:flex;gap:6px}
-.box{flex:1;aspect-ratio:1/1;border-radius:8px;overflow:hidden;display:flex;align-items:center;justify-content:center;position:relative;
+.box{aspect-ratio:1/1;width:100%;max-width:128px;margin:0 auto;border-radius:8px;overflow:hidden;display:flex;align-items:center;justify-content:center;position:relative;
  background:linear-gradient(45deg,#1d1d22 25%,transparent 25%),linear-gradient(-45deg,#1d1d22 25%,transparent 25%),linear-gradient(45deg,transparent 75%,#1d1d22 75%),linear-gradient(-45deg,transparent 75%,#1d1d22 75%);background-size:18px 18px;background-position:0 0,0 9px,9px -9px,-9px 0}
 .box img{width:100%;height:100%;object-fit:contain;image-rendering:pixelated}
 .box .lbl{position:absolute;top:3px;left:4px;font-size:9px;color:#ccc;background:#000a;padding:0 4px;border-radius:3px}
@@ -141,9 +137,10 @@ function render(){
   h+='<div class=genh>'+g+' <small>('+items.length+')</small></div><div class=grid>';
   for(var k=0;k<items.length;k++){var it=items[k];
    var src=it.stat;
+   var gc=it.gen==='1차'?'g1':it.gen==='2차'?'g2':'g3';
    var img=src?'<img src="'+src+'" loading=lazy>':'<span>이미지</span>';
    h+='<div class="card'+(o[it.uid]?' on':'')+'" data-uid="'+it.uid+'">'
-     +'<div class="box'+(src?'':' noimg')+'">'+img+'</div>'
+     +'<div class="box '+gc+(src?'':' noimg')+'">'+img+'</div>'
      +'<div class=name>'+it.name+'</div>'
      +'<button class=sel onclick="pick(\\''+it.uid+'\\')">선택</button></div>';
   }
