@@ -114,6 +114,12 @@ const MENU: { href: string; icon: string; title: string; desc: string; external?
     title: '클라이언트 에러',
     desc: '사용자 기기 전역 에러 수집(그룹화·발생횟수). 해결 처리',
   },
+  {
+    href: '/admin/catalog-review',
+    icon: '🗂️',
+    title: '아이템 카탈로그 비교·검수',
+    desc: '1차(150)·2차(108)·3차(56) 통합 비교·선택 (슬롯/세대 필터, 모바일)',
+  },
 ];
 
 export default async function AdminHubPage() {
@@ -148,7 +154,7 @@ export default async function AdminHubPage() {
             n > 0 ? 'border-red-800/60 hover:border-red-600' : 'border-zinc-800 hover:border-amber-600'
           }`;
           return m.external ? (
-            <a key={m.href} href={m.href} className={cls}>
+            <a key={m.href} href={m.href} target="_blank" rel="noopener noreferrer" className={cls}>
               {inner}
             </a>
           ) : (
