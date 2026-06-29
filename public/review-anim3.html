@@ -1,5 +1,5 @@
 <!doctype html><html lang=ko><head><meta charset=utf-8><meta name=viewport content="width=390,user-scalable=no">
-<title>3차 애니 검수 (61)</title><style>
+<title>3차 애니 검수 (60)</title><style>
 *{box-sizing:border-box}
 body{margin:0;background:#0b0b0e;color:#e7e7ea;font:14px/1.45 system-ui,sans-serif}
 header{position:sticky;top:0;background:#0b0b0ef5;backdrop-filter:blur(6px);border-bottom:1px solid #222;z-index:9;padding:9px 12px}
@@ -40,10 +40,10 @@ h2{font-size:14px;margin:18px 0 8px;border-left:4px solid #16a34a;padding-left:8
 .card.rej-prompt .rp{background:#3a2a0e;color:#fbbf24;border-color:#d97706}
 .rs{flex:1;min-width:0;font-size:11px;background:#101015;color:#e7e7ea;border:1px solid #2c2c36;border-radius:7px;padding:5px 7px}
 </style></head><body>
-<header><h1>🟢 3차 애니 검수 — 61종 (무기/방어구/장신구)</h1>
+<header><h1>🟢 3차 애니 검수 — 60종 (무기/방어구/장신구)</h1>
 <div class="tools"><button onclick="exportRej()">📋 리젝 내보내기</button><button onclick="clearRej()">초기화</button><span id="cnt"></span></div>
 <textarea id="out" readonly></textarea></header>
-<main><h2>무기 <small>(22)</small></h2><div class="grid"><div class="card" data-id="seed-kingdom_ribbon_rapier">
+<main><h2>무기 <small>(21)</small></h2><div class="grid"><div class="card" data-id="seed-kingdom_ribbon_rapier">
     <div class="imgs">
       <div class="box"><span class=lbl>정적</span><img src="sprites/pool/seed-kingdom_ribbon_rapier.png" loading=lazy></div>
       <div class="box"><span class=lbl>애니</span><div class="anim" data-frames="9" style="background-image:url('sprites/anim3/seed-kingdom_ribbon_rapier.webp?v=1782633448771')"></div></div>
@@ -306,7 +306,7 @@ h2{font-size:14px;margin:18px 0 8px;border-left:4px solid #16a34a;padding-left:8
   </div><div class="card" data-id="w-reaper-scythe-120">
     <div class="imgs">
       <div class="box"><span class=lbl>정적</span><img src="sprites/pool/w-reaper-scythe-120.png" loading=lazy></div>
-      <div class="box"><span class=lbl>애니</span><div class="anim" data-frames="9" style="background-image:url('sprites/anim3/w-reaper-scythe-120.webp?v=1782718755318')"></div></div>
+      <div class="box"><span class=lbl>애니</span><div class="anim" data-frames="9" style="background-image:url('sprites/anim3/w-reaper-scythe-120.webp?v=1782720775827')"></div></div>
     </div>
     <div class="meta"><span class="nm">혼불낫</span><span class="mt">정면 · 섬뜩</span><span class="id">w-reaper-scythe-120</span></div>
     <div class="story">초승달처럼 휜 칠흑 칼날, 자루 끝엔 보랏빛 혼불이 소리 없이 탄다. 이 낫이 한 번 거둘 때마다 그 불이 손톱만큼 자란다. 불꽃의 크기가 곧 거둔 수다. 지금 저 불이 한 손바닥만 한 걸 보면, 세어 볼 엄두가 나지 않는다.</div>
@@ -314,7 +314,7 @@ h2{font-size:14px;margin:18px 0 8px;border-left:4px solid #16a34a;padding-left:8
       <button class="rk rt" onclick="rej('w-reaper-scythe-120','story')">✕ 스토리 리젝</button>
       <input class="rs" data-k="story" placeholder="이름·스토리 리젝 사유" oninput="setReason('w-reaper-scythe-120','story',this.value)">
     </div>
-    <div class="pr"><span class="prlbl">애니 프롬프트</span><div class="prtxt">낫의 자루와 칼날은 완전히 고정·정지 — 무기 자체는 흔들리거나 기울거나 움직이지 않는다. 오직 뼈 자루 끝의 보랏빛 혼불만 끊임없이 일렁이며 피어오르고, 검은 칼날의 룬 글자가 은은하게 빛나며 맥동한다</div><div class="pren">the scythe's shaft and curved blade are completely rigid and fixed in place — the weapon itself does not sway, tilt, move or shift at all; only the violet soul-flame at the base of the bone handle flickers, sways and rises continuously, and the runes engraved along the black blade softly glow and pulse with light</div></div>
+    <div class="pr"><span class="prlbl">애니 프롬프트</span><div class="prtxt">사신 낫의 완전한 정물 — 사진처럼 모든 프레임에서 자루와 칼날은 픽셀까지 동일하게 고정(흔들림·기울기·회전·이동·크기변화 없음). 오직 뼈 자루 끝 보랏빛 혼불이 일렁이며 피어오르고, 검은 칼날의 룬이 밝아졌다 어두워질 뿐. 혼불·룬발광만 애니, 낫은 절대 고정</div><div class="pren">a completely static still-life of the reaper scythe held upright, frozen in place like a photograph — the scythe shaft and curved blade MUST stay perfectly fixed and pixel-identical in every frame: no swaying, tilting, rotating, moving or scaling of the weapon at all. the ONLY things that animate are the violet soul-flame at the base of the bone handle flickering and rising, and the runes along the black blade glowing brighter then dimmer. animate ONLY the flame and rune-glow, never the scythe itself</div></div>
     <div class="rejrow">
       <button class="rk ra" onclick="rej('w-reaper-scythe-120','anim')">✕ 애니 리젝</button>
       <input class="rs" data-k="anim" placeholder="애니 리젝 사유" oninput="setReason('w-reaper-scythe-120','anim',this.value)">
@@ -346,7 +346,7 @@ h2{font-size:14px;margin:18px 0 8px;border-left:4px solid #16a34a;padding-left:8
   </div><div class="card" data-id="w-assassin-twin-daggers-156">
     <div class="imgs">
       <div class="box"><span class=lbl>정적</span><img src="sprites/pool/w-assassin-twin-daggers-156.png" loading=lazy></div>
-      <div class="box"><span class=lbl>애니</span><div class="anim" data-frames="9" style="background-image:url('sprites/anim3/w-assassin-twin-daggers-156.webp?v=1782718786238')"></div></div>
+      <div class="box"><span class=lbl>애니</span><div class="anim" data-frames="9" style="background-image:url('sprites/anim3/w-assassin-twin-daggers-156.webp?v=1782720735199')"></div></div>
     </div>
     <div class="meta"><span class="nm">쌍익 단검</span><span class="mt">정면 · 서늘</span><span class="id">w-assassin-twin-daggers-156</span></div>
     <div class="story">두 자루 모두 칼날이 검은 불꽃처럼 굽이치고, 금빛 날개 손잡이엔 푸른 보석이 한 알씩 박혔다. 칼날은 빛을 한 점도 머금지 않아, 어둠 속에선 푸른 보석 두 점만 둥실 떠 보인다. 그 두 점이 가까워지는 걸 알아챘다면, 이미 늦은 것이다.</div>
@@ -354,7 +354,7 @@ h2{font-size:14px;margin:18px 0 8px;border-left:4px solid #16a34a;padding-left:8
       <button class="rk rt" onclick="rej('w-assassin-twin-daggers-156','story')">✕ 스토리 리젝</button>
       <input class="rs" data-k="story" placeholder="이름·스토리 리젝 사유" oninput="setReason('w-assassin-twin-daggers-156','story',this.value)">
     </div>
-    <div class="pr"><span class="prlbl">애니 프롬프트</span><div class="prtxt">쌍단검은 절대적으로 고정·정지 — 칼날은 조금도 움직이거나 회전·기울지 않는다. 오직 검금빛 칼날 주위로 고급스러운 어둠의 오라만 부드럽게 감돌고 흐른다</div><div class="pren">the twin daggers are absolutely fixed and frozen in place — the blades do not move, rotate, tilt or shift even slightly; only a refined dark shadow aura swirls and drifts softly around the black-and-gold blades, smooth and elegant</div></div>
+    <div class="pr"><span class="prlbl">애니 프롬프트</span><div class="prtxt">쌍단검의 완전한 정물 — 사진처럼 모든 프레임에서 단검은 픽셀까지 동일하게 고정(이동·회전·기울기·확대·흔들림 일절 없음). 오직 검금빛 칼날 주위로 어둠의 그림자 오라(연기 같은 그림자 결)가 감돌고 사라질 뿐. 오라만 애니, 단검은 절대 고정</div><div class="pren">a completely static still-life of the twin daggers, frozen in place like a photograph — the daggers MUST stay perfectly fixed and pixel-identical in every frame: no movement, no rotation, no tilt, no scaling, no swaying of the blades whatsoever. the ONLY thing that animates is a faint dark shadow aura of soft smoky shadow wisps that drift, swirl and fade around the black-and-gold blades. animate ONLY the aura, never the daggers</div></div>
     <div class="rejrow">
       <button class="rk ra" onclick="rej('w-assassin-twin-daggers-156','anim')">✕ 애니 리젝</button>
       <input class="rs" data-k="anim" placeholder="애니 리젝 사유" oninput="setReason('w-assassin-twin-daggers-156','anim',this.value)">
@@ -402,26 +402,6 @@ h2{font-size:14px;margin:18px 0 8px;border-left:4px solid #16a34a;padding-left:8
     <div class="rejrow">
       <button class="rk rp" onclick="rej('w-celestial-greatsword-153','prompt')">✕ 프롬프트 리젝</button>
       <input class="rs" data-k="prompt" placeholder="프롬프트 리젝 사유" oninput="setReason('w-celestial-greatsword-153','prompt',this.value)">
-    </div>
-  </div><div class="card" data-id="w-elven-longbow-154">
-    <div class="imgs">
-      <div class="box"><span class=lbl>정적</span><img src="sprites/pool/w-elven-longbow-154.png" loading=lazy></div>
-      <div class="box"><span class=lbl>애니</span><div class="anim" data-frames="9" style="background-image:url('sprites/anim3/w-elven-longbow-154.webp?v=1782718777996')"></div></div>
-    </div>
-    <div class="meta"><span class="nm">은버들 활</span><span class="mt">정면 · 우아</span><span class="id">w-elven-longbow-154</span></div>
-    <div class="story">은빛 나무를 휘어 만든 활인데, 죽지 않아 아직도 휘청휘청 유연하다. 보통 활은 너무 당기면 부러지지만, 이 활은 당기는 대로 끝없이 휜다. 가지가 제 한계를 모르는 까닭이다. 그래서 이 활을 떠난 화살은, 다른 어떤 활보다 멀리 날아갔다.</div>
-    <div class="rejrow">
-      <button class="rk rt" onclick="rej('w-elven-longbow-154','story')">✕ 스토리 리젝</button>
-      <input class="rs" data-k="story" placeholder="이름·스토리 리젝 사유" oninput="setReason('w-elven-longbow-154','story',this.value)">
-    </div>
-    <div class="pr"><span class="prlbl">애니 프롬프트</span><div class="prtxt">엘프 장궁은 완전히 단단하게 고정·정지 — 활은 휘거나 굽거나 흔들리거나 움직이지 않으며 화살도 없다. 오직 에메랄드와 은빛 잎사귀 조각만 은은한 초록빛으로 또렷이 반짝이며 빛난다</div><div class="pren">the elven longbow is completely rigid, frozen and fixed — the bow does not bend, flex, sway, move or shift at all, and there is no arrow; only the emerald gems and silver leaf carvings shimmer and glow with soft bright green light, elegant</div></div>
-    <div class="rejrow">
-      <button class="rk ra" onclick="rej('w-elven-longbow-154','anim')">✕ 애니 리젝</button>
-      <input class="rs" data-k="anim" placeholder="애니 리젝 사유" oninput="setReason('w-elven-longbow-154','anim',this.value)">
-    </div>
-    <div class="rejrow">
-      <button class="rk rp" onclick="rej('w-elven-longbow-154','prompt')">✕ 프롬프트 리젝</button>
-      <input class="rs" data-k="prompt" placeholder="프롬프트 리젝 사유" oninput="setReason('w-elven-longbow-154','prompt',this.value)">
     </div>
   </div><div class="card" data-id="seed-volcano_forgeheart_warhammer">
     <div class="imgs">
@@ -1269,7 +1249,7 @@ h2{font-size:14px;margin:18px 0 8px;border-left:4px solid #16a34a;padding-left:8
   </div></div></main>
 <script>
 var RK='reviewAnim3_v1';
-var NAMES={"seed-kingdom_ribbon_rapier":"창천검","seed-kingdom_court_twin_sabers":"청홍 쌍검","seed-kingdom_winged_coronation_sword":"창궁검","seed-kingdom_falcon_cane_sword":"매 머리 지팡이검","seed-temple_frost_odachi":"눈꽃 대도","seed-volcano_emberveined_greatsword":"용암을 가둔 대검","seed-swamp_lotus_trident":"피어나는 삼지창","seed-angel_star_wand":"유성의 지팡이","seed-volcano_dragonjaw_halberd":"포효하는 용턱","w-pumpkin-witch-staff-95":"마녀의 등불","seed-kingdom_banner_spear":"왕기의 창","seed-volcano_ember_scythe":"잿불낫","w-vampire-rapier-114":"선혈의 가는 검","w-reaper-scythe-120":"혼불낫","w-necromancer-staff-126":"초혼의 해골장","w-assassin-twin-daggers-156":"쌍익 단검","w-ornate-flintlock-pistol-162":"상아빛 한 발","w-celestial-greatsword-153":"해오름검","w-elven-longbow-154":"은버들 활","seed-volcano_forgeheart_warhammer":"화심의 망치","w-thunder-spear-191":"벼락을 박은 창","w--57":"봉문검","seed-angel_radiant_gown":"아침빛 예복","seed-kingdom_azure_outfit":"쪽빛 기사복","seed-angel_seraphguard_armor":"세라핌의 갑주","seed-kingdom_goldknight_plate":"적금 갑주","seed-temple_frostguard_garb":"설산 파수의 갑주","seed-temple_breathwoven_vestment":"설야 예복","a-pumpkin-witch-outfit-96":"호박등 드레스","a-necromancer-robe-127":"갈까마귀 로브","a-test-gothic-lolita-150":"진홍 레이스 드레스","a-test-military-coat-151":"금장 군복","seed-volcano_embersilk_dress":"화문 예복","a-valkyrie-battle-dress-176":"창공의 전투복","a-frost-warden-coat-179":"설원 파수꾼의 외투","a-paladin-armor-180":"성광 갑주","a-dragon-knight-armor-186":"흑룡의 비늘갑","a-phoenix-dancer-dress-183":"불새 깃 드레스","a-astrologer-outfit-103":"성좌의 망토","a-desert-nomad-robes-231":"모래바람의 겹옷","a-academy-professor-robe-234":"학장복","a-academy-student-uniform-233":"왕립 학원 교복","a-forest-ranger-outfit-240":"숲지기의 한 벌","seed-temple_snowflake_crown":"설화의 관","seed-temple_fur_stole":"설백 목도리","seed-volcano_dragonscale_satchel":"용비늘 가방","seed-volcano_dragonhorn_circlet":"화룡의 뿔관","seed-volcano_obsidian_warfan":"흑요 봉황선","seed-swamp_mushroom_hat":"약초꾼의 버섯 모자","seed-swamp_lily_crown":"수련 화관","seed-angel_glide_wings":"하얀 깃 날개","seed-kingdom_court_fan":"진홍 봉황선","a-commander-epaulets-93":"푸른 깃 견장","a-pumpkin-witch-hat-97":"마녀의 뾰족 모자","a-phantom-half-mask-125":"상아 반가면","a-valkyrie-winged-circlet-179":"발키리의 날개 서클릿","a-devil-horns-winged-149":"작은 악마의 뿔","a-dragon-horned-helm-187":"용면 투구","a-paladin-winged-helm-181":"백은 날개 투구","a-frost-kite-shield-82":"빙정 방패","a-round-glasses-245":"금테 둥근 안경"};
+var NAMES={"seed-kingdom_ribbon_rapier":"창천검","seed-kingdom_court_twin_sabers":"청홍 쌍검","seed-kingdom_winged_coronation_sword":"창궁검","seed-kingdom_falcon_cane_sword":"매 머리 지팡이검","seed-temple_frost_odachi":"눈꽃 대도","seed-volcano_emberveined_greatsword":"용암을 가둔 대검","seed-swamp_lotus_trident":"피어나는 삼지창","seed-angel_star_wand":"유성의 지팡이","seed-volcano_dragonjaw_halberd":"포효하는 용턱","w-pumpkin-witch-staff-95":"마녀의 등불","seed-kingdom_banner_spear":"왕기의 창","seed-volcano_ember_scythe":"잿불낫","w-vampire-rapier-114":"선혈의 가는 검","w-reaper-scythe-120":"혼불낫","w-necromancer-staff-126":"초혼의 해골장","w-assassin-twin-daggers-156":"쌍익 단검","w-ornate-flintlock-pistol-162":"상아빛 한 발","w-celestial-greatsword-153":"해오름검","seed-volcano_forgeheart_warhammer":"화심의 망치","w-thunder-spear-191":"벼락을 박은 창","w--57":"봉문검","seed-angel_radiant_gown":"아침빛 예복","seed-kingdom_azure_outfit":"쪽빛 기사복","seed-angel_seraphguard_armor":"세라핌의 갑주","seed-kingdom_goldknight_plate":"적금 갑주","seed-temple_frostguard_garb":"설산 파수의 갑주","seed-temple_breathwoven_vestment":"설야 예복","a-pumpkin-witch-outfit-96":"호박등 드레스","a-necromancer-robe-127":"갈까마귀 로브","a-test-gothic-lolita-150":"진홍 레이스 드레스","a-test-military-coat-151":"금장 군복","seed-volcano_embersilk_dress":"화문 예복","a-valkyrie-battle-dress-176":"창공의 전투복","a-frost-warden-coat-179":"설원 파수꾼의 외투","a-paladin-armor-180":"성광 갑주","a-dragon-knight-armor-186":"흑룡의 비늘갑","a-phoenix-dancer-dress-183":"불새 깃 드레스","a-astrologer-outfit-103":"성좌의 망토","a-desert-nomad-robes-231":"모래바람의 겹옷","a-academy-professor-robe-234":"학장복","a-academy-student-uniform-233":"왕립 학원 교복","a-forest-ranger-outfit-240":"숲지기의 한 벌","seed-temple_snowflake_crown":"설화의 관","seed-temple_fur_stole":"설백 목도리","seed-volcano_dragonscale_satchel":"용비늘 가방","seed-volcano_dragonhorn_circlet":"화룡의 뿔관","seed-volcano_obsidian_warfan":"흑요 봉황선","seed-swamp_mushroom_hat":"약초꾼의 버섯 모자","seed-swamp_lily_crown":"수련 화관","seed-angel_glide_wings":"하얀 깃 날개","seed-kingdom_court_fan":"진홍 봉황선","a-commander-epaulets-93":"푸른 깃 견장","a-pumpkin-witch-hat-97":"마녀의 뾰족 모자","a-phantom-half-mask-125":"상아 반가면","a-valkyrie-winged-circlet-179":"발키리의 날개 서클릿","a-devil-horns-winged-149":"작은 악마의 뿔","a-dragon-horned-helm-187":"용면 투구","a-paladin-winged-helm-181":"백은 날개 투구","a-frost-kite-shield-82":"빙정 방패","a-round-glasses-245":"금테 둥근 안경"};
 function load(){try{return JSON.parse(localStorage.getItem(RK)||'{}')}catch(e){return {}}}
 function save(o){localStorage.setItem(RK,JSON.stringify(o))}
 // 구조: { id: { anim?:{reason}, prompt?:{reason} } }
