@@ -65,7 +65,8 @@ export interface CatalogItem {
   wornDesc?: string;
 }
 
-// 카탈로그 108종은 catalog-next.ts에서 단일 source로 관리.
-import { CATALOG_NEXT } from './catalog-next';
+// 카탈로그 단일 source — 3차 60종(catalog-v3.ts). 목표 120종의 전반부.
+// (구 108종 catalog-next.ts는 보존하되 미사용 — 향후 120 확장 시 참고/병합용.)
+import { CATALOG_V3 } from './catalog-v3';
 
-export const CATALOG_ITEMS: CatalogItem[] = CATALOG_NEXT;
+export const CATALOG_ITEMS: CatalogItem[] = CATALOG_V3;
