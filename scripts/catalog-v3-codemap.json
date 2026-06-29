@@ -1,0 +1,242 @@
+{
+  "seed-kingdom_ribbon_rapier": {
+    "code": "kingdom_ribbon_rapier",
+    "slot": "weapon"
+  },
+  "seed-kingdom_court_twin_sabers": {
+    "code": "kingdom_court_twin_sabers",
+    "slot": "weapon"
+  },
+  "seed-kingdom_winged_coronation_sword": {
+    "code": "kingdom_winged_coronation_sword",
+    "slot": "weapon"
+  },
+  "seed-kingdom_falcon_cane_sword": {
+    "code": "kingdom_falcon_cane_sword",
+    "slot": "weapon"
+  },
+  "seed-temple_frost_odachi": {
+    "code": "temple_frost_odachi",
+    "slot": "weapon"
+  },
+  "seed-volcano_emberveined_greatsword": {
+    "code": "volcano_emberveined_greatsword",
+    "slot": "weapon"
+  },
+  "seed-swamp_lotus_trident": {
+    "code": "swamp_lotus_trident",
+    "slot": "weapon"
+  },
+  "seed-angel_star_wand": {
+    "code": "angel_star_wand",
+    "slot": "weapon"
+  },
+  "seed-volcano_dragonjaw_halberd": {
+    "code": "volcano_dragonjaw_halberd",
+    "slot": "weapon"
+  },
+  "w-pumpkin-witch-staff-95": {
+    "code": "pumpkin_witch_staff",
+    "slot": "weapon"
+  },
+  "seed-kingdom_banner_spear": {
+    "code": "kingdom_banner_spear",
+    "slot": "weapon"
+  },
+  "seed-volcano_ember_scythe": {
+    "code": "volcano_ember_scythe",
+    "slot": "weapon"
+  },
+  "w-vampire-rapier-114": {
+    "code": "vampire_blood_rapier",
+    "slot": "weapon"
+  },
+  "w-reaper-scythe-120": {
+    "code": "reaper_soul_scythe",
+    "slot": "weapon"
+  },
+  "w-necromancer-staff-126": {
+    "code": "necromancer_skull_staff",
+    "slot": "weapon"
+  },
+  "w-assassin-twin-daggers-156": {
+    "code": "assassin_twin_daggers",
+    "slot": "weapon"
+  },
+  "w-ornate-flintlock-pistol-162": {
+    "code": "ivory_flintlock_pistol",
+    "slot": "weapon"
+  },
+  "w-celestial-greatsword-153": {
+    "code": "celestial_dawn_greatsword",
+    "slot": "weapon"
+  },
+  "seed-volcano_forgeheart_warhammer": {
+    "code": "volcano_forgeheart_warhammer",
+    "slot": "weapon"
+  },
+  "w-thunder-spear-191": {
+    "code": "thunder_emperor_spear",
+    "slot": "weapon"
+  },
+  "w--57": {
+    "code": "vault_key_greatsword",
+    "slot": "weapon"
+  },
+  "seed-angel_radiant_gown": {
+    "code": "angel_radiant_gown",
+    "slot": "armor"
+  },
+  "seed-kingdom_azure_outfit": {
+    "code": "kingdom_azure_outfit",
+    "slot": "armor"
+  },
+  "seed-angel_seraphguard_armor": {
+    "code": "angel_seraphguard_armor",
+    "slot": "armor"
+  },
+  "seed-kingdom_goldknight_plate": {
+    "code": "kingdom_goldknight_plate",
+    "slot": "armor"
+  },
+  "seed-temple_frostguard_garb": {
+    "code": "temple_frostguard_garb",
+    "slot": "armor"
+  },
+  "seed-temple_breathwoven_vestment": {
+    "code": "temple_breathwoven_vestment",
+    "slot": "armor"
+  },
+  "a-pumpkin-witch-outfit-96": {
+    "code": "pumpkin_witch_dress",
+    "slot": "armor"
+  },
+  "a-necromancer-robe-127": {
+    "code": "necromancer_raven_robe",
+    "slot": "armor"
+  },
+  "a-test-gothic-lolita-150": {
+    "code": "crimson_gothic_dress",
+    "slot": "armor"
+  },
+  "a-test-military-coat-151": {
+    "code": "royal_military_coat",
+    "slot": "armor"
+  },
+  "seed-volcano_embersilk_dress": {
+    "code": "volcano_embersilk_dress",
+    "slot": "armor"
+  },
+  "a-valkyrie-battle-dress-176": {
+    "code": "valkyrie_battle_dress",
+    "slot": "armor"
+  },
+  "a-frost-warden-coat-179": {
+    "code": "frostwarden_coat",
+    "slot": "armor"
+  },
+  "a-paladin-armor-180": {
+    "code": "paladin_holy_armor",
+    "slot": "armor"
+  },
+  "a-dragon-knight-armor-186": {
+    "code": "dragonknight_scale_armor",
+    "slot": "armor"
+  },
+  "a-phoenix-dancer-dress-183": {
+    "code": "phoenix_dancer_dress",
+    "slot": "armor"
+  },
+  "a-astrologer-outfit-103": {
+    "code": "astrologer_starmap_coat",
+    "slot": "armor"
+  },
+  "a-desert-nomad-robes-231": {
+    "code": "desert_nomad_robes",
+    "slot": "armor"
+  },
+  "a-academy-professor-robe-234": {
+    "code": "academy_professor_robe",
+    "slot": "armor"
+  },
+  "a-academy-student-uniform-233": {
+    "code": "academy_student_uniform",
+    "slot": "armor"
+  },
+  "a-forest-ranger-outfit-240": {
+    "code": "forest_ranger_outfit",
+    "slot": "armor"
+  },
+  "seed-temple_snowflake_crown": {
+    "code": "temple_snowflake_crown",
+    "slot": "accessory"
+  },
+  "seed-temple_fur_stole": {
+    "code": "temple_fur_stole",
+    "slot": "accessory"
+  },
+  "seed-volcano_dragonscale_satchel": {
+    "code": "volcano_dragonscale_satchel",
+    "slot": "accessory"
+  },
+  "seed-volcano_dragonhorn_circlet": {
+    "code": "volcano_dragonhorn_circlet",
+    "slot": "accessory"
+  },
+  "seed-volcano_obsidian_warfan": {
+    "code": "volcano_obsidian_warfan",
+    "slot": "accessory"
+  },
+  "seed-swamp_mushroom_hat": {
+    "code": "swamp_mushroom_hat",
+    "slot": "accessory"
+  },
+  "seed-swamp_lily_crown": {
+    "code": "swamp_lily_crown",
+    "slot": "accessory"
+  },
+  "seed-angel_glide_wings": {
+    "code": "angel_glide_wings",
+    "slot": "accessory"
+  },
+  "seed-kingdom_court_fan": {
+    "code": "kingdom_court_fan",
+    "slot": "accessory"
+  },
+  "a-commander-epaulets-93": {
+    "code": "commander_feather_epaulets",
+    "slot": "accessory"
+  },
+  "a-pumpkin-witch-hat-97": {
+    "code": "pumpkin_witch_hat",
+    "slot": "accessory"
+  },
+  "a-phantom-half-mask-125": {
+    "code": "phantom_half_mask",
+    "slot": "accessory"
+  },
+  "a-valkyrie-winged-circlet-179": {
+    "code": "valkyrie_winged_circlet",
+    "slot": "accessory"
+  },
+  "a-devil-horns-winged-149": {
+    "code": "devil_horn_headband",
+    "slot": "accessory"
+  },
+  "a-dragon-horned-helm-187": {
+    "code": "dragonknight_horned_helm",
+    "slot": "accessory"
+  },
+  "a-paladin-winged-helm-181": {
+    "code": "paladin_winged_helm",
+    "slot": "accessory"
+  },
+  "a-frost-kite-shield-82": {
+    "code": "frost_kite_shield",
+    "slot": "accessory"
+  },
+  "a-round-glasses-245": {
+    "code": "round_gold_glasses",
+    "slot": "accessory"
+  }
+}
