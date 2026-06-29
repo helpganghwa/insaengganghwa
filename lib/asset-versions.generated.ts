@@ -19,6 +19,7 @@ export const ASSET_VERSIONS: Record<string, string> = {
   "/sprites/hub/shop.png": "49d35107",
   "/sprites/hub/checkin-bg.png": "02a636c3",
   "/sprites/hub/daily-supply-bg.png": "6412bd4b",
+  "/sprites/hub/board.png": "e896afc0",
   "/sprites/hub/box-armor.png": "475f817a",
   "/sprites/hub/gacha.png": "c17b3fec",
   "/sprites/hub/guild.png": "b2c7467d",
@@ -200,5 +201,5 @@ export const ASSET_VERSIONS: Record<string, string> = {
   "/og/raid/dragon_west.png": "430425cb",
   "/og/og-3.png": "f0e47cd0",
   "/og/og-2.png": "c8c24cc5",
-  "/sprites/atlas.webp": "fe969b22"
+  "/sprites/atlas.webp": "6ab72290"
 };
