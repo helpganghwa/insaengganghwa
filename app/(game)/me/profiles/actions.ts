@@ -5,6 +5,7 @@ import { and, count, desc, eq, ne } from 'drizzle-orm';
 import { z } from 'zod';
 
 import { getSessionUserId } from '@/lib/auth/session';
+import { rateLimited } from '@/lib/ratelimit';
 import { db } from '@/lib/db/client';
 import { characters } from '@/lib/db/schema/server';
 import { getActiveServerId } from '@/lib/game/servers';
@@ -45,6 +46,8 @@ export async function setActiveDirection(
 ): Promise<ActionState> {
   const userId = await getSessionUserId();
   if (!userId) return { status: 'error', message: '로그인이 필요합니다.' };
+  if (await rateLimited(userId, 'profileEdit'))
+    return { status: 'error', message: '잠시 후 다시 시도해 주세요.' };
 
   const dir = DirectionSchema.safeParse(direction);
   if (!dir.success) return { status: 'error', message: '잘못된 방향입니다.' };
@@ -65,6 +68,8 @@ export async function setActiveDirection(
 export async function setActiveProfile(profileId: string): Promise<ActionState> {
   const userId = await getSessionUserId();
   if (!userId) return { status: 'error', message: '로그인이 필요합니다.' };
+  if (await rateLimited(userId, 'profileEdit'))
+    return { status: 'error', message: '잠시 후 다시 시도해 주세요.' };
   if (!(await ownedProfileId(userId, profileId)))
     return { status: 'error', message: '아바타를 찾을 수 없습니다.' };
 
@@ -83,6 +88,8 @@ export async function setActiveProfile(profileId: string): Promise<ActionState> 
 export async function deleteProfile(profileId: string): Promise<ActionState> {
   const userId = await getSessionUserId();
   if (!userId) return { status: 'error', message: '로그인이 필요합니다.' };
+  if (await rateLimited(userId, 'profileEdit'))
+    return { status: 'error', message: '잠시 후 다시 시도해 주세요.' };
   if (!(await ownedProfileId(userId, profileId)))
     return { status: 'error', message: '아바타를 찾을 수 없습니다.' };
 

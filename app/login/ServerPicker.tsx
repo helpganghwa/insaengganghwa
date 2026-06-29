@@ -20,7 +20,8 @@ export function ServerPicker({
   const [picked, setPicked] = useState(defaultSrv);
 
   useEffect(() => {
-    document.cookie = `login_srv=${picked}; path=/; max-age=600; samesite=lax`;
+    const secure = location.protocol === 'https:' ? '; secure' : '';
+    document.cookie = `login_srv=${picked}; path=/; max-age=600; samesite=lax${secure}`;
   }, [picked]);
 
   // 별도 컨테이너(로그인 버튼과 동일 너비 w-full) + 3열 그리드. 높이는 행 수에 따라 자동.

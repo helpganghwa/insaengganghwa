@@ -27,6 +27,14 @@ const nextConfig: NextConfig = {
           { key: 'Accept-CH', value: 'Sec-CH-UA-Model' },
           { key: 'Critical-CH', value: 'Sec-CH-UA-Model' },
           { key: 'Vary', value: 'Sec-CH-UA-Model' },
+          // 보안 헤더(방어심층). script/style/connect는 외부 SDK(카카오·포트원·Supabase)
+          // 깨짐 방지로 CSP에서 제한하지 않고, 클릭재킹·base/object 변조만 막는다.
+          { key: 'X-Frame-Options', value: 'SAMEORIGIN' },
+          { key: 'X-Content-Type-Options', value: 'nosniff' },
+          { key: 'Referrer-Policy', value: 'strict-origin-when-cross-origin' },
+          { key: 'Strict-Transport-Security', value: 'max-age=31536000; includeSubDomains' },
+          { key: 'Permissions-Policy', value: 'camera=(), microphone=(), geolocation=()' },
+          { key: 'Content-Security-Policy', value: "object-src 'none'; base-uri 'self'; frame-ancestors 'self'" },
         ],
       },
       {

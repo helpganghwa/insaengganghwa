@@ -26,6 +26,7 @@ export type RlBucket =
   | 'guild'
   | 'shop'
   | 'profile'
+  | 'profileEdit'
   | 'report';
 
 const WINDOWS: Record<RlBucket, [limit: number, window: `${number} s`]> = {
@@ -41,6 +42,7 @@ const WINDOWS: Record<RlBucket, [limit: number, window: `${number} s`]> = {
   guild: [20, '10 s'], // 기부·배치·가입·문양생성 자동화 방어
   shop: [20, '10 s'], // 무료수령·주문·상자구매 연타 방어
   profile: [5, '3600 s'], // 아바타 생성(Claude+Pixellab 고비용) — 시간당 5건
+  profileEdit: [30, '10 s'], // 대표 선택·방향 변경·삭제 연타 방어(저비용)
   report: [5, '60 s'], // 신고 스팸·reportCount 인플레이션 방어
 };
 
