@@ -19,7 +19,8 @@ import type { ProfileGender } from './refs';
 import type { Appearance } from './appearance-v3';
 
 const MODEL_ID = 'claude-sonnet-4-6';
-const MAX_CHARS = 1800; // v3 description 한도 2000 — 안전 마진.
+const MAX_CHARS = 1990; // v3 description 한도 2000 직전 — 절단은 최후 안전장치(아래 압축 재생성이 우선).
+const SOFT_LIMIT = 1750; // 이보다 길면 절단 대신 압축 재생성 트리거(문장 완결 보존).
 
 const PROP = `PROPORTIONS ARE THE TOP PRIORITY — a TALL, slender 7-heads-tall figure (a small head about one-seventh of the total body height), and NEVER shorter than 6 heads. A tall long-legged silhouette like an anime key-visual idol: long legs (roughly half the total height), a high waistline, a slender neck and a compact torso. The youthfulness is in the FACE only — the BODY stays tall and long-legged, never short, stubby or child-like. Even in a long dress or gown, keep the silhouette tall and slim (a slim, floor-length gown, NOT a wide bell that shortens the figure) with long legs implied beneath. Keep ALL head accessories small and neat — ears, horns, crowns and headpieces stay modest, and hair volume restrained, so the head reads small. Even when an item is a large helmet, mask, hood, horned skull, antlers or headdress, do NOT let it dominate the silhouette or balloon the head: render it scaled down to sit on a small head, and lengthen the body (legs + torso) so the head AND its headgear together never exceed about one-sixth of the total height. When in doubt, make the body taller rather than the head bigger.`;
 
@@ -42,7 +43,7 @@ POSE: use the given pose for the arms and stance, following its mood as describe
 STYLE (EMPHASIZE STRONGLY): authentic Japanese anime / JRPG key-visual aesthetic — smooth clean cel-shading with soft shape edges and NO outlines (lineless, no dark or white border lines around the character), bright vibrant saturated colors, glossy expressive anime eyes, polished anime rendering. The Japanese-anime look is the most important stylistic goal.
 EQUIPMENT — render the signature items FAITHFULLY to the IMAGES: copy each item's EXACT silhouette, colors, materials, ornaments and signature features so it is instantly recognizable as the SAME object shown in the reference image. Do NOT redesign, simplify, restyle or substitute a generic version — match the reference precisely (same blade/garment shape, same color palette, same ornaments and motifs). Describe each item richly and specifically (shape, color, ornament, motif) so the generator reproduces that exact item, not a lookalike.
 CONCEPT COHESION — the items may come from DIFFERENT sets; use their lore/stories to design the base outfit, layers, color accents, emblem motifs, footwear, mood and stance that blend them into ONE harmonious youthful anime character (not a generic outfit, and not clashing themes).
-LENGTH: about 1200-1700 characters — richly detailed but under 1800 (do not exceed). Write ONLY positive visual description; never use the words cute, chibi, adult, mature or grown. Output ONLY the prompt text, no preamble or quotes.`;
+LENGTH: aim for 1200-1600 characters. HARD LIMIT 1700 — any text beyond 1700 characters is DISCARDED by the system, so you MUST finish describing ALL THREE items (weapon, armor, accessory) AND end on a complete sentence well before 1700. Be efficient: spend length evenly across the three items and the figure, favor concise specific phrases over long flowing sentences, and if running long write more tersely rather than dropping or truncating any item — the WEAPON especially must be fully described and never cut off. Write ONLY positive visual description; never use the words cute, chibi, adult, mature or grown. Output ONLY the prompt text, no preamble or quotes.`;
 }
 
 let _client: Anthropic | null = null;
@@ -115,22 +116,46 @@ export async function composeV3Description(input: ComposeV3Input): Promise<strin
   }
   content.push({
     type: 'text',
-    text: `Race: ${ap.race}. Hair: ${ap.hair} hair. Expression: ${ap.expression}. Pose: ${ap.pose}. Use the equipment images (match each item EXACTLY — same shape, colors, ornaments; not a generic lookalike) and their lore (concept cohesion). Keep the subject a good-looking young adult in their early twenties about 20-24 years old (youthful, not a teenager) in strong Japanese anime style, and the weapon GRIPPED in a hand (fingers around the handle, never floating); if it is a matched pair, one in each hand, both drawn. Write the prompt under 1800 characters.`,
+    text: `Race: ${ap.race}. Hair: ${ap.hair} hair. Expression: ${ap.expression}. Pose: ${ap.pose}. Use the equipment images (match each item EXACTLY — same shape, colors, ornaments; not a generic lookalike) and their lore (concept cohesion). Keep the subject a good-looking young adult in their early twenties about 20-24 years old (youthful, not a teenager) in strong Japanese anime style, and the weapon GRIPPED in a hand (fingers around the handle, never floating); if it is a matched pair, one in each hand, both drawn. Write the prompt under 1900 characters with ALL THREE items fully described to completion (do not cut off the weapon).`,
   });
+
+  const sys = [{ type: 'text' as const, text: systemPrompt(gender), cache_control: { type: 'ephemeral' as const } }];
+  const clean = (r: Anthropic.Message): string => {
+    const block = r.content.find((b) => b.type === 'text');
+    return (block && 'text' in block ? block.text : '')
+      .trim()
+      .replace(/^["'`]|["'`]$/g, '')
+      .replace(/\s+/g, ' ')
+      .trim();
+  };
 
   const res = await client().messages.create({
     model: MODEL_ID,
     max_tokens: 800,
-    system: [{ type: 'text', text: systemPrompt(gender), cache_control: { type: 'ephemeral' } }],
+    system: sys,
     messages: [{ role: 'user', content }],
   });
-  const block = res.content.find((b) => b.type === 'text');
-  let desc = (block && 'text' in block ? block.text : '')
-    .trim()
-    .replace(/^["'`]|["'`]$/g, '')
-    .replace(/\s+/g, ' ')
-    .trim();
+  let desc = clean(res);
   if (!desc) throw new Error('COMPOSE_V3_EMPTY');
+
+  // 한도 초과 시 절단 대신 "압축 재생성"(최대 2회) — 모델이 직접 줄여 문장 완결 보존.
+  for (let attempt = 0; attempt < 2 && desc.length > SOFT_LIMIT; attempt++) {
+    const r = await client().messages.create({
+      model: MODEL_ID,
+      max_tokens: 800,
+      system: sys,
+      messages: [
+        {
+          role: 'user',
+          content: `Shorten this Pixellab character prompt to UNDER ${SOFT_LIMIT} characters (it is currently ${desc.length}). Keep ALL THREE equipment items fully described and faithful to their look, keep the Japanese-anime style and the front-facing full-body framing, and END on a complete sentence. Output ONLY the rewritten prompt:\n\n${desc}`,
+        },
+      ],
+    });
+    const shorter = clean(r);
+    if (shorter) desc = shorter;
+  }
+
+  // 재생성 후에도 절대 한도 초과면 안전 절단(v3 2000 보호) — 단어 경계.
   if (desc.length > MAX_CHARS) {
     const cut = desc.slice(0, MAX_CHARS);
     const sp = cut.lastIndexOf(' ');
