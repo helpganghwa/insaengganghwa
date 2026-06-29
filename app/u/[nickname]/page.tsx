@@ -503,6 +503,7 @@ export default async function PublicProfilePage({
                     championRank={it.championRank}
                     size={48}
                     frameless
+                    itemAnim
                   />
                   <span className="line-clamp-2 break-keep px-0.5 text-[9px] leading-tight text-zinc-400">
                     {it.name}

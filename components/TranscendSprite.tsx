@@ -14,7 +14,14 @@ import {
   ATLAS_CELL,
   loadAtlasImage,
 } from '@/lib/game/equipment/sprite-atlas';
+import {
+  hasItemAnim,
+  itemAnimFrames,
+  itemAnimUrl,
+} from '@/lib/game/equipment/item-anim';
 import { transcendStyle, TRANSCEND_TUNING } from '@/lib/game/equipment/transcend';
+
+const ITEM_ANIM_MS = 110; // 프레임 간격 — 차분한 루프.
 
 const SLOT_EMOJI = { weapon: '⚔️', armor: '🛡️', accessory: '💍' } as const;
 
@@ -206,6 +213,43 @@ interface Props {
    * 그대로 적용(없으면 강조 사라짐). 정적/동적 두 경로 모두 동일하게 frame skip.
    */
   frameless?: boolean;
+  /**
+   * 장비 자체 애니(itemanim 스트립)를 재생. 소수 아이템이 돋보이는 showcase 자리(프로필 장착·
+   * 가챠 공개·도감 상세)에서만 켠다. 빽빽한 그리드/썸네일은 끄고 정적 atlas 유지(부하·산만 방지).
+   * 애니가 없는 code는 자동으로 정적 폴백. 해방(캔버스) 경로와는 독립.
+   */
+  itemAnim?: boolean;
+}
+
+/** 장비 itemanim 스트립을 CSS 스텝 애니(WAAPI)로 프레임 재생 — canvas 불필요·GPU 저렴. */
+function ItemAnimSprite({ code, size }: { code: string; size: number }) {
+  const ref = useRef<HTMLDivElement>(null);
+  const frames = itemAnimFrames(code);
+  const url = itemAnimUrl(code);
+  useEffect(() => {
+    const el = ref.current;
+    if (!el || frames <= 1) return;
+    const anim = el.animate(
+      [{ backgroundPositionX: '0px' }, { backgroundPositionX: `-${frames * size}px` }],
+      { duration: frames * ITEM_ANIM_MS, iterations: Infinity, easing: `steps(${frames})` },
+    );
+    return () => anim.cancel();
+  }, [code, size, frames]);
+  if (!url || !frames) return null;
+  return (
+    <div
+      ref={ref}
+      aria-hidden
+      style={{
+        width: size,
+        height: size,
+        backgroundImage: `url(${url})`,
+        backgroundSize: `${frames * size}px ${size}px`,
+        backgroundRepeat: 'no-repeat',
+        imageRendering: 'pixelated',
+      }}
+    />
+  );
 }
 
 /** 8각 별 SVG path (정적 II 코너용 — 캔버스 drawStar와 동일 형태). */
@@ -238,13 +282,14 @@ const EmojiFallback = ({ size, slot, code, className }: { size: number; slot?: P
  * 글로우/배경 없음(확정안). +10/챔피언이 아닌 모든 등급이 이 경로.
  */
 function TranscendStatic({
-  st, size, code, className, frameless = false,
+  st, size, code, className, frameless = false, itemAnim = false,
 }: {
   st: ReturnType<typeof transcendStyle>;
   size: number;
   code: string;
   className?: string;
   frameless?: boolean;
+  itemAnim?: boolean;
 }) {
   const [r, g, b] = st.colorRgb;
   const frameCol = `rgb(${r},${g},${b})`;
@@ -254,14 +299,20 @@ function TranscendStatic({
   const inset = size * 0.115;
   const starBox = size * 0.16;
   // Sprite는 atlas(1 WebP)에서 background-position으로 잘라 그림. 150개 PNG 개별 X.
-  const bg = atlasBgStyle(code, sw);
+  // itemAnim showcase면 정적 atlas 대신 itemanim 스트립 애니(없는 code는 정적 폴백).
+  const useAnim = itemAnim && hasItemAnim(code);
+  const bg = useAnim ? null : atlasBgStyle(code, sw);
   return (
     <div
       className={className}
       style={{ width: size, height: size, position: 'relative' }}
       aria-label={`${code} +${st.level}${st.labelKo ? ` ${st.labelKo}` : ''}`}
     >
-      {bg ? (
+      {useAnim ? (
+        <div style={{ position: 'absolute', left: (size - sw) / 2, top: (size - sw) / 2 }}>
+          <ItemAnimSprite code={code} size={sw} />
+        </div>
+      ) : bg ? (
         <div
           aria-hidden
           style={{ position: 'absolute', left: (size - sw) / 2, top: (size - sw) / 2, ...bg }}
@@ -301,7 +352,7 @@ function TranscendStatic({
 }
 
 export function TranscendSprite(props: Props) {
-  const { code, level, slot, isChampion = false, championRank, size = 64, animate = true, className, frameless = false } = props;
+  const { code, level, slot, isChampion = false, championRank, size = 64, animate = true, className, frameless = false, itemAnim = false } = props;
   const st = transcendStyle(level);
   if (!atlasCoord(code)) return <EmojiFallback size={size} slot={slot} code={code} className={className} />;
   // 동적(캔버스+rAF) 진입 조건:
@@ -309,7 +360,7 @@ export function TranscendSprite(props: Props) {
   //   그 외 → 정적(프레임/별만). 초월 단계 후광은 폐지(해방 효과로 이전).
   const dynamic = animate && libRank(championRank, isChampion) != null;
   if (!dynamic) {
-    return <TranscendStatic st={st} size={size} code={code} className={className} frameless={frameless} />;
+    return <TranscendStatic st={st} size={size} code={code} className={className} frameless={frameless} itemAnim={itemAnim} />;
   }
   return <TranscendCanvas {...props} />;
 }
