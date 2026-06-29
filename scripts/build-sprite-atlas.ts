@@ -11,14 +11,14 @@ import { join } from 'node:path';
 
 import { SPRITE_MANIFEST } from '../lib/game/equipment/sprite-manifest';
 
-const CELL = 128;
+const CELL = 256; // 3차 소스가 256 네이티브 — 셀도 256으로(다운스케일 손실·셀 오버플로 방지).
 // 셀 사이 투명 여백 — 축소 렌더(인벤 목록 등) 시 인접 셀이 경계로 새어나오는 bleeding
-// 방지(2026-05-29). stride = CELL + GUTTER. atlasBgStyle은 cell(128)로 crop하므로 누출
+// 방지(2026-05-29). stride = CELL + GUTTER. atlasBgStyle은 cell로 crop하므로 누출
 // 영역이 gutter(투명)에 떨어져 점이 안 보임.
 const GUTTER = 8;
 const STRIDE = CELL + GUTTER;
-const COLS = 15;
-const ROWS = 10; // 150 정확. 늘리려면 row 추가.
+const COLS = 8;
+const ROWS = 8; // 64셀(현재 60종 + 여유). 120 확장 시 grid 확대.
 
 const PUB = join(process.cwd(), 'public');
 const OUT_WEBP = join(PUB, 'sprites', 'atlas.webp');
@@ -46,7 +46,13 @@ for (let i = 0; i < codes.length; i++) {
   const row = Math.floor(i / COLS);
   const x = col * STRIDE;
   const y = row * STRIDE;
-  composite.push({ input: file, left: x, top: y });
+  // 입력을 정확히 CELL×CELL로 맞춤(contain·투명배경) — 소스 해상도가 달라도 셀 오버플로/잘림 방지.
+  const cell = await sharp(file)
+    .ensureAlpha()
+    .resize(CELL, CELL, { fit: 'contain', background: { r: 0, g: 0, b: 0, alpha: 0 } })
+    .png()
+    .toBuffer();
+  composite.push({ input: cell, left: x, top: y });
   items[code] = { x, y };
   placed++;
 }
