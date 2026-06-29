@@ -6,6 +6,7 @@ import { characters } from '@/lib/db/schema/server';
 import { profiles } from '@/lib/db/schema/profiles';
 import { CATALOG_ITEMS } from '@/lib/game/equipment/catalog';
 import { spritePath } from '@/lib/game/equipment/sprite-manifest';
+import { pixellabKeyByIdx, keyIdxFromOptions } from '@/lib/game/profile/pixellab-keys';
 import { assetUrl } from '@/lib/asset-versions';
 import { listServers } from '@/lib/game/servers';
 
@@ -38,9 +39,10 @@ const DECISION_KO: Record<string, string> = {
   grant: '아바타 지급',
   reject: '회수+환불',
 };
-async function pixellabRotations(charId: string): Promise<Record<string, string>> {
-  const key = process.env.PIXELLAB_API_KEY;
-  if (!key) return {};
+async function pixellabRotations(charId: string, keyIdx: number): Promise<Record<string, string>> {
+  // ⚠️ 캐릭터는 생성에 쓴 키로만 조회 가능 → 잡 options의 keyIdx로 키 선택(레거시=key1).
+  if (!process.env.PIXELLAB_API_KEY) return {};
+  const key = pixellabKeyByIdx(keyIdx);
   try {
     const r = await fetch(`https://api.pixellab.ai/v2/characters/${charId}`, {
       headers: { authorization: `Bearer ${key}` },
@@ -148,7 +150,7 @@ export default async function AdminProfileGenPage({
   const imgs = await Promise.all(
     rows.map(async (r) => {
       if (r.rotations && Object.keys(r.rotations as object).length) return r.rotations as Record<string, string>;
-      if (r.pixellabCharacterId) return pixellabRotations(r.pixellabCharacterId);
+      if (r.pixellabCharacterId) return pixellabRotations(r.pixellabCharacterId, keyIdxFromOptions(r.options));
       return {} as Record<string, string>;
     }),
   );

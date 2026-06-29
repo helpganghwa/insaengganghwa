@@ -12,6 +12,7 @@ import { CATALOG_ITEMS } from '@/lib/game/equipment/catalog';
 import { composeV3Description } from './compose-v3';
 import { pickRandomAppearance, type Appearance } from './appearance-v3';
 import { markFailedAndRefund } from './pipeline';
+import { pixellabKeyByIdx, pickPixellabKeyIdx } from './pixellab-keys';
 import type { ProfileGender } from './refs';
 
 const WORN_BY_KEY = new Map(CATALOG_ITEMS.map((c) => [c.key, c.wornDesc ?? c.art]));
@@ -40,6 +41,8 @@ export interface CreateV3Input {
   accessory?: string;
   /** 미지정 시 성별 풀에서 랜덤 부여. */
   appearance?: Appearance;
+  /** Pixellab 키 인덱스(1|2). 미지정 시 1. ⚠️ 폴링/다운로드도 같은 키 필수. */
+  keyIdx?: number;
 }
 
 export interface CreateV3Result {
@@ -48,6 +51,8 @@ export interface CreateV3Result {
   /** 실제 전달한 description(재현·검수 컨텍스트용 저장). */
   description: string;
   appearance: Appearance;
+  /** 생성에 사용한 키 인덱스(잡 options에 기록 → 이후 단계 동일 키). */
+  keyIdx: number;
 }
 
 /**
@@ -57,8 +62,8 @@ export interface CreateV3Result {
  * 실패(키 없음·API 오류) throw.
  */
 export async function createCharacterV3(input: CreateV3Input): Promise<CreateV3Result> {
-  const key = process.env.PIXELLAB_API_KEY;
-  if (!key) throw new Error('PIXELLAB_API_KEY missing');
+  const keyIdx = input.keyIdx ?? 1;
+  const key = pixellabKeyByIdx(keyIdx);
 
   const appearance = input.appearance ?? pickRandomAppearance(input.gender);
   const description = await composeV3Description({
@@ -94,6 +99,7 @@ export async function createCharacterV3(input: CreateV3Input): Promise<CreateV3R
     backgroundJobId: j.background_job_id ?? null,
     description,
     appearance,
+    keyIdx,
   };
 }
 
@@ -140,8 +146,11 @@ export async function enqueueOneV3(): Promise<
   };
 
   try {
+    // 키 라운드로빈(잡 id 패리티) — key2 미설정이면 항상 1. 이후 폴링/다운로드도 같은 키 사용.
+    const keyIdx = pickPixellabKeyIdx(job.id);
     const out = await createCharacterV3({
       gender,
+      keyIdx,
       // 키 우선(compose가 비전+로어 로드) + wornDesc 텍스트 폴백.
       weaponKey: eqs.weaponKey,
       armorKey: eqs.armorKey,
@@ -156,9 +165,9 @@ export async function enqueueOneV3(): Promise<
         status: 'downloading',
         pixellabCharacterId: out.characterId,
         pixellabBackgroundJobId: out.backgroundJobId,
-        // 실제 전달한 v3 description으로 덮어씀(재현·AI검수 컨텍스트). 외형 랜덤값은 options에 기록.
+        // 실제 전달한 v3 description으로 덮어씀(재현·AI검수 컨텍스트). 외형 랜덤값·키 인덱스는 options에 기록.
         descriptionPrompt: out.description,
-        options: { ...(job.options as Record<string, unknown>), v3Appearance: out.appearance },
+        options: { ...(job.options as Record<string, unknown>), v3Appearance: out.appearance, pixellabKeyIdx: out.keyIdx },
       })
       .where(eq(profileGenerationJobs.id, job.id));
     return { kind: 'enqueued', jobId: job.id, characterId: out.characterId };

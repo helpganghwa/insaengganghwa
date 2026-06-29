@@ -26,6 +26,7 @@ import { mailbox } from '@/lib/db/schema/mailbox';
 import { sendPushToUser } from '@/lib/push/send';
 
 import { reviewProfile, type ReviewVerdict } from './ai-review';
+import { pixellabKeyByIdx, keyIdxFromOptions } from './pixellab-keys';
 import { anyBackgroundOpaque } from './bg-alpha';
 import { detectFullBodyCrop } from './crop-check';
 import { detectFaceBox, type FaceBox } from './face-box';
@@ -110,8 +111,7 @@ export async function pollAndProcessDownloading(limit = 5): Promise<{
   failed: number;
   stillProcessing: number;
 }> {
-  const key = process.env.PIXELLAB_API_KEY;
-  if (!key) throw new Error('PIXELLAB_API_KEY missing');
+  if (!process.env.PIXELLAB_API_KEY) throw new Error('PIXELLAB_API_KEY missing');
 
   const due = await db
     .select({
@@ -146,8 +146,10 @@ export async function pollAndProcessDownloading(limit = 5): Promise<{
     // character endpoint로 polling — rotation_urls 완성도가 완료 신호.
     // (background-jobs는 만료/404 가능, v2 character 응답엔 status 필드 없음 —
     //  rotation_urls의 string 갯수 8이면 completed, 미만이면 pending.)
+    // ⚠️ 생성에 쓴 키로만 조회 가능 → 잡 options의 keyIdx로 키 선택(레거시=key1).
+    const jobKey = pixellabKeyByIdx(keyIdxFromOptions(job.options));
     const charRes = await fetch(`${PIXELLAB_BASE}/characters/${job.characterId}`, {
-      headers: { authorization: `Bearer ${key}` },
+      headers: { authorization: `Bearer ${jobKey}` },
     });
     if (!charRes.ok) {
       if (charRes.status === 404) {
@@ -327,8 +329,9 @@ export async function adminGrantAvatarForJob(jobId: bigint): Promise<{ ok: boole
   if (job.userProfileId) return { ok: false, msg: '이미 아바타가 지급되어 있습니다.' };
   if (!job.pixellabCharacterId) return { ok: false, msg: 'Pixellab 캐릭터 정보가 없어 지급할 수 없습니다.' };
 
-  const key = process.env.PIXELLAB_API_KEY;
-  if (!key) return { ok: false, msg: 'PIXELLAB_API_KEY 미설정' };
+  if (!process.env.PIXELLAB_API_KEY) return { ok: false, msg: 'PIXELLAB_API_KEY 미설정' };
+  // ⚠️ 생성에 쓴 키로만 조회 가능 → 잡 options의 keyIdx로 키 선택(레거시=key1).
+  const key = pixellabKeyByIdx(keyIdxFromOptions(job.options));
 
   const charRes = await fetch(`${PIXELLAB_BASE}/characters/${job.pixellabCharacterId}`, {
     headers: { authorization: `Bearer ${key}` },
