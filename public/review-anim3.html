@@ -1,0 +1,1289 @@
+<!doctype html><html lang=ko><head><meta charset=utf-8><meta name=viewport content="width=390,user-scalable=no">
+<title>3차 애니 검수 (61)</title><style>
+*{box-sizing:border-box}
+body{margin:0;background:#0b0b0e;color:#e7e7ea;font:14px/1.45 system-ui,sans-serif}
+header{position:sticky;top:0;background:#0b0b0ef5;backdrop-filter:blur(6px);border-bottom:1px solid #222;z-index:9;padding:9px 12px}
+h1{font-size:15px;margin:0}
+.tools{display:flex;gap:7px;margin-top:7px;align-items:center;flex-wrap:wrap}
+.tools button{font-size:12px;font-weight:700;border:1px solid #33333c;background:#16161c;color:#e7e7ea;border-radius:7px;padding:6px 10px;cursor:pointer}
+#cnt{font-size:12px;color:#f87171}
+#out{display:none;width:100%;height:170px;margin-top:7px;background:#0e0e12;color:#cfcfd6;border:1px solid #26262e;border-radius:7px;font:11px ui-monospace,monospace;padding:6px}
+main{padding:10px 12px 60px;max-width:760px;margin:0 auto}
+h2{font-size:14px;margin:18px 0 8px;border-left:4px solid #16a34a;padding-left:8px}
+.grid{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+.card{background:#15151a;border:1px solid #26262e;border-radius:14px;padding:10px;display:flex;flex-direction:column;gap:7px}
+.card.rej-anim{outline:3px solid #dc2626}
+.card.rej-prompt{box-shadow:inset 0 0 0 3px #d97706}
+.card.rej-story{background:#241016}
+.mt{font-size:9px;color:#7a7a85;background:#16161c;border:1px solid #2a2a32;border-radius:4px;padding:0 5px}
+.story{font-size:12.5px;color:#e7e7ea;line-height:1.6;background:#101015;border:1px solid #23232b;border-radius:8px;padding:8px 10px;white-space:pre-line}
+.story.pend{color:#5a5a62;font-style:italic}
+.card.rej-story .rt{background:#3a1422;color:#f9a8d4;border-color:#db2777}
+.imgs{display:flex;gap:8px}
+.box{flex:1;aspect-ratio:1/1;border-radius:8px;overflow:hidden;display:flex;align-items:center;justify-content:center;position:relative;
+ background:linear-gradient(45deg,#1d1d22 25%,transparent 25%),linear-gradient(-45deg,#1d1d22 25%,transparent 25%),linear-gradient(45deg,transparent 75%,#1d1d22 75%),linear-gradient(-45deg,transparent 75%,#1d1d22 75%);background-size:16px 16px;background-position:0 0,0 8px,8px -8px,-8px 0}
+.box img{width:100%;height:100%;object-fit:contain;image-rendering:pixelated}
+.box.pend{color:#555;font-size:10px}
+.box .lbl{position:absolute;top:3px;left:4px;font-size:9px;color:#ccc;background:#000a;padding:0 4px;border-radius:3px;z-index:2}
+.anim{width:100%;height:100%;background-repeat:no-repeat;background-position:0 0;image-rendering:pixelated}
+.ph{color:#555;font-size:11px;text-align:center}
+.meta{display:flex;align-items:baseline;gap:6px;flex-wrap:wrap}
+.nm{font-weight:700;font-size:14px}
+.id{font-size:9px;color:#555;font-family:ui-monospace,monospace}
+.pr{background:#101015;border:1px solid #23232b;border-radius:8px;padding:6px 8px}
+.prlbl{font-size:9px;color:#7a7a85;text-transform:uppercase;letter-spacing:.04em}
+.prtxt{font-size:12px;color:#dff3e7;line-height:1.5;margin-top:3px;white-space:pre-wrap}
+.pren{font-size:10px;color:#6b7b72;font-family:ui-monospace,monospace;margin-top:4px;white-space:pre-wrap}
+.rejrow{display:flex;gap:6px}
+.rk{font-size:11px;font-weight:700;border:1px solid #3a3a44;background:#1c1c22;color:#cfcfd6;border-radius:7px;padding:5px 8px;cursor:pointer;white-space:nowrap}
+.card.rej-anim .ra{background:#3a1414;color:#f87171;border-color:#dc2626}
+.card.rej-prompt .rp{background:#3a2a0e;color:#fbbf24;border-color:#d97706}
+.rs{flex:1;min-width:0;font-size:11px;background:#101015;color:#e7e7ea;border:1px solid #2c2c36;border-radius:7px;padding:5px 7px}
+</style></head><body>
+<header><h1>🟢 3차 애니 검수 — 61종 (무기/방어구/장신구)</h1>
+<div class="tools"><button onclick="exportRej()">📋 리젝 내보내기</button><button onclick="clearRej()">초기화</button><span id="cnt"></span></div>
+<textarea id="out" readonly></textarea></header>
+<main><h2>무기 <small>(22)</small></h2><div class="grid"><div class="card" data-id="seed-kingdom_ribbon_rapier">
+    <div class="imgs">
+      <div class="box"><span class=lbl>정적</span><img src="sprites/pool/seed-kingdom_ribbon_rapier.png" loading=lazy></div>
+      <div class="box"><span class=lbl>애니</span><div class="anim" data-frames="9" style="background-image:url('sprites/anim3/seed-kingdom_ribbon_rapier.webp?v=1782633448771')"></div></div>
+    </div>
+    <div class="meta"><span class="nm">창천검</span><span class="mt">정면 · 우아</span><span class="id">seed-kingdom_ribbon_rapier</span></div>
+    <div class="story">은빛 칼날은 바늘처럼 가늘고, 황금 가드 한가운데 푸른 보석이 박혀 있다. 거기서 흘러내린 긴 청색 리본이 칼끝까지 따라와, 찌를 때마다 허공에 푸른 호선을 그린다. 상대가 그 선을 눈으로 좇는 순간, 칼끝은 이미 다른 곳에 가 있다.</div>
+    <div class="rejrow">
+      <button class="rk rt" onclick="rej('seed-kingdom_ribbon_rapier','story')">✕ 스토리 리젝</button>
+      <input class="rs" data-k="story" placeholder="이름·스토리 리젝 사유" oninput="setReason('seed-kingdom_ribbon_rapier','story',this.value)">
+    </div>
+    <div class="pr"><span class="prlbl">애니 프롬프트</span><div class="prtxt">가는 레이피어는 완전히 멈춘 채, 늘어진 푸른 리본이 물결치며 나부끼고 칼날을 따라 은청색 광휘가 맥동한다</div><div class="pren">the slender rapier floats perfectly still while its trailing blue ribbon ripples and flutters, a soft silver-blue radiance pulsing along the blade</div></div>
+    <div class="rejrow">
+      <button class="rk ra" onclick="rej('seed-kingdom_ribbon_rapier','anim')">✕ 애니 리젝</button>
+      <input class="rs" data-k="anim" placeholder="애니 리젝 사유" oninput="setReason('seed-kingdom_ribbon_rapier','anim',this.value)">
+    </div>
+    <div class="rejrow">
+      <button class="rk rp" onclick="rej('seed-kingdom_ribbon_rapier','prompt')">✕ 프롬프트 리젝</button>
+      <input class="rs" data-k="prompt" placeholder="프롬프트 리젝 사유" oninput="setReason('seed-kingdom_ribbon_rapier','prompt',this.value)">
+    </div>
+  </div><div class="card" data-id="seed-kingdom_court_twin_sabers">
+    <div class="imgs">
+      <div class="box"><span class=lbl>정적</span><img src="sprites/pool/seed-kingdom_court_twin_sabers.png" loading=lazy></div>
+      <div class="box"><span class=lbl>애니</span><div class="anim" data-frames="9" style="background-image:url('sprites/anim3/seed-kingdom_court_twin_sabers.webp?v=1782649748056')"></div></div>
+    </div>
+    <div class="meta"><span class="nm">청홍 쌍검</span><span class="mt">정면 · 장엄</span><span class="id">seed-kingdom_court_twin_sabers</span></div>
+    <div class="story">넓은 은빛 칼날 둘이 X자로 맞물린다. 한 자루의 손잡이엔 푸른 보석, 다른 자루엔 붉은 보석—같은 장인이 같은 날 빚은 한 쌍이다. 둘을 함께 들면 푸름과 붉음이 손안에서 엇갈려 돈다. 한 손엔 새벽, 한 손엔 노을을 쥔 셈이다.</div>
+    <div class="rejrow">
+      <button class="rk rt" onclick="rej('seed-kingdom_court_twin_sabers','story')">✕ 스토리 리젝</button>
+      <input class="rs" data-k="story" placeholder="이름·스토리 리젝 사유" oninput="setReason('seed-kingdom_court_twin_sabers','story',this.value)">
+    </div>
+    <div class="pr"><span class="prlbl">애니 프롬프트</span><div class="prtxt">교차한 쌍검은 완전히 얼어붙은 듯 고정되고, 오직 손잡이 보석만 밝고 또렷이 빛나며 맥동한다 (왼쪽 선명한 푸른·오른쪽 선명한 붉은, 검은 움직임 없음)</div><div class="pren">the crossed twin sabers stay completely still and frozen; only the gems in their hilts glow and pulse brightly and noticeably — left gem vivid blue, right gem vivid red — no blade movement</div></div>
+    <div class="rejrow">
+      <button class="rk ra" onclick="rej('seed-kingdom_court_twin_sabers','anim')">✕ 애니 리젝</button>
+      <input class="rs" data-k="anim" placeholder="애니 리젝 사유" oninput="setReason('seed-kingdom_court_twin_sabers','anim',this.value)">
+    </div>
+    <div class="rejrow">
+      <button class="rk rp" onclick="rej('seed-kingdom_court_twin_sabers','prompt')">✕ 프롬프트 리젝</button>
+      <input class="rs" data-k="prompt" placeholder="프롬프트 리젝 사유" oninput="setReason('seed-kingdom_court_twin_sabers','prompt',this.value)">
+    </div>
+  </div><div class="card" data-id="seed-kingdom_winged_coronation_sword">
+    <div class="imgs">
+      <div class="box"><span class=lbl>정적</span><img src="sprites/pool/seed-kingdom_winged_coronation_sword.png" loading=lazy></div>
+      <div class="box"><span class=lbl>애니</span><div class="anim" data-frames="9" style="background-image:url('sprites/anim3/seed-kingdom_winged_coronation_sword.webp?v=1782633779365')"></div></div>
+    </div>
+    <div class="meta"><span class="nm">창궁검</span><span class="mt">정면 · 장엄</span><span class="id">seed-kingdom_winged_coronation_sword</span></div>
+    <div class="story">황금 독수리 날개가 가드에서 활짝 펴지고, 그 위 작은 관과 한가운데 푸른 다이아가 하늘빛으로 빛난다. 칼몸엔 옅은 금빛 무늬가 흐른다. 높이 치켜들면 날개가 바람을 받아, 검을 든 게 아니라 새 한 마리를 막 놓아주려는 듯하다.</div>
+    <div class="rejrow">
+      <button class="rk rt" onclick="rej('seed-kingdom_winged_coronation_sword','story')">✕ 스토리 리젝</button>
+      <input class="rs" data-k="story" placeholder="이름·스토리 리젝 사유" oninput="setReason('seed-kingdom_winged_coronation_sword','story',this.value)">
+    </div>
+    <div class="pr"><span class="prlbl">애니 프롬프트</span><div class="prtxt">장검은 미동 없이 떠 있고 하늘빛 보석이 밝아졌다 어두워지며, 날개 모양 가드가 한 번 펄럭인다</div><div class="pren">the longsword hovers motionless as the sky-blue gem brightens and dims, and the winged crossguard flaps its wings once</div></div>
+    <div class="rejrow">
+      <button class="rk ra" onclick="rej('seed-kingdom_winged_coronation_sword','anim')">✕ 애니 리젝</button>
+      <input class="rs" data-k="anim" placeholder="애니 리젝 사유" oninput="setReason('seed-kingdom_winged_coronation_sword','anim',this.value)">
+    </div>
+    <div class="rejrow">
+      <button class="rk rp" onclick="rej('seed-kingdom_winged_coronation_sword','prompt')">✕ 프롬프트 리젝</button>
+      <input class="rs" data-k="prompt" placeholder="프롬프트 리젝 사유" oninput="setReason('seed-kingdom_winged_coronation_sword','prompt',this.value)">
+    </div>
+  </div><div class="card" data-id="seed-kingdom_falcon_cane_sword">
+    <div class="imgs">
+      <div class="box"><span class=lbl>정적</span><img src="sprites/pool/seed-kingdom_falcon_cane_sword.png" loading=lazy></div>
+      <div class="box"><span class=lbl>애니</span><div class="anim" data-frames="9" style="background-image:url('sprites/anim3/seed-kingdom_falcon_cane_sword.webp?v=1782642906315')"></div></div>
+    </div>
+    <div class="meta"><span class="nm">매 머리 지팡이검</span><span class="mt">정면 · 우아</span><span class="id">seed-kingdom_falcon_cane_sword</span></div>
+    <div class="story">자줏빛 나무 자루에 금빛 덩굴무늬가 감겼고, 손잡이는 부리를 다문 황금 매 머리다. 누가 봐도 귀족의 산책 지팡이다. 매의 부리를 비틀어 당기면, 자루 속에서 가느다란 칼 한 줄이 소리 없이 빠져나온다. 매가 사냥감을 채듯, 단 한 번이면 된다.</div>
+    <div class="rejrow">
+      <button class="rk rt" onclick="rej('seed-kingdom_falcon_cane_sword','story')">✕ 스토리 리젝</button>
+      <input class="rs" data-k="story" placeholder="이름·스토리 리젝 사유" oninput="setReason('seed-kingdom_falcon_cane_sword','story',this.value)">
+    </div>
+    <div class="pr"><span class="prlbl">애니 프롬프트</span><div class="prtxt">지팡이검은 완전히 멈춰 있고, 오직 황동 매 머리의 눈이 반짝이며 부리를 한 번 벌린다 (오라·윤기 없음, 고급스럽게)</div><div class="pren">the cane-sword stays completely still; only the brass falcon-head's eyes sparkle and its beak opens once — no aura, no sheen, elegant and refined</div></div>
+    <div class="rejrow">
+      <button class="rk ra" onclick="rej('seed-kingdom_falcon_cane_sword','anim')">✕ 애니 리젝</button>
+      <input class="rs" data-k="anim" placeholder="애니 리젝 사유" oninput="setReason('seed-kingdom_falcon_cane_sword','anim',this.value)">
+    </div>
+    <div class="rejrow">
+      <button class="rk rp" onclick="rej('seed-kingdom_falcon_cane_sword','prompt')">✕ 프롬프트 리젝</button>
+      <input class="rs" data-k="prompt" placeholder="프롬프트 리젝 사유" oninput="setReason('seed-kingdom_falcon_cane_sword','prompt',this.value)">
+    </div>
+  </div><div class="card" data-id="seed-temple_frost_odachi">
+    <div class="imgs">
+      <div class="box"><span class=lbl>정적</span><img src="sprites/pool/seed-temple_frost_odachi.png" loading=lazy></div>
+      <div class="box"><span class=lbl>애니</span><div class="anim" data-frames="9" style="background-image:url('sprites/anim3/seed-temple_frost_odachi.webp?v=1782652767207')"></div></div>
+    </div>
+    <div class="meta"><span class="nm">눈꽃 대도</span><span class="mt">정면 · 장엄</span><span class="id">seed-temple_frost_odachi</span></div>
+    <div class="story">한겨울 강을 통째로 얼려 길게 뽑아낸 듯, 칼날이 시리도록 푸르다. 코등이는 여섯 갈래 눈꽃 결정이 그대로 굳었고, 자루엔 흰 술이 고드름처럼 매달렸다. 칼집에서 빼는 순간 둘레 공기가 먼저 얼어붙는다. 한 번 휘두르면 그 자리에, 한 박자 늦게 겨울이 내려앉는다.</div>
+    <div class="rejrow">
+      <button class="rk rt" onclick="rej('seed-temple_frost_odachi','story')">✕ 스토리 리젝</button>
+      <input class="rs" data-k="story" placeholder="이름·스토리 리젝 사유" oninput="setReason('seed-temple_frost_odachi','story',this.value)">
+    </div>
+    <div class="pr"><span class="prlbl">애니 프롬프트</span><div class="prtxt">서리 대도는 완전히 고정된 채, 칼날 둘레로 여섯 갈래 눈꽃이 살며시 생겨나 부드럽게 흩날린다 (차분하고 고급스러운 눈꽃 효과)</div><div class="pren">the frost odachi stays completely still while delicate six-sided snowflakes form and drift gently down around the icy blade, a calm refined wintry snowflake effect, elegant</div></div>
+    <div class="rejrow">
+      <button class="rk ra" onclick="rej('seed-temple_frost_odachi','anim')">✕ 애니 리젝</button>
+      <input class="rs" data-k="anim" placeholder="애니 리젝 사유" oninput="setReason('seed-temple_frost_odachi','anim',this.value)">
+    </div>
+    <div class="rejrow">
+      <button class="rk rp" onclick="rej('seed-temple_frost_odachi','prompt')">✕ 프롬프트 리젝</button>
+      <input class="rs" data-k="prompt" placeholder="프롬프트 리젝 사유" oninput="setReason('seed-temple_frost_odachi','prompt',this.value)">
+    </div>
+  </div><div class="card" data-id="seed-volcano_emberveined_greatsword">
+    <div class="imgs">
+      <div class="box"><span class=lbl>정적</span><img src="sprites/pool/seed-volcano_emberveined_greatsword.png" loading=lazy></div>
+      <div class="box"><span class=lbl>애니</span><div class="anim" data-frames="9" style="background-image:url('sprites/anim3/seed-volcano_emberveined_greatsword.webp?v=1782633804325')"></div></div>
+    </div>
+    <div class="meta"><span class="nm">용암을 가둔 대검</span><span class="mt">정면 · 맹렬</span><span class="id">seed-volcano_emberveined_greatsword</span></div>
+    <div class="story">흑요석으로 칼몸을 두르고, 그 한가운데 식지 않는 용암 한 줄기를 가뒀다. 자루 끝엔 불사조 날개가 펼쳐지고 그 위로 주황빛 불씨가 맥동한다. 휘두르면 갇혀 있던 열기가 칼끝에서 잠깐 풀려난다. 화산이 제 심장 한 조각을 떼어 만든 칼이다.</div>
+    <div class="rejrow">
+      <button class="rk rt" onclick="rej('seed-volcano_emberveined_greatsword','story')">✕ 스토리 리젝</button>
+      <input class="rs" data-k="story" placeholder="이름·스토리 리젝 사유" oninput="setReason('seed-volcano_emberveined_greatsword','story',this.value)">
+    </div>
+    <div class="pr"><span class="prlbl">애니 프롬프트</span><div class="prtxt">흑요석 대검은 멈춰 있고 잿불빛 용암 줄기가 밝아졌다 어두워지며, 옅은 열기 아지랑이와 불티가 피어오른다</div><div class="pren">the obsidian greatsword stays still as the ember-orange lava veins glow brighter and dimmer, faint heat-shimmer and sparks rising</div></div>
+    <div class="rejrow">
+      <button class="rk ra" onclick="rej('seed-volcano_emberveined_greatsword','anim')">✕ 애니 리젝</button>
+      <input class="rs" data-k="anim" placeholder="애니 리젝 사유" oninput="setReason('seed-volcano_emberveined_greatsword','anim',this.value)">
+    </div>
+    <div class="rejrow">
+      <button class="rk rp" onclick="rej('seed-volcano_emberveined_greatsword','prompt')">✕ 프롬프트 리젝</button>
+      <input class="rs" data-k="prompt" placeholder="프롬프트 리젝 사유" oninput="setReason('seed-volcano_emberveined_greatsword','prompt',this.value)">
+    </div>
+  </div><div class="card" data-id="seed-swamp_lotus_trident">
+    <div class="imgs">
+      <div class="box"><span class=lbl>정적</span><img src="sprites/pool/seed-swamp_lotus_trident.png" loading=lazy></div>
+      <div class="box"><span class=lbl>애니</span><div class="anim" data-frames="9" style="background-image:url('sprites/anim3/seed-swamp_lotus_trident.webp?v=1782647486890')"></div></div>
+    </div>
+    <div class="meta"><span class="nm">피어나는 삼지창</span><span class="mt">정면 · 우아</span><span class="id">seed-swamp_lotus_trident</span></div>
+    <div class="story">박하빛 줄기 세 가닥이 위로 갈라지며 삼지창이 된다. 살아 있는 나무라, 물에 닿으면 갈래 사이로 흰 수련이 봉오리를 터뜨리고 잎이 돋는다. 들고 서 있기만 해도 손끝에서 작은 봄이 자란다. 겨눈 자리마다, 칼끝보다 꽃이 먼저 닿는다.</div>
+    <div class="rejrow">
+      <button class="rk rt" onclick="rej('seed-swamp_lotus_trident','story')">✕ 스토리 리젝</button>
+      <input class="rs" data-k="story" placeholder="이름·스토리 리젝 사유" oninput="setReason('seed-swamp_lotus_trident','story',this.value)">
+    </div>
+    <div class="pr"><span class="prlbl">애니 프롬프트</span><div class="prtxt">삼지창은 가만히 있고 초록 덩굴이 부드럽고 매끄럽게 자라 오르며 연꽃이 살며시 피어난다 (유려하고 고급스럽게)</div><div class="pren">the trident stays still while green vines smoothly and gently grow up the shaft and lotus flowers softly bloom open, fluid smooth and elegant</div></div>
+    <div class="rejrow">
+      <button class="rk ra" onclick="rej('seed-swamp_lotus_trident','anim')">✕ 애니 리젝</button>
+      <input class="rs" data-k="anim" placeholder="애니 리젝 사유" oninput="setReason('seed-swamp_lotus_trident','anim',this.value)">
+    </div>
+    <div class="rejrow">
+      <button class="rk rp" onclick="rej('seed-swamp_lotus_trident','prompt')">✕ 프롬프트 리젝</button>
+      <input class="rs" data-k="prompt" placeholder="프롬프트 리젝 사유" oninput="setReason('seed-swamp_lotus_trident','prompt',this.value)">
+    </div>
+  </div><div class="card" data-id="seed-angel_star_wand">
+    <div class="imgs">
+      <div class="box"><span class=lbl>정적</span><img src="sprites/pool/seed-angel_star_wand.png" loading=lazy></div>
+      <div class="box"><span class=lbl>애니</span><div class="anim" data-frames="9" style="background-image:url('sprites/anim3/seed-angel_star_wand.webp?v=1782633906907')"></div></div>
+    </div>
+    <div class="meta"><span class="nm">샛별의 지팡이</span><span class="mt">정면 · 밝음</span><span class="id">seed-angel_star_wand</span></div>
+    <div class="story">지팡이 끝에 황금 별이 작은 날개를 달고 앉아, 쉴 새 없이 빛가루를 흩뿌린다. 별 아래엔 푸른 보석, 자루엔 흰빛과 금빛이 나선으로 감긴다. 어둠 속에서 한 번 휘저으면 머리 위로 작은 별 무리가 떠올라 길을 비춘다. 이걸 든 사람은 늘 한 발 앞이 환하다.</div>
+    <div class="rejrow">
+      <button class="rk rt" onclick="rej('seed-angel_star_wand','story')">✕ 스토리 리젝</button>
+      <input class="rs" data-k="story" placeholder="이름·스토리 리젝 사유" oninput="setReason('seed-angel_star_wand','story',this.value)">
+    </div>
+    <div class="pr"><span class="prlbl">애니 프롬프트</span><div class="prtxt">별 지팡이는 가만히 떠 있고 별 끝이 반짝이며 부드러운 빛가루를 흩뿌리고, 작은 날개가 파닥이며 은은한 금빛 후광이 맥동한다</div><div class="pren">the star wand floats still as its star tip twinkles and sheds soft sparkles, the small wings fluttering and a gentle golden halo pulsing</div></div>
+    <div class="rejrow">
+      <button class="rk ra" onclick="rej('seed-angel_star_wand','anim')">✕ 애니 리젝</button>
+      <input class="rs" data-k="anim" placeholder="애니 리젝 사유" oninput="setReason('seed-angel_star_wand','anim',this.value)">
+    </div>
+    <div class="rejrow">
+      <button class="rk rp" onclick="rej('seed-angel_star_wand','prompt')">✕ 프롬프트 리젝</button>
+      <input class="rs" data-k="prompt" placeholder="프롬프트 리젝 사유" oninput="setReason('seed-angel_star_wand','prompt',this.value)">
+    </div>
+  </div><div class="card" data-id="seed-volcano_dragonjaw_halberd">
+    <div class="imgs">
+      <div class="box"><span class=lbl>정적</span><img src="sprites/pool/seed-volcano_dragonjaw_halberd.png" loading=lazy></div>
+      <div class="box"><span class=lbl>애니</span><div class="anim" data-frames="9" style="background-image:url('sprites/anim3/seed-volcano_dragonjaw_halberd.webp?v=1782640854332')"></div></div>
+    </div>
+    <div class="meta"><span class="nm">포효하는 용턱</span><span class="mt">정면 · 맹렬</span><span class="id">seed-volcano_dragonjaw_halberd</span></div>
+    <div class="story">도끼날이 통째로 용의 머리다. 부릅뜬 눈, 비틀린 뿔, 쩍 벌린 아가리 안쪽이 그대로 시퍼런 날이 된다. 내리치는 순간 그 아가리가 한 번 더 벌어지며 뜨거운 숨을 토하니, 맞은 쪽은 베이기 전에 먼저 그을린다. 용을 잡은 자가, 그 머리를 무기로 되돌려 받은 셈이다.</div>
+    <div class="rejrow">
+      <button class="rk rt" onclick="rej('seed-volcano_dragonjaw_halberd','story')">✕ 스토리 리젝</button>
+      <input class="rs" data-k="story" placeholder="이름·스토리 리젝 사유" oninput="setReason('seed-volcano_dragonjaw_halberd','story',this.value)">
+    </div>
+    <div class="pr"><span class="prlbl">애니 프롬프트</span><div class="prtxt">핼버드는 가만히 있고 용 머리가 절제되고 고급스러운 주황 화염 브레스를 차분하게 내뿜는다 (요란하지 않게, 은은한 불티)</div><div class="pren">the halberd stays still while the dragon-jaw head breathes out a refined controlled stream of orange flame-breath, calmer and more elegant and not flashy, with soft embers</div></div>
+    <div class="rejrow">
+      <button class="rk ra" onclick="rej('seed-volcano_dragonjaw_halberd','anim')">✕ 애니 리젝</button>
+      <input class="rs" data-k="anim" placeholder="애니 리젝 사유" oninput="setReason('seed-volcano_dragonjaw_halberd','anim',this.value)">
+    </div>
+    <div class="rejrow">
+      <button class="rk rp" onclick="rej('seed-volcano_dragonjaw_halberd','prompt')">✕ 프롬프트 리젝</button>
+      <input class="rs" data-k="prompt" placeholder="프롬프트 리젝 사유" oninput="setReason('seed-volcano_dragonjaw_halberd','prompt',this.value)">
+    </div>
+  </div><div class="card" data-id="w-pumpkin-witch-staff-95">
+    <div class="imgs">
+      <div class="box"><span class=lbl>정적</span><img src="sprites/pool/w-pumpkin-witch-staff-95.png" loading=lazy></div>
+      <div class="box"><span class=lbl>애니</span><div class="anim" data-frames="9" style="background-image:url('sprites/anim3/w-pumpkin-witch-staff-95.webp?v=1782633928943')"></div></div>
+    </div>
+    <div class="meta"><span class="nm">마녀의 등불</span><span class="mt">정면 · 기괴</span><span class="id">w-pumpkin-witch-staff-95</span></div>
+    <div class="story">비틀린 검은 가지 끝에 조각된 호박이 얹히고, 그 정수리에서 주황 불길이 너울거린다. 마녀가 밤마실을 나설 때 이걸 들면, 호박이 길을 밝히고 매달린 검은 고양이가 앞장선다. 등불은 꺼지는 법이 없다. 마녀의 변덕만큼, 불꽃도 밤새 제멋대로 춤춘다.</div>
+    <div class="rejrow">
+      <button class="rk rt" onclick="rej('w-pumpkin-witch-staff-95','story')">✕ 스토리 리젝</button>
+      <input class="rs" data-k="story" placeholder="이름·스토리 리젝 사유" oninput="setReason('w-pumpkin-witch-staff-95','story',this.value)">
+    </div>
+    <div class="pr"><span class="prlbl">애니 프롬프트</span><div class="prtxt">마녀의 지팡이는 가만히 떠 있고 조각된 잭오랜턴의 눈이 따뜻한 주황빛으로 깜빡이며 작은 연기가 피어오르고, 보랏빛 오라가 맥동한다</div><div class="pren">the witch's staff hovers still as the carved jack-o-lantern's eyes flicker with warm orange light and tiny wisps drift up, a purple aura pulsing</div></div>
+    <div class="rejrow">
+      <button class="rk ra" onclick="rej('w-pumpkin-witch-staff-95','anim')">✕ 애니 리젝</button>
+      <input class="rs" data-k="anim" placeholder="애니 리젝 사유" oninput="setReason('w-pumpkin-witch-staff-95','anim',this.value)">
+    </div>
+    <div class="rejrow">
+      <button class="rk rp" onclick="rej('w-pumpkin-witch-staff-95','prompt')">✕ 프롬프트 리젝</button>
+      <input class="rs" data-k="prompt" placeholder="프롬프트 리젝 사유" oninput="setReason('w-pumpkin-witch-staff-95','prompt',this.value)">
+    </div>
+  </div><div class="card" data-id="seed-kingdom_banner_spear">
+    <div class="imgs">
+      <div class="box"><span class=lbl>정적</span><img src="sprites/pool/seed-kingdom_banner_spear.png" loading=lazy></div>
+      <div class="box"><span class=lbl>애니</span><div class="anim" data-frames="9" style="background-image:url('sprites/anim3/seed-kingdom_banner_spear.webp?v=1782634020375')"></div></div>
+    </div>
+    <div class="meta"><span class="nm">왕기의 창</span><span class="mt">정면 · 장엄</span><span class="id">seed-kingdom_banner_spear</span></div>
+    <div class="story">창끝은 작고 단정한데, 거기 매달린 자줏빛 깃발이 사람 키만 하다. 금실로 수놓은 왕관 문장이 깃 한가운데서 번쩍인다. 전장에서 이 깃이 오르면 흩어졌던 줄이 다시 모이고, 이 깃이 쓰러지면 그날 싸움이 끝난 것이다. 그래서 기수는 창을 휘두르지 않는다. 그저 끝까지 세워 둔다.</div>
+    <div class="rejrow">
+      <button class="rk rt" onclick="rej('seed-kingdom_banner_spear','story')">✕ 스토리 리젝</button>
+      <input class="rs" data-k="story" placeholder="이름·스토리 리젝 사유" oninput="setReason('seed-kingdom_banner_spear','story',this.value)">
+    </div>
+    <div class="pr"><span class="prlbl">애니 프롬프트</span><div class="prtxt">창은 가만히 있고 왕실 깃발이 바람에 물결치며 펄럭이고, 자루를 따라 위엄 있는 금빛 윤기가 흐른다</div><div class="pren">the spear holds steady while its royal banner ripples and waves in the wind, a regal golden sheen traveling along the shaft</div></div>
+    <div class="rejrow">
+      <button class="rk ra" onclick="rej('seed-kingdom_banner_spear','anim')">✕ 애니 리젝</button>
+      <input class="rs" data-k="anim" placeholder="애니 리젝 사유" oninput="setReason('seed-kingdom_banner_spear','anim',this.value)">
+    </div>
+    <div class="rejrow">
+      <button class="rk rp" onclick="rej('seed-kingdom_banner_spear','prompt')">✕ 프롬프트 리젝</button>
+      <input class="rs" data-k="prompt" placeholder="프롬프트 리젝 사유" oninput="setReason('seed-kingdom_banner_spear','prompt',this.value)">
+    </div>
+  </div><div class="card" data-id="seed-volcano_ember_scythe">
+    <div class="imgs">
+      <div class="box"><span class=lbl>정적</span><img src="sprites/pool/seed-volcano_ember_scythe.png" loading=lazy></div>
+      <div class="box"><span class=lbl>애니</span><div class="anim" data-frames="9" style="background-image:url('sprites/anim3/seed-volcano_ember_scythe.webp?v=1782636387772')"></div></div>
+    </div>
+    <div class="meta"><span class="nm">불을 거두는 낫</span><span class="mt">정면 · 맹렬</span><span class="id">seed-volcano_ember_scythe</span></div>
+    <div class="story">검은 칼날 등을 따라 주황 불길이 일렁이고, 자루 곁엔 작은 등롱 하나가 매달려 그 불을 옮겨 담는다. 화산이 휩쓸고 간 들판을 이 낫으로 베면, 타다 만 잿더미가 등롱 속으로 빨려 든다. 거둔 불은 꺼뜨리지 않는다. 들판이 다시 푸를 때까지, 그 불씨를 품고 기다린다.</div>
+    <div class="rejrow">
+      <button class="rk rt" onclick="rej('seed-volcano_ember_scythe','story')">✕ 스토리 리젝</button>
+      <input class="rs" data-k="story" placeholder="이름·스토리 리젝 사유" oninput="setReason('seed-volcano_ember_scythe','story',this.value)">
+    </div>
+    <div class="pr"><span class="prlbl">애니 프롬프트</span><div class="prtxt">낫은 좌우 흔들림 전혀 없이 완전히 고정된 채, 휘어진 칼날을 따라 불꽃이 일렁이며 타오르고 불티가 피어오른다</div><div class="pren">the scythe stays perfectly still with absolutely no swaying; flames flicker and ripple along the curved blade edge and embers rise</div></div>
+    <div class="rejrow">
+      <button class="rk ra" onclick="rej('seed-volcano_ember_scythe','anim')">✕ 애니 리젝</button>
+      <input class="rs" data-k="anim" placeholder="애니 리젝 사유" oninput="setReason('seed-volcano_ember_scythe','anim',this.value)">
+    </div>
+    <div class="rejrow">
+      <button class="rk rp" onclick="rej('seed-volcano_ember_scythe','prompt')">✕ 프롬프트 리젝</button>
+      <input class="rs" data-k="prompt" placeholder="프롬프트 리젝 사유" oninput="setReason('seed-volcano_ember_scythe','prompt',this.value)">
+    </div>
+  </div><div class="card" data-id="w-vampire-rapier-114">
+    <div class="imgs">
+      <div class="box"><span class=lbl>정적</span><img src="sprites/pool/w-vampire-rapier-114.png" loading=lazy></div>
+      <div class="box"><span class=lbl>애니</span><div class="anim" data-frames="9" style="background-image:url('sprites/anim3/w-vampire-rapier-114.webp?v=1782641063917')"></div></div>
+    </div>
+    <div class="meta"><span class="nm">선혈의 가는 검</span><span class="mt">1인칭 · 위트</span><span class="id">w-vampire-rapier-114</span></div>
+    <div class="story">검은 박쥐 날개가 가드에서 접혔다 펴지고, 손잡이 끝엔 핏빛 루비가 심장처럼 박혀 있다. 칼날은 바늘처럼 가늘어, 스치면 베인 줄도 모른다. 루비가 한 번 깊게 붉어질 때—그게 신호다. 나는 한 방울도 흘리지 않는다. 흘리기엔, 너무 아깝거든.</div>
+    <div class="rejrow">
+      <button class="rk rt" onclick="rej('w-vampire-rapier-114','story')">✕ 스토리 리젝</button>
+      <input class="rs" data-k="story" placeholder="이름·스토리 리젝 사유" oninput="setReason('w-vampire-rapier-114','story',this.value)">
+    </div>
+    <div class="pr"><span class="prlbl">애니 프롬프트</span><div class="prtxt">레이피어는 미동 없이 떠 있고 핏빛 루비 폼멜이 빛을 발하며, 박쥐날개 가드 주위로 화려하고 우아한 깊은 진홍 오라가 풍성하게 감돈다 (한층 화려하고 고급스럽게)</div><div class="pren">the rapier floats still as the blood-red ruby pommel radiates and a splendid elegant deep-crimson aura swirls richly around the bat-wing guard, more dazzling and refined</div></div>
+    <div class="rejrow">
+      <button class="rk ra" onclick="rej('w-vampire-rapier-114','anim')">✕ 애니 리젝</button>
+      <input class="rs" data-k="anim" placeholder="애니 리젝 사유" oninput="setReason('w-vampire-rapier-114','anim',this.value)">
+    </div>
+    <div class="rejrow">
+      <button class="rk rp" onclick="rej('w-vampire-rapier-114','prompt')">✕ 프롬프트 리젝</button>
+      <input class="rs" data-k="prompt" placeholder="프롬프트 리젝 사유" oninput="setReason('w-vampire-rapier-114','prompt',this.value)">
+    </div>
+  </div><div class="card" data-id="w-reaper-scythe-120">
+    <div class="imgs">
+      <div class="box"><span class=lbl>정적</span><img src="sprites/pool/w-reaper-scythe-120.png" loading=lazy></div>
+      <div class="box"><span class=lbl>애니</span><div class="anim" data-frames="9" style="background-image:url('sprites/anim3/w-reaper-scythe-120.webp?v=1782653669586')"></div></div>
+    </div>
+    <div class="meta"><span class="nm">혼불낫</span><span class="mt">정면 · 섬뜩</span><span class="id">w-reaper-scythe-120</span></div>
+    <div class="story">칠흑 같은 칼날이 초승달처럼 길게 휘었고, 그 등을 따라 보랏빛 글자가 희미하게 떠 있다. 뼈를 감아 쥔 자루 끝에선 혼불 한 송이가 소리 없이 타오른다. 이 낫이 한 번 호를 그리면, 벤 자리에 온기 대신 한기가 고인다. 거두는 건 목숨이 아니라 그 마지막 입김이다.</div>
+    <div class="rejrow">
+      <button class="rk rt" onclick="rej('w-reaper-scythe-120','story')">✕ 스토리 리젝</button>
+      <input class="rs" data-k="story" placeholder="이름·스토리 리젝 사유" oninput="setReason('w-reaper-scythe-120','story',this.value)">
+    </div>
+    <div class="pr"><span class="prlbl">애니 프롬프트</span><div class="prtxt">사신의 낫은 가만히 들린 채, 뼈 자루 끝의 보랏빛 혼불이 끊임없이 일렁이고 춤추며 피어오르고, 검은 칼날의 글자가 은은하게 빛나며 맥동한다</div><div class="pren">the reaper scythe is held still while the violet soul-flame at the base of the bone handle flickers, sways, dances and rises continuously, and the runes along the black curved blade softly glow and pulse</div></div>
+    <div class="rejrow">
+      <button class="rk ra" onclick="rej('w-reaper-scythe-120','anim')">✕ 애니 리젝</button>
+      <input class="rs" data-k="anim" placeholder="애니 리젝 사유" oninput="setReason('w-reaper-scythe-120','anim',this.value)">
+    </div>
+    <div class="rejrow">
+      <button class="rk rp" onclick="rej('w-reaper-scythe-120','prompt')">✕ 프롬프트 리젝</button>
+      <input class="rs" data-k="prompt" placeholder="프롬프트 리젝 사유" oninput="setReason('w-reaper-scythe-120','prompt',this.value)">
+    </div>
+  </div><div class="card" data-id="w-necromancer-staff-126">
+    <div class="imgs">
+      <div class="box"><span class=lbl>정적</span><img src="sprites/pool/w-necromancer-staff-126.png" loading=lazy></div>
+      <div class="box"><span class=lbl>애니</span><div class="anim" data-frames="9" style="background-image:url('sprites/anim3/w-necromancer-staff-126.webp?v=1782634088596')"></div></div>
+    </div>
+    <div class="meta"><span class="nm">초혼의 해골장</span><span class="mt">정면 · 기괴</span><span class="id">w-necromancer-staff-126</span></div>
+    <div class="story">긴 뼈 한 자루 끝에 뿔 달린 해골을 얹고 검은 천으로 묶었다. 빈 눈과 정수리에서 병든 초록 불이 끊임없이 새어 오른다. 자루를 땅에 두드리면 그 불이 잠깐 거세지며, 흙 아래 잠든 것들이 자세를 고쳐 눕는다. 깨우는 건 아니다. 다만 잊지 말라고, 한 번씩 두드릴 뿐이다.</div>
+    <div class="rejrow">
+      <button class="rk rt" onclick="rej('w-necromancer-staff-126','story')">✕ 스토리 리젝</button>
+      <input class="rs" data-k="story" placeholder="이름·스토리 리젝 사유" oninput="setReason('w-necromancer-staff-126','story',this.value)">
+    </div>
+    <div class="pr"><span class="prlbl">애니 프롬프트</span><div class="prtxt">뼈 지팡이는 가만히 떠 있고 뿔 달린 해골에서 병적인 초록 영혼불이 일렁이며 피어오르고, 초록 오라가 맥동한다</div><div class="pren">the bone staff hovers still as the sickly green soul-flame flickers and rises from the horned skull, a green aura pulsing</div></div>
+    <div class="rejrow">
+      <button class="rk ra" onclick="rej('w-necromancer-staff-126','anim')">✕ 애니 리젝</button>
+      <input class="rs" data-k="anim" placeholder="애니 리젝 사유" oninput="setReason('w-necromancer-staff-126','anim',this.value)">
+    </div>
+    <div class="rejrow">
+      <button class="rk rp" onclick="rej('w-necromancer-staff-126','prompt')">✕ 프롬프트 리젝</button>
+      <input class="rs" data-k="prompt" placeholder="프롬프트 리젝 사유" oninput="setReason('w-necromancer-staff-126','prompt',this.value)">
+    </div>
+  </div><div class="card" data-id="w-assassin-twin-daggers-156">
+    <div class="imgs">
+      <div class="box"><span class=lbl>정적</span><img src="sprites/pool/w-assassin-twin-daggers-156.png" loading=lazy></div>
+      <div class="box"><span class=lbl>애니</span><div class="anim" data-frames="9" style="background-image:url('sprites/anim3/w-assassin-twin-daggers-156.webp?v=1782652767822')"></div></div>
+    </div>
+    <div class="meta"><span class="nm">쌍익 단검</span><span class="mt">정면 · 서늘</span><span class="id">w-assassin-twin-daggers-156</span></div>
+    <div class="story">두 자루 모두 검은 칼날이 불꽃처럼 굽이치고, 금빛 날개 손잡이엔 푸른 보석이 한 알씩 박혔다. 화려해서 오히려 무기 같지 않다—그게 노림수다. 연회복 안쪽에 숨겨 두었다가, 푸른 보석이 한 번 반짝이면 두 칼이 동시에 움직인다. 박수 소리에 묻혀, 아무도 눈치채지 못하게.</div>
+    <div class="rejrow">
+      <button class="rk rt" onclick="rej('w-assassin-twin-daggers-156','story')">✕ 스토리 리젝</button>
+      <input class="rs" data-k="story" placeholder="이름·스토리 리젝 사유" oninput="setReason('w-assassin-twin-daggers-156','story',this.value)">
+    </div>
+    <div class="pr"><span class="prlbl">애니 프롬프트</span><div class="prtxt">쌍단검은 완전히 고정된 채, 검금빛 칼날 주위로 고급스러운 어둠의 오라가 부드럽고 잔잔하게 감돈다 (단검은 움직이지 않음)</div><div class="pren">the twin daggers stay completely still while an elegant dark shadow aura swirls softly and gently around the black-and-gold blades, smooth and refined, the daggers not moving</div></div>
+    <div class="rejrow">
+      <button class="rk ra" onclick="rej('w-assassin-twin-daggers-156','anim')">✕ 애니 리젝</button>
+      <input class="rs" data-k="anim" placeholder="애니 리젝 사유" oninput="setReason('w-assassin-twin-daggers-156','anim',this.value)">
+    </div>
+    <div class="rejrow">
+      <button class="rk rp" onclick="rej('w-assassin-twin-daggers-156','prompt')">✕ 프롬프트 리젝</button>
+      <input class="rs" data-k="prompt" placeholder="프롬프트 리젝 사유" oninput="setReason('w-assassin-twin-daggers-156','prompt',this.value)">
+    </div>
+  </div><div class="card" data-id="w-ornate-flintlock-pistol-162">
+    <div class="imgs">
+      <div class="box"><span class=lbl>정적</span><img src="sprites/pool/w-ornate-flintlock-pistol-162.png" loading=lazy></div>
+      <div class="box"><span class=lbl>애니</span><div class="anim" data-frames="9" style="background-image:url('sprites/anim3/w-ornate-flintlock-pistol-162.webp?v=1782650880700')"></div></div>
+    </div>
+    <div class="meta"><span class="nm">상아빛 한 발</span><span class="mt">정면 · 담담</span><span class="id">w-ornate-flintlock-pistol-162</span></div>
+    <div class="story">상아 손잡이에 금빛 덩굴을 새기고 강철 총열을 길게 뽑은 결투용 권총이다. 화약 한 줌, 탄환 한 발—재장전은 없다. 그래서 이 총을 든 자는 좀처럼 먼저 쏘려 하지 않는다. 끝까지 손가락만 방아쇠에 걸어 둔다. 그 한 발이 아직 남아 있다는 것만으로 대개는 충분했다.</div>
+    <div class="rejrow">
+      <button class="rk rt" onclick="rej('w-ornate-flintlock-pistol-162','story')">✕ 스토리 리젝</button>
+      <input class="rs" data-k="story" placeholder="이름·스토리 리젝 사유" oninput="setReason('w-ornate-flintlock-pistol-162','story',this.value)">
+    </div>
+    <div class="pr"><span class="prlbl">애니 프롬프트</span><div class="prtxt">플린트락 권총은 가만히 있고 새겨진 금색 문양이 화려하고 풍성하게 빛나며 반짝이고, 총구에서 우아한 연기가 피어오른다 (화려하고 고급스럽게)</div><div class="pren">the flintlock pistol rests still while the engraved gold patterns glow and sparkle richly and splendidly, and elegant wisps of smoke rise from the barrel, dazzling and refined</div></div>
+    <div class="rejrow">
+      <button class="rk ra" onclick="rej('w-ornate-flintlock-pistol-162','anim')">✕ 애니 리젝</button>
+      <input class="rs" data-k="anim" placeholder="애니 리젝 사유" oninput="setReason('w-ornate-flintlock-pistol-162','anim',this.value)">
+    </div>
+    <div class="rejrow">
+      <button class="rk rp" onclick="rej('w-ornate-flintlock-pistol-162','prompt')">✕ 프롬프트 리젝</button>
+      <input class="rs" data-k="prompt" placeholder="프롬프트 리젝 사유" oninput="setReason('w-ornate-flintlock-pistol-162','prompt',this.value)">
+    </div>
+  </div><div class="card" data-id="w-celestial-greatsword-153">
+    <div class="imgs">
+      <div class="box"><span class=lbl>정적</span><img src="sprites/pool/w-celestial-greatsword-153.png" loading=lazy></div>
+      <div class="box"><span class=lbl>애니</span><div class="anim" data-frames="9" style="background-image:url('sprites/anim3/w-celestial-greatsword-153.webp?v=1782636527338')"></div></div>
+    </div>
+    <div class="meta"><span class="nm">해오름검</span><span class="mt">정면 · 장엄</span><span class="id">w-celestial-greatsword-153</span></div>
+    <div class="story">칼을 세우면 황금 날개가 활짝 펴지고, 그 한가운데 작은 해가 박혀 타오른다. 칼몸을 따라 흐르는 금빛 줄기는 새벽 햇살을 그대로 쇳물에 부어 굳힌 듯하다. 가장 어두운 새벽, 이 검을 뽑아 든 자의 발끝부터 빛이 번진다. 밤이 물러서는 건 그다음이다.</div>
+    <div class="rejrow">
+      <button class="rk rt" onclick="rej('w-celestial-greatsword-153','story')">✕ 스토리 리젝</button>
+      <input class="rs" data-k="story" placeholder="이름·스토리 리젝 사유" oninput="setReason('w-celestial-greatsword-153','story',this.value)">
+    </div>
+    <div class="pr"><span class="prlbl">애니 프롬프트</span><div class="prtxt">천공의 대검은 완전히 고정된 채, 중앙의 태양 보석이 빛을 뿜어내고 그 빛이 부드러운 광선으로 우아하게 퍼져나가며 고급스러운 성스러운 광휘가 맥동한다</div><div class="pren">the celestial greatsword stays perfectly still while the sunburst gem at its center emits light that elegantly spreads outward in soft radiant rays, a refined holy glow pulsing</div></div>
+    <div class="rejrow">
+      <button class="rk ra" onclick="rej('w-celestial-greatsword-153','anim')">✕ 애니 리젝</button>
+      <input class="rs" data-k="anim" placeholder="애니 리젝 사유" oninput="setReason('w-celestial-greatsword-153','anim',this.value)">
+    </div>
+    <div class="rejrow">
+      <button class="rk rp" onclick="rej('w-celestial-greatsword-153','prompt')">✕ 프롬프트 리젝</button>
+      <input class="rs" data-k="prompt" placeholder="프롬프트 리젝 사유" oninput="setReason('w-celestial-greatsword-153','prompt',this.value)">
+    </div>
+  </div><div class="card" data-id="w-elven-longbow-154">
+    <div class="imgs">
+      <div class="box"><span class=lbl>정적</span><img src="sprites/pool/w-elven-longbow-154.png" loading=lazy></div>
+      <div class="box"><span class=lbl>애니</span><div class="anim" data-frames="9" style="background-image:url('sprites/anim3/w-elven-longbow-154.webp?v=1782652767324')"></div></div>
+    </div>
+    <div class="meta"><span class="nm">은빛 잎새 활</span><span class="mt">정면 · 우아</span><span class="id">w-elven-longbow-154</span></div>
+    <div class="story">은빛 나무가 살아서 휘어 활이 됐다. 가지마다 잎새가 돋고 푸른 보석이 이슬처럼 맺혔다. 시위엔 화살이 없다—당기는 순간, 초록빛이 저절로 모여 한 대의 빛 화살이 된다. 쏘면 사라지고, 당기면 다시 핀다. 이 활을 든 궁수에게서 벗어나려면, 밤이 오기를 기다리는 수밖에 없었다.</div>
+    <div class="rejrow">
+      <button class="rk rt" onclick="rej('w-elven-longbow-154','story')">✕ 스토리 리젝</button>
+      <input class="rs" data-k="story" placeholder="이름·스토리 리젝 사유" oninput="setReason('w-elven-longbow-154','story',this.value)">
+    </div>
+    <div class="pr"><span class="prlbl">애니 프롬프트</span><div class="prtxt">엘프 장궁은 완전히 얼어붙은 듯 일절 움직이지 않고, 오직 에메랄드와 은빛 잎사귀 조각만 밝은 초록빛으로 또렷이 빛난다 (활 움직임 없음, 화살 없음, 고급스럽게)</div><div class="pren">the elven longbow stays absolutely frozen and motionless while only the emerald gems and silver leaf carvings clearly glow and shimmer with bright green light, no bow movement at all, no arrow, elegant</div></div>
+    <div class="rejrow">
+      <button class="rk ra" onclick="rej('w-elven-longbow-154','anim')">✕ 애니 리젝</button>
+      <input class="rs" data-k="anim" placeholder="애니 리젝 사유" oninput="setReason('w-elven-longbow-154','anim',this.value)">
+    </div>
+    <div class="rejrow">
+      <button class="rk rp" onclick="rej('w-elven-longbow-154','prompt')">✕ 프롬프트 리젝</button>
+      <input class="rs" data-k="prompt" placeholder="프롬프트 리젝 사유" oninput="setReason('w-elven-longbow-154','prompt',this.value)">
+    </div>
+  </div><div class="card" data-id="seed-volcano_forgeheart_warhammer">
+    <div class="imgs">
+      <div class="box"><span class=lbl>정적</span><img src="sprites/pool/seed-volcano_forgeheart_warhammer.png" loading=lazy></div>
+      <div class="box"><span class=lbl>애니</span><div class="anim" data-frames="9" style="background-image:url('sprites/anim3/seed-volcano_forgeheart_warhammer.webp?v=1782641475989')"></div></div>
+    </div>
+    <div class="meta"><span class="nm">화심의 망치</span><span class="mt">정면 · 맹렬</span><span class="id">seed-volcano_forgeheart_warhammer</span></div>
+    <div class="story">망치 머리 양면에 새겨진 금이 용암처럼 벌겋게 달아 있다. 한가운데 날개 돋친 불꽃 문장이 숨 쉬듯 깜빡인다. 이걸로 모루를 한 번 내리치면 쇠를 따로 달굴 필요가 없다—망치가 제 열을 쇠에 옮겨 주니까. 대장장이의 손이 식어도, 이 망치만은 식지 않는다.</div>
+    <div class="rejrow">
+      <button class="rk rt" onclick="rej('seed-volcano_forgeheart_warhammer','story')">✕ 스토리 리젝</button>
+      <input class="rs" data-k="story" placeholder="이름·스토리 리젝 사유" oninput="setReason('seed-volcano_forgeheart_warhammer','story',this.value)">
+    </div>
+    <div class="pr"><span class="prlbl">애니 프롬프트</span><div class="prtxt">워해머는 가만히 있고 녹아내린 대장간 심장이 폭발하듯 타오르며 갈라진 틈에서 불똥이 튀고, 고급스러운 열기 광휘가 맥동한다</div><div class="pren">the warhammer stays perfectly still while its molten forge-core erupts and embers spark out from the glowing cracks, a refined elegant heat-glow pulsing</div></div>
+    <div class="rejrow">
+      <button class="rk ra" onclick="rej('seed-volcano_forgeheart_warhammer','anim')">✕ 애니 리젝</button>
+      <input class="rs" data-k="anim" placeholder="애니 리젝 사유" oninput="setReason('seed-volcano_forgeheart_warhammer','anim',this.value)">
+    </div>
+    <div class="rejrow">
+      <button class="rk rp" onclick="rej('seed-volcano_forgeheart_warhammer','prompt')">✕ 프롬프트 리젝</button>
+      <input class="rs" data-k="prompt" placeholder="프롬프트 리젝 사유" oninput="setReason('seed-volcano_forgeheart_warhammer','prompt',this.value)">
+    </div>
+  </div><div class="card" data-id="w-thunder-spear-191">
+    <div class="imgs">
+      <div class="box"><span class=lbl>정적</span><img src="sprites/pool/w-thunder-spear-191.png" loading=lazy></div>
+      <div class="box"><span class=lbl>애니</span><div class="anim" data-frames="9" style="background-image:url('sprites/anim3/w-thunder-spear-191.webp?v=1782634477886')"></div></div>
+    </div>
+    <div class="meta"><span class="nm">벼락을 박은 창</span><span class="mt">정면 · 장엄</span><span class="id">w-thunder-spear-191</span></div>
+    <div class="story">창날 자리에 진짜 벼락 한 줄기를 박아 넣은 듯하다. 남빛 번개가 칼끝에서 끊임없이 갈래지고, 자루와 만나는 곳엔 금빛 섬광이 별처럼 터져 굳었다. 들어 올리면 자루를 타고 찌릿한 기운이 손끝까지 오른다. 내리치기도 전에, 하늘이 먼저 대답한다.</div>
+    <div class="rejrow">
+      <button class="rk rt" onclick="rej('w-thunder-spear-191','story')">✕ 스토리 리젝</button>
+      <input class="rs" data-k="story" placeholder="이름·스토리 리젝 사유" oninput="setReason('w-thunder-spear-191','story',this.value)">
+    </div>
+    <div class="pr"><span class="prlbl">애니 프롬프트</span><div class="prtxt">번개 창은 가만히 떠 있고 금빛 자루를 따라 들쭉날쭉한 남빛 번개가 튀며, 밝은 오라가 맥동한다</div><div class="pren">the lightning spear hovers still while jagged arcs of indigo electricity crackle along the gold polearm, a bright aura pulsing</div></div>
+    <div class="rejrow">
+      <button class="rk ra" onclick="rej('w-thunder-spear-191','anim')">✕ 애니 리젝</button>
+      <input class="rs" data-k="anim" placeholder="애니 리젝 사유" oninput="setReason('w-thunder-spear-191','anim',this.value)">
+    </div>
+    <div class="rejrow">
+      <button class="rk rp" onclick="rej('w-thunder-spear-191','prompt')">✕ 프롬프트 리젝</button>
+      <input class="rs" data-k="prompt" placeholder="프롬프트 리젝 사유" oninput="setReason('w-thunder-spear-191','prompt',this.value)">
+    </div>
+  </div><div class="card" data-id="w--57">
+    <div class="imgs">
+      <div class="box"><span class=lbl>정적</span><img src="sprites/pool/w--57.png" loading=lazy></div>
+      <div class="box"><span class=lbl>애니</span><div class="anim" data-frames="9" style="background-image:url('sprites/anim3/w--57.webp?v=1782652767450')"></div></div>
+    </div>
+    <div class="meta"><span class="nm">봉문검</span><span class="mt">수수께끼 · 수수께끼</span><span class="id">w--57</span></div>
+    <div class="story">손잡이 끝이 거대한 열쇠 고리로 휘말리고, 칼몸엔 금빛 무늬가 자물쇠 문양처럼 새겨졌다. 원래는 어느 큰 문을 잠그던 열쇠였는데, 누군가 그것을 두드려 검으로 폈다. 고리를 돌리면 칼날 홈이 딸깍, 아직도 열쇠처럼 돈다. 이 검이 베지 못하는 건 없다. 다만, 아직 열지 못한 문이 하나 남아 있다.</div>
+    <div class="rejrow">
+      <button class="rk rt" onclick="rej('w--57','story')">✕ 스토리 리젝</button>
+      <input class="rs" data-k="story" placeholder="이름·스토리 리젝 사유" oninput="setReason('w--57','story',this.value)">
+    </div>
+    <div class="pr"><span class="prlbl">애니 프롬프트</span><div class="prtxt">열쇠 대검은 손잡이 맨 위의 고리 모양 장식만 천천히 한 바퀴 돌고, 칼날과 가드는 일절 움직이지 않는다 (발광 없이 회전만)</div><div class="pren">the skeleton-key greatsword stays completely still EXCEPT for the ring-shaped key decoration at the very top of the hilt, which slowly rotates a full turn; the blade and guard do not move at all, no glow</div></div>
+    <div class="rejrow">
+      <button class="rk ra" onclick="rej('w--57','anim')">✕ 애니 리젝</button>
+      <input class="rs" data-k="anim" placeholder="애니 리젝 사유" oninput="setReason('w--57','anim',this.value)">
+    </div>
+    <div class="rejrow">
+      <button class="rk rp" onclick="rej('w--57','prompt')">✕ 프롬프트 리젝</button>
+      <input class="rs" data-k="prompt" placeholder="프롬프트 리젝 사유" oninput="setReason('w--57','prompt',this.value)">
+    </div>
+  </div></div><h2>방어구 <small>(21)</small></h2><div class="grid"><div class="card" data-id="seed-angel_radiant_gown">
+    <div class="imgs">
+      <div class="box"><span class=lbl>정적</span><img src="sprites/pool/seed-angel_radiant_gown.png" loading=lazy></div>
+      <div class="box"><span class=lbl>애니</span><div class="anim" data-frames="9" style="background-image:url('sprites/anim3/seed-angel_radiant_gown.webp?v=1782634472215')"></div></div>
+    </div>
+    <div class="meta"><span class="nm">아침빛 예복</span><span class="mt">정면 · 밝음</span><span class="id">seed-angel_radiant_gown</span></div>
+    <div class="story">눈처럼 흰 비단에 금실 햇살이 옷자락 가득 번진다. 허리에서 풀린 금빛 띠가 바람을 받아 길게 나부끼면, 마치 아침 해를 통째로 두른 듯하다. 어두운 방에 들어서면 이 예복을 입은 사람만 따로 환해, 사람들은 자기도 모르게 그쪽으로 고개를 돌린다.</div>
+    <div class="rejrow">
+      <button class="rk rt" onclick="rej('seed-angel_radiant_gown','story')">✕ 스토리 리젝</button>
+      <input class="rs" data-k="story" placeholder="이름·스토리 리젝 사유" oninput="setReason('seed-angel_radiant_gown','story',this.value)">
+    </div>
+    <div class="pr"><span class="prlbl">애니 프롬프트</span><div class="prtxt">빛나는 예복은 가만히 떠 있고 금빛 햇살 무늬가 일렁이며 깃털 밑단이 부드럽게 흔들리고, 따뜻한 햇살 오라가 맥동한다</div><div class="pren">the radiant gown floats still as its golden ray patterns shimmer and the feathered hem gently sways, a warm sunlit aura pulsing</div></div>
+    <div class="rejrow">
+      <button class="rk ra" onclick="rej('seed-angel_radiant_gown','anim')">✕ 애니 리젝</button>
+      <input class="rs" data-k="anim" placeholder="애니 리젝 사유" oninput="setReason('seed-angel_radiant_gown','anim',this.value)">
+    </div>
+    <div class="rejrow">
+      <button class="rk rp" onclick="rej('seed-angel_radiant_gown','prompt')">✕ 프롬프트 리젝</button>
+      <input class="rs" data-k="prompt" placeholder="프롬프트 리젝 사유" oninput="setReason('seed-angel_radiant_gown','prompt',this.value)">
+    </div>
+  </div><div class="card" data-id="seed-kingdom_azure_outfit">
+    <div class="imgs">
+      <div class="box"><span class=lbl>정적</span><img src="sprites/pool/seed-kingdom_azure_outfit.png" loading=lazy></div>
+      <div class="box"><span class=lbl>애니</span><div class="anim" data-frames="9" style="background-image:url('sprites/anim3/seed-kingdom_azure_outfit.webp?v=1782650887680')"></div></div>
+    </div>
+    <div class="meta"><span class="nm">창천 기사복</span><span class="mt">정면 · 밝음</span><span class="id">seed-kingdom_azure_outfit</span></div>
+    <div class="story">은빛 갑옷 위에 깊은 청색 휘장을 두르고 금실로 단을 둘렀다. 가슴 한가운데 흰 보석이 별처럼 박혀, 햇빛이 닿으면 멀리서도 빛난다. 화려한 갑옷이 부담스러운 신참에게 처음 내어 주는 한 벌이다. 줄을 맞춰 선 기사들 사이에서, 이 한 벌은 늘 가장 푸르게 도드라졌다.</div>
+    <div class="rejrow">
+      <button class="rk rt" onclick="rej('seed-kingdom_azure_outfit','story')">✕ 스토리 리젝</button>
+      <input class="rs" data-k="story" placeholder="이름·스토리 리젝 사유" oninput="setReason('seed-kingdom_azure_outfit','story',this.value)">
+    </div>
+    <div class="pr"><span class="prlbl">애니 프롬프트</span><div class="prtxt">기사 의상은 가만히 걸려 있고 오직 옷깃과 망토만 부드럽게 살랑인다 (목 부분 포함 오라 일절 없이, 깔끔하게)</div><div class="pren">the knight outfit hangs still while only its collar and cape sway and ripple gently and softly, absolutely no aura anywhere especially at the neck, clean and elegant</div></div>
+    <div class="rejrow">
+      <button class="rk ra" onclick="rej('seed-kingdom_azure_outfit','anim')">✕ 애니 리젝</button>
+      <input class="rs" data-k="anim" placeholder="애니 리젝 사유" oninput="setReason('seed-kingdom_azure_outfit','anim',this.value)">
+    </div>
+    <div class="rejrow">
+      <button class="rk rp" onclick="rej('seed-kingdom_azure_outfit','prompt')">✕ 프롬프트 리젝</button>
+      <input class="rs" data-k="prompt" placeholder="프롬프트 리젝 사유" oninput="setReason('seed-kingdom_azure_outfit','prompt',this.value)">
+    </div>
+  </div><div class="card" data-id="seed-angel_seraphguard_armor">
+    <div class="imgs">
+      <div class="box"><span class=lbl>정적</span><img src="sprites/pool/seed-angel_seraphguard_armor.png" loading=lazy></div>
+      <div class="box"><span class=lbl>애니</span><div class="anim" data-frames="9" style="background-image:url('sprites/anim3/seed-angel_seraphguard_armor.webp?v=1782641613698')"></div></div>
+    </div>
+    <div class="meta"><span class="nm">세라핌의 갑주</span><span class="mt">정면 · 장엄</span><span class="id">seed-angel_seraphguard_armor</span></div>
+    <div class="story">새하얀 판금 위에 금빛 별 하나가 가슴에서 빛나고, 등 뒤로 흰 깃 날개가 활짝 펴진다. 무겁고 빈틈없어 보이지만, 정작 이 갑주를 두른 자는 늘 누군가의 뒤에 선다. 화살이 날아오는 쪽이 아니라, 등을 맡긴 사람 쪽을 지키려고. 그래서 이 갑주는 늘 뒷모습이 가장 빛난다.</div>
+    <div class="rejrow">
+      <button class="rk rt" onclick="rej('seed-angel_seraphguard_armor','story')">✕ 스토리 리젝</button>
+      <input class="rs" data-k="story" placeholder="이름·스토리 리젝 사유" oninput="setReason('seed-angel_seraphguard_armor','story',this.value)">
+    </div>
+    <div class="pr"><span class="prlbl">애니 프롬프트</span><div class="prtxt">날개 호갑은 가만히 있고 작은 날개가 부드럽게 파닥이며 가운데 문양이 고급스러운 빛으로 빛난다</div><div class="pren">the winged guard-plate stays still while its small wings flutter gently and the central emblem glows with an elegant refined light</div></div>
+    <div class="rejrow">
+      <button class="rk ra" onclick="rej('seed-angel_seraphguard_armor','anim')">✕ 애니 리젝</button>
+      <input class="rs" data-k="anim" placeholder="애니 리젝 사유" oninput="setReason('seed-angel_seraphguard_armor','anim',this.value)">
+    </div>
+    <div class="rejrow">
+      <button class="rk rp" onclick="rej('seed-angel_seraphguard_armor','prompt')">✕ 프롬프트 리젝</button>
+      <input class="rs" data-k="prompt" placeholder="프롬프트 리젝 사유" oninput="setReason('seed-angel_seraphguard_armor','prompt',this.value)">
+    </div>
+  </div><div class="card" data-id="seed-kingdom_goldknight_plate">
+    <div class="imgs">
+      <div class="box"><span class=lbl>정적</span><img src="sprites/pool/seed-kingdom_goldknight_plate.png" loading=lazy></div>
+      <div class="box"><span class=lbl>애니</span><div class="anim" data-frames="9" style="background-image:url('sprites/anim3/seed-kingdom_goldknight_plate.webp?v=1782649747898')"></div></div>
+    </div>
+    <div class="meta"><span class="nm">적금 갑주</span><span class="mt">정면 · 장엄</span><span class="id">seed-kingdom_goldknight_plate</span></div>
+    <div class="story">검붉은 강철에 금빛 덩굴이 빈틈없이 새겨지고, 허리 아래로 진홍 자락이 길게 드리운다. 한 발 걸을 때마다 그 자락이 핏빛 그림자처럼 따라온다. 가장 앞줄에 세우려 만든 갑주다. 뒷걸음질 한 번에도 진홍 자락이 발을 휘감아, 차마 돌아설 수 없게 한다.</div>
+    <div class="rejrow">
+      <button class="rk rt" onclick="rej('seed-kingdom_goldknight_plate','story')">✕ 스토리 리젝</button>
+      <input class="rs" data-k="story" placeholder="이름·스토리 리젝 사유" oninput="setReason('seed-kingdom_goldknight_plate','story',this.value)">
+    </div>
+    <div class="pr"><span class="prlbl">애니 프롬프트</span><div class="prtxt">금적색 갑주는 어깨를 포함해 완전히 고정돼 전혀 움직이지 않고, 오직 가운데 피닉스 문양만 밝게 빛나며 맥동한다 (갑주 움직임 없음)</div><div class="pren">the gold-and-crimson plate stays completely still with the shoulders fixed and not moving at all; only the phoenix emblem at its center glows brightly and pulses, no armor movement</div></div>
+    <div class="rejrow">
+      <button class="rk ra" onclick="rej('seed-kingdom_goldknight_plate','anim')">✕ 애니 리젝</button>
+      <input class="rs" data-k="anim" placeholder="애니 리젝 사유" oninput="setReason('seed-kingdom_goldknight_plate','anim',this.value)">
+    </div>
+    <div class="rejrow">
+      <button class="rk rp" onclick="rej('seed-kingdom_goldknight_plate','prompt')">✕ 프롬프트 리젝</button>
+      <input class="rs" data-k="prompt" placeholder="프롬프트 리젝 사유" oninput="setReason('seed-kingdom_goldknight_plate','prompt',this.value)">
+    </div>
+  </div><div class="card" data-id="seed-temple_frostguard_garb">
+    <div class="imgs">
+      <div class="box"><span class=lbl>정적</span><img src="sprites/pool/seed-temple_frostguard_garb.png" loading=lazy></div>
+      <div class="box"><span class=lbl>애니</span><div class="anim" data-frames="9" style="background-image:url('sprites/anim3/seed-temple_frostguard_garb.webp?v=1782642000944')"></div></div>
+    </div>
+    <div class="meta"><span class="nm">설산 파수의 갑주</span><span class="mt">정면 · 장엄</span><span class="id">seed-temple_frostguard_garb</span></div>
+    <div class="story">은빛 판금 위에 흰 털깃 망토를 두르고, 가슴엔 여섯 갈래 눈꽃 문양이 새겨졌다. 추울수록 그 문양이 더 또렷이 푸르게 빛난다. 눈보라 치는 신전 앞을 며칠씩 지켜도 이 갑주를 입은 자는 떨지 않는다. 추위를 견디는 게 아니라, 어느새 추위 쪽이 그를 비켜 간다.</div>
+    <div class="rejrow">
+      <button class="rk rt" onclick="rej('seed-temple_frostguard_garb','story')">✕ 스토리 리젝</button>
+      <input class="rs" data-k="story" placeholder="이름·스토리 리젝 사유" oninput="setReason('seed-temple_frostguard_garb','story',this.value)">
+    </div>
+    <div class="pr"><span class="prlbl">애니 프롬프트</span><div class="prtxt">서리 파수꾼 복장은 가만히 걸려 있고 망토가 살짝 흔들리며 가슴 문양이 은은하게 빛나며 맥동한다 (눈 결정 없음, 고급스럽게)</div><div class="pren">the frost-guard garb hangs still while its cape sways slightly and the emblem on its chest softly glows and pulses, no snow crystals at all, elegant and refined</div></div>
+    <div class="rejrow">
+      <button class="rk ra" onclick="rej('seed-temple_frostguard_garb','anim')">✕ 애니 리젝</button>
+      <input class="rs" data-k="anim" placeholder="애니 리젝 사유" oninput="setReason('seed-temple_frostguard_garb','anim',this.value)">
+    </div>
+    <div class="rejrow">
+      <button class="rk rp" onclick="rej('seed-temple_frostguard_garb','prompt')">✕ 프롬프트 리젝</button>
+      <input class="rs" data-k="prompt" placeholder="프롬프트 리젝 사유" oninput="setReason('seed-temple_frostguard_garb','prompt',this.value)">
+    </div>
+  </div><div class="card" data-id="seed-temple_breathwoven_vestment">
+    <div class="imgs">
+      <div class="box"><span class=lbl>정적</span><img src="sprites/pool/seed-temple_breathwoven_vestment.png" loading=lazy></div>
+      <div class="box"><span class=lbl>애니</span><div class="anim" data-frames="9" style="background-image:url('sprites/anim3/seed-temple_breathwoven_vestment.webp?v=1782643049174')"></div></div>
+    </div>
+    <div class="meta"><span class="nm">설야 예복</span><span class="mt">수수께끼 · 수수께끼</span><span class="id">seed-temple_breathwoven_vestment</span></div>
+    <div class="story">옅은 얼음빛 비단에 은실로 서리 무늬를 놓고, 어깨엔 흰 털을 둘렀다. 짠 실이 보통 실이 아니라, 추운 새벽 사제들의 입김을 모아 자은 것이다. 입으면 숨결이 유난히 하얗게 서리고, 옷자락 무늬가 그 숨을 따라 천천히 밝아졌다 잦아든다.</div>
+    <div class="rejrow">
+      <button class="rk rt" onclick="rej('seed-temple_breathwoven_vestment','story')">✕ 스토리 리젝</button>
+      <input class="rs" data-k="story" placeholder="이름·스토리 리젝 사유" oninput="setReason('seed-temple_breathwoven_vestment','story',this.value)">
+    </div>
+    <div class="pr"><span class="prlbl">애니 프롬프트</span><div class="prtxt">룬으로 짠 예복은 가만히 걸려 있고 예복에 짜인 룬 문양들이 또렷이 차례로 환하게 빛난다 (룬이 분명히 반짝임, 고급스럽게)</div><div class="pren">the rune-woven vestment hangs still while the woven runes across it clearly light up and glow brightly one after another, plainly visible and shining, an elegant refined glow</div></div>
+    <div class="rejrow">
+      <button class="rk ra" onclick="rej('seed-temple_breathwoven_vestment','anim')">✕ 애니 리젝</button>
+      <input class="rs" data-k="anim" placeholder="애니 리젝 사유" oninput="setReason('seed-temple_breathwoven_vestment','anim',this.value)">
+    </div>
+    <div class="rejrow">
+      <button class="rk rp" onclick="rej('seed-temple_breathwoven_vestment','prompt')">✕ 프롬프트 리젝</button>
+      <input class="rs" data-k="prompt" placeholder="프롬프트 리젝 사유" oninput="setReason('seed-temple_breathwoven_vestment','prompt',this.value)">
+    </div>
+  </div><div class="card" data-id="a-pumpkin-witch-outfit-96">
+    <div class="imgs">
+      <div class="box"><span class=lbl>정적</span><img src="sprites/pool/a-pumpkin-witch-outfit-96.png" loading=lazy></div>
+      <div class="box"><span class=lbl>애니</span><div class="anim" data-frames="9" style="background-image:url('sprites/anim3/a-pumpkin-witch-outfit-96.webp?v=1782634703469')"></div></div>
+    </div>
+    <div class="meta"><span class="nm">호박등 드레스</span><span class="mt">정면 · 밝음</span><span class="id">a-pumpkin-witch-outfit-96</span></div>
+    <div class="story">검은 치마 끝이 호박등 불꽃처럼 들쭉날쭉 갈라지고, 허리엔 커다란 주황 리본이 묶였다. 줄무늬 스타킹에 굽 높은 부츠까지, 무섭다기보단 한껏 멋을 부린 차림이다. 이 옷을 입고 골목을 돌면 아이들이 줄줄이 따라붙는다. 사탕을 가장 많이 받는 건 해마다 이 차림이었다.</div>
+    <div class="rejrow">
+      <button class="rk rt" onclick="rej('a-pumpkin-witch-outfit-96','story')">✕ 스토리 리젝</button>
+      <input class="rs" data-k="story" placeholder="이름·스토리 리젝 사유" oninput="setReason('a-pumpkin-witch-outfit-96','story',this.value)">
+    </div>
+    <div class="pr"><span class="prlbl">애니 프롬프트</span><div class="prtxt">마녀 드레스는 가만히 걸려 있고 호박빛 주황 주름이 흔들리며 작은 보랏빛 반짝임이 떠다니고, 으스스한 오라가 맥동한다</div><div class="pren">the witch dress hangs still as the pumpkin-orange ruffles sway and tiny purple sparkles drift, a spooky aura pulsing</div></div>
+    <div class="rejrow">
+      <button class="rk ra" onclick="rej('a-pumpkin-witch-outfit-96','anim')">✕ 애니 리젝</button>
+      <input class="rs" data-k="anim" placeholder="애니 리젝 사유" oninput="setReason('a-pumpkin-witch-outfit-96','anim',this.value)">
+    </div>
+    <div class="rejrow">
+      <button class="rk rp" onclick="rej('a-pumpkin-witch-outfit-96','prompt')">✕ 프롬프트 리젝</button>
+      <input class="rs" data-k="prompt" placeholder="프롬프트 리젝 사유" oninput="setReason('a-pumpkin-witch-outfit-96','prompt',this.value)">
+    </div>
+  </div><div class="card" data-id="a-necromancer-robe-127">
+    <div class="imgs">
+      <div class="box"><span class=lbl>정적</span><img src="sprites/pool/a-necromancer-robe-127.png" loading=lazy></div>
+      <div class="box"><span class=lbl>애니</span><div class="anim" data-frames="9" style="background-image:url('sprites/anim3/a-necromancer-robe-127.webp?v=1782634656833')"></div></div>
+    </div>
+    <div class="meta"><span class="nm">갈까마귀 로브</span><span class="mt">정면 · 기괴</span><span class="id">a-necromancer-robe-127</span></div>
+    <div class="story">갈까마귀 부리를 본뜬 후드 아래로 짙은 녹색 자락이 너덜너덜 드리운다. 가슴엔 갈비뼈를 엮어 달고, 단을 따라 초록 글자가 희미하게 빛난다. 자락이 바람에 스치면 깃털 스치는 소리가 난다. 새도 사람도 아닌 그 그림자를 마주치면, 길을 비켜 주는 편이 낫다.</div>
+    <div class="rejrow">
+      <button class="rk rt" onclick="rej('a-necromancer-robe-127','story')">✕ 스토리 리젝</button>
+      <input class="rs" data-k="story" placeholder="이름·스토리 리젝 사유" oninput="setReason('a-necromancer-robe-127','story',this.value)">
+    </div>
+    <div class="pr"><span class="prlbl">애니 프롬프트</span><div class="prtxt">어두운 로브는 가만히 걸려 있고 너덜한 자락이 흔들리며 안에서 병적인 초록빛이 새어 나오고, 초록 오라가 맥동한다</div><div class="pren">the dark robe hangs still while its ragged layers stir and a sickly green glow seeps from within, a green aura pulsing</div></div>
+    <div class="rejrow">
+      <button class="rk ra" onclick="rej('a-necromancer-robe-127','anim')">✕ 애니 리젝</button>
+      <input class="rs" data-k="anim" placeholder="애니 리젝 사유" oninput="setReason('a-necromancer-robe-127','anim',this.value)">
+    </div>
+    <div class="rejrow">
+      <button class="rk rp" onclick="rej('a-necromancer-robe-127','prompt')">✕ 프롬프트 리젝</button>
+      <input class="rs" data-k="prompt" placeholder="프롬프트 리젝 사유" oninput="setReason('a-necromancer-robe-127','prompt',this.value)">
+    </div>
+  </div><div class="card" data-id="a-test-gothic-lolita-150">
+    <div class="imgs">
+      <div class="box"><span class=lbl>정적</span><img src="sprites/pool/a-test-gothic-lolita-150.png" loading=lazy></div>
+      <div class="box"><span class=lbl>애니</span><div class="anim" data-frames="9" style="background-image:url('sprites/anim3/a-test-gothic-lolita-150.webp?v=1782634813428')"></div></div>
+    </div>
+    <div class="meta"><span class="nm">진홍 레이스 드레스</span><span class="mt">정면 · 우아</span><span class="id">a-test-gothic-lolita-150</span></div>
+    <div class="story">진홍 비단에 검정 레이스를 층층이 두르고, 잘록한 허리부터 치마가 종처럼 활짝 퍼진다. 리본만 스무 개가 넘어, 혼자 다 묶으려면 한나절이 걸린다. 무거워 보여도 입으면 의외로 가볍고, 무엇보다—이 드레스를 입은 날엔 누구도 함부로 말을 붙이지 못한다.</div>
+    <div class="rejrow">
+      <button class="rk rt" onclick="rej('a-test-gothic-lolita-150','story')">✕ 스토리 리젝</button>
+      <input class="rs" data-k="story" placeholder="이름·스토리 리젝 사유" oninput="setReason('a-test-gothic-lolita-150','story',this.value)">
+    </div>
+    <div class="pr"><span class="prlbl">애니 프롬프트</span><div class="prtxt">고딕 로리타 드레스는 가만히 걸려 있고 레이스와 리본이 부드럽게 나부끼며, 흐릿한 진홍 오라가 맥동한다</div><div class="pren">the gothic lolita dress hangs still as its lace and ribbons flutter softly, a dim crimson aura pulsing</div></div>
+    <div class="rejrow">
+      <button class="rk ra" onclick="rej('a-test-gothic-lolita-150','anim')">✕ 애니 리젝</button>
+      <input class="rs" data-k="anim" placeholder="애니 리젝 사유" oninput="setReason('a-test-gothic-lolita-150','anim',this.value)">
+    </div>
+    <div class="rejrow">
+      <button class="rk rp" onclick="rej('a-test-gothic-lolita-150','prompt')">✕ 프롬프트 리젝</button>
+      <input class="rs" data-k="prompt" placeholder="프롬프트 리젝 사유" oninput="setReason('a-test-gothic-lolita-150','prompt',this.value)">
+    </div>
+  </div><div class="card" data-id="a-test-military-coat-151">
+    <div class="imgs">
+      <div class="box"><span class=lbl>정적</span><img src="sprites/pool/a-test-military-coat-151.png" loading=lazy></div>
+      <div class="box"><span class=lbl>애니</span><div class="anim" data-frames="9" style="background-image:url('sprites/anim3/a-test-military-coat-151.webp?v=1782642012879')"></div></div>
+    </div>
+    <div class="meta"><span class="nm">금장 군복</span><span class="mt">정면 · 담담</span><span class="id">a-test-military-coat-151</span></div>
+    <div class="story">군청색 천에 금빛 장식끈을 가슴 가득 가로질러 달고, 양어깨엔 금술 견장이 늘어진다. 단추 하나까지 빛나도록 닦은 정복이다. 처음 이 옷을 받은 사관은 거울 앞을 떠나지 못했다. 단추를 끝까지 채우는 순간, 어쩐지 등이 한 뼘 곧아졌다.</div>
+    <div class="rejrow">
+      <button class="rk rt" onclick="rej('a-test-military-coat-151','story')">✕ 스토리 리젝</button>
+      <input class="rs" data-k="story" placeholder="이름·스토리 리젝 사유" oninput="setReason('a-test-military-coat-151','story',this.value)">
+    </div>
+    <div class="pr"><span class="prlbl">애니 프롬프트</span><div class="prtxt">군복 코트는 가만히 걸려 있고 금색 장식띠와 황동 단추가 또렷하고 밝게 우아한 광택으로 반짝인다</div><div class="pren">the military coat hangs still while its gold braid and brass buttons sparkle and gleam brightly and clearly with an elegant refined shine, a crisp blue sheen</div></div>
+    <div class="rejrow">
+      <button class="rk ra" onclick="rej('a-test-military-coat-151','anim')">✕ 애니 리젝</button>
+      <input class="rs" data-k="anim" placeholder="애니 리젝 사유" oninput="setReason('a-test-military-coat-151','anim',this.value)">
+    </div>
+    <div class="rejrow">
+      <button class="rk rp" onclick="rej('a-test-military-coat-151','prompt')">✕ 프롬프트 리젝</button>
+      <input class="rs" data-k="prompt" placeholder="프롬프트 리젝 사유" oninput="setReason('a-test-military-coat-151','prompt',this.value)">
+    </div>
+  </div><div class="card" data-id="seed-volcano_embersilk_dress">
+    <div class="imgs">
+      <div class="box"><span class=lbl>정적</span><img src="sprites/pool/seed-volcano_embersilk_dress.png" loading=lazy></div>
+      <div class="box"><span class=lbl>애니</span><div class="anim" data-frames="9" style="background-image:url('sprites/anim3/seed-volcano_embersilk_dress.webp?v=1782643049530')"></div></div>
+    </div>
+    <div class="meta"><span class="nm">화염 비단 예복</span><span class="mt">정면 · 우아</span><span class="id">seed-volcano_embersilk_dress</span></div>
+    <div class="story">진홍 비단 자락마다 불길이 타오르는 무늬가 번지고, 깃은 솟구치는 불꽃을 그대로 굳혀 세운 듯하다. 가슴과 치맛단엔 금빛 태양 문장이 박혀, 움직일 때마다 불티가 흩날리는 착시를 일으킨다. 분화구 곁 신전의 무희가 입던 옷이라, 멈춰 서 있어도 어쩐지 춤추는 것처럼 보인다.</div>
+    <div class="rejrow">
+      <button class="rk rt" onclick="rej('seed-volcano_embersilk_dress','story')">✕ 스토리 리젝</button>
+      <input class="rs" data-k="story" placeholder="이름·스토리 리젝 사유" oninput="setReason('seed-volcano_embersilk_dress','story',this.value)">
+    </div>
+    <div class="pr"><span class="prlbl">애니 프롬프트</span><div class="prtxt">잿불 실크 드레스는 완전히 고정된 채, 오직 가운데 장식만 가볍고 은은하게 발광한다 (다른 곳 화려한 발광 없음, 고급스럽게)</div><div class="pren">the ember-silk dress hangs perfectly still while only the ornament at its center glows lightly and softly, a subtle refined gleam, no flashy glow elsewhere</div></div>
+    <div class="rejrow">
+      <button class="rk ra" onclick="rej('seed-volcano_embersilk_dress','anim')">✕ 애니 리젝</button>
+      <input class="rs" data-k="anim" placeholder="애니 리젝 사유" oninput="setReason('seed-volcano_embersilk_dress','anim',this.value)">
+    </div>
+    <div class="rejrow">
+      <button class="rk rp" onclick="rej('seed-volcano_embersilk_dress','prompt')">✕ 프롬프트 리젝</button>
+      <input class="rs" data-k="prompt" placeholder="프롬프트 리젝 사유" oninput="setReason('seed-volcano_embersilk_dress','prompt',this.value)">
+    </div>
+  </div><div class="card" data-id="a-valkyrie-battle-dress-176">
+    <div class="imgs">
+      <div class="box"><span class=lbl>정적</span><img src="sprites/pool/a-valkyrie-battle-dress-176.png" loading=lazy></div>
+      <div class="box"><span class=lbl>애니</span><div class="anim" data-frames="9" style="background-image:url('sprites/anim3/a-valkyrie-battle-dress-176.webp?v=1782640451189')"></div></div>
+    </div>
+    <div class="meta"><span class="nm">창공의 전투복</span><span class="mt">정면 · 밝음</span><span class="id">a-valkyrie-battle-dress-176</span></div>
+    <div class="story">금빛 날개를 펼친 흉갑 아래로 흰 주름치마가 떨어지고, 푸른 띠가 어깨에서 비스듬히 흘러내린다. 갑옷이라기엔 가볍고, 드레스라기엔 단단하다. 쓰러진 자를 골라 데려가는 게 발키리의 일이라, 이 옷을 입은 발은 늘 전장에서 가장 빨랐다.</div>
+    <div class="rejrow">
+      <button class="rk rt" onclick="rej('a-valkyrie-battle-dress-176','story')">✕ 스토리 리젝</button>
+      <input class="rs" data-k="story" placeholder="이름·스토리 리젝 사유" oninput="setReason('a-valkyrie-battle-dress-176','story',this.value)">
+    </div>
+    <div class="pr"><span class="prlbl">애니 프롬프트</span><div class="prtxt">발키리 전투복은 어깨는 고정된 채, 치마 자락과 푸른 띠만 살짝 나부끼고 가슴의 문양이 은은하게 빛난다 (고급스럽게)</div><div class="pren">the valkyrie battle-dress hangs still with the shoulders fixed; only the skirt hem and the blue sash sway gently while the emblem on the chest softly glows, elegant and refined</div></div>
+    <div class="rejrow">
+      <button class="rk ra" onclick="rej('a-valkyrie-battle-dress-176','anim')">✕ 애니 리젝</button>
+      <input class="rs" data-k="anim" placeholder="애니 리젝 사유" oninput="setReason('a-valkyrie-battle-dress-176','anim',this.value)">
+    </div>
+    <div class="rejrow">
+      <button class="rk rp" onclick="rej('a-valkyrie-battle-dress-176','prompt')">✕ 프롬프트 리젝</button>
+      <input class="rs" data-k="prompt" placeholder="프롬프트 리젝 사유" oninput="setReason('a-valkyrie-battle-dress-176','prompt',this.value)">
+    </div>
+  </div><div class="card" data-id="a-frost-warden-coat-179">
+    <div class="imgs">
+      <div class="box"><span class=lbl>정적</span><img src="sprites/pool/a-frost-warden-coat-179.png" loading=lazy></div>
+      <div class="box"><span class=lbl>애니</span><div class="anim" data-frames="9" style="background-image:url('sprites/anim3/a-frost-warden-coat-179.webp?v=1782642194043')"></div></div>
+    </div>
+    <div class="meta"><span class="nm">설원 파수꾼의 외투</span><span class="mt">정면 · 밝음</span><span class="id">a-frost-warden-coat-179</span></div>
+    <div class="story">강철빛 천에 흰 털을 깃과 소맷부리, 단까지 둘렀다. 은빛 잠금쇠가 가슴을 따라 줄지어 채워지고, 옷자락엔 서리 맺힌 나뭇가지 무늬가 은실로 수놓였다. 북쪽 끝, 사람 하나 없는 설원을 혼자 지키는 자의 옷이다. 눈보라가 외투를 휘감아도 안쪽만은 늘 잔잔히 따뜻하다.</div>
+    <div class="rejrow">
+      <button class="rk rt" onclick="rej('a-frost-warden-coat-179','story')">✕ 스토리 리젝</button>
+      <input class="rs" data-k="story" placeholder="이름·스토리 리젝 사유" oninput="setReason('a-frost-warden-coat-179','story',this.value)">
+    </div>
+    <div class="pr"><span class="prlbl">애니 프롬프트</span><div class="prtxt">서리 파수꾼 외투는 가만히 걸려 있고 은청색 표면이 잔잔하게 맥동하며 고급스러운 차가운 광택을 낸다 (주변 오라 없음)</div><div class="pren">the frost-warden coat hangs still while its silver-blue surface softly and calmly pulses with a refined cold sheen, no surrounding aura</div></div>
+    <div class="rejrow">
+      <button class="rk ra" onclick="rej('a-frost-warden-coat-179','anim')">✕ 애니 리젝</button>
+      <input class="rs" data-k="anim" placeholder="애니 리젝 사유" oninput="setReason('a-frost-warden-coat-179','anim',this.value)">
+    </div>
+    <div class="rejrow">
+      <button class="rk rp" onclick="rej('a-frost-warden-coat-179','prompt')">✕ 프롬프트 리젝</button>
+      <input class="rs" data-k="prompt" placeholder="프롬프트 리젝 사유" oninput="setReason('a-frost-warden-coat-179','prompt',this.value)">
+    </div>
+  </div><div class="card" data-id="a-paladin-armor-180">
+    <div class="imgs">
+      <div class="box"><span class=lbl>정적</span><img src="sprites/pool/a-paladin-armor-180.png" loading=lazy></div>
+      <div class="box"><span class=lbl>애니</span><div class="anim" data-frames="9" style="background-image:url('sprites/anim3/a-paladin-armor-180.webp?v=1782642122069')"></div></div>
+    </div>
+    <div class="meta"><span class="nm">성익 갑주</span><span class="mt">선언문 · 장엄</span><span class="id">a-paladin-armor-180</span></div>
+    <div class="story">새하얀 판금 위에 푸른 휘장을 드리우고, 등 뒤로 거대한 금빛 날개가 펼쳐진다. 가슴엔 독수리 문장, 휘장엔 검을 닮은 금빛 십자가 새겨졌다. 이 갑주를 두른 자는 물러서는 법을 배우지 않는다. 등 뒤에 지킬 사람이 하나라도 있으면, 그 자리에 못 박힌 듯 버틴다.</div>
+    <div class="rejrow">
+      <button class="rk rt" onclick="rej('a-paladin-armor-180','story')">✕ 스토리 리젝</button>
+      <input class="rs" data-k="story" placeholder="이름·스토리 리젝 사유" oninput="setReason('a-paladin-armor-180','story',this.value)">
+    </div>
+    <div class="pr"><span class="prlbl">애니 프롬프트</span><div class="prtxt">성스러운 갑주는 가만히 있고 오직 푸른 휘장만 부드럽게 흔들리며 백금색 표면이 우아하게 빛난다 (오라 없음, 고급스럽게)</div><div class="pren">the holy plate stays still while only the blue tabard sways gently and the white-and-gold surface gleams with an elegant refined shine, no aura</div></div>
+    <div class="rejrow">
+      <button class="rk ra" onclick="rej('a-paladin-armor-180','anim')">✕ 애니 리젝</button>
+      <input class="rs" data-k="anim" placeholder="애니 리젝 사유" oninput="setReason('a-paladin-armor-180','anim',this.value)">
+    </div>
+    <div class="rejrow">
+      <button class="rk rp" onclick="rej('a-paladin-armor-180','prompt')">✕ 프롬프트 리젝</button>
+      <input class="rs" data-k="prompt" placeholder="프롬프트 리젝 사유" oninput="setReason('a-paladin-armor-180','prompt',this.value)">
+    </div>
+  </div><div class="card" data-id="a-dragon-knight-armor-186">
+    <div class="imgs">
+      <div class="box"><span class=lbl>정적</span><img src="sprites/pool/a-dragon-knight-armor-186.png" loading=lazy></div>
+      <div class="box"><span class=lbl>애니</span><div class="anim" data-frames="9" style="background-image:url('sprites/anim3/a-dragon-knight-armor-186.webp?v=1782653141950')"></div></div>
+    </div>
+    <div class="meta"><span class="nm">흑룡의 비늘갑</span><span class="mt">정면 · 맹렬</span><span class="id">a-dragon-knight-armor-186</span></div>
+    <div class="story">검푸른 용비늘을 한 장 한 장 겹쳐 두르고, 등 뒤엔 가죽 같은 용 날개가 펼쳐진다. 가슴 한가운데 금빛 용 머리가 붉은 눈을 부릅뜨고, 성이 오를수록 그 눈이 더 붉게 탄다. 용의 가죽을 빼앗아 두른 자에게, 용은 죽어서도 제 비늘로 그 등을 지켜 주는 셈이다.</div>
+    <div class="rejrow">
+      <button class="rk rt" onclick="rej('a-dragon-knight-armor-186','story')">✕ 스토리 리젝</button>
+      <input class="rs" data-k="story" placeholder="이름·스토리 리젝 사유" oninput="setReason('a-dragon-knight-armor-186','story',this.value)">
+    </div>
+    <div class="pr"><span class="prlbl">애니 프롬프트</span><div class="prtxt">용비늘 갑주는 완전히 고정된 채, 가슴의 용 문양이 밝고 강하게 빛나며 맥동하고 거기서 또렷한 불똥과 화염 콧김이 세차게 뿜어진다 (가슴 용 위주, 갑주 움직임 없음)</div><div class="pren">the dragon-scale plate stays completely still while the dragon emblem at its chest glows and pulses BRIGHTLY and strongly, with clear vivid sparks and fiery breath bursting out from it, effect centered on the chest dragon, no armor movement</div></div>
+    <div class="rejrow">
+      <button class="rk ra" onclick="rej('a-dragon-knight-armor-186','anim')">✕ 애니 리젝</button>
+      <input class="rs" data-k="anim" placeholder="애니 리젝 사유" oninput="setReason('a-dragon-knight-armor-186','anim',this.value)">
+    </div>
+    <div class="rejrow">
+      <button class="rk rp" onclick="rej('a-dragon-knight-armor-186','prompt')">✕ 프롬프트 리젝</button>
+      <input class="rs" data-k="prompt" placeholder="프롬프트 리젝 사유" oninput="setReason('a-dragon-knight-armor-186','prompt',this.value)">
+    </div>
+  </div><div class="card" data-id="a-phoenix-dancer-dress-183">
+    <div class="imgs">
+      <div class="box"><span class=lbl>정적</span><img src="sprites/pool/a-phoenix-dancer-dress-183.png" loading=lazy></div>
+      <div class="box"><span class=lbl>애니</span><div class="anim" data-frames="9" style="background-image:url('sprites/anim3/a-phoenix-dancer-dress-183.webp?v=1782652222713')"></div></div>
+    </div>
+    <div class="meta"><span class="nm">불새 깃 드레스</span><span class="mt">정면 · 우아</span><span class="id">a-phoenix-dancer-dress-183</span></div>
+    <div class="story">치마 전체가 진홍과 주황 깃털로 층층이 덮여, 한 걸음에 불꽃이 일렁이는 듯하다. 금빛 코르셋 위로 깃이 어깨까지 솟아오른다. 무희가 한 바퀴 돌면 깃 사이로 불티가 흩날렸다 사라진다. 춤이 끝나 옷이 한 김 식어도, 이튿날이면 깃은 다시 처음처럼 붉었다. 불사조가 그렇듯이.</div>
+    <div class="rejrow">
+      <button class="rk rt" onclick="rej('a-phoenix-dancer-dress-183','story')">✕ 스토리 리젝</button>
+      <input class="rs" data-k="story" placeholder="이름·스토리 리젝 사유" oninput="setReason('a-phoenix-dancer-dress-183','story',this.value)">
+    </div>
+    <div class="pr"><span class="prlbl">애니 프롬프트</span><div class="prtxt">불사조 무희 드레스는 거의 고정된 채, 또렷이 보이는 빛나는 불똥이 드레스 자락 둘레로 부드럽고 잔잔하게 떠오른다 (불똥은 분명히 보이되 움직임은 부드럽게)</div><div class="pren">the phoenix dance dress stays mostly still while clearly visible glowing embers softly and gently float and drift upward around the dress hem, embers plainly visible but the motion soft and smooth, elegant</div></div>
+    <div class="rejrow">
+      <button class="rk ra" onclick="rej('a-phoenix-dancer-dress-183','anim')">✕ 애니 리젝</button>
+      <input class="rs" data-k="anim" placeholder="애니 리젝 사유" oninput="setReason('a-phoenix-dancer-dress-183','anim',this.value)">
+    </div>
+    <div class="rejrow">
+      <button class="rk rp" onclick="rej('a-phoenix-dancer-dress-183','prompt')">✕ 프롬프트 리젝</button>
+      <input class="rs" data-k="prompt" placeholder="프롬프트 리젝 사유" oninput="setReason('a-phoenix-dancer-dress-183','prompt',this.value)">
+    </div>
+  </div><div class="card" data-id="a-astrologer-outfit-103">
+    <div class="imgs">
+      <div class="box"><span class=lbl>정적</span><img src="sprites/pool/a-astrologer-outfit-103.png" loading=lazy></div>
+      <div class="box"><span class=lbl>애니</span><div class="anim" data-frames="9" style="background-image:url('sprites/anim3/a-astrologer-outfit-103.webp?v=1782635030421')"></div></div>
+    </div>
+    <div class="meta"><span class="nm">성좌의 망토</span><span class="mt">정면 · 수수께끼</span><span class="id">a-astrologer-outfit-103</span></div>
+    <div class="story">깊은 남색 천 위에 금실로 별자리를 빼곡히 수놓았다. 어깨엔 짧은 망토를 덧대고, 단추마다 작은 별이 박혔다. 어두운 데서 펼치면 수놓인 별들이 정말 떠 있는 듯 어렴풋이 빛난다. 점성술사는 이 옷을 펼쳐 든 채, 제 어깨 위 별자리부터 손끝으로 짚어 갔다.</div>
+    <div class="rejrow">
+      <button class="rk rt" onclick="rej('a-astrologer-outfit-103','story')">✕ 스토리 리젝</button>
+      <input class="rs" data-k="story" placeholder="이름·스토리 리젝 사유" oninput="setReason('a-astrologer-outfit-103','story',this.value)">
+    </div>
+    <div class="pr"><span class="prlbl">애니 프롬프트</span><div class="prtxt">점성술사 코트드레스는 가만히 걸려 있고 금빛 별자리 자수가 별처럼 반짝이며, 부드러운 남빛 오라가 맥동한다</div><div class="pren">the astrologer coat-dress hangs still while the gold constellation embroidery twinkles like stars, a soft navy aura pulsing</div></div>
+    <div class="rejrow">
+      <button class="rk ra" onclick="rej('a-astrologer-outfit-103','anim')">✕ 애니 리젝</button>
+      <input class="rs" data-k="anim" placeholder="애니 리젝 사유" oninput="setReason('a-astrologer-outfit-103','anim',this.value)">
+    </div>
+    <div class="rejrow">
+      <button class="rk rp" onclick="rej('a-astrologer-outfit-103','prompt')">✕ 프롬프트 리젝</button>
+      <input class="rs" data-k="prompt" placeholder="프롬프트 리젝 사유" oninput="setReason('a-astrologer-outfit-103','prompt',this.value)">
+    </div>
+  </div><div class="card" data-id="a-desert-nomad-robes-231">
+    <div class="imgs">
+      <div class="box"><span class=lbl>정적</span><img src="sprites/pool/a-desert-nomad-robes-231.png" loading=lazy></div>
+      <div class="box"><span class=lbl>애니</span><div class="anim" data-frames="9" style="background-image:url('sprites/anim3/a-desert-nomad-robes-231.webp?v=1782635073710')"></div></div>
+    </div>
+    <div class="meta"><span class="nm">모래바람의 겹옷</span><span class="mt">정면 · 밝음</span><span class="id">a-desert-nomad-robes-231</span></div>
+    <div class="story">모래빛 천을 몇 겹이고 둘러 입고, 어깨엔 두건을 깊이 늘어뜨렸다. 허리엔 색실로 짠 띠를 둘렀는데, 그 무늬가 유랑자마다 다르다. 지나온 마을의 빛깔이 한 줄씩 더해지기 때문이다. 낮의 열기도 밤의 추위도, 이 겹겹 사이에서 순하게 풀린다.</div>
+    <div class="rejrow">
+      <button class="rk rt" onclick="rej('a-desert-nomad-robes-231','story')">✕ 스토리 리젝</button>
+      <input class="rs" data-k="story" placeholder="이름·스토리 리젝 사유" oninput="setReason('a-desert-nomad-robes-231','story',this.value)">
+    </div>
+    <div class="pr"><span class="prlbl">애니 프롬프트</span><div class="prtxt">유랑자의 의복은 가만히 걸려 있고 겹겹의 천과 띠가 따뜻한 바람에 흔들리며 고운 모래가 흩날리고, 모래빛 오라가 맥동한다</div><div class="pren">the nomad robes hang still as their layered fabric and sash sway in a warm breeze, fine sand drifting past, a sandy aura pulsing</div></div>
+    <div class="rejrow">
+      <button class="rk ra" onclick="rej('a-desert-nomad-robes-231','anim')">✕ 애니 리젝</button>
+      <input class="rs" data-k="anim" placeholder="애니 리젝 사유" oninput="setReason('a-desert-nomad-robes-231','anim',this.value)">
+    </div>
+    <div class="rejrow">
+      <button class="rk rp" onclick="rej('a-desert-nomad-robes-231','prompt')">✕ 프롬프트 리젝</button>
+      <input class="rs" data-k="prompt" placeholder="프롬프트 리젝 사유" oninput="setReason('a-desert-nomad-robes-231','prompt',this.value)">
+    </div>
+  </div><div class="card" data-id="a-academy-professor-robe-234">
+    <div class="imgs">
+      <div class="box"><span class=lbl>정적</span><img src="sprites/pool/a-academy-professor-robe-234.png" loading=lazy></div>
+      <div class="box"><span class=lbl>애니</span><div class="anim" data-frames="9" style="background-image:url('sprites/anim3/a-academy-professor-robe-234.webp?v=1782635053541')"></div></div>
+    </div>
+    <div class="meta"><span class="nm">학자의 자줏빛 예복</span><span class="mt">정면 · 담담</span><span class="id">a-academy-professor-robe-234</span></div>
+    <div class="story">짙은 자주색 천에 금빛 단을 두르고, 가슴께엔 금술 끈이 길게 늘어진다. 무게로 권위를 내는 옷이라, 이걸 걸치면 같은 말을 해도 학생들이 더 받아 적는다. 한자리에 오래 선 교수일수록 옷자락이 반들반들 닳아, 그 윤기만으로 연륜을 짐작했다.</div>
+    <div class="rejrow">
+      <button class="rk rt" onclick="rej('a-academy-professor-robe-234','story')">✕ 스토리 리젝</button>
+      <input class="rs" data-k="story" placeholder="이름·스토리 리젝 사유" oninput="setReason('a-academy-professor-robe-234','story',this.value)">
+    </div>
+    <div class="pr"><span class="prlbl">애니 프롬프트</span><div class="prtxt">교수복은 가만히 걸려 있고 금색 장식이 반짝이며 천이 부드럽게 흔들리고, 학구적인 호박빛 오라가 맥동한다</div><div class="pren">the professor robe hangs still while its gold trim glints and the fabric sways gently, a scholarly amber aura pulsing</div></div>
+    <div class="rejrow">
+      <button class="rk ra" onclick="rej('a-academy-professor-robe-234','anim')">✕ 애니 리젝</button>
+      <input class="rs" data-k="anim" placeholder="애니 리젝 사유" oninput="setReason('a-academy-professor-robe-234','anim',this.value)">
+    </div>
+    <div class="rejrow">
+      <button class="rk rp" onclick="rej('a-academy-professor-robe-234','prompt')">✕ 프롬프트 리젝</button>
+      <input class="rs" data-k="prompt" placeholder="프롬프트 리젝 사유" oninput="setReason('a-academy-professor-robe-234','prompt',this.value)">
+    </div>
+  </div><div class="card" data-id="a-academy-student-uniform-233">
+    <div class="imgs">
+      <div class="box"><span class=lbl>정적</span><img src="sprites/pool/a-academy-student-uniform-233.png" loading=lazy></div>
+      <div class="box"><span class=lbl>애니</span><div class="anim" data-frames="9" style="background-image:url('sprites/anim3/a-academy-student-uniform-233.webp?v=1782642290063')"></div></div>
+    </div>
+    <div class="meta"><span class="nm">왕립 학원 교복</span><span class="mt">정면 · 밝음</span><span class="id">a-academy-student-uniform-233</span></div>
+    <div class="story">남색 재킷에 금빛 단추를 두 줄로 달고, 가슴엔 학원 문장을 박았다. 붉은 줄무늬 리본과 주름치마가 걸음마다 가볍게 흔들린다. 처음 이 교복을 받아 입은 날을 다들 오래 기억한다. 어제까진 그냥 아이였는데, 단추를 채우는 순간 어엿한 학생이 되어 있었다.</div>
+    <div class="rejrow">
+      <button class="rk rt" onclick="rej('a-academy-student-uniform-233','story')">✕ 스토리 리젝</button>
+      <input class="rs" data-k="story" placeholder="이름·스토리 리젝 사유" oninput="setReason('a-academy-student-uniform-233','story',this.value)">
+    </div>
+    <div class="pr"><span class="prlbl">애니 프롬프트</span><div class="prtxt">학원 교복은 가만히 걸려 있고 리본과 치마 자락이 또렷이 살랑이며 흔들린다 (움직임이 분명히 보이게, 오라 없음)</div><div class="pren">the student uniform hangs still while its ribbon and skirt hem clearly sway and flutter gently, the movement plainly visible, no aura, clean and elegant</div></div>
+    <div class="rejrow">
+      <button class="rk ra" onclick="rej('a-academy-student-uniform-233','anim')">✕ 애니 리젝</button>
+      <input class="rs" data-k="anim" placeholder="애니 리젝 사유" oninput="setReason('a-academy-student-uniform-233','anim',this.value)">
+    </div>
+    <div class="rejrow">
+      <button class="rk rp" onclick="rej('a-academy-student-uniform-233','prompt')">✕ 프롬프트 리젝</button>
+      <input class="rs" data-k="prompt" placeholder="프롬프트 리젝 사유" oninput="setReason('a-academy-student-uniform-233','prompt',this.value)">
+    </div>
+  </div><div class="card" data-id="a-forest-ranger-outfit-240">
+    <div class="imgs">
+      <div class="box"><span class=lbl>정적</span><img src="sprites/pool/a-forest-ranger-outfit-240.png" loading=lazy></div>
+      <div class="box"><span class=lbl>애니</span><div class="anim" data-frames="9" style="background-image:url('sprites/anim3/a-forest-ranger-outfit-240.webp?v=1782642247890')"></div></div>
+    </div>
+    <div class="meta"><span class="nm">숲지기의 한 벌</span><span class="mt">정면 · 밝음</span><span class="id">a-forest-ranger-outfit-240</span></div>
+    <div class="story">초록 두건 망토 아래로 갈색 가죽 갑옷을 받쳐 입고, 허리와 어깨엔 가죽끈과 주머니가 주렁주렁 달렸다. 화살 손질 도구부터 마른 풀씨까지, 숲에서 필요한 건 죄다 이 주머니 어딘가에 있다. 이 옷을 입으면 나뭇잎 사이에 서 있어도 좀처럼 눈에 띄지 않아, 새들도 곁에서 마음 놓고 지저귄다.</div>
+    <div class="rejrow">
+      <button class="rk rt" onclick="rej('a-forest-ranger-outfit-240','story')">✕ 스토리 리젝</button>
+      <input class="rs" data-k="story" placeholder="이름·스토리 리젝 사유" oninput="setReason('a-forest-ranger-outfit-240','story',this.value)">
+    </div>
+    <div class="pr"><span class="prlbl">애니 프롬프트</span><div class="prtxt">순찰자 의상은 가만히 걸려 있고 오직 후드와 화살통 끈만 살짝 흔들린다 (나뭇잎·오라 없음, 깔끔하게)</div><div class="pren">the ranger outfit hangs still while only the hood and quiver strap sway gently, no leaves and no aura, clean and elegant</div></div>
+    <div class="rejrow">
+      <button class="rk ra" onclick="rej('a-forest-ranger-outfit-240','anim')">✕ 애니 리젝</button>
+      <input class="rs" data-k="anim" placeholder="애니 리젝 사유" oninput="setReason('a-forest-ranger-outfit-240','anim',this.value)">
+    </div>
+    <div class="rejrow">
+      <button class="rk rp" onclick="rej('a-forest-ranger-outfit-240','prompt')">✕ 프롬프트 리젝</button>
+      <input class="rs" data-k="prompt" placeholder="프롬프트 리젝 사유" oninput="setReason('a-forest-ranger-outfit-240','prompt',this.value)">
+    </div>
+  </div></div><h2>장신구 <small>(18)</small></h2><div class="grid"><div class="card" data-id="seed-temple_snowflake_crown">
+    <div class="imgs">
+      <div class="box"><span class=lbl>정적</span><img src="sprites/pool/seed-temple_snowflake_crown.png" loading=lazy></div>
+      <div class="box"><span class=lbl>애니</span><div class="anim" data-frames="9" style="background-image:url('sprites/anim3/seed-temple_snowflake_crown.webp?v=1782641219035')"></div></div>
+    </div>
+    <div class="meta"><span class="nm">설화의 관</span><span class="mt">정면 · 장엄</span><span class="id">seed-temple_snowflake_crown</span></div>
+    <div class="story">여섯 갈래 눈꽃 결정을 그대로 깎아 세운 은빛 관이다. 한가운데 가장 큰 결정이 솟고, 둘레 띠에도 작은 눈꽃이 줄지어 박혔다. 손이 닿아도 녹지 않는다. 이 관을 쓰면 숨결이 하얗게 서리고, 보는 이들은 한겨울 한복판에 선 듯 절로 옷깃을 여민다.</div>
+    <div class="rejrow">
+      <button class="rk rt" onclick="rej('seed-temple_snowflake_crown','story')">✕ 스토리 리젝</button>
+      <input class="rs" data-k="story" placeholder="이름·스토리 리젝 사유" oninput="setReason('seed-temple_snowflake_crown','story',this.value)">
+    </div>
+    <div class="pr"><span class="prlbl">애니 프롬프트</span><div class="prtxt">눈꽃 왕관은 가만히 있고 결정 면이 우아하게 반짝이며 작은 눈가루가 흩날린다 (고급스럽고 화려한 차가운 광택)</div><div class="pren">the snowflake crown stays still while its crystal facets sparkle elegantly and tiny snow motes drift, a refined dazzling cold pale-blue shimmer, premium</div></div>
+    <div class="rejrow">
+      <button class="rk ra" onclick="rej('seed-temple_snowflake_crown','anim')">✕ 애니 리젝</button>
+      <input class="rs" data-k="anim" placeholder="애니 리젝 사유" oninput="setReason('seed-temple_snowflake_crown','anim',this.value)">
+    </div>
+    <div class="rejrow">
+      <button class="rk rp" onclick="rej('seed-temple_snowflake_crown','prompt')">✕ 프롬프트 리젝</button>
+      <input class="rs" data-k="prompt" placeholder="프롬프트 리젝 사유" oninput="setReason('seed-temple_snowflake_crown','prompt',this.value)">
+    </div>
+  </div><div class="card" data-id="seed-temple_fur_stole">
+    <div class="imgs">
+      <div class="box"><span class=lbl>정적</span><img src="sprites/pool/seed-temple_fur_stole.png" loading=lazy></div>
+      <div class="box"><span class=lbl>애니</span><div class="anim" data-frames="9" style="background-image:url('sprites/anim3/seed-temple_fur_stole.webp?v=1782641210096')"></div></div>
+    </div>
+    <div class="meta"><span class="nm">설백 목도리</span><span class="mt">정면 · 밝음</span><span class="id">seed-temple_fur_stole</span></div>
+    <div class="story">새하얀 털을 어깨에 둥글게 두르고, 양 끝엔 금실과 푸른 보석으로 짠 매듭 띠를 늘어뜨렸다. 두르는 순간 목덜미부터 사르르 따뜻해져, 한겨울 새벽 예불에도 졸음이 밀려올 만큼 포근하다. 누군가는 이걸 두른 채 선 자리에서 그대로 잠들었다.</div>
+    <div class="rejrow">
+      <button class="rk rt" onclick="rej('seed-temple_fur_stole','story')">✕ 스토리 리젝</button>
+      <input class="rs" data-k="story" placeholder="이름·스토리 리젝 사유" oninput="setReason('seed-temple_fur_stole','story',this.value)">
+    </div>
+    <div class="pr"><span class="prlbl">애니 프롬프트</span><div class="prtxt">털 목도리는 완전히 고정된 채, 오직 부드러운 흰 털만 살랑살랑 흔들린다 (윤기·광휘 없음, 고급스럽게)</div><div class="pren">the fur stole rests perfectly still while only its soft white fur sways and stirs gently, no sheen and no glow, elegant and refined</div></div>
+    <div class="rejrow">
+      <button class="rk ra" onclick="rej('seed-temple_fur_stole','anim')">✕ 애니 리젝</button>
+      <input class="rs" data-k="anim" placeholder="애니 리젝 사유" oninput="setReason('seed-temple_fur_stole','anim',this.value)">
+    </div>
+    <div class="rejrow">
+      <button class="rk rp" onclick="rej('seed-temple_fur_stole','prompt')">✕ 프롬프트 리젝</button>
+      <input class="rs" data-k="prompt" placeholder="프롬프트 리젝 사유" oninput="setReason('seed-temple_fur_stole','prompt',this.value)">
+    </div>
+  </div><div class="card" data-id="seed-volcano_dragonscale_satchel">
+    <div class="imgs">
+      <div class="box"><span class=lbl>정적</span><img src="sprites/pool/seed-volcano_dragonscale_satchel.png" loading=lazy></div>
+      <div class="box"><span class=lbl>애니</span><div class="anim" data-frames="9" style="background-image:url('sprites/anim3/seed-volcano_dragonscale_satchel.webp?v=1782652820986')"></div></div>
+    </div>
+    <div class="meta"><span class="nm">흑린 봇짐</span><span class="mt">정면 · 담담</span><span class="id">seed-volcano_dragonscale_satchel</span></div>
+    <div class="story">검은 용비늘 가죽을 이어 지은 봇짐이다. 버클은 녹은 금을 부어 굳혔고, 비늘은 십 년을 메도 긁힌 자국 하나 없다. 먼 길 떠나는 자들이 짐을 꾸릴 때 가장 먼저 챙긴다. 용의 등을 지고 다니는 셈이니, 어지간한 비바람에는 안의 것이 끄떡없다.</div>
+    <div class="rejrow">
+      <button class="rk rt" onclick="rej('seed-volcano_dragonscale_satchel','story')">✕ 스토리 리젝</button>
+      <input class="rs" data-k="story" placeholder="이름·스토리 리젝 사유" oninput="setReason('seed-volcano_dragonscale_satchel','story',this.value)">
+    </div>
+    <div class="pr"><span class="prlbl">애니 프롬프트</span><div class="prtxt">용비늘 봇짐은 완전히 고정되고, 오직 가운데 금빛 버클 보석만 밝고 또렷하게 번쩍이며 강하게 맥동한다 (그 외 일절 움직임 없음, 끈·줄 없음)</div><div class="pren">the dragon-scale satchel stays completely frozen; only the central gold buckle gem flashes and glows BRIGHTLY and clearly and pulses with strong light, nothing else moves, no strap and no cord</div></div>
+    <div class="rejrow">
+      <button class="rk ra" onclick="rej('seed-volcano_dragonscale_satchel','anim')">✕ 애니 리젝</button>
+      <input class="rs" data-k="anim" placeholder="애니 리젝 사유" oninput="setReason('seed-volcano_dragonscale_satchel','anim',this.value)">
+    </div>
+    <div class="rejrow">
+      <button class="rk rp" onclick="rej('seed-volcano_dragonscale_satchel','prompt')">✕ 프롬프트 리젝</button>
+      <input class="rs" data-k="prompt" placeholder="프롬프트 리젝 사유" oninput="setReason('seed-volcano_dragonscale_satchel','prompt',this.value)">
+    </div>
+  </div><div class="card" data-id="seed-volcano_dragonhorn_circlet">
+    <div class="imgs">
+      <div class="box"><span class=lbl>정적</span><img src="sprites/pool/seed-volcano_dragonhorn_circlet.png" loading=lazy></div>
+      <div class="box"><span class=lbl>애니</span><div class="anim" data-frames="9" style="background-image:url('sprites/anim3/seed-volcano_dragonhorn_circlet.webp?v=1782635221297')"></div></div>
+    </div>
+    <div class="meta"><span class="nm">화룡의 뿔관</span><span class="mt">정면 · 맹렬</span><span class="id">seed-volcano_dragonhorn_circlet</span></div>
+    <div class="story">검붉은 띠 양옆에서 진짜 용의 뿔 두 개가 휘어 솟고, 한가운데 핏빛 루비가 화로처럼 박혔다. 띠를 따라 금빛 불꽃 무늬가 일렁인다. 화산의 투사들은 이 관을 쓰고서야 비로소 제 몫의 용을 마주할 용기를 냈다. 뿔을 쓴 자에게, 용은 더 이상 올려다보는 상대가 아니다.</div>
+    <div class="rejrow">
+      <button class="rk rt" onclick="rej('seed-volcano_dragonhorn_circlet','story')">✕ 스토리 리젝</button>
+      <input class="rs" data-k="story" placeholder="이름·스토리 리젝 사유" oninput="setReason('seed-volcano_dragonhorn_circlet','story',this.value)">
+    </div>
+    <div class="pr"><span class="prlbl">애니 프롬프트</span><div class="prtxt">용뿔 서클릿은 가만히 있고 뿔을 따라 잿불빛이 일렁이며, 사나운 주황 오라가 맥동한다</div><div class="pren">the dragon-horn circlet holds steady while ember light flickers along its horns, a fierce orange aura pulsing</div></div>
+    <div class="rejrow">
+      <button class="rk ra" onclick="rej('seed-volcano_dragonhorn_circlet','anim')">✕ 애니 리젝</button>
+      <input class="rs" data-k="anim" placeholder="애니 리젝 사유" oninput="setReason('seed-volcano_dragonhorn_circlet','anim',this.value)">
+    </div>
+    <div class="rejrow">
+      <button class="rk rp" onclick="rej('seed-volcano_dragonhorn_circlet','prompt')">✕ 프롬프트 리젝</button>
+      <input class="rs" data-k="prompt" placeholder="프롬프트 리젝 사유" oninput="setReason('seed-volcano_dragonhorn_circlet','prompt',this.value)">
+    </div>
+  </div><div class="card" data-id="seed-volcano_obsidian_warfan">
+    <div class="imgs">
+      <div class="box"><span class=lbl>정적</span><img src="sprites/pool/seed-volcano_obsidian_warfan.png" loading=lazy></div>
+      <div class="box"><span class=lbl>애니</span><div class="anim" data-frames="9" style="background-image:url('sprites/anim3/seed-volcano_obsidian_warfan.webp?v=1782641164842')"></div></div>
+    </div>
+    <div class="meta"><span class="nm">흑요 봉황선</span><span class="mt">정면 · 맹렬</span><span class="id">seed-volcano_obsidian_warfan</span></div>
+    <div class="story">흑요석 살을 칼날처럼 펼친 군선이다. 가운데엔 금빛 봉황이 날개를 활짝 펴고, 가장자리마다 금이 번뜩인다. 활짝 펴면 더운 바람이 일고, 접으면 그대로 단단한 몽둥이가 된다. 부채를 든 장수는 싸우러 온 게 아니라 구경 온 듯 보였는데, 늘 가장 마지막까지 서 있었다.</div>
+    <div class="rejrow">
+      <button class="rk rt" onclick="rej('seed-volcano_obsidian_warfan','story')">✕ 스토리 리젝</button>
+      <input class="rs" data-k="story" placeholder="이름·스토리 리젝 사유" oninput="setReason('seed-volcano_obsidian_warfan','story',this.value)">
+    </div>
+    <div class="pr"><span class="prlbl">애니 프롬프트</span><div class="prtxt">군선은 가만히 있고 잿불빛 주황 가장자리가 우아하게 빛나며 옅은 열기가 피어오른다 (고급스럽게)</div><div class="pren">the war-fan rests still while its ember-orange edges glow elegantly and faint heat-shimmer rises, refined and premium</div></div>
+    <div class="rejrow">
+      <button class="rk ra" onclick="rej('seed-volcano_obsidian_warfan','anim')">✕ 애니 리젝</button>
+      <input class="rs" data-k="anim" placeholder="애니 리젝 사유" oninput="setReason('seed-volcano_obsidian_warfan','anim',this.value)">
+    </div>
+    <div class="rejrow">
+      <button class="rk rp" onclick="rej('seed-volcano_obsidian_warfan','prompt')">✕ 프롬프트 리젝</button>
+      <input class="rs" data-k="prompt" placeholder="프롬프트 리젝 사유" oninput="setReason('seed-volcano_obsidian_warfan','prompt',this.value)">
+    </div>
+  </div><div class="card" data-id="seed-swamp_mushroom_hat">
+    <div class="imgs">
+      <div class="box"><span class=lbl>정적</span><img src="sprites/pool/seed-swamp_mushroom_hat.png" loading=lazy></div>
+      <div class="box"><span class=lbl>애니</span><div class="anim" data-frames="9" style="background-image:url('sprites/anim3/seed-swamp_mushroom_hat.webp?v=1782635367375')"></div></div>
+    </div>
+    <div class="meta"><span class="nm">약초꾼의 버섯 모자</span><span class="mt">정면 · 밝음</span><span class="id">seed-swamp_mushroom_hat</span></div>
+    <div class="story">커다란 붉은 버섯 갓을 통째로 모자로 썼다. 챙엔 이끼와 푸른 초롱꽃이 돋고, 작은 약병과 마른 잎이 끈에 줄줄이 매달려 흔들린다. 비가 오면 우산, 볕이 나면 그늘이다. 약초꾼이 모자를 벗으면, 갓 안쪽에 끼워 둔 약초에서 은은한 풀냄새가 한 줌 따라 났다.</div>
+    <div class="rejrow">
+      <button class="rk rt" onclick="rej('seed-swamp_mushroom_hat','story')">✕ 스토리 리젝</button>
+      <input class="rs" data-k="story" placeholder="이름·스토리 리젝 사유" oninput="setReason('seed-swamp_mushroom_hat','story',this.value)">
+    </div>
+    <div class="pr"><span class="prlbl">애니 프롬프트</span><div class="prtxt">버섯 모자는 가만히 있고 갓에서 작은 빛나는 포자가 피어오르며, 부드러운 초록 오라가 맥동한다</div><div class="pren">the mushroom-cap hat sits still while tiny glowing spores drift up from its cap, a soft green aura pulsing</div></div>
+    <div class="rejrow">
+      <button class="rk ra" onclick="rej('seed-swamp_mushroom_hat','anim')">✕ 애니 리젝</button>
+      <input class="rs" data-k="anim" placeholder="애니 리젝 사유" oninput="setReason('seed-swamp_mushroom_hat','anim',this.value)">
+    </div>
+    <div class="rejrow">
+      <button class="rk rp" onclick="rej('seed-swamp_mushroom_hat','prompt')">✕ 프롬프트 리젝</button>
+      <input class="rs" data-k="prompt" placeholder="프롬프트 리젝 사유" oninput="setReason('seed-swamp_mushroom_hat','prompt',this.value)">
+    </div>
+  </div><div class="card" data-id="seed-swamp_lily_crown">
+    <div class="imgs">
+      <div class="box"><span class=lbl>정적</span><img src="sprites/pool/seed-swamp_lily_crown.png" loading=lazy></div>
+      <div class="box"><span class=lbl>애니</span><div class="anim" data-frames="9" style="background-image:url('sprites/anim3/seed-swamp_lily_crown.webp?v=1782650752930')"></div></div>
+    </div>
+    <div class="meta"><span class="nm">수련 화관</span><span class="mt">정면 · 밝음</span><span class="id">seed-swamp_lily_crown</span></div>
+    <div class="story">분홍 수련을 큼직하게 엮어 둥근 화관을 지었다. 봉오리와 활짝 핀 꽃이 잎사귀 사이에 번갈아 앉았다. 늪 마을에선 큰비가 갠 다음 날 이걸 쓰고 물가를 한 바퀴 돈다. 그해 물이 넘치지 말라는 비손인데, 신기하게도 이 화관의 수련만은 잔치가 끝나고도 한참을 더 피어 있었다.</div>
+    <div class="rejrow">
+      <button class="rk rt" onclick="rej('seed-swamp_lily_crown','story')">✕ 스토리 리젝</button>
+      <input class="rs" data-k="story" placeholder="이름·스토리 리젝 사유" oninput="setReason('seed-swamp_lily_crown','story',this.value)">
+    </div>
+    <div class="pr"><span class="prlbl">애니 프롬프트</span><div class="prtxt">수련 꽃관은 가만히 있고 분홍 연꽃 봉오리가 피어나 활짝 핀다 (오라·광휘 없이 오직 꽃만 피어남, 고급스럽게)</div><div class="pren">the water-lily crown stays still while its pink lotus buds bloom and open into full blossoms, NO aura and no glow, just the flowers opening, elegant</div></div>
+    <div class="rejrow">
+      <button class="rk ra" onclick="rej('seed-swamp_lily_crown','anim')">✕ 애니 리젝</button>
+      <input class="rs" data-k="anim" placeholder="애니 리젝 사유" oninput="setReason('seed-swamp_lily_crown','anim',this.value)">
+    </div>
+    <div class="rejrow">
+      <button class="rk rp" onclick="rej('seed-swamp_lily_crown','prompt')">✕ 프롬프트 리젝</button>
+      <input class="rs" data-k="prompt" placeholder="프롬프트 리젝 사유" oninput="setReason('seed-swamp_lily_crown','prompt',this.value)">
+    </div>
+  </div><div class="card" data-id="seed-angel_glide_wings">
+    <div class="imgs">
+      <div class="box"><span class=lbl>정적</span><img src="sprites/pool/seed-angel_glide_wings.png" loading=lazy></div>
+      <div class="box"><span class=lbl>애니</span><div class="anim" data-frames="9" style="background-image:url('sprites/anim3/seed-angel_glide_wings.webp?v=1782652767577')"></div></div>
+    </div>
+    <div class="meta"><span class="nm">하얀 깃 날개</span><span class="mt">정면 · 밝음</span><span class="id">seed-angel_glide_wings</span></div>
+    <div class="story">등에 다는 새하얀 깃 날개다. 깃 끝마다 금빛 단이 둘리고, 죽지엔 금실 무늬가 감겼다. 진짜 날지는 못해도, 높은 데서 뛰어내릴 때 한 박자쯤 천천히 내려앉게 해 준다. 그 한 박자가 좋아서, 아이들은 일부러 낮은 담을 골라 폴짝폴짝 뛰어내렸다.</div>
+    <div class="rejrow">
+      <button class="rk rt" onclick="rej('seed-angel_glide_wings','story')">✕ 스토리 리젝</button>
+      <input class="rs" data-k="story" placeholder="이름·스토리 리젝 사유" oninput="setReason('seed-angel_glide_wings','story',this.value)">
+    </div>
+    <div class="pr"><span class="prlbl">애니 프롬프트</span><div class="prtxt">한 쌍의 천사 날개는 완전히 고정돼 파닥임·날개 움직임이 전혀 없고, 오직 깃털 위로 부드러운 빛이 또렷이 일렁인다 (고급스러운 금빛)</div><div class="pren">the pair of angel wings are held completely still and fixed with NO flapping and no wing movement at all; only a soft gentle shimmer of light clearly plays over the feathers, refined golden glow</div></div>
+    <div class="rejrow">
+      <button class="rk ra" onclick="rej('seed-angel_glide_wings','anim')">✕ 애니 리젝</button>
+      <input class="rs" data-k="anim" placeholder="애니 리젝 사유" oninput="setReason('seed-angel_glide_wings','anim',this.value)">
+    </div>
+    <div class="rejrow">
+      <button class="rk rp" onclick="rej('seed-angel_glide_wings','prompt')">✕ 프롬프트 리젝</button>
+      <input class="rs" data-k="prompt" placeholder="프롬프트 리젝 사유" oninput="setReason('seed-angel_glide_wings','prompt',this.value)">
+    </div>
+  </div><div class="card" data-id="seed-kingdom_court_fan">
+    <div class="imgs">
+      <div class="box"><span class=lbl>정적</span><img src="sprites/pool/seed-kingdom_court_fan.png" loading=lazy></div>
+      <div class="box"><span class=lbl>애니</span><div class="anim" data-frames="9" style="background-image:url('sprites/anim3/seed-kingdom_court_fan.webp?v=1782647327266')"></div></div>
+    </div>
+    <div class="meta"><span class="nm">진홍 봉황선</span><span class="mt">정면 · 우아</span><span class="id">seed-kingdom_court_fan</span></div>
+    <div class="story">진홍 비단에 금실로 봉황 한 마리를 수놓고, 가장자리엔 금 레이스를 둘렀다. 펼치면 봉황이 부채 가득 날개를 펴고, 촛불 아래선 금실이 진짜 날갯짓처럼 일렁인다. 연회의 가장 높은 자리에 앉은 이만 이 부채로 얼굴을 반쯤 가릴 수 있었다.</div>
+    <div class="rejrow">
+      <button class="rk rt" onclick="rej('seed-kingdom_court_fan','story')">✕ 스토리 리젝</button>
+      <input class="rs" data-k="story" placeholder="이름·스토리 리젝 사유" oninput="setReason('seed-kingdom_court_fan','story',this.value)">
+    </div>
+    <div class="pr"><span class="prlbl">애니 프롬프트</span><div class="prtxt">봉황 부채는 가만히 있고 금빛 문양이 밝고 또렷하게 발광하며 고급스럽게 빛나고, 옅은 불티가 떠다닌다</div><div class="pren">the phoenix court fan rests still while its gold patterns glow brightly and noticeably, shimmering with refined light, faint embers drifting</div></div>
+    <div class="rejrow">
+      <button class="rk ra" onclick="rej('seed-kingdom_court_fan','anim')">✕ 애니 리젝</button>
+      <input class="rs" data-k="anim" placeholder="애니 리젝 사유" oninput="setReason('seed-kingdom_court_fan','anim',this.value)">
+    </div>
+    <div class="rejrow">
+      <button class="rk rp" onclick="rej('seed-kingdom_court_fan','prompt')">✕ 프롬프트 리젝</button>
+      <input class="rs" data-k="prompt" placeholder="프롬프트 리젝 사유" oninput="setReason('seed-kingdom_court_fan','prompt',this.value)">
+    </div>
+  </div><div class="card" data-id="a-commander-epaulets-93">
+    <div class="imgs">
+      <div class="box"><span class=lbl>정적</span><img src="sprites/pool/a-commander-epaulets-93.png" loading=lazy></div>
+      <div class="box"><span class=lbl>애니</span><div class="anim" data-frames="9" style="background-image:url('sprites/anim3/a-commander-epaulets-93.webp?v=1782641388356')"></div></div>
+    </div>
+    <div class="meta"><span class="nm">푸른 깃 견장</span><span class="mt">정면 · 장엄</span><span class="id">a-commander-epaulets-93</span></div>
+    <div class="story">금빛 어깨갑 양쪽에서 푸른 깃털이 부챗살처럼 펼쳐지고, 아래로 은사슬과 푸른 보석이 줄줄이 늘어진다. 한 걸음 걸을 때마다 사슬이 가볍게 절그럭댄다. 하늘 군단의 지휘관만 이 견장을 달았다. 멀리서도 그 푸른 깃을 보고, 흩어졌던 줄이 다시 모였다.</div>
+    <div class="rejrow">
+      <button class="rk rt" onclick="rej('a-commander-epaulets-93','story')">✕ 스토리 리젝</button>
+      <input class="rs" data-k="story" placeholder="이름·스토리 리젝 사유" oninput="setReason('a-commander-epaulets-93','story',this.value)">
+    </div>
+    <div class="pr"><span class="prlbl">애니 프롬프트</span><div class="prtxt">깃털 견장은 가만히 있고 늘어진 금사슬이 부드럽게 흔들리며 보석이 우아하게 반짝인다 (고급스럽게)</div><div class="pren">the feathered epaulets stay still while the hanging gold chains sway gently and the gems glint elegantly, refined and proud</div></div>
+    <div class="rejrow">
+      <button class="rk ra" onclick="rej('a-commander-epaulets-93','anim')">✕ 애니 리젝</button>
+      <input class="rs" data-k="anim" placeholder="애니 리젝 사유" oninput="setReason('a-commander-epaulets-93','anim',this.value)">
+    </div>
+    <div class="rejrow">
+      <button class="rk rp" onclick="rej('a-commander-epaulets-93','prompt')">✕ 프롬프트 리젝</button>
+      <input class="rs" data-k="prompt" placeholder="프롬프트 리젝 사유" oninput="setReason('a-commander-epaulets-93','prompt',this.value)">
+    </div>
+  </div><div class="card" data-id="a-pumpkin-witch-hat-97">
+    <div class="imgs">
+      <div class="box"><span class=lbl>정적</span><img src="sprites/pool/a-pumpkin-witch-hat-97.png" loading=lazy></div>
+      <div class="box"><span class=lbl>애니</span><div class="anim" data-frames="9" style="background-image:url('sprites/anim3/a-pumpkin-witch-hat-97.webp?v=1782641383245')"></div></div>
+    </div>
+    <div class="meta"><span class="nm">마녀의 뾰족 모자</span><span class="mt">정면 · 위트</span><span class="id">a-pumpkin-witch-hat-97</span></div>
+    <div class="story">끝이 살짝 꺾인 검은 뾰족 모자에 주황 띠를 두르고 금빛 버클을 채웠다. 띠 한쪽엔 작은 잭오랜턴이 매달려 까딱인다. 챙이 워낙 넓어 비를 잘 막는 대신, 정작 쓴 사람은 앞이 잘 안 보인다고 투덜댄다. 그래도 이 모자만 쓰면 어쩐지 한 뼘 더 당당해진다나.</div>
+    <div class="rejrow">
+      <button class="rk rt" onclick="rej('a-pumpkin-witch-hat-97','story')">✕ 스토리 리젝</button>
+      <input class="rs" data-k="story" placeholder="이름·스토리 리젝 사유" oninput="setReason('a-pumpkin-witch-hat-97','story',this.value)">
+    </div>
+    <div class="pr"><span class="prlbl">애니 프롬프트</span><div class="prtxt">마녀 모자는 가만히 있고 휘어진 끝이 부드럽게 흔들리며 버클 주위로 작은 주황 반짝임이 떠다닌다 (고급스럽게)</div><div class="pren">the witch hat stays still while its bent tip sways gently and tiny orange sparkles drift around the buckle, refined and elegant</div></div>
+    <div class="rejrow">
+      <button class="rk ra" onclick="rej('a-pumpkin-witch-hat-97','anim')">✕ 애니 리젝</button>
+      <input class="rs" data-k="anim" placeholder="애니 리젝 사유" oninput="setReason('a-pumpkin-witch-hat-97','anim',this.value)">
+    </div>
+    <div class="rejrow">
+      <button class="rk rp" onclick="rej('a-pumpkin-witch-hat-97','prompt')">✕ 프롬프트 리젝</button>
+      <input class="rs" data-k="prompt" placeholder="프롬프트 리젝 사유" oninput="setReason('a-pumpkin-witch-hat-97','prompt',this.value)">
+    </div>
+  </div><div class="card" data-id="a-phantom-half-mask-125">
+    <div class="imgs">
+      <div class="box"><span class=lbl>정적</span><img src="sprites/pool/a-phantom-half-mask-125.png" loading=lazy></div>
+      <div class="box"><span class=lbl>애니</span><div class="anim" data-frames="9" style="background-image:url('sprites/anim3/a-phantom-half-mask-125.webp?v=1782652767688')"></div></div>
+    </div>
+    <div class="meta"><span class="nm">상아 반가면</span><span class="mt">정면 · 수수께끼</span><span class="id">a-phantom-half-mask-125</span></div>
+    <div class="story">얼굴 위쪽을 가리는 상아빛 가면이다. 금빛 세공이 눈가를 따라 덩굴처럼 뻗고, 한쪽엔 검은 술이 늘어진다. 가면무도회에선 모두가 정체를 감추지만, 이 가면을 쓴 자는 어쩐지 더 또렷이 기억에 남는다. 가린 절반이 드러낸 절반을 더 궁금하게 만드는 까닭이다.</div>
+    <div class="rejrow">
+      <button class="rk rt" onclick="rej('a-phantom-half-mask-125','story')">✕ 스토리 리젝</button>
+      <input class="rs" data-k="story" placeholder="이름·스토리 리젝 사유" oninput="setReason('a-phantom-half-mask-125','story',this.value)">
+    </div>
+    <div class="pr"><span class="prlbl">애니 프롬프트</span><div class="prtxt">백자 반가면은 완전히 고정된 채, 금빛 세공이 곡선을 따라 또렷이 반짝이며 빛난다 (가면 본체는 정지, 고급스럽게)</div><div class="pren">the porcelain half-mask stays completely still while its gold filigree clearly sparkles and glints with bright moving light along its curves, the mask itself frozen, elegant</div></div>
+    <div class="rejrow">
+      <button class="rk ra" onclick="rej('a-phantom-half-mask-125','anim')">✕ 애니 리젝</button>
+      <input class="rs" data-k="anim" placeholder="애니 리젝 사유" oninput="setReason('a-phantom-half-mask-125','anim',this.value)">
+    </div>
+    <div class="rejrow">
+      <button class="rk rp" onclick="rej('a-phantom-half-mask-125','prompt')">✕ 프롬프트 리젝</button>
+      <input class="rs" data-k="prompt" placeholder="프롬프트 리젝 사유" oninput="setReason('a-phantom-half-mask-125','prompt',this.value)">
+    </div>
+  </div><div class="card" data-id="a-valkyrie-winged-circlet-179">
+    <div class="imgs">
+      <div class="box"><span class=lbl>정적</span><img src="sprites/pool/a-valkyrie-winged-circlet-179.png" loading=lazy></div>
+      <div class="box"><span class=lbl>애니</span><div class="anim" data-frames="9" style="background-image:url('sprites/anim3/a-valkyrie-winged-circlet-179.webp?v=1782647405145')"></div></div>
+    </div>
+    <div class="meta"><span class="nm">발키리의 날개관</span><span class="mt">정면 · 장엄</span><span class="id">a-valkyrie-winged-circlet-179</span></div>
+    <div class="story">은빛 띠 한가운데 큼직한 푸른 보석을 금테로 둘러 앉히고, 양옆엔 은백색 깃 날개를 달았다. 이 관을 쓰면 멀리 쓰러진 자의 마지막 숨소리까지 들린다고 했다. 발키리는 그 소리를 좇아, 늘 전장에 가장 먼저 닿았다.</div>
+    <div class="rejrow">
+      <button class="rk rt" onclick="rej('a-valkyrie-winged-circlet-179','story')">✕ 스토리 리젝</button>
+      <input class="rs" data-k="story" placeholder="이름·스토리 리젝 사유" oninput="setReason('a-valkyrie-winged-circlet-179','story',this.value)">
+    </div>
+    <div class="pr"><span class="prlbl">애니 프롬프트</span><div class="prtxt">날개 서클릿은 가만히 있고 가운데 푸른 보석이 밝게 빛나며 맥동하고, 옆 날개는 산들바람에 흔들리듯 아주 살짝만 움직인다 (파닥임 없음, 고급스럽게)</div><div class="pren">the winged circlet stays still while the blue gem at its center glows and pulses brightly, and the side-wings sway only very slightly as if in a gentle breeze, no flapping, refined</div></div>
+    <div class="rejrow">
+      <button class="rk ra" onclick="rej('a-valkyrie-winged-circlet-179','anim')">✕ 애니 리젝</button>
+      <input class="rs" data-k="anim" placeholder="애니 리젝 사유" oninput="setReason('a-valkyrie-winged-circlet-179','anim',this.value)">
+    </div>
+    <div class="rejrow">
+      <button class="rk rp" onclick="rej('a-valkyrie-winged-circlet-179','prompt')">✕ 프롬프트 리젝</button>
+      <input class="rs" data-k="prompt" placeholder="프롬프트 리젝 사유" oninput="setReason('a-valkyrie-winged-circlet-179','prompt',this.value)">
+    </div>
+  </div><div class="card" data-id="a-devil-horns-winged-149">
+    <div class="imgs">
+      <div class="box"><span class=lbl>정적</span><img src="sprites/pool/a-devil-horns-winged-149.png" loading=lazy></div>
+      <div class="box"><span class=lbl>애니</span><div class="anim" data-frames="9" style="background-image:url('sprites/anim3/a-devil-horns-winged-149.webp?v=1782641365038')"></div></div>
+    </div>
+    <div class="meta"><span class="nm">작은 악마의 뿔</span><span class="mt">정면 · 밝음</span><span class="id">a-devil-horns-winged-149</span></div>
+    <div class="story">윤기 도는 붉은 뿔 두 개를 가운데 세우고, 양옆엔 작은 박쥐 날개를 단 머리띠다. 무섭게 보이려고 만들었다는데, 정작 쓴 사람은 하나같이 더 귀여워졌다. 축제 밤이면 이걸 쓴 아이들이 골목마다 뿔을 들이밀며 사탕을 받아 갔다.</div>
+    <div class="rejrow">
+      <button class="rk rt" onclick="rej('a-devil-horns-winged-149','story')">✕ 스토리 리젝</button>
+      <input class="rs" data-k="story" placeholder="이름·스토리 리젝 사유" oninput="setReason('a-devil-horns-winged-149','story',this.value)">
+    </div>
+    <div class="pr"><span class="prlbl">애니 프롬프트</span><div class="prtxt">악마뿔 머리띠는 가만히 있고 작은 박쥐 날개가 부드럽게 파닥이며 고급스러운 흐릿한 진홍 빛이 은은하게 맥동한다</div><div class="pren">the devil-horn headband stays still while its little bat wings flutter gently and a refined dim crimson glow softly pulses, elegant</div></div>
+    <div class="rejrow">
+      <button class="rk ra" onclick="rej('a-devil-horns-winged-149','anim')">✕ 애니 리젝</button>
+      <input class="rs" data-k="anim" placeholder="애니 리젝 사유" oninput="setReason('a-devil-horns-winged-149','anim',this.value)">
+    </div>
+    <div class="rejrow">
+      <button class="rk rp" onclick="rej('a-devil-horns-winged-149','prompt')">✕ 프롬프트 리젝</button>
+      <input class="rs" data-k="prompt" placeholder="프롬프트 리젝 사유" oninput="setReason('a-devil-horns-winged-149','prompt',this.value)">
+    </div>
+  </div><div class="card" data-id="a-dragon-horned-helm-187">
+    <div class="imgs">
+      <div class="box"><span class=lbl>정적</span><img src="sprites/pool/a-dragon-horned-helm-187.png" loading=lazy></div>
+      <div class="box"><span class=lbl>애니</span><div class="anim" data-frames="9" style="background-image:url('sprites/anim3/a-dragon-horned-helm-187.webp?v=1782642518637')"></div></div>
+    </div>
+    <div class="meta"><span class="nm">용면 투구</span><span class="mt">정면 · 맹렬</span><span class="id">a-dragon-horned-helm-187</span></div>
+    <div class="story">검푸른 강철 투구 정면에 금빛 용의 얼굴이 으르렁대며 박혔다. 양옆으론 금빛 뿔과 날개가 사납게 뻗는다. 눈구멍 안쪽이 가끔 번뜩이고, 콧등 틈으로 옅은 불김이 샌다. 이걸 쓴 자의 목소리는 투구를 울려 한층 낮게 깔려, 듣는 이의 등을 절로 서늘하게 했다.</div>
+    <div class="rejrow">
+      <button class="rk rt" onclick="rej('a-dragon-horned-helm-187','story')">✕ 스토리 리젝</button>
+      <input class="rs" data-k="story" placeholder="이름·스토리 리젝 사유" oninput="setReason('a-dragon-horned-helm-187','story',this.value)">
+    </div>
+    <div class="pr"><span class="prlbl">애니 프롬프트</span><div class="prtxt">흑룡 뿔투구는 완전히 고정된 채, 전체 오라 대신 용의 눈이 번뜩이며 콧구멍에서 불똥과 작은 화염 콧김이 뿜어져 나온다 (고급스럽고 사납게)</div><div class="pren">the dragon horned helm stays perfectly still; instead of any overall aura, the dragon's eyes flash and glint while sparks and small wisps of fiery breath puff out from its nostrils, refined and fierce</div></div>
+    <div class="rejrow">
+      <button class="rk ra" onclick="rej('a-dragon-horned-helm-187','anim')">✕ 애니 리젝</button>
+      <input class="rs" data-k="anim" placeholder="애니 리젝 사유" oninput="setReason('a-dragon-horned-helm-187','anim',this.value)">
+    </div>
+    <div class="rejrow">
+      <button class="rk rp" onclick="rej('a-dragon-horned-helm-187','prompt')">✕ 프롬프트 리젝</button>
+      <input class="rs" data-k="prompt" placeholder="프롬프트 리젝 사유" oninput="setReason('a-dragon-horned-helm-187','prompt',this.value)">
+    </div>
+  </div><div class="card" data-id="a-paladin-winged-helm-181">
+    <div class="imgs">
+      <div class="box"><span class=lbl>정적</span><img src="sprites/pool/a-paladin-winged-helm-181.png" loading=lazy></div>
+      <div class="box"><span class=lbl>애니</span><div class="anim" data-frames="9" style="background-image:url('sprites/anim3/a-paladin-winged-helm-181.webp?v=1782635614103')"></div></div>
+    </div>
+    <div class="meta"><span class="nm">백은 날개 투구</span><span class="mt">정면 · 장엄</span><span class="id">a-paladin-winged-helm-181</span></div>
+    <div class="story">새하얀 은빛 투구 정면에 금빛 십자가 곧게 새겨지고, 양옆엔 작은 은 날개가 펴진다. 정수리엔 푸른 깃 장식이 꼿꼿이 섰다. 투구를 쓰면 시야가 좁아지는 대신, 오직 앞만 보게 된다. 성기사에게 필요한 건 딱 그것뿐이라 했다.</div>
+    <div class="rejrow">
+      <button class="rk rt" onclick="rej('a-paladin-winged-helm-181','story')">✕ 스토리 리젝</button>
+      <input class="rs" data-k="story" placeholder="이름·스토리 리젝 사유" oninput="setReason('a-paladin-winged-helm-181','story',this.value)">
+    </div>
+    <div class="pr"><span class="prlbl">애니 프롬프트</span><div class="prtxt">날개 투구는 가만히 있고 푸른 깃털 장식이 흔들리며 은빛이 반짝이고, 성스러운 오라가 맥동한다</div><div class="pren">the winged great-helm holds steady while its blue plume sways and the silver gleams, a holy aura pulsing</div></div>
+    <div class="rejrow">
+      <button class="rk ra" onclick="rej('a-paladin-winged-helm-181','anim')">✕ 애니 리젝</button>
+      <input class="rs" data-k="anim" placeholder="애니 리젝 사유" oninput="setReason('a-paladin-winged-helm-181','anim',this.value)">
+    </div>
+    <div class="rejrow">
+      <button class="rk rp" onclick="rej('a-paladin-winged-helm-181','prompt')">✕ 프롬프트 리젝</button>
+      <input class="rs" data-k="prompt" placeholder="프롬프트 리젝 사유" oninput="setReason('a-paladin-winged-helm-181','prompt',this.value)">
+    </div>
+  </div><div class="card" data-id="a-frost-kite-shield-82">
+    <div class="imgs">
+      <div class="box"><span class=lbl>정적</span><img src="sprites/pool/a-frost-kite-shield-82.png" loading=lazy></div>
+      <div class="box"><span class=lbl>애니</span><div class="anim" data-frames="9" style="background-image:url('sprites/anim3/a-frost-kite-shield-82.webp?v=1782635666963')"></div></div>
+    </div>
+    <div class="meta"><span class="nm">빙정 방패</span><span class="mt">정면 · 장엄</span><span class="id">a-frost-kite-shield-82</span></div>
+    <div class="story">얼음 결정을 깎아 두른 연 모양 방패다. 한가운데 여섯 갈래 눈꽃이 큼직하게 새겨지고, 은 테가 가장자리를 단단히 잡았다. 날아오는 것이 이 방패에 닿으면 부딪치기도 전에 한 김 얼어, 기세가 뚝 꺾인다. 이 방패 뒤는 언제나 한겨울이었다.</div>
+    <div class="rejrow">
+      <button class="rk rt" onclick="rej('a-frost-kite-shield-82','story')">✕ 스토리 리젝</button>
+      <input class="rs" data-k="story" placeholder="이름·스토리 리젝 사유" oninput="setReason('a-frost-kite-shield-82','story',this.value)">
+    </div>
+    <div class="pr"><span class="prlbl">애니 프롬프트</span><div class="prtxt">서리 방패는 가만히 있고 결정 표면이 반짝이며 눈꽃 보스가 빛나고, 차가운 오라가 맥동한다</div><div class="pren">the frost shield holds steady as its crystal surface sparkles and the snowflake boss glows, a cold aura pulsing</div></div>
+    <div class="rejrow">
+      <button class="rk ra" onclick="rej('a-frost-kite-shield-82','anim')">✕ 애니 리젝</button>
+      <input class="rs" data-k="anim" placeholder="애니 리젝 사유" oninput="setReason('a-frost-kite-shield-82','anim',this.value)">
+    </div>
+    <div class="rejrow">
+      <button class="rk rp" onclick="rej('a-frost-kite-shield-82','prompt')">✕ 프롬프트 리젝</button>
+      <input class="rs" data-k="prompt" placeholder="프롬프트 리젝 사유" oninput="setReason('a-frost-kite-shield-82','prompt',this.value)">
+    </div>
+  </div><div class="card" data-id="a-round-glasses-245">
+    <div class="imgs">
+      <div class="box"><span class=lbl>정적</span><img src="sprites/pool/a-round-glasses-245.png" loading=lazy></div>
+      <div class="box"><span class=lbl>애니</span><div class="anim" data-frames="9" style="background-image:url('sprites/anim3/a-round-glasses-245.webp?v=1782635694401')"></div></div>
+    </div>
+    <div class="meta"><span class="nm">금테 둥근 안경</span><span class="mt">정면 · 위트</span><span class="id">a-round-glasses-245</span></div>
+    <div class="story">가느다란 금테로 둥글게 두른 안경이다. 알이 맑아 빛이 닿으면 동그란 테두리만 반짝 떠 보인다. 잘 보이게 해 주는지는 둘째 문제고, 테가 얇아 콧잔등이 안 아픈 게 최고다. 이걸 걸치고 책장을 넘기면, 같은 말을 해도 어쩐지 한결 그럴듯하게 들린다.</div>
+    <div class="rejrow">
+      <button class="rk rt" onclick="rej('a-round-glasses-245','story')">✕ 스토리 리젝</button>
+      <input class="rs" data-k="story" placeholder="이름·스토리 리젝 사유" oninput="setReason('a-round-glasses-245','story',this.value)">
+    </div>
+    <div class="pr"><span class="prlbl">애니 프롬프트</span><div class="prtxt">둥근 안경은 가만히 있고 렌즈에 빛이 반짝이며 테를 따라 옅은 금빛 윤기가 흐른다</div><div class="pren">the round glasses rest still while light glints across the lenses and a faint golden sheen travels along the frames</div></div>
+    <div class="rejrow">
+      <button class="rk ra" onclick="rej('a-round-glasses-245','anim')">✕ 애니 리젝</button>
+      <input class="rs" data-k="anim" placeholder="애니 리젝 사유" oninput="setReason('a-round-glasses-245','anim',this.value)">
+    </div>
+    <div class="rejrow">
+      <button class="rk rp" onclick="rej('a-round-glasses-245','prompt')">✕ 프롬프트 리젝</button>
+      <input class="rs" data-k="prompt" placeholder="프롬프트 리젝 사유" oninput="setReason('a-round-glasses-245','prompt',this.value)">
+    </div>
+  </div></div></main>
+<script>
+var RK='reviewAnim3_v1';
+var NAMES={"seed-kingdom_ribbon_rapier":"창천검","seed-kingdom_court_twin_sabers":"청홍 쌍검","seed-kingdom_winged_coronation_sword":"창궁검","seed-kingdom_falcon_cane_sword":"매 머리 지팡이검","seed-temple_frost_odachi":"눈꽃 대도","seed-volcano_emberveined_greatsword":"용암을 가둔 대검","seed-swamp_lotus_trident":"피어나는 삼지창","seed-angel_star_wand":"샛별의 지팡이","seed-volcano_dragonjaw_halberd":"포효하는 용턱","w-pumpkin-witch-staff-95":"마녀의 등불","seed-kingdom_banner_spear":"왕기의 창","seed-volcano_ember_scythe":"불을 거두는 낫","w-vampire-rapier-114":"선혈의 가는 검","w-reaper-scythe-120":"혼불낫","w-necromancer-staff-126":"초혼의 해골장","w-assassin-twin-daggers-156":"쌍익 단검","w-ornate-flintlock-pistol-162":"상아빛 한 발","w-celestial-greatsword-153":"해오름검","w-elven-longbow-154":"은빛 잎새 활","seed-volcano_forgeheart_warhammer":"화심의 망치","w-thunder-spear-191":"벼락을 박은 창","w--57":"봉문검","seed-angel_radiant_gown":"아침빛 예복","seed-kingdom_azure_outfit":"창천 기사복","seed-angel_seraphguard_armor":"세라핌의 갑주","seed-kingdom_goldknight_plate":"적금 갑주","seed-temple_frostguard_garb":"설산 파수의 갑주","seed-temple_breathwoven_vestment":"설야 예복","a-pumpkin-witch-outfit-96":"호박등 드레스","a-necromancer-robe-127":"갈까마귀 로브","a-test-gothic-lolita-150":"진홍 레이스 드레스","a-test-military-coat-151":"금장 군복","seed-volcano_embersilk_dress":"화염 비단 예복","a-valkyrie-battle-dress-176":"창공의 전투복","a-frost-warden-coat-179":"설원 파수꾼의 외투","a-paladin-armor-180":"성익 갑주","a-dragon-knight-armor-186":"흑룡의 비늘갑","a-phoenix-dancer-dress-183":"불새 깃 드레스","a-astrologer-outfit-103":"성좌의 망토","a-desert-nomad-robes-231":"모래바람의 겹옷","a-academy-professor-robe-234":"학자의 자줏빛 예복","a-academy-student-uniform-233":"왕립 학원 교복","a-forest-ranger-outfit-240":"숲지기의 한 벌","seed-temple_snowflake_crown":"설화의 관","seed-temple_fur_stole":"설백 목도리","seed-volcano_dragonscale_satchel":"흑린 봇짐","seed-volcano_dragonhorn_circlet":"화룡의 뿔관","seed-volcano_obsidian_warfan":"흑요 봉황선","seed-swamp_mushroom_hat":"약초꾼의 버섯 모자","seed-swamp_lily_crown":"수련 화관","seed-angel_glide_wings":"하얀 깃 날개","seed-kingdom_court_fan":"진홍 봉황선","a-commander-epaulets-93":"푸른 깃 견장","a-pumpkin-witch-hat-97":"마녀의 뾰족 모자","a-phantom-half-mask-125":"상아 반가면","a-valkyrie-winged-circlet-179":"발키리의 날개관","a-devil-horns-winged-149":"작은 악마의 뿔","a-dragon-horned-helm-187":"용면 투구","a-paladin-winged-helm-181":"백은 날개 투구","a-frost-kite-shield-82":"빙정 방패","a-round-glasses-245":"금테 둥근 안경"};
+function load(){try{return JSON.parse(localStorage.getItem(RK)||'{}')}catch(e){return {}}}
+function save(o){localStorage.setItem(RK,JSON.stringify(o))}
+// 구조: { id: { anim?:{reason}, prompt?:{reason} } }
+function apply(){var o=load(),cs=document.querySelectorAll('.card');for(var i=0;i<cs.length;i++){var c=cs[i],e=o[c.dataset.id]||{};
+ c.classList.toggle('rej-anim',!!e.anim);c.classList.toggle('rej-prompt',!!e.prompt);c.classList.toggle('rej-story',!!e.story);
+ var ins=c.querySelectorAll('.rs');for(var j=0;j<ins.length;j++){var k=ins[j].dataset.k;ins[j].value=(e[k]&&e[k].reason)||''}}upd()}
+function upd(){var o=load(),a=0,p=0,s=0;for(var u in o){if(o[u].anim)a++;if(o[u].prompt)p++;if(o[u].story)s++}document.getElementById('cnt').textContent='애니 '+a+' · 프롬프트 '+p+' · 스토리 '+s}
+function rej(id,k){var o=load();if(!o[id])o[id]={};if(o[id][k])delete o[id][k];else o[id][k]={reason:''};if(!o[id].anim&&!o[id].prompt&&!o[id].story)delete o[id];save(o);apply()}
+function setReason(id,k,v){var o=load();if(!o[id])o[id]={};if(!o[id][k])o[id][k]={};o[id][k].reason=v;save(o);upd()}
+function exportRej(){var o=load(),aL=[],pL=[],sL=[];for(var u in o){
+ if(o[u].anim)aL.push(u+'  |  '+(NAMES[u]||'')+(o[u].anim.reason?'  |  '+o[u].anim.reason:''));
+ if(o[u].prompt)pL.push(u+'  |  '+(NAMES[u]||'')+(o[u].prompt.reason?'  |  '+o[u].prompt.reason:''));
+ if(o[u].story)sL.push(u+'  |  '+(NAMES[u]||'')+(o[u].story.reason?'  |  '+o[u].story.reason:''));}
+ var t='[스토리 리젝 '+sL.length+'종]\n'+(sL.join('\n')||'(없음)')+'\n\n[애니 리젝 '+aL.length+'종]\n'+(aL.join('\n')||'(없음)')+'\n\n[프롬프트 리젝 '+pL.length+'종]\n'+(pL.join('\n')||'(없음)');
+ var ta=document.getElementById('out');ta.value=t;ta.style.display='block';ta.select();try{navigator.clipboard.writeText(t)}catch(e){}}
+function clearRej(){if(confirm('리젝 표시 전체 초기화?')){localStorage.removeItem(RK);document.getElementById('out').style.display='none';apply()}}
+// 애니 — 프로덕션과 동일: N프레임 스트립을 박스폭에 맞춰 120ms마다 한 프레임씩.
+function startAnims(){var as=document.querySelectorAll('.anim[data-frames]');for(var i=0;i<as.length;i++){(function(el){var n=parseInt(el.dataset.frames,10);if(!n)return;var f=0;function tick(){var w=el.clientWidth;if(w){el.style.backgroundSize=(n*w)+'px '+w+'px';el.style.backgroundPositionX=(-f*w)+'px';f=(f+1)%n}}tick();setInterval(tick,120)})(as[i])}}
+apply();startAnims();
+</script></body></html>
