@@ -29,7 +29,7 @@
     "tone": "서늘",
     "lore": "두 자루 모두 칼날이 검은 불꽃처럼 굽이치고, 금빛 날개 손잡이엔 푸른 보석이 한 알씩 박혔다. 칼날은 빛을 한 점도 머금지 않아, 어둠 속에선 푸른 보석 두 점만 둥실 떠 보인다. 그 두 점이 가까워지는 걸 알아챘다면, 이미 늦은 것이다.",
     "region": "일반",
-    "wornDesc": "a pair of twisting black-and-gold daggers with winged hilts and small blue gems"
+    "wornDesc": "twin black-and-gold daggers with winged hilts and small blue gems — a matched pair, dual-wielded with one dagger gripped in each hand, both drawn (never sheathed)"
   },
   "a-round-glasses-245": {
     "name": "금테 둥근 안경",
@@ -101,7 +101,7 @@
     "tone": "장엄",
     "lore": "넓은 은빛 칼날 둘이 X자로 맞물린다. 한 자루의 손잡이엔 푸른 보석, 다른 자루엔 붉은 보석—같은 장인이 같은 날 빚은 한 쌍이다. 둘을 함께 들면 푸름과 붉음이 손안에서 엇갈려 돈다. 한 손엔 새벽, 한 손엔 노을을 쥔 셈이다.",
     "region": "왕국",
-    "wornDesc": "a pair of slim curved silver sabers with gold tasseled hilts, one blue-gemmed and one red-gemmed"
+    "wornDesc": "twin slim curved silver sabers with gold tasseled hilts — a matched pair, one with a blue gem and one with a red gem, dual-wielded with one saber gripped in each hand, both drawn (never sheathed)"
   },
   "seed-kingdom_winged_coronation_sword": {
     "name": "창궁검",
