@@ -20,6 +20,7 @@ export * from './activity-log';
 export * from './conquest/schedule';
 export * from './conquest/deploy';
 export * from './conquest/executor';
+export * from './conquest/abandon';
 export {
   generateAndStoreChronicle,
   getChronicle,

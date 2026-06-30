@@ -9,7 +9,7 @@ import { GuildError } from '../errors';
 import { nextBattleKstDay, isConquestLocked } from './schedule';
 
 /** actor가 zone 소유 길드의 길드장/부길드장인지 검증하고 소유 길드 id 반환. */
-async function assertOfficerOfZoneOwner(
+export async function assertOfficerOfZoneOwner(
   tx: Parameters<Parameters<typeof db.transaction>[0]>[0],
   actorUserId: string,
   zoneId: number,

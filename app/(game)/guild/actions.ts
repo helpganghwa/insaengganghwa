@@ -28,6 +28,7 @@ import {
   clearMemberDeployment,
   setZoneExecutor,
   clearZoneExecutor,
+  abandonZone,
   setGuildNotice,
   setGuildIntro,
   setGuildOpenchat,
@@ -484,6 +485,22 @@ export async function clearExecutorAction(zoneId: number) {
     return { status: 'success' } as const;
   } catch (e) {
     return fail(e, 'clearExecutor');
+  }
+}
+
+/** 점령지 포기 — 소유 길드 길드장/부길드장. 구역 중립화 + 미수금 세금 소멸. */
+export async function abandonZoneAction(zoneId: number) {
+  const u = await getSessionUserId();
+  if (!u) return unauth;
+  if (await rateLimited(u, 'guild')) return { status: 'error', code: 'RATE_LIMITED' } as const;
+  const __b = await actionBlock(); if (__b) return { status: 'error', code: __b } as const;
+  try {
+    await abandonZone({ actorUserId: u, zoneId });
+    revalidatePath('/guild/map');
+    revalidatePath('/guild');
+    return { status: 'success' } as const;
+  } catch (e) {
+    return fail(e, 'abandonZone');
   }
 }
 

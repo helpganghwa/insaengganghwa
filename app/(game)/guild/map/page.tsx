@@ -1,7 +1,7 @@
 import { assetUrl } from '@/lib/asset-versions';
 import { getActiveServerId } from '@/lib/game/servers';
 import { getSessionUserId } from '@/lib/auth/session';
-import { getWorldmapZones, getResidence, getChronicle, getZoneAdjacency } from '@/lib/game/guild';
+import { getWorldmapZones, getResidence, getChronicle, getZoneAdjacency, getMyMembership } from '@/lib/game/guild';
 
 import { WorldMapView } from './WorldMapView';
 
@@ -11,11 +11,12 @@ export default async function WorldMapPage() {
   const userId = await getSessionUserId();
   const serverId = await getActiveServerId();
 
-  const [zones, residenceZoneId, chronicle, adjacency] = await Promise.all([
+  const [zones, residenceZoneId, chronicle, adjacency, membership] = await Promise.all([
     getWorldmapZones(serverId),
     userId ? getResidence(userId, serverId) : Promise.resolve(null),
     getChronicle(serverId).catch(() => null),
     getZoneAdjacency(serverId).catch(() => []),
+    userId ? getMyMembership(userId, serverId) : Promise.resolve(null),
   ]);
 
   return (
@@ -24,6 +25,8 @@ export default async function WorldMapPage() {
       residenceZoneId={residenceZoneId}
       canSetResidence={userId != null}
       myUserId={userId}
+      myGuildId={membership?.guildId?.toString() ?? null}
+      myRole={membership?.role ?? null}
       serverId={serverId}
       chronicle={chronicle}
       adjacency={adjacency}

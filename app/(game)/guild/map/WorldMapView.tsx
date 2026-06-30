@@ -17,6 +17,7 @@ import {
   setResidenceAction,
   getZoneBattleAction,
   collectTaxAction,
+  abandonZoneAction,
   getGuildSummaryByNameAction,
 } from '../actions';
 import { guildErrMsg } from '../errors-msg';
@@ -171,6 +172,8 @@ export function WorldMapView({
   residenceZoneId,
   canSetResidence,
   myUserId,
+  myGuildId,
+  myRole,
   serverId,
   chronicle,
   zones,
@@ -180,6 +183,8 @@ export function WorldMapView({
   residenceZoneId: number | null;
   canSetResidence: boolean;
   myUserId: string | null;
+  myGuildId: string | null;
+  myRole: string | null;
   serverId: number;
   chronicle: { today: string | null; list: { kstDay: string; headline: string }[] } | null;
   zones: Zone[];
@@ -199,6 +204,8 @@ export function WorldMapView({
   const [collectNow, setCollectNow] = useState(0); // 모달 열 때 캡처한 시각(쿨다운 계산, 렌더 순수성)
   const [collectConfirm, setCollectConfirm] = useState(false);
   const [collectLeft, setCollectLeft] = useState(0);
+  const [abandonConfirm, setAbandonConfirm] = useState(false); // 점령지 포기 2단계 컨펌
+  useEffect(() => { setAbandonConfirm(false); }, [selectedId]); // 다른 구역 열면 포기 컨펌 해제
   useEffect(() => {
     if (!collectConfirm) return;
     const id = setInterval(() => {
@@ -318,6 +325,17 @@ export function WorldMapView({
       optimisticAdjust(BigInt(r.executorGain));
       showHeaderToast({ title: `세금 수금 +${Number(r.executorGain).toLocaleString('ko-KR')}💎` });
       setCollectOpen(null);
+      router.refresh();
+    });
+  };
+
+  // 점령지 포기 — 소유 길드 길드장/부길드장만. 구역 중립화 + 미수금 세금 소멸.
+  const abandon = (zoneId: number) => {
+    setAbandonConfirm(false);
+    start(async () => {
+      const r = await abandonZoneAction(zoneId);
+      if (r.status !== 'success') return showError(guildErrMsg(r.code));
+      showHeaderToast({ title: '점령지를 포기했습니다' });
       router.refresh();
     });
   };
@@ -797,9 +815,27 @@ export function WorldMapView({
                 </button>
               ))}
 
+              {/* 점령지 포기 — 소유 길드 길드장/부길드장만. 미수금 세금 소멸 경고 + 2단계 컨펌. */}
+              {selected.ownerGuildId != null &&
+                selected.ownerGuildId === myGuildId &&
+                (myRole === 'leader' || myRole === 'vice') && (
+                  <button
+                    type="button"
+                    onClick={() => (abandonConfirm ? abandon(selected.id) : setAbandonConfirm(true))}
+                    disabled={pending}
+                    className={`mt-3 w-full rounded-lg py-2.5 text-sm font-bold disabled:opacity-50 ${
+                      abandonConfirm
+                        ? 'bg-red-600 text-white'
+                        : 'border border-red-700/60 text-red-600 dark:text-red-400'
+                    }`}
+                  >
+                    {abandonConfirm ? '정말 포기? (미수금 세금 소멸)' : '점령지 포기'}
+                  </button>
+                )}
+
               <button
                 type="button"
-                onClick={() => setSelectedId(null)}
+                onClick={() => { setAbandonConfirm(false); setSelectedId(null); }}
                 className="mt-3 w-full py-1.5 text-[11px] text-zinc-500"
               >
                 닫기
