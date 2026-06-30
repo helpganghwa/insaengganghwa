@@ -7,17 +7,17 @@ import { detectFullBodyCrop } from '@/lib/game/profile/crop-check';
 
 /**
  * 회귀: 하반신 잘림인데 검수 통과했던 실제 아바타(2026-06-26 사용자 신고).
- * 원인 = wideBottom 비율을 maxSpan으로 정규화 → 팔벌림/망토로 분모 부풀려져 다리 단면이
- * 좁아 보임. 수정 = median(몸통 대표폭) 정규화. 로컬 픽스처라 네트워크/API 없이 결정론 검증.
+ * 검사 규칙 = "맨 아래 1px 행에 피사체 픽셀이 있으면 잘림"(2026-06-30 단순화 — 옛 bandRatio·
+ * headsTall 휴리스틱은 넓은전신/허벅지잘림에서 지표 역전으로 둘을 못 갈랐다). 잘린 캐릭터는
+ * 몸이 프레임 바닥까지 꽉 차 맨 아래 행이 점유된다. 로컬 픽스처라 네트워크/API 없이 결정론 검증.
  */
 const png = readFileSync(join(import.meta.dirname, '../fixtures/cropped-lowerbody-south.png'));
 
-describe('crop detection — lower-body crop regression (median normalization)', () => {
-  it('flags the wide-character lower-body crop as cropped', async () => {
+describe('crop detection — bottom-row rule (lower-body crop regression)', () => {
+  it('flags the lower-body crop as cropped (bottom row occupied)', async () => {
     const res = await detectFullBodyCrop(png);
     expect(res.cropped).toBe(true);
-    // 바닥 프레임에 닿고(margin≈0) median 정규화 비율이 0.5 이상이어야 검출.
-    expect(res.metrics.bottomMargin).toBeLessThanOrEqual(0.008);
-    expect(res.metrics.bottomBandRatio).toBeGreaterThanOrEqual(0.5);
+    // 잘림이면 맨 아래 행이 피사체로 점유됨(불투명 픽셀 다수).
+    expect(res.metrics.bottomRowOpaque).toBeGreaterThanOrEqual(6);
   });
 });
