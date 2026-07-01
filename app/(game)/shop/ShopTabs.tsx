@@ -8,6 +8,9 @@ import { useResourceToast, type HeaderReward } from '@/components/ResourceToast'
 import { useDiamond } from '@/components/DiamondContext';
 import { PublicFooter } from '@/components/PublicFooter';
 import { ModalShell } from '@/components/ModalShell';
+import * as PortOne from '@portone/browser-sdk/v2';
+
+import { verifyIdentityAction } from '../me/settings/identity-actions';
 
 import { claimFreeAction, devPurchaseAction, buyBoxAction, verifyPurchaseAction } from './actions';
 import { runCheckout } from './checkout';
@@ -246,6 +249,8 @@ export function ShopTabs({
   initialTab = 'daily',
   returnPaymentId = null,
   returnCode = null,
+  identityStoreId,
+  identityChannelKey,
 }: {
   free: Record<FreeSlot, boolean>;
   isAdmin: boolean;
@@ -258,6 +263,9 @@ export function ShopTabs({
   /** 모바일 결제 복귀 — 포트원이 /shop?paymentId=…(&code=…)로 리다이렉트. 화면 내에서 검증 처리. */
   returnPaymentId?: string | null;
   returnCode?: string | null;
+  /** 본인인증(KG이니시스 통합인증) — 상점 내에서 바로 인증 진행(설정 이동 없이). */
+  identityStoreId?: string;
+  identityChannelKey?: string;
 }) {
   const router = useRouter();
   const { showHeaderToast } = useResourceToast();
@@ -270,6 +278,68 @@ export function ShopTabs({
   const [premiumDays, setPremiumDays] = useState<number | null>(initialPremiumDays);
   const [confirm, setConfirm] = useState<string | null>(null); // 구매 확인 대기 중인 상품
   const [identityPrompt, setIdentityPrompt] = useState(false); // 본인인증 필요 모달
+  const [identityBusy, setIdentityBusy] = useState(false);
+  const [identityErr, setIdentityErr] = useState<string | null>(null);
+
+  // 상점 내 본인인증 — 설정 이동 없이 여기서 포트원 통합인증(KG이니시스) 진행.
+  const startIdentity = async () => {
+    // 채널키 미설정 등 인라인 진행 불가 시에만 설정 화면으로 폴백.
+    if (!identityStoreId || !identityChannelKey) {
+      setIdentityPrompt(false);
+      router.push('/me/settings');
+      return;
+    }
+    setIdentityErr(null);
+    setIdentityBusy(true);
+    try {
+      const res = await PortOne.requestIdentityVerification({
+        storeId: identityStoreId,
+        identityVerificationId: `idv-${crypto.randomUUID()}`,
+        channelKey: identityChannelKey,
+        redirectUrl: `${window.location.origin}/shop`,
+      });
+      // 모바일은 리다이렉트되어 여기 도달하지 않음(아래 useEffect에서 복귀 처리). PC는 res 반환.
+      if (!res) return;
+      if (res.code) {
+        setIdentityBusy(false);
+        setIdentityErr(res.message ?? '본인인증에 실패했습니다.');
+        return;
+      }
+      const r = await verifyIdentityAction(res.identityVerificationId);
+      setIdentityBusy(false);
+      if (r.ok) {
+        setIdentityPrompt(false);
+        router.refresh(); // 인증 반영 후 다시 구매 시 통과.
+      } else setIdentityErr(r.message);
+    } catch (e) {
+      setIdentityBusy(false);
+      setIdentityErr((e as Error).message);
+    }
+  };
+
+  // 모바일 본인인증 리다이렉트 복귀 — /shop?identityVerificationId=…(&code=…) 검증 처리.
+  useEffect(() => {
+    const sp = new URLSearchParams(window.location.search);
+    const id = sp.get('identityVerificationId');
+    if (!id) return;
+    window.history.replaceState({}, '', window.location.pathname); // 중복 처리 방지
+    if (sp.get('code')) {
+      setIdentityErr(sp.get('message') || '본인인증에 실패했습니다.');
+      setIdentityPrompt(true);
+      return;
+    }
+    setIdentityBusy(true);
+    verifyIdentityAction(id).then((r) => {
+      setIdentityBusy(false);
+      if (r.ok) {
+        setIdentityPrompt(false);
+        router.refresh();
+      } else {
+        setIdentityErr(r.message);
+        setIdentityPrompt(true);
+      }
+    });
+  }, [router]);
   const confirmTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
   const [, startTransition] = useTransition();
   const returnHandled = useRef(false);
@@ -652,21 +722,23 @@ export function ShopTabs({
             <button
               type="button"
               onClick={() => setIdentityPrompt(false)}
-              className="flex-1 rounded-lg bg-zinc-100 py-2.5 text-sm font-bold text-zinc-700 active:opacity-70 dark:bg-zinc-800 dark:text-zinc-200"
+              disabled={identityBusy}
+              className="flex-1 rounded-lg bg-zinc-100 py-2.5 text-sm font-bold text-zinc-700 active:opacity-70 disabled:opacity-50 dark:bg-zinc-800 dark:text-zinc-200"
             >
               취소
             </button>
             <button
               type="button"
-              onClick={() => {
-                setIdentityPrompt(false);
-                router.push('/me/settings');
-              }}
-              className="flex-1 rounded-lg bg-zinc-900 py-2.5 text-sm font-bold text-white active:opacity-90 dark:bg-zinc-100 dark:text-zinc-900"
+              onClick={startIdentity}
+              disabled={identityBusy}
+              className="flex-1 rounded-lg bg-zinc-900 py-2.5 text-sm font-bold text-white active:opacity-90 disabled:opacity-50 dark:bg-zinc-100 dark:text-zinc-900"
             >
-              본인인증 하기
+              {identityBusy ? '진행 중…' : '본인인증 하기'}
             </button>
           </div>
+          {identityErr ? (
+            <p className="mt-2 text-center text-[12px] text-red-500">{identityErr}</p>
+          ) : null}
         </ModalShell>
       ) : null}
     </div>
