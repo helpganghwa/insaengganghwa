@@ -32,6 +32,7 @@ export default async function DeployPage() {
   return (
     <DeployBoard
       isOfficer={isOfficer}
+      myUserId={userId}
       myGuildId={membership.guildId.toString()}
       mapSrc={assetUrl('/sprites/guild/worldmap.png')}
       attackableZoneIds={attackable}

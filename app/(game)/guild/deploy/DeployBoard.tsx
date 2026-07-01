@@ -12,7 +12,8 @@ import {
 } from '@/lib/game/guild/balance';
 
 import {
-  deployMemberAction,
+  deployAction,
+  cancelDeployAction,
   clearMemberDeploymentAction,
   setExecutorAction,
   clearExecutorAction,
@@ -49,6 +50,7 @@ const fmt = (n: number) =>
 
 export function DeployBoard({
   isOfficer,
+  myUserId,
   myGuildId,
   mapSrc,
   attackableZoneIds,
@@ -57,6 +59,7 @@ export function DeployBoard({
   zones,
 }: {
   isOfficer: boolean;
+  myUserId: string;
   myGuildId: string;
   mapSrc: string;
   attackableZoneIds: number[];
@@ -115,25 +118,39 @@ export function DeployBoard({
   const patch = (userId: string, p: Partial<Member>) =>
     setMembers((prev) => prev.map((m) => (m.userId === userId ? { ...m, ...p } : m)));
 
-  const assign = (m: Member) => {
+  // 길드원 목록 — 본인을 항상 맨 위로(나머지 순서 유지). 배치는 본인 몫이라 접근성 우선.
+  const sortedMembers = useMemo(
+    () => [
+      ...members.filter((m) => m.userId === myUserId),
+      ...members.filter((m) => m.userId !== myUserId),
+    ],
+    [members, myUserId],
+  );
+
+  // 자가 배치 — 배치는 유저 고유 권한(임원도 남을 배치 불가). 선택 구역에 본인을 공격/수비 등록.
+  const selfDeploy = () => {
     if (!selected || !selectedRole) return;
-    const prev = m;
-    patch(m.userId, { depZoneId: selected.id, depZoneName: selected.name, depRole: selectedRole });
+    const me = members.find((x) => x.userId === myUserId);
+    if (!me) return;
+    const prev = me;
+    patch(myUserId, { depZoneId: selected.id, depZoneName: selected.name, depRole: selectedRole });
     start(async () => {
-      const r = await deployMemberAction(m.userId, selected.id, selectedRole);
+      const r = await deployAction(selected.id, selectedRole);
       if (r.status !== 'success') {
-        patch(m.userId, { depZoneId: prev.depZoneId, depZoneName: prev.depZoneName, depRole: prev.depRole });
+        patch(myUserId, { depZoneId: prev.depZoneId, depZoneName: prev.depZoneName, depRole: prev.depRole });
         return showError(guildErrMsg(r.code));
       }
       showHeaderToast({ title: selectedRole === 'attack' ? '공격 배치' : '수비 배치' });
     });
   };
 
+  // 해제 — 본인은 자기 배치 취소(cancelDeploy), 임원은 남의 배치도 해제(clearMember).
   const remove = (m: Member) => {
     const prev = m;
+    const isSelf = m.userId === myUserId;
     patch(m.userId, { depZoneId: null, depZoneName: null, depRole: null });
     start(async () => {
-      const r = await clearMemberDeploymentAction(m.userId);
+      const r = isSelf ? await cancelDeployAction() : await clearMemberDeploymentAction(m.userId);
       if (r.status !== 'success') {
         patch(m.userId, { depZoneId: prev.depZoneId, depZoneName: prev.depZoneName, depRole: prev.depRole });
         return showError(guildErrMsg(r.code));
@@ -442,9 +459,10 @@ export function DeployBoard({
                           {isDefend ? '수비' : '공격'}
                         </span>
                       </div>
-                      {isOfficer && !locked && (
+                      {!locked && (isOfficer || m.userId === myUserId) && (
                         <div className="flex shrink-0 items-center gap-0.5">
-                          {isDefend && (
+                          {/* 집행관 지정은 임원 권한 */}
+                          {isDefend && isOfficer && (
                             <button
                               type="button"
                               onClick={() => setExec(m)}
@@ -454,6 +472,7 @@ export function DeployBoard({
                               집행관
                             </button>
                           )}
+                          {/* 해제는 본인 또는 임원 */}
                           <button
                             type="button"
                             onClick={() => remove(m)}
@@ -487,7 +506,7 @@ export function DeployBoard({
             <span className="text-zinc-400">대기 {idleCount}</span>
           </p>
           <ul className="mt-2 space-y-1">
-            {members.map((m) => {
+            {sortedMembers.map((m) => {
               const isExec = m.execZoneId != null;
               const here = selectedId != null && m.depZoneId === selectedId;
               const deployedZoneId = m.depZoneId ?? m.execZoneId; // 클릭 시 이동할 구역
@@ -496,7 +515,9 @@ export function DeployBoard({
                 : m.depRole
                   ? `${m.depRole === 'attack' ? '공격' : '수비'}·${m.depZoneName}`
                   : '미배치';
-              const canAssign = isOfficer && !locked && selected != null && !isExec && !here;
+              // 배치는 유저 고유 권한 — 공격/수비 버튼은 본인 행에만 노출.
+              const canSelfDeploy =
+                m.userId === myUserId && !locked && selected != null && !isExec && !here;
               return (
                 <li key={m.userId} className="flex min-h-[38px] items-center gap-1">
                   <button
@@ -507,6 +528,11 @@ export function DeployBoard({
                   >
                     <span className="flex w-full items-center gap-1">
                       <span className="truncate text-[12px] font-semibold">{m.nickname}</span>
+                      {m.userId === myUserId && (
+                        <span className="shrink-0 rounded bg-amber-500/15 px-1 text-[8px] font-bold text-amber-600 dark:text-amber-400">
+                          나
+                        </span>
+                      )}
                       <span className="shrink-0 font-mono text-[9px] text-zinc-400">{fmt(m.combat)}</span>
                     </span>
                     <span
@@ -525,10 +551,10 @@ export function DeployBoard({
                   </button>
                   {here ? (
                     <span className="shrink-0 text-[9px] font-bold text-emerald-500">배치됨</span>
-                  ) : canAssign ? (
+                  ) : canSelfDeploy ? (
                     <button
                       type="button"
-                      onClick={() => assign(m)}
+                      onClick={selfDeploy}
                       disabled={pending}
                       className={`shrink-0 rounded-md px-1.5 py-0.5 text-[10px] font-bold text-white disabled:opacity-50 ${
                         isDefend ? 'bg-sky-600' : 'bg-red-600'
