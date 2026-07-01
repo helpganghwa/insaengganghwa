@@ -35,8 +35,8 @@ export default async function LoginPage({
   const recommendedId = showServers ? await latestOpenServerId() : 1;
   // 테스트 로그인 — /login?test=true + env 스위치 둘 다 켜져야 노출(실운영 전환 시 env로 차단).
   const testMode = test === 'true' && isTestLoginEnabled();
-  // 심사용 ID/PW 로그인 — env만 켜지면 노출(심사관이 ?test 없이 접근). 실운영 전환 시 env로 차단.
-  const reviewLogin = isTestLoginEnabled();
+  // 심사용 ID/PW 로그인 — ?test=true + env 둘 다 켜져야 노출(일반 사용자에겐 이메일 폼 숨김).
+  const reviewLogin = test === 'true' && isTestLoginEnabled();
 
   return (
     <div className="flex min-h-dvh flex-col bg-zinc-50 dark:bg-black">
