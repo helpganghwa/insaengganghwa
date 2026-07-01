@@ -54,6 +54,7 @@ export function CreateProfileForm({
   const [confirm, setConfirm] = useState(false);
   const [confirmLeft, setConfirmLeft] = useState(0); // 3s 재탭 컨펌 카운트다운
   const [submitted, setSubmitted] = useState(false); // 낙관: 제출 직후 ⏳ 즉시 표시
+  const [nowMs, setNowMs] = useState<number | null>(null); // 진행시간용 라이브 클럭(마운트 후 세팅 — 하이드레이션 안전)
   const [pending, startTransition] = useTransition();
 
   // 생성 — 강화 취소와 동일 3s 재탭 컨펌(오탭 보호). 만료 시 자동 해제.
@@ -74,6 +75,15 @@ export function CreateProfileForm({
     }, 1000);
     return () => clearInterval(id);
   }, [confirm]);
+
+  // 생성 진행 중이면 1초마다 라이브 클럭 갱신(경과 시간 표시용).
+  useEffect(() => {
+    if (activeJob === null && !submitted) return;
+    const tick = () => setNowMs(Date.now());
+    tick();
+    const id = setInterval(tick, 1000);
+    return () => clearInterval(id);
+  }, [activeJob, submitted]);
 
   const balance = BigInt(diamond);
   const allEquipped = equipped.every((e) => e.code);
@@ -112,10 +122,24 @@ export function CreateProfileForm({
 
   if (inProgress || submitted) {
     const statusText = activeJob ? (STATUS_LABEL[activeJob.status] ?? '처리 중') : '요청 중';
+    const startedAt = activeJob?.createdAt ? Date.parse(activeJob.createdAt) : NaN;
+    const elapsedSec =
+      !Number.isNaN(startedAt) && nowMs != null ? Math.max(0, Math.floor((nowMs - startedAt) / 1000)) : null;
+    const elapsedText =
+      elapsedSec == null
+        ? null
+        : elapsedSec < 60
+          ? `${elapsedSec}초`
+          : `${Math.floor(elapsedSec / 60)}분 ${elapsedSec % 60}초`;
     return (
       <div className="rounded-2xl border border-amber-300 bg-amber-50 p-4 text-center dark:border-amber-700/50 dark:bg-amber-950/30">
         <div className="text-2xl">⏳</div>
         <div className="mt-1 text-sm font-semibold">아바타 {statusText}</div>
+        {elapsedText && (
+          <div className="mt-1 font-mono text-sm font-semibold tabular-nums text-amber-700 dark:text-amber-300">
+            경과 {elapsedText}
+          </div>
+        )}
         <p className="mt-1 text-xs text-zinc-500">
           보통 약 10분 내외 걸려요(혼잡하면 조금 더 걸릴 수 있어요). 완료되면 알림과 우편함으로 알려드릴게요.
         </p>
