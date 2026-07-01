@@ -13,11 +13,12 @@ export async function assertOfficerOfZoneOwner(
   tx: Parameters<Parameters<typeof db.transaction>[0]>[0],
   actorUserId: string,
   zoneId: number,
-): Promise<{ guildId: bigint; serverId: number }> {
+): Promise<{ guildId: bigint; serverId: number; zoneName: string }> {
   // 존 소유 길드를 먼저 잠그고, actor 멤버십을 (user, guild)로 앵커 — 길드가 서버에 묶여
   // 서버 식별이 내재됨(SERVER.md P5: 다서버에서도 정확). 1집행관 가드 스코프용으로 serverId도 반환(감사 G-01).
+  // zoneName은 활동 로그 detail(zone) 기록용 — 피드가 이름으로 렌더.
   const [z] = await tx
-    .select({ ownerGuildId: zones.ownerGuildId, serverId: zones.serverId })
+    .select({ ownerGuildId: zones.ownerGuildId, serverId: zones.serverId, name: zones.name })
     .from(zones)
     .where(eq(zones.id, zoneId))
     .for('update');
@@ -31,7 +32,7 @@ export async function assertOfficerOfZoneOwner(
     .limit(1);
   if (!m) throw new GuildError('FORBIDDEN'); // 자기 길드 소유 구역 아님
   if (m.role !== 'leader' && m.role !== 'vice') throw new GuildError('NOT_OFFICER');
-  return { guildId: m.guildId, serverId: z.serverId };
+  return { guildId: m.guildId, serverId: z.serverId, zoneName: z.name };
 }
 
 /**

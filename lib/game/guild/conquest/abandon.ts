@@ -19,7 +19,7 @@ import { assertOfficerOfZoneOwner } from './executor';
 export async function abandonZone(input: { actorUserId: string; zoneId: number }): Promise<void> {
   if (isConquestLocked()) throw new GuildError('BATTLE_IN_PROGRESS');
   await db.transaction(async (tx) => {
-    const { guildId, serverId } = await assertOfficerOfZoneOwner(tx, input.actorUserId, input.zoneId);
+    const { guildId, serverId, zoneName } = await assertOfficerOfZoneOwner(tx, input.actorUserId, input.zoneId);
 
     await tx
       .update(zones)
@@ -47,7 +47,7 @@ export async function abandonZone(input: { actorUserId: string; zoneId: number }
       guildId,
       actorUserId: input.actorUserId,
       action: 'zone_lost',
-      detail: { reason: 'abandon', zoneId: input.zoneId },
+      detail: { reason: 'abandon', zone: zoneName },
     });
   });
 }
