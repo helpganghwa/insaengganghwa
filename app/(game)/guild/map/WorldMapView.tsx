@@ -315,8 +315,10 @@ export function WorldMapView({
     start(async () => {
       const r = await collectTaxAction(zoneId);
       if (r.status !== 'success') return showError(guildErrMsg(r.code));
+      // 지갑은 실제 본인 몫(10%)만 반영, 토스트는 총 수금액(집행관+길드 풀 90%)을 노출.
+      const total = BigInt(r.executorGain) + BigInt(r.guildGain);
       optimisticAdjust(BigInt(r.executorGain));
-      showHeaderToast({ title: `세금 수금 +${Number(r.executorGain).toLocaleString('ko-KR')}💎` });
+      showHeaderToast({ title: `세금 수금 +${Number(total).toLocaleString('ko-KR')}💎` });
       setCollectOpen(null);
       router.refresh();
     });
