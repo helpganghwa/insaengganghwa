@@ -7,6 +7,7 @@ import { assetUrl } from '@/lib/asset-versions';
 import { useResourceToast, type HeaderReward } from '@/components/ResourceToast';
 import { useDiamond } from '@/components/DiamondContext';
 import { PublicFooter } from '@/components/PublicFooter';
+import { ModalShell } from '@/components/ModalShell';
 
 import { claimFreeAction, devPurchaseAction, buyBoxAction, verifyPurchaseAction } from './actions';
 import { runCheckout } from './checkout';
@@ -268,6 +269,7 @@ export function ShopTabs({
   const [purchased, setPurchased] = useState<Set<string>>(() => new Set(initialPurchased));
   const [premiumDays, setPremiumDays] = useState<number | null>(initialPremiumDays);
   const [confirm, setConfirm] = useState<string | null>(null); // 구매 확인 대기 중인 상품
+  const [identityPrompt, setIdentityPrompt] = useState(false); // 본인인증 필요 모달
   const confirmTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
   const [, startTransition] = useTransition();
   const returnHandled = useRef(false);
@@ -410,10 +412,8 @@ export function ShopTabs({
       } else if (r.reason === 'cancel') {
         // 사용자 취소 — 조용히 무시.
       } else if (r.code === 'IDENTITY_REQUIRED') {
-        // 청소년보호 — 결제 전 본인인증 필수. 설정의 본인인증 화면으로 유도.
-        if (window.confirm('결제를 진행하려면 먼저 본인인증이 필요합니다.\n본인인증 화면으로 이동할까요?')) {
-          router.push('/me/settings');
-        }
+        // 청소년보호 — 결제 전 본인인증 필수. 본인인증 유도 모달 노출.
+        setIdentityPrompt(true);
       } else {
         const title =
           commonErrTitle(r.code) ??
@@ -635,6 +635,40 @@ export function ShopTabs({
         {/* 전자상거래법 표시 — 컨텐츠 패딩 영역 밖 전체폭, 컨텐츠와 함께 스크롤(사업자정보·약관·환불). */}
         <PublicFooter />
       </div>
+
+      {/* 본인인증 필요 — 청소년보호(결제 전 본인인증). */}
+      {identityPrompt ? (
+        <ModalShell
+          onClose={() => setIdentityPrompt(false)}
+          label="본인인증 필요"
+          className="w-full max-w-[300px] rounded-2xl bg-white p-5 dark:bg-zinc-950"
+        >
+          <h2 className="text-base font-bold">본인인증이 필요합니다</h2>
+          <p className="mt-1.5 text-[13px] leading-relaxed text-zinc-500 dark:text-zinc-400">
+            청소년 보호를 위해 유료 결제 전 본인인증이 필요합니다. 설정에서 본인인증을 완료한 뒤 다시
+            시도해 주세요.
+          </p>
+          <div className="mt-4 flex gap-2">
+            <button
+              type="button"
+              onClick={() => setIdentityPrompt(false)}
+              className="flex-1 rounded-lg bg-zinc-100 py-2.5 text-sm font-bold text-zinc-700 active:opacity-70 dark:bg-zinc-800 dark:text-zinc-200"
+            >
+              취소
+            </button>
+            <button
+              type="button"
+              onClick={() => {
+                setIdentityPrompt(false);
+                router.push('/me/settings');
+              }}
+              className="flex-1 rounded-lg bg-zinc-900 py-2.5 text-sm font-bold text-white active:opacity-90 dark:bg-zinc-100 dark:text-zinc-900"
+            >
+              본인인증 하기
+            </button>
+          </div>
+        </ModalShell>
+      ) : null}
     </div>
   );
 }
