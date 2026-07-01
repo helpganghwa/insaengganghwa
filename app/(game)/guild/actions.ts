@@ -497,6 +497,7 @@ export async function abandonZoneAction(zoneId: number) {
   try {
     await abandonZone({ actorUserId: u, zoneId });
     revalidatePath('/guild/map');
+    revalidatePath('/guild/deploy');
     revalidatePath('/guild');
     return { status: 'success' } as const;
   } catch (e) {

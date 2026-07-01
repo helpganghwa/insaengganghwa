@@ -1,7 +1,9 @@
 'use client';
 
+import { useRouter } from 'next/navigation';
 import { useEffect, useMemo, useState, useTransition } from 'react';
 
+import { ModalShell } from '@/components/ModalShell';
 import { useResourceToast } from '@/components/ResourceToast';
 import {
   CONQUEST_DEFENDER_BONUS,
@@ -14,6 +16,7 @@ import {
   clearMemberDeploymentAction,
   setExecutorAction,
   clearExecutorAction,
+  abandonZoneAction,
 } from '../actions';
 import { guildErrMsg } from '../errors-msg';
 
@@ -61,9 +64,12 @@ export function DeployBoard({
   members: Member[];
   zones: Zone[];
 }) {
+  const router = useRouter();
   const { showHeaderToast, showError } = useResourceToast();
   const [members, setMembers] = useState(initialMembers);
   const [selectedId, setSelectedId] = useState<number | null>(null);
+  const [abandonOpen, setAbandonOpen] = useState(false); // 점령지 포기 확인 팝업
+  useEffect(() => { setAbandonOpen(false); }, [selectedId]); // 다른 구역 선택 시 팝업 닫기
   const [pending, start] = useTransition();
 
   const zoneById = useMemo(() => new Map(zones.map((z) => [z.id, z])), [zones]);
@@ -168,6 +174,18 @@ export function DeployBoard({
         return showError(guildErrMsg(r.code));
       }
       showHeaderToast({ title: '집행관 해제' });
+    });
+  };
+
+  // 점령지 포기 — 소유 길드 길드장/부길드장만. 구역 중립화(쌓인 세금은 유지). 확인 팝업 경유.
+  const abandon = (zoneId: number) => {
+    setAbandonOpen(false);
+    start(async () => {
+      const r = await abandonZoneAction(zoneId);
+      if (r.status !== 'success') return showError(guildErrMsg(r.code));
+      showHeaderToast({ title: '점령지를 포기했습니다' });
+      setSelectedId(null);
+      router.refresh();
     });
   };
 
@@ -368,6 +386,17 @@ export function DeployBoard({
                 >
                   {isDefend ? '수비' : '공격'}
                 </span>
+                {/* 점령지 포기 — 우리 점령지(수비) + 임원(길드장/부길드장)만. 해제 버튼과 동일 스타일, 확인 팝업. */}
+                {isDefend && isOfficer && (
+                  <button
+                    type="button"
+                    onClick={() => setAbandonOpen(true)}
+                    disabled={pending}
+                    className="ml-auto shrink-0 rounded-md px-1.5 py-0.5 text-[10px] font-bold text-red-500 disabled:opacity-50"
+                  >
+                    점령지 포기
+                  </button>
+                )}
               </div>
               <p className="mt-0.5 text-[10px] text-zinc-500">
                 총 전투력 <span className="font-mono font-bold text-zinc-700 dark:text-zinc-200">{fmt(totalPower)}</span>
@@ -514,6 +543,39 @@ export function DeployBoard({
           </ul>
         </section>
       </div>
+
+      {/* 점령지 포기 확인 팝업 — 길드 탈퇴 컨펌과 동일 패턴. 세금은 유지되므로 소멸 경고 없음. */}
+      {abandonOpen && selected && (
+        <ModalShell
+          onClose={() => setAbandonOpen(false)}
+          label="점령지 포기"
+          className="w-full max-w-[300px] rounded-2xl bg-white p-5 dark:bg-zinc-950"
+        >
+          <h2 className="text-base font-bold">점령지 포기</h2>
+          <p className="mt-1.5 text-[13px] leading-relaxed text-zinc-500 dark:text-zinc-400">
+            <span className="font-semibold text-zinc-700 dark:text-zinc-200">{selected.name}</span> 구역을 정말 포기할까요?
+            <br />
+            소유권을 잃고 중립 상태가 됩니다.
+          </p>
+          <div className="mt-4 flex gap-2">
+            <button
+              type="button"
+              onClick={() => setAbandonOpen(false)}
+              className="flex-1 rounded-lg bg-zinc-100 py-2.5 text-sm font-bold text-zinc-700 active:opacity-70 dark:bg-zinc-800 dark:text-zinc-200"
+            >
+              취소
+            </button>
+            <button
+              type="button"
+              onClick={() => abandon(selected.id)}
+              disabled={pending}
+              className="flex-1 rounded-lg bg-red-600 py-2.5 text-sm font-bold text-white active:opacity-90 disabled:opacity-50"
+            >
+              포기
+            </button>
+          </div>
+        </ModalShell>
+      )}
     </div>
   );
 }
