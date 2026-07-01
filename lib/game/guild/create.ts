@@ -23,7 +23,7 @@ export function normalizeGuildName(raw: string): string {
 }
 
 /**
- * 길드 결성 — GUILD §1. 단일 트랜잭션: 1유저1길드 검사 + 이름 검증/중복 + 10,000💎 차감 + 길드·리더 멤버 생성.
+ * 길드 결성 — GUILD §1. 단일 트랜잭션: 1유저1길드 검사 + 이름 검증/중복 + 5,000💎 차감 + 길드·리더 멤버 생성.
  * 문양(emblem_url)은 결성 시 런타임 생성(P4) — 일단 null(폴백). 서버 권위·멱등(PK/unique가 최종 방어).
  */
 export async function createGuild(input: {

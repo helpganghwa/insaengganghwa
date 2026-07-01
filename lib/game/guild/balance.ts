@@ -5,7 +5,7 @@
 
 // ── 결성 / 정체성 (§1, §1.6) ──
 /** 길드 결성 비용(💎). 빈 길드 양산 억제 + 다이아 sink. */
-export const GUILD_CREATE_COST_DIAMOND = 10_000;
+export const GUILD_CREATE_COST_DIAMOND = 5_000;
 /** 문양 생성 비용(💎). 결성 시 1회 무료, 이후 새 문양 생성마다 과금(외형 BM). */
 export const GUILD_EMBLEM_REROLL_COST_DIAMOND = 3_000;
 /** 길드당 보관 가능한 문양 최대 수(최소 1). 아바타 다중 프로필 패턴. */

@@ -21,7 +21,7 @@ export const FREE_REWARDS: Record<FreeSlot, { diamond: number; boxes: number }> 
   daily: { diamond: 0, boxes: 3 },
   weekly: { diamond: 0, boxes: 20 },
   monthly: { diamond: 0, boxes: 100 },
-  signup: { diamond: 1000, boxes: 0 },
+  signup: { diamond: 5000, boxes: 0 },
 };
 
 /** 현재 주기 키(KST). 같은 키 = 이미 받은 주기. signup=once, 그 외는 공용 주기키. */

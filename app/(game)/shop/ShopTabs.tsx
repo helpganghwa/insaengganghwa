@@ -34,7 +34,7 @@ const FREE_DISPLAY: Record<
   daily: { period: '매일', reward: '📦 3개', diamond: 0, boxes: 3 },
   weekly: { period: '매주', reward: '📦 20개', diamond: 0, boxes: 20 },
   monthly: { period: '매월', reward: '📦 100개', diamond: 0, boxes: 100 },
-  signup: { period: '', reward: '💎 1,000', diamond: 1000, boxes: 0 },
+  signup: { period: '', reward: '💎 5,000', diamond: 5000, boxes: 0 },
 };
 
 // 카드·기간별 한 줄 설명(플레이버). 기간(일일/주간/월간) × 카드 종류마다 다르게.
