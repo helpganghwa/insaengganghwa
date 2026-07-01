@@ -99,7 +99,6 @@ function ResultCard({
           championRank={r.championRank}
           size={spriteSize}
           frameless
-          itemAnim
         />
       </span>
       <span
