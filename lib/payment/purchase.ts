@@ -50,6 +50,7 @@ const MAX_ORDER_KRW = 10_000_000;
 export type PurchaseErrorCode =
   | 'UNKNOWN_PRODUCT'
   | 'ALREADY_PURCHASED' // 주기 상품 같은 주기 재구매
+  | 'IDENTITY_REQUIRED' // 본인인증 미완료(결제 전 필수 — 청소년보호)
   | 'MINOR_LIMIT' // 미성년 월 한도 초과
   | 'CONFIG'; // 포트원 env 미설정
 
@@ -74,11 +75,11 @@ export function portoneConfig(): { storeId: string; channelKey: string } | null 
   return { storeId, channelKey };
 }
 
-/** 계정의 미성년 여부 + 이번 달(KST) 누적 결제액. 본인인증 미시행(행 없음)이면 isMinor=false. */
+/** 계정의 본인인증 여부·미성년 여부 + 이번 달(KST) 누적 결제액. 미인증(행 없음)은 미성년으로 취급(방어). */
 async function minorStatus(
   userId: string,
   kstMonth: string,
-): Promise<{ isMinor: boolean; monthlyKrw: number }> {
+): Promise<{ verified: boolean; isMinor: boolean; monthlyKrw: number }> {
   const [idRow, limitRow] = await Promise.all([
     db
       .select({ isAdult: identityVerifications.isAdult })
@@ -95,7 +96,8 @@ async function minorStatus(
       .limit(1),
   ]);
   return {
-    isMinor: idRow[0] ? !idRow[0].isAdult : false,
+    verified: !!idRow[0],
+    isMinor: idRow[0] ? !idRow[0].isAdult : true,
     monthlyKrw: Number(limitRow[0]?.total ?? 0n),
   };
 }
@@ -181,7 +183,9 @@ export async function createOrder(
   }
 
   const kstMonth = kstMonthString();
-  const { isMinor, monthlyKrw } = await minorStatus(userId, kstMonth);
+  const { verified, isMinor, monthlyKrw } = await minorStatus(userId, kstMonth);
+  // 청소년보호 — 결제 전 본인인증 필수. 미인증이면 결제 차단(설정에서 본인인증 유도).
+  if (!verified) throw new PurchaseError('IDENTITY_REQUIRED');
   if (isMinor && monthlyKrw + krw > MINOR_MONTHLY_LIMIT_KRW) {
     throw new PurchaseError('MINOR_LIMIT');
   }

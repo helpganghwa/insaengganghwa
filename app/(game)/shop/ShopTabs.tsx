@@ -409,6 +409,11 @@ export function ShopTabs({
         showHeaderToast({ title: '구매 완료' });
       } else if (r.reason === 'cancel') {
         // 사용자 취소 — 조용히 무시.
+      } else if (r.code === 'IDENTITY_REQUIRED') {
+        // 청소년보호 — 결제 전 본인인증 필수. 설정의 본인인증 화면으로 유도.
+        if (window.confirm('결제를 진행하려면 먼저 본인인증이 필요합니다.\n본인인증 화면으로 이동할까요?')) {
+          router.push('/me/settings');
+        }
       } else {
         const title =
           commonErrTitle(r.code) ??
