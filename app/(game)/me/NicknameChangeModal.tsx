@@ -1,6 +1,7 @@
 'use client';
 
 import { useEffect, useState, useTransition } from 'react';
+import { createPortal } from 'react-dom';
 import { useRouter } from 'next/navigation';
 
 import { NICKNAME_CHANGE_COST_DIAMOND } from '@/lib/game/balance';
@@ -64,12 +65,13 @@ export function NicknameChangeModal({
     });
   };
 
-  return (
+  // body로 portal — 설정 Section의 isolate(stacking context) 밖으로 빼내 헤더/하단바(z-30) 위에 표시.
+  return createPortal(
     <div
       role="dialog"
       aria-modal="true"
       aria-label="닉네임 변경"
-      className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 p-4 backdrop-blur-md"
+      className="fixed inset-0 z-[100] flex items-center justify-center bg-black/70 p-4 backdrop-blur-md"
       onClick={onClose}
     >
       <div
@@ -135,6 +137,7 @@ export function NicknameChangeModal({
           </button>
         </div>
       </div>
-    </div>
+    </div>,
+    document.body,
   );
 }
