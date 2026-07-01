@@ -97,31 +97,6 @@ async function ensureTestUser(email: string): Promise<void> {
 }
 
 /**
- * 테스트 계정 로그인(버튼식) — `ALLOW_TEST_LOGIN=true`일 때만 동작(실운영 전환 시 env로 즉시 차단).
- * 해당 email의 Supabase Auth 유저를 (없으면) admin으로 생성 → 고정 비번 로그인(세션 쿠키 설정).
- */
-export async function signInWithTestAccount(formData: FormData) {
-  if (!isTestLoginEnabled()) redirect('/login?error=test_login_disabled');
-  const email = String(formData.get('email') ?? '');
-  if (!TEST_ACCOUNTS.some((a) => a.email === email)) {
-    redirect('/login?error=invalid_test_account');
-  }
-
-  await ensureTestUser(email);
-  // 요청 스코프 클라이언트라야 세션 쿠키가 설정됨.
-  const supabase = await createSupabaseServerClient();
-  const { error } = await supabase.auth.signInWithPassword({
-    email,
-    password: passwordForTestAccount(email),
-  });
-  if (error) redirect(`/login?error=${encodeURIComponent(error.message)}`);
-
-  const { data } = await supabase.auth.getUser();
-  if (data.user?.id) await applyServerSelect(data.user.id);
-  redirect('/');
-}
-
-/**
  * 심사용 ID/PW 입력 로그인 — 포트원·게임위 심사관이 카카오 없이 자격증명으로 로그인.
  * `ALLOW_TEST_LOGIN=true`일 때만 동작(실운영 전환 시 env로 즉시 차단). 사전 등록된 테스트/심사
  * 계정 email만 허용하고, 비밀번호는 입력값으로 검증(signInWithPassword) — 틀리면 실패.
