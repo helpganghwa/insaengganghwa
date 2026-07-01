@@ -7,7 +7,7 @@ import { db } from '@/lib/db/client';
 import { worldChronicle } from '@/lib/db/schema/guild';
 import type { ConquestFinale } from './simulate';
 
-const MODEL_ID = 'claude-haiku-4-5-20251001';
+const MODEL_ID = 'claude-sonnet-5';
 
 let _client: Anthropic | null = null;
 function client(): Anthropic {
@@ -223,7 +223,7 @@ export async function generateAndStoreChronicle(
   const summary = await aggregateConquestDay(kstDay, serverId);
   if (!isNotable(summary)) return { created: false, reason: 'no-event' };
 
-  // 길드별로 미리 그룹핑한 명확한 요약 — 작은 모델이 captures를 한 길드로 합치지 않게(정확 귀속).
+  // 길드별로 미리 그룹핑한 명확한 요약 — 모델이 captures를 한 길드로 합치지 않게(정확 귀속).
   const capByGuild = new Map<string, string[]>();
   for (const c of summary.captures) {
     const arr = capByGuild.get(c.winner) ?? [];

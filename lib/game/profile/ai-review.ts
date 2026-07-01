@@ -12,8 +12,8 @@ import Anthropic from '@anthropic-ai/sdk';
 import sharp from 'sharp';
 import { z } from 'zod';
 
-// 검수 모델 — 4.5 Haiku는 미세 결함(끊긴 무기 등) 검출률이 낮아 Sonnet 4.6으로 상향(정확도 1/5→3/5 실측).
-const MODEL_ID = 'claude-sonnet-4-6';
+// 검수 모델 — 미세 결함(끊긴 무기·해부학 오류 등) 검출 정확도가 중요해 Sonnet 5 사용.
+const MODEL_ID = 'claude-sonnet-5';
 
 const REVIEW_REASONS = ['nsfw', 'violence', 'hate', 'quality'] as const;
 export type ReviewReason = (typeof REVIEW_REASONS)[number];

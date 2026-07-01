@@ -21,8 +21,8 @@ import {
   type EmblemSelection,
 } from './emblem-vocab';
 
-// ── AI 프롬프트 생성(Haiku) — 선택값을 코히어런트한 픽셀 엠블럼 영문 프롬프트로 변환. 실패 시 템플릿 폴백. ──
-const EMBLEM_PROMPT_MODEL = 'claude-haiku-4-5-20251001';
+// ── AI 프롬프트 생성(Sonnet 5) — 선택값을 코히어런트한 픽셀 엠블럼 영문 프롬프트로 변환. 실패 시 템플릿 폴백. ──
+const EMBLEM_PROMPT_MODEL = 'claude-sonnet-5';
 let _anthropic: Anthropic | null = null;
 function anthropic(): Anthropic {
   const key = process.env.ANTHROPIC_API_KEY;

@@ -19,7 +19,7 @@ import { spritePath } from '@/lib/game/equipment/sprite-manifest';
 import type { ProfileGender } from './refs';
 import type { Appearance } from './appearance-v3';
 
-const MODEL_ID = 'claude-sonnet-4-6';
+const MODEL_ID = 'claude-sonnet-5';
 const MAX_CHARS = 1990; // v3 description 한도 2000 직전 — 절단은 최후 안전장치(아래 압축 재생성이 우선).
 const SOFT_LIMIT = 1700; // 이보다 길 때만 압축 재생성 — 규칙 축소로 목표 1100~1600, 초과 시에만 압축.
 
