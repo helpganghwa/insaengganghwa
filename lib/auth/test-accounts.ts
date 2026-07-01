@@ -24,18 +24,14 @@ export function isTestLoginEnabled(): boolean {
 export const REVIEW_ACCOUNT_EMAIL = 'cbt@ganghwa.app';
 export const REVIEW_ACCOUNT_PASSWORD = 'cbt123456';
 
-/** 고정 테스트 계정 — 심사관(포트원·게임위) 제출용 1개 + 길드/친구/대난투 등 다인 기능 검수용 3개. */
+/** 고정 심사/검수 계정 3개 — 심사관 제출용 + 길드/친구/대난투 등 다인 기능 검수용. 전부 동일 비밀번호. */
 export const TEST_ACCOUNTS: { email: string; label: string }[] = [
-  { email: REVIEW_ACCOUNT_EMAIL, label: '심사용' },
-  { email: 'tester1@insaeng.test', label: '테스터 1' },
-  { email: 'tester2@insaeng.test', label: '테스터 2' },
-  { email: 'tester3@insaeng.test', label: '테스터 3' },
+  { email: 'cbt@ganghwa.app', label: '심사용 1' },
+  { email: 'cbt2@ganghwa.app', label: '심사용 2' },
+  { email: 'cbt3@ganghwa.app', label: '심사용 3' },
 ];
 
-/** 테스터(다인 검수)용 공용 비밀번호 — 심사 계정은 REVIEW_ACCOUNT_PASSWORD 별도. */
-export const TEST_PASSWORD = 'insaeng-test-9f3a2b';
-
-/** 계정 email별 비밀번호 — 심사 계정만 쉬운 비번, 나머지는 테스터 공용 비번. */
-export function passwordForTestAccount(email: string): string {
-  return email === REVIEW_ACCOUNT_EMAIL ? REVIEW_ACCOUNT_PASSWORD : TEST_PASSWORD;
+/** 모든 심사/검수 계정 공용 비밀번호(cbt123456). */
+export function passwordForTestAccount(_email: string): string {
+  return REVIEW_ACCOUNT_PASSWORD;
 }
