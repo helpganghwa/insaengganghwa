@@ -22,5 +22,6 @@ export * from './friends'; // §16 친구 (검색→요청→수락)
 export * from './guild'; // §17 길드 (협력 성장 + 월드맵 점령전) — GUILD.md. ⚠ 마이그레이션 미적용 시 inert
 export * from './server'; // §18 서버 (논리 분리 — 계정 전역/캐릭터 서버별) — SERVER.md
 export * from './world'; // §19 월드 이벤트 피드 (홈 하단 WorldLogFeed) + 랭킹 1위 추적
+export * from './support'; // §20 고객센터 문의 (인앱 접수 → 관리자 답변)
 export * from './announcement'; // §20 공지사항 (게시판 — 어드민 작성·발행, 홈 카드/강제 팝업)
 export * from './leaderboard'; // §21 리더보드 사전계산 스냅샷 (cron 재계산 — 읽기 경량화)

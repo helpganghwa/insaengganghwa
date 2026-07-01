@@ -5,6 +5,7 @@ import { db } from '@/lib/db/client';
 import { paymentAlerts } from '@/lib/db/schema/payment';
 import { clientErrors } from '@/lib/db/schema/ops';
 import { userProfiles, profileGenerationJobs } from '@/lib/db/schema/avatar';
+import { supportInquiries } from '@/lib/db/schema/support';
 
 /**
  * 관리자 허브 — /admin. (admin) 레이아웃이 접근을 게이트하므로 여기선 메뉴만.
@@ -20,7 +21,7 @@ async function pendingCounts(): Promise<Record<string, number>> {
   const dayMs = new Date(`${kstToday}T00:00:00+09:00`).getTime();
   const dayStart = new Date(dayMs);
   const dayEnd = new Date(dayMs + 24 * 3600 * 1000);
-  const [alerts, reports, genTodo, cerrors] = await Promise.all([
+  const [alerts, reports, genTodo, cerrors, supportOpen] = await Promise.all([
     // 미해결 결제 사고.
     one(
       db
@@ -56,12 +57,20 @@ async function pendingCounts(): Promise<Record<string, number>> {
         .from(clientErrors)
         .where(eq(clientErrors.resolved, false)),
     ),
+    // 미답변 고객센터 문의(마이그레이션 미적용 시 0으로 degrade — 허브 보호).
+    one(
+      db
+        .select({ n: sql<number>`count(*)::int` })
+        .from(supportInquiries)
+        .where(eq(supportInquiries.status, 'open')),
+    ).catch(() => 0),
   ]);
   return {
     '/admin/alerts': alerts,
     '/admin/reports': reports,
     '/admin/profile-gen': genTodo,
     '/admin/client-errors': cerrors,
+    '/admin/support': supportOpen,
   };
 }
 
@@ -77,6 +86,12 @@ const MENU: { href: string; icon: string; title: string; desc: string; external?
     icon: '🚩',
     title: '프로필 신고',
     desc: '신고 누적 프로필 확인 및 비공개 조치',
+  },
+  {
+    href: '/admin/support',
+    icon: '💬',
+    title: '고객센터 문의',
+    desc: '유저 문의 확인·답변 (우편 + 앱 알림 발송)',
   },
   {
     href: '/admin/announcements',

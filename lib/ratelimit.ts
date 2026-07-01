@@ -27,7 +27,8 @@ export type RlBucket =
   | 'shop'
   | 'profile'
   | 'profileEdit'
-  | 'report';
+  | 'report'
+  | 'support';
 
 const WINDOWS: Record<RlBucket, [limit: number, window: `${number} s`]> = {
   enhance: [30, '10 s'],
@@ -44,6 +45,7 @@ const WINDOWS: Record<RlBucket, [limit: number, window: `${number} s`]> = {
   profile: [10, '3600 s'], // 아바타 생성(Claude+Pixellab 고비용) — 시간당 10건
   profileEdit: [30, '10 s'], // 대표 선택·방향 변경·삭제 연타 방어(저비용)
   report: [5, '60 s'], // 신고 스팸·reportCount 인플레이션 방어
+  support: [5, '3600 s'], // 고객센터 문의 — 시간당 5건(스팸 방어)
 };
 
 const url = process.env.UPSTASH_REDIS_REST_URL;
