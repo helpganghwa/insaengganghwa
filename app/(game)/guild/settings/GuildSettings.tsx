@@ -80,6 +80,8 @@ export function GuildSettings({
   const [pending, start] = useTransition();
   const [genOpen, setGenOpen] = useState(false);
   const [genPending, setGenPending] = useState(false); // 낙관적 '생성 중' 슬롯
+  const [genStartMs, setGenStartMs] = useState<number | null>(null); // 생성 시작시각(경과 표시)
+  const [nowMs, setNowMs] = useState<number | null>(null); // 라이브 클럭(마운트 후 — 하이드레이션 안전)
   // 문양 사용/삭제 3초 인-버튼 컨펌(만료 자동 해제) — { action, id } + 남은 초.
   const [armed, setArmed] = useState<{ action: 'use' | 'del'; id: string } | null>(null);
   const [armedLeft, setArmedLeft] = useState(0);
@@ -100,6 +102,25 @@ export function GuildSettings({
     }, 1000);
     return () => clearInterval(id);
   }, [genConfirm]);
+
+  // 생성 중이면 1초마다 라이브 클럭 갱신(경과 시간 표시).
+  useEffect(() => {
+    if (!genPending) return;
+    const tick = () => setNowMs(Date.now());
+    tick();
+    const id = setInterval(tick, 1000);
+    return () => clearInterval(id);
+  }, [genPending]);
+
+  // 생성 경과 시간 — 시작시각 대비. 마운트 전(nowMs null)엔 미표시(하이드레이션 안전).
+  const genElapsedSec =
+    genStartMs != null && nowMs != null ? Math.max(0, Math.floor((nowMs - genStartMs) / 1000)) : null;
+  const genElapsedText =
+    genElapsedSec == null
+      ? null
+      : genElapsedSec < 60
+        ? `${genElapsedSec}초`
+        : `${Math.floor(genElapsedSec / 60)}분 ${genElapsedSec % 60}초`;
 
   // 사용/삭제 버튼 3초 컨펌(만료 자동 해제) — 남은 초 표기.
   useEffect(() => {
@@ -130,13 +151,18 @@ export function GuildSettings({
       }
       if (!raw) return;
       let alive = false;
+      let startAt: number | null = null;
       try {
         const { at, base } = JSON.parse(raw) as { at: number; base: number };
         alive = Date.now() - at < 180_000 && emblems.length <= base;
+        startAt = at;
       } catch {
         alive = false;
       }
-      if (alive) setGenPending(true);
+      if (alive) {
+        setGenPending(true);
+        if (startAt != null) setGenStartMs(startAt);
+      }
       else {
         try {
           localStorage.removeItem('guildEmblemGen');
@@ -327,8 +353,10 @@ export function GuildSettings({
   const generate = async () => {
     setGenOpen(false);
     // 생성중 영속 플래그(재진입 표시용) — 시작시각 + 기준 문양수.
+    const at = Date.now();
+    setGenStartMs(at);
     try {
-      localStorage.setItem('guildEmblemGen', JSON.stringify({ at: Date.now(), base: emblemList.length }));
+      localStorage.setItem('guildEmblemGen', JSON.stringify({ at, base: emblemList.length }));
     } catch {
       /* noop */
     }
@@ -746,10 +774,15 @@ export function GuildSettings({
               return (
                 <div key={`empty-${i}`} className="flex flex-col items-center gap-1">
                   {pendingSlot ? (
-                    <div className="flex aspect-square w-full items-center justify-center rounded-lg border-2 border-dashed border-amber-400 bg-amber-50 dark:bg-amber-950/30">
+                    <div className="flex aspect-square w-full flex-col items-center justify-center gap-0.5 rounded-lg border-2 border-dashed border-amber-400 bg-amber-50 dark:bg-amber-950/30">
                       <span className="text-[8px] font-semibold text-amber-600 dark:text-amber-400">
                         생성 중…
                       </span>
+                      {genElapsedText && (
+                        <span className="font-mono text-[8px] tabular-nums text-amber-500 dark:text-amber-400/80">
+                          {genElapsedText}
+                        </span>
+                      )}
                     </div>
                   ) : (
                     <button
