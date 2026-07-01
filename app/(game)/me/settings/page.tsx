@@ -102,8 +102,11 @@ export default async function SettingsPage() {
         <Row label="본인인증">
           <IdentityVerifyRow
             verified={verified}
-            storeId={process.env.NEXT_PUBLIC_PORTONE_STORE_ID}
-            channelKey={process.env.NEXT_PUBLIC_PORTONE_IDENTITY_CHANNEL_KEY}
+            storeId={process.env.PORTONE_STORE_ID || process.env.NEXT_PUBLIC_PORTONE_STORE_ID}
+            channelKey={
+              process.env.PORTONE_IDENTITY_CHANNEL_KEY ||
+              process.env.NEXT_PUBLIC_PORTONE_IDENTITY_CHANNEL_KEY
+            }
           />
         </Row>
       </Section>
