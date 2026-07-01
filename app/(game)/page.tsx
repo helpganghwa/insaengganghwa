@@ -14,6 +14,7 @@ import { getWorldFeed } from '@/lib/game/world/event';
 import { listPublishedAnnouncements } from '@/lib/game/announcement';
 
 import { AnnouncementBoard } from './AnnouncementBoard';
+import { ConquestCardStatus } from './ConquestCardStatus';
 import { BattlePassBanner } from './BattlePassBanner';
 import { DailySupplyCard } from './DailySupplyCard';
 import { HomeBannerCarousel } from './HomeBannerCarousel';
@@ -128,8 +129,16 @@ export default async function HomePage() {
   /** 월드맵 카드 — 현재 거주 구역명(지역색 강조). 미배정/미소속이면 null. */
   let residenceName: string | null = null;
   let residenceRegion: string | null = null;
-  // 세계지도 카드 설명 — 점령전(매일 23:00~24:00 KST) 시간 상태. 기본값=비점령 문구.
-  let conquestStatus = '오늘 23시 점령전';
+  // 세계지도 카드 — 점령전(매일 KST 23:00 = UTC 14:00, 한국 DST 없음). 진행중(23시대) 여부 +
+  // 다음 23:00까지 카운트다운(targetMs=다음 23:00의 UTC epoch). 진행중 여부는 로그인 시 DB 시계로 갱신.
+  let conquestInProgress = new Date().getUTCHours() === 14; // 로그아웃/콜드 폴백(KST 23시대)
+  const conquestTargetMs = (() => {
+    const n = new Date();
+    const t = new Date(n);
+    t.setUTCHours(14, 0, 0, 0); // KST 23:00
+    if (t.getTime() <= n.getTime()) t.setUTCDate(t.getUTCDate() + 1);
+    return t.getTime();
+  })();
 
   if (userId) {
     const kstToday = kstDateString();
@@ -224,8 +233,8 @@ export default async function HomePage() {
         ).filter(Boolean).length;
         residenceName = row.residence_name ?? null;
         residenceRegion = row.residence_region ?? null;
-        // 23시대(23:00~24:00) = 점령전 진행중, 그 외 = 오늘 밤 일정 안내.
-        conquestStatus = row.kst_hour === 23 ? '점령전 진행중' : '오늘 23시 점령전';
+        // 23시대(23:00~24:00) = 점령전 진행중(DB 시계 권위).
+        conquestInProgress = row.kst_hour === 23;
         // phase별 문구. 발표 후(after) + revealed면 우승자, 닉 미상(더미)이면 발표 문구.
         if (row.melee_phase === 'before') meleeDesc = '오늘 9시 개시';
         else if (row.melee_phase === 'running') meleeDesc = '난투 진행 중';
@@ -325,7 +334,7 @@ export default async function HomePage() {
                       </span>
                     </>
                   ) : isWorldmapCard ? (
-                    conquestStatus
+                    <ConquestCardStatus inProgress={conquestInProgress} targetMs={conquestTargetMs} />
                   ) : (
                     desc
                   )}
