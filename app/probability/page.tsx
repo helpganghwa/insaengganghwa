@@ -29,9 +29,7 @@ import {
   RAID_DAMAGE_VARIANCE,
   RAID_DAMAGE_K,
   RAID_PHASE_DROP_BOXES,
-  GEM_TO_MS,
 } from '@/lib/game/balance';
-import { INVITE_DIAMOND_PER_REFERRAL, INVITE_BOX_PER_REFERRAL } from '@/lib/game/referral/stats';
 import { asc, eq } from 'drizzle-orm';
 import { db } from '@/lib/db/client';
 import { catalogItems } from '@/lib/db/schema/equipment';
@@ -88,14 +86,6 @@ export default async function ProbabilityPage() {
     <main className="mx-auto min-h-dvh w-full max-w-[390px] bg-white px-4 py-5 text-zinc-900 dark:bg-black dark:text-zinc-50">
       <header className="mb-4">
         <h1 className="text-lg font-extrabold">확률 공시</h1>
-        <p className="mt-1.5 text-[12px] leading-relaxed text-zinc-600 dark:text-zinc-300">
-          강화·초월·보급·레이드에 쓰이는 확률과 수치를 빠짐없이 공개합니다. 여기 적힌 값은 실제
-          게임 판정과 <b>항상 똑같이</b> 적용되며, 내용이 바뀔 때는 <b>최소 24시간 전에 미리</b>{' '}
-          알려드립니다.
-        </p>
-        <p className="mt-1 text-[10px] leading-relaxed text-zinc-400">
-          게임산업진흥에 관한 법률 제33조에 따른 확률형 항목 공시입니다.
-        </p>
       </header>
 
       <Sec n="1" title="강화" id="enhance">
@@ -256,22 +246,6 @@ export default async function ProbabilityPage() {
         </P>
       </Sec>
 
-      <Sec n="6" title="경제·기타">
-        <P>
-          강화 시간 단축: 다이아 1개로 강화 대기 시간을 {Math.round(GEM_TO_MS / 60_000)}분 줄입니다.
-          단축 비율은 강화를 <b>시작한 시점의 값으로 고정</b>되어, 이미 진행 중인 강화에는 나중에
-          비율이 바뀌어도 소급되지 않습니다.
-        </P>
-        <P>
-          친구 초대: 공유 링크로 신규 가입 전환 시 공유자에게 💎{INVITE_DIAMOND_PER_REFERRAL} +
-          보급상자 {INVITE_BOX_PER_REFERRAL}개(무기·방어구·장신구 각 {INVITE_BOX_PER_REFERRAL / 3}개) 지급.
-        </P>
-      </Sec>
-
-      <p className="mt-6 text-[10px] leading-relaxed text-zinc-400 dark:text-zinc-500">
-        이 페이지의 모든 확률과 수치는 게임 내부의 실제 판정과 항상 같은 값으로 표시됩니다. 사양이
-        바뀌는 경우 최소 24시간 전에 미리 공지합니다.
-      </p>
     </main>
   );
 }
