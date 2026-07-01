@@ -32,6 +32,18 @@ import {
   GEM_TO_MS,
 } from '@/lib/game/balance';
 import { INVITE_DIAMOND_PER_REFERRAL, INVITE_BOX_PER_REFERRAL } from '@/lib/game/referral/stats';
+import { asc, eq } from 'drizzle-orm';
+import { db } from '@/lib/db/client';
+import { catalogItems } from '@/lib/db/schema/equipment';
+import { CATALOG_ITEMS } from '@/lib/game/equipment/catalog';
+
+export const dynamic = 'force-dynamic';
+
+const SLOT_KO: Record<'weapon' | 'armor' | 'accessory', string> = {
+  weapon: '무기',
+  armor: '방어구',
+  accessory: '장신구',
+};
 
 export const metadata: Metadata = {
   title: '확률 공시 — 인생강화',
@@ -49,8 +61,29 @@ const CP_SAMPLES = [0, 10, 30, 51, 99];
 const PHASE_SAMPLES = [1, 2, 3, 4, 5];
 const EXTRA_ATTACK_SAMPLES = [1, 10, 11, 20, 21, 30, 31, 40];
 
-/** 확률 공시 — 공개 페이지. lib/game/balance.ts(단일 진실 원천)에서 직접 산출. */
-export default function ProbabilityPage() {
+/** 확률 공시 — 공개 페이지. 수치는 lib/game/balance.ts, 보급 목록은 실제 추첨 풀(catalog_items active)에서 산출. */
+export default async function ProbabilityPage() {
+  // 보급 균등 추첨 풀 — 실제 판정과 동일(슬롯별 active 카탈로그, 각 1/N). DB 실패 시 코드 카탈로그 폴백.
+  const bySlot: Record<'weapon' | 'armor' | 'accessory', string[]> = {
+    weapon: [],
+    armor: [],
+    accessory: [],
+  };
+  try {
+    const active = await db
+      .select({ slot: catalogItems.slot, name: catalogItems.name })
+      .from(catalogItems)
+      .where(eq(catalogItems.active, true))
+      .orderBy(asc(catalogItems.name));
+    for (const c of active) bySlot[c.slot as 'weapon' | 'armor' | 'accessory'].push(c.name);
+  } catch {
+    for (const c of CATALOG_ITEMS) bySlot[c.slot].push(c.nameKo);
+    for (const k of Object.keys(bySlot) as (keyof typeof bySlot)[])
+      bySlot[k].sort((a, b) => a.localeCompare(b, 'ko'));
+  }
+  // 각 아이템 당첨 확률 = 1/N → bp = 10000/N.
+  const supplyProbBp = (n: number) => (n > 0 ? Math.round((10000 / n) * 100) / 100 : 0);
+
   return (
     <main className="mx-auto min-h-dvh w-full max-w-[390px] bg-white px-4 py-5 text-zinc-900 dark:bg-black dark:text-zinc-50">
       <header className="mb-4">
@@ -65,7 +98,7 @@ export default function ProbabilityPage() {
         </p>
       </header>
 
-      <Sec n="1" title="강화">
+      <Sec n="1" title="강화" id="enhance">
         <P>
           강화는 한 번 시도할 때마다 네 가지 결과 중 하나가 나옵니다 — <b>성공</b>(한 단계 ↑) ·{' '}
           <b>메가</b>(두 단계 ↑) · <b>유지</b>(그대로) · <b>하락</b>(한 단계 ↓). 오래 기다릴수록
@@ -146,15 +179,39 @@ export default function ProbabilityPage() {
         </Table>
       </Sec>
 
-      <Sec n="4" title="보급 (보급 상자)">
+      <Sec n="4" title="보급 (보급 상자)" id="supply">
         <P>
           보급 상자를 열면 그 슬롯의 활성 아이템 중 <b>하나가 똑같은 확률로</b> 나옵니다(각 아이템
-          당첨 확률 = 1 ÷ 슬롯 활성 아이템 수). 슬롯별 활성 아이템 수는 게임 안에 표시됩니다.
+          당첨 확률 = 1 ÷ 슬롯 활성 아이템 수). 아래는 슬롯별 전체 아이템과 당첨 확률입니다.
         </P>
         <P>
           아직 없는 아이템이면 새로 <b>획득(도감 해금)</b>되고, 이미 있는 아이템이면 그 아이템의{' '}
           <b>초월 진행도</b>로 쌓입니다. 상자 열기에는 이 균등 추첨 외에 숨은 추가 확률이 없습니다.
         </P>
+        {(['weapon', 'armor', 'accessory'] as const).map((s) => {
+          const items = bySlot[s];
+          const p = pct(supplyProbBp(items.length));
+          return (
+            <div key={s}>
+              <h3 className="mb-1 mt-2 text-[12px] font-bold">
+                {SLOT_KO[s]} — {items.length}종 · 각 {p}
+              </h3>
+              <ul className="tabular-nums text-[11px]">
+                {items.map((name) => (
+                  <li
+                    key={name}
+                    className="flex items-baseline justify-between gap-2 border-t border-zinc-100 py-0.5 dark:border-zinc-900"
+                  >
+                    <span className="min-w-0 flex-1 break-keep text-zinc-700 dark:text-zinc-200">
+                      {name}
+                    </span>
+                    <span className="shrink-0 text-zinc-500">{p}</span>
+                  </li>
+                ))}
+              </ul>
+            </div>
+          );
+        })}
       </Sec>
 
       <Sec n="5" title="레이드">
@@ -219,9 +276,19 @@ export default function ProbabilityPage() {
   );
 }
 
-function Sec({ n, title, children }: { n: string; title: string; children: React.ReactNode }) {
+function Sec({
+  n,
+  title,
+  id,
+  children,
+}: {
+  n: string;
+  title: string;
+  id?: string;
+  children: React.ReactNode;
+}) {
   return (
-    <section className="mb-5">
+    <section id={id} className="mb-5 scroll-mt-4">
       <h2 className="mb-1.5 text-sm font-bold">
         §{n}. {title}
       </h2>

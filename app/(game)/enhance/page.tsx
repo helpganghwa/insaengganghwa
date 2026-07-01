@@ -1,3 +1,4 @@
+import Link from 'next/link';
 import { sql } from 'drizzle-orm';
 
 import { getSessionUserId } from '@/lib/auth/session';
@@ -154,6 +155,14 @@ export default async function EnhancePage() {
           })}
         </section>
       ))}
+      <div className="pt-1 pb-2 text-center">
+        <Link
+          href="/probability#enhance"
+          className="text-[11px] text-zinc-400 underline underline-offset-2 hover:text-zinc-600 dark:hover:text-zinc-300"
+        >
+          확률 공시
+        </Link>
+      </div>
     </div>
   );
 }

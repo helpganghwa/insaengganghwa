@@ -1,3 +1,4 @@
+import Link from 'next/link';
 import { and, eq } from 'drizzle-orm';
 import { getActiveServerId } from '@/lib/game/servers';
 import { preload } from 'react-dom';
@@ -54,6 +55,14 @@ export default async function GachaPage() {
           eager={i === 0}
         />
       ))}
+      <div className="pt-1 pb-2 text-center">
+        <Link
+          href="/probability#supply"
+          className="text-[11px] text-zinc-400 underline underline-offset-2 hover:text-zinc-600 dark:hover:text-zinc-300"
+        >
+          확률 공시
+        </Link>
+      </div>
     </div>
   );
 }
