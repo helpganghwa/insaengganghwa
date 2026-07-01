@@ -16,6 +16,7 @@ import { InstallAppButton } from './InstallAppButton';
 import { PushSettings } from './PushSettings';
 import { SupportModal } from './SupportModal';
 import { WithdrawButton } from './WithdrawButton';
+import { IdentityVerifyRow } from './IdentityVerifyRow';
 
 const APP_VERSION = '0.1.0'; // 출시 전 v0
 
@@ -99,9 +100,11 @@ export default async function SettingsPage() {
         </Row>
         <Divider />
         <Row label="본인인증">
-          <span className={`text-sm ${verified ? 'text-emerald-600' : 'text-zinc-500'}`}>
-            {verified ? '완료' : '미인증 (결제 시 진행)'}
-          </span>
+          <IdentityVerifyRow
+            verified={verified}
+            storeId={process.env.NEXT_PUBLIC_PORTONE_STORE_ID}
+            channelKey={process.env.NEXT_PUBLIC_PORTONE_IDENTITY_CHANNEL_KEY}
+          />
         </Row>
       </Section>
 

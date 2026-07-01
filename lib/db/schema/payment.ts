@@ -28,7 +28,7 @@ export const iapRefundReasonEnum = pgEnum('iap_refund_reason', [
   'minor_protection',
   'error',
 ]);
-export const identityProviderEnum = pgEnum('identity_provider', ['kmc', 'pass']);
+export const identityProviderEnum = pgEnum('identity_provider', ['kmc', 'pass', 'kg_inicis']);
 
 /** §9.1 iap_orders. */
 export const iapOrders = pgTable('iap_orders', {
