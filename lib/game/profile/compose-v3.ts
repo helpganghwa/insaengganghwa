@@ -3,12 +3,13 @@
 // create-character-v3용 영문 description을 작성한다. 규칙:
 //  - 비율: 7등신·작은 머리·긴 다리·머리 부속(귀·뿔·관) 작게.
 //  - 미소녀(여)/미소년(남) young adult(20~24, early twenties): 동안 방지 + 과성숙 방지.
-//  - 무기 = 시그니처: IMAGE에 충실·고디테일 재현(그립). 쌍수만 양손 강제(허리 걸침 부실 재현 방지).
-//  - 방어구·장신구 = 컨셉만: 테마·색·모티프만 뽑아 Claude가 자유 재해석·응집(리터럴 복사 X, 매번 변주).
-//    → AI를 거치는 핵심 = 매번 애니 JRPG 최적 구성을 창의·다양하게 생성. 경직된 부위별 규칙 최소화.
+//  - 무기 = 시그니처: IMAGE에 충실·고디테일 재현(그립·전면 존재감 크게). 쌍수만 양손 강제.
+//  - 방어구·장신구 = 충실·인식가능: 실루엣·색·시그니처를 그 아이템으로 알아보게 유지(딴 장비로 대체 X),
+//    애니풍 렌더+의상 융화. 장신구 배치는 다양화(부채=허리 고정 X). 리터럴 픽셀복사는 아니되 정체성 유지.
+//    → 다양성은 아이템 변형이 아니라 캐릭터(인종·머리·표정·포즈·기본의상·색악센트)에서 낸다.
 //  - Japanese anime 스타일을 강하게 강조(이 조합에서 품질이 가장 좋음).
 //  - 부정형 회피, "cute/chibi/adult/mature/grown" 미사용. enhance_prompt OFF이므로 이 description이
-//    최종 프롬프트(서버 확장 없음). 목표 1100~1600(집중·풍부), 압축 트리거 1700, 절단 안전장치 1990.
+//    최종 프롬프트(서버 확장 없음). 목표 1800~1950(한계까지 풍부·상세), 압축 트리거 1990, 절단 안전장치 1990.
 import 'server-only';
 import Anthropic from '@anthropic-ai/sdk';
 import { readFileSync } from 'node:fs';
@@ -21,7 +22,8 @@ import type { Appearance } from './appearance-v3';
 
 const MODEL_ID = 'claude-sonnet-5';
 const MAX_CHARS = 1990; // v3 description 한도 2000 직전 — 절단은 최후 안전장치(아래 압축 재생성이 우선).
-const SOFT_LIMIT = 1700; // 이보다 길 때만 압축 재생성 — 규칙 축소로 목표 1100~1600, 초과 시에만 압축.
+const SOFT_LIMIT = 1990; // 한계까지 꽉 채워 품질↑ — 목표 1800~1950, 한도(1990) 초과 시에만 압축 재생성.
+const COMPOSE_MAX_TOKENS = 1500; // ~1950자(≈500토큰) 출력 + Sonnet 5 사고 토큰 여유(800이면 절단 위험).
 
 const PROP = `PROPORTIONS ARE THE TOP PRIORITY — a TALL, slender 7-heads-tall figure (a small head about one-seventh of the total body height), and NEVER shorter than 6 heads. A tall long-legged silhouette like an anime key-visual idol: long legs (roughly half the total height), a high waistline, a slender neck and a compact torso. The youthfulness is in the FACE only — the BODY stays tall and long-legged, never short, stubby or child-like. Even in a long dress or gown, keep the silhouette tall and slim (a slim, floor-length gown, NOT a wide bell that shortens the figure) with long legs implied beneath. Keep ALL head accessories small and neat — ears, horns, crowns and headpieces stay modest, and hair volume restrained, so the head reads small. Even when an item is a large helmet, mask, hood, horned skull, antlers or headdress, do NOT let it dominate the silhouette or balloon the head: render it scaled down to sit on a small head, and lengthen the body (legs + torso) so the head AND its headgear together never exceed about one-sixth of the total height. When in doubt, make the body taller rather than the head bigger.`;
 
@@ -41,11 +43,12 @@ SUBJECT: ${subjectOf(male)}, of the given race, with the given hair and expressi
 AGE — KEEP CONSISTENT: a young adult in their early twenties (about 20-24), youthful and good-looking but NOT a teenager or a child (no over-cutesy baby face), and never aged up into an older or middle-aged person — keep it a fresh young adult even with regal, heroic or ornate gear.
 ${male ? MENS + '\n' : ''}COMPOSITION: full-length from the top of the head to the soles of the feet, centered with clear margin above and below, both feet visible, a clear front view facing the viewer (body not turned to the side), transparent background, solo. Always leave clear empty space above the head so nothing is cropped at the top.
 POSE: use the given pose for the arms and stance, following its mood (usually calm and composed) — natural and relaxed (a gentle weight shift onto one leg is fine), NOT stiff or rigid, and stay FRONT-FACING toward the viewer (both shoulders, chest, feet and face toward the camera, not a side or three-quarter profile). Keep the hands and any weapon at shoulder height or lower, never raised above the head.
-WEAPON — FAITHFUL, HIGH DETAIL: the weapon is the character's SIGNATURE item. Reproduce it faithfully and in rich detail from its IMAGE, as if lifting the actual item onto the character — preserve its exact silhouette, main colors, materials and signature ornaments so it reads as the same weapon, and keep it clearly GRIPPED in a hand (fingers around the handle; it may rest on a shoulder, lean on the body or touch the ground, but NEVER floats detached). If the weapon is a MATCHED PAIR (twin blades, dual sabers, paired daggers, a set of two), the character wields ONE IN EACH HAND, both fully drawn and equally detailed — do NOT sheathe or hang the second one at the waist or back (a sheathed second copy renders poorly). The weapon is never dropped, hidden or omitted.
-ARMOR & ACCESSORY — CONCEPT ONLY, REINTERPRET FREELY: treat the armor and accessory as CONCEPT references, not fixed images. Read their essence — theme, key colors, motif and mood — from the image and lore, then REINTERPRET and BLEND them into ONE cohesive anime outfit that best fits a Japanese-anime JRPG key visual. You may restyle their silhouette, layering, proportions and how they are worn; do NOT copy them literally, and vary the interpretation each time so designs stay diverse. Every accessory is WORN or attached naturally somewhere on the body (placement is your art-director choice) and NEVER floats or hovers detached in mid-air.
-CONCEPT COHESION — the items may come from DIFFERENT sets; use their lore to unify the base outfit, color accents, emblem motifs, footwear, mood and stance into ONE harmonious youthful anime character (not clashing themes, not a generic outfit).
+WEAPON — FAITHFUL, HIGH DETAIL, PROMINENT: the weapon is the character's SIGNATURE item. Reproduce it faithfully and in rich detail from its IMAGE, as if lifting the actual item onto the character — preserve its exact silhouette, main colors, materials and signature ornaments so it reads as the same weapon. Render it LARGE and clearly in the FOREGROUND with its shape and details sharp and readable — the single most eye-catching prop, never small, blurry or vague. Keep it clearly GRIPPED in a hand (fingers around the handle; it may rest on a shoulder, lean on the body or touch the ground, but NEVER floats detached). If the weapon is a MATCHED PAIR (twin blades, dual sabers, paired daggers, a set of two), the character wields ONE IN EACH HAND, both fully drawn and equally detailed — do NOT sheathe or hang the second one at the waist or back (a sheathed second copy renders poorly). The weapon is never dropped, hidden or omitted.
+ARMOR & ACCESSORY — FAITHFUL & RECOGNIZABLE: render the armor and accessory so they are clearly RECOGNIZABLE as the SAME items shown in their IMAGES — preserve each one's silhouette, main colors and signature ornaments — while drawing them naturally in the anime style and blending them harmoniously onto the character. Do NOT replace them with different-looking gear or invent unrelated armor; keep each source item's identity intact (a faithful anime rendering, not a flat copy, and NOT a different item). Every accessory is WORN or attached naturally on the body and NEVER floats detached — and VARY where each accessory sits from one design to the next (e.g. a fan may be held in a free hand, tucked into a belt or waist sash, or fastened as an ornament; do NOT default every time to the waist).
+DIVERSITY — freshness comes from the CHARACTER, not from altering the gear: vary the race, hair, expression, pose, base-clothing styling, color accents and mood from one design to the next. Keep the three signature items (weapon, armor, accessory) faithful and consistent to their images; never achieve variety by changing what the items themselves look like.
+CONCEPT COHESION — the items may come from DIFFERENT sets; use their lore to unify the base clothing (non-signature layers), color accents, emblem motifs, footwear, mood and stance into ONE harmonious youthful anime character (not clashing themes, not a generic outfit).
 STYLE (EMPHASIZE STRONGLY): authentic Japanese anime / JRPG key-visual aesthetic — smooth clean cel-shading with soft shape edges and NO outlines (lineless, no dark or white border lines around the character), bright vibrant saturated colors, glossy expressive anime eyes, polished anime rendering. The Japanese-anime look is the most important stylistic goal.
-LENGTH: about 1100-1600 characters — vivid, evocative and focused (a flowing description, not a dry list and not padded with rules). Describe the WEAPON in rich faithful detail and the reinterpreted outfit cohesively; keep the weapon fully described and END on a complete sentence. Write ONLY positive visual description; never use the words cute, chibi, adult, mature or grown. Output ONLY the prompt text, no preamble or quotes.`;
+LENGTH: aim for about 1800-1950 characters — USE THE ROOM to be richly detailed, vivid and evocative (a flowing description, not a dry list and not padded with rules): describe the WEAPON, the recognizable armor and accessory, the base clothing, colors, materials, lighting and mood specifically and generously. Finish describing ALL THREE items and END on a complete sentence before 1990 characters. Write ONLY positive visual description; never use the words cute, chibi, adult, mature or grown. Output ONLY the prompt text, no preamble or quotes.`;
 }
 
 let _client: Anthropic | null = null;
@@ -118,7 +121,7 @@ export async function composeV3Description(input: ComposeV3Input): Promise<strin
   }
   content.push({
     type: 'text',
-    text: `Race: ${ap.race}. Hair: ${ap.hair} hair. Expression: ${ap.expression}. Pose: ${ap.pose}. Reproduce the WEAPON faithfully and in high detail from its image (gripped in a hand, never floating; if it is a matched pair, one in each hand, both fully drawn). Treat the ARMOR and ACCESSORY as concept references only — capture their theme, colors and motif from image + lore and reinterpret them freely into ONE cohesive Japanese-anime JRPG outfit (not a literal copy), varying the design for freshness. Keep the subject a good-looking young adult (about 20-24, not a teenager) in strong Japanese anime style. Write the prompt as instructed — concise and vivid, weapon fully described.`,
+    text: `Race: ${ap.race}. Hair: ${ap.hair} hair. Expression: ${ap.expression}. Pose: ${ap.pose}. Reproduce the WEAPON faithfully and in high detail from its image, rendered LARGE and prominent (gripped in a hand, never floating; if it is a matched pair, one in each hand, both fully drawn). Render the ARMOR and ACCESSORY so they stay clearly RECOGNIZABLE as the SAME items from their images — silhouette, main colors, signature ornaments — anime-styled and blended in, NOT replaced with different gear; vary accessory placement (a fan need not always sit at the waist). Draw diversity from the CHARACTER (race, hair, expression, pose, base clothing, color accents, mood), not from changing the items. Keep the subject a good-looking young adult (about 20-24, not a teenager) in strong Japanese anime style. Write the prompt richly detailed toward the ~1900-character budget, all three items fully described.`,
   });
 
   const sys = [{ type: 'text' as const, text: systemPrompt(gender), cache_control: { type: 'ephemeral' as const } }];
@@ -133,7 +136,7 @@ export async function composeV3Description(input: ComposeV3Input): Promise<strin
 
   const res = await client().messages.create({
     model: MODEL_ID,
-    max_tokens: 800,
+    max_tokens: COMPOSE_MAX_TOKENS,
     system: sys,
     messages: [{ role: 'user', content }],
   });
@@ -144,12 +147,12 @@ export async function composeV3Description(input: ComposeV3Input): Promise<strin
   for (let attempt = 0; attempt < 2 && desc.length > SOFT_LIMIT; attempt++) {
     const r = await client().messages.create({
       model: MODEL_ID,
-      max_tokens: 800,
+      max_tokens: COMPOSE_MAX_TOKENS,
       system: sys,
       messages: [
         {
           role: 'user',
-          content: `Tighten this Pixellab character prompt to UNDER ${SOFT_LIMIT} characters (it is currently ${desc.length}). Keep the WEAPON faithful and richly detailed, keep the reinterpreted outfit cohesive, keep the rich evocative Japanese-anime style (not a dry list) and the front-facing full-body framing, and END on a complete sentence. Output ONLY the rewritten prompt:\n\n${desc}`,
+          content: `Tighten this Pixellab character prompt to UNDER ${SOFT_LIMIT} characters (it is currently ${desc.length}). Keep the WEAPON faithful, detailed and prominent, keep the armor and accessory clearly recognizable as the same items, keep the rich evocative Japanese-anime style (not a dry list) and the front-facing full-body framing, and END on a complete sentence. Output ONLY the rewritten prompt:\n\n${desc}`,
         },
       ],
     });
