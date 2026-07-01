@@ -55,10 +55,6 @@ export default async function LegalPage({ params }: { params: Promise<{ doc: str
       <MarkdownView source={LEGAL_BODY[doc]} />
 
       <BusinessInfo />
-
-      <p className="mt-4 text-[11px] text-zinc-400">
-        ※ 본 문서는 출시 준비용 초안이며, 정식 게시 전 변경될 수 있습니다.
-      </p>
     </div>
   );
 }
