@@ -305,8 +305,8 @@ async function acceptJob(
       userId,
       serverId,
       type: 'profile_accepted',
-      title: '프로필 생성 완료',
-      body: '새 프로필이 목록에 추가되었습니다. 아바타 목록에서 확인해 보세요.',
+      title: '아바타 생성 완료',
+      body: '새 아바타가 목록에 추가되었습니다. 아바타 목록에서 확인해 보세요.',
       senderLabel: '시스템',
       payload: {},
     });
@@ -394,7 +394,7 @@ export async function adminGrantAvatarForJob(jobId: bigint): Promise<{ ok: boole
       serverId: job.serverId,
       type: 'admin',
       title: '아바타 지급 안내',
-      body: '안녕하세요, 운영팀입니다.\n\n생성하신 아바타를 운영팀이 직접 확인한 결과 문제가 없어 정상 지급해 드렸습니다.\n다이아 추가 차감 없이 프로필 목록에 추가되었으니, 아바타 목록에서 확인해 보세요.\n\n불편을 드려 죄송합니다. 감사합니다.',
+      body: '안녕하세요, 운영팀입니다.\n\n생성하신 아바타를 운영팀이 직접 확인한 결과 문제가 없어 정상 지급해 드렸습니다.\n다이아 추가 차감 없이 아바타 목록에 추가되었으니 확인해 보세요.\n\n불편을 드려 죄송합니다. 감사합니다.',
       senderLabel: '운영자',
       payload: {},
     });
@@ -439,7 +439,7 @@ async function rejectJob(
       userId,
       serverId,
       type: 'profile_rejected_ai',
-      title: '프로필 검토 미통과',
+      title: '아바타 검토 미통과',
       body: userBody,
       senderLabel: '시스템',
       payload: {},
@@ -447,7 +447,7 @@ async function rejectJob(
     return true;
   });
   if (did) {
-    await safePush(userId, '프로필 검토 미통과', '검토를 통과하지 못해 다이아를 환불했어요. 우편함을 확인하세요.', '/mail');
+    await safePush(userId, '아바타 검토 미통과', '검토를 통과하지 못해 다이아를 환불했어요. 우편함을 확인하세요.', '/mail');
   }
 }
 
@@ -489,14 +489,14 @@ export async function markFailedAndRefund(jobId: bigint, userId: string, reason:
       userId,
       serverId: job.serverId,
       type: 'profile_failed',
-      title: '프로필 생성 시스템 오류',
-      body: `생성 도중 시스템 오류가 발생해 다이아가 전액 환불되었습니다.\n다시 시도해 주세요.\n\n(내부 사유: ${reason.slice(0, 200)})`,
+      title: '아바타 생성 시스템 오류',
+      body: '생성 도중 시스템 오류가 발생해 다이아가 전액 환불되었습니다.\n다시 시도해 주세요.',
       senderLabel: '시스템',
       payload: {},
     });
     return true;
   });
   if (did) {
-    await safePush(userId, '프로필 생성 실패', '시스템 오류로 다이아를 환불했어요. 다시 시도해 주세요.', '/mail');
+    await safePush(userId, '아바타 생성 실패', '시스템 오류로 다이아를 환불했어요. 다시 시도해 주세요.', '/mail');
   }
 }
