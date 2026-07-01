@@ -67,7 +67,8 @@ export async function createGuild(input: {
     // 길드 + 리더 멤버.
     const [g] = await tx
       .insert(guilds)
-      .values({ name, serverId: input.serverId, leaderUserId: input.userId, emblemColor: input.emblemColor ?? null })
+      // 가입 방식 기본값 = 승인제(길드장/부길드장 승인). 생성 후 설정에서 자유가입으로 변경 가능.
+      .values({ name, serverId: input.serverId, leaderUserId: input.userId, emblemColor: input.emblemColor ?? null, joinPolicy: 'approval' })
       .returning({ id: guilds.id });
     await tx
       .insert(guildMembers)
