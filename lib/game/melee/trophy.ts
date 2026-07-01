@@ -10,6 +10,7 @@ import { userProfiles } from '@/lib/db/schema/avatar';
 import { reviewProfile } from '@/lib/game/profile/ai-review';
 import { anyBackgroundOpaque } from '@/lib/game/profile/bg-alpha';
 import { detectFaceBox } from '@/lib/game/profile/face-box';
+import { pixellabKeyByIdx, keyIdxFromOptions } from '@/lib/game/profile/pixellab-keys';
 
 /**
  * 대난투 우승 트로피 아바타 자동 생성 — MELEE §우승컵.
@@ -68,8 +69,15 @@ function isPng(b: Buffer): boolean {
   return b.length > 1000 && b[0] === 0x89 && b[1] === 0x50 && b[2] === 0x4e && b[3] === 0x47;
 }
 
-/** 우승자 source 캐릭터 — 현재 활성 프로필의 pixellab 캐릭터(없으면 최근 프로필). */
-async function getSourceChar(userId: string, serverId: number): Promise<string | null> {
+/**
+ * 우승자 source 캐릭터 — 현재 활성 프로필의 pixellab 캐릭터(없으면 최근 프로필).
+ * ⚠️ 캐릭터는 "생성한 키"로만 조회/파생 가능(계정 귀속) → 프로필 options의 pixellabKeyIdx를
+ * 함께 반환해 create-state·폴링을 반드시 같은 키로 한다(키2 라운드로빈 대응).
+ */
+async function getSourceChar(
+  userId: string,
+  serverId: number,
+): Promise<{ cid: string; keyIdx: number } | null> {
   const [p] = await db
     .select({ active: characters.activeProfileId })
     .from(characters)
@@ -77,18 +85,18 @@ async function getSourceChar(userId: string, serverId: number): Promise<string |
     .limit(1);
   if (p?.active) {
     const [ap] = await db
-      .select({ cid: userProfiles.pixellabCharacterId })
+      .select({ cid: userProfiles.pixellabCharacterId, options: userProfiles.options })
       .from(userProfiles)
       .where(eq(userProfiles.id, p.active))
       .limit(1);
-    if (ap?.cid) return ap.cid;
+    if (ap?.cid) return { cid: ap.cid, keyIdx: keyIdxFromOptions(ap.options) };
   }
   const [anyP] = await db
-    .select({ cid: userProfiles.pixellabCharacterId })
+    .select({ cid: userProfiles.pixellabCharacterId, options: userProfiles.options })
     .from(userProfiles)
     .where(eq(userProfiles.userId, userId))
     .limit(1);
-  return anyP?.cid ?? null;
+  return anyP?.cid ? { cid: anyP.cid, keyIdx: keyIdxFromOptions(anyP.options) } : null;
 }
 
 /** 우승자 아바타의 표시 방향(active_direction) — 트로피도 같은 방향 노출. 없으면 south. */
@@ -117,8 +125,8 @@ async function getChampionDirection(userId: string, serverId: number): Promise<s
 const PRESERVE =
   ", while keeping the same face, expression, hair, outfit, legs, stance and the same facing direction as the original; change only the arm(s) and hand(s) now holding the trophy";
 
-async function createState(sourceChar: string, edit: string): Promise<string> {
-  const key = process.env.PIXELLAB_API_KEY!;
+async function createState(sourceChar: string, edit: string, keyIdx: number): Promise<string> {
+  const key = pixellabKeyByIdx(keyIdx); // 소스 캐릭터를 만든 키로만 파생 가능(계정 귀속).
   const res = await fetch(`${PIXELLAB_BASE}/create-character-state`, {
     method: 'POST',
     headers: { 'content-type': 'application/json', authorization: `Bearer ${key}` },
@@ -136,8 +144,8 @@ async function createState(sourceChar: string, edit: string): Promise<string> {
 type ReadyImages = { direction: string; png: Buffer }[];
 
 /** pixellab 캐릭터 폴링 — 8방향 실파일(PNG) 완성 시 buffer 배열, 아니면 pending/gone. */
-async function fetchReady(charId: string): Promise<'pending' | 'gone' | ReadyImages> {
-  const key = process.env.PIXELLAB_API_KEY!;
+async function fetchReady(charId: string, keyIdx: number): Promise<'pending' | 'gone' | ReadyImages> {
+  const key = pixellabKeyByIdx(keyIdx); // 파생 캐릭터도 소스와 같은 키에 귀속 → 같은 키로 폴링.
   const res = await fetch(`${PIXELLAB_BASE}/characters/${charId}`, {
     headers: { authorization: `Bearer ${key}` },
   });
@@ -208,7 +216,7 @@ async function startAttempt(b: TrophyBattle, nextAttempt: number): Promise<void>
     return;
   }
   const pose = POSE_POOL[(Number(b.id % BigInt(POSE_POOL.length)) + nextAttempt) % POSE_POOL.length]!;
-  const charId = await createState(source, pose.edit);
+  const charId = await createState(source.cid, pose.edit, source.keyIdx);
   await db
     .update(meleeBattles)
     .set({
@@ -275,7 +283,9 @@ async function processOne(b: TrophyBattle): Promise<void> {
   }
   if (b.trophyStatus !== 'generating' || !b.trophyCharId) return;
 
-  const ready = await fetchReady(b.trophyCharId);
+  // 폴링도 소스 캐릭터를 만든 키로(계정 귀속). 활성 프로필의 keyIdx 재확인(없으면 key1 폴백).
+  const source = await getSourceChar(b.championUserId, b.serverId);
+  const ready = await fetchReady(b.trophyCharId, source?.keyIdx ?? 1);
 
   if (ready === 'pending') {
     // 타임아웃 시 재시도.
