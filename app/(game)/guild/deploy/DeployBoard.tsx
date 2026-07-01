@@ -528,11 +528,6 @@ export function DeployBoard({
                   >
                     <span className="flex w-full items-center gap-1">
                       <span className="truncate text-[12px] font-semibold">{m.nickname}</span>
-                      {m.userId === myUserId && (
-                        <span className="shrink-0 rounded bg-amber-500/15 px-1 text-[8px] font-bold text-amber-600 dark:text-amber-400">
-                          나
-                        </span>
-                      )}
                       <span className="shrink-0 font-mono text-[9px] text-zinc-400">{fmt(m.combat)}</span>
                     </span>
                     <span
