@@ -168,8 +168,12 @@ export async function openSupplyBoxes(input: {
   try {
     for (const r of opened) {
       const fromT = r.transcendLevel - r.transcended;
-      if (r.transcended > 0 && Math.floor(r.transcendLevel / 10) > Math.floor(fromT / 10)) {
-        const milestone = Math.floor(r.transcendLevel / 10) * 10;
+      // 초월 색 등급 경계(11·21·31…)에 올라설 때만 기록. tier index = floor((level-1)/10),
+      // 일반(1~10, index 0)은 제외 — 희귀(11)부터 등급 상승 시점을 마일스톤으로.
+      const nt = Math.floor((r.transcendLevel - 1) / 10);
+      const pt = Math.floor((fromT - 1) / 10);
+      if (r.transcended > 0 && nt >= 1 && nt > pt) {
+        const milestone = nt * 10 + 1; // 11, 21, 31, 41…(등급 시작 레벨)
         const [ci] = (await db.execute(
           sql`select name from catalog_items where id = ${r.catalogItemId} limit 1`,
         )) as unknown as { name: string }[];

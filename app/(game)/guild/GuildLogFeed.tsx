@@ -5,6 +5,7 @@ import Link from 'next/link';
 
 import type { GuildLogEntry } from '@/lib/game/guild/activity-log';
 import { profileHref } from '@/lib/game/profile/href';
+import { transcendStyle } from '@/lib/game/equipment/transcend';
 
 // 강조 색 — 줄 전체가 아니라 '중요 포인트' 토큰에만 적용.
 const C = {
@@ -93,8 +94,19 @@ function message(e: GuildLogEntry): ReactNode {
     // 업적 — 멤버.
     case 'achv_enhance':
       return <>{actor}님이 {item} {hl(`+${level} 강화`, C.amber)}에 성공했습니다</>;
-    case 'achv_transcend':
-      return <>{actor}님이 {item} {hl(`초월 +${level}`, C.violet)} 달성했습니다</>;
+    case 'achv_transcend': {
+      // +N 색상 = 그 초월 단계(색 등급)색과 동일.
+      const [tr, tg, tb] = transcendStyle(level).colorRgb;
+      return (
+        <>
+          {actor}님이 {item}{' '}
+          <span className="font-semibold" style={{ color: `rgb(${tr},${tg},${tb})` }}>
+            초월 +{level}
+          </span>{' '}
+          달성했습니다
+        </>
+      );
+    }
     case 'achv_melee':
       return <>{actor}님이 대난투 {hl(`${medal}${rank}위`, C.amber)}에 올랐습니다</>;
     case 'achv_rank_leader':

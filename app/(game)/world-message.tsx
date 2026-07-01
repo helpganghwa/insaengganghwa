@@ -3,11 +3,11 @@ import Link from 'next/link';
 
 import type { WorldEventEntry } from '@/lib/game/world/event';
 import { profileHref } from '@/lib/game/profile/href';
+import { transcendStyle } from '@/lib/game/equipment/transcend';
 
 // 강조 색 — 핵심 토큰에만(GuildLogFeed와 통일).
 const C = {
   amber: 'text-amber-600 dark:text-amber-400',
-  violet: 'text-violet-600 dark:text-violet-400',
   // 길드색 — 세계지도 연대기와 동일(슬레이트)
   guild: 'text-slate-600 dark:text-slate-400',
 };
@@ -57,8 +57,19 @@ export function worldEventMessage(e: WorldEventEntry, opts?: { link?: boolean })
       return <>{actor}님이 대난투 {hl(`${medal}${rank}위`, C.amber)}에 올랐습니다</>;
     case 'enhance':
       return <>{actor}님이 {item} {hl(`+${level} 강화`, C.amber)}에 성공했습니다</>;
-    case 'transcend':
-      return <>{actor}님이 {item} {hl(`초월 +${level}`, C.violet)} 달성했습니다</>;
+    case 'transcend': {
+      // +N 색상 = 그 초월 단계(색 등급)색과 동일(GuildLogFeed와 통일).
+      const [tr, tg, tb] = transcendStyle(level).colorRgb;
+      return (
+        <>
+          {actor}님이 {item}{' '}
+          <span className="font-semibold" style={{ color: `rgb(${tr},${tg},${tb})` }}>
+            초월 +{level}
+          </span>{' '}
+          달성했습니다
+        </>
+      );
+    }
     case 'guild_create':
       return <>{actor}님이 {hl(guildName, C.guild)} 길드를 결성했습니다</>;
     case 'guild_power_1':
