@@ -13,11 +13,31 @@ export type GuildRow = {
   emblemColor: string | null;
   combat: number;
   intro: string | null;
+  /** 가입 방식 — 'open'(자유) | 'approval'(승인). */
+  joinPolicy: string;
+  /** 점령 구역 이름 목록(없으면 빈 배열). 카드 배지 수 + 팝업 목록. */
+  zones: string[];
 };
 
 /** 컴팩트 수치(예: 53,000 → 5.3만). */
 function fmtNum(n: number): string {
   return new Intl.NumberFormat('ko-KR', { notation: 'compact', maximumFractionDigits: 1 }).format(n);
+}
+
+/** 가입 방식 배지 — 자유(초록)=신청 즉시 가입 / 승인(주황)=길드장 승인 필요. */
+function JoinPolicyBadge({ policy }: { policy: string }) {
+  const open = policy === 'open';
+  return (
+    <span
+      className={`shrink-0 rounded px-1.5 py-0.5 text-[10px] font-bold leading-none ${
+        open
+          ? 'bg-emerald-100 text-emerald-700 dark:bg-emerald-500/15 dark:text-emerald-300'
+          : 'bg-amber-100 text-amber-700 dark:bg-amber-500/15 dark:text-amber-300'
+      }`}
+    >
+      {open ? '자유' : '승인'}
+    </span>
+  );
 }
 
 export function EmblemThumb({ url }: { url: string | null }) {
@@ -77,9 +97,13 @@ export function GuildList({
           >
             <EmblemThumb url={g.emblemUrl} />
             <div className="min-w-0 flex-1">
-              <div className="truncate text-sm font-semibold">{g.name}</div>
+              <div className="flex items-center gap-1.5">
+                <span className="truncate text-sm font-semibold">{g.name}</span>
+                <JoinPolicyBadge policy={g.joinPolicy} />
+              </div>
               <div className="text-[11px] text-zinc-500">
                 Lv.{g.level} · {g.memberCount}명
+                {g.zones.length > 0 ? ` · 점령 ${g.zones.length}` : ''}
               </div>
             </div>
             {/* 전투력(길드원 전투력 합) */}
@@ -132,12 +156,32 @@ export function GuildList({
               )}
             </div>
             <div className="min-w-0">
-              <h2 className="truncate text-base font-bold">{selected.name}</h2>
+              <div className="flex items-center gap-1.5">
+                <h2 className="truncate text-base font-bold">{selected.name}</h2>
+                <JoinPolicyBadge policy={selected.joinPolicy} />
+              </div>
               <p className="mt-0.5 text-[11px] text-zinc-500">
                 Lv.{selected.level} · {selected.memberCount}명 · 전투력{' '}
                 <span className="font-bold text-amber-600 dark:text-amber-400">{fmtNum(selected.combat)}</span>
               </p>
             </div>
+          </div>
+          <div className="mt-3 border-t border-zinc-100 pt-3 dark:border-zinc-900">
+            <p className="text-[11px] font-bold text-zinc-400">점령 구역 ({selected.zones.length})</p>
+            {selected.zones.length > 0 ? (
+              <div className="mt-1.5 flex flex-wrap gap-1">
+                {selected.zones.map((z) => (
+                  <span
+                    key={z}
+                    className="rounded-md bg-amber-50 px-2 py-0.5 text-[11px] font-medium text-amber-700 dark:bg-amber-500/10 dark:text-amber-300"
+                  >
+                    {z}
+                  </span>
+                ))}
+              </div>
+            ) : (
+              <p className="mt-1 text-[12px] text-zinc-400">점령 중인 구역이 없습니다.</p>
+            )}
           </div>
           <div className="mt-3 border-t border-zinc-100 pt-3 dark:border-zinc-900">
             <p className="text-[11px] font-bold text-zinc-400">길드 소개</p>

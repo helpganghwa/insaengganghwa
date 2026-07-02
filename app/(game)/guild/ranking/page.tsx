@@ -35,6 +35,8 @@ export default async function GuildRankingPage() {
           emblemColor: g.emblemColor,
           combat: g.combat,
           intro: g.intro,
+          joinPolicy: g.joinPolicy,
+          zones: g.zones,
         }))}
         showRank
         emptyText="아직 결성된 길드가 없습니다."

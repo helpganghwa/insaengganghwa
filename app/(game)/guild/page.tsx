@@ -37,6 +37,8 @@ async function browseView(userId: string, serverId: number) {
     emblemColor: string | null;
     combat: number;
     intro: string | null;
+    joinPolicy: string;
+    zones: string[];
   }) => ({
     id: g.id.toString(),
     name: g.name,
@@ -46,6 +48,8 @@ async function browseView(userId: string, serverId: number) {
     emblemColor: g.emblemColor,
     combat: g.combat,
     intro: g.intro,
+    joinPolicy: g.joinPolicy,
+    zones: g.zones,
   });
   return (
     <GuildBrowse

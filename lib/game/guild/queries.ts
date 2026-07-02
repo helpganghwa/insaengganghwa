@@ -122,6 +122,28 @@ async function guildCombatPowers(serverId: number, guildIds: bigint[]): Promise<
   return cpByGuild;
 }
 
+/**
+ * 길드별 점령 구역 이름 목록 — guildId→구역명 배열(zone.id 오름차순). 여러 길드 1쿼리(N+1 방지).
+ * 리스트 카드의 점령 수 배지 + 상세 팝업의 구역 목록 공용.
+ */
+async function guildZoneNames(serverId: number, guildIds: bigint[]): Promise<Map<string, string[]>> {
+  const byGuild = new Map<string, string[]>();
+  if (guildIds.length === 0) return byGuild;
+  const rows = await db
+    .select({ ownerGuildId: zones.ownerGuildId, name: zones.name })
+    .from(zones)
+    .where(and(eq(zones.serverId, serverId), inArray(zones.ownerGuildId, guildIds)))
+    .orderBy(zones.id);
+  for (const r of rows) {
+    if (r.ownerGuildId == null) continue;
+    const key = r.ownerGuildId.toString();
+    const arr = byGuild.get(key);
+    if (arr) arr.push(r.name);
+    else byGuild.set(key, [r.name]);
+  }
+  return byGuild;
+}
+
 /** 길드 랭킹 — 전투력(길드원 전투력 합)순, 동률은 레벨순. combat 필드 포함. 미가입 첫화면 랭킹 탭. */
 export async function getGuildRanking(serverId: number, limit = 50) {
   const rows = await db
@@ -132,13 +154,22 @@ export async function getGuildRanking(serverId: number, limit = 50) {
       emblemUrl: guilds.emblemUrl,
       emblemColor: guilds.emblemColor,
       intro: guilds.intro,
+      joinPolicy: guilds.joinPolicy,
       memberCount: sql<number>`(select count(*)::int from guild_members gm where gm.guild_id = ${guilds.id})`,
     })
     .from(guilds)
     .where(eq(guilds.serverId, serverId));
-  const cp = await guildCombatPowers(serverId, rows.map((r) => r.id));
+  const ids = rows.map((r) => r.id);
+  const [cp, zoneNames] = await Promise.all([
+    guildCombatPowers(serverId, ids),
+    guildZoneNames(serverId, ids),
+  ]);
   return rows
-    .map((r) => ({ ...r, combat: cp.get(r.id.toString()) ?? 0 }))
+    .map((r) => ({
+      ...r,
+      combat: cp.get(r.id.toString()) ?? 0,
+      zones: zoneNames.get(r.id.toString()) ?? [],
+    }))
     .sort((a, b) => b.combat - a.combat || b.level - a.level)
     .slice(0, limit);
 }
@@ -156,6 +187,7 @@ export async function searchGuilds(serverId: number, q: string) {
     emblemUrl: guilds.emblemUrl,
     emblemColor: guilds.emblemColor,
     intro: guilds.intro,
+    joinPolicy: guilds.joinPolicy,
     memberCount: sql<number>`(select count(*)::int from guild_members gm where gm.guild_id = ${guilds.id})`,
   } as const;
   const rows = term
@@ -170,8 +202,16 @@ export async function searchGuilds(serverId: number, q: string) {
         .where(eq(guilds.serverId, serverId))
         .orderBy(sql`random()`)
         .limit(10);
-  const cp = await guildCombatPowers(serverId, rows.map((r) => r.id));
-  return rows.map((r) => ({ ...r, combat: cp.get(r.id.toString()) ?? 0 }));
+  const ids = rows.map((r) => r.id);
+  const [cp, zoneNames] = await Promise.all([
+    guildCombatPowers(serverId, ids),
+    guildZoneNames(serverId, ids),
+  ]);
+  return rows.map((r) => ({
+    ...r,
+    combat: cp.get(r.id.toString()) ?? 0,
+    zones: zoneNames.get(r.id.toString()) ?? [],
+  }));
 }
 
 /** 길드 1건 요약(이름 정확일치) — 세계지도 연대기에서 길드명 클릭 팝업용. 없으면 null. */
