@@ -4,7 +4,7 @@ import { getActiveServerId } from '@/lib/game/servers';
 import { sql } from 'drizzle-orm';
 
 import { assetUrl } from '@/lib/asset-versions';
-import { getSessionUserId } from '@/lib/auth/session';
+import { getSessionUserId, shouldHidePaidContent } from '@/lib/auth/session';
 import { db } from '@/lib/db/client';
 import { withTimeout } from '@/lib/db/with-timeout';
 import { freeStatusFromClaims } from '@/lib/game/shop/free';
@@ -106,6 +106,8 @@ const REGION_COLOR: Record<string, string> = {
 export default async function HomePage() {
   const userId = await getSessionUserId();
   const serverId = await getActiveServerId();
+  // CBT 기간엔 일반 유저에게 성장패스(결제 콘텐츠) 배너를 숨김. 테스터·정식 출시 시 노출.
+  const hidePaid = await shouldHidePaidContent();
   // (game) layout이 가드하므로 정상 흐름엔 null 아님. 폴백 안전.
   let hasUnclaimedDaily = false;
   let hasUnclaimedCheckin = false;
@@ -267,8 +269,8 @@ export default async function HomePage() {
       <HomeBannerCarousel>
         {hasUnclaimedDaily ? <DailySupplyCard /> : null}
         {hasUnclaimedCheckin ? <HubCheckinCard /> : null}
-        {/* 성장패스 상시 배너 — 캐러셀 마지막 슬라이드 */}
-        <BattlePassBanner />
+        {/* 성장패스 상시 배너 — 캐러셀 마지막 슬라이드. CBT엔 일반 유저에게 숨김. */}
+        {hidePaid ? null : <BattlePassBanner />}
       </HomeBannerCarousel>
       <div className="grid grid-cols-2 gap-2.5">
         {MENU.map((m, i) => {

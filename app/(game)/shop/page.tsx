@@ -1,4 +1,5 @@
 import { getAdminStatus } from '@/lib/auth/require-admin';
+import { shouldHidePaidContent } from '@/lib/auth/session';
 import { getActiveServerId } from '@/lib/game/servers';
 import { withTimeout } from '@/lib/db/with-timeout';
 import { getFreeStatus, FREE_SLOTS, type FreeSlot } from '@/lib/game/shop/free';
@@ -32,17 +33,22 @@ export default async function ShopPage({
 
   const noFree = Object.fromEntries(FREE_SLOTS.map((s) => [s, false])) as Record<FreeSlot, boolean>;
   // 견습의 주머니(💎)는 전 유저 구매 가능 → 구매현황은 모두 로드. 현금/프리미엄은 어드민만 구매.
-  const [free, purchased, premiumDays] = await Promise.all([
+  const [free, purchased, premiumDays, hidePaid] = await Promise.all([
     withTimeout(getFreeStatus(userId, serverId), 3500, 'shop.free').catch(() => noFree),
     withTimeout(getPurchaseStatus(userId, serverId), 3500, 'shop.purchased').catch(() => [] as string[]),
     withTimeout(getPremiumRemainingDays(userId, serverId), 3500, 'shop.premium').catch(() => null),
+    shouldHidePaidContent(),
   ]);
+
+  // CBT 기간엔 일반 유저에게 유료 상품을 '준비 중'으로 표시(payEnabled=false). 무료 보급·견습의
+  // 주머니(💎)는 payEnabled 무관하게 그대로 사용. 테스터 계정·정식 출시 시에는 실제 설정을 따름.
+  const payEnabled = portoneConfig() !== null && !hidePaid;
 
   return (
     <ShopTabs
       free={free}
       isAdmin={isAdmin}
-      payEnabled={portoneConfig() !== null}
+      payEnabled={payEnabled}
       purchased={purchased}
       premiumDays={premiumDays}
       initialTab={initialTab}

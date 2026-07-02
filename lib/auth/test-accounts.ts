@@ -17,6 +17,15 @@ export function isTestLoginEnabled(): boolean {
 }
 
 /**
+ * CBT/심사 기간 여부 = 테스트 로그인 활성. 이 기간엔 결제 콘텐츠(성장패스·상점 유료)를
+ * 테스터 계정에만 노출하고 일반 카카오 유저에겐 숨김/준비중 처리한다.
+ * 정식 출시 시 ALLOW_TEST_LOGIN을 끄면 자동으로 전 유저에게 결제 개방(게이팅 해제).
+ */
+export function isCbtPaidHidden(): boolean {
+  return isTestLoginEnabled();
+}
+
+/**
  * 심사 제출용 계정(ID/PW 입력 로그인) — 포트원·게임물 등급심의에 기재하는 단일 자격증명.
  * 심사관은 카카오 없이 이 ID/PW로 로그인. env ALLOW_TEST_LOGIN=true일 때만 폼 노출.
  * 외우기 쉬운 값(CBT 테마) — 게이트가 env라 단순값으로 충분.

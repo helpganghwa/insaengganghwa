@@ -2,7 +2,7 @@
 
 import { revalidatePath } from 'next/cache';
 
-import { getSessionUserId } from '@/lib/auth/session';
+import { getSessionUserId, shouldHidePaidContent } from '@/lib/auth/session';
 import { getActiveServerId } from '@/lib/game/servers';
 import { requireAdmin } from '@/lib/auth/require-admin';
 import { rateLimited } from '@/lib/ratelimit';
@@ -56,6 +56,8 @@ export async function createOrderAction(productId: string) {
   if (!u) return { status: 'error', code: 'UNAUTHENTICATED' } as const;
   if (await rateLimited(u, 'shop')) return { status: 'error', code: 'RATE_LIMITED' } as const;
   const __b = await actionBlock(); if (__b) return { status: 'error', code: __b } as const;
+  // CBT 기간 결제 차단(서버 권위) — UI 숨김 우회 방지. 테스터·정식 출시 시엔 통과.
+  if (await shouldHidePaidContent()) return { status: 'error', code: 'CONFIG' } as const;
   try {
     const o = await createOrder(u, await getActiveServerId(), productId);
     return { status: 'success', order: o } as const;
