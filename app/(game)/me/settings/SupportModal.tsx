@@ -135,7 +135,7 @@ export function SupportModal({
                       onChange={(e) => setBody(e.target.value.slice(0, BODY_MAX))}
                       rows={5}
                       placeholder={note ?? '문의 내용을 작성해 주세요.'}
-                      className="mt-2.5 w-full resize-none rounded-xl border border-zinc-200 bg-zinc-50 px-3 py-2.5 text-[13px] outline-none focus:border-zinc-400 dark:border-zinc-700 dark:bg-zinc-900 dark:focus:border-zinc-500"
+                      className="mt-2.5 w-full resize-none rounded-xl border border-zinc-200 bg-zinc-50 px-3 py-2.5 text-base outline-none focus:border-zinc-400 dark:border-zinc-700 dark:bg-zinc-900 dark:focus:border-zinc-500"
                     />
                     <div className="mt-0.5 flex items-center justify-between text-[10px] text-zinc-400">
                       <span>{note ? `* ${note}` : ' '}</span>
