@@ -702,7 +702,10 @@ export function MeleeResult({ view, serverId }: { view: MeleeResultView; serverI
     // 효과음 — 결승 최후의 일격은 배속 무관히 재생(우승 팡파레는 FightStage 토스트와 맞춰 별도).
     // 일반 라운드는 고속(8x↑) 자동재생 시 연사 방지로 생략.
     if (f.isFinal) sounds.meleeKo();
-    else if (speed <= 4) f.hpAfter <= 0 ? sounds.meleeKo() : sounds.meleeHit();
+    else if (speed <= 4) {
+      if (f.hpAfter <= 0) sounds.meleeKo();
+      else sounds.meleeHit();
+    }
   };
 
   // 행 데이터(시간순) — 표시는 역순, 전체 재생은 시간순으로 사용.

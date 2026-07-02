@@ -102,21 +102,21 @@ async function ensureTestUser(email: string): Promise<void> {
  * 계정 email만 허용하고, 비밀번호는 입력값으로 검증(signInWithPassword) — 틀리면 실패.
  */
 export async function signInWithCredentials(formData: FormData) {
-  if (!isTestLoginEnabled()) redirect('/login?test=cred&error=test_login_disabled');
+  if (!isTestLoginEnabled()) redirect('/login?test=true&error=test_login_disabled');
   const email = String(formData.get('email') ?? '')
     .trim()
     .toLowerCase();
   const password = String(formData.get('password') ?? '');
   // 임의 Supabase 계정 비번 로그인 방지 — 사전 등록된 테스트/심사 계정만 허용.
   if (!TEST_ACCOUNTS.some((a) => a.email === email)) {
-    redirect('/login?test=cred&error=' + encodeURIComponent('등록되지 않은 심사 계정입니다'));
+    redirect('/login?test=true&error=' + encodeURIComponent('등록되지 않은 심사 계정입니다'));
   }
 
   await ensureTestUser(email); // 첫 로그인 시 계정 보장(비번은 고정값으로 생성됨).
   const supabase = await createSupabaseServerClient();
   const { error } = await supabase.auth.signInWithPassword({ email, password });
   if (error) {
-    redirect('/login?test=cred&error=' + encodeURIComponent('아이디 또는 비밀번호가 올바르지 않습니다'));
+    redirect('/login?test=true&error=' + encodeURIComponent('아이디 또는 비밀번호가 올바르지 않습니다'));
   }
 
   const { data } = await supabase.auth.getUser();

@@ -279,7 +279,9 @@ export async function completePurchase(
       .from(iapOrders)
       .where(eq(iapOrders.id, order.id))
       .for('update');
-    if (!locked || locked.status === 'paid') return; // 이미 다른 호출이 지급 완료.
+    // pending에서만 지급 전이 — paid(이미 지급)·refunded/cancelled(환불 확정) 상태를
+    // 다시 paid로 되돌려 재지급하는 레이스를 차단(환불 후 stale PAID 재확인 경로).
+    if (!locked || locked.status !== 'pending') return;
 
     await tx
       .update(iapOrders)

@@ -21,7 +21,6 @@ import * as schema from './schema';
 type DrizzleDb = ReturnType<typeof drizzle<typeof schema>>;
 
 declare global {
-  // eslint-disable-next-line no-var
   var __pgClient: ReturnType<typeof postgres> | undefined;
 }
 

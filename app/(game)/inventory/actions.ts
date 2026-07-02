@@ -15,6 +15,7 @@ type ErrorState = { status: 'error'; code: string; message: string };
 
 const MSG: Record<string, string> = {
   NOT_FOUND: '장비를 찾을 수 없습니다.',
+  SLOT_TAKEN: '같은 부위를 방금 다른 곳에서 장착했어요. 다시 시도해 주세요.',
   UNAUTHENTICATED: '로그인이 필요합니다.',
   RATE_LIMITED: '요청이 너무 빠릅니다. 잠시 후 다시 시도해 주세요.',
   MAINTENANCE: '점검 중입니다. 잠시 후 다시 시도해 주세요.',
@@ -53,7 +54,13 @@ export async function unequipAction(id: string) {
   if (await rateLimited(u, 'inventory')) return err('RATE_LIMITED');
   const __b = await actionBlock();
   if (__b) return err(__b);
-  await unequipItem(u, BigInt(id));
-  revalidate();
-  return { status: 'success' as const };
+  try {
+    await unequipItem(u, BigInt(id));
+    revalidate();
+    return { status: 'success' as const };
+  } catch (e) {
+    if (e instanceof EquipError) return err(e.code);
+    console.error('[unequip]', e);
+    return err('UNKNOWN');
+  }
 }

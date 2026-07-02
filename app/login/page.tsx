@@ -95,7 +95,7 @@ export default async function LoginPage({
 
         {error ? (
           <p className="text-sm text-red-600 dark:text-red-400">
-            로그인 실패: {decodeURIComponent(error)}
+            로그인 실패: {error}
           </p>
         ) : null}
         <p className="text-[11px] leading-relaxed text-zinc-400">

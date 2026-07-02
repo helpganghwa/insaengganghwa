@@ -39,7 +39,7 @@ async function pool<T, R>(items: T[], n: number, fn: (t: T) => Promise<R>): Prom
   const objs = await fetchList();
   console.error(`객체 ${objs.length}개 해시 계산...`);
   const cacheP = join('/tmp', 'obj-hashes.json');
-  let cache: Record<string, number[]> = existsSync(cacheP) ? JSON.parse(readFileSync(cacheP, 'utf8')) : {};
+  const cache: Record<string, number[]> = existsSync(cacheP) ? JSON.parse(readFileSync(cacheP, 'utf8')) : {};
   let done = 0;
   await pool(objs, 10, async (o) => {
     if (cache[o.id]) { done++; return; }

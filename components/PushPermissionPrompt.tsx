@@ -171,7 +171,7 @@ function IosGuideView({ onClose }: { onClose: () => void }) {
       </p>
       <ol className="mt-3 space-y-1.5 text-[12px] text-zinc-700 dark:text-zinc-200">
         <li>1. Safari 하단 공유 버튼 탭 (↑ 화살표 아이콘)</li>
-        <li>2. "홈 화면에 추가" 선택</li>
+        <li>2. “홈 화면에 추가” 선택</li>
         <li>3. 홈 화면의 인생강화 아이콘으로 다시 접속</li>
         <li>4. 알림 권한 요청에 동의</li>
       </ol>

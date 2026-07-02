@@ -4,6 +4,7 @@ import { revalidatePath } from 'next/cache';
 
 import { getSessionUserId } from '@/lib/auth/session';
 import { rateLimited } from '@/lib/ratelimit';
+import { actionBlock } from '@/lib/game/action-gate';
 import { createProfileJob } from '@/lib/game/profile/actions';
 import { CreateProfileJobError } from '@/lib/game/profile/errors';
 
@@ -19,6 +20,8 @@ type CreateState =
 const MSG: Record<string, string> = {
   UNAUTHORIZED: '로그인이 필요합니다.',
   INVALID_OPTIONS: '옵션이 유효하지 않습니다.',
+  BANNED: '이용이 제한된 계정입니다.',
+  MAINTENANCE: '서버 점검 중입니다. 잠시 후 다시 시도해 주세요.',
   NO_EQUIPMENT: '무기·방어구·장신구 3종을 모두 장착해야 합니다.',
   INSUFFICIENT_DIAMOND: '다이아가 부족합니다.',
   PROFILE_GEN_IN_PROGRESS: '이미 아바타를 생성하고 있어요. 완료 후 다시 시도해 주세요.',
@@ -35,6 +38,8 @@ export async function submitProfileJob(
   if (!userId) return { status: 'error', code: 'UNAUTHORIZED', message: MSG.UNAUTHORIZED! };
   if (await rateLimited(userId, 'profile'))
     return { status: 'error', code: 'RATE_LIMITED', message: MSG.RATE_LIMITED! };
+  const blocked = await actionBlock();
+  if (blocked) return { status: 'error', code: blocked, message: MSG[blocked] ?? MSG.UNKNOWN! };
   try {
     const r = await createProfileJob({ gender });
     revalidatePath('/me');

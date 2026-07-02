@@ -53,7 +53,9 @@ export async function openAction(slot: Slot, count: number): Promise<OpenActionR
   const __b = await actionBlock();
   if (__b) return { status: 'error', code: __b, message: MSG[__b] ?? __b };
   // count 1~10 범위 클램프 — UI에서도 동일 보장(보유량 < 10이면 보유량까지).
-  const n = Math.max(1, Math.min(10, Math.floor(count)));
+  // NaN/Infinity 방어 — 유효하지 않으면 1개(Math.floor(NaN) 클램프가 NaN을 통과시키는 버그 차단).
+  const parsed = Math.floor(count);
+  const n = Number.isFinite(parsed) ? Math.max(1, Math.min(10, parsed)) : 1;
   try {
     const opened = await openSupplyBoxes({ userId, serverId: await getActiveServerId(), slot, count: n });
     // 개봉 아이템은 항상 active 풀에서 나오므로 캐시된 활성 카탈로그로 메타 조회(DB 왕복 제거).

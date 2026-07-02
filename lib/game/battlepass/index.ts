@@ -369,6 +369,9 @@ export function claimSegment(
   type: BattlePassType,
   segmentIndex: number,
 ): Promise<{ granted: number; rewardKind: 'diamond' | 'box' }> {
+  // 클라 공급 segmentIndex 검증 — 음수/비정수 방어. 음수면 startLevel<1 → level<1이
+  // bpSegmentIndex에서 구간0로 매핑돼 무한 무료 보상이 발급됨(경제 붕괴). 반드시 여기서 차단.
+  if (!Number.isInteger(segmentIndex) || segmentIndex < 0) throw new BattlePassErr('NOTHING_TO_CLAIM');
   return db.transaction(async (tx) => {
     const maxReached = await reachedFor(userId, serverId, type);
     const startLevel = segmentIndex * BP_SEGMENT_SIZE[type] + 1;

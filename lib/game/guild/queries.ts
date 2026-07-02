@@ -11,7 +11,6 @@ import {
   zones,
   conquestBattles,
   guildJoinRequests,
-  guildTaxDistributions,
   zoneAdjacency,
 } from '@/lib/db/schema/guild';
 import { profiles } from '@/lib/db/schema/profiles';

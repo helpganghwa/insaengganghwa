@@ -1,7 +1,7 @@
 // 장비 상세 액션 버튼 배경 6장 — Pixellab → public/sprites/ui/btn-{action}.png
 // 사이즈 128×80 (가로 직사각 — 3×2 그리드 버튼 비율). 솔리드 배경(sharp 후처리).
 import { config } from 'dotenv';
-import { existsSync, readFileSync, writeFileSync } from 'node:fs';
+import { existsSync, writeFileSync } from 'node:fs';
 import { join } from 'node:path';
 import sharp from 'sharp';
 
@@ -136,5 +136,4 @@ for (const b of BUTTONS) {
 }
 console.log(`[action-buttons] ok ${ok} · skip ${skip} · fail ${fail} / ${BUTTONS.length}`);
 // 모든 백업 클린업
-readFileSync; // suppress unused
 process.exit(fail > 0 ? 1 : 0);

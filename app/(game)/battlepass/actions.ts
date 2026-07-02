@@ -73,6 +73,7 @@ export async function claimAllAction(type: BattlePassType) {
   const u = await getSessionUserId();
   if (!u) return err('UNAUTHENTICATED');
   if (await rateLimited(u, 'battlepass')) return err('RATE_LIMITED');
+  const __b = await actionBlock(); if (__b) return err(__b);
   const rewardKind = type === 'enhance' ? ('diamond' as const) : ('box' as const);
   let granted = 0;
   for (const claim of [claimFree, claimPremium]) {

@@ -134,7 +134,7 @@ export function PushSettings(props: {
       <div className="px-3 py-2.5 text-[11px] leading-relaxed text-zinc-500">
         iPhone Safari는 홈 화면에 추가한 PWA에서만 푸시를 받을 수 있어요.
         <br />
-        Safari 공유 → "홈 화면에 추가" 후 홈 아이콘으로 다시 들어와 주세요.
+        Safari 공유 → “홈 화면에 추가” 후 홈 아이콘으로 다시 들어와 주세요.
       </div>
     );
   }
