@@ -43,7 +43,13 @@ export async function signInWithKakao(formData?: FormData) {
     options: { redirectTo: callback, scopes: 'account_email' },
   });
 
-  if (error) redirect(`/login?error=${encodeURIComponent(error.message)}`);
+  if (error) {
+    // 원문(영문·KOE 코드 등)은 서버 로그로만 — 사용자에겐 한국어 안내만 노출.
+    console.error('[auth] kakao signInWithOAuth failed:', error.message);
+    redirect(
+      `/login?error=${encodeURIComponent('카카오 로그인을 시작하지 못했어요. 잠시 후 다시 시도해 주세요.')}`,
+    );
+  }
   if (data.url) redirect(data.url);
 }
 
@@ -102,7 +108,8 @@ async function ensureTestUser(email: string): Promise<void> {
  * 계정 email만 허용하고, 비밀번호는 입력값으로 검증(signInWithPassword) — 틀리면 실패.
  */
 export async function signInWithCredentials(formData: FormData) {
-  if (!isTestLoginEnabled()) redirect('/login?test=true&error=test_login_disabled');
+  if (!isTestLoginEnabled())
+    redirect('/login?test=true&error=' + encodeURIComponent('심사용 로그인이 비활성화되어 있습니다'));
   const email = String(formData.get('email') ?? '')
     .trim()
     .toLowerCase();

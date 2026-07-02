@@ -34,6 +34,7 @@ const ERR: Record<string, string> = {
   CAP_REACHED: '친구가 가득 찼습니다 (최대 30)',
   NO_REQUEST: '요청이 없습니다',
   UNAUTHENTICATED: '로그인이 필요합니다',
+  RATE_LIMITED: '요청이 너무 빠릅니다. 잠시 후 다시 시도해주세요',
   UNKNOWN: '잠시 후 다시 시도해주세요',
 };
 

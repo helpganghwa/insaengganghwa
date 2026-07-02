@@ -345,10 +345,9 @@ export function BoastModal({
             </div>
           </div>
 
-          {/* OG fetch 실패 시 디버그 정보(개발자만 보임, 사용자 무관). */}
           {imgErr ? (
-            <div className="mt-2 break-all rounded bg-zinc-900 p-2 text-[9px] text-zinc-500">
-              ⚠ OG 미리보기 fetch 실패: {imageUrl}
+            <div className="mt-2 rounded bg-zinc-900 p-2 text-center text-[10px] text-zinc-500">
+              미리보기 이미지를 불러오지 못했어요. 공유는 정상 동작합니다.
             </div>
           ) : null}
           {imageUrl ? (
