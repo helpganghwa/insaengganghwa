@@ -8,6 +8,7 @@ import { createClient, type SupabaseClient } from '@supabase/supabase-js';
 import { db } from '@/lib/db/client';
 import { getWalletDiamond, walletTrySpend } from '@/lib/game/wallet';
 import { guilds, guildMembers, guildEmblems } from '@/lib/db/schema/guild';
+import { pixellabKeyByIdx, pickPixellabKeyIdx } from '@/lib/game/profile/pixellab-keys';
 
 import { GUILD_EMBLEM_REROLL_COST_DIAMOND, MAX_GUILD_EMBLEMS } from './balance';
 import { GuildError } from './errors';
@@ -144,14 +145,18 @@ async function fitEmblemToFrame(png: Buffer, size = 128, pad = 6): Promise<Buffe
 
 /** pixflux 128² no_background 생성 → PNG Buffer. 429는 백오프 재시도, 그 외 실패는 throw.
  *  shieldLike=false(마름모·깃발)면 negatives에 방패류를 추가해 모델 기본값(방패)을 밀어낸다. */
-async function generateEmblemPng(prompt: string, shieldLike = true): Promise<Buffer> {
-  const key = process.env.PIXELLAB_API_KEY;
-  if (!key) throw new Error('PIXELLAB_API_KEY missing');
+// startKeyIdx: 라운드로빈 시작 키(1|2). pixflux는 동기 단발 호출이라 아바타와 달리 키 일관성
+// 제약이 없어(폴링 없음) 재시도마다 키를 교대한다 — 부하 분산 + 한쪽 키 429 시 다른 키로 failover.
+// key2 미설정이면 pixellabKeyByIdx가 항상 key1 반환(단일 키 환경 무영향).
+async function generateEmblemPng(prompt: string, shieldLike = true, startKeyIdx = 1): Promise<Buffer> {
+  if (!process.env.PIXELLAB_API_KEY) throw new Error('PIXELLAB_API_KEY missing');
   const negative =
     'blurry, low detail, flat, plain, messy, cluttered, busy rainbow, text, letters, watermark, signature' +
     (shieldLike ? '' : ', shield, heater shield, round shield, escutcheon, shield shape');
   let lastErr = 'unknown';
   for (let attempt = 0; attempt < 4; attempt++) {
+    const keyIdx = ((startKeyIdx - 1 + attempt) % 2) + 1; // 시작키에서 시도마다 1↔2 교대
+    const key = pixellabKeyByIdx(keyIdx);
     // 행 방지 — Pixellab 무응답/쿼터초과 시 25초 후 abort(과거 300초 함수 타임아웃 유발). 빠른 실패→폴백.
     const ctrl = new AbortController();
     const timer = setTimeout(() => ctrl.abort(), 25_000);
@@ -175,15 +180,15 @@ async function generateEmblemPng(prompt: string, shieldLike = true): Promise<Buf
         (e as Error)?.name === 'AbortError'
           ? 'timeout(25s)'
           : `fetch: ${(e as Error)?.message ?? 'unknown'}`;
-      console.warn(`[guild.emblem] 요청 실패 재시도 (attempt ${attempt}) — ${lastErr}`);
+      console.warn(`[guild.emblem] 요청 실패 재시도 (attempt ${attempt}, key${keyIdx}) — ${lastErr}`);
       continue;
     } finally {
       clearTimeout(timer);
     }
     if (res.status === 429) {
       await new Promise((r) => setTimeout(r, 700 * 2 ** attempt)); // 백오프 단축(긴 요청 단축)
-      lastErr = '429 rate limit';
-      continue;
+      lastErr = `429 rate limit (key${keyIdx})`;
+      continue; // 다음 시도는 교대된 키로 — 한쪽 키 포화 시 다른 키로 우회.
     }
     if (!res.ok) throw new Error(`pixflux HTTP ${res.status}: ${(await res.text()).slice(0, 200)}`);
     const j = (await res.json()) as { image?: { base64?: string } };
@@ -239,7 +244,8 @@ async function generateEmblemAsset(
   // 비방패(마름모·깃발)는 AI 재작성을 건너뛴다 — Haiku가 'coat of arms/crest'를 재주입해
   // 방패로 회귀시키는 게 주원인(라이브 검증). 결정적 템플릿(heraldry 단어 없음)으로 직행.
   const prompt = shieldLike ? await buildEmblemPromptAI(selection) : buildEmblemPrompt(selection);
-  const raw = await generateEmblemPng(prompt, shieldLike);
+  // 라운드로빈 시작 키 = 길드 id 패리티(아바타와 동일 키풀). 이후 재시도는 generateEmblemPng가 교대.
+  const raw = await generateEmblemPng(prompt, shieldLike, pickPixellabKeyIdx(guildId));
   const png = await fitEmblemToFrame(raw); // 투명 여백 제거·프레임 채움(가시성↑)
   const emblemUrl = await uploadEmblem(`${guildId}/${crypto.randomUUID()}.png`, png);
   return { emblemUrl, color };
