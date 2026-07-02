@@ -10,6 +10,7 @@ import * as haptic from '@/lib/game/haptic';
 import { formatCompactKR } from '@/lib/ui/format-number';
 import { PROFILE_MAX } from '@/lib/game/balance';
 import type { Slot } from '@/lib/db/schema/equipment';
+import type { ProfileQueueInfo } from '@/lib/game/profile/queue';
 
 import { submitProfileJob } from './actions';
 
@@ -20,12 +21,11 @@ type EquippedSlot = {
   transcendLevel: number;
 };
 
-type ActiveJob = { status: string; createdAt: string | null } | null;
-
 const SLOT_LABEL: Record<Slot, string> = { weapon: '무기', armor: '방어구', accessory: '장신구' };
 const SLOT_EMOJI: Record<Slot, string> = { weapon: '⚔️', armor: '🛡️', accessory: '💍' };
 const STATUS_LABEL: Record<string, string> = {
   queued: '대기 중',
+  starting: '생성 시작',
   downloading: '생성 중',
   ai_reviewing: '검토 중',
 };
@@ -39,13 +39,13 @@ export function CreateProfileForm({
   price,
   profileCount,
   equipped,
-  activeJob,
+  queue,
 }: {
   diamond: string;
   price: number;
   profileCount: number;
   equipped: EquippedSlot[];
-  activeJob: ActiveJob;
+  queue: ProfileQueueInfo | null;
 }) {
   const router = useRouter();
   const { optimisticAdjust: adjustDiamond } = useDiamond();
@@ -76,19 +76,26 @@ export function CreateProfileForm({
     return () => clearInterval(id);
   }, [confirm]);
 
-  // 생성 진행 중이면 1초마다 라이브 클럭 갱신(경과 시간 표시용).
+  // 생성 진행/대기 중이면 1초마다 라이브 클럭 갱신(경과 시간 표시용).
   useEffect(() => {
-    if (activeJob === null && !submitted) return;
+    if (queue === null && !submitted) return;
     const tick = () => setNowMs(Date.now());
     tick();
     const id = setInterval(tick, 1000);
     return () => clearInterval(id);
-  }, [activeJob, submitted]);
+  }, [queue, submitted]);
+
+  // 진행/대기 중이면 30초마다 서버 상태 재조회(대기→시작→완료 반영). 완료되면 queue=null로 정지.
+  useEffect(() => {
+    if (queue === null) return;
+    const id = setInterval(() => router.refresh(), 30_000);
+    return () => clearInterval(id);
+  }, [queue, router]);
 
   const balance = BigInt(diamond);
   const allEquipped = equipped.every((e) => e.code);
   const enough = balance >= BigInt(price);
-  const inProgress = activeJob !== null;
+  const inProgress = queue !== null;
   const disabled = pending || inProgress || !allEquipped || !enough;
 
   const onClick = () => {
@@ -121,8 +128,10 @@ export function CreateProfileForm({
   };
 
   if (inProgress || submitted) {
-    const statusText = activeJob ? (STATUS_LABEL[activeJob.status] ?? '처리 중') : '요청 중';
-    const startedAt = activeJob?.createdAt ? Date.parse(activeJob.createdAt) : NaN;
+    // 대기열(슬롯 가득 → 웨이브 대기) vs 생성 중/곧 시작 구분.
+    const waiting = queue?.waiting ?? false;
+    const statusText = queue ? (STATUS_LABEL[queue.status] ?? '처리 중') : '요청 중';
+    const startedAt = queue?.createdAt ? Date.parse(queue.createdAt) : NaN;
     const elapsedSec =
       !Number.isNaN(startedAt) && nowMs != null ? Math.max(0, Math.floor((nowMs - startedAt) / 1000)) : null;
     const elapsedText =
@@ -133,15 +142,25 @@ export function CreateProfileForm({
           : `${Math.floor(elapsedSec / 60)}분 ${elapsedSec % 60}초`;
     return (
       <div className="rounded-2xl border border-amber-300 bg-amber-50 p-4 text-center dark:border-amber-700/50 dark:bg-amber-950/30">
-        <div className="text-2xl">⏳</div>
-        <div className="mt-1 text-sm font-semibold">아바타 {statusText}</div>
-        {elapsedText && (
-          <div className="mt-1 font-mono text-sm font-semibold tabular-nums text-amber-700 dark:text-amber-300">
-            경과 {elapsedText}
+        <div className="text-2xl">{waiting ? '🕐' : '⏳'}</div>
+        <div className="mt-1 text-sm font-semibold">
+          {waiting ? `아바타 생성 대기 중` : `아바타 ${statusText}`}
+        </div>
+        {waiting && queue ? (
+          <div className="mt-1 text-sm font-semibold text-amber-700 dark:text-amber-300">
+            대기 {queue.position}번째 · 예상 약 {queue.etaMinutes}분
           </div>
+        ) : (
+          elapsedText && (
+            <div className="mt-1 font-mono text-sm font-semibold tabular-nums text-amber-700 dark:text-amber-300">
+              경과 {elapsedText}
+            </div>
+          )
         )}
         <p className="mt-1 text-xs text-zinc-500">
-          보통 약 10분 내외 걸려요(혼잡하면 조금 더 걸릴 수 있어요). 완료되면 알림과 우편함으로 알려드릴게요.
+          {waiting
+            ? '생성 슬롯이 비면 자동으로 시작돼요. 화면을 닫아도 진행되며, 완료되면 알림과 우편함으로 알려드려요.'
+            : '보통 약 10분 내외 걸려요(혼잡하면 조금 더 걸릴 수 있어요). 완료되면 알림과 우편함으로 알려드릴게요.'}
         </p>
       </div>
     );

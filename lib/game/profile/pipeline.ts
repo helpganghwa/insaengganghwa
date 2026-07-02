@@ -3,7 +3,7 @@
  * Storage 미러링 + Claude vision 자동 검토 + 분기(accepted/rejected_ai/failed).
  *
  * cron(`/api/cron/profile-poll`)에서 호출:
- *  - 큐 등록(status='queued' → 'downloading')은 v3(pipeline-v3.ts enqueueOneV3)가 담당.
+ *  - 발주(queued→starting→downloading)는 v3(pipeline-v3.ts drainQueue)가 담당.
  *  - pollAndProcessDownloading(): status='downloading' N건 → 폴링 → 완료시 process(이 파일).
  *
  * 외부 의존:
@@ -464,9 +464,9 @@ export async function markFailedAndRefund(jobId: bigint, userId: string, reason:
   if (!job || job.status === 'failed' || job.status === 'rejected_ai' || job.status === 'accepted') return;
 
   const did = await db.transaction(async (tx) => {
-    // 조건부 클레임 먼저(감사 #2, money path) — 비종단(queued/downloading)일 때만 failed로 전이.
+    // 조건부 클레임 먼저(감사 #2, money path) — 비종단(queued/starting/downloading)일 때만 failed로 전이.
     // 0행이면 다른 워커가 이미 처리(P1 불변식 위반·동시 P2 타임아웃 등) → 환불 skip해 이중환불 방지.
-    // markFailedAndRefund는 queued(P2 타임아웃·enqueue 실패)와 downloading(poll 실패) 양쪽에서 호출.
+    // 호출처: queued(P2 타임아웃)·starting(발주 실패/스윕)·downloading(poll 실패).
     const claimed = await tx
       .update(profileGenerationJobs)
       .set({
@@ -477,7 +477,7 @@ export async function markFailedAndRefund(jobId: bigint, userId: string, reason:
       .where(
         and(
           eq(profileGenerationJobs.id, jobId),
-          inArray(profileGenerationJobs.status, ['queued', 'downloading']),
+          inArray(profileGenerationJobs.status, ['queued', 'starting', 'downloading']),
         ),
       )
       .returning({ id: profileGenerationJobs.id });

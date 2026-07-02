@@ -3,28 +3,29 @@
  *
  * 매 2분 실행 (Pixellab Pro mode ~6분이라 polling 2~3회).
  * 한 iteration:
- *   1. status='queued' 1건 → create-character-v3(외형 랜덤+Claude 조합) → 'downloading' (enqueueOneV3)
+ *   1. drainQueue() — 여유 슬롯(동시 5 - 활성)만큼 queued→발주(즉시 시작은 submit의 after()가,
+ *      cron은 백스톱). 정체 스윕 포함.
  *   2. status='downloading' 최대 5건 → 폴링 → completed면 다운로드·AI 검토·분기
  *
  * 인증: CRON_SECRET Bearer 또는 x-vercel-cron 헤더 (resolve-enhance 패턴).
  */
 import { isCronAuthorized } from '@/lib/auth/cron-auth';
 import { pollAndProcessDownloading } from '@/lib/game/profile/pipeline';
-import { enqueueOneV3 } from '@/lib/game/profile/pipeline-v3';
+import { drainQueue } from '@/lib/game/profile/pipeline-v3';
 
 export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
-export const maxDuration = 60; // Pro mode 처리·8방향 다운로드·AI 검토 시간 여유.
+export const maxDuration = 90; // drain(최대 5 발주 POST) + Pro mode 폴링·8방향 다운로드·AI 검토 여유.
 
 export async function GET(req: Request) {
   if (!isCronAuthorized(req)) return new Response('forbidden', { status: 403 });
 
   const t0 = Date.now();
-  let enqueueResult: Awaited<ReturnType<typeof enqueueOneV3>> | { kind: 'error'; error: string };
+  let enqueueResult: Awaited<ReturnType<typeof drainQueue>> | { error: string };
   try {
-    enqueueResult = await enqueueOneV3();
+    enqueueResult = await drainQueue();
   } catch (e) {
-    enqueueResult = { kind: 'error', error: (e as Error).message };
+    enqueueResult = { error: (e as Error).message };
   }
 
   let pollResult: Awaited<ReturnType<typeof pollAndProcessDownloading>> | { error: string };

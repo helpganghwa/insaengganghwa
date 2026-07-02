@@ -392,6 +392,19 @@ export const PROFILE_GENERATION_DIAMOND = 2_000;
 /** 유저당 보유 프로필(아바타) 최대 개수 — 초과 시 생성 차단(서버·클라 공용 검사). */
 export const PROFILE_MAX = 20;
 
+/**
+ * 아바타 동시 생성 상한 — **Pixellab 키 1개당**. 키풀(key1/key2) 각각 이 값까지 동시 생성.
+ * 서버 전체 상한 = 이 값 × 활성 키 수(profileGenConcurrency, key2 있으면 4×2=8). 보수적 4.
+ * 'starting'+'downloading'을 키별로 카운트(ai_reviewing은 Claude·수초라 미포함).
+ */
+export const PROFILE_GEN_PER_KEY = 4;
+
+/**
+ * 슬롯 회전 시간(분) — 대기열 ETA 계산용. prod 실측(2026-07-02, n=97): created→resolved
+ * 평균 6.4 · p50 5.8 · p90 7.8분. 보수적으로 8분(≈p90). resolvedAt 누적되면 재보정.
+ */
+export const PROFILE_GEN_SLOT_MINUTES = 8;
+
 // §6.4 광고 보상 — v1 미도입(사용자 결정). 모바일 웹은 보상형 광고 SDK SSV
 // 인프라가 약해 치트 방어가 어렵고 1인 운영 부담이 큼. 상점에 광고 제거 IAP는
 // 향후 도입 검토(광고 노출 자체 OFF). 향후 네이티브 wrapper 도입 시 재검토.

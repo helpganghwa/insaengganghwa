@@ -1,11 +1,13 @@
 'use server';
 
 import { revalidatePath } from 'next/cache';
+import { after } from 'next/server';
 
 import { getSessionUserId } from '@/lib/auth/session';
 import { rateLimited } from '@/lib/ratelimit';
 import { actionBlock } from '@/lib/game/action-gate';
 import { createProfileJob } from '@/lib/game/profile/actions';
+import { drainQueue } from '@/lib/game/profile/pipeline-v3';
 import { CreateProfileJobError } from '@/lib/game/profile/errors';
 
 /**
@@ -42,6 +44,15 @@ export async function submitProfileJob(
   if (blocked) return { status: 'error', code: blocked, message: MSG[blocked] ?? MSG.UNKNOWN! };
   try {
     const r = await createProfileJob({ gender });
+    // 즉시 시작 — 응답 후 백그라운드로 드레인(여유 슬롯 있으면 2분 cron 안 기다리고 바로 발주).
+    // best-effort: 실패해도 cron 백스톱이 다음 tick에 픽업. 슬롯 가득이면 queued 유지(대기열).
+    after(async () => {
+      try {
+        await drainQueue();
+      } catch (e) {
+        console.error('[profile.submit.drain]', e);
+      }
+    });
     revalidatePath('/me');
     revalidatePath('/me/create');
     return { status: 'ok', jobId: r.jobId, estimatedMinutes: r.estimatedMinutes };

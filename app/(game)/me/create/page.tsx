@@ -1,4 +1,4 @@
-import { and, count, eq, inArray, isNotNull } from 'drizzle-orm';
+import { and, count, eq, isNotNull } from 'drizzle-orm';
 
 import { getSessionUserId } from '@/lib/auth/session';
 import { getActiveServerId } from '@/lib/game/servers';
@@ -6,8 +6,9 @@ import { getWalletDiamond } from '@/lib/game/wallet';
 import { db } from '@/lib/db/client';
 import { withTimeout } from '@/lib/db/with-timeout';
 import { catalogItems, userEquipment, type Slot } from '@/lib/db/schema/equipment';
-import { profileGenerationJobs, userProfiles } from '@/lib/db/schema/avatar';
+import { userProfiles } from '@/lib/db/schema/avatar';
 import { PROFILE_GENERATION_DIAMOND } from '@/lib/game/balance';
+import { getMyProfileQueueInfo } from '@/lib/game/profile/queue';
 
 import { CreateProfileForm } from './CreateProfileForm';
 
@@ -36,19 +37,7 @@ export default async function CreateProfilePage() {
           isNotNull(userEquipment.equippedSlot),
         ),
       ),
-    db
-      .select({
-        status: profileGenerationJobs.status,
-        createdAt: profileGenerationJobs.createdAt,
-      })
-      .from(profileGenerationJobs)
-      .where(
-        and(
-          eq(profileGenerationJobs.userId, userId),
-          inArray(profileGenerationJobs.status, ['queued', 'downloading', 'ai_reviewing']),
-        ),
-      )
-      .limit(1),
+    getMyProfileQueueInfo(userId, serverId),
     db
       .select({ n: count() })
       .from(userProfiles)
@@ -59,7 +48,7 @@ export default async function CreateProfilePage() {
   ).catch(() => null);
   const prof = _r?.[0] ?? [];
   const equipped = _r?.[1] ?? [];
-  const activeJobs = _r?.[2] ?? [];
+  const queueInfo = _r?.[2] ?? null;
   const profileCount = _r?.[3]?.[0]?.n ?? 0;
 
   const bySlot = new Map(equipped.map((e) => [e.slot, e]));
@@ -67,8 +56,6 @@ export default async function CreateProfilePage() {
     const it = bySlot.get(s);
     return it ? { slot: s, code: it.code, name: it.name, transcendLevel: it.transcendLevel } : { slot: s, code: null, name: null, transcendLevel: 0 };
   });
-
-  const activeJob = activeJobs[0] ?? null;
 
   return (
     <div className="space-y-4 px-4 py-6">
@@ -82,11 +69,7 @@ export default async function CreateProfilePage() {
         price={PROFILE_GENERATION_DIAMOND}
         profileCount={profileCount}
         equipped={equippedSlots}
-        activeJob={
-          activeJob
-            ? { status: activeJob.status, createdAt: activeJob.createdAt?.toISOString() ?? null }
-            : null
-        }
+        queue={queueInfo}
       />
     </div>
   );
