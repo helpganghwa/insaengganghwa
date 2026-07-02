@@ -118,7 +118,7 @@ function EnhanceSlotPicker({
           </button>
         </header>
         <p className="mb-2 text-[10px] text-zinc-500">
-          탭하면 빈 lane에 자동 등록됩니다 (잠금/강화중 제외).
+          탭하면 빈 슬롯에 자동 등록됩니다 (잠금/강화중 제외).
         </p>
 
         {error ? (
@@ -131,7 +131,7 @@ function EnhanceSlotPicker({
           <div className="rounded-lg border border-dashed border-zinc-300 p-6 text-center text-xs text-zinc-500 dark:border-zinc-700">
             강화 가능한 {josa(SLOT_LABEL[slot], '이/가')} 없습니다.
             <Link href="/gacha" className="mt-2 block text-[11px] text-amber-600 underline dark:text-amber-400">
-              🎁 보급에서 획득 →
+              🎁 보급에서 획득
             </Link>
           </div>
         ) : (

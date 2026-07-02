@@ -318,7 +318,7 @@ export function WorldMapView({
       // 지갑은 실제 본인 몫(10%)만 반영, 토스트는 총 수금액(집행관+길드 풀 90%)을 노출.
       const total = BigInt(r.executorGain) + BigInt(r.guildGain);
       optimisticAdjust(BigInt(r.executorGain));
-      showHeaderToast({ title: `세금 수금 +${Number(total).toLocaleString('ko-KR')}💎` });
+      showHeaderToast({ title: `세금 수금 완료 ${Number(total).toLocaleString('ko-KR')}💎` });
       setCollectOpen(null);
       router.refresh();
     });
@@ -483,11 +483,7 @@ export function WorldMapView({
       {/* 거주지 미설정 코치 — 보통 가입 시 랜덤 배정되나, 미설정 상태면 설정을 유도(세금 기여 동선). */}
       {residence == null && (
         <div className="mx-4 mt-3 rounded-xl border border-emerald-300 bg-emerald-50 p-3 text-[12px] text-emerald-800 dark:border-emerald-500/40 dark:bg-emerald-500/10 dark:text-emerald-300">
-          <p className="font-bold">📍 거주지를 정하세요</p>
-          <p className="mt-0.5 leading-relaxed">
-            구역을 눌러 거주지로 설정하면, 그곳에서 올린 강화 성공이 그 구역 세금으로 쌓여 소유 길드에
-            기여합니다. 이동은 언제든 자유입니다.
-          </p>
+          <p className="font-bold">거주지를 정하세요</p>
         </div>
       )}
 
@@ -874,7 +870,7 @@ export function WorldMapView({
                         style={{ animation: 'confirm-bg-pulse 1.2s ease-in-out infinite' }}
                       />
                     )}
-                    <span className="relative">{collectConfirm ? `한번 더 ${collectLeft}s` : '수금'}</span>
+                    <span className="relative">{collectConfirm ? `수금 ${collectLeft}s` : '수금'}</span>
                   </button>
                 )}
                 <button type="button" onClick={close} className="mt-1.5 w-full py-1 text-[11px] text-zinc-500">

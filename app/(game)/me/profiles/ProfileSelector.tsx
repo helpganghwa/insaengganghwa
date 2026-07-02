@@ -131,7 +131,7 @@ export function ProfileSelector({
               />
             ) : null}
             <span className="relative">
-              {confirmDelete ? `삭제 확인 ${confirmDeleteLeft}s` : '삭제'}
+              {confirmDelete ? `삭제 ${confirmDeleteLeft}s` : '삭제'}
             </span>
           </button>
         ) : null}

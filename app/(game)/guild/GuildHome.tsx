@@ -250,7 +250,7 @@ export function GuildHome({
               const label = done
                 ? '완료'
                 : isNext && confirm
-                  ? `한번 더 ${confirmLeft}s`
+                  ? `${i + 1}단계 ${costLabel} ${confirmLeft}s`
                   : `${i + 1}단계 ${costLabel}`;
               return (
                 <button

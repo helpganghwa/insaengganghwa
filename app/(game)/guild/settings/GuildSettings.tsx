@@ -880,7 +880,7 @@ export function GuildSettings({
                     emblemList.length === 0
                       ? '무료'
                       : `💎${GUILD_EMBLEM_REROLL_COST_DIAMOND.toLocaleString('ko-KR')}`;
-                  return genConfirm ? `한번 더 ${price} ${genConfirmLeft}s` : `생성하기 ${price}`;
+                  return genConfirm ? `생성하기 ${price} ${genConfirmLeft}s` : `생성하기 ${price}`;
                 })()}
               </span>
             </button>

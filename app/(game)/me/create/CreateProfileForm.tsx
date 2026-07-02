@@ -209,7 +209,7 @@ export function CreateProfileForm({
         </div>
         {!allEquipped && (
           <p className="mt-2 text-[11px] text-amber-600 dark:text-amber-400">
-            3종을 모두 장착해야 생성할 수 있어요.
+            장비를 모두 장착해야 생성할 수 있어요.
           </p>
         )}
       </section>

@@ -138,11 +138,11 @@ function defaultTitle(type: string): string {
     case 'reward':
       return '보상이 도착했습니다';
     case 'profile_accepted':
-      return '프로필이 승인되었습니다';
+      return '아바타가 승인되었습니다';
     case 'profile_rejected_ai':
-      return '프로필 검토 결과';
+      return '아바타 검토 결과';
     case 'profile_failed':
-      return '프로필 처리 실패';
+      return '아바타 처리 실패';
     case 'notice':
       return '공지';
     case 'melee':

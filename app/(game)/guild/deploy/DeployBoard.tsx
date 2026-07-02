@@ -576,7 +576,7 @@ export function DeployBoard({
           <p className="mt-1.5 text-[13px] leading-relaxed text-zinc-500 dark:text-zinc-400">
             <span className="font-semibold text-zinc-700 dark:text-zinc-200">{selected.name}</span> 구역을 정말 포기할까요?
             <br />
-            소유권을 잃고 중립 상태가 되며, 이 구역의 우리 길드 배치도 해제됩니다.
+            소유권을 잃고 중립 상태가 됩니다.
           </p>
           <div className="mt-4 flex gap-2">
             <button

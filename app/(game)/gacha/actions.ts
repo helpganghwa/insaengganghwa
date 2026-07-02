@@ -37,7 +37,7 @@ export type OpenActionResult =
 
 const MSG: Record<string, string> = {
   NO_BOX: '보급 상자가 부족합니다.',
-  NO_CATALOG: '해당 슬롯 카탈로그가 없습니다.',
+  NO_CATALOG: '해당 장비의 아이템이 없습니다.',
   UNAUTHENTICATED: '로그인이 필요합니다.',
   RATE_LIMITED: '요청이 너무 빠릅니다. 잠시 후 다시 시도해 주세요.',
   MAINTENANCE: '점검 중입니다. 잠시 후 다시 시도해 주세요.',

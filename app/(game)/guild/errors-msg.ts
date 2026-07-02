@@ -17,7 +17,7 @@ const MAP: Record<string, string> = {
   INVALID_TARGET: '대상이 올바르지 않습니다.',
   ZONE_NOT_FOUND: '구역을 찾을 수 없습니다.',
   NOT_EXECUTOR: '해당 구역의 집행관이 아닙니다.',
-  COLLECT_COOLDOWN: '아직 수금 쿨다운입니다.',
+  COLLECT_COOLDOWN: '아직 수금 할 수 없습니다.',
   NOTHING_TO_COLLECT: '수금할 다이아가 없습니다.',
   NOTHING_TO_DISTRIBUTE: '분배할 다이아가 없습니다.',
   DISTRIBUTE_OVER_POOL: '분배 총액이 세금을 초과합니다.',

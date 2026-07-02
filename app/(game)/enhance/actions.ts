@@ -55,7 +55,7 @@ type ErrorState = { status: 'error'; code: string; message: string };
 const MSG: Record<string, string> = {
   EQUIPMENT_NOT_FOUND: '장비를 찾을 수 없습니다.',
   ALREADY_ENHANCING: '이미 강화 중인 장비입니다.',
-  SLOT_BUSY: '같은 부위 2 lane이 모두 사용 중입니다.',
+  SLOT_BUSY: '같은 부위 슬롯이 모두 사용 중입니다.',
   JOB_NOT_FOUND: '강화 작업을 찾을 수 없습니다.',
   INSUFFICIENT_DIAMOND: '다이아가 부족합니다.',
   UNAUTHENTICATED: '로그인이 필요합니다.',

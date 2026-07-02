@@ -122,7 +122,7 @@ export function CreateGuildForm() {
           {pending
             ? '생성 중…'
             : confirm
-              ? `한 번 더 누르면 ${COST}💎 차감 (${confirmLeft}s)`
+              ? `${COST}💎 · 길드 생성 (${confirmLeft}s)`
               : `${COST}💎 · 길드 생성`}
         </span>
       </button>

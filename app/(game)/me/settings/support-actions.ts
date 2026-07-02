@@ -19,7 +19,7 @@ export async function submitInquiryAction(type: string, body: string): Promise<R
   if (trimmed.length > BODY_MAX)
     return { status: 'error', message: `문의 내용은 ${BODY_MAX}자 이내로 적어주세요.` };
   if (await rateLimited(userId, 'support'))
-    return { status: 'error', message: '문의가 너무 잦습니다. 잠시 후 다시 시도해 주세요.' };
+    return { status: 'error', message: '잠시 후 다시 시도해 주세요.' };
 
   try {
     const serverId = await getActiveServerId();

@@ -80,7 +80,7 @@ export function IdentityVerifyRow({
 
   if (done) return <span className="text-sm text-emerald-600">완료</span>;
   if (!storeId || !channelKey)
-    return <span className="text-sm text-zinc-500">미인증 (준비 중)</span>;
+    return <span className="text-sm text-zinc-500">준비 중</span>;
 
   return (
     <div className="flex flex-col items-end gap-1">

@@ -589,7 +589,7 @@ export function EnhanceSlotCard({
                 (ready ? '다시 탭하면 강화' : '아직 무르익지 않았다 — 다시 탭하면 강행')}
             </span>
             <span className="relative z-30 rounded bg-black/75 px-2 py-0.5 font-mono text-[10px] text-zinc-300 tabular-nums">
-              {confirmLeft}s 후 자동 취소
+              {confirmLeft}s 후 강화 취소
             </span>
           </div>
         ) : null}

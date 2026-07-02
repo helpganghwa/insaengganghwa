@@ -108,7 +108,7 @@ export function SwapPickerModal({
           </button>
         </div>
         <p className="mb-2 text-[11px] leading-snug text-zinc-400">
-          같은 슬롯의 강화 lane이 모두 사용 중이에요. 교체할 강화를 선택하면 진행 중인 강화를
+          같은 슬롯의 강화 슬롯이 모두 사용 중이에요. 교체할 강화를 선택하면 진행 중인 강화를
           취소하고 새 장비를 등록합니다.
         </p>
 
