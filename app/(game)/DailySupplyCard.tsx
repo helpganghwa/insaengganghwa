@@ -49,7 +49,7 @@ export function DailySupplyCard() {
             오늘의 보급
           </div>
           <div className="truncate text-[12px] font-medium text-white/95 drop-shadow-[0_1px_2px_rgba(0,0,0,0.9)]">
-            동트는 종이 울렸어요. 우편함에서 보급을 받으세요.
+            오늘의 보급이 도착했어요. 우편함에서 받아가세요.
           </div>
         </div>
       </div>
