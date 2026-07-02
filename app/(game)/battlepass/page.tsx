@@ -44,6 +44,11 @@ export default async function BattlePassPage({
       payEnabled={portoneConfig() !== null}
       returnPaymentId={sp.paymentId ?? null}
       returnCode={sp.code ?? null}
+      identityStoreId={process.env.PORTONE_STORE_ID || process.env.NEXT_PUBLIC_PORTONE_STORE_ID}
+      identityChannelKey={
+        process.env.PORTONE_IDENTITY_CHANNEL_KEY ||
+        process.env.NEXT_PUBLIC_PORTONE_IDENTITY_CHANNEL_KEY
+      }
     />
   );
 }

@@ -9,8 +9,12 @@ import { assetUrl } from '@/lib/asset-versions';
 import { useResourceToast } from '@/components/ResourceToast';
 import { useDiamond } from '@/components/DiamondContext';
 import { PublicFooter } from '@/components/PublicFooter';
+import { ModalShell } from '@/components/ModalShell';
+import * as PortOne from '@portone/browser-sdk/v2';
 import { runCheckout } from '@/app/(game)/shop/checkout';
 import { verifyPurchaseAction } from '@/app/(game)/shop/actions';
+
+import { verifyIdentityAction } from '../me/settings/identity-actions';
 
 import { claimSegmentAction, claimTierAction } from './actions';
 
@@ -231,6 +235,8 @@ export function BattlePassClient({
   payEnabled,
   returnPaymentId = null,
   returnCode = null,
+  identityStoreId,
+  identityChannelKey,
 }: {
   enhance: BattlePassView;
   transcend: BattlePassView;
@@ -239,6 +245,9 @@ export function BattlePassClient({
   /** 모바일 결제 복귀 — 포트원이 /battlepass?paymentId=…(&code=…)로 리다이렉트. 화면 내 검증. */
   returnPaymentId?: string | null;
   returnCode?: string | null;
+  /** 본인인증(KG이니시스 통합인증) — 성장패스 내에서 바로 인증 진행(설정 이동 없이). */
+  identityStoreId?: string;
+  identityChannelKey?: string;
 }) {
   const router = useRouter();
   const [, startTransition] = useTransition();
@@ -248,6 +257,68 @@ export function BattlePassClient({
   const returnHandled = useRef(false);
   const { showHeaderToast } = useResourceToast();
   const { optimisticAdjust: adjustDiamond } = useDiamond();
+  const [identityPrompt, setIdentityPrompt] = useState(false); // 본인인증 필요 모달
+  const [identityBusy, setIdentityBusy] = useState(false);
+  const [identityErr, setIdentityErr] = useState<string | null>(null);
+
+  // 성장패스 내 본인인증 — 설정 이동 없이 여기서 포트원 통합인증(KG이니시스) 진행. ShopTabs와 동일 패턴.
+  const startIdentity = async () => {
+    if (!identityStoreId || !identityChannelKey) {
+      setIdentityPrompt(false);
+      router.push('/me/settings');
+      return;
+    }
+    setIdentityErr(null);
+    setIdentityBusy(true);
+    try {
+      const res = await PortOne.requestIdentityVerification({
+        storeId: identityStoreId,
+        identityVerificationId: `idv-${crypto.randomUUID()}`,
+        channelKey: identityChannelKey,
+        redirectUrl: `${window.location.origin}/battlepass`,
+      });
+      // 모바일은 리다이렉트되어 여기 도달하지 않음(아래 useEffect에서 복귀 처리). PC는 res 반환.
+      if (!res) return;
+      if (res.code) {
+        setIdentityBusy(false);
+        setIdentityErr(res.message ?? '본인인증에 실패했습니다.');
+        return;
+      }
+      const r = await verifyIdentityAction(res.identityVerificationId);
+      setIdentityBusy(false);
+      if (r.ok) {
+        setIdentityPrompt(false);
+        router.refresh(); // 인증 반영 후 다시 구매 시 통과.
+      } else setIdentityErr(r.message);
+    } catch (e) {
+      setIdentityBusy(false);
+      setIdentityErr((e as Error).message);
+    }
+  };
+
+  // 모바일 본인인증 리다이렉트 복귀 — /battlepass?identityVerificationId=…(&code=…) 검증 처리.
+  useEffect(() => {
+    const sp = new URLSearchParams(window.location.search);
+    const id = sp.get('identityVerificationId');
+    if (!id) return;
+    window.history.replaceState({}, '', window.location.pathname); // 중복 처리 방지
+    if (sp.get('code')) {
+      setIdentityErr(sp.get('message') || '본인인증에 실패했습니다.');
+      setIdentityPrompt(true);
+      return;
+    }
+    setIdentityBusy(true);
+    verifyIdentityAction(id).then((r) => {
+      setIdentityBusy(false);
+      if (r.ok) {
+        setIdentityPrompt(false);
+        router.refresh();
+      } else {
+        setIdentityErr(r.message);
+        setIdentityPrompt(true);
+      }
+    });
+  }, [router]);
 
   // 모바일 결제 복귀 — /battlepass?paymentId=…(&code=…)로 돌아오면 화면 내 검증·지급 확인 후 쿼리 정리.
   useEffect(() => {
@@ -290,6 +361,9 @@ export function BattlePassClient({
         showHeaderToast({ title: '성장패스 구매 완료' });
       } else if (r.reason === 'cancel') {
         // 사용자 취소 — 조용히.
+      } else if (r.code === 'IDENTITY_REQUIRED') {
+        // 청소년보호 — 결제 전 본인인증 필수. 본인인증 유도 모달 노출.
+        setIdentityPrompt(true);
       } else {
         setError(
           r.code === 'ALREADY_PURCHASED'
@@ -431,6 +505,42 @@ export function BattlePassClient({
         {/* 전자상거래법 표시 — 컨텐츠 패딩 영역 밖 전체폭, 컨텐츠와 함께 스크롤(사업자정보·약관·환불). */}
         <PublicFooter />
       </div>
+
+      {/* 본인인증 필요 — 청소년보호(결제 전 본인인증). ShopTabs와 동일 모달. */}
+      {identityPrompt ? (
+        <ModalShell
+          onClose={() => setIdentityPrompt(false)}
+          label="본인인증 필요"
+          className="w-full max-w-[300px] rounded-2xl bg-white p-5 dark:bg-zinc-950"
+        >
+          <h2 className="text-base font-bold">본인인증이 필요합니다</h2>
+          <p className="mt-1.5 text-[13px] leading-relaxed text-zinc-500 dark:text-zinc-400">
+            청소년 보호를 위해 유료 결제 전 본인인증이 필요합니다. 설정에서 본인인증을 완료한 뒤 다시
+            시도해 주세요.
+          </p>
+          <div className="mt-4 flex gap-2">
+            <button
+              type="button"
+              onClick={() => setIdentityPrompt(false)}
+              disabled={identityBusy}
+              className="flex-1 rounded-lg bg-zinc-100 py-2.5 text-sm font-bold text-zinc-700 active:opacity-70 disabled:opacity-50 dark:bg-zinc-800 dark:text-zinc-200"
+            >
+              취소
+            </button>
+            <button
+              type="button"
+              onClick={startIdentity}
+              disabled={identityBusy}
+              className="flex-1 rounded-lg bg-zinc-900 py-2.5 text-sm font-bold text-white active:opacity-90 disabled:opacity-50 dark:bg-zinc-100 dark:text-zinc-900"
+            >
+              {identityBusy ? '진행 중…' : '본인인증 하기'}
+            </button>
+          </div>
+          {identityErr ? (
+            <p className="mt-2 text-center text-[12px] text-red-500">{identityErr}</p>
+          ) : null}
+        </ModalShell>
+      ) : null}
     </div>
   );
 }
