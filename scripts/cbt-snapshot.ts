@@ -36,13 +36,19 @@ type ProfileRow = {
 };
 
 async function keepsakeOf(userId: string): Promise<ProfileRow | null> {
-  // 마지막 착용(active)만 — 기본 아바타 착용 중이면 미지급(기본은 실운영에서 기본 지급되므로
-  // 중복 방지, 사용자 확정). 생성 아바타를 보유해도 착용 중이 아니면 지급하지 않는다.
+  // 착용 중(비기본) 우선 — 기본 아바타 착용 중이거나 미착용이면 가장 최근 생성한 비기본
+  // 아바타로 fallback. 기본 아바타 자체는 실운영에서 기본 지급되므로 항상 제외.
   const [active] = await sql<ProfileRow[]>`
     select up.* from characters c join user_profiles up on up.id = c.active_profile_id
     where c.user_id = ${userId} and coalesce(up.options->>'isDefault','false') <> 'true'
     limit 1`;
-  return active ?? null;
+  if (active) return active;
+  const [latest] = await sql<ProfileRow[]>`
+    select up.* from user_profiles up
+    where up.user_id = ${userId} and coalesce(up.options->>'isDefault','false') <> 'true'
+    order by up.created_at desc
+    limit 1`;
+  return latest ?? null;
 }
 
 /** storage 공개 URL → 같은 버킷 내 키 추출. */
