@@ -29,7 +29,9 @@ const COMPOSE_MAX_TOKENS = 1500; // ~1950자(≈500토큰) 출력 + Sonnet 5 사
 
 const PROP = `PROPORTIONS ARE THE TOP PRIORITY — a TALL, slender 7-heads-tall figure (a small head about one-seventh of the total body height); keep it at least 6 heads tall. A tall long-legged silhouette like an anime key-visual idol: long legs (roughly half the total height), a high waistline, a slender neck and a compact torso. The face is attractive and clearly reads as early-twenties, while the BODY stays tall and long-legged with a slim long-legged build. Even in a long dress or gown, keep the silhouette tall and slim (a slim, floor-length gown that keeps the figure long) with long legs implied beneath. Keep ALL head accessories small and neat — ears, horns, crowns and headpieces stay modest, and hair volume restrained, so the head reads small. Even a large helmet, mask, hood, horned skull, antlers or headdress stays scaled down to sit on a small head; lengthen the body (legs + torso) so the head AND its headgear together stay within about one-sixth of the total height. When in doubt, make the body taller.`;
 
-const MENS = `Render ALL attire as MENSWEAR — a fitted coat or tunic with trousers and boots, in the items' colors, materials and motifs; keep everything masculine as coats, tunics, trousers and boots.`;
+// 여성형 방어구의 남성 변환 — "코트/튜닉" 2종으로 수렴시키면 교복·갑옷까지 로브화되므로
+// (라이브 피드백), 원본 의상 카테고리를 유지한 남성형 대응물로 번역한다.
+const MENS = `Render ALL attire as MENSWEAR by translating each garment into the MASCULINE version of the SAME garment type — keep the garment's category and identity: a school or military uniform stays a uniform (a fitted uniform blazer or jacket with matching uniform trousers, keeping its crest, tie and trims), plate armor stays plate armor, a robe stays a robe, a coat stays a coat, and only a dress or gown becomes a princely fitted long coat; any skirt becomes matching trousers. Keep each item's signature colors, materials, trims and ornaments, with trousers and boots below.`;
 
 function subjectOf(male: boolean): string {
   return male
