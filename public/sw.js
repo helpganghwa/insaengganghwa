@@ -49,7 +49,6 @@ self.addEventListener('notificationclick', (event) => {
         includeUncontrolled: true,
       });
       // 이미 타깃 경로에 있는 탭을 우선 재사용, 없으면 아무 탭이나.
-      // navigate/focus 프로미스를 await — SW가 이동 완료 전 종료되는 것 방지.
       const target =
         clientsArr.find((c) => {
           try {
@@ -59,8 +58,28 @@ self.addEventListener('notificationclick', (event) => {
           }
         }) || clientsArr[0];
       if (target) {
-        if ('navigate' in target) await target.navigate(url);
-        return target.focus();
+        // focus 먼저(항상 안전). navigate()는 미제어(uncontrolled) 클라이언트에서 스펙상
+        // reject되고 iOS PWA에서도 불안정 — 예전엔 reject가 focus까지 삼켜 이동 없이 마지막
+        // 화면이 그대로 보였다(생성 완료 알림 → 생성화면). 실패 시 앱 내 라우팅으로 폴백.
+        try {
+          await target.focus();
+        } catch {}
+        let already = false;
+        try {
+          already = new URL(target.url).pathname === url;
+        } catch {}
+        if (already) return;
+        if ('navigate' in target) {
+          try {
+            await target.navigate(url);
+            return;
+          } catch {}
+        }
+        // 폴백 — 클라이언트(PushAutoSync)가 수신해 router.push(소프트 내비게이션).
+        try {
+          target.postMessage({ type: 'push-navigate', url });
+        } catch {}
+        return;
       }
       // 열린 탭이 없으면 새 창.
       if (self.clients.openWindow) return self.clients.openWindow(url);

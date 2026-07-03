@@ -1,6 +1,7 @@
 'use client';
 
 import { useEffect } from 'react';
+import { useRouter } from 'next/navigation';
 
 import { registerPushSubscriptionAction } from '@/lib/push/actions';
 import { checkPushSupport, requestAndSubscribe, serializeSubscription } from '@/lib/push/client';
@@ -15,6 +16,23 @@ import { checkPushSupport, requestAndSubscribe, serializeSubscription } from '@/
  * 권한 요청은 기존 contextual prompt가 담당(첫 방문 즉시 요청 금지 정책 유지).
  */
 export function PushAutoSync() {
+  const router = useRouter();
+
+  // SW 알림 클릭 폴백 라우팅 — WindowClient.navigate()가 미제어 클라이언트/iOS PWA에서
+  // 실패하면 SW가 postMessage({type:'push-navigate'})로 위임한다(sw.js). 여기서 수신해
+  // 소프트 내비게이션. 없으면 알림을 눌러도 마지막 화면이 그대로 보이는 버그가 된다.
+  useEffect(() => {
+    if (!('serviceWorker' in navigator)) return;
+    const onMessage = (e: MessageEvent) => {
+      const d = e.data as { type?: string; url?: string } | null;
+      if (d?.type === 'push-navigate' && typeof d.url === 'string' && d.url.startsWith('/')) {
+        router.push(d.url);
+      }
+    };
+    navigator.serviceWorker.addEventListener('message', onMessage);
+    return () => navigator.serviceWorker.removeEventListener('message', onMessage);
+  }, [router]);
+
   useEffect(() => {
     const support = checkPushSupport();
     if (support.kind !== 'supported' || support.permission !== 'granted') return;
