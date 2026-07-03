@@ -1,10 +1,15 @@
 'use client';
 
+import { useEffect } from 'react';
+
+import { reportBoundaryError } from '@/lib/report-boundary-error';
+
 /**
  * 루트 에러 바운더리 — root layout 자체가 렌더 실패할 때의 최후 폴백(2026-05-29).
  * global-error는 html/body를 직접 포함해야 한다(layout을 대체하므로).
  */
-export default function GlobalError({ reset }: { error: Error & { digest?: string }; reset: () => void }) {
+export default function GlobalError({ error, reset }: { error: Error & { digest?: string }; reset: () => void }) {
+  useEffect(() => reportBoundaryError('global-boundary', error), [error]);
   return (
     <html lang="ko">
       <body className="flex min-h-dvh flex-col items-center justify-center gap-4 bg-zinc-950 px-6 text-center text-zinc-50">
