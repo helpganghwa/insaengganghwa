@@ -36,9 +36,10 @@ import { TutorialCoach } from '@/components/tutorial/TutorialCoach';
 import { InstallStrip } from '@/components/install/InstallStrip';
 import { kstDateString } from '@/lib/kst';
 
-// 일일 보급 트리오(보급·프리미엄·CBT이월)의 유저·서버·KST일 단위 성공 마크 — 매 페이지 로드마다
-// 응답 후 쓰기 3건이 나가던 것을 하루 1회(인스턴스당)로 줄인다(자정 herd 완화). 셋 다 에러 없이
-// 끝난 경우에만 마크(부분 실패는 다음 로드에서 재시도). 멱등이라 인스턴스 교체로 재실행돼도 안전.
+// 일일 보급(보급·CBT이월)의 유저·서버·KST일 단위 성공 마크 — 매 페이지 로드마다 나가던
+// 응답 후 쓰기를 하루 1회(인스턴스당)로 줄인다(자정 herd 완화). 에러 없이 끝난 경우에만
+// 마크(부분 실패는 다음 로드에서 재시도). 멱등이라 인스턴스 교체로 재실행돼도 안전.
+// ⚠ 프리미엄 daily는 이 스로틀 대상이 아님 — 하루 중 구매로 상태가 바뀌는 유일한 ensure.
 const dailyEnsured = new Map<string, number>();
 function pruneDailyEnsured() {
   if (dailyEnsured.size < 10_000) return;
@@ -78,32 +79,33 @@ export default async function GameLayout({ children }: { children: React.ReactNo
   //  끊겨 그날 보급이 누락될 수 있음(referral 패턴과 통일). 멱등이라 재진입 시 안전.
   const dailySid = await getActiveServerId();
   const ensureKey = `${userId}:${dailySid}:${kstDateString()}`;
-  if (!dailyEnsured.has(ensureKey)) {
-    after(async () => {
-      let allOk = true;
-      await withTimeout(ensureDailyMail(userId, dailySid), 2000, 'layout.dailyMail').catch((e) => {
-        allOk = false;
-        if (!(e instanceof DbTimeoutError)) console.warn('[layout] dailyMail error', e);
-      });
-      await withTimeout(ensurePremiumDailyMail(userId, dailySid), 2000, 'layout.premiumDaily').catch(
-        (e) => {
-          allOk = false;
-          if (!(e instanceof DbTimeoutError)) console.warn('[layout] premiumDaily error', e);
-        },
-      );
-      // CBT 보상 이월 — 실운영에서 1회 지급(멱등). CBT/스냅샷 전엔 테이블이 비어 no-op.
-      await withTimeout(ensureCbtCarryover(userId, dailySid), 3000, 'layout.cbtCarryover').catch(
-        (e) => {
-          allOk = false;
-          if (!(e instanceof DbTimeoutError)) console.warn('[layout] cbtCarryover error', e);
-        },
-      );
-      if (allOk) {
-        pruneDailyEnsured();
-        dailyEnsured.set(ensureKey, Date.now());
-      }
+  const throttled = dailyEnsured.has(ensureKey);
+  after(async () => {
+    // 프리미엄 daily는 스로틀 제외 — 프리미엄 활성 상태가 하루 중 바뀔 수 있어(낮에 구매 →
+    // 구매일=1일차 지급) 마크 뒤에도 매 로드 실행해야 함. 미보유 시 CTE가 비어 싼 no-op.
+    await withTimeout(ensurePremiumDailyMail(userId, dailySid), 2000, 'layout.premiumDaily').catch(
+      (e) => {
+        if (!(e instanceof DbTimeoutError)) console.warn('[layout] premiumDaily error', e);
+      },
+    );
+    if (throttled) return;
+    let allOk = true;
+    await withTimeout(ensureDailyMail(userId, dailySid), 2000, 'layout.dailyMail').catch((e) => {
+      allOk = false;
+      if (!(e instanceof DbTimeoutError)) console.warn('[layout] dailyMail error', e);
     });
-  }
+    // CBT 보상 이월 — 실운영에서 1회 지급(멱등). CBT/스냅샷 전엔 테이블이 비어 no-op.
+    await withTimeout(ensureCbtCarryover(userId, dailySid), 3000, 'layout.cbtCarryover').catch(
+      (e) => {
+        allOk = false;
+        if (!(e instanceof DbTimeoutError)) console.warn('[layout] cbtCarryover error', e);
+      },
+    );
+    if (allOk) {
+      pruneDailyEnsured();
+      dailyEnsured.set(ensureKey, Date.now());
+    }
+  });
 
   // 카카오 공유 링크 가입 귀속 — pending_referral 쿠키 있으면 1회 처리(멱등).
   // 쿠키는 **요청 스코프에서 먼저 읽는다**(cookies()를 after() 안에서 호출하면 Next가 throw).

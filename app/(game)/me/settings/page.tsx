@@ -70,7 +70,7 @@ export default async function SettingsPage() {
           initialRaid={p?.pushRaid ?? true}
           initialProfile={p?.pushProfile ?? true}
           initialReferral={p?.pushReferral ?? true}
-          initialEnhanceMode={p?.pushEnhanceMode ?? 'instant'}
+          initialEnhanceMode={p?.pushEnhanceMode ?? 'batched'}
         />
       </Section>
 

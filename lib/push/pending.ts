@@ -42,7 +42,7 @@ export async function appendEnhanceReady(
     .from(profiles)
     .where(eq(profiles.id, userId))
     .limit(1);
-  const mode = p?.mode ?? 'instant';
+  const mode = p?.mode ?? 'batched'; // 컬럼 default(batched)와 동일 폴백 — 표시/동작 불일치 방지
 
   if (mode === 'instant') {
     const { title, body } = describeOne(item);
