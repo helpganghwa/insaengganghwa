@@ -66,13 +66,17 @@ type SlotKind = 'weapon' | 'armor' | 'accessory';
 interface ResolvedItem {
   slot: SlotKind;
   wornDesc: string;
-  art: string;
   lore: string;
   /** 스프라이트 base64(vision). 부재 시 null → 텍스트만. */
   b64: string | null;
 }
 
-/** 카탈로그 키 → wornDesc/art/lore + 스프라이트 이미지. 스프라이트 부재는 텍스트로 degrade. */
+/**
+ * 카탈로그 키 → wornDesc/lore + 스프라이트 이미지. 스프라이트 부재는 텍스트로 degrade.
+ * ⚠ art(스프라이트 생성 의도 프롬프트)는 compose 입력에서 제외 — 실제 생성 결과(이미지)와
+ *   어긋난 색·서사 표현이 그대로 남아 있어(예: silver guard vs 실제 gold) 이미지 검증된
+ *   wornDesc와 모순되는 노이즈가 된다. wornDesc 부재 시 폴백으로만 사용.
+ */
 function resolveItem(slot: SlotKind, key: string | undefined, fallbackText: string | undefined): ResolvedItem | null {
   if (key) {
     const it = CATALOG_ITEMS.find((c) => c.key === key);
@@ -84,10 +88,10 @@ function resolveItem(slot: SlotKind, key: string | undefined, fallbackText: stri
       } catch {
         b64 = null; // 런타임 파일 부재 → 텍스트만으로 진행.
       }
-      return { slot, wornDesc: it.wornDesc ?? it.art ?? '', art: it.art ?? '', lore: it.lore ?? '', b64 };
+      return { slot, wornDesc: it.wornDesc ?? it.art ?? '', lore: it.lore ?? '', b64 };
     }
   }
-  if (fallbackText) return { slot, wornDesc: fallbackText, art: '', lore: '', b64: null };
+  if (fallbackText) return { slot, wornDesc: fallbackText, lore: '', b64: null };
   return null;
 }
 
@@ -117,8 +121,7 @@ export async function composeV3Description(input: ComposeV3Input): Promise<strin
   const content: Anthropic.MessageParam['content'] = [];
   for (const it of items) {
     const lore = it.lore ? `\nlore: ${it.lore}` : '';
-    const art = it.art ? `\ndetail: ${it.art}` : '';
-    content.push({ type: 'text', text: `=== ${label[it.slot]} ===\nvisual: ${it.wornDesc}${art}${lore}` });
+    content.push({ type: 'text', text: `=== ${label[it.slot]} ===\nvisual: ${it.wornDesc}${lore}` });
     if (it.b64) content.push({ type: 'image', source: { type: 'base64', media_type: 'image/png', data: it.b64 } });
   }
   content.push({
