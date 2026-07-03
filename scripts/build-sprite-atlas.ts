@@ -17,8 +17,8 @@ const CELL = 256; // 3차 소스가 256 네이티브 — 셀도 256으로(다운
 // 영역이 gutter(투명)에 떨어져 점이 안 보임.
 const GUTTER = 8;
 const STRIDE = CELL + GUTTER;
-const COLS = 8;
-const ROWS = 8; // 64셀(현재 60종 + 여유). 120 확장 시 grid 확대.
+const COLS = 12;
+const ROWS = 10; // 120셀(현재 106종 + 여유) — 목표 120종까지 수용.
 
 const PUB = join(process.cwd(), 'public');
 const OUT_WEBP = join(PUB, 'sprites', 'atlas.webp');
