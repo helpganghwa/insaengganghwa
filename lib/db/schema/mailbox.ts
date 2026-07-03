@@ -74,10 +74,10 @@ export const mailbox = pgTable(
     payload: jsonb('payload').notNull(),
     /** 수령 시각(null = 미수령). claim transition의 멱등 키. */
     claimedAt: timestamp('claimed_at', { withTimezone: true }),
-    /** 만료 시각(default = sentAt + 7일, 통일). 만료 시 수령 불가. */
+    /** 만료 시각(default = sentAt + 30일, 통일). 만료 시 수령 불가. */
     expiresAt: timestamp('expires_at', { withTimezone: true })
       .notNull()
-      .default(sql`now() + interval '7 days'`),
+      .default(sql`now() + interval '30 days'`),
     createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
   },
   (t) => [

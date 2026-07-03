@@ -45,7 +45,7 @@ export async function ensurePremiumDailyMail(userId: string, serverId: number): 
            ${serverId},
            'reward'::mailbox_type,
            '성장 프리미엄 — 오늘의 보상',
-           '성장 프리미엄 일일 보상이 도착했습니다. 7일 안에 받으세요.',
+           '성장 프리미엄 일일 보상이 도착했습니다. 30일 안에 받으세요.',
            '성장 프리미엄',
            ${PAYLOAD}::jsonb,
            now() + interval '7 days'
