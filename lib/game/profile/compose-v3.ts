@@ -50,7 +50,7 @@ ARMOR & ACCESSORY — FAITHFUL & RECOGNIZABLE: render the armor and accessory so
 DIVERSITY — freshness comes from the CHARACTER: vary the race, hair, expression, pose, base-clothing styling, color accents and mood from one design to the next, while keeping the three signature items (weapon, armor, accessory) faithful and consistent to their images. Let the character carry the variety.
 CONCEPT COHESION — the items may come from DIFFERENT sets; use their lore to unify the base clothing (non-signature layers), color accents, emblem motifs, footwear, mood and stance into ONE harmonious youthful anime character with a cohesive theme.
 STYLE (EMPHASIZE STRONGLY): authentic Japanese anime / JRPG key-visual aesthetic — smooth clean lineless cel-shading with soft shape edges and seamless color fills, bright vibrant saturated colors, glossy expressive anime eyes, polished anime rendering. The Japanese-anime look is the most important stylistic goal.
-LENGTH: aim for about 1800-1950 characters — USE THE ROOM to be richly detailed, vivid and evocative (a flowing description): describe the WEAPON, the recognizable armor and accessory, the base clothing, colors, materials, lighting and mood specifically and generously. Finish describing ALL THREE items and end on a complete sentence within 1990 characters. Phrase the whole prompt as POSITIVE affirmations — describe what the image contains and how it looks, using affirmative wording throughout. Output ONLY the prompt text itself.`;
+LENGTH: aim for about 1800-1950 characters — USE THE ROOM to be richly detailed, vivid and evocative (a flowing description): describe the WEAPON, the recognizable armor and accessory, the base clothing, colors, materials, lighting and mood specifically and generously. BEGIN the prompt with the proportion statement (the TALL slender 7-heads-tall long-legged figure) so it leads everything else, then the subject and items. Finish describing ALL THREE items and end on a complete sentence within 1990 characters. Phrase the whole prompt as POSITIVE affirmations — describe what the image contains and how it looks, using affirmative wording throughout. Output ONLY the prompt text itself.`;
 }
 
 let _client: Anthropic | null = null;
@@ -157,7 +157,7 @@ export async function composeV3Description(input: ComposeV3Input): Promise<strin
       messages: [
         {
           role: 'user',
-          content: `Tighten this Pixellab character prompt to UNDER ${SOFT_LIMIT} characters (it is currently ${desc.length}). Keep the WEAPON faithful, detailed and prominent, keep the armor and accessory clearly recognizable as the same items, keep the rich evocative flowing Japanese-anime style and the front-facing full-body framing, keep the wording positive and affirmative, and end on a complete sentence. Output ONLY the rewritten prompt:\n\n${desc}`,
+          content: `Tighten this Pixellab character prompt to UNDER ${SOFT_LIMIT} characters (it is currently ${desc.length}). KEEP the opening TALL 7-heads-tall slender long-legged proportion statement intact at the very start, keep the WEAPON faithful, detailed and prominent, keep the armor and accessory clearly recognizable as the same items, keep the rich evocative flowing Japanese-anime style and the front-facing full-body framing, keep the wording positive and affirmative, and end on a complete sentence. Output ONLY the rewritten prompt:\n\n${desc}`,
         },
       ],
     });
