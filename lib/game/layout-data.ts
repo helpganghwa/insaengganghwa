@@ -47,7 +47,7 @@ const DEFAULTS: LayoutData = {
 
 /**
  * 프로필(닉네임·다이아) + 우편 미수령 dot + 강화완료 dot을 단일 왕복(Promise.all)으로.
- * 4s 가드 + catch — 콜드 DB 커넥션이 max:1 풀에서 hang해도 기본값으로 graceful degrade.
+ * 4s 가드 + catch — 콜드 DB 커넥션이 풀에서 hang해도 기본값으로 graceful degrade.
  */
 export async function loadLayoutData(userId: string, serverId: number): Promise<LayoutData> {
   try {

@@ -19,9 +19,9 @@
 | **인증** | Kakao OAuth (Supabase Auth) | 한국 유저 대상 단독 인증 |
 | **결제** | 포트원 + KMC/PASS 본인인증 | 카카오페이/토스/카드 |
 | **이메일** | Resend | 결제 영수증 (전자상거래법 의무) |
-| **AI 검토** | Anthropic SDK (Claude Sonnet 4.6 vision) | 프로필 자동 검토 — NSFW/품질/일치성 (PROFILE §5) |
-| **AI 스프라이트** | Pixellab v2 (Pro Tier 3) | 캐릭터 프로필 생성 — `/v2/create-character-pro` (PROFILE §4) |
-| **모니터링** | Sentry + PostHog + Better Stack | 에러/분석/uptime |
+| **AI 검토** | Anthropic SDK (Claude Sonnet 5 vision) | 프로필 자동 검토 — NSFW/품질/일치성 (PROFILE §5) |
+| **AI 스프라이트** | Pixellab v2 (Pro Tier 3) | 캐릭터 프로필 생성 — `/v2/create-character-v3` (PROFILE §4) |
+| **모니터링** | 자체 client_errors 수집(/api/client-error + 에러 바운더리 리포트) | Sentry는 미도입 — 필요 시 재검토 |
 | **배포** | Vercel (Edge + Cron) | 빠른 배포, KST Cron |
 | **광고** | AdMob Web (1차) | 보상형 광고 |
 | **레이트리밋** | Upstash Redis | 강화/보석 API 어뷰징 방어 |
@@ -361,7 +361,7 @@ master/master-dev로 DB도 나눌 수 있는가 — **가능**. 두 방식:
 - Supabase **서울 리전(`ap-northeast-2`)** + **트랜잭션 풀러(`:6543`)**. 컴퓨트·DB 동일 리전 코로케이션 유지.
 
 ### 11.3 DB 커넥션
-- postgres.js `prepare: false`(pgbouncer 트랜잭션 풀러 정합) + 서버리스 풀 `max: 1` · `idle_timeout` · `connect_timeout` 명시. 클라이언트 모듈 싱글톤 재사용(개발 HMR 폭발 방지).
+- postgres.js `prepare: false`(pgbouncer 트랜잭션 풀러 정합) + 서버리스 풀 `max: 8`(cron :00 동시발화 6~7개 + 유저 트래픽 헤드룸, client.ts 주석 참조) · `idle_timeout` · `connect_timeout` 명시. 클라이언트 모듈 싱글톤 재사용(개발 HMR 폭발 방지).
 - 마이그레이션은 `DIRECT_URL` = Supabase **Session pooler**(`...pooler.supabase.com:5432`, 유저 `postgres.<ref>`). 레거시 Direct(`db.<ref>.supabase.co:5432`)는 **IPv6 전용 → 대부분 환경 연결 불가**, 쓰지 말 것. 런타임 `DATABASE_URL` = Transaction pooler(`:6543`).
 
 ### 11.4 요청당 왕복 최소화
