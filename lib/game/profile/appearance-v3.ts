@@ -10,11 +10,25 @@ export interface Appearance {
   race: string;
   /** "{color} {style}" 머리 묘사. */
   hair: string;
+  /** 눈(홍채) 색 — 캐릭터별 랜덤 축(같은 머리색이라도 다른 인물로 읽히게, 라이브 피드백). */
+  eyeColor: string;
   /** 표정 묘사. */
   expression: string;
   /** 팔/스탠스 포즈(무기-안전). 무기 든 손은 유지 — compose가 안전절과 함께 사용. */
   pose: string;
 }
+
+// 홍채 색 풀 — 남녀 공용. 장비 색과 무관하게 얼굴 정체성을 만드는 축.
+const EYE_COLORS = [
+  'amber',
+  'emerald-green',
+  'sapphire-blue',
+  'violet',
+  'crimson',
+  'teal',
+  'golden',
+  'steel-gray',
+];
 
 // 포즈 가중치 풀 — 정적 3종(차분·기본, 높게) + 역동 2종(생동감, 중간) + 히든 1종(희소·특별).
 // 모두 정면 유지(측면/3-4 틀기 없음). 전신·양발·무기그립은 compose 안전절이 보장. pickWeighted 추출.
@@ -96,6 +110,7 @@ export function pickRandomAppearance(gender: ProfileGender): Appearance {
   return {
     race: pickWeighted(p.races),
     hair: `${pick(p.hairColors)} ${pick(p.hairStyles)}`,
+    eyeColor: pick(EYE_COLORS),
     expression: pickWeighted(p.expressions),
     pose: pickWeighted(POSES),
   };
