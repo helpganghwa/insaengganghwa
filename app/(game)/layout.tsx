@@ -47,7 +47,8 @@ import { InstallStrip } from '@/components/install/InstallStrip';
 export default async function GameLayout({ children }: { children: React.ReactNode }) {
   const userId = await getSessionUserId();
   if (!userId) redirect('/login');
-  // 프로필/스타터 지급은 DB 트리거(handle_new_user) + 백필 마이그레이션 담당 — 핫패스 부트스트랩 없음.
+  // 캐릭터/스타터 지급은 로그인 콜백(createCharacterAuto)이 담당(트리거 0067은 계정행만).
+  // 콜백 실패로 캐릭터가 없는 계정은 loadLayoutData의 자가복구가 생성 — 핫패스 부트스트랩 없음.
 
   // 서버 점검 게이트 — 점검 유효 + 비-어드민이면 게임 대신 풀사이즈 점검화면(로그인은 그룹 밖이라 접속 가능).
   //  캐시(20s)라 대부분 DB 미접촉. 행 부재/조회 지연은 fail-open(점검 아님)으로 콜드스타트 안전.

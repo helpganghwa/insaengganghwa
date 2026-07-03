@@ -1,7 +1,15 @@
 import 'server-only';
 
 import { pgGuard } from '@/lib/db/guarded';
+import { createCharacterAuto } from '@/lib/game/server-select';
 import { parseFaceBox, type FaceBox } from '@/components/faceCrop';
+
+// 반쪽 계정 자가복구 — 콜백의 createCharacterAuto가 실패하면 profiles만 있고 characters가
+// 없는 계정이 생기고, 콜백은 재실행되지 않아 유저 스스로 복구할 방법이 없다(재로그인뿐).
+// 셸 데이터 로드에서 감지(left join이라 nickname null == 캐릭터 부재) 시 1회 생성 후 재조회.
+// 인스턴스당 유저별 재시도 간격을 두어 지속 실패 시 요청마다 생성 tx가 반복되는 것을 막는다.
+const healAttemptAt = new Map<string, number>();
+const HEAL_RETRY_MS = 5 * 60 * 1000;
 
 /**
  * (game) 셸(헤더·하단 네비)에 필요한 최소 데이터.
@@ -97,6 +105,21 @@ export async function loadLayoutData(userId: string, serverId: number): Promise<
           guild_emblem_url?: string | null;
         }
       | undefined;
+    // 캐릭터 부재(반쪽 계정) 자가복구 — 생성 성공 시 재조회로 이번 응답부터 정상 데이터.
+    // 재귀는 1단으로 끝난다: 스로틀 맵이 직후 재시도를 차단하고, 성공 경로는 nickname이 채워진다.
+    if (profileRows.length > 0 && p?.nickname == null) {
+      const last = healAttemptAt.get(userId) ?? 0;
+      if (Date.now() - last > HEAL_RETRY_MS) {
+        healAttemptAt.set(userId, Date.now());
+        try {
+          await createCharacterAuto({ userId, serverId });
+          console.warn('[layout] half-account healed — character created', { userId, serverId });
+          return await loadLayoutData(userId, serverId);
+        } catch (e) {
+          console.warn('[layout] half-account heal failed', (e as Error).message);
+        }
+      }
+    }
     // options(jsonb)도 문자열일 수 있어 방어 파싱 후 faceBox 추출.
     let opts = p?.profile_options as Record<string, unknown> | string | null | undefined;
     if (typeof opts === 'string') {
