@@ -87,11 +87,17 @@ export class CharacterError extends Error {
 }
 
 /**
- * 닉네임 자동 제안 — '대장장이' + 4자리 난수(정확히 8자 = NICKNAME_MAX_LEN).
+ * 닉네임 자동 제안 — '대장장이' + 4자리 영숫자 난수(정확히 8자 = NICKNAME_MAX_LEN).
+ * 숫자만(9,000조합)이면 포화 시 자동 생성이 막히므로 [0-9a-z] 36⁴ ≈ 168만 조합으로 확장.
  * 로컬 생성(DB 무접촉): 전역 유일은 characters_nickname_uq가 최종 방어하고 호출부가 재추첨.
  */
+const NICK_SUFFIX_CHARS = '0123456789abcdefghijklmnopqrstuvwxyz';
 export function suggestNickname(): string {
-  return `대장장이${Math.floor(Math.random() * 9000) + 1000}`;
+  let suffix = '';
+  for (let i = 0; i < 4; i++) {
+    suffix += NICK_SUFFIX_CHARS[Math.floor(Math.random() * NICK_SUFFIX_CHARS.length)];
+  }
+  return `대장장이${suffix}`;
 }
 
 /**
@@ -220,10 +226,7 @@ export async function createCharacterAuto(input: {
   serverId: number;
 }): Promise<{ nickname: string }> {
   for (let i = 0; i < 10; i++) {
-    // 기본형 '대장장이'+4자리는 전역 9,000조합 — 포화 시 자동 생성이 막히므로
-    // 후반 재시도는 '대장'+6자리(8자 유지, 90만 조합)로 폴백해 성장 헤드룸 확보.
-    const candidate =
-      i < 5 ? suggestNickname() : `대장${Math.floor(Math.random() * 900000) + 100000}`;
+    const candidate = suggestNickname();
     try {
       await createCharacter({ userId: input.userId, serverId: input.serverId, nickname: candidate });
       return { nickname: candidate };
