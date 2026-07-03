@@ -190,7 +190,9 @@ async function claimSlot(): Promise<ClaimedJob | null> {
       .where(and(eq(profileGenerationJobs.id, job.id), eq(profileGenerationJobs.status, 'queued')))
       .returning({ id: profileGenerationJobs.id });
     if (claimed.length === 0) return null;
-    return { ...job, keyIdx: target };
+    // options는 갱신본(newOptions)으로 반환 — launchJob이 구 options를 펼쳐 덮어쓰면
+    // pixellabClaimedAt이 유실돼 교대 배정 판정이 created_at 폴백에만 의존하게 된다.
+    return { ...job, options: newOptions, keyIdx: target };
   });
 }
 

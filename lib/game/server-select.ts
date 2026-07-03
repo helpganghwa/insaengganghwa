@@ -220,7 +220,10 @@ export async function createCharacterAuto(input: {
   serverId: number;
 }): Promise<{ nickname: string }> {
   for (let i = 0; i < 10; i++) {
-    const candidate = suggestNickname();
+    // 기본형 '대장장이'+4자리는 전역 9,000조합 — 포화 시 자동 생성이 막히므로
+    // 후반 재시도는 '대장'+6자리(8자 유지, 90만 조합)로 폴백해 성장 헤드룸 확보.
+    const candidate =
+      i < 5 ? suggestNickname() : `대장${Math.floor(Math.random() * 900000) + 100000}`;
     try {
       await createCharacter({ userId: input.userId, serverId: input.serverId, nickname: candidate });
       return { nickname: candidate };
