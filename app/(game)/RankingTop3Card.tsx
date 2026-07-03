@@ -15,13 +15,28 @@ const METRICS: { metric: LeaderboardMetric; label: string }[] = [
   { metric: 'melee', label: '대난투 우승' },
 ];
 
-export async function RankingTop3Card() {
-  const serverId = await getActiveServerId();
+type Deck = (typeof METRICS)[number] & { top: Awaited<ReturnType<typeof getRankingTop>> };
+
+// 서버별 60s TTL 캐시 — 홈 로드마다 5쿼리를 발사하던 핫패스 팬아웃 축소(자정 herd 완화).
+// 랭킹은 준실시간이면 충분(system-mode 20s 캐시와 동일 패턴, 인스턴스 로컬).
+const TTL_MS = 60_000;
+const deckCache = new Map<number, { decks: Deck[]; at: number }>();
+
+async function loadDecks(serverId: number): Promise<Deck[]> {
+  const hit = deckCache.get(serverId);
+  if (hit && Date.now() - hit.at < TTL_MS) return hit.decks;
   const decks = (
     await Promise.all(
       METRICS.map(async (m) => ({ ...m, top: await getRankingTop(m.metric, serverId, 3) })),
     )
   ).filter((d) => d.top.length > 0);
+  deckCache.set(serverId, { decks, at: Date.now() });
+  return decks;
+}
+
+export async function RankingTop3Card() {
+  const serverId = await getActiveServerId();
+  const decks = await loadDecks(serverId);
   if (decks.length === 0) return null;
 
   const initialIndex = crypto.getRandomValues(new Uint32Array(1))[0]! % decks.length;

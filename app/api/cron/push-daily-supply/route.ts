@@ -15,8 +15,12 @@ import { sendPushToUsers } from '@/lib/push/send';
 
 export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
+export const maxDuration = 300;
 
 const CHUNK = 200;
+// 청크 간 지연 — 전원 동시 수신 시 유저들이 한 시점에 몰려 진입(홈 풀로드+일일보급 write)해
+// 커넥션 풀이 스파이크로 포화되는 thundering herd 완화. 도착 시각을 청크 단위로 분산한다.
+const CHUNK_DELAY_MS = 15_000;
 
 type Row = { user_id: string };
 
@@ -60,6 +64,7 @@ export async function GET(req: Request) {
   let goneSum = 0;
   let failedSum = 0;
   for (let i = 0; i < rows.length; i += CHUNK) {
+    if (i > 0) await new Promise((r) => setTimeout(r, CHUNK_DELAY_MS));
     const ids = rows.slice(i, i + CHUNK).map((r) => r.user_id);
     const res = await sendPushToUsers(ids, payload);
     okSum += res.ok;
