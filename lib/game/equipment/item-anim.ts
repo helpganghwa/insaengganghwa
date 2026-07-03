@@ -7,11 +7,17 @@ import meta from '@/public/sprites/itemanim.json';
 
 interface ItemAnimMeta {
   cell: number;
-  items: Record<string, { frames: number }>;
+  /** cell: 아이템별 오버라이드 — 2차 편입분은 128(3차 기본 256과 혼재, 화질개선 재생성 시 통일). */
+  items: Record<string, { frames: number; cell?: number }>;
 }
 const A = meta as ItemAnimMeta;
 
 export const ITEM_ANIM_CELL = A.cell;
+
+/** 스트립 셀 크기(px) — 아이템별 오버라이드 우선. 렌더는 source-crop이라 혼재 안전. */
+export function itemAnimCell(code: string): number {
+  return A.items[code]?.cell ?? A.cell;
+}
 
 /** 프레임 수(없으면 0). */
 export function itemAnimFrames(code: string): number {

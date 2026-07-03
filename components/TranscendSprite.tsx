@@ -12,7 +12,7 @@ import {
   hasItemAnim,
   itemAnimFrames,
   itemAnimUrl,
-  ITEM_ANIM_CELL,
+  itemAnimCell,
 } from '@/lib/game/equipment/item-anim';
 import { transcendStyle, TRANSCEND_TUNING } from '@/lib/game/equipment/transcend';
 
@@ -365,6 +365,7 @@ function TranscendCanvas({
     // 해방 아이템 + 애니 보유 → 본체를 애니 프레임으로 재생(후광/광택/프레임은 idle 기반 유지).
     const useAnim = dynamic && rank != null && hasItemAnim(code);
     const nFrames = useAnim ? itemAnimFrames(code) : 0;
+    const animCell = itemAnimCell(code); // 스트립 셀(px) — 2차 128 / 3차 256 혼재 지원
 
     let frameCanvas: HTMLCanvasElement | null = null;
 
@@ -499,7 +500,7 @@ function TranscendCanvas({
         if (fi !== curFrame) {
           curFrame = fi;
           animSpriteX.clearRect(0, 0, FS, FS);
-          animSpriteX.drawImage(stripImg, fi * ITEM_ANIM_CELL, 0, ITEM_ANIM_CELL, ITEM_ANIM_CELL, SP, SP, SW, SW);
+          animSpriteX.drawImage(stripImg, fi * animCell, 0, animCell, animCell, SP, SP, SW, SW);
           if (showRadiant && rankColor) radiantCv = makeRadiant(animSpriteCv, rankColor);
         }
         baseSprite = animSpriteCv;

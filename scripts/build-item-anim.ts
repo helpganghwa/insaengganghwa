@@ -12,7 +12,15 @@ const anim3 = JSON.parse(readFileSync(join(ROOT, 'public/sprites/anim3.json'), '
 const outDir = join(ROOT, 'public/sprites/itemanim');
 mkdirSync(outDir, { recursive: true });
 
-const items: Record<string, { frames: number }> = {};
+// 기존 json의 비-anim3 항목(2차 편입분 cell 오버라이드 포함) 보존 — 재실행 시 유실 방지.
+const prevPath = join(ROOT, 'public/sprites/itemanim.json');
+const prev = existsSync(prevPath)
+  ? (JSON.parse(readFileSync(prevPath, 'utf8')) as { items: Record<string, { frames: number; cell?: number }> }).items
+  : {};
+const anim3Codes = new Set(Object.values(map).map((m) => m.code));
+const items: Record<string, { frames: number; cell?: number }> = Object.fromEntries(
+  Object.entries(prev).filter(([code]) => !anim3Codes.has(code)),
+);
 let ok = 0;
 const miss: string[] = [];
 for (const id of Object.keys(map)) {
