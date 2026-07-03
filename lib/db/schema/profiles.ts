@@ -46,7 +46,7 @@ export const profiles = pgTable('profiles', {
   /** 대난투 결과 발표 알림 토글 — 기본 ON(MELEE §7). 일일 복귀 푸시 겸함. */
   pushMelee: boolean('push_melee').notNull().default(true),
   /** 강화 모드 — instant(즉시) | batched(30분 묶음). 기본 instant. */
-  pushEnhanceMode: pushEnhanceModeEnum('push_enhance_mode').notNull().default('instant'),
+  pushEnhanceMode: pushEnhanceModeEnum('push_enhance_mode').notNull().default('batched'),
   /**
    * 현재 active 캐릭터 프로필(`user_profiles.id`). null = 미설정(fallback 아이콘).
    * FK는 마이그레이션에서 `ON DELETE SET NULL`로 ALTER 추가(순환 import 회피).
