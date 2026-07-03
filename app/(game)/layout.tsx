@@ -11,6 +11,7 @@ import { withTimeout, DbTimeoutError } from '@/lib/db/with-timeout';
 import { MaintenanceScreen } from './MaintenanceScreen';
 import { BanScreen } from './BanScreen';
 import { ensureDailyMail, ensurePremiumDailyMail } from '@/lib/game/mailbox';
+import { ensureCbtCarryover } from '@/lib/game/cbt/grant';
 import { loadLayoutData } from '@/lib/game/layout-data';
 import { getActiveServerId } from '@/lib/game/servers';
 import {
@@ -71,6 +72,12 @@ export default async function GameLayout({ children }: { children: React.ReactNo
     await withTimeout(ensurePremiumDailyMail(userId, dailySid), 2000, 'layout.premiumDaily').catch(
       (e) => {
         if (!(e instanceof DbTimeoutError)) console.warn('[layout] premiumDaily error', e);
+      },
+    );
+    // CBT 보상 이월 — 실운영에서 1회 지급(멱등). CBT/스냅샷 전엔 테이블이 비어 no-op.
+    await withTimeout(ensureCbtCarryover(userId, dailySid), 3000, 'layout.cbtCarryover').catch(
+      (e) => {
+        if (!(e instanceof DbTimeoutError)) console.warn('[layout] cbtCarryover error', e);
       },
     );
   });
