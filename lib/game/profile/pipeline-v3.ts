@@ -135,16 +135,35 @@ async function claimSlot(): Promise<ClaimedJob | null> {
     const byKey: Record<number, number> = { 1: 0, 2: 0 };
     for (const r of rows) byKey[Number(r.k)] = Number(r.n);
 
-    // 여유 있는 키 중 가장 덜 바쁜 키 배정(동률이면 key1). 없으면 전 키 가득 → 대기.
+    // 여유 있는 키 중 가장 덜 바쁜 키 배정. 없으면 전 키 가득 → 대기.
     let target = 0;
     let best = Infinity;
+    let tie = false;
     for (let k = 1; k <= pixellabKeyCount(); k++) {
-      if ((byKey[k] ?? 0) < PROFILE_GEN_PER_KEY && (byKey[k] ?? 0) < best) {
-        best = byKey[k] ?? 0;
+      const n = byKey[k] ?? 0;
+      if (n >= PROFILE_GEN_PER_KEY) continue;
+      if (n < best) {
+        best = n;
         target = k;
+        tie = false;
+      } else if (n === best) {
+        tie = true;
       }
     }
     if (target === 0) return null;
+    // 동률이면 마지막 배정 키의 반대 키로 교대 — 한산할 때 key1 편중을 없애 두 키의
+    // 사용량(과금·쿼터)을 고르게 유지한다. 판정은 options.pixellabClaimedAt(배정 시각) 우선.
+    if (tie) {
+      const lastRows = (await tx.execute(sql`
+        select coalesce((options->>'pixellabKeyIdx')::int, 1) as k
+        from profile_generation_jobs
+        where options ? 'pixellabKeyIdx'
+        order by coalesce((options->>'pixellabClaimedAt')::bigint, 0) desc, created_at desc
+        limit 1
+      `)) as unknown as Array<{ k: number }>;
+      const lastKey = Number(lastRows[0]?.k ?? 2);
+      target = lastKey === 1 ? 2 : 1;
+    }
 
     const [job] = await tx
       .select({
@@ -160,7 +179,11 @@ async function claimSlot(): Promise<ClaimedJob | null> {
     if (!job) return null;
 
     // queued→starting 조건부 전이 + 배정 키 기록(락 하 단독 실행이나 방어적 status 조건).
-    const newOptions = { ...(job.options as Record<string, unknown>), pixellabKeyIdx: target };
+    const newOptions = {
+      ...(job.options as Record<string, unknown>),
+      pixellabKeyIdx: target,
+      pixellabClaimedAt: Date.now(), // 교대 배정의 "마지막 배정" 판정 기준
+    };
     const claimed = await tx
       .update(profileGenerationJobs)
       .set({ status: 'starting', options: newOptions })
