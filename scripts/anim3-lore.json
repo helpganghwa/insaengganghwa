@@ -5,7 +5,7 @@
     "tone": "우아",
     "lore": "은빛 칼날은 바늘처럼 가늘고, 황금 가드 한가운데 푸른 보석이 박혀 있다. 거기서 흘러내린 긴 청색 리본이 칼끝까지 따라와, 찌를 때마다 허공에 푸른 호선을 그린다. 상대가 그 선을 눈으로 좇는 순간, 칼끝은 이미 다른 곳에 가 있다.",
     "region": "왕국",
-    "wornDesc": "slender silver rapier, gold swept guard set with a blue gem, long blue gold-edged ribbon wound around the hilt"
+    "wornDesc": "slender silver rapier, gold swept guard set with a blue gem, a long blue gold-edged ribbon trailing loosely down from the guard"
   },
   "seed-volcano_emberveined_greatsword": {
     "name": "용암을 가둔 대검",
@@ -29,7 +29,7 @@
     "tone": "서늘",
     "lore": "두 자루 모두 칼날이 검은 불꽃처럼 굽이치고, 금빛 날개 손잡이엔 푸른 보석이 한 알씩 박혔다. 칼날은 빛을 한 점도 머금지 않아, 어둠 속에선 푸른 보석 두 점만 둥실 떠 보인다. 그 두 점이 가까워지는 걸 알아챘다면, 이미 늦은 것이다.",
     "region": "일반",
-    "wornDesc": "a matched pair of curved black-and-gold daggers, gold winged guards set with blue gems, blue inlay along the blades"
+    "wornDesc": "a matched pair of daggers, wavy black-steel blades intertwined with twisting gold bands, gold winged guards set with blue gems, blue inlay"
   },
   "a-round-glasses-245": {
     "name": "금테 둥근 안경",
@@ -149,7 +149,7 @@
     "tone": "장엄",
     "lore": "왕기 수칙. 이 창의 본분은 찌르는 데 있지 않고 세우는 데 있다. 자줏빛 깃이 오른 자리가 곧 왕이 선 자리다. 기수는 어떤 경우에도 깃을 뉘지 말 것. 깃이 쓰러지면 군세의 다리가 함께 풀린다. 기수가 쓰러지거든, 옆 사람이 즉시 깃을 받아 세울 것.",
     "region": "왕국",
-    "wornDesc": "tall brown-shafted spear, silver leaf-shaped blade, purple banner bearing a gold crown and gold lion emblem, gold tassels"
+    "wornDesc": "tall spear with a silver leaf-shaped blade, a LONG purple banner streaming down half the shaft with a gold crown-and-lion emblem, forked tasseled ends"
   },
   "seed-volcano_ember_scythe": {
     "name": "잿불낫",
