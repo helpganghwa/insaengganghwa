@@ -3,6 +3,7 @@
 import { revalidatePath } from 'next/cache';
 
 import { getSessionUserId } from '@/lib/auth/session';
+import { actionBlock } from '@/lib/game/action-gate';
 import { getActiveServerId } from '@/lib/game/servers';
 import { rateLimited } from '@/lib/ratelimit';
 import {
@@ -34,6 +35,8 @@ export async function sendRequestAction(targetId: string) {
   const u = await getSessionUserId();
   if (!u) return { status: 'error', code: 'UNAUTHENTICATED' } as const;
   if (await rateLimited(u, 'friend')) return { status: 'error', code: 'RATE_LIMITED' } as const;
+  const __b = await actionBlock();
+  if (__b) return { status: 'error', code: __b } as const;
   try {
     const r = await sendRequest(u, await getActiveServerId(), targetId);
     revalidatePath('/friends');
@@ -49,6 +52,8 @@ export async function respondAction(requesterId: string, action: 'accept' | 'dec
   const u = await getSessionUserId();
   if (!u) return { status: 'error', code: 'UNAUTHENTICATED' } as const;
   if (await rateLimited(u, 'friend')) return { status: 'error', code: 'RATE_LIMITED' } as const;
+  const __b = await actionBlock();
+  if (__b) return { status: 'error', code: __b } as const;
   try {
     await respondRequest(u, await getActiveServerId(), requesterId, action);
     revalidatePath('/friends');
@@ -64,6 +69,8 @@ export async function cancelAction(targetId: string) {
   const u = await getSessionUserId();
   if (!u) return { status: 'error', code: 'UNAUTHENTICATED' } as const;
   if (await rateLimited(u, 'friend')) return { status: 'error', code: 'RATE_LIMITED' } as const;
+  const __b = await actionBlock();
+  if (__b) return { status: 'error', code: __b } as const;
   try {
     await cancelRequest(u, await getActiveServerId(), targetId);
     revalidatePath('/friends');
@@ -78,6 +85,8 @@ export async function removeFriendAction(otherId: string) {
   const u = await getSessionUserId();
   if (!u) return { status: 'error', code: 'UNAUTHENTICATED' } as const;
   if (await rateLimited(u, 'friend')) return { status: 'error', code: 'RATE_LIMITED' } as const;
+  const __b = await actionBlock();
+  if (__b) return { status: 'error', code: __b } as const;
   try {
     await removeFriend(u, await getActiveServerId(), otherId);
     revalidatePath('/friends');
