@@ -86,12 +86,12 @@ export class CharacterError extends Error {
   }
 }
 
-/** 닉네임 자동 제안 — 가입 트리거와 동일 생성기(전역 유일 충돌 시 클라 재시도). */
-export async function suggestNickname(): Promise<string> {
-  const rows = (await db.execute(
-    sql`select public.generate_korean_nickname() as n`,
-  )) as unknown as { n: string }[];
-  return rows[0]?.n ?? '모험가';
+/**
+ * 닉네임 자동 제안 — '대장장이' + 4자리 난수(정확히 8자 = NICKNAME_MAX_LEN).
+ * 로컬 생성(DB 무접촉): 전역 유일은 characters_nickname_uq가 최종 방어하고 호출부가 재추첨.
+ */
+export function suggestNickname(): string {
+  return `대장장이${Math.floor(Math.random() * 9000) + 1000}`;
 }
 
 /**
@@ -220,10 +220,7 @@ export async function createCharacterAuto(input: {
   serverId: number;
 }): Promise<{ nickname: string }> {
   for (let i = 0; i < 10; i++) {
-    const candidate =
-      i < 8
-        ? await suggestNickname()
-        : `${(await suggestNickname()).slice(0, 4)}${Math.floor(Math.random() * 9000) + 1000}`;
+    const candidate = suggestNickname();
     try {
       await createCharacter({ userId: input.userId, serverId: input.serverId, nickname: candidate });
       return { nickname: candidate };

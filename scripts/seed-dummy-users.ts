@@ -2,7 +2,7 @@
  * 더미 유저 200명 생성 (테스트용).
  *
  *  - Supabase Admin API로 auth.users 200 row 생성(email/password)
- *  - public.profiles 200 row insert (닉네임은 DB의 generate_korean_nickname() 호출 —
+ *  - public.profiles 200 row insert (닉네임은 '대장장이'+4자리 로컬 생성 —
  *    실유저와 동일한 한글 풀 사용, 0005 참조) + 다이아 랜덤
  *  - 각 유저 무기/방어구/장신구 각 1~3개 장비 보유(랜덤 카탈로그)
  *  - 전체 장비 강화 +0~+99 / 초월 0~10 분포(피라미드 — 대부분 낮고, 일부 고강)
@@ -30,7 +30,7 @@ const COUNT = Number(process.env.DUMMY_COUNT ?? 200);
 // 닉네임은 DB 함수 호출 — 실유저 가입 트리거(handle_new_user)와 동일 풀(0005).
 // 공백·영문·숫자 섞임 없이 한글만, 자연스러운 동사+색상+명사 조합.
 async function nick(): Promise<string> {
-  const [r] = (await db`select public.generate_korean_nickname() as name`) as { name: string }[];
+  const r = { name: `대장장이${Math.floor(Math.random() * 9000) + 1000}` };
   return r!.name;
 }
 
