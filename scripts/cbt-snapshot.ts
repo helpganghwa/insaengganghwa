@@ -8,7 +8,7 @@
  *     `cbt-keepsake/{userId}.png`로 복사(wipe 후에도 생존) + 행 원본 jsonb 스냅샷.
  *  3. cbt_carryover upsert.
  *
- * 실행 절차(컷오버 데이): 0096 적용 → 본 스크립트 --confirm → wipe(cbt_carryover·cbt-keepsake 제외) → 배포.
+ * 실행 절차(컷오버 데이): docs/CUTOVER-LIVE.md 런북 — 점검ON → 본 스크립트 --confirm → cutover-live.ts → env 전환·배포.
  * 기본 드라이런. 대상 DB = PROD_DATABASE_URL(:5432 세션 풀러로 자동 전환).
  *
  * 사용: bun run --env-file=.env.local scripts/cbt-snapshot.ts [--confirm]
