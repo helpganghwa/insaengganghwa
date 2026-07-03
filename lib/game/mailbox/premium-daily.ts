@@ -48,7 +48,7 @@ export async function ensurePremiumDailyMail(userId: string, serverId: number): 
            '성장 프리미엄 일일 보상이 도착했습니다. 30일 안에 받으세요.',
            '성장 프리미엄',
            ${PAYLOAD}::jsonb,
-           now() + interval '7 days'
+           now() + interval '30 days'
     from g
     returning id::text id
   `)) as unknown as { id: string }[];

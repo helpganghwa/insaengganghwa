@@ -48,7 +48,7 @@ export async function ensureDailyMail(userId: string, serverId: number): Promise
            '동트는 종소리와 함께 보급이 닿았습니다. 30일 안에 받으세요.',
            '일일 보급',
            ${PAYLOAD}::jsonb,
-           now() + interval '7 days'
+           now() + interval '30 days'
     from g
     returning id::text id
   `)) as unknown as { id: string }[];

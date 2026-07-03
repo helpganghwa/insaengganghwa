@@ -25,7 +25,7 @@ export function PushAutoSync() {
     if (!('serviceWorker' in navigator)) return;
     const onMessage = (e: MessageEvent) => {
       const d = e.data as { type?: string; url?: string } | null;
-      if (d?.type === 'push-navigate' && typeof d.url === 'string' && d.url.startsWith('/')) {
+      if (d?.type === 'push-navigate' && typeof d.url === 'string' && d.url.startsWith('/') && !d.url.startsWith('//')) {
         router.push(d.url);
       }
     };
@@ -51,7 +51,8 @@ export function PushAutoSync() {
             const get = store.get('pending');
             get.onsuccess = () => {
               const v = get.result as { url?: string; ts?: number } | undefined;
-              if (v && typeof v.url === 'string' && v.url.startsWith('/')) {
+              // '//' 프로토콜-상대 URL 차단 — router.push('//evil.com') 오픈리다이렉트 방어심화.
+              if (v && typeof v.url === 'string' && v.url.startsWith('/') && !v.url.startsWith('//')) {
                 store.delete('pending');
                 if (Date.now() - (v.ts ?? 0) < FRESH_MS && location.pathname !== v.url) {
                   router.push(v.url);

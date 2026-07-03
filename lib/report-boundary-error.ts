@@ -13,7 +13,8 @@ export function reportBoundaryError(kind: string, error: Error & { digest?: stri
       kind,
       message,
       stack: error.stack?.slice(0, 1500),
-      url: location.href,
+      url: location.origin + location.pathname, // 쿼리 제외 — 콜백 토큰 등 시크릿의 DB 잔류 방지
+
       ua: navigator.userAgent,
     });
     if (navigator.sendBeacon) {
