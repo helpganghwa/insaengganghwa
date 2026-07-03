@@ -143,6 +143,18 @@ export async function listInquiries(
     .limit(limit);
 }
 
+/**
+ * 관리자 문의 삭제 — 답변 없이 종결할 문의(스팸·테스트·중복 등) 정리용. 하드 삭제.
+ * 유저에게 통지 없음(답변이 필요한 건은 answerInquiry 사용).
+ */
+export async function deleteInquiry(inquiryId: bigint): Promise<boolean> {
+  const rows = await db
+    .delete(supportInquiries)
+    .where(eq(supportInquiries.id, inquiryId))
+    .returning({ id: supportInquiries.id });
+  return rows.length > 0;
+}
+
 /** 관리자 카운트(미답변 배지용). */
 export async function countOpenInquiries(serverId: number | null): Promise<number> {
   const conds = [eq(supportInquiries.status, 'open')];

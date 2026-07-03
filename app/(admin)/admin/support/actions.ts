@@ -3,7 +3,7 @@
 import { revalidatePath } from 'next/cache';
 
 import { getAdminStatus } from '@/lib/auth/require-admin';
-import { answerInquiry } from '@/lib/game/support/inquiry';
+import { answerInquiry, deleteInquiry } from '@/lib/game/support/inquiry';
 
 /** 관리자 답변 — 우편 + 앱 푸시 발송. 이미 답변된 건은 no-op. */
 export async function answerInquiryAction(
@@ -21,6 +21,16 @@ export async function answerInquiryAction(
       msg: r.reason === 'ALREADY_OR_NOT_FOUND' ? '이미 답변되었거나 없는 문의입니다.' : '답변 내용을 확인하세요.',
     };
   }
+  revalidatePath('/admin/support');
+  return { ok: true };
+}
+
+/** 관리자 문의 삭제 — 답변 없이 종결(스팸·테스트·중복). 유저 통지 없음. */
+export async function deleteInquiryAction(inquiryId: string): Promise<{ ok: boolean; msg?: string }> {
+  const { userId, isAdmin } = await getAdminStatus();
+  if (!isAdmin || !userId) return { ok: false, msg: '권한이 없습니다.' };
+  const ok = await deleteInquiry(BigInt(inquiryId));
+  if (!ok) return { ok: false, msg: '이미 삭제되었거나 없는 문의입니다.' };
   revalidatePath('/admin/support');
   return { ok: true };
 }

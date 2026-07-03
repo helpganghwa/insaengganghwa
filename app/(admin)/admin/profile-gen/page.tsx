@@ -206,6 +206,7 @@ export default async function AdminProfileGenPage({
           const rot = imgs[i]!;
           const eqs = (r.equipmentSnapshot ?? {}) as { weaponKey?: string; armorKey?: string; accessoryKey?: string };
           const verdict = (r.aiVerdict ?? null) as { pass?: boolean; reasons?: string[]; notes?: string } | null;
+          const gender = (r.options as { gender?: string } | null)?.gender ?? null;
           const eqName = (key?: string) => (key ? (NAME_BY_CODE.get(key) ?? key) : '-');
           const reviewed = !!r.adminDecision;
           const isTerminal = TERMINAL.includes(r.status);
@@ -253,6 +254,11 @@ export default async function AdminProfileGenPage({
                     </div>
                     {/* 식별: 코드 · 다이아 · 서버 · job */}
                     <div className="flex flex-wrap items-center gap-x-2 gap-y-0.5 text-[10px] text-zinc-500">
+                      {gender ? (
+                        <span className={`font-bold ${gender === 'male' ? 'text-sky-300' : 'text-pink-300'}`}>
+                          {gender === 'male' ? '♂ 남성' : '♀ 여성'}
+                        </span>
+                      ) : null}
                       {r.code ? <span className="font-mono text-sky-400">#{r.code}</span> : null}
                       <span>💎{r.diamondEscrow.toString()}</span>
                       <ServerBadge serverId={r.serverId} />

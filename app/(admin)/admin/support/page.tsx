@@ -7,6 +7,7 @@ import { listServers } from '@/lib/game/servers';
 import { ServerBadge } from '../ServerBadge';
 import { ServerFilter, parseServerFilter } from '../ServerFilter';
 import { AdminSupportAnswer } from './AdminSupportAnswer';
+import { AdminSupportDelete } from './AdminSupportDelete';
 
 export const dynamic = 'force-dynamic';
 
@@ -92,6 +93,7 @@ export default async function AdminSupportPage({
                       미답변
                     </span>
                   )}
+                  <AdminSupportDelete inquiryId={String(r.id)} />
                 </div>
 
                 <p className="mt-2 whitespace-pre-wrap text-[13px] leading-relaxed text-zinc-700 dark:text-zinc-200">
