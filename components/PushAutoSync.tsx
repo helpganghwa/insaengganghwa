@@ -26,7 +26,7 @@ export function PushAutoSync() {
     const onMessage = (e: MessageEvent) => {
       const d = e.data as { type?: string; url?: string } | null;
       if (d?.type === 'push-navigate' && typeof d.url === 'string' && d.url.startsWith('/') && !d.url.startsWith('//')) {
-        router.push(d.url);
+        if (location.pathname !== d.url) router.push(d.url);
       }
     };
     navigator.serviceWorker.addEventListener('message', onMessage);
@@ -65,11 +65,20 @@ export function PushAutoSync() {
         };
       } catch { /* noop */ }
     };
-    consume();
-    const onVisible = () => { if (document.visibilityState === 'visible') consume(); };
+    // 복귀 레이스 방어 — 알림 탭으로 앱이 포그라운드될 때 visibilitychange가 SW의 목적지
+    // 기록(savePendingNav)보다 먼저 실행될 수 있다(첫 알림은 콜드 오픈이라 마운트 소비가
+    // 항상 늦어 정상, 2회차부터 복귀 경로에서 실패 — 실서버 재현). 짧은 지연 재소비로 커버.
+    const timers: ReturnType<typeof setTimeout>[] = [];
+    const consumeWithRetry = () => {
+      consume();
+      timers.push(setTimeout(consume, 600), setTimeout(consume, 2000));
+    };
+    consumeWithRetry();
+    const onVisible = () => { if (document.visibilityState === 'visible') consumeWithRetry(); };
     document.addEventListener('visibilitychange', onVisible);
     window.addEventListener('focus', onVisible);
     return () => {
+      timers.forEach(clearTimeout);
       document.removeEventListener('visibilitychange', onVisible);
       window.removeEventListener('focus', onVisible);
     };

@@ -94,10 +94,12 @@ self.addEventListener('notificationclick', (event) => {
         if ('navigate' in target) {
           try {
             await target.navigate(url);
-            return;
           } catch {}
         }
-        // 폴백 — 클라이언트(PushAutoSync)가 수신해 router.push(소프트 내비게이션).
+        // postMessage는 navigate 결과와 무관하게 항상 전송 — iOS는 navigate()가 resolve만
+        // 하고 실제 이동을 안 하는 케이스가 있어(성공 가장) 조기 return하면 폴백이 죽는다.
+        // navigate가 진짜 성공했으면 페이지가 리로드돼 메시지가 버려질 뿐(무해), 클라 측은
+        // pathname 가드로 중복 이동을 막는다.
         try {
           target.postMessage({ type: 'push-navigate', url });
         } catch {}
