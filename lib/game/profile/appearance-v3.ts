@@ -80,7 +80,7 @@ const MALE = {
     { desc: 'a handsome vampire youth with pale skin, small fangs and crimson eyes', weight: 10 },
   ],
   hairStyles: ['short tousled', 'medium swept-back', 'shaggy bangs'],
-  hairColors: ['black', 'silver', 'white', 'dark-blue', 'ash-brown', 'crimson', 'platinum'],
+  hairColors: ['black', 'silver', 'white', 'dark-blue', 'ash-brown', 'crimson', 'platinum', 'golden-blond', 'chestnut-brown', 'deep-green', 'indigo'],
   // 표정 가중치 — 멋짐·쿨 기조 높게, 스머크는 희소 스파이스.
   expressions: [
     { desc: 'a confident gaze', weight: 30 },
