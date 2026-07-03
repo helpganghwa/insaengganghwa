@@ -27,29 +27,44 @@ type Row = { user_id: string };
 export async function GET(req: Request) {
   if (!isCronAuthorized(req)) return new Response('forbidden', { status: 403 });
 
-  // 멱등 게이트 — 오늘 KST 이미 발송했으면 skip. 매 30분 fallback cron이 안전하게 재시도 가능.
-  // INSERT ON CONFLICT DO NOTHING 결과 0 row면 이미 발송됨(=skip).
-  const claim = (await db.execute(sql`
+  // 재개형 멱등 게이트 — kst_day 행을 claim하고, completed_at이 찍히기 전까지는
+  // 30분 fallback cron이 cursor_user_id부터 이어서 발송한다(타임아웃 중단 시 영구 부분발송 방지).
+  await db.execute(sql`
     insert into daily_supply_broadcasts (kst_day)
     values ((now() at time zone 'Asia/Seoul')::date)
     on conflict (kst_day) do nothing
-    returning kst_day
-  `)) as unknown as Array<{ kst_day: string }>;
-  if (claim.length === 0) {
+  `);
+  const [state] = (await db.execute(sql`
+    select kst_day, cursor_user_id, coalesce(recipients, 0)::int as recipients, completed_at
+    from daily_supply_broadcasts
+    where kst_day = (now() at time zone 'Asia/Seoul')::date
+  `)) as unknown as Array<{
+    kst_day: string;
+    cursor_user_id: string | null;
+    recipients: number;
+    completed_at: string | null;
+  }>;
+  if (!state || state.completed_at) {
     return Response.json({ ok: true, skipped: true, reason: 'already_sent_today', kind: 'push-daily-supply' });
   }
+  const kstDay = state.kst_day;
 
-  // 구독이 1건 이상 있는 유저 중 push_supply ON. 한 번에 모두 조회 후 chunk 발송.
-  // (DAU 1k 이하 가정. 만 단위가 되면 페이지네이션 필요.)
+  // 구독이 1건 이상 있는 유저 중 push_supply ON — 커서 이후만, id 순 결정적 페이지네이션.
+  const cursor = state.cursor_user_id ?? '00000000-0000-0000-0000-000000000000';
   const rows = (await db.execute(sql`
     select distinct p.id::text user_id
     from profiles p
     inner join push_subscriptions s on s.user_id = p.id
-    where p.push_supply = true
+    where p.push_supply = true and p.id > ${cursor}::uuid
+    order by user_id
   `)) as unknown as Row[];
 
   if (rows.length === 0) {
-    return Response.json({ ok: true, recipients: 0, kind: 'push-daily-supply' });
+    await db.execute(sql`
+      update daily_supply_broadcasts set completed_at = now(), sent_at = coalesce(sent_at, now())
+      where kst_day = ${kstDay}
+    `);
+    return Response.json({ ok: true, recipients: state.recipients, resumed: !!state.cursor_user_id, kind: 'push-daily-supply' });
   }
 
   const payload = {
@@ -60,32 +75,50 @@ export async function GET(req: Request) {
     category: 'supply' as const,
   };
 
+  // maxDuration(300s) 안에서 처리 가능한 만큼만 — 시간 예산 소진 시 커서를 남기고 종료,
+  // 잔여는 다음 30분 cron이 이어서 발송.
+  const startedAt = Date.now();
+  const TIME_BUDGET_MS = 240_000;
   let okSum = 0;
   let goneSum = 0;
   let failedSum = 0;
+  let processed = 0;
   for (let i = 0; i < rows.length; i += CHUNK) {
-    if (i > 0) await new Promise((r) => setTimeout(r, CHUNK_DELAY_MS));
-    const ids = rows.slice(i, i + CHUNK).map((r) => r.user_id);
-    const res = await sendPushToUsers(ids, payload);
+    if (i > 0) {
+      if (Date.now() - startedAt > TIME_BUDGET_MS) break;
+      await new Promise((r) => setTimeout(r, CHUNK_DELAY_MS));
+    }
+    const chunk = rows.slice(i, i + CHUNK);
+    const res = await sendPushToUsers(chunk.map((r) => r.user_id), payload);
     okSum += res.ok;
     goneSum += res.gone;
     failedSum += res.failed;
+    processed += chunk.length;
+    // 청크 단위 커서 전진 — 중단돼도 이 지점부터 재개(같은 유저 중복 발송 없음).
+    await db.execute(sql`
+      update daily_supply_broadcasts
+      set cursor_user_id = ${chunk[chunk.length - 1]!.user_id},
+          recipients = coalesce(recipients, 0) + ${chunk.length},
+          sent_at = coalesce(sent_at, now())
+      where kst_day = ${kstDay}
+    `);
   }
 
-  // 발송 통계 기록 (이미 INSERT된 row 업데이트). ⚠ now()::date 재계산 금지 — 발송이 KST 자정을
-  // 넘기면 INSERT(어제)와 UPDATE(오늘) 날짜가 어긋나 0행 매칭 → recipients=0. claim이 반환한 kst_day 재사용.
-  await db.execute(sql`
-    update daily_supply_broadcasts
-    set recipients = ${rows.length}
-    where kst_day = ${claim[0]!.kst_day}
-  `);
+  const done = processed >= rows.length;
+  if (done) {
+    await db.execute(sql`
+      update daily_supply_broadcasts set completed_at = now() where kst_day = ${kstDay}
+    `);
+  }
 
   return Response.json({
     ok: true,
-    recipients: rows.length,
+    recipients: state.recipients + processed,
     sent: okSum,
     gone: goneSum,
     failed: failedSum,
+    completed: done,
+    remaining: rows.length - processed,
     kind: 'push-daily-supply',
   });
 }
