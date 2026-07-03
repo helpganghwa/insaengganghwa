@@ -33,6 +33,47 @@ export function PushAutoSync() {
     return () => navigator.serviceWorker.removeEventListener('message', onMessage);
   }, [router]);
 
+  // 알림 클릭 목적지 핸드오프 소비 — iOS PWA는 openWindow(url)가 start_url/마지막 화면으로
+  // 열려 SW의 어떤 경로로도 목적지가 보장되지 않는 케이스가 있다(실서버 재현). SW가
+  // notificationclick 시 IndexedDB('push-nav')에 남긴 목적지를 마운트·포커스 시 읽어 이동.
+  useEffect(() => {
+    if (!('indexedDB' in window)) return;
+    const FRESH_MS = 2 * 60 * 1000; // 클릭 직후만 유효 — 오래된 잔존 항목으로 갑자기 튀는 것 방지
+    const consume = () => {
+      try {
+        const open = indexedDB.open('push-nav', 1);
+        open.onupgradeneeded = () => open.result.createObjectStore('kv');
+        open.onsuccess = () => {
+          try {
+            const dbi = open.result;
+            const tx = dbi.transaction('kv', 'readwrite');
+            const store = tx.objectStore('kv');
+            const get = store.get('pending');
+            get.onsuccess = () => {
+              const v = get.result as { url?: string; ts?: number } | undefined;
+              if (v && typeof v.url === 'string' && v.url.startsWith('/')) {
+                store.delete('pending');
+                if (Date.now() - (v.ts ?? 0) < FRESH_MS && location.pathname !== v.url) {
+                  router.push(v.url);
+                }
+              }
+            };
+            tx.oncomplete = () => dbi.close();
+            tx.onerror = () => dbi.close();
+          } catch { /* noop */ }
+        };
+      } catch { /* noop */ }
+    };
+    consume();
+    const onVisible = () => { if (document.visibilityState === 'visible') consume(); };
+    document.addEventListener('visibilitychange', onVisible);
+    window.addEventListener('focus', onVisible);
+    return () => {
+      document.removeEventListener('visibilitychange', onVisible);
+      window.removeEventListener('focus', onVisible);
+    };
+  }, [router]);
+
   useEffect(() => {
     const support = checkPushSupport();
     if (support.kind !== 'supported' || support.permission !== 'granted') return;

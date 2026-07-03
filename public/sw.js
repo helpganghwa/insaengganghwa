@@ -39,11 +39,33 @@ self.addEventListener('push', (event) => {
   event.waitUntil(self.registration.showNotification(title, options));
 });
 
+// 클릭 목적지 핸드오프 — iOS PWA는 openWindow(url)가 start_url/마지막 화면으로 열리는
+// 케이스가 있어(SW 단독으론 목적지 보장 불가), 목적지를 IndexedDB에 남기고 클라이언트
+// (PushAutoSync)가 포커스 시 읽어 router.push로 마저 이동한다.
+function savePendingNav(url) {
+  return new Promise((resolve) => {
+    try {
+      const open = indexedDB.open('push-nav', 1);
+      open.onupgradeneeded = () => open.result.createObjectStore('kv');
+      open.onsuccess = () => {
+        try {
+          const tx = open.result.transaction('kv', 'readwrite');
+          tx.objectStore('kv').put({ url, ts: Date.now() }, 'pending');
+          tx.oncomplete = () => { open.result.close(); resolve(); };
+          tx.onerror = () => { open.result.close(); resolve(); };
+        } catch { resolve(); }
+      };
+      open.onerror = () => resolve();
+    } catch { resolve(); }
+  });
+}
+
 self.addEventListener('notificationclick', (event) => {
   event.notification.close();
   const url = (event.notification.data && event.notification.data.url) || '/';
   event.waitUntil(
     (async () => {
+      await savePendingNav(url);
       const clientsArr = await self.clients.matchAll({
         type: 'window',
         includeUncontrolled: true,
