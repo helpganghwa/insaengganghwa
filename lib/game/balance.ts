@@ -390,7 +390,7 @@ export const NICKNAME_CHANGE_COST_DIAMOND = 300;
 export const PROFILE_GENERATION_DIAMOND = 2_000;
 
 /** 유저당 보유 프로필(아바타) 최대 개수 — 초과 시 생성 차단(서버·클라 공용 검사). */
-export const PROFILE_MAX = 20;
+export const PROFILE_MAX = 100;
 
 /**
  * 아바타 동시 생성 상한 — **Pixellab 키 1개당**. 키풀(key1/key2) 각각 이 값까지 동시 생성.
