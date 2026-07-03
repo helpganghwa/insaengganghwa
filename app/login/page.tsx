@@ -6,7 +6,7 @@ import { PublicFooter } from '@/components/PublicFooter';
 
 import { signInWithKakao, signInWithCredentials } from '@/lib/auth/actions';
 import { getSessionUserId } from '@/lib/auth/session';
-import { isTestLoginEnabled } from '@/lib/auth/test-accounts';
+import { isTestLoginEnabled, isCbtPaidHidden } from '@/lib/auth/test-accounts';
 import { listServersPublic, latestOpenServerId } from '@/lib/game/server-select';
 import { ServerPicker } from './ServerPicker';
 
@@ -97,6 +97,17 @@ export default async function LoginPage({
           <p className="text-sm text-red-600 dark:text-red-400">
             로그인 실패: {error}
           </p>
+        ) : null}
+        {/* CBT 기간 데이터 초기화 사전 고지 — 게이트는 결제 숨김과 같은 CBT 플래그.
+            정식 오픈(env off) 시 자동 미노출. */}
+        {isCbtPaidHidden() ? (
+          <div className="w-full rounded-xl border border-amber-300 bg-amber-50 px-4 py-3 text-left text-[12px] leading-relaxed text-amber-900 dark:border-amber-700 dark:bg-amber-950 dark:text-amber-200">
+            <p className="font-bold">비공개 테스트(CBT) 안내</p>
+            <p className="mt-1">
+              지금은 CBT 기간으로, 테스트 종료 시 게임 데이터가 초기화될 수 있습니다.
+              테스트에 참여해 주신 분들께는 정식 오픈 때 감사 보상이 지급됩니다.
+            </p>
+          </div>
         ) : null}
         <p className="text-[11px] leading-relaxed text-zinc-400">
           로그인 시{' '}
