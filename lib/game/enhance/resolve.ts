@@ -11,6 +11,7 @@ import {
 import { accrueResidenceTax } from '@/lib/game/guild/tax';
 import { logMemberAchievement } from '@/lib/game/guild/achievement';
 import { logWorldEvent } from '@/lib/game/world/event';
+import { rebuildCodexChampionsForItem } from '@/lib/game/leaderboard/snapshot';
 
 import { EnhanceError } from './queue';
 
@@ -175,6 +176,13 @@ export async function resolveEnhance(input: ResolveInput): Promise<ResolveResult
       await accrueResidenceTax(String(job.user_id), Number(job.job_server_id), toLevel);
     } catch {
       // 세금 누적 실패는 무시(강화 결과 보존).
+    }
+    // 해방(아이템 챔피언) 즉시 반영 — 이 아이템 파티션만 부분 재계산(보유자 소수라 저비용).
+    // 6/26 스냅샷화로 사라졌던 "내 강화 즉시 선반영" 체감 복원. 실패해도 15분 cron이 백스톱.
+    try {
+      await rebuildCodexChampionsForItem(Number(job.job_server_id), catalogItemId);
+    } catch {
+      // 부분 재계산 실패 무시(cron 백스톱).
     }
   }
 

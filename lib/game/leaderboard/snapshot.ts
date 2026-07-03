@@ -135,6 +135,31 @@ export async function rebuildLeaderboardSnapshot(
  * 아이템(catalog)별 강화랭킹 상위3 스냅샷 재계산(감사 S3). row_number ≤ 3을 DB에서 단일 SQL로
  * 산출 → (server) 전 행 delete+insert 원자 교체. ue_catalog_rank_idx(max_enhance_level)로 인덱스 정렬.
  */
+/**
+ * 단일 아이템 파티션만 재계산 — 강화 완료 직후 해방 즉시 반영용(체감 선반영 복원).
+ * 대상이 해당 아이템 보유자뿐이라 저비용. 전체 재계산(15분 cron)은 백스톱으로 유지.
+ */
+export async function rebuildCodexChampionsForItem(serverId: number, catalogItemId: number): Promise<void> {
+  await db.transaction(async (tx) => {
+    await tx
+      .delete(codexChampions)
+      .where(and(eq(codexChampions.serverId, serverId), eq(codexChampions.catalogItemId, catalogItemId)));
+    await tx.execute(sql`
+      insert into codex_champions (server_id, catalog_item_id, user_id, rank)
+      select ${serverId}, ${catalogItemId}, user_id, rn
+      from (
+        select user_id,
+          row_number() over (
+            order by max_enhance_level desc, max_enhance_reached_at asc, user_id asc
+          ) as rn
+        from user_equipment
+        where server_id = ${serverId} and catalog_item_id = ${catalogItemId} and max_enhance_level > 0
+      ) t
+      where rn <= 3
+    `);
+  });
+}
+
 export async function rebuildCodexChampions(serverId: number): Promise<void> {
   await db.transaction(async (tx) => {
     await tx.delete(codexChampions).where(eq(codexChampions.serverId, serverId));
