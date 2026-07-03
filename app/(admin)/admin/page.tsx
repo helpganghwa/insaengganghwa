@@ -76,6 +76,12 @@ async function pendingCounts(): Promise<Record<string, number>> {
 
 const MENU: { href: string; icon: string; title: string; desc: string; external?: boolean }[] = [
   {
+    href: '/admin/users',
+    icon: '👤',
+    title: '유저 조회',
+    desc: '닉네임 검색 → 계정 360도(지갑·장착·결제·아바타) + 선제 정지/경고',
+  },
+  {
     href: '/admin/profile-gen',
     icon: '🎨',
     title: '아바타 생성 검수',
