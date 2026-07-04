@@ -64,7 +64,7 @@ function pickWeighted(items: readonly Weighted[]): string {
   return items[items.length - 1]!.desc;
 }
 
-// 종족 가중치(2026-06-22): 인간 50% 주력 + 판타지 5종 각 10%. 머리 부속(귀·뿔·날개)은 항상 작게.
+// 종족 가중치: 인간 주력(≈45%) + 판타지 6종 각 10%. 머리 부속(귀·뿔)은 항상 작게.
 // 네코미미는 "귀만"(꼬리 미언급) + small neat.
 const FEMALE = {
   races: [
@@ -74,6 +74,7 @@ const FEMALE = {
     { desc: 'a fairy girl with small translucent wings', weight: 10 },
     { desc: 'a beautiful demon girl with small neat horns', weight: 10 },
     { desc: 'a beautiful dragon-girl with small neat horns and subtle scale accents', weight: 10 },
+    { desc: 'a beautiful girl with striking heterochromatic eyes', weight: 10 },
   ],
   hairStyles: ['long straight', 'long wavy', 'twin-tails', 'a high ponytail', 'a hime-cut'],
   hairColors: ['platinum-blonde', 'silver', 'pink', 'lavender', 'sky-blue', 'black', 'auburn', 'white', 'mint-green'],
@@ -94,7 +95,7 @@ const MALE = {
     { desc: 'a noble elf youth with slender pointed ears', weight: 10 },
     { desc: 'a dragonkin youth with small neat horns', weight: 10 },
     { desc: 'a youth with small neat demon horns', weight: 10 },
-    { desc: 'an angel youth with small neat white wings', weight: 10 },
+    { desc: 'a handsome youth with striking heterochromatic eyes', weight: 10 },
     { desc: 'a handsome vampire youth with pale skin, small fangs and crimson eyes', weight: 10 },
   ],
   hairStyles: ['short tousled', 'medium swept-back', 'shaggy bangs'],
@@ -111,10 +112,17 @@ const MALE = {
 
 export function pickRandomAppearance(gender: ProfileGender): Appearance {
   const p = gender === 'male' ? MALE : FEMALE;
+  const race = pickWeighted(p.races);
+  // 오드아이 종족 — 단일 홍채색 축과 충돌하지 않게 서로 다른 두 색을 명시해 전달.
+  let eyeColor = pick(EYE_COLORS);
+  if (race.includes('heterochromatic')) {
+    const second = pick(EYE_COLORS.filter((c) => c !== eyeColor));
+    eyeColor = `${eyeColor}-and-${second} heterochromatic (one eye each color)`;
+  }
   return {
-    race: pickWeighted(p.races),
+    race,
     hair: `${pick(p.hairColors)} ${pick(p.hairStyles)}`,
-    eyeColor: pick(EYE_COLORS),
+    eyeColor,
     expression: pickWeighted(p.expressions),
     pose: pickWeighted(POSES),
   };
