@@ -1,5 +1,6 @@
 import 'server-only';
 
+import Anthropic from '@anthropic-ai/sdk';
 import { and, desc, eq, isNotNull, isNull, or, sql } from 'drizzle-orm';
 import { createClient, type SupabaseClient } from '@supabase/supabase-js';
 
@@ -142,6 +143,47 @@ async function createState(sourceChar: string, edit: string, keyIdx: number): Pr
 }
 
 type ReadyImages = { direction: string; png: Buffer }[];
+
+let _anthropic: Anthropic | null = null;
+function anthropic(): Anthropic {
+  if (_anthropic) return _anthropic;
+  const key = process.env.ANTHROPIC_API_KEY;
+  if (!key) throw new Error('ANTHROPIC_API_KEY missing');
+  _anthropic = new Anthropic({ apiKey: key });
+  return _anthropic;
+}
+
+/**
+ * 트로피 가시성 검사 — create-state가 무기 교체 edit을 무시하고 원본 소지품을 유지하는
+ * 결함(간헐, 검증됨: battle 11)이 공용 AI 검토(해부학 전용, 미학 일치 검사 금지)를 그대로
+ * 통과하므로, 전용 게이트로 "황금 트로피가 실제로 보이는가"만 판정한다. south 1장 기준.
+ */
+async function trophyVisible(images: ReadyImages): Promise<boolean> {
+  const south = images.find((im) => im.direction === 'south')?.png;
+  if (!south) return false;
+  const res = await anthropic().messages.create({
+    model: 'claude-sonnet-5',
+    max_tokens: 64,
+    messages: [
+      {
+        role: 'user',
+        content: [
+          {
+            type: 'image',
+            source: { type: 'base64', media_type: 'image/png', data: south.toString('base64') },
+          },
+          {
+            type: 'text',
+            text: 'Is this character holding a golden trophy cup that is clearly visible? A sword, staff or any other weapon instead of a trophy means NO. Answer with JSON only: {"trophy": true|false}',
+          },
+        ],
+      },
+    ],
+  });
+  const raw = res.content.find((b) => b.type === 'text')?.text ?? '';
+  const m = raw.match(/"trophy"\s*:\s*(true|false)/);
+  return m?.[1] === 'true';
+}
 
 /** pixellab 캐릭터 폴링 — 8방향 실파일(PNG) 완성 시 buffer 배열, 아니면 pending/gone. */
 async function fetchReady(charId: string, keyIdx: number): Promise<'pending' | 'gone' | ReadyImages> {
@@ -312,6 +354,12 @@ async function processOne(b: TrophyBattle): Promise<void> {
   // AI 비전이 잡은 정면 머리 박스(모자·뿔 무시) — 트로피 얼굴중심 크롭에 사용(실루엣보다 정확).
   let aiHead: { cx: number; cy: number; h: number } | null = null;
   try {
+    // 트로피 가시성 선검사 — edit 무시(원본 무기 유지) 결함은 해부학 검토를 통과하므로 먼저 차단.
+    if (!(await trophyVisible(ready))) {
+      console.warn(`[melee.trophy] battle ${b.id} 트로피 미표시(edit 무시) → 재시도`);
+      await startAttempt(b, b.trophyAttempts + 1);
+      return;
+    }
     const review = await reviewProfile({
       images: ready.map((im) => ({ direction: im.direction, png: im.png })),
       descriptionPrompt: REVIEW_DESCRIPTION,
