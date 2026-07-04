@@ -34,14 +34,18 @@ const EYE_COLORS = [
 // 모두 정면 유지(측면/3-4 틀기 없음). 전신·양발·무기그립은 compose 안전절이 보장. pickWeighted 추출.
 const POSES = [
   // 정적 — 차분한 정면 스탠스
-  { desc: 'standing tall and composed, the weapon held quietly at one side', weight: 22 },
-  { desc: 'standing with the weight shifted onto one leg in a relaxed contrapposto, the weapon resting at one side', weight: 22 },
-  { desc: 'holding the weapon upright in front with both hands resting on it, in a calm and dignified stance', weight: 22 },
+  { desc: 'standing tall and composed, the weapon held quietly at one side', weight: 20 },
+  { desc: 'standing with the weight shifted onto one leg in a relaxed contrapposto, the weapon resting at one side', weight: 20 },
+  { desc: 'holding the weapon upright in front with both hands resting on it, in a calm and dignified stance', weight: 20 },
   // 정적(추가) — 다른 결의 차분한 정면 포즈(컨셉 친화, 액션감 X)
-  { desc: 'holding the weapon horizontally in front with both hands, in a calm and composed at-rest stance', weight: 14 },
-  { desc: 'standing poised with one hand resting elegantly on the hip and the weapon held calmly at the other side', weight: 14 },
+  { desc: 'holding the weapon horizontally in front with both hands, in a calm and composed at-rest stance', weight: 12 },
+  { desc: 'standing poised with one hand resting elegantly on the hip and the weapon held calmly at the other side', weight: 12 },
+  // 정적(2차 추가, 2026-07-04) — 여유·귀족적 멋·포용 결(전부 정면·무기 시인성 유지)
+  { desc: 'standing at ease with the weapon planted at the side like a cane, one hand resting atop it, leaning subtly with quiet confidence', weight: 4 },
+  { desc: 'one hand lightly adjusting the collar or glove with effortless poise, the weapon held calmly at the other side', weight: 4 },
+  { desc: 'cradling the weapon gently in both arms against the chest, standing calm and serene', weight: 4 },
   // 히든 — 희소·특별(무기를 머리 위로 들지 않음 — 머리 위 공간 확보)
-  { desc: 'resting the weapon back on one shoulder, head held high with a proud charismatic air, the free hand extended forward in a bold inviting gesture toward the viewer', weight: 6 },
+  { desc: 'resting the weapon back on one shoulder, head held high with a proud charismatic air, the free hand extended forward in a bold inviting gesture toward the viewer', weight: 4 },
 ] as const;
 
 // 서버 RNG (CLAUDE §3.1).
@@ -90,7 +94,7 @@ const MALE = {
     { desc: 'a noble elf youth with slender pointed ears', weight: 10 },
     { desc: 'a dragonkin youth with small neat horns', weight: 10 },
     { desc: 'a youth with small neat demon horns', weight: 10 },
-    { desc: 'a beast-kin youth with small neat wolf ears', weight: 10 },
+    { desc: 'an angel youth with small neat white wings', weight: 10 },
     { desc: 'a handsome vampire youth with pale skin, small fangs and crimson eyes', weight: 10 },
   ],
   hairStyles: ['short tousled', 'medium swept-back', 'shaggy bangs'],
