@@ -64,7 +64,13 @@ export async function createGuildAction(name: string, emblem: EmblemSelection) {
   const __b = await actionBlock(); if (__b) return { status: 'error', code: __b } as const;
   if (!isValidEmblemSelection(emblem)) return { status: 'error', code: 'EMBLEM_INVALID' } as const;
   try {
-    const { guildId } = await createGuild({ userId: u, serverId: await getActiveServerId(), name, emblemColor: mainColor(emblem.mainToneId) });
+    const { guildId } = await createGuild({
+      userId: u,
+      serverId: await getActiveServerId(),
+      name,
+      emblemColor: mainColor(emblem.mainToneId),
+      emblemSelection: emblem, // 최초 생성 실패 시 cron 재시도 원본
+    });
     // 문양 생성(Pixellab ~수초)은 응답 이후로 미뤄 결성을 즉시 반환(낙관적 UX).
     // best-effort — 실패해도 길드는 유지(폴백 문양·재생성으로 커버). 완료 시 /guild 무효화.
     after(async () => {

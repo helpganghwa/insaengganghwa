@@ -32,6 +32,8 @@ export async function createGuild(input: {
   name: string;
   /** 선택 톤의 UI 악센트 색(emblem_color). 문양 이미지 생성은 액션 레이어에서 best-effort. */
   emblemColor?: string | null;
+  /** 문양 선택값 원본 — 최초 생성 실패 시 cron 재시도용으로 저장(0101). */
+  emblemSelection?: unknown;
 }): Promise<{ guildId: bigint }> {
   const name = normalizeGuildName(input.name);
   if (name.length < GUILD_NAME_MIN_LEN || name.length > GUILD_NAME_MAX_LEN) {
@@ -68,7 +70,14 @@ export async function createGuild(input: {
     const [g] = await tx
       .insert(guilds)
       // 가입 방식 기본값 = 승인제(길드장/부길드장 승인). 생성 후 설정에서 자유가입으로 변경 가능.
-      .values({ name, serverId: input.serverId, leaderUserId: input.userId, emblemColor: input.emblemColor ?? null, joinPolicy: 'approval' })
+      .values({
+        name,
+        serverId: input.serverId,
+        leaderUserId: input.userId,
+        emblemColor: input.emblemColor ?? null,
+        emblemSelection: input.emblemSelection ?? null,
+        joinPolicy: 'approval',
+      })
       .returning({ id: guilds.id });
     await tx
       .insert(guildMembers)

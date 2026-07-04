@@ -57,6 +57,10 @@ export const guilds = pgTable('guilds', {
    * FK는 마이그레이션에서 ALTER 추가(guilds↔guild_emblems 상호참조 회피, residence와 동일 패턴).
    */
   activeEmblemId: bigint('active_emblem_id', { mode: 'bigint' }),
+  /** 결성 시 문양 선택값(EmblemSelection) — 최초 생성 실패 시 cron 재시도의 원본(0101). */
+  emblemSelection: jsonb('emblem_selection'),
+  /** 문양 cron 재시도 횟수 — 상한 도달 시 수동 개입 대상(무한 pixflux 과금 방지). */
+  emblemAttempts: integer('emblem_attempts').notNull().default(0),
   /** 길드 공지 ≤200자(길드장/부길드장만 편집, 멤버 전용 노출). */
   notice: text('notice'),
   /** 길드 소개(공개) — 목록 팝업 노출용. 길드장/부길드장 편집. null=미설정. */
