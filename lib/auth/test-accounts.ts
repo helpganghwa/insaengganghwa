@@ -38,6 +38,8 @@ export const TEST_ACCOUNTS: { email: string; label: string }[] = [
   { email: 'cbt@ganghwa.app', label: '심사용 1' },
   { email: 'cbt2@ganghwa.app', label: '심사용 2' },
   { email: 'cbt3@ganghwa.app', label: '심사용 3' },
+  { email: 'cbt4@ganghwa.app', label: '심사용 4' },
+  { email: 'cbt5@ganghwa.app', label: '심사용 5' },
 ];
 
 /** 모든 심사/검수 계정 공용 비밀번호(cbt123456). */

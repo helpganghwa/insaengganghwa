@@ -25,6 +25,11 @@ export default async function ShopPage({
   if (!userId) return null;
   const serverId = await getActiveServerId();
 
+  // CBT 기간 일반 유저 — 상품별 '준비 중' 토스트 대신 상점 전체를 준비 중으로 닫음(무료 수령·
+  // 견습의 주머니 포함). 심사 계정은 결제 검수, 어드민은 테스트 구매를 위해 통과.
+  // 정식 출시 시 ALLOW_TEST_LOGIN 해제로 자동 개방.
+  if (!isAdmin && (await shouldHidePaidContent())) return <ShopClosed />;
+
   const sp = await searchParams;
   const tabParam = sp.tab;
   const initialTab: ShopTab = SHOP_TABS.includes(tabParam as ShopTab)
@@ -63,5 +68,22 @@ export default async function ShopPage({
         process.env.NEXT_PUBLIC_PORTONE_IDENTITY_CHANNEL_KEY
       }
     />
+  );
+}
+
+/** CBT 기간 상점 잠금 화면 — 정식 오픈까지 전체 준비 중. */
+function ShopClosed() {
+  return (
+    <div className="flex flex-col items-center justify-center gap-3 px-6 py-28 text-center">
+      <div className="text-4xl" aria-hidden>
+        🔨
+      </div>
+      <p className="text-lg font-bold">상점 준비 중</p>
+      <p className="text-sm text-zinc-500 dark:text-zinc-400">
+        CBT 기간에는 상점이 열리지 않아요.
+        <br />
+        정식 오픈과 함께 찾아옵니다.
+      </p>
+    </div>
   );
 }

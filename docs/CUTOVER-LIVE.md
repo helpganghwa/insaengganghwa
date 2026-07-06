@@ -84,6 +84,6 @@ bun run scripts/record-probability-snapshot.ts --note="정식 오픈" --confirm
 ## 8. 사후 (심사 종료 후)
 
 - 심사 계정 물리 제거: `lib/auth/test-accounts.ts` 삭제 + `signInWithCredentials`/`ensureTestUser`/
-  로그인 test 분기 제거 + prod Supabase Auth의 `cbt@`·`cbt2@`·`cbt3@ganghwa.app` 계정 삭제.
+  로그인 test 분기 제거 + prod Supabase Auth의 `cbt@`~`cbt5@ganghwa.app` 계정(5개) 삭제.
 - 스토리지 고아 정리(선택): wipe로 행이 사라진 `profiles` 버킷 파일과 Pixellab 캐릭터는 남는다 —
   비용 누적 시 GC 스크립트 검토(회원탈퇴 경로도 동일 패턴).
