@@ -45,7 +45,7 @@ export const CATALOG_V3: CatalogItem[] = [
     "slot": "weapon",
     "nameKo": "눈꽃 대도",
     "region": "신전",
-    "lore": "한겨울 강처럼 푸른 칼날, 코등이는 여섯 갈래 눈꽃 결정이다. 이 칼에 베이면 피가 흐르지 않는다. 상처가 먼저 얼어붙으니까. 벤 자리에서 서리가 사방으로 번지고, 번지는 만큼 그 자리가 굳어 움직이지 않는다.",
+    "lore": "한겨울 강처럼 푸른 칼날, 코등이는 여섯 갈래 눈꽃 결정이다. 이 칼은 닿기도 전에 서리가 먼저 닿는다. 스친 자리마다 눈꽃이 사방으로 피어나고, 피어나는 만큼 그 자리가 굳어 움직이지 않는다.",
     "art": "a long slender frost odachi greatsword with a pale ice-blue blade and a silver-wrapped hilt",
     "wornDesc": "long curved pale ice-blue odachi with a jagged icy edge, white snowflake guard, white tassel at the pommel"
   },
@@ -115,9 +115,9 @@ export const CATALOG_V3: CatalogItem[] = [
   {
     "key": "vampire_blood_rapier",
     "slot": "weapon",
-    "nameKo": "선혈의 가는 검",
+    "nameKo": "진홍의 가는 검",
     "region": "일반",
-    "lore": "손잡이 끝 핏빛 루비를 보게. 처음엔 그저 맑은 돌이었네. 이 검으로 한 사람을 끝낼 때마다 한 방울씩 붉어졌지. 바늘처럼 가는 날이라 베인 줄도 모르고 가는데, 그새 루비는 또 한 톤 짙어진다. 지금 저렇게 검붉은 건 — 글쎄, 내가 몇백 년을 살았다는 뜻이기도 하고.",
+    "lore": "손잡이 끝 루비를 보게. 처음엔 그저 맑은 돌이었네. 주인과 함께 밤을 오래 지날수록 한 톤씩 깊어지는 돌이지. 바늘처럼 가는 날은 소리도 없이 밤공기를 가른다. 지금 저렇게 검붉은 건 — 글쎄, 내가 몇백 년을 살았다는 뜻이기도 하고.",
     "art": "a vampire noble's ornate rapier with a bat-wing guard and a blood-red ruby pommel, black and crimson with gold — elegant, gothic and deadly",
     "wornDesc": "slender black rapier, dark bat-wing guard with gold scrollwork, red-wrapped grip, large red gem pommel"
   },
@@ -324,7 +324,7 @@ export const CATALOG_V3: CatalogItem[] = [
     "slot": "armor",
     "nameKo": "흑룡의 비늘갑",
     "region": "화산",
-    "lore": "검푸른 용비늘을 한 장씩 겹쳐 두르고, 등 뒤엔 가죽 같은 용 날개가 펼쳐진다. 가슴 한가운데 금빛 용 머리가 붉은 눈을 부릅떴다. 용을 베어 그 가죽을 벗긴 자만이 이 갑주를 입는다. 죽은 용은 제 비늘로, 제 목을 친 자의 등을 끝까지 지킨다.",
+    "lore": "검푸른 용비늘을 한 장씩 겹쳐 두르고, 등 뒤엔 가죽 같은 용 날개가 펼쳐진다. 가슴 한가운데 금빛 용 머리가 붉은 눈을 부릅떴다. 용을 쓰러뜨리고 그 비늘을 얻은 자만이 이 갑주를 입는다. 죽은 용은 제 비늘로, 저를 쓰러뜨린 자의 등을 끝까지 지킨다.",
     "art": "a dragon knight costume — ornate obsidian dragon-scale plate armor edged in molten gold with a dragon-wing cape — powerful and fierce",
     "wornDesc": "dark blue-grey scale armor with gold trim, a gold dragon-head chest emblem, and rust-brown leathery dragon wings as a cape"
   },
@@ -423,7 +423,7 @@ export const CATALOG_V3: CatalogItem[] = [
     "slot": "accessory",
     "nameKo": "흑요 봉황선",
     "region": "화산",
-    "lore": "흑요 봉황선. 흑요석 살에 금빛 봉황, 활짝 펴면 더운 바람이 일고 접으면 단단한 몽둥이가 된다. 화산 여제가 분노를 가라앉힐 때 든다. 부채를 한 번 천천히 부치는 동안, 여제는 누구의 목을 칠지 다시 헤아린다. 부채가 멈추면, 헤아림도 끝난 것이다.",
+    "lore": "흑요 봉황선. 흑요석 살에 금빛 봉황, 활짝 펴면 더운 바람이 일고 접으면 단단한 몽둥이가 된다. 화산 여제가 분노를 가라앉힐 때 든다. 부채를 한 번 천천히 부치는 동안, 여제는 노여움을 어디에 내릴지 다시 헤아린다. 부채가 멈추면, 헤아림도 끝난 것이다.",
     "art": "a large black-and-gold war-fan with obsidian ribs and ember-orange edges",
     "wornDesc": "large black obsidian war-fan, a gold phoenix at the top center, gold lightning-crack veins down the blades, a gold handle"
   },
