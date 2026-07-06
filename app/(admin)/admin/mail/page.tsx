@@ -1,6 +1,7 @@
-import { desc, eq } from 'drizzle-orm';
+import { and, desc, eq } from 'drizzle-orm';
 
 import { db } from '@/lib/db/client';
+import { profiles } from '@/lib/db/schema/profiles';
 import { characters } from '@/lib/db/schema/server';
 import { adminMailLogs } from '@/lib/db/schema/mailbox';
 
@@ -46,7 +47,13 @@ export default async function AdminMailPage() {
       adminNickname: characters.nickname,
     })
     .from(adminMailLogs)
-    .leftJoin(characters, eq(characters.userId, adminMailLogs.adminId))
+    // characters PK가 (userId, serverId)라 서버 조건 없이 조인하면 다중 서버 캐릭터 수만큼
+    // 로그 행이 중복된다 — 관리자의 마지막 활성 서버 캐릭터 1행으로 고정.
+    .leftJoin(profiles, eq(profiles.id, adminMailLogs.adminId))
+    .leftJoin(
+      characters,
+      and(eq(characters.userId, adminMailLogs.adminId), eq(characters.serverId, profiles.lastServerId)),
+    )
     .orderBy(desc(adminMailLogs.createdAt))
     .limit(30);
 

@@ -41,13 +41,17 @@ export async function sendMailToUserAction(opts: {
   try {
     const adminId = await requireAdmin();
     let recipientId: string | null = null;
+    // 닉네임은 특정 서버의 캐릭터를 가리킴 — 그 캐릭터의 서버로 배송해야
+    // 다른 서버 우편함/지갑에 오배송되지 않는다(닉네임 전역 유일).
+    let recipientServerId: number | null = null;
     if (opts.toNickname?.trim()) {
       const [r] = await db
-        .select({ id: characters.userId })
+        .select({ id: characters.userId, sid: characters.serverId })
         .from(characters)
         .where(eq(characters.nickname, opts.toNickname.trim()))
         .limit(1);
       recipientId = r?.id ?? null;
+      recipientServerId = r?.sid ?? null;
     } else if (opts.toUserId?.trim()) {
       // userId도 실제 profiles에 존재하는지 확인 — 오타 UUID로 고아 우편 생성 방지.
       const id = opts.toUserId.trim();
@@ -68,15 +72,19 @@ export async function sendMailToUserAction(opts: {
     const payload = clampPayload(opts.payload);
     // 우편 + 감사 로그 원자 발송.
     await db.transaction(async (tx) => {
-      // 수신자의 활성 서버 우편함으로(SERVER.md — 우편은 서버별).
-      const [rp] = await tx
-        .select({ sid: profiles.lastServerId })
-        .from(profiles)
-        .where(eq(profiles.id, recipientId))
-        .limit(1);
+      // 닉네임 지정 시 그 캐릭터의 서버, userId 지정 시 수신자의 마지막 활성 서버.
+      let deliverySid = recipientServerId;
+      if (deliverySid == null) {
+        const [rp] = await tx
+          .select({ sid: profiles.lastServerId })
+          .from(profiles)
+          .where(eq(profiles.id, recipientId))
+          .limit(1);
+        deliverySid = rp?.sid ?? 1;
+      }
       await tx.insert(mailbox).values({
         userId: recipientId,
-        serverId: rp?.sid ?? 1,
+        serverId: deliverySid,
         type: 'admin',
         title,
         body,
