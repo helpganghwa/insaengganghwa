@@ -12,6 +12,7 @@ import { accrueResidenceTax } from '@/lib/game/guild/tax';
 import { logMemberAchievement } from '@/lib/game/guild/achievement';
 import { logWorldEvent } from '@/lib/game/world/event';
 import { rebuildCodexChampionsForItem } from '@/lib/game/leaderboard/snapshot';
+import { refreshEnhanceMetrics } from '@/lib/game/leaderboard/incremental';
 
 import { EnhanceError } from './queue';
 
@@ -168,6 +169,16 @@ export async function resolveEnhance(input: ResolveInput): Promise<ResolveResult
 
   // 푸시 알림은 '결과 시점' 아닌 'complete_at 도달 시점'(=최대확률)에 cron이 처리(2026-05-26).
   // resolveEnhance는 결과 트랜잭션만 담당, 알림 책임 없음.
+
+  // 리더보드 증분 갱신(v2) — 레벨이 변했을 때만(성공·메가·하락). 유저 1명 스코프 재계산.
+  // best-effort: 실패는 시간별 전체 재계산(cron)이 교정 — 강화 결과엔 영향 없음.
+  if (toLevel !== fromLevel) {
+    try {
+      await refreshEnhanceMetrics(String(job.user_id), Number(job.job_server_id));
+    } catch {
+      // cron 백스톱.
+    }
+  }
 
   // 길드 세금 누적(GUILD §5.5) — 성공/mega(레벨 상승) 시 거주 구역에 도달레벨 포인트.
   // **강화 원자 트랜잭션과 분리(best-effort)**: 실패해도 강화 정산엔 영향 없음.

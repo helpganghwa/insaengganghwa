@@ -70,7 +70,7 @@
     },
     {
       "path": "/api/cron/leaderboard-snapshot",
-      "schedule": "2-59/5 * * * *"
+      "schedule": "11 * * * *"
     },
     {
       "path": "/api/cron/guild-leader-handover",

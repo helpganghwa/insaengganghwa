@@ -9,6 +9,7 @@ import { transcendLogs } from '@/lib/db/schema/transcend';
 import { transcendFodderForStep } from '@/lib/game/balance';
 import { logMemberAchievement } from '@/lib/game/guild/achievement';
 import { logWorldEvent } from '@/lib/game/world/event';
+import { refreshEnhanceMetrics } from '@/lib/game/leaderboard/incremental';
 
 /**
  * 보급 상자 열기 — GDD §3.4 / BALANCE §4 / SCHEMA §5.
@@ -186,6 +187,14 @@ export async function openSupplyBoxes(input: {
     }
   } catch {
     // 업적 기록 실패 무시.
+  }
+
+  // 리더보드 증분 갱신(v2) — 신규 획득·자동초월이 combat을 바꾼다(트랜잭션 밖 best-effort).
+  // 실패는 시간별 전체 재계산(cron)이 교정.
+  try {
+    await refreshEnhanceMetrics(userId, serverId);
+  } catch {
+    // cron 백스톱.
   }
 
   return opened;

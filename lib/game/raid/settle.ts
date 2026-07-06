@@ -8,6 +8,7 @@ import { raids, raidParticipants, raidRewards } from '@/lib/db/schema/raid';
 import { sendPushToUsers } from '@/lib/push/send';
 import { aggregatePhaseDrops, raidPhasesCleared } from './drops';
 import { RAID_BOSSES } from './bosses';
+import { bumpCountMetric } from '@/lib/game/leaderboard/incremental';
 
 /**
  * 레이드 정산 — GDD §3.5 / SCHEMA §6.4. 6시간 만료 시 lazy(접속 조회) + cron 일괄.
@@ -95,6 +96,14 @@ export async function settleRaid(
       serverId: raid.serverId as number | null,
     };
   });
+
+  // 리더보드 증분(v2) — 레이드 처치 카운트는 "1페이즈+ 돌파 & 공격 1회+ 참가자" 기준
+  // (스냅샷 raidRows와 동일 술어). settle이 조건부 전이로 정확히 1회라 +1이 정확.
+  if (result.settled && result.phasesCleared >= 1 && (result.winnerIds?.length ?? 0) > 0) {
+    bumpCountMetric(result.winnerIds!, result.serverId!, 'raid').catch((e) =>
+      console.warn('[raid.settle] leaderboard bump failed (cron이 교정)', e),
+    );
+  }
 
   // 트랜잭션 커밋 후 푸시 발송(best-effort). 토글·구독 없는 유저는 자동 스킵.
   if (result.settled && (result.winnerIds?.length ?? 0) > 0) {

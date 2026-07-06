@@ -82,7 +82,12 @@ async function attachProfiles(serverId: number, entries: LeaderboardEntry[]): Pr
 
 // ── 스냅샷 읽기(인덱스, 유저 수 무관) ──
 
-/** Top-N — (server,metric,rank) 인덱스로 N행. nickname/publicCode는 조인(신선). */
+/**
+ * Top-N — (server,metric,value) 인덱스로 값 내림차순 N행, 순위는 읽기 시 파생(v2).
+ * 값은 증분 갱신(incremental.ts)으로 항상 신선 — rank 컬럼은 더 이상 읽지 않는다
+ * (증분 upsert가 rank를 안 쓰므로 저장된 rank는 낡을 수 있음). 경쟁 순위(1,2,2,4)는
+ * 페이지가 항상 최상위부터 시작하므로 페이지 내에서 정확히 계산된다.
+ */
 async function snapshotTop(metric: LeaderboardMetric, serverId: number, n: number): Promise<LeaderboardEntry[]> {
   const rows = await db
     .select({
@@ -90,7 +95,6 @@ async function snapshotTop(metric: LeaderboardMetric, serverId: number, n: numbe
       nickname: characters.nickname,
       publicCode: profiles.publicCode,
       value: leaderboardRanks.value,
-      rank: leaderboardRanks.rank,
     })
     .from(leaderboardRanks)
     .innerJoin(
@@ -99,25 +103,27 @@ async function snapshotTop(metric: LeaderboardMetric, serverId: number, n: numbe
     )
     .innerJoin(profiles, eq(profiles.id, leaderboardRanks.userId))
     .where(and(eq(leaderboardRanks.serverId, serverId), eq(leaderboardRanks.metric, metric)))
-    .orderBy(leaderboardRanks.rank)
+    .orderBy(sql`${leaderboardRanks.value} desc`, leaderboardRanks.userId)
     .limit(n);
-  return rows.map((r) => ({
-    userId: r.userId,
-    nickname: r.nickname,
-    publicCode: r.publicCode,
-    value: Number(r.value),
-    rank: r.rank,
-  }));
+  let prevVal: number | null = null;
+  let prevRank = 0;
+  return rows.map((r, i) => {
+    const value = Number(r.value);
+    const rank = prevVal !== null && value === prevVal ? prevRank : i + 1;
+    prevVal = value;
+    prevRank = rank;
+    return { userId: r.userId, nickname: r.nickname, publicCode: r.publicCode, value, rank };
+  });
 }
 const safeTop = (m: LeaderboardMetric, sid: number, n: number) =>
   withTimeout(snapshotTop(m, sid, n), TIMEOUT_MS, `leaderboard.top.${m}`).catch(() => [] as LeaderboardEntry[]);
 
 export type MyRankSnap = { value: number; rank: number } | null;
 
-/** 내 순위 — PK 단일행. 없으면 null(신규/미집계). */
+/** 내 순위 — PK 단일행으로 값 조회 후 순위는 값 파생(count(value>내값)+1, v2). 없으면 null. */
 async function snapshotMyRank(metric: LeaderboardMetric, serverId: number, userId: string): Promise<MyRankSnap> {
   const [r] = await db
-    .select({ value: leaderboardRanks.value, rank: leaderboardRanks.rank })
+    .select({ value: leaderboardRanks.value })
     .from(leaderboardRanks)
     .where(
       and(
@@ -127,7 +133,8 @@ async function snapshotMyRank(metric: LeaderboardMetric, serverId: number, userI
       ),
     )
     .limit(1);
-  return r ? { value: Number(r.value), rank: r.rank } : null;
+  if (!r) return null;
+  return rankByValue(metric, serverId, userId, Number(r.value));
 }
 const safeMyRank = (m: LeaderboardMetric, sid: number, uid: string) =>
   withTimeout(snapshotMyRank(m, sid, uid), TIMEOUT_MS, `leaderboard.mine.${m}`).catch(() => null);

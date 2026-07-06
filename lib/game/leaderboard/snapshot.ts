@@ -10,8 +10,7 @@ import { meleeBattles } from '@/lib/db/schema/melee';
 import { codexChampions } from '@/lib/db/schema/leaderboard';
 import { userMilestones } from '@/lib/db/schema/world';
 import { milestoneOf } from '@/lib/game/milestone';
-import { logWorldEvent } from '@/lib/game/world/event';
-import { logMemberAchievement } from '@/lib/game/guild/achievement';
+import { claimMilestone } from '@/lib/game/leaderboard/incremental';
 import { combatPowerFromOwned } from '@/lib/game/equipment/combat-power';
 import type { LeaderboardMetric } from './queries';
 
@@ -158,15 +157,18 @@ export async function rebuildLeaderboardSnapshot(
     // 전량 delete+insert → 차등 upsert(감사 P1) — 값·순위가 그대로인 행은 no-op이라
     // 5분마다 전 유저 행을 rewrite하던 WAL/bloat이 "실제 변동분"으로 줄어든다.
     // 탈락 행(전 장비 소실·탈퇴 등 — 드묾)만 별도 delete. 두 문 모두 단일 왕복.
-    const uids = ranked.map((r) => r.userId);
-    const vals = ranked.map((r) => r.value);
-    const rks = ranked.map((r) => r.rank);
+    // ⚠ 배열 파라미터는 PG 배열 리터럴 문자열('{a,b,c}')로 전달 — drizzle sql``은 JS 배열을
+    // 튜플 ($1,$2,…)로 전개해 `::uuid[]` 캐스트가 구문 오류가 된다(2026-07-07 prod 크론 500 사고).
+    // uuid·정수는 콤마/따옴표가 없어 join이 안전.
+    const uidArr = `{${ranked.map((r) => r.userId).join(',')}}`;
+    const valArr = `{${ranked.map((r) => r.value).join(',')}}`;
+    const rkArr = `{${ranked.map((r) => r.rank).join(',')}}`;
     await db.transaction(async (tx) => {
       if (ranked.length > 0) {
         await tx.execute(sql`
           insert into leaderboard_ranks (server_id, metric, user_id, value, rank)
           select ${serverId}, ${metric}, u.user_id, u.value, u.rank
-          from unnest(${uids}::uuid[], ${vals}::bigint[], ${rks}::int[]) as u(user_id, value, rank)
+          from unnest(${uidArr}::uuid[], ${valArr}::bigint[], ${rkArr}::int[]) as u(user_id, value, rank)
           on conflict (server_id, metric, user_id) do update
             set value = excluded.value, rank = excluded.rank, updated_at = now()
             where (leaderboard_ranks.value, leaderboard_ranks.rank)
@@ -176,7 +178,7 @@ export async function rebuildLeaderboardSnapshot(
       await tx.execute(sql`
         delete from leaderboard_ranks
         where server_id = ${serverId} and metric = ${metric}
-          and not (user_id = any(${uids}::uuid[]))
+          and not (user_id = any(${uidArr}::uuid[]))
       `);
     });
     counts[metric] = ranked.length;
@@ -201,7 +203,7 @@ async function logPersonalMilestones(
   rows: Row[],
 ): Promise<void> {
   const eligible = rows
-    .map((r) => ({ userId: r.userId, mile: milestoneOf(metric, r.value) }))
+    .map((r) => ({ userId: r.userId, value: r.value, mile: milestoneOf(metric, r.value) }))
     .filter((r) => r.mile > 0);
   if (eligible.length === 0) return;
   const marks = await db
@@ -216,19 +218,12 @@ async function logPersonalMilestones(
     );
   const markBy = new Map(marks.map((m) => [m.userId, Number(m.milestone)]));
   for (const r of eligible) {
-    if (r.mile <= (markBy.get(r.userId) ?? 0)) continue;
-    await db
-      .insert(userMilestones)
-      .values({ userId: r.userId, serverId, metric, milestone: BigInt(r.mile) })
-      .onConflictDoUpdate({
-        target: [userMilestones.userId, userMilestones.serverId, userMilestones.metric],
-        set: { milestone: BigInt(r.mile), updatedAt: new Date() },
-      });
-    await logWorldEvent(serverId, 'personal_milestone', { metric, milestone: r.mile }, { actorUserId: r.userId });
-    await logMemberAchievement(r.userId, serverId, {
-      action: 'achv_milestone',
-      detail: { metric, milestone: r.mile },
-    });
+    if (r.mile <= (markBy.get(r.userId) ?? 0)) continue; // 빠른 스킵(대부분)
+    // 실제 클레임은 증분 경로(incremental.ts)와 공유하는 원자 조건부 upsert(v2) —
+    // 벌크 read 후 쓰기 시점 증분과 경합해도 피드가 정확히 1회만 발화.
+    await claimMilestone(r.userId, serverId, metric, r.value).catch((e) =>
+      console.warn('[milestone] claim failed', r.userId, (e as Error).message),
+    );
   }
 }
 

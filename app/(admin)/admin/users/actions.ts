@@ -6,9 +6,11 @@ import { and, eq, isNull, sql } from 'drizzle-orm';
 import { requireAdmin } from '@/lib/auth/require-admin';
 import { db } from '@/lib/db/client';
 import { profiles } from '@/lib/db/schema/profiles';
+import { characters } from '@/lib/db/schema/server';
 import { mailbox } from '@/lib/db/schema/mailbox';
 import { enhancementJobs } from '@/lib/db/schema/enhance';
 import { GEM_TO_MS } from '@/lib/game/balance';
+import { removeUserFromBoards, restoreUserBoards } from '@/lib/game/leaderboard/incremental';
 
 type Result = { status: 'success' } | { status: 'error'; code: string };
 
@@ -39,6 +41,9 @@ export async function banUserAction(
     .where(eq(profiles.id, userId))
     .returning({ id: profiles.id });
   if (updated.length === 0) return { status: 'error', code: 'NOT_FOUND' };
+  // 리더보드 즉시 제외(v2) — 읽기 경로에 밴 조인을 두지 않는 대가로 쓰기 시점 삭제.
+  // 실패해도 시간별 전체 재계산(밴 제외 술어)이 교정.
+  await removeUserFromBoards(userId).catch((e) => console.warn('[ban] board remove failed', e));
   revalidatePath('/admin/users');
   return { status: 'success' };
 }
@@ -51,6 +56,16 @@ export async function unbanUserAction(userId: string): Promise<Result> {
     .where(eq(profiles.id, userId))
     .returning({ id: profiles.id });
   if (updated.length === 0) return { status: 'error', code: 'NOT_FOUND' };
+  // 리더보드 복원(v2) — 캐릭터 보유 전 서버의 값을 유저 스코프로 재계산.
+  try {
+    const chars = await db
+      .select({ serverId: characters.serverId })
+      .from(characters)
+      .where(eq(characters.userId, userId));
+    for (const c of chars) await restoreUserBoards(userId, c.serverId);
+  } catch (e) {
+    console.warn('[unban] board restore failed (cron이 교정)', e);
+  }
   revalidatePath('/admin/users');
   return { status: 'success' };
 }

@@ -9,6 +9,7 @@ import { characters } from '@/lib/db/schema/server';
 import { sendPushToUsers } from '@/lib/push/send';
 import { logMemberAchievement } from '@/lib/game/guild/achievement';
 import { logWorldEvent } from '@/lib/game/world/event';
+import { bumpCountMetric } from '@/lib/game/leaderboard/incremental';
 
 /**
  * 대난투 10:00 발표 — MELEE §7. KST 오늘 배틀이 'computed'면:
@@ -68,9 +69,10 @@ async function revealOne(serverId: number, battleDate: string): Promise<{ battle
           eq(meleeBattles.status, 'computed'),
         ),
       )
-      .returning({ id: meleeBattles.id });
+      .returning({ id: meleeBattles.id, championUserId: meleeBattles.championUserId });
     if (flipped.length === 0) return null;
     const battleId = flipped[0]!.id;
+    const championUserId = flipped[0]!.championUserId;
 
     // 시상대 Top3(1·2·3위) — 우편/푸시 공통 본문. 참가자 적으면 있는 만큼만(🥇 폴백).
     const podium = await tx
@@ -101,11 +103,18 @@ async function revealOne(serverId: number, battleDate: string): Promise<{ battle
       from melee_participants mp
       where mp.battle_id = ${battleId}
     `);
-    return { battleId, podium, podiumStr };
+    return { battleId, podium, podiumStr, championUserId };
   });
 
   if (!result) return null;
   const { battleId, podium, podiumStr } = result;
+
+  // 리더보드 증분(v2) — 통산 우승 +1. reveal이 조건부 전이로 정확히 1회라 증분이 정확.
+  if (result.championUserId) {
+    bumpCountMetric([result.championUserId], serverId, 'melee').catch((e) =>
+      console.warn('[melee.reveal] leaderboard bump failed (cron이 교정)', e),
+    );
+  }
 
   // 푸시 — 참가자 전원(토글 ON만 내부 필터). 본문은 시상대 Top3(개인 순위는 우편/페이지).
   // 경계규칙 1 — 발송은 활성 서버(last_server_id) 참가자에게만(타 서버 푸시 억제).

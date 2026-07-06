@@ -90,6 +90,10 @@ export async function withdrawAccount(userId: string): Promise<void> {
     await tx.execute(sql`delete from push_pending where user_id = ${uid}`);
     await tx.execute(sql`delete from push_subscriptions where user_id = ${uid}`);
 
+    // 리더보드·개인 기록 — 캐릭터가 사라지면 보드의 값도 유령이 된다(0103·v2 증분화 후속).
+    await tx.execute(sql`delete from leaderboard_ranks where user_id = ${uid}`);
+    await tx.execute(sql`delete from user_milestones where user_id = ${uid}`);
+
     // 아바타(프로필 생성잡 → 활성프로필 SET NULL → 프로필) + 캐릭터(닉네임).
     await tx.execute(sql`delete from profile_generation_jobs where user_id = ${uid}`);
     await tx.execute(sql`delete from user_profiles where user_id = ${uid}`);
