@@ -583,11 +583,9 @@ export function ShopTabs({
                 <BannerCard
                   key="first"
                   bg="first"
-                  char="gift"
                   tall
-                  charCenter
-                  title="첫 결제 특가"
-                  desc="이 서버에서 딱 1번, 다시 없을 가격"
+                  title="인생 특가"
+                  desc="이 서버에서 단 한 번, 인생 최대 혜택"
                   detail={`${dia(FIRST_SPECIAL.grant.diamond)} · 📦${FIRST_SPECIAL.grant.boxes}`}
                   price={won(FIRST_SPECIAL.krw)}
                   confirming={confirm === FIRST_SPECIAL.id}

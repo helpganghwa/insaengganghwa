@@ -40,9 +40,9 @@ export const PREMIUM = {
 };
 
 /**
- * 첫 결제 특가 — 계정당 1회 한정(서버 무관: 다이아 지갑이 서버별이라 서버당 허용 시 신서버마다
- * 저가 반복 구매 루트가 생김). 목적은 수익이 아니라 첫 결제 전환(가치 ~22배, 1회라 경제 무부담).
- * 지급은 구매 시점 활성 서버 지갑. 상자는 부위 균등(30 → 10/10/10).
+ * 인생 특가 — 서버별 1회 한정(사용자 확정: 서버별 지갑 경제의 경쟁 출발선). 목적은 수익이
+ * 아니라 결제 전환(가치 ~22배, 1회라 경제 무부담). 지급은 구매 시점 활성 서버 지갑.
+ * 상자는 부위 균등(30 → 10/10/10). id는 하위호환 유지(first_special).
  */
 export const FIRST_SPECIAL = {
   id: 'first_special',
@@ -87,7 +87,7 @@ const DIAMOND_NAME: Record<string, string> = {
 };
 export function paidProduct(productId: string): { krw: number; orderName: string } | null {
   if (productId === PREMIUM.id) return { krw: PREMIUM.krw, orderName: '성장 프리미엄' };
-  if (productId === FIRST_SPECIAL.id) return { krw: FIRST_SPECIAL.krw, orderName: '첫 결제 특가 패키지' };
+  if (productId === FIRST_SPECIAL.id) return { krw: FIRST_SPECIAL.krw, orderName: '인생 특가 패키지' };
   const d = DIAMONDS.find((x) => x.id === productId);
   if (d)
     return {
