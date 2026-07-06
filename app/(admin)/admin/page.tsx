@@ -76,6 +76,12 @@ async function pendingCounts(): Promise<Record<string, number>> {
 
 const MENU: { href: string; icon: string; title: string; desc: string; external?: boolean }[] = [
   {
+    href: '/admin/dashboard',
+    icon: '📊',
+    title: '운영 대시보드',
+    desc: '오늘 가입·DAU·매출·활동 + 헬스 인바리언트(크론·정산 침묵 장애 감지)',
+  },
+  {
     href: '/admin/users',
     icon: '👤',
     title: '유저 조회',
