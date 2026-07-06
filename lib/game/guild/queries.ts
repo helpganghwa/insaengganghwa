@@ -224,12 +224,21 @@ export async function getGuildSummaryByName(serverId: number, name: string) {
       emblemUrl: guilds.emblemUrl,
       intro: guilds.intro,
       memberCount: sql<number>`(select count(*)::int from guild_members gm where gm.guild_id = ${guilds.id})`,
+      joinPolicy: guilds.joinPolicy,
     })
     .from(guilds)
     .where(and(eq(guilds.serverId, serverId), eq(guilds.name, name)))
     .limit(1);
   if (!g) return null;
-  const cp = await guildCombatPowers(serverId, [g.id]);
+  const [cp, zoneRows] = await Promise.all([
+    guildCombatPowers(serverId, [g.id]),
+    // 점령 구역 목록 — 길드 목록 팝업과 동일 정보(세계지도 팝업 정보 격차 해소, 2026-07-06).
+    db
+      .select({ name: zones.name })
+      .from(zones)
+      .where(and(eq(zones.serverId, serverId), eq(zones.ownerGuildId, g.id)))
+      .orderBy(zones.id),
+  ]);
   return {
     name: g.name,
     level: g.level,
@@ -237,6 +246,8 @@ export async function getGuildSummaryByName(serverId: number, name: string) {
     intro: g.intro,
     memberCount: g.memberCount,
     combat: cp.get(g.id.toString()) ?? 0,
+    joinPolicy: g.joinPolicy,
+    zones: zoneRows.map((z) => z.name),
   };
 }
 

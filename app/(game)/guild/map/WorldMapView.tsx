@@ -250,6 +250,8 @@ export function WorldMapView({
     combat: number;
     emblemUrl: string | null;
     intro: string | null;
+    joinPolicy: string;
+    zones: string[];
   };
   const [guildPopup, setGuildPopup] = useState<GuildPopup | null>(null);
   const openGuildByName = (name: string) => {
@@ -912,7 +914,18 @@ export function WorldMapView({
               )}
             </div>
             <div className="min-w-0">
-              <h2 className="truncate text-base font-bold">{guildPopup.name}</h2>
+              <div className="flex items-center gap-1.5">
+                <h2 className="truncate text-base font-bold">{guildPopup.name}</h2>
+                <span
+                  className={`shrink-0 rounded px-1.5 py-0.5 text-[10px] font-bold ${
+                    guildPopup.joinPolicy === 'open'
+                      ? 'bg-emerald-100 text-emerald-700 dark:bg-emerald-500/15 dark:text-emerald-300'
+                      : 'bg-amber-100 text-amber-700 dark:bg-amber-500/15 dark:text-amber-300'
+                  }`}
+                >
+                  {guildPopup.joinPolicy === 'open' ? '자유' : '승인'}
+                </span>
+              </div>
               <p className="mt-0.5 text-[11px] text-zinc-500">
                 Lv.{guildPopup.level} · {guildPopup.memberCount}명 · 전투력{' '}
                 <span className="font-bold text-amber-600 dark:text-amber-400">
@@ -920,6 +933,23 @@ export function WorldMapView({
                 </span>
               </p>
             </div>
+          </div>
+          <div className="mt-3 border-t border-zinc-100 pt-3 dark:border-zinc-900">
+            <p className="text-[11px] font-bold text-zinc-400">점령 구역 ({guildPopup.zones.length})</p>
+            {guildPopup.zones.length > 0 ? (
+              <div className="mt-1.5 flex flex-wrap gap-1">
+                {guildPopup.zones.map((z) => (
+                  <span
+                    key={z}
+                    className="rounded-md bg-amber-50 px-2 py-0.5 text-[11px] font-medium text-amber-700 dark:bg-amber-500/10 dark:text-amber-300"
+                  >
+                    {z}
+                  </span>
+                ))}
+              </div>
+            ) : (
+              <p className="mt-1 text-[12px] text-zinc-500">점령한 구역이 없습니다.</p>
+            )}
           </div>
           <div className="mt-3 border-t border-zinc-100 pt-3 dark:border-zinc-900">
             <p className="text-[11px] font-bold text-zinc-400">길드 소개</p>
