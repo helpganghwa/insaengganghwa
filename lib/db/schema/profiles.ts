@@ -31,7 +31,7 @@ export const profiles = pgTable('profiles', {
   identityVerifiedAt: timestamp('identity_verified_at', { withTimezone: true }),
   /** 해시만 — 원본 미저장 (REGULATORY). */
   birthYearHash: text('birth_year_hash'),
-  /** 닉네임 변경 횟수. 첫 변경 무료, 이후 1000 다이아 차감(NICKNAME_CHANGE_COST_DIAMOND). */
+  /** 닉네임 변경 횟수. 첫 변경 무료, 이후 NICKNAME_CHANGE_COST_DIAMOND(balance.ts) 차감. */
   /** Day1 온보딩 진행 (GDD §4). */
   /** 어드민 권한(우편함 발송 등). 1인 운영 — 본인 계정만 직접 SQL로 true 설정. */
   isAdmin: boolean('is_admin').notNull().default(false),

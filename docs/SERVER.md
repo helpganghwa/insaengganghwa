@@ -100,4 +100,9 @@ characters (user_id FK profiles, server_id FK servers, diamond, residence_zone_i
 - **오픈 트리거(권고)**: 1서버 점령전 포화(활성 길드가 구역 경합을 상시 채움) + DAU 임계(예: 5,000) 동시 충족. 단순 인구만으로 열지 않는다(인구 분산 = 콜드스타트 역행).
 - 오픈 절차: `bun run scripts/open-server.ts <id> <이름>` — servers INSERT + zones 50구역·인접 간선 복제 시드(1서버 템플릿). 이후 공지/이벤트(신서버 부스트). 코드 배포 불필요.
 - `status=full` = 신규 캐릭터 생성 제한(기존 캐릭터는 정상) · `closed` = 준비 중/통합 대비.
+- **오픈 후 기존 서버 상태(정책 확정 2026-07-06)**: 신서버를 열어도 기존 서버는 **`open` 유지** —
+  1서버 신규가입은 계속 가능해야 한다. 로그인 선택기는 open 서버를 모두 노출하고 최신 서버에
+  '추천' 뱃지만 붙인다(자동 배정 기본값 = 최신 open). `full` 전환은 실제 포화 시에만 사용.
+  크론 루프(`openServerIds`)는 open+full 모두 순회하므로 full 전환이 기존 유저의
+  리더보드/대난투/점령전을 멈추지 않는다.
 - 서버 통합(인구 감소 시)은 v2 과제 — characters PK가 (user_id, server_id)라 단순 UPDATE 통합은 충돌 처리 필요(별도 설계).
