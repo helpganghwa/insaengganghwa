@@ -1,9 +1,11 @@
 'use client';
 
+import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { useEffect, useMemo, useState, useTransition } from 'react';
 import { josa } from 'es-hangul';
 
+import { profileHref } from '@/lib/game/profile/href';
 import { useResourceToast } from '@/components/ResourceToast';
 import { useDiamond } from '@/components/DiamondContext';
 import { ModalShell } from '@/components/ModalShell';
@@ -47,7 +49,7 @@ type Zone = {
  * zoneColor: 구역 이름 → 색(zones 기반). 미매칭이면 null(기본 색 유지). 지역 카테고리는 마커 없이 일반 텍스트.
  */
 // \}+ — AI가 닫는 중괄호를 겹쳐 쓰는 경우({z|왕성}}) 여분까지 흡수.
-const CHRONICLE_TOKEN_RE = /\{([guz])\|([^}]+)\}+/g;
+const CHRONICLE_TOKEN_RE = /\{([guz])\|([^}|]+)(?:\|([^}]+))?\}+/g;
 
 // 마커 직후 조사 보정용 — AI가 쓴 한쪽 조사를 이름 받침에 맞게 교정(은↔는 등).
 // 긴 조사부터 검사(으로부터>로>... 접두 충돌 방지). es-hangul josa.pick으로 정확 산출.
@@ -85,11 +87,13 @@ function ChronicleText({
   zoneColor,
   onGuild,
   onZone,
+  serverId,
 }: {
   text: string;
   zoneColor: (name: string) => string | null;
   onGuild: (name: string) => void;
   onZone: (name: string) => void;
+  serverId: number;
 }) {
   const out: React.ReactNode[] = [];
   let last = 0;
@@ -113,13 +117,20 @@ function ChronicleText({
         </button>,
       );
     } else if (type === 'u') {
-      // 인물 — 웜 그레이(스톤) 표시 전용. 링크 금지: 마커에는 기록 당시 닉네임(텍스트)만 있는데
-      // /u는 publicCode 단일 해석(P-A7, 닉네임 폴백 없음)이라 닉 기반 링크는 항상 404이고,
-      // 닉변·재취득 시 오귀속 위험까지 있다. 연대기는 사관 기록 — 당시 이름 그대로 표시가 맞다.
+      // 인물 — 웜 그레이(스톤). 3필드 마커({u|닉|코드})의 코드는 불변 publicCode — 닉변·재취득에도
+      // 안전한 프로필 링크. 코드 없는 레거시 2필드는 표시 전용(닉 기반 링크는 /u가 publicCode
+      // 단일 해석이라 404 + 오귀속 위험 — P-A7).
+      const code = m[3];
       out.push(
-        <span key={key++} className="text-stone-500 dark:text-stone-400">
-          {name}
-        </span>,
+        code ? (
+          <Link key={key++} href={profileHref(code, serverId)} className="text-stone-500 underline decoration-dotted underline-offset-2 dark:text-stone-400">
+            {name}
+          </Link>
+        ) : (
+          <span key={key++} className="text-stone-500 dark:text-stone-400">
+            {name}
+          </span>
+        ),
       );
     } else {
       // 구역 — 지역색 칩. 클릭 시 구역 상세 팝업.
@@ -525,6 +536,7 @@ export function WorldMapView({
                     className="whitespace-pre-line text-[13px] leading-relaxed text-zinc-600 dark:text-zinc-300"
                   >
                     <ChronicleText
+                      serverId={serverId}
                       text={para.trim()}
                       zoneColor={zoneColor}
                       onGuild={openGuildByName}
@@ -551,6 +563,7 @@ export function WorldMapView({
                   </span>
                   <span className="text-zinc-600 dark:text-zinc-300">
                     <ChronicleText
+                      serverId={serverId}
                       text={e.headline}
                       zoneColor={zoneColor}
                       onGuild={openGuildByName}

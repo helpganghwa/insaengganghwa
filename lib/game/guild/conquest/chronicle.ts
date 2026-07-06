@@ -29,7 +29,7 @@ export type ConquestDaySummary = {
   /** 공격 측 — 그날 각 구역을 공격한(role=attack 배치) 길드(구역×길드 distinct). */
   attacks: { zone: string; region: string; guild: string }[];
   /** 주목할 개인 활약(그날 finale 기준 — 최다 수비/처치). '처치'는 공·수 역할 무관 쓰러뜨린 수. */
-  feats: { nickname: string; guild: string; kind: '수비' | '처치'; count: number }[];
+  feats: { nickname: string; publicCode: string | null; guild: string; kind: '수비' | '처치'; count: number }[];
 };
 
 /** kstDay(YYYY-MM-DD)에 일수 가감 — 날짜 문자열 산술(UTC 정오 기준, DST 무관). */
@@ -41,7 +41,7 @@ function addDaysToKstDay(kstDay: string, delta: number): string {
 
 /** 연대기 마커 제거 — {g|이름}/{u|이름}/{z|이름} → 이름(맥락 전달용 평문화). */
 function stripMarkers(s: string): string {
-  return s.replace(/\{[guz]\|([^}]+)\}+/g, '$1');
+  return s.replace(/\{[guz]\|([^}|]+)(?:\|[^}]*)?\}+/g, '$1');
 }
 
 // 지역 풀네임(줄임말 금지) — 세계지도 REGION 라벨과 일치.
@@ -138,13 +138,22 @@ export async function aggregateConquestDay(kstDay: string, serverId: number): Pr
   `)) as unknown as { zone: string; region: string; guild: string }[];
   const attacks = attackRows.map((a) => ({ zone: a.zone, region: REGION_KO[a.region] ?? a.region, guild: a.guild }));
 
-  const topSurvive = [...survives.values()].sort((a, b) => b.n - a.n)[0];
-  const topKill = [...kills.values()].sort((a, b) => b.n - a.n)[0];
+  const topSurviveE = [...survives.entries()].sort((a, b) => b[1].n - a[1].n)[0];
+  const topKillE = [...kills.entries()].sort((a, b) => b[1].n - a[1].n)[0];
+  // 인물 publicCode 해소 — 연대기 {u|닉|코드} 링크용(닉네임은 변경 가능, 코드는 불변).
+  const featUserIds = [topSurviveE, topKillE].filter((e) => e && e[1].n >= 3).map((e) => e![0]);
+  const codeByUser = new Map<string, string>();
+  if (featUserIds.length > 0) {
+    const codeRows = (await db.execute(sql`
+      select id::text as uid, public_code from profiles where id in ${sql`(${sql.join(featUserIds.map((u) => sql`${u}::uuid`), sql`, `)})`}
+    `)) as unknown as { uid: string; public_code: string | null }[];
+    for (const r of codeRows) if (r.public_code) codeByUser.set(r.uid, r.public_code);
+  }
   const feats: ConquestDaySummary['feats'] = [];
-  if (topSurvive && topSurvive.n >= 3)
-    feats.push({ nickname: topSurvive.nick, guild: topSurvive.guild, kind: '수비', count: topSurvive.n });
-  if (topKill && topKill.n >= 3)
-    feats.push({ nickname: topKill.nick, guild: topKill.guild, kind: '처치', count: topKill.n });
+  if (topSurviveE && topSurviveE[1].n >= 3)
+    feats.push({ nickname: topSurviveE[1].nick, publicCode: codeByUser.get(topSurviveE[0]) ?? null, guild: topSurviveE[1].guild, kind: '수비', count: topSurviveE[1].n });
+  if (topKillE && topKillE[1].n >= 3)
+    feats.push({ nickname: topKillE[1].nick, publicCode: codeByUser.get(topKillE[0]) ?? null, guild: topKillE[1].guild, kind: '처치', count: topKillE[1].n });
 
   return {
     kstDay,
@@ -232,9 +241,17 @@ export async function generateAndStoreChronicle(
     capByGuild.set(c.winner, arr);
   }
   // 모든 항목에 (길드)/(구역) 라벨을 붙여 모델이 둘을 혼동·오마킹하지 않게(구역명을 길드로 쓰는 버그 방지).
+  // 구역별 상세 — 이전 소유주(빼앗음)·첫 점령을 명시해 AI가 소유권 이동을 서술할 수 있게 한다
+  // (2026-07-06 피드백: SECOND가 안녕하세요 구역을 빼앗았는데 '빼앗음' 표현이 누락).
+  const capAnno = (zone: string): string => {
+    const c = summary.captures.find((x) => x.zone === zone);
+    if (!c) return '';
+    if (c.from) return `(길드 「${c.from}」 로부터 빼앗음${summary.defenses.some((d) => d.zone === zone) ? '' : ' — 방어 병력 없음'})`;
+    return c.firstCapture ? '(중립지 첫 점령)' : '(무주지 점령)';
+  };
   const capLines =
     [...capByGuild.entries()]
-      .map(([g, zs]) => `· 길드 「${g}」 이(가) 구역 ${zs.map((z) => `「${z}」`).join(', ')} 을(를) 점령 (총 ${zs.length}곳)`)
+      .map(([g, zs]) => `· 길드 「${g}」 이(가) 구역 ${zs.map((z) => `「${z}」${capAnno(z)}`).join(', ')} 을(를) 점령 (총 ${zs.length}곳)`)
       .join('\n') || '· (신규 점령 없음)';
   // 공격 측(role=attack) — 누가 어느 구역을 공격했는지. 구역별로 길드 묶음(공격 길드 정확 귀속).
   const atkByZone = new Map<string, string[]>();
@@ -260,17 +277,82 @@ export async function generateAndStoreChronicle(
           : `· 인물 「${f.nickname}」 (소속 길드 「${f.guild}」): 공격 ${f.count}회 받아내고 버팀(수비)`,
       )
       .join('\n') || '· (없음)';
+  // ── 지형 형세(지도 분석) — 인접 그래프로 길드 영토의 연결 조각 수 변화(분단/통합/비지) 감지
+  // (2026-07-06 피드백: 점령으로 상대 영토가 둘로 쪼개지는 형세를 지도 보듯 서술하게). ──
+  const zoneRows = (await db.execute(sql`
+    select z.id::int as id, z.name, g.name as owner
+    from zones z left join guilds g on g.id = z.owner_guild_id
+    where z.server_id = ${serverId}
+  `)) as unknown as { id: number; name: string; owner: string | null }[];
+  const adjRows = (await db.execute(sql`
+    select za.zone_a::int as a, za.zone_b::int as b
+    from zone_adjacency za join zones z on z.id = za.zone_a
+    where z.server_id = ${serverId}
+  `)) as unknown as { a: number; b: number }[];
+  const idByName = new Map(zoneRows.map((z) => [z.name, z.id]));
+  const nbr = new Map<number, number[]>();
+  for (const e of adjRows) {
+    nbr.set(e.a, [...(nbr.get(e.a) ?? []), e.b]);
+    nbr.set(e.b, [...(nbr.get(e.b) ?? []), e.a]);
+  }
+  const compCount = (ownerOf: Map<number, string | null>, guild: string): { comps: number; zones: number } => {
+    const mine = new Set([...ownerOf.entries()].filter(([, o]) => o === guild).map(([id]) => id));
+    const seen = new Set<number>();
+    let comps = 0;
+    for (const start of mine) {
+      if (seen.has(start)) continue;
+      comps++;
+      const stack = [start];
+      while (stack.length) {
+        const cur = stack.pop()!;
+        if (seen.has(cur)) continue;
+        seen.add(cur);
+        for (const nx of nbr.get(cur) ?? []) if (mine.has(nx) && !seen.has(nx)) stack.push(nx);
+      }
+    }
+    return { comps, zones: mine.size };
+  };
+  // after = 현재 DB 상태(그날 전투 반영 후), before = 오늘 점령을 되돌린 상태.
+  const afterOwner = new Map<number, string | null>(zoneRows.map((z) => [z.id, z.owner]));
+  const beforeOwner = new Map(afterOwner);
+  for (const c of summary.captures) {
+    const zid = idByName.get(c.zone);
+    if (zid !== undefined) beforeOwner.set(zid, c.from);
+  }
+  const topoGuilds = new Set<string>();
+  for (const c of summary.captures) { topoGuilds.add(c.winner); if (c.from) topoGuilds.add(c.from); }
+  const topoLines = [...topoGuilds]
+    .map((g) => {
+      const b = compCount(beforeOwner, g);
+      const a = compCount(afterOwner, g);
+      if (a.zones === 0 && b.zones > 0) return `· 길드 「${g}」: 마지막 구역까지 잃어 영토 소멸`;
+      if (a.comps > b.comps && a.zones < b.zones)
+        return `· 길드 「${g}」: 구역 상실로 영토가 ${a.comps}개 조각으로 갈라짐(분단)`;
+      if (a.comps > b.comps) return `· 길드 「${g}」: 새 점령지가 기존 영토와 떨어져 있음(${a.comps}개 조각, 비지 확보)`;
+      if (a.comps < b.comps && b.comps > 1) return `· 길드 「${g}」: 점령으로 흩어져 있던 영토가 ${a.comps}개 조각으로 이어짐(통합)`;
+      return null;
+    })
+    .filter((s): s is string => s !== null)
+    .join('\n');
+
   const digest =
     `[점령전 정리 — 이 귀속을 그대로 따를 것]\n` +
     `■ 공격 측(구역을 공격한 길드):\n${atkLines}\n` +
     `■ 신규 점령(길드별):\n${capLines}\n` +
     `■ 방어(점령 아님 — 소유 길드가 위 공격을 막아냄):\n${defLines}\n` +
-    `■ 개인 활약:\n${featLines}`;
+    `■ 개인 활약:\n${featLines}\n` +
+    `■ 지형 형세(지도 분석 — 형세 서술 근거):\n${topoLines || '· (연결 형세 변화 없음)'}`;
 
   // ── 연속성 맥락(참고용) — 오늘의 사실은 위 정리만 따르되, 흐름·판도는 아래를 참고해 이어 쓴다. ──
   // 현재 영토 현황(누적 점령 결과) — '정세' 문단 근거.
   const standLines =
-    summary.standings.map((s) => `· 길드 「${s.guild}」: ${s.zones}곳 보유`).join('\n') || '· (보유 길드 없음)';
+    summary.standings
+      .map((s) => {
+        const t = compCount(afterOwner, s.guild);
+        const frag = t.comps > 1 ? ` — 영토가 ${t.comps}개 조각으로 나뉘어 있음` : '';
+        return `· 길드 「${s.guild}」: ${s.zones}곳 보유${frag}`;
+      })
+      .join('\n') || '· (보유 길드 없음)';
 
   // 어제 점령전 결과(있으면) — 전날과의 연속성.
   const prevDay = addDaysToKstDay(kstDay, -1);
@@ -308,38 +390,7 @@ export async function generateAndStoreChronicle(
     `[지난 역사 — 어제까지 누적, 흐름 참고용]\n${histLines || '· (이전 기록 없음)'}`;
 
   const bigChange = isBigChange(summary);
-  const res = await client().messages.create({
-    model: MODEL_ID,
-    max_tokens: 1100,
-    system: [{ type: 'text', text: SYSTEM_PROMPT, cache_control: { type: 'ephemeral' } }],
-    messages: [
-      {
-        role: 'user',
-        content:
-          `${kstDay} 점령전 기록.\n\n${digest}\n\n${context}\n\n` +
-          `공격한 길드는 '공격 측' 목록만 따라라 — 소유(방어) 길드가 공격했다고 쓰지 말 것. 방어 측은 공격을 받아낸 쪽이다. '처치'가 많은 인물도 방어 측일 수 있으니 처치 수로 공격 측을 단정하지 말 것.\n` +
-          `위 '신규 점령(길드별)'을 정확히 따라라 — 한 길드의 점령을 다른 길드로 옮기거나 여러 길드 점령을 한 길드로 합치지 말 것. 방어는 점령으로 세지 말 것.\n` +
-          `[현재 영토 현황]·[어제 점령전 결과]·[지난 역사]는 흐름·판도 참고용이다. 오늘의 사실(점령/방어/활약)은 반드시 '[점령전 정리]'만 따르고, 어제·과거의 점령을 오늘 것으로 적지 말 것.\n` +
-          `이야기 끝의 '형세'(정세) 대목은 '[현재 영토 현황]'(누적 보유 구역 수)을 반영하고, 어제·지난 역사와 자연스럽게 이어지도록 연속성 있게 맺는다. 현재 일은 '오늘' 대신 '이번에·이번 전투'로 받는다(예: "어제 세 곳에 이어 이번에 두 곳을 더해 현재 다섯 곳을 보유").\n` +
-          `today는 역사가가 그날의 일을 하나의 이야기로 풀어 들려주듯 쓴다 — 사건→결과→그 의미→형세를 별개 문단·라벨로 쪼개지 말고 인과로 이어지는 단일 서사로. 문단은 흐름에 따라 자연스럽게(2~4문단), '그날·이날·오늘' 같은 시간 지시어로 문단을 시작하지 말 것.\n` +
-          (bigChange
-            ? `이번 전투는 정세가 크게 바뀐 경우 — headline에 핵심 사건 한 줄을 쓴다.\n`
-            : `이번 전투는 정세가 크게 바뀐 경우가 아님 — headline은 반드시 빈 문자열("")로 둔다.\n`) +
-          `마커: 길드={g|}, 인물={u|}, 개별 구역(zone)={z|}. 지역은 마커 없이.\n\n` +
-          `위 규칙대로 JSON({today, headline})만 출력하라.`,
-      },
-    ],
-  });
-  const block = res.content.find((b) => b.type === 'text');
-  const raw = block && 'text' in block ? block.text : '';
-  const m = raw.match(/\{[\s\S]*\}/);
-  if (!m) throw new Error(`CHRONICLE_PARSE_FAIL: ${raw.slice(0, 200)}`);
-  const parsed = JSON.parse(m[0]) as { today?: string; headline?: string };
-  // 마커 닫는 중괄호 겹침({g|신화}}) 정규화 — 마커 뒤 여분 } 제거(저장 깔끔).
-  const fixBraces = (s: string) => s.replace(/(\{[guz]\|[^}]+)\}{2,}/g, '$1}');
-  // 결정론 마커 교정 — 코드가 아는 정답(길드/구역 이름)으로 LLM 오마킹 보정.
-  // {g|이름}인데 이름이 구역명에만 있으면 {z|}로, {z|이름}인데 길드명에만 있으면 {g|}로 강제.
-  // 동명(길드명=구역명)이면 모델 출력 유지(어느 쪽인지 코드도 불가). cf. 2026-06-20 '기사 연무장' 버그.
+  // ── 이름 집합(검증·교정·강제 공용) — summary가 아는 정답. ──
   const guildNames = new Set<string>();
   const zoneNames = new Set<string>();
   for (const c of summary.captures) { guildNames.add(c.winner); zoneNames.add(c.zone); }
@@ -347,6 +398,11 @@ export async function generateAndStoreChronicle(
   for (const d of summary.defenses) { guildNames.add(d.owner); zoneNames.add(d.zone); }
   for (const f of summary.feats) guildNames.add(f.guild);
   for (const s of summary.standings) guildNames.add(s.guild);
+  const userNames = new Set<string>(summary.feats.map((f) => f.nickname));
+
+  // 마커 닫는 중괄호 겹침({g|신화}}) 정규화 — 마커 뒤 여분 } 제거(저장 깔끔).
+  const fixBraces = (s: string) => s.replace(/(\{[guz]\|[^}]+)\}{2,}/g, '$1}');
+  // 결정론 마커 교정 — {g|이름}인데 구역명에만 있으면 {z|}로, 반대도(동명이면 모델 출력 유지).
   const correctMarkers = (s: string) =>
     s.replace(/\{([gz])\|([^}]+)\}/g, (mm, t: string, name: string) => {
       const n = name.trim();
@@ -356,15 +412,24 @@ export async function generateAndStoreChronicle(
       if (t === 'z' && isG && !isZ) return `{g|${name}}`;
       return mm;
     });
-  // 마커 누락 강제(2026-07-05 사건: 본문 전체 마커 0, 「이름」 평문 노출) — LLM 준수에
-  // 의존하지 않고 코드가 아는 이름을 결정론적으로 마킹. 기존 마커 구간은 보존, 동명
-  // (길드=구역 등 두 종류에 존재)은 종류 판정 불가라 건너뜀. 긴 이름 우선(부분 문자열 오마킹 방지).
-  const userNames = new Set<string>(summary.feats.map((f) => f.nickname));
   const wrapOutsideMarkers = (text: string, find: string, repl: string): string =>
     text
       .split(/(\{[guz]\|[^}]+\}+)/g)
       .map((seg, i) => (i % 2 === 1 ? seg : seg.replaceAll(find, repl)))
       .join('');
+  // 검증 — 알려진 이름이 마커 밖(평문·「」)에 등장하면 위반. 재시도 피드백/백스톱 판단 공용.
+  const findViolations = (s: string): string[] => {
+    const plain = s
+      .split(/(\{[guz]\|[^}]+\}+)/g)
+      .filter((_, i) => i % 2 === 0)
+      .join('');
+    return [...new Set([...guildNames, ...userNames, ...zoneNames])].filter(
+      (n) => n.length >= 2 && plain.includes(n),
+    );
+  };
+  // 마커 누락 강제(2026-07-05 사건: 본문 전체 마커 0, 「이름」 평문 노출) — 재시도로도 남은
+  // 위반을 결정론 마킹. 기존 마커 보존, 동명(두 종류 이상에 존재)은 종류 판정 불가라 스킵(재시도
+  // 단계에서 AI가 문맥으로 해소하는 것이 1차 방어), 긴 이름 우선(부분 문자열 오마킹 방지).
   const enforceMarkers = (s: string): string => {
     const ambiguous = new Set(
       [...guildNames, ...zoneNames, ...userNames].filter(
@@ -386,11 +451,69 @@ export async function generateAndStoreChronicle(
     }
     return out;
   };
-  const today = enforceMarkers(correctMarkers(fixBraces((parsed.today ?? '').trim())));
-  // 헤드라인('전체' 연표)은 정세가 크게 바뀐 날만 — 아니면 빈 문자열(연표 미노출).
-  const headline = bigChange
-    ? enforceMarkers(correctMarkers(fixBraces((parsed.headline ?? '').trim())))
-    : '';
+  // {u|닉} → {u|닉|코드} — 렌더 링크용 불변 publicCode 주입(닉변·재취득에도 안전).
+  const codeByNick = new Map(summary.feats.filter((f) => f.publicCode).map((f) => [f.nickname, f.publicCode!]));
+  const enrichUserMarkers = (s: string): string =>
+    s.replace(/\{u\|([^}|]+)\}/g, (mm, n: string) => {
+      const code = codeByNick.get(n.trim());
+      return code ? `{u|${n.trim()}|${code}}` : mm;
+    });
+
+  const baseContent =
+    `${kstDay} 점령전 기록.\n\n${digest}\n\n${context}\n\n` +
+    `공격한 길드는 '공격 측' 목록만 따라라 — 소유(방어) 길드가 공격했다고 쓰지 말 것. 방어 측은 공격을 받아낸 쪽이다. '처치'가 많은 인물도 방어 측일 수 있으니 처치 수로 공격 측을 단정하지 말 것.\n` +
+    `위 '신규 점령(길드별)'을 정확히 따라라 — 한 길드의 점령을 다른 길드로 옮기거나 여러 길드 점령을 한 길드로 합치지 말 것. 방어는 점령으로 세지 말 것.\n` +
+    `[현재 영토 현황]·[어제 점령전 결과]·[지난 역사]는 흐름·판도 참고용이다. 오늘의 사실(점령/방어/활약)은 반드시 '[점령전 정리]'만 따르고, 어제·과거의 점령을 오늘 것으로 적지 말 것.\n` +
+    `이야기 끝의 '형세'(정세) 대목은 '[현재 영토 현황]'(누적 보유 구역 수)을 반영하고, 어제·지난 역사와 자연스럽게 이어지도록 연속성 있게 맺는다. 현재 일은 '오늘' 대신 '이번에·이번 전투'로 받는다(예: "어제 세 곳에 이어 이번에 두 곳을 더해 현재 다섯 곳을 보유").\n` +
+    `'신규 점령'에 '~로부터 빼앗음'이 붙은 구역은 소유권 이동을 분명히 이야기하라 — 이전 주인 길드를 언급하고, '방어 병력 없음'이면 그 사실 자체를 서사로 쓴다(무혈 입성·비워진 성을 접수 등). '지형 형세'의 분단·통합·비지 신호가 있으면 지도를 보며 형세를 짚는 사관처럼 형세 대목에 녹여라(예: "이 한 수로 상대 영토는 남북으로 갈라졌다").\n` +
+          `today는 역사가가 그날의 일을 하나의 이야기로 풀어 들려주듯 쓴다 — 사건→결과→그 의미→형세를 별개 문단·라벨로 쪼개지 말고 인과로 이어지는 단일 서사로. 문단은 흐름에 따라 자연스럽게(2~4문단), '그날·이날·오늘' 같은 시간 지시어로 문단을 시작하지 말 것.\n` +
+    (bigChange
+      ? `이번 전투는 정세가 크게 바뀐 경우 — headline에 핵심 사건 한 줄을 쓴다.\n`
+      : `이번 전투는 정세가 크게 바뀐 경우가 아님 — headline은 반드시 빈 문자열("")로 둔다.\n`) +
+    `마커: 길드={g|}, 인물={u|}, 개별 구역(zone)={z|}. 지역은 마커 없이. 모든 길드/인물/구역 이름은 등장할 때마다 반드시 마커로 감싼다(「」 따옴표 금지).\n\n` +
+    `위 규칙대로 JSON({today, headline})만 출력하라.`;
+
+  // ── 생성 + 검증 재시도(최대 3회) — 위반(마커 없는 이름)을 피드백으로 재생성 유도. ──
+  // 재시도로도 남으면 enforceMarkers가 결정론 백스톱(동명 모호만 최종 잔존 가능, warn).
+  const messages: { role: 'user' | 'assistant'; content: string }[] = [
+    { role: 'user', content: baseContent },
+  ];
+  let today = '';
+  let headline = '';
+  for (let attempt = 0; attempt < 3; attempt++) {
+    const res = await client().messages.create({
+      model: MODEL_ID,
+      max_tokens: 1100,
+      system: [{ type: 'text', text: SYSTEM_PROMPT, cache_control: { type: 'ephemeral' } }],
+      messages,
+    });
+    const block = res.content.find((b) => b.type === 'text');
+    const raw = block && 'text' in block ? block.text : '';
+    const m = raw.match(/\{[\s\S]*\}/);
+    if (!m) throw new Error(`CHRONICLE_PARSE_FAIL: ${raw.slice(0, 200)}`);
+    const parsed = JSON.parse(m[0]) as { today?: string; headline?: string };
+    const candT = correctMarkers(fixBraces((parsed.today ?? '').trim()));
+    const candH = bigChange ? correctMarkers(fixBraces((parsed.headline ?? '').trim())) : '';
+    const viol = [...new Set([...findViolations(candT), ...findViolations(candH)])];
+    if (viol.length === 0 || attempt === 2) {
+      if (viol.length > 0) {
+        console.warn(`[chronicle] 마커 위반 잔존(재시도 소진) — enforce 백스톱 적용: ${viol.join(', ')}`);
+      }
+      today = enrichUserMarkers(enforceMarkers(candT));
+      headline = enrichUserMarkers(enforceMarkers(candH));
+      break;
+    }
+    console.warn(`[chronicle] 마커 위반 ${viol.length}건 → 재생성(attempt ${attempt + 1}): ${viol.join(', ')}`);
+    messages.push(
+      { role: 'assistant', content: raw },
+      {
+        role: 'user',
+        content:
+          `다음 이름이 마커 없이(평문 또는 「」로) 등장했다: ${viol.join(', ')}\n` +
+          `길드는 {g|이름}, 인물은 {u|이름}, 개별 구역은 {z|이름}으로 — 위 이름의 모든 등장 위치를 종류에 맞는 마커로 감싸서, 같은 내용을 처음부터 끝까지 다시 JSON({today, headline})으로만 출력하라.`,
+      },
+    );
+  }
   if (!today) throw new Error('CHRONICLE_EMPTY');
   if (bigChange && !headline) throw new Error('CHRONICLE_EMPTY');
 
