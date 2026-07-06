@@ -204,12 +204,12 @@ export function EnhanceSlotCard({
   const [flashMsg, setFlashMsg] = useState<string | null>(null); // outcome 랜덤 메시지
   const [confirmMsg, setConfirmMsg] = useState<string | null>(null); // 확인 랜덤 메시지
   const [attempting, setAttempting] = useState(false); // 강화 시도 중(취소/단축 제외)
-  // iOS 연타/고스트탭 방어(2026-07-06 슬롯 전멸 사건) — 컨펌 진입 후 700ms 내 재탭은
-  // 사람이 라벨을 읽고 누른 것일 수 없으므로 무시. 기기 이벤트 몰아치기(중단 후 재개
-  // 일괄 발화)가 같은 좌표에 연속 탭을 떨어뜨려도 확정이 뚫리지 않는다.
+  // iOS 고스트탭 방어(2026-07-06 슬롯 전멸 사건) — 컨펌 진입 후 150ms 내 재탭 무시.
+  // 일괄 발화(큐에 쌓인 탭의 동시 방출)는 간격이 수십 ms라 걸리고, 사람의 최속
+  // 탭-탭(~150ms+)은 통과 — 700ms였을 땐 숙련 유저의 빠른 확정이 씹혀 UX 저하(회귀).
   const armedAtRef = useRef(0);
   const armGuard = () => { armedAtRef.current = Date.now(); };
-  const armTooFresh = () => Date.now() - armedAtRef.current < 700;
+  const armTooFresh = () => Date.now() - armedAtRef.current < 150;
   const [attemptingMsg, setAttemptingMsg] = useState<string | null>(null);
 
   useEffect(() => {
