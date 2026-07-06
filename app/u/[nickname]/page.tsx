@@ -211,7 +211,7 @@ export async function generateMetadata({
     /* 카운트 조회 실패 시 정적 문구 유지 */
   }
   // OG는 불변 코드로 — 닉 변경/링크 캐시에도 안정. 서버는 쿼리로 전파.
-  const ogImage = `/og/${encodeURIComponent(data.publicCode)}${serverId !== DEFAULT_SERVER_ID ? `?s=${serverId}` : ''}`;
+  const ogImage = `/og/${encodeURIComponent(data.publicCode)}?s=${serverId}`;
   return {
     title,
     description,

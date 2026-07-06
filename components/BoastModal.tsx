@@ -77,8 +77,9 @@ export function BoastModal({
 
   useEffect(() => {
     if (typeof window !== 'undefined') {
-      const sfx = serverId !== 1 ? `?s=${serverId}` : '';
-      setShareUrl(`${window.location.origin}/s/${encodeURIComponent(publicCode)}${sfx}`);
+      // ?s=는 서버 1도 항상 명시 — 생략 시 /u가 조회자의 활성 서버로 폴백해
+      // 다른 서버 유저에게 404/엉뚱한 서버 프로필이 보인다.
+      setShareUrl(`${window.location.origin}/s/${encodeURIComponent(publicCode)}?s=${serverId}`);
     }
   }, [publicCode, serverId]);
 
@@ -110,8 +111,7 @@ export function BoastModal({
     if (!open || typeof window === 'undefined') return '';
     const origin = window.location.origin;
     const v = Math.random().toString(36).slice(2, 10); // 카톡 캐시 우회(매 공유 다른 OG).
-    const params = new URLSearchParams({ v });
-    if (serverId !== 1) params.set('s', String(serverId));
+    const params = new URLSearchParams({ v, s: String(serverId) });
     return `${origin}/og/${encodeURIComponent(publicCode)}?${params.toString()}`;
   }, [open, publicCode, serverId]);
 
@@ -186,12 +186,11 @@ export function BoastModal({
     const origin = window.location.origin;
     // v=random은 카톡 캐시 우회(매 공유마다 다른 OG — 서버 OG는 sprite·배경 랜덤 합성).
     const v = Math.random().toString(36).slice(2, 10);
-    const params = new URLSearchParams({ v });
-    if (serverId !== 1) params.set('s', String(serverId));
+    const params = new URLSearchParams({ v, s: String(serverId) });
     const imageUrl = `${origin}/og/${encodeURIComponent(publicCode)}?${params.toString()}`;
     // '인생강화 시작' — /s/[code]?start=1로 보내 pending_referral 쿠키를 세팅(추천 귀속) 후
     // 앱 시작(/)으로 리다이렉트. 직접 '/'로 보내면 쿠키가 없어 추천인 리워드가 누락됨.
-    const startUrl = `${origin}/s/${encodeURIComponent(publicCode)}?start=1${serverId !== 1 ? `&s=${serverId}` : ''}`;
+    const startUrl = `${origin}/s/${encodeURIComponent(publicCode)}?start=1&s=${serverId}`;
     k.Share.sendDefault({
       objectType: 'feed',
       content: {
