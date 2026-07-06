@@ -10,7 +10,9 @@ import { shopPurchases } from '@/lib/db/schema/shop';
 import { mailbox } from '@/lib/db/schema/mailbox';
 import { SUPPLY_SLOTS } from '@/lib/game/balance';
 
-import { shopGrant, productPeriod, PREMIUM } from './catalog';
+import { raisePaymentAlert } from '@/lib/payment/alert';
+
+import { shopGrant, productPeriod, PREMIUM, FIRST_SPECIAL } from './catalog';
 import { periodKey } from './period';
 
 /**
@@ -89,6 +91,44 @@ export async function applyProductGrant(
   const g = shopGrant(productId);
   if (!g) throw new Error('UNKNOWN_PRODUCT');
   const period = productPeriod(productId);
+
+  // 인생 특가(서버별 1회) — createOrder 사전체크는 비원자(pending 2건 병렬 결제 가능)라
+  // 지급 시점에 'once' 행 잠금으로 최종 게이트(dev 지급과 동일 원장). 두 번째 결제 지급은
+  // 차단하되 결제는 이미 성사됐으므로 throw 대신(웹훅 재시도 루프 방지) 알림 → 수동 환불.
+  if (productId === FIRST_SPECIAL.id) {
+    await tx
+      .insert(shopPurchases)
+      .values({ userId, serverId, productId, periodKey: '' })
+      .onConflictDoNothing();
+    const [row] = await tx
+      .select({ periodKey: shopPurchases.periodKey })
+      .from(shopPurchases)
+      .where(
+        and(
+          eq(shopPurchases.userId, userId),
+          eq(shopPurchases.serverId, serverId),
+          eq(shopPurchases.productId, productId),
+        ),
+      )
+      .for('update');
+    if (row?.periodKey === 'once') {
+      await raisePaymentAlert('COMPLETE_EXCEPTION', {
+        paymentId: `first-special-dup:${userId}:${serverId}`,
+        detail: `인생 특가 중복 결제 감지(서버 ${serverId}) — 두 번째 지급 차단됨. 중복 결제분 수동 환불 필요.`,
+      });
+      return { diamond: 0, boxes: 0 };
+    }
+    await tx
+      .update(shopPurchases)
+      .set({ periodKey: 'once', updatedAt: new Date() })
+      .where(
+        and(
+          eq(shopPurchases.userId, userId),
+          eq(shopPurchases.serverId, serverId),
+          eq(shopPurchases.productId, productId),
+        ),
+      );
+  }
 
   if (productId === PREMIUM.id) {
     await mailPremiumInstant(tx, userId, serverId, g, {
