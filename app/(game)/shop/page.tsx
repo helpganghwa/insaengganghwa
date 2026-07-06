@@ -74,16 +74,11 @@ export default async function ShopPage({
 /** CBT 기간 상점 잠금 화면 — 정식 오픈까지 전체 준비 중. */
 function ShopClosed() {
   return (
-    <div className="flex flex-col items-center justify-center gap-3 px-6 py-28 text-center">
+    <div className="flex min-h-[70dvh] flex-col items-center justify-center gap-3 px-6 text-center">
       <div className="text-4xl" aria-hidden>
         🔨
       </div>
       <p className="text-lg font-bold">상점 준비 중</p>
-      <p className="text-sm text-zinc-500 dark:text-zinc-400">
-        CBT 기간에는 상점이 열리지 않아요.
-        <br />
-        정식 오픈과 함께 찾아옵니다.
-      </p>
     </div>
   );
 }
