@@ -45,8 +45,10 @@ bun run --env-file=.env.local scripts/cbt-snapshot.ts            # 드라이런 
 bun run --env-file=.env.local scripts/cbt-snapshot.ts --confirm  # 기록 + keepsake 버킷 복사
 ```
 
-- 초대 보상 집계 + 기념 아바타(착용 비기본 우선, 없으면 최근 생성 비기본)를 `cbt_carryover`에 upsert.
-- south.png를 storage `cbt-keepsake/`로 복사(wipe 생존).
+- 이월 범위(정책): **닉네임 + 아바타 전 목록(비기본) + 추천 보상**. 진행도는 리셋.
+- 캐릭터 보유 전 유저를 `cbt_carryover`에 upsert(빈손 유저도 닉네임 이월 대상).
+- 아바타는 정면(south) 1방향만 사용(기획 확정) — 각 아바타의 south.png를 storage
+  `cbt-keepsake/{userId}/{profileId}.png`로 복사(wipe 생존).
 
 ## 3. wipe 실행
 
@@ -63,6 +65,18 @@ catalog_items(현행 60종 유지) · probability_snapshots · system_mode · an
 
 > ⚠ **profiles는 어떤 경우에도 wipe 금지** — `cbt_carryover`가 CASCADE FK로 매달려 있어 이월
 > 원장이 전손되고, `handle_new_user` 트리거는 auth.users INSERT에만 발화해 계정이 재생성되지 않는다.
+
+## 3.5. CBT 유저 사전 복원 (wipe 직후, 오픈 전)
+
+```bash
+bun run --env-file=.env.local scripts/cbt-restore.ts --db=prod            # 드라이런
+bun run --env-file=.env.local scripts/cbt-restore.ts --db=prod --confirm  # 실행
+```
+
+CBT 유저 전원의 캐릭터를 1서버에 **미리 생성** — CBT 닉네임 그대로 + 아바타 전 목록 복원
+(마지막 착용 active) + 가입 보너스(💎1,000·슬롯당 📦10, ×1) + 초대 이월 보상·환영 우편(만료 90일)
++ `granted_at` 마킹. 닉네임 예약 로직이 필요 없고(자리가 이미 차 있음), 오픈 첫날 월드가
+비어 보이지 않는다. 멱등 — 재실행 시 기존 캐릭터는 건너뜀. 튜토리얼은 스킵(step 9, 베테랑).
 
 ## 4. env 전환 + 배포
 
@@ -94,7 +108,8 @@ bun run scripts/record-probability-snapshot.ts --note="정식 오픈" --confirm
 | 항목 | 기대값 |
 |------|--------|
 | 신규 가입 보너스 | 💎1,000 / 슬롯당 상자 10개 (×1) |
-| CBT 유저 재로그인 | 캐릭터 재생성 + "CBT 감사 보상" 우편(초대 이월) + 기념 아바타 복원 |
+| CBT 유저 재로그인 | **사전 복원된 캐릭터로 바로 진입**(CBT 닉네임·아바타 목록·마지막 착용 active 유지) + 우편 2통(초대 이월 보상·환영) |
+| CBT 닉네임 | 신규 유저가 선점 불가(캐릭터가 이미 존재) — 닉변도 정상 |
 | 상점/성장패스 | 유료 상품 노출·결제창 정상 |
 | 로그인 화면 | CBT 고지 배너 미노출 |
 | 확률공시 `/probability` | 현행 카탈로그 기준 표기 |

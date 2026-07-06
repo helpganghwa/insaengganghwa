@@ -1,14 +1,17 @@
 /**
- * CBT 보상 이월 스냅샷 — 실운영 컷오버(wipe) **직전** 1회 실행.
+ * CBT 이월 스냅샷 — 실운영 컷오버(wipe) **직전** 1회 실행.
  *
- * 하는 일(유저별):
+ * 이월 범위(정책): 닉네임 + 아바타 전 목록(비기본) + 추천 보상. 진행도는 이월하지 않음.
+ *
+ * 하는 일(캐릭터 보유 전 유저 — 빈손 유저도 닉네임 이월을 위해 전원 기록):
  *  1. 초대 보상 집계 — referral_attributions(rewarded=true) 건수 × 당시 단가(💎1,000+📦30).
- *  2. 기념 아바타 — 마지막 착용(characters.active_profile_id, 기본 제외) 없으면 가장 최근
- *     생성 아바타(user_profiles, isDefault 제외). south.png를 storage `profiles` 버킷의
- *     `cbt-keepsake/{userId}.png`로 복사(wipe 후에도 생존) + 행 원본 jsonb 스냅샷.
+ *  2. 아바타 전 목록(비기본) — 정면(south) PNG를 storage `profiles` 버킷의
+ *     `cbt-keepsake/{userId}/{profileId}.png`로 복사(wipe 생존). 아바타는 정면 1방향만
+ *     사용(기획 확정)이라 south만 복사하면 완전 이월. 마지막 착용은 was_active 마킹.
  *  3. cbt_carryover upsert.
  *
- * 실행 절차(컷오버 데이): docs/CUTOVER-LIVE.md 런북 — 점검ON → 본 스크립트 --confirm → cutover-live.ts → env 전환·배포.
+ * 실행 절차(컷오버 데이): docs/CUTOVER-LIVE.md 런북 — 점검ON → 본 스크립트 --confirm →
+ * cutover-live.ts → cbt-restore.ts(1서버 사전 복원) → env 전환·배포.
  * 기본 드라이런. 대상 DB = PROD_DATABASE_URL(:5432 세션 풀러로 자동 전환).
  *
  * 사용: bun run --env-file=.env.local scripts/cbt-snapshot.ts [--confirm]
@@ -30,26 +33,21 @@ if (!SUPA_URL || !SUPA_KEY) { console.error('SUPABASE service env 미설정'); p
 const storage = createClient(SUPA_URL, SUPA_KEY, { auth: { persistSession: false } }).storage;
 
 type ProfileRow = {
-  id: string; user_id: string; server_id: number; rotations: Record<string, string>;
+  id: string; user_id: string; rotations: Record<string, string>;
   pixellab_character_id: string; options: Record<string, unknown>;
   equipment_snapshot: unknown; description_prompt: string; created_at: string;
 };
 
-async function keepsakeOf(userId: string): Promise<ProfileRow | null> {
-  // 착용 중(비기본) 우선 — 기본 아바타 착용 중이거나 미착용이면 가장 최근 생성한 비기본
-  // 아바타로 fallback. 기본 아바타 자체는 실운영에서 기본 지급되므로 항상 제외.
-  const [active] = await sql<ProfileRow[]>`
-    select up.* from characters c join user_profiles up on up.id = c.active_profile_id
-    where c.user_id = ${userId} and coalesce(up.options->>'isDefault','false') <> 'true'
-    limit 1`;
-  if (active) return active;
-  const [latest] = await sql<ProfileRow[]>`
-    select up.* from user_profiles up
-    where up.user_id = ${userId} and coalesce(up.options->>'isDefault','false') <> 'true'
-    order by up.created_at desc
-    limit 1`;
-  return latest ?? null;
-}
+/** cbt_carryover.avatars 원소 — grant.ts/cbt-restore.ts와 형태 공유. */
+type CarryAvatar = {
+  image_url: string;
+  was_active: boolean;
+  pixellab_character_id: string;
+  options: Record<string, unknown>;
+  equipment_snapshot: unknown;
+  description_prompt: string;
+  created_at: string;
+};
 
 /** storage 공개 URL → 같은 버킷 내 키 추출. */
 function storageKey(url: string): string | null {
@@ -57,27 +55,27 @@ function storageKey(url: string): string | null {
   return m ? m[1]! : null;
 }
 
-async function copyKeepsakeImage(userId: string, southUrl: string): Promise<string | null> {
+async function copyKeepsakeImage(userId: string, profileId: string, southUrl: string): Promise<string | null> {
   const key = storageKey(southUrl);
   if (!key) return null;
-  const dest = `cbt-keepsake/${userId}.png`;
+  const dest = `cbt-keepsake/${userId}/${profileId}.png`;
   if (confirm) {
     const dl = await storage.from('profiles').download(key);
-    if (dl.error || !dl.data) { console.warn(`  ⚠ 이미지 다운로드 실패 ${userId}: ${dl.error?.message}`); return null; }
+    if (dl.error || !dl.data) { console.warn(`  ⚠ 이미지 다운로드 실패 ${profileId}: ${dl.error?.message}`); return null; }
     const buf = Buffer.from(await dl.data.arrayBuffer());
     const up = await storage.from('profiles').upload(dest, buf, { contentType: 'image/png', upsert: true, cacheControl: '31536000' });
-    if (up.error) { console.warn(`  ⚠ 이미지 업로드 실패 ${userId}: ${up.error.message}`); return null; }
+    if (up.error) { console.warn(`  ⚠ 이미지 업로드 실패 ${profileId}: ${up.error.message}`); return null; }
   }
   const { data } = storage.from('profiles').getPublicUrl(dest);
   return data.publicUrl;
 }
 
 async function main() {
-  console.log(`\n=== CBT 보상 이월 스냅샷 ${confirm ? '(실행)' : '(드라이런)'} ===\n`);
+  console.log(`\n=== CBT 이월 스냅샷 ${confirm ? '(실행)' : '(드라이런)'} ===\n`);
 
-  // 유저 풀 = 캐릭터 보유 전체(닉네임 포함).
-  const users = await sql<{ user_id: string; nickname: string }[]>`
-    select user_id, nickname from characters order by created_at`;
+  // 유저 풀 = 캐릭터 보유 전체 — 빈손이어도 닉네임은 이월(복원 시 그대로 캐릭터 생성).
+  const users = await sql<{ user_id: string; nickname: string; active_profile_id: string | null }[]>`
+    select user_id, nickname, active_profile_id from characters order by created_at`;
 
   // 초대 집계(추천인 기준).
   const invites = await sql<{ referrer_user_id: string; n: number }[]>`
@@ -85,45 +83,61 @@ async function main() {
     where rewarded = true group by referrer_user_id`;
   const inviteBy = new Map(invites.map((r) => [r.referrer_user_id, Number(r.n)]));
 
-  let rows = 0, withInvite = 0, withKeepsake = 0;
+  let rows = 0, withInvite = 0, avatarTotal = 0;
   for (const u of users) {
     const inviteCount = inviteBy.get(u.user_id) ?? 0;
-    const ks = await keepsakeOf(u.user_id);
-    if (inviteCount === 0 && !ks) continue; // 이월할 것 없음
 
-    let keepsakeUrl: string | null = null;
-    if (ks) {
-      const south = ks.rotations?.south;
-      if (typeof south === 'string' && south) keepsakeUrl = await copyKeepsakeImage(u.user_id, south);
+    // 비기본 아바타 전부 — 기본 아바타는 실운영 캐릭터 생성이 기본 지급하므로 제외.
+    const owned = await sql<ProfileRow[]>`
+      select id, user_id, rotations, pixellab_character_id, options, equipment_snapshot,
+             description_prompt, created_at
+      from user_profiles
+      where user_id = ${u.user_id} and coalesce(options->>'isDefault','false') <> 'true'
+      order by created_at`;
+
+    const avatars: CarryAvatar[] = [];
+    for (const p of owned) {
+      const south = p.rotations?.south;
+      if (typeof south !== 'string' || !south) { console.warn(`  ⚠ south 없음 ${p.id} — 건너뜀`); continue; }
+      const url = await copyKeepsakeImage(u.user_id, p.id, south);
+      if (!url) continue;
+      avatars.push({
+        image_url: url,
+        was_active: p.id === u.active_profile_id,
+        pixellab_character_id: p.pixellab_character_id,
+        options: p.options ?? {},
+        equipment_snapshot: p.equipment_snapshot ?? {},
+        description_prompt: p.description_prompt ?? '',
+        created_at: p.created_at,
+      });
     }
 
     rows++;
     if (inviteCount > 0) withInvite++;
-    if (ks && keepsakeUrl) withKeepsake++;
+    avatarTotal += avatars.length;
     console.log(
       `  ${u.nickname.padEnd(12)} 초대 ${String(inviteCount).padStart(2)}건` +
       ` → 💎${inviteCount * INVITE_DIAMOND_PER} 📦${inviteCount * INVITE_BOX_PER}` +
-      (ks && keepsakeUrl ? ' · 기념아바타 ✓' : ks ? ' · 기념아바타(이미지 실패)' : ''),
+      ` · 아바타 ${avatars.length}개${avatars.some((a) => a.was_active) ? '(착용 포함)' : ''}`,
     );
 
     if (confirm) {
       await sql`
-        insert into cbt_carryover (user_id, nickname, invite_count, invite_diamond, invite_boxes, keepsake, keepsake_image_url)
+        insert into cbt_carryover (user_id, nickname, invite_count, invite_diamond, invite_boxes, avatars)
         values (${u.user_id}, ${u.nickname}, ${inviteCount},
                 ${inviteCount * INVITE_DIAMOND_PER}, ${inviteCount * INVITE_BOX_PER},
-                ${ks && keepsakeUrl ? sql.json(ks as never) : null}, ${keepsakeUrl})
+                ${avatars.length > 0 ? sql.json(avatars as never) : null})
         on conflict (user_id) do update set
           nickname = excluded.nickname,
           invite_count = excluded.invite_count,
           invite_diamond = excluded.invite_diamond,
           invite_boxes = excluded.invite_boxes,
-          keepsake = excluded.keepsake,
-          keepsake_image_url = excluded.keepsake_image_url,
+          avatars = excluded.avatars,
           snapshot_at = now()`;
     }
   }
 
-  console.log(`\n대상 ${rows}명 (초대보상 ${withInvite} · 기념아바타 ${withKeepsake})`);
+  console.log(`\n대상 ${rows}명 (초대보상 ${withInvite} · 아바타 총 ${avatarTotal}개)`);
   if (!confirm) console.log('드라이런 종료 — 실제 기록은 --confirm.');
   await sql.end();
 }
