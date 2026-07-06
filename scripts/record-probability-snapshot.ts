@@ -6,17 +6,7 @@
 import { config } from 'dotenv';
 import postgres from 'postgres';
 
-import {
-  baseSuccessRateBp,
-  downRateBp,
-  MEGA_OF_SUCCESS_BP,
-  transcendFodderForStep,
-  transcendFodderCumulative,
-  transcendBonusBp,
-  supplyItemProbability,
-  RAID_CRIT_RATE_BP,
-  RAID_CRIT_MULT,
-} from '../lib/game/balance';
+import { buildProbabilityPayloadCore } from '../lib/game/probability-payload';
 
 config({ path: '.env.local' });
 config({ path: '.env', override: false });
@@ -32,41 +22,17 @@ if (!url) {
 const sql = postgres(url, { prepare: false, max: 1 });
 
 async function main() {
-  // 공시 페이지(app/probability/page.tsx)와 동일한 단일 출처(balance.ts)에서 전문 구성.
-  const enhance = Array.from({ length: 100 }, (_, lv) => ({
-    level: lv,
-    successBp: baseSuccessRateBp(lv),
-    downBp: downRateBp(lv),
-  }));
-  const transcend = Array.from({ length: 10 }, (_, i) => {
-    const t = i + 1;
-    return {
-      toLevel: t,
-      fodder: transcendFodderForStep(t),
-      fodderCumulative: transcendFodderCumulative(t),
-      bonusBp: transcendBonusBp(t),
-    };
-  });
-  // 보급은 슬롯 내 균등 1/N — 현행 활성 카탈로그 수를 DB에서 읽어 스냅샷에 고정.
+  // 공시 페이지(app/probability/page.tsx)·대시보드 최신성 검사와 동일한 단일 출처
+  // (lib/game/probability-payload.ts)에서 전문 구성. 보급 1/N의 활성 카탈로그 수는 DB 고정.
   const slotCounts = (await sql`
     select slot, count(*)::int as n from catalog_items where active = true group by slot order by slot
   `) as unknown as Array<{ slot: string; n: number }>;
-  const supply = slotCounts.map((s) => ({
-    slot: s.slot,
-    activeCount: s.n,
-    itemProbability: supplyItemProbability(s.n),
-  }));
+  const core = buildProbabilityPayloadCore(slotCounts);
+  const payload = { ...core, note };
 
-  const payload = {
-    version: 1,
-    note,
-    enhance: { table: enhance, megaOfSuccessBp: MEGA_OF_SUCCESS_BP },
-    transcend,
-    supply,
-    raid: { critRateBp: RAID_CRIT_RATE_BP, critMult: RAID_CRIT_MULT },
-  };
-
-  console.log(`공시 스냅샷 페이로드 — enhance ${enhance.length}행 · transcend ${transcend.length}행 · supply ${supply.length}슬롯`);
+  console.log(
+    `공시 스냅샷 페이로드 — enhance ${core.enhance.table.length}행 · transcend ${core.transcend.length}행 · supply ${core.supply.length}슬롯`,
+  );
   console.log(JSON.stringify({ ...payload, enhance: { ...payload.enhance, table: '(100행 생략)' } }, null, 2));
 
   if (!CONFIRM) {

@@ -12,6 +12,7 @@ import { profileGenerationJobs } from '@/lib/db/schema/avatar';
 import { pushPending } from '@/lib/db/schema/push';
 import { clientErrors } from '@/lib/db/schema/ops';
 import { kstStartOfDay, kstDateString } from '@/lib/kst';
+import { buildProbabilityPayloadCore, probabilityFingerprint } from '@/lib/game/probability-payload';
 
 /**
  * 운영 대시보드 v1 — "게임이 지금 건강한가"를 30초 안에 판단하는 화면.
@@ -25,6 +26,28 @@ export const dynamic = 'force-dynamic';
 
 const n = async (q: Promise<{ n: number }[]>) => (await q)[0]?.n ?? 0;
 const won = (v: number | bigint | string) => `₩${Number(v).toLocaleString('ko-KR')}`;
+
+/**
+ * 확률 공시 스냅샷 최신성(게임산업법 §33 게이트, 감사 F-5) — balance.ts/활성 카탈로그의
+ * 현재 공시 전문 지문 ↔ 최신 probability_snapshots 지문 비교. 다르면 "미기록 변경" 1.
+ * 스냅샷이 아예 없어도 1(기록 필요). 기록: record-probability-snapshot.ts --confirm.
+ */
+async function snapshotStale(): Promise<number> {
+  const [slotCounts, latest] = await Promise.all([
+    db.execute(
+      sql`select slot, count(*)::int as n from catalog_items where active = true group by slot`,
+    ) as unknown as Promise<{ slot: string; n: number }[]>,
+    db.execute(
+      sql`select payload from probability_snapshots order by effective_at desc limit 1`,
+    ) as unknown as Promise<{ payload: unknown }[]>,
+  ]);
+  const current = probabilityFingerprint(buildProbabilityPayloadCore(slotCounts));
+  const stored = latest[0]?.payload;
+  if (!stored) return 1;
+  // 저장본에서 note(기록 사유, 코어 외 항목) 제거 후 비교 — jsonb 키 순서는 지문이 흡수.
+  const { note: _note, ...core } = stored as Record<string, unknown>;
+  return probabilityFingerprint(core) === current ? 0 : 1;
+}
 
 async function loadDashboard() {
   const dayStart = kstStartOfDay();
@@ -54,6 +77,7 @@ async function loadDashboard() {
     pushBacklog,
     clientErr24h,
     genStuck,
+    probStale,
   ] = await Promise.all([
     n(db.select({ n: sql<number>`count(*)::int` }).from(profiles).where(gte(profiles.createdAt, dayStart))),
     n(
@@ -140,6 +164,7 @@ async function loadDashboard() {
           ),
         ),
     ),
+    snapshotStale(),
   ]);
 
   return {
@@ -162,6 +187,7 @@ async function loadDashboard() {
       { label: '푸시 적체 (45분+)', value: pushBacklog, hint: 'push-flush 크론 확인' },
       { label: '아바타 생성 정체 (20분+)', value: genStuck, hint: 'profile-poll 크론·Pixellab 상태 확인' },
       { label: '클라 에러 24h', value: clientErr24h.groups, hint: `발생 ${clientErr24h.hits}회 — /admin/client-errors`, softLimit: 3 },
+      { label: '확률 공시 스냅샷 미기록 변경 (§33)', value: probStale, hint: 'balance/카탈로그 변경분 미기록 — record-probability-snapshot.ts --confirm 실행' },
     ] as { label: string; value: number; hint: string; softLimit?: number }[],
   };
 }

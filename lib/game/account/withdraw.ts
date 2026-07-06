@@ -96,9 +96,18 @@ export async function withdrawAccount(userId: string): Promise<void> {
     await tx.execute(sql`delete from characters where user_id = ${uid}`);
 
     // PII 제거 마킹 — profiles 자체는 결제 보존 앵커라 유지. 활성 프로필/배경 초기화 + 탈퇴 시각.
+    // 본인인증 파생 필드도 클리어(감사 F-14) — 연도 해시는 후보 ~120개라 사실상 가역이라
+    // "탈퇴 시 지체 없이 파기" 대상. 결제 경로 판정(minorStatus)은 법정 보존 원장인
+    // identity_verifications를 읽으므로 영향 없음 — 이 필드들은 설정 화면 표시 전용.
     await tx
       .update(profiles)
-      .set({ activeBackground: null, withdrawnAt: new Date() })
+      .set({
+        activeBackground: null,
+        withdrawnAt: new Date(),
+        birthYearHash: null,
+        isAdult: false,
+        identityVerifiedAt: null,
+      })
       .where(eq(profiles.id, userId));
   });
 }

@@ -18,7 +18,7 @@
 | **ORM** | Drizzle | 마이그레이션 안정성, TS 타입 자동 |
 | **인증** | Kakao OAuth (Supabase Auth) | 한국 유저 대상 단독 인증 |
 | **결제** | 포트원 + KMC/PASS 본인인증 | 카카오페이/토스/카드 |
-| **이메일** | Resend | 결제 영수증 (전자상거래법 의무) |
+| **영수증** | PG(포트원/이니시스) 결제모듈 | 결제창 이메일 입력 → PG 매출전표 발송으로 영수증 의무 갈음(자체 발송 없음) |
 | **AI 검토** | Anthropic SDK (Claude Sonnet 5 vision) | 프로필 자동 검토 — NSFW/품질/일치성 (PROFILE §5) |
 | **AI 스프라이트** | Pixellab v2 (Pro Tier 3) | 캐릭터 프로필 생성 — `/v2/create-character-v3` (PROFILE §4) |
 | **모니터링** | 자체 client_errors 수집(/api/client-error + 에러 바운더리 리포트) | Sentry는 미도입 — 필요 시 재검토 |

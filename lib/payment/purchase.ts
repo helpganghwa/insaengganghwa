@@ -230,7 +230,7 @@ export async function createOrder(
 
 export type CompleteResult =
   | { ok: true; already: boolean }
-  | { ok: false; code: 'ORDER_NOT_FOUND' | 'NOT_PAID' | 'AMOUNT_MISMATCH' };
+  | { ok: false; code: 'ORDER_NOT_FOUND' | 'NOT_PAID' | 'AMOUNT_MISMATCH' | 'MINOR_LIMIT' };
 
 /**
  * 결제 완료 처리 — 웹훅·클라 검증 양쪽에서 호출(멱등). portone_order_id로 주문 조회 →
@@ -278,6 +278,7 @@ export async function completePurchase(
   }
 
   const kstMonth = kstMonthString();
+  let minorExceeded = false;
   await db.transaction(async (tx) => {
     // 주문 잠금 + 상태 재확인 — 동시 호출 중 1회만 지급(멱등 핵심).
     const [locked] = await tx
@@ -294,6 +295,26 @@ export async function completePurchase(
       .set({ status: 'paid', paidAt: new Date() })
       .where(eq(iapOrders.id, order.id));
 
+    // 월 누적 가산을 **지급보다 먼저** — createOrder의 한도 검사는 pending 생성 시점이라
+    // 비원자(결제창 여러 개 → pending N건이 각자 한도 이내로 통과 → 전부 결제 완료로
+    // 합산 초과 가능, 감사 F-10). 여기서 upsert 행 잠금으로 직렬화된 새 누적액을 받아
+    // 미성년 한도를 재검사하고, 초과면 지급을 보류한다(결제는 성사됐으므로 tx 밖 자동 환불).
+    const [monthly] = await tx
+      .insert(monthlyPurchaseLimits)
+      .values({ userId: order.userId, kstMonth, totalKrw: order.amountKrw })
+      .onConflictDoUpdate({
+        target: [monthlyPurchaseLimits.userId, monthlyPurchaseLimits.kstMonth],
+        set: { totalKrw: sql`${monthlyPurchaseLimits.totalKrw} + ${order.amountKrw}` },
+      })
+      .returning({ total: monthlyPurchaseLimits.totalKrw });
+    if (Number(monthly?.total ?? 0n) > MINOR_MONTHLY_LIMIT_KRW) {
+      const { isMinor } = await minorStatus(order.userId, kstMonth);
+      if (isMinor) {
+        minorExceeded = true;
+        return; // paid 전이·월누적은 커밋(원장 정확) — 지급만 보류, 환불이 월누적을 복원.
+      }
+    }
+
     // 지급 — 배틀패스 구간 해금(소급 포함) vs 상점 상품. bp는 이미 보유면 null(멱등 무해).
     const bp = parseBpProduct(order.productCode);
     if (bp) {
@@ -301,16 +322,22 @@ export async function completePurchase(
     } else {
       await applyProductGrant(tx, order.userId, order.serverId, order.productCode);
     }
-
-    // 월 누적 가산 — 미성년 한도 추적(전 계정 기록, 한도는 미성년만 createOrder서 적용).
-    await tx
-      .insert(monthlyPurchaseLimits)
-      .values({ userId: order.userId, kstMonth, totalKrw: order.amountKrw })
-      .onConflictDoUpdate({
-        target: [monthlyPurchaseLimits.userId, monthlyPurchaseLimits.kstMonth],
-        set: { totalKrw: sql`${monthlyPurchaseLimits.totalKrw} + ${order.amountKrw}` },
-      });
   });
+
+  if (minorExceeded) {
+    // 지급 없이 paid로 남은 주문 — 즉시 자동 환불(지급분이 없어 회수는 no-op, 월누적 복원).
+    // 환불 실패 시 refundPurchase 내부 경로/recon이 REFUND_RECLAIM_FAILED로 알림.
+    await raisePaymentAlert('MINOR_LIMIT_EXCEEDED', {
+      paymentId,
+      orderId: order.id,
+      detail: `미성년 월 한도 초과 결제 감지(동시 주문 우회) — 지급 보류 + 자동 환불 시도. 주문 ₩${Number(order.amountKrw).toLocaleString('ko-KR')}.`,
+    });
+    const { refundPurchase } = await import('./refund');
+    await refundPurchase(paymentId).catch((e) =>
+      console.error('[purchase] minor-limit auto refund failed', paymentId, e),
+    );
+    return { ok: false, code: 'MINOR_LIMIT' };
+  }
 
   return { ok: true, already: false };
 }
