@@ -61,8 +61,14 @@ export interface CatalogItem {
   lore: string;
   /** Pixellab 64×64 생성 키워드 (영문, 글로우/등급 제외). */
   art: string;
-  /** 아바타 합성용 '착용/장착 외형' 사전 묘사(영문·간결·성별중립). compose가 결정론적 조립에 사용. */
+  /** 아바타 합성용 '착용/장착 외형' 사전 묘사(영문·간결). compose가 결정론적 조립에 사용. */
   wornDesc?: string;
+  /**
+   * 남성 아바타 전용 착용 외형(영문). 드레스·치마 등 여성 지향 실루엣이 남성에 어색한 방어구만
+   * 별도 정본을 둔다(여=귀여움/아름다움/화려함, 남=멋짐/장엄함/화려함, 같은 아이템 정체성 유지).
+   * 미지정 시 wornDesc + MENS 규칙으로 폴백. 여성 아바타는 항상 wornDesc를 쓴다.
+   */
+  wornDescMale?: string;
 }
 
 // 카탈로그 단일 source — 3차 60종(catalog-v3.ts) + 2차 선정 46종(catalog-v2live.ts) = 106종.

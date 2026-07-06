@@ -80,7 +80,12 @@ interface ResolvedItem {
  *   어긋난 색·서사 표현이 그대로 남아 있어(예: silver guard vs 실제 gold) 이미지 검증된
  *   wornDesc와 모순되는 노이즈가 된다. wornDesc 부재 시 폴백으로만 사용.
  */
-function resolveItem(slot: SlotKind, key: string | undefined, fallbackText: string | undefined): ResolvedItem | null {
+function resolveItem(
+  slot: SlotKind,
+  key: string | undefined,
+  fallbackText: string | undefined,
+  male: boolean,
+): ResolvedItem | null {
   if (key) {
     const it = CATALOG_ITEMS.find((c) => c.key === key);
     if (it) {
@@ -91,7 +96,9 @@ function resolveItem(slot: SlotKind, key: string | undefined, fallbackText: stri
       } catch {
         b64 = null; // 런타임 파일 부재 → 텍스트만으로 진행.
       }
-      return { slot, wornDesc: it.wornDesc ?? it.art ?? '', lore: it.lore ?? '', b64 };
+      // 남성 아바타 + 남성 정본이 있으면 그것을 쓴다(드레스·치마의 번역 부하 제거). 없으면 wornDesc.
+      const worn = (male && it.wornDescMale) || it.wornDesc || it.art || '';
+      return { slot, wornDesc: worn, lore: it.lore ?? '', b64 };
     }
   }
   if (fallbackText) return { slot, wornDesc: fallbackText, lore: '', b64: null };
@@ -114,10 +121,11 @@ export interface ComposeV3Input {
 /** Claude로 v3용 description 생성. 비전(스프라이트)+로어 아트디렉팅. 실패(빈 응답)는 throw. */
 export async function composeV3Description(input: ComposeV3Input): Promise<string> {
   const { gender, appearance: ap } = input;
+  const male = gender === 'male';
   const items = [
-    resolveItem('weapon', input.weaponKey, input.weapon),
-    resolveItem('armor', input.armorKey, input.armor),
-    resolveItem('accessory', input.accessoryKey, input.accessory),
+    resolveItem('weapon', input.weaponKey, input.weapon, male),
+    resolveItem('armor', input.armorKey, input.armor, male),
+    resolveItem('accessory', input.accessoryKey, input.accessory, male),
   ].filter((v): v is ResolvedItem => v !== null);
 
   const label: Record<SlotKind, string> = { weapon: 'WEAPON', armor: 'ARMOR', accessory: 'ACCESSORY' };

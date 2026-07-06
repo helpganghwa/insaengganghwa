@@ -200,7 +200,7 @@ export const CATALOG_V3: CatalogItem[] = [
     "region": "타락천사",
     "lore": "눈처럼 흰 비단에 금실 햇살이 옷자락 가득 번진다. 허리에서 풀린 금빛 띠가 바람을 받아 길게 나부끼면, 마치 아침 해를 통째로 두른 듯하다. 어두운 방에 들어서면 이 예복을 입은 사람만 따로 환해, 사람들은 자기도 모르게 그쪽으로 고개를 돌린다.",
     "art": "a flowing white-and-gold radiant gown with golden ray patterns and a feathered hem",
-    "wornDesc": "floor-length white-and-gold gown, long hanging sleeves, a gold sash draped over one shoulder, tiered ruffled hem with gold edges"
+    "wornDesc": "floor-length white-and-gold gown, softly draped long sleeves, a gold sash over one shoulder, a tiered ruffled hem with delicate gold edging, radiant and graceful", "wornDescMale": "floor-length white-and-gold ceremonial robe-coat, long draped sleeves, a gold sash across one shoulder, a gold-edged layered hem over white trousers, radiant and stately"
   },
   {
     "key": "kingdom_azure_outfit",
@@ -209,7 +209,7 @@ export const CATALOG_V3: CatalogItem[] = [
     "region": "왕국",
     "lore": "은빛 갑옷에 쪽빛 휘장, 가슴엔 흰 보석. 갓 임관한 기사의 옷이다. 노련한 갑주에 비하면 가볍고 수수하지만, 정작 전장에서 가장 망설임 없이 앞으로 내딛는 발은 늘 이 쪽빛 줄에서 나온다. 기사단의 맨 앞줄이 늘 가장 푸르게 빛나는 건, 그래서다.",
     "art": "a blue-and-white knight outfit",
-    "wornDesc": "knee-length blue-and-white coat-dress with gold trim, a short blue shoulder cape, a white chest gem, and silver plate greaves"
+    "wornDesc": "knee-length blue-and-white knightly coat with gold trim, a short blue shoulder cape, a white chest gem, and silver plate greaves, trim and elegant", "wornDescMale": "knee-length blue-and-white knight's surcoat with gold trim, a short blue shoulder cape, a white chest gem, and silver plate greaves, bold and gallant"
   },
   {
     "key": "angel_seraphguard_armor",
@@ -218,7 +218,7 @@ export const CATALOG_V3: CatalogItem[] = [
     "region": "타락천사",
     "lore": "새하얀 판금 가슴에 금빛 별이 빛나고, 등 뒤로 흰 깃 날개가 활짝 펴진다. 신전 가장 깊은 자리, 마지막 문을 지키는 자만이 이 갑주를 입는다. 그 문이 열린 적은 없다. 갑주가 거기 서 있는 한, 앞으로도 없을 것이다.",
     "art": "holy light armor — the winged guard-plate of a celestial knight, slim and radiant",
-    "wornDesc": "full-body white plate armor with gold trim, a gold eight-pointed star on the chest, and white feathered wings at the shoulders"
+    "wornDesc": "sleek white plate armor with gold trim, a gold eight-pointed star on the chest, and white feathered wings at the shoulders, radiant and graceful", "wornDescMale": "full-body white plate armor with gold trim, a gold eight-pointed star on the broad chest, and towering white feathered wings at the shoulders, radiant and majestic"
   },
   {
     "key": "kingdom_goldknight_plate",
@@ -227,7 +227,7 @@ export const CATALOG_V3: CatalogItem[] = [
     "region": "왕국",
     "lore": "검붉은 강철에 금빛 덩굴, 허리 아래로 사람 키만 한 진홍 자락. 왕의 으뜸 친위가 입는다. 자락이 워낙 길어, 뒤로 물러서려다간 제 발에 밟혀 넘어진다. 물러설 수 없게 일부러 그리 지은 것이다. 이 갑주를 입은 자에게, 뒤로 물러설 길은 없다.",
     "art": "a gold-and-crimson knight plate",
-    "wornDesc": "full-body dark steel plate armor with bronze engraved pauldrons and breastplate, a dark-red front tabard panel and hip drapes"
+    "wornDesc": "fitted dark steel plate armor with bronze engraved pauldrons and breastplate, a dark-red front tabard and hip drapes, sleek and regal", "wornDescMale": "full-body dark steel plate armor with heavy bronze engraved pauldrons and breastplate, a dark-red front tabard and hip drapes, imposing and regal"
   },
   {
     "key": "temple_frostguard_garb",
@@ -236,7 +236,7 @@ export const CATALOG_V3: CatalogItem[] = [
     "region": "신전",
     "lore": "은빛 판금에 흰 털깃 망토, 가슴엔 눈꽃 문양. 설산 신전 길목을 지키는 갑주다. 추위에 갑옷 이음새마다 서리가 끼는데, 그 서리가 도리어 틈을 메워 빈틈없는 한 덩이가 된다. 추울수록 단단해지는 갑옷이라, 한겨울 이 길을 뚫으려 든 자는 아무도 없었다.",
     "art": "a guardian garb — the frost-guard outfit of a snow-temple sentinel, disciplined and noble",
-    "wornDesc": "silver-blue full plate armor with a white fur collar, snowflake emblems on the pauldrons, and a long pale-blue frost-patterned cape"
+    "wornDesc": "silver-blue plate armor with a soft white fur collar, snowflake emblems on the pauldrons, and a flowing pale-blue frost-patterned cape, elegant and cool", "wornDescMale": "silver-blue full plate armor with a white fur collar, snowflake emblems on broad pauldrons, and a long pale-blue frost-patterned cape, stalwart and cold"
   },
   {
     "key": "temple_breathwoven_vestment",
@@ -245,7 +245,7 @@ export const CATALOG_V3: CatalogItem[] = [
     "region": "신전",
     "lore": "설야 예복. 옅은 얼음빛 비단에 은실 서리 무늬, 어깨엔 흰 털. 신전에 단 한 벌뿐이다. 옛날 한 사제가 눈에 갇힌 신전에서 봄을 기다리며 한 올 한 올 짰다 한다. 그래서 이 옷은 아무리 추운 데 서 있어도 안쪽만은 봄날처럼 따뜻하다. 옷자락의 서리 무늬는, 바깥이 추울수록 도리어 또렷하고 푸르게 살아났다.",
     "art": "a sacred vestment — the rune-woven robe of a frost-temple priestess, serene and luminous",
-    "wornDesc": "floor-length pale ice-blue robe with white fur collar and shoulder trim, wide hanging sleeves, and white frost patterns down the front"
+    "wornDesc": "floor-length pale ice-blue robe with a white fur collar and shoulder trim, wide flowing sleeves, and delicate white frost patterns down the front, serene and lovely", "wornDescMale": "floor-length pale ice-blue robe with a white fur collar and shoulder trim, wide draped sleeves, and white frost patterns down the front over pale trousers, serene and dignified"
   },
   {
     "key": "pumpkin_witch_dress",
@@ -254,7 +254,7 @@ export const CATALOG_V3: CatalogItem[] = [
     "region": "일반",
     "lore": "검은 치마 끝이 호박등 불꽃처럼 들쭉날쭉 갈라지고, 허리엔 커다란 주황 리본이 묶였다. 줄무늬 스타킹에 굽 높은 부츠까지. 무섭자고 만든 옷이 아니라, 누가 봐도 한껏 멋을 부린 차림이다. 빙글 돌면 치맛단이 활짝 펴져 정말 작은 호박처럼 부푼다.",
     "art": "a Halloween witch outfit — a black knee-length dress with pumpkin-orange ruffles and a tattered hem, an orange sash bow and black-and-orange striped stockings — a spooky-cute anime witch in black and pumpkin-orange, not a long gown",
-    "wornDesc": "strapless black knee-length dress with a large orange waist bow, ragged orange ruffle skirt layers, orange-striped stockings and buckled black boots"
+    "wornDesc": "strapless black knee-length dress with a big orange waist bow, ragged orange ruffle skirt layers, orange-striped stockings and buckled black boots, playful and cute", "wornDescMale": "black witch's frock coat with a large orange sash knot at the waist, ragged orange-layered coattails, orange-striped leggings and buckled black boots, roguish and sharp"
   },
   {
     "key": "necromancer_raven_robe",
@@ -263,7 +263,7 @@ export const CATALOG_V3: CatalogItem[] = [
     "region": "일반",
     "lore": "갈까마귀 부리를 본뜬 후드 아래로 짙은 녹색 자락이 너덜너덜 드리운다. 가슴엔 갈비뼈를 엮어 달고, 단을 따라 초록 글자가 희미하게 빛난다. 자락이 바람에 스치면 깃털 스치는 소리가 난다. 새도 사람도 아닌 그 그림자를 마주치면, 길을 비켜 주는 편이 낫다.",
     "art": "a necromancer costume — a hooded dark-green and black robe with bone ornaments, ragged layered hems and skeletal trim — eerie and arcane, a masculine figure, not a dress",
-    "wornDesc": "hooded dark-green-and-black robe with ragged torn hems, a bone ribcage ornament across the chest and a small skull clasp"
+    "wornDesc": "hooded dark-green-and-black robe with ragged torn hems, a bone ribcage ornament across the chest and a small skull clasp, eerie and elegant", "wornDescMale": "hooded dark-green-and-black robe with ragged torn hems, a bone ribcage ornament across the broad chest and a skull clasp, eerie and grim"
   },
   {
     "key": "crimson_gothic_dress",
@@ -272,7 +272,7 @@ export const CATALOG_V3: CatalogItem[] = [
     "region": "일반",
     "lore": "진홍 비단에 검정 레이스를 층층이 두르고, 잘록한 허리부터 치마가 종처럼 퍼진다. 리본만 스무 개가 넘어, 혼자 다 묶으려면 한나절이 걸린다. 그 한나절이 아까워, 한 번 차려입은 날엔 좀처럼 갈아입지 않는다.",
     "art": "a frilly gothic lolita dress in black and crimson with lace trim, ribbons and layered ruffles — elegant and cute",
-    "wornDesc": "crimson bell-skirted dress with puffed shoulders, wide ruffled sleeve cuffs, black lace neckline trim and layered black ruffle skirt tiers"
+    "wornDesc": "crimson bell-skirted dress with puffed shoulders, wide ruffled sleeve cuffs, black lace neckline trim and layered black ruffle skirt tiers, gorgeous and gothic", "wornDescMale": "crimson gothic tailcoat with structured shoulders, wide black-trimmed cuffs, a black lace jabot at the collar, and layered black-trimmed coattails over black trousers, dashing and gothic"
   },
   {
     "key": "royal_military_coat",
@@ -281,7 +281,7 @@ export const CATALOG_V3: CatalogItem[] = [
     "region": "왕국",
     "lore": "군청색 천에 금빛 장식끈을 가슴 가득 가로질러 달고, 양어깨엔 금술 견장이 늘어진다. 단추 하나까지 빛나도록 닦은 정복이다. 처음 이 옷을 받은 사관은 거울 앞을 떠나지 못했다. 단추를 끝까지 채우는 순간, 어쩐지 등이 한 뼘 곧아졌다.",
     "art": "an ornate royal-blue military coat with gold braid, epaulettes and brass buttons — dashing and regal",
-    "wornDesc": "knee-length royal-blue military coat with gold fringed epaulettes, twin rows of brass buttons joined by gold braid, and a gold waist sash"
+    "wornDesc": "knee-length royal-blue military coat with gold fringed epaulettes, twin rows of brass buttons joined by gold braid, and a gold waist sash, crisp and elegant", "wornDescMale": "knee-length royal-blue military coat with gold fringed epaulettes, twin rows of brass buttons joined by gold braid, and a gold waist sash, commanding and grand"
   },
   {
     "key": "volcano_embersilk_dress",
@@ -290,7 +290,7 @@ export const CATALOG_V3: CatalogItem[] = [
     "region": "화산",
     "lore": "진홍 비단에 불길 무늬를 수놓고 깃을 굳힌 불꽃처럼 세운 옷이다. 신기하게도 불에 닿아도 타지 않는다. 자락이 불 속을 스쳐도 무늬만 잠깐 환해질 뿐 비단은 멀쩡하다. 그래서 화산 신전에선 불을 다루는 자에게 이 옷부터 입혔다. 옷이 먼저 불을 견뎌야, 사람이 그 곁에 설 수 있으니까.",
     "art": "an ember-silk dress — the flame-shrine gown of a volcano priestess, elegant and fierce",
-    "wornDesc": "floor-length crimson gown with a stiff upright flame collar, pointed shoulder pieces, and orange sun-and-flame emblems down the front panel"
+    "wornDesc": "floor-length crimson gown with a stiff upright flame collar, pointed shoulder pieces, and orange sun-and-flame emblems down the front, striking and beautiful", "wornDescMale": "floor-length crimson ceremonial coat with a stiff upright flame collar, pointed shoulder guards, and orange sun-and-flame emblems down the front over black trousers, striking and majestic"
   },
   {
     "key": "valkyrie_battle_dress",
@@ -299,7 +299,7 @@ export const CATALOG_V3: CatalogItem[] = [
     "region": "타락천사",
     "lore": "「발키리 옷이 왜 이렇게 가벼워?」 「업고 떠나야 하니까.」 「업어? 누굴.」 「전장에서 쓰러진 이들.」 금빛 날개 흉갑에 흰 주름치마, 허리엔 창공빛 푸른 띠. 그 띠가 데려갈 이를 둘러 업는 끈이라, 유난히 길고 부드럽다.",
     "art": "a valkyrie battle-dress in white and gold with light armor plating and a blue sash",
-    "wornDesc": "white-and-gold armored dress with a gold winged-bird breastplate, knee-length white pleated skirt with gold hip plates and a blue waist sash"
+    "wornDesc": "white-and-gold armored dress with a gold winged-bird breastplate, a knee-length white pleated skirt with gold hip plates and a blue waist sash, valiant and beautiful", "wornDescMale": "white-and-gold battle armor with a gold winged-bird breastplate, a knee-length white pleated war-kilt with gold hip plates and a blue waist sash over armored greaves, valiant and mighty"
   },
   {
     "key": "frostwarden_coat",
@@ -308,7 +308,7 @@ export const CATALOG_V3: CatalogItem[] = [
     "region": "신전",
     "lore": "강철빛 천에 흰 털을 깃과 소맷부리, 단까지 둘렀다. 은빛 잠금쇠가 가슴을 따라 줄지어 채워지고, 옷자락엔 서리 맺힌 나뭇가지 무늬가 은실로 수놓였다. 북쪽 끝, 사람 하나 없는 설원을 혼자 지키는 자의 옷이다. 눈보라가 외투를 휘감아도 안쪽만은 늘 잔잔히 따뜻하다.",
     "art": "a frost-warden's long fur-lined coat in steel-blue and silver with a high collar and silver clasps, floor-length flowing coat — stoic and masculine, no trousers, no legs",
-    "wornDesc": "long steel-blue coat with white fur collar, cuffs and hem, four silver buckled straps down the front, and white frost-branch embroidery"
+    "wornDesc": "long steel-blue coat with a soft white fur collar, cuffs and hem, four silver buckled straps down the front, and delicate white frost-branch embroidery, elegant and cool", "wornDescMale": "long steel-blue coat with a white fur collar, cuffs and hem, four silver buckled straps down the front, and white frost-branch embroidery, rugged and cold"
   },
   {
     "key": "paladin_holy_armor",
@@ -317,7 +317,7 @@ export const CATALOG_V3: CatalogItem[] = [
     "region": "타락천사",
     "lore": "양어깨에서 금빛 날개가 활짝 솟은 새하얀 갑주다. 날개가 워낙 넓어, 이걸 입으면 좁은 골목이나 문틈으로는 빠져나갈 수가 없다. 늘 탁 트인 데로만 다녀야 한다. 숨을 곳이 없으니 도망칠 곳도 없다. 성기사가 정면으로만 싸우는 건, 어쩌면 이 날개 폭 때문인지도 모른다.",
     "art": "a paladin costume — ornate white-and-gold holy plate armor with a blue tabard, winged pauldrons and gold filigree — heroic and radiant",
-    "wornDesc": "white-and-gold plate armor with large gold feathered wings at the shoulders and a blue tabard bearing a gold cross"
+    "wornDesc": "white-and-gold plate armor with large gold feathered wings at the shoulders and a blue tabard bearing a gold cross, radiant and graceful", "wornDescMale": "white-and-gold plate armor with large gold feathered wings at the broad shoulders and a blue tabard bearing a gold cross, radiant and majestic"
   },
   {
     "key": "dragonknight_scale_armor",
@@ -326,7 +326,7 @@ export const CATALOG_V3: CatalogItem[] = [
     "region": "화산",
     "lore": "검푸른 용비늘을 한 장씩 겹쳐 두르고, 등 뒤엔 가죽 같은 용 날개가 펼쳐진다. 가슴 한가운데 금빛 용 머리가 붉은 눈을 부릅떴다. 용을 쓰러뜨리고 그 비늘을 얻은 자만이 이 갑주를 입는다. 죽은 용은 제 비늘로, 저를 쓰러뜨린 자의 등을 끝까지 지킨다.",
     "art": "a dragon knight costume — ornate obsidian dragon-scale plate armor edged in molten gold with a dragon-wing cape — powerful and fierce",
-    "wornDesc": "dark blue-grey scale armor with gold trim, a gold dragon-head chest emblem, and rust-brown leathery dragon wings as a cape"
+    "wornDesc": "dark blue-grey scale armor with gold trim, a gold dragon-head chest emblem, and rust-brown leathery dragon wings as a cape, fierce and sleek", "wornDescMale": "dark blue-grey scale armor with gold trim, a gold dragon-head chest emblem, and rust-brown leathery dragon wings as a cape, fierce and imposing"
   },
   {
     "key": "phoenix_dancer_dress",
@@ -335,7 +335,7 @@ export const CATALOG_V3: CatalogItem[] = [
     "region": "화산",
     "lore": "치마 전체가 진홍과 주황 깃털로 층층이 덮여, 한 걸음에 불꽃이 일렁이는 듯하다. 금빛 코르셋 위로 깃이 어깨까지 솟는다. 불사조가 마지막으로 타오른 자리에서 떨어진 깃만 모아 지었다. 그 깃은 한 해가 지나면 저절로 더 붉어진다. 죽은 새의 깃인데도, 어쩐지 아직 살아 있는 것처럼.",
     "art": "a phoenix dancer costume — a crimson-and-gold feathered dance dress with layered flame-petal skirts and a jeweled bodice — dazzling and graceful",
-    "wornDesc": "floor-length red-orange feathered gown with a crimson corset bodice, gold bead chains, a red-jeweled gold collar, and layered feather skirts"
+    "wornDesc": "floor-length red-orange feathered gown with a crimson corset bodice, gold bead chains, a red-jeweled gold collar, and layered feather skirts, dazzling and beautiful", "wornDescMale": "red-orange feathered long coat with a fitted crimson breastplate-vest, gold bead chains, a red-jeweled gold collar, and layered feather coattails, dazzling and fiery"
   },
   {
     "key": "astrologer_starmap_coat",
@@ -344,7 +344,7 @@ export const CATALOG_V3: CatalogItem[] = [
     "region": "일반",
     "lore": "깊은 남색 천에 금실로 별자리를 빼곡히 수놓았다. 어두운 데서 펼치면 그 별들이 어렴풋이 떠 보인다. 묘한 건, 망토의 별자리가 계절 따라 조금씩 자리를 바꾼다는 거다. 점성가는 굳이 하늘을 올려다보지 않는다. 망토만 펼쳐 봐도 오늘 밤 별이 어디 있는지 알 수 있으니까.",
     "art": "an astrologer's outfit — a navy knee-length coat-dress with gold constellation embroidery, a flowing star-map half-cape and a belt — elegant and mystical, not a long gown",
-    "wornDesc": "knee-length navy coat with a short shoulder capelet, gold constellation lines and stars, gold front buttons and a brown waist belt"
+    "wornDesc": "knee-length navy coat with a short shoulder capelet, gold constellation lines and stars, gold front buttons and a brown waist belt, dreamy and elegant", "wornDescMale": "knee-length navy coat with a short shoulder cape, gold constellation lines and stars, gold front buttons and a brown waist belt, mysterious and grand"
   },
   {
     "key": "desert_nomad_robes",
@@ -353,7 +353,7 @@ export const CATALOG_V3: CatalogItem[] = [
     "region": "일반",
     "lore": "모래빛 천을 몇 겹이고 둘러 입고, 어깨엔 두건을 깊이 늘어뜨렸다. 허리의 색실 띠는 유랑자마다 무늬가 다르다. 지나온 마을에서 한 가닥씩 얻어 덧대기 때문이다. 띠가 길고 무늬가 복잡한 자일수록, 더 먼 곳에서 왔다는 뜻이었다.",
     "art": "a desert nomad outfit — flowing sand-beige layered robes with a patterned sash and a hooded shawl — exotic and practical, not a dress",
-    "wornDesc": "layered sand-beige robes with a wrapped cowl shawl and a striped red-brown woven waist sash with a hanging end"
+    "wornDesc": "layered sand-beige robes with a softly wrapped cowl shawl and a striped red-brown woven waist sash with a hanging end, graceful and worn", "wornDescMale": "layered sand-beige robes with a wrapped cowl and a striped red-brown woven waist sash with a hanging end, rugged and stoic"
   },
   {
     "key": "academy_professor_robe",
@@ -362,7 +362,7 @@ export const CATALOG_V3: CatalogItem[] = [
     "region": "왕국",
     "lore": "내가 학생일 적, 학장이 그 자주옷을 입고 들어서면 강의실이 절로 조용해졌네. 짙은 자주에 금빛 단, 무릎까지 늘어진 금술 끈. 같은 사람이 평상복을 입었을 땐 그저 잔소리 많은 노인이었는데, 그 옷만 걸치면 한마디 한마디가 무겁게 박혔지. 자주색이 사람을 바꾼 게 아니라, 그 색을 입을 자격을 평생 들여 얻은 거라는 걸, 나는 한참 뒤에야 알았다네.",
     "art": "a royal academy professor outfit — a long deep-burgundy scholar's robe-coat with gold trim, a high collar, a sash and a draped mantle — dignified and scholarly, fantasy academy, no legs",
-    "wornDesc": "long deep-burgundy robe with gold trim, a draped red shoulder mantle, wide hanging sleeves with crest patches, and a sashed waist"
+    "wornDesc": "long deep-burgundy robe with gold trim, a draped red shoulder mantle, wide flowing sleeves with crest patches, and a sashed waist, refined and elegant", "wornDescMale": "long deep-burgundy robe with gold trim, a draped red shoulder mantle, wide sleeves with crest patches, and a sashed waist, learned and dignified"
   },
   {
     "key": "academy_student_uniform",
@@ -371,7 +371,7 @@ export const CATALOG_V3: CatalogItem[] = [
     "region": "왕국",
     "lore": "「단추가 자꾸 어긋나.」 「손 떨려서 그래.」 「안 떨려.」 「…떨면서.」 남색 재킷에 금빛 단추 두 줄, 붉은 리본, 학원 문장. 입학 첫날 아침, 거울 앞 풍경은 해마다 똑같다. 옷이 작아서가 아니라, 마음이 커져서 단추가 어긋난다.",
     "art": "a royal academy student uniform — a tailored navy uniform coat with gold trim, a school crest, a ribbon tie and a pleated hem — smart and youthful, fantasy academy, no legs",
-    "wornDesc": "navy double-breasted blazer with gold buttons, a red-striped bow at the white shirt collar, gold chest crest, and navy pleated skirt"
+    "wornDesc": "navy double-breasted blazer with gold buttons, a red-striped ribbon bow at the white collar, gold chest crest, and a navy pleated skirt, neat and cute", "wornDescMale": "navy double-breasted blazer with gold buttons, a red-striped necktie at the white collar, gold chest crest, and matching navy tailored trousers, neat and sharp"
   },
   {
     "key": "forest_ranger_outfit",
@@ -380,7 +380,7 @@ export const CATALOG_V3: CatalogItem[] = [
     "region": "일반",
     "lore": "초록 두건 망토 아래로 갈색 가죽 갑옷을 받쳐 입고, 허리와 어깨엔 가죽끈과 주머니가 주렁주렁 달렸다. 화살 손질 도구부터 마른 풀씨까지, 숲에서 필요한 건 죄다 이 주머니 어딘가에 있다. 이 옷을 입으면 나뭇잎 사이에 서 있어도 좀처럼 눈에 띄지 않아, 새들도 곁에서 마음 놓고 지저귄다.",
     "art": "a forest ranger outfit — a green-and-brown hooded leather tunic-coat with a quiver strap, belt pouches and a half-cape — agile and natural, not a dress, no legs",
-    "wornDesc": "green hooded half-cape over brown leather chest armor, a diagonal strap across the chest, belt pouches, and a green tunic"
+    "wornDesc": "green hooded half-cape over brown leather chest armor, a diagonal strap across the chest, belt pouches, and a green tunic, nimble and spirited", "wornDescMale": "green hooded half-cape over brown leather chest armor, a diagonal strap across the chest, belt pouches, and a green tunic, rugged and ready"
   },
   {
     "key": "temple_snowflake_crown",
