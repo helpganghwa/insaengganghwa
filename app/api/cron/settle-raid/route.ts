@@ -18,35 +18,46 @@ import { settleRaid } from '@/lib/game/raid/settle';
 
 export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
+export const maxDuration = 120;
 
+// 배치 × 시간 예산 드레인(감사 P1) — 고정 20건/5분(240/시간)은 피크에 미접속 정산·푸시가
+// 지연 누적된다. lazy settle 백스톱이 있어 유실은 아니나 예산 내 드레인으로 지연 제거.
 const CHUNK = 20;
+const TIME_BUDGET_MS = 90_000;
 
 export async function GET(req: Request) {
   if (!isCronAuthorized(req)) return new Response('forbidden', { status: 403 });
 
-  const due = await db
-    .select({ id: raids.id })
-    .from(raids)
-    .where(and(eq(raids.status, 'active'), lte(raids.expireAt, sql`now()`)))
-    .orderBy(asc(raids.expireAt))
-    .limit(CHUNK);
-
-  if (due.length === 0) {
-    return Response.json({ ok: true, settled: 0, skipped: 0, kind: 'settle-raid' });
-  }
-
+  const startedAt = Date.now();
   let settled = 0;
   let skipped = 0;
   let failed = 0;
-  for (const { id } of due) {
-    try {
-      const r = await settleRaid({ raidId: id });
-      if (r.settled) settled++;
-      else skipped++; // 이미 settled(lazy 먼저 처리)
-    } catch (e) {
-      failed++;
-      console.warn('[settle-raid] raid', id.toString(), e);
+  let candidates = 0;
+
+  for (;;) {
+    const due = await db
+      .select({ id: raids.id })
+      .from(raids)
+      .where(and(eq(raids.status, 'active'), lte(raids.expireAt, sql`now()`)))
+      .orderBy(asc(raids.expireAt))
+      .limit(CHUNK);
+    candidates += due.length;
+
+    for (const { id } of due) {
+      try {
+        const r = await settleRaid({ raidId: id });
+        if (r.settled) settled++;
+        else skipped++; // 이미 settled(lazy 먼저 처리)
+      } catch (e) {
+        failed++;
+        console.warn('[settle-raid] raid', id.toString(), e);
+      }
     }
+
+    if (due.length < CHUNK) break;
+    // 전 배치 실패면 같은 레이드를 무한 재선택할 수 있어 중단(다음 틱 재시도).
+    if (settled + skipped === 0) break;
+    if (Date.now() - startedAt > TIME_BUDGET_MS) break;
   }
 
   return Response.json({
@@ -54,8 +65,7 @@ export async function GET(req: Request) {
     settled,
     skipped,
     failed,
-    chunk: CHUNK,
-    candidates: due.length,
+    candidates,
     kind: 'settle-raid',
   });
 }

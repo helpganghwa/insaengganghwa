@@ -120,32 +120,23 @@ export async function broadcastMailAction(opts: {
 }): Promise<OkBroadcast | ErrorState> {
   try {
     const adminId = await requireAdmin();
-    const all = await db.select({ id: profiles.id, sid: profiles.lastServerId }).from(profiles);
-    if (all.length === 0) return { status: 'success', count: 0 };
-
     const payload = clampPayload(opts.payload);
     const title = (opts.title || '').slice(0, 100);
     const body = (opts.body || '').slice(0, 1000);
-    const CHUNK = 500;
     let inserted = 0;
-    // 단일 트랜잭션 — 중간 청크에서 실패하면 전체 롤백. 부분 발송 상태가 남지 않으므로
-    // 재실행해도 이중 지급이 없다(원자적: 전부 또는 전무).
+    // 단일 트랜잭션 + **단일 INSERT…SELECT**(감사 P1) — 전 유저를 앱으로 끌어와 청크 루프로
+    // 왕복하면 10만 유저에 200회 왕복의 수 분짜리 tx(풀러 장시간 점유 = 검증된 장애 모드).
+    // DB측 fan-out 한 문으로 왕복 1회. 실패 시 전체 롤백(재실행 이중 지급 없음)은 동일.
     await db.transaction(async (tx) => {
-      for (let i = 0; i < all.length; i += CHUNK) {
-        const slice = all.slice(i, i + CHUNK);
-        await tx.insert(mailbox).values(
-          slice.map((p) => ({
-            userId: p.id,
-            serverId: p.sid,
-            type: 'admin' as const,
-            title,
-            body,
-            senderLabel: '인생강화',
-            payload,
-          })),
-        );
-        inserted += slice.length;
-      }
+      const rows = (await tx.execute(sql`
+        insert into mailbox (user_id, server_id, type, title, body, sender_label, payload)
+        select p.id, p.last_server_id, 'admin'::mailbox_type, ${title}, ${body}, '인생강화', ${JSON.stringify(payload)}::jsonb
+        from profiles p
+        where p.withdrawn_at is null
+        returning id
+      `)) as unknown as { id: string }[];
+      inserted = rows.length;
+      if (inserted === 0) return;
       // 감사 로그도 같은 트랜잭션 — 발송 롤백 시 로그도 롤백(거짓 기록 방지).
       await tx.insert(adminMailLogs).values({
         adminId,
@@ -157,6 +148,7 @@ export async function broadcastMailAction(opts: {
         payload,
       });
     });
+    if (inserted === 0) return { status: 'success', count: 0 };
     revalidatePath('/admin/mail');
     return { status: 'success', count: inserted };
   } catch (e) {

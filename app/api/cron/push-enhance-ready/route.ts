@@ -21,8 +21,12 @@ import { appendEnhanceReady } from '@/lib/push/pending';
 
 export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
+export const maxDuration = 55; // 매분 크론 — 다음 틱 전에 반드시 종료(클레임이라 겹쳐도 안전).
 
+// 배치 50 × 시간 예산 루프(감사 P1) — 고정 50건/분은 1만 DAU 피크(수백 건/분)에서
+// 알림 지연이 누적된다. 예산 내 드레인, 잔여는 다음 틱.
 const CHUNK = 50;
+const TIME_BUDGET_MS = 40_000;
 
 type ReadyRow = {
   job_id: string;
@@ -37,6 +41,12 @@ type ReadyRow = {
 export async function GET(req: Request) {
   if (!isCronAuthorized(req)) return new Response('forbidden', { status: 403 });
 
+  const startedAt = Date.now();
+  let totalClaimed = 0;
+  let sent = 0;
+  let failed = 0;
+
+  for (;;) {
   // 원자 클레임: 단일 UPDATE 문으로 push_sent=true 마킹하면서 발송 대상 RETURNING.
   // 같은 잡이 동시 cron에서 두 번 select되지 않도록 FOR UPDATE SKIP LOCKED.
   // catalog_items join은 RETURNING 후 별도 CTE로 — UPDATE RETURNING은 자기 테이블 컬럼만.
@@ -72,13 +82,9 @@ export async function GET(req: Request) {
     join catalog_items ci on ci.id = ue.catalog_item_id
   `)) as unknown as ReadyRow[];
 
-  if (claimed.length === 0) {
-    return Response.json({ ok: true, sent: 0, kind: 'push-enhance-ready' });
-  }
+  totalClaimed += claimed.length;
 
   // 마킹은 이미 끝났음 — 발송 실패해도 재시도 안 함(폭격 방지).
-  let sent = 0;
-  let failed = 0;
   for (const r of claimed) {
     try {
       await appendEnhanceReady(r.user_id, {
@@ -96,9 +102,13 @@ export async function GET(req: Request) {
     }
   }
 
+  if (claimed.length < CHUNK) break;
+  if (Date.now() - startedAt > TIME_BUDGET_MS) break; // 잔여는 다음 틱(1분)
+  }
+
   return Response.json({
     ok: true,
-    claimed: claimed.length,
+    claimed: totalClaimed,
     sent,
     failed,
     kind: 'push-enhance-ready',

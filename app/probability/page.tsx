@@ -30,9 +30,7 @@ import {
   RAID_DAMAGE_K,
   RAID_PHASE_DROP_BOXES,
 } from '@/lib/game/balance';
-import { asc, eq } from 'drizzle-orm';
-import { db } from '@/lib/db/client';
-import { catalogItems } from '@/lib/db/schema/equipment';
+import { getActiveCatalog } from '@/lib/game/catalog';
 import { CATALOG_ITEMS } from '@/lib/game/equipment/catalog';
 
 export const dynamic = 'force-dynamic';
@@ -68,12 +66,12 @@ export default async function ProbabilityPage() {
     accessory: [],
   };
   try {
-    const active = await db
-      .select({ slot: catalogItems.slot, name: catalogItems.name })
-      .from(catalogItems)
-      .where(eq(catalogItems.active, true))
-      .orderBy(asc(catalogItems.name));
+    // §11.5 — 공개 페이지가 매 요청 DB를 치지 않도록 공용 카탈로그 캐시(10분) 재사용.
+    // 판정 풀(open.ts)과 동일 소스(active=true)라 공시-판정 일치 유지.
+    const active = await getActiveCatalog();
     for (const c of active) bySlot[c.slot as 'weapon' | 'armor' | 'accessory'].push(c.name);
+    for (const k of Object.keys(bySlot) as (keyof typeof bySlot)[])
+      bySlot[k].sort((a, b) => a.localeCompare(b, 'ko'));
   } catch {
     for (const c of CATALOG_ITEMS) bySlot[c.slot].push(c.nameKo);
     for (const k of Object.keys(bySlot) as (keyof typeof bySlot)[])

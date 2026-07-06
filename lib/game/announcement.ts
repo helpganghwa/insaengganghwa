@@ -1,5 +1,6 @@
 import 'server-only';
 
+import { unstable_cache } from 'next/cache';
 import { desc, eq } from 'drizzle-orm';
 
 import { db } from '@/lib/db/client';
@@ -21,16 +22,23 @@ function toView(r: typeof announcements.$inferSelect): AnnouncementView {
   };
 }
 
-/** 게시판/홈 — 발행된 공지 최신순(고정 상단 정렬은 클라에서). */
-export async function listPublishedAnnouncements(limit = 30): Promise<AnnouncementView[]> {
-  const rows = await db
-    .select()
-    .from(announcements)
-    .where(eq(announcements.published, true))
-    .orderBy(desc(announcements.publishedAt), desc(announcements.id))
-    .limit(limit);
-  return rows.map(toView);
-}
+/**
+ * 게시판/홈 — 발행된 공지 최신순(고정 상단 정렬은 클라에서).
+ * §11.5 — 홈 로드마다 조회되는 준불변 데이터라 30초 캐시(공지 발행 지연 ≤30s 허용).
+ */
+export const listPublishedAnnouncements = unstable_cache(
+  async (limit = 30): Promise<AnnouncementView[]> => {
+    const rows = await db
+      .select()
+      .from(announcements)
+      .where(eq(announcements.published, true))
+      .orderBy(desc(announcements.publishedAt), desc(announcements.id))
+      .limit(limit);
+    return rows.map(toView);
+  },
+  ['published-announcements-v1'],
+  { revalidate: 30, tags: ['announcements'] },
+);
 
 /** 어드민 — 전체(초안 포함) 최신순. */
 export async function listAllAnnouncements(limit = 100): Promise<AnnouncementView[]> {

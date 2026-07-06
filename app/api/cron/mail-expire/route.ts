@@ -59,5 +59,20 @@ export async function GET(req: Request) {
     if (rows.length < BATCH) break;
     if (Date.now() - startedAt > TIME_BUDGET_MS) break; // 잔여는 내일(또는 수동 재호출)
   }
-  return Response.json({ ok: true, kind: 'mail-expire', deleted });
+
+  // world_events 90일 보존(감사 P1) — 삭제 경로가 없어 단조 증가하던 피드 로그 정리.
+  // 읽기는 최신 limit이라 90일이면 충분(연대기·업적은 별도 테이블에 영속).
+  let eventsDeleted = 0;
+  const evRows = (await db.execute(sql`
+    delete from world_events
+    where id in (
+      select id from world_events
+      where created_at < now() - interval '90 days'
+      limit ${BATCH}
+    )
+    returning id
+  `)) as unknown as { id: string }[];
+  eventsDeleted = evRows.length;
+
+  return Response.json({ ok: true, kind: 'mail-expire', deleted, eventsDeleted });
 }

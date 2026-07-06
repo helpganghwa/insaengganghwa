@@ -1,5 +1,6 @@
 import 'server-only';
 
+import { unstable_cache } from 'next/cache';
 import { and, desc, eq, inArray, isNotNull, sql } from 'drizzle-orm';
 
 import { db } from '@/lib/db/client';
@@ -56,8 +57,16 @@ export async function logWorldEvent(
   }
 }
 
-/** 홈 월드 피드 — server_id 최신순 limit건 + actor 닉/코드 일괄 해소. */
-export async function getWorldFeed(serverId: number, limit = 40): Promise<WorldEventEntry[]> {
+/**
+ * 홈 월드 피드 — server_id 최신순 limit건 + actor 닉/코드 일괄 해소.
+ * §11.5 — 전 유저가 홈마다 같은 피드를 읽으므로 30초 캐시(피드 지연 ≤30s 허용, 인자별 키).
+ */
+export const getWorldFeed = unstable_cache(getWorldFeedUncached, ['world-feed-v1'], {
+  revalidate: 30,
+  tags: ['world-feed'],
+});
+
+async function getWorldFeedUncached(serverId: number, limit = 40): Promise<WorldEventEntry[]> {
   const rows = await db
     .select({
       id: worldEvents.id,
