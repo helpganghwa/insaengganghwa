@@ -14,6 +14,7 @@ import { paidProduct, shopGrant, productPeriod, FIRST_SPECIAL } from '@/lib/game
 import { periodKey } from '@/lib/game/shop/period';
 import { raisePaymentAlert } from './alert';
 import { applyProductGrant } from '@/lib/game/shop/grant';
+import { hasFirstSpecial } from '@/lib/game/shop/dev-purchase';
 import { applyBpSegmentPurchase } from '@/lib/game/battlepass';
 
 import { getPortonePayment } from './portone';
@@ -165,23 +166,10 @@ export async function createOrder(
     orderName = info.orderName;
     diamondGranted = g.diamond;
 
-    // 첫 결제 특가 — 서버별 1회(사용자 확정: 서버별 지갑 경제의 경쟁 출발선). 해당 서버 paid
-    // 이력만 차단 — 신서버 합류 시 그 서버에서 다시 1회 구매 가능.
-    if (productId === FIRST_SPECIAL.id) {
-      const [prev] = await db
-        .select({ id: iapOrders.id })
-        .from(iapOrders)
-        .where(
-          and(
-            eq(iapOrders.userId, userId),
-            eq(iapOrders.serverId, serverId),
-            eq(iapOrders.productCode, FIRST_SPECIAL.id),
-            eq(iapOrders.status, 'paid'),
-          ),
-        )
-        .limit(1);
-      if (prev) throw new PurchaseError('ALREADY_PURCHASED');
-    }
+    // 인생 특가 — 서버별 1회(서버별 지갑 경제의 경쟁 출발선). 해당 서버 이력(실결제 paid +
+    // 어드민 테스트 지급)만 차단 — 신서버 합류 시 그 서버에서 다시 1회 구매 가능.
+    if (productId === FIRST_SPECIAL.id && (await hasFirstSpecial(userId, serverId)))
+      throw new PurchaseError('ALREADY_PURCHASED');
 
     const period = productPeriod(productId);
     if (period) {

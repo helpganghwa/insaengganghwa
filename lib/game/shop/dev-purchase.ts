@@ -31,10 +31,14 @@ export async function devPurchase(
   if (!g) throw new ShopBuyError('UNKNOWN_PRODUCT');
   const period = productPeriod(productId);
 
+  // 인생 특가 — 주기 없는 서버별 1회 상품. 실결제는 iap_orders로 차단되지만 dev 지급은
+  // 결제 기록을 안 남기므로 shop_purchases 'once' 마킹으로 중복 차단(구매 판정도 이 행을 인정).
+  const onceKey = productId === FIRST_SPECIAL.id ? 'once' : null;
+
   await db.transaction(async (tx) => {
-    if (period) {
-      // 주기 1회 제한 — row 잠금 후 현재 주기와 비교(이미 구매면 차단). 실결제는 createOrder가 사전체크.
-      const cur = periodKey(period);
+    const cur = onceKey ?? (period ? periodKey(period) : null);
+    if (cur) {
+      // 1회 제한 — row 잠금 후 현재 키와 비교(이미 구매면 차단). 실결제는 createOrder가 사전체크.
       await tx
         .insert(shopPurchases)
         .values({ userId, serverId, productId, periodKey: '' })
@@ -54,6 +58,15 @@ export async function devPurchase(
     }
     // 지급 + 주기 마킹 — 실결제(completePurchase)와 동일 경로.
     await applyProductGrant(tx, userId, serverId, productId);
+    // applyProductGrant는 주기 상품만 마킹 — 'once' 상품은 여기서 직접 마킹.
+    if (onceKey)
+      await tx
+        .insert(shopPurchases)
+        .values({ userId, serverId, productId, periodKey: onceKey })
+        .onConflictDoUpdate({
+          target: [shopPurchases.userId, shopPurchases.serverId, shopPurchases.productId],
+          set: { periodKey: onceKey, updatedAt: new Date() },
+        });
   });
 
   return g;
@@ -98,19 +111,36 @@ export async function getPurchaseStatus(userId: string, serverId: number): Promi
   return out;
 }
 
-/** 첫 결제 특가(서버별 1회) 구매 여부 — 상점 캐러셀 슬라이드 숨김 판단용. */
+/**
+ * 인생 특가(서버별 1회) 구매 여부 — 캐러셀 슬라이드 숨김·재구매 차단 판단.
+ * 실결제(iap_orders paid)와 어드민 테스트 지급(shop_purchases 'once') 모두 인정.
+ */
 export async function hasFirstSpecial(userId: string, serverId: number): Promise<boolean> {
-  const [row] = await db
-    .select({ id: iapOrders.id })
-    .from(iapOrders)
-    .where(
-      and(
-        eq(iapOrders.userId, userId),
-        eq(iapOrders.serverId, serverId),
-        eq(iapOrders.productCode, FIRST_SPECIAL.id),
-        eq(iapOrders.status, 'paid'),
-      ),
-    )
-    .limit(1);
-  return !!row;
+  const [[paid], [dev]] = await Promise.all([
+    db
+      .select({ id: iapOrders.id })
+      .from(iapOrders)
+      .where(
+        and(
+          eq(iapOrders.userId, userId),
+          eq(iapOrders.serverId, serverId),
+          eq(iapOrders.productCode, FIRST_SPECIAL.id),
+          eq(iapOrders.status, 'paid'),
+        ),
+      )
+      .limit(1),
+    db
+      .select({ userId: shopPurchases.userId })
+      .from(shopPurchases)
+      .where(
+        and(
+          eq(shopPurchases.userId, userId),
+          eq(shopPurchases.serverId, serverId),
+          eq(shopPurchases.productId, FIRST_SPECIAL.id),
+          eq(shopPurchases.periodKey, 'once'),
+        ),
+      )
+      .limit(1),
+  ]);
+  return !!(paid || dev);
 }

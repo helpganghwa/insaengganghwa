@@ -397,7 +397,7 @@ export function ShopTabs({
   }, []);
 
   const soon = () => showHeaderToast({ title: '준비 중입니다' });
-  const isLimited = (id: string) => productPeriod(id) !== null;
+  const isLimited = (id: string) => id === FIRST_SPECIAL.id || productPeriod(id) !== null;
   // 결제 설정이 되어 있으면 전 유저 실결제, 아니면 어드민 테스트 즉시구매만 판매 가능.
   const canSell = payEnabled || isAdmin;
   const buy = (id: string) => (payEnabled ? onPay(id) : onBuy(id));
@@ -579,13 +579,13 @@ export function ShopTabs({
         <ul className="mb-3">
           {(() => {
             const banners = [
-              !firstSpecialDone && (
+              !firstSpecialDone && !purchased.has(FIRST_SPECIAL.id) && (
                 <BannerCard
                   key="first"
                   bg="first"
                   tall
                   title="인생 특가"
-                  desc="이 서버에서 단 한 번, 인생 최대 혜택"
+                  desc="단 한 번, 인생 최대 혜택"
                   detail={`${dia(FIRST_SPECIAL.grant.diamond)} · 📦${FIRST_SPECIAL.grant.boxes}`}
                   price={won(FIRST_SPECIAL.krw)}
                   confirming={confirm === FIRST_SPECIAL.id}
