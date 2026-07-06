@@ -1,6 +1,6 @@
 import 'server-only';
 
-import { eq, inArray } from 'drizzle-orm';
+import { and, eq, inArray } from 'drizzle-orm';
 
 import { db } from '@/lib/db/client';
 import { withTimeout } from '@/lib/db/with-timeout';
@@ -15,6 +15,8 @@ const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/
 
 export type ConquestBattleRow = {
   id: bigint;
+  /** 전투가 벌어진 서버 — 로스터 길드/아바타 조회는 이 서버로 스코프. */
+  serverId: number;
   battleKstDay: string;
   zoneId: number;
   zoneName: string;
@@ -80,8 +82,13 @@ export async function buildConquestBattleView(
   const { roster, events } = finale;
 
   // 조회 유저의 현재 길드 — '우리 길드' 필터(내가 직접 출전 안 해도 우리 길드 전투를 본다).
+  // 전투가 벌어진 서버의 멤버십만 — 다른 서버 길드 소속이 '우리 길드'로 오판되지 않게.
   const [mg] = await withTimeout(
-    db.select({ gid: guildMembers.guildId }).from(guildMembers).where(eq(guildMembers.userId, userId)).limit(1),
+    db
+      .select({ gid: guildMembers.guildId })
+      .from(guildMembers)
+      .where(and(eq(guildMembers.userId, userId), eq(guildMembers.serverId, row.serverId)))
+      .limit(1),
     2000,
     'conquest.myGuild',
   ).catch(() => []);
@@ -101,7 +108,11 @@ export async function buildConquestBattleView(
           dir: userProfiles.activeDirection,
         })
         .from(profiles)
-        .innerJoin(characters, eq(characters.userId, profiles.id))
+        // 전투 서버의 캐릭터로 고정 — 다중 서버 캐릭터 보유 시 임의 서버 아바타가 뜨는 것 방지.
+        .innerJoin(
+          characters,
+          and(eq(characters.userId, profiles.id), eq(characters.serverId, row.serverId)),
+        )
         .innerJoin(userProfiles, eq(userProfiles.id, characters.activeProfileId))
         .where(inArray(profiles.id, rosterIds)),
       3000,

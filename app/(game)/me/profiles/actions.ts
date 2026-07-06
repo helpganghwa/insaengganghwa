@@ -30,12 +30,22 @@ const DIRECTIONS = [
 ] as const;
 const DirectionSchema = z.enum(DIRECTIONS);
 
-/** 본인 소유 프로필인지 확인 — 아니면 null. */
-async function ownedProfileId(userId: string, profileId: string): Promise<string | null> {
+/** 본인 소유 프로필인지 확인 — 아니면 null. serverId 지정 시 그 서버 자산인지도 검증. */
+async function ownedProfileId(
+  userId: string,
+  profileId: string,
+  serverId?: number,
+): Promise<string | null> {
   const [row] = await db
     .select({ id: userProfiles.id })
     .from(userProfiles)
-    .where(and(eq(userProfiles.id, profileId), eq(userProfiles.userId, userId)))
+    .where(
+      and(
+        eq(userProfiles.id, profileId),
+        eq(userProfiles.userId, userId),
+        serverId != null ? eq(userProfiles.serverId, serverId) : undefined,
+      ),
+    )
     .limit(1);
   return row?.id ?? null;
 }
@@ -75,10 +85,13 @@ export async function setActiveProfile(profileId: string): Promise<ActionState> 
     return { status: 'error', message: '잠시 후 다시 시도해 주세요.' };
   const __b = await actionBlock();
   if (__b) return { status: 'error', message: __b === 'BANNED' ? '이용이 제한된 계정입니다.' : '서버 점검 중입니다.' };
-  if (!(await ownedProfileId(userId, profileId)))
+
+  // 아바타는 서버별 자산(2000💎도 그 서버 지갑에서 차감) — 다른 서버 아바타를
+  // 활성 서버 캐릭터 대표로 다는 교차 설정 차단.
+  const serverId = await getActiveServerId();
+  if (!(await ownedProfileId(userId, profileId, serverId)))
     return { status: 'error', message: '아바타를 찾을 수 없습니다.' };
 
-  const serverId = await getActiveServerId();
   await db
     .update(characters)
     .set({ activeProfileId: profileId })

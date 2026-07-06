@@ -19,7 +19,7 @@ export async function getUserGuildBrief(userId: string, serverId: number): Promi
            z.name as executor_zone, z.region::text as executor_zone_region
     from guild_members gm
     join guilds g on g.id = gm.guild_id
-    left join zones z on z.executor_user_id = gm.user_id
+    left join zones z on z.executor_user_id = gm.user_id and z.server_id = gm.server_id
     where gm.user_id = ${userId}::uuid and gm.server_id = ${serverId}
     limit 1
   `)) as unknown as {

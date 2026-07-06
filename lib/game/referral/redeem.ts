@@ -1,6 +1,6 @@
 import 'server-only';
 
-import { eq, or } from 'drizzle-orm';
+import { eq, or, sql } from 'drizzle-orm';
 
 import { db } from '@/lib/db/client';
 import { profiles } from '@/lib/db/schema/profiles';
@@ -51,11 +51,13 @@ export async function attributeReferralFromShare(
   // 1. tx — attribute + mailbox 적재.
   const result = await db.transaction(async (tx) => {
     // 닉네임은 전 캐릭터 전역 유일(characters) — 코드(profiles)와 함께 매칭.
+    // publicCode 매칭 시 다중 서버 캐릭터가 있을 수 있어 마지막 활성 서버 닉을 우선(표시용).
     const [referrer] = await tx
       .select({ id: profiles.id, nickname: characters.nickname, lastServerId: profiles.lastServerId })
       .from(profiles)
       .innerJoin(characters, eq(characters.userId, profiles.id))
       .where(or(eq(profiles.publicCode, shareCode), eq(characters.nickname, shareCode)))
+      .orderBy(sql`(${characters.serverId} = ${profiles.lastServerId}) desc`)
       .limit(1);
     if (!referrer) return null;
 

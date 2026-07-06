@@ -340,6 +340,7 @@ export async function getConquestBattleById(id: bigint) {
   const [b] = await db
     .select({
       id: conquestBattles.id,
+      serverId: conquestBattles.serverId,
       battleKstDay: conquestBattles.battleKstDay,
       zoneId: conquestBattles.zoneId,
       zoneName: zones.name,
