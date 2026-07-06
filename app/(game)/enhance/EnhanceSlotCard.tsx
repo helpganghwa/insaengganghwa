@@ -206,7 +206,9 @@ export function EnhanceSlotCard({
   const [attempting, setAttempting] = useState(false); // 강화 시도 중(취소/단축 제외)
   // iOS 고스트탭 방어(2026-07-06 슬롯 전멸 사건) — 컨펌 진입 후 150ms 내 재탭 무시.
   // 일괄 발화(큐에 쌓인 탭의 동시 방출)는 간격이 수십 ms라 걸리고, 사람의 최속
-  // 탭-탭(~150ms+)은 통과 — 700ms였을 땐 숙련 유저의 빠른 확정이 씹혀 UX 저하(회귀).
+  // 탭-탭(~150ms+)은 통과. **취소·단축에만 적용** — 취소는 관통 시 진행시간 증발+
+  // 레이아웃 연쇄(카드 소멸→아래 카드가 같은 좌표로 상승)로 전멸 가능, 단축은 다이아
+  // 실소비. 시도는 관통해도 의도한 강화 실행(서버 멱등)이라 무가드(반응성 우선).
   const armedAtRef = useRef(0);
   const armGuard = () => { armedAtRef.current = Date.now(); };
   const armTooFresh = () => Date.now() - armedAtRef.current < 150;
@@ -470,14 +472,14 @@ export function EnhanceSlotCard({
         onClick={() => {
           if (pending || flash || otherActionConfirm) return; // 보석단축/취소 컨펌 중엔 시도 영역 잠금
           // 확인 모드: 두 번째 탭 = 강화. 그 외(기본): 첫 탭 = 확인 진입.
-          if (confirm) { if (armTooFresh()) return; doAttempt(); }
-          else { armGuard(); setConfirm(true); }
+          if (confirm) doAttempt();
+          else setConfirm(true);
         }}
         onKeyDown={(e) => {
           if ((e.key === 'Enter' || e.key === ' ') && !pending && !flash && !otherActionConfirm) {
             e.preventDefault();
-            if (confirm) { if (armTooFresh()) return; doAttempt(); }
-            else { armGuard(); setConfirm(true); }
+            if (confirm) doAttempt();
+            else setConfirm(true);
           }
         }}
         className={`relative h-[92px] cursor-pointer isolate overflow-hidden rounded-xl border-2 bg-zinc-950 text-zinc-100 transition active:scale-[0.99] ${
