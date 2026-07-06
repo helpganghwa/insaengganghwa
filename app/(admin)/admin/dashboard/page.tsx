@@ -11,7 +11,7 @@ import { conquestBattles, guildBattleDeployments } from '@/lib/db/schema/guild';
 import { profileGenerationJobs } from '@/lib/db/schema/avatar';
 import { pushPending } from '@/lib/db/schema/push';
 import { clientErrors } from '@/lib/db/schema/ops';
-import { kstStartOfDay, kstDateString, kstMonthString } from '@/lib/kst';
+import { kstStartOfDay, kstDateString } from '@/lib/kst';
 
 /**
  * 운영 대시보드 v1 — "게임이 지금 건강한가"를 30초 안에 판단하는 화면.
@@ -29,7 +29,10 @@ const won = (v: number | bigint | string) => `₩${Number(v).toLocaleString('ko-
 async function loadDashboard() {
   const dayStart = kstStartOfDay();
   const today = kstDateString();
-  const monthStart = new Date(`${kstMonthString()}-01T00:00:00+09:00`);
+  // KST 이달 1일 00:00의 UTC 인스턴트 — ⚠ kstMonthString()은 'YYYYMM'(하이픈 없음, 월한도
+  // 키용)이라 Date 문자열 조립에 쓰면 Invalid Date가 된다(2026-07-06 prod 장애).
+  const k = new Date(Date.now() + 9 * 3600_000);
+  const monthStart = new Date(Date.UTC(k.getUTCFullYear(), k.getUTCMonth(), 1) - 9 * 3600_000);
 
   const [
     signupsToday,
