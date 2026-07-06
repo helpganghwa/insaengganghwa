@@ -29,7 +29,8 @@ export type RlBucket =
   | 'profile'
   | 'profileEdit'
   | 'report'
-  | 'support';
+  | 'support'
+  | 'identity';
 
 const WINDOWS: Record<RlBucket, [limit: number, window: `${number} s`]> = {
   enhance: [30, '10 s'],
@@ -49,6 +50,7 @@ const WINDOWS: Record<RlBucket, [limit: number, window: `${number} s`]> = {
   profileEdit: [30, '10 s'], // 대표 선택·방향 변경·삭제 연타 방어(저비용)
   report: [5, '60 s'], // 신고 스팸·reportCount 인플레이션 방어
   support: [5, '3600 s'], // 고객센터 문의 — 시간당 5건(스팸 방어)
+  identity: [10, '600 s'], // 본인인증 검증 — 임의 ID 대량 전달로 포트원 조회 폭주 방어
 };
 
 const url = process.env.UPSTASH_REDIS_REST_URL;

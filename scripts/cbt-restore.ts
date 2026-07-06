@@ -92,7 +92,34 @@ async function main() {
     );
     if (!confirm) continue;
 
-    await sql.begin(async (tx) => {
+    try {
+      await restoreOne(r, avatars);
+      created++;
+    } catch (e) {
+      if (e instanceof Error && e.message.startsWith('ALREADY_GRANTED')) {
+        console.warn(`  ⚠ ${r.nickname} 이미 지급됨(lazy 선점) — 건너뜀`);
+        skipped++;
+        continue;
+      }
+      throw e;
+    }
+  }
+
+  console.log(`\n완료: 생성 ${created} · 건너뜀 ${skipped} / 대상 ${rows.length}`);
+  if (!confirm) console.log('드라이런 종료 — 실제 실행은 --confirm.');
+  await sql.end();
+}
+
+async function restoreOne(r: CarryRow, avatars: CarryAvatar[]): Promise<void> {
+  await sql.begin(async (tx) => {
+      // 0. 지급권 클레임 먼저(멱등의 직접 방어) — lazy 지급(grant.ts)과 동시 실행돼도
+      //    granted_at 조건부 전이는 한쪽만 성공한다. 0행이면 이미 지급됨 → 전체 중단.
+      const claimed = await tx`
+        update cbt_carryover set granted_at = now()
+        where user_id = ${r.user_id} and granted_at is null
+        returning user_id`;
+      if (claimed.length === 0) throw new Error(`ALREADY_GRANTED:${r.nickname}`);
+
       // 1. 캐릭터 — CBT 닉 그대로, 거주지 랜덤, 튜토리얼 스킵(베테랑).
       const [rz] = await tx`
         select id from zones where server_id = ${serverId} order by random() limit 1`;
@@ -159,20 +186,11 @@ async function main() {
           `새로워진 세계에서 다시 한번, 강화는 인생이다!`
         }, '시스템', ${tx.json({})}, ${sql.unsafe(MAIL_EXPIRE)})`;
 
-      // 4. 계정 포인터 — 마지막 서버·탈퇴 마킹 해제 / 지급 완료 마킹.
+      // 4. 계정 포인터 — 마지막 서버·탈퇴 마킹 해제. (지급 완료 마킹은 0에서 선클레임.)
       await tx`
         update profiles set last_server_id = ${serverId}, withdrawn_at = null
         where id = ${r.user_id}`;
-      await tx`
-        update cbt_carryover set granted_at = now()
-        where user_id = ${r.user_id} and granted_at is null`;
-    });
-    created++;
-  }
-
-  console.log(`\n완료: 생성 ${created} · 건너뜀 ${skipped} / 대상 ${rows.length}`);
-  if (!confirm) console.log('드라이런 종료 — 실제 실행은 --confirm.');
-  await sql.end();
+  });
 }
 
 main().catch(async (e) => { console.error(e); await sql.end(); process.exit(1); });

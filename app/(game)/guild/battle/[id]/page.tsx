@@ -1,7 +1,6 @@
 import { notFound } from 'next/navigation';
 
 import { getSessionUserId } from '@/lib/auth/session';
-import { getActiveServerId } from '@/lib/game/servers';
 import { getConquestBattleById } from '@/lib/game/guild';
 import { buildConquestBattleView } from '@/lib/game/guild/conquest/battle-view';
 
@@ -20,7 +19,8 @@ export default async function ConquestBattlePage({ params }: { params: Promise<{
   const row = await getConquestBattleById(BigInt(id)).catch(() => null);
   if (!row) notFound();
 
-  const serverId = await getActiveServerId();
+  // 링크(?s=)·로스터 조회 모두 전투가 벌어진 서버 기준 — 조회자 활성 서버를 쓰면
+  // 크로스서버 열람 시 로스터 프로필 링크가 엉뚱한 서버로 열린다(404/오표시).
   const view = await buildConquestBattleView(row, userId);
-  return <ConquestBattleView view={view} serverId={serverId} />;
+  return <ConquestBattleView view={view} serverId={row.serverId} />;
 }

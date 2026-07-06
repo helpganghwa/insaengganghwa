@@ -37,6 +37,15 @@ export async function ensureCbtCarryover(userId: string, serverId: number): Prom
     .limit(1);
   if (!row) return false;
 
+  // 활성 서버에 캐릭터가 없으면 지급 보류(1회권 소진 방지) — user_profiles는 characters
+  // FK가 없어 캐릭터 없는 서버에도 insert가 성공해버린다. 캐릭터가 생긴 뒤 재방문 시 지급.
+  const [ch] = await db
+    .select({ uid: characters.userId })
+    .from(characters)
+    .where(and(eq(characters.userId, userId), eq(characters.serverId, serverId)))
+    .limit(1);
+  if (!ch) return false;
+
   return db.transaction(async (tx) => {
     // 클레임 먼저(멱등, money path) — 0행이면 다른 요청이 지급 중/완료.
     const claimed = await tx

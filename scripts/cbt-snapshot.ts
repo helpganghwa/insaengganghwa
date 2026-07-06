@@ -74,8 +74,13 @@ async function main() {
   console.log(`\n=== CBT 이월 스냅샷 ${confirm ? '(실행)' : '(드라이런)'} ===\n`);
 
   // 유저 풀 = 캐릭터 보유 전체 — 빈손이어도 닉네임은 이월(복원 시 그대로 캐릭터 생성).
+  // 유저당 1행: 다중 서버 캐릭터 보유자는 마지막 활성 서버의 닉/착용을 정본으로
+  // (행 단위 순회 + user_id PK upsert면 나중 행이 앞 행을 덮어 닉 하나가 소리 없이 유실).
   const users = await sql<{ user_id: string; nickname: string; active_profile_id: string | null }[]>`
-    select user_id, nickname, active_profile_id from characters order by created_at`;
+    select distinct on (c.user_id) c.user_id, c.nickname, c.active_profile_id
+    from characters c
+    join profiles p on p.id = c.user_id
+    order by c.user_id, (c.server_id = p.last_server_id) desc, c.created_at`;
 
   // 초대 집계(추천인 기준).
   const invites = await sql<{ referrer_user_id: string; n: number }[]>`

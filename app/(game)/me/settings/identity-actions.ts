@@ -3,6 +3,7 @@
 import { revalidatePath } from 'next/cache';
 
 import { getSessionUserId } from '@/lib/auth/session';
+import { rateLimited } from '@/lib/ratelimit';
 import { verifyAndStoreIdentity } from '@/lib/payment/identity';
 
 /**
@@ -14,6 +15,8 @@ export async function verifyIdentityAction(
 ): Promise<{ ok: true; isAdult: boolean } | { ok: false; message: string }> {
   const userId = await getSessionUserId();
   if (!userId) return { ok: false, message: '로그인이 필요합니다.' };
+  if (await rateLimited(userId, 'identity'))
+    return { ok: false, message: '잠시 후 다시 시도해 주세요.' };
   if (!identityVerificationId) return { ok: false, message: '본인인증 정보가 없습니다.' };
 
   const r = await verifyAndStoreIdentity(userId, identityVerificationId);

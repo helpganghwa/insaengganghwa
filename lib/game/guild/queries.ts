@@ -375,7 +375,7 @@ export async function getDeployBoard(guildId: bigint) {
     join characters c on c.user_id = gm.user_id and c.server_id = gm.server_id
     left join guild_battle_deployments d on d.user_id = gm.user_id and d.server_id = gm.server_id and d.battle_kst_day = ${battleKstDay}
     left join zones dz on dz.id = d.zone_id
-    left join zones ez on ez.executor_user_id = gm.user_id
+    left join zones ez on ez.executor_user_id = gm.user_id and ez.server_id = gm.server_id
     where gm.guild_id = ${guildId}
     order by case gm.role when 'leader' then 0 when 'vice' then 1 else 2 end, c.nickname
   `)) as unknown as DeployBoardMember[];
