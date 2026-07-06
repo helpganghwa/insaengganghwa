@@ -11,6 +11,8 @@ import { TUTORIAL_DONE } from '@/lib/game/tutorial';
 
 import { type ActiveJob } from './EnhanceSlotCard';
 import { type EnhanceCandidate } from './EnhanceSlotPicker';
+import { RefreshOnResume } from '@/components/RefreshOnResume';
+
 import { SlotLane } from './SlotLane';
 import { PushPermissionPrompt } from '@/components/PushPermissionPrompt';
 
@@ -122,6 +124,8 @@ export default async function EnhancePage() {
 
   return (
     <div className="space-y-5 px-4 py-4">
+      {/* iOS PWA 복귀 시 서버 상태 강제 동기화 — 유령 등록/스테일 슬롯 해소(2026-07-06). */}
+      <RefreshOnResume />
       <PushPermissionPrompt trigger={hasRunningJob} />
       {SLOTS.map((slot) => (
         <section key={slot} className="space-y-2">

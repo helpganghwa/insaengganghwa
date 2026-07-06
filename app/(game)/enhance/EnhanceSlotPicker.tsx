@@ -9,6 +9,8 @@ import type { Slot } from '@/lib/db/schema/equipment';
 import { TranscendSprite } from '@/components/TranscendSprite';
 import { RarityFrame, rarityBorderStyle, hasRarityBorder } from '@/components/RarityFrame';
 
+import { useResourceToast } from '@/components/ResourceToast';
+
 import { startEnhance } from './actions';
 
 const SLOT_LABEL: Record<Slot, string> = { weapon: '무기', armor: '방어구', accessory: '장신구' };
@@ -72,6 +74,7 @@ function EnhanceSlotPicker({
   onOptimisticStart?: (candidate: EnhanceCandidate) => void;
 }) {
   const router = useRouter();
+  const { showError } = useResourceToast();
   const [pending, startTransition] = useTransition();
   const [error, setError] = useState<string | null>(null);
 
@@ -85,12 +88,20 @@ function EnhanceSlotPicker({
         onOptimisticStart?.(candidate);
         onClose();
       }
-      const r = await startEnhance(id);
-      if (r.status === 'error') {
-        setError(r.message);
-        return;
+      // 실패는 반드시 사용자에게 보인다(유령 등록 사건 2026-07-06) — 모달이 이미 닫혀
+      // 로컬 setError는 안 보이므로 전역 토스트 + refresh로 낙관 카드를 서버 상태로 되돌린다.
+      try {
+        const r = await startEnhance(id);
+        if (r.status === 'error') {
+          showError(`강화 등록 실패 — ${r.message}`);
+          router.refresh();
+          return;
+        }
+        router.refresh();
+      } catch {
+        showError('강화 등록이 전송되지 않았어요. 슬롯 상태를 확인해 주세요.');
+        router.refresh();
       }
-      router.refresh();
     });
   };
 

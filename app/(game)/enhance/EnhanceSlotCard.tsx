@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useState, useTransition } from 'react';
+import { useRef, useEffect, useState, useTransition } from 'react';
 import { useRouter } from 'next/navigation';
 
 import {
@@ -204,6 +204,12 @@ export function EnhanceSlotCard({
   const [flashMsg, setFlashMsg] = useState<string | null>(null); // outcome 랜덤 메시지
   const [confirmMsg, setConfirmMsg] = useState<string | null>(null); // 확인 랜덤 메시지
   const [attempting, setAttempting] = useState(false); // 강화 시도 중(취소/단축 제외)
+  // iOS 연타/고스트탭 방어(2026-07-06 슬롯 전멸 사건) — 컨펌 진입 후 700ms 내 재탭은
+  // 사람이 라벨을 읽고 누른 것일 수 없으므로 무시. 기기 이벤트 몰아치기(중단 후 재개
+  // 일괄 발화)가 같은 좌표에 연속 탭을 떨어뜨려도 확정이 뚫리지 않는다.
+  const armedAtRef = useRef(0);
+  const armGuard = () => { armedAtRef.current = Date.now(); };
+  const armTooFresh = () => Date.now() - armedAtRef.current < 700;
   const [attemptingMsg, setAttemptingMsg] = useState<string | null>(null);
 
   useEffect(() => {
@@ -399,9 +405,11 @@ export function EnhanceSlotCard({
     if (pending || !instantCost || !canAfford) return;
     // 다이아 사용 — 취소와 동일 3s 재탭 패턴(오탭 보호). 카운트다운은 useEffect.
     if (!confirmReduce) {
+      armGuard();
       setConfirmReduce(true);
       return;
     }
+    if (armTooFresh()) return; // 연타 방어
     setConfirmReduce(false);
     setOptimisticDone(true);
     // 헤더 다이아 즉시 차감(낙관). 실패 시 롤백.
@@ -421,9 +429,11 @@ export function EnhanceSlotCard({
   const doCancel = () => {
     if (attempting) return;
     if (!confirmCancel) {
+      armGuard();
       setConfirmCancel(true);
       return;
     }
+    if (armTooFresh()) return; // 연타 방어 — 컨펌 직후 고스트탭 무시
     setConfirmCancel(false);
     setOptimisticCancelled(true); // 카드 즉시 숨김 — 처리중 표시 X
     void cancelEnhanceAction(activeJob.jobId).then((r) => {
@@ -460,14 +470,14 @@ export function EnhanceSlotCard({
         onClick={() => {
           if (pending || flash || otherActionConfirm) return; // 보석단축/취소 컨펌 중엔 시도 영역 잠금
           // 확인 모드: 두 번째 탭 = 강화. 그 외(기본): 첫 탭 = 확인 진입.
-          if (confirm) doAttempt();
-          else setConfirm(true);
+          if (confirm) { if (armTooFresh()) return; doAttempt(); }
+          else { armGuard(); setConfirm(true); }
         }}
         onKeyDown={(e) => {
           if ((e.key === 'Enter' || e.key === ' ') && !pending && !flash && !otherActionConfirm) {
             e.preventDefault();
-            if (confirm) doAttempt();
-            else setConfirm(true);
+            if (confirm) { if (armTooFresh()) return; doAttempt(); }
+            else { armGuard(); setConfirm(true); }
           }
         }}
         className={`relative h-[92px] cursor-pointer isolate overflow-hidden rounded-xl border-2 bg-zinc-950 text-zinc-100 transition active:scale-[0.99] ${
