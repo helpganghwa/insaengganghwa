@@ -308,16 +308,23 @@ export function BattlePassClient({
       return;
     }
     setIdentityBusy(true);
-    verifyIdentityAction(id).then((r) => {
-      setIdentityBusy(false);
-      if (r.ok) {
-        setIdentityPrompt(false);
-        router.refresh();
-      } else {
-        setIdentityErr(r.message);
+    verifyIdentityAction(id)
+      .then((r) => {
+        setIdentityBusy(false);
+        if (r.ok) {
+          setIdentityPrompt(false);
+          router.refresh();
+        } else {
+          setIdentityErr(r.message);
+          setIdentityPrompt(true);
+        }
+      })
+      .catch(() => {
+        // 전송 실패 — busy 고착 시 모달 버튼이 영구 disabled.
+        setIdentityBusy(false);
+        setIdentityErr('본인인증 확인이 전송되지 않았어요. 다시 시도해 주세요.');
         setIdentityPrompt(true);
-      }
-    });
+      });
   }, [router]);
 
   // 모바일 결제 복귀 — /battlepass?paymentId=…(&code=…)로 돌아오면 화면 내 검증·지급 확인 후 쿼리 정리.
@@ -335,10 +342,14 @@ export function BattlePassClient({
     }
     if (returnPaymentId) {
       void (async () => {
-        const v = await verifyPurchaseAction(returnPaymentId);
+        const v = await verifyPurchaseAction(returnPaymentId).catch(
+          () => ({ status: 'error', code: 'NETWORK' }) as const,
+        );
         if (v.status === 'success') {
           router.refresh();
           showHeaderToast({ title: '성장패스 구매 완료' });
+        } else if (v.code === 'NETWORK') {
+          setError('결제 확인 지연 — 지급은 잠시 후 자동 반영됩니다.');
         } else {
           setError('결제 확인에 실패했습니다.');
         }
@@ -354,7 +365,10 @@ export function BattlePassClient({
     setError(null);
     setPaying(true);
     void (async () => {
-      const r = await runCheckout(`bp_${passType}_${segmentIndex}`, `${window.location.origin}/battlepass`);
+      // 전송 실패도 흡수 — paying 고착 시 구매 버튼이 무반응이 된다.
+      const r = await runCheckout(`bp_${passType}_${segmentIndex}`, `${window.location.origin}/battlepass`).catch(
+        () => ({ ok: false, reason: 'create', code: 'NETWORK' }) as const,
+      );
       setPaying(false);
       if (r.ok) {
         router.refresh();
@@ -370,7 +384,9 @@ export function BattlePassClient({
             ? '이미 구매한 구간입니다.'
             : r.code === 'MINOR_LIMIT'
               ? '미성년 월 구매한도를 초과했습니다.'
-              : '결제에 실패했습니다.',
+              : r.code === 'NETWORK'
+                ? '요청이 전송되지 않았어요. 연결을 확인해 주세요.'
+                : '결제에 실패했습니다.',
         );
       }
     })();

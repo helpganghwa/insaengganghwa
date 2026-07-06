@@ -36,13 +36,19 @@ export function IdentityVerifyRow({
       return;
     }
     setBusy(true);
-    verifyIdentityAction(id).then((r) => {
-      setBusy(false);
-      if (r.ok) {
-        setDone(true);
-        router.refresh();
-      } else setErr(r.message);
-    });
+    verifyIdentityAction(id)
+      .then((r) => {
+        setBusy(false);
+        if (r.ok) {
+          setDone(true);
+          router.refresh();
+        } else setErr(r.message);
+      })
+      .catch(() => {
+        // 전송 실패 — busy 고착 시 인증 버튼이 영구 disabled.
+        setBusy(false);
+        setErr('본인인증 확인이 전송되지 않았어요. 다시 시도해 주세요.');
+      });
   }, [router]);
 
   const start = async () => {

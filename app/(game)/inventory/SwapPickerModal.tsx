@@ -57,7 +57,10 @@ export function SwapPickerModal({
   useEffect(() => {
     let cancelled = false;
     (async () => {
-      const r = await getActiveJobsForSlot(slot);
+      // 전송 실패도 에러 상태로 — reject 방치 시 jobs=null "불러오는 중…" 무한 로딩.
+      const r = await getActiveJobsForSlot(slot).catch(
+        () => ({ status: 'error', message: '목록을 불러오지 못했어요. 연결을 확인해 주세요.' }) as const,
+      );
       if (cancelled) return;
       if (r.status === 'error') {
         setError(r.message);

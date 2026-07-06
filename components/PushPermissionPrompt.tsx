@@ -52,7 +52,7 @@ export function PushPermissionPrompt({
     }
     if (support.permission === 'granted') {
       // 이미 권한 있음 — 모달 없이 구독만 보장
-      void subscribeAndRegister().then(() => onDone?.());
+      void subscribeAndRegister().then(() => onDone?.()).catch(() => {}); // best-effort — 다음 트리거에서 재시도
       return;
     }
     if (support.permission === 'denied') return; // 재요청 X

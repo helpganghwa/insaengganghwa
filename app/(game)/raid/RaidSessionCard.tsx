@@ -291,7 +291,11 @@ export function RaidSessionCard({ view: v, serverId }: { view: RaidView; serverI
     setFx('hit');
     setTimeout(() => setFx(null), 520);
     void (async () => {
-      const r = await action();
+      const r = await action().catch(() => {
+        // 전송 실패(오프라인 등) — reject를 삼키지 않으면 attacking=true 고착으로
+        // 공격 버튼이 영구 disabled + 로어 오버레이가 안 사라진다.
+        return { status: 'error', message: '공격이 전송되지 않았어요. 연결을 확인해 주세요.', code: 'NETWORK' } as const;
+      });
       if (r.status !== 'success') {
         onFail?.();
         showError(r.message);
@@ -352,9 +356,12 @@ export function RaidSessionCard({ view: v, serverId }: { view: RaidView; serverI
     setClaimedOpt(true);
     sounds.rewardClaim();
     haptic.success();
-    // 백그라운드 확정 — 실패(이미 수령 등) 시 롤백.
+    // 백그라운드 확정 — 실패(이미 수령 등)·전송 실패 시 롤백.
     void (async () => {
-      const r = await claimRaidRewardAction(v.raidId);
+      const r = await claimRaidRewardAction(v.raidId).catch(
+        () =>
+          ({ status: 'error', message: '수령이 전송되지 않았어요. 다시 시도해 주세요.', code: 'NETWORK' }) as const,
+      );
       if (r.status !== 'success') {
         setClaimedOpt(false);
         showError(r.message);

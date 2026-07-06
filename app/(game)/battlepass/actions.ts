@@ -27,6 +27,7 @@ const MSG: Record<string, string> = {
   UNAUTHENTICATED: '로그인이 필요합니다.',
   RATE_LIMITED: '요청이 너무 빠릅니다. 잠시 후 다시 시도해 주세요.',
   MAINTENANCE: '서버 점검 중입니다. 잠시 후 다시 시도해 주세요.',
+  BANNED: '이용이 제한된 계정입니다.',
   UNKNOWN: '알 수 없는 오류',
 };
 const err = (c: string): ErrorState => ({ status: 'error', code: c, message: MSG[c] ?? c });

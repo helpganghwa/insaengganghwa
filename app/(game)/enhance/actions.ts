@@ -203,6 +203,7 @@ export async function cancelEnhanceAction(jobId: string) {
 export async function getActiveJobsForSlot(slot: Slot) {
   const userId = await uid();
   if (!userId) return err('UNAUTHENTICATED');
+  try {
   const rows = await db
     .select({
       jobId: enhancementJobs.id,
@@ -238,6 +239,12 @@ export async function getActiveJobsForSlot(slot: Slot) {
       slot: r.slot,
     })),
   };
+  } catch (e) {
+    // 유일하게 서버측 catch가 없던 조회 액션 — throw가 클라(SwapPickerModal)까지
+    // 전파되면 "불러오는 중…" 무한 로딩으로 굳는다.
+    console.error('[enhance.getActiveJobsForSlot]', e);
+    return err('UNKNOWN');
+  }
 }
 
 /** (D+A) 슬롯 교체 — 취소 + 등록 단일 트랜잭션 */

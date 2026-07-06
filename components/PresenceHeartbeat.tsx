@@ -20,7 +20,7 @@ export function PresenceHeartbeat() {
       if (alive) return;
       // 게이트 먼저 닫고(중복 핑 방지) 호출 — 접속표시는 best-effort라 실패 시 다음 만료 때 재시도.
       document.cookie = `${COOKIE}=1; max-age=${TTL}; path=/; samesite=lax`;
-      void heartbeatAction();
+      void heartbeatAction().catch(() => {}); // best-effort — reject 삼킴(다음 만료 때 재시도)
     };
     ping();
     const onVis = () => {

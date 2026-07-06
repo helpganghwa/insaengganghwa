@@ -429,14 +429,20 @@ export function EnhanceSlotCard({
     }
     setConfirmCancel(false);
     setOptimisticCancelled(true); // 카드 즉시 숨김 — 처리중 표시 X
-    void cancelEnhanceAction(activeJob.jobId).then((r) => {
-      if (r.status === 'error') {
+    void cancelEnhanceAction(activeJob.jobId)
+      .then((r) => {
+        if (r.status === 'error') {
+          setOptimisticCancelled(false);
+          showError(r.message);
+        } else {
+          router.refresh();
+        }
+      })
+      .catch(() => {
+        // 전송 실패(오프라인 등) — 서버엔 잡이 살아있는데 placeholder로 굳으면 슬롯이 죽는다.
         setOptimisticCancelled(false);
-        showError(r.message);
-      } else {
-        router.refresh();
-      }
-    });
+        showError('취소가 전송되지 않았어요. 연결을 확인하고 다시 시도해 주세요.');
+      });
   };
 
   // 보석 단축/취소 3초 컨펌 중에는 슬롯의 다른 영역(강화 시도·반대 버튼) 클릭 불가 — 오탭/혼선 방지.

@@ -107,10 +107,12 @@ const CASH_ART: Record<string, { bg: string; char: string }> = {
 
 const won = (n: number) => `₩${n.toLocaleString('ko-KR')}`;
 const dia = (n: number) => `💎${n.toLocaleString('ko-KR')}`;
-/** 공용 에러코드 → 안내(레이트리밋·점검). 해당 없으면 null → 호출부 폴백 사용. */
+/** 공용 에러코드 → 안내(레이트리밋·점검·정지·전송실패). 해당 없으면 null → 호출부 폴백 사용. */
 function commonErrTitle(code: string | undefined): string | null {
   if (code === 'RATE_LIMITED') return '요청이 너무 빠릅니다. 잠시 후 다시 시도해 주세요.';
   if (code === 'MAINTENANCE') return '서버 점검 중입니다. 잠시 후 다시 시도해 주세요.';
+  if (code === 'BANNED') return '이용이 제한된 계정입니다.';
+  if (code === 'NETWORK') return '요청이 전송되지 않았어요. 연결을 확인해 주세요.';
   return null;
 }
 
@@ -337,16 +339,23 @@ export function ShopTabs({
       return;
     }
     setIdentityBusy(true);
-    verifyIdentityAction(id).then((r) => {
-      setIdentityBusy(false);
-      if (r.ok) {
-        setIdentityPrompt(false);
-        router.refresh();
-      } else {
-        setIdentityErr(r.message);
+    verifyIdentityAction(id)
+      .then((r) => {
+        setIdentityBusy(false);
+        if (r.ok) {
+          setIdentityPrompt(false);
+          router.refresh();
+        } else {
+          setIdentityErr(r.message);
+          setIdentityPrompt(true);
+        }
+      })
+      .catch(() => {
+        // 전송 실패 — busy 고착 시 모달 버튼이 영구 disabled.
+        setIdentityBusy(false);
+        setIdentityErr('본인인증 확인이 전송되지 않았어요. 다시 시도해 주세요.');
         setIdentityPrompt(true);
-      }
-    });
+      });
   }, [router]);
   const confirmTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
   const [, startTransition] = useTransition();
@@ -379,10 +388,16 @@ export function ShopTabs({
     }
     if (returnPaymentId) {
       void (async () => {
-        const v = await verifyPurchaseAction(returnPaymentId);
+        // 전송 실패 시에도 안내 — 쿼리는 이미 지워 재시도 경로가 없으므로 침묵하면
+        // 유저가 결과를 영영 모른다(지급 자체는 웹훅이 보장).
+        const v = await verifyPurchaseAction(returnPaymentId).catch(
+          () => ({ status: 'error', code: 'NETWORK' }) as const,
+        );
         if (v.status === 'success') {
           router.refresh(); // 다이아·상자·프리미엄 등 서버 권위 상태 동기화.
           showHeaderToast({ title: '구매 완료' });
+        } else if (v.code === 'NETWORK') {
+          showHeaderToast({ title: '결제 확인 지연 — 지급은 잠시 후 자동 반영됩니다' });
         } else {
           showHeaderToast({
             title:
@@ -480,7 +495,10 @@ export function ShopTabs({
     setPaying(true);
     void (async () => {
       // 복귀 URL = 상점 자신(별도 페이지 없음). 포트원이 ?paymentId=…(&code=…)를 덧붙여 복귀.
-      const r = await runCheckout(productId, `${window.location.origin}/shop`);
+      // 전송 실패도 흡수 — paying 고착 시 전 유료 카드가 무반응이 된다.
+      const r = await runCheckout(productId, `${window.location.origin}/shop`).catch(
+        () => ({ ok: false, reason: 'create', code: 'NETWORK' }) as const,
+      );
       setPaying(false);
       if (r.ok) {
         if (limited && productId !== PREMIUM.id) setPurchased((p) => new Set(p).add(productId));
