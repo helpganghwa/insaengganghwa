@@ -39,6 +39,17 @@ export const PREMIUM = {
   daily: { diamond: 300, boxes: 15, days: 30 },
 };
 
+/**
+ * 첫 결제 특가 — 계정당 1회 한정(서버 무관: 다이아 지갑이 서버별이라 서버당 허용 시 신서버마다
+ * 저가 반복 구매 루트가 생김). 목적은 수익이 아니라 첫 결제 전환(가치 ~22배, 1회라 경제 무부담).
+ * 지급은 구매 시점 활성 서버 지갑. 상자는 부위 균등(30 → 10/10/10).
+ */
+export const FIRST_SPECIAL = {
+  id: 'first_special',
+  krw: 1000,
+  grant: { diamond: 5000, boxes: 30 },
+};
+
 export const DIAMONDS = [
   { id: 'starter', total: 300, krw: 1500 },
   { id: 'small', total: 1200, krw: 6000 },
@@ -53,6 +64,7 @@ export const DIAMONDS = [
  */
 export function shopGrant(productId: string): { diamond: number; boxes: number } | null {
   if (productId === PREMIUM.id) return { ...PREMIUM.instant };
+  if (productId === FIRST_SPECIAL.id) return { ...FIRST_SPECIAL.grant };
   const d = DIAMONDS.find((x) => x.id === productId);
   if (d) return { diamond: d.total, boxes: 0 };
   for (const p of ['daily', 'weekly', 'monthly'] as Period[]) {
@@ -75,6 +87,7 @@ const DIAMOND_NAME: Record<string, string> = {
 };
 export function paidProduct(productId: string): { krw: number; orderName: string } | null {
   if (productId === PREMIUM.id) return { krw: PREMIUM.krw, orderName: '성장 프리미엄' };
+  if (productId === FIRST_SPECIAL.id) return { krw: FIRST_SPECIAL.krw, orderName: '첫 결제 특가 패키지' };
   const d = DIAMONDS.find((x) => x.id === productId);
   if (d)
     return {

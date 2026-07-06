@@ -3,7 +3,7 @@ import { shouldHidePaidContent } from '@/lib/auth/session';
 import { getActiveServerId } from '@/lib/game/servers';
 import { withTimeout } from '@/lib/db/with-timeout';
 import { getFreeStatus, FREE_SLOTS, type FreeSlot } from '@/lib/game/shop/free';
-import { getPurchaseStatus, getPremiumRemainingDays } from '@/lib/game/shop/dev-purchase';
+import { getPurchaseStatus, getPremiumRemainingDays, hasFirstSpecial } from '@/lib/game/shop/dev-purchase';
 import { portoneConfig } from '@/lib/payment/purchase';
 
 import { ShopTabs } from './ShopTabs';
@@ -33,11 +33,13 @@ export default async function ShopPage({
 
   const noFree = Object.fromEntries(FREE_SLOTS.map((s) => [s, false])) as Record<FreeSlot, boolean>;
   // 견습의 주머니(💎)는 전 유저 구매 가능 → 구매현황은 모두 로드. 현금/프리미엄은 어드민만 구매.
-  const [free, purchased, premiumDays, hidePaid] = await Promise.all([
+  const [free, purchased, premiumDays, hidePaid, firstSpecialDone] = await Promise.all([
     withTimeout(getFreeStatus(userId, serverId), 3500, 'shop.free').catch(() => noFree),
     withTimeout(getPurchaseStatus(userId, serverId), 3500, 'shop.purchased').catch(() => [] as string[]),
     withTimeout(getPremiumRemainingDays(userId, serverId), 3500, 'shop.premium').catch(() => null),
     shouldHidePaidContent(),
+    // 첫 결제 특가 구매 여부(계정 기준, 서버 무관) — 구매 후 카드 숨김.
+    withTimeout(hasFirstSpecial(userId), 3500, 'shop.firstSpecial').catch(() => true),
   ]);
 
   // CBT 기간엔 일반 유저에게 유료 상품을 '준비 중'으로 표시(payEnabled=false). 무료 보급·견습의
@@ -51,6 +53,7 @@ export default async function ShopPage({
       payEnabled={payEnabled}
       purchased={purchased}
       premiumDays={premiumDays}
+      firstSpecialDone={firstSpecialDone}
       initialTab={initialTab}
       returnPaymentId={sp.paymentId ?? null}
       returnCode={sp.code ?? null}

@@ -3,9 +3,10 @@ import 'server-only';
 import { and, eq } from 'drizzle-orm';
 
 import { db } from '@/lib/db/client';
+import { iapOrders } from '@/lib/db/schema/payment';
 import { shopPurchases } from '@/lib/db/schema/shop';
 
-import { shopGrant, productPeriod } from './catalog';
+import { FIRST_SPECIAL, shopGrant, productPeriod } from './catalog';
 import { periodKey } from './period';
 import { applyProductGrant } from './grant';
 
@@ -95,4 +96,20 @@ export async function getPurchaseStatus(userId: string, serverId: number): Promi
     if (p && r.periodKey === periodKey(p)) out.push(r.productId);
   }
   return out;
+}
+
+/** 첫 결제 특가(계정당 1회·서버 무관) 구매 여부 — 상점 카드 숨김 판단용. */
+export async function hasFirstSpecial(userId: string): Promise<boolean> {
+  const [row] = await db
+    .select({ id: iapOrders.id })
+    .from(iapOrders)
+    .where(
+      and(
+        eq(iapOrders.userId, userId),
+        eq(iapOrders.productCode, FIRST_SPECIAL.id),
+        eq(iapOrders.status, 'paid'),
+      ),
+    )
+    .limit(1);
+  return !!row;
 }

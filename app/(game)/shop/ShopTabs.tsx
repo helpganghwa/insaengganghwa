@@ -15,7 +15,7 @@ import { verifyIdentityAction } from '../me/settings/identity-actions';
 import { claimFreeAction, devPurchaseAction, buyBoxAction, verifyPurchaseAction } from './actions';
 import { runCheckout } from './checkout';
 import type { FreeSlot } from '@/lib/game/shop/free';
-import { BOX, CASH, PREMIUM, DIAMONDS, productPeriod } from '@/lib/game/shop/catalog';
+import { FIRST_SPECIAL, BOX, CASH, PREMIUM, DIAMONDS, productPeriod } from '@/lib/game/shop/catalog';
 
 /**
  * 상점 — 상단 배너 + 탭(일일/주간/월간/충전). 담백.
@@ -246,6 +246,7 @@ export function ShopTabs({
   payEnabled,
   purchased: initialPurchased,
   premiumDays: initialPremiumDays,
+  firstSpecialDone,
   initialTab = 'daily',
   returnPaymentId = null,
   returnCode = null,
@@ -258,6 +259,7 @@ export function ShopTabs({
   payEnabled: boolean;
   purchased: string[];
   premiumDays: number | null;
+  firstSpecialDone: boolean;
   /** 딥링크용 초기 탭(예: 헤더 다이아 클릭 → ?tab=charge). */
   initialTab?: Tab;
   /** 모바일 결제 복귀 — 포트원이 /shop?paymentId=…(&code=…)로 리다이렉트. 화면 내에서 검증 처리. */
@@ -566,6 +568,23 @@ export function ShopTabs({
       <div className="flex min-h-0 flex-1 flex-col overflow-y-auto overscroll-contain">
         {/* 컨텐츠 영역 — flex-1 유지(짧아도 footer를 하단으로 밀어냄). 컨텐츠와 footer 모두 함께 스크롤. */}
         <div className="flex-1 px-3 py-3">
+        {/* 첫 결제 특가 — 계정당 1회 한정, 구매 후 카드 숨김. */}
+        {!firstSpecialDone && (
+          <ul className="mb-3">
+            <BannerCard
+              bg="premium"
+              char="premium"
+              compact
+              accent="amber"
+              title="첫 결제 특가"
+              desc="계정당 딱 1번, 다시 없을 가격"
+              detail={`${dia(FIRST_SPECIAL.grant.diamond)} · 📦${FIRST_SPECIAL.grant.boxes}`}
+              price={won(FIRST_SPECIAL.krw)}
+              confirming={confirm === FIRST_SPECIAL.id}
+              onClick={() => tapPaid(FIRST_SPECIAL.id, canSell, () => buy(FIRST_SPECIAL.id))}
+            />
+          </ul>
+        )}
         {/* 프리미엄 상단 배너 — 약간 큰 배너 카드 */}
         <ul className="mb-3">
           <BannerCard

@@ -10,7 +10,7 @@ import { shopPurchases } from '@/lib/db/schema/shop';
 import { battlePassSegments } from '@/lib/db/schema/battlepass';
 import { kstMonthString } from '@/lib/kst';
 import { bpSegmentPriceKrw, type BattlePassType } from '@/lib/game/balance';
-import { paidProduct, shopGrant, productPeriod } from '@/lib/game/shop/catalog';
+import { paidProduct, shopGrant, productPeriod, FIRST_SPECIAL } from '@/lib/game/shop/catalog';
 import { periodKey } from '@/lib/game/shop/period';
 import { raisePaymentAlert } from './alert';
 import { applyProductGrant } from '@/lib/game/shop/grant';
@@ -164,6 +164,23 @@ export async function createOrder(
     krw = info.krw;
     orderName = info.orderName;
     diamondGranted = g.diamond;
+
+    // 첫 결제 특가 — 계정당 1회(서버 무관). 다이아 지갑이 서버별이라 서버 기준 허용 시
+    // 신서버마다 저가 반복 구매 가능 → 계정 기준 paid 이력으로 차단.
+    if (productId === FIRST_SPECIAL.id) {
+      const [prev] = await db
+        .select({ id: iapOrders.id })
+        .from(iapOrders)
+        .where(
+          and(
+            eq(iapOrders.userId, userId),
+            eq(iapOrders.productCode, FIRST_SPECIAL.id),
+            eq(iapOrders.status, 'paid'),
+          ),
+        )
+        .limit(1);
+      if (prev) throw new PurchaseError('ALREADY_PURCHASED');
+    }
 
     const period = productPeriod(productId);
     if (period) {
