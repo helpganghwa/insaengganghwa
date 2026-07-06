@@ -4,11 +4,19 @@ import { createServerClient } from '@supabase/ssr';
 import { NextResponse, type NextRequest } from 'next/server';
 
 /**
- * 모든 요청에서 세션 쿠키 자동 갱신 — Supabase SSR **필수 패턴**.
- * 여기 `getUser()`는 토큰 갱신을 트리거하는 SSR 표준(요청당 1회, 쿠키 리프레시 겸용).
- * 앱 페이지/액션의 세션 식별은 `lib/auth/session.ts`의 로컬 JWT(`getClaims`) 사용
- * — 핫패스 추가 RTT 회피(CLAUDE §11.1). 미들웨어 갱신은 그 예외.
+ * 세션 쿠키 자동 갱신 — Supabase SSR 패턴의 **조건부** 변형(감사 P7, 2026-07-07).
+ *
+ * 표준 패턴은 매 요청 `getUser()`(Auth 서버 원격 호출)지만, 이 미들웨어는 인가 결정을
+ * 하지 않고(세션 식별은 각 페이지의 로컬 JWT `getClaims`) 오직 **토큰 리프레시**만
+ * 담당하므로, 토큰 만료가 임박했을 때만 원격 호출하면 충분하다:
+ *  - 만료까지 여유(≥10분): 쿠키 로컬 파싱(getSession)만 — 네트워크 0회.
+ *    전 내비게이션의 Auth RTT 제거 + Auth 장애가 전 사이트 지연으로 번지는 결합 차단.
+ *  - 만료 임박/파싱 실패: 기존대로 getUser()로 갱신(타임아웃 가드 유지).
+ * 갱신을 놓쳐도 안전한 이유(기존과 동일): refresh 누락은 다음 요청에서 자연 복구되고,
+ * 위조 쿠키는 어차피 하류의 서명 검증(getClaims)이 거른다 — 여기서 통과시켜도 무해.
  */
+const REFRESH_MARGIN_MS = 10 * 60 * 1000;
+
 export async function updateSession(request: NextRequest) {
   let response = NextResponse.next({ request });
 
@@ -33,19 +41,41 @@ export async function updateSession(request: NextRequest) {
     },
   );
 
-  // 세션 쿠키 refresh — SSR 표준(getUser가 만료 토큰 갱신 트리거). 단 Auth 원격 호출이
-  // 콜드/지연 시 미들웨어가 통째로 hang하면 전 사이트가 about:blank 무한로딩이 되므로
-  // 타임아웃 가드 필수(2026-05-29). 실패/지연 시 그대로 통과 — 세션 식별은 각 페이지의
-  // getSessionUserId(로컬 JWT)가 수행하므로 refresh 누락은 다음 요청에서 자연 복구.
+  // 1) 만료 판정 — getSession은 유효 세션이면 쿠키 로컬 파싱만(무네트워크).
+  //    만료 세션이면 SDK가 자체 refresh를 시도할 수 있어 동일하게 타임아웃 가드.
+  //    파싱 실패·비로그인·판정 불가는 전부 "갱신 필요" 취급(기존 동작으로 폴백).
+  let needRefresh = true;
   try {
-    await Promise.race([
-      supabase.auth.getUser(),
+    const { data } = await Promise.race([
+      supabase.auth.getSession(),
       new Promise<never>((_, reject) =>
-        setTimeout(() => reject(new Error('SESSION_REFRESH_TIMEOUT')), 2500),
+        setTimeout(() => reject(new Error('SESSION_READ_TIMEOUT')), 1500),
       ),
     ]);
+    if (!data.session) {
+      needRefresh = false; // 비로그인 — 갱신할 세션 자체가 없음.
+    } else {
+      const expMs = (data.session.expires_at ?? 0) * 1000;
+      needRefresh = expMs - Date.now() < REFRESH_MARGIN_MS;
+    }
   } catch {
-    // best-effort — 통과.
+    needRefresh = true;
+  }
+
+  // 2) 임박 시에만 원격 갱신 — Auth 원격 호출이 콜드/지연 시 미들웨어가 통째로 hang하면
+  //    전 사이트가 about:blank 무한로딩이 되므로 타임아웃 가드 필수(2026-05-29).
+  //    실패/지연 시 그대로 통과 — refresh 누락은 다음 요청에서 자연 복구.
+  if (needRefresh) {
+    try {
+      await Promise.race([
+        supabase.auth.getUser(),
+        new Promise<never>((_, reject) =>
+          setTimeout(() => reject(new Error('SESSION_REFRESH_TIMEOUT')), 2500),
+        ),
+      ]);
+    } catch {
+      // best-effort — 통과.
+    }
   }
   return response;
 }

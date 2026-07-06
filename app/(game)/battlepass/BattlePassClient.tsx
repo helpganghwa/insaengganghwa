@@ -1,6 +1,7 @@
 'use client';
 
 import { useEffect, useRef, useState, useTransition } from 'react';
+import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 
 import type { BattlePassView, BattlePassSegmentView } from '@/lib/game/battlepass';
@@ -497,6 +498,13 @@ export function BattlePassClient({
       <div className="flex min-h-0 flex-1 flex-col overflow-y-auto overscroll-contain">
         {/* 컨텐츠 영역 — flex-1 유지(짧아도 footer를 하단으로 밀어냄). 함께 스크롤. */}
         <div className="flex-1 px-3 py-3">
+        {/* 확률형 아이템 고지(법규 F-11) — 초월 패스 보상에 보급상자 포함, 구매 화면 인접 노출. */}
+        <p className="mb-2 px-1 text-center text-[10px] leading-snug text-zinc-500">
+          📦 보급상자는 확률형 아이템입니다 ·{' '}
+          <Link href="/probability#supply" className="underline underline-offset-2">
+            아이템별 확률 보기
+          </Link>
+        </p>
         <div className="flex gap-2.5">
           <PassColumn
             view={cols[0]!.view}

@@ -1,6 +1,7 @@
 'use client';
 
 import { useEffect, useRef, useState, useTransition } from 'react';
+import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 
 import { assetUrl } from '@/lib/asset-versions';
@@ -646,6 +647,15 @@ export function ShopTabs({
             );
           })()}
         </ul>
+
+        {/* 확률형 아이템 고지(법규 F-11) — 보급상자가 포함된 상품(특가·프리미엄·패키지·주머니)의
+            구매 화면 인접 노출. 푸터 링크만으로는 스크롤 거리가 멀어 지침상 방어력이 약했다. */}
+        <p className="mb-3 px-1 text-center text-[10px] leading-snug text-zinc-500">
+          📦 보급상자는 확률형 아이템입니다 ·{' '}
+          <Link href="/probability#supply" className="underline underline-offset-2">
+            아이템별 확률 보기
+          </Link>
+        </p>
 
         {/* 탭 */}
         <div className="mb-3 flex gap-1 rounded-xl bg-zinc-100 p-1 dark:bg-zinc-900">
