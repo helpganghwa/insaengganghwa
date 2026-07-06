@@ -7,6 +7,8 @@ import { characters } from '@/lib/db/schema/server';
 import { userEquipment, catalogItems } from '@/lib/db/schema/equipment';
 import { userProfiles } from '@/lib/db/schema/avatar';
 import { iapOrders } from '@/lib/db/schema/payment';
+import { enhancementJobs } from '@/lib/db/schema/enhance';
+import { GEM_TO_MS } from '@/lib/game/balance';
 import { kstDateString } from '@/lib/kst';
 
 import { UserModActions } from './UserModActions';
@@ -55,7 +57,7 @@ async function loadDetail(userId: string) {
     .limit(1);
   if (!profile) return null;
 
-  const [chars, equipped, orders, avatarAgg] = await Promise.all([
+  const [chars, equipped, orders, avatarAgg, cancelledJobs] = await Promise.all([
     db
       .select({
         serverId: characters.serverId,
@@ -100,8 +102,32 @@ async function loadDetail(userId: string) {
       })
       .from(userProfiles)
       .where(eq(userProfiles.userId, userId)),
+    // 강화 취소 이력 — 버그 문의 피해 산정용(0102 이후 cancelled_at 보유분만 시간 측정 가능).
+    db
+      .select({
+        id: enhancementJobs.id,
+        slot: enhancementJobs.slot,
+        slotLane: enhancementJobs.slotLane,
+        fromLevel: enhancementJobs.fromLevel,
+        startedAt: enhancementJobs.startedAt,
+        cancelledAt: enhancementJobs.cancelledAt,
+      })
+      .from(enhancementJobs)
+      .where(and(eq(enhancementJobs.userId, userId), eq(enhancementJobs.status, 'cancelled')))
+      .orderBy(desc(enhancementJobs.createdAt))
+      .limit(20),
   ]);
-  return { profile, chars, equipped, orders, avatar: avatarAgg[0] ?? { n: 0, reports: 0 } };
+  // 피해 시간(진행 소실) = cancelled_at - started_at. 환산은 보석 단축 공식 환율(1분=1💎).
+  const lostMs = cancelledJobs.reduce(
+    (s, j) => s + (j.cancelledAt ? Math.max(0, j.cancelledAt.getTime() - j.startedAt.getTime()) : 0),
+    0,
+  );
+  const compDiamond = Math.ceil(lostMs / GEM_TO_MS);
+  return {
+    profile, chars, equipped, orders,
+    avatar: avatarAgg[0] ?? { n: 0, reports: 0 },
+    cancelledJobs, lostMs, compDiamond,
+  };
 }
 
 export default async function AdminUsersPage({
@@ -231,6 +257,32 @@ export default async function AdminUsersPage({
             <Link href="/admin/payments" className="mt-2 inline-block text-xs underline">
               결제 관리로
             </Link>
+          </div>
+
+          <div className="rounded-xl border border-zinc-200 p-4 text-sm dark:border-zinc-800">
+            <p className="font-semibold">강화 취소 이력 {detail.cancelledJobs.length}건 (최근 20)</p>
+            {detail.cancelledJobs.length === 0 ? (
+              <p className="mt-1 text-xs text-zinc-400">취소 이력 없음</p>
+            ) : (
+              <>
+                <ul className="mt-2 flex flex-col gap-1 text-xs text-zinc-600 dark:text-zinc-300">
+                  {detail.cancelledJobs.map((j) => (
+                    <li key={String(j.id)}>
+                      #{String(j.id)} · {SLOT_LABEL[j.slot] ?? j.slot}/{j.slotLane} · +{j.fromLevel} 시도 ·{' '}
+                      {fmtDate(j.startedAt)} 시작 →{' '}
+                      {j.cancelledAt
+                        ? `${fmtDate(j.cancelledAt)} 취소 (진행 ${Math.round((j.cancelledAt.getTime() - j.startedAt.getTime()) / 60_000)}분 소실)`
+                        : '취소 시각 미기록(0102 이전)'}
+                    </li>
+                  ))}
+                </ul>
+                <p className="mt-2 rounded bg-amber-50 px-2 py-1 text-xs text-amber-800 dark:bg-amber-950 dark:text-amber-200">
+                  피해 시간 합계(측정 가능분): <b>{Math.round(detail.lostMs / 60_000)}분</b> → 권장 보상{' '}
+                  <b>💎{detail.compDiamond.toLocaleString('ko-KR')}</b> (보석 단축 환율 1분=1💎, §6.2)
+                  — 유저 정상 취소가 섞일 수 있으니 문의 내용과 대조 후 우편 발송
+                </p>
+              </>
+            )}
           </div>
 
           <UserModActions userId={detail.profile.id} banned={!!detail.profile.bannedAt} />
