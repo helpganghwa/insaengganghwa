@@ -20,7 +20,6 @@ import { makeRng } from './rng';
  *
  * 스케일: 로스터 CP 일괄(set-based) + 참가자 청크 insert. 초대규모는 청크/스트림/배치 큐 필요(MELEE §9).
  */
-type EqRow = { uid: string; cid: number; el: number; tl: number };
 
 /** 보급 상자 count개를 슬롯에 결정론 분배(seed+userId). */
 function distributeBoxes(count: number, seed: string, userId: string): Record<SupplySlot, number> {
@@ -51,29 +50,37 @@ export async function runMelee(serverId: number): Promise<{ ran: boolean; battle
   if (existing) return { ran: false };
 
   // 참가 자격: **전투력 > 0**(장비 보유로 CP가 잡히는 유저)이면 자동 참가. CP 0 = 미참가.
-  //  전 유저 장비 일괄 로드 → JS에서 유저별 CP 산출 → 0 초과만 로스터.
   //  정지 계정 제외 — 리더보드와 동일 정책(정지 중 자동 참가·보상 수령 차단).
-  const eqRows = (await db.execute(sql`
-    select ei.user_id::text uid, ei.catalog_item_id cid, ei.enhance_level el, ei.transcend_level tl
-    from user_equipment ei
-    join profiles p on p.id = ei.user_id
-    where ei.server_id = ${serverId}
-      and (p.banned_at is null or (p.ban_until is not null and p.ban_until <= now()))
-  `)) as unknown as EqRow[];
-  if (eqRows.length === 0) return { ran: false };
-
-  const byUser = new Map<string, OwnedRow[]>();
-  for (const r of eqRows) {
-    const row: OwnedRow = { catalogItemId: r.cid, enhanceLevel: r.el, transcendLevel: r.tl };
-    const arr = byUser.get(r.uid);
-    if (arr) arr.push(row);
-    else byUser.set(r.uid, [row]);
+  //  keyset 청크(감사 P1) — 서버 전 장비를 한 번에 메모리로 끌면 유저 수 비례 OOM.
+  //  유저 id 순으로 잘라 배치당 장비만 적재, 누적은 {uid, cp}만.
+  const BATCH = 2000;
+  const withCp: { uid: string; cp: number }[] = [];
+  let after = '00000000-0000-0000-0000-000000000000';
+  for (;;) {
+    const rows = (await db.execute(sql`
+      select ei.user_id::text uid,
+             json_agg(json_build_array(ei.catalog_item_id, ei.enhance_level, ei.transcend_level)) items
+      from user_equipment ei
+      join profiles p on p.id = ei.user_id
+      where ei.server_id = ${serverId}
+        and ei.user_id > ${after}::uuid
+        and (p.banned_at is null or (p.ban_until is not null and p.ban_until <= now()))
+      group by ei.user_id
+      order by ei.user_id
+      limit ${BATCH}
+    `)) as unknown as { uid: string; items: [number, number, number][] }[];
+    for (const r of rows) {
+      const owned: OwnedRow[] = r.items.map(([cid, el, tl]) => ({
+        catalogItemId: cid,
+        enhanceLevel: el,
+        transcendLevel: tl,
+      }));
+      const cp = combatPowerFromOwned(owned);
+      if (cp > 0) withCp.push({ uid: r.uid, cp });
+    }
+    if (rows.length < BATCH) break;
+    after = rows[rows.length - 1]!.uid;
   }
-
-  // 유저별 CP 산출 후 CP > 0 만 참가자로.
-  const withCp = [...byUser.entries()]
-    .map(([uid, owned]) => ({ uid, cp: combatPowerFromOwned(owned) }))
-    .filter((x) => x.cp > 0);
   if (withCp.length === 0) return { ran: false };
 
   const ids = withCp.map((x) => x.uid);

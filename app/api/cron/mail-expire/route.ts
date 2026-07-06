@@ -28,20 +28,36 @@ import { db } from '@/lib/db/client';
 
 export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
+export const maxDuration = 120;
+
+// 배치 삭제(감사 P1) — 일일 보급·대난투 우편은 유저당 매일 2건+라 무제한 단문 DELETE는
+// 유저 수 비례로 statement_timeout(2분)에 걸리고, 실패→적체→다음 날 더 큰 DELETE의
+// 영구 실패 루프가 된다. 5,000행씩 잘라 지우고 남으면 다음 배치(시간 예산 내 루프).
+const BATCH = 5_000;
+const TIME_BUDGET_MS = 90_000;
 
 export async function GET(req: Request) {
   if (!isCronAuthorized(req)) {
     return new Response('forbidden', { status: 403 });
   }
   // (a) 미수령+만료 OR (b) 수령완료 후 30일 경과 row 삭제.
-  // RETURNING id로 삭제 수 산출(서버 로그). 인덱스(mailbox_user_unclaimed_idx)로 (a) 빠름;
-  // (b)는 created_at full scan일 수 있으나 매일 1회 KST 03시 호출이라 부담 적음.
-  const rows = (await db.execute(sql`
-    delete from mailbox
-    where (claimed_at is null and expires_at < now())
-       or (claimed_at is not null and created_at < now() - interval '30 days')
-    returning id
-  `)) as unknown as { id: string }[];
-  const deleted = rows.length;
+  // (a)는 부분 인덱스(mailbox_user_unclaimed_idx), (b)는 mailbox_claimed_created_idx(0107).
+  const startedAt = Date.now();
+  let deleted = 0;
+  for (;;) {
+    const rows = (await db.execute(sql`
+      delete from mailbox
+      where id in (
+        select id from mailbox
+        where (claimed_at is null and expires_at < now())
+           or (claimed_at is not null and created_at < now() - interval '30 days')
+        limit ${BATCH}
+      )
+      returning id
+    `)) as unknown as { id: string }[];
+    deleted += rows.length;
+    if (rows.length < BATCH) break;
+    if (Date.now() - startedAt > TIME_BUDGET_MS) break; // 잔여는 내일(또는 수동 재호출)
+  }
   return Response.json({ ok: true, kind: 'mail-expire', deleted });
 }

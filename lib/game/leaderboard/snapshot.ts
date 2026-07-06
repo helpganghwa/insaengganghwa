@@ -7,7 +7,7 @@ import { profiles } from '@/lib/db/schema/profiles';
 import { userEquipment } from '@/lib/db/schema/equipment';
 import { raids, raidParticipants } from '@/lib/db/schema/raid';
 import { meleeBattles } from '@/lib/db/schema/melee';
-import { leaderboardRanks, codexChampions } from '@/lib/db/schema/leaderboard';
+import { codexChampions } from '@/lib/db/schema/leaderboard';
 import { userMilestones } from '@/lib/db/schema/world';
 import { milestoneOf } from '@/lib/game/milestone';
 import { logWorldEvent } from '@/lib/game/world/event';
@@ -38,31 +38,46 @@ async function sumRows(serverId: number): Promise<Row[]> {
 }
 
 async function combatRows(serverId: number): Promise<Row[]> {
-  // 유저별 보유 전 인스턴스를 json_agg(1쿼리) → 앱에서 카탈로그 dedup·최강 선택(pieceCombatPower 단일 진실).
-  const rows = (await db.execute(sql`
-    select p.id::text as id,
-           coalesce(
-             json_agg(json_build_array(e.catalog_item_id, e.enhance_level, e.transcend_level))
-               filter (where e.user_id is not null),
-             '[]'::json
-           ) as items
-    from profiles p
-    join characters c on c.user_id = p.id and c.server_id = ${serverId}
-    left join user_equipment e on e.user_id = p.id and e.server_id = ${serverId}
-    group by p.id
-  `)) as unknown as { id: string; items: [number, number, number][] }[];
-  return rows.map((r) => ({
-    userId: r.id,
-    value: Math.round(
-      combatPowerFromOwned(
-        r.items.map(([catalogItemId, enhanceLevel, transcendLevel]) => ({
-          catalogItemId,
-          enhanceLevel,
-          transcendLevel,
-        })),
-      ),
-    ),
-  }));
+  // 유저별 보유 인스턴스를 json_agg → 앱에서 카탈로그 dedup·최강 선택(pieceCombatPower 단일 진실).
+  // keyset 청크(감사 P1) — 전 유저 장비를 한 번에 끌어오면 유저 수 비례로 함수 메모리·전송이
+  // 폭증한다(5만 유저 ≈ 수백만 행 JSON). 유저 id 순으로 잘라 배치당 장비만 적재.
+  const BATCH = 2000;
+  const out: Row[] = [];
+  let after = '00000000-0000-0000-0000-000000000000';
+  for (;;) {
+    const rows = (await db.execute(sql`
+      select p.id::text as id,
+             coalesce(
+               json_agg(json_build_array(e.catalog_item_id, e.enhance_level, e.transcend_level))
+                 filter (where e.user_id is not null),
+               '[]'::json
+             ) as items
+      from profiles p
+      join characters c on c.user_id = p.id and c.server_id = ${serverId}
+      left join user_equipment e on e.user_id = p.id and e.server_id = ${serverId}
+      where p.id > ${after}::uuid
+      group by p.id
+      order by p.id
+      limit ${BATCH}
+    `)) as unknown as { id: string; items: [number, number, number][] }[];
+    for (const r of rows) {
+      out.push({
+        userId: r.id,
+        value: Math.round(
+          combatPowerFromOwned(
+            r.items.map(([catalogItemId, enhanceLevel, transcendLevel]) => ({
+              catalogItemId,
+              enhanceLevel,
+              transcendLevel,
+            })),
+          ),
+        ),
+      });
+    }
+    if (rows.length < BATCH) break;
+    after = rows[rows.length - 1]!.id;
+  }
+  return out;
 }
 
 async function raidRows(serverId: number): Promise<Row[]> {
@@ -140,13 +155,29 @@ export async function rebuildLeaderboardSnapshot(
       prevRank = rank;
       return { serverId, metric, userId: r.userId, value: r.value, rank };
     });
+    // 전량 delete+insert → 차등 upsert(감사 P1) — 값·순위가 그대로인 행은 no-op이라
+    // 5분마다 전 유저 행을 rewrite하던 WAL/bloat이 "실제 변동분"으로 줄어든다.
+    // 탈락 행(전 장비 소실·탈퇴 등 — 드묾)만 별도 delete. 두 문 모두 단일 왕복.
+    const uids = ranked.map((r) => r.userId);
+    const vals = ranked.map((r) => r.value);
+    const rks = ranked.map((r) => r.rank);
     await db.transaction(async (tx) => {
-      await tx
-        .delete(leaderboardRanks)
-        .where(and(eq(leaderboardRanks.serverId, serverId), eq(leaderboardRanks.metric, metric)));
-      for (let i = 0; i < ranked.length; i += 500) {
-        await tx.insert(leaderboardRanks).values(ranked.slice(i, i + 500));
+      if (ranked.length > 0) {
+        await tx.execute(sql`
+          insert into leaderboard_ranks (server_id, metric, user_id, value, rank)
+          select ${serverId}, ${metric}, u.user_id, u.value, u.rank
+          from unnest(${uids}::uuid[], ${vals}::bigint[], ${rks}::int[]) as u(user_id, value, rank)
+          on conflict (server_id, metric, user_id) do update
+            set value = excluded.value, rank = excluded.rank, updated_at = now()
+            where (leaderboard_ranks.value, leaderboard_ranks.rank)
+                  is distinct from (excluded.value, excluded.rank)
+        `);
       }
+      await tx.execute(sql`
+        delete from leaderboard_ranks
+        where server_id = ${serverId} and metric = ${metric}
+          and not (user_id = any(${uids}::uuid[]))
+      `);
     });
     counts[metric] = ranked.length;
     // 개인 기록 마일스톤(2026-07-06) — 이 지표들의 전 유저 값을 여기서 이미 계산하므로

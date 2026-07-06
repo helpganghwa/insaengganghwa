@@ -93,6 +93,8 @@ export const userEquipment = pgTable(
     uniqueIndex('ue_user_slot_uq')
       .on(t.userId, t.serverId, t.equippedSlot)
       .where(sql`${t.equippedSlot} is not null`),
+    // 서버 단위 집계(리더보드 스냅샷·대난투 로스터 group by user_id) — 0107 수동 적용.
+    index('ue_server_user_idx').on(t.serverId, t.userId),
     // 최고강화자 셀프조인(liberatedItemRanks NOT EXISTS) — 0026 수동 적용.
     index('ue_catalog_rank_idx')
       .on(t.catalogItemId, t.maxEnhanceLevel, t.maxEnhanceReachedAt, t.userId)

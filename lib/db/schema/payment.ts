@@ -31,22 +31,31 @@ export const iapRefundReasonEnum = pgEnum('iap_refund_reason', [
 export const identityProviderEnum = pgEnum('identity_provider', ['kmc', 'pass', 'kg_inicis']);
 
 /** §9.1 iap_orders. */
-export const iapOrders = pgTable('iap_orders', {
-  id: bigserial('id', { mode: 'bigint' }).primaryKey(),
-  /** 지급 대상 지갑 서버(SERVER.md §4) — 미성년 월 한도는 계정 합산(서버 무관). */
-  serverId: smallint('server_id').notNull().default(1),
-  userId: uuid('user_id')
-    .notNull()
-    .references(() => profiles.id),
-  /** webhook 멱등 키. */
-  portoneOrderId: text('portone_order_id').notNull().unique(),
-  productCode: text('product_code').notNull(),
-  amountKrw: bigint('amount_krw', { mode: 'bigint' }).notNull(),
-  diamondGranted: bigint('diamond_granted', { mode: 'bigint' }).notNull(),
-  status: iapStatusEnum('status').notNull().default('pending'),
-  paidAt: timestamp('paid_at', { withTimezone: true }),
-  createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
-});
+export const iapOrders = pgTable(
+  'iap_orders',
+  {
+    id: bigserial('id', { mode: 'bigint' }).primaryKey(),
+    /** 지급 대상 지갑 서버(SERVER.md §4) — 미성년 월 한도는 계정 합산(서버 무관). */
+    serverId: smallint('server_id').notNull().default(1),
+    userId: uuid('user_id')
+      .notNull()
+      .references(() => profiles.id),
+    /** webhook 멱등 키. */
+    portoneOrderId: text('portone_order_id').notNull().unique(),
+    productCode: text('product_code').notNull(),
+    amountKrw: bigint('amount_krw', { mode: 'bigint' }).notNull(),
+    diamondGranted: bigint('diamond_granted', { mode: 'bigint' }).notNull(),
+    status: iapStatusEnum('status').notNull().default('pending'),
+    paidAt: timestamp('paid_at', { withTimezone: true }),
+    createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
+  },
+  (t) => [
+    // payment-recon 10분 주기 스캔(부분) + 유저 구매내역 — 0107 수동 적용.
+    index('iap_orders_pending_created_idx').on(t.createdAt).where(sql`${t.status} = 'pending'`),
+    index('iap_orders_paid_paidat_idx').on(t.paidAt).where(sql`${t.status} = 'paid'`),
+    index('iap_orders_user_idx').on(t.userId),
+  ],
+);
 
 /** §9.2 iap_refunds — 환불 시 재화 자동 회수(GDD §8). */
 export const iapRefunds = pgTable('iap_refunds', {
