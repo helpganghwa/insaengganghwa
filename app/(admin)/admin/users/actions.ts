@@ -1,7 +1,7 @@
 'use server';
 
 import { revalidatePath } from 'next/cache';
-import { and, eq } from 'drizzle-orm';
+import { and, eq, isNull, sql } from 'drizzle-orm';
 
 import { requireAdmin } from '@/lib/auth/require-admin';
 import { db } from '@/lib/db/client';
@@ -55,11 +55,11 @@ export async function unbanUserAction(userId: string): Promise<Result> {
   return { status: 'success' };
 }
 
-/** 경고 우편 — 유저의 활성 서버 우편함으로 발송. */
 /**
  * 강화 취소 피해 보상 우편 발송 — 취소된 잡의 진행 소실(cancelled_at − started_at) 합계를
  * 보석 단축 환율(1분=1💎)로 환산해 다이아 우편 지급. 금액은 화면 표기와 무관하게 서버에서
  * 재계산(클라 신뢰 금지)하고 상한 클램프. 유저 정상 취소가 섞일 수 있어 운영 판단 후 클릭하는 도구.
+ * 멱등(0106): 보상한 잡은 cancel_compensated_at 마킹 — 재클릭은 그 후 새 취소분만 집계한다.
  */
 export async function compensateCancelDamageAction(userId: string): Promise<Result> {
   await requireAdmin();
@@ -70,26 +70,39 @@ export async function compensateCancelDamageAction(userId: string): Promise<Resu
     .limit(1);
   if (!p) return { status: 'error', code: 'NOT_FOUND' };
 
-  const jobs = await db
-    .select({ startedAt: enhancementJobs.startedAt, cancelledAt: enhancementJobs.cancelledAt })
-    .from(enhancementJobs)
-    .where(and(eq(enhancementJobs.userId, userId), eq(enhancementJobs.status, 'cancelled')));
-  const lostMs = jobs.reduce(
-    (s, j) => s + (j.cancelledAt ? Math.max(0, j.cancelledAt.getTime() - j.startedAt.getTime()) : 0),
-    0,
-  );
-  const diamond = Math.min(COMP_MAX_DIAMOND, Math.ceil(lostMs / GEM_TO_MS));
-  if (diamond <= 0) return { status: 'error', code: 'NOTHING_TO_COMPENSATE' };
+  const compensated = await db.transaction(async (tx) => {
+    // 조건부 클레임 — 미보상 취소 잡만 마킹하며 집계. 동시/반복 클릭은 0행 → 재지급 없음.
+    const jobs = await tx
+      .update(enhancementJobs)
+      .set({ cancelCompensatedAt: sql`now()` })
+      .where(
+        and(
+          eq(enhancementJobs.userId, userId),
+          eq(enhancementJobs.status, 'cancelled'),
+          isNull(enhancementJobs.cancelCompensatedAt),
+        ),
+      )
+      .returning({ startedAt: enhancementJobs.startedAt, cancelledAt: enhancementJobs.cancelledAt });
+    const lostMs = jobs.reduce(
+      (s, j) => s + (j.cancelledAt ? Math.max(0, j.cancelledAt.getTime() - j.startedAt.getTime()) : 0),
+      0,
+    );
+    const diamond = Math.min(COMP_MAX_DIAMOND, Math.ceil(lostMs / GEM_TO_MS));
+    // 보상할 게 없으면 롤백 — 마킹도 되돌려 다음 실제 보상 시 정상 집계.
+    if (diamond <= 0) return 0;
 
-  await db.insert(mailbox).values({
-    userId,
-    serverId: p.sid ?? 1,
-    type: 'reward',
-    title: '강화 진행 보상',
-    body: `강화 취소로 손실된 진행 시간(약 ${Math.round(lostMs / 60_000)}분)에 대한 보상입니다. 불편을 드려 죄송합니다.`,
-    senderLabel: '운영팀',
-    payload: { diamond },
+    await tx.insert(mailbox).values({
+      userId,
+      serverId: p.sid ?? 1,
+      type: 'reward',
+      title: '강화 진행 보상',
+      body: `강화 취소로 손실된 진행 시간(약 ${Math.round(lostMs / 60_000)}분)에 대한 보상입니다. 불편을 드려 죄송합니다.`,
+      senderLabel: '운영팀',
+      payload: { diamond },
+    });
+    return diamond;
   });
+  if (compensated <= 0) return { status: 'error', code: 'NOTHING_TO_COMPENSATE' };
   revalidatePath('/admin/users');
   return { status: 'success' };
 }

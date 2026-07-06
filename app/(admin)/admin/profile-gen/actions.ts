@@ -28,7 +28,20 @@ export async function adminRevokeAndRefund(jobId: string): Promise<{ ok: boolean
   if (!job.userProfileId) return { ok: false, msg: '연결된 아바타가 없습니다(통과 건 아님/이미 회수됨).' };
   const profileId = job.userProfileId;
 
-  await db.transaction(async (tx) => {
+  const claimed = await db.transaction(async (tx) => {
+    // 조건부 클레임 먼저(money path) — 게이트(:28)는 비잠금 read라 동시 더블클릭이 둘 다
+    // 통과할 수 있다. user_profile_id가 아직 그 값일 때만 전이시켜 환불을 정확히 1회로.
+    const rows = await tx
+      .update(profileGenerationJobs)
+      .set({
+        userProfileId: null,
+        rejectReason: '운영자 회수(분쟁) — 다이아 환불',
+        adminDecision: 'reject',
+        adminReviewedAt: new Date(),
+      })
+      .where(and(eq(profileGenerationJobs.id, job.id), eq(profileGenerationJobs.userProfileId, profileId)))
+      .returning({ id: profileGenerationJobs.id });
+    if (rows.length === 0) return false;
     await tx
       .update(characters)
       .set({ activeProfileId: null })
@@ -41,15 +54,6 @@ export async function adminRevokeAndRefund(jobId: string): Promise<{ ok: boolean
       );
     await tx.delete(userProfiles).where(eq(userProfiles.id, profileId));
     await walletAdd(tx, job.userId, job.serverId, job.diamondEscrow);
-    await tx
-      .update(profileGenerationJobs)
-      .set({
-        userProfileId: null,
-        rejectReason: '운영자 회수(분쟁) — 다이아 환불',
-        adminDecision: 'reject',
-        adminReviewedAt: new Date(),
-      })
-      .where(eq(profileGenerationJobs.id, job.id));
     await tx.insert(mailbox).values({
       userId: job.userId,
       serverId: job.serverId,
@@ -59,8 +63,10 @@ export async function adminRevokeAndRefund(jobId: string): Promise<{ ok: boolean
       senderLabel: '운영자',
       payload: {},
     });
+    return true;
   });
   revalidatePath('/admin/profile-gen');
+  if (!claimed) return { ok: false, msg: '이미 처리된 건입니다(동시 요청).' };
   return { ok: true };
 }
 

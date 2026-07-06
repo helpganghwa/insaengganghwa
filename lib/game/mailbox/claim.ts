@@ -116,6 +116,8 @@ export function claimAllMail(input: { userId: string; serverId: number }): Promi
           gt(mailbox.expiresAt, sql`now()`),
         ),
       )
+      // 잠금 순서 고정 — 동시 claimAll 2건이 서로 다른 순서로 행을 잠그면 데드락(한쪽 abort).
+      .orderBy(mailbox.id)
       .for('update');
 
     if (rows.length === 0) return emptyResult();

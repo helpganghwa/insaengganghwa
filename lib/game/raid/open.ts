@@ -67,6 +67,12 @@ export async function activeRaidCount(tx: Tx, userId: string) {
 /** 일일 한도(KST) 체크 + 증가 (open/join 공통, 호스팅+참여 합산). */
 export async function bumpDailyOrThrow(tx: Tx, userId: string, serverId: number) {
   const kstDate = kstDateString();
+  // 행 존재 보장 — 그날 첫 행이 없으면 FOR UPDATE가 잠글 대상이 없어(부재 행 갭 락 없음)
+  // 동시 N요청이 모두 c=0으로 캡 체크를 통과한다. 선행 upsert로 항상 잠금이 성립하게.
+  await tx
+    .insert(raidDailyCounts)
+    .values({ userId, serverId, kstDate, startedCount: 0 })
+    .onConflictDoNothing();
   const [row] = await tx
     .select({ c: raidDailyCounts.startedCount })
     .from(raidDailyCounts)
@@ -80,12 +86,15 @@ export async function bumpDailyOrThrow(tx: Tx, userId: string, serverId: number)
     .for('update');
   if ((row?.c ?? 0) >= RAID_DAILY_CAP) throw new RaidError('DAILY_CAP_REACHED');
   await tx
-    .insert(raidDailyCounts)
-    .values({ userId, serverId, kstDate, startedCount: 1 })
-    .onConflictDoUpdate({
-      target: [raidDailyCounts.userId, raidDailyCounts.serverId, raidDailyCounts.kstDate],
-      set: { startedCount: sql`${raidDailyCounts.startedCount} + 1` },
-    });
+    .update(raidDailyCounts)
+    .set({ startedCount: sql`${raidDailyCounts.startedCount} + 1` })
+    .where(
+      and(
+        eq(raidDailyCounts.userId, userId),
+        eq(raidDailyCounts.serverId, serverId),
+        eq(raidDailyCounts.kstDate, kstDate),
+      ),
+    );
 }
 
 export type RaidShareMode = 'off' | 'free' | 'approval';

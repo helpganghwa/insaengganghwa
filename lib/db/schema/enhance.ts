@@ -64,6 +64,8 @@ export const enhancementJobs = pgTable(
     pushSent: boolean('push_sent').notNull().default(false),
     /** 취소 시각(0102) — 슬롯 전멸 사건 추적용 감사 필드. null=미취소. */
     cancelledAt: timestamp('cancelled_at', { withTimezone: true }),
+    /** 취소 피해 보상 우편 발송 시각(0106) — 어드민 보상 도구의 멱등 마커. null=미보상. */
+    cancelCompensatedAt: timestamp('cancel_compensated_at', { withTimezone: true }),
     createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
   },
   (t) => [

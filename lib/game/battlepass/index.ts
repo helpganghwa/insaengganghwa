@@ -191,6 +191,23 @@ const reachedFor = async (userId: string, serverId: number, type: BattlePassType
 };
 const sorted = (a: number[]) => [...a].sort((x, y) => x - y);
 
+/**
+ * state 행 존재 보장 — 행이 없으면 SELECT FOR UPDATE가 아무것도 잠그지 않아(부재 행엔
+ * 갭 락 없음) 최초 수령 동시 요청이 모두 claimed=∅로 통과해 이중지급된다. 상점 무료
+ * 수령(shop/free.ts)·출석(checkin/claim.ts)과 동일한 선행 upsert 패턴.
+ */
+async function ensureStateRow(
+  tx: Parameters<Parameters<typeof db.transaction>[0]>[0],
+  userId: string,
+  serverId: number,
+  type: BattlePassType,
+): Promise<void> {
+  await tx
+    .insert(battlePassState)
+    .values({ userId, serverId, passType: type, freeClaimedTiers: [] })
+    .onConflictDoNothing();
+}
+
 // ── 무료 라인 수령 — 집합 기반(개별 단계 비순차 수령) ─────────────────────────
 
 /** 무료 — 받을 수 있는 모든 마일스톤 일괄 수령(컬럼 하단 '한번에 받기'). */
@@ -200,6 +217,7 @@ export function claimFree(
   type: BattlePassType,
 ): Promise<{ granted: number; rewardKind: 'diamond' | 'box' }> {
   return db.transaction(async (tx) => {
+    await ensureStateRow(tx, userId, serverId, type);
     const [s] = await tx
       .select({ tiers: battlePassState.freeClaimedTiers })
       .from(battlePassState)
@@ -241,6 +259,7 @@ export function claimFreeTier(
   level: number,
 ): Promise<{ granted: number; rewardKind: 'diamond' | 'box' }> {
   return db.transaction(async (tx) => {
+    await ensureStateRow(tx, userId, serverId, type);
     const [s] = await tx
       .select({ tiers: battlePassState.freeClaimedTiers })
       .from(battlePassState)
@@ -379,6 +398,7 @@ export function claimSegment(
     const levels = tierLevelsIn(type, startLevel, cap);
     if (levels.length === 0) throw new BattlePassErr('NOTHING_TO_CLAIM');
 
+    await ensureStateRow(tx, userId, serverId, type);
     const [s] = await tx
       .select({ tiers: battlePassState.freeClaimedTiers })
       .from(battlePassState)
