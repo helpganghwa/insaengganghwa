@@ -1,7 +1,5 @@
 'use client';
-import { profileHref } from '@/lib/game/profile/href';
 
-import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { useEffect, useMemo, useState, useTransition } from 'react';
 import { josa } from 'es-hangul';
@@ -87,13 +85,11 @@ function ChronicleText({
   zoneColor,
   onGuild,
   onZone,
-  serverId,
 }: {
   text: string;
   zoneColor: (name: string) => string | null;
   onGuild: (name: string) => void;
   onZone: (name: string) => void;
-  serverId: number;
 }) {
   const out: React.ReactNode[] = [];
   let last = 0;
@@ -117,11 +113,13 @@ function ChronicleText({
         </button>,
       );
     } else if (type === 'u') {
-      // 인물 — 웜 그레이(스톤), 밑줄 없음. 클릭 시 프로필 상세(/u/[nickname]).
+      // 인물 — 웜 그레이(스톤) 표시 전용. 링크 금지: 마커에는 기록 당시 닉네임(텍스트)만 있는데
+      // /u는 publicCode 단일 해석(P-A7, 닉네임 폴백 없음)이라 닉 기반 링크는 항상 404이고,
+      // 닉변·재취득 시 오귀속 위험까지 있다. 연대기는 사관 기록 — 당시 이름 그대로 표시가 맞다.
       out.push(
-        <Link key={key++} href={profileHref(name, serverId)} className="text-stone-500 dark:text-stone-400">
+        <span key={key++} className="text-stone-500 dark:text-stone-400">
           {name}
-        </Link>,
+        </span>,
       );
     } else {
       // 구역 — 지역색 칩. 클릭 시 구역 상세 팝업.
@@ -527,7 +525,6 @@ export function WorldMapView({
                     className="whitespace-pre-line text-[13px] leading-relaxed text-zinc-600 dark:text-zinc-300"
                   >
                     <ChronicleText
-                      serverId={serverId}
                       text={para.trim()}
                       zoneColor={zoneColor}
                       onGuild={openGuildByName}
@@ -554,7 +551,6 @@ export function WorldMapView({
                   </span>
                   <span className="text-zinc-600 dark:text-zinc-300">
                     <ChronicleText
-                      serverId={serverId}
                       text={e.headline}
                       zoneColor={zoneColor}
                       onGuild={openGuildByName}

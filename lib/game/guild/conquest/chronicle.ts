@@ -356,9 +356,41 @@ export async function generateAndStoreChronicle(
       if (t === 'z' && isG && !isZ) return `{g|${name}}`;
       return mm;
     });
-  const today = correctMarkers(fixBraces((parsed.today ?? '').trim()));
+  // 마커 누락 강제(2026-07-05 사건: 본문 전체 마커 0, 「이름」 평문 노출) — LLM 준수에
+  // 의존하지 않고 코드가 아는 이름을 결정론적으로 마킹. 기존 마커 구간은 보존, 동명
+  // (길드=구역 등 두 종류에 존재)은 종류 판정 불가라 건너뜀. 긴 이름 우선(부분 문자열 오마킹 방지).
+  const userNames = new Set<string>(summary.feats.map((f) => f.nickname));
+  const wrapOutsideMarkers = (text: string, find: string, repl: string): string =>
+    text
+      .split(/(\{[guz]\|[^}]+\}+)/g)
+      .map((seg, i) => (i % 2 === 1 ? seg : seg.replaceAll(find, repl)))
+      .join('');
+  const enforceMarkers = (s: string): string => {
+    const ambiguous = new Set(
+      [...guildNames, ...zoneNames, ...userNames].filter(
+        (n) =>
+          Number(guildNames.has(n)) + Number(zoneNames.has(n)) + Number(userNames.has(n)) > 1,
+      ),
+    );
+    const items = [
+      ...[...guildNames].map((n) => ({ k: 'g' as const, n })),
+      ...[...userNames].map((n) => ({ k: 'u' as const, n })),
+      ...[...zoneNames].map((n) => ({ k: 'z' as const, n })),
+    ]
+      .filter((it) => it.n.length >= 2 && !ambiguous.has(it.n))
+      .sort((a, b) => b.n.length - a.n.length);
+    let out = s;
+    for (const { k, n } of items) {
+      out = wrapOutsideMarkers(out, `「${n}」`, `{${k}|${n}}`);
+      out = wrapOutsideMarkers(out, n, `{${k}|${n}}`);
+    }
+    return out;
+  };
+  const today = enforceMarkers(correctMarkers(fixBraces((parsed.today ?? '').trim())));
   // 헤드라인('전체' 연표)은 정세가 크게 바뀐 날만 — 아니면 빈 문자열(연표 미노출).
-  const headline = bigChange ? correctMarkers(fixBraces((parsed.headline ?? '').trim())) : '';
+  const headline = bigChange
+    ? enforceMarkers(correctMarkers(fixBraces((parsed.headline ?? '').trim())))
+    : '';
   if (!today) throw new Error('CHRONICLE_EMPTY');
   if (bigChange && !headline) throw new Error('CHRONICLE_EMPTY');
 
