@@ -98,9 +98,11 @@ export const mailClaimLogs = pgTable('mail_claim_logs', {
   id: bigserial('id', { mode: 'bigint' }).primaryKey(),
   /** 소속 서버(SERVER.md P3b). */
   serverId: smallint('server_id').notNull().default(1),
-  mailId: bigint('mail_id', { mode: 'bigint' })
-    .notNull()
-    .references(() => mailbox.id, { onDelete: 'set null' }),
+  /** 원본 우편 — 만료 삭제 시 SET NULL로 끊기므로 nullable(수령 시각·금액은 로그에 보존).
+   *  ⚠ notNull과 onDelete SET NULL은 공존 불가 — 실제 DB도 nullable(드리프트 감사 2026-07-07). */
+  mailId: bigint('mail_id', { mode: 'bigint' }).references(() => mailbox.id, {
+    onDelete: 'set null',
+  }),
   userId: uuid('user_id')
     .notNull()
     .references(() => profiles.id, { onDelete: 'cascade' }),
