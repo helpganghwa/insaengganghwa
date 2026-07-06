@@ -1,0 +1,1135 @@
+<!doctype html><html lang=ko><head><meta charset=utf-8><meta name=viewport content="width=390,user-scalable=no">
+<title>최종 120종 리뷰</title><style>
+*{box-sizing:border-box}
+body{margin:0;background:#0b0b0e;color:#e7e7ea;font:14px/1.45 system-ui,sans-serif}
+header{position:sticky;top:0;background:#0b0b0ef5;backdrop-filter:blur(6px);border-bottom:1px solid #222;z-index:9;padding:9px 12px}
+h1{font-size:15px;margin:0}
+.tools{display:flex;gap:7px;margin-top:7px;align-items:center}
+.tools button{font-size:12px;font-weight:700;border:1px solid #33333c;background:#16161c;color:#e7e7ea;border-radius:7px;padding:6px 10px;cursor:pointer}
+#cnt{font-size:12px;color:#f87171}
+#out{display:none;width:100%;height:150px;margin-top:7px;background:#0e0e12;color:#cfcfd6;border:1px solid #26262e;border-radius:7px;font:11px ui-monospace,monospace;padding:6px}
+main{padding:10px 12px 60px;max-width:760px;margin:0 auto}
+h2{font-size:14px;margin:18px 0 8px;border-left:4px solid #d97706;padding-left:8px}
+.grid{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+.card{background:#15151a;border:1px solid #26262e;border-radius:14px;padding:10px;display:flex;flex-direction:column;gap:7px}
+.card.rejected{outline:3px solid #dc2626;opacity:.65}
+.imgs{display:flex;gap:8px}
+.box{flex:1;aspect-ratio:1/1;border-radius:8px;overflow:hidden;display:flex;align-items:center;justify-content:center;position:relative;
+ background:linear-gradient(45deg,#1d1d22 25%,transparent 25%),linear-gradient(-45deg,#1d1d22 25%,transparent 25%),linear-gradient(45deg,transparent 75%,#1d1d22 75%),linear-gradient(-45deg,transparent 75%,#1d1d22 75%);background-size:16px 16px;background-position:0 0,0 8px,8px -8px,-8px 0}
+.box img{width:100%;height:100%;object-fit:contain;image-rendering:pixelated}
+.box.pend{flex-direction:column;color:#555;font-size:10px}
+.box .lbl{position:absolute;top:3px;left:4px;font-size:9px;color:#ccc;background:#000a;padding:0 4px;border-radius:3px;z-index:2}
+.anim{width:100%;height:100%;background-repeat:no-repeat;background-position:0 0;image-rendering:pixelated}
+.ph{color:#555;font-size:11px}
+.meta{display:flex;align-items:center;gap:6px}
+.gb{font-size:9px;font-weight:700;border-radius:4px;padding:1px 5px}
+.g1{background:#334155;color:#cbd5e1}.g2{background:#3a2a0e;color:#fbbf24}.g3{background:#14361f;color:#4ade80}
+.nm{font-weight:700;font-size:14px}
+.story{font-size:11.5px;color:#c7c7cd}
+.story.pend{color:#5a5a62;font-style:italic}
+.rej{display:flex;gap:6px;margin-top:2px}
+.rk{font-size:11px;font-weight:700;border:1px solid #3a3a44;background:#1c1c22;color:#cfcfd6;border-radius:7px;padding:5px 8px;cursor:pointer;white-space:nowrap}
+.card.rejected .rk{background:#3a1414;color:#f87171;border-color:#dc2626}
+.rs{flex:1;min-width:0;font-size:11px;background:#101015;color:#e7e7ea;border:1px solid #2c2c36;border-radius:7px;padding:5px 7px}
+</style></head><body>
+<header><h1>최종 120종 리뷰 — 무기/방어구/장신구</h1>
+<div class="tools"><button onclick="exportRej()">📋 리젝 내보내기</button><button onclick="clearRej()">초기화</button><span id="cnt"></span></div>
+<textarea id="out" readonly></textarea></header>
+<main><h2>무기 <small>(40)</small></h2><div class="grid"><div class="card" data-uid="v3:seed-kingdom_ribbon_rapier">
+    <div class="imgs">
+      <div class="box"><span class=lbl>정적</span><img src="sprites/pool/seed-kingdom_ribbon_rapier.png" loading=lazy></div>
+      <div class="box pend"><span class=lbl>애니</span><span class=ph>생성 예정</span></div>
+    </div>
+    <div class="meta"><span class="gb g3">3차</span><span class="nm">푸른 매듭</span></div>
+    <div class="story pend">— 스토리 생성 예정 —</div>
+    <div class="rej"><button class="rk" onclick="rej('v3:seed-kingdom_ribbon_rapier')">✕ 리젝</button>
+      <input class="rs" placeholder="리젝 사유" oninput="setReason('v3:seed-kingdom_ribbon_rapier',this.value)"></div>
+  </div><div class="card" data-uid="v3:seed-kingdom_court_twin_sabers">
+    <div class="imgs">
+      <div class="box"><span class=lbl>정적</span><img src="sprites/pool/seed-kingdom_court_twin_sabers.png" loading=lazy></div>
+      <div class="box pend"><span class=lbl>애니</span><span class=ph>생성 예정</span></div>
+    </div>
+    <div class="meta"><span class="gb g3">3차</span><span class="nm">마주 든 한 쌍</span></div>
+    <div class="story pend">— 스토리 생성 예정 —</div>
+    <div class="rej"><button class="rk" onclick="rej('v3:seed-kingdom_court_twin_sabers')">✕ 리젝</button>
+      <input class="rs" placeholder="리젝 사유" oninput="setReason('v3:seed-kingdom_court_twin_sabers',this.value)"></div>
+  </div><div class="card" data-uid="v3:seed-kingdom_winged_coronation_sword">
+    <div class="imgs">
+      <div class="box"><span class=lbl>정적</span><img src="sprites/pool/seed-kingdom_winged_coronation_sword.png" loading=lazy></div>
+      <div class="box pend"><span class=lbl>애니</span><span class=ph>생성 예정</span></div>
+    </div>
+    <div class="meta"><span class="gb g3">3차</span><span class="nm">즉위의 깃</span></div>
+    <div class="story pend">— 스토리 생성 예정 —</div>
+    <div class="rej"><button class="rk" onclick="rej('v3:seed-kingdom_winged_coronation_sword')">✕ 리젝</button>
+      <input class="rs" placeholder="리젝 사유" oninput="setReason('v3:seed-kingdom_winged_coronation_sword',this.value)"></div>
+  </div><div class="card" data-uid="v3:seed-kingdom_falcon_cane_sword">
+    <div class="imgs">
+      <div class="box"><span class=lbl>정적</span><img src="sprites/pool/seed-kingdom_falcon_cane_sword.png" loading=lazy></div>
+      <div class="box pend"><span class=lbl>애니</span><span class=ph>생성 예정</span></div>
+    </div>
+    <div class="meta"><span class="gb g3">3차</span><span class="nm">지팡이 속 한 줄</span></div>
+    <div class="story pend">— 스토리 생성 예정 —</div>
+    <div class="rej"><button class="rk" onclick="rej('v3:seed-kingdom_falcon_cane_sword')">✕ 리젝</button>
+      <input class="rs" placeholder="리젝 사유" oninput="setReason('v3:seed-kingdom_falcon_cane_sword',this.value)"></div>
+  </div><div class="card" data-uid="v3:seed-temple_frost_odachi">
+    <div class="imgs">
+      <div class="box"><span class=lbl>정적</span><img src="sprites/pool/seed-temple_frost_odachi.png" loading=lazy></div>
+      <div class="box pend"><span class=lbl>애니</span><span class=ph>생성 예정</span></div>
+    </div>
+    <div class="meta"><span class="gb g3">3차</span><span class="nm">서리를 벼린 대도</span></div>
+    <div class="story pend">— 스토리 생성 예정 —</div>
+    <div class="rej"><button class="rk" onclick="rej('v3:seed-temple_frost_odachi')">✕ 리젝</button>
+      <input class="rs" placeholder="리젝 사유" oninput="setReason('v3:seed-temple_frost_odachi',this.value)"></div>
+  </div><div class="card" data-uid="v3:seed-volcano_emberveined_greatsword">
+    <div class="imgs">
+      <div class="box"><span class=lbl>정적</span><img src="sprites/pool/seed-volcano_emberveined_greatsword.png" loading=lazy></div>
+      <div class="box pend"><span class=lbl>애니</span><span class=ph>생성 예정</span></div>
+    </div>
+    <div class="meta"><span class="gb g3">3차</span><span class="nm">잿불을 머금은 칼</span></div>
+    <div class="story pend">— 스토리 생성 예정 —</div>
+    <div class="rej"><button class="rk" onclick="rej('v3:seed-volcano_emberveined_greatsword')">✕ 리젝</button>
+      <input class="rs" placeholder="리젝 사유" oninput="setReason('v3:seed-volcano_emberveined_greatsword',this.value)"></div>
+  </div><div class="card" data-uid="v3:seed-swamp_lotus_trident">
+    <div class="imgs">
+      <div class="box"><span class=lbl>정적</span><img src="sprites/pool/seed-swamp_lotus_trident.png" loading=lazy></div>
+      <div class="box pend"><span class=lbl>애니</span><span class=ph>생성 예정</span></div>
+    </div>
+    <div class="meta"><span class="gb g3">3차</span><span class="nm">세 갈래 물줄기</span></div>
+    <div class="story pend">— 스토리 생성 예정 —</div>
+    <div class="rej"><button class="rk" onclick="rej('v3:seed-swamp_lotus_trident')">✕ 리젝</button>
+      <input class="rs" placeholder="리젝 사유" oninput="setReason('v3:seed-swamp_lotus_trident',this.value)"></div>
+  </div><div class="card" data-uid="v3:seed-angel_star_wand">
+    <div class="imgs">
+      <div class="box"><span class=lbl>정적</span><img src="sprites/pool/seed-angel_star_wand.png" loading=lazy></div>
+      <div class="box pend"><span class=lbl>애니</span><span class=ph>생성 예정</span></div>
+    </div>
+    <div class="meta"><span class="gb g3">3차</span><span class="nm">별을 인 지팡이</span></div>
+    <div class="story pend">— 스토리 생성 예정 —</div>
+    <div class="rej"><button class="rk" onclick="rej('v3:seed-angel_star_wand')">✕ 리젝</button>
+      <input class="rs" placeholder="리젝 사유" oninput="setReason('v3:seed-angel_star_wand',this.value)"></div>
+  </div><div class="card" data-uid="v3:seed-volcano_dragonjaw_halberd">
+    <div class="imgs">
+      <div class="box"><span class=lbl>정적</span><img src="sprites/pool/seed-volcano_dragonjaw_halberd.png" loading=lazy></div>
+      <div class="box pend"><span class=lbl>애니</span><span class=ph>생성 예정</span></div>
+    </div>
+    <div class="meta"><span class="gb g3">3차</span><span class="nm">용의 턱</span></div>
+    <div class="story pend">— 스토리 생성 예정 —</div>
+    <div class="rej"><button class="rk" onclick="rej('v3:seed-volcano_dragonjaw_halberd')">✕ 리젝</button>
+      <input class="rs" placeholder="리젝 사유" oninput="setReason('v3:seed-volcano_dragonjaw_halberd',this.value)"></div>
+  </div><div class="card" data-uid="v3:w-pumpkin-witch-staff-95">
+    <div class="imgs">
+      <div class="box"><span class=lbl>정적</span><img src="sprites/pool/w-pumpkin-witch-staff-95.png" loading=lazy></div>
+      <div class="box pend"><span class=lbl>애니</span><span class=ph>생성 예정</span></div>
+    </div>
+    <div class="meta"><span class="gb g3">3차</span><span class="nm">잭오랜턴 지팡이</span></div>
+    <div class="story pend">— 스토리 생성 예정 —</div>
+    <div class="rej"><button class="rk" onclick="rej('v3:w-pumpkin-witch-staff-95')">✕ 리젝</button>
+      <input class="rs" placeholder="리젝 사유" oninput="setReason('v3:w-pumpkin-witch-staff-95',this.value)"></div>
+  </div><div class="card" data-uid="v3:seed-kingdom_banner_spear">
+    <div class="imgs">
+      <div class="box"><span class=lbl>정적</span><img src="sprites/pool/seed-kingdom_banner_spear.png" loading=lazy></div>
+      <div class="box pend"><span class=lbl>애니</span><span class=ph>생성 예정</span></div>
+    </div>
+    <div class="meta"><span class="gb g3">3차</span><span class="nm">왕실 깃발 창</span></div>
+    <div class="story pend">— 스토리 생성 예정 —</div>
+    <div class="rej"><button class="rk" onclick="rej('v3:seed-kingdom_banner_spear')">✕ 리젝</button>
+      <input class="rs" placeholder="리젝 사유" oninput="setReason('v3:seed-kingdom_banner_spear',this.value)"></div>
+  </div><div class="card" data-uid="v3:seed-volcano_ember_scythe">
+    <div class="imgs">
+      <div class="box"><span class=lbl>정적</span><img src="sprites/pool/seed-volcano_ember_scythe.png" loading=lazy></div>
+      <div class="box pend"><span class=lbl>애니</span><span class=ph>생성 예정</span></div>
+    </div>
+    <div class="meta"><span class="gb g3">3차</span><span class="nm">잿불을 거두는 낫</span></div>
+    <div class="story pend">— 스토리 생성 예정 —</div>
+    <div class="rej"><button class="rk" onclick="rej('v3:seed-volcano_ember_scythe')">✕ 리젝</button>
+      <input class="rs" placeholder="리젝 사유" oninput="setReason('v3:seed-volcano_ember_scythe',this.value)"></div>
+  </div><div class="card" data-uid="v3:w-vampire-rapier-114">
+    <div class="imgs">
+      <div class="box"><span class=lbl>정적</span><img src="sprites/pool/w-vampire-rapier-114.png" loading=lazy></div>
+      <div class="box pend"><span class=lbl>애니</span><span class=ph>생성 예정</span></div>
+    </div>
+    <div class="meta"><span class="gb g3">3차</span><span class="nm">흡혈귀의 가는 검</span></div>
+    <div class="story pend">— 스토리 생성 예정 —</div>
+    <div class="rej"><button class="rk" onclick="rej('v3:w-vampire-rapier-114')">✕ 리젝</button>
+      <input class="rs" placeholder="리젝 사유" oninput="setReason('v3:w-vampire-rapier-114',this.value)"></div>
+  </div><div class="card" data-uid="v3:w-reaper-scythe-120">
+    <div class="imgs">
+      <div class="box"><span class=lbl>정적</span><img src="sprites/pool/w-reaper-scythe-120.png" loading=lazy></div>
+      <div class="box pend"><span class=lbl>애니</span><span class=ph>생성 예정</span></div>
+    </div>
+    <div class="meta"><span class="gb g3">3차</span><span class="nm">영혼을 거두는 낫</span></div>
+    <div class="story pend">— 스토리 생성 예정 —</div>
+    <div class="rej"><button class="rk" onclick="rej('v3:w-reaper-scythe-120')">✕ 리젝</button>
+      <input class="rs" placeholder="리젝 사유" oninput="setReason('v3:w-reaper-scythe-120',this.value)"></div>
+  </div><div class="card" data-uid="v3:w-necromancer-staff-126">
+    <div class="imgs">
+      <div class="box"><span class=lbl>정적</span><img src="sprites/pool/w-necromancer-staff-126.png" loading=lazy></div>
+      <div class="box pend"><span class=lbl>애니</span><span class=ph>생성 예정</span></div>
+    </div>
+    <div class="meta"><span class="gb g3">3차</span><span class="nm">해골 강령 지팡이</span></div>
+    <div class="story pend">— 스토리 생성 예정 —</div>
+    <div class="rej"><button class="rk" onclick="rej('v3:w-necromancer-staff-126')">✕ 리젝</button>
+      <input class="rs" placeholder="리젝 사유" oninput="setReason('v3:w-necromancer-staff-126',this.value)"></div>
+  </div><div class="card" data-uid="v3:w-assassin-twin-daggers-156">
+    <div class="imgs">
+      <div class="box"><span class=lbl>정적</span><img src="sprites/pool/w-assassin-twin-daggers-156.png" loading=lazy></div>
+      <div class="box pend"><span class=lbl>애니</span><span class=ph>생성 예정</span></div>
+    </div>
+    <div class="meta"><span class="gb g3">3차</span><span class="nm">그림자 쌍단검</span></div>
+    <div class="story pend">— 스토리 생성 예정 —</div>
+    <div class="rej"><button class="rk" onclick="rej('v3:w-assassin-twin-daggers-156')">✕ 리젝</button>
+      <input class="rs" placeholder="리젝 사유" oninput="setReason('v3:w-assassin-twin-daggers-156',this.value)"></div>
+  </div><div class="card" data-uid="v3:w-ornate-flintlock-pistol-162">
+    <div class="imgs">
+      <div class="box"><span class=lbl>정적</span><img src="sprites/pool/w-ornate-flintlock-pistol-162.png" loading=lazy></div>
+      <div class="box pend"><span class=lbl>애니</span><span class=ph>생성 예정</span></div>
+    </div>
+    <div class="meta"><span class="gb g3">3차</span><span class="nm">장식 플린트락 권총</span></div>
+    <div class="story pend">— 스토리 생성 예정 —</div>
+    <div class="rej"><button class="rk" onclick="rej('v3:w-ornate-flintlock-pistol-162')">✕ 리젝</button>
+      <input class="rs" placeholder="리젝 사유" oninput="setReason('v3:w-ornate-flintlock-pistol-162',this.value)"></div>
+  </div><div class="card" data-uid="v3:w-celestial-greatsword-153">
+    <div class="imgs">
+      <div class="box"><span class=lbl>정적</span><img src="sprites/pool/w-celestial-greatsword-153.png" loading=lazy></div>
+      <div class="box pend"><span class=lbl>애니</span><span class=ph>생성 예정</span></div>
+    </div>
+    <div class="meta"><span class="gb g3">3차</span><span class="nm">천공의 대검</span></div>
+    <div class="story pend">— 스토리 생성 예정 —</div>
+    <div class="rej"><button class="rk" onclick="rej('v3:w-celestial-greatsword-153')">✕ 리젝</button>
+      <input class="rs" placeholder="리젝 사유" oninput="setReason('v3:w-celestial-greatsword-153',this.value)"></div>
+  </div><div class="card" data-uid="v3:w-elven-longbow-154">
+    <div class="imgs">
+      <div class="box"><span class=lbl>정적</span><img src="sprites/pool/w-elven-longbow-154.png" loading=lazy></div>
+      <div class="box pend"><span class=lbl>애니</span><span class=ph>생성 예정</span></div>
+    </div>
+    <div class="meta"><span class="gb g3">3차</span><span class="nm">엘프의 은빛 장궁</span></div>
+    <div class="story pend">— 스토리 생성 예정 —</div>
+    <div class="rej"><button class="rk" onclick="rej('v3:w-elven-longbow-154')">✕ 리젝</button>
+      <input class="rs" placeholder="리젝 사유" oninput="setReason('v3:w-elven-longbow-154',this.value)"></div>
+  </div><div class="card" data-uid="v3:seed-volcano_forgeheart_warhammer">
+    <div class="imgs">
+      <div class="box"><span class=lbl>정적</span><img src="sprites/pool/seed-volcano_forgeheart_warhammer.png" loading=lazy></div>
+      <div class="box pend"><span class=lbl>애니</span><span class=ph>생성 예정</span></div>
+    </div>
+    <div class="meta"><span class="gb g3">3차</span><span class="nm">대장간의 심장</span></div>
+    <div class="story pend">— 스토리 생성 예정 —</div>
+    <div class="rej"><button class="rk" onclick="rej('v3:seed-volcano_forgeheart_warhammer')">✕ 리젝</button>
+      <input class="rs" placeholder="리젝 사유" oninput="setReason('v3:seed-volcano_forgeheart_warhammer',this.value)"></div>
+  </div><div class="card" data-uid="v3:w-thunder-spear-191">
+    <div class="imgs">
+      <div class="box"><span class=lbl>정적</span><img src="sprites/pool/w-thunder-spear-191.png" loading=lazy></div>
+      <div class="box pend"><span class=lbl>애니</span><span class=ph>생성 예정</span></div>
+    </div>
+    <div class="meta"><span class="gb g3">3차</span><span class="nm">뇌격의 창</span></div>
+    <div class="story pend">— 스토리 생성 예정 —</div>
+    <div class="rej"><button class="rk" onclick="rej('v3:w-thunder-spear-191')">✕ 리젝</button>
+      <input class="rs" placeholder="리젝 사유" oninput="setReason('v3:w-thunder-spear-191',this.value)"></div>
+  </div><div class="card" data-uid="v3:w--57">
+    <div class="imgs">
+      <div class="box"><span class=lbl>정적</span><img src="sprites/pool/w--57.png" loading=lazy></div>
+      <div class="box pend"><span class=lbl>애니</span><span class=ph>생성 예정</span></div>
+    </div>
+    <div class="meta"><span class="gb g3">3차</span><span class="nm">잠긴 문의 대검</span></div>
+    <div class="story pend">— 스토리 생성 예정 —</div>
+    <div class="rej"><button class="rk" onclick="rej('v3:w--57')">✕ 리젝</button>
+      <input class="rs" placeholder="리젝 사유" oninput="setReason('v3:w--57',this.value)"></div>
+  </div><div class="card" data-uid="v2:kingdom_masque_saber">
+    <div class="imgs">
+      <div class="box"><span class=lbl>정적</span><img src="sprites/weapon/kingdom_masque_saber.png" loading=lazy></div>
+      <div class="box"><span class=lbl>애니</span><div class="anim" data-frames="15" style="background-image:url('sprites/anim/kingdom_masque_saber.webp')"></div></div>
+    </div>
+    <div class="meta"><span class="gb g2">2차</span><span class="nm">무도회의 한 수</span></div>
+    <div class="story">춤이 결투로 바뀌는 건 한순간이다. 손잡이의 와인빛 리본을 푸는 그 짧은 동안, 상대는 내가 손님인지 자객인지 가늠하느라 멈칫한다. 그 멈칫이면 충분하다. 가는 금빛 칼날은 그 한 박자를 결코 놓치지 않는다.</div>
+    <div class="rej"><button class="rk" onclick="rej('v2:kingdom_masque_saber')">✕ 리젝</button>
+      <input class="rs" placeholder="리젝 사유" oninput="setReason('v2:kingdom_masque_saber',this.value)"></div>
+  </div><div class="card" data-uid="v2:kingdom_coronation_mace">
+    <div class="imgs">
+      <div class="box"><span class=lbl>정적</span><img src="sprites/weapon/kingdom_coronation_mace.png" loading=lazy></div>
+      <div class="box"><span class=lbl>애니</span><div class="anim" data-frames="15" style="background-image:url('sprites/anim/kingdom_coronation_mace.webp')"></div></div>
+    </div>
+    <div class="meta"><span class="gb g2">2차</span><span class="nm">왕을 짊어진 대검</span></div>
+    <div class="story">즉위식의 첫 시험은 이 검이다. 금과 로열블루로 치장하고 손잡이 끝에서 사자가 포효하는, 칼몸을 따라 보석이 줄지어 박힌 거대한 양손검. 새 왕은 이것을 두 손으로 머리 위까지 들어 올려야 한다. 팔이 떨리면 왕좌도 떨린다. 흔들림 없이 들어 올린 자만이 그 무게를 감당할 자격을 얻는다.</div>
+    <div class="rej"><button class="rk" onclick="rej('v2:kingdom_coronation_mace')">✕ 리젝</button>
+      <input class="rs" placeholder="리젝 사유" oninput="setReason('v2:kingdom_coronation_mace',this.value)"></div>
+  </div><div class="card" data-uid="v2:kingdom_dawnguard_sword">
+    <div class="imgs">
+      <div class="box"><span class=lbl>정적</span><img src="sprites/weapon/kingdom_dawnguard_sword.png" loading=lazy></div>
+      <div class="box"><span class=lbl>애니</span><div class="anim" data-frames="15" style="background-image:url('sprites/anim/kingdom_dawnguard_sword.webp')"></div></div>
+    </div>
+    <div class="meta"><span class="gb g2">2차</span><span class="nm">동트는 맹세</span></div>
+    <div class="story">성문 앞에서 너는 이 검을 처음 받아 든다. 금빛으로 휘어 오른 손잡이, 푸른 가죽 자루, 군더더기 없는 강철 양날. 화려하진 않지만 손에 익으면 평생을 함께한다. 기억해라. 이 검을 든 자는 동이 틀 때까지 제자리를 지킨다.</div>
+    <div class="rej"><button class="rk" onclick="rej('v2:kingdom_dawnguard_sword')">✕ 리젝</button>
+      <input class="rs" placeholder="리젝 사유" oninput="setReason('v2:kingdom_dawnguard_sword',this.value)"></div>
+  </div><div class="card" data-uid="v2:marsh_frog_blowgun">
+    <div class="imgs">
+      <div class="box"><span class=lbl>정적</span><img src="sprites/weapon/marsh_frog_blowgun.png" loading=lazy></div>
+      <div class="box"><span class=lbl>애니</span><div class="anim" data-frames="15" style="background-image:url('sprites/anim/marsh_frog_blowgun.webp')"></div></div>
+    </div>
+    <div class="meta"><span class="gb g2">2차</span><span class="nm">퉤! 하는 대롱</span></div>
+    <div class="story">「방금 개굴 소리 났지?」 「그거 네가 낸 거 아니야?」 갈대 대롱 끝에 개구리 한 마리가 떡하니 앉아, 쏠 때마다 개굴 소리가 난다고 소문이 자자하다. 개구리가 우는 건지 쏘는 사람이 흉내 내는 건지를 두고, 늪에선 아직도 편이 갈린다.</div>
+    <div class="rej"><button class="rk" onclick="rej('v2:marsh_frog_blowgun')">✕ 리젝</button>
+      <input class="rs" placeholder="리젝 사유" oninput="setReason('v2:marsh_frog_blowgun',this.value)"></div>
+  </div><div class="card" data-uid="v2:marsh_fen_scythe">
+    <div class="imgs">
+      <div class="box"><span class=lbl>정적</span><img src="sprites/weapon/marsh_fen_scythe.png" loading=lazy></div>
+      <div class="box"><span class=lbl>애니</span><div class="anim" data-frames="15" style="background-image:url('sprites/anim/marsh_fen_scythe.webp')"></div></div>
+    </div>
+    <div class="meta"><span class="gb g2">2차</span><span class="nm">길잡이 낫</span></div>
+    <div class="story">늪의 안내인은 검을 들지 않는다. 이끼 슨 청동 낫 둘레로 에메랄드 반딧불이 모여 길을 그린다. 낫은 무엇을 베기 위한 게 아니다. 반딧불이 그려 둔 길을 흩지 않도록, 앞을 가린 갈대만 살며시 젖히는 도구다. 길을 내는 게 아니라, 이미 있는 길을 드러낼 뿐이다.</div>
+    <div class="rej"><button class="rk" onclick="rej('v2:marsh_fen_scythe')">✕ 리젝</button>
+      <input class="rs" placeholder="리젝 사유" oninput="setReason('v2:marsh_fen_scythe',this.value)"></div>
+  </div><div class="card" data-uid="v2:volcano_dancer_daggers">
+    <div class="imgs">
+      <div class="box"><span class=lbl>정적</span><img src="sprites/weapon/volcano_dancer_daggers.png" loading=lazy></div>
+      <div class="box"><span class=lbl>애니</span><div class="anim" data-frames="15" style="background-image:url('sprites/anim/volcano_dancer_daggers.webp')"></div></div>
+    </div>
+    <div class="meta"><span class="gb g2">2차</span><span class="nm">춤추는 쌍불꽃</span></div>
+    <div class="story">금빛 휜 쌍단검의 날끝마다 주황 불꽃이 인다. 무희가 두 칼을 엇갈려 돌리면 불의 고리가 그려졌는데, 적은 그 아름다움에 홀려 한 발 늦게야 베인 걸 알았다.</div>
+    <div class="rej"><button class="rk" onclick="rej('v2:volcano_dancer_daggers')">✕ 리젝</button>
+      <input class="rs" placeholder="리젝 사유" oninput="setReason('v2:volcano_dancer_daggers',this.value)"></div>
+  </div><div class="card" data-uid="v2:volcano_phoenix_bow">
+    <div class="imgs">
+      <div class="box"><span class=lbl>정적</span><img src="sprites/weapon/volcano_phoenix_bow.png" loading=lazy></div>
+      <div class="box"><span class=lbl>애니</span><div class="anim" data-frames="15" style="background-image:url('sprites/anim/volcano_phoenix_bow.webp')"></div></div>
+    </div>
+    <div class="meta"><span class="gb g2">2차</span><span class="nm">재에서 당기는 활</span></div>
+    <div class="story">불사조가 마지막으로 타오른 자리에서 그 깃을 주워 메운 활이다. 흑요석 몸체에 금빛 불꽃 날개가 펼쳐지고, 시위를 당기면 균열마다 잿불이 살아난다. 한 번 재가 되어 본 활이라, 누구보다 먼저 그리고 가장 뜨겁게 다시 타오른다.</div>
+    <div class="rej"><button class="rk" onclick="rej('v2:volcano_phoenix_bow')">✕ 리젝</button>
+      <input class="rs" placeholder="리젝 사유" oninput="setReason('v2:volcano_phoenix_bow',this.value)"></div>
+  </div><div class="card" data-uid="v2:temple_frostward_bow">
+    <div class="imgs">
+      <div class="box"><span class=lbl>정적</span><img src="sprites/weapon/temple_frostward_bow.png" loading=lazy></div>
+      <div class="box"><span class=lbl>애니</span><div class="anim" data-frames="15" style="background-image:url('sprites/anim/temple_frostward_bow.webp')"></div></div>
+    </div>
+    <div class="meta"><span class="gb g2">2차</span><span class="nm">봄을 겨눈 석궁</span></div>
+    <div class="story">신전 가장 높은 자리에 걸려 있던 석궁이다. 흰 대리석을 깎아 만들고 몸체엔 식지 않는 청록 룬이 흐른다. 개머리판에 새겨진 비문은 단 한 줄 — '겨눈 곳에 봄이 온다.' 서리 신전에서 가장 따뜻한 말이다.</div>
+    <div class="rej"><button class="rk" onclick="rej('v2:temple_frostward_bow')">✕ 리젝</button>
+      <input class="rs" placeholder="리젝 사유" oninput="setReason('v2:temple_frostward_bow',this.value)"></div>
+  </div><div class="card" data-uid="v2:angel_duskwing_sword">
+    <div class="imgs">
+      <div class="box"><span class=lbl>정적</span><img src="sprites/weapon/angel_duskwing_sword.png" loading=lazy></div>
+      <div class="box"><span class=lbl>애니</span><div class="anim" data-frames="15" style="background-image:url('sprites/anim/angel_duskwing_sword.webp')"></div></div>
+    </div>
+    <div class="meta"><span class="gb g2">2차</span><span class="nm">노을이 앉는 검</span></div>
+    <div class="story">해가 가장 낮게 걸리는 시간, 이 검은 제일 아름답다. 황금 날개가 손잡이를 감싸고 칼날엔 황혼빛이 흐른다. 검은 깃 하나가 바람에 흔들릴 때마다, 노을이 칼끝에 한 번씩 내려앉는다. 황혼의 날개가 검을 들면 하늘이 잠깐 숨을 멈춘다.</div>
+    <div class="rej"><button class="rk" onclick="rej('v2:angel_duskwing_sword')">✕ 리젝</button>
+      <input class="rs" placeholder="리젝 사유" oninput="setReason('v2:angel_duskwing_sword',this.value)"></div>
+  </div><div class="card" data-uid="v2:angel_cherub_bow">
+    <div class="imgs">
+      <div class="box"><span class=lbl>정적</span><img src="sprites/weapon/angel_cherub_bow.png" loading=lazy></div>
+      <div class="box"><span class=lbl>애니</span><div class="anim" data-frames="15" style="background-image:url('sprites/anim/angel_cherub_bow.webp')"></div></div>
+    </div>
+    <div class="meta"><span class="gb g2">2차</span><span class="nm">두근 화살</span></div>
+    <div class="story">「또 누구 맞히려고 그래.」 「쉿, 지금 고르는 중이잖아.」 구름 위에서 제일 인기 많은 금빛 하트 활. 화살을 맞으면 옆에 있던 사람이 갑자기 좋아 보인다나. 꼬마 천사는 오늘도 구름 뒤에 숨어, 누굴 맞힐지 신중하게 시위를 당긴다.</div>
+    <div class="rej"><button class="rk" onclick="rej('v2:angel_cherub_bow')">✕ 리젝</button>
+      <input class="rs" placeholder="리젝 사유" oninput="setReason('v2:angel_cherub_bow',this.value)"></div>
+  </div><div class="card" data-uid="v2:orc_hunter_boomerang">
+    <div class="imgs">
+      <div class="box"><span class=lbl>정적</span><img src="sprites/weapon/orc_hunter_boomerang.png" loading=lazy></div>
+      <div class="box"><span class=lbl>애니</span><div class="anim" data-frames="15" style="background-image:url('sprites/anim/orc_hunter_boomerang.webp')"></div></div>
+    </div>
+    <div class="meta"><span class="gb g2">2차</span><span class="nm">돌아오는 뼈</span></div>
+    <div class="story">짐승 뼈를 깎아 만든 부메랑이다. 던지면 사냥감을 맞히고 제 손으로 돌아온다 — “안 돌아오면 그게 어디 부메랑이냐”는 게 사냥꾼 지론. 청록 깃이 도는 소리로 적은 뒤늦게 안다, 이미 늦었다는 걸.</div>
+    <div class="rej"><button class="rk" onclick="rej('v2:orc_hunter_boomerang')">✕ 리젝</button>
+      <input class="rs" placeholder="리젝 사유" oninput="setReason('v2:orc_hunter_boomerang',this.value)"></div>
+  </div><div class="card" data-uid="v2:orc_shaman_staff">
+    <div class="imgs">
+      <div class="box"><span class=lbl>정적</span><img src="sprites/weapon/orc_shaman_staff.png" loading=lazy></div>
+      <div class="box"><span class=lbl>애니</span><div class="anim" data-frames="15" style="background-image:url('sprites/anim/orc_shaman_staff.webp')"></div></div>
+    </div>
+    <div class="meta"><span class="gb g2">2차</span><span class="nm">묻지 않는 지팡이</span></div>
+    <div class="story">답을 모를 땐 누구에게 묻는가. 노인은 사람 대신 바람에게 묻는다. 뼈와 깃털, 마른 약초를 매단 이 지팡이를 바람결에 맡기고, 사락이는 소리에 오래 귀를 기울인다. 서두른 입보다 먼저 바람이 길을 일러 준다고, 그는 믿었다.</div>
+    <div class="rej"><button class="rk" onclick="rej('v2:orc_shaman_staff')">✕ 리젝</button>
+      <input class="rs" placeholder="리젝 사유" oninput="setReason('v2:orc_shaman_staff',this.value)"></div>
+  </div><div class="card" data-uid="v2:orc_ancestor_maul">
+    <div class="imgs">
+      <div class="box"><span class=lbl>정적</span><img src="sprites/weapon/orc_ancestor_maul.png" loading=lazy></div>
+      <div class="box"><span class=lbl>애니</span><div class="anim" data-frames="15" style="background-image:url('sprites/anim/orc_ancestor_maul.webp')"></div></div>
+    </div>
+    <div class="meta"><span class="gb g2">2차</span><span class="nm">조상이 쥔 자루</span></div>
+    <div class="story">마울 머리에 부족을 세운 조상의 얼굴이 큼지막이 새겨졌다. 엄니를 드러낸 그 얼굴 아래로 깃과 구슬이 매달려 흔들린다. 큰 싸움을 앞두면 전사들은 이 얼굴에 이마를 맞대고 이름을 부른다. 그러면 조상이 한 번 더 팔에 힘을 보탠다고 믿었다.</div>
+    <div class="rej"><button class="rk" onclick="rej('v2:orc_ancestor_maul')">✕ 리젝</button>
+      <input class="rs" placeholder="리젝 사유" oninput="setReason('v2:orc_ancestor_maul',this.value)"></div>
+  </div><div class="card" data-uid="v1:common_emperor_naginata">
+    <div class="imgs">
+      <div class="box"><span class=lbl>정적</span><img src="_compare/v1/weapon/common_emperor_naginata.png" loading=lazy></div>
+      <div class="box pend"><span class=lbl>애니</span><span class=ph>생성 예정</span></div>
+    </div>
+    <div class="meta"><span class="gb g1">1차</span><span class="nm">황제의 나기나타</span></div>
+    <div class="story pend">— 스토리 생성 예정 —</div>
+    <div class="rej"><button class="rk" onclick="rej('v1:common_emperor_naginata')">✕ 리젝</button>
+      <input class="rs" placeholder="리젝 사유" oninput="setReason('v1:common_emperor_naginata',this.value)"></div>
+  </div><div class="card" data-uid="v1:fallen_seraph_glaive">
+    <div class="imgs">
+      <div class="box"><span class=lbl>정적</span><img src="_compare/v1/weapon/fallen_seraph_glaive.png" loading=lazy></div>
+      <div class="box pend"><span class=lbl>애니</span><span class=ph>생성 예정</span></div>
+    </div>
+    <div class="meta"><span class="gb g1">1차</span><span class="nm">세라프의 글레이브</span></div>
+    <div class="story pend">— 스토리 생성 예정 —</div>
+    <div class="rej"><button class="rk" onclick="rej('v1:fallen_seraph_glaive')">✕ 리젝</button>
+      <input class="rs" placeholder="리젝 사유" oninput="setReason('v1:fallen_seraph_glaive',this.value)"></div>
+  </div><div class="card" data-uid="v1:fallen_decay_wing_scythe">
+    <div class="imgs">
+      <div class="box"><span class=lbl>정적</span><img src="_compare/v1/weapon/fallen_decay_wing_scythe.png" loading=lazy></div>
+      <div class="box pend"><span class=lbl>애니</span><span class=ph>생성 예정</span></div>
+    </div>
+    <div class="meta"><span class="gb g1">1차</span><span class="nm">썩은 날개의 낫</span></div>
+    <div class="story pend">— 스토리 생성 예정 —</div>
+    <div class="rej"><button class="rk" onclick="rej('v1:fallen_decay_wing_scythe')">✕ 리젝</button>
+      <input class="rs" placeholder="리젝 사유" oninput="setReason('v1:fallen_decay_wing_scythe',this.value)"></div>
+  </div><div class="card" data-uid="v1:fallen_cherub_resting_rapier">
+    <div class="imgs">
+      <div class="box"><span class=lbl>정적</span><img src="_compare/v1/weapon/fallen_cherub_resting_rapier.png" loading=lazy></div>
+      <div class="box pend"><span class=lbl>애니</span><span class=ph>생성 예정</span></div>
+    </div>
+    <div class="meta"><span class="gb g1">1차</span><span class="nm">케르빔이 안 떠난 검</span></div>
+    <div class="story pend">— 스토리 생성 예정 —</div>
+    <div class="rej"><button class="rk" onclick="rej('v1:fallen_cherub_resting_rapier')">✕ 리젝</button>
+      <input class="rs" placeholder="리젝 사유" oninput="setReason('v1:fallen_cherub_resting_rapier',this.value)"></div>
+  </div><div class="card" data-uid="v2:angel_rose_rapier">
+    <div class="imgs">
+      <div class="box"><span class=lbl>정적</span><img src="sprites/weapon/angel_rose_rapier.png" loading=lazy></div>
+      <div class="box"><span class=lbl>애니</span><div class="anim" data-frames="15" style="background-image:url('sprites/anim/angel_rose_rapier.webp')"></div></div>
+    </div>
+    <div class="meta"><span class="gb g2">2차</span><span class="nm">자비의 가는 검</span></div>
+    <div class="story">베기보다 막기를 택한 그대에게 이 검을 바칩니다. 흰 검신에 장미빛 깃이 돋고 손잡이 위로 옅은 분홍 후광이 돕니다. 자비에도 칼이 필요하다는 것을, 그대는 누구보다 일찍 알았지요. 이 검은 누구를 베기 위해서가 아니라, 그대가 지키려는 것을 위해 존재합니다.</div>
+    <div class="rej"><button class="rk" onclick="rej('v2:angel_rose_rapier')">✕ 리젝</button>
+      <input class="rs" placeholder="리젝 사유" oninput="setReason('v2:angel_rose_rapier',this.value)"></div>
+  </div></div><h2>방어구 <small>(40)</small></h2><div class="grid"><div class="card" data-uid="v3:seed-angel_radiant_gown">
+    <div class="imgs">
+      <div class="box"><span class=lbl>정적</span><img src="sprites/pool/seed-angel_radiant_gown.png" loading=lazy></div>
+      <div class="box pend"><span class=lbl>애니</span><span class=ph>생성 예정</span></div>
+    </div>
+    <div class="meta"><span class="gb g3">3차</span><span class="nm">햇살을 두른 예복</span></div>
+    <div class="story pend">— 스토리 생성 예정 —</div>
+    <div class="rej"><button class="rk" onclick="rej('v3:seed-angel_radiant_gown')">✕ 리젝</button>
+      <input class="rs" placeholder="리젝 사유" oninput="setReason('v3:seed-angel_radiant_gown',this.value)"></div>
+  </div><div class="card" data-uid="v3:seed-kingdom_azure_outfit">
+    <div class="imgs">
+      <div class="box"><span class=lbl>정적</span><img src="sprites/pool/seed-kingdom_azure_outfit.png" loading=lazy></div>
+      <div class="box pend"><span class=lbl>애니</span><span class=ph>생성 예정</span></div>
+    </div>
+    <div class="meta"><span class="gb g3">3차</span><span class="nm">푸른 기사의 한 벌</span></div>
+    <div class="story pend">— 스토리 생성 예정 —</div>
+    <div class="rej"><button class="rk" onclick="rej('v3:seed-kingdom_azure_outfit')">✕ 리젝</button>
+      <input class="rs" placeholder="리젝 사유" oninput="setReason('v3:seed-kingdom_azure_outfit',this.value)"></div>
+  </div><div class="card" data-uid="v3:seed-angel_seraphguard_armor">
+    <div class="imgs">
+      <div class="box"><span class=lbl>정적</span><img src="sprites/pool/seed-angel_seraphguard_armor.png" loading=lazy></div>
+      <div class="box pend"><span class=lbl>애니</span><span class=ph>생성 예정</span></div>
+    </div>
+    <div class="meta"><span class="gb g3">3차</span><span class="nm">수호의 백은 경갑</span></div>
+    <div class="story pend">— 스토리 생성 예정 —</div>
+    <div class="rej"><button class="rk" onclick="rej('v3:seed-angel_seraphguard_armor')">✕ 리젝</button>
+      <input class="rs" placeholder="리젝 사유" oninput="setReason('v3:seed-angel_seraphguard_armor',this.value)"></div>
+  </div><div class="card" data-uid="v3:seed-kingdom_goldknight_plate">
+    <div class="imgs">
+      <div class="box"><span class=lbl>정적</span><img src="sprites/pool/seed-kingdom_goldknight_plate.png" loading=lazy></div>
+      <div class="box pend"><span class=lbl>애니</span><span class=ph>생성 예정</span></div>
+    </div>
+    <div class="meta"><span class="gb g3">3차</span><span class="nm">황금 기사 갑주</span></div>
+    <div class="story pend">— 스토리 생성 예정 —</div>
+    <div class="rej"><button class="rk" onclick="rej('v3:seed-kingdom_goldknight_plate')">✕ 리젝</button>
+      <input class="rs" placeholder="리젝 사유" oninput="setReason('v3:seed-kingdom_goldknight_plate',this.value)"></div>
+  </div><div class="card" data-uid="v3:seed-temple_frostguard_garb">
+    <div class="imgs">
+      <div class="box"><span class=lbl>정적</span><img src="sprites/pool/seed-temple_frostguard_garb.png" loading=lazy></div>
+      <div class="box pend"><span class=lbl>애니</span><span class=ph>생성 예정</span></div>
+    </div>
+    <div class="meta"><span class="gb g3">3차</span><span class="nm">설산 파수꾼</span></div>
+    <div class="story pend">— 스토리 생성 예정 —</div>
+    <div class="rej"><button class="rk" onclick="rej('v3:seed-temple_frostguard_garb')">✕ 리젝</button>
+      <input class="rs" placeholder="리젝 사유" oninput="setReason('v3:seed-temple_frostguard_garb',this.value)"></div>
+  </div><div class="card" data-uid="v3:seed-temple_breathwoven_vestment">
+    <div class="imgs">
+      <div class="box"><span class=lbl>정적</span><img src="sprites/pool/seed-temple_breathwoven_vestment.png" loading=lazy></div>
+      <div class="box pend"><span class=lbl>애니</span><span class=ph>생성 예정</span></div>
+    </div>
+    <div class="meta"><span class="gb g3">3차</span><span class="nm">입김으로 짠 예복</span></div>
+    <div class="story pend">— 스토리 생성 예정 —</div>
+    <div class="rej"><button class="rk" onclick="rej('v3:seed-temple_breathwoven_vestment')">✕ 리젝</button>
+      <input class="rs" placeholder="리젝 사유" oninput="setReason('v3:seed-temple_breathwoven_vestment',this.value)"></div>
+  </div><div class="card" data-uid="v3:a-pumpkin-witch-outfit-96">
+    <div class="imgs">
+      <div class="box"><span class=lbl>정적</span><img src="sprites/pool/a-pumpkin-witch-outfit-96.png" loading=lazy></div>
+      <div class="box pend"><span class=lbl>애니</span><span class=ph>생성 예정</span></div>
+    </div>
+    <div class="meta"><span class="gb g3">3차</span><span class="nm">호박 마녀의 옷</span></div>
+    <div class="story pend">— 스토리 생성 예정 —</div>
+    <div class="rej"><button class="rk" onclick="rej('v3:a-pumpkin-witch-outfit-96')">✕ 리젝</button>
+      <input class="rs" placeholder="리젝 사유" oninput="setReason('v3:a-pumpkin-witch-outfit-96',this.value)"></div>
+  </div><div class="card" data-uid="v3:a-necromancer-robe-127">
+    <div class="imgs">
+      <div class="box"><span class=lbl>정적</span><img src="sprites/pool/a-necromancer-robe-127.png" loading=lazy></div>
+      <div class="box pend"><span class=lbl>애니</span><span class=ph>생성 예정</span></div>
+    </div>
+    <div class="meta"><span class="gb g3">3차</span><span class="nm">강령술사의 로브</span></div>
+    <div class="story pend">— 스토리 생성 예정 —</div>
+    <div class="rej"><button class="rk" onclick="rej('v3:a-necromancer-robe-127')">✕ 리젝</button>
+      <input class="rs" placeholder="리젝 사유" oninput="setReason('v3:a-necromancer-robe-127',this.value)"></div>
+  </div><div class="card" data-uid="v3:a-test-gothic-lolita-150">
+    <div class="imgs">
+      <div class="box"><span class=lbl>정적</span><img src="sprites/pool/a-test-gothic-lolita-150.png" loading=lazy></div>
+      <div class="box pend"><span class=lbl>애니</span><span class=ph>생성 예정</span></div>
+    </div>
+    <div class="meta"><span class="gb g3">3차</span><span class="nm">고딕 로리타 드레스</span></div>
+    <div class="story pend">— 스토리 생성 예정 —</div>
+    <div class="rej"><button class="rk" onclick="rej('v3:a-test-gothic-lolita-150')">✕ 리젝</button>
+      <input class="rs" placeholder="리젝 사유" oninput="setReason('v3:a-test-gothic-lolita-150',this.value)"></div>
+  </div><div class="card" data-uid="v3:a-test-military-coat-151">
+    <div class="imgs">
+      <div class="box"><span class=lbl>정적</span><img src="sprites/pool/a-test-military-coat-151.png" loading=lazy></div>
+      <div class="box pend"><span class=lbl>애니</span><span class=ph>생성 예정</span></div>
+    </div>
+    <div class="meta"><span class="gb g3">3차</span><span class="nm">군청 제복 코트</span></div>
+    <div class="story pend">— 스토리 생성 예정 —</div>
+    <div class="rej"><button class="rk" onclick="rej('v3:a-test-military-coat-151')">✕ 리젝</button>
+      <input class="rs" placeholder="리젝 사유" oninput="setReason('v3:a-test-military-coat-151',this.value)"></div>
+  </div><div class="card" data-uid="v3:seed-volcano_embersilk_dress">
+    <div class="imgs">
+      <div class="box"><span class=lbl>정적</span><img src="sprites/pool/seed-volcano_embersilk_dress.png" loading=lazy></div>
+      <div class="box pend"><span class=lbl>애니</span><span class=ph>생성 예정</span></div>
+    </div>
+    <div class="meta"><span class="gb g3">3차</span><span class="nm">불티를 두른 실크</span></div>
+    <div class="story pend">— 스토리 생성 예정 —</div>
+    <div class="rej"><button class="rk" onclick="rej('v3:seed-volcano_embersilk_dress')">✕ 리젝</button>
+      <input class="rs" placeholder="리젝 사유" oninput="setReason('v3:seed-volcano_embersilk_dress',this.value)"></div>
+  </div><div class="card" data-uid="v3:a-valkyrie-battle-dress-176">
+    <div class="imgs">
+      <div class="box"><span class=lbl>정적</span><img src="sprites/pool/a-valkyrie-battle-dress-176.png" loading=lazy></div>
+      <div class="box pend"><span class=lbl>애니</span><span class=ph>생성 예정</span></div>
+    </div>
+    <div class="meta"><span class="gb g3">3차</span><span class="nm">발키리 전투복</span></div>
+    <div class="story pend">— 스토리 생성 예정 —</div>
+    <div class="rej"><button class="rk" onclick="rej('v3:a-valkyrie-battle-dress-176')">✕ 리젝</button>
+      <input class="rs" placeholder="리젝 사유" oninput="setReason('v3:a-valkyrie-battle-dress-176',this.value)"></div>
+  </div><div class="card" data-uid="v3:a-frost-warden-coat-179">
+    <div class="imgs">
+      <div class="box"><span class=lbl>정적</span><img src="sprites/pool/a-frost-warden-coat-179.png" loading=lazy></div>
+      <div class="box pend"><span class=lbl>애니</span><span class=ph>생성 예정</span></div>
+    </div>
+    <div class="meta"><span class="gb g3">3차</span><span class="nm">서리 파수꾼의 외투</span></div>
+    <div class="story pend">— 스토리 생성 예정 —</div>
+    <div class="rej"><button class="rk" onclick="rej('v3:a-frost-warden-coat-179')">✕ 리젝</button>
+      <input class="rs" placeholder="리젝 사유" oninput="setReason('v3:a-frost-warden-coat-179',this.value)"></div>
+  </div><div class="card" data-uid="v3:a-paladin-armor-180">
+    <div class="imgs">
+      <div class="box"><span class=lbl>정적</span><img src="sprites/pool/a-paladin-armor-180.png" loading=lazy></div>
+      <div class="box pend"><span class=lbl>애니</span><span class=ph>생성 예정</span></div>
+    </div>
+    <div class="meta"><span class="gb g3">3차</span><span class="nm">성기사의 백금 갑주</span></div>
+    <div class="story pend">— 스토리 생성 예정 —</div>
+    <div class="rej"><button class="rk" onclick="rej('v3:a-paladin-armor-180')">✕ 리젝</button>
+      <input class="rs" placeholder="리젝 사유" oninput="setReason('v3:a-paladin-armor-180',this.value)"></div>
+  </div><div class="card" data-uid="v3:a-dragon-knight-armor-186">
+    <div class="imgs">
+      <div class="box"><span class=lbl>정적</span><img src="sprites/pool/a-dragon-knight-armor-186.png" loading=lazy></div>
+      <div class="box pend"><span class=lbl>애니</span><span class=ph>생성 예정</span></div>
+    </div>
+    <div class="meta"><span class="gb g3">3차</span><span class="nm">흑룡 기사 갑주</span></div>
+    <div class="story pend">— 스토리 생성 예정 —</div>
+    <div class="rej"><button class="rk" onclick="rej('v3:a-dragon-knight-armor-186')">✕ 리젝</button>
+      <input class="rs" placeholder="리젝 사유" oninput="setReason('v3:a-dragon-knight-armor-186',this.value)"></div>
+  </div><div class="card" data-uid="v3:a-phoenix-dancer-dress-183">
+    <div class="imgs">
+      <div class="box"><span class=lbl>정적</span><img src="sprites/pool/a-phoenix-dancer-dress-183.png" loading=lazy></div>
+      <div class="box pend"><span class=lbl>애니</span><span class=ph>생성 예정</span></div>
+    </div>
+    <div class="meta"><span class="gb g3">3차</span><span class="nm">불사조 무희의 옷</span></div>
+    <div class="story pend">— 스토리 생성 예정 —</div>
+    <div class="rej"><button class="rk" onclick="rej('v3:a-phoenix-dancer-dress-183')">✕ 리젝</button>
+      <input class="rs" placeholder="리젝 사유" oninput="setReason('v3:a-phoenix-dancer-dress-183',this.value)"></div>
+  </div><div class="card" data-uid="v3:a-astrologer-outfit-103">
+    <div class="imgs">
+      <div class="box"><span class=lbl>정적</span><img src="sprites/pool/a-astrologer-outfit-103.png" loading=lazy></div>
+      <div class="box pend"><span class=lbl>애니</span><span class=ph>생성 예정</span></div>
+    </div>
+    <div class="meta"><span class="gb g3">3차</span><span class="nm">astrologer outfit</span></div>
+    <div class="story pend">— 스토리 생성 예정 —</div>
+    <div class="rej"><button class="rk" onclick="rej('v3:a-astrologer-outfit-103')">✕ 리젝</button>
+      <input class="rs" placeholder="리젝 사유" oninput="setReason('v3:a-astrologer-outfit-103',this.value)"></div>
+  </div><div class="card" data-uid="v2:kingdom_masque_gown">
+    <div class="imgs">
+      <div class="box"><span class=lbl>정적</span><img src="sprites/armor/kingdom_masque_gown.png" loading=lazy></div>
+      <div class="box"><span class=lbl>애니</span><div class="anim" data-frames="15" style="background-image:url('sprites/anim/kingdom_masque_gown.webp')"></div></div>
+    </div>
+    <div class="meta"><span class="gb g2">2차</span><span class="nm">이름 없는 드레스</span></div>
+    <div class="story">문을 밀고 들어서는 순간, 나는 더 이상 어제의 내가 아니다. 검은 비단에 금실이 흐르고 와인빛 단이 겹겹이 부서지는 이 드레스 한 벌이면, 사람들은 내 이름 대신 내 그림자만 좇는다. 화려할수록 더 깊이 숨을 수 있다는 건, 무도회만 아는 비밀이다.</div>
+    <div class="rej"><button class="rk" onclick="rej('v2:kingdom_masque_gown')">✕ 리젝</button>
+      <input class="rs" placeholder="리젝 사유" oninput="setReason('v2:kingdom_masque_gown',this.value)"></div>
+  </div><div class="card" data-uid="v2:kingdom_regalia_cloak">
+    <div class="imgs">
+      <div class="box"><span class=lbl>정적</span><img src="sprites/armor/kingdom_regalia_cloak.png" loading=lazy></div>
+      <div class="box"><span class=lbl>애니</span><div class="anim" data-frames="15" style="background-image:url('sprites/anim/kingdom_regalia_cloak.webp')"></div></div>
+    </div>
+    <div class="meta"><span class="gb g2">2차</span><span class="nm">별을 두른 망토</span></div>
+    <div class="story">연회장의 모든 눈이 한 사람에게 쏠리는 순간이 있다. 로열블루 벨벳 위로 금실이 강처럼 흐르고 보석이 별처럼 박힌 이 망토를 펼칠 때다. 춤추던 이들이 발을 멈추고 천장 대신 그 어깨를 올려다본다. 밤하늘을 통째로 걸친 사람이 거기 서 있다.</div>
+    <div class="rej"><button class="rk" onclick="rej('v2:kingdom_regalia_cloak')">✕ 리젝</button>
+      <input class="rs" placeholder="리젝 사유" oninput="setReason('v2:kingdom_regalia_cloak',this.value)"></div>
+  </div><div class="card" data-uid="v2:kingdom_riddle_coat">
+    <div class="imgs">
+      <div class="box"><span class=lbl>정적</span><img src="sprites/armor/kingdom_riddle_coat.png" loading=lazy></div>
+      <div class="box"><span class=lbl>애니</span><div class="anim" data-frames="15" style="background-image:url('sprites/anim/kingdom_riddle_coat.webp')"></div></div>
+    </div>
+    <div class="meta"><span class="gb g2">2차</span><span class="nm">별을 읽는 외투</span></div>
+    <div class="story">밤하늘을 옷으로 입으면 그 비밀을 읽을 수 있을까. 깊은 청색 천에 금실로 해와 달과 별자리를 수놓은 외투, 후드를 쓰면 얼굴이 그늘에 잠긴다. 성탑의 현자들은 별 하나가 자리를 옮길 때마다 자락 어딘가에 그날 밤의 답을 한 줄씩 적어 두었다. 외투는 점점 무거워졌지만, 답은 끝나지 않았다.</div>
+    <div class="rej"><button class="rk" onclick="rej('v2:kingdom_riddle_coat')">✕ 리젝</button>
+      <input class="rs" placeholder="리젝 사유" oninput="setReason('v2:kingdom_riddle_coat',this.value)"></div>
+  </div><div class="card" data-uid="v2:kingdom_dawnguard_cuirass">
+    <div class="imgs">
+      <div class="box"><span class=lbl>정적</span><img src="sprites/armor/kingdom_dawnguard_cuirass.png" loading=lazy></div>
+      <div class="box"><span class=lbl>애니</span><div class="anim" data-frames="15" style="background-image:url('sprites/anim/kingdom_dawnguard_cuirass.webp')"></div></div>
+    </div>
+    <div class="meta"><span class="gb g2">2차</span><span class="nm">여명의 벽</span></div>
+    <div class="story">전장에서 너는 곧 알게 된다. 이 은빛 흉갑은 혼자일 때보다 어깨를 맞댈 때 더 단단해진다는 걸. 가슴의 금빛 태양이 옆 사람의 태양과 나란히 설 때, 흩어진 근위병은 하나의 성벽이 된다. 네가 무릎 꿇으면 옆 사람이 반 발짝 당겨 그 자리를 메운다. 사람들은 그 한 줄을 여명의 벽이라 불렀다.</div>
+    <div class="rej"><button class="rk" onclick="rej('v2:kingdom_dawnguard_cuirass')">✕ 리젝</button>
+      <input class="rs" placeholder="리젝 사유" oninput="setReason('v2:kingdom_dawnguard_cuirass',this.value)"></div>
+  </div><div class="card" data-uid="v2:marsh_frog_hood">
+    <div class="imgs">
+      <div class="box"><span class=lbl>정적</span><img src="sprites/armor/marsh_frog_hood.png" loading=lazy></div>
+      <div class="box"><span class=lbl>애니</span><div class="anim" data-frames="15" style="background-image:url('sprites/anim/marsh_frog_hood.webp')"></div></div>
+    </div>
+    <div class="meta"><span class="gb g2">2차</span><span class="nm">개구리 탈 망토</span></div>
+    <div class="story">「또 따라온다, 저것들.」 큼지막한 개구리 머리 두건에 수련잎 망토를 두르면, 진짜 개구리들이 동료인 줄 알고 줄줄이 따라붙는다. 「떼어 내는 게 더 일이라니까.」 늪 아이들이 제일 갖고 싶어 하면서도, 한 번 써 본 아이는 꼭 그렇게 투덜댄다.</div>
+    <div class="rej"><button class="rk" onclick="rej('v2:marsh_frog_hood')">✕ 리젝</button>
+      <input class="rs" placeholder="리젝 사유" oninput="setReason('v2:marsh_frog_hood',this.value)"></div>
+  </div><div class="card" data-uid="v2:marsh_bogwarden_chest">
+    <div class="imgs">
+      <div class="box"><span class=lbl>정적</span><img src="sprites/armor/marsh_bogwarden_chest.png" loading=lazy></div>
+      <div class="box"><span class=lbl>애니</span><div class="anim" data-frames="15" style="background-image:url('sprites/anim/marsh_bogwarden_chest.webp')"></div></div>
+    </div>
+    <div class="meta"><span class="gb g2">2차</span><span class="nm">늪빛 흉갑</span></div>
+    <div class="story">너는 늪을 건넜고, 늪은 너에게 제 빛깔을 입혔다. 깊은 물에 푸르게 슨 청동 흉갑, 가슴엔 청록 수련 문장이 돋아 있다. 이 색은 아무에게나 남지 않는다. 늪을 건너고도 끝내 가라앉지 않은 자만이 이 빛을 얻는다.</div>
+    <div class="rej"><button class="rk" onclick="rej('v2:marsh_bogwarden_chest')">✕ 리젝</button>
+      <input class="rs" placeholder="리젝 사유" oninput="setReason('v2:marsh_bogwarden_chest',this.value)"></div>
+  </div><div class="card" data-uid="v2:marsh_angler_cape">
+    <div class="imgs">
+      <div class="box"><span class=lbl>정적</span><img src="sprites/armor/marsh_angler_cape.png" loading=lazy></div>
+      <div class="box"><span class=lbl>애니</span><div class="anim" data-frames="15" style="background-image:url('sprites/anim/marsh_angler_cape.webp')"></div></div>
+    </div>
+    <div class="meta"><span class="gb g2">2차</span><span class="nm">도롱이</span></div>
+    <div class="story">늪에선 말이야, 기다리는 놈이 다 잡는 거야. 짚과 갈대를 촘촘히 엮은 이 도롱이를 두르고 갈대밭에 가만히 서 있으면, 새도 물고기도 나를 그냥 갈대인 줄 알아. 비도 막아 주지, 몸도 숨겨 주지. 갑옷값 굳었다고 늘 동네에 자랑한다.</div>
+    <div class="rej"><button class="rk" onclick="rej('v2:marsh_angler_cape')">✕ 리젝</button>
+      <input class="rs" placeholder="리젝 사유" oninput="setReason('v2:marsh_angler_cape',this.value)"></div>
+  </div><div class="card" data-uid="v2:volcano_dancer_cape">
+    <div class="imgs">
+      <div class="box"><span class=lbl>정적</span><img src="sprites/armor/volcano_dancer_cape.png" loading=lazy></div>
+      <div class="box"><span class=lbl>애니</span><div class="anim" data-frames="15" style="background-image:url('sprites/anim/volcano_dancer_cape.webp')"></div></div>
+    </div>
+    <div class="meta"><span class="gb g2">2차</span><span class="nm">불길 케이프</span></div>
+    <div class="story">주황·붉은 비단 자락 끝이 불꽃으로 타오르는 케이프다. 무희가 한 바퀴 돌면 자락의 불길이 둥근 고리를 그리며 뒤를 따른다. 적은 그 불의 궤적에 홀려, 정작 무희가 어떻게 코앞까지 다가왔는지 끝내 알지 못했다.</div>
+    <div class="rej"><button class="rk" onclick="rej('v2:volcano_dancer_cape')">✕ 리젝</button>
+      <input class="rs" placeholder="리젝 사유" oninput="setReason('v2:volcano_dancer_cape',this.value)"></div>
+  </div><div class="card" data-uid="v2:volcano_gala_gown">
+    <div class="imgs">
+      <div class="box"><span class=lbl>정적</span><img src="sprites/armor/volcano_gala_gown.png" loading=lazy></div>
+      <div class="box"><span class=lbl>애니</span><div class="anim" data-frames="15" style="background-image:url('sprites/anim/volcano_gala_gown.webp')"></div></div>
+    </div>
+    <div class="meta"><span class="gb g2">2차</span><span class="nm">용암으로 짠 드레스</span></div>
+    <div class="story">여제의 드레스는 베틀이 아니라 분화구에서 나왔다. 녹은 금을 실처럼 뽑아 짜고 그 사이사이 루비 불씨를 박았다. 이걸 걸친 사람은 용암 위를 맨발로 걸어도 데지 않는다. 화산이 그녀를 제 주인으로 받아들였다는, 가장 분명한 증표다.</div>
+    <div class="rej"><button class="rk" onclick="rej('v2:volcano_gala_gown')">✕ 리젝</button>
+      <input class="rs" placeholder="리젝 사유" oninput="setReason('v2:volcano_gala_gown',this.value)"></div>
+  </div><div class="card" data-uid="v2:temple_monk_sash">
+    <div class="imgs">
+      <div class="box"><span class=lbl>정적</span><img src="sprites/armor/temple_monk_sash.png" loading=lazy></div>
+      <div class="box"><span class=lbl>애니</span><div class="anim" data-frames="15" style="background-image:url('sprites/anim/temple_monk_sash.webp')"></div></div>
+    </div>
+    <div class="meta"><span class="gb g2">2차</span><span class="nm">한쪽 어깨 띠</span></div>
+    <div class="story">「가진 것이 정말 그뿐입니까.」 「이 천 한 장이면 족하네.」 한쪽 어깨에만 두른 주황 천, 매듭마다 옥 구슬과 작은 부적이 달려 걸음마다 사락인다. 「가진 게 적어야 어디든 갈 수 있거든.」 노승은 그 말을 남기고 또 길을 떠났다.</div>
+    <div class="rej"><button class="rk" onclick="rej('v2:temple_monk_sash')">✕ 리젝</button>
+      <input class="rs" placeholder="리젝 사유" oninput="setReason('v2:temple_monk_sash',this.value)"></div>
+  </div><div class="card" data-uid="v2:angel_risen_mantle">
+    <div class="imgs">
+      <div class="box"><span class=lbl>정적</span><img src="sprites/armor/angel_risen_mantle.png" loading=lazy></div>
+      <div class="box"><span class=lbl>애니</span><div class="anim" data-frames="15" style="background-image:url('sprites/anim/angel_risen_mantle.webp')"></div></div>
+    </div>
+    <div class="meta"><span class="gb g2">2차</span><span class="nm">부러진 적 있는 날개</span></div>
+    <div class="story">이 망토는 펼치면 한 쌍의 큰 날개가 된다. 잿빛과 흰빛 깃이 켜켜이 겹쳐 누구보다 넓게 퍼진다. 한 번 꺾였던 깃이라는데, 너는 이제 안다. 부러져 본 날개라야 가장 멀리 난다는 것을. 그 말을 제 몸으로 증명할 수 있는 건 너뿐이다.</div>
+    <div class="rej"><button class="rk" onclick="rej('v2:angel_risen_mantle')">✕ 리젝</button>
+      <input class="rs" placeholder="리젝 사유" oninput="setReason('v2:angel_risen_mantle',this.value)"></div>
+  </div><div class="card" data-uid="v2:angel_cherub_armor">
+    <div class="imgs">
+      <div class="box"><span class=lbl>정적</span><img src="sprites/armor/angel_cherub_armor.png" loading=lazy></div>
+      <div class="box"><span class=lbl>애니</span><div class="anim" data-frames="15" style="background-image:url('sprites/anim/angel_cherub_armor.webp')"></div></div>
+    </div>
+    <div class="meta"><span class="gb g2">2차</span><span class="nm">구름 갑옷</span></div>
+    <div class="story">「그게 진짜 갑옷이라고?」 「이래 봬도 화살 하나 안 통한다니까.」 구름을 뭉쳐 만든 꼬마 천사의 갑옷, 가슴 한가운데 금빛 날개 돋친 별이 콕 박혔다. 폭신해 보인다고 놀리면, 본인은 더 잔뜩 으쓱대며 가슴을 편다.</div>
+    <div class="rej"><button class="rk" onclick="rej('v2:angel_cherub_armor')">✕ 리젝</button>
+      <input class="rs" placeholder="리젝 사유" oninput="setReason('v2:angel_cherub_armor',this.value)"></div>
+  </div><div class="card" data-uid="v2:angel_penitent_drape">
+    <div class="imgs">
+      <div class="box"><span class=lbl>정적</span><img src="sprites/armor/angel_penitent_drape.png" loading=lazy></div>
+      <div class="box"><span class=lbl>애니</span><div class="anim" data-frames="15" style="background-image:url('sprites/anim/angel_penitent_drape.webp')"></div></div>
+    </div>
+    <div class="meta"><span class="gb g2">2차</span><span class="nm">사슬과 한쪽 날개</span></div>
+    <div class="story">부서진 사슬을 어깨에 두르고, 한쪽엔 잿빛으로 바랜 날개만 남았다. 다 꺼지기 전 마지막 한 줌의 빛을 사슬 끝에 매달고, 그는 외길을 걷는다. 한쪽 날개로는 날 수 없어도, 끝까지 가는 법만은 잊지 않았다.</div>
+    <div class="rej"><button class="rk" onclick="rej('v2:angel_penitent_drape')">✕ 리젝</button>
+      <input class="rs" placeholder="리젝 사유" oninput="setReason('v2:angel_penitent_drape',this.value)"></div>
+  </div><div class="card" data-uid="v2:orc_shaman_robe">
+    <div class="imgs">
+      <div class="box"><span class=lbl>정적</span><img src="sprites/armor/orc_shaman_robe.png" loading=lazy></div>
+      <div class="box"><span class=lbl>애니</span><div class="anim" data-frames="15" style="background-image:url('sprites/anim/orc_shaman_robe.webp')"></div></div>
+    </div>
+    <div class="meta"><span class="gb g2">2차</span><span class="nm">깃털 두른 침묵</span></div>
+    <div class="story">이 옷을 입은 자에게는 왜 아무도 먼저 말을 걸지 않는가. 수십 마리 새의 깃털과 가죽을 기워 만든 샤먼의 옷, 뼈 장식이 걸음마다 달그락인다. 그가 스스로 입을 열 때까지 기다리는 것이 부족의 오랜 금기다. 침묵도 그에겐 하나의 말이기 때문이다.</div>
+    <div class="rej"><button class="rk" onclick="rej('v2:orc_shaman_robe')">✕ 리젝</button>
+      <input class="rs" placeholder="리젝 사유" oninput="setReason('v2:orc_shaman_robe',this.value)"></div>
+  </div><div class="card" data-uid="v1:fallen_paladin_breastplate">
+    <div class="imgs">
+      <div class="box"><span class=lbl>정적</span><img src="_compare/v1/armor/fallen_paladin_breastplate.png" loading=lazy></div>
+      <div class="box pend"><span class=lbl>애니</span><span class=ph>생성 예정</span></div>
+    </div>
+    <div class="meta"><span class="gb g1">1차</span><span class="nm">팰러딘의 흉갑</span></div>
+    <div class="story pend">— 스토리 생성 예정 —</div>
+    <div class="rej"><button class="rk" onclick="rej('v1:fallen_paladin_breastplate')">✕ 리젝</button>
+      <input class="rs" placeholder="리젝 사유" oninput="setReason('v1:fallen_paladin_breastplate',this.value)"></div>
+  </div><div class="card" data-uid="v1:common_aristocrat_lace_dress">
+    <div class="imgs">
+      <div class="box"><span class=lbl>정적</span><img src="_compare/v1/armor/common_aristocrat_lace_dress.png" loading=lazy></div>
+      <div class="box pend"><span class=lbl>애니</span><span class=ph>생성 예정</span></div>
+    </div>
+    <div class="meta"><span class="gb g1">1차</span><span class="nm">귀족 영애의 레이스 드레스</span></div>
+    <div class="story pend">— 스토리 생성 예정 —</div>
+    <div class="rej"><button class="rk" onclick="rej('v1:common_aristocrat_lace_dress')">✕ 리젝</button>
+      <input class="rs" placeholder="리젝 사유" oninput="setReason('v1:common_aristocrat_lace_dress',this.value)"></div>
+  </div><div class="card" data-uid="v1:fallen_celestial_gold_chest">
+    <div class="imgs">
+      <div class="box"><span class=lbl>정적</span><img src="_compare/v1/armor/fallen_celestial_gold_chest.png" loading=lazy></div>
+      <div class="box pend"><span class=lbl>애니</span><span class=ph>생성 예정</span></div>
+    </div>
+    <div class="meta"><span class="gb g1">1차</span><span class="nm">천상의 황금 흉갑</span></div>
+    <div class="story pend">— 스토리 생성 예정 —</div>
+    <div class="rej"><button class="rk" onclick="rej('v1:fallen_celestial_gold_chest')">✕ 리젝</button>
+      <input class="rs" placeholder="리젝 사유" oninput="setReason('v1:fallen_celestial_gold_chest',this.value)"></div>
+  </div><div class="card" data-uid="v2:temple_faux_robe">
+    <div class="imgs">
+      <div class="box"><span class=lbl>정적</span><img src="sprites/armor/temple_faux_robe.png" loading=lazy></div>
+      <div class="box"><span class=lbl>애니</span><div class="anim" data-frames="15" style="background-image:url('sprites/anim/temple_faux_robe.webp')"></div></div>
+    </div>
+    <div class="meta"><span class="gb g2">2차</span><span class="nm">자칭 훈장 사제복</span></div>
+    <div class="story">받은 적 없는 훈장을 직접 만들어 잔뜩 달았다. 흰 사제복 위에 금메달과 배지가 빼곡해 걸을 때마다 절그럭댄다. 누가 무슨 공로냐 물으면 '다 기적이지'라며 얼버무린다. 무거워서 오래 못 서 있는 게 유일한 단점.</div>
+    <div class="rej"><button class="rk" onclick="rej('v2:temple_faux_robe')">✕ 리젝</button>
+      <input class="rs" placeholder="리젝 사유" oninput="setReason('v2:temple_faux_robe',this.value)"></div>
+  </div><div class="card" data-uid="v2:marsh_lily_gown">
+    <div class="imgs">
+      <div class="box"><span class=lbl>정적</span><img src="sprites/armor/marsh_lily_gown.png" loading=lazy></div>
+      <div class="box"><span class=lbl>애니</span><div class="anim" data-frames="15" style="background-image:url('sprites/anim/marsh_lily_gown.webp')"></div></div>
+    </div>
+    <div class="meta"><span class="gb g2">2차</span><span class="nm">수련이 피는 드레스</span></div>
+    <div class="story">여왕이 물 위를 걸으면 발끝마다 수련이 피어 드레스가 된다고들 한다. 분홍과 흰 꽃잎이 겹겹이 쌓이고 그 사이로 얇은 비단이 무지갯빛으로 일렁인다. 진주 이슬이 점점이 맺혀, 여왕이 걸음을 옮길 때마다 작은 별처럼 또르르 굴렀다.</div>
+    <div class="rej"><button class="rk" onclick="rej('v2:marsh_lily_gown')">✕ 리젝</button>
+      <input class="rs" placeholder="리젝 사유" oninput="setReason('v2:marsh_lily_gown',this.value)"></div>
+  </div><div class="card" data-uid="v3:a-desert-nomad-robes-231">
+    <div class="imgs">
+      <div class="box"><span class=lbl>정적</span><img src="sprites/pool/a-desert-nomad-robes-231.png" loading=lazy></div>
+      <div class="box pend"><span class=lbl>애니</span><span class=ph>생성 예정</span></div>
+    </div>
+    <div class="meta"><span class="gb g3">3차</span><span class="nm">사막 유랑자의 의복</span></div>
+    <div class="story pend">— 스토리 생성 예정 —</div>
+    <div class="rej"><button class="rk" onclick="rej('v3:a-desert-nomad-robes-231')">✕ 리젝</button>
+      <input class="rs" placeholder="리젝 사유" oninput="setReason('v3:a-desert-nomad-robes-231',this.value)"></div>
+  </div><div class="card" data-uid="v3:a-academy-professor-robe-234">
+    <div class="imgs">
+      <div class="box"><span class=lbl>정적</span><img src="sprites/pool/a-academy-professor-robe-234.png" loading=lazy></div>
+      <div class="box pend"><span class=lbl>애니</span><span class=ph>생성 예정</span></div>
+    </div>
+    <div class="meta"><span class="gb g3">3차</span><span class="nm">왕립 학원 교수복</span></div>
+    <div class="story pend">— 스토리 생성 예정 —</div>
+    <div class="rej"><button class="rk" onclick="rej('v3:a-academy-professor-robe-234')">✕ 리젝</button>
+      <input class="rs" placeholder="리젝 사유" oninput="setReason('v3:a-academy-professor-robe-234',this.value)"></div>
+  </div><div class="card" data-uid="v3:a-academy-student-uniform-233">
+    <div class="imgs">
+      <div class="box"><span class=lbl>정적</span><img src="sprites/pool/a-academy-student-uniform-233.png" loading=lazy></div>
+      <div class="box pend"><span class=lbl>애니</span><span class=ph>생성 예정</span></div>
+    </div>
+    <div class="meta"><span class="gb g3">3차</span><span class="nm">왕립 학원 교복</span></div>
+    <div class="story pend">— 스토리 생성 예정 —</div>
+    <div class="rej"><button class="rk" onclick="rej('v3:a-academy-student-uniform-233')">✕ 리젝</button>
+      <input class="rs" placeholder="리젝 사유" oninput="setReason('v3:a-academy-student-uniform-233',this.value)"></div>
+  </div><div class="card" data-uid="v3:a-forest-ranger-outfit-240">
+    <div class="imgs">
+      <div class="box"><span class=lbl>정적</span><img src="sprites/pool/a-forest-ranger-outfit-240.png" loading=lazy></div>
+      <div class="box pend"><span class=lbl>애니</span><span class=ph>생성 예정</span></div>
+    </div>
+    <div class="meta"><span class="gb g3">3차</span><span class="nm">숲 순찰자의 옷</span></div>
+    <div class="story pend">— 스토리 생성 예정 —</div>
+    <div class="rej"><button class="rk" onclick="rej('v3:a-forest-ranger-outfit-240')">✕ 리젝</button>
+      <input class="rs" placeholder="리젝 사유" oninput="setReason('v3:a-forest-ranger-outfit-240',this.value)"></div>
+  </div></div><h2>장신구 <small>(40)</small></h2><div class="grid"><div class="card" data-uid="v3:seed-temple_snowflake_crown">
+    <div class="imgs">
+      <div class="box"><span class=lbl>정적</span><img src="sprites/pool/seed-temple_snowflake_crown.png" loading=lazy></div>
+      <div class="box pend"><span class=lbl>애니</span><span class=ph>생성 예정</span></div>
+    </div>
+    <div class="meta"><span class="gb g3">3차</span><span class="nm">눈꽃의 관</span></div>
+    <div class="story pend">— 스토리 생성 예정 —</div>
+    <div class="rej"><button class="rk" onclick="rej('v3:seed-temple_snowflake_crown')">✕ 리젝</button>
+      <input class="rs" placeholder="리젝 사유" oninput="setReason('v3:seed-temple_snowflake_crown',this.value)"></div>
+  </div><div class="card" data-uid="v3:seed-temple_fur_stole">
+    <div class="imgs">
+      <div class="box"><span class=lbl>정적</span><img src="sprites/pool/seed-temple_fur_stole.png" loading=lazy></div>
+      <div class="box pend"><span class=lbl>애니</span><span class=ph>생성 예정</span></div>
+    </div>
+    <div class="meta"><span class="gb g3">3차</span><span class="nm">흰 털 목도리</span></div>
+    <div class="story pend">— 스토리 생성 예정 —</div>
+    <div class="rej"><button class="rk" onclick="rej('v3:seed-temple_fur_stole')">✕ 리젝</button>
+      <input class="rs" placeholder="리젝 사유" oninput="setReason('v3:seed-temple_fur_stole',this.value)"></div>
+  </div><div class="card" data-uid="v3:seed-volcano_dragonscale_satchel">
+    <div class="imgs">
+      <div class="box"><span class=lbl>정적</span><img src="sprites/pool/seed-volcano_dragonscale_satchel.png" loading=lazy></div>
+      <div class="box pend"><span class=lbl>애니</span><span class=ph>생성 예정</span></div>
+    </div>
+    <div class="meta"><span class="gb g3">3차</span><span class="nm">용비늘 봇짐</span></div>
+    <div class="story pend">— 스토리 생성 예정 —</div>
+    <div class="rej"><button class="rk" onclick="rej('v3:seed-volcano_dragonscale_satchel')">✕ 리젝</button>
+      <input class="rs" placeholder="리젝 사유" oninput="setReason('v3:seed-volcano_dragonscale_satchel',this.value)"></div>
+  </div><div class="card" data-uid="v3:seed-volcano_dragonhorn_circlet">
+    <div class="imgs">
+      <div class="box"><span class=lbl>정적</span><img src="sprites/pool/seed-volcano_dragonhorn_circlet.png" loading=lazy></div>
+      <div class="box pend"><span class=lbl>애니</span><span class=ph>생성 예정</span></div>
+    </div>
+    <div class="meta"><span class="gb g3">3차</span><span class="nm">용뿔 서클릿</span></div>
+    <div class="story pend">— 스토리 생성 예정 —</div>
+    <div class="rej"><button class="rk" onclick="rej('v3:seed-volcano_dragonhorn_circlet')">✕ 리젝</button>
+      <input class="rs" placeholder="리젝 사유" oninput="setReason('v3:seed-volcano_dragonhorn_circlet',this.value)"></div>
+  </div><div class="card" data-uid="v3:seed-volcano_obsidian_warfan">
+    <div class="imgs">
+      <div class="box"><span class=lbl>정적</span><img src="sprites/pool/seed-volcano_obsidian_warfan.png" loading=lazy></div>
+      <div class="box pend"><span class=lbl>애니</span><span class=ph>생성 예정</span></div>
+    </div>
+    <div class="meta"><span class="gb g3">3차</span><span class="nm">흑요석 군선</span></div>
+    <div class="story pend">— 스토리 생성 예정 —</div>
+    <div class="rej"><button class="rk" onclick="rej('v3:seed-volcano_obsidian_warfan')">✕ 리젝</button>
+      <input class="rs" placeholder="리젝 사유" oninput="setReason('v3:seed-volcano_obsidian_warfan',this.value)"></div>
+  </div><div class="card" data-uid="v3:seed-swamp_mushroom_hat">
+    <div class="imgs">
+      <div class="box"><span class=lbl>정적</span><img src="sprites/pool/seed-swamp_mushroom_hat.png" loading=lazy></div>
+      <div class="box pend"><span class=lbl>애니</span><span class=ph>생성 예정</span></div>
+    </div>
+    <div class="meta"><span class="gb g3">3차</span><span class="nm">버섯 모자</span></div>
+    <div class="story pend">— 스토리 생성 예정 —</div>
+    <div class="rej"><button class="rk" onclick="rej('v3:seed-swamp_mushroom_hat')">✕ 리젝</button>
+      <input class="rs" placeholder="리젝 사유" oninput="setReason('v3:seed-swamp_mushroom_hat',this.value)"></div>
+  </div><div class="card" data-uid="v3:seed-swamp_lily_crown">
+    <div class="imgs">
+      <div class="box"><span class=lbl>정적</span><img src="sprites/pool/seed-swamp_lily_crown.png" loading=lazy></div>
+      <div class="box pend"><span class=lbl>애니</span><span class=ph>생성 예정</span></div>
+    </div>
+    <div class="meta"><span class="gb g3">3차</span><span class="nm">수련 꽃관</span></div>
+    <div class="story pend">— 스토리 생성 예정 —</div>
+    <div class="rej"><button class="rk" onclick="rej('v3:seed-swamp_lily_crown')">✕ 리젝</button>
+      <input class="rs" placeholder="리젝 사유" oninput="setReason('v3:seed-swamp_lily_crown',this.value)"></div>
+  </div><div class="card" data-uid="v3:seed-angel_glide_wings">
+    <div class="imgs">
+      <div class="box"><span class=lbl>정적</span><img src="sprites/pool/seed-angel_glide_wings.png" loading=lazy></div>
+      <div class="box pend"><span class=lbl>애니</span><span class=ph>생성 예정</span></div>
+    </div>
+    <div class="meta"><span class="gb g3">3차</span><span class="nm">깃든 날개</span></div>
+    <div class="story pend">— 스토리 생성 예정 —</div>
+    <div class="rej"><button class="rk" onclick="rej('v3:seed-angel_glide_wings')">✕ 리젝</button>
+      <input class="rs" placeholder="리젝 사유" oninput="setReason('v3:seed-angel_glide_wings',this.value)"></div>
+  </div><div class="card" data-uid="v3:seed-kingdom_court_fan">
+    <div class="imgs">
+      <div class="box"><span class=lbl>정적</span><img src="sprites/pool/seed-kingdom_court_fan.png" loading=lazy></div>
+      <div class="box pend"><span class=lbl>애니</span><span class=ph>생성 예정</span></div>
+    </div>
+    <div class="meta"><span class="gb g3">3차</span><span class="nm">봉황 부채</span></div>
+    <div class="story pend">— 스토리 생성 예정 —</div>
+    <div class="rej"><button class="rk" onclick="rej('v3:seed-kingdom_court_fan')">✕ 리젝</button>
+      <input class="rs" placeholder="리젝 사유" oninput="setReason('v3:seed-kingdom_court_fan',this.value)"></div>
+  </div><div class="card" data-uid="v3:a-commander-epaulets-93">
+    <div class="imgs">
+      <div class="box"><span class=lbl>정적</span><img src="sprites/pool/a-commander-epaulets-93.png" loading=lazy></div>
+      <div class="box pend"><span class=lbl>애니</span><span class=ph>생성 예정</span></div>
+    </div>
+    <div class="meta"><span class="gb g3">3차</span><span class="nm">사령관의 견장</span></div>
+    <div class="story pend">— 스토리 생성 예정 —</div>
+    <div class="rej"><button class="rk" onclick="rej('v3:a-commander-epaulets-93')">✕ 리젝</button>
+      <input class="rs" placeholder="리젝 사유" oninput="setReason('v3:a-commander-epaulets-93',this.value)"></div>
+  </div><div class="card" data-uid="v3:a-pumpkin-witch-hat-97">
+    <div class="imgs">
+      <div class="box"><span class=lbl>정적</span><img src="sprites/pool/a-pumpkin-witch-hat-97.png" loading=lazy></div>
+      <div class="box pend"><span class=lbl>애니</span><span class=ph>생성 예정</span></div>
+    </div>
+    <div class="meta"><span class="gb g3">3차</span><span class="nm">호박 마녀의 모자</span></div>
+    <div class="story pend">— 스토리 생성 예정 —</div>
+    <div class="rej"><button class="rk" onclick="rej('v3:a-pumpkin-witch-hat-97')">✕ 리젝</button>
+      <input class="rs" placeholder="리젝 사유" oninput="setReason('v3:a-pumpkin-witch-hat-97',this.value)"></div>
+  </div><div class="card" data-uid="v3:a-phantom-half-mask-125">
+    <div class="imgs">
+      <div class="box"><span class=lbl>정적</span><img src="sprites/pool/a-phantom-half-mask-125.png" loading=lazy></div>
+      <div class="box pend"><span class=lbl>애니</span><span class=ph>생성 예정</span></div>
+    </div>
+    <div class="meta"><span class="gb g3">3차</span><span class="nm">괴인의 백자 반가면</span></div>
+    <div class="story pend">— 스토리 생성 예정 —</div>
+    <div class="rej"><button class="rk" onclick="rej('v3:a-phantom-half-mask-125')">✕ 리젝</button>
+      <input class="rs" placeholder="리젝 사유" oninput="setReason('v3:a-phantom-half-mask-125',this.value)"></div>
+  </div><div class="card" data-uid="v3:a-valkyrie-winged-circlet-179">
+    <div class="imgs">
+      <div class="box"><span class=lbl>정적</span><img src="sprites/pool/a-valkyrie-winged-circlet-179.png" loading=lazy></div>
+      <div class="box pend"><span class=lbl>애니</span><span class=ph>생성 예정</span></div>
+    </div>
+    <div class="meta"><span class="gb g3">3차</span><span class="nm">발키리 날개 서클릿</span></div>
+    <div class="story pend">— 스토리 생성 예정 —</div>
+    <div class="rej"><button class="rk" onclick="rej('v3:a-valkyrie-winged-circlet-179')">✕ 리젝</button>
+      <input class="rs" placeholder="리젝 사유" oninput="setReason('v3:a-valkyrie-winged-circlet-179',this.value)"></div>
+  </div><div class="card" data-uid="v3:a-devil-horns-winged-149">
+    <div class="imgs">
+      <div class="box"><span class=lbl>정적</span><img src="sprites/pool/a-devil-horns-winged-149.png" loading=lazy></div>
+      <div class="box pend"><span class=lbl>애니</span><span class=ph>생성 예정</span></div>
+    </div>
+    <div class="meta"><span class="gb g3">3차</span><span class="nm">박쥐날개 뿔머리띠</span></div>
+    <div class="story pend">— 스토리 생성 예정 —</div>
+    <div class="rej"><button class="rk" onclick="rej('v3:a-devil-horns-winged-149')">✕ 리젝</button>
+      <input class="rs" placeholder="리젝 사유" oninput="setReason('v3:a-devil-horns-winged-149',this.value)"></div>
+  </div><div class="card" data-uid="v3:a-dragon-horned-helm-187">
+    <div class="imgs">
+      <div class="box"><span class=lbl>정적</span><img src="sprites/pool/a-dragon-horned-helm-187.png" loading=lazy></div>
+      <div class="box pend"><span class=lbl>애니</span><span class=ph>생성 예정</span></div>
+    </div>
+    <div class="meta"><span class="gb g3">3차</span><span class="nm">흑룡 뿔투구</span></div>
+    <div class="story pend">— 스토리 생성 예정 —</div>
+    <div class="rej"><button class="rk" onclick="rej('v3:a-dragon-horned-helm-187')">✕ 리젝</button>
+      <input class="rs" placeholder="리젝 사유" oninput="setReason('v3:a-dragon-horned-helm-187',this.value)"></div>
+  </div><div class="card" data-uid="v3:a-paladin-winged-helm-181">
+    <div class="imgs">
+      <div class="box"><span class=lbl>정적</span><img src="sprites/pool/a-paladin-winged-helm-181.png" loading=lazy></div>
+      <div class="box pend"><span class=lbl>애니</span><span class=ph>생성 예정</span></div>
+    </div>
+    <div class="meta"><span class="gb g3">3차</span><span class="nm">성기사 날개 투구</span></div>
+    <div class="story pend">— 스토리 생성 예정 —</div>
+    <div class="rej"><button class="rk" onclick="rej('v3:a-paladin-winged-helm-181')">✕ 리젝</button>
+      <input class="rs" placeholder="리젝 사유" oninput="setReason('v3:a-paladin-winged-helm-181',this.value)"></div>
+  </div><div class="card" data-uid="v3:a-frost-kite-shield-82">
+    <div class="imgs">
+      <div class="box"><span class=lbl>정적</span><img src="sprites/pool/a-frost-kite-shield-82.png" loading=lazy></div>
+      <div class="box pend"><span class=lbl>애니</span><span class=ph>생성 예정</span></div>
+    </div>
+    <div class="meta"><span class="gb g3">3차</span><span class="nm">서리 카이트 실드</span></div>
+    <div class="story pend">— 스토리 생성 예정 —</div>
+    <div class="rej"><button class="rk" onclick="rej('v3:a-frost-kite-shield-82')">✕ 리젝</button>
+      <input class="rs" placeholder="리젝 사유" oninput="setReason('v3:a-frost-kite-shield-82',this.value)"></div>
+  </div><div class="card" data-uid="v2:kingdom_masque_mask">
+    <div class="imgs">
+      <div class="box"><span class=lbl>정적</span><img src="sprites/accessory/kingdom_masque_mask.png" loading=lazy></div>
+      <div class="box"><span class=lbl>애니</span><div class="anim" data-frames="15" style="background-image:url('sprites/anim/kingdom_masque_mask.webp')"></div></div>
+    </div>
+    <div class="meta"><span class="gb g2">2차</span><span class="nm">이름을 가린 가면</span></div>
+    <div class="story">촛불이 다 사위고 악사가 활을 내려놓을 때, 사람들은 하나둘 가면을 벗는다. 나는 늘 그 순간이 가장 두렵다. 금빛 세공 뒤, 와인빛 깃이 가려 주던 얼굴을 다시 마주해야 하니까. 가면은 하룻밤의 거짓을 허락하고, 새벽은 어김없이 그 값을 받아 간다.</div>
+    <div class="rej"><button class="rk" onclick="rej('v2:kingdom_masque_mask')">✕ 리젝</button>
+      <input class="rs" placeholder="리젝 사유" oninput="setReason('v2:kingdom_masque_mask',this.value)"></div>
+  </div><div class="card" data-uid="v2:kingdom_regalia_crown">
+    <div class="imgs">
+      <div class="box"><span class=lbl>정적</span><img src="sprites/accessory/kingdom_regalia_crown.png" loading=lazy></div>
+      <div class="box"><span class=lbl>애니</span><div class="anim" data-frames="15" style="background-image:url('sprites/anim/kingdom_regalia_crown.webp')"></div></div>
+    </div>
+    <div class="meta"><span class="gb g2">2차</span><span class="nm">별이 박힌 왕관</span></div>
+    <div class="story">노래가 절정으로 치달으면 마지막으로 이 왕관이 나온다. 금테에 푸른 보석과 잔별이 촘촘해, 촛불 아래선 샹들리에보다 환하다. 관이 머리에 닿는 순간 악단이 마지막 소절을 터뜨리고, 그제야 연회는 비로소 완성된다.</div>
+    <div class="rej"><button class="rk" onclick="rej('v2:kingdom_regalia_crown')">✕ 리젝</button>
+      <input class="rs" placeholder="리젝 사유" oninput="setReason('v2:kingdom_regalia_crown',this.value)"></div>
+  </div><div class="card" data-uid="v2:kingdom_coronation_medallion">
+    <div class="imgs">
+      <div class="box"><span class=lbl>정적</span><img src="sprites/accessory/kingdom_coronation_medallion.png" loading=lazy></div>
+      <div class="box"><span class=lbl>애니</span><div class="anim" data-frames="15" style="background-image:url('sprites/anim/kingdom_coronation_medallion.webp')"></div></div>
+    </div>
+    <div class="meta"><span class="gb g2">2차</span><span class="nm">사자의 증표</span></div>
+    <div class="story">대관식이 끝나면 새 왕의 목에 이 메달이 걸린다. 금빛 원판 한가운데 사자가 포효하고, 그 위로 푸른 사파이어가 별처럼 박혔다. 왕관은 머리에 얹혀 위엄을 보이지만, 약속은 가슴에 걸려 숨을 쉰다. 왕이 숨 쉴 때마다 사자도 가슴 위에서 함께 들썩인다.</div>
+    <div class="rej"><button class="rk" onclick="rej('v2:kingdom_coronation_medallion')">✕ 리젝</button>
+      <input class="rs" placeholder="리젝 사유" oninput="setReason('v2:kingdom_coronation_medallion',this.value)"></div>
+  </div><div class="card" data-uid="v2:kingdom_dawnguard_ring">
+    <div class="imgs">
+      <div class="box"><span class=lbl>정적</span><img src="sprites/accessory/kingdom_dawnguard_ring.png" loading=lazy></div>
+      <div class="box"><span class=lbl>애니</span><div class="anim" data-frames="15" style="background-image:url('sprites/anim/kingdom_dawnguard_ring.webp')"></div></div>
+    </div>
+    <div class="meta"><span class="gb g2">2차</span><span class="nm">새벽지기의 표식</span></div>
+    <div class="story">오늘 밤 새벽 차례는 너다. 이 반지를 받아라. 금테 속 네모난 푸른 보석이 별빛을 머금으면, 모두가 잠든 사이 동쪽 하늘을 가장 먼저 맞는 사람이 된다. 반지는 누구의 소유도 아니다. 그저 그 밤 깨어 있는 자의 손가락에 잠시 머물 뿐이다.</div>
+    <div class="rej"><button class="rk" onclick="rej('v2:kingdom_dawnguard_ring')">✕ 리젝</button>
+      <input class="rs" placeholder="리젝 사유" oninput="setReason('v2:kingdom_dawnguard_ring',this.value)"></div>
+  </div><div class="card" data-uid="v2:kingdom_riddle_astrolabe">
+    <div class="imgs">
+      <div class="box"><span class=lbl>정적</span><img src="sprites/accessory/kingdom_riddle_astrolabe.png" loading=lazy></div>
+      <div class="box"><span class=lbl>애니</span><div class="anim" data-frames="15" style="background-image:url('sprites/anim/kingdom_riddle_astrolabe.webp')"></div></div>
+    </div>
+    <div class="meta"><span class="gb g2">2차</span><span class="nm">대답하지 않는 나침반</span></div>
+    <div class="story">별을 손바닥에 담으면 사람의 앞날까지 보일까. 금빛 고리 가운데 푸른 별을 맞추면 그날 밤하늘이 고스란히 손에 들어온다. 다만 이걸로 누군가의 내일을 들여다본 자들은 하나같이 입을 닫았다. 봐선 안 될 것까지 보고 만 얼굴이었다.</div>
+    <div class="rej"><button class="rk" onclick="rej('v2:kingdom_riddle_astrolabe')">✕ 리젝</button>
+      <input class="rs" placeholder="리젝 사유" oninput="setReason('v2:kingdom_riddle_astrolabe',this.value)"></div>
+  </div><div class="card" data-uid="v2:marsh_frog_jar">
+    <div class="imgs">
+      <div class="box"><span class=lbl>정적</span><img src="sprites/accessory/marsh_frog_jar.png" loading=lazy></div>
+      <div class="box"><span class=lbl>애니</span><div class="anim" data-frames="15" style="background-image:url('sprites/anim/marsh_frog_jar.webp')"></div></div>
+    </div>
+    <div class="meta"><span class="gb g2">2차</span><span class="nm">반딧불 충전기</span></div>
+    <div class="story">「불 꺼졌어!」 「흔들어 봐, 자는 거야.」 밤마다 반딧불을 모아 담는 유리병, 그 안에서 작은 개구리가 불빛을 지킨다나 뭐라나. 어두운 늪길엔 이만 한 게 없지만, 반딧불이 잠들면 병을 흔들어 깨워야 하는 게 영 번거롭다.</div>
+    <div class="rej"><button class="rk" onclick="rej('v2:marsh_frog_jar')">✕ 리젝</button>
+      <input class="rs" placeholder="리젝 사유" oninput="setReason('v2:marsh_frog_jar',this.value)"></div>
+  </div><div class="card" data-uid="v2:marsh_bogwarden_horn">
+    <div class="imgs">
+      <div class="box"><span class=lbl>정적</span><img src="sprites/accessory/marsh_bogwarden_horn.png" loading=lazy></div>
+      <div class="box"><span class=lbl>애니</span><div class="anim" data-frames="15" style="background-image:url('sprites/anim/marsh_bogwarden_horn.webp')"></div></div>
+    </div>
+    <div class="meta"><span class="gb g2">2차</span><span class="nm">부르면 모이는 뿔피리</span></div>
+    <div class="story">너는 이제 혼자 싸우지 않아도 된다. 수련잎 무늬가 새겨진 이 청동 뿔피리를 한 번 길게 불면, 안개 어딘가에서 반딧불 같은 빛과 함께 늪지기들이 답해 온다. 늪에서 외로이 스러지는 자는 없다. 부를 줄만 안다면.</div>
+    <div class="rej"><button class="rk" onclick="rej('v2:marsh_bogwarden_horn')">✕ 리젝</button>
+      <input class="rs" placeholder="리젝 사유" oninput="setReason('v2:marsh_bogwarden_horn',this.value)"></div>
+  </div><div class="card" data-uid="v2:marsh_angler_creel">
+    <div class="imgs">
+      <div class="box"><span class=lbl>정적</span><img src="sprites/accessory/marsh_angler_creel.png" loading=lazy></div>
+      <div class="box"><span class=lbl>애니</span><div class="anim" data-frames="15" style="background-image:url('sprites/anim/marsh_angler_creel.webp')"></div></div>
+    </div>
+    <div class="meta"><span class="gb g2">2차</span><span class="nm">반딧불 통발</span></div>
+    <div class="story">빛을 보고 모인 물고기가 제 발로 통발에 들어온다니까, 이만한 미끼가 없어. 등에 메는 버들 통발에 반딧불 등을 넣어 두면 끝이지. 단점이 딱 하나, 너무 환하게 켜 두면 정작 물고기는 안 오고 모기만 잔뜩 꼬인다는 거야.</div>
+    <div class="rej"><button class="rk" onclick="rej('v2:marsh_angler_creel')">✕ 리젝</button>
+      <input class="rs" placeholder="리젝 사유" oninput="setReason('v2:marsh_angler_creel',this.value)"></div>
+  </div><div class="card" data-uid="v2:volcano_ember_hourglass">
+    <div class="imgs">
+      <div class="box"><span class=lbl>정적</span><img src="sprites/accessory/volcano_ember_hourglass.png" loading=lazy></div>
+      <div class="box"><span class=lbl>애니</span><div class="anim" data-frames="15" style="background-image:url('sprites/anim/volcano_ember_hourglass.webp')"></div></div>
+    </div>
+    <div class="meta"><span class="gb g2">2차</span><span class="nm">재가 흐르는 모래시계</span></div>
+    <div class="story">흑요석 모래시계 안에서 잿불이 모래처럼 천천히 흘러내린다. 이걸로 화산이 깨어날 때를 잰다는데, 신기하게도 모래는 줄어들기만 할 뿐 바닥까지 떨어지는 법이 없다. 이 잿불이 다 떨어지는 날엔 화산이 깨어나 큰일이 난다 하여, 사람들은 모래가 줄지 않는 것을 차라리 다행으로 여겼다.</div>
+    <div class="rej"><button class="rk" onclick="rej('v2:volcano_ember_hourglass')">✕ 리젝</button>
+      <input class="rs" placeholder="리젝 사유" oninput="setReason('v2:volcano_ember_hourglass',this.value)"></div>
+  </div><div class="card" data-uid="v2:temple_frostward_orb">
+    <div class="imgs">
+      <div class="box"><span class=lbl>정적</span><img src="sprites/accessory/temple_frostward_orb.png" loading=lazy></div>
+      <div class="box"><span class=lbl>애니</span><div class="anim" data-frames="15" style="background-image:url('sprites/anim/temple_frostward_orb.webp')"></div></div>
+    </div>
+    <div class="meta"><span class="gb g2">2차</span><span class="nm">식지 않는 심장</span></div>
+    <div class="story">제단 한가운데 놓여 있던 보주다. 대리석과 금 틀 안에서 청록 룬이 새겨진 수정구가 천천히 돌며 빛난다. 한겨울 신전의 등불이 모두 얼어붙은 밤에도, 이 수정구의 청록빛만은 홀로 돌며 타올랐다. 사람들은 그래서 이걸 '신전의 심장'이라 불렀다.</div>
+    <div class="rej"><button class="rk" onclick="rej('v2:temple_frostward_orb')">✕ 리젝</button>
+      <input class="rs" placeholder="리젝 사유" oninput="setReason('v2:temple_frostward_orb',this.value)"></div>
+  </div><div class="card" data-uid="v2:temple_monk_censer">
+    <div class="imgs">
+      <div class="box"><span class=lbl>정적</span><img src="sprites/accessory/temple_monk_censer.png" loading=lazy></div>
+      <div class="box"><span class=lbl>애니</span><div class="anim" data-frames="15" style="background-image:url('sprites/anim/temple_monk_censer.webp')"></div></div>
+    </div>
+    <div class="meta"><span class="gb g2">2차</span><span class="nm">흔들리는 향로</span></div>
+    <div class="story">「연기가 자꾸 흩어집니다.」 「그럼 무언가 다가온다는 뜻이지.」 사슬에 매단 놋 향로에서 향 연기가 끊임없이 피어오른다. 곧게 오르면 마음이 고요하고, 흩어지면 기척이 가깝다. 노승은 말없이 연기만 보고도 둘레의 모든 것을 읽었다.</div>
+    <div class="rej"><button class="rk" onclick="rej('v2:temple_monk_censer')">✕ 리젝</button>
+      <input class="rs" placeholder="리젝 사유" oninput="setReason('v2:temple_monk_censer',this.value)"></div>
+  </div><div class="card" data-uid="v2:orc_shaman_banner">
+    <div class="imgs">
+      <div class="box"><span class=lbl>정적</span><img src="sprites/accessory/orc_shaman_banner.png" loading=lazy></div>
+      <div class="box"><span class=lbl>애니</span><div class="anim" data-frames="15" style="background-image:url('sprites/anim/orc_shaman_banner.webp')"></div></div>
+    </div>
+    <div class="meta"><span class="gb g2">2차</span><span class="nm">조상의 깃발</span></div>
+    <div class="story">샤먼이 이 깃발을 땅에 꽂으면, 그날 밤 부족의 죽은 이들이 찾아온다고 한다. 낡은 가죽에 매단 깃털과 구슬이 바람 한 점 없는데도 흔들리는 밤이면, 노인은 아무도 없는 깃발 앞에 앉아 오래 이야기를 나눴다. 무엇을 들었는지는 끝내 말하지 않았지만, 이튿날 그의 결정은 한 번도 틀린 적이 없었다.</div>
+    <div class="rej"><button class="rk" onclick="rej('v2:orc_shaman_banner')">✕ 리젝</button>
+      <input class="rs" placeholder="리젝 사유" oninput="setReason('v2:orc_shaman_banner',this.value)"></div>
+  </div><div class="card" data-uid="v2:orc_ancestor_bracelet">
+    <div class="imgs">
+      <div class="box"><span class=lbl>정적</span><img src="sprites/accessory/orc_ancestor_bracelet.png" loading=lazy></div>
+      <div class="box"><span class=lbl>애니</span><div class="anim" data-frames="15" style="background-image:url('sprites/anim/orc_ancestor_bracelet.webp')"></div></div>
+    </div>
+    <div class="meta"><span class="gb g2">2차</span><span class="nm">손목에 감은 조상</span></div>
+    <div class="story">먼 길을 떠나는 전사는 이 뼈 팔찌를 손목에 감는다. 조상의 얼굴을 새긴 뼈 구슬 사이로 작은 어금니가 달그락거린다. 외로운 밤, 손목을 쥐고 있으면 부족 전체가 등 뒤에 선 것 같았다.</div>
+    <div class="rej"><button class="rk" onclick="rej('v2:orc_ancestor_bracelet')">✕ 리젝</button>
+      <input class="rs" placeholder="리젝 사유" oninput="setReason('v2:orc_ancestor_bracelet',this.value)"></div>
+  </div><div class="card" data-uid="v2:orc_grumble_tankard">
+    <div class="imgs">
+      <div class="box"><span class=lbl>정적</span><img src="sprites/accessory/orc_grumble_tankard.png" loading=lazy></div>
+      <div class="box"><span class=lbl>애니</span><div class="anim" data-frames="15" style="background-image:url('sprites/anim/orc_grumble_tankard.webp')"></div></div>
+    </div>
+    <div class="meta"><span class="gb g2">2차</span><span class="nm">한 잔의 보람</span></div>
+    <div class="story">「오늘은 좀 두들겼나?」 「오늘도 잘 두들겼지.」 하루 일이 끝나면 영감은 이 찌그러진 무쇠 잔부터 가득 채운다. 잔 한가운데엔 제 얼굴을 닮은 오크가 새겨져 있는데, 멋있으라고 직접 새겼단다. 한 모금 들이켜고 나오는 말은, 늘 똑같다.</div>
+    <div class="rej"><button class="rk" onclick="rej('v2:orc_grumble_tankard')">✕ 리젝</button>
+      <input class="rs" placeholder="리젝 사유" oninput="setReason('v2:orc_grumble_tankard',this.value)"></div>
+  </div><div class="card" data-uid="v2:orc_ironfang_necklace">
+    <div class="imgs">
+      <div class="box"><span class=lbl>정적</span><img src="sprites/accessory/orc_ironfang_necklace.png" loading=lazy></div>
+      <div class="box"><span class=lbl>애니</span><div class="anim" data-frames="15" style="background-image:url('sprites/anim/orc_ironfang_necklace.webp')"></div></div>
+    </div>
+    <div class="meta"><span class="gb g2">2차</span><span class="nm">엄니에 새긴 무용담</span></div>
+    <div class="story">엄니 하나가 이긴 싸움 하나야. 내 목에 엄니가 몇 개였냐고? 세다가 그냥 포기했지. 쇠구슬에 붉은 끈, 걸을 때마다 절그럭절그럭 그 소리만 나도 애송이들은 줄행랑을 쳤어. 이게 다 내 무용담이다. 한 알 한 알이 다 이야기라고.</div>
+    <div class="rej"><button class="rk" onclick="rej('v2:orc_ironfang_necklace')">✕ 리젝</button>
+      <input class="rs" placeholder="리젝 사유" oninput="setReason('v2:orc_ironfang_necklace',this.value)"></div>
+  </div><div class="card" data-uid="v1:fallen_archangel_halo_crown">
+    <div class="imgs">
+      <div class="box"><span class=lbl>정적</span><img src="_compare/v1/accessory/fallen_archangel_halo_crown.png" loading=lazy></div>
+      <div class="box pend"><span class=lbl>애니</span><span class=ph>생성 예정</span></div>
+    </div>
+    <div class="meta"><span class="gb g1">1차</span><span class="nm">대천사의 후광 crown</span></div>
+    <div class="story pend">— 스토리 생성 예정 —</div>
+    <div class="rej"><button class="rk" onclick="rej('v1:fallen_archangel_halo_crown')">✕ 리젝</button>
+      <input class="rs" placeholder="리젝 사유" oninput="setReason('v1:fallen_archangel_halo_crown',this.value)"></div>
+  </div><div class="card" data-uid="v2:temple_faux_halo">
+    <div class="imgs">
+      <div class="box"><span class=lbl>정적</span><img src="sprites/accessory/temple_faux_halo.png" loading=lazy></div>
+      <div class="box"><span class=lbl>애니</span><div class="anim" data-frames="15" style="background-image:url('sprites/anim/temple_faux_halo.webp')"></div></div>
+    </div>
+    <div class="meta"><span class="gb g2">2차</span><span class="nm">철사로 띄운 후광</span></div>
+    <div class="story">머리 위에 후광이 떠 있어야 성자처럼 보인다기에, 가는 철사로 금테를 띄웠다. 살짝 비뚤어졌지만 멀리서 보면 그럴듯하다. 바람이 불면 흔들리는데, 자칭 성자는 그걸 '하늘의 응답'이라 우긴다.</div>
+    <div class="rej"><button class="rk" onclick="rej('v2:temple_faux_halo')">✕ 리젝</button>
+      <input class="rs" placeholder="리젝 사유" oninput="setReason('v2:temple_faux_halo',this.value)"></div>
+  </div><div class="card" data-uid="v2:kingdom_coronation_gauntlets">
+    <div class="imgs">
+      <div class="box"><span class=lbl>정적</span><img src="sprites/armor/kingdom_coronation_gauntlets.png" loading=lazy></div>
+      <div class="box"><span class=lbl>애니</span><div class="anim" data-frames="15" style="background-image:url('sprites/anim/kingdom_coronation_gauntlets.webp')"></div></div>
+    </div>
+    <div class="meta"><span class="gb g2">2차</span><span class="nm">맹세를 쥔 손</span></div>
+    <div class="story">왕은 이 금빛 장갑을 끼고 선왕의 손을 맞잡는다. 한쪽 손등엔 포효하는 사자, 다른 손등엔 또 다른 왕가의 문장. 두 문장이 맞닿는 순간 맹세는 말 없이 성립된다. 푸른 법랑이 마디마다 감겨 쥔 손을 쉬이 놓지 못하게 하니, 한 번 맞잡은 맹세를 무른 왕은 일찍이 없었다.</div>
+    <div class="rej"><button class="rk" onclick="rej('v2:kingdom_coronation_gauntlets')">✕ 리젝</button>
+      <input class="rs" placeholder="리젝 사유" oninput="setReason('v2:kingdom_coronation_gauntlets',this.value)"></div>
+  </div><div class="card" data-uid="v2:orc_drum_shield">
+    <div class="imgs">
+      <div class="box"><span class=lbl>정적</span><img src="sprites/armor/orc_drum_shield.png" loading=lazy></div>
+      <div class="box"><span class=lbl>애니</span><div class="anim" data-frames="15" style="background-image:url('sprites/anim/orc_drum_shield.webp')"></div></div>
+    </div>
+    <div class="meta"><span class="gb g2">2차</span><span class="nm">북이 된 방패</span></div>
+    <div class="story">「막다가 노래 한 곡 나오겠는데.」 「그게 바로 우리 방식이지.」 가죽을 팽팽히 멘 전쟁북을 그대로 방패로 쓴다. 적의 일격을 막을 때마다 둥, 하고 깊은 소리가 울린다. 막는 것이 곧 북을 치는 일이라, 이 부족은 싸우는 내내 노래를 멈추는 법이 없었다.</div>
+    <div class="rej"><button class="rk" onclick="rej('v2:orc_drum_shield')">✕ 리젝</button>
+      <input class="rs" placeholder="리젝 사유" oninput="setReason('v2:orc_drum_shield',this.value)"></div>
+  </div><div class="card" data-uid="v1:common_traveler_star_hat">
+    <div class="imgs">
+      <div class="box"><span class=lbl>정적</span><img src="_compare/v1/armor/common_traveler_star_hat.png" loading=lazy></div>
+      <div class="box pend"><span class=lbl>애니</span><span class=ph>생성 예정</span></div>
+    </div>
+    <div class="meta"><span class="gb g1">1차</span><span class="nm">여행자의 별 모자</span></div>
+    <div class="story pend">— 스토리 생성 예정 —</div>
+    <div class="rej"><button class="rk" onclick="rej('v1:common_traveler_star_hat')">✕ 리젝</button>
+      <input class="rs" placeholder="리젝 사유" oninput="setReason('v1:common_traveler_star_hat',this.value)"></div>
+  </div><div class="card" data-uid="v1:common_golden_rose_shield">
+    <div class="imgs">
+      <div class="box"><span class=lbl>정적</span><img src="_compare/v1/armor/common_golden_rose_shield.png" loading=lazy></div>
+      <div class="box pend"><span class=lbl>애니</span><span class=ph>생성 예정</span></div>
+    </div>
+    <div class="meta"><span class="gb g1">1차</span><span class="nm">황금 장미 방패</span></div>
+    <div class="story pend">— 스토리 생성 예정 —</div>
+    <div class="rej"><button class="rk" onclick="rej('v1:common_golden_rose_shield')">✕ 리젝</button>
+      <input class="rs" placeholder="리젝 사유" oninput="setReason('v1:common_golden_rose_shield',this.value)"></div>
+  </div><div class="card" data-uid="v2:orc_ancestor_mask">
+    <div class="imgs">
+      <div class="box"><span class=lbl>정적</span><img src="sprites/armor/orc_ancestor_mask.png" loading=lazy></div>
+      <div class="box"><span class=lbl>애니</span><div class="anim" data-frames="15" style="background-image:url('sprites/anim/orc_ancestor_mask.webp')"></div></div>
+    </div>
+    <div class="meta"><span class="gb g2">2차</span><span class="nm">조상의 얼굴</span></div>
+    <div class="story">축제와 전쟁, 두 날에만 꺼내는 가면이다. 흰 뼈에 붉은 칠로 조상의 얼굴을 새기고 양옆에 깃털을 늘어뜨렸다. 이 가면을 쓴 자는 제 이름 대신 조상의 이름으로 불린다.</div>
+    <div class="rej"><button class="rk" onclick="rej('v2:orc_ancestor_mask')">✕ 리젝</button>
+      <input class="rs" placeholder="리젝 사유" oninput="setReason('v2:orc_ancestor_mask',this.value)"></div>
+  </div><div class="card" data-uid="v3:a-round-glasses-245">
+    <div class="imgs">
+      <div class="box"><span class=lbl>정적</span><img src="sprites/pool/a-round-glasses-245.png" loading=lazy></div>
+      <div class="box pend"><span class=lbl>애니</span><span class=ph>생성 예정</span></div>
+    </div>
+    <div class="meta"><span class="gb g3">3차</span><span class="nm">둥근 안경</span></div>
+    <div class="story pend">— 스토리 생성 예정 —</div>
+    <div class="rej"><button class="rk" onclick="rej('v3:a-round-glasses-245')">✕ 리젝</button>
+      <input class="rs" placeholder="리젝 사유" oninput="setReason('v3:a-round-glasses-245',this.value)"></div>
+  </div></div></main>
+<script>
+var RK='review120_v1';
+var NAMES={"v3:seed-kingdom_ribbon_rapier":"푸른 매듭","v3:seed-kingdom_court_twin_sabers":"마주 든 한 쌍","v3:seed-kingdom_winged_coronation_sword":"즉위의 깃","v3:seed-kingdom_falcon_cane_sword":"지팡이 속 한 줄","v3:seed-temple_frost_odachi":"서리를 벼린 대도","v3:seed-volcano_emberveined_greatsword":"잿불을 머금은 칼","v3:seed-swamp_lotus_trident":"세 갈래 물줄기","v3:seed-angel_star_wand":"별을 인 지팡이","v3:seed-volcano_dragonjaw_halberd":"용의 턱","v3:w-pumpkin-witch-staff-95":"잭오랜턴 지팡이","v3:seed-kingdom_banner_spear":"왕실 깃발 창","v3:seed-volcano_ember_scythe":"잿불을 거두는 낫","v3:w-vampire-rapier-114":"흡혈귀의 가는 검","v3:w-reaper-scythe-120":"영혼을 거두는 낫","v3:w-necromancer-staff-126":"해골 강령 지팡이","v3:w-assassin-twin-daggers-156":"그림자 쌍단검","v3:w-ornate-flintlock-pistol-162":"장식 플린트락 권총","v3:w-celestial-greatsword-153":"천공의 대검","v3:w-elven-longbow-154":"엘프의 은빛 장궁","v3:seed-volcano_forgeheart_warhammer":"대장간의 심장","v3:w-thunder-spear-191":"뇌격의 창","v3:w--57":"잠긴 문의 대검","v2:kingdom_masque_saber":"무도회의 한 수","v2:kingdom_coronation_mace":"왕을 짊어진 대검","v2:kingdom_dawnguard_sword":"동트는 맹세","v2:marsh_frog_blowgun":"퉤! 하는 대롱","v2:marsh_fen_scythe":"길잡이 낫","v2:volcano_dancer_daggers":"춤추는 쌍불꽃","v2:volcano_phoenix_bow":"재에서 당기는 활","v2:temple_frostward_bow":"봄을 겨눈 석궁","v2:angel_duskwing_sword":"노을이 앉는 검","v2:angel_cherub_bow":"두근 화살","v2:orc_hunter_boomerang":"돌아오는 뼈","v2:orc_shaman_staff":"묻지 않는 지팡이","v2:orc_ancestor_maul":"조상이 쥔 자루","v1:common_emperor_naginata":"황제의 나기나타","v1:fallen_seraph_glaive":"세라프의 글레이브","v1:fallen_decay_wing_scythe":"썩은 날개의 낫","v1:fallen_cherub_resting_rapier":"케르빔이 안 떠난 검","v2:angel_rose_rapier":"자비의 가는 검","v3:seed-angel_radiant_gown":"햇살을 두른 예복","v3:seed-kingdom_azure_outfit":"푸른 기사의 한 벌","v3:seed-angel_seraphguard_armor":"수호의 백은 경갑","v3:seed-kingdom_goldknight_plate":"황금 기사 갑주","v3:seed-temple_frostguard_garb":"설산 파수꾼","v3:seed-temple_breathwoven_vestment":"입김으로 짠 예복","v3:a-pumpkin-witch-outfit-96":"호박 마녀의 옷","v3:a-necromancer-robe-127":"강령술사의 로브","v3:a-test-gothic-lolita-150":"고딕 로리타 드레스","v3:a-test-military-coat-151":"군청 제복 코트","v3:seed-volcano_embersilk_dress":"불티를 두른 실크","v3:a-valkyrie-battle-dress-176":"발키리 전투복","v3:a-frost-warden-coat-179":"서리 파수꾼의 외투","v3:a-paladin-armor-180":"성기사의 백금 갑주","v3:a-dragon-knight-armor-186":"흑룡 기사 갑주","v3:a-phoenix-dancer-dress-183":"불사조 무희의 옷","v3:a-astrologer-outfit-103":"astrologer outfit","v2:kingdom_masque_gown":"이름 없는 드레스","v2:kingdom_regalia_cloak":"별을 두른 망토","v2:kingdom_riddle_coat":"별을 읽는 외투","v2:kingdom_dawnguard_cuirass":"여명의 벽","v2:marsh_frog_hood":"개구리 탈 망토","v2:marsh_bogwarden_chest":"늪빛 흉갑","v2:marsh_angler_cape":"도롱이","v2:volcano_dancer_cape":"불길 케이프","v2:volcano_gala_gown":"용암으로 짠 드레스","v2:temple_monk_sash":"한쪽 어깨 띠","v2:angel_risen_mantle":"부러진 적 있는 날개","v2:angel_cherub_armor":"구름 갑옷","v2:angel_penitent_drape":"사슬과 한쪽 날개","v2:orc_shaman_robe":"깃털 두른 침묵","v1:fallen_paladin_breastplate":"팰러딘의 흉갑","v1:common_aristocrat_lace_dress":"귀족 영애의 레이스 드레스","v1:fallen_celestial_gold_chest":"천상의 황금 흉갑","v2:temple_faux_robe":"자칭 훈장 사제복","v2:marsh_lily_gown":"수련이 피는 드레스","v3:a-desert-nomad-robes-231":"사막 유랑자의 의복","v3:a-academy-professor-robe-234":"왕립 학원 교수복","v3:a-academy-student-uniform-233":"왕립 학원 교복","v3:a-forest-ranger-outfit-240":"숲 순찰자의 옷","v3:seed-temple_snowflake_crown":"눈꽃의 관","v3:seed-temple_fur_stole":"흰 털 목도리","v3:seed-volcano_dragonscale_satchel":"용비늘 봇짐","v3:seed-volcano_dragonhorn_circlet":"용뿔 서클릿","v3:seed-volcano_obsidian_warfan":"흑요석 군선","v3:seed-swamp_mushroom_hat":"버섯 모자","v3:seed-swamp_lily_crown":"수련 꽃관","v3:seed-angel_glide_wings":"깃든 날개","v3:seed-kingdom_court_fan":"봉황 부채","v3:a-commander-epaulets-93":"사령관의 견장","v3:a-pumpkin-witch-hat-97":"호박 마녀의 모자","v3:a-phantom-half-mask-125":"괴인의 백자 반가면","v3:a-valkyrie-winged-circlet-179":"발키리 날개 서클릿","v3:a-devil-horns-winged-149":"박쥐날개 뿔머리띠","v3:a-dragon-horned-helm-187":"흑룡 뿔투구","v3:a-paladin-winged-helm-181":"성기사 날개 투구","v3:a-frost-kite-shield-82":"서리 카이트 실드","v2:kingdom_masque_mask":"이름을 가린 가면","v2:kingdom_regalia_crown":"별이 박힌 왕관","v2:kingdom_coronation_medallion":"사자의 증표","v2:kingdom_dawnguard_ring":"새벽지기의 표식","v2:kingdom_riddle_astrolabe":"대답하지 않는 나침반","v2:marsh_frog_jar":"반딧불 충전기","v2:marsh_bogwarden_horn":"부르면 모이는 뿔피리","v2:marsh_angler_creel":"반딧불 통발","v2:volcano_ember_hourglass":"재가 흐르는 모래시계","v2:temple_frostward_orb":"식지 않는 심장","v2:temple_monk_censer":"흔들리는 향로","v2:orc_shaman_banner":"조상의 깃발","v2:orc_ancestor_bracelet":"손목에 감은 조상","v2:orc_grumble_tankard":"한 잔의 보람","v2:orc_ironfang_necklace":"엄니에 새긴 무용담","v1:fallen_archangel_halo_crown":"대천사의 후광 crown","v2:temple_faux_halo":"철사로 띄운 후광","v2:kingdom_coronation_gauntlets":"맹세를 쥔 손","v2:orc_drum_shield":"북이 된 방패","v1:common_traveler_star_hat":"여행자의 별 모자","v1:common_golden_rose_shield":"황금 장미 방패","v2:orc_ancestor_mask":"조상의 얼굴","v3:a-round-glasses-245":"둥근 안경"};
+function load(){try{return JSON.parse(localStorage.getItem(RK)||'{}')}catch(e){return {}}}
+function save(o){localStorage.setItem(RK,JSON.stringify(o))}
+function apply(){var o=load(),cs=document.querySelectorAll('.card');for(var i=0;i<cs.length;i++){var c=cs[i],e=o[c.dataset.uid];c.classList.toggle('rejected',!!e);var inp=c.querySelector('.rs');if(e&&typeof e.reason==='string')inp.value=e.reason}upd()}
+function upd(){var o=load(),n=0;for(var u in o)n++;document.getElementById('cnt').textContent='리젝 '+n+'종'}
+function rej(uid){var o=load();if(o[uid])delete o[uid];else o[uid]={reason:''};save(o);apply()}
+function setReason(uid,v){var o=load();if(!o[uid])o[uid]={};o[uid].reason=v;save(o);upd()}
+function exportRej(){var o=load(),lines=[];for(var u in o){lines.push(u+'  |  '+(NAMES[u]||'')+(o[u].reason?'  |  '+o[u].reason:''))}
+ var t='[리젝 '+lines.length+'종]\n'+(lines.join('\n')||'(없음)');
+ var ta=document.getElementById('out');ta.value=t;ta.style.display='block';ta.select();try{navigator.clipboard.writeText(t)}catch(e){}}
+function clearRej(){if(confirm('리젝 표시 전체 초기화?')){localStorage.removeItem(RK);document.getElementById('out').style.display='none';apply()}}
+// 2차 애니 — 프로덕션과 동일: 15프레임 스트립을 박스폭에 맞춰 120ms마다 한 프레임씩.
+function startAnims(){var as=document.querySelectorAll('.anim[data-frames]');for(var i=0;i<as.length;i++){(function(el){var n=parseInt(el.dataset.frames,10);if(!n)return;var f=0;function tick(){var w=el.clientWidth;if(w){el.style.backgroundSize=(n*w)+'px '+w+'px';el.style.backgroundPositionX=(-f*w)+'px';f=(f+1)%n}}tick();setInterval(tick,120)})(as[i])}}
+apply();startAnims();
+</script></body></html>

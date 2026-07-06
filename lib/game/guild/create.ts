@@ -54,11 +54,12 @@ export async function createGuild(input: {
       .for('update');
     if (existing) throw new GuildError('ALREADY_IN_GUILD');
 
-    // 이름 중복 사전 체크(unique 제약이 최종 방어).
+    // 이름 중복 사전 체크 — 전역(전 서버) 유일. 한 서버에 있는 길드명은 다른 서버에서도
+    // 결성 불가(전역 unique 제약이 최종 방어). serverId로 좁히지 않는다.
     const [dup] = await tx
       .select({ id: guilds.id })
       .from(guilds)
-      .where(and(eq(guilds.serverId, input.serverId), eq(guilds.name, name)))
+      .where(eq(guilds.name, name))
       .limit(1);
     if (dup) throw new GuildError('NAME_TAKEN');
 

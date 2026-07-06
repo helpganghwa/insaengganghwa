@@ -44,8 +44,9 @@ export const guildDeployRoleEnum = pgEnum('guild_deploy_role', ['attack', 'defen
 /** §1·§2 guilds. name 변경불가. level=수용(10+level, L40서 50상한)+무제한(L41+ 과시, 혜택0). */
 export const guilds = pgTable('guilds', {
   id: bigserial('id', { mode: 'bigint' }).primaryKey(),
-  /** 소속 서버(SERVER.md P5) — 길드명 유일성은 서버별(guilds_server_name_uq). */
+  /** 소속 서버(SERVER.md P5). */
   serverId: smallint('server_id').notNull().default(1),
+  /** 길드명 — 전역(전 서버) 유일. 한 서버의 이름은 다른 서버에서도 결성 불가. */
   name: text('name').notNull().unique(),
   /** 3축(모양·색상톤·키워드) Pixellab 생성물(§1.6). 생성 전/실패 시 null → 폴백 문양. */
   emblemUrl: text('emblem_url'),

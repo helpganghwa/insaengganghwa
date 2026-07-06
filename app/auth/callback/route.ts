@@ -120,6 +120,12 @@ export async function GET(request: NextRequest) {
     }
   } else {
     console.error('[auth.callback] no code param', { params: searchParams.toString() });
+    // 사용자가 카카오 동의를 취소하면 code 없이 error=access_denied로 복귀 — 실패가 아니라
+    // 취소이므로 조용한 안내로 구분(붉은 '오류'가 아닌 회색 안내).
+    const oauthErr = searchParams.get('error');
+    if (oauthErr === 'access_denied') {
+      return NextResponse.redirect(`${origin}/login?error=cancelled`);
+    }
   }
   return NextResponse.redirect(`${origin}/login?error=oauth_failed`);
 }

@@ -10,6 +10,20 @@ import { isTestLoginEnabled, isCbtPaidHidden } from '@/lib/auth/test-accounts';
 import { listServersPublic, latestOpenServerId } from '@/lib/game/server-select';
 import { ServerPicker } from './ServerPicker';
 
+/**
+ * 로그인 에러 표시 문구 — 내부 코드(oauth_failed 등)를 유저 친화 한글로 매핑. actions.ts가
+ * 이미 한글 메시지를 넘긴 경우(한글 포함)는 그대로 노출하고, 매핑에 없는 미지의 코드는
+ * 원문 대신 일반 안내로 대체(내부 코드 유출 방지).
+ */
+function loginErrorMessage(raw: string): string {
+  const MAP: Record<string, string> = {
+    oauth_failed: '로그인에 실패했어요. 잠시 후 다시 시도해 주세요.',
+  };
+  if (MAP[raw]) return MAP[raw];
+  if (/[가-힣]/.test(raw)) return raw; // 이미 한글 안내 메시지
+  return '로그인에 실패했어요. 잠시 후 다시 시도해 주세요.';
+}
+
 /** 로그인 화면 서버 기본 선택 — 공유된 서버 > 직전 접속 서버(srv 잔존) > 최신 open 서버. */
 async function defaultServerId(open: { id: number; status: string }[]): Promise<number> {
   const jar = await cookies();
@@ -94,9 +108,11 @@ export default async function LoginPage({
         ) : null}
 
         {error ? (
-          <p className="text-sm text-red-600 dark:text-red-400">
-            로그인 실패: {error}
-          </p>
+          error === 'cancelled' ? (
+            <p className="text-sm text-zinc-500 dark:text-zinc-400">로그인이 취소되었어요. 다시 시도해 주세요.</p>
+          ) : (
+            <p className="text-sm text-red-600 dark:text-red-400">{loginErrorMessage(error)}</p>
+          )
         ) : null}
         {/* CBT 기간 데이터 초기화 사전 고지 — 게이트는 결제 숨김과 같은 CBT 플래그.
             정식 오픈(env off) 시 자동 미노출. */}

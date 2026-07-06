@@ -2,6 +2,7 @@ import { revalidatePath } from 'next/cache';
 
 import { getSessionUserId } from '@/lib/auth/session';
 import { rateLimited } from '@/lib/ratelimit';
+import { actionBlock } from '@/lib/game/action-gate';
 import { getActiveServerId } from '@/lib/game/servers';
 import { generateEmblem } from '@/lib/game/guild';
 import { isValidEmblemSelection, type EmblemSelection } from '@/lib/game/guild/emblem-vocab';
@@ -21,6 +22,11 @@ export const maxDuration = 180;
 export async function POST(req: Request) {
   const userId = await getSessionUserId();
   if (!userId) return Response.json({ status: 'error', code: 'UNAUTHENTICATED' }, { status: 401 });
+
+  // 정지/점검 게이트 — 이 라우트는 서버 액션이 아니라 fetch 엔드포인트라 레이아웃 게이트를
+  // 안 거친다. 정지 계정의 직접 POST(5,000💎 차감+AI 실호출)와 점검 중 경제 변이를 입구에서 차단.
+  const blocked = await actionBlock();
+  if (blocked) return Response.json({ status: 'error', code: blocked }, { status: 403 });
 
   // 고비용 생성(Anthropic+Pixellab 실호출) — 실패 시 캡이 안 올라 무한 재시도 가능하므로 입구에서 차단.
   if (await rateLimited(userId, 'guild')) {

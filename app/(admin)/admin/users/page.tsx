@@ -12,6 +12,7 @@ import { GEM_TO_MS } from '@/lib/game/balance';
 import { kstDateString } from '@/lib/kst';
 
 import { UserModActions } from './UserModActions';
+import { CompensateCancelButton } from './CompensateCancelButton';
 
 /**
  * 유저 통합 상세 — 닉네임 검색 → 계정 360도 뷰(캐릭터·지갑·장착·결제·아바타·제재).
@@ -281,6 +282,7 @@ export default async function AdminUsersPage({
                   <b>💎{detail.compDiamond.toLocaleString('ko-KR')}</b> (보석 단축 환율 1분=1💎, §6.2)
                   — 유저 정상 취소가 섞일 수 있으니 문의 내용과 대조 후 우편 발송
                 </p>
+                <CompensateCancelButton userId={detail.profile.id} diamond={detail.compDiamond} />
               </>
             )}
           </div>

@@ -167,6 +167,12 @@ export async function sendRequest(
   const [t] = await db.select({ id: profiles.id }).from(profiles).where(eq(profiles.id, targetId)).limit(1);
   if (!t) throw new FriendError('NOT_FOUND');
   return db.transaction(async (tx) => {
+    // 상호 동시 요청 레이스 방지 — PK가 방향성(requester,addressee)이라 A→B·B→A가 서로 다른
+    // 행이 되어 아직 없는 역방향을 FOR UPDATE로 못 잠근다. 정렬된 쌍으로 트랜잭션 advisory 락을
+    // 먼저 잡아 두 tx를 직렬화 → 나중 tx가 먼저 tx의 pending을 보고 '수락'으로 성립(중복 행 방지).
+    const lo = meId < targetId ? meId : targetId;
+    const hi = meId < targetId ? targetId : meId;
+    await tx.execute(sql`select pg_advisory_xact_lock(hashtextextended(${lo} || ${hi} || ${String(serverId)}, 0))`);
     const [existing] = await tx
       .select()
       .from(friendLinks)

@@ -322,6 +322,9 @@ export function EnhanceSlotCard({
       if (r.status === 'error') {
         setAttempting(false);
         showError(r.message);
+        // 유령 카드 해소 — cron/다른 탭이 먼저 정산해 잡이 사라졌으면(JOB_NOT_FOUND) 이
+        // 카드는 스테일. 서버 재동기화로 걷어내지 않으면 재탭마다 같은 토스트만 반복된다.
+        if (r.code === 'JOB_NOT_FOUND') router.refresh();
         return;
       }
       // 튜토리얼: 첫 강화 시도 완료 신호(코치가 attempt 단계일 때만 마무리 팝업).

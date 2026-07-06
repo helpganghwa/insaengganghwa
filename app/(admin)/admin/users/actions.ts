@@ -1,14 +1,19 @@
 'use server';
 
 import { revalidatePath } from 'next/cache';
-import { eq } from 'drizzle-orm';
+import { and, eq } from 'drizzle-orm';
 
 import { requireAdmin } from '@/lib/auth/require-admin';
 import { db } from '@/lib/db/client';
 import { profiles } from '@/lib/db/schema/profiles';
 import { mailbox } from '@/lib/db/schema/mailbox';
+import { enhancementJobs } from '@/lib/db/schema/enhance';
+import { GEM_TO_MS } from '@/lib/game/balance';
 
 type Result = { status: 'success' } | { status: 'error'; code: string };
+
+// 취소 피해 보상 상한 — 오지급 방어. 정상적 산정치는 수천 규모, 이 이상은 수기 우편으로.
+const COMP_MAX_DIAMOND = 100_000;
 
 /**
  * 유저 단위 제재 액션 — 신고 접수 없이도 선제 조치 가능(결제 어뷰징·매크로 등).
@@ -51,6 +56,44 @@ export async function unbanUserAction(userId: string): Promise<Result> {
 }
 
 /** 경고 우편 — 유저의 활성 서버 우편함으로 발송. */
+/**
+ * 강화 취소 피해 보상 우편 발송 — 취소된 잡의 진행 소실(cancelled_at − started_at) 합계를
+ * 보석 단축 환율(1분=1💎)로 환산해 다이아 우편 지급. 금액은 화면 표기와 무관하게 서버에서
+ * 재계산(클라 신뢰 금지)하고 상한 클램프. 유저 정상 취소가 섞일 수 있어 운영 판단 후 클릭하는 도구.
+ */
+export async function compensateCancelDamageAction(userId: string): Promise<Result> {
+  await requireAdmin();
+  const [p] = await db
+    .select({ sid: profiles.lastServerId })
+    .from(profiles)
+    .where(eq(profiles.id, userId))
+    .limit(1);
+  if (!p) return { status: 'error', code: 'NOT_FOUND' };
+
+  const jobs = await db
+    .select({ startedAt: enhancementJobs.startedAt, cancelledAt: enhancementJobs.cancelledAt })
+    .from(enhancementJobs)
+    .where(and(eq(enhancementJobs.userId, userId), eq(enhancementJobs.status, 'cancelled')));
+  const lostMs = jobs.reduce(
+    (s, j) => s + (j.cancelledAt ? Math.max(0, j.cancelledAt.getTime() - j.startedAt.getTime()) : 0),
+    0,
+  );
+  const diamond = Math.min(COMP_MAX_DIAMOND, Math.ceil(lostMs / GEM_TO_MS));
+  if (diamond <= 0) return { status: 'error', code: 'NOTHING_TO_COMPENSATE' };
+
+  await db.insert(mailbox).values({
+    userId,
+    serverId: p.sid ?? 1,
+    type: 'reward',
+    title: '강화 진행 보상',
+    body: `강화 취소로 손실된 진행 시간(약 ${Math.round(lostMs / 60_000)}분)에 대한 보상입니다. 불편을 드려 죄송합니다.`,
+    senderLabel: '운영팀',
+    payload: { diamond },
+  });
+  revalidatePath('/admin/users');
+  return { status: 'success' };
+}
+
 export async function warnUserAction(userId: string): Promise<Result> {
   await requireAdmin();
   const [p] = await db

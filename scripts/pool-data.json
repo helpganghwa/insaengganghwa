@@ -1,0 +1,1478 @@
+[
+  {
+    "id": "seed-kingdom_winged_coronation_sword",
+    "slot": "weapon",
+    "label": "즉위의 깃",
+    "prompt": "a regal fantasy longsword with a golden winged crossguard and a sky-blue gem in the hilt"
+  },
+  {
+    "id": "seed-kingdom_ribbon_rapier",
+    "slot": "weapon",
+    "label": "푸른 매듭",
+    "prompt": "a slender royal rapier with a swept silver guard and a trailing blue ribbon"
+  },
+  {
+    "id": "seed-kingdom_court_twin_sabers",
+    "slot": "weapon",
+    "label": "마주 든 한 쌍",
+    "prompt": "a pair of slim curved court sabers crossed in an X with golden tasseled hilts"
+  },
+  {
+    "id": "seed-kingdom_falcon_cane_sword",
+    "slot": "weapon",
+    "label": "지팡이 속 한 줄",
+    "prompt": "an elegant gentlemans cane-sword with a polished dark shaft and a brass falcon-head handle"
+  },
+  {
+    "id": "seed-temple_first_snow_musket",
+    "slot": "weapon",
+    "label": "첫눈을 겨눈 총신",
+    "prompt": "an ornate antique fantasy flintlock musket — the long ceremonial hunting gun of a snow-temple hunter, a single long decorated barrel with an engraved wooden stock and frost-rune fittings, no telescopic scope, not a modern rifle, splendid frost-white and silver, a beautiful clean fantasy anime RPG gacha-game weapon, isolated object on a plain flat empty background, large, pixel art"
+  },
+  {
+    "id": "seed-temple_glacier_lance",
+    "slot": "weapon",
+    "label": "빙하가 벼린 창",
+    "prompt": "a lance — the glacier-forged cavalry lance of a snow-temple knight, sacred and unbreakable"
+  },
+  {
+    "id": "seed-temple_frost_odachi",
+    "slot": "weapon",
+    "label": "서리를 벼린 대도",
+    "prompt": "a long slender frost odachi greatsword with a pale ice-blue blade and a silver-wrapped hilt"
+  },
+  {
+    "id": "seed-orc_festival_glaive",
+    "slot": "weapon",
+    "label": "축제의 언월",
+    "prompt": "a tribal war-glaive — the festival glaive of an orc dancer-warrior, vivid and joyful, fierce yet splendid"
+  },
+  {
+    "id": "seed-volcano_emberveined_greatsword",
+    "slot": "weapon",
+    "label": "잿불을 머금은 칼",
+    "prompt": "a massive obsidian greatsword veined with ember-orange lava and a gold-edged blade"
+  },
+  {
+    "id": "seed-volcano_dragonjaw_halberd",
+    "slot": "weapon",
+    "label": "용의 턱",
+    "prompt": "a halberd — the dragon-jaw poleaxe of a volcano forge-knight, fierce yet splendid"
+  },
+  {
+    "id": "seed-volcano_forgeheart_warhammer",
+    "slot": "weapon",
+    "label": "대장간의 심장",
+    "prompt": "a warhammer — the forge-heart maul of a volcano smith-warrior, molten and mighty"
+  },
+  {
+    "id": "seed-swamp_blossom_rapier",
+    "slot": "weapon",
+    "label": "피어나는 한 송이",
+    "prompt": "a rapier — the blooming fairy rapier of a swamp duelist, delicate and lovely"
+  },
+  {
+    "id": "seed-swamp_lotus_trident",
+    "slot": "weapon",
+    "label": "세 갈래 물줄기",
+    "prompt": "an elegant fairy trident of living mint wood with three slender prongs and small water-lily blooms"
+  },
+  {
+    "id": "seed-angel_dawnlight_longsword",
+    "slot": "weapon",
+    "label": "여명의 빛줄기",
+    "prompt": "a longsword — the dawn-light blade of a celestial guardian, radiant and noble"
+  },
+  {
+    "id": "seed-angel_halo_glaive",
+    "slot": "weapon",
+    "label": "후광을 두른 날",
+    "prompt": "a glaive — the haloed warglaive of a celestial knight, radiant and graceful"
+  },
+  {
+    "id": "seed-angel_morningstar_spear",
+    "slot": "weapon",
+    "label": "새벽별 한 점",
+    "prompt": "a spear — the morning-star lance of a celestial sentinel, radiant and noble"
+  },
+  {
+    "id": "seed-kingdom_guard_warhammer",
+    "slot": "weapon",
+    "label": "근위의 망치",
+    "prompt": "a warhammer — the ceremonial guard warhammer of the royal palace, regal and commanding"
+  },
+  {
+    "id": "seed-kingdom_banner_spear",
+    "slot": "weapon",
+    "label": "왕실 깃발 창",
+    "prompt": "a royal banner spear"
+  },
+  {
+    "id": "seed-volcano_ember_scythe",
+    "slot": "weapon",
+    "label": "잿불을 거두는 낫",
+    "prompt": "a flaming scythe"
+  },
+  {
+    "id": "seed-angel_star_wand",
+    "slot": "weapon",
+    "label": "별을 인 지팡이",
+    "prompt": "a winged star wand"
+  },
+  {
+    "id": "seed-temple_breathwoven_vestment",
+    "slot": "armor",
+    "label": "입김으로 짠 예복",
+    "prompt": "a sacred vestment — the rune-woven robe of a frost-temple priestess, serene and luminous"
+  },
+  {
+    "id": "seed-temple_runeguard_armor",
+    "slot": "armor",
+    "label": "글자를 새긴 경갑",
+    "prompt": "slim silver-and-ice-blue rune light armor with a short tasset skirt and etched sacred glyphs"
+  },
+  {
+    "id": "seed-temple_aurora_gown",
+    "slot": "armor",
+    "label": "새벽빛 자락",
+    "prompt": "an aurora gown — the shimmering dress of a winter temple oracle, serene and lovely"
+  },
+  {
+    "id": "seed-temple_frostguard_garb",
+    "slot": "armor",
+    "label": "설산 파수꾼",
+    "prompt": "a guardian garb — the frost-guard outfit of a snow-temple sentinel, disciplined and noble"
+  },
+  {
+    "id": "seed-volcano_emberpriest_dress",
+    "slot": "armor",
+    "label": "잿불맥동",
+    "prompt": "a cuirass dress — the ember-priestess attire of a volcano shrine, fierce and elegant"
+  },
+  {
+    "id": "seed-volcano_ronin_garb",
+    "slot": "armor",
+    "label": "잿불 무사",
+    "prompt": "a wanderer garb — the ember-ronin outfit of a volcano swordsman, bold and rugged"
+  },
+  {
+    "id": "seed-volcano_embersilk_dress",
+    "slot": "armor",
+    "label": "불티를 두른 실크",
+    "prompt": "an ember-silk dress — the flame-shrine gown of a volcano priestess, elegant and fierce"
+  },
+  {
+    "id": "seed-swamp_petal_fairy_dress",
+    "slot": "armor",
+    "label": "요정의 첫 꽃잎",
+    "prompt": "a petal dress — the first-flight gown of a young bog-fairy woven from dawn flower petals, light and joyful"
+  },
+  {
+    "id": "seed-swamp_lotus_dress",
+    "slot": "armor",
+    "label": "수련을 두른 사람",
+    "prompt": "a lotus dress — the bloom-gown of a swamp lily maiden, fresh and lovely"
+  },
+  {
+    "id": "seed-angel_radiant_gown",
+    "slot": "armor",
+    "label": "햇살을 두른 예복",
+    "prompt": "a flowing white-and-gold radiant gown with golden ray patterns and a feathered hem"
+  },
+  {
+    "id": "seed-angel_seraphguard_armor",
+    "slot": "armor",
+    "label": "수호의 백은 경갑",
+    "prompt": "holy light armor — the winged guard-plate of a celestial knight, slim and radiant"
+  },
+  {
+    "id": "seed-kingdom_goldknight_plate",
+    "slot": "armor",
+    "label": "황금 기사 갑주",
+    "prompt": "a gold-and-crimson knight plate"
+  },
+  {
+    "id": "seed-kingdom_azure_outfit",
+    "slot": "armor",
+    "label": "푸른 기사의 한 벌",
+    "prompt": "a blue-and-white knight outfit"
+  },
+  {
+    "id": "seed-temple_snowflake_crown",
+    "slot": "accessory",
+    "label": "눈꽃의 관",
+    "prompt": "a radiant silver crown shaped from large six-sided snowflake crystals"
+  },
+  {
+    "id": "seed-temple_fur_stole",
+    "slot": "accessory",
+    "label": "흰 털 목도리",
+    "prompt": "a fur stole — a winter temple's cozy white shoulder wrap, soft and luxurious"
+  },
+  {
+    "id": "seed-temple_prayer_lantern",
+    "slot": "accessory",
+    "label": "기도의 등불",
+    "prompt": "a lantern on a staff — the frost prayer-lantern of a snow temple, serene and luminous"
+  },
+  {
+    "id": "seed-orc_war_horn",
+    "slot": "accessory",
+    "label": "부족의 뿔나팔",
+    "prompt": "a war horn — the great curved battle-horn of an orc festival, bone bound with feathers, slung at the side"
+  },
+  {
+    "id": "seed-volcano_dragonhorn_circlet",
+    "slot": "accessory",
+    "label": "용뿔 서클릿",
+    "prompt": "a circlet — the dragon-horn diadem of a volcano champion, bold and regal"
+  },
+  {
+    "id": "seed-volcano_dragonscale_satchel",
+    "slot": "accessory",
+    "label": "용비늘 봇짐",
+    "prompt": "a large black dragon-scale leather satchel with molten-gold buckles worn across the body on a braided strap"
+  },
+  {
+    "id": "seed-volcano_obsidian_warfan",
+    "slot": "accessory",
+    "label": "흑요석 군선",
+    "prompt": "a large black-and-gold war-fan with obsidian ribs and ember-orange edges"
+  },
+  {
+    "id": "seed-volcano_forge_lantern",
+    "slot": "accessory",
+    "label": "꺼지지 않는 등불",
+    "prompt": "a lantern — the ever-burning forge lantern of a volcano smith on a chain, warm and bold"
+  },
+  {
+    "id": "seed-volcano_ashrelic_tome",
+    "slot": "accessory",
+    "label": "잿빛 비책",
+    "prompt": "an open grimoire — the ash-sage spellbook of the volcano, arcane and bold"
+  },
+  {
+    "id": "seed-swamp_lily_crown",
+    "slot": "accessory",
+    "label": "수련 꽃관",
+    "prompt": "a lush flower crown woven of large pink water-lilies and green leaves"
+  },
+  {
+    "id": "seed-swamp_mushroom_hat",
+    "slot": "accessory",
+    "label": "버섯 모자",
+    "prompt": "a hat — the oversized mushroom-cap hat of a swamp herbalist, cute and cozy"
+  },
+  {
+    "id": "seed-swamp_firefly_jar",
+    "slot": "accessory",
+    "label": "반딧불 병",
+    "prompt": "a jar lantern — a swamp child's jar of fireflies, charming and warm"
+  },
+  {
+    "id": "seed-angel_glide_wings",
+    "slot": "accessory",
+    "label": "깃든 날개",
+    "prompt": "a pair of small feathered angel wings — delicate white-and-gold wings worn at the back, light and radiant"
+  },
+  {
+    "id": "seed-kingdom_court_fan",
+    "slot": "accessory",
+    "label": "봉황 부채",
+    "prompt": "a crimson-and-gold phoenix court fan"
+  },
+  {
+    "id": "w--47",
+    "slot": "weapon",
+    "label": "숨은 칼 양산",
+    "prompt": "a lace parasol that conceals a slim hidden blade — a duelist's elegant disguise, graceful and sly"
+  },
+  {
+    "id": "w--48",
+    "slot": "weapon",
+    "label": "먹의 일필",
+    "prompt": "a giant calligraphy brush wielded as a spear — an ink-warrior's weapon that paints as it strikes, bold and artful"
+  },
+  {
+    "id": "w--49",
+    "slot": "weapon",
+    "label": "닻검",
+    "prompt": "a great anchor forged into a sword — a sky-pirate's massive anchor-blade, heavy and daring"
+  },
+  {
+    "id": "a--50",
+    "slot": "armor",
+    "label": "낙엽 정령옷",
+    "prompt": "an outfit woven from autumn leaves and drifting petals — a wandering season-spirit's garb, warm and whimsical"
+  },
+  {
+    "id": "a--51",
+    "slot": "armor",
+    "label": "태엽 드레스",
+    "prompt": "a clockwork gown with little brass gears turning along the hem — a tinker-princess's dress, intricate and charming"
+  },
+  {
+    "id": "a--52",
+    "slot": "armor",
+    "label": "종이학 드레스",
+    "prompt": "a dress folded from a thousand white origami paper cranes — delicate and wondrous"
+  },
+  {
+    "id": "a--53",
+    "slot": "accessory",
+    "label": "작은 행성",
+    "prompt": "a tiny floating planet orbited by little moons, hovering at the shoulder — a cosmic companion charm"
+  },
+  {
+    "id": "a--54",
+    "slot": "accessory",
+    "label": "주머니 어항",
+    "prompt": "a glass orb pocket-aquarium with a tiny living koi swimming inside — serene and magical"
+  },
+  {
+    "id": "a--55",
+    "slot": "accessory",
+    "label": "도깨비불 새장",
+    "prompt": "an ornate birdcage lantern holding a captured will-o-wisp — eerie and lovely"
+  },
+  {
+    "id": "w--56",
+    "slot": "weapon",
+    "label": "공명 창",
+    "prompt": "a tuning-fork halberd that hums with resonant sound — a sound-knight's resonant polearm, sleek and strange"
+  },
+  {
+    "id": "w--57",
+    "slot": "weapon",
+    "label": "열쇠 대검",
+    "prompt": "an oversized skeleton-key forged into a greatsword — a vault-warden's curious key-blade, ornate and grand"
+  },
+  {
+    "id": "w--58",
+    "slot": "weapon",
+    "label": "비눗방울 지팡이",
+    "prompt": "a bubble-blowing wand that fires shimmering soap bubbles — a carnival mage's playful weapon, whimsical and bright"
+  },
+  {
+    "id": "a--59",
+    "slot": "armor",
+    "label": "물의 드레스",
+    "prompt": "a gown made of flowing water held in shape by magic — a river-spirit's liquid dress, translucent and serene"
+  },
+  {
+    "id": "a--60",
+    "slot": "armor",
+    "label": "버섯 갑주",
+    "prompt": "an armored outfit grown from mushrooms and moss — a forest-gnome's living fungal armor, earthy and cute"
+  },
+  {
+    "id": "a--61",
+    "slot": "armor",
+    "label": "은하 가운",
+    "prompt": "a ballgown whose skirt contains a swirling spiral galaxy — cosmic and breathtaking"
+  },
+  {
+    "id": "a--62",
+    "slot": "accessory",
+    "label": "떠도는 두루마리",
+    "prompt": "a stack of floating spell-scrolls orbiting like a halo — a scribe-sage's circling parchments"
+  },
+  {
+    "id": "a--63",
+    "slot": "accessory",
+    "label": "스노우볼 펜던트",
+    "prompt": "a snow-globe pendant with a tiny winter village inside — nostalgic and magical"
+  },
+  {
+    "id": "a--64",
+    "slot": "accessory",
+    "label": "태엽 잠자리",
+    "prompt": "a mechanical dragonfly with whirring brass wings perched at the shoulder — a tinker's clockwork pet"
+  },
+  {
+    "id": "w-sunrise-longsword-65",
+    "slot": "weapon",
+    "label": "sunrise longsword",
+    "prompt": "a slender longsword whose blade shimmers like the dawn sky in gold and rose — the sword of a young sunrise knight, elegant and hopeful"
+  },
+  {
+    "id": "w-crimson-naginata-66",
+    "slot": "weapon",
+    "label": "crimson naginata",
+    "prompt": "a graceful twin-bladed naginata wound with flowing crimson cord — the polearm of a battle-dancer, sleek and fierce"
+  },
+  {
+    "id": "a-scholar-coat-dress-67",
+    "slot": "armor",
+    "label": "scholar coat-dress",
+    "prompt": "an elegant high-collared coat-dress in deep teal and silver — the traveling attire of a star-charting scholar, refined and adventurous"
+  },
+  {
+    "id": "a-herbalist-dress-68",
+    "slot": "armor",
+    "label": "herbalist dress",
+    "prompt": "a soft layered dress in cream and dusty rose with a knit shawl — the gentle outfit of a village herbalist, warm and cute"
+  },
+  {
+    "id": "a-astrolabe-pendant-69",
+    "slot": "accessory",
+    "label": "astrolabe pendant",
+    "prompt": "an ornate astrolabe pendant of brass and blue enamel — a sky-navigator's heirloom, intricate and lovely"
+  },
+  {
+    "id": "a-traveler-hat-70",
+    "slot": "accessory",
+    "label": "traveler hat",
+    "prompt": "a wide-brimmed traveler's hat with a feather and a folded map tucked in the band — charming and adventurous"
+  },
+  {
+    "id": "w-phoenix-greatsword-71",
+    "slot": "weapon",
+    "label": "phoenix greatsword",
+    "prompt": "a magnificent greatsword with a blade of layered peacock-sheen steel and a jeweled phoenix crossguard — the splendid blade of a flame-empress, dazzling, lavishly ornate and regal"
+  },
+  {
+    "id": "w-frostfire-glaive-72",
+    "slot": "weapon",
+    "label": "frostfire glaive",
+    "prompt": "a graceful glaive crowned with a crescent of frostfire and trailing ribbons of pale-blue flame — the radiant polearm of a winter comet-rider, lavishly ornate and otherworldly"
+  },
+  {
+    "id": "a-peacock-gown-73",
+    "slot": "armor",
+    "label": "peacock gown",
+    "prompt": "an opulent layered gown of peacock-teal and gold with a cascade of jeweled feathers and a high lace collar — the splendid attire of a celestial peacock-princess, dazzling and graceful"
+  },
+  {
+    "id": "a-camellia-battle-dress-74",
+    "slot": "armor",
+    "label": "camellia battle-dress",
+    "prompt": "an ornate floral battle-dress of crimson and gold lacquered armor-petals — the splendid outfit of a camellia warrior-maiden, fierce and beautiful"
+  },
+  {
+    "id": "a-phoenix-headdress-75",
+    "slot": "accessory",
+    "label": "phoenix headdress",
+    "prompt": "a grand ornate headdress of golden filigree, dangling pearls and a single blue phoenix plume — the splendid crown of a sky-court dancer, dazzling and regal"
+  },
+  {
+    "id": "a-serpent-hand-mirror-76",
+    "slot": "accessory",
+    "label": "serpent hand-mirror",
+    "prompt": "an opulent jeweled hand-mirror framed by golden serpents and moonstones — an enchantress's splendid relic, ornate and mysterious"
+  },
+  {
+    "id": "w-dragoon-spear-77",
+    "slot": "weapon",
+    "label": "dragoon spear",
+    "prompt": "an ornate war-spear with a leaf-shaped blade and a banner of royal silk — the splendid lance of a dragoon captain, regal and bold"
+  },
+  {
+    "id": "w-sun-dancer-scimitar-78",
+    "slot": "weapon",
+    "label": "sun-dancer scimitar",
+    "prompt": "a curved scimitar with a sunburst goldwork hilt and a sandstone-red blade — the splendid saber of a desert sun-dancer, fierce and dazzling"
+  },
+  {
+    "id": "a-moonlit-duelist-suit-79",
+    "slot": "armor",
+    "label": "moonlit duelist suit",
+    "prompt": "an ornate slim battle-suit of indigo and silver with a feathered half-cape and fitted trousers — the splendid attire of a moonlit duelist, sleek and dashing, not a dress"
+  },
+  {
+    "id": "a-lotus-martial-outfit-80",
+    "slot": "armor",
+    "label": "lotus martial outfit",
+    "prompt": "a layered martial-artist outfit of crimson and gold with a sash, armored sleeves and fitted pants — the splendid garb of a lotus warrior, fierce and graceful, not a dress"
+  },
+  {
+    "id": "a-phoenix-round-shield-81",
+    "slot": "accessory",
+    "label": "phoenix round shield",
+    "prompt": "a grand round shield emblazoned with a golden phoenix on deep crimson, rimmed with ornate gold filigree — a splendid royal aegis, dazzling and bold"
+  },
+  {
+    "id": "a-frost-kite-shield-82",
+    "slot": "accessory",
+    "label": "frost kite shield",
+    "prompt": "an ornate kite shield of frost-blue crystal and silver with a snowflake boss — a splendid winter guardian's shield, elegant and radiant"
+  },
+  {
+    "id": "w-witch-staff-83",
+    "slot": "weapon",
+    "label": "witch staff",
+    "prompt": "a witch's magic staff topped with a crescent moon cradling a violet crystal, wound with little gold stars — the wand of a young anime witch in deep violet and gold, charming and magical"
+  },
+  {
+    "id": "a-witch-outfit-84",
+    "slot": "armor",
+    "label": "witch outfit",
+    "prompt": "a cute anime witch outfit — a knee-length violet skirt-dress with a gold-star-trimmed bodice, a short cape and a belt, with stockings — charming and magical, in deep violet and gold, not a long gown"
+  },
+  {
+    "id": "a-witch-hat-85",
+    "slot": "accessory",
+    "label": "witch hat",
+    "prompt": "a young anime witch's wide pointed hat in deep violet with a gold star band, a buckle and a softly curled tip — charming and magical"
+  },
+  {
+    "id": "w-halloween-witch-staff-86",
+    "slot": "weapon",
+    "label": "halloween witch staff",
+    "prompt": "a gnarled black wooden witch's staff topped with a twisted claw clutching a purple crystal orb, with a little bat charm dangling — a Halloween witch's spooky-cute staff, black with violet accents"
+  },
+  {
+    "id": "a-halloween-witch-outfit-87",
+    "slot": "armor",
+    "label": "halloween witch outfit",
+    "prompt": "a classic Halloween witch outfit — a black knee-length dress with a tattered zigzag hem, purple lace, a corset belt and striped stockings — a spooky-cute anime witch in black with violet accents, not a long gown"
+  },
+  {
+    "id": "a-halloween-witch-hat-88",
+    "slot": "accessory",
+    "label": "halloween witch hat",
+    "prompt": "a classic black witch's wide pointed hat with a big buckle, a bent drooping tip and a purple band — a Halloween witch's spooky-cute hat"
+  },
+  {
+    "id": "w-gunblade-89",
+    "slot": "weapon",
+    "label": "gunblade",
+    "prompt": "an ornate gunblade — a slim engraved sword fused with a flintlock pistol, the splendid dual-weapon of a noble duelist, fierce and elegant"
+  },
+  {
+    "id": "w-bell-warhammer-90",
+    "slot": "weapon",
+    "label": "bell warhammer",
+    "prompt": "a great ceremonial warhammer with a domed bronze bell-head wrapped in gold prayer-bands — a temple guardian's splendid maul, bold and resonant"
+  },
+  {
+    "id": "a-archmage-cloak-91",
+    "slot": "armor",
+    "label": "archmage cloak",
+    "prompt": "a dramatic hooded cloak-mantle of deep wine and gold with an ornate gem clasp, draped over the shoulders — a wandering archmage's splendid traveling cloak, soft cloth not armor"
+  },
+  {
+    "id": "a-sailor-academy-outfit-92",
+    "slot": "armor",
+    "label": "sailor academy outfit",
+    "prompt": "a cute casual outfit — a sailor-collar blouse with a pleated suspender skirt and a ribbon, fresh and youthful, an academy student's everyday wear, soft cloth not armor"
+  },
+  {
+    "id": "a-commander-epaulets-93",
+    "slot": "accessory",
+    "label": "commander epaulets",
+    "prompt": "ornate feathered shoulder-epaulets with hanging gold chains and gems — a sky-commander's splendid regalia, worn at the shoulders"
+  },
+  {
+    "id": "a-sun-mask-94",
+    "slot": "accessory",
+    "label": "sun mask",
+    "prompt": "a grand ceremonial sun-mask of gold and jade — a sun-priest's splendid visage, radiant and bold"
+  },
+  {
+    "id": "w-pumpkin-witch-staff-95",
+    "slot": "weapon",
+    "label": "pumpkin witch staff",
+    "prompt": "a gnarled black wooden witch's staff crowned with a small carved jack-o-lantern and curls of orange flame, a black cat charm dangling — a pumpkin-night witch's spooky-cute staff, black and pumpkin-orange"
+  },
+  {
+    "id": "a-pumpkin-witch-outfit-96",
+    "slot": "armor",
+    "label": "pumpkin witch outfit",
+    "prompt": "a Halloween witch outfit — a black knee-length dress with pumpkin-orange ruffles and a tattered hem, an orange sash bow and black-and-orange striped stockings — a spooky-cute anime witch in black and pumpkin-orange, not a long gown"
+  },
+  {
+    "id": "a-pumpkin-witch-hat-97",
+    "slot": "accessory",
+    "label": "pumpkin witch hat",
+    "prompt": "a black witch's wide pointed hat with an orange ribbon band, a gold buckle, a bent tip and a tiny pumpkin charm — a Halloween witch's spooky-cute hat, black and pumpkin-orange"
+  },
+  {
+    "id": "w-clockwork-lance-99",
+    "slot": "weapon",
+    "label": "clockwork lance",
+    "prompt": "a clockwork spear with rotating brass gears and a hissing steam-piston tip, copper and bronze — a tinkerer's quirky steampunk lance, intricate and bold"
+  },
+  {
+    "id": "a-tinkerer-outfit-100",
+    "slot": "armor",
+    "label": "tinkerer outfit",
+    "prompt": "a tinkerer's outfit — a knee-length brass-buttoned coat-dress with leather strap-belts, gear trims and short boots, copper and brown — quirky steampunk, not a long gown"
+  },
+  {
+    "id": "a-clockwork-goggles-101",
+    "slot": "accessory",
+    "label": "clockwork goggles",
+    "prompt": "brass clockwork goggles with multiple flip-up magnifying lenses and tiny turning gears, copper and bronze — a tinkerer's signature eyewear"
+  },
+  {
+    "id": "w-armillary-staff-102",
+    "slot": "weapon",
+    "label": "armillary staff",
+    "prompt": "an astrologer's tall staff topped with a golden armillary sphere of nested rings and a star, deep navy and gold — a stargazer's elegant celestial staff"
+  },
+  {
+    "id": "a-astrologer-outfit-103",
+    "slot": "armor",
+    "label": "astrologer outfit",
+    "prompt": "an astrologer's outfit — a navy knee-length coat-dress with gold constellation embroidery, a flowing star-map half-cape and a belt — elegant and mystical, not a long gown"
+  },
+  {
+    "id": "a-constellation-circlet-104",
+    "slot": "accessory",
+    "label": "constellation circlet",
+    "prompt": "a golden circlet with a small orbiting star and a crescent moon over the brow, deep navy and gold — a stargazer's elegant diadem"
+  },
+  {
+    "id": "w-plague-cane-blade-104",
+    "slot": "weapon",
+    "label": "plague cane-blade",
+    "prompt": "a plague-doctor's cane-sword — a black lacquered walking cane concealing a thin blade, with a glass alchemy vial set in the silver pommel — eerie, refined and masculine"
+  },
+  {
+    "id": "a-plague-doctor-coat-105",
+    "slot": "armor",
+    "label": "plague doctor coat",
+    "prompt": "a plague-doctor's outfit — a long black waxed-leather coat with brass buckles, a high collar, dark gloves and tall boots — eerie and elegant, a masculine figure, not a dress"
+  },
+  {
+    "id": "a-plague-beak-mask-106",
+    "slot": "accessory",
+    "label": "plague beak mask",
+    "prompt": "a plague-doctor's beaked mask of dark leather and brass with round glass goggle-eyes — eerie and iconic"
+  },
+  {
+    "id": "a-scholar-half-moon-glasses-108",
+    "slot": "accessory",
+    "label": "scholar half-moon glasses",
+    "prompt": "elegant silver half-moon reading glasses with an ornate filigree bridge — a wise court scholar's eyewear, refined and graceful"
+  },
+  {
+    "id": "a-enchantress-cat-eye-glasses-109",
+    "slot": "accessory",
+    "label": "enchantress cat-eye glasses",
+    "prompt": "stylish ornate cat-eye glasses with jeweled corners and a delicate chain, deep violet and gold — an enchantress's chic eyewear, elegant and mysterious"
+  },
+  {
+    "id": "w-hidden-gun-sword-113",
+    "slot": "weapon",
+    "label": "hidden-gun sword",
+    "prompt": "an elegant ornate longsword that secretly conceals a gun — shaped fully as a graceful noble's sword, with a flintlock barrel, hammer and trigger cleverly built into the ornate hilt and crossguard, a disguised sword-pistol that looks like a sword first, engraved steel and gold, refined and surprising"
+  },
+  {
+    "id": "a-round-wizard-glasses-113",
+    "slot": "accessory",
+    "label": "round wizard glasses",
+    "prompt": "a single pair of round fantasy spectacles with thin gold frames, small crystal lenses and a tiny chain — only the eyewear, a small object, no building, no cathedral, no scenery, a single isolated object on a plain flat empty background, pixel art"
+  },
+  {
+    "id": "w-cute-devil-trident-111",
+    "slot": "weapon",
+    "label": "cute devil trident",
+    "prompt": "a cute little-devil trident — a small chubby pitchfork with a rounded heart-shaped fork in glossy black and pink-crimson with a tiny bat charm — adorable and spooky-cute"
+  },
+  {
+    "id": "a-cute-devil-dress-112",
+    "slot": "armor",
+    "label": "cute devil dress",
+    "prompt": "a cute little-devil costume dress — a black-and-crimson knee-length dress with long puffed sleeves, a high frilled collar, a frilled hem, a little devil tail and striped tights, fully covered with no exposed skin — spooky-cute anime, shown as just the worn outfit, not a long gown"
+  },
+  {
+    "id": "a-devil-horns-headband-113",
+    "slot": "accessory",
+    "label": "devil horns headband",
+    "prompt": "a cute little-devil horn headband in glossy black and crimson with small curved horns and a tiny bow — a spooky-cute devil costume accessory, just the headband, no wings"
+  },
+  {
+    "id": "w-vampire-rapier-114",
+    "slot": "weapon",
+    "label": "vampire rapier",
+    "prompt": "a vampire noble's ornate rapier with a bat-wing guard and a blood-red ruby pommel, black and crimson with gold — elegant, gothic and deadly"
+  },
+  {
+    "id": "a-vampire-costume-115",
+    "slot": "armor",
+    "label": "vampire costume",
+    "prompt": "a vampire costume — a black-and-crimson knee-length gothic dress with a high collar, a flowing bat-wing cape, lace ruffles and a corset, long sleeves and tights, fully covered — elegant and spooky, not a long gown"
+  },
+  {
+    "id": "a-vampire-caped-collar-116",
+    "slot": "accessory",
+    "label": "vampire caped collar",
+    "prompt": "an ornate vampire's caped collar — a tall standing black collar with crimson lining, a ruby brooch and a bat-wing silhouette, worn at the shoulders — elegant and gothic"
+  },
+  {
+    "id": "w-magical-girl-wand-117",
+    "slot": "weapon",
+    "label": "magical-girl wand",
+    "prompt": "a magical-girl wand — a glossy pink-and-gold wand topped with a big heart and a star, trailing ribbons and gems — sparkly and adorable"
+  },
+  {
+    "id": "a-magical-girl-costume-118",
+    "slot": "armor",
+    "label": "magical-girl costume",
+    "prompt": "a magical-girl costume — a frilly pink-and-white knee-length dress with puffed sleeves, a big bow, a heart brooch, layered ruffles, white gloves and tights, fully covered — sparkly and cute, not a long gown"
+  },
+  {
+    "id": "a-magical-girl-tiara-119",
+    "slot": "accessory",
+    "label": "magical-girl tiara",
+    "prompt": "a magical-girl tiara with a big heart gem, little wings and ribbons in pink and gold — sparkly and adorable"
+  },
+  {
+    "id": "w-reaper-scythe-120",
+    "slot": "weapon",
+    "label": "reaper scythe",
+    "prompt": "a grim reaper's great scythe — a long curved black blade with a bone-wrapped haft and a violet soul-flame curling at the heel — eerie and majestic"
+  },
+  {
+    "id": "a-reaper-robe-121",
+    "slot": "armor",
+    "label": "reaper robe",
+    "prompt": "a grim reaper costume — a tattered black hooded robe-coat with a ragged hem, bone clasps and dark cloth wrappings, full-length and ominous — eerie, a masculine figure, not a dress"
+  },
+  {
+    "id": "a-reaper-skull-mask-122",
+    "slot": "accessory",
+    "label": "reaper skull mask",
+    "prompt": "a grim reaper's pale bone skull half-mask with hollow shadowed eyes and a small violet ember — eerie and iconic"
+  },
+  {
+    "id": "w-phantom-cane-sword-123",
+    "slot": "weapon",
+    "label": "phantom cane-sword",
+    "prompt": "a phantom's cane-sword — a sleek black lacquered cane concealing a thin blade, with a gold skull-and-rose handle — elegant and mysterious"
+  },
+  {
+    "id": "a-phantom-costume-124",
+    "slot": "armor",
+    "label": "phantom costume",
+    "prompt": "a phantom of the opera costume — a black tailcoat with a crimson-lined cape, a white waistcoat, an ascot and gloves — elegant and mysterious, a refined masculine figure, not a dress"
+  },
+  {
+    "id": "a-phantom-half-mask-125",
+    "slot": "accessory",
+    "label": "phantom half-mask",
+    "prompt": "a phantom's ornate half-mask of white porcelain and gold filigree — elegant, mysterious and iconic"
+  },
+  {
+    "id": "w-necromancer-staff-126",
+    "slot": "weapon",
+    "label": "necromancer staff",
+    "prompt": "a necromancer's bone staff topped with a horned skull and a sickly green soul-flame, wrapped with dark cloth — eerie and arcane"
+  },
+  {
+    "id": "a-necromancer-robe-127",
+    "slot": "armor",
+    "label": "necromancer robe",
+    "prompt": "a necromancer costume — a hooded dark-green and black robe with bone ornaments, ragged layered hems and skeletal trim — eerie and arcane, a masculine figure, not a dress"
+  },
+  {
+    "id": "a-necromancer-grimoire-128",
+    "slot": "accessory",
+    "label": "necromancer grimoire",
+    "prompt": "a necromancer's grimoire bound in black leather and bone with a green gem clasp and dangling charms — eerie and arcane"
+  },
+  {
+    "id": "w-frost-queen-scepter-129",
+    "slot": "weapon",
+    "label": "frost queen scepter",
+    "prompt": "a frost queen's ice scepter topped with a great blue crystal and radiating frost spikes, silver and ice-blue — elegant, regal and cold"
+  },
+  {
+    "id": "a-frost-queen-gown-130",
+    "slot": "armor",
+    "label": "frost queen gown",
+    "prompt": "a frost queen costume — an elegant ice-blue and silver structured gown with a tall crystalline collar, frost-pattern lace and a long shimmering cape — regal and cold, a queen's iconic costume"
+  },
+  {
+    "id": "a-frost-queen-crown-131",
+    "slot": "accessory",
+    "label": "frost queen crown",
+    "prompt": "a frost queen's ice crown of tall blue crystal shards and silver filigree — regal, elegant and cold"
+  },
+  {
+    "id": "w-dark-knight-greatsword-132",
+    "slot": "weapon",
+    "label": "dark knight greatsword",
+    "prompt": "a dark knight's massive black greatsword with a jagged edge and carved crimson runes, dark steel and tarnished gold — ominous and powerful"
+  },
+  {
+    "id": "a-dark-knight-armor-133",
+    "slot": "armor",
+    "label": "dark knight armor",
+    "prompt": "a dark knight costume — ornate black plate armor with spiked pauldrons, a tattered crimson cape and dark gold trim — ominous and powerful, an iconic full-armor costume"
+  },
+  {
+    "id": "a-dark-knight-helm-134",
+    "slot": "accessory",
+    "label": "dark knight helm",
+    "prompt": "a dark knight's horned black great-helm with a narrow crimson visor slit, a crimson plume and dark gold trim — ominous and iconic"
+  },
+  {
+    "id": "w-angel-longsword-135",
+    "slot": "weapon",
+    "label": "angel longsword",
+    "prompt": "an angel's radiant longsword with feathered wing guards and a golden halo-ring pommel, white and gold — holy and graceful"
+  },
+  {
+    "id": "a-angel-costume-136",
+    "slot": "armor",
+    "label": "angel costume",
+    "prompt": "an angel costume — a white and gold knee-length dress with golden trim, a feathered shoulder mantle and large white feathered wings at the back — radiant and holy, not a long gown"
+  },
+  {
+    "id": "a-angel-halo-137",
+    "slot": "accessory",
+    "label": "angel halo",
+    "prompt": "an angel's golden halo ring fringed with soft white feathers — radiant, holy and iconic"
+  },
+  {
+    "id": "w-demon-whip-blade-138",
+    "slot": "weapon",
+    "label": "demon whip-blade",
+    "prompt": "a demon's barbed whip-blade — a segmented black-and-violet whip ending in a heart-tipped blade, sleek and wicked — a stylish demon costume weapon"
+  },
+  {
+    "id": "a-demon-costume-139",
+    "slot": "armor",
+    "label": "demon costume",
+    "prompt": "a demon costume — a sleek black-and-violet knee-length dress with sharp asymmetric frills, a high collar, long gloves, a slim devil tail and dark tights, fully covered with no exposed skin — alluring and wicked, not a long gown"
+  },
+  {
+    "id": "a-demon-horns-headband-140",
+    "slot": "accessory",
+    "label": "demon horns headband",
+    "prompt": "large curved demon horns on a headband in glossy black and violet with a small dangling chain and gem — bold and iconic, no wings"
+  },
+  {
+    "id": "a-pirate-captain-coat-141",
+    "slot": "armor",
+    "label": "pirate captain coat",
+    "prompt": "a pirate captain costume — a crimson and gold long coat with a white ruffled shirt, a sash, a wide belt and tall boots — adventurous and bold, not a dress"
+  },
+  {
+    "id": "a-shinobi-bodysuit-142",
+    "slot": "armor",
+    "label": "shinobi bodysuit",
+    "prompt": "a ninja shinobi outfit — a sleek black and crimson bodysuit with wrapped cloth sashes, light armor plates and a trailing scarf — cool and agile, not a dress"
+  },
+  {
+    "id": "a-desert-prince-robes-144",
+    "slot": "armor",
+    "label": "desert prince robes",
+    "prompt": "a desert prince outfit — flowing white and gold layered robes with a jeweled sash and a half-cape — regal and exotic, a masculine figure, not a dress"
+  },
+  {
+    "id": "a-musketeer-tabard-coat-145",
+    "slot": "armor",
+    "label": "musketeer tabard-coat",
+    "prompt": "a royal musketeer outfit — a deep-blue tabard-coat with gold cross trim, a feathered half-cape and tall boots — dashing, a masculine figure, not a dress"
+  },
+  {
+    "id": "a-flower-knight-tunic-146",
+    "slot": "armor",
+    "label": "flower knight tunic",
+    "prompt": "a flower-knight outfit — a green and gold leaf-armored tunic with a petal half-cape and fitted trousers — graceful and verdant, a masculine figure, not a dress"
+  },
+  {
+    "id": "a-steampunk-duchess-gown-147",
+    "slot": "armor",
+    "label": "steampunk duchess gown",
+    "prompt": "a steampunk duchess outfit — a brass-and-cream bustle dress with gear details, a corset and lace gloves — elegant and intricate"
+  },
+  {
+    "id": "a-autumn-knit-casual-148",
+    "slot": "armor",
+    "label": "autumn knit casual",
+    "prompt": "a cozy autumn casual outfit — a chunky knit cardigan over a plaid pleated skirt with a scarf and short boots — warm and cute, knee-length, not a long gown"
+  },
+  {
+    "id": "a-devil-horns-winged-149",
+    "slot": "accessory",
+    "label": "devil horns headband (winged)",
+    "prompt": "a cute devil horn headband with little bat wings, black and crimson"
+  },
+  {
+    "id": "a-test-gothic-lolita-150",
+    "slot": "armor",
+    "label": "test gothic lolita",
+    "prompt": "a frilly gothic lolita dress in black and crimson with lace trim, ribbons and layered ruffles — elegant and cute"
+  },
+  {
+    "id": "a-test-military-coat-151",
+    "slot": "armor",
+    "label": "test military coat",
+    "prompt": "an ornate royal-blue military coat with gold braid, epaulettes and brass buttons — dashing and regal"
+  },
+  {
+    "id": "a-test-sailor-uniform-152",
+    "slot": "armor",
+    "label": "test sailor uniform",
+    "prompt": "a cute sailor school uniform with a navy collar, a red ribbon and a pleated skirt — fresh and youthful"
+  },
+  {
+    "id": "a-princess-ball-gown-153",
+    "slot": "armor",
+    "label": "princess ball gown",
+    "prompt": "an elegant fairy-tale princess ball gown in lavender and silver with floral embroidery and layered tulle"
+  },
+  {
+    "id": "a-court-mage-robe-coat-154",
+    "slot": "armor",
+    "label": "court mage robe-coat",
+    "prompt": "a royal court mage's long indigo robe-coat with gold constellation embroidery and a high collar"
+  },
+  {
+    "id": "a-forest-ranger-two-piece-156",
+    "slot": "armor",
+    "label": "forest ranger two-piece",
+    "prompt": "a forest ranger's two-piece outfit — a green hooded tunic with a leather corset-belt and a layered skirt"
+  },
+  {
+    "id": "a-celestial-monk-robe-157",
+    "slot": "armor",
+    "label": "celestial monk robe",
+    "prompt": "a celestial monk's flowing white-and-gold robe with prayer-bead sashes and wide sleeves"
+  },
+  {
+    "id": "a-fantasy-hanbok-158",
+    "slot": "armor",
+    "label": "fantasy hanbok",
+    "prompt": "a fantasy hanbok dress in soft pink and jade with flowing ribbons, a short jeogori top and a full chima skirt"
+  },
+  {
+    "id": "a-dragon-knight-gown-159",
+    "slot": "armor",
+    "label": "dragon-knight gown",
+    "prompt": "a dragon-knight gown — an obsidian dragon-scale bodice flaring into a molten-gold layered skirt"
+  },
+  {
+    "id": "a-village-healer-casual-160",
+    "slot": "armor",
+    "label": "village healer casual",
+    "prompt": "a cozy village healer's outfit — a knit shawl over a linen apron dress with little herb pouches"
+  },
+  {
+    "id": "a-sky-pirate-outfit-161",
+    "slot": "armor",
+    "label": "sky-pirate outfit",
+    "prompt": "a sky-pirate's outfit — a crimson cropped jacket with gold buttons over a ruffled blouse and a belted skirt"
+  },
+  {
+    "id": "a-wandering-witch-cloak-162",
+    "slot": "armor",
+    "label": "wandering witch cloak",
+    "prompt": "a wandering witch's outfit — a deep-purple hooded cloak over a star-patterned dress with a corset belt"
+  },
+  {
+    "id": "w-celestial-greatsword-153",
+    "slot": "weapon",
+    "label": "celestial greatsword",
+    "prompt": "a radiant celestial greatsword with a winged guard and a sunburst gem, white and gold — splendid and heroic"
+  },
+  {
+    "id": "w-elven-longbow-154",
+    "slot": "weapon",
+    "label": "elven longbow",
+    "prompt": "an elegant elven longbow of living silver-wood with leaf carvings and emerald gems — graceful and natural"
+  },
+  {
+    "id": "w-crystal-lance-155",
+    "slot": "weapon",
+    "label": "crystal lance",
+    "prompt": "an ornate crystal lance with a spiraling blue-ice tip and a small banner — elegant and cold"
+  },
+  {
+    "id": "w-assassin-twin-daggers-156",
+    "slot": "weapon",
+    "label": "assassin twin daggers",
+    "prompt": "a pair of ornate assassin's daggers with twisting black-and-gold blades — sleek and deadly"
+  },
+  {
+    "id": "w-druid-staff-157",
+    "slot": "weapon",
+    "label": "druid staff",
+    "prompt": "a druid's gnarled wooden staff crowned with blooming flowers and a green crystal — natural and serene"
+  },
+  {
+    "id": "w-dwarven-battle-axe-158",
+    "slot": "weapon",
+    "label": "dwarven battle-axe",
+    "prompt": "a mighty dwarven battle-axe with a rune-etched gold-and-steel double head — bold and sturdy"
+  },
+  {
+    "id": "w-moonlight-katana-159",
+    "slot": "weapon",
+    "label": "moonlight katana",
+    "prompt": "an elegant moonlight katana with a pale silver blade and a blossom-wrapped hilt — graceful and serene"
+  },
+  {
+    "id": "w-crystal-warhammer-160",
+    "slot": "weapon",
+    "label": "crystal warhammer",
+    "prompt": "an ornate war-hammer with a crystal-studded head and gold filigree — grand and mighty"
+  },
+  {
+    "id": "w-rose-thorn-scythe-161",
+    "slot": "weapon",
+    "label": "rose-thorn scythe",
+    "prompt": "an elegant rose-thorn scythe with a curved black blade and twining red roses — beautiful and eerie"
+  },
+  {
+    "id": "w-ornate-flintlock-pistol-162",
+    "slot": "weapon",
+    "label": "ornate flintlock pistol",
+    "prompt": "an ornate antique fantasy flintlock pistol with a carved ivory grip and gold scrollwork — refined and elegant, not a modern gun"
+  },
+  {
+    "id": "a-valkyrie-battle-dress-176",
+    "slot": "armor",
+    "label": "valkyrie battle-dress",
+    "prompt": "a valkyrie battle-dress in white and gold with light armor plating and a blue sash"
+  },
+  {
+    "id": "a-valkyrie-costume-178",
+    "slot": "armor",
+    "label": "valkyrie costume",
+    "prompt": "a valkyrie costume — a white-and-gold winged battle-dress with silver armor plating, a blue cape and feathered pauldrons — heroic and radiant, knee-length"
+  },
+  {
+    "id": "a-valkyrie-winged-circlet-179",
+    "slot": "accessory",
+    "label": "valkyrie winged circlet",
+    "prompt": "a valkyrie's winged circlet — a silver-and-gold crown with feathered side-wings and a blue gem — heroic and radiant"
+  },
+  {
+    "id": "a-dark-knight-battle-coat-175",
+    "slot": "armor",
+    "label": "dark knight battle-coat",
+    "prompt": "a dark knight's long black battle-coat with silver chest armor plates, a high collar and a tattered crimson hem, floor-length flowing coat — ominous and masculine, no trousers, no legs"
+  },
+  {
+    "id": "a-admiral-greatcoat-176",
+    "slot": "armor",
+    "label": "admiral greatcoat",
+    "prompt": "a royal admiral's long navy greatcoat with gold braid, epaulettes and brass buttons, floor-length flowing coat — dashing and masculine, no trousers, no legs"
+  },
+  {
+    "id": "a-dragon-lord-scaled-coat-178",
+    "slot": "armor",
+    "label": "dragon-lord scaled coat",
+    "prompt": "a dragon-lord's ornate long scaled coat in obsidian and molten-gold with a high collar and a flowing hem, floor-length flowing coat — powerful and masculine, no trousers, no legs"
+  },
+  {
+    "id": "a-frost-warden-coat-179",
+    "slot": "armor",
+    "label": "frost-warden coat",
+    "prompt": "a frost-warden's long fur-lined coat in steel-blue and silver with a high collar and silver clasps, floor-length flowing coat — stoic and masculine, no trousers, no legs"
+  },
+  {
+    "id": "w-splendid-valkyrie-glaive-178",
+    "slot": "weapon",
+    "label": "splendid valkyrie glaive",
+    "prompt": "a magnificent valkyrie glaive — a long ornate polearm with a great curved blade of white-silver and gold, lavishly engraved with feathers and runes, set with sapphires and a radiant winged guard — extremely splendid, gorgeous and heroic, just the weapon by itself, no surrounding effects, no aura, no floating particles, a clean isolated object"
+  },
+  {
+    "id": "w-valkyrie-glaive-178",
+    "slot": "weapon",
+    "label": "valkyrie glaive",
+    "prompt": "an ornate valkyrie glaive — a long polearm with a curved white-and-gold blade, a feather-engraved guard and a blue gem, lavishly splendid and heroic — just the weapon by itself, no surrounding effects, no aura, no floating particles, a clean isolated object"
+  },
+  {
+    "id": "w-paladin-greatsword-179",
+    "slot": "weapon",
+    "label": "paladin greatsword",
+    "prompt": "a paladin's radiant white-and-gold greatsword with a cross-shaped guard and a sunburst gem — holy and splendid, no surrounding effects, no aura"
+  },
+  {
+    "id": "a-paladin-armor-180",
+    "slot": "armor",
+    "label": "paladin armor",
+    "prompt": "a paladin costume — ornate white-and-gold holy plate armor with a blue tabard, winged pauldrons and gold filigree — heroic and radiant"
+  },
+  {
+    "id": "a-paladin-winged-helm-181",
+    "slot": "accessory",
+    "label": "paladin winged helm",
+    "prompt": "a paladin's winged great-helm in white silver and gold with a blue plume — holy and heroic"
+  },
+  {
+    "id": "w-phoenix-fan-blade-182",
+    "slot": "weapon",
+    "label": "phoenix fan-blade",
+    "prompt": "a phoenix dancer's ornate flame fan-blade — a folding war-fan of crimson and gold phoenix feathers with a hidden blade — dazzling and fierce, no surrounding effects, no aura"
+  },
+  {
+    "id": "a-phoenix-dancer-dress-183",
+    "slot": "armor",
+    "label": "phoenix dancer dress",
+    "prompt": "a phoenix dancer costume — a crimson-and-gold feathered dance dress with layered flame-petal skirts and a jeweled bodice — dazzling and graceful"
+  },
+  {
+    "id": "a-phoenix-crown-184",
+    "slot": "accessory",
+    "label": "phoenix crown",
+    "prompt": "a phoenix crown — an ornate gold headdress with a crimson phoenix and trailing feathers — dazzling and regal"
+  },
+  {
+    "id": "w-dragon-knight-greatsword-185",
+    "slot": "weapon",
+    "label": "dragon knight greatsword",
+    "prompt": "a dragon knight's massive obsidian greatsword with a molten-gold dragon-head guard and carved ember runes — powerful and splendid, no surrounding effects, no aura"
+  },
+  {
+    "id": "a-dragon-knight-armor-186",
+    "slot": "armor",
+    "label": "dragon knight armor",
+    "prompt": "a dragon knight costume — ornate obsidian dragon-scale plate armor edged in molten gold with a dragon-wing cape — powerful and fierce"
+  },
+  {
+    "id": "a-dragon-horned-helm-187",
+    "slot": "accessory",
+    "label": "dragon horned helm",
+    "prompt": "a dragon knight's horned great-helm in obsidian and molten-gold with dragon motifs — fierce and bold"
+  },
+  {
+    "id": "w-lunar-crescent-staff-188",
+    "slot": "weapon",
+    "label": "lunar crescent staff",
+    "prompt": "a lunar priestess's crescent moon staff — a tall silver staff topped with a crescent moon and a pale blue gem — elegant and serene, no surrounding effects, no aura"
+  },
+  {
+    "id": "a-lunar-priestess-robe-189",
+    "slot": "armor",
+    "label": "lunar priestess robe",
+    "prompt": "a lunar priestess costume — a flowing silver-and-white robe-gown with crescent-moon embroidery, a star sash and draped sleeves — elegant and mystical"
+  },
+  {
+    "id": "a-lunar-circlet-190",
+    "slot": "accessory",
+    "label": "lunar circlet",
+    "prompt": "a lunar circlet — a delicate silver crown with a crescent moon and pearls over the brow — elegant and serene"
+  },
+  {
+    "id": "w-thunder-spear-191",
+    "slot": "weapon",
+    "label": "thunder spear",
+    "prompt": "a thunder emperor's ornate lightning spear — a gold-and-indigo polearm with a jagged lightning-bolt blade — dynamic and splendid, no surrounding effects, no aura"
+  },
+  {
+    "id": "a-thunder-emperor-armor-192",
+    "slot": "armor",
+    "label": "thunder emperor armor",
+    "prompt": "a thunder emperor costume — ornate gold-and-indigo emperor armor with a lightning-pattern cape and high shoulders — powerful and majestic"
+  },
+  {
+    "id": "a-thunder-crown-193",
+    "slot": "accessory",
+    "label": "thunder crown",
+    "prompt": "a thunder crown — an ornate gold crown with jagged lightning-bolt points and a blue gem — majestic and bold"
+  },
+  {
+    "id": "w-mermaid-trident-194",
+    "slot": "weapon",
+    "label": "mermaid trident",
+    "prompt": "a mermaid queen's ornate trident — a pearl-and-teal trident with coral curls and a blue pearl — elegant and regal, no surrounding effects, no aura"
+  },
+  {
+    "id": "a-mermaid-queen-gown-195",
+    "slot": "armor",
+    "label": "mermaid queen gown",
+    "prompt": "a mermaid queen costume — a pearl-and-teal scaled gown with a seashell bodice, coral frills and a flowing fin-skirt — elegant and opulent"
+  },
+  {
+    "id": "a-coral-crown-196",
+    "slot": "accessory",
+    "label": "coral crown",
+    "prompt": "a coral crown — an ornate crown of pink coral, pearls and a blue gem — elegant and regal"
+  },
+  {
+    "id": "w-cat-bell-wand-198",
+    "slot": "weapon",
+    "label": "cat bell wand",
+    "prompt": "a cute black cat wand topped with a round cat-head and a golden bell — adorable, no surrounding effects, no aura"
+  },
+  {
+    "id": "a-black-cat-hoodie-199",
+    "slot": "armor",
+    "label": "black cat hoodie",
+    "prompt": "a cute black cat hoodie outfit — a cozy oversized long black hoodie with cat ears on the hood, a bell collar, paw-print pockets and a curly cat tail — cute and unisex, no legs"
+  },
+  {
+    "id": "a-cat-fish-pouch-200",
+    "slot": "accessory",
+    "label": "cat fish pouch",
+    "prompt": "a cute fish-shaped crossbody pouch bag with a cat-paw zipper charm, black and pink — adorable"
+  },
+  {
+    "id": "w-bunny-carrot-staff-201",
+    "slot": "weapon",
+    "label": "bunny carrot staff",
+    "prompt": "a cute bunny mage's carrot staff — a plush orange carrot with a leafy top on a wooden staff — adorable, no surrounding effects, no aura"
+  },
+  {
+    "id": "a-rabbit-pocketwatch-203",
+    "slot": "accessory",
+    "label": "rabbit pocketwatch",
+    "prompt": "a cute white-rabbit pocket watch on a pink ribbon, with a carrot charm — adorable"
+  },
+  {
+    "id": "w-berry-candy-staff-204",
+    "slot": "weapon",
+    "label": "berry candy staff",
+    "prompt": "a cute berry witch's candy staff topped with a glossy strawberry and a cream swirl — adorable, no surrounding effects, no aura"
+  },
+  {
+    "id": "a-berry-witch-dress-205",
+    "slot": "armor",
+    "label": "berry witch dress",
+    "prompt": "a cute berry witch dress — a red-and-white polka-dot dress with a green leaf collar, strawberry-seed buttons and a frilled hem — adorable"
+  },
+  {
+    "id": "a-strawberry-basket-bag-206",
+    "slot": "accessory",
+    "label": "strawberry basket bag",
+    "prompt": "a cute woven strawberry basket bag full of ripe berries — adorable"
+  },
+  {
+    "id": "w-lollipop-wand-207",
+    "slot": "weapon",
+    "label": "lollipop wand",
+    "prompt": "a cute candy fairy's lollipop wand — a big rainbow swirl lollipop on a ribboned stick — adorable, no surrounding effects, no aura"
+  },
+  {
+    "id": "a-candy-fairy-dress-208",
+    "slot": "armor",
+    "label": "candy fairy dress",
+    "prompt": "a cute candy fairy dress — a pastel rainbow dress with candy-wrapper frills, gumdrop buttons and small sheer wings — adorable"
+  },
+  {
+    "id": "a-candy-charm-necklace-209",
+    "slot": "accessory",
+    "label": "candy charm necklace",
+    "prompt": "a cute lollipop and candy charm necklace in pastel colors — adorable"
+  },
+  {
+    "id": "w-bear-plush-hammer-210",
+    "slot": "weapon",
+    "label": "bear plush hammer",
+    "prompt": "a cute plush bear hammer — a soft round bear-head plush on a short padded handle — adorable, no surrounding effects, no aura"
+  },
+  {
+    "id": "a-bear-onesie-pajama-211",
+    "slot": "armor",
+    "label": "bear onesie pajama",
+    "prompt": "a cozy bear onesie pajama — a fuzzy brown hooded onesie with round bear ears, a belly patch and a stubby tail — cute and unisex"
+  },
+  {
+    "id": "a-teddy-backpack-212",
+    "slot": "accessory",
+    "label": "teddy backpack",
+    "prompt": "a cute round teddy-bear backpack in soft brown with little ears and a zipper — adorable"
+  },
+  {
+    "id": "w-patissier-whisk-213",
+    "slot": "weapon",
+    "label": "patissier whisk",
+    "prompt": "a cute patissier's giant whisk — a big polished steel whisk wand tied with a ribbon — adorable, no surrounding effects, no aura"
+  },
+  {
+    "id": "a-patissier-apron-coat-214",
+    "slot": "armor",
+    "label": "patissier apron-coat",
+    "prompt": "a cute patissier outfit — a long cream apron-coat over a striped shirt with mitten oven-gloves and a ribbon — sweet and charming, unisex, no legs"
+  },
+  {
+    "id": "a-recipe-book-215",
+    "slot": "accessory",
+    "label": "recipe book",
+    "prompt": "a cute pastel recipe book with a ribbon bookmark and a macaron sticker — adorable"
+  },
+  {
+    "id": "a-bunny-mage-robe-215",
+    "slot": "armor",
+    "label": "bunny mage robe",
+    "prompt": "a fluffy white bunny mage robe — a soft white long hooded robe with tall floppy bunny ears on the hood and soft pink trim and a ribbon, a clean smooth front with no tail and no pom-pom on the front — cute and unisex, no legs"
+  },
+  {
+    "id": "w-master-chef-knife-216",
+    "slot": "weapon",
+    "label": "master chef knife",
+    "prompt": "a master chef's ornate carving knife — a long gleaming steel chef's knife with a black-and-gold royal handle and an engraved damascus blade — sleek and masterful, no surrounding effects, no aura"
+  },
+  {
+    "id": "a-head-chef-coat-217",
+    "slot": "armor",
+    "label": "head-chef coat",
+    "prompt": "a royal head-chef's outfit — a sleek long black-and-gold double-breasted chef coat with a high collar, gold royal trim, a crimson sash and rolled sleeves — masterful and dignified, masculine, no legs, no skirt"
+  },
+  {
+    "id": "a-chef-knife-roll-218",
+    "slot": "accessory",
+    "label": "chef knife-roll",
+    "prompt": "a master chef's leather knife-roll case with brass buckles holding several gleaming knives — sleek and professional"
+  },
+  {
+    "id": "w-assassin-twin-daggers-219",
+    "slot": "weapon",
+    "label": "assassin twin daggers",
+    "prompt": "a pair of sleek shadow assassin's twin daggers with black blades and dark-wrapped hilts — sharp and deadly, no surrounding effects, no aura"
+  },
+  {
+    "id": "a-shadow-assassin-outfit-220",
+    "slot": "armor",
+    "label": "shadow assassin outfit",
+    "prompt": "a shadow assassin outfit — a sleek black hooded long coat-wrap with dark cloth straps, a high collar and a half-cape — agile and deadly, masculine, no legs"
+  },
+  {
+    "id": "a-assassin-half-mask-221",
+    "slot": "accessory",
+    "label": "assassin half-mask",
+    "prompt": "a sleek black assassin's half-mask covering the lower face, with dark grey trim — sharp and mysterious"
+  },
+  {
+    "id": "w-gladiator-gladius-222",
+    "slot": "weapon",
+    "label": "gladiator gladius",
+    "prompt": "an ornate gladiator's gladius — a short broad steel sword with a bronze-and-gold hilt and a crimson grip — bold and battle-worn, no surrounding effects, no aura"
+  },
+  {
+    "id": "a-gladiator-armor-223",
+    "slot": "armor",
+    "label": "gladiator armor",
+    "prompt": "a gladiator outfit — a bronze-and-black muscled cuirass with a crimson tunic, a layered leather pteruges skirt and a shoulder guard — heroic and rugged, masculine, no legs"
+  },
+  {
+    "id": "a-gladiator-pauldron-224",
+    "slot": "accessory",
+    "label": "gladiator pauldron",
+    "prompt": "a gladiator's ornate ivory tusk shoulder-guard pauldron with bronze studs and a crimson strap — bold and rugged"
+  },
+  {
+    "id": "w-oni-katana-225",
+    "slot": "weapon",
+    "label": "oni katana",
+    "prompt": "a flame oni's katana — a sleek black blade with a crimson ember edge-line and a gold-and-red oni-motif hilt — fierce and sleek, no surrounding effects, no aura"
+  },
+  {
+    "id": "a-flame-oni-outfit-226",
+    "slot": "armor",
+    "label": "flame oni outfit",
+    "prompt": "a flame oni swordsman outfit — a red-and-black layered warrior coat with gold flame patterns, a black sash and armored sleeves — fierce and bold, masculine, no legs"
+  },
+  {
+    "id": "a-oni-half-mask-227",
+    "slot": "accessory",
+    "label": "oni half-mask",
+    "prompt": "a fierce red-and-black oni half-mask with gold horns and a snarling grin — fierce and iconic"
+  },
+  {
+    "id": "a-samurai-armor-coat-228",
+    "slot": "armor",
+    "label": "samurai armor coat",
+    "prompt": "an ornate samurai-inspired layered armor coat in crimson and gold lacquer plates with a black sash — fierce and noble, not a dress"
+  },
+  {
+    "id": "a-elven-ranger-cloak-229",
+    "slot": "armor",
+    "label": "elven ranger cloak",
+    "prompt": "an elegant elven ranger outfit — a deep-green hooded tunic-cloak with silver leaf clasps and a quiver strap — graceful and natural, not a dress"
+  },
+  {
+    "id": "a-sorceress-robe-gown-230",
+    "slot": "armor",
+    "label": "sorceress robe-gown",
+    "prompt": "a royal sorceress gown — a deep-violet and gold robe-dress with star embroidery and a high collar — elegant and arcane"
+  },
+  {
+    "id": "a-desert-nomad-robes-231",
+    "slot": "armor",
+    "label": "desert nomad robes",
+    "prompt": "a desert nomad outfit — flowing sand-beige layered robes with a patterned sash and a hooded shawl — exotic and practical, not a dress"
+  },
+  {
+    "id": "a-steampunk-aviator-coat-232",
+    "slot": "armor",
+    "label": "steampunk aviator coat",
+    "prompt": "a steampunk aviator outfit — a brown leather flight coat with brass buckles, a goggles strap and a scarf — adventurous and cool, not a dress"
+  },
+  {
+    "id": "a-academy-student-uniform-233",
+    "slot": "armor",
+    "label": "academy student uniform",
+    "prompt": "a royal academy student uniform — a tailored navy uniform coat with gold trim, a school crest, a ribbon tie and a pleated hem — smart and youthful, fantasy academy, no legs"
+  },
+  {
+    "id": "a-academy-professor-robe-234",
+    "slot": "armor",
+    "label": "academy professor robe",
+    "prompt": "a royal academy professor outfit — a long deep-burgundy scholar's robe-coat with gold trim, a high collar, a sash and a draped mantle — dignified and scholarly, fantasy academy, no legs"
+  },
+  {
+    "id": "a-simple-glasses-233",
+    "slot": "accessory",
+    "label": "simple glasses",
+    "prompt": "a simple pair of glasses — thin round metal-framed spectacles with clear lenses and a small bridge, clean minimal and modern, just the eyewear alone, a small object, no building, no scenery, no person, a single isolated object on a plain flat empty background, pixel art"
+  },
+  {
+    "id": "w-beach-festival-trident-236",
+    "slot": "weapon",
+    "label": "beach festival trident",
+    "prompt": "a summer beach festival trident — a bright aqua-and-coral trident decorated with seashells and a starfish — playful and summery, no surrounding effects, no aura"
+  },
+  {
+    "id": "a-beach-festival-outfit-237",
+    "slot": "armor",
+    "label": "beach festival outfit",
+    "prompt": "a summer beach festival outfit — a bright aqua-and-white sailor-style summer dress with shell buttons, a coral sash and ruffles — fresh and summery"
+  },
+  {
+    "id": "a-tropical-flower-lei-238",
+    "slot": "accessory",
+    "label": "tropical flower lei",
+    "prompt": "a tropical flower lei necklace with bright hibiscus flowers, seashells and a starfish — bright and summery"
+  },
+  {
+    "id": "w-ranger-recurve-bow-239",
+    "slot": "weapon",
+    "label": "ranger recurve bow",
+    "prompt": "a ranger's elegant recurve longbow of yew wood with leaf carvings and a green leather grip — graceful and natural, no surrounding effects, no aura"
+  },
+  {
+    "id": "a-forest-ranger-outfit-240",
+    "slot": "armor",
+    "label": "forest ranger outfit",
+    "prompt": "a forest ranger outfit — a green-and-brown hooded leather tunic-coat with a quiver strap, belt pouches and a half-cape — agile and natural, not a dress, no legs"
+  },
+  {
+    "id": "a-ranger-quiver-241",
+    "slot": "accessory",
+    "label": "ranger quiver",
+    "prompt": "a ranger's leather quiver full of arrows with feathered fletching and a shoulder strap — practical and rugged"
+  },
+  {
+    "id": "a-black-glasses-open-236",
+    "slot": "accessory",
+    "label": "black glasses open",
+    "prompt": "a simple pair of glasses with thin black frames and clear round lenses, both side temple arms fully open and visible in a three-quarter angled view, clean minimal and modern, just the eyewear alone, no building, no scenery, no person, a single isolated object on a plain flat empty background, pixel art"
+  },
+  {
+    "id": "a-fantasy-bouquet-243",
+    "slot": "accessory",
+    "label": "fantasy bouquet",
+    "prompt": "a fantasy enchanted bouquet — magical crystal-petaled flowers and star-shaped blossoms in iridescent blue, violet and gold, wrapped with a shimmering silk ribbon, with tiny floating sparkles — ethereal, lush and magical"
+  },
+  {
+    "id": "a-hq-round-glasses-244",
+    "slot": "accessory",
+    "label": "hq round glasses",
+    "prompt": "a finely detailed pair of round eyeglasses with slim gold frames, clear glass lenses with subtle reflections, delicate hinges, a thin bridge and temple arms — large and filling the whole frame, crisp clean high-quality, just the eyewear alone, no building, no scenery, no person, a single isolated object on a plain flat empty background, pixel art"
+  },
+  {
+    "id": "a-round-glasses-245",
+    "slot": "accessory",
+    "label": "round glasses",
+    "prompt": "a finely detailed pair of round gold eyeglasses"
+  }
+]

@@ -1,8 +1,9 @@
 import 'server-only';
 
-import { and, eq, inArray, sql } from 'drizzle-orm';
+import { and, eq, or, gt, isNull, isNotNull, inArray, sql } from 'drizzle-orm';
 
 import { db } from '@/lib/db/client';
+import { profiles } from '@/lib/db/schema/profiles';
 import { userEquipment } from '@/lib/db/schema/equipment';
 import { raids, raidParticipants } from '@/lib/db/schema/raid';
 import { meleeBattles } from '@/lib/db/schema/melee';
@@ -92,6 +93,17 @@ async function meleeRows(serverId: number): Promise<Row[]> {
     .map((x) => ({ userId: x.userId, value: Number(x.value) }));
 }
 
+/** 현재 활성 정지 계정 id 집합 — bannedAt 있고 banUntil이 없거나 아직 안 지남(ban.ts와 동일 판정). */
+async function activeBannedIds(): Promise<Set<string>> {
+  const rows = await db
+    .select({ id: profiles.id })
+    .from(profiles)
+    .where(
+      and(isNotNull(profiles.bannedAt), or(isNull(profiles.banUntil), gt(profiles.banUntil, sql`now()`))),
+    );
+  return new Set(rows.map((r) => r.id));
+}
+
 const ROWS_FN: Record<LeaderboardMetric, (sid: number) => Promise<Row[]>> = {
   max: maxRows,
   sum: sumRows,
@@ -110,8 +122,14 @@ export async function rebuildLeaderboardSnapshot(
   metrics: LeaderboardMetric[] = METRICS,
 ): Promise<Partial<Record<LeaderboardMetric, number>>> {
   const counts = {} as Partial<Record<LeaderboardMetric, number>>;
+  // 정지 계정 제외(감사 2026-07-06) — 밴은 행동만 막고 장비/기록은 남으므로, 필터 없이는
+  // 어뷰저를 정지해도 Top100·마일스톤에 계속 노출된다. 활성 정지(bannedAt 있고 banUntil 미도래)를
+  // 한 번 조회해 전 메트릭에서 뺀다(계정 정지는 전역이라 서버 무관).
+  const banned = await activeBannedIds();
   for (const metric of metrics) {
-    const rows = (await ROWS_FN[metric](serverId)).sort((a, b) => b.value - a.value);
+    const rows = (await ROWS_FN[metric](serverId))
+      .filter((r) => !banned.has(r.userId))
+      .sort((a, b) => b.value - a.value);
     // 경쟁 순위(1,2,2,4 — 동점은 같은 등수) — queries.rankByValue의 count(value>x)+1과 일치(감사 S3).
     // 순차(i+1)는 동점에 임의 다른 등수를 줘 before(스냅샷)/after(실시간)가 어긋났음.
     let prevVal: number | null = null;
@@ -204,8 +222,13 @@ export async function rebuildCodexChampionsForItem(serverId: number, catalogItem
           row_number() over (
             order by max_enhance_level desc, max_enhance_reached_at asc, user_id asc
           ) as rn
-        from user_equipment
+        from user_equipment ue
         where server_id = ${serverId} and catalog_item_id = ${catalogItemId} and max_enhance_level > 0
+          and not exists (
+            select 1 from profiles p
+            where p.id = ue.user_id and p.banned_at is not null
+              and (p.ban_until is null or p.ban_until > now())
+          )
       ) t
       where rn <= 3
     `);
@@ -224,8 +247,13 @@ export async function rebuildCodexChampions(serverId: number): Promise<void> {
             partition by catalog_item_id
             order by max_enhance_level desc, max_enhance_reached_at asc, user_id asc
           ) as rn
-        from user_equipment
+        from user_equipment ue
         where server_id = ${serverId} and max_enhance_level > 0
+          and not exists (
+            select 1 from profiles p
+            where p.id = ue.user_id and p.banned_at is not null
+              and (p.ban_until is null or p.ban_until > now())
+          )
       ) t
       where rn <= 3
     `);

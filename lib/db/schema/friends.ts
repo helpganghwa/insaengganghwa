@@ -3,7 +3,8 @@
  * status='pending'(요청 중) | 'accepted'(친구). 친구 = accepted & (requester or addressee = 나).
  * 방향 1행만 저장(요청자 requester→수락자 addressee). 역방향 중복 요청은 로직에서 차단.
  */
-import { pgTable, uuid, text, timestamp, primaryKey, index, smallint } from 'drizzle-orm/pg-core';
+import { sql } from 'drizzle-orm';
+import { pgTable, uuid, text, timestamp, primaryKey, index, uniqueIndex, smallint } from 'drizzle-orm/pg-core';
 
 import { profiles } from './profiles';
 
@@ -26,6 +27,13 @@ export const friendLinks = pgTable(
     primaryKey({ columns: [t.requesterId, t.serverId, t.addresseeId] }),
     index('friend_addressee_idx').on(t.addresseeId, t.status),
     index('friend_requester_idx').on(t.requesterId, t.status),
+    // 무방향 쌍 유니크(0104) — 방향 PK로는 A→B·B→A 두 행이 공존 가능. 정렬 쌍 유니크로
+    // 한 쌍당 링크 1행을 하드 보장(상호 동시 요청 레이스의 최후 방어; advisory 락과 이중화).
+    uniqueIndex('friend_pair_uq').on(
+      t.serverId,
+      sql`least(${t.requesterId}, ${t.addresseeId})`,
+      sql`greatest(${t.requesterId}, ${t.addresseeId})`,
+    ),
   ],
 );
 

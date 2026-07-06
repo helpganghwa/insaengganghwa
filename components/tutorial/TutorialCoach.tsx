@@ -331,8 +331,26 @@ export function TutorialCoach({ statePromise }: { statePromise: Promise<Tutorial
         }
       >
         <div className="rounded-xl bg-amber-400 px-3.5 py-2.5 text-amber-950 shadow-xl">
-          <div className="mb-0.5 text-[10px] font-bold opacity-70">
-            튜토리얼 {STEP_NO[effective]}/{STEP_TOTAL}
+          <div className="mb-0.5 flex items-center justify-between gap-2">
+            <span className="text-[10px] font-bold opacity-70">
+              튜토리얼 {STEP_NO[effective]}/{STEP_TOTAL}
+            </span>
+            {/* 중도 그만두기 — 진행 중에도 언제든 종료(인트로 건너뛰기와 동일 처리). */}
+            <button
+              type="button"
+              data-tut-ui
+              onClick={() => {
+                setPhase('done');
+                setStarted(false);
+                persist(null);
+                startAction(async () => {
+                  await skipTutorialAction();
+                });
+              }}
+              className="pointer-events-auto rounded px-1.5 py-0.5 text-[10px] font-bold text-amber-950/60 underline underline-offset-2 hover:text-amber-950"
+            >
+              그만두기
+            </button>
           </div>
           <p className="text-[13px] font-bold leading-snug break-keep">{copy}</p>
         </div>

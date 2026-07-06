@@ -90,7 +90,7 @@ export async function createProfileJob(
   }
   const equipmentSnapshot = { weaponKey, armorKey, accessoryKey };
 
-  // description은 생성 시점(cron enqueueOneV3)에 compose-v3가 비전+로어로 만들어 채운다.
+  // description은 발주 시점(drainQueue→launchJob)에 compose-v3가 비전+로어로 만들어 채운다.
   // 여기서는 빈 값으로 enqueue만 — v3가 descriptionPrompt를 덮어씀.
   const description = '';
 
