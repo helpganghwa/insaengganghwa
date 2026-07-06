@@ -207,8 +207,8 @@ export default async function RaidPage() {
                hc.nickname as host_nickname,
                (select count(*) from raid_participants rp where rp.raid_id = r.id)::int as participant_count
         from raids r
-        join guild_members hg on hg.user_id = r.host_user_id
-        join guild_members mg on mg.guild_id = hg.guild_id and mg.user_id = ${userId}::uuid
+        join guild_members hg on hg.user_id = r.host_user_id and hg.server_id = r.server_id
+        join guild_members mg on mg.guild_id = hg.guild_id and mg.user_id = ${userId}::uuid and mg.server_id = ${serverId}
         join characters hc on hc.user_id = r.host_user_id and hc.server_id = r.server_id
         where r.server_id = ${serverId} and r.status = 'active' and r.guild_share <> 'off' and r.expire_at > now()
         limit 20
