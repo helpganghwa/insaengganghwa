@@ -1,6 +1,6 @@
 'use client';
 
-import { useRef, useEffect, useState, useTransition } from 'react';
+import { useEffect, useState, useTransition } from 'react';
 import { useRouter } from 'next/navigation';
 
 import {
@@ -204,14 +204,6 @@ export function EnhanceSlotCard({
   const [flashMsg, setFlashMsg] = useState<string | null>(null); // outcome 랜덤 메시지
   const [confirmMsg, setConfirmMsg] = useState<string | null>(null); // 확인 랜덤 메시지
   const [attempting, setAttempting] = useState(false); // 강화 시도 중(취소/단축 제외)
-  // iOS 고스트탭 방어(2026-07-06 슬롯 전멸 사건) — 컨펌 진입 후 150ms 내 재탭 무시.
-  // 일괄 발화(큐에 쌓인 탭의 동시 방출)는 간격이 수십 ms라 걸리고, 사람의 최속
-  // 탭-탭(~150ms+)은 통과. **취소·단축에만 적용** — 취소는 관통 시 진행시간 증발+
-  // 레이아웃 연쇄(카드 소멸→아래 카드가 같은 좌표로 상승)로 전멸 가능, 단축은 다이아
-  // 실소비. 시도는 관통해도 의도한 강화 실행(서버 멱등)이라 무가드(반응성 우선).
-  const armedAtRef = useRef(0);
-  const armGuard = () => { armedAtRef.current = Date.now(); };
-  const armTooFresh = () => Date.now() - armedAtRef.current < 150;
   const [attemptingMsg, setAttemptingMsg] = useState<string | null>(null);
 
   useEffect(() => {
@@ -407,11 +399,9 @@ export function EnhanceSlotCard({
     if (pending || !instantCost || !canAfford) return;
     // 다이아 사용 — 취소와 동일 3s 재탭 패턴(오탭 보호). 카운트다운은 useEffect.
     if (!confirmReduce) {
-      armGuard();
       setConfirmReduce(true);
       return;
     }
-    if (armTooFresh()) return; // 연타 방어
     setConfirmReduce(false);
     setOptimisticDone(true);
     // 헤더 다이아 즉시 차감(낙관). 실패 시 롤백.
@@ -431,11 +421,9 @@ export function EnhanceSlotCard({
   const doCancel = () => {
     if (attempting) return;
     if (!confirmCancel) {
-      armGuard();
       setConfirmCancel(true);
       return;
     }
-    if (armTooFresh()) return; // 연타 방어 — 컨펌 직후 고스트탭 무시
     setConfirmCancel(false);
     setOptimisticCancelled(true); // 카드 즉시 숨김 — 처리중 표시 X
     void cancelEnhanceAction(activeJob.jobId).then((r) => {
