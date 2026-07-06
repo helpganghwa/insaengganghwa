@@ -98,14 +98,15 @@ export async function getPurchaseStatus(userId: string, serverId: number): Promi
   return out;
 }
 
-/** 첫 결제 특가(계정당 1회·서버 무관) 구매 여부 — 상점 카드 숨김 판단용. */
-export async function hasFirstSpecial(userId: string): Promise<boolean> {
+/** 첫 결제 특가(서버별 1회) 구매 여부 — 상점 캐러셀 슬라이드 숨김 판단용. */
+export async function hasFirstSpecial(userId: string, serverId: number): Promise<boolean> {
   const [row] = await db
     .select({ id: iapOrders.id })
     .from(iapOrders)
     .where(
       and(
         eq(iapOrders.userId, userId),
+        eq(iapOrders.serverId, serverId),
         eq(iapOrders.productCode, FIRST_SPECIAL.id),
         eq(iapOrders.status, 'paid'),
       ),

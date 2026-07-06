@@ -13,6 +13,12 @@ import * as PortOne from '@portone/browser-sdk/v2';
 import { verifyIdentityAction } from '../me/settings/identity-actions';
 
 import { claimFreeAction, devPurchaseAction, buyBoxAction, verifyPurchaseAction } from './actions';
+import { Swiper, SwiperSlide } from 'swiper/react';
+import { Pagination } from 'swiper/modules';
+
+import 'swiper/css';
+import 'swiper/css/pagination';
+
 import { runCheckout } from './checkout';
 import type { FreeSlot } from '@/lib/game/shop/free';
 import { FIRST_SPECIAL, BOX, CASH, PREMIUM, DIAMONDS, productPeriod } from '@/lib/game/shop/catalog';
@@ -568,43 +574,61 @@ export function ShopTabs({
       <div className="flex min-h-0 flex-1 flex-col overflow-y-auto overscroll-contain">
         {/* 컨텐츠 영역 — flex-1 유지(짧아도 footer를 하단으로 밀어냄). 컨텐츠와 footer 모두 함께 스크롤. */}
         <div className="flex-1 px-3 py-3">
-        {/* 첫 결제 특가 — 계정당 1회 한정, 구매 후 카드 숨김. */}
-        {!firstSpecialDone && (
-          <ul className="mb-3">
-            <BannerCard
-              bg="premium"
-              char="premium"
-              compact
-              accent="amber"
-              title="첫 결제 특가"
-              desc="계정당 딱 1번, 다시 없을 가격"
-              detail={`${dia(FIRST_SPECIAL.grant.diamond)} · 📦${FIRST_SPECIAL.grant.boxes}`}
-              price={won(FIRST_SPECIAL.krw)}
-              confirming={confirm === FIRST_SPECIAL.id}
-              onClick={() => tapPaid(FIRST_SPECIAL.id, canSell, () => buy(FIRST_SPECIAL.id))}
-            />
-          </ul>
-        )}
-        {/* 프리미엄 상단 배너 — 약간 큰 배너 카드 */}
+        {/* 상단 배너 캐러셀(홈 배너 패턴) — 첫결제 특가(서버별 1회, 미구매 시) 우선 노출 +
+            성장 프리미엄. 구매 완료(firstSpecialDone) 시 특가 슬라이드가 사라져 프리미엄 단독. */}
         <ul className="mb-3">
-          <BannerCard
-            bg="premium"
-            char="premium"
-            tall
-            charCenter
-            title="성장 프리미엄"
-            desc="한 달간 매일 보상이 쏟아지는 패스"
-            detail={`즉시 ${dia(PREMIUM.instant.diamond)}·📦${PREMIUM.instant.boxes} · 매일 ${dia(
-              PREMIUM.daily.diamond,
-            )}·📦${PREMIUM.daily.boxes}`}
-            price={premiumDays != null ? `${premiumDays}일 남음` : won(PREMIUM.krw)}
-            confirming={confirm === PREMIUM.id}
-            onClick={() =>
-              premiumDays != null
-                ? showHeaderToast({ title: `이용 중 — ${premiumDays}일 남음` })
-                : tapPaid(PREMIUM.id, canSell, () => buy(PREMIUM.id))
-            }
-          />
+          {(() => {
+            const banners = [
+              !firstSpecialDone && (
+                <BannerCard
+                  key="first"
+                  bg="first"
+                  char="gift"
+                  tall
+                  charCenter
+                  title="첫 결제 특가"
+                  desc="이 서버에서 딱 1번, 다시 없을 가격"
+                  detail={`${dia(FIRST_SPECIAL.grant.diamond)} · 📦${FIRST_SPECIAL.grant.boxes}`}
+                  price={won(FIRST_SPECIAL.krw)}
+                  confirming={confirm === FIRST_SPECIAL.id}
+                  onClick={() => tapPaid(FIRST_SPECIAL.id, canSell, () => buy(FIRST_SPECIAL.id))}
+                />
+              ),
+              <BannerCard
+                key="premium"
+                bg="premium"
+                char="premium"
+                tall
+                charCenter
+                title="성장 프리미엄"
+                desc="한 달간 매일 보상이 쏟아지는 패스"
+                detail={`즉시 ${dia(PREMIUM.instant.diamond)}·📦${PREMIUM.instant.boxes} · 매일 ${dia(
+                  PREMIUM.daily.diamond,
+                )}·📦${PREMIUM.daily.boxes}`}
+                price={premiumDays != null ? `${premiumDays}일 남음` : won(PREMIUM.krw)}
+                confirming={confirm === PREMIUM.id}
+                onClick={() =>
+                  premiumDays != null
+                    ? showHeaderToast({ title: `이용 중 — ${premiumDays}일 남음` })
+                    : tapPaid(PREMIUM.id, canSell, () => buy(PREMIUM.id))
+                }
+              />,
+            ].filter(Boolean);
+            if (banners.length === 1) return banners[0];
+            return (
+              <Swiper
+                modules={[Pagination]}
+                pagination={{ clickable: true }}
+                spaceBetween={8}
+                slidesPerView={1}
+                className="home-banner-swiper"
+              >
+                {banners.map((b, i) => (
+                  <SwiperSlide key={i}>{b}</SwiperSlide>
+                ))}
+              </Swiper>
+            );
+          })()}
         </ul>
 
         {/* 탭 */}

@@ -38,8 +38,8 @@ export default async function ShopPage({
     withTimeout(getPurchaseStatus(userId, serverId), 3500, 'shop.purchased').catch(() => [] as string[]),
     withTimeout(getPremiumRemainingDays(userId, serverId), 3500, 'shop.premium').catch(() => null),
     shouldHidePaidContent(),
-    // 첫 결제 특가 구매 여부(계정 기준, 서버 무관) — 구매 후 카드 숨김.
-    withTimeout(hasFirstSpecial(userId), 3500, 'shop.firstSpecial').catch(() => true),
+    // 첫 결제 특가 구매 여부(서버별 1회) — 구매 후 캐러셀에서 슬라이드 제거.
+    withTimeout(hasFirstSpecial(userId, serverId), 3500, 'shop.firstSpecial').catch(() => true),
   ]);
 
   // CBT 기간엔 일반 유저에게 유료 상품을 '준비 중'으로 표시(payEnabled=false). 무료 보급·견습의

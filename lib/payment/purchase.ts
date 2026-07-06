@@ -165,8 +165,8 @@ export async function createOrder(
     orderName = info.orderName;
     diamondGranted = g.diamond;
 
-    // 첫 결제 특가 — 계정당 1회(서버 무관). 다이아 지갑이 서버별이라 서버 기준 허용 시
-    // 신서버마다 저가 반복 구매 가능 → 계정 기준 paid 이력으로 차단.
+    // 첫 결제 특가 — 서버별 1회(사용자 확정: 서버별 지갑 경제의 경쟁 출발선). 해당 서버 paid
+    // 이력만 차단 — 신서버 합류 시 그 서버에서 다시 1회 구매 가능.
     if (productId === FIRST_SPECIAL.id) {
       const [prev] = await db
         .select({ id: iapOrders.id })
@@ -174,6 +174,7 @@ export async function createOrder(
         .where(
           and(
             eq(iapOrders.userId, userId),
+            eq(iapOrders.serverId, serverId),
             eq(iapOrders.productCode, FIRST_SPECIAL.id),
             eq(iapOrders.status, 'paid'),
           ),

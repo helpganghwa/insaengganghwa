@@ -51,6 +51,7 @@ export const ASSET_VERSIONS: Record<string, string> = {
   "/sprites/shop/knight-lg-bg.png": "4b823cdd",
   "/sprites/shop/adventurer-sm-bg.png": "2b1996b3",
   "/sprites/shop/adventurer-lg-bg.png": "af7ea57f",
+  "/sprites/shop/first-bg.png": "9d5b08d2",
   "/sprites/shop/knight-sm-bg.png": "087d7118",
   "/sprites/shop/dia-large-bg.png": "18ace156",
   "/sprites/shop/dia-mega-bg.png": "f24dad76",
@@ -93,5 +94,5 @@ export const ASSET_VERSIONS: Record<string, string> = {
   "/og/raid/dragon_west.png": "430425cb",
   "/og/og-3.png": "f0e47cd0",
   "/og/og-2.png": "c8c24cc5",
-  "/sprites/atlas.webp": "7d015994"
+  "/sprites/atlas.webp": "2496c7f3"
 };
