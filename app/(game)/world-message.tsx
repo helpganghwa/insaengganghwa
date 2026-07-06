@@ -4,6 +4,7 @@ import Link from 'next/link';
 import type { WorldEventEntry } from '@/lib/game/world/event';
 import { profileHref } from '@/lib/game/profile/href';
 import { transcendStyle } from '@/lib/game/equipment/transcend';
+import { milestoneLabel } from '@/lib/game/milestone';
 
 // 강조 색 — 핵심 토큰에만(GuildLogFeed와 통일).
 const C = {
@@ -78,6 +79,8 @@ export function worldEventMessage(e: WorldEventEntry, opts?: { link?: boolean })
       return <>{hl(guildName, C.guild)} 길드가 {hl('점령지 1위', C.amber)}에 올랐습니다</>;
     case 'rank_leader':
       return <>{actor}님이 {hl(`${METRIC_LABEL[metric] ?? metric} 1위`, C.amber)}에 올랐습니다</>;
+    case 'personal_milestone':
+      return <>{actor}님이 {hl(`${milestoneLabel(metric, (d.milestone as number) ?? 0)} 달성`, C.amber)}했습니다</>;
     default:
       return e.type;
   }

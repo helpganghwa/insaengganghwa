@@ -5,6 +5,7 @@ import Link from 'next/link';
 
 import type { GuildLogEntry } from '@/lib/game/guild/activity-log';
 import { profileHref } from '@/lib/game/profile/href';
+import { milestoneLabel } from '@/lib/game/milestone';
 import { transcendStyle } from '@/lib/game/equipment/transcend';
 
 // 강조 색 — 줄 전체가 아니라 '중요 포인트' 토큰에만 적용.
@@ -111,6 +112,8 @@ function message(e: GuildLogEntry): ReactNode {
       return <>{actor}님이 대난투 {hl(`${medal}${rank}위`, C.amber)}에 올랐습니다</>;
     case 'achv_rank_leader':
       return <>{actor}님이 {hl(`${METRIC_LABEL[metric] ?? metric} 1위`, C.amber)}에 올랐습니다</>;
+    case 'achv_milestone':
+      return <>{actor}님이 {hl(`${milestoneLabel(metric, (e.detail?.milestone as number) ?? 0)} 달성`, C.amber)}했습니다</>;
     // 업적 — 길드.
     case 'achv_guild_power_rank':
       return <>길드가 전투력 랭킹 {hl(`${medal}${rank}위`, C.emerald)}를 달성했습니다</>;

@@ -1,3 +1,4 @@
+import { sql } from 'drizzle-orm';
 import {
   bigint,
   bigserial,
@@ -50,4 +51,20 @@ export const rankingLeaders = pgTable(
     updatedAt: timestamp('updated_at', { withTimezone: true }).notNull().defaultNow(),
   },
   (t) => [primaryKey({ columns: [t.serverId, t.metric] })],
+);
+
+/**
+ * 개인 기록 마일스톤 워터마크(0103) — 스냅샷 cron이 값 교차를 감지해 월드·길드 로그를 남긴다.
+ * 단조 증가(마지막으로 기록한 마일스톤 값) — 하락 후 재달성 재발화 없음.
+ */
+export const userMilestones = pgTable(
+  'user_milestones',
+  {
+    userId: uuid('user_id').notNull(),
+    serverId: smallint('server_id').notNull(),
+    metric: text('metric').notNull(),
+    milestone: bigint('milestone', { mode: 'bigint' }).notNull().default(sql`0`),
+    updatedAt: timestamp('updated_at', { withTimezone: true }).notNull().defaultNow(),
+  },
+  (t) => [primaryKey({ columns: [t.userId, t.serverId, t.metric] })],
 );

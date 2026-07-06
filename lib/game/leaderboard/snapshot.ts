@@ -1,12 +1,16 @@
 import 'server-only';
 
-import { and, eq, sql } from 'drizzle-orm';
+import { and, eq, inArray, sql } from 'drizzle-orm';
 
 import { db } from '@/lib/db/client';
 import { userEquipment } from '@/lib/db/schema/equipment';
 import { raids, raidParticipants } from '@/lib/db/schema/raid';
 import { meleeBattles } from '@/lib/db/schema/melee';
 import { leaderboardRanks, codexChampions } from '@/lib/db/schema/leaderboard';
+import { userMilestones } from '@/lib/db/schema/world';
+import { milestoneOf } from '@/lib/game/milestone';
+import { logWorldEvent } from '@/lib/game/world/event';
+import { logMemberAchievement } from '@/lib/game/guild/achievement';
 import { combatPowerFromOwned } from '@/lib/game/equipment/combat-power';
 import type { LeaderboardMetric } from './queries';
 
@@ -127,8 +131,56 @@ export async function rebuildLeaderboardSnapshot(
       }
     });
     counts[metric] = ranked.length;
+    // 개인 기록 마일스톤(2026-07-06) — 이 지표들의 전 유저 값을 여기서 이미 계산하므로
+    // 워터마크 교차를 감지해 월드·길드 로그를 남긴다(핫패스 비용 0, 최대 15분 지연 허용).
+    if (metric === 'sum' || metric === 'combat' || metric === 'raid' || metric === 'melee') {
+      await logPersonalMilestones(serverId, metric, rows).catch((e) =>
+        console.warn('[milestone]', metric, (e as Error).message),
+      );
+    }
   }
   return counts;
+}
+
+/**
+ * 워터마크 교차 감지 → 월드+길드 로그. 워터마크는 단조(마지막 기록 마일스톤) — 하락 후
+ * 재달성 재발화 없음. 한 번에 여러 임계를 건너뛰어도 최고 임계 1건만 기록(스팸 방지).
+ */
+async function logPersonalMilestones(
+  serverId: number,
+  metric: 'sum' | 'combat' | 'raid' | 'melee',
+  rows: Row[],
+): Promise<void> {
+  const eligible = rows
+    .map((r) => ({ userId: r.userId, mile: milestoneOf(metric, r.value) }))
+    .filter((r) => r.mile > 0);
+  if (eligible.length === 0) return;
+  const marks = await db
+    .select({ userId: userMilestones.userId, milestone: userMilestones.milestone })
+    .from(userMilestones)
+    .where(
+      and(
+        eq(userMilestones.serverId, serverId),
+        eq(userMilestones.metric, metric),
+        inArray(userMilestones.userId, eligible.map((r) => r.userId)),
+      ),
+    );
+  const markBy = new Map(marks.map((m) => [m.userId, Number(m.milestone)]));
+  for (const r of eligible) {
+    if (r.mile <= (markBy.get(r.userId) ?? 0)) continue;
+    await db
+      .insert(userMilestones)
+      .values({ userId: r.userId, serverId, metric, milestone: BigInt(r.mile) })
+      .onConflictDoUpdate({
+        target: [userMilestones.userId, userMilestones.serverId, userMilestones.metric],
+        set: { milestone: BigInt(r.mile), updatedAt: new Date() },
+      });
+    await logWorldEvent(serverId, 'personal_milestone', { metric, milestone: r.mile }, { actorUserId: r.userId });
+    await logMemberAchievement(r.userId, serverId, {
+      action: 'achv_milestone',
+      detail: { metric, milestone: r.mile },
+    });
+  }
 }
 
 /**
