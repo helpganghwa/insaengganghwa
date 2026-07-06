@@ -46,7 +46,11 @@ const WIPE_TABLES = [
   'mail_claim_logs', 'admin_mail_logs', 'daily_supply_grants', 'premium_daily_grants', 'mailbox',
   'checkin_claim_logs', 'user_checkin_state',
   'battlepass_segments', 'battlepass_state',
-  'ranking_leaders', 'world_events',
+  // user_milestones: 개인 기록 단조 워터마크(0103). profiles FK CASCADE는 profiles 보존이라
+  // 안 터짐 — 남기면 CBT 고점을 넘을 때까지 마일스톤 피드가 침묵한다.
+  'ranking_leaders', 'world_events', 'user_milestones',
+  // ad_views: 광고 보상 v1 미도입(빈 테이블 예상)이나 0000에서 생성돼 물리 존재 — 유저 귀속 데이터.
+  'ad_views',
   'payment_alerts', 'monthly_purchase_limits', 'iap_refunds', 'iap_orders', 'identity_verifications',
   'client_errors', 'admin_actions',
   'support_inquiries', // CBT 문의 — 실운영 첫날 오탐 배지 방지

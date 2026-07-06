@@ -18,12 +18,27 @@
 | 결제 E2E 1건 | 본인인증 → 주문 → 지급 → 환불 회수까지 테스트 채널로 검증 |
 | 약관/개인정보 시행일 | 오픈일 기준 갱신 필요 여부 확인(`lib/legal/content.ts` LEGAL_META) |
 
-## 1. 점검 모드 ON
+## 1. 점검 모드 ON + 크론 정지
 
-어드민 → 점검(`/admin/maintenance`)에서 `maintenance` 전환.
-스크립트가 자동으로 켜지 않으며, **켜지 않으면 cutover-live가 가드로 중단**된다.
+1. 어드민 → 점검(`/admin/maintenance`)에서 `maintenance` 전환.
+   스크립트가 자동으로 켜지 않으며, **켜지 않으면 cutover-live가 가드로 중단**된다.
+2. **크론 일시 정지** — maintenance는 유저 대면 경로만 막고 **크론은 계속 돈다**
+   (`app/api/cron/*` 어디에도 system_mode 체크 없음). wipe 창에서 `push-daily-supply`·
+   `resolve-enhance`·대난투/점령 정산 등이 방금 비운 테이블에 재INSERT하거나 CBT 데이터로
+   정산을 돌릴 수 있다. 방법(택1):
+   - Vercel 대시보드 → Settings → Cron Jobs 비활성화(§6에서 재활성화), 또는
+   - `CRON_SECRET`을 임시 회전(모든 크론이 fail-closed) 후 §6에서 원복.
+   대난투/점령 정산 시각(KST 정시·23시)과 겹치지 않는 창을 고르면 리스크가 더 준다.
 
 ## 2. 이월 스냅샷 (wipe 전 필수)
+
+**wipe 전 실결제 부재 확인** — CBT는 ALLOW_TEST_LOGIN으로 결제가 막혀 있어 실주문이 없어야
+정상이지만, 1건이라도 있으면 `iap_orders` 삭제가 전자상거래법 거래기록 보존의무(5년)와 충돌한다:
+
+```sql
+select count(*) from iap_orders where status in ('paid','refunded');
+-- 0이 아니면: 해당 행 백업(export) 후 wipe 진행
+```
 
 ```bash
 bun run --env-file=.env.local scripts/cbt-snapshot.ts            # 드라이런 확인
@@ -66,9 +81,13 @@ bun run scripts/record-probability-snapshot.ts --note="정식 오픈" --confirm
 
 ## 6. 점검 해제 + 오픈
 
-1. 오픈 공지 발행(`/admin/announcements`) — 트래픽 분산을 위해 공지 시각을 나누는 것을 권장
+1. **서버명 확인** — 컷오버는 servers 행을 보존·재사용한다(id=1). CBT용 이름이면 정식
+   서버명으로 변경: `update servers set name = '1서버' where id = 1;` (이름은 로그인
+   서버 선택·설정 화면에 노출됨.)
+2. 크론 재활성화(§1에서 정지한 방식의 역순 — Cron Jobs 활성화 또는 `CRON_SECRET` 원복).
+3. 오픈 공지 발행(`/admin/announcements`) — 트래픽 분산을 위해 공지 시각을 나누는 것을 권장
    (재로그인 폭주 시 콜백 캐릭터 생성 tx가 커넥션 풀을 경쟁).
-2. 점검 모드 OFF.
+4. 점검 모드 OFF.
 
 ## 7. 오픈 직후 검증
 
