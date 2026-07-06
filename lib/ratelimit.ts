@@ -15,6 +15,7 @@ import { Redis } from '@upstash/redis';
  */
 export type RlBucket =
   | 'enhance'
+  | 'enhanceCancel'
   | 'gacha'
   | 'inventory'
   | 'raid'
@@ -32,6 +33,8 @@ export type RlBucket =
 
 const WINDOWS: Record<RlBucket, [limit: number, window: `${number} s`]> = {
   enhance: [30, '10 s'],
+  // 취소 전용 — 슬롯 전멸 사건(2026-07-06) 재발 가드. 정상 UX(3초 재탭 컨펌)에선 도달 불가.
+  enhanceCancel: [8, '60 s'],
   gacha: [15, '10 s'],
   inventory: [40, '10 s'],
   raid: [30, '10 s'],

@@ -62,6 +62,8 @@ export const enhancementJobs = pgTable(
     status: enhanceJobStatusEnum('status').notNull().default('running'),
     /** '최대확률 도달' 알림 1회 보장 게이트(2026-05-26). complete_at 도달 시 cron이 발송 후 true 마크. */
     pushSent: boolean('push_sent').notNull().default(false),
+    /** 취소 시각(0102) — 슬롯 전멸 사건 추적용 감사 필드. null=미취소. */
+    cancelledAt: timestamp('cancelled_at', { withTimezone: true }),
     createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
   },
   (t) => [

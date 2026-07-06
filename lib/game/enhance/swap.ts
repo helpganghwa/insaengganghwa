@@ -21,7 +21,7 @@ export function swapEnhance(input: {
   return db.transaction(async (tx) => {
     const cancelled = await tx
       .update(enhancementJobs)
-      .set({ status: 'cancelled' })
+      .set({ status: 'cancelled', cancelledAt: new Date() })
       .where(
         and(
           eq(enhancementJobs.id, cancelJobId),
@@ -32,6 +32,9 @@ export function swapEnhance(input: {
       .returning({ id: enhancementJobs.id });
     if (cancelled.length === 0) throw new EnhanceError('JOB_NOT_FOUND');
 
-    return queueEnhanceInTx(tx, { userId, userEquipmentId });
+    const result = await queueEnhanceInTx(tx, { userId, userEquipmentId });
+    // 감사 로그 — 교체로 인한 취소와 신규 잡을 한 줄에(슬롯 전멸 사건 추적용).
+    console.log(`[enhance.swap] cancel=${cancelJobId} new=${result.jobId} user=${userId}`);
+    return result;
   });
 }

@@ -13,7 +13,7 @@ import { EnhanceError } from './queue';
 export async function cancelEnhance(input: { userId: string; jobId: bigint }): Promise<void> {
   const rows = await db
     .update(enhancementJobs)
-    .set({ status: 'cancelled' })
+    .set({ status: 'cancelled', cancelledAt: new Date() })
     .where(
       and(
         eq(enhancementJobs.id, input.jobId),
@@ -23,4 +23,6 @@ export async function cancelEnhance(input: { userId: string; jobId: bigint }): P
     )
     .returning({ id: enhancementJobs.id });
   if (rows.length === 0) throw new EnhanceError('JOB_NOT_FOUND'); // 이미 완료/취소 → 멱등
+  // 감사 로그 — 슬롯 전멸 사건(2026-07-06) 이후 취소는 반드시 흔적을 남긴다(요청 로그와 결합돼 추적 가능).
+  console.log(`[enhance.cancel] job=${input.jobId} user=${input.userId}`);
 }

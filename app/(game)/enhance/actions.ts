@@ -182,7 +182,8 @@ export async function reduceTimeWithGems(jobId: string, diamonds: number) {
 export async function cancelEnhanceAction(jobId: string) {
   const userId = await uid();
   if (!userId) return err('UNAUTHENTICATED');
-  if (await rateLimited(userId, 'enhance')) return err('RATE_LIMITED');
+  // 취소 전용 버킷 — 짧은 시간 다중 취소 폭주(슬롯 전멸 사건) 차단. 정상 조작은 컨펌 때문에 도달 불가.
+  if (await rateLimited(userId, 'enhanceCancel')) return err('RATE_LIMITED');
   const __b = await actionBlock(); if (__b) return err(__b);
   try {
     await cancelEnhance({ userId, jobId: BigInt(jobId) });
