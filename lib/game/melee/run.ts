@@ -52,10 +52,13 @@ export async function runMelee(serverId: number): Promise<{ ran: boolean; battle
 
   // 참가 자격: **전투력 > 0**(장비 보유로 CP가 잡히는 유저)이면 자동 참가. CP 0 = 미참가.
   //  전 유저 장비 일괄 로드 → JS에서 유저별 CP 산출 → 0 초과만 로스터.
+  //  정지 계정 제외 — 리더보드와 동일 정책(정지 중 자동 참가·보상 수령 차단).
   const eqRows = (await db.execute(sql`
     select ei.user_id::text uid, ei.catalog_item_id cid, ei.enhance_level el, ei.transcend_level tl
     from user_equipment ei
+    join profiles p on p.id = ei.user_id
     where ei.server_id = ${serverId}
+      and (p.banned_at is null or (p.ban_until is not null and p.ban_until <= now()))
   `)) as unknown as EqRow[];
   if (eqRows.length === 0) return { ran: false };
 

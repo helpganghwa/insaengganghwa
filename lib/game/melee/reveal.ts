@@ -1,6 +1,6 @@
 import 'server-only';
 
-import { and, eq, inArray, sql } from 'drizzle-orm';
+import { and, eq, inArray, lte, sql } from 'drizzle-orm';
 
 import { db } from '@/lib/db/client';
 import { meleeBattles, meleeParticipants } from '@/lib/db/schema/melee';
@@ -18,12 +18,40 @@ import { logWorldEvent } from '@/lib/game/world/event';
  * 우편 적재는 단일 SQL(insert…select from melee_participants)로 N행 한 번에 — DB측 처리.
  * 푸시는 sendPushToUsers(배치, 동일 본문·시상대, 토글 OFF 자동 스킵). 초대규모는 청크 필요.
  */
-export async function revealMelee(serverId: number): Promise<{ revealed: boolean; battleId?: string; mailed?: number }> {
+export async function revealMelee(serverId: number): Promise<{ revealed: number; mailed: number; battleIds: string[] }> {
   const [today] = (await db.execute(
     sql`select (now() at time zone 'Asia/Seoul')::date::text d`,
   )) as unknown as { d: string }[];
-  const battleDate = today!.d;
 
+  // 백스톱 스캔 — 오늘뿐 아니라 과거의 미발표('computed') 배틀도 함께 쓸어담는다.
+  // 발표 윈도(KST 10시대 12틱)가 장애로 전량 실패하면, 실행 시각 파생 날짜만 보는 구조에선
+  // 그 배틀이 영영 미발표로 남아 참가자 보상 우편이 영구 유실된다(감사 M-2).
+  const pending = await db
+    .select({ d: meleeBattles.battleDate })
+    .from(meleeBattles)
+    .where(
+      and(
+        eq(meleeBattles.serverId, serverId),
+        eq(meleeBattles.status, 'computed'),
+        lte(meleeBattles.battleDate, today!.d),
+      ),
+    )
+    .orderBy(meleeBattles.battleDate);
+
+  let mailed = 0;
+  const battleIds: string[] = [];
+  for (const p of pending) {
+    const r = await revealOne(serverId, p.d);
+    if (r) {
+      mailed += r.mailed;
+      battleIds.push(r.battleId);
+    }
+  }
+  return { revealed: battleIds.length, mailed, battleIds };
+}
+
+/** (server, battleDate) 배틀 1건 발표 — 조건부 플립 + 우편 + 푸시 + 업적/피드. */
+async function revealOne(serverId: number, battleDate: string): Promise<{ battleId: string; mailed: number } | null> {
   const RANK_LABEL = ['🏆우승', '2등', '3등'];
 
   // 트랜잭션 — 상태 플립(computed→revealed, 멱등) + 시상대 조회 + 참가자 결과 우편 일괄 적재를
@@ -76,7 +104,7 @@ export async function revealMelee(serverId: number): Promise<{ revealed: boolean
     return { battleId, podium, podiumStr };
   });
 
-  if (!result) return { revealed: false };
+  if (!result) return null;
   const { battleId, podium, podiumStr } = result;
 
   // 푸시 — 참가자 전원(토글 ON만 내부 필터). 본문은 시상대 Top3(개인 순위는 우편/페이지).
@@ -109,5 +137,5 @@ export async function revealMelee(serverId: number): Promise<{ revealed: boolean
     }
   }
 
-  return { revealed: true, battleId: battleId.toString(), mailed: userIds.length };
+  return { battleId: battleId.toString(), mailed: userIds.length };
 }

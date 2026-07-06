@@ -98,7 +98,7 @@ interface PixellabCharacterDetail {
  *  ① 구조적(주방어, 감사 #2): accept/reject/markFailed 모두 **claim-first 조건부 전이**
  *     (`update … where status IN(...) returning` → 0행이면 즉시 종료)라, 두 워커가 같은 잡을 잡아도
  *     지급·환불·프로필생성은 **정확히 1회**만 일어난다.
- *  ② 운영적(보조): 유일 호출자가 profile-poll cron(2분=120s)이고 maxDuration=60s라 연속 invocation이
+ *  ② 운영적(보조): 유일 호출자가 profile-poll cron(2분=120s)이고 maxDuration=90s라 연속 invocation이
  *     절대 겹치지 않으며 루프 내 처리도 순차 — 애초에 동시 진입이 거의 없다.
  *
  * 🔒 새 호출자/병렬 처리를 추가하더라도 ①의 조건부 전이가 멱등을 보장하나, ②가 깨지면 락 경합·중복

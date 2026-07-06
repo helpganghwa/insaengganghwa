@@ -83,25 +83,37 @@ export async function GET(req: Request) {
   let goneSum = 0;
   let failedSum = 0;
   let processed = 0;
+  // CAS 커서 — 발송 **전에** 이전 커서 값 조건부로 전진시켜 청크를 선점한다(감사 M-3).
+  // 재시도/수동 트리거로 두 인스턴스가 겹치면 CAS가 한쪽만 통과 → 같은 구간 중복 푸시 차단.
+  // 선점 후 발송 실패는 그 청크 유실(알림이라 허용 — push-flush와 동일 트레이드오프).
+  let prevCursor: string | null = state.cursor_user_id;
   for (let i = 0; i < rows.length; i += CHUNK) {
     if (i > 0) {
       if (Date.now() - startedAt > TIME_BUDGET_MS) break;
       await new Promise((r) => setTimeout(r, CHUNK_DELAY_MS));
     }
     const chunk = rows.slice(i, i + CHUNK);
+    const nextCursor = chunk[chunk.length - 1]!.user_id;
+    const claimed = (await db.execute(sql`
+      update daily_supply_broadcasts
+      set cursor_user_id = ${nextCursor},
+          recipients = coalesce(recipients, 0) + ${chunk.length},
+          sent_at = coalesce(sent_at, now())
+      where kst_day = ${kstDay}
+        and completed_at is null
+        and cursor_user_id is not distinct from ${prevCursor}
+      returning kst_day
+    `)) as unknown as unknown[];
+    if (claimed.length === 0) {
+      console.warn('[push-daily-supply] 커서 선점 실패 — 다른 인스턴스 진행 중, 중단');
+      break;
+    }
+    prevCursor = nextCursor;
     const res = await sendPushToUsers(chunk.map((r) => r.user_id), payload);
     okSum += res.ok;
     goneSum += res.gone;
     failedSum += res.failed;
     processed += chunk.length;
-    // 청크 단위 커서 전진 — 중단돼도 이 지점부터 재개(같은 유저 중복 발송 없음).
-    await db.execute(sql`
-      update daily_supply_broadcasts
-      set cursor_user_id = ${chunk[chunk.length - 1]!.user_id},
-          recipients = coalesce(recipients, 0) + ${chunk.length},
-          sent_at = coalesce(sent_at, now())
-      where kst_day = ${kstDay}
-    `);
   }
 
   const done = processed >= rows.length;

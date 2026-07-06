@@ -248,6 +248,30 @@ async function startAttempt(b: TrophyBattle, nextAttempt: number): Promise<void>
     console.warn(`[melee.trophy] battle ${b.id} FAILED (attempts > ${MAX_ATTEMPTS})`);
     return;
   }
+  // 클레임 먼저 — 크론 실행이 주기(3분)를 넘겨 다음 틱과 겹치면 두 인스턴스가 같은
+  // 배틀로 유료 생성 POST를 이중 발사한다. 시도 번호 전이를 원자 조건부로 선점하고,
+  // 0행이면 다른 인스턴스가 이미 진행 중 → 조용히 물러난다.
+  const claim = await db
+    .update(meleeBattles)
+    .set({
+      trophyStatus: 'generating',
+      trophyCharId: null,
+      trophyAttempts: nextAttempt,
+      trophyUpdatedAt: new Date(),
+    })
+    .where(
+      and(
+        eq(meleeBattles.id, b.id),
+        nextAttempt === 1
+          ? isNull(meleeBattles.trophyStatus)
+          : and(eq(meleeBattles.trophyStatus, 'generating'), eq(meleeBattles.trophyAttempts, nextAttempt - 1)),
+      ),
+    )
+    .returning({ id: meleeBattles.id });
+  if (claim.length === 0) {
+    console.log(`[melee.trophy] battle ${b.id} attempt ${nextAttempt} 선점됨 — skip`);
+    return;
+  }
   const source = await getSourceChar(b.championUserId, b.serverId);
   if (!source) {
     await db
@@ -262,10 +286,8 @@ async function startAttempt(b: TrophyBattle, nextAttempt: number): Promise<void>
   await db
     .update(meleeBattles)
     .set({
-      trophyStatus: 'generating',
       trophyCharId: charId,
       trophyPose: pose.tag,
-      trophyAttempts: nextAttempt,
       trophyUpdatedAt: new Date(),
     })
     .where(eq(meleeBattles.id, b.id));
@@ -323,7 +345,13 @@ async function processOne(b: TrophyBattle): Promise<void> {
     await startAttempt(b, 1);
     return;
   }
-  if (b.trophyStatus !== 'generating' || !b.trophyCharId) return;
+  if (b.trophyStatus !== 'generating') return;
+  if (!b.trophyCharId) {
+    // 클레임 직후 생성 POST가 실패해 남은 고아 클레임 — 타임아웃 경과 시 다음 시도로.
+    const ageMin = (Date.now() - (b.trophyUpdatedAt?.getTime() ?? 0)) / 60_000;
+    if (ageMin > GEN_TIMEOUT_MIN) await startAttempt(b, b.trophyAttempts + 1);
+    return;
+  }
 
   // 폴링도 소스 캐릭터를 만든 키로(계정 귀속). 활성 프로필의 keyIdx 재확인(없으면 key1 폴백).
   const source = await getSourceChar(b.championUserId, b.serverId);

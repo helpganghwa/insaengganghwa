@@ -5,6 +5,7 @@ import { and, desc, eq, lt, sql } from 'drizzle-orm';
 
 import { db } from '@/lib/db/client';
 import { worldChronicle } from '@/lib/db/schema/guild';
+import { kstDateString } from '@/lib/kst';
 import type { ConquestFinale } from './simulate';
 
 const MODEL_ID = 'claude-sonnet-5';
@@ -85,9 +86,9 @@ export async function aggregateConquestDay(kstDay: string, serverId: number): Pr
   for (const b of battles) {
     if (!b.winner) continue;
     const region = REGION_KO[b.region] ?? b.region;
-    const capturedToday =
-      b.captured_at != null &&
-      new Date(b.captured_at).toISOString().slice(0, 10) === kstDay;
+    // KST 날짜로 비교 — UTC 문자열(toISOString)은 KST 00~09시 점령을 전날로 밀어
+    // 지연·재실행 시 점령이 '방어'로 오분류된다.
+    const capturedToday = b.captured_at != null && kstDateString(new Date(b.captured_at)) === kstDay;
     if (capturedToday) {
       captures.push({
         zone: b.zone,

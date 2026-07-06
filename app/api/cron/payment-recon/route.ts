@@ -10,7 +10,7 @@
  * 인증: isCronAuthorized(CRON_SECRET Bearer 또는 x-vercel-cron). 각 주문 PortOne 조회는
  *  개별 try로 격리 — 1건 실패가 전체 run을 막지 않게.
  */
-import { and, desc, eq, gt, lt, sql } from 'drizzle-orm';
+import { and, asc, eq, gt, lt, sql } from 'drizzle-orm';
 
 import { isCronAuthorized } from '@/lib/auth/cron-auth';
 import { db } from '@/lib/db/client';
@@ -38,7 +38,9 @@ export async function GET(req: Request) {
     .select({ id: iapOrders.id, pid: iapOrders.portoneOrderId })
     .from(iapOrders)
     .where(and(eq(iapOrders.status, 'pending'), lt(iapOrders.createdAt, sql`now() - interval '15 minutes'`)))
-    .orderBy(desc(iapOrders.createdAt))
+    // 오래된 것 우선(asc) — 최신순이면 백로그가 limit을 넘는 동안 가장 오래된(가장 위험한)
+    // 주문이 영원히 스캔 밖에 남는 기아 발생(감사 M-4).
+    .orderBy(asc(iapOrders.createdAt))
     .limit(ORPHAN_PENDING_LIMIT);
   let healed = 0;
   let stillPending = 0;
@@ -68,7 +70,8 @@ export async function GET(req: Request) {
     .select({ id: iapOrders.id, pid: iapOrders.portoneOrderId })
     .from(iapOrders)
     .where(and(eq(iapOrders.status, 'paid'), gt(iapOrders.paidAt, sql`now() - interval '3 days'`)))
-    .orderBy(desc(iapOrders.paidAt))
+    // 오래된 것 우선(asc) — 환불 미회수가 가장 오래 방치된 주문부터(기아 방지, 감사 M-4).
+    .orderBy(asc(iapOrders.paidAt))
     .limit(REFUND_SCAN_LIMIT);
   let reclaimed = 0;
   for (const o of recentPaid) {
@@ -89,6 +92,13 @@ export async function GET(req: Request) {
     }
   }
   out.refundBackstop = { scanned: recentPaid.length, reclaimed, capped: recentPaid.length === REFUND_SCAN_LIMIT };
+  // 캡 도달 = 미스캔 주문이 존재할 수 있는 상태 — 응답 JSON에만 남기지 않고 알림(중복은 미해결 1회 게이트).
+  if (pending.length === ORPHAN_PENDING_LIMIT || recentPaid.length === REFUND_SCAN_LIMIT) {
+    await raisePaymentAlert('RECON_SCAN_CAPPED', {
+      paymentId: 'recon:scan-capped',
+      detail: `recon 스캔 캡 도달(pending ${pending.length}/${ORPHAN_PENDING_LIMIT}, paid ${recentPaid.length}/${REFUND_SCAN_LIMIT}) — 백로그가 limit을 넘음. asc 정렬이라 다음 주기에 이어지지만 규모 확인 필요.`,
+    });
+  }
 
   // ── D. 미성년 월 한도 초과(본인인증 연동 후 실효) ──────────────────────────
   const month = kstMonthString();

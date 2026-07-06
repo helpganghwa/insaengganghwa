@@ -9,7 +9,7 @@ import { sendPushToUser } from '@/lib/push/send';
 /**
  * 강화 '준비 완료'(=complete_at 도달, 최대확률) 알림 적재/발송.
  *
- * 트리거: /api/cron/push-enhance-ready (매 5분) — push_sent=false 잡 발견 시 호출.
+ * 트리거: /api/cron/push-enhance-ready (매분) — push_sent=false 잡 발견 시 호출.
  * 모드 분기:
  *  - instant (기본): sendPushToUser 즉시 호출 — 슬롯별 즉시 알림(OS tag 묶음)
  *  - batched: push_pending 적재 → push-flush cron이 30분 윈도 후 묶음 발송

@@ -23,7 +23,8 @@ export type PaymentAlertKind =
   | 'MINOR_LIMIT_EXCEEDED' // 高(법규): 미성년 월 한도 초과
   | 'ORPHAN_PENDING' // 中: 장시간 pending(PG도 미결제)
   | 'COMPLETE_EXCEPTION' // 高: 지급 처리 중 예외
-  | 'PARTIAL_CANCELLED'; // 中: 부분취소(수동 처리 필요)
+  | 'PARTIAL_CANCELLED' // 中: 부분취소(수동 처리 필요)
+  | 'RECON_SCAN_CAPPED'; // 高: recon 스캔이 limit에 걸림(백로그 초과 — 미스캔 주문 존재 가능)
 
 type Severity = 'critical' | 'high' | 'warn';
 
@@ -36,6 +37,7 @@ const SEVERITY: Record<PaymentAlertKind, Severity> = {
   AMOUNT_MISMATCH: 'warn',
   ORPHAN_PENDING: 'warn',
   PARTIAL_CANCELLED: 'warn',
+  RECON_SCAN_CAPPED: 'high',
 };
 
 const SEV_EMOJI: Record<Severity, string> = { critical: '🔴', high: '🟠', warn: '🟡' };
@@ -70,11 +72,14 @@ export async function raisePaymentAlert(
       .limit(1);
     if (existing) return false;
 
-    await db
+    // 동시 호출 레이스 — 부분 유니크가 1건만 통과. returning으로 실제 insert 여부를 확인해
+    // 진 쪽이 webhook/푸시를 중복 발송하지 않게 한다.
+    const inserted = await db
       .insert(paymentAlerts)
       .values({ kind, severity, paymentId, orderId: opts.orderId, detail: opts.detail })
-      .onConflictDoNothing(); // 동시 호출 레이스 — 부분 유니크가 1건만 통과.
-    created = true;
+      .onConflictDoNothing()
+      .returning({ id: paymentAlerts.id });
+    created = inserted.length > 0;
   } catch (e) {
     // DB 기록 실패해도 알림 시도는 이어간다(아래 webhook). 기록 실패 자체를 콘솔에.
     console.error('[payment-alert] persist failed', e);

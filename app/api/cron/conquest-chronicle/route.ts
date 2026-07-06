@@ -7,7 +7,10 @@
  * 스케줄: vercel.json UTC 15시대 5분 간격(= KST 00시대) — 배포 겹침 대비 윈도.
  * 인증: CRON_SECRET Bearer(설정 시) — isCronAuthorized.
  */
+import { sql } from 'drizzle-orm';
+
 import { isCronAuthorized } from '@/lib/auth/cron-auth';
+import { db } from '@/lib/db/client';
 import { generateAndStoreChronicle } from '@/lib/game/guild';
 import { revealConquest, carryOverDefenders } from '@/lib/game/guild/conquest/run';
 import { openServerIds } from '@/lib/game/server-list';
@@ -16,6 +19,10 @@ import { kstDateString } from '@/lib/kst';
 export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
 export const maxDuration = 60;
+
+// 백스톱 포함 1틱당 처리 일수 상한 — 연대기 LLM 호출이 있어 maxDuration(60s) 예산 보호.
+// 밀린 날이 더 있어도 다음 틱(5분 간격 12틱)이 이어받는다.
+const MAX_DAYS_PER_TICK = 3;
 
 export async function GET(req: Request) {
   if (!isCronAuthorized(req)) return new Response('forbidden', { status: 403 });
@@ -26,17 +33,32 @@ export async function GET(req: Request) {
     // per-server 에러격리(감사 G1) — 한 서버 공개 실패가 뒤 서버 소유권·보상 우편 누락으로 번지지 않도록. 멱등 재시도 안전.
     for (const sid of await openServerIds()) {
       try {
-        // narrate 전에 어제 전투 공개(소유권 적용·우편·published 마킹) — 멱등.
-        const rev = await revealConquest(sid, kstDay);
-        // 공개 후 수비 배치 이월(안 뺏긴 구역만, 공격은 해제) — 재실행 안전. 실패해도 공개/연대기엔 무관.
-        const carry = await carryOverDefenders(sid, kstDay).catch(() => ({ carried: 0 }));
-        results.push({
-          serverId: sid,
-          revealed: rev.revealed,
-          mailed: rev.mailed,
-          carried: carry.carried,
-          ...(await generateAndStoreChronicle(kstDay, sid)),
-        });
+        // 대상 일자 = 어제 + **과거 미공개 잔여분**(백스톱, 감사 M-2) — 공개 윈도(00시대 12틱)가
+        // 장애로 전량 실패하면 실행 시각 파생 날짜만 봐서는 그 전투가 영영 미공개로 남아
+        // 소유권 이전·보상 우편이 영구 유실된다. published_at is null을 날짜 무관 스캔.
+        const pendingRows = (await db.execute(sql`
+          select distinct battle_kst_day::text d from conquest_battles
+          where server_id = ${sid} and published_at is null and battle_kst_day <= ${kstDay}
+          order by d limit ${MAX_DAYS_PER_TICK}
+        `)) as unknown as { d: string }[];
+        const days = pendingRows.map((r) => r.d);
+        // 연대기는 공개 여부와 별개 멱등(kst_day 기준)이라 어제 날짜는 항상 시도.
+        if (!days.includes(kstDay)) days.push(kstDay);
+
+        for (const day of days) {
+          // narrate 전에 전투 공개(소유권 적용·우편·published 마킹) — 멱등.
+          const rev = await revealConquest(sid, day);
+          // 공개 후 수비 배치 이월(안 뺏긴 구역만, 공격은 해제) — 재실행 안전. 실패해도 공개/연대기엔 무관.
+          const carry = await carryOverDefenders(sid, day).catch(() => ({ carried: 0 }));
+          results.push({
+            serverId: sid,
+            kstDay: day,
+            revealed: rev.revealed,
+            mailed: rev.mailed,
+            carried: carry.carried,
+            ...(await generateAndStoreChronicle(day, sid)),
+          });
+        }
       } catch (se) {
         console.error('[conquest-chronicle] server', sid, se);
         results.push({ serverId: sid, error: (se as Error).message });
