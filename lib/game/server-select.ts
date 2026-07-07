@@ -169,6 +169,20 @@ export async function createCharacter(input: {
         .onConflictDoNothing();
     }
 
+    // 반쪽 계정 복구 재진입 안전 — 캐릭터만 유실된 계정엔 이전 기본 아바타(isDefault)가 남아
+    // uq_default_avatar_per_char(0092, user_id+server_id+pixellab_character_id where isDefault)와
+    // 충돌해 캐릭터 재생성이 영구 실패한다(자가복구 무한 실패의 실제 원인, 2026-07-07). 새 캐릭터가
+    // 기본 아바타를 새로 소유하므로 기존 기본 아바타를 먼저 비운다(정상 신규는 없어 무해, 커스텀 유지).
+    await tx
+      .delete(userProfiles)
+      .where(
+        and(
+          eq(userProfiles.userId, input.userId),
+          eq(userProfiles.serverId, input.serverId),
+          sql`(${userProfiles.options} ->> 'isDefault') = 'true'`,
+        ),
+      );
+
     // 기본 아바타 2종(서버 자산) + active 랜덤.
     const inserted = await tx
       .insert(userProfiles)
