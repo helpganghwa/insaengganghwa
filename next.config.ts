@@ -14,7 +14,11 @@ const nextConfig: NextConfig = {
   // 읽으므로, 해당 서버리스 함수 번들에 public 스프라이트를 강제 포함(미포함 시 비전이 조용히
   // 텍스트로 degrade됨). 정적 분석으로는 추적 안 되는 동적 경로라 명시 포함 필요.
   outputFileTracingIncludes: {
+    // 프로필 생성(v3 compose)이 런타임에 장비 스프라이트 PNG를 readFileSync(vision 입력)로 읽는다.
+    // 주 발주 경로는 /me/create의 after()가 즉시 실행하는 drainQueue이고, cron/profile-poll은 백스톱.
+    // 두 함수 번들 모두에 스프라이트를 강제 포함해야 비전 입력이 텍스트로 조용히 degrade되지 않는다.
     '/api/cron/profile-poll': ['./public/sprites/**/*.png'],
+    '/me/create': ['./public/sprites/**/*.png'],
   },
   async headers() {
     return [

@@ -17,7 +17,7 @@ import { applyProductGrant } from '@/lib/game/shop/grant';
 import { hasFirstSpecial } from '@/lib/game/shop/dev-purchase';
 import { applyBpSegmentPurchase } from '@/lib/game/battlepass';
 
-import { getPortonePayment } from './portone';
+import { getPortonePayment, cancelPortonePayment } from './portone';
 
 /**
  * 배틀패스(성장패스) 결제 상품코드 — `bp_<type>_<구간index>`(예: bp_enhance_2, bp_transcend_0).
@@ -353,6 +353,14 @@ export async function completePurchase(
       orderId: order.id,
       detail: `미성년 월 한도 초과 결제 감지(동시 주문 우회) — 지급 보류 + 자동 환불 시도. 주문 ₩${Number(order.amountKrw).toLocaleString('ko-KR')}.`,
     });
+    // PortOne 실제 취소를 **먼저** — refundPurchase는 PG가 CANCELLED일 때만 회수·월누적
+    // 복원을 하는 사후 정합화 함수라, 선행 취소 없이는 no-op이 된다(어드민 환불 경로와 동일 순서).
+    // 취소 실패는 삼켜 recon B 백스톱에 맡긴다(refundPurchase가 NOT_CANCELLED로 빠져도 알림은 남음).
+    try {
+      await cancelPortonePayment(paymentId, '미성년 월 한도 초과 자동 환불');
+    } catch (e) {
+      console.error('[purchase] minor-limit portone cancel failed', paymentId, e);
+    }
     const { refundPurchase } = await import('./refund');
     await refundPurchase(paymentId).catch((e) =>
       console.error('[purchase] minor-limit auto refund failed', paymentId, e),
