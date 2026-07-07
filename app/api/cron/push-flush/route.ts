@@ -96,6 +96,8 @@ export async function GET(req: Request) {
     }
 
     if (rows.length < CLAIM_BATCH) break;
+    // 예산 체크는 다음 클레임 **전** — 초과 후 새 배치를 DELETE(클레임)하면 발송 중
+    // maxDuration 킬에 그 배치가 통째로 유실된다(클레임=삭제라 재전송 없음).
     if (Date.now() - startedAt > TIME_BUDGET_MS) break; // 잔여는 다음 틱(5분)
   }
 

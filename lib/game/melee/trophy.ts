@@ -241,10 +241,18 @@ type TrophyBattle = {
 /** 새 시도 시작(생성 POST). 상한 초과면 failed. */
 async function startAttempt(b: TrophyBattle, nextAttempt: number): Promise<void> {
   if (nextAttempt > MAX_ATTEMPTS) {
+    // 조건부 전이 — 크론 겹침 시 다른 인스턴스가 이미 done으로 마감한 배틀을 stale 판정으로
+    // failed로 덮지 않게(읽은 상태 그대로일 때만).
     await db
       .update(meleeBattles)
       .set({ trophyStatus: 'failed', trophyUpdatedAt: new Date() })
-      .where(eq(meleeBattles.id, b.id));
+      .where(
+        and(
+          eq(meleeBattles.id, b.id),
+          eq(meleeBattles.trophyStatus, 'generating'),
+          eq(meleeBattles.trophyAttempts, nextAttempt - 1),
+        ),
+      );
     console.warn(`[melee.trophy] battle ${b.id} FAILED (attempts > ${MAX_ATTEMPTS})`);
     return;
   }
@@ -274,14 +282,24 @@ async function startAttempt(b: TrophyBattle, nextAttempt: number): Promise<void>
   }
   const source = await getSourceChar(b.championUserId, b.serverId);
   if (!source) {
+    // 조건부 전이 — 방금 이 인스턴스가 선점한 상태(generating, nextAttempt)일 때만 failed.
     await db
       .update(meleeBattles)
       .set({ trophyStatus: 'failed', trophyUpdatedAt: new Date() })
-      .where(eq(meleeBattles.id, b.id));
+      .where(
+        and(
+          eq(meleeBattles.id, b.id),
+          eq(meleeBattles.trophyStatus, 'generating'),
+          eq(meleeBattles.trophyAttempts, nextAttempt),
+        ),
+      );
     console.warn(`[melee.trophy] battle ${b.id} FAILED (champion has no pixellab profile)`);
     return;
   }
   const pose = POSE_POOL[(Number(b.id % BigInt(POSE_POOL.length)) + nextAttempt) % POSE_POOL.length]!;
+  // 알려진 한계: createState(유료 POST) 성공 ↔ 아래 charId 저장 사이 크래시 시 고아 클레임 —
+  // 20분 타임아웃 재시도가 같은 attempt를 한 번 더 발사(이중 과금 가능, MAX_ATTEMPTS=3 상한).
+  // 외부 POST를 tx로 감쌀 수 없는 구조적 트레이드오프로 수용(발생 시 크레딧 소액 손실뿐).
   const charId = await createState(source.cid, pose.edit, source.keyIdx);
   await db
     .update(meleeBattles)

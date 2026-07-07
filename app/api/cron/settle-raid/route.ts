@@ -43,11 +43,13 @@ export async function GET(req: Request) {
       .limit(CHUNK);
     candidates += due.length;
 
+    let iterProgress = 0; // 이번 반복 진행량 — 누적 카운터로 판정하면 첫 성공 이후 가드가 무력.
     for (const { id } of due) {
       try {
         const r = await settleRaid({ raidId: id });
         if (r.settled) settled++;
         else skipped++; // 이미 settled(lazy 먼저 처리)
+        iterProgress++;
       } catch (e) {
         failed++;
         console.warn('[settle-raid] raid', id.toString(), e);
@@ -55,8 +57,8 @@ export async function GET(req: Request) {
     }
 
     if (due.length < CHUNK) break;
-    // 전 배치 실패면 같은 레이드를 무한 재선택할 수 있어 중단(다음 틱 재시도).
-    if (settled + skipped === 0) break;
+    // 이번 배치가 전부 실패면 같은 레이드(선두 정렬 고정)를 재선택해 예산만 태운다 — 중단(다음 틱 재시도).
+    if (iterProgress === 0) break;
     if (Date.now() - startedAt > TIME_BUDGET_MS) break;
   }
 

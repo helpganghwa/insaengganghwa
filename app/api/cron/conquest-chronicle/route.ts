@@ -44,6 +44,27 @@ export async function GET(req: Request) {
         const days = pendingRows.map((r) => r.d);
         // 연대기는 공개 여부와 별개 멱등(kst_day 기준)이라 어제 날짜는 항상 시도.
         if (!days.includes(kstDay)) days.push(kstDay);
+        // 연대기 구멍 백필(감사 2026-07-07 D-묶음) — 공개(published)는 됐는데 연대기 생성이
+        // 실패(LLM 오류 등)한 날은 위 스캔(published_at is null 기준)에 다시 안 잡혀 영구
+        // 유실됐다. 최근 7일 중 전투는 있고 world_chronicle 행이 없는 날을 재시도 대상으로
+        // 추가(generate는 멱등 — 행 있으면 skip, 사건 없으면 no-event로 조용히 끝).
+        const holes = (await db.execute(sql`
+          select distinct cb.battle_kst_day::text d
+          from conquest_battles cb
+          where cb.server_id = ${sid}
+            and cb.battle_kst_day < ${kstDay}
+            and cb.battle_kst_day >= ${kstDay}::date - interval '7 days'
+            and not exists (
+              select 1 from world_chronicle wc
+              where wc.server_id = ${sid} and wc.kst_day = cb.battle_kst_day
+            )
+          order by d
+        `)) as unknown as { d: string }[];
+        for (const h of holes) if (!days.includes(h.d)) days.push(h.d);
+        // 1틱 예산 보호 — 백스톱·백필 합산 상한(LLM 호출 포함). 잔여는 다음 틱(5분 간격)이
+        // 이어받는다. 단 어제(오늘 자정 공개분)는 항상 포함 — 잘리면 마지막 슬롯과 교체.
+        days.splice(MAX_DAYS_PER_TICK);
+        if (!days.includes(kstDay) && days.length > 0) days[days.length - 1] = kstDay;
 
         for (const day of days) {
           // narrate 전에 전투 공개(소유권 적용·우편·published 마킹) — 멱등.

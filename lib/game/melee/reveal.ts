@@ -10,6 +10,7 @@ import { sendPushToUsers } from '@/lib/push/send';
 import { logMemberAchievement } from '@/lib/game/guild/achievement';
 import { logWorldEvent } from '@/lib/game/world/event';
 import { bumpCountMetric } from '@/lib/game/leaderboard/incremental';
+import { kstDateString } from '@/lib/kst';
 
 /**
  * 대난투 10:00 발표 — MELEE §7. KST 오늘 배틀이 'computed'면:
@@ -90,20 +91,23 @@ async function revealOne(serverId: number, battleDate: string): Promise<{ battle
         : '🏆우승 챔피언';
 
     // 결과 우편 — 참가자 전원 1행씩 DB측 일괄 적재(melee type, 다이아+상자 payload).
-    await tx.execute(sql`
+    // 날짜 라벨 — 백스톱으로 늦게 발표된 과거 배틀은 '오늘'이 오표기라 전투일을 명시.
+    const dayLabel = battleDate === kstDateString() ? '오늘 대난투' : `${battleDate} 대난투`;
+    const inserted = (await tx.execute(sql`
       insert into mailbox (user_id, server_id, type, title, body, sender_label, payload, expires_at)
       select mp.user_id,
              ${serverId},
              'melee'::mailbox_type,
              '대난투 결과',
-             '오늘 대난투 ' || mp.final_rank || '위!' || E'\n' || ${podiumStr},
+             ${dayLabel} || ' ' || mp.final_rank || '위!' || E'\n' || ${podiumStr},
              '대난투',
              jsonb_build_object('diamond', mp.reward_diamond, 'boxes', mp.reward_boxes),
              now() + interval '30 days'
       from melee_participants mp
       where mp.battle_id = ${battleId}
-    `);
-    return { battleId, podium, podiumStr, championUserId };
+      returning user_id
+    `)) as unknown as unknown[];
+    return { battleId, podium, podiumStr, championUserId, mailCount: inserted.length };
   });
 
   if (!result) return null;
@@ -147,5 +151,5 @@ async function revealOne(serverId: number, battleDate: string): Promise<{ battle
     }
   }
 
-  return { battleId: battleId.toString(), mailed: userIds.length };
+  return { battleId: battleId.toString(), mailed: result.mailCount };
 }

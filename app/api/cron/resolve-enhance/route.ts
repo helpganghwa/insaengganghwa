@@ -52,13 +52,16 @@ export async function GET(req: Request) {
     candidates += due.length;
 
     // 순차 처리 — 한 트랜잭션 실패가 다른 것 막지 않음(각 ~50ms).
+    let iterProgress = 0; // 이번 반복 진행량 — 누적 카운터로 판정하면 첫 성공 이후 가드가 무력.
     for (const { id } of due) {
       try {
         await resolveEnhance({ jobId: id, requireComplete: true });
         resolved++;
+        iterProgress++;
       } catch (e) {
         if (e instanceof EnhanceError && e.code === 'JOB_NOT_FOUND') {
           skipped++; // 멱등 no-op
+          iterProgress++;
         } else {
           failed++;
           console.warn('[resolve-enhance] job', id.toString(), e);
@@ -67,8 +70,8 @@ export async function GET(req: Request) {
     }
 
     if (due.length < CHUNK) break;
-    // 전 배치가 전부 실패면 같은 잡을 무한 재선택할 수 있어 중단(다음 시간에 재시도).
-    if (resolved + skipped === 0) break;
+    // 이번 배치가 전부 실패면 같은 잡(선두 정렬 고정)을 재선택해 예산만 태운다 — 중단(다음 시간 재시도).
+    if (iterProgress === 0) break;
     if (Date.now() - startedAt > TIME_BUDGET_MS) break;
   }
 
