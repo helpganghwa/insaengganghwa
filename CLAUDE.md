@@ -254,7 +254,7 @@ bun run scripts/seed-catalog.ts
 `docs/SCHEMA.md` 참조.
 
 1. **(A) 큐 등록** — 슬롯 잠금, 자원 escrow(즉시 차감), `complete_at = now() + duration` stamping
-2. **(B) 큐 완료** — Lazy(클라이언트 조회 시) + Cron(24h 미해결 자동 처리). `complete_at <= now()` 서버 시계 검증 → RNG → 결과 적용 → 로그
+2. **(B) 큐 완료(수령)** — 유저가 강화 카드를 **수령(클릭)**할 때만 판정·재등록. 서버 시계로 경과 산정(§6.3) → RNG → 결과 적용 → 로그 → 자동 재등록(다음 레벨). **자동 완료 없음** — 수령 전까지 `running` 유지(다 찬 잡은 base 최대확률 고정이라 방치해도 손해/이득 없음). 이탈 계정 잡은 탈퇴 시 (D) 전삭제로 정리.
 3. **(C) 보석 단축** — 보석 차감 + `complete_at` 단축. 환산률은 등록 시점 값 영구 유지 (소급 금지)
 4. **(D) 취소** — `status='running' → 'cancelled'` 조건부 전이. 슬롯 lane 즉시 해제
 5. **(D+A) 슬롯 교체** — (D)+(A) 단일 트랜잭션

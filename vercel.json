@@ -17,10 +17,6 @@
       "schedule": "* * * * *"
     },
     {
-      "path": "/api/cron/resolve-enhance",
-      "schedule": "0 * * * *"
-    },
-    {
       "path": "/api/cron/settle-raid",
       "schedule": "*/5 * * * *"
     },

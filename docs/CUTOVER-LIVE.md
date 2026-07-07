@@ -24,7 +24,7 @@
    스크립트가 자동으로 켜지 않으며, **켜지 않으면 cutover-live가 가드로 중단**된다.
 2. **크론 일시 정지** — maintenance는 유저 대면 경로만 막고 **크론은 계속 돈다**
    (`app/api/cron/*` 어디에도 system_mode 체크 없음). wipe 창에서 `push-daily-supply`·
-   `resolve-enhance`·대난투/점령 정산 등이 방금 비운 테이블에 재INSERT하거나 CBT 데이터로
+   대난투/점령 정산 등이 방금 비운 테이블에 재INSERT하거나 CBT 데이터로
    정산을 돌릴 수 있다. 방법(택1):
    - Vercel 대시보드 → Settings → Cron Jobs 비활성화(§6에서 재활성화), 또는
    - `CRON_SECRET`을 임시 회전(모든 크론이 fail-closed) 후 §6에서 원복.

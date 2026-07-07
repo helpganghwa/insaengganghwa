@@ -29,16 +29,15 @@ import { EnhanceError } from './queue';
  *
  * 회귀 방어: tests/enhance/resolve.test.ts (success/hold/down/idempotency 4 케이스).
  *
- * - 유저 시도(`requireComplete:false`): 언제든, effective = base×(경과/총)
- * - cron/lazy(`requireComplete:true`): `completeAt <= now()` 인 큐만 (full rate)
+ * 수령은 유저가 강화 카드를 누르는 시점에만 일어난다(자동 완료 없음 — 수령 전까지 running 유지).
+ * effective = base × (경과/총), 경과는 총(=complete_at−started_at)으로 클램프 → 조기 수령은
+ * 낮은 확률, complete_at 도달 후엔 base(최대)로 고정(그 뒤엔 아무리 놔둬도 이득/손해 없음).
  * 결과: 성공(+1) / 유지(안전 실패) / 하락(−1, +52~). **파괴 없음**.
  */
 export type ResolveInput = {
   jobId: bigint;
-  /** 유저 시도 시 본인 검증. cron은 생략. */
+  /** 수령 요청자 본인 검증(소유권 가드). */
   userId?: string;
-  /** true면 완료 시각 도달한 큐만(cron). false면 조기 시도 허용(유저). */
-  requireComplete: boolean;
   /** 테스트용 RNG 주입(0..9999). 기본=crypto. 프로덕션 호출은 절대 지정 금지. */
   rngBp?: () => number;
 };
@@ -61,12 +60,11 @@ function rollBp(): number {
 type Row = Record<string, unknown>;
 
 export async function resolveEnhance(input: ResolveInput): Promise<ResolveResult> {
-  const { jobId, userId, requireComplete, rngBp } = input;
+  const { jobId, userId, rngBp } = input;
   const jid = jobId.toString();
 
   // ── RT1: 검증·계산용 조인 select (락 없음 — 동시성은 RT2 status 가드가 보장) ──
   const ownerCond = userId ? sql` and j.user_id = ${userId}::uuid` : sql``;
-  const dueCond = requireComplete ? sql` and j.complete_at <= now()` : sql``;
   const r1 = (await db.execute(sql`
     select j.user_equipment_id::text         as user_equipment_id,
            j.server_id                       as job_server_id,
@@ -81,7 +79,7 @@ export async function resolveEnhance(input: ResolveInput): Promise<ResolveResult
            ue.catalog_item_id                as catalog_item_id
     from enhancement_jobs j
     join user_equipment ue on ue.id = j.user_equipment_id
-    where j.id = ${jid}::bigint and j.status = 'running'${ownerCond}${dueCond}
+    where j.id = ${jid}::bigint and j.status = 'running'${ownerCond}
     limit 1
   `)) as unknown as Row[];
   const job = r1[0];

@@ -7,7 +7,7 @@
  *      cron은 백스톱). 정체 스윕 포함.
  *   2. status='downloading' 최대 5건 → 폴링 → completed면 다운로드·AI 검토·분기
  *
- * 인증: CRON_SECRET Bearer 또는 x-vercel-cron 헤더 (resolve-enhance 패턴).
+ * 인증: CRON_SECRET Bearer 또는 x-vercel-cron 헤더 (공통 크론 인증 패턴, isCronAuthorized).
  */
 import { isCronAuthorized } from '@/lib/auth/cron-auth';
 import { pollAndProcessDownloading } from '@/lib/game/profile/pipeline';

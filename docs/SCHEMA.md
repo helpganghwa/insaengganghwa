@@ -91,7 +91,7 @@
 | `created_at` | timestamptz default now() | |
 
 - **부분 UNIQUE** `(user_id, slot, slot_lane) WHERE status='running'` → lane 점유(SLOT_BUSY). 추가 `(user_equipment_id) WHERE status='running'` 중복 큐 차단
-- 인덱스 `(status, complete_at)` — lazy/cron 정산. `(user_id, status)`
+- 인덱스 `(status, complete_at)` — 완료 도달 스캔(push-enhance-ready). `(user_id, status)`
 - 환산률·base_rate **등록 시점 스냅샷 영구**(소급 금지, CLAUDE §6.3)
 - (A)등록→(B)완료(`for update`+`status='running'`조건부→`completed`)→(C)단축→(D)취소→(D+A)교체 단일 tx
 

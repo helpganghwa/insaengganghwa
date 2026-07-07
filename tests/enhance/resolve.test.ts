@@ -45,7 +45,7 @@ describe.skipIf(skip)('resolveEnhance — DB 통합', () => {
     });
     cleanupFn = cleanup;
 
-    const r = await resolveEnhance({ jobId, userId: TEST_USER_ID, requireComplete: false });
+    const r = await resolveEnhance({ jobId, userId: TEST_USER_ID });
     expect(r.outcome).toBe('success');
     expect(r.fromLevel).toBe(10);
     expect(r.toLevel).toBe(11);
@@ -81,7 +81,6 @@ describe.skipIf(skip)('resolveEnhance — DB 통합', () => {
     const r = await resolveEnhance({
       jobId,
       userId: TEST_USER_ID,
-      requireComplete: false,
       rngBp: () => 9999,
     });
     expect(r.outcome).toBe('hold');
@@ -109,7 +108,6 @@ describe.skipIf(skip)('resolveEnhance — DB 통합', () => {
     const r = await resolveEnhance({
       jobId,
       userId: TEST_USER_ID,
-      requireComplete: false,
       rngBp: () => 0,
     });
     expect(r.outcome).toBe('down');
@@ -131,14 +129,14 @@ describe.skipIf(skip)('resolveEnhance — DB 통합', () => {
     });
     cleanupFn = cleanup;
 
-    const first = await resolveEnhance({ jobId, userId: TEST_USER_ID, requireComplete: false });
+    const first = await resolveEnhance({ jobId, userId: TEST_USER_ID });
     expect(first.outcome).toBe('success'); // 첫 호출 정상
 
     await expect(
-      resolveEnhance({ jobId, userId: TEST_USER_ID, requireComplete: false }),
+      resolveEnhance({ jobId, userId: TEST_USER_ID }),
     ).rejects.toBeInstanceOf(EnhanceError);
     try {
-      await resolveEnhance({ jobId, userId: TEST_USER_ID, requireComplete: false });
+      await resolveEnhance({ jobId, userId: TEST_USER_ID });
     } catch (e) {
       expect((e as EnhanceError).code).toBe('JOB_NOT_FOUND');
     }

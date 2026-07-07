@@ -118,7 +118,7 @@ export async function finalizeEnhance(jobId: string): Promise<
     const ranksBefore = await getMyRanks(userId, await getActiveServerId());
 
     // 결과 판정·저장 원자 트랜잭션(CLAUDE §3.1/§3.3/§3.4).
-    const r = await resolveEnhance({ jobId: BigInt(jobId), userId, requireComplete: false });
+    const r = await resolveEnhance({ jobId: BigInt(jobId), userId });
 
     // 결과 무관 자동 재등록(GDD §3.2 갱신 — 실패도 슬롯 유지) — **응답 내에서
     // await** 해야 함. 백그라운드(after)로 빼면 응답 후 router.refresh가 새 잡

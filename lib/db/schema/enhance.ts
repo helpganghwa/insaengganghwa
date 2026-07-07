@@ -77,7 +77,7 @@ export const enhancementJobs = pgTable(
     uniqueIndex('ej_equipment_running_uq')
       .on(t.userEquipmentId)
       .where(sql`${t.status} = 'running'`),
-    // lazy/cron 정산.
+    // 완료 도달(push-enhance-ready) 스캔 — running 중 complete_at 지난 잡.
     index('ej_status_complete_idx').on(t.status, t.completeAt),
     index('ej_user_status_idx').on(t.userId, t.status),
   ],
