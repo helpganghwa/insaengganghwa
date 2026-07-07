@@ -111,7 +111,8 @@ async function revealOne(serverId: number, battleDate: string): Promise<{ battle
 
   // 리더보드 증분(v2) — 통산 우승 +1. reveal이 조건부 전이로 정확히 1회라 증분이 정확.
   if (result.championUserId) {
-    bumpCountMetric([result.championUserId], serverId, 'melee').catch((e) =>
+    // await — 서버리스는 응답 종료 시 미완 프라미스를 드롭할 수 있어 fire-and-forget 금지.
+    await bumpCountMetric([result.championUserId], serverId, 'melee').catch((e) =>
       console.warn('[melee.reveal] leaderboard bump failed (cron이 교정)', e),
     );
   }

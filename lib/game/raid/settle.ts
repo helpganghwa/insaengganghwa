@@ -100,7 +100,8 @@ export async function settleRaid(
   // 리더보드 증분(v2) — 레이드 처치 카운트는 "1페이즈+ 돌파 & 공격 1회+ 참가자" 기준
   // (스냅샷 raidRows와 동일 술어). settle이 조건부 전이로 정확히 1회라 +1이 정확.
   if (result.settled && result.phasesCleared >= 1 && (result.winnerIds?.length ?? 0) > 0) {
-    bumpCountMetric(result.winnerIds!, result.serverId!, 'raid').catch((e) =>
+    // await — 서버리스는 응답 종료 시 미완 프라미스를 드롭할 수 있어 fire-and-forget 금지.
+    await bumpCountMetric(result.winnerIds!, result.serverId!, 'raid').catch((e) =>
       console.warn('[raid.settle] leaderboard bump failed (cron이 교정)', e),
     );
   }

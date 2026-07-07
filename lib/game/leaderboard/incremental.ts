@@ -27,6 +27,17 @@ import { combatPowerFromOwned } from '@/lib/game/equipment/combat-power';
 
 type CountMetric = 'raid' | 'melee';
 
+/** 활성 밴 여부 — 밴 유저의 증분이 removeUserFromBoards를 무효화(유령 재등장)하지 않게. */
+async function isActivelyBanned(userId: string): Promise<boolean> {
+  const [r] = await db.execute(sql`
+    select 1 from profiles
+    where id = ${userId}::uuid and banned_at is not null
+      and (ban_until is null or ban_until > now())
+    limit 1
+  `) as unknown as unknown[];
+  return !!r;
+}
+
 /** 값 upsert — 순위 없이 값만(rank 컬럼은 레거시, 시간별 재계산이 채움). */
 async function upsertValue(userId: string, serverId: number, metric: string, value: number): Promise<void> {
   await db.execute(sql`
@@ -64,6 +75,9 @@ export async function claimMilestone(userId: string, serverId: number, metric: s
  * 호출당 수 ms. 훅: 강화 정산(레벨 변동 시)·보급 개봉(획득/자동초월).
  */
 export async function refreshEnhanceMetrics(userId: string, serverId: number): Promise<void> {
+  // 밴 가드(리뷰 2026-07-07) — 밴 유저의 방치 잡을 크론이 정산하는 등의 경로로
+  // 삭제된 보드 행이 재삽입되면 다음 정합 재계산까지 Top100에 재노출된다.
+  if (await isActivelyBanned(userId)) return;
   const rows = await db
     .select({
       catalogItemId: userEquipment.catalogItemId,
@@ -93,18 +107,67 @@ export async function refreshEnhanceMetrics(userId: string, serverId: number): P
  */
 export async function bumpCountMetric(userIds: string[], serverId: number, metric: CountMetric): Promise<void> {
   if (userIds.length === 0) return;
+  // 밴 가드(리뷰 2026-07-07) — 밴 유저는 증분에서 제외(유령 재등장 방지, 재계산과 동일 정책).
+  const uidArrAll = `{${userIds.join(',')}}`;
+  const active = (await db.execute(sql`
+    select id::text as id from profiles
+    where id = any(${uidArrAll}::uuid[])
+      and not (banned_at is not null and (ban_until is null or ban_until > now()))
+  `)) as unknown as { id: string }[];
+  if (active.length === 0) return;
   // ⚠ PG 배열 리터럴 문자열로 전달 — drizzle sql``의 JS 배열은 튜플로 전개됨(snapshot.ts 참조).
-  const uidArr = `{${userIds.join(',')}}`;
+  const uidArr = `{${active.map((a) => a.id).join(',')}}`;
+  // xmax=0 = 이번에 insert된 행 — 행 부재 상태의 +1은 통산 이력을 모르는 value 1이므로
+  // (밴 해제 직후 등, 리뷰 2026-07-07) 신규 삽입분만 원천 테이블 재계산으로 교정한다.
   const bumped = (await db.execute(sql`
     insert into leaderboard_ranks (server_id, metric, user_id, value, rank)
     select ${serverId}, ${metric}, u, 1, 0 from unnest(${uidArr}::uuid[]) as u
     on conflict (server_id, metric, user_id) do update
       set value = leaderboard_ranks.value + 1, updated_at = now()
-    returning user_id::text as user_id, value
-  `)) as unknown as { user_id: string; value: string }[];
+    returning user_id::text as user_id, value, (xmax = 0) as inserted
+  `)) as unknown as { user_id: string; value: string; inserted: boolean }[];
   for (const b of bumped) {
-    await claimMilestone(b.user_id, serverId, metric, Number(b.value)).catch(() => {});
+    let value = Number(b.value);
+    if (b.inserted) {
+      const recounted = await recountCountMetric(b.user_id, serverId, metric).catch(() => null);
+      if (recounted != null && recounted !== value) {
+        await upsertValue(b.user_id, serverId, metric, recounted).catch(() => {});
+        value = recounted;
+      }
+    }
+    await claimMilestone(b.user_id, serverId, metric, value).catch(() => {});
   }
+}
+
+/** 카운트 메트릭 원천 재계산 — 스냅샷과 동일 술어(유저 1명 스코프). */
+async function recountCountMetric(userId: string, serverId: number, metric: CountMetric): Promise<number> {
+  if (metric === 'raid') {
+    const [r] = await db
+      .select({ n: sql<number>`count(distinct ${raidParticipants.raidId})::int` })
+      .from(raidParticipants)
+      .innerJoin(raids, eq(raids.id, raidParticipants.raidId))
+      .where(
+        and(
+          eq(raidParticipants.userId, userId),
+          eq(raids.serverId, serverId),
+          eq(raids.status, 'settled'),
+          sql`${raids.phasesCleared} >= 1`,
+          gte(raidParticipants.attacksUsed, 1),
+        ),
+      );
+    return r?.n ?? 0;
+  }
+  const [m] = await db
+    .select({ n: sql<number>`count(*)::int` })
+    .from(meleeBattles)
+    .where(
+      and(
+        eq(meleeBattles.serverId, serverId),
+        eq(meleeBattles.status, 'revealed'),
+        eq(meleeBattles.championUserId, userId),
+      ),
+    );
+  return m?.n ?? 0;
 }
 
 /** 유저를 전 보드에서 제거 — 밴·탈퇴 시(읽기 경로에 밴 조인을 두지 않는 대가). 전 서버. */
@@ -118,29 +181,8 @@ export async function removeUserFromBoards(userId: string): Promise<void> {
  */
 export async function restoreUserBoards(userId: string, serverId: number): Promise<void> {
   await refreshEnhanceMetrics(userId, serverId);
-  const [raidCnt] = await db
-    .select({ n: sql<number>`count(distinct ${raidParticipants.raidId})::int` })
-    .from(raidParticipants)
-    .innerJoin(raids, eq(raids.id, raidParticipants.raidId))
-    .where(
-      and(
-        eq(raidParticipants.userId, userId),
-        eq(raids.serverId, serverId),
-        eq(raids.status, 'settled'),
-        sql`${raids.phasesCleared} >= 1`,
-        gte(raidParticipants.attacksUsed, 1),
-      ),
-    );
-  const [meleeCnt] = await db
-    .select({ n: sql<number>`count(*)::int` })
-    .from(meleeBattles)
-    .where(
-      and(
-        eq(meleeBattles.serverId, serverId),
-        eq(meleeBattles.status, 'revealed'),
-        eq(meleeBattles.championUserId, userId),
-      ),
-    );
-  if ((raidCnt?.n ?? 0) > 0) await upsertValue(userId, serverId, 'raid', raidCnt!.n);
-  if ((meleeCnt?.n ?? 0) > 0) await upsertValue(userId, serverId, 'melee', meleeCnt!.n);
+  const raidCnt = await recountCountMetric(userId, serverId, 'raid');
+  const meleeCnt = await recountCountMetric(userId, serverId, 'melee');
+  if (raidCnt > 0) await upsertValue(userId, serverId, 'raid', raidCnt);
+  if (meleeCnt > 0) await upsertValue(userId, serverId, 'melee', meleeCnt);
 }

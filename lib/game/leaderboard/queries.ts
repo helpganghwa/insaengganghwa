@@ -1,6 +1,6 @@
 import 'server-only';
 
-import { and, eq, gt, inArray, ne, sql } from 'drizzle-orm';
+import { and, eq, gt, inArray, sql } from 'drizzle-orm';
 
 import { db } from '@/lib/db/client';
 import { withTimeout } from '@/lib/db/with-timeout';
@@ -143,9 +143,11 @@ const safeMyRank = (m: LeaderboardMetric, sid: number, uid: string) =>
 async function rankByValue(
   metric: LeaderboardMetric,
   serverId: number,
-  userId: string,
+  _userId: string, // 시그니처 유지(호출부 다수) — 자기 제외는 논리적으로 불필요해 미사용.
   myValue: number,
 ): Promise<MyRankSnap> {
+  // ne(userId)는 논리적으로 잉여(자기 값은 자기보다 클 수 없음) — 제거하면 value_idx
+  // index-only 스캔이 가능해 힙 방문이 사라진다(리뷰 2026-07-07).
   const [c] = await db
     .select({ n: sql<number>`count(*)::int` })
     .from(leaderboardRanks)
@@ -153,7 +155,6 @@ async function rankByValue(
       and(
         eq(leaderboardRanks.serverId, serverId),
         eq(leaderboardRanks.metric, metric),
-        ne(leaderboardRanks.userId, userId),
         gt(leaderboardRanks.value, myValue),
       ),
     );
