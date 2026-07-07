@@ -34,8 +34,8 @@ export default async function GuildRankingPage({
   if (!membership) redirect('/guild');
 
   const { sort: sortParam } = await searchParams;
-  // 화이트리스트 검증 — 미지정/오염값은 전투력(서버 기본)으로.
-  const sort: GuildRankSort = SORTS.some((s) => s.key === sortParam) ? (sortParam as GuildRankSort) : 'combat';
+  // 화이트리스트 검증 — 미지정/오염값은 레벨(랭킹 페이지 기본)으로.
+  const sort: GuildRankSort = SORTS.some((s) => s.key === sortParam) ? (sortParam as GuildRankSort) : 'level';
 
   const ranking = await withTimeout(
     getGuildRanking(serverId, RANKING_LIMIT, sort),
