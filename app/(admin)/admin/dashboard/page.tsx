@@ -1,16 +1,4 @@
-import { and, eq, gte, inArray, isNull, lt, sql } from 'drizzle-orm';
-
-import { db } from '@/lib/db/client';
-import { profiles } from '@/lib/db/schema/profiles';
-import { characters, servers } from '@/lib/db/schema/server';
-import { iapOrders, iapRefunds, paymentAlerts } from '@/lib/db/schema/payment';
-import { enhancementJobs } from '@/lib/db/schema/enhance';
-import { raids } from '@/lib/db/schema/raid';
-import { meleeBattles, meleeParticipants } from '@/lib/db/schema/melee';
-import { conquestBattles, guildBattleDeployments } from '@/lib/db/schema/guild';
-import { profileGenerationJobs } from '@/lib/db/schema/avatar';
-import { pushPending } from '@/lib/db/schema/push';
-import { clientErrors } from '@/lib/db/schema/ops';
+import { pgGuard } from '@/lib/db/guarded';
 import { kstStartOfDay, kstDateString } from '@/lib/kst';
 import { buildProbabilityPayloadCore, probabilityFingerprint } from '@/lib/game/probability-payload';
 
@@ -19,12 +7,14 @@ import { buildProbabilityPayloadCore, probabilityFingerprint } from '@/lib/game/
  *  ① 핵심 숫자(가입·DAU·매출·활동) ② 헬스 인바리언트("0이어야 정상" 목록 — 크론 사망·
  *  정산 침묵 장애가 별도 heartbeat 없이 여기서 드러난다).
  *
- * 부하: 전부 count/sum 단문 + Promise.all 병렬. 어드민 1인·수동 새로고침 전제라 캐시 없음
- * (자동 새로고침/홈 위젯화 시 60s 캐시 도입 — 풀러 포화 이력 주의).
+ * 부하: 스칼라 서브쿼리로 묶은 **단일 쿼리 1왕복** + pgGuard(취소형 타임아웃).
+ * 병렬 21쿼리 시절엔 접근 한 번이 인스턴스 풀(max 8)을 통째로 점유했고, 풀러에서 멈춘
+ * 커넥션이 슬롯을 물면 같은 인스턴스의 게임 페이지 전체가 줄줄이 매달렸다
+ * (2026-07-07 prod 장애 — 대시보드 접근 → 전 페이지 300s 타임아웃). 어드민 1인·수동
+ * 새로고침 전제라 캐시 없음(자동 새로고침/홈 위젯화 시 60s 캐시 도입).
  */
 export const dynamic = 'force-dynamic';
 
-const n = async (q: Promise<{ n: number }[]>) => (await q)[0]?.n ?? 0;
 const won = (v: number | bigint | string) => `₩${Number(v).toLocaleString('ko-KR')}`;
 
 /**
@@ -32,22 +22,36 @@ const won = (v: number | bigint | string) => `₩${Number(v).toLocaleString('ko-
  * 현재 공시 전문 지문 ↔ 최신 probability_snapshots 지문 비교. 다르면 "미기록 변경" 1.
  * 스냅샷이 아예 없어도 1(기록 필요). 기록: record-probability-snapshot.ts --confirm.
  */
-async function snapshotStale(): Promise<number> {
-  const [slotCounts, latest] = await Promise.all([
-    db.execute(
-      sql`select slot, count(*)::int as n from catalog_items where active = true group by slot`,
-    ) as unknown as Promise<{ slot: string; n: number }[]>,
-    db.execute(
-      sql`select payload from probability_snapshots order by effective_at desc limit 1`,
-    ) as unknown as Promise<{ payload: unknown }[]>,
-  ]);
+function snapshotStaleFrom(slotCounts: { slot: string; n: number }[], stored: unknown): number {
   const current = probabilityFingerprint(buildProbabilityPayloadCore(slotCounts));
-  const stored = latest[0]?.payload;
   if (!stored) return 1;
   // 저장본에서 note(기록 사유, 코어 외 항목) 제거 후 비교 — jsonb 키 순서는 지문이 흡수.
   const { note: _note, ...core } = stored as Record<string, unknown>;
   return probabilityFingerprint(core) === current ? 0 : 1;
 }
+
+type DashRow = {
+  signups_today: number;
+  dau: number;
+  chars_by_server: { serverId: number; name: string; c: number }[];
+  accounts_total: number;
+  sales_today: { sum: string; c: number };
+  sales_month: { sum: string; c: number };
+  refunds_month: number;
+  running_jobs: number;
+  raids_today: number;
+  melee_today: number;
+  deploys_today: number;
+  melee_stuck: number;
+  conquest_unpublished: number;
+  pending_orders: number;
+  open_alerts: number;
+  push_backlog: number;
+  client_err: { groups: number; hits: number };
+  gen_stuck: number;
+  slot_counts: { slot: string; n: number }[];
+  snapshot_payload: unknown;
+};
 
 async function loadDashboard() {
   const dayStart = kstStartOfDay();
@@ -57,115 +61,78 @@ async function loadDashboard() {
   const k = new Date(Date.now() + 9 * 3600_000);
   const monthStart = new Date(Date.UTC(k.getUTCFullYear(), k.getUTCMonth(), 1) - 9 * 3600_000);
 
-  const [
-    signupsToday,
+  // 전 지표를 스칼라 서브쿼리 한 문장으로 — 풀 슬롯 1개·1왕복. 각 서브쿼리는 전부 소형
+  // count/sum이라 플래너가 순차 실행해도 수십 ms. 10s 타임아웃 시 쿼리 취소로 슬롯 즉시 회수.
+  const rows = await pgGuard<DashRow[]>(
+    (sql) => sql<DashRow[]>`
+      select
+        (select count(*)::int from profiles where created_at >= ${dayStart}) as signups_today,
+        (select count(distinct user_id)::int from characters where last_seen_at >= ${dayStart}) as dau,
+        (select coalesce(json_agg(t), '[]'::json) from (
+           select c.server_id as "serverId", s.name, count(*)::int as c
+           from characters c join servers s on s.id = c.server_id
+           group by c.server_id, s.name order by c.server_id) t) as chars_by_server,
+        (select count(*)::int from profiles) as accounts_total,
+        (select json_build_object('sum', coalesce(sum(amount_krw), 0)::text, 'c', count(*)::int)
+           from iap_orders where status = 'paid' and paid_at >= ${dayStart}) as sales_today,
+        (select json_build_object('sum', coalesce(sum(amount_krw), 0)::text, 'c', count(*)::int)
+           from iap_orders where status in ('paid', 'refunded') and paid_at >= ${monthStart}) as sales_month,
+        (select count(*)::int from iap_refunds where created_at >= ${monthStart}) as refunds_month,
+        (select count(*)::int from enhancement_jobs where status = 'running') as running_jobs,
+        (select count(*)::int from raids where opened_at >= ${dayStart}) as raids_today,
+        (select count(*)::int from melee_participants mp
+           join melee_battles mb on mb.id = mp.battle_id
+           where mb.battle_date = ${today}) as melee_today,
+        (select count(*)::int from guild_battle_deployments where battle_kst_day >= ${today}) as deploys_today,
+        -- 발표 안 된 대난투 — 어제 이전 'computed' 잔존(오늘 09~10시 사이 1건은 정상이라 과거만).
+        (select count(*)::int from melee_battles
+           where status = 'computed' and battle_date < ${today}) as melee_stuck,
+        -- 공개 안 된 점령전 — 어제 이전 미공개(오늘 23시 정산분은 자정 공개 전이 정상이라 과거만).
+        (select count(*)::int from conquest_battles
+           where published_at is null and battle_kst_day < ${today}) as conquest_unpublished,
+        (select count(*)::int from iap_orders
+           where status = 'pending' and created_at < now() - interval '15 minutes') as pending_orders,
+        (select count(*)::int from payment_alerts where resolved = false) as open_alerts,
+        -- 푸시 적체 — flush 트리거(first_at+30분) 후에도 15분 이상 안 나간 행.
+        (select count(*)::int from push_pending
+           where first_at < now() - interval '45 minutes') as push_backlog,
+        (select json_build_object('groups', count(*)::int, 'hits', coalesce(sum("count"), 0)::int)
+           from client_errors where last_seen >= now() - interval '24 hours') as client_err,
+        -- 아바타 생성 정체 — 활성 상태로 20분+ 멈춘 잡(프롬프트/폴링 사망 신호).
+        (select count(*)::int from profile_generation_jobs
+           where status in ('queued', 'starting', 'downloading', 'ai_reviewing')
+             and created_at < now() - interval '20 minutes') as gen_stuck,
+        (select coalesce(json_agg(t), '[]'::json) from (
+           select slot, count(*)::int as n from catalog_items where active = true group by slot) t) as slot_counts,
+        (select payload from probability_snapshots order by effective_at desc limit 1) as snapshot_payload
+    `,
+    10_000,
+    'admin.dashboard',
+  );
+  const r = rows[0];
+  if (!r) throw new Error('DASHBOARD_EMPTY');
+
+  const {
+    signups_today: signupsToday,
     dau,
-    charsByServer,
-    accountsTotal,
-    salesToday,
-    salesMonth,
-    refundsMonth,
-    runningJobs,
-    raidsToday,
-    meleeToday,
-    deploysToday,
-    // ── 인바리언트 ──
-    meleeStuck,
-    conquestUnpublished,
-    pendingOrders,
-    openAlerts,
-    pushBacklog,
-    clientErr24h,
-    genStuck,
-    probStale,
-  ] = await Promise.all([
-    n(db.select({ n: sql<number>`count(*)::int` }).from(profiles).where(gte(profiles.createdAt, dayStart))),
-    n(
-      db
-        .select({ n: sql<number>`count(distinct ${characters.userId})::int` })
-        .from(characters)
-        .where(gte(characters.lastSeenAt, dayStart)),
-    ),
-    db
-      .select({ serverId: characters.serverId, name: servers.name, c: sql<number>`count(*)::int` })
-      .from(characters)
-      .innerJoin(servers, eq(servers.id, characters.serverId))
-      .groupBy(characters.serverId, servers.name)
-      .orderBy(characters.serverId),
-    n(db.select({ n: sql<number>`count(*)::int` }).from(profiles)),
-    db
-      .select({ sum: sql<string>`coalesce(sum(${iapOrders.amountKrw}), 0)::text`, c: sql<number>`count(*)::int` })
-      .from(iapOrders)
-      .where(and(eq(iapOrders.status, 'paid'), gte(iapOrders.paidAt, dayStart)))
-      .then((r) => r[0] ?? { sum: '0', c: 0 }),
-    db
-      .select({ sum: sql<string>`coalesce(sum(${iapOrders.amountKrw}), 0)::text`, c: sql<number>`count(*)::int` })
-      .from(iapOrders)
-      .where(and(inArray(iapOrders.status, ['paid', 'refunded']), gte(iapOrders.paidAt, monthStart)))
-      .then((r) => r[0] ?? { sum: '0', c: 0 }),
-    n(db.select({ n: sql<number>`count(*)::int` }).from(iapRefunds).where(gte(iapRefunds.createdAt, monthStart))),
-    n(db.select({ n: sql<number>`count(*)::int` }).from(enhancementJobs).where(eq(enhancementJobs.status, 'running'))),
-    n(db.select({ n: sql<number>`count(*)::int` }).from(raids).where(gte(raids.openedAt, dayStart))),
-    n(
-      db
-        .select({ n: sql<number>`count(*)::int` })
-        .from(meleeParticipants)
-        .innerJoin(meleeBattles, eq(meleeBattles.id, meleeParticipants.battleId))
-        .where(eq(meleeBattles.battleDate, today)),
-    ),
-    n(
-      db
-        .select({ n: sql<number>`count(*)::int` })
-        .from(guildBattleDeployments)
-        .where(sql`${guildBattleDeployments.battleKstDay} >= ${today}`),
-    ),
-    // 발표 안 된 대난투 — 어제 이전 'computed' 잔존(오늘 09~10시 사이 1건은 정상이라 과거만).
-    n(
-      db
-        .select({ n: sql<number>`count(*)::int` })
-        .from(meleeBattles)
-        .where(and(eq(meleeBattles.status, 'computed'), lt(meleeBattles.battleDate, today))),
-    ),
-    // 공개 안 된 점령전 — 어제 이전 미공개(오늘 23시 정산분은 자정 공개 전이 정상이라 과거만).
-    n(
-      db
-        .select({ n: sql<number>`count(*)::int` })
-        .from(conquestBattles)
-        .where(and(isNull(conquestBattles.publishedAt), sql`${conquestBattles.battleKstDay} < ${today}`)),
-    ),
-    n(
-      db
-        .select({ n: sql<number>`count(*)::int` })
-        .from(iapOrders)
-        .where(and(eq(iapOrders.status, 'pending'), lt(iapOrders.createdAt, sql`now() - interval '15 minutes'`))),
-    ),
-    n(db.select({ n: sql<number>`count(*)::int` }).from(paymentAlerts).where(eq(paymentAlerts.resolved, false))),
-    // 푸시 적체 — flush 트리거(first_at+30분) 후에도 15분 이상 안 나간 행.
-    n(
-      db
-        .select({ n: sql<number>`count(*)::int` })
-        .from(pushPending)
-        .where(lt(pushPending.firstAt, sql`now() - interval '45 minutes'`)),
-    ),
-    db
-      .select({ groups: sql<number>`count(*)::int`, hits: sql<number>`coalesce(sum(${clientErrors.count}), 0)::int` })
-      .from(clientErrors)
-      .where(gte(clientErrors.lastSeen, sql`now() - interval '24 hours'`))
-      .then((r) => r[0] ?? { groups: 0, hits: 0 }),
-    // 아바타 생성 정체 — 활성 상태로 20분+ 멈춘 잡(프롬프트/폴링 사망 신호).
-    n(
-      db
-        .select({ n: sql<number>`count(*)::int` })
-        .from(profileGenerationJobs)
-        .where(
-          and(
-            inArray(profileGenerationJobs.status, ['queued', 'starting', 'downloading', 'ai_reviewing']),
-            lt(profileGenerationJobs.createdAt, sql`now() - interval '20 minutes'`),
-          ),
-        ),
-    ),
-    snapshotStale(),
-  ]);
+    chars_by_server: charsByServer,
+    accounts_total: accountsTotal,
+    sales_today: salesToday,
+    sales_month: salesMonth,
+    refunds_month: refundsMonth,
+    running_jobs: runningJobs,
+    raids_today: raidsToday,
+    melee_today: meleeToday,
+    deploys_today: deploysToday,
+    melee_stuck: meleeStuck,
+    conquest_unpublished: conquestUnpublished,
+    pending_orders: pendingOrders,
+    open_alerts: openAlerts,
+    push_backlog: pushBacklog,
+    client_err: clientErr24h,
+    gen_stuck: genStuck,
+  } = r;
+  const probStale = snapshotStaleFrom(r.slot_counts, r.snapshot_payload);
 
   return {
     signupsToday,

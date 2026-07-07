@@ -186,12 +186,14 @@ export default async function AdminHubPage() {
           const cls = `flex items-start gap-3 rounded-2xl border bg-zinc-900/50 p-4 transition hover:bg-zinc-900 ${
             n > 0 ? 'border-red-800/60 hover:border-red-600' : 'border-zinc-800 hover:border-amber-600'
           }`;
+          // prefetch=false — 어드민 페이지는 전부 force-dynamic 중쿼리라, 메뉴 진입만으로
+          // 10여 페이지가 동시 렌더되며 DB 풀 버스트를 만든다(2026-07-07 장애 증폭 요인).
           return m.external ? (
             <a key={m.href} href={m.href} target="_blank" rel="noopener noreferrer" className={cls}>
               {inner}
             </a>
           ) : (
-            <Link key={m.href} href={m.href} className={cls}>
+            <Link key={m.href} href={m.href} prefetch={false} className={cls}>
               {inner}
             </Link>
           );
