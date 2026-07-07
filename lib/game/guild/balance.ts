@@ -25,11 +25,17 @@ export const GUILD_MAX_CAPACITY = 50;
 export function guildCapacity(level: number): number {
   return Math.min(GUILD_MAX_CAPACITY, GUILD_BASE_CAPACITY + Math.max(0, level));
 }
-/** 다음 레벨까지 필요 XP — 앞 싸게/뒤 비싸게(L0~9 400 · L10~24 1.5k · L25+ 5k). */
+/**
+ * 다음 레벨까지 필요 XP — 등차 곡선 110×(level+1). 레벨마다 +110씩 체증(엄격 증가)해
+ * 갈수록 어려워진다. L0→1=110 … L39→40=4,400, L40 도달 누적 90,200 XP.
+ * 정원(=하루 최대 XP=90×min(50,10+L))도 함께 커지지만 XP가 더 빨리 증가해
+ * 레벨당 소요 시간도 계속 늘어남(0.12일→1.0일). 이론상 최속(항상 정원 만석·전원 일 90 기부)
+ * L40까지 ≈30.7일 ≈ 한 달. L41+는 상한(정원50) 도달 후에도 곡선 유지 → 과시·랭킹용 영구 sink.
+ * GUILD.md §2.2와 1:1(CLAUDE §3.5). 시뮬 튜닝 시 계수 110만 조정.
+ */
+export const GUILD_XP_PER_LEVEL_STEP = 110;
 export function guildXpToNext(level: number): number {
-  if (level < 10) return 400;
-  if (level < 25) return 1_500;
-  return 5_000;
+  return GUILD_XP_PER_LEVEL_STEP * (Math.max(0, level) + 1);
 }
 
 // ── 기부 (§2.1) — 일 3회, KST 자정 리셋. 개인 기여도 = 길드 XP와 1:1 ──

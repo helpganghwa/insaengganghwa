@@ -97,16 +97,22 @@ export async function getMyJoinRequest(userId: string, serverId: number): Promis
  * 길드별 전투력 합(길드원 전투력 합, BALANCE §3) — guildId→합산 CP. JS 공식(pieceCombatPower)이라
  * SQL 정렬 불가 → 멤버·장비 로드 후 합산. ⚠ 길드 수가 매우 커지면 비정규화 캐시 고려(현재 소규모라 라이브).
  */
-async function guildCombatPowers(serverId: number, guildIds: bigint[]): Promise<Map<string, number>> {
-  const cpByGuild = new Map<string, number>();
-  if (guildIds.length === 0) return cpByGuild;
-  for (const g of guildIds) cpByGuild.set(g.toString(), 0); // 0명 길드도 0으로 포함
-  // 길드 전투력 = 멤버들의 combat 스냅샷(leaderboard_ranks, cron 사전계산) 합 — 라이브 전 장비 스캔
-  // 제거(감사 S1). 멤버가 아직 스냅샷에 없으면(신규·다음 cron 전) left join으로 0 처리.
+type GuildMemberStat = { combat: number; memberCount: number };
+/**
+ * 길드별 전투력 합 + 멤버 수 — guild_members를 길드별 GROUP BY로 한 번 스캔해 둘 다 산출.
+ * memberCount를 길드마다 상관 서브쿼리로 N번 세던 것을 이 집계 1회로 흡수(최적화, 2026-07-07).
+ * 전투력 = 멤버 combat 스냅샷(leaderboard_ranks, cron 사전계산) 합 — 라이브 장비 스캔 제거(감사 S1).
+ * 멤버 수는 count(distinct userId)로 세어 left join 중복행에 영향받지 않음. 스냅샷 미존재 멤버는 0.
+ */
+async function guildMemberStats(serverId: number, guildIds: bigint[]): Promise<Map<string, GuildMemberStat>> {
+  const byGuild = new Map<string, GuildMemberStat>();
+  if (guildIds.length === 0) return byGuild;
+  for (const g of guildIds) byGuild.set(g.toString(), { combat: 0, memberCount: 0 }); // 0명 길드도 포함
   const rows = await db
     .select({
       gid: guildMembers.guildId,
       cp: sql<number>`coalesce(sum(${leaderboardRanks.value}), 0)::bigint`,
+      cnt: sql<number>`count(distinct ${guildMembers.userId})::int`,
     })
     .from(guildMembers)
     .leftJoin(
@@ -119,8 +125,8 @@ async function guildCombatPowers(serverId: number, guildIds: bigint[]): Promise<
     )
     .where(and(eq(guildMembers.serverId, serverId), inArray(guildMembers.guildId, guildIds)))
     .groupBy(guildMembers.guildId);
-  for (const r of rows) cpByGuild.set(r.gid.toString(), Number(r.cp));
-  return cpByGuild;
+  for (const r of rows) byGuild.set(r.gid.toString(), { combat: Number(r.cp), memberCount: Number(r.cnt) });
+  return byGuild;
 }
 
 /** 팝업 구역 칩용 최소 정보 — region은 지역색 표시 근거. */
@@ -149,8 +155,22 @@ async function guildZoneChips(serverId: number, guildIds: bigint[]): Promise<Map
   return byGuild;
 }
 
-/** 길드 랭킹 — 전투력(길드원 전투력 합)순, 동률은 레벨순. combat 필드 포함. 미가입 첫화면 랭킹 탭. */
-export async function getGuildRanking(serverId: number, limit = 50) {
+/** 랭킹 정렬 기준 — 전투력(길드원 전투력 합) | 레벨 | 점령지(구역 수). 랭킹은 서버 전체 대상이므로
+ *  정렬은 반드시 전 길드 계산 후 slice 앞에서 수행(상위 N 재정렬은 다른 기준 1위를 누락시킴). */
+export type GuildRankSort = 'combat' | 'level' | 'zones';
+
+// 정렬 기준별 비교자 — 동률은 전투력 → 레벨 순으로 안정화(순위 흔들림 방지).
+const RANKING_COMPARATORS: Record<
+  GuildRankSort,
+  (a: { combat: number; level: number; zones: unknown[] }, b: { combat: number; level: number; zones: unknown[] }) => number
+> = {
+  combat: (a, b) => b.combat - a.combat || b.level - a.level,
+  level: (a, b) => b.level - a.level || b.combat - a.combat,
+  zones: (a, b) => b.zones.length - a.zones.length || b.combat - a.combat || b.level - a.level,
+};
+
+/** 길드 랭킹 — 서버 전체 길드를 sort 기준으로 정렬 후 상위 limit. combat 필드 포함. 미가입 첫화면 랭킹 탭. */
+export async function getGuildRanking(serverId: number, limit = 50, sort: GuildRankSort = 'combat') {
   const rows = await db
     .select({
       id: guilds.id,
@@ -160,22 +180,25 @@ export async function getGuildRanking(serverId: number, limit = 50) {
       emblemColor: guilds.emblemColor,
       intro: guilds.intro,
       joinPolicy: guilds.joinPolicy,
-      memberCount: sql<number>`(select count(*)::int from guild_members gm where gm.guild_id = ${guilds.id})`,
     })
     .from(guilds)
     .where(eq(guilds.serverId, serverId));
   const ids = rows.map((r) => r.id);
-  const [cp, zoneChips] = await Promise.all([
-    guildCombatPowers(serverId, ids),
+  const [stats, zoneChips] = await Promise.all([
+    guildMemberStats(serverId, ids),
     guildZoneChips(serverId, ids),
   ]);
   return rows
-    .map((r) => ({
-      ...r,
-      combat: cp.get(r.id.toString()) ?? 0,
-      zones: zoneChips.get(r.id.toString()) ?? [],
-    }))
-    .sort((a, b) => b.combat - a.combat || b.level - a.level)
+    .map((r) => {
+      const s = stats.get(r.id.toString());
+      return {
+        ...r,
+        memberCount: s?.memberCount ?? 0,
+        combat: s?.combat ?? 0,
+        zones: zoneChips.get(r.id.toString()) ?? [],
+      };
+    })
+    .sort(RANKING_COMPARATORS[sort])
     .slice(0, limit);
 }
 
@@ -193,7 +216,6 @@ export async function searchGuilds(serverId: number, q: string) {
     emblemColor: guilds.emblemColor,
     intro: guilds.intro,
     joinPolicy: guilds.joinPolicy,
-    memberCount: sql<number>`(select count(*)::int from guild_members gm where gm.guild_id = ${guilds.id})`,
   } as const;
   const rows = term
     ? await db
@@ -208,15 +230,19 @@ export async function searchGuilds(serverId: number, q: string) {
         .orderBy(sql`random()`)
         .limit(10);
   const ids = rows.map((r) => r.id);
-  const [cp, zoneChips] = await Promise.all([
-    guildCombatPowers(serverId, ids),
+  const [stats, zoneChips] = await Promise.all([
+    guildMemberStats(serverId, ids),
     guildZoneChips(serverId, ids),
   ]);
-  return rows.map((r) => ({
-    ...r,
-    combat: cp.get(r.id.toString()) ?? 0,
-    zones: zoneChips.get(r.id.toString()) ?? [],
-  }));
+  return rows.map((r) => {
+    const s = stats.get(r.id.toString());
+    return {
+      ...r,
+      memberCount: s?.memberCount ?? 0,
+      combat: s?.combat ?? 0,
+      zones: zoneChips.get(r.id.toString()) ?? [],
+    };
+  });
 }
 
 /** 길드 1건 요약(이름 정확일치) — 세계지도 연대기에서 길드명 클릭 팝업용. 없으면 null. */
@@ -228,15 +254,14 @@ export async function getGuildSummaryByName(serverId: number, name: string) {
       level: guilds.level,
       emblemUrl: guilds.emblemUrl,
       intro: guilds.intro,
-      memberCount: sql<number>`(select count(*)::int from guild_members gm where gm.guild_id = ${guilds.id})`,
       joinPolicy: guilds.joinPolicy,
     })
     .from(guilds)
     .where(and(eq(guilds.serverId, serverId), eq(guilds.name, name)))
     .limit(1);
   if (!g) return null;
-  const [cp, zoneRows] = await Promise.all([
-    guildCombatPowers(serverId, [g.id]),
+  const [stats, zoneRows] = await Promise.all([
+    guildMemberStats(serverId, [g.id]),
     // 점령 구역 목록 — 길드 목록 팝업과 동일 정보(세계지도 팝업 정보 격차 해소, 2026-07-06).
     db
       .select({ name: zones.name, region: zones.region })
@@ -244,13 +269,14 @@ export async function getGuildSummaryByName(serverId: number, name: string) {
       .where(and(eq(zones.serverId, serverId), eq(zones.ownerGuildId, g.id)))
       .orderBy(zones.id),
   ]);
+  const s = stats.get(g.id.toString());
   return {
     name: g.name,
     level: g.level,
     emblemUrl: g.emblemUrl,
     intro: g.intro,
-    memberCount: g.memberCount,
-    combat: cp.get(g.id.toString()) ?? 0,
+    memberCount: s?.memberCount ?? 0,
+    combat: s?.combat ?? 0,
     joinPolicy: g.joinPolicy,
     zones: zoneRows.map((z) => ({ name: z.name, region: z.region })),
   };
