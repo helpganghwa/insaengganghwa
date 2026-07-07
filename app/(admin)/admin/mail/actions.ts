@@ -117,17 +117,44 @@ export async function broadcastMailAction(opts: {
   title: string;
   body: string;
   payload: MailPayload;
+  /** 클릭 의도당 클라 UUID(0110) — 응답 유실 재클릭의 전 유저 이중 발송 방지. */
+  idemKey?: string;
 }): Promise<OkBroadcast | ErrorState> {
   try {
     const adminId = await requireAdmin();
     const payload = clampPayload(opts.payload);
     const title = (opts.title || '').slice(0, 100);
     const body = (opts.body || '').slice(0, 1000);
+    const idemKey =
+      opts.idemKey && /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(opts.idemKey)
+        ? opts.idemKey
+        : null;
     let inserted = 0;
+    let duplicate = false;
     // 단일 트랜잭션 + **단일 INSERT…SELECT**(감사 P1) — 전 유저를 앱으로 끌어와 청크 루프로
     // 왕복하면 10만 유저에 200회 왕복의 수 분짜리 tx(풀러 장시간 점유 = 검증된 장애 모드).
     // DB측 fan-out 한 문으로 왕복 1회. 실패 시 전체 롤백(재실행 이중 지급 없음)은 동일.
     await db.transaction(async (tx) => {
+      // 멱등 선점(0110) — 로그를 **발송 전에** 키와 함께 선점. 같은 키 재시도(커밋 후 응답
+      // 유실 → 재클릭)는 conflict로 0행 → 발송 없이 종료. 발송 실패 시 롤백되어 키도 풀린다.
+      const log = await tx
+        .insert(adminMailLogs)
+        .values({
+          adminId,
+          mode: 'broadcast',
+          recipientCount: 0,
+          targetLabel: '전체',
+          title,
+          body,
+          payload,
+          idempotencyKey: idemKey,
+        })
+        .onConflictDoNothing({ target: adminMailLogs.idempotencyKey })
+        .returning({ id: adminMailLogs.id });
+      if (log.length === 0) {
+        duplicate = true;
+        return;
+      }
       const rows = (await tx.execute(sql`
         insert into mailbox (user_id, server_id, type, title, body, sender_label, payload)
         select p.id, p.last_server_id, 'admin'::mailbox_type, ${title}, ${body}, '인생강화', ${JSON.stringify(payload)}::jsonb
@@ -136,18 +163,12 @@ export async function broadcastMailAction(opts: {
         returning id
       `)) as unknown as { id: string }[];
       inserted = rows.length;
-      if (inserted === 0) return;
-      // 감사 로그도 같은 트랜잭션 — 발송 롤백 시 로그도 롤백(거짓 기록 방지).
-      await tx.insert(adminMailLogs).values({
-        adminId,
-        mode: 'broadcast',
-        recipientCount: inserted,
-        targetLabel: '전체',
-        title,
-        body,
-        payload,
-      });
+      await tx
+        .update(adminMailLogs)
+        .set({ recipientCount: inserted })
+        .where(eq(adminMailLogs.id, log[0]!.id));
     });
+    if (duplicate) return { status: 'success', count: 0 };
     if (inserted === 0) return { status: 'success', count: 0 };
     revalidatePath('/admin/mail');
     return { status: 'success', count: inserted };

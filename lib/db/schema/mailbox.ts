@@ -21,6 +21,7 @@ import {
   text,
   timestamp,
   index,
+  uniqueIndex,
 } from 'drizzle-orm/pg-core';
 import { sql } from 'drizzle-orm';
 
@@ -136,9 +137,16 @@ export const adminMailLogs = pgTable(
     body: text('body').notNull().default(''),
     /** clampPayload 결과(다이아/상자). */
     payload: jsonb('payload').notNull(),
+    /** broadcast 멱등키(0110) — 응답 유실 재클릭의 전 유저 이중 발송 방지. */
+    idempotencyKey: uuid('idempotency_key'),
     createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
   },
-  (t) => [index('admin_mail_logs_created_idx').on(t.createdAt)],
+  (t) => [
+    index('admin_mail_logs_created_idx').on(t.createdAt),
+    uniqueIndex('admin_mail_logs_idem_uq')
+      .on(t.idempotencyKey)
+      .where(sql`${t.idempotencyKey} is not null`),
+  ],
 );
 
 export type AdminMailLog = typeof adminMailLogs.$inferSelect;

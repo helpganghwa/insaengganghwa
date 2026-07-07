@@ -508,6 +508,9 @@ export function ShopTabs({
         showHeaderToast({ title: '구매 완료' });
       } else if (r.reason === 'cancel') {
         // 사용자 취소 — 조용히 무시.
+      } else if (r.reason === 'verify' && r.code === 'NETWORK') {
+        // 결제창은 닫혔는데 확인 요청만 전송 실패 — 지급 권위는 웹훅이라 곧 반영됨(미결제 오해 방지).
+        showHeaderToast({ title: '결제 확인이 지연되고 있어요', detail: '잠시 후 자동 반영됩니다' });
       } else if (r.code === 'IDENTITY_REQUIRED') {
         // 청소년보호 — 결제 전 본인인증 필수. 본인인증 유도 모달 노출.
         setIdentityPrompt(true);

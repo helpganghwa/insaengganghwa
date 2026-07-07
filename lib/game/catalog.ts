@@ -25,6 +25,8 @@ export const getActiveCatalog = unstable_cache(
       .from(catalogItems)
       .where(eq(catalogItems.active, true)),
   ['active-catalog-v1'],
+  // 강제 무효화: POST /api/admin/revalidate?tag=catalog — 카탈로그 전환 스크립트 후 필수
+  // (안 쏘면 확률 공시가 최대 10분 구 데이터 = §33 공시-판정 불일치 창).
   { revalidate: 600, tags: ['catalog'] },
 );
 

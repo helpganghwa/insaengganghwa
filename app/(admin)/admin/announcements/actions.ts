@@ -1,5 +1,6 @@
 'use server';
 
+import { revalidateTag } from 'next/cache';
 import { eq, sql } from 'drizzle-orm';
 
 import { requireAdmin } from '@/lib/auth/require-admin';
@@ -54,11 +55,14 @@ export async function saveAnnouncementAction(input: SaveInput): Promise<Result> 
       publishedAt: input.publish ? sql`now()` : null,
     });
   }
+  // 편집 즉시 반영 — 30s 캐시(tags:['announcements'])를 기다리지 않게 무효화.
+  revalidateTag('announcements', 'max');
   return { status: 'success' };
 }
 
 export async function deleteAnnouncementAction(id: string): Promise<Result> {
   await requireAdmin();
   await db.delete(announcements).where(eq(announcements.id, BigInt(id)));
+  revalidateTag('announcements', 'max');
   return { status: 'success' };
 }

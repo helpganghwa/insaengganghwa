@@ -103,7 +103,9 @@ export async function compensateCancelDamageAction(userId: string): Promise<Resu
       0,
     );
     const diamond = Math.min(COMP_MAX_DIAMOND, Math.ceil(lostMs / GEM_TO_MS));
-    // 보상할 게 없으면 롤백 — 마킹도 되돌려 다음 실제 보상 시 정상 집계.
+    // 보상 0(=손실 0ms 잡뿐)이면 우편 없이 종료 — drizzle tx에서 return은 **커밋**이므로
+    // 마킹은 남는다. 의도된 동작: 손실 0 잡은 '보상 완료(0)'가 정확한 상태고, 마킹을 되돌리면
+    // 매 실행 재스캔된다(2026-07-07 전수감사: 기존 '롤백' 주석은 오기 — 롤백은 throw만 가능).
     if (diamond <= 0) return 0;
 
     await tx.insert(mailbox).values({

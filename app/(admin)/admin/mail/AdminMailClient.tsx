@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useState, useTransition } from 'react';
+import { useEffect, useRef, useState, useTransition } from 'react';
 
 import {
   sendMailToUserAction,
@@ -19,6 +19,7 @@ type Mode = 'one' | 'broadcast';
  *   재확인 입력(수신자 수 또는 'BROADCAST') 요구.
  */
 export function AdminMailClient() {
+  const bcKeyRef = useRef<string | null>(null);
   const [mode, setMode] = useState<Mode>('one');
   const [toKind, setToKind] = useState<'nickname' | 'userId'>('nickname');
   const [to, setTo] = useState('');
@@ -95,7 +96,10 @@ export function AdminMailClient() {
           setFlash({ ok: false, msg: '확인 칸에 "BROADCAST"를 입력하세요.' });
           return;
         }
-        const r = await broadcastMailAction({ title, body, payload });
+        // 멱등키(0110) — 전송 실패 재시도는 같은 키 재사용(전 유저 이중 발송 방지).
+        bcKeyRef.current ??= crypto.randomUUID();
+        const r = await broadcastMailAction({ title, body, payload, idemKey: bcKeyRef.current });
+        if (r.status === 'success') bcKeyRef.current = null;
         if (r.status === 'error') setFlash({ ok: false, msg: r.message });
         else {
           setFlash({ ok: true, msg: `${r.count}명에게 발송 완료` });

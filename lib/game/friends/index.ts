@@ -164,7 +164,13 @@ export async function sendRequest(
   targetId: string,
 ): Promise<{ status: 'requested' | 'accepted' }> {
   if (meId === targetId) throw new FriendError('SELF');
-  const [t] = await db.select({ id: profiles.id }).from(profiles).where(eq(profiles.id, targetId)).limit(1);
+  // 대상 검증은 캐릭터(서버 스코프) 기준 — 친구는 서버별인데 profiles만 보면 그 서버에
+  // 캐릭터가 없는 유저(타서버 프로필 링크 등)에게 유령 요청이 걸린다(2026-07-07 전수감사).
+  const [t] = await db
+    .select({ id: characters.userId })
+    .from(characters)
+    .where(and(eq(characters.userId, targetId), eq(characters.serverId, serverId)))
+    .limit(1);
   if (!t) throw new FriendError('NOT_FOUND');
   return db.transaction(async (tx) => {
     // 상호 동시 요청 레이스 방지 — PK가 방향성(requester,addressee)이라 A→B·B→A가 서로 다른

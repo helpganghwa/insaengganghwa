@@ -15,7 +15,9 @@ import { NextResponse, type NextRequest } from 'next/server';
  * 갱신을 놓쳐도 안전한 이유(기존과 동일): refresh 누락은 다음 요청에서 자연 복구되고,
  * 위조 쿠키는 어차피 하류의 서명 검증(getClaims)이 거른다 — 여기서 통과시켜도 무해.
  */
-const REFRESH_MARGIN_MS = 10 * 60 * 1000;
+// SDK(auth-js)의 실제 회전 마진은 90초 — 마진을 그보다 크게 잡으면 (마진−90초) 구간은
+// 매 요청 원격 getUser RTT만 내고 회전은 안 일어난다(리뷰 2026-07-07: 10분→2분 축소).
+const REFRESH_MARGIN_MS = 2 * 60 * 1000;
 
 export async function updateSession(request: NextRequest) {
   let response = NextResponse.next({ request });
