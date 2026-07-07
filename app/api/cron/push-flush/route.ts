@@ -16,6 +16,7 @@ import { sql } from 'drizzle-orm';
 import { isCronAuthorized } from '@/lib/auth/cron-auth';
 import { db } from '@/lib/db/client';
 import { sendPushToUser } from '@/lib/push/send';
+import { beatCron } from '@/lib/cron/heartbeat';
 
 export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
@@ -101,6 +102,7 @@ export async function GET(req: Request) {
     if (Date.now() - startedAt > TIME_BUDGET_MS) break; // 잔여는 다음 틱(5분)
   }
 
+  await beatCron('push-flush', `sent=${sent} failed=${failed}`);
   return Response.json({
     ok: true,
     candidates,

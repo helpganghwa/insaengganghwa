@@ -12,6 +12,7 @@ import { sql } from 'drizzle-orm';
 import { isCronAuthorized } from '@/lib/auth/cron-auth';
 import { db } from '@/lib/db/client';
 import { sendPushToUsers } from '@/lib/push/send';
+import { beatCron } from '@/lib/cron/heartbeat';
 
 export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
@@ -123,6 +124,7 @@ export async function GET(req: Request) {
     `);
   }
 
+  await beatCron('push-daily-supply', `sent=${okSum} done=${done}`);
   return Response.json({
     ok: true,
     recipients: state.recipients + processed,

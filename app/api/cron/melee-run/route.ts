@@ -6,6 +6,7 @@
 import { isCronAuthorized } from '@/lib/auth/cron-auth';
 import { runMelee } from '@/lib/game/melee/run';
 import { openServerIds } from '@/lib/game/server-list';
+import { beatCron } from '@/lib/cron/heartbeat';
 
 export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
@@ -26,6 +27,7 @@ export async function GET(req: Request) {
       }
     }
     const ok = results.every((r) => !('error' in r));
+    await beatCron('melee-run', `ok=${ok}`);
     return Response.json({ ok, results, kind: 'melee-run' }, { status: ok ? 200 : 500 });
   } catch (e) {
     console.error('[melee-run]', e);

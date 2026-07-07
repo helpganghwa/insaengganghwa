@@ -1,5 +1,6 @@
 import { pgGuard } from '@/lib/db/guarded';
 import { kstStartOfDay, kstDateString } from '@/lib/kst';
+import { getStaleCrons } from '@/lib/cron/heartbeat';
 import { buildProbabilityPayloadCore, probabilityFingerprint } from '@/lib/game/probability-payload';
 
 /**
@@ -136,6 +137,8 @@ async function loadDashboard() {
     gen_stuck: genStuck,
   } = r;
   const probStale = snapshotStaleFrom(r.slot_counts, r.snapshot_payload);
+  // 크론 dead-man — 허용 간격 초과(또는 한 번도 성공 없음). 총체적 정지(CRON_SECRET 사고) 포함.
+  const staleCrons = await getStaleCrons(Date.now()).catch(() => []);
 
   return {
     signupsToday,
@@ -150,6 +153,7 @@ async function loadDashboard() {
     meleeToday,
     deploysToday,
     invariants: [
+      { label: '정지 크론 (dead-man)', value: staleCrons.length, hint: staleCrons.length ? `정지: ${staleCrons.map((s) => s.name).join(', ')} — CRON_SECRET·Vercel Cron 확인` : '전 크론 정상 beat' },
       { label: '미발표 대난투 (어제 이전 computed)', value: meleeStuck, hint: 'melee-reveal 크론 확인 — 참가자 보상 우편 미발송 상태' },
       { label: '미공개 점령전 (어제 이전)', value: conquestUnpublished, hint: 'conquest-chronicle 크론 확인 — 소유권·우편 미적용 상태' },
       { label: '15분+ pending 주문', value: pendingOrders, hint: 'payment-recon이 자동 치유 — 지속되면 /admin/payments 확인' },

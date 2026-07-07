@@ -18,6 +18,7 @@ import { sql } from 'drizzle-orm';
 import { isCronAuthorized } from '@/lib/auth/cron-auth';
 import { db } from '@/lib/db/client';
 import { appendEnhanceReady } from '@/lib/push/pending';
+import { beatCron } from '@/lib/cron/heartbeat';
 
 export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
@@ -106,6 +107,7 @@ export async function GET(req: Request) {
   if (Date.now() - startedAt > TIME_BUDGET_MS) break; // 잔여는 다음 틱(1분)
   }
 
+  await beatCron('push-enhance-ready', `sent=${sent} failed=${failed}`);
   return Response.json({
     ok: true,
     claimed: totalClaimed,

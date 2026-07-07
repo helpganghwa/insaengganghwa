@@ -15,6 +15,7 @@ import { isCronAuthorized } from '@/lib/auth/cron-auth';
 import { db } from '@/lib/db/client';
 import { raids } from '@/lib/db/schema/raid';
 import { settleRaid } from '@/lib/game/raid/settle';
+import { beatCron } from '@/lib/cron/heartbeat';
 
 export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
@@ -62,6 +63,7 @@ export async function GET(req: Request) {
     if (Date.now() - startedAt > TIME_BUDGET_MS) break;
   }
 
+  await beatCron('settle-raid', `settled=${settled} failed=${failed}`);
   return Response.json({
     ok: true,
     settled,

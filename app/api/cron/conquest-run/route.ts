@@ -8,6 +8,7 @@ import { isCronAuthorized } from '@/lib/auth/cron-auth';
 import { openServerIds } from '@/lib/game/server-list';
 import { runConquest } from '@/lib/game/guild/conquest/run';
 import { kstDateString } from '@/lib/kst';
+import { beatCron } from '@/lib/cron/heartbeat';
 
 export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
@@ -30,6 +31,7 @@ export async function GET(req: Request) {
       }
     }
     const ok = results.every((r) => !('error' in r));
+    await beatCron('conquest-run', `ok=${ok}`);
     return Response.json({ ok, battleDay, results, kind: 'conquest-run' }, { status: ok ? 200 : 500 });
   } catch (e) {
     console.error('[conquest-run]', e);

@@ -12,6 +12,7 @@
 import { isCronAuthorized } from '@/lib/auth/cron-auth';
 import { pollAndProcessDownloading } from '@/lib/game/profile/pipeline';
 import { drainQueue } from '@/lib/game/profile/pipeline-v3';
+import { beatCron } from '@/lib/cron/heartbeat';
 
 export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
@@ -35,6 +36,7 @@ export async function GET(req: Request) {
     pollResult = { error: (e as Error).message };
   }
 
+  await beatCron('profile-poll');
   // enqueueResult.jobId 등 bigint 포함 → Response.json(JSON.stringify)이 직렬화 못 함.
   // bigint→string replacer로 안전 직렬화(크론 응답 500 방지).
   return new Response(

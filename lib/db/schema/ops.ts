@@ -79,6 +79,18 @@ export const clientErrors = pgTable(
   ],
 );
 
+/**
+ * §10.6 cron_heartbeats — 크론 dead-man. 각 크론이 성공 시 last_success_at 갱신(beatCron).
+ * warm 워치독·어드민 대시보드가 크론별 허용 간격 초과를 정지로 감지(lib/cron/heartbeat.ts).
+ */
+export const cronHeartbeats = pgTable('cron_heartbeats', {
+  name: text('name').primaryKey(),
+  lastSuccessAt: timestamp('last_success_at', { withTimezone: true }).notNull().defaultNow(),
+  detail: text('detail'),
+  /** 정지 알림 디듀프 — warm 워치독이 알림 시각 기록, beatCron 회복 시 null. */
+  staleAlertedAt: timestamp('stale_alerted_at', { withTimezone: true }),
+});
+
 /** §10.4 admin_actions — 운영 감사 로그. */
 export const adminActions = pgTable('admin_actions', {
   id: bigserial('id', { mode: 'bigint' }).primaryKey(),

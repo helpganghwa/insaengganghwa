@@ -12,6 +12,8 @@ import { sql } from 'drizzle-orm';
 import { isCronAuthorized } from '@/lib/auth/cron-auth';
 import { db } from '@/lib/db/client';
 import { withTimeout } from '@/lib/db/with-timeout';
+import { beatCron, getStaleCrons, markStaleAlerted } from '@/lib/cron/heartbeat';
+import { raiseOpsAlert } from '@/lib/ops/alert';
 
 export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
@@ -47,5 +49,24 @@ export async function GET(req: Request) {
     out.fetch = (e as Error).message;
   }
 
+  // 3. 크론 dead-man 워치독 — 매분 도는 warm이 다른 크론의 정지(허용 간격 초과)를 감지해
+  //    아직 알리지 않은 것만 어드민 푸시/웹훅. warm 자신이 죽으면(=총체적 크론 정지) 여기서
+  //    못 알리므로, 외부 uptime 모니터가 최종 백스톱(대시보드도 방문 시 표시).
+  try {
+    const stale = await getStaleCrons(Date.now());
+    const fresh = stale.filter((s) => !s.alerted);
+    if (fresh.length > 0) {
+      const lines = fresh
+        .map((s) => `• ${s.name} — ${s.lastSuccessAt ? `${Math.round(s.ageMs / 60000)}분째 미성공` : '한 번도 성공 없음'}`)
+        .join('\n');
+      await raiseOpsAlert(`크론 정지 감지 ${fresh.length}건`, lines);
+      await markStaleAlerted(fresh.map((s) => s.name));
+    }
+    out.stale = stale.map((s) => s.name);
+  } catch (e) {
+    out.stale = (e as Error).message;
+  }
+
+  await beatCron('warm');
   return Response.json({ ms: Date.now() - t0, ...out });
 }

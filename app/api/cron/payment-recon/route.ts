@@ -20,6 +20,7 @@ import { completePurchase } from '@/lib/payment/purchase';
 import { refundPurchase } from '@/lib/payment/refund';
 import { raisePaymentAlert } from '@/lib/payment/alert';
 import { kstMonthString } from '@/lib/kst';
+import { beatCron } from '@/lib/cron/heartbeat';
 
 export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
@@ -134,5 +135,6 @@ export async function GET(req: Request) {
   }
   out.minorLimit = { over: minorOver.length };
 
+  await beatCron('payment-recon');
   return Response.json({ ok: true, ...out });
 }
