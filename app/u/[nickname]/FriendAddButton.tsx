@@ -71,7 +71,7 @@ export function FriendAddButton({
             : 'border-zinc-700 bg-zinc-900/60 text-zinc-300 hover:bg-zinc-900'
         }`}
       >
-        {relation === 'incoming' ? '친구 요청 수락' : '＋ 친구 추가'}
+        {relation === 'incoming' ? '친구 요청 수락' : '친구 추가'}
       </button>
       {err && (
         <p className="rounded-lg bg-red-950/40 px-2 py-1 text-center text-xs text-red-300">{err}</p>
