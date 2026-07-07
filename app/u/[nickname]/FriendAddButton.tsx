@@ -65,13 +65,13 @@ export function FriendAddButton({
         type="button"
         onClick={send}
         disabled={pending}
-        className={`flex w-full items-center justify-center rounded-xl py-2.5 text-sm font-bold transition active:scale-[0.98] ${
+        className={`flex w-full items-center justify-center rounded-xl border py-2.5 text-sm font-semibold transition active:scale-[0.98] ${
           pending
-            ? 'bg-zinc-800 text-zinc-500'
-            : 'bg-gradient-to-r from-sky-500 to-indigo-500 text-white shadow-lg shadow-indigo-900/30'
+            ? 'border-zinc-800 bg-zinc-900/40 text-zinc-500'
+            : 'border-zinc-700 bg-zinc-900/60 text-zinc-300 hover:bg-zinc-900'
         }`}
       >
-        {relation === 'incoming' ? '친구 요청 수락' : '친구 추가'}
+        {relation === 'incoming' ? '친구 요청 수락' : '＋ 친구 추가'}
       </button>
       {err && (
         <p className="rounded-lg bg-red-950/40 px-2 py-1 text-center text-xs text-red-300">{err}</p>
