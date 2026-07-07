@@ -279,6 +279,7 @@ export async function completePurchase(
 
   const kstMonth = kstMonthString();
   let minorExceeded = false;
+  let dupSkipped = false;
   await db.transaction(async (tx) => {
     // 주문 잠금 + 상태 재확인 — 동시 호출 중 1회만 지급(멱등 핵심).
     const [locked] = await tx
@@ -286,9 +287,9 @@ export async function completePurchase(
       .from(iapOrders)
       .where(eq(iapOrders.id, order.id))
       .for('update');
-    // pending에서만 지급 전이 — paid(이미 지급)·refunded/cancelled(환불 확정) 상태를
-    // 다시 paid로 되돌려 재지급하는 레이스를 차단(환불 후 stale PAID 재확인 경로).
-    if (!locked || locked.status !== 'pending') return;
+    // pending(+recon이 24h 종결한 expired의 늦은 결제)에서만 지급 전이 — paid(이미 지급)·
+    // refunded(환불 확정)를 다시 paid로 되돌려 재지급하는 레이스를 차단.
+    if (!locked || (locked.status !== 'pending' && locked.status !== 'expired')) return;
 
     await tx
       .update(iapOrders)
@@ -311,6 +312,9 @@ export async function completePurchase(
       const { isMinor } = await minorStatus(order.userId, kstMonth);
       if (isMinor) {
         minorExceeded = true;
+        // 지급 없이 paid — 회수 스킵 마커(0108). 없으면 환불 회수가 과거 다른 주문의
+        // 지급분을 깎는다(자동 환불이 즉시 따라와도 재화 원장은 이 마커가 지킨다).
+        await tx.update(iapOrders).set({ grantSkipped: true }).where(eq(iapOrders.id, order.id));
         return; // paid 전이·월누적은 커밋(원장 정확) — 지급만 보류, 환불이 월누적을 복원.
       }
     }
@@ -320,9 +324,26 @@ export async function completePurchase(
     if (bp) {
       await applyBpSegmentPurchase(tx, order.userId, order.serverId, bp.type, bp.segmentIndex);
     } else {
-      await applyProductGrant(tx, order.userId, order.serverId, order.productCode);
+      const g = await applyProductGrant(tx, order.userId, order.serverId, order.productCode);
+      if (g.skipped) {
+        // 인생 특가 중복 결제 — 지급 차단됨(grant.ts 최종 게이트). 회수 스킵 마커 동일 적용.
+        dupSkipped = true;
+        await tx.update(iapOrders).set({ grantSkipped: true }).where(eq(iapOrders.id, order.id));
+      }
     }
   });
+
+  if (dupSkipped) {
+    // tx 커밋 후 발화(잠금 보유 중 외부 HTTP 금지 + 롤백 시 허위 알림 방지) — 기존에는
+    // grant.ts가 tx 안에서 알림을 쐈다(2026-07-07 전수감사 A-묶음).
+    await raisePaymentAlert('COMPLETE_EXCEPTION', {
+      paymentId,
+      orderId: order.id,
+      detail:
+        `인생 특가 중복 결제 감지(서버 ${order.serverId}) — 두 번째 지급 차단·grant_skipped 마킹. ` +
+        `중복 결제분은 환불해도 기존 지급분이 회수되지 않으니 안심하고 환불 처리.`,
+    });
+  }
 
   if (minorExceeded) {
     // 지급 없이 paid로 남은 주문 — 즉시 자동 환불(지급분이 없어 회수는 no-op, 월누적 복원).

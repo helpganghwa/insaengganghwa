@@ -22,7 +22,8 @@ import { sql } from 'drizzle-orm';
 
 import { profiles } from './profiles';
 
-export const iapStatusEnum = pgEnum('iap_status', ['pending', 'paid', 'refunded']);
+// 'expired' = 24h+ 이탈 pending 종결(payment-recon, 0108) — 늦은 결제는 expired→paid 재전이 허용.
+export const iapStatusEnum = pgEnum('iap_status', ['pending', 'paid', 'refunded', 'expired']);
 export const iapRefundReasonEnum = pgEnum('iap_refund_reason', [
   'user',
   'minor_protection',
@@ -46,6 +47,8 @@ export const iapOrders = pgTable(
     amountKrw: bigint('amount_krw', { mode: 'bigint' }).notNull(),
     diamondGranted: bigint('diamond_granted', { mode: 'bigint' }).notNull(),
     status: iapStatusEnum('status').notNull().default('pending'),
+    /** 지급 없이 paid 된 주문(특가 중복·미성년 보류, 0108) — 환불 시 재화 회수 스킵 근거. */
+    grantSkipped: boolean('grant_skipped').notNull().default(false),
     paidAt: timestamp('paid_at', { withTimezone: true }),
     createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
   },

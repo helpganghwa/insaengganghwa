@@ -27,6 +27,8 @@ export const maxDuration = 60;
 
 const ORPHAN_PENDING_LIMIT = 50;
 const REFUND_SCAN_LIMIT = 50;
+// 이탈 pending 종결 기준 — PG 결제창 유효기간을 넉넉히 덮는 24h(가상계좌 입금 지연 흡수).
+const PENDING_EXPIRE_MS = 24 * 60 * 60 * 1000;
 
 export async function GET(req: Request) {
   if (!isCronAuthorized(req)) return new Response('forbidden', { status: 403 });
@@ -35,7 +37,7 @@ export async function GET(req: Request) {
 
   // ── A. 고아 pending 복구 ────────────────────────────────────────────────
   const pending = await db
-    .select({ id: iapOrders.id, pid: iapOrders.portoneOrderId })
+    .select({ id: iapOrders.id, pid: iapOrders.portoneOrderId, createdAt: iapOrders.createdAt })
     .from(iapOrders)
     .where(and(eq(iapOrders.status, 'pending'), lt(iapOrders.createdAt, sql`now() - interval '15 minutes'`)))
     // 오래된 것 우선(asc) — 최신순이면 백로그가 limit을 넘는 동안 가장 오래된(가장 위험한)
@@ -44,6 +46,7 @@ export async function GET(req: Request) {
     .limit(ORPHAN_PENDING_LIMIT);
   let healed = 0;
   let stillPending = 0;
+  let expired = 0;
   for (const o of pending) {
     try {
       const pay = await getPortonePayment(o.pid);
@@ -56,14 +59,24 @@ export async function GET(req: Request) {
             orderId: o.id,
             detail: `PG는 PAID인데 재지급 실패(code=${r.code}). 즉시 수동 확인 필요.`,
           });
+      } else if (o.createdAt.getTime() < Date.now() - PENDING_EXPIRE_MS) {
+        // 24h+ 이탈 pending 종결(0108) — 종결 없이는 죽은 주문이 이 스캔(limit 50)을 영구
+        // 점유해 진짜 유실 주문이 기아. 방금 PG 미결제를 확인한 주문만, 조건부(pending)로
+        // 전이해 웹훅과 경합해도 안전. 만료 후 늦은 결제는 completePurchase가
+        // expired→paid를 허용해 지급 유실 없음.
+        await db
+          .update(iapOrders)
+          .set({ status: 'expired' })
+          .where(and(eq(iapOrders.id, o.id), eq(iapOrders.status, 'pending')));
+        expired++;
       } else {
-        stillPending++; // PG도 미결제 — 이탈한 주문(정상). 기록만.
+        stillPending++; // PG도 미결제 — 이탈한 주문(24h 내, 정상). 기록만.
       }
     } catch (e) {
       console.error('[payment-recon] A pending check failed', o.pid, e);
     }
   }
-  out.orphanPending = { scanned: pending.length, healed, stillPending, capped: pending.length === ORPHAN_PENDING_LIMIT };
+  out.orphanPending = { scanned: pending.length, healed, stillPending, expired, capped: pending.length === ORPHAN_PENDING_LIMIT };
 
   // ── B. 환불 미회수 백스톱(최근 3일 paid) ──────────────────────────────────
   const recentPaid = await db

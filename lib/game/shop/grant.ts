@@ -10,7 +10,6 @@ import { shopPurchases } from '@/lib/db/schema/shop';
 import { mailbox } from '@/lib/db/schema/mailbox';
 import { SUPPLY_SLOTS } from '@/lib/game/balance';
 
-import { raisePaymentAlert } from '@/lib/payment/alert';
 
 import { shopGrant, productPeriod, PREMIUM, FIRST_SPECIAL } from './catalog';
 import { periodKey } from './period';
@@ -87,7 +86,7 @@ export async function applyProductGrant(
   userId: string,
   serverId: number,
   productId: string,
-): Promise<Grant> {
+): Promise<Grant & { skipped?: boolean }> {
   const g = shopGrant(productId);
   if (!g) throw new Error('UNKNOWN_PRODUCT');
   const period = productPeriod(productId);
@@ -112,11 +111,10 @@ export async function applyProductGrant(
       )
       .for('update');
     if (row?.periodKey === 'once') {
-      await raisePaymentAlert('COMPLETE_EXCEPTION', {
-        paymentId: `first-special-dup:${userId}:${serverId}`,
-        detail: `인생 특가 중복 결제 감지(서버 ${serverId}) — 두 번째 지급 차단됨. 중복 결제분 수동 환불 필요.`,
-      });
-      return { diamond: 0, boxes: 0 };
+      // 지급 차단 — 알림은 호출자가 tx 커밋 후 발화(외부 HTTP를 잠금 보유 중 수행 금지 +
+      // 롤백 시 허위 알림 방지). 호출자는 skipped를 보고 주문에 grant_skipped를 마킹해
+      // 환불 시 이 주문이 "타 주문 지급분"을 회수하지 않게 한다.
+      return { diamond: 0, boxes: 0, skipped: true };
     }
     await tx
       .update(shopPurchases)
@@ -219,6 +217,8 @@ export async function reclaimProductGrant(
   }
 
   // 주기 상품(일일/주간/월간)이면 구매 마크 삭제 → 환불 후 같은 주기에 재구매 가능(disabled 해제).
+  // ⚠ 인생 특가('once', period 없음)는 의도적으로 마크를 남긴다 — 환불해도 특가 기회는
+  // 1회 소진(환불 어뷰징 방지, 사용자 결정 2026-07-07). 재화 회수는 위에서 동일하게 수행.
   if (productPeriod(productId)) {
     await tx
       .delete(shopPurchases)

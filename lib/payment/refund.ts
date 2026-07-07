@@ -50,7 +50,7 @@ export async function refundPurchase(paymentId: string): Promise<RefundResult> {
 
   await db.transaction(async (tx) => {
     const [locked] = await tx
-      .select({ status: iapOrders.status })
+      .select({ status: iapOrders.status, grantSkipped: iapOrders.grantSkipped })
       .from(iapOrders)
       .where(eq(iapOrders.id, order.id))
       .for('update');
@@ -61,8 +61,13 @@ export async function refundPurchase(paymentId: string): Promise<RefundResult> {
 
     if (wasPaid) {
       // 지급분 회수 — 배틀패스 구간(구간 row 삭제+보상 회수) vs 상점 상품(다이아·상자·주기마크).
+      // ⚠ grant_skipped 주문(특가 중복·미성년 보류 — 지급 없이 paid)은 회수를 건너뛴다:
+      // 회수하면 "다른 주문이 지급한" 재화를 몰수한다(2026-07-07 전수감사 高-1).
+      // 월누적 차감·감사기록은 결제 자체에 귀속되므로 그대로 수행.
       const bp = parseBpProduct(order.productCode);
-      if (bp) {
+      if (locked.grantSkipped) {
+        // no-op — 지급된 것이 없음.
+      } else if (bp) {
         await reclaimBpSegment(tx, order.userId, order.serverId, bp.type, bp.segmentIndex);
       } else {
         await reclaimProductGrant(tx, order.userId, order.serverId, order.productCode);
@@ -90,13 +95,13 @@ export async function refundPurchase(paymentId: string): Promise<RefundResult> {
       });
     }
 
-    // 환불 감사 기록 — clawbackDone은 지급분을 회수했는지(pending 취소면 회수 없음).
+    // 환불 감사 기록 — clawbackDone은 지급분을 실제 회수했는지(pending 취소·grant_skipped는 회수 없음).
     await tx.insert(iapRefunds).values({
       orderId: order.id,
       userId: order.userId,
       reason: 'user',
       amountKrw: order.amountKrw,
-      clawbackDone: wasPaid,
+      clawbackDone: wasPaid && !locked.grantSkipped,
     });
   });
 

@@ -19,7 +19,7 @@ export type OrderRow = {
   productName: string;
   krw: number;
   diamond: number;
-  status: 'pending' | 'paid' | 'refunded';
+  status: 'pending' | 'paid' | 'refunded' | 'expired';
   nickname: string | null;
   /** 유저 고유코드 — 콘솔 주문자명·문의 식별 대조용. */
   code: string | null;
@@ -38,6 +38,7 @@ const STATUS_BADGE: Record<OrderRow['status'], { label: string; cls: string }> =
   paid: { label: '결제완료', cls: 'bg-emerald-900/50 text-emerald-300 border-emerald-700/50' },
   refunded: { label: '환불됨', cls: 'bg-zinc-800 text-zinc-400 border-zinc-700' },
   pending: { label: '대기', cls: 'bg-amber-900/40 text-amber-300 border-amber-700/50' },
+  expired: { label: '만료', cls: 'bg-zinc-800 text-zinc-500 border-zinc-700' },
 };
 
 const ERR_MSG: Record<string, string> = {
