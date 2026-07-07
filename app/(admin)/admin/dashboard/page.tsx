@@ -54,32 +54,35 @@ type DashRow = {
 };
 
 async function loadDashboard() {
-  const dayStart = kstStartOfDay();
+  // ⚠ raw 클라이언트(pgGuard)에 Date 객체 파라미터 금지 — drizzle(driver.js)이 공유 postgres
+  // 클라이언트의 timestamp 직렬화기(1184 등)를 identity로 교체해, Date가 미변환으로 소켓에
+  // 내려가 TypeError가 난다(2026-07-07 prod digest 3386322421). ISO 문자열 + ::timestamptz.
+  const dayStart = kstStartOfDay().toISOString();
   const today = kstDateString();
   // KST 이달 1일 00:00의 UTC 인스턴트 — ⚠ kstMonthString()은 'YYYYMM'(하이픈 없음, 월한도
   // 키용)이라 Date 문자열 조립에 쓰면 Invalid Date가 된다(2026-07-06 prod 장애).
   const k = new Date(Date.now() + 9 * 3600_000);
-  const monthStart = new Date(Date.UTC(k.getUTCFullYear(), k.getUTCMonth(), 1) - 9 * 3600_000);
+  const monthStart = new Date(Date.UTC(k.getUTCFullYear(), k.getUTCMonth(), 1) - 9 * 3600_000).toISOString();
 
   // 전 지표를 스칼라 서브쿼리 한 문장으로 — 풀 슬롯 1개·1왕복. 각 서브쿼리는 전부 소형
   // count/sum이라 플래너가 순차 실행해도 수십 ms. 10s 타임아웃 시 쿼리 취소로 슬롯 즉시 회수.
   const rows = await pgGuard<DashRow[]>(
     (sql) => sql<DashRow[]>`
       select
-        (select count(*)::int from profiles where created_at >= ${dayStart}) as signups_today,
-        (select count(distinct user_id)::int from characters where last_seen_at >= ${dayStart}) as dau,
+        (select count(*)::int from profiles where created_at >= ${dayStart}::timestamptz) as signups_today,
+        (select count(distinct user_id)::int from characters where last_seen_at >= ${dayStart}::timestamptz) as dau,
         (select coalesce(json_agg(t), '[]'::json) from (
            select c.server_id as "serverId", s.name, count(*)::int as c
            from characters c join servers s on s.id = c.server_id
            group by c.server_id, s.name order by c.server_id) t) as chars_by_server,
         (select count(*)::int from profiles) as accounts_total,
         (select json_build_object('sum', coalesce(sum(amount_krw), 0)::text, 'c', count(*)::int)
-           from iap_orders where status = 'paid' and paid_at >= ${dayStart}) as sales_today,
+           from iap_orders where status = 'paid' and paid_at >= ${dayStart}::timestamptz) as sales_today,
         (select json_build_object('sum', coalesce(sum(amount_krw), 0)::text, 'c', count(*)::int)
-           from iap_orders where status in ('paid', 'refunded') and paid_at >= ${monthStart}) as sales_month,
-        (select count(*)::int from iap_refunds where created_at >= ${monthStart}) as refunds_month,
+           from iap_orders where status in ('paid', 'refunded') and paid_at >= ${monthStart}::timestamptz) as sales_month,
+        (select count(*)::int from iap_refunds where created_at >= ${monthStart}::timestamptz) as refunds_month,
         (select count(*)::int from enhancement_jobs where status = 'running') as running_jobs,
-        (select count(*)::int from raids where opened_at >= ${dayStart}) as raids_today,
+        (select count(*)::int from raids where opened_at >= ${dayStart}::timestamptz) as raids_today,
         (select count(*)::int from melee_participants mp
            join melee_battles mb on mb.id = mp.battle_id
            where mb.battle_date = ${today}) as melee_today,
