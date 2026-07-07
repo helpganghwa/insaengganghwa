@@ -203,20 +203,6 @@ function isNotable(s: ConquestDaySummary): boolean {
 }
 
 /**
- * '전체'(헤드라인) 기록 대상 — 대륙의 정세가 크게 바뀌거나 특별한 기록이 있는 날만.
- *  · 길드 간 영토 탈취(from!=null: 한 길드가 다른 길드 구역을 빼앗음 = 전선 이동)
- *  · 하루 2곳 이상 점령(대규모 변동)
- *  · 특별한 개인 활약(단일 전투 다수 처치/수비 — 임계 5회 이상)
- *  단발 중립 점령·소소한 방어만 있는 날은 '오늘'엔 남되 '전체' 연표엔 올리지 않는다.
- */
-function isBigChange(s: ConquestDaySummary): boolean {
-  const takenFromGuild = s.captures.some((c) => c.from != null);
-  const multiCapture = s.captures.length >= 2;
-  const specialFeat = s.feats.some((f) => f.count >= 5);
-  return takenFromGuild || multiCapture || specialFeat;
-}
-
-/**
  * 그날 연대기 생성·저장(멱등) — 그날 점령전 요약을 AI가 기록.
  * 이미 그날 행이 있으면 skip. 큰 사건 없으면 기록 안 함(별일 없는 날). KEY 없으면 throw.
  */
@@ -281,10 +267,10 @@ export async function generateAndStoreChronicle(
   // ── 지형 형세(지도 분석) — 인접 그래프로 길드 영토의 연결 조각 수 변화(분단/통합/비지) 감지
   // (2026-07-06 피드백: 점령으로 상대 영토가 둘로 쪼개지는 형세를 지도 보듯 서술하게). ──
   const zoneRows = (await db.execute(sql`
-    select z.id::int as id, z.name, g.name as owner
+    select z.id::int as id, z.name, z.region::text as region, g.name as owner
     from zones z left join guilds g on g.id = z.owner_guild_id
     where z.server_id = ${serverId}
-  `)) as unknown as { id: number; name: string; owner: string | null }[];
+  `)) as unknown as { id: number; name: string; region: string; owner: string | null }[];
   const adjRows = (await db.execute(sql`
     select za.zone_a::int as a, za.zone_b::int as b
     from zone_adjacency za join zones z on z.id = za.zone_a
@@ -336,13 +322,63 @@ export async function generateAndStoreChronicle(
     .filter((s): s is string => s !== null)
     .join('\n');
 
+  // ── '전체' 연표 등재 판정 — 판도 이정표(1위 교체·지역 완전 장악·영토 소멸·판도 데뷔)와
+  // 기록적 개인 활약만 역사로 남긴다. 일상 확장(하루 몇 곳 점령·단순 탈취)은 '오늘' 스토리에만
+  // (2026-07-07 결정: 연표가 '각각 한 곳씩 접수' 류 일지로 채워지는 것 방지). ──
+  const countsOf = (ownerOf: Map<number, string | null>): Map<string, number> => {
+    const m = new Map<string, number>();
+    for (const o of ownerOf.values()) if (o) m.set(o, (m.get(o) ?? 0) + 1);
+    return m;
+  };
+  // 유일 최다 보유 길드 — 동수 공동 1위는 null(교체로 치지 않음).
+  const leaderOf = (counts: Map<string, number>): string | null => {
+    let best: string | null = null;
+    let bestN = 0;
+    let tie = false;
+    for (const [g, n] of counts) {
+      if (n > bestN) { best = g; bestN = n; tie = false; }
+      else if (n === bestN) tie = true;
+    }
+    return tie ? null : best;
+  };
+  const beforeCounts = countsOf(beforeOwner);
+  const afterCounts = countsOf(afterOwner);
+  const milestones: string[] = [];
+  const prevLeader = leaderOf(beforeCounts);
+  const nextLeader = leaderOf(afterCounts);
+  if (prevLeader && nextLeader && prevLeader !== nextLeader)
+    milestones.push(`· 길드 「${nextLeader}」 이(가) 영토 1위에 올라섬(직전 1위 「${prevLeader}」)`);
+  const regionZoneIds = new Map<string, number[]>();
+  for (const z of zoneRows) regionZoneIds.set(z.region, [...(regionZoneIds.get(z.region) ?? []), z.id]);
+  for (const [region, ids] of regionZoneIds) {
+    const owners = new Set(ids.map((id) => afterOwner.get(id) ?? null));
+    if (owners.size !== 1) continue;
+    const g = [...owners][0];
+    // 그날 새로 성립한 완전 장악만(전날부터 이미 전 구역 소유였으면 제외).
+    if (g && !ids.every((id) => beforeOwner.get(id) === g))
+      milestones.push(`· 길드 「${g}」 이(가) ${REGION_KO[region] ?? region} 전체 ${ids.length}곳을 장악`);
+  }
+  for (const g of new Set([...beforeCounts.keys(), ...afterCounts.keys()])) {
+    const b = beforeCounts.get(g) ?? 0;
+    const a = afterCounts.get(g) ?? 0;
+    if (b > 0 && a === 0) milestones.push(`· 길드 「${g}」 영토 소멸(마지막 구역 상실)`);
+    if (b === 0 && a > 0)
+      milestones.push(
+        beforeCounts.size === 0
+          ? `· 길드 「${g}」 이(가) 대륙 최초로 구역을 점령`
+          : `· 길드 「${g}」 이(가) 첫 구역을 확보하며 판도에 등장`,
+      );
+  }
+  const specialFeat = summary.feats.some((f) => f.count >= 5);
+
   const digest =
     `[점령전 정리 — 이 귀속을 그대로 따를 것]\n` +
     `■ 공격 측(구역을 공격한 길드):\n${atkLines}\n` +
     `■ 신규 점령(길드별):\n${capLines}\n` +
     `■ 방어(점령 아님 — 소유 길드가 위 공격을 막아냄):\n${defLines}\n` +
     `■ 개인 활약:\n${featLines}\n` +
-    `■ 지형 형세(지도 분석 — 형세 서술 근거):\n${topoLines || '· (연결 형세 변화 없음)'}`;
+    `■ 지형 형세(지도 분석 — 형세 서술 근거):\n${topoLines || '· (연결 형세 변화 없음)'}` +
+    (milestones.length > 0 ? `\n■ 역사적 사건(연표 등재 사유):\n${milestones.join('\n')}` : '');
 
   // ── 연속성 맥락(참고용) — 오늘의 사실은 위 정리만 따르되, 흐름·판도는 아래를 참고해 이어 쓴다. ──
   // 현재 영토 현황(누적 점령 결과) — '정세' 문단 근거.
@@ -390,7 +426,7 @@ export async function generateAndStoreChronicle(
     `[어제(${prevDay}) 점령전 결과 — 연속성 참고용]\n${yesterdayBlock}\n\n` +
     `[지난 역사 — 어제까지 누적, 흐름 참고용]\n${histLines || '· (이전 기록 없음)'}`;
 
-  const bigChange = isBigChange(summary);
+  const bigChange = milestones.length > 0 || specialFeat;
   // ── 이름 집합(검증·교정·강제 공용) — summary가 아는 정답. ──
   const guildNames = new Set<string>();
   const zoneNames = new Set<string>();
@@ -469,8 +505,8 @@ export async function generateAndStoreChronicle(
     `'신규 점령'에 '~로부터 빼앗음'이 붙은 구역은 소유권 이동을 분명히 이야기하라 — 이전 주인 길드를 언급하고, '방어 병력 없음'이면 그 사실 자체를 서사로 쓴다(무혈 입성·비워진 성을 접수 등). '지형 형세'의 분단·통합·비지 신호가 있으면 지도를 보며 형세를 짚는 사관처럼 형세 대목에 녹여라(예: "이 한 수로 상대 영토는 남북으로 갈라졌다").\n` +
           `today는 역사가가 그날의 일을 하나의 이야기로 풀어 들려주듯 쓴다 — 사건→결과→그 의미→형세를 별개 문단·라벨로 쪼개지 말고 인과로 이어지는 단일 서사로. 문단은 흐름에 따라 자연스럽게(2~4문단), '그날·이날·오늘' 같은 시간 지시어로 문단을 시작하지 말 것.\n` +
     (bigChange
-      ? `이번 전투는 정세가 크게 바뀐 경우 — headline에 핵심 사건 한 줄을 쓴다.\n`
-      : `이번 전투는 정세가 크게 바뀐 경우가 아님 — headline은 반드시 빈 문자열("")로 둔다.\n`) +
+      ? `이번 전투는 역사에 남는 날 — headline은 '■ 역사적 사건'${milestones.length === 0 ? '(기록적 개인 활약)' : ''}을 중심으로 핵심 한 줄을 쓴다.\n`
+      : `이번 전투는 역사에 남을 날이 아님 — headline은 반드시 빈 문자열("")로 둔다.\n`) +
     `마커: 길드={g|}, 인물={u|}, 개별 구역(zone)={z|}. 지역은 마커 없이. 모든 길드/인물/구역 이름은 등장할 때마다 반드시 마커로 감싼다(「」 따옴표 금지).\n\n` +
     `위 규칙대로 JSON({today, headline})만 출력하라.`;
 
