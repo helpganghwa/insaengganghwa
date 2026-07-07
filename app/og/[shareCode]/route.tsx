@@ -128,7 +128,10 @@ export async function GET(_req: Request, { params }: { params: Promise<{ shareCo
     if (up) {
       const rot = up.rotations as Record<string, string>;
       const u = rot[up.activeDirection];
-      if (u) charUri = await dataUri(u);
+      // 기본 아바타(대장장이 남/여)는 rotations가 상대경로(/sprites/default/...)로 저장된다.
+      // dataUri.fetch는 절대 URL만 받으므로 origin을 붙여야 한다 — 안 붙이면 기본 아바타 유저의
+      // OG 캐릭터가 통째로 ✨ 폴백으로 빠졌다(커스텀 아바타는 Supabase 절대 URL이라 무영향).
+      if (u) charUri = await dataUri(u.startsWith('http') ? u : `${origin}${u}`);
     }
   }
 
