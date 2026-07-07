@@ -22,8 +22,7 @@ import {
 import { guildErrMsg } from '../errors-msg';
 
 import { ZONE_LORE } from '@/lib/game/guild/zone-lore';
-
-type Region = 'volcano' | 'temple' | 'swamp' | 'orc' | 'kingdom' | 'angel';
+import { REGION_META, REGION_ORDER, type Region } from '@/lib/game/guild/region-meta';
 
 type Zone = {
   id: number;
@@ -163,16 +162,8 @@ function ChronicleText({
   return <>{out}</>;
 }
 
-const REGION: Record<Region, { label: string; color: string }> = {
-  volcano: { label: '드래곤 화산', color: '#ef4444' },
-  temple: { label: '잊힌 신전', color: '#60a5fa' },
-  swamp: { label: '슬라임 늪', color: '#22c55e' },
-  orc: { label: '오크 부락', color: '#f97316' },
-  kingdom: { label: '왕국', color: '#fbbf24' },
-  angel: { label: '타락 천사 부유섬', color: '#c084fc' },
-};
-// 지역 현황 표시 순서(요청) — 왕국·오크·늪·화산·신전·부유섬.
-const REGION_ORDER: Region[] = ['kingdom', 'orc', 'swamp', 'volcano', 'temple', 'angel'];
+// 지역 라벨·색 — 공용 메타(길드 팝업 칩과 동일 출처).
+const REGION = REGION_META;
 
 
 export function WorldMapView({
@@ -251,7 +242,7 @@ export function WorldMapView({
     emblemUrl: string | null;
     intro: string | null;
     joinPolicy: string;
-    zones: string[];
+    zones: { name: string; region: Region }[];
   };
   const [guildPopup, setGuildPopup] = useState<GuildPopup | null>(null);
   const openGuildByName = (name: string) => {
@@ -940,10 +931,10 @@ export function WorldMapView({
               <div className="mt-1.5 flex flex-wrap gap-1">
                 {guildPopup.zones.map((z) => (
                   <span
-                    key={z}
-                    className="rounded-md bg-amber-50 px-2 py-0.5 text-[11px] font-medium text-amber-700 dark:bg-amber-500/10 dark:text-amber-300"
+                    key={z.name}
+                    className={`rounded-md px-2 py-0.5 text-[11px] font-medium ${REGION_META[z.region].chip}`}
                   >
-                    {z}
+                    {z.name}
                   </span>
                 ))}
               </div>

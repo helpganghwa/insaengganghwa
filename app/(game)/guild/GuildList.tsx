@@ -3,6 +3,7 @@
 import { useState } from 'react';
 
 import { ModalShell } from '@/components/ModalShell';
+import { REGION_META, type Region } from '@/lib/game/guild/region-meta';
 
 export type GuildRow = {
   id: string;
@@ -15,8 +16,8 @@ export type GuildRow = {
   intro: string | null;
   /** 가입 방식 — 'open'(자유) | 'approval'(승인). */
   joinPolicy: string;
-  /** 점령 구역 이름 목록(없으면 빈 배열). 카드 배지 수 + 팝업 목록. */
-  zones: string[];
+  /** 점령 구역 목록(없으면 빈 배열). 카드 배지 수 + 팝업 칩(지역색). */
+  zones: { name: string; region: Region }[];
 };
 
 /** 컴팩트 수치(예: 53,000 → 5.3만). */
@@ -172,10 +173,10 @@ export function GuildList({
               <div className="mt-1.5 flex flex-wrap gap-1">
                 {selected.zones.map((z) => (
                   <span
-                    key={z}
-                    className="rounded-md bg-amber-50 px-2 py-0.5 text-[11px] font-medium text-amber-700 dark:bg-amber-500/10 dark:text-amber-300"
+                    key={z.name}
+                    className={`rounded-md px-2 py-0.5 text-[11px] font-medium ${REGION_META[z.region].chip}`}
                   >
-                    {z}
+                    {z.name}
                   </span>
                 ))}
               </div>

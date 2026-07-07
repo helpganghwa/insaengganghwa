@@ -12,6 +12,7 @@ import {
 } from '@/lib/game/guild';
 import { GUILD_LEADER_HANDOVER_DAYS, GUILD_LEADER_HANDOVER_WARN_DAYS } from '@/lib/game/guild/balance';
 import { kstDateString, daysSinceIso } from '@/lib/kst';
+import type { Region } from '@/lib/game/guild/region-meta';
 
 // 풀 포화 시 무한 대기 방지 — 각 쿼리 타임아웃(초과 시 쿼리 취소·풀 회수, 에러바운더리로 degrade).
 const DB_GUARD_MS = 4000;
@@ -38,7 +39,7 @@ async function browseView(userId: string, serverId: number) {
     combat: number;
     intro: string | null;
     joinPolicy: string;
-    zones: string[];
+    zones: { name: string; region: Region }[];
   }) => ({
     id: g.id.toString(),
     name: g.name,

@@ -22,6 +22,7 @@ import { combatPowerFromOwned } from '@/lib/game/equipment/combat-power';
 import { kstDateString } from '@/lib/kst';
 
 import { guildCapacity } from './balance';
+import type { Region } from './region-meta';
 import { nextBattleKstDay, isConquestLocked } from './conquest/schedule';
 
 type DeployBoardMember = {
@@ -122,24 +123,28 @@ async function guildCombatPowers(serverId: number, guildIds: bigint[]): Promise<
   return cpByGuild;
 }
 
+/** 팝업 구역 칩용 최소 정보 — region은 지역색 표시 근거. */
+type ZoneChip = { name: string; region: Region };
+
 /**
- * 길드별 점령 구역 이름 목록 — guildId→구역명 배열(zone.id 오름차순). 여러 길드 1쿼리(N+1 방지).
- * 리스트 카드의 점령 수 배지 + 상세 팝업의 구역 목록 공용.
+ * 길드별 점령 구역 목록(이름+지역) — guildId→배열(zone.id 오름차순). 여러 길드 1쿼리(N+1 방지).
+ * 리스트 카드의 점령 수 배지 + 상세 팝업의 구역 칩(지역색) 공용.
  */
-async function guildZoneNames(serverId: number, guildIds: bigint[]): Promise<Map<string, string[]>> {
-  const byGuild = new Map<string, string[]>();
+async function guildZoneChips(serverId: number, guildIds: bigint[]): Promise<Map<string, ZoneChip[]>> {
+  const byGuild = new Map<string, ZoneChip[]>();
   if (guildIds.length === 0) return byGuild;
   const rows = await db
-    .select({ ownerGuildId: zones.ownerGuildId, name: zones.name })
+    .select({ ownerGuildId: zones.ownerGuildId, name: zones.name, region: zones.region })
     .from(zones)
     .where(and(eq(zones.serverId, serverId), inArray(zones.ownerGuildId, guildIds)))
     .orderBy(zones.id);
   for (const r of rows) {
     if (r.ownerGuildId == null) continue;
     const key = r.ownerGuildId.toString();
+    const chip = { name: r.name, region: r.region };
     const arr = byGuild.get(key);
-    if (arr) arr.push(r.name);
-    else byGuild.set(key, [r.name]);
+    if (arr) arr.push(chip);
+    else byGuild.set(key, [chip]);
   }
   return byGuild;
 }
@@ -160,15 +165,15 @@ export async function getGuildRanking(serverId: number, limit = 50) {
     .from(guilds)
     .where(eq(guilds.serverId, serverId));
   const ids = rows.map((r) => r.id);
-  const [cp, zoneNames] = await Promise.all([
+  const [cp, zoneChips] = await Promise.all([
     guildCombatPowers(serverId, ids),
-    guildZoneNames(serverId, ids),
+    guildZoneChips(serverId, ids),
   ]);
   return rows
     .map((r) => ({
       ...r,
       combat: cp.get(r.id.toString()) ?? 0,
-      zones: zoneNames.get(r.id.toString()) ?? [],
+      zones: zoneChips.get(r.id.toString()) ?? [],
     }))
     .sort((a, b) => b.combat - a.combat || b.level - a.level)
     .slice(0, limit);
@@ -203,14 +208,14 @@ export async function searchGuilds(serverId: number, q: string) {
         .orderBy(sql`random()`)
         .limit(10);
   const ids = rows.map((r) => r.id);
-  const [cp, zoneNames] = await Promise.all([
+  const [cp, zoneChips] = await Promise.all([
     guildCombatPowers(serverId, ids),
-    guildZoneNames(serverId, ids),
+    guildZoneChips(serverId, ids),
   ]);
   return rows.map((r) => ({
     ...r,
     combat: cp.get(r.id.toString()) ?? 0,
-    zones: zoneNames.get(r.id.toString()) ?? [],
+    zones: zoneChips.get(r.id.toString()) ?? [],
   }));
 }
 
@@ -234,7 +239,7 @@ export async function getGuildSummaryByName(serverId: number, name: string) {
     guildCombatPowers(serverId, [g.id]),
     // 점령 구역 목록 — 길드 목록 팝업과 동일 정보(세계지도 팝업 정보 격차 해소, 2026-07-06).
     db
-      .select({ name: zones.name })
+      .select({ name: zones.name, region: zones.region })
       .from(zones)
       .where(and(eq(zones.serverId, serverId), eq(zones.ownerGuildId, g.id)))
       .orderBy(zones.id),
@@ -247,7 +252,7 @@ export async function getGuildSummaryByName(serverId: number, name: string) {
     memberCount: g.memberCount,
     combat: cp.get(g.id.toString()) ?? 0,
     joinPolicy: g.joinPolicy,
-    zones: zoneRows.map((z) => z.name),
+    zones: zoneRows.map((z) => ({ name: z.name, region: z.region })),
   };
 }
 
