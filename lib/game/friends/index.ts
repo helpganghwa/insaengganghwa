@@ -328,6 +328,34 @@ export async function getRequests(
   return { incoming, outgoing };
 }
 
+/**
+ * 나와 상대의 친구 관계 1건 — 프로필 페이지 '친구 추가' 버튼 초기 상태.
+ * serverId는 요청 액션(sendRequestAction=조회자 활성 서버)과 반드시 일치시켜야 상태가 어긋나지 않는다.
+ */
+export async function getFriendRelation(
+  meId: string,
+  serverId: number,
+  otherId: string,
+): Promise<FriendRelation> {
+  if (meId === otherId) return 'none';
+  const [l] = await db
+    .select({ requesterId: friendLinks.requesterId, status: friendLinks.status })
+    .from(friendLinks)
+    .where(
+      and(
+        eq(friendLinks.serverId, serverId),
+        or(
+          and(eq(friendLinks.requesterId, meId), eq(friendLinks.addresseeId, otherId)),
+          and(eq(friendLinks.requesterId, otherId), eq(friendLinks.addresseeId, meId)),
+        ),
+      ),
+    )
+    .limit(1);
+  if (!l) return 'none';
+  if (l.status === 'accepted') return 'friend';
+  return l.requesterId === meId ? 'outgoing' : 'incoming';
+}
+
 /** 내 친구 id 목록 — 레이드 친구 공개 등 재사용. */
 export async function getFriendIds(meId: string, serverId: number): Promise<string[]> {
   const rows = await db

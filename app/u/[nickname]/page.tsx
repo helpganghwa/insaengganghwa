@@ -7,8 +7,9 @@ import { and, eq, inArray, isNotNull } from 'drizzle-orm';
 
 import { db } from '@/lib/db/client';
 import { withTimeout } from '@/lib/db/with-timeout';
-import { getSessionUserId } from '@/lib/auth/session';
+import { getAdminStatus } from '@/lib/auth/require-admin';
 import { getActiveServerId } from '@/lib/game/servers';
+import { getFriendRelation, type FriendRelation } from '@/lib/game/friends';
 import { getUserGuildBrief } from '@/lib/game/guild';
 import { getEnhancingUserCount } from '@/app/(game)/me/actions';
 import { profiles } from '@/lib/db/schema/profiles';
@@ -25,6 +26,7 @@ import { CharacterStage } from '@/components/CharacterStage';
 import { BoastLauncher } from '@/components/BoastModal';
 
 import { ReportButton } from './ReportButton';
+import { FriendAddButton } from './FriendAddButton';
 
 const SLOT_LABEL: Record<Slot, string> = { weapon: '무기', armor: '방어구', accessory: '장신구' };
 
@@ -388,13 +390,23 @@ export default async function PublicProfilePage({
   if (!data) notFound();
 
   const bySlot = new Map(data.equipped.map((e) => [e.slot, e]));
-  const viewerId = await getSessionUserId();
+  // 조회자 + 운영자 여부를 한 번에(getAdminStatus는 미로그인 시 조회 없이 단락).
+  const { userId: viewerId, isAdmin } = await getAdminStatus();
   const mode: 'guest' | 'self' | 'other' = !viewerId
     ? 'guest'
     : viewerId === data.ownerId
       ? 'self'
       : 'other';
   const canReport = mode === 'other' && !!data.profileId;
+
+  // 친구 관계 — 로그인+타인일 때만. sendRequestAction과 동일 서버(조회자 활성 서버) 기준으로
+  // 계산해 버튼 상태와 실제 요청이 어긋나지 않게 한다(친구는 서버별). 실패 시 'none' 폴백.
+  let friendRelation: FriendRelation = 'none';
+  if (mode === 'other') {
+    friendRelation = await getFriendRelation(viewerId!, await getActiveServerId(), data.ownerId).catch(
+      () => 'none' as const,
+    );
+  }
 
   return (
     <main className="mx-auto min-h-dvh w-full max-w-[390px] bg-zinc-950 text-zinc-50">
@@ -608,8 +620,22 @@ export default async function PublicProfilePage({
               }))}
               label="프로필 공유하기"
             />
+            {/* 친구 추가 — 로그인+친구 아님일 때. friend면 렌더 안 함(요구사항). */}
+            {friendRelation !== 'friend' ? (
+              <FriendAddButton targetId={data.ownerId} initialRelation={friendRelation} />
+            ) : null}
             {canReport ? <ReportButton profileId={data.profileId!} /> : null}
           </>
+        ) : null}
+
+        {/* 운영자 전용 — 이 유저의 관리자 상세로 바로 이동(친구/공유와 독립). */}
+        {isAdmin ? (
+          <Link
+            href={`/admin/users?uid=${data.ownerId}`}
+            className="flex w-full items-center justify-center rounded-xl border border-zinc-700 bg-zinc-900/60 py-2.5 text-sm font-semibold text-zinc-300 transition active:scale-[0.98] hover:bg-zinc-900"
+          >
+            🛠️ 유저 조회
+          </Link>
         ) : null}
       </div>
     </main>
