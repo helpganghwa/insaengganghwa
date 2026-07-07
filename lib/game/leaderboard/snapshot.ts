@@ -141,6 +141,11 @@ export async function rebuildLeaderboardSnapshot(
   // 한 번 조회해 전 메트릭에서 뺀다(계정 정지는 전역이라 서버 무관).
   const banned = await activeBannedIds();
   for (const metric of metrics) {
+    // 읽기 시각 스탬프 — 아래 upsert/delete는 이 시각 이후 갱신된 행(read~write 사이에
+    // 커밋된 증분 갱신·신규 삽입)을 건드리지 않는다. 가드 없이는 교정 크론이 방금 반영된
+    // 강화 결과를 낡은 값으로 되돌리거나 신규 행을 삭제해 다음 크론까지 순위가 퇴행했다
+    // (2026-07-07 전수감사 C-묶음). ISO 문자열 — raw 경로에 Date 금지(dashboard 사건).
+    const readAt = new Date().toISOString();
     const rows = (await ROWS_FN[metric](serverId))
       .filter((r) => !banned.has(r.userId))
       .sort((a, b) => b.value - a.value);
@@ -173,12 +178,14 @@ export async function rebuildLeaderboardSnapshot(
             set value = excluded.value, rank = excluded.rank, updated_at = now()
             where (leaderboard_ranks.value, leaderboard_ranks.rank)
                   is distinct from (excluded.value, excluded.rank)
+              and leaderboard_ranks.updated_at < ${readAt}::timestamptz
         `);
       }
       await tx.execute(sql`
         delete from leaderboard_ranks
         where server_id = ${serverId} and metric = ${metric}
           and not (user_id = any(${uidArr}::uuid[]))
+          and updated_at < ${readAt}::timestamptz
       `);
     });
     counts[metric] = ranked.length;

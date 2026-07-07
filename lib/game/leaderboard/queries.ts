@@ -148,6 +148,9 @@ async function rankByValue(
 ): Promise<MyRankSnap> {
   // ne(userId)는 논리적으로 잉여(자기 값은 자기보다 클 수 없음) — 제거하면 value_idx
   // index-only 스캔이 가능해 힙 방문이 사라진다(리뷰 2026-07-07).
+  // 알려진 한계: myValue가 live 재계산 값(getMyRanksAfter)이고 하락 직후 증분 훅이
+  // 실패(best-effort)하면 내 낡은 상위 행이 count에 포함돼 순위가 1 나쁘게 보일 수 있다 —
+  // 다음 훅/시간별 크론이 교정하는 드문 표시 오차로, 핫패스 index-only를 유지하는 쪽을 택함.
   const [c] = await db
     .select({ n: sql<number>`count(*)::int` })
     .from(leaderboardRanks)
