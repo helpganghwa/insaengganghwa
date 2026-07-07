@@ -5,7 +5,6 @@ import { and, desc, eq, lt, sql } from 'drizzle-orm';
 
 import { db } from '@/lib/db/client';
 import { worldChronicle } from '@/lib/db/schema/guild';
-import { kstDateString } from '@/lib/kst';
 import type { ConquestFinale } from './simulate';
 
 const MODEL_ID = 'claude-sonnet-5';
@@ -58,7 +57,7 @@ const REGION_KO: Record<string, string> = {
 /** 그날(kstDay) 점령전 결과를 집계 — 사건 없으면 battleCount 0. */
 export async function aggregateConquestDay(kstDay: string, serverId: number): Promise<ConquestDaySummary> {
   const battles = (await db.execute(sql`
-    select z.name as zone, z.region::text as region, z.captured_at as captured_at,
+    select z.name as zone, z.region::text as region,
            g.name as winner, cb.finale as finale,
            (select g2.name from conquest_battles cb2
               join guilds g2 on g2.id = cb2.winner_guild_id
@@ -71,7 +70,6 @@ export async function aggregateConquestDay(kstDay: string, serverId: number): Pr
   `)) as unknown as {
     zone: string;
     region: string;
-    captured_at: Date | null;
     winner: string | null;
     finale: ConquestFinale | null;
     prev_owner: string | null;
@@ -86,10 +84,11 @@ export async function aggregateConquestDay(kstDay: string, serverId: number): Pr
   for (const b of battles) {
     if (!b.winner) continue;
     const region = REGION_KO[b.region] ?? b.region;
-    // KST 날짜로 비교 — UTC 문자열(toISOString)은 KST 00~09시 점령을 전날로 밀어
-    // 지연·재실행 시 점령이 '방어'로 오분류된다.
-    const capturedToday = b.captured_at != null && kstDateString(new Date(b.captured_at)) === kstDay;
-    if (capturedToday) {
+    // 점령/방어는 소유권 이동으로 판정(winner ≠ 직전 소유 길드). captured_at 시각 비교는
+    // 공개(reveal)가 전투 다음날 00시(KST)에 찍혀 어느 날짜 기준으로도 전투일과 어긋난다
+    // (kstDateString 비교는 항상 불일치 → 전 점령이 방어로 오분류, 07-06 연대기 누락 사건).
+    const isCapture = b.winner !== b.prev_owner;
+    if (isCapture) {
       captures.push({
         zone: b.zone,
         region,
