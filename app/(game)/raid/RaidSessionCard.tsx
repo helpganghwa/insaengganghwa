@@ -167,6 +167,8 @@ export function RaidSessionCard({ view: v, serverId }: { view: RaidView; serverI
     null,
   );
   const fxKey = useRef(0);
+  // 보석 공격 멱등키(0109) — 클릭 의도당 1개, 전송 실패 재시도에서만 재사용.
+  const gemKeyRef = useRef<string | null>(null);
   // 개설자 참가요청 수락/거절 — 낙관적 제거(서버 확정 후 refresh).
   const [handledReqs, setHandledReqs] = useState<Set<string>>(new Set());
   const decideReq = (requesterId: string, approve: boolean) => {
@@ -338,11 +340,19 @@ export function RaidSessionCard({ view: v, serverId }: { view: RaidView; serverI
       return;
     }
     setGemConfirm(false);
+    // 멱등키(0109) — 전송 실패(NETWORK) 재시도는 같은 키를 재사용해 서버가 이중 차감을
+    // 막는다. 성공·비즈니스 거절(서버가 차감 안 함)은 키 폐기 → 다음 클릭은 새 키.
+    gemKeyRef.current ??= crypto.randomUUID();
+    const key = gemKeyRef.current;
     // 낙관 — 보석 공격은 추가 공격(extra+1)+공격(used+1)이라 left 변화 0. 응답 후 깜빡임 방지.
     setLocalExtra((n) => n + 1);
     setLocalUsed((n) => n + 1);
     runAttack(
-      () => gemAttackRaidAction(v.raidId),
+      async () => {
+        const r = await gemAttackRaidAction(v.raidId, key);
+        if (r.status === 'success' || r.code !== 'NETWORK') gemKeyRef.current = null;
+        return r;
+      },
       () => {
         setLocalExtra((n) => Math.max(0, n - 1));
         setLocalUsed((n) => Math.max(0, n - 1));

@@ -156,13 +156,17 @@ export async function attackRaidAction(raidId: string) {
   }
 }
 
-export async function buyExtraAttackAction(raidId: string) {
+// 클라 생성 멱등키 검증(0109) — UUID 형식만 통과(임의 문자열로 인한 uuid 캐스트 오류 방지).
+const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+const asIdemKey = (k?: string) => (k && UUID_RE.test(k) ? k : undefined);
+
+export async function buyExtraAttackAction(raidId: string, idemKey?: string) {
   const u = await uid();
   if (!u) return err('UNAUTHENTICATED');
   if (await rateLimited(u, 'raid')) return err('RATE_LIMITED');
   const __b = await actionBlock(); if (__b) return err(__b);
   try {
-    const r = await buyExtraAttack({ userId: u, serverId: await getActiveServerId(), raidId: BigInt(raidId) });
+    const r = await buyExtraAttack({ userId: u, serverId: await getActiveServerId(), raidId: BigInt(raidId), idemKey: asIdemKey(idemKey) });
     rev(raidId);
     return { status: 'success' as const, ...r };
   } catch (e) {
@@ -173,13 +177,13 @@ export async function buyExtraAttackAction(raidId: string) {
 }
 
 /** 보석 공격 — 추가 공격 구매 + 즉시 공격을 한 트랜잭션으로(충전 단계 생략). */
-export async function gemAttackRaidAction(raidId: string) {
+export async function gemAttackRaidAction(raidId: string, idemKey?: string) {
   const u = await uid();
   if (!u) return err('UNAUTHENTICATED');
   if (await rateLimited(u, 'raid')) return err('RATE_LIMITED');
   const __b = await actionBlock(); if (__b) return err(__b);
   try {
-    const r = await gemAttackRaid({ userId: u, serverId: await getActiveServerId(), raidId: BigInt(raidId) });
+    const r = await gemAttackRaid({ userId: u, serverId: await getActiveServerId(), raidId: BigInt(raidId), idemKey: asIdemKey(idemKey) });
     rev(raidId);
     return { status: 'success' as const, ...r };
   } catch (e) {

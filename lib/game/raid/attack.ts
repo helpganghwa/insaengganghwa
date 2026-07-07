@@ -127,8 +127,10 @@ export function buyExtraAttack(input: {
   userId: string;
   serverId: number;
   raidId: bigint;
+  /** 클릭 의도당 클라 생성 UUID(0109) — 응답 유실 재시도의 이중 차감 방지. */
+  idemKey?: string;
 }): Promise<{ cost: number; extraAttacks: number }> {
-  const { userId, raidId } = input;
+  const { userId, raidId, idemKey } = input;
 
   return db.transaction(async (tx) => {
     const [raid] = await tx
@@ -142,11 +144,21 @@ export function buyExtraAttack(input: {
     }
 
     const [part] = await tx
-      .select({ id: raidParticipants.id, extraAttacks: raidParticipants.extraAttacks })
+      .select({
+        id: raidParticipants.id,
+        extraAttacks: raidParticipants.extraAttacks,
+        lastBuyKey: raidParticipants.lastBuyKey,
+      })
       .from(raidParticipants)
       .where(and(eq(raidParticipants.raidId, raidId), eq(raidParticipants.userId, userId)))
       .for('update');
     if (!part) throw new RaidError('NOT_PARTICIPANT');
+
+    // 멱등 재시도 — 직전 구매가 같은 키였으면 이미 처리된 요청(응답만 유실). 재차감 없이
+    // 그 결과를 복원해 반환(같은 유저는 participant FOR UPDATE로 직렬화).
+    if (idemKey && part.lastBuyKey === idemKey) {
+      return { cost: raidExtraAttackCost(part.extraAttacks), extraAttacks: part.extraAttacks };
+    }
 
     const nth = part.extraAttacks + 1;
     const cost = raidExtraAttackCost(nth);
@@ -158,7 +170,7 @@ export function buyExtraAttack(input: {
 
     await tx
       .update(raidParticipants)
-      .set({ extraAttacks: nth })
+      .set({ extraAttacks: nth, lastBuyKey: idemKey ?? null })
       .where(eq(raidParticipants.id, part.id));
 
     return { cost, extraAttacks: nth };
@@ -170,8 +182,10 @@ export async function gemAttackRaid(input: {
   userId: string;
   serverId: number;
   raidId: bigint;
+  /** 클릭 의도당 클라 생성 UUID(0109) — 응답 유실 재시도의 이중 차감 방지. */
+  idemKey?: string;
 }): Promise<{ damage: number; isCrit: boolean; phasesCleared: number; cost: number }> {
-  const { userId, raidId } = input;
+  const { userId, raidId, idemKey } = input;
 
   // 락 밖 — serverId 사전조회 + CP 계산(감사 S2). 게이트·결제는 락 내 재확인/수행.
   const [meta] = await db
@@ -213,6 +227,29 @@ export async function gemAttackRaid(input: {
       .for('update');
     if (!part) throw new RaidError('NOT_PARTICIPANT');
 
+    // 멱등 재시도 — 같은 키의 공격이 이미 기록돼 있으면(응답 유실 후 재클릭) 재차감·재공격
+    // 없이 그 결과를 반환. 같은 유저는 participant FOR UPDATE로 직렬화되어 select가 정확;
+    // raid_attacks_idem_uq(partial unique)가 이론적 경합의 최종 백스톱.
+    if (idemKey) {
+      const [prev] = await tx
+        .select({
+          damage: raidAttacks.damage,
+          isCrit: raidAttacks.isCrit,
+          diamondCost: raidAttacks.diamondCost,
+        })
+        .from(raidAttacks)
+        .where(and(eq(raidAttacks.idempotencyKey, idemKey), eq(raidAttacks.userId, userId)))
+        .limit(1);
+      if (prev) {
+        return {
+          damage: Number(prev.damage),
+          isCrit: prev.isCrit,
+          phasesCleared: raid.phasesCleared,
+          cost: Number(prev.diamondCost),
+        };
+      }
+    }
+
     // 보석 결제(추가 공격 1회분) — for update로 다이아 조건부 차감. 결제 서버 = raid.serverId.
     const nth = part.extraAttacks + 1;
     const cost = raidExtraAttackCost(nth);
@@ -250,6 +287,7 @@ export async function gemAttackRaid(input: {
       isCrit,
       isExtra: true,
       diamondCost: BigInt(cost),
+      idempotencyKey: idemKey ?? null,
     });
 
     return { damage, isCrit, phasesCleared, cost };

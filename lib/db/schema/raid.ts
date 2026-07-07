@@ -98,6 +98,8 @@ export const raidParticipants = pgTable(
     attacksUsed: integer('attacks_used').notNull().default(0),
     extraAttacks: integer('extra_attacks').notNull().default(0),
     totalDamage: bigint('total_damage', { mode: 'bigint' }).notNull().default(sql`0`),
+    /** 최근 추가공격 구매 멱등키(0109) — 응답 유실 재시도의 이중 차감 방지. */
+    lastBuyKey: uuid('last_buy_key'),
     joinedAt: timestamp('joined_at', { withTimezone: true }).notNull().defaultNow(),
   },
   (t) => [uniqueIndex('raid_participant_uq').on(t.raidId, t.userId)],
@@ -114,6 +116,8 @@ export const raidAttacks = pgTable('raid_attacks', {
   isExtra: boolean('is_extra').notNull(),
   /** 추가 공격 비용(다이아), 기본 공격=0. */
   diamondCost: bigint('diamond_cost', { mode: 'bigint' }).notNull().default(sql`0`),
+  /** 보석 공격 멱등키(0109, partial unique) — 같은 키 재시도는 이 행을 결과로 반환. */
+  idempotencyKey: uuid('idempotency_key'),
   createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
 });
 
