@@ -46,8 +46,28 @@ export async function GET(request: NextRequest) {
       });
     }
     if (!error) {
-      const res = NextResponse.redirect(`${origin}${next}`);
       const userId = data.session?.user.id;
+      // 카카오 픽셀 전환 파라미터 — 신규 가입=회원가입(signup), 그 외=로그인(login).
+      // 클라 로더(KakaoPixel)가 이 파라미터를 보고 completeRegistration/login을 1회 발화한다.
+      // 신규 판정은 추천인 보상과 동일 신호(createdAt이 윈도 이내 = 방금 가입). 실패해도 로그인은 진행.
+      let kakaoEv: 'signup' | 'login' | null = null;
+      if (userId) {
+        try {
+          const [acct] = await db
+            .select({ createdAt: profiles.createdAt })
+            .from(profiles)
+            .where(eq(profiles.id, userId))
+            .limit(1);
+          const isNew =
+            !!acct && Date.now() - acct.createdAt.getTime() <= REFERRAL_NEW_SIGNUP_WINDOW_MS;
+          kakaoEv = isNew ? 'signup' : 'login';
+        } catch (e) {
+          console.warn('[auth.callback] pixel ev skipped', (e as Error).message);
+        }
+      }
+      const dest = new URL(`${origin}${next}`);
+      if (kakaoEv) dest.searchParams.set('kakao_ev', kakaoEv);
+      const res = NextResponse.redirect(dest.toString());
       if (userId) {
         try {
           // 대상 서버 확정: 로그인 화면 선택(login_srv) > 마지막 접속(last_server_id) > 최신 open.
