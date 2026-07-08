@@ -315,7 +315,10 @@ export async function generateAndStoreChronicle(
       if (a.zones === 0 && b.zones > 0) return `· 길드 「${g}」: 마지막 구역까지 잃어 영토 소멸`;
       if (a.comps > b.comps && a.zones < b.zones)
         return `· 길드 「${g}」: 구역 상실로 영토가 ${a.comps}개 조각으로 갈라짐(분단)`;
-      if (a.comps > b.comps) return `· 길드 「${g}」: 새 점령지가 기존 영토와 떨어져 있음(${a.comps}개 조각, 비지 확보)`;
+      // b.zones>0 필수 — 첫 점령(0→1)은 '기존 영토와 떨어진 비지'가 아니라 데뷔다(기존 영토가 없음).
+      // 이 가드가 없으면 첫 구역이 "기존 세력권과 이어지지 않은 홀로 떨어진 조각"으로 오서술됨(2026-07-07 사건).
+      if (a.comps > b.comps && b.zones > 0)
+        return `· 길드 「${g}」: 새 점령지가 기존 영토와 떨어져 있음(${a.comps}개 조각, 비지 확보)`;
       if (a.comps < b.comps && b.comps > 1) return `· 길드 「${g}」: 점령으로 흩어져 있던 영토가 ${a.comps}개 조각으로 이어짐(통합)`;
       return null;
     })
