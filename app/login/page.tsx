@@ -8,7 +8,8 @@ import { signInWithKakao, signInWithCredentials } from '@/lib/auth/actions';
 import { getSessionUserId } from '@/lib/auth/session';
 import { isTestLoginEnabled, isCbtPaidHidden } from '@/lib/auth/test-accounts';
 import { listServersPublic, latestOpenServerId } from '@/lib/game/server-select';
-import { getEnhanceLive } from '@/lib/game/stats/queries';
+import { Suspense } from 'react';
+import { EnhanceStatsCard, EnhanceStatsFallback } from '@/components/EnhanceStatsCard';
 import { ServerPicker } from './ServerPicker';
 
 /**
@@ -48,14 +49,12 @@ export default async function LoginPage({
   const showServers = servers.length >= 1;
   const defaultSrv = showServers ? await defaultServerId(servers) : 1;
   const recommendedId = showServers ? await latestOpenServerId() : 1;
-  // 라이브 카운트(소셜 증명) — getEnhanceLive는 캐시(90s)+타임아웃 가드라 로그인에 붙여도 안전(실패 시 0).
-  const live = await getEnhanceLive();
   // 심사용 ID/PW 로그인 — ?test=true + env 둘 다 켜져야 노출(일반 사용자에겐 이메일 폼 숨김).
   // 원클릭 버튼(비번 우회)은 폐지 — 링크가 유출돼도 아이디/비밀번호를 알아야만 로그인 가능.
   const reviewLogin = test === 'true' && isTestLoginEnabled();
 
   return (
-    <div className="flex min-h-dvh flex-col bg-[#17110c] text-zinc-200">
+    <div className="mx-auto flex min-h-dvh w-full max-w-[390px] flex-col bg-[#17110c] text-zinc-200">
       {/* 풀블리드 히어로 — 타이틀'인생강화'·부제'강화는 인생이다' 포함(생성 배경). 하단이 #17110c로
           페이드(베이킹)돼 아래 콘텐츠와 seamless. 파일 없으면 다크 플레이스홀더. */}
       <div
@@ -65,7 +64,7 @@ export default async function LoginPage({
         style={{ backgroundImage: 'url(/login-hero.webp)' }}
       />
 
-      <main className="mx-auto -mt-3 flex w-full max-w-[340px] flex-1 flex-col items-center px-6 pb-3 text-center">
+      <main className="flex w-full flex-1 flex-col items-center px-6 pb-3 pt-4 text-center">
         {/* 서버 선택 — 로그인 버튼 위(위치 유지), 영역·크기만 축소(컴팩트). 기본 서버가 쿠키에 선점돼 안 눌러도 정상 로그인. */}
         {showServers ? (
           <div className="mb-4 w-full">
@@ -86,14 +85,12 @@ export default async function LoginPage({
           </button>
         </form>
 
-        {/* 소셜 증명 — 로그인 버튼 아래 */}
-        {live.totalUsers > 0 ? (
-          <p className="mt-4 text-[13px] text-zinc-400">
-            지금{' '}
-            <span className="font-bold text-amber-400">{live.totalUsers.toLocaleString('ko-KR')}명</span>이
-            인생강화중
-          </p>
-        ) : null}
+        {/* 소셜 증명 — 로그인 버튼 아래, 프로필 페이지와 동일 통계 카드(공유 컴포넌트) */}
+        <div className="mt-5 w-full">
+          <Suspense fallback={<EnhanceStatsFallback />}>
+            <EnhanceStatsCard />
+          </Suspense>
+        </div>
 
         {/* 심사용 ID/PW 로그인 — 포트원·게임위 심사관이 카카오 없이 로그인. env로만 노출/차단. */}
         {reviewLogin ? (
