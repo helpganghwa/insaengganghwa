@@ -104,7 +104,7 @@ export function DeployBoard({
     [members, selectedId],
   );
 
-  // 선택 구역 총 전투력 — 수비: 일반 ×1.2 + 집행관 ×3 / 공격: ×1.0.
+  // 선택 구역 총 전투력 — 수비: 일반 ×1.2 + 집행관 ×2 / 공격: ×1.0.
   const totalPower = useMemo(() => {
     if (!selected) return 0;
     if (isDefend) {

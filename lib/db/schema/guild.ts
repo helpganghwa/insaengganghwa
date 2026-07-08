@@ -160,7 +160,7 @@ export const zones = pgTable(
     ownerGuildId: bigint('owner_guild_id', { mode: 'bigint' }).references(() => guilds.id, {
       onDelete: 'set null',
     }),
-    /** 집행관(상시) — 세금 수집권·자동 방어(×3). 소유 시 ≥1 필수. */
+    /** 집행관(상시) — 세금 수집권·자동 방어(×2). 소유 시 ≥1 필수. */
     executorUserId: uuid('executor_user_id').references(() => profiles.id, { onDelete: 'set null' }),
     /** 세금 포인트 누적기 — 강화 성공=도달레벨 가산, 100pt마다 tax_diamond +1로 환산(잔여 carry). */
     taxPoints: bigint('tax_points', { mode: 'bigint' }).notNull().default(sql`0`),

@@ -17,7 +17,7 @@ import { simulateConquest, type ConquestUnit } from './simulate';
  * 전투력 스냅샷·승자 산출은 23:00에 확정하되, **소유권 적용·우편은 하지 않는다**(지연 공개).
  * 결과는 conquest_battles에 published_at=NULL로 저장만 → 24:00 revealConquest가 공개·발표.
  * (대난투 computed→revealed 선례와 동형: 산출=정시, 노출=발표 시각.)
- *  - 경합 구역(공격 배치 ≥1)만 순회. 참가 = 배치(공/수) + 집행관(자동 ×3 방어).
+ *  - 경합 구역(공격 배치 ≥1)만 순회. 참가 = 배치(공/수) + 집행관(자동 ×2 방어).
  *  - effCp = 장비 전투력 스냅샷 × 역할 배수. simulateConquest → 승자 → finale 저장.
  *  - 멱등: conquest_battles UNIQUE(zone_id, battle_kst_day) + onConflictDoNothing.
  *  - battleDay는 호출자(cron 라우트)가 KST 오늘 날짜로 결정(클라 불신·결정론).
@@ -112,7 +112,7 @@ export async function runConquest(serverId: number, battleDay: string): Promise<
         effCp: Math.max(1, Math.round(cpOf(d.uid) * conquestPowerMult(d.role, false))),
       });
     }
-    // 집행관 자동 방어(×3) — 배치행 없이 포함(중복 방지).
+    // 집행관 자동 방어(×2) — 배치행 없이 포함(중복 방지).
     if (z.executor && z.owner_guild_id && !seen.has(z.executor)) {
       units.push({
         userId: z.executor,
@@ -155,7 +155,7 @@ export async function runConquest(serverId: number, battleDay: string): Promise<
 /**
  * 점령전 공개 직후(자정) 수비 배치 이월 — GUILD §5.8. 어제(battleDay) 수비 배치 중
  * **여전히 길드가 소유한 구역 + 아직 그 길드 소속**인 유저만 다음 전투일로 재생성(role=defend).
- * 공격 배치는 이월 안 함(전원 자동 해제). 집행관은 zones.executor로 유지(자동 ×3 방어).
+ * 공격 배치는 이월 안 함(전원 자동 해제). 집행관은 zones.executor로 유지(자동 ×2 방어).
  * 재실행 안전 — carryDay에 배치가 이미 있으면(이월 완료 or 유저가 이미 배치 시작) 건너뜀.
  */
 export async function carryOverDefenders(

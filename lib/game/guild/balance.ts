@@ -62,14 +62,14 @@ export const GUILD_REJOIN_LOCK_HOURS = 24;
 export const CONQUEST_BATTLE_KST_HOUR = 23;
 /** 일반 방어 인원 전투력 보너스(+20%). */
 export const CONQUEST_DEFENDER_BONUS = 0.2;
-/** 집행관 전투력 배수(×3, 방어 거점 앵커). */
-export const CONQUEST_EXECUTOR_POWER_MULT = 3;
+/** 집행관 전투력 배수(×2, 방어 거점 앵커). */
+export const CONQUEST_EXECUTOR_POWER_MULT = 2;
 
 /** 배치 역할 — 공격/수비. 집행관은 배치행 없이 자동 수비(별도). */
 export type ConquestRole = 'attack' | 'defend';
 /**
  * 유효 전투력 배수(§5.8②) — 보정은 effCP에 적용(HP·데미지 둘 다). 시뮬 튜닝값.
- *  공격 ×1.0 · 수비 ×1.2 · 집행관 ×3.0(집행관은 자동 수비, isExecutor로 구분).
+ *  공격 ×1.0 · 수비 ×1.2 · 집행관 ×2.0(집행관은 자동 수비, isExecutor로 구분).
  */
 export function conquestPowerMult(role: ConquestRole, isExecutor: boolean): number {
   if (isExecutor) return CONQUEST_EXECUTOR_POWER_MULT;
