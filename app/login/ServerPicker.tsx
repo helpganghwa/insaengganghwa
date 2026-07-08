@@ -26,9 +26,9 @@ export function ServerPicker({
 
   // 별도 컨테이너(로그인 버튼과 동일 너비 w-full) + 3열 그리드. 높이는 행 수에 따라 자동.
   return (
-    <div className="w-full rounded-2xl border border-zinc-200 bg-white p-3 dark:border-zinc-800 dark:bg-zinc-900/50">
-      <p className="mb-2 text-left text-[11px] font-bold text-zinc-400">서버 선택</p>
-      <div className="grid grid-cols-3 gap-2">
+    <div className="w-full rounded-xl border border-zinc-200 bg-white p-2 dark:border-zinc-800 dark:bg-zinc-900/50">
+      <p className="mb-1.5 text-left text-[10px] font-bold text-zinc-400">서버 선택</p>
+      <div className="grid grid-cols-3 gap-1.5">
         {servers.map((sv) => {
           const open = sv.status === 'open';
           const active = sv.id === picked;
@@ -38,7 +38,7 @@ export function ServerPicker({
               type="button"
               disabled={!open}
               onClick={() => setPicked(sv.id)}
-              className={`relative rounded-xl border px-1 py-2.5 text-[13px] font-bold transition ${
+              className={`relative rounded-lg border px-1 py-1.5 text-[12px] font-bold transition ${
                 active
                   ? 'border-amber-500 bg-amber-500/10 text-amber-700 dark:text-amber-300'
                   : open

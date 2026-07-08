@@ -55,33 +55,26 @@ export default async function LoginPage({
   const reviewLogin = test === 'true' && isTestLoginEnabled();
 
   return (
-    <div className="flex min-h-dvh flex-col bg-zinc-50 dark:bg-black">
-      <main className="mx-auto flex w-full max-w-[360px] flex-1 flex-col items-center justify-center gap-8 px-6 text-center">
-        <div className="w-full">
-          {/* 히어로 아트 — 타이틀'인생강화'·부제'강화는 인생이다' 포함(생성 배경), /public/login-hero.png (16:9 권장).
-              배경이미지 방식이라 파일이 없으면 다크 플레이스홀더가 보인다(깨진 이미지 아이콘 방지). */}
-          <div
-            role="img"
-            aria-label="인생강화 — 강화는 인생이다"
-            className="aspect-video w-full rounded-2xl bg-zinc-900 bg-cover bg-center shadow-sm ring-1 ring-black/5 dark:ring-white/10"
-            style={{ backgroundImage: 'url(/login-hero.png)' }}
-          />
-          {live.totalUsers > 0 ? (
-            <p className="mt-3 text-[13px] text-zinc-500 dark:text-zinc-400">
-              지금{' '}
-              <span className="font-bold text-amber-600 dark:text-amber-400">
-                {live.totalUsers.toLocaleString('ko-KR')}명
-              </span>
-              이 인생강화중
-            </p>
-          ) : null}
-        </div>
+    <div className="flex min-h-dvh flex-col bg-[#17110c] text-zinc-200">
+      {/* 풀블리드 히어로 — 타이틀'인생강화'·부제'강화는 인생이다' 포함(생성 배경). 하단이 #17110c로
+          페이드(베이킹)돼 아래 콘텐츠와 seamless. 파일 없으면 다크 플레이스홀더. */}
+      <div
+        role="img"
+        aria-label="인생강화 — 강화는 인생이다"
+        className="aspect-[1344/768] w-full bg-[#17110c] bg-cover bg-top"
+        style={{ backgroundImage: 'url(/login-hero.webp)' }}
+      />
 
-        {showServers && <ServerPicker servers={servers} defaultSrv={defaultSrv} recommendedId={recommendedId} />}
+      <main className="mx-auto -mt-3 flex w-full max-w-[340px] flex-1 flex-col items-center px-6 pb-3 text-center">
+        {/* 서버 선택 — 로그인 버튼 위(위치 유지), 영역·크기만 축소(컴팩트). 기본 서버가 쿠키에 선점돼 안 눌러도 정상 로그인. */}
+        {showServers ? (
+          <div className="mb-4 w-full">
+            <ServerPicker servers={servers} defaultSrv={defaultSrv} recommendedId={recommendedId} />
+          </div>
+        ) : null}
 
+        {/* 카카오 로그인 — 공식 가이드 준수(#FEE500 / 라벨 "카카오 로그인" / 심볼·텍스트 #000(85%) / radius 12px, 심볼 미변형). */}
         <form action={signInWithKakao} className="w-full">
-          {/* 카카오 로그인 버튼 — 공식 가이드 준수: 컨테이너 #FEE500 / 라벨 "카카오 로그인" /
-              심볼·텍스트 #000(85%) / radius 12px. 심볼은 공식 말풍선(미변형). */}
           <button
             type="submit"
             aria-label="카카오 로그인"
@@ -92,6 +85,15 @@ export default async function LoginPage({
             <span className="text-[15px] font-bold text-black/85">카카오 로그인</span>
           </button>
         </form>
+
+        {/* 소셜 증명 — 로그인 버튼 아래 */}
+        {live.totalUsers > 0 ? (
+          <p className="mt-4 text-[13px] text-zinc-400">
+            지금{' '}
+            <span className="font-bold text-amber-400">{live.totalUsers.toLocaleString('ko-KR')}명</span>이
+            인생강화중
+          </p>
+        ) : null}
 
         {/* 심사용 ID/PW 로그인 — 포트원·게임위 심사관이 카카오 없이 로그인. env로만 노출/차단. */}
         {reviewLogin ? (
@@ -126,18 +128,17 @@ export default async function LoginPage({
             <p className="text-sm text-red-600 dark:text-red-400">{loginErrorMessage(error)}</p>
           )
         ) : null}
-        {/* CBT 기간 데이터 초기화 사전 고지 — 게이트는 결제 숨김과 같은 CBT 플래그.
-            정식 오픈(env off) 시 자동 미노출. */}
+        {/* 서브듀드 — CBT 기간 데이터 초기화 사전 고지(작게·저대비, 문구는 원문 유지). 정식 오픈(env off) 시 자동 미노출. */}
         {isCbtPaidHidden() ? (
-          <div className="w-full rounded-xl border border-amber-300 bg-amber-50 px-4 py-3 text-left text-[12px] leading-relaxed text-amber-900 dark:border-amber-700 dark:bg-amber-950 dark:text-amber-200">
-            <p className="font-bold">비공개 테스트(CBT) 안내</p>
+          <div className="mt-4 w-full rounded-lg border border-white/10 bg-white/[0.03] px-3 py-2.5 text-left text-[11px] leading-relaxed text-zinc-500">
+            <p className="font-semibold text-zinc-400">비공개 테스트(CBT) 안내</p>
             <p className="mt-1">
-              지금은 CBT 기간으로, 테스트 종료 시 게임 데이터가 초기화될 수 있습니다.
-              테스트에 참여해 주신 분들께는 정식 오픈 때 감사 보상이 지급됩니다.
+              지금은 CBT 기간으로, 테스트 종료 시 게임 데이터가 초기화될 수 있습니다. 테스트에 참여해 주신
+              분들께는 정식 오픈 때 감사 보상이 지급됩니다.
             </p>
           </div>
         ) : null}
-        <p className="text-[11px] leading-relaxed text-zinc-400">
+        <p className="mt-5 text-[11px] leading-relaxed text-zinc-500">
           로그인 시{' '}
           <Link href="/legal/terms" className="underline">
             이용약관
