@@ -9,6 +9,7 @@ import { and, eq, sql } from 'drizzle-orm';
 
 import { db } from '@/lib/db/client';
 import { clientErrors } from '@/lib/db/schema/ops';
+import { rateLimited } from '@/lib/ratelimit';
 
 export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
@@ -16,6 +17,12 @@ export const dynamic = 'force-dynamic';
 const OPEN_ROW_CAP = 1000; // 미해결 distinct fingerprint 상한(남용 방어).
 
 export async function POST(req: Request) {
+  // 무인증 공개 엔드포인트 — IP 기반 레이트리밋으로 count 인플레이션·DB 쓰기 증폭 남용 방어.
+  const ip =
+    req.headers.get('x-forwarded-for')?.split(',')[0]?.trim() ||
+    req.headers.get('x-real-ip') ||
+    'unknown';
+  if (await rateLimited(`ce:${ip}`, 'clientError')) return new Response(null, { status: 204 });
   try {
     const raw = await req.text();
     if (raw.length > 4000) return new Response(null, { status: 204 });

@@ -30,7 +30,8 @@ export type RlBucket =
   | 'profileEdit'
   | 'report'
   | 'support'
-  | 'identity';
+  | 'identity'
+  | 'clientError';
 
 const WINDOWS: Record<RlBucket, [limit: number, window: `${number} s`]> = {
   enhance: [30, '10 s'],
@@ -51,6 +52,7 @@ const WINDOWS: Record<RlBucket, [limit: number, window: `${number} s`]> = {
   report: [5, '60 s'], // 신고 스팸·reportCount 인플레이션 방어
   support: [5, '3600 s'], // 고객센터 문의 — 시간당 5건(스팸 방어)
   identity: [10, '600 s'], // 본인인증 검증 — 임의 ID 대량 전달로 포트원 조회 폭주 방어
+  clientError: [30, '60 s'], // 무인증 공개 에러 수집 — IP당 분당 30(에러 버스트 허용+남용 방어)
 };
 
 const url = process.env.UPSTASH_REDIS_REST_URL;

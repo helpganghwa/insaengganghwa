@@ -4,6 +4,7 @@ import { revalidatePath } from 'next/cache';
 import { and, eq } from 'drizzle-orm';
 
 import { requireAdmin } from '@/lib/auth/require-admin';
+import { safeBigInt } from '@/lib/util/id';
 import { db } from '@/lib/db/client';
 import { profileGenerationJobs, userProfiles } from '@/lib/db/schema/avatar';
 import { characters } from '@/lib/db/schema/server';
@@ -19,10 +20,12 @@ import { adminGrantAvatarForJob } from '@/lib/game/profile/pipeline';
  */
 export async function adminRevokeAndRefund(jobId: string): Promise<{ ok: boolean; msg?: string }> {
   await requireAdmin();
+  const jid = safeBigInt(jobId);
+  if (jid === null) return { ok: false, msg: '잘못된 작업 ID입니다.' };
   const [job] = await db
     .select()
     .from(profileGenerationJobs)
-    .where(eq(profileGenerationJobs.id, BigInt(jobId)))
+    .where(eq(profileGenerationJobs.id, jid))
     .limit(1);
   if (!job) return { ok: false, msg: '작업을 찾을 수 없습니다.' };
   if (!job.userProfileId) return { ok: false, msg: '연결된 아바타가 없습니다(통과 건 아님/이미 회수됨).' };
@@ -77,7 +80,9 @@ export async function adminRevokeAndRefund(jobId: string): Promise<{ ok: boolean
  */
 export async function adminGrantAvatar(jobId: string): Promise<{ ok: boolean; msg?: string }> {
   await requireAdmin();
-  const r = await adminGrantAvatarForJob(BigInt(jobId));
+  const jid = safeBigInt(jobId);
+  if (jid === null) return { ok: false, msg: '잘못된 작업 ID입니다.' };
+  const r = await adminGrantAvatarForJob(jid);
   revalidatePath('/admin/profile-gen');
   return r;
 }
@@ -88,10 +93,12 @@ export async function adminGrantAvatar(jobId: string): Promise<{ ok: boolean; ms
  */
 export async function adminConfirmReview(jobId: string): Promise<{ ok: boolean; msg?: string }> {
   await requireAdmin();
+  const jid = safeBigInt(jobId);
+  if (jid === null) return { ok: false, msg: '잘못된 작업 ID입니다.' };
   await db
     .update(profileGenerationJobs)
     .set({ adminDecision: 'confirm', adminReviewedAt: new Date() })
-    .where(eq(profileGenerationJobs.id, BigInt(jobId)));
+    .where(eq(profileGenerationJobs.id, jid));
   revalidatePath('/admin/profile-gen');
   return { ok: true };
 }

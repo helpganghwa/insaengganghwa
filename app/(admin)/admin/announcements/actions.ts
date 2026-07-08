@@ -1,6 +1,8 @@
 'use server';
 
 import { revalidateTag } from 'next/cache';
+
+import { safeBigInt } from '@/lib/util/id';
 import { eq, sql } from 'drizzle-orm';
 
 import { requireAdmin } from '@/lib/auth/require-admin';
@@ -30,6 +32,8 @@ export async function saveAnnouncementAction(input: SaveInput): Promise<Result> 
   if (!body) return { status: 'error', message: '내용을 입력하세요.' };
 
   if (input.id) {
+    const aid = safeBigInt(input.id);
+    if (aid === null) return { status: 'error', message: '잘못된 공지 ID입니다.' };
     await db
       .update(announcements)
       .set({
@@ -44,7 +48,7 @@ export async function saveAnnouncementAction(input: SaveInput): Promise<Result> 
           : announcements.publishedAt,
         updatedAt: sql`now()`,
       })
-      .where(eq(announcements.id, BigInt(input.id)));
+      .where(eq(announcements.id, aid));
   } else {
     await db.insert(announcements).values({
       category,
@@ -62,7 +66,9 @@ export async function saveAnnouncementAction(input: SaveInput): Promise<Result> 
 
 export async function deleteAnnouncementAction(id: string): Promise<Result> {
   await requireAdmin();
-  await db.delete(announcements).where(eq(announcements.id, BigInt(id)));
+  const aid = safeBigInt(id);
+  if (aid === null) return { status: 'error', message: '잘못된 공지 ID입니다.' };
+  await db.delete(announcements).where(eq(announcements.id, aid));
   revalidateTag('announcements', 'max');
   return { status: 'success' };
 }

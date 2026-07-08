@@ -43,7 +43,7 @@ export function ClientErrorReporter() {
         kind,
         message: message?.slice(0, 500),
         stack: stack?.slice(0, 1500),
-        url: location.pathname + location.search,
+        url: location.pathname, // search 제외 — 콜백 토큰·추천코드 등 시크릿 DB 잔류 방지(report-boundary와 동일 정책)
         ua: navigator.userAgent.slice(0, 200),
       });
       try {

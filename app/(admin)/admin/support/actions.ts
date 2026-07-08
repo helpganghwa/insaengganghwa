@@ -2,6 +2,8 @@
 
 import { revalidatePath } from 'next/cache';
 
+import { safeBigInt } from '@/lib/util/id';
+
 import { getAdminStatus } from '@/lib/auth/require-admin';
 import { answerInquiry, deleteInquiry } from '@/lib/game/support/inquiry';
 
@@ -14,7 +16,9 @@ export async function answerInquiryAction(
   if (!isAdmin || !userId) return { ok: false, msg: '권한이 없습니다.' };
   const trimmed = (answer ?? '').trim();
   if (trimmed.length < 2) return { ok: false, msg: '답변 내용을 입력하세요.' };
-  const r = await answerInquiry({ inquiryId: BigInt(inquiryId), adminUserId: userId, answer: trimmed });
+  const iid = safeBigInt(inquiryId);
+  if (iid === null) return { ok: false, msg: '잘못된 문의 ID입니다.' };
+  const r = await answerInquiry({ inquiryId: iid, adminUserId: userId, answer: trimmed });
   if (!r.ok) {
     return {
       ok: false,
@@ -29,7 +33,9 @@ export async function answerInquiryAction(
 export async function deleteInquiryAction(inquiryId: string): Promise<{ ok: boolean; msg?: string }> {
   const { userId, isAdmin } = await getAdminStatus();
   if (!isAdmin || !userId) return { ok: false, msg: '권한이 없습니다.' };
-  const ok = await deleteInquiry(BigInt(inquiryId));
+  const iid = safeBigInt(inquiryId);
+  if (iid === null) return { ok: false, msg: '잘못된 문의 ID입니다.' };
+  const ok = await deleteInquiry(iid);
   if (!ok) return { ok: false, msg: '이미 삭제되었거나 없는 문의입니다.' };
   revalidatePath('/admin/support');
   return { ok: true };
