@@ -264,7 +264,7 @@ export default async function AdminProfileGenPage({
                       <ServerBadge serverId={r.serverId} />
                       <span>job {String(r.id)}</span>
                     </div>
-                    <div className="text-[10px] text-zinc-500">{new Date(r.createdAt).toLocaleString('ko-KR')}</div>
+                    <div className="text-[10px] text-zinc-500">{new Date(r.createdAt).toLocaleString('ko-KR', { timeZone: 'Asia/Seoul', hour12: false })}</div>
                     {/* 장비 3종 — 스프라이트 이미지 가로 배치(무기·방어구·장신구). */}
                     <div className="flex gap-1.5 pt-0.5">
                       {[eqs.weaponKey, eqs.armorKey, eqs.accessoryKey].map((k, idx) => {
