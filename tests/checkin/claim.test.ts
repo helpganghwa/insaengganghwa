@@ -6,6 +6,7 @@ import { endTestDb, sql, testDb } from '../db';
 
 const TEST_USER_ID = process.env.TEST_USER_ID ?? '';
 const skip = !TEST_USER_ID;
+const SERVER_ID = 1; // user_checkin_state/checkin_claim_logs는 (user_id, server_id) 키(서버 샤딩).
 
 /**
  * claimCheckin DB 통합 — 1일 1회 가드(KST) + state advance + 멱등 회귀.
@@ -17,14 +18,15 @@ describe.skipIf(skip)('claimCheckin — DB 통합', () => {
   async function resetState() {
     // 1차 가드: state. 2차 가드: 오늘 KST 로그 row 제거(UNIQUE 위반 회피).
     await testDb.execute(sql`
-      insert into user_checkin_state (user_id, day_progress, last_claimed_kst_day, total_claimed_count)
-      values (${TEST_USER_ID}::uuid, 0, null, 0)
-      on conflict (user_id) do update
+      insert into user_checkin_state (user_id, server_id, day_progress, last_claimed_kst_day, total_claimed_count)
+      values (${TEST_USER_ID}::uuid, ${SERVER_ID}, 0, null, 0)
+      on conflict (user_id, server_id) do update
         set day_progress = 0, last_claimed_kst_day = null, total_claimed_count = 0, updated_at = now()
     `);
     await testDb.execute(sql`
       delete from checkin_claim_logs
       where user_id = ${TEST_USER_ID}::uuid
+        and server_id = ${SERVER_ID}
         and kst_day = (now() at time zone 'Asia/Seoul')::date
     `);
   }
@@ -48,15 +50,15 @@ describe.skipIf(skip)('claimCheckin — DB 통합', () => {
 
     const [state] = (await testDb.execute(sql`
       select day_progress::int dp, last_claimed_kst_day::text last
-      from user_checkin_state where user_id = ${TEST_USER_ID}::uuid
+      from user_checkin_state where user_id = ${TEST_USER_ID}::uuid and server_id = ${SERVER_ID}
     `)) as unknown as { dp: number; last: string }[];
     expect(state!.dp).toBe(1);
 
     const [log] = (await testDb.execute(sql`
-      select cycle_day::int day, diamond_granted::text dia, boxes_granted::text boxes
-      from checkin_claim_logs where user_id = ${TEST_USER_ID}::uuid and kst_day = ${state!.last}::date
-    `)) as unknown as { day: number; dia: string; boxes: string }[];
-    expect(log!.day).toBe(1);
+      select cycle_day::int cday, diamond_granted::text dia, boxes_granted::text boxes
+      from checkin_claim_logs where user_id = ${TEST_USER_ID}::uuid and server_id = ${SERVER_ID} and kst_day = ${state!.last}::date
+    `)) as unknown as { cday: number; dia: string; boxes: string }[];
+    expect(log!.cday).toBe(1);
     expect(log!.dia).toBe('0');
     expect(JSON.parse(log!.boxes)).toMatchObject({ weapon: 10 });
   });
@@ -76,7 +78,7 @@ describe.skipIf(skip)('claimCheckin — DB 통합', () => {
     await testDb.execute(sql`
       update user_checkin_state
       set day_progress = 6, last_claimed_kst_day = ${yesterday[0]!.d}::date, total_claimed_count = 6
-      where user_id = ${TEST_USER_ID}::uuid
+      where user_id = ${TEST_USER_ID}::uuid and server_id = ${SERVER_ID}
     `);
 
     const r = await claimCheckin({ userId: TEST_USER_ID, serverId: 1 });
@@ -91,7 +93,7 @@ describe.skipIf(skip)('claimCheckin — DB 통합', () => {
     await testDb.execute(sql`
       update user_checkin_state
       set day_progress = 27, last_claimed_kst_day = ${yesterday[0]!.d}::date, total_claimed_count = 27
-      where user_id = ${TEST_USER_ID}::uuid
+      where user_id = ${TEST_USER_ID}::uuid and server_id = ${SERVER_ID}
     `);
 
     const r = await claimCheckin({ userId: TEST_USER_ID, serverId: 1 });
@@ -100,7 +102,7 @@ describe.skipIf(skip)('claimCheckin — DB 통합', () => {
 
     const [state] = (await testDb.execute(sql`
       select day_progress::int dp
-      from user_checkin_state where user_id = ${TEST_USER_ID}::uuid
+      from user_checkin_state where user_id = ${TEST_USER_ID}::uuid and server_id = ${SERVER_ID}
     `)) as unknown as { dp: number }[];
     expect(state!.dp).toBe(0);
   });

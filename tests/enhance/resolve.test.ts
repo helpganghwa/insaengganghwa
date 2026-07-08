@@ -45,7 +45,8 @@ describe.skipIf(skip)('resolveEnhance — DB 통합', () => {
     });
     cleanupFn = cleanup;
 
-    const r = await resolveEnhance({ jobId, userId: TEST_USER_ID });
+    // rngBp=5000: mega 카브아웃(작은 상단 분량) 위·success 밴드 내 → 항상 success 강제(미지정 시 가끔 mega로 flaky).
+    const r = await resolveEnhance({ jobId, userId: TEST_USER_ID, rngBp: () => 5000 });
     expect(r.outcome).toBe('success');
     expect(r.fromLevel).toBe(10);
     expect(r.toLevel).toBe(11);
@@ -129,7 +130,8 @@ describe.skipIf(skip)('resolveEnhance — DB 통합', () => {
     });
     cleanupFn = cleanup;
 
-    const first = await resolveEnhance({ jobId, userId: TEST_USER_ID });
+    // rngBp=5000으로 success 강제(mega면 outcome 단정 실패 — 위 success 테스트와 동일 이유).
+    const first = await resolveEnhance({ jobId, userId: TEST_USER_ID, rngBp: () => 5000 });
     expect(first.outcome).toBe('success'); // 첫 호출 정상
 
     await expect(
