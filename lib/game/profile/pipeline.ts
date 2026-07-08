@@ -316,7 +316,7 @@ async function acceptJob(
 
 /**
  * 운영자 분쟁 처리 — AI가 거절했지만 실제로 문제 없는 아바타를 직접 지급(다이아 차감 없음).
- * Pixellab 캐릭터에서 8방향을 Storage로 미러링 → user_profiles 생성 → 목록 추가 + 우편.
+ * Pixellab 캐릭터에서 정면(south)을 Storage로 미러링 → user_profiles 생성 → 목록 추가 + 우편.
  * AI 거절 시 escrow는 이미 환불됐으므로 추가 차감/환불 없음(순수 지급).
  */
 export async function adminGrantAvatarForJob(jobId: bigint): Promise<{ ok: boolean; msg?: string }> {

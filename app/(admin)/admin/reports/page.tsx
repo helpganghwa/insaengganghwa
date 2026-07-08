@@ -46,7 +46,6 @@ export default async function AdminReportsPage({
       nickname: characters.nickname,
       code: profiles.publicCode,
       rotations: userProfiles.rotations,
-      activeDirection: userProfiles.activeDirection,
       reportCount: userProfiles.reportCount,
       createdAt: userProfiles.createdAt,
       bannedAt: profiles.bannedAt,
@@ -130,7 +129,7 @@ export default async function AdminReportsPage({
       ) : (
         reported.map((p) => {
           const rot = p.rotations as Record<string, string>;
-          const charImg = rot[p.activeDirection] ?? null;
+          const charImg = rot.south ?? Object.values(rot)[0] ?? null; // 항상 정면(south)
           const reasons = [...(reasonMap.get(p.id) ?? new Map())].sort((a, b) => b[1] - a[1]);
           const reports = reportsByProfile.get(p.id) ?? [];
           const banned = !!p.bannedAt && (!p.banUntil || p.banUntil.getTime() > Date.now());

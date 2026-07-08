@@ -76,7 +76,7 @@ async function attachItemRankProfiles(
 ): Promise<ItemRankEntry[]> {
   if (entries.length === 0) return entries;
   const userIds = entries.map((e) => e.userId);
-  // 아바타: characters.active_profile_id → user_profiles.rotations[activeDirection].
+  // 아바타: characters.active_profile_id → user_profiles.rotations.south (정면 고정, 8방향 미사용).
   let imgMap = new Map<string, string | null>();
   try {
     const rows = await withTimeout(
@@ -84,7 +84,6 @@ async function attachItemRankProfiles(
         .select({
           userId: characters.userId,
           rotations: userProfiles.rotations,
-          activeDirection: userProfiles.activeDirection,
         })
         .from(characters)
         .leftJoin(userProfiles, eq(userProfiles.id, characters.activeProfileId))
@@ -95,7 +94,7 @@ async function attachItemRankProfiles(
     imgMap = new Map(
       rows.map((r) => {
         const rot = r.rotations as Record<string, string> | null;
-        const img = rot && r.activeDirection ? (rot[r.activeDirection] ?? null) : null;
+        const img = rot ? (rot.south ?? Object.values(rot)[0] ?? null) : null;
         return [r.userId, img] as const;
       }),
     );

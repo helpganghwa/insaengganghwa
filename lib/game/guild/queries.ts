@@ -478,8 +478,8 @@ export async function getGuildMembersRich(guildId: bigint) {
       role: guildMembers.role,
       contribution: guildMembers.contributionPoints,
       lastSeenAt: characters.lastSeenAt,
-      // 유저 지정 방향(active_direction, enum→text) 우선, 없으면 정면(south) 폴백.
-      avatar: sql<string | null>`coalesce(${userProfiles.rotations} ->> ${userProfiles.activeDirection}::text, ${userProfiles.rotations} ->> 'south')`,
+      // 아바타는 항상 정면(south) — 8방향 미사용.
+      avatar: sql<string | null>`${userProfiles.rotations} ->> 'south'`,
     })
     .from(guildMembers)
     .innerJoin(profiles, eq(profiles.id, guildMembers.userId))

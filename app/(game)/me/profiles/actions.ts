@@ -2,7 +2,6 @@
 
 import { revalidatePath } from 'next/cache';
 import { and, count, desc, eq, ne } from 'drizzle-orm';
-import { z } from 'zod';
 
 import { getSessionUserId } from '@/lib/auth/session';
 import { actionBlock } from '@/lib/game/action-gate';
@@ -14,21 +13,9 @@ import { userProfiles } from '@/lib/db/schema/avatar';
 
 /**
  * PROFILE §8.2 — 프로필 선택화면 액션. 모두 본인 소유 프로필만 대상.
- * 선택/방향 변경이 즉시 대표·표시 방향에 반영(별도 "설정" 버튼 없음).
+ * 아바타는 정면(south) 고정 — 방향 회전 없음(대표 선택/삭제만).
  */
 type ActionState = { status: 'ok' } | { status: 'error'; message: string };
-
-const DIRECTIONS = [
-  'south',
-  'east',
-  'north',
-  'west',
-  'south_east',
-  'north_east',
-  'north_west',
-  'south_west',
-] as const;
-const DirectionSchema = z.enum(DIRECTIONS);
 
 /** 본인 소유 프로필인지 확인 — 아니면 null. serverId 지정 시 그 서버 자산인지도 검증. */
 async function ownedProfileId(
@@ -48,33 +35,6 @@ async function ownedProfileId(
     )
     .limit(1);
   return row?.id ?? null;
-}
-
-/** 표시 방향 변경. */
-export async function setActiveDirection(
-  profileId: string,
-  direction: string,
-): Promise<ActionState> {
-  const userId = await getSessionUserId();
-  if (!userId) return { status: 'error', message: '로그인이 필요합니다.' };
-  if (await rateLimited(userId, 'profileEdit'))
-    return { status: 'error', message: '잠시 후 다시 시도해 주세요.' };
-  const __b = await actionBlock();
-  if (__b) return { status: 'error', message: __b === 'BANNED' ? '이용이 제한된 계정입니다.' : '서버 점검 중입니다.' };
-
-  const dir = DirectionSchema.safeParse(direction);
-  if (!dir.success) return { status: 'error', message: '잘못된 방향입니다.' };
-  if (!(await ownedProfileId(userId, profileId)))
-    return { status: 'error', message: '아바타를 찾을 수 없습니다.' };
-
-  await db
-    .update(userProfiles)
-    .set({ activeDirection: dir.data })
-    .where(and(eq(userProfiles.id, profileId), eq(userProfiles.userId, userId)));
-
-  revalidatePath('/me/profiles');
-  revalidatePath('/me');
-  return { status: 'ok' };
 }
 
 /** 이 프로필을 대표(active) 프로필로 설정. */

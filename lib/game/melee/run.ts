@@ -108,7 +108,6 @@ export async function runMelee(serverId: number): Promise<{ ran: boolean; battle
       .select({
         uid: characters.userId,
         rotations: userProfiles.rotations,
-        dir: userProfiles.activeDirection,
       })
       .from(characters)
       .innerJoin(userProfiles, eq(userProfiles.id, characters.activeProfileId))
@@ -116,8 +115,8 @@ export async function runMelee(serverId: number): Promise<{ ran: boolean; battle
     const avOf = new Map<string, string>();
     for (const a of avRows) {
       const rot = a.rotations as Record<string, string>;
-      // 유저가 설정한 방향(activeDirection) 우선 — 없으면 south 폴백.
-      const url = (a.dir ? rot[a.dir] : undefined) ?? rot.south;
+      // 아바타는 항상 정면(south) — 8방향 미사용.
+      const url = rot.south ?? Object.values(rot)[0];
       if (url) avOf.set(a.uid, url);
     }
     for (const r of result.finale.roster) r.avatar = avOf.get(r.userId) ?? null;

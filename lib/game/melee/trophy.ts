@@ -45,16 +45,8 @@ const POSE_POOL = [
 const REVIEW_DESCRIPTION =
   'A victorious champion character holding a golden trophy cup in a celebration pose. Check every rotation for anatomical part-count defects (extra or missing arms/legs/heads).';
 
-const DIRECTIONS = [
-  'south',
-  'south_east',
-  'east',
-  'north_east',
-  'north',
-  'north_west',
-  'west',
-  'south_west',
-] as const;
+// 정면(south) 1방향만 — 8방향 미사용(아바타는 앞모습 하나로 통일).
+const DIRECTIONS = ['south'] as const;
 
 let _sb: SupabaseClient | null = null;
 function serviceClient(): SupabaseClient {
@@ -98,24 +90,6 @@ async function getSourceChar(
     .where(eq(userProfiles.userId, userId))
     .limit(1);
   return anyP?.cid ? { cid: anyP.cid, keyIdx: keyIdxFromOptions(anyP.options) } : null;
-}
-
-/** 우승자 아바타의 표시 방향(active_direction) — 트로피도 같은 방향 노출. 없으면 south. */
-async function getChampionDirection(userId: string, serverId: number): Promise<string> {
-  const [p] = await db
-    .select({ active: characters.activeProfileId })
-    .from(characters)
-    .where(and(eq(characters.userId, userId), eq(characters.serverId, serverId)))
-    .limit(1);
-  if (p?.active) {
-    const [ap] = await db
-      .select({ dir: userProfiles.activeDirection })
-      .from(userProfiles)
-      .where(eq(userProfiles.id, p.active))
-      .limit(1);
-    if (ap?.dir) return ap.dir;
-  }
-  return 'south';
 }
 
 // 한쪽 팔만 바꾸고 나머지(얼굴·표정·머리·복장·몸·자세·바라보는 방향)는 머리부터 발끝까지
@@ -185,7 +159,7 @@ async function trophyVisible(images: ReadyImages): Promise<boolean> {
   return m?.[1] === 'true';
 }
 
-/** pixellab 캐릭터 폴링 — 8방향 실파일(PNG) 완성 시 buffer 배열, 아니면 pending/gone. */
+/** pixellab 캐릭터 폴링 — 정면(south) 실파일(PNG) 완성 시 buffer 배열, 아니면 pending/gone. */
 async function fetchReady(charId: string, keyIdx: number): Promise<'pending' | 'gone' | ReadyImages> {
   const key = pixellabKeyByIdx(keyIdx); // 파생 캐릭터도 소스와 같은 키에 귀속 → 같은 키로 폴링.
   const res = await fetch(`${PIXELLAB_BASE}/characters/${charId}`, {
@@ -210,7 +184,7 @@ async function fetchReady(charId: string, keyIdx: number): Promise<'pending' | '
   return images;
 }
 
-/** 8방향 PNG를 Supabase Storage에 미러 → 영구 public URL 맵(snake_case 키). */
+/** 정면(south) PNG를 Supabase Storage에 미러 → 영구 public URL 맵. */
 async function mirror(battleId: bigint, images: ReadyImages): Promise<Record<string, string>> {
   const sb = serviceClient();
   const rotations: Record<string, string> = {};
@@ -320,19 +294,15 @@ async function finalize(
   aiHead: { cx: number; cy: number; h: number } | null,
 ): Promise<void> {
   const rotations = await mirror(b.id, _images);
-  // 표시 방향 = 우승자 아바타의 active_direction(같은 방향). 없으면 south 폴백.
-  const dir = await getChampionDirection(b.championUserId, b.serverId);
-  const chosen = rotations[dir] ?? rotations.south;
-  if (!chosen) throw new Error('mirror missing chosen/south');
+  // 트로피는 항상 정면(south) — 8방향 미사용(아바타 앞모습 통일).
+  const chosen = rotations.south;
+  if (!chosen) throw new Error('mirror missing south');
 
   // 트로피 얼굴중심 크롭용 박스 — AI 비전 머리 박스(모자·뿔 무시, 정확) 우선,
   // 없으면 표시 이미지 실루엣 detectFaceBox 폴백.
   let trophyFaceBox = aiHead;
   if (!trophyFaceBox) {
-    const chosenPng =
-      _images.find((im) => im.direction === dir)?.png ??
-      _images.find((im) => im.direction === 'south')?.png ??
-      null;
+    const chosenPng = _images.find((im) => im.direction === 'south')?.png ?? null;
     if (chosenPng) {
       try {
         trophyFaceBox = await detectFaceBox(chosenPng);
@@ -389,7 +359,7 @@ async function processOne(b: TrophyBattle): Promise<void> {
     return;
   }
 
-  // 8방향 완성 → 배경 투명 검사(결정론) + AI 해부학 검토. 둘 중 하나라도 실패면 재시도.
+  // 정면(south) 완성 → 배경 투명 검사(결정론) + AI 해부학 검토. 둘 중 하나라도 실패면 재시도.
   // 배경 불투명(no_background 실패)은 AI 비전이 못 잡으므로 alpha 검사로 선차단.
   if (await anyBackgroundOpaque(ready.map((im) => im.png))) {
     console.warn(`[melee.trophy] battle ${b.id} 배경 불투명 → 재시도`);

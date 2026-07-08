@@ -105,7 +105,6 @@ export async function buildConquestBattleView(
           uid: profiles.id,
           code: profiles.publicCode,
           rotations: userProfiles.rotations,
-          dir: userProfiles.activeDirection,
         })
         .from(profiles)
         // 전투 서버의 캐릭터로 고정 — 다중 서버 캐릭터 보유 시 임의 서버 아바타가 뜨는 것 방지.
@@ -120,7 +119,7 @@ export async function buildConquestBattleView(
     ).catch(() => []);
     for (const a of av) {
       const rot = a.rotations as Record<string, string>;
-      const url = (a.dir ? rot[a.dir] : undefined) ?? rot.south;
+      const url = rot.south ?? Object.values(rot)[0]; // 아바타는 항상 정면(south)
       if (url) avatarOf.set(a.uid, url);
       if (a.code) codeOf.set(a.uid, a.code);
     }

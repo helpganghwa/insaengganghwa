@@ -10,12 +10,11 @@ import { setActiveProfile, deleteProfile } from './actions';
 type ProfileItem = {
   id: string;
   rotations: Record<string, string>;
-  activeDirection: string;
 };
 
-/** 표시용 정면 이미지 — south 우선, 없으면 activeDirection, 없으면 첫 값(구 8방향 프로필 호환). */
+/** 표시용 정면 이미지 — 항상 south(정면, 8방향 미사용). 레거시 프로필 대비 첫 값 폴백. */
 function frontSrc(p: ProfileItem): string {
-  return p.rotations.south ?? p.rotations[p.activeDirection] ?? Object.values(p.rotations)[0] ?? '';
+  return p.rotations.south ?? Object.values(p.rotations)[0] ?? '';
 }
 
 export function ProfileSelector({

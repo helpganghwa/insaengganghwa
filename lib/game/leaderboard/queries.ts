@@ -39,14 +39,13 @@ const TIMEOUT_MS = 3000;
  */
 async function attachProfiles(serverId: number, entries: LeaderboardEntry[]): Promise<LeaderboardEntry[]> {
   if (entries.length === 0) return entries;
-  let rows: { userId: string; rotations: unknown; activeDirection: string | null }[];
+  let rows: { userId: string; rotations: unknown }[];
   try {
     rows = await withTimeout(
       db
         .select({
           userId: characters.userId,
           rotations: userProfiles.rotations,
-          activeDirection: userProfiles.activeDirection,
         })
         .from(characters)
         .leftJoin(userProfiles, eq(userProfiles.id, characters.activeProfileId))
@@ -62,7 +61,7 @@ async function attachProfiles(serverId: number, entries: LeaderboardEntry[]): Pr
   const map = new Map(
     rows.map((r) => {
       const rot = r.rotations as Record<string, string> | null;
-      const img = rot && r.activeDirection ? (rot[r.activeDirection] ?? null) : null;
+      const img = rot ? (rot.south ?? Object.values(rot)[0] ?? null) : null;
       return [r.userId, img] as const;
     }),
   );

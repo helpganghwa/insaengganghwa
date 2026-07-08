@@ -1,11 +1,11 @@
 // 프로필 자동 검토 — Claude Haiku 4.5 vision.
-// 입력: 8방향 회전 이미지 전부(Buffer[]) + descriptionPrompt
+// 입력: 프로필 이미지(현재 정면 south 1장) + descriptionPrompt
 // 출력: { pass: boolean, reasons: ReviewReason[], notes: string }
 //
-// PROFILE.md §5 system prompt + 모델 박제 그대로 사용.
+// PROFILE.md §5 system prompt + 모델 박제 그대로 사용. (프롬프트는 다중 뷰도 처리하나
+// 아바타는 정면만 저장·표시하므로 실제 입력은 south 1장.)
 // 보수 원칙: 명백한 결함만 fail, 의심스러우면 pass.
-// 단, 신체 부위 개수 이상(3다리·3팔·3눈·머리 2개 등)은 어느 한 방향에서라도 보이면 fail
-// — 측면/후면 뷰에서만 드러나는 결함을 잡기 위해 8방향 전부 검토(2026-06-01).
+// 단, 신체 부위 개수 이상(3다리·3팔·3눈·머리 2개 등)은 보이면 fail.
 
 import 'server-only';
 import Anthropic from '@anthropic-ai/sdk';
@@ -101,7 +101,7 @@ export interface ReviewImage {
 }
 
 export interface ReviewInput {
-  /** 8방향 회전 이미지 전부. (1장만 넘겨도 동작) */
+  /** 프로필 이미지 — 현재 정면(south) 1장. */
   images: ReviewImage[];
   descriptionPrompt: string;
 }

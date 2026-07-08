@@ -39,7 +39,10 @@ export const profileJobStatusEnum = pgEnum('profile_job_status', [
   'starting',
 ]);
 
-/** Pixellab v2 8방향(south/north/east/west + 4 diagonal). 유저는 상세에서 회전·active 선택. */
+/**
+ * 프로필 방향 enum. **현재는 정면(south)만 사용** — 8방향 회전 미도입(측/후면 품질 미달, 앞모습 통일).
+ * enum 값은 레거시 active_direction 컬럼 호환을 위해 유지(값 제거는 파괴적 마이그레이션이라 보류).
+ */
 export const profileDirectionEnum = pgEnum('profile_direction', [
   'south',
   'east',
@@ -81,15 +84,14 @@ export const userProfiles = pgTable(
     userId: uuid('user_id')
       .notNull()
       .references(() => profiles.id, { onDelete: 'cascade' }),
-    /**
-     * 8방향 PNG URL — `{ south, east, north, west, south_east, north_east, north_west, south_west }`.
-     * Pixellab v2 8방향 시트를 Supabase Storage에 미러링한 결과. 자랑카드·hub·랭킹은
-     * `rotations[active_direction]` 단일 이미지 사용. 상세 화면에서 8방향 회전 가능.
-     */
     /** 소속 서버(SERVER.md P6) — 아바타는 캐릭터 자산. */
     serverId: smallint('server_id').notNull().default(1),
+    /**
+     * 정면 PNG URL — `{ south: url }`. 앞모습 1장만 저장·표시(8방향 미사용).
+     * 자랑카드·hub·랭킹·트로피 모두 `rotations.south`를 쓴다.
+     */
     rotations: jsonb('rotations').notNull(),
-    /** 현재 active 방향 — 유저가 상세에서 선택. default 'south'(정면). */
+    /** 레거시 — 현재 미사용(항상 정면 south). 회전 미도입이라 읽지 않는다. */
     activeDirection: profileDirectionEnum('active_direction').notNull().default('south'),
     /** Pixellab character_id — 재다운로드/추적용. */
     pixellabCharacterId: text('pixellab_character_id').notNull(),

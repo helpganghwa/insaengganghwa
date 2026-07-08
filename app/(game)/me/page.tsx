@@ -58,7 +58,7 @@ export default async function ProfilePage() {
       transcendLevel: number;
       equippedSlot: string | null;
     }[];
-    avatars: { id: string; rotations: unknown; activeDirection: string }[];
+    avatars: { id: string; rotations: unknown }[];
   };
   const _r = await withTimeout(
     Promise.all([
@@ -74,7 +74,7 @@ export default async function ProfilePage() {
               'transcendLevel', transcend_level, 'equippedSlot', equipped_slot))
             from user_equipment where user_id = ${userId}::uuid and server_id = ${serverId}), '[]'::json) as equipment,
           coalesce((select json_agg(json_build_object(
-              'id', id, 'rotations', rotations, 'activeDirection', active_direction) order by created_at desc)
+              'id', id, 'rotations', rotations) order by created_at desc)
             from user_profiles where user_id = ${userId}::uuid and server_id = ${serverId}), '[]'::json) as avatars
         from profiles p
           left join characters c on c.user_id = p.id and c.server_id = ${serverId}
@@ -117,8 +117,10 @@ export default async function ProfilePage() {
 
   const activeProfileId = row?.active_profile_id ?? null;
   const activeProfile = myProfiles.find((p) => p.id === activeProfileId) ?? null;
-  const dirImg = (p: { rotations: unknown; activeDirection: string }) =>
-    (p.rotations as Record<string, string>)[p.activeDirection];
+  const dirImg = (p: { rotations: unknown }) => {
+    const rot = p.rotations as Record<string, string>;
+    return rot.south ?? Object.values(rot)[0]; // 항상 정면(south)
+  };
 
   return (
     <div className="space-y-4 px-4 py-6">

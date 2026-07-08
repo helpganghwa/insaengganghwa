@@ -22,7 +22,6 @@ export default async function ProfileSelectPage() {
       .select({
         id: userProfiles.id,
         rotations: userProfiles.rotations,
-        activeDirection: userProfiles.activeDirection,
       })
       .from(userProfiles)
       .where(and(eq(userProfiles.userId, userId), eq(userProfiles.serverId, serverId)))
@@ -57,7 +56,6 @@ export default async function ProfileSelectPage() {
             profiles={list.map((r) => ({
               id: r.id,
               rotations: r.rotations as Record<string, string>,
-              activeDirection: r.activeDirection,
             }))}
             activeProfileId={p[0]?.activeProfileId ?? null}
           />

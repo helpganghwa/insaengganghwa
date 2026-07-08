@@ -16,7 +16,7 @@ import { beatCron } from '@/lib/cron/heartbeat';
 
 export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
-export const maxDuration = 90; // drain(최대 5 발주 POST) + Pro mode 폴링·8방향 다운로드·AI 검토 여유.
+export const maxDuration = 90; // drain(최대 5 발주 POST) + Pro mode 폴링·정면 다운로드·AI 검토 여유.
 
 export async function GET(req: Request) {
   if (!isCronAuthorized(req)) return new Response('forbidden', { status: 403 });

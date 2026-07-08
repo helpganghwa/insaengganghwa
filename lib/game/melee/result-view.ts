@@ -57,7 +57,6 @@ export async function buildMeleeResultView(
           uid: characters.userId,
           code: profiles.publicCode,
           rotations: userProfiles.rotations,
-          dir: userProfiles.activeDirection,
           options: userProfiles.options,
         })
         .from(characters)
@@ -69,8 +68,8 @@ export async function buildMeleeResultView(
     ).catch(() => []);
     for (const a of av) {
       const rot = a.rotations as Record<string, string>;
-      // 유저가 설정한 방향(activeDirection) 우선 — 없으면 south 폴백.
-      const url = (a.dir ? rot[a.dir] : undefined) ?? rot.south;
+      // 아바타는 항상 정면(south) — 8방향 미사용. 레거시 프로필 대비 첫 값 폴백.
+      const url = rot.south ?? Object.values(rot)[0];
       if (url) avatarOf.set(a.uid, url);
       if (a.code) codeOf.set(a.uid, a.code);
       const fb = parseFaceBox((a.options as Record<string, unknown> | null)?.faceBox);

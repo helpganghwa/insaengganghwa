@@ -47,14 +47,14 @@
 
 ### 3.1 `user_profiles`
 
-8방향 시트 통째 보관 — 유저가 상세에서 회전하며 active 방향 선택.
+정면(south) 1장만 보관 — 아바타는 앞모습으로 통일(8방향 회전 미도입).
 
 | 컬럼 | 타입 | 설명 |
 |---|---|---|
 | `id` | uuid PK | |
 | `user_id` | uuid FK profiles | 소유자 |
-| `rotations` | jsonb | `{ south, east, north, west, south_east, north_east, north_west, south_west }` 8 URL. Supabase Storage 미러링 결과 |
-| `active_direction` | enum default `south` | 현재 표시 방향. 자랑카드·hub·랭킹은 `rotations[active_direction]` 단일 이미지 사용 |
+| `rotations` | jsonb | `{ south }` 정면 1 URL. Supabase Storage 미러링 결과 |
+| `active_direction` | enum default `south` | 레거시 컬럼 — 항상 `south`, 미사용. 표시는 모두 `rotations.south` |
 | `pixellab_character_id` | text | 원본 추적용(재다운로드 가능) |
 | `options` | jsonb | 유저 옵션 4축 v2 확정: `{ gender, hair, expression, pose }` — 총 1,000 조합. enum 값은 §4.2·`lib/game/profile/compose.ts` |
 | `equipment_snapshot` | jsonb | `{ weapon, armor, accessory }` 카탈로그 키 — 디버그·재현용 |
@@ -64,7 +64,7 @@
 
 인덱스: `(user_id, created_at desc)`, `(report_count desc)`(운영자 신고 대시보드).
 
-**8방향 활용 의도**: Pixellab v2가 어차피 8방향 풀시트를 반환 — 1장만 쓰면 자원 낭비. 유저가 상세에서 ◀▶로 회전하며 마음에 드는 각도를 active로 선택(§8.2).
+**정면만 사용**: Pixellab v2는 8방향 풀시트를 반환하지만 측/후면 품질이 낮아 **정면(south) 1장만** 저장·표시한다 — 아바타는 앞모습으로 통일(회전 UI 없음).
 
 ### 3.2 `profile_generation_jobs`
 
@@ -219,7 +219,7 @@ JRPG 아니메 픽셀아트 톤 고정. **6 블록** 결합:
 
 ### 5.1 검토 흐름
 
-1. 서버 cron이 `status=downloading` 작업의 character_id로 `/v2/characters/{id}` 호출 → **8방향 PNG 모두** 다운로드 → Supabase Storage 미러링(`profiles/{user_id}/{job_id}/{direction}.png`) → `status=ai_reviewing`로 전이. AI 검토는 `south.png`만 입력(8장 검토는 과잉, default 방향만으로 안전성 판정 충분).
+1. 서버 cron이 `status=downloading` 작업의 character_id로 `/v2/characters/{id}` 호출 → **정면(south) PNG** 다운로드 → Supabase Storage 미러링(`profiles/{user_id}/{job_id}/south.png`) → `status=ai_reviewing`로 전이. AI 검토도 `south.png` 입력.
 2. Claude API (Anthropic SDK) multimodal 호출:
    - 입력: south.png + description_prompt + 검토 기준 system prompt
    - 출력: 구조화 JSON `{pass: bool, reasons: [enum...], notes: string}`
@@ -355,17 +355,15 @@ Be lenient. Only fail on CLEAR defects. "Could be better" or "head looks big" is
 
 ### 8.1 프로필 화면 (`/profile` 또는 hub 내)
 
-- 상단: 현재 active 프로필 큰 이미지(`rotations[active_direction]`) + 닉네임·전투력
+- 상단: 현재 active 프로필 큰 이미지(`rotations.south`, 정면) + 닉네임·전투력
 - 중단: 보유 프로필 목록(가로 스크롤, 작은 카드들). 카드 탭 = **프로필 상세** 이동.
 - 하단: **"새 프로필 생성"** CTA — 다이아 잔액·가격 표시, 탭 시 옵션 선택 화면으로.
 - 생성 중인 작업이 있으면 카드 상단에 "생성 중 (예상 N분)" 배지.
 
-### 8.2 프로필 상세 — 8방향 회전·active 선택 (신규)
+### 8.2 프로필 상세 — 대표 선택 (정면 고정)
 
-- 큰 이미지(현재 표시 방향) + ◀ ▶ 버튼으로 8방향 회전(south → south_east → east → … 순환).
-- 방향 인디케이터(8개 dot, 현재 방향 강조).
-- "이 방향으로 설정" 버튼 → 서버 액션 `setActiveDirection(profileId, direction)` → `user_profiles.active_direction` 업데이트. 본인 프로필만.
-- 보조 액션: "active 프로필로 설정"(보유 목록 중 이 프로필을 메인으로) / "삭제"(확인 모달, hidden 처리는 운영자만).
+- 큰 정면(south) 이미지 프리뷰 — 아바타는 앞모습 하나로 통일(방향 회전 없음).
+- 액션: "active 프로필로 설정"(보유 목록 중 이 프로필을 메인으로) / "삭제"(확인 모달, hidden 처리는 운영자만).
 
 ### 8.3 옵션 선택 화면
 

@@ -78,7 +78,6 @@ export async function loadMeleeHistory(serverId: number): Promise<MeleeHistoryRo
               nick: characters.nickname,
               code: profiles.publicCode,
               rotations: userProfiles.rotations,
-              dir: userProfiles.activeDirection,
               options: userProfiles.options,
             })
             .from(characters)
@@ -105,7 +104,7 @@ export async function loadMeleeHistory(serverId: number): Promise<MeleeHistoryRo
   >();
   for (const c of champRows) {
     const rot = (c.rotations as Record<string, string> | null) ?? null;
-    const avatar = rot ? rot.south ?? (c.dir ? rot[c.dir] ?? null : null) : null;
+    const avatar = rot ? (rot.south ?? Object.values(rot)[0] ?? null) : null;
     const faceBox = parseFaceBox((c.options as Record<string, unknown> | null)?.faceBox);
     champOf.set(c.uid, { nick: c.nick, code: c.code, avatar, faceBox });
   }

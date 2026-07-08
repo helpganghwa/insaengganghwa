@@ -73,7 +73,6 @@ const loadProfile = cache(async (handle: string, serverId: number) => {
       .select({
         id: userProfiles.id,
         rotations: userProfiles.rotations,
-        activeDirection: userProfiles.activeDirection,
       })
       .from(userProfiles)
       .where(eq(userProfiles.id, prof.activeProfileId))
@@ -81,7 +80,7 @@ const loadProfile = cache(async (handle: string, serverId: number) => {
     if (up) {
       profileId = up.id;
       const rot = up.rotations as Record<string, string>;
-      charImg = rot[up.activeDirection] ?? null;
+      charImg = rot.south ?? Object.values(rot)[0] ?? null; // 항상 정면(south)
     }
   }
 

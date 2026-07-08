@@ -114,20 +114,19 @@ export async function GET(_req: Request, { params }: { params: Promise<{ shareCo
 
   const bySlot = new Map(equipped.map((e) => [e.slot, e]));
 
-  // 대표 프로필 캐릭터 이미지(rotations[active_direction]) — 있으면 OG에 합성.
+  // 대표 프로필 캐릭터 이미지(rotations.south, 정면) — 있으면 OG에 합성.
   let charUri: string | null = null;
   if (prof?.activeProfileId) {
     const [up] = await db
       .select({
         rotations: userProfiles.rotations,
-        activeDirection: userProfiles.activeDirection,
       })
       .from(userProfiles)
       .where(eq(userProfiles.id, prof.activeProfileId))
       .limit(1);
     if (up) {
       const rot = up.rotations as Record<string, string>;
-      const u = rot[up.activeDirection];
+      const u = rot.south ?? Object.values(rot)[0]; // 항상 정면(south)
       // 기본 아바타(대장장이 남/여)는 rotations가 상대경로(/sprites/default/...)로 저장된다.
       // dataUri.fetch는 절대 URL만 받으므로 origin을 붙여야 한다 — 안 붙이면 기본 아바타 유저의
       // OG 캐릭터가 통째로 ✨ 폴백으로 빠졌다(커스텀 아바타는 Supabase 절대 URL이라 무영향).
