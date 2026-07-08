@@ -130,3 +130,34 @@ bun run scripts/record-probability-snapshot.ts --note="정식 오픈" --confirm
   로그인 test 분기 제거 + prod Supabase Auth의 `cbt@`~`cbt5@ganghwa.app` 계정(5개) 삭제.
 - 스토리지 고아 정리(선택): wipe로 행이 사라진 `profiles` 버킷 파일과 Pixellab 캐릭터는 남는다 —
   비용 누적 시 GC 스크립트 검토(회원탈퇴 경로도 동일 패턴).
+
+## 9. 긴급 롤백/복구 (사고 대응)
+
+배포·마이그레이션이 잘못됐을 때의 복구 절차. **실패 유형별로 다르게** 대응한다.
+
+### 사전 준비 (오픈 전 1회 확인)
+- **Supabase PITR 활성 여부 확인**(prod): 대시보드 → Database → Backups. PITR(Point-in-Time Recovery)은 Pro 애드온 — 미활성이면 **daily 백업만** 존재(복구 입도 = 하루). 데이터 손상 사고 대비가 필요하면 PITR 활성 검토.
+- **긴급정지 SQL 숙지**(admin UI가 죽어도 되게): 아래 킬스위치 SQL을 `bun run db:apply` 또는 psql로 직접 실행 가능.
+
+### 유형 A — 코드 배포가 나쁨 (버그·회귀, **데이터 미손상**)
+- **Vercel 인스턴트 롤백**: 대시보드 → 프로젝트 → Deployments → 직전 정상 배포 → **Promote to Production**(수 초). 또는 `git push origin <직전정상커밋>:master` (강제 아님, ff면).
+- 코드만 되돌리면 끝(DB 무관). 가장 흔하고 가장 쉬움.
+
+### 유형 B — 마이그레이션이 데이터를 잘못 건드림 (가장 위험)
+1. **즉시 동결**(출혈 중단) — 킬스위치로 게임 쓰기 차단:
+   ```sql
+   insert into system_mode (key, mode) values ('global','emergency_stop')
+   on conflict (key) do update set mode='emergency_stop', updated_at=now();
+   ```
+   (읽기는 허용하고 쓰기만 막으려면 `read_only`.) 전파 최대 20s(캐시 TTL).
+   ⚠ **결제 지급/환불 마무리 경로는 actionBlock 예외라 계속 동작**한다(막으면 paid-not-granted). 이게 의도.
+2. **진단**: `bun run db:status PROD_DATABASE_URL` — 어떤 manual 파일이 적용됐는지 + drift(적용 후 편집) 확인 → 문제 마이그레이션 특정.
+3. **복구 선택**:
+   - **(a) 전진 수정(forward-fix) — 대부분 최선**: 잘못을 되돌리는 새 마이그레이션(추가 컬럼 drop·잘못 UPDATE된 값 재계산 등)을 멱등하게 작성해 `db:apply`. 감사 가능·정상 트랜잭션 무손실. 컬럼 추가/제약 같은 구조 실수는 거의 이걸로 해결.
+   - **(b) Supabase PITR 복구 — 최후 수단**: 데이터가 광범위 손상돼 전진 수정이 불가할 때만. 대시보드 → Database → Backups → **사고 직전 시각으로 복원**. ⚠ 프로젝트 전체를 되감으므로 **그 사이 정상 트랜잭션(결제·강화 등)도 유실** → 반드시 동결(1단계) 후, 유실 범위를 각오하고 실행. PITR 미활성이면 daily 백업(최대 하루 유실).
+4. **해제**: 복구 검증 후 `update system_mode set mode='live', updated_at=now() where key='global';`
+
+### 유형 C — DB 다운/도달 불가
+- `/api/health/deep`가 `503 {db:down}` 또는 도달불가. Supabase 상태 페이지(status.supabase.com) 확인 → 플랫폼 장애면 대기, 아니면 풀러 포화(pool_size·핫패스 쿼리 통합으로 대응) 또는 커넥션 문제 점검.
+
+> 원칙: **데이터 손상 = 먼저 동결, 그다음 진단(db:status), 되도록 전진 수정, PITR은 최후.** 코드 문제 = Vercel 롤백으로 끝.
