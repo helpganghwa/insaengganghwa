@@ -79,7 +79,7 @@ export async function getStaleCrons(nowMs: number): Promise<StaleCron[]> {
   return stale;
 }
 
-/** warm 워치독 알림 디듀프 — 정지 크론에 알림 시각 마킹(1시간 1회). */
+/** warm 워치독 알림 디듀프 — 정지 크론에 알림 시각 마킹. 정지 사고당 1회만 알림(회복 시 beatCron이 null 리셋). */
 export async function markStaleAlerted(names: string[]): Promise<void> {
   if (names.length === 0) return;
   try {

@@ -9,7 +9,7 @@ import { mailbox, mailClaimLogs } from '@/lib/db/schema/mailbox';
 import { SUPPLY_SLOTS, type SupplySlot } from '@/lib/game/balance';
 
 /**
- * 우편함 수령 — SCHEMA §7. 비동기 보상(레이드 정산·오프라인 강화 결과 등) 지급.
+ * 우편함 수령 — SCHEMA §7. 비동기 보상(레이드 정산·프로필 검토 결과 등) 지급.
  * payload: { diamond?, boxes?: { weapon?, armor?, accessory? } }.
  * 멱등: claimed_at is null 조건부. 다이아/보급상자 지급 + claimed_at 기록 = 단일 tx.
  */

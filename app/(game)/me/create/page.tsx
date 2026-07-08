@@ -1,4 +1,4 @@
-import { and, count, eq, isNotNull, sql } from 'drizzle-orm';
+import { and, count, eq, isNotNull } from 'drizzle-orm';
 
 import { getSessionUserId } from '@/lib/auth/session';
 import { getActiveServerId } from '@/lib/game/servers';
@@ -8,7 +8,7 @@ import { withTimeout } from '@/lib/db/with-timeout';
 import { catalogItems, userEquipment, type Slot } from '@/lib/db/schema/equipment';
 import { userProfiles } from '@/lib/db/schema/avatar';
 import { PROFILE_GENERATION_DIAMOND, profileGenPrice } from '@/lib/game/balance';
-import { getMyProfileQueueInfo } from '@/lib/game/profile/queue';
+import { getMyProfileQueueInfo, hasGeneratedCustomAvatar } from '@/lib/game/profile/queue';
 
 import { CreateProfileForm } from './CreateProfileForm';
 
@@ -42,17 +42,8 @@ export default async function CreateProfilePage() {
       .select({ n: count() })
       .from(userProfiles)
       .where(and(eq(userProfiles.userId, userId), eq(userProfiles.serverId, serverId))),
-    // 첫생성 할인 판정용 — 기본 아바타 제외 커스텀 아바타 수.
-    db
-      .select({ n: count() })
-      .from(userProfiles)
-      .where(
-        and(
-          eq(userProfiles.userId, userId),
-          eq(userProfiles.serverId, serverId),
-          sql`(${userProfiles.options} ->> 'isDefault') is distinct from 'true'`,
-        ),
-      ),
+    // 첫생성 할인 판정 — 성공 생성 이력(accepted/admin-grant), 삭제로 리셋 불가.
+    hasGeneratedCustomAvatar(userId, serverId),
     ]),
     3500,
     'me.create.page',
@@ -61,7 +52,7 @@ export default async function CreateProfilePage() {
   const equipped = _r?.[1] ?? [];
   const queueInfo = _r?.[2] ?? null;
   const profileCount = _r?.[3]?.[0]?.n ?? 0;
-  const hasCustom = (_r?.[4]?.[0]?.n ?? 0) > 0;
+  const hasCustom = _r?.[4] ?? false;
   const price = profileGenPrice(hasCustom);
 
   const bySlot = new Map(equipped.map((e) => [e.slot, e]));

@@ -8,6 +8,7 @@ import { withTimeout } from '@/lib/db/with-timeout';
 import { type Slot } from '@/lib/db/schema/equipment';
 import { CharacterStage } from '@/components/CharacterStage';
 import { GuildBadge } from '@/components/GuildBadge';
+import { hasGeneratedCustomAvatar } from '@/lib/game/profile/queue';
 import { combatPowerFromOwned } from '@/lib/game/equipment/combat-power';
 import { liberatedItemRanks } from '@/lib/game/codex/ranking';
 import { getCatalogMap, completeCatalog } from '@/lib/game/catalog';
@@ -58,7 +59,7 @@ export default async function ProfilePage() {
       transcendLevel: number;
       equippedSlot: string | null;
     }[];
-    avatars: { id: string; rotations: unknown; isDefault: boolean }[];
+    avatars: { id: string; rotations: unknown }[];
   };
   const _r = await withTimeout(
     Promise.all([
@@ -74,8 +75,7 @@ export default async function ProfilePage() {
               'transcendLevel', transcend_level, 'equippedSlot', equipped_slot))
             from user_equipment where user_id = ${userId}::uuid and server_id = ${serverId}), '[]'::json) as equipment,
           coalesce((select json_agg(json_build_object(
-              'id', id, 'rotations', rotations,
-              'isDefault', coalesce((options->>'isDefault')::boolean, false)) order by created_at desc)
+              'id', id, 'rotations', rotations) order by created_at desc)
             from user_profiles where user_id = ${userId}::uuid and server_id = ${serverId}), '[]'::json) as avatars
         from profiles p
           left join characters c on c.user_id = p.id and c.server_id = ${serverId}
@@ -96,8 +96,8 @@ export default async function ProfilePage() {
   const allEquipment = row?.equipment ?? [];
   const equippedRaw = allEquipment.filter((e) => e.equippedSlot != null);
   const myProfiles = row?.avatars ?? [];
-  // 첫생성 할인 배지 — 기본 아바타만 있고 성공한 커스텀 아바타가 아직 없으면 노출.
-  const hasCustomAvatar = myProfiles.some((p) => !p.isDefault);
+  // 첫생성 할인 배지 — 성공 생성 이력(accepted/admin-grant)이 없으면 노출. 삭제로 리셋 불가(서버 차감과 동일 기준).
+  const hasCustomAvatar = await hasGeneratedCustomAvatar(userId, serverId);
   const refN = row?.referral_count ?? 0;
   const referralStats = {
     totalReferrals: refN,

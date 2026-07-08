@@ -96,7 +96,7 @@ export async function startEnhance(userEquipmentId: string) {
 }
 
 /**
- * (B) 강화 시도 — 유저 조기 시도 허용(effective rate). 성공 시 서버 자동 재등록.
+ * (B) 강화 시도 — 유저 조기 시도 허용(effective rate). 결과 무관 서버 자동 재등록(실패/유지/하락도 슬롯 유지).
  * 토스트용 ranks before/after 동봉(상승/하락 모두 표시, 클라이언트가 디바운스/노출 판단).
  */
 export async function finalizeEnhance(jobId: string): Promise<

@@ -1,6 +1,6 @@
 import 'server-only';
 
-import { and, count, eq, inArray, lt } from 'drizzle-orm';
+import { and, count, eq, inArray, lt, or } from 'drizzle-orm';
 
 import { db } from '@/lib/db/client';
 import { profileGenerationJobs } from '@/lib/db/schema/avatar';
@@ -27,6 +27,28 @@ const ACTIVE = ['queued', 'starting', 'downloading', 'ai_reviewing'] as const;
  *  - 대기(queued): position=나보다 앞선 queued 수+1, eta=시작 대기(웨이브)+내 생성.
  * 슬롯 회전(SLOT_MINUTES)·동시성(CONCURRENCY) 기반 근사(prod 실측 상수).
  */
+/**
+ * 이 유저가 이 서버에서 **성공한 커스텀 아바타 생성 이력**이 있는지 — 첫생성 50% 할인 판정용.
+ * 성공 신호 = jobs.status='accepted'(정상 검토 통과) OR adminDecision='grant'(어드민 지급) —
+ * 둘 다 잡에 append-only라 아바타를 삭제해도 남는다(현재 보유수 기반 판정의 '삭제→재할인' 우회 차단).
+ */
+export async function hasGeneratedCustomAvatar(userId: string, serverId: number): Promise<boolean> {
+  const [row] = await db
+    .select({ n: count() })
+    .from(profileGenerationJobs)
+    .where(
+      and(
+        eq(profileGenerationJobs.userId, userId),
+        eq(profileGenerationJobs.serverId, serverId),
+        or(
+          eq(profileGenerationJobs.status, 'accepted'),
+          eq(profileGenerationJobs.adminDecision, 'grant'),
+        ),
+      ),
+    );
+  return (row?.n ?? 0) > 0;
+}
+
 export async function getMyProfileQueueInfo(
   userId: string,
   serverId: number,

@@ -31,7 +31,7 @@ export async function GET(req: Request) {
       }
     }
     const ok = results.every((r) => !('error' in r));
-    await beatCron('conquest-run', `ok=${ok}`);
+    if (ok) await beatCron('conquest-run'); // 성공일 때만 — '실행됐으나 실패'를 dead-man이 감지하게
     return Response.json({ ok, battleDay, results, kind: 'conquest-run' }, { status: ok ? 200 : 500 });
   } catch (e) {
     console.error('[conquest-run]', e);

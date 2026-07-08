@@ -43,7 +43,7 @@ const POSE_POOL = [
 ] as const;
 
 const REVIEW_DESCRIPTION =
-  'A victorious champion character holding a golden trophy cup in a celebration pose. Check every rotation for anatomical part-count defects (extra or missing arms/legs/heads).';
+  'A victorious champion character holding a golden trophy cup in a celebration pose. Check the front (south) view for anatomical part-count defects (extra or missing arms/legs/heads).';
 
 // 정면(south) 1방향만 — 8방향 미사용(아바타는 앞모습 하나로 통일).
 const DIRECTIONS = ['south'] as const;

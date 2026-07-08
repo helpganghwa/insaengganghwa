@@ -27,7 +27,7 @@ export async function GET(req: Request) {
       }
     }
     const ok = results.every((r) => !('error' in r));
-    await beatCron('melee-run', `ok=${ok}`);
+    if (ok) await beatCron('melee-run'); // 성공(전 서버 정상)일 때만 — '실행됐으나 실패'를 dead-man이 감지하게
     return Response.json({ ok, results, kind: 'melee-run' }, { status: ok ? 200 : 500 });
   } catch (e) {
     console.error('[melee-run]', e);

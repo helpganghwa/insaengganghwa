@@ -46,6 +46,7 @@ export async function GET(req: Request) {
     completed_at: string | null;
   }>;
   if (!state || state.completed_at) {
+    await beatCron('push-daily-supply', 'already_sent/no-work'); // 정상 no-op — dead-man 오알림 방지
     return Response.json({ ok: true, skipped: true, reason: 'already_sent_today', kind: 'push-daily-supply' });
   }
   const kstDay = state.kst_day;
@@ -65,6 +66,8 @@ export async function GET(req: Request) {
       update daily_supply_broadcasts set completed_at = now(), sent_at = coalesce(sent_at, now())
       where kst_day = ${kstDay}
     `);
+    // 구독+토글 유저 0명(출시 초기)이라도 정상 완료 — beat를 찍어 dead-man 오알림(영구 stale) 방지.
+    await beatCron('push-daily-supply', 'recipients=0');
     return Response.json({ ok: true, recipients: state.recipients, resumed: !!state.cursor_user_id, kind: 'push-daily-supply' });
   }
 

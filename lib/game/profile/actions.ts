@@ -15,7 +15,7 @@
  */
 import 'server-only';
 
-import { and, count, eq, isNotNull, sql } from 'drizzle-orm';
+import { and, count, eq, isNotNull } from 'drizzle-orm';
 import { z } from 'zod';
 
 import { db } from '@/lib/db/client';
@@ -27,6 +27,7 @@ import { getSessionUserId } from '@/lib/auth/session';
 import { getActiveServerId } from '@/lib/game/servers';
 
 import { pickRandomHairLength, pickRandomPose, pickRandomRace } from './compose';
+import { hasGeneratedCustomAvatar } from './queue';
 import { CreateProfileJobError } from './errors';
 
 // 유저 입력은 gender만 (2026-05-28). hair color/style·pose 폐기, expression·race는 서버 random.
@@ -94,19 +95,10 @@ export async function createProfileJob(
   // 여기서는 빈 값으로 enqueue만 — v3가 descriptionPrompt를 덮어씀.
   const description = '';
 
-  // 첫생성 할인(서버 권위) — 성공(수락)한 커스텀 아바타(기본 아바타 제외)가 0개면 50% 할인가.
-  // 거절·환불된 시도는 user_profiles에 안 남으므로 할인 미소진(다음 시도도 할인가).
-  const [cc] = await db
-    .select({ n: count() })
-    .from(userProfiles)
-    .where(
-      and(
-        eq(userProfiles.userId, userId),
-        eq(userProfiles.serverId, serverId),
-        sql`(${userProfiles.options} ->> 'isDefault') is distinct from 'true'`,
-      ),
-    );
-  const cost = profileGenPrice((cc?.n ?? 0) > 0);
+  // 첫생성 할인(서버 권위) — 성공한 커스텀 아바타 생성 **이력**(accepted/admin-grant jobs)이
+  // 없을 때만 50% 할인가. 이력 기반이라 아바타를 삭제해도 리셋 안 됨(할인 무한재취득 우회 차단).
+  // 거절·실패 시도는 accepted가 아니라 할인 미소진(다음 시도도 할인가).
+  const cost = profileGenPrice(await hasGeneratedCustomAvatar(userId, serverId));
 
   return db.transaction(async (tx) => {
     // 3. 다이아 escrow — 조건부 차감(서버별 지갑). 부족 시 미차감.

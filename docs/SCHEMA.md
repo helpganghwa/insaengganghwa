@@ -233,7 +233,7 @@ T+1개) 도달 시 **자동으로** `transcend_level +1`(다중 가능) + `max_t
 | `created_at` | timestamptz default now() | |
 
 - 인덱스 `(user_id, claimed_at)` — 미수령 조회
-- 적재: 오프라인 강화 cron 정산 · 레이드 6h 정산 · 비동기 보상 · 운영 공지(GDD §3.10)
+- 적재: 레이드 6h 정산 · 프로필 검토 결과 · 비동기 보상 · 운영 공지(GDD §3.10)
 - 우편 만료 정리는 cron (`/api/cron/mail-expire`)이 매일 KST 03시(UTC 18시) `claimed_at IS NULL AND expires_at < now()` 행 삭제. claim 경로는 이미 `gt(expiresAt, now())` lazy 만료 — cron은 누적 정리용.
 
 ---

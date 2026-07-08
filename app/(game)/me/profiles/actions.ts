@@ -46,7 +46,7 @@ export async function setActiveProfile(profileId: string): Promise<ActionState> 
   const __b = await actionBlock();
   if (__b) return { status: 'error', message: __b === 'BANNED' ? '이용이 제한된 계정입니다.' : '서버 점검 중입니다.' };
 
-  // 아바타는 서버별 자산(2000💎도 그 서버 지갑에서 차감) — 다른 서버 아바타를
+  // 아바타는 서버별 자산(생성비도 그 서버 지갑에서 차감) — 다른 서버 아바타를
   // 활성 서버 캐릭터 대표로 다는 교차 설정 차단.
   const serverId = await getActiveServerId();
   if (!(await ownedProfileId(userId, profileId, serverId)))

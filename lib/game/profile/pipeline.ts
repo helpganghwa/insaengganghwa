@@ -143,14 +143,32 @@ export async function pollAndProcessDownloading(limit = 5): Promise<{
       continue;
     }
 
+    // Timeout 가드 — 반드시 fetch/분기보다 **앞**. charRes가 지속 5xx/429거나 throw(네트워크)여도
+    // 아래에 도달 못해 escrow(다이아)가 영구 동결되고 활성 UNIQUE로 재생성까지 막히던 회귀 차단.
+    // rotation_urls는 떴으나 실파일이 영원히 404인 부분 실패까지 포함해 20분 초과 잡을 환불·정리.
+    const ageMin = (Date.now() - new Date(job.createdAt ?? 0).getTime()) / 60_000;
+    if (ageMin > PROFILE_GEN_TIMEOUT_MIN) {
+      await markFailedAndRefund(job.id, job.userId, `Pixellab timeout/stall ${ageMin.toFixed(0)}min`);
+      failed += 1;
+      continue;
+    }
+
     // character endpoint로 polling — rotation_urls 완성도가 완료 신호.
     // (background-jobs는 만료/404 가능, v2 character 응답엔 status 필드 없음 —
     //  rotation_urls의 string 갯수 8이면 completed, 미만이면 pending.)
     // ⚠️ 생성에 쓴 키로만 조회 가능 → 잡 options의 keyIdx로 키 선택(레거시=key1).
     const jobKey = pixellabKeyByIdx(keyIdxFromOptions(job.options));
-    const charRes = await fetch(`${PIXELLAB_BASE}/characters/${job.characterId}`, {
-      headers: { authorization: `Bearer ${jobKey}` },
-    });
+    let charRes: Response;
+    try {
+      charRes = await fetch(`${PIXELLAB_BASE}/characters/${job.characterId}`, {
+        headers: { authorization: `Bearer ${jobKey}` },
+      });
+    } catch {
+      // 네트워크/DNS/reset — 이 잡만 다음 tick 재시도(위 타임아웃 가드가 20분 후 정리).
+      // throw가 배치 전체를 중단시켜 선두 잡이 뒤 잡을 head-of-line 블록하던 것도 방지.
+      stillProcessing += 1;
+      continue;
+    }
     if (!charRes.ok) {
       if (charRes.status === 404) {
         await markFailedAndRefund(job.id, job.userId, `Pixellab character not found (${charRes.status})`);
@@ -161,15 +179,6 @@ export async function pollAndProcessDownloading(limit = 5): Promise<{
       continue;
     }
     const char = (await charRes.json()) as PixellabCharacterDetail;
-
-    // Timeout 가드 (rotation 완성 여부와 무관 — 맨 앞). rotation_urls는 떴지만 실제 파일이
-    // 영원히 404인 부분 실패(검증됨)까지 포함해 무한 재시도·큐 영구 점유를 차단.
-    const ageMin = (Date.now() - new Date(job.createdAt ?? 0).getTime()) / 60_000;
-    if (ageMin > PROFILE_GEN_TIMEOUT_MIN) {
-      await markFailedAndRefund(job.id, job.userId, `Pixellab timeout/stall ${ageMin.toFixed(0)}min`);
-      failed += 1;
-      continue;
-    }
 
     if (!char.rotation_urls) {
       stillProcessing += 1;

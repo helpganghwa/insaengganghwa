@@ -100,7 +100,7 @@ STYLE (EMPHASIZE STRONGLY): MODERN 2020s Japanese TV-anime character design in h
 ## 6. 도입 전 필요 작업
 
 - **후보 선택 게이트**: run-to-run 편차가 커서 N장 생성 → 자동 검수(픽셀 격자 균일도·비율) 또는 유저 선택 구조가 필요하다.
-- **8방향 회전**: v2는 south 1프레임만 산출한다. 회전이 필요하면 v2 결과를 `create-character-v3`의 `reference_image`(south 참조 → 8방향 회전 모드)로 넘기는 하이브리드 경로를 검토한다.
+- **회전 없음(확정)**: 게임은 아바타를 **앞모습(south) 1프레임만** 사용한다 — 8방향 회전은 도입하지 않는다(생성·AI검수·트로피·표시 전 경로가 south 단일 프레임 기준).
 
 ## 7. 비용 (실측)
 

@@ -22,11 +22,13 @@ export async function GET(req: Request) {
   if (!isCronAuthorized(req)) return new Response('forbidden', { status: 403 });
 
   const t0 = Date.now();
+  let ok = true; // 두 단계 모두 예외 없이 끝나야 성공 — dead-man이 '실행됐으나 실패'를 감지하게.
   let enqueueResult: Awaited<ReturnType<typeof drainQueue>> | { error: string };
   try {
     enqueueResult = await drainQueue();
   } catch (e) {
     enqueueResult = { error: (e as Error).message };
+    ok = false;
   }
 
   let pollResult: Awaited<ReturnType<typeof pollAndProcessDownloading>> | { error: string };
@@ -34,9 +36,10 @@ export async function GET(req: Request) {
     pollResult = await pollAndProcessDownloading(5);
   } catch (e) {
     pollResult = { error: (e as Error).message };
+    ok = false;
   }
 
-  await beatCron('profile-poll');
+  if (ok) await beatCron('profile-poll');
   // enqueueResult.jobId 등 bigint 포함 → Response.json(JSON.stringify)이 직렬화 못 함.
   // bigint→string replacer로 안전 직렬화(크론 응답 500 방지).
   return new Response(

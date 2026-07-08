@@ -318,7 +318,14 @@ export function EnhanceSlotCard({
     setAttemptingMsg(lore.attempting);
     startTransition(async () => {
       // 결과 트랜잭션 커밋 즉시 반환(후처리는 서버 after). 이 await만 pending.
-      const r = await finalizeEnhance(activeJob.jobId);
+      // 전송 실패(풀러 타임아웃·오프라인 등)로 reject되면 아래 분기에 도달 못해 attempting이
+      // 고착된다 — .catch로 잡아 낙관 상태를 되돌리고 재시도 안내(doCancel과 동일 방어).
+      const r = await finalizeEnhance(activeJob.jobId).catch(() => null);
+      if (!r) {
+        setAttempting(false);
+        showError('전송에 실패했어요. 연결을 확인하고 다시 시도해 주세요.');
+        return;
+      }
       if (r.status === 'error') {
         setAttempting(false);
         showError(r.message);
@@ -411,7 +418,15 @@ export function EnhanceSlotCard({
     const debit = BigInt(instantCost);
     adjustDiamond(-debit);
     startTransition(async () => {
-      const r = await reduceTimeWithGems(activeJob.jobId, instantCost);
+      // 전송 실패(reject)로 아래 분기에 도달 못하면 낙관 차감이 안 되돌려져 헤더 다이아가
+      // 실제보다 낮게 굳는다 — .catch로 잡아 롤백(에러 반환 케이스와 동일).
+      const r = await reduceTimeWithGems(activeJob.jobId, instantCost).catch(() => null);
+      if (!r) {
+        setOptimisticDone(false);
+        adjustDiamond(debit); // 전송 실패 롤백
+        showError('전송에 실패했어요. 연결을 확인하고 다시 시도해 주세요.');
+        return;
+      }
       if (r.status === 'error') {
         setOptimisticDone(false);
         adjustDiamond(debit); // 롤백
