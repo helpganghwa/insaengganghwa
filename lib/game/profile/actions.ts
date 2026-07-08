@@ -15,14 +15,14 @@
  */
 import 'server-only';
 
-import { and, count, eq, isNotNull } from 'drizzle-orm';
+import { and, count, eq, isNotNull, sql } from 'drizzle-orm';
 import { z } from 'zod';
 
 import { db } from '@/lib/db/client';
 import { walletTrySpend } from '@/lib/game/wallet';
 import { profileGenerationJobs, userProfiles } from '@/lib/db/schema/avatar';
 import { catalogItems, userEquipment } from '@/lib/db/schema/equipment';
-import { PROFILE_GENERATION_DIAMOND, PROFILE_MAX } from '@/lib/game/balance';
+import { PROFILE_MAX, profileGenPrice } from '@/lib/game/balance';
 import { getSessionUserId } from '@/lib/auth/session';
 import { getActiveServerId } from '@/lib/game/servers';
 
@@ -94,9 +94,23 @@ export async function createProfileJob(
   // 여기서는 빈 값으로 enqueue만 — v3가 descriptionPrompt를 덮어씀.
   const description = '';
 
+  // 첫생성 할인(서버 권위) — 성공(수락)한 커스텀 아바타(기본 아바타 제외)가 0개면 50% 할인가.
+  // 거절·환불된 시도는 user_profiles에 안 남으므로 할인 미소진(다음 시도도 할인가).
+  const [cc] = await db
+    .select({ n: count() })
+    .from(userProfiles)
+    .where(
+      and(
+        eq(userProfiles.userId, userId),
+        eq(userProfiles.serverId, serverId),
+        sql`(${userProfiles.options} ->> 'isDefault') is distinct from 'true'`,
+      ),
+    );
+  const cost = profileGenPrice((cc?.n ?? 0) > 0);
+
   return db.transaction(async (tx) => {
     // 3. 다이아 escrow — 조건부 차감(서버별 지갑). 부족 시 미차감.
-    const paid = await walletTrySpend(tx, userId, serverId, PROFILE_GENERATION_DIAMOND);
+    const paid = await walletTrySpend(tx, userId, serverId, cost);
     if (!paid) {
       throw new CreateProfileJobError('INSUFFICIENT_DIAMOND');
     }
@@ -112,7 +126,7 @@ export async function createProfileJob(
           descriptionPrompt: description,
           options: opts,
           equipmentSnapshot,
-          diamondEscrow: BigInt(PROFILE_GENERATION_DIAMOND),
+          diamondEscrow: BigInt(cost),
           status: 'queued',
         })
         .returning({ id: profileGenerationJobs.id });

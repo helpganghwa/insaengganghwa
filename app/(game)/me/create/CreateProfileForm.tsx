@@ -37,12 +37,16 @@ const GENDERS: { value: 'female' | 'male'; label: string }[] = [
 export function CreateProfileForm({
   diamond,
   price,
+  basePrice,
+  firstGenDiscount,
   profileCount,
   equipped,
   queue,
 }: {
   diamond: string;
   price: number;
+  basePrice: number;
+  firstGenDiscount: boolean;
   profileCount: number;
   equipped: EquippedSlot[];
   queue: ProfileQueueInfo | null;
@@ -235,8 +239,22 @@ export function CreateProfileForm({
 
       {/* 가격·잔액 */}
       <div className="flex items-center justify-between rounded-xl bg-zinc-100 px-4 py-3 text-sm dark:bg-zinc-900">
-        <span className="text-zinc-500">생성 비용</span>
-        <span className="font-mono font-semibold tabular-nums">💎 {price.toLocaleString('ko-KR')}</span>
+        <span className="text-zinc-500">
+          생성 비용
+          {firstGenDiscount ? (
+            <span className="ml-2 rounded-full bg-rose-100 px-1.5 py-0.5 text-[10px] font-bold text-rose-600 dark:bg-rose-950/50 dark:text-rose-300">
+              첫 아바타 50% 할인
+            </span>
+          ) : null}
+        </span>
+        <span className="font-mono font-semibold tabular-nums">
+          {firstGenDiscount ? (
+            <span className="mr-1 text-xs font-normal text-zinc-400 line-through">
+              💎 {basePrice.toLocaleString('ko-KR')}
+            </span>
+          ) : null}
+          💎 {price.toLocaleString('ko-KR')}
+        </span>
       </div>
       <div className="flex items-center justify-between px-1 text-xs text-zinc-500">
         <span>보유 다이아</span>

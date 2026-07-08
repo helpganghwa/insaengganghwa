@@ -385,9 +385,19 @@ export const NICKNAME_CHANGE_COST_DIAMOND = 300;
 
 /**
  * §6.6 캐릭터 프로필 생성 — Pixellab v2 Pro + Claude vision 자동 검토 비용 포함.
- * 2000 다이아(1다=1분 환산 ≈ 1.4일치, 프리미엄 자기표현). AI 검토 거절 시 100% 환불(PROFILE §5.1·§6).
+ * 정상 1500 다이아(≈1일치 시간). AI 검토 거절 시 100% 환불(PROFILE §5.1·§6).
+ * 첫 아바타(아직 성공한 커스텀 아바타가 0개)는 50% 할인(750) — 신규를 플래그십 기능에 훅킹.
+ * 거절·환불은 성공이 아니라 할인 미소진(다음 시도도 할인가).
  */
-export const PROFILE_GENERATION_DIAMOND = 2_000;
+export const PROFILE_GENERATION_DIAMOND = 1_500;
+
+/** 첫 아바타 50% 할인가(첫 성공 전까지 적용). */
+export const PROFILE_FIRST_GEN_DIAMOND = 750;
+
+/** 생성 가격 — 성공한 커스텀 아바타 보유 여부로 첫생성 할인 여부 결정. 서버 권위. */
+export function profileGenPrice(hasCustomAvatar: boolean): number {
+  return hasCustomAvatar ? PROFILE_GENERATION_DIAMOND : PROFILE_FIRST_GEN_DIAMOND;
+}
 
 /** 유저당 보유 프로필(아바타) 최대 개수 — 초과 시 생성 차단(서버·클라 공용 검사). */
 export const PROFILE_MAX = 100;
