@@ -14,6 +14,7 @@
 | 포트원 결제 env 4종 동시 입력 | `PORTONE_STORE_ID`·`CHANNEL_KEY`·`API_SECRET`·`WEBHOOK_SECRET` — 부분 설정 시 지급 검증 붕괴 |
 | 포트원 콘솔 웹훅 URL | `https://ganghwa.app/api/webhooks/portone` + 운영 시크릿 |
 | `CRON_SECRET` 프로덕션 설정 | 미설정 시 payment-recon 등 cron fail-closed |
+| 풀러 Pool Size 상향 (15 → 30~40) | Supabase 대시보드 → Database → Connection Pooling, **prod·staging 각각**. 부하테스트 무릎 C≈20~30 실측(2026-07-08) — 15면 피크 버스트/​cron :00 겹침 시 큐잉 지연(에러는 아님). `max_connections=60` 내 20+ 여유 남기고 설정 |
 | 통신판매업 신고 | 완료 후 `lib/legal/content.ts` `mailOrderNo` 기입 |
 | 결제 E2E 1건 | 본인인증 → 주문 → 지급 → 환불 회수까지 테스트 채널로 검증 |
 | 약관/개인정보 시행일 | 오픈일 기준 갱신 필요 여부 확인(`lib/legal/content.ts` LEGAL_META) |
