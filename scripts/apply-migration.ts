@@ -2,10 +2,11 @@
  * 단일 SQL 파일을 운영 Supabase에 트랜잭션 안에서 적용.
  *
  * 사용:
- *   bun run scripts/apply-migration.ts lib/db/migrations/0008_push.sql
+ *   bun run scripts/apply-migration.ts lib/db/manual/0008_push.sql                    # DIRECT_URL(기본)
+ *   bun run scripts/apply-migration.ts lib/db/manual/0008_push.sql PROD_DATABASE_URL  # 대상 env 지정
  *
  * 환경:
- *   DIRECT_URL = Supabase Session pooler(:5432) — Drizzle migrate와 동일 경로
+ *   DIRECT_URL = Supabase Session pooler(:5432) — Drizzle migrate와 동일 경로. 2번째 인자로 다른 env 지정 가능.
  *
  * 안전성:
  *  - 단일 BEGIN/COMMIT으로 wrap → 중간 실패 시 자동 ROLLBACK
@@ -33,11 +34,13 @@ if (!existsSync(path)) {
   process.exit(1);
 }
 
-const url = process.env.DIRECT_URL;
+const urlEnv = process.argv[3] ?? 'DIRECT_URL';
+const url = process.env[urlEnv];
 if (!url) {
-  console.error('DIRECT_URL 미설정 — .env.local 확인 (Supabase session pooler:5432)');
+  console.error(`${urlEnv} 미설정 — .env.local 확인`);
   process.exit(1);
 }
+if (urlEnv !== 'DIRECT_URL') console.log(`[apply] 대상 = ${urlEnv}`);
 
 const body = readFileSync(path, 'utf8');
 console.log(`[apply] ${path} (${body.length} bytes)`);
