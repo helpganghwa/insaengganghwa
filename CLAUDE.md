@@ -217,7 +217,7 @@ bun run scripts/seed-catalog.ts
 - **Server Components 기본**, Client Components는 `"use client"` 명시
 - Server Actions로 폼 처리 (가급적 Route Handler보다 우선)
 - `Image` 컴포넌트는 픽셀아트엔 부적합 → 자체 픽셀 렌더러 (`<PixelSprite>`) 사용
-- Cache Components (`use cache`) 명시적 사용 — 자동 캐시 의존 X
+- 불변/준불변 데이터는 명시적 캐시로 요청 경로 DB 제거 — **현재 구현 = `unstable_cache`**(§11.5). 자동 캐시 의존 X. ⚠ Cache Components(`use cache`)는 **미도입**(`next.config`에 `cacheComponents` 플래그 없음 → 지시어 써도 무효)
 - **고정 390 스케일**: 출력 메타는 정확히 `<meta name="viewport" content="width=390">` (initial-scale 없음). `app/layout.tsx`의 `export const viewport = { themeColor, width: 390, initialScale: undefined }`로 지정. ⚠ **`initialScale: undefined` 절대 제거 금지** — Next는 viewport export를 기본값 `{width:'device-width',initialScale:1}`과 스프레드 병합 후 non-null 필드만 직렬화하므로, `{width:390}`만 두면 기본값 `initialScale:1`이 살아남아 출력이 `width=390, initial-scale=1`이 되고 **375서 15px 가로 스크롤 재발**(검증됨). `initialScale: undefined`가 기본값 1을 덮어써 출력에서 제거됨 — 이것이 metadata API로 순수 width=390을 내는 유일한 방법(리터럴 `<meta>`는 Next 자동 주입분과 **중복**되어 불가, 검증됨). `width=390`만 있으면 브라우저가 initial-scale=기기폭/390 자동 계산해 390 레이아웃을 화면에 꽉 맞춤(작은 폰 축소·큰 폰 확대, **모든 화면 동일 비율·좌우 여백0·가로 스크롤0**). 앱 셸 `w-full max-w-[390px] mx-auto`(safe-area). 모든 화면을 390 컬럼으로 구현. ⚠ `initial-scale`/`maximum-scale`/`user-scalable=no` 중 하나라도 들어가면 자동 핏 무력화 — 스케일 잠금 금지(핀치줌 허용 감수). ⚠ **html/body에 `overflow-x`(overflow-x-hidden 등) 절대 금지** — overflow가 한 축만 걸리면 타축이 visible→auto로 계산돼 body가 스크롤 컨테이너가 되고 AppHeader(`sticky top-0`)·BottomNav(`sticky bottom-0`) 고정이 풀림(검증됨). width=390라 가로 오버플로 자체가 없어 가드 불필요; 특정 요소가 390 초과 시 그 요소를 수정. WIREFRAMES §0 참조
 
 ### 5.3 컴포넌트
@@ -368,7 +368,8 @@ master/master-dev로 DB도 나눌 수 있는가 — **가능**. 두 방식:
 - 한 요청 내 의존 없는 쿼리는 **`Promise.all` 병렬**. N+1 금지. 게임 액션은 **단일 트랜잭션 1왕복** 지향(자원 차감+상태+로그를 한 tx).
 
 ### 11.5 불변 데이터 캐시
-- 카탈로그·BALANCE 상수·확률공시 등 불변/준불변은 **`use cache`(Cache Components)**로 요청 경로에서 DB 제거.
+- 카탈로그·공지·확률공시·통계 등 불변/준불변은 **명시적 캐시**로 요청 경로에서 DB 제거. **현재 구현 = 레거시 `unstable_cache`** (6곳: `lib/game/catalog.ts`·`announcement.ts`·`world/event.ts`·`stats/queries.ts`, `app/(game)/me/actions.ts`, `app/u/[nickname]/page.tsx`). BALANCE 상수·확률공시 payload는 순수 TS 상수라 애초에 DB왕복 0(캐시 불필요).
+- ⚠ **Cache Components(`use cache`)는 미도입** — `next.config.ts`에 `cacheComponents: true`가 없어 지시어를 써도 무효다(Next 16서 `unstable_cache`는 deprecated 경로지만 의도=요청당 DB왕복 제거는 충족). **도입 로드맵**: 플래그 활성 후 위 6곳을 `use cache`+`cacheTag`로 이관.
 - **게임 상태(강화/보석/초월/보급/레이드)는 캐시 금지** — 서버 권위·실시간·트랜잭션(§3·§6).
 
 ### 11.6 측정
