@@ -18,6 +18,8 @@
     "db:push": "echo '⚠ drizzle-kit push 금지 — manual SQL과 충돌해 인덱스/제약을 drop할 수 있음. lib/db/manual SQL 사용(db:apply / db-rebuild)' && exit 1",
     "db:studio": "drizzle-kit studio",
     "db:apply": "bun run scripts/apply-migration.ts",
+    "db:status": "bun run scripts/migration-status.ts",
+    "db:ledger-backfill": "bun run scripts/migration-backfill.ts",
     "test": "vitest run",
     "test:watch": "vitest",
     "test:coverage": "vitest run --coverage",

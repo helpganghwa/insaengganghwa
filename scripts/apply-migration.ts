@@ -13,10 +13,12 @@
  *  - 적용 후 잠깐 끊고 종료 (커넥션 풀 누수 방지)
  */
 import { readFileSync, existsSync } from 'node:fs';
-import { resolve } from 'node:path';
+import { basename, resolve } from 'node:path';
 
 import { config } from 'dotenv';
 import postgres from 'postgres';
+
+import { checksumOf, recordMigration } from './_ledger';
 
 config({ path: '.env.local' });
 
@@ -47,6 +49,14 @@ try {
     await tx.unsafe(body);
   });
   console.log('[apply] OK — COMMIT 완료');
+
+  // 마이그레이션 원장 기록 — 커밋과 분리(원장 테이블 부재 시 마이그레이션 자체를 롤백시키지 않도록).
+  try {
+    await recordMigration(sql, basename(path), checksumOf(body));
+    console.log('[apply] 원장 기록(schema_migrations)');
+  } catch (e) {
+    console.warn('[apply] ⚠ 원장 미기록 — schema_migrations 없음? 0112를 먼저 적용하세요:', (e as Error).message);
+  }
 } catch (e) {
   console.error('[apply] FAIL — 자동 ROLLBACK');
   console.error(e);

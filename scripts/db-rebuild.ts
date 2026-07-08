@@ -14,6 +14,8 @@ import { join } from 'node:path';
 import { config } from 'dotenv';
 import postgres from 'postgres';
 
+import { listManualFiles, recordMigration } from './_ledger';
+
 config({ path: '.env.local' });
 config({ path: '.env', override: false });
 
@@ -113,6 +115,12 @@ async function main() {
     }
     pending = failed;
   }
+
+  // 원장 백필 — 방금 적용한 manual 파일 전체를 schema_migrations에 기록(0112가 패스 중 생성됨).
+  console.log('\n[2.5] 마이그레이션 원장 백필(schema_migrations)');
+  const manual = listManualFiles(MANUAL_DIR);
+  for (const f of manual) await recordMigration(sql, f.filename, f.checksum);
+  console.log(`  ${manual.length}개 기록`);
 
   console.log('\n[3/3] seed-catalog');
   await sql.end();

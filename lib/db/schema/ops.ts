@@ -91,6 +91,17 @@ export const cronHeartbeats = pgTable('cron_heartbeats', {
   staleAlertedAt: timestamp('stale_alerted_at', { withTimezone: true }),
 });
 
+/**
+ * manual SQL 마이그레이션 원장 — "이 DB에 어떤 manual 파일이 적용됐는가"를 쿼리 가능하게.
+ * apply-migration/db-rebuild가 적용과 같은 tx에서 filename+checksum 기록. checksum으로 적용 후
+ * 파일 편집(drift) 감지. drizzle-kit migrate/push는 폐기라(진실원천=lib/db/manual) 이 원장이 유일한 상태 추적.
+ */
+export const schemaMigrations = pgTable('schema_migrations', {
+  filename: text('filename').primaryKey(),
+  checksum: text('checksum'), // sha256(파일 본문). 레거시 백필분은 null 허용.
+  appliedAt: timestamp('applied_at', { withTimezone: true }).notNull().defaultNow(),
+});
+
 /** §10.4 admin_actions — 운영 감사 로그. */
 export const adminActions = pgTable('admin_actions', {
   id: bigserial('id', { mode: 'bigint' }).primaryKey(),
