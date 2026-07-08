@@ -115,6 +115,15 @@ bun run scripts/record-probability-snapshot.ts --note="정식 오픈" --confirm
 | 확률공시 `/probability` | 현행 카탈로그 기준 표기 |
 | 어드민 허브 | 잔존 배지 0 (신고·검수·문의 wipe됨) |
 
+## 7.5 외부 모니터링 배선 (오픈 전/직후)
+
+내부 dead-man(warm 워치독)은 crons 정지를 능동 알림하지만 **warm 자체가 죽으면**(CRON_SECRET 사고·배포 파손 등) 아무도 안 알린다. 외부 uptime 모니터로 이 사각을 마감한다:
+
+- **엔드포인트**: `https://ganghwa.app/api/health/deep` — DB 도달성 + cron 사망(한 번 돈 뒤 정지)을 함께 검사(앱이 서빙 → warm이 죽어도 warm의 stale을 보고). `200`=정상 / `503`=DB 다운 또는 cron 사망 / 도달불가=앱 다운.
+- **모니터 서비스**: UptimeRobot·BetterStack·Cronitor 등(무료 티어 충분). 이 URL을 **1~5분 간격 HTTP GET**, **비200 또는 도달불가 시 알림**(이메일/슬랙/SMS)으로 설정.
+- 효과: 앱 다운·DB 다운·총체적 cron 정지(warm 사망 포함)를 외부에서 독립 감지 → 내부 알림과 이중화.
+- ⚠ `/api/health`(dpl만 반환, 클라가 1분 폴링하는 배포감지용)는 모니터에 쓰지 말 것 — 반드시 `/api/health/deep`.
+
 ## 8. 사후 (심사 종료 후)
 
 - 심사 계정 물리 제거: `lib/auth/test-accounts.ts` 삭제 + `signInWithCredentials`/`ensureTestUser`/
