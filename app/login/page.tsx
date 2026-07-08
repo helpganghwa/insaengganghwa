@@ -8,6 +8,7 @@ import { signInWithKakao, signInWithCredentials } from '@/lib/auth/actions';
 import { getSessionUserId } from '@/lib/auth/session';
 import { isTestLoginEnabled, isCbtPaidHidden } from '@/lib/auth/test-accounts';
 import { listServersPublic, latestOpenServerId } from '@/lib/game/server-select';
+import { getEnhanceLive } from '@/lib/game/stats/queries';
 import { ServerPicker } from './ServerPicker';
 
 /**
@@ -47,6 +48,8 @@ export default async function LoginPage({
   const showServers = servers.length >= 1;
   const defaultSrv = showServers ? await defaultServerId(servers) : 1;
   const recommendedId = showServers ? await latestOpenServerId() : 1;
+  // 라이브 카운트(소셜 증명) — getEnhanceLive는 캐시(90s)+타임아웃 가드라 로그인에 붙여도 안전(실패 시 0).
+  const live = await getEnhanceLive();
   // 심사용 ID/PW 로그인 — ?test=true + env 둘 다 켜져야 노출(일반 사용자에겐 이메일 폼 숨김).
   // 원클릭 버튼(비번 우회)은 폐지 — 링크가 유출돼도 아이디/비밀번호를 알아야만 로그인 가능.
   const reviewLogin = test === 'true' && isTestLoginEnabled();
@@ -54,15 +57,24 @@ export default async function LoginPage({
   return (
     <div className="flex min-h-dvh flex-col bg-zinc-50 dark:bg-black">
       <main className="mx-auto flex w-full max-w-[360px] flex-1 flex-col items-center justify-center gap-8 px-6 text-center">
-        <div>
-          {/* eslint-disable-next-line @next/next/no-img-element */}
-          <img
-            src="/icons/icon-192.png"
-            alt="인생강화"
-            className="mx-auto h-20 w-20 rounded-2xl shadow-sm"
-            style={{ imageRendering: 'pixelated' }}
+        <div className="w-full">
+          {/* 히어로 아트 — 타이틀'인생강화'·부제'강화는 인생이다' 포함(생성 배경), /public/login-hero.png (16:9 권장).
+              배경이미지 방식이라 파일이 없으면 다크 플레이스홀더가 보인다(깨진 이미지 아이콘 방지). */}
+          <div
+            role="img"
+            aria-label="인생강화 — 강화는 인생이다"
+            className="aspect-video w-full rounded-2xl bg-zinc-900 bg-cover bg-center shadow-sm ring-1 ring-black/5 dark:ring-white/10"
+            style={{ backgroundImage: 'url(/login-hero.png)' }}
           />
-          <h1 className="mt-4 text-3xl font-semibold tracking-tight">인생강화</h1>
+          {live.totalUsers > 0 ? (
+            <p className="mt-3 text-[13px] text-zinc-500 dark:text-zinc-400">
+              지금{' '}
+              <span className="font-bold text-amber-600 dark:text-amber-400">
+                {live.totalUsers.toLocaleString('ko-KR')}명
+              </span>
+              이 인생강화중
+            </p>
+          ) : null}
         </div>
 
         {showServers && <ServerPicker servers={servers} defaultSrv={defaultSrv} recommendedId={recommendedId} />}
