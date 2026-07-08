@@ -316,7 +316,10 @@ async function finalize(
   // 우승자에게 아바타로 지급하지 않음(2026-06-04 피드백 — 우편/앱알림 폐기). 전투 재생은 원본 아바타.
   const finale = b.finale;
   if (finale) {
-    finale.trophyAvatar = chosen;
+    // 스토리지 경로는 battleId 고정(재생성 시 upsert 덮어쓰기)이라, 재생성해도 URL이 같으면
+    // 브라우저·CDN이 옛 이미지를 7일 캐시로 계속 보여준다(검증됨). charId를 버전 쿼리로 붙여
+    // 재생성마다 URL을 바꿔 캐시를 무력화한다.
+    finale.trophyAvatar = `${chosen}?v=${_charId}`;
     finale.trophyFaceBox = trophyFaceBox;
   }
   await db
