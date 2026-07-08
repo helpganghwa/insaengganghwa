@@ -4,6 +4,7 @@ import { revalidatePath } from 'next/cache';
 import { and, desc, eq, gt, isNotNull, isNull, lt, sql } from 'drizzle-orm';
 
 import { getSessionUserId } from '@/lib/auth/session';
+import { makeErr, type ErrorResult } from '@/lib/game/action-result';
 import { getActiveServerId } from '@/lib/game/servers';
 import { db } from '@/lib/db/client';
 import { mailbox } from '@/lib/db/schema/mailbox';
@@ -17,7 +18,7 @@ import {
 } from '@/lib/game/mailbox';
 import type { MailItem } from './MailList';
 
-type ErrorState = { status: 'error'; code: string; message: string };
+type ErrorState = ErrorResult;
 
 const MSG: Record<string, string> = {
   MAIL_NOT_FOUND: '이미 수령했거나 만료된 우편입니다.',
@@ -28,9 +29,7 @@ const MSG: Record<string, string> = {
   UNKNOWN: '알 수 없는 오류',
 };
 
-function err(code: string): ErrorState {
-  return { status: 'error', code, message: MSG[code] ?? code };
-}
+const err = makeErr(MSG);
 
 function revalidate() {
   revalidatePath('/mail');

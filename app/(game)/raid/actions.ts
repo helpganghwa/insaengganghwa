@@ -3,6 +3,7 @@
 import { revalidatePath } from 'next/cache';
 
 import { getSessionUserId } from '@/lib/auth/session';
+import { makeErr } from '@/lib/game/action-result';
 import { getActiveServerId } from '@/lib/game/servers';
 import { rateLimited } from '@/lib/ratelimit';
 import { actionBlock } from '@/lib/game/action-gate';
@@ -23,7 +24,6 @@ import {
 } from '@/lib/game/raid';
 import { RAID_OPEN_COST_DIAMOND } from '@/lib/game/balance';
 
-type Err = { status: 'error'; code: string; message: string };
 const MSG: Record<string, string> = {
   INSUFFICIENT_DIAMOND: `다이아가 부족합니다 (소환 ${RAID_OPEN_COST_DIAMOND.toLocaleString('ko-KR')}).`,
   DAILY_CAP_REACHED: '오늘 레이드 한도(5회)를 모두 사용했습니다.',
@@ -43,7 +43,7 @@ const MSG: Record<string, string> = {
   MAINTENANCE: '서버 점검 중입니다. 잠시 후 다시 시도해 주세요.',
   UNKNOWN: '알 수 없는 오류',
 };
-const err = (c: string): Err => ({ status: 'error', code: c, message: MSG[c] ?? c });
+const err = makeErr(MSG);
 function rev(raidId?: string) {
   revalidatePath('/raid');
   revalidatePath('/');

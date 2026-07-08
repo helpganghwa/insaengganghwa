@@ -3,6 +3,7 @@
 import { revalidatePath } from 'next/cache';
 
 import { getSessionUserId } from '@/lib/auth/session';
+import { makeErr } from '@/lib/game/action-result';
 import { getActiveServerId } from '@/lib/game/servers';
 import { rateLimited } from '@/lib/ratelimit';
 import { actionBlock } from '@/lib/game/action-gate';
@@ -20,7 +21,6 @@ import type { BattlePassType } from '@/lib/game/balance';
  * 배틀패스 액션 — 무료/프리미엄 라인 수령. 프리미엄 구간 구매는 결제 백엔드(포트원)
  * 연동 후 활성(현재 UI '준비 중').
  */
-type ErrorState = { status: 'error'; code: string; message: string };
 const MSG: Record<string, string> = {
   NOTHING_TO_CLAIM: '받을 보상이 없습니다.',
   NOT_PURCHASED: '프리미엄 미구매 구간입니다.',
@@ -30,7 +30,7 @@ const MSG: Record<string, string> = {
   BANNED: '이용이 제한된 계정입니다.',
   UNKNOWN: '알 수 없는 오류',
 };
-const err = (c: string): ErrorState => ({ status: 'error', code: c, message: MSG[c] ?? c });
+const err = makeErr(MSG);
 
 function revalidate() {
   revalidatePath('/battlepass');

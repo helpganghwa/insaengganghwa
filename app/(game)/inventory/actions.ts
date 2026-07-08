@@ -3,6 +3,7 @@
 import { revalidatePath } from 'next/cache';
 
 import { getSessionUserId } from '@/lib/auth/session';
+import { makeErr } from '@/lib/game/action-result';
 import { rateLimited } from '@/lib/ratelimit';
 import { actionBlock } from '@/lib/game/action-gate';
 import { equipItem, unequipItem, EquipError } from '@/lib/game/equipment/equip';
@@ -11,7 +12,6 @@ import { equipItem, unequipItem, EquipError } from '@/lib/game/equipment/equip';
  * 인벤토리 액션 — 장착 전용(외형, 전투력·랭킹 무관 BALANCE §3.2).
  * 초월은 자동(박스 열기 시), 분해·잠금은 폐기 → 별도 액션 없음.
  */
-type ErrorState = { status: 'error'; code: string; message: string };
 
 const MSG: Record<string, string> = {
   NOT_FOUND: '장비를 찾을 수 없습니다.',
@@ -22,7 +22,7 @@ const MSG: Record<string, string> = {
   BANNED: '이용이 제한된 계정입니다.',
   UNKNOWN: '알 수 없는 오류',
 };
-const err = (c: string): ErrorState => ({ status: 'error', code: c, message: MSG[c] ?? c });
+const err = makeErr(MSG);
 
 function revalidate() {
   revalidatePath('/');

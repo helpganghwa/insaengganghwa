@@ -4,6 +4,7 @@ import { revalidatePath } from 'next/cache';
 import { and, eq, sql } from 'drizzle-orm';
 
 import { getSessionUserId } from '@/lib/auth/session';
+import { makeErr, type ErrorResult } from '@/lib/game/action-result';
 import { rateLimited } from '@/lib/ratelimit';
 import { actionBlock } from '@/lib/game/action-gate';
 import { getActiveServerId } from '@/lib/game/servers';
@@ -50,7 +51,7 @@ async function cleanupPushPendingJob(userId: string, jobId: string): Promise<voi
   }
 }
 
-type ErrorState = { status: 'error'; code: string; message: string };
+type ErrorState = ErrorResult;
 
 const MSG: Record<string, string> = {
   EQUIPMENT_NOT_FOUND: '장비를 찾을 수 없습니다.',
@@ -65,9 +66,7 @@ const MSG: Record<string, string> = {
   UNKNOWN: '알 수 없는 오류',
 };
 
-function err(code: string): ErrorState {
-  return { status: 'error', code, message: MSG[code] ?? code };
-}
+const err = makeErr(MSG);
 function revalidateAll() {
   revalidatePath('/');
   revalidatePath('/enhance');

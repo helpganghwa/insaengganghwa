@@ -3,12 +3,13 @@
 import { revalidatePath } from 'next/cache';
 
 import { getSessionUserId } from '@/lib/auth/session';
+import { makeErr, type ErrorResult } from '@/lib/game/action-result';
 import { rateLimited } from '@/lib/ratelimit';
 import { actionBlock } from '@/lib/game/action-gate';
 import { claimCheckin, CheckinError, type CheckinClaimResult } from '@/lib/game/checkin';
 import { getActiveServerId } from '@/lib/game/servers';
 
-type ErrorState = { status: 'error'; code: string; message: string };
+type ErrorState = ErrorResult;
 
 const MSG: Record<string, string> = {
   CHECKIN_ALREADY_CLAIMED: '오늘은 이미 출석을 수령했습니다.',
@@ -21,9 +22,7 @@ const MSG: Record<string, string> = {
   UNKNOWN: '알 수 없는 오류',
 };
 
-function err(code: string): ErrorState {
-  return { status: 'error', code, message: MSG[code] ?? code };
-}
+const err = makeErr(MSG);
 
 export async function claimCheckinAction(): Promise<
   { status: 'success'; result: CheckinClaimResult } | ErrorState
