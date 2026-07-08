@@ -85,6 +85,7 @@ export default async function ProfilePage() {
       `) as unknown as Promise<MeRow[]>,
       liberatedItemRanks(userId, serverId),
       getCatalogMap(),
+      hasGeneratedCustomAvatar(userId, serverId),
     ]),
     3500,
     'me.page',
@@ -97,7 +98,8 @@ export default async function ProfilePage() {
   const equippedRaw = allEquipment.filter((e) => e.equippedSlot != null);
   const myProfiles = row?.avatars ?? [];
   // 첫생성 할인 배지 — 성공 생성 이력(accepted/admin-grant)이 없으면 노출. 삭제로 리셋 불가(서버 차감과 동일 기준).
-  const hasCustomAvatar = await hasGeneratedCustomAvatar(userId, serverId);
+  // 위 withTimeout Promise.all 안에서 병렬 조회(핫패스 미가드 순차 왕복 방지, me/create와 동일). 타임아웃 시 false.
+  const hasCustomAvatar = _r?.[3] ?? false;
   const refN = row?.referral_count ?? 0;
   const referralStats = {
     totalReferrals: refN,

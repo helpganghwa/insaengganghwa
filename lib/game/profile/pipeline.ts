@@ -178,7 +178,14 @@ export async function pollAndProcessDownloading(limit = 5): Promise<{
       }
       continue;
     }
-    const char = (await charRes.json()) as PixellabCharacterDetail;
+    let char: PixellabCharacterDetail;
+    try {
+      char = (await charRes.json()) as PixellabCharacterDetail;
+    } catch {
+      // 200이지만 본문 파싱 실패(잘림 등) — 배치 중단 없이 다음 tick 재시도(20분 초과 시 타임아웃 가드가 정리).
+      stillProcessing += 1;
+      continue;
+    }
 
     if (!char.rotation_urls) {
       stillProcessing += 1;

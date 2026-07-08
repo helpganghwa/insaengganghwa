@@ -14,12 +14,18 @@ export async function onRequestError(
   context: { routerKind: string; routePath: string; routeType: string },
 ): Promise<void> {
   try {
-    const { recordError } = await import('@/lib/ops/record-error');
     const e = error as { message?: string; stack?: string } | null;
+    const msg = e?.message ?? String(error);
+    // DB/커넥션 장애 계열은 기록을 건너뛴다 — 그 순간 client_errors 쓰기도 같은 DB라 실패하며
+    // 포화를 증폭시킨다(장애 중 write 폭증 방지). 애플리케이션 로직 throw는 정상 기록.
+    if (/timeout|ECONNREFUSED|ETIMEDOUT|connect|pool|too many clients|Connection terminated/i.test(msg)) {
+      return;
+    }
+    const { recordError } = await import('@/lib/ops/record-error');
     const where = `${context.routeType || context.routerKind} ${request.method} ${context.routePath || request.path}`;
     await recordError({
       kind: 'server',
-      message: `[${where}] ${e?.message ?? String(error)}`,
+      message: `[${where}] ${msg}`,
       url: request.path,
       stack: e?.stack ?? null,
     });
