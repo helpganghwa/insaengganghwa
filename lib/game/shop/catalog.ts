@@ -6,7 +6,7 @@ export type Period = 'daily' | 'weekly' | 'monthly';
 
 /** 💎로 사는 보급상자(견습의 주머니) — 인게임 재화 sink. (현금 아님 → 테스트 즉시구매 대상 아님) */
 export const BOX: Record<Period, { cost: number; boxes: number }> = {
-  daily: { cost: 200, boxes: 15 },
+  daily: { cost: 300, boxes: 12 },
   weekly: { cost: 1200, boxes: 60 },
   monthly: { cost: 4000, boxes: 240 },
 };
