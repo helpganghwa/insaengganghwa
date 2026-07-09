@@ -65,6 +65,9 @@ export async function resolveEnhance(input: ResolveInput): Promise<ResolveResult
 
   // ── RT1: 검증·계산용 조인 select (락 없음 — 동시성은 RT2 status 가드가 보장) ──
   const ownerCond = userId ? sql` and j.user_id = ${userId}::uuid` : sql``;
+  // RT2 방어심화(감사) — RT1이 소유권 검증 후 throw하지만, RT2 상태전이 자체를 userId로 국소
+  // 보장(RT1 순서 의존 제거). RT2 update 대상 테이블은 무별칭이라 `j.` 없이 user_id로.
+  const ownerCondRt2 = userId ? sql` and user_id = ${userId}::uuid` : sql``;
   const r1 = (await db.execute(sql`
     select j.user_equipment_id::text         as user_equipment_id,
            j.server_id                       as job_server_id,
@@ -134,7 +137,7 @@ export async function resolveEnhance(input: ResolveInput): Promise<ResolveResult
     with j as (
       update enhancement_jobs
       set status = 'completed'
-      where id = ${jid}::bigint and status = 'running'
+      where id = ${jid}::bigint and status = 'running'${ownerCondRt2}
       returning user_id, user_equipment_id, server_id
     ),
     ue as (
