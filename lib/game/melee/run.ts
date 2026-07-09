@@ -11,7 +11,6 @@ import { getGuildBriefsByUsers } from '@/lib/game/guild/badge';
 import { meleeRewardForRank, SUPPLY_SLOTS, type SupplySlot } from '@/lib/game/balance';
 
 import { simulateMelee, type MeleeParticipantInput } from './simulate';
-import { makeRng } from './rng';
 
 /**
  * 대난투 9시 산출 — MELEE §3. KST 오늘 배틀이 없으면:
@@ -21,14 +20,15 @@ import { makeRng } from './rng';
  * 스케일: 로스터 CP 일괄(set-based) + 참가자 청크 insert. 초대규모는 청크/스트림/배치 큐 필요(MELEE §9).
  */
 
-/** 보급 상자 count개를 슬롯에 결정론 분배(seed+userId). */
-function distributeBoxes(count: number, seed: string, userId: string): Record<SupplySlot, number> {
+/** 보급 상자 count개를 3슬롯 균등 분배(무기/방어구/장신구 동일). 보상 개수는 3의 배수라
+ *  정확히 count/3씩. 3의 배수가 아니면 나머지를 슬롯 순서대로 1개씩 얹음(결정론). */
+function distributeBoxes(count: number): Record<SupplySlot, number> {
   const boxes: Record<SupplySlot, number> = { weapon: 0, armor: 0, accessory: 0 };
   if (count <= 0) return boxes;
-  const rng = makeRng(`${seed}:${userId}:box`);
-  for (let i = 0; i < count; i++) {
-    boxes[SUPPLY_SLOTS[Math.floor(rng() * SUPPLY_SLOTS.length)]!] += 1;
-  }
+  const base = Math.floor(count / SUPPLY_SLOTS.length);
+  for (const s of SUPPLY_SLOTS) boxes[s] = base;
+  let rem = count - base * SUPPLY_SLOTS.length;
+  for (let i = 0; rem > 0; i++, rem--) boxes[SUPPLY_SLOTS[i % SUPPLY_SLOTS.length]!] += 1;
   return boxes;
 }
 
@@ -165,7 +165,7 @@ export async function runMelee(serverId: number): Promise<{ ran: boolean; battle
         finalRank: r.finalRank,
         killerUserId: r.killerUserId,
         rewardDiamond: BigInt(reward.diamond),
-        rewardBoxes: distributeBoxes(reward.boxes, seed, r.userId),
+        rewardBoxes: distributeBoxes(reward.boxes),
         myEvents: r.events,
         attackCount: r.attackCount,
         defenseCount: r.defenseCount,

@@ -43,8 +43,8 @@ const FREE_DISPLAY: Record<
   { period: string; reward: string; diamond: number; boxes: number }
 > = {
   daily: { period: '매일', reward: '📦 3개', diamond: 0, boxes: 3 },
-  weekly: { period: '매주', reward: '📦 20개', diamond: 0, boxes: 20 },
-  monthly: { period: '매월', reward: '📦 100개', diamond: 0, boxes: 100 },
+  weekly: { period: '매주', reward: '📦 30개', diamond: 0, boxes: 30 },
+  monthly: { period: '매월', reward: '📦 150개', diamond: 0, boxes: 150 },
   signup: { period: '', reward: '💎 5,000', diamond: 5000, boxes: 0 },
 };
 

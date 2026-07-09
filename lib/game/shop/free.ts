@@ -19,8 +19,8 @@ export const FREE_SLOTS: FreeSlot[] = ['daily', 'weekly', 'monthly', 'signup'];
 
 export const FREE_REWARDS: Record<FreeSlot, { diamond: number; boxes: number }> = {
   daily: { diamond: 0, boxes: 3 },
-  weekly: { diamond: 0, boxes: 20 },
-  monthly: { diamond: 0, boxes: 100 },
+  weekly: { diamond: 0, boxes: 30 },
+  monthly: { diamond: 0, boxes: 150 },
   signup: { diamond: 5000, boxes: 0 },
 };
 

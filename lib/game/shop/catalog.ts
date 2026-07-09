@@ -6,7 +6,7 @@ export type Period = 'daily' | 'weekly' | 'monthly';
 
 /** 💎로 사는 보급상자(견습의 주머니) — 인게임 재화 sink. (현금 아님 → 테스트 즉시구매 대상 아님) */
 export const BOX: Record<Period, { cost: number; boxes: number }> = {
-  daily: { cost: 200, boxes: 8 },
+  daily: { cost: 200, boxes: 15 },
   weekly: { cost: 1200, boxes: 60 },
   monthly: { cost: 4000, boxes: 240 },
 };
@@ -15,18 +15,18 @@ export type Cash = { id: string; name: string; krw: number; diamond: number; box
 export const CASH: Record<Period, Cash[]> = {
   daily: [
     { id: 'd1', name: '모험가의 작은 자루', krw: 1200, diamond: 290, boxes: 3 },
-    { id: 'd2', name: '기사의 작은 상자', krw: 2500, diamond: 610, boxes: 7 },
+    { id: 'd2', name: '기사의 작은 상자', krw: 2500, diamond: 610, boxes: 9 },
     { id: 'd3', name: '왕의 작은 금고', krw: 4900, diamond: 1200, boxes: 15 },
   ],
   weekly: [
     { id: 'w1', name: '모험가의 자루', krw: 4900, diamond: 1360, boxes: 18 },
-    { id: 'w2', name: '기사의 상자', krw: 9900, diamond: 2750, boxes: 40 },
+    { id: 'w2', name: '기사의 상자', krw: 9900, diamond: 2750, boxes: 60 },
     { id: 'w3', name: '왕의 금고', krw: 19900, diamond: 5550, boxes: 90 },
   ],
   monthly: [
-    { id: 'm1', name: '모험가의 큰 자루', krw: 9900, diamond: 3200, boxes: 55 },
+    { id: 'm1', name: '모험가의 큰 자루', krw: 9900, diamond: 3200, boxes: 90 },
     { id: 'm2', name: '기사의 큰 상자', krw: 19900, diamond: 6450, boxes: 120 },
-    { id: 'm3', name: '왕의 큰 금고', krw: 39900, diamond: 12900, boxes: 260 },
+    { id: 'm3', name: '왕의 큰 금고', krw: 39900, diamond: 12900, boxes: 300 },
   ],
 };
 

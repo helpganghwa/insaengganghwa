@@ -517,25 +517,26 @@ export type MeleeReward = { diamond: number; boxes: number };
 
 /**
  * 등수(1-base) + 총 참가자 N → 보상. 티어 배타(스캔 순서로 첫 매칭 1개만). MELEE §6.
- * 1위 💎2000+30 · 2~3위 💎1000+15 · 상위5% 💎400+10 · 상위20% 💎150+10 · 상위50% 💎100+5 · 그외 💎50+3.
+ * 1위 💎2000+60 · 2~3위 💎1000+30 · 상위5% 💎400+15 · 상위20% 💎150+15 · 상위50% 💎100+9 · 그외 💎50+6.
+ * 상자 수는 3의 배수(부위 3슬롯 균등 분배 — distributeBoxes).
  */
 export function meleeRewardForRank(rank: number, n: number): MeleeReward {
-  if (rank <= 1) return { diamond: 2000, boxes: 30 };
-  if (rank <= 3) return { diamond: 1000, boxes: 15 };
-  if (rank <= Math.ceil(n * 0.05)) return { diamond: 400, boxes: 10 };
-  if (rank <= Math.ceil(n * 0.2)) return { diamond: 150, boxes: 10 };
-  if (rank <= Math.ceil(n * 0.5)) return { diamond: 100, boxes: 5 };
-  return { diamond: 50, boxes: 3 };
+  if (rank <= 1) return { diamond: 2000, boxes: 60 };
+  if (rank <= 3) return { diamond: 1000, boxes: 30 };
+  if (rank <= Math.ceil(n * 0.05)) return { diamond: 400, boxes: 15 };
+  if (rank <= Math.ceil(n * 0.2)) return { diamond: 150, boxes: 15 };
+  if (rank <= Math.ceil(n * 0.5)) return { diamond: 100, boxes: 9 };
+  return { diamond: 50, boxes: 6 };
 }
 
 /** 보상 테이블 표시용 — meleeRewardForRank와 1:1(공시). 등수 라벨 + 보상. */
 export const MELEE_REWARD_TIERS: { label: string; diamond: number; boxes: number }[] = [
-  { label: '1위', diamond: 2000, boxes: 30 },
-  { label: '2~3위', diamond: 1000, boxes: 15 },
-  { label: '상위 5%', diamond: 400, boxes: 10 },
-  { label: '상위 20%', diamond: 150, boxes: 10 },
-  { label: '상위 50%', diamond: 100, boxes: 5 },
-  { label: '그 외', diamond: 50, boxes: 3 },
+  { label: '1위', diamond: 2000, boxes: 60 },
+  { label: '2~3위', diamond: 1000, boxes: 30 },
+  { label: '상위 5%', diamond: 400, boxes: 15 },
+  { label: '상위 20%', diamond: 150, boxes: 15 },
+  { label: '상위 50%', diamond: 100, boxes: 9 },
+  { label: '그 외', diamond: 50, boxes: 6 },
 ];
 
 // ─────────────────────────────────────────────────────────────────────────────
