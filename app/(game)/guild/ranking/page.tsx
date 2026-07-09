@@ -78,7 +78,7 @@ export default async function GuildRankingPage({
           combat: g.combat,
           intro: g.intro,
           joinPolicy: g.joinPolicy,
-          openchatUrl: g.openchatUrl,
+          hasOpenchat: g.hasOpenchat,
           zones: g.zones,
         }))}
         showRank

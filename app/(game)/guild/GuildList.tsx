@@ -16,8 +16,8 @@ export type GuildRow = {
   intro: string | null;
   /** 가입 방식 — 'open'(자유) | 'approval'(승인). */
   joinPolicy: string;
-  /** 카카오 오픈채팅 링크(null=미설정). 설정 길드만 오픈채팅 배지 노출. */
-  openchatUrl: string | null;
+  /** 카카오 오픈채팅 설정 여부(배지용). URL 원문은 비길드원에 미전송(보안) — GuildHome에서만. */
+  hasOpenchat: boolean;
   /** 점령 구역 목록(없으면 빈 배열). 카드 배지 수 + 팝업 칩(지역색). */
   zones: { name: string; region: Region }[];
 };
@@ -117,7 +117,7 @@ export function GuildList({
               <div className="flex items-center gap-1.5">
                 <span className="truncate text-sm font-semibold">{g.name}</span>
                 <JoinPolicyBadge policy={g.joinPolicy} />
-                {g.openchatUrl ? <KakaoOpenchatBadge /> : null}
+                {g.hasOpenchat ? <KakaoOpenchatBadge /> : null}
               </div>
               <div className="text-[11px] text-zinc-500">
                 Lv.{g.level} · {g.memberCount}명
@@ -177,7 +177,7 @@ export function GuildList({
               <div className="flex items-center gap-1.5">
                 <h2 className="truncate text-base font-bold">{selected.name}</h2>
                 <JoinPolicyBadge policy={selected.joinPolicy} />
-                {selected.openchatUrl ? <KakaoOpenchatBadge /> : null}
+                {selected.hasOpenchat ? <KakaoOpenchatBadge /> : null}
               </div>
               <p className="mt-0.5 text-[11px] text-zinc-500">
                 Lv.{selected.level} · {selected.memberCount}명 · 전투력{' '}

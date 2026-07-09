@@ -180,7 +180,8 @@ export async function getGuildRanking(serverId: number, limit = 50, sort: GuildR
       emblemColor: guilds.emblemColor,
       intro: guilds.intro,
       joinPolicy: guilds.joinPolicy,
-      openchatUrl: guilds.openchatUrl,
+      // URL 원문은 비길드원에 미전송(보안) — 배지용 boolean만. 링크는 GuildHome(길드원)에서만.
+      hasOpenchat: sql<boolean>`(${guilds.openchatUrl} is not null)`,
     })
     .from(guilds)
     .where(eq(guilds.serverId, serverId));
@@ -217,7 +218,8 @@ export async function searchGuilds(serverId: number, q: string) {
     emblemColor: guilds.emblemColor,
     intro: guilds.intro,
     joinPolicy: guilds.joinPolicy,
-    openchatUrl: guilds.openchatUrl,
+    // URL 원문은 비길드원에 미전송(보안) — 배지용 boolean만.
+    hasOpenchat: sql<boolean>`(${guilds.openchatUrl} is not null)`,
   } as const;
   const rows = term
     ? await db
