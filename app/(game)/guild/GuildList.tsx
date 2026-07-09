@@ -47,11 +47,11 @@ function JoinPolicyBadge({ policy }: { policy: string }) {
 function KakaoOpenchatBadge() {
   return (
     <span
-      className="flex shrink-0 items-center rounded-[3px] bg-[#FEE500] px-1 py-px leading-none"
+      className="flex shrink-0 items-center rounded-[3px] bg-[#FEE500] px-1 py-[3px] leading-none"
       title="카카오톡 오픈채팅 운영 길드"
       aria-label="카카오톡 오픈채팅 운영 길드"
     >
-      {/* 자유/승인 배지보다 작은 컴팩트 칩 — 아이콘 8px + 얇은 패딩. */}
+      {/* 자유/승인 배지와 높이 동일(14px) — 아이콘 8px(h-2) + 상하 3px 패딩. */}
       {/* eslint-disable-next-line @next/next/no-img-element */}
       <img src="/kakao/kakao_symbol.png" alt="" aria-hidden className="h-2 w-auto" />
     </span>
