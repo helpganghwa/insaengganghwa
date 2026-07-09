@@ -20,9 +20,26 @@ export const metadata: Metadata = {
   // 절대 URL — manifest·OG·icons가 절대 경로로 직렬화되어야 PWA 설치 정상.
   // 도메인은 NEXT_PUBLIC_SITE_URL로 주입(서비스 주체/도메인 이전 대응 — docs/MIGRATION.md).
   metadataBase: new URL(process.env.NEXT_PUBLIC_SITE_URL ?? 'https://ganghwa.app'),
-  title: '인생강화 — insaengganghwa',
-  description: '강화는 인생이다.',
-  applicationName: 'insaengganghwa',
+  title: '인생강화',
+  description: '강화는 인생이다',
+  applicationName: '인생강화',
+  keywords: ['인생강화', '강화 게임', '방치형 RPG', '강화 RPG', '한국식 강화', '모바일 웹게임', 'idle RPG'],
+  // 소셜 공유 카드(카카오톡·페북·검색) — 한국 게임 성장 최대 채널. 절대 URL은 metadataBase로 직렬화.
+  openGraph: {
+    type: 'website',
+    locale: 'ko_KR',
+    siteName: '인생강화',
+    url: '/',
+    title: '인생강화',
+    description: '강화는 인생이다',
+    images: [{ url: '/og.webp', width: 1200, height: 686, alt: '인생강화 — 강화는 인생이다' }],
+  },
+  twitter: {
+    card: 'summary_large_image',
+    title: '인생강화',
+    description: '강화는 인생이다',
+    images: ['/og.webp'],
+  },
   formatDetection: { telephone: false },
   // PWA: app/manifest.ts가 자동으로 <link rel="manifest"> 주입.
   // 아이콘은 app/icon.png(favicon) + app/apple-icon.png(iOS)도 Next convention으로
@@ -112,12 +129,43 @@ export default function RootLayout({ children }: Readonly<{ children: React.Reac
   //   AppHeader(sticky top-0)·BottomNav(sticky bottom-0)가 실제 스크롤 안 하는
   //   컨테이너 기준이 되어 고정이 풀린다(검증됨). width=390 뷰포트라 가로 오버플로
   //   자체가 없어 가드 불필요. 특정 요소가 390 초과 시 그 요소를 고치고 여기 금지.
+  // 구조화 데이터(Schema.org) — 검색 리치 결과(사이트·게임 스니펫).
+  const site = process.env.NEXT_PUBLIC_SITE_URL ?? 'https://ganghwa.app';
+  const jsonLd = {
+    '@context': 'https://schema.org',
+    '@graph': [
+      {
+        '@type': 'WebSite',
+        '@id': `${site}/#website`,
+        url: site,
+        name: '인생강화',
+        description: '강화는 인생이다',
+        inLanguage: 'ko-KR',
+      },
+      {
+        '@type': 'VideoGame',
+        name: '인생강화',
+        url: site,
+        description: '강화는 인생이다',
+        inLanguage: 'ko',
+        applicationCategory: 'Game',
+        genre: ['RPG', 'Idle'],
+        operatingSystem: 'Web',
+        image: `${site}/og.webp`,
+      },
+    ],
+  };
   return (
     <html
       lang="ko"
       className={`dark ${geistSans.variable} ${geistMono.variable} h-full overscroll-none antialiased`}
     >
       <body className="flex min-h-full flex-col overscroll-none bg-zinc-950 text-zinc-50">
+        {/* 구조화 데이터(JSON-LD) — 검색 리치 결과용. */}
+        <script
+          type="application/ld+json"
+          dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd) }}
+        />
         {children}
         {/* 전역 클라 에러 → 서버 로그 수집(Sentry 없이 v1 관측성). */}
         <ClientErrorReporter />
