@@ -47,12 +47,12 @@ function JoinPolicyBadge({ policy }: { policy: string }) {
 function KakaoOpenchatBadge() {
   return (
     <span
-      className="flex shrink-0 items-center gap-0.5 rounded bg-[#FEE500] px-1.5 py-0.5 text-[10px] font-bold leading-none text-black/85"
+      className="flex shrink-0 items-center rounded bg-[#FEE500] px-1 py-0.5 leading-none"
       title="카카오톡 오픈채팅 운영 길드"
+      aria-label="카카오톡 오픈채팅 운영 길드"
     >
       {/* eslint-disable-next-line @next/next/no-img-element */}
-      <img src="/kakao/kakao_symbol.png" alt="" aria-hidden className="h-[9px] w-auto" />
-      오픈채팅
+      <img src="/kakao/kakao_symbol.png" alt="" aria-hidden className="h-3 w-auto" />
     </span>
   );
 }
