@@ -40,6 +40,13 @@ export const metadata: Metadata = {
     description: '강화는 인생이다',
     images: ['/og.webp'],
   },
+  // 검색엔진 소유확인 — 구글 서치콘솔 / 네이버 서치어드바이저(인증코드는 공개 메타태그).
+  verification: {
+    google: 'EJfPFW-vWJoP9tDZpj1_rrMhjkNGQfq0hmqAdazCi2o',
+    other: {
+      'naver-site-verification': 'd5b63ce66c7e89f5985af78950501db03c9ccc75',
+    },
+  },
   formatDetection: { telephone: false },
   // PWA: app/manifest.ts가 자동으로 <link rel="manifest"> 주입.
   // 아이콘은 app/icon.png(favicon) + app/apple-icon.png(iOS)도 Next convention으로
