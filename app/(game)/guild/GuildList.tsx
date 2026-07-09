@@ -16,6 +16,8 @@ export type GuildRow = {
   intro: string | null;
   /** 가입 방식 — 'open'(자유) | 'approval'(승인). */
   joinPolicy: string;
+  /** 카카오 오픈채팅 링크(null=미설정). 설정 길드만 오픈채팅 배지 노출. */
+  openchatUrl: string | null;
   /** 점령 구역 목록(없으면 빈 배열). 카드 배지 수 + 팝업 칩(지역색). */
   zones: { name: string; region: Region }[];
 };
@@ -37,6 +39,20 @@ function JoinPolicyBadge({ policy }: { policy: string }) {
       }`}
     >
       {open ? '자유' : '승인'}
+    </span>
+  );
+}
+
+/** 카카오 오픈채팅 배지 — openchatUrl 설정 길드만. 외부 소통 채널 보유 표시(비클릭 인디케이터). */
+function KakaoOpenchatBadge() {
+  return (
+    <span
+      className="flex shrink-0 items-center gap-0.5 rounded bg-[#FEE500] px-1.5 py-0.5 text-[10px] font-bold leading-none text-black/85"
+      title="카카오톡 오픈채팅 운영 길드"
+    >
+      {/* eslint-disable-next-line @next/next/no-img-element */}
+      <img src="/kakao/kakao_symbol.png" alt="" aria-hidden className="h-[9px] w-auto" />
+      오픈채팅
     </span>
   );
 }
@@ -101,6 +117,7 @@ export function GuildList({
               <div className="flex items-center gap-1.5">
                 <span className="truncate text-sm font-semibold">{g.name}</span>
                 <JoinPolicyBadge policy={g.joinPolicy} />
+                {g.openchatUrl ? <KakaoOpenchatBadge /> : null}
               </div>
               <div className="text-[11px] text-zinc-500">
                 Lv.{g.level} · {g.memberCount}명
@@ -160,6 +177,7 @@ export function GuildList({
               <div className="flex items-center gap-1.5">
                 <h2 className="truncate text-base font-bold">{selected.name}</h2>
                 <JoinPolicyBadge policy={selected.joinPolicy} />
+                {selected.openchatUrl ? <KakaoOpenchatBadge /> : null}
               </div>
               <p className="mt-0.5 text-[11px] text-zinc-500">
                 Lv.{selected.level} · {selected.memberCount}명 · 전투력{' '}

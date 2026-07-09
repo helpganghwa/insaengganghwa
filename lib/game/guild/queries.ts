@@ -180,6 +180,7 @@ export async function getGuildRanking(serverId: number, limit = 50, sort: GuildR
       emblemColor: guilds.emblemColor,
       intro: guilds.intro,
       joinPolicy: guilds.joinPolicy,
+      openchatUrl: guilds.openchatUrl,
     })
     .from(guilds)
     .where(eq(guilds.serverId, serverId));
@@ -216,6 +217,7 @@ export async function searchGuilds(serverId: number, q: string) {
     emblemColor: guilds.emblemColor,
     intro: guilds.intro,
     joinPolicy: guilds.joinPolicy,
+    openchatUrl: guilds.openchatUrl,
   } as const;
   const rows = term
     ? await db

@@ -39,6 +39,7 @@ async function browseView(userId: string, serverId: number) {
     combat: number;
     intro: string | null;
     joinPolicy: string;
+    openchatUrl: string | null;
     zones: { name: string; region: Region }[];
   }) => ({
     id: g.id.toString(),
@@ -50,6 +51,7 @@ async function browseView(userId: string, serverId: number) {
     combat: g.combat,
     intro: g.intro,
     joinPolicy: g.joinPolicy,
+    openchatUrl: g.openchatUrl,
     zones: g.zones,
   });
   return (
