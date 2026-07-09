@@ -14,7 +14,7 @@ import {
   latestOpenServerId,
 } from '@/lib/game/server-select';
 import { createSupabaseServerClient, createSupabaseServiceClient } from './supabase-server';
-import { isTestLoginEnabled, TEST_ACCOUNTS, passwordForTestAccount } from './test-accounts';
+import { TEST_ACCOUNTS, passwordForTestAccount } from './test-accounts';
 
 /** 내부 경로만 허용 — open-redirect 방지(절대 URL·//호스트 차단). */
 function safeNext(raw: unknown): string {
@@ -108,8 +108,8 @@ async function ensureTestUser(email: string): Promise<void> {
  * 계정 email만 허용하고, 비밀번호는 입력값으로 검증(signInWithPassword) — 틀리면 실패.
  */
 export async function signInWithCredentials(formData: FormData) {
-  if (!isTestLoginEnabled())
-    redirect('/login?test=true&error=' + encodeURIComponent('심사용 로그인이 비활성화되어 있습니다'));
+  // 심사 로그인은 상시 활성(env 게이트 없음) — 출시 후 스토어·게임위 재심의 지속 대응(사용자 결정 2026-07-09).
+  // 여전히 사전 등록된 TEST_ACCOUNTS email + 비번(signInWithPassword)만 통과.
   const email = String(formData.get('email') ?? '')
     .trim()
     .toLowerCase();

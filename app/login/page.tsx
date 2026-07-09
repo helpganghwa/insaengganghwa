@@ -6,7 +6,7 @@ import { PublicFooter } from '@/components/PublicFooter';
 
 import { signInWithKakao, signInWithCredentials } from '@/lib/auth/actions';
 import { getSessionUserId } from '@/lib/auth/session';
-import { isTestLoginEnabled, isCbtPaidHidden } from '@/lib/auth/test-accounts';
+import { isCbtPaidHidden } from '@/lib/auth/test-accounts';
 import { listServersPublic, latestOpenServerId } from '@/lib/game/server-select';
 import { Suspense } from 'react';
 import { EnhanceStatsCard, EnhanceStatsFallback } from '@/components/EnhanceStatsCard';
@@ -49,9 +49,9 @@ export default async function LoginPage({
   const showServers = servers.length >= 1;
   const defaultSrv = showServers ? await defaultServerId(servers) : 1;
   const recommendedId = showServers ? await latestOpenServerId() : 1;
-  // 심사용 ID/PW 로그인 — ?test=true + env 둘 다 켜져야 노출(일반 사용자에겐 이메일 폼 숨김).
+  // 심사용 ID/PW 로그인 — ?test=true면 상시 노출(env 게이트 없음, 출시 후 재심의 지속 대응).
   // 원클릭 버튼(비번 우회)은 폐지 — 링크가 유출돼도 아이디/비밀번호를 알아야만 로그인 가능.
-  const reviewLogin = test === 'true' && isTestLoginEnabled();
+  const reviewLogin = test === 'true';
 
   return (
     <div className="mx-auto flex min-h-dvh w-full max-w-[390px] flex-col bg-[#17110c] text-zinc-200">
