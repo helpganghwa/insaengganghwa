@@ -16,17 +16,17 @@ export const CASH: Record<Period, Cash[]> = {
   daily: [
     { id: 'd1', name: '모험가의 작은 자루', krw: 1200, diamond: 290, boxes: 3 },
     { id: 'd2', name: '기사의 작은 상자', krw: 2500, diamond: 610, boxes: 9 },
-    { id: 'd3', name: '왕의 작은 금고', krw: 4900, diamond: 1200, boxes: 15 },
+    { id: 'd3', name: '왕의 작은 금고', krw: 4900, diamond: 1200, boxes: 18 },
   ],
   weekly: [
     { id: 'w1', name: '모험가의 자루', krw: 4900, diamond: 1360, boxes: 18 },
-    { id: 'w2', name: '기사의 상자', krw: 9900, diamond: 2750, boxes: 60 },
+    { id: 'w2', name: '기사의 상자', krw: 9900, diamond: 2750, boxes: 39 },
     { id: 'w3', name: '왕의 금고', krw: 19900, diamond: 5550, boxes: 90 },
   ],
   monthly: [
-    { id: 'm1', name: '모험가의 큰 자루', krw: 9900, diamond: 3200, boxes: 90 },
+    { id: 'm1', name: '모험가의 큰 자루', krw: 9900, diamond: 3200, boxes: 54 },
     { id: 'm2', name: '기사의 큰 상자', krw: 19900, diamond: 6450, boxes: 120 },
-    { id: 'm3', name: '왕의 큰 금고', krw: 39900, diamond: 12900, boxes: 300 },
+    { id: 'm3', name: '왕의 큰 금고', krw: 39900, diamond: 12900, boxes: 258 },
   ],
 };
 
