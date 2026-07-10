@@ -30,7 +30,7 @@
     },
     {
       "path": "/api/cron/profile-poll",
-      "schedule": "*/2 * * * *"
+      "schedule": "1-59/2 * * * *"
     },
     {
       "path": "/api/cron/warm",
@@ -74,7 +74,7 @@
     },
     {
       "path": "/api/cron/guild-emblem-retry",
-      "schedule": "*/10 * * * *"
+      "schedule": "3-53/10 * * * *"
     }
   ]
 }

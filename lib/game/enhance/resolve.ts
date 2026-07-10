@@ -79,6 +79,7 @@ export async function resolveEnhance(input: ResolveInput): Promise<ResolveResult
            j.total_reduced_ms::text          as total_reduced_ms,
            extract(epoch from j.started_at)  as started_epoch,
            extract(epoch from j.complete_at) as complete_epoch,
+           j.complete_at::text               as complete_at_txt,
            ue.catalog_item_id                as catalog_item_id
     from enhancement_jobs j
     join user_equipment ue on ue.id = j.user_equipment_id
@@ -94,6 +95,8 @@ export async function resolveEnhance(input: ResolveInput): Promise<ResolveResult
   const baseRateBp = Number(job.base_rate_bp);
   const durationMs = String(job.duration_ms);
   const reducedMs = String(job.total_reduced_ms);
+  // RT1↔RT2 사이 reduceTime(보석 단축) 커밋 레이스 가드용 — RT2가 이 값 불변일 때만 전이.
+  const completeAtTxt = String(job.complete_at_txt);
 
   // 서버 시계 기준 경과/총 (총 = completeAt - startedAt, 단축분은 completeAt에 반영됨).
   // extract(epoch)는 microsecond 소수 → *1000 후 정수 아님. bigint 파라미터로 가기 전 floor.
@@ -138,6 +141,7 @@ export async function resolveEnhance(input: ResolveInput): Promise<ResolveResult
       update enhancement_jobs
       set status = 'completed'
       where id = ${jid}::bigint and status = 'running'${ownerCondRt2}
+        and complete_at = ${completeAtTxt}::timestamptz
       returning user_id, user_equipment_id, server_id
     ),
     ue as (

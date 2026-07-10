@@ -18,7 +18,13 @@ export async function onRequestError(
     const msg = e?.message ?? String(error);
     // DB/커넥션 장애 계열은 기록을 건너뛴다 — 그 순간 client_errors 쓰기도 같은 DB라 실패하며
     // 포화를 증폭시킨다(장애 중 write 폭증 방지). 애플리케이션 로직 throw는 정상 기록.
-    if (/timeout|ECONNREFUSED|ETIMEDOUT|connect|pool|too many clients|Connection terminated/i.test(msg)) {
+    // ⚠ 과광폭 금지 — 예전 `connect|pool` 부분 매치는 "cannot connect Kakao SDK" 같은
+    //   앱 에러까지 삼켰다. DB 장애 시그니처만 명시적으로 나열한다.
+    if (
+      /timeout|ECONNREFUSED|ETIMEDOUT|ECONNRESET|too many clients|Connection terminated|connection slots|CONNECT_TIMEOUT|connection pool/i.test(
+        msg,
+      )
+    ) {
       return;
     }
     const { recordError } = await import('@/lib/ops/record-error');

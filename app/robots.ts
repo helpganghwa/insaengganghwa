@@ -29,7 +29,6 @@ export default function robots(): MetadataRoute.Robots {
           '/guild',
           '/world',
           '/leaderboard',
-          '/sprite-review',
         ],
       },
     ],

@@ -39,9 +39,11 @@ export async function GET(req: Request) {
     const proto = req.headers.get('x-forwarded-proto') ?? 'https';
     if (host) {
       const base = `${proto}://${host}`;
+      // 5s 타임아웃 — 페이지 hang이 warm 함수(maxDuration 20s)를 죽여 beatCron 미도달 →
+      // "cron 전멸" 오보고로 번지는 것을 차단(페이지 지연은 fetch 결과 'err'로만 기록).
       const settled = await Promise.allSettled([
-        fetch(`${base}/login`, { headers: { 'x-warm': '1' }, cache: 'no-store' }),
-        fetch(`${base}/`, { headers: { 'x-warm': '1' }, redirect: 'manual', cache: 'no-store' }),
+        fetch(`${base}/login`, { headers: { 'x-warm': '1' }, cache: 'no-store', signal: AbortSignal.timeout(5000) }),
+        fetch(`${base}/`, { headers: { 'x-warm': '1' }, redirect: 'manual', cache: 'no-store', signal: AbortSignal.timeout(5000) }),
       ]);
       out.fetch = settled.map((s) => (s.status === 'fulfilled' ? s.value.status : 'err'));
     }

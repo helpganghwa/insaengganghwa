@@ -15,7 +15,7 @@
 | 신규가입 보너스 — 다이아 | 💎 1,000 | 💎 5,000 | TS 상수 (`server-select.ts` SIGNUP_DIAMOND) |
 | 신규가입 보너스 — 보급상자 | 슬롯당 10개 | 슬롯당 50개 | TS 상수 (`server-select.ts` SIGNUP_BOX_PER_SLOT) |
 | 출석체크 보상 | ×1 | ×5 | TS 상수 `TEST_REWARD_MULTIPLIER` |
-| 일일 우편 보급 | 💎 1,000 + 슬롯당 5장 | 💎 5,000 + 슬롯당 25장 | TS 상수 `TEST_REWARD_MULTIPLIER` |
+| 일일 우편 보급 | 💎 300 + 슬롯당 5장 | 💎 1,500 + 슬롯당 25장 | TS 상수 `TEST_REWARD_MULTIPLIER` |
 
 그 외 보상(분해·레이드 참가/페이즈 드롭·친구 초대 등)은 테스트 모드와 **무관하게 정상값**으로
 지급된다.
@@ -36,7 +36,7 @@ export const TEST_REWARD_MULTIPLIER = TEST_MODE ? 5 : 1;
 ```
 
 - 출석체크: `lib/game/checkin/claim.ts` 가 `TEST_REWARD_MULTIPLIER`로 보상 배수.
-- 일일 우편: `lib/game/mailbox/daily.ts` 가 기본값(💎1,000 / 슬롯당 5장)에 배율을 곱해 payload 생성.
+- 일일 우편: `lib/game/mailbox/daily.ts` 가 기본값(💎300 / 슬롯당 5장)에 배율을 곱해 payload 생성.
 - 신규가입 보너스: `lib/game/server-select.ts` 의 `SIGNUP_DIAMOND`/`SIGNUP_BOX_PER_SLOT`이 배율을 곱함.
   가입 지급은 로그인 콜백의 `createCharacter`(TS)가 담당한다 — DB 트리거(`handle_new_user`)는
   0067 이후 **계정 행만 생성**하며 보너스를 지급하지 않는다.

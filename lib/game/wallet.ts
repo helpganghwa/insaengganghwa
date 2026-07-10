@@ -48,6 +48,10 @@ export async function walletTrySpend(
   amount: bigint | number,
 ): Promise<boolean> {
   const amt = BigInt(amount);
+  // 방어심화 — 음수면 조건(diamond >= 음수)이 항상 참이라 차감이 지급으로 반전된다.
+  // 현재 전 호출부가 서버 권위 상수/검증값이라 악용 경로는 없지만 불변식으로 고정.
+  // (0은 합법 — 길드 문양 첫 시도 등 무료 비용이 no-op 차감으로 통과해야 한다.)
+  if (amt < 0n) throw new Error(`WALLET_NEGATIVE_AMOUNT:${amt}`);
   const rows = await dbx
     .update(characters)
     .set({ diamond: sql`${characters.diamond} - ${amt}` })

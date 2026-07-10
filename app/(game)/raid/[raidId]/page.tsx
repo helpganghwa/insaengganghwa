@@ -21,6 +21,9 @@ export default async function RaidDetail({ params }: { params: Promise<{ raidId:
   const userId = await getSessionUserId();
   if (!userId) return null;
   const { raidId } = await params;
+  // 숫자 검증 — /raid/abc 같은 비정수는 BigInt() throw로 에러 바운더리에 떨어지므로
+  // 멜리(battle/[id])와 동일하게 404 처리.
+  if (!/^\d+$/.test(raidId)) notFound();
 
   async function loadRaid() {
     const [r] = await db
