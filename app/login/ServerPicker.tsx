@@ -7,7 +7,7 @@ import { useEffect, useState } from 'react';
  * **사용자가 실제로 클릭했을 때만** `login_srv` 쿠키(10분)에 기록 — OAuth 왕복 후 콜백이 읽어
  * 활성 서버 확정. ⚠ 마운트 즉시 기본값을 기록하면 콜백의 `last_server_id` 복원(기기 변경
  * 유저)이 항상 가려져, 신서버 오픈 후 기존 유저가 빈 신서버에 오배정된다(2026-07-10 감사 R1).
- * 미클릭 시 콜백 기본 체인(pending_server(초대 링크) → last_server_id → 최신 open)이 서버를 정한다.
+ * 미클릭 시 콜백 기본 체인(last_server_id → pending_server(초대 링크) → 최신 open)이 서버를 정한다.
  */
 export function ServerPicker({
   servers,
