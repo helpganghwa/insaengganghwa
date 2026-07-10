@@ -41,8 +41,9 @@ const STEP_TARGETS: Record<TutorialStep, Candidate[]> = {
     },
     { sel: '[data-tut="nav-inventory"]', copy: '강화할 장비를 고르러 인벤토리로 가볼게요!' },
   ],
-  // nav-enhance(바텀 탭)는 제외 — 강화 버튼이 자동으로 /enhance로 이동하므로 '이동' 단계 불필요.
   // enhance-confirm: 첫 탭 후 '확인' 오버레이가 뜬 상태(한 번 더 탭해야 강화). 우선순위 위.
+  // nav-enhance(바텀 탭)는 최후순위 폴백 — 정상 흐름(강화 버튼→/enhance 자동 이동)엔 안 걸리고,
+  // attempt 중 이탈 후 다른 페이지로 재진입했을 때만 매칭돼 /enhance로 안내(재개 공백 방지).
   attempt: [
     {
       sel: '[data-tut="enhance-confirm"]',
@@ -52,6 +53,7 @@ const STEP_TARGETS: Record<TutorialStep, Candidate[]> = {
       sel: '[data-tut="enhance-attempt"]',
       copy: '강화 슬롯을 두 번 탭해요! 첫 탭은 확인, 한 번 더 누르면 강화 시작 — 시간이 지날수록 성공 확률이 올라가요 ⚒️',
     },
+    { sel: '[data-tut="nav-enhance"]', copy: '강화소로 돌아가 마지막 단계를 마쳐요! ⚒️' },
   ],
 };
 
@@ -112,6 +114,9 @@ export function TutorialCoach({ statePromise }: { statePromise: Promise<Tutorial
         setPhase(s.phase);
         // localStorage가 비어 있고 active면 서버 파생 step으로 재개(이후엔 로컬 우선).
         if (s.phase === 'active' && s.step) setLocalStep((cur) => cur ?? s.step);
+        // DONE 계정은 잔존 tut_step 제거 — 같은 브라우저에 ACTIVE 계정이 로그인했을 때
+        // 남의 진행 단계가 서버 파생값을 이기는 교차 오염 방지(레거시 오염 자가 정리 포함).
+        if (s.phase === 'done') persist(null);
       })
       .catch(() => {});
     return () => {
@@ -134,6 +139,9 @@ export function TutorialCoach({ statePromise }: { statePromise: Promise<Tutorial
   // 액션 신호 — 클라 단계 머신 전진 / 마무리 팝업(서버 통신 없음).
   useEffect(() => {
     const onAdvance = () => {
+      // active일 때만 전진/기록 — DONE 유저의 매 장착/보급 이벤트가 tut_step을 다시 써서
+      // 같은 브라우저의 다른 계정(ACTIVE)에 오염된 단계가 재개되는 것 방지.
+      if (!(started || phase === 'active')) return;
       setLocalStep((cur) => {
         const i = idxOf(cur ?? 'open');
         const next = i >= 0 && i < STEP_ORDER.length - 1 ? STEP_ORDER[i + 1] : cur ?? 'open';

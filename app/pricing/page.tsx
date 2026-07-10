@@ -1,11 +1,12 @@
 import type { Metadata } from 'next';
 import Link from 'next/link';
 
-import { CASH, DIAMONDS, PREMIUM, type Cash } from '@/lib/game/shop/catalog';
+import { CASH, DIAMONDS, PREMIUM, FIRST_SPECIAL, type Cash } from '@/lib/game/shop/catalog';
+import { bpSegmentPriceKrw, BP_SEGMENT_PRICE_CAP_KRW } from '@/lib/game/balance';
 
 export const metadata: Metadata = {
   title: '상품 안내 — 인생강화',
-  description: '인생강화 유료 상품(다이아·패키지·성장 프리미엄) 및 가격 안내.',
+  description: '인생강화 유료 상품(다이아·패키지·성장 프리미엄·성장패스·인생 특가) 및 가격 안내.',
 };
 
 const won = (n: number) => `₩${n.toLocaleString('ko-KR')}`;
@@ -37,6 +38,28 @@ export default function PricingPage() {
             name="성장 프리미엄"
             sub={`즉시 다이아 ${PREMIUM.instant.diamond.toLocaleString()}개·보급상자 ${PREMIUM.instant.boxes}개 + 30일간 매일 다이아 ${PREMIUM.daily.diamond}개·상자 ${PREMIUM.daily.boxes}개`}
             price={won(PREMIUM.krw)}
+          />
+        </Grid>
+      </Section>
+
+      {/* 성장패스 — 구간별 독립 결제(만료 없음). 가격은 balance 상수 파생(공시-코드 1:1). */}
+      <Section title="성장패스 (강화/초월)">
+        <Grid>
+          <Item
+            name="성장패스 구간 결제"
+            sub={`강화 100레벨/초월 10레벨 구간별 독립 결제 · 만료 없음 · 구간이 오를수록 가격 상승(상한 ${won(BP_SEGMENT_PRICE_CAP_KRW)})`}
+            price={`${won(bpSegmentPriceKrw('enhance', 0))}~${won(BP_SEGMENT_PRICE_CAP_KRW)}`}
+          />
+        </Grid>
+      </Section>
+
+      {/* 인생 특가 — 서버별 1회 한정 */}
+      <Section title="인생 특가 (1회 한정)">
+        <Grid>
+          <Item
+            name="인생 특가"
+            sub={`다이아 ${FIRST_SPECIAL.grant.diamond.toLocaleString()}개 + 보급상자 ${FIRST_SPECIAL.grant.boxes}개 · 서버별 1회 구매 가능`}
+            price={won(FIRST_SPECIAL.krw)}
           />
         </Grid>
       </Section>

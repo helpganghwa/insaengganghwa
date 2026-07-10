@@ -521,9 +521,11 @@ export function ShopTabs({
             ? '미성년 월 구매한도를 초과했습니다'
             : r.code === 'ALREADY_PURCHASED'
               ? '이미 구매완료한 상품입니다'
-              : r.code === 'AMOUNT_MISMATCH'
-                ? '결제 금액 오류 — 고객센터로 문의해 주세요'
-                : '결제에 실패했습니다');
+              : r.code === 'REVIEW_ACCOUNT'
+                ? '심사용 계정은 결제할 수 없습니다'
+                : r.code === 'AMOUNT_MISMATCH'
+                  ? '결제 금액 오류 — 고객센터로 문의해 주세요'
+                  : '결제에 실패했습니다');
         if (r.code === 'ALREADY_PURCHASED') setPurchased((p) => new Set(p).add(productId));
         showHeaderToast({ title });
       }

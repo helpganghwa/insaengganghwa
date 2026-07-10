@@ -82,9 +82,15 @@ CBT 유저 전원의 캐릭터를 1서버에 **미리 생성** — CBT 닉네임
 ## 4. env 전환 + 배포
 
 1. Vercel env에서 **`TEST_MODE` 삭제** — 보상 배율 ×5 → ×1 (자세한 절차 docs/TEST-MODE.md).
-2. Vercel env에서 **`ALLOW_TEST_LOGIN` 삭제** — 심사 로그인 차단 + 결제 전 유저 개방 + CBT 고지
-   소멸이 **동시에** 일어난다. §0의 결제 준비가 끝난 뒤에만 내릴 것.
+2. Vercel env에서 **`ALLOW_TEST_LOGIN` 삭제** — 결제 전 유저 개방 + CBT 고지 소멸.
+   ⚠ 심사 로그인(/login?test=true)은 이 플래그와 **무관하게 상시 활성**(2026-07-09 분리 —
+   출시 후 스토어·게임위 재심의 대응, 사용자 결정). §0의 결제 준비가 끝난 뒤에만 내릴 것.
 3. 재배포(env 변경은 새 배포부터 적용).
+
+> **심사 계정 결제**: cbt 계정은 서버에서 결제 차단(`REVIEW_ACCOUNT`) — 자격증명이 심사
+> 서류로 공유되는 계정이라 제3자 실결제(환불/차지백 귀속 분쟁)를 막는다. PG/게임위
+> 심사관이 **결제 검수**를 해야 하는 기간에만 env `ALLOW_REVIEW_PAYMENT=true`로 일시
+> 해제(심사관은 본인 휴대폰으로 본인인증 후 결제), 검수 종료 시 즉시 제거.
 
 ## 5. 확률 공시 스냅샷 기록
 
@@ -127,8 +133,10 @@ bun run scripts/record-probability-snapshot.ts --note="정식 오픈" --confirm
 
 ## 8. 사후 (심사 종료 후)
 
-- 심사 계정 물리 제거: `lib/auth/test-accounts.ts` 삭제 + `signInWithCredentials`/`ensureTestUser`/
-  로그인 test 분기 제거 + prod Supabase Auth의 `cbt@`~`cbt5@ganghwa.app` 계정(5개) 삭제.
+- ~~심사 계정 물리 제거~~ → **폐기(2026-07-10)**: 심사 계정·로그인은 출시 후에도 **영구 유지**
+  (스토어·게임위 재심의 상시 대응, 사용자 결정). 잔여 리스크는 결제 차단(`REVIEW_ACCOUNT`,
+  §4 참조)으로 통제 — 유출돼도 실결제·타 유저 데이터 접근 불가.
+  `ALLOW_REVIEW_PAYMENT`가 남아 있지 않은지만 확인(심사 검수 후 즉시 제거).
 - 스토리지 고아 정리(선택): wipe로 행이 사라진 `profiles` 버킷 파일과 Pixellab 캐릭터는 남는다 —
   비용 누적 시 GC 스크립트 검토(회원탈퇴 경로도 동일 패턴).
 
