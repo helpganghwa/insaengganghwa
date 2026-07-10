@@ -15,7 +15,6 @@ import { periodKey } from '@/lib/game/shop/period';
 import { raisePaymentAlert } from './alert';
 import { applyProductGrant } from '@/lib/game/shop/grant';
 import { hasFirstSpecial, getPremiumRemainingDays } from '@/lib/game/shop/dev-purchase';
-import { TEST_ACCOUNTS } from '@/lib/auth/test-accounts';
 import { applyBpSegmentPurchase } from '@/lib/game/battlepass';
 
 import { getPortonePayment, cancelPortonePayment } from './portone';
@@ -54,7 +53,6 @@ export type PurchaseErrorCode =
   | 'ALREADY_PURCHASED' // 주기 상품 같은 주기 재구매
   | 'IDENTITY_REQUIRED' // 본인인증 미완료(결제 전 필수 — 청소년보호)
   | 'MINOR_LIMIT' // 미성년 월 한도 초과
-  | 'REVIEW_ACCOUNT' // 심사(cbt) 계정 결제 차단 — ALLOW_REVIEW_PAYMENT=true로 일시 해제
   | 'CONFIG'; // 포트원 env 미설정
 
 export class PurchaseError extends Error {
@@ -129,24 +127,8 @@ export async function createOrder(
   const cfg = portoneConfig();
   if (!cfg) throw new PurchaseError('CONFIG');
 
-  // 심사(cbt) 계정 결제 차단 — 심사 로그인은 상시 활성 + 공개 자격증명(사용자 결정 2026-07-09)이라,
-  // 비번을 아는 제3자가 cbt 계정으로 실결제하면 환불/차지백 귀속 분쟁이 된다. 주문 생성 자체를 차단.
-  // PG/게임위 심사관이 결제 검수를 해야 하는 기간엔 env `ALLOW_REVIEW_PAYMENT=true`로 일시 해제
-  // (심사관은 자기 휴대폰 본인인증 후 결제 — 검수 종료 시 env 제거). auth.users 조회 실패는
-  // fail-open: 이 가드 때문에 일반 유저 결제가 죽으면 안 된다(차단 대상은 5계정뿐).
-  if (process.env.ALLOW_REVIEW_PAYMENT !== 'true') {
-    try {
-      const emails = TEST_ACCOUNTS.map((a) => a.email);
-      const rows = (await db.execute(
-        sql`select 1 from auth.users where id = ${userId}::uuid
-            and email in (${sql.join(emails.map((e) => sql`${e}`), sql`, `)})`,
-      )) as unknown as unknown[];
-      if (rows.length > 0) throw new PurchaseError('REVIEW_ACCOUNT');
-    } catch (e) {
-      if (e instanceof PurchaseError) throw e;
-      // 조회 실패(권한/일시 장애) — 가드만 스킵(fail-open).
-    }
-  }
+  // 심사(cbt) 계정 결제 차단 없음 — 사용자 결정(2026-07-10): 심사 계정도 결제 허용
+  // (심사관 결제 검수 편의 우선, 공개 자격증명의 제3자 결제 리스크는 수용).
 
   // 상품 해석 — 배틀패스 구간(bp_*) vs 상점 상품. 금액·지급은 서버 권위.
   const bp = parseBpProduct(productId);
