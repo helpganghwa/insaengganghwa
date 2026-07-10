@@ -27,6 +27,7 @@ export type RaidErrorCode =
   | 'RAID_CLOSED'
   | 'RAID_FULL'
   | 'ALREADY_JOINED'
+  | 'NO_CHARACTER_ON_SERVER' // 크로스서버 참가 차단(풀 아이솔레이션 — 감사 R4)
   | 'NOT_PARTICIPANT'
   | 'NO_ATTACKS'
   | 'NOT_SETTLEABLE'

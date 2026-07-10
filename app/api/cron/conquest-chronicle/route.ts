@@ -11,6 +11,7 @@ import { sql } from 'drizzle-orm';
 import { revalidateTag } from 'next/cache';
 
 import { isCronAuthorized } from '@/lib/auth/cron-auth';
+import { beatCron } from '@/lib/cron/heartbeat';
 import { db } from '@/lib/db/client';
 import { generateAndStoreChronicle } from '@/lib/game/guild';
 import { revealConquest, carryOverDefenders } from '@/lib/game/guild/conquest/run';
@@ -92,6 +93,7 @@ export async function GET(req: Request) {
       }
     }
     const ok = results.every((r) => !('error' in r));
+    if (ok) await beatCron('conquest-chronicle'); // 성공 시에만 — 공개 크론 정지를 dead-man이 감지
     return Response.json({ ok, kstDay, results, kind: 'conquest-chronicle' }, { status: ok ? 200 : 500 });
   } catch (e) {
     console.error('[conquest-chronicle]', e);

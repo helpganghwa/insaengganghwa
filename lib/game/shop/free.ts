@@ -31,7 +31,7 @@ function periodKey(slot: FreeSlot): string {
 }
 
 export class ShopFreeError extends Error {
-  constructor(public code: 'ALREADY_CLAIMED') {
+  constructor(public code: 'ALREADY_CLAIMED' | 'NO_CHARACTER') {
     super(code);
     this.name = 'ShopFreeError';
   }
@@ -77,6 +77,13 @@ export function claimFree(userId: string, serverId: number, slot: FreeSlot): Pro
       .insert(shopFreeClaims)
       .values({ userId, serverId, slot, periodKey: '' })
       .onConflictDoNothing();
+    // 캐릭터 존재 가드(2026-07-10 감사 R3, 일일메일 daily.ts 패턴 통일) — srv 쿠키는 무검증
+    // 통과라, 미오픈 신서버 id로 변조해 무료 상자를 선적립(오픈 즉시 재고 보유)하는 것 차단.
+    const [ch] = (await tx.execute(
+      sql`select 1 from characters c where c.user_id = ${userId}::uuid and c.server_id = ${serverId} limit 1`,
+    )) as unknown as unknown[];
+    if (!ch) throw new ShopFreeError('NO_CHARACTER');
+
     const [row] = await tx
       .select({ periodKey: shopFreeClaims.periodKey })
       .from(shopFreeClaims)

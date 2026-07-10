@@ -66,6 +66,13 @@ export function requestJoinRaid(input: {
     if (raid.status !== 'active' || raid.expireAt.getTime() <= Date.now()) {
       throw new RaidError('RAID_CLOSED');
     }
+
+    // 크로스서버 참가 차단(2026-07-10 감사 R4, 풀 아이솔레이션) — 참가자가 레이드 서버에
+    // 캐릭터가 없으면 거부. 없으면 CP 0으로 참가하고 보상이 캐릭터 없는 서버에 고아 적재된다.
+    const [ch] = (await tx.execute(
+      sql`select 1 from characters c where c.user_id = ${userId}::uuid and c.server_id = ${raid.serverId} limit 1`,
+    )) as unknown as unknown[];
+    if (!ch) throw new RaidError('NO_CHARACTER_ON_SERVER');
     // 호스트 or 이미 참가자 → 요청 없이 바로 진입.
     if (raid.hostUserId === userId) return { raidId: raid.id, state: 'joined' as const };
     const [existing] = await tx

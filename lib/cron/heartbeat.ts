@@ -27,7 +27,9 @@ export const CRON_MAX_GAP_MS: Record<string, number> = {
   'payment-recon': 40 * MIN, // 10분 — 결제 백스톱(최중요)
   'push-daily-supply': 17 * HOUR, // UTC15~23:30 창(창 밖 최대공백 ~15.5h)
   'melee-run': 25 * HOUR, // UTC0 창 — 대난투 개최
+  'melee-reveal': 25 * HOUR, // UTC1 창 — 대난투 발표(보상 우편·푸시). 정지=결과 영구 미공개(감사 R5)
   'conquest-run': 25 * HOUR, // UTC14 창 — 점령전 정산
+  'conquest-chronicle': 25 * HOUR, // UTC15 창 — 점령 공개(소유권 플립·보상 우편). 정지=공개 지연(감사 R5)
 };
 
 /**

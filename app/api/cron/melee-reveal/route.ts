@@ -3,6 +3,7 @@
  * 'computed' → 'revealed'(멱등) + 참가자 전원 결과 우편 + 푸시. 인증 = CRON_SECRET / x-vercel-cron.
  */
 import { isCronAuthorized } from '@/lib/auth/cron-auth';
+import { beatCron } from '@/lib/cron/heartbeat';
 import { revealMelee } from '@/lib/game/melee/reveal';
 import { openServerIds } from '@/lib/game/server-list';
 
@@ -24,6 +25,7 @@ export async function GET(req: Request) {
       }
     }
     const ok = results.every((r) => !('error' in r));
+    if (ok) await beatCron('melee-reveal'); // 성공 시에만 — '실행됐으나 실패'를 dead-man이 감지
     return Response.json({ ok, results, kind: 'melee-reveal' }, { status: ok ? 200 : 500 });
   } catch (e) {
     console.error('[melee-reveal]', e);

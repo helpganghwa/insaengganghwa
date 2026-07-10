@@ -31,7 +31,7 @@ import { TEST_REWARD_MULTIPLIER } from '@/lib/game/test-mode';
  */
 
 export class CheckinError extends Error {
-  constructor(public code: 'CHECKIN_ALREADY_CLAIMED') {
+  constructor(public code: 'CHECKIN_ALREADY_CLAIMED' | 'NO_CHARACTER') {
     super(code);
     this.name = 'CheckinError';
   }
@@ -70,6 +70,13 @@ function applyRewardToAcc(reward: CheckinReward, acc: Acc) {
 export function claimCheckin(input: { userId: string; serverId: number }): Promise<CheckinClaimResult> {
   const { userId, serverId } = input;
   return db.transaction(async (tx) => {
+    // 0) 캐릭터 존재 가드(2026-07-10 감사 R3, 일일메일 패턴 통일) — srv 쿠키 변조로 미오픈
+    //    신서버에 출석 진행/상자를 선적립(오픈 즉시 재고+진행도 보유)하는 것 차단.
+    const [ch] = (await tx.execute(
+      sql`select 1 from characters c where c.user_id = ${userId}::uuid and c.server_id = ${serverId} limit 1`,
+    )) as unknown as unknown[];
+    if (!ch) throw new CheckinError('NO_CHARACTER');
+
     // 1) state UPSERT — 신규는 dp=0/last=null 생성, 기존은 그대로(NO-OP). `for update`는
     //    INSERT … ON CONFLICT DO UPDATE 후 별도 SELECT FOR UPDATE로 잠금 확보.
     await tx

@@ -126,7 +126,9 @@ const loadProfile = cache(async (handle: string, serverId: number) => {
           transcendLevel: userEquipment.transcendLevel,
         })
         .from(userEquipment)
-        .where(eq(userEquipment.userId, prof.id)),
+        // serverId 필터 필수(2026-07-10 감사 R2) — 없으면 양서버 보유자의 전투력·합산·최고가
+        // 전 서버 합산돼 같은 화면의 서버 스코프 랭킹 배지·OG 카드와 수치가 어긋난다.
+        .where(and(eq(userEquipment.userId, prof.id), eq(userEquipment.serverId, serverId))),
       2000,
       'u.owned',
     ).catch(

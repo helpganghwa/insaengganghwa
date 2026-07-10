@@ -4,8 +4,10 @@ import { useEffect, useState } from 'react';
 
 /**
  * 로그인 화면 서버 셀렉터(SERVER.md §3) — 서버명 칩만 노출(설명 없음), 최신 서버에 추천 라벨.
- * 선택을 `login_srv` 쿠키(10분)에 즉시 기록 — OAuth 왕복 후 콜백(또는 테스트 로그인 액션)이
- * 읽어 활성 서버 확정 + 캐릭터 없으면 자동 생성. 폼과 분리된 쿠키 방식이라 어떤 로그인 버튼과도 동작.
+ * **사용자가 실제로 클릭했을 때만** `login_srv` 쿠키(10분)에 기록 — OAuth 왕복 후 콜백이 읽어
+ * 활성 서버 확정. ⚠ 마운트 즉시 기본값을 기록하면 콜백의 `last_server_id` 복원(기기 변경
+ * 유저)이 항상 가려져, 신서버 오픈 후 기존 유저가 빈 신서버에 오배정된다(2026-07-10 감사 R1).
+ * 미클릭 시 콜백 기본 체인(last_server_id → pending_server → 최신 open)이 서버를 정한다.
  */
 export function ServerPicker({
   servers,
@@ -19,10 +21,17 @@ export function ServerPicker({
 }) {
   const [picked, setPicked] = useState(defaultSrv);
 
+  // 마운트 시 잔존 login_srv 소거 — 직전 시도(중단된 로그인 등)의 선택이 이번 로그인에
+  // 유령처럼 적용되는 것 방지. 이후 기록은 오직 사용자 클릭에서만.
   useEffect(() => {
+    document.cookie = 'login_srv=; path=/; max-age=0';
+  }, []);
+
+  const pick = (id: number) => {
+    setPicked(id);
     const secure = location.protocol === 'https:' ? '; secure' : '';
-    document.cookie = `login_srv=${picked}; path=/; max-age=600; samesite=lax${secure}`;
-  }, [picked]);
+    document.cookie = `login_srv=${id}; path=/; max-age=600; samesite=lax${secure}`;
+  };
 
   // 별도 컨테이너(로그인 버튼과 동일 너비 w-full) + 3열 그리드. 높이는 행 수에 따라 자동.
   return (
@@ -37,7 +46,7 @@ export function ServerPicker({
               key={sv.id}
               type="button"
               disabled={!open}
-              onClick={() => setPicked(sv.id)}
+              onClick={() => pick(sv.id)}
               className={`relative rounded-lg border px-1 py-1.5 text-[12px] font-bold transition ${
                 active
                   ? 'border-amber-500 bg-amber-500/10 text-amber-700 dark:text-amber-300'

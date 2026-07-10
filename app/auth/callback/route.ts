@@ -70,10 +70,16 @@ export async function GET(request: NextRequest) {
       const res = NextResponse.redirect(dest.toString());
       if (userId) {
         try {
-          // 대상 서버 확정: 로그인 화면 선택(login_srv) > 마지막 접속(last_server_id) > 최신 open.
-          const picked = Number(request.cookies.get('login_srv')?.value);
-          let sid: number | null =
-            Number.isInteger(picked) && picked >= 1 && picked <= 32767 ? picked : null;
+          // 대상 서버 확정(2026-07-10 R1 조정): 명시 클릭(login_srv) > 마지막 접속(last_server_id)
+          // > 공유 링크 의도(pending_server — 사실상 링크 타고 온 **신규 유저**만 여기 도달)
+          // > 최신 open. 기존 유저 복원이 공유 링크보다 우선 — 서버2 초대 링크를 눌렀던 1서버
+          // 유저가 무주의 로그인으로 신서버에 빈 캐릭터를 만드는 오배정 방지(따라가려면 직접 선택).
+          // login_srv는 이제 셀렉터 **클릭 시에만** 기록됨(마운트 자동 기록이 복원을 가리던 R1 수정).
+          const asSid = (raw: string | undefined): number | null => {
+            const n = Number(raw);
+            return Number.isInteger(n) && n >= 1 && n <= 32767 ? n : null;
+          };
+          let sid: number | null = asSid(request.cookies.get('login_srv')?.value);
           if (!sid) {
             const [p] = await db
               .select({ sid: profiles.lastServerId })
@@ -82,6 +88,7 @@ export async function GET(request: NextRequest) {
               .limit(1);
             sid = p?.sid ?? null;
           }
+          if (!sid) sid = asSid(request.cookies.get('pending_server')?.value);
           if (!sid) sid = await latestOpenServerId();
           // 그 서버에 캐릭터가 없으면 생성(가입 보너스 + 기본 아바타 + 거주지 포함).
           // 가입 트리거(0067)는 더 이상 캐릭터를 만들지 않으므로, 신규 가입·새 서버 합류 모두
@@ -99,6 +106,9 @@ export async function GET(request: NextRequest) {
             });
           }
           res.cookies.delete('login_srv');
+          // 공유 링크 서버 의도는 1회성 — 소비 후 소거(F7: 7일 잔존 시 이후 재로그인의
+          // 기본 선택을 계속 오염시키던 문제).
+          res.cookies.delete('pending_server');
         } catch (e) {
           console.warn('[auth.callback] srv select skipped', (e as Error).message);
         }

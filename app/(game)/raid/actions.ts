@@ -33,6 +33,7 @@ const MSG: Record<string, string> = {
   NOT_SHARED: '비공개 레이드입니다.',
   RAID_FULL: '인원이 가득 찼습니다 (최대 10명).',
   ALREADY_JOINED: '이미 참여 중입니다.',
+  NO_CHARACTER_ON_SERVER: '다른 서버의 레이드입니다. 해당 서버 캐릭터로만 참여할 수 있어요.',
   NOT_PARTICIPANT: '참여자가 아닙니다.',
   NOT_HOST: '개설자만 처리할 수 있습니다.',
   REQUEST_NOT_FOUND: '참가 요청을 찾을 수 없습니다.',
