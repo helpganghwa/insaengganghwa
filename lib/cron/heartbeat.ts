@@ -18,6 +18,9 @@ const HOUR = 60 * MIN;
 // 감시 대상 = 정지 시 실사용/매출 영향이 있는 핵심 크론만. 총체적 정지(CRON_SECRET 사고)는
 // 고빈도 크론(≤40분) 아무거나 stale로 잡히고, 개별 중요 크론도 각자 감지된다. 여기 계측한
 // 크론만 beatCron을 호출한다(미계측 크론을 넣으면 항상 stale 오탐).
+// ⚠ 신규 등재 절차: 여기 추가 + 라우트에 beatCron + **배포 직후 prod cron_heartbeats에
+//   last_success_at=now() 시드** — 첫 스케줄 실행 전까지 '한 번도 성공 없음' 1회성 오탐이
+//   울린다(2026-07-10 melee-reveal/conquest-chronicle 등재 때 실제 발생·시드로 해소).
 export const CRON_MAX_GAP_MS: Record<string, number> = {
   warm: 5 * MIN, // 매분 — 워치독 본체
   'push-enhance-ready': 10 * MIN, // 매분
