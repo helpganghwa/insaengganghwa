@@ -8,8 +8,10 @@ import { guildMembers, zones, guildBattleDeployments } from '@/lib/db/schema/gui
 import { GuildError } from '../errors';
 import { nextBattleKstDay, isConquestLocked } from './schedule';
 
-/** actor가 zone 소유 길드의 길드장/부길드장인지 검증하고 소유 길드 id 반환. */
-export async function assertOfficerOfZoneOwner(
+/** actor가 zone 소유 길드의 **길드장**인지 검증하고 소유 길드 id 반환.
+ *  집행관 지정/해제·구역 포기는 길드장 전속(2026-07-10 권한 조정 — 자산·영토급 액션이라
+ *  임원 공용에서 상향. 포기는 파괴적, 집행관은 세금 수금권 부여라 동급으로 묶음). */
+export async function assertLeaderOfZoneOwner(
   tx: Parameters<Parameters<typeof db.transaction>[0]>[0],
   actorUserId: string,
   zoneId: number,
@@ -31,12 +33,12 @@ export async function assertOfficerOfZoneOwner(
     .where(and(eq(guildMembers.userId, actorUserId), eq(guildMembers.guildId, z.ownerGuildId)))
     .limit(1);
   if (!m) throw new GuildError('FORBIDDEN'); // 자기 길드 소유 구역 아님
-  if (m.role !== 'leader' && m.role !== 'vice') throw new GuildError('NOT_OFFICER');
+  if (m.role !== 'leader') throw new GuildError('NOT_LEADER');
   return { guildId: m.guildId, serverId: z.serverId, zoneName: z.name };
 }
 
 /**
- * 집행관 지정 — GUILD §5.8⑦. 소유 길드 길드장/부길드장이 길드원 1명을 그 구역 집행관으로.
+ * 집행관 지정 — GUILD §5.8⑦. 소유 길드 길드장이 길드원 1명을 그 구역 집행관으로.
  *  - 대상은 같은 길드원이어야 하고, 이미 다른 구역 집행관이면 거부(1유저 1집행관).
  *  - 집행관은 자동 방어로 슬롯 점유 → 대상의 다음 전투 배치는 제거.
  */
@@ -47,7 +49,7 @@ export async function setZoneExecutor(input: {
 }): Promise<void> {
   if (isConquestLocked()) throw new GuildError('BATTLE_IN_PROGRESS'); // 정산·공개 윈도(23:00~01:00) 잠금
   await db.transaction(async (tx) => {
-    const { guildId, serverId } = await assertOfficerOfZoneOwner(tx, input.actorUserId, input.zoneId);
+    const { guildId, serverId } = await assertLeaderOfZoneOwner(tx, input.actorUserId, input.zoneId);
 
     const [target] = await tx
       .select({ guildId: guildMembers.guildId })
@@ -86,11 +88,11 @@ export async function setZoneExecutor(input: {
   });
 }
 
-/** 집행관 해제 — 소유 길드 길드장/부길드장. 구역을 집행관 공석으로(자동 방어·수금 중단). */
+/** 집행관 해제 — 소유 길드 길드장. 구역을 집행관 공석으로(자동 방어·수금 중단). */
 export async function clearZoneExecutor(input: { actorUserId: string; zoneId: number }): Promise<void> {
   if (isConquestLocked()) throw new GuildError('BATTLE_IN_PROGRESS'); // 정산·공개 윈도 잠금
   await db.transaction(async (tx) => {
-    await assertOfficerOfZoneOwner(tx, input.actorUserId, input.zoneId);
+    await assertLeaderOfZoneOwner(tx, input.actorUserId, input.zoneId);
     await tx.update(zones).set({ executorUserId: null }).where(eq(zones.id, input.zoneId));
   });
 }

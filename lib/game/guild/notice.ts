@@ -8,6 +8,7 @@ import { guilds, guildMembers } from '@/lib/db/schema/guild';
 import { containsProfanity } from '@/lib/game/moderation/profanity';
 
 import { GUILD_INTRO_MAX_LEN, GUILD_NOTICE_MAX_LEN } from './balance';
+import { logGuildAudit } from './audit';
 import { GuildError } from './errors';
 
 /**
@@ -29,6 +30,14 @@ export async function setGuildNotice(input: { userId: string; serverId: number; 
       .update(guilds)
       .set({ notice: text.length > 0 ? text : null })
       .where(eq(guilds.id, m.guildId));
+    // 길드 로그 — 누가 공지를 수정/삭제했는지 피드에 남김(2026-07-10 권한 감사 요청).
+    await logGuildAudit(tx, {
+      serverId: input.serverId,
+      guildId: m.guildId,
+      actorUserId: input.userId,
+      action: 'notice_edit',
+      detail: { cleared: text.length === 0 },
+    });
   });
 }
 

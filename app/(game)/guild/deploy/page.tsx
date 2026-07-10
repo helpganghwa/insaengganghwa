@@ -22,7 +22,8 @@ export default async function DeployPage() {
   const membership = await getMyMembership(userId, serverId);
   if (!membership) redirect('/guild');
 
-  const isOfficer = membership.role === 'leader' || membership.role === 'vice';
+  // 남 배치·집행관 지정/해제·구역 포기는 길드장 전속(2026-07-10 권한 조정).
+  const isLeader = membership.role === 'leader';
   const [board, attackable, adjacency] = await Promise.all([
     getDeployBoard(membership.guildId),
     getAttackableZoneIds(membership.guildId),
@@ -31,7 +32,7 @@ export default async function DeployPage() {
 
   return (
     <DeployBoard
-      isOfficer={isOfficer}
+      isLeader={isLeader}
       myUserId={userId}
       myGuildId={membership.guildId.toString()}
       mapSrc={assetUrl('/sprites/guild/worldmap.png')}

@@ -25,9 +25,11 @@ export default async function GuildSettingsPage() {
   const isOfficer = membership.role === 'leader' || membership.role === 'vice';
   if (!isOfficer) redirect('/guild');
 
+  // 가입 신청 목록은 길드장 전용(2026-07-10 권한 조정) — 부길드장 클라 props에 신청자
+  // 목록이 직렬화되지 않게 fetch 자체를 게이트(UI 숨김과 이중).
   const [guild, joinRequests, members, emblems] = await Promise.all([
     getGuild(membership.guildId),
-    getJoinRequests(membership.guildId),
+    membership.role === 'leader' ? getJoinRequests(membership.guildId) : Promise.resolve([]),
     getGuildMembers(membership.guildId),
     getGuildEmblems(membership.guildId),
   ]);

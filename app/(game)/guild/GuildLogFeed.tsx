@@ -85,11 +85,17 @@ function message(e: GuildLogEntry): ReactNode {
     case 'transfer_leadership':
       return <>{actor}님이 {target}님에게 {hl('길드장을 위임', C.violet)}했습니다</>;
     case 'set_vice':
-      return <>{target}님이 {hl('부길드장', C.sky)}이 되었습니다</>;
+      return <>{actor}님이 {target}님을 {hl('부길드장', C.sky)}으로 임명했습니다</>;
     case 'unset_vice':
-      return <>{target}님의 부길드장이 해제되었습니다</>;
+      return <>{actor}님이 {target}님의 부길드장을 해제했습니다</>;
     case 'set_join_policy':
-      return '가입 방식이 변경되었습니다';
+      return <>{actor}님이 가입 방식을 변경했습니다</>;
+    case 'notice_edit':
+      return e.detail?.cleared ? (
+        <>{actor}님이 공지를 삭제했습니다</>
+      ) : (
+        <>{actor}님이 {hl('공지', C.sky)}를 수정했습니다</>
+      );
     case 'auto_handover':
       return <>{target}님에게 {hl('길드장이 자동 위임', C.violet)}되었습니다</>;
     // 업적 — 멤버.

@@ -495,7 +495,7 @@ export function GuildSettings({
             }`}
           >
             {label}
-            {k === 'members' && policy === 'approval' && requests.length > 0 ? (
+            {k === 'members' && isLeader && policy === 'approval' && requests.length > 0 ? (
               <span className="absolute right-1 top-0.5 rounded-full bg-amber-600 px-1 text-[9px] font-bold leading-tight text-white">
                 {requests.length}
               </span>
@@ -629,8 +629,9 @@ export function GuildSettings({
       </section>
       )}
 
-      {/* 가입 방식 + 신청 — 구성원 탭에 통합 */}
-      {tab === 'members' && (
+      {/* 가입 방식 + 신청 — 구성원 탭에 통합. **길드장 전용**(2026-07-10 권한 조정 —
+          서버 액션도 NOT_LEADER 게이트라 UI 숨김은 혼란 방지용). */}
+      {tab === 'members' && isLeader && (
       <section className="rounded-xl border border-zinc-200 bg-white p-3 dark:border-zinc-800 dark:bg-zinc-950">
         <div className="flex items-center justify-between gap-2">
           <h3 className="text-sm font-bold">가입 방식</h3>

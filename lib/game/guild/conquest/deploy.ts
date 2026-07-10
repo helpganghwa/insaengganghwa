@@ -135,8 +135,8 @@ export async function getMyDeployment(
   return d ? { zoneId: d.zoneId, role: d.role as ConquestRole, battleKstDay } : null;
 }
 
-/** actor가 임원(길드장/부길드장)인지 검증하고 길드 id 반환. */
-async function assertOfficer(
+/** actor가 길드장인지 검증하고 길드 id 반환 — 남 배치/해제는 **길드장 전속**(2026-07-10 권한 조정). */
+async function assertLeader(
   tx: Parameters<Parameters<typeof db.transaction>[0]>[0],
   userId: string,
   serverId: number,
@@ -147,12 +147,12 @@ async function assertOfficer(
     .where(and(eq(guildMembers.userId, userId), eq(guildMembers.serverId, serverId)))
     .limit(1);
   if (!m) throw new GuildError('NOT_IN_GUILD');
-  if (m.role !== 'leader' && m.role !== 'vice') throw new GuildError('NOT_OFFICER');
+  if (m.role !== 'leader') throw new GuildError('NOT_LEADER');
   return m.guildId;
 }
 
 /**
- * 길드원 배치(임원 전용) — GUILD §5.8⑥. 길드장/부길드장이 길드원 1명을 공격/수비 구역에 배치.
+ * 길드원 배치(길드장 전용) — GUILD §5.8⑥. 길드장이 길드원 1명을 공격/수비 구역에 배치.
  *  - 대상은 같은 길드원. 집행관은 자동 방어라 배치 불가(IS_EXECUTOR).
  *  - 수비=자기 길드 소유 구역, 공격=비소유 구역. 1인 1배치(upsert), 23:00 잠금(날짜 롤).
  */
@@ -165,7 +165,7 @@ export async function deployMember(input: {
 }): Promise<{ battleKstDay: string }> {
   if (isConquestLocked()) throw new GuildError('BATTLE_IN_PROGRESS'); // 정산·공개 윈도 잠금
   return db.transaction(async (tx) => {
-    const guildId = await assertOfficer(tx, input.actorUserId, input.serverId);
+    const guildId = await assertLeader(tx, input.actorUserId, input.serverId);
 
     const [target] = await tx
       .select({ guildId: guildMembers.guildId })
@@ -224,7 +224,7 @@ export async function clearMemberDeployment(input: {
 }): Promise<void> {
   if (isConquestLocked()) throw new GuildError('BATTLE_IN_PROGRESS'); // 정산·공개 윈도 잠금
   await db.transaction(async (tx) => {
-    const guildId = await assertOfficer(tx, input.actorUserId, input.serverId);
+    const guildId = await assertLeader(tx, input.actorUserId, input.serverId);
     await tx
       .delete(guildBattleDeployments)
       .where(

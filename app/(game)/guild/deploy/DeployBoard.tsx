@@ -49,7 +49,7 @@ const fmt = (n: number) =>
   new Intl.NumberFormat('ko-KR', { notation: 'compact', maximumFractionDigits: 1 }).format(n);
 
 export function DeployBoard({
-  isOfficer,
+  isLeader,
   myUserId,
   myGuildId,
   mapSrc,
@@ -58,7 +58,7 @@ export function DeployBoard({
   members: initialMembers,
   zones,
 }: {
-  isOfficer: boolean;
+  isLeader: boolean;
   myUserId: string;
   myGuildId: string;
   mapSrc: string;
@@ -404,7 +404,7 @@ export function DeployBoard({
                   {isDefend ? '수비' : '공격'}
                 </span>
                 {/* 점령지 포기 — 우리 점령지(수비) + 임원(길드장/부길드장)만. 해제 버튼과 동일 스타일, 확인 팝업. */}
-                {isDefend && isOfficer && (
+                {isDefend && isLeader && (
                   <button
                     type="button"
                     onClick={() => setAbandonOpen(true)}
@@ -434,7 +434,7 @@ export function DeployBoard({
                         </span>
                         <span className="text-[9px] font-medium text-indigo-500">집행관</span>
                       </div>
-                      {isOfficer && !locked && (
+                      {isLeader && !locked && (
                         <button
                           type="button"
                           onClick={clearExec}
@@ -459,10 +459,10 @@ export function DeployBoard({
                           {isDefend ? '수비' : '공격'}
                         </span>
                       </div>
-                      {!locked && (isOfficer || m.userId === myUserId) && (
+                      {!locked && (isLeader || m.userId === myUserId) && (
                         <div className="flex shrink-0 items-center gap-0.5">
                           {/* 집행관 지정은 임원 권한 */}
-                          {isDefend && isOfficer && (
+                          {isDefend && isLeader && (
                             <button
                               type="button"
                               onClick={() => setExec(m)}

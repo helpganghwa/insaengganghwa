@@ -18,14 +18,15 @@ import { joinGuild } from './join';
 type Tx = Parameters<Parameters<typeof db.transaction>[0]>[0];
 
 /** actor가 길드 임원(길드장/부길드장)인지 검증하고 길드 id 반환. */
-async function assertOfficer(tx: Tx, userId: string, serverId: number): Promise<bigint> {
+// 가입 승인/거절·가입방식 설정은 **길드장 전속**(2026-07-10 권한 조정 — 임원 공용에서 상향).
+async function assertLeader(tx: Tx, userId: string, serverId: number): Promise<bigint> {
   const [m] = await tx
     .select({ guildId: guildMembers.guildId, role: guildMembers.role })
     .from(guildMembers)
     .where(and(eq(guildMembers.userId, userId), eq(guildMembers.serverId, serverId)))
     .limit(1);
   if (!m) throw new GuildError('NOT_IN_GUILD');
-  if (m.role !== 'leader' && m.role !== 'vice') throw new GuildError('NOT_OFFICER');
+  if (m.role !== 'leader') throw new GuildError('NOT_LEADER');
   return m.guildId;
 }
 
@@ -91,7 +92,7 @@ export async function approveJoinRequest(input: {
   requestUserId: string;
 }): Promise<void> {
   await db.transaction(async (tx) => {
-    const guildId = await assertOfficer(tx, input.actorUserId, input.serverId);
+    const guildId = await assertLeader(tx, input.actorUserId, input.serverId);
 
     const [req] = await tx
       .select({ guildId: guildJoinRequests.guildId })
@@ -146,7 +147,7 @@ export async function rejectJoinRequest(input: {
   requestUserId: string;
 }): Promise<void> {
   await db.transaction(async (tx) => {
-    const guildId = await assertOfficer(tx, input.actorUserId, input.serverId);
+    const guildId = await assertLeader(tx, input.actorUserId, input.serverId);
     const rows = await tx
       .delete(guildJoinRequests)
       .where(
@@ -167,7 +168,7 @@ export async function setJoinPolicy(input: {
   policy: GuildJoinPolicy;
 }): Promise<void> {
   await db.transaction(async (tx) => {
-    const guildId = await assertOfficer(tx, input.userId, input.serverId);
+    const guildId = await assertLeader(tx, input.userId, input.serverId);
     await tx.update(guilds).set({ joinPolicy: input.policy }).where(eq(guilds.id, guildId));
     await logGuildAudit(tx, {
       serverId: input.serverId,
