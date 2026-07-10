@@ -10,11 +10,11 @@ import { shopPurchases } from '@/lib/db/schema/shop';
 import { battlePassSegments } from '@/lib/db/schema/battlepass';
 import { kstMonthString } from '@/lib/kst';
 import { bpSegmentPriceKrw, type BattlePassType } from '@/lib/game/balance';
-import { paidProduct, shopGrant, productPeriod, FIRST_SPECIAL } from '@/lib/game/shop/catalog';
+import { paidProduct, shopGrant, productPeriod, FIRST_SPECIAL, PREMIUM } from '@/lib/game/shop/catalog';
 import { periodKey } from '@/lib/game/shop/period';
 import { raisePaymentAlert } from './alert';
 import { applyProductGrant } from '@/lib/game/shop/grant';
-import { hasFirstSpecial } from '@/lib/game/shop/dev-purchase';
+import { hasFirstSpecial, getPremiumRemainingDays } from '@/lib/game/shop/dev-purchase';
 import { applyBpSegmentPurchase } from '@/lib/game/battlepass';
 
 import { getPortonePayment, cancelPortonePayment } from './portone';
@@ -171,20 +171,30 @@ export async function createOrder(
     if (productId === FIRST_SPECIAL.id && (await hasFirstSpecial(userId, serverId)))
       throw new PurchaseError('ALREADY_PURCHASED');
 
-    const period = productPeriod(productId);
-    if (period) {
-      const [row] = await db
-        .select({ periodKey: shopPurchases.periodKey })
-        .from(shopPurchases)
-        .where(
-          and(
-            eq(shopPurchases.userId, userId),
-            eq(shopPurchases.serverId, serverId),
-            eq(shopPurchases.productId, productId),
-          ),
-        )
-        .limit(1);
-      if (row?.periodKey === periodKey(period)) throw new PurchaseError('ALREADY_PURCHASED');
+    if (productId === PREMIUM.id) {
+      // 성장 프리미엄 — 달력월(periodKey)이 아니라 **드립 활성(구매 후 30일)** 기준으로 차단.
+      // 월경계 재구매가 grant upsert의 updatedAt을 덮어써 잔여 드립일을 증발시키는 것 방지
+      // (예: 7/25 구매 → 8/1 재구매 시 60일이 아닌 37일만 지급). UI(ShopTabs premiumDays
+      // "N일 남음" 비활성)와 동일 기준 — 서버/화면 정합. 드립 만료 후엔 같은 달이라도 재구매 허용.
+      if ((await getPremiumRemainingDays(userId, serverId)) != null) {
+        throw new PurchaseError('ALREADY_PURCHASED');
+      }
+    } else {
+      const period = productPeriod(productId);
+      if (period) {
+        const [row] = await db
+          .select({ periodKey: shopPurchases.periodKey })
+          .from(shopPurchases)
+          .where(
+            and(
+              eq(shopPurchases.userId, userId),
+              eq(shopPurchases.serverId, serverId),
+              eq(shopPurchases.productId, productId),
+            ),
+          )
+          .limit(1);
+        if (row?.periodKey === periodKey(period)) throw new PurchaseError('ALREADY_PURCHASED');
+      }
     }
   }
 
