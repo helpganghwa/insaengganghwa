@@ -7,6 +7,7 @@
 import { isCronAuthorized } from '@/lib/auth/cron-auth';
 import { openServerIds } from '@/lib/game/server-list';
 import { runConquest } from '@/lib/game/guild/conquest/run';
+import { generateAndStoreChronicle } from '@/lib/game/guild';
 import { kstDateString } from '@/lib/kst';
 import { beatCron } from '@/lib/cron/heartbeat';
 
@@ -25,6 +26,15 @@ export async function GET(req: Request) {
     for (const sid of await openServerIds()) {
       try {
         results.push({ serverId: sid, ...(await runConquest(sid, battleDay)) });
+        // 연대기 **사전 생성**(정각 공개 설계) — 정산 직후 23시대에 LLM 스토리를 미리 만들어
+        // 저장한다(as-if-flipped 집계, chronicle.ts). 노출은 getChronicle의 읽기 게이트가
+        // 자정에 시계 기준으로 개방 → 00:00:00 정각에 크론 지터 없이 보임. 멱등(행 있으면
+        // skip)이라 다중 tick 안전. 실패는 무해 — 00시대 conquest-chronicle 백필이 생성.
+        try {
+          await generateAndStoreChronicle(battleDay, sid);
+        } catch (ce) {
+          console.warn('[conquest-run] chronicle pregen 실패(00시대 백필로 강등)', sid, ce);
+        }
       } catch (se) {
         console.error('[conquest-run] server', sid, se);
         results.push({ serverId: sid, error: (se as Error).message });

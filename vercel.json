@@ -54,7 +54,7 @@
     },
     {
       "path": "/api/cron/conquest-chronicle",
-      "schedule": "2-57/5 15 * * *"
+      "schedule": "0-55/5 15 * * *"
     },
     {
       "path": "/api/cron/guild-rank-achv",

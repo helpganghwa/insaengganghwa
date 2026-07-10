@@ -8,6 +8,7 @@
  * 인증: CRON_SECRET Bearer(설정 시) — isCronAuthorized.
  */
 import { sql } from 'drizzle-orm';
+import { revalidateTag } from 'next/cache';
 
 import { isCronAuthorized } from '@/lib/auth/cron-auth';
 import { db } from '@/lib/db/client';
@@ -68,7 +69,12 @@ export async function GET(req: Request) {
 
         for (const day of days) {
           // narrate 전에 전투 공개(소유권 적용·우편·published 마킹) — 멱등.
+          // 연대기는 통상 23시대 conquest-run이 **사전 생성**해 두므로(정각 공개 설계) 아래
+          // generate는 skip('already')로 끝난다 — 이 틱의 실작업은 플립·우편뿐(LLM 없음, 수초).
+          // 사전 생성이 실패한 날만 여기서 백필(LLM 생성)된다.
           const rev = await revealConquest(sid, day);
+          // 공개(소유권 플립) 직후 세계 피드 캐시 즉시 무효화 — 30s TTL 대기 없이 지도/피드 반영.
+          if (rev.revealed > 0) revalidateTag('world-feed', 'max');
           // 공개 후 수비 배치 이월(안 뺏긴 구역만, 공격은 해제) — 재실행 안전. 실패해도 공개/연대기엔 무관.
           const carry = await carryOverDefenders(sid, day).catch(() => ({ carried: 0 }));
           results.push({

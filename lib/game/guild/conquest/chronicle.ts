@@ -5,6 +5,7 @@ import { and, desc, eq, lt, sql } from 'drizzle-orm';
 
 import { db } from '@/lib/db/client';
 import { worldChronicle } from '@/lib/db/schema/guild';
+import { kstDateString } from '@/lib/kst';
 import type { ConquestFinale } from './simulate';
 
 const MODEL_ID = 'claude-sonnet-5';
@@ -121,9 +122,18 @@ export async function aggregateConquestDay(kstDay: string, serverId: number): Pr
     }
   }
 
+  // 누적 판도 — **as-if-flipped**: 그날 전투의 winner를 소유권에 오버레이해 '공개 후' 기준으로
+  // 계산한다. 사전 생성(23시대, 플립 전)에도 정확하고, 공개 후에는 winner=owner라 no-op(멱등).
   const standingsRows = (await db.execute(sql`
     select g.name as guild, count(*)::int as zones
-    from zones z join guilds g on g.id = z.owner_guild_id
+    from zones z
+    left join lateral (
+      select cb.winner_guild_id from conquest_battles cb
+      where cb.zone_id = z.id and cb.server_id = ${serverId}
+        and cb.battle_kst_day = ${kstDay} and cb.winner_guild_id is not null
+      limit 1
+    ) w on true
+    join guilds g on g.id = coalesce(w.winner_guild_id, z.owner_guild_id)
     where z.server_id = ${serverId}
     group by g.name order by zones desc limit 6
   `)) as unknown as { guild: string; zones: number }[];
@@ -299,8 +309,14 @@ export async function generateAndStoreChronicle(
     }
     return { comps, zones: mine.size };
   };
-  // after = 현재 DB 상태(그날 전투 반영 후), before = 오늘 점령을 되돌린 상태.
+  // after = 그날 전투 반영 후 상태 — DB 소유권에 captures(winner)를 **오버레이**해 계산.
+  // 사전 생성(23시대, 플립 전)엔 DB가 아직 '이전' 상태라 오버레이가 필수이고, 공개 후 실행이면
+  // DB=winner라 no-op(멱등). before = after에서 오늘 점령을 되돌린 상태.
   const afterOwner = new Map<number, string | null>(zoneRows.map((z) => [z.id, z.owner]));
+  for (const c of summary.captures) {
+    const zid = idByName.get(c.zone);
+    if (zid !== undefined) afterOwner.set(zid, c.winner);
+  }
   const beforeOwner = new Map(afterOwner);
   for (const c of summary.captures) {
     const zid = idByName.get(c.zone);
@@ -438,6 +454,14 @@ export async function generateAndStoreChronicle(
   for (const d of summary.defenses) { guildNames.add(d.owner); zoneNames.add(d.zone); }
   for (const f of summary.feats) guildNames.add(f.guild);
   for (const s of summary.standings) guildNames.add(s.guild);
+  // 이름 집합을 당일 참여자로 한정하면 **과거 맥락으로 언급된 길드**(전날 축출된 길드 등)가
+  // 위반 감지·교정·강제 마킹을 전부 비껴가 평문 노출된다(2026-07-10 '1ST' 사건 — 모델이
+  // 지난 역사 서술에서 마커를 빼먹음). 서버 전체 길드·구역 이름을 집합에 추가해 커버.
+  const allGuildRows = (await db.execute(
+    sql`select name from guilds where server_id = ${serverId}`,
+  )) as unknown as { name: string }[];
+  for (const g of allGuildRows) guildNames.add(g.name);
+  for (const z of zoneRows) zoneNames.add(z.name);
   const userNames = new Set<string>(summary.feats.map((f) => f.nickname));
 
   // 마커 닫는 중괄호 겹침({g|신화}}) 정규화 — 마커 뒤 여분 } 제거(저장 깔끔).
@@ -510,7 +534,7 @@ export async function generateAndStoreChronicle(
     (bigChange
       ? `이번 전투는 역사에 남는 날 — headline은 '■ 역사적 사건'${milestones.length === 0 ? '(기록적 개인 활약)' : ''}을 중심으로 핵심 한 줄을 쓴다.\n`
       : `이번 전투는 역사에 남을 날이 아님 — headline은 반드시 빈 문자열("")로 둔다.\n`) +
-    `마커: 길드={g|}, 인물={u|}, 개별 구역(zone)={z|}. 지역은 마커 없이. 모든 길드/인물/구역 이름은 등장할 때마다 반드시 마커로 감싼다(「」 따옴표 금지).\n\n` +
+    `마커: 길드={g|}, 인물={u|}, 개별 구역(zone)={z|}. 지역은 마커 없이. 모든 길드/인물/구역 이름은 등장할 때마다 반드시 마커로 감싼다(「」 따옴표 금지). **어제·지난 역사 등 과거 맥락으로 언급하는 이름도 예외 없이 마커** — 예: 전날 밀려난 길드 'X'를 회상하며 언급할 때도 {g|X}.\n\n` +
     `위 규칙대로 JSON({today, headline})만 출력하라.`;
 
   // ── 생성 + 검증 재시도(최대 3회) — 위반(마커 없는 이름)을 피드백으로 재생성 유도. ──
@@ -574,6 +598,10 @@ export type ChronicleData = {
 
 /** 세계지도 하단 표시용 — 오늘(최신 스토리) + 전체(날짜별 헤드라인 리스트). */
 export async function getChronicle(serverId: number): Promise<ChronicleData> {
+  // 읽기 게이트(kst_day < 오늘 KST) — 연대기는 23시대에 **사전 생성**되고(정산 직후), 노출은
+  // 자정에 시계 기준으로 자동 개방된다(크론 지터 0, 정각 공개). 전투일 D의 행은 D 23시대에
+  // 존재하지만 D+1 00:00:00부터 보인다. 사전 생성 실패 시 00시대 크론 백필이 생성하며,
+  // 그 행은 kst_day=어제라 즉시 노출(기존 동작과 동일한 우아한 강등).
   const rows = await db
     .select({
       kstDay: worldChronicle.kstDay,
@@ -581,7 +609,7 @@ export async function getChronicle(serverId: number): Promise<ChronicleData> {
       headline: worldChronicle.headline,
     })
     .from(worldChronicle)
-    .where(eq(worldChronicle.serverId, serverId))
+    .where(and(eq(worldChronicle.serverId, serverId), lt(worldChronicle.kstDay, kstDateString(new Date()))))
     .orderBy(sql`${worldChronicle.kstDay} desc`)
     .limit(120);
   return {
