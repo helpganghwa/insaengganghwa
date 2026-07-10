@@ -29,7 +29,45 @@ export function sanitizeNicknameInput(raw: string): string {
 
 export type NicknameValidation = { ok: true } | { ok: false; reason: string };
 
-/** server·client 공용 검증. trim 후 길이·문자 모두 체크. */
+/**
+ * 사칭·혼동 방지 예약어 — **부분 일치** 차단(영문은 소문자 정규화 후 비교).
+ * 비속어 필터가 아니라 운영 주체 사칭(운영자·관리자·GM 등)·서비스 공식 명의 혼동을 막는
+ * 최소 목록. 기존 닉네임은 grandfathered — 변경/신규 시점에만 검사(파일 헤더 정책과 동일).
+ * 닉네임 최대 8자라 9자+ 단어(administrator 등)는 등재 무의미 — 8자 이하만 유지.
+ */
+const RESERVED_SUBSTRINGS = [
+  // 한글 — 운영 주체 사칭
+  '운영자',
+  '운영진',
+  '운영팀',
+  '관리자',
+  '개발자',
+  '매니저',
+  '고객센터',
+  '시스템',
+  '공식',
+  // 서비스 명의
+  '인생강화',
+  // 영문 — 소문자 비교(대소문자 우회 차단)
+  'admin',
+  'operator',
+  'manager',
+  'staff',
+  'system',
+  'official',
+] as const;
+
+/** 짧은 토큰은 **전체 일치만** — 부분 일치는 오차단('gm'⊂'kingman' 등)이 커서 제외. */
+const RESERVED_EXACT = ['gm', 'cs', 'bot'] as const;
+
+/** 예약어 포함 여부 — 소문자 정규화 후 부분/전체 일치 검사. */
+export function hasReservedWord(nickname: string): boolean {
+  const n = nickname.toLowerCase();
+  if ((RESERVED_EXACT as readonly string[]).includes(n)) return true;
+  return RESERVED_SUBSTRINGS.some((w) => n.includes(w));
+}
+
+/** server·client 공용 검증. trim 후 길이·문자·예약어 모두 체크. */
 export function validateNickname(raw: string): NicknameValidation {
   const trimmed = raw.trim();
   if (trimmed.length === 0) return { ok: false, reason: '닉네임을 입력해 주세요' };
@@ -42,6 +80,9 @@ export function validateNickname(raw: string): NicknameValidation {
   }
   if (len > NICKNAME_MAX_LEN) {
     return { ok: false, reason: `닉네임은 최대 ${NICKNAME_MAX_LEN}자입니다` };
+  }
+  if (hasReservedWord(trimmed)) {
+    return { ok: false, reason: '사용할 수 없는 단어가 포함되어 있어요' };
   }
   return { ok: true };
 }
