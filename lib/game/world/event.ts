@@ -16,7 +16,7 @@ import { logMemberAchievement } from '@/lib/game/guild/achievement';
 export type WorldEventType =
   | 'melee_rank' // 대난투 1~3위 — detail { rank }
   | 'enhance' // 강화 100단위 — detail { item, level }
-  | 'transcend' // 초월 10단위 — detail { item, level }
+  | 'transcend' // 개인 최고 초월 기록 갱신(11+, 유저당 수치별 1회) — detail { item, level }
   | 'guild_create' // 길드 결성 — detail { guildName }
   | 'guild_power_1' // 길드 전투력 1위 교체 — detail { guildName }
   | 'guild_zone_1' // 길드 점령지 1위 교체 — detail { guildName }

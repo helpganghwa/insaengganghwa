@@ -165,24 +165,45 @@ export async function openSupplyBoxes(input: {
     return results;
   });
 
-  // 길드 업적 — 초월 10단위 돌파 시 길드 피드에 노출(best-effort, 트랜잭션 밖).
+  // 길드/월드 업적 — **유저 개인 최고 초월 기록 갱신 시 1회**(2026-07-12 피드백).
+  // 이전 방식(아이템별 색 등급 경계 11·21·31… 돌파마다 기록)은 106종이 비슷한 시기에
+  // T11을 넘으며 피드가 도배됐다. 이제 "그 유저가 처음 밟는 초월 수치"만 기록:
+  //  - 기준 = 전 장비 중 최고 초월(개인 기록). 11 미만은 종전처럼 침묵(일반 등급 제외).
+  //  - 11부터는 +1 단위로 기록되지만 유저당 각 수치 1회뿐이라 도배 불가.
+  //  - 한 번의 개봉에서 여러 단계를 뛰어도 이벤트는 1건(신기록 수치만 발표).
   try {
-    for (const r of opened) {
-      const fromT = r.transcendLevel - r.transcended;
-      // 초월 색 등급 경계(11·21·31…)에 올라설 때만 기록. tier index = floor((level-1)/10),
-      // 일반(1~10, index 0)은 제외 — 희귀(11)부터 등급 상승 시점을 마일스톤으로.
-      const nt = Math.floor((r.transcendLevel - 1) / 10);
-      const pt = Math.floor((fromT - 1) / 10);
-      if (r.transcended > 0 && nt >= 1 && nt > pt) {
-        const milestone = nt * 10 + 1; // 11, 21, 31, 41…(등급 시작 레벨)
-        const [ci] = (await db.execute(
-          sql`select name from catalog_items where id = ${r.catalogItemId} limit 1`,
-        )) as unknown as { name: string }[];
-        await logMemberAchievement(userId, serverId, {
-          action: 'achv_transcend',
-          detail: { item: ci?.name ?? '장비', level: milestone },
-        });
-        await logWorldEvent(serverId, 'transcend', { item: ci?.name ?? '장비', level: milestone }, { actorUserId: userId });
+    const transcendedRows = opened.filter((r) => r.transcended > 0);
+    if (transcendedRows.length > 0) {
+      const top = transcendedRows.reduce((a, b) => (b.transcendLevel > a.transcendLevel ? b : a));
+      const newMax = top.transcendLevel;
+      if (newMax >= 11) {
+        // 이전 개인 최고 = (이번에 안 연 장비들의 현재 최고) vs (이번에 연 장비들의 개봉 전 레벨).
+        const openedIds = opened.map((r) => r.catalogItemId);
+        const [row] = (await db.execute(sql`
+          select coalesce(max(transcend_level), 0)::int as m
+          from user_equipment
+          where user_id = ${userId}::uuid and server_id = ${serverId}
+            and catalog_item_id not in (${sql.join(openedIds.map((id) => sql`${id}`), sql`, `)})
+        `)) as unknown as { m: number }[];
+        const prevMax = Math.max(
+          row?.m ?? 0,
+          ...opened.map((r) => r.transcendLevel - r.transcended),
+        );
+        if (newMax > prevMax) {
+          const [ci] = (await db.execute(
+            sql`select name from catalog_items where id = ${top.catalogItemId} limit 1`,
+          )) as unknown as { name: string }[];
+          await logMemberAchievement(userId, serverId, {
+            action: 'achv_transcend',
+            detail: { item: ci?.name ?? '장비', level: newMax },
+          });
+          await logWorldEvent(
+            serverId,
+            'transcend',
+            { item: ci?.name ?? '장비', level: newMax },
+            { actorUserId: userId },
+          );
+        }
       }
     }
   } catch {

@@ -26,7 +26,7 @@ export type GuildAuditAction =
   | 'tax_distribute'
   | 'zone_capture'
   | 'zone_lost'
-  // 업적 피드 — 멤버(강화 100단위·초월 10단위·대난투 1~3위) + 길드(전투력·점령지 랭킹 1~3위).
+  // 업적 피드 — 멤버(강화 100단위·초월 개인기록 갱신(11+)·대난투 1~3위) + 길드(전투력·점령지 랭킹 1~3위).
   | 'achv_enhance'
   | 'achv_transcend'
   | 'achv_melee'
