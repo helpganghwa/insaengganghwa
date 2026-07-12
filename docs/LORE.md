@@ -275,7 +275,7 @@ DB 시드 · 스프라이트 파이프라인 · UI 표시명 · 확률공시 종
 4. ✅ 파이프라인 포팅: `scripts/_sprite-prompt.ts`·`sprite-pipeline.ts`(등급 없음·CATALOG 구동)
    + `scripts/seed-catalog.ts`(code 기반 upsert). `catalog_items.code`가 스프라이트 키 — 마이그레이션 불필요.
    `sprite-jobs.json` init 완료(150 pending).
-5. ⏳ **로어 전체 리뷰**(`docs/LORE-REVIEW.md`) → 수정 반영
+5. ✅ **로어 전체 리뷰·수정 반영 완료**(정본 = `lib/game/equipment/catalog.ts`의 `lore`)
 6. (리뷰 후) Pixellab MCP `Create M-XL image` 64×64 일괄 → `manifest` → UI 연결
 3. 파이프라인 포팅: `scripts/_sprite-prompt.ts`(catalog→jobs, 등급 없음·LORE `art` 구동) +
    `scripts/sprite-pipeline.ts`(상태/다운로드) + `catalogItems.spriteKey` 컬럼·마이그레이션
