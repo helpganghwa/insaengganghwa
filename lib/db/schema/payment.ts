@@ -125,6 +125,9 @@ export const identityVerifications = pgTable('identity_verifications', {
     .notNull()
     .references(() => profiles.id, { onDelete: 'cascade' }),
   provider: identityProviderEnum('provider').notNull(),
+  /** 포트원 인증 건 ID — 전역 UNIQUE(부분 idx, 0114)로 재사용(replay) 차단. 계정 미귀속
+   *  인증 ID를 여러 계정이 재사용해 미성년 한도를 우회하던 것 방지. */
+  identityVerificationId: text('identity_verification_id'),
   birthYearHash: text('birth_year_hash').notNull(),
   isAdult: boolean('is_adult').notNull(),
   verifiedAt: timestamp('verified_at', { withTimezone: true }).notNull().defaultNow(),

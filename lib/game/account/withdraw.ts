@@ -15,6 +15,8 @@ import { guilds } from '@/lib/db/schema/guild';
  *
  * 보존(삭제 안 함): iap_orders, iap_refunds, identity_verifications, monthly_purchase_limits.
  * 길드장은 위임/해산 선행 필요(LEADER_MUST_TRANSFER) — guilds.leader FK 보호.
+ * auth.users(카카오 이메일)는 이 함수 밖(withdraw-actions.anonymizeAuthUser)에서 익명화한다 —
+ * profiles→auth CASCADE + iap_orders→profiles NO ACTION 때문에 삭제 대신 이메일만 무효화(S2).
  */
 export class WithdrawError extends Error {
   constructor(public code: 'LEADER_MUST_TRANSFER') {

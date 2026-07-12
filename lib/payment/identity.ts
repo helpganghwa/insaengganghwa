@@ -59,7 +59,7 @@ function assessBirth(birthDate: string): { isAdult: boolean; birthYear: string }
 
 export type VerifyResult =
   | { ok: true; isAdult: boolean }
-  | { ok: false; code: 'NOT_VERIFIED' | 'NO_BIRTH' | 'ERROR'; message: string };
+  | { ok: false; code: 'NOT_VERIFIED' | 'NO_BIRTH' | 'ALREADY_USED' | 'ERROR'; message: string };
 
 /**
  * 본인인증 결과 검증 + 저장. 포트원 재조회 → VERIFIED 확인 → 성년 판정 →
@@ -85,17 +85,33 @@ export async function verifyAndStoreIdentity(
   const { isAdult, birthYear } = assessBirth(idv.birthDate);
   const birthYearHash = createHash('sha256').update(birthYear).digest('hex');
 
-  await db.transaction(async (tx) => {
-    await tx.insert(identityVerifications).values({
-      userId,
-      provider: 'kg_inicis',
-      birthYearHash,
-      isAdult,
+  try {
+    await db.transaction(async (tx) => {
+      // identityVerificationId 저장 + 전역 UNIQUE(0114) — 같은 인증 건을 다른 계정이 재사용해
+      // is_adult를 얻어 미성년 한도를 우회하던 replay 차단(보안감사 S1). 재사용이면 여기서
+      // 유니크 위반 → tx 롤백(profiles.is_adult도 세팅 안 됨) → ALREADY_USED로 거부.
+      await tx.insert(identityVerifications).values({
+        userId,
+        provider: 'kg_inicis',
+        identityVerificationId,
+        birthYearHash,
+        isAdult,
+      });
+      await tx
+        .update(profiles)
+        .set({ isAdult, identityVerifiedAt: sql`now()`, birthYearHash })
+        .where(eq(profiles.id, userId));
     });
-    await tx
-      .update(profiles)
-      .set({ isAdult, identityVerifiedAt: sql`now()`, birthYearHash })
-      .where(eq(profiles.id, userId));
-  });
+  } catch (e) {
+    // 23505 = unique_violation(이미 소비된 인증 건).
+    if ((e as { code?: string }).code === '23505') {
+      return {
+        ok: false,
+        code: 'ALREADY_USED',
+        message: '이미 사용된 본인인증이에요. 다시 인증해 주세요.',
+      };
+    }
+    throw e;
+  }
   return { ok: true, isAdult };
 }
