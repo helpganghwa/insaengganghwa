@@ -2,6 +2,7 @@ import Link from 'next/link';
 import { and, eq } from 'drizzle-orm';
 
 import { getSessionUserId } from '@/lib/auth/session';
+import { isCbtPaidHidden } from '@/lib/auth/test-accounts';
 import { getActiveServerId } from '@/lib/game/servers';
 import { countServers, listServersForUser } from '@/lib/game/server-select';
 import { db } from '@/lib/db/client';
@@ -98,17 +99,23 @@ export default async function SettingsPage() {
         <Row label="로그인 방식">
           <span className="text-sm text-zinc-500">카카오</span>
         </Row>
-        <Divider />
-        <Row label="본인인증">
-          <IdentityVerifyRow
-            verified={verified}
-            storeId={process.env.PORTONE_STORE_ID || process.env.NEXT_PUBLIC_PORTONE_STORE_ID}
-            channelKey={
-              process.env.PORTONE_IDENTITY_CHANNEL_KEY ||
-              process.env.NEXT_PUBLIC_PORTONE_IDENTITY_CHANNEL_KEY
-            }
-          />
-        </Row>
+        {/* 본인인증 = 결제 전용 → CBT 기간엔 결제와 함께 숨김(isCbtPaidHidden). 노출 시 CBT 유저가
+            불필요하게 KMC/PASS 실인증(건당 비용·실명/생년 PII 수집)을 하게 됨. 정식 오픈(게이트 off) 시 노출. */}
+        {isCbtPaidHidden() ? null : (
+          <>
+            <Divider />
+            <Row label="본인인증">
+              <IdentityVerifyRow
+                verified={verified}
+                storeId={process.env.PORTONE_STORE_ID || process.env.NEXT_PUBLIC_PORTONE_STORE_ID}
+                channelKey={
+                  process.env.PORTONE_IDENTITY_CHANNEL_KEY ||
+                  process.env.NEXT_PUBLIC_PORTONE_IDENTITY_CHANNEL_KEY
+                }
+              />
+            </Row>
+          </>
+        )}
       </Section>
 
       <Section title="약관 / 문의">
