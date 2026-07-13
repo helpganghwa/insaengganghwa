@@ -2,12 +2,13 @@ import 'server-only';
 
 import sharp from 'sharp';
 import Anthropic from '@anthropic-ai/sdk';
-import { and, eq, desc, sql } from 'drizzle-orm';
+import { and, eq, desc, lt, sql } from 'drizzle-orm';
 import { createClient, type SupabaseClient } from '@supabase/supabase-js';
 
 import { db } from '@/lib/db/client';
-import { getWalletDiamond, walletTrySpend } from '@/lib/game/wallet';
-import { guilds, guildMembers, guildEmblems } from '@/lib/db/schema/guild';
+import { walletTrySpend, walletAdd } from '@/lib/game/wallet';
+import { guilds, guildMembers, guildEmblems, guildEmblemEscrows } from '@/lib/db/schema/guild';
+import { mailbox } from '@/lib/db/schema/mailbox';
 import { pixellabKeyByIdx, pickPixellabKeyIdx } from '@/lib/game/profile/pixellab-keys';
 
 import { GUILD_EMBLEM_REROLL_COST_DIAMOND, MAX_GUILD_EMBLEMS } from './balance';
@@ -310,11 +311,72 @@ async function requireLeaderGuild(userId: string, serverId: number): Promise<big
   return m.guildId;
 }
 
+/** 문양 행 삽입 + (활성 문양이 없을 때만) 활성화. tx 안에서 호출. */
+async function storeEmblemRow(
+  tx: Parameters<Parameters<typeof db.transaction>[0]>[0],
+  guildId: bigint,
+  emblemUrl: string,
+  color: string | null,
+): Promise<{ emblemId: bigint; emblemUrl: string }> {
+  const [row] = await tx
+    .insert(guildEmblems)
+    .values({ guildId, emblemUrl, emblemColor: color })
+    .returning({ id: guildEmblems.id });
+  // 사용 중 문양 유지 — 보관함에만 추가(활성은 그대로). 단 활성이 없을 때만 새 문양으로 설정.
+  const [g] = await tx
+    .select({ activeId: guilds.activeEmblemId })
+    .from(guilds)
+    .where(eq(guilds.id, guildId))
+    .limit(1);
+  if (g?.activeId == null) {
+    await tx
+      .update(guilds)
+      .set({ activeEmblemId: row!.id, emblemUrl, emblemColor: color })
+      .where(eq(guilds.id, guildId));
+  }
+  return { emblemId: row!.id, emblemUrl };
+}
+
+/**
+ * 에스크로 환불 — pending 예치를 환불(walletAdd) + refunded 마킹 + 실패 통지 우편. 멱등:
+ * FOR UPDATE 락 + status='pending' 확인으로 in-request/크론 이중 환불 방지(이미 해소면 no-op).
+ */
+async function refundEmblemEscrow(escrowId: bigint): Promise<void> {
+  await db.transaction(async (tx) => {
+    const [esc] = await tx
+      .select()
+      .from(guildEmblemEscrows)
+      .where(eq(guildEmblemEscrows.id, escrowId))
+      .for('update')
+      .limit(1);
+    if (!esc || esc.status !== 'pending') return; // 이미 completed/refunded — 멱등 no-op
+    await tx
+      .update(guildEmblemEscrows)
+      .set({ status: 'refunded', resolvedAt: sql`now()` })
+      .where(eq(guildEmblemEscrows.id, escrowId));
+    await walletAdd(tx, esc.userId, esc.serverId, esc.amount); // 지갑 즉시 반환
+    // 우편은 순수 통지(payload 빈값) — 다이아는 이미 walletAdd로 반환됨(중복 지급 금지).
+    await tx.insert(mailbox).values({
+      userId: esc.userId,
+      serverId: esc.serverId,
+      type: 'guild',
+      title: '문양 생성 실패 — 다이아 환불',
+      body: `문양 생성이 일시적으로 실패해 ${esc.amount.toString()}💎를 돌려드렸어요. 잠시 후 다시 시도해 주세요.`,
+      senderLabel: '길드',
+      payload: {},
+      expiresAt: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000),
+    });
+  });
+}
+
 /**
  * 새 문양 생성·보관 — 길드장만. **첫 문양은 무료**(결성 시 무료 문양이 best-effort로 실패한
  * 길드의 복구 경로), 2번째+(재생성)는 3,000💎(💎 sink·외형 BM). 보관 최대 미만일 때만.
- * **생성·업로드 성공 후에만** 차감+행 삽입+활성화를 한 트랜잭션으로(2026-06-11 버그 수정):
- *  생성/타임아웃 실패 시 차감·빈 행이 전혀 남지 않음(환불 로직 불필요).
+ *
+ * 유료 경로는 **에스크로**(2026-07-13): 클릭 즉시 차감+pending 기록 → 생성 중 다른 행위로 잔액이
+ * 내려가도(TOCTOU) 영향 없음 → 성공 시 completed, 실패 시 환불+우편 후 refunded. 예치~해소 사이
+ * 함수 사망 시 pending 잔존분은 reconcile 크론이 6분(>maxDuration 180s) 경과 후 환불.
+ * 무료(첫 문양)는 차감이 없어 에스크로 없이 성공 시에만 삽입.
  */
 export async function generateEmblem(input: {
   userId: string;
@@ -322,53 +384,82 @@ export async function generateEmblem(input: {
   selection: EmblemSelection;
 }): Promise<{ emblemId: bigint; emblemUrl: string }> {
   const rerollCost = BigInt(GUILD_EMBLEM_REROLL_COST_DIAMOND);
-  // 1) 사전 검증(차감 없음) — 길드장·보유 한도·잔액. 비싼 생성 전에 빠르게 실패.
   const guildId = await requireLeaderGuild(input.userId, input.serverId);
   const [{ n }] = await db
     .select({ n: sql<number>`count(*)::int` })
     .from(guildEmblems)
     .where(eq(guildEmblems.guildId, guildId));
   if (n >= MAX_GUILD_EMBLEMS) throw new GuildError('EMBLEM_MAX');
-  // 첫 문양은 무료 — 결성 무료 문양(after best-effort)이 실패한 길드의 복구 경로. 2번째+만 과금.
-  const cost = n === 0 ? 0n : rerollCost;
-  if (cost > 0n) {
-    const pre = await getWalletDiamond(db, input.userId, input.serverId);
-    if (pre < cost) throw new GuildError('INSUFFICIENT_DIAMOND');
+  const cost = n === 0 ? 0n : rerollCost; // 첫 문양 무료
+
+  // 무료 경로 — 차감 없음. 생성 성공 시에만 삽입(실패해도 차감/빈 행 없음).
+  if (cost === 0n) {
+    const { emblemUrl, color } = await generateEmblemAsset(guildId, input.selection);
+    return db.transaction((tx) => storeEmblemRow(tx, guildId, emblemUrl, color));
   }
 
-  // 2) 생성·업로드(느림·과금 전). 실패하면 여기서 throw — DB 변경 전이라 차감/빈 행 없음.
-  const { emblemUrl, color } = await generateEmblemAsset(guildId, input.selection);
-
-  // 3) 성공 시에만 원자적으로 차감 + 행 삽입 + 활성화(시점 재검증).
-  return db.transaction(async (tx) => {
+  // 유료 경로 1) 에스크로 — 클릭 즉시 차감 + pending 기록(원자적). 잔액 부족이면 여기서 실패(생성 전).
+  const escrowId = await db.transaction(async (tx) => {
     const [{ n: n2 }] = await tx
       .select({ n: sql<number>`count(*)::int` })
       .from(guildEmblems)
       .where(eq(guildEmblems.guildId, guildId));
     if (n2 >= MAX_GUILD_EMBLEMS) throw new GuildError('EMBLEM_MAX');
-    const txCost = n2 === 0 ? 0n : rerollCost; // 커밋 시점 재평가 — 첫 문양 무료
-    if (txCost > 0n) {
-      const paid = await walletTrySpend(tx, input.userId, input.serverId, txCost);
-      if (!paid) throw new GuildError('INSUFFICIENT_DIAMOND');
-    }
+    const paid = await walletTrySpend(tx, input.userId, input.serverId, cost);
+    if (!paid) throw new GuildError('INSUFFICIENT_DIAMOND');
     const [row] = await tx
-      .insert(guildEmblems)
-      .values({ guildId, emblemUrl, emblemColor: color })
-      .returning({ id: guildEmblems.id });
-    // 사용 중 문양 유지 — 생성은 보관함에만 추가(활성은 그대로). 단 활성이 없을 때만 새 문양으로 설정.
-    const [g] = await tx
-      .select({ activeId: guilds.activeEmblemId })
-      .from(guilds)
-      .where(eq(guilds.id, guildId))
-      .limit(1);
-    if (g?.activeId == null) {
-      await tx
-        .update(guilds)
-        .set({ activeEmblemId: row!.id, emblemUrl, emblemColor: color })
-        .where(eq(guilds.id, guildId));
-    }
-    return { emblemId: row!.id, emblemUrl };
+      .insert(guildEmblemEscrows)
+      .values({ serverId: input.serverId, guildId, userId: input.userId, amount: cost })
+      .returning({ id: guildEmblemEscrows.id });
+    return row!.id;
   });
+
+  // 2) 생성(예치 후) — 실패하면 환불+우편 후 rethrow(라우트가 EMBLEM_GEN_FAILED로 매핑).
+  let asset: { emblemUrl: string; color: string | null };
+  try {
+    asset = await generateEmblemAsset(guildId, input.selection);
+  } catch (e) {
+    await refundEmblemEscrow(escrowId);
+    throw e;
+  }
+
+  // 3) 생성 성공 — escrow completed(예치는 이미 차감됨) + 문양 삽입/활성화. 임계(6분)>maxDuration이라
+  //    크론이 먼저 환불하는 경쟁은 사실상 없음. 만에 하나 이미 환불됐으면 유저에 유리하게 문양은 지급.
+  return db.transaction(async (tx) => {
+    const upd = await tx
+      .update(guildEmblemEscrows)
+      .set({ status: 'completed', resolvedAt: sql`now()` })
+      .where(and(eq(guildEmblemEscrows.id, escrowId), eq(guildEmblemEscrows.status, 'pending')))
+      .returning({ id: guildEmblemEscrows.id });
+    if (upd.length === 0) {
+      console.warn(`[guild.emblem] escrow ${escrowId} 이미 해소됨 — 문양은 지급(사실상 무료)`);
+    }
+    return storeEmblemRow(tx, guildId, asset.emblemUrl, asset.color);
+  });
+}
+
+/**
+ * 미해소 에스크로 reconcile — 예치~해소 사이 함수 사망으로 pending에 남은 예치를 환불(크론에서 호출).
+ * 임계 6분(>maxDuration 180s)이라 진행 중인 정상 요청은 절대 건드리지 않음. 환불 처리 건수 반환.
+ */
+export async function reconcileStuckEmblemEscrows(maxItems = 20): Promise<number> {
+  const stuck = await db
+    .select({ id: guildEmblemEscrows.id })
+    .from(guildEmblemEscrows)
+    .where(
+      and(
+        eq(guildEmblemEscrows.status, 'pending'),
+        lt(guildEmblemEscrows.createdAt, sql`now() - interval '6 minutes'`),
+      ),
+    )
+    .orderBy(guildEmblemEscrows.createdAt)
+    .limit(maxItems);
+  let refunded = 0;
+  for (const s of stuck) {
+    await refundEmblemEscrow(s.id);
+    refunded++;
+  }
+  return refunded;
 }
 
 /** 보관 문양 중 하나를 활성으로 선택 — 길드장만, 무료. */

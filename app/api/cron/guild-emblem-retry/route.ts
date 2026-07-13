@@ -15,7 +15,7 @@ import { and, isNotNull, isNull, lt, sql } from 'drizzle-orm';
 import { isCronAuthorized } from '@/lib/auth/cron-auth';
 import { db } from '@/lib/db/client';
 import { guilds } from '@/lib/db/schema/guild';
-import { generateAndStoreEmblem } from '@/lib/game/guild/emblem';
+import { generateAndStoreEmblem, reconcileStuckEmblemEscrows } from '@/lib/game/guild/emblem';
 import type { EmblemSelection } from '@/lib/game/guild/emblem-vocab';
 
 export const runtime = 'nodejs';
@@ -26,6 +26,14 @@ const MAX_ATTEMPTS = 12;
 
 export async function GET(req: Request) {
   if (!isCronAuthorized(req)) return new Response('forbidden', { status: 403 });
+
+  // 유료 재생성 에스크로 reconcile — 예치 후 함수 사망으로 pending에 남은 다이아를 환불(6분+ 경과분).
+  // best-effort — 실패해도 최초 생성 재시도는 계속 진행.
+  const escrowRefunded = await reconcileStuckEmblemEscrows().catch((e) => {
+    console.error('[guild-emblem-retry] escrow reconcile 실패', (e as Error).message);
+    return 0;
+  });
+  if (escrowRefunded > 0) console.log(`[guild-emblem-retry] 미해소 에스크로 ${escrowRefunded}건 환불`);
 
   const [g] = await db
     .select({ id: guilds.id, selection: guilds.emblemSelection, attempts: guilds.emblemAttempts })
@@ -40,7 +48,7 @@ export async function GET(req: Request) {
     .orderBy(guilds.createdAt)
     .limit(1);
 
-  if (!g) return Response.json({ ok: true, retried: 0, kind: 'guild-emblem-retry' });
+  if (!g) return Response.json({ ok: true, retried: 0, escrowRefunded, kind: 'guild-emblem-retry' });
 
   // 시도 카운트를 생성 전에 선증가 — 생성 도중 함수가 죽어도 같은 길드로 무한 루프하지 않는다.
   await db

@@ -35,8 +35,8 @@ const MAP: Record<string, string> = {
   EMBLEM_MAX: '문양은 최대 5개까지 보관할 수 있어요. 하나를 삭제한 뒤 생성하세요.',
   EMBLEM_MIN: '문양은 최소 1개는 남겨야 해요.',
   EMBLEM_NOT_FOUND: '문양을 찾을 수 없습니다.',
-  // 생성 서버(Pixellab) 혼잡·일시 실패 — 차감은 성공 시에만 되므로 다이아 안전을 명시해 안심시킴.
-  EMBLEM_GEN_FAILED: '지금 문양 생성이 혼잡해 잠시 실패했어요. 다이아는 차감되지 않았으니 잠시 후 다시 시도해 주세요.',
+  // 생성 서버(Pixellab) 혼잡·일시 실패 — 예치한 다이아는 자동 환불(우편 통지)되므로 안심 명시.
+  EMBLEM_GEN_FAILED: '지금 문양 생성이 혼잡해 잠시 실패했어요. 차감된 다이아는 환불했으니(우편 확인) 잠시 후 다시 시도해 주세요.',
   OPENCHAT_INVALID: '카카오 오픈채팅 링크(https://open.kakao.com/o/…)만 등록할 수 있습니다.',
   UNAUTHENTICATED: '로그인이 필요합니다.',
   RATE_LIMITED: '요청이 너무 빠릅니다. 잠시 후 다시 시도해 주세요.',

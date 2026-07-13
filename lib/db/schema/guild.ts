@@ -297,6 +297,32 @@ export const guildEmblems = pgTable(
 );
 
 /**
+ * 문양 재생성 에스크로 — 유료 재생성(3,000💎)의 다이아 손실/혼란 방지(2026-07-13).
+ * 클릭 즉시 예치(차감)하고 pending 기록 → 생성 성공 시 completed, 실패 시 환불+우편 후 refunded.
+ * 함수가 예치~해소 사이에 죽으면 pending이 남는데, reconcile 크론이 임계(>maxDuration 180s, 6분)
+ * 경과분을 환불 처리(정상 in-request 흐름과 경쟁하지 않도록 임계를 넉넉히 크게). 감사·복구용 append.
+ */
+export const guildEmblemEscrows = pgTable(
+  'guild_emblem_escrows',
+  {
+    id: bigserial('id', { mode: 'bigint' }).primaryKey(),
+    serverId: smallint('server_id').notNull().default(1),
+    guildId: bigint('guild_id', { mode: 'bigint' }).notNull(),
+    userId: uuid('user_id').notNull(),
+    /** 예치액(💎). 환불 시 이 값을 그대로 반환. */
+    amount: bigint('amount', { mode: 'bigint' }).notNull(),
+    /** 'pending'(예치·미해소) | 'completed'(문양 반영) | 'refunded'(환불 완료). */
+    status: text('status').notNull().default('pending'),
+    createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
+    resolvedAt: timestamp('resolved_at', { withTimezone: true }),
+  },
+  (t) => [
+    // reconcile 대상(미해소 예치) 빠른 조회 — 부분 인덱스.
+    index('guild_emblem_escrow_pending_idx').on(t.createdAt).where(sql`${t.status} = 'pending'`),
+  ],
+);
+
+/**
  * 길드 감사 로그(§4 운영) — 임원/시스템의 민감 액션 기록(추방·위임·부길드장·해산·가입정책·자동위임).
  * 분쟁·어뷰징 추적용 **기록 전용**(v1 조회 UI 없음). 역사 보존을 위해 guild/user FK 없음(비정규화) —
  * 길드 해산·계정 삭제 후에도 로그 잔존. actor null = 시스템(자동 위임).
