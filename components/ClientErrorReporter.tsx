@@ -25,6 +25,9 @@ const BENIGN_PATTERNS = [
   // 스택·라인·실메시지가 원천 제거돼 디버깅 불가. 동일오리진 버그는 이 문자열을 만들지
   // 않으므로(항상 실메시지 동반) 필터해도 진짜 신호 손실 없음. Sentry도 기본 무시.
   'script error',
+  // 리사이즈 콜백이 한 프레임에 다 못 끝날 때 브라우저가 내는 경고 — 실제 동작엔 무해
+  // (남은 알림은 다음 프레임에 전달). 'loop limit exceeded'/'undelivered notifications' 두 변형 모두 포함.
+  'resizeobserver',
 ];
 const isBenign = (message: string) => {
   const m = message.toLowerCase();
