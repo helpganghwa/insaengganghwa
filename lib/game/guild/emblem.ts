@@ -38,11 +38,11 @@ Rules:
 - Style anchors (always include the spirit): medieval heraldry, coat of arms, family crest, ornate, symmetrical, vintage emblem, dark fantasy, pixel art.
 - The MAIN keyword is the central heraldic charge: large, bold, the clear focal point.
 - The SUB keyword (if any) MUST be clearly visible too — place it as a secondary heraldic element such as supporters flanking the main on BOTH sides, or crossed behind it, or a charge on a chief/base band. Smaller than the main but distinctly rendered, NEVER omitted or dissolved into texture.
-- SHAPE FIDELITY (critical): the given shape is the overall OUTER SILHOUETTE of the whole emblem and is MANDATORY — it must be immediately recognizable as that exact shape. If the shape is NOT a shield (e.g. a lozenge/diamond/rhombus, or a hanging banner), do NOT draw a shield or escutcheon — keep the non-shield silhouette. Main color as the field, sub color as the accents, border and trim.
-- Palette: the two given colors clearly dominate (field = main color, accents/border/trim = sub color); a few small additional accent colors are okay, just keep it cohesive — not a busy rainbow.
+- SHAPE FIDELITY (critical): the given shape is the overall OUTER SILHOUETTE of the whole emblem and is MANDATORY — it must be immediately recognizable as that exact shape. If the shape is NOT a shield (e.g. a lozenge/diamond/rhombus, or a hanging banner), do NOT draw a shield or escutcheon — keep the non-shield silhouette. The MAIN color fills a large solid field/backing behind the charge; the SUB color is the charge, accents, border and trim.
+- Palette: exactly two colors dominate — the MAIN color as a large SOLID field/backing that visibly covers a big portion of the emblem (if the central motif would otherwise fill everything, seat it on a MAIN-colored roundel/plaque/field so the main color is ALWAYS plainly visible, never reduced to a thin outline or omitted), and the SUB color as the charge/accents/border/trim; a few tiny extra accents are okay, not a busy rainbow.
 - Detail: highly detailed, intricate ornate filigree and fine engraved linework, crisp clean pixel detail, rich shading and metallic depth, embossed relief.
 - Compose everything into ONE unified crest — do NOT scatter unrelated floating objects.
-- Always include: bold clean readable silhouette, fills the frame, centered, transparent background, no text, no lettering.`;
+- Always include: bold clean readable silhouette, fills the frame, centered, no text, no lettering. Only the area OUTSIDE the emblem's outer silhouette is transparent — inside, the main-colored field is solid (not transparent).`;
 
 async function buildEmblemPromptAI(s: EmblemSelection): Promise<string> {
   try {
@@ -63,7 +63,7 @@ async function buildEmblemPromptAI(s: EmblemSelection): Promise<string> {
         {
           role: 'user',
           content:
-            `Shape (overall emblem silhouette, mandatory): ${shape}${shapeNote}\nMain color (field): ${main}\nSub color (accents/trim): ${sub}\n` +
+            `Shape (overall emblem silhouette, mandatory): ${shape}${shapeNote}\nMain color (large SOLID field/backing, must clearly dominate the emblem): ${main}\nSub color (charge/accents/trim): ${sub}\n` +
             `Main keyword (central charge, focal point): ${mainKw}\n` +
             `Sub keyword (secondary charge, must be clearly visible — e.g. flanking supporters): ${subKw ?? 'none'}\n\n` +
             `Write the one-line heraldic pixel guild emblem prompt.`,

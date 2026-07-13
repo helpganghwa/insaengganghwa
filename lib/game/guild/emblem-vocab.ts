@@ -127,9 +127,11 @@ export function buildEmblemPrompt(s: EmblemSelection): string {
   const mainKw = keywordById(s.mainKeywordId)?.en ?? 'a heraldic beast';
   const subKw = s.subKeywordId ? keywordById(s.subKeywordId)?.en : null;
   const palette =
-    `mostly a ${main} and ${sub} palette with these two colors dominating, ${main} field with ${sub} accents and trim, ` +
+    // 메인색은 반드시 solid 배경면(field/backing)을 차지 — 새·짐승처럼 프레임을 채우는 모티브에서
+    // "transparent background"와 충돌해 메인색이 통째로 증발하던 문제 방지(2026-07-13, FIRST 길드).
+    `a two-color ${main} and ${sub} palette, ${main} filling a large solid field/backing behind the central motif so it clearly dominates (never a thin outline, never omitted), ${sub} as the charge, accents, border and trim, ` +
     `highly detailed intricate filigree and fine engraved linework, rich metallic shading and embossed relief, ` +
-    `bold clean silhouette filling the frame, centered, dark fantasy, transparent background, no text`;
+    `bold clean silhouette filling the frame, centered, dark fantasy, only the area outside the emblem outline is transparent (the ${main} field inside is solid), no text`;
 
   // 방패 계열(라운드·기사 방패) — 정통 문장(紋章) 프레이밍 유지(모델 기본값과 일치).
   if (shapeDef.shield) {
