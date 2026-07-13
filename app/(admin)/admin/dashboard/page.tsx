@@ -110,11 +110,13 @@ async function loadDashboard() {
         (select count(*)::int from iap_orders
            where status = 'pending' and created_at < now() - interval '15 minutes') as pending_orders,
         (select count(*)::int from payment_alerts where resolved = false) as open_alerts,
-        -- 푸시 적체 — flush 트리거(first_at+30분) 후에도 15분 이상 안 나간 행.
+        -- 푸시 적체 — 가장 긴 묶음 모드(batched_1h=60분) 윈도 + 크론 주기(5분) + 여유 후에도
+        -- 안 나간 행. 45분 임계는 batched_1h 유저의 정상 대기(≤60분)를 오탐했음(2026-07-14).
         (select count(*)::int from push_pending
-           where first_at < now() - interval '45 minutes') as push_backlog,
+           where first_at < now() - interval '75 minutes') as push_backlog,
+        -- 미해결만 — resolved 처리된 그룹의 24h 잔상이 소프트리밋(3)을 넘겨 오탐(2026-07-14).
         (select json_build_object('groups', count(*)::int, 'hits', coalesce(sum("count"), 0)::int)
-           from client_errors where last_seen >= now() - interval '24 hours') as client_err,
+           from client_errors where resolved = false and last_seen >= now() - interval '24 hours') as client_err,
         -- 아바타 생성 정체 — 활성 상태로 20분+ 멈춘 잡(프롬프트/폴링 사망 신호).
         (select count(*)::int from profile_generation_jobs
            where status in ('queued', 'starting', 'downloading', 'ai_reviewing')
