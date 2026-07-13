@@ -80,6 +80,7 @@ export default async function GuildRankingPage({
           joinPolicy: g.joinPolicy,
           hasOpenchat: g.hasOpenchat,
           zones: g.zones,
+          leaderNickname: g.leaderNickname,
         }))}
         showRank
         emptyText="아직 결성된 길드가 없습니다."

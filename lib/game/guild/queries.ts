@@ -170,6 +170,14 @@ const RANKING_COMPARATORS: Record<
 };
 
 /** 길드 랭킹 — 서버 전체 길드를 sort 기준으로 정렬 후 상위 limit. combat 필드 포함. 미가입 첫화면 랭킹 탭. */
+/** 길드장 닉네임 스칼라 서브쿼리 — 카드/팝업 노출용(2026-07-13). 길드장 부재(이론상 없음)면 null. */
+const leaderNicknameSql = sql<string | null>`(
+  select c.nickname from guild_members gm
+  join characters c on c.user_id = gm.user_id and c.server_id = gm.server_id
+  where gm.guild_id = ${guilds.id} and gm.role = 'leader'
+  limit 1
+)`;
+
 /**
  * 랭킹 base 계산 — 서버 전체 길드 + 멤버 stats(전투력·인원) + 점령 zones를 한 번에 산출(정렬 전).
  * 정렬 comparator는 이 결과에 in-memory로 적용하므로, 여러 지표 정렬을 원해도 DB 비용은 1회.
@@ -186,6 +194,7 @@ async function buildGuildRankingBase(serverId: number) {
       joinPolicy: guilds.joinPolicy,
       // URL 원문은 비길드원에 미전송(보안) — 배지용 boolean만. 링크는 GuildHome(길드원)에서만.
       hasOpenchat: sql<boolean>`(${guilds.openchatUrl} is not null)`,
+      leaderNickname: leaderNicknameSql,
     })
     .from(guilds)
     .where(eq(guilds.serverId, serverId));
@@ -237,6 +246,7 @@ export async function searchGuilds(serverId: number, q: string) {
     joinPolicy: guilds.joinPolicy,
     // URL 원문은 비길드원에 미전송(보안) — 배지용 boolean만.
     hasOpenchat: sql<boolean>`(${guilds.openchatUrl} is not null)`,
+    leaderNickname: leaderNicknameSql,
   } as const;
   const rows = term
     ? await db

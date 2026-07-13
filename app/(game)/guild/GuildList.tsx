@@ -20,6 +20,8 @@ export type GuildRow = {
   hasOpenchat: boolean;
   /** 점령 구역 목록(없으면 빈 배열). 카드 배지 수 + 팝업 칩(지역색). */
   zones: { name: string; region: Region }[];
+  /** 길드장 닉네임 — 카드 셋째 줄·팝업 헤더 노출(가입 의사결정 정보, 2026-07-13). */
+  leaderNickname: string | null;
 };
 
 /** 컴팩트 수치(예: 53,000 → 5.3만). */
@@ -124,6 +126,12 @@ export function GuildList({
                 Lv.{g.level} · {g.memberCount}명
                 {g.zones.length > 0 ? ` · 점령 ${g.zones.length}` : ''}
               </div>
+              {g.leaderNickname ? (
+                <div className="truncate text-[11px] text-zinc-500">
+                  <span className="text-zinc-400">길드장</span>{' '}
+                  <span className="font-medium text-zinc-600 dark:text-zinc-300">{g.leaderNickname}</span>
+                </div>
+              ) : null}
             </div>
             {/* 전투력(길드원 전투력 합) */}
             <div className="shrink-0 text-right">
@@ -184,6 +192,14 @@ export function GuildList({
                 Lv.{selected.level} · {selected.memberCount}명 · 전투력{' '}
                 <span className="font-bold text-amber-600 dark:text-amber-400">{fmtNum(selected.combat)}</span>
               </p>
+              {selected.leaderNickname ? (
+                <p className="mt-0.5 truncate text-[11px] text-zinc-500">
+                  <span className="text-zinc-400">길드장</span>{' '}
+                  <span className="font-medium text-zinc-600 dark:text-zinc-300">
+                    {selected.leaderNickname}
+                  </span>
+                </p>
+              ) : null}
             </div>
           </div>
           <div className="mt-3 border-t border-zinc-100 pt-3 dark:border-zinc-900">

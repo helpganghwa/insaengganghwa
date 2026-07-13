@@ -41,6 +41,7 @@ async function browseView(userId: string, serverId: number) {
     joinPolicy: string;
     hasOpenchat: boolean;
     zones: { name: string; region: Region }[];
+    leaderNickname: string | null;
   }) => ({
     id: g.id.toString(),
     name: g.name,
@@ -53,6 +54,7 @@ async function browseView(userId: string, serverId: number) {
     joinPolicy: g.joinPolicy,
     hasOpenchat: g.hasOpenchat,
     zones: g.zones,
+    leaderNickname: g.leaderNickname,
   });
   return (
     <GuildBrowse
