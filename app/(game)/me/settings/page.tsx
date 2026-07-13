@@ -13,6 +13,7 @@ import { signOut } from '@/lib/auth/actions';
 
 import { LocalToggle } from './SettingsControls';
 import { NicknameRow } from './NicknameRow';
+import { CodeRow } from './CodeRow';
 import { InstallAppButton } from './InstallAppButton';
 import { PushSettings } from './PushSettings';
 import { SupportModal } from './SupportModal';
@@ -94,6 +95,11 @@ export default async function SettingsPage() {
             changedCount={p?.nicknameChangedCount ?? 0}
             diamond={String(p?.diamond ?? 0n)}
           />
+        </Row>
+        <Divider />
+        {/* 내 코드 — 친구 검색·문의 식별용 공개 코드 조회/복사(2026-07-13 요청). */}
+        <Row label="코드">
+          <CodeRow code={p?.publicCode ?? '------'} />
         </Row>
         <Divider />
         <Row label="로그인 방식">
