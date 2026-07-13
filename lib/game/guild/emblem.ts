@@ -456,8 +456,14 @@ export async function reconcileStuckEmblemEscrows(maxItems = 20): Promise<number
     .limit(maxItems);
   let refunded = 0;
   for (const s of stuck) {
-    await refundEmblemEscrow(s.id);
-    refunded++;
+    // 건별 격리 — 한 건 실패(탈퇴로 캐릭터 부재 등)가 뒤 건들의 환불을 막지 않게. 실패 건은
+    // pending으로 남아 다음 주기 재시도(로그로 수동 개입 신호).
+    try {
+      await refundEmblemEscrow(s.id);
+      refunded++;
+    } catch (e) {
+      console.error(`[guild.emblem] escrow ${s.id} 환불 실패 — 다음 주기 재시도`, (e as Error).message);
+    }
   }
   return refunded;
 }
