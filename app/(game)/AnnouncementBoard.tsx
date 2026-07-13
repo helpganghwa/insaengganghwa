@@ -50,7 +50,16 @@ function Detail({ a }: { a: AnnouncementView }) {
  * 마지막 본 최신 공지 id)로 추적: 최신 id > seen이면 카드에 빨간 dot + 홈 진입 시 1회 팝업.
  * '다시 보지 않기' → seen=최신 id(새 글 올라오면 자동 재노출). 목록을 열어도 읽음 처리.
  */
-export function AnnouncementBoard({ items, tint }: { items: AnnouncementView[]; tint: string }) {
+export function AnnouncementBoard({
+  items,
+  tint,
+  holdPopup = false,
+}: {
+  items: AnnouncementView[];
+  tint: string;
+  /** true면 홈 강제 팝업 억제(예: 튜토리얼 진행 중 — 온보딩 우선). 카드·목록은 정상 노출. */
+  holdPopup?: boolean;
+}) {
   const [mounted, setMounted] = useState(false);
   // 초기값은 클라에서 localStorage로(SSR=0). 의존 UI는 mounted 후에만 노출 → 하이드레이션 안전.
   const [seenId, setSeenId] = useState<number>(() => {
@@ -72,7 +81,7 @@ export function AnnouncementBoard({ items, tint }: { items: AnnouncementView[]; 
 
   const latest = items[0] ?? null; // 발행 최신순 → 가장 새 글
   const hasNew = !!latest && Number(latest.id) > seenId;
-  const gateOpen = mounted && hasNew && !gateDismissed && !listOpen;
+  const gateOpen = mounted && hasNew && !gateDismissed && !listOpen && !holdPopup;
   // 고정 우선(목록) — stable sort라 같은 그룹 내 발행 최신순 유지.
   const sorted = [...items].sort((a, b) => Number(b.pinned) - Number(a.pinned));
 

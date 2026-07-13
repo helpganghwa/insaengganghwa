@@ -8,7 +8,9 @@ import { zones } from '@/lib/db/schema/guild';
 import { userSupplyBoxes } from '@/lib/db/schema/supply';
 import { userProfiles } from '@/lib/db/schema/avatar';
 import { profiles } from '@/lib/db/schema/profiles';
+import { mailbox } from '@/lib/db/schema/mailbox';
 import { TEST_REWARD_MULTIPLIER } from '@/lib/game/test-mode';
+import { isCbtPaidHidden } from '@/lib/auth/test-accounts';
 import {
   NICKNAME_MIN_LEN,
   NICKNAME_MAX_LEN,
@@ -206,6 +208,22 @@ export async function createCharacter(input: {
         .set({ activeProfileId: pick.id })
         .where(and(eq(characters.userId, input.userId), eq(characters.serverId, input.serverId)));
     }
+    // CBT 참여 감사 보상 — CBT 기간(isCbtPaidHidden)에 생성되는 신규 캐릭터에 자동 우편.
+    // 초기 재화가 얇아 테스트가 어려운 문제 보완(2026-07-13). 기존 유저는 별도 브로드캐스트로
+    // 지급. 정식 오픈(게이트 off) 시 자동 중단. 만료 90일.
+    if (isCbtPaidHidden()) {
+      await tx.insert(mailbox).values({
+        userId: input.userId,
+        serverId: input.serverId,
+        type: 'reward',
+        title: 'CBT 참여 감사 보상',
+        body: 'CBT에 참여해 주셔서 감사합니다! 마음껏 강화를 즐겨보세요. ⚒️',
+        senderLabel: '인생강화',
+        payload: { diamond: 10000, boxes: { weapon: 100, armor: 100, accessory: 100 } },
+        expiresAt: new Date(Date.now() + 90 * 24 * 60 * 60 * 1000),
+      });
+    }
+
     // 재가입(탈퇴 후 새 시작) — 탈퇴 마킹 해제. 신규 유저는 이미 null이라 무해.
     await tx.update(profiles).set({ withdrawnAt: null }).where(eq(profiles.id, input.userId));
   });

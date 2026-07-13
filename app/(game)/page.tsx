@@ -12,6 +12,7 @@ import { kstDateString } from '@/lib/kst';
 
 import { getWorldFeed } from '@/lib/game/world/event';
 import { listPublishedAnnouncements } from '@/lib/game/announcement';
+import { getTutorialState } from '@/lib/game/tutorial';
 
 import { AnnouncementBoard } from './AnnouncementBoard';
 import { ConquestCardStatus } from './ConquestCardStatus';
@@ -254,12 +255,18 @@ export default async function HomePage() {
 
   // 월드 소식 티커 — 헤더 하단 고정, 최근 10건 롤링(클릭 시 /world 전체). 콜드/hang 시 빈 배열로 degrade.
   // 월드피드 + 게시판(공지) 병렬 조회(독립 — §11.4 왕복 최소화). 콜드/hang 시 각각 빈 배열로 degrade.
-  const [worldFeed, announcements] = userId
+  const [worldFeed, announcements, tutState] = userId
     ? await Promise.all([
         withTimeout(getWorldFeed(serverId, 10), 2500, 'home.worldfeed').catch(() => []),
         withTimeout(listPublishedAnnouncements(30), 2000, 'home.ann').catch(() => []),
+        // 튜토리얼 미완료 유저에겐 공지 강제 팝업을 억제(온보딩 우선) — 신규 유저가 공지에 가려
+        // 튜토리얼을 못 보던 문제(2026-07-13 CBT 피드백). 실패 시 done으로 폴백(팝업 정상 노출).
+        withTimeout(getTutorialState(userId, serverId), 1500, 'home.tut').catch(
+          () => ({ phase: 'done' as const, step: null }),
+        ),
       ])
-    : [[], []];
+    : [[], [], { phase: 'done' as const, step: null }];
+  const tutorialActive = tutState.phase !== 'done';
 
   return (
     <>
@@ -282,7 +289,9 @@ export default async function HomePage() {
           return (
             <Fragment key={m.href}>
               {/* 게시판 카드 — 상점 뒤·우편함 앞(index 6). */}
-              {i === 6 && <AnnouncementBoard items={announcements} tint="#2b2147" />}
+              {i === 6 && (
+                <AnnouncementBoard items={announcements} tint="#2b2147" holdPopup={tutorialActive} />
+              )}
               <Link
               href={m.href}
               data-tut={m.href === '/gacha' ? 'goto-gacha' : undefined}
