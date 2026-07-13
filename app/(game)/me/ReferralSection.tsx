@@ -49,7 +49,7 @@ export function ReferralSection({
           <h2 className="text-[11px] font-semibold text-zinc-600 dark:text-zinc-300">
             카카오톡 공유 가입 보상
           </h2>
-          <span className="shrink-0 rounded-full bg-[#FEE500] px-2 py-0.5 text-[10px] font-bold text-[#191919]">
+          <span className="shrink-0 rounded-full bg-[#FEE500] px-2 py-0.5 text-[10px] font-normal text-[#191919]">
             가입당 💎{perDiamond.toLocaleString('ko-KR')} 📦{perBox}
           </span>
         </div>
