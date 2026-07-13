@@ -12,7 +12,8 @@ const MAX_PER_SESSION = 8;
 
 // Safari/모바일에서 fetch가 내비게이션·탭전환·화면잠금·약전파로 취소될 때 흔한 양성 거부.
 // 실제 코드 버그가 아니라 네트워크 노이즈라 수집에서 제외(패널 신호 보존). 소문자 부분일치.
-const BENIGN_PATTERNS = [
+// (export — report-boundary-error가 배포 경계의 청크/RSC fetch 실패 필터에 재사용.)
+export const BENIGN_PATTERNS = [
   'load failed', // Safari: fetch 실패/취소
   'failed to fetch', // Chrome/Edge: 동일
   'networkerror', // Firefox 등
