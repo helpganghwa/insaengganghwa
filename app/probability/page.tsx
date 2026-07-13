@@ -127,7 +127,7 @@ export default async function ProbabilityPage() {
         </P>
       </Sec>
 
-      <Sec n="2" title="초월">
+      <Sec n="2" title="초월" id="transcend">
         <P>
           초월은 <b>같은 아이템을 보급 상자로 또 얻으면 자동으로</b> 올라갑니다. T단계까지 가려면 그
           아이템 중복이 <b>T개</b> 필요하고(T1=1개, T2=2개…), <b>상한 없이 끝없이</b> 올릴 수
@@ -146,7 +146,7 @@ export default async function ProbabilityPage() {
         </Table>
       </Sec>
 
-      <Sec n="3" title="전투력">
+      <Sec n="3" title="전투력" id="combat">
         <P>
           강화 레벨이 오를수록 전투력이 점점 빠르게 늘어납니다. 아이템 하나의 전투력은 기반 전투력에
           초월 보너스를 곱한 값이고, <b>총 전투력은 가진 모든 아이템(중복 제외) 전투력의 합</b>
@@ -202,7 +202,7 @@ export default async function ProbabilityPage() {
         })}
       </Sec>
 
-      <Sec n="5" title="레이드">
+      <Sec n="5" title="레이드" id="raid">
         <P>
           소환 비용 {RAID_OPEN_COST_DIAMOND.toLocaleString('ko-KR')}다이아 / 인원 최대{' '}
           {RAID_MAX_PARTICIPANTS}명(호스트 포함) / 동시 진행 1인 최대{' '}
