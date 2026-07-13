@@ -7,7 +7,7 @@ import { josa } from 'es-hangul';
 
 import type { Slot } from '@/lib/db/schema/equipment';
 import { TranscendSprite } from '@/components/TranscendSprite';
-import { RarityFrame, rarityBorderStyle, hasRarityBorder } from '@/components/RarityFrame';
+import { RarityFrame, rarityBorderStyle, hasRarityBorder, TranscendTag } from '@/components/RarityFrame';
 
 import { useResourceToast } from '@/components/ResourceToast';
 
@@ -170,7 +170,11 @@ function EnhanceSlotPicker({
                 <span className="line-clamp-2 break-keep px-0.5 text-[10px] leading-tight text-zinc-600 dark:text-zinc-400">
                   {c.name}
                 </span>
-                <span className="text-xs font-semibold">+{c.enhanceLevel}</span>
+                <span className="text-xs font-semibold">
+                  +{c.enhanceLevel}
+                  {/* 초월 수치 명시 — 테두리만으론 교환 후보 비교가 어려움(2026-07-13 피드백). */}
+                  {c.transcendLevel > 0 ? <TranscendTag level={c.transcendLevel} className="ml-1" /> : null}
+                </span>
                 {c.equipped ? (
                   <span className="absolute left-1 top-1 rounded-full bg-emerald-500/95 px-1 text-[8px] font-bold text-white">
                     장
