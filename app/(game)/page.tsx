@@ -229,11 +229,15 @@ export default async function HomePage() {
         counts['/gacha'] = row.supply_sum ?? 0;
         counts['/mail'] = row.mail_unclaimed ?? 0;
         counts['/raid'] = row.raid_unclaimed ?? 0;
-        counts['/shop'] = Object.values(
-          freeStatusFromClaims(
-            (row.free_claims ?? []).map(([slot, periodKey]) => ({ slot, periodKey })),
-          ),
-        ).filter(Boolean).length;
+        // CBT 일반 유저는 상점 전체가 '준비 중'(ShopClosed) — 무료 수령 뱃지가 상시 3으로 떠서
+        // 들어가면 닫혀 있는 오표시 방지(2026-07-13). 심사/어드민·정식 출시에는 정상 계산.
+        counts['/shop'] = (await shouldHidePaidContent())
+          ? 0
+          : Object.values(
+              freeStatusFromClaims(
+                (row.free_claims ?? []).map(([slot, periodKey]) => ({ slot, periodKey })),
+              ),
+            ).filter(Boolean).length;
         residenceName = row.residence_name ?? null;
         residenceRegion = row.residence_region ?? null;
         // 23시대(23:00~24:00) = 점령전 진행중(DB 시계 권위).

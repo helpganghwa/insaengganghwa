@@ -14,7 +14,11 @@ export const TEST_MODE = process.env.TEST_MODE === 'true';
 /** 테스트 기간 보상 배율 — 출석체크·일일 우편·가입 보너스에 적용. */
 export const TEST_REWARD_MULTIPLIER = TEST_MODE ? 5 : 1;
 
-if (TEST_MODE) {
-  // 인스턴스 콜드스타트마다 1회 — 정식 출시 전 끄는 걸 잊지 않도록.
+// 인스턴스당 1회 — 정식 출시 전 끄는 걸 잊지 않도록. 모듈 스코프 if만으로는 라우트별 청크
+// 중복 번들/미들웨어 재평가로 매 요청 찍혀 warning 로그를 지배했음(실측 2026-07-13, 6h 1,800+건
+// 대부분) → globalThis 플래그로 번들 중복과 무관하게 프로세스당 1회 보장.
+const g = globalThis as { __testModeWarned?: boolean };
+if (TEST_MODE && !g.__testModeWarned) {
+  g.__testModeWarned = true;
   console.warn('⚠ [test-mode] ×5 보상 활성(TEST_MODE=true) — 정식 출시 전 env에서 반드시 제거할 것');
 }
