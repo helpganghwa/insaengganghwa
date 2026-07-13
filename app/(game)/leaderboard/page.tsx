@@ -164,14 +164,20 @@ export default async function LeaderboardPage({
           {top.length > 3 && (
             <section className="isolate overflow-hidden rounded-xl border border-zinc-800 bg-zinc-900">
               <ul>
-                {top.slice(3).map((e) => {
+                {top.slice(3).map((e, i, rows) => {
                   const me = e.userId === userId;
+                  // 첫/마지막 행이면 부모(rounded-xl overflow-hidden)의 둥근 모서리에 사각 링이
+                  // 잘리므로, 그 행의 링만 같은 방향으로 둥글려 클립과 정렬(중간 행은 사각 유지).
+                  // ⚠ first:/last: 의사클래스는 li의 유일 자식(Link)엔 항상 참이라 못 씀 → 인덱스로 판정.
+                  const meRound = me
+                    ? `${i === 0 ? 'rounded-t-xl ' : ''}${i === rows.length - 1 ? 'rounded-b-xl ' : ''}`
+                    : '';
                   return (
                     <li key={e.userId}>
                       <Link
                         href={profileHref(e.publicCode, serverId)}
                         className={`flex h-14 items-center gap-2.5 border-b border-zinc-800 px-3 last:border-b-0 ${
-                          me ? 'bg-amber-400/10 ring-1 ring-amber-400/60 ring-inset' : ''
+                          me ? `bg-amber-400/10 ring-1 ring-amber-400/60 ring-inset ${meRound}` : ''
                         }`}
                       >
                         <span className="w-7 shrink-0 text-center font-mono text-sm text-zinc-400 tabular-nums">
