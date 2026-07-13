@@ -21,7 +21,7 @@ type Mode = 'one' | 'broadcast';
 export function AdminMailClient() {
   const bcKeyRef = useRef<string | null>(null);
   const [mode, setMode] = useState<Mode>('one');
-  const [toKind, setToKind] = useState<'nickname' | 'userId'>('nickname');
+  const [toKind, setToKind] = useState<'nickname' | 'code' | 'userId'>('nickname');
   const [to, setTo] = useState('');
   const [title, setTitle] = useState('');
   const [body, setBody] = useState('');
@@ -81,7 +81,11 @@ export function AdminMailClient() {
           return;
         }
         const r = await sendMailToUserAction({
-          ...(toKind === 'nickname' ? { toNickname: to } : { toUserId: to }),
+          ...(toKind === 'nickname'
+            ? { toNickname: to }
+            : toKind === 'code'
+              ? { toCode: to }
+              : { toUserId: to }),
           title,
           body,
           payload,
@@ -137,16 +141,17 @@ export function AdminMailClient() {
           <div className="flex gap-1.5">
             <select
               value={toKind}
-              onChange={(e) => setToKind(e.target.value as 'nickname' | 'userId')}
+              onChange={(e) => setToKind(e.target.value as 'nickname' | 'code' | 'userId')}
               className="rounded border border-zinc-300 bg-transparent px-2 py-1.5 text-base dark:border-zinc-700"
             >
               <option value="nickname">닉네임</option>
+              <option value="code">코드</option>
               <option value="userId">userId</option>
             </select>
             <input
               value={to}
               onChange={(e) => setTo(e.target.value)}
-              placeholder={toKind === 'nickname' ? '닉네임' : 'uuid'}
+              placeholder={toKind === 'nickname' ? '닉네임' : toKind === 'code' ? '#UY1GToa9' : 'uuid'}
               className="flex-1 rounded border border-zinc-300 bg-transparent px-2 py-1.5 text-base dark:border-zinc-700"
             />
           </div>

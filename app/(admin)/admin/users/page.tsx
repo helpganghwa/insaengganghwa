@@ -27,17 +27,22 @@ function fmtDate(d: Date | null): string {
   return d ? `${kstDateString(d)} ${d.toLocaleTimeString('ko-KR', { timeZone: 'Asia/Seoul', hour12: false, hour: '2-digit', minute: '2-digit' })}` : '-';
 }
 
+/** 닉네임 부분일치 + 유저 코드(#publicCode) 정확일치 통합 검색(2026-07-13 요청). */
 async function searchByNickname(q: string) {
+  const code = q.replace(/^#/, ''); // '#UY1GToa9' 붙여넣기 지원
   return db
     .select({
       userId: characters.userId,
       serverId: characters.serverId,
       nickname: characters.nickname,
+      publicCode: profiles.publicCode,
       bannedAt: profiles.bannedAt,
     })
     .from(characters)
     .innerJoin(profiles, eq(profiles.id, characters.userId))
-    .where(sql`${characters.nickname} ilike ${'%' + q + '%'}`)
+    .where(
+      sql`${characters.nickname} ilike ${'%' + q + '%'} or ${profiles.publicCode} ilike ${code}`,
+    )
     .orderBy(characters.nickname)
     .limit(20);
 }
@@ -148,7 +153,7 @@ export default async function AdminUsersPage({
         <input
           name="q"
           defaultValue={q ?? ''}
-          placeholder="닉네임 검색(부분일치)"
+          placeholder="닉네임(부분일치) 또는 코드(#UY1GToa9)"
           className="flex-1 rounded-lg border border-zinc-300 bg-white px-3 py-2 text-base dark:border-zinc-700 dark:bg-zinc-900"
         />
         <button type="submit" className="rounded-lg bg-zinc-900 px-4 py-2 text-sm font-medium text-white dark:bg-zinc-100 dark:text-zinc-900">
@@ -166,7 +171,9 @@ export default async function AdminUsersPage({
               className="flex items-center justify-between rounded-lg border border-zinc-200 px-3 py-2 text-sm hover:bg-zinc-50 dark:border-zinc-800 dark:hover:bg-zinc-900"
             >
               <span>
-                {r.nickname} <span className="text-xs text-zinc-400">{r.serverId}서버</span>
+                {r.nickname}{' '}
+                <span className="font-mono text-xs tabular-nums text-zinc-400">#{r.publicCode}</span>{' '}
+                <span className="text-xs text-zinc-400">{r.serverId}서버</span>
               </span>
               {r.bannedAt && <span className="rounded bg-red-100 px-1.5 py-0.5 text-[11px] text-red-700 dark:bg-red-950 dark:text-red-300">정지됨</span>}
             </Link>

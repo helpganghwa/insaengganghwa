@@ -30,9 +30,11 @@ type ErrorState = { status: 'error'; message: string };
 type OkOne = { status: 'success'; count: 1 };
 type OkBroadcast = { status: 'success'; count: number };
 
-/** 단건 발송 — nickname 또는 userId. 둘 다 비면 에러. */
+/** 단건 발송 — nickname / 유저 코드(#publicCode) / userId. 전부 비면 에러. */
 export async function sendMailToUserAction(opts: {
   toNickname?: string;
+  /** 유저 코드(publicCode, '#' 접두 허용) — 문의 스냅샷에서 복붙 발송용(2026-07-13). */
+  toCode?: string;
   toUserId?: string;
   title: string;
   body: string;
@@ -52,6 +54,15 @@ export async function sendMailToUserAction(opts: {
         .limit(1);
       recipientId = r?.id ?? null;
       recipientServerId = r?.sid ?? null;
+    } else if (opts.toCode?.trim()) {
+      // 코드 = 계정 단위(서버 불특정) — 배송 서버는 수신자의 마지막 활성 서버 폴백(하단 로직).
+      const code = opts.toCode.trim().replace(/^#/, '');
+      const [r] = await db
+        .select({ id: profiles.id })
+        .from(profiles)
+        .where(sql`${profiles.publicCode} ilike ${code}`)
+        .limit(1);
+      recipientId = r?.id ?? null;
     } else if (opts.toUserId?.trim()) {
       // userId도 실제 profiles에 존재하는지 확인 — 오타 UUID로 고아 우편 생성 방지.
       const id = opts.toUserId.trim();
@@ -95,7 +106,7 @@ export async function sendMailToUserAction(opts: {
         adminId,
         mode: 'one',
         recipientCount: 1,
-        targetLabel: (opts.toNickname?.trim() || opts.toUserId?.trim() || '').slice(0, 200),
+        targetLabel: (opts.toNickname?.trim() || opts.toCode?.trim() || opts.toUserId?.trim() || '').slice(0, 200),
         title,
         body,
         payload,
