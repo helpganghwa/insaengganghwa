@@ -28,6 +28,14 @@ function snapshotStaleFrom(slotCounts: { slot: string; n: number }[], stored: un
   if (!stored) return 1;
   // 저장본에서 note(기록 사유, 코어 외 항목) 제거 후 비교 — jsonb 키 순서는 지문이 흡수.
   const { note: _note, ...core } = stored as Record<string, unknown>;
+  // supply 배열 순서 정규화(2026-07-13) — 빌더는 이미 slot 정렬로 기록하지만, 정렬 도입 전
+  // 레거시·수동 스냅샷은 삽입순(weapon/armor/accessory)이라 지문만 어긋나 오탐(빨간불)이 났다.
+  // 슬롯 순 정렬만 맞추므로 확률 '값' 변경은 그대로 감지된다(§33 게이트 유지).
+  if (Array.isArray((core as { supply?: unknown }).supply)) {
+    (core as { supply: { slot: string }[] }).supply = [
+      ...(core as { supply: { slot: string }[] }).supply,
+    ].sort((a, b) => a.slot.localeCompare(b.slot));
+  }
   return probabilityFingerprint(core) === current ? 0 : 1;
 }
 
