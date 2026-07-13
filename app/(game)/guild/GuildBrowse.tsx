@@ -10,12 +10,21 @@ import { searchGuildsAction, joinGuildAction } from './actions';
 import { guildErrMsg } from './errors-msg';
 import { GuildList, type GuildRow } from './GuildList';
 
+/** 랭킹 정렬 지표 — /guild/ranking 페이지와 동일 3종. 클라 전환(각 지표별 서버측 top-N). */
+type RankSort = 'level' | 'combat' | 'zones';
+const RANK_SORTS: { key: RankSort; label: string }[] = [
+  { key: 'level', label: '레벨' },
+  { key: 'combat', label: '전투력' },
+  { key: 'zones', label: '점령지' },
+];
+
 export function GuildBrowse({
-  ranking,
+  rankings,
   defaultGuilds,
   myRequestGuildId,
 }: {
-  ranking: GuildRow[];
+  /** 지표별 랭킹 3종(레벨/전투력/점령지) — 각 지표 기준 진짜 top-N. */
+  rankings: Record<RankSort, GuildRow[]>;
   /** 검색 전 기본 노출(랜덤 추천). */
   defaultGuilds: GuildRow[];
   myRequestGuildId: string | null;
@@ -23,6 +32,7 @@ export function GuildBrowse({
   const router = useRouter();
   const { showHeaderToast, showError } = useResourceToast();
   const [tab, setTab] = useState<'ranking' | 'search'>('ranking');
+  const [rankSort, setRankSort] = useState<RankSort>('level');
   const [q, setQ] = useState('');
   const [results, setResults] = useState<GuildRow[] | null>(null);
   const [pending, start] = useTransition();
@@ -71,14 +81,35 @@ export function GuildBrowse({
 
       <div className="mt-3">
         {tab === 'ranking' ? (
-          <GuildList
-            guilds={ranking}
-            showRank
-            onJoin={join}
-            pending={pending}
-            myRequestGuildId={myRequestGuildId}
-            emptyText="아직 결성된 길드가 없습니다. 첫 길드를 만들어보세요!"
-          />
+          <>
+            {/* 정렬 필터 — /guild/ranking과 동일 3종. 클릭 시 클라에서 즉시 전환. */}
+            <div className="mb-3 flex justify-end">
+              <div className="flex gap-1 rounded-lg bg-zinc-100 p-0.5 dark:bg-zinc-900">
+                {RANK_SORTS.map((s) => (
+                  <button
+                    key={s.key}
+                    type="button"
+                    onClick={() => setRankSort(s.key)}
+                    className={`rounded-md px-2 py-0.5 text-[11px] font-bold transition ${
+                      rankSort === s.key
+                        ? 'bg-white text-zinc-900 shadow-sm dark:bg-zinc-950 dark:text-zinc-50'
+                        : 'text-zinc-500'
+                    }`}
+                  >
+                    {s.label}
+                  </button>
+                ))}
+              </div>
+            </div>
+            <GuildList
+              guilds={rankings[rankSort]}
+              showRank
+              onJoin={join}
+              pending={pending}
+              myRequestGuildId={myRequestGuildId}
+              emptyText="아직 결성된 길드가 없습니다. 첫 길드를 만들어보세요!"
+            />
+          </>
         ) : (
           <>
             <div className="flex gap-2">

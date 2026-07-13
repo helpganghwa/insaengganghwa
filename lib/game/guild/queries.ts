@@ -170,7 +170,11 @@ const RANKING_COMPARATORS: Record<
 };
 
 /** 길드 랭킹 — 서버 전체 길드를 sort 기준으로 정렬 후 상위 limit. combat 필드 포함. 미가입 첫화면 랭킹 탭. */
-export async function getGuildRanking(serverId: number, limit = 50, sort: GuildRankSort = 'combat') {
+/**
+ * 랭킹 base 계산 — 서버 전체 길드 + 멤버 stats(전투력·인원) + 점령 zones를 한 번에 산출(정렬 전).
+ * 정렬 comparator는 이 결과에 in-memory로 적용하므로, 여러 지표 정렬을 원해도 DB 비용은 1회.
+ */
+async function buildGuildRankingBase(serverId: number) {
   const rows = await db
     .select({
       id: guilds.id,
@@ -190,18 +194,31 @@ export async function getGuildRanking(serverId: number, limit = 50, sort: GuildR
     guildMemberStats(serverId, ids),
     guildZoneChips(serverId, ids),
   ]);
-  return rows
-    .map((r) => {
-      const s = stats.get(r.id.toString());
-      return {
-        ...r,
-        memberCount: s?.memberCount ?? 0,
-        combat: s?.combat ?? 0,
-        zones: zoneChips.get(r.id.toString()) ?? [],
-      };
-    })
-    .sort(RANKING_COMPARATORS[sort])
-    .slice(0, limit);
+  return rows.map((r) => {
+    const s = stats.get(r.id.toString());
+    return {
+      ...r,
+      memberCount: s?.memberCount ?? 0,
+      combat: s?.combat ?? 0,
+      zones: zoneChips.get(r.id.toString()) ?? [],
+    };
+  });
+}
+
+export async function getGuildRanking(serverId: number, limit = 50, sort: GuildRankSort = 'combat') {
+  const base = await buildGuildRankingBase(serverId);
+  return base.sort(RANKING_COMPARATORS[sort]).slice(0, limit);
+}
+
+/**
+ * 지표별 랭킹 3종(레벨/전투력/점령지)을 DB 1회 비용으로 반환 — 무소속 browse 랭킹 탭의
+ * 클라 필터 전환용. 각 리스트는 해당 지표 기준 진짜 top-N(클라 재정렬과 달리 상위권 누락 없음).
+ * ⚠ 정렬은 배열을 변형하므로 지표마다 base 사본([...base])을 정렬한다.
+ */
+export async function getGuildRankingsMulti(serverId: number, limit = 50) {
+  const base = await buildGuildRankingBase(serverId);
+  const bySort = (sort: GuildRankSort) => [...base].sort(RANKING_COMPARATORS[sort]).slice(0, limit);
+  return { level: bySort('level'), combat: bySort('combat'), zones: bySort('zones') };
 }
 
 /** 길드 검색(이름 부분일치) — 가입 브라우즈용. combat(전투력 합) 포함.

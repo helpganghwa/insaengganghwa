@@ -5,7 +5,7 @@ import {
   getMyMembership,
   getGuild,
   getGuildMembersRich,
-  getGuildRanking,
+  getGuildRankingsMulti,
   getGuildActivityLog,
   getMyJoinRequest,
   searchGuilds,
@@ -24,8 +24,8 @@ export const dynamic = 'force-dynamic';
 
 /** 미가입 첫화면 — 랭킹/찾기 탭 + 생성 FAB. */
 async function browseView(userId: string, serverId: number) {
-  const [ranking, defaults, myRequest] = await Promise.all([
-    withTimeout(getGuildRanking(serverId), DB_GUARD_MS, 'guild.browse.ranking'),
+  const [rankings, defaults, myRequest] = await Promise.all([
+    withTimeout(getGuildRankingsMulti(serverId), DB_GUARD_MS, 'guild.browse.ranking'),
     withTimeout(searchGuilds(serverId, ''), DB_GUARD_MS, 'guild.browse.random').catch(() => []),
     withTimeout(getMyJoinRequest(userId, serverId), DB_GUARD_MS, 'guild.browse.req'),
   ]);
@@ -57,7 +57,11 @@ async function browseView(userId: string, serverId: number) {
   return (
     <GuildBrowse
       myRequestGuildId={myRequest?.toString() ?? null}
-      ranking={ranking.map(toRow)}
+      rankings={{
+        level: rankings.level.map(toRow),
+        combat: rankings.combat.map(toRow),
+        zones: rankings.zones.map(toRow),
+      }}
       defaultGuilds={defaults.map(toRow)}
     />
   );
