@@ -72,18 +72,21 @@ export default async function LoginPage({
           </div>
         ) : null}
 
-        {/* 카카오 로그인 — 공식 가이드 준수(#FEE500 / 라벨 "카카오 로그인" / 심볼·텍스트 #000(85%) / radius 12px, 심볼 미변형). */}
-        <form action={signInWithKakao} className="w-full">
-          <button
-            type="submit"
-            aria-label="카카오 로그인"
-            className="flex w-full items-center justify-center gap-2 rounded-[12px] bg-[#FEE500] py-3.5 transition active:scale-[0.99] hover:brightness-95"
-          >
-            {/* eslint-disable-next-line @next/next/no-img-element */}
-            <img src="/kakao/kakao_symbol.png" alt="" aria-hidden className="h-[18px] w-auto" />
-            <span className="text-[15px] font-bold text-black/85">카카오 로그인</span>
-          </button>
-        </form>
+        {/* 카카오 로그인 — 공식 가이드 준수(#FEE500 / 라벨 "카카오 로그인" / 심볼·텍스트 #000(85%) / radius 12px, 심볼 미변형).
+            심사용(?test=true)에선 카카오 버튼을 숨기고 아래 ID/PW 폼만 노출(심사관 동선 단순화). */}
+        {reviewLogin ? null : (
+          <form action={signInWithKakao} className="w-full">
+            <button
+              type="submit"
+              aria-label="카카오 로그인"
+              className="flex w-full items-center justify-center gap-2 rounded-[12px] bg-[#FEE500] py-3.5 transition active:scale-[0.99] hover:brightness-95"
+            >
+              {/* eslint-disable-next-line @next/next/no-img-element */}
+              <img src="/kakao/kakao_symbol.png" alt="" aria-hidden className="h-[18px] w-auto" />
+              <span className="text-[15px] font-bold text-black/85">카카오 로그인</span>
+            </button>
+          </form>
+        )}
 
         {/* 소셜 증명 — 로그인 버튼 아래, 프로필 페이지와 동일 통계 카드(공유 컴포넌트) */}
         <div className="mt-5 w-full">
