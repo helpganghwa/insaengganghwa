@@ -21,6 +21,10 @@ const BENIGN_PATTERNS = [
   'aborterror',
   'cancelled',
   'the network connection was lost',
+  // 크로스오리진 스크립트(카카오 픽셀 등)가 CORS로 잘려 넘기는 opaque 에러 —
+  // 스택·라인·실메시지가 원천 제거돼 디버깅 불가. 동일오리진 버그는 이 문자열을 만들지
+  // 않으므로(항상 실메시지 동반) 필터해도 진짜 신호 손실 없음. Sentry도 기본 무시.
+  'script error',
 ];
 const isBenign = (message: string) => {
   const m = message.toLowerCase();
