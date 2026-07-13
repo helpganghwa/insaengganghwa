@@ -50,7 +50,9 @@ export async function POST(req: Request) {
     revalidatePath('/', 'layout'); // 헤더(공유 레이아웃) 활성 문양 반영
     return Response.json({ status: 'success' });
   } catch (e) {
-    const code = e instanceof GuildError ? e.code : 'UNKNOWN';
+    // GuildError(길드장 아님·한도·잔액)는 그대로. 그 외(pixflux 타임아웃·업로드 등 생성/인프라
+    // 실패)는 전용 코드로 — 차감은 성공 시에만 일어나므로 어떤 실패든 다이아 미차감이 보장됨.
+    const code = e instanceof GuildError ? e.code : 'EMBLEM_GEN_FAILED';
     console.error('[guild.emblem.generate]', e);
     return Response.json({ status: 'error', code }, { status: 400 });
   }

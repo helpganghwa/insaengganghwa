@@ -391,8 +391,11 @@ export function GuildSettings({
         }
         setGenPending(false);
         showError(guildErrMsg(r.code ?? 'UNKNOWN'));
+      } else {
+        // null(네트워크/타임아웃): 서버가 아직 생성 중일 수 있어 실패로 단정하지 않되, 조용히
+        // 스피너만 남기지 말고 안내(완료 시 문양함 반영·다이아는 성공 시에만 차감). 플래그는 유지.
+        showHeaderToast({ title: '생성이 지연되고 있어요 — 완료되면 문양함에 나타나요' });
       }
-      // null(네트워크/타임아웃): 서버가 생성 중일 수 있어 플래그 유지(effect/TTL이 정리).
     }
     router.refresh(); // 성공/불명확 모두 실제 상태 반영.
   };
