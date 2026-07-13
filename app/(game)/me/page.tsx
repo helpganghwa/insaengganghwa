@@ -127,6 +127,17 @@ export default async function ProfilePage() {
     return rot.south ?? Object.values(rot)[0]; // 항상 정면(south)
   };
 
+  // 자랑 팝업 데이터 — 자랑 버튼(BoastLauncher)과 추천 섹션(탭 시 동일 팝업)이 공유.
+  const boastPieces = equipped.map((e) => ({
+    slot: e.slot,
+    code: e.code,
+    name: e.name,
+    enhanceLevel: e.enhanceLevel,
+    transcendLevel: e.transcendLevel,
+    championRank: libRanks.get(e.catalogItemId) ?? null,
+    catalogItemId: e.catalogItemId,
+  }));
+
   return (
     <div className="space-y-4 px-4 py-6">
       {/* 내 정보 카드 — 좌: 닉네임/캐릭터/전투력 · 우: 장비 3종 */}
@@ -228,21 +239,25 @@ export default async function ProfilePage() {
         profileImg={activeProfile ? dirImg(activeProfile) : null}
         guildEmblemUrl={row?.guild_emblem_url ?? null}
         guildName={row?.guild_name ?? null}
-        pieces={equipped.map((e) => ({
-          slot: e.slot,
-          code: e.code,
-          name: e.name,
-          enhanceLevel: e.enhanceLevel,
-          transcendLevel: e.transcendLevel,
-          championRank: libRanks.get(e.catalogItemId) ?? null,
-          catalogItemId: e.catalogItemId,
-        }))}
+        pieces={boastPieces}
       />
 
       <ReferralSection
         totalReferrals={referralStats.totalReferrals}
         totalDiamondEarned={referralStats.totalDiamondEarned}
         totalBoxEarned={referralStats.totalBoxEarned}
+        perDiamond={INVITE_DIAMOND_PER_REFERRAL}
+        perBox={INVITE_BOX_PER_REFERRAL}
+        boast={{
+          nickname,
+          publicCode,
+          pieces: boastPieces,
+          total,
+          profileImg: activeProfile ? dirImg(activeProfile) : null,
+          guildEmblemUrl: row?.guild_emblem_url ?? null,
+          guildName: row?.guild_name ?? null,
+          serverId,
+        }}
       />
 
       <nav className="space-y-2">
