@@ -41,6 +41,8 @@ function snapshotStaleFrom(slotCounts: { slot: string; n: number }[], stored: un
 
 type DashRow = {
   signups_today: number;
+  signups_today_invited: number; // 오늘 가입 중 초대(추천 링크)로 유입된 수
+  accounts_invited: number; // 누적 가입 중 초대로 유입된 수
   dau: number;
   chars_by_server: { serverId: number; name: string; c: number }[];
   accounts_total: number;
@@ -79,6 +81,9 @@ async function loadDashboard() {
     (sql) => sql<DashRow[]>`
       select
         (select count(*)::int from profiles where created_at >= ${dayStart}::timestamptz) as signups_today,
+        (select count(*)::int from profiles p where p.created_at >= ${dayStart}::timestamptz
+           and exists (select 1 from referral_attributions r where r.new_user_id = p.id)) as signups_today_invited,
+        (select count(distinct new_user_id)::int from referral_attributions) as accounts_invited,
         (select count(distinct user_id)::int from characters where last_seen_at >= ${dayStart}::timestamptz) as dau,
         (select coalesce(json_agg(t), '[]'::json) from (
            select c.server_id as "serverId", s.name, count(*)::int as c
@@ -126,6 +131,8 @@ async function loadDashboard() {
 
   const {
     signups_today: signupsToday,
+    signups_today_invited: signupsTodayInvited,
+    accounts_invited: accountsInvited,
     dau,
     chars_by_server: charsByServer,
     accounts_total: accountsTotal,
@@ -150,6 +157,8 @@ async function loadDashboard() {
 
   return {
     signupsToday,
+    signupsTodayInvited,
+    accountsInvited,
     dau,
     charsByServer,
     accountsTotal,
@@ -208,7 +217,11 @@ export default async function AdminDashboardPage() {
       <section className="space-y-2">
         <h2 className="text-xs font-bold text-zinc-500">오늘 (KST)</h2>
         <div className="grid grid-cols-2 gap-2 sm:grid-cols-4">
-          <Card label="신규 가입" value={d.signupsToday.toLocaleString()} />
+          <Card
+            label="신규 가입"
+            value={d.signupsToday.toLocaleString()}
+            sub={`일반 ${(d.signupsToday - d.signupsTodayInvited).toLocaleString()} · 초대 ${d.signupsTodayInvited.toLocaleString()}`}
+          />
           <Card label="DAU (접속 유저)" value={d.dau.toLocaleString()} />
           <Card label="오늘 매출" value={won(d.salesToday.sum)} sub={`${d.salesToday.c}건`} />
           <Card label="레이드 개설" value={d.raidsToday.toLocaleString()} />
@@ -222,7 +235,18 @@ export default async function AdminDashboardPage() {
       <section className="space-y-2">
         <h2 className="text-xs font-bold text-zinc-500">누적</h2>
         <div className="grid grid-cols-2 gap-2 sm:grid-cols-4">
-          <Card label="총 계정" value={d.accountsTotal.toLocaleString()} />
+          <Card
+            label="총 계정"
+            value={d.accountsTotal.toLocaleString()}
+            sub={`일반 ${(d.accountsTotal - d.accountsInvited).toLocaleString()} · 초대 ${d.accountsInvited.toLocaleString()}`}
+          />
+          <Card
+            label="초대 유입 비율"
+            value={`${d.accountsTotal > 0 ? Math.round((d.accountsInvited / d.accountsTotal) * 100) : 0}%`}
+            sub={`초대 ${d.accountsInvited.toLocaleString()} / 전체 ${d.accountsTotal.toLocaleString()}`}
+          />
+        </div>
+        <div className="grid grid-cols-2 gap-2 sm:grid-cols-4">
           {d.charsByServer.map((s) => (
             <Card key={s.serverId} label={`캐릭터 · ${s.name}`} value={s.c.toLocaleString()} />
           ))}
