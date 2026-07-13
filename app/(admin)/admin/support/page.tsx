@@ -1,6 +1,6 @@
 import Link from 'next/link';
 
-import { listInquiries } from '@/lib/game/support/inquiry';
+import { listInquiries, signInquiryImageUrls } from '@/lib/game/support/inquiry';
 import { INQUIRY_LABEL } from '@/lib/game/support/types';
 import { listServers } from '@/lib/game/servers';
 
@@ -33,6 +33,11 @@ export default async function AdminSupportPage({
     status === 'answered' ? 'answered' : status === 'all' ? 'all' : 'open';
   const servers = await listServers();
   const rows = await listInquiries(st, srvFilter, 150);
+
+  // 첨부 이미지(0116) — private 버킷이라 signed URL(1h) 일괄 발급 후 경로→URL 매핑.
+  const allPaths = rows.flatMap((r) => r.imagePaths ?? []);
+  const signedList = await signInquiryImageUrls(allPaths);
+  const signedByPath = new Map(allPaths.map((p, i) => [p, signedList[i] ?? null]));
 
   const tabHref = (id: string) => {
     const p = new URLSearchParams();
@@ -99,6 +104,32 @@ export default async function AdminSupportPage({
                 <p className="mt-2 whitespace-pre-wrap text-[13px] leading-relaxed text-zinc-700 dark:text-zinc-200">
                   {r.body}
                 </p>
+
+                {/* 첨부 이미지 — 썸네일(클릭 시 원본 새 탭, signed URL 1h). */}
+                {(r.imagePaths ?? []).length > 0 ? (
+                  <div className="mt-2 flex flex-wrap gap-1.5">
+                    {(r.imagePaths ?? []).map((p) => {
+                      const url = signedByPath.get(p);
+                      return url ? (
+                        <a key={p} href={url} target="_blank" rel="noreferrer" className="block">
+                          {/* eslint-disable-next-line @next/next/no-img-element */}
+                          <img
+                            src={url}
+                            alt="첨부 이미지"
+                            className="h-20 w-20 rounded-lg border border-zinc-200 object-cover dark:border-zinc-700"
+                          />
+                        </a>
+                      ) : (
+                        <span
+                          key={p}
+                          className="flex h-20 w-20 items-center justify-center rounded-lg border border-dashed border-zinc-300 text-[10px] text-zinc-400 dark:border-zinc-700"
+                        >
+                          로드 실패
+                        </span>
+                      );
+                    })}
+                  </div>
+                ) : null}
 
                 {r.status === 'answered' ? (
                   <div className="mt-2 rounded-lg bg-zinc-50 p-2.5 dark:bg-zinc-900">

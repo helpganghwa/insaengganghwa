@@ -5,6 +5,7 @@ import { sql, eq } from 'drizzle-orm';
 import { db } from '@/lib/db/client';
 import { profiles } from '@/lib/db/schema/profiles';
 import { guilds } from '@/lib/db/schema/guild';
+import { removeAllInquiryImagesForUser } from '@/lib/game/support/inquiry';
 
 /**
  * 회원탈퇴 — 게임 데이터 파기 + PII 제거, 결제·본인인증·미성년한도는 법정 보존(익명화 in-place).
@@ -115,5 +116,12 @@ export async function withdrawAccount(userId: string): Promise<void> {
         identityVerifiedAt: null,
       })
       .where(eq(profiles.id, userId));
+
+    // 문의 첨부 이미지 경로 클리어(0116) — 문의 행(본문)은 분쟁 추적용 보존이지만,
+    // 이미지는 PII 밀도가 높아(결제내역 스크린샷 등) 탈퇴 시 파기. 파일 실체는 tx 밖에서.
+    await tx.execute(sql`update support_inquiries set image_paths = '{}' where user_id = ${uid}`);
   });
+
+  // 스토리지 첨부 파기(best-effort, tx 밖) — private 버킷이라 남아도 노출은 없음.
+  await removeAllInquiryImagesForUser(userId);
 }

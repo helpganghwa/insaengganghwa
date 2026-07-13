@@ -8,8 +8,70 @@ import { mailbox } from '@/lib/db/schema/mailbox';
 import { characters } from '@/lib/db/schema/server';
 import { profiles } from '@/lib/db/schema/profiles';
 import { sendPushToUser } from '@/lib/push/send';
+import { createSupabaseServiceClient } from '@/lib/auth/supabase-server';
 
 import { INQUIRY_LABEL, ANSWER_MAX, BODY_MAX, type InquiryType } from './types';
+
+/**
+ * 첨부 이미지 버킷(0116) — **private**(문의 스크린샷엔 결제내역·개인정보가 흔함).
+ * 어드민 열람은 signed URL(1h). 경로 = {userId}/{uuid}.jpg — 탈퇴 시 폴더째 정리.
+ */
+export const INQUIRY_BUCKET = 'inquiry-attachments';
+
+/** 첨부 업로드(버킷 멱등 생성) — 업로드된 경로 반환. 실패 시 부분 업로드 정리 후 throw. */
+export async function uploadInquiryImages(
+  userId: string,
+  files: { bytes: Buffer; contentType: string }[],
+): Promise<string[]> {
+  const supabase = createSupabaseServiceClient();
+  await supabase.storage.createBucket(INQUIRY_BUCKET, { public: false }).catch(() => {});
+  const paths: string[] = [];
+  for (const f of files) {
+    const path = `${userId}/${crypto.randomUUID()}.jpg`;
+    const { error } = await supabase.storage
+      .from(INQUIRY_BUCKET)
+      .upload(path, f.bytes, { contentType: f.contentType, upsert: false });
+    if (error) {
+      await removeInquiryImages(paths); // 부분 업로드 정리(고아 방지)
+      throw new Error(`inquiry upload: ${error.message}`);
+    }
+    paths.push(path);
+  }
+  return paths;
+}
+
+/** 첨부 삭제(best-effort) — 문의 삭제·접수 실패 롤백·탈퇴 정리에서 사용. */
+export async function removeInquiryImages(paths: string[]): Promise<void> {
+  if (paths.length === 0) return;
+  try {
+    await createSupabaseServiceClient().storage.from(INQUIRY_BUCKET).remove(paths);
+  } catch {
+    /* best-effort — 남아도 private 버킷이라 노출 없음 */
+  }
+}
+
+/** 어드민 열람용 signed URL(1h) — private 버킷이라 직접 URL 없음. 실패 항목은 null. */
+export async function signInquiryImageUrls(paths: string[]): Promise<(string | null)[]> {
+  if (paths.length === 0) return [];
+  const { data, error } = await createSupabaseServiceClient()
+    .storage.from(INQUIRY_BUCKET)
+    .createSignedUrls(paths, 3600);
+  if (error || !data) return paths.map(() => null);
+  return data.map((d) => d.signedUrl ?? null);
+}
+
+/** 탈퇴 정리 — 해당 유저 첨부 폴더 삭제(행은 CASCADE, 파일은 여기서). best-effort. */
+export async function removeAllInquiryImagesForUser(userId: string): Promise<void> {
+  try {
+    const supabase = createSupabaseServiceClient();
+    const { data } = await supabase.storage.from(INQUIRY_BUCKET).list(userId, { limit: 100 });
+    if (data?.length) {
+      await supabase.storage.from(INQUIRY_BUCKET).remove(data.map((f) => `${userId}/${f.name}`));
+    }
+  } catch {
+    /* best-effort */
+  }
+}
 
 /**
  * 문의 접수 — 저장 + 접수 안내 우편(운영자 발신). 푸시는 없음(사용자 결정).
@@ -20,6 +82,8 @@ export async function submitInquiry(input: {
   serverId: number;
   type: InquiryType;
   body: string;
+  /** 첨부 이미지 스토리지 경로(uploadInquiryImages 결과, ≤3). */
+  imagePaths?: string[];
 }): Promise<{ id: bigint }> {
   const body = input.body.trim().slice(0, BODY_MAX);
   const [who] = await db
@@ -42,6 +106,7 @@ export async function submitInquiry(input: {
       type: input.type,
       body,
       contextSnapshot: snapshot,
+      imagePaths: input.imagePaths ?? [],
     })
     .returning({ id: supportInquiries.id });
 
@@ -151,8 +216,10 @@ export async function deleteInquiry(inquiryId: bigint): Promise<boolean> {
   const rows = await db
     .delete(supportInquiries)
     .where(eq(supportInquiries.id, inquiryId))
-    .returning({ id: supportInquiries.id });
-  return rows.length > 0;
+    .returning({ id: supportInquiries.id, imagePaths: supportInquiries.imagePaths });
+  if (rows.length === 0) return false;
+  await removeInquiryImages(rows[0]!.imagePaths ?? []); // 첨부 파일도 정리(best-effort)
+  return true;
 }
 
 /** 관리자 카운트(미답변 배지용). */

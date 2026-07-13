@@ -48,6 +48,8 @@ export const supportInquiries = pgTable(
     answeredAt: timestamp('answered_at', { withTimezone: true }),
     /** 접수 시점 닉네임·#코드 스냅샷 — 닉 변경돼도 관리자 식별. */
     contextSnapshot: jsonb('context_snapshot').notNull().default({}),
+    /** 첨부 이미지 스토리지 경로(0116) — private 버킷 inquiry-attachments, 어드민은 signed URL 열람. */
+    imagePaths: text('image_paths').array().notNull().default([]),
     createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
   },
   (t) => [
