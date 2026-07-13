@@ -246,7 +246,11 @@ export default async function HomePage() {
             meleeChampion = row.melee_champ;
             meleeEdition = row.melee_edition ?? 0;
           } else meleeDesc = '오늘의 결과 발표';
-        } else meleeDesc = '결과 집계 중';
+        } else if (row.melee_status == null) {
+          // 오늘 배틀 행 자체가 없음 — 9시 이후 오픈한 서버·참가자 0명인 날(run 조기 반환).
+          // 집계할 것이 없는데 '집계 중'이 자정까지 뜨던 문제(2026-07-13) → 다음 회차 안내로.
+          meleeDesc = '내일 9시 개시';
+        } else meleeDesc = '결과 집계 중'; // 행 있고 미공개 — 실제 집계 창(09:30~10:00)
       }
     } catch {
       // 콜드/hang → 카드 + 알림 숨김(기본 false/0). 메뉴 그리드는 정상 노출.
