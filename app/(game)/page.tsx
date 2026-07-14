@@ -305,13 +305,30 @@ export default async function HomePage() {
         return (
           <Link
             href="/challenges"
-            className={`relative flex items-center gap-3 overflow-hidden rounded-2xl border-2 px-3.5 py-3 transition active:scale-[0.99] ${
+            className={`relative isolate flex items-center gap-3 overflow-hidden rounded-2xl border-2 px-3.5 py-3 transition active:scale-[0.99] ${
               claimable > 0
-                ? 'border-amber-500/70 bg-gradient-to-r from-amber-950/60 to-orange-950/40 shadow-[0_0_18px_rgba(245,158,11,0.25)]'
-                : 'border-zinc-800 bg-zinc-900/60'
+                ? 'border-amber-500/70 shadow-[0_0_18px_rgba(245,158,11,0.25)]'
+                : 'border-zinc-800'
             }`}
           >
-            <span className="text-2xl">🏆</span>
+            {/* 픽셀아트 배경(성장패스 에셋 재활용) + 어둠 오버레이 — 홈 카드 문법 통일 */}
+            {/* eslint-disable-next-line @next/next/no-img-element */}
+            <img
+              src={assetUrl('/sprites/hub/battlepass.png')}
+              alt=""
+              aria-hidden
+              draggable={false}
+              className="absolute inset-0 -z-10 h-full w-full object-cover opacity-45"
+              style={{ imageRendering: 'pixelated' }}
+            />
+            <div
+              className={`absolute inset-0 -z-10 ${
+                claimable > 0
+                  ? 'bg-gradient-to-r from-amber-950/85 via-black/60 to-orange-950/60'
+                  : 'bg-gradient-to-r from-black/85 via-black/65 to-black/50'
+              }`}
+            />
+            <span className="text-2xl drop-shadow">🏆</span>
             <span className="min-w-0 flex-1">
               <span className="block text-sm font-bold text-white">도전 과제</span>
               <span className="mt-0.5 block text-[11px] text-zinc-400">

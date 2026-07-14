@@ -4,6 +4,7 @@ import { useMemo, useState, useTransition } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 
+import { assetUrl } from '@/lib/asset-versions';
 import { useResourceToast } from '@/components/ResourceToast';
 import { useDiamond } from '@/components/DiamondContext';
 import {
@@ -14,6 +15,21 @@ import {
 } from '@/lib/game/challenges/defs';
 
 import { claimChallengeAction } from './actions';
+
+/** 그룹 배너 픽셀아트(기존 홈 카드 에셋 재활용) — 없는 그룹은 그라데이션 폴백. */
+const GROUP_BG: Partial<Record<string, string>> = {
+  supply: '/sprites/hub/gacha.png',
+  equip: '/sprites/hub/inventory.png',
+  enhance: '/sprites/hub/enhance.png',
+  daily: '/sprites/hub/mail.png',
+  growth: '/sprites/hub/box-weapon.png',
+  social: '/sprites/hub/melee.png',
+  guild: '/sprites/hub/guild.png',
+  raid: '/sprites/hub/raid.png',
+  world: '/sprites/guild/worldmap.png',
+  avatar: '/sprites/default/female/south.png',
+  shop: '/sprites/hub/shop.png',
+};
 
 /**
  * 도전 과제 화면 — 전 과제 한눈에 + 항목별 개별 수령 + 전체 완료 특별 보상(2026-07-14).
@@ -116,9 +132,20 @@ export function ChallengesClient({
           <span className="text-3xl">{completeClaimed ? '👑' : '🎁'}</span>
           <div className="min-w-0 flex-1">
             <div className="text-[14px] font-extrabold">{COMPLETE_BONUS.label}</div>
-            <div className="mt-0.5 text-[12px] text-zinc-500">
-              💎 {COMPLETE_BONUS.diamond.toLocaleString('ko-KR')} + 보급상자 각{' '}
-              {COMPLETE_BONUS.boxes.weapon}개
+            <div className="mt-0.5 flex items-center gap-1 text-[12px] text-zinc-500">
+              💎 {COMPLETE_BONUS.diamond.toLocaleString('ko-KR')} +
+              {(['weapon', 'armor', 'accessory'] as const).map((b) => (
+                // eslint-disable-next-line @next/next/no-img-element
+                <img
+                  key={b}
+                  src={assetUrl(`/sprites/hub/box-${b}.png`)}
+                  alt=""
+                  aria-hidden
+                  className="h-5 w-5 object-contain"
+                  style={{ imageRendering: 'pixelated' }}
+                />
+              ))}
+              <span>각 {COMPLETE_BONUS.boxes.weapon}개</span>
             </div>
           </div>
           {completeClaimed ? (
@@ -152,10 +179,26 @@ export function ChallengesClient({
       <div className="mt-2 space-y-4">
         {groups.map((g) => (
           <section key={g.id}>
-            <h2 className="mb-1.5 px-1 text-[12px] font-bold text-zinc-500">
-              {g.icon} {g.label}
-            </h2>
-            <div className="overflow-hidden rounded-2xl border border-zinc-200 dark:border-zinc-800">
+            <div className="isolate overflow-hidden rounded-2xl border border-zinc-200 dark:border-zinc-800">
+              {/* 그룹 배너 — 홈 카드 픽셀아트 재활용(cover + 어둠 그라데이션) */}
+              <div className="relative h-12 overflow-hidden bg-zinc-900">
+                {GROUP_BG[g.id] ? (
+                  // eslint-disable-next-line @next/next/no-img-element
+                  <img
+                    src={assetUrl(GROUP_BG[g.id]!)}
+                    alt=""
+                    aria-hidden
+                    draggable={false}
+                    className="absolute inset-0 h-full w-full object-cover opacity-80"
+                    style={{ imageRendering: 'pixelated', objectPosition: 'center 30%' }}
+                  />
+                ) : null}
+                <div className="absolute inset-0 bg-gradient-to-r from-black/80 via-black/45 to-black/20" />
+                <div className="absolute inset-y-0 left-3 flex items-center gap-1.5">
+                  <span className="text-[14px]">{g.icon}</span>
+                  <span className="text-[13px] font-extrabold text-white drop-shadow">{g.label}</span>
+                </div>
+              </div>
               {list
                 .filter((c) => c.group === g.id)
                 .map((c, i, arr) => (
@@ -240,7 +283,7 @@ function Row({
           href={def.go}
           className="shrink-0 rounded-lg border border-zinc-200 px-2.5 py-1.5 text-[11px] font-semibold text-zinc-500 active:scale-95 dark:border-zinc-700 dark:text-zinc-400"
         >
-          하러 가기 →
+          바로가기
         </Link>
       ) : null}
     </div>
