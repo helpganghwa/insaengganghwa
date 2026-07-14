@@ -24,27 +24,53 @@ export async function detectFaceBox(png: Buffer): Promise<FaceBox | null> {
     if (C < 4 || W < 16 || H < 16) return null;
     const alpha = (x: number, y: number) => data[(y * W + x) * C + 3]!;
 
-    // 행별 불투명 좌/우 끝 + 폭.
+    // 머리 탐색은 **중앙 밴드(가로 30~70%)**로 제한(2026-07-14) — 치켜든 무기(도끼·망치)가
+    // 머리보다 높으면 전체 스캔의 top이 무기 끝으로 잡혀 얼굴 박스가 무기 쪽으로 끌렸음
+    // (YOONEE 사례). 캐릭터는 중앙 정렬이 생성 표준이라 얼굴은 항상 밴드 안에 있다.
+    // 신장(figureH)만 전체 스캔 기준(발끝·치마 폭 등 포함).
+    const bandL = Math.round(W * 0.3);
+    const bandR = Math.round(W * 0.7);
+
+    // 행별 불투명 좌/우 끝 + 폭 — 밴드(머리 탐색용)와 전체(신장용) 이중 계산.
     const left = new Int32Array(H);
     const right = new Int32Array(H);
     const span = new Int32Array(H);
+    const fullSpan = new Int32Array(H);
     for (let y = 0; y < H; y++) {
       let l = -1;
       let r = -1;
       let cnt = 0;
+      let fCnt = 0;
+      let fSeen = -1;
+      let fLast = -1;
       for (let x = 0; x < W; x++) {
         if (alpha(x, y) >= ALPHA_ON) {
-          if (l < 0) l = x;
-          r = x;
-          cnt++;
+          if (fSeen < 0) fSeen = x;
+          fLast = x;
+          fCnt++;
+          if (x >= bandL && x <= bandR) {
+            if (l < 0) l = x;
+            r = x;
+            cnt++;
+          }
         }
       }
       left[y] = l;
       right[y] = r;
       span[y] = cnt >= 2 && l >= 0 ? r - l + 1 : 0;
+      fullSpan[y] = fCnt >= 2 && fSeen >= 0 ? fLast - fSeen + 1 : 0;
     }
 
-    // 피사체 상/하단.
+    // 신장(전체) + 머리 탐색 상/하단(밴드 — 비면 전체로 폴백).
+    let fTop = -1;
+    let fBot = -1;
+    for (let y = 0; y < H; y++) {
+      if (fullSpan[y] > 0) {
+        if (fTop < 0) fTop = y;
+        fBot = y;
+      }
+    }
+    if (fTop < 0 || fBot <= fTop) return null;
     let top = -1;
     let bottom = -1;
     for (let y = 0; y < H; y++) {
@@ -53,8 +79,11 @@ export async function detectFaceBox(png: Buffer): Promise<FaceBox | null> {
         bottom = y;
       }
     }
-    if (top < 0 || bottom <= top) return null;
-    const figureH = bottom - top + 1;
+    if (top < 0 || bottom <= top) {
+      top = fTop;
+      bottom = fBot;
+    }
+    const figureH = fBot - fTop + 1;
 
     // 어깨폭(상체 최대) — 목 판정 기준.
     const shLo = top + Math.round(figureH * 0.15);
