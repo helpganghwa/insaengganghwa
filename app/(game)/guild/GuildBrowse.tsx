@@ -143,9 +143,10 @@ export function GuildBrowse({
         )}
       </div>
 
-      {/* 길드 생성 FAB — 컬럼 우하단(바텀네비 위) */}
+      {/* 길드 생성 FAB — 컬럼 우하단(바텀네비+가이드 티커 위). 72px는 티커(~28px)와 겹쳐
+          104px로 상향(2026-07-14) — 티커를 꺼도 여백만 넉넉해질 뿐 무해. */}
       <div className="pointer-events-none fixed inset-x-0 bottom-0 z-40 mx-auto max-w-[390px]">
-        <div className="flex justify-end px-4 pb-[calc(env(safe-area-inset-bottom)+72px)]">
+        <div className="flex justify-end px-4 pb-[calc(env(safe-area-inset-bottom)+104px)]">
           <Link
             href="/guild/create"
             className="pointer-events-auto flex items-center gap-1.5 rounded-full bg-amber-600 py-3 pl-4 pr-5 text-sm font-bold text-white shadow-lg shadow-amber-900/30 active:scale-95"
