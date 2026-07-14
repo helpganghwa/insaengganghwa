@@ -5,38 +5,43 @@ import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 
 import { assetUrl } from '@/lib/asset-versions';
+import { ModalShell } from '@/components/ModalShell';
 import { useResourceToast } from '@/components/ResourceToast';
 import { useDiamond } from '@/components/DiamondContext';
+import { InstallAppButton } from '@/app/(game)/me/settings/InstallAppButton';
 import {
   CHALLENGE_GROUPS,
   COMPLETE_BONUS,
   activeChallenges,
   type ChallengeDef,
+  type ChallengeGroup,
 } from '@/lib/game/challenges/defs';
 
 import { claimChallengeAction } from './actions';
 
-/** 그룹 배너 픽셀아트(기존 홈 카드 에셋 재활용) — 없는 그룹은 그라데이션 폴백. */
-const GROUP_BG: Partial<Record<string, string>> = {
-  supply: '/sprites/hub/gacha.png',
-  equip: '/sprites/hub/inventory.png',
-  enhance: '/sprites/hub/enhance.png',
-  daily: '/sprites/hub/mail.png',
-  growth: '/sprites/hub/box-weapon.png',
-  social: '/sprites/hub/melee.png',
-  guild: '/sprites/hub/guild.png',
-  raid: '/sprites/hub/raid.png',
-  world: '/sprites/guild/worldmap.png',
-  avatar: '/sprites/default/female/south.png',
-  shop: '/sprites/hub/shop.png',
+/**
+ * 도전 과제 화면 — 전 과제 한눈에 + 개별 수령 + 전체 완료 특별 보상(2026-07-14).
+ * 컴팩트 1줄 행 + CSS 그룹 헤더(이미지는 홈 배너만 — 2026-07-15 피드백). 미달성 과제는
+ * '가이드' 팝업으로 달성 방법을 안내하고 하단에 상황 맞는 버튼(바로가기/앱 설치)을 노출.
+ * 수령은 낙관 UI(즉시 체크 + 헤더 다이아 반영, 실패 롤백).
+ */
+
+/** 그룹 CSS 틴트 — 이미지 없이 색으로 구분(컴팩트·가독성). */
+const GROUP_TINT: Record<ChallengeGroup, string> = {
+  supply: 'bg-emerald-500/10 text-emerald-600 dark:text-emerald-400',
+  equip: 'bg-sky-500/10 text-sky-600 dark:text-sky-400',
+  enhance: 'bg-amber-500/10 text-amber-600 dark:text-amber-400',
+  daily: 'bg-violet-500/10 text-violet-600 dark:text-violet-400',
+  growth: 'bg-fuchsia-500/10 text-fuchsia-600 dark:text-fuchsia-400',
+  app: 'bg-blue-500/10 text-blue-600 dark:text-blue-400',
+  social: 'bg-pink-500/10 text-pink-600 dark:text-pink-400',
+  guild: 'bg-orange-500/10 text-orange-600 dark:text-orange-400',
+  raid: 'bg-red-500/10 text-red-600 dark:text-red-400',
+  world: 'bg-teal-500/10 text-teal-600 dark:text-teal-400',
+  avatar: 'bg-purple-500/10 text-purple-600 dark:text-purple-400',
+  shop: 'bg-lime-500/10 text-lime-600 dark:text-lime-400',
 };
 
-/**
- * 도전 과제 화면 — 전 과제 한눈에 + 항목별 개별 수령 + 전체 완료 특별 보상(2026-07-14).
- * 리텐션 핵심 콘텐츠: 수령 가능 항목은 앰버 글로우로 유혹하고, 미달성 항목엔 '하러 가기'
- * 동선을 붙여 "보상 보인다 → 눌러본다 → 콘텐츠 한 바퀴"를 만든다. 수령은 낙관 UI
- * (즉시 체크 + 헤더 다이아 반영) + 서버 재검증(실패 시 롤백).
- */
 export function ChallengesClient({
   done,
   claimedInit,
@@ -54,6 +59,7 @@ export function ChallengesClient({
   const [claimed, setClaimed] = useState<Set<string>>(() => new Set(claimedInit));
   const [completeClaimed, setCompleteClaimed] = useState(completeClaimedInit);
   const [pendingId, setPendingId] = useState<string | null>(null);
+  const [guideFor, setGuideFor] = useState<ChallengeDef | null>(null);
   const [, start] = useTransition();
 
   const list = useMemo(() => activeChallenges(hidePaid), [hidePaid]);
@@ -63,15 +69,13 @@ export function ChallengesClient({
   );
 
   const claimedCount = list.filter((c) => claimed.has(c.id)).length;
-  const claimableCount =
-    list.filter((c) => done[c.id] && !claimed.has(c.id)).length;
+  const claimableCount = list.filter((c) => done[c.id] && !claimed.has(c.id)).length;
   const completeReady = claimedCount === list.length && !completeClaimed;
   const progress = Math.round((claimedCount / list.length) * 100);
 
   const claim = (id: string, diamond: number) => {
     if (pendingId) return;
     setPendingId(id);
-    // 낙관 — 즉시 체크 + 헤더 다이아 반영(실패 시 롤백).
     const isComplete = id === COMPLETE_BONUS.id;
     if (isComplete) setCompleteClaimed(true);
     else setClaimed((s) => new Set(s).add(id));
@@ -93,7 +97,9 @@ export function ChallengesClient({
       }
       showHeaderToast({
         title: `💎 ${r.diamond.toLocaleString('ko-KR')} 획득!`,
-        detail: r.boxes ? `보급상자 ${r.boxes.weapon + r.boxes.armor + r.boxes.accessory}개 지급` : undefined,
+        detail: r.boxes
+          ? `보급상자 ${r.boxes.weapon + r.boxes.armor + r.boxes.accessory}개 지급`
+          : undefined,
       });
       router.refresh();
     });
@@ -105,12 +111,9 @@ export function ChallengesClient({
       <div className="flex items-baseline justify-between">
         <h1 className="text-lg font-extrabold">🏆 도전 과제</h1>
         <span className="text-[12px] tabular-nums text-zinc-500">
-          {claimedCount}/{list.length} 완료
+          {claimedCount}/{list.length}
         </span>
       </div>
-      <p className="mt-0.5 text-[12px] text-zinc-500">
-        인생강화의 모든 콘텐츠를 정복하고 보상을 받아보세요 — 각 과제는 한 번만!
-      </p>
       <div className="mt-2 h-2 overflow-hidden rounded-full bg-zinc-100 dark:bg-zinc-800">
         <div
           className="h-full rounded-full bg-gradient-to-r from-amber-400 to-orange-500 transition-all duration-500"
@@ -118,9 +121,9 @@ export function ChallengesClient({
         />
       </div>
 
-      {/* ── 전체 완료 특별 보상 — 항상 보이는 최종 목표 ── */}
+      {/* ── 전체 완료 특별 보상 ── */}
       <div
-        className={`mt-3 rounded-2xl border-2 p-3.5 transition ${
+        className={`mt-3 rounded-xl border-2 px-3 py-2.5 transition ${
           completeReady
             ? 'border-amber-400 bg-gradient-to-r from-amber-50 to-orange-50 shadow-[0_0_24px_rgba(245,158,11,0.25)] dark:from-amber-950/40 dark:to-orange-950/30'
             : completeClaimed
@@ -128,11 +131,11 @@ export function ChallengesClient({
               : 'border-zinc-200 dark:border-zinc-800'
         }`}
       >
-        <div className="flex items-center gap-3">
-          <span className="text-3xl">{completeClaimed ? '👑' : '🎁'}</span>
+        <div className="flex items-center gap-2.5">
+          <span className="text-2xl">{completeClaimed ? '👑' : '🎁'}</span>
           <div className="min-w-0 flex-1">
-            <div className="text-[14px] font-extrabold">{COMPLETE_BONUS.label}</div>
-            <div className="mt-0.5 flex items-center gap-1 text-[12px] text-zinc-500">
+            <div className="text-[13px] font-extrabold">{COMPLETE_BONUS.label}</div>
+            <div className="flex items-center gap-1 text-[11px] text-zinc-500">
               💎 {COMPLETE_BONUS.diamond.toLocaleString('ko-KR')} +
               {(['weapon', 'armor', 'accessory'] as const).map((b) => (
                 // eslint-disable-next-line @next/next/no-img-element
@@ -141,7 +144,7 @@ export function ChallengesClient({
                   src={assetUrl(`/sprites/hub/box-${b}.png`)}
                   alt=""
                   aria-hidden
-                  className="h-5 w-5 object-contain"
+                  className="h-4 w-4 object-contain"
                   style={{ imageRendering: 'pixelated' }}
                 />
               ))}
@@ -149,20 +152,18 @@ export function ChallengesClient({
             </div>
           </div>
           {completeClaimed ? (
-            <span className="shrink-0 text-[12px] font-bold text-emerald-600 dark:text-emerald-400">
-              수령 완료 ✓
-            </span>
+            <span className="shrink-0 text-[12px] font-bold text-emerald-600 dark:text-emerald-400">✓</span>
           ) : completeReady ? (
             <button
               type="button"
               disabled={pendingId != null}
               onClick={() => claim(COMPLETE_BONUS.id, COMPLETE_BONUS.diamond)}
-              className="shrink-0 animate-pulse rounded-xl bg-gradient-to-r from-amber-500 to-orange-500 px-4 py-2 text-[13px] font-extrabold text-white shadow-lg disabled:opacity-50"
+              className="shrink-0 animate-pulse rounded-lg bg-gradient-to-r from-amber-500 to-orange-500 px-3.5 py-1.5 text-[12px] font-extrabold text-white shadow-lg disabled:opacity-50"
             >
               받기!
             </button>
           ) : (
-            <span className="shrink-0 rounded-full bg-zinc-100 px-2.5 py-1 text-[11px] font-bold tabular-nums text-zinc-500 dark:bg-zinc-800 dark:text-zinc-400">
+            <span className="shrink-0 rounded-full bg-zinc-100 px-2 py-0.5 text-[10px] font-bold tabular-nums text-zinc-500 dark:bg-zinc-800 dark:text-zinc-400">
               {claimedCount}/{list.length}
             </span>
           )}
@@ -170,52 +171,79 @@ export function ChallengesClient({
       </div>
 
       {claimableCount > 0 ? (
-        <p className="mt-3 text-[12px] font-semibold text-amber-600 dark:text-amber-400">
+        <p className="mt-2.5 text-[12px] font-semibold text-amber-600 dark:text-amber-400">
           ✨ 지금 받을 수 있는 보상 {claimableCount}개
         </p>
       ) : null}
 
-      {/* ── 그룹별 과제 목록 ── */}
-      <div className="mt-2 space-y-4">
+      {/* ── 그룹별 과제 목록 — CSS 헤더 + 컴팩트 1줄 행 ── */}
+      <div className="mt-2 space-y-2.5">
         {groups.map((g) => (
-          <section key={g.id}>
-            <div className="isolate overflow-hidden rounded-2xl border border-zinc-200 dark:border-zinc-800">
-              {/* 그룹 배너 — 홈 카드 픽셀아트 재활용(cover + 어둠 그라데이션) */}
-              <div className="relative h-12 overflow-hidden bg-zinc-900">
-                {GROUP_BG[g.id] ? (
-                  // eslint-disable-next-line @next/next/no-img-element
-                  <img
-                    src={assetUrl(GROUP_BG[g.id]!)}
-                    alt=""
-                    aria-hidden
-                    draggable={false}
-                    className="absolute inset-0 h-full w-full object-cover opacity-80"
-                    style={{ imageRendering: 'pixelated', objectPosition: 'center 30%' }}
-                  />
-                ) : null}
-                <div className="absolute inset-0 bg-gradient-to-r from-black/80 via-black/45 to-black/20" />
-                <div className="absolute inset-y-0 left-3 flex items-center gap-1.5">
-                  <span className="text-[14px]">{g.icon}</span>
-                  <span className="text-[13px] font-extrabold text-white drop-shadow">{g.label}</span>
-                </div>
-              </div>
-              {list
-                .filter((c) => c.group === g.id)
-                .map((c, i, arr) => (
-                  <Row
-                    key={c.id}
-                    def={c}
-                    state={claimed.has(c.id) ? 'claimed' : done[c.id] ? 'ready' : 'todo'}
-                    last={i === arr.length - 1}
-                    pending={pendingId === c.id}
-                    anyPending={pendingId != null}
-                    onClaim={() => claim(c.id, c.diamond)}
-                  />
-                ))}
+          <section
+            key={g.id}
+            className="overflow-hidden rounded-xl border border-zinc-200 dark:border-zinc-800"
+          >
+            <div className={`flex items-center gap-1.5 px-3 py-1.5 text-[12px] font-bold ${GROUP_TINT[g.id]}`}>
+              <span>{g.icon}</span>
+              {g.label}
             </div>
+            {list
+              .filter((c) => c.group === g.id)
+              .map((c) => (
+                <Row
+                  key={c.id}
+                  def={c}
+                  state={claimed.has(c.id) ? 'claimed' : done[c.id] ? 'ready' : 'todo'}
+                  pending={pendingId === c.id}
+                  anyPending={pendingId != null}
+                  onClaim={() => claim(c.id, c.diamond)}
+                  onGuide={() => setGuideFor(c)}
+                />
+              ))}
           </section>
         ))}
       </div>
+
+      {/* ── 가이드 팝업 — 달성 방법 + 상황 맞는 하단 버튼 ── */}
+      {guideFor ? (
+        <ModalShell
+          onClose={() => setGuideFor(null)}
+          label={`${guideFor.label} 가이드`}
+          className="w-full max-w-[320px] rounded-2xl bg-white p-4 dark:bg-zinc-950"
+        >
+          <div className="flex items-center gap-2">
+            <span className="text-xl">{CHALLENGE_GROUPS.find((g) => g.id === guideFor.group)?.icon}</span>
+            <h2 className="min-w-0 flex-1 text-[15px] font-bold">{guideFor.label}</h2>
+            <span className="shrink-0 text-[12px] font-bold tabular-nums text-amber-600 dark:text-amber-400">
+              💎 {guideFor.diamond.toLocaleString('ko-KR')}
+            </span>
+          </div>
+          <p className="mt-2.5 text-[13px] leading-relaxed text-zinc-600 dark:text-zinc-300">
+            {guideFor.guide}
+          </p>
+          <div className="mt-4">
+            {guideFor.id === 'app_install' ? (
+              <div className="isolate overflow-hidden rounded-xl border border-zinc-200 dark:border-zinc-700">
+                <InstallAppButton />
+              </div>
+            ) : (
+              <Link
+                href={guideFor.go}
+                className="block w-full rounded-xl bg-amber-600 py-2.5 text-center text-sm font-bold text-white active:opacity-90"
+              >
+                바로가기
+              </Link>
+            )}
+          </div>
+          <button
+            type="button"
+            onClick={() => setGuideFor(null)}
+            className="mt-2 w-full rounded-xl bg-zinc-100 py-2.5 text-sm font-bold text-zinc-600 active:opacity-70 dark:bg-zinc-800 dark:text-zinc-300"
+          >
+            닫기
+          </button>
+        </ModalShell>
+      ) : null}
     </div>
   );
 }
@@ -223,69 +251,66 @@ export function ChallengesClient({
 function Row({
   def,
   state,
-  last,
   pending,
   anyPending,
   onClaim,
+  onGuide,
 }: {
   def: ChallengeDef;
   state: 'claimed' | 'ready' | 'todo';
-  last: boolean;
   pending: boolean;
   anyPending: boolean;
   onClaim: () => void;
+  onGuide: () => void;
 }) {
   return (
     <div
-      className={`flex items-center gap-2.5 px-3 py-2.5 ${last ? '' : 'border-b border-zinc-100 dark:border-zinc-900'} ${
+      className={`flex items-center gap-2 border-t border-zinc-100 px-3 py-1.5 dark:border-zinc-900 ${
         state === 'ready' ? 'bg-amber-50/70 dark:bg-amber-950/20' : ''
       }`}
     >
-      {/* 상태 아이콘 */}
+      {/* 상태 점 */}
       <span
-        className={`flex h-6 w-6 shrink-0 items-center justify-center rounded-full text-[12px] font-bold ${
+        className={`h-1.5 w-1.5 shrink-0 rounded-full ${
           state === 'claimed'
-            ? 'bg-emerald-100 text-emerald-600 dark:bg-emerald-950/50 dark:text-emerald-400'
+            ? 'bg-emerald-500'
             : state === 'ready'
-              ? 'bg-amber-400 text-white shadow-[0_0_10px_rgba(245,158,11,0.5)]'
-              : 'bg-zinc-100 text-zinc-400 dark:bg-zinc-800 dark:text-zinc-500'
+              ? 'bg-amber-500 shadow-[0_0_6px_rgba(245,158,11,0.8)]'
+              : 'bg-zinc-300 dark:bg-zinc-700'
+        }`}
+      />
+      <span
+        className={`min-w-0 flex-1 truncate text-[13px] ${
+          state === 'claimed'
+            ? 'text-zinc-400 line-through decoration-zinc-300 dark:decoration-zinc-600'
+            : 'font-medium'
         }`}
       >
-        {state === 'claimed' ? '✓' : state === 'ready' ? '!' : ''}
+        {def.label}
       </span>
-
-      {/* 라벨 + 보상 */}
-      <div className="min-w-0 flex-1">
-        <div
-          className={`text-[13px] font-semibold ${
-            state === 'claimed' ? 'text-zinc-400 line-through decoration-zinc-300 dark:decoration-zinc-600' : ''
-          }`}
-        >
-          {def.label}
-        </div>
-        <div className="text-[11px] tabular-nums text-zinc-400">
-          💎 {def.diamond.toLocaleString('ko-KR')}
-        </div>
-      </div>
-
-      {/* 액션 */}
+      <span className="shrink-0 text-[11px] tabular-nums text-zinc-400">
+        💎{def.diamond.toLocaleString('ko-KR')}
+      </span>
       {state === 'ready' ? (
         <button
           type="button"
           disabled={anyPending}
           onClick={onClaim}
-          className="shrink-0 rounded-lg bg-amber-500 px-3 py-1.5 text-[12px] font-bold text-white shadow active:scale-95 disabled:opacity-50"
+          className="w-14 shrink-0 rounded-md bg-amber-500 py-1 text-center text-[11px] font-bold text-white shadow active:scale-95 disabled:opacity-50"
         >
-          {pending ? '수령 중…' : '받기'}
+          {pending ? '…' : '받기'}
         </button>
       ) : state === 'todo' ? (
-        <Link
-          href={def.go}
-          className="shrink-0 rounded-lg border border-zinc-200 px-2.5 py-1.5 text-[11px] font-semibold text-zinc-500 active:scale-95 dark:border-zinc-700 dark:text-zinc-400"
+        <button
+          type="button"
+          onClick={onGuide}
+          className="w-14 shrink-0 rounded-md border border-zinc-200 py-1 text-center text-[11px] font-semibold text-zinc-500 active:scale-95 dark:border-zinc-700 dark:text-zinc-400"
         >
-          바로가기
-        </Link>
-      ) : null}
+          가이드
+        </button>
+      ) : (
+        <span className="w-14 shrink-0 text-center text-[11px] font-bold text-emerald-500">✓</span>
+      )}
     </div>
   );
 }

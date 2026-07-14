@@ -13,8 +13,10 @@ export type ChallengeDef = {
   group: ChallengeGroup;
   label: string;
   diamond: number;
-  /** 미달성 시 '하러 가기' 링크. */
+  /** 바로가기 링크(가이드 팝업 하단 버튼). */
   go: string;
+  /** 달성 방법 안내(가이드 팝업 본문). */
+  guide: string;
 };
 
 export const CHALLENGE_GROUPS: { id: ChallengeGroup; icon: string; label: string }[] = [
@@ -33,36 +35,36 @@ export const CHALLENGE_GROUPS: { id: ChallengeGroup; icon: string; label: string
 ];
 
 export const CHALLENGES: ChallengeDef[] = [
-  { id: 'supply_weapon', group: 'supply', label: '무기 상자 열기', diamond: 200, go: '/gacha' },
-  { id: 'supply_armor', group: 'supply', label: '방어구 상자 열기', diamond: 200, go: '/gacha' },
-  { id: 'supply_accessory', group: 'supply', label: '장신구 상자 열기', diamond: 200, go: '/gacha' },
-  { id: 'equip_weapon', group: 'equip', label: '무기 장착하기', diamond: 200, go: '/inventory' },
-  { id: 'equip_armor', group: 'equip', label: '방어구 장착하기', diamond: 200, go: '/inventory' },
-  { id: 'equip_accessory', group: 'equip', label: '장신구 장착하기', diamond: 200, go: '/inventory' },
-  { id: 'enhance_weapon', group: 'enhance', label: '무기 강화하기', diamond: 200, go: '/enhance' },
-  { id: 'enhance_armor', group: 'enhance', label: '방어구 강화하기', diamond: 200, go: '/enhance' },
-  { id: 'enhance_accessory', group: 'enhance', label: '장신구 강화하기', diamond: 200, go: '/enhance' },
-  { id: 'mail_claim', group: 'daily', label: '우편 보상 받기', diamond: 200, go: '/mail' },
-  { id: 'checkin', group: 'daily', label: '출석 체크하기', diamond: 200, go: '/checkin' },
-  { id: 'transcend', group: 'growth', label: '장비 초월 달성하기', diamond: 300, go: '/gacha' },
-  { id: 'gem_reduce', group: 'growth', label: '보석으로 강화 시간 줄이기', diamond: 200, go: '/enhance' },
-  { id: 'app_install', group: 'app', label: '앱으로 실행하기', diamond: 1000, go: '/me/settings' },
-  { id: 'push_on', group: 'app', label: '알림 설정하기', diamond: 2000, go: '/me/settings' },
-  { id: 'friend', group: 'social', label: '친구 맺기', diamond: 300, go: '/friends' },
-  { id: 'boast_share', group: 'social', label: '내 프로필 자랑하기', diamond: 300, go: '/me' },
-  { id: 'guild_join', group: 'guild', label: '길드 가입하기', diamond: 500, go: '/guild' },
-  { id: 'guild_donate', group: 'guild', label: '길드에 기부하기', diamond: 500, go: '/guild' },
-  { id: 'guild_deploy', group: 'guild', label: '점령전 병력 배치하기', diamond: 500, go: '/guild/deploy' },
-  { id: 'raid_summon', group: 'raid', label: '레이드 소환하기', diamond: 300, go: '/raid' },
-  { id: 'raid_attack', group: 'raid', label: '레이드 공격하기', diamond: 300, go: '/raid' },
-  { id: 'raid_reward', group: 'raid', label: '레이드 보상 받기', diamond: 500, go: '/raid' },
-  { id: 'melee_join', group: 'social', label: '대난투 참가하기', diamond: 500, go: '/melee' },
-  { id: 'residence_move', group: 'world', label: '거주 구역 이동하기', diamond: 300, go: '/guild/map' },
-  { id: 'avatar_change', group: 'avatar', label: '아바타 변경하기', diamond: 500, go: '/me/profiles' },
-  { id: 'avatar_create', group: 'avatar', label: '나만의 아바타 만들기', diamond: 1000, go: '/me/profiles' },
-  { id: 'shop_daily', group: 'shop', label: '일일 무료 선물 받기', diamond: 200, go: '/shop' },
-  { id: 'shop_weekly', group: 'shop', label: '주간 무료 선물 받기', diamond: 300, go: '/shop?tab=weekly' },
-  { id: 'shop_monthly', group: 'shop', label: '월간 무료 선물 받기', diamond: 500, go: '/shop?tab=monthly' },
+  { id: 'supply_weapon', group: 'supply', label: '무기 상자 열기', diamond: 200, go: '/gacha', guide: '보급에서 무기 상자를 1회 열면 달성돼요. 상자가 없다면 우편함·출석 보상을 확인해 보세요.' },
+  { id: 'supply_armor', group: 'supply', label: '방어구 상자 열기', diamond: 200, go: '/gacha', guide: '보급에서 방어구 상자를 1회 열면 달성돼요. 상자가 없다면 우편함·출석 보상을 확인해 보세요.' },
+  { id: 'supply_accessory', group: 'supply', label: '장신구 상자 열기', diamond: 200, go: '/gacha', guide: '보급에서 장신구 상자를 1회 열면 달성돼요. 상자가 없다면 우편함·출석 보상을 확인해 보세요.' },
+  { id: 'equip_weapon', group: 'equip', label: '무기 장착하기', diamond: 200, go: '/inventory', guide: '인벤토리에서 무기를 선택해 장착하면 달성돼요.' },
+  { id: 'equip_armor', group: 'equip', label: '방어구 장착하기', diamond: 200, go: '/inventory', guide: '인벤토리에서 방어구를 선택해 장착하면 달성돼요.' },
+  { id: 'equip_accessory', group: 'equip', label: '장신구 장착하기', diamond: 200, go: '/inventory', guide: '인벤토리에서 장신구를 선택해 장착하면 달성돼요.' },
+  { id: 'enhance_weapon', group: 'enhance', label: '무기 강화하기', diamond: 200, go: '/enhance', guide: '강화소의 무기 슬롯에 장비를 올려 강화를 시작하면 달성돼요.' },
+  { id: 'enhance_armor', group: 'enhance', label: '방어구 강화하기', diamond: 200, go: '/enhance', guide: '강화소의 방어구 슬롯에 장비를 올려 강화를 시작하면 달성돼요.' },
+  { id: 'enhance_accessory', group: 'enhance', label: '장신구 강화하기', diamond: 200, go: '/enhance', guide: '강화소의 장신구 슬롯에 장비를 올려 강화를 시작하면 달성돼요.' },
+  { id: 'mail_claim', group: 'daily', label: '우편 보상 받기', diamond: 200, go: '/mail', guide: '우편함에서 보상이 담긴 우편을 수령하면 달성돼요.' },
+  { id: 'checkin', group: 'daily', label: '출석 체크하기', diamond: 200, go: '/checkin', guide: '출석 캘린더에서 오늘의 보상을 받으면 달성돼요.' },
+  { id: 'transcend', group: 'growth', label: '장비 초월 달성하기', diamond: 300, go: '/gacha', guide: '같은 장비를 중복으로 모으면 자동으로 초월돼요 — 보급상자를 열다 보면 자연히 달성됩니다!' },
+  { id: 'gem_reduce', group: 'growth', label: '보석으로 강화 시간 줄이기', diamond: 200, go: '/enhance', guide: '진행 중인 강화 카드에서 보석으로 남은 시간을 단축하면 달성돼요.' },
+  { id: 'app_install', group: 'app', label: '앱으로 실행하기', diamond: 1000, go: '/me/settings', guide: '홈 화면에 앱으로 설치한 뒤, 설치된 앱으로 접속하면 달성돼요. 아래 버튼으로 설치를 시작하세요.' },
+  { id: 'push_on', group: 'app', label: '알림 설정하기', diamond: 2000, go: '/me/settings', guide: '설정 → 알림에서 알림을 켜면 달성돼요. 강화 완료·레이드 소식을 놓치지 않게 됩니다.' },
+  { id: 'friend', group: 'social', label: '친구 맺기', diamond: 300, go: '/friends', guide: '친구 화면에서 닉네임이나 코드(#)로 검색해 친구를 맺으면 달성돼요.' },
+  { id: 'boast_share', group: 'social', label: '내 프로필 자랑하기', diamond: 300, go: '/me', guide: '프로필의 \'내 프로필 자랑하기\'로 카카오톡 공유를 실행하면 달성돼요.' },
+  { id: 'guild_join', group: 'guild', label: '길드 가입하기', diamond: 500, go: '/guild', guide: '길드 탭에서 마음에 드는 길드에 가입하면 달성돼요.' },
+  { id: 'guild_donate', group: 'guild', label: '길드에 기부하기', diamond: 500, go: '/guild', guide: '길드 홈에서 기부하면 달성돼요 — 하루 3회, 첫 회는 무료!' },
+  { id: 'guild_deploy', group: 'guild', label: '점령전 병력 배치하기', diamond: 500, go: '/guild/deploy', guide: '길드 → 점령전 배치에서 구역에 병력을 배치하면 달성돼요. (길드 가입 필요)' },
+  { id: 'raid_summon', group: 'raid', label: '레이드 소환하기', diamond: 300, go: '/raid', guide: '레이드에서 보스를 소환하면 달성돼요.' },
+  { id: 'raid_attack', group: 'raid', label: '레이드 공격하기', diamond: 300, go: '/raid', guide: '진행 중인 레이드에 들어가 공격하면 달성돼요 — 친구·길드 레이드 참여도 인정!' },
+  { id: 'raid_reward', group: 'raid', label: '레이드 보상 받기', diamond: 500, go: '/raid', guide: '레이드 종료 후 정산 보상을 수령하면 달성돼요.' },
+  { id: 'melee_join', group: 'social', label: '대난투 참가하기', diamond: 500, go: '/melee', guide: '전투력이 있으면 매일 아침 9시 대난투에 자동 참가돼요 — 내일 아침이면 달성!' },
+  { id: 'residence_move', group: 'world', label: '거주 구역 이동하기', diamond: 300, go: '/guild/map', guide: '세계지도에서 다른 구역을 선택해 거주지를 이동하면 달성돼요.' },
+  { id: 'avatar_change', group: 'avatar', label: '아바타 변경하기', diamond: 500, go: '/me/profiles', guide: '아바타 관리에서 다른 아바타를 대표로 지정하면 달성돼요.' },
+  { id: 'avatar_create', group: 'avatar', label: '나만의 아바타 만들기', diamond: 1000, go: '/me/profiles', guide: '아바타 관리에서 나만의 아바타를 생성하면 달성돼요 — 지금 착용한 장비가 반영됩니다!' },
+  { id: 'shop_daily', group: 'shop', label: '일일 무료 선물 받기', diamond: 200, go: '/shop', guide: '상점 일일 탭에서 무료 선물을 받으면 달성돼요.' },
+  { id: 'shop_weekly', group: 'shop', label: '주간 무료 선물 받기', diamond: 300, go: '/shop?tab=weekly', guide: '상점 주간 탭에서 무료 선물을 받으면 달성돼요.' },
+  { id: 'shop_monthly', group: 'shop', label: '월간 무료 선물 받기', diamond: 500, go: '/shop?tab=monthly', guide: '상점 월간 탭에서 무료 선물을 받으면 달성돼요.' },
 ];
 
 /**
