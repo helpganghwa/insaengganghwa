@@ -112,6 +112,12 @@ const MENU: { href: string; icon: string; title: string; desc: string; external?
     desc: '전역 공지 작성·발행·고정 (홈 게시판·강제 팝업 노출)',
   },
   {
+    href: '/admin/preview',
+    icon: '🔍',
+    title: '공개 전 검수',
+    desc: '점령전 연대기(자정 공개)·대난투 우승 트로피(10시 공개) 미리보기·수정·재생성',
+  },
+  {
     href: '/admin/mail',
     icon: '📬',
     title: '운영자 우편 발송',
