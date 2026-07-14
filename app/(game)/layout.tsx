@@ -21,6 +21,7 @@ import {
 } from '@/lib/game/referral/auto-attribute';
 import { AppHeader, AppHeaderShell } from '@/components/AppHeader';
 import { BottomNav } from '@/components/BottomNav';
+import { GuideTicker } from '@/components/GuideTicker';
 import { BottomNavAsync } from '@/components/BottomNavAsync';
 import { SpritePreloader } from '@/components/SpritePreloader';
 import { SfxUnlock } from '@/components/audio/SfxUnlock';
@@ -154,6 +155,8 @@ export default async function GameLayout({ children }: { children: React.ReactNo
           {/* 새 배포 자동 새로고침 + 새로고침 후 토스트(showHeaderToast 사용 — 프로바이더 안). */}
           <VersionUpdateToast />
         </ResourceToastProvider>
+        {/* 가이드 팁 티커 — GNB 바로 위 롤링(끄기 가능, 튜토리얼 중 자동 숨김). */}
+        <GuideTicker />
         <Suspense fallback={<BottomNav />}>
           <BottomNavAsync dataPromise={layoutData} />
         </Suspense>
