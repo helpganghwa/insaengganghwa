@@ -256,8 +256,8 @@ export function GuideClient() {
 
   return (
     <div className="pb-24">
-      {/* 카테고리 그리드 — 헤더(h-12) 바로 아래 sticky 고정, 4×3 꽉 찬 버튼 */}
-      <div className="sticky top-[calc(3rem+env(safe-area-inset-top))] z-10 border-b border-zinc-100 bg-white/95 px-3 pb-2 pt-2 backdrop-blur dark:border-zinc-900 dark:bg-zinc-950/95">
+      {/* 카테고리 그리드 — 4×3 꽉 찬 버튼(sticky는 레이아웃 겹침 문제로 제거, 2026-07-14) */}
+      <div className="border-b border-zinc-100 bg-white px-3 pb-2 pt-2 dark:border-zinc-900 dark:bg-zinc-950">
         <div className="mb-2 flex items-center justify-between px-1">
           <h1 className="text-base font-extrabold">게임 안내</h1>
           <GuideTickerToggle />
