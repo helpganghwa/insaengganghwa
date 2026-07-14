@@ -381,3 +381,9 @@ html {
   72%      { transform: translate3d(1.2px, 0, 0) rotate(1deg); }
   84%      { transform: translate3d(-0.7px, 0, 0); }
 }
+
+/* 가이드 팁 티커 — 넘치는 텍스트를 우→좌로 흘림(GuideTicker, --gt-shift = -overflowPx). */
+@keyframes guide-ticker-slide {
+  from { transform: translateX(0); }
+  to { transform: translateX(var(--gt-shift, 0)); }
+}
