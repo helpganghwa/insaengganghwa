@@ -26,6 +26,7 @@ export function AdminMailClient() {
   const [title, setTitle] = useState('');
   const [body, setBody] = useState('');
   const [diamond, setDiamond] = useState('');
+  const [pushOn, setPushOn] = useState(true); // 앱 알림 동반 발송(admin 카테고리, 구독자만 수신)
   const [bw, setBw] = useState('');
   const [ba, setBa] = useState('');
   const [bc, setBc] = useState('');
@@ -89,6 +90,7 @@ export function AdminMailClient() {
           title,
           body,
           payload,
+          push: pushOn,
         });
         if (r.status === 'error') setFlash({ ok: false, msg: r.message });
         else {
@@ -102,7 +104,7 @@ export function AdminMailClient() {
         }
         // 멱등키(0110) — 전송 실패 재시도는 같은 키 재사용(전 유저 이중 발송 방지).
         bcKeyRef.current ??= crypto.randomUUID();
-        const r = await broadcastMailAction({ title, body, payload, idemKey: bcKeyRef.current });
+        const r = await broadcastMailAction({ title, body, payload, idemKey: bcKeyRef.current, push: pushOn });
         if (r.status === 'success') bcKeyRef.current = null;
         if (r.status === 'error') setFlash({ ok: false, msg: r.message });
         else {
@@ -226,6 +228,16 @@ export function AdminMailClient() {
         </p>
       ) : null}
 
+      {/* 앱 알림 동반 발송(선택) — 우편은 항상, 푸시는 체크 시(구독자만 실제 수신). */}
+      <label className="mb-2 flex items-center gap-2 text-[13px] text-zinc-600 dark:text-zinc-300">
+        <input
+          type="checkbox"
+          checked={pushOn}
+          onChange={(e) => setPushOn(e.target.checked)}
+          className="h-4 w-4 accent-amber-600"
+        />
+        앱 알림도 발송 (푸시 구독자만 수신)
+      </label>
       <button
         type="button"
         disabled={pending}

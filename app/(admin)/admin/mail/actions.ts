@@ -8,6 +8,7 @@ import { db } from '@/lib/db/client';
 import { profiles } from '@/lib/db/schema/profiles';
 import { characters } from '@/lib/db/schema/server';
 import { mailbox, adminMailLogs } from '@/lib/db/schema/mailbox';
+import { sendPushToUser, sendPushToUsers } from '@/lib/push/send';
 
 export interface MailPayload {
   diamond?: number;
@@ -39,6 +40,8 @@ export async function sendMailToUserAction(opts: {
   title: string;
   body: string;
   payload: MailPayload;
+  /** 앱 알림(웹푸시)도 발송 — admin 카테고리, 구독 없는 유저는 no-op(2026-07-14 선택 옵션). */
+  push?: boolean;
 }): Promise<OkOne | ErrorState> {
   try {
     const adminId = await requireAdmin();
@@ -112,6 +115,19 @@ export async function sendMailToUserAction(opts: {
         payload,
       });
     });
+    // 앱 알림(선택) — 우편 커밋 후 best-effort(실패해도 우편은 전달됨).
+    if (opts.push) {
+      try {
+        await sendPushToUser(recipientId, {
+          title: '운영자 우편 도착',
+          body: (opts.title || '').slice(0, 60),
+          url: '/mail',
+          category: 'admin',
+        });
+      } catch {
+        /* best-effort */
+      }
+    }
     revalidatePath('/admin/mail');
     return { status: 'success', count: 1 };
   } catch (e) {
@@ -130,6 +146,8 @@ export async function broadcastMailAction(opts: {
   payload: MailPayload;
   /** 클릭 의도당 클라 UUID(0110) — 응답 유실 재클릭의 전 유저 이중 발송 방지. */
   idemKey?: string;
+  /** 앱 알림(웹푸시)도 발송 — admin 카테고리, 구독자만 실제 수신(2026-07-14 선택 옵션). */
+  push?: boolean;
 }): Promise<OkBroadcast | ErrorState> {
   try {
     const adminId = await requireAdmin();
@@ -181,6 +199,23 @@ export async function broadcastMailAction(opts: {
     });
     if (duplicate) return { status: 'success', count: 0 };
     if (inserted === 0) return { status: 'success', count: 0 };
+    // 앱 알림(선택) — 우편 커밋 후 best-effort. 구독 테이블 기준으로 대상 추림(80명 루프 회피).
+    if (opts.push) {
+      try {
+        const ids = await db
+          .select({ id: profiles.id })
+          .from(profiles)
+          .where(sql`${profiles.withdrawnAt} is null`);
+        await sendPushToUsers(ids.map((r) => r.id), {
+          title: '운영자 우편 도착',
+          body: (opts.title || '').slice(0, 60),
+          url: '/mail',
+          category: 'admin',
+        });
+      } catch (e) {
+        console.warn('[admin.mail.broadcast] push failed', (e as Error).message);
+      }
+    }
     revalidatePath('/admin/mail');
     return { status: 'success', count: inserted };
   } catch (e) {
