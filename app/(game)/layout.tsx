@@ -22,6 +22,7 @@ import {
 import { AppHeader, AppHeaderShell } from '@/components/AppHeader';
 import { BottomNav } from '@/components/BottomNav';
 import { AppInstallMark } from '@/components/AppInstallMark';
+import { GuideTicker } from '@/components/GuideTicker';
 import { BottomNavAsync } from '@/components/BottomNavAsync';
 import { SpritePreloader } from '@/components/SpritePreloader';
 import { SfxUnlock } from '@/components/audio/SfxUnlock';
@@ -157,6 +158,8 @@ export default async function GameLayout({ children }: { children: React.ReactNo
         </ResourceToastProvider>
         {/* PWA 실행 감지 — 도전 과제 'app_install' 마킹(0118). */}
         <AppInstallMark />
+        {/* 가이드 팁 티커 — GNB 바로 위 롤링(끄기 가능, 튜토리얼 중 자동 숨김). */}
+        <GuideTicker />
         <Suspense fallback={<BottomNav />}>
           <BottomNavAsync dataPromise={layoutData} />
         </Suspense>

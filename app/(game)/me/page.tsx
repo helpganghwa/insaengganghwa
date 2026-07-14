@@ -30,6 +30,7 @@ const MENU = [
   { href: '/checkin', icon: '⚡', label: '출석 캘린더' },
   { href: '/me/codex', icon: '📖', label: '도감' },
   { href: '/leaderboard', icon: '🏆', label: '랭킹' },
+  { href: '/guide', icon: '💡', label: '게임 안내' },
   { href: '/me/settings', icon: '⚙️', label: '설정' },
 ];
 

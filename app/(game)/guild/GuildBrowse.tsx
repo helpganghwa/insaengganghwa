@@ -143,9 +143,10 @@ export function GuildBrowse({
         )}
       </div>
 
-      {/* 길드 생성 FAB — 컬럼 우하단(바텀네비 위) */}
+      {/* 길드 생성 FAB — 컬럼 우하단(바텀네비 위). 가이드 티커가 켜져 있으면 그 높이(--gt-h,
+          GuideTicker가 발행)만큼 더 올라가 겹치지 않는다(꺼지면 0px — 기존 72px 위치). */}
       <div className="pointer-events-none fixed inset-x-0 bottom-0 z-40 mx-auto max-w-[390px]">
-        <div className="flex justify-end px-4 pb-[calc(env(safe-area-inset-bottom)+72px)]">
+        <div className="flex justify-end px-4 pb-[calc(env(safe-area-inset-bottom)+72px+var(--gt-h,0px))]">
           <Link
             href="/guild/create"
             className="pointer-events-auto flex items-center gap-1.5 rounded-full bg-amber-600 py-3 pl-4 pr-5 text-sm font-bold text-white shadow-lg shadow-amber-900/30 active:scale-95"
