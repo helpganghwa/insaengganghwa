@@ -76,18 +76,18 @@ export function GuideTicker() {
     >
       <div className="pointer-events-auto flex items-center gap-1.5 border-t border-zinc-200 bg-white/95 px-3 py-1.5 backdrop-blur dark:border-zinc-800 dark:bg-zinc-950/95">
         {/* 💡·×는 고정(페이드 없음) — 텍스트만 교체 페이드 + 넘치면 marquee */}
-        <span className="shrink-0 text-[11px]" aria-hidden>
+        <span className="shrink-0 text-[11px] leading-none" aria-hidden>
           💡
         </span>
         <Link
           href={`/guide#${tip.anchor}`}
           className={`min-w-0 flex-1 transition-opacity duration-200 ${fade ? 'opacity-100' : 'opacity-0'}`}
         >
-          <div ref={wrapRef} className="overflow-hidden">
+          <div ref={wrapRef} className="flex items-center overflow-hidden">
             <span
               key={idx}
               ref={textRef}
-              className="inline-block whitespace-nowrap text-[11px] text-zinc-600 dark:text-zinc-300"
+              className="inline-block whitespace-nowrap text-[11px] leading-none text-zinc-600 dark:text-zinc-300"
               style={
                 overflowPx > 0
                   ? {
