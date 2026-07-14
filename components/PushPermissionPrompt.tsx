@@ -22,6 +22,8 @@ import { registerPushSubscriptionAction } from '@/lib/push/actions';
 
 const DISMISS_KEY = 'push_dismiss_at';
 const DISMISS_WINDOW_MS = 7 * 24 * 60 * 60 * 1000;
+/** 만료시각 방식 억제 키 — 튜토리얼 완료 모달이 24h 유예를 걸 때 사용(2026-07-14 D1 개선). */
+export const DISMISS_UNTIL_KEY = 'push_dismiss_until';
 
 type Step = 'closed' | 'pitch' | 'ios-guide' | 'success' | 'error';
 
@@ -37,10 +39,17 @@ export function PushPermissionPrompt({
 
   useEffect(() => {
     if (!trigger || step !== 'closed') return;
-    // 7일 dismiss 윈도
     try {
+      // 튜토리얼 진행 중엔 절대 미노출 — 코치(z-61)·완료모달(z-62)과 경합 방지(2026-07-14).
+      // 알림 유도는 완료모달이 전담하고, 이 프롬프트는 그 이후(24h 유예 뒤) 2차 기회 담당.
+      if (localStorage.getItem('tut_step')) return;
+      // 7일 dismiss 윈도(명시적 거절)
       const t = Number(localStorage.getItem(DISMISS_KEY) ?? 0);
       if (t > 0 && Date.now() - t < DISMISS_WINDOW_MS) return;
+      // 만료시각 방식 유예(완료모달이 기록한 24h) — 지났으면 키 정리 후 진행.
+      const until = Number(localStorage.getItem(DISMISS_UNTIL_KEY) ?? 0);
+      if (until > Date.now()) return;
+      if (until > 0) localStorage.removeItem(DISMISS_UNTIL_KEY);
     } catch {
       // localStorage 차단 환경 — 그냥 진행
     }

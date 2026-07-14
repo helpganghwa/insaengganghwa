@@ -21,11 +21,13 @@ type PushState = 'idle' | 'pending' | 'done' | 'error' | 'unsupported';
 export function TutorialCompleteModal({ onClose }: { onClose: () => void }) {
   const [push, setPush] = useState<PushState>('idle');
 
-  // 이 팝업이 이미 알림을 안내하므로, 강화페이지의 기존 푸시 권한 prompt는 억제.
-  // PushPermissionPrompt가 보는 dismiss 윈도(7일) 키를 설정.
+  // 이 팝업이 이미 알림을 안내하므로 강화페이지 프롬프트를 잠시 억제하되, 7일이 아닌
+  // **24시간 유예**로(2026-07-14): 여기서 안 켠 다수 유저가 다음날 재방문 때 2차 기회를
+  // 받게 — D1 실측(푸시 구독 43% vs 미구독 8% 재방문)에 따른 재방문 루프 강화.
+  // (기존 push_dismiss_at(7일)은 명시적 거절 전용으로 남김.)
   useEffect(() => {
     try {
-      localStorage.setItem('push_dismiss_at', String(Date.now()));
+      localStorage.setItem('push_dismiss_until', String(Date.now() + 24 * 60 * 60 * 1000));
     } catch {
       /* localStorage 차단 환경 — 무시 */
     }
