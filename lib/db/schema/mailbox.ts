@@ -143,9 +143,9 @@ export const adminMailLogs = pgTable(
   },
   (t) => [
     index('admin_mail_logs_created_idx').on(t.createdAt),
-    uniqueIndex('admin_mail_logs_idem_uq')
-      .on(t.idempotencyKey)
-      .where(sql`${t.idempotencyKey} is not null`),
+    // non-partial(0117) — partial(where not null)은 ON CONFLICT (idempotency_key)의 arbiter로
+    // 추론되지 않아(42P10) broadcast가 전면 실패했음. UNIQUE는 NULL끼리 충돌 안 해 partial 불필요.
+    uniqueIndex('admin_mail_logs_idem_uq').on(t.idempotencyKey),
   ],
 );
 
