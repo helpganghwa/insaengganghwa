@@ -4,6 +4,7 @@ import { db } from '@/lib/db/client';
 import { worldChronicle } from '@/lib/db/schema/guild';
 
 import { ServerBadge } from '../ServerBadge';
+import { AdminAvatarViewer } from '../profile-gen/AdminAvatarViewer';
 import { ChronicleEditor, TrophyRegenButton } from './PreviewClient';
 
 /**
@@ -100,20 +101,14 @@ export default async function AdminPreviewPage() {
           <div className="mt-2 space-y-3">
             {battles.map((b) => (
               <div key={b.id} className="flex items-center gap-3 rounded-xl border border-zinc-800 p-3">
-                {/* 트로피 아바타 미리보기 — 유저에겐 10:00 reveal 후 포디움에 노출 */}
-                <div className="flex h-20 w-20 shrink-0 items-center justify-center overflow-hidden rounded-lg bg-zinc-900">
+                {/* 트로피 아바타 미리보기 — 클릭 시 확대(픽셀 디테일 검수, profile-gen 뷰어 재사용) */}
+                <div className="w-[120px] shrink-0">
                   {b.trophy_avatar ? (
-                    // eslint-disable-next-line @next/next/no-img-element
-                    <img
-                      src={b.trophy_avatar}
-                      alt="트로피 아바타"
-                      className="h-full w-full object-contain"
-                      style={{ imageRendering: 'pixelated' }}
-                    />
+                    <AdminAvatarViewer rotations={{ south: b.trophy_avatar }} />
                   ) : (
-                    <span className="text-[10px] text-zinc-500">
+                    <div className="flex aspect-square w-full items-center justify-center rounded-lg bg-zinc-900 text-[10px] text-zinc-500">
                       {b.trophy_status === 'generating' ? '생성 중…' : b.trophy_status === 'failed' ? '실패' : '대기'}
-                    </span>
+                    </div>
                   )}
                 </div>
                 <div className="min-w-0 flex-1 text-[13px]">
