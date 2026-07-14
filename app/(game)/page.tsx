@@ -311,10 +311,10 @@ export default async function HomePage() {
                 : 'border-zinc-800'
             }`}
           >
-            {/* 픽셀아트 배경(성장패스 에셋 재활용) + 어둠 오버레이 — 홈 카드 문법 통일 */}
+            {/* 픽셀아트 배경(Pixellab 신규 생성 — 트로피·보물상자 배너) + 어둠 오버레이 */}
             {/* eslint-disable-next-line @next/next/no-img-element */}
             <img
-              src={assetUrl('/sprites/hub/battlepass.png')}
+              src={assetUrl('/sprites/hub/challenges.png')}
               alt=""
               aria-hidden
               draggable={false}
