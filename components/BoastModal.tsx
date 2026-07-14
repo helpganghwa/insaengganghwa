@@ -1,5 +1,6 @@
 'use client';
 
+import { markClientChallengeAction } from '@/app/(game)/challenges/actions';
 import { useEffect, useMemo, useState } from 'react';
 import { createPortal } from 'react-dom';
 
@@ -191,6 +192,8 @@ export function BoastModal({
     // '인생강화 시작' — /s/[code]?start=1로 보내 pending_referral 쿠키를 세팅(추천 귀속) 후
     // 앱 시작(/)으로 리다이렉트. 직접 '/'로 보내면 쿠키가 없어 추천인 리워드가 누락됨.
     const startUrl = `${origin}/s/${encodeURIComponent(publicCode)}?start=1&s=${serverId}`;
+    // 도전 과제(0118) — 자랑 공유 마킹(멱등·fire-and-forget, 공유 실행 자체로 인정).
+    void markClientChallengeAction('boast_share');
     k.Share.sendDefault({
       objectType: 'feed',
       content: {

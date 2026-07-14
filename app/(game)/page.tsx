@@ -13,6 +13,8 @@ import { kstDateString } from '@/lib/kst';
 import { getWorldFeed } from '@/lib/game/world/event';
 import { listPublishedAnnouncements } from '@/lib/game/announcement';
 import { getTutorialState } from '@/lib/game/tutorial';
+import { getChallengeStatus } from '@/lib/game/challenges/status';
+import { activeChallenges, COMPLETE_BONUS } from '@/lib/game/challenges/defs';
 
 import { AnnouncementBoard } from './AnnouncementBoard';
 import { ConquestCardStatus } from './ConquestCardStatus';
@@ -263,7 +265,7 @@ export default async function HomePage() {
 
   // 월드 소식 티커 — 헤더 하단 고정, 최근 10건 롤링(클릭 시 /world 전체). 콜드/hang 시 빈 배열로 degrade.
   // 월드피드 + 게시판(공지) 병렬 조회(독립 — §11.4 왕복 최소화). 콜드/hang 시 각각 빈 배열로 degrade.
-  const [worldFeed, announcements, tutState] = userId
+  const [worldFeed, announcements, tutState, chgStatus] = userId
     ? await Promise.all([
         withTimeout(getWorldFeed(serverId, 10), 2500, 'home.worldfeed').catch(() => []),
         withTimeout(listPublishedAnnouncements(30), 2000, 'home.ann').catch(() => []),
@@ -272,8 +274,12 @@ export default async function HomePage() {
         withTimeout(getTutorialState(userId, serverId), 1500, 'home.tut').catch(
           () => ({ phase: 'done' as const, step: null }),
         ),
+        // 도전 과제 진행/수령가능 — 홈 전용 카드용(실패 시 null → 카드 기본 표시).
+        withTimeout(getChallengeStatus(userId, serverId, hidePaid), 2000, 'home.chg').catch(
+          () => null,
+        ),
       ])
-    : [[], [], { phase: 'done' as const, step: null }];
+    : [[], [], { phase: 'done' as const, step: null }, null];
   const tutorialActive = tutState.phase !== 'done';
 
   return (
@@ -287,6 +293,43 @@ export default async function HomePage() {
         {/* 성장패스 상시 배너 — 캐러셀 마지막 슬라이드. CBT엔 일반 유저에게 숨김. */}
         {hidePaid ? null : <BattlePassBanner />}
       </HomeBannerCarousel>
+      {/* 도전 과제 — 일회성 온보딩 리워드(0118). 수령 가능하면 앰버 글로우로 유혹. */}
+      {(() => {
+        const actives = activeChallenges(hidePaid);
+        const total = actives.length;
+        const totalDiamond = actives.reduce((a, c) => a + c.diamond, 0) + COMPLETE_BONUS.diamond;
+        const claimedN = chgStatus ? actives.filter((c) => chgStatus.claimed.has(c.id)).length : 0;
+        const claimable = chgStatus?.claimable ?? 0;
+        const allDone = chgStatus?.completeClaimed ?? false;
+        if (allDone) return null; // 전부 정복(보너스까지 수령) — 카드 은퇴
+        return (
+          <Link
+            href="/challenges"
+            className={`relative flex items-center gap-3 overflow-hidden rounded-2xl border-2 px-3.5 py-3 transition active:scale-[0.99] ${
+              claimable > 0
+                ? 'border-amber-500/70 bg-gradient-to-r from-amber-950/60 to-orange-950/40 shadow-[0_0_18px_rgba(245,158,11,0.25)]'
+                : 'border-zinc-800 bg-zinc-900/60'
+            }`}
+          >
+            <span className="text-2xl">🏆</span>
+            <span className="min-w-0 flex-1">
+              <span className="block text-sm font-bold text-white">도전 과제</span>
+              <span className="mt-0.5 block text-[11px] text-zinc-400">
+                모든 콘텐츠 정복하고 💎{totalDiamond.toLocaleString('ko-KR')} 받기
+              </span>
+            </span>
+            {claimable > 0 ? (
+              <span className="shrink-0 animate-pulse rounded-full bg-amber-500 px-2.5 py-1 text-[11px] font-extrabold text-white">
+                받을 보상 {claimable}
+              </span>
+            ) : (
+              <span className="shrink-0 rounded-full bg-zinc-800 px-2.5 py-1 text-[11px] font-bold tabular-nums text-zinc-400">
+                {claimedN}/{total}
+              </span>
+            )}
+          </Link>
+        );
+      })()}
       <div className="grid grid-cols-2 gap-2.5">
         {MENU.map((m, i) => {
           const count = counts[m.href] ?? 0;

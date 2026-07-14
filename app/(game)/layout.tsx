@@ -21,6 +21,7 @@ import {
 } from '@/lib/game/referral/auto-attribute';
 import { AppHeader, AppHeaderShell } from '@/components/AppHeader';
 import { BottomNav } from '@/components/BottomNav';
+import { AppInstallMark } from '@/components/AppInstallMark';
 import { BottomNavAsync } from '@/components/BottomNavAsync';
 import { SpritePreloader } from '@/components/SpritePreloader';
 import { SfxUnlock } from '@/components/audio/SfxUnlock';
@@ -154,6 +155,8 @@ export default async function GameLayout({ children }: { children: React.ReactNo
           {/* 새 배포 자동 새로고침 + 새로고침 후 토스트(showHeaderToast 사용 — 프로바이더 안). */}
           <VersionUpdateToast />
         </ResourceToastProvider>
+        {/* PWA 실행 감지 — 도전 과제 'app_install' 마킹(0118). */}
+        <AppInstallMark />
         <Suspense fallback={<BottomNav />}>
           <BottomNavAsync dataPromise={layoutData} />
         </Suspense>

@@ -1,5 +1,6 @@
 'use server';
 
+import { markChallengeEvent } from '@/lib/game/challenges/events';
 import { revalidatePath } from 'next/cache';
 import { and, count, desc, eq, ne } from 'drizzle-orm';
 
@@ -56,6 +57,8 @@ export async function setActiveProfile(profileId: string): Promise<ActionState> 
     .update(characters)
     .set({ activeProfileId: profileId })
     .where(and(eq(characters.userId, userId), eq(characters.serverId, serverId)));
+  // 도전 과제(0118) — 아바타 변경 마킹(멱등·best-effort).
+  await markChallengeEvent(db, userId, serverId, 'avatar_change');
 
   revalidatePath('/me');
   revalidatePath('/me/profiles');

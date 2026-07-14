@@ -3,6 +3,7 @@ import 'server-only';
 import { and, eq, sql } from 'drizzle-orm';
 
 import { db } from '@/lib/db/client';
+import { markChallengeEvent } from '@/lib/game/challenges/events';
 import { characters } from '@/lib/db/schema/server';
 import { zones } from '@/lib/db/schema/guild';
 
@@ -22,6 +23,7 @@ export async function getResidence(userId: string, serverId: number): Promise<nu
 
 /** 거주 구역 변경 — GUILD §5.5. 이동 자유(쿨다운 없음). 존재하는 구역만. */
 export async function setResidence(userId: string, serverId: number, zoneId: number): Promise<void> {
+  const before = await getResidence(userId, serverId);
   const [z] = await db
     .select({ id: zones.id })
     .from(zones)
@@ -32,6 +34,10 @@ export async function setResidence(userId: string, serverId: number, zoneId: num
     .update(characters)
     .set({ residenceZoneId: zoneId })
     .where(and(eq(characters.userId, userId), eq(characters.serverId, serverId)));
+  // 도전 과제(0118) — 기본 배정과 다른 구역으로 '이동'했을 때만 마킹.
+  if (before != null && before !== zoneId) {
+    await markChallengeEvent(db, userId, serverId, 'residence_move');
+  }
 }
 
 /**
