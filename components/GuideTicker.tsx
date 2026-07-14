@@ -14,6 +14,10 @@ import { GUIDE_TIPS } from '@/lib/game/guide-tips';
  * 긴 팁은 말줄임 대신 **우→좌 marquee**(잠깐 멈췄다 넘치는 만큼 흘러감, keyframes는
  * globals.css `guide-ticker-slide`). 팁 체류 시간은 스크롤 길이에 비례해 자동 연장.
  * 💡 아이콘·× 버튼은 페이드 없이 고정 — 텍스트만 교체 페이드.
+ *
+ * 겹침 방지(2026-07-14): 티커가 켜져 있을 때만 ① 문서 흐름에 같은 높이의 스페이서를
+ * 렌더해 페이지 최하단 콘텐츠를 밀어올리고 ② :root에 --gt-h(px)를 발행해 다른 fixed
+ * 요소(길드 생성 FAB 등)가 티커 위로 비켜설 수 있게 한다. 끄면 둘 다 0으로 복귀.
  */
 const OFF_KEY = 'guide_ticker_off';
 const BASE_MS = 8000; // 짧은 팁 기본 체류
@@ -27,7 +31,9 @@ export function GuideTicker() {
   const [fade, setFade] = useState(true);
   const wrapRef = useRef<HTMLDivElement>(null);
   const textRef = useRef<HTMLSpanElement>(null);
+  const barRef = useRef<HTMLDivElement>(null);
   const [overflowPx, setOverflowPx] = useState(0);
+  const [barH, setBarH] = useState(0);
 
   // 마운트 시 표시 판정(SSR 불일치 방지 — 클라에서만 켬) + 시작 팁 랜덤.
   useEffect(() => {
@@ -40,6 +46,27 @@ export function GuideTicker() {
     setIdx(Math.floor(Math.random() * GUIDE_TIPS.length));
     setVisible(true);
   }, []);
+
+  // 표시 중엔 바 높이를 측정해 스페이서·--gt-h로 반영(끄면 0 복귀). resize 대응.
+  // /guide에선 바를 렌더하지 않으므로(하단 return null) 변수도 0으로 — 잔존값 방지.
+  useEffect(() => {
+    if (!visible || pathname === '/guide') {
+      setBarH(0);
+      document.documentElement.style.setProperty('--gt-h', '0px');
+      return;
+    }
+    const measure = () => {
+      const h = barRef.current?.offsetHeight ?? 0;
+      setBarH(h);
+      document.documentElement.style.setProperty('--gt-h', `${h}px`);
+    };
+    measure();
+    window.addEventListener('resize', measure);
+    return () => {
+      window.removeEventListener('resize', measure);
+      document.documentElement.style.setProperty('--gt-h', '0px');
+    };
+  }, [visible, pathname]);
 
   // 팁이 바뀔 때마다 넘침(px) 측정 — 넘치면 marquee, 아니면 정지.
   useEffect(() => {
@@ -70,11 +97,17 @@ export function GuideTicker() {
   const scrollDurS = overflowPx / SCROLL_PX_PER_S;
 
   return (
-    <div
-      className="pointer-events-none fixed inset-x-0 z-20 mx-auto max-w-[390px]"
-      style={{ bottom: 'calc(3.5rem + env(safe-area-inset-bottom))' }}
-    >
-      <div className="pointer-events-auto flex items-center gap-1.5 border-t border-zinc-200 bg-white/95 px-3 py-1.5 backdrop-blur dark:border-zinc-800 dark:bg-zinc-950/95">
+    <>
+      {/* 문서 흐름 스페이서 — 페이지 최하단 콘텐츠가 티커에 가리지 않게 같은 높이만큼 밀어올림. */}
+      <div aria-hidden style={{ height: barH }} />
+      <div
+        className="pointer-events-none fixed inset-x-0 z-20 mx-auto max-w-[390px]"
+        style={{ bottom: 'calc(3.5rem + env(safe-area-inset-bottom))' }}
+      >
+        <div
+          ref={barRef}
+          className="pointer-events-auto flex items-center gap-1.5 border-t border-zinc-200 bg-white/95 px-3 py-1.5 backdrop-blur dark:border-zinc-800 dark:bg-zinc-950/95"
+        >
         {/* 💡·×는 고정(페이드 없음) — 텍스트만 교체 페이드 + 넘치면 marquee */}
         <span className="shrink-0 text-[11px] leading-none" aria-hidden>
           💡
@@ -116,8 +149,9 @@ export function GuideTicker() {
         >
           ✕
         </button>
+        </div>
       </div>
-    </div>
+    </>
   );
 }
 
