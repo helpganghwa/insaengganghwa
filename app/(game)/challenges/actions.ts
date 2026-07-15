@@ -6,7 +6,7 @@ import { getSessionUserId, shouldHidePaidContent } from '@/lib/auth/session';
 import { getActiveServerId } from '@/lib/game/servers';
 import { rateLimited } from '@/lib/ratelimit';
 import { actionBlock } from '@/lib/game/action-gate';
-import { claimChallenge } from '@/lib/game/challenges/claim';
+import { claimChallenge, claimAllChallenges } from '@/lib/game/challenges/claim';
 import { markChallengeEvent } from '@/lib/game/challenges/events';
 import { db } from '@/lib/db/client';
 
@@ -20,7 +20,7 @@ export async function claimChallengeAction(challengeId: string): Promise<ClaimRe
   if (!userId) return { status: 'error', message: '로그인이 필요합니다.' };
   const blocked = await actionBlock();
   if (blocked) return { status: 'error', message: '지금은 수령할 수 없습니다.' };
-  if (await rateLimited(userId, 'checkin'))
+  if (await rateLimited(userId, 'challenge'))
     return { status: 'error', message: '잠시 후 다시 시도해 주세요.' };
 
   const serverId = await getActiveServerId();
@@ -37,6 +37,26 @@ export async function claimChallengeAction(challengeId: string): Promise<ClaimRe
   revalidatePath('/challenges');
   revalidatePath('/');
   return { status: 'success', diamond: r.diamond, boxes: r.boxes };
+}
+
+type ClaimAllResult =
+  | { status: 'success'; count: number; diamond: number; boxes: { weapon: number; armor: number; accessory: number } | null }
+  | { status: 'error'; message: string };
+
+/** 일괄 수령 — 달성 & 미수령 전 과제 단일 트랜잭션(완료 보너스 제외). */
+export async function claimAllChallengesAction(): Promise<ClaimAllResult> {
+  const userId = await getSessionUserId();
+  if (!userId) return { status: 'error', message: '로그인이 필요합니다.' };
+  const blocked = await actionBlock();
+  if (blocked) return { status: 'error', message: '지금은 수령할 수 없습니다.' };
+  if (await rateLimited(userId, 'challenge'))
+    return { status: 'error', message: '잠시 후 다시 시도해 주세요.' };
+
+  const serverId = await getActiveServerId();
+  const r = await claimAllChallenges(userId, serverId, await shouldHidePaidContent());
+  revalidatePath('/challenges');
+  revalidatePath('/');
+  return { status: 'success', ...r };
 }
 
 /**

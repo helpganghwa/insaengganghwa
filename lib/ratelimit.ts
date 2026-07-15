@@ -22,6 +22,7 @@ export type RlBucket =
   | 'nickname'
   | 'mail'
   | 'checkin'
+  | 'challenge'
   | 'battlepass'
   | 'friend'
   | 'guild'
@@ -46,6 +47,8 @@ const WINDOWS: Record<RlBucket, [limit: number, window: `${number} s`]> = {
   nickname: [5, '60 s'],
   mail: [60, '10 s'],
   checkin: [10, '10 s'],
+  // 도전 과제 수령 — 일회성 31건 유계라 느슨하게(연속 연타 = 정상 사용, 2026-07-15 CBT).
+  challenge: [40, '10 s'],
   battlepass: [20, '10 s'],
   friend: [20, '10 s'], // 검색·요청·수락 스팸 방어
   guild: [20, '10 s'], // 기부·배치·가입·문양생성 자동화 방어

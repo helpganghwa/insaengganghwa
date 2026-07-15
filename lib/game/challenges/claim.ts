@@ -89,3 +89,63 @@ export async function claimChallenge(
     return { ok: true as const, diamond: def.diamond, boxes };
   });
 }
+
+/**
+ * 일괄 수령 — 달성 & 미수령 전 과제를 단일 트랜잭션으로: 판정 1왕복(status와 동일 조건 SQL)
+ * → claims 일괄 insert(멱등) → 실제 insert된 것만 합산 지급. 완료 보너스는 제외(연출 분리 —
+ * 전용 카드에서 수동 수령).
+ */
+export async function claimAllChallenges(
+  userId: string,
+  serverId: number,
+  hidePaid: boolean,
+): Promise<{ count: number; diamond: number; boxes: { weapon: number; armor: number; accessory: number } | null }> {
+  const list = activeChallenges(hidePaid);
+  return db.transaction(async (tx) => {
+    const cols = list.map((c) => sql`${doneCondSql(c.id, userId, serverId)} as ${sql.raw(`"${c.id}"`)}`);
+    const [row] = (await tx.execute(sql`
+      select ${sql.join(cols, sql`, `)},
+        (select coalesce(json_agg(challenge_id), '[]'::json)
+           from challenge_claims where user_id=${userId}::uuid and server_id=${serverId}) as claimed
+    `)) as unknown as (Record<string, boolean> & { claimed: string[] })[];
+    const already = new Set(row?.claimed ?? []);
+    const targets = list.filter((c) => row?.[c.id] && !already.has(c.id));
+    if (targets.length === 0) return { count: 0, diamond: 0, boxes: null };
+
+    const perSlot = (c: (typeof targets)[number]) => (c.boxes ? c.boxes / 3 : 0);
+    const ins = await tx
+      .insert(challengeClaims)
+      .values(
+        targets.map((c) => ({
+          userId,
+          serverId,
+          challengeId: c.id,
+          diamond: BigInt(c.diamond),
+          boxes: c.boxes ? { weapon: perSlot(c), armor: perSlot(c), accessory: perSlot(c) } : {},
+        })),
+      )
+      .onConflictDoNothing()
+      .returning({ id: challengeClaims.challengeId });
+    const got = new Set(ins.map((i) => i.id));
+    const claimedDefs = targets.filter((c) => got.has(c.id));
+    if (claimedDefs.length === 0) return { count: 0, diamond: 0, boxes: null };
+
+    const diamond = claimedDefs.reduce((a, c) => a + c.diamond, 0);
+    const boxPerSlot = claimedDefs.reduce((a, c) => a + perSlot(c), 0);
+    await walletAdd(tx, userId, serverId, diamond);
+    if (boxPerSlot > 0) {
+      for (const slot of ['weapon', 'armor', 'accessory'] as const) {
+        await tx.execute(sql`
+          insert into user_supply_boxes (user_id, server_id, slot, count)
+          values (${userId}::uuid, ${serverId}, ${slot}, ${boxPerSlot})
+          on conflict (user_id, server_id, slot) do update set count = user_supply_boxes.count + ${boxPerSlot}
+        `);
+      }
+    }
+    return {
+      count: claimedDefs.length,
+      diamond,
+      boxes: boxPerSlot > 0 ? { weapon: boxPerSlot, armor: boxPerSlot, accessory: boxPerSlot } : null,
+    };
+  });
+}
