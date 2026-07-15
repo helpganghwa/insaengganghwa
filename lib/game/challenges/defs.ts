@@ -1,7 +1,8 @@
 /**
  * 도전 과제 정의 — 27종 + 전체 완료 보너스(2026-07-14 사용자 확정).
  * 게임의 모든 루프를 정확히 한 바퀴 돌게 만드는 일회성 온보딩 리워드.
- * 보상 합계: 과제 💎12,200 + 완료 보너스 💎5,000·상자 각 20 = 총 💎17,200.
+ * 보상 합계: 과제 💎12,200+📦75 + 완료 보너스 💎5,000+📦150 = 총 💎17,200·📦225.
+ * 📦는 루프 시동 길목·고가치 행동 4종에만(초월·앱·알림·아바타 생성) — 완료 보너스 임팩트 보존.
  * 상점 무료 3종은 CBT(결제 숨김) 동안 자동 숨김 — 정식 오픈 시 자동 등장(activeChallenges).
  * 달성 판정 SQL은 status.ts(상태 파생), 예외 4종은 challenge_events 마킹.
  */
@@ -17,6 +18,8 @@ export type ChallengeDef = {
   go: string;
   /** 달성 방법 안내(가이드 팝업 본문). */
   guide: string;
+  /** 보급상자 추가 보상(총 개수, 3의 배수 — 3슬롯 균등 분배). 대부분 과제는 💎만. */
+  boxes?: number;
 };
 
 export const CHALLENGE_GROUPS: { id: ChallengeGroup; icon: string; label: string }[] = [
@@ -46,10 +49,10 @@ export const CHALLENGES: ChallengeDef[] = [
   { id: 'enhance_accessory', group: 'enhance', label: '장신구 강화하기', diamond: 200, go: '/enhance', guide: '강화소의 장신구 슬롯에 장비를 올려 강화를 시작하면 달성돼요.' },
   { id: 'mail_claim', group: 'daily', label: '우편 보상 받기', diamond: 200, go: '/mail', guide: '우편함에서 우편을 수령하면 달성돼요. 어떤 우편이든 좋아요!' },
   { id: 'checkin', group: 'daily', label: '출석 체크하기', diamond: 200, go: '/checkin', guide: '출석 캘린더에서 오늘의 보상을 받으면 달성돼요.' },
-  { id: 'transcend', group: 'growth', label: '장비 초월 달성하기', diamond: 300, go: '/gacha', guide: '같은 장비를 중복으로 모으면 자동으로 초월돼요 — 보급상자를 열다 보면 자연히 달성됩니다!' },
+  { id: 'transcend', group: 'growth', label: '장비 초월 달성하기', diamond: 300, boxes: 15, go: '/gacha', guide: '같은 장비를 중복으로 모으면 자동으로 초월돼요 — 보급상자를 열다 보면 자연히 달성됩니다!' },
   { id: 'gem_reduce', group: 'growth', label: '보석으로 강화 시간 줄이기', diamond: 200, go: '/enhance', guide: '진행 중인 강화 카드에서 보석으로 남은 시간을 단축하면 달성돼요.' },
-  { id: 'app_install', group: 'app', label: '앱으로 실행하기', diamond: 1000, go: '/me/settings', guide: '홈 화면에 앱으로 설치한 뒤, 설치된 앱으로 접속하면 달성돼요. 아래 버튼으로 설치를 시작하세요.' },
-  { id: 'push_on', group: 'app', label: '알림 설정하기', diamond: 2000, go: '/me/settings', guide: '설정 → 알림에서 알림을 켜면 달성돼요. 강화 완료·레이드 소식을 놓치지 않게 됩니다.' },
+  { id: 'app_install', group: 'app', label: '앱으로 실행하기', diamond: 1000, boxes: 15, go: '/me/settings', guide: '홈 화면에 앱으로 설치한 뒤, 설치된 앱으로 접속하면 달성돼요. 아래 버튼으로 설치를 시작하세요.' },
+  { id: 'push_on', group: 'app', label: '알림 설정하기', diamond: 2000, boxes: 30, go: '/me/settings', guide: '설정 → 알림에서 알림을 켜면 달성돼요. 강화 완료·레이드 소식을 놓치지 않게 됩니다.' },
   { id: 'friend', group: 'social', label: '친구 맺기', diamond: 300, go: '/friends', guide: '친구 화면에서 닉네임이나 코드(#)로 검색해 친구를 맺으면 달성돼요.' },
   { id: 'boast_share', group: 'social', label: '내 프로필 자랑하기', diamond: 300, go: '/me', guide: '프로필의 \'내 프로필 자랑하기\'로 카카오톡 공유를 실행하면 달성돼요.' },
   { id: 'guild_join', group: 'guild', label: '길드 가입하기', diamond: 500, go: '/guild', guide: '길드 탭에서 마음에 드는 길드에 가입하면 달성돼요.' },
@@ -61,7 +64,7 @@ export const CHALLENGES: ChallengeDef[] = [
   { id: 'melee_join', group: 'social', label: '대난투 참가하기', diamond: 500, go: '/melee', guide: '매일 아침 9시, 전투력이 있는 모든 모험가가 자동으로 참가해요. 9시가 지나 시작했다면 내일 아침 대난투부터 참가됩니다!' },
   { id: 'residence_move', group: 'world', label: '거주 구역 이동하기', diamond: 300, go: '/guild/map', guide: '세계지도에서 다른 구역을 선택해 거주지를 이동하면 달성돼요.' },
   { id: 'avatar_change', group: 'avatar', label: '아바타 변경하기', diamond: 500, go: '/me/profiles', guide: '아바타 관리에서 다른 아바타를 대표로 지정하면 달성돼요.' },
-  { id: 'avatar_create', group: 'avatar', label: '나만의 아바타 만들기', diamond: 1000, go: '/me/profiles', guide: '아바타 관리에서 나만의 아바타를 생성하면 달성돼요 — 지금 착용한 장비가 반영됩니다!' },
+  { id: 'avatar_create', group: 'avatar', label: '나만의 아바타 만들기', diamond: 1000, boxes: 15, go: '/me/profiles', guide: '아바타 관리에서 나만의 아바타를 생성하면 달성돼요 — 지금 착용한 장비가 반영됩니다!' },
   { id: 'shop_daily', group: 'shop', label: '일일 무료 선물 받기', diamond: 200, go: '/shop', guide: '상점 일일 탭에서 무료 선물을 받으면 달성돼요.' },
   { id: 'shop_weekly', group: 'shop', label: '주간 무료 선물 받기', diamond: 300, go: '/shop?tab=weekly', guide: '상점 주간 탭에서 무료 선물을 받으면 달성돼요.' },
   { id: 'shop_monthly', group: 'shop', label: '월간 무료 선물 받기', diamond: 500, go: '/shop?tab=monthly', guide: '상점 월간 탭에서 무료 선물을 받으면 달성돼요.' },
@@ -75,12 +78,12 @@ export function activeChallenges(hidePaid: boolean): ChallengeDef[] {
   return hidePaid ? CHALLENGES.filter((c) => c.group !== 'shop') : CHALLENGES;
 }
 
-/** 전체 완료 보너스 — 27종 전부 수령 시. */
+/** 전체 완료 보너스 — 전 과제 수령 시. */
 export const COMPLETE_BONUS = {
   id: 'complete',
   label: '모든 도전 과제 완료!',
   diamond: 5000,
-  boxes: { weapon: 20, armor: 20, accessory: 20 },
+  boxes: { weapon: 50, armor: 50, accessory: 50 },
 } as const;
 
 export const CHALLENGE_IDS = new Set(CHALLENGES.map((c) => c.id));

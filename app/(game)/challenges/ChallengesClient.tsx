@@ -2,7 +2,6 @@
 
 import { useMemo, useState, useTransition } from 'react';
 import Link from 'next/link';
-import { useRouter } from 'next/navigation';
 
 import { ModalShell } from '@/components/ModalShell';
 import { useResourceToast } from '@/components/ResourceToast';
@@ -52,7 +51,6 @@ export function ChallengesClient({
   completeClaimed: boolean;
   hidePaid: boolean;
 }) {
-  const router = useRouter();
   const { showError, showHeaderToast } = useResourceToast();
   const { optimisticAdjust } = useDiamond();
   const [claimed, setClaimed] = useState<Set<string>>(() => new Set(claimedInit));
@@ -207,6 +205,7 @@ export function ChallengesClient({
             <h2 className="min-w-0 flex-1 text-[15px] font-bold">{guideFor.label}</h2>
             <span className="shrink-0 text-[12px] font-bold tabular-nums text-amber-600 dark:text-amber-400">
               💎 {guideFor.diamond.toLocaleString('ko-KR')}
+              {guideFor.boxes ? ` + 📦 ${guideFor.boxes}` : ''}
             </span>
           </div>
           <p className="mt-2.5 text-[13px] leading-relaxed text-zinc-600 dark:text-zinc-300">
@@ -279,6 +278,7 @@ function Row({
       </span>
       <span className="shrink-0 text-[11px] tabular-nums text-zinc-400">
         💎{def.diamond.toLocaleString('ko-KR')}
+        {def.boxes ? <span className="ml-1">📦{def.boxes}</span> : null}
       </span>
       {/* 액션 — 세 상태 모두 동일 박스(w-14 h-6)로 레이아웃 시프트 방지(2026-07-15). */}
       {state === 'ready' ? (
