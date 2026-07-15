@@ -11,6 +11,7 @@ import {
 import { accrueResidenceTax } from '@/lib/game/guild/tax';
 import { logMemberAchievement } from '@/lib/game/guild/achievement';
 import { logWorldEvent } from '@/lib/game/world/event';
+import { sendMilestoneMail } from '@/lib/game/milestone-mail';
 import { rebuildCodexChampionsForItem } from '@/lib/game/leaderboard/snapshot';
 import { refreshEnhanceMetrics } from '@/lib/game/leaderboard/incremental';
 
@@ -230,6 +231,8 @@ export async function resolveEnhance(input: ResolveInput): Promise<ResolveResult
         await logWorldEvent(Number(job.job_server_id), 'enhance', { item: ci?.name ?? '장비', level: milestone }, {
           actorUserId: String(job.user_id),
         });
+        // 이정표 보상 우편(2026-07-15) — 피드 발화와 1:1(개인 최초 게이트가 1회 보장).
+        await sendMilestoneMail(String(job.user_id), Number(job.job_server_id), 'enhance', milestone);
       }
     } catch {
       // 업적 기록 실패 무시.

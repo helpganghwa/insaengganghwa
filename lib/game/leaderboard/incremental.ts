@@ -8,6 +8,7 @@ import { raids, raidParticipants } from '@/lib/db/schema/raid';
 import { meleeBattles } from '@/lib/db/schema/melee';
 import { milestoneOf } from '@/lib/game/milestone';
 import { logWorldEvent } from '@/lib/game/world/event';
+import { sendMilestoneMail } from '@/lib/game/milestone-mail';
 import { logMemberAchievement } from '@/lib/game/guild/achievement';
 import { combatPowerFromOwned } from '@/lib/game/equipment/combat-power';
 
@@ -86,6 +87,8 @@ export async function claimMilestone(userId: string, serverId: number, metric: s
   if (claimed.length === 0) return;
   await logWorldEvent(serverId, 'personal_milestone', { metric, milestone: mile }, { actorUserId: userId });
   await logMemberAchievement(userId, serverId, { action: 'achv_milestone', detail: { metric, milestone: mile } });
+  // 이정표 보상 우편(2026-07-15) — 피드 발화와 1:1. 워터마크가 1회를 보장.
+  await sendMilestoneMail(userId, serverId, metric as 'sum' | 'combat' | 'raid' | 'melee', mile);
 }
 
 /**

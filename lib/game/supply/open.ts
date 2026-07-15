@@ -9,6 +9,7 @@ import { transcendLogs } from '@/lib/db/schema/transcend';
 import { transcendFodderForStep } from '@/lib/game/balance';
 import { logMemberAchievement } from '@/lib/game/guild/achievement';
 import { logWorldEvent } from '@/lib/game/world/event';
+import { sendMilestoneMail } from '@/lib/game/milestone-mail';
 import { refreshEnhanceMetrics } from '@/lib/game/leaderboard/incremental';
 
 /**
@@ -203,6 +204,8 @@ export async function openSupplyBoxes(input: {
             { item: ci?.name ?? '장비', level: newMax },
             { actorUserId: userId },
           );
+          // 이정표 보상 우편(2026-07-15) — 피드 발화와 1:1(개인 최고 갱신 게이트가 1회 보장).
+          await sendMilestoneMail(userId, serverId, 'transcend', newMax);
         }
       }
     }
