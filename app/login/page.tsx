@@ -110,11 +110,11 @@ export default async function LoginPage({
 
         {/* 게임 소개 — 검색·AI 크롤러가 읽는 유일한 공개 설명(SEO 검수 A1, 2026-07-15).
             스크롤 아래 배치라 로그인 전환 동선 무영향. h1은 사이트 전체에서 이 페이지가 대문. */}
-        <section className="mt-6 w-full text-left">
-          <h1 className="text-[15px] font-extrabold leading-snug text-zinc-100">
+        <section className="mt-6 w-full text-center">
+          <h1 className="text-[13.5px] font-extrabold leading-snug text-zinc-100">
             인생강화 — 기다릴수록 강해지는 방치형 강화 RPG
           </h1>
-          <p className="mt-1.5 text-[12px] leading-relaxed text-zinc-400">
+          <p className="mt-1.5 text-[11px] leading-relaxed text-zinc-400">
             장비를 강화 슬롯에 올려두면 시간이 흐를수록 성공 확률이 올라갑니다. 조급하게 두드릴지,
             끝까지 기다릴지 — 선택은 당신의 몫. 설치 없이 웹에서 바로, 무료로 시작하세요.
           </p>
@@ -126,10 +126,10 @@ export default async function LoginPage({
               ['🆓', '가볍게 시작', '설치 없음, 카카오 3초, 무료'],
             ].map(([icon, t, d]) => (
               <div key={t} className="rounded-lg bg-white/[0.04] px-2.5 py-2">
-                <h2 className="text-[11.5px] font-bold text-zinc-200">
+                <h2 className="text-[11px] font-bold text-zinc-200">
                   <span aria-hidden>{icon}</span> {t}
                 </h2>
-                <p className="mt-0.5 text-[10.5px] leading-snug text-zinc-500">{d}</p>
+                <p className="mt-0.5 text-[10px] leading-snug text-zinc-500">{d}</p>
               </div>
             ))}
           </div>
