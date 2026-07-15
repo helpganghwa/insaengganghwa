@@ -259,10 +259,21 @@ export async function generateAndStoreChronicle(
     atkByZone.set(a.zone, arr);
   }
   // 주어-목적어 순서 명시: "길드 「G」 이(가) 구역 「Z」 을(를) 공격" — zone:guild 콜론 포맷이 주어 오독을 유발했음.
-  const atkLines =
-    [...atkByZone.entries()]
-      .map(([z, gs]) => `· 길드 「${[...new Set(gs)].join('」, 「')}」 이(가) 구역 「${z}」 을(를) 공격`)
-      .join('\n') || '· (공격 측 없음)';
+  // 길드별 공격 합계 명시(2026-07-15) — 합계가 없으면 모델이 전투 전체 공격 구역 수를 한 길드에
+  // 오귀속(실사례: 전설 6곳 공격을 '일곱 구역'으로 — 타 길드 1곳 합산). 세는 일을 모델에 맡기지 않는다.
+  const atkTotalByGuild = new Map<string, Set<string>>();
+  for (const a of summary.attacks) {
+    const set = atkTotalByGuild.get(a.guild) ?? new Set<string>();
+    set.add(a.zone);
+    atkTotalByGuild.set(a.guild, set);
+  }
+  const atkTotals = [...atkTotalByGuild.entries()]
+    .map(([g, zs]) => `· 길드 「${g}」 — 이번 전투에서 총 ${zs.size}개 구역을 공격`)
+    .join('\n');
+  const atkZoneLines = [...atkByZone.entries()]
+    .map(([z, gs]) => `· 길드 「${[...new Set(gs)].join('」, 「')}」 이(가) 구역 「${z}」 을(를) 공격`)
+    .join('\n');
+  const atkLines = atkZoneLines ? `${atkZoneLines}\n${atkTotals}` : '· (공격 측 없음)';
   const defLines =
     summary.defenses.map((d) => `· 길드 「${d.owner}」 이(가) 구역 「${d.zone}」 을(를) 방어`).join('\n') ||
     '· (방어 없음)';
