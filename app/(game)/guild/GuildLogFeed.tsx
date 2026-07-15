@@ -117,7 +117,7 @@ function message(e: GuildLogEntry): ReactNode {
     case 'achv_melee':
       return <>{actor}님이 대난투 {hl(`${medal}${rank}위`, C.violet)}에 올랐습니다</>;
     case 'achv_rank_leader':
-      return <>{actor}님이 {hl(`👑 ${METRIC_LABEL[metric] ?? metric} 1위`, C.sky)}에 올랐습니다</>;
+      return <>{actor}님이 {hl(`${METRIC_LABEL[metric] ?? metric} 1위`, C.sky)}에 올랐습니다</>;
     case 'achv_milestone':
       return <>{actor}님이 {hl(`${milestoneLabel(metric, (e.detail?.milestone as number) ?? 0)} 달성`, C.emerald)}했습니다</>;
     // 업적 — 길드.

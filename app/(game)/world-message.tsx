@@ -82,7 +82,7 @@ export function worldEventMessage(e: WorldEventEntry, opts?: { link?: boolean })
     case 'guild_zone_1':
       return <>{hl(guildName, C.guild)} 길드가 {hl('점령지 1위', C.sky)}에 올랐습니다</>;
     case 'rank_leader':
-      return <>{actor}님이 {hl(`👑 ${METRIC_LABEL[metric] ?? metric} 1위`, C.sky)}에 올랐습니다</>;
+      return <>{actor}님이 {hl(`${METRIC_LABEL[metric] ?? metric} 1위`, C.sky)}에 올랐습니다</>;
     case 'personal_milestone':
       return <>{actor}님이 {hl(`${milestoneLabel(metric, (d.milestone as number) ?? 0)} 달성`, C.emerald)}했습니다</>;
     default:
