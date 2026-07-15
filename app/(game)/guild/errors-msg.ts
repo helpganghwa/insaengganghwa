@@ -1,4 +1,6 @@
 // 길드 에러 코드 → 사용자 메시지(클라이언트). 서버 액션의 { code }와 1:1.
+import { GUILD_REJOIN_LOCK_HOURS } from '@/lib/game/guild/balance';
+
 const MAP: Record<string, string> = {
   ALREADY_IN_GUILD: '이미 길드에 소속되어 있습니다.',
   NOT_IN_GUILD: '길드에 소속되어 있지 않습니다.',
@@ -9,7 +11,7 @@ const MAP: Record<string, string> = {
   INSUFFICIENT_DIAMOND: '다이아가 부족합니다.',
   GUILD_NOT_FOUND: '길드를 찾을 수 없습니다.',
   GUILD_FULL: '길드 정원이 가득 찼습니다.',
-  REJOIN_LOCKED: '탈퇴 후 24시간이 지나야 가입할 수 있습니다.',
+  REJOIN_LOCKED: `탈퇴 후 ${GUILD_REJOIN_LOCK_HOURS}시간이 지나야 가입할 수 있습니다.`,
   NOT_LEADER: '길드장만 할 수 있습니다.',
   LEADER_MUST_TRANSFER: '길드장은 위임하거나 해산해야 탈퇴할 수 있습니다.',
   DONATION_CAP_REACHED: '오늘 기부를 모두 했습니다.',

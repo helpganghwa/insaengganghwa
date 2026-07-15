@@ -9,6 +9,7 @@ import { useResourceToast } from '@/components/ResourceToast';
 import { useDiamond } from '@/components/DiamondContext';
 import { ModalShell } from '@/components/ModalShell';
 import {
+  GUILD_REJOIN_LOCK_HOURS,
   GUILD_EMBLEM_REROLL_COST_DIAMOND,
   GUILD_INTRO_MAX_LEN,
   GUILD_NOTICE_MAX_LEN,
@@ -252,7 +253,7 @@ export function GuildSettings({
   const kick = (userId: string, nickname: string) =>
     setConfirmModal({
       title: '구성원 추방',
-      message: `${nickname}님을 추방할까요?\n24시간 동안 다시 가입할 수 없습니다.`,
+      message: `${nickname}님을 추방할까요?\n${GUILD_REJOIN_LOCK_HOURS}시간 동안 다시 가입할 수 없습니다.`,
       confirmLabel: '추방',
       onConfirm: () => doKick(userId),
     });
