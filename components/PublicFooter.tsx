@@ -11,6 +11,7 @@ const LINKS: [string, string][] = [
   ['/legal/privacy', '개인정보'],
   ['/legal/refund', '환불'],
   ['/legal/youth', '청소년보호'],
+  ['/faq', 'FAQ'],
   ['/pricing', '상품안내'],
   ['/probability', '확률공시'],
 ];
