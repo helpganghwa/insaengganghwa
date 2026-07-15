@@ -218,9 +218,16 @@ export async function generateMetadata({
   const description = `${data.nickname}님의 인생강화 프로필 — 전투력 ${data.total.toLocaleString('ko-KR')} · 최고 강화 +${data.maxEnhance.toLocaleString('ko-KR')} · 합산 강화 +${data.sumEnhance.toLocaleString('ko-KR')}`;
   // OG는 불변 코드로 — 닉 변경/링크 캐시에도 안정. 서버는 쿼리로 전파.
   const ogImage = `/og/${encodeURIComponent(data.publicCode)}?s=${serverId}`;
+  // canonical — 1서버는 클린 URL, 그 외 서버는 ?s= 포함(서버별 프로필은 별개 문서 —
+  // 루트 './' 상속이 파라미터를 떼면서 다서버 프로필이 한 canonical로 합쳐지는 것 방지).
+  const canonical =
+    serverId === 1
+      ? `/u/${encodeURIComponent(data.publicCode)}`
+      : `/u/${encodeURIComponent(data.publicCode)}?s=${serverId}`;
   return {
     title,
     description,
+    alternates: { canonical },
     openGraph: { title, description: ogDescription, images: [ogImage] },
     twitter: { card: 'summary_large_image', title, description: ogDescription, images: [ogImage] },
   };
