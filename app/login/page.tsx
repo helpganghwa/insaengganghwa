@@ -123,7 +123,7 @@ export default async function LoginPage({
               ['⏳', '시간이 무기', '기다릴수록 오르는 성공 확률'],
               ['📦', '수집과 초월', '100종+ 장비, 중복 수집 자동 초월'],
               ['⚔️', '함께 겨루기', '레이드 · 대난투 · 길드 점령전'],
-              ['🆓', '가볍게 시작', '설치 없음, 카카오 3초, 무료'],
+              ['⚡', '가볍게 시작', '설치 없음, 카카오 3초, 무료'],
             ].map(([icon, t, d]) => (
               <div key={t} className="rounded-lg bg-white/[0.04] px-2.5 py-2">
                 <h2 className="text-[11px] font-bold text-zinc-200">
