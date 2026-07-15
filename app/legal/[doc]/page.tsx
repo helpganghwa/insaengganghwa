@@ -22,7 +22,7 @@ export async function generateMetadata({
 }): Promise<Metadata> {
   const { doc } = await params;
   if (!isSlug(doc)) return {};
-  return { title: `${LEGAL_META[doc].title} — 인생강화` };
+  return { title: LEGAL_META[doc].title };
 }
 
 export default async function LegalPage({ params }: { params: Promise<{ doc: string }> }) {

@@ -203,7 +203,7 @@ export async function generateMetadata({
   const handle = decodeURIComponent(raw);
   const serverId = await resolveServerId((await searchParams).s);
   const data = await loadProfile(handle, serverId);
-  if (!data) return { title: '인생강화' };
+  if (!data) return { title: { absolute: '인생강화' } };
   // 카카오톡 공유 카드(BoastModal)와 문구 통일(2026-05-31 고정 문구 결정).
   const title = `${data.nickname} - '강화는 인생이다'`;
   let description = '인생강화에서 지금도 누군가 인생 강화중';

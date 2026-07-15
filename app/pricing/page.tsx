@@ -5,7 +5,7 @@ import { CASH, DIAMONDS, PREMIUM, FIRST_SPECIAL, type Cash } from '@/lib/game/sh
 import { bpSegmentPriceKrw, BP_SEGMENT_PRICE_CAP_KRW } from '@/lib/game/balance';
 
 export const metadata: Metadata = {
-  title: '상품 안내 — 인생강화',
+  title: '상품 안내',
   description: '인생강화 유료 상품(다이아·패키지·성장 프리미엄·성장패스·인생 특가) 및 가격 안내.',
 };
 

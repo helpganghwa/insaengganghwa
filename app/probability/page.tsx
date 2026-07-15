@@ -42,7 +42,7 @@ const SLOT_KO: Record<'weapon' | 'armor' | 'accessory', string> = {
 };
 
 export const metadata: Metadata = {
-  title: '확률 공시 — 인생강화',
+  title: '확률 공시',
   description: '강화·초월·보급 확률 및 수치 공시 (게임산업법 §33 — 확률형 한정).',
 };
 

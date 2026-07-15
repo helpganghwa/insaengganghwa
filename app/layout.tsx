@@ -20,8 +20,12 @@ export const metadata: Metadata = {
   // 절대 URL — manifest·OG·icons가 절대 경로로 직렬화되어야 PWA 설치 정상.
   // 도메인은 NEXT_PUBLIC_SITE_URL로 주입(서비스 주체/도메인 이전 대응 — docs/MIGRATION.md).
   metadataBase: new URL(process.env.NEXT_PUBLIC_SITE_URL ?? 'https://ganghwa.app'),
-  title: '인생강화',
-  description: '강화는 인생이다',
+  // 검색용 title/description은 정보형(SEO 검수 A2·A4), 공유(OG)는 슬로건 유지 — 용도 분리.
+  title: { default: '인생강화 — 방치형 강화 RPG', template: '%s — 인생강화' },
+  description:
+    '기다릴수록 성공 확률이 오르는 방치형 강화 RPG. 무기·방어구·장신구를 강화하고 레이드·대난투에서 겨루세요. 설치 없이 웹에서 무료로.',
+  // 파라미터 변형(?s=·?error= 등) 중복 인덱싱 방지 — 페이지별 경로 상속(A3).
+  alternates: { canonical: './' },
   applicationName: '인생강화',
   keywords: ['인생강화', '강화 게임', '방치형 RPG', '강화 RPG', '한국식 강화', '모바일 웹게임', 'idle RPG'],
   // 소셜 공유 카드(카카오톡·페북·검색) — 한국 게임 성장 최대 채널. 절대 URL은 metadataBase로 직렬화.
