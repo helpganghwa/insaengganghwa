@@ -109,7 +109,7 @@ export function TutorialCompleteModal({ onClose }: { onClose: () => void }) {
           </span>
           <span className="mt-0.5 block text-[12px] leading-relaxed text-zinc-600 dark:text-zinc-300">
             과제를 하나씩 달성할 때마다 다이아 보상 — 전부 정복하면{' '}
-            <b className="text-amber-600 dark:text-amber-400">💎 5,000 + 📦 60</b> 보너스까지!
+            <b className="text-amber-600 dark:text-amber-400">💎 5,000 + 📦 150</b> 보너스까지!
           </span>
         </Link>
 

@@ -61,6 +61,10 @@ export async function claimChallenge(
   const def = activeChallenges(hidePaid).find((c) => c.id === challengeId);
   if (!def) return { ok: false, reason: 'UNKNOWN_ID' };
 
+  // 상자 추가 보상(선별 과제) — 총량은 3의 배수, 3슬롯 균등.
+  const per = def.boxes ? def.boxes / 3 : 0;
+  const boxes = per > 0 ? { weapon: per, armor: per, accessory: per } : null;
+
   return db.transaction(async (tx) => {
     const [r] = (await tx.execute(
       sql`select ${doneCondSql(def.id, userId, serverId)} as done`,
@@ -68,11 +72,20 @@ export async function claimChallenge(
     if (!r?.done) return { ok: false as const, reason: 'NOT_DONE' as const };
     const ins = await tx
       .insert(challengeClaims)
-      .values({ userId, serverId, challengeId: def.id, diamond: BigInt(def.diamond), boxes: {} })
+      .values({ userId, serverId, challengeId: def.id, diamond: BigInt(def.diamond), boxes: boxes ?? {} })
       .onConflictDoNothing()
       .returning({ id: challengeClaims.challengeId });
     if (ins.length === 0) return { ok: false as const, reason: 'ALREADY' as const };
     await walletAdd(tx, userId, serverId, def.diamond);
-    return { ok: true as const, diamond: def.diamond, boxes: null };
+    if (boxes) {
+      for (const [slot, n] of Object.entries(boxes)) {
+        await tx.execute(sql`
+          insert into user_supply_boxes (user_id, server_id, slot, count)
+          values (${userId}::uuid, ${serverId}, ${slot}, ${n})
+          on conflict (user_id, server_id, slot) do update set count = user_supply_boxes.count + ${n}
+        `);
+      }
+    }
+    return { ok: true as const, diamond: def.diamond, boxes };
   });
 }
