@@ -7,6 +7,7 @@ import Link from 'next/link';
 import { useResourceToast } from '@/components/ResourceToast';
 import { useDiamond } from '@/components/DiamondContext';
 import {
+  GUILD_REJOIN_LOCK_HOURS,
   GUILD_DONATIONS_PER_DAY,
   GUILD_DONATION_TIERS,
   guildXpToNext,
@@ -359,13 +360,13 @@ export function GuildHome({
                     <>
                       길드원이 없어 탈퇴 시 길드가 해산됩니다.
                       <br />
-                      탈퇴 후 24시간 동안 재가입할 수 없습니다.
+                      탈퇴 후 {GUILD_REJOIN_LOCK_HOURS}시간 동안 재가입할 수 없습니다.
                     </>
                   ) : (
                     <>
                       정말 길드를 탈퇴할까요?
                       <br />
-                      탈퇴 후 24시간 동안 재가입할 수 없습니다.
+                      탈퇴 후 {GUILD_REJOIN_LOCK_HOURS}시간 동안 재가입할 수 없습니다.
                     </>
                   )}
                 </p>
