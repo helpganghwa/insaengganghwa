@@ -32,8 +32,8 @@ const FAQS: { q: string; a: string; body?: ReactNode }[] = [
         줄이는 편의 위주라, 결제가 승패를 사지 않습니다. 상품 구성과 가격은{' '}
         <Link href="/pricing" className="underline">
           상품 안내
-        </Link>
-        에 전부 공개되어 있어요.
+        </Link>{' '}
+        페이지에 전부 공개되어 있어요.
       </>
     ),
   },
@@ -54,8 +54,8 @@ const FAQS: { q: string; a: string; body?: ReactNode }[] = [
         단계별 확률은{' '}
         <Link href="/probability" className="underline">
           확률 공시
-        </Link>
-        에 전부 공개되어 있습니다.
+        </Link>{' '}
+        페이지에 전부 공개되어 있습니다.
       </>
     ),
   },
@@ -83,8 +83,8 @@ const FAQS: { q: string; a: string; body?: ReactNode }[] = [
         강화·초월·보급의 모든 확률과 수치를{' '}
         <Link href="/probability" className="underline">
           확률 공시
-        </Link>
-        에 상시 공개하고 있어요. 확률이 바뀔 때는 사전 공지 후 반영됩니다.
+        </Link>{' '}
+        페이지에 상시 공개하고 있어요. 확률이 바뀔 때는 사전 공지 후 반영됩니다.
       </>
     ),
   },
