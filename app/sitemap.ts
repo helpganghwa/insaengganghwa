@@ -2,8 +2,11 @@ import type { MetadataRoute } from 'next';
 
 import { desc } from 'drizzle-orm';
 
+import { eq } from 'drizzle-orm';
+
 import { db } from '@/lib/db/client';
 import { profiles } from '@/lib/db/schema/profiles';
+import { characters } from '@/lib/db/schema/server';
 
 const SITE = process.env.NEXT_PUBLIC_SITE_URL ?? 'https://ganghwa.app';
 
@@ -31,13 +34,15 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
 
   let profileEntries: MetadataRoute.Sitemap = [];
   try {
+    // 캐릭터(서버) 단위로 — canonical(/u/코드?s=N)과 동일 형태(불일치 시 크롤러 혼선).
     const rows = await db
-      .select({ code: profiles.publicCode })
+      .select({ code: profiles.publicCode, serverId: characters.serverId })
       .from(profiles)
+      .innerJoin(characters, eq(characters.userId, profiles.id))
       .orderBy(desc(profiles.createdAt))
       .limit(2000);
     profileEntries = rows.map((r) => ({
-      url: `${SITE}/u/${r.code}`,
+      url: `${SITE}/u/${r.code}?s=${r.serverId}`,
       changeFrequency: 'daily' as const,
       priority: 0.5,
     }));

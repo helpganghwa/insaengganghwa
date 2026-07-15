@@ -218,12 +218,10 @@ export async function generateMetadata({
   const description = `${data.nickname}님의 인생강화 프로필 — 전투력 ${data.total.toLocaleString('ko-KR')} · 최고 강화 +${data.maxEnhance.toLocaleString('ko-KR')} · 합산 강화 +${data.sumEnhance.toLocaleString('ko-KR')}`;
   // OG는 불변 코드로 — 닉 변경/링크 캐시에도 안정. 서버는 쿼리로 전파.
   const ogImage = `/og/${encodeURIComponent(data.publicCode)}?s=${serverId}`;
-  // canonical — 1서버는 클린 URL, 그 외 서버는 ?s= 포함(서버별 프로필은 별개 문서 —
-  // 루트 './' 상속이 파라미터를 떼면서 다서버 프로필이 한 canonical로 합쳐지는 것 방지).
-  const canonical =
-    serverId === 1
-      ? `/u/${encodeURIComponent(data.publicCode)}`
-      : `/u/${encodeURIComponent(data.publicCode)}?s=${serverId}`;
+  // canonical — 항상 ?s= 명시(1서버 포함, 2026-07-15 사용자 결정). 파라미터 없는 /u/코드는
+  // "조회자 활성 서버"로 해석되는 모호한 주소라 canonical 부적격 — ?s= 형태만이 누구에게나
+  // 같은 문서를 보장(공유 링크의 '서버 1도 항상 명시' 정책과 일관). sitemap도 동일 형태.
+  const canonical = `/u/${encodeURIComponent(data.publicCode)}?s=${serverId}`;
   return {
     title,
     description,
