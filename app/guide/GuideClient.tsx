@@ -258,8 +258,8 @@ export function GuideClient() {
     <div className="pb-24">
       {/* 카테고리 그리드 — 4×3 꽉 찬 버튼(sticky는 레이아웃 겹침 문제로 제거, 2026-07-14) */}
       <div className="border-b border-zinc-100 bg-white px-3 pb-2 pt-2 dark:border-zinc-900 dark:bg-zinc-950">
-        <div className="mb-2 flex items-center justify-between px-1">
-          <h1 className="text-base font-extrabold">게임 안내</h1>
+        {/* h1은 공개 셸(page.tsx)로 승격 — 여기선 티커 토글만. */}
+        <div className="mb-2 flex items-center justify-end px-1">
           <GuideTickerToggle />
         </div>
         <div className="grid grid-cols-4 gap-1.5">
