@@ -140,28 +140,45 @@ export default function RootLayout({ children }: Readonly<{ children: React.Reac
   //   AppHeader(sticky top-0)·BottomNav(sticky bottom-0)가 실제 스크롤 안 하는
   //   컨테이너 기준이 되어 고정이 풀린다(검증됨). width=390 뷰포트라 가로 오버플로
   //   자체가 없어 가드 불필요. 특정 요소가 390 초과 시 그 요소를 고치고 여기 금지.
-  // 구조화 데이터(Schema.org) — 검색 리치 결과(사이트·게임 스니펫).
+  // 구조화 데이터(Schema.org) — 검색 리치 결과 + AI 엔진 인용(SEO 검수 B3, 2026-07-15).
+  // description은 슬로건 대신 정보형(메타 description과 동일 방향), 무료·플랫폼·멀티 명시.
   const site = process.env.NEXT_PUBLIC_SITE_URL ?? 'https://ganghwa.app';
+  const gameDescription =
+    '기다릴수록 성공 확률이 오르는 방치형 강화 RPG. 무기·방어구·장신구를 강화·초월하고 레이드·대난투·길드 점령전에서 겨룹니다. 설치 없이 웹에서 무료로 플레이.';
   const jsonLd = {
     '@context': 'https://schema.org',
     '@graph': [
+      {
+        '@type': 'Organization',
+        '@id': `${site}/#org`,
+        name: '인생강화',
+        url: site,
+        email: 'help@ganghwa.app',
+        logo: `${site}/icons/icon-192.png`,
+      },
       {
         '@type': 'WebSite',
         '@id': `${site}/#website`,
         url: site,
         name: '인생강화',
-        description: '강화는 인생이다',
+        description: gameDescription,
         inLanguage: 'ko-KR',
+        publisher: { '@id': `${site}/#org` },
       },
       {
         '@type': 'VideoGame',
         name: '인생강화',
         url: site,
-        description: '강화는 인생이다',
+        description: gameDescription,
         inLanguage: 'ko',
         applicationCategory: 'Game',
         genre: ['RPG', 'Idle'],
         operatingSystem: 'Web',
+        gamePlatform: ['Web Browser', 'Mobile Web'],
+        playMode: ['SinglePlayer', 'MultiPlayer'],
+        offers: { '@type': 'Offer', price: 0, priceCurrency: 'KRW', description: '무료 플레이(부분 유료화)' },
+        author: { '@id': `${site}/#org` },
+        publisher: { '@id': `${site}/#org` },
         image: `${site}/og.webp`,
       },
     ],
