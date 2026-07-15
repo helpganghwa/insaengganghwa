@@ -1,6 +1,7 @@
 'use client';
 
 import { useEffect, useState } from 'react';
+import Link from 'next/link';
 
 import {
   checkPushSupport,
@@ -14,6 +15,7 @@ import { InstallAppButton } from '@/app/(game)/me/settings/InstallAppButton';
  * 튜토리얼 마무리 팝업 — 첫 강화 완료 후 1회.
  *  - 알림 가치 제안(강화 최고확률 도달 알림) + 권한 요청
  *  - 앱 설치 안내(PWA)
+ *  - 도전 과제 소개(다음 목표 제시 — 튜토리얼 이후 이탈 방지)
  *  - 마무리 CTA(인생강화 도전)
  */
 type PushState = 'idle' | 'pending' | 'done' | 'error' | 'unsupported';
@@ -96,6 +98,20 @@ export function TutorialCompleteModal({ onClose }: { onClose: () => void }) {
         <div className="mt-2 isolate overflow-hidden rounded-xl border border-zinc-200 dark:border-zinc-700">
           <InstallAppButton />
         </div>
+
+        <Link
+          href="/challenges"
+          onClick={onClose}
+          className="mt-2 block rounded-xl border border-amber-500/40 bg-amber-50 px-3 py-2.5 text-left dark:bg-amber-500/10"
+        >
+          <span className="text-[13px] font-bold text-amber-700 dark:text-amber-300">
+            🏆 도전 과제가 열렸어요!
+          </span>
+          <span className="mt-0.5 block text-[12px] leading-relaxed text-zinc-600 dark:text-zinc-300">
+            과제를 하나씩 달성할 때마다 다이아 보상 — 전부 정복하면{' '}
+            <b className="text-amber-600 dark:text-amber-400">💎 5,000 + 📦 60</b> 보너스까지!
+          </span>
+        </Link>
 
         <button
           type="button"
