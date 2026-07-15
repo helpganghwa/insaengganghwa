@@ -271,6 +271,8 @@ export const worldChronicle = pgTable(
     kstDay: date('kst_day').notNull(),
     todayText: text('today_text').notNull(),
     headline: text('headline').notNull(),
+    /** AI 재검수 수정 내역(0119) — [{kind:'fact'|'style', before, after, reason}]. 무수정이면 []. */
+    reviewNotes: jsonb('review_notes'),
     createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
   },
   (t) => [primaryKey({ columns: [t.serverId, t.kstDay] })],

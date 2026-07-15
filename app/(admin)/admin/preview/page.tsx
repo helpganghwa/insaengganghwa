@@ -85,6 +85,37 @@ export default async function AdminPreviewPage() {
                   headline={c.headline}
                   todayText={c.todayText}
                 />
+                {/* AI 재검수 내역(0119) — 초안에서 바뀐 구절 diff. 사람 검수는 이 목록만 훑으면 됨. */}
+                {Array.isArray(c.reviewNotes) && c.reviewNotes.length > 0 ? (
+                  <div className="mt-2 rounded-lg bg-zinc-900 px-3 py-2">
+                    <p className="text-[10px] font-bold text-zinc-400">
+                      🤖 AI 재검수 {(c.reviewNotes as { kind: string }[]).length}건 수정
+                    </p>
+                    <ul className="mt-1 space-y-1">
+                      {(c.reviewNotes as { kind: string; before: string; after: string; reason: string }[]).map(
+                        (n, i) => (
+                          <li key={i} className="text-[11px] leading-relaxed text-zinc-400">
+                            <span
+                              className={`mr-1 rounded px-1 py-px text-[9px] font-bold ${
+                                n.kind === 'fact'
+                                  ? 'bg-red-500/20 text-red-300'
+                                  : 'bg-sky-500/20 text-sky-300'
+                              }`}
+                            >
+                              {n.kind === 'fact' ? '사실' : '문체'}
+                            </span>
+                            <span className="text-zinc-500 line-through">{n.before}</span>
+                            {' → '}
+                            <span className="text-zinc-200">{n.after}</span>
+                            <span className="text-zinc-600"> — {n.reason}</span>
+                          </li>
+                        ),
+                      )}
+                    </ul>
+                  </div>
+                ) : c.reviewNotes != null ? (
+                  <p className="mt-2 text-[10px] text-zinc-500">🤖 AI 재검수 — 수정 없음(초안 통과)</p>
+                ) : null}
               </div>
             ))}
           </div>

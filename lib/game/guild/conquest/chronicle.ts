@@ -176,6 +176,28 @@ export async function aggregateConquestDay(kstDay: string, serverId: number): Pr
   };
 }
 
+/** 재검수 노트 — 어드민 공개 전 검수 페이지에 diff로 노출(0119). */
+export type ChronicleReviewNote = { kind: 'fact' | 'style'; before: string; after: string; reason: string };
+
+const REVIEW_SYSTEM_PROMPT = `너는 대륙 연대기의 수석 편집자다. 이야기꾼이 쓴 초안을 두 기준으로 재검수한다.
+
+[1. 사실 검증 — 사실표가 유일한 진실]
+- 초안의 모든 수치(구역 수·조각 수·보유 수·순위)·소유·귀속 주장을 사실표와 대조한다.
+- 불일치는 사실표 기준으로 고친다. 사실표에 없는 수치·사건은 지어내지 말고 그 대목을 사실표 범위로 줄인다.
+- 특히: 길드별 공격/점령 구역 수를 다른 길드 것과 합치지 말 것, 일부 구역을 잃어도 남은 영토가 있으면 '사라졌다/자리를 잃었다'류 소멸 표현 금지.
+
+[2. 문장 퇴고 — 읽는 재미]
+- 어색한 문장·번역투·같은 단어의 단조로운 반복(예: 같은 수사가 세 문단 연속)을 다듬는다.
+- 이야기의 긴장과 흐름(사건→결과→의미→형세)을 살리되, 잘 쓰인 문장은 건드리지 않는다. 과장·미사여구 추가 금지 — 다듬기지 다시 쓰기가 아니다.
+- 전체 길이는 초안의 ±20% 안에서 유지한다.
+
+[마커 — 절대 규칙]
+- 길드={g|이름}, 인물={u|닉} 또는 {u|닉|코드}, 개별 구역={z|이름}. 모든 이름은 등장할 때마다 마커로 감싼다. 마커 문법을 새로 만들거나 깨뜨리지 말 것.
+
+출력은 JSON 하나만: {"today": string, "headline": string, "changes": [{"kind": "fact"|"style", "before": string, "after": string, "reason": string}]}
+- changes의 before/after는 바뀐 구절만 짧게(전문 아님). 수정이 없으면 원문 그대로 + changes: [].
+- headline은 초안에 있을 때만 다듬고, 초안이 빈 문자열이면 빈 문자열 유지.`;
+
 const SYSTEM_PROMPT = `너는 대륙의 정복 전쟁을 듣는 이에게 들려주는 이야기꾼이다. 길드들이 구역을 두고 벌인 일을 말하듯이 풀어 전한다.
 
 규칙:
@@ -598,10 +620,56 @@ export async function generateAndStoreChronicle(
   if (!today) throw new Error('CHRONICLE_EMPTY');
   if (bigChange && !headline) throw new Error('CHRONICLE_EMPTY');
 
+  // ── AI 재검수 패스(2026-07-15) — 사실 대조(사실표=digest·현황) + 문장 퇴고. best-effort:
+  // 실패·마커 위반 시 초안 유지. 사실표는 코드가 계산한 값이라 "코드가 AI를 검사"하는 구조.
+  let reviewNotes: ChronicleReviewNote[] = [];
+  try {
+    const res = await client().messages.create({
+      model: MODEL_ID,
+      max_tokens: 1600,
+      system: [{ type: 'text', text: REVIEW_SYSTEM_PROMPT, cache_control: { type: 'ephemeral' } }],
+      messages: [
+        {
+          role: 'user',
+          content:
+            `[사실표 — 유일한 진실]\n${digest}\n\n${context}\n\n[초안]\n` +
+            JSON.stringify({ today, headline }) +
+            `\n\n재검수 결과를 JSON으로만 출력하라.`,
+        },
+      ],
+    });
+    const block = res.content.find((b) => b.type === 'text');
+    const raw = block && 'text' in block ? block.text : '';
+    const m = raw.match(/\{[\s\S]*\}/);
+    if (m) {
+      const parsed = JSON.parse(m[0]) as {
+        today?: string;
+        headline?: string;
+        changes?: ChronicleReviewNote[];
+      };
+      const revT = enrichUserMarkers(enforceMarkers(correctMarkers(fixBraces((parsed.today ?? '').trim()))));
+      const revH = bigChange
+        ? enrichUserMarkers(enforceMarkers(correctMarkers(fixBraces((parsed.headline ?? '').trim()))))
+        : '';
+      const viol = [...findViolations(revT), ...(bigChange ? findViolations(revH) : [])];
+      if (revT && viol.length === 0 && (!bigChange || revH)) {
+        today = revT;
+        headline = revH;
+        reviewNotes = (parsed.changes ?? [])
+          .filter((c) => c && (c.kind === 'fact' || c.kind === 'style') && c.after)
+          .slice(0, 12);
+      } else {
+        console.warn(`[chronicle] 재검수본 폐기(빈 본문 또는 마커 위반 ${viol.length}건) — 초안 유지`);
+      }
+    }
+  } catch (e) {
+    console.warn(`[chronicle] 재검수 실패 — 초안 유지: ${(e as Error).message}`);
+  }
+
   await db
     .insert(worldChronicle)
     .values({
-      serverId, kstDay, todayText: today, headline })
+      serverId, kstDay, todayText: today, headline, reviewNotes })
     .onConflictDoNothing({ target: [worldChronicle.serverId, worldChronicle.kstDay] });
   return { created: true };
 }
