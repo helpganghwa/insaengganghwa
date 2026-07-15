@@ -204,22 +204,25 @@ export async function generateMetadata({
   const serverId = await resolveServerId((await searchParams).s);
   const data = await loadProfile(handle, serverId);
   if (!data) return { title: { absolute: '인생강화' } };
-  // 카카오톡 공유 카드(BoastModal)와 문구 통일(2026-05-31 고정 문구 결정).
+  // 카카오톡 공유 카드(BoastModal)와 문구 통일(2026-05-31 고정 문구 결정) — OG/트위터 전용.
   const title = `${data.nickname} - '강화는 인생이다'`;
-  let description = '인생강화에서 지금도 누군가 인생 강화중';
+  let ogDescription = '인생강화에서 지금도 누군가 인생 강화중';
   try {
     const n = await getEnhancingUserCount();
-    if (n > 0) description = `인생강화에서 ${n.toLocaleString('ko-KR')}명이 인생 강화중`;
+    if (n > 0) ogDescription = `인생강화에서 ${n.toLocaleString('ko-KR')}명이 인생 강화중`;
   } catch {
     /* 카운트 조회 실패 시 정적 문구 유지 */
   }
+  // 검색용 description은 페이지 고유 데이터로 개별화(SEO 검수 A5, 2026-07-15) —
+  // /u 수천 건이 전부 같은 문장이면 대량 유사 페이지 신호. loadProfile은 React cache라 추가 쿼리 0.
+  const description = `${data.nickname}님의 인생강화 프로필 — 전투력 ${data.total.toLocaleString('ko-KR')} · 최고 강화 +${data.maxEnhance.toLocaleString('ko-KR')} · 합산 강화 +${data.sumEnhance.toLocaleString('ko-KR')}`;
   // OG는 불변 코드로 — 닉 변경/링크 캐시에도 안정. 서버는 쿼리로 전파.
   const ogImage = `/og/${encodeURIComponent(data.publicCode)}?s=${serverId}`;
   return {
     title,
     description,
-    openGraph: { title, description, images: [ogImage] },
-    twitter: { card: 'summary_large_image', title, description, images: [ogImage] },
+    openGraph: { title, description: ogDescription, images: [ogImage] },
+    twitter: { card: 'summary_large_image', title, description: ogDescription, images: [ogImage] },
   };
 }
 
