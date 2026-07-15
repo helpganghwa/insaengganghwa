@@ -4,7 +4,6 @@ import { useMemo, useState, useTransition } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 
-import { assetUrl } from '@/lib/asset-versions';
 import { ModalShell } from '@/components/ModalShell';
 import { useResourceToast } from '@/components/ResourceToast';
 import { useDiamond } from '@/components/DiamondContext';
@@ -135,20 +134,9 @@ export function ChallengesClient({
           <span className="text-2xl">{completeClaimed ? '👑' : '🎁'}</span>
           <div className="min-w-0 flex-1">
             <div className="text-[13px] font-extrabold">{COMPLETE_BONUS.label}</div>
-            <div className="flex items-center gap-1 text-[11px] text-zinc-500">
-              💎 {COMPLETE_BONUS.diamond.toLocaleString('ko-KR')} +
-              {(['weapon', 'armor', 'accessory'] as const).map((b) => (
-                // eslint-disable-next-line @next/next/no-img-element
-                <img
-                  key={b}
-                  src={assetUrl(`/sprites/hub/box-${b}.png`)}
-                  alt=""
-                  aria-hidden
-                  className="h-4 w-4 object-contain"
-                  style={{ imageRendering: 'pixelated' }}
-                />
-              ))}
-              <span>각 {COMPLETE_BONUS.boxes.weapon}개</span>
+            <div className="text-[11px] tabular-nums text-zinc-500">
+              💎 {COMPLETE_BONUS.diamond.toLocaleString('ko-KR')} + 📦{' '}
+              {COMPLETE_BONUS.boxes.weapon + COMPLETE_BONUS.boxes.armor + COMPLETE_BONUS.boxes.accessory}
             </div>
           </div>
           {completeClaimed ? (
@@ -291,12 +279,13 @@ function Row({
       <span className="shrink-0 text-[11px] tabular-nums text-zinc-400">
         💎{def.diamond.toLocaleString('ko-KR')}
       </span>
+      {/* 액션 — 세 상태 모두 동일 박스(w-14 h-6)로 레이아웃 시프트 방지(2026-07-15). */}
       {state === 'ready' ? (
         <button
           type="button"
           disabled={anyPending}
           onClick={onClaim}
-          className="w-14 shrink-0 rounded-md bg-amber-500 py-1 text-center text-[11px] font-bold text-white shadow active:scale-95 disabled:opacity-50"
+          className="flex h-6 w-14 shrink-0 items-center justify-center rounded-md bg-amber-500 text-[11px] font-bold text-white shadow active:scale-95 disabled:opacity-50"
         >
           {pending ? '…' : '받기'}
         </button>
@@ -304,12 +293,12 @@ function Row({
         <button
           type="button"
           onClick={onGuide}
-          className="w-14 shrink-0 rounded-md border border-zinc-200 py-1 text-center text-[11px] font-semibold text-zinc-500 active:scale-95 dark:border-zinc-700 dark:text-zinc-400"
+          className="flex h-6 w-14 shrink-0 items-center justify-center rounded-md border border-zinc-200 text-[11px] font-semibold text-zinc-500 active:scale-95 dark:border-zinc-700 dark:text-zinc-400"
         >
           가이드
         </button>
       ) : (
-        <span className="w-14 shrink-0 text-center text-[11px] font-bold text-emerald-500">✓</span>
+        <span className="flex h-6 w-14 shrink-0 items-center justify-center text-[11px] font-bold text-emerald-500">✓</span>
       )}
     </div>
   );

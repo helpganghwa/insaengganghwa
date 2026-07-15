@@ -29,7 +29,7 @@ export const CHALLENGE_GROUPS: { id: ChallengeGroup; icon: string; label: string
   { id: 'social', icon: '👥', label: '소셜' },
   { id: 'guild', icon: '🏰', label: '길드' },
   { id: 'raid', icon: '⚔️', label: '레이드' },
-  { id: 'world', icon: '🗺️', label: '월드' },
+  { id: 'world', icon: '🗺️', label: '세계지도' },
   { id: 'avatar', icon: '✨', label: '아바타' },
   { id: 'shop', icon: '🎁', label: '상점' },
 ];

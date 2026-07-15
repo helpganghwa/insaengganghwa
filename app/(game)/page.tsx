@@ -287,13 +287,8 @@ export default async function HomePage() {
       {worldFeed.length > 0 && <WorldTicker entries={worldFeed} />}
       <div className="flex flex-col gap-3 px-4 py-4">
       <RankingTop3Card />
-      <HomeBannerCarousel>
-        {hasUnclaimedDaily ? <DailySupplyCard /> : null}
-        {hasUnclaimedCheckin ? <HubCheckinCard /> : null}
-        {/* 성장패스 상시 배너 — 캐러셀 마지막 슬라이드. CBT엔 일반 유저에게 숨김. */}
-        {hidePaid ? null : <BattlePassBanner />}
-      </HomeBannerCarousel>
-      {/* 도전 과제 — 일회성 온보딩 리워드(0118). 수령 가능하면 앰버 글로우로 유혹. */}
+      {/* 도전 과제 배너 — 일회성 온보딩 리워드(0118). 캐러셀 배너와 동일 규격(h-16),
+          랭킹 바로 아래(2026-07-15 위치·크기 확정). 수령 가능 시 앰버 글로우. */}
       {(() => {
         const actives = activeChallenges(hidePaid);
         const total = actives.length;
@@ -301,52 +296,54 @@ export default async function HomePage() {
         const claimedN = chgStatus ? actives.filter((c) => chgStatus.claimed.has(c.id)).length : 0;
         const claimable = chgStatus?.claimable ?? 0;
         const allDone = chgStatus?.completeClaimed ?? false;
-        if (allDone) return null; // 전부 정복(보너스까지 수령) — 카드 은퇴
+        if (allDone) return null; // 전부 정복(보너스까지 수령) — 배너 은퇴
         return (
           <Link
             href="/challenges"
-            className={`relative isolate flex items-center gap-3 overflow-hidden rounded-2xl border-2 px-3.5 py-3 transition active:scale-[0.99] ${
+            className={`relative isolate block h-16 w-full min-w-0 overflow-hidden rounded-xl border transition active:scale-[0.99] ${
               claimable > 0
-                ? 'border-amber-500/70 shadow-[0_0_18px_rgba(245,158,11,0.25)]'
-                : 'border-zinc-800'
+                ? 'border-amber-500/70 shadow-[0_0_14px_rgba(245,158,11,0.3)]'
+                : 'border-amber-600/40'
             }`}
           >
-            {/* 픽셀아트 배경(Pixellab 신규 생성 — 트로피·보물상자 배너) + 어둠 오버레이 */}
             {/* eslint-disable-next-line @next/next/no-img-element */}
             <img
               src={assetUrl('/sprites/hub/challenges.png')}
               alt=""
               aria-hidden
               draggable={false}
-              className="absolute inset-0 -z-10 h-full w-full object-cover opacity-45"
+              className="absolute inset-0 h-full w-full object-cover"
               style={{ imageRendering: 'pixelated' }}
             />
-            <div
-              className={`absolute inset-0 -z-10 ${
-                claimable > 0
-                  ? 'bg-gradient-to-r from-amber-950/85 via-black/60 to-orange-950/60'
-                  : 'bg-gradient-to-r from-black/85 via-black/65 to-black/50'
-              }`}
-            />
-            <span className="text-2xl drop-shadow">🏆</span>
-            <span className="min-w-0 flex-1">
-              <span className="block text-sm font-bold text-white">도전 과제</span>
-              <span className="mt-0.5 block text-[11px] text-zinc-400">
-                모든 콘텐츠 정복하고 💎{totalDiamond.toLocaleString('ko-KR')} 받기
-              </span>
-            </span>
-            {claimable > 0 ? (
-              <span className="shrink-0 animate-pulse rounded-full bg-amber-500 px-2.5 py-1 text-[11px] font-extrabold text-white">
-                받을 보상 {claimable}
-              </span>
-            ) : (
-              <span className="shrink-0 rounded-full bg-zinc-800 px-2.5 py-1 text-[11px] font-bold tabular-nums text-zinc-400">
-                {claimedN}/{total}
-              </span>
-            )}
+            <div className="pointer-events-none absolute inset-0 bg-gradient-to-r from-black/75 via-black/35 to-transparent" />
+            <div className="relative z-10 flex h-full w-full items-center px-3.5">
+              <div className="min-w-0 flex-1">
+                <div className="text-[10px] font-semibold tracking-wider text-amber-300 drop-shadow-[0_1px_2px_rgba(0,0,0,0.9)]">
+                  도전 과제
+                </div>
+                <div className="truncate text-[12px] font-medium text-white/95 drop-shadow-[0_1px_2px_rgba(0,0,0,0.9)]">
+                  모든 콘텐츠 정복하고 💎{totalDiamond.toLocaleString('ko-KR')} 받기
+                </div>
+              </div>
+              {claimable > 0 ? (
+                <span className="shrink-0 animate-pulse rounded-full bg-amber-500 px-2.5 py-1 text-[11px] font-extrabold text-white shadow">
+                  받을 보상 {claimable}
+                </span>
+              ) : (
+                <span className="shrink-0 rounded-full bg-black/55 px-2.5 py-1 text-[11px] font-bold tabular-nums text-white/90">
+                  {claimedN}/{total}
+                </span>
+              )}
+            </div>
           </Link>
         );
       })()}
+      <HomeBannerCarousel>
+        {hasUnclaimedDaily ? <DailySupplyCard /> : null}
+        {hasUnclaimedCheckin ? <HubCheckinCard /> : null}
+        {/* 성장패스 상시 배너 — 캐러셀 마지막 슬라이드. CBT엔 일반 유저에게 숨김. */}
+        {hidePaid ? null : <BattlePassBanner />}
+      </HomeBannerCarousel>
       <div className="grid grid-cols-2 gap-2.5">
         {MENU.map((m, i) => {
           const count = counts[m.href] ?? 0;
