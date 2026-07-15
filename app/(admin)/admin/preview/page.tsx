@@ -14,13 +14,14 @@ import { ChronicleEditor, TrophyRegenButton } from './PreviewClient';
  */
 export const dynamic = 'force-dynamic';
 
+// 항목별 최근 2개만 — 검수 대상은 항상 최신분(2026-07-15), 과거분은 스크롤 노이즈.
 async function loadData() {
   const [chronicles, battles] = await Promise.all([
     db
       .select()
       .from(worldChronicle)
       .orderBy(desc(worldChronicle.kstDay))
-      .limit(3),
+      .limit(2),
     db.execute(sql`
       select mb.id::text as id, mb.server_id, mb.battle_date::text as battle_date,
              mb.status::text as status, mb.trophy_status, mb.trophy_attempts,
@@ -28,8 +29,8 @@ async function loadData() {
              c.nickname as champion
       from melee_battles mb
       left join characters c on c.user_id = mb.champion_user_id and c.server_id = mb.server_id
-      where mb.battle_date >= (now() at time zone 'Asia/Seoul')::date - 1
       order by mb.battle_date desc, mb.server_id
+      limit 2
     `) as unknown as Promise<
       {
         id: string;
