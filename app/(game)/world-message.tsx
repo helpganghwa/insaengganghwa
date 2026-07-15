@@ -6,17 +6,19 @@ import { profileHref } from '@/lib/game/profile/href';
 import { transcendStyle } from '@/lib/game/equipment/transcend';
 import { milestoneLabel } from '@/lib/game/milestone';
 
-// 강조 색 — 핵심 토큰에만, 사건 종류별 구분(GuildLogFeed와 통일, 2026-07-15):
-// 강화=앰버 · 1위 등극=스카이 · 개인 기록=에메랄드 · 대난투=바이올렛 · 초월=단계색.
+// 강조 색 — 핵심 토큰에만, 사건 종류별 구분(GuildLogFeed와 통일, 2026-07-15 사용자 확정 배색):
+// 강화·개인 기록=레드 · 유저 1위 등극=오렌지 · 길드 1위 등극=푸크시아 · 대난투=앰버 · 초월=단계색.
 const C = {
   amber: 'text-amber-600 dark:text-amber-400',
-  sky: 'text-sky-600 dark:text-sky-400',
-  emerald: 'text-emerald-600 dark:text-emerald-400',
-  violet: 'text-violet-600 dark:text-violet-400',
+  orange: 'text-orange-600 dark:text-orange-400',
+  red: 'text-red-600 dark:text-red-400',
+  fuchsia: 'text-fuchsia-600 dark:text-fuchsia-400',
   // 길드색 — 세계지도 연대기와 동일(슬레이트)
   guild: 'text-slate-600 dark:text-slate-400',
 };
 const hl = (text: string, cls: string) => <span className={`font-semibold ${cls}`}>{text}</span>;
+// 길드명 — 색은 슬레이트 유지, 굵기만 엑스트라볼드(닉네임과 동급 주체 토큰).
+const hb = (text: string, cls: string) => <span className={`font-extrabold ${cls}`}>{text}</span>;
 
 const METRIC_LABEL: Record<string, string> = {
   max: '최고 강화',
@@ -35,11 +37,11 @@ function userNode(
 ): ReactNode {
   const label = nick ?? '알 수 없음';
   // 유저색 — 세계지도 연대기 인물색과 동일(스톤)
-  if (!link || !code) return <span className="font-semibold text-stone-500 dark:text-stone-400">{label}</span>;
+  if (!link || !code) return <span className="font-extrabold text-stone-500 dark:text-stone-400">{label}</span>;
   return (
     <Link
       href={profileHref(code, serverId)}
-      className="font-semibold text-stone-500 hover:underline dark:text-stone-400"
+      className="font-extrabold text-stone-500 hover:underline dark:text-stone-400"
     >
       {label}
     </Link>
@@ -59,9 +61,9 @@ export function worldEventMessage(e: WorldEventEntry, opts?: { link?: boolean })
   const medal = rank === 1 ? '🥇' : rank === 2 ? '🥈' : rank === 3 ? '🥉' : '';
   switch (e.type) {
     case 'melee_rank':
-      return <>{actor}님이 대난투 {hl(`${medal}${rank}위`, C.violet)}에 올랐습니다</>;
+      return <>{actor}님이 대난투 {hl(`${medal}${rank}위`, C.amber)}에 올랐습니다</>;
     case 'enhance':
-      return <>{actor}님이 {item} {hl(`+${level} 강화`, C.amber)}에 성공했습니다</>;
+      return <>{actor}님이 {item} {hl(`+${level} 강화`, C.red)}에 성공했습니다</>;
     case 'transcend': {
       // +N 색상 = 그 초월 단계(색 등급)색과 동일(GuildLogFeed와 통일).
       const [tr, tg, tb] = transcendStyle(level).colorRgb;
@@ -76,15 +78,15 @@ export function worldEventMessage(e: WorldEventEntry, opts?: { link?: boolean })
       );
     }
     case 'guild_create':
-      return <>{actor}님이 {hl(guildName, C.guild)} 길드를 결성했습니다</>;
+      return <>{actor}님이 {hb(guildName, C.guild)} 길드를 결성했습니다</>;
     case 'guild_power_1':
-      return <>{hl(guildName, C.guild)} 길드가 {hl('전투력 1위', C.sky)}에 올랐습니다</>;
+      return <>{hb(guildName, C.guild)} 길드가 {hl('전투력 1위', C.fuchsia)}에 올랐습니다</>;
     case 'guild_zone_1':
-      return <>{hl(guildName, C.guild)} 길드가 {hl('점령지 1위', C.sky)}에 올랐습니다</>;
+      return <>{hb(guildName, C.guild)} 길드가 {hl('점령지 1위', C.fuchsia)}에 올랐습니다</>;
     case 'rank_leader':
-      return <>{actor}님이 {hl(`${METRIC_LABEL[metric] ?? metric} 1위`, C.sky)}에 올랐습니다</>;
+      return <>{actor}님이 {hl(`${METRIC_LABEL[metric] ?? metric} 1위`, C.orange)}에 올랐습니다</>;
     case 'personal_milestone':
-      return <>{actor}님이 {hl(`${milestoneLabel(metric, (d.milestone as number) ?? 0)} 달성`, C.emerald)}했습니다</>;
+      return <>{actor}님이 {hl(`${milestoneLabel(metric, (d.milestone as number) ?? 0)} 달성`, C.red)}했습니다</>;
     default:
       return e.type;
   }

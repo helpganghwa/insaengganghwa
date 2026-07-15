@@ -8,13 +8,18 @@ import { profileHref } from '@/lib/game/profile/href';
 import { milestoneLabel } from '@/lib/game/milestone';
 import { transcendStyle } from '@/lib/game/equipment/transcend';
 
-// 강조 색 — '중요 포인트' 토큰에만, 업적은 월드 피드와 동일 배색(강화=앰버·1위/랭킹=스카이·기록=에메랄드·대난투=바이올렛).
+// 강조 색 — '중요 포인트' 토큰에만, 업적은 월드 피드와 동일 배색(2026-07-15 사용자 확정):
+// 강화·기록=레드 · 1위/랭킹=오렌지 · 대난투=앰버. 운영 사건은 수금/지급=스카이 ·
+// 위임=핑크 · 부길드장=인디고 · 공지=슬레이트.
 const C = {
   amber: 'text-amber-600 dark:text-amber-400',
+  orange: 'text-orange-600 dark:text-orange-400',
   emerald: 'text-emerald-600 dark:text-emerald-400',
   red: 'text-red-600 dark:text-red-400',
   sky: 'text-sky-600 dark:text-sky-400',
-  violet: 'text-violet-600 dark:text-violet-400',
+  pink: 'text-pink-600 dark:text-pink-400',
+  indigo: 'text-indigo-600 dark:text-indigo-400',
+  slate: 'text-slate-600 dark:text-slate-400',
 };
 const hl = (text: string, cls: string) => <span className={`font-semibold ${cls}`}>{text}</span>;
 
@@ -22,11 +27,11 @@ const hl = (text: string, cls: string) => <span className={`font-semibold ${cls}
 function user(code: string | null, nick: string | null, serverId: number): ReactNode {
   const label = nick ?? '알 수 없음';
   // 닉네임 색 — 월드 로그/연대기 인물색과 동일(스톤)
-  if (!code) return <span className="font-semibold text-stone-500 dark:text-stone-400">{label}</span>;
+  if (!code) return <span className="font-extrabold text-stone-500 dark:text-stone-400">{label}</span>;
   return (
     <Link
       href={profileHref(code, serverId)}
-      className="font-semibold text-stone-500 hover:underline dark:text-stone-400"
+      className="font-extrabold text-stone-500 hover:underline dark:text-stone-400"
     >
       {label}
     </Link>
@@ -73,7 +78,7 @@ function message(e: GuildLogEntry): ReactNode {
     case 'levelup':
       return <>길드가 {hl(`Lv.${(e.detail?.level as number) ?? '?'}`, C.amber)} 달성했습니다</>;
     case 'tax_collect':
-      return <>{actor}님이 세금 {hl(`${amt}💎`, C.amber)}를 수금했습니다</>;
+      return <>{actor}님이 세금 {hl(`${amt}💎`, C.sky)}를 수금했습니다</>;
     case 'tax_distribute':
       return <>{target}님에게 세금 {hl(`${amt}💎`, C.sky)}를 지급했습니다</>;
     case 'zone_capture':
@@ -83,9 +88,9 @@ function message(e: GuildLogEntry): ReactNode {
     case 'kick':
       return <>{actor}님이 {target}님을 {hl('추방', C.red)}했습니다</>;
     case 'transfer_leadership':
-      return <>{actor}님이 {target}님에게 {hl('길드장을 위임', C.violet)}했습니다</>;
+      return <>{actor}님이 {target}님에게 {hl('길드장을 위임', C.pink)}했습니다</>;
     case 'set_vice':
-      return <>{actor}님이 {target}님을 {hl('부길드장', C.sky)}으로 임명했습니다</>;
+      return <>{actor}님이 {target}님을 {hl('부길드장', C.indigo)}으로 임명했습니다</>;
     case 'unset_vice':
       return <>{actor}님이 {target}님의 부길드장을 해제했습니다</>;
     case 'set_join_policy':
@@ -94,13 +99,13 @@ function message(e: GuildLogEntry): ReactNode {
       return e.detail?.cleared ? (
         <>{actor}님이 공지를 삭제했습니다</>
       ) : (
-        <>{actor}님이 {hl('공지', C.sky)}를 수정했습니다</>
+        <>{actor}님이 {hl('공지', C.slate)}를 수정했습니다</>
       );
     case 'auto_handover':
-      return <>{target}님에게 {hl('길드장이 자동 위임', C.violet)}되었습니다</>;
+      return <>{target}님에게 {hl('길드장이 자동 위임', C.pink)}되었습니다</>;
     // 업적 — 멤버.
     case 'achv_enhance':
-      return <>{actor}님이 {item} {hl(`+${level} 강화`, C.amber)}에 성공했습니다</>;
+      return <>{actor}님이 {item} {hl(`+${level} 강화`, C.red)}에 성공했습니다</>;
     case 'achv_transcend': {
       // +N 색상 = 그 초월 단계(색 등급)색과 동일.
       const [tr, tg, tb] = transcendStyle(level).colorRgb;
@@ -115,16 +120,16 @@ function message(e: GuildLogEntry): ReactNode {
       );
     }
     case 'achv_melee':
-      return <>{actor}님이 대난투 {hl(`${medal}${rank}위`, C.violet)}에 올랐습니다</>;
+      return <>{actor}님이 대난투 {hl(`${medal}${rank}위`, C.amber)}에 올랐습니다</>;
     case 'achv_rank_leader':
-      return <>{actor}님이 {hl(`${METRIC_LABEL[metric] ?? metric} 1위`, C.sky)}에 올랐습니다</>;
+      return <>{actor}님이 {hl(`${METRIC_LABEL[metric] ?? metric} 1위`, C.orange)}에 올랐습니다</>;
     case 'achv_milestone':
-      return <>{actor}님이 {hl(`${milestoneLabel(metric, (e.detail?.milestone as number) ?? 0)} 달성`, C.emerald)}했습니다</>;
+      return <>{actor}님이 {hl(`${milestoneLabel(metric, (e.detail?.milestone as number) ?? 0)} 달성`, C.red)}했습니다</>;
     // 업적 — 길드.
     case 'achv_guild_power_rank':
-      return <>길드가 전투력 랭킹 {hl(`${medal}${rank}위`, C.sky)}를 달성했습니다</>;
+      return <>길드가 전투력 랭킹 {hl(`${medal}${rank}위`, C.orange)}를 달성했습니다</>;
     case 'achv_guild_zone_rank':
-      return <>길드가 점령지 랭킹 {hl(`${medal}${rank}위`, C.sky)}를 달성했습니다</>;
+      return <>길드가 점령지 랭킹 {hl(`${medal}${rank}위`, C.orange)}를 달성했습니다</>;
     default:
       return e.action;
   }
