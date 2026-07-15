@@ -1,6 +1,5 @@
 'use client';
 
-import { markClientChallengeAction } from '@/app/(game)/challenges/actions';
 import { useEffect, useMemo, useState } from 'react';
 import { createPortal } from 'react-dom';
 
@@ -178,7 +177,7 @@ export function BoastModal({
       }
     }
   };
-  const doShareKakao = async () => {
+  const doShareKakao = () => {
     const k = (window as unknown as { Kakao?: KakaoApi }).Kakao;
     if (!k || !k.isInitialized()) {
       showError('카카오톡 공유가 준비되지 않았습니다. 잠시 후 다시 시도해주세요.');
@@ -192,13 +191,13 @@ export function BoastModal({
     // '인생강화 시작' — /s/[code]?start=1로 보내 pending_referral 쿠키를 세팅(추천 귀속) 후
     // 앱 시작(/)으로 리다이렉트. 직접 '/'로 보내면 쿠키가 없어 추천인 리워드가 누락됨.
     const startUrl = `${origin}/s/${encodeURIComponent(publicCode)}?start=1&s=${serverId}`;
-    // 도전 과제(0118) — 자랑 공유 마킹(멱등, 공유 실행 자체로 인정). ⚠ sendDefault가 모바일에서
-    // 카카오 앱으로 즉시 전환하며 전송 중인 요청을 끊는 레이스가 있어(2026-07-15 CBT) **await 후** 공유.
-    // 마킹 실패해도 공유는 진행(best-effort).
+    // 도전 과제(0118) — 자랑 공유 마킹(멱등, 버튼 클릭 자체로 인정). sendBeacon은 카카오 앱
+    // 전환/페이지 이탈에도 전송이 보장돼 공유 로직을 건드리지 않는다(2026-07-15 — await 방식은
+    // 클릭 제스처와 sendDefault 사이 틈을 만들어 회귀, 원복).
     try {
-      await markClientChallengeAction('boast_share');
+      navigator.sendBeacon('/api/challenges/mark?e=boast_share');
     } catch {
-      /* 마킹 실패 무시 — 다음 공유에서 재시도됨 */
+      /* 미지원 환경 — 마킹 생략(다음 공유에서 재시도) */
     }
     k.Share.sendDefault({
       objectType: 'feed',
