@@ -15,7 +15,7 @@ import {
   type ChallengeGroup,
 } from '@/lib/game/challenges/defs';
 
-import { claimChallengeAction } from './actions';
+import { claimChallengeAction, claimAllChallengesAction } from './actions';
 
 /**
  * 도전 과제 화면 — 전 과제 한눈에 + 개별 수령 + 전체 완료 특별 보상(2026-07-14).
@@ -106,6 +106,41 @@ export function ChallengesClient({
     });
   };
 
+  // 일괄 수령 — 달성 & 미수령 전량(완료 보너스 제외, 단일 트랜잭션). 낙관 처리 동일.
+  const claimAll = () => {
+    if (pendingIds.has('__all__')) return;
+    const targets = list.filter((c) => done[c.id] && !claimed.has(c.id) && !pendingIds.has(c.id));
+    if (targets.length === 0) return;
+    const totalDiamond = targets.reduce((a, c) => a + c.diamond, 0);
+    setPendingIds((p) => new Set(p).add('__all__'));
+    setClaimed((s) => new Set([...s, ...targets.map((c) => c.id)]));
+    optimisticAdjust(BigInt(totalDiamond));
+    start(async () => {
+      const r = await claimAllChallengesAction();
+      setPendingIds((p) => {
+        const n = new Set(p);
+        n.delete('__all__');
+        return n;
+      });
+      if (r.status !== 'success') {
+        setClaimed((s) => {
+          const n = new Set(s);
+          for (const c of targets) n.delete(c.id);
+          return n;
+        });
+        optimisticAdjust(BigInt(-totalDiamond));
+        showError(r.message);
+        return;
+      }
+      showHeaderToast({
+        title: `💎 ${r.diamond.toLocaleString('ko-KR')} 획득!`,
+        detail: r.boxes
+          ? `과제 ${r.count}개 · 보급상자 ${r.boxes.weapon + r.boxes.armor + r.boxes.accessory}개 지급`
+          : `과제 ${r.count}개 수령`,
+      });
+    });
+  };
+
   return (
     <div className="px-4 py-4 pb-24">
       {/* ── 헤더 + 전체 진행 ── */}
@@ -161,9 +196,19 @@ export function ChallengesClient({
       </div>
 
       {claimableCount > 0 ? (
-        <p className="mt-2.5 text-[12px] font-semibold text-amber-600 dark:text-amber-400">
-          ✨ 지금 받을 수 있는 보상 {claimableCount}개
-        </p>
+        <div className="mt-2.5 flex items-center justify-between gap-2">
+          <p className="text-[12px] font-semibold text-amber-600 dark:text-amber-400">
+            ✨ 지금 받을 수 있는 보상 {claimableCount}개
+          </p>
+          <button
+            type="button"
+            disabled={pendingIds.has('__all__')}
+            onClick={claimAll}
+            className="shrink-0 rounded-lg bg-amber-500 px-3 py-1 text-[11px] font-bold text-white shadow active:scale-95 disabled:opacity-50"
+          >
+            {pendingIds.has('__all__') ? '수령 중…' : '모두 받기'}
+          </button>
+        </div>
       ) : null}
 
       {/* ── 그룹별 과제 목록 — CSS 헤더 + 컴팩트 1줄 행 ── */}

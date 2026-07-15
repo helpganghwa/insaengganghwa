@@ -178,7 +178,7 @@ export function BoastModal({
       }
     }
   };
-  const doShareKakao = () => {
+  const doShareKakao = async () => {
     const k = (window as unknown as { Kakao?: KakaoApi }).Kakao;
     if (!k || !k.isInitialized()) {
       showError('카카오톡 공유가 준비되지 않았습니다. 잠시 후 다시 시도해주세요.');
@@ -192,8 +192,14 @@ export function BoastModal({
     // '인생강화 시작' — /s/[code]?start=1로 보내 pending_referral 쿠키를 세팅(추천 귀속) 후
     // 앱 시작(/)으로 리다이렉트. 직접 '/'로 보내면 쿠키가 없어 추천인 리워드가 누락됨.
     const startUrl = `${origin}/s/${encodeURIComponent(publicCode)}?start=1&s=${serverId}`;
-    // 도전 과제(0118) — 자랑 공유 마킹(멱등·fire-and-forget, 공유 실행 자체로 인정).
-    void markClientChallengeAction('boast_share');
+    // 도전 과제(0118) — 자랑 공유 마킹(멱등, 공유 실행 자체로 인정). ⚠ sendDefault가 모바일에서
+    // 카카오 앱으로 즉시 전환하며 전송 중인 요청을 끊는 레이스가 있어(2026-07-15 CBT) **await 후** 공유.
+    // 마킹 실패해도 공유는 진행(best-effort).
+    try {
+      await markClientChallengeAction('boast_share');
+    } catch {
+      /* 마킹 실패 무시 — 다음 공유에서 재시도됨 */
+    }
     k.Share.sendDefault({
       objectType: 'feed',
       content: {
