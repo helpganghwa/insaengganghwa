@@ -6,9 +6,13 @@ import { profileHref } from '@/lib/game/profile/href';
 import { transcendStyle } from '@/lib/game/equipment/transcend';
 import { milestoneLabel } from '@/lib/game/milestone';
 
-// 강조 색 — 핵심 토큰에만(GuildLogFeed와 통일).
+// 강조 색 — 핵심 토큰에만, 사건 종류별 구분(GuildLogFeed와 통일, 2026-07-15):
+// 강화=앰버 · 1위 등극=스카이 · 개인 기록=에메랄드 · 대난투=바이올렛 · 초월=단계색.
 const C = {
   amber: 'text-amber-600 dark:text-amber-400',
+  sky: 'text-sky-600 dark:text-sky-400',
+  emerald: 'text-emerald-600 dark:text-emerald-400',
+  violet: 'text-violet-600 dark:text-violet-400',
   // 길드색 — 세계지도 연대기와 동일(슬레이트)
   guild: 'text-slate-600 dark:text-slate-400',
 };
@@ -55,7 +59,7 @@ export function worldEventMessage(e: WorldEventEntry, opts?: { link?: boolean })
   const medal = rank === 1 ? '🥇' : rank === 2 ? '🥈' : rank === 3 ? '🥉' : '';
   switch (e.type) {
     case 'melee_rank':
-      return <>{actor}님이 대난투 {hl(`${medal}${rank}위`, C.amber)}에 올랐습니다</>;
+      return <>{actor}님이 대난투 {hl(`${medal}${rank}위`, C.violet)}에 올랐습니다</>;
     case 'enhance':
       return <>{actor}님이 {item} {hl(`+${level} 강화`, C.amber)}에 성공했습니다</>;
     case 'transcend': {
@@ -74,13 +78,13 @@ export function worldEventMessage(e: WorldEventEntry, opts?: { link?: boolean })
     case 'guild_create':
       return <>{actor}님이 {hl(guildName, C.guild)} 길드를 결성했습니다</>;
     case 'guild_power_1':
-      return <>{hl(guildName, C.guild)} 길드가 {hl('전투력 1위', C.amber)}에 올랐습니다</>;
+      return <>{hl(guildName, C.guild)} 길드가 {hl('전투력 1위', C.sky)}에 올랐습니다</>;
     case 'guild_zone_1':
-      return <>{hl(guildName, C.guild)} 길드가 {hl('점령지 1위', C.amber)}에 올랐습니다</>;
+      return <>{hl(guildName, C.guild)} 길드가 {hl('점령지 1위', C.sky)}에 올랐습니다</>;
     case 'rank_leader':
-      return <>{actor}님이 {hl(`${METRIC_LABEL[metric] ?? metric} 1위`, C.amber)}에 올랐습니다</>;
+      return <>{actor}님이 {hl(`👑 ${METRIC_LABEL[metric] ?? metric} 1위`, C.sky)}에 올랐습니다</>;
     case 'personal_milestone':
-      return <>{actor}님이 {hl(`${milestoneLabel(metric, (d.milestone as number) ?? 0)} 달성`, C.amber)}했습니다</>;
+      return <>{actor}님이 {hl(`${milestoneLabel(metric, (d.milestone as number) ?? 0)} 달성`, C.emerald)}했습니다</>;
     default:
       return e.type;
   }

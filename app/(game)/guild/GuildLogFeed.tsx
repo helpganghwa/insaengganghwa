@@ -8,7 +8,7 @@ import { profileHref } from '@/lib/game/profile/href';
 import { milestoneLabel } from '@/lib/game/milestone';
 import { transcendStyle } from '@/lib/game/equipment/transcend';
 
-// 강조 색 — 줄 전체가 아니라 '중요 포인트' 토큰에만 적용.
+// 강조 색 — '중요 포인트' 토큰에만, 업적은 월드 피드와 동일 배색(강화=앰버·1위/랭킹=스카이·기록=에메랄드·대난투=바이올렛).
 const C = {
   amber: 'text-amber-600 dark:text-amber-400',
   emerald: 'text-emerald-600 dark:text-emerald-400',
@@ -115,16 +115,16 @@ function message(e: GuildLogEntry): ReactNode {
       );
     }
     case 'achv_melee':
-      return <>{actor}님이 대난투 {hl(`${medal}${rank}위`, C.amber)}에 올랐습니다</>;
+      return <>{actor}님이 대난투 {hl(`${medal}${rank}위`, C.violet)}에 올랐습니다</>;
     case 'achv_rank_leader':
-      return <>{actor}님이 {hl(`${METRIC_LABEL[metric] ?? metric} 1위`, C.amber)}에 올랐습니다</>;
+      return <>{actor}님이 {hl(`👑 ${METRIC_LABEL[metric] ?? metric} 1위`, C.sky)}에 올랐습니다</>;
     case 'achv_milestone':
-      return <>{actor}님이 {hl(`${milestoneLabel(metric, (e.detail?.milestone as number) ?? 0)} 달성`, C.amber)}했습니다</>;
+      return <>{actor}님이 {hl(`${milestoneLabel(metric, (e.detail?.milestone as number) ?? 0)} 달성`, C.emerald)}했습니다</>;
     // 업적 — 길드.
     case 'achv_guild_power_rank':
-      return <>길드가 전투력 랭킹 {hl(`${medal}${rank}위`, C.emerald)}를 달성했습니다</>;
+      return <>길드가 전투력 랭킹 {hl(`${medal}${rank}위`, C.sky)}를 달성했습니다</>;
     case 'achv_guild_zone_rank':
-      return <>길드가 점령지 랭킹 {hl(`${medal}${rank}위`, C.emerald)}를 달성했습니다</>;
+      return <>길드가 점령지 랭킹 {hl(`${medal}${rank}위`, C.sky)}를 달성했습니다</>;
     default:
       return e.action;
   }

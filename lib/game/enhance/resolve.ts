@@ -202,23 +202,35 @@ export async function resolveEnhance(input: ResolveInput): Promise<ResolveResult
     }
   }
 
-  // 길드 업적 — 강화 100단위 돌파 시 길드 피드에 노출(best-effort). mega(+2)로 100을 건너뛰어도 경계 통과로 포착.
+  // 강화 업적 — 개인 최초 달성 기준(초월과 동일, 2026-07-15): 새 100단위 경계가 본인 전 장비를
+  // 통틀어 처음일 때만 길드/월드 피드에 발표. 아이템별 반복(+100 재달성)은 피드 스팸이라 제거.
+  // mega(+2)로 100을 건너뛰어도 경계 통과로 포착.
   if (
     (outcome === 'success' || outcome === 'mega') &&
     Math.floor(toLevel / 100) > Math.floor(fromLevel / 100)
   ) {
     try {
-      const milestone = Math.floor(toLevel / 100) * 100;
-      const [ci] = (await db.execute(
-        sql`select name from catalog_items where id = ${catalogItemId} limit 1`,
-      )) as unknown as { name: string }[];
-      await logMemberAchievement(String(job.user_id), Number(job.job_server_id), {
-        action: 'achv_enhance',
-        detail: { item: ci?.name ?? '장비', level: milestone },
-      });
-      await logWorldEvent(Number(job.job_server_id), 'enhance', { item: ci?.name ?? '장비', level: milestone }, {
-        actorUserId: String(job.user_id),
-      });
+      // 이 장비 행은 이미 toLevel로 갱신됨 — 이전 개인 최고 = (다른 장비 최고) vs fromLevel.
+      const [best] = (await db.execute(sql`
+        select coalesce(max(enhance_level), 0)::int as m
+        from user_equipment
+        where user_id = ${String(job.user_id)}::uuid and server_id = ${Number(job.job_server_id)}
+          and catalog_item_id <> ${catalogItemId}
+      `)) as unknown as { m: number }[];
+      const prevBest = Math.max(best?.m ?? 0, fromLevel);
+      if (Math.floor(toLevel / 100) > Math.floor(prevBest / 100)) {
+        const milestone = Math.floor(toLevel / 100) * 100;
+        const [ci] = (await db.execute(
+          sql`select name from catalog_items where id = ${catalogItemId} limit 1`,
+        )) as unknown as { name: string }[];
+        await logMemberAchievement(String(job.user_id), Number(job.job_server_id), {
+          action: 'achv_enhance',
+          detail: { item: ci?.name ?? '장비', level: milestone },
+        });
+        await logWorldEvent(Number(job.job_server_id), 'enhance', { item: ci?.name ?? '장비', level: milestone }, {
+          actorUserId: String(job.user_id),
+        });
+      }
     } catch {
       // 업적 기록 실패 무시.
     }
