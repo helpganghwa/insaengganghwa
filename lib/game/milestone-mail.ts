@@ -14,7 +14,9 @@ import { mailbox } from '@/lib/db/schema/mailbox';
 
 export type MilestoneMailMetric = 'enhance' | 'sum' | 'combat' | 'raid' | 'melee' | 'transcend';
 
-const SENDER = '기록의 전당';
+// 발신 '인생강화' + type 'admin' — 카드가 "인생강화 ✓"(인증 배지)로 표시되는 특별 우편
+// (2026-07-15 사용자 확정: '보상' 배지 대신). admin 타입 의도적 재사용(별도 enum 불필요).
+const SENDER = '인생강화';
 
 /** 전투력 축약 한글 표기 — milestone.ts와 동일 규칙(10만/100만/1000만/1억). */
 function koreanCount(v: number): string {
@@ -158,7 +160,7 @@ export async function sendMilestoneMail(
     await db.insert(mailbox).values({
       userId,
       serverId,
-      type: 'reward',
+      type: 'admin',
       title: composeTitle(metric, milestone),
       body: composeBody(metric, milestone),
       senderLabel: SENDER,
