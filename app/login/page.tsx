@@ -88,6 +88,19 @@ export default async function LoginPage({
           </form>
         )}
 
+        {/* 약관 동의 고지 — 로그인 버튼 바로 아래(동의 시점과 근접, 2026-07-15 위치 이동). */}
+        <p className="mt-2.5 text-[11px] leading-relaxed text-zinc-500">
+          로그인 시{' '}
+          <Link href="/legal/terms" className="underline">
+            이용약관
+          </Link>{' '}
+          및{' '}
+          <Link href="/legal/privacy" className="underline">
+            개인정보처리방침
+          </Link>
+          에 동의하는 것으로 간주됩니다.
+        </p>
+
         {/* 소셜 증명 — 로그인 버튼 아래, 프로필 페이지와 동일 통계 카드(공유 컴포넌트) */}
         <div className="mt-5 w-full">
           <Suspense fallback={<EnhanceStatsFallback />}>
@@ -97,39 +110,29 @@ export default async function LoginPage({
 
         {/* 게임 소개 — 검색·AI 크롤러가 읽는 유일한 공개 설명(SEO 검수 A1, 2026-07-15).
             스크롤 아래 배치라 로그인 전환 동선 무영향. h1은 사이트 전체에서 이 페이지가 대문. */}
-        <section className="mt-8 w-full text-left">
-          <h1 className="text-[17px] font-extrabold leading-snug text-zinc-100">
+        <section className="mt-6 w-full text-left">
+          <h1 className="text-[15px] font-extrabold leading-snug text-zinc-100">
             인생강화 — 기다릴수록 강해지는 방치형 강화 RPG
           </h1>
-          <p className="mt-2 text-[12.5px] leading-relaxed text-zinc-400">
+          <p className="mt-1.5 text-[12px] leading-relaxed text-zinc-400">
             장비를 강화 슬롯에 올려두면 시간이 흐를수록 성공 확률이 올라갑니다. 조급하게 두드릴지,
             끝까지 기다릴지 — 선택은 당신의 몫. 설치 없이 웹에서 바로, 무료로 시작하세요.
           </p>
-          <div className="mt-4 grid grid-cols-2 gap-2">
+          <div className="mt-3 grid grid-cols-2 gap-1.5">
             {[
-              ['⏳', '시간이 무기', '기다릴수록 오르는 성공 확률, 자면서도 성장'],
-              ['📦', '수집과 초월', '100종+ 장비, 중복 수집으로 자동 초월'],
-              ['⚔️', '함께 겨루기', '레이드 · 매일 아침 대난투 · 길드 점령전'],
-              ['🆓', '가볍게 시작', '설치 없음, 카카오 3초 로그인, 무료'],
+              ['⏳', '시간이 무기', '기다릴수록 오르는 성공 확률'],
+              ['📦', '수집과 초월', '100종+ 장비, 중복 수집 자동 초월'],
+              ['⚔️', '함께 겨루기', '레이드 · 대난투 · 길드 점령전'],
+              ['🆓', '가볍게 시작', '설치 없음, 카카오 3초, 무료'],
             ].map(([icon, t, d]) => (
-              <div key={t} className="rounded-xl border border-white/10 bg-white/[0.03] px-3 py-2.5">
-                <div className="text-base" aria-hidden>
-                  {icon}
-                </div>
-                <h2 className="mt-1 text-[12px] font-bold text-zinc-200">{t}</h2>
-                <p className="mt-0.5 text-[11px] leading-relaxed text-zinc-500">{d}</p>
+              <div key={t} className="rounded-lg bg-white/[0.04] px-2.5 py-2">
+                <h2 className="text-[11.5px] font-bold text-zinc-200">
+                  <span aria-hidden>{icon}</span> {t}
+                </h2>
+                <p className="mt-0.5 text-[10.5px] leading-snug text-zinc-500">{d}</p>
               </div>
             ))}
           </div>
-          <p className="mt-3 text-[11px] text-zinc-500">
-            <Link href="/probability" className="underline">
-              강화 확률 공시
-            </Link>
-            {' · '}
-            <Link href="/pricing" className="underline">
-              상품 안내
-            </Link>
-          </p>
         </section>
 
         {/* 심사용 ID/PW 로그인 — 포트원·게임위 심사관이 카카오 없이 로그인. env로만 노출/차단. */}
@@ -175,17 +178,6 @@ export default async function LoginPage({
             </p>
           </div>
         ) : null}
-        <p className="mt-5 text-[11px] leading-relaxed text-zinc-500">
-          로그인 시{' '}
-          <Link href="/legal/terms" className="underline">
-            이용약관
-          </Link>{' '}
-          및{' '}
-          <Link href="/legal/privacy" className="underline">
-            개인정보처리방침
-          </Link>
-          에 동의하는 것으로 간주됩니다.
-        </p>
       </main>
       <PublicFooter />
     </div>
