@@ -57,7 +57,7 @@ export function ChallengesClient({
   const { optimisticAdjust } = useDiamond();
   const [claimed, setClaimed] = useState<Set<string>>(() => new Set(claimedInit));
   const [completeClaimed, setCompleteClaimed] = useState(completeClaimedInit);
-  const [pendingId, setPendingId] = useState<string | null>(null);
+  const [pendingIds, setPendingIds] = useState<Set<string>>(() => new Set());
   const [guideFor, setGuideFor] = useState<ChallengeDef | null>(null);
   const [, start] = useTransition();
 
@@ -73,15 +73,19 @@ export function ChallengesClient({
   const progress = Math.round((claimedCount / list.length) * 100);
 
   const claim = (id: string, diamond: number) => {
-    if (pendingId) return;
-    setPendingId(id);
+    if (pendingIds.has(id)) return;
+    setPendingIds((p) => new Set(p).add(id));
     const isComplete = id === COMPLETE_BONUS.id;
     if (isComplete) setCompleteClaimed(true);
     else setClaimed((s) => new Set(s).add(id));
     optimisticAdjust(BigInt(diamond));
     start(async () => {
       const r = await claimChallengeAction(id);
-      setPendingId(null);
+      setPendingIds((p) => {
+        const n = new Set(p);
+        n.delete(id);
+        return n;
+      });
       if (r.status !== 'success') {
         if (isComplete) setCompleteClaimed(false);
         else
@@ -100,7 +104,7 @@ export function ChallengesClient({
           ? `보급상자 ${r.boxes.weapon + r.boxes.armor + r.boxes.accessory}개 지급`
           : undefined,
       });
-      router.refresh();
+      // router.refresh 없음 — 로컬 낙관 상태가 진실과 일치(서버 멱등 수령 성공 시).
     });
   };
 
@@ -144,7 +148,7 @@ export function ChallengesClient({
           ) : completeReady ? (
             <button
               type="button"
-              disabled={pendingId != null}
+              disabled={pendingIds.has(COMPLETE_BONUS.id)}
               onClick={() => claim(COMPLETE_BONUS.id, COMPLETE_BONUS.diamond)}
               className="shrink-0 animate-pulse rounded-lg bg-gradient-to-r from-amber-500 to-orange-500 px-3.5 py-1.5 text-[12px] font-extrabold text-white shadow-lg disabled:opacity-50"
             >
@@ -182,8 +186,7 @@ export function ChallengesClient({
                   key={c.id}
                   def={c}
                   state={claimed.has(c.id) ? 'claimed' : done[c.id] ? 'ready' : 'todo'}
-                  pending={pendingId === c.id}
-                  anyPending={pendingId != null}
+                  pending={pendingIds.has(c.id)}
                   onClaim={() => claim(c.id, c.diamond)}
                   onGuide={() => setGuideFor(c)}
                 />
@@ -240,14 +243,12 @@ function Row({
   def,
   state,
   pending,
-  anyPending,
   onClaim,
   onGuide,
 }: {
   def: ChallengeDef;
   state: 'claimed' | 'ready' | 'todo';
   pending: boolean;
-  anyPending: boolean;
   onClaim: () => void;
   onGuide: () => void;
 }) {
@@ -283,7 +284,7 @@ function Row({
       {state === 'ready' ? (
         <button
           type="button"
-          disabled={anyPending}
+          disabled={pending}
           onClick={onClaim}
           className="flex h-6 w-14 shrink-0 items-center justify-center rounded-md bg-amber-500 text-[11px] font-bold text-white shadow active:scale-95 disabled:opacity-50"
         >
