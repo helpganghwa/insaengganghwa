@@ -245,13 +245,6 @@ export function TutorialCoach({ statePromise }: { statePromise: Promise<Tutorial
             await startTutorialAction();
           });
         }}
-        onSkip={() => {
-          setPhase('done');
-          persist(null);
-          startAction(async () => {
-            await skipTutorialAction();
-          });
-        }}
       />
     );
   }

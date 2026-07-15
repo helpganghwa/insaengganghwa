@@ -1,17 +1,16 @@
 'use client';
 
 /**
- * 신규 첫 진입 — 메인페이지에서 튜토리얼 시작/건너뛰기 선택 팝업.
- * 선택에 따라 코치 진행 여부 결정(시작=ACTIVE, 건너뛰기=DONE).
+ * 신규 첫 진입 — 메인페이지 튜토리얼 시작 팝업.
+ * 건너뛰기 없음(2026-07-15) — 시작만 가능. 이탈 경로는 진행 중 '그만두기'로 일원화
+ * (인트로서 스킵한 유저가 첫 루프를 전혀 모른 채 방치되는 문제 방지).
  */
 export function TutorialIntroModal({
   pending,
   onStart,
-  onSkip,
 }: {
   pending: boolean;
   onStart: () => void;
-  onSkip: () => void;
 }) {
   return (
     <div
@@ -34,7 +33,7 @@ export function TutorialIntroModal({
           처음이시군요. 보급 상자 열기 → 장착 → 강화까지 1분이면 끝나는 짧은 안내를
           시작할까요?
         </p>
-        <div className="mt-5 flex flex-col gap-2">
+        <div className="mt-5">
           <button
             type="button"
             onClick={onStart}
@@ -42,14 +41,6 @@ export function TutorialIntroModal({
             className="w-full rounded-xl bg-gradient-to-r from-amber-500 to-orange-500 px-3 py-3 text-[14px] font-extrabold text-amber-950 disabled:opacity-60"
           >
             ⚒️ 튜토리얼 시작하기
-          </button>
-          <button
-            type="button"
-            onClick={onSkip}
-            disabled={pending}
-            className="w-full rounded-xl px-3 py-2 text-[12px] font-medium text-zinc-500 disabled:opacity-60 dark:text-zinc-400"
-          >
-            건너뛰기
           </button>
         </div>
       </div>
