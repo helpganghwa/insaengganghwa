@@ -399,21 +399,33 @@ export function ChronicleReplayPanel({
     }
   };
 
+  // 정적 ChronicleText와 동일 개행 — 정적판의 구역/길드는 <button>(inline-block: 이름을
+  // 한 덩어리로 줄바꿈)이라, 재생판 span도 inline-block으로 맞춘다(2026-07-16: 재생/완료
+  // 화면의 개행 기준이 달라지던 문제). 클릭은 재생 중 비활성이므로 button 미사용(중첩 금지).
   const renderSeg = (seg: ChronicleSegment, shown: string, key: number) => {
     if (seg.kind === 'g')
       return (
-        <span key={key} className="font-semibold text-slate-600 dark:text-slate-400">{shown}</span>
+        <span key={key} className="inline-block align-baseline font-semibold text-slate-600 dark:text-slate-400">{shown}</span>
       );
     if (seg.kind === 'u')
       return (
-        <span key={key} className="text-stone-500 dark:text-stone-400">{shown}</span>
+        <span
+          key={key}
+          className={
+            seg.code
+              ? 'text-stone-500 underline decoration-dotted underline-offset-2 dark:text-stone-400'
+              : 'text-stone-500 dark:text-stone-400'
+          }
+        >
+          {shown}
+        </span>
       );
     if (seg.kind === 'z') {
       const c = zoneColor(seg.name);
       return (
         <span
           key={key}
-          className="mx-px rounded-[3px] px-1 align-baseline text-[11px] font-semibold"
+          className="mx-px inline-block rounded-[3px] px-1 align-baseline text-[11px] font-semibold"
           style={c ? { color: c, backgroundColor: `${c}1f`, boxShadow: `inset 0 0 0 1px ${c}55` } : undefined}
         >
           {shown}
