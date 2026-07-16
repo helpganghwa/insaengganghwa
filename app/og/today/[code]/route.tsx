@@ -66,12 +66,13 @@ export async function GET(req: Request, { params }: { params: Promise<{ code: st
   const dayKo = '일월화수목금토'[new Date(`${kstDay}T12:00:00Z`).getUTCDay()];
 
   // 메인 수치 — 전투력 증감 우선, 없으면 강화 통계, 그것도 없으면 현재 전투력.
+  // arrow는 숫자보다 작게 분리 렌더(2026-07-16 피드백 — 92px 통짜 ▲가 과대).
   const main =
     t.combatDelta && t.combatDelta !== 0
-      ? { big: `${t.combatDelta > 0 ? '▲' : '▼'} ${fmt(Math.abs(t.combatDelta))}`, color: t.combatDelta > 0 ? '#34d399' : '#f87171', sub: `전투력 ${t.combatDelta > 0 ? '상승' : '변동'} · 현재 ${fmt(t.combat)}` }
+      ? { arrow: t.combatDelta > 0 ? '▲' : '▼', big: fmt(Math.abs(t.combatDelta)), color: t.combatDelta > 0 ? '#34d399' : '#f87171', sub: `전투력 ${t.combatDelta > 0 ? '상승' : '변동'} · 현재 ${fmt(t.combat)}` }
       : t.attempts > 0
-        ? { big: `강화 ${t.attempts}회`, color: '#fbbf24', sub: `성공 ${t.success} · 유지 ${t.hold} · 하락 ${t.down}` }
-        : { big: fmt(t.combat), color: '#fbbf24', sub: '전투력 — 오늘도 담금질 중' };
+        ? { arrow: '', big: `강화 ${t.attempts}회`, color: '#fbbf24', sub: `성공 ${t.success} · 유지 ${t.hold} · 하락 ${t.down}` }
+        : { arrow: '', big: fmt(t.combat), color: '#fbbf24', sub: '전투력 — 오늘도 담금질 중' };
 
   const chips = [
     `최고 강화 +${fmt(t.maxEnhance)}`,
@@ -112,8 +113,11 @@ export async function GET(req: Request, { params }: { params: Promise<{ code: st
           {prof.nickname}
         </div>
         <div style={{ display: 'flex', fontSize: 24, color: '#78716c', marginTop: 10 }}>{randomQuote()}</div>
-        <div style={{ display: 'flex', fontSize: 92, fontWeight: 800, color: main.color, marginTop: 22 }}>
-          {main.big}
+        <div style={{ display: 'flex', alignItems: 'center', gap: 16, marginTop: 22 }}>
+          {main.arrow ? (
+            <div style={{ display: 'flex', fontSize: 44, fontWeight: 800, color: main.color, marginTop: 8 }}>{main.arrow}</div>
+          ) : null}
+          <div style={{ display: 'flex', fontSize: 92, fontWeight: 800, color: main.color }}>{main.big}</div>
         </div>
         <div style={{ display: 'flex', fontSize: 26, color: '#a8a29e', marginTop: 6 }}>{main.sub}</div>
         <div style={{ display: 'flex', gap: 14, marginTop: 30 }}>
