@@ -45,7 +45,7 @@ export async function GET(req: Request, { params }: { params: Promise<{ code: st
     .limit(1);
   if (!prof) return new Response('not found', { status: 404 });
 
-  const [t, avatar, bg] = await Promise.all([
+  const [t, avatar] = await Promise.all([
     getTodayTicker(prof.id, serverId),
     (async () => {
       if (!prof.activeProfileId) return null;
@@ -59,7 +59,6 @@ export async function GET(req: Request, { params }: { params: Promise<{ code: st
       // 기본 아바타는 상대경로(/sprites/default/...) — origin 프리픽스 필수(기존 OG와 동일 이슈).
       return src ? dataUri(src.startsWith('http') ? src : `${url.origin}${src}`) : null;
     })(),
-    dataUri(`${url.origin}/sprites/today-card.png`),
   ]);
 
   const kstDay = new Date(Date.now() + 9 * 3600 * 1000).toISOString().slice(0, 10);
@@ -88,14 +87,17 @@ export async function GET(req: Request, { params }: { params: Promise<{ code: st
           width: '100%', height: '100%', display: 'flex', flexDirection: 'column',
           alignItems: 'center', justifyContent: 'center', position: 'relative',
           paddingTop: 8, paddingBottom: 8,
-          background: 'linear-gradient(160deg, #241a10 0%, #0f0d0b 65%)',
+          // 이미지 프레임 폐기(2026-07-16) — CSS 그라데이션 + 아바타 후광만.
+          background: 'linear-gradient(160deg, #131a2b 0%, #0a0c12 60%)',
         }}
       >
-        {/* 픽셀 프레임 배경(Pixellab, 2026-07-16) — 부재 시 위 그라데이션 폴백. */}
-        {bg ? (
-          // eslint-disable-next-line @next/next/no-img-element
-          <img src={bg} width={1200} height={630} style={{ position: 'absolute', inset: 0 }} />
-        ) : null}
+        {/* 아바타 후광 — 우측 라디얼 글로우(장식은 CSS만, 보더 없음). */}
+        <div
+          style={{
+            position: 'absolute', right: -80, bottom: -120, width: 640, height: 640, display: 'flex',
+            background: 'radial-gradient(circle, rgba(245,158,11,0.22) 0%, rgba(245,158,11,0.06) 45%, rgba(245,158,11,0) 70%)',
+          }}
+        />
         {/* 우측 아바타 — 배경 요소 */}
         {avatar ? (
           // eslint-disable-next-line @next/next/no-img-element

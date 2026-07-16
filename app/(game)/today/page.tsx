@@ -89,7 +89,7 @@ export default async function TodayPage({ searchParams }: { searchParams: Promis
   const tab = p === 'all' ? 'all' : 'today';
 
   const [me] = await db
-    .select({ nickname: characters.nickname, publicCode: profiles.publicCode })
+    .select({ nickname: characters.nickname, publicCode: profiles.publicCode, createdAt: characters.createdAt })
     .from(characters)
     .innerJoin(profiles, eq(profiles.id, characters.userId))
     .where(and(eq(characters.userId, userId), eq(characters.serverId, serverId)))
@@ -97,13 +97,21 @@ export default async function TodayPage({ searchParams }: { searchParams: Promis
 
   const kstNow = new Date(Date.now() + 9 * 3600 * 1000);
   const dateLabel = `${kstNow.getUTCMonth() + 1}/${kstNow.getUTCDate()} (${'일월화수목금토'[kstNow.getUTCDay()]})`;
+  // 전체 탭 헤더 — '나의 인생강화' + 시작(캐릭터 생성일 KST)~오늘(2026-07-16 확정).
+  const joined = me?.createdAt ? new Date(me.createdAt.getTime() + 9 * 3600 * 1000) : null;
+  const joinedLabel = joined
+    ? `${joined.getUTCFullYear() !== kstNow.getUTCFullYear() ? `${joined.getUTCFullYear()}. ` : ''}${joined.getUTCMonth() + 1}/${joined.getUTCDate()}`
+    : '';
+  const isAll = tab === 'all';
 
   return (
     <div id="today-page" className="flex flex-col gap-2.5 px-4 py-4 pb-24">
       <div className="flex items-center justify-between">
         <div className="flex items-baseline gap-2">
-          <h1 className="text-[17px] font-extrabold">오늘의 인생강화</h1>
-          <span className="text-[10px] tabular-nums text-zinc-500">{dateLabel}</span>
+          <h1 className="text-[17px] font-extrabold">{isAll ? '나의 인생강화' : '오늘의 인생강화'}</h1>
+          <span className="text-[10px] tabular-nums text-zinc-500">
+            {isAll && joinedLabel ? `${joinedLabel} ~ ${dateLabel}` : dateLabel}
+          </span>
         </div>
         {/* 오늘/전체 세그먼트 — 타이틀 옆 컴팩트 배치 */}
         <div data-capture-exclude className="flex overflow-hidden rounded-lg border border-zinc-200 text-[11px] font-bold dark:border-zinc-800">
@@ -131,7 +139,7 @@ export default async function TodayPage({ searchParams }: { searchParams: Promis
       {tab === 'today' ? (
         <TodayTab userId={userId} serverId={serverId} nickname={me?.nickname ?? ''} publicCode={me?.publicCode ?? ''} />
       ) : (
-        <AllTab userId={userId} serverId={serverId} nickname={me?.nickname ?? ''} />
+        <AllTab userId={userId} serverId={serverId} nickname={me?.nickname ?? ''} publicCode={me?.publicCode ?? ''} />
       )}
     </div>
   );
@@ -187,20 +195,15 @@ async function TodayTab({
           ).map((k) => (
             <div key={k.l} className="rounded-lg bg-white/70 px-1.5 py-1.5 text-center dark:bg-zinc-950/50">
               <div className="text-[9px] text-zinc-500">{k.l}</div>
-              <div className="mt-0.5 text-[12px] font-extrabold tabular-nums">
-                {k.p.now == null ? (
-                  '—'
-                ) : k.p.prev != null && k.p.prev !== k.p.now ? (
-                  <>
-                    <span className="text-[10px] font-normal text-zinc-400 line-through">#{k.p.prev}</span> #{k.p.now}
-                  </>
-                ) : (
-                  <>#{k.p.now}</>
-                )}
+              <div className="text-[10px] tabular-nums text-zinc-400 dark:text-zinc-600">
+                {k.p.prev != null ? `어제 #${k.p.prev}` : '어제 기록 없음'}
               </div>
-              <div className="text-[9px] tabular-nums">
+              <div className="text-[13px] font-extrabold leading-tight tabular-nums">
+                {k.p.now != null ? `#${k.p.now}` : '—'}
+              </div>
+              <div className="text-[10px] tabular-nums">
                 {k.p.now != null && k.p.prev != null && k.p.prev !== k.p.now ? (
-                  <span className={k.p.prev > k.p.now ? 'text-emerald-500' : 'text-red-400'}>
+                  <span className={`font-extrabold ${k.p.prev > k.p.now ? 'text-emerald-500' : 'text-red-400'}`}>
                     {k.p.prev > k.p.now ? '▲' : '▼'} {Math.abs(k.p.prev - k.p.now)}
                   </span>
                 ) : (
@@ -264,7 +267,9 @@ async function TodayTab({
   );
 }
 
-async function AllTab({ userId, serverId, nickname }: { userId: string; serverId: number; nickname: string }) {
+async function AllTab({
+  userId, serverId, nickname, publicCode,
+}: { userId: string; serverId: number; nickname: string; publicCode: string }) {
   const [s, history] = await Promise.all([
     withTimeout(getLifetimeStats(userId, serverId), 3500, 'today.all').catch(() => null),
     withTimeout(getRankHistory(userId, serverId), 2000, 'today.rankhist').catch(() => [] as RankPoint[]),

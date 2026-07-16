@@ -15,9 +15,9 @@ export function TodayTicker({ data }: { data: TickerData }) {
     const fmt = (n: number) => n.toLocaleString('ko-KR');
     const delta = (d: number | null) =>
       d == null || d === 0 ? null : d > 0 ? (
-        <span className="font-extrabold text-emerald-400"> ▲ {fmt(d)}</span>
+        <span className="font-extrabold text-emerald-600 dark:text-emerald-400"> ▲ {fmt(d)}</span>
       ) : (
-        <span className="font-extrabold text-red-400"> ▼ {fmt(-d)}</span>
+        <span className="font-extrabold text-red-500 dark:text-red-400"> ▼ {fmt(-d)}</span>
       );
     if (data.combatDelta) out.push(<>전투력 <b>{fmt(data.combat)}</b>{delta(data.combatDelta)}</>);
     if (data.maxDelta) out.push(<>최고 강화 <b>+{fmt(data.maxEnhance)}</b>{delta(data.maxDelta)}</>);
@@ -54,21 +54,14 @@ export function TodayTicker({ data }: { data: TickerData }) {
   return (
     <Link
       href="/today"
-      className="flex items-center gap-2 px-3.5 py-2 text-zinc-100"
-      style={{
-        // 카드 프레임(today-card.png)을 9슬라이스 border-image로 재사용 — 코너 보존·잘림 불가
-        // (2026-07-16: 얇은 배너 전용 생성은 반복 실패, 별도 에셋 없이 카드와 톤 일치).
-        borderStyle: 'solid',
-        borderWidth: 10,
-        borderImageSource: 'url(/sprites/today-card.png)',
-        borderImageSlice: '54 fill',
-        borderImageWidth: '10px',
-        borderImageRepeat: 'stretch',
-      }}
+      className="flex items-center gap-2 rounded-xl border border-amber-500/50 bg-gradient-to-r from-amber-500/15 via-amber-500/5 to-transparent px-3 py-2"
     >
-      <span className="shrink-0 text-[11px] font-extrabold text-amber-400">오늘의 인생강화</span>
+      {/* 이미지 프레임 폐기(2026-07-16) — CSS 복귀 + 가독성 강화(본문 대비↑). */}
+      <span className="shrink-0 text-[11px] font-extrabold text-amber-600 dark:text-amber-400">
+        오늘의 인생강화
+      </span>
       <span
-        className="min-w-0 flex-1 truncate text-[12px] transition-opacity duration-200"
+        className="min-w-0 flex-1 truncate text-[12.5px] font-medium text-zinc-800 transition-opacity duration-200 dark:text-zinc-100"
         style={{ opacity: visible ? 1 : 0 }}
       >
         {msgs[idx]}
