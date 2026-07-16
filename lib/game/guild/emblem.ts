@@ -109,16 +109,41 @@ const MIN_OPAQUE_RATIO = 0.03; // 미만 = 빈/깨진 이미지
 const MAX_OPAQUE_RATIO = 0.98; // 초과 = no_background 실패(사각 덩어리)
 const OPAQUE_ALPHA = 24; // 이 alpha 초과면 불투명 픽셀로 카운트
 
-/** 불투명 픽셀 비율이 정상 범위인지(빈/꽉참 결함 검출). 디코드 실패도 결함으로 간주. */
+// 내부 채움율 하한(2026-07-16) — 프롬프트가 '메인색 솔리드 필드 필수'인데 테두리+모티프만
+// 그리고 속을 비운 산출물이 종종 나옴(라이브 #13·#21: 0.59~0.64, 정상 0.91~1.0). 행별
+// [첫..끝 불투명] 스팬 대비 불투명 비율이라 방패/원형/마름모 등 외곽 모양과 무관.
+const MIN_INTERIOR_FILL = 0.8;
+
+/** 불투명 비율 + 내부 채움율이 정상 범위인지(빈/꽉참·속빈 결함 검출). 디코드 실패도 결함. */
 async function emblemQualityOk(png: Buffer): Promise<boolean> {
   try {
     const { data, info } = await sharp(png).ensureAlpha().raw().toBuffer({ resolveWithObject: true });
-    const total = info.width * info.height;
+    const { width, height, channels } = info;
+    const total = width * height;
     if (total === 0) return false;
     let opaque = 0;
-    for (let i = 3; i < data.length; i += info.channels) if (data[i]! > OPAQUE_ALPHA) opaque++;
+    for (let i = 3; i < data.length; i += channels) if (data[i]! > OPAQUE_ALPHA) opaque++;
     const ratio = opaque / total;
-    return ratio >= MIN_OPAQUE_RATIO && ratio <= MAX_OPAQUE_RATIO;
+    if (ratio < MIN_OPAQUE_RATIO || ratio > MAX_OPAQUE_RATIO) return false;
+    // 내부 채움율 — 메인색 필드 누락(속 빈 문양) 검출.
+    let span = 0;
+    let inSpan = 0;
+    for (let y = 0; y < height; y++) {
+      let first = -1;
+      let last = -1;
+      for (let x = 0; x < width; x++) {
+        if (data[(y * width + x) * channels + 3]! > OPAQUE_ALPHA) {
+          if (first < 0) first = x;
+          last = x;
+        }
+      }
+      if (first < 0) continue;
+      for (let x = first; x <= last; x++) {
+        if (data[(y * width + x) * channels + 3]! > OPAQUE_ALPHA) inSpan++;
+      }
+      span += last - first + 1;
+    }
+    return span > 0 && inSpan / span >= MIN_INTERIOR_FILL;
   } catch {
     return false;
   }
