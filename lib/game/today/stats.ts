@@ -160,7 +160,7 @@ export async function getTodayDetail(userId: string, serverId: number): Promise<
   const kstDay = String(e.kst_day ?? '');
   let streak = 0;
   if (days.length > 0) {
-    let cursor = new Date(`${kstDay}T12:00:00Z`);
+    const cursor = new Date(`${kstDay}T12:00:00Z`);
     if (days[0] !== kstDay) cursor.setUTCDate(cursor.getUTCDate() - 1); // 오늘 미출석 허용
     for (const d of days) {
       const want = cursor.toISOString().slice(0, 10);
