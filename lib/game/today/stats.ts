@@ -356,3 +356,81 @@ export async function getRankHistory(userId: string, serverId: number): Promise<
   }
   return points;
 }
+
+export type DailyEnhancePoint = { kstDay: string; success: number; hold: number; down: number };
+export type DatedRankPoint = { kstDay: string; rank: number };
+export type TranscendItem = { name: string; code: string; slot: string; level: number };
+
+export type AllTabExtras = {
+  dailyEnhance: DailyEnhancePoint[];
+  meleeRanks: DatedRankPoint[]; // 날짜별 대난투 순위(실기록)
+  raidRanks: DatedRankPoint[]; // 레이드 처치 랭킹 스냅샷(0122, 축적형)
+  meleeWorst: number | null;
+  raidBestPhase: number;
+  transcendTop: TranscendItem | null;
+  transcendBottom: TranscendItem | null;
+};
+
+/** 전체 탭 부가 데이터(2026-07-16 재구성) — 일별 강화·대난투/레이드 추이·초월 최고/최저 아이템. */
+export async function getAllTabExtras(userId: string, serverId: number): Promise<AllTabExtras> {
+  const [daily, melee, raid, extremes, misc] = await Promise.all([
+    db.execute(sql`
+      select (created_at at time zone 'Asia/Seoul')::date::text d,
+             count(*) filter (where result in ('success','mega'))::int success,
+             count(*) filter (where result = 'hold')::int hold,
+             count(*) filter (where result = 'down')::int down
+      from enhancement_logs
+      where user_id = ${userId}::uuid and server_id = ${serverId}
+        and created_at >= (((now() at time zone 'Asia/Seoul')::date - 30)::timestamp at time zone 'Asia/Seoul')
+      group by 1 order by 1
+    `),
+    db.execute(sql`
+      select mb.battle_date::text d, mp.final_rank
+      from melee_participants mp join melee_battles mb on mb.id = mp.battle_id
+      where mp.user_id = ${userId}::uuid and mb.server_id = ${serverId} and mb.status = 'revealed'
+        and mb.battle_date >= (now() at time zone 'Asia/Seoul')::date - 30
+      order by mb.battle_date
+    `),
+    db.execute(sql`
+      select kst_day::text d, raid_rank from user_daily_stats
+      where user_id = ${userId}::uuid and server_id = ${serverId} and raid_rank is not null
+      order by kst_day asc limit 31
+    `),
+    db.execute(sql`
+      (select ci.name, ci.code, ci.slot::text slot, ue.transcend_level lv, 'top' as kind
+       from user_equipment ue join catalog_items ci on ci.id = ue.catalog_item_id
+       where ue.user_id = ${userId}::uuid and ue.server_id = ${serverId}
+       order by ue.transcend_level desc, ue.enhance_level desc limit 1)
+      union all
+      (select ci.name, ci.code, ci.slot::text, ue.transcend_level, 'bottom'
+       from user_equipment ue join catalog_items ci on ci.id = ue.catalog_item_id
+       where ue.user_id = ${userId}::uuid and ue.server_id = ${serverId}
+       order by ue.transcend_level asc, ue.enhance_level asc limit 1)
+    `),
+    db.execute(sql`
+      select
+        (select max(mp.final_rank)::int from melee_participants mp join melee_battles mb on mb.id = mp.battle_id
+          where mp.user_id = ${userId}::uuid and mb.server_id = ${serverId} and mb.status = 'revealed') melee_worst,
+        (select coalesce(max(rd.phases_cleared), 0)::int from raid_participants rp join raids rd on rd.id = rp.raid_id
+          where rp.user_id = ${userId}::uuid and rd.server_id = ${serverId}) best_phase
+    `),
+  ]);
+  const dailyRows = daily as unknown as { d: string; success: number; hold: number; down: number }[];
+  const meleeRows = melee as unknown as { d: string; final_rank: number }[];
+  const raidRows = raid as unknown as { d: string; raid_rank: number }[];
+  const exRows = extremes as unknown as { name: string; code: string; slot: string; lv: number; kind: string }[];
+  const m = (misc as unknown as { melee_worst: number | null; best_phase: number }[])[0];
+  const item = (kind: string): TranscendItem | null => {
+    const r = exRows.find((x) => x.kind === kind);
+    return r ? { name: r.name, code: r.code, slot: r.slot, level: Number(r.lv) } : null;
+  };
+  return {
+    dailyEnhance: dailyRows.map((r) => ({ kstDay: r.d.slice(0, 10), success: r.success, hold: r.hold, down: r.down })),
+    meleeRanks: meleeRows.map((r) => ({ kstDay: r.d.slice(0, 10), rank: Number(r.final_rank) })),
+    raidRanks: raidRows.map((r) => ({ kstDay: r.d.slice(0, 10), rank: Number(r.raid_rank) })),
+    meleeWorst: m?.melee_worst == null ? null : Number(m.melee_worst),
+    raidBestPhase: Number(m?.best_phase ?? 0),
+    transcendTop: item('top'),
+    transcendBottom: item('bottom'),
+  };
+}

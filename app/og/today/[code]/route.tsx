@@ -98,7 +98,7 @@ export async function GET(req: Request, { params }: { params: Promise<{ code: st
             src={avatar}
             width={552}
             height={620}
-            style={{ position: 'absolute', right: 8, bottom: 5, objectFit: 'contain', opacity: 0.94 }}
+            style={{ position: 'absolute', right: -85, bottom: 5, objectFit: 'contain', opacity: 0.94 }}
           />
         ) : null}
 

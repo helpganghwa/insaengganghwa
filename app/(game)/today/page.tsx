@@ -7,7 +7,9 @@ import { withTimeout } from '@/lib/db/with-timeout';
 import { db } from '@/lib/db/client';
 import { profiles } from '@/lib/db/schema/profiles';
 import { characters } from '@/lib/db/schema/server';
-import { getTodayDetail, getLifetimeStats, getRankHistory, type RankPoint } from '@/lib/game/today/stats';
+import { getTodayDetail, getLifetimeStats, getRankHistory, getAllTabExtras, type RankPoint, type AllTabExtras } from '@/lib/game/today/stats';
+import { TranscendSprite } from '@/components/TranscendSprite';
+import { EnhanceDailyChart, SingleRankChart } from './MiniCharts';
 import { getWorldFeed } from '@/lib/game/world/event';
 import { worldEventMessage, fmtWorldTime } from '@/app/(game)/world-message';
 
@@ -270,15 +272,16 @@ async function TodayTab({
 async function AllTab({
   userId, serverId, nickname, publicCode,
 }: { userId: string; serverId: number; nickname: string; publicCode: string }) {
-  const [s, history] = await Promise.all([
+  const [s, history, extras] = await Promise.all([
     withTimeout(getLifetimeStats(userId, serverId), 3500, 'today.all').catch(() => null),
     withTimeout(getRankHistory(userId, serverId), 2000, 'today.rankhist').catch(() => [] as RankPoint[]),
+    withTimeout(getAllTabExtras(userId, serverId), 3500, 'today.extras').catch(() => null as AllTabExtras | null),
   ]);
   if (!s) return <p className="py-10 text-center text-sm text-zinc-500">잠시 후 다시 시도해 주세요.</p>;
   const rank = (r: number | null) => (r != null ? `#${r}` : undefined);
   return (
     <>
-      <Card title={`${nickname}의 대장장이 이력`} aside={`${s.joinedDays}일째 단련 중`}>
+      <Card title={`${nickname}의 대장장이 이력`} aside={`${s.joinedDays}일째 인생강화`}>
         <StatGrid
           items={[
             { l: '전투력', v: fmt(s.combat), s: rank(s.ranks.combat) },
@@ -286,6 +289,19 @@ async function AllTab({
             { l: '합산 강화', v: `+${fmt(s.sumEnhance)}`, s: rank(s.ranks.sum) },
           ]}
         />
+      </Card>
+
+      <Card title="랭킹 추이" aside="최근 30일 · 자정 기준">
+        {history.length >= 2 ? (
+          <RankChartClient points={history} />
+        ) : (
+          <div className="py-2 text-center">
+            {history.length === 1 ? (
+              <p className="text-[13px] font-extrabold tabular-nums">현재 전투력 #{history[0]!.combat ?? '-'}</p>
+            ) : null}
+            <p className="mt-0.5 text-[10.5px] text-zinc-500">내일부터 매일 자정 기록으로 추이가 그려져요.</p>
+          </div>
+        )}
       </Card>
 
       <Card title="통산 강화">
@@ -299,6 +315,12 @@ async function AllTab({
             ]}
           />
         </div>
+        {extras && extras.dailyEnhance.length > 0 ? (
+          <div className="mt-2">
+            <div className="mb-0.5 text-[9px] text-zinc-500">일별 강화 (최근 30일)</div>
+            <EnhanceDailyChart points={extras.dailyEnhance} />
+          </div>
+        ) : null}
       </Card>
 
       <Card title="수집과 초월">
@@ -318,41 +340,86 @@ async function AllTab({
             { l: '상자 개봉', v: fmt(s.boxesOpened) },
           ]}
         />
+        {extras && (extras.transcendTop || extras.transcendBottom) ? (
+          <div className="mt-2 grid grid-cols-2 gap-1.5">
+            {(
+              [
+                { l: '최고 초월 장비', it: extras.transcendTop },
+                { l: '최저 초월 장비', it: extras.transcendBottom },
+              ] as const
+            ).map((k) =>
+              k.it ? (
+                <div key={k.l} className="flex items-center gap-2 rounded-lg bg-white/70 px-2 py-1.5 dark:bg-zinc-950/50">
+                  <TranscendSprite
+                    code={k.it.code}
+                    slot={k.it.slot as 'weapon' | 'armor' | 'accessory'}
+                    level={k.it.level}
+                    size={30}
+                    frameless
+                  />
+                  <div className="min-w-0 flex-1">
+                    <div className="text-[9px] text-zinc-500">{k.l}</div>
+                    <div className="truncate text-[10.5px] font-bold leading-tight">{k.it.name}</div>
+                    <div
+                      className="text-[10px] font-extrabold tabular-nums"
+                      style={k.it.level > 0 ? { color: `rgb(${transcendStyle(k.it.level).colorRgb.join(',')})` } : undefined}
+                    >
+                      {k.it.level > 0 ? `✦${k.it.level}` : '초월 전'}
+                    </div>
+                  </div>
+                </div>
+              ) : null,
+            )}
+          </div>
+        ) : null}
       </Card>
 
-      <Card title="전투 이력">
+      <Card title="레이드">
         <StatGrid
-          cols={3}
+          cols={4}
           items={[
-            { l: '레이드 소환', v: s.raidSummons > 0 ? `${fmt(s.raidSummons)}회` : '—' },
-            { l: '레이드 공격', v: s.raidAttacks > 0 ? `${fmt(s.raidAttacks)}회` : '—' },
-            { l: '레이드 보상', v: s.raidRewards > 0 ? `${fmt(s.raidRewards)}회` : '—' },
+            { l: '소환', v: s.raidSummons > 0 ? `${fmt(s.raidSummons)}회` : '—' },
+            { l: '공격', v: s.raidAttacks > 0 ? `${fmt(s.raidAttacks)}회` : '—' },
+            { l: '보상 수령', v: s.raidRewards > 0 ? `${fmt(s.raidRewards)}회` : '—' },
+            { l: '최고 페이즈', v: extras && extras.raidBestPhase > 0 ? `${extras.raidBestPhase}페이즈` : '—' },
           ]}
         />
-        <div className="mt-1.5">
-          <StatGrid
-            cols={3}
-            items={[
-              { l: '대난투 참가', v: s.meleeJoined > 0 ? `${fmt(s.meleeJoined)}회` : '—' },
-              { l: '우승', v: s.meleeWins > 0 ? <span className="text-amber-500">🥇 {s.meleeWins}</span> : '—' },
-              { l: '최고 순위', v: s.meleeBest != null ? `#${s.meleeBest}` : '—' },
-            ]}
-          />
-        </div>
-      </Card>
-
-      <Card title="랭킹 추이" aside="최근 30일 · 자정 기준">
-        {history.length >= 2 ? (
-          <RankChartClient points={history} />
-        ) : (
-          <div className="py-2 text-center">
-            {history.length === 1 ? (
-              <p className="text-[13px] font-extrabold tabular-nums">현재 전투력 #{history[0]!.combat ?? "-"}</p>
-            ) : null}
-            <p className="mt-0.5 text-[10.5px] text-zinc-500">내일부터 매일 자정 기록으로 추이가 그려져요.</p>
+        {extras && extras.raidRanks.length >= 2 ? (
+          <div className="mt-2">
+            <div className="mb-0.5 text-[9px] text-zinc-500">처치 랭킹 추이</div>
+            <SingleRankChart points={extras.raidRanks} color="#f87171" name="레이드 랭킹" />
           </div>
+        ) : (
+          <p className="mt-1.5 text-[10px] text-zinc-500">처치 랭킹 추이는 기록이 쌓이면 표시돼요.</p>
         )}
       </Card>
+
+      <Card title="대난투">
+        <StatGrid
+          cols={4}
+          items={[
+            { l: '참가', v: s.meleeJoined > 0 ? `${fmt(s.meleeJoined)}회` : '—' },
+            { l: '우승', v: s.meleeWins > 0 ? <span className="text-amber-500">🥇 {s.meleeWins}</span> : '—' },
+            { l: '최고 순위', v: s.meleeBest != null ? `#${s.meleeBest}` : '—' },
+            { l: '최저 순위', v: extras?.meleeWorst != null ? `#${extras.meleeWorst}` : '—' },
+          ]}
+        />
+        {extras && extras.meleeRanks.length >= 2 ? (
+          <div className="mt-2">
+            <div className="mb-0.5 text-[9px] text-zinc-500">날짜별 순위 추이</div>
+            <SingleRankChart points={extras.meleeRanks} color="#c084fc" name="대난투 순위" />
+          </div>
+        ) : (
+          <p className="mt-1.5 text-[10px] text-zinc-500">순위 추이는 참가 기록이 쌓이면 표시돼요.</p>
+        )}
+      </Card>
+
+      <TodayShareBox
+        nickname={nickname}
+        publicCode={publicCode}
+        serverId={serverId}
+        statsLine={`${s.joinedDays}일째 인생강화 · 통산 강화 ${fmt(s.attempts)}회 · 전투력 ${fmt(s.combat)}`}
+      />
     </>
   );
 }

@@ -24,16 +24,17 @@ export async function GET(req: Request) {
           select user_id, metric, value,
                  row_number() over (partition by metric order by value desc)::int as rnk
           from leaderboard_ranks
-          where server_id = ${serverId} and metric in ('combat', 'max', 'sum')
+          where server_id = ${serverId} and metric in ('combat', 'max', 'sum', 'raid')
         )
-        insert into user_daily_stats (user_id, server_id, kst_day, combat, max_enhance, sum_enhance, combat_rank, max_rank, sum_rank)
+        insert into user_daily_stats (user_id, server_id, kst_day, combat, max_enhance, sum_enhance, combat_rank, max_rank, sum_rank, raid_rank)
         select user_id, ${serverId}, (now() at time zone 'Asia/Seoul')::date,
                coalesce(max(case when metric = 'combat' then value end), 0),
                coalesce(max(case when metric = 'max' then value end), 0),
                coalesce(max(case when metric = 'sum' then value end), 0),
                max(case when metric = 'combat' then rnk end),
                max(case when metric = 'max' then rnk end),
-               max(case when metric = 'sum' then rnk end)
+               max(case when metric = 'sum' then rnk end),
+               max(case when metric = 'raid' then rnk end)
         from lr
         group by user_id
         on conflict do nothing
