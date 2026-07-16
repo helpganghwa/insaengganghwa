@@ -94,7 +94,7 @@ const ATTACK_LORE: Record<RaidBoss, readonly string[]> = {
 };
 // 보석 공격 컨펌 로어 — {n}=보석 비용.
 const GEM_CONFIRM_LORE = [
-  '보석 {n}을 바쳐 한 번 더 검을 들겠는가?',
+  '다이아 {n}을 바쳐 한 번 더 검을 들겠는가?',
   '{n}의 대가로 일격의 기회를 청하시겠습니까?',
   '{n}을 제물 삼아 다시 맞서시겠습니까?',
   '영혼의 {n}을 불살라 추가 공격을 감행할까?',
