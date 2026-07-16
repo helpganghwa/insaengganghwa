@@ -290,3 +290,35 @@ export async function getLifetimeStats(userId: string, serverId: number): Promis
     avatarsCreated: num(e.avatars),
   };
 }
+
+export type RankPoint = { kstDay: string; rank: number; combat: number };
+
+/** 전투력 랭킹 추이 — 최근 31일 자정 스냅샷 + 현재 시점(실시간) 1점. 스냅샷은 2026-07-16부터 축적. */
+export async function getRankHistory(userId: string, serverId: number): Promise<RankPoint[]> {
+  const rows = (await db.execute(sql`
+    select kst_day::text kst_day, combat_rank, combat::text combat
+    from user_daily_stats
+    where user_id = ${userId}::uuid and server_id = ${serverId} and combat_rank is not null
+    order by kst_day asc limit 31
+  `)) as unknown as { kst_day: string; combat_rank: number; combat: string }[];
+  const points: RankPoint[] = rows.map((r) => ({
+    kstDay: r.kst_day.slice(0, 10),
+    rank: Number(r.combat_rank),
+    combat: Number(r.combat),
+  }));
+  // 현재 시점 라이브 랭크 — 마지막 점(오늘 스냅샷과 다르면 추가).
+  const [now] = (await db.execute(sql`
+    select rnk, value from (
+      select user_id, value::text value, row_number() over (order by value desc)::int rnk
+      from leaderboard_ranks where server_id = ${serverId} and metric = 'combat'
+    ) t where user_id = ${userId}::uuid
+  `)) as unknown as { rnk: number; value: string }[];
+  if (now) {
+    const today = new Date(Date.now() + 9 * 3600 * 1000).toISOString().slice(0, 10);
+    const last = points[points.length - 1];
+    if (!last || last.kstDay !== today || last.rank !== Number(now.rnk)) {
+      points.push({ kstDay: today, rank: Number(now.rnk), combat: Number(now.value) });
+    }
+  }
+  return points;
+}
