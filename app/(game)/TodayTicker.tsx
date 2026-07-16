@@ -6,12 +6,12 @@ import Link from 'next/link';
 import type { TodayTicker as TickerData } from '@/lib/game/today/stats';
 
 /**
- * 홈 '오늘의 인생강화' 티커 — 두 문구(지표/강화 통계) 교대 페이드 + **넘치면 우→좌 marquee**
- * (GuideTicker와 동일 문법, 2026-07-16). 큰 수치는 만/억 축약(fmtKo). 전체 탭 → /today.
+ * 홈 '오늘의 인생강화' 티커 — 문구 교대 페이드 + 넘치면 **왕복 marquee 루프**
+ * (정지→좌로→정지→복귀 무한, 2026-07-16: forwards 단방향은 '잘린 채 정지'로 보여 폐기).
+ * 지표 문구는 증감만 표시(현재 수치 제외, 사용자 확정). 전체 영역 탭 → /today.
  */
 const SCROLL_PX_PER_S = 35;
-const SCROLL_DELAY_MS = 1500;
-const BASE_MS = 10_000;
+const ROTATE_MS = 10_000;
 
 /** 만/억 축약 — 1억 이상 X.X억, 1만 이상 X.X만(소수 1자리), 그 외 로케일 숫자. */
 const fmtKo = (n: number) => {
@@ -21,41 +21,50 @@ const fmtKo = (n: number) => {
   return n.toLocaleString('ko-KR');
 };
 
-function Delta({ d }: { d: number | null }) {
-  if (!d) return null;
+function Delta({ d }: { d: number }) {
   return d > 0 ? (
-    <span className="text-emerald-600 dark:text-emerald-400"> ▲{fmtKo(d)}</span>
+    <span className="text-emerald-600 dark:text-emerald-400">▲{fmtKo(d)}</span>
   ) : (
-    <span className="text-red-500 dark:text-red-400"> ▼{fmtKo(-d)}</span>
+    <span className="text-red-500 dark:text-red-400">▼{fmtKo(-d)}</span>
   );
 }
 
 export function TodayTicker({ data }: { data: TickerData }) {
-  const msgs = useMemo(
-    () => [
-      <>
-        전투력 {fmtKo(data.combat)}
-        <Delta d={data.combatDelta} /> · 최고 +{fmtKo(data.maxEnhance)}
-        <Delta d={data.maxDelta} /> · 합산 +{fmtKo(data.sumEnhance)}
-        <Delta d={data.sumDelta} />
-      </>,
+  const msgs = useMemo(() => {
+    const out: React.ReactNode[] = [];
+    // 지표 — 증감이 있는 것만, 증감치만(현재 수치 생략).
+    const deltas: React.ReactNode[] = [];
+    if (data.combatDelta) deltas.push(<>전투력 <Delta d={data.combatDelta} /></>);
+    if (data.maxDelta) deltas.push(<>최고 강화 <Delta d={data.maxDelta} /></>);
+    if (data.sumDelta) deltas.push(<>합산 강화 <Delta d={data.sumDelta} /></>);
+    if (deltas.length > 0)
+      out.push(
+        <>
+          {deltas.map((d, i) => (
+            <span key={i}>
+              {i > 0 ? ' · ' : ''}
+              {d}
+            </span>
+          ))}
+        </>,
+      );
+    out.push(
       <>
         강화 {data.attempts}회 · 성공{' '}
         <span className="text-emerald-600 dark:text-emerald-400">{data.success}</span> · 유지 {data.hold} · 하락{' '}
         <span className={data.down > 0 ? 'text-red-500 dark:text-red-400' : ''}>{data.down}</span>
       </>,
-    ],
-    [data],
-  );
+    );
+    return out;
+  }, [data]);
+
   const [idx, setIdx] = useState(0);
   const [visible, setVisible] = useState(true);
   const [overflowPx, setOverflowPx] = useState(0);
   const wrapRef = useRef<HTMLDivElement>(null);
   const textRef = useRef<HTMLSpanElement>(null);
 
-  // 문구 교체마다 넘침 측정 — 넘치면 marquee, 아니면 정지.
-  // 폰트 로드 완료 후 재측정 + 리사이즈 재측정(마운트 직후 측정은 폰트 폭 확정 전이라
-  // 몇 px 넘침을 놓쳐 marquee가 안 돌던 문제, 2026-07-16).
+  // 문구 교체마다 넘침 측정(폰트 로드·리사이즈 재측정 포함).
   useEffect(() => {
     const measure = () => {
       const wrap = wrapRef.current;
@@ -69,21 +78,21 @@ export function TodayTicker({ data }: { data: TickerData }) {
     return () => window.removeEventListener('resize', measure);
   }, [idx, msgs]);
 
-  // 교대 — 체류 시간은 marquee 길이에 비례(다 읽고 교체).
+  // 교대 — 문구가 2개 이상일 때만.
   useEffect(() => {
-    const scrollMs = overflowPx > 0 ? SCROLL_DELAY_MS + (overflowPx / SCROLL_PX_PER_S) * 1000 + 2000 : 0;
-    const stayMs = Math.max(BASE_MS, scrollMs);
+    if (msgs.length <= 1) return;
     const t = window.setTimeout(() => {
       setVisible(false);
       window.setTimeout(() => {
-        setIdx((i) => (i + 1) % 2);
+        setIdx((i) => (i + 1) % msgs.length);
         setVisible(true);
       }, 250);
-    }, stayMs);
+    }, ROTATE_MS);
     return () => window.clearTimeout(t);
-  }, [idx, overflowPx]);
+  }, [idx, msgs.length]);
 
-  const scrollDurS = overflowPx / SCROLL_PX_PER_S;
+  // 왕복 루프 주기 — 이동 구간(32%×2)이 스크롤 속도에 맞도록 역산, 최소 5초.
+  const loopDurS = Math.max(5, (overflowPx / SCROLL_PX_PER_S) * 2 / 0.64);
 
   return (
     <Link
@@ -93,11 +102,12 @@ export function TodayTicker({ data }: { data: TickerData }) {
       <span className="shrink-0 text-[11px] font-extrabold text-amber-600 dark:text-amber-400">
         오늘의 인생강화
       </span>
-      <div
-        className={`min-w-0 flex-1 transition-opacity duration-200 ${visible ? 'opacity-100' : 'opacity-0'}`}
-      >
-        {/* 정렬 — 평소 우측, 넘칠 땐 좌측(우측 정렬이면 왼쪽이 잘린 채 시작해 marquee 방향이 어긋남). */}
-        <div ref={wrapRef} className={`flex items-center overflow-hidden ${overflowPx > 0 ? 'justify-start' : 'justify-end'}`}>
+      <div className={`min-w-0 flex-1 transition-opacity duration-200 ${visible ? 'opacity-100' : 'opacity-0'}`}>
+        {/* 정렬 — 평소 우측, 넘칠 땐 좌측(우측 정렬이면 왼쪽이 잘린 채 시작). */}
+        <div
+          ref={wrapRef}
+          className={`flex items-center overflow-hidden ${overflowPx > 0 ? 'justify-start' : 'justify-end'}`}
+        >
           <span
             key={idx}
             ref={textRef}
@@ -105,7 +115,7 @@ export function TodayTicker({ data }: { data: TickerData }) {
             style={
               overflowPx > 0
                 ? {
-                    animation: `guide-ticker-slide ${scrollDurS}s linear ${SCROLL_DELAY_MS}ms forwards`,
+                    animation: `today-ticker-slide ${loopDurS}s linear 0.4s infinite`,
                     ['--gt-shift' as string]: `-${overflowPx}px`,
                   }
                 : undefined
