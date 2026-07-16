@@ -12,11 +12,14 @@ import { useResourceToast } from '@/components/ResourceToast';
  * 버튼: 카카오톡 공유 · 링크 복사 · 💾 이미지로 저장(같은 PNG 다운로드).
  */
 export function TodayShareBox({
+  mode = 'today',
   nickname,
   publicCode,
   serverId,
   statsLine,
 }: {
+  /** today=오늘의 성장 카드, all=통산(나의 인생강화) 카드 — 문구·OG 레이아웃 분기. */
+  mode?: 'today' | 'all';
   nickname: string;
   publicCode: string;
   serverId: number;
@@ -31,8 +34,8 @@ export function TodayShareBox({
   const ogUrl = useMemo(() => {
     if (!open || typeof window === 'undefined') return '';
     const v = Math.random().toString(36).slice(2, 10);
-    return `${window.location.origin}/og/today/${encodeURIComponent(publicCode)}?s=${serverId}&v=${v}`;
-  }, [open, publicCode, serverId]);
+    return `${window.location.origin}/og/today/${encodeURIComponent(publicCode)}?s=${serverId}&v=${v}${mode === 'all' ? '&mode=all' : ''}`;
+  }, [open, publicCode, serverId, mode]);
 
   useEffect(() => {
     if (!open) return;
@@ -73,7 +76,7 @@ export function TodayShareBox({
     k.Share.sendDefault({
       objectType: 'feed',
       content: {
-        title: `${nickname} - 오늘도 강화는 인생이다`,
+        title: mode === 'all' ? `${nickname} - 나의 인생강화` : `${nickname} - 오늘도 강화는 인생이다`,
         description: statsLine,
         imageUrl: ogUrl,
         imageWidth: 1200,
@@ -106,9 +109,9 @@ export function TodayShareBox({
         filter: (n) => !(n instanceof HTMLElement && n.dataset.captureExclude != null),
       });
       const blob = await (await fetch(dataUrl)).blob();
-      const file = new File([blob], `오늘의인생강화_${nickname}.png`, { type: 'image/png' });
+      const file = new File([blob], `${mode === 'all' ? '나의인생강화' : '오늘의인생강화'}_${nickname}.png`, { type: 'image/png' });
       if (navigator.canShare?.({ files: [file] })) {
-        await navigator.share({ files: [file], title: '오늘의 인생강화' });
+        await navigator.share({ files: [file], title: mode === 'all' ? '나의 인생강화' : '오늘의 인생강화' });
       } else {
         const a = document.createElement('a');
         a.href = dataUrl;
@@ -139,7 +142,7 @@ export function TodayShareBox({
           onClick={() => setOpen(true)}
           className="mt-5 flex w-full items-center justify-center gap-2 rounded-xl bg-[#FEE500] py-3 text-sm font-extrabold text-[#191919] active:scale-[0.99]"
         >
-          💬 오늘의 성장 자랑하기
+          💬 {mode === 'all' ? '나의 인생강화 자랑하기' : '오늘의 성장 자랑하기'}
         </button>
         <button
           type="button"
@@ -156,7 +159,7 @@ export function TodayShareBox({
             <div
               role="dialog"
               aria-modal="true"
-              aria-label="오늘의 성장 자랑하기"
+              aria-label="성장 자랑하기"
               className="fixed inset-0 z-[100] flex items-center justify-center bg-black/70 p-4 backdrop-blur-md"
               onClick={() => setOpen(false)}
             >
@@ -186,7 +189,7 @@ export function TodayShareBox({
                     ) : null}
                   </div>
                   <div className="mt-2 space-y-0.5 px-1">
-                    <div className="text-[13px] font-semibold text-zinc-100">{nickname} - 오늘도 강화는 인생이다</div>
+                    <div className="text-[13px] font-semibold text-zinc-100">{nickname} - {mode === 'all' ? '나의 인생강화' : '오늘도 강화는 인생이다'}</div>
                     <div className="text-[11px] text-zinc-400">{statsLine}</div>
                   </div>
                 </div>

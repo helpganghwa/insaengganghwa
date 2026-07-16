@@ -289,18 +289,13 @@ async function AllTab({
             { l: '합산 강화', v: `+${fmt(s.sumEnhance)}`, s: rank(s.ranks.sum) },
           ]}
         />
-      </Card>
-
-      <Card title="랭킹 추이" aside="최근 30일 · 자정 기준">
         {history.length >= 2 ? (
-          <RankChartClient points={history} />
-        ) : (
-          <div className="py-2 text-center">
-            {history.length === 1 ? (
-              <p className="text-[13px] font-extrabold tabular-nums">현재 전투력 #{history[0]!.combat ?? '-'}</p>
-            ) : null}
-            <p className="mt-0.5 text-[10.5px] text-zinc-500">내일부터 매일 자정 기록으로 추이가 그려져요.</p>
+          <div className="mt-2">
+            <div className="mb-0.5 text-[9px] text-zinc-500">랭킹 추이 (최근 30일 · 자정 기준)</div>
+            <RankChartClient points={history} />
           </div>
+        ) : (
+          <p className="mt-1.5 text-[10px] text-zinc-500">랭킹 추이는 내일부터 매일 자정 기록으로 그려져요.</p>
         )}
       </Card>
 
@@ -415,6 +410,7 @@ async function AllTab({
       </Card>
 
       <TodayShareBox
+        mode="all"
         nickname={nickname}
         publicCode={publicCode}
         serverId={serverId}

@@ -4,11 +4,11 @@ import { useEffect, useRef } from 'react';
 import * as echarts from 'echarts/core';
 import { LineChart } from 'echarts/charts';
 import { GridComponent, TooltipComponent, LegendComponent } from 'echarts/components';
-import { CanvasRenderer } from 'echarts/renderers';
+import { SVGRenderer } from 'echarts/renderers';
 
 import type { RankPoint } from '@/lib/game/today/stats';
 
-echarts.use([LineChart, GridComponent, TooltipComponent, LegendComponent, CanvasRenderer]);
+echarts.use([LineChart, GridComponent, TooltipComponent, LegendComponent, SVGRenderer]);
 
 /**
  * 랭킹 추이 차트(2026-07-16) — 전투력/최고/합산 3지표 멀티라인, 범례 탭으로 토글.
@@ -25,7 +25,7 @@ export function RankChartClient({ points }: { points: RankPoint[] }) {
 
   useEffect(() => {
     if (!ref.current) return;
-    const chart = echarts.init(ref.current);
+    const chart = echarts.init(ref.current, undefined, { renderer: 'svg' });
     const dates = points.map((p) => `${Number(p.kstDay.slice(5, 7))}/${Number(p.kstDay.slice(8, 10))}`);
     const datesFull = points.map(
       (p) => `${Number(p.kstDay.slice(5, 7))}/${Number(p.kstDay.slice(8, 10))} (${'일월화수목금토'[new Date(`${p.kstDay}T12:00:00Z`).getUTCDay()]})`,

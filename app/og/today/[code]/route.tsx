@@ -5,7 +5,7 @@ import { db } from '@/lib/db/client';
 import { profiles } from '@/lib/db/schema/profiles';
 import { characters } from '@/lib/db/schema/server';
 import { userProfiles } from '@/lib/db/schema/avatar';
-import { getTodayTicker } from '@/lib/game/today/stats';
+import { getTodayTicker, getLifetimeStats } from '@/lib/game/today/stats';
 import { randomQuote } from '@/lib/game/today/quotes';
 
 export const size = { width: 1200, height: 630 };
@@ -36,6 +36,7 @@ export async function GET(req: Request, { params }: { params: Promise<{ code: st
   const url = new URL(req.url);
   const sRaw = Number(url.searchParams.get('s'));
   const serverId = Number.isInteger(sRaw) && sRaw >= 1 ? sRaw : 1;
+  const modeAll = url.searchParams.get('mode') === 'all'; // 전체 탭 공유 — 통산 카드(2026-07-16)
 
   const [prof] = await db
     .select({ id: profiles.id, nickname: characters.nickname, activeProfileId: characters.activeProfileId })
@@ -45,8 +46,9 @@ export async function GET(req: Request, { params }: { params: Promise<{ code: st
     .limit(1);
   if (!prof) return new Response('not found', { status: 404 });
 
-  const [t, avatar] = await Promise.all([
+  const [t, life, avatar] = await Promise.all([
     getTodayTicker(prof.id, serverId),
+    modeAll ? getLifetimeStats(prof.id, serverId) : Promise.resolve(null),
     (async () => {
       if (!prof.activeProfileId) return null;
       const [up] = await db
@@ -67,18 +69,26 @@ export async function GET(req: Request, { params }: { params: Promise<{ code: st
 
   // 메인 수치 — 전투력 증감 우선, 없으면 강화 통계, 그것도 없으면 현재 전투력.
   // arrow는 숫자보다 작게 분리 렌더(2026-07-16 피드백 — 92px 통짜 ▲가 과대).
-  const main =
-    t.combatDelta && t.combatDelta !== 0
+  const main = modeAll && life
+    ? { arrow: '', big: fmt(life.combat), color: '#fbbf24', sub: `${life.joinedDays}일째 인생강화 · 전투력` }
+    : t.combatDelta && t.combatDelta !== 0
       ? { arrow: t.combatDelta > 0 ? '▲' : '▼', big: fmt(Math.abs(t.combatDelta)), color: t.combatDelta > 0 ? '#34d399' : '#f87171', sub: `전투력 ${t.combatDelta > 0 ? '상승' : '변동'} · 현재 ${fmt(t.combat)}` }
       : t.attempts > 0
         ? { arrow: '', big: `강화 ${t.attempts}회`, color: '#fbbf24', sub: `성공 ${t.success} · 유지 ${t.hold} · 하락 ${t.down}` }
         : { arrow: '', big: fmt(t.combat), color: '#fbbf24', sub: '전투력 — 오늘도 담금질 중' };
 
-  const chips = [
-    `최고 강화 +${fmt(t.maxEnhance)}`,
-    `합산 강화 +${fmt(t.sumEnhance)}`,
-    ...(t.attempts > 0 ? [`강화 ${t.attempts}회 · 성공 ${t.success}`] : []),
-  ];
+  const chips = modeAll && life
+    ? [
+        `최고 강화 +${fmt(life.maxEnhance)}`,
+        `합산 강화 +${fmt(life.sumEnhance)}`,
+        `통산 강화 ${fmt(life.attempts)}회`,
+        ...(life.meleeWins > 0 ? [`대난투 우승 ${life.meleeWins}회`] : []),
+      ]
+    : [
+        `최고 강화 +${fmt(t.maxEnhance)}`,
+        `합산 강화 +${fmt(t.sumEnhance)}`,
+        ...(t.attempts > 0 ? [`강화 ${t.attempts}회 · 성공 ${t.success}`] : []),
+      ];
 
   return new ImageResponse(
     (
@@ -103,7 +113,7 @@ export async function GET(req: Request, { params }: { params: Promise<{ code: st
         ) : null}
 
         <div style={{ display: 'flex', fontSize: 30, fontWeight: 800, color: '#fbbf24', letterSpacing: 18 }}>
-          오늘의 인생강화
+          {modeAll ? '나의 인생강화' : '오늘의 인생강화'}
         </div>
         <div style={{ display: 'flex', width: 120, height: 3, background: 'rgba(245,158,11,0.5)', marginTop: 22 }} />
         <div style={{ display: 'flex', fontSize: 44, fontWeight: 700, color: '#e7e5e4', marginTop: 26 }}>

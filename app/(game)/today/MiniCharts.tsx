@@ -4,11 +4,11 @@ import { useEffect, useRef } from 'react';
 import * as echarts from 'echarts/core';
 import { BarChart, LineChart } from 'echarts/charts';
 import { GridComponent, TooltipComponent, LegendComponent } from 'echarts/components';
-import { CanvasRenderer } from 'echarts/renderers';
+import { SVGRenderer } from 'echarts/renderers';
 
 import type { DailyEnhancePoint, DatedRankPoint } from '@/lib/game/today/stats';
 
-echarts.use([BarChart, LineChart, GridComponent, TooltipComponent, LegendComponent, CanvasRenderer]);
+echarts.use([BarChart, LineChart, GridComponent, TooltipComponent, LegendComponent, SVGRenderer]);
 
 const dayKo = (d: string) => '일월화수목금토'[new Date(`${d}T12:00:00Z`).getUTCDay()];
 const md = (d: string) => `${Number(d.slice(5, 7))}/${Number(d.slice(8, 10))}`;
@@ -17,7 +17,7 @@ function useChart(build: (chart: echarts.EChartsType) => void, deps: unknown[]) 
   const ref = useRef<HTMLDivElement>(null);
   useEffect(() => {
     if (!ref.current) return;
-    const chart = echarts.init(ref.current);
+    const chart = echarts.init(ref.current, undefined, { renderer: 'svg' });
     build(chart);
     const onResize = () => chart.resize();
     window.addEventListener('resize', onResize);
