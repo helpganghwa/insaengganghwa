@@ -35,7 +35,7 @@ export function TodayTicker({ data }: { data: TickerData }) {
     if (data.combatDelta) parts.push(<>전투력 <Delta d={data.combatDelta} /></>);
     if (data.maxDelta) parts.push(<>최고 강화 <Delta d={data.maxDelta} /></>);
     if (data.sumDelta) parts.push(<>합산 강화 <Delta d={data.sumDelta} /></>);
-    parts.push(<>강화 {data.attempts}회</>);
+    parts.push(<>강화 {data.attempts}회 시도</>);
     parts.push(<span className="text-emerald-600 dark:text-emerald-400">성공 {data.success}</span>);
     parts.push(<span className="text-zinc-500 dark:text-zinc-400">유지 {data.hold}</span>);
     parts.push(
@@ -62,7 +62,9 @@ export function TodayTicker({ data }: { data: TickerData }) {
 
   useEffect(() => {
     const measure = () => {
-      const w = copyRef.current?.scrollWidth ?? 0;
+      // getBoundingClientRect — 소수점 폭. scrollWidth(정수 반올림)로 이동하면 매 루프
+      // 미세 오차가 쌓여 이음새에서 깜빡/점프(2026-07-16).
+      const w = copyRef.current?.getBoundingClientRect().width ?? 0;
       const c = wrapRef.current?.clientWidth ?? 0;
       if (w > 0 && c > 0) {
         setCopyW(w);
@@ -93,7 +95,7 @@ export function TodayTicker({ data }: { data: TickerData }) {
             copyW > 0
               ? {
                   animation: `today-ticker-flow ${durS}s linear infinite`,
-                  ['--tt-shift' as string]: `-${copyW}px`,
+                  ['--tt-shift' as string]: `-${copyW.toFixed(2)}px`,
                 }
               : undefined
           }
