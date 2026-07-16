@@ -206,6 +206,15 @@ export function GachaResultModal({
                     }}
                   />
                 ))}
+                {/* 10칸 자리채움(2026-07-16 고객 문의) — 중복 묶음으로 카드 수가 1~10 가변이라
+                    줄 수가 바뀌며 하단 버튼이 결과마다 이동 → 투명 클론으로 4줄 높이 고정(연타 미스탭 방지). */}
+                {sortedResults.length > 0
+                  ? Array.from({ length: Math.max(0, 10 - sortedResults.length) }, (_, i) => (
+                      <div key={`ph-${i}`} className="invisible" aria-hidden>
+                        <ResultCard r={sortedResults[0]!} slot={slot} />
+                      </div>
+                    ))
+                  : null}
               </div>
               {openLoreIdx !== null && sortedResults[openLoreIdx]?.loreTeaser ? (
                 <div className="mt-3 rounded-xl border border-emerald-300 bg-emerald-50 px-3.5 py-3 text-left dark:border-emerald-800 dark:bg-emerald-950/30">
