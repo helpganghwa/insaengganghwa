@@ -376,7 +376,7 @@ export default async function HomePage() {
             m.href === '/melee'
               ? meleeDesc
               : m.href === '/raid' && raidJoinable > 0
-                ? `참여 가능한 레이드 ${raidJoinable}개`
+                ? `참여 가능 레이드 ${raidJoinable}`
                 : m.desc;
           const descHot = m.href === '/raid' && raidJoinable > 0; // 참여 가능 — desc 강조색
           return (
