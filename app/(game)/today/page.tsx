@@ -7,7 +7,7 @@ import { withTimeout } from '@/lib/db/with-timeout';
 import { db } from '@/lib/db/client';
 import { profiles } from '@/lib/db/schema/profiles';
 import { characters } from '@/lib/db/schema/server';
-import { getTodayDetail, getLifetimeStats } from '@/lib/game/today/stats';
+import { getTodayDetail, getLifetimeStats, getRankHistory, type RankPoint } from '@/lib/game/today/stats';
 import { getWorldFeed } from '@/lib/game/world/event';
 import { worldEventMessage, fmtWorldTime } from '@/app/(game)/world-message';
 
@@ -226,7 +226,10 @@ async function TodayTab({
 }
 
 async function AllTab({ userId, serverId, nickname }: { userId: string; serverId: number; nickname: string }) {
-  const s = await withTimeout(getLifetimeStats(userId, serverId), 3500, 'today.all').catch(() => null);
+  const [s, history] = await Promise.all([
+    withTimeout(getLifetimeStats(userId, serverId), 3500, 'today.all').catch(() => null),
+    withTimeout(getRankHistory(userId, serverId), 2000, 'today.rankhist').catch(() => [] as RankPoint[]),
+  ]);
   if (!s) return <p className="py-10 text-center text-sm text-zinc-500">잠시 후 다시 시도해 주세요.</p>;
   const rank = (r: number | null) => (r != null ? `#${r}` : undefined);
   return (
@@ -287,22 +290,59 @@ async function AllTab({ userId, serverId, nickname }: { userId: string; serverId
         </div>
       </Card>
 
-      <Card title="생활">
-        <StatGrid
-          cols={4}
-          items={[
-            { l: '누적 출석', v: `${s.checkinDays}일` },
-            { l: '친구', v: s.friends > 0 ? `${s.friends}명` : '—' },
-            { l: '도전 과제', v: s.challengesClaimed > 0 ? `${s.challengesClaimed}개` : '—' },
-            { l: '아바타 생성', v: s.avatarsCreated > 0 ? `${s.avatarsCreated}회` : '—' },
-          ]}
-        />
-        {s.guildName ? (
-          <p className="mt-1.5 text-[10.5px] text-zinc-500">
-            🏰 <b className="text-zinc-700 dark:text-zinc-300">{s.guildName}</b> 소속 · 기여도 {fmt(s.guildContribution)}
-          </p>
-        ) : null}
+      <Card title="전투력 랭킹 추이" aside="최근 30일 · 자정 기준">
+        <RankChart points={history} />
       </Card>
     </>
+  );
+}
+
+
+/** 전투력 랭킹 추이 SVG — 낮을수록 위(1위=상단). 점 2개 미만이면 안내(스냅샷 축적 중). */
+function RankChart({ points }: { points: RankPoint[] }) {
+  if (points.length < 2) {
+    return (
+      <div className="py-2 text-center">
+        {points.length === 1 ? (
+          <p className="text-[13px] font-extrabold tabular-nums">현재 #{points[0]!.rank}</p>
+        ) : null}
+        <p className="mt-0.5 text-[10.5px] text-zinc-500">내일부터 매일 자정 기록으로 추이가 그려져요.</p>
+      </div>
+    );
+  }
+  const W = 320;
+  const H = 84;
+  const PAD = { l: 6, r: 34, t: 10, b: 14 };
+  const ranks = points.map((p) => p.rank);
+  const min = Math.min(...ranks);
+  const max = Math.max(...ranks);
+  const span = Math.max(1, max - min);
+  const x = (i: number) => PAD.l + (i / (points.length - 1)) * (W - PAD.l - PAD.r);
+  const y = (r: number) => PAD.t + ((r - min) / span) * (H - PAD.t - PAD.b);
+  const poly = points.map((p, i) => `${x(i).toFixed(1)},${y(p.rank).toFixed(1)}`).join(' ');
+  const last = points[points.length - 1]!;
+  const first = points[0]!;
+  const improved = last.rank < first.rank;
+  return (
+    <div>
+      <svg viewBox={`0 0 ${W} ${H}`} className="w-full">
+        {/* 가이드라인 — 최고(min)·최저(max) 랭크 */}
+        <line x1={PAD.l} y1={y(min)} x2={W - PAD.r} y2={y(min)} stroke="currentColor" strokeOpacity="0.08" strokeWidth="1" />
+        <line x1={PAD.l} y1={y(max)} x2={W - PAD.r} y2={y(max)} stroke="currentColor" strokeOpacity="0.08" strokeWidth="1" />
+        <polyline points={poly} fill="none" stroke="#f59e0b" strokeWidth="2" strokeLinejoin="round" strokeLinecap="round" />
+        {points.map((p, i) => (
+          <circle key={p.kstDay} cx={x(i)} cy={y(p.rank)} r={i === points.length - 1 ? 3.2 : 2} fill={i === points.length - 1 ? '#f59e0b' : '#a8a29e'} />
+        ))}
+        <text x={W - PAD.r + 4} y={y(last.rank) + 3.5} fontSize="10" fontWeight="800" fill={improved ? '#10b981' : '#f59e0b'}>
+          #{last.rank}
+        </text>
+      </svg>
+      <div className="flex justify-between text-[9px] tabular-nums text-zinc-500">
+        <span>{first.kstDay.slice(5).replace('-', '/')} #{first.rank}</span>
+        <span>
+          {improved ? `▲ ${first.rank - last.rank}계단 상승` : last.rank > first.rank ? `▼ ${last.rank - first.rank}계단` : '유지'}
+        </span>
+      </div>
+    </div>
   );
 }
