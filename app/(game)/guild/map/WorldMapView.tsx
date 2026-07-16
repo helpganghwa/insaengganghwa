@@ -449,7 +449,7 @@ export function WorldMapView({
                   // 중립: 어두운 배경 + 흐린 지역색.
                   backgroundColor: owned
                     ? emblemColor
-                      ? `${emblemColor}59` /* ~35% */
+                      ? `${emblemColor}73` /* ~45%(2026-07-16 상향) */
                       : 'transparent'
                     : 'rgba(10,12,20,0.45)',
                   boxShadow: owned ? `0 0 4px ${color}88` : 'none',
