@@ -22,10 +22,11 @@ const fmtKo = (n: number) => {
 };
 
 function Delta({ d }: { d: number }) {
+  // ▲▼ 대신 텍스트 표기(2026-07-16 확정) — 티커의 작은 폰트에서 기호보다 가독적.
   return d > 0 ? (
-    <span className="text-emerald-600 dark:text-emerald-400">▲{fmtKo(d)}</span>
+    <span className="text-emerald-600 dark:text-emerald-400">{fmtKo(d)} 상승</span>
   ) : (
-    <span className="text-red-500 dark:text-red-400">▼{fmtKo(-d)}</span>
+    <span className="text-red-500 dark:text-red-400">{fmtKo(-d)} 하락</span>
   );
 }
 
