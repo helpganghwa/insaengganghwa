@@ -221,13 +221,7 @@ async function TodayTab({
             {
               l: '대난투',
               v: d.melee?.myRank != null ? `#${d.melee.myRank}` : '—',
-              s: d.melee?.myRank != null && d.melee.prevRank != null && d.melee.prevRank !== d.melee.myRank ? (
-                <span className={d.melee.prevRank > d.melee.myRank ? 'text-emerald-500' : 'text-red-400'}>
-                  {d.melee.prevRank > d.melee.myRank ? '▲' : '▼'} {Math.abs(d.melee.prevRank - d.melee.myRank)}
-                </span>
-              ) : d.melee ? (
-                <>{d.melee.total}명 참가</>
-              ) : undefined,
+              s: d.melee ? <>{d.melee.total}명 참가</> : undefined,
             },
           ]}
         />
