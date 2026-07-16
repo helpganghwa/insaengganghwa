@@ -62,11 +62,11 @@ export function EnhanceDailyChart({ points }: { points: DailyEnhancePoint[] }) {
           const totalH = Math.round((p.successH + p.holdH + p.downH) * 10) / 10;
           const cnt = { 성공: p.success, 유지: p.hold, 하락: p.down } as Record<string, number>;
           return `${md(p.kstDay)} (${dayKo(p.kstDay)}) · ${totalH}시간 단련 · 시도 ${p.success + p.hold + p.down}회<br/>` +
-            arr.map((a) => `${a.marker} ${a.seriesName} <b>${a.value}h</b> (${cnt[a.seriesName] ?? 0}회)`).join('<br/>');
+            arr.map((a) => `${a.marker} ${a.seriesName} <b>${a.value}시간</b> (${cnt[a.seriesName] ?? 0}회)`).join('<br/>');
         },
       },
       xAxis: { type: 'category', data: dates, ...AXIS },
-      yAxis: { type: 'value', splitLine: { lineStyle: { color: 'rgba(120,113,108,0.12)' } }, axisLabel: { ...AXIS.axisLabel, formatter: '{value}h' } },
+      yAxis: { type: 'value', splitLine: { lineStyle: { color: 'rgba(120,113,108,0.12)' } }, axisLabel: { ...AXIS.axisLabel, formatter: '{value}시간' } },
       series: [
         { name: '성공', type: 'bar', stack: 'e', data: points.map((p) => p.successH), itemStyle: { color: '#34d399' }, barMaxWidth: 10 },
         { name: '유지', type: 'bar', stack: 'e', data: points.map((p) => p.holdH), itemStyle: { color: '#71717a' }, barMaxWidth: 10 },
