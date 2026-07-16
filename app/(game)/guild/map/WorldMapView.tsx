@@ -559,7 +559,6 @@ export function WorldMapView({
                   text={chronicle!.today}
                   replay={replay}
                   zones={zones.map((z) => ({ id: z.id, name: z.name, mapX: z.mapX, mapY: z.mapY }))}
-                  adjacency={adjacency}
                   layer={replayLayer}
                   zoneColor={zoneColor}
                   onOwnerFlip={(zoneId, guild) => setReplayOwners((m) => ({ ...(m ?? {}), [zoneId]: guild }))}

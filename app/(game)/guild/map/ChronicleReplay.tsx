@@ -10,8 +10,7 @@ import { parseChronicleSegments, type ChronicleSegment } from './chronicle-token
  * 세계지도 '오늘의 역사' 리플레이(2026-07-16 확정 연출) — 연대기 타이핑과 지도 연출 동기화.
  *  - {z|구역} 마커 완성 → 문장 진군(곡선, %키프레임 — 노드에 정확 착지) → 격돌 → 점령 플래시
  *  - 연속 나열({z|A}·{z|B}·{z|C})은 한 그룹으로 **동시 발표**(마지막 구역명에서 일괄 진군)
- *  - 재언급 변주: 이미 점령된 구역 재언급=단일 펄스, {g|길드} 언급=그 길드가 오늘 얻은 구역 일괄 펄스,
- *    '조각' 서술=최근 언급 길드 영토의 연결 조각을 조각 단위로 순차 펄스(인접 그래프)
+ *  - 재언급 변주(길드/조각 펄스)는 2026-07-16 롤백 — 전투 요소만 애니메이션(사용자 확정)
  *  - 움직이는 문양은 배경 없음(문양 이미지만, 미보유 길드만 색 방패 폴백)
  *  - 탭=스킵, prefers-reduced-motion=정적
  */
@@ -45,7 +44,6 @@ export function ChronicleReplayPanel({
   text,
   replay,
   zones,
-  adjacency,
   layer,
   zoneColor,
   onOwnerFlip,
@@ -54,7 +52,6 @@ export function ChronicleReplayPanel({
   text: string;
   replay: ConquestReplay;
   zones: ReplayZonePos[];
-  adjacency: { a: number; b: number }[];
   layer: HTMLDivElement | null;
   zoneColor: (name: string) => string | null;
   onOwnerFlip: (zoneId: number, guild: string) => void;
@@ -66,10 +63,7 @@ export function ChronicleReplayPanel({
   const skipRef = useRef(false);
   const doneRef = useRef(false);
   const firedRef = useRef(new Set<string>());
-  // 소유 미러 — 부모 flip과 동일 궤적(길드 펄스·조각 계산용, 부모 상태 재조회 없이 자체 추적).
   const ownersRef = useRef<Record<number, string | null>>({ ...replay.beforeOwner });
-  const lastGuildRef = useRef<string | null>(null);
-  const guildPulseAtRef = useRef(new Map<string, number>());
 
   const zoneById = useRef(new Map(zones.map((z) => [z.id, z])));
 
@@ -215,10 +209,6 @@ export function ChronicleReplayPanel({
     );
     setTimeout(() => f.remove(), strong ? 1600 : 1100);
   }
-  const pulseZone = (zoneId: number, color: string) => {
-    const z = zoneById.current.get(zoneId);
-    if (z) flashAt({ x: z.mapX, y: z.mapY }, color, false);
-  };
 
   /** 그룹 일괄 실행 — 전 이벤트 동시 진군, 격돌 병렬, 점령 플래시는 살짝 스태거. */
   async function runZoneEvents(evs: ReplayEvent[]): Promise<void> {
@@ -287,53 +277,7 @@ export function ChronicleReplayPanel({
     if (layer) layer.innerHTML = '';
   }
 
-  /** {g|길드} 재언급 — 오늘 이 길드가 얻은(=이미 발표된) 구역 일괄 펄스(4s 스로틀). */
-  function pulseGuildZones(guild: string) {
-    const now = Date.now();
-    const last = guildPulseAtRef.current.get(guild) ?? 0;
-    if (now - last < 4000) return;
-    const captured = Object.values(replay.events).filter(
-      (ev) => ev.type === 'capture' && ev.winner === guild && firedRef.current.has(ev.zone),
-    );
-    if (captured.length === 0) return;
-    guildPulseAtRef.current.set(guild, now);
-    const color = guildOf(guild).color ?? '#a8a29e';
-    captured.forEach((ev, i) => setTimeout(() => pulseZone(ev.zoneId, color), i * 130));
-  }
 
-  /** '조각' 서술 — 최근 언급 길드 영토의 연결 조각을 조각 단위 순차 펄스. */
-  function pulseFragments(guild: string) {
-    const owned = zones.filter((z) => ownersRef.current[z.id] === guild).map((z) => z.id);
-    if (owned.length === 0) return;
-    const set = new Set(owned);
-    const nb = new Map<number, number[]>();
-    for (const e of adjacency) {
-      if (set.has(e.a) && set.has(e.b)) {
-        nb.set(e.a, [...(nb.get(e.a) ?? []), e.b]);
-        nb.set(e.b, [...(nb.get(e.b) ?? []), e.a]);
-      }
-    }
-    const seen = new Set<number>();
-    const comps: number[][] = [];
-    for (const id of owned) {
-      if (seen.has(id)) continue;
-      const comp: number[] = [];
-      const st = [id];
-      while (st.length) {
-        const cur = st.pop()!;
-        if (seen.has(cur)) continue;
-        seen.add(cur);
-        comp.push(cur);
-        for (const n of nb.get(cur) ?? []) if (!seen.has(n)) st.push(n);
-      }
-      comps.push(comp);
-    }
-    if (comps.length === 0) return;
-    const color = guildOf(guild).color ?? '#a8a29e';
-    comps.forEach((comp, ci) =>
-      comp.forEach((zid) => setTimeout(() => pulseZone(zid, color), ci * 550)),
-    );
-  }
 
   // ── 타이핑 본체 ──
   useEffect(() => {
@@ -351,10 +295,7 @@ export function ChronicleReplayPanel({
               await sleepUnless(seg.text[c - 1] === ' ' ? 28 : CHAR_MS, () => skipRef.current);
             }
           }
-          if (seg.kind === 'g') {
-            lastGuildRef.current = seg.name;
-            if (!skipRef.current) pulseGuildZones(seg.name); // 재언급 변주
-          } else if (seg.kind === 'z') {
+          if (seg.kind === 'z') {
             const ev = replay.events[seg.name];
             if (ev && !firedRef.current.has(seg.name)) {
               const key = `${p}:${s}`;
@@ -366,12 +307,7 @@ export function ChronicleReplayPanel({
                 for (const n of names) firedRef.current.add(n);
                 await runZoneEvents(names.map((n) => replay.events[n]!).filter(Boolean));
               }
-            } else if (ev && !skipRef.current) {
-              // 이미 발표된 구역 재언급 — 단일 펄스
-              pulseZone(ev.zoneId, guildOf(ev.winner).color ?? '#a8a29e');
             }
-          } else if (seg.kind === 'text' && seg.text.includes('조각') && lastGuildRef.current && !skipRef.current) {
-            pulseFragments(lastGuildRef.current);
           }
         }
       }
