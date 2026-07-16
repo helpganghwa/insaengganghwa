@@ -17,6 +17,7 @@ import { getChallengeStatus } from '@/lib/game/challenges/status';
 import { getTodayTicker } from '@/lib/game/today/stats';
 import { TodayTicker } from './TodayTicker';
 import { activeChallenges, COMPLETE_BONUS } from '@/lib/game/challenges/defs';
+import { RAID_MAX_PARTICIPANTS } from '@/lib/game/balance';
 
 import { AnnouncementBoard } from './AnnouncementBoard';
 import { ConquestCardStatus } from './ConquestCardStatus';
@@ -183,7 +184,23 @@ export default async function HomePage() {
                      where r.server_id = ${serverId} and r.status = 'active' and r.expire_at > now()
                        and r.host_user_id <> ${userId}::uuid
                        and not exists (select 1 from raid_participants rp
-                                        where rp.raid_id = r.id and rp.user_id = ${userId}::uuid)) end)
+                                        where rp.raid_id = r.id and rp.user_id = ${userId}::uuid)
+                       -- 정원 여유(호스트 포함 상한) — 만석 레이드는 참여 불가(2026-07-16 오표기 수정)
+                       and (select count(*)::int from raid_participants rp3 where rp3.raid_id = r.id) < ${RAID_MAX_PARTICIPANTS}
+                       -- 가시성 — 내가 발견 가능한 레이드만: 친구 공개(호스트와 친구) 또는 길드 공개(같은 길드)
+                       and (
+                         (r.friend_share <> 'off' and exists (
+                            select 1 from friend_links fl
+                            where fl.server_id = r.server_id and fl.status = 'accepted'
+                              and ((fl.requester_id = r.host_user_id and fl.addressee_id = ${userId}::uuid)
+                                or (fl.addressee_id = r.host_user_id and fl.requester_id = ${userId}::uuid))))
+                         or
+                         (r.guild_share <> 'off' and exists (
+                            select 1 from guild_members gm1
+                            join guild_members gm2 on gm2.guild_id = gm1.guild_id and gm2.server_id = gm1.server_id
+                            where gm1.user_id = r.host_user_id and gm2.user_id = ${userId}::uuid
+                              and gm1.server_id = r.server_id))
+                       )) end)
               as raid_joinable,
             -- 대난투: 서버 시계로 phase(개시 전/진행/발표 후) + 오늘 배틀 상태·우승자 닉.
             case
