@@ -3,17 +3,55 @@ import 'server-only';
 import { and, eq, sql } from 'drizzle-orm';
 
 import { db } from '@/lib/db/client';
-import { walletAdd } from '@/lib/game/wallet';
 import { guilds, guildMembers, guildTaxDistributions, guildAuditLog } from '@/lib/db/schema/guild';
+import { mailbox } from '@/lib/db/schema/mailbox';
+import { characters } from '@/lib/db/schema/server';
 
 import type { GuildTaxDistribution } from './balance';
 import { logGuildAudit } from './audit';
 import { GuildError } from './errors';
 
+type Tx = Parameters<Parameters<typeof db.transaction>[0]>[0];
+
+/** 분배 지급 = 보상 우편(2026-07-16 문의 반영) — 지갑 직접 입금은 수령 인지가 불가능했음.
+ *  수령형 우편(첨부 💎)이라 우편함 빨간 점·홈 배지로 알림까지 해결. 만료 30일(기본). */
+async function sendTaxMails(
+  tx: Tx,
+  serverId: number,
+  guildName: string,
+  leaderNick: string,
+  rows: { userId: string; amount: bigint }[],
+): Promise<void> {
+  if (rows.length === 0) return;
+  await tx.insert(mailbox).values(
+    rows.map((r) => ({
+      userId: r.userId,
+      serverId,
+      type: 'reward' as const,
+      title: '길드 세금 분배',
+      body: `${guildName} 길드장 ${leaderNick}님이 세금 💎${r.amount.toLocaleString('ko-KR')}을 분배했습니다.`,
+      senderLabel: '길드',
+      payload: { diamond: Number(r.amount) },
+    })),
+  );
+}
+
+/** 분배 우편 문구용 — 길드명 + 길드장 닉네임(캐릭터 행 부재 시 폴백). */
+async function guildMailMeta(tx: Tx, guildId: bigint, leaderUserId: string, serverId: number) {
+  const [g] = await tx.select({ name: guilds.name }).from(guilds).where(eq(guilds.id, guildId)).limit(1);
+  const [c] = await tx
+    .select({ nick: characters.nickname })
+    .from(characters)
+    .where(and(eq(characters.userId, leaderUserId), eq(characters.serverId, serverId)))
+    .limit(1);
+  return { guildName: g?.name ?? '길드', leaderNick: c?.nick ?? '길드장' };
+}
+
 /**
  * 길드 세금 풀 분배 — GUILD §5.5. 길드장만. 분배 내역 로그 기록(공개).
  * - equal: 풀을 길드원 N으로 균등(각 floor(pool/N)), 잔여는 풀에 carry.
  * - target: 풀 전액을 특정 길드원에게.
+ * 지급은 **보상 우편**(sendTaxMails) — 즉시 입금 아님(수령 시 지갑 반영).
  */
 export function distributeGuildTax(input: {
   leaderUserId: string;
@@ -47,7 +85,10 @@ export function distributeGuildTax(input: {
         .where(and(eq(guildMembers.userId, input.targetUserId), eq(guildMembers.guildId, gid)))
         .limit(1);
       if (!t) throw new GuildError('TARGET_NOT_IN_GUILD');
-      await walletAdd(tx, input.targetUserId, input.serverId, pool);
+      const meta = await guildMailMeta(tx, gid, input.leaderUserId, input.serverId);
+      await sendTaxMails(tx, input.serverId, meta.guildName, meta.leaderNick, [
+        { userId: input.targetUserId, amount: pool },
+      ]);
       await tx.update(guilds).set({ taxPoolDiamond: 0n }).where(eq(guilds.id, gid));
       await tx.insert(guildTaxDistributions).values({
         guildId: gid,
@@ -79,7 +120,14 @@ export function distributeGuildTax(input: {
     if (per <= 0n) throw new GuildError('NOTHING_TO_DISTRIBUTE'); // 풀 < 인원
     const distributed = per * n;
 
-    for (const m of members) await walletAdd(tx, m.u, input.serverId, per);
+    const metaEq = await guildMailMeta(tx, gid, input.leaderUserId, input.serverId);
+    await sendTaxMails(
+      tx,
+      input.serverId,
+      metaEq.guildName,
+      metaEq.leaderNick,
+      members.map((m) => ({ userId: m.u, amount: per })),
+    );
     await tx
       .update(guilds)
       .set({ taxPoolDiamond: sql`${guilds.taxPoolDiamond} - ${distributed}` })
@@ -150,9 +198,14 @@ export function distributeGuildTaxManual(input: {
     const memberSet = new Set(memberRows.map((r) => r.u));
     for (const uid of byUser.keys()) if (!memberSet.has(uid)) throw new GuildError('TARGET_NOT_IN_GUILD');
 
-    for (const [uid, amt] of byUser) {
-      await walletAdd(tx, uid, input.serverId, amt);
-    }
+    const metaMan = await guildMailMeta(tx, gid, input.leaderUserId, input.serverId);
+    await sendTaxMails(
+      tx,
+      input.serverId,
+      metaMan.guildName,
+      metaMan.leaderNick,
+      [...byUser].map(([uid, amt]) => ({ userId: uid, amount: amt })),
+    );
     await tx
       .update(guilds)
       .set({ taxPoolDiamond: sql`${guilds.taxPoolDiamond} - ${total}` })
