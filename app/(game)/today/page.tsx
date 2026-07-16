@@ -100,7 +100,7 @@ export default async function TodayPage({ searchParams }: { searchParams: Promis
   // 전체 탭 헤더 — '나의 인생강화' + 시작(캐릭터 생성일 KST)~오늘(2026-07-16 확정).
   const joined = me?.createdAt ? new Date(me.createdAt.getTime() + 9 * 3600 * 1000) : null;
   const joinedLabel = joined
-    ? `${joined.getUTCFullYear() !== kstNow.getUTCFullYear() ? `${joined.getUTCFullYear()}. ` : ''}${joined.getUTCMonth() + 1}/${joined.getUTCDate()}`
+    ? `${joined.getUTCFullYear() !== kstNow.getUTCFullYear() ? `${joined.getUTCFullYear()}. ` : ''}${joined.getUTCMonth() + 1}/${joined.getUTCDate()} (${'일월화수목금토'[joined.getUTCDay()]})`
     : '';
   const isAll = tab === 'all';
 

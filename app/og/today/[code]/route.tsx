@@ -91,21 +91,14 @@ export async function GET(req: Request, { params }: { params: Promise<{ code: st
           background: 'linear-gradient(160deg, #131a2b 0%, #0a0c12 60%)',
         }}
       >
-        {/* 아바타 후광 — 우측 라디얼 글로우(장식은 CSS만, 보더 없음). */}
-        <div
-          style={{
-            position: 'absolute', right: -80, bottom: -120, width: 640, height: 640, display: 'flex',
-            background: 'radial-gradient(circle, rgba(245,158,11,0.22) 0%, rgba(245,158,11,0.06) 45%, rgba(245,158,11,0) 70%)',
-          }}
-        />
         {/* 우측 아바타 — 배경 요소 */}
         {avatar ? (
           // eslint-disable-next-line @next/next/no-img-element
           <img
             src={avatar}
-            width={460}
-            height={580}
-            style={{ position: 'absolute', right: 40, bottom: 25, objectFit: 'contain', opacity: 0.92 }}
+            width={552}
+            height={620}
+            style={{ position: 'absolute', right: 8, bottom: 5, objectFit: 'contain', opacity: 0.94 }}
           />
         ) : null}
 
