@@ -35,6 +35,7 @@ type Zone = {
   ownerGuildId: string | null;
   ownerGuildName: string | null;
   ownerEmblemUrl: string | null;
+  ownerEmblemColor: string | null;
   executorUserId: string | null;
   executorNickname: string | null;
   taxDiamond: string;
@@ -419,6 +420,12 @@ export function WorldMapView({
                 ? (replay?.guilds[rOwner]?.emblemUrl ?? null)
                 : null
               : z.ownerEmblemUrl;
+          const emblemColor =
+            rOwner !== undefined
+              ? rOwner != null
+                ? (replay?.guilds[rOwner]?.color ?? null)
+                : null
+              : z.ownerEmblemColor;
           const isResidence = z.id === residence;
           const color = REGION[z.region].color;
           return (
@@ -438,8 +445,13 @@ export function WorldMapView({
               <span
                 className="relative block h-[17px] w-[17px] overflow-hidden rounded-[4px] ring-1 ring-black/70 transition"
                 style={{
-                  // 점령 시: 배경 투명(문양만) + 얇은 지역색 보더. 중립: 어두운 배경 + 흐린 지역색.
-                  backgroundColor: owned ? 'transparent' : 'rgba(10,12,20,0.45)',
+                  // 점령 시: 문양 주색 반투명 배경(2026-07-16 확정 — 색 없으면 투명 유지) + 지역색 보더.
+                  // 중립: 어두운 배경 + 흐린 지역색.
+                  backgroundColor: owned
+                    ? emblemColor
+                      ? `${emblemColor}59` /* ~35% */
+                      : 'transparent'
+                    : 'rgba(10,12,20,0.45)',
                   boxShadow: owned ? `0 0 4px ${color}88` : 'none',
                   outline: `1px solid ${color}${owned ? '' : '88'}`,
                   // 0: 색상 보더를 요소 가장자리에 붙여 배경↔보더 빈공간 제거(배경이 보더까지 꽉 참).
@@ -502,16 +514,19 @@ export function WorldMapView({
         {!showConquest ? (
           <>
         {hasChronicle ? (
-          <div className="mb-2 flex items-center justify-end gap-1.5">
+          <div className="mb-2 flex items-center justify-between gap-1.5">
+            {/* 다시 보기 — 왼쪽 끝, 이모지 없음(2026-07-16 확정). 미노출 시에도 우측 탭 정렬 유지용 스페이서. */}
             {canReplay && !replayActive ? (
               <button
                 type="button"
                 onClick={startReplay}
                 className="rounded-lg border border-zinc-200 px-2 py-0.5 text-[11px] font-bold text-zinc-500 active:opacity-60 dark:border-zinc-800 dark:text-zinc-400"
               >
-                ▶ 다시 보기
+                다시 보기
               </button>
-            ) : null}
+            ) : (
+              <span />
+            )}
             <div className="flex gap-0.5 rounded-lg bg-zinc-100 p-0.5 dark:bg-zinc-900">
               {(
                 [
@@ -544,6 +559,7 @@ export function WorldMapView({
                   text={chronicle!.today}
                   replay={replay}
                   zones={zones.map((z) => ({ id: z.id, name: z.name, mapX: z.mapX, mapY: z.mapY }))}
+                  adjacency={adjacency}
                   layer={replayLayer}
                   zoneColor={zoneColor}
                   onOwnerFlip={(zoneId, guild) => setReplayOwners((m) => ({ ...(m ?? {}), [zoneId]: guild }))}

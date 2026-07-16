@@ -41,6 +41,7 @@ export default async function WorldMapPage() {
         ownerGuildId: z.ownerGuildId?.toString() ?? null,
         ownerGuildName: z.ownerGuildName,
         ownerEmblemUrl: z.ownerEmblemUrl,
+        ownerEmblemColor: z.ownerEmblemColor,
         executorUserId: z.executorUserId,
         executorNickname: z.executorNickname,
         taxDiamond: z.taxDiamond.toString(),
