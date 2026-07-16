@@ -273,7 +273,9 @@ export async function getLifetimeStats(userId: string, serverId: number): Promis
       (select joined from melee) melee_joined, (select wins from melee) melee_wins, (select best from melee) melee_best,
       (select count(*)::int from raids where host_user_id=${userId}::uuid and server_id=${serverId}) raid_summons,
       (select count(*)::int from raid_attacks ra join raids rd on rd.id=ra.raid_id where ra.user_id=${userId}::uuid and rd.server_id=${serverId}) raid_attacks,
-      (select count(*)::int from raid_rewards rr join raids rd on rd.id=rr.raid_id where rr.user_id=${userId}::uuid and rd.server_id=${serverId} and rr.claimed_at is not null) raid_rewards,
+      (select coalesce(sum(coalesce((rr.boxes->>'weapon')::int,0) + coalesce((rr.boxes->>'armor')::int,0) + coalesce((rr.boxes->>'accessory')::int,0)),0)::int
+         from raid_rewards rr join raids rd on rd.id=rr.raid_id
+         where rr.user_id=${userId}::uuid and rd.server_id=${serverId} and rr.claimed_at is not null) raid_rewards,
       (select count(*)::int from checkin_claim_logs where user_id=${userId}::uuid and server_id=${serverId}) checkin_days,
       (select count(*)::int from friend_links where server_id=${serverId} and status='accepted' and (requester_id=${userId}::uuid or addressee_id=${userId}::uuid)) friends,
       (select g.name from guild_members gm join guilds g on g.id=gm.guild_id where gm.user_id=${userId}::uuid and gm.server_id=${serverId} limit 1) guild_name,
@@ -328,7 +330,8 @@ export async function getRankHistory(userId: string, serverId: number): Promise<
     select kst_day::text kst_day, combat_rank, max_rank, sum_rank
     from user_daily_stats
     where user_id = ${userId}::uuid and server_id = ${serverId} and combat_rank is not null
-    order by kst_day asc limit 31
+      and kst_day >= (now() at time zone 'Asia/Seoul')::date - 30
+    order by kst_day asc
   `)) as unknown as { kst_day: string; combat_rank: number | null; max_rank: number | null; sum_rank: number | null }[];
   const points: RankPoint[] = rows.map((r) => ({
     kstDay: r.kst_day.slice(0, 10),
@@ -394,7 +397,8 @@ export async function getAllTabExtras(userId: string, serverId: number): Promise
     db.execute(sql`
       select kst_day::text d, raid_rank from user_daily_stats
       where user_id = ${userId}::uuid and server_id = ${serverId} and raid_rank is not null
-      order by kst_day asc limit 31
+        and kst_day >= (now() at time zone 'Asia/Seoul')::date - 30
+      order by kst_day asc
     `),
     db.execute(sql`
       (select ci.name, ci.code, ci.slot::text slot, ue.transcend_level lv, 'top' as kind

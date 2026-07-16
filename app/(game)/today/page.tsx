@@ -10,8 +10,6 @@ import { characters } from '@/lib/db/schema/server';
 import { getTodayDetail, getLifetimeStats, getRankHistory, getAllTabExtras, type RankPoint, type AllTabExtras } from '@/lib/game/today/stats';
 import { TranscendSprite } from '@/components/TranscendSprite';
 import { EnhanceDailyChart, SingleRankChart } from './MiniCharts';
-import { getWorldFeed } from '@/lib/game/world/event';
-import { worldEventMessage, fmtWorldTime } from '@/app/(game)/world-message';
 
 import { TodayShareBox } from './TodayShareBox';
 import { RankChartClient } from './RankChartClient';
@@ -150,16 +148,8 @@ export default async function TodayPage({ searchParams }: { searchParams: Promis
 async function TodayTab({
   userId, serverId, nickname, publicCode,
 }: { userId: string; serverId: number; nickname: string; publicCode: string }) {
-  const [d, feed] = await Promise.all([
-    withTimeout(getTodayDetail(userId, serverId), 3500, 'today.detail').catch(() => null),
-    withTimeout(getWorldFeed(serverId, 10), 2000, 'today.feed').catch(() => []),
-  ]);
+  const d = await withTimeout(getTodayDetail(userId, serverId), 3500, 'today.detail').catch(() => null);
   if (!d) return <p className="py-10 text-center text-sm text-zinc-500">잠시 후 다시 시도해 주세요.</p>;
-  const todayIso = new Date(Date.now() + 9 * 3600 * 1000).toISOString().slice(0, 10);
-  const issues = feed
-    .filter((e) => new Date(Date.parse(e.createdAtIso) + 9 * 3600 * 1000).toISOString().slice(0, 10) === todayIso)
-    .slice(0, 2);
-  const medal = (r: number) => (r === 1 ? '🥇' : r === 2 ? '🥈' : '🥉');
   const kstNow = new Date(Date.now() + 9 * 3600 * 1000);
   const captureDate = `${kstNow.getUTCFullYear()}. ${kstNow.getUTCMonth() + 1}. ${kstNow.getUTCDate()} (${'일월화수목금토'[kstNow.getUTCDay()]})`;
   return (
@@ -221,13 +211,13 @@ async function TodayTab({
         <EnhanceBar success={d.success} hold={d.hold} down={d.down} attempts={d.attempts} />
       </Card>
 
-      <Card title="오늘의 활동" aside={d.streakDays > 0 ? `🔥 ${d.streakDays}일 연속 출석` : undefined}>
+      <Card title="오늘의 활동">
         <StatGrid
           cols={4}
           items={[
             { l: '상자 개봉', v: d.boxesOpened > 0 ? `${d.boxesOpened}개` : '—' },
             { l: '초월 진척', v: d.transcendUps > 0 ? <span className="text-emerald-500">+{d.transcendUps}</span> : '—' },
-            { l: '레이드', v: d.raidAttacks > 0 ? `${d.raidAttacks}회` : '—' },
+            { l: '레이드 참여', v: d.raidAttacks > 0 ? `${d.raidAttacks}회` : '—' },
             {
               l: '대난투',
               v: d.melee?.myRank != null ? `#${d.melee.myRank}` : '—',
@@ -241,23 +231,7 @@ async function TodayTab({
             },
           ]}
         />
-        {d.melee && d.melee.top3.length > 0 ? (
-          <p className="mt-1.5 truncate text-[10px] text-zinc-500">
-            {d.melee.top3.map((t) => `${medal(t.rank)} ${t.nickname}`).join('  ')}
-          </p>
-        ) : null}
       </Card>
-
-      {issues.length > 0 ? (
-        <Card title="오늘의 이슈">
-          {issues.map((e) => (
-            <div key={e.id} className="flex items-baseline justify-between gap-2 py-0.5 text-[11.5px]">
-              <span className="min-w-0 flex-1 truncate text-zinc-600 dark:text-zinc-300">{worldEventMessage(e)}</span>
-              <span className="shrink-0 font-mono text-[9px] text-zinc-500">{fmtWorldTime(e.createdAtIso).slice(9)}</span>
-            </div>
-          ))}
-        </Card>
-      ) : null}
 
       <TodayShareBox
         nickname={nickname}
@@ -375,7 +349,7 @@ async function AllTab({
           items={[
             { l: '소환', v: s.raidSummons > 0 ? `${fmt(s.raidSummons)}회` : '—' },
             { l: '공격', v: s.raidAttacks > 0 ? `${fmt(s.raidAttacks)}회` : '—' },
-            { l: '보상 수령', v: s.raidRewards > 0 ? `${fmt(s.raidRewards)}회` : '—' },
+            { l: '획득 상자', v: s.raidRewards > 0 ? `${fmt(s.raidRewards)}개` : '—' },
             { l: '최고 페이즈', v: extras && extras.raidBestPhase > 0 ? `${extras.raidBestPhase}페이즈` : '—' },
           ]}
         />

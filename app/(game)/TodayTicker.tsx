@@ -24,9 +24,9 @@ const fmtKo = (n: number) => {
 function Delta({ d }: { d: number | null }) {
   if (!d) return null;
   return d > 0 ? (
-    <span className="font-extrabold text-emerald-600 dark:text-emerald-400"> ▲{fmtKo(d)}</span>
+    <span className="text-emerald-600 dark:text-emerald-400"> ▲{fmtKo(d)}</span>
   ) : (
-    <span className="font-extrabold text-red-500 dark:text-red-400"> ▼{fmtKo(-d)}</span>
+    <span className="text-red-500 dark:text-red-400"> ▼{fmtKo(-d)}</span>
   );
 }
 
@@ -34,15 +34,15 @@ export function TodayTicker({ data }: { data: TickerData }) {
   const msgs = useMemo(
     () => [
       <>
-        전투력 <b>{fmtKo(data.combat)}</b>
-        <Delta d={data.combatDelta} /> · 최고 <b>+{fmtKo(data.maxEnhance)}</b>
-        <Delta d={data.maxDelta} /> · 합산 <b>+{fmtKo(data.sumEnhance)}</b>
+        전투력 {fmtKo(data.combat)}
+        <Delta d={data.combatDelta} /> · 최고 +{fmtKo(data.maxEnhance)}
+        <Delta d={data.maxDelta} /> · 합산 +{fmtKo(data.sumEnhance)}
         <Delta d={data.sumDelta} />
       </>,
       <>
-        강화 <b>{data.attempts}회</b> · 성공{' '}
-        <b className="text-emerald-600 dark:text-emerald-400">{data.success}</b> · 유지 {data.hold} · 하락{' '}
-        <span className={data.down > 0 ? 'font-bold text-red-500 dark:text-red-400' : ''}>{data.down}</span>
+        강화 {data.attempts}회 · 성공{' '}
+        <span className="text-emerald-600 dark:text-emerald-400">{data.success}</span> · 유지 {data.hold} · 하락{' '}
+        <span className={data.down > 0 ? 'text-red-500 dark:text-red-400' : ''}>{data.down}</span>
       </>,
     ],
     [data],
@@ -54,11 +54,19 @@ export function TodayTicker({ data }: { data: TickerData }) {
   const textRef = useRef<HTMLSpanElement>(null);
 
   // 문구 교체마다 넘침 측정 — 넘치면 marquee, 아니면 정지.
+  // 폰트 로드 완료 후 재측정 + 리사이즈 재측정(마운트 직후 측정은 폰트 폭 확정 전이라
+  // 몇 px 넘침을 놓쳐 marquee가 안 돌던 문제, 2026-07-16).
   useEffect(() => {
-    const wrap = wrapRef.current;
-    const text = textRef.current;
-    if (!wrap || !text) return;
-    setOverflowPx(Math.max(0, text.scrollWidth - wrap.clientWidth));
+    const measure = () => {
+      const wrap = wrapRef.current;
+      const text = textRef.current;
+      if (!wrap || !text) return;
+      setOverflowPx(Math.max(0, text.scrollWidth - wrap.clientWidth));
+    };
+    measure();
+    document.fonts?.ready.then(measure).catch(() => {});
+    window.addEventListener('resize', measure);
+    return () => window.removeEventListener('resize', measure);
   }, [idx, msgs]);
 
   // 교대 — 체류 시간은 marquee 길이에 비례(다 읽고 교체).
@@ -93,7 +101,7 @@ export function TodayTicker({ data }: { data: TickerData }) {
           <span
             key={idx}
             ref={textRef}
-            className="inline-block whitespace-nowrap text-[11.5px] font-medium leading-none tabular-nums text-zinc-800 dark:text-zinc-100"
+            className="inline-block whitespace-nowrap text-[11.5px] leading-none tabular-nums text-zinc-800 dark:text-zinc-100"
             style={
               overflowPx > 0
                 ? {
