@@ -99,7 +99,17 @@ export function TodayTicker({ data }: { data: TickerData }) {
       <div ref={wrapRef} className="min-w-0 flex-1 overflow-hidden">
         <div
           className="flex w-max items-center text-[11.5px] leading-none tabular-nums text-zinc-800 dark:text-zinc-100"
-          style={durS > 0 ? { animation: `today-ticker-flow ${durS.toFixed(1)}s linear infinite` } : undefined}
+          style={
+            durS > 0
+              ? {
+                  animation: `today-ticker-flow ${durS.toFixed(1)}s linear infinite`,
+                  // 반복 경계 리페인트 깜빡임(iOS Safari) — 합성 레이어 상주 힌트(2026-07-16).
+                  willChange: 'transform',
+                  backfaceVisibility: 'hidden',
+                  transform: 'translateZ(0)',
+                }
+              : undefined
+          }
         >
           {half(true)}
           {half(false)}
