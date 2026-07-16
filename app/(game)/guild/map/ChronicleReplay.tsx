@@ -18,8 +18,8 @@ import { parseChronicleSegments, type ChronicleSegment } from './chronicle-token
 
 export type ReplayZonePos = { id: number; name: string; mapX: number; mapY: number };
 
-const CHAR_MS = 70;
-const MARCH_MS = 2200;
+const CHAR_MS = 82; // 2026-07-16 감속 2차
+const MARCH_MS = 2600;
 
 const sleepUnless = (ms: number, skip: () => boolean) =>
   new Promise<void>((r) => (skip() ? r() : setTimeout(r, ms)));
@@ -251,12 +251,12 @@ export function ChronicleReplayPanel({
         const z = zoneById.current.get(c.ev.zoneId)!;
         sparkAt({ x: z.mapX, y: z.mapY });
       }
-      await sleepUnless(650, () => skipRef.current);
+      await sleepUnless(750, () => skipRef.current);
       for (const c of clashers) {
         const z = zoneById.current.get(c.ev.zoneId)!;
         sparkAt({ x: z.mapX, y: z.mapY });
       }
-      await sleepUnless(650, () => skipRef.current);
+      await sleepUnless(750, () => skipRef.current);
     }
     // 점령/방어 결과 — 플래시 스태거(220ms)로 일괄 발표의 리듬
     for (const { ev, marchers } of all) {
@@ -265,10 +265,10 @@ export function ChronicleReplayPanel({
       const z = zoneById.current.get(ev.zoneId);
       applyFlip(ev);
       if (z) flashAt({ x: z.mapX, y: z.mapY }, guildOf(ev.winner).color ?? '#a8a29e');
-      await sleepUnless(220, () => skipRef.current);
+      await sleepUnless(300, () => skipRef.current);
       for (const m of marchers) if (!losers.includes(m.g)) setTimeout(() => fadeEmblem(m.el), 450);
     }
-    await sleepUnless(500, () => skipRef.current);
+    await sleepUnless(650, () => skipRef.current);
   }
 
   function applyFlip(ev: ReplayEvent) {
