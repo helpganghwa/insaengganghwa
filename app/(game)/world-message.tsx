@@ -79,6 +79,15 @@ export function worldEventMessage(e: WorldEventEntry, opts?: { link?: boolean })
     }
     case 'guild_create':
       return <>{actor}님이 {hb(guildName, C.guild)} 길드를 결성했습니다</>;
+    case 'guild_disband': {
+      const zs = (d.zones as string[]) ?? [];
+      return (
+        <>
+          {hb(guildName, C.guild)} 길드가 해산했습니다
+          {zs.length > 0 ? <> — 구역 {zs.length}곳이 주인을 잃었습니다</> : null}
+        </>
+      );
+    }
     case 'guild_power_1':
       return <>{hb(guildName, C.guild)} 길드가 {hl('전투력 1위', C.fuchsia)}에 올랐습니다</>;
     case 'guild_zone_1':

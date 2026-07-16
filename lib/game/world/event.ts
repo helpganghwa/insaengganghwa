@@ -18,6 +18,7 @@ export type WorldEventType =
   | 'enhance' // 강화 100단위 — detail { item, level }
   | 'transcend' // 개인 최고 초월 기록 갱신(11+, 유저당 수치별 1회) — detail { item, level }
   | 'guild_create' // 길드 결성 — detail { guildName }
+  | 'guild_disband' // 길드 해산(자발·자동 공통) — detail { guildName, zones: string[] }(중립화된 구역, 연대기 재료)
   | 'guild_power_1' // 길드 전투력 1위 교체 — detail { guildName }
   | 'guild_zone_1' // 길드 점령지 1위 교체 — detail { guildName }
   | 'rank_leader' // 랭킹 5종 유저 1위 교체 — detail { metric, value }

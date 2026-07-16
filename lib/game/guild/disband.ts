@@ -1,6 +1,6 @@
 import 'server-only';
 
-import { and, eq } from 'drizzle-orm';
+import { and, eq, sql } from 'drizzle-orm';
 
 import { db } from '@/lib/db/client';
 import { guilds, guildMembers, zones } from '@/lib/db/schema/guild';
@@ -15,6 +15,25 @@ type Tx = Parameters<Parameters<typeof db.transaction>[0]>[0];
  * 보유 구역: 소유·집행관·점령시각 해제(중립화). 세금 풀은 길드 삭제로 소멸.
  */
 export async function neutralizeAndDeleteGuild(tx: Tx, guildId: bigint): Promise<void> {
+  // 해산 흔적(2026-07-16) — 월드 피드 + 점령전 연대기 재료. 길드 행이 삭제되면 이름·구역을
+  // 복원할 수 없으므로 삭제 **전에** 스냅샷을 world_events(guild_disband)로 남긴다
+  // (자발 해산·마지막 멤버 탈퇴 자동 해산 공용 경로라 여기 한 곳이면 전 경로 커버).
+  const [g] = await tx
+    .select({ name: guilds.name, serverId: guilds.serverId })
+    .from(guilds)
+    .where(eq(guilds.id, guildId))
+    .limit(1);
+  const freed = await tx
+    .select({ name: zones.name })
+    .from(zones)
+    .where(eq(zones.ownerGuildId, guildId));
+  if (g) {
+    await tx.execute(sql`
+      insert into world_events (server_id, type, guild_id, detail)
+      values (${g.serverId}, 'guild_disband', ${guildId},
+              ${JSON.stringify({ guildName: g.name, zones: freed.map((z) => z.name) })}::jsonb)
+    `);
+  }
   await tx
     .update(zones)
     .set({ ownerGuildId: null, executorUserId: null, capturedAt: null })
