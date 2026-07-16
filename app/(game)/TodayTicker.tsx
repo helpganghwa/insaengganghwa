@@ -48,7 +48,8 @@ export function TodayTicker({ data }: { data: TickerData }) {
         {parts.map((p, i) => (
           <span key={i}>
             {p}
-            <span className="text-zinc-400 dark:text-zinc-600"> · </span>
+            {/* NBSP 구분 — 일반 공백은 사본 끝(인라인 박스 종단)에서 잘려 '·전투력'으로 붙음. */}
+            <span className="text-zinc-400 dark:text-zinc-600">{'\u00A0·\u00A0'}</span>
           </span>
         ))}
       </>
