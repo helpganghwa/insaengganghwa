@@ -95,12 +95,13 @@ export function TodayShareBox({
     const node = document.getElementById('today-capture');
     if (!node) return;
     setSaving(true);
+    node.setAttribute('data-capturing', '1'); // 캡처 전용 헤더(타이틀·날짜) 표시
     try {
       const dark = document.documentElement.classList.contains('dark');
       const dataUrl = await toPng(node, {
         pixelRatio: 2,
         backgroundColor: dark ? '#09090b' : '#ffffff',
-        style: { margin: '0' },
+        style: { margin: '0', padding: '18px 14px' },
       });
       const blob = await (await fetch(dataUrl)).blob();
       const file = new File([blob], `오늘의인생강화_${nickname}.png`, { type: 'image/png' });
@@ -115,6 +116,7 @@ export function TodayShareBox({
     } catch {
       /* 사용자 취소(AbortError) 포함 — 무시 */
     } finally {
+      node.removeAttribute('data-capturing');
       setSaving(false);
     }
   };

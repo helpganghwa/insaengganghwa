@@ -15,6 +15,8 @@ export const userDailyStats = pgTable(
     maxEnhance: bigint('max_enhance', { mode: 'bigint' }).notNull().default(0n),
     sumEnhance: bigint('sum_enhance', { mode: 'bigint' }).notNull().default(0n),
     combatRank: integer('combat_rank'),
+    maxRank: integer('max_rank'),
+    sumRank: integer('sum_rank'),
   },
   (t) => [primaryKey({ columns: [t.userId, t.serverId, t.kstDay] })],
 );
