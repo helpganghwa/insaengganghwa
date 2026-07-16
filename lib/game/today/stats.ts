@@ -212,6 +212,8 @@ export type LifetimeStats = {
   down: number;
   gemReduces: number;
   gemsSpent: number;
+  /** 통산 단련 시간(시간 단위) — Σ elapsed_ms(확률이 차오르던 유효 대기시간, 만기 후 방치 제외). */
+  totalTrainH: number;
   boxesOpened: number;
   transcendMax: number;
   transcendSum: number;
@@ -300,6 +302,7 @@ export async function getLifetimeStats(userId: string, serverId: number): Promis
     down: num(e.down),
     gemReduces: num(e.gem_reduces),
     gemsSpent: num(e.gems_spent),
+    totalTrainH: Math.round(num(e.total_elapsed_ms) / 3_600_000),
     boxesOpened: num(e.boxes),
     transcendMax: num(e.t_max),
     transcendSum: num(e.t_sum),

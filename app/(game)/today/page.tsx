@@ -271,12 +271,16 @@ async function AllTab({
         <EnhanceBar success={s.success} hold={s.hold} down={s.down} attempts={s.attempts} />
         <div className="mt-2">
           <StatGrid
-            cols={2}
+            cols={3}
             items={[
               { l: '총 시도', v: `${fmt(s.attempts)}회` },
+              { l: '총 단련 시간', v: s.totalTrainH > 0 ? `${fmt(s.totalTrainH)}시간` : '—' },
               { l: '다이아 시간 단축', v: s.gemsSpent > 0 ? `💎 ${fmt(s.gemsSpent)}` : '—', s: s.gemReduces > 0 ? `${fmt(s.gemReduces)}회` : undefined },
             ]}
           />
+          <p className="mt-1 text-[9.5px] text-zinc-500">
+            단련 시간은 장비가 강화 슬롯에서 성공 확률을 채우며 보낸 시간의 합이에요.
+          </p>
         </div>
         {extras && extras.dailyEnhance.length > 0 ? (
           <div className="mt-2">
