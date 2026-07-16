@@ -3,7 +3,6 @@
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { useEffect, useMemo, useState, useTransition } from 'react';
-import { josa } from 'es-hangul';
 
 import { profileHref } from '@/lib/game/profile/href';
 import { useResourceToast } from '@/components/ResourceToast';
@@ -23,6 +22,9 @@ import { guildErrMsg } from '../errors-msg';
 
 import { ZONE_LORE } from '@/lib/game/guild/zone-lore';
 import { REGION_META, REGION_ORDER, type Region } from '@/lib/game/guild/region-meta';
+import { CHRONICLE_TOKEN_RE, fixLeadingJosa } from './chronicle-tokens';
+import { ChronicleReplayPanel } from './ChronicleReplay';
+import type { ConquestReplay } from '@/lib/game/guild/conquest/replay';
 
 type Zone = {
   id: number;
@@ -47,40 +49,6 @@ type Zone = {
  *   칩/밑줄로 구분(색이 아닌 형태로 강조).
  * zoneColor: 구역 이름 → 색(zones 기반). 미매칭이면 null(기본 색 유지). 지역 카테고리는 마커 없이 일반 텍스트.
  */
-// \}+ — AI가 닫는 중괄호를 겹쳐 쓰는 경우({z|왕성}}) 여분까지 흡수.
-const CHRONICLE_TOKEN_RE = /\{([guz])\|([^}|]+)(?:\|([^}]+))?\}+/g;
-
-// 마커 직후 조사 보정용 — AI가 쓴 한쪽 조사를 이름 받침에 맞게 교정(은↔는 등).
-// 긴 조사부터 검사(으로부터>로>... 접두 충돌 방지). es-hangul josa.pick으로 정확 산출.
-const JOSA_PARTICLES: { p: string; pair: Parameters<typeof josa>[1] }[] = [
-  { p: '으로부터', pair: '으로부터/로부터' }, { p: '로부터', pair: '으로부터/로부터' },
-  { p: '으로서', pair: '으로서/로서' }, { p: '로서', pair: '으로서/로서' },
-  { p: '으로써', pair: '으로써/로써' }, { p: '로써', pair: '으로써/로써' },
-  { p: '이에요', pair: '이에요/예요' }, { p: '예요', pair: '이에요/예요' },
-  { p: '이란', pair: '이란/란' }, { p: '란', pair: '이란/란' },
-  { p: '이랑', pair: '이랑/랑' }, { p: '랑', pair: '이랑/랑' },
-  { p: '이나', pair: '이나/나' }, { p: '나', pair: '이나/나' },
-  { p: '이라', pair: '이라/라' }, { p: '라', pair: '이라/라' },
-  { p: '으로', pair: '으로/로' }, { p: '로', pair: '으로/로' },
-  { p: '은', pair: '은/는' }, { p: '는', pair: '은/는' },
-  { p: '이', pair: '이/가' }, { p: '가', pair: '이/가' },
-  { p: '을', pair: '을/를' }, { p: '를', pair: '을/를' },
-  { p: '와', pair: '와/과' }, { p: '과', pair: '와/과' },
-  { p: '아', pair: '아/야' }, { p: '야', pair: '아/야' },
-];
-
-/** 마커(name) 직후 텍스트(after)의 선두 조사를 이름 받침에 맞게 교정. 교정 조사 + 소비 길이 반환(없으면 null). */
-function fixLeadingJosa(name: string, after: string): { josa: string; len: number } | null {
-  for (const { p, pair } of JOSA_PARTICLES) {
-    if (!after.startsWith(p)) continue;
-    // 조사 뒤가 한글 음절이면 단어 일부일 수 있어 보정 안 함(공백·문장부호·끝만 조사로 인정).
-    const next = after[p.length];
-    if (next !== undefined && /[가-힣]/.test(next)) return null;
-    return { josa: josa.pick(name, pair), len: p.length };
-  }
-  return null;
-}
-
 function ChronicleText({
   text,
   zoneColor,
@@ -175,6 +143,7 @@ export function WorldMapView({
   chronicle,
   zones,
   adjacency,
+  replay,
 }: {
   mapSrc: string;
   residenceZoneId: number | null;
@@ -184,6 +153,7 @@ export function WorldMapView({
   chronicle: { today: string | null; list: { kstDay: string; headline: string }[] } | null;
   zones: Zone[];
   adjacency: { a: number; b: number }[];
+  replay: ConquestReplay | null;
 }) {
   const { showHeaderToast, showError } = useResourceToast();
   const { optimisticAdjust } = useDiamond();
@@ -191,6 +161,33 @@ export function WorldMapView({
   const [residence, setResidence] = useState<number | null>(residenceZoneId);
   const [selectedId, setSelectedId] = useState<number | null>(null);
   const [chronicleTab, setChronicleTab] = useState<'today' | 'full'>('today');
+  // '오늘의 역사' 리플레이(2026-07-16) — 재생 중엔 구역 소유 표시를 그날 아침(before) 상태로
+  // 되돌려 두고, 이벤트마다 승자에게 전환(종료 상태 = 현재 DB와 동일). layer는 오버레이 전용.
+  const [replayActive, setReplayActive] = useState(false);
+  const [replayOwners, setReplayOwners] = useState<Record<number, string | null> | null>(null);
+  const [replayLayer, setReplayLayer] = useState<HTMLDivElement | null>(null);
+  const canReplay = !!replay && !!chronicle?.today;
+  const startReplay = () => {
+    if (!canReplay || replayActive) return;
+    setShowConquest(false);
+    setChronicleTab('today');
+    setReplayOwners({ ...replay!.beforeOwner });
+    setReplayActive(true);
+  };
+  const endReplay = () => {
+    setReplayActive(false);
+    setReplayOwners(null); // 현재(실제) 소유로 복귀 — 리플레이 최종 상태와 동일
+  };
+  // 첫 진입 자동 재생 — 그날 1회(localStorage 게이트).
+  useEffect(() => {
+    if (!canReplay) return;
+    const key = `world-replay-seen:${serverId}`;
+    if (localStorage.getItem(key) === replay!.kstDay) return;
+    localStorage.setItem(key, replay!.kstDay);
+    const t = setTimeout(startReplay, 600); // 지도 첫 페인트 후
+    return () => clearTimeout(t);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
   // 우하단 스위치 — ON(기본): 노드=구역명 + 하단=역사. OFF: 노드=점령 길드명 + 하단=점령현황.
   const [showConquest, setShowConquest] = useState(false);
   const [statusTab, setStatusTab] = useState<'region' | 'ranking'>('region');
@@ -330,6 +327,8 @@ export function WorldMapView({
     <div className="flex min-h-full flex-col">
       {/* 지도 + 네모 노드 오버레이 — 풀폭 플러시(좌우 여백·모서리 제거). */}
       <div className="relative aspect-square w-full shrink-0 overflow-hidden border-b border-zinc-800 bg-zinc-950">
+        {/* 리플레이 오버레이(2026-07-16) — 문장 진군·격돌·플래시 전용 레이어(ChronicleReplay가 직접 관리). */}
+        <div ref={setReplayLayer} aria-hidden className="pointer-events-none absolute inset-0 z-40" />
         {/* eslint-disable-next-line @next/next/no-img-element */}
         <img
           src={mapSrc}
@@ -411,7 +410,15 @@ export function WorldMapView({
           />
         </span>
         {zones.map((z) => {
-          const owned = z.ownerGuildId != null;
+          // 리플레이 중 소유 override — 아침(before) 상태에서 시작해 이벤트마다 승자로 전환.
+          const rOwner = replayOwners ? (replayOwners[z.id] ?? null) : undefined;
+          const owned = rOwner !== undefined ? rOwner != null : z.ownerGuildId != null;
+          const emblemUrl =
+            rOwner !== undefined
+              ? rOwner != null
+                ? (replay?.guilds[rOwner]?.emblemUrl ?? null)
+                : null
+              : z.ownerEmblemUrl;
           const isResidence = z.id === residence;
           const color = REGION[z.region].color;
           return (
@@ -439,11 +446,11 @@ export function WorldMapView({
                   outlineOffset: 0,
                 }}
               >
-                {/* 점령 길드 문양(있으면) */}
-                {owned && z.ownerEmblemUrl ? (
+                {/* 점령 길드 문양(있으면) — 리플레이 중엔 override 소유 길드의 문양 */}
+                {owned && emblemUrl ? (
                   // eslint-disable-next-line @next/next/no-img-element
                   <img
-                    src={z.ownerEmblemUrl}
+                    src={emblemUrl}
                     alt=""
                     aria-hidden
                     className="h-full w-full object-contain"
@@ -495,7 +502,16 @@ export function WorldMapView({
         {!showConquest ? (
           <>
         {hasChronicle ? (
-          <div className="mb-2 flex justify-end">
+          <div className="mb-2 flex items-center justify-end gap-1.5">
+            {canReplay && !replayActive ? (
+              <button
+                type="button"
+                onClick={startReplay}
+                className="rounded-lg border border-zinc-200 px-2 py-0.5 text-[11px] font-bold text-zinc-500 active:opacity-60 dark:border-zinc-800 dark:text-zinc-400"
+              >
+                ▶ 다시 보기
+              </button>
+            ) : null}
             <div className="flex gap-0.5 rounded-lg bg-zinc-100 p-0.5 dark:bg-zinc-900">
               {(
                 [
@@ -522,6 +538,18 @@ export function WorldMapView({
         {hasChronicle ? (
           chronicleTab === 'today' ? (
             chronicle!.today ? (
+              replayActive && replay ? (
+                <ChronicleReplayPanel
+                  key={`replay-${replay.kstDay}`}
+                  text={chronicle!.today}
+                  replay={replay}
+                  zones={zones.map((z) => ({ id: z.id, name: z.name, mapX: z.mapX, mapY: z.mapY }))}
+                  layer={replayLayer}
+                  zoneColor={zoneColor}
+                  onOwnerFlip={(zoneId, guild) => setReplayOwners((m) => ({ ...(m ?? {}), [zoneId]: guild }))}
+                  onDone={endReplay}
+                />
+              ) : (
               <div className="flex flex-col gap-2.5">
                 {chronicle!.today.split(/\n{2,}/).map((para, idx) => (
                   <p
@@ -538,6 +566,7 @@ export function WorldMapView({
                   </p>
                 ))}
               </div>
+              )
             ) : (
               <p className="text-[13px] leading-relaxed text-zinc-400">
                 오늘은 기록된 역사가 없습니다. [전체]에서 지난 기록을 확인하세요.
