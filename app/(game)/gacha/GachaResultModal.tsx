@@ -103,7 +103,7 @@ function ResultCard({
       </span>
       <span
         className={`line-clamp-2 break-keep px-0.5 leading-tight text-zinc-600 dark:text-zinc-400 ${
-          big ? 'text-[13px] font-medium' : 'text-[9px]'
+          big ? 'text-[13px] font-medium' : 'min-h-[2.5em] text-[9px]'
         }`}
       >
         {r.name}
