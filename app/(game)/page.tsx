@@ -14,6 +14,8 @@ import { getWorldFeed } from '@/lib/game/world/event';
 import { listPublishedAnnouncements } from '@/lib/game/announcement';
 import { getTutorialState } from '@/lib/game/tutorial';
 import { getChallengeStatus } from '@/lib/game/challenges/status';
+import { getTodayTicker } from '@/lib/game/today/stats';
+import { TodayTicker } from './TodayTicker';
 import { activeChallenges, COMPLETE_BONUS } from '@/lib/game/challenges/defs';
 
 import { AnnouncementBoard } from './AnnouncementBoard';
@@ -265,7 +267,7 @@ export default async function HomePage() {
 
   // 월드 소식 티커 — 헤더 하단 고정, 최근 10건 롤링(클릭 시 /world 전체). 콜드/hang 시 빈 배열로 degrade.
   // 월드피드 + 게시판(공지) 병렬 조회(독립 — §11.4 왕복 최소화). 콜드/hang 시 각각 빈 배열로 degrade.
-  const [worldFeed, announcements, tutState, chgStatus] = userId
+  const [worldFeed, announcements, tutState, chgStatus, todayStats] = userId
     ? await Promise.all([
         withTimeout(getWorldFeed(serverId, 10), 2500, 'home.worldfeed').catch(() => []),
         withTimeout(listPublishedAnnouncements(30), 2000, 'home.ann').catch(() => []),
@@ -278,8 +280,10 @@ export default async function HomePage() {
         withTimeout(getChallengeStatus(userId, serverId, hidePaid), 2000, 'home.chg').catch(
           () => null,
         ),
+        // 오늘의 인생강화 티커(0120) — 실패 시 null(티커 미노출).
+        withTimeout(getTodayTicker(userId, serverId), 2000, 'home.today').catch(() => null),
       ])
-    : [[], [], { phase: 'done' as const, step: null }, null];
+    : [[], [], { phase: 'done' as const, step: null }, null, null];
   const tutorialActive = tutState.phase !== 'done';
 
   return (
@@ -287,6 +291,8 @@ export default async function HomePage() {
       {worldFeed.length > 0 && <WorldTicker entries={worldFeed} />}
       <div className="flex flex-col gap-3 px-4 py-4">
       <RankingTop3Card />
+      {/* 오늘의 인생강화 티커(0120) — 랭킹 바로 아래 1줄, /today 진입점(2026-07-16 확정). */}
+      {todayStats ? <TodayTicker data={todayStats} /> : null}
       {/* 도전 과제 배너 — 일회성 온보딩 리워드(0118). 캐러셀 배너와 동일 규격(h-16),
           랭킹 바로 아래(2026-07-15 위치·크기 확정). 수령 가능 시 앰버 글로우. */}
       {(() => {
