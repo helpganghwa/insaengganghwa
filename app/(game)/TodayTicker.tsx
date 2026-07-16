@@ -15,7 +15,7 @@ export function TodayTicker({ data }: { data: TickerData }) {
     const fmt = (n: number) => n.toLocaleString('ko-KR');
     const delta = (d: number | null) =>
       d == null || d === 0 ? null : d > 0 ? (
-        <span className="font-extrabold text-emerald-500"> ▲ {fmt(d)}</span>
+        <span className="font-extrabold text-emerald-400"> ▲ {fmt(d)}</span>
       ) : (
         <span className="font-extrabold text-red-400"> ▼ {fmt(-d)}</span>
       );
@@ -25,7 +25,7 @@ export function TodayTicker({ data }: { data: TickerData }) {
     if (data.attempts > 0)
       out.push(
         <>
-          강화 <b>{data.attempts}회</b> · 성공 <b className="text-emerald-500">{data.success}</b>{' '}
+          강화 <b>{data.attempts}회</b> · 성공 <b className="text-emerald-400">{data.success}</b>{' '}
           유지 {data.hold}{data.down > 0 ? <span className="text-red-400"> 하락 {data.down}</span> : null}
         </>,
       );
@@ -54,11 +54,15 @@ export function TodayTicker({ data }: { data: TickerData }) {
   return (
     <Link
       href="/today"
-      className="flex items-center gap-2 rounded-xl border border-amber-600/40 bg-gradient-to-r from-amber-500/10 to-amber-500/[0.03] px-3 py-2"
+      className="flex items-center gap-2 overflow-hidden rounded-lg px-3.5 py-2 text-zinc-100"
+      style={{
+        // 픽셀 프레임 배너(Pixellab, 2026-07-16) — 다크 이미지 고정이라 텍스트도 라이트 고정.
+        backgroundImage: 'url(/sprites/today-ticker.png)',
+        backgroundSize: '100% 100%',
+        imageRendering: 'pixelated',
+      }}
     >
-      <span className="shrink-0 text-[11px] font-extrabold text-amber-600 dark:text-amber-400">
-        오늘의 인생강화
-      </span>
+      <span className="shrink-0 text-[11px] font-extrabold text-amber-400">오늘의 인생강화</span>
       <span
         className="min-w-0 flex-1 truncate text-[12px] transition-opacity duration-200"
         style={{ opacity: visible ? 1 : 0 }}

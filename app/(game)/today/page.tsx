@@ -12,6 +12,7 @@ import { getWorldFeed } from '@/lib/game/world/event';
 import { worldEventMessage, fmtWorldTime } from '@/app/(game)/world-message';
 
 import { TodayShareBox } from './TodayShareBox';
+import { RankChartClient } from './RankChartClient';
 
 /**
  * 오늘의 인생강화(0120) — 오늘/전체 2탭(7·30일 폐기, 2026-07-16). 게임 카드 톤으로 컴팩트하게:
@@ -149,30 +150,35 @@ async function TodayTab({
   const medal = (r: number) => (r === 1 ? '🥇' : r === 2 ? '🥈' : '🥉');
   return (
     <>
+      {/* 이미지 저장 캡처 영역(2026-07-16) — 버튼(TodayShareBox)은 밖. */}
+      <div id="today-capture" className="flex flex-col gap-2.5 bg-white dark:bg-zinc-950">
       <Card title="어제와 비교" aside="자정 기준">
         <StatGrid
           items={[
-            {
-              l: '전투력', v: fmt(d.combat),
-              s: (
-                <>
-                  <Delta d={d.combatDelta} />
-                  {d.combatRank != null ? (
-                    <span className="ml-1">
-                      {d.combatRankPrev != null && d.combatRankPrev !== d.combatRank ? (
-                        <>#{d.combatRankPrev}→<b className={d.combatRankPrev > d.combatRank ? 'text-emerald-500' : 'text-red-400'}>#{d.combatRank}</b></>
-                      ) : (
-                        <>#{d.combatRank}</>
-                      )}
-                    </span>
-                  ) : null}
-                </>
-              ),
-            },
+            { l: '전투력', v: fmt(d.combat), s: <Delta d={d.combatDelta} /> },
             { l: '최고 강화', v: `+${fmt(d.maxEnhance)}`, s: <Delta d={d.maxDelta} /> },
             { l: '합산 강화', v: `+${fmt(d.sumEnhance)}`, s: <Delta d={d.sumDelta} /> },
           ]}
         />
+        {/* 랭킹 변화 — 수치 변화와 분리(2026-07-16 피드백: 셀 안 혼합 표기가 가독 저해). */}
+        {d.combatRank != null ? (
+          <div className="mt-1.5 flex items-baseline justify-between rounded-lg bg-white/70 px-2.5 py-1.5 dark:bg-zinc-950/50">
+            <span className="text-[10px] text-zinc-500">전투력 랭킹</span>
+            <span className="text-[12px] font-extrabold tabular-nums">
+              {d.combatRankPrev != null && d.combatRankPrev !== d.combatRank ? (
+                <>
+                  <span className="font-normal text-zinc-400 line-through">#{d.combatRankPrev}</span>
+                  {' → '}#{d.combatRank}{' '}
+                  <span className={`text-[10px] ${d.combatRankPrev > d.combatRank ? 'text-emerald-500' : 'text-red-400'}`}>
+                    {d.combatRankPrev > d.combatRank ? '▲' : '▼'} {Math.abs(d.combatRankPrev - d.combatRank)}
+                  </span>
+                </>
+              ) : (
+                <>#{d.combatRank} <span className="text-[10px] font-normal text-zinc-400">변동 없음</span></>
+              )}
+            </span>
+          </div>
+        ) : null}
       </Card>
 
       <Card title="오늘의 강화" aside={d.attempts > 0 ? `시도 ${d.attempts}회` : undefined}>
@@ -181,9 +187,11 @@ async function TodayTab({
 
       <Card title="오늘의 활동" aside={d.streakDays > 0 ? `🔥 ${d.streakDays}일 연속 출석` : undefined}>
         <StatGrid
+          cols={4}
           items={[
             { l: '상자 개봉', v: d.boxesOpened > 0 ? `${d.boxesOpened}개` : '—' },
             { l: '초월 진척', v: d.transcendUps > 0 ? <span className="text-emerald-500">+{d.transcendUps}</span> : '—' },
+            { l: '레이드', v: d.raidAttacks > 0 ? `${d.raidAttacks}회` : '—' },
             {
               l: '대난투',
               v: d.melee?.myRank != null ? `#${d.melee.myRank}` : '—',
@@ -214,6 +222,7 @@ async function TodayTab({
           ))}
         </Card>
       ) : null}
+      </div>
 
       <TodayShareBox
         nickname={nickname}
@@ -244,7 +253,7 @@ async function AllTab({ userId, serverId, nickname }: { userId: string; serverId
         />
       </Card>
 
-      <Card title="통산 강화" aside={s.attempts > 0 ? `성공률 ${Math.round((s.success / s.attempts) * 100)}%` : undefined}>
+      <Card title="통산 강화">
         <EnhanceBar success={s.success} hold={s.hold} down={s.down} attempts={s.attempts} />
         <div className="mt-2">
           <StatGrid
@@ -262,7 +271,7 @@ async function AllTab({ userId, serverId, nickname }: { userId: string; serverId
           cols={4}
           items={[
             { l: '보유 장비', v: `${s.itemKinds}종`, s: `/ ${s.catalogTotal}종` },
-            { l: '최고 초월', v: s.transcendMax > 0 ? `T${s.transcendMax}` : '—' },
+            { l: '최고 초월', v: s.transcendMax > 0 ? <span className="text-amber-500">✦{s.transcendMax}</span> : '—' },
             { l: '초월 합계', v: s.transcendSum > 0 ? `+${fmt(s.transcendSum)}` : '—' },
             { l: '상자 개봉', v: fmt(s.boxesOpened) },
           ]}
@@ -291,58 +300,19 @@ async function AllTab({ userId, serverId, nickname }: { userId: string; serverId
       </Card>
 
       <Card title="전투력 랭킹 추이" aside="최근 30일 · 자정 기준">
-        <RankChart points={history} />
+        {history.length >= 2 ? (
+          <RankChartClient points={history} />
+        ) : (
+          <div className="py-2 text-center">
+            {history.length === 1 ? (
+              <p className="text-[13px] font-extrabold tabular-nums">현재 #{history[0]!.rank}</p>
+            ) : null}
+            <p className="mt-0.5 text-[10.5px] text-zinc-500">내일부터 매일 자정 기록으로 추이가 그려져요.</p>
+          </div>
+        )}
       </Card>
     </>
   );
 }
 
 
-/** 전투력 랭킹 추이 SVG — 낮을수록 위(1위=상단). 점 2개 미만이면 안내(스냅샷 축적 중). */
-function RankChart({ points }: { points: RankPoint[] }) {
-  if (points.length < 2) {
-    return (
-      <div className="py-2 text-center">
-        {points.length === 1 ? (
-          <p className="text-[13px] font-extrabold tabular-nums">현재 #{points[0]!.rank}</p>
-        ) : null}
-        <p className="mt-0.5 text-[10.5px] text-zinc-500">내일부터 매일 자정 기록으로 추이가 그려져요.</p>
-      </div>
-    );
-  }
-  const W = 320;
-  const H = 84;
-  const PAD = { l: 6, r: 34, t: 10, b: 14 };
-  const ranks = points.map((p) => p.rank);
-  const min = Math.min(...ranks);
-  const max = Math.max(...ranks);
-  const span = Math.max(1, max - min);
-  const x = (i: number) => PAD.l + (i / (points.length - 1)) * (W - PAD.l - PAD.r);
-  const y = (r: number) => PAD.t + ((r - min) / span) * (H - PAD.t - PAD.b);
-  const poly = points.map((p, i) => `${x(i).toFixed(1)},${y(p.rank).toFixed(1)}`).join(' ');
-  const last = points[points.length - 1]!;
-  const first = points[0]!;
-  const improved = last.rank < first.rank;
-  return (
-    <div>
-      <svg viewBox={`0 0 ${W} ${H}`} className="w-full">
-        {/* 가이드라인 — 최고(min)·최저(max) 랭크 */}
-        <line x1={PAD.l} y1={y(min)} x2={W - PAD.r} y2={y(min)} stroke="currentColor" strokeOpacity="0.08" strokeWidth="1" />
-        <line x1={PAD.l} y1={y(max)} x2={W - PAD.r} y2={y(max)} stroke="currentColor" strokeOpacity="0.08" strokeWidth="1" />
-        <polyline points={poly} fill="none" stroke="#f59e0b" strokeWidth="2" strokeLinejoin="round" strokeLinecap="round" />
-        {points.map((p, i) => (
-          <circle key={p.kstDay} cx={x(i)} cy={y(p.rank)} r={i === points.length - 1 ? 3.2 : 2} fill={i === points.length - 1 ? '#f59e0b' : '#a8a29e'} />
-        ))}
-        <text x={W - PAD.r + 4} y={y(last.rank) + 3.5} fontSize="10" fontWeight="800" fill={improved ? '#10b981' : '#f59e0b'}>
-          #{last.rank}
-        </text>
-      </svg>
-      <div className="flex justify-between text-[9px] tabular-nums text-zinc-500">
-        <span>{first.kstDay.slice(5).replace('-', '/')} #{first.rank}</span>
-        <span>
-          {improved ? `▲ ${first.rank - last.rank}계단 상승` : last.rank > first.rank ? `▼ ${last.rank - first.rank}계단` : '유지'}
-        </span>
-      </div>
-    </div>
-  );
-}

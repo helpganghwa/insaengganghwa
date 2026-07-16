@@ -87,6 +87,7 @@ export type TodayDetail = TodayTicker & {
   melee: { myRank: number | null; total: number; prevRank: number | null; top3: { rank: number; nickname: string }[] } | null;
   boxesOpened: number;
   transcendUps: number;
+  raidAttacks: number;
   streakDays: number;
 };
 
@@ -122,6 +123,10 @@ export async function getTodayDetail(userId: string, serverId: number): Promise<
         select coalesce(sum(to_t - from_t), 0)::int n from transcend_logs
         where user_id = ${userId}::uuid and server_id = ${serverId} and created_at >= ${KST_DAY_START}
       ),
+      raids_today as (
+        select count(*)::int n from raid_attacks ra join raids rd on rd.id = ra.raid_id
+        where ra.user_id = ${userId}::uuid and rd.server_id = ${serverId} and ra.created_at >= ${KST_DAY_START}
+      ),
       days as (select distinct kst_day from checkin_claim_logs
         where user_id = ${userId}::uuid and server_id = ${serverId}
         order by kst_day desc limit 60)
@@ -136,6 +141,7 @@ export async function getTodayDetail(userId: string, serverId: number): Promise<
            where mp.battle_id = (select id from battle) and mp.final_rank <= 3) melee_top3,
         (select n from boxes) boxes_opened,
         (select n from tups) transcend_ups,
+        (select n from raids_today) raid_attacks,
         (select coalesce(json_agg(kst_day::text order by kst_day desc), '[]'::json) from days) checkin_days,
         (select d::text from today_day) kst_day
     `),
@@ -172,6 +178,7 @@ export async function getTodayDetail(userId: string, serverId: number): Promise<
         : null,
     boxesOpened: Number(e.boxes_opened ?? 0),
     transcendUps: Number(e.transcend_ups ?? 0),
+    raidAttacks: Number(e.raid_attacks ?? 0),
     streakDays: streak,
   };
 }
