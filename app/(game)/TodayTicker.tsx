@@ -88,7 +88,8 @@ export function TodayTicker({ data }: { data: TickerData }) {
       <div
         className={`min-w-0 flex-1 transition-opacity duration-200 ${visible ? 'opacity-100' : 'opacity-0'}`}
       >
-        <div ref={wrapRef} className="flex items-center justify-end overflow-hidden">
+        {/* 정렬 — 평소 우측, 넘칠 땐 좌측(우측 정렬이면 왼쪽이 잘린 채 시작해 marquee 방향이 어긋남). */}
+        <div ref={wrapRef} className={`flex items-center overflow-hidden ${overflowPx > 0 ? 'justify-start' : 'justify-end'}`}>
           <span
             key={idx}
             ref={textRef}
