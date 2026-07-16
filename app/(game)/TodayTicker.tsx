@@ -58,19 +58,18 @@ export function TodayTicker({ data }: { data: TickerData }) {
 
   const wrapRef = useRef<HTMLDivElement>(null);
   const copyRef = useRef<HTMLSpanElement>(null);
-  const [copyW, setCopyW] = useState(0);
-  const [copies, setCopies] = useState(2);
+  // 절반 1개당 사본 수(M) — 절반 폭이 컨테이너보다 넓어야 이동 중 공백이 없다.
+  const [perHalf, setPerHalf] = useState(1);
+  const [durS, setDurS] = useState(0);
 
   useEffect(() => {
     const measure = () => {
-      // getBoundingClientRect — 소수점 폭. scrollWidth(정수 반올림)로 이동하면 매 루프
-      // 미세 오차가 쌓여 이음새에서 깜빡/점프(2026-07-16).
       const w = copyRef.current?.getBoundingClientRect().width ?? 0;
       const c = wrapRef.current?.clientWidth ?? 0;
       if (w > 0 && c > 0) {
-        setCopyW(w);
-        // 컨테이너 + 사본 1개를 항상 덮도록 — 이동 중에도 빈 공간이 생기지 않는 최소 반복 수.
-        setCopies(Math.max(2, Math.ceil(c / w) + 1));
+        const m = Math.max(1, Math.ceil(c / w));
+        setPerHalf(m);
+        setDurS(Math.max(6, (w * m) / SCROLL_PX_PER_S)); // -50% = 절반 폭 이동 시간
       }
     };
     measure();
@@ -79,7 +78,15 @@ export function TodayTicker({ data }: { data: TickerData }) {
     return () => window.removeEventListener('resize', measure);
   }, [line]);
 
-  const durS = copyW > 0 ? Math.max(6, copyW / SCROLL_PX_PER_S) : 14;
+  const half = (withRef: boolean) => (
+    <span aria-hidden={!withRef} className="flex w-max items-center">
+      {Array.from({ length: perHalf }, (_, i) => (
+        <span key={i} ref={withRef && i === 0 ? copyRef : undefined} className="inline-block whitespace-nowrap">
+          {line}
+        </span>
+      ))}
+    </span>
+  );
 
   return (
     <Link
@@ -92,20 +99,10 @@ export function TodayTicker({ data }: { data: TickerData }) {
       <div ref={wrapRef} className="min-w-0 flex-1 overflow-hidden">
         <div
           className="flex w-max items-center text-[11.5px] leading-none tabular-nums text-zinc-800 dark:text-zinc-100"
-          style={
-            copyW > 0
-              ? {
-                  animation: `today-ticker-flow ${durS}s linear infinite`,
-                  ['--tt-shift' as string]: `-${copyW.toFixed(2)}px`,
-                }
-              : undefined
-          }
+          style={durS > 0 ? { animation: `today-ticker-flow ${durS.toFixed(1)}s linear infinite` } : undefined}
         >
-          {Array.from({ length: copies }, (_, i) => (
-            <span key={i} ref={i === 0 ? copyRef : undefined} aria-hidden={i > 0} className="inline-block whitespace-nowrap">
-              {line}
-            </span>
-          ))}
+          {half(true)}
+          {half(false)}
         </div>
       </div>
     </Link>
