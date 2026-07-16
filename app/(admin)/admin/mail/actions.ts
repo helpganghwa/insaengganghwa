@@ -7,7 +7,7 @@ import { requireAdmin } from '@/lib/auth/require-admin';
 import { db } from '@/lib/db/client';
 import { profiles } from '@/lib/db/schema/profiles';
 import { characters } from '@/lib/db/schema/server';
-import { mailbox, adminMailLogs } from '@/lib/db/schema/mailbox';
+import { mailbox, adminMailLogs, adminScheduledMails } from '@/lib/db/schema/mailbox';
 import { sendPushToUser, sendPushToUsers } from '@/lib/push/send';
 
 export interface MailPayload {
@@ -232,4 +232,58 @@ export async function getBroadcastRecipientCountAction(): Promise<{ count: numbe
   await requireAdmin();
   const [row] = await db.select({ c: sql<number>`count(*)::int` }).from(profiles);
   return { count: row?.c ?? 0 };
+}
+
+/** 전체 발송 예약(0123) — KST datetime → 크론(scheduled-mail, 5분)이 도래 시 발송. */
+export async function scheduleBroadcastAction(opts: {
+  title: string;
+  body: string;
+  payload: MailPayload;
+  push?: boolean;
+  /** KST 'YYYY-MM-DDTHH:mm' (datetime-local 값). */
+  scheduledAtKst: string;
+}): Promise<{ status: 'success'; scheduledAtIso: string } | ErrorState> {
+  try {
+    const adminId = await requireAdmin();
+    const m = /^(\d{4})-(\d{2})-(\d{2})T(\d{2}):(\d{2})$/.exec(opts.scheduledAtKst || '');
+    if (!m) return { status: 'error', message: '예약 시각 형식이 올바르지 않습니다.' };
+    const at = new Date(`${opts.scheduledAtKst}:00+09:00`);
+    if (Number.isNaN(at.getTime())) return { status: 'error', message: '예약 시각이 올바르지 않습니다.' };
+    if (at.getTime() < Date.now() + 60_000)
+      return { status: 'error', message: '예약 시각은 최소 1분 이후여야 합니다.' };
+    await db.insert(adminScheduledMails).values({
+      adminId,
+      title: (opts.title || '').slice(0, 100),
+      body: (opts.body || '').slice(0, 1000),
+      payload: clampPayload(opts.payload),
+      push: !!opts.push,
+      scheduledAt: at,
+    });
+    revalidatePath('/admin/mail');
+    return { status: 'success', scheduledAtIso: at.toISOString() };
+  } catch (e) {
+    const msg = e instanceof Error ? e.message : 'UNKNOWN';
+    if (msg === 'FORBIDDEN') return { status: 'error', message: '관리자 권한이 없습니다.' };
+    if (msg === 'UNAUTHENTICATED') return { status: 'error', message: '로그인이 필요합니다.' };
+    console.error('[admin.mail.schedule]', e);
+    return { status: 'error', message: '알 수 없는 오류' };
+  }
+}
+
+/** 예약 취소 — 미발송 건만(sent_at null 조건부, 발송 경합 시 no-op). */
+export async function cancelScheduledMailAction(id: string): Promise<{ status: 'success' } | ErrorState> {
+  try {
+    await requireAdmin();
+    await db.execute(sql`
+      update admin_scheduled_mails set canceled_at = now()
+      where id = ${id}::bigint and sent_at is null and canceled_at is null
+    `);
+    revalidatePath('/admin/mail');
+    return { status: 'success' };
+  } catch (e) {
+    const msg = e instanceof Error ? e.message : 'UNKNOWN';
+    if (msg === 'FORBIDDEN') return { status: 'error', message: '관리자 권한이 없습니다.' };
+    console.error('[admin.mail.cancel-schedule]', e);
+    return { status: 'error', message: '알 수 없는 오류' };
+  }
 }

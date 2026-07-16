@@ -39,15 +39,21 @@ export type ConquestReplay = {
   beforeOwner: Record<number, string | null>;
 };
 
-export async function getConquestReplay(serverId: number): Promise<ConquestReplay | null> {
-  // 연대기와 동일한 '최신 공개일' — 읽기 게이트(kst_day < 오늘 KST)와 정합.
-  const [row] = (await db.execute(dsql`
-    select kst_day::text d from world_chronicle
-    where server_id = ${serverId} and kst_day < (now() at time zone 'Asia/Seoul')::date
-    order by kst_day desc limit 1
-  `)) as unknown as { d: string }[];
-  if (!row) return null;
-  const kstDay = row.d.slice(0, 10);
+export async function getConquestReplay(serverId: number, forKstDay?: string): Promise<ConquestReplay | null> {
+  // 기본: 연대기와 동일한 '최신 공개일'(읽기 게이트 kst_day < 오늘 KST와 정합).
+  // forKstDay 지정 시 그 날짜로 — 공개 전 검수(어드민 미리보기, 2026-07-16) 전용.
+  let kstDay: string;
+  if (forKstDay) {
+    kstDay = forKstDay.slice(0, 10);
+  } else {
+    const [row] = (await db.execute(dsql`
+      select kst_day::text d from world_chronicle
+      where server_id = ${serverId} and kst_day < (now() at time zone 'Asia/Seoul')::date
+      order by kst_day desc limit 1
+    `)) as unknown as { d: string }[];
+    if (!row) return null;
+    kstDay = row.d.slice(0, 10);
+  }
 
   const s = await aggregateConquestDay(kstDay, serverId);
   if (s.captures.length === 0 && s.defenses.length === 0) return null;

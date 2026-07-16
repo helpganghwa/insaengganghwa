@@ -1,9 +1,9 @@
-import { and, desc, eq } from 'drizzle-orm';
+import { and, desc, eq, sql } from 'drizzle-orm';
 
 import { db } from '@/lib/db/client';
 import { profiles } from '@/lib/db/schema/profiles';
 import { characters } from '@/lib/db/schema/server';
-import { adminMailLogs } from '@/lib/db/schema/mailbox';
+import { adminMailLogs, adminScheduledMails } from '@/lib/db/schema/mailbox';
 
 import { AdminMailClient } from './AdminMailClient';
 
@@ -35,6 +35,24 @@ const kstFmt = new Intl.DateTimeFormat('ko-KR', {
 
 /** 어드민 우편 발송 — 단건 + broadcast. 진입 가드는 (admin)/layout.tsx 일원화. */
 export default async function AdminMailPage() {
+  // 대기 중 예약(0123) — 미발송·미취소만, 도래 임박순.
+  const scheduledRows = await db
+    .select({
+      id: adminScheduledMails.id,
+      title: adminScheduledMails.title,
+      scheduledAt: adminScheduledMails.scheduledAt,
+      push: adminScheduledMails.push,
+    })
+    .from(adminScheduledMails)
+    .where(and(sql`${adminScheduledMails.sentAt} is null`, sql`${adminScheduledMails.canceledAt} is null`))
+    .orderBy(adminScheduledMails.scheduledAt)
+    .limit(20);
+  const scheduled = scheduledRows.map((r) => ({
+    id: String(r.id),
+    title: r.title,
+    scheduledAtKst: kstFmt.format(r.scheduledAt),
+    push: r.push,
+  }));
   const logs = await db
     .select({
       id: adminMailLogs.id,
@@ -59,7 +77,7 @@ export default async function AdminMailPage() {
 
   return (
     <>
-      <AdminMailClient />
+      <AdminMailClient scheduled={scheduled} />
 
       <section className="mx-auto max-w-md px-4 pb-12 text-sm">
         <h2 className="mb-2 mt-1 text-xs font-bold text-zinc-500">최근 발송 ({logs.length})</h2>

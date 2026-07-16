@@ -1,7 +1,8 @@
 import { desc, sql } from 'drizzle-orm';
 
 import { db } from '@/lib/db/client';
-import { worldChronicle } from '@/lib/db/schema/guild';
+import { worldChronicle, zones as zonesTable } from '@/lib/db/schema/guild';
+import { getConquestReplay, type ConquestReplay } from '@/lib/game/guild';
 
 import { ServerBadge } from '../ServerBadge';
 import { AdminAvatarViewer } from '../profile-gen/AdminAvatarViewer';
@@ -44,14 +45,32 @@ async function loadData() {
       }[]
     >,
   ]);
-  return { chronicles, battles };
+  // 애니메이션 미리보기 재료(2026-07-16) — 연대기 날짜별 리플레이 스크립트 + 구역 좌표.
+  const replays = new Map<string, ConquestReplay | null>();
+  for (const c of chronicles) {
+    replays.set(
+      `${c.serverId}:${c.kstDay}`,
+      await getConquestReplay(c.serverId, c.kstDay).catch(() => null),
+    );
+  }
+  const zoneRows = await db
+    .select({
+      id: zonesTable.id,
+      name: zonesTable.name,
+      mapX: zonesTable.mapX,
+      mapY: zonesTable.mapY,
+      region: zonesTable.region,
+      serverId: zonesTable.serverId,
+    })
+    .from(zonesTable);
+  return { chronicles, battles, replays, zoneRows };
 }
 
 const isTodayKst = (day: string) =>
   day === new Date(Date.now() + 9 * 3600 * 1000).toISOString().slice(0, 10);
 
 export default async function AdminPreviewPage() {
-  const { chronicles, battles } = await loadData();
+  const { chronicles, battles, replays, zoneRows } = await loadData();
 
   return (
     <main className="mx-auto flex w-full max-w-3xl flex-col gap-6 px-4 py-6">
@@ -84,6 +103,8 @@ export default async function AdminPreviewPage() {
                   kstDay={c.kstDay}
                   headline={c.headline}
                   todayText={c.todayText}
+                  replay={replays.get(`${c.serverId}:${c.kstDay}`) ?? null}
+                  zones={zoneRows.filter((z) => z.serverId === c.serverId)}
                 />
                 {/* AI 재검수 내역(0119) — 초안에서 바뀐 구절 diff. 사람 검수는 이 목록만 훑으면 됨. */}
                 {Array.isArray(c.reviewNotes) && c.reviewNotes.length > 0 ? (
