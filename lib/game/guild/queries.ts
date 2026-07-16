@@ -326,6 +326,7 @@ export async function getWorldmapZones(serverId: number) {
       ownerGuildId: zones.ownerGuildId,
       ownerGuildName: ownerGuild.name,
       ownerEmblemUrl: ownerGuild.emblemUrl,
+      ownerEmblemColor: ownerGuild.emblemColor,
       executorUserId: zones.executorUserId,
       executorNickname: characters.nickname,
       taxDiamond: zones.taxDiamond,
