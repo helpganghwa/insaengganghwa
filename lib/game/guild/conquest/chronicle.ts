@@ -399,6 +399,10 @@ export async function generateAndStoreChronicle(
       // 이 가드가 없으면 첫 구역이 "기존 세력권과 이어지지 않은 홀로 떨어진 조각"으로 오서술됨(2026-07-07 사건).
       if (a.comps > b.comps && b.zones > 0)
         return `· 길드 「${g}」: 새 점령지가 기존 영토와 떨어져 있음(${a.comps}개 조각, 비지 확보)`;
+      // 조각 수 감소의 원인 구분(2026-07-16 라이브 오서술) — 상실로 줄어든 것은 '통합'이 아니다.
+      // CBT가 왕성·대성당을 잃어 3→2조각이 됐는데 "이어붙였다"로 서술된 사건.
+      if (a.comps < b.comps && a.zones < b.zones)
+        return `· 길드 「${g}」: 구역 상실로 영토가 줄어 ${a.comps}개 조각만 남음(⚠ 연결/통합된 것이 아님 — '이어붙였다'류 서술 금지)`;
       if (a.comps < b.comps && b.comps > 1) return `· 길드 「${g}」: 점령으로 흩어져 있던 영토가 ${a.comps}개 조각으로 이어짐(통합)`;
       return null;
     })
