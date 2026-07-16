@@ -211,6 +211,7 @@ export type LifetimeStats = {
   hold: number;
   down: number;
   gemReduces: number;
+  gemsSpent: number;
   boxesOpened: number;
   transcendMax: number;
   transcendSum: number;
@@ -265,6 +266,7 @@ export async function getLifetimeStats(userId: string, serverId: number): Promis
       (select attempts from el) attempts, (select success from el) success,
       (select hold from el) hold, (select down from el) down,
       (select count(*)::int from gem_time_reductions where user_id=${userId}::uuid and server_id=${serverId}) gem_reduces,
+      (select coalesce(sum(gems_spent),0)::bigint from gem_time_reductions where user_id=${userId}::uuid and server_id=${serverId}) gems_spent,
       (select count(*)::int from supply_open_logs where user_id=${userId}::uuid and server_id=${serverId}) boxes,
       (select coalesce(max(transcend_level),0)::int from user_equipment where user_id=${userId}::uuid and server_id=${serverId}) t_max,
       (select coalesce(sum(transcend_level),0)::int from user_equipment where user_id=${userId}::uuid and server_id=${serverId}) t_sum,
@@ -297,6 +299,7 @@ export async function getLifetimeStats(userId: string, serverId: number): Promis
     hold: num(e.hold),
     down: num(e.down),
     gemReduces: num(e.gem_reduces),
+    gemsSpent: num(e.gems_spent),
     boxesOpened: num(e.boxes),
     transcendMax: num(e.t_max),
     transcendSum: num(e.t_sum),

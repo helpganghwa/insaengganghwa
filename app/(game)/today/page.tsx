@@ -274,7 +274,7 @@ async function AllTab({
             cols={2}
             items={[
               { l: '총 시도', v: `${fmt(s.attempts)}회` },
-              { l: '보석 시간 단축', v: s.gemReduces > 0 ? `${fmt(s.gemReduces)}회` : '—' },
+              { l: '보석 시간 단축', v: s.gemsSpent > 0 ? `💎 ${fmt(s.gemsSpent)}` : '—', s: s.gemReduces > 0 ? `${fmt(s.gemReduces)}회` : undefined },
             ]}
           />
         </div>
