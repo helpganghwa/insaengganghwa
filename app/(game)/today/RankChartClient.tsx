@@ -3,17 +3,23 @@
 import { useEffect, useRef } from 'react';
 import * as echarts from 'echarts/core';
 import { LineChart } from 'echarts/charts';
-import { GridComponent, TooltipComponent } from 'echarts/components';
+import { GridComponent, TooltipComponent, LegendComponent } from 'echarts/components';
 import { CanvasRenderer } from 'echarts/renderers';
 
 import type { RankPoint } from '@/lib/game/today/stats';
 
-echarts.use([LineChart, GridComponent, TooltipComponent, CanvasRenderer]);
+echarts.use([LineChart, GridComponent, TooltipComponent, LegendComponent, CanvasRenderer]);
 
 /**
- * 전투력 랭킹 추이 차트(ECharts treeshaken, 2026-07-16) — 1위가 위(inverse y),
- * 앰버 라인+그라데이션 영역, 툴팁(날짜·랭크·전투력), 마지막 점 강조.
+ * 랭킹 추이 차트(2026-07-16) — 전투력/최고/합산 3지표 멀티라인, 범례 탭으로 토글.
+ * 1위가 위(inverse y), 툴팁은 보이는 시리즈 일괄 표시.
  */
+const SERIES = [
+  { key: 'combat', name: '전투력', color: '#f59e0b' },
+  { key: 'max', name: '최고', color: '#38bdf8' },
+  { key: 'sum', name: '합산', color: '#34d399' },
+] as const;
+
 export function RankChartClient({ points }: { points: RankPoint[] }) {
   const ref = useRef<HTMLDivElement>(null);
 
@@ -22,17 +28,22 @@ export function RankChartClient({ points }: { points: RankPoint[] }) {
     const chart = echarts.init(ref.current);
     const dates = points.map((p) => `${Number(p.kstDay.slice(5, 7))}/${Number(p.kstDay.slice(8, 10))}`);
     chart.setOption({
-      grid: { left: 34, right: 14, top: 14, bottom: 22 },
+      grid: { left: 34, right: 12, top: 34, bottom: 22 },
+      legend: {
+        top: 0,
+        left: 'center',
+        itemWidth: 14,
+        itemHeight: 8,
+        icon: 'roundRect',
+        textStyle: { color: '#78716c', fontSize: 10 },
+        inactiveColor: 'rgba(120,113,108,0.35)',
+      },
       tooltip: {
         trigger: 'axis',
         backgroundColor: 'rgba(24,24,27,0.92)',
         borderColor: 'rgba(245,158,11,0.4)',
         textStyle: { color: '#e4e4e7', fontSize: 11 },
-        formatter: (ps: unknown) => {
-          const p = (ps as { dataIndex: number }[])[0]!;
-          const pt = points[p.dataIndex]!;
-          return `${dates[p.dataIndex]} · <b>#${pt.rank}</b><br/>전투력 ${pt.combat.toLocaleString('ko-KR')}`;
-        },
+        valueFormatter: (v: unknown) => (v == null ? '-' : `#${v}`),
       },
       xAxis: {
         type: 'category',
@@ -40,7 +51,7 @@ export function RankChartClient({ points }: { points: RankPoint[] }) {
         boundaryGap: false,
         axisLine: { lineStyle: { color: 'rgba(120,113,108,0.3)' } },
         axisTick: { show: false },
-        axisLabel: { color: '#78716c', fontSize: 9, interval: 'auto' },
+        axisLabel: { color: '#78716c', fontSize: 9 },
       },
       yAxis: {
         type: 'value',
@@ -50,24 +61,18 @@ export function RankChartClient({ points }: { points: RankPoint[] }) {
         axisLabel: { color: '#78716c', fontSize: 9, formatter: '#{value}' },
         splitLine: { lineStyle: { color: 'rgba(120,113,108,0.12)' } },
       },
-      series: [
-        {
-          type: 'line',
-          data: points.map((p) => p.rank),
-          smooth: 0.35,
-          symbol: 'circle',
-          symbolSize: (_: unknown, p: { dataIndex: number }) => (p.dataIndex === points.length - 1 ? 8 : 4),
-          lineStyle: { color: '#f59e0b', width: 2.5 },
-          itemStyle: { color: '#f59e0b', borderColor: '#fff7ed', borderWidth: 1 },
-          areaStyle: {
-            color: new echarts.graphic.LinearGradient(0, 0, 0, 1, [
-              { offset: 0, color: 'rgba(245,158,11,0.02)' },
-              { offset: 1, color: 'rgba(245,158,11,0.25)' },
-            ]),
-          },
-        },
-      ],
-      animationDuration: 500,
+      series: SERIES.map((sr) => ({
+        name: sr.name,
+        type: 'line',
+        data: points.map((p) => p[sr.key]),
+        smooth: 0.3,
+        symbol: 'circle',
+        symbolSize: 4,
+        connectNulls: true,
+        lineStyle: { color: sr.color, width: 2 },
+        itemStyle: { color: sr.color },
+      })),
+      animationDuration: 450,
     });
     const onResize = () => chart.resize();
     window.addEventListener('resize', onResize);
@@ -77,5 +82,5 @@ export function RankChartClient({ points }: { points: RankPoint[] }) {
     };
   }, [points]);
 
-  return <div ref={ref} className="h-[170px] w-full" />;
+  return <div ref={ref} className="h-[190px] w-full" />;
 }

@@ -87,6 +87,7 @@ export async function GET(req: Request, { params }: { params: Promise<{ code: st
         style={{
           width: '100%', height: '100%', display: 'flex', flexDirection: 'column',
           alignItems: 'center', justifyContent: 'center', position: 'relative',
+          paddingTop: 8, paddingBottom: 8,
           background: 'linear-gradient(160deg, #241a10 0%, #0f0d0b 65%)',
         }}
       >
@@ -100,9 +101,9 @@ export async function GET(req: Request, { params }: { params: Promise<{ code: st
           // eslint-disable-next-line @next/next/no-img-element
           <img
             src={avatar}
-            width={300}
-            height={400}
-            style={{ position: 'absolute', right: 90, bottom: 40, objectFit: 'contain', opacity: 0.92 }}
+            width={460}
+            height={580}
+            style={{ position: 'absolute', right: 40, bottom: 25, objectFit: 'contain', opacity: 0.92 }}
           />
         ) : null}
 

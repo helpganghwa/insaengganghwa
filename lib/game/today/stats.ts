@@ -80,8 +80,12 @@ export async function getTodayTicker(userId: string, serverId: number): Promise<
   };
 }
 
+export type RankPair = { now: number | null; prev: number | null };
+
 export type TodayDetail = TodayTicker & {
   kstDay: string;
+  /** 랭킹 변화 3지표(어제 자정 스냅샷 대비). combatRank*는 하위호환 별칭. */
+  rankChanges: { combat: RankPair; max: RankPair; sum: RankPair };
   combatRank: number | null;
   combatRankPrev: number | null;
   melee: { myRank: number | null; total: number; prevRank: number | null; top3: { rank: number; nickname: string }[] } | null;
@@ -98,13 +102,13 @@ export async function getTodayDetail(userId: string, serverId: number): Promise<
     db.execute(sql`
       with today_day as (select (now() at time zone 'Asia/Seoul')::date d),
       rank_now as (
-        select rnk from (
-          select user_id, row_number() over (order by value desc)::int rnk
-          from leaderboard_ranks where server_id = ${serverId} and metric = 'combat'
+        select metric, rnk from (
+          select user_id, metric, row_number() over (partition by metric order by value desc)::int rnk
+          from leaderboard_ranks where server_id = ${serverId} and metric in ('combat','max','sum')
         ) t where user_id = ${userId}::uuid
       ),
       rank_prev as (
-        select combat_rank from user_daily_stats
+        select combat_rank, max_rank, sum_rank from user_daily_stats
         where user_id = ${userId}::uuid and server_id = ${serverId} and kst_day = (select d from today_day)
       ),
       battle as (
@@ -131,8 +135,12 @@ export async function getTodayDetail(userId: string, serverId: number): Promise<
         where user_id = ${userId}::uuid and server_id = ${serverId}
         order by kst_day desc limit 60)
       select
-        (select rnk from rank_now) rank_now,
-        (select combat_rank from rank_prev) rank_prev,
+        (select rnk from rank_now where metric='combat') rank_combat,
+        (select rnk from rank_now where metric='max') rank_max,
+        (select rnk from rank_now where metric='sum') rank_sum,
+        (select combat_rank from rank_prev) prev_combat,
+        (select max_rank from rank_prev) prev_max,
+        (select sum_rank from rank_prev) prev_sum,
         (select final_rank from melee_participants where battle_id = (select id from battle) and user_id = ${userId}::uuid) melee_rank,
         (select count(*)::int from melee_participants where battle_id = (select id from battle)) melee_total,
         (select final_rank from melee_participants where battle_id = (select id from battle_prev) and user_id = ${userId}::uuid) melee_prev,
@@ -162,11 +170,20 @@ export async function getTodayDetail(userId: string, serverId: number): Promise<
     }
   }
   const meleeTotal = Number(e.melee_total ?? 0);
+  const pair = (now: unknown, prev: unknown) => ({
+    now: now == null ? null : Number(now),
+    prev: prev == null ? null : Number(prev),
+  });
   return {
     ...ticker,
     kstDay,
-    combatRank: e.rank_now == null ? null : Number(e.rank_now),
-    combatRankPrev: e.rank_prev == null ? null : Number(e.rank_prev),
+    rankChanges: {
+      combat: pair(e.rank_combat, e.prev_combat),
+      max: pair(e.rank_max, e.prev_max),
+      sum: pair(e.rank_sum, e.prev_sum),
+    },
+    combatRank: e.rank_combat == null ? null : Number(e.rank_combat),
+    combatRankPrev: e.prev_combat == null ? null : Number(e.prev_combat),
     melee:
       meleeTotal > 0
         ? {
@@ -298,34 +315,44 @@ export async function getLifetimeStats(userId: string, serverId: number): Promis
   };
 }
 
-export type RankPoint = { kstDay: string; rank: number; combat: number };
+export type RankPoint = {
+  kstDay: string;
+  combat: number | null;
+  max: number | null;
+  sum: number | null;
+};
 
-/** 전투력 랭킹 추이 — 최근 31일 자정 스냅샷 + 현재 시점(실시간) 1점. 스냅샷은 2026-07-16부터 축적. */
+/** 랭킹 추이(3지표) — 최근 31일 자정 스냅샷 + 현재 라이브 1점. 스냅샷은 2026-07-16부터 축적. */
 export async function getRankHistory(userId: string, serverId: number): Promise<RankPoint[]> {
   const rows = (await db.execute(sql`
-    select kst_day::text kst_day, combat_rank, combat::text combat
+    select kst_day::text kst_day, combat_rank, max_rank, sum_rank
     from user_daily_stats
     where user_id = ${userId}::uuid and server_id = ${serverId} and combat_rank is not null
     order by kst_day asc limit 31
-  `)) as unknown as { kst_day: string; combat_rank: number; combat: string }[];
+  `)) as unknown as { kst_day: string; combat_rank: number | null; max_rank: number | null; sum_rank: number | null }[];
   const points: RankPoint[] = rows.map((r) => ({
     kstDay: r.kst_day.slice(0, 10),
-    rank: Number(r.combat_rank),
-    combat: Number(r.combat),
+    combat: r.combat_rank == null ? null : Number(r.combat_rank),
+    max: r.max_rank == null ? null : Number(r.max_rank),
+    sum: r.sum_rank == null ? null : Number(r.sum_rank),
   }));
-  // 현재 시점 라이브 랭크 — 마지막 점(오늘 스냅샷과 다르면 추가).
-  const [now] = (await db.execute(sql`
-    select rnk, value from (
-      select user_id, value::text value, row_number() over (order by value desc)::int rnk
-      from leaderboard_ranks where server_id = ${serverId} and metric = 'combat'
+  const now = (await db.execute(sql`
+    select metric, rnk from (
+      select user_id, metric, row_number() over (partition by metric order by value desc)::int rnk
+      from leaderboard_ranks where server_id = ${serverId} and metric in ('combat','max','sum')
     ) t where user_id = ${userId}::uuid
-  `)) as unknown as { rnk: number; value: string }[];
-  if (now) {
+  `)) as unknown as { metric: string; rnk: number }[];
+  if (now.length > 0) {
     const today = new Date(Date.now() + 9 * 3600 * 1000).toISOString().slice(0, 10);
+    const live: RankPoint = {
+      kstDay: today,
+      combat: now.find((r) => r.metric === 'combat')?.rnk ?? null,
+      max: now.find((r) => r.metric === 'max')?.rnk ?? null,
+      sum: now.find((r) => r.metric === 'sum')?.rnk ?? null,
+    };
     const last = points[points.length - 1];
-    if (!last || last.kstDay !== today || last.rank !== Number(now.rnk)) {
-      points.push({ kstDay: today, rank: Number(now.rnk), combat: Number(now.value) });
-    }
+    if (!last || last.kstDay !== today) points.push(live);
+    else points[points.length - 1] = live; // 오늘 스냅샷보다 라이브가 최신
   }
   return points;
 }

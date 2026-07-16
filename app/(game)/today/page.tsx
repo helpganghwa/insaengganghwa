@@ -13,6 +13,7 @@ import { worldEventMessage, fmtWorldTime } from '@/app/(game)/world-message';
 
 import { TodayShareBox } from './TodayShareBox';
 import { RankChartClient } from './RankChartClient';
+import { transcendStyle } from '@/lib/game/equipment/transcend';
 
 /**
  * 오늘의 인생강화(0120) — 오늘/전체 2탭(7·30일 폐기, 2026-07-16). 게임 카드 톤으로 컴팩트하게:
@@ -148,10 +149,16 @@ async function TodayTab({
     .filter((e) => new Date(Date.parse(e.createdAtIso) + 9 * 3600 * 1000).toISOString().slice(0, 10) === todayIso)
     .slice(0, 2);
   const medal = (r: number) => (r === 1 ? '🥇' : r === 2 ? '🥈' : '🥉');
+  const kstNow = new Date(Date.now() + 9 * 3600 * 1000);
+  const captureDate = `${kstNow.getUTCFullYear()}. ${kstNow.getUTCMonth() + 1}. ${kstNow.getUTCDate()} (${'일월화수목금토'[kstNow.getUTCDay()]})`;
   return (
     <>
-      {/* 이미지 저장 캡처 영역(2026-07-16) — 버튼(TodayShareBox)은 밖. */}
-      <div id="today-capture" className="flex flex-col gap-2.5 bg-white dark:bg-zinc-950">
+      {/* 이미지 저장 캡처 영역(2026-07-16) — 버튼(TodayShareBox)은 밖. 타이틀·날짜는 캡처 시에만. */}
+      <div id="today-capture" className="group flex flex-col gap-2.5 bg-white dark:bg-zinc-950">
+      <div className="hidden items-baseline justify-between px-0.5 group-data-[capturing=1]:flex">
+        <span className="text-[15px] font-extrabold">오늘의 인생강화</span>
+        <span className="text-[10px] tabular-nums text-zinc-500">{captureDate}</span>
+      </div>
       <Card title="어제와 비교" aside="자정 기준">
         <StatGrid
           items={[
@@ -160,25 +167,40 @@ async function TodayTab({
             { l: '합산 강화', v: `+${fmt(d.sumEnhance)}`, s: <Delta d={d.sumDelta} /> },
           ]}
         />
-        {/* 랭킹 변화 — 수치 변화와 분리(2026-07-16 피드백: 셀 안 혼합 표기가 가독 저해). */}
-        {d.combatRank != null ? (
-          <div className="mt-1.5 flex items-baseline justify-between rounded-lg bg-white/70 px-2.5 py-1.5 dark:bg-zinc-950/50">
-            <span className="text-[10px] text-zinc-500">전투력 랭킹</span>
-            <span className="text-[12px] font-extrabold tabular-nums">
-              {d.combatRankPrev != null && d.combatRankPrev !== d.combatRank ? (
-                <>
-                  <span className="font-normal text-zinc-400 line-through">#{d.combatRankPrev}</span>
-                  {' → '}#{d.combatRank}{' '}
-                  <span className={`text-[10px] ${d.combatRankPrev > d.combatRank ? 'text-emerald-500' : 'text-red-400'}`}>
-                    {d.combatRankPrev > d.combatRank ? '▲' : '▼'} {Math.abs(d.combatRankPrev - d.combatRank)}
+        {/* 랭킹 변화 — 수치 변화와 분리, 3지표(2026-07-16 피드백). */}
+        <div className="mt-1.5 grid grid-cols-3 gap-1.5">
+          {(
+            [
+              { l: '전투력 랭킹', p: d.rankChanges.combat },
+              { l: '최고 랭킹', p: d.rankChanges.max },
+              { l: '합산 랭킹', p: d.rankChanges.sum },
+            ] as const
+          ).map((k) => (
+            <div key={k.l} className="rounded-lg bg-white/70 px-1.5 py-1.5 text-center dark:bg-zinc-950/50">
+              <div className="text-[9px] text-zinc-500">{k.l}</div>
+              <div className="mt-0.5 text-[12px] font-extrabold tabular-nums">
+                {k.p.now == null ? (
+                  '—'
+                ) : k.p.prev != null && k.p.prev !== k.p.now ? (
+                  <>
+                    <span className="text-[10px] font-normal text-zinc-400 line-through">#{k.p.prev}</span> #{k.p.now}
+                  </>
+                ) : (
+                  <>#{k.p.now}</>
+                )}
+              </div>
+              <div className="text-[9px] tabular-nums">
+                {k.p.now != null && k.p.prev != null && k.p.prev !== k.p.now ? (
+                  <span className={k.p.prev > k.p.now ? 'text-emerald-500' : 'text-red-400'}>
+                    {k.p.prev > k.p.now ? '▲' : '▼'} {Math.abs(k.p.prev - k.p.now)}
                   </span>
-                </>
-              ) : (
-                <>#{d.combatRank} <span className="text-[10px] font-normal text-zinc-400">변동 없음</span></>
-              )}
-            </span>
-          </div>
-        ) : null}
+                ) : (
+                  <span className="text-zinc-400 dark:text-zinc-600">—</span>
+                )}
+              </div>
+            </div>
+          ))}
+        </div>
       </Card>
 
       <Card title="오늘의 강화" aside={d.attempts > 0 ? `시도 ${d.attempts}회` : undefined}>
@@ -271,7 +293,14 @@ async function AllTab({ userId, serverId, nickname }: { userId: string; serverId
           cols={4}
           items={[
             { l: '보유 장비', v: `${s.itemKinds}종`, s: `/ ${s.catalogTotal}종` },
-            { l: '최고 초월', v: s.transcendMax > 0 ? <span className="text-amber-500">✦{s.transcendMax}</span> : '—' },
+            {
+              l: '최고 초월',
+              v: s.transcendMax > 0 ? (
+                <span style={{ color: `rgb(${transcendStyle(s.transcendMax).colorRgb.join(',')})` }}>✦{s.transcendMax}</span>
+              ) : (
+                '—'
+              ),
+            },
             { l: '초월 합계', v: s.transcendSum > 0 ? `+${fmt(s.transcendSum)}` : '—' },
             { l: '상자 개봉', v: fmt(s.boxesOpened) },
           ]}
@@ -299,13 +328,13 @@ async function AllTab({ userId, serverId, nickname }: { userId: string; serverId
         </div>
       </Card>
 
-      <Card title="전투력 랭킹 추이" aside="최근 30일 · 자정 기준">
+      <Card title="랭킹 추이" aside="최근 30일 · 자정 기준">
         {history.length >= 2 ? (
           <RankChartClient points={history} />
         ) : (
           <div className="py-2 text-center">
             {history.length === 1 ? (
-              <p className="text-[13px] font-extrabold tabular-nums">현재 #{history[0]!.rank}</p>
+              <p className="text-[13px] font-extrabold tabular-nums">현재 전투력 #{history[0]!.combat ?? "-"}</p>
             ) : null}
             <p className="mt-0.5 text-[10.5px] text-zinc-500">내일부터 매일 자정 기록으로 추이가 그려져요.</p>
           </div>
