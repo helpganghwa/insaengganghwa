@@ -2,7 +2,7 @@ import { desc, sql } from 'drizzle-orm';
 
 import { db } from '@/lib/db/client';
 import { worldChronicle, zones as zonesTable } from '@/lib/db/schema/guild';
-import { getConquestReplay, type ConquestReplay } from '@/lib/game/guild';
+import { getConquestReplay, getZoneAdjacency, type ConquestReplay } from '@/lib/game/guild';
 
 import { ServerBadge } from '../ServerBadge';
 import { AdminAvatarViewer } from '../profile-gen/AdminAvatarViewer';
@@ -53,6 +53,7 @@ async function loadData() {
       await getConquestReplay(c.serverId, c.kstDay).catch(() => null),
     );
   }
+  const adjacency = await getZoneAdjacency(1).catch(() => []);
   const zoneRows = await db
     .select({
       id: zonesTable.id,
@@ -63,14 +64,14 @@ async function loadData() {
       serverId: zonesTable.serverId,
     })
     .from(zonesTable);
-  return { chronicles, battles, replays, zoneRows };
+  return { chronicles, battles, replays, zoneRows, adjacency };
 }
 
 const isTodayKst = (day: string) =>
   day === new Date(Date.now() + 9 * 3600 * 1000).toISOString().slice(0, 10);
 
 export default async function AdminPreviewPage() {
-  const { chronicles, battles, replays, zoneRows } = await loadData();
+  const { chronicles, battles, replays, zoneRows, adjacency } = await loadData();
 
   return (
     <main className="mx-auto flex w-full max-w-3xl flex-col gap-6 px-4 py-6">
@@ -105,6 +106,7 @@ export default async function AdminPreviewPage() {
                   todayText={c.todayText}
                   replay={replays.get(`${c.serverId}:${c.kstDay}`) ?? null}
                   zones={zoneRows.filter((z) => z.serverId === c.serverId)}
+                  adjacency={adjacency}
                 />
                 {/* AI 재검수 내역(0119) — 초안에서 바뀐 구절 diff. 사람 검수는 이 목록만 훑으면 됨. */}
                 {Array.isArray(c.reviewNotes) && c.reviewNotes.length > 0 ? (
