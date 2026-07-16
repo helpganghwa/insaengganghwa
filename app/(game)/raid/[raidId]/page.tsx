@@ -6,7 +6,7 @@ import { preload } from 'react-dom';
 import { getSessionUserId } from '@/lib/auth/session';
 import { db } from '@/lib/db/client';
 import { characters } from '@/lib/db/schema/server';
-import { withTimeout } from '@/lib/db/with-timeout';
+import { withTimeout, withTimeoutRetry } from '@/lib/db/with-timeout';
 import { profiles } from '@/lib/db/schema/profiles';
 import { raids, raidParticipants, raidRewards } from '@/lib/db/schema/raid';
 import { raidPhasesCleared, getPendingJoinRequests } from '@/lib/game/raid';
@@ -42,8 +42,9 @@ export default async function RaidDetail({ params }: { params: Promise<{ raidId:
     return r;
   }
 
-  // 콜드 hang 시 무한 대기 방지 — 3s 가드. 초과 시 throw → (game)/error.tsx("다시 시도").
-  let raid = await withTimeout(loadRaid(), 3000, 'raid.load');
+  // 콜드 hang 시 무한 대기 방지 — 3s 가드 + 1회 재시도(풀러 콜드 스파이크 흡수, 2026-07-16).
+  // 재시도도 초과 시 throw → (game)/error.tsx("다시 시도").
+  let raid = await withTimeoutRetry(loadRaid, 3000, 'raid.load');
   if (!raid) notFound();
 
   // LCP 우선 — 보스 배경 + 보스 sprite(또는 APNG) preload 시그널 주입.

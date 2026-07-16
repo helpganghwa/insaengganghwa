@@ -1,6 +1,6 @@
 import { getSessionUserId } from '@/lib/auth/session';
 import { getActiveServerId } from '@/lib/game/servers';
-import { withTimeout } from '@/lib/db/with-timeout';
+import { withTimeout, withTimeoutRetry } from '@/lib/db/with-timeout';
 import {
   getMyMembership,
   getGuild,
@@ -76,13 +76,14 @@ export default async function GuildPage() {
     return <div className="px-4 py-8 text-center text-sm text-zinc-500">로그인이 필요합니다.</div>;
   }
 
-  const membership = await withTimeout(getMyMembership(userId, serverId), DB_GUARD_MS, 'guild.membership');
+  // 타임아웃 = 페이지 사망 지점 — 1회 재시도(풀러 콜드 스파이크 흡수, 2026-07-16 digest 261459032).
+  const membership = await withTimeoutRetry(() => getMyMembership(userId, serverId), DB_GUARD_MS, 'guild.membership');
 
   if (!membership) return browseView(userId, serverId);
 
   const [guild, members, log] = await Promise.all([
-    withTimeout(getGuild(membership.guildId), DB_GUARD_MS, 'guild.guild'),
-    withTimeout(getGuildMembersRich(membership.guildId), DB_GUARD_MS, 'guild.members'),
+    withTimeoutRetry(() => getGuild(membership.guildId), DB_GUARD_MS, 'guild.guild'),
+    withTimeoutRetry(() => getGuildMembersRich(membership.guildId), DB_GUARD_MS, 'guild.members'),
     // 홈은 미리보기 10건만(전체는 /guild/log 상세에서 100건). 월드 로그와 동일 패턴.
     withTimeout(getGuildActivityLog(membership.guildId, serverId, 10), DB_GUARD_MS, 'guild.log').catch(
       () => [],

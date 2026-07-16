@@ -29,3 +29,23 @@ export function withTimeout<T>(p: Promise<T>, ms: number, label: string): Promis
     if (timer) clearTimeout(timer);
   });
 }
+
+/**
+ * 타임아웃 + 1회 재시도(2026-07-16) — "타임아웃 = 페이지 사망"인 상세 페이지 핫로드용.
+ * 풀러 콜드 커넥트 스파이크(CONNECT_TIMEOUT :6543, 라이브 guild/raid 사례)는 첫 실패
+ * 직후 재시도에서 거의 항상 성공한다 — 유저는 에러 화면 대신 1~2초 추가 대기.
+ * fn은 호출마다 새 쿼리를 만들어야 함(프로미스 재사용 금지 — 이미 걸린 쿼리 재대기 방지).
+ */
+export async function withTimeoutRetry<T>(
+  fn: () => Promise<T>,
+  ms: number,
+  label: string,
+): Promise<T> {
+  try {
+    return await withTimeout(fn(), ms, label);
+  } catch (e) {
+    if (!(e instanceof DbTimeoutError)) throw e;
+    console.warn(`[withTimeoutRetry] ${label} ${ms}ms 초과 — 1회 재시도`);
+    return await withTimeout(fn(), ms, `${label}#retry`);
+  }
+}
