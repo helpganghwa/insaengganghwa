@@ -85,6 +85,33 @@ export function TodayShareBox({
     });
   };
 
+  const [saving, setSaving] = useState(false);
+  // 저장 = Web Share API(파일) — 모바일 네이티브 시트(사진 저장·카톡 전송 겸용, 2026-07-16 확정).
+  // 미지원(데스크톱 등)이면 다운로드 폴백. 원본은 OG PNG 그대로(공유·미리보기와 동일 파일).
+  const doSaveImage = async () => {
+    if (saving) return;
+    setSaving(true);
+    try {
+      const url = `/og/today/${encodeURIComponent(publicCode)}?s=${serverId}&v=${Math.random().toString(36).slice(2, 10)}`;
+      const blob = await (await fetch(url)).blob();
+      const file = new File([blob], `오늘의인생강화_${nickname}.png`, { type: 'image/png' });
+      if (navigator.canShare?.({ files: [file] })) {
+        await navigator.share({ files: [file], title: '오늘의 인생강화' });
+      } else {
+        const obj = URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = obj;
+        a.download = file.name;
+        a.click();
+        URL.revokeObjectURL(obj);
+      }
+    } catch {
+      /* 사용자 취소(AbortError) 포함 — 무시 */
+    } finally {
+      setSaving(false);
+    }
+  };
+
   const doCopy = async () => {
     try {
       await navigator.clipboard.writeText(shareUrl);
@@ -103,13 +130,14 @@ export function TodayShareBox({
       >
         💬 오늘의 성장 자랑하기
       </button>
-      <a
-        href={ogUrl || `/og/today/${encodeURIComponent(publicCode)}?s=${serverId}`}
-        download={`오늘의인생강화_${nickname}.png`}
-        className="mt-2 flex w-full items-center justify-center gap-2 rounded-xl border border-zinc-300 py-2.5 text-[12.5px] font-bold text-zinc-600 active:scale-[0.99] dark:border-zinc-700 dark:text-zinc-300"
+      <button
+        type="button"
+        onClick={doSaveImage}
+        disabled={saving}
+        className="mt-2 flex w-full items-center justify-center gap-2 rounded-xl border border-zinc-300 py-2.5 text-[12.5px] font-bold text-zinc-600 active:scale-[0.99] disabled:opacity-60 dark:border-zinc-700 dark:text-zinc-300"
       >
-        💾 이미지로 저장
-      </a>
+        {saving ? '카드 준비 중…' : '💾 이미지로 저장'}
+      </button>
 
       {open
         ? createPortal(

@@ -176,125 +176,117 @@ export async function getTodayDetail(userId: string, serverId: number): Promise<
   };
 }
 
-export type PeriodStats = {
-  days: number;
-  combatDelta: number | null; // 기간 시작 스냅샷 부재 시 null(스냅샷은 2026-07-16부터 축적)
-  sumGained: number; // 로그 기반(Σ to-from) — 스냅샷 무관 정확
-  attempts: number;
-  success: number;
-  hold: number;
-  down: number;
-  boxesOpened: number;
-  transcendUps: number;
-  meleeJoined: number;
-  meleeWins: number;
-  meleeBest: number | null;
-  raidAttacks: number;
-};
-
-/** 기간 통계(7·30일) — 로그 집계 중심(정확), 전투력 ▲만 기간 시작 스냅샷 필요. */
-export async function getPeriodStats(userId: string, serverId: number, days: 7 | 30): Promise<PeriodStats> {
-  const [r] = (await db.execute(sql`
-    with since as (
-      select (((now() at time zone 'Asia/Seoul')::date - ${days})::timestamp at time zone 'Asia/Seoul') ts,
-             ((now() at time zone 'Asia/Seoul')::date - ${days}) d
-    ),
-    logs as (
-      select count(*)::int attempts,
-             count(*) filter (where result in ('success','mega'))::int success,
-             count(*) filter (where result = 'hold')::int hold,
-             count(*) filter (where result = 'down')::int down,
-             coalesce(sum(to_level - from_level), 0)::int sum_gained
-      from enhancement_logs
-      where user_id = ${userId}::uuid and server_id = ${serverId} and created_at >= (select ts from since)
-    ),
-    snap as (
-      select combat from user_daily_stats
-      where user_id = ${userId}::uuid and server_id = ${serverId} and kst_day = (select d from since)
-    ),
-    melee as (
-      select count(*)::int joined,
-             count(*) filter (where mp.final_rank = 1)::int wins,
-             min(mp.final_rank)::int best
-      from melee_participants mp join melee_battles mb on mb.id = mp.battle_id
-      where mp.user_id = ${userId}::uuid and mb.server_id = ${serverId} and mb.battle_date >= (select d from since)
-    )
-    select
-      (select attempts from logs) attempts, (select success from logs) success,
-      (select hold from logs) hold, (select down from logs) down,
-      (select sum_gained from logs) sum_gained,
-      (select combat from snap)::bigint snap_combat,
-      coalesce((select value from leaderboard_ranks where server_id=${serverId} and user_id=${userId}::uuid and metric='combat'), 0)::bigint combat_now,
-      (select count(*)::int from supply_open_logs where user_id=${userId}::uuid and server_id=${serverId} and created_at >= (select ts from since)) boxes,
-      (select coalesce(sum(to_t - from_t),0)::int from transcend_logs where user_id=${userId}::uuid and server_id=${serverId} and created_at >= (select ts from since)) tups,
-      (select joined from melee) melee_joined, (select wins from melee) melee_wins, (select best from melee) melee_best,
-      (select count(*)::int from raid_attacks ra join raids rd on rd.id = ra.raid_id
-        where ra.user_id=${userId}::uuid and rd.server_id=${serverId} and ra.created_at >= (select ts from since)) raid_attacks
-  `)) as unknown as Record<string, unknown>[];
-  const e = r ?? {};
-  return {
-    days,
-    combatDelta: e.snap_combat == null ? null : Number(e.combat_now) - Number(e.snap_combat),
-    sumGained: Number(e.sum_gained ?? 0),
-    attempts: Number(e.attempts ?? 0),
-    success: Number(e.success ?? 0),
-    hold: Number(e.hold ?? 0),
-    down: Number(e.down ?? 0),
-    boxesOpened: Number(e.boxes ?? 0),
-    transcendUps: Number(e.tups ?? 0),
-    meleeJoined: Number(e.melee_joined ?? 0),
-    meleeWins: Number(e.melee_wins ?? 0),
-    meleeBest: e.melee_best == null ? null : Number(e.melee_best),
-    raidAttacks: Number(e.raid_attacks ?? 0),
-  };
-}
-
 export type LifetimeStats = {
   joinedDays: number;
   combat: number;
   maxEnhance: number;
   sumEnhance: number;
+  ranks: { combat: number | null; max: number | null; sum: number | null };
   attempts: number;
   success: number;
+  hold: number;
+  down: number;
+  gemReduces: number;
   boxesOpened: number;
   transcendMax: number;
+  transcendSum: number;
+  itemKinds: number;
+  catalogTotal: number;
   meleeJoined: number;
   meleeWins: number;
+  meleeBest: number | null;
+  raidSummons: number;
   raidAttacks: number;
-  itemKinds: number;
+  raidRewards: number;
+  checkinDays: number;
+  friends: number;
+  guildName: string | null;
+  guildContribution: number;
+  challengesClaimed: number;
+  avatarsCreated: number;
 };
 
-/** 통산(전체) — 대장장이 이력서. */
+/** 통산(전체) — 대장장이 이력서(2026-07-16 확장: 랭킹 5종·전투·수집·소셜 풀 프로필). */
 export async function getLifetimeStats(userId: string, serverId: number): Promise<LifetimeStats> {
   const [r] = (await db.execute(sql`
+    with ranks as (
+      select metric, rnk from (
+        select user_id, metric, row_number() over (partition by metric order by value desc)::int rnk
+        from leaderboard_ranks where server_id=${serverId} and metric in ('combat','max','sum')
+      ) t where user_id=${userId}::uuid
+    ),
+    el as (
+      select count(*)::int attempts,
+             count(*) filter (where result in ('success','mega'))::int success,
+             count(*) filter (where result='hold')::int hold,
+             count(*) filter (where result='down')::int down
+      from enhancement_logs where user_id=${userId}::uuid and server_id=${serverId}
+    ),
+    melee as (
+      select count(*)::int joined,
+             count(*) filter (where mp.final_rank=1)::int wins,
+             min(mp.final_rank)::int best
+      from melee_participants mp join melee_battles mb on mb.id=mp.battle_id
+      where mp.user_id=${userId}::uuid and mb.server_id=${serverId} and mb.status='revealed'
+    )
     select
       greatest(1, ((now() at time zone 'Asia/Seoul')::date
         - ((select created_at from characters where user_id=${userId}::uuid and server_id=${serverId}) at time zone 'Asia/Seoul')::date) + 1)::int joined_days,
       coalesce((select value from leaderboard_ranks where server_id=${serverId} and user_id=${userId}::uuid and metric='combat'),0)::bigint combat,
       coalesce((select value from leaderboard_ranks where server_id=${serverId} and user_id=${userId}::uuid and metric='max'),0)::bigint max_e,
       coalesce((select value from leaderboard_ranks where server_id=${serverId} and user_id=${userId}::uuid and metric='sum'),0)::bigint sum_e,
-      (select count(*)::int from enhancement_logs where user_id=${userId}::uuid and server_id=${serverId}) attempts,
-      (select count(*) filter (where result in ('success','mega'))::int from enhancement_logs where user_id=${userId}::uuid and server_id=${serverId}) success,
+      (select rnk from ranks where metric='combat') rank_combat,
+      (select rnk from ranks where metric='max') rank_max,
+      (select rnk from ranks where metric='sum') rank_sum,
+      (select attempts from el) attempts, (select success from el) success,
+      (select hold from el) hold, (select down from el) down,
+      (select count(*)::int from gem_time_reductions where user_id=${userId}::uuid and server_id=${serverId}) gem_reduces,
       (select count(*)::int from supply_open_logs where user_id=${userId}::uuid and server_id=${serverId}) boxes,
       (select coalesce(max(transcend_level),0)::int from user_equipment where user_id=${userId}::uuid and server_id=${serverId}) t_max,
-      (select count(*)::int from melee_participants mp join melee_battles mb on mb.id=mp.battle_id where mp.user_id=${userId}::uuid and mb.server_id=${serverId}) melee_joined,
-      (select count(*)::int from melee_participants mp join melee_battles mb on mb.id=mp.battle_id where mp.user_id=${userId}::uuid and mb.server_id=${serverId} and mp.final_rank=1) melee_wins,
+      (select coalesce(sum(transcend_level),0)::int from user_equipment where user_id=${userId}::uuid and server_id=${serverId}) t_sum,
+      (select count(*)::int from user_equipment where user_id=${userId}::uuid and server_id=${serverId}) item_kinds,
+      (select count(*)::int from catalog_items) catalog_total,
+      (select joined from melee) melee_joined, (select wins from melee) melee_wins, (select best from melee) melee_best,
+      (select count(*)::int from raids where host_user_id=${userId}::uuid and server_id=${serverId}) raid_summons,
       (select count(*)::int from raid_attacks ra join raids rd on rd.id=ra.raid_id where ra.user_id=${userId}::uuid and rd.server_id=${serverId}) raid_attacks,
-      (select count(*)::int from user_equipment where user_id=${userId}::uuid and server_id=${serverId}) item_kinds
+      (select count(*)::int from raid_rewards rr join raids rd on rd.id=rr.raid_id where rr.user_id=${userId}::uuid and rd.server_id=${serverId} and rr.claimed_at is not null) raid_rewards,
+      (select count(*)::int from checkin_claim_logs where user_id=${userId}::uuid and server_id=${serverId}) checkin_days,
+      (select count(*)::int from friend_links where server_id=${serverId} and status='accepted' and (requester_id=${userId}::uuid or addressee_id=${userId}::uuid)) friends,
+      (select g.name from guild_members gm join guilds g on g.id=gm.guild_id where gm.user_id=${userId}::uuid and gm.server_id=${serverId} limit 1) guild_name,
+      coalesce((select gm.contribution_points from guild_members gm where gm.user_id=${userId}::uuid and gm.server_id=${serverId} limit 1),0)::bigint guild_contrib,
+      (select count(*)::int from challenge_claims where user_id=${userId}::uuid and server_id=${serverId} and challenge_id <> 'complete') chg_claimed,
+      (select count(*)::int from profile_generation_jobs where user_id=${userId}::uuid and server_id=${serverId}) avatars
   `)) as unknown as Record<string, unknown>[];
   const e = r ?? {};
+  const num = (v: unknown) => Number(v ?? 0);
+  const opt = (v: unknown) => (v == null ? null : Number(v));
   return {
-    joinedDays: Number(e.joined_days ?? 1),
-    combat: Number(e.combat ?? 0),
-    maxEnhance: Number(e.max_e ?? 0),
-    sumEnhance: Number(e.sum_e ?? 0),
-    attempts: Number(e.attempts ?? 0),
-    success: Number(e.success ?? 0),
-    boxesOpened: Number(e.boxes ?? 0),
-    transcendMax: Number(e.t_max ?? 0),
-    meleeJoined: Number(e.melee_joined ?? 0),
-    meleeWins: Number(e.melee_wins ?? 0),
-    raidAttacks: Number(e.raid_attacks ?? 0),
-    itemKinds: Number(e.item_kinds ?? 0),
+    joinedDays: Math.max(1, num(e.joined_days)),
+    combat: num(e.combat),
+    maxEnhance: num(e.max_e),
+    sumEnhance: num(e.sum_e),
+    ranks: { combat: opt(e.rank_combat), max: opt(e.rank_max), sum: opt(e.rank_sum) },
+    attempts: num(e.attempts),
+    success: num(e.success),
+    hold: num(e.hold),
+    down: num(e.down),
+    gemReduces: num(e.gem_reduces),
+    boxesOpened: num(e.boxes),
+    transcendMax: num(e.t_max),
+    transcendSum: num(e.t_sum),
+    itemKinds: num(e.item_kinds),
+    catalogTotal: num(e.catalog_total),
+    meleeJoined: num(e.melee_joined),
+    meleeWins: num(e.melee_wins),
+    meleeBest: opt(e.melee_best),
+    raidSummons: num(e.raid_summons),
+    raidAttacks: num(e.raid_attacks),
+    raidRewards: num(e.raid_rewards),
+    checkinDays: num(e.checkin_days),
+    friends: num(e.friends),
+    guildName: (e.guild_name as string) ?? null,
+    guildContribution: num(e.guild_contrib),
+    challengesClaimed: num(e.chg_claimed),
+    avatarsCreated: num(e.avatars),
   };
 }
