@@ -9,8 +9,7 @@ import { GuildError } from '../errors';
 import { nextBattleKstDay, isConquestLocked } from './schedule';
 
 /** actor가 zone 소유 길드의 **길드장**인지 검증하고 소유 길드 id 반환.
- *  집행관 지정/해제·구역 포기는 길드장 전속(2026-07-10 권한 조정 — 자산·영토급 액션이라
- *  임원 공용에서 상향. 포기는 파괴적, 집행관은 세금 수금권 부여라 동급으로 묶음). */
+ *  집행관 지정/해제는 길드장 전속(2026-07-10 권한 조정 — 세금 수금권 부여라 자산급 액션). */
 export async function assertLeaderOfZoneOwner(
   tx: Parameters<Parameters<typeof db.transaction>[0]>[0],
   actorUserId: string,

@@ -29,6 +29,8 @@ export type ConquestDaySummary = {
   standings: { guild: string; zones: number }[];
   /** 공격 측 — 그날 각 구역을 공격한(role=attack 배치) 길드(구역×길드 distinct). */
   attacks: { zone: string; region: string; guild: string }[];
+  /** 그날 해산한 길드(world_events guild_disband) — 보유하던 구역이 중립화됨(연대기 서술 재료). */
+  disbands: { guildName: string; zones: string[] }[];
   /** 주목할 개인 활약(그날 finale 기준 — 최다 수비/처치). '처치'는 공·수 역할 무관 쓰러뜨린 수. */
   feats: { nickname: string; publicCode: string | null; guild: string; kind: '수비' | '처치'; count: number }[];
 };
@@ -63,7 +65,10 @@ export async function aggregateConquestDay(kstDay: string, serverId: number): Pr
            (select g2.name from conquest_battles cb2
               join guilds g2 on g2.id = cb2.winner_guild_id
               where cb2.zone_id = cb.zone_id and cb2.battle_kst_day < ${kstDay}
-              order by cb2.battle_kst_day desc limit 1) as prev_owner
+              order by cb2.battle_kst_day desc limit 1) as prev_owner,
+           exists(select 1 from conquest_battles cb3
+              where cb3.zone_id = cb.zone_id and cb3.battle_kst_day < ${kstDay}
+                and cb3.winner_guild_id is not null) as had_owner_history
     from conquest_battles cb
     join zones z on z.id = cb.zone_id
     left join guilds g on g.id = cb.winner_guild_id
@@ -74,6 +79,7 @@ export async function aggregateConquestDay(kstDay: string, serverId: number): Pr
     winner: string | null;
     finale: ConquestFinale | null;
     prev_owner: string | null;
+    had_owner_history: boolean;
   }[];
 
   const captures: ConquestDaySummary['captures'] = [];
@@ -83,7 +89,11 @@ export async function aggregateConquestDay(kstDay: string, serverId: number): Pr
   const kills = new Map<string, { nick: string; guild: string; n: number }>();
 
   for (const b of battles) {
-    if (!b.winner) continue;
+    if (!b.winner) {
+      // 무승부(승자 없음) — 소유 길드가 있으면 '소유 유지'로 방어에 준해 기록(결과 누락 방지).
+      if (b.prev_owner) defenses.push({ zone: b.zone, region: REGION_KO[b.region] ?? b.region, owner: b.prev_owner });
+      continue;
+    }
     const region = REGION_KO[b.region] ?? b.region;
     // 점령/방어는 소유권 이동으로 판정(winner ≠ 직전 소유 길드). captured_at 시각 비교는
     // 공개(reveal)가 전투 다음날 00시(KST)에 찍혀 어느 날짜 기준으로도 전투일과 어긋난다
@@ -95,7 +105,9 @@ export async function aggregateConquestDay(kstDay: string, serverId: number): Pr
         region,
         winner: b.winner,
         from: b.prev_owner,
-        firstCapture: b.prev_owner == null,
+        // 소유 이력이 있는데 prev_owner를 못 푼 경우 = 이전 주인 길드가 해산으로 삭제됨 —
+        // '첫 점령'이 아니라 '무주지 점령'으로 표기(2026-07-16 점검).
+        firstCapture: b.prev_owner == null && !b.had_owner_history,
       });
     } else {
       defenses.push({ zone: b.zone, region, owner: b.winner });
@@ -165,9 +177,20 @@ export async function aggregateConquestDay(kstDay: string, serverId: number): Pr
   if (topKillE && topKillE[1].n >= 3)
     feats.push({ nickname: topKillE[1].nick, publicCode: codeByUser.get(topKillE[0]) ?? null, guild: topKillE[1].guild, kind: '처치', count: topKillE[1].n });
 
+  // 그날 해산(guild_disband) — KST 일자 매칭. 길드 행은 이미 삭제됐으므로 detail 스냅샷이 유일한 소스.
+  const disbandRows = (await db.execute(sql`
+    select detail from world_events
+    where server_id = ${serverId} and type = 'guild_disband'
+      and (created_at at time zone 'Asia/Seoul')::date = ${kstDay}::date
+  `)) as unknown as { detail: { guildName?: string; zones?: string[] } }[];
+  const disbands = disbandRows
+    .map((r) => ({ guildName: r.detail?.guildName ?? '길드', zones: r.detail?.zones ?? [] }))
+    .filter((d) => d.guildName);
+
   return {
     kstDay,
     battleCount: battles.length,
+    disbands,
     captures,
     defenses,
     standings: standingsRows,
@@ -232,7 +255,7 @@ const SYSTEM_PROMPT = `너는 대륙의 정복 전쟁을 듣는 이에게 들려
 
 /** 그날 사건이 '큰 사건'인지 — 점령(영토 변동) 또는 주목할 개인 활약이 있으면 기록 대상('오늘' 스토리). */
 function isNotable(s: ConquestDaySummary): boolean {
-  return s.captures.length > 0 || s.feats.length > 0;
+  return s.captures.length > 0 || s.feats.length > 0 || s.disbands.length > 0;
 }
 
 /**
@@ -266,8 +289,15 @@ export async function generateAndStoreChronicle(
   const capAnno = (zone: string): string => {
     const c = summary.captures.find((x) => x.zone === zone);
     if (!c) return '';
-    if (c.from) return `(길드 「${c.from}」 로부터 빼앗음${summary.defenses.some((d) => d.zone === zone) ? '' : ' — 방어 병력 없음'})`;
-    return c.firstCapture ? '(중립지 첫 점령)' : '(무주지 점령)';
+    // 경합 — 같은 구역을 노린 다른 공격 길드(승자 제외). 있으면 '무혈 접수'가 아니라
+    // 공격자끼리의 전투 끝에 차지한 것(2026-07-16 점검: 무방비+다중 공격 오서술 방지).
+    const rivals = [...new Set(summary.attacks.filter((a) => a.zone === zone && a.guild !== c.winner).map((a) => a.guild))];
+    const rivalNote = rivals.length > 0 ? ` — 길드 「${rivals.join('」, 「')}」 와(과) 경합해 승리` : '';
+    if (c.from) {
+      const noDef = summary.defenses.some((d) => d.zone === zone) ? '' : ` — 이전 주인 「${c.from}」 은(는) 방어 병력 없음`;
+      return `(길드 「${c.from}」 로부터 빼앗음${noDef}${rivalNote})`;
+    }
+    return c.firstCapture ? `(중립지 첫 점령${rivalNote})` : `(무주지 점령${rivalNote})`;
   };
   const capLines =
     [...capByGuild.entries()]
@@ -422,6 +452,9 @@ export async function generateAndStoreChronicle(
           : `· 길드 「${g}」 이(가) 첫 구역을 확보하며 판도에 등장`,
       );
   }
+  for (const d of summary.disbands) {
+    if (d.zones.length > 0) milestones.push(`· 길드 「${d.guildName}」 해산 — 보유하던 ${d.zones.length}개 구역이 주인을 잃음`);
+  }
   const specialFeat = summary.feats.some((f) => f.count >= 5);
 
   // 빈 섹션은 digest에서 **통째로 제외**(2026-07-12 피드백) — '· (없음)' 플레이스홀더를
@@ -434,6 +467,13 @@ export async function generateAndStoreChronicle(
     digestSections.push(`■ 방어(점령 아님 — 소유 길드가 위 공격을 막아냄):\n${defLines}`);
   if (summary.feats.length > 0) digestSections.push(`■ 개인 활약:\n${featLines}`);
   if (topoLines) digestSections.push(`■ 지형 형세(지도 분석 — 형세 서술 근거):\n${topoLines}`);
+  if (summary.disbands.length > 0)
+    digestSections.push(
+      `■ 길드 해산(이 길드들은 오늘 해체됨 — 보유 구역은 주인 없는 땅이 됨):\n` +
+        summary.disbands
+          .map((d) => `· 길드 「${d.guildName}」 해산${d.zones.length > 0 ? ` — 구역 ${d.zones.map((z) => `「${z}」`).join(', ')} 이(가) 중립화` : ''}`)
+          .join('\n'),
+    );
   if (milestones.length > 0) digestSections.push(`■ 역사적 사건(연표 등재 사유):\n${milestones.join('\n')}`);
   const digest = `[점령전 정리 — 이 귀속을 그대로 따를 것]\n` + digestSections.join('\n');
 
