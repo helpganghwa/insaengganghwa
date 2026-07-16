@@ -150,17 +150,27 @@ function Fighter({
     />
   );
   return (
-    <div className="flex w-40 translate-y-[3px] flex-col items-center gap-0.5">
-      <div
-        className={`relative h-[117px] w-40 transition-transform duration-200 ${lunge} ${shake ? 'animate-hit-shake' : ''}`}
+    <div className="flex w-40 flex-col items-center gap-0.5">
+      {/* 대난투 무대와 동일 구성(2026-07-17) — 라벨/닉/길드/아바타/체력바를 겹침 없이 위→아래.
+          구버전(라벨 absolute + 아바타 117px 선행)은 h-60 무대에서 요소가 겹쳤음. */}
+      <span
+        className={`text-pixel-outline rounded-full px-2 py-0.5 text-[9px] font-bold text-white ${
+          attacking ? 'bg-amber-600/85' : 'bg-sky-700/85'
+        }`}
       >
-        <span
-          className={`absolute left-1/2 top-0 z-20 -translate-x-1/2 rounded-full px-2 py-0.5 text-[9px] font-bold text-white text-pixel-outline ${
-            attacking ? 'bg-amber-600/85' : 'bg-sky-700/85'
-          }`}
-        >
-          {attacking ? '공격' : '방어'}
-        </span>
+        {attacking ? '공격' : '방어'}
+      </span>
+      <div className="flex max-w-[150px] items-center gap-1">
+        <span className="truncate text-[11px] font-bold text-white drop-shadow">{name}</span>
+      </div>
+      {/* 길드(문양+이름) — 고정 높이 예약(일관성·체력바 가림 방지, melee와 동일). */}
+      <div className="flex h-[12px] max-w-[150px] items-center gap-1">
+        <GuildMark emblem={emblem} color={color} size={10} />
+        <span className="truncate text-[9px] font-medium text-zinc-300 drop-shadow">{guild}</span>
+      </div>
+      <div
+        className={`relative h-28 w-40 transition-transform duration-200 ${lunge} ${shake ? 'animate-hit-shake' : ''}`}
+      >
         {dmg != null ? (
           <div className="animate-dmg-float pointer-events-none absolute left-1/2 top-4 z-20 font-mono text-xl font-extrabold text-red-300 drop-shadow-[0_2px_4px_rgba(0,0,0,0.9)]">
             -{dmg.toLocaleString()}
@@ -179,14 +189,6 @@ function Fighter({
           )}
         </div>
         <div className="pointer-events-none absolute -bottom-0.5 left-1/2 h-2 w-24 -translate-x-1/2 rounded-[50%] bg-black/55 blur-[3px]" />
-      </div>
-      <div className="flex max-w-[150px] items-center gap-1">
-        <span className="truncate text-[11px] font-bold text-white drop-shadow">{name}</span>
-      </div>
-      {/* 길드 정보 — 문양(없으면 색점) + 길드명 */}
-      <div className="flex max-w-[150px] items-center gap-1">
-        <GuildMark emblem={emblem} color={color} size={13} />
-        <span className="truncate text-[10px] font-medium text-zinc-300 drop-shadow">{guild}</span>
       </div>
       <div className="mt-0.5 h-1.5 w-24 isolate overflow-hidden rounded-full bg-zinc-800 ring-1 ring-black/40">
         <div className={`h-full ${hpColor(pct)}`} style={{ width: `${pct}%`, transition: 'width 650ms ease-out' }} />
