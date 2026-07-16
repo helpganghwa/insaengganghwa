@@ -50,7 +50,7 @@ export const CHALLENGES: ChallengeDef[] = [
   { id: 'mail_claim', group: 'daily', label: '우편 보상 받기', diamond: 200, go: '/mail', guide: '우편함에서 우편을 수령하면 달성돼요. 어떤 우편이든 좋아요!' },
   { id: 'checkin', group: 'daily', label: '출석 체크하기', diamond: 200, go: '/checkin', guide: '출석 캘린더에서 오늘의 보상을 받으면 달성돼요.' },
   { id: 'transcend', group: 'growth', label: '장비 초월 달성하기', diamond: 300, boxes: 15, go: '/gacha', guide: '같은 장비를 중복으로 모으면 자동으로 초월돼요 — 보급상자를 열다 보면 자연히 달성됩니다!' },
-  { id: 'gem_reduce', group: 'growth', label: '보석으로 강화 시간 줄이기', diamond: 200, go: '/enhance', guide: '진행 중인 강화 카드에서 보석으로 남은 시간을 단축하면 달성돼요.' },
+  { id: 'gem_reduce', group: 'growth', label: '다이아로 강화 시간 줄이기', diamond: 200, go: '/enhance', guide: '진행 중인 강화 카드에서 다이아로 남은 시간을 단축하면 달성돼요.' },
   { id: 'app_install', group: 'app', label: '앱으로 실행하기', diamond: 1000, boxes: 15, go: '/me/settings', guide: '홈 화면에 앱으로 설치한 뒤, 설치된 앱으로 접속하면 달성돼요. 아래 버튼으로 설치를 시작하세요.' },
   { id: 'push_on', group: 'app', label: '알림 설정하기', diamond: 2000, boxes: 30, go: '/me/settings', guide: '설정 → 알림에서 알림을 켜면 달성돼요. 강화 완료·레이드 소식을 놓치지 않게 됩니다.' },
   { id: 'friend', group: 'social', label: '친구 맺기', diamond: 300, go: '/friends', guide: '친구 화면에서 닉네임이나 코드(#)로 검색해 친구를 맺으면 달성돼요.' },
