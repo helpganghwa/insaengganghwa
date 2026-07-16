@@ -129,6 +129,7 @@ export default async function HomePage() {
   //  발표 전: 진행 전("오늘 9시 개시") / 진행 중 / 집계 중. 발표 후: 우승자 닉네임.
   //  시각 판정은 서버 시계(SQL now())로(CLAUDE §3.2) — 아래 melee 조회에서 phase 산출.
   let meleeDesc = '매일 9시 개시';
+  let raidJoinable = 0;
   /** 발표 후 우승자 닉네임(있으면 카드에서 색상 강조 렌더). */
   let meleeChampion: string | null = null;
   /** 발표 후 회차(제N회 우승). */
@@ -174,6 +175,16 @@ export default async function HomePage() {
               as mail_unclaimed,
             (select count(*)::int from raid_rewards rr join raids r on r.id = rr.raid_id where rr.user_id = ${userId}::uuid and r.server_id = ${serverId} and rr.claimed_at is null)
               as raid_unclaimed,
+            -- 참여 가능 레이드(2026-07-16 고객 문의) — 남이 연 active 레이드 중 미참여, 일일 한도(5) 여유 시만.
+            (select case when coalesce((select started_count from raid_daily_counts
+                     where user_id = ${userId}::uuid and server_id = ${serverId}
+                       and kst_date = (now() at time zone 'Asia/Seoul')::date), 0) >= 5 then 0
+              else (select count(*)::int from raids r
+                     where r.server_id = ${serverId} and r.status = 'active' and r.expire_at > now()
+                       and r.host_user_id <> ${userId}::uuid
+                       and not exists (select 1 from raid_participants rp
+                                        where rp.raid_id = r.id and rp.user_id = ${userId}::uuid)) end)
+              as raid_joinable,
             -- 대난투: 서버 시계로 phase(개시 전/진행/발표 후) + 오늘 배틀 상태·우승자 닉.
             case
               when n.kst::time < time '09:00' then 'before'
@@ -216,6 +227,7 @@ export default async function HomePage() {
         supply_sum: number;
         mail_unclaimed: number;
         raid_unclaimed: number;
+        raid_joinable: number;
         melee_phase: 'before' | 'running' | 'after';
         melee_status: string | null;
         melee_champ: string | null;
@@ -233,6 +245,7 @@ export default async function HomePage() {
         counts['/gacha'] = row.supply_sum ?? 0;
         counts['/mail'] = row.mail_unclaimed ?? 0;
         counts['/raid'] = row.raid_unclaimed ?? 0;
+        raidJoinable = row.raid_joinable ?? 0;
         // CBT 일반 유저는 상점 전체가 '준비 중'(ShopClosed) — 무료 수령 뱃지가 상시 3으로 떠서
         // 들어가면 닫혀 있는 오표시 방지(2026-07-13). 심사/어드민·정식 출시에는 정상 계산.
         counts['/shop'] = (await shouldHidePaidContent())
@@ -359,7 +372,13 @@ export default async function HomePage() {
           const badge = count > 99 ? '99+' : count > 0 ? String(count) : null;
           const isMeleeChamp = m.href === '/melee' && meleeChampion;
           const isWorldmapCard = m.href === '/guild/map';
-          const desc = m.href === '/melee' ? meleeDesc : m.desc;
+          const desc =
+            m.href === '/melee'
+              ? meleeDesc
+              : m.href === '/raid' && raidJoinable > 0
+                ? `참여 가능한 레이드 ${raidJoinable}개`
+                : m.desc;
+          const descHot = m.href === '/raid' && raidJoinable > 0; // 참여 가능 — desc 강조색
           return (
             <Fragment key={m.href}>
               {/* 게시판 카드 — 상점 뒤·우편함 앞(index 6). */}
@@ -420,6 +439,8 @@ export default async function HomePage() {
                     </>
                   ) : isWorldmapCard ? (
                     <ConquestCardStatus inProgress={conquestInProgress} targetMs={conquestTargetMs} />
+                  ) : descHot ? (
+                    <span className="font-extrabold text-emerald-300 drop-shadow-[0_1px_2px_rgba(0,0,0,0.9)]">{desc}</span>
                   ) : (
                     desc
                   )}
