@@ -17,6 +17,7 @@ export const userDailyStats = pgTable(
     combatRank: integer('combat_rank'),
     maxRank: integer('max_rank'),
     sumRank: integer('sum_rank'),
+    raidRank: integer('raid_rank'),
   },
   (t) => [primaryKey({ columns: [t.userId, t.serverId, t.kstDay] })],
 );
