@@ -8,6 +8,7 @@
  * 라벨 + 감사 로그(mail_claim_logs). 챔피언 자동 보상은 도입 안 함(사용자 결정).
  */
 import {
+  boolean,
   pgTable,
   smallint,
   pgEnum,
@@ -188,3 +189,17 @@ export const premiumDailyGrants = pgTable(
   (t) => [primaryKey({ columns: [t.userId, t.serverId, t.kstDay] })],
 );
 
+
+/** 0123 운영자 우편 예약 전송 — 크론이 due 클레임(sent_at 조건부) 후 전체 발송. */
+export const adminScheduledMails = pgTable('admin_scheduled_mails', {
+  id: bigserial('id', { mode: 'bigint' }).primaryKey(),
+  adminId: uuid('admin_id').notNull(),
+  title: text('title').notNull(),
+  body: text('body').notNull().default(''),
+  payload: jsonb('payload').notNull().default(sql`'{}'::jsonb`),
+  push: boolean('push').notNull().default(false),
+  scheduledAt: timestamp('scheduled_at', { withTimezone: true }).notNull(),
+  sentAt: timestamp('sent_at', { withTimezone: true }),
+  canceledAt: timestamp('canceled_at', { withTimezone: true }),
+  createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
+});

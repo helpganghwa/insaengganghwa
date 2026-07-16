@@ -5,6 +5,8 @@ import { useEffect, useRef, useState, useTransition } from 'react';
 import {
   sendMailToUserAction,
   broadcastMailAction,
+  scheduleBroadcastAction,
+  cancelScheduledMailAction,
   getBroadcastRecipientCountAction,
   type MailPayload,
 } from './actions';
@@ -18,7 +20,11 @@ type Mode = 'one' | 'broadcast';
  * - 보내기 전 본문/제목/수신 대상 확인 UI(2-step). broadcast는 인원 큰 작업이라
  *   재확인 입력(수신자 수 또는 'BROADCAST') 요구.
  */
-export function AdminMailClient() {
+export function AdminMailClient({
+  scheduled,
+}: {
+  scheduled: { id: string; title: string; scheduledAtKst: string; push: boolean }[];
+}) {
   const bcKeyRef = useRef<string | null>(null);
   const [mode, setMode] = useState<Mode>('one');
   const [toKind, setToKind] = useState<'nickname' | 'code' | 'userId'>('nickname');
@@ -27,6 +33,7 @@ export function AdminMailClient() {
   const [body, setBody] = useState('');
   const [diamond, setDiamond] = useState('');
   const [pushOn, setPushOn] = useState(true); // 앱 알림 동반 발송(admin 카테고리, 구독자만 수신)
+  const [scheduleAt, setScheduleAt] = useState(''); // 예약 전송(KST datetime-local) — 빈값=즉시(0123)
   const [bw, setBw] = useState('');
   const [ba, setBa] = useState('');
   const [bc, setBc] = useState('');
@@ -100,6 +107,17 @@ export function AdminMailClient() {
       } else {
         if (confirmBcast !== 'BROADCAST') {
           setFlash({ ok: false, msg: '확인 칸에 "BROADCAST"를 입력하세요.' });
+          return;
+        }
+        if (scheduleAt) {
+          // 예약 전송(0123) — 즉시 발송 대신 예약 등록, 크론이 도래 시 발송.
+          const r = await scheduleBroadcastAction({ title, body, payload, push: pushOn, scheduledAtKst: scheduleAt });
+          if (r.status === 'error') setFlash({ ok: false, msg: r.message });
+          else {
+            setFlash({ ok: true, msg: '예약 등록 완료 — 예약 시각에 자동 발송됩니다' });
+            setScheduleAt('');
+            reset();
+          }
           return;
         }
         // 멱등키(0110) — 전송 실패 재시도는 같은 키 재사용(전 유저 이중 발송 방지).
@@ -204,6 +222,38 @@ export function AdminMailClient() {
       {/* broadcast 확인 */}
       {mode === 'broadcast' ? (
         <section className="mb-3 space-y-1.5">
+          <label className="text-[11px] font-semibold text-zinc-500">예약 전송 (KST · 비우면 즉시 발송)</label>
+          <input
+            type="datetime-local"
+            value={scheduleAt}
+            onChange={(e) => setScheduleAt(e.target.value)}
+            className="w-full rounded border border-zinc-300 bg-transparent px-2 py-1.5 text-base dark:border-zinc-700"
+          />
+          {scheduled.length > 0 ? (
+            <div className="rounded border border-zinc-200 p-2 dark:border-zinc-800">
+              <p className="mb-1 text-[10px] font-semibold text-zinc-500">대기 중인 예약 {scheduled.length}건</p>
+              {scheduled.map((sm) => (
+                <div key={sm.id} className="flex items-center justify-between gap-2 py-0.5 text-[11px]">
+                  <span className="min-w-0 flex-1 truncate">
+                    <span className="font-mono text-zinc-500">{sm.scheduledAtKst}</span> {sm.title}
+                    {sm.push ? ' 🔔' : ''}
+                  </span>
+                  <button
+                    type="button"
+                    onClick={() =>
+                      startTransition(async () => {
+                        const r = await cancelScheduledMailAction(sm.id);
+                        setFlash(r.status === 'success' ? { ok: true, msg: '예약 취소됨' } : { ok: false, msg: r.message });
+                      })
+                    }
+                    className="shrink-0 rounded px-1.5 py-0.5 text-[10px] font-bold text-red-500"
+                  >
+                    취소
+                  </button>
+                </div>
+              ))}
+            </div>
+          ) : null}
           <label className="text-[11px] font-semibold text-red-600">
             발송 확정 — &quot;BROADCAST&quot; 입력
           </label>
