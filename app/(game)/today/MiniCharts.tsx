@@ -41,7 +41,8 @@ const TOOLTIP_BASE = {
   textStyle: { color: '#e4e4e7', fontSize: 11 },
 } as const;
 
-/** 일별 강화 스택바 — 성공/유지/하락(2026-07-16 전체 탭 재구성). */
+/** 일별 단련 시간 스택바 — 결과별 대기시간 합(h). 시도 횟수는 성장할수록 줄어 y축 부적합
+ *  (고레벨=긴 대기=큰 막대 — 우상향 성장 서사, 2026-07-16 확정). 툴팁에 횟수 병기. */
 export function EnhanceDailyChart({ points }: { points: DailyEnhancePoint[] }) {
   const ref = useChart((chart) => {
     const dates = points.map((p) => md(p.kstDay));
@@ -58,17 +59,18 @@ export function EnhanceDailyChart({ points }: { points: DailyEnhancePoint[] }) {
           const arr = ps as { seriesName: string; dataIndex: number; value: number; marker: string }[];
           if (!arr.length) return '';
           const p = points[arr[0]!.dataIndex]!;
-          const total = p.success + p.hold + p.down;
-          return `${md(p.kstDay)} (${dayKo(p.kstDay)}) · ${total}회<br/>` +
-            arr.map((a) => `${a.marker} ${a.seriesName} <b>${a.value}</b>`).join('<br/>');
+          const totalH = Math.round((p.successH + p.holdH + p.downH) * 10) / 10;
+          const cnt = { 성공: p.success, 유지: p.hold, 하락: p.down } as Record<string, number>;
+          return `${md(p.kstDay)} (${dayKo(p.kstDay)}) · ${totalH}시간 단련 · 시도 ${p.success + p.hold + p.down}회<br/>` +
+            arr.map((a) => `${a.marker} ${a.seriesName} <b>${a.value}h</b> (${cnt[a.seriesName] ?? 0}회)`).join('<br/>');
         },
       },
       xAxis: { type: 'category', data: dates, ...AXIS },
-      yAxis: { type: 'value', minInterval: 1, splitLine: { lineStyle: { color: 'rgba(120,113,108,0.12)' } }, axisLabel: AXIS.axisLabel },
+      yAxis: { type: 'value', splitLine: { lineStyle: { color: 'rgba(120,113,108,0.12)' } }, axisLabel: { ...AXIS.axisLabel, formatter: '{value}h' } },
       series: [
-        { name: '성공', type: 'bar', stack: 'e', data: points.map((p) => p.success), itemStyle: { color: '#34d399' }, barMaxWidth: 10 },
-        { name: '유지', type: 'bar', stack: 'e', data: points.map((p) => p.hold), itemStyle: { color: '#71717a' }, barMaxWidth: 10 },
-        { name: '하락', type: 'bar', stack: 'e', data: points.map((p) => p.down), itemStyle: { color: '#f87171' }, barMaxWidth: 10 },
+        { name: '성공', type: 'bar', stack: 'e', data: points.map((p) => p.successH), itemStyle: { color: '#34d399' }, barMaxWidth: 10 },
+        { name: '유지', type: 'bar', stack: 'e', data: points.map((p) => p.holdH), itemStyle: { color: '#71717a' }, barMaxWidth: 10 },
+        { name: '하락', type: 'bar', stack: 'e', data: points.map((p) => p.downH), itemStyle: { color: '#f87171' }, barMaxWidth: 10 },
       ],
       animationDuration: 400,
     });

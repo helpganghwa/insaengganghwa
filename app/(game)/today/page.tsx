@@ -280,7 +280,7 @@ async function AllTab({
         </div>
         {extras && extras.dailyEnhance.length > 0 ? (
           <div className="mt-2">
-            <div className="mb-0.5 text-[9px] text-zinc-500">일별 강화 (최근 30일)</div>
+            <div className="mb-0.5 text-[9px] text-zinc-500">일별 단련 시간 (최근 30일)</div>
             <EnhanceDailyChart points={extras.dailyEnhance} />
           </div>
         ) : null}

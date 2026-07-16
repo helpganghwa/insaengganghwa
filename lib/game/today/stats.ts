@@ -363,7 +363,17 @@ export async function getRankHistory(userId: string, serverId: number): Promise<
   return points;
 }
 
-export type DailyEnhancePoint = { kstDay: string; success: number; hold: number; down: number };
+export type DailyEnhancePoint = {
+  kstDay: string;
+  /** 결과별 단련 시간(시간 단위, 소수 1자리) — 시도 횟수는 성장할수록 줄어드는 지표라
+   *  y축은 시간으로(고레벨=긴 대기=큰 막대, 2026-07-16 확정). 횟수는 툴팁 병기용. */
+  successH: number;
+  holdH: number;
+  downH: number;
+  success: number;
+  hold: number;
+  down: number;
+};
 export type DatedRankPoint = { kstDay: string; rank: number };
 export type TranscendItem = { name: string; code: string; slot: string; level: number };
 
@@ -384,7 +394,10 @@ export async function getAllTabExtras(userId: string, serverId: number): Promise
       select (created_at at time zone 'Asia/Seoul')::date::text d,
              count(*) filter (where result in ('success','mega'))::int success,
              count(*) filter (where result = 'hold')::int hold,
-             count(*) filter (where result = 'down')::int down
+             count(*) filter (where result = 'down')::int down,
+             coalesce(sum(elapsed_ms) filter (where result in ('success','mega')), 0)::bigint success_ms,
+             coalesce(sum(elapsed_ms) filter (where result = 'hold'), 0)::bigint hold_ms,
+             coalesce(sum(elapsed_ms) filter (where result = 'down'), 0)::bigint down_ms
       from enhancement_logs
       where user_id = ${userId}::uuid and server_id = ${serverId}
         and created_at >= (((now() at time zone 'Asia/Seoul')::date - 30)::timestamp at time zone 'Asia/Seoul')
@@ -422,7 +435,7 @@ export async function getAllTabExtras(userId: string, serverId: number): Promise
           where rp.user_id = ${userId}::uuid and rd.server_id = ${serverId}) best_phase
     `),
   ]);
-  const dailyRows = daily as unknown as { d: string; success: number; hold: number; down: number }[];
+  const dailyRows = daily as unknown as { d: string; success: number; hold: number; down: number; success_ms: string; hold_ms: string; down_ms: string }[];
   const meleeRows = melee as unknown as { d: string; final_rank: number }[];
   const raidRows = raid as unknown as { d: string; raid_rank: number }[];
   const exRows = extremes as unknown as { name: string; code: string; slot: string; lv: number; kind: string }[];
@@ -432,7 +445,15 @@ export async function getAllTabExtras(userId: string, serverId: number): Promise
     return r ? { name: r.name, code: r.code, slot: r.slot, level: Number(r.lv) } : null;
   };
   return {
-    dailyEnhance: dailyRows.map((r) => ({ kstDay: r.d.slice(0, 10), success: r.success, hold: r.hold, down: r.down })),
+    dailyEnhance: dailyRows.map((r) => ({
+      kstDay: r.d.slice(0, 10),
+      successH: Math.round((Number(r.success_ms) / 3_600_000) * 10) / 10,
+      holdH: Math.round((Number(r.hold_ms) / 3_600_000) * 10) / 10,
+      downH: Math.round((Number(r.down_ms) / 3_600_000) * 10) / 10,
+      success: r.success,
+      hold: r.hold,
+      down: r.down,
+    })),
     meleeRanks: meleeRows.map((r) => ({ kstDay: r.d.slice(0, 10), rank: Number(r.final_rank) })),
     raidRanks: raidRows.map((r) => ({ kstDay: r.d.slice(0, 10), rank: Number(r.raid_rank) })),
     meleeWorst: m?.melee_worst == null ? null : Number(m.melee_worst),
