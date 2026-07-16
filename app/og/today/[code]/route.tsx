@@ -56,7 +56,8 @@ export async function GET(req: Request, { params }: { params: Promise<{ code: st
         .limit(1);
       const rot = (up?.rotations ?? {}) as Record<string, string>;
       const src = rot.south ?? Object.values(rot)[0];
-      return src ? dataUri(src) : null;
+      // 기본 아바타는 상대경로(/sprites/default/...) — origin 프리픽스 필수(기존 OG와 동일 이슈).
+      return src ? dataUri(src.startsWith('http') ? src : `${url.origin}${src}`) : null;
     })(),
     dataUri(`${url.origin}/sprites/today-card.png`),
   ]);
