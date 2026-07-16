@@ -27,6 +27,9 @@ export function RankChartClient({ points }: { points: RankPoint[] }) {
     if (!ref.current) return;
     const chart = echarts.init(ref.current);
     const dates = points.map((p) => `${Number(p.kstDay.slice(5, 7))}/${Number(p.kstDay.slice(8, 10))}`);
+    const datesFull = points.map(
+      (p) => `${Number(p.kstDay.slice(5, 7))}/${Number(p.kstDay.slice(8, 10))} (${'일월화수목금토'[new Date(`${p.kstDay}T12:00:00Z`).getUTCDay()]})`,
+    );
     chart.setOption({
       grid: { left: 34, right: 12, top: 34, bottom: 22 },
       legend: {
@@ -43,7 +46,15 @@ export function RankChartClient({ points }: { points: RankPoint[] }) {
         backgroundColor: 'rgba(24,24,27,0.92)',
         borderColor: 'rgba(245,158,11,0.4)',
         textStyle: { color: '#e4e4e7', fontSize: 11 },
-        valueFormatter: (v: unknown) => (v == null ? '-' : `#${v}`),
+        // 날짜에 요일 포함(2026-07-16) + 값은 #랭크.
+        formatter: (ps: unknown) => {
+          const arr = ps as { seriesName: string; dataIndex: number; value: number | null; marker: string }[];
+          if (!arr.length) return '';
+          const lines = arr
+            .map((a) => `${a.marker} ${a.seriesName} <b>${a.value == null ? '-' : `#${a.value}`}</b>`)
+            .join('<br/>');
+          return `${datesFull[arr[0]!.dataIndex]}<br/>${lines}`;
+        },
       },
       xAxis: {
         type: 'category',
