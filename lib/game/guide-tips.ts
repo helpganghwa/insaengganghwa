@@ -14,7 +14,7 @@ export const GUIDE_TIPS: GuideTip[] = [
   { text: '강화는 기다릴수록 성공 확률이 올라가요. 최고 확률에 도달한 뒤 수령하면 가장 안전해요.', anchor: 'enhance' },
   { text: '강화 슬롯은 부위당 2개, 총 6개 — 여러 장비를 동시에 돌려보세요.', anchor: 'enhance' },
   { text: '강화 완료를 놓쳐도 손해는 없어요 — 수령하기 전까지 최고 확률로 유지됩니다.', anchor: 'enhance' },
-  { text: '급할 땐 보석으로 강화 시간을 단축할 수 있어요.', anchor: 'enhance' },
+  { text: '급할 땐 다이아로 강화 시간을 단축할 수 있어요.', anchor: 'enhance' },
 
   // 보급/초월
   { text: '보급상자에서 이미 가진 장비가 나오면 자동으로 초월 재료가 돼요 — 중복도 손해가 아니에요.', anchor: 'supply' },
