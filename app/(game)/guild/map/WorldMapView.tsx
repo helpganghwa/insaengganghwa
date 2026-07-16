@@ -2,7 +2,7 @@
 
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
-import { useEffect, useMemo, useState, useTransition } from 'react';
+import { useEffect, useLayoutEffect, useMemo, useState, useTransition } from 'react';
 
 import { profileHref } from '@/lib/game/profile/href';
 import { useResourceToast } from '@/components/ResourceToast';
@@ -180,12 +180,17 @@ export function WorldMapView({
     setReplayOwners(null); // 현재(실제) 소유로 복귀 — 리플레이 최종 상태와 동일
   };
   // 첫 진입 자동 재생 — 그날 1회(localStorage 게이트).
-  useEffect(() => {
+  // useLayoutEffect: 소유 되감기(before 상태)를 **첫 페인트 전에** 적용 — useEffect+지연으로는
+  // 최종 소유 지도가 한순간 보였다가 되감기며 깜빡였음(2026-07-16). 타이핑 시작만 600ms 지연.
+  useLayoutEffect(() => {
     if (!canReplay) return;
     const key = `world-replay-seen:${serverId}`;
     if (localStorage.getItem(key) === replay!.kstDay) return;
     localStorage.setItem(key, replay!.kstDay);
-    const t = setTimeout(startReplay, 600); // 지도 첫 페인트 후
+    setShowConquest(false);
+    setChronicleTab('today');
+    setReplayOwners({ ...replay!.beforeOwner }); // 페인트 전 — 아침 상태로 시작
+    const t = setTimeout(() => setReplayActive(true), 600);
     return () => clearTimeout(t);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
