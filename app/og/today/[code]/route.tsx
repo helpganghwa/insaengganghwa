@@ -6,7 +6,7 @@ import { profiles } from '@/lib/db/schema/profiles';
 import { characters } from '@/lib/db/schema/server';
 import { userProfiles } from '@/lib/db/schema/avatar';
 import { getTodayTicker } from '@/lib/game/today/stats';
-import { todayQuote } from '@/lib/game/today/quotes';
+import { randomQuote } from '@/lib/game/today/quotes';
 
 export const size = { width: 1200, height: 630 };
 export const contentType = 'image/png';
@@ -106,7 +106,7 @@ export async function GET(req: Request, { params }: { params: Promise<{ code: st
         <div style={{ display: 'flex', fontSize: 44, fontWeight: 700, color: '#e7e5e4', marginTop: 26 }}>
           {prof.nickname}
         </div>
-        <div style={{ display: 'flex', fontSize: 24, color: '#78716c', marginTop: 10 }}>{todayQuote(kstDay)}</div>
+        <div style={{ display: 'flex', fontSize: 24, color: '#78716c', marginTop: 10 }}>{randomQuote()}</div>
         <div style={{ display: 'flex', fontSize: 92, fontWeight: 800, color: main.color, marginTop: 22 }}>
           {main.big}
         </div>
