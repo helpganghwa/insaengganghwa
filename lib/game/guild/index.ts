@@ -17,6 +17,7 @@ export * from './tax';
 export * from './collect';
 export * from './distribute';
 export * from './activity-log';
+export * from './conquest/replay';
 export * from './conquest/schedule';
 export * from './conquest/deploy';
 export * from './conquest/executor';
