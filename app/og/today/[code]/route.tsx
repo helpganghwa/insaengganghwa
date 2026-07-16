@@ -45,7 +45,7 @@ export async function GET(req: Request, { params }: { params: Promise<{ code: st
     .limit(1);
   if (!prof) return new Response('not found', { status: 404 });
 
-  const [t, avatar] = await Promise.all([
+  const [t, avatar, bg] = await Promise.all([
     getTodayTicker(prof.id, serverId),
     (async () => {
       if (!prof.activeProfileId) return null;
@@ -58,6 +58,7 @@ export async function GET(req: Request, { params }: { params: Promise<{ code: st
       const src = rot.south ?? Object.values(rot)[0];
       return src ? dataUri(src) : null;
     })(),
+    dataUri(`${url.origin}/sprites/today-card.png`),
   ]);
 
   const kstDay = new Date(Date.now() + 9 * 3600 * 1000).toISOString().slice(0, 10);
@@ -85,9 +86,13 @@ export async function GET(req: Request, { params }: { params: Promise<{ code: st
           width: '100%', height: '100%', display: 'flex', flexDirection: 'column',
           alignItems: 'center', justifyContent: 'center', position: 'relative',
           background: 'linear-gradient(160deg, #241a10 0%, #0f0d0b 65%)',
-          border: '3px solid rgba(245,158,11,0.5)',
         }}
       >
+        {/* 픽셀 프레임 배경(Pixellab, 2026-07-16) — 부재 시 위 그라데이션 폴백. */}
+        {bg ? (
+          // eslint-disable-next-line @next/next/no-img-element
+          <img src={bg} width={1200} height={630} style={{ position: 'absolute', inset: 0 }} />
+        ) : null}
         {/* 우측 아바타 — 배경 요소 */}
         {avatar ? (
           // eslint-disable-next-line @next/next/no-img-element
@@ -95,7 +100,7 @@ export async function GET(req: Request, { params }: { params: Promise<{ code: st
             src={avatar}
             width={300}
             height={400}
-            style={{ position: 'absolute', right: 40, bottom: -20, objectFit: 'contain', opacity: 0.92 }}
+            style={{ position: 'absolute', right: 90, bottom: 40, objectFit: 'contain', opacity: 0.92 }}
           />
         ) : null}
 
