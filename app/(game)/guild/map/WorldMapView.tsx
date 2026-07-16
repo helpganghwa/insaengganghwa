@@ -151,7 +151,7 @@ export function WorldMapView({
   canSetResidence: boolean;
   myUserId: string | null;
   serverId: number;
-  chronicle: { today: string | null; list: { kstDay: string; headline: string }[] } | null;
+  chronicle: { today: string | null; yesterday: string | null; list: { kstDay: string; headline: string }[] } | null;
   zones: Zone[];
   adjacency: { a: number; b: number }[];
   replay: ConquestReplay | null;
@@ -161,7 +161,7 @@ export function WorldMapView({
   const router = useRouter();
   const [residence, setResidence] = useState<number | null>(residenceZoneId);
   const [selectedId, setSelectedId] = useState<number | null>(null);
-  const [chronicleTab, setChronicleTab] = useState<'today' | 'full'>('today');
+  const [chronicleTab, setChronicleTab] = useState<'yesterday' | 'today' | 'full'>('today'); // 기본 오늘(2026-07-17: 어제 탭 추가)
   // '오늘의 역사' 리플레이(2026-07-16) — 재생 중엔 구역 소유 표시를 그날 아침(before) 상태로
   // 되돌려 두고, 이벤트마다 승자에게 전환(종료 상태 = 현재 DB와 동일). layer는 오버레이 전용.
   const [replayActive, setReplayActive] = useState(false);
@@ -217,6 +217,7 @@ export function WorldMapView({
   }, [collectConfirm]);
   // 행이 없으면 getChronicle가 {today:null,list:[]}를 반환 — 이 경우도 placeholder로 처리.
   const hasChronicle = !!chronicle && (chronicle.today != null || chronicle.list.length > 0);
+  const hasYesterday = !!chronicle?.yesterday;
 
   // 연대기 {z|이름} 강조용 — 개별 구역 이름 → 그 구역의 지역색. (지역 카테고리는 색칠 안 함.)
   const zoneColorMap = useMemo(() => {
@@ -535,6 +536,7 @@ export function WorldMapView({
             <div className="flex gap-0.5 rounded-lg bg-zinc-100 p-0.5 dark:bg-zinc-900">
               {(
                 [
+                  ...(hasYesterday ? ([['yesterday', '어제']] as const) : []),
                   ['today', '오늘'],
                   ['full', '전체'],
                 ] as const
@@ -556,7 +558,28 @@ export function WorldMapView({
           </div>
         ) : null}
         {hasChronicle ? (
-          chronicleTab === 'today' ? (
+          chronicleTab === 'yesterday' ? (
+            chronicle!.yesterday ? (
+              <div className="flex flex-col gap-2.5">
+                {chronicle!.yesterday.split(/\n{2,}/).map((para, idx) => (
+                  <p
+                    key={idx}
+                    className="whitespace-pre-line text-[13px] leading-relaxed text-zinc-600 dark:text-zinc-300"
+                  >
+                    <ChronicleText
+                      serverId={serverId}
+                      text={para.trim()}
+                      zoneColor={zoneColor}
+                      onGuild={openGuildByName}
+                      onZone={openZoneByName}
+                    />
+                  </p>
+                ))}
+              </div>
+            ) : (
+              <p className="text-[13px] leading-relaxed text-zinc-400">이전 기록이 없습니다.</p>
+            )
+          ) : chronicleTab === 'today' ? (
             chronicle!.today ? (
               replayActive && replay ? (
                 <ChronicleReplayPanel

@@ -645,6 +645,8 @@ export async function generateAndStoreChronicle(
 export type ChronicleData = {
   /** '오늘' — 최신 기록일의 긴 스토리(없으면 null). */
   today: string | null;
+  /** '어제' — 그 직전 기록일의 긴 스토리(없으면 null). */
+  yesterday: string | null;
   /** '전체' — 큰 사건이 있던 날들의 (날짜·한 줄) 리스트(최신순). */
   list: { kstDay: string; headline: string }[];
 };
@@ -667,6 +669,8 @@ export async function getChronicle(serverId: number): Promise<ChronicleData> {
     .limit(120);
   return {
     today: rows[0]?.todayText ?? null,
+    // '어제' 탭(2026-07-17 추가) — 최신 공개일의 직전 기록 전문.
+    yesterday: rows[1]?.todayText ?? null,
     // '전체' 연표 — 헤드라인이 있는 날(정세가 크게 바뀐 날)만 노출.
     list: rows
       .filter((r) => r.headline && r.headline.trim().length > 0)
