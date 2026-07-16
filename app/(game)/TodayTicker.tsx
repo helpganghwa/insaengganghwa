@@ -6,12 +6,11 @@ import Link from 'next/link';
 import type { TodayTicker as TickerData } from '@/lib/game/today/stats';
 
 /**
- * 홈 '오늘의 인생강화' 티커 — 문구 교대 페이드 + 넘치면 **왕복 marquee 루프**
- * (정지→좌로→정지→복귀 무한, 2026-07-16: forwards 단방향은 '잘린 채 정지'로 보여 폐기).
- * 지표 문구는 증감만 표시(현재 수치 제외, 사용자 확정). 전체 영역 탭 → /today.
+ * 홈 '오늘의 인생강화' 티커 — 전 지표 한 줄, **무한 흐름 marquee**(2026-07-16 확정:
+ * 교대 페이드 폐기). 동일 사본 2개를 이어붙여 translateX -50% 무한 루프(이음새 없음).
+ * 지표(전투력/최고/합산)는 증감만·증감 있는 것만, 강화 통계는 항상. 전체 영역 탭 → /today.
  */
-const SCROLL_PX_PER_S = 35;
-const ROTATE_MS = 10_000;
+const SCROLL_PX_PER_S = 30;
 
 /** 만/억 축약 — 1억 이상 X.X억, 1만 이상 X.X만(소수 1자리), 그 외 로케일 숫자. */
 const fmtKo = (n: number) => {
@@ -22,7 +21,6 @@ const fmtKo = (n: number) => {
 };
 
 function Delta({ d }: { d: number }) {
-  // ▲▼ 대신 텍스트 표기(2026-07-16 확정) — 티커의 작은 폰트에서 기호보다 가독적.
   return d > 0 ? (
     <span className="text-emerald-600 dark:text-emerald-400">{fmtKo(d)} 상승</span>
   ) : (
@@ -31,72 +29,55 @@ function Delta({ d }: { d: number }) {
 }
 
 export function TodayTicker({ data }: { data: TickerData }) {
-  const msgs = useMemo(() => {
-    const out: React.ReactNode[] = [];
-    // 지표 — 증감이 있는 것만, 증감치만(현재 수치 생략).
-    const deltas: React.ReactNode[] = [];
-    if (data.combatDelta) deltas.push(<>전투력 <Delta d={data.combatDelta} /></>);
-    if (data.maxDelta) deltas.push(<>최고 강화 <Delta d={data.maxDelta} /></>);
-    if (data.sumDelta) deltas.push(<>합산 강화 <Delta d={data.sumDelta} /></>);
-    if (deltas.length > 0)
-      out.push(
-        <>
-          {deltas.map((d, i) => (
-            <span key={i}>
-              {i > 0 ? ' · ' : ''}
-              {d}
-            </span>
-          ))}
-        </>,
-      );
-    out.push(
-      <>
-        강화 {data.attempts}회 ·{' '}
-        <span className="text-emerald-600 dark:text-emerald-400">성공 {data.success}</span> ·{' '}
-        <span className="text-zinc-500 dark:text-zinc-400">유지 {data.hold}</span> ·{' '}
-        <span className={data.down > 0 ? 'text-red-500 dark:text-red-400' : 'text-zinc-500 dark:text-zinc-400'}>
-          하락 {data.down}
-        </span>
-      </>,
+  const line = useMemo(() => {
+    const parts: React.ReactNode[] = [];
+    if (data.combatDelta) parts.push(<>전투력 <Delta d={data.combatDelta} /></>);
+    if (data.maxDelta) parts.push(<>최고 강화 <Delta d={data.maxDelta} /></>);
+    if (data.sumDelta) parts.push(<>합산 강화 <Delta d={data.sumDelta} /></>);
+    parts.push(<>강화 {data.attempts}회</>);
+    parts.push(<span className="text-emerald-600 dark:text-emerald-400">성공 {data.success}</span>);
+    parts.push(<span className="text-zinc-500 dark:text-zinc-400">유지 {data.hold}</span>);
+    parts.push(
+      <span className={data.down > 0 ? 'text-red-500 dark:text-red-400' : 'text-zinc-500 dark:text-zinc-400'}>
+        하락 {data.down}
+      </span>,
     );
-    return out;
+    return (
+      <>
+        {parts.map((p, i) => (
+          <span key={i}>
+            {i > 0 ? <span className="text-zinc-400 dark:text-zinc-600"> · </span> : null}
+            {p}
+          </span>
+        ))}
+      </>
+    );
   }, [data]);
 
-  const [idx, setIdx] = useState(0);
-  const [visible, setVisible] = useState(true);
-  const [overflowPx, setOverflowPx] = useState(0);
-  const wrapRef = useRef<HTMLDivElement>(null);
-  const textRef = useRef<HTMLSpanElement>(null);
-
-  // 문구 교체마다 넘침 측정(폰트 로드·리사이즈 재측정 포함).
+  // 사본 1개 폭 실측 → 속도 일정(px/s)하게 주기 계산. 폰트 로드 후 재측정.
+  const copyRef = useRef<HTMLSpanElement>(null);
+  const [durS, setDurS] = useState(14);
   useEffect(() => {
     const measure = () => {
-      const wrap = wrapRef.current;
-      const text = textRef.current;
-      if (!wrap || !text) return;
-      setOverflowPx(Math.max(0, text.scrollWidth - wrap.clientWidth));
+      const w = copyRef.current?.scrollWidth ?? 0;
+      if (w > 0) setDurS(Math.max(8, w / SCROLL_PX_PER_S));
     };
     measure();
     document.fonts?.ready.then(measure).catch(() => {});
     window.addEventListener('resize', measure);
     return () => window.removeEventListener('resize', measure);
-  }, [idx, msgs]);
+  }, [line]);
 
-  // 교대 — 문구가 2개 이상일 때만.
-  useEffect(() => {
-    if (msgs.length <= 1) return;
-    const t = window.setTimeout(() => {
-      setVisible(false);
-      window.setTimeout(() => {
-        setIdx((i) => (i + 1) % msgs.length);
-        setVisible(true);
-      }, 250);
-    }, ROTATE_MS);
-    return () => window.clearTimeout(t);
-  }, [idx, msgs.length]);
-
-  // 왕복 루프 주기 — 이동 구간(32%×2)이 스크롤 속도에 맞도록 역산, 최소 5초.
-  const loopDurS = Math.max(5, (overflowPx / SCROLL_PX_PER_S) * 2 / 0.64);
+  // 사본에 넉넉한 우측 간격(문장 끝↔다음 시작) — 폭에 포함되어 -50% 루프가 정확히 맞물림.
+  const copy = (withRef: boolean) => (
+    <span
+      ref={withRef ? copyRef : undefined}
+      aria-hidden={!withRef}
+      className="inline-block whitespace-nowrap pr-10"
+    >
+      {line}
+    </span>
+  );
 
   return (
     <Link
@@ -106,27 +87,13 @@ export function TodayTicker({ data }: { data: TickerData }) {
       <span className="shrink-0 text-[11px] font-extrabold text-amber-600 dark:text-amber-400">
         오늘의 인생강화
       </span>
-      <div className={`min-w-0 flex-1 transition-opacity duration-200 ${visible ? 'opacity-100' : 'opacity-0'}`}>
-        {/* 정렬 — 평소 우측, 넘칠 땐 좌측(우측 정렬이면 왼쪽이 잘린 채 시작). */}
+      <div className="min-w-0 flex-1 overflow-hidden">
         <div
-          ref={wrapRef}
-          className={`flex items-center overflow-hidden ${overflowPx > 0 ? 'justify-start' : 'justify-end'}`}
+          className="flex w-max items-center text-[11.5px] leading-none tabular-nums text-zinc-800 dark:text-zinc-100"
+          style={{ animation: `today-ticker-flow ${durS}s linear infinite` }}
         >
-          <span
-            key={idx}
-            ref={textRef}
-            className="inline-block whitespace-nowrap text-[11.5px] leading-none tabular-nums text-zinc-800 dark:text-zinc-100"
-            style={
-              overflowPx > 0
-                ? {
-                    animation: `today-ticker-slide ${loopDurS}s linear 0.4s infinite`,
-                    ['--gt-shift' as string]: `-${overflowPx}px`,
-                  }
-                : undefined
-            }
-          >
-            {msgs[idx]}
-          </span>
+          {copy(true)}
+          {copy(false)}
         </div>
       </div>
     </Link>

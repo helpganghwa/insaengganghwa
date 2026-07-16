@@ -388,10 +388,9 @@ html {
   to { transform: translateX(var(--gt-shift, 0)); }
 }
 
-/* 오늘의 인생강화 티커 — 왕복 루프(정지→좌로→정지→복귀). forwards 단방향은 스크롤이
-   금방 끝나 '잘린 채 정지'로 보였음(2026-07-16). */
-@keyframes today-ticker-slide {
-  0%, 14% { transform: translateX(0); }
-  46%, 60% { transform: translateX(var(--gt-shift, 0)); }
-  92%, 100% { transform: translateX(0); }
+/* 오늘의 인생강화 티커 — 무한 흐름(뉴스 티커, 2026-07-16 확정). 동일 사본 2개를 이어붙여
+   -50%(사본 1개 폭)까지 흘리면 이음새 없는 루프. */
+@keyframes today-ticker-flow {
+  from { transform: translateX(0); }
+  to { transform: translateX(-50%); }
 }
