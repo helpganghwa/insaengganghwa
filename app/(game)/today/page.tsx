@@ -65,10 +65,11 @@ function EnhanceBar({ success, hold, down, attempts }: { success: number; hold: 
     return <p className="py-0.5 text-center text-[11px] text-zinc-500">아직 강화 기록이 없어요 — 슬롯에 장비를 올려보세요!</p>;
   return (
     <div>
-      <div className="flex h-2 overflow-hidden rounded-full">
-        <div style={{ flex: Math.max(success, 0.01) }} className="bg-emerald-500" />
-        <div style={{ flex: Math.max(hold, 0.01) }} className="bg-zinc-300 dark:bg-zinc-700" />
-        <div style={{ flex: Math.max(down, 0.01) }} className="bg-red-400" />
+      <div className="flex h-2 gap-px overflow-hidden rounded-full">
+        {/* 0인 세그먼트는 아예 미렌더(0.01 flex가 1px 슬리버로 보이던 문제, 2026-07-16) */}
+        {success > 0 ? <div style={{ flex: success }} className="bg-emerald-500" /> : null}
+        {hold > 0 ? <div style={{ flex: hold }} className="bg-zinc-300 dark:bg-zinc-700" /> : null}
+        {down > 0 ? <div style={{ flex: down }} className="bg-red-400" /> : null}
       </div>
       <div className="mt-1 flex items-baseline gap-2.5 text-[10px] tabular-nums text-zinc-500">
         <span className="font-bold text-emerald-600 dark:text-emerald-400">성공 {success}</span>
@@ -98,14 +99,14 @@ export default async function TodayPage({ searchParams }: { searchParams: Promis
   const dateLabel = `${kstNow.getUTCMonth() + 1}/${kstNow.getUTCDate()} (${'일월화수목금토'[kstNow.getUTCDay()]})`;
 
   return (
-    <div className="flex flex-col gap-2.5 px-4 py-4 pb-24">
+    <div id="today-page" className="flex flex-col gap-2.5 px-4 py-4 pb-24">
       <div className="flex items-center justify-between">
         <div className="flex items-baseline gap-2">
           <h1 className="text-[17px] font-extrabold">오늘의 인생강화</h1>
           <span className="text-[10px] tabular-nums text-zinc-500">{dateLabel}</span>
         </div>
         {/* 오늘/전체 세그먼트 — 타이틀 옆 컴팩트 배치 */}
-        <div className="flex overflow-hidden rounded-lg border border-zinc-200 text-[11px] font-bold dark:border-zinc-800">
+        <div data-capture-exclude className="flex overflow-hidden rounded-lg border border-zinc-200 text-[11px] font-bold dark:border-zinc-800">
           {(
             [
               { id: 'today', label: '오늘', href: '/today' },
@@ -153,20 +154,28 @@ async function TodayTab({
   const captureDate = `${kstNow.getUTCFullYear()}. ${kstNow.getUTCMonth() + 1}. ${kstNow.getUTCDate()} (${'일월화수목금토'[kstNow.getUTCDay()]})`;
   return (
     <>
-      {/* 이미지 저장 캡처 영역(2026-07-16) — 버튼(TodayShareBox)은 밖. 타이틀·날짜는 캡처 시에만. */}
-      <div id="today-capture" className="group flex flex-col gap-2.5 bg-white dark:bg-zinc-950">
-      <div className="hidden items-baseline justify-between px-0.5 group-data-[capturing=1]:flex">
-        <span className="text-[15px] font-extrabold">오늘의 인생강화</span>
-        <span className="text-[10px] tabular-nums text-zinc-500">{captureDate}</span>
-      </div>
       <Card title="어제와 비교" aside="자정 기준">
-        <StatGrid
-          items={[
-            { l: '전투력', v: fmt(d.combat), s: <Delta d={d.combatDelta} /> },
-            { l: '최고 강화', v: `+${fmt(d.maxEnhance)}`, s: <Delta d={d.maxDelta} /> },
-            { l: '합산 강화', v: `+${fmt(d.sumEnhance)}`, s: <Delta d={d.sumDelta} /> },
-          ]}
-        />
+        {/* 어제 값 → 오늘 값 흐름을 명시(2026-07-16 피드백: '비교되는 느낌' 강화). */}
+        <div className="grid grid-cols-3 gap-1.5">
+          {(
+            [
+              { l: '전투력', now: d.combat, delta: d.combatDelta, prefix: '' },
+              { l: '최고 강화', now: d.maxEnhance, delta: d.maxDelta, prefix: '+' },
+              { l: '합산 강화', now: d.sumEnhance, delta: d.sumDelta, prefix: '+' },
+            ] as const
+          ).map((k) => (
+            <div key={k.l} className="rounded-lg bg-white/70 px-1.5 py-1.5 text-center dark:bg-zinc-950/50">
+              <div className="text-[9px] text-zinc-500">{k.l}</div>
+              <div className="text-[10px] tabular-nums text-zinc-400 dark:text-zinc-600">
+                {k.delta != null ? `어제 ${k.prefix}${fmt(k.now - k.delta)}` : '어제 기록 없음'}
+              </div>
+              <div className="text-[13px] font-extrabold leading-tight tabular-nums">
+                {k.prefix}{fmt(k.now)}
+              </div>
+              <div className="text-[10px] tabular-nums"><Delta d={k.delta} /></div>
+            </div>
+          ))}
+        </div>
         {/* 랭킹 변화 — 수치 변화와 분리, 3지표(2026-07-16 피드백). */}
         <div className="mt-1.5 grid grid-cols-3 gap-1.5">
           {(
@@ -244,7 +253,6 @@ async function TodayTab({
           ))}
         </Card>
       ) : null}
-      </div>
 
       <TodayShareBox
         nickname={nickname}
