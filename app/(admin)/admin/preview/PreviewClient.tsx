@@ -102,16 +102,22 @@ function ReplayPreview({
         <div ref={setLayer} aria-hidden className="pointer-events-none absolute inset-0 z-40" />
       </div>
       <div className="rounded-lg border border-zinc-800 bg-zinc-900 p-2.5">
-        <ChronicleReplayPanel
-          key={runKey}
-          text={text}
-          replay={replay}
-          zones={zones}
-          layer={layer}
-          zoneColor={zoneColor}
-          onOwnerFlip={(zoneId, guild) => setOwners((m) => ({ ...m, [zoneId]: guild }))}
-          onDone={() => {}}
-        />
+        {/* layer 준비 후 마운트(2026-07-17) — 같은 렌더에 패널을 올리면 엔진이 null 레이어를
+            잡아 문양·전투 연출이 전부 no-op(타이핑만 동작하던 버그). */}
+        {layer ? (
+          <ChronicleReplayPanel
+            key={runKey}
+            text={text}
+            replay={replay}
+            zones={zones}
+            layer={layer}
+            zoneColor={zoneColor}
+            onOwnerFlip={(zoneId, guild) => setOwners((m) => ({ ...m, [zoneId]: guild }))}
+            onDone={() => {}}
+          />
+        ) : (
+          <p className="text-[11px] text-zinc-500">지도 준비 중…</p>
+        )}
       </div>
       <button
         type="button"

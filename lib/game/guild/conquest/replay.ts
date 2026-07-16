@@ -58,15 +58,23 @@ export async function getConquestReplay(serverId: number, forKstDay?: string): P
   const s = await aggregateConquestDay(kstDay, serverId);
   if (s.captures.length === 0 && s.defenses.length === 0) return null;
 
-  // 구역 메타(id·좌표·현 소유 길드명) — 이름 매칭·이전 소유 복원·출발지 계산용.
+  // 구역 메타 + 그날 종료 시점 소유 — **전투 이력 기반**(zone별 kstDay 이하 최신 승자).
+  // 현 DB owner 기준이면 과거 날짜 리플레이(어제 탭)에 이후 날의 결과가 섞이고,
+  // 검수 시점(자정 플립 전)의 오늘 리플레이도 어긋난다(2026-07-17). 소유는 전투로만
+  // 바뀌므로(해산 중립화는 길드 삭제 → 이름 해석 null=중립으로 자연 수렴) 이력이 단일 진실.
   const zoneRows = (await db.execute(dsql`
-    select z.id, z.name, z.map_x, z.map_y, g.name as owner
-    from zones z left join guilds g on g.id = z.owner_guild_id
+    select z.id, z.name, z.map_x, z.map_y,
+           (select g2.name from conquest_battles cb2
+              join guilds g2 on g2.id = cb2.winner_guild_id
+              where cb2.zone_id = z.id and cb2.server_id = z.server_id
+                and cb2.battle_kst_day <= ${kstDay}::date
+              order by cb2.battle_kst_day desc limit 1) as owner
+    from zones z
     where z.server_id = ${serverId}
   `)) as unknown as { id: number; name: string; map_x: number; map_y: number; owner: string | null }[];
   const byName = new Map(zoneRows.map((z) => [z.name, z]));
 
-  // 이전 소유 복원 — 현재 상태에서 그날 점령을 되돌림(공개 후 DB = 그날 결과 반영 상태).
+  // 이전 소유 복원 — 그날 종료 상태에서 그날 점령을 되돌림(위 이력 기반이라 날짜 무관 정확).
   const beforeOwner: Record<number, string | null> = {};
   for (const z of zoneRows) beforeOwner[z.id] = z.owner;
   for (const c of s.captures) {

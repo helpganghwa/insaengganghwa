@@ -145,16 +145,18 @@ export function WorldMapView({
   zones,
   adjacency,
   replay,
+  replayYesterday,
 }: {
   mapSrc: string;
   residenceZoneId: number | null;
   canSetResidence: boolean;
   myUserId: string | null;
   serverId: number;
-  chronicle: { today: string | null; yesterday: string | null; list: { kstDay: string; headline: string }[] } | null;
+  chronicle: { today: string | null; yesterday: string | null; yesterdayDay: string | null; list: { kstDay: string; headline: string }[] } | null;
   zones: Zone[];
   adjacency: { a: number; b: number }[];
   replay: ConquestReplay | null;
+  replayYesterday: ConquestReplay | null;
 }) {
   const { showHeaderToast, showError } = useResourceToast();
   const { optimisticAdjust } = useDiamond();
@@ -164,21 +166,26 @@ export function WorldMapView({
   const [chronicleTab, setChronicleTab] = useState<'yesterday' | 'today' | 'full'>('today'); // 기본 오늘(2026-07-17: 어제 탭 추가)
   // '오늘의 역사' 리플레이(2026-07-16) — 재생 중엔 구역 소유 표시를 그날 아침(before) 상태로
   // 되돌려 두고, 이벤트마다 승자에게 전환(종료 상태 = 현재 DB와 동일). layer는 오버레이 전용.
-  const [replayActive, setReplayActive] = useState(false);
+  // 재생 트랙 — 'today' | 'yesterday' | null(미재생). 어제 리플레이의 최종 상태는 어제 종료
+  // 시점이라, 종료/취소 시 항상 owners=null(라이브)로 복귀한다(2026-07-17 어제 탭).
+  const [replayingTab, setReplayingTab] = useState<'today' | 'yesterday' | null>(null);
   const [replayOwners, setReplayOwners] = useState<Record<number, string | null> | null>(null);
   const [replayLayer, setReplayLayer] = useState<HTMLDivElement | null>(null);
   const canReplay = !!replay && !!chronicle?.today;
-  const startReplay = () => {
-    if (!canReplay || replayActive) return;
+  const canReplayYesterday = !!replayYesterday && !!chronicle?.yesterday;
+  const startReplay = (tab: 'today' | 'yesterday' = 'today') => {
+    const r = tab === 'today' ? replay : replayYesterday;
+    if (!r || replayingTab) return;
     setShowConquest(false);
-    setChronicleTab('today');
-    setReplayOwners({ ...replay!.beforeOwner });
-    setReplayActive(true);
+    setChronicleTab(tab);
+    setReplayOwners({ ...r.beforeOwner });
+    setReplayingTab(tab);
   };
   const endReplay = () => {
-    setReplayActive(false);
-    setReplayOwners(null); // 현재(실제) 소유로 복귀 — 리플레이 최종 상태와 동일
+    setReplayingTab(null);
+    setReplayOwners(null); // 라이브 소유로 복귀(오늘=최종 상태와 동일, 어제=현재로 점프)
   };
+  const replayActive = replayingTab !== null;
   // 첫 진입 자동 재생 — 그날 1회(localStorage 게이트).
   // useLayoutEffect: 소유 되감기(before 상태)를 **첫 페인트 전에** 적용 — useEffect+지연으로는
   // 최종 소유 지도가 한순간 보였다가 되감기며 깜빡였음(2026-07-16). 타이핑 시작만 600ms 지연.
@@ -190,7 +197,7 @@ export function WorldMapView({
     setShowConquest(false);
     setChronicleTab('today');
     setReplayOwners({ ...replay!.beforeOwner }); // 페인트 전 — 아침 상태로 시작
-    const t = setTimeout(() => setReplayActive(true), 600);
+    const t = setTimeout(() => setReplayingTab('today'), 600);
     return () => clearTimeout(t);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
@@ -420,16 +427,17 @@ export function WorldMapView({
           // 리플레이 중 소유 override — 아침(before) 상태에서 시작해 이벤트마다 승자로 전환.
           const rOwner = replayOwners ? (replayOwners[z.id] ?? null) : undefined;
           const owned = rOwner !== undefined ? rOwner != null : z.ownerGuildId != null;
+          const activeReplay = replayingTab === 'yesterday' ? replayYesterday : replay;
           const emblemUrl =
             rOwner !== undefined
               ? rOwner != null
-                ? (replay?.guilds[rOwner]?.emblemUrl ?? null)
+                ? (activeReplay?.guilds[rOwner]?.emblemUrl ?? null)
                 : null
               : z.ownerEmblemUrl;
           const emblemColor =
             rOwner !== undefined
               ? rOwner != null
-                ? (replay?.guilds[rOwner]?.color ?? null)
+                ? (activeReplay?.guilds[rOwner]?.color ?? null)
                 : null
               : z.ownerEmblemColor;
           const isResidence = z.id === residence;
@@ -522,10 +530,11 @@ export function WorldMapView({
         {hasChronicle ? (
           <div className="mb-2 flex items-center justify-between gap-1.5">
             {/* 다시 보기 — 왼쪽 끝, 이모지 없음(2026-07-16 확정). 미노출 시에도 우측 탭 정렬 유지용 스페이서. */}
-            {canReplay && !replayActive ? (
+            {!replayActive &&
+            ((chronicleTab === 'today' && canReplay) || (chronicleTab === 'yesterday' && canReplayYesterday)) ? (
               <button
                 type="button"
-                onClick={startReplay}
+                onClick={() => startReplay(chronicleTab === 'yesterday' ? 'yesterday' : 'today')}
                 className="rounded-lg border border-zinc-200 px-2 py-0.5 text-[11px] font-bold text-zinc-500 active:opacity-60 dark:border-zinc-800 dark:text-zinc-400"
               >
                 다시 보기
@@ -544,7 +553,10 @@ export function WorldMapView({
                 <button
                   key={k}
                   type="button"
-                  onClick={() => setChronicleTab(k)}
+                  onClick={() => {
+                    if (replayActive) endReplay(); // 재생 중 탭 이동 = 자동 완료(라이브 상태 확정)
+                    setChronicleTab(k);
+                  }}
                   className={`rounded-md px-2 py-0.5 text-[11px] font-bold transition ${
                     chronicleTab === k
                       ? 'bg-white text-zinc-900 shadow-sm dark:bg-zinc-950 dark:text-zinc-50'
@@ -559,7 +571,18 @@ export function WorldMapView({
         ) : null}
         {hasChronicle ? (
           chronicleTab === 'yesterday' ? (
-            chronicle!.yesterday ? (
+            replayingTab === 'yesterday' && replayYesterday && chronicle!.yesterday ? (
+              <ChronicleReplayPanel
+                key={`replay-y-${replayYesterday.kstDay}`}
+                text={chronicle!.yesterday}
+                replay={replayYesterday}
+                zones={zones.map((z) => ({ id: z.id, name: z.name, mapX: z.mapX, mapY: z.mapY }))}
+                layer={replayLayer}
+                zoneColor={zoneColor}
+                onOwnerFlip={(zoneId, guild) => setReplayOwners((m) => ({ ...(m ?? {}), [zoneId]: guild }))}
+                onDone={endReplay}
+              />
+            ) : chronicle!.yesterday ? (
               <div className="flex flex-col gap-2.5">
                 {chronicle!.yesterday.split(/\n{2,}/).map((para, idx) => (
                   <p
@@ -581,7 +604,7 @@ export function WorldMapView({
             )
           ) : chronicleTab === 'today' ? (
             chronicle!.today ? (
-              replayActive && replay ? (
+              replayingTab === 'today' && replay ? (
                 <ChronicleReplayPanel
                   key={`replay-${replay.kstDay}`}
                   text={chronicle!.today}

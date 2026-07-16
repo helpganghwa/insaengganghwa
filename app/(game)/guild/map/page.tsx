@@ -21,6 +21,10 @@ export default async function WorldMapPage() {
     getConquestReplay(serverId).catch(() => null),
     getZoneAdjacency(serverId).catch(() => []),
   ]);
+  // 어제 리플레이 — 연대기 로드 결과(어제 기록일)에 의존해 후속 1회(가벼움, 상세 페이지).
+  const replayYesterday = chronicle?.yesterdayDay
+    ? await getConquestReplay(serverId, chronicle.yesterdayDay).catch(() => null)
+    : null;
 
   return (
     <WorldMapView
@@ -31,6 +35,7 @@ export default async function WorldMapPage() {
       serverId={serverId}
       chronicle={chronicle}
       replay={replay}
+      replayYesterday={replayYesterday}
       adjacency={adjacency}
       zones={zones.map((z) => ({
         id: z.id,
