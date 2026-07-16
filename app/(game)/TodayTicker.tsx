@@ -51,9 +51,12 @@ export function TodayTicker({ data }: { data: TickerData }) {
       );
     out.push(
       <>
-        강화 {data.attempts}회 · 성공{' '}
-        <span className="text-emerald-600 dark:text-emerald-400">{data.success}</span> · 유지 {data.hold} · 하락{' '}
-        <span className={data.down > 0 ? 'text-red-500 dark:text-red-400' : ''}>{data.down}</span>
+        강화 {data.attempts}회 ·{' '}
+        <span className="text-emerald-600 dark:text-emerald-400">성공 {data.success}</span> ·{' '}
+        <span className="text-zinc-500 dark:text-zinc-400">유지 {data.hold}</span> ·{' '}
+        <span className={data.down > 0 ? 'text-red-500 dark:text-red-400' : 'text-zinc-500 dark:text-zinc-400'}>
+          하락 {data.down}
+        </span>
       </>,
     );
     return out;
