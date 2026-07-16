@@ -54,17 +54,18 @@ export function TodayTicker({ data }: { data: TickerData }) {
   return (
     <Link
       href="/today"
-      className="relative flex items-center gap-2 overflow-hidden rounded-lg px-3.5 py-2 text-zinc-100"
+      className="flex items-center gap-2 px-3.5 py-2 text-zinc-100"
+      style={{
+        // 카드 프레임(today-card.png)을 9슬라이스 border-image로 재사용 — 코너 보존·잘림 불가
+        // (2026-07-16: 얇은 배너 전용 생성은 반복 실패, 별도 에셋 없이 카드와 톤 일치).
+        borderStyle: 'solid',
+        borderWidth: 10,
+        borderImageSource: 'url(/sprites/today-card.png)',
+        borderImageSlice: '54 fill',
+        borderImageWidth: '10px',
+        borderImageRepeat: 'stretch',
+      }}
     >
-      {/* 픽셀 프레임 배너(Pixellab) — img 절대 채움(background-size 스트레치가 우측 잘림 유발, 2026-07-16). */}
-      {/* eslint-disable-next-line @next/next/no-img-element */}
-      <img
-        src="/sprites/today-ticker.png"
-        alt=""
-        aria-hidden
-        className="absolute inset-0 -z-10 h-full w-full"
-        style={{ imageRendering: 'pixelated' }}
-      />
       <span className="shrink-0 text-[11px] font-extrabold text-amber-400">오늘의 인생강화</span>
       <span
         className="min-w-0 flex-1 truncate text-[12px] transition-opacity duration-200"

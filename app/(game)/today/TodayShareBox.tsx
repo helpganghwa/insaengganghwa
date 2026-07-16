@@ -88,20 +88,22 @@ export function TodayShareBox({
   };
 
   const [saving, setSaving] = useState(false);
-  // 저장 = 페이지 정보 캡처(2026-07-16 확정 — OG 카드가 아니라 #today-capture 영역, 버튼 제외).
-  // Web Share API(파일)로 네이티브 시트 → 사진 저장·카톡 전송, 미지원이면 다운로드 폴백.
+  // 저장 = 페이지 전체 캡처(2026-07-16 확정 — 타이틀·날짜 포함, 탭 필터·하단 버튼만 제외).
+  // filter로 [data-capture-exclude] 노드를 클론에서 제거. style 오버라이드 없음(레이아웃 변형이
+  // 우측 잘림을 유발했음) — 페이지 자체 패딩(px-4 py-4)이 여백 역할.
   const doSaveImage = async () => {
     if (saving) return;
-    const node = document.getElementById('today-capture');
+    const node = document.getElementById('today-page');
     if (!node) return;
     setSaving(true);
-    node.setAttribute('data-capturing', '1'); // 캡처 전용 헤더(타이틀·날짜) 표시
     try {
       const dark = document.documentElement.classList.contains('dark');
       const dataUrl = await toPng(node, {
         pixelRatio: 2,
         backgroundColor: dark ? '#09090b' : '#ffffff',
-        style: { margin: '0', padding: '18px 14px' },
+        width: node.offsetWidth,
+        height: node.offsetHeight,
+        filter: (n) => !(n instanceof HTMLElement && n.dataset.captureExclude != null),
       });
       const blob = await (await fetch(dataUrl)).blob();
       const file = new File([blob], `오늘의인생강화_${nickname}.png`, { type: 'image/png' });
@@ -116,7 +118,6 @@ export function TodayShareBox({
     } catch {
       /* 사용자 취소(AbortError) 포함 — 무시 */
     } finally {
-      node.removeAttribute('data-capturing');
       setSaving(false);
     }
   };
@@ -132,21 +133,23 @@ export function TodayShareBox({
 
   return (
     <>
-      <button
-        type="button"
-        onClick={() => setOpen(true)}
-        className="mt-5 flex w-full items-center justify-center gap-2 rounded-xl bg-[#FEE500] py-3 text-sm font-extrabold text-[#191919] active:scale-[0.99]"
-      >
-        💬 오늘의 성장 자랑하기
-      </button>
-      <button
-        type="button"
-        onClick={doSaveImage}
-        disabled={saving}
-        className="mt-2 flex w-full items-center justify-center gap-2 rounded-xl border border-zinc-300 py-2.5 text-[12.5px] font-bold text-zinc-600 active:scale-[0.99] disabled:opacity-60 dark:border-zinc-700 dark:text-zinc-300"
-      >
-        {saving ? '이미지 준비 중…' : '💾 이미지로 저장'}
-      </button>
+      <div data-capture-exclude>
+        <button
+          type="button"
+          onClick={() => setOpen(true)}
+          className="mt-5 flex w-full items-center justify-center gap-2 rounded-xl bg-[#FEE500] py-3 text-sm font-extrabold text-[#191919] active:scale-[0.99]"
+        >
+          💬 오늘의 성장 자랑하기
+        </button>
+        <button
+          type="button"
+          onClick={doSaveImage}
+          disabled={saving}
+          className="mt-2 flex w-full items-center justify-center gap-2 rounded-xl border border-zinc-300 py-2.5 text-[12.5px] font-bold text-zinc-600 active:scale-[0.99] disabled:opacity-60 dark:border-zinc-700 dark:text-zinc-300"
+        >
+          {saving ? '이미지 준비 중…' : '💾 이미지로 저장'}
+        </button>
+      </div>
 
       {open
         ? createPortal(
