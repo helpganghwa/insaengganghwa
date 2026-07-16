@@ -1,0 +1,134 @@
+import { ImageResponse } from 'next/og';
+import { and, eq } from 'drizzle-orm';
+
+import { db } from '@/lib/db/client';
+import { profiles } from '@/lib/db/schema/profiles';
+import { characters } from '@/lib/db/schema/server';
+import { userProfiles } from '@/lib/db/schema/avatar';
+import { getTodayTicker } from '@/lib/game/today/stats';
+import { todayQuote } from '@/lib/game/today/quotes';
+
+export const size = { width: 1200, height: 630 };
+export const contentType = 'image/png';
+
+/** 같은 배포의 정적 에셋 → base64 data URI(Satori 안정 임베드). 실패=null. */
+async function dataUri(url: string): Promise<string | null> {
+  try {
+    const res = await fetch(url, { cache: 'no-store' });
+    if (!res.ok) return null;
+    const ct = res.headers.get('content-type') ?? '';
+    if (!ct.startsWith('image/')) return null;
+    const b64 = Buffer.from(await res.arrayBuffer()).toString('base64');
+    return `data:${ct};base64,${b64}`;
+  } catch {
+    return null;
+  }
+}
+
+const fmt = (n: number) => n.toLocaleString('ko-KR');
+
+/**
+ * 오늘의 성장 카드 OG(2026-07-16 확정 — 기록 증서 B 수정판) — 미리보기·카톡·💾저장이
+ * 전부 이 PNG 하나(단일 진실). 중앙 정렬 증서 + 우측 대표 아바타 + 최고/합산/강화 칩.
+ */
+export async function GET(req: Request, { params }: { params: Promise<{ code: string }> }) {
+  const { code } = await params;
+  const url = new URL(req.url);
+  const sRaw = Number(url.searchParams.get('s'));
+  const serverId = Number.isInteger(sRaw) && sRaw >= 1 ? sRaw : 1;
+
+  const [prof] = await db
+    .select({ id: profiles.id, nickname: characters.nickname, activeProfileId: characters.activeProfileId })
+    .from(profiles)
+    .innerJoin(characters, and(eq(characters.userId, profiles.id), eq(characters.serverId, serverId)))
+    .where(eq(profiles.publicCode, decodeURIComponent(code)))
+    .limit(1);
+  if (!prof) return new Response('not found', { status: 404 });
+
+  const [t, avatar] = await Promise.all([
+    getTodayTicker(prof.id, serverId),
+    (async () => {
+      if (!prof.activeProfileId) return null;
+      const [up] = await db
+        .select({ rotations: userProfiles.rotations })
+        .from(userProfiles)
+        .where(eq(userProfiles.id, prof.activeProfileId))
+        .limit(1);
+      const rot = (up?.rotations ?? {}) as Record<string, string>;
+      const src = rot.south ?? Object.values(rot)[0];
+      return src ? dataUri(src) : null;
+    })(),
+  ]);
+
+  const kstDay = new Date(Date.now() + 9 * 3600 * 1000).toISOString().slice(0, 10);
+  const [y, m, d] = kstDay.split('-');
+  const dayKo = '일월화수목금토'[new Date(`${kstDay}T12:00:00Z`).getUTCDay()];
+
+  // 메인 수치 — 전투력 증감 우선, 없으면 강화 통계, 그것도 없으면 현재 전투력.
+  const main =
+    t.combatDelta && t.combatDelta !== 0
+      ? { big: `${t.combatDelta > 0 ? '▲' : '▼'} ${fmt(Math.abs(t.combatDelta))}`, color: t.combatDelta > 0 ? '#34d399' : '#f87171', sub: `전투력 ${t.combatDelta > 0 ? '상승' : '변동'} · 현재 ${fmt(t.combat)}` }
+      : t.attempts > 0
+        ? { big: `강화 ${t.attempts}회`, color: '#fbbf24', sub: `성공 ${t.success} · 유지 ${t.hold} · 하락 ${t.down}` }
+        : { big: fmt(t.combat), color: '#fbbf24', sub: '전투력 — 오늘도 담금질 중' };
+
+  const chips = [
+    `최고 강화 +${fmt(t.maxEnhance)}`,
+    `합산 강화 +${fmt(t.sumEnhance)}`,
+    ...(t.attempts > 0 ? [`강화 ${t.attempts}회 · 성공 ${t.success}`] : []),
+  ];
+
+  return new ImageResponse(
+    (
+      <div
+        style={{
+          width: '100%', height: '100%', display: 'flex', flexDirection: 'column',
+          alignItems: 'center', justifyContent: 'center', position: 'relative',
+          background: 'linear-gradient(160deg, #241a10 0%, #0f0d0b 65%)',
+          border: '3px solid rgba(245,158,11,0.5)',
+        }}
+      >
+        {/* 우측 아바타 — 배경 요소 */}
+        {avatar ? (
+          // eslint-disable-next-line @next/next/no-img-element
+          <img
+            src={avatar}
+            width={300}
+            height={400}
+            style={{ position: 'absolute', right: 40, bottom: -20, objectFit: 'contain', opacity: 0.92 }}
+          />
+        ) : null}
+
+        <div style={{ display: 'flex', fontSize: 30, fontWeight: 800, color: '#fbbf24', letterSpacing: 18 }}>
+          오늘의 인생강화
+        </div>
+        <div style={{ display: 'flex', width: 120, height: 3, background: 'rgba(245,158,11,0.5)', marginTop: 22 }} />
+        <div style={{ display: 'flex', fontSize: 44, fontWeight: 700, color: '#e7e5e4', marginTop: 26 }}>
+          {prof.nickname}
+        </div>
+        <div style={{ display: 'flex', fontSize: 24, color: '#78716c', marginTop: 10 }}>{todayQuote(kstDay)}</div>
+        <div style={{ display: 'flex', fontSize: 92, fontWeight: 800, color: main.color, marginTop: 22 }}>
+          {main.big}
+        </div>
+        <div style={{ display: 'flex', fontSize: 26, color: '#a8a29e', marginTop: 6 }}>{main.sub}</div>
+        <div style={{ display: 'flex', gap: 14, marginTop: 30 }}>
+          {chips.map((c) => (
+            <div
+              key={c}
+              style={{
+                display: 'flex', fontSize: 22, color: '#d6d3d1', padding: '10px 24px',
+                background: 'rgba(255,255,255,0.07)', borderRadius: 999,
+              }}
+            >
+              {c}
+            </div>
+          ))}
+        </div>
+        <div style={{ display: 'flex', fontSize: 20, color: '#57534e', marginTop: 34 }}>
+          {`${y}. ${Number(m)}. ${Number(d)} (${dayKo}) · ganghwa.app`}
+        </div>
+      </div>
+    ),
+    size,
+  );
+}
