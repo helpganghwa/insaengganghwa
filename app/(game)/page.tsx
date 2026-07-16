@@ -291,8 +291,11 @@ export default async function HomePage() {
       {worldFeed.length > 0 && <WorldTicker entries={worldFeed} />}
       <div className="flex flex-col gap-3 px-4 py-4">
       <RankingTop3Card />
-      {/* 오늘의 인생강화 티커(0120) — 랭킹 바로 아래 1줄, /today 진입점(2026-07-16 확정). */}
-      {todayStats ? <TodayTicker data={todayStats} /> : null}
+      {/* 오늘의 인생강화 티커(0120) — 랭킹 바로 아래 1줄, /today 진입점(2026-07-16 확정).
+          신규(장비 0·활동 0)에겐 숨김 — '전투력 0' 노출 방지. */}
+      {todayStats && (todayStats.combat > 0 || todayStats.attempts > 0) ? (
+        <TodayTicker data={todayStats} />
+      ) : null}
       {/* 도전 과제 배너 — 일회성 온보딩 리워드(0118). 캐러셀 배너와 동일 규격(h-16),
           랭킹 바로 아래(2026-07-15 위치·크기 확정). 수령 가능 시 앰버 글로우. */}
       {(() => {
