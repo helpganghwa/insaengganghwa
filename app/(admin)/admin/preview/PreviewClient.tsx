@@ -6,6 +6,7 @@ import { useRouter } from 'next/navigation';
 import type { ConquestReplay } from '@/lib/game/guild/conquest/replay';
 import { ChronicleReplayPanel } from '@/app/(game)/guild/map/ChronicleReplay';
 import { REGION_META, type Region } from '@/lib/game/guild/region-meta';
+import { assetUrl } from '@/lib/asset-versions';
 
 import { updateChronicleAction, regenTrophyAction } from './actions';
 
@@ -20,10 +21,12 @@ function ReplayPreview({
   text,
   replay,
   zones,
+  adjacency,
 }: {
   text: string;
   replay: ConquestReplay;
   zones: PreviewZone[];
+  adjacency: { a: number; b: number }[];
 }) {
   const [layer, setLayer] = useState<HTMLDivElement | null>(null);
   const [runKey, setRunKey] = useState(0);
@@ -32,25 +35,68 @@ function ReplayPreview({
     const z = zones.find((x) => x.name === name);
     return z ? REGION_META[z.region].color : null;
   };
+  const posById = new Map(zones.map((z) => [z.id, z]));
   return (
     <div className="space-y-2">
+      {/* 실지도 재현(2026-07-16 피드백) — 월드맵 배경 + 인접 길 + 실노드 스타일(WorldMapView와 동일 문법) */}
       <div className="relative aspect-square w-full max-w-[340px] overflow-hidden rounded-xl border border-zinc-800 bg-zinc-950">
+        {/* eslint-disable-next-line @next/next/no-img-element */}
+        <img
+          src={assetUrl('/sprites/guild/worldmap.png')}
+          alt=""
+          aria-hidden
+          className="absolute inset-0 h-full w-full object-cover"
+          style={{ imageRendering: 'pixelated' }}
+        />
+        <svg viewBox="0 0 100 100" preserveAspectRatio="none" className="absolute inset-0 h-full w-full">
+          {adjacency.map((e) => {
+            const A = posById.get(e.a);
+            const B = posById.get(e.b);
+            if (!A || !B) return null;
+            return (
+              <line
+                key={`${e.a}-${e.b}`}
+                x1={A.mapX}
+                y1={A.mapY}
+                x2={B.mapX}
+                y2={B.mapY}
+                stroke="#fcd34d"
+                strokeOpacity={0.5}
+                strokeWidth={0.5}
+                strokeLinecap="round"
+              />
+            );
+          })}
+        </svg>
         {zones.map((z) => {
           const owner = owners[z.id] ?? null;
           const color = REGION_META[z.region].color;
-          const gColor = owner ? (replay.guilds[owner]?.color ?? '#a8a29e') : null;
+          const g = owner ? replay.guilds[owner] : null;
+          const gColor = owner ? (g?.color ?? '#a8a29e') : null;
           return (
             <span
               key={z.id}
               title={z.name}
-              className="absolute block h-[15px] w-[15px] -translate-x-1/2 -translate-y-1/2 rounded-[4px] ring-1 ring-black/70"
+              className="absolute block h-[17px] w-[17px] -translate-x-1/2 -translate-y-1/2 overflow-hidden rounded-[4px] ring-1 ring-black/70"
               style={{
                 left: `${z.mapX}%`,
                 top: `${z.mapY}%`,
                 backgroundColor: gColor ? `${gColor}73` : 'rgba(10,12,20,0.45)',
                 outline: `1px solid ${color}${owner ? '' : '88'}`,
+                outlineOffset: 0,
               }}
-            />
+            >
+              {g?.emblemUrl ? (
+                // eslint-disable-next-line @next/next/no-img-element
+                <img
+                  src={g.emblemUrl}
+                  alt=""
+                  aria-hidden
+                  className="h-full w-full object-contain"
+                  style={{ imageRendering: 'pixelated' }}
+                />
+              ) : null}
+            </span>
           );
         })}
         <div ref={setLayer} aria-hidden className="pointer-events-none absolute inset-0 z-40" />
@@ -89,6 +135,7 @@ export function ChronicleEditor({
   todayText: initialText,
   replay,
   zones,
+  adjacency,
 }: {
   serverId: number;
   kstDay: string;
@@ -96,6 +143,7 @@ export function ChronicleEditor({
   todayText: string;
   replay: ConquestReplay | null;
   zones: PreviewZone[];
+  adjacency: { a: number; b: number }[];
 }) {
   const router = useRouter();
   const [headline, setHeadline] = useState(initialHeadline);
@@ -148,7 +196,7 @@ export function ChronicleEditor({
           </button>
         ) : null}
       </div>
-      {showReplay && replay ? <ReplayPreview key={text} text={text} replay={replay} zones={zones} /> : null}
+      {showReplay && replay ? <ReplayPreview key={text} text={text} replay={replay} zones={zones} adjacency={adjacency} /> : null}
     </div>
   );
 }
