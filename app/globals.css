@@ -383,9 +383,9 @@ html {
 }
 
 
-/* 오늘의 인생강화 티커 — 무한 흐름(뉴스 티커, 2026-07-16 확정). 동일 사본 2개를 이어붙여
-   -50%(사본 1개 폭)까지 흘리면 이음새 없는 루프. */
+/* 오늘의 인생강화 티커 — 무한 흐름(뉴스 티커). 사본을 컨테이너+1개 이상 반복하고
+   정확히 사본 1개 폭(--tt-shift)만큼 이동 → 이음새 없는 연속 루프(2026-07-16). */
 @keyframes today-ticker-flow {
   from { transform: translateX(0); }
-  to { transform: translateX(-50%); }
+  to { transform: translateX(var(--tt-shift, -50%)); }
 }

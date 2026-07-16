@@ -6,9 +6,10 @@ import Link from 'next/link';
 import type { TodayTicker as TickerData } from '@/lib/game/today/stats';
 
 /**
- * 홈 '오늘의 인생강화' 티커 — 전 지표 한 줄, **무한 흐름 marquee**(2026-07-16 확정:
- * 교대 페이드 폐기). 동일 사본 2개를 이어붙여 translateX -50% 무한 루프(이음새 없음).
- * 지표(전투력/최고/합산)는 증감만·증감 있는 것만, 강화 통계는 항상. 전체 영역 탭 → /today.
+ * 홈 '오늘의 인생강화' 티커 — 전 지표 한 줄 **무한 흐름 marquee**(2026-07-16).
+ * 사본을 컨테이너를 채우고도 남게 반복 배치(주식 티커처럼 촘촘히)하고, 정확히 사본
+ * 1개 폭(--tt-shift)만큼 이동하는 무한 루프 — 내용이 짧아도 공백·점프 없음.
+ * 지표(전투력/최고/합산)는 증감 있는 것만, 강화 통계는 상시. 전체 영역 탭 → /today.
  */
 const SCROLL_PX_PER_S = 30;
 
@@ -46,21 +47,28 @@ export function TodayTicker({ data }: { data: TickerData }) {
       <>
         {parts.map((p, i) => (
           <span key={i}>
-            {i > 0 ? <span className="text-zinc-400 dark:text-zinc-600"> · </span> : null}
             {p}
+            <span className="text-zinc-400 dark:text-zinc-600"> · </span>
           </span>
         ))}
       </>
     );
   }, [data]);
 
-  // 사본 1개 폭 실측 → 속도 일정(px/s)하게 주기 계산. 폰트 로드 후 재측정.
+  const wrapRef = useRef<HTMLDivElement>(null);
   const copyRef = useRef<HTMLSpanElement>(null);
-  const [durS, setDurS] = useState(14);
+  const [copyW, setCopyW] = useState(0);
+  const [copies, setCopies] = useState(2);
+
   useEffect(() => {
     const measure = () => {
       const w = copyRef.current?.scrollWidth ?? 0;
-      if (w > 0) setDurS(Math.max(8, w / SCROLL_PX_PER_S));
+      const c = wrapRef.current?.clientWidth ?? 0;
+      if (w > 0 && c > 0) {
+        setCopyW(w);
+        // 컨테이너 + 사본 1개를 항상 덮도록 — 이동 중에도 빈 공간이 생기지 않는 최소 반복 수.
+        setCopies(Math.max(2, Math.ceil(c / w) + 1));
+      }
     };
     measure();
     document.fonts?.ready.then(measure).catch(() => {});
@@ -68,16 +76,7 @@ export function TodayTicker({ data }: { data: TickerData }) {
     return () => window.removeEventListener('resize', measure);
   }, [line]);
 
-  // 사본에 넉넉한 우측 간격(문장 끝↔다음 시작) — 폭에 포함되어 -50% 루프가 정확히 맞물림.
-  const copy = (withRef: boolean) => (
-    <span
-      ref={withRef ? copyRef : undefined}
-      aria-hidden={!withRef}
-      className="inline-block whitespace-nowrap pr-10"
-    >
-      {line}
-    </span>
-  );
+  const durS = copyW > 0 ? Math.max(6, copyW / SCROLL_PX_PER_S) : 14;
 
   return (
     <Link
@@ -87,13 +86,23 @@ export function TodayTicker({ data }: { data: TickerData }) {
       <span className="shrink-0 text-[11px] font-extrabold text-amber-600 dark:text-amber-400">
         오늘의 인생강화
       </span>
-      <div className="min-w-0 flex-1 overflow-hidden">
+      <div ref={wrapRef} className="min-w-0 flex-1 overflow-hidden">
         <div
           className="flex w-max items-center text-[11.5px] leading-none tabular-nums text-zinc-800 dark:text-zinc-100"
-          style={{ animation: `today-ticker-flow ${durS}s linear infinite` }}
+          style={
+            copyW > 0
+              ? {
+                  animation: `today-ticker-flow ${durS}s linear infinite`,
+                  ['--tt-shift' as string]: `-${copyW}px`,
+                }
+              : undefined
+          }
         >
-          {copy(true)}
-          {copy(false)}
+          {Array.from({ length: copies }, (_, i) => (
+            <span key={i} ref={i === 0 ? copyRef : undefined} aria-hidden={i > 0} className="inline-block whitespace-nowrap">
+              {line}
+            </span>
+          ))}
         </div>
       </div>
     </Link>
