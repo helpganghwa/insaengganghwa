@@ -21,8 +21,9 @@ function client(): Anthropic {
 export type ConquestDaySummary = {
   kstDay: string;
   battleCount: number;
-  /** 점령(소유권 변경) — winner가 prevOwner로부터 빼앗음(prevOwner null=중립 첫 점령). */
-  captures: { zone: string; region: string; winner: string; from: string | null; firstCapture: boolean }[];
+  /** 점령(소유권 변경) — winner가 prevOwner로부터 빼앗음(prevOwner null=중립 첫 점령).
+   * defenders = finale 로스터 중 이전 주인 소속 수(>0이면 교전 끝 함락 — '무혈'로 서술 금지). */
+  captures: { zone: string; region: string; winner: string; from: string | null; firstCapture: boolean; defenders: number }[];
   /** 방어 성공(소유 길드 유지). */
   defenses: { zone: string; region: string; owner: string }[];
   /** 영토 순위(그날 이후 보유 구역 수, 상위). */
@@ -108,6 +109,11 @@ export async function aggregateConquestDay(kstDay: string, serverId: number): Pr
         // 소유 이력이 있는데 prev_owner를 못 푼 경우 = 이전 주인 길드가 해산으로 삭제됨 —
         // '첫 점령'이 아니라 '무주지 점령'으로 표기(2026-07-16 점검).
         firstCapture: b.prev_owner == null && !b.had_owner_history,
+        // 방어 병력 유무는 defenses(방어 '성공' 목록)가 아니라 finale 로스터로 판정 —
+        // 싸우고도 진 방어를 '방어 병력 없음'으로 오표기한 사건(2026-07-17 성문) 방지.
+        defenders: b.prev_owner
+          ? (b.finale?.roster ?? []).filter((r) => r.guildName === b.prev_owner).length
+          : 0,
       });
     } else {
       defenses.push({ zone: b.zone, region, owner: b.winner });
@@ -272,8 +278,13 @@ export async function generateAndStoreChronicle(
     const rivals = [...new Set(summary.attacks.filter((a) => a.zone === zone && a.guild !== c.winner).map((a) => a.guild))];
     const rivalNote = rivals.length > 0 ? ` — 길드 「${rivals.join('」, 「')}」 와(과) 경합해 승리` : '';
     if (c.from) {
-      const noDef = summary.defenses.some((d) => d.zone === zone) ? '' : ` — 이전 주인 「${c.from}」 은(는) 방어 병력 없음`;
-      return `(길드 「${c.from}」 로부터 빼앗음${noDef}${rivalNote})`;
+      // 교전 유무는 finale 로스터 기반 defenders로 판정 — defenses(방어 성공 목록)로 판정하면
+      // '싸우고도 진 방어'가 전부 '방어 병력 없음'이 된다(2026-07-17 성문 오서술 사건).
+      const defNote =
+        c.defenders > 0
+          ? ` — 이전 주인 「${c.from}」 이(가) 수비수 ${c.defenders}명으로 맞서 싸웠으나 패배(교전 있었음 — 무혈·무저항 아님)`
+          : ` — 이전 주인 「${c.from}」 은(는) 방어 병력 없음`;
+      return `(길드 「${c.from}」 로부터 빼앗음${defNote}${rivalNote})`;
     }
     return c.firstCapture ? `(중립지 첫 점령${rivalNote})` : `(무주지 점령${rivalNote})`;
   };
@@ -582,7 +593,7 @@ export async function generateAndStoreChronicle(
     `[현재 영토 현황]·[어제 점령전 결과]·[지난 역사]는 흐름·판도 참고용이다. 오늘의 사실(점령/방어/활약)은 반드시 '[점령전 정리]'만 따르고, 어제·과거의 점령을 오늘 것으로 적지 말 것.\n` +
     `정리에 없는 항목(개인 활약·방어·형세 등)은 그 화제를 아예 다루지 말 것 — "~는 없었다"류 부재 언급 금지(있는 사건만으로 서사).\n` +
     `이야기 끝의 '형세'(정세) 대목은 '[현재 영토 현황]'(누적 보유 구역 수)을 반영하고, 어제·지난 역사와 자연스럽게 이어지도록 연속성 있게 맺는다. 현재 일은 '오늘' 대신 '이번에·이번 전투'로 받는다(예: "어제 세 곳에 이어 이번에 두 곳을 더해 현재 다섯 곳을 보유").\n` +
-    `'신규 점령'에 '~로부터 빼앗음'이 붙은 구역은 소유권 이동을 분명히 이야기하라 — 이전 주인 길드를 언급하고, '방어 병력 없음'이면 그 사실 자체를 서사로 쓴다(무혈 입성·비워진 성을 접수 등). '지형 형세'의 분단·통합·비지 신호가 있으면 지도를 보며 형세를 짚는 사관처럼 형세 대목에 녹여라(예: "이 한 수로 상대 영토는 남북으로 갈라졌다") 신호가 없으면 조각·분산 이야기를 꺼내지 말고, 영토가 나뉘어 있음을 '약점·미완성'으로 단정하지 말 것(여러 거점은 전략일 수 있음)..\n` +
+    `'신규 점령'에 '~로부터 빼앗음'이 붙은 구역은 소유권 이동을 분명히 이야기하라 — 이전 주인 길드를 언급하고, '방어 병력 없음'이면 그 사실 자체를 서사로 쓴다(무혈 입성·비워진 성을 접수 등). 반대로 '수비수 N명으로 맞서 싸웠으나 패배'가 붙은 구역은 실제 교전 끝에 함락된 것이다 — 이런 구역을 '지키는 병력이 없었다'·무혈·무저항으로 쓰면 안 되고, 저항을 뚫고 차지한 것으로 서술한다. '지형 형세'의 분단·통합·비지 신호가 있으면 지도를 보며 형세를 짚는 사관처럼 형세 대목에 녹여라(예: "이 한 수로 상대 영토는 남북으로 갈라졌다") 신호가 없으면 조각·분산 이야기를 꺼내지 말고, 영토가 나뉘어 있음을 '약점·미완성'으로 단정하지 말 것(여러 거점은 전략일 수 있음)..\n` +
           `today는 역사가가 그날의 일을 하나의 이야기로 풀어 들려주듯 쓴다 — 사건→결과→그 의미→형세를 별개 문단·라벨로 쪼개지 말고 인과로 이어지는 단일 서사로. 문단은 흐름에 따라 자연스럽게(2~4문단), '그날·이날·오늘' 같은 시간 지시어로 문단을 시작하지 말 것.\n` +
     (bigChange
       ? `이번 전투는 역사에 남는 날 — headline은 '■ 역사적 사건'${milestones.length === 0 ? '(기록적 개인 활약)' : ''}을 중심으로 핵심 한 줄을 쓴다.\n`
