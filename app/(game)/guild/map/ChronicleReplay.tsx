@@ -10,6 +10,8 @@ import { parseChronicleSegments, type ChronicleSegment } from './chronicle-token
  * 세계지도 '오늘의 역사' 리플레이(2026-07-16 확정 연출) — 연대기 타이핑과 지도 연출 동기화.
  *  - {z|구역} 마커 완성 → 문장 진군(곡선, %키프레임 — 노드에 정확 착지) → 격돌 → 점령 플래시
  *  - 연속 나열({z|A}·{z|B}·{z|C})은 한 그룹으로 **동시 발표**(마지막 구역명에서 일괄 진군)
+ *  - 단, 교전 구역(경합/수비전)은 일괄 발표에서 분리해 뒤에 **한 곳씩 단독 재생** — 수비
+ *    문양이 구역에 서서 맞서다 쓰러지는 연출 포함(2026-07-17: 성문 전투가 묻히던 피드백)
  *  - 재언급 변주(길드/조각 펄스)는 2026-07-16 롤백 — 전투 요소만 애니메이션(사용자 확정)
  *  - 움직이는 문양은 배경 없음(문양 이미지만, 미보유 길드만 색 방패 폴백)
  *  - 탭=스킵, prefers-reduced-motion=정적
@@ -210,9 +212,19 @@ export function ChronicleReplayPanel({
     setTimeout(() => f.remove(), strong ? 1600 : 1100);
   }
 
+  /** 교전 여부 — 경합(공격 길드 2+) 또는 수비 병력이 맞선 함락/방어. */
+  const hasClash = (ev: ReplayEvent) => ev.rivals.length > 0 || ev.defended;
+  /** 구역에 서서 맞서는 수비 길드 — capture는 이전 주인(수비수 있었을 때), defense는 소유 길드. */
+  const standingGuildOf = (ev: ReplayEvent) =>
+    ev.type === 'defense' ? ev.winner : ev.defended ? ev.from : null;
+
   /** 그룹 일괄 실행 — 전 이벤트 동시 진군, 격돌 병렬, 점령 플래시는 살짝 스태거. */
   async function runZoneEvents(evs: ReplayEvent[]): Promise<void> {
-    const all: { ev: ReplayEvent; marchers: { g: string; el: HTMLElement | null }[] }[] = [];
+    const all: {
+      ev: ReplayEvent;
+      marchers: { g: string; el: HTMLElement | null }[];
+      standing: { g: string; el: HTMLElement | null } | null;
+    }[] = [];
     for (const ev of evs) {
       const target = zoneById.current.get(ev.zoneId);
       if (!target || skipRef.current) {
@@ -221,6 +233,9 @@ export function ChronicleReplayPanel({
       }
       const tPct = { x: target.mapX, y: target.mapY };
       const parties = ev.type === 'capture' ? [ev.winner, ...ev.rivals] : ev.rivals;
+      // 수비 문양 — 구역 위에 서서 맞선다(진군 없음). 무혈 함락과 시각적으로 구분(2026-07-17).
+      const standingGuild = standingGuildOf(ev);
+      const standing = standingGuild ? { g: standingGuild, el: spawnEmblem(standingGuild, tPct) } : null;
       const marchers: { g: string; el: HTMLElement | null }[] = [];
       for (const g of parties) {
         const originId = ev.origins[g] ?? null;
@@ -230,12 +245,12 @@ export function ChronicleReplayPanel({
         marchers.push({ g, el });
         void march(el, fromPct, tPct);
       }
-      all.push({ ev, marchers });
+      all.push({ ev, marchers, standing });
     }
     if (all.length === 0) return;
     await sleepUnless(MARCH_MS + 150, () => skipRef.current);
-    // 격돌(있는 이벤트만) — 병렬
-    const clashers = all.filter((a) => a.ev.rivals.length > 0);
+    // 격돌(교전 이벤트만 — 경합 또는 수비전) — 병렬
+    const clashers = all.filter((a) => hasClash(a.ev));
     if (clashers.length > 0 && !skipRef.current) {
       for (const c of clashers) {
         const z = zoneById.current.get(c.ev.zoneId)!;
@@ -249,9 +264,14 @@ export function ChronicleReplayPanel({
       await sleepUnless(750, () => skipRef.current);
     }
     // 점령/방어 결과 — 플래시 스태거(220ms)로 일괄 발표의 리듬
-    for (const { ev, marchers } of all) {
+    for (const { ev, marchers, standing } of all) {
       const losers = ev.rivals;
       for (const m of marchers) if (losers.includes(m.g)) killEmblem(m.el);
+      // 수비 문양: 함락(capture)이면 쓰러지고, 방어 성공(defense)이면 잠시 서 있다 사라진다.
+      if (standing) {
+        if (ev.type === 'capture') killEmblem(standing.el);
+        else setTimeout(() => fadeEmblem(standing.el), 900);
+      }
       const z = zoneById.current.get(ev.zoneId);
       applyFlip(ev);
       if (z) flashAt({ x: z.mapX, y: z.mapY }, guildOf(ev.winner).color ?? '#a8a29e');
@@ -305,7 +325,13 @@ export function ChronicleReplayPanel({
               } else {
                 const names = grp ? grp.zones.filter((n) => !firedRef.current.has(n)) : [seg.name];
                 for (const n of names) firedRef.current.add(n);
-                await runZoneEvents(names.map((n) => replay.events[n]!).filter(Boolean));
+                const evList = names.map((n) => replay.events[n]!).filter(Boolean);
+                // 교전(경합/수비전) 구역은 일괄 발표에서 분리 — 무혈 점령들을 동시에 발표한 뒤
+                // 전투는 한 곳씩 단독 재생해 격돌이 묻히지 않게 한다(2026-07-17 성문 피드백).
+                const calm = evList.filter((e) => !hasClash(e));
+                const battles = evList.filter(hasClash);
+                if (calm.length > 0) await runZoneEvents(calm);
+                for (const b of battles) await runZoneEvents([b]);
               }
             }
           }

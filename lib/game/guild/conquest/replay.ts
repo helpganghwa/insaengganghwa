@@ -28,6 +28,9 @@ export type ReplayEvent = {
   rivals: string[];
   /** 길드별 출발 구역 id — null이면 무영지(지도 밖 등장). */
   origins: Record<string, number | null>;
+  /** 수비 병력이 현장에 있었는지 — capture는 finale 로스터의 이전 주인 수비수(>0),
+   *  defense는 항상 true. true면 구역에 수비 문양을 세우고 격돌을 재생(무혈과 구분). */
+  defended: boolean;
 };
 
 export type ConquestReplay = {
@@ -113,7 +116,7 @@ export async function getConquestReplay(serverId: number, forKstDay?: string): P
     const rivals = rivalsFor(c.zone, c.winner);
     const origins: Record<string, number | null> = { [c.winner]: originFor(c.winner, c.zone) };
     for (const r of rivals) origins[r] = originFor(r, c.zone);
-    events[c.zone] = { zoneId: z.id, zone: c.zone, type: 'capture', winner: c.winner, from: c.from, rivals, origins };
+    events[c.zone] = { zoneId: z.id, zone: c.zone, type: 'capture', winner: c.winner, from: c.from, rivals, origins, defended: c.defenders > 0 };
   }
   for (const d of s.defenses) {
     const z = byName.get(d.zone);
@@ -122,7 +125,7 @@ export async function getConquestReplay(serverId: number, forKstDay?: string): P
     if (rivals.length === 0) continue; // 공격 없던 방어(무승부 보정 등)는 연출 생략
     const origins: Record<string, number | null> = {};
     for (const r of rivals) origins[r] = originFor(r, d.zone);
-    events[d.zone] = { zoneId: z.id, zone: d.zone, type: 'defense', winner: d.owner, from: null, rivals, origins };
+    events[d.zone] = { zoneId: z.id, zone: d.zone, type: 'defense', winner: d.owner, from: null, rivals, origins, defended: true };
   }
   if (Object.keys(events).length === 0) return null;
 
