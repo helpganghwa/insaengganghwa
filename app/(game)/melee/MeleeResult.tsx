@@ -38,6 +38,10 @@ export type MeleeResultView = {
     rank: number;
     diamond: number;
     boxes: { weapon: number; armor: number; accessory: number };
+    /** 공격 성공(쓰러뜨린 수) — killer 기록 기준 전판 정확값. */
+    attackSuccess: number;
+    /** 방어 성공(피격에서 버틴 수) — 탈락 피격 제외. */
+    defenseSuccess: number;
   } | null;
   myEvents: MeleeMyEvent[];
   myNickname: string;
@@ -940,9 +944,17 @@ export function MeleeResult({ view, serverId }: { view: MeleeResultView; serverI
           ))}
         </div>
         <div className="flex items-center justify-between gap-2 px-3 py-2">
-          <span className="truncate text-[10px] text-zinc-500">
-            {tab === 'log' && truncated ? `마지막 ${finale.events.length.toLocaleString()}전` : ''}
-          </span>
+          {/* 좌측 요약 — 내 전투 탭: 등수·공격/방어 성공(4위 이하도 한눈에, 2026-07-18). */}
+          {tab === 'mine' && me ? (
+            <span className="truncate text-[10px] text-zinc-400">
+              <b className="font-bold text-amber-400">{me.rank}위</b>
+              {` · 공격 성공 ${me.attackSuccess} · 방어 성공 ${me.defenseSuccess}`}
+            </span>
+          ) : (
+            <span className="truncate text-[10px] text-zinc-500">
+              {tab === 'log' && truncated ? `마지막 ${finale.events.length.toLocaleString()}전` : ''}
+            </span>
+          )}
           <div className="flex shrink-0 items-center gap-1.5">
             <button
               type="button"

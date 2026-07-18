@@ -158,6 +158,11 @@ export async function buildMeleeResultView(
         boxes: meleeParticipants.rewardBoxes,
         myEvents: meleeParticipants.myEvents,
         cp: meleeParticipants.cpSnapshot,
+        defenseCount: meleeParticipants.defenseCount,
+        // 공격 성공(킬) = 나를 killer로 기록한 참가자 수 — finale(마지막 N라운드)과 달리
+        // 전체 전투 기준 정확값(포디움의 finale 집계와 의미 동일, 범위만 전판).
+        kills: sql<number>`(select count(*)::int from melee_participants mp2
+          where mp2.battle_id = ${meleeParticipants.battleId} and mp2.killer_user_id = ${meleeParticipants.userId})`,
         nickname: characters.nickname,
         code: profiles.publicCode,
       })
@@ -184,7 +189,16 @@ export async function buildMeleeResultView(
         ? faceBoxOf.get(battle.championUserId) ?? null
         : null,
     podium,
-    me: meRow ? { rank: meRow.rank, diamond: Number(meRow.diamond), boxes: meRow.boxes } : null,
+    me: meRow
+      ? {
+          rank: meRow.rank,
+          diamond: Number(meRow.diamond),
+          boxes: meRow.boxes,
+          attackSuccess: Number(meRow.kills),
+          // 방어 성공 = 피격 중 버텨낸 횟수 — 탈락자는 마지막 피격 1회가 탈락이므로 제외.
+          defenseSuccess: Math.max(0, meRow.defenseCount - (meRow.rank > 1 ? 1 : 0)),
+        }
+      : null,
     myEvents: meRow?.myEvents ?? [],
     // 스냅샷 닉 우선 — 로그 필터(닉 매칭)와 일치 + 개명 무관.
     myNickname: snapNick.get(userId) ?? meRow?.nickname ?? '',
