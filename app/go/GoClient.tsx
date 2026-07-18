@@ -31,9 +31,9 @@ export function GoClient() {
       return;
     }
     if (/KAKAOTALK/i.test(ua)) {
+      // 자동 스킴 발사 금지(2026-07-18) — 웹뷰가 제스처 없는 스킴을 차단하면 빈 화면에 갇히고,
+      // 광고 심사(카카오모먼트)에서 비정상 랜딩으로 볼 소지. 버튼 탭으로만 연다(G123 패턴).
       setEnv('kakao');
-      // 카톡 인앱은 공식 스킴으로 기본 브라우저 자동 이동
-      window.location.href = `kakaotalk://web/openExternal?url=${encodeURIComponent(target)}`;
       return;
     }
     setEnv(/Android/i.test(ua) ? 'android-inapp' : 'ios-inapp');
@@ -55,7 +55,11 @@ export function GoClient() {
     }
   };
 
-  if (env === 'checking' || env === 'normal' || env === 'kakao') {
+  const openKakaoExternal = () => {
+    window.location.href = `kakaotalk://web/openExternal?url=${encodeURIComponent(target)}`;
+  };
+
+  if (env === 'checking' || env === 'normal') {
     return (
       <main className="mx-auto flex min-h-dvh w-full max-w-[390px] flex-col items-center justify-center gap-3 bg-white px-6 dark:bg-zinc-950">
         <div className="text-3xl">⚒️</div>
@@ -90,7 +94,15 @@ export function GoClient() {
           외부 브라우저로 열기
         </h2>
 
-        {env === 'android-inapp' ? (
+        {env === 'kakao' ? (
+          <button
+            type="button"
+            onClick={openKakaoExternal}
+            className="mt-4 w-full rounded-xl bg-amber-500 px-4 py-3.5 text-[15px] font-extrabold text-white active:bg-amber-600"
+          >
+            기본 브라우저로 열기
+          </button>
+        ) : env === 'android-inapp' ? (
           <button
             type="button"
             onClick={openChrome}
