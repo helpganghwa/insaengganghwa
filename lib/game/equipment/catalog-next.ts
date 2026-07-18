@@ -576,7 +576,7 @@ export const CATALOG_NEXT: CatalogItem[] = [
     "region": "신전",
     "lore": "신전 가장 높은 자리에 걸려 있던 석궁이다. 흰 대리석을 깎아 만들고 몸체엔 식지 않는 청록 룬이 흐른다. 개머리판에 새겨진 비문은 단 한 줄 — '겨눈 곳에 봄이 온다.' 서리 신전에서 가장 따뜻한 말이다.",
     "art": "an ornate grand majestic temple crossbow, white marble and gold with elaborate filigree, glowing cyan rune inlay and frost-crystal accents.",
-    "wornDesc": "ornate bronze recurve bow with a glowing pale-blue crystal arrow nocked"
+    "wornDesc": "an ornate white-marble and gold crossbow with short horizontal limbs mounted on a filigreed stock with a trigger grip, glowing cyan rune inlay along the body, a pale-blue crystal bolt loaded in the groove, held level in one hand"
   },
   {
     "key": "temple_frostward_helm",
