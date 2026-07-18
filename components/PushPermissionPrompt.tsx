@@ -41,7 +41,8 @@ export function PushPermissionPrompt({
     if (!trigger || step !== 'closed') return;
     try {
       // 튜토리얼 진행 중엔 절대 미노출 — 코치(z-61)·완료모달(z-62)과 경합 방지(2026-07-14).
-      // 알림 유도는 완료모달이 전담하고, 이 프롬프트는 그 이후(24h 유예 뒤) 2차 기회 담당.
+      // 완료모달의 알림·설치 안내는 제거됨(2026-07-18: 첫날 앱 미설치 대다수라 너무 이름) —
+      // 이 프롬프트(완료모달의 24h 유예 뒤)와 도전 과제(app_install·push_on)가 안내를 전담.
       if (localStorage.getItem('tut_step')) return;
       // 7일 dismiss 윈도(명시적 거절)
       const t = Number(localStorage.getItem(DISMISS_KEY) ?? 0);
