@@ -151,13 +151,7 @@ export function GoClient() {
           <p className="mt-2 break-all text-center text-[11px] text-zinc-500">{target}</p>
         </section>
 
-        {/* 게임 요약 칩 */}
-        <div className="mt-5 flex justify-center gap-2 text-[11.5px] font-bold text-zinc-300">
-          <span className="rounded-full border border-zinc-700 bg-zinc-900 px-3 py-1.5">📱 설치 없음</span>
-          <span className="rounded-full border border-zinc-700 bg-zinc-900 px-3 py-1.5">🆓 무료 플레이</span>
-          <span className="rounded-full border border-zinc-700 bg-zinc-900 px-3 py-1.5">⚡ 카카오 3초 시작</span>
-        </div>
-        <p className="mt-3 text-center text-[12px] leading-relaxed text-zinc-500">
+        <p className="mt-5 text-center text-[12px] leading-relaxed text-zinc-500">
           기다릴수록 성공 확률이 오르는 방치형 강화 RPG
         </p>
       </div>
