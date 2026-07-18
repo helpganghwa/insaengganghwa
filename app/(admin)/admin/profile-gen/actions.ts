@@ -1,7 +1,7 @@
 'use server';
 
 import { revalidatePath } from 'next/cache';
-import { and, eq } from 'drizzle-orm';
+import { and, eq, sql } from 'drizzle-orm';
 
 import { requireAdmin } from '@/lib/auth/require-admin';
 import { safeBigInt } from '@/lib/util/id';
@@ -45,9 +45,22 @@ export async function adminRevokeAndRefund(jobId: string): Promise<{ ok: boolean
       .where(and(eq(profileGenerationJobs.id, job.id), eq(profileGenerationJobs.userProfileId, profileId)))
       .returning({ id: profileGenerationJobs.id });
     if (rows.length === 0) return false;
+    // 대표였다면 유저의 기본 아바타로 전환(신고 플로우 resetReportedAvatar와 동일 정책) —
+    // null로만 두면 /u·랭킹 등에서 빈 영역이 표시됨(2026-07-18 바람 사례).
+    const [def] = await tx
+      .select({ id: userProfiles.id })
+      .from(userProfiles)
+      .where(
+        and(
+          eq(userProfiles.userId, job.userId),
+          eq(userProfiles.serverId, job.serverId),
+          sql`(${userProfiles.options} ->> 'isDefault') = 'true'`,
+        ),
+      )
+      .limit(1);
     await tx
       .update(characters)
-      .set({ activeProfileId: null })
+      .set({ activeProfileId: def?.id ?? null })
       .where(
         and(
           eq(characters.userId, job.userId),
