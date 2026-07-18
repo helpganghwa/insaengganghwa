@@ -25,7 +25,9 @@ export async function updateChronicleAction(input: {
     await requireAdmin();
     const headline = input.headline.trim().slice(0, 200);
     const todayText = input.todayText.trim().slice(0, 4000);
-    if (!headline || !todayText) return { status: 'error', message: '헤드라인/본문을 입력하세요.' };
+    // 헤드라인은 빈 값이 정상(큰 사건 없는 날 = '') — 빈 헤드라인 날에 본문 수정 저장이
+    // 항상 거부되던 버그(07-17 검수 수정 미반영 사건). 본문만 필수.
+    if (!todayText) return { status: 'error', message: '본문을 입력하세요.' };
     const rows = await db
       .update(worldChronicle)
       .set({ headline, todayText })
