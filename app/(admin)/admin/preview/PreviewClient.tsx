@@ -191,7 +191,12 @@ export function ChronicleEditor({
         >
           {pending ? '저장 중…' : '수정 저장'}
         </button>
-        {flash ? <span className="text-[12px] text-zinc-400">{flash}</span> : null}
+        {/* 실패는 빨간색으로 구분 — 회색 단일 표시가 에러를 '저장됨'처럼 보이게 했음(07-17). */}
+        {flash ? (
+          <span className={`text-[12px] font-bold ${flash === '저장됨' ? 'text-emerald-400' : 'text-red-400'}`}>
+            {flash}
+          </span>
+        ) : null}
         {replay ? (
           <button
             type="button"
