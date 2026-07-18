@@ -48,6 +48,44 @@ function stripMarkers(s: string): string {
   return s.replace(/\{[guz]\|([^}|]+)(?:\|[^}]*)?\}+/g, '$1');
 }
 
+/**
+ * 모델 JSON 관용 파서 — 모델이 문자열 값 안에 원시 제어문자(실제 줄바꿈 등)를 내보내면
+ * JSON.parse가 깨진다(2026-07-18 pregen 3틱 연속 실패: Bad control character/Unterminated string).
+ * 1차 그대로 파싱 → 실패 시 문자열 내부의 제어문자만 이스케이프해 재파싱. 실패면 null.
+ */
+function parseModelJson<T>(raw: string): T | null {
+  const m = raw.match(/\{[\s\S]*\}/);
+  if (!m) return null;
+  const s = m[0];
+  try {
+    return JSON.parse(s) as T;
+  } catch {
+    let out = '';
+    let inStr = false;
+    let esc = false;
+    for (const ch of s) {
+      if (inStr) {
+        if (esc) { out += ch; esc = false; continue; }
+        if (ch === '\\') { out += ch; esc = true; continue; }
+        if (ch === '"') { inStr = false; out += ch; continue; }
+        if (ch.charCodeAt(0) < 0x20) {
+          out += ch === '\n' ? '\\n' : ch === '\t' ? '\\t' : ch === '\r' ? '' : ' ';
+          continue;
+        }
+        out += ch;
+        continue;
+      }
+      if (ch === '"') inStr = true;
+      out += ch;
+    }
+    try {
+      return JSON.parse(out) as T;
+    } catch {
+      return null;
+    }
+  }
+}
+
 // 지역 풀네임(줄임말 금지) — 세계지도 REGION 라벨과 일치.
 const REGION_KO: Record<string, string> = {
   volcano: '드래곤 화산',
@@ -253,7 +291,7 @@ const SYSTEM_PROMPT = `너는 대륙의 정복 전쟁을 듣는 이에게 들려
 - **개인 활약(feats)의 '처치'는 적을 쓰러뜨린 수이며 공격·수비 역할과 무관하다 — 방어 측 인물도 처치가 많을 수 있다. '처치'가 많다는 이유로 그 인물·길드를 공격 측으로 단정하지 말 것**(공격 측은 오직 '공격 측' 목록으로만 판단). '수비'는 공격을 받아내고 버틴 횟수다.
 - '대륙 지배', '천하', '제패' 같은 과장된 총평·결론 금지. 일어난 사실만 적는다.
 - 유혈·시신·신체 훼손·고문 등 잔혹한 묘사 금지. 전투와 처치는 '쓰러뜨렸다·밀어냈다·물러났다' 수준의 담담한 표현으로만 서술하고, 피나 상해를 묘사하지 않는다.
-- 반드시 JSON만 출력: {"today": "...", "headline": "..."}.
+- 반드시 JSON만 출력: {"today": "...", "headline": "..."}. JSON 문자열 값 안의 줄바꿈은 반드시 \\n 이스케이프로 쓴다(실제 줄바꿈 문자 금지).
   - today: 역사가가 그날 대륙에서 벌어진 일을 하나의 이야기로 풀어 들려주듯 쓴다. 아래 네 가지를 반드시 이야기 안에 녹이되, 각각을 별개 문단·라벨로 나누지 말고 사건 → 결과 → 그 의미 → 형세로 흐르는 하나의 인과 서사로 이어 쓴다(보고서 항목 나열이 아니라, 처음부터 끝까지 이어지는 한 편의 이야기):
     · 어떤 길드가 어느 구역을 노리고 부딪혔는지 — 전투의 발단과 흐름.
     · 누가 어느 구역을 점령했고 누가 막아냈는지 — 점령과 방어를 구분해서.
@@ -653,9 +691,21 @@ export async function generateAndStoreChronicle(
     });
     const block = res.content.find((b) => b.type === 'text');
     const raw = block && 'text' in block ? block.text : '';
-    const m = raw.match(/\{[\s\S]*\}/);
-    if (!m) throw new Error(`CHRONICLE_PARSE_FAIL: ${raw.slice(0, 200)}`);
-    const parsed = JSON.parse(m[0]) as { today?: string; headline?: string };
+    // 파싱 실패도 재시도 소재(2026-07-18) — 종전엔 즉시 throw라 한 번의 깨진 JSON이 생성 전체를 무산시켰다.
+    const parsed = parseModelJson<{ today?: string; headline?: string }>(raw);
+    if (!parsed) {
+      if (attempt === 2) throw new Error(`CHRONICLE_PARSE_FAIL: ${raw.slice(0, 200)}`);
+      console.warn(`[chronicle] JSON 파싱 실패 → 재생성(attempt ${attempt + 1})`);
+      messages.push(
+        { role: 'assistant', content: raw },
+        {
+          role: 'user',
+          content:
+            '출력이 유효한 JSON이 아니다. 문자열 값 안의 줄바꿈은 반드시 \\n으로 이스케이프해서, 같은 내용을 JSON({today, headline})만으로 다시 출력하라.',
+        },
+      );
+      continue;
+    }
     const candT = correctMarkers(fixBraces((parsed.today ?? '').trim()));
     const candH = bigChange ? correctMarkers(fixBraces((parsed.headline ?? '').trim())) : '';
     const viol = [...new Set([...findViolations(candT), ...findViolations(candH)])];
@@ -701,13 +751,12 @@ export async function generateAndStoreChronicle(
     });
     const block = res.content.find((b) => b.type === 'text');
     const raw = block && 'text' in block ? block.text : '';
-    const m = raw.match(/\{[\s\S]*\}/);
-    if (m) {
-      const parsed = JSON.parse(m[0]) as {
-        today?: string;
-        headline?: string;
-        changes?: ChronicleReviewNote[];
-      };
+    const parsed = parseModelJson<{
+      today?: string;
+      headline?: string;
+      changes?: ChronicleReviewNote[];
+    }>(raw);
+    if (parsed) {
       const revT = enrichUserMarkers(enforceMarkers(correctMarkers(fixBraces((parsed.today ?? '').trim()))));
       const revH = bigChange
         ? enrichUserMarkers(enforceMarkers(correctMarkers(fixBraces((parsed.headline ?? '').trim()))))
