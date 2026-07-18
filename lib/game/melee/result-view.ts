@@ -85,20 +85,6 @@ export async function buildMeleeResultView(
   const dft = (i: number) =>
     i % 2 === 0 ? '/sprites/default/male/south.png' : '/sprites/default/female/south.png';
 
-  // 공격 성공(킬)·방어 성공(피격 후 생존) — 리플레이와 동일 소스(finale.events)로 집계.
-  //  (윈도 절단된 초대규모 배틀은 윈도 내 기준 — 리플레이에 보이는 것과 일치.)
-  const kills = new Map<string, number>();
-  const survives = new Map<string, number>();
-  for (const [a, t, , hpAfter] of finale.events) {
-    if (hpAfter <= 0) {
-      const au = finale.roster[a]?.userId;
-      if (au) kills.set(au, (kills.get(au) ?? 0) + 1);
-    } else {
-      const tu = finale.roster[t]?.userId;
-      if (tu) survives.set(tu, (survives.get(tu) ?? 0) + 1);
-    }
-  }
-
   const topRows = await withTimeout(
     db
       .select({
@@ -106,6 +92,11 @@ export async function buildMeleeResultView(
         nickname: characters.nickname,
         code: profiles.publicCode,
         uid: meleeParticipants.userId,
+        defenseCount: meleeParticipants.defenseCount,
+        // 공격 성공(킬) — finale(마지막 N라운드 윈도) 집계가 아니라 killer 기록 기반
+        // 전판 정확값(내 전투 요약과 동일 기준, 2026-07-18).
+        kills: sql<number>`(select count(*)::int from melee_participants mp2
+          where mp2.battle_id = ${meleeParticipants.battleId} and mp2.killer_user_id = ${meleeParticipants.userId})`,
       })
       .from(meleeParticipants)
       .innerJoin(profiles, eq(profiles.id, meleeParticipants.userId))
@@ -139,8 +130,9 @@ export async function buildMeleeResultView(
       r.rank === 1 && finale.trophyAvatar
         ? finale.trophyAvatar
         : (avatarOf.get(r.uid) ?? dft(r.rank)),
-    attackSuccess: kills.get(r.uid) ?? 0,
-    defenseSuccess: survives.get(r.uid) ?? 0,
+    attackSuccess: Number(r.kills),
+    // 방어 성공 = 피격 중 버텨낸 횟수 — 탈락자(2·3위)는 마지막 피격 1회 제외, 1위는 전부 인정.
+    defenseSuccess: Math.max(0, r.defenseCount - (r.rank > 1 ? 1 : 0)),
     guildName: guildFor(r.uid)?.name ?? null,
     guildEmblemUrl: guildFor(r.uid)?.emblemUrl ?? null,
   }));
