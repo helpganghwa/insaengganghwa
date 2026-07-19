@@ -31,7 +31,7 @@ const SLOT_EMOJI: Record<Slot, string> = { weapon: '⚔️', armor: '🛡️', a
 const SLOT_ORDER: Record<Slot, number> = { weapon: 0, armor: 1, accessory: 2 };
 const SEEN_STORAGE_KEY = 'ig:seen-items';
 type SlotFilter = 'all' | Slot;
-type SortBy = 'recent' | 'enhance' | 'transcend';
+type SortBy = 'name' | 'enhance' | 'transcend';
 
 export function InventoryGrid({
   items,
@@ -70,7 +70,7 @@ export function InventoryGrid({
           return b.enhanceLevel - a.enhanceLevel || b.transcendLevel - a.transcendLevel || b.acquiredAtMs - a.acquiredAtMs;
         if (sortBy === 'transcend')
           return b.transcendLevel - a.transcendLevel || b.enhanceLevel - a.enhanceLevel || b.acquiredAtMs - a.acquiredAtMs;
-        return b.acquiredAtMs - a.acquiredAtMs;
+        return a.name.localeCompare(b.name, 'ko');
       });
   }, [displayItems, filter, sortBy]);
 
@@ -131,7 +131,7 @@ export function InventoryGrid({
             [
               ['enhance', '강화순'],
               ['transcend', '초월순'],
-              ['recent', '최신순'],
+              ['name', '이름순'],
             ] as const
           ).map(([k, label]) => (
             <button key={k} type="button" className={fb(sortBy === k)} onClick={() => setSortBy(k)}>
