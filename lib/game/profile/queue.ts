@@ -1,6 +1,6 @@
 import 'server-only';
 
-import { and, count, eq, inArray, lt, or } from 'drizzle-orm';
+import { and, count, eq, inArray, lt, or, sql } from 'drizzle-orm';
 
 import { db } from '@/lib/db/client';
 import { profileGenerationJobs } from '@/lib/db/schema/avatar';
@@ -31,6 +31,9 @@ const ACTIVE = ['queued', 'starting', 'downloading', 'ai_reviewing'] as const;
  * 이 유저가 이 서버에서 **성공한 커스텀 아바타 생성 이력**이 있는지 — 첫생성 50% 할인 판정용.
  * 성공 신호 = jobs.status='accepted'(정상 검토 통과) OR adminDecision='grant'(어드민 지급) —
  * 둘 다 잡에 append-only라 아바타를 삭제해도 남는다(현재 보유수 기반 판정의 '삭제→재할인' 우회 차단).
+ * 단, 운영자 회수(adminDecision='reject' — 회수+전액 환불)는 "없던 생성"이므로 이력에서 제외 —
+ * 첫 생성이 회수된 유저의 재생성이 정가(1,500)로 계산되던 버그(2026-07-19). reject는 어드민만
+ * 설정 가능해 유저 측 할인 우회 경로는 없다.
  */
 export async function hasGeneratedCustomAvatar(userId: string, serverId: number): Promise<boolean> {
   const [row] = await db
@@ -41,7 +44,10 @@ export async function hasGeneratedCustomAvatar(userId: string, serverId: number)
         eq(profileGenerationJobs.userId, userId),
         eq(profileGenerationJobs.serverId, serverId),
         or(
-          eq(profileGenerationJobs.status, 'accepted'),
+          and(
+            eq(profileGenerationJobs.status, 'accepted'),
+            sql`${profileGenerationJobs.adminDecision} IS DISTINCT FROM 'reject'`,
+          ),
           eq(profileGenerationJobs.adminDecision, 'grant'),
         ),
       ),
