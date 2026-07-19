@@ -264,6 +264,7 @@ const SYSTEM_PROMPT = `너는 대륙의 정복 전쟁을 듣는 이에게 들려
 - **점령(captures)은 각 구역의 winner(점령 길드)를 그대로 따른다. 서로 다른 길드가 각자 다른 구역을 점령했으면 길드별로 구분해서 쓴다 — 여러 길드의 점령을 한 길드가 모두 한 것처럼 절대 합치지 않는다.** (예: 한 길드가 두 구역, 다른 길드가 한 구역을 점령했으면 둘 다 기록.)
 - 방어(defenses)는 '점령'이 아니다(이미 소유한 구역을 '공격 측'의 공격으로부터 지켜낸 것). 점령 수에 포함하지 말고, 방어는 방어로만 서술한다.
 - **개인 활약(feats)의 '처치'는 적을 쓰러뜨린 수이며 공격·수비 역할과 무관하다 — 방어 측 인물도 처치가 많을 수 있다. '처치'가 많다는 이유로 그 인물·길드를 공격 측으로 단정하지 말 것**(공격 측은 오직 '공격 측' 목록으로만 판단). '수비'는 공격을 받아내고 버틴 횟수다.
+- '최초·처음으로·사상 처음' 같은 최초 주장은 정리에 그렇게 명시된 경우에만 쓴다 — 정리에 '대륙 최초'·'첫 점령' 표기가 없으면 최초라고 단정하지 말 것(정리엔 그날 사실만 있고 과거 전체 이력은 없다).
 - '대륙 지배', '천하', '제패' 같은 과장된 총평·결론 금지. 일어난 사실만 적는다.
 - 유혈·시신·신체 훼손·고문 등 잔혹한 묘사 금지. 전투와 처치는 '쓰러뜨렸다·밀어냈다·물러났다' 수준의 담담한 표현으로만 서술하고, 피나 상해를 묘사하지 않는다.
 - 반드시 JSON만 출력: {"today": "...", "headline": "..."}. JSON 문자열 값 안의 줄바꿈은 반드시 \\n 이스케이프로 쓴다(실제 줄바꿈 문자 금지).
@@ -273,6 +274,7 @@ const SYSTEM_PROMPT = `너는 대륙의 정복 전쟁을 듣는 이에게 들려
     · 무엇이 승패를 갈랐고 누가 활약했는지 — 개인 활약(feats)과 전투가 갈린 지점.
     · 그래서 이번 전투 이후 대륙의 형세가 어떻게 되었는지 — 영토 순위·기세(과장 없이 사실만).
     문단은 이야기 흐름에 따라 자연스럽게 나눈다(2~4문단, 어느 문단도 한 파트만 전담하지 않게 — 사건과 결과가 한 문단에서 이어지거나 활약이 결과 서술에 섞여도 좋다). 문단 사이는 빈 줄(\\n\\n)로 구분. 라벨('주요사건:' 등) 금지. 어느 문단도 '그날·이날·오늘' 같은 시간 지시어로 시작하지 말고 바로 길드·구역·사건으로 시작한다.
+    사건 배치: 같은 길드·같은 지역의 이야기는 한 곳에 모아 서술한다(한 세력의 서사 중간에 다른 세력 이야기를 끼워 흐름을 끊지 말 것). '■ 역사적 사건' 이정표가 있으면 그 사건을 서사의 정점으로 배치하고, 그 지역과 관련된 점령·방어는 이정표 대목에 함께 묶는다.
   - headline: 핵심 사건을 한 줄로 압축(25자 내외, 마커 포함, 말하듯이). 점령 길드가 여럿이면 가장 많이 점령한 쪽 위주로 쓰되 다른 길드의 점령도 가능하면 담는다. 예: "{g|천둥길드}가 {z|왕성} 등 세 곳을 휩쓸었다". 정세가 크게 바뀐 날이 아니면 빈 문자열("")로 둔다.`;
 
 /** 그날 사건이 '큰 사건'인지 — 점령(영토 변동) 또는 주목할 개인 활약이 있으면 기록 대상('오늘' 스토리). */
@@ -424,6 +426,10 @@ export async function generateAndStoreChronicle(
       // CBT가 왕성·대성당을 잃어 3→2조각이 됐는데 "이어붙였다"로 서술된 사건.
       if (a.comps < b.comps && a.zones < b.zones)
         return `· 길드 「${g}」: 구역 상실로 영토가 줄어 ${a.comps}개 조각만 남음(⚠ 연결/통합된 것이 아님 — '이어붙였다'류 서술 금지)`;
+      // 득실 혼합(얻고 잃어 보유 수 동일)의 조각 감소도 성과가 아니다(2026-07-19 FIRST —
+      // 고립지를 잃어 조각이 준 것을 "하나로 이어지는 성과"로 포장한 사건).
+      if (a.comps < b.comps && a.zones === b.zones)
+        return `· 길드 「${g}」: 구역을 얻고 잃으며 남은 영토가 ${a.comps}개 조각으로 모임(⚠ 상실이 낀 변화 — '성과·통합'으로 포장 금지, 득실을 중립 서술)`;
       if (a.comps < b.comps && b.comps > 1) return `· 길드 「${g}」: 점령으로 흩어져 있던 영토가 ${a.comps}개 조각으로 이어짐(통합)`;
       return null;
     })
@@ -458,13 +464,27 @@ export async function generateAndStoreChronicle(
     milestones.push(`· 길드 「${nextLeader}」 이(가) 영토 1위에 올라섬(직전 1위 「${prevLeader}」)`);
   const regionZoneIds = new Map<string, number[]>();
   for (const z of zoneRows) regionZoneIds.set(z.region, [...(regionZoneIds.get(z.region) ?? []), z.id]);
+  // 전투 전 이미 성립해 있던 지역 석권 — '최초/N번째' 판단 근거를 사실표에 명시
+  // (2026-07-19: 왕국 석권이 이미 있는데 오크 부락을 '대륙 최초'로 오서술한 사건).
+  const priorSweeps: string[] = [];
+  for (const [region, ids] of regionZoneIds) {
+    const owners = new Set(ids.map((id) => beforeOwner.get(id) ?? null));
+    if (owners.size !== 1) continue;
+    const g = [...owners][0];
+    if (g) priorSweeps.push(`${REGION_KO[region] ?? region}=「${g}」`);
+  }
   for (const [region, ids] of regionZoneIds) {
     const owners = new Set(ids.map((id) => afterOwner.get(id) ?? null));
     if (owners.size !== 1) continue;
     const g = [...owners][0];
     // 그날 새로 성립한 완전 장악만(전날부터 이미 전 구역 소유였으면 제외).
-    if (g && !ids.every((id) => beforeOwner.get(id) === g))
-      milestones.push(`· 길드 「${g}」 이(가) ${REGION_KO[region] ?? region} 전체 ${ids.length}곳을 장악`);
+    if (g && !ids.every((id) => beforeOwner.get(id) === g)) {
+      const firstNote =
+        priorSweeps.length > 0
+          ? ` (이미 성립한 지역 석권 있음: ${priorSweeps.join(', ')} — '대륙 최초' 아님, ${priorSweeps.length + 1}번째)`
+          : ' (대륙 최초의 지역 석권)';
+      milestones.push(`· 길드 「${g}」 이(가) ${REGION_KO[region] ?? region} 전체 ${ids.length}곳을 장악${firstNote}`);
+    }
   }
   for (const g of new Set([...beforeCounts.keys(), ...afterCounts.keys()])) {
     const b = beforeCounts.get(g) ?? 0;
