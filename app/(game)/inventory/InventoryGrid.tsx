@@ -43,8 +43,9 @@ export function InventoryGrid({
   nickname: string;
 }) {
   const [filter, setFilter] = useState<SlotFilter>(initialSlot);
-  // 정렬 UI 제거 — 항상 '강화순' 고정(2026-06-05 피드백).
-  const sortBy: SortBy = 'enhance';
+  // 정렬 재도입(2026-07-19 유저 건의) — 06-05에 UI를 뺐지만 카탈로그 106종 시대엔 필요.
+  // 기본은 기존과 동일한 강화순(암묵 정렬이 라벨로 드러나는 효과 겸함).
+  const [sortBy, setSortBy] = useState<SortBy>('enhance');
   const [openId, setOpenId] = useState<string | null>(null);
   const [, startTransition] = useTransition();
   // 낙관적 items — 최적조합 클릭 시 클라이언트에서 같은 알고리즘으로 시뮬레이션 후
@@ -64,8 +65,11 @@ export function InventoryGrid({
       .filter((i) => !i.equipped)
       .filter((i) => (filter === 'all' ? true : i.slot === filter))
       .sort((a, b) => {
-        if (sortBy === 'enhance') return b.enhanceLevel - a.enhanceLevel;
-        if (sortBy === 'transcend') return b.transcendLevel - a.transcendLevel;
+        // 동률 2차 기준까지 명시 — 같은 수치끼리 순서가 널뛰지 않게.
+        if (sortBy === 'enhance')
+          return b.enhanceLevel - a.enhanceLevel || b.transcendLevel - a.transcendLevel || b.acquiredAtMs - a.acquiredAtMs;
+        if (sortBy === 'transcend')
+          return b.transcendLevel - a.transcendLevel || b.enhanceLevel - a.enhanceLevel || b.acquiredAtMs - a.acquiredAtMs;
         return b.acquiredAtMs - a.acquiredAtMs;
       });
   }, [displayItems, filter, sortBy]);
@@ -118,6 +122,20 @@ export function InventoryGrid({
           {(['weapon', 'armor', 'accessory'] as const).map((s) => (
             <button key={s} type="button" className={fb(filter === s)} onClick={() => setFilter(s)}>
               {SLOT_EMOJI[s]}
+            </button>
+          ))}
+        </div>
+        {/* 정렬 — 보유 목록에만 적용(장착 3개는 상단 고정 유지). */}
+        <div className="flex gap-1.5">
+          {(
+            [
+              ['enhance', '강화순'],
+              ['transcend', '초월순'],
+              ['recent', '최신순'],
+            ] as const
+          ).map(([k, label]) => (
+            <button key={k} type="button" className={fb(sortBy === k)} onClick={() => setSortBy(k)}>
+              {label}
             </button>
           ))}
         </div>
