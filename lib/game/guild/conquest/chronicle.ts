@@ -281,7 +281,7 @@ const SYSTEM_PROMPT = `너는 대륙의 정복 전쟁을 듣는 이에게 들려
   - 길드 이름 → {g|이름}
   - 인물(사용자) 이름 → {u|이름}
   - 개별 구역 이름 → {z|이름}   (예: {z|왕성}, {z|대성당}, {z|성문})
-  - 지역(왕국·드래곤 화산·잊힌 신전·슬라임 늪·오크 부락·타락 천사 부유섬)에는 마커를 쓰지 않는다(일반 텍스트). 지역명은 주어진 이름 그대로 쓴다.
+  - 지역(왕국·드래곤 화산·잊힌 신전·슬라임 늪·오크 부락·타락 천사 부유섬)에는 마커를 쓰지 않는다(일반 텍스트). 지역명은 주어진 이름 그대로 쓴다. 지역명과 같은 이름의 구역이 있어도(예: 구역 '잊힌 신전') 'X 지역'처럼 지역을 말할 때는 마커 없이 — 구역 자체를 가리킬 때만 {z|X}.
   - ★중요★ '점령전 정리'에서 「」로 감싼 이름은 바로 앞의 분류(길드/구역/인물)를 그대로 따른다: '길드 「X」'는 반드시 {g|X}, '구역 「X」'는 반드시 {z|X}, '인물 「X」'는 반드시 {u|X}. 구역 이름을 절대 {g|}(길드)로 쓰지 말 것 — 구역명과 길드명은 서로 다르며 혼동하면 안 된다. 공격의 주어는 '길드', 목적어는 '구역'이다.
 - 시각·시간대 표현 금지(정오·아침·저녁·새벽·밤·자정, '종이 울리자' 등).
 - 시간을 가리키는 지시어('그날·이날·오늘·그 날·하루·당일' 등)를 쓰지 말 것. 특히 문단·문장을 그런 단어로 시작하지 말고, 바로 사건·길드·구역으로 시작한다. 오늘 일어난 일은 '오늘' 대신 '이번 전투·이번에' 또는 그냥 동사로 서술한다.
@@ -645,12 +645,19 @@ export async function generateAndStoreChronicle(
       .split(/(\{[guz]\|[^}]+\}+)/g)
       .map((seg, i) => (i % 2 === 1 ? seg : seg.replaceAll(find, repl)))
       .join('');
+  // 지역명과 동명인 구역(예: 잊힌 신전)의 '지역 언급' 보호 — "X 지역"은 구역이 아니라 지역이라
+  // 마커 대상이 아니다(2026-07-19: '{z|잊힌 신전} 지역'으로 오마킹된 사건). 검사·백스톱 공용.
+  const REGION_NAMES = Object.values(REGION_KO);
+  const stripRegionMentions = (s: string): string =>
+    REGION_NAMES.reduce((acc, r) => acc.replaceAll(`${r} 지역`, ''), s);
   // 검증 — 알려진 이름이 마커 밖(평문·「」)에 등장하면 위반. 재시도 피드백/백스톱 판단 공용.
   const findViolations = (s: string): string[] => {
-    const plain = s
-      .split(/(\{[guz]\|[^}]+\}+)/g)
-      .filter((_, i) => i % 2 === 0)
-      .join('');
+    const plain = stripRegionMentions(
+      s
+        .split(/(\{[guz]\|[^}]+\}+)/g)
+        .filter((_, i) => i % 2 === 0)
+        .join(''),
+    );
     return [...new Set([...guildNames, ...userNames, ...zoneNames])].filter(
       (n) => n.length >= 2 && plain.includes(n),
     );
@@ -672,11 +679,19 @@ export async function generateAndStoreChronicle(
     ]
       .filter((it) => it.n.length >= 2 && !ambiguous.has(it.n))
       .sort((a, b) => b.n.length - a.n.length);
+    // 'X 지역'(지역 언급)은 감싸지 않게 센티널로 보호 후 복원.
     let out = s;
+    const sentinels = new Map<string, string>();
+    REGION_NAMES.forEach((r, i) => {
+      const key = `R${i}`;
+      sentinels.set(key, `${r} 지역`);
+      out = out.replaceAll(`${r} 지역`, key);
+    });
     for (const { k, n } of items) {
       out = wrapOutsideMarkers(out, `「${n}」`, `{${k}|${n}}`);
       out = wrapOutsideMarkers(out, n, `{${k}|${n}}`);
     }
+    for (const [key, orig] of sentinels) out = out.replaceAll(key, orig);
     return out;
   };
   // {u|닉} → {u|닉|코드} — 렌더 링크용 불변 publicCode 주입(닉변·재취득에도 안전).
