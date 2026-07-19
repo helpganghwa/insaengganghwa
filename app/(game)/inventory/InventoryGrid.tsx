@@ -125,17 +125,24 @@ export function InventoryGrid({
             </button>
           ))}
         </div>
-        {/* 정렬 — 보유 목록에만 적용(장착 3개는 상단 고정 유지). 컴팩트 셀렉트(2026-07-19). */}
-        <select
-          value={sortBy}
-          onChange={(e) => setSortBy(e.target.value as SortBy)}
-          aria-label="정렬 기준"
-          className="rounded-full border border-zinc-300 bg-transparent px-2.5 py-1.5 text-xs text-zinc-600 dark:border-zinc-700 dark:bg-zinc-950 dark:text-zinc-400"
-        >
-          <option value="enhance">강화순</option>
-          <option value="transcend">초월순</option>
-          <option value="name">이름순</option>
-        </select>
+        {/* 정렬 — 보유 목록에만 적용(장착 3개는 상단 고정 유지). 컴팩트 셀렉트(2026-07-19).
+            네이티브 화살표는 브라우저마다 위치·색이 제각각(크롬=패딩 밖, iOS PWA=검정)이라
+            appearance-none으로 없애고 ▾를 직접 그린다. */}
+        <span className="relative inline-flex items-center">
+          <select
+            value={sortBy}
+            onChange={(e) => setSortBy(e.target.value as SortBy)}
+            aria-label="정렬 기준"
+            className="appearance-none rounded-full border border-zinc-300 bg-transparent py-1.5 pl-3 pr-7 text-xs text-zinc-600 dark:border-zinc-700 dark:bg-zinc-950 dark:text-zinc-400"
+          >
+            <option value="enhance">강화순</option>
+            <option value="transcend">초월순</option>
+            <option value="name">이름순</option>
+          </select>
+          <span aria-hidden className="pointer-events-none absolute right-2.5 text-[9px] text-zinc-400 dark:text-zinc-500">
+            ▼
+          </span>
+        </span>
       </div>
 
       {equipped.length > 0 ? (
