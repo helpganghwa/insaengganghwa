@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useTransition } from 'react';
+import { useMemo, useState, useTransition } from 'react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import { josa } from 'es-hangul';
@@ -77,6 +77,17 @@ function EnhanceSlotPicker({
   const { showError } = useResourceToast();
   const [pending, startTransition] = useTransition();
   const [error, setError] = useState<string | null>(null);
+  // 정렬 — 인벤토리와 동일 3종(2026-07-19). 동률 2차 기준도 동일.
+  const [sortBy, setSortBy] = useState<'enhance' | 'transcend' | 'name'>('enhance');
+  const sorted = useMemo(() => {
+    return [...candidates].sort((a, b) => {
+      if (sortBy === 'enhance')
+        return b.enhanceLevel - a.enhanceLevel || b.transcendLevel - a.transcendLevel || a.name.localeCompare(b.name, 'ko');
+      if (sortBy === 'transcend')
+        return b.transcendLevel - a.transcendLevel || b.enhanceLevel - a.enhanceLevel || a.name.localeCompare(b.name, 'ko');
+      return a.name.localeCompare(b.name, 'ko');
+    });
+  }, [candidates, sortBy]);
 
   const pick = (id: string) => {
     if (pending) return;
@@ -117,16 +128,34 @@ function EnhanceSlotPicker({
         className="max-h-[82dvh] w-full max-w-xs overflow-y-auto rounded-2xl bg-white p-3 shadow-[0_0_40px_rgba(245,158,11,0.18)] ring-1 ring-amber-700/40 dark:bg-zinc-950"
         onClick={(e) => e.stopPropagation()}
       >
-        <header className="mb-2 flex items-baseline justify-between">
+        <header className="mb-2 flex items-center justify-between">
           <h2 className="text-sm font-semibold">{SLOT_LABEL[slot]} 강화 등록</h2>
-          <button
-            type="button"
-            onClick={onClose}
-            className="text-base leading-none text-zinc-400 hover:text-zinc-700 dark:hover:text-zinc-300"
-            aria-label="닫기"
-          >
-            ×
-          </button>
+          <div className="flex items-center gap-2">
+            {/* 정렬 셀렉트 — 인벤토리와 동일 스타일(커스텀 ▼, iOS 색상·크롬 위치 이슈 회피). */}
+            <span className="relative inline-flex items-center">
+              <select
+                value={sortBy}
+                onChange={(e) => setSortBy(e.target.value as typeof sortBy)}
+                aria-label="정렬 기준"
+                className="appearance-none rounded-full border border-zinc-300 bg-transparent py-1 pl-2.5 pr-6 text-[11px] text-zinc-600 dark:border-zinc-700 dark:bg-zinc-950 dark:text-zinc-400"
+              >
+                <option value="enhance">강화순</option>
+                <option value="transcend">초월순</option>
+                <option value="name">이름순</option>
+              </select>
+              <span aria-hidden className="pointer-events-none absolute right-2 text-[8px] text-zinc-400 dark:text-zinc-500">
+                ▼
+              </span>
+            </span>
+            <button
+              type="button"
+              onClick={onClose}
+              className="text-base leading-none text-zinc-400 hover:text-zinc-700 dark:hover:text-zinc-300"
+              aria-label="닫기"
+            >
+              ×
+            </button>
+          </div>
         </header>
         <p className="mb-2 text-[10px] text-zinc-500">
           탭하면 빈 슬롯에 자동 등록됩니다 (잠금/강화중 제외).
@@ -147,7 +176,7 @@ function EnhanceSlotPicker({
           </div>
         ) : (
           <div className="grid grid-cols-3 gap-2">
-            {candidates.map((c) => (
+            {sorted.map((c) => (
               <button
                 key={c.id}
                 type="button"
