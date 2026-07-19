@@ -90,7 +90,7 @@ export async function GET(req: Request, { params }: { params: Promise<{ code: st
         ...(t.attempts > 0 ? [`강화 ${t.attempts}회 · 성공 ${t.success}`] : []),
       ];
 
-  // '나의 인생강화'(mode=all) — 좌측 텍스트 / 우측 아바타 2분할(2026-07-19 사용자 요청).
+  // '나의 인생강화'(mode=all) — 좌측 텍스트(중앙 정렬) / 우측 아바타 2분할(2026-07-19 B안 확정).
   if (modeAll) {
     return new ImageResponse(
       (
@@ -104,7 +104,7 @@ export async function GET(req: Request, { params }: { params: Promise<{ code: st
           <div
             style={{
               display: 'flex', flexDirection: 'column', justifyContent: 'center',
-              alignItems: 'flex-start', width: 690, paddingLeft: 72, paddingRight: 10,
+              alignItems: 'center', width: 690, paddingLeft: 40, paddingRight: 10,
             }}
           >
             <div style={{ display: 'flex', fontSize: 30, fontWeight: 800, color: '#fbbf24', letterSpacing: 14 }}>
