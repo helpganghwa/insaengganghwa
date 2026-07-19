@@ -125,20 +125,17 @@ export function InventoryGrid({
             </button>
           ))}
         </div>
-        {/* 정렬 — 보유 목록에만 적용(장착 3개는 상단 고정 유지). */}
-        <div className="flex gap-1.5">
-          {(
-            [
-              ['enhance', '강화순'],
-              ['transcend', '초월순'],
-              ['name', '이름순'],
-            ] as const
-          ).map(([k, label]) => (
-            <button key={k} type="button" className={fb(sortBy === k)} onClick={() => setSortBy(k)}>
-              {label}
-            </button>
-          ))}
-        </div>
+        {/* 정렬 — 보유 목록에만 적용(장착 3개는 상단 고정 유지). 컴팩트 셀렉트(2026-07-19). */}
+        <select
+          value={sortBy}
+          onChange={(e) => setSortBy(e.target.value as SortBy)}
+          aria-label="정렬 기준"
+          className="rounded-full border border-zinc-300 bg-transparent px-2.5 py-1.5 text-xs text-zinc-600 dark:border-zinc-700 dark:bg-zinc-950 dark:text-zinc-400"
+        >
+          <option value="enhance">강화순</option>
+          <option value="transcend">초월순</option>
+          <option value="name">이름순</option>
+        </select>
       </div>
 
       {equipped.length > 0 ? (
