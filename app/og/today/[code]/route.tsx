@@ -90,6 +90,75 @@ export async function GET(req: Request, { params }: { params: Promise<{ code: st
         ...(t.attempts > 0 ? [`강화 ${t.attempts}회 · 성공 ${t.success}`] : []),
       ];
 
+  // '나의 인생강화'(mode=all) — 좌측 텍스트 / 우측 아바타 2분할(2026-07-19 사용자 요청).
+  if (modeAll) {
+    return new ImageResponse(
+      (
+        <div
+          style={{
+            width: '100%', height: '100%', display: 'flex', flexDirection: 'row',
+            background: 'linear-gradient(160deg, #131a2b 0%, #0a0c12 60%)',
+          }}
+        >
+          {/* 좌측 — 텍스트 컬럼 */}
+          <div
+            style={{
+              display: 'flex', flexDirection: 'column', justifyContent: 'center',
+              alignItems: 'flex-start', width: 690, paddingLeft: 72, paddingRight: 10,
+            }}
+          >
+            <div style={{ display: 'flex', fontSize: 30, fontWeight: 800, color: '#fbbf24', letterSpacing: 14 }}>
+              나의 인생강화
+            </div>
+            <div style={{ display: 'flex', width: 120, height: 3, background: 'rgba(245,158,11,0.5)', marginTop: 20 }} />
+            <div style={{ display: 'flex', fontSize: 44, fontWeight: 700, color: '#e7e5e4', marginTop: 24 }}>
+              {prof.nickname}
+            </div>
+            <div style={{ display: 'flex', fontSize: 23, color: '#78716c', marginTop: 10 }}>{randomQuote()}</div>
+            <div style={{ display: 'flex', fontSize: 92, fontWeight: 800, color: main.color, marginTop: 18 }}>
+              {main.big}
+            </div>
+            <div style={{ display: 'flex', fontSize: 26, color: '#a8a29e', marginTop: 4 }}>{main.sub}</div>
+            <div style={{ display: 'flex', flexWrap: 'wrap', gap: 12, marginTop: 26, maxWidth: 600 }}>
+              {chips.map((c) => (
+                <div
+                  key={c}
+                  style={{
+                    display: 'flex', fontSize: 21, color: '#d6d3d1', padding: '9px 20px',
+                    background: 'rgba(255,255,255,0.07)', borderRadius: 999,
+                  }}
+                >
+                  {c}
+                </div>
+              ))}
+            </div>
+            <div style={{ display: 'flex', fontSize: 20, color: '#57534e', marginTop: 30 }}>
+              {`${y}. ${Number(m)}. ${Number(d)} (${dayKo}) · ganghwa.app`}
+            </div>
+          </div>
+          {/* 우측 — 아바타 컬럼(바닥 정렬) */}
+          <div
+            style={{
+              display: 'flex', flex: 1, alignItems: 'flex-end', justifyContent: 'center',
+              paddingBottom: 0,
+            }}
+          >
+            {avatar ? (
+              // eslint-disable-next-line @next/next/no-img-element
+              <img
+                src={avatar}
+                width={500}
+                height={600}
+                style={{ objectFit: 'contain', opacity: 0.96 }}
+              />
+            ) : null}
+          </div>
+        </div>
+      ),
+      size,
+    );
+  }
+
   return new ImageResponse(
     (
       <div
@@ -113,7 +182,7 @@ export async function GET(req: Request, { params }: { params: Promise<{ code: st
         ) : null}
 
         <div style={{ display: 'flex', fontSize: 30, fontWeight: 800, color: '#fbbf24', letterSpacing: 18 }}>
-          {modeAll ? '나의 인생강화' : '오늘의 인생강화'}
+          오늘의 인생강화
         </div>
         <div style={{ display: 'flex', width: 120, height: 3, background: 'rgba(245,158,11,0.5)', marginTop: 22 }} />
         <div style={{ display: 'flex', fontSize: 44, fontWeight: 700, color: '#e7e5e4', marginTop: 26 }}>
