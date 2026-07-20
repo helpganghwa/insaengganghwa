@@ -19,9 +19,9 @@ export async function setChatHiddenAction(messageId: string, hidden: boolean): P
     .update(chatMessages)
     .set({ hiddenAt: hidden ? new Date() : null })
     .where(eq(chatMessages.id, id))
-    .returning({ serverId: chatMessages.serverId });
+    .returning({ serverId: chatMessages.serverId, guildId: chatMessages.guildId });
   if (!row) return { status: 'error', message: '메시지가 없습니다.' };
-  if (hidden) await broadcastChat(row.serverId, 'hide', { id: messageId });
+  if (hidden) await broadcastChat(row.serverId, 'hide', { id: messageId }, row.guildId);
   revalidatePath('/admin/chat');
   return { status: 'success' };
 }

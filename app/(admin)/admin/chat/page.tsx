@@ -2,6 +2,7 @@ import { desc, eq, sql } from 'drizzle-orm';
 
 import { db } from '@/lib/db/client';
 import { chatMessages } from '@/lib/db/schema/chat';
+import { guilds } from '@/lib/db/schema/guild';
 import { characters } from '@/lib/db/schema/server';
 import { profiles } from '@/lib/db/schema/profiles';
 import { isChatEnabled } from '@/lib/game/chat/service';
@@ -23,6 +24,8 @@ export default async function AdminChatPage() {
       serverId: chatMessages.serverId,
       userId: chatMessages.userId,
       body: chatMessages.body,
+      guildId: chatMessages.guildId,
+      guildName: guilds.name,
       hiddenAt: chatMessages.hiddenAt,
       createdAt: chatMessages.createdAt,
       nickname: characters.nickname,
@@ -32,6 +35,7 @@ export default async function AdminChatPage() {
     .from(chatMessages)
     .leftJoin(characters, sql`${characters.userId} = ${chatMessages.userId} and ${characters.serverId} = ${chatMessages.serverId}`)
     .leftJoin(profiles, eq(profiles.id, chatMessages.userId))
+    .leftJoin(guilds, eq(guilds.id, chatMessages.guildId))
     .orderBy(desc(chatMessages.id))
     .limit(200);
 
@@ -39,7 +43,7 @@ export default async function AdminChatPage() {
     <div className="space-y-4">
       <div className="flex items-center justify-between">
         <h1 className="text-lg font-bold">
-          전체 채팅 <span className={enabled ? 'text-emerald-500' : 'text-red-500'}>{enabled ? 'ON' : 'OFF'}</span>
+          채팅 운영(전체·길드) <span className={enabled ? 'text-emerald-500' : 'text-red-500'}>{enabled ? 'ON' : 'OFF'}</span>
         </h1>
         <ChatToggle enabled={enabled} />
       </div>
@@ -58,6 +62,11 @@ export default async function AdminChatPage() {
             <div className="flex items-center gap-2">
               <b>{m.nickname ?? '(탈퇴)'}</b>
               <span className="text-zinc-500">s{m.serverId}</span>
+              {m.guildId ? (
+                <span className="rounded bg-indigo-900/60 px-1.5 text-[10px] font-bold text-indigo-300">
+                  길드 {m.guildName ?? m.guildId.toString()}
+                </span>
+              ) : null}
               <span className="text-zinc-500">{fmt(m.createdAt)}</span>
               {Number(m.reports) > 0 ? (
                 <span className="rounded bg-red-800 px-1.5 text-[10px] font-bold text-white">신고 {m.reports}</span>
