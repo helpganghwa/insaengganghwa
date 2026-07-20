@@ -35,7 +35,7 @@ export function TutorialCompleteModal({ onClose }: { onClose: () => void }) {
         <p className="mt-2 text-[13px] leading-relaxed text-zinc-600 dark:text-zinc-300">
           첫 강화를 시작했어요. 강화는{' '}
           <b className="text-amber-600 dark:text-amber-400">시간이 지날수록 성공 확률이 올라가요</b> —
-          기다렸다가 수령하는 것이 인생강화의 기본이에요.
+          기다렸다가 강화하는 것이 인생강화의 기본이에요.
         </p>
 
         <Link
@@ -47,7 +47,7 @@ export function TutorialCompleteModal({ onClose }: { onClose: () => void }) {
             🏆 도전 과제가 열렸어요!
           </span>
           <span className="mt-0.5 block text-[12px] leading-relaxed text-zinc-600 dark:text-zinc-300">
-            과제를 하나씩 달성할 때마다 다이아 보상 — 전부 정복하면{' '}
+            과제를 하나씩 달성할 때마다 다이아 보상 — 전부 완료하면{' '}
             <b className="text-amber-600 dark:text-amber-400">💎 5,000 + 📦 150</b> 보너스까지!
           </span>
         </Link>

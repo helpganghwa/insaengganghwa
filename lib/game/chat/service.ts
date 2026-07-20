@@ -9,6 +9,7 @@ import { characters } from '@/lib/db/schema/server';
 import { userProfiles } from '@/lib/db/schema/avatar';
 import { systemMode } from '@/lib/db/schema/ops';
 import { getGuildBriefsByUsers } from '@/lib/game/guild/badge';
+import { parseFaceBox } from '@/components/faceCrop';
 
 import { broadcastChat } from './realtime';
 
@@ -24,6 +25,8 @@ export type ChatMessageDto = {
   publicCode: string | null;
   /** 정면 아바타 URL(작은 썸네일용) — null=기본 아이콘. */
   avatar: string | null;
+  /** 얼굴 크롭 박스(검수 산출) — 헤더/친구 썸네일과 동일 크롭. */
+  faceBox: { cx: number; cy: number; h: number } | null;
   guildName: string | null;
   body: string;
   createdAt: string; // ISO
@@ -43,7 +46,7 @@ export async function isChatEnabled(): Promise<boolean> {
 async function displayFields(
   userIds: string[],
   serverId: number,
-): Promise<Map<string, { nickname: string; publicCode: string | null; avatar: string | null; guildName: string | null }>> {
+): Promise<Map<string, { nickname: string; publicCode: string | null; avatar: string | null; faceBox: { cx: number; cy: number; h: number } | null; guildName: string | null }>> {
   if (userIds.length === 0) return new Map();
   const uniq = [...new Set(userIds)];
   const [rows, guilds] = await Promise.all([
@@ -53,6 +56,7 @@ async function displayFields(
         nickname: characters.nickname,
         publicCode: profiles.publicCode,
         rotations: userProfiles.rotations,
+        options: userProfiles.options,
       })
       .from(characters)
       .innerJoin(profiles, eq(profiles.id, characters.userId))
@@ -67,6 +71,7 @@ async function displayFields(
       nickname: r.nickname,
       publicCode: r.publicCode,
       avatar: rot.south ?? Object.values(rot)[0] ?? null,
+      faceBox: parseFaceBox((r.options as Record<string, unknown> | null)?.faceBox),
       guildName: (guilds.get(r.userId) as { name?: string } | undefined)?.name ?? null,
     });
   }
@@ -97,6 +102,7 @@ export async function getRecentChat(serverId: number, limit = 100): Promise<Chat
         nickname: f?.nickname ?? '대장장이',
         publicCode: f?.publicCode ?? null,
         avatar: f?.avatar ?? null,
+        faceBox: f?.faceBox ?? null,
         guildName: f?.guildName ?? null,
         body: r.body,
         createdAt: r.createdAt.toISOString(),
@@ -122,6 +128,7 @@ export async function persistAndBroadcast(
     nickname: f?.nickname ?? '대장장이',
     publicCode: f?.publicCode ?? null,
     avatar: f?.avatar ?? null,
+    faceBox: f?.faceBox ?? null,
     guildName: f?.guildName ?? null,
     body,
     createdAt: row!.createdAt.toISOString(),
