@@ -66,7 +66,7 @@ export function ConquestCardStatus({
             overflowPx > 0
               ? {
                   ['--mq' as string]: `-${overflowPx}px`,
-                  animation: `ig-marquee-x ${Math.max(7, Math.round(overflowPx / 12))}s ease-in-out infinite`,
+                  animation: `ig-marquee-x ${Math.max(12, Math.round(overflowPx / 6))}s linear infinite`,
                 }
               : undefined
           }
