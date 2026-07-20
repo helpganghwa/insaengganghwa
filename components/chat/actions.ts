@@ -86,14 +86,15 @@ export async function sendChat(raw: string, channel: 'all' | 'guild' = 'all'): P
   if (duplicate) return { status: 'error', message: '같은 내용을 연속으로 보낼 수 없어요.' };
 
   // @멘션(0128) — 실제 유저 닉과 일치하는 것만 유효. 저장(표시 시 @ 제거·강조) + 푸시(최대 3명).
-  let mentionTargets: { uid: string; nickname: string }[] = [];
+  let mentionTargets: { uid: string; nickname: string; code: string | null }[] = [];
   if (body.includes('@')) {
     const cands = [...new Set([...body.matchAll(/@([^\s@]{1,12})/g)].map((m) => m[1]!))].slice(0, 5);
     if (cands.length > 0) {
       try {
         const rows = await db
-          .select({ uid: characters.userId, nickname: characters.nickname })
+          .select({ uid: characters.userId, nickname: characters.nickname, code: profiles.publicCode })
           .from(characters)
+          .innerJoin(profiles, eq(profiles.id, characters.userId))
           .where(and(eq(characters.serverId, serverId), inArray(characters.nickname, cands)));
         mentionTargets = rows.filter((r) => r.uid !== userId);
       } catch {
@@ -102,7 +103,13 @@ export async function sendChat(raw: string, channel: 'all' | 'guild' = 'all'): P
     }
   }
 
-  const message = await persistAndBroadcast(userId, serverId, body, mentionTargets.map((t) => t.nickname), guildId);
+  const message = await persistAndBroadcast(
+    userId,
+    serverId,
+    body,
+    mentionTargets.map((t) => ({ n: t.nickname, c: t.code })),
+    guildId,
+  );
 
   if (mentionTargets.length > 0) {
     await Promise.all(

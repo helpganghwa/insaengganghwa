@@ -22,6 +22,8 @@ import { broadcastChat } from './realtime';
  * 표시 필드(닉/아바타/길드)는 저장하지 않고 조회 시 조인 — 닉변·아바타 교체 즉시 반영.
  */
 
+export type ChatMention = { n: string; c: string | null };
+
 export type ChatMessageDto = {
   id: string;
   userId: string;
@@ -35,8 +37,8 @@ export type ChatMessageDto = {
   guildEmblemUrl: string | null;
   /** 현재(가장 최근) 대난투 우승자 — 닉네임 앞 🏆 표시. */
   isMeleeChampion: boolean;
-  /** 유효 멘션 닉 목록(0128) — 표시 시 @ 제거·색 강조 대상. */
-  mentions: string[] | null;
+  /** 유효 멘션(0128) — 닉+공개코드. 표시 시 @ 제거·강조·프로필 링크. (구 string[] 호환) */
+  mentions: ChatMention[] | null;
   /** 시스템 라인(월드 이벤트) — 있으면 유저 필드는 빈 값, 렌더는 worldEventMessage. */
   sys?: WorldEventEntry;
   /** 길드 시스템 라인(길드 활동 로그) — 길드 탭 전용, 렌더는 guildLogMessage. */
@@ -62,6 +64,12 @@ export function guildLogToChatDto(entry: GuildLogEntry): ChatMessageDto {
     body: '',
     createdAt: entry.createdAtIso,
   };
+}
+
+/** 저장된 mentions(구=string[], 신={n,c}[]) → ChatMention[] 정규화. */
+function normMentions(v: unknown): ChatMention[] | null {
+  if (!Array.isArray(v) || v.length === 0) return null;
+  return v.map((e) => (typeof e === 'string' ? { n: e, c: null } : (e as ChatMention)));
 }
 
 /** 월드 이벤트 → 채팅 시스템 라인 DTO. id는 sys- 프리픽스(실메시지와 충돌 없음). */
@@ -217,7 +225,7 @@ export async function getRecentChat(
         guildName: f?.guildName ?? null,
         guildEmblemUrl: f?.guildEmblemUrl ?? null,
         isMeleeChampion: f?.isMeleeChampion ?? false,
-        mentions: (r.mentions as string[] | null) ?? null,
+        mentions: normMentions(r.mentions),
         body: r.body,
         createdAt: r.createdAt.toISOString(),
       } satisfies ChatMessageDto;
@@ -239,7 +247,7 @@ export async function persistAndBroadcast(
   userId: string,
   serverId: number,
   body: string,
-  mentions: string[] = [],
+  mentions: ChatMention[] = [],
   guildId: bigint | null = null,
 ): Promise<ChatMessageDto> {
   const [row] = await db

@@ -1,12 +1,14 @@
 'use client';
 
 import { useCallback, useEffect, useLayoutEffect, useRef, useState } from 'react';
+import Link from 'next/link';
 import { usePathname, useRouter } from 'next/navigation';
 
 import { supabaseBrowser } from '@/lib/supabase-browser';
 import { ZoomSafeInput } from '@/components/ui/ZoomSafeField';
 import { faceCropStyle, type FaceBox } from '@/components/faceCrop';
-import type { ChatMessageDto } from '@/lib/game/chat/service';
+import type { ChatMention, ChatMessageDto } from '@/lib/game/chat/service';
+import { profileHref } from '@/lib/game/profile/href';
 import type { WorldEventEntry } from '@/lib/game/world/event';
 import { worldEventMessage } from '@/app/(game)/world-message';
 import { guildLogMessage } from '@/app/(game)/guild/GuildLogFeed';
@@ -539,23 +541,28 @@ export function ChatDock() {
   const visibleMessages = messages.filter((m) => !blocked.has(m.userId));
   const visibleLatest = latest && !blocked.has(latest.userId) ? latest : null;
 
-  // 멘션 렌더(0128) — 서버가 검증한 유효 멘션만 @ 제거 + 은은한 색 강조(내 닉은 진하게).
-  // 무효 @토큰은 입력한 그대로 일반 텍스트.
-  const renderBody = (body: string, mentions: string[] | null) =>
+  // 멘션 렌더(0128) — 서버가 검증한 유효 멘션만 @ 제거 + 은은한 강조, 닉 클릭 시 프로필 상세.
+  // 무효 @토큰은 입력한 그대로 일반 텍스트. 색은 절제(내 닉만 약간 진하게).
+  const renderBody = (body: string, mentions: ChatMention[] | null) =>
     body.split(/(@[^\s@]{1,12})/g).map((part, i) => {
       const nick = part.startsWith('@') ? part.slice(1) : null;
-      if (nick && mentions?.includes(nick)) {
+      const hit = nick ? mentions?.find((mm) => mm.n === nick) : null;
+      if (nick && hit) {
+        const cls =
+          meNickname && nick === meNickname
+            ? 'font-semibold text-amber-600/80 dark:text-amber-400/80'
+            : 'font-medium text-amber-700/65 dark:text-amber-300/60';
+        if (hit.c) {
+          return (
+            <Link key={i} href={profileHref(hit.c, serverIdRef.current)} className={`${cls} hover:underline`}>
+              {nick}
+            </Link>
+          );
+        }
         return (
-          <b
-            key={i}
-            className={
-              meNickname && nick === meNickname
-                ? 'font-bold text-amber-600 dark:text-amber-400'
-                : 'font-semibold text-amber-600/85 dark:text-amber-400/85'
-            }
-          >
+          <span key={i} className={cls}>
             {nick}
-          </b>
+          </span>
         );
       }
       return part;
@@ -652,19 +659,22 @@ export function ChatDock() {
         >
           <div className="relative mx-auto flex h-full w-full max-w-[390px] flex-col bg-white dark:bg-zinc-950">
             <header className="flex shrink-0 items-center justify-between gap-2 border-b border-zinc-100 px-3 py-1.5 dark:border-zinc-800/70">
-              <div className="flex items-center gap-1">
+              <div className="flex items-center gap-4">
                 {(['all', 'guild'] as const).map((tk) => (
                   <button
                     key={tk}
                     type="button"
                     onClick={() => switchTab(tk)}
-                    className={`rounded-full px-2.5 py-1 text-[12px] font-bold ${
+                    className={`relative py-1 text-[13px] transition-colors ${
                       tab === tk
-                        ? 'bg-amber-500 text-white'
-                        : 'text-zinc-400 hover:text-zinc-600 dark:hover:text-zinc-300'
+                        ? 'font-bold text-zinc-900 dark:text-zinc-50'
+                        : 'font-medium text-zinc-400 hover:text-zinc-600 dark:hover:text-zinc-300'
                     }`}
                   >
                     {tk === 'all' ? '전체' : '길드'}
+                    {tab === tk ? (
+                      <span className="absolute -bottom-[7px] left-0 right-0 h-[2px] rounded-full bg-zinc-900 dark:bg-zinc-50" />
+                    ) : null}
                   </button>
                 ))}
               </div>
@@ -687,8 +697,7 @@ export function ChatDock() {
               className="min-h-0 flex-1 overflow-y-auto overscroll-contain px-2.5 py-2"
             >
               {tab === 'guild' && !myGuild ? (
-                <div className="flex h-full flex-col items-center justify-center gap-3 px-6 text-center">
-                  <span className="text-3xl">🛡️</span>
+                <div className="flex h-full flex-col items-center justify-center gap-4 px-6 text-center">
                   <p className="text-[12.5px] leading-relaxed text-zinc-500 dark:text-zinc-400">
                     길드에 가입하면 길드원들과 대화할 수 있어요.
                   </p>
@@ -702,9 +711,9 @@ export function ChatDock() {
                       }
                       router.push('/guild');
                     }}
-                    className="rounded-full bg-amber-500 px-4 py-2 text-[12.5px] font-bold text-white"
+                    className="rounded-full bg-amber-500 px-5 py-2 text-[12.5px] font-bold text-white"
                   >
-                    길드 보러 가기
+                    길드 가입하기
                   </button>
                 </div>
               ) : null}
@@ -741,37 +750,26 @@ export function ChatDock() {
                   !prev.sysGuild &&
                   prev.userId === m.userId &&
                   new Date(m.createdAt).getTime() - new Date(prev.createdAt).getTime() < 60_000;
-                // 내 메시지 — 카카오톡식 우측 정렬(아바타·닉·배경 없음), 묶음이면 시간 생략.
-                if (mine) {
-                  return (
-                    <div
-                      key={m.id}
-                      className={`flex items-end justify-end gap-1.5 px-1.5 ${grouped ? 'py-[2px]' : 'py-[5px]'} ${
-                        pending ? 'opacity-50' : ''
-                      }`}
-                    >
-                      {!grouped ? (
-                        <span className="shrink-0 text-[9px] text-zinc-300 dark:text-zinc-600">
-                          {new Date(m.createdAt).toLocaleTimeString('ko-KR', {
-                            hour: '2-digit',
-                            minute: '2-digit',
-                          })}
-                        </span>
-                      ) : null}
-                      <p className="max-w-[78%] text-[12.5px] leading-[1.45] break-words text-zinc-800 dark:text-zinc-200">
-                        {renderBody(m.body, m.mentions)}
-                      </p>
-                    </div>
-                  );
-                }
                 if (grouped) {
                   return (
                     <div
                       key={m.id}
-                      className={`flex items-start gap-2 px-1.5 py-[2px] ${pending ? 'opacity-50' : ''}`}
+                      className={`flex items-start gap-2 px-1.5 py-[2px] ${
+                        mine ? 'bg-amber-50/70 dark:bg-amber-500/[0.07]' : ''
+                      } ${pending ? 'opacity-50' : ''}`}
                     >
                       <p
-                        onClick={() => {
+                        onClickCapture={(e) => {
+                          if ((e.target as HTMLElement).closest('a')) {
+                            try {
+                              sessionStorage.setItem(RESTORE_KEY, 'panel');
+                            } catch {
+                              /* ignore */
+                            }
+                          }
+                        }}
+                        onClick={(e) => {
+                          if ((e.target as HTMLElement).closest('a')) return;
                           if (!mine && !pending) setReportTarget(m);
                         }}
                         className="min-w-0 flex-1 pl-8 text-[12.5px] leading-[1.45] break-words text-zinc-800 dark:text-zinc-200"
@@ -784,7 +782,9 @@ export function ChatDock() {
                 return (
                   <div
                     key={m.id}
-                    className={`flex items-start gap-2 px-1.5 py-[5px] ${pending ? 'opacity-50' : ''}`}
+                    className={`flex items-start gap-2 px-1.5 py-[5px] ${
+                      mine ? 'bg-amber-50/70 dark:bg-amber-500/[0.07]' : ''
+                    } ${pending ? 'opacity-50' : ''}`}
                   >
                     <button
                       type="button"
@@ -827,7 +827,17 @@ export function ChatDock() {
                       </div>
                       {/* 본문 탭 = 신고 팝업(별도 신고 버튼 없음, 내 메시지 제외) */}
                       <p
-                        onClick={() => {
+                        onClickCapture={(e) => {
+                          if ((e.target as HTMLElement).closest('a')) {
+                            try {
+                              sessionStorage.setItem(RESTORE_KEY, 'panel');
+                            } catch {
+                              /* ignore */
+                            }
+                          }
+                        }}
+                        onClick={(e) => {
+                          if ((e.target as HTMLElement).closest('a')) return;
                           if (!mine && !pending) setReportTarget(m);
                         }}
                         className="mt-[3px] text-[12.5px] leading-[1.45] break-words text-zinc-800 dark:text-zinc-200"
@@ -907,7 +917,7 @@ export function ChatDock() {
                   type="button"
                   onClick={() => setOpen(false)}
                   aria-label="채팅 닫기"
-                  className="h-9 w-[44px] shrink-0 rounded-full bg-zinc-100 text-[12.5px] font-bold text-zinc-500 dark:bg-zinc-800 dark:text-zinc-400"
+                  className="h-9 w-[54px] shrink-0 rounded-full bg-zinc-100 text-[12.5px] font-bold text-zinc-500 dark:bg-zinc-800 dark:text-zinc-400"
                 >
                   닫기
                 </button>
