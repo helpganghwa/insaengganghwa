@@ -30,7 +30,8 @@ export async function broadcastChat(
       // 채팅 전송 응답을 브로드캐스트 지연에 묶지 않음 — 짧은 타임아웃.
       signal: AbortSignal.timeout(2500),
     });
-  } catch {
-    // best-effort — 폴링 폴백이 커버.
+  } catch (e) {
+    // best-effort — 폴링 폴백이 커버. 단 실패는 로그로 가시화(무증상 디버깅 불가 방지).
+    console.warn('[chat.broadcast] 실패', (e as Error).message);
   }
 }

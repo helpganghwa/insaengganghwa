@@ -1,7 +1,5 @@
 import 'server-only';
 
-import { after } from 'next/server';
-
 import { and, desc, eq, inArray, sql } from 'drizzle-orm';
 
 import { db } from '@/lib/db/client';
@@ -172,7 +170,9 @@ export async function persistAndBroadcast(
     body,
     createdAt: row!.createdAt.toISOString(),
   };
-  after(() => broadcastChat(serverId, 'new', dto));
+  // after() 사용 금지(2026-07-21 롤백) — 프로덕션에서 응답 후 콜백이 드롭돼 브로드캐스트가
+  // 발사되지 않는 정황(실시간 미전달). 낙관 UI라 전송자 체감 지연 없음 — await로 보장.
+  await broadcastChat(serverId, 'new', dto);
   return dto;
 }
 
@@ -206,7 +206,7 @@ export async function reportChatMessage(
       .where(eq(chatReports.messageId, messageId));
     if (n >= 3) {
       await db.update(chatMessages).set({ hiddenAt: new Date() }).where(eq(chatMessages.id, messageId));
-      after(() => broadcastChat(msg.serverId, 'hide', { id: String(messageId) }));
+      await broadcastChat(msg.serverId, 'hide', { id: String(messageId) });
     }
   }
   return 'ok';

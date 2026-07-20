@@ -256,11 +256,11 @@ export function ChatDock() {
     };
   }, [channel, applyNew]);
 
-  // 폴링 폴백 — WS 미연결일 때만(15초). 열림=100개 동기화, 닫힘=최근 1개.
+  // 폴링 — WS 상태와 무관하게 상시 15초(2026-07-21): WS가 SUBSCRIBED여도 서버측 송신
+  // 실패 등으로 조용히 끊긴 상태를 커버(최대 15초 내 미니바·목록 복구). 열림=100, 닫힘=1.
   useEffect(() => {
     if (enabled === false) return;
     const t = setInterval(() => {
-      if (wsOkRef.current) return;
       void fetchRecent(openRef.current ? 100 : 1).then((ms) => {
         if (!ms) return;
         if (openRef.current) setMessages(ms);
@@ -722,13 +722,15 @@ export function ChatDock() {
                 {/* 버튼 2개/4개와 무관하게 높이 고정 — 아바타 위치·크기 불변.
                     아바타는 object-cover로 세로를 꽉 채움(캔버스 좌우 여백은 크롭) */}
                 <div className="mt-2 flex h-[184px] items-stretch gap-2.5">
-                  <div className="flex w-[150px] shrink-0 items-end justify-center overflow-hidden">
+                  {/* 크롭 없음 — 세로를 꽉 채우되 폭은 열 밖으로 넘쳐도 보이게(visible),
+                      클립은 팝업 카드의 overflow-hidden(라운드)에서만 발생 */}
+                  <div className="relative w-[150px] shrink-0">
                     {profile.data.avatar ? (
                       // eslint-disable-next-line @next/next/no-img-element
                       <img
                         src={profile.data.avatar}
                         alt=""
-                        className="h-full w-full object-cover object-bottom"
+                        className="absolute bottom-0 left-1/2 h-full w-auto max-w-none -translate-x-1/2"
                         style={{ imageRendering: 'pixelated' }}
                       />
                     ) : (
