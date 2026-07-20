@@ -1,11 +1,13 @@
 'use client';
 
 import { useCallback, useEffect, useRef, useState } from 'react';
-import Link from 'next/link';
+import { usePathname, useRouter } from 'next/navigation';
 
 import { supabaseBrowser } from '@/lib/supabase-browser';
-import { faceCropStyle } from '@/components/faceCrop';
+import { ZoomSafeInput } from '@/components/ui/ZoomSafeField';
+import { faceCropStyle, type FaceBox } from '@/components/faceCrop';
 import type { ChatMessageDto } from '@/lib/game/chat/service';
+import { sendRequestAction } from '@/app/(game)/friends/actions';
 
 import { sendChat, reportChat } from './actions';
 
@@ -13,17 +15,44 @@ import { sendChat, reportChat } from './actions';
  * 전체 채팅 도크(0125, 2026-07-20 확정 UX) —
  *  - GNB 바로 위 fixed 반투명 미니바(최근 1개 메시지) → 탭하면 헤더·GNB 사이를 덮는 불투명 패널
  *  - 수신: Supabase Realtime broadcast 구독, 실패 시 15초 폴링 폴백
- *  - 전송: sendChat 서버 액션(쿨다운 5초 — 버튼 카운트다운 동기)
- *  - 미니바 높이는 --chat-dock-h로 발행 — 레이아웃 main이 하단 패딩으로 비켜섬(콘텐츠 가림 방지)
- *  - 하단 오프셋에 --gt-h(가이드 티커) 합산 — 티커가 있는 브랜치에서도 겹치지 않음
+ *  - 닉네임/아바타 탭 → 미니 프로필 팝업(전투력·강화·친구추가·신고·차단), 신고도 팝업 확인
+ *  - 차단은 로컬(기기) 필터 — localStorage 목록, 서버 부담 0
+ *  - 미니바 높이는 --chat-dock-h로 발행(main 하단 패딩), --gt-h(가이드 티커) 합산 오프셋
+ *  - 라우트 이동 시 패널 자동 최소화
  */
 
 const COOLDOWN_S = 5;
 const DOCK_H = '42px';
-// iOS는 포커스된 input 폰트가 16px 미만이면 화면을 자동 확대 — 16px로 두고 시각만 13px로 스케일.
-const INPUT_SCALE = 13 / 16;
+const BLOCK_KEY = 'ig:chat-blocked';
+
+type MiniProfile = {
+  userId: string;
+  nickname: string;
+  publicCode: string | null;
+  avatar: string | null;
+  faceBox: FaceBox | null;
+  guildName: string | null;
+  guildEmblemUrl: string | null;
+  isMeleeChampion: boolean;
+  combat: number;
+  maxEnhance: number;
+  sumEnhance: number;
+  friendStatus: 'pending' | 'accepted' | null;
+  isMe: boolean;
+};
+
+function loadBlocked(): Set<string> {
+  try {
+    const raw = localStorage.getItem(BLOCK_KEY);
+    return new Set(raw ? (JSON.parse(raw) as string[]) : []);
+  } catch {
+    return new Set();
+  }
+}
 
 export function ChatDock() {
+  const router = useRouter();
+  const pathname = usePathname();
   const [enabled, setEnabled] = useState<boolean | null>(null); // null=로딩(도크 미표시)
   const [channel, setChannel] = useState<string | null>(null);
   const [me, setMe] = useState<string | null>(null);
@@ -35,21 +64,37 @@ export function ChatDock() {
   const [sending, setSending] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [hiddenByTutorial, setHiddenByTutorial] = useState(false);
+  const [blocked, setBlocked] = useState<Set<string>>(new Set());
+  // 팝업 — 미니 프로필(로딩=userId만) / 신고 확인.
+  const [profile, setProfile] = useState<{ userId: string; data: MiniProfile | null } | null>(null);
+  const [reportTarget, setReportTarget] = useState<ChatMessageDto | null>(null);
+  const [popupFlash, setPopupFlash] = useState<string | null>(null);
 
   const openRef = useRef(false);
   const wsOkRef = useRef(false);
   const listRef = useRef<HTMLDivElement | null>(null);
   const serverIdRef = useRef(1);
+  // 낙관 전송용 — 내 표시 필드(닉/아바타/길드)는 서버 응답·최근 목록의 내 메시지에서 채움.
+  const myFieldsRef = useRef<ChatMessageDto | null>(null);
+  const tempSeqRef = useRef(0);
   openRef.current = open;
 
-  // 튜토리얼 중엔 도크 숨김 — 코치마크·완료 모달과 시각 경합 방지.
+  // 튜토리얼 중엔 도크 숨김 — 코치마크·완료 모달과 시각 경합 방지. 차단 목록도 초기 로드.
   useEffect(() => {
     try {
       setHiddenByTutorial(Boolean(localStorage.getItem('tut_step')));
     } catch {
       /* ignore */
     }
+    setBlocked(loadBlocked());
   }, []);
+
+  // 라우트 이동 → 패널 자동 최소화(2026-07-20 피드백 6).
+  useEffect(() => {
+    setOpen(false);
+    setProfile(null);
+    setReportTarget(null);
+  }, [pathname]);
 
   const visible = enabled === true && !hiddenByTutorial;
 
@@ -108,6 +153,8 @@ export function ChatDock() {
         if (Number.isInteger(sid)) serverIdRef.current = sid;
       }
       if (data.me) setMe(data.me);
+      const mine = data.messages.filter((m) => m.userId === data.me).pop();
+      if (mine) myFieldsRef.current = mine;
       return data.messages;
     } catch {
       return null;
@@ -179,33 +226,108 @@ export function ChatDock() {
     setTimeout(() => setError(null), 3000);
   };
 
+  // 낙관 전송(2026-07-20 피드백) — 즉시 내 말풍선을 띄우고 서버 확정 시 실 메시지로 교체.
+  // 실패하면 말풍선 회수 + 입력 복원 + 쿨다운 해제. (타 유저 수신 순서와 잠시 다를 수 있음 — 허용.)
   const submit = () => {
     const body = input.trim();
     if (!body || sending || cooldown > 0) return;
     setSending(true);
+    const tempId = `tmp-${++tempSeqRef.current}`;
+    const mine = myFieldsRef.current;
+    const temp: ChatMessageDto = {
+      id: tempId,
+      userId: me ?? 'me',
+      nickname: mine?.nickname ?? '나',
+      publicCode: mine?.publicCode ?? null,
+      avatar: mine?.avatar ?? null,
+      faceBox: mine?.faceBox ?? null,
+      guildName: mine?.guildName ?? null,
+      guildEmblemUrl: mine?.guildEmblemUrl ?? null,
+      isMeleeChampion: mine?.isMeleeChampion ?? false,
+      body,
+      createdAt: new Date().toISOString(),
+    };
+    setMessages((prev) => [...prev, temp]);
+    setInput('');
+    setCooldown(COOLDOWN_S);
+    requestAnimationFrame(() => scrollToBottom(true));
+    const rollback = () => {
+      setMessages((prev) => prev.filter((m) => m.id !== tempId));
+      setInput(body);
+      setCooldown(0);
+    };
     void sendChat(body)
       .then((r) => {
         if (r.status === 'error') {
+          rollback();
           flashError(r.message);
           return;
         }
-        setInput('');
-        setCooldown(COOLDOWN_S);
-        applyNew(r.message);
-        requestAnimationFrame(() => scrollToBottom(true));
+        myFieldsRef.current = r.message;
+        setLatest(r.message);
+        setMessages((prev) => {
+          const rest = prev.filter((m) => m.id !== tempId);
+          // 내 broadcast가 먼저 도착해 이미 실 메시지가 있으면 temp만 제거.
+          return rest.some((m) => m.id === r.message.id) ? rest : [...rest, r.message];
+        });
       })
-      .catch(() => flashError('전송에 실패했어요. 다시 시도해 주세요.'))
+      .catch(() => {
+        rollback();
+        flashError('전송에 실패했어요. 다시 시도해 주세요.');
+      })
       .finally(() => setSending(false));
   };
 
-  const report = (m: ChatMessageDto) => {
-    if (!window.confirm(`이 메시지를 신고할까요?\n"${m.body.slice(0, 40)}"`)) return;
+  const openProfile = (userId: string) => {
+    setPopupFlash(null);
+    setProfile({ userId, data: null });
+    void fetch(`/api/chat/profile?uid=${userId}`, { cache: 'no-store' })
+      .then(async (res) => (res.ok ? ((await res.json()) as MiniProfile) : null))
+      .then((data) => {
+        if (data) setProfile((prev) => (prev?.userId === userId ? { userId, data } : prev));
+        else setProfile(null);
+      })
+      .catch(() => setProfile(null));
+  };
+
+  const toggleBlock = (userId: string) => {
+    setBlocked((prev) => {
+      const next = new Set(prev);
+      if (next.has(userId)) next.delete(userId);
+      else next.add(userId);
+      try {
+        localStorage.setItem(BLOCK_KEY, JSON.stringify([...next]));
+      } catch {
+        /* ignore */
+      }
+      return next;
+    });
+  };
+
+  const confirmReport = () => {
+    const m = reportTarget;
+    if (!m) return;
+    setReportTarget(null);
     void reportChat(m.id).then((r) => {
       flashError(r.status === 'ok' ? '신고가 접수되었습니다.' : (r.message ?? '신고에 실패했습니다.'));
     });
   };
 
   if (!visible) return null;
+
+  const visibleMessages = messages.filter((m) => !blocked.has(m.userId));
+  const visibleLatest = latest && !blocked.has(latest.userId) ? latest : null;
+
+  const avatarBox = (m: { avatar: string | null; faceBox: FaceBox | null }, size: string) => (
+    <span className={`${size} shrink-0 overflow-hidden`}>
+      {m.avatar ? (
+        // eslint-disable-next-line @next/next/no-img-element
+        <img src={m.avatar} alt="" className="h-full w-full" style={faceCropStyle(m.faceBox)} />
+      ) : (
+        <span className="flex h-full w-full items-center justify-center text-[11px]">👤</span>
+      )}
+    </span>
+  );
 
   return (
     <>
@@ -223,14 +345,17 @@ export function ChatDock() {
               className="pointer-events-auto flex h-[34px] w-full items-center gap-2 rounded-full border border-zinc-200/70 bg-white/70 px-3 text-left backdrop-blur-md dark:border-zinc-700/60 dark:bg-zinc-900/70"
             >
               <span aria-hidden className="text-[12px]">💬</span>
-              {latest ? (
+              {visibleLatest ? (
                 <span className="min-w-0 flex-1 truncate text-[11px] text-zinc-500 dark:text-zinc-400">
-                  <b className="font-semibold text-zinc-700 dark:text-zinc-200">{latest.nickname}</b>
+                  <b className="font-semibold text-zinc-700 dark:text-zinc-200">
+                    {visibleLatest.isMeleeChampion ? '🏆' : ''}
+                    {visibleLatest.nickname}
+                  </b>
                   <span className="mx-1 opacity-60">·</span>
-                  {latest.body}
+                  {visibleLatest.body}
                 </span>
               ) : (
-                <span className="flex-1 truncate text-[11px] text-zinc-400">전체 채팅에 첫 인사를 남겨보세요</span>
+                <span className="flex-1 truncate text-[11px] text-zinc-400">전체 채팅</span>
               )}
             </button>
           </div>
@@ -247,113 +372,251 @@ export function ChatDock() {
           }}
         >
           <div className="mx-auto flex h-full w-full max-w-[390px] flex-col bg-white dark:bg-zinc-950">
-            <header className="flex shrink-0 items-center justify-between border-b border-zinc-100 px-3 py-1.5 dark:border-zinc-800/70">
+            <header className="flex shrink-0 items-center border-b border-zinc-100 px-3 py-1.5 dark:border-zinc-800/70">
               <h2 className="text-[12px] font-bold text-zinc-700 dark:text-zinc-200">💬 전체 채팅</h2>
-              <button
-                type="button"
-                onClick={() => setOpen(false)}
-                aria-label="채팅 닫기"
-                className="px-1.5 text-base leading-none text-zinc-400 hover:text-zinc-700 dark:hover:text-zinc-200"
-              >
-                ×
-              </button>
             </header>
 
             <div ref={listRef} className="min-h-0 flex-1 overflow-y-auto overscroll-contain px-2.5 py-2">
-              {messages.length === 0 ? (
-                <p className="py-10 text-center text-[12px] text-zinc-400">
-                  아직 대화가 없어요. 첫 인사를 남겨보세요!
-                </p>
-              ) : (
-                messages.map((m) => {
-                  const mine = m.userId === me;
-                  return (
-                    <div
-                      key={m.id}
-                      className={`flex items-start gap-2 rounded-lg px-1.5 py-[5px] ${
-                        mine ? 'bg-amber-50/70 dark:bg-amber-500/[0.07]' : ''
-                      }`}
-                    >
-                      <span className="mt-[3px] h-6 w-6 shrink-0 overflow-hidden rounded-full bg-zinc-100 dark:bg-zinc-800/80">
-                        {m.avatar ? (
+              {visibleMessages.map((m) => {
+                const mine = m.userId === me;
+                const pending = m.id.startsWith('tmp-');
+                return (
+                  <div
+                    key={m.id}
+                    className={`flex items-start gap-2 rounded-lg px-1.5 py-[5px] ${
+                      mine ? 'bg-amber-50/70 dark:bg-amber-500/[0.07]' : ''
+                    } ${pending ? 'opacity-50' : ''}`}
+                  >
+                    <button type="button" onClick={() => openProfile(m.userId)} aria-label={`${m.nickname} 정보`} className="mt-[3px]">
+                      {avatarBox(m, 'block h-6 w-6')}
+                    </button>
+                    <div className="min-w-0 flex-1">
+                      <div className="flex items-baseline gap-1.5 leading-none">
+                        <button
+                          type="button"
+                          onClick={() => openProfile(m.userId)}
+                          className="truncate text-[11px] font-semibold text-zinc-500 dark:text-zinc-400"
+                        >
+                          {m.isMeleeChampion ? '🏆' : ''}
+                          {m.nickname}
+                        </button>
+                        {m.guildEmblemUrl ? (
                           // eslint-disable-next-line @next/next/no-img-element
-                          <img src={m.avatar} alt="" className="h-full w-full" style={faceCropStyle(m.faceBox)} />
-                        ) : (
-                          <span className="flex h-full w-full items-center justify-center text-[11px]">👤</span>
-                        )}
-                      </span>
-                      <div className="min-w-0 flex-1">
-                        <div className="flex items-baseline gap-1.5 leading-none">
-                          {m.publicCode ? (
-                            <Link
-                              href={`/u/${m.publicCode}?s=${serverIdRef.current}`}
-                              className="truncate text-[11px] font-semibold text-zinc-500 dark:text-zinc-400"
-                            >
-                              {m.nickname}
-                            </Link>
-                          ) : (
-                            <span className="truncate text-[11px] font-semibold text-zinc-500 dark:text-zinc-400">
-                              {m.nickname}
-                            </span>
-                          )}
-                          {m.guildName ? (
-                            <span className="truncate text-[9.5px] text-zinc-400 dark:text-zinc-500">{m.guildName}</span>
-                          ) : null}
-                          <span className="ml-auto shrink-0 text-[9px] text-zinc-300 dark:text-zinc-600">
-                            {new Date(m.createdAt).toLocaleTimeString('ko-KR', { hour: '2-digit', minute: '2-digit' })}
-                          </span>
-                          {!mine ? (
-                            <button
-                              type="button"
-                              onClick={() => report(m)}
-                              aria-label="메시지 신고"
-                              className="shrink-0 text-[9px] text-zinc-300 hover:text-red-500 dark:text-zinc-600"
-                            >
-                              신고
-                            </button>
-                          ) : null}
-                        </div>
-                        <p className="mt-[3px] break-words text-[12.5px] leading-[1.45] text-zinc-800 dark:text-zinc-200">
-                          {m.body}
-                        </p>
+                          <img
+                            src={m.guildEmblemUrl}
+                            alt=""
+                            className="h-3 w-3 shrink-0 self-center object-contain"
+                            style={{ imageRendering: 'pixelated' }}
+                          />
+                        ) : null}
+                        {m.guildName ? (
+                          <span className="truncate text-[9.5px] text-zinc-400 dark:text-zinc-500">{m.guildName}</span>
+                        ) : null}
+                        <span className="ml-auto shrink-0 text-[9px] text-zinc-300 dark:text-zinc-600">
+                          {new Date(m.createdAt).toLocaleTimeString('ko-KR', { hour: '2-digit', minute: '2-digit' })}
+                        </span>
+                        {!mine ? (
+                          <button
+                            type="button"
+                            onClick={() => setReportTarget(m)}
+                            aria-label="메시지 신고"
+                            className="shrink-0 text-[9px] text-zinc-300 hover:text-red-500 dark:text-zinc-600"
+                          >
+                            신고
+                          </button>
+                        ) : null}
                       </div>
+                      <p className="mt-[3px] break-words text-[12.5px] leading-[1.45] text-zinc-800 dark:text-zinc-200">
+                        {m.body}
+                      </p>
                     </div>
-                  );
-                })
-              )}
+                  </div>
+                );
+              })}
             </div>
 
             <div className="shrink-0 border-t border-zinc-100 px-2.5 py-2 dark:border-zinc-800/70">
               {error ? <p className="mb-1 px-1 text-[11px] text-amber-600 dark:text-amber-400">{error}</p> : null}
               <div className="flex items-center gap-1.5">
-                {/* iOS 포커스 확대 방지 — 16px 폰트를 스케일로 13px처럼 표시(래퍼가 실제 크기 고정). */}
-                <span className="relative h-9 min-w-0 flex-1">
-                  <input
-                    value={input}
-                    onChange={(e) => setInput(e.target.value)}
-                    onKeyDown={(e) => {
-                      if (e.key === 'Enter' && !e.nativeEvent.isComposing) submit();
-                    }}
-                    maxLength={200}
-                    placeholder="메시지 입력"
-                    className="absolute left-0 top-0 rounded-full border border-zinc-200 bg-zinc-50 px-4 text-[16px] outline-none focus:border-amber-400 dark:border-zinc-700 dark:bg-zinc-900"
-                    style={{
-                      width: `${(100 / INPUT_SCALE).toFixed(2)}%`,
-                      height: `${(100 / INPUT_SCALE).toFixed(2)}%`,
-                      transform: `scale(${INPUT_SCALE})`,
-                      transformOrigin: '0 0',
-                    }}
-                  />
-                </span>
+                <ZoomSafeInput
+                  value={input}
+                  onChange={(e) => setInput(e.target.value)}
+                  onKeyDown={(e) => {
+                    if (e.key === 'Enter' && !e.nativeEvent.isComposing) submit();
+                  }}
+                  maxLength={100}
+                  placeholder="메시지 입력"
+                  wrapClassName="h-9 min-w-0 flex-1"
+                  className="rounded-full border border-zinc-200 bg-zinc-50 px-4 outline-none focus:border-amber-400 dark:border-zinc-700 dark:bg-zinc-900"
+                />
                 <button
                   type="button"
                   onClick={submit}
                   disabled={sending || cooldown > 0 || input.trim().length === 0}
-                  className="h-9 shrink-0 rounded-full bg-amber-500 px-4 text-[12.5px] font-bold text-white disabled:opacity-40"
+                  className="h-9 w-[54px] shrink-0 rounded-full bg-amber-500 text-[12.5px] font-bold text-white disabled:opacity-40"
                 >
                   {cooldown > 0 ? `${cooldown}s` : '전송'}
                 </button>
+                <button
+                  type="button"
+                  onClick={() => setOpen(false)}
+                  aria-label="채팅 닫기"
+                  className="h-9 w-[44px] shrink-0 rounded-full bg-zinc-100 text-[12.5px] font-bold text-zinc-500 dark:bg-zinc-800 dark:text-zinc-400"
+                >
+                  닫기
+                </button>
               </div>
+            </div>
+          </div>
+        </div>
+      ) : null}
+
+      {/* 미니 프로필 팝업 */}
+      {profile ? (
+        <div
+          role="dialog"
+          aria-modal="true"
+          aria-label="유저 정보"
+          className="fixed inset-0 z-40 flex items-center justify-center bg-black/60 p-6 backdrop-blur-sm"
+          onClick={() => setProfile(null)}
+        >
+          <div
+            className="w-full max-w-[280px] rounded-2xl bg-white p-4 text-center dark:bg-zinc-900"
+            onClick={(e) => e.stopPropagation()}
+          >
+            {!profile.data ? (
+              <p className="py-8 text-[12px] text-zinc-400">불러오는 중…</p>
+            ) : (
+              <>
+                <div className="mx-auto h-16 w-16 overflow-hidden">
+                  {profile.data.avatar ? (
+                    // eslint-disable-next-line @next/next/no-img-element
+                    <img src={profile.data.avatar} alt="" className="h-full w-full" style={faceCropStyle(profile.data.faceBox)} />
+                  ) : (
+                    <span className="flex h-full w-full items-center justify-center text-3xl">👤</span>
+                  )}
+                </div>
+                <div className="mt-2 flex items-center justify-center gap-1.5">
+                  <b className="text-[15px]">
+                    {profile.data.isMeleeChampion ? '🏆 ' : ''}
+                    {profile.data.nickname}
+                  </b>
+                  {profile.data.guildEmblemUrl ? (
+                    // eslint-disable-next-line @next/next/no-img-element
+                    <img src={profile.data.guildEmblemUrl} alt="" className="h-3.5 w-3.5 object-contain" style={{ imageRendering: 'pixelated' }} />
+                  ) : null}
+                  {profile.data.guildName ? (
+                    <span className="text-[11px] text-zinc-400">{profile.data.guildName}</span>
+                  ) : null}
+                </div>
+                <div className="mt-3 grid grid-cols-3 gap-1.5 text-center">
+                  {(
+                    [
+                      ['전투력', profile.data.combat.toLocaleString()],
+                      ['최고 강화', `+${profile.data.maxEnhance}`],
+                      ['합산 강화', `+${profile.data.sumEnhance.toLocaleString()}`],
+                    ] as const
+                  ).map(([label, v]) => (
+                    <div key={label} className="rounded-lg bg-zinc-50 px-1 py-1.5 dark:bg-zinc-800/60">
+                      <div className="text-[9px] text-zinc-400">{label}</div>
+                      <div className="text-[12px] font-bold tabular-nums">{v}</div>
+                    </div>
+                  ))}
+                </div>
+                {popupFlash ? <p className="mt-2 text-[11px] text-amber-600 dark:text-amber-400">{popupFlash}</p> : null}
+                <div className="mt-3 grid grid-cols-2 gap-1.5">
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setProfile(null);
+                      if (profile.data?.publicCode) router.push(`/u/${profile.data.publicCode}?s=${serverIdRef.current}`);
+                    }}
+                    className="rounded-lg bg-zinc-100 py-2 text-[12px] font-bold dark:bg-zinc-800"
+                  >
+                    프로필 보기
+                  </button>
+                  {!profile.data.isMe ? (
+                    <button
+                      type="button"
+                      disabled={profile.data.friendStatus !== null}
+                      onClick={() => {
+                        void sendRequestAction(profile.data!.userId).then((r) => {
+                          setPopupFlash(r.status === 'success' ? '친구 요청을 보냈어요' : '요청에 실패했어요');
+                          if (r.status === 'success')
+                            setProfile((prev) =>
+                              prev?.data ? { ...prev, data: { ...prev.data, friendStatus: 'pending' } } : prev,
+                            );
+                        });
+                      }}
+                      className="rounded-lg bg-amber-500 py-2 text-[12px] font-bold text-white disabled:opacity-50"
+                    >
+                      {profile.data.friendStatus === 'accepted'
+                        ? '친구 ✓'
+                        : profile.data.friendStatus === 'pending'
+                          ? '요청됨'
+                          : '친구 추가'}
+                    </button>
+                  ) : (
+                    <span />
+                  )}
+                  {!profile.data.isMe ? (
+                    <button
+                      type="button"
+                      onClick={() => {
+                        toggleBlock(profile.data!.userId);
+                        setPopupFlash(blocked.has(profile.data!.userId) ? '차단을 해제했어요' : '이 기기에서 메시지를 숨겨요');
+                      }}
+                      className="rounded-lg bg-zinc-100 py-2 text-[12px] font-bold text-zinc-600 dark:bg-zinc-800 dark:text-zinc-300"
+                    >
+                      {blocked.has(profile.data.userId) ? '차단 해제' : '차단'}
+                    </button>
+                  ) : null}
+                  <button
+                    type="button"
+                    onClick={() => setProfile(null)}
+                    className="rounded-lg bg-zinc-100 py-2 text-[12px] font-bold text-zinc-500 dark:bg-zinc-800 dark:text-zinc-400"
+                  >
+                    닫기
+                  </button>
+                </div>
+              </>
+            )}
+          </div>
+        </div>
+      ) : null}
+
+      {/* 신고 확인 팝업 */}
+      {reportTarget ? (
+        <div
+          role="dialog"
+          aria-modal="true"
+          aria-label="메시지 신고"
+          className="fixed inset-0 z-40 flex items-center justify-center bg-black/60 p-6 backdrop-blur-sm"
+          onClick={() => setReportTarget(null)}
+        >
+          <div className="w-full max-w-[280px] rounded-2xl bg-white p-4 dark:bg-zinc-900" onClick={(e) => e.stopPropagation()}>
+            <h3 className="text-[13px] font-bold">이 메시지를 신고할까요?</h3>
+            <p className="mt-2 rounded-lg bg-zinc-50 px-3 py-2 text-[12px] text-zinc-600 dark:bg-zinc-800/60 dark:text-zinc-300">
+              <b>{reportTarget.nickname}</b> · {reportTarget.body.slice(0, 60)}
+            </p>
+            <p className="mt-2 text-[10.5px] leading-relaxed text-zinc-400">
+              신고가 누적되면 메시지가 자동으로 숨겨지고 운영자가 확인합니다.
+            </p>
+            <div className="mt-3 grid grid-cols-2 gap-1.5">
+              <button
+                type="button"
+                onClick={() => setReportTarget(null)}
+                className="rounded-lg bg-zinc-100 py-2 text-[12px] font-bold text-zinc-500 dark:bg-zinc-800 dark:text-zinc-400"
+              >
+                취소
+              </button>
+              <button
+                type="button"
+                onClick={confirmReport}
+                className="rounded-lg bg-red-500 py-2 text-[12px] font-bold text-white"
+              >
+                신고
+              </button>
             </div>
           </div>
         </div>

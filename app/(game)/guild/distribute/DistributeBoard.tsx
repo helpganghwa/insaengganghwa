@@ -8,6 +8,7 @@ import { useDiamond } from '@/components/DiamondContext';
 
 import { distributeTaxManualAction } from '../actions';
 import { guildErrMsg } from '../errors-msg';
+import { ZoomSafeInput } from '@/components/ui/ZoomSafeField';
 
 type Role = 'leader' | 'vice' | 'member';
 type Member = { userId: string; nickname: string; role: Role };
@@ -123,12 +124,13 @@ export function DistributeBoard({
               </div>
               <div className="flex shrink-0 items-center gap-1">
                 <span className="text-[12px] text-zinc-400">💎</span>
-                <input
+                <ZoomSafeInput
                   inputMode="numeric"
                   value={amounts[m.userId] ?? ''}
                   onChange={(e) => setAmt(m.userId, e.target.value)}
                   placeholder="0"
-                  className={`w-20 rounded-lg border bg-white px-2 py-1.5 text-right text-base tabular-nums outline-none focus:border-zinc-400 dark:bg-zinc-900 ${
+                  wrapClassName="w-20 shrink-0 h-[31px]"
+                  className={`rounded-lg border bg-white px-2 text-right tabular-nums outline-none focus:border-zinc-400 dark:bg-zinc-900 ${
                     amt > 0
                       ? 'border-amber-400 dark:border-amber-500/60'
                       : 'border-zinc-300 dark:border-zinc-700'

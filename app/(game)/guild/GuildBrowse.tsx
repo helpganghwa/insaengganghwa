@@ -9,6 +9,7 @@ import { useResourceToast } from '@/components/ResourceToast';
 import { searchGuildsAction, joinGuildAction } from './actions';
 import { guildErrMsg } from './errors-msg';
 import { GuildList, type GuildRow } from './GuildList';
+import { ZoomSafeInput } from '@/components/ui/ZoomSafeField';
 
 /** 랭킹 정렬 지표 — /guild/ranking 페이지와 동일 3종. 클라 전환(각 지표별 서버측 top-N). */
 type RankSort = 'level' | 'combat' | 'zones';
@@ -113,12 +114,13 @@ export function GuildBrowse({
         ) : (
           <>
             <div className="flex gap-2">
-              <input
+              <ZoomSafeInput
                 value={q}
                 onChange={(e) => setQ(e.target.value)}
                 onKeyDown={(e) => e.key === 'Enter' && search()}
                 placeholder="길드 이름 검색"
-                className="min-w-0 flex-1 rounded-lg border border-zinc-300 bg-white px-3 py-2 text-base dark:border-zinc-700 dark:bg-zinc-900"
+                wrapClassName="h-9 min-w-0 flex-1"
+                className="rounded-lg border border-zinc-300 bg-white px-3 dark:border-zinc-700 dark:bg-zinc-900"
               />
               <button
                 type="button"

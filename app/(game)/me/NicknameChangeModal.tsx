@@ -7,6 +7,7 @@ import { useRouter } from 'next/navigation';
 import { NICKNAME_CHANGE_COST_DIAMOND } from '@/lib/game/balance';
 import { NICKNAME_MAX_LEN, NICKNAME_MIN_LEN, nicknameLen, validateNickname } from '@/lib/game/nickname';
 import { useResourceToast } from '@/components/ResourceToast';
+import { ZoomSafeInput } from '@/components/ui/ZoomSafeField';
 
 import { changeNicknameAction } from './actions';
 
@@ -92,7 +93,7 @@ export function NicknameChangeModal({
 
         {/* IME composition 중 자모 분리(ㄱ·ㅏ)를 onChange에서 strip하지 않음 — 한글 입력 보존. */}
         {/* 검증은 변경확인(submit) 시 validateNickname()이 수행. */}
-        <input
+        <ZoomSafeInput
           value={next}
           onChange={(e) => {
             setNext(e.target.value);
@@ -101,7 +102,8 @@ export function NicknameChangeModal({
           // 자모 합성 여유로 약간 크게(10*2=20), 실제 한도는 validateNickname.
           maxLength={NICKNAME_MAX_LEN * 2}
           placeholder={`${NICKNAME_MIN_LEN}~${NICKNAME_MAX_LEN}자 (한글·영문·숫자)`}
-          className="mt-3 w-full rounded-md border border-zinc-300 bg-transparent px-2.5 py-2 text-base dark:border-zinc-700"
+          wrapClassName="mt-3 h-9 w-full"
+          className="rounded-md border border-zinc-300 bg-transparent px-2.5 dark:border-zinc-700"
           autoFocus
         />
         <p className="mt-1 text-right text-[10px] text-zinc-500 tabular-nums">

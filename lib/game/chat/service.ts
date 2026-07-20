@@ -7,6 +7,7 @@ import { chatMessages, chatReports } from '@/lib/db/schema/chat';
 import { profiles } from '@/lib/db/schema/profiles';
 import { characters } from '@/lib/db/schema/server';
 import { userProfiles } from '@/lib/db/schema/avatar';
+import { meleeBattles } from '@/lib/db/schema/melee';
 import { systemMode } from '@/lib/db/schema/ops';
 import { getGuildBriefsByUsers } from '@/lib/game/guild/badge';
 import { parseFaceBox } from '@/components/faceCrop';
@@ -28,9 +29,23 @@ export type ChatMessageDto = {
   /** 얼굴 크롭 박스(검수 산출) — 헤더/친구 썸네일과 동일 크롭. */
   faceBox: { cx: number; cy: number; h: number } | null;
   guildName: string | null;
+  guildEmblemUrl: string | null;
+  /** 현재(가장 최근) 대난투 우승자 — 닉네임 앞 🏆 표시. */
+  isMeleeChampion: boolean;
   body: string;
   createdAt: string; // ISO
 };
+
+/** 가장 최근 대난투 우승자(다음 대난투 확정 전까지 '현재 1등'). */
+export async function currentMeleeChampion(serverId: number): Promise<string | null> {
+  const [row] = await db
+    .select({ uid: meleeBattles.championUserId })
+    .from(meleeBattles)
+    .where(and(eq(meleeBattles.serverId, serverId), sql`${meleeBattles.championUserId} is not null`))
+    .orderBy(desc(meleeBattles.battleDate))
+    .limit(1);
+  return row?.uid ?? null;
+}
 
 /** 채팅 킬스위치(system_mode key='chat') — 행 없거나 live면 ON. */
 export async function isChatEnabled(): Promise<boolean> {
@@ -46,10 +61,10 @@ export async function isChatEnabled(): Promise<boolean> {
 async function displayFields(
   userIds: string[],
   serverId: number,
-): Promise<Map<string, { nickname: string; publicCode: string | null; avatar: string | null; faceBox: { cx: number; cy: number; h: number } | null; guildName: string | null }>> {
+): Promise<Map<string, { nickname: string; publicCode: string | null; avatar: string | null; faceBox: { cx: number; cy: number; h: number } | null; guildName: string | null; guildEmblemUrl: string | null; isMeleeChampion: boolean }>> {
   if (userIds.length === 0) return new Map();
   const uniq = [...new Set(userIds)];
-  const [rows, guilds] = await Promise.all([
+  const [rows, guilds, champion] = await Promise.all([
     db
       .select({
         userId: characters.userId,
@@ -63,6 +78,7 @@ async function displayFields(
       .leftJoin(userProfiles, eq(userProfiles.id, characters.activeProfileId))
       .where(and(eq(characters.serverId, serverId), inArray(characters.userId, uniq))),
     getGuildBriefsByUsers(uniq, serverId).catch(() => new Map<string, { name: string }>()),
+    currentMeleeChampion(serverId).catch(() => null),
   ]);
   const m = new Map();
   for (const r of rows) {
@@ -73,6 +89,8 @@ async function displayFields(
       avatar: rot.south ?? Object.values(rot)[0] ?? null,
       faceBox: parseFaceBox((r.options as Record<string, unknown> | null)?.faceBox),
       guildName: (guilds.get(r.userId) as { name?: string } | undefined)?.name ?? null,
+      guildEmblemUrl: (guilds.get(r.userId) as { emblemUrl?: string | null } | undefined)?.emblemUrl ?? null,
+      isMeleeChampion: r.userId === champion,
     });
   }
   return m;
@@ -104,6 +122,8 @@ export async function getRecentChat(serverId: number, limit = 100): Promise<Chat
         avatar: f?.avatar ?? null,
         faceBox: f?.faceBox ?? null,
         guildName: f?.guildName ?? null,
+        guildEmblemUrl: f?.guildEmblemUrl ?? null,
+        isMeleeChampion: f?.isMeleeChampion ?? false,
         body: r.body,
         createdAt: r.createdAt.toISOString(),
       };
@@ -130,6 +150,8 @@ export async function persistAndBroadcast(
     avatar: f?.avatar ?? null,
     faceBox: f?.faceBox ?? null,
     guildName: f?.guildName ?? null,
+    guildEmblemUrl: f?.guildEmblemUrl ?? null,
+    isMeleeChampion: f?.isMeleeChampion ?? false,
     body,
     createdAt: row!.createdAt.toISOString(),
   };
