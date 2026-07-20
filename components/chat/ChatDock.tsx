@@ -456,6 +456,14 @@ export function ChatDock() {
       /* ignore */
     }
   };
+  // GNB 탭(같은 페이지 재탭 포함) → 패널 최소화. 라우트 변경은 pathname effect가 커버하지만
+  // 같은 경로 재탭은 pathname이 안 바뀌어 여기서 처리(2026-07-22 피드백).
+  useEffect(() => {
+    const onGnb = () => setOpen(false);
+    window.addEventListener('ig:gnb-nav', onGnb);
+    return () => window.removeEventListener('ig:gnb-nav', onGnb);
+  }, []);
+
   useEffect(() => {
     // 콜드 오픈(알림 → 새 창/전체 내비게이션) — 첫 마운트의 주소로 판정.
     if (location.search.includes('chat=')) openFromPushRef.current(location.href);
