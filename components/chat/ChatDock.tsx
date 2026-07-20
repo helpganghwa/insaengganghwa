@@ -25,6 +25,8 @@ const COOLDOWN_S = 5;
 const DOCK_H = '42px';
 const BLOCK_KEY = 'ig:chat-blocked';
 const COLLAPSE_KEY = 'ig:chat-collapsed';
+// '프로필 보기' 이동 후 뒤로가기 복원 — 값=팝업 대상 userId(세션 한정, 마운트 시 1회 소비).
+const RESTORE_KEY = 'ig:chat-restore';
 
 type MiniProfile = {
   userId: string;
@@ -118,8 +120,14 @@ export function ChatDock() {
     });
   };
 
-  // 라우트 이동 → 패널 자동 최소화(2026-07-20 피드백 6).
+  // 라우트 이동 → 패널 자동 최소화(2026-07-20 피드백 6). 마운트 첫 실행은 스킵 —
+  // 아래 RESTORE_KEY 복원(뒤로가기)이 연 패널을 닫지 않도록.
+  const routeEffectRanRef = useRef(false);
   useEffect(() => {
+    if (!routeEffectRanRef.current) {
+      routeEffectRanRef.current = true;
+      return;
+    }
     setOpen(false);
     setProfile(null);
     setReportTarget(null);
@@ -283,6 +291,20 @@ export function ChatDock() {
     if (el) el.scrollTop = el.scrollHeight;
     needInitialScrollRef.current = false;
   }, [open, messages]);
+
+  // '프로필 보기'로 나갔다 돌아온 마운트 — 채팅 패널 + 유저 팝업 복원(1회 소비).
+  useEffect(() => {
+    try {
+      const uid = sessionStorage.getItem(RESTORE_KEY);
+      if (!uid) return;
+      sessionStorage.removeItem(RESTORE_KEY);
+      openPanel();
+      openProfile(uid);
+    } catch {
+      /* ignore */
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   const flashError = (msg: string) => {
     setError(msg);
@@ -632,123 +654,127 @@ export function ChatDock() {
           onClick={() => setProfile(null)}
         >
           <div
-            className="w-full max-w-[300px] overflow-hidden rounded-2xl bg-white dark:bg-zinc-900"
+            className="w-full max-w-[320px] overflow-hidden rounded-2xl bg-white dark:bg-zinc-900"
             onClick={(e) => e.stopPropagation()}
           >
             {!profile.data ? (
               <p className="py-10 text-center text-[12px] text-zinc-400">불러오는 중…</p>
             ) : (
-              <>
-                {/* 자랑 카드식 2분할 — 왼쪽 전신 아바타 / 오른쪽 정보 */}
-                <div className="flex items-stretch gap-3 bg-gradient-to-br from-amber-50 via-white to-zinc-50 px-4 pb-3 pt-4 dark:from-amber-500/[0.09] dark:via-zinc-900 dark:to-zinc-900">
-                  <div className="flex w-[96px] shrink-0 items-end justify-center">
-                    {profile.data.avatar ? (
-                      // eslint-disable-next-line @next/next/no-img-element
-                      <img
-                        src={profile.data.avatar}
-                        alt=""
-                        className="max-h-[120px] w-auto"
-                        style={{ imageRendering: 'pixelated' }}
-                      />
-                    ) : (
-                      <span className="pb-4 text-5xl">👤</span>
-                    )}
-                  </div>
-                  <div className="flex min-w-0 flex-1 flex-col justify-center">
-                    <b className="truncate text-[15px] leading-tight">
-                      {profile.data.isMeleeChampion ? '🏆 ' : ''}
-                      {profile.data.nickname}
-                    </b>
-                    {profile.data.guildName ? (
-                      <span className="mt-0.5 flex items-center gap-1 text-[11px] text-zinc-400">
-                        {profile.data.guildEmblemUrl ? (
-                          // eslint-disable-next-line @next/next/no-img-element
-                          <img
-                            src={profile.data.guildEmblemUrl}
-                            alt=""
-                            className="h-3.5 w-3.5 shrink-0 object-contain"
-                            style={{ imageRendering: 'pixelated' }}
-                          />
-                        ) : null}
-                        <span className="truncate">{profile.data.guildName}</span>
-                      </span>
-                    ) : null}
-                    <div className="mt-2.5 space-y-1 border-t border-zinc-200/70 pt-2 dark:border-zinc-700/50">
-                      {(
-                        [
-                          ['전투력', profile.data.combat.toLocaleString()],
-                          ['최고 강화', `+${profile.data.maxEnhance}`],
-                          ['합산 강화', `+${profile.data.sumEnhance.toLocaleString()}`],
-                        ] as const
-                      ).map(([label, v]) => (
-                        <div key={label} className="flex items-baseline justify-between gap-2">
-                          <span className="text-[10px] text-zinc-400">{label}</span>
-                          <span className="text-[12.5px] font-bold tabular-nums">{v}</span>
-                        </div>
-                      ))}
-                    </div>
-                  </div>
-                </div>
-                {popupFlash ? (
-                  <p className="px-4 pt-2 text-center text-[11px] text-amber-600 dark:text-amber-400">{popupFlash}</p>
-                ) : null}
-                {/* 상호작용 버튼 */}
-                <div className="grid grid-cols-2 gap-1.5 p-3">
-                  <button
-                    type="button"
-                    onClick={() => {
-                      setProfile(null);
-                      if (profile.data?.publicCode) router.push(`/u/${profile.data.publicCode}?s=${serverIdRef.current}`);
-                    }}
-                    className="rounded-lg bg-zinc-100 py-2 text-[12px] font-bold dark:bg-zinc-800"
-                  >
-                    프로필 보기
-                  </button>
-                  {!profile.data.isMe ? (
-                    <button
-                      type="button"
-                      disabled={profile.data.friendStatus !== null}
-                      onClick={() => {
-                        void sendRequestAction(profile.data!.userId).then((r) => {
-                          setPopupFlash(r.status === 'success' ? '친구 요청을 보냈어요' : '요청에 실패했어요');
-                          if (r.status === 'success')
-                            setProfile((prev) =>
-                              prev?.data ? { ...prev, data: { ...prev.data, friendStatus: 'pending' } } : prev,
-                            );
-                        });
-                      }}
-                      className="rounded-lg bg-amber-500 py-2 text-[12px] font-bold text-white disabled:opacity-50"
-                    >
-                      {profile.data.friendStatus === 'accepted'
-                        ? '친구 ✓'
-                        : profile.data.friendStatus === 'pending'
-                          ? '요청됨'
-                          : '친구 추가'}
-                    </button>
+              /* 자랑 카드식 2분할 — 왼쪽 전신 아바타(크게) / 오른쪽 정보+액션 */
+              <div className="flex items-stretch gap-3 bg-gradient-to-br from-amber-50 via-white to-zinc-50 p-4 dark:from-amber-500/[0.09] dark:via-zinc-900 dark:to-zinc-900">
+                <div className="flex w-[128px] shrink-0 items-end justify-center">
+                  {profile.data.avatar ? (
+                    // eslint-disable-next-line @next/next/no-img-element
+                    <img
+                      src={profile.data.avatar}
+                      alt=""
+                      className="max-h-[176px] w-auto"
+                      style={{ imageRendering: 'pixelated' }}
+                    />
                   ) : (
-                    <span />
+                    <span className="pb-6 text-6xl">👤</span>
                   )}
-                  {!profile.data.isMe ? (
+                </div>
+                <div className="flex min-w-0 flex-1 flex-col">
+                  <b className="truncate text-[15px] leading-tight">
+                    {profile.data.isMeleeChampion ? '🏆 ' : ''}
+                    {profile.data.nickname}
+                  </b>
+                  {profile.data.guildName ? (
+                    <span className="mt-0.5 flex items-center gap-1 text-[11px] text-zinc-400">
+                      {profile.data.guildEmblemUrl ? (
+                        // eslint-disable-next-line @next/next/no-img-element
+                        <img
+                          src={profile.data.guildEmblemUrl}
+                          alt=""
+                          className="h-3.5 w-3.5 shrink-0 object-contain"
+                          style={{ imageRendering: 'pixelated' }}
+                        />
+                      ) : null}
+                      <span className="truncate">{profile.data.guildName}</span>
+                    </span>
+                  ) : null}
+                  <div className="mt-2 space-y-1 border-t border-zinc-200/70 pt-2 dark:border-zinc-700/50">
+                    {(
+                      [
+                        ['전투력', profile.data.combat.toLocaleString()],
+                        ['최고 강화', `+${profile.data.maxEnhance}`],
+                        ['합산 강화', `+${profile.data.sumEnhance.toLocaleString()}`],
+                      ] as const
+                    ).map(([label, v]) => (
+                      <div key={label} className="flex items-baseline justify-between gap-2">
+                        <span className="text-[10px] text-zinc-400">{label}</span>
+                        <span className="text-[12.5px] font-bold tabular-nums">{v}</span>
+                      </div>
+                    ))}
+                  </div>
+                  {popupFlash ? (
+                    <p className="mt-1.5 text-[10.5px] text-amber-600 dark:text-amber-400">{popupFlash}</p>
+                  ) : null}
+                  {/* 액션 — isMe 여부와 무관하게 빈 칸 없이 채워지는 2열 */}
+                  <div className="mt-auto grid grid-cols-2 gap-1.5 pt-3">
+                    {!profile.data.isMe ? (
+                      <>
+                        <button
+                          type="button"
+                          disabled={profile.data.friendStatus !== null}
+                          onClick={() => {
+                            void sendRequestAction(profile.data!.userId).then((r) => {
+                              setPopupFlash(r.status === 'success' ? '친구 요청을 보냈어요' : '요청에 실패했어요');
+                              if (r.status === 'success')
+                                setProfile((prev) =>
+                                  prev?.data ? { ...prev, data: { ...prev.data, friendStatus: 'pending' } } : prev,
+                                );
+                            });
+                          }}
+                          className="rounded-lg bg-amber-500 py-1.5 text-[11.5px] font-bold text-white disabled:opacity-50"
+                        >
+                          {profile.data.friendStatus === 'accepted'
+                            ? '친구 ✓'
+                            : profile.data.friendStatus === 'pending'
+                              ? '요청됨'
+                              : '친구 추가'}
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => {
+                            toggleBlock(profile.data!.userId, profile.data!.nickname);
+                            setPopupFlash(blocked.has(profile.data!.userId) ? '차단을 해제했어요' : '이 기기에서 메시지를 숨겨요');
+                          }}
+                          className="rounded-lg bg-zinc-100 py-1.5 text-[11.5px] font-bold text-zinc-600 dark:bg-zinc-800 dark:text-zinc-300"
+                        >
+                          {blocked.has(profile.data.userId) ? '차단 해제' : '차단'}
+                        </button>
+                      </>
+                    ) : null}
                     <button
                       type="button"
                       onClick={() => {
-                        toggleBlock(profile.data!.userId, profile.data!.nickname);
-                        setPopupFlash(blocked.has(profile.data!.userId) ? '차단을 해제했어요' : '이 기기에서 메시지를 숨겨요');
+                        if (profile.data?.publicCode) {
+                          try {
+                            // 뒤로가기 복원 — 채팅 패널+이 팝업을 다시 연다(ChatDock 마운트 시 소비).
+                            sessionStorage.setItem(RESTORE_KEY, profile.data.userId);
+                          } catch {
+                            /* ignore */
+                          }
+                          router.push(`/u/${profile.data.publicCode}?s=${serverIdRef.current}`);
+                        }
+                        setProfile(null);
                       }}
-                      className="rounded-lg bg-zinc-100 py-2 text-[12px] font-bold text-zinc-600 dark:bg-zinc-800 dark:text-zinc-300"
+                      className="rounded-lg bg-zinc-100 py-1.5 text-[11.5px] font-bold dark:bg-zinc-800"
                     >
-                      {blocked.has(profile.data.userId) ? '차단 해제' : '차단'}
+                      프로필 보기
                     </button>
-                  ) : null}
-                  <button
-                    type="button"
-                    onClick={() => setProfile(null)}
-                    className="rounded-lg bg-zinc-100 py-2 text-[12px] font-bold text-zinc-500 dark:bg-zinc-800 dark:text-zinc-400"
-                  >
-                    닫기
-                  </button>
+                    <button
+                      type="button"
+                      onClick={() => setProfile(null)}
+                      className="rounded-lg bg-zinc-100 py-1.5 text-[11.5px] font-bold text-zinc-500 dark:bg-zinc-800 dark:text-zinc-400"
+                    >
+                      닫기
+                    </button>
+                  </div>
                 </div>
-              </>
+              </div>
             )}
           </div>
         </div>

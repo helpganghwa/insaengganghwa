@@ -1,5 +1,7 @@
 import 'server-only';
 
+import { after } from 'next/server';
+
 import { and, desc, eq, inArray, sql } from 'drizzle-orm';
 
 import { db } from '@/lib/db/client';
@@ -36,25 +38,40 @@ export type ChatMessageDto = {
   createdAt: string; // ISO
 };
 
-/** 가장 최근 대난투 우승자(다음 대난투 확정 전까지 '현재 1등'). */
+/** 가장 최근 대난투 우승자(다음 대난투 확정 전까지 '현재 1등').
+ * 하루 1회(9시) 바뀌는 값 — 인스턴스 60초 캐시로 전송·조회마다의 DB 왕복 제거. */
+const champCache = new Map<number, { uid: string | null; at: number }>();
+const CHAMP_TTL_MS = 60_000;
+
 export async function currentMeleeChampion(serverId: number): Promise<string | null> {
+  const cached = champCache.get(serverId);
+  if (cached && Date.now() - cached.at < CHAMP_TTL_MS) return cached.uid;
   const [row] = await db
     .select({ uid: meleeBattles.championUserId })
     .from(meleeBattles)
     .where(and(eq(meleeBattles.serverId, serverId), sql`${meleeBattles.championUserId} is not null`))
     .orderBy(desc(meleeBattles.battleDate))
     .limit(1);
-  return row?.uid ?? null;
+  const uid = row?.uid ?? null;
+  champCache.set(serverId, { uid, at: Date.now() });
+  return uid;
 }
 
-/** 채팅 킬스위치(system_mode key='chat') — 행 없거나 live면 ON. */
+/** 채팅 킬스위치(system_mode key='chat') — 행 없거나 live면 ON.
+ * 인스턴스 30초 캐시 — 전송·조회 핫패스에서 DB 왕복 제거(OFF 반영 최대 30초 지연 수용). */
+let enabledCache: { v: boolean; at: number } | null = null;
+const ENABLED_TTL_MS = 30_000;
+
 export async function isChatEnabled(): Promise<boolean> {
+  if (enabledCache && Date.now() - enabledCache.at < ENABLED_TTL_MS) return enabledCache.v;
   const [row] = await db
     .select({ mode: systemMode.mode })
     .from(systemMode)
     .where(eq(systemMode.key, 'chat'))
     .limit(1);
-  return !row || row.mode === 'live';
+  const v = !row || row.mode === 'live';
+  enabledCache = { v, at: Date.now() };
+  return v;
 }
 
 /** 유저 표시 필드 일괄 해석 — 닉/코드/아바타/길드. */
@@ -155,7 +172,7 @@ export async function persistAndBroadcast(
     body,
     createdAt: row!.createdAt.toISOString(),
   };
-  await broadcastChat(serverId, 'new', dto);
+  after(() => broadcastChat(serverId, 'new', dto));
   return dto;
 }
 
@@ -189,7 +206,7 @@ export async function reportChatMessage(
       .where(eq(chatReports.messageId, messageId));
     if (n >= 3) {
       await db.update(chatMessages).set({ hiddenAt: new Date() }).where(eq(chatMessages.id, messageId));
-      await broadcastChat(msg.serverId, 'hide', { id: String(messageId) });
+      after(() => broadcastChat(msg.serverId, 'hide', { id: String(messageId) }));
     }
   }
   return 'ok';
