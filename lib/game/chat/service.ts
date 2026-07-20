@@ -13,6 +13,7 @@ import { getGuildBriefsByUsers } from '@/lib/game/guild/badge';
 import { parseFaceBox } from '@/components/faceCrop';
 
 import { getWorldFeed, type WorldEventEntry } from '@/lib/game/world/event';
+import { getGuildActivityLog, type GuildLogEntry } from '@/lib/game/guild/activity-log';
 
 import { broadcastChat } from './realtime';
 
@@ -38,9 +39,30 @@ export type ChatMessageDto = {
   mentions: string[] | null;
   /** 시스템 라인(월드 이벤트) — 있으면 유저 필드는 빈 값, 렌더는 worldEventMessage. */
   sys?: WorldEventEntry;
+  /** 길드 시스템 라인(길드 활동 로그) — 길드 탭 전용, 렌더는 guildLogMessage. */
+  sysGuild?: GuildLogEntry;
   body: string;
   createdAt: string; // ISO
 };
+
+/** 길드 활동 로그 → 채팅 시스템 라인 DTO. */
+export function guildLogToChatDto(entry: GuildLogEntry): ChatMessageDto {
+  return {
+    id: `gsys-${entry.id}`,
+    userId: '',
+    nickname: '',
+    publicCode: null,
+    avatar: null,
+    faceBox: null,
+    guildName: null,
+    guildEmblemUrl: null,
+    isMeleeChampion: false,
+    mentions: null,
+    sysGuild: entry,
+    body: '',
+    createdAt: entry.createdAtIso,
+  };
+}
 
 /** 월드 이벤트 → 채팅 시스템 라인 DTO. id는 sys- 프리픽스(실메시지와 충돌 없음). */
 export function sysToChatDto(entry: WorldEventEntry): ChatMessageDto {
@@ -78,6 +100,20 @@ export async function currentMeleeChampion(serverId: number): Promise<string | n
   const uid = row?.uid ?? null;
   champCache.set(serverId, { uid, at: Date.now() });
   return uid;
+}
+
+/** 내 길드 채널 정보(0130) — 채팅 길드 탭·전송 검증용. 미가입=null. */
+export async function getMyGuildChannel(
+  userId: string,
+  serverId: number,
+): Promise<{ guildId: string; guildName: string } | null> {
+  const rows = await db.execute(sql`
+    select gm.guild_id::text as gid, g.name
+    from guild_members gm join guilds g on g.id = gm.guild_id
+    where gm.user_id = ${userId} and gm.server_id = ${serverId} limit 1
+  `);
+  const r = (rows as unknown as { gid: string; name: string }[])[0];
+  return r ? { guildId: r.gid, guildName: r.name } : null;
 }
 
 /** 채팅 킬스위치(system_mode key='chat') — 행 없거나 live면 ON.
@@ -137,8 +173,16 @@ async function displayFields(
 }
 
 /** 최근 메시지(오래된 → 최신 순, 숨김 제외). */
-export async function getRecentChat(serverId: number, limit = 100): Promise<ChatMessageDto[]> {
-  const [rows, worldFeed] = await Promise.all([
+export async function getRecentChat(
+  serverId: number,
+  limit = 100,
+  guildId: bigint | null = null,
+): Promise<ChatMessageDto[]> {
+  // 채널 필터 — 전체(guildId null)는 guild_id is null만, 길드는 해당 guild_id만.
+  const channelCond = guildId
+    ? eq(chatMessages.guildId, guildId)
+    : sql`${chatMessages.guildId} is null`;
+  const [rows, sysFeed] = await Promise.all([
     db
       .select({
         id: chatMessages.id,
@@ -148,11 +192,15 @@ export async function getRecentChat(serverId: number, limit = 100): Promise<Chat
         createdAt: chatMessages.createdAt,
       })
       .from(chatMessages)
-      .where(and(eq(chatMessages.serverId, serverId), sql`${chatMessages.hiddenAt} is null`))
+      .where(and(eq(chatMessages.serverId, serverId), channelCond, sql`${chatMessages.hiddenAt} is null`))
       .orderBy(desc(chatMessages.id))
       .limit(limit),
-    // 시스템 라인(월드 이벤트) 병합 — 30초 캐시 피드 재사용(실시간은 broadcast 'sys'가 커버).
-    limit > 1 ? getWorldFeed(serverId, 30).catch(() => []) : Promise.resolve([]),
+    // 시스템 라인 병합 — 전체=월드 피드(30s 캐시), 길드=길드 활동 로그. 실시간은 폴링(15s)이 커버.
+    limit > 1
+      ? guildId
+        ? getGuildActivityLog(guildId, serverId, 30).catch(() => [])
+        : getWorldFeed(serverId, 30).catch(() => [])
+      : Promise.resolve([]),
   ]);
   const fields = await displayFields(rows.map((r) => r.userId), serverId);
   const msgs = rows
@@ -174,13 +222,15 @@ export async function getRecentChat(serverId: number, limit = 100): Promise<Chat
         createdAt: r.createdAt.toISOString(),
       } satisfies ChatMessageDto;
     });
-  if (worldFeed.length === 0) return msgs;
+  if (sysFeed.length === 0) return msgs;
   // 채팅 표시 구간(가장 오래된 메시지 이후) 이벤트만 — 채팅이 없으면 최근 15건.
   const oldest = msgs[0]?.createdAt;
-  const sys = worldFeed
+  const toDto = guildId ? guildLogToChatDto : sysToChatDto;
+  const sys = (sysFeed as (WorldEventEntry | GuildLogEntry)[])
     .filter((e) => (oldest ? e.createdAtIso >= oldest : true))
     .slice(0, oldest ? undefined : 15)
-    .map(sysToChatDto);
+    // @ts-expect-error 두 피드 타입은 toDto가 guildId로 정확히 대응(런타임 안전).
+    .map(toDto);
   return [...msgs, ...sys].sort((a, b) => (a.createdAt < b.createdAt ? -1 : a.createdAt > b.createdAt ? 1 : 0));
 }
 
@@ -190,10 +240,11 @@ export async function persistAndBroadcast(
   serverId: number,
   body: string,
   mentions: string[] = [],
+  guildId: bigint | null = null,
 ): Promise<ChatMessageDto> {
   const [row] = await db
     .insert(chatMessages)
-    .values({ serverId, userId, body, mentions: mentions.length ? mentions : null })
+    .values({ serverId, userId, body, guildId, mentions: mentions.length ? mentions : null })
     .returning({ id: chatMessages.id, createdAt: chatMessages.createdAt });
   const fields = await displayFields([userId], serverId);
   const f = fields.get(userId);
@@ -213,16 +264,24 @@ export async function persistAndBroadcast(
   };
   // after() 사용 금지(2026-07-21 롤백) — 프로덕션에서 응답 후 콜백이 드롭돼 브로드캐스트가
   // 발사되지 않는 정황(실시간 미전달). 낙관 UI라 전송자 체감 지연 없음 — await로 보장.
-  await broadcastChat(serverId, 'new', dto);
+  await broadcastChat(serverId, 'new', dto, guildId);
   return dto;
 }
 
 /** 직전 내 메시지와 동일 본문인지(연속 도배 차단). */
-export async function isDuplicateOfLast(userId: string, serverId: number, body: string): Promise<boolean> {
+export async function isDuplicateOfLast(
+  userId: string,
+  serverId: number,
+  body: string,
+  guildId: bigint | null = null,
+): Promise<boolean> {
+  const channelCond = guildId
+    ? eq(chatMessages.guildId, guildId)
+    : sql`${chatMessages.guildId} is null`;
   const [last] = await db
     .select({ body: chatMessages.body })
     .from(chatMessages)
-    .where(and(eq(chatMessages.serverId, serverId), eq(chatMessages.userId, userId)))
+    .where(and(eq(chatMessages.serverId, serverId), eq(chatMessages.userId, userId), channelCond))
     .orderBy(desc(chatMessages.id))
     .limit(1);
   return last?.body === body;
@@ -234,7 +293,7 @@ export async function reportChatMessage(
   messageId: bigint,
 ): Promise<'ok' | 'not_found'> {
   const [msg] = await db
-    .select({ id: chatMessages.id, serverId: chatMessages.serverId, hiddenAt: chatMessages.hiddenAt, userId: chatMessages.userId })
+    .select({ id: chatMessages.id, serverId: chatMessages.serverId, guildId: chatMessages.guildId, hiddenAt: chatMessages.hiddenAt, userId: chatMessages.userId })
     .from(chatMessages)
     .where(eq(chatMessages.id, messageId))
     .limit(1);
@@ -247,7 +306,7 @@ export async function reportChatMessage(
       .where(eq(chatReports.messageId, messageId));
     if (n >= 3) {
       await db.update(chatMessages).set({ hiddenAt: new Date() }).where(eq(chatMessages.id, messageId));
-      await broadcastChat(msg.serverId, 'hide', { id: String(messageId) });
+      await broadcastChat(msg.serverId, 'hide', { id: String(messageId) }, msg.guildId);
     }
   }
   return 'ok';

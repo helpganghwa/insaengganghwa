@@ -14,6 +14,7 @@ import { characters } from '@/lib/db/schema/server';
 import { sendPushToUser } from '@/lib/push/send';
 import { CHAT_MAX_LEN, checkAndFilterChatBody } from '@/lib/game/chat/filter';
 import {
+  getMyGuildChannel,
   isChatEnabled,
   isDuplicateOfLast,
   persistAndBroadcast,
@@ -28,7 +29,7 @@ export type SendChatResult =
   | { status: 'ok'; message: ChatMessageDto }
   | { status: 'error'; message: string };
 
-export async function sendChat(raw: string): Promise<SendChatResult> {
+export async function sendChat(raw: string, channel: 'all' | 'guild' = 'all'): Promise<SendChatResult> {
   const userId = await getSessionUserId();
   if (!userId) return { status: 'error', message: '로그인이 필요합니다.' };
   const __b = await actionBlock(); // 밴·점검 캐시 — 저비용.
@@ -48,6 +49,13 @@ export async function sendChat(raw: string): Promise<SendChatResult> {
   const body = check.body;
 
   const serverId = await getActiveServerId(); // 쿠키 — 왕복 없음.
+  // 길드 채널 — 소속 검증(미가입이면 전송 불가). 전체 채널은 guildId null.
+  let guildId: bigint | null = null;
+  if (channel === 'guild') {
+    const g = await getMyGuildChannel(userId, serverId);
+    if (!g) return { status: 'error', message: '길드에 가입해야 이용할 수 있어요.' };
+    guildId = BigInt(g.guildId);
+  }
   // 독립 검증 병렬화 — 순차 5왕복 → 1왕복 시간. 킬스위치/뮤트 탈락 시 레이트 토큰이
   // 소모되는 부작용은 무해(어차피 전송 불가 상태)로 수용.
   const [enabled, [p], cooldownHit, burstHit, duplicate] = await Promise.all([
@@ -59,7 +67,7 @@ export async function sendChat(raw: string): Promise<SendChatResult> {
       .limit(1),
     rateLimited(userId, 'chatSend'),
     rateLimited(userId, 'chatBurst'),
-    isDuplicateOfLast(userId, serverId, body),
+    isDuplicateOfLast(userId, serverId, body, guildId),
   ]);
   if (!enabled) return { status: 'error', message: '채팅이 잠시 닫혀 있습니다.' };
   // 채팅 금지(운영 제재) — 만료 지나면 자동 해제 간주. 남은 기간 안내(피드백 2026-07-21).
@@ -94,13 +102,13 @@ export async function sendChat(raw: string): Promise<SendChatResult> {
     }
   }
 
-  const message = await persistAndBroadcast(userId, serverId, body, mentionTargets.map((t) => t.nickname));
+  const message = await persistAndBroadcast(userId, serverId, body, mentionTargets.map((t) => t.nickname), guildId);
 
   if (mentionTargets.length > 0) {
     await Promise.all(
       mentionTargets.slice(0, 3).map((t) =>
         sendPushToUser(t.uid, {
-          title: `💬 ${message.nickname}님이 채팅에서 언급했어요`,
+          title: `💬 ${message.nickname}님이 ${channel === 'guild' ? '길드 ' : ''}채팅에서 언급했어요`,
           body: body.slice(0, 60),
           url: '/',
           tag: 'chat-mention',
