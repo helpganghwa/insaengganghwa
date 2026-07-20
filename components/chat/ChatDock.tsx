@@ -61,6 +61,8 @@ export function ChatDock() {
   const [showBlockList, setShowBlockList] = useState(false);
   // 미니바 접힘(채팅 안 보기) — 이모지만 남김. 기기 저장으로 유지.
   const [collapsed, setCollapsed] = useState(false);
+  // 접힘 중 도착한 새 메시지 — 이모지 버튼에 점 배지, 펼치면 해제.
+  const [collapsedUnseen, setCollapsedUnseen] = useState(false);
   // 팝업 — 미니 프로필(로딩=userId만) / 신고 확인.
   const [profile, setProfile] = useState<{ userId: string; data: MiniProfile } | null>(null);
   const [reportTarget, setReportTarget] = useState<ChatMessageDto | null>(null);
@@ -96,6 +98,7 @@ export function ChatDock() {
   }, []);
 
   const toggleCollapsed = () => {
+    setCollapsedUnseen(false);
     setCollapsed((c) => {
       const next = !c;
       try {
@@ -133,6 +136,16 @@ export function ChatDock() {
       root.style.removeProperty('--chat-dock-h');
     };
   }, [visible]);
+
+  // 접힘 중 새 메시지 감지 — 최초 로드(prev null)는 제외, 차단 유저 메시지도 제외.
+  const prevLatestIdRef = useRef<string | null>(null);
+  useEffect(() => {
+    const id = latest && !blocked.has(latest.userId) ? latest.id : null;
+    if (id && prevLatestIdRef.current && id !== prevLatestIdRef.current && collapsed) {
+      setCollapsedUnseen(true);
+    }
+    if (id) prevLatestIdRef.current = id;
+  }, [latest, collapsed, blocked]);
 
   const scrollToBottom = useCallback((smooth = false) => {
     const el = listRef.current;
@@ -428,9 +441,15 @@ export function ChatDock() {
                 type="button"
                 onClick={toggleCollapsed}
                 aria-label="채팅 펼치기"
-                className="pointer-events-auto flex h-[34px] w-[34px] items-center justify-center rounded-full border border-zinc-200/70 bg-white/70 backdrop-blur-md dark:border-zinc-700/60 dark:bg-zinc-900/70"
+                className="pointer-events-auto relative flex h-[34px] w-[34px] items-center justify-center rounded-full border border-zinc-200/70 bg-white/70 backdrop-blur-md dark:border-zinc-700/60 dark:bg-zinc-900/70"
               >
                 <span aria-hidden className="text-[12px]">💬</span>
+                {collapsedUnseen ? (
+                  <span
+                    aria-hidden
+                    className="absolute right-0 top-0 h-2 w-2 rounded-full bg-amber-500 ring-2 ring-white dark:ring-zinc-900"
+                  />
+                ) : null}
               </button>
             ) : (
               <div className="pointer-events-auto flex h-[34px] w-full items-center rounded-full border border-zinc-200/70 bg-white/70 pl-1.5 pr-3 backdrop-blur-md dark:border-zinc-700/60 dark:bg-zinc-900/70">
@@ -829,13 +848,26 @@ export function ChatDock() {
             <p className="mt-2 text-[10.5px] leading-relaxed text-zinc-400">
               신고가 누적되면 메시지가 자동으로 숨겨집니다.
             </p>
-            <div className="mt-3 grid grid-cols-2 gap-1.5">
+            <div className="mt-3 grid grid-cols-3 gap-1.5">
               <button
                 type="button"
                 onClick={() => setReportTarget(null)}
                 className="rounded-lg bg-zinc-100 py-2 text-[12px] font-bold text-zinc-500 dark:bg-zinc-800 dark:text-zinc-400"
               >
                 취소
+              </button>
+              <button
+                type="button"
+                onClick={() => {
+                  const m = reportTarget;
+                  if (!m) return;
+                  toggleBlock(m.userId, m.nickname);
+                  setReportTarget(null);
+                  flashError('차단했어요. 차단 목록에서 해제할 수 있어요.');
+                }}
+                className="rounded-lg bg-zinc-100 py-2 text-[12px] font-bold text-zinc-600 dark:bg-zinc-800 dark:text-zinc-300"
+              >
+                차단
               </button>
               <button
                 type="button"

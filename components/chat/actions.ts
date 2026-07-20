@@ -57,9 +57,17 @@ export async function sendChat(raw: string): Promise<SendChatResult> {
     isDuplicateOfLast(userId, serverId, check.body),
   ]);
   if (!enabled) return { status: 'error', message: '채팅이 잠시 닫혀 있습니다.' };
-  // 채팅 금지(운영 제재) — 만료 지나면 자동 해제 간주.
-  if (p?.mutedUntil && p.mutedUntil > new Date())
-    return { status: 'error', message: '채팅 이용이 제한된 상태입니다.' };
+  // 채팅 금지(운영 제재) — 만료 지나면 자동 해제 간주. 남은 기간 안내(피드백 2026-07-21).
+  if (p?.mutedUntil && p.mutedUntil > new Date()) {
+    const ms = p.mutedUntil.getTime() - Date.now();
+    const left =
+      ms >= 86_400_000
+        ? `${Math.ceil(ms / 86_400_000)}일`
+        : ms >= 3_600_000
+          ? `${Math.ceil(ms / 3_600_000)}시간`
+          : `${Math.max(1, Math.ceil(ms / 60_000))}분`;
+    return { status: 'error', message: `채팅 이용이 제한된 상태입니다. (해제까지 약 ${left})` };
+  }
   if (cooldownHit) return { status: 'error', message: '잠시 후 다시 보낼 수 있어요. (5초)' };
   if (burstHit) return { status: 'error', message: '메시지를 너무 자주 보내고 있어요. 잠시 쉬어주세요.' };
   if (duplicate) return { status: 'error', message: '같은 내용을 연속으로 보낼 수 없어요.' };
