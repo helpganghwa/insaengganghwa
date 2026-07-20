@@ -15,18 +15,39 @@ export function parseFaceBox(v: unknown): FaceBox | null {
   return { cx, cy, h };
 }
 
-/** 얼굴이 썸네일에 들어오도록 transform-origin·scale 산출. 머리가 박스의 ~절반 차지하도록. */
+/**
+ * 얼굴이 썸네일 (50%, 44%)에 오도록 transform-origin을 역산(2026-07-21 수식 교체).
+ * 이전 수식은 origin에 박스 좌표를 그대로 꽂아 "박스=머리 꼭대기"(옛 실루엣 감지)일 때만
+ * 우연히 맞았다 — 비전 재감지로 박스가 정확한 "얼굴 중심"이 되면서 머리가 잘려(검증됨)
+ * 목표점 고정 방식으로 교체. 스케일은 얼굴이 썸네일의 ~절반을 차지하도록.
+ */
 export function faceCropStyle(box: FaceBox | null): CSSProperties {
-  const cx = box?.cx ?? 0.46;
-  const cy = box?.cy ?? 0.07;
+  // 폴백도 얼굴 "중심" 의미(v3 표준 머리 중심 근사).
+  const cx = box?.cx ?? 0.5;
+  const cy = box?.cy ?? 0.13;
   const hf = box?.h ?? 0.14;
-  const scale = Math.min(5, Math.max(2.2, 0.5 / hf));
+  const s = Math.min(5, Math.max(2.2, 0.5 / hf));
+  // 목표: 얼굴 중심이 썸네일 (0.5, 0.44)에 위치. screen = o + (p - o)·s 를 o에 대해 풀면:
+  const ox = (0.5 - cx * s) / (1 - s);
+  const oy = (0.44 - cy * s) / (1 - s);
+  return {
+    imageRendering: 'pixelated',
+    objectFit: 'cover',
+    objectPosition: '50% 0%',
+    transform: `scale(${s.toFixed(2)})`,
+    transformOrigin: `${(ox * 100).toFixed(1)}% ${(oy * 100).toFixed(1)}%`,
+  };
+}
+
+/** (레거시) origin에 박스 좌표를 그대로 꽂는 옛 수식 — 대난투 스트립 전용(옛 데이터로 튜닝됨). */
+function pinnedCropStyle(box: FaceBox): CSSProperties {
+  const scale = Math.min(5, Math.max(2.2, 0.5 / box.h));
   return {
     imageRendering: 'pixelated',
     objectFit: 'cover',
     objectPosition: '50% 0%',
     transform: `scale(${scale.toFixed(2)})`,
-    transformOrigin: `${(cx * 100).toFixed(1)}% ${(cy * 100).toFixed(1)}%`,
+    transformOrigin: `${(box.cx * 100).toFixed(1)}% ${(box.cy * 100).toFixed(1)}%`,
   };
 }
 
@@ -41,5 +62,5 @@ export function meleeFaceCropStyle(box: FaceBox | null): CSSProperties {
   // 정확)일 때 cy를 곱 보정하면 아바타별 머리 위치가 정확히 중심에 온다.
   const b = box ?? { cx: 0.5, cy: 0.25, h: 0.2 };
   const screenCy = Math.min(0.9, b.cy * 1.8);
-  return faceCropStyle({ cx: b.cx, cy: screenCy, h: Math.max(b.h, 0.3) });
+  return pinnedCropStyle({ cx: b.cx, cy: screenCy, h: Math.max(b.h, 0.3) });
 }
