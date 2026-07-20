@@ -11,6 +11,7 @@ import { rateLimited } from '@/lib/ratelimit';
 import { db } from '@/lib/db/client';
 import { profiles } from '@/lib/db/schema/profiles';
 import { characters } from '@/lib/db/schema/server';
+import { guildMembers } from '@/lib/db/schema/guild';
 import { sendPushToUser } from '@/lib/push/send';
 import { CHAT_MAX_LEN, checkAndFilterChatBody } from '@/lib/game/chat/filter';
 import {
@@ -99,6 +100,22 @@ export async function sendChat(raw: string, channel: 'all' | 'guild' = 'all'): P
           .innerJoin(profiles, eq(profiles.id, characters.userId))
           .where(and(eq(characters.serverId, serverId), inArray(characters.nickname, cands)));
         mentionTargets = rows.filter((r) => r.uid !== userId);
+        // 길드 채널 — 멘션 유효 대상을 같은 길드원으로 한정(외부 유저에게 볼 수 없는
+        // 메시지의 알림·강조가 가지 않게).
+        if (guildId && mentionTargets.length > 0) {
+          const members = await db
+            .select({ uid: guildMembers.userId })
+            .from(guildMembers)
+            .where(
+              and(
+                eq(guildMembers.serverId, serverId),
+                eq(guildMembers.guildId, guildId),
+                inArray(guildMembers.userId, mentionTargets.map((t) => t.uid)),
+              ),
+            );
+          const memberSet = new Set(members.map((m) => m.uid));
+          mentionTargets = mentionTargets.filter((t) => memberSet.has(t.uid));
+        }
       } catch {
         // 멘션 해석 실패 — 일반 텍스트로 전송.
       }
