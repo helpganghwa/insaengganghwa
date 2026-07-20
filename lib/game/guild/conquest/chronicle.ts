@@ -855,6 +855,8 @@ export async function generateAndStoreChronicle(
 export type ChronicleData = {
   /** '오늘' — 최신 기록일의 긴 스토리(없으면 null). */
   today: string | null;
+  /** '오늘' 기록일(YYYY-MM-DD) — 홈 카드 '새 역사' 티저의 열람 처리용(localStorage 값). */
+  todayDay: string | null;
   /** '어제' — 그 직전 기록일의 긴 스토리(없으면 null). */
   yesterday: string | null;
   /** '어제' 기록일(YYYY-MM-DD) — 어제 리플레이 스크립트 로드용. */
@@ -881,6 +883,7 @@ export async function getChronicle(serverId: number): Promise<ChronicleData> {
     .limit(120);
   return {
     today: rows[0]?.todayText ?? null,
+    todayDay: rows[0] ? String(rows[0].kstDay) : null,
     // '어제' 탭(2026-07-17 추가) — 최신 공개일의 직전 기록 전문.
     yesterday: rows[1]?.todayText ?? null,
     yesterdayDay: rows[1] ? String(rows[1].kstDay) : null,
