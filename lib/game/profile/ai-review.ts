@@ -75,7 +75,7 @@ For anatomy: count carefully in the front view. Before failing for an extra ARM 
 
 For safety (nsfw/violence/hate) and aesthetic preference: when in doubt, PASS.
 
-ALSO (always, even when pass=true) locate the HEAD in the SOUTH (front) view for thumbnail face-cropping. In the SOUTH image, give the head/face bounding region as fractions 0..1 of the image: "head": { "cx": horizontal center of the head, "cy": vertical center of the head (face), "h": head height as a fraction of image height }. Measure the visible head/face only (hair counts, but ignore tall hats/horns extending far above). For a typical full-body character the head is near the top-center: cx≈0.5, cy≈0.08, h≈0.14. If no south view or no visible head, omit "head".
+ALSO (always, even when pass=true) locate the HEAD in the SOUTH (front) view for thumbnail face-cropping. In the SOUTH image, give the head/face bounding region as fractions 0..1 of the image: "head": { "cx": horizontal center of the head, "cy": vertical center of the head (face), "h": head height as a fraction of image height }. Measure the visible head/face only (hair counts, but ignore tall hats/horns extending far above; also IGNORE held weapons, staffs, wings or banners beside/above the character — the head is attached to the body at the top of the torso, near the horizontal center). For a typical full-body character the head is near the top-center: cx≈0.5, cy≈0.08, h≈0.14. If no south view or no visible head, omit "head".
 
 OUTPUT — strict JSON only:
 {
