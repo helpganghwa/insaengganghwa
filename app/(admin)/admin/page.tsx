@@ -94,6 +94,12 @@ const MENU: { href: string; icon: string; title: string; desc: string; external?
     desc: '생성 성공·실패 내역 조회, 통과 회수+환불 / 실패 아바타 지급 (분쟁 처리)',
   },
   {
+    href: '/admin/chat',
+    icon: '🗨️',
+    title: '월드 채팅 운영',
+    desc: '최근 메시지·신고 확인, 숨김·채팅 금지, 채팅 ON/OFF 킬스위치',
+  },
+  {
     href: '/admin/reports',
     icon: '🚩',
     title: '프로필 신고',

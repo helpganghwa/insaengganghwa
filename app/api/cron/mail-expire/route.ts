@@ -25,6 +25,7 @@ import { sql } from 'drizzle-orm';
 
 import { isCronAuthorized } from '@/lib/auth/cron-auth';
 import { db } from '@/lib/db/client';
+import { cleanupChat } from '@/lib/game/chat/service';
 
 export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
@@ -74,5 +75,8 @@ export async function GET(req: Request) {
   `)) as unknown as { id: string }[];
   eventsDeleted = evRows.length;
 
-  return Response.json({ ok: true, kind: 'mail-expire', deleted, eventsDeleted });
+  // 월드 채팅 보존 정리(0125) — 7일 초과 또는 서버당 최근 1,000개 초과분.
+  const chatDeleted = await cleanupChat().catch(() => 0);
+
+  return Response.json({ ok: true, kind: 'mail-expire', deleted, eventsDeleted, chatDeleted });
 }
