@@ -9,6 +9,7 @@ import { faceCropStyle, type FaceBox } from '@/components/faceCrop';
 import type { ChatMessageDto } from '@/lib/game/chat/service';
 import type { WorldEventEntry } from '@/lib/game/world/event';
 import { worldEventMessage } from '@/app/(game)/world-message';
+import { guildLogMessage } from '@/app/(game)/guild/GuildLogFeed';
 import { sendRequestAction } from '@/app/(game)/friends/actions';
 
 import { sendChat, reportChat, setChatBlockAction } from './actions';
@@ -47,6 +48,8 @@ type MiniProfile = {
   isMe: boolean;
 };
 
+type Tab = 'all' | 'guild';
+
 /** 월드 이벤트 broadcast('sys') → 시스템 라인 의사 메시지. */
 function sysToMsg(e: WorldEventEntry): ChatMessageDto {
   return {
@@ -71,6 +74,8 @@ export function ChatDock() {
   const pathname = usePathname();
   const [enabled, setEnabled] = useState<boolean | null>(null); // null=로딩(도크 미표시)
   const [channel, setChannel] = useState<string | null>(null);
+  const [tab, setTab] = useState<Tab>('all');
+  const [myGuild, setMyGuild] = useState<{ id: string; name: string } | null>(null);
   const [me, setMe] = useState<string | null>(null);
   const [latest, setLatest] = useState<ChatMessageDto | null>(null);
   const [open, setOpen] = useState(false);
@@ -103,6 +108,8 @@ export function ChatDock() {
   const wsOkRef = useRef(false);
   const listRef = useRef<HTMLDivElement | null>(null);
   const serverIdRef = useRef(1);
+  const tabRef = useRef<Tab>('all');
+  tabRef.current = tab;
   // 낙관 전송용 — 내 표시 필드(닉/아바타/길드)는 서버 응답·최근 목록의 내 메시지에서 채움.
   const myFieldsRef = useRef<ChatMessageDto | null>(null);
   const tempSeqRef = useRef(0);
@@ -181,7 +188,7 @@ export function ChatDock() {
 
   const applyNew = useCallback(
     (m: ChatMessageDto) => {
-      if (!m.sys) setLatest(m); // 시스템 라인은 미니바(마지막 채팅)에서 제외.
+      if (!m.sys && !m.sysGuild) setLatest(m); // 시스템 라인은 미니바(마지막 채팅)에서 제외.
       // 닫힘 중에도 목록 버퍼를 채움 — 패널을 열 때 과거 목록이 먼저 보였다가 교체되는
       // 플래시 없이 즉시 현재 대화가 보이게(2026-07-21 피드백). 열림 시 fetch(100)가 정합 보정.
       setMessages((prev) => {
@@ -223,43 +230,51 @@ export function ChatDock() {
     };
   }, [open, scrollToBottom]);
 
-  const fetchRecent = useCallback(async (limit: number): Promise<ChatMessageDto[] | null> => {
-    try {
-      const res = await fetch(`/api/chat/recent?limit=${limit}`, { cache: 'no-store' });
-      if (!res.ok) return null;
-      const data = (await res.json()) as {
-        disabled?: boolean;
-        channel?: string;
-        me?: string;
-        messages: ChatMessageDto[];
-        meNickname?: string | null;
-        blocked?: { id: string; nickname: string }[];
-      };
-      if (data.disabled) {
-        setEnabled(false);
+  const fetchRecent = useCallback(
+    async (limit: number, forTab?: Tab): Promise<ChatMessageDto[] | null> => {
+      const t = forTab ?? tabRef.current;
+      try {
+        const res = await fetch(`/api/chat/recent?limit=${limit}&channel=${t}`, { cache: 'no-store' });
+        if (!res.ok) return null;
+        const data = (await res.json()) as {
+          disabled?: boolean;
+          channel?: string;
+          me?: string;
+          messages: ChatMessageDto[];
+          meNickname?: string | null;
+          guild?: { id: string; name: string } | null;
+          blocked?: { id: string; nickname: string }[];
+        };
+        if (data.disabled) {
+          setEnabled(false);
+          return null;
+        }
+        setEnabled(true);
+        // 응답이 도착한 시점의 활성 탭과 요청 탭이 다르면(빠른 전환) 채널·목록 반영 스킵.
+        if (t !== tabRef.current) return null;
+        if (data.channel) {
+          setChannel(data.channel);
+          const sid = Number(data.channel.split(':s')[1]);
+          if (Number.isInteger(sid)) serverIdRef.current = sid;
+        }
+        if (data.me) setMe(data.me);
+        if (data.meNickname) setMeNickname(data.meNickname);
+        setMyGuild(data.guild ?? null);
+        if (data.blocked) setBlocked(new Map(data.blocked.map((b) => [b.id, b.nickname])));
+        const mine = data.messages.filter((m) => m.userId === data.me).pop();
+        if (mine) myFieldsRef.current = mine;
+        return data.messages;
+      } catch {
         return null;
       }
-      setEnabled(true);
-      if (data.channel) {
-        setChannel(data.channel);
-        const sid = Number(data.channel.split(':s')[1]);
-        if (Number.isInteger(sid)) serverIdRef.current = sid;
-      }
-      if (data.me) setMe(data.me);
-      if (data.meNickname) setMeNickname(data.meNickname);
-      if (data.blocked) setBlocked(new Map(data.blocked.map((b) => [b.id, b.nickname])));
-      const mine = data.messages.filter((m) => m.userId === data.me).pop();
-      if (mine) myFieldsRef.current = mine;
-      return data.messages;
-    } catch {
-      return null;
-    }
-  }, []);
+    },
+    [],
+  );
 
   // 초기 로드 — 최근 1개(미니바).
   useEffect(() => {
     void fetchRecent(1).then((ms) => {
-      const lastUser = ms ? [...ms].reverse().find((m) => !m.sys) : null;
+      const lastUser = ms ? [...ms].reverse().find((m) => !m.sys && !m.sysGuild) : null;
       if (lastUser) setLatest(lastUser);
     });
   }, [fetchRecent]);
@@ -304,7 +319,7 @@ export function ChatDock() {
         if (!ms) return;
         if (openRef.current) setMessages(ms);
         else if (ms.length > 0) applyNew(ms[ms.length - 1]!);
-        const lastUser = [...ms].reverse().find((m) => !m.sys);
+        const lastUser = [...ms].reverse().find((m) => !m.sys && !m.sysGuild);
         if (lastUser) setLatest(lastUser);
       });
     }, 15000);
@@ -344,6 +359,25 @@ export function ChatDock() {
         needInitialScrollRef.current = true; // fetch 반영 렌더도 페인트 전 바닥 고정.
         setMessages(ms);
       }
+    });
+  };
+
+  // 탭 전환(전체/길드) — 버퍼·미니바 비우고 새 채널 재조회. channel 변경으로 구독도 교체.
+  const switchTab = (next: Tab) => {
+    if (next === tab) return;
+    setTab(next);
+    tabRef.current = next;
+    setMessages([]);
+    setLatest(null);
+    setUnseenBelow(false);
+    myFieldsRef.current = null;
+    needInitialScrollRef.current = true;
+    void fetchRecent(open ? 100 : 1, next).then((ms) => {
+      if (!ms) return;
+      needInitialScrollRef.current = true;
+      setMessages(ms);
+      const lastUser = [...ms].reverse().find((m) => !m.sys && !m.sysGuild);
+      if (lastUser) setLatest(lastUser);
     });
   };
 
@@ -412,7 +446,7 @@ export function ChatDock() {
       setInput(body);
       setCooldown(0);
     };
-    void sendChat(body)
+    void sendChat(body, tabRef.current)
       .then((r) => {
         if (r.status === 'error') {
           rollback();
@@ -595,7 +629,9 @@ export function ChatDock() {
                       {visibleLatest.body}
                     </span>
                   ) : (
-                    <span className="flex-1 truncate text-[11px] text-zinc-400">전체 채팅</span>
+                    <span className="flex-1 truncate text-[11px] text-zinc-400">
+                      {tab === 'guild' ? '길드 채팅' : '전체 채팅'}
+                    </span>
                   )}
                 </button>
               </div>
@@ -615,14 +651,27 @@ export function ChatDock() {
           }}
         >
           <div className="relative mx-auto flex h-full w-full max-w-[390px] flex-col bg-white dark:bg-zinc-950">
-            <header className="flex shrink-0 items-center justify-between border-b border-zinc-100 px-3 py-1.5 dark:border-zinc-800/70">
-              <h2 className="text-[12px] font-bold text-zinc-700 dark:text-zinc-200">
-                💬 전체 채팅
-              </h2>
+            <header className="flex shrink-0 items-center justify-between gap-2 border-b border-zinc-100 px-3 py-1.5 dark:border-zinc-800/70">
+              <div className="flex items-center gap-1">
+                {(['all', 'guild'] as const).map((tk) => (
+                  <button
+                    key={tk}
+                    type="button"
+                    onClick={() => switchTab(tk)}
+                    className={`rounded-full px-2.5 py-1 text-[12px] font-bold ${
+                      tab === tk
+                        ? 'bg-amber-500 text-white'
+                        : 'text-zinc-400 hover:text-zinc-600 dark:hover:text-zinc-300'
+                    }`}
+                  >
+                    {tk === 'all' ? '전체' : '길드'}
+                  </button>
+                ))}
+              </div>
               <button
                 type="button"
                 onClick={() => setShowBlockList(true)}
-                className="text-[10.5px] font-semibold text-zinc-400 hover:text-zinc-600 dark:hover:text-zinc-300"
+                className="shrink-0 text-[10.5px] font-semibold text-zinc-400 hover:text-zinc-600 dark:hover:text-zinc-300"
               >
                 차단 목록
               </button>
@@ -637,9 +686,32 @@ export function ChatDock() {
               }}
               className="min-h-0 flex-1 overflow-y-auto overscroll-contain px-2.5 py-2"
             >
-              {visibleMessages.map((m, i) => {
-                // 시스템 라인(월드 이벤트) — 가운데 정렬 회색, 상호작용 없음.
-                if (m.sys) {
+              {tab === 'guild' && !myGuild ? (
+                <div className="flex h-full flex-col items-center justify-center gap-3 px-6 text-center">
+                  <span className="text-3xl">🛡️</span>
+                  <p className="text-[12.5px] leading-relaxed text-zinc-500 dark:text-zinc-400">
+                    길드에 가입하면 길드원들과 대화할 수 있어요.
+                  </p>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      try {
+                        sessionStorage.setItem(RESTORE_KEY, 'panel');
+                      } catch {
+                        /* ignore */
+                      }
+                      router.push('/guild');
+                    }}
+                    className="rounded-full bg-amber-500 px-4 py-2 text-[12.5px] font-bold text-white"
+                  >
+                    길드 보러 가기
+                  </button>
+                </div>
+              ) : null}
+              {(tab !== 'guild' || myGuild) &&
+                visibleMessages.map((m, i) => {
+                // 시스템 라인 — 전체=월드 이벤트, 길드=길드 활동 로그. 가운데 정렬 회색.
+                if (m.sys || m.sysGuild) {
                   return (
                     <div
                       key={m.id}
@@ -655,7 +727,7 @@ export function ChatDock() {
                       }}
                       className="px-4 py-[3px] text-center text-[10.5px] leading-snug text-zinc-400 dark:text-zinc-500"
                     >
-                      {worldEventMessage(m.sys, { link: true })}
+                      {m.sys ? worldEventMessage(m.sys, { link: true }) : guildLogMessage(m.sysGuild!)}
                     </div>
                   );
                 }
@@ -666,6 +738,7 @@ export function ChatDock() {
                 const grouped =
                   !!prev &&
                   !prev.sys &&
+                  !prev.sysGuild &&
                   prev.userId === m.userId &&
                   new Date(m.createdAt).getTime() - new Date(prev.createdAt).getTime() < 60_000;
                 // 내 메시지 — 카카오톡식 우측 정렬(아바타·닉·배경 없음), 묶음이면 시간 생략.
@@ -780,6 +853,7 @@ export function ChatDock() {
               </button>
             ) : null}
 
+            {tab === 'guild' && !myGuild ? null : (
             <div className="shrink-0 border-t border-zinc-100 px-2.5 py-2 dark:border-zinc-800/70">
               {error ? (
                 <p className="mb-1 px-1 text-[11px] text-amber-600 dark:text-amber-400">{error}</p>
@@ -807,7 +881,7 @@ export function ChatDock() {
                     if (e.key === 'Enter' && !e.nativeEvent.isComposing) submit();
                   }}
                   maxLength={100}
-                  placeholder="메시지 입력 · @닉네임 멘션"
+                  placeholder={tab === 'guild' ? '길드 채팅 · @닉네임 멘션' : '메시지 입력 · @닉네임 멘션'}
                   wrapClassName="h-9 min-w-0 flex-1"
                   className="rounded-full border border-zinc-200 bg-zinc-50 px-4 outline-none focus:border-amber-400 dark:border-zinc-700 dark:bg-zinc-900"
                 />
@@ -839,6 +913,7 @@ export function ChatDock() {
                 </button>
               </div>
             </div>
+            )}
           </div>
         </div>
       ) : null}

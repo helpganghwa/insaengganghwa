@@ -4,7 +4,7 @@
  * 보존: 서버당 최근 1,000개 + 7일(mail-expire 크론에서 정리).
  */
 import { sql } from 'drizzle-orm';
-import { bigserial, index, jsonb, pgTable, primaryKey, smallint, text, timestamp, uuid } from 'drizzle-orm/pg-core';
+import { bigint, bigserial, index, jsonb, pgTable, primaryKey, smallint, text, timestamp, uuid } from 'drizzle-orm/pg-core';
 
 import { profiles } from './profiles';
 
@@ -20,11 +20,16 @@ export const chatMessages = pgTable(
     body: text('body').notNull(),
     /** 유효 멘션 닉 목록(0128) — 전송 시점 실제 유저와 일치한 것만(표시 시 @ 제거·강조). */
     mentions: jsonb('mentions'),
+    /** 채널(0130) — null=전체(서버) 채팅, 값=해당 길드 채팅. */
+    guildId: bigint('guild_id', { mode: 'bigint' }),
     /** 모더레이션 숨김(신고 3건 자동 또는 어드민) — null=노출. */
     hiddenAt: timestamp('hidden_at', { withTimezone: true }),
     createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
   },
-  (t) => [index('chat_msg_server_id_idx').on(t.serverId, sql`${t.id} desc`)],
+  (t) => [
+    index('chat_msg_server_id_idx').on(t.serverId, sql`${t.id} desc`),
+    index('chat_msg_guild_idx').on(t.serverId, t.guildId, sql`${t.id} desc`),
+  ],
 );
 
 export const chatReports = pgTable(

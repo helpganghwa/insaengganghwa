@@ -60,7 +60,7 @@ function fmtFull(iso: string): string {
   return `${d.getUTCFullYear()}-${p(d.getUTCMonth() + 1)}-${p(d.getUTCDate())} ${p(d.getUTCHours())}:${p(d.getUTCMinutes())}:${p(d.getUTCSeconds())}`;
 }
 
-function message(e: GuildLogEntry): ReactNode {
+export function guildLogMessage(e: GuildLogEntry): ReactNode {
   const actor = user(e.actorCode, e.actorNickname, e.serverId);
   const target = user(e.targetCode, e.targetNickname, e.serverId);
   const zone = (e.detail?.zone as string) ?? '구역';
@@ -157,7 +157,7 @@ export function GuildLogFeed({ entries, full = false }: { entries: GuildLogEntry
           <span
             className={`min-w-0 flex-1 text-zinc-700 dark:text-zinc-300 ${full ? 'whitespace-normal break-words' : 'truncate'}`}
           >
-            {message(e)}
+            {guildLogMessage(e)}
           </span>
           <span className="shrink-0 font-mono text-[9px] tabular-nums text-zinc-400">
             {fmtFull(e.createdAtIso)}
