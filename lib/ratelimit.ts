@@ -65,6 +65,49 @@ const WINDOWS: Record<RlBucket, [limit: number, window: `${number} s`]> = {
   chatBurst: [12, '60 s'], // 월드 채팅 분당 상한 — 도배 방어
 };
 
+/**
+ * Redis(분산) 유지 버킷 — 고비용 생성·어뷰징 민감·저빈도라 정확한 계정 단위 상한이 필요한 곳.
+ * 나머지 고빈도 게임 버킷은 인스턴스 인메모리 창으로 처리(2026-07-21): Upstash 무료 50만
+ * 커맨드/월을 게임 연타가 소진해 전체 fail-open되던 문제 해소(커맨드 ~95% 절감).
+ * 인메모리는 인스턴스별 독립 창이라 상한이 인스턴스 수만큼 완화되지만, 목적이 봇 플러드
+ * '감속'(무결성은 트랜잭션·멱등이 보장)이라 충분 — Fluid 인스턴스 재사용으로 실효성 있음.
+ */
+const REDIS_BUCKETS: ReadonlySet<RlBucket> = new Set<RlBucket>([
+  'profile', // Claude+Pixellab 고비용 생성
+  'identity', // 포트원 조회 폭주 방어
+  'support',
+  'report',
+  'nickname',
+  'chatSend', // 전서버 공개 채팅 — 정확한 쿨다운 필요
+  'chatBurst',
+  'clientError', // 무인증 공개 엔드포인트
+]);
+
+/** 인메모리 슬라이딩 창 — key=`${bucket}:${userId}`, 값=요청 시각 목록(창 밖 자동 배출). */
+const memHits = new Map<string, number[]>();
+function memLimited(userId: string, bucket: RlBucket): boolean {
+  const [limit, window] = WINDOWS[bucket];
+  const winMs = Number.parseInt(window, 10) * 1000;
+  const now = Date.now();
+  const key = `${bucket}:${userId}`;
+  const kept = (memHits.get(key) ?? []).filter((t) => now - t < winMs);
+  if (kept.length >= limit) {
+    memHits.set(key, kept);
+    return true;
+  }
+  kept.push(now);
+  memHits.set(key, kept);
+  // 메모리 상한 가드 — 5만 키 초과 시 만료 엔트리 일괄 청소(드묾, 최대 창 3600s 기준).
+  if (memHits.size > 50_000) {
+    for (const [k, v] of memHits) {
+      const f = v.filter((t) => now - t < 3_600_000);
+      if (f.length === 0) memHits.delete(k);
+      else memHits.set(k, f);
+    }
+  }
+  return false;
+}
+
 const url = process.env.UPSTASH_REDIS_REST_URL;
 const token = process.env.UPSTASH_REDIS_REST_TOKEN;
 
@@ -89,6 +132,8 @@ let warned = false;
 
 /** true = 차단(한도 초과). env 미설정·장애 시 false(fail-open). */
 export async function rateLimited(userId: string, bucket: RlBucket): Promise<boolean> {
+  // 고빈도 게임 버킷 — 인메모리 창(Upstash 커맨드 미소비, 네트워크 왕복 0).
+  if (!REDIS_BUCKETS.has(bucket)) return memLimited(userId, bucket);
   const rl = limiter(bucket);
   if (!rl) {
     if (!warned) {

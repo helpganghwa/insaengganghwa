@@ -27,6 +27,16 @@ export async function GET(req: Request) {
   const channel = url.searchParams.get('channel') === 'guild' ? 'guild' : 'all';
   const serverId = await getActiveServerId();
 
+  // 경량 모드(2026-07-21) — 닫힌 미니바의 15초 상시 폴링용. 차단목록·닉네임·(전체 채널이면)
+  // 길드 조회를 생략해 폴링당 DB 왕복을 최소화(세션당 하루 수천 회 × 전 세션 누적 절감).
+  // 차단 필터·채널 토픽은 클라이언트가 초기/전체 조회에서 받은 상태를 유지한다.
+  if (url.searchParams.get('lite') === '1') {
+    const guild = channel === 'guild' ? await getMyGuildChannel(userId, serverId) : null;
+    const guildId = channel === 'guild' && guild ? BigInt(guild.guildId) : null;
+    const messages = channel === 'guild' && !guild ? [] : await getRecentChat(serverId, limit, guildId);
+    return NextResponse.json({ messages });
+  }
+
   const [blocked, [meChar], guild] = await Promise.all([
     getChatBlocks(userId, serverId),
     db
