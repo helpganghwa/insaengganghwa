@@ -143,6 +143,8 @@ export default async function HomePage() {
   let conquestInProgress = new Date().getUTCHours() === 14; // 로그아웃/콜드 폴백(KST 23시대)
   /** 최신 공개 연대기 날짜 — 미열람이면 카운트다운 대신 '새 역사' 티저(열람 판정은 클라 localStorage). */
   let latestChronicleDay: string | null = null;
+  /** 그날 헤드라인(마커 제거 평문) — 있으면 티저 문구로 사용, 없으면 '새로운 역사가 쓰였다'. */
+  let chronicleHeadline: string | null = null;
   const conquestTargetMs = (() => {
     const n = new Date();
     const t = new Date(n);
@@ -230,9 +232,12 @@ export default async function HomePage() {
               (select json_agg(json_build_array(slot, period_key)) from shop_free_claims where user_id = ${userId}::uuid and server_id = ${serverId}),
               '[]'::json
             ) as free_claims,
-            -- 최신 공개 연대기 날짜(kst_day < 오늘 = 자정 공개분) — '새 역사' 티저 판정용(읽음은 클라 localStorage).
+            -- 최신 공개 연대기(kst_day < 오늘 = 자정 공개분) — '새 역사' 티저 판정용(읽음은 클라 localStorage).
             (select max(kst_day)::text from world_chronicle where server_id = ${serverId} and kst_day < n.kst::date)
-              as chron_day
+              as chron_day,
+            (select headline from world_chronicle where server_id = ${serverId} and kst_day < n.kst::date
+              order by kst_day desc limit 1)
+              as chron_headline
           from (select (now() at time zone 'Asia/Seoul') kst) n
           left join melee_battles b on b.battle_date = n.kst::date and b.server_id = ${serverId}
           left join characters cc on cc.user_id = b.champion_user_id and cc.server_id = ${serverId}
@@ -259,6 +264,7 @@ export default async function HomePage() {
         kst_hour: number;
         free_claims: [string, string][];
         chron_day: string | null;
+        chron_headline: string | null;
       }>;
 
       if (row) {
@@ -283,6 +289,9 @@ export default async function HomePage() {
         // 23시대(23:00~24:00) = 점령전 진행중(DB 시계 권위).
         conquestInProgress = row.kst_hour === 23;
         latestChronicleDay = row.chron_day ?? null;
+        // 헤드라인 마커({g|이름}·{z|이름}·{u|닉|코드}) → 평문. 카드 desc의 truncate가 말줄임 처리.
+        chronicleHeadline =
+          row.chron_headline?.replace(/\{[gzu]\|([^}|]+)(?:\|[^}]*)?\}/g, '$1').trim() || null;
         // phase별 문구. 발표 후(after) + revealed면 우승자, 닉 미상(더미)이면 발표 문구.
         if (row.melee_phase === 'before') meleeDesc = '오늘 9시 개시';
         else if (row.melee_phase === 'running') meleeDesc = '난투 진행 중';
@@ -467,6 +476,7 @@ export default async function HomePage() {
                       targetMs={conquestTargetMs}
                       serverId={serverId}
                       chronicleDay={latestChronicleDay}
+                      chronicleHeadline={chronicleHeadline}
                     />
                   ) : descHot ? (
                     <span className="font-extrabold text-emerald-300 drop-shadow-[0_1px_2px_rgba(0,0,0,0.9)]">{desc}</span>

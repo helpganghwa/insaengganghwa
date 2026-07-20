@@ -549,7 +549,7 @@ export function ConquestBattleView({ view, serverId }: { view: View; serverId: n
   };
 
   return (
-    <div className="flex h-full flex-col">
+    <div className="flex h-[calc(100%-var(--chat-dock-h,0px))] flex-col">
       {/* 무대 — 고정(지역 배경) */}
       <div className="relative h-60 shrink-0 overflow-hidden border-b border-zinc-800">
         {/* eslint-disable-next-line @next/next/no-img-element */}
