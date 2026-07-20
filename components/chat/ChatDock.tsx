@@ -78,6 +78,7 @@ export function ChatDock() {
   const [channel, setChannel] = useState<string | null>(null);
   const [tab, setTab] = useState<Tab>('all');
   const [myGuild, setMyGuild] = useState<{ id: string; name: string } | null>(null);
+  const [guildTopic, setGuildTopic] = useState<string | null>(null);
   const [me, setMe] = useState<string | null>(null);
   const [latest, setLatest] = useState<ChatMessageDto | null>(null);
   const [open, setOpen] = useState(false);
@@ -251,6 +252,7 @@ export function ChatDock() {
           messages: ChatMessageDto[];
           meNickname?: string | null;
           guild?: { id: string; name: string } | null;
+          guildChannel?: string | null;
           blocked?: { id: string; nickname: string }[];
         };
         if (data.disabled) {
@@ -271,6 +273,7 @@ export function ChatDock() {
         if (data.me) setMe(data.me);
         if (data.meNickname) setMeNickname(data.meNickname);
         setMyGuild(data.guild ?? null);
+        setGuildTopic(data.guildChannel ?? null);
         if (data.blocked) setBlocked(new Map(data.blocked.map((b) => [b.id, b.nickname])));
         const mine = data.messages.filter((m) => m.userId === data.me).pop();
         if (mine) myFieldsRef.current = mine;
@@ -338,12 +341,20 @@ export function ChatDock() {
           wsOkRef.current = status === 'SUBSCRIBED';
         });
     const chans = [mk(`chat:s${sid}`, 'all')];
-    if (myGuild) chans.push(mk(`chat:s${sid}:g${myGuild.id}`, 'guild'));
+    // 길드 토픽은 서버가 소속 검증 후 내려준 값만 사용(HMAC 토큰 포함 — 클라 조립 금지).
+    if (guildTopic) chans.push(mk(guildTopic, 'guild'));
     return () => {
       wsOkRef.current = false;
       for (const c of chans) void sb.removeChannel(c);
     };
-  }, [sid, myGuild?.id, routeIncoming]);
+  }, [sid, guildTopic, routeIncoming]);
+
+  // 길드 탈퇴/해산 감지 — 길드 버퍼·미니바 잔존 제거.
+  useEffect(() => {
+    if (myGuild) return;
+    bufRef.current.guild = { messages: [], latest: null };
+    if (tabRef.current === 'guild') setLatest(null);
+  }, [myGuild]);
 
   // 비활성 탭 선적재 — 길드 소속이 확인되면 길드 버퍼를 미리 채워 첫 전환도 즉시.
   useEffect(() => {
@@ -367,7 +378,8 @@ export function ChatDock() {
     const t = setInterval(() => {
       void fetchRecent(openRef.current ? 100 : 1).then((ms) => {
         if (!ms) return;
-        if (openRef.current) setMessages(ms);
+        if (openRef.current)
+          setMessages((prev) => [...ms, ...prev.filter((m) => m.id.startsWith('tmp-'))]);
         else if (ms.length > 0) applyNew(ms[ms.length - 1]!);
         const lastUser = [...ms].reverse().find((m) => !m.sys && !m.sysGuild);
         if (lastUser) setLatest(lastUser);
@@ -407,14 +419,14 @@ export function ChatDock() {
     void fetchRecent(100).then((ms) => {
       if (ms) {
         needInitialScrollRef.current = true; // fetch 반영 렌더도 페인트 전 바닥 고정.
-        setMessages(ms);
+        setMessages((prev) => [...ms, ...prev.filter((m) => m.id.startsWith('tmp-'))]);
       }
     });
   };
 
   // 탭 전환(전체/길드) — 캐시 버퍼를 즉시 표시(렉 없음), 백그라운드 재조회로 정합 보정.
   // 구독은 두 채널 상시 유지라 재구독 비용도 없음.
-  const switchTab = (next: Tab) => {
+  const switchTab = (next: Tab, limitOverride?: number) => {
     if (next === tab) return;
     // 현재 탭 상태를 버퍼로 저장 후 다음 탭 버퍼를 즉시 로드.
     bufRef.current[tab] = { messages, latest };
@@ -422,13 +434,15 @@ export function ChatDock() {
     setTab(next);
     tabRef.current = next;
     setMessages(cached.messages);
+    // 탭 전환에 의한 latest 교체는 '새 메시지'가 아님 — 접힘 점 배지 오탐 방지.
+    prevLatestIdRef.current = cached.latest && !blocked.has(cached.latest.userId) ? cached.latest.id : null;
     setLatest(cached.latest);
     setUnseenBelow(false);
     needInitialScrollRef.current = true;
-    void fetchRecent(open ? 100 : 1, next).then((ms) => {
+    void fetchRecent(limitOverride ?? (open ? 100 : 1), next).then((ms) => {
       if (!ms) return;
       needInitialScrollRef.current = true;
-      setMessages(ms);
+      setMessages((prev) => [...ms, ...prev.filter((m) => m.id.startsWith('tmp-'))]);
       const lastUser = [...ms].reverse().find((m) => !m.sys && !m.sysGuild);
       if (lastUser) setLatest(lastUser);
     });
@@ -444,7 +458,7 @@ export function ChatDock() {
       return;
     }
     if (chat !== 'all' && chat !== 'guild') return;
-    if (chat !== tabRef.current) switchTab(chat);
+    if (chat !== tabRef.current) switchTab(chat, 100);
     openPanel();
     try {
       const u = new URL(location.href);
@@ -505,10 +519,15 @@ export function ChatDock() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
+  const errorTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const flashError = (msg: string) => {
     setError(msg);
-    setTimeout(() => setError(null), 3000);
+    if (errorTimerRef.current) clearTimeout(errorTimerRef.current);
+    errorTimerRef.current = setTimeout(() => setError(null), 3000);
   };
+  useEffect(() => () => {
+    if (errorTimerRef.current) clearTimeout(errorTimerRef.current);
+  }, []);
 
   // 낙관 전송(2026-07-20 피드백) — 즉시 내 말풍선을 띄우고 서버 확정 시 실 메시지로 교체.
   // 실패하면 말풍선 회수 + 입력 복원 + 쿨다운 해제. (타 유저 수신 순서와 잠시 다를 수 있음 — 허용.)
@@ -536,12 +555,20 @@ export function ChatDock() {
     setInput('');
     setCooldown(COOLDOWN_S);
     requestAnimationFrame(() => scrollToBottom(true));
+    // 응답 도착 전에 탭을 바꿀 수 있음 — 확정/롤백은 '전송한 탭'에만 반영(활성이면 상태, 아니면 버퍼).
+    const sentTab = tabRef.current;
     const rollback = () => {
-      setMessages((prev) => prev.filter((m) => m.id !== tempId));
-      setInput(body);
-      setCooldown(0);
+      if (sentTab === tabRef.current) {
+        setMessages((prev) => prev.filter((m) => m.id !== tempId));
+        setInput(body);
+        setCooldown(0);
+      } else {
+        const b = bufRef.current[sentTab];
+        b.messages = b.messages.filter((m) => m.id !== tempId);
+        setCooldown(0);
+      }
     };
-    void sendChat(body, tabRef.current)
+    void sendChat(body, sentTab)
       .then((r) => {
         if (r.status === 'error') {
           rollback();
@@ -549,12 +576,19 @@ export function ChatDock() {
           return;
         }
         myFieldsRef.current = r.message;
-        setLatest(r.message);
-        setMessages((prev) => {
-          const rest = prev.filter((m) => m.id !== tempId);
-          // 내 broadcast가 먼저 도착해 이미 실 메시지가 있으면 temp만 제거.
-          return rest.some((m) => m.id === r.message.id) ? rest : [...rest, r.message];
-        });
+        if (sentTab === tabRef.current) {
+          setLatest(r.message);
+          setMessages((prev) => {
+            const rest = prev.filter((m) => m.id !== tempId);
+            // 내 broadcast가 먼저 도착해 이미 실 메시지가 있으면 temp만 제거.
+            return rest.some((m) => m.id === r.message.id) ? rest : [...rest, r.message];
+          });
+        } else {
+          const b = bufRef.current[sentTab];
+          const rest = b.messages.filter((m) => m.id !== tempId);
+          b.messages = rest.some((m) => m.id === r.message.id) ? rest : [...rest, r.message];
+          b.latest = r.message;
+        }
       })
       .catch(() => {
         rollback();

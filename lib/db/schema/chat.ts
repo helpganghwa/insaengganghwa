@@ -16,7 +16,7 @@ export const chatMessages = pgTable(
     userId: uuid('user_id')
       .notNull()
       .references(() => profiles.id, { onDelete: 'cascade' }),
-    /** 서버 필터(금칙어 마스킹) 후 저장 — 원문 미보존. 최대 200자(액션 검증). */
+    /** 서버 필터 통과 본문(금칙어=전송 거부) — 최대 100자(CHAT_MAX_LEN, 액션 검증). */
     body: text('body').notNull(),
     /** 유효 멘션 닉 목록(0128) — 전송 시점 실제 유저와 일치한 것만(표시 시 @ 제거·강조). */
     mentions: jsonb('mentions'),
