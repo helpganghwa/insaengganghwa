@@ -41,7 +41,7 @@ export default async function ProfileSelectPage() {
   return (
     <div className="space-y-4 px-4 py-6">
       {list.length === 0 ? (
-        <Link
+        <Link prefetch={false}
           href="/me/create"
           className="flex flex-col items-center justify-center gap-1 rounded-xl border-2 border-dashed border-zinc-300 py-10 text-center text-zinc-400 dark:border-zinc-700"
         >
@@ -59,7 +59,7 @@ export default async function ProfileSelectPage() {
             }))}
             activeProfileId={p[0]?.activeProfileId ?? null}
           />
-          <Link
+          <Link prefetch={false}
             href="/me/create"
             className="flex w-full items-center justify-center gap-2 rounded-xl bg-amber-600 px-4 py-3 text-sm font-bold text-white shadow-md transition active:scale-[0.99]"
           >

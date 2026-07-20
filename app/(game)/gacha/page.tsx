@@ -56,7 +56,7 @@ export default async function GachaPage() {
         />
       ))}
       <div className="pt-1 pb-2 text-center">
-        <Link
+        <Link prefetch={false}
           href="/probability#supply"
           className="text-[11px] text-zinc-400 underline underline-offset-2 hover:text-zinc-600 dark:hover:text-zinc-300"
         >

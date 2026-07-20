@@ -327,10 +327,10 @@ export function MailList({
   return (
     <div className="space-y-3 px-4 py-4">
       <div className="flex gap-1 rounded-full bg-zinc-100 p-1 text-center dark:bg-zinc-900">
-        <Link href="/mail" className={tabCls(tab === 'unread')}>
+        <Link prefetch={false} href="/mail" className={tabCls(tab === 'unread')}>
           미수령{unreadCount != null && unreadCount > 0 ? ` (${unreadCount})` : ''}
         </Link>
-        <Link href="/mail?tab=done" className={tabCls(tab === 'done')}>
+        <Link prefetch={false} href="/mail?tab=done" className={tabCls(tab === 'done')}>
           수령 완료
         </Link>
       </div>

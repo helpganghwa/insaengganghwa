@@ -92,11 +92,11 @@ export default async function LoginPage({
         {/* 약관 동의 고지 — 로그인 버튼 바로 아래(동의 시점과 근접, 2026-07-15 위치 이동). */}
         <p className="mt-2.5 text-[11px] leading-relaxed text-zinc-500">
           로그인 시{' '}
-          <Link href="/legal/terms" className="underline">
+          <Link prefetch={false} href="/legal/terms" className="underline">
             이용약관
           </Link>{' '}
           및{' '}
-          <Link href="/legal/privacy" className="underline">
+          <Link prefetch={false} href="/legal/privacy" className="underline">
             개인정보처리방침
           </Link>
           에 동의하는 것으로 간주됩니다.

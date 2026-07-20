@@ -52,7 +52,7 @@ export default async function AdminSupportPage({
 
       <div className="mt-2 flex items-center gap-1.5">
         {STATUS_TABS.map((t) => (
-          <Link
+          <Link prefetch={false}
             key={t.id}
             href={tabHref(t.id)}
             className={`rounded-full px-3 py-1 text-[12px] font-semibold ${

@@ -24,7 +24,7 @@ export function PublicFooter() {
     <footer className="mx-auto w-full max-w-[390px] border-t border-zinc-200 px-5 py-5 text-[11px] leading-relaxed text-zinc-500 dark:border-zinc-800">
       <nav className="mb-3 flex gap-x-3 overflow-x-auto whitespace-nowrap">
         {LINKS.map(([href, label]) => (
-          <Link key={href} href={href} className="shrink-0 hover:underline">
+          <Link prefetch={false} key={href} href={href} className="shrink-0 hover:underline">
             {label}
           </Link>
         ))}

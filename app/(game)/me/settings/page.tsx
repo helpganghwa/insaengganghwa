@@ -188,7 +188,7 @@ function Row({ label, children }: { label: string; children: React.ReactNode }) 
 
 function SettingLink({ href, label }: { href: string; label: string }) {
   return (
-    <Link href={href} className="flex items-center px-3 py-2.5">
+    <Link prefetch={false} href={href} className="flex items-center px-3 py-2.5">
       <span className="text-sm">{label}</span>
     </Link>
   );

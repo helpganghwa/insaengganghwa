@@ -30,7 +30,7 @@ const FAQS: { q: string; a: string; body?: ReactNode }[] = [
       <>
         네, 무료로 시작해서 끝까지 무료로 즐길 수 있어요. 유료 재화(다이아)는 강화 대기 시간을
         줄이는 편의 위주라, 결제가 승패를 사지 않습니다. 상품 구성과 가격은{' '}
-        <Link href="/pricing" className="underline">
+        <Link prefetch={false} href="/pricing" className="underline">
           상품 안내
         </Link>{' '}
         페이지에 전부 공개되어 있어요.
@@ -52,7 +52,7 @@ const FAQS: { q: string; a: string; body?: ReactNode }[] = [
       <>
         아니요, 장비가 파괴되거나 사라지는 일은 없어요. 강화 결과는 성공·유지·하락 세 가지뿐이고,
         단계별 확률은{' '}
-        <Link href="/probability" className="underline">
+        <Link prefetch={false} href="/probability" className="underline">
           확률 공시
         </Link>{' '}
         페이지에 전부 공개되어 있습니다.
@@ -81,7 +81,7 @@ const FAQS: { q: string; a: string; body?: ReactNode }[] = [
     body: (
       <>
         강화·초월·보급의 모든 확률과 수치를{' '}
-        <Link href="/probability" className="underline">
+        <Link prefetch={false} href="/probability" className="underline">
           확률 공시
         </Link>{' '}
         페이지에 상시 공개하고 있어요. 확률이 바뀔 때는 사전 공지 후 반영됩니다.
@@ -119,7 +119,7 @@ export default function FaqPage() {
       <main className="flex-1 px-4 py-5">
         <div className="flex items-center justify-between">
           <h1 className="text-lg font-extrabold">자주 묻는 질문</h1>
-          <Link
+          <Link prefetch={false}
             href="/"
             className="rounded-lg bg-gradient-to-r from-amber-500 to-orange-500 px-3 py-1.5 text-[12px] font-extrabold text-amber-950 active:opacity-90"
           >

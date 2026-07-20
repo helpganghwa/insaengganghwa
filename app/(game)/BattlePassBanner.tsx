@@ -8,7 +8,7 @@ import { assetUrl } from '@/lib/asset-versions';
  */
 export function BattlePassBanner() {
   return (
-    <Link
+    <Link prefetch={false}
       href="/battlepass"
       className="relative flex h-full w-full min-w-0 items-center isolate overflow-hidden transition active:scale-[0.99]"
     >

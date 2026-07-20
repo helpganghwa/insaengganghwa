@@ -121,7 +121,7 @@ function MyRankChip({ me }: { me: MeleeResultView['me'] }) {
     .filter(Boolean)
     .join(' · ');
   return (
-    <Link
+    <Link prefetch={false}
       href="/mail"
       className="text-pixel-outline inline-flex min-w-0 shrink items-center gap-1.5 truncate rounded-full bg-black/60 px-3 py-1 text-[11px] font-medium text-zinc-100 ring-1 ring-amber-700/40 backdrop-blur-sm"
     >
@@ -231,7 +231,7 @@ function Fighter({
         >
           {avatar ? (
             href ? (
-              <Link href={href} aria-label={`${name} 프로필`} className="block h-full w-full">
+              <Link prefetch={false} href={href} aria-label={`${name} 프로필`} className="block h-full w-full">
                 {/* eslint-disable-next-line @next/next/no-img-element */}
                 <img
                   src={avatar}
@@ -474,7 +474,7 @@ function RankingView({
               <div className="relative -mt-2.5 h-36 w-full">
                 {p?.avatarUrl ? (
                   p.publicCode ? (
-                    <Link
+                    <Link prefetch={false}
                       href={profileHref(p.publicCode, serverId)}
                       aria-label={`${p.nickname} 프로필`}
                       className="absolute inset-0 block"
@@ -905,14 +905,14 @@ export function MeleeResult({ view, serverId }: { view: MeleeResultView; serverI
         {/* 무대 하단 바 — [보상테이블] · [내 순위] · [역대우승자]. 랭킹 뷰일 때만. */}
         {!fight ? (
           <div className="absolute inset-x-0 bottom-2 z-20 flex items-center justify-between gap-1.5 px-3">
-            <Link
+            <Link prefetch={false}
               href="/melee/info"
               className="text-pixel-outline shrink-0 rounded-full bg-black/55 px-2.5 py-1 text-[10px] font-bold text-amber-200 backdrop-blur-sm"
             >
               보상테이블
             </Link>
             <MyRankChip me={me} />
-            <Link
+            <Link prefetch={false}
               href="/melee/info?tab=history"
               className="text-pixel-outline shrink-0 rounded-full bg-black/55 px-2.5 py-1 text-[10px] font-bold text-amber-200 backdrop-blur-sm"
             >

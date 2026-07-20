@@ -181,7 +181,7 @@ function Fighter({
           style={{ opacity: faded ? 0.25 : 1, filter: faded ? 'grayscale(1)' : 'none' }}
         >
           {href ? (
-            <Link href={href} aria-label={`${name} 프로필`} className="block h-full w-full">
+            <Link prefetch={false} href={href} aria-label={`${name} 프로필`} className="block h-full w-full">
               {img}
             </Link>
           ) : (

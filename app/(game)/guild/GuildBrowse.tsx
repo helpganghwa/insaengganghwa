@@ -149,7 +149,7 @@ export function GuildBrowse({
       <div className="pointer-events-none fixed inset-x-0 bottom-0 z-40 mx-auto max-w-[390px]">
         {/* 채팅 미니바(--chat-dock-h) 위로 회피 — 미니바와 FAB가 겹치던 문제(2026-07-20). */}
         <div className="flex justify-end px-4 pb-[calc(env(safe-area-inset-bottom)+72px+var(--chat-dock-h,0px))]">
-          <Link
+          <Link prefetch={false}
             href="/guild/create"
             className="pointer-events-auto flex items-center gap-1.5 rounded-full bg-amber-600 py-3 pl-4 pr-5 text-sm font-bold text-white shadow-lg shadow-amber-900/30 active:scale-95"
           >

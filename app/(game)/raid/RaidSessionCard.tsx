@@ -639,7 +639,7 @@ export function RaidSessionCard({ view: v, serverId }: { view: RaidView; serverI
             <ul className="space-y-1">
               {visibleReqs.map((req) => (
                 <li key={req.userId} className="flex items-center gap-2 text-[12px]">
-                  <Link
+                  <Link prefetch={false}
                     href={profileHref(req.publicCode, serverId)}
                     className="min-w-0 flex-1 truncate font-medium hover:underline"
                   >
@@ -690,7 +690,7 @@ export function RaidSessionCard({ view: v, serverId }: { view: RaidView; serverI
                       {MEDAL[i] ?? <span className="text-zinc-500">{i + 1}</span>}
                     </span>
                     {/* 닉네임 클릭 → 본인 포함 모두 /u/<code> 공개 프로필(불변 코드). */}
-                    <Link
+                    <Link prefetch={false}
                       href={profileHref(p.publicCode, serverId)}
                       className="flex min-w-0 flex-1 items-center gap-1 font-medium hover:underline"
                     >

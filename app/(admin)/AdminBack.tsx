@@ -14,7 +14,7 @@ export function AdminBack() {
   const label = atHub ? '← 프로필' : '← 관리자 메뉴';
   return (
     <div className="px-4 pt-4">
-      <Link href={href} className="inline-flex items-center gap-1 text-sm text-zinc-400 hover:text-amber-300">
+      <Link prefetch={false} href={href} className="inline-flex items-center gap-1 text-sm text-zinc-400 hover:text-amber-300">
         {label}
       </Link>
     </div>

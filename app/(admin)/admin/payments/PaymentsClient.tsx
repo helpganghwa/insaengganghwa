@@ -127,7 +127,7 @@ export function PaymentsClient({
           <>
             {/* 날짜 네비 — 전/다음날 + 날짜 선택. 오늘이면 다음날 비활성. */}
             <div className="mt-2 flex items-center gap-2">
-          <Link
+          <Link prefetch={false}
             href={`/admin/payments?date=${prevDate}`}
             className="rounded-lg border border-zinc-700 bg-zinc-900 px-2.5 py-1 text-sm hover:bg-zinc-800"
           >
@@ -143,7 +143,7 @@ export function PaymentsClient({
             className="rounded-lg border border-zinc-700 bg-zinc-900 px-2.5 py-1 text-sm tabular-nums"
           />
           {date < today ? (
-            <Link
+            <Link prefetch={false}
               href={`/admin/payments?date=${nextDate}`}
               className="rounded-lg border border-zinc-700 bg-zinc-900 px-2.5 py-1 text-sm hover:bg-zinc-800"
             >
@@ -155,7 +155,7 @@ export function PaymentsClient({
             </span>
           )}
           {date !== today ? (
-            <Link
+            <Link prefetch={false}
               href="/admin/payments"
               className="ml-auto rounded-lg border border-amber-700/60 bg-amber-900/20 px-2.5 py-1 text-xs font-bold text-amber-300"
             >

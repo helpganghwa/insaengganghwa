@@ -521,7 +521,7 @@ export default async function PublicProfilePage({
 
         {/* ── CTA 분기 — 모두 동일 폭·패딩, 디자인 강조만 다름. ── */}
         {mode === 'guest' ? (
-          <Link
+          <Link prefetch={false}
             href="/login"
             className="flex w-full items-center justify-center rounded-xl bg-gradient-to-r from-amber-500 to-orange-500 py-2.5 text-sm font-bold text-amber-950 shadow-lg shadow-amber-900/30 transition active:scale-[0.98]"
           >
@@ -579,7 +579,7 @@ export default async function PublicProfilePage({
 
         {/* 운영자 전용 — 이 유저의 관리자 상세로 바로 이동(친구/공유와 독립). */}
         {isAdmin ? (
-          <Link
+          <Link prefetch={false}
             href={`/admin/users?uid=${data.ownerId}`}
             className="flex w-full items-center justify-center rounded-xl border border-zinc-700 bg-zinc-900/60 py-2.5 text-sm font-semibold text-zinc-300 transition active:scale-[0.98] hover:bg-zinc-900"
           >

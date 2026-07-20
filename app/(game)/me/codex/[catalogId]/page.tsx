@@ -87,7 +87,7 @@ export default async function CodexItemPage({
               const medal = e.rank === 1 ? '🥇' : e.rank === 2 ? '🥈' : e.rank === 3 ? '🥉' : null;
               return (
                 <li key={e.userId}>
-                  <Link
+                  <Link prefetch={false}
                     href={profileHref(e.publicCode, serverId)}
                     className={`flex items-center gap-3 border-b border-zinc-100 px-4 py-2.5 last:border-b-0 dark:border-zinc-900 ${
                       e.userId === userId ? 'bg-amber-50 dark:bg-amber-950/40' : ''

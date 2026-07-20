@@ -35,7 +35,7 @@ export function BottomNav({
           (item.href === '/enhance' && hasCompletedEnhance) ||
           (item.href === '/me' && hasFriendRequest);
         return (
-          <Link
+          <Link prefetch={false}
             key={item.href}
             href={item.href}
             // 채팅창이 열려 있으면 GNB 탭(같은 페이지 재탭 포함)에 최소화 — ChatDock이 수신.

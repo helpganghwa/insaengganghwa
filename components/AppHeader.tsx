@@ -35,7 +35,7 @@ export function AppHeaderShell({
     <header className="sticky top-0 z-30 box-content flex h-12 items-center justify-between gap-2 border-b border-zinc-200 bg-white px-3 pt-[env(safe-area-inset-top)] dark:border-zinc-800 dark:bg-zinc-950">
       {/* 아바타 클릭=아바타 선택(/me/profiles), 이름 클릭=닉네임 변경 팝업. */}
       <div className="flex min-w-0 items-center gap-2">
-        <Link
+        <Link prefetch={false}
           href="/me/profiles"
           aria-label="아바타 선택"
           className="relative h-8 w-8 shrink-0 overflow-hidden"
@@ -73,7 +73,7 @@ export function AppHeaderShell({
 
       <div className="flex shrink-0 items-center gap-1.5 text-xs">
         {diamondSlot ?? (
-          <Link
+          <Link prefetch={false}
             href="/shop?tab=charge"
             aria-label={`다이아 ${diamond} · 충전`}
             className="inline-flex items-center gap-1 text-zinc-700 dark:text-zinc-100"

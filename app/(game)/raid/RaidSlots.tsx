@@ -259,7 +259,7 @@ export function RaidSlots({
         {cells.map((s, i) =>
           s ? (
             s.kind === 'pending_claim' ? (
-              <Link
+              <Link prefetch={false}
                 key={s.raidId}
                 href={`/raid/${s.raidId}`}
                 style={{ boxShadow: getBossShadow(s.bossCode) }}
@@ -305,7 +305,7 @@ export function RaidSlots({
                 </span>
               </Link>
             ) : (
-            <Link
+            <Link prefetch={false}
               key={s.raidId}
               href={`/raid/${s.raidId}`}
               style={{ boxShadow: getBossShadow(s.bossCode) }}

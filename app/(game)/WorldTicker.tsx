@@ -42,7 +42,7 @@ export function WorldTicker({ entries }: { entries: WorldEventEntry[] }) {
   const text = 'block w-full truncate text-[11px] leading-tight text-zinc-700 dark:text-zinc-300';
 
   return (
-    <Link
+    <Link prefetch={false}
       href="/world"
       aria-label="월드 소식 전체 보기"
       className="sticky top-0 z-20 block border-b border-zinc-200 bg-white/90 px-4 py-1 backdrop-blur active:bg-zinc-50 dark:border-zinc-800 dark:bg-zinc-950/90 dark:active:bg-zinc-900"
