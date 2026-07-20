@@ -96,6 +96,8 @@ export function ChatDock() {
   const [kbOffset, setKbOffset] = useState(0);
   // 멘션 하이라이트용 내 닉네임.
   const [meNickname, setMeNickname] = useState<string | null>(null);
+  // 멘션 자동완성 — 서버 전체 닉네임 prefix 검색 결과(250ms 디바운스).
+  const [searchCands, setSearchCands] = useState<string[]>([]);
 
   const openRef = useRef(false);
   const wsOkRef = useRef(false);
@@ -308,6 +310,23 @@ export function ChatDock() {
     return () => clearTimeout(t);
   }, [cooldown]);
 
+  // 멘션 자동완성 — 입력 끝 @접두를 서버 전체 닉네임에서 prefix 검색(250ms 디바운스).
+  useEffect(() => {
+    const tok = /@([^\s@]{1,12})$/.exec(input);
+    if (!tok) {
+      setSearchCands([]);
+      return;
+    }
+    const q = tok[1]!;
+    const t = setTimeout(() => {
+      void fetch(`/api/chat/mention-search?q=${encodeURIComponent(q)}`, { cache: 'no-store' })
+        .then(async (r) => (r.ok ? ((await r.json()) as { nicknames: string[] }) : null))
+        .then((d) => setSearchCands(d?.nicknames ?? []))
+        .catch(() => setSearchCands([]));
+    }, 250);
+    return () => clearTimeout(t);
+  }, [input]);
+
   const openPanel = () => {
     setOpen(true);
     setUnseenBelow(false);
@@ -335,6 +354,10 @@ export function ChatDock() {
       const raw = sessionStorage.getItem(RESTORE_KEY);
       if (!raw) return;
       sessionStorage.removeItem(RESTORE_KEY);
+      if (raw === 'panel') {
+        openPanel(); // 시스템 라인 닉네임 링크 복귀 — 패널만 복원.
+        return;
+      }
       const data = JSON.parse(raw) as MiniProfile;
       openPanel();
       setProfile({ userId: data.userId, data });
@@ -442,15 +465,16 @@ export function ChatDock() {
   const mentionToken = /@([^\s@]{0,12})$/.exec(input);
   const mentionCands = mentionToken
     ? [
-        ...new Set(
-          [...messages]
+        ...new Set([
+          // 최근 발언자(즉시) 우선, 서버 전체 검색(디바운스) 결과로 보강.
+          ...[...messages]
             .reverse()
             .filter((m) => !m.sys && m.userId && m.userId !== me)
-            .map((m) => m.nickname),
-        ),
-      ]
-        .filter((n) => n.startsWith(mentionToken[1] ?? ''))
-        .slice(0, 5)
+            .map((m) => m.nickname)
+            .filter((n) => n.startsWith(mentionToken[1] ?? '')),
+          ...searchCands,
+        ]),
+      ].slice(0, 5)
     : [];
   const applyMention = (nick: string) => {
     if (!mentionToken) return;
@@ -609,7 +633,20 @@ export function ChatDock() {
                 // 시스템 라인(월드 이벤트) — 가운데 정렬 회색, 상호작용 없음.
                 if (m.sys) {
                   return (
-                    <div key={m.id} className="px-4 py-[3px] text-center text-[10.5px] leading-snug text-zinc-400 dark:text-zinc-500">
+                    <div
+                      key={m.id}
+                      // 닉네임 링크로 프로필에 갔다 돌아오면 패널을 다시 연다(마운트 복원 소비).
+                      onClickCapture={(e) => {
+                        if ((e.target as HTMLElement).closest('a')) {
+                          try {
+                            sessionStorage.setItem(RESTORE_KEY, 'panel');
+                          } catch {
+                            /* ignore */
+                          }
+                        }
+                      }}
+                      className="px-4 py-[3px] text-center text-[10.5px] leading-snug text-zinc-400 dark:text-zinc-500"
+                    >
                       {worldEventMessage(m.sys, { link: true })}
                     </div>
                   );
@@ -623,13 +660,34 @@ export function ChatDock() {
                   !prev.sys &&
                   prev.userId === m.userId &&
                   new Date(m.createdAt).getTime() - new Date(prev.createdAt).getTime() < 60_000;
+                // 내 메시지 — 카카오톡식 우측 정렬(아바타·닉·배경 없음), 묶음이면 시간 생략.
+                if (mine) {
+                  return (
+                    <div
+                      key={m.id}
+                      className={`flex items-end justify-end gap-1.5 px-1.5 ${grouped ? 'py-[2px]' : 'py-[5px]'} ${
+                        pending ? 'opacity-50' : ''
+                      }`}
+                    >
+                      {!grouped ? (
+                        <span className="shrink-0 text-[9px] text-zinc-300 dark:text-zinc-600">
+                          {new Date(m.createdAt).toLocaleTimeString('ko-KR', {
+                            hour: '2-digit',
+                            minute: '2-digit',
+                          })}
+                        </span>
+                      ) : null}
+                      <p className="max-w-[78%] text-[12.5px] leading-[1.45] break-words text-zinc-800 dark:text-zinc-200">
+                        {renderBody(m.body, m.mentions)}
+                      </p>
+                    </div>
+                  );
+                }
                 if (grouped) {
                   return (
                     <div
                       key={m.id}
-                      className={`flex items-start gap-2 px-1.5 py-[2px] ${
-                        mine ? 'bg-amber-50/70 dark:bg-amber-500/[0.07]' : ''
-                      } ${pending ? 'opacity-50' : ''}`}
+                      className={`flex items-start gap-2 px-1.5 py-[2px] ${pending ? 'opacity-50' : ''}`}
                     >
                       <p
                         onClick={() => {
@@ -645,9 +703,7 @@ export function ChatDock() {
                 return (
                   <div
                     key={m.id}
-                    className={`flex items-start gap-2 px-1.5 py-[5px] ${
-                      mine ? 'bg-amber-50/70 dark:bg-amber-500/[0.07]' : ''
-                    } ${pending ? 'opacity-50' : ''}`}
+                    className={`flex items-start gap-2 px-1.5 py-[5px] ${pending ? 'opacity-50' : ''}`}
                   >
                     <button
                       type="button"
