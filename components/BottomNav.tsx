@@ -38,6 +38,8 @@ export function BottomNav({
           <Link
             key={item.href}
             href={item.href}
+            // 채팅창이 열려 있으면 GNB 탭(같은 페이지 재탭 포함)에 최소화 — ChatDock이 수신.
+            onClick={() => window.dispatchEvent(new Event('ig:gnb-nav'))}
             data-tut={
               item.href === '/inventory'
                 ? 'nav-inventory'
