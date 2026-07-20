@@ -4,18 +4,24 @@ import { useCallback, useEffect, useRef, useState } from 'react';
 import Link from 'next/link';
 
 import { supabaseBrowser } from '@/lib/supabase-browser';
+import { faceCropStyle } from '@/components/faceCrop';
 import type { ChatMessageDto } from '@/lib/game/chat/service';
 
 import { sendChat, reportChat } from './actions';
 
 /**
- * 월드 채팅 도크(0125, 2026-07-20 확정 UX) —
+ * 전체 채팅 도크(0125, 2026-07-20 확정 UX) —
  *  - GNB 바로 위 fixed 반투명 미니바(최근 1개 메시지) → 탭하면 헤더·GNB 사이를 덮는 불투명 패널
  *  - 수신: Supabase Realtime broadcast 구독, 실패 시 15초 폴링 폴백
  *  - 전송: sendChat 서버 액션(쿨다운 5초 — 버튼 카운트다운 동기)
+ *  - 미니바 높이는 --chat-dock-h로 발행 — 레이아웃 main이 하단 패딩으로 비켜섬(콘텐츠 가림 방지)
+ *  - 하단 오프셋에 --gt-h(가이드 티커) 합산 — 티커가 있는 브랜치에서도 겹치지 않음
  */
 
 const COOLDOWN_S = 5;
+const DOCK_H = '42px';
+// iOS는 포커스된 input 폰트가 16px 미만이면 화면을 자동 확대 — 16px로 두고 시각만 13px로 스케일.
+const INPUT_SCALE = 13 / 16;
 
 export function ChatDock() {
   const [enabled, setEnabled] = useState<boolean | null>(null); // null=로딩(도크 미표시)
@@ -44,6 +50,18 @@ export function ChatDock() {
       /* ignore */
     }
   }, []);
+
+  const visible = enabled === true && !hiddenByTutorial;
+
+  // 미니바 높이 발행 — 레이아웃 main의 paddingBottom이 이 변수로 비켜섬.
+  useEffect(() => {
+    const root = document.documentElement;
+    if (visible) root.style.setProperty('--chat-dock-h', DOCK_H);
+    else root.style.removeProperty('--chat-dock-h');
+    return () => {
+      root.style.removeProperty('--chat-dock-h');
+    };
+  }, [visible]);
 
   const scrollToBottom = useCallback((smooth = false) => {
     const el = listRef.current;
@@ -187,32 +205,32 @@ export function ChatDock() {
     });
   };
 
-  if (enabled === null || enabled === false || hiddenByTutorial) return null;
+  if (!visible) return null;
 
   return (
     <>
-      {/* 미니바 — GNB 바로 위 fixed, 반투명(뒤 콘텐츠 비침) */}
+      {/* 미니바 — GNB(+가이드 티커) 바로 위 fixed, 반투명(뒤 콘텐츠 비침) */}
       {!open ? (
         <div
           className="pointer-events-none fixed inset-x-0 z-20"
-          style={{ bottom: 'calc(3.5rem + env(safe-area-inset-bottom))' }}
+          style={{ bottom: 'calc(3.5rem + env(safe-area-inset-bottom) + var(--gt-h, 0px))' }}
         >
           <div className="mx-auto w-full max-w-[390px] px-2 pb-1">
             <button
               type="button"
               onClick={openPanel}
-              aria-label="월드 채팅 열기"
-              className="pointer-events-auto flex w-full items-center gap-2 rounded-full border border-zinc-200/70 bg-white/75 px-3 py-1.5 text-left backdrop-blur-md dark:border-zinc-700/70 dark:bg-zinc-900/75"
+              aria-label="전체 채팅 열기"
+              className="pointer-events-auto flex h-[34px] w-full items-center gap-2 rounded-full border border-zinc-200/70 bg-white/70 px-3 text-left backdrop-blur-md dark:border-zinc-700/60 dark:bg-zinc-900/70"
             >
-              <span aria-hidden className="text-[13px]">💬</span>
+              <span aria-hidden className="text-[12px]">💬</span>
               {latest ? (
-                <span className="min-w-0 flex-1 truncate text-[11.5px] text-zinc-600 dark:text-zinc-300">
-                  <b className="font-bold text-zinc-800 dark:text-zinc-100">{latest.nickname}</b>
-                  <span className="mx-1 text-zinc-400">·</span>
+                <span className="min-w-0 flex-1 truncate text-[11px] text-zinc-500 dark:text-zinc-400">
+                  <b className="font-semibold text-zinc-700 dark:text-zinc-200">{latest.nickname}</b>
+                  <span className="mx-1 opacity-60">·</span>
                   {latest.body}
                 </span>
               ) : (
-                <span className="flex-1 truncate text-[11.5px] text-zinc-400">월드 채팅에 첫 인사를 남겨보세요</span>
+                <span className="flex-1 truncate text-[11px] text-zinc-400">전체 채팅에 첫 인사를 남겨보세요</span>
               )}
             </button>
           </div>
@@ -225,23 +243,23 @@ export function ChatDock() {
           className="fixed inset-x-0 z-20"
           style={{
             top: 'calc(3rem + env(safe-area-inset-top))',
-            bottom: 'calc(3.5rem + env(safe-area-inset-bottom))',
+            bottom: 'calc(3.5rem + env(safe-area-inset-bottom) + var(--gt-h, 0px))',
           }}
         >
-          <div className="mx-auto flex h-full w-full max-w-[390px] flex-col border-x border-zinc-200 bg-white dark:border-zinc-800 dark:bg-zinc-950">
-            <header className="flex shrink-0 items-center justify-between border-b border-zinc-200 px-3 py-2 dark:border-zinc-800">
-              <h2 className="text-[13px] font-extrabold">💬 월드 채팅</h2>
+          <div className="mx-auto flex h-full w-full max-w-[390px] flex-col bg-white dark:bg-zinc-950">
+            <header className="flex shrink-0 items-center justify-between border-b border-zinc-100 px-3 py-1.5 dark:border-zinc-800/70">
+              <h2 className="text-[12px] font-bold text-zinc-700 dark:text-zinc-200">💬 전체 채팅</h2>
               <button
                 type="button"
                 onClick={() => setOpen(false)}
                 aria-label="채팅 닫기"
-                className="px-1 text-lg leading-none text-zinc-400 hover:text-zinc-700 dark:hover:text-zinc-200"
+                className="px-1.5 text-base leading-none text-zinc-400 hover:text-zinc-700 dark:hover:text-zinc-200"
               >
                 ×
               </button>
             </header>
 
-            <div ref={listRef} className="min-h-0 flex-1 space-y-2.5 overflow-y-auto overscroll-contain px-3 py-3">
+            <div ref={listRef} className="min-h-0 flex-1 overflow-y-auto overscroll-contain px-2.5 py-2">
               {messages.length === 0 ? (
                 <p className="py-10 text-center text-[12px] text-zinc-400">
                   아직 대화가 없어요. 첫 인사를 남겨보세요!
@@ -252,82 +270,86 @@ export function ChatDock() {
                   return (
                     <div
                       key={m.id}
-                      className={`flex items-start gap-2 rounded-xl px-2 py-1.5 ${
-                        mine ? 'bg-amber-50 dark:bg-amber-500/10' : ''
+                      className={`flex items-start gap-2 rounded-lg px-1.5 py-[5px] ${
+                        mine ? 'bg-amber-50/70 dark:bg-amber-500/[0.07]' : ''
                       }`}
                     >
-                      <span className="mt-0.5 h-7 w-7 shrink-0 overflow-hidden rounded-full bg-zinc-100 dark:bg-zinc-800">
+                      <span className="mt-[3px] h-6 w-6 shrink-0 overflow-hidden rounded-full bg-zinc-100 dark:bg-zinc-800/80">
                         {m.avatar ? (
                           // eslint-disable-next-line @next/next/no-img-element
-                          <img
-                            src={m.avatar}
-                            alt=""
-                            className="h-full w-full scale-[2.2] object-cover object-top"
-                            style={{ imageRendering: 'pixelated' }}
-                          />
+                          <img src={m.avatar} alt="" className="h-full w-full" style={faceCropStyle(m.faceBox)} />
                         ) : (
-                          <span className="flex h-full w-full items-center justify-center text-[13px]">👤</span>
+                          <span className="flex h-full w-full items-center justify-center text-[11px]">👤</span>
                         )}
                       </span>
                       <div className="min-w-0 flex-1">
-                        <div className="flex items-baseline gap-1.5">
+                        <div className="flex items-baseline gap-1.5 leading-none">
                           {m.publicCode ? (
                             <Link
                               href={`/u/${m.publicCode}?s=${serverIdRef.current}`}
-                              className="truncate text-[11.5px] font-bold text-zinc-800 dark:text-zinc-100"
+                              className="truncate text-[11px] font-semibold text-zinc-500 dark:text-zinc-400"
                             >
                               {m.nickname}
                             </Link>
                           ) : (
-                            <span className="truncate text-[11.5px] font-bold text-zinc-800 dark:text-zinc-100">
+                            <span className="truncate text-[11px] font-semibold text-zinc-500 dark:text-zinc-400">
                               {m.nickname}
                             </span>
                           )}
                           {m.guildName ? (
-                            <span className="truncate text-[10px] text-zinc-400">{m.guildName}</span>
+                            <span className="truncate text-[9.5px] text-zinc-400 dark:text-zinc-500">{m.guildName}</span>
                           ) : null}
-                          <span className="ml-auto shrink-0 text-[10px] text-zinc-400">
+                          <span className="ml-auto shrink-0 text-[9px] text-zinc-300 dark:text-zinc-600">
                             {new Date(m.createdAt).toLocaleTimeString('ko-KR', { hour: '2-digit', minute: '2-digit' })}
                           </span>
+                          {!mine ? (
+                            <button
+                              type="button"
+                              onClick={() => report(m)}
+                              aria-label="메시지 신고"
+                              className="shrink-0 text-[9px] text-zinc-300 hover:text-red-500 dark:text-zinc-600"
+                            >
+                              신고
+                            </button>
+                          ) : null}
                         </div>
-                        <p className="break-words text-[13px] leading-snug text-zinc-700 dark:text-zinc-200">
+                        <p className="mt-[3px] break-words text-[12.5px] leading-[1.45] text-zinc-800 dark:text-zinc-200">
                           {m.body}
                         </p>
                       </div>
-                      {!mine ? (
-                        <button
-                          type="button"
-                          onClick={() => report(m)}
-                          aria-label="메시지 신고"
-                          className="mt-0.5 shrink-0 text-[10px] text-zinc-300 hover:text-red-500 dark:text-zinc-600"
-                        >
-                          신고
-                        </button>
-                      ) : null}
                     </div>
                   );
                 })
               )}
             </div>
 
-            <div className="shrink-0 border-t border-zinc-200 px-3 py-2 dark:border-zinc-800">
-              {error ? <p className="mb-1 text-[11px] text-amber-600 dark:text-amber-400">{error}</p> : null}
-              <div className="flex items-center gap-2">
-                <input
-                  value={input}
-                  onChange={(e) => setInput(e.target.value)}
-                  onKeyDown={(e) => {
-                    if (e.key === 'Enter' && !e.nativeEvent.isComposing) submit();
-                  }}
-                  maxLength={200}
-                  placeholder="메시지 입력 (200자)"
-                  className="min-w-0 flex-1 rounded-full border border-zinc-300 bg-white px-3.5 py-2 text-[13px] outline-none focus:border-amber-500 dark:border-zinc-700 dark:bg-zinc-900"
-                />
+            <div className="shrink-0 border-t border-zinc-100 px-2.5 py-2 dark:border-zinc-800/70">
+              {error ? <p className="mb-1 px-1 text-[11px] text-amber-600 dark:text-amber-400">{error}</p> : null}
+              <div className="flex items-center gap-1.5">
+                {/* iOS 포커스 확대 방지 — 16px 폰트를 스케일로 13px처럼 표시(래퍼가 실제 크기 고정). */}
+                <span className="relative h-9 min-w-0 flex-1">
+                  <input
+                    value={input}
+                    onChange={(e) => setInput(e.target.value)}
+                    onKeyDown={(e) => {
+                      if (e.key === 'Enter' && !e.nativeEvent.isComposing) submit();
+                    }}
+                    maxLength={200}
+                    placeholder="메시지 입력"
+                    className="absolute left-0 top-0 rounded-full border border-zinc-200 bg-zinc-50 px-4 text-[16px] outline-none focus:border-amber-400 dark:border-zinc-700 dark:bg-zinc-900"
+                    style={{
+                      width: `${(100 / INPUT_SCALE).toFixed(2)}%`,
+                      height: `${(100 / INPUT_SCALE).toFixed(2)}%`,
+                      transform: `scale(${INPUT_SCALE})`,
+                      transformOrigin: '0 0',
+                    }}
+                  />
+                </span>
                 <button
                   type="button"
                   onClick={submit}
                   disabled={sending || cooldown > 0 || input.trim().length === 0}
-                  className="shrink-0 rounded-full bg-amber-500 px-4 py-2 text-[13px] font-bold text-white disabled:opacity-40"
+                  className="h-9 shrink-0 rounded-full bg-amber-500 px-4 text-[12.5px] font-bold text-white disabled:opacity-40"
                 >
                   {cooldown > 0 ? `${cooldown}s` : '전송'}
                 </button>

@@ -96,7 +96,7 @@ const MENU: { href: string; icon: string; title: string; desc: string; external?
   {
     href: '/admin/chat',
     icon: '🗨️',
-    title: '월드 채팅 운영',
+    title: '전체 채팅 운영',
     desc: '최근 메시지·신고 확인, 숨김·채팅 금지, 채팅 ON/OFF 킬스위치',
   },
   {

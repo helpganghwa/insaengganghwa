@@ -15,7 +15,7 @@ export function ChatToggle({ enabled }: { enabled: boolean }) {
       type="button"
       disabled={pending}
       onClick={() => {
-        if (!window.confirm(enabled ? '월드 채팅을 끌까요? (전 유저 즉시 차단)' : '월드 채팅을 켤까요?')) return;
+        if (!window.confirm(enabled ? '전체 채팅을 끌까요? (전 유저 즉시 차단)' : '전체 채팅을 켤까요?')) return;
         start(async () => {
           await setChatEnabledAction(!enabled);
           router.refresh();

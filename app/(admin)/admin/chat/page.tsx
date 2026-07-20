@@ -14,7 +14,7 @@ function fmt(d: Date): string {
   return d.toLocaleString('ko-KR', { timeZone: 'Asia/Seoul', hour12: false, month: 'numeric', day: 'numeric', hour: '2-digit', minute: '2-digit' });
 }
 
-/** 월드 채팅 운영(0125) — 최근 메시지·신고 수·숨김/금지·킬스위치. 진입 가드는 (admin)/layout. */
+/** 전체 채팅 운영(0125) — 최근 메시지·신고 수·숨김/금지·킬스위치. 진입 가드는 (admin)/layout. */
 export default async function AdminChatPage() {
   const enabled = await isChatEnabled();
   const rows = await db
@@ -39,7 +39,7 @@ export default async function AdminChatPage() {
     <div className="space-y-4">
       <div className="flex items-center justify-between">
         <h1 className="text-lg font-bold">
-          월드 채팅 <span className={enabled ? 'text-emerald-500' : 'text-red-500'}>{enabled ? 'ON' : 'OFF'}</span>
+          전체 채팅 <span className={enabled ? 'text-emerald-500' : 'text-red-500'}>{enabled ? 'ON' : 'OFF'}</span>
         </h1>
         <ChatToggle enabled={enabled} />
       </div>

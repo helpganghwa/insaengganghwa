@@ -150,7 +150,10 @@ export default async function GameLayout({ children }: { children: React.ReactNo
           <AppHeader dataPromise={layoutData} />
         </Suspense>
         <ResourceToastProvider>
-          <main className="flex min-h-0 flex-1 flex-col overflow-y-auto overscroll-contain">
+          <main
+            className="flex min-h-0 flex-1 flex-col overflow-y-auto overscroll-contain"
+            style={{ paddingBottom: 'var(--chat-dock-h, 0px)' }}
+          >
             {children}
           </main>
           {/* 새 배포 자동 새로고침 + 새로고침 후 토스트(showHeaderToast 사용 — 프로바이더 안). */}
