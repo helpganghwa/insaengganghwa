@@ -1,6 +1,6 @@
 'use client';
 
-import { useCallback, useEffect, useRef, useState } from 'react';
+import { useCallback, useEffect, useLayoutEffect, useRef, useState } from 'react';
 import { usePathname, useRouter } from 'next/navigation';
 
 import { supabaseBrowser } from '@/lib/supabase-browser';
@@ -41,12 +41,13 @@ type MiniProfile = {
   isMe: boolean;
 };
 
-function loadBlocked(): Set<string> {
+function loadBlocked(): Map<string, string> {
   try {
     const raw = localStorage.getItem(BLOCK_KEY);
-    return new Set(raw ? (JSON.parse(raw) as string[]) : []);
+    const arr = raw ? (JSON.parse(raw) as (string | { id: string; nickname: string })[]) : [];
+    return new Map(arr.map((e) => (typeof e === 'string' ? [e, '유저'] : [e.id, e.nickname])));
   } catch {
-    return new Set();
+    return new Map();
   }
 }
 
@@ -64,7 +65,8 @@ export function ChatDock() {
   const [sending, setSending] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [hiddenByTutorial, setHiddenByTutorial] = useState(false);
-  const [blocked, setBlocked] = useState<Set<string>>(new Set());
+  const [blocked, setBlocked] = useState<Map<string, string>>(new Map());
+  const [showBlockList, setShowBlockList] = useState(false);
   // 팝업 — 미니 프로필(로딩=userId만) / 신고 확인.
   const [profile, setProfile] = useState<{ userId: string; data: MiniProfile | null } | null>(null);
   const [reportTarget, setReportTarget] = useState<ChatMessageDto | null>(null);
@@ -81,6 +83,8 @@ export function ChatDock() {
   // 낙관 전송용 — 내 표시 필드(닉/아바타/길드)는 서버 응답·최근 목록의 내 메시지에서 채움.
   const myFieldsRef = useRef<ChatMessageDto | null>(null);
   const tempSeqRef = useRef(0);
+  // 패널 오픈 직후 첫 렌더를 페인트 전에 바닥으로 — 위가 보였다가 내려가는 깜빡임 방지.
+  const needInitialScrollRef = useRef(false);
   openRef.current = open;
 
   // 튜토리얼 중엔 도크 숨김 — 코치마크·완료 모달과 시각 경합 방지. 차단 목록도 초기 로드.
@@ -98,6 +102,7 @@ export function ChatDock() {
     setOpen(false);
     setProfile(null);
     setReportTarget(null);
+    setShowBlockList(false);
   }, [pathname]);
 
   const visible = enabled === true && !hiddenByTutorial;
@@ -241,13 +246,22 @@ export function ChatDock() {
   const openPanel = () => {
     setOpen(true);
     setUnseenBelow(false);
+    needInitialScrollRef.current = true;
     void fetchRecent(100).then((ms) => {
       if (ms) {
+        needInitialScrollRef.current = true; // fetch 반영 렌더도 페인트 전 바닥 고정.
         setMessages(ms);
-        requestAnimationFrame(() => scrollToBottom());
       }
     });
   };
+
+  // 페인트 전 바닥 스크롤 — openPanel 직후 렌더(이전 목록)와 fetch 반영 렌더 모두.
+  useLayoutEffect(() => {
+    if (!open || !needInitialScrollRef.current || messages.length === 0) return;
+    const el = listRef.current;
+    if (el) el.scrollTop = el.scrollHeight;
+    needInitialScrollRef.current = false;
+  }, [open, messages]);
 
   const flashError = (msg: string) => {
     setError(msg);
@@ -318,13 +332,13 @@ export function ChatDock() {
       .catch(() => setProfile(null));
   };
 
-  const toggleBlock = (userId: string) => {
+  const toggleBlock = (userId: string, nickname: string) => {
     setBlocked((prev) => {
-      const next = new Set(prev);
+      const next = new Map(prev);
       if (next.has(userId)) next.delete(userId);
-      else next.add(userId);
+      else next.set(userId, nickname);
       try {
-        localStorage.setItem(BLOCK_KEY, JSON.stringify([...next]));
+        localStorage.setItem(BLOCK_KEY, JSON.stringify([...next].map(([id, n]) => ({ id, nickname: n }))));
       } catch {
         /* ignore */
       }
@@ -405,8 +419,15 @@ export function ChatDock() {
           }}
         >
           <div className="relative mx-auto flex h-full w-full max-w-[390px] flex-col bg-white dark:bg-zinc-950">
-            <header className="flex shrink-0 items-center border-b border-zinc-100 px-3 py-1.5 dark:border-zinc-800/70">
+            <header className="flex shrink-0 items-center justify-between border-b border-zinc-100 px-3 py-1.5 dark:border-zinc-800/70">
               <h2 className="text-[12px] font-bold text-zinc-700 dark:text-zinc-200">💬 전체 채팅</h2>
+              <button
+                type="button"
+                onClick={() => setShowBlockList(true)}
+                className="text-[10.5px] font-semibold text-zinc-400 hover:text-zinc-600 dark:hover:text-zinc-300"
+              >
+                차단 목록
+              </button>
             </header>
 
             <div
@@ -430,7 +451,7 @@ export function ChatDock() {
                   return (
                     <div
                       key={m.id}
-                      className={`flex items-start gap-2 rounded-lg px-1.5 py-[2px] ${
+                      className={`flex items-start gap-2 px-1.5 py-[2px] ${
                         mine ? 'bg-amber-50/70 dark:bg-amber-500/[0.07]' : ''
                       } ${pending ? 'opacity-50' : ''}`}
                     >
@@ -453,7 +474,7 @@ export function ChatDock() {
                 return (
                   <div
                     key={m.id}
-                    className={`flex items-start gap-2 rounded-lg px-1.5 py-[5px] ${
+                    className={`flex items-start gap-2 px-1.5 py-[5px] ${
                       mine ? 'bg-amber-50/70 dark:bg-amber-500/[0.07]' : ''
                     } ${pending ? 'opacity-50' : ''}`}
                   >
@@ -569,50 +590,68 @@ export function ChatDock() {
           onClick={() => setProfile(null)}
         >
           <div
-            className="w-full max-w-[280px] rounded-2xl bg-white p-4 text-center dark:bg-zinc-900"
+            className="w-full max-w-[300px] overflow-hidden rounded-2xl bg-white dark:bg-zinc-900"
             onClick={(e) => e.stopPropagation()}
           >
             {!profile.data ? (
-              <p className="py-8 text-[12px] text-zinc-400">불러오는 중…</p>
+              <p className="py-10 text-center text-[12px] text-zinc-400">불러오는 중…</p>
             ) : (
               <>
-                <div className="mx-auto h-16 w-16 overflow-hidden">
-                  {profile.data.avatar ? (
-                    // eslint-disable-next-line @next/next/no-img-element
-                    <img src={profile.data.avatar} alt="" className="h-full w-full" style={faceCropStyle(profile.data.faceBox)} />
-                  ) : (
-                    <span className="flex h-full w-full items-center justify-center text-3xl">👤</span>
-                  )}
-                </div>
-                <div className="mt-2 flex items-center justify-center gap-1.5">
-                  <b className="text-[15px]">
-                    {profile.data.isMeleeChampion ? '🏆 ' : ''}
-                    {profile.data.nickname}
-                  </b>
-                  {profile.data.guildEmblemUrl ? (
-                    // eslint-disable-next-line @next/next/no-img-element
-                    <img src={profile.data.guildEmblemUrl} alt="" className="h-3.5 w-3.5 object-contain" style={{ imageRendering: 'pixelated' }} />
-                  ) : null}
-                  {profile.data.guildName ? (
-                    <span className="text-[11px] text-zinc-400">{profile.data.guildName}</span>
-                  ) : null}
-                </div>
-                <div className="mt-3 grid grid-cols-3 gap-1.5 text-center">
-                  {(
-                    [
-                      ['전투력', profile.data.combat.toLocaleString()],
-                      ['최고 강화', `+${profile.data.maxEnhance}`],
-                      ['합산 강화', `+${profile.data.sumEnhance.toLocaleString()}`],
-                    ] as const
-                  ).map(([label, v]) => (
-                    <div key={label} className="rounded-lg bg-zinc-50 px-1 py-1.5 dark:bg-zinc-800/60">
-                      <div className="text-[9px] text-zinc-400">{label}</div>
-                      <div className="text-[12px] font-bold tabular-nums">{v}</div>
+                {/* 자랑 카드식 2분할 — 왼쪽 전신 아바타 / 오른쪽 정보 */}
+                <div className="flex items-stretch gap-3 bg-gradient-to-br from-amber-50 via-white to-zinc-50 px-4 pb-3 pt-4 dark:from-amber-500/[0.09] dark:via-zinc-900 dark:to-zinc-900">
+                  <div className="flex w-[96px] shrink-0 items-end justify-center">
+                    {profile.data.avatar ? (
+                      // eslint-disable-next-line @next/next/no-img-element
+                      <img
+                        src={profile.data.avatar}
+                        alt=""
+                        className="max-h-[120px] w-auto"
+                        style={{ imageRendering: 'pixelated' }}
+                      />
+                    ) : (
+                      <span className="pb-4 text-5xl">👤</span>
+                    )}
+                  </div>
+                  <div className="flex min-w-0 flex-1 flex-col justify-center">
+                    <b className="truncate text-[15px] leading-tight">
+                      {profile.data.isMeleeChampion ? '🏆 ' : ''}
+                      {profile.data.nickname}
+                    </b>
+                    {profile.data.guildName ? (
+                      <span className="mt-0.5 flex items-center gap-1 text-[11px] text-zinc-400">
+                        {profile.data.guildEmblemUrl ? (
+                          // eslint-disable-next-line @next/next/no-img-element
+                          <img
+                            src={profile.data.guildEmblemUrl}
+                            alt=""
+                            className="h-3.5 w-3.5 shrink-0 object-contain"
+                            style={{ imageRendering: 'pixelated' }}
+                          />
+                        ) : null}
+                        <span className="truncate">{profile.data.guildName}</span>
+                      </span>
+                    ) : null}
+                    <div className="mt-2.5 space-y-1 border-t border-zinc-200/70 pt-2 dark:border-zinc-700/50">
+                      {(
+                        [
+                          ['전투력', profile.data.combat.toLocaleString()],
+                          ['최고 강화', `+${profile.data.maxEnhance}`],
+                          ['합산 강화', `+${profile.data.sumEnhance.toLocaleString()}`],
+                        ] as const
+                      ).map(([label, v]) => (
+                        <div key={label} className="flex items-baseline justify-between gap-2">
+                          <span className="text-[10px] text-zinc-400">{label}</span>
+                          <span className="text-[12.5px] font-bold tabular-nums">{v}</span>
+                        </div>
+                      ))}
                     </div>
-                  ))}
+                  </div>
                 </div>
-                {popupFlash ? <p className="mt-2 text-[11px] text-amber-600 dark:text-amber-400">{popupFlash}</p> : null}
-                <div className="mt-3 grid grid-cols-2 gap-1.5">
+                {popupFlash ? (
+                  <p className="px-4 pt-2 text-center text-[11px] text-amber-600 dark:text-amber-400">{popupFlash}</p>
+                ) : null}
+                {/* 상호작용 버튼 */}
+                <div className="grid grid-cols-2 gap-1.5 p-3">
                   <button
                     type="button"
                     onClick={() => {
@@ -651,7 +690,7 @@ export function ChatDock() {
                     <button
                       type="button"
                       onClick={() => {
-                        toggleBlock(profile.data!.userId);
+                        toggleBlock(profile.data!.userId, profile.data!.nickname);
                         setPopupFlash(blocked.has(profile.data!.userId) ? '차단을 해제했어요' : '이 기기에서 메시지를 숨겨요');
                       }}
                       className="rounded-lg bg-zinc-100 py-2 text-[12px] font-bold text-zinc-600 dark:bg-zinc-800 dark:text-zinc-300"
@@ -673,6 +712,46 @@ export function ChatDock() {
         </div>
       ) : null}
 
+      {/* 차단 목록 팝업 — 차단 유저는 메시지가 숨어 프로필 진입이 불가하므로 여기서 해제 */}
+      {showBlockList ? (
+        <div
+          role="dialog"
+          aria-modal="true"
+          aria-label="차단 목록"
+          className="fixed inset-0 z-40 flex items-center justify-center bg-black/60 p-6 backdrop-blur-sm"
+          onClick={() => setShowBlockList(false)}
+        >
+          <div className="w-full max-w-[280px] rounded-2xl bg-white p-4 dark:bg-zinc-900" onClick={(e) => e.stopPropagation()}>
+            <h3 className="text-[13px] font-bold">차단 목록</h3>
+            {blocked.size === 0 ? (
+              <p className="py-6 text-center text-[12px] text-zinc-400">차단한 유저가 없어요.</p>
+            ) : (
+              <ul className="mt-2 max-h-[240px] space-y-1 overflow-y-auto">
+                {[...blocked].map(([id, nickname]) => (
+                  <li key={id} className="flex items-center justify-between gap-2 rounded-lg bg-zinc-50 px-2.5 py-1.5 dark:bg-zinc-800/60">
+                    <span className="truncate text-[12px] font-semibold">{nickname}</span>
+                    <button
+                      type="button"
+                      onClick={() => toggleBlock(id, nickname)}
+                      className="shrink-0 rounded-md bg-zinc-200 px-2 py-1 text-[11px] font-bold text-zinc-600 dark:bg-zinc-700 dark:text-zinc-300"
+                    >
+                      해제
+                    </button>
+                  </li>
+                ))}
+              </ul>
+            )}
+            <button
+              type="button"
+              onClick={() => setShowBlockList(false)}
+              className="mt-3 w-full rounded-lg bg-zinc-100 py-2 text-[12px] font-bold text-zinc-500 dark:bg-zinc-800 dark:text-zinc-400"
+            >
+              닫기
+            </button>
+          </div>
+        </div>
+      ) : null}
+
       {/* 신고 확인 팝업 */}
       {reportTarget ? (
         <div
@@ -688,7 +767,7 @@ export function ChatDock() {
               <b>{reportTarget.nickname}</b> · {reportTarget.body.slice(0, 60)}
             </p>
             <p className="mt-2 text-[10.5px] leading-relaxed text-zinc-400">
-              신고가 누적되면 메시지가 자동으로 숨겨지고 운영자가 확인합니다.
+              신고가 누적되면 메시지가 자동으로 숨겨집니다.
             </p>
             <div className="mt-3 grid grid-cols-2 gap-1.5">
               <button
