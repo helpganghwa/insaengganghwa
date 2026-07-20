@@ -86,7 +86,7 @@ const MemberRow = memo(function MemberRow({ m, myUserId, serverId }: { m: RichMe
   const isMe = m.userId === myUserId;
   return (
     <li>
-      <Link
+      <Link prefetch={false}
         href={profileHref(m.publicCode, serverId)}
         className="flex items-center gap-2 py-1.5 active:opacity-70"
       >

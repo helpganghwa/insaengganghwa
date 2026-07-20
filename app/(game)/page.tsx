@@ -353,7 +353,7 @@ export default async function HomePage() {
         const allDone = chgStatus?.completeClaimed ?? false;
         if (allDone) return null; // 전부 정복(보너스까지 수령) — 배너 은퇴
         return (
-          <Link
+          <Link prefetch={false}
             href="/challenges"
             className={`relative isolate block h-16 w-full min-w-0 overflow-hidden rounded-xl border transition active:scale-[0.99] ${
               claimable > 0
@@ -418,7 +418,7 @@ export default async function HomePage() {
               {i === 6 && (
                 <AnnouncementBoard items={announcements} tint="#2b2147" holdPopup={tutorialActive} />
               )}
-              <Link
+              <Link prefetch={false}
               href={m.href}
               data-tut={m.href === '/gacha' ? 'goto-gacha' : undefined}
               style={{ backgroundColor: m.tint }}

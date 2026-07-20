@@ -91,7 +91,7 @@ function ChronicleText({
       const code = m[3];
       out.push(
         code ? (
-          <Link key={key++} href={profileHref(code, serverId)} className="text-stone-500 underline decoration-dotted underline-offset-2 dark:text-stone-400">
+          <Link prefetch={false} key={key++} href={profileHref(code, serverId)} className="text-stone-500 underline decoration-dotted underline-offset-2 dark:text-stone-400">
             {name}
           </Link>
         ) : (

@@ -106,7 +106,7 @@ export default async function LeaderboardPage({
                     );
                   }
                   return (
-                    <Link
+                    <Link prefetch={false}
                       key={entry.userId}
                       href={profileHref(entry.publicCode, serverId)}
                       className={`flex min-w-0 flex-1 flex-col items-center self-stretch ${
@@ -174,7 +174,7 @@ export default async function LeaderboardPage({
                     : '';
                   return (
                     <li key={e.userId}>
-                      <Link
+                      <Link prefetch={false}
                         href={profileHref(e.publicCode, serverId)}
                         className={`flex h-14 items-center gap-2.5 border-b border-zinc-800 px-3 last:border-b-0 ${
                           me ? `bg-amber-400/10 ring-1 ring-amber-400/60 ring-inset ${meRound}` : ''

@@ -133,7 +133,7 @@ export function RaidInviteLanding({
 
       {/* 액션 — 상태별 분기 */}
       {ended ? (
-        <Link
+        <Link prefetch={false}
           href="/"
           className="flex w-full items-center justify-center rounded-xl border border-zinc-700 py-3.5 text-sm font-bold text-zinc-300 active:bg-zinc-900"
         >

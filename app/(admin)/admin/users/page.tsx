@@ -165,7 +165,7 @@ export default async function AdminUsersPage({
         <section className="flex flex-col gap-2">
           <p className="text-xs text-zinc-500">{results.length}건 (최대 20)</p>
           {results.map((r) => (
-            <Link
+            <Link prefetch={false}
               key={`${r.userId}:${r.serverId}`}
               href={`/admin/users?uid=${r.userId}`}
               className="flex items-center justify-between rounded-lg border border-zinc-200 px-3 py-2 text-sm hover:bg-zinc-50 dark:border-zinc-800 dark:hover:bg-zinc-900"
@@ -213,7 +213,7 @@ export default async function AdminUsersPage({
               <dd>
                 {detail.avatar.n}개 보유 · 미처리 신고 {detail.avatar.reports}건
                 {detail.avatar.reports > 0 && (
-                  <Link href="/admin/reports" className="ml-1 underline">신고 페이지</Link>
+                  <Link prefetch={false} href="/admin/reports" className="ml-1 underline">신고 페이지</Link>
                 )}
               </dd>
             </dl>
@@ -262,7 +262,7 @@ export default async function AdminUsersPage({
                 ))}
               </ul>
             )}
-            <Link href="/admin/payments" className="mt-2 inline-block text-xs underline">
+            <Link prefetch={false} href="/admin/payments" className="mt-2 inline-block text-xs underline">
               결제 관리로
             </Link>
           </div>

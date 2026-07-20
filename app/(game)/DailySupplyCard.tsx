@@ -14,7 +14,7 @@ import { assetUrl } from '@/lib/asset-versions';
  */
 export function DailySupplyCard() {
   return (
-    <Link
+    <Link prefetch={false}
       href="/mail"
       className="relative flex h-full w-full overflow-hidden transition active:scale-[0.99]"
     >

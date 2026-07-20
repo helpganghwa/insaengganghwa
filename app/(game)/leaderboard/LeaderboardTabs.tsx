@@ -16,7 +16,7 @@ export function LeaderboardTabs({ active }: { active: LeaderboardMetric }) {
   return (
     <div className="grid grid-cols-5 gap-1 rounded-full bg-zinc-100 p-1 dark:bg-zinc-900">
       {TABS.map((t) => (
-        <Link
+        <Link prefetch={false}
           key={t.key}
           href={`/leaderboard?tab=${t.key}`}
           className={

@@ -503,7 +503,7 @@ export function BattlePassClient({
         {/* 확률형 아이템 고지(법규 F-11) — 초월 패스 보상에 보급상자 포함, 구매 화면 인접 노출. */}
         <p className="mb-2 px-1 text-center text-[10px] leading-snug text-zinc-500">
           📦 보급상자는 확률형 아이템입니다 ·{' '}
-          <Link href="/probability#supply" className="underline underline-offset-2">
+          <Link prefetch={false} href="/probability#supply" className="underline underline-offset-2">
             아이템별 확률 보기
           </Link>
         </p>

@@ -38,7 +38,7 @@ export function TutorialCompleteModal({ onClose }: { onClose: () => void }) {
           기다렸다가 강화하는 것이 인생강화의 기본이에요.
         </p>
 
-        <Link
+        <Link prefetch={false}
           href="/challenges"
           onClick={onClose}
           className="mt-4 block rounded-xl border border-amber-500/40 bg-amber-50 px-3 py-2.5 text-left dark:bg-amber-500/10"

@@ -12,7 +12,7 @@ import { useDiamond } from '@/components/DiamondContext';
 export function HeaderDiamond() {
   const { diamond } = useDiamond();
   return (
-    <Link
+    <Link prefetch={false}
       href="/shop?tab=charge"
       aria-label={`다이아 ${diamond} · 충전`}
       className="inline-flex items-center gap-1 text-zinc-700 dark:text-zinc-100"

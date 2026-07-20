@@ -37,7 +37,7 @@ export default async function LegalPage({ params }: { params: Promise<{ doc: str
         <p className="mt-0.5 text-[11px] text-zinc-500">시행일: {meta.effectiveDate}</p>
         <nav className="mt-2 flex flex-wrap gap-1.5">
           {SLUGS.map((s) => (
-            <Link
+            <Link prefetch={false}
               key={s}
               href={`/legal/${s}`}
               className={`rounded-full px-2 py-0.5 text-[11px] ${

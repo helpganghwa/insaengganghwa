@@ -11,7 +11,7 @@ import { assetUrl } from '@/lib/asset-versions';
  */
 export function HubCheckinCard() {
   return (
-    <Link
+    <Link prefetch={false}
       href="/checkin"
       className="relative flex h-full w-full overflow-hidden transition active:scale-[0.99]"
     >

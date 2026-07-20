@@ -39,7 +39,7 @@ function userNode(
   // 유저색 — 세계지도 연대기 인물색과 동일(스톤)
   if (!link || !code) return <span className="font-extrabold text-stone-500 dark:text-stone-400">{label}</span>;
   return (
-    <Link
+    <Link prefetch={false}
       href={profileHref(code, serverId)}
       className="font-extrabold text-stone-500 hover:underline dark:text-stone-400"
     >

@@ -58,7 +58,7 @@ export function RankingDeck({
       className="isolate overflow-hidden rounded-xl border border-amber-900/50 shadow-lg shadow-black/40"
     >
       {/* 헤더 — 타이틀(랭킹 진입). 좌우 스와이프로 타입 전환. */}
-      <Link
+      <Link prefetch={false}
         href={`/leaderboard?tab=${metric}`}
         className="relative flex items-center justify-center overflow-hidden border-b border-amber-700/40 px-3.5 py-1.5 transition hover:brightness-110"
       >
@@ -120,7 +120,7 @@ export function RankingDeck({
               );
             }
             return (
-              <Link
+              <Link prefetch={false}
                 key={entry.userId}
                 href={profileHref(entry.publicCode, serverId)}
                 className={`flex min-w-0 flex-1 flex-col items-center self-stretch ${

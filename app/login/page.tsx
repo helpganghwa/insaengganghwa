@@ -143,11 +143,11 @@ export default async function LoginPage({
         ) : null}
         <p className="mt-5 text-[11px] leading-relaxed text-zinc-500">
           로그인 시{' '}
-          <Link href="/legal/terms" className="underline">
+          <Link prefetch={false} href="/legal/terms" className="underline">
             이용약관
           </Link>{' '}
           및{' '}
-          <Link href="/legal/privacy" className="underline">
+          <Link prefetch={false} href="/legal/privacy" className="underline">
             개인정보처리방침
           </Link>
           에 동의하는 것으로 간주됩니다.

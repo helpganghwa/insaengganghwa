@@ -121,7 +121,7 @@ export default async function TodayPage({ searchParams }: { searchParams: Promis
               { id: 'all', label: '전체', href: '/today?p=all' },
             ] as const
           ).map((t) => (
-            <Link
+            <Link prefetch={false}
               key={t.id}
               href={t.href}
               className={`px-3 py-1 ${

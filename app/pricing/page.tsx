@@ -71,11 +71,11 @@ export default function PricingPage() {
 
       <p className="mt-5 text-[11px] leading-relaxed text-zinc-500">
         · 확률형 요소(강화·보급)의 확률 정보는{' '}
-        <Link href="/probability" className="underline">
+        <Link prefetch={false} href="/probability" className="underline">
           확률 공시
         </Link>
         에서 확인할 수 있습니다. <br />· 청약철회·환불 기준은{' '}
-        <Link href="/legal/refund" className="underline">
+        <Link prefetch={false} href="/legal/refund" className="underline">
           환불·청약철회 안내
         </Link>
         를 참고하세요. <br />· 미성년 회원은 관련 법령상 월 결제 한도 및 법정대리인 동의 절차가 적용될 수 있습니다.

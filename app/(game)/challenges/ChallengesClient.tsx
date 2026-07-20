@@ -262,7 +262,7 @@ export function ChallengesClient({
                 <InstallAppButton />
               </div>
             ) : (
-              <Link
+              <Link prefetch={false}
                 href={guideFor.go}
                 className="block w-full rounded-xl bg-amber-600 py-2.5 text-center text-sm font-bold text-white active:opacity-90"
               >

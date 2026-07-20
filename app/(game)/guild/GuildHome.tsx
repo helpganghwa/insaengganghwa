@@ -288,7 +288,7 @@ export function GuildHome({
           길드 관리(임원)만 빠지면 멤버는 3깃발 → 비어도 자연스러움. */}
       <div className="grid grid-cols-4 gap-2">
         {visibleMenu.map((m) => (
-          <Link
+          <Link prefetch={false}
             key={m.href}
             href={m.href}
             style={{
@@ -320,7 +320,7 @@ export function GuildHome({
       <section className="rounded-xl border border-zinc-200 bg-white p-3 dark:border-zinc-800 dark:bg-zinc-950">
         <div className="mb-1 flex items-center justify-between">
           <h3 className="text-sm font-bold">길드 로그</h3>
-          <Link href="/guild/log" className="text-[11px] font-semibold text-zinc-500 hover:underline">
+          <Link prefetch={false} href="/guild/log" className="text-[11px] font-semibold text-zinc-500 hover:underline">
             전체 보기 ›
           </Link>
         </div>
@@ -379,7 +379,7 @@ export function GuildHome({
                     {mustTransfer ? '닫기' : '취소'}
                   </button>
                   {mustTransfer ? (
-                    <Link
+                    <Link prefetch={false}
                       href="/guild/settings"
                       onClick={() => setLeaveOpen(false)}
                       className="flex-1 rounded-lg bg-amber-600 py-2.5 text-center text-sm font-bold text-white active:opacity-90"

@@ -50,7 +50,7 @@ export default async function GuildRankingPage({
         <h1 className="px-1 text-sm font-bold">길드 랭킹</h1>
         <div className="flex gap-1 rounded-lg bg-zinc-100 p-0.5 dark:bg-zinc-900">
           {SORTS.map((s) => (
-            <Link
+            <Link prefetch={false}
               key={s.key}
               href={`/guild/ranking?sort=${s.key}`}
               scroll={false}

@@ -160,7 +160,7 @@ export default async function ProfilePage() {
               className="z-10 max-w-full text-[11px] text-white/70"
             />
             {activeProfile ? (
-              <Link
+              <Link prefetch={false}
                 href={profileHref(publicCode, serverId)}
                 aria-label="내 프로필 상세"
                 className="block"
@@ -172,7 +172,7 @@ export default async function ProfilePage() {
                 />
               </Link>
             ) : (
-              <Link
+              <Link prefetch={false}
                 href="/me/create"
                 className="flex aspect-[3/4] h-44 flex-col items-center justify-center gap-1 rounded-2xl border-2 border-dashed border-white/25 text-white/60"
               >
@@ -188,7 +188,7 @@ export default async function ProfilePage() {
               const it = bySlot.get(s);
               if (!it) {
                 return (
-                  <Link
+                  <Link prefetch={false}
                     key={s}
                     href={`/inventory?slot=${s}`}
                     className="flex flex-1 items-center gap-2 rounded-xl border border-dashed border-white/15 bg-white/[0.02] px-2 text-white/45"
@@ -263,7 +263,7 @@ export default async function ProfilePage() {
 
       <nav className="space-y-2">
         {MENU.map((m) => (
-          <Link
+          <Link prefetch={false}
             key={m.href}
             href={m.href}
             className="flex items-center justify-between rounded-xl border border-zinc-200 bg-white px-4 py-3 dark:border-zinc-800 dark:bg-zinc-950"
@@ -290,7 +290,7 @@ export default async function ProfilePage() {
           </Link>
         ))}
         {isAdmin ? (
-          <Link
+          <Link prefetch={false}
             href="/admin"
             className="flex items-center justify-between rounded-xl border border-amber-500/40 bg-amber-500/5 px-4 py-3 text-amber-700 dark:text-amber-300"
           >

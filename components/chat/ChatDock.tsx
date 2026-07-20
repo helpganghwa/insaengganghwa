@@ -681,7 +681,7 @@ export function ChatDock() {
             : 'font-semibold text-amber-600/85 dark:text-amber-400/85';
         if (hit.c) {
           return (
-            <Link key={i} href={profileHref(hit.c, serverIdRef.current)} className={`${cls} hover:underline`}>
+            <Link prefetch={false} key={i} href={profileHref(hit.c, serverIdRef.current)} className={`${cls} hover:underline`}>
               {nick}
             </Link>
           );

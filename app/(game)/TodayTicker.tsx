@@ -135,7 +135,7 @@ export function TodayTicker({ data }: { data: TickerData }) {
   );
 
   return (
-    <Link
+    <Link prefetch={false}
       href="/today"
       className="flex items-center gap-2 rounded-xl border border-amber-500/50 bg-gradient-to-r from-amber-500/15 via-amber-500/5 to-transparent px-3 py-2"
     >

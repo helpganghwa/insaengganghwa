@@ -82,7 +82,7 @@ export default async function CodexPage() {
                 }
                 const rank = libRanks.get(c.id) ?? null;
                 return (
-                  <Link
+                  <Link prefetch={false}
                     key={c.id}
                     href={`/me/codex/${c.id}`}
                     className="flex aspect-square flex-col items-center justify-center gap-0.5 rounded-xl border-2 border-zinc-200 bg-white p-1 text-center dark:border-zinc-800 dark:bg-zinc-950"
