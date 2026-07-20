@@ -39,4 +39,19 @@ export const chatReports = pgTable(
   (t) => [primaryKey({ columns: [t.messageId, t.reporterUserId] })],
 );
 
+/** 채팅 차단(0126) — 계정 귀속(서버 무관). 닉네임은 조회 시 characters 조인. */
+export const chatBlocks = pgTable(
+  'chat_blocks',
+  {
+    userId: uuid('user_id')
+      .notNull()
+      .references(() => profiles.id, { onDelete: 'cascade' }),
+    blockedUserId: uuid('blocked_user_id')
+      .notNull()
+      .references(() => profiles.id, { onDelete: 'cascade' }),
+    createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
+  },
+  (t) => [primaryKey({ columns: [t.userId, t.blockedUserId] })],
+);
+
 export type ChatMessage = typeof chatMessages.$inferSelect;
