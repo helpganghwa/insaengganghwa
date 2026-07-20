@@ -12,6 +12,7 @@ import { db } from '@/lib/db/client';
 import { profiles } from '@/lib/db/schema/profiles';
 import { characters } from '@/lib/db/schema/server';
 import { guildMembers } from '@/lib/db/schema/guild';
+import { chatBlocks } from '@/lib/db/schema/chat';
 import { sendPushToUser } from '@/lib/push/send';
 import { CHAT_MAX_LEN, checkAndFilterChatBody } from '@/lib/game/chat/filter';
 import {
@@ -131,6 +132,19 @@ export async function sendChat(raw: string, channel: 'all' | 'guild' = 'all'): P
   );
 
   if (mentionTargets.length > 0) {
+    // 나를 차단한 유저에게는 멘션 푸시 미발송 — 차단 우회 알림 채널 방지(2026-07-22).
+    try {
+      const blockers = await db
+        .select({ uid: chatBlocks.userId })
+        .from(chatBlocks)
+        .where(and(eq(chatBlocks.blockedUserId, userId), inArray(chatBlocks.userId, mentionTargets.map((t) => t.uid))));
+      const blockerSet = new Set(blockers.map((b) => b.uid));
+      mentionTargets = mentionTargets.filter((t) => !blockerSet.has(t.uid));
+    } catch {
+      // 차단 조회 실패 — 푸시 스킵보다 발송이 낫다고 보고 진행.
+    }
+  }
+  if (mentionTargets.length > 0) {
     await Promise.all(
       mentionTargets.slice(0, 3).map((t) =>
         sendPushToUser(t.uid, {
@@ -170,7 +184,8 @@ export async function reportChat(messageId: string): Promise<{ status: 'ok' | 'e
   } catch {
     return { status: 'error', message: '잘못된 요청입니다.' };
   }
-  const r = await reportChatMessage(userId, id);
+  const serverId = await getActiveServerId();
+  const r = await reportChatMessage(userId, id, serverId);
   if (r === 'not_found') return { status: 'error', message: '메시지를 찾을 수 없습니다.' };
   return { status: 'ok' };
 }

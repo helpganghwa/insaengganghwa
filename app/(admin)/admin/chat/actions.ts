@@ -8,6 +8,7 @@ import { db } from '@/lib/db/client';
 import { chatMessages } from '@/lib/db/schema/chat';
 import { profiles } from '@/lib/db/schema/profiles';
 import { broadcastChat } from '@/lib/game/chat/realtime';
+import { resetChatEnabledCache } from '@/lib/game/chat/service';
 
 type Result = { status: 'success' } | { status: 'error'; message: string };
 
@@ -48,6 +49,7 @@ export async function setChatEnabledAction(enabled: boolean): Promise<Result> {
     values ('chat', ${enabled ? 'live' : 'maintenance'}::system_mode_value, '월드 채팅 토글')
     on conflict (key) do update set mode = excluded.mode, updated_at = now()
   `);
+  resetChatEnabledCache();
   revalidatePath('/admin/chat');
   return { status: 'success' };
 }

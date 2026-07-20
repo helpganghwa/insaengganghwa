@@ -129,6 +129,11 @@ export async function getMyGuildChannel(
 let enabledCache: { v: boolean; at: number } | null = null;
 const ENABLED_TTL_MS = 30_000;
 
+/** 킬스위치 캐시 무효화 — 어드민 토글 직후 같은 인스턴스에서 즉시 반영(타 인스턴스는 TTL 30초). */
+export function resetChatEnabledCache(): void {
+  enabledCache = null;
+}
+
 export async function isChatEnabled(): Promise<boolean> {
   if (enabledCache && Date.now() - enabledCache.at < ENABLED_TTL_MS) return enabledCache.v;
   const [row] = await db
@@ -299,6 +304,7 @@ export async function isDuplicateOfLast(
 export async function reportChatMessage(
   reporterUserId: string,
   messageId: bigint,
+  reporterServerId: number,
 ): Promise<'ok' | 'not_found'> {
   const [msg] = await db
     .select({ id: chatMessages.id, serverId: chatMessages.serverId, guildId: chatMessages.guildId, hiddenAt: chatMessages.hiddenAt, userId: chatMessages.userId })
@@ -306,6 +312,16 @@ export async function reportChatMessage(
     .where(eq(chatMessages.id, messageId))
     .limit(1);
   if (!msg) return 'not_found';
+  // 가시성 검증(2026-07-22) — messageId는 순차라 열거 가능. 신고자는 같은 서버여야 하고,
+  // 길드 메시지면 그 길드원이어야 한다(볼 수 없는 메시지의 자동 숨김 어뷰징 차단).
+  if (msg.serverId !== reporterServerId) return 'not_found';
+  if (msg.guildId) {
+    const member = await db.execute(sql`
+      select 1 from guild_members
+      where user_id = ${reporterUserId} and server_id = ${msg.serverId} and guild_id = ${msg.guildId} limit 1
+    `);
+    if ((member as unknown as unknown[]).length === 0) return 'not_found';
+  }
   await db.insert(chatReports).values({ messageId, reporterUserId }).onConflictDoNothing();
   if (!msg.hiddenAt) {
     const [{ n }] = await db
@@ -367,7 +383,7 @@ export async function cleanupChat(): Promise<number> {
     where created_at < now() - interval '7 days'
        or id in (
          select id from (
-           select id, row_number() over (partition by server_id order by id desc) rn
+           select id, row_number() over (partition by server_id, coalesce(guild_id, 0) order by id desc) rn
            from chat_messages
          ) t where t.rn > 1000
        )

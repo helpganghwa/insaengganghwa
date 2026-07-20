@@ -43,6 +43,8 @@ export async function GET(req: Request) {
 
   return NextResponse.json({
     channel: chatTopic(serverId, guildId),
+    // 길드 실시간 토픽(HMAC 토큰 포함) — 소속 검증된 응답으로만 전달(비길드원 도청 차단).
+    guildChannel: guild ? chatTopic(serverId, BigInt(guild.guildId)) : null,
     me: userId,
     meNickname: meChar?.nickname ?? null,
     guild: guild ? { id: guild.guildId, name: guild.guildName } : null,
