@@ -592,7 +592,7 @@ export function ShopTabs({
   };
 
   return (
-    <div className="flex h-full flex-col">
+    <div className="flex h-[calc(100%-var(--chat-dock-h,0px))] flex-col">
       <div className="flex min-h-0 flex-1 flex-col overflow-y-auto overscroll-contain">
         {/* 컨텐츠 영역 — flex-1 유지(짧아도 footer를 하단으로 밀어냄). 컨텐츠와 footer 모두 함께 스크롤. */}
         <div className="flex-1 px-3 py-3">

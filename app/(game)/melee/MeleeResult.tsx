@@ -876,7 +876,7 @@ export function MeleeResult({ view, serverId }: { view: MeleeResultView; serverI
   };
 
   return (
-    <div className="flex h-full flex-col">
+    <div className="flex h-[calc(100%-var(--chat-dock-h,0px))] flex-col">
       {/* 무대 — 헤더처럼 고정(스크롤·오버스크롤 영향 없음) */}
       <div className="relative h-60 shrink-0 overflow-hidden border-b border-amber-900/50">
         {/* eslint-disable-next-line @next/next/no-img-element */}

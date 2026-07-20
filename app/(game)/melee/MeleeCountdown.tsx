@@ -93,7 +93,7 @@ export function MeleeCountdown({
   }
 
   return (
-    <div className="flex h-full flex-col">
+    <div className="flex h-[calc(100%-var(--chat-dock-h,0px))] flex-col">
       {/* 무대 — 결과 화면과 동일 크기(h-60 고정). melee.png + 정보·남은시간 오버레이. */}
       <div className="relative h-60 shrink-0 overflow-hidden border-b border-amber-900/50">
         {/* eslint-disable-next-line @next/next/no-img-element */}

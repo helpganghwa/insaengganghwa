@@ -150,11 +150,12 @@ export default async function GameLayout({ children }: { children: React.ReactNo
           <AppHeader dataPromise={layoutData} />
         </Suspense>
         <ResourceToastProvider>
-          <main
-            className="flex min-h-0 flex-1 flex-col overflow-y-auto overscroll-contain"
-            style={{ paddingBottom: 'var(--chat-dock-h, 0px)' }}
-          >
+          <main className="flex min-h-0 flex-1 flex-col overflow-y-auto overscroll-contain">
             {children}
+            {/* 채팅 미니바 회피 스페이서 — 스크롤 컨테이너 자신의 padding-bottom은 브라우저에 따라
+                스크롤 영역에 포함되지 않아(Safari/Firefox) 마지막 콘텐츠가 미니바에 가려진다(2026-07-20).
+                h-full 내부스크롤 페이지는 루트를 calc(100%-var(--chat-dock-h))로 맞춰 정합. */}
+            <div aria-hidden className="shrink-0" style={{ height: 'var(--chat-dock-h, 0px)' }} />
           </main>
           {/* 새 배포 자동 새로고침 + 새로고침 후 토스트(showHeaderToast 사용 — 프로바이더 안). */}
           <VersionUpdateToast />

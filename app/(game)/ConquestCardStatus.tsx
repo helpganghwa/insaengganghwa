@@ -18,11 +18,14 @@ export function ConquestCardStatus({
   targetMs,
   serverId,
   chronicleDay,
+  chronicleHeadline,
 }: {
   inProgress: boolean;
   targetMs: number;
   serverId: number;
   chronicleDay: string | null;
+  /** 그날 헤드라인(평문) — 있으면 티저 문구로 우선 사용(부모 div의 truncate가 말줄임). */
+  chronicleHeadline: string | null;
 }) {
   const [now, setNow] = useState<number | null>(null);
   const [unread, setUnread] = useState(false);
@@ -46,7 +49,7 @@ export function ConquestCardStatus({
   if (unread)
     return (
       <span className="font-extrabold text-amber-300 drop-shadow-[0_1px_2px_rgba(0,0,0,0.9)]">
-        새로운 역사가 쓰였다
+        {chronicleHeadline || '새로운 역사가 쓰였다'}
       </span>
     );
   if (now == null) return <>다음 점령전까지</>; // 마운트 전 — 서버 렌더 폴백(하이드레이션 안전)

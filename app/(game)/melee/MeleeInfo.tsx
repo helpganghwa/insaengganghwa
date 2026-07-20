@@ -160,7 +160,7 @@ export function MeleeInfo({
   // standalone(/melee/info) — 배너+필터를 상단 고정, 본문만 스크롤(대난투 결과 화면과 동일 패턴).
   if (showBanner) {
     return (
-      <div className="flex h-full flex-col">
+      <div className="flex h-[calc(100%-var(--chat-dock-h,0px))] flex-col">
         {banner}
         <div className="shrink-0 bg-zinc-950 pt-3 pb-3">{tabBar}</div>
         <div className="min-h-0 flex-1 space-y-3 overflow-y-auto pb-6">{body}</div>
