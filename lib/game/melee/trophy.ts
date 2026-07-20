@@ -138,6 +138,9 @@ async function trophyVisible(images: ReadyImages): Promise<boolean> {
   const res = await anthropic().messages.create({
     model: 'claude-sonnet-5',
     max_tokens: 64,
+    // Sonnet 5는 thinking 미지정 시 adaptive 기본(2026 변경) — 짧은 예산이 thinking에
+    // 소진돼 본문이 비는 사고 방지(7/20 연대기 pregen 전량 실패). 명시 비활성.
+    thinking: { type: 'disabled' },
     messages: [
       {
         role: 'user',

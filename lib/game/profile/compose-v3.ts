@@ -154,6 +154,9 @@ export async function composeV3Description(input: ComposeV3Input): Promise<strin
   const res = await client().messages.create({
     model: MODEL_ID,
     max_tokens: COMPOSE_MAX_TOKENS,
+    // Sonnet 5는 thinking 미지정 시 adaptive 기본(2026 변경) — 짧은 예산이 thinking에
+    // 소진돼 본문이 비는 사고 방지(7/20 연대기 pregen 전량 실패). 명시 비활성.
+    thinking: { type: 'disabled' },
     system: sys,
     messages: [{ role: 'user', content }],
   });
@@ -165,6 +168,9 @@ export async function composeV3Description(input: ComposeV3Input): Promise<strin
     const r = await client().messages.create({
       model: MODEL_ID,
       max_tokens: COMPOSE_MAX_TOKENS,
+      // Sonnet 5는 thinking 미지정 시 adaptive 기본(2026 변경) — 짧은 예산이 thinking에
+      // 소진돼 본문이 비는 사고 방지(7/20 연대기 pregen 전량 실패). 명시 비활성.
+      thinking: { type: 'disabled' },
       system: sys,
       messages: [
         {
