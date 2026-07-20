@@ -157,12 +157,14 @@ export function ChatDock() {
   const applyNew = useCallback(
     (m: ChatMessageDto) => {
       setLatest(m);
+      // 닫힘 중에도 목록 버퍼를 채움 — 패널을 열 때 과거 목록이 먼저 보였다가 교체되는
+      // 플래시 없이 즉시 현재 대화가 보이게(2026-07-21 피드백). 열림 시 fetch(100)가 정합 보정.
+      setMessages((prev) => {
+        if (prev.some((p) => p.id === m.id)) return prev;
+        const next = [...prev, m];
+        return next.length > 150 ? next.slice(-150) : next;
+      });
       if (openRef.current) {
-        setMessages((prev) => {
-          if (prev.some((p) => p.id === m.id)) return prev;
-          const next = [...prev, m];
-          return next.length > 150 ? next.slice(-150) : next;
-        });
         // 바닥 근처에서만 자동 스크롤(위로 읽는 중이면 유지 + "↓ 새 메시지" 칩).
         const el = listRef.current;
         if (el && el.scrollHeight - el.scrollTop - el.clientHeight < 120) {
@@ -264,11 +266,12 @@ export function ChatDock() {
       void fetchRecent(openRef.current ? 100 : 1).then((ms) => {
         if (!ms) return;
         if (openRef.current) setMessages(ms);
+        else if (ms.length > 0) applyNew(ms[ms.length - 1]!);
         if (ms.length > 0) setLatest(ms[ms.length - 1]!);
       });
     }, 15000);
     return () => clearInterval(t);
-  }, [enabled, fetchRecent]);
+  }, [enabled, fetchRecent, applyNew]);
 
   // 쿨다운 카운트다운.
   useEffect(() => {
