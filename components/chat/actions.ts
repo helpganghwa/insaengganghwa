@@ -41,9 +41,11 @@ export async function sendChat(raw: string, channel: 'all' | 'guild' = 'all'): P
     const msg =
       check.reason === 'URL'
         ? '링크는 보낼 수 없어요.'
-        : check.reason === 'TOO_LONG'
-          ? `${CHAT_MAX_LEN}자까지 보낼 수 있어요.`
-          : '내용을 입력해 주세요.';
+        : check.reason === 'BADWORD'
+          ? '부적절한 표현이 포함되어 있어 보낼 수 없어요.'
+          : check.reason === 'TOO_LONG'
+            ? `${CHAT_MAX_LEN}자까지 보낼 수 있어요.`
+            : '내용을 입력해 주세요.';
     return { status: 'error', message: msg };
   }
   const body = check.body;
@@ -117,7 +119,7 @@ export async function sendChat(raw: string, channel: 'all' | 'guild' = 'all'): P
         sendPushToUser(t.uid, {
           title: `💬 ${message.nickname}님이 ${channel === 'guild' ? '길드 ' : ''}채팅에서 언급했어요`,
           body: body.slice(0, 60),
-          url: '/',
+          url: `/?chat=${channel}`,
           tag: 'chat-mention',
           category: 'chat_mention',
         }).catch(() => null),
