@@ -128,13 +128,34 @@ export async function submitInquiry(input: {
  * 관리자 답변 — open→answered 멱등 전이 + 답변 우편(운영자) + 앱 푸시(category 'admin', 항상 발송).
  * 이미 답변됐거나 없는 건은 no-op(reason 반환).
  */
+export type AnswerReward = { diamond: number; boxes: { weapon: number; armor: number; accessory: number } };
+
+/** 보상 첨부 정규화 — 음수/NaN 방어 + 상한(다이아 10만·상자 슬롯당 1,000). 전부 0이면 null. */
+function normReward(r?: AnswerReward | null): AnswerReward | null {
+  if (!r) return null;
+  const clamp = (v: unknown, max: number) => Math.min(max, Math.max(0, Math.floor(Number(v) || 0)));
+  const out = {
+    diamond: clamp(r.diamond, 100_000),
+    boxes: {
+      weapon: clamp(r.boxes?.weapon, 1_000),
+      armor: clamp(r.boxes?.armor, 1_000),
+      accessory: clamp(r.boxes?.accessory, 1_000),
+    },
+  };
+  const any = out.diamond > 0 || out.boxes.weapon > 0 || out.boxes.armor > 0 || out.boxes.accessory > 0;
+  return any ? out : null;
+}
+
 export async function answerInquiry(input: {
   inquiryId: bigint;
   adminUserId: string;
   answer: string;
+  /** 답변에 첨부할 보상(0128 개선) — 우편 payload로 실려 유저가 수령. */
+  reward?: AnswerReward | null;
 }): Promise<{ ok: boolean; reason?: 'EMPTY' | 'ALREADY_OR_NOT_FOUND' }> {
   const answer = input.answer.trim().slice(0, ANSWER_MAX);
   if (answer.length < 2) return { ok: false, reason: 'EMPTY' };
+  const reward = normReward(input.reward);
 
   const done = await db.transaction(async (tx) => {
     const [inq] = await tx
@@ -170,7 +191,8 @@ export async function answerInquiry(input: {
       title: '문의 답변이 도착했어요',
       body: `${label}에 대한 답변입니다.\n\n${answer}\n\n────────\n■ 보내신 문의\n${inq.body}`,
       senderLabel: '운영자',
-      payload: {},
+      // 보상 첨부 시 수령형 우편(payload 기반 — MailList hasPayload) — 없으면 안내문만.
+      payload: reward ?? {},
     });
     return { userId: inq.userId };
   });
