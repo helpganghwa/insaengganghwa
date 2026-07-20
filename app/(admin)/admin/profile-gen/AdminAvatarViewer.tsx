@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 
 import { ModalShell } from '@/components/ModalShell';
 
@@ -15,8 +15,36 @@ const CHECKER = {
  * 생성 내역 검토용 — 가로 꽉 채운 1:1 아바타 뷰어(정면 정적, 회전 미사용 2026-06-22).
  * south 우선, 없으면 첫 가용 방향(구 8방향 건 호환). 이미지 클릭 시 확대 팝업(픽셀 디테일 검수).
  */
-export function AdminAvatarViewer({ rotations }: { rotations: Record<string, string> }) {
-  const src = rotations.south ?? Object.values(rotations)[0] ?? '';
+export function AdminAvatarViewer({
+  rotations,
+  lazyJobId,
+}: {
+  rotations: Record<string, string>;
+  /** 저장 이미지가 없는 잡 — 마운트 후 Pixellab 회전을 지연 조회(페이지 진입을 막지 않음). */
+  lazyJobId?: string;
+}) {
+  const [lazy, setLazy] = useState<Record<string, string> | null>(null);
+  const [lazyDone, setLazyDone] = useState(false);
+  useEffect(() => {
+    if (!lazyJobId) return;
+    let alive = true;
+    void fetch(`/api/admin/pixellab-rotations?job=${lazyJobId}`, { cache: 'no-store' })
+      .then(async (r) => (r.ok ? ((await r.json()) as { rotations: Record<string, string> }) : null))
+      .then((d) => {
+        if (!alive) return;
+        setLazy(d?.rotations ?? {});
+        setLazyDone(true);
+      })
+      .catch(() => {
+        if (alive) setLazyDone(true);
+      });
+    return () => {
+      alive = false;
+    };
+  }, [lazyJobId]);
+
+  const merged = Object.keys(rotations).length ? rotations : (lazy ?? {});
+  const src = merged.south ?? Object.values(merged)[0] ?? '';
   const [zoom, setZoom] = useState(false);
 
   if (!src) {
@@ -25,7 +53,7 @@ export function AdminAvatarViewer({ rotations }: { rotations: Record<string, str
         className="flex aspect-square w-full items-center justify-center rounded-xl text-sm text-zinc-600"
         style={CHECKER}
       >
-        이미지 없음
+        {lazyJobId && !lazyDone ? '이미지 불러오는 중…' : '이미지 없음'}
       </div>
     );
   }
