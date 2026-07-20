@@ -5,6 +5,7 @@ import { createPortal } from 'react-dom';
 
 import { useResourceToast } from '@/components/ResourceToast';
 import { INQUIRY_TYPES, BODY_MAX, type InquiryType } from '@/lib/game/support/types';
+import { ZoomSafeTextarea } from '@/components/ui/ZoomSafeField';
 
 const MAX_IMAGES = 3;
 
@@ -194,12 +195,12 @@ export function SupportModal({
                     </div>
 
                     {/* 내용 */}
-                    <textarea
+                    <ZoomSafeTextarea
                       value={body}
                       onChange={(e) => setBody(e.target.value.slice(0, BODY_MAX))}
-                      rows={5}
                       placeholder={note ?? '문의 내용을 작성해 주세요.'}
-                      className="mt-2.5 w-full resize-none rounded-xl border border-zinc-200 bg-zinc-50 px-3 py-2.5 text-base outline-none focus:border-zinc-400 dark:border-zinc-700 dark:bg-zinc-900 dark:focus:border-zinc-500"
+                      wrapClassName="mt-2.5 h-[116px] w-full"
+                      className="rounded-xl border border-zinc-200 bg-zinc-50 px-3 py-2.5 outline-none focus:border-zinc-400 dark:border-zinc-700 dark:bg-zinc-900 dark:focus:border-zinc-500"
                     />
                     <div className="mt-0.5 flex items-center justify-between text-[10px] text-zinc-400">
                       <span>{note ? `* ${note}` : ' '}</span>

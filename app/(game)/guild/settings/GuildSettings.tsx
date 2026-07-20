@@ -34,6 +34,7 @@ import {
 } from '../actions';
 import { EmblemPicker, DEFAULT_EMBLEM } from '../EmblemPicker';
 import { guildErrMsg } from '../errors-msg';
+import { ZoomSafeInput, ZoomSafeTextarea } from '@/components/ui/ZoomSafeField';
 
 type Role = 'leader' | 'vice' | 'member';
 type JoinRequest = { userId: string; nickname: string };
@@ -521,12 +522,12 @@ export function GuildSettings({
               {notice.length}/{GUILD_NOTICE_MAX_LEN}
             </span>
           </div>
-          <textarea
+          <ZoomSafeTextarea
             value={notice}
             onChange={(e) => setNotice(e.target.value.slice(0, GUILD_NOTICE_MAX_LEN))}
             placeholder="길드원에게 보일 공지를 입력하세요 (길드 정보에 노출)"
-            rows={2}
-            className="mt-1.5 w-full resize-none rounded-lg border border-zinc-200 bg-zinc-50 px-2.5 py-2 text-base outline-none focus:border-zinc-400 dark:border-zinc-700 dark:bg-zinc-900 dark:focus:border-zinc-500"
+            wrapClassName="mt-1.5 h-[54px] w-full"
+            className="rounded-lg border border-zinc-200 bg-zinc-50 px-2.5 py-2 outline-none focus:border-zinc-400 dark:border-zinc-700 dark:bg-zinc-900 dark:focus:border-zinc-500"
           />
           <div className="mt-2 flex justify-end gap-1.5">
             {notice.length > 0 && (
@@ -548,12 +549,12 @@ export function GuildSettings({
               {intro.length}/{GUILD_INTRO_MAX_LEN}
             </span>
           </div>
-          <textarea
+          <ZoomSafeTextarea
             value={intro}
             onChange={(e) => setIntro(e.target.value.slice(0, GUILD_INTRO_MAX_LEN))}
             placeholder="공개 소개를 입력하세요"
-            rows={2}
-            className="mt-1.5 w-full resize-none rounded-lg border border-zinc-200 bg-zinc-50 px-2.5 py-2 text-base outline-none focus:border-zinc-400 dark:border-zinc-700 dark:bg-zinc-900 dark:focus:border-zinc-500"
+            wrapClassName="mt-1.5 h-[54px] w-full"
+            className="rounded-lg border border-zinc-200 bg-zinc-50 px-2.5 py-2 outline-none focus:border-zinc-400 dark:border-zinc-700 dark:bg-zinc-900 dark:focus:border-zinc-500"
           />
           <div className="mt-2 flex justify-end gap-1.5">
             {intro.length > 0 && (
@@ -570,13 +571,14 @@ export function GuildSettings({
         {/* 카카오 오픈채팅 — 길드 홈에 입장 버튼 노출 */}
         <div className="border-t border-zinc-100 pt-3 dark:border-zinc-900">
           <span className="text-[12px] font-semibold text-zinc-600 dark:text-zinc-300">카카오 오픈채팅</span>
-          <input
+          <ZoomSafeInput
             type="url"
             inputMode="url"
             value={openchat}
             onChange={(e) => setOpenchat(e.target.value.slice(0, 80))}
             placeholder="https://open.kakao.com/o/…"
-            className="mt-1.5 w-full rounded-lg border border-zinc-200 bg-zinc-50 px-2.5 py-2 text-base outline-none focus:border-zinc-400 dark:border-zinc-700 dark:bg-zinc-900 dark:focus:border-zinc-500"
+            wrapClassName="mt-1.5 h-9 w-full"
+            className="rounded-lg border border-zinc-200 bg-zinc-50 px-2.5 outline-none focus:border-zinc-400 dark:border-zinc-700 dark:bg-zinc-900 dark:focus:border-zinc-500"
           />
           <p className="mt-1 text-[10px] text-zinc-400">
             등록하면 길드 홈에 입장 버튼이 보입니다. 비우고 저장하면 제거됩니다.

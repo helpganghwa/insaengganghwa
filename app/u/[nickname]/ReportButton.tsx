@@ -1,6 +1,7 @@
 'use client';
 
 import { useState, useTransition } from 'react';
+import { ZoomSafeTextarea } from '@/components/ui/ZoomSafeField';
 
 import { reportProfile } from './actions';
 
@@ -101,16 +102,13 @@ export function ReportButton({ profileId }: { profileId: string }) {
                   ))}
                 </div>
                 {reason && NOTE_REASONS.has(reason) && (
-                  // text-base(16px) 필수 — iOS Safari는 input font-size<16px에
-                  // 포커스 시 자동 줌인. viewport 스케일 잠금이 금지(390 자동핏)
-                  // 라 input 자체의 font-size로만 막을 수 있음(2026-06-01).
-                  <textarea
+                  <ZoomSafeTextarea
                     value={note}
                     onChange={(e) => setNote(e.target.value)}
                     maxLength={200}
                     placeholder={NOTE_PLACEHOLDER[reason] ?? '사유를 간단히 적어주세요 (최대 200자)'}
-                    className="mt-2 w-full rounded-xl border border-zinc-200 p-2 text-base dark:border-zinc-800 dark:bg-zinc-900"
-                    rows={2}
+                    wrapClassName="mt-2 h-[54px] w-full"
+                    className="rounded-xl border border-zinc-200 p-2 dark:border-zinc-800 dark:bg-zinc-900"
                   />
                 )}
                 {err && (

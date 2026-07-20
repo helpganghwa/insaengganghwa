@@ -8,6 +8,7 @@ import { useResourceToast } from '@/components/ResourceToast';
 import { GuildBadge } from '@/components/GuildBadge';
 import { LastSeen } from '@/components/LastSeen';
 import { faceCropStyle, type FaceBox } from '@/components/faceCrop';
+import { ZoomSafeInput } from '@/components/ui/ZoomSafeField';
 
 import {
   searchAction,
@@ -369,13 +370,13 @@ export function FriendsTabs({
         {tab === 'find' ? (
           <div className="space-y-3">
             <div className="flex gap-2">
-              <input
+              <ZoomSafeInput
                 value={q}
                 onChange={(e) => setQ(e.target.value)}
                 onKeyDown={(e) => e.key === 'Enter' && doSearch()}
                 placeholder="닉네임 또는 코드 검색"
-                /* text-base(16px) — iOS 포커스 자동 확대 방지 */
-                className="min-w-0 flex-1 rounded-lg border border-zinc-300 bg-white px-3 py-2 text-base outline-none focus:border-amber-400 dark:border-zinc-700 dark:bg-zinc-900"
+                wrapClassName="h-9 min-w-0 flex-1"
+                className="rounded-lg border border-zinc-300 bg-white px-3 outline-none focus:border-amber-400 dark:border-zinc-700 dark:bg-zinc-900"
               />
               <button
                 type="button"

@@ -11,6 +11,7 @@ import { listServersPublic, latestOpenServerId } from '@/lib/game/server-select'
 import { Suspense } from 'react';
 import { EnhanceStatsCard, EnhanceStatsFallback } from '@/components/EnhanceStatsCard';
 import { ServerPicker } from './ServerPicker';
+import { ZoomSafeInput } from '@/components/ui/ZoomSafeField';
 
 /**
  * 로그인 에러 표시 문구 — 내부 코드(oauth_failed 등)를 유저 친화 한글로 매핑. actions.ts가
@@ -98,19 +99,21 @@ export default async function LoginPage({
         {/* 심사용 ID/PW 로그인 — 포트원·게임위 심사관이 카카오 없이 로그인. env로만 노출/차단. */}
         {reviewLogin ? (
           <form action={signInWithCredentials} className="w-full space-y-2 text-left">
-            <input
+            <ZoomSafeInput
               type="email"
               name="email"
               autoComplete="username"
               placeholder="아이디(이메일)"
-              className="w-full rounded-xl border border-zinc-300 bg-white px-3 py-2.5 text-base dark:border-zinc-700 dark:bg-zinc-900"
+              wrapClassName="h-[38px] w-full"
+              className="rounded-xl border border-zinc-300 bg-white px-3 dark:border-zinc-700 dark:bg-zinc-900"
             />
-            <input
+            <ZoomSafeInput
               type="password"
               name="password"
               autoComplete="current-password"
               placeholder="비밀번호"
-              className="w-full rounded-xl border border-zinc-300 bg-white px-3 py-2.5 text-base dark:border-zinc-700 dark:bg-zinc-900"
+              wrapClassName="h-[38px] w-full"
+              className="rounded-xl border border-zinc-300 bg-white px-3 dark:border-zinc-700 dark:bg-zinc-900"
             />
             <button
               type="submit"

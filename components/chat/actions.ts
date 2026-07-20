@@ -8,7 +8,7 @@ import { actionBlock } from '@/lib/game/action-gate';
 import { rateLimited } from '@/lib/ratelimit';
 import { db } from '@/lib/db/client';
 import { profiles } from '@/lib/db/schema/profiles';
-import { checkAndFilterChatBody } from '@/lib/game/chat/filter';
+import { CHAT_MAX_LEN, checkAndFilterChatBody } from '@/lib/game/chat/filter';
 import {
   isChatEnabled,
   isDuplicateOfLast,
@@ -50,7 +50,7 @@ export async function sendChat(raw: string): Promise<SendChatResult> {
       check.reason === 'URL'
         ? '링크는 보낼 수 없어요.'
         : check.reason === 'TOO_LONG'
-          ? '200자까지 보낼 수 있어요.'
+          ? `${CHAT_MAX_LEN}자까지 보낼 수 있어요.`
           : '내용을 입력해 주세요.';
     return { status: 'error', message: msg };
   }

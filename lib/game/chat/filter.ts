@@ -16,7 +16,7 @@ export type ChatBodyCheck =
   | { ok: true; body: string }
   | { ok: false; reason: 'EMPTY' | 'TOO_LONG' | 'URL' };
 
-export const CHAT_MAX_LEN = 200;
+export const CHAT_MAX_LEN = 100;
 
 /** 검증 + 정제 — 실패 사유 반환(액션이 사용자 메시지로 변환). */
 export function checkAndFilterChatBody(raw: string): ChatBodyCheck {

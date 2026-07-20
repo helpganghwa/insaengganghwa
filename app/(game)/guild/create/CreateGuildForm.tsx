@@ -15,6 +15,7 @@ import type { EmblemSelection } from '@/lib/game/guild/emblem-vocab';
 import { createGuildAction } from '../actions';
 import { EmblemPicker, DEFAULT_EMBLEM } from '../EmblemPicker';
 import { guildErrMsg } from '../errors-msg';
+import { ZoomSafeInput } from '@/components/ui/ZoomSafeField';
 
 const CONFIRM_SECONDS = 3;
 const COST = GUILD_CREATE_COST_DIAMOND.toLocaleString('ko-KR');
@@ -81,7 +82,7 @@ export function CreateGuildForm() {
             {GUILD_NAME_MIN_LEN}~{GUILD_NAME_MAX_LEN}자 · 변경 불가
           </span>
         </div>
-        <input
+        <ZoomSafeInput
           ref={inputRef}
           // uncontrolled(value 바인딩 없음) — 한글 IME 조합을 React가 끊지 않음.
           // 정제는 포커스 아웃(DOM 직접, 재렌더 없음) + 제출(onClick clean). 공백·특수문자 제거.
@@ -90,7 +91,8 @@ export function CreateGuildForm() {
           }}
           maxLength={GUILD_NAME_MAX_LEN}
           placeholder="한글·영문·숫자 (공백·특수문자 불가)"
-          className="mt-2 w-full rounded-lg border border-zinc-300 bg-white px-3 py-2 text-base dark:border-zinc-700 dark:bg-zinc-900"
+          wrapClassName="mt-2 h-9 w-full"
+          className="rounded-lg border border-zinc-300 bg-white px-3 dark:border-zinc-700 dark:bg-zinc-900"
         />
       </section>
 
