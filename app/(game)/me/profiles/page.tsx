@@ -9,6 +9,7 @@ import { withTimeout } from '@/lib/db/with-timeout';
 import { userProfiles } from '@/lib/db/schema/avatar';
 
 import { ProfileSelector } from './ProfileSelector';
+import { PROFILE_BASE_SLOTS, PROFILE_MAX } from '@/lib/game/balance';
 
 export default async function ProfileSelectPage() {
   const userId = await getSessionUserId();
@@ -27,7 +28,7 @@ export default async function ProfileSelectPage() {
       .where(and(eq(userProfiles.userId, userId), eq(userProfiles.serverId, serverId)))
       .orderBy(desc(userProfiles.createdAt)),
     db
-      .select({ activeProfileId: characters.activeProfileId })
+      .select({ activeProfileId: characters.activeProfileId, avatarSlotBonus: characters.avatarSlotBonus })
       .from(characters)
       .where(and(eq(characters.userId, userId), eq(characters.serverId, serverId)))
       .limit(1),
@@ -58,6 +59,7 @@ export default async function ProfileSelectPage() {
               rotations: r.rotations as Record<string, string>,
             }))}
             activeProfileId={p[0]?.activeProfileId ?? null}
+            slotLimit={Math.min(PROFILE_MAX, PROFILE_BASE_SLOTS + (p[0]?.avatarSlotBonus ?? 0))}
           />
           <Link
             href="/me/create"

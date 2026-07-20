@@ -2,7 +2,7 @@
 
 import { markChallengeEvent } from '@/lib/game/challenges/events';
 import { revalidatePath } from 'next/cache';
-import { and, count, desc, eq, ne } from 'drizzle-orm';
+import { and, count, desc, eq, ne, sql } from 'drizzle-orm';
 
 import { getSessionUserId } from '@/lib/auth/session';
 import { actionBlock } from '@/lib/game/action-gate';
@@ -11,6 +11,8 @@ import { db } from '@/lib/db/client';
 import { characters } from '@/lib/db/schema/server';
 import { getActiveServerId } from '@/lib/game/servers';
 import { userProfiles } from '@/lib/db/schema/avatar';
+import { walletTrySpend } from '@/lib/game/wallet';
+import { PROFILE_BASE_SLOTS, PROFILE_MAX, PROFILE_SLOT_EXPAND_COST_DIAMOND } from '@/lib/game/balance';
 
 /**
  * PROFILE §8.2 — 프로필 선택화면 액션. 모두 본인 소유 프로필만 대상.
@@ -123,4 +125,48 @@ export async function deleteProfile(profileId: string): Promise<ActionState> {
   revalidatePath('/me');
   revalidatePath('/me/profiles');
   return { status: 'ok' };
+}
+
+/**
+ * 아바타 보관함 +1칸 확장(0124 BM) — 칸당 PROFILE_SLOT_EXPAND_COST_DIAMOND, 상한 PROFILE_MAX.
+ * 지갑 차감(조건부)과 bonus 증가(상한 조건부)를 한 트랜잭션으로 — 실패 시 전액 롤백.
+ */
+export async function expandAvatarSlot(): Promise<
+  { status: 'ok'; limit: number } | { status: 'error'; message: string }
+> {
+  const userId = await getSessionUserId();
+  if (!userId) return { status: 'error', message: '로그인이 필요합니다.' };
+  if (await rateLimited(userId, 'profileEdit'))
+    return { status: 'error', message: '잠시 후 다시 시도해 주세요.' };
+  const __b = await actionBlock();
+  if (__b) return { status: 'error', message: __b === 'BANNED' ? '이용이 제한된 계정입니다.' : '서버 점검 중입니다.' };
+  const serverId = await getActiveServerId();
+
+  try {
+    const limit = await db.transaction(async (tx) => {
+      // 상한 검사 겸 증가 — 조건부 UPDATE(bonus가 상한 미만일 때만)로 레이스 안전.
+      const rows = await tx
+        .update(characters)
+        .set({ avatarSlotBonus: sql`${characters.avatarSlotBonus} + 1` })
+        .where(
+          and(
+            eq(characters.userId, userId),
+            eq(characters.serverId, serverId),
+            sql`${PROFILE_BASE_SLOTS} + ${characters.avatarSlotBonus} < ${PROFILE_MAX}`,
+          ),
+        )
+        .returning({ bonus: characters.avatarSlotBonus });
+      if (rows.length === 0) throw new Error('SLOT_MAX');
+      const ok = await walletTrySpend(tx, userId, serverId, PROFILE_SLOT_EXPAND_COST_DIAMOND);
+      if (!ok) throw new Error('INSUFFICIENT');
+      return Math.min(PROFILE_MAX, PROFILE_BASE_SLOTS + rows[0]!.bonus);
+    });
+    revalidatePath('/me/profiles');
+    return { status: 'ok', limit };
+  } catch (e) {
+    const msg = (e as Error).message;
+    if (msg === 'SLOT_MAX') return { status: 'error', message: `보관함은 최대 ${PROFILE_MAX}칸까지 확장할 수 있습니다.` };
+    if (msg === 'INSUFFICIENT') return { status: 'error', message: '다이아가 부족합니다.' };
+    return { status: 'error', message: '확장에 실패했습니다. 잠시 후 다시 시도해 주세요.' };
+  }
 }
