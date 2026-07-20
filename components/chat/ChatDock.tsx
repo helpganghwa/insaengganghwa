@@ -6,8 +6,7 @@ import { usePathname, useRouter } from 'next/navigation';
 import { supabaseBrowser } from '@/lib/supabase-browser';
 import { ZoomSafeInput } from '@/components/ui/ZoomSafeField';
 import { faceCropStyle, type FaceBox } from '@/components/faceCrop';
-import { TranscendSprite } from '@/components/TranscendSprite';
-import type { ChatItemSnap, ChatMessageDto } from '@/lib/game/chat/service';
+import type { ChatMessageDto } from '@/lib/game/chat/service';
 import type { WorldEventEntry } from '@/lib/game/world/event';
 import { worldEventMessage } from '@/app/(game)/world-message';
 import { sendRequestAction } from '@/app/(game)/friends/actions';
@@ -48,8 +47,6 @@ type MiniProfile = {
   isMe: boolean;
 };
 
-type MyItem = { id: string; name: string; code: string; slot: ChatItemSnap['s']; e: number; t: number; cp: number };
-
 /** 월드 이벤트 broadcast('sys') → 시스템 라인 의사 메시지. */
 function sysToMsg(e: WorldEventEntry): ChatMessageDto {
   return {
@@ -62,7 +59,7 @@ function sysToMsg(e: WorldEventEntry): ChatMessageDto {
     guildName: null,
     guildEmblemUrl: null,
     isMeleeChampion: false,
-    item: null,
+    mentions: null,
     sys: e,
     body: '',
     createdAt: e.createdAtIso,
@@ -97,11 +94,6 @@ export function ChatDock() {
   const [unseenBelow, setUnseenBelow] = useState(false);
   // iOS 소프트 키보드가 가리는 높이(px) — visualViewport로 측정, 패널 bottom 보정.
   const [kbOffset, setKbOffset] = useState(0);
-  // 장비 자랑 태그(0127) — 선택기·선택된 장비·메시지 장비 상세 팝업.
-  const [showItemPicker, setShowItemPicker] = useState(false);
-  const [myItems, setMyItems] = useState<MyItem[] | null>(null);
-  const [pickedItem, setPickedItem] = useState<MyItem | null>(null);
-  const [itemView, setItemView] = useState<ChatItemSnap | null>(null);
   // 멘션 하이라이트용 내 닉네임.
   const [meNickname, setMeNickname] = useState<string | null>(null);
 
@@ -156,8 +148,6 @@ export function ChatDock() {
     setProfile(null);
     setReportTarget(null);
     setShowBlockList(false);
-    setShowItemPicker(false);
-    setItemView(null);
   }, [pathname]);
 
   const visible = enabled === true && !hiddenByTutorial;
@@ -364,8 +354,7 @@ export function ChatDock() {
   // 실패하면 말풍선 회수 + 입력 복원 + 쿨다운 해제. (타 유저 수신 순서와 잠시 다를 수 있음 — 허용.)
   const submit = () => {
     const body = input.trim();
-    const item = pickedItem;
-    if ((!body && !item) || sending || cooldown > 0) return;
+    if (!body || sending || cooldown > 0) return;
     setSending(true);
     const tempId = `tmp-${++tempSeqRef.current}`;
     const mine = myFieldsRef.current;
@@ -379,22 +368,20 @@ export function ChatDock() {
       guildName: mine?.guildName ?? null,
       guildEmblemUrl: mine?.guildEmblemUrl ?? null,
       isMeleeChampion: mine?.isMeleeChampion ?? false,
-      item: item ? { n: item.name, c: item.code, s: item.slot, e: item.e, t: item.t, cp: item.cp } : null,
+      mentions: null,
       body,
       createdAt: new Date().toISOString(),
     };
     setMessages((prev) => [...prev, temp]);
     setInput('');
-    setPickedItem(null);
     setCooldown(COOLDOWN_S);
     requestAnimationFrame(() => scrollToBottom(true));
     const rollback = () => {
       setMessages((prev) => prev.filter((m) => m.id !== tempId));
       setInput(body);
-      setPickedItem(item);
       setCooldown(0);
     };
-    void sendChat(body, item?.id)
+    void sendChat(body)
       .then((r) => {
         if (r.status === 'error') {
           rollback();
@@ -451,17 +438,6 @@ export function ChatDock() {
     });
   };
 
-  // 장비 선택기 — 열 때 목록 로드(세션 캐시).
-  const openItemPicker = () => {
-    setShowItemPicker(true);
-    if (myItems === null) {
-      void fetch('/api/chat/my-items', { cache: 'no-store' })
-        .then(async (res) => (res.ok ? ((await res.json()) as { items: MyItem[] }) : null))
-        .then((d) => setMyItems(d?.items ?? []))
-        .catch(() => setMyItems([]));
-    }
-  };
-
   // 멘션 자동완성 — 입력 끝의 @접두에 대해 최근 발언자 닉 후보(최대 5).
   const mentionToken = /@([^\s@]{0,12})$/.exec(input);
   const mentionCands = mentionToken
@@ -497,37 +473,27 @@ export function ChatDock() {
   const visibleMessages = messages.filter((m) => !blocked.has(m.userId));
   const visibleLatest = latest && !blocked.has(latest.userId) ? latest : null;
 
-  // 멘션 하이라이트 — @닉 토큰 앰버, 내 닉이면 진하게.
-  const renderBody = (body: string) =>
-    body.split(/(@[^\s@]{1,12})/g).map((part, i) =>
-      part.startsWith('@') ? (
-        <b
-          key={i}
-          className={
-            meNickname && part.slice(1) === meNickname
-              ? 'font-bold text-amber-600 dark:text-amber-400'
-              : 'font-semibold text-amber-600/80 dark:text-amber-400/80'
-          }
-        >
-          {part}
-        </b>
-      ) : (
-        part
-      ),
-    );
-
-  // 장비 자랑 칩 — 탭하면 상세 팝업.
-  const itemChip = (it: ChatItemSnap) => (
-    <button
-      type="button"
-      onClick={() => setItemView(it)}
-      className="mt-1 flex items-center gap-1.5 rounded-lg border border-amber-200/70 bg-amber-50/60 px-2 py-1 dark:border-amber-500/20 dark:bg-amber-500/10"
-    >
-      <TranscendSprite code={it.c} level={it.t} slot={it.s} size={22} animate={false} frameless />
-      <span className="max-w-[140px] truncate text-[11.5px] font-bold">{it.n}</span>
-      <span className="text-[11.5px] font-extrabold text-amber-600 dark:text-amber-400">+{it.e}</span>
-    </button>
-  );
+  // 멘션 렌더(0128) — 서버가 검증한 유효 멘션만 @ 제거 + 은은한 색 강조(내 닉은 진하게).
+  // 무효 @토큰은 입력한 그대로 일반 텍스트.
+  const renderBody = (body: string, mentions: string[] | null) =>
+    body.split(/(@[^\s@]{1,12})/g).map((part, i) => {
+      const nick = part.startsWith('@') ? part.slice(1) : null;
+      if (nick && mentions?.includes(nick)) {
+        return (
+          <b
+            key={i}
+            className={
+              meNickname && nick === meNickname
+                ? 'font-bold text-amber-600 dark:text-amber-400'
+                : 'font-semibold text-amber-600/85 dark:text-amber-400/85'
+            }
+          >
+            {nick}
+          </b>
+        );
+      }
+      return part;
+    });
 
   const avatarBox = (m: { avatar: string | null; faceBox: FaceBox | null }, size: string) => (
     <span className={`${size} shrink-0 overflow-hidden`}>
@@ -644,7 +610,7 @@ export function ChatDock() {
                 if (m.sys) {
                   return (
                     <div key={m.id} className="px-4 py-[3px] text-center text-[10.5px] leading-snug text-zinc-400 dark:text-zinc-500">
-                      {worldEventMessage(m.sys, { link: false })}
+                      {worldEventMessage(m.sys, { link: true })}
                     </div>
                   );
                 }
@@ -665,19 +631,14 @@ export function ChatDock() {
                         mine ? 'bg-amber-50/70 dark:bg-amber-500/[0.07]' : ''
                       } ${pending ? 'opacity-50' : ''}`}
                     >
-                      <div className="min-w-0 flex-1 pl-8">
-                        {m.body ? (
-                          <p
-                            onClick={() => {
-                              if (!mine && !pending) setReportTarget(m);
-                            }}
-                            className="text-[12.5px] leading-[1.45] break-words text-zinc-800 dark:text-zinc-200"
-                          >
-                            {renderBody(m.body)}
-                          </p>
-                        ) : null}
-                        {m.item ? itemChip(m.item) : null}
-                      </div>
+                      <p
+                        onClick={() => {
+                          if (!mine && !pending) setReportTarget(m);
+                        }}
+                        className="min-w-0 flex-1 pl-8 text-[12.5px] leading-[1.45] break-words text-zinc-800 dark:text-zinc-200"
+                      >
+                        {renderBody(m.body, m.mentions)}
+                      </p>
                     </div>
                   );
                 }
@@ -728,17 +689,14 @@ export function ChatDock() {
                         </span>
                       </div>
                       {/* 본문 탭 = 신고 팝업(별도 신고 버튼 없음, 내 메시지 제외) */}
-                      {m.body ? (
-                        <p
-                          onClick={() => {
-                            if (!mine && !pending) setReportTarget(m);
-                          }}
-                          className="mt-[3px] text-[12.5px] leading-[1.45] break-words text-zinc-800 dark:text-zinc-200"
-                        >
-                          {renderBody(m.body)}
-                        </p>
-                      ) : null}
-                      {m.item ? itemChip(m.item) : null}
+                      <p
+                        onClick={() => {
+                          if (!mine && !pending) setReportTarget(m);
+                        }}
+                        className="mt-[3px] text-[12.5px] leading-[1.45] break-words text-zinc-800 dark:text-zinc-200"
+                      >
+                        {renderBody(m.body, m.mentions)}
+                      </p>
                     </div>
                   </div>
                 );
@@ -777,32 +735,7 @@ export function ChatDock() {
                   ))}
                 </div>
               ) : null}
-              {pickedItem ? (
-                <div className="mb-1.5 flex items-center gap-1.5 rounded-lg border border-amber-200/70 bg-amber-50/60 px-2 py-1 dark:border-amber-500/20 dark:bg-amber-500/10">
-                  <TranscendSprite code={pickedItem.code} level={pickedItem.t} slot={pickedItem.slot} size={20} animate={false} frameless />
-                  <span className="min-w-0 flex-1 truncate text-[11.5px] font-bold">
-                    {pickedItem.name}{' '}
-                    <b className="text-amber-600 dark:text-amber-400">+{pickedItem.e}</b>
-                  </span>
-                  <button
-                    type="button"
-                    onClick={() => setPickedItem(null)}
-                    aria-label="장비 태그 제거"
-                    className="shrink-0 px-1 text-[13px] leading-none text-zinc-400"
-                  >
-                    ×
-                  </button>
-                </div>
-              ) : null}
               <div className="flex items-center gap-1.5">
-                <button
-                  type="button"
-                  onClick={openItemPicker}
-                  aria-label="장비 자랑"
-                  className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-zinc-100 text-[15px] dark:bg-zinc-800"
-                >
-                  ⚔️
-                </button>
                 <ZoomSafeInput
                   value={input}
                   onChange={(e) => setInput(e.target.value)}
@@ -810,7 +743,7 @@ export function ChatDock() {
                     if (e.key === 'Enter' && !e.nativeEvent.isComposing) submit();
                   }}
                   maxLength={100}
-                  placeholder="메시지 입력"
+                  placeholder="메시지 입력 · @닉네임 멘션"
                   wrapClassName="h-9 min-w-0 flex-1"
                   className="rounded-full border border-zinc-200 bg-zinc-50 px-4 outline-none focus:border-amber-400 dark:border-zinc-700 dark:bg-zinc-900"
                 />
@@ -825,9 +758,9 @@ export function ChatDock() {
                   // 포커스를 뺏지 않아 전송 후에도 키보드 유지(연속 대화). disabled 속성은
                   // pointerdown을 삼켜 비활성 탭에서 입력창 포커스가 풀림 — aria+스타일로 대체.
                   onPointerDown={(e) => e.preventDefault()}
-                  aria-disabled={sending || cooldown > 0 || (input.trim().length === 0 && !pickedItem)}
+                  aria-disabled={sending || cooldown > 0 || input.trim().length === 0}
                   className={`h-9 w-[54px] shrink-0 rounded-full bg-amber-500 text-[12.5px] font-bold text-white ${
-                    sending || cooldown > 0 || (input.trim().length === 0 && !pickedItem) ? 'opacity-40' : ''
+                    sending || cooldown > 0 || input.trim().length === 0 ? 'opacity-40' : ''
                   }`}
                 >
                   {cooldown > 0 ? `${cooldown}s` : '전송'}
@@ -1000,94 +933,6 @@ export function ChatDock() {
                 </div>
               </div>
             }
-          </div>
-        </div>
-      ) : null}
-
-      {/* 장비 선택기 — 장비 자랑 태그(0127) */}
-      {showItemPicker ? (
-        <div
-          role="dialog"
-          aria-modal="true"
-          aria-label="장비 자랑"
-          className="fixed inset-0 z-40 flex items-center justify-center bg-black/60 p-6 backdrop-blur-sm"
-          onClick={() => setShowItemPicker(false)}
-        >
-          <div className="w-full max-w-[300px] rounded-2xl bg-white p-4 dark:bg-zinc-900" onClick={(e) => e.stopPropagation()}>
-            <h3 className="text-[13px] font-bold">자랑할 장비 선택</h3>
-            {myItems === null ? (
-              <p className="py-8 text-center text-[12px] text-zinc-400">불러오는 중…</p>
-            ) : myItems.length === 0 ? (
-              <p className="py-8 text-center text-[12px] text-zinc-400">보유한 장비가 없어요.</p>
-            ) : (
-              <ul className="mt-2 max-h-[300px] space-y-1 overflow-y-auto overscroll-contain">
-                {myItems.map((it) => (
-                  <li key={it.id}>
-                    <button
-                      type="button"
-                      onClick={() => {
-                        setPickedItem(it);
-                        setShowItemPicker(false);
-                      }}
-                      className="flex w-full items-center gap-2 rounded-lg bg-zinc-50 px-2 py-1.5 text-left dark:bg-zinc-800/60"
-                    >
-                      <TranscendSprite code={it.code} level={it.t} slot={it.slot} size={28} animate={false} frameless />
-                      <span className="min-w-0 flex-1 truncate text-[12px] font-semibold">{it.name}</span>
-                      <span className="shrink-0 text-[12px] font-extrabold text-amber-600 tabular-nums dark:text-amber-400">
-                        +{it.e}
-                      </span>
-                    </button>
-                  </li>
-                ))}
-              </ul>
-            )}
-            <button
-              type="button"
-              onClick={() => setShowItemPicker(false)}
-              className="mt-3 w-full rounded-lg bg-zinc-100 py-2 text-[12px] font-bold text-zinc-500 dark:bg-zinc-800 dark:text-zinc-400"
-            >
-              닫기
-            </button>
-          </div>
-        </div>
-      ) : null}
-
-      {/* 장비 상세 팝업 — 채팅 장비 칩 탭 */}
-      {itemView ? (
-        <div
-          role="dialog"
-          aria-modal="true"
-          aria-label="장비 정보"
-          className="fixed inset-0 z-40 flex items-center justify-center bg-black/60 p-6 backdrop-blur-sm"
-          onClick={() => setItemView(null)}
-        >
-          <div className="w-full max-w-[260px] rounded-2xl bg-white p-4 text-center dark:bg-zinc-900" onClick={(e) => e.stopPropagation()}>
-            <div className="flex justify-center">
-              <TranscendSprite code={itemView.c} level={itemView.t} slot={itemView.s} size={96} />
-            </div>
-            <b className="mt-2 block text-[14px]">{itemView.n}</b>
-            <div className="mt-3 space-y-1">
-              {(
-                [
-                  ['강화', `+${itemView.e}`],
-                  ['초월', itemView.t > 0 ? `${itemView.t}단계` : '—'],
-                  ['전투력', itemView.cp.toLocaleString()],
-                ] as const
-              ).map(([label, v]) => (
-                <div key={label} className="flex items-baseline justify-between gap-2 px-1">
-                  <span className="text-[10px] text-zinc-400">{label}</span>
-                  <span className="text-[12.5px] font-bold tabular-nums">{v}</span>
-                </div>
-              ))}
-            </div>
-            <p className="mt-2 text-[9.5px] text-zinc-400">전송 시점 기준</p>
-            <button
-              type="button"
-              onClick={() => setItemView(null)}
-              className="mt-3 w-full rounded-lg bg-zinc-100 py-2 text-[12px] font-bold text-zinc-500 dark:bg-zinc-800 dark:text-zinc-400"
-            >
-              닫기
-            </button>
           </div>
         </div>
       ) : null}

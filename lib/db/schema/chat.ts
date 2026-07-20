@@ -18,8 +18,8 @@ export const chatMessages = pgTable(
       .references(() => profiles.id, { onDelete: 'cascade' }),
     /** 서버 필터(금칙어 마스킹) 후 저장 — 원문 미보존. 최대 200자(액션 검증). */
     body: text('body').notNull(),
-    /** 장비 자랑 태그 스냅샷 {n,c,s,e,t,cp}(0127) — null=일반 메시지. */
-    item: jsonb('item'),
+    /** 유효 멘션 닉 목록(0128) — 전송 시점 실제 유저와 일치한 것만(표시 시 @ 제거·강조). */
+    mentions: jsonb('mentions'),
     /** 모더레이션 숨김(신고 3건 자동 또는 어드민) — null=노출. */
     hiddenAt: timestamp('hidden_at', { withTimezone: true }),
     createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
