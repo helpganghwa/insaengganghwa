@@ -3,6 +3,7 @@ import { getActiveServerId } from '@/lib/game/servers';
 import { getSessionUserId } from '@/lib/auth/session';
 import { getWorldmapZones, getResidence, getChronicle, getZoneAdjacency, getConquestReplay } from '@/lib/game/guild';
 
+import { ChronicleReadMark } from './ChronicleReadMark';
 import { WorldMapView } from './WorldMapView';
 
 export const dynamic = 'force-dynamic';
@@ -27,6 +28,9 @@ export default async function WorldMapPage() {
     : null;
 
   return (
+    <>
+    {/* 세계지도 진입 = 연대기 열람 — 홈 카드 '새 역사' 티저를 카운트다운으로 복귀시킨다. */}
+    <ChronicleReadMark serverId={serverId} day={chronicle?.todayDay ?? null} />
     <WorldMapView
       mapSrc={assetUrl('/sprites/guild/worldmap.png')}
       residenceZoneId={residenceZoneId}
@@ -54,5 +58,6 @@ export default async function WorldMapPage() {
         residentCount: z.residentCount,
       }))}
     />
+    </>
   );
 }
