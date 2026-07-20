@@ -24,6 +24,7 @@ import { sendChat, reportChat } from './actions';
 const COOLDOWN_S = 5;
 const DOCK_H = '42px';
 const BLOCK_KEY = 'ig:chat-blocked';
+const COLLAPSE_KEY = 'ig:chat-collapsed';
 
 type MiniProfile = {
   userId: string;
@@ -67,6 +68,8 @@ export function ChatDock() {
   const [hiddenByTutorial, setHiddenByTutorial] = useState(false);
   const [blocked, setBlocked] = useState<Map<string, string>>(new Map());
   const [showBlockList, setShowBlockList] = useState(false);
+  // 미니바 접힘(채팅 안 보기) — 이모지만 남김. 기기 저장으로 유지.
+  const [collapsed, setCollapsed] = useState(false);
   // 팝업 — 미니 프로필(로딩=userId만) / 신고 확인.
   const [profile, setProfile] = useState<{ userId: string; data: MiniProfile | null } | null>(null);
   const [reportTarget, setReportTarget] = useState<ChatMessageDto | null>(null);
@@ -95,7 +98,25 @@ export function ChatDock() {
       /* ignore */
     }
     setBlocked(loadBlocked());
+    try {
+      setCollapsed(localStorage.getItem(COLLAPSE_KEY) === '1');
+    } catch {
+      /* ignore */
+    }
   }, []);
+
+  const toggleCollapsed = () => {
+    setCollapsed((c) => {
+      const next = !c;
+      try {
+        if (next) localStorage.setItem(COLLAPSE_KEY, '1');
+        else localStorage.removeItem(COLLAPSE_KEY);
+      } catch {
+        /* ignore */
+      }
+      return next;
+    });
+  };
 
   // 라우트 이동 → 패널 자동 최소화(2026-07-20 피드백 6).
   useEffect(() => {
@@ -380,30 +401,51 @@ export function ChatDock() {
           style={{ bottom: 'calc(3.5rem + env(safe-area-inset-bottom) + var(--gt-h, 0px))' }}
         >
           <div className="mx-auto w-full max-w-[390px] px-2 pb-1">
-            <button
-              type="button"
-              onClick={openPanel}
-              aria-label="전체 채팅 열기"
-              className="pointer-events-auto flex h-[34px] w-full items-center gap-2 rounded-full border border-zinc-200/70 bg-white/70 px-3 text-left backdrop-blur-md dark:border-zinc-700/60 dark:bg-zinc-900/70"
-            >
-              <span aria-hidden className="text-[12px]">💬</span>
-              {visibleLatest ? (
-                // key=메시지 id — 최신 메시지 교체 시 리마운트로 fade 재생.
-                <span
-                  key={visibleLatest.id}
-                  className="animate-chat-swap min-w-0 flex-1 truncate text-[11px] text-zinc-500 dark:text-zinc-400"
+            {collapsed ? (
+              // 접힘(채팅 안 보기) — 왼쪽에 이모지만, 탭하면 다시 펼침.
+              <button
+                type="button"
+                onClick={toggleCollapsed}
+                aria-label="채팅 펼치기"
+                className="pointer-events-auto flex h-[34px] w-[34px] items-center justify-center rounded-full border border-zinc-200/70 bg-white/70 backdrop-blur-md dark:border-zinc-700/60 dark:bg-zinc-900/70"
+              >
+                <span aria-hidden className="text-[12px]">💬</span>
+              </button>
+            ) : (
+              <div className="pointer-events-auto flex h-[34px] w-full items-center rounded-full border border-zinc-200/70 bg-white/70 pl-1.5 pr-3 backdrop-blur-md dark:border-zinc-700/60 dark:bg-zinc-900/70">
+                <button
+                  type="button"
+                  onClick={toggleCollapsed}
+                  aria-label="채팅 접기"
+                  className="flex h-full shrink-0 items-center px-1.5 text-[12px]"
                 >
-                  <b className="font-semibold text-zinc-700 dark:text-zinc-200">
-                    {visibleLatest.isMeleeChampion ? '🏆' : ''}
-                    {visibleLatest.nickname}
-                  </b>
-                  <span className="mx-1 opacity-60">·</span>
-                  {visibleLatest.body}
-                </span>
-              ) : (
-                <span className="flex-1 truncate text-[11px] text-zinc-400">전체 채팅</span>
-              )}
-            </button>
+                  <span aria-hidden>💬</span>
+                </button>
+                <button
+                  type="button"
+                  onClick={openPanel}
+                  aria-label="전체 채팅 열기"
+                  className="flex h-full min-w-0 flex-1 items-center text-left"
+                >
+                  {visibleLatest ? (
+                    // key=메시지 id — 최신 메시지 교체 시 리마운트로 fade 재생.
+                    <span
+                      key={visibleLatest.id}
+                      className="animate-chat-swap min-w-0 flex-1 truncate text-[11px] text-zinc-500 dark:text-zinc-400"
+                    >
+                      <b className="font-semibold text-zinc-700 dark:text-zinc-200">
+                        {visibleLatest.isMeleeChampion ? '🏆' : ''}
+                        {visibleLatest.nickname}
+                      </b>
+                      <span className="mx-1 opacity-60">·</span>
+                      {visibleLatest.body}
+                    </span>
+                  ) : (
+                    <span className="flex-1 truncate text-[11px] text-zinc-400">전체 채팅</span>
+                  )}
+                </button>
+              </div>
+            )}
           </div>
         </div>
       ) : null}
