@@ -271,6 +271,7 @@ const SYSTEM_PROMPT = `너는 대륙의 정복 전쟁을 듣는 이에게 들려
 - 중립지·무주지 점령만으로 어느 지역에 한 길드만 있게 된 경우, '하나만 남았다·몰아냈다·밀어냈다' 같은 축출 뉘앙스 금지 — 그 지역에 다른 세력이 원래 없었다(정리의 '중립지/무주지' 표기로 판단). '유일하게 발을 들였다·홀로 세력을 넓혔다'처럼 쓴다.
 - 개인 활약을 서술할 때는 그 활약이 나온 구역({z|마커})을 함께 언급한다(정리의 '구역 「…」 전투에서' 표기를 근거로. 구역이 많으면 대표 한두 곳만).
 - 길드의 첫 등장(첫 구역 확보)은 '판도에 이름을 올렸다'가 아니라 '대륙에 이름을 알렸다'로 표현한다.
+- 길드 보유 수 변화 요약은 '길드별 보유 증감' 수치를 그대로 따른다. 얻고 잃은 것이 모두 있으면 'N곳을 얻고 M곳을 내주어 K곳' 형태로 쓴다 — 획득만 언급하고 최종 수를 붙이면 산수가 안 맞는 문장이 된다(금지).
 - '대륙 지배', '천하', '제패' 같은 과장된 총평·결론 금지. 일어난 사실만 적는다.
 - 유혈·시신·신체 훼손·고문 등 잔혹한 묘사 금지. 전투와 처치는 '쓰러뜨렸다·밀어냈다·물러났다' 수준의 담담한 표현으로만 서술하고, 피나 상해를 묘사하지 않는다.
 - 반드시 JSON만 출력: {"today": "...", "headline": "..."}. JSON 문자열 값 안의 줄바꿈은 반드시 \\n 이스케이프로 쓴다(실제 줄바꿈 문자 금지).
@@ -515,6 +516,24 @@ export async function generateAndStoreChronicle(
   }
   const specialFeat = summary.feats.some((f) => f.count >= 5);
 
+  // 길드별 보유 증감(2026-07-21 피드백) — '열두 곳을 더해 40곳'처럼 상실을 빠뜨린 요약이
+  // 산수 오해(30+12=42?)를 부른다. 전투 전후·획득·상실을 사실표로 명시해 정확한 요약을 강제.
+  const deltaLines = [...new Set([...beforeCounts.keys(), ...afterCounts.keys()])]
+    .map((g) => {
+      const gained = summary.captures.filter((c) => c.winner === g).length;
+      const lost = summary.captures.filter((c) => c.from === g).length;
+      if (gained === 0 && lost === 0) return null;
+      const b = beforeCounts.get(g) ?? 0;
+      const a = afterCounts.get(g) ?? 0;
+      const warn =
+        gained > 0 && lost > 0
+          ? ` — 보유 수를 요약할 땐 획득과 상실을 함께 쓸 것('${gained}곳을 더해 ${a}곳' 식은 산수가 안 맞아 금지)`
+          : '';
+      return `· 길드 「${g}」: 전투 전 ${b}곳 → 전투 후 ${a}곳 (${gained}곳 획득, ${lost}곳 상실${warn})`;
+    })
+    .filter((s): s is string => s !== null)
+    .join('\n');
+
   // 빈 섹션은 digest에서 **통째로 제외**(2026-07-12 피드백) — '· (없음)' 플레이스홀더를
   // 먹이면 모델이 성실하게 "눈에 띄는 활약은 없었다"류 부재 서술을 생성해 템플릿 티가 난다.
   // 안 보여주면 못 쓴다 + baseContent의 부재 서술 금지 규칙이 이중 방어.
@@ -532,6 +551,7 @@ export async function generateAndStoreChronicle(
           .map((d) => `· 길드 「${d.guildName}」 해산${d.zones.length > 0 ? ` — 구역 ${d.zones.map((z) => `「${z}」`).join(', ')} 이(가) 중립화` : ''}`)
           .join('\n'),
     );
+  if (deltaLines) digestSections.push(`■ 길드별 보유 증감(보유 수 서술은 이 수치만 따를 것):\n${deltaLines}`);
   if (milestones.length > 0) digestSections.push(`■ 역사적 사건(연표 등재 사유):\n${milestones.join('\n')}`);
   const digest = `[점령전 정리 — 이 귀속을 그대로 따를 것]\n` + digestSections.join('\n');
 
