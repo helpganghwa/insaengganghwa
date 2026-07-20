@@ -55,7 +55,7 @@ export const referralAttributions = pgTable('referral_attributions', {
     .unique()
     .references(() => profiles.id, { onDelete: 'cascade' }),
   shareCode: text('share_code').notNull(),
-  /** 멱등 — 공유자 +300 다이아(BALANCE §6.3) 1회. */
+  /** 멱등 — 공유자에게 초대 보상 우편 1회(수치는 lib/game/referral/stats.ts INVITE_* 상수가 정본). */
   rewarded: boolean('rewarded').notNull().default(false),
   createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
 });
