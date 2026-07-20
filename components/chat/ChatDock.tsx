@@ -411,7 +411,9 @@ export function ChatDock() {
     if (!m) return;
     setReportTarget(null);
     void reportChat(m.id).then((r) => {
-      flashError(r.status === 'ok' ? '신고가 접수되었습니다.' : (r.message ?? '신고에 실패했습니다.'));
+      flashError(
+        r.status === 'ok' ? '신고가 접수되었습니다.' : (r.message ?? '신고에 실패했습니다.'),
+      );
     });
   };
 
@@ -448,16 +450,18 @@ export function ChatDock() {
                 aria-label="채팅 펼치기"
                 className="pointer-events-auto relative flex h-[34px] w-[34px] items-center justify-center rounded-full border border-zinc-200/70 bg-white/70 backdrop-blur-md dark:border-zinc-700/60 dark:bg-zinc-900/70"
               >
-                <span aria-hidden className="text-[12px]">💬</span>
+                <span aria-hidden className="text-[12px]">
+                  💬
+                </span>
                 {collapsedUnseen ? (
                   <span
                     aria-hidden
-                    className="absolute right-0 top-0 h-2 w-2 rounded-full bg-amber-500 ring-2 ring-white dark:ring-zinc-900"
+                    className="absolute top-0 right-0 h-2 w-2 rounded-full bg-amber-500 ring-2 ring-white dark:ring-zinc-900"
                   />
                 ) : null}
               </button>
             ) : (
-              <div className="pointer-events-auto flex h-[34px] w-full items-center rounded-full border border-zinc-200/70 bg-white/70 pl-1.5 pr-3 backdrop-blur-md dark:border-zinc-700/60 dark:bg-zinc-900/70">
+              <div className="pointer-events-auto flex h-[34px] w-full items-center rounded-full border border-zinc-200/70 bg-white/70 pr-3 pl-1.5 backdrop-blur-md dark:border-zinc-700/60 dark:bg-zinc-900/70">
                 <button
                   type="button"
                   onClick={toggleCollapsed}
@@ -507,7 +511,9 @@ export function ChatDock() {
         >
           <div className="relative mx-auto flex h-full w-full max-w-[390px] flex-col bg-white dark:bg-zinc-950">
             <header className="flex shrink-0 items-center justify-between border-b border-zinc-100 px-3 py-1.5 dark:border-zinc-800/70">
-              <h2 className="text-[12px] font-bold text-zinc-700 dark:text-zinc-200">💬 전체 채팅</h2>
+              <h2 className="text-[12px] font-bold text-zinc-700 dark:text-zinc-200">
+                💬 전체 채팅
+              </h2>
               <button
                 type="button"
                 onClick={() => setShowBlockList(true)}
@@ -521,7 +527,8 @@ export function ChatDock() {
               ref={listRef}
               onScroll={() => {
                 const el = listRef.current;
-                if (el && el.scrollHeight - el.scrollTop - el.clientHeight < 120) setUnseenBelow(false);
+                if (el && el.scrollHeight - el.scrollTop - el.clientHeight < 120)
+                  setUnseenBelow(false);
               }}
               className="min-h-0 flex-1 overflow-y-auto overscroll-contain px-2.5 py-2"
             >
@@ -546,7 +553,7 @@ export function ChatDock() {
                         onClick={() => {
                           if (!mine && !pending) setReportTarget(m);
                         }}
-                        className="min-w-0 flex-1 break-words pl-8 text-[12.5px] leading-[1.45] text-zinc-800 dark:text-zinc-200"
+                        className="min-w-0 flex-1 pl-8 text-[12.5px] leading-[1.45] break-words text-zinc-800 dark:text-zinc-200"
                       >
                         {m.body}
                       </p>
@@ -560,7 +567,12 @@ export function ChatDock() {
                       mine ? 'bg-amber-50/70 dark:bg-amber-500/[0.07]' : ''
                     } ${pending ? 'opacity-50' : ''}`}
                   >
-                    <button type="button" onClick={() => openProfile(m.userId)} aria-label={`${m.nickname} 정보`} className="mt-[3px]">
+                    <button
+                      type="button"
+                      onClick={() => openProfile(m.userId)}
+                      aria-label={`${m.nickname} 정보`}
+                      className="mt-[3px]"
+                    >
                       {avatarBox(m, 'block h-6 w-6')}
                     </button>
                     <div className="min-w-0 flex-1">
@@ -583,19 +595,23 @@ export function ChatDock() {
                           />
                         ) : null}
                         {m.guildName ? (
-                          <span className="truncate text-[9.5px] text-zinc-400 dark:text-zinc-500">{m.guildName}</span>
+                          <span className="truncate text-[9.5px] text-zinc-400 dark:text-zinc-500">
+                            {m.guildName}
+                          </span>
                         ) : null}
                         <span className="ml-auto shrink-0 text-[9px] text-zinc-300 dark:text-zinc-600">
-                          {new Date(m.createdAt).toLocaleTimeString('ko-KR', { hour: '2-digit', minute: '2-digit' })}
+                          {new Date(m.createdAt).toLocaleTimeString('ko-KR', {
+                            hour: '2-digit',
+                            minute: '2-digit',
+                          })}
                         </span>
-
                       </div>
                       {/* 본문 탭 = 신고 팝업(별도 신고 버튼 없음, 내 메시지 제외) */}
                       <p
                         onClick={() => {
                           if (!mine && !pending) setReportTarget(m);
                         }}
-                        className="mt-[3px] break-words text-[12.5px] leading-[1.45] text-zinc-800 dark:text-zinc-200"
+                        className="mt-[3px] text-[12.5px] leading-[1.45] break-words text-zinc-800 dark:text-zinc-200"
                       >
                         {m.body}
                       </p>
@@ -619,7 +635,9 @@ export function ChatDock() {
             ) : null}
 
             <div className="shrink-0 border-t border-zinc-100 px-2.5 py-2 dark:border-zinc-800/70">
-              {error ? <p className="mb-1 px-1 text-[11px] text-amber-600 dark:text-amber-400">{error}</p> : null}
+              {error ? (
+                <p className="mb-1 px-1 text-[11px] text-amber-600 dark:text-amber-400">{error}</p>
+              ) : null}
               <div className="flex items-center gap-1.5">
                 <ZoomSafeInput
                   value={input}
@@ -633,7 +651,9 @@ export function ChatDock() {
                   className="rounded-full border border-zinc-200 bg-zinc-50 px-4 outline-none focus:border-amber-400 dark:border-zinc-700 dark:bg-zinc-900"
                 />
                 {input.length >= 80 ? (
-                  <span className="shrink-0 text-[10px] tabular-nums text-zinc-400">{input.length}/100</span>
+                  <span className="shrink-0 text-[10px] text-zinc-400 tabular-nums">
+                    {input.length}/100
+                  </span>
                 ) : null}
                 <button
                   type="button"
@@ -677,29 +697,15 @@ export function ChatDock() {
           >
             {
               /* 자랑 카드식 2분할 — 왼쪽 전신 아바타(크게) / 오른쪽 정보+액션 */
-              <div className="flex h-[256px] items-stretch gap-2.5 bg-gradient-to-br from-amber-50 via-white to-zinc-50 p-4 dark:from-amber-500/[0.09] dark:via-zinc-900 dark:to-zinc-900">
-                {/* 버튼 2개/4개와 무관하게 카드 높이 고정 — 아바타 위치·크기 불변.
-                    아바타는 object-cover로 세로를 꽉 채움(캔버스 좌우 여백은 크롭) — contain 대비 ~50% 확대 */}
-                <div className="flex w-[150px] shrink-0 items-end justify-center overflow-hidden">
-                  {profile.data.avatar ? (
-                    // eslint-disable-next-line @next/next/no-img-element
-                    <img
-                      src={profile.data.avatar}
-                      alt=""
-                      className="h-full w-full object-cover object-bottom"
-                      style={{ imageRendering: 'pixelated' }}
-                    />
-                  ) : (
-                    <span className="flex h-full w-full items-center justify-center text-6xl">👤</span>
-                  )}
-                </div>
-                <div className="flex min-w-0 flex-1 flex-col">
-                  <b className="truncate text-[15px] leading-tight">
+              <div className="bg-gradient-to-br from-amber-50 via-white to-zinc-50 p-4 dark:from-amber-500/[0.09] dark:via-zinc-900 dark:to-zinc-900">
+                {/* 닉네임·길드 — 프로필 페이지처럼 상단 가운데 별도 영역(닉 가림 방지) */}
+                <div className="flex flex-col items-center text-center">
+                  <b className="max-w-full truncate text-[15px] leading-tight">
                     {profile.data.isMeleeChampion ? '🏆 ' : ''}
                     {profile.data.nickname}
                   </b>
                   {profile.data.guildName ? (
-                    <span className="mt-0.5 flex items-center gap-1 text-[11px] text-zinc-400">
+                    <span className="mt-0.5 flex max-w-[88%] items-center justify-center gap-1 text-[11px] text-zinc-400">
                       {profile.data.guildEmblemUrl ? (
                         // eslint-disable-next-line @next/next/no-img-element
                         <img
@@ -712,85 +718,118 @@ export function ChatDock() {
                       <span className="truncate">{profile.data.guildName}</span>
                     </span>
                   ) : null}
-                  <div className="mt-2 space-y-1 border-t border-zinc-200/70 pt-2 dark:border-zinc-700/50">
-                    {(
-                      [
-                        ['전투력', profile.data.combat.toLocaleString()],
-                        ['최고 강화', `+${profile.data.maxEnhance}`],
-                        ['합산 강화', `+${profile.data.sumEnhance.toLocaleString()}`],
-                        ['레이드 처치', profile.data.raidKills.toLocaleString()],
-                        ['대난투 우승', profile.data.meleeWins.toLocaleString()],
-                      ] as const
-                    ).map(([label, v]) => (
-                      <div key={label} className="flex items-baseline justify-between gap-2">
-                        <span className="text-[10px] text-zinc-400">{label}</span>
-                        <span className="text-[12.5px] font-bold tabular-nums">{v}</span>
-                      </div>
-                    ))}
+                </div>
+                {/* 버튼 2개/4개와 무관하게 높이 고정 — 아바타 위치·크기 불변.
+                    아바타는 object-cover로 세로를 꽉 채움(캔버스 좌우 여백은 크롭) */}
+                <div className="mt-2 flex h-[184px] items-stretch gap-2.5">
+                  <div className="flex w-[150px] shrink-0 items-end justify-center overflow-hidden">
+                    {profile.data.avatar ? (
+                      // eslint-disable-next-line @next/next/no-img-element
+                      <img
+                        src={profile.data.avatar}
+                        alt=""
+                        className="h-full w-full object-cover object-bottom"
+                        style={{ imageRendering: 'pixelated' }}
+                      />
+                    ) : (
+                      <span className="flex h-full w-full items-center justify-center text-6xl">
+                        👤
+                      </span>
+                    )}
                   </div>
-                  {popupFlash ? (
-                    <p className="mt-1.5 text-[10.5px] text-amber-600 dark:text-amber-400">{popupFlash}</p>
-                  ) : null}
-                  {/* 액션 — isMe 여부와 무관하게 빈 칸 없이 채워지는 2열 */}
-                  <div className="mt-auto grid grid-cols-2 gap-1.5 pt-3">
-                    {!profile.data.isMe ? (
-                      <>
-                        <button
-                          type="button"
-                          disabled={profile.data.friendStatus !== null}
-                          onClick={() => {
-                            void sendRequestAction(profile.data!.userId).then((r) => {
-                              setPopupFlash(r.status === 'success' ? '친구 요청을 보냈어요' : '요청에 실패했어요');
-                              if (r.status === 'success')
-                                setProfile((prev) =>
-                                  prev?.data ? { ...prev, data: { ...prev.data, friendStatus: 'pending' } } : prev,
-                                );
-                            });
-                          }}
-                          className="rounded-lg bg-amber-500 py-1.5 text-[11.5px] font-bold text-white disabled:opacity-50"
-                        >
-                          {profile.data.friendStatus === 'accepted'
-                            ? '친구 ✓'
-                            : profile.data.friendStatus === 'pending'
-                              ? '요청됨'
-                              : '친구 추가'}
-                        </button>
-                        <button
-                          type="button"
-                          onClick={() => {
-                            toggleBlock(profile.data!.userId, profile.data!.nickname);
-                            setPopupFlash(blocked.has(profile.data!.userId) ? '차단을 해제했어요' : '이 기기에서 메시지를 숨겨요');
-                          }}
-                          className="rounded-lg bg-zinc-100 py-1.5 text-[11.5px] font-bold text-zinc-600 dark:bg-zinc-800 dark:text-zinc-300"
-                        >
-                          {blocked.has(profile.data.userId) ? '차단 해제' : '차단'}
-                        </button>
-                      </>
+                  <div className="flex min-w-0 flex-1 flex-col">
+                    <div className="space-y-1">
+                      {(
+                        [
+                          ['전투력', profile.data.combat.toLocaleString()],
+                          ['최고 강화', `+${profile.data.maxEnhance}`],
+                          ['합산 강화', `+${profile.data.sumEnhance.toLocaleString()}`],
+                          ['레이드 처치', profile.data.raidKills.toLocaleString()],
+                          ['대난투 우승', profile.data.meleeWins.toLocaleString()],
+                        ] as const
+                      ).map(([label, v]) => (
+                        <div key={label} className="flex items-baseline justify-between gap-2">
+                          <span className="text-[10px] text-zinc-400">{label}</span>
+                          <span className="text-[12.5px] font-bold tabular-nums">{v}</span>
+                        </div>
+                      ))}
+                    </div>
+                    {popupFlash ? (
+                      <p className="mt-1.5 text-[10.5px] text-amber-600 dark:text-amber-400">
+                        {popupFlash}
+                      </p>
                     ) : null}
-                    <button
-                      type="button"
-                      onClick={() => {
-                        if (!profile.data?.publicCode) return;
-                        try {
-                          // 뒤로가기 복원 — 프로필 데이터째 저장해 재조회 없이 즉시 복원.
-                          sessionStorage.setItem(RESTORE_KEY, JSON.stringify(profile.data));
-                        } catch {
-                          /* ignore */
-                        }
-                        // 팝업을 닫지 않고 이동 — 페이지 전환과 함께 자연스럽게 사라짐.
-                        router.push(`/u/${profile.data.publicCode}?s=${serverIdRef.current}`);
-                      }}
-                      className="rounded-lg bg-zinc-100 py-1.5 text-[11.5px] font-bold dark:bg-zinc-800"
-                    >
-                      프로필 보기
-                    </button>
-                    <button
-                      type="button"
-                      onClick={() => setProfile(null)}
-                      className="rounded-lg bg-zinc-100 py-1.5 text-[11.5px] font-bold text-zinc-500 dark:bg-zinc-800 dark:text-zinc-400"
-                    >
-                      닫기
-                    </button>
+                    {/* 액션 — isMe 여부와 무관하게 빈 칸 없이 채워지는 2열 */}
+                    <div className="mt-auto grid grid-cols-2 gap-1.5 pt-3">
+                      {!profile.data.isMe ? (
+                        <>
+                          <button
+                            type="button"
+                            disabled={profile.data.friendStatus !== null}
+                            onClick={() => {
+                              void sendRequestAction(profile.data!.userId).then((r) => {
+                                setPopupFlash(
+                                  r.status === 'success'
+                                    ? '친구 요청을 보냈어요'
+                                    : '요청에 실패했어요',
+                                );
+                                if (r.status === 'success')
+                                  setProfile((prev) =>
+                                    prev?.data
+                                      ? { ...prev, data: { ...prev.data, friendStatus: 'pending' } }
+                                      : prev,
+                                  );
+                              });
+                            }}
+                            className="rounded-lg bg-amber-500 py-1.5 text-[11.5px] font-bold text-white disabled:opacity-50"
+                          >
+                            {profile.data.friendStatus === 'accepted'
+                              ? '친구 ✓'
+                              : profile.data.friendStatus === 'pending'
+                                ? '요청됨'
+                                : '친구 추가'}
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() => {
+                              toggleBlock(profile.data!.userId, profile.data!.nickname);
+                              setPopupFlash(
+                                blocked.has(profile.data!.userId)
+                                  ? '차단을 해제했어요'
+                                  : '이 기기에서 메시지를 숨겨요',
+                              );
+                            }}
+                            className="rounded-lg bg-zinc-100 py-1.5 text-[11.5px] font-bold text-zinc-600 dark:bg-zinc-800 dark:text-zinc-300"
+                          >
+                            {blocked.has(profile.data.userId) ? '차단 해제' : '차단'}
+                          </button>
+                        </>
+                      ) : null}
+                      <button
+                        type="button"
+                        onClick={() => {
+                          if (!profile.data?.publicCode) return;
+                          try {
+                            // 뒤로가기 복원 — 프로필 데이터째 저장해 재조회 없이 즉시 복원.
+                            sessionStorage.setItem(RESTORE_KEY, JSON.stringify(profile.data));
+                          } catch {
+                            /* ignore */
+                          }
+                          // 팝업을 닫지 않고 이동 — 페이지 전환과 함께 자연스럽게 사라짐.
+                          router.push(`/u/${profile.data.publicCode}?s=${serverIdRef.current}`);
+                        }}
+                        className="rounded-lg bg-zinc-100 py-1.5 text-[11.5px] font-bold dark:bg-zinc-800"
+                      >
+                        프로필 보기
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => setProfile(null)}
+                        className="rounded-lg bg-zinc-100 py-1.5 text-[11.5px] font-bold text-zinc-500 dark:bg-zinc-800 dark:text-zinc-400"
+                      >
+                        닫기
+                      </button>
+                    </div>
                   </div>
                 </div>
               </div>
@@ -808,14 +847,20 @@ export function ChatDock() {
           className="fixed inset-0 z-40 flex items-center justify-center bg-black/60 p-6 backdrop-blur-sm"
           onClick={() => setShowBlockList(false)}
         >
-          <div className="w-full max-w-[280px] rounded-2xl bg-white p-4 dark:bg-zinc-900" onClick={(e) => e.stopPropagation()}>
+          <div
+            className="w-full max-w-[280px] rounded-2xl bg-white p-4 dark:bg-zinc-900"
+            onClick={(e) => e.stopPropagation()}
+          >
             <h3 className="text-[13px] font-bold">차단 목록</h3>
             {blocked.size === 0 ? (
               <p className="py-6 text-center text-[12px] text-zinc-400">차단한 유저가 없어요.</p>
             ) : (
               <ul className="mt-2 max-h-[240px] space-y-1 overflow-y-auto">
                 {[...blocked].map(([id, nickname]) => (
-                  <li key={id} className="flex items-center justify-between gap-2 rounded-lg bg-zinc-50 px-2.5 py-1.5 dark:bg-zinc-800/60">
+                  <li
+                    key={id}
+                    className="flex items-center justify-between gap-2 rounded-lg bg-zinc-50 px-2.5 py-1.5 dark:bg-zinc-800/60"
+                  >
                     <span className="truncate text-[12px] font-semibold">{nickname}</span>
                     <button
                       type="button"
@@ -848,7 +893,10 @@ export function ChatDock() {
           className="fixed inset-0 z-40 flex items-center justify-center bg-black/60 p-6 backdrop-blur-sm"
           onClick={() => setReportTarget(null)}
         >
-          <div className="w-full max-w-[280px] rounded-2xl bg-white p-4 dark:bg-zinc-900" onClick={(e) => e.stopPropagation()}>
+          <div
+            className="w-full max-w-[280px] rounded-2xl bg-white p-4 dark:bg-zinc-900"
+            onClick={(e) => e.stopPropagation()}
+          >
             <h3 className="text-[13px] font-bold">이 메시지를 신고할까요?</h3>
             <p className="mt-2 rounded-lg bg-zinc-50 px-3 py-2 text-[12px] text-zinc-600 dark:bg-zinc-800/60 dark:text-zinc-300">
               <b>{reportTarget.nickname}</b> · {reportTarget.body.slice(0, 60)}
