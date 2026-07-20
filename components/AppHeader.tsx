@@ -47,8 +47,7 @@ export function AppHeaderShell({
               alt=""
               aria-hidden
               draggable={false}
-              // 박스는 그대로 두고 이미지만 6px 아래로 — 얼굴이 내려와 상단 짤림 완화.
-              className="absolute inset-x-0 top-[6px] h-full w-full"
+              className="absolute inset-0 h-full w-full"
               style={faceCropStyle(profileFaceBox)}
             />
           ) : (
