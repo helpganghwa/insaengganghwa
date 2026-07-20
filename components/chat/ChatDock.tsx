@@ -265,8 +265,16 @@ export function ChatDock() {
   }, [fetchRecent]);
 
   // Realtime 구독 — 채널 확정 후 1회. 실패 시 폴링 폴백(아래 별도 effect).
+  // 서버 전환(쿠키 srv 변경 → 채널 교체) 시 이전 서버 메시지 버퍼·미니바를 비운다.
+  const prevChannelRef = useRef<string | null>(null);
   useEffect(() => {
     if (!channel) return;
+    if (prevChannelRef.current && prevChannelRef.current !== channel) {
+      setMessages([]);
+      setLatest(null);
+      myFieldsRef.current = null;
+    }
+    prevChannelRef.current = channel;
     const sb = supabaseBrowser();
     if (!sb) return;
     const ch = sb

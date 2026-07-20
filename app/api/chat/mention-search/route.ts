@@ -1,5 +1,5 @@
 import { NextResponse } from 'next/server';
-import { and, ilike, ne, eq } from 'drizzle-orm';
+import { and, ne, eq, sql } from 'drizzle-orm';
 
 import { getSessionUserId } from '@/lib/auth/session';
 import { getActiveServerId } from '@/lib/game/servers';
@@ -26,8 +26,9 @@ export async function GET(req: Request) {
       and(
         eq(characters.serverId, serverId),
         ne(characters.userId, userId),
-        // prefix 검색 — %는 이스케이프(닉네임 정책상 특수문자 없음이지만 방어).
-        ilike(characters.nickname, `${q.replaceAll('%', '\\%').replaceAll('_', '\\_')}%`),
+        // prefix 검색 — characters_nick_prefix_idx(0129, text_pattern_ops)를 타는 형태.
+        // %/_는 이스케이프(닉네임 정책상 특수문자 없음이지만 방어).
+        sql`lower(${characters.nickname}) like lower(${q.replaceAll('%', '\\%').replaceAll('_', '\\_')}) || '%'`,
       ),
     )
     .orderBy(characters.nickname)
