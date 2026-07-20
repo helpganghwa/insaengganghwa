@@ -2,7 +2,7 @@
 
 import { useState, useTransition } from 'react';
 
-import { adminConfirmReview, adminGrantAvatar, adminRevokeAndRefund } from './actions';
+import { adminConfirmReview, adminGrantAvatar, adminRefundOnly, adminRevokeAndRefund } from './actions';
 
 const DECISION_KO: Record<string, string> = {
   confirm: '✓ 확인(무조치)',
@@ -14,6 +14,7 @@ export function AdminProfileGenActions({
   jobId,
   hasAvatar,
   canGrant,
+  canRefundOnly,
   escrow,
   decision,
 }: {
@@ -21,6 +22,8 @@ export function AdminProfileGenActions({
   hasAvatar: boolean;
   /** AI 거절(실패) 건이라 운영자가 아바타를 지급할 수 있는 상태. 통과 건엔 false. */
   canGrant: boolean;
+  /** accepted인데 아바타가 이미 삭제돼 회수 불가 — 분쟁 시 환불만 가능(미환불 건 한정). */
+  canRefundOnly: boolean;
   escrow: string;
   decision: string | null;
 }) {
@@ -77,6 +80,20 @@ export function AdminProfileGenActions({
           className="rounded-lg border border-emerald-700 bg-emerald-900/30 px-3 py-1.5 text-xs font-bold text-emerald-300 disabled:opacity-50"
         >
           아바타 지급(차감X)
+        </button>
+      ) : canRefundOnly ? (
+        <button
+          type="button"
+          disabled={pending}
+          onClick={() =>
+            run(
+              () => adminRefundOnly(jobId),
+              `아바타는 이미 삭제된 건입니다. 다이아 ${escrow}개를 환불만 할까요?\n(회수 없음 + 우편 통지)`,
+            )
+          }
+          className="rounded-lg border border-amber-700 bg-amber-900/30 px-3 py-1.5 text-xs font-bold text-amber-300 disabled:opacity-50"
+        >
+          환불만(회수 없음)
         </button>
       ) : (
         <span className="text-[11px] text-zinc-500">표시할 아바타 없음 (유저 삭제 또는 회수됨)</span>
