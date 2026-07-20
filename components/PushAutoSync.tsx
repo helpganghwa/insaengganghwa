@@ -27,6 +27,8 @@ export function PushAutoSync() {
       const d = e.data as { type?: string; url?: string } | null;
       if (d?.type === 'push-navigate' && typeof d.url === 'string' && d.url.startsWith('/') && !d.url.startsWith('//')) {
         if (location.pathname !== d.url) router.push(d.url);
+        // 앱 내 위젯(채팅 도크 등)에 목적지 전달 — 같은 경로여도 쿼리 액션(?chat=)은 처리돼야 한다.
+        window.dispatchEvent(new CustomEvent('ig:push-nav', { detail: d.url }));
       }
     };
     navigator.serviceWorker.addEventListener('message', onMessage);
@@ -54,8 +56,9 @@ export function PushAutoSync() {
               // '//' 프로토콜-상대 URL 차단 — router.push('//evil.com') 오픈리다이렉트 방어심화.
               if (v && typeof v.url === 'string' && v.url.startsWith('/') && !v.url.startsWith('//')) {
                 store.delete('pending');
-                if (Date.now() - (v.ts ?? 0) < FRESH_MS && location.pathname !== v.url) {
-                  router.push(v.url);
+                if (Date.now() - (v.ts ?? 0) < FRESH_MS) {
+                  if (location.pathname !== v.url) router.push(v.url);
+                  window.dispatchEvent(new CustomEvent('ig:push-nav', { detail: v.url }));
                 }
               }
             };

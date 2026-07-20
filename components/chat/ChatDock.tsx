@@ -434,6 +434,40 @@ export function ChatDock() {
     });
   };
 
+  // 푸시 클릭 목적지(?chat=all|guild) — 채팅창을 해당 탭으로 오픈. 처리 후 쿼리 제거.
+  const openFromPushRef = useRef<(url: string) => void>(() => {});
+  openFromPushRef.current = (url: string) => {
+    let chat: string | null = null;
+    try {
+      chat = new URL(url, location.origin).searchParams.get('chat');
+    } catch {
+      return;
+    }
+    if (chat !== 'all' && chat !== 'guild') return;
+    if (chat !== tabRef.current) switchTab(chat);
+    openPanel();
+    try {
+      const u = new URL(location.href);
+      if (u.searchParams.has('chat')) {
+        u.searchParams.delete('chat');
+        history.replaceState(null, '', u.pathname + (u.search ? u.search : ''));
+      }
+    } catch {
+      /* ignore */
+    }
+  };
+  useEffect(() => {
+    // 콜드 오픈(알림 → 새 창/전체 내비게이션) — 첫 마운트의 주소로 판정.
+    if (location.search.includes('chat=')) openFromPushRef.current(location.href);
+    // 앱이 이미 열려 있을 때 — PushAutoSync가 발행하는 목적지 이벤트 수신.
+    const onNav = (e: Event) => {
+      const url = (e as CustomEvent<string>).detail;
+      if (typeof url === 'string') openFromPushRef.current(url);
+    };
+    window.addEventListener('ig:push-nav', onNav);
+    return () => window.removeEventListener('ig:push-nav', onNav);
+  }, []);
+
   // 페인트 전 바닥 스크롤 — openPanel 직후 렌더(이전 목록)와 fetch 반영 렌더 모두.
   useLayoutEffect(() => {
     if (!open || !needInitialScrollRef.current || messages.length === 0) return;

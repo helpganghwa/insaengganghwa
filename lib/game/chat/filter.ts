@@ -1,7 +1,7 @@
 /**
- * 월드 채팅 본문 필터(0125) — 서버 전용 검증·정제. 원문은 저장하지 않고 마스킹본만 저장.
+ * 월드 채팅 본문 필터(0125) — 서버 전용 검증.
  *  - URL 전면 차단(피싱·홍보 방지, CBT 정책 — 사용자 확정 2026-07-20)
- *  - 금칙어는 마스킹(●) — 목록은 최소 시작, 운영하며 보강
+ *  - 금칙어는 전송 거부(2026-07-22 마스킹 → 거부 전환, 사용자 확정) — 목록은 운영하며 보강
  */
 
 const URL_RE = /(https?:\/\/|www\.|[a-z0-9-]+\.(com|net|org|kr|io|gg|app|me|ly|xyz)(\/|\b))/i;
@@ -14,7 +14,7 @@ const BADWORDS = [
 
 export type ChatBodyCheck =
   | { ok: true; body: string }
-  | { ok: false; reason: 'EMPTY' | 'TOO_LONG' | 'URL' };
+  | { ok: false; reason: 'EMPTY' | 'TOO_LONG' | 'URL' | 'BADWORD' };
 
 export const CHAT_MAX_LEN = 100;
 
@@ -24,9 +24,6 @@ export function checkAndFilterChatBody(raw: string): ChatBodyCheck {
   if (!body) return { ok: false, reason: 'EMPTY' };
   if (body.length > CHAT_MAX_LEN) return { ok: false, reason: 'TOO_LONG' };
   if (URL_RE.test(body)) return { ok: false, reason: 'URL' };
-  let masked = body;
-  for (const w of BADWORDS) {
-    if (masked.includes(w)) masked = masked.replaceAll(w, '●'.repeat(w.length));
-  }
-  return { ok: true, body: masked };
+  if (BADWORDS.some((w) => body.includes(w))) return { ok: false, reason: 'BADWORD' };
+  return { ok: true, body };
 }
