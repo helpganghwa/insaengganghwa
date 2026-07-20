@@ -304,6 +304,9 @@ export default async function AdminProfileGenPage({
                     jobId={String(r.id)}
                     hasAvatar={!!r.userProfileId}
                     canGrant={!r.userProfileId && (r.status === 'rejected_ai' || r.status === 'failed')}
+                    canRefundOnly={
+                      !r.userProfileId && r.status === 'accepted' && r.adminDecision !== 'reject' && r.diamondEscrow > 0n
+                    }
                     escrow={r.diamondEscrow.toString()}
                     decision={r.adminDecision ?? null}
                   />

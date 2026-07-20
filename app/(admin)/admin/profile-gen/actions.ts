@@ -87,6 +87,59 @@ export async function adminRevokeAndRefund(jobId: string): Promise<{ ok: boolean
 }
 
 /**
+ * 환불만(회수 없음) — 유저가 아바타를 이미 삭제해 회수할 대상이 없는 accepted 건의 분쟁 환불.
+ * 조건부 클레임(adminDecision != 'reject' AND user_profile_id IS NULL)으로 정확히 1회.
+ * reject로 마킹되므로 첫 생성 할인 이력에서도 제외된다(회수+환불과 동일 정산 의미).
+ */
+export async function adminRefundOnly(jobId: string): Promise<{ ok: boolean; msg?: string }> {
+  await requireAdmin();
+  const jid = safeBigInt(jobId);
+  if (jid === null) return { ok: false, msg: '잘못된 작업 ID입니다.' };
+  const [job] = await db
+    .select()
+    .from(profileGenerationJobs)
+    .where(eq(profileGenerationJobs.id, jid))
+    .limit(1);
+  if (!job) return { ok: false, msg: '작업을 찾을 수 없습니다.' };
+  if (job.status !== 'accepted') return { ok: false, msg: 'accepted(과금 완료) 건만 환불할 수 있습니다.' };
+  if (job.userProfileId) return { ok: false, msg: '아바타가 남아 있습니다 — 리젝(회수+환불)을 사용하세요.' };
+  if (job.diamondEscrow <= 0n) return { ok: false, msg: '환불할 다이아가 없습니다.' };
+
+  const claimed = await db.transaction(async (tx) => {
+    const rows = await tx
+      .update(profileGenerationJobs)
+      .set({
+        rejectReason: '운영자 환불(분쟁·아바타 기삭제) — 다이아 환불',
+        adminDecision: 'reject',
+        adminReviewedAt: new Date(),
+      })
+      .where(
+        and(
+          eq(profileGenerationJobs.id, job.id),
+          sql`${profileGenerationJobs.adminDecision} IS DISTINCT FROM 'reject'`,
+          sql`${profileGenerationJobs.userProfileId} IS NULL`,
+        ),
+      )
+      .returning({ id: profileGenerationJobs.id });
+    if (rows.length === 0) return false;
+    await walletAdd(tx, job.userId, job.serverId, job.diamondEscrow);
+    await tx.insert(mailbox).values({
+      userId: job.userId,
+      serverId: job.serverId,
+      type: 'admin',
+      title: '아바타 생성 다이아 환불 안내',
+      body: `안녕하세요, 운영팀입니다.\n\n문의 주신 아바타 생성 건에 대해 사용하신 다이아 ${job.diamondEscrow.toString()}개를 전액 환불해 드렸습니다.\n환불 다이아로 언제든 다시 생성하실 수 있습니다.\n\n이용해 주셔서 감사합니다.`,
+      senderLabel: '운영자',
+      payload: {},
+    });
+    return true;
+  });
+  revalidatePath('/admin/profile-gen');
+  if (!claimed) return { ok: false, msg: '이미 환불 처리된 건입니다.' };
+  return { ok: true };
+}
+
+/**
  * 아바타 지급 (다이아 차감 없음) — AI가 거절했지만 실제로 문제 없는 아바타를 직접 지급.
  * Storage 미러링 + user_profiles 생성 + 목록 추가 + 우편(pipeline.adminGrantAvatarForJob).
  * AI 거절 시 escrow는 이미 환불됐으므로 추가 차감/환불 없음(순수 지급).
