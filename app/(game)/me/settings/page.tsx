@@ -47,6 +47,7 @@ export default async function SettingsPage() {
         pushRaid: profiles.pushRaid,
         pushProfile: profiles.pushProfile,
         pushReferral: profiles.pushReferral,
+        pushChatMention: profiles.pushChatMention,
         pushEnhanceMode: profiles.pushEnhanceMode,
       })
       .from(profiles)
@@ -72,6 +73,7 @@ export default async function SettingsPage() {
           initialRaid={p?.pushRaid ?? true}
           initialProfile={p?.pushProfile ?? true}
           initialReferral={p?.pushReferral ?? true}
+          initialChatMention={p?.pushChatMention ?? true}
           initialEnhanceMode={p?.pushEnhanceMode ?? 'batched'}
         />
       </Section>

@@ -1,7 +1,11 @@
 import { NextResponse } from 'next/server';
 
+import { and, eq } from 'drizzle-orm';
+
 import { getSessionUserId } from '@/lib/auth/session';
 import { getActiveServerId } from '@/lib/game/servers';
+import { db } from '@/lib/db/client';
+import { characters } from '@/lib/db/schema/server';
 import { getChatBlocks, getRecentChat, isChatEnabled } from '@/lib/game/chat/service';
 import { chatTopic } from '@/lib/game/chat/realtime';
 
@@ -20,9 +24,20 @@ export async function GET(req: Request) {
   const limitRaw = Number(url.searchParams.get('limit'));
   const limit = Number.isInteger(limitRaw) && limitRaw >= 1 && limitRaw <= 100 ? limitRaw : 100;
   const serverId = await getActiveServerId();
-  const [messages, blocked] = await Promise.all([
+  const [messages, blocked, [meChar]] = await Promise.all([
     getRecentChat(serverId, limit),
     getChatBlocks(userId, serverId),
+    db
+      .select({ nickname: characters.nickname })
+      .from(characters)
+      .where(and(eq(characters.userId, userId), eq(characters.serverId, serverId)))
+      .limit(1),
   ]);
-  return NextResponse.json({ channel: chatTopic(serverId), me: userId, messages, blocked });
+  return NextResponse.json({
+    channel: chatTopic(serverId),
+    me: userId,
+    meNickname: meChar?.nickname ?? null,
+    messages,
+    blocked,
+  });
 }
