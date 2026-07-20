@@ -14,7 +14,7 @@ import { getGuildBriefsByUsers } from '@/lib/game/guild';
 import { getBossBg, getBossSprite } from '@/lib/game/raid/boss-sprites';
 import { assetUrl } from '@/lib/asset-versions';
 
-import { settleRaidAction } from '../actions';
+import { settleRaid } from '@/lib/game/raid/settle';
 import { RaidSessionCard, type RaidView } from '../RaidSessionCard';
 
 export default async function RaidDetail({ params }: { params: Promise<{ raidId: string }> }) {
@@ -61,9 +61,11 @@ export default async function RaidDetail({ params }: { params: Promise<{ raidId:
 
   // 만료된 active → lazy 정산(멱등) 후 재조회. 콜드 시 정산 tx가 hang하면 페이지가
   // 막히므로 가드 — 실패 시 settle-raid cron(*/5)이 정산을 담당하고 현재 상태로 진행.
+  // ⚠ 서버 액션(settleRaidAction)이 아니라 도메인 함수 직접 호출 — 액션의 revalidatePath가
+  // 렌더 중 실행돼 Next 미지원 에러를 냈다(런타임 로그 검출, 2026-07-22). cron과 동일 경로.
   if (raid.status === 'active' && raid.expireAt.getTime() <= Date.now()) {
     try {
-      await withTimeout(settleRaidAction(raidId), 4000, 'raid.settle');
+      await withTimeout(settleRaid({ raidId: BigInt(raidId) }), 4000, 'raid.settle');
       raid = (await withTimeout(loadRaid(), 3000, 'raid.reload'))!;
     } catch {
       // 정산 hang/실패 → cron 백업. raid는 직전 active 상태로 표시.
