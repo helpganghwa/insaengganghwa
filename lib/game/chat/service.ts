@@ -12,6 +12,8 @@ import { systemMode } from '@/lib/db/schema/ops';
 import { getGuildBriefsByUsers } from '@/lib/game/guild/badge';
 import { parseFaceBox } from '@/components/faceCrop';
 
+import { getWorldFeed, type WorldEventEntry } from '@/lib/game/world/event';
+
 import { broadcastChat } from './realtime';
 
 /**
@@ -32,9 +34,41 @@ export type ChatMessageDto = {
   guildEmblemUrl: string | null;
   /** 현재(가장 최근) 대난투 우승자 — 닉네임 앞 🏆 표시. */
   isMeleeChampion: boolean;
+  /** 장비 자랑 태그(0127) — 전송 시점 스냅샷. null=일반 메시지. */
+  item: ChatItemSnap | null;
+  /** 시스템 라인(월드 이벤트) — 있으면 유저 필드는 빈 값, 렌더는 worldEventMessage. */
+  sys?: WorldEventEntry;
   body: string;
   createdAt: string; // ISO
 };
+
+export type ChatItemSnap = {
+  n: string; // 이름
+  c: string; // 카탈로그 code(스프라이트)
+  s: 'weapon' | 'armor' | 'accessory';
+  e: number; // 강화
+  t: number; // 초월
+  cp: number; // 전투력(전송 시점)
+};
+
+/** 월드 이벤트 → 채팅 시스템 라인 DTO. id는 sys- 프리픽스(실메시지와 충돌 없음). */
+export function sysToChatDto(entry: WorldEventEntry): ChatMessageDto {
+  return {
+    id: `sys-${entry.id}`,
+    userId: '',
+    nickname: '',
+    publicCode: null,
+    avatar: null,
+    faceBox: null,
+    guildName: null,
+    guildEmblemUrl: null,
+    isMeleeChampion: false,
+    item: null,
+    sys: entry,
+    body: '',
+    createdAt: entry.createdAtIso,
+  };
+}
 
 /** 가장 최근 대난투 우승자(다음 대난투 확정 전까지 '현재 1등').
  * 하루 1회(9시) 바뀌는 값 — 인스턴스 60초 캐시로 전송·조회마다의 DB 왕복 제거. */
@@ -113,19 +147,24 @@ async function displayFields(
 
 /** 최근 메시지(오래된 → 최신 순, 숨김 제외). */
 export async function getRecentChat(serverId: number, limit = 100): Promise<ChatMessageDto[]> {
-  const rows = await db
-    .select({
-      id: chatMessages.id,
-      userId: chatMessages.userId,
-      body: chatMessages.body,
-      createdAt: chatMessages.createdAt,
-    })
-    .from(chatMessages)
-    .where(and(eq(chatMessages.serverId, serverId), sql`${chatMessages.hiddenAt} is null`))
-    .orderBy(desc(chatMessages.id))
-    .limit(limit);
+  const [rows, worldFeed] = await Promise.all([
+    db
+      .select({
+        id: chatMessages.id,
+        userId: chatMessages.userId,
+        body: chatMessages.body,
+        item: chatMessages.item,
+        createdAt: chatMessages.createdAt,
+      })
+      .from(chatMessages)
+      .where(and(eq(chatMessages.serverId, serverId), sql`${chatMessages.hiddenAt} is null`))
+      .orderBy(desc(chatMessages.id))
+      .limit(limit),
+    // 시스템 라인(월드 이벤트) 병합 — 30초 캐시 피드 재사용(실시간은 broadcast 'sys'가 커버).
+    limit > 1 ? getWorldFeed(serverId, 30).catch(() => []) : Promise.resolve([]),
+  ]);
   const fields = await displayFields(rows.map((r) => r.userId), serverId);
-  return rows
+  const msgs = rows
     .reverse()
     .map((r) => {
       const f = fields.get(r.userId);
@@ -139,10 +178,19 @@ export async function getRecentChat(serverId: number, limit = 100): Promise<Chat
         guildName: f?.guildName ?? null,
         guildEmblemUrl: f?.guildEmblemUrl ?? null,
         isMeleeChampion: f?.isMeleeChampion ?? false,
+        item: (r.item as ChatItemSnap | null) ?? null,
         body: r.body,
         createdAt: r.createdAt.toISOString(),
-      };
+      } satisfies ChatMessageDto;
     });
+  if (worldFeed.length === 0) return msgs;
+  // 채팅 표시 구간(가장 오래된 메시지 이후) 이벤트만 — 채팅이 없으면 최근 15건.
+  const oldest = msgs[0]?.createdAt;
+  const sys = worldFeed
+    .filter((e) => (oldest ? e.createdAtIso >= oldest : true))
+    .slice(0, oldest ? undefined : 15)
+    .map(sysToChatDto);
+  return [...msgs, ...sys].sort((a, b) => (a.createdAt < b.createdAt ? -1 : a.createdAt > b.createdAt ? 1 : 0));
 }
 
 /** 저장 + 브로드캐스트 — 본문은 이미 필터·검증 완료본. 반환 DTO는 낙관 렌더에도 사용. */
@@ -150,10 +198,11 @@ export async function persistAndBroadcast(
   userId: string,
   serverId: number,
   body: string,
+  item: ChatItemSnap | null = null,
 ): Promise<ChatMessageDto> {
   const [row] = await db
     .insert(chatMessages)
-    .values({ serverId, userId, body })
+    .values({ serverId, userId, body, item })
     .returning({ id: chatMessages.id, createdAt: chatMessages.createdAt });
   const fields = await displayFields([userId], serverId);
   const f = fields.get(userId);
@@ -167,6 +216,7 @@ export async function persistAndBroadcast(
     guildName: f?.guildName ?? null,
     guildEmblemUrl: f?.guildEmblemUrl ?? null,
     isMeleeChampion: f?.isMeleeChampion ?? false,
+    item,
     body,
     createdAt: row!.createdAt.toISOString(),
   };

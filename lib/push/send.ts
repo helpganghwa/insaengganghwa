@@ -40,7 +40,7 @@ export type PushPayload = {
   body: string;
   url?: string;
   tag?: string;
-  category: 'enhance' | 'raid' | 'supply' | 'profile' | 'referral' | 'melee' | 'admin';
+  category: 'enhance' | 'raid' | 'supply' | 'profile' | 'referral' | 'melee' | 'chat_mention' | 'admin';
   /**
    * 같은 tag 알림 교체 시 재알림(소리/진동) 여부. 기본 true — 미지정 시 SW가
    * 무음 교체해 "알림이 안 온다"고 느껴지던 문제 방지(2026-06-01). tag가 항상
@@ -60,6 +60,7 @@ const TOGGLE_COLUMN: Partial<Record<PushPayload['category'], PgColumn>> = {
   raid: profiles.pushRaid,
   profile: profiles.pushProfile,
   referral: profiles.pushReferral,
+  chat_mention: profiles.pushChatMention,
 };
 
 /**

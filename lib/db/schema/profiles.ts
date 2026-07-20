@@ -45,6 +45,8 @@ export const profiles = pgTable('profiles', {
   pushReferral: boolean('push_referral').notNull().default(true),
   /** 대난투 결과 발표 알림 토글 — 기본 ON(MELEE §7). 일일 복귀 푸시 겸함. */
   pushMelee: boolean('push_melee').notNull().default(true),
+  /** 채팅 멘션(@닉네임) 푸시(0127) — 설정 > 알림에서 끄기 가능. */
+  pushChatMention: boolean('push_chat_mention').notNull().default(true),
   /** 강화 모드 — instant(즉시) | batched(30분 묶음). 기본 instant. */
   pushEnhanceMode: pushEnhanceModeEnum('push_enhance_mode').notNull().default('batched'),
   /**

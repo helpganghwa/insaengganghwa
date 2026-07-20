@@ -4,7 +4,7 @@
  * 보존: 서버당 최근 1,000개 + 7일(mail-expire 크론에서 정리).
  */
 import { sql } from 'drizzle-orm';
-import { bigserial, index, pgTable, primaryKey, smallint, text, timestamp, uuid } from 'drizzle-orm/pg-core';
+import { bigserial, index, jsonb, pgTable, primaryKey, smallint, text, timestamp, uuid } from 'drizzle-orm/pg-core';
 
 import { profiles } from './profiles';
 
@@ -18,6 +18,8 @@ export const chatMessages = pgTable(
       .references(() => profiles.id, { onDelete: 'cascade' }),
     /** 서버 필터(금칙어 마스킹) 후 저장 — 원문 미보존. 최대 200자(액션 검증). */
     body: text('body').notNull(),
+    /** 장비 자랑 태그 스냅샷 {n,c,s,e,t,cp}(0127) — null=일반 메시지. */
+    item: jsonb('item'),
     /** 모더레이션 숨김(신고 3건 자동 또는 어드민) — null=노출. */
     hiddenAt: timestamp('hidden_at', { withTimezone: true }),
     createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),

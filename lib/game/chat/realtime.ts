@@ -10,7 +10,7 @@ export function chatTopic(serverId: number): string {
 
 export async function broadcastChat(
   serverId: number,
-  event: 'new' | 'hide',
+  event: 'new' | 'hide' | 'sys',
   payload: unknown,
 ): Promise<void> {
   const url = process.env.NEXT_PUBLIC_SUPABASE_URL;

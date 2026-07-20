@@ -11,6 +11,7 @@ import { guilds, zones } from '@/lib/db/schema/guild';
 import { getRankingTop, type LeaderboardMetric } from '@/lib/game/leaderboard/queries';
 import { getGuildRanking } from '@/lib/game/guild/queries';
 import { logMemberAchievement } from '@/lib/game/guild/achievement';
+import { broadcastChat } from '@/lib/game/chat/realtime';
 
 /** 월드 피드 사건 종류. detail 스키마는 각 logWorldEvent 호출부 + WorldLogFeed 렌더 참조. */
 export type WorldEventType =
@@ -46,13 +47,44 @@ export async function logWorldEvent(
   opts?: { actorUserId?: string; guildId?: bigint },
 ): Promise<void> {
   try {
-    await db.insert(worldEvents).values({
-      serverId,
-      type,
-      actorUserId: opts?.actorUserId ?? null,
-      guildId: opts?.guildId ?? null,
-      detail,
-    });
+    const [row] = await db
+      .insert(worldEvents)
+      .values({
+        serverId,
+        type,
+        actorUserId: opts?.actorUserId ?? null,
+        guildId: opts?.guildId ?? null,
+        detail,
+      })
+      .returning({ id: worldEvents.id, createdAt: worldEvents.createdAt });
+    // 전체 채팅 시스템 라인(2026-07-21) — 월드로그에 찍히는 사건을 실시간 브로드캐스트.
+    // 마일스톤 지점만이라 빈도 낮음. 실패해도 채팅 폴백(getRecentChat 병합)이 커버.
+    if (row) {
+      let actorNickname: string | null = null;
+      let actorCode: string | null = null;
+      if (opts?.actorUserId) {
+        const [[c], [pr]] = await Promise.all([
+          db
+            .select({ nickname: characters.nickname })
+            .from(characters)
+            .where(and(eq(characters.serverId, serverId), eq(characters.userId, opts.actorUserId)))
+            .limit(1),
+          db.select({ code: profiles.publicCode }).from(profiles).where(eq(profiles.id, opts.actorUserId)).limit(1),
+        ]);
+        actorNickname = c?.nickname ?? null;
+        actorCode = pr?.code ?? null;
+      }
+      const entry: WorldEventEntry = {
+        id: row.id.toString(),
+        type,
+        serverId,
+        actorNickname,
+        actorCode,
+        detail,
+        createdAtIso: row.createdAt.toISOString(),
+      };
+      await broadcastChat(serverId, 'sys', entry);
+    }
   } catch {
     // best-effort — 기록 실패는 무시.
   }

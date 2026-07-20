@@ -29,7 +29,7 @@ import {
  */
 
 // 일일 보급·대난투는 상시 발송(끄기 불가) — 설정 토글에서 제외.
-type Cat = 'enhance' | 'raid' | 'profile' | 'referral';
+type Cat = 'enhance' | 'raid' | 'profile' | 'referral' | 'chat_mention';
 
 type EnhanceMode = 'instant' | 'batched' | 'batched_1h';
 
@@ -38,6 +38,7 @@ export function PushSettings(props: {
   initialRaid: boolean;
   initialProfile: boolean;
   initialReferral: boolean;
+  initialChatMention: boolean;
   initialEnhanceMode: EnhanceMode;
 }) {
   const [supportKind, setSupportKind] = useState<string | null>(null);
@@ -51,6 +52,7 @@ export function PushSettings(props: {
   const [raid, setRaid] = useState(props.initialRaid);
   const [profile, setProfile] = useState(props.initialProfile);
   const [referral, setReferral] = useState(props.initialReferral);
+  const [chatMention, setChatMention] = useState(props.initialChatMention);
   const [enhanceMode, setEnhanceMode] = useState<EnhanceMode>(props.initialEnhanceMode);
   const [pending, startTransition] = useTransition();
 
@@ -110,6 +112,7 @@ export function PushSettings(props: {
       raid: setRaid,
       profile: setProfile,
       referral: setReferral,
+      chat_mention: setChatMention,
     };
     const setLocal = setterMap[cat];
     setLocal(next);
@@ -221,6 +224,13 @@ export function PushSettings(props: {
         on={referral}
         disabled={togglesDisabled || pending}
         onChange={(v) => flip('referral', v)}
+      />
+      <Toggle
+        label="채팅 멘션"
+        hint="전체 채팅에서 @닉네임으로 언급됐을 때"
+        on={chatMention}
+        disabled={togglesDisabled || pending}
+        onChange={(v) => flip('chat_mention', v)}
       />
     </div>
   );
