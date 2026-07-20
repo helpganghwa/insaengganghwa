@@ -5,7 +5,8 @@ import { useRouter } from 'next/navigation';
 
 import * as haptic from '@/lib/game/haptic';
 import { useResourceToast } from '@/components/ResourceToast';
-import { setActiveProfile, deleteProfile } from './actions';
+import { setActiveProfile, deleteProfile, expandAvatarSlot } from './actions';
+import { PROFILE_SLOT_EXPAND_COST_DIAMOND, PROFILE_MAX } from '@/lib/game/balance';
 
 type ProfileItem = {
   id: string;
@@ -20,9 +21,12 @@ function frontSrc(p: ProfileItem): string {
 export function ProfileSelector({
   profiles,
   activeProfileId,
+  slotLimit,
 }: {
   profiles: ProfileItem[];
   activeProfileId: string | null;
+  /** 보관 한도 = min(PROFILE_MAX, 기본 + 확장 구매분). */
+  slotLimit: number;
 }) {
   const router = useRouter();
   const { showHeaderToast, showError } = useResourceToast();
@@ -148,6 +152,30 @@ export function ProfileSelector({
             />
           ) : null}
         </div>
+      </div>
+
+      {/* 보관함 현황 + 확장(+1칸 300💎, 0124 BM) */}
+      <div className="flex items-center justify-between text-[11px] text-zinc-500 dark:text-zinc-400">
+        <span>
+          보관함 {list.length}/{slotLimit}
+        </span>
+        {slotLimit < PROFILE_MAX ? (
+          <button
+            type="button"
+            disabled={pending}
+            onClick={() => {
+              startTransition(async () => {
+                const r = await expandAvatarSlot();
+                if (r.status === 'error') return showError(r.message);
+                showHeaderToast({ title: `보관함 확장 (+1칸 → ${r.limit}칸)` });
+                router.refresh();
+              });
+            }}
+            className="rounded-full border border-zinc-300 px-2.5 py-1 font-bold text-zinc-600 disabled:opacity-50 dark:border-zinc-700 dark:text-zinc-300"
+          >
+            +1칸 확장 💎{PROFILE_SLOT_EXPAND_COST_DIAMOND}
+          </button>
+        ) : null}
       </div>
 
       {/* 보유 목록 — 탭하면 미리보기(적용 버튼으로 확정) */}

@@ -53,6 +53,8 @@ export const characters = pgTable(
     lastSeenAt: timestamp('last_seen_at', { withTimezone: true }),
     /** 활성 아바타(user_profiles.id, P6 이관) — null=기본 아이콘 폴백. FK는 0061 ALTER. */
     activeProfileId: uuid('active_profile_id'),
+    /** 아바타 보관함 확장 구매분(칸, 0124) — 한도 = min(PROFILE_MAX, PROFILE_BASE_SLOTS + bonus). */
+    avatarSlotBonus: integer('avatar_slot_bonus').notNull().default(0),
     createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
   },
   (t) => [

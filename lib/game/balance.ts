@@ -399,8 +399,14 @@ export function profileGenPrice(hasCustomAvatar: boolean): number {
   return hasCustomAvatar ? PROFILE_GENERATION_DIAMOND : PROFILE_FIRST_GEN_DIAMOND;
 }
 
-/** 유저당 보유 프로필(아바타) 최대 개수 — 초과 시 생성 차단(서버·클라 공용 검사). */
+/** 유저당 보유 프로필(아바타) 절대 상한 — 확장을 아무리 사도 이 위로는 불가. */
 export const PROFILE_MAX = 100;
+
+/** 아바타 보관 기본 한도(칸) — 기본 아바타 2개 포함. 초과 보관은 확장 구매(2026-07-20 BM). */
+export const PROFILE_BASE_SLOTS = 10;
+
+/** 보관함 +1칸 확장 비용(💎) — 반복 구매, 상한 PROFILE_MAX. */
+export const PROFILE_SLOT_EXPAND_COST_DIAMOND = 300;
 
 /**
  * 아바타 동시 생성 상한 — **Pixellab 키 1개당**. 키풀(key1/key2) 각각 이 값까지 동시 생성.
