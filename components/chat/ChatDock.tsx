@@ -9,7 +9,7 @@ import { faceCropStyle, type FaceBox } from '@/components/faceCrop';
 import type { ChatMessageDto } from '@/lib/game/chat/service';
 import { sendRequestAction } from '@/app/(game)/friends/actions';
 
-import { sendChat, reportChat } from './actions';
+import { sendChat, reportChat, setChatBlockAction } from './actions';
 
 /**
  * 전체 채팅 도크(0125, 2026-07-20 확정 UX) —
@@ -23,7 +23,6 @@ import { sendChat, reportChat } from './actions';
 
 const COOLDOWN_S = 5;
 const DOCK_H = '42px';
-const BLOCK_KEY = 'ig:chat-blocked';
 const COLLAPSE_KEY = 'ig:chat-collapsed';
 // '프로필 보기' 이동 후 뒤로가기 복원 — 값=팝업 대상 userId(세션 한정, 마운트 시 1회 소비).
 const RESTORE_KEY = 'ig:chat-restore';
@@ -44,16 +43,6 @@ type MiniProfile = {
   isMe: boolean;
 };
 
-function loadBlocked(): Map<string, string> {
-  try {
-    const raw = localStorage.getItem(BLOCK_KEY);
-    const arr = raw ? (JSON.parse(raw) as (string | { id: string; nickname: string })[]) : [];
-    return new Map(arr.map((e) => (typeof e === 'string' ? [e, '유저'] : [e.id, e.nickname])));
-  } catch {
-    return new Map();
-  }
-}
-
 export function ChatDock() {
   const router = useRouter();
   const pathname = usePathname();
@@ -73,7 +62,7 @@ export function ChatDock() {
   // 미니바 접힘(채팅 안 보기) — 이모지만 남김. 기기 저장으로 유지.
   const [collapsed, setCollapsed] = useState(false);
   // 팝업 — 미니 프로필(로딩=userId만) / 신고 확인.
-  const [profile, setProfile] = useState<{ userId: string; data: MiniProfile | null } | null>(null);
+  const [profile, setProfile] = useState<{ userId: string; data: MiniProfile } | null>(null);
   const [reportTarget, setReportTarget] = useState<ChatMessageDto | null>(null);
   const [popupFlash, setPopupFlash] = useState<string | null>(null);
   // 위로 읽는 중 도착한 새 메시지 — "↓ 새 메시지" 칩. 바닥 근처로 오면 자동 해제.
@@ -99,7 +88,6 @@ export function ChatDock() {
     } catch {
       /* ignore */
     }
-    setBlocked(loadBlocked());
     try {
       setCollapsed(localStorage.getItem(COLLAPSE_KEY) === '1');
     } catch {
@@ -202,6 +190,7 @@ export function ChatDock() {
         channel?: string;
         me?: string;
         messages: ChatMessageDto[];
+        blocked?: { id: string; nickname: string }[];
       };
       if (data.disabled) {
         setEnabled(false);
@@ -214,6 +203,7 @@ export function ChatDock() {
         if (Number.isInteger(sid)) serverIdRef.current = sid;
       }
       if (data.me) setMe(data.me);
+      if (data.blocked) setBlocked(new Map(data.blocked.map((b) => [b.id, b.nickname])));
       const mine = data.messages.filter((m) => m.userId === data.me).pop();
       if (mine) myFieldsRef.current = mine;
       return data.messages;
@@ -363,29 +353,38 @@ export function ChatDock() {
       .finally(() => setSending(false));
   };
 
+  // 로딩 팝업 없이 — 데이터가 다 오면 그때 연다(2026-07-21 피드백 3).
   const openProfile = (userId: string) => {
     setPopupFlash(null);
-    setProfile({ userId, data: null });
     void fetch(`/api/chat/profile?uid=${userId}`, { cache: 'no-store' })
       .then(async (res) => (res.ok ? ((await res.json()) as MiniProfile) : null))
       .then((data) => {
-        if (data) setProfile((prev) => (prev?.userId === userId ? { userId, data } : prev));
-        else setProfile(null);
+        if (data) setProfile({ userId, data });
       })
-      .catch(() => setProfile(null));
+      .catch(() => {
+        /* 무시 — 팝업 미노출 */
+      });
   };
 
+  // 차단 토글(0126, 서버 저장) — 낙관 반영 후 서버 확정, 실패 시 복원.
   const toggleBlock = (userId: string, nickname: string) => {
+    const wasBlocked = blocked.has(userId);
     setBlocked((prev) => {
       const next = new Map(prev);
-      if (next.has(userId)) next.delete(userId);
+      if (wasBlocked) next.delete(userId);
       else next.set(userId, nickname);
-      try {
-        localStorage.setItem(BLOCK_KEY, JSON.stringify([...next].map(([id, n]) => ({ id, nickname: n }))));
-      } catch {
-        /* ignore */
-      }
       return next;
+    });
+    void setChatBlockAction(userId, !wasBlocked).then((r) => {
+      if (r.status === 'error') {
+        setBlocked((prev) => {
+          const next = new Map(prev);
+          if (wasBlocked) next.set(userId, nickname);
+          else next.delete(userId);
+          return next;
+        });
+        setPopupFlash(r.message ?? '요청에 실패했어요');
+      }
     });
   };
 
@@ -519,19 +518,14 @@ export function ChatDock() {
                         mine ? 'bg-amber-50/70 dark:bg-amber-500/[0.07]' : ''
                       } ${pending ? 'opacity-50' : ''}`}
                     >
-                      <p className="min-w-0 flex-1 break-words pl-8 text-[12.5px] leading-[1.45] text-zinc-800 dark:text-zinc-200">
+                      <p
+                        onClick={() => {
+                          if (!mine && !pending) setReportTarget(m);
+                        }}
+                        className="min-w-0 flex-1 break-words pl-8 text-[12.5px] leading-[1.45] text-zinc-800 dark:text-zinc-200"
+                      >
                         {m.body}
                       </p>
-                      {!mine ? (
-                        <button
-                          type="button"
-                          onClick={() => setReportTarget(m)}
-                          aria-label="메시지 신고"
-                          className="mt-[3px] shrink-0 text-[9px] text-zinc-300 hover:text-red-500 dark:text-zinc-600"
-                        >
-                          신고
-                        </button>
-                      ) : null}
                     </div>
                   );
                 }
@@ -570,18 +564,15 @@ export function ChatDock() {
                         <span className="ml-auto shrink-0 text-[9px] text-zinc-300 dark:text-zinc-600">
                           {new Date(m.createdAt).toLocaleTimeString('ko-KR', { hour: '2-digit', minute: '2-digit' })}
                         </span>
-                        {!mine ? (
-                          <button
-                            type="button"
-                            onClick={() => setReportTarget(m)}
-                            aria-label="메시지 신고"
-                            className="shrink-0 text-[9px] text-zinc-300 hover:text-red-500 dark:text-zinc-600"
-                          >
-                            신고
-                          </button>
-                        ) : null}
+
                       </div>
-                      <p className="mt-[3px] break-words text-[12.5px] leading-[1.45] text-zinc-800 dark:text-zinc-200">
+                      {/* 본문 탭 = 신고 팝업(별도 신고 버튼 없음, 내 메시지 제외) */}
+                      <p
+                        onClick={() => {
+                          if (!mine && !pending) setReportTarget(m);
+                        }}
+                        className="mt-[3px] break-words text-[12.5px] leading-[1.45] text-zinc-800 dark:text-zinc-200"
+                      >
                         {m.body}
                       </p>
                     </div>
@@ -623,10 +614,13 @@ export function ChatDock() {
                 <button
                   type="button"
                   onClick={submit}
-                  // 포커스를 뺏지 않아 전송 후에도 키보드 유지(연속 대화).
+                  // 포커스를 뺏지 않아 전송 후에도 키보드 유지(연속 대화). disabled 속성은
+                  // pointerdown을 삼켜 비활성 탭에서 입력창 포커스가 풀림 — aria+스타일로 대체.
                   onPointerDown={(e) => e.preventDefault()}
-                  disabled={sending || cooldown > 0 || input.trim().length === 0}
-                  className="h-9 w-[54px] shrink-0 rounded-full bg-amber-500 text-[12.5px] font-bold text-white disabled:opacity-40"
+                  aria-disabled={sending || cooldown > 0 || input.trim().length === 0}
+                  className={`h-9 w-[54px] shrink-0 rounded-full bg-amber-500 text-[12.5px] font-bold text-white ${
+                    sending || cooldown > 0 || input.trim().length === 0 ? 'opacity-40' : ''
+                  }`}
                 >
                   {cooldown > 0 ? `${cooldown}s` : '전송'}
                 </button>
@@ -657,9 +651,7 @@ export function ChatDock() {
             className="w-full max-w-[320px] overflow-hidden rounded-2xl bg-white dark:bg-zinc-900"
             onClick={(e) => e.stopPropagation()}
           >
-            {!profile.data ? (
-              <p className="py-10 text-center text-[12px] text-zinc-400">불러오는 중…</p>
-            ) : (
+            {
               /* 자랑 카드식 2분할 — 왼쪽 전신 아바타(크게) / 오른쪽 정보+액션 */
               <div className="flex items-stretch gap-3 bg-gradient-to-br from-amber-50 via-white to-zinc-50 p-4 dark:from-amber-500/[0.09] dark:via-zinc-900 dark:to-zinc-900">
                 <div className="flex w-[128px] shrink-0 items-end justify-center">
@@ -775,7 +767,7 @@ export function ChatDock() {
                   </div>
                 </div>
               </div>
-            )}
+            }
           </div>
         </div>
       ) : null}

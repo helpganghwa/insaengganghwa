@@ -5,7 +5,7 @@ import { after } from 'next/server';
 import { and, desc, eq, inArray, sql } from 'drizzle-orm';
 
 import { db } from '@/lib/db/client';
-import { chatMessages, chatReports } from '@/lib/db/schema/chat';
+import { chatBlocks, chatMessages, chatReports } from '@/lib/db/schema/chat';
 import { profiles } from '@/lib/db/schema/profiles';
 import { characters } from '@/lib/db/schema/server';
 import { userProfiles } from '@/lib/db/schema/avatar';
@@ -210,6 +210,46 @@ export async function reportChatMessage(
     }
   }
   return 'ok';
+}
+
+/** 내 차단 목록 — 닉네임은 현재 서버 characters에서 해석(없으면 '유저'). */
+export async function getChatBlocks(
+  userId: string,
+  serverId: number,
+): Promise<{ id: string; nickname: string }[]> {
+  const rows = await db
+    .select({ id: chatBlocks.blockedUserId, nickname: characters.nickname })
+    .from(chatBlocks)
+    .leftJoin(
+      characters,
+      and(eq(characters.userId, chatBlocks.blockedUserId), eq(characters.serverId, serverId)),
+    )
+    .where(eq(chatBlocks.userId, userId))
+    .orderBy(desc(chatBlocks.createdAt));
+  return rows.map((r) => ({ id: r.id, nickname: r.nickname ?? '유저' }));
+}
+
+const CHAT_BLOCK_CAP = 100;
+
+/** 차단 설정/해제 — 멱등. 반환: 적용 후 상태('blocked'|'unblocked'|'CAP'). */
+export async function setChatBlock(
+  userId: string,
+  blockedUserId: string,
+  on: boolean,
+): Promise<'blocked' | 'unblocked' | 'CAP'> {
+  if (!on) {
+    await db
+      .delete(chatBlocks)
+      .where(and(eq(chatBlocks.userId, userId), eq(chatBlocks.blockedUserId, blockedUserId)));
+    return 'unblocked';
+  }
+  const [{ n }] = await db
+    .select({ n: sql<number>`count(*)::int` })
+    .from(chatBlocks)
+    .where(eq(chatBlocks.userId, userId));
+  if (n >= CHAT_BLOCK_CAP) return 'CAP';
+  await db.insert(chatBlocks).values({ userId, blockedUserId }).onConflictDoNothing();
+  return 'blocked';
 }
 
 /** 보존 정리(크론) — 7일 초과 또는 서버당 최근 1,000개 초과분 삭제. */
