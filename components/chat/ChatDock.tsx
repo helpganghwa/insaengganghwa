@@ -550,8 +550,8 @@ export function ChatDock() {
       if (nick && hit) {
         const cls =
           meNickname && nick === meNickname
-            ? 'font-semibold text-amber-600/80 dark:text-amber-400/80'
-            : 'font-medium text-amber-700/65 dark:text-amber-300/60';
+            ? 'font-bold text-amber-600 dark:text-amber-400'
+            : 'font-semibold text-amber-600/85 dark:text-amber-400/85';
         if (hit.c) {
           return (
             <Link key={i} href={profileHref(hit.c, serverIdRef.current)} className={`${cls} hover:underline`}>
