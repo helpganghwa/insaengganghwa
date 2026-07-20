@@ -112,6 +112,12 @@ export function ChatDock() {
   const serverIdRef = useRef(1);
   const tabRef = useRef<Tab>('all');
   tabRef.current = tab;
+  // 탭별 버퍼(전환 즉시 표시용) — 활성 탭은 messages/latest 상태가 원본, 비활성 탭은 여기.
+  const bufRef = useRef<Record<Tab, { messages: ChatMessageDto[]; latest: ChatMessageDto | null }>>({
+    all: { messages: [], latest: null },
+    guild: { messages: [], latest: null },
+  });
+  const [sid, setSid] = useState<number | null>(null);
   // 낙관 전송용 — 내 표시 필드(닉/아바타/길드)는 서버 응답·최근 목록의 내 메시지에서 채움.
   const myFieldsRef = useRef<ChatMessageDto | null>(null);
   const tempSeqRef = useRef(0);
@@ -256,8 +262,11 @@ export function ChatDock() {
         if (t !== tabRef.current) return null;
         if (data.channel) {
           setChannel(data.channel);
-          const sid = Number(data.channel.split(':s')[1]);
-          if (Number.isInteger(sid)) serverIdRef.current = sid;
+          const sidNum = Number(data.channel.split(':s')[1]);
+          if (Number.isInteger(sidNum)) {
+            serverIdRef.current = sidNum;
+            setSid(sidNum);
+          }
         }
         if (data.me) setMe(data.me);
         if (data.meNickname) setMeNickname(data.meNickname);
@@ -281,36 +290,75 @@ export function ChatDock() {
     });
   }, [fetchRecent]);
 
-  // Realtime 구독 — 채널 확정 후 1회. 실패 시 폴링 폴백(아래 별도 effect).
-  // 서버 전환(쿠키 srv 변경 → 채널 교체) 시 이전 서버 메시지 버퍼·미니바를 비운다.
-  const prevChannelRef = useRef<string | null>(null);
+  // 수신 라우팅 — 활성 탭이면 화면(applyNew), 비활성 탭이면 버퍼에만 적재(전환 즉시 표시).
+  const routeIncoming = useCallback(
+    (t: Tab, m: ChatMessageDto) => {
+      if (t === tabRef.current) {
+        applyNew(m);
+        return;
+      }
+      const b = bufRef.current[t];
+      if (!b.messages.some((x) => x.id === m.id)) {
+        b.messages = [...b.messages, m].slice(-150);
+      }
+      if (!m.sys && !m.sysGuild) b.latest = m;
+    },
+    [applyNew],
+  );
+
+  // Realtime 구독 — 전체+내 길드 두 채널을 **항상 동시에** 구독(탭 전환 시 재구독 없음 → 전환 즉시).
+  // 서버 전환(sid 변경)일 때만 버퍼·미니바 초기화 후 재구독.
+  const prevSidRef = useRef<number | null>(null);
   useEffect(() => {
-    if (!channel) return;
-    if (prevChannelRef.current && prevChannelRef.current !== channel) {
+    if (sid === null) return;
+    if (prevSidRef.current !== null && prevSidRef.current !== sid) {
       setMessages([]);
       setLatest(null);
       myFieldsRef.current = null;
+      bufRef.current = { all: { messages: [], latest: null }, guild: { messages: [], latest: null } };
     }
-    prevChannelRef.current = channel;
+    prevSidRef.current = sid;
     const sb = supabaseBrowser();
     if (!sb) return;
-    const ch = sb
-      .channel(channel)
-      .on('broadcast', { event: 'new' }, ({ payload }) => applyNew(payload as ChatMessageDto))
-      .on('broadcast', { event: 'sys' }, ({ payload }) => applyNew(sysToMsg(payload as WorldEventEntry)))
-      .on('broadcast', { event: 'hide' }, ({ payload }) => {
-        const id = (payload as { id: string }).id;
-        setMessages((prev) => prev.filter((m) => m.id !== id));
-        setLatest((prev) => (prev?.id === id ? null : prev));
-      })
-      .subscribe((status) => {
-        wsOkRef.current = status === 'SUBSCRIBED';
-      });
+    const mk = (topic: string, t: Tab) =>
+      sb
+        .channel(topic)
+        .on('broadcast', { event: 'new' }, ({ payload }) => routeIncoming(t, payload as ChatMessageDto))
+        .on('broadcast', { event: 'sys' }, ({ payload }) => routeIncoming(t, sysToMsg(payload as WorldEventEntry)))
+        .on('broadcast', { event: 'hide' }, ({ payload }) => {
+          const id = (payload as { id: string }).id;
+          setMessages((prev) => prev.filter((m) => m.id !== id));
+          setLatest((prev) => (prev?.id === id ? null : prev));
+          for (const b of Object.values(bufRef.current)) {
+            b.messages = b.messages.filter((m) => m.id !== id);
+            if (b.latest?.id === id) b.latest = null;
+          }
+        })
+        .subscribe((status) => {
+          wsOkRef.current = status === 'SUBSCRIBED';
+        });
+    const chans = [mk(`chat:s${sid}`, 'all')];
+    if (myGuild) chans.push(mk(`chat:s${sid}:g${myGuild.id}`, 'guild'));
     return () => {
       wsOkRef.current = false;
-      void sb.removeChannel(ch);
+      for (const c of chans) void sb.removeChannel(c);
     };
-  }, [channel, applyNew]);
+  }, [sid, myGuild?.id, routeIncoming]);
+
+  // 비활성 탭 선적재 — 길드 소속이 확인되면 길드 버퍼를 미리 채워 첫 전환도 즉시.
+  useEffect(() => {
+    if (!myGuild || bufRef.current.guild.messages.length > 0) return;
+    void fetch('/api/chat/recent?limit=50&channel=guild', { cache: 'no-store' })
+      .then(async (r) => (r.ok ? ((await r.json()) as { messages?: ChatMessageDto[] }) : null))
+      .then((d) => {
+        if (!d?.messages || tabRef.current === 'guild') return;
+        const lastUser = [...d.messages].reverse().find((m) => !m.sys && !m.sysGuild) ?? null;
+        bufRef.current.guild = { messages: d.messages, latest: lastUser };
+      })
+      .catch(() => {
+        /* 무시 — 전환 시 재조회 */
+      });
+  }, [myGuild?.id]);
 
   // 폴링 — WS 상태와 무관하게 상시 15초(2026-07-21): WS가 SUBSCRIBED여도 서버측 송신
   // 실패 등으로 조용히 끊긴 상태를 커버(최대 15초 내 미니바·목록 복구). 열림=100, 닫힘=1.
@@ -364,15 +412,18 @@ export function ChatDock() {
     });
   };
 
-  // 탭 전환(전체/길드) — 버퍼·미니바 비우고 새 채널 재조회. channel 변경으로 구독도 교체.
+  // 탭 전환(전체/길드) — 캐시 버퍼를 즉시 표시(렉 없음), 백그라운드 재조회로 정합 보정.
+  // 구독은 두 채널 상시 유지라 재구독 비용도 없음.
   const switchTab = (next: Tab) => {
     if (next === tab) return;
+    // 현재 탭 상태를 버퍼로 저장 후 다음 탭 버퍼를 즉시 로드.
+    bufRef.current[tab] = { messages, latest };
+    const cached = bufRef.current[next];
     setTab(next);
     tabRef.current = next;
-    setMessages([]);
-    setLatest(null);
+    setMessages(cached.messages);
+    setLatest(cached.latest);
     setUnseenBelow(false);
-    myFieldsRef.current = null;
     needInitialScrollRef.current = true;
     void fetchRecent(open ? 100 : 1, next).then((ms) => {
       if (!ms) return;
