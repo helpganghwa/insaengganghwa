@@ -34,21 +34,12 @@ export type ChatMessageDto = {
   guildEmblemUrl: string | null;
   /** 현재(가장 최근) 대난투 우승자 — 닉네임 앞 🏆 표시. */
   isMeleeChampion: boolean;
-  /** 장비 자랑 태그(0127) — 전송 시점 스냅샷. null=일반 메시지. */
-  item: ChatItemSnap | null;
+  /** 유효 멘션 닉 목록(0128) — 표시 시 @ 제거·색 강조 대상. */
+  mentions: string[] | null;
   /** 시스템 라인(월드 이벤트) — 있으면 유저 필드는 빈 값, 렌더는 worldEventMessage. */
   sys?: WorldEventEntry;
   body: string;
   createdAt: string; // ISO
-};
-
-export type ChatItemSnap = {
-  n: string; // 이름
-  c: string; // 카탈로그 code(스프라이트)
-  s: 'weapon' | 'armor' | 'accessory';
-  e: number; // 강화
-  t: number; // 초월
-  cp: number; // 전투력(전송 시점)
 };
 
 /** 월드 이벤트 → 채팅 시스템 라인 DTO. id는 sys- 프리픽스(실메시지와 충돌 없음). */
@@ -63,7 +54,7 @@ export function sysToChatDto(entry: WorldEventEntry): ChatMessageDto {
     guildName: null,
     guildEmblemUrl: null,
     isMeleeChampion: false,
-    item: null,
+    mentions: null,
     sys: entry,
     body: '',
     createdAt: entry.createdAtIso,
@@ -153,7 +144,7 @@ export async function getRecentChat(serverId: number, limit = 100): Promise<Chat
         id: chatMessages.id,
         userId: chatMessages.userId,
         body: chatMessages.body,
-        item: chatMessages.item,
+        mentions: chatMessages.mentions,
         createdAt: chatMessages.createdAt,
       })
       .from(chatMessages)
@@ -178,7 +169,7 @@ export async function getRecentChat(serverId: number, limit = 100): Promise<Chat
         guildName: f?.guildName ?? null,
         guildEmblemUrl: f?.guildEmblemUrl ?? null,
         isMeleeChampion: f?.isMeleeChampion ?? false,
-        item: (r.item as ChatItemSnap | null) ?? null,
+        mentions: (r.mentions as string[] | null) ?? null,
         body: r.body,
         createdAt: r.createdAt.toISOString(),
       } satisfies ChatMessageDto;
@@ -198,11 +189,11 @@ export async function persistAndBroadcast(
   userId: string,
   serverId: number,
   body: string,
-  item: ChatItemSnap | null = null,
+  mentions: string[] = [],
 ): Promise<ChatMessageDto> {
   const [row] = await db
     .insert(chatMessages)
-    .values({ serverId, userId, body, item })
+    .values({ serverId, userId, body, mentions: mentions.length ? mentions : null })
     .returning({ id: chatMessages.id, createdAt: chatMessages.createdAt });
   const fields = await displayFields([userId], serverId);
   const f = fields.get(userId);
@@ -216,7 +207,7 @@ export async function persistAndBroadcast(
     guildName: f?.guildName ?? null,
     guildEmblemUrl: f?.guildEmblemUrl ?? null,
     isMeleeChampion: f?.isMeleeChampion ?? false,
-    item,
+    mentions: mentions.length ? mentions : null,
     body,
     createdAt: row!.createdAt.toISOString(),
   };
