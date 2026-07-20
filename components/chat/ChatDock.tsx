@@ -667,23 +667,24 @@ export function ChatDock() {
           onClick={() => setProfile(null)}
         >
           <div
-            className="w-full max-w-[320px] overflow-hidden rounded-2xl bg-white dark:bg-zinc-900"
+            className="w-full max-w-[340px] overflow-hidden rounded-2xl bg-white dark:bg-zinc-900"
             onClick={(e) => e.stopPropagation()}
           >
             {
               /* 자랑 카드식 2분할 — 왼쪽 전신 아바타(크게) / 오른쪽 정보+액션 */
-              <div className="flex items-stretch gap-3 bg-gradient-to-br from-amber-50 via-white to-zinc-50 p-4 dark:from-amber-500/[0.09] dark:via-zinc-900 dark:to-zinc-900">
-                <div className="flex w-[128px] shrink-0 items-end justify-center">
+              <div className="flex h-[216px] items-stretch gap-2.5 bg-gradient-to-br from-amber-50 via-white to-zinc-50 p-4 dark:from-amber-500/[0.09] dark:via-zinc-900 dark:to-zinc-900">
+                {/* 버튼 2개/4개와 무관하게 카드 높이 고정(h-[216px]) — 아바타 위치·크기 불변 */}
+                <div className="flex w-[150px] shrink-0 items-end justify-center">
                   {profile.data.avatar ? (
                     // eslint-disable-next-line @next/next/no-img-element
                     <img
                       src={profile.data.avatar}
                       alt=""
-                      className="max-h-[176px] w-auto"
+                      className="h-full w-full object-contain object-bottom"
                       style={{ imageRendering: 'pixelated' }}
                     />
                   ) : (
-                    <span className="pb-6 text-6xl">👤</span>
+                    <span className="flex h-full w-full items-center justify-center text-6xl">👤</span>
                   )}
                 </div>
                 <div className="flex min-w-0 flex-1 flex-col">
