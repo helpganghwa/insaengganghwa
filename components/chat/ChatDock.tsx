@@ -240,10 +240,14 @@ export function ChatDock() {
   }, [open, scrollToBottom]);
 
   const fetchRecent = useCallback(
-    async (limit: number, forTab?: Tab): Promise<ChatMessageDto[] | null> => {
+    // lite=닫힌 미니바 상시 폴링용 경량 조회(메시지만) — 서버가 차단목록·닉네임·길드 조회를
+    // 생략하므로(DB 절감) 채널·차단 등 부속 상태는 초기/전체 조회 값을 유지한다.
+    async (limit: number, forTab?: Tab, lite?: boolean): Promise<ChatMessageDto[] | null> => {
       const t = forTab ?? tabRef.current;
       try {
-        const res = await fetch(`/api/chat/recent?limit=${limit}&channel=${t}`, { cache: 'no-store' });
+        const res = await fetch(`/api/chat/recent?limit=${limit}&channel=${t}${lite ? '&lite=1' : ''}`, {
+          cache: 'no-store',
+        });
         if (!res.ok) return null;
         const data = (await res.json()) as {
           disabled?: boolean;
@@ -272,8 +276,11 @@ export function ChatDock() {
         }
         if (data.me) setMe(data.me);
         if (data.meNickname) setMeNickname(data.meNickname);
-        setMyGuild(data.guild ?? null);
-        setGuildTopic(data.guildChannel ?? null);
+        // lite 응답엔 guild/guildChannel/blocked가 아예 없음 — 기존 상태 유지(null 덮어쓰기 금지).
+        if (!lite) {
+          setMyGuild(data.guild ?? null);
+          setGuildTopic(data.guildChannel ?? null);
+        }
         if (data.blocked) setBlocked(new Map(data.blocked.map((b) => [b.id, b.nickname])));
         const mine = data.messages.filter((m) => m.userId === data.me).pop();
         if (mine) myFieldsRef.current = mine;
@@ -376,7 +383,8 @@ export function ChatDock() {
   useEffect(() => {
     if (enabled === false) return;
     const t = setInterval(() => {
-      void fetchRecent(openRef.current ? 100 : 1).then((ms) => {
+      // 닫힘 상태는 lite(메시지 1건만·부속 조회 생략) — 상시 폴링의 DB 부하 최소화.
+      void fetchRecent(openRef.current ? 100 : 1, undefined, !openRef.current).then((ms) => {
         if (!ms) return;
         if (openRef.current)
           setMessages((prev) => [...ms, ...prev.filter((m) => m.id.startsWith('tmp-'))]);
