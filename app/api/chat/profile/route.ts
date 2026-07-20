@@ -1,5 +1,5 @@
 import { NextResponse } from 'next/server';
-import { and, eq, sql } from 'drizzle-orm';
+import { and, eq, inArray, sql } from 'drizzle-orm';
 
 import { getSessionUserId } from '@/lib/auth/session';
 import { getActiveServerId } from '@/lib/game/servers';
@@ -9,6 +9,7 @@ import { characters } from '@/lib/db/schema/server';
 import { userProfiles } from '@/lib/db/schema/avatar';
 import { userEquipment } from '@/lib/db/schema/equipment';
 import { friendLinks } from '@/lib/db/schema/friends';
+import { leaderboardRanks } from '@/lib/db/schema/leaderboard';
 import { pieceCombatPower } from '@/lib/game/balance';
 import { currentMeleeChampion } from '@/lib/game/chat/service';
 import { getGuildBriefsByUsers } from '@/lib/game/guild/badge';
@@ -29,7 +30,7 @@ export async function GET(req: Request) {
   if (!uid || !/^[0-9a-f-]{36}$/i.test(uid)) return NextResponse.json({ error: 'bad_request' }, { status: 400 });
   const serverId = await getActiveServerId();
 
-  const [[row], equip, guilds, [fr], champion] = await Promise.all([
+  const [[row], equip, guilds, [fr], champion, metrics] = await Promise.all([
     db
       .select({
         nickname: characters.nickname,
@@ -58,6 +59,17 @@ export async function GET(req: Request) {
       )
       .limit(1),
     currentMeleeChampion(serverId).catch(() => null),
+    // 레이드 처치·대난투 우승 누계 — 리더보드 카운터(v2) 재사용(PK 2행 조회).
+    db
+      .select({ metric: leaderboardRanks.metric, value: leaderboardRanks.value })
+      .from(leaderboardRanks)
+      .where(
+        and(
+          eq(leaderboardRanks.serverId, serverId),
+          eq(leaderboardRanks.userId, uid),
+          inArray(leaderboardRanks.metric, ['raid', 'melee']),
+        ),
+      ),
   ]);
   if (!row) return NextResponse.json({ error: 'not_found' }, { status: 404 });
 
@@ -76,6 +88,8 @@ export async function GET(req: Request) {
     guildName: g?.name ?? null,
     guildEmblemUrl: g?.emblemUrl ?? null,
     isMeleeChampion: uid === champion,
+    raidKills: metrics.find((m) => m.metric === 'raid')?.value ?? 0,
+    meleeWins: metrics.find((m) => m.metric === 'melee')?.value ?? 0,
     combat,
     maxEnhance,
     sumEnhance,
