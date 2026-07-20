@@ -33,7 +33,7 @@ export type ConquestDaySummary = {
   /** 그날 해산한 길드(world_events guild_disband) — 보유하던 구역이 중립화됨(연대기 서술 재료). */
   disbands: { guildName: string; zones: string[] }[];
   /** 주목할 개인 활약(그날 finale 기준 — 최다 수비/처치). '처치'는 공·수 역할 무관 쓰러뜨린 수. */
-  feats: { nickname: string; publicCode: string | null; guild: string; kind: '수비' | '처치'; count: number }[];
+  feats: { nickname: string; publicCode: string | null; guild: string; kind: '수비' | '처치'; count: number; zones: string[] }[];
 };
 
 /** kstDay(YYYY-MM-DD)에 일수 가감 — 날짜 문자열 산술(UTC 정오 기준, DST 무관). */
@@ -123,9 +123,10 @@ export async function aggregateConquestDay(kstDay: string, serverId: number): Pr
 
   const captures: ConquestDaySummary['captures'] = [];
   const defenses: ConquestDaySummary['defenses'] = [];
-  // 개인 활약 — 그날 전 battle의 finale 합산(유저별 수비 성공·처치).
-  const survives = new Map<string, { nick: string; guild: string; n: number }>();
-  const kills = new Map<string, { nick: string; guild: string; n: number }>();
+  // 개인 활약 — 그날 전 battle의 finale 합산(유저별 수비 성공·처치). zones = 활약이 나온 구역
+  // (2026-07-20 피드백: 어느 구역 전투에서의 활약인지 서술에 필요).
+  const survives = new Map<string, { nick: string; guild: string; n: number; zones: Set<string> }>();
+  const kills = new Map<string, { nick: string; guild: string; n: number; zones: Set<string> }>();
 
   for (const b of battles) {
     if (!b.winner) {
@@ -162,15 +163,17 @@ export async function aggregateConquestDay(kstDay: string, serverId: number): Pr
         if (hp <= 0) {
           const ru = f.roster[a];
           if (ru) {
-            const e = kills.get(ru.userId) ?? { nick: ru.nickname, guild: ru.guildName, n: 0 };
+            const e = kills.get(ru.userId) ?? { nick: ru.nickname, guild: ru.guildName, n: 0, zones: new Set<string>() };
             e.n += 1;
+            e.zones.add(b.zone);
             kills.set(ru.userId, e);
           }
         } else {
           const rt = f.roster[t];
           if (rt) {
-            const e = survives.get(rt.userId) ?? { nick: rt.nickname, guild: rt.guildName, n: 0 };
+            const e = survives.get(rt.userId) ?? { nick: rt.nickname, guild: rt.guildName, n: 0, zones: new Set<string>() };
             e.n += 1;
+            e.zones.add(b.zone);
             survives.set(rt.userId, e);
           }
         }
@@ -217,9 +220,9 @@ export async function aggregateConquestDay(kstDay: string, serverId: number): Pr
   }
   const feats: ConquestDaySummary['feats'] = [];
   if (topSurviveE && topSurviveE[1].n >= 3)
-    feats.push({ nickname: topSurviveE[1].nick, publicCode: codeByUser.get(topSurviveE[0]) ?? null, guild: topSurviveE[1].guild, kind: '수비', count: topSurviveE[1].n });
+    feats.push({ nickname: topSurviveE[1].nick, publicCode: codeByUser.get(topSurviveE[0]) ?? null, guild: topSurviveE[1].guild, kind: '수비', count: topSurviveE[1].n, zones: [...topSurviveE[1].zones] });
   if (topKillE && topKillE[1].n >= 3)
-    feats.push({ nickname: topKillE[1].nick, publicCode: codeByUser.get(topKillE[0]) ?? null, guild: topKillE[1].guild, kind: '처치', count: topKillE[1].n });
+    feats.push({ nickname: topKillE[1].nick, publicCode: codeByUser.get(topKillE[0]) ?? null, guild: topKillE[1].guild, kind: '처치', count: topKillE[1].n, zones: [...topKillE[1].zones] });
 
   // 그날 해산(guild_disband) — KST 일자 매칭. 길드 행은 이미 삭제됐으므로 detail 스냅샷이 유일한 소스.
   const disbandRows = (await db.execute(sql`
@@ -265,6 +268,9 @@ const SYSTEM_PROMPT = `너는 대륙의 정복 전쟁을 듣는 이에게 들려
 - 방어(defenses)는 '점령'이 아니다(이미 소유한 구역을 '공격 측'의 공격으로부터 지켜낸 것). 점령 수에 포함하지 말고, 방어는 방어로만 서술한다.
 - **개인 활약(feats)의 '처치'는 적을 쓰러뜨린 수이며 공격·수비 역할과 무관하다 — 방어 측 인물도 처치가 많을 수 있다. '처치'가 많다는 이유로 그 인물·길드를 공격 측으로 단정하지 말 것**(공격 측은 오직 '공격 측' 목록으로만 판단). '수비'는 공격을 받아내고 버틴 횟수다.
 - '최초·처음으로·사상 처음' 같은 최초 주장은 정리에 그렇게 명시된 경우에만 쓴다 — 정리에 '대륙 최초'·'첫 점령' 표기가 없으면 최초라고 단정하지 말 것(정리엔 그날 사실만 있고 과거 전체 이력은 없다).
+- 중립지·무주지 점령만으로 어느 지역에 한 길드만 있게 된 경우, '하나만 남았다·몰아냈다·밀어냈다' 같은 축출 뉘앙스 금지 — 그 지역에 다른 세력이 원래 없었다(정리의 '중립지/무주지' 표기로 판단). '유일하게 발을 들였다·홀로 세력을 넓혔다'처럼 쓴다.
+- 개인 활약을 서술할 때는 그 활약이 나온 구역({z|마커})을 함께 언급한다(정리의 '구역 「…」 전투에서' 표기를 근거로. 구역이 많으면 대표 한두 곳만).
+- 길드의 첫 등장(첫 구역 확보)은 '판도에 이름을 올렸다'가 아니라 '대륙에 이름을 알렸다'로 표현한다.
 - '대륙 지배', '천하', '제패' 같은 과장된 총평·결론 금지. 일어난 사실만 적는다.
 - 유혈·시신·신체 훼손·고문 등 잔혹한 묘사 금지. 전투와 처치는 '쓰러뜨렸다·밀어냈다·물러났다' 수준의 담담한 표현으로만 서술하고, 피나 상해를 묘사하지 않는다.
 - 반드시 JSON만 출력: {"today": "...", "headline": "..."}. JSON 문자열 값 안의 줄바꿈은 반드시 \\n 이스케이프로 쓴다(실제 줄바꿈 문자 금지).
@@ -275,7 +281,7 @@ const SYSTEM_PROMPT = `너는 대륙의 정복 전쟁을 듣는 이에게 들려
     · 그래서 이번 전투 이후 대륙의 형세가 어떻게 되었는지 — 영토 순위·기세(과장 없이 사실만).
     문단은 이야기 흐름에 따라 자연스럽게 나눈다(2~4문단, 어느 문단도 한 파트만 전담하지 않게 — 사건과 결과가 한 문단에서 이어지거나 활약이 결과 서술에 섞여도 좋다). 문단 사이는 빈 줄(\\n\\n)로 구분. 라벨('주요사건:' 등) 금지. 어느 문단도 '그날·이날·오늘' 같은 시간 지시어로 시작하지 말고 바로 길드·구역·사건으로 시작한다.
     사건 배치: 같은 길드·같은 지역의 이야기는 한 곳에 모아 서술한다(한 세력의 서사 중간에 다른 세력 이야기를 끼워 흐름을 끊지 말 것). '■ 역사적 사건' 이정표가 있으면 그 사건을 서사의 정점으로 배치하고, 그 지역과 관련된 점령·방어는 이정표 대목에 함께 묶는다.
-  - headline: 핵심 사건을 한 줄로 압축(25자 내외, 마커 포함, 말하듯이). 점령 길드가 여럿이면 가장 많이 점령한 쪽 위주로 쓰되 다른 길드의 점령도 가능하면 담는다. 예: "{g|천둥길드}가 {z|왕성} 등 세 곳을 휩쓸었다". 정세가 크게 바뀐 날이 아니면 빈 문자열("")로 둔다.`;
+  - headline: 핵심 사건을 한 줄로 압축(25자 내외, 마커 포함, 말하듯이). 점령 길드가 여럿이면 가장 많이 점령한 쪽 위주로 쓰되 다른 길드의 점령도 가능하면 담는다. 예: "{g|천둥길드}가 {z|왕성} 등 세 곳을 휩쓸었다". 이번 전투에서 처음 대륙에 이름을 알린 길드('역사적 사건'의 첫 등장)가 있으면 헤드라인 말미에 ' — {g|이름} 첫 등장' 식으로 병기한다(여럿이면 '·'로 나열). 정세가 크게 바뀐 날이 아니면 빈 문자열("")로 둔다.`;
 
 /** 그날 사건이 '큰 사건'인지 — 점령(영토 변동) 또는 주목할 개인 활약이 있으면 기록 대상('오늘' 스토리). */
 function isNotable(s: ConquestDaySummary): boolean {
@@ -351,12 +357,15 @@ export async function generateAndStoreChronicle(
     summary.defenses.map((d) => `· 길드 「${d.owner}」 이(가) 구역 「${d.zone}」 을(를) 방어`).join('\n') ||
     '· (방어 없음)';
   // 활약 문구를 자명하게: '처치'=적 N명 쓰러뜨림(공·수 무관), '수비'=공격 N회 받아내고 버팀.
+  // 활약 구역 명시(2026-07-20 피드백) — 어느 구역 전투에서의 활약인지 서술할 수 있게.
+  const featZones = (f: (typeof summary.feats)[number]) =>
+    f.zones.length > 0 ? ` — 구역 ${f.zones.map((z) => `「${z}」`).join(', ')} 전투에서` : '';
   const featLines =
     summary.feats
       .map((f) =>
         f.kind === '처치'
-          ? `· 인물 「${f.nickname}」 (소속 길드 「${f.guild}」): 적 ${f.count}명 처치(공·수 역할 무관, 쓰러뜨린 수)`
-          : `· 인물 「${f.nickname}」 (소속 길드 「${f.guild}」): 공격 ${f.count}회 받아내고 버팀(수비)`,
+          ? `· 인물 「${f.nickname}」 (소속 길드 「${f.guild}」): 적 ${f.count}명 처치(공·수 역할 무관, 쓰러뜨린 수)${featZones(f)}`
+          : `· 인물 「${f.nickname}」 (소속 길드 「${f.guild}」): 공격 ${f.count}회 받아내고 버팀(수비)${featZones(f)}`,
       )
       .join('\n') || '· (없음)';
   // ── 지형 형세(지도 분석) — 인접 그래프로 길드 영토의 연결 조각 수 변화(분단/통합/비지) 감지
@@ -430,7 +439,11 @@ export async function generateAndStoreChronicle(
       // 고립지를 잃어 조각이 준 것을 "하나로 이어지는 성과"로 포장한 사건).
       if (a.comps < b.comps && a.zones === b.zones)
         return `· 길드 「${g}」: 구역을 얻고 잃으며 남은 영토가 ${a.comps}개 조각으로 모임(⚠ 상실이 낀 변화 — '성과·통합'으로 포장 금지, 득실을 중립 서술)`;
-      if (a.comps < b.comps && b.comps > 1) return `· 길드 「${g}」: 점령으로 흩어져 있던 영토가 ${a.comps}개 조각으로 이어짐(통합)`;
+      // 'N개 조각으로 이어짐'은 'N개가 하나로 합쳐짐'으로 오독됨(2026-07-20 재생성 오서술) — 전후 수와 금지 표현 명시.
+      if (a.comps < b.comps && b.comps > 1)
+        return a.comps === 1
+          ? `· 길드 「${g}」: 점령으로 흩어져 있던 영토 ${b.comps}개 조각이 모두 하나로 이어짐(완전 연결)`
+          : `· 길드 「${g}」: 점령으로 영토 조각이 ${b.comps}→${a.comps}개로 줄어 일부가 이어짐(⚠ 아직 ${a.comps}개 조각으로 나뉨 — '하나로 연결됐다' 서술 금지)`;
       return null;
     })
     .filter((s): s is string => s !== null)
@@ -494,7 +507,7 @@ export async function generateAndStoreChronicle(
       milestones.push(
         beforeCounts.size === 0
           ? `· 길드 「${g}」 이(가) 대륙 최초로 구역을 점령`
-          : `· 길드 「${g}」 이(가) 첫 구역을 확보하며 판도에 등장`,
+          : `· 길드 「${g}」 이(가) 첫 구역을 확보하며 대륙에 이름을 알림(첫 등장 — '판도에 등장' 대신 이 표현으로)`,
       );
   }
   for (const d of summary.disbands) {
