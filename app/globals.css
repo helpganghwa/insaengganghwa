@@ -357,6 +357,13 @@ html {
   0%   { opacity: 0; transform: scale(0.96); }
   100% { opacity: 1; transform: scale(1); }
 }
+/* 홈 세계지도 카드 티저 마퀴 — 긴 헤드라인을 좌우 왕복(양 끝 정지 구간 포함).
+   이동 거리는 인라인 --mq(음수 px, 넘친 폭)로 주입. @theme 밖(트리셰이크 회피). */
+@keyframes ig-marquee-x {
+  0%, 14%   { transform: translateX(0); }
+  46%, 62%  { transform: translateX(var(--mq, 0px)); }
+  94%, 100% { transform: translateX(0); }
+}
 /* 채팅 미니바 최신 메시지 교체 fade — @theme 밖(트리셰이크 회피). */
 @keyframes chat-swap {
   0%   { opacity: 0; transform: translateY(3px); }

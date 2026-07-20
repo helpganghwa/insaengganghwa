@@ -338,7 +338,9 @@ export function WorldMapView({
   };
 
   return (
-    <div className="flex min-h-full flex-col">
+    // shrink-0 필수 — 명시적 min-h-full은 flex 자동 최소치(min-content)를 대체해, main의
+    // 수축이 루트를 콘텐츠보다 작게 줄이고 본문이 박스 밖으로 넘친다(채팅바 가림 원인).
+    <div className="flex min-h-full shrink-0 flex-col">
       {/* 지도 + 네모 노드 오버레이 — 풀폭 플러시(좌우 여백·모서리 제거). */}
       <div className="relative aspect-square w-full shrink-0 overflow-hidden border-b border-zinc-800 bg-zinc-950">
         {/* 리플레이 오버레이(2026-07-16) — 문장 진군·격돌·플래시 전용 레이어(ChronicleReplay가 직접 관리). */}
@@ -523,8 +525,10 @@ export function WorldMapView({
       )}
 
       {/* 세계 연대기 — 점령전 발표(KST 자정)와 함께 매일 AI 갱신(큰 사건 있는 날만). [오늘]=긴 기록 / [전체]=날짜별 한 줄.
-          남은 세로 영역을 가득 채워(flex-1) 페이지에 빈 공간이 없게. */}
-      <section className="flex flex-1 flex-col bg-white px-4 pb-4 pt-3 dark:bg-zinc-950">
+          남은 세로 영역을 가득 채우되 flex-auto(basis auto) — flex-1(basis 0)은 긴 본문이
+          루트 intrinsic 높이에 반영되지 않아 텍스트가 루트 밖으로 넘치고, 채팅 미니바
+          회피 스페이서가 본문 중간에 배치돼 하단이 가려졌다(2026-07-21 재현·확정). */}
+      <section className="flex flex-auto flex-col bg-white px-4 pb-4 pt-3 dark:bg-zinc-950">
         {!showConquest ? (
           <>
         {hasChronicle ? (
