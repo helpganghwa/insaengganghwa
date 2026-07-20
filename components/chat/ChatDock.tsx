@@ -69,6 +69,10 @@ export function ChatDock() {
   const [profile, setProfile] = useState<{ userId: string; data: MiniProfile | null } | null>(null);
   const [reportTarget, setReportTarget] = useState<ChatMessageDto | null>(null);
   const [popupFlash, setPopupFlash] = useState<string | null>(null);
+  // 위로 읽는 중 도착한 새 메시지 — "↓ 새 메시지" 칩. 바닥 근처로 오면 자동 해제.
+  const [unseenBelow, setUnseenBelow] = useState(false);
+  // iOS 소프트 키보드가 가리는 높이(px) — visualViewport로 측정, 패널 bottom 보정.
+  const [kbOffset, setKbOffset] = useState(0);
 
   const openRef = useRef(false);
   const wsOkRef = useRef(false);
@@ -122,15 +126,38 @@ export function ChatDock() {
           const next = [...prev, m];
           return next.length > 150 ? next.slice(-150) : next;
         });
-        // 바닥 근처에서만 자동 스크롤(위로 읽는 중이면 유지).
+        // 바닥 근처에서만 자동 스크롤(위로 읽는 중이면 유지 + "↓ 새 메시지" 칩).
         const el = listRef.current;
         if (el && el.scrollHeight - el.scrollTop - el.clientHeight < 120) {
           requestAnimationFrame(() => scrollToBottom(true));
+        } else {
+          setUnseenBelow(true);
         }
       }
     },
     [scrollToBottom],
   );
+
+  // iOS 키보드 겹침 보정 — 레이아웃 뷰포트는 안 줄고 visualViewport만 줄어드는 환경(iOS)에서
+  // 가려진 높이만큼 패널을 올린다. 레이아웃까지 같이 줄어드는 환경(Android)은 차이가 0이라 무해.
+  useEffect(() => {
+    if (!open) return;
+    const vv = window.visualViewport;
+    if (!vv) return;
+    const update = () => {
+      const kb = Math.max(0, window.innerHeight - vv.height - vv.offsetTop);
+      setKbOffset(Math.round(kb));
+      if (kb > 0) requestAnimationFrame(() => scrollToBottom());
+    };
+    update();
+    vv.addEventListener('resize', update);
+    vv.addEventListener('scroll', update);
+    return () => {
+      vv.removeEventListener('resize', update);
+      vv.removeEventListener('scroll', update);
+      setKbOffset(0);
+    };
+  }, [open, scrollToBottom]);
 
   const fetchRecent = useCallback(async (limit: number): Promise<ChatMessageDto[] | null> => {
     try {
@@ -213,6 +240,7 @@ export function ChatDock() {
 
   const openPanel = () => {
     setOpen(true);
+    setUnseenBelow(false);
     void fetchRecent(100).then((ms) => {
       if (ms) {
         setMessages(ms);
@@ -346,7 +374,11 @@ export function ChatDock() {
             >
               <span aria-hidden className="text-[12px]">💬</span>
               {visibleLatest ? (
-                <span className="min-w-0 flex-1 truncate text-[11px] text-zinc-500 dark:text-zinc-400">
+                // key=메시지 id — 최신 메시지 교체 시 리마운트로 fade 재생.
+                <span
+                  key={visibleLatest.id}
+                  className="animate-chat-swap min-w-0 flex-1 truncate text-[11px] text-zinc-500 dark:text-zinc-400"
+                >
                   <b className="font-semibold text-zinc-700 dark:text-zinc-200">
                     {visibleLatest.isMeleeChampion ? '🏆' : ''}
                     {visibleLatest.nickname}
@@ -368,18 +400,56 @@ export function ChatDock() {
           className="fixed inset-x-0 z-20"
           style={{
             top: 'calc(3rem + env(safe-area-inset-top))',
-            bottom: 'calc(3.5rem + env(safe-area-inset-bottom) + var(--gt-h, 0px))',
+            // 키보드가 열리면(kbOffset>0) GNB 오프셋 대신 키보드 위로 — max()로 큰 쪽 채택.
+            bottom: `max(${kbOffset}px, calc(3.5rem + env(safe-area-inset-bottom) + var(--gt-h, 0px)))`,
           }}
         >
-          <div className="mx-auto flex h-full w-full max-w-[390px] flex-col bg-white dark:bg-zinc-950">
+          <div className="relative mx-auto flex h-full w-full max-w-[390px] flex-col bg-white dark:bg-zinc-950">
             <header className="flex shrink-0 items-center border-b border-zinc-100 px-3 py-1.5 dark:border-zinc-800/70">
               <h2 className="text-[12px] font-bold text-zinc-700 dark:text-zinc-200">💬 전체 채팅</h2>
             </header>
 
-            <div ref={listRef} className="min-h-0 flex-1 overflow-y-auto overscroll-contain px-2.5 py-2">
-              {visibleMessages.map((m) => {
+            <div
+              ref={listRef}
+              onScroll={() => {
+                const el = listRef.current;
+                if (el && el.scrollHeight - el.scrollTop - el.clientHeight < 120) setUnseenBelow(false);
+              }}
+              className="min-h-0 flex-1 overflow-y-auto overscroll-contain px-2.5 py-2"
+            >
+              {visibleMessages.map((m, i) => {
                 const mine = m.userId === me;
                 const pending = m.id.startsWith('tmp-');
+                // 같은 유저 1분 내 연속 발언 — 아바타·닉 생략, 본문만 이어붙임.
+                const prev = visibleMessages[i - 1];
+                const grouped =
+                  !!prev &&
+                  prev.userId === m.userId &&
+                  new Date(m.createdAt).getTime() - new Date(prev.createdAt).getTime() < 60_000;
+                if (grouped) {
+                  return (
+                    <div
+                      key={m.id}
+                      className={`flex items-start gap-2 rounded-lg px-1.5 py-[2px] ${
+                        mine ? 'bg-amber-50/70 dark:bg-amber-500/[0.07]' : ''
+                      } ${pending ? 'opacity-50' : ''}`}
+                    >
+                      <p className="min-w-0 flex-1 break-words pl-8 text-[12.5px] leading-[1.45] text-zinc-800 dark:text-zinc-200">
+                        {m.body}
+                      </p>
+                      {!mine ? (
+                        <button
+                          type="button"
+                          onClick={() => setReportTarget(m)}
+                          aria-label="메시지 신고"
+                          className="mt-[3px] shrink-0 text-[9px] text-zinc-300 hover:text-red-500 dark:text-zinc-600"
+                        >
+                          신고
+                        </button>
+                      ) : null}
+                    </div>
+                  );
+                }
                 return (
                   <div
                     key={m.id}
@@ -435,6 +505,19 @@ export function ChatDock() {
               })}
             </div>
 
+            {unseenBelow ? (
+              <button
+                type="button"
+                onClick={() => {
+                  scrollToBottom(true);
+                  setUnseenBelow(false);
+                }}
+                className="absolute bottom-[60px] left-1/2 z-10 -translate-x-1/2 rounded-full bg-zinc-800/90 px-3 py-1.5 text-[11px] font-bold text-white shadow-lg backdrop-blur-sm dark:bg-zinc-200/90 dark:text-zinc-900"
+              >
+                ↓ 새 메시지
+              </button>
+            ) : null}
+
             <div className="shrink-0 border-t border-zinc-100 px-2.5 py-2 dark:border-zinc-800/70">
               {error ? <p className="mb-1 px-1 text-[11px] text-amber-600 dark:text-amber-400">{error}</p> : null}
               <div className="flex items-center gap-1.5">
@@ -449,9 +532,14 @@ export function ChatDock() {
                   wrapClassName="h-9 min-w-0 flex-1"
                   className="rounded-full border border-zinc-200 bg-zinc-50 px-4 outline-none focus:border-amber-400 dark:border-zinc-700 dark:bg-zinc-900"
                 />
+                {input.length >= 80 ? (
+                  <span className="shrink-0 text-[10px] tabular-nums text-zinc-400">{input.length}/100</span>
+                ) : null}
                 <button
                   type="button"
                   onClick={submit}
+                  // 포커스를 뺏지 않아 전송 후에도 키보드 유지(연속 대화).
+                  onPointerDown={(e) => e.preventDefault()}
                   disabled={sending || cooldown > 0 || input.trim().length === 0}
                   className="h-9 w-[54px] shrink-0 rounded-full bg-amber-500 text-[12.5px] font-bold text-white disabled:opacity-40"
                 >

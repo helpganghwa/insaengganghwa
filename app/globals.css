@@ -66,6 +66,9 @@ html {
   --animate-phase-up: phase-up 0.6s ease-out;
   --animate-pulse-soft: pulse-soft 1.6s ease-in-out infinite;
 
+  /* 채팅 미니바 최신 메시지 교체 fade. */
+  --animate-chat-swap: chat-swap 0.25s ease-out;
+
   /* 레이드 결산 보상 수령 — 중립(회색) 글로우 1회(disabled 톤 일관). */
   --animate-claim-glow: claim-glow 0.8s ease-out;
   @keyframes claim-glow {
@@ -353,6 +356,11 @@ html {
 @keyframes gacha-result-in {
   0%   { opacity: 0; transform: scale(0.96); }
   100% { opacity: 1; transform: scale(1); }
+}
+/* 채팅 미니바 최신 메시지 교체 fade — @theme 밖(트리셰이크 회피). */
+@keyframes chat-swap {
+  0%   { opacity: 0; transform: translateY(3px); }
+  100% { opacity: 1; transform: translateY(0); }
 }
 /* 결과 영역 교체 fade(연속 열기). */
 @keyframes gacha-result-swap {
