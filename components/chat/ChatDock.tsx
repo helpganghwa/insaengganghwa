@@ -24,7 +24,7 @@ import { sendChat, reportChat, setChatBlockAction } from './actions';
 const COOLDOWN_S = 5;
 const DOCK_H = '42px';
 const COLLAPSE_KEY = 'ig:chat-collapsed';
-// '프로필 보기' 이동 후 뒤로가기 복원 — 값=팝업 대상 userId(세션 한정, 마운트 시 1회 소비).
+// '프로필 보기' 이동 후 뒤로가기 복원 — 값=MiniProfile JSON(세션 한정, 마운트 시 1회 소비).
 const RESTORE_KEY = 'ig:chat-restore';
 
 type MiniProfile = {
@@ -297,14 +297,17 @@ export function ChatDock() {
     needInitialScrollRef.current = false;
   }, [open, messages]);
 
-  // '프로필 보기'로 나갔다 돌아온 마운트 — 채팅 패널 + 유저 팝업 복원(1회 소비).
+  // '프로필 보기'로 나갔다 돌아온 마운트 — 채팅 패널 + 유저 팝업을 저장분으로 즉시 복원
+  // (닫힘→재오픈 깜빡임 없음), 이후 백그라운드 재조회로 최신화(1회 소비).
   useEffect(() => {
     try {
-      const uid = sessionStorage.getItem(RESTORE_KEY);
-      if (!uid) return;
+      const raw = sessionStorage.getItem(RESTORE_KEY);
+      if (!raw) return;
       sessionStorage.removeItem(RESTORE_KEY);
+      const data = JSON.parse(raw) as MiniProfile;
       openPanel();
-      openProfile(uid);
+      setProfile({ userId: data.userId, data });
+      openProfile(data.userId);
     } catch {
       /* ignore */
     }
@@ -767,16 +770,15 @@ export function ChatDock() {
                     <button
                       type="button"
                       onClick={() => {
-                        if (profile.data?.publicCode) {
-                          try {
-                            // 뒤로가기 복원 — 채팅 패널+이 팝업을 다시 연다(ChatDock 마운트 시 소비).
-                            sessionStorage.setItem(RESTORE_KEY, profile.data.userId);
-                          } catch {
-                            /* ignore */
-                          }
-                          router.push(`/u/${profile.data.publicCode}?s=${serverIdRef.current}`);
+                        if (!profile.data?.publicCode) return;
+                        try {
+                          // 뒤로가기 복원 — 프로필 데이터째 저장해 재조회 없이 즉시 복원.
+                          sessionStorage.setItem(RESTORE_KEY, JSON.stringify(profile.data));
+                        } catch {
+                          /* ignore */
                         }
-                        setProfile(null);
+                        // 팝업을 닫지 않고 이동 — 페이지 전환과 함께 자연스럽게 사라짐.
+                        router.push(`/u/${profile.data.publicCode}?s=${serverIdRef.current}`);
                       }}
                       className="rounded-lg bg-zinc-100 py-1.5 text-[11.5px] font-bold dark:bg-zinc-800"
                     >
