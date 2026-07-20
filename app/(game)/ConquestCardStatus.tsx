@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 
 /** 연대기 열람 기록 localStorage 키 — 값 = 마지막으로 읽은 공개 연대기의 kst_day. */
 export const chronicleReadKey = (serverId: number) => `ig:chron-read:s${serverId}`;
@@ -29,6 +29,10 @@ export function ConquestCardStatus({
 }) {
   const [now, setNow] = useState<number | null>(null);
   const [unread, setUnread] = useState(false);
+  // 긴 헤드라인 마퀴 — 넘친 폭(px). 0이면 정적 표시(짧은 문구·측정 전).
+  const [overflowPx, setOverflowPx] = useState(0);
+  const wrapRef = useRef<HTMLSpanElement>(null);
+  const textRef = useRef<HTMLSpanElement>(null);
   useEffect(() => {
     if (!chronicleDay) return;
     try {
@@ -37,6 +41,11 @@ export function ConquestCardStatus({
       // localStorage 불가(프라이빗 모드 등) — 카운트다운 폴백
     }
   }, [serverId, chronicleDay]);
+  useEffect(() => {
+    if (!unread || !wrapRef.current || !textRef.current) return;
+    const over = textRef.current.scrollWidth - wrapRef.current.clientWidth;
+    setOverflowPx(over > 4 ? over : 0);
+  }, [unread, chronicleHeadline]);
   useEffect(() => {
     if (inProgress || unread) return;
     const tick = () => setNow(Date.now());
@@ -48,8 +57,22 @@ export function ConquestCardStatus({
   if (inProgress) return <>점령전 진행중</>;
   if (unread)
     return (
-      <span className="font-extrabold text-amber-300 drop-shadow-[0_1px_2px_rgba(0,0,0,0.9)]">
-        {chronicleHeadline || '새로운 역사가 쓰였다'}
+      // 부모 div의 truncate(말줄임) 대신 좌우 왕복 마퀴(2026-07-21) — 넘칠 때만 애니메이션.
+      <span ref={wrapRef} className="block overflow-hidden whitespace-nowrap">
+        <span
+          ref={textRef}
+          className="inline-block font-extrabold text-amber-300 drop-shadow-[0_1px_2px_rgba(0,0,0,0.9)]"
+          style={
+            overflowPx > 0
+              ? {
+                  ['--mq' as string]: `-${overflowPx}px`,
+                  animation: `ig-marquee-x ${Math.max(7, Math.round(overflowPx / 12))}s ease-in-out infinite`,
+                }
+              : undefined
+          }
+        >
+          {chronicleHeadline || '새로운 역사가 쓰였다'}
+        </span>
       </span>
     );
   if (now == null) return <>다음 점령전까지</>; // 마운트 전 — 서버 렌더 폴백(하이드레이션 안전)

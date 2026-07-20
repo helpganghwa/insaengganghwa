@@ -432,7 +432,7 @@ export function RaidSessionCard({ view: v, serverId }: { view: RaidView; serverI
   const bossBg = getBossBg(v.bossCode);
   return (
     // 레이드 상세는 grow와 동일한 다크 톤 강제.
-    <section className="min-h-full overflow-hidden bg-zinc-950 text-zinc-100">
+    <section className="min-h-full shrink-0 overflow-hidden bg-zinc-950 text-zinc-100">
       {/* ── 히어로: 배경 + 큰 보스(풀블리드, 타격 FX 오버레이) ── */}
       <div
         className={`relative flex h-60 items-end justify-center bg-gradient-to-b ${getBossBgClass(v.bossCode)}`}
