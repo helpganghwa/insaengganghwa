@@ -689,7 +689,11 @@ export async function generateAndStoreChronicle(
   for (let attempt = 0; attempt < 3; attempt++) {
     const res = await client().messages.create({
       model: MODEL_ID,
-      max_tokens: 1100,
+      // 대규모 전투일(다구역 서술)에 1100이 부족해 JSON이 잘림(2026-07-20 실측) — 여유 상향.
+      max_tokens: 2200,
+      // Sonnet 5는 thinking 미지정 시 adaptive 기본(2026 변경) — 짧은 예산이 thinking에
+      // 소진돼 본문이 비는 사고 방지(7/20 연대기 pregen 전량 실패). 명시 비활성.
+      thinking: { type: 'disabled' },
       system: [{ type: 'text', text: SYSTEM_PROMPT, cache_control: { type: 'ephemeral' } }],
       messages,
     });
@@ -698,6 +702,10 @@ export async function generateAndStoreChronicle(
     // 파싱 실패도 재시도 소재(2026-07-18) — 종전엔 즉시 throw라 한 번의 깨진 JSON이 생성 전체를 무산시켰다.
     const parsed = parseModelJson<{ today?: string; headline?: string }>(raw);
     if (!parsed) {
+      // 빈 응답 진단(2026-07-21) — raw가 비면 파싱 이전 문제(중단 사유·블록 구성)를 남긴다.
+      console.warn(
+        `[chronicle] 응답 진단 stop=${res.stop_reason} blocks=[${res.content.map((b) => b.type).join(',')}] rawLen=${raw.length}`,
+      );
       if (attempt === 2) throw new Error(`CHRONICLE_PARSE_FAIL: ${raw.slice(0, 200)}`);
       console.warn(`[chronicle] JSON 파싱 실패 → 재생성(attempt ${attempt + 1})`);
       messages.push(

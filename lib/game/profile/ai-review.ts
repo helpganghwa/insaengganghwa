@@ -144,6 +144,9 @@ export async function reviewProfile(input: ReviewInput): Promise<ReviewResult> {
     const res = await client().messages.create({
       model: MODEL_ID,
       max_tokens: 512,
+      // Sonnet 5는 thinking 미지정 시 adaptive 기본(2026 변경) — 짧은 예산이 thinking에
+      // 소진돼 본문이 비는 사고 방지(7/20 연대기 pregen 전량 실패). 명시 비활성.
+      thinking: { type: 'disabled' },
       system: [{ type: 'text', text: SYSTEM_PROMPT, cache_control: { type: 'ephemeral' } }],
       messages: [{ role: 'user', content }],
     });
