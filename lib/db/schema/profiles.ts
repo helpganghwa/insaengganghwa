@@ -66,6 +66,8 @@ export const profiles = pgTable('profiles', {
   lastServerId: smallint('last_server_id').notNull().default(1),
   /** 회원탈퇴 시각(null=활성). 게임데이터 파기 후 마킹, 결제기록은 보존. 재로그인 시 createCharacter가 해제. */
   withdrawnAt: timestamp('withdrawn_at', { withTimezone: true }),
+  /** 채팅 금지 만료(0125, null=정상) — 미래 시각이면 월드 채팅 전송 차단(계정 전역). */
+  chatMutedUntil: timestamp('chat_muted_until', { withTimezone: true }),
   /** 계정 정지 시각(null=정상). 설정 시 게임 접근 차단·로그인 시 사유 노출(운영). */
   bannedAt: timestamp('banned_at', { withTimezone: true }),
   /** 정지 사유(로그인 시 노출). */

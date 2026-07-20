@@ -32,7 +32,9 @@ export type RlBucket =
   | 'report'
   | 'support'
   | 'identity'
-  | 'clientError';
+  | 'clientError'
+  | 'chatSend'
+  | 'chatBurst';
 
 const WINDOWS: Record<RlBucket, [limit: number, window: `${number} s`]> = {
   enhance: [30, '10 s'],
@@ -59,6 +61,8 @@ const WINDOWS: Record<RlBucket, [limit: number, window: `${number} s`]> = {
   support: [5, '3600 s'], // 고객센터 문의 — 시간당 5건(스팸 방어)
   identity: [10, '600 s'], // 본인인증 검증 — 임의 ID 대량 전달로 포트원 조회 폭주 방어
   clientError: [30, '60 s'], // 무인증 공개 에러 수집 — IP당 분당 30(에러 버스트 허용+남용 방어)
+  chatSend: [1, '5 s'], // 월드 채팅 쿨다운(0125) — 5초당 1회
+  chatBurst: [12, '60 s'], // 월드 채팅 분당 상한 — 도배 방어
 };
 
 const url = process.env.UPSTASH_REDIS_REST_URL;
