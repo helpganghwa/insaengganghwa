@@ -672,15 +672,16 @@ export function ChatDock() {
           >
             {
               /* 자랑 카드식 2분할 — 왼쪽 전신 아바타(크게) / 오른쪽 정보+액션 */
-              <div className="flex h-[216px] items-stretch gap-2.5 bg-gradient-to-br from-amber-50 via-white to-zinc-50 p-4 dark:from-amber-500/[0.09] dark:via-zinc-900 dark:to-zinc-900">
-                {/* 버튼 2개/4개와 무관하게 카드 높이 고정(h-[216px]) — 아바타 위치·크기 불변 */}
-                <div className="flex w-[150px] shrink-0 items-end justify-center">
+              <div className="flex h-[256px] items-stretch gap-2.5 bg-gradient-to-br from-amber-50 via-white to-zinc-50 p-4 dark:from-amber-500/[0.09] dark:via-zinc-900 dark:to-zinc-900">
+                {/* 버튼 2개/4개와 무관하게 카드 높이 고정 — 아바타 위치·크기 불변.
+                    아바타는 object-cover로 세로를 꽉 채움(캔버스 좌우 여백은 크롭) — contain 대비 ~50% 확대 */}
+                <div className="flex w-[150px] shrink-0 items-end justify-center overflow-hidden">
                   {profile.data.avatar ? (
                     // eslint-disable-next-line @next/next/no-img-element
                     <img
                       src={profile.data.avatar}
                       alt=""
-                      className="h-full w-full object-contain object-bottom"
+                      className="h-full w-full object-cover object-bottom"
                       style={{ imageRendering: 'pixelated' }}
                     />
                   ) : (
