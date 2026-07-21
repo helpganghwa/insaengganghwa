@@ -308,6 +308,70 @@ export function EnhanceSlotCard({
   const instantCost = remainingMs > 0 ? diamondToFinishMs(remainingMs) : 0;
   const canAfford = BigInt(diamond) >= BigInt(instantCost || 0);
 
+  // 결과 연출 재생 — 정상 응답·복구 조회 공용(2026-07-21 분리).
+  const playResult = (oc: Outcome, fromLv: number, toLv: number, lore: (typeof LORE_SETS)[number]) => {
+    beginEnhanceOverlay();
+    setAttempting(false);
+
+    const reduceMotion =
+      typeof window !== 'undefined' &&
+      window.matchMedia?.('(prefers-reduced-motion: reduce)').matches;
+
+    if (oc === 'mega') {
+      // 메가(+2) — 2단계 연출. Phase 1: 일반 성공 +1, Phase 2: 보너스 +1.
+      setFlash('success');
+      setFlashFromLevel(fromLv);
+      setFlashToLevel(fromLv + 1);
+      setFlashMsg(lore.success);
+      sounds.enhanceSuccess(); // Phase 1 — 성공음
+      if (!reduceMotion && typeof navigator !== 'undefined' && 'vibrate' in navigator) {
+        navigator.vibrate(30); // Phase 1 — success 햅틱
+      }
+      // Phase 2 — 1.4s 후 메가 추가.
+      setTimeout(() => {
+        setFlash('mega');
+        setFlashFromLevel(fromLv + 1);
+        setFlashToLevel(toLv);
+        setFlashMsg(lore.mega ?? lore.success);
+        sounds.enhanceJackpot(); // Phase 2 — 대박(메가) 팡파레
+        if (!reduceMotion && typeof navigator !== 'undefined' && 'vibrate' in navigator) {
+          navigator.vibrate([0, 50, 80, 50, 80, 100]); // mega 햅틱
+        }
+      }, 1400);
+      // 종료 — Phase 2 표시 후 총 3.9s(2026-05-31 사용자 결정: 0.5s 단축).
+      setTimeout(() => {
+        setFlash(null);
+        setFlashMsg(null);
+        setFlashFromLevel(null);
+        setFlashToLevel(null);
+        endEnhanceOverlay(); // 오버레이 종료 → 활성 0이면 랭킹 토스트 노출
+        router.refresh();
+      }, 3900);
+    } else {
+      setFlash(oc);
+      setFlashFromLevel(fromLv);
+      setFlashToLevel(toLv);
+      setFlashMsg(lore[oc] ?? lore.success);
+      // 결과음 — reduceMotion과 무관(소리는 모션 감소 대상 아님).
+      if (oc === 'success') sounds.enhanceSuccess();
+      else if (oc === 'down') sounds.enhanceDown();
+      else sounds.enhanceKeep(); // hold(유지)
+      if (!reduceMotion && typeof navigator !== 'undefined' && 'vibrate' in navigator) {
+        if (oc === 'success') navigator.vibrate(30);
+        else if (oc === 'down') navigator.vibrate([0, 30, 50, 30]);
+        // hold: 무음
+      }
+      setTimeout(() => {
+        setFlash(null);
+        setFlashMsg(null);
+        setFlashFromLevel(null);
+        setFlashToLevel(null);
+        endEnhanceOverlay(); // 오버레이 종료 → 활성 0이면 랭킹 토스트 노출
+        router.refresh();
+      }, 2500);
+    }
+  };
+
   const doAttempt = () => {
     if (pending) return;
     // 세트 랜덤 — 시도/결과(success/hold/down)가 같은 컨셉을 공유(맥락 유지).
@@ -322,10 +386,22 @@ export function EnhanceSlotCard({
       // 고착된다 — .catch로 잡아 낙관 상태를 되돌리고 재시도 안내(doCancel과 동일 방어).
       const r = await finalizeEnhance(activeJob.jobId).catch(() => null);
       if (!r) {
+        // 응답 유실 ≠ 판정 실패(2026-07-21 공포님 제보) — 배포 스큐·모바일 복귀 직후엔
+        // 서버 판정은 커밋됐는데 응답만 못 받는 케이스가 실재. 순수 JSON 라우트(스큐 면역)로
+        // 결과를 되찾아 정상 연출을 재생하고, 못 찾으면 상태 재동기화로 강등.
+        const rec = await fetch(`/api/enhance/outcome?job=${activeJob.jobId}`, { cache: 'no-store' })
+          .then((res) => (res.ok ? (res.json() as Promise<{ state: string; outcome?: string; fromLevel?: number; toLevel?: number }>) : null))
+          .catch(() => null);
+        if (rec?.state === 'done' && rec.outcome) {
+          playResult(rec.outcome as Outcome, Number(rec.fromLevel), Number(rec.toLevel), lore);
+          return;
+        }
         setAttempting(false);
-        // 응답 유실 ≠ 판정 실패(2026-07-21 공포님 제보) — 배포 직후 구버전 클라이언트나
-        // 모바일 복귀 직후엔 서버 판정은 커밋됐는데 응답만 못 받는 케이스가 실재한다.
-        // 스테일 카드를 그대로 두면 "게이지만 초기화"로 보이므로 즉시 서버 상태로 재동기화.
+        if (rec?.state === 'pending') {
+          // 액션이 실행되지 않음(순수 네트워크 실패) — 재시도 안전.
+          showError('전송에 실패했어요. 연결을 확인하고 다시 시도해 주세요.');
+          return;
+        }
         showError('연결이 불안정해 결과 표시에 실패했어요. 최신 상태로 다시 불러옵니다.');
         router.refresh();
         return;
@@ -343,69 +419,7 @@ export function EnhanceSlotCard({
       // 강화 결과 토스트 — 누적(last-wins)만 하고, 결과 오버레이 종료 시 노출.
       // 이 슬롯 오버레이 시작 신호(begin) → 종료 setTimeout에서 end → 모든 슬롯 0이면 토스트.
       showRanking(r.ranksBefore, r.ranksAfter);
-      beginEnhanceOverlay();
-      const oc = r.result.outcome as Outcome;
-      const fromLv = Number(r.result.fromLevel);
-      const toLv = Number(r.result.toLevel);
-      setAttempting(false);
-
-      const reduceMotion =
-        typeof window !== 'undefined' &&
-        window.matchMedia?.('(prefers-reduced-motion: reduce)').matches;
-
-      if (oc === 'mega') {
-        // 메가(+2) — 2단계 연출. Phase 1: 일반 성공 +1, Phase 2: 보너스 +1.
-        setFlash('success');
-        setFlashFromLevel(fromLv);
-        setFlashToLevel(fromLv + 1);
-        setFlashMsg(lore.success);
-        sounds.enhanceSuccess(); // Phase 1 — 성공음
-        if (!reduceMotion && typeof navigator !== 'undefined' && 'vibrate' in navigator) {
-          navigator.vibrate(30); // Phase 1 — success 햅틱
-        }
-        // Phase 2 — 1.4s 후 메가 추가.
-        setTimeout(() => {
-          setFlash('mega');
-          setFlashFromLevel(fromLv + 1);
-          setFlashToLevel(toLv);
-          setFlashMsg(lore.mega ?? lore.success);
-          sounds.enhanceJackpot(); // Phase 2 — 대박(메가) 팡파레
-          if (!reduceMotion && typeof navigator !== 'undefined' && 'vibrate' in navigator) {
-            navigator.vibrate([0, 50, 80, 50, 80, 100]); // mega 햅틱
-          }
-        }, 1400);
-        // 종료 — Phase 2 표시 후 총 3.9s(2026-05-31 사용자 결정: 0.5s 단축).
-        setTimeout(() => {
-          setFlash(null);
-          setFlashMsg(null);
-          setFlashFromLevel(null);
-          setFlashToLevel(null);
-          endEnhanceOverlay(); // 오버레이 종료 → 활성 0이면 랭킹 토스트 노출
-          router.refresh();
-        }, 3900);
-      } else {
-        setFlash(oc);
-        setFlashFromLevel(fromLv);
-        setFlashToLevel(toLv);
-        setFlashMsg(lore[oc] ?? lore.success);
-        // 결과음 — reduceMotion과 무관(소리는 모션 감소 대상 아님).
-        if (oc === 'success') sounds.enhanceSuccess();
-        else if (oc === 'down') sounds.enhanceDown();
-        else sounds.enhanceKeep(); // hold(유지)
-        if (!reduceMotion && typeof navigator !== 'undefined' && 'vibrate' in navigator) {
-          if (oc === 'success') navigator.vibrate(30);
-          else if (oc === 'down') navigator.vibrate([0, 30, 50, 30]);
-          // hold: 무음
-        }
-        setTimeout(() => {
-          setFlash(null);
-          setFlashMsg(null);
-          setFlashFromLevel(null);
-          setFlashToLevel(null);
-          endEnhanceOverlay(); // 오버레이 종료 → 활성 0이면 랭킹 토스트 노출
-          router.refresh();
-        }, 2500);
-      }
+      playResult(r.result.outcome as Outcome, Number(r.result.fromLevel), Number(r.result.toLevel), lore);
     });
   };
 
