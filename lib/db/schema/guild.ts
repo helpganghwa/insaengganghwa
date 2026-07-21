@@ -291,6 +291,14 @@ export const guildEmblems = pgTable(
     emblemUrl: text('emblem_url'),
     /** 선택 색상톤(emblem 3축 중 tone). */
     emblemColor: text('emblem_color'),
+    /** 생성 컨텍스트(0132) — 선택 요소(형태·색톤 등)·사용 프롬프트(검수·분쟁 근거). */
+    selection: jsonb('selection'),
+    genPrompt: text('gen_prompt'),
+    /** 검수 결정(0131) — 'confirm'(통과·무조치) | 'reject'(리젝+환불). null=미검수. */
+    adminDecision: text('admin_decision'),
+    adminReviewedAt: timestamp('admin_reviewed_at', { withTimezone: true }),
+    /** 리젝 소프트 삭제(0131) — 이력 보존, 유저 목록·개수 집계에서 제외. */
+    removedAt: timestamp('removed_at', { withTimezone: true }),
     createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
   },
   (t) => [index('guild_emblem_guild_idx').on(t.guildId)],
