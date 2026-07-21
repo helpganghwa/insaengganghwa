@@ -76,13 +76,13 @@ export function AppHeaderShell({
           {stats ? (
             // 서브라인 — 라벨은 흐리게, 수치는 앰버 강조(문의 채택안 B, 2026-07-21).
             <span className="truncate font-mono text-[9px] font-bold text-zinc-500 dark:text-zinc-400">
-              전투력
+              전투력{' '}
               <b className="font-extrabold text-amber-600 dark:text-amber-300">
                 {stats.combat.toLocaleString('ko-KR')}
               </b>
-              {' · '}최고
+              {' · '}최고{' '}
               <b className="font-extrabold text-amber-600 dark:text-amber-300">+{stats.maxEnhance}</b>
-              {' · '}합산
+              {' · '}합산{' '}
               <b className="font-extrabold text-amber-600 dark:text-amber-300">+{stats.sumEnhance}</b>
             </span>
           ) : null}
