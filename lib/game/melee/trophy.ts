@@ -10,7 +10,7 @@ import { meleeBattles, type MeleeFinale } from '@/lib/db/schema/melee';
 import { userProfiles } from '@/lib/db/schema/avatar';
 import { reviewProfile } from '@/lib/game/profile/ai-review';
 import { anyBackgroundOpaque } from '@/lib/game/profile/bg-alpha';
-import { detectFaceBox } from '@/lib/game/profile/face-box';
+import { detectFaceBox, reconcileFaceBox } from '@/lib/game/profile/face-box';
 import { pixellabKeyByIdx, keyIdxFromOptions } from '@/lib/game/profile/pixellab-keys';
 
 /**
@@ -311,6 +311,17 @@ async function finalize(
         trophyFaceBox = await detectFaceBox(chosenPng);
       } catch {
         trophyFaceBox = null;
+      }
+    }
+  }
+  // cx 런 스냅(2026-07-21) — AI 중앙 앵커링·돌출물 끌림 교정(reconcile은 단일 소스도 스냅 수행).
+  if (trophyFaceBox) {
+    const southPng = _images.find((im) => im.direction === 'south')?.png ?? null;
+    if (southPng) {
+      try {
+        trophyFaceBox = (await reconcileFaceBox(southPng, null, trophyFaceBox)) ?? trophyFaceBox;
+      } catch {
+        /* 보정 실패 — 원본 박스 유지 */
       }
     }
   }
