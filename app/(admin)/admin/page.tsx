@@ -94,6 +94,12 @@ const MENU: { href: string; icon: string; title: string; desc: string; external?
     desc: '생성 성공·실패 내역 조회, 통과 회수+환불 / 실패 아바타 지급 (분쟁 처리)',
   },
   {
+    href: '/admin/emblem-review',
+    icon: '🛡️',
+    title: '길드 문양 검수',
+    desc: '생성 문양 조회·제거(활성 해제+길드장 통지), 유료 재생성 환불 (분쟁 처리)',
+  },
+  {
     href: '/admin/chat',
     icon: '🗨️',
     title: '전체 채팅 운영',
