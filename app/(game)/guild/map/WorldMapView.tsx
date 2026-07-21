@@ -373,7 +373,9 @@ export function WorldMapView({
     // 수축이 루트를 콘텐츠보다 작게 줄이고 본문이 박스 밖으로 넘친다(채팅바 가림 원인).
     <div className="flex min-h-full shrink-0 flex-col">
       {/* 지도 + 네모 노드 오버레이 — 풀폭 플러시(좌우 여백·모서리 제거). */}
-      <div className="relative aspect-square w-full shrink-0 overflow-hidden border-b border-zinc-800 bg-zinc-950">
+      {/* isolate — 내부 노드 zIndex(선택 30 등)가 전역 스태킹으로 새어 채팅 패널(z-20 fixed)
+          위로 떠오르던 오버랩 버그 방지(2026-07-21 제보). */}
+      <div className="relative isolate aspect-square w-full shrink-0 overflow-hidden border-b border-zinc-800 bg-zinc-950">
         {/* 리플레이 오버레이(2026-07-16) — 문장 진군·격돌·플래시 전용 레이어(ChronicleReplay가 직접 관리). */}
         <div ref={setReplayLayer} aria-hidden className="pointer-events-none absolute inset-0 z-40" />
         {/* eslint-disable-next-line @next/next/no-img-element */}
