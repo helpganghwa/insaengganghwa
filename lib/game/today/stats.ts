@@ -249,7 +249,8 @@ export async function getLifetimeStats(userId: string, serverId: number): Promis
       select count(*)::int attempts,
              count(*) filter (where result in ('success','mega'))::int success,
              count(*) filter (where result='hold')::int hold,
-             count(*) filter (where result='down')::int down
+             count(*) filter (where result='down')::int down,
+             coalesce(sum(elapsed_ms),0)::bigint total_elapsed_ms
       from enhancement_logs where user_id=${userId}::uuid and server_id=${serverId}
     ),
     melee as (
@@ -270,6 +271,8 @@ export async function getLifetimeStats(userId: string, serverId: number): Promis
       (select rnk from ranks where metric='sum') rank_sum,
       (select attempts from el) attempts, (select success from el) success,
       (select hold from el) hold, (select down from el) down,
+      -- 총 단련 시간 원천(2026-07-21 버그) — 매핑은 total_elapsed_ms를 읽는데 select에 빠져 항상 0('—')이었다.
+      (select total_elapsed_ms from el) total_elapsed_ms,
       (select count(*)::int from gem_time_reductions where user_id=${userId}::uuid and server_id=${serverId}) gem_reduces,
       (select coalesce(sum(gems_spent),0)::bigint from gem_time_reductions where user_id=${userId}::uuid and server_id=${serverId}) gems_spent,
       (select count(*)::int from supply_open_logs where user_id=${userId}::uuid and server_id=${serverId}) boxes,
