@@ -17,7 +17,7 @@
 | Supabase Realtime 쿼터 검토(채팅) | 접속 유저 전원이 WS 1개 유지 — 동접≈Realtime 동시 연결. Pro 포함 500 초과 시 과금/거절, 메시지 수는 전송×구독자 fan-out. 동접 수백↑ 전망이면 쿼터 상향 또는 '패널 열림에만 구독' 전환 검토 |
 | Upstash 레이트리밋 Pay-as-you-go 전환 | 무료 50만 커맨드/월 초과 시 리밋 전면 fail-open(2026-07-21 CBT서 실제 도달·확인). 고빈도 게임 버킷을 인메모리 창으로 전환(lib/ratelimit.ts REDIS_BUCKETS 주석)해 커맨드 ~95% 절감 — 오픈 후 사용량 재확인해 무료 티어로 충분하면 전환 불필요, 부족하면 콘솔 → 플랜 전환 |
 | 풀러 Pool Size 상향 (15 → 30~40) | Supabase 대시보드 → Database → Connection Pooling, **prod·staging 각각**. 부하테스트 무릎 C≈20~30 실측(2026-07-08) — 15면 피크 버스트/​cron :00 겹침 시 큐잉 지연(에러는 아님). `max_connections=60` 내 20+ 여유 남기고 설정 |
-| 통신판매업 신고 | 완료 후 `lib/legal/content.ts` `mailOrderNo` 기입 |
+| ~~통신판매업 신고~~ | ✅ 완료(2026-07-21, 제 2026-울산중구-0155호) — `lib/legal/content.ts` 기입·노출 확인 |
 | 결제 E2E 1건 | 본인인증 → 주문 → 지급 → 환불 회수까지 테스트 채널로 검증 |
 | 약관/개인정보 시행일 | 오픈일 기준 갱신 필요 여부 확인(`lib/legal/content.ts` LEGAL_META) |
 
