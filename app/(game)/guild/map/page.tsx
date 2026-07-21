@@ -53,6 +53,7 @@ export default async function WorldMapPage() {
         ownerEmblemColor: z.ownerEmblemColor,
         executorUserId: z.executorUserId,
         executorNickname: z.executorNickname,
+        executorCode: z.executorCode,
         taxDiamond: z.taxDiamond.toString(),
         lastTaxAt: z.lastTaxCollectedAt ? z.lastTaxCollectedAt.getTime() : null,
         residentCount: z.residentCount,
