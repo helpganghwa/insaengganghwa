@@ -83,6 +83,11 @@ export function doneCondSql(id: string, userId: string, serverId: number) {
       return sql`exists(select 1 from shop_free_claims where user_id=${u} and server_id=${s} and slot='weekly')`;
     case 'shop_monthly':
       return sql`exists(select 1 from shop_free_claims where user_id=${u} and server_id=${s} and slot='monthly')`;
+    case 'chat_send':
+      // 마킹 우선 + chat_messages 폴백 — 과제 추가 전에 이미 채팅한 유저 자동 인정
+      // (메시지는 7일 보존이라 마킹이 영구 기록, 폴백은 소급 인정용).
+      return sql`(exists(select 1 from challenge_events where user_id=${u} and server_id=${s} and event_id='chat_send')
+        or exists(select 1 from chat_messages where user_id=${u} and server_id=${s}))`;
     // 이벤트형 — 상태 흔적이 없는 행위(마킹 기반).
     case 'app_install':
     case 'boast_share':
