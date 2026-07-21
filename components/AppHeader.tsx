@@ -19,6 +19,7 @@ export function AppHeaderShell({
   profileSouth = null,
   profileFaceBox = null,
   guildEmblemUrl = null,
+  stats = null,
   diamondSlot,
 }: {
   nickname?: string;
@@ -28,6 +29,8 @@ export function AppHeaderShell({
   /** 활성 프로필 얼굴 박스(검수 산출) — 썸네일 정밀 크롭. 없으면 폴백 크롭. */
   profileFaceBox?: FaceBox | null;
   guildEmblemUrl?: string | null;
+  /** 닉네임 아래 서브라인 — 전투력·최고강화·합산강화(2026-07-21 문의 반영). null=미표시(fallback 셸). */
+  stats?: { combat: number; maxEnhance: number; sumEnhance: number } | null;
   /** AppHeader(server)가 client HeaderDiamond를 주입 — Suspense fallback은 정적 표시. */
   diamondSlot?: React.ReactNode;
 }) {
@@ -59,15 +62,30 @@ export function AppHeaderShell({
             </span>
           )}
         </Link>
-        {/* 이름↔문양은 좁게(gap-1), 아바타↔이름은 기존 gap-2 유지. */}
-        <span className="flex min-w-0 items-center gap-1">
-          <NicknameEditor
-            current={nickname}
-            changedCount={nicknameChangedCount}
-            diamond={String(diamond)}
-            className="!text-[13px] text-zinc-800 dark:text-zinc-100"
-          />
-          <GuildBadge emblemUrl={guildEmblemUrl} size={18} className="shrink-0" />
+        {/* 이름↔문양은 좁게(gap-1), 아바타↔이름은 기존 gap-2 유지. 스탯 있으면 이름 아래 서브라인 2단. */}
+        <span className="flex min-w-0 flex-col justify-center leading-tight">
+          <span className="flex min-w-0 items-center gap-1">
+            <NicknameEditor
+              current={nickname}
+              changedCount={nicknameChangedCount}
+              diamond={String(diamond)}
+              className="!text-[13px] text-zinc-800 dark:text-zinc-100"
+            />
+            <GuildBadge emblemUrl={guildEmblemUrl} size={18} className="shrink-0" />
+          </span>
+          {stats ? (
+            // 서브라인 — 라벨은 흐리게, 수치는 앰버 강조(문의 채택안 B, 2026-07-21).
+            <span className="truncate font-mono text-[9px] font-bold text-zinc-500 dark:text-zinc-400">
+              전투력
+              <b className="font-extrabold text-amber-600 dark:text-amber-300">
+                {stats.combat.toLocaleString('ko-KR')}
+              </b>
+              {' · '}최고
+              <b className="font-extrabold text-amber-600 dark:text-amber-300">+{stats.maxEnhance}</b>
+              {' · '}합산
+              <b className="font-extrabold text-amber-600 dark:text-amber-300">+{stats.sumEnhance}</b>
+            </span>
+          ) : null}
         </span>
       </div>
 
@@ -103,6 +121,7 @@ export async function AppHeader({ dataPromise }: { dataPromise: Promise<LayoutDa
         profileSouth={d.profileSouth}
         profileFaceBox={d.profileFaceBox}
         guildEmblemUrl={d.guildEmblemUrl}
+        stats={d.stats}
         diamondSlot={<HeaderDiamond />}
       />
     </>
