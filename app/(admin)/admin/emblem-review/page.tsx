@@ -4,10 +4,11 @@ import { db } from '@/lib/db/client';
 import { guilds, guildEmblems, guildEmblemEscrows } from '@/lib/db/schema/guild';
 import { characters } from '@/lib/db/schema/server';
 import { listServers } from '@/lib/game/servers';
+import { EMBLEM_SHAPES, EMBLEM_TONES, EMBLEM_KEYWORDS, type EmblemSelection } from '@/lib/game/guild/emblem-vocab';
 
 import { ServerBadge } from '../ServerBadge';
 import { ServerFilter, parseServerFilter } from '../ServerFilter';
-import { RemoveEmblemButton, RefundEscrowButton } from './AdminEmblemActions';
+import { EmblemDecisionButtons, RefundEscrowButton } from './AdminEmblemActions';
 
 export const dynamic = 'force-dynamic';
 
@@ -17,10 +18,22 @@ const ESCROW_KO: Record<string, string> = {
   refunded: '환불됨',
 };
 
+/** 선택 요소 한글 요약 — '기사 방패 · 핏빛 적/순백 · 용(+검)' 형태. */
+function selectionKo(sel: unknown): string | null {
+  const s = sel as EmblemSelection | null;
+  if (!s || typeof s !== 'object' || !('shapeId' in s)) return null;
+  const shape = EMBLEM_SHAPES.find((x) => x.id === s.shapeId)?.ko ?? s.shapeId;
+  const main = EMBLEM_TONES.find((x) => x.id === s.mainToneId)?.ko ?? s.mainToneId;
+  const sub = EMBLEM_TONES.find((x) => x.id === s.subToneId)?.ko ?? s.subToneId;
+  const kw = EMBLEM_KEYWORDS.find((x) => x.id === s.mainKeywordId)?.ko ?? s.mainKeywordId;
+  const sub2 = s.subKeywordId ? (EMBLEM_KEYWORDS.find((x) => x.id === s.subKeywordId)?.ko ?? s.subKeywordId) : null;
+  return `${shape} · ${main}/${sub} · ${kw}${sub2 ? `(+${sub2})` : ''}`;
+}
+
 /**
- * 길드 문양 생성 검수(2026-07-21) — 아바타 검수(profile-gen)와 동일 축의 분쟁 대응 도구.
- *  상단: 그날 생성된 문양(이미지·길드·활성 여부) + [문양 제거]
- *  하단: 유료 재생성 예치 내역(3,000💎) + [환불] (completed만)
+ * 길드 문양 생성 검수(0131·0132) — 아바타 검수(profile-gen)와 동일 결정 모델.
+ *  상단: 그날 생성 문양(이미지·선택 요소·프롬프트) + [검토 통과] / [리젝+환불]
+ *  하단: 유료 재생성 예치 내역 + [환불] (문양 유지 단독 환불)
  */
 export default async function AdminEmblemReviewPage({
   searchParams,
@@ -48,8 +61,11 @@ export default async function AdminEmblemReviewPage({
       id: guildEmblems.id,
       url: guildEmblems.emblemUrl,
       color: guildEmblems.emblemColor,
+      selection: guildEmblems.selection,
+      genPrompt: guildEmblems.genPrompt,
+      adminDecision: guildEmblems.adminDecision,
+      removedAt: guildEmblems.removedAt,
       createdAt: guildEmblems.createdAt,
-      guildId: guilds.id,
       guildName: guilds.name,
       serverId: guilds.serverId,
       activeEmblemId: guilds.activeEmblemId,
@@ -112,31 +128,55 @@ export default async function AdminEmblemReviewPage({
           <p className="rounded-lg border border-zinc-800 p-4 text-sm text-zinc-500">이 날짜에 생성된 문양이 없습니다.</p>
         ) : (
           <ul className="space-y-2">
-            {emblems.map((e) => (
-              <li key={String(e.id)} className="flex items-center gap-3 rounded-lg border border-zinc-800 bg-zinc-900/60 p-2.5">
-                <span className="flex h-14 w-14 shrink-0 items-center justify-center overflow-hidden rounded-lg bg-zinc-950">
-                  {e.url ? (
-                    // eslint-disable-next-line @next/next/no-img-element
-                    <img src={e.url} alt="" className="h-full w-full object-contain" style={{ imageRendering: 'pixelated' }} />
-                  ) : (
-                    <span className="text-[10px] text-zinc-600">생성중</span>
-                  )}
-                </span>
-                <div className="min-w-0 flex-1">
-                  <div className="flex items-center gap-1.5">
-                    <span className="truncate text-[13px] font-bold">{e.guildName}</span>
-                    <ServerBadge serverId={e.serverId} />
-                    {e.activeEmblemId != null && e.activeEmblemId === e.id ? (
-                      <span className="shrink-0 rounded bg-emerald-500/15 px-1.5 py-0.5 text-[9px] font-bold text-emerald-400">활성</span>
-                    ) : null}
+            {emblems.map((e) => {
+              const sel = selectionKo(e.selection);
+              return (
+                <li key={String(e.id)} className="rounded-lg border border-zinc-800 bg-zinc-900/60 p-2.5">
+                  <div className="flex items-start gap-3">
+                    <span className="flex h-14 w-14 shrink-0 items-center justify-center overflow-hidden rounded-lg bg-zinc-950">
+                      {e.url ? (
+                        // eslint-disable-next-line @next/next/no-img-element
+                        <img
+                          src={e.url}
+                          alt=""
+                          className={`h-full w-full object-contain ${e.removedAt ? 'opacity-40 grayscale' : ''}`}
+                          style={{ imageRendering: 'pixelated' }}
+                        />
+                      ) : (
+                        <span className="text-[10px] text-zinc-600">생성중</span>
+                      )}
+                    </span>
+                    <div className="min-w-0 flex-1">
+                      <div className="flex flex-wrap items-center gap-1.5">
+                        <span className="truncate text-[13px] font-bold">{e.guildName}</span>
+                        <ServerBadge serverId={e.serverId} />
+                        {e.activeEmblemId != null && e.activeEmblemId === e.id ? (
+                          <span className="shrink-0 rounded bg-emerald-500/15 px-1.5 py-0.5 text-[9px] font-bold text-emerald-400">활성</span>
+                        ) : null}
+                        {e.adminDecision === 'reject' ? (
+                          <span className="shrink-0 rounded bg-red-500/15 px-1.5 py-0.5 text-[9px] font-bold text-red-400">리젝</span>
+                        ) : e.adminDecision === 'confirm' ? (
+                          <span className="shrink-0 rounded bg-zinc-700 px-1.5 py-0.5 text-[9px] font-bold text-zinc-300">통과</span>
+                        ) : (
+                          <span className="shrink-0 rounded bg-amber-500/15 px-1.5 py-0.5 text-[9px] font-bold text-amber-400">미검수</span>
+                        )}
+                      </div>
+                      <p className="mt-0.5 text-[10px] text-zinc-500">
+                        {hhmm(e.createdAt)} · #{String(e.id)}
+                        {sel ? <> · <span className="text-zinc-400">{sel}</span></> : ' · 선택 기록 없음(0132 이전 생성)'}
+                      </p>
+                      {e.genPrompt ? (
+                        <details className="mt-1">
+                          <summary className="cursor-pointer text-[10px] text-zinc-500">프롬프트 보기</summary>
+                          <p className="mt-1 rounded bg-zinc-950 p-2 text-[10px] leading-relaxed text-zinc-400">{e.genPrompt}</p>
+                        </details>
+                      ) : null}
+                    </div>
+                    {e.adminDecision == null ? <EmblemDecisionButtons emblemId={String(e.id)} /> : null}
                   </div>
-                  <p className="mt-0.5 text-[10px] text-zinc-500">
-                    {hhmm(e.createdAt)} · 톤 {e.color ?? '—'} · #{String(e.id)}
-                  </p>
-                </div>
-                <RemoveEmblemButton emblemId={String(e.id)} />
-              </li>
-            ))}
+                </li>
+              );
+            })}
           </ul>
         )}
       </section>
@@ -176,9 +216,8 @@ export default async function AdminEmblemReviewPage({
       </section>
 
       <p className="text-[11px] leading-relaxed text-zinc-600">
-        문양 제거: 보관함에서 삭제하고, 활성 문양이면 즉시 무문양으로 전환되며 길드장에게 안내 우편이 발송됩니다.
-        환불: 유료 재생성 예치(완료 건)를 환불 처리하고 결제 유저에게 다이아 반환 + 우편이 발송됩니다(문양은 유지 —
-        함께 제거하려면 위에서 별도로 제거).
+        검토 통과: 무조치 확인 기록. 리젝+환불: 문양을 유저 목록에서 제거(활성이면 즉시 무문양 전환)하고, 연결된
+        유료 생성이 있으면 자동 환불 + 길드장·결제자 우편 발송. 아래 환불 버튼은 문양은 유지한 채 예치만 환불합니다.
       </p>
     </div>
   );

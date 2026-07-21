@@ -2,7 +2,7 @@ import 'server-only';
 
 import sharp from 'sharp';
 import Anthropic from '@anthropic-ai/sdk';
-import { and, eq, desc, lt, sql } from 'drizzle-orm';
+import { and, eq, desc, isNull, lt, sql } from 'drizzle-orm';
 import { createClient, type SupabaseClient } from '@supabase/supabase-js';
 
 import { db } from '@/lib/db/client';
@@ -267,7 +267,7 @@ async function setGuildActiveEmblem(
 async function generateEmblemAsset(
   guildId: bigint,
   selection: EmblemSelection,
-): Promise<{ emblemUrl: string; color: string | null }> {
+): Promise<{ emblemUrl: string; color: string | null; prompt: string }> {
   const color = mainColor(selection.mainToneId);
   const shieldLike = isShieldShape(selection.shapeId);
   // 비방패(마름모·깃발)는 AI 재작성을 건너뛴다 — Haiku가 'coat of arms/crest'를 재주입해
@@ -277,7 +277,7 @@ async function generateEmblemAsset(
   const raw = await generateEmblemPng(prompt, shieldLike, pickPixellabKeyIdx(guildId));
   const png = await fitEmblemToFrame(raw); // 투명 여백 제거·프레임 채움(가시성↑)
   const emblemUrl = await uploadEmblem(`${guildId}/${crypto.randomUUID()}.png`, png);
-  return { emblemUrl, color };
+  return { emblemUrl, color, prompt };
 }
 
 /** url에서 스토리지 키 추출(삭제 정리용). 못 찾으면 null. */
@@ -296,10 +296,10 @@ export async function generateAndStoreEmblem(input: {
   guildId: bigint;
   selection: EmblemSelection;
 }): Promise<{ emblemUrl: string }> {
-  const { emblemUrl, color } = await generateEmblemAsset(input.guildId, input.selection);
+  const { emblemUrl, color, prompt } = await generateEmblemAsset(input.guildId, input.selection);
   const [row] = await db
     .insert(guildEmblems)
-    .values({ guildId: input.guildId, emblemUrl, emblemColor: color })
+    .values({ guildId: input.guildId, emblemUrl, emblemColor: color, selection: input.selection, genPrompt: prompt })
     .returning({ id: guildEmblems.id });
   await setGuildActiveEmblem(input.guildId, { id: row!.id, emblemUrl, emblemColor: color });
   return { emblemUrl };
@@ -317,7 +317,8 @@ export async function getGuildEmblems(
   const rows = await db
     .select({ id: guildEmblems.id, emblemUrl: guildEmblems.emblemUrl, emblemColor: guildEmblems.emblemColor })
     .from(guildEmblems)
-    .where(eq(guildEmblems.guildId, guildId))
+    // removedAt: 운영 리젝(0131) 제외 — 유저에겐 없는 문양.
+    .where(and(eq(guildEmblems.guildId, guildId), isNull(guildEmblems.removedAt)))
     .orderBy(desc(guildEmblems.id));
   return rows.map((r) => ({
     id: r.id.toString(),
@@ -345,10 +346,11 @@ async function storeEmblemRow(
   guildId: bigint,
   emblemUrl: string,
   color: string | null,
+  gen?: { selection: EmblemSelection; prompt: string },
 ): Promise<{ emblemId: bigint; emblemUrl: string }> {
   const [row] = await tx
     .insert(guildEmblems)
-    .values({ guildId, emblemUrl, emblemColor: color })
+    .values({ guildId, emblemUrl, emblemColor: color, selection: gen?.selection ?? null, genPrompt: gen?.prompt ?? null })
     .returning({ id: guildEmblems.id });
   // 사용 중 문양 유지 — 보관함에만 추가(활성은 그대로). 단 활성이 없을 때만 새 문양으로 설정.
   const [g] = await tx
@@ -416,14 +418,14 @@ export async function generateEmblem(input: {
   const [{ n }] = await db
     .select({ n: sql<number>`count(*)::int` })
     .from(guildEmblems)
-    .where(eq(guildEmblems.guildId, guildId));
+    .where(and(eq(guildEmblems.guildId, guildId), isNull(guildEmblems.removedAt)));
   if (n >= MAX_GUILD_EMBLEMS) throw new GuildError('EMBLEM_MAX');
   const cost = n === 0 ? 0n : rerollCost; // 첫 문양 무료
 
   // 무료 경로 — 차감 없음. 생성 성공 시에만 삽입(실패해도 차감/빈 행 없음).
   if (cost === 0n) {
-    const { emblemUrl, color } = await generateEmblemAsset(guildId, input.selection);
-    return db.transaction((tx) => storeEmblemRow(tx, guildId, emblemUrl, color));
+    const { emblemUrl, color, prompt } = await generateEmblemAsset(guildId, input.selection);
+    return db.transaction((tx) => storeEmblemRow(tx, guildId, emblemUrl, color, { selection: input.selection, prompt }));
   }
 
   // 유료 경로 1) 에스크로 — 클릭 즉시 차감 + pending 기록(원자적). 잔액 부족이면 여기서 실패(생성 전).
@@ -431,7 +433,7 @@ export async function generateEmblem(input: {
     const [{ n: n2 }] = await tx
       .select({ n: sql<number>`count(*)::int` })
       .from(guildEmblems)
-      .where(eq(guildEmblems.guildId, guildId));
+      .where(and(eq(guildEmblems.guildId, guildId), isNull(guildEmblems.removedAt)));
     if (n2 >= MAX_GUILD_EMBLEMS) throw new GuildError('EMBLEM_MAX');
     const paid = await walletTrySpend(tx, input.userId, input.serverId, cost);
     if (!paid) throw new GuildError('INSUFFICIENT_DIAMOND');
@@ -443,7 +445,7 @@ export async function generateEmblem(input: {
   });
 
   // 2) 생성(예치 후) — 실패하면 환불+우편 후 rethrow(라우트가 EMBLEM_GEN_FAILED로 매핑).
-  let asset: { emblemUrl: string; color: string | null };
+  let asset: { emblemUrl: string; color: string | null; prompt: string };
   try {
     asset = await generateEmblemAsset(guildId, input.selection);
   } catch (e) {
@@ -462,7 +464,7 @@ export async function generateEmblem(input: {
     if (upd.length === 0) {
       console.warn(`[guild.emblem] escrow ${escrowId} 이미 해소됨 — 문양은 지급(사실상 무료)`);
     }
-    return storeEmblemRow(tx, guildId, asset.emblemUrl, asset.color);
+    return storeEmblemRow(tx, guildId, asset.emblemUrl, asset.color, { selection: input.selection, prompt: asset.prompt });
   });
 }
 
@@ -514,7 +516,8 @@ export async function deleteEmblem(input: { userId: string; serverId: number; em
   const rows = await db
     .select({ id: guildEmblems.id, emblemUrl: guildEmblems.emblemUrl, emblemColor: guildEmblems.emblemColor })
     .from(guildEmblems)
-    .where(eq(guildEmblems.guildId, guildId))
+    // removedAt: 운영 리젝(0131) 제외 — 유저에겐 없는 문양.
+    .where(and(eq(guildEmblems.guildId, guildId), isNull(guildEmblems.removedAt)))
     .orderBy(desc(guildEmblems.id));
   if (rows.length <= 1) throw new GuildError('EMBLEM_MIN');
   const target = rows.find((r) => r.id === input.emblemId);
