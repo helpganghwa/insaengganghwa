@@ -34,7 +34,6 @@
     "@supabase/supabase-js": "^2.105.4",
     "@upstash/ratelimit": "^2.0.8",
     "@upstash/redis": "^1.38.0",
-    "@vercel/analytics": "^2.0.1",
     "badwords-ko": "^1.0.4",
     "drizzle-orm": "^0.45.2",
     "echarts": "^6.1.0",
