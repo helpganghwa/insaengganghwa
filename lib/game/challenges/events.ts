@@ -12,7 +12,7 @@ export async function markChallengeEvent(
   dbx: { execute: (typeof db)['execute'] },
   userId: string,
   serverId: number,
-  eventId: 'app_install' | 'boast_share' | 'residence_move' | 'avatar_change',
+  eventId: 'app_install' | 'boast_share' | 'residence_move' | 'avatar_change' | 'chat_send',
 ): Promise<void> {
   try {
     await dbx.execute(sql`

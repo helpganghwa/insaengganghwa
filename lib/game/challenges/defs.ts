@@ -1,10 +1,10 @@
 /**
- * 도전 과제 정의 — 27종 + 전체 완료 보너스(2026-07-14 사용자 확정).
+ * 도전 과제 정의 — 28종 + 전체 완료 보너스(2026-07-14 사용자 확정, 07-21 채팅 추가).
  * 게임의 모든 루프를 정확히 한 바퀴 돌게 만드는 일회성 온보딩 리워드.
- * 보상 합계: 과제 💎12,200+📦75 + 완료 보너스 💎5,000+📦150 = 총 💎17,200·📦225.
+ * 보상 합계: 과제 💎12,700+📦75 + 완료 보너스 💎5,000+📦150 = 총 💎17,700·📦225.
  * 📦는 루프 시동 길목·고가치 행동 4종에만(초월·앱·알림·아바타 생성) — 완료 보너스 임팩트 보존.
  * 상점 무료 3종은 CBT(결제 숨김) 동안 자동 숨김 — 정식 오픈 시 자동 등장(activeChallenges).
- * 달성 판정 SQL은 status.ts(상태 파생), 예외 4종은 challenge_events 마킹.
+ * 달성 판정 SQL은 status.ts(상태 파생), 예외 5종은 challenge_events 마킹.
  */
 export type ChallengeGroup =
   | 'supply' | 'equip' | 'enhance' | 'daily' | 'growth' | 'app' | 'social' | 'guild' | 'raid' | 'world' | 'avatar' | 'shop';
@@ -55,6 +55,7 @@ export const CHALLENGES: ChallengeDef[] = [
   { id: 'push_on', group: 'app', label: '알림 설정하기', diamond: 2000, boxes: 30, go: '/me/settings', guide: '설정 → 알림에서 알림을 켜면 달성돼요. 강화 완료·레이드 소식을 놓치지 않게 됩니다.' },
   { id: 'friend', group: 'social', label: '친구 맺기', diamond: 300, go: '/friends', guide: '친구 화면에서 닉네임이나 코드(#)로 검색해 친구를 맺으면 달성돼요.' },
   { id: 'boast_share', group: 'social', label: '내 프로필 자랑하기', diamond: 300, go: '/me', guide: '프로필의 \'내 프로필 자랑하기\'로 카카오톡 공유를 실행하면 달성돼요.' },
+  { id: 'chat_send', group: 'social', label: '채팅 메시지 보내기', diamond: 500, go: '/?chat=all', guide: '화면 아래 채팅바를 열고 전체 채팅에 메시지를 보내면 달성돼요. 가볍게 인사를 남겨보세요!' },
   { id: 'guild_join', group: 'guild', label: '길드 가입하기', diamond: 500, go: '/guild', guide: '길드 탭에서 마음에 드는 길드에 가입하면 달성돼요.' },
   { id: 'guild_donate', group: 'guild', label: '길드에 기부하기', diamond: 500, go: '/guild', guide: '길드 홈에서 기부하면 달성돼요 — 하루 3회, 첫 회는 무료!' },
   { id: 'guild_deploy', group: 'guild', label: '점령전 배치', diamond: 500, go: '/guild/deploy', guide: '길드 → 점령전 배치에서 구역에 공격 또는 수비를 등록하면 달성돼요.' },
@@ -89,4 +90,4 @@ export const COMPLETE_BONUS = {
 export const CHALLENGE_IDS = new Set(CHALLENGES.map((c) => c.id));
 
 /** challenge_events로 마킹되는 이벤트형 과제(상태 흔적이 없는 행위). */
-export const EVENT_CHALLENGES = new Set(['app_install', 'boast_share', 'residence_move', 'avatar_change']);
+export const EVENT_CHALLENGES = new Set(['app_install', 'boast_share', 'residence_move', 'avatar_change', 'chat_send']);

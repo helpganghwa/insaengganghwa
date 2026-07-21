@@ -14,6 +14,7 @@ import { characters } from '@/lib/db/schema/server';
 import { guildMembers } from '@/lib/db/schema/guild';
 import { chatBlocks } from '@/lib/db/schema/chat';
 import { sendPushToUser } from '@/lib/push/send';
+import { markChallengeEvent } from '@/lib/game/challenges/events';
 import { CHAT_MAX_LEN, checkAndFilterChatBody } from '@/lib/game/chat/filter';
 import {
   getMyGuildChannel,
@@ -130,6 +131,9 @@ export async function sendChat(raw: string, channel: 'all' | 'guild' = 'all'): P
     mentionTargets.map((t) => ({ n: t.nickname, c: t.code })),
     guildId,
   );
+
+  // 도전 과제 '채팅 메시지 보내기'(2026-07-21) — 메시지는 7일 보존이라 영구 마킹으로 기록.
+  await markChallengeEvent(db, userId, serverId, 'chat_send');
 
   if (mentionTargets.length > 0) {
     // 나를 차단한 유저에게는 멘션 푸시 미발송 — 차단 우회 알림 채널 방지(2026-07-22).
