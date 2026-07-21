@@ -50,6 +50,15 @@ export async function setZoneExecutor(input: {
   await db.transaction(async (tx) => {
     const { guildId, serverId } = await assertLeaderOfZoneOwner(tx, input.actorUserId, input.zoneId);
 
+    // 물러나는 기존 집행관 — 교체로 자동 방어가 사라지므로 아래에서 일반 수비 배치로 복원
+    // (2026-07-21 문의 #36: 복원이 없어 교체된 집행관이 수비에서 완전히 빠지던 버그).
+    const [cur] = await tx
+      .select({ executorUserId: zones.executorUserId })
+      .from(zones)
+      .where(eq(zones.id, input.zoneId))
+      .limit(1);
+    const prevExecutor = cur?.executorUserId ?? null;
+
     const [target] = await tx
       .select({ guildId: guildMembers.guildId })
       .from(guildMembers)
@@ -84,14 +93,56 @@ export async function setZoneExecutor(input: {
           eq(guildBattleDeployments.battleKstDay, nextBattleKstDay()),
         ),
       );
+
+    // 물러난 집행관을 이 구역 일반 수비로 복원 — 자동 방어만 잃고 수비 자체는 유지되게.
+    if (prevExecutor && prevExecutor !== input.targetUserId) {
+      await restoreAsDefender(tx, { userId: prevExecutor, guildId, serverId, zoneId: input.zoneId });
+    }
   });
 }
 
-/** 집행관 해제 — 소유 길드 길드장. 구역을 집행관 공석으로(자동 방어·수금 중단). */
+/**
+ * 물러난 집행관의 수비 복원(2026-07-21 문의 #36) — 집행관 교체·해제 시 자동 방어가 사라지므로
+ * 같은 구역 일반 수비 배치(defend)를 넣어준다. 본인이 그 사이 다른 배치를 했으면 그쪽을
+ * 존중(유저·일 유니크 onConflictDoNothing) — 덮어쓰지 않는다. 탈퇴자는 멤버십 검사로 제외.
+ */
+async function restoreAsDefender(
+  tx: Parameters<Parameters<typeof db.transaction>[0]>[0],
+  input: { userId: string; guildId: bigint; serverId: number; zoneId: number },
+): Promise<void> {
+  const [m] = await tx
+    .select({ userId: guildMembers.userId })
+    .from(guildMembers)
+    .where(and(eq(guildMembers.userId, input.userId), eq(guildMembers.guildId, input.guildId)))
+    .limit(1);
+  if (!m) return; // 이미 길드를 떠난 계정 — 복원 대상 아님
+  await tx
+    .insert(guildBattleDeployments)
+    .values({
+      serverId: input.serverId,
+      battleKstDay: nextBattleKstDay(),
+      userId: input.userId,
+      guildId: input.guildId,
+      zoneId: input.zoneId,
+      role: 'defend',
+    })
+    .onConflictDoNothing();
+}
+
+/** 집행관 해제 — 소유 길드 길드장. 구역을 집행관 공석으로(자동 방어·수금 중단).
+ *  해제된 인원은 같은 구역 일반 수비로 복원(교체와 동일 — 수비에서 통째로 빠지지 않게). */
 export async function clearZoneExecutor(input: { actorUserId: string; zoneId: number }): Promise<void> {
   if (isConquestLocked()) throw new GuildError('BATTLE_IN_PROGRESS'); // 정산·공개 윈도 잠금
   await db.transaction(async (tx) => {
-    await assertLeaderOfZoneOwner(tx, input.actorUserId, input.zoneId);
+    const { guildId, serverId } = await assertLeaderOfZoneOwner(tx, input.actorUserId, input.zoneId);
+    const [cur] = await tx
+      .select({ executorUserId: zones.executorUserId })
+      .from(zones)
+      .where(eq(zones.id, input.zoneId))
+      .limit(1);
     await tx.update(zones).set({ executorUserId: null }).where(eq(zones.id, input.zoneId));
+    if (cur?.executorUserId) {
+      await restoreAsDefender(tx, { userId: cur.executorUserId, guildId, serverId, zoneId: input.zoneId });
+    }
   });
 }
