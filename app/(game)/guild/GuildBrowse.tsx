@@ -146,7 +146,9 @@ export function GuildBrowse({
       </div>
 
       {/* 길드 생성 FAB — 컬럼 우하단(바텀네비 위) */}
-      <div className="pointer-events-none fixed inset-x-0 bottom-0 z-40 mx-auto max-w-[390px]">
+      {/* z-10 — 채팅 패널(z-20 fixed, DOM 후순위)이 열리면 FAB를 덮도록(전수조사 2026-07-21).
+          페이지 콘텐츠(z-auto) 위로는 충분. */}
+      <div className="pointer-events-none fixed inset-x-0 bottom-0 z-10 mx-auto max-w-[390px]">
         {/* 채팅 미니바(--chat-dock-h) 위로 회피 — 미니바와 FAB가 겹치던 문제(2026-07-20). */}
         <div className="flex justify-end px-4 pb-[calc(env(safe-area-inset-bottom)+72px+var(--chat-dock-h,0px))]">
           <Link prefetch={false}
