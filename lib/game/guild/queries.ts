@@ -286,12 +286,13 @@ export async function getGuildSummaryByName(serverId: number, name: string) {
       emblemUrl: guilds.emblemUrl,
       intro: guilds.intro,
       joinPolicy: guilds.joinPolicy,
+      leaderUserId: guilds.leaderUserId,
     })
     .from(guilds)
     .where(and(eq(guilds.serverId, serverId), eq(guilds.name, name)))
     .limit(1);
   if (!g) return null;
-  const [stats, zoneRows] = await Promise.all([
+  const [stats, zoneRows, [leader]] = await Promise.all([
     guildMemberStats(serverId, [g.id]),
     // 점령 구역 목록 — 길드 목록 팝업과 동일 정보(세계지도 팝업 정보 격차 해소, 2026-07-06).
     db
@@ -299,6 +300,13 @@ export async function getGuildSummaryByName(serverId: number, name: string) {
       .from(zones)
       .where(and(eq(zones.serverId, serverId), eq(zones.ownerGuildId, g.id)))
       .orderBy(zones.id),
+    // 길드장 닉/코드(2026-07-21) — 팝업에서 프로필 링크.
+    db
+      .select({ nickname: characters.nickname, code: profiles.publicCode })
+      .from(characters)
+      .innerJoin(profiles, eq(profiles.id, characters.userId))
+      .where(and(eq(characters.userId, g.leaderUserId), eq(characters.serverId, serverId)))
+      .limit(1),
   ]);
   const s = stats.get(g.id.toString());
   return {
@@ -309,6 +317,8 @@ export async function getGuildSummaryByName(serverId: number, name: string) {
     memberCount: s?.memberCount ?? 0,
     combat: s?.combat ?? 0,
     joinPolicy: g.joinPolicy,
+    leaderNickname: leader?.nickname ?? null,
+    leaderCode: leader?.code ?? null,
     zones: zoneRows.map((z) => ({ name: z.name, region: z.region })),
   };
 }
@@ -329,6 +339,8 @@ export async function getWorldmapZones(serverId: number) {
       ownerEmblemColor: ownerGuild.emblemColor,
       executorUserId: zones.executorUserId,
       executorNickname: characters.nickname,
+      // 집행관 프로필 링크용(2026-07-21) — 구역 팝업에서 클릭 → /u/[code] 이동.
+      executorCode: profiles.publicCode,
       taxDiamond: zones.taxDiamond,
       lastTaxCollectedAt: zones.lastTaxCollectedAt,
       // 거주 인원 — 이 구역을 거주지로 둔 유저 수(상관 서브쿼리, executor 조인과 별개 스코프).
@@ -340,6 +352,7 @@ export async function getWorldmapZones(serverId: number) {
       characters,
       and(eq(characters.userId, zones.executorUserId), eq(characters.serverId, zones.serverId)),
     )
+    .leftJoin(profiles, eq(profiles.id, zones.executorUserId))
     .where(eq(zones.serverId, serverId))
     .orderBy(zones.id);
 }

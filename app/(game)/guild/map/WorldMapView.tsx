@@ -38,6 +38,8 @@ type Zone = {
   ownerEmblemColor: string | null;
   executorUserId: string | null;
   executorNickname: string | null;
+  /** 집행관 공개코드 — 팝업에서 프로필 이동 링크(없으면 링크 미표시). */
+  executorCode: string | null;
   taxDiamond: string;
   lastTaxAt: number | null;
   residentCount: number;
@@ -163,6 +165,20 @@ export function WorldMapView({
   const router = useRouter();
   const [residence, setResidence] = useState<number | null>(residenceZoneId);
   const [selectedId, setSelectedId] = useState<number | null>(null);
+  // 구역 팝업 복원(2026-07-21) — 집행관 프로필로 이동 후 뒤로가기 시 팝업 유지(채팅창 패턴).
+  // 이동 직전 sessionStorage에 구역 id를 남기고, 마운트 시 1회 소비해 재오픈.
+  useEffect(() => {
+    try {
+      const raw = sessionStorage.getItem('ig:worldmap-restore');
+      if (raw != null) {
+        sessionStorage.removeItem('ig:worldmap-restore');
+        const id = Number(raw);
+        if (Number.isInteger(id)) setSelectedId(id);
+      }
+    } catch {
+      // sessionStorage 불가 — 복원만 생략
+    }
+  }, []);
   const [chronicleTab, setChronicleTab] = useState<'yesterday' | 'today' | 'full'>('today'); // 기본 오늘(2026-07-17: 어제 탭 추가)
   // '오늘의 역사' 리플레이(2026-07-16) — 재생 중엔 구역 소유 표시를 그날 아침(before) 상태로
   // 되돌려 두고, 이벤트마다 승자에게 전환(종료 상태 = 현재 DB와 동일). layer는 오버레이 전용.
@@ -253,6 +269,8 @@ export function WorldMapView({
     emblemUrl: string | null;
     intro: string | null;
     joinPolicy: string;
+    leaderNickname: string | null;
+    leaderCode: string | null;
     zones: { name: string; region: Region }[];
   };
   const [guildPopup, setGuildPopup] = useState<GuildPopup | null>(null);
@@ -263,6 +281,19 @@ export function WorldMapView({
       })
       .catch(() => {});
   };
+  // 길드 팝업 복원(2026-07-21) — 길드장 프로필 이동 후 뒤로가기 시 팝업 재오픈(구역 팝업과 동일 패턴).
+  useEffect(() => {
+    try {
+      const name = sessionStorage.getItem('ig:worldmap-restore-guild');
+      if (name) {
+        sessionStorage.removeItem('ig:worldmap-restore-guild');
+        openGuildByName(name);
+      }
+    } catch {
+      // sessionStorage 불가 — 복원만 생략
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   // 점령 현황(OFF 모드) — zones에서 파생. 지역별 구역 묶음 + 길드 순위(점령지 수).
   const regionGroups = useMemo(
@@ -841,7 +872,25 @@ export function WorldMapView({
                   <dt className="text-zinc-500">집행관</dt>
                   <dd className="font-semibold">
                     {selected.executorNickname ? (
-                      <span className="text-indigo-500 dark:text-indigo-400">{selected.executorNickname}</span>
+                      selected.executorCode ? (
+                        // 프로필 이동 — 복원 키를 남겨 뒤로가기 시 이 팝업이 다시 열린다.
+                        <Link
+                          prefetch={false}
+                          href={profileHref(selected.executorCode, serverId)}
+                          onClick={() => {
+                            try {
+                              sessionStorage.setItem('ig:worldmap-restore', String(selected.id));
+                            } catch {
+                              // 저장 실패 시 복원만 생략
+                            }
+                          }}
+                          className="text-indigo-500 underline decoration-dotted underline-offset-2 dark:text-indigo-400"
+                        >
+                          {selected.executorNickname}
+                        </Link>
+                      ) : (
+                        <span className="text-indigo-500 dark:text-indigo-400">{selected.executorNickname}</span>
+                      )
                     ) : (
                       <span className="text-zinc-400">공석</span>
                     )}
@@ -1022,6 +1071,30 @@ export function WorldMapView({
                   {guildPopup.combat.toLocaleString('ko-KR')}
                 </span>
               </p>
+              {guildPopup.leaderNickname ? (
+                <p className="mt-0.5 truncate text-[11px] text-zinc-500">
+                  길드장{' '}
+                  {guildPopup.leaderCode ? (
+                    // 프로필 이동 — 복원 키(길드명)를 남겨 뒤로가기 시 이 팝업이 다시 열린다.
+                    <Link
+                      prefetch={false}
+                      href={profileHref(guildPopup.leaderCode, serverId)}
+                      onClick={() => {
+                        try {
+                          sessionStorage.setItem('ig:worldmap-restore-guild', guildPopup.name);
+                        } catch {
+                          // 저장 실패 시 복원만 생략
+                        }
+                      }}
+                      className="font-semibold text-indigo-500 underline decoration-dotted underline-offset-2 dark:text-indigo-400"
+                    >
+                      {guildPopup.leaderNickname}
+                    </Link>
+                  ) : (
+                    <span className="font-semibold">{guildPopup.leaderNickname}</span>
+                  )}
+                </p>
+              ) : null}
             </div>
           </div>
           <div className="mt-3 border-t border-zinc-100 pt-3 dark:border-zinc-900">
