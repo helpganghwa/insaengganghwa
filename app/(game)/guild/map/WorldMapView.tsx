@@ -905,23 +905,78 @@ export function WorldMapView({
                 <div className="flex items-center justify-between gap-2">
                   <dt className="flex items-center gap-1.5 text-zinc-500">
                     누적 세금
-                    {/* 수금 — 그 구역 집행관 본인만(라벨 오른쪽 작은 버튼) */}
-                    {myUserId != null && selected.executorUserId === myUserId && (
-                      <button
-                        type="button"
-                        onClick={() => {
-                          setCollectConfirm(false);
-                          setCollectNow(Date.now());
-                          setCollectOpen(selected.id);
-                        }}
-                        className="rounded-md bg-emerald-600 px-2 py-0.5 text-[10px] font-bold text-white active:opacity-80"
-                      >
-                        수금
-                      </button>
-                    )}
+                    {/* 수금 — 그 구역 집행관 본인만(라벨 오른쪽 작은 버튼).
+                        쿨다운 중엔 비활성 + ⏳ HH:MM 타이머(2026-07-21 문의 반영). */}
+                    {myUserId != null &&
+                      selected.executorUserId === myUserId &&
+                      (() => {
+                        const end =
+                          selected.lastTaxAt != null
+                            ? selected.lastTaxAt + TAX_COLLECT_COOLDOWN_MIN * 60_000
+                            : 0;
+                        const remMs = end - Date.now();
+                        if (remMs > 0) {
+                          const h = Math.floor(remMs / 3_600_000);
+                          const m = Math.floor((remMs % 3_600_000) / 60_000);
+                          return (
+                            <button
+                              type="button"
+                              disabled
+                              className="rounded-md border border-zinc-300 bg-zinc-100 px-2 py-0.5 font-mono text-[10px] font-bold text-zinc-400 dark:border-zinc-700 dark:bg-zinc-800/60 dark:text-zinc-500"
+                            >
+                              ⏳ {h}:{String(m).padStart(2, '0')}
+                            </button>
+                          );
+                        }
+                        return (
+                          <button
+                            type="button"
+                            onClick={() => {
+                              setCollectConfirm(false);
+                              setCollectNow(Date.now());
+                              setCollectOpen(selected.id);
+                            }}
+                            className="rounded-md bg-emerald-600 px-2 py-0.5 text-[10px] font-bold text-white active:opacity-80"
+                          >
+                            수금
+                          </button>
+                        );
+                      })()}
                   </dt>
                   <dd className="font-mono tabular-nums">💎{selected.taxDiamond}</dd>
                 </div>
+                {/* 다음 수금 — 쿨다운 남은 시간(모두에게 표시, 2026-07-21 문의 채택안 B).
+                    소유 길드가 있을 때만(중립지는 수금 개념 없음). 시각은 절대 시각 병기. */}
+                {selected.ownerGuildId != null && (
+                  <div className="flex justify-between">
+                    <dt className="text-zinc-500">다음 수금</dt>
+                    <dd className="font-semibold">
+                      {(() => {
+                        const end =
+                          selected.lastTaxAt != null
+                            ? selected.lastTaxAt + TAX_COLLECT_COOLDOWN_MIN * 60_000
+                            : 0;
+                        const remMs = end - Date.now();
+                        if (remMs <= 0)
+                          return <span className="text-emerald-600 dark:text-emerald-400">즉시 가능</span>;
+                        const remH = Math.ceil(remMs / 3_600_000);
+                        const rem = remH >= 1 ? `${remH}시간 후` : `${Math.max(1, Math.ceil(remMs / 60_000))}분 후`;
+                        const d = new Date(end);
+                        const kst = new Intl.DateTimeFormat('ko-KR', {
+                          timeZone: 'Asia/Seoul',
+                          month: 'numeric',
+                          day: 'numeric',
+                          hour: 'numeric',
+                        }).format(d);
+                        return (
+                          <span className="text-zinc-600 dark:text-zinc-300">
+                            {rem} 가능 <span className="font-normal text-zinc-400">({kst})</span>
+                          </span>
+                        );
+                      })()}
+                    </dd>
+                  </div>
+                )}
               </dl>
 
             {canSetResidence &&
