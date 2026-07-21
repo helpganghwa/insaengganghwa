@@ -2,6 +2,7 @@ import 'server-only';
 
 import { pgGuard } from '@/lib/db/guarded';
 import { createCharacterAuto } from '@/lib/game/server-select';
+import { pieceCombatPower } from '@/lib/game/balance';
 import { parseFaceBox, type FaceBox } from '@/components/faceCrop';
 
 // 반쪽 계정 자가복구 — 콜백의 createCharacterAuto가 실패하면 profiles만 있고 characters가
@@ -31,6 +32,8 @@ export interface LayoutData {
   profileFaceBox: FaceBox | null;
   /** 헤더 우측 길드 문양 — 미소속/생성중이면 null(미표시). */
   guildEmblemUrl: string | null;
+  /** 닉네임 아래 서브라인(2026-07-21 문의 반영) — 전투력·최고강화·합산강화. 로드 실패 시 null(미표시). */
+  stats: { combat: number; maxEnhance: number; sumEnhance: number } | null;
 }
 
 const DEFAULTS: LayoutData = {
@@ -43,6 +46,7 @@ const DEFAULTS: LayoutData = {
   profileSouth: null,
   profileFaceBox: null,
   guildEmblemUrl: null,
+  stats: null,
 };
 
 /**
@@ -52,7 +56,7 @@ const DEFAULTS: LayoutData = {
 export async function loadLayoutData(userId: string, serverId: number): Promise<LayoutData> {
   try {
     // pgGuard: 타임아웃 시 쿼리 취소 → 풀 커넥션 즉시 회수(모든 페이지가 호출하는 핫패스).
-    const [profileRows, mailRows, enhRows, friendReqRows] = await Promise.all([
+    const [profileRows, mailRows, enhRows, friendReqRows, equipRows] = await Promise.all([
       pgGuard(
         (sql) => sql`
           select c.nickname, c.nickname_changed_count, c.diamond, up.rotations, up.options as profile_options, g.emblem_url as guild_emblem_url
@@ -93,6 +97,16 @@ export async function loadLayoutData(userId: string, serverId: number): Promise<
           limit 1`,
         4000,
         'layout.friendreq',
+      ),
+      // 헤더 서브라인 스탯 — 전투력은 조각별 수식(pieceCombatPower)이라 행을 가져와 JS 합산
+      // (채팅 프로필 팝업과 동일 산식·동일 소스 = 수치 일치).
+      pgGuard(
+        (sql) => sql`
+          select enhance_level as e, transcend_level as t, max_enhance_level as mx
+          from user_equipment
+          where user_id = ${userId}::uuid and server_id = ${serverId}`,
+        4000,
+        'layout.stats',
       ),
     ]);
     const p = profileRows[0] as
@@ -145,6 +159,14 @@ export async function loadLayoutData(userId: string, serverId: number): Promise<
       profileSouth: (rot as Record<string, string> | null)?.south ?? null,
       profileFaceBox: faceBox,
       guildEmblemUrl: p?.guild_emblem_url ?? null,
+      stats: (() => {
+        const eq = equipRows as { e: number; t: number; mx: number }[];
+        return {
+          combat: eq.reduce((acc, r) => acc + pieceCombatPower(r.e, r.t), 0),
+          maxEnhance: eq.reduce((acc, r) => Math.max(acc, r.mx), 0),
+          sumEnhance: eq.reduce((acc, r) => acc + r.e, 0),
+        };
+      })(),
     };
   } catch (e) {
     console.warn('[layout] data load failed — defaults', (e as Error).message);
