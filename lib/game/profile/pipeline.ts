@@ -29,7 +29,7 @@ import { reviewProfile, type ReviewVerdict } from './ai-review';
 import { pixellabKeyByIdx, keyIdxFromOptions } from './pixellab-keys';
 import { anyBackgroundOpaque } from './bg-alpha';
 import { detectFullBodyCrop } from './crop-check';
-import { detectFaceBox, type FaceBox } from './face-box';
+import { detectFaceBox, reconcileFaceBox, type FaceBox } from './face-box';
 
 /** 검토 결과 push — 실패는 무시(전체 흐름 막지 않음). 토글·구독은 sendPushToUser가 처리. */
 async function safePush(
@@ -231,8 +231,8 @@ export async function pollAndProcessDownloading(limit = 5): Promise<{
           .upload(path, png, { contentType: 'image/png', upsert: true, cacheControl: '604800' });
         if (up.error) throw new Error(`storage upload south: ${up.error.message}`);
         const rotations = { south: supabase.storage.from(STORAGE_BUCKET).getPublicUrl(path).data.publicUrl };
-        // 얼굴 크롭 박스 — 원본 south에서 결정론 검출(실패 시 검수 head 폴백).
-        const faceBox = (await detectFaceBox(png)) ?? review.verdict.head ?? null;
+        // 얼굴 크롭 박스 — 실루엣 감지·AI 머리 박스 교차검증 + cx 런 스냅(2026-07-21 쩌내·SEB).
+        const faceBox = await reconcileFaceBox(png, await detectFaceBox(png), review.verdict.head ?? null);
         await acceptJob(job.id, job.serverId, job.userId, rotations, job.characterId, job.options, job.equipmentSnapshot, job.description, review.verdict, faceBox);
         accepted += 1;
       } else {
@@ -367,7 +367,7 @@ export async function adminGrantAvatarForJob(jobId: bigint): Promise<{ ok: boole
   const sup = await supabase.storage.from(STORAGE_BUCKET).upload(spath, spng, { contentType: 'image/png', upsert: true, cacheControl: '604800' });
   if (sup.error) return { ok: false, msg: `이미지 미러링 실패: ${sup.error.message}` };
   const rotations = { south: supabase.storage.from(STORAGE_BUCKET).getPublicUrl(spath).data.publicUrl };
-  const faceBox = await detectFaceBox(spng);
+  const faceBox = await reconcileFaceBox(spng, await detectFaceBox(spng), null);
   const adminOptions = faceBox
     ? { ...(job.options as Record<string, unknown>), faceBox }
     : job.options;

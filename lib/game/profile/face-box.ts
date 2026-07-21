@@ -17,6 +17,58 @@ export interface FaceBox {
 
 const ALPHA_ON = 128;
 
+/**
+ * faceBox 확정(2026-07-21 쩌내·SEB 사례) — 실루엣 감지(det)와 AI 머리 박스(ai)를 교차검증해
+ * 채택하고, 얼굴 행의 몸체 런 중심으로 cx를 스냅한다.
+ *  - 두 소스가 크게 어긋나면(Δcy>0.05 또는 Δcx>0.06) 실루엣이 깃발·창 돌출물에 끌린
+ *    신호로 보고 AI 쪽 채택(AI 프롬프트는 배너·무기 무시를 명시 — 파국적 오류가 없음).
+ *  - cx 스냅: cy 행의 불투명 런(≥W*4%) 중 cx에 가장 가까운 런의 중심으로 이동(±0.08 한도)
+ *    — AI의 중앙 앵커링(cx≈0.5 관성)을 실제 머리 위치로 교정(쩌내 0.49→0.43 검증).
+ */
+export async function reconcileFaceBox(
+  png: Buffer,
+  det: FaceBox | null,
+  ai: FaceBox | null,
+): Promise<FaceBox | null> {
+  const primary =
+    det && ai
+      ? Math.abs(det.cy - ai.cy) > 0.05 || Math.abs(det.cx - ai.cx) > 0.06
+        ? ai
+        : det
+      : (det ?? ai);
+  if (!primary) return null;
+  try {
+    const { data, info } = await sharp(png).ensureAlpha().raw().toBuffer({ resolveWithObject: true });
+    const { width: W, height: H, channels: C } = info;
+    if (C < 4 || W < 16 || H < 16) return primary;
+    const alpha = (x: number, y: number) => data[(y * W + x) * C + 3]!;
+    const y = Math.min(H - 1, Math.max(0, Math.round(primary.cy * H)));
+    // cy 행의 불투명 런 수집(폭 ≥ W*4% — 창대·깃대 제외)
+    const minRun = Math.max(6, Math.round(W * 0.04));
+    const runs: { s: number; e: number }[] = [];
+    let s = -1;
+    for (let x = 0; x < W; x++) {
+      const on = alpha(x, y) >= ALPHA_ON;
+      if (on && s < 0) s = x;
+      if (!on && s >= 0) {
+        if (x - s >= minRun) runs.push({ s, e: x - 1 });
+        s = -1;
+      }
+    }
+    if (s >= 0 && W - s >= minRun) runs.push({ s, e: W - 1 });
+    if (runs.length === 0) return primary; // 행에 몸체 없음 — 원본 유지(호출부 판단)
+    const px = primary.cx * W;
+    const nearest = runs.sort(
+      (a, b) => Math.abs((a.s + a.e) / 2 - px) - Math.abs((b.s + b.e) / 2 - px),
+    )[0]!;
+    const cx = (nearest.s + nearest.e) / 2 / W;
+    // 스냅 한도 ±0.08 — 얼굴이 아닌 먼 물체 런으로 튀는 것 방지.
+    return Math.abs(cx - primary.cx) <= 0.08 ? { ...primary, cx } : primary;
+  } catch {
+    return primary;
+  }
+}
+
 export async function detectFaceBox(png: Buffer): Promise<FaceBox | null> {
   try {
     const { data, info } = await sharp(png).ensureAlpha().raw().toBuffer({ resolveWithObject: true });
