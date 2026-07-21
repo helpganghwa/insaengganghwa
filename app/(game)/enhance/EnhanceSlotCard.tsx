@@ -323,7 +323,11 @@ export function EnhanceSlotCard({
       const r = await finalizeEnhance(activeJob.jobId).catch(() => null);
       if (!r) {
         setAttempting(false);
-        showError('전송에 실패했어요. 연결을 확인하고 다시 시도해 주세요.');
+        // 응답 유실 ≠ 판정 실패(2026-07-21 공포님 제보) — 배포 직후 구버전 클라이언트나
+        // 모바일 복귀 직후엔 서버 판정은 커밋됐는데 응답만 못 받는 케이스가 실재한다.
+        // 스테일 카드를 그대로 두면 "게이지만 초기화"로 보이므로 즉시 서버 상태로 재동기화.
+        showError('연결이 불안정해 결과 표시에 실패했어요. 최신 상태로 다시 불러옵니다.');
+        router.refresh();
         return;
       }
       if (r.status === 'error') {
@@ -423,8 +427,10 @@ export function EnhanceSlotCard({
       const r = await reduceTimeWithGems(activeJob.jobId, instantCost).catch(() => null);
       if (!r) {
         setOptimisticDone(false);
-        adjustDiamond(debit); // 전송 실패 롤백
-        showError('전송에 실패했어요. 연결을 확인하고 다시 시도해 주세요.');
+        adjustDiamond(debit); // 전송 실패 롤백(실행됐다면 아래 refresh가 실차감 반영)
+        showError('연결이 불안정해요. 최신 상태로 다시 불러옵니다.');
+        // 응답 유실 시 서버는 이미 단축됐을 수 있음 — 재동기화로 실제 상태 표시(이중 결제 방지).
+        router.refresh();
         return;
       }
       if (r.status === 'error') {
@@ -455,8 +461,10 @@ export function EnhanceSlotCard({
       })
       .catch(() => {
         // 전송 실패(오프라인 등) — 서버엔 잡이 살아있는데 placeholder로 굳으면 슬롯이 죽는다.
+        // 응답 유실이면 취소는 이미 처리됐을 수 있음 — 재동기화로 실제 상태 표시.
         setOptimisticCancelled(false);
-        showError('취소가 전송되지 않았어요. 연결을 확인하고 다시 시도해 주세요.');
+        showError('연결이 불안정해요. 최신 상태로 다시 불러옵니다.');
+        router.refresh();
       });
   };
 
