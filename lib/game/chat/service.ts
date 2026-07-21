@@ -209,10 +209,12 @@ export async function getRecentChat(
       .orderBy(desc(chatMessages.id))
       .limit(limit),
     // 시스템 라인 병합 — 전체=월드 피드(30s 캐시), 길드=길드 활동 로그. 실시간은 폴링(15s)이 커버.
+    // 깊이 150(2026-07-21): 30건이면 채팅 100건이 걸치는 기간을 못 덮어, 옛 채팅 사이의
+    // 피드 줄만 창 밖으로 밀려 사라지는 비대칭 발생(채팅은 남는데 피드만 증발).
     limit > 1
       ? guildId
-        ? getGuildActivityLog(guildId, serverId, 30).catch(() => [])
-        : getWorldFeed(serverId, 30).catch(() => [])
+        ? getGuildActivityLog(guildId, serverId, 150).catch(() => [])
+        : getWorldFeed(serverId, 150).catch(() => [])
       : Promise.resolve([]),
   ]);
   const fields = await displayFields(rows.map((r) => r.userId), serverId);
