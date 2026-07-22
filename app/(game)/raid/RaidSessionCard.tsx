@@ -471,10 +471,11 @@ export function RaidSessionCard({ view: v, serverId }: { view: RaidView; serverI
           ) : null}
         </div>
 
-        {/* 상단 3열: 뒤로가기 | 보스명·방장(중앙) | 타이머 — 뒤로가기 추가로 보스명을 중앙 이동(2026-07-22). */}
-        <div className="absolute left-0 right-0 top-0 z-10 grid grid-cols-[auto_1fr_auto] items-center gap-2 p-3">
+        {/* 상단: 뒤로가기(좌)·타이머(우) + 보스명·방장은 절대 배치로 **화면 기준 정중앙**
+            — 좌우 요소 폭이 달라도 중앙 고정(2026-07-22). */}
+        <div className="absolute left-0 right-0 top-0 z-10 flex items-center justify-between p-3">
           <BackFab fallback="/raid" className="h-8 w-8" />
-          <div className="min-w-0 truncate text-center text-sm font-extrabold drop-shadow">
+          <div className="pointer-events-none absolute inset-x-20 top-1/2 -translate-y-1/2 truncate text-center text-sm font-extrabold drop-shadow">
             {boss.name}
             {v.isHost ? (
               <span className="ml-1 rounded bg-amber-500 px-1 text-[9px] text-amber-950">방장</span>
