@@ -12,7 +12,15 @@ const LABEL: Record<LeaderboardMetric, string> = {
   sum: '합산 강화',
   combat: '전투력',
   raid: '레이드 처치',
-  melee: '대난투', // 2026-07-22 개편 — 값=누적 포인트
+  melee: '대난투', // 2026-07-22 개편 — 값=감쇠 랭킹 포인트(반감기 14일)
+};
+// 탭별 산정 기준 캡션 — 내 순위 카드 아래 상시 표시(A안, 2026-07-22).
+const CRITERIA: Record<LeaderboardMetric, string> = {
+  max: '보유 장비 중 가장 높은 강화 레벨이에요.',
+  sum: '보유 장비 전체의 강화 레벨을 더한 값이에요.',
+  combat: '보유 장비 전체의 전투력을 더한 값이에요.',
+  raid: '처치에 성공한 레이드에 참여한 횟수예요.',
+  melee: '대난투 순위로 얻는 랭킹 포인트. 최근 성적일수록 크게 반영돼요(점수 가치는 14일마다 절반).',
 };
 // metric별 명예의 전당 배경(현재 전부 동일 전당 배경 사용).
 const BG: Record<LeaderboardMetric, string> = {
@@ -53,6 +61,8 @@ export default async function LeaderboardPage({
             : '기록을 쌓으면 집계됩니다'}
         </span>
       </section>
+      {/* space-y-4(16px)를 -mt로 좁혀 카드에 종속된 캡션으로 보이게(6px 간격). */}
+      <p className="-mt-2.5 px-1 text-[10px] leading-relaxed text-zinc-500">{CRITERIA[metric]}</p>
 
       {top.length === 0 ? (
         <section className="rounded-xl border border-zinc-800 bg-zinc-900 px-4 py-10 text-center text-sm text-zinc-400">
