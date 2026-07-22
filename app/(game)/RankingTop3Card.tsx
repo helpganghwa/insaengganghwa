@@ -12,7 +12,7 @@ const METRICS: { metric: LeaderboardMetric; label: string }[] = [
   { metric: 'sum', label: '합산 강화' },
   { metric: 'combat', label: '전투력' },
   { metric: 'raid', label: '레이드 처치' },
-  { metric: 'melee', label: '대난투 우승' },
+  { metric: 'melee', label: '대난투' }, // 2026-07-22 개편 — 값=누적 포인트
 ];
 
 type Deck = (typeof METRICS)[number] & { top: Awaited<ReturnType<typeof getRankingTop>> };
