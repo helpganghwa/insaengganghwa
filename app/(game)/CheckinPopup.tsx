@@ -92,6 +92,11 @@ export function CheckinPopup({ dayProgress }: { dayProgress: number }) {
   const mileLabel = rewardLabel(CHECKIN_CALENDAR[mileDay - 1]!);
   const bonusLabel = `💎${fmt(CHECKIN_COMPLETE_BONUS_DIAMOND)}`; // 완주 보너스(칸 보상과 별도 1회)
   const today = CHECKIN_CALENDAR[day - 1]!;
+  // 28일째는 칸 보상 + 완주 보너스가 함께 지급 — 버튼·완료 문구는 합계로 표기(사용자 확정).
+  const todayLabel =
+    day === CHECKIN_CYCLE_DAYS && today.kind === 'diamond'
+      ? `💎${fmt(today.amount + CHECKIN_COMPLETE_BONUS_DIAMOND)}`
+      : rewardLabel(today);
   const weekDays = Array.from({ length: 7 }, (_, i) => (week - 1) * 7 + i + 1);
   // 게이지는 "받은 만큼"(수령 전 = 어제까지) — 수령 순간 오늘 몫이 차오르는 연출.
   const filled = claimed ? day : day - 1;
@@ -141,15 +146,14 @@ export function CheckinPopup({ dayProgress }: { dayProgress: number }) {
 
   return (
     <div className="fixed inset-0 z-[80] flex items-center justify-center bg-black/65 p-5 backdrop-blur-sm">
-      <style>{`@keyframes checkin-pop{0%{transform:scale(1)}45%{transform:scale(1.4)}100%{transform:scale(1)}}`}</style>
       <div className="w-full max-w-[340px] rounded-2xl border border-amber-800/70 bg-zinc-900 p-4 shadow-2xl shadow-black/60">
         <p className="text-center text-sm font-extrabold text-amber-200">출석 {day}일째</p>
         <p className="mt-0.5 text-center text-[11px] text-zinc-400">
           {week}주 차 — {mileDay}일째 {mileLabel}
         </p>
 
-        {/* 이번 주 7칸 — 3+3+1 구성(사용자 확정): 평일 6칸 3열 2행 + 7일째 큰 보상 풀와이드 강조. */}
-        <div className="mt-3 grid grid-cols-3 gap-1.5">
+        {/* 이번 주 7칸 — 6+1 구성(사용자 확정): 평일 6칸 한 줄 + 7일째 큰 보상 풀와이드 강조. */}
+        <div className="mt-3 grid grid-cols-6 gap-1">
           {weekDays.map((d) => {
             const r = CHECKIN_CALENDAR[d - 1]!;
             const isToday = d === day;
@@ -164,14 +168,12 @@ export function CheckinPopup({ dayProgress }: { dayProgress: number }) {
                 : mile
                   ? 'border-violet-500/80 bg-violet-950/40 text-violet-200 shadow-[0_0_8px_rgba(168,85,247,0.25)]'
                   : 'border-zinc-700/60 bg-zinc-800/70 text-zinc-400';
-            const pop = isToday && claimed ? { animation: 'checkin-pop 0.8s ease' } : undefined;
             if (mile) {
               // 마지막 칸 — 풀와이드 큰 보상(강조): 아이콘 + "N일째 큰 보상 · 라벨"
               return (
                 <div
                   key={d}
-                  className={`col-span-3 flex items-center justify-center gap-2 rounded-xl border py-2 transition-all duration-500 ${stateCls}`}
-                  style={pop}
+                  className={`col-span-6 flex items-center justify-center gap-2 rounded-xl border py-2 transition-all duration-500 ${stateCls}`}
                 >
                   <span className="text-lg leading-none">{isToday && claimed ? '✅' : rewardIcon(r, d)}</span>
                   <span className="text-[11px] font-extrabold">
@@ -187,7 +189,6 @@ export function CheckinPopup({ dayProgress }: { dayProgress: number }) {
               <div
                 key={d}
                 className={`flex flex-col items-center gap-1 rounded-xl border py-2 transition-all duration-500 ${stateCls}`}
-                style={pop}
               >
                 <span className="text-base leading-none">
                   {isToday && claimed ? '✅' : rewardIcon(r, d)}
@@ -241,7 +242,7 @@ export function CheckinPopup({ dayProgress }: { dayProgress: number }) {
 
         {claimed ? (
           <div className="mt-3.5 rounded-xl bg-emerald-950/80 py-2.5 text-center text-sm font-extrabold text-emerald-300">
-            {rewardLabel(today)} 지급 완료!
+            {todayLabel} 지급 완료!
           </div>
         ) : (
           <button
@@ -253,7 +254,7 @@ export function CheckinPopup({ dayProgress }: { dayProgress: number }) {
             {pending
               ? '수령 중…'
               : // 다이아는 라벨에 💎가 이미 있어 아이콘 생략(💎 중복 표기 방지).
-                `${today.kind === 'diamond' ? '' : `${rewardIcon(today, day)} `}${rewardLabel(today)} 받기`}
+                `${today.kind === 'diamond' ? '' : `${rewardIcon(today, day)} `}${todayLabel} 받기`}
           </button>
         )}
 
