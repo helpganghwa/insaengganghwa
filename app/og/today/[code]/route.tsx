@@ -29,7 +29,7 @@ const fmt = (n: number) => n.toLocaleString('ko-KR');
 
 /**
  * 오늘의 성장 카드 OG(2026-07-16 확정 — 기록 증서 B 수정판) — 미리보기·카톡·💾저장이
- * 전부 이 PNG 하나(단일 진실). 중앙 정렬 증서 + 우측 대표 아바타 + 최고/합산/강화 칩.
+ * 전부 이 PNG 하나(단일 진실). 좌측 증서 컬럼 + 우측 대표 아바타 2분할(today/all 공통).
  */
 export async function GET(req: Request, { params }: { params: Promise<{ code: string }> }) {
   const { code } = await params;
@@ -90,127 +90,71 @@ export async function GET(req: Request, { params }: { params: Promise<{ code: st
         ...(t.attempts > 0 ? [`강화 ${t.attempts}회 · 성공 ${t.success}`] : []),
       ];
 
-  // '나의 인생강화'(mode=all) — 좌측 텍스트(중앙 정렬) / 우측 아바타 2분할(2026-07-19 B안 확정).
-  if (modeAll) {
-    return new ImageResponse(
-      (
-        <div
-          style={{
-            width: '100%', height: '100%', display: 'flex', flexDirection: 'row',
-            background: 'linear-gradient(160deg, #131a2b 0%, #0a0c12 60%)',
-          }}
-        >
-          {/* 좌측 — 텍스트 컬럼 */}
-          <div
-            style={{
-              display: 'flex', flexDirection: 'column', justifyContent: 'center',
-              alignItems: 'center', width: 690, paddingLeft: 40, paddingRight: 10,
-            }}
-          >
-            <div style={{ display: 'flex', fontSize: 30, fontWeight: 800, color: '#fbbf24', letterSpacing: 14 }}>
-              나의 인생강화
-            </div>
-            <div style={{ display: 'flex', width: 120, height: 3, background: 'rgba(245,158,11,0.5)', marginTop: 20 }} />
-            <div style={{ display: 'flex', fontSize: 44, fontWeight: 700, color: '#e7e5e4', marginTop: 24 }}>
-              {prof.nickname}
-            </div>
-            <div style={{ display: 'flex', fontSize: 23, color: '#78716c', marginTop: 10 }}>{randomQuote()}</div>
-            <div style={{ display: 'flex', fontSize: 92, fontWeight: 800, color: main.color, marginTop: 18 }}>
-              {main.big}
-            </div>
-            <div style={{ display: 'flex', fontSize: 26, color: '#a8a29e', marginTop: 4 }}>{main.sub}</div>
-            <div style={{ display: 'flex', flexWrap: 'wrap', gap: 12, marginTop: 26, maxWidth: 600 }}>
-              {chips.map((c) => (
-                <div
-                  key={c}
-                  style={{
-                    display: 'flex', fontSize: 21, color: '#d6d3d1', padding: '9px 20px',
-                    background: 'rgba(255,255,255,0.07)', borderRadius: 999,
-                  }}
-                >
-                  {c}
-                </div>
-              ))}
-            </div>
-            <div style={{ display: 'flex', fontSize: 20, color: '#57534e', marginTop: 30 }}>
-              {`${y}. ${Number(m)}. ${Number(d)} (${dayKo}) · ganghwa.app`}
-            </div>
-          </div>
-          {/* 우측 — 아바타 컬럼(바닥 정렬) */}
-          <div
-            style={{
-              display: 'flex', flex: 1, alignItems: 'flex-end', justifyContent: 'center',
-              paddingBottom: 0,
-            }}
-          >
-            {avatar ? (
-              // eslint-disable-next-line @next/next/no-img-element
-              <img
-                src={avatar}
-                width={500}
-                height={600}
-                style={{ objectFit: 'contain', opacity: 0.96 }}
-              />
-            ) : null}
-          </div>
-        </div>
-      ),
-      size,
-    );
-  }
-
+  // 좌측 텍스트(중앙 정렬) / 우측 아바타 2분할 — mode=all B안(2026-07-19)을 today에도
+  // 통일 적용(2026-07-22 피드백 — today만 중앙 정렬+배경 아바타로 남아 있었음).
   return new ImageResponse(
     (
       <div
         style={{
-          width: '100%', height: '100%', display: 'flex', flexDirection: 'column',
-          alignItems: 'center', justifyContent: 'center', position: 'relative',
-          paddingTop: 8, paddingBottom: 8,
-          // 이미지 프레임 폐기(2026-07-16) — CSS 그라데이션 + 아바타 후광만.
+          width: '100%', height: '100%', display: 'flex', flexDirection: 'row',
           background: 'linear-gradient(160deg, #131a2b 0%, #0a0c12 60%)',
         }}
       >
-        {/* 우측 아바타 — 배경 요소 */}
-        {avatar ? (
-          // eslint-disable-next-line @next/next/no-img-element
-          <img
-            src={avatar}
-            width={552}
-            height={620}
-            style={{ position: 'absolute', right: -85, bottom: 5, objectFit: 'contain', opacity: 0.94 }}
-          />
-        ) : null}
-
-        <div style={{ display: 'flex', fontSize: 30, fontWeight: 800, color: '#fbbf24', letterSpacing: 18 }}>
-          오늘의 인생강화
+        {/* 좌측 — 텍스트 컬럼 */}
+        <div
+          style={{
+            display: 'flex', flexDirection: 'column', justifyContent: 'center',
+            alignItems: 'center', width: 690, paddingLeft: 40, paddingRight: 10,
+          }}
+        >
+          <div style={{ display: 'flex', fontSize: 30, fontWeight: 800, color: '#fbbf24', letterSpacing: 14 }}>
+            {modeAll ? '나의 인생강화' : '오늘의 인생강화'}
+          </div>
+          <div style={{ display: 'flex', width: 120, height: 3, background: 'rgba(245,158,11,0.5)', marginTop: 20 }} />
+          <div style={{ display: 'flex', fontSize: 44, fontWeight: 700, color: '#e7e5e4', marginTop: 24 }}>
+            {prof.nickname}
+          </div>
+          <div style={{ display: 'flex', fontSize: 23, color: '#78716c', marginTop: 10 }}>{randomQuote()}</div>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 16, marginTop: 18 }}>
+            {main.arrow ? (
+              <div style={{ display: 'flex', fontSize: 44, fontWeight: 800, color: main.color, marginTop: 8 }}>{main.arrow}</div>
+            ) : null}
+            <div style={{ display: 'flex', fontSize: 92, fontWeight: 800, color: main.color }}>{main.big}</div>
+          </div>
+          <div style={{ display: 'flex', fontSize: 26, color: '#a8a29e', marginTop: 4 }}>{main.sub}</div>
+          <div style={{ display: 'flex', flexWrap: 'wrap', justifyContent: 'center', gap: 12, marginTop: 26, maxWidth: 600 }}>
+            {chips.map((c) => (
+              <div
+                key={c}
+                style={{
+                  display: 'flex', fontSize: 21, color: '#d6d3d1', padding: '9px 20px',
+                  background: 'rgba(255,255,255,0.07)', borderRadius: 999,
+                }}
+              >
+                {c}
+              </div>
+            ))}
+          </div>
+          <div style={{ display: 'flex', fontSize: 20, color: '#57534e', marginTop: 30 }}>
+            {`${y}. ${Number(m)}. ${Number(d)} (${dayKo}) · ganghwa.app`}
+          </div>
         </div>
-        <div style={{ display: 'flex', width: 120, height: 3, background: 'rgba(245,158,11,0.5)', marginTop: 22 }} />
-        <div style={{ display: 'flex', fontSize: 44, fontWeight: 700, color: '#e7e5e4', marginTop: 26 }}>
-          {prof.nickname}
-        </div>
-        <div style={{ display: 'flex', fontSize: 24, color: '#78716c', marginTop: 10 }}>{randomQuote()}</div>
-        <div style={{ display: 'flex', alignItems: 'center', gap: 16, marginTop: 22 }}>
-          {main.arrow ? (
-            <div style={{ display: 'flex', fontSize: 44, fontWeight: 800, color: main.color, marginTop: 8 }}>{main.arrow}</div>
+        {/* 우측 — 아바타 컬럼(바닥 정렬) */}
+        <div
+          style={{
+            display: 'flex', flex: 1, alignItems: 'flex-end', justifyContent: 'center',
+            paddingBottom: 0,
+          }}
+        >
+          {avatar ? (
+            // eslint-disable-next-line @next/next/no-img-element
+            <img
+              src={avatar}
+              width={500}
+              height={600}
+              style={{ objectFit: 'contain', opacity: 0.96 }}
+            />
           ) : null}
-          <div style={{ display: 'flex', fontSize: 92, fontWeight: 800, color: main.color }}>{main.big}</div>
-        </div>
-        <div style={{ display: 'flex', fontSize: 26, color: '#a8a29e', marginTop: 6 }}>{main.sub}</div>
-        <div style={{ display: 'flex', gap: 14, marginTop: 30 }}>
-          {chips.map((c) => (
-            <div
-              key={c}
-              style={{
-                display: 'flex', fontSize: 22, color: '#d6d3d1', padding: '10px 24px',
-                background: 'rgba(255,255,255,0.07)', borderRadius: 999,
-              }}
-            >
-              {c}
-            </div>
-          ))}
-        </div>
-        <div style={{ display: 'flex', fontSize: 20, color: '#57534e', marginTop: 34 }}>
-          {`${y}. ${Number(m)}. ${Number(d)} (${dayKo}) · ganghwa.app`}
         </div>
       </div>
     ),
