@@ -520,7 +520,7 @@ export type MeleeReward = { diamond: number; boxes: number };
  * 설계: 1위만 특별(2위의 ~1.7배), 이후 완만한 균등 곡선(순위 스트레스 최소화 — 경쟁
  * 동기는 포인트가 담당: 1위 20 vs 2위 10). 절대 순위 구간(1~200) 우선, 퍼센타일은
  * 참가자 667명+부터 실효(그 전엔 절대 구간이 선매칭). 상자는 3의 배수(distributeBoxes).
- * 랭킹 = 누적 포인트(leaderboard metric 'melee') — 우승 횟수는 통계·마일스톤으로 유지.
+ * 랭킹 = 감쇠 포인트(leaderboard metric 'melee', 반감기 14일) — 우승 횟수는 통계·마일스톤으로 유지.
  *  - maxRank: 절대 순위 상한 / pct: 퍼센타일 상한(ceil(n*pct)) / 아무것도 없으면 참가(전원).
  */
 export type MeleeTier = {
@@ -561,10 +561,20 @@ export function meleeRewardForRank(rank: number, n: number): MeleeReward {
   return { diamond: t.diamond, boxes: t.boxes };
 }
 
-/** 랭킹 포인트 — 발표 시 참가자 전원 적립(리더보드 'melee' = 누적 포인트). */
+/** 랭킹 포인트 — 발표 시 참가자 전원 적립(리더보드 'melee'). */
 export function meleePointsForRank(rank: number, n: number): number {
   return meleeTierForRank(rank, n).points;
 }
+
+/**
+ * 대난투 랭킹 포인트 반감기(일) — 획득 포인트의 랭킹 반영 가치가 이 일수마다 절반으로
+ * 지수 감쇠한다(가중치 = 0.5^(경과일/14)). 누적제의 구조적 문제(운영 기간에 비례해
+ * 자라는 고인물 벽 — 후발 유저가 아무리 잘해도 격차 고정) 해소: 수렴 상한이
+ * "일평균 성적 × 상수"라 언제 시작해도 최근 성적만 좋으면 반드시 역전한다.
+ * 하드 컷(롤링 창) 대신 감쇠 — 창 밖 이탈로 순위가 하루아침에 꺼지는 절벽 없음.
+ * 통산 누적 포인트(이력서 표시)는 감쇠 없이 별도 유지.
+ */
+export const MELEE_POINT_HALF_LIFE_DAYS = 14;
 
 // ─────────────────────────────────────────────────────────────────────────────
 // §9. 배틀패스 (성장 패스 — 만료 없음)

@@ -6,7 +6,7 @@ import { db } from '@/lib/db/client';
 import { profiles } from '@/lib/db/schema/profiles';
 import { userEquipment } from '@/lib/db/schema/equipment';
 import { raids, raidParticipants } from '@/lib/db/schema/raid';
-import { meleePointsCaseSql } from '@/lib/game/melee/points';
+import { meleeDecayedPointsSumSql } from '@/lib/game/melee/points';
 import { codexChampions } from '@/lib/db/schema/leaderboard';
 import { userMilestones } from '@/lib/db/schema/world';
 import { milestoneOf } from '@/lib/game/milestone';
@@ -96,12 +96,16 @@ async function raidRows(serverId: number): Promise<Row[]> {
   return r.map((x) => ({ userId: x.userId, value: Number(x.value) }));
 }
 
-/** melee = 누적 포인트(2026-07-22 개편) — CASE는 MELEE_REWARD_TIERS 단일 출처(points.ts). */
+/**
+ * melee = 감쇠 포인트(반감기 14일, 2026-07-22) — Σ(구간 포인트 × 0.5^(경과일/14)).
+ * 집계식은 MELEE_REWARD_TIERS 단일 출처(points.ts). 시간이 지나며 줄어드는 감쇠 진행분은
+ * 이 매시 재계산이 자연 반영(별도 만료 작업 불필요).
+ */
 async function meleeRows(serverId: number): Promise<Row[]> {
   const r = await db
     .execute(sql`
       select mp.user_id::text as user_id,
-             coalesce(sum(${sql.raw(meleePointsCaseSql('mp.final_rank', 'pc.n'))}), 0)::int as value
+             ${sql.raw(meleeDecayedPointsSumSql('mp.final_rank', 'pc.n', 'mb.battle_date'))} as value
       from melee_participants mp
       join melee_battles mb on mb.id = mp.battle_id
       join (select battle_id, count(*)::int as n from melee_participants group by battle_id) pc
