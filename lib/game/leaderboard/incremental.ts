@@ -5,12 +5,11 @@ import { and, eq, gte, sql } from 'drizzle-orm';
 import { db } from '@/lib/db/client';
 import { userEquipment } from '@/lib/db/schema/equipment';
 import { raids, raidParticipants } from '@/lib/db/schema/raid';
-import { meleeBattles } from '@/lib/db/schema/melee';
 import { milestoneOf } from '@/lib/game/milestone';
 import { logWorldEvent } from '@/lib/game/world/event';
 import { logMemberAchievement } from '@/lib/game/guild/achievement';
 import { combatPowerFromOwned } from '@/lib/game/equipment/combat-power';
-import { meleePointsCaseSql } from '@/lib/game/melee/points';
+import { meleeDecayedPointsSumSql } from '@/lib/game/melee/points';
 
 /**
  * 리더보드 **증분 갱신**(v2, 2026-07-07) — 값 테이블(leaderboard_ranks)을 쓰기 시점에
@@ -166,6 +165,9 @@ export async function bumpCountMetric(userIds: string[], serverId: number, metri
  * 대난투 포인트 적립(2026-07-22) — 발표 시 참가자 전원, 유저별 가변 포인트 +.
  * bumpCountMetric와 동일한 락·신규삽입 recount 교정 구조. 마일스톤은 호출하지 않음 —
  * melee 마일스톤은 '우승 횟수' 기반으로 reveal에서 별도 클레임(포인트 오발화 차단).
+ * 감쇠(반감기 14일)와의 정합: 발표일 포인트는 가중치 1.0이라 원포인트 +p가 정확하고,
+ * 기존 값의 감쇠 진행분은 매시 스냅샷 재계산이 흡수한다(증분은 항상 상한 근사 — 낙관 오차
+ * 는 최대 1시간 내 교정).
  */
 export async function bumpMeleePoints(
   entries: { userId: string; points: number }[],
@@ -219,11 +221,10 @@ async function recountCountMetric(
       );
     return r?.n ?? 0;
   }
-  // melee = 누적 포인트(2026-07-22 개편) — 참가 순위×구간 포인트 합. CASE는 MELEE_REWARD_TIERS
-  // 단일 출처에서 생성(points.ts) — TS 함수·스냅샷과 결과 항상 일치.
-  const caseExpr = meleePointsCaseSql('mp.final_rank', 'pc.n');
+  // melee = 감쇠 포인트(반감기 14일, 2026-07-22) — Σ(구간 포인트 × 0.5^(경과일/14)).
+  // 집계식은 MELEE_REWARD_TIERS 단일 출처에서 생성(points.ts) — 스냅샷과 결과 항상 일치.
   const rows = (await dbx.execute(sql`
-    select coalesce(sum(${sql.raw(caseExpr)}), 0)::int as n
+    select ${sql.raw(meleeDecayedPointsSumSql('mp.final_rank', 'pc.n', 'mb.battle_date'))} as n
     from melee_participants mp
     join melee_battles mb on mb.id = mp.battle_id
     join (select battle_id, count(*)::int as n from melee_participants group by battle_id) pc

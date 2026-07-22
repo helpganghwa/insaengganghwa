@@ -362,21 +362,13 @@ async function AllTab({
       </Card>
 
       <Card title="대난투">
-        {/* 1행: 참여·포인트(2026-07-22 개편 — 평균 = 누적/참가, 소수 1자리) / 2행: 우승·순위. */}
+        {/* 1행: 참가·랭킹(감쇠)·누적 포인트 / 2행: 우승·순위. 랭킹 포인트 = 리더보드와 동일 산식. */}
         <StatGrid
           cols={3}
           items={[
             { l: '참가', v: s.meleeJoined > 0 ? `${fmt(s.meleeJoined)}회` : '—' },
-            { l: '누적 포인트', v: s.meleePoints > 0 ? <span className="text-violet-400">{fmt(s.meleePoints)}P</span> : '—' },
-            {
-              l: '평균 포인트',
-              v:
-                s.meleeJoined > 0 && s.meleePoints > 0 ? (
-                  <span className="text-violet-400">{(s.meleePoints / s.meleeJoined).toFixed(1)}P</span>
-                ) : (
-                  '—'
-                ),
-            },
+            { l: '랭킹 포인트', v: s.meleeRankingPoints > 0 ? `${fmt(s.meleeRankingPoints)}P` : '—' },
+            { l: '누적 포인트', v: s.meleePoints > 0 ? `${fmt(s.meleePoints)}P` : '—' },
           ]}
         />
         <div className="mt-1.5" />
@@ -388,6 +380,9 @@ async function AllTab({
             { l: '최저 순위', v: extras?.meleeWorst != null ? `#${extras.meleeWorst}` : '—' },
           ]}
         />
+        <p className="mt-1.5 text-[10px] text-zinc-500">
+          랭킹 포인트는 최근 성적일수록 크게 반영돼요 — 점수 가치는 14일마다 절반으로 줄어요.
+        </p>
         {extras && extras.meleeRanks.length >= 2 ? (
           <div className="mt-2">
             <div className="mb-0.5 text-[9px] text-zinc-500">날짜별 순위 추이</div>
