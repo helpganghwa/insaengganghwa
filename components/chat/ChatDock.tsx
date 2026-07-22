@@ -506,9 +506,10 @@ export function ChatDock() {
     needInitialScrollRef.current = false;
   }, [open, messages]);
 
-  // '프로필 보기'로 나갔다 돌아온 마운트 — 채팅 패널 + 유저 팝업을 저장분으로 즉시 복원
-  // (닫힘→재오픈 깜빡임 없음), 이후 백그라운드 재조회로 최신화(1회 소비).
-  useEffect(() => {
+  // '프로필 보기'로 나갔다 돌아온 마운트 — 채팅 패널 + 유저 팝업을 저장분으로 즉시 복원,
+  // 이후 백그라운드 재조회로 최신화(1회 소비). useLayoutEffect — useEffect는 페인트 뒤라
+  // 닫힌 FAB가 한 프레임 그려진 후 열려 깜빡였다(2026-07-22 피드백). 페인트 전 복원으로 제거.
+  useLayoutEffect(() => {
     try {
       const raw = sessionStorage.getItem(RESTORE_KEY);
       if (!raw) return;
