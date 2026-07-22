@@ -85,9 +85,12 @@ export async function withdrawAccount(userId: string): Promise<void> {
     await tx.execute(sql`delete from melee_participants where user_id = ${uid}`);
     await tx.execute(sql`update melee_battles set champion_user_id = null where champion_user_id = ${uid}`);
 
-    // 친구·추천·공유·광고·푸시.
+    // 친구·공유·광고·푸시.
     await tx.execute(sql`delete from friend_links where requester_id = ${uid} or addressee_id = ${uid}`);
-    await tx.execute(sql`delete from referral_attributions where referrer_user_id = ${uid} or new_user_id = ${uid}`);
+    // ⚠ referral_attributions는 **삭제하지 않는다**(2026-07-22). 이 행이 추천 보상 1인 1회의
+    //   유일한 잠금장치라, 지우면 "탈퇴 → 다시 시작"만으로 추천인에게 보상이 무한 재지급된다
+    //   (재가입 시 profiles.created_at은 그대로라 신규 가입 판정도 계속 통과, 쿠키는 7일 유지).
+    //   PII 없음(내부 id 쌍 + 공개코드) + profiles 행 자체가 결제 앵커로 보존되므로 잔존 무해.
     await tx.execute(sql`delete from shares where user_id = ${uid}`);
     await tx.execute(sql`delete from ad_views where user_id = ${uid}`);
     await tx.execute(sql`delete from push_pending where user_id = ${uid}`);
