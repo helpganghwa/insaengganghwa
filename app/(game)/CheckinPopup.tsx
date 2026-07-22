@@ -103,6 +103,11 @@ export function CheckinPopup({ dayProgress }: { dayProgress: number }) {
 
   if (closed) return null;
 
+  const closeAfterClaim = () => {
+    setClosed(true);
+    router.refresh(); // 헤더 다이아·도전과제·배너 갱신
+  };
+
   const claim = () => {
     setError(null);
     // 낙관적 업데이트(사용자 확정) — 응답을 기다리지 않고 ✓ 팝 + 게이지 fill을 즉시 시작.
@@ -129,10 +134,7 @@ export function CheckinPopup({ dayProgress }: { dayProgress: number }) {
             })(),
           });
         }, Math.max(0, 1100 - elapsed));
-        setTimeout(() => {
-          setClosed(true);
-          router.refresh(); // 헤더 다이아·도전과제·배너 갱신
-        }, Math.max(600, 2600 - elapsed));
+        // 자동 닫기 없음(사용자 확정) — 닫기 버튼/배경 클릭으로 닫는다.
       } else if (res.code === 'CHECKIN_ALREADY_CLAIMED') {
         // 다른 탭/기기에서 이미 수령 — 조용히 닫고 동기화.
         setClosed(true);
@@ -145,15 +147,21 @@ export function CheckinPopup({ dayProgress }: { dayProgress: number }) {
   };
 
   return (
-    <div className="fixed inset-0 z-[80] flex items-center justify-center bg-black/65 p-5 backdrop-blur-sm">
-      <div className="w-full max-w-[340px] rounded-2xl border border-amber-800/70 bg-zinc-900 p-4 shadow-2xl shadow-black/60">
+    <div
+      className="fixed inset-0 z-[80] flex items-center justify-center bg-black/65 p-5 backdrop-blur-sm"
+      onClick={claimed ? closeAfterClaim : undefined} // 배경 클릭 닫기 — 수령 후에만(강제 수령 유지)
+    >
+      <div
+        className="w-full max-w-[340px] rounded-2xl border border-amber-800/70 bg-zinc-900 p-4 shadow-2xl shadow-black/60"
+        onClick={(e) => e.stopPropagation()}
+      >
         <p className="text-center text-sm font-extrabold text-amber-200">출석 {day}일째</p>
         <p className="mt-0.5 text-center text-[11px] text-zinc-400">
-          {week}주 차 — {mileDay}일째 {mileLabel}
+          {week}주 차
         </p>
 
         {/* 이번 주 7칸 — 6+1 구성(사용자 확정): 평일 6칸 한 줄 + 7일째 큰 보상 풀와이드 강조. */}
-        <div className="mt-3 grid grid-cols-6 gap-1">
+        <div className="mt-3 grid grid-cols-6 gap-x-1 gap-y-2">
           {weekDays.map((d) => {
             const r = CHECKIN_CALENDAR[d - 1]!;
             const isToday = d === day;
@@ -179,9 +187,9 @@ export function CheckinPopup({ dayProgress }: { dayProgress: number }) {
                   <span className="text-[11px] font-extrabold">
                     {d}일째 큰 보상 · {rewardLabel(r)}
                   </span>
-                  <span className="text-[9px] font-bold opacity-80">
-                    {past ? '✓' : isToday ? (claimed ? '완료' : '오늘') : ''}
-                  </span>
+                  {isToday ? (
+                    <span className="text-[9px] font-bold opacity-80">{claimed ? '완료' : '오늘'}</span>
+                  ) : null}
                 </div>
               );
             }
@@ -194,7 +202,7 @@ export function CheckinPopup({ dayProgress }: { dayProgress: number }) {
                   {isToday && claimed ? '✅' : rewardIcon(r, d)}
                 </span>
                 <span className="text-[10px] font-bold leading-none">
-                  {past ? '✓' : isToday ? (claimed ? '완료' : '오늘') : `${d}일`}
+                  {isToday ? (claimed ? '완료' : '오늘') : `${d}일`}
                 </span>
               </div>
             );
@@ -203,7 +211,7 @@ export function CheckinPopup({ dayProgress }: { dayProgress: number }) {
 
         {/* 게이지 — 다음 큰 보상(마지막 주엔 완주와 동일이라 생략) + 완주 보상. 수령 시 차오름. */}
         <div className="mt-3 space-y-2">
-          {mileDay < CHECKIN_CYCLE_DAYS && (
+          {(
             <div>
               <div className="flex items-baseline justify-between text-[10px] text-zinc-400">
                 <span>
@@ -237,13 +245,21 @@ export function CheckinPopup({ dayProgress }: { dayProgress: number }) {
               />
             </div>
           </div>
-          <p className="text-[9px] leading-snug text-zinc-500">완주 보너스는 28일을 모두 채우면 그날 보상에 더해 한 번 더 지급돼요.</p>
         </div>
 
         {claimed ? (
-          <div className="mt-3.5 rounded-xl bg-emerald-950/80 py-2.5 text-center text-sm font-extrabold text-emerald-300">
-            {todayLabel} 지급 완료!
-          </div>
+          <>
+            <div className="mt-3.5 rounded-xl bg-emerald-950/80 py-2.5 text-center text-sm font-extrabold text-emerald-300">
+              {todayLabel} 지급 완료!
+            </div>
+            <button
+              type="button"
+              onClick={closeAfterClaim}
+              className="mt-2 w-full rounded-xl border border-zinc-700 bg-zinc-800 py-2 text-center text-[13px] font-bold text-zinc-300 active:bg-zinc-700"
+            >
+              닫기
+            </button>
+          </>
         ) : (
           <button
             type="button"
