@@ -12,7 +12,7 @@ const LABEL: Record<LeaderboardMetric, string> = {
   sum: '합산 강화',
   combat: '전투력',
   raid: '레이드 처치',
-  melee: '대난투 우승',
+  melee: '대난투', // 2026-07-22 개편 — 값=누적 포인트
 };
 // metric별 명예의 전당 배경(현재 전부 동일 전당 배경 사용).
 const BG: Record<LeaderboardMetric, string> = {
