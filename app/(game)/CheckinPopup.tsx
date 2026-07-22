@@ -57,7 +57,6 @@ export function CheckinPopupGate({ unclaimed, dayProgress }: { unclaimed: boolea
   if (!unclaimed) return null;
   return <CheckinPopup dayProgress={dayProgress} />;
 }
-const SLOT_KO = { weapon: '무기', armor: '방어구', accessory: '장신구' } as const;
 const SLOT_ICON = { weapon: '⚔️', armor: '🛡️', accessory: '💍' } as const;
 
 function rewardIcon(r: CheckinReward, day1: number): string {
@@ -68,7 +67,7 @@ function rewardIcon(r: CheckinReward, day1: number): string {
 
 function rewardLabel(r: CheckinReward): string {
   if (r.kind === 'diamond') return `💎${fmt(r.amount)}`;
-  if (r.kind === 'supply') return `${SLOT_KO[r.slot]} 상자 ${r.count}개`;
+  if (r.kind === 'supply') return `보급 상자 ${r.count}개`; // 슬롯은 이모지(⚔️🛡️💍)가 전달
   return `보급 세트 ${r.perSlot * 3}개`;
 }
 
@@ -111,15 +110,14 @@ export function CheckinPopup({ dayProgress }: { dayProgress: number }) {
       if (res.status === 'success') {
         setTimeout(() => {
           showHeaderToast({
-            icon: '📅',
             title: `출석 ${day}일째 보상 획득!`,
             rewards: rewardToasts(res.result.reward),
           });
-        }, Math.max(0, 750 - elapsed));
+        }, Math.max(0, 1100 - elapsed));
         setTimeout(() => {
           setClosed(true);
           router.refresh(); // 헤더 다이아·도전과제·배너 갱신
-        }, Math.max(400, 1700 - elapsed));
+        }, Math.max(600, 2600 - elapsed));
       } else if (res.code === 'CHECKIN_ALREADY_CLAIMED') {
         // 다른 탭/기기에서 이미 수령 — 조용히 닫고 동기화.
         setClosed(true);
@@ -133,9 +131,9 @@ export function CheckinPopup({ dayProgress }: { dayProgress: number }) {
 
   return (
     <div className="fixed inset-0 z-[80] flex items-center justify-center bg-black/65 p-5 backdrop-blur-sm">
-      <style>{`@keyframes checkin-pop{0%{transform:scale(1)}45%{transform:scale(1.35)}100%{transform:scale(1)}}`}</style>
+      <style>{`@keyframes checkin-pop{0%{transform:scale(1)}45%{transform:scale(1.4)}100%{transform:scale(1)}}`}</style>
       <div className="w-full max-w-[340px] rounded-2xl border border-amber-800/70 bg-zinc-900 p-4 shadow-2xl shadow-black/60">
-        <p className="text-center text-sm font-extrabold text-amber-200">📅 출석 {day}일째</p>
+        <p className="text-center text-sm font-extrabold text-amber-200">출석 {day}일째</p>
         <p className="mt-0.5 text-center text-[11px] text-zinc-400">
           {week}주 차 — {mileDay}일째 {mileLabel}
         </p>
@@ -161,7 +159,7 @@ export function CheckinPopup({ dayProgress }: { dayProgress: number }) {
                         ? 'border-violet-700/70 bg-zinc-800/70 text-zinc-300'
                         : 'border-zinc-700/60 bg-zinc-800/70 text-zinc-400'
                 }`}
-                style={isToday && claimed ? { animation: 'checkin-pop 0.5s ease' } : undefined}
+                style={isToday && claimed ? { animation: 'checkin-pop 0.8s ease' } : undefined}
               >
                 <span className="text-[13px] leading-none">
                   {isToday && claimed ? '✅' : rewardIcon(r, d)}
@@ -188,7 +186,7 @@ export function CheckinPopup({ dayProgress }: { dayProgress: number }) {
               </div>
               <div className="mt-0.5 h-1.5 overflow-hidden rounded-full bg-zinc-800">
                 <div
-                  className="h-full rounded-full bg-gradient-to-r from-violet-500 to-amber-400 transition-[width] duration-700 ease-out"
+                  className="h-full rounded-full bg-gradient-to-r from-violet-500 to-amber-400 transition-[width] duration-[1100ms] ease-out"
                   style={{ width: `${Math.round((filled / mileDay) * 100)}%` }}
                 />
               </div>
@@ -197,7 +195,7 @@ export function CheckinPopup({ dayProgress }: { dayProgress: number }) {
           <div>
             <div className="flex items-baseline justify-between text-[10px] text-zinc-400">
               <span>
-                완주 보상 <b className="text-amber-300">{lastLabel}</b>
+                28일 완주 보상 <b className="text-amber-300">{lastLabel}</b>
               </span>
               <span className="tabular-nums">
                 {filled} / {CHECKIN_CYCLE_DAYS}일
@@ -205,16 +203,17 @@ export function CheckinPopup({ dayProgress }: { dayProgress: number }) {
             </div>
             <div className="mt-0.5 h-1.5 overflow-hidden rounded-full bg-zinc-800">
               <div
-                className="h-full rounded-full bg-zinc-500 transition-[width] duration-700 ease-out"
+                className="h-full rounded-full bg-gradient-to-r from-sky-500 to-cyan-300 transition-[width] duration-[1100ms] ease-out"
                 style={{ width: `${Math.round((filled / CHECKIN_CYCLE_DAYS) * 100)}%` }}
               />
             </div>
           </div>
+          <p className="text-[9px] leading-snug text-zinc-500">큰 보상과 완주 보상은 각각 해당 일차의 출석 보상으로 지급돼요.</p>
         </div>
 
         {claimed ? (
           <div className="mt-3.5 rounded-xl bg-emerald-950/80 py-2.5 text-center text-sm font-extrabold text-emerald-300">
-            ✓ {rewardLabel(today)} 지급 완료!
+            {rewardLabel(today)} 지급 완료!
           </div>
         ) : (
           <button
