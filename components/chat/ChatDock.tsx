@@ -158,8 +158,9 @@ export function ChatDock() {
 
   // 라우트 이동 → 패널 자동 최소화(2026-07-20 피드백 6). 마운트 첫 실행은 스킵 —
   // 아래 RESTORE_KEY 복원(뒤로가기)이 연 패널을 닫지 않도록.
+  // useLayoutEffect — 새 페이지 커밋과 같은 페인트에 닫아 "새 페이지 위에 패널 1프레임"도 제거.
   const routeEffectRanRef = useRef(false);
-  useEffect(() => {
+  useLayoutEffect(() => {
     if (!routeEffectRanRef.current) {
       routeEffectRanRef.current = true;
       return;
@@ -480,10 +481,16 @@ export function ChatDock() {
       /* ignore */
     }
   };
-  // GNB 탭(같은 페이지 재탭 포함) → 패널 최소화. 라우트 변경은 pathname effect가 커버하지만
-  // 같은 경로 재탭은 pathname이 안 바뀌어 여기서 처리(2026-07-22 피드백).
+  // GNB 탭 → 패널 최소화. **같은 경로 재탭만** 즉시 닫는다(내비게이션 없음 = pathname
+  // effect가 못 닫는 케이스). 실제 이동은 pathname 전환 layout effect가 새 페이지 페인트와
+  // 동시에 닫음 — 먼저 닫으면 옛 페이지가 내비 지연 동안 그대로 보여 어지러웠다(2026-07-22).
   useEffect(() => {
-    const onGnb = () => setOpen(false);
+    const onGnb = (e: Event) => {
+      const target = (e as CustomEvent<string>).detail;
+      const here = location.pathname;
+      const same = target === '/' ? here === '/' : here === target || here.startsWith(`${target}/`);
+      if (same) setOpen(false);
+    };
     window.addEventListener('ig:gnb-nav', onGnb);
     return () => window.removeEventListener('ig:gnb-nav', onGnb);
   }, []);
