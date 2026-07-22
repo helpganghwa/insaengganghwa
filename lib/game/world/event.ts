@@ -1,6 +1,6 @@
 import 'server-only';
 
-import { unstable_cache } from 'next/cache';
+import { unstable_cache, revalidateTag } from 'next/cache';
 import { and, desc, eq, inArray, isNotNull, sql } from 'drizzle-orm';
 
 import { db } from '@/lib/db/client';
@@ -57,6 +57,14 @@ export async function logWorldEvent(
         detail,
       })
       .returning({ id: worldEvents.id, createdAt: worldEvents.createdAt });
+    // 쓰기 시점 캐시 무효화(2026-07-22) — 30초 SWR만으로는 만료 후 첫 진입이 stale을 받고
+    // 백그라운드 갱신이라 "티커는 최신인데 상세는 재진입해야 보이는" 불일치가 났다.
+    // 이벤트는 저빈도(마일스톤 지점만)라 무효화 비용 무시 가능, limit별 엔트리 전부 동시 갱신.
+    try {
+      revalidateTag('world-feed');
+    } catch {
+      /* 요청 컨텍스트 밖(스크립트 등) — 캐시 무효화만 생략 */
+    }
     // 전체 채팅 시스템 라인(2026-07-21) — 월드로그에 찍히는 사건을 실시간 브로드캐스트.
     // 마일스톤 지점만이라 빈도 낮음. 실패해도 채팅 폴백(getRecentChat 병합)이 커버.
     if (row) {
