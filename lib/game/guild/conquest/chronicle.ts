@@ -313,7 +313,7 @@ const SYSTEM_PROMPT = `너는 대륙의 정복 전쟁을 듣는 이에게 들려
     · 그래서 이번 전투 이후 대륙의 형세가 어떻게 되었는지 — 영토 순위·기세(과장 없이 사실만).
     문단은 이야기 흐름에 따라 자연스럽게 나눈다(2~4문단, 어느 문단도 한 파트만 전담하지 않게 — 사건과 결과가 한 문단에서 이어지거나 활약이 결과 서술에 섞여도 좋다). 문단 사이는 빈 줄(\\n\\n)로 구분. 라벨('주요사건:' 등) 금지. 어느 문단도 '그날·이날·오늘' 같은 시간 지시어로 시작하지 말고 바로 길드·구역·사건으로 시작한다.
     사건 배치: 같은 길드·같은 지역의 이야기는 한 곳에 모아 서술한다(한 세력의 서사 중간에 다른 세력 이야기를 끼워 흐름을 끊지 말 것). '■ 역사적 사건' 이정표가 있으면 그 사건을 서사의 정점으로 배치하고, 그 지역과 관련된 점령·방어는 이정표 대목에 함께 묶는다.
-  - headline: 핵심 사건을 한 줄로 압축(25자 내외, 마커 포함, 말하듯이). 점령 길드가 여럿이면 가장 많이 점령한 쪽 위주로 쓰되 다른 길드의 점령도 가능하면 담는다. 예: "{g|천둥길드}가 {z|왕성} 등 세 곳을 휩쓸었다". 이번 전투에서 처음 대륙에 이름을 알린 길드('역사적 사건'의 첫 등장)가 있으면 헤드라인 말미에 ' — {g|이름} 첫 등장' 식으로 병기한다(여럿이면 '·'로 나열). 정세가 크게 바뀐 날이 아니면 빈 문자열("")로 둔다.`;
+  - headline: 핵심 사건을 한 줄로 압축(25자 내외, 마커 포함, 말하듯이). 점령 길드가 여럿이면 가장 많이 점령한 쪽 위주로 쓰되 다른 길드의 점령도 가능하면 담는다. 예: "{g|천둥길드}가 {z|왕성} 등 세 곳을 휩쓸었다". 이번 전투에서 처음 대륙에 이름을 알린 길드('역사적 사건'의 첫 등장)가 있으면 헤드라인 말미에 ' — {g|이름} 첫 등장' 식으로 병기한다(여럿이면 '·'로 나열). '역사적 사건'에 판도 복귀(재기)로 적힌 길드는 첫 등장이 아니다 — 병기하려면 ' — {g|이름} 복귀'로 쓴다. 정세가 크게 바뀐 날이 아니면 빈 문자열("")로 둔다.`;
 
 /** 그날 사건이 '큰 사건'인지 — 점령(영토 변동) 또는 주목할 개인 활약이 있으면 기록 대상('오늘' 스토리). */
 function isNotable(s: ConquestDaySummary): boolean {
@@ -542,15 +542,32 @@ export async function generateAndStoreChronicle(
       milestones.push(`· 길드 「${g}」 이(가) ${REGION_KO[region] ?? region} 전체 ${ids.length}곳을 장악${firstNote}`);
     }
   }
+  // 데뷔 후보(전날 0 → 오늘 1+)의 과거 이력 조회 — '어제 상태'만 보면 영토를 전부 잃었다
+  // 돌아온 길드가 첫 등장으로 오판정된다(2026-07-22 FIRST 사건: 7/21 영토 소멸 → 7/22 복귀를
+  // 헤드라인에 '첫 등장'으로 서술). 과거 점령전 승리 이력이 있으면 복귀, 없어야 진짜 첫 등장.
+  const debutCandidates = [...new Set([...beforeCounts.keys(), ...afterCounts.keys()])].filter(
+    (g) => (beforeCounts.get(g) ?? 0) === 0 && (afterCounts.get(g) ?? 0) > 0,
+  );
+  const veteranRows = debutCandidates.length
+    ? ((await db.execute(sql`
+        select distinct g.name from conquest_battles cb
+        join guilds g on g.id = cb.winner_guild_id
+        where cb.server_id = ${serverId} and cb.battle_kst_day < ${kstDay}
+          and g.name in ${sql.raw(`(${debutCandidates.map((g) => `'${g.replace(/'/g, "''")}'`).join(', ')})`)}
+      `)) as unknown as { name: string }[])
+    : [];
+  const veterans = new Set(veteranRows.map((r) => r.name));
   for (const g of new Set([...beforeCounts.keys(), ...afterCounts.keys()])) {
     const b = beforeCounts.get(g) ?? 0;
     const a = afterCounts.get(g) ?? 0;
     if (b > 0 && a === 0) milestones.push(`· 길드 「${g}」 영토 소멸(마지막 구역 상실)`);
     if (b === 0 && a > 0)
       milestones.push(
-        beforeCounts.size === 0
-          ? `· 길드 「${g}」 이(가) 대륙 최초로 구역을 점령`
-          : `· 길드 「${g}」 이(가) 첫 구역을 확보하며 대륙에 이름을 알림(첫 등장 — '판도에 등장' 대신 이 표현으로)`,
+        veterans.has(g)
+          ? `· 길드 「${g}」 이(가) 영토를 모두 잃었던 처지에서 다시 구역을 확보하며 판도에 복귀(재기 — 과거에 영토를 가졌던 길드다. '첫 등장'·'대륙에 이름을 알렸다' 표현 금지, '돌아왔다'류로)`
+          : beforeCounts.size === 0
+            ? `· 길드 「${g}」 이(가) 대륙 최초로 구역을 점령`
+            : `· 길드 「${g}」 이(가) 첫 구역을 확보하며 대륙에 이름을 알림(첫 등장 — '판도에 등장' 대신 이 표현으로)`,
       );
   }
   for (const d of summary.disbands) {
