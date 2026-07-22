@@ -732,7 +732,7 @@ export function ChatDock() {
           className="pointer-events-none fixed inset-x-0 z-20"
           style={{ bottom: 'calc(3.5rem + env(safe-area-inset-bottom) + var(--gt-h, 0px))' }}
         >
-          <div className="mx-auto w-full max-w-[390px] px-2 pb-1">
+          <div className="mx-auto w-full max-w-[390px] px-2 pb-2">
             {collapsed ? (
               // 접힘(채팅 안 보기) — 왼쪽에 이모지만, 탭하면 다시 펼침.
               <button
