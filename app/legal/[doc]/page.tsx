@@ -1,4 +1,6 @@
 import type { Metadata } from 'next';
+
+import { BackBar } from '@/components/BackNav';
 import Link from 'next/link';
 import { notFound } from 'next/navigation';
 
@@ -32,6 +34,7 @@ export default async function LegalPage({ params }: { params: Promise<{ doc: str
 
   return (
     <div className="mx-auto max-w-[390px] px-4 py-5">
+      <BackBar title={meta.title} />
       <header className="mb-3">
         <h1 className="text-lg font-bold">{meta.title}</h1>
         <p className="mt-0.5 text-[11px] text-zinc-500">시행일: {meta.effectiveDate}</p>
