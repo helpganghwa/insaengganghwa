@@ -20,7 +20,7 @@ const CRITERIA: Record<LeaderboardMetric, string> = {
   sum: '보유 장비 전체의 강화 레벨을 더한 값이에요.',
   combat: '보유 장비 전체의 전투력을 더한 값이에요.',
   raid: '처치에 성공한 레이드에 참여한 횟수예요.',
-  melee: '대난투 순위로 얻는 랭킹 포인트. 최근 성적일수록 크게 반영돼요(점수 가치는 14일마다 절반).',
+  melee: '대난투 순위로 얻는 랭킹 포인트에요. 최근 성적일수록 크게 반영돼요.',
 };
 // metric별 명예의 전당 배경(현재 전부 동일 전당 배경 사용).
 const BG: Record<LeaderboardMetric, string> = {
