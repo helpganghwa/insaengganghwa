@@ -38,8 +38,10 @@ export function BottomNav({
           <Link prefetch={false}
             key={item.href}
             href={item.href}
-            // 채팅창이 열려 있으면 GNB 탭(같은 페이지 재탭 포함)에 최소화 — ChatDock이 수신.
-            onClick={() => window.dispatchEvent(new Event('ig:gnb-nav'))}
+            // 채팅창이 열려 있으면 GNB 탭에 최소화 — ChatDock이 수신. 목적지 href를 실어
+            // 같은 경로 재탭(내비 없음)만 즉시 닫고, 실제 이동은 pathname 전환과 동시에 닫는다
+            // (닫힘→이동 순서로 옛 페이지가 잠깐 보이던 어지러움 제거, 2026-07-22).
+            onClick={() => window.dispatchEvent(new CustomEvent('ig:gnb-nav', { detail: item.href }))}
             data-tut={
               item.href === '/inventory'
                 ? 'nav-inventory'
