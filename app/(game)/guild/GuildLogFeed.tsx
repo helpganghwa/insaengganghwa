@@ -44,7 +44,7 @@ const METRIC_LABEL: Record<string, string> = {
   sum: '합산 강화',
   combat: '전투력',
   raid: '레이드 처치',
-  melee: '대난투 우승',
+  melee: '대난투', // 2026-07-22 개편 — 랭킹=누적 포인트('대난투 1위'로 표기)
 };
 
 function amountOf(detail: Record<string, unknown> | null): string {
