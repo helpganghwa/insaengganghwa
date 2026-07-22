@@ -362,15 +362,30 @@ async function AllTab({
       </Card>
 
       <Card title="대난투">
+        {/* 1행: 참여·포인트(2026-07-22 개편 — 평균 = 누적/참가, 소수 1자리) / 2행: 우승·순위. */}
         <StatGrid
-          cols={4}
+          cols={3}
           items={[
             { l: '참가', v: s.meleeJoined > 0 ? `${fmt(s.meleeJoined)}회` : '—' },
+            { l: '누적 포인트', v: s.meleePoints > 0 ? <span className="text-violet-400">{fmt(s.meleePoints)}P</span> : '—' },
+            {
+              l: '평균 포인트',
+              v:
+                s.meleeJoined > 0 && s.meleePoints > 0 ? (
+                  <span className="text-violet-400">{(s.meleePoints / s.meleeJoined).toFixed(1)}P</span>
+                ) : (
+                  '—'
+                ),
+            },
+          ]}
+        />
+        <div className="mt-1.5" />
+        <StatGrid
+          cols={3}
+          items={[
             { l: '우승', v: s.meleeWins > 0 ? <span className="text-amber-500">🥇 {s.meleeWins}</span> : '—' },
             { l: '최고 순위', v: s.meleeBest != null ? `#${s.meleeBest}` : '—' },
             { l: '최저 순위', v: extras?.meleeWorst != null ? `#${extras.meleeWorst}` : '—' },
-            // 누적 랭킹 포인트(2026-07-22 개편) — 리더보드 '대난투'와 동일 산식.
-            { l: '누적 포인트', v: s.meleePoints > 0 ? <span className="text-violet-400">{fmt(s.meleePoints)}P</span> : '—' },
           ]}
         />
         {extras && extras.meleeRanks.length >= 2 ? (
