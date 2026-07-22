@@ -1,6 +1,6 @@
 import 'server-only';
 
-import { eq, or, sql } from 'drizzle-orm';
+import { eq, sql } from 'drizzle-orm';
 
 import { db } from '@/lib/db/client';
 import { profiles } from '@/lib/db/schema/profiles';
@@ -31,7 +31,9 @@ export class ReferralError extends Error {
  * - 현재: mailbox에 type='reward' row 적재 → 사용자가 우편함에서 명시적 수령.
  *   referrer는 신규 가입 즉시 push 알림으로 인지.
  *
- * - shareCode = referrer 공개 코드(신규) 또는 닉네임(레거시 링크 하위호환).
+ * - shareCode = referrer 공개 코드(불변) — 단일 해석. 닉네임 폴백은 제거(2026-07-22, /u P-A7과
+ *   동일 근거: 닉은 변경·재취득 가능이라 레거시 닉네임 링크가 닉변+재취득 후 엉뚱한 유저에게
+ *   보상을 귀속시킬 수 있다). 현행 공유 링크는 전부 publicCode.
  * - 보상 조건 = **링크 클릭 → 그 이후 회원가입 완료**. clickedAtMs(클릭 시각)보다 늦게
  *   생성된 계정만 귀속(기존 유저가 링크를 타도 보상 없음). clickedAtMs 없으면 귀속하지 않는다.
  * - 멱등: referral_attributions(new_user_id UNIQUE) — 두 번째 호출 ALREADY_REDEEMED.
@@ -48,20 +50,14 @@ export async function attributeReferralFromShare(
 ): Promise<{ referrerNickname: string } | null> {
   // 1. tx — attribute + mailbox 적재.
   const result = await db.transaction(async (tx) => {
-    // 닉네임은 전 캐릭터 전역 유일(characters) — 코드(profiles)와 함께 매칭(닉네임은 레거시 링크용).
-    // ⚠ publicCode 일치를 **항상 먼저** 고른다(2026-07-22). 닉네임 규칙(2~8자 영숫자·한글)이
-    //   공개코드(8자 영숫자)와 문자셋·길이가 겹쳐, 남의 공개코드를 닉네임으로 바꾸면 그 사람의
-    //   초대 보상을 가로챌 수 있었다(정렬에 우선순위가 없어 승자가 비결정적이었음).
-    // 동순위 내에선 마지막 활성 서버 닉을 우선(다중 서버 캐릭터 — 표시용).
+    // publicCode 단일 해석(2026-07-22) — 닉네임 폴백 제거(파일 헤더 참조). 다중 서버 캐릭터가
+    // 있을 수 있어 마지막 활성 서버 닉을 우선(표시용).
     const [referrer] = await tx
       .select({ id: profiles.id, nickname: characters.nickname, lastServerId: profiles.lastServerId })
       .from(profiles)
       .innerJoin(characters, eq(characters.userId, profiles.id))
-      .where(or(eq(profiles.publicCode, shareCode), eq(characters.nickname, shareCode)))
-      .orderBy(
-        sql`(${profiles.publicCode} = ${shareCode}) desc`,
-        sql`(${characters.serverId} = ${profiles.lastServerId}) desc`,
-      )
+      .where(eq(profiles.publicCode, shareCode))
+      .orderBy(sql`(${characters.serverId} = ${profiles.lastServerId}) desc`)
       .limit(1);
     if (!referrer) return null;
 
