@@ -33,15 +33,13 @@ export class ReferralError extends Error {
  *
  * - shareCode = referrer 공개 코드(신규) 또는 닉네임(레거시 링크 하위호환).
  * - 보상 조건 = **링크 클릭 → 그 이후 회원가입 완료**. clickedAtMs(클릭 시각)보다 늦게
- *   생성된 계정만 귀속(기존 유저가 링크를 타도 보상 없음). clickedAtMs 없으면(레거시 쿠키)
- *   "최근 7일 내 가입" 폴백.
+ *   생성된 계정만 귀속(기존 유저가 링크를 타도 보상 없음). clickedAtMs 없으면 귀속하지 않는다.
  * - 멱등: referral_attributions(new_user_id UNIQUE) — 두 번째 호출 ALREADY_REDEEMED.
  * - 단일 트랜잭션(attribute row + mailbox row + rewarded=true), 푸시는 tx 밖.
  */
 // 쿠키(함수 서버 시계)와 createdAt(DB 시계) 간 오차 허용폭 — 정상 신규는 클릭 후 가입이라
 // createdAt ≥ clickedAt이지만, 시계 스큐로 살짝 빠르게 보일 수 있어 5분 버퍼.
 const SIGNUP_SKEW_MS = 5 * 60 * 1000;
-const LEGACY_MAX_AGE_MS = 7 * 24 * 60 * 60 * 1000; // 레거시 쿠키 폴백: 7일(쿠키 TTL) 내 가입만.
 
 export async function attributeReferralFromShare(
   newUserId: string,
@@ -50,14 +48,20 @@ export async function attributeReferralFromShare(
 ): Promise<{ referrerNickname: string } | null> {
   // 1. tx — attribute + mailbox 적재.
   const result = await db.transaction(async (tx) => {
-    // 닉네임은 전 캐릭터 전역 유일(characters) — 코드(profiles)와 함께 매칭.
-    // publicCode 매칭 시 다중 서버 캐릭터가 있을 수 있어 마지막 활성 서버 닉을 우선(표시용).
+    // 닉네임은 전 캐릭터 전역 유일(characters) — 코드(profiles)와 함께 매칭(닉네임은 레거시 링크용).
+    // ⚠ publicCode 일치를 **항상 먼저** 고른다(2026-07-22). 닉네임 규칙(2~8자 영숫자·한글)이
+    //   공개코드(8자 영숫자)와 문자셋·길이가 겹쳐, 남의 공개코드를 닉네임으로 바꾸면 그 사람의
+    //   초대 보상을 가로챌 수 있었다(정렬에 우선순위가 없어 승자가 비결정적이었음).
+    // 동순위 내에선 마지막 활성 서버 닉을 우선(다중 서버 캐릭터 — 표시용).
     const [referrer] = await tx
       .select({ id: profiles.id, nickname: characters.nickname, lastServerId: profiles.lastServerId })
       .from(profiles)
       .innerJoin(characters, eq(characters.userId, profiles.id))
       .where(or(eq(profiles.publicCode, shareCode), eq(characters.nickname, shareCode)))
-      .orderBy(sql`(${characters.serverId} = ${profiles.lastServerId}) desc`)
+      .orderBy(
+        sql`(${profiles.publicCode} = ${shareCode}) desc`,
+        sql`(${characters.serverId} = ${profiles.lastServerId}) desc`,
+      )
       .limit(1);
     if (!referrer) return null;
 
@@ -72,12 +76,12 @@ export async function attributeReferralFromShare(
       .where(eq(profiles.id, newUserId))
       .limit(1);
     if (!acct) return null;
+    // 클릭 시각이 없으면 귀속하지 않는다(2026-07-22). 종전엔 "최근 7일 내 가입" 폴백이 있었는데,
+    // 두 쿠키 모두 httpOnly=false라 클릭 시각만 지우면 이미 존재하던 계정도 신규로 통과했다.
+    // 클릭 시각 쿠키는 2026-06-16부터 항상 함께 세팅되고 수명이 7일이라 레거시 쿠키는 이미 소멸.
+    if (clickedAtMs == null) return null;
     const createdMs = acct.createdAt.getTime();
-    const isNewSignup =
-      clickedAtMs != null
-        ? createdMs >= clickedAtMs - SIGNUP_SKEW_MS
-        : createdMs >= Date.now() - LEGACY_MAX_AGE_MS;
-    if (!isNewSignup) return null; // 기존 유저 — 보상 없음.
+    if (createdMs < clickedAtMs - SIGNUP_SKEW_MS) return null; // 기존 유저 — 보상 없음.
 
     // 신규 가입자 nickname — 알림·우편함 메시지에 표시.
     const [newUser] = await tx
