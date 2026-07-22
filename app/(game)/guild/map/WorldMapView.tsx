@@ -2,7 +2,7 @@
 
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
-import { useEffect, useLayoutEffect, useMemo, useState, useTransition } from 'react';
+import { useEffect, useLayoutEffect, useMemo, useRef, useState, useTransition } from 'react';
 
 import { profileHref } from '@/lib/game/profile/href';
 import { useResourceToast } from '@/components/ResourceToast';
@@ -203,6 +203,22 @@ export function WorldMapView({
     setReplayOwners(null); // 라이브 소유로 복귀(오늘=최종 상태와 동일, 어제=현재로 점프)
   };
   const replayActive = replayingTab !== null;
+  // 재생 중에는 지도를 상단에 고정(sticky)하고 본문 스크롤을 항상 최하단으로 따라가게 한다
+  // (2026-07-23 제보: 타이핑되는 문장을 보려면 내리고, 지도를 보려면 다시 올려야 했음).
+  // 재생이 끝나면 sticky·추종이 모두 해제돼 원래 스크롤 동작으로 돌아온다.
+  const chronicleRef = useRef<HTMLElement | null>(null);
+  useEffect(() => {
+    if (!replayActive) return;
+    const sec = chronicleRef.current;
+    const scroller = sec?.closest('main');
+    if (!sec || !scroller) return;
+    // 문단이 늘 때마다 최하단으로. smooth는 타이핑 간격보다 느려 뒤처지므로 즉시 이동.
+    const toBottom = () => scroller.scrollTo({ top: scroller.scrollHeight });
+    toBottom();
+    const ro = new ResizeObserver(toBottom);
+    ro.observe(sec);
+    return () => ro.disconnect();
+  }, [replayActive]);
   // 첫 진입 자동 재생 — 그날 1회(localStorage 게이트).
   // useLayoutEffect: 소유 되감기(before 상태)를 **첫 페인트 전에** 적용 — useEffect+지연으로는
   // 최종 소유 지도가 한순간 보였다가 되감기며 깜빡였음(2026-07-16). 타이핑 시작만 600ms 지연.
@@ -377,7 +393,13 @@ export function WorldMapView({
       {/* 지도 + 네모 노드 오버레이 — 풀폭 플러시(좌우 여백·모서리 제거). */}
       {/* isolate — 내부 노드 zIndex(선택 30 등)가 전역 스태킹으로 새어 채팅 패널(z-20 fixed)
           위로 떠오르던 오버랩 버그 방지(2026-07-21 제보). */}
-      <div className="relative isolate aspect-square w-full shrink-0 overflow-hidden border-b border-zinc-800 bg-zinc-950">
+      <div
+        className={`relative isolate aspect-square w-full shrink-0 overflow-hidden border-b border-zinc-800 bg-zinc-950 ${
+          // z-10 — 뒤따르는 연대기 섹션(정적, DOM 후순위)이 고정된 지도 위로 덮는 것을 막는다.
+          //  채팅 패널(z-20 fixed)·헤더(z-30)보다는 아래라 기존 스태킹은 그대로.
+          replayActive ? 'sticky top-0 z-10' : ''
+        }`}
+      >
         {/* 리플레이 오버레이(2026-07-16) — 문장 진군·격돌·플래시 전용 레이어(ChronicleReplay가 직접 관리). */}
         <div ref={setReplayLayer} aria-hidden className="pointer-events-none absolute inset-0 z-40" />
         {/* eslint-disable-next-line @next/next/no-img-element */}
@@ -563,7 +585,7 @@ export function WorldMapView({
           남은 세로 영역을 가득 채우되 flex-auto(basis auto) — flex-1(basis 0)은 긴 본문이
           루트 intrinsic 높이에 반영되지 않아 텍스트가 루트 밖으로 넘치고, 채팅 미니바
           회피 스페이서가 본문 중간에 배치돼 하단이 가려졌다(2026-07-21 재현·확정). */}
-      <section className="flex flex-auto flex-col bg-white px-4 pb-4 pt-3 dark:bg-zinc-950">
+      <section ref={chronicleRef} className="flex flex-auto flex-col bg-white px-4 pb-4 pt-3 dark:bg-zinc-950">
         {!showConquest ? (
           <>
         {hasChronicle ? (
