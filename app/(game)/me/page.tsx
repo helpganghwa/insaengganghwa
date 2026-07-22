@@ -155,18 +155,19 @@ export default async function ProfilePage() {
             diamond={row?.diamond ?? '0'}
             className="relative z-10 text-white text-sm font-bold"
           />
+          {/* 순서 규칙(2026-07-23): 닉네임 → 길드문양 → 길드명 → 집행관. */}
           {row?.executor_zone || row?.guild_name ? (
             <div className="flex max-w-full items-center gap-1 text-[11px] text-white/70">
-              <ExecutorTag zone={row?.executor_zone} region={row?.executor_zone_region} />
-              {row?.executor_zone && row?.guild_name ? (
-                <span className="shrink-0 text-white/30">·</span>
-              ) : null}
               <GuildBadge
                 emblemUrl={row?.guild_emblem_url ?? null}
                 name={row?.guild_name ?? null}
                 size={14}
                 className="min-w-0 text-[11px] text-white/70"
               />
+              {row?.executor_zone && row?.guild_name ? (
+                <span className="shrink-0 text-white/30">·</span>
+              ) : null}
+              <ExecutorTag zone={row?.executor_zone} region={row?.executor_zone_region} />
             </div>
           ) : null}
         </div>

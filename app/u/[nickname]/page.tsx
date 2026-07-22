@@ -384,17 +384,9 @@ export default async function PublicProfilePage({
           <h1 className="text-xl font-extrabold tracking-tight text-white drop-shadow-[0_2px_3px_rgba(0,0,0,0.7)]">
             {data.nickname}
           </h1>
+          {/* 순서 규칙(2026-07-23): 닉네임 → 길드문양 → 길드명 → 집행관. */}
           {data.guild && (
             <div className="mt-0.5 flex max-w-[88%] items-center justify-center gap-1 text-[11px] font-semibold drop-shadow-[0_1px_2px_rgba(0,0,0,0.8)]">
-              {data.guild.executorZone && (
-                <span className="shrink-0">
-                  <span style={{ color: REGION_COLOR[data.guild.executorZoneRegion ?? ''] ?? '#a5b4fc' }}>
-                    {data.guild.executorZone}
-                  </span>
-                  <span className="text-indigo-300"> 집행관 ·</span>
-                </span>
-              )}
-              {data.guild.name && <span className="truncate text-white/80">{data.guild.name}</span>}
               {data.guild.emblemUrl && (
                 // eslint-disable-next-line @next/next/no-img-element
                 <img
@@ -404,6 +396,16 @@ export default async function PublicProfilePage({
                   className="shrink-0 object-contain"
                   style={{ width: 15, height: 15, imageRendering: 'pixelated' }}
                 />
+              )}
+              {data.guild.name && <span className="truncate text-white/80">{data.guild.name}</span>}
+              {data.guild.name && data.guild.executorZone && <span className="shrink-0 text-white/40">·</span>}
+              {data.guild.executorZone && (
+                <span className="shrink-0">
+                  <span style={{ color: REGION_COLOR[data.guild.executorZoneRegion ?? ''] ?? '#a5b4fc' }}>
+                    {data.guild.executorZone}
+                  </span>
+                  <span className="text-indigo-300"> 집행관</span>
+                </span>
               )}
             </div>
           )}

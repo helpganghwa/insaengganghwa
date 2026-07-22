@@ -249,7 +249,7 @@ async function AllTab({
   const rank = (r: number | null) => (r != null ? `#${r}` : undefined);
   return (
     <>
-      <Card title={`${nickname}의 대장장이 이력`} aside={`${s.joinedDays}일째 인생강화`}>
+      <Card title={`${nickname}의 대장장이 이력`} aside={`인생강화 ${s.joinedDays}일째`}>
         <StatGrid
           items={[
             { l: '전투력', v: fmt(s.combat), s: rank(s.ranks.combat) },
@@ -396,7 +396,7 @@ async function AllTab({
         nickname={nickname}
         publicCode={publicCode}
         serverId={serverId}
-        statsLine={`${s.joinedDays}일째 인생강화 · 통산 강화 ${fmt(s.attempts)}회 · 전투력 ${fmt(s.combat)}`}
+        statsLine={`인생강화 ${s.joinedDays}일째 · 통산 강화 ${fmt(s.attempts)}회 · 전투력 ${fmt(s.combat)}`}
       />
     </>
   );

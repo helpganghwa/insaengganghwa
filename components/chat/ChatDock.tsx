@@ -1110,11 +1110,7 @@ export function ChatDock() {
                   </b>
                   {profile.data.guildName || profile.data.executorZone ? (
                     <span className="mt-0.5 flex max-w-[88%] items-center justify-center gap-1 text-[11px] text-zinc-400">
-                      {/* 집행관(2026-07-22) — 프로필 상세와 동일하게 길드 좌측. */}
-                      <ExecutorTag zone={profile.data.executorZone} region={profile.data.executorZoneRegion} />
-                      {profile.data.executorZone && profile.data.guildName ? (
-                        <span className="shrink-0 text-zinc-600">·</span>
-                      ) : null}
+                      {/* 순서 규칙(2026-07-23): 닉네임 → 길드문양 → 길드명 → 집행관. */}
                       {profile.data.guildEmblemUrl ? (
                         // eslint-disable-next-line @next/next/no-img-element
                         <img
@@ -1124,7 +1120,13 @@ export function ChatDock() {
                           style={{ imageRendering: 'pixelated' }}
                         />
                       ) : null}
-                      <span className="truncate">{profile.data.guildName}</span>
+                      {profile.data.guildName ? (
+                        <span className="truncate">{profile.data.guildName}</span>
+                      ) : null}
+                      {profile.data.guildName && profile.data.executorZone ? (
+                        <span className="shrink-0 text-zinc-600">·</span>
+                      ) : null}
+                      <ExecutorTag zone={profile.data.executorZone} region={profile.data.executorZoneRegion} />
                     </span>
                   ) : null}
                 </div>

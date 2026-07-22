@@ -33,7 +33,7 @@ export interface FriendUser {
   profileSouth: string | null;
   /** 활성 프로필 얼굴 박스(검수 산출) — 썸네일 정밀 크롭. 없으면 null(폴백). */
   faceBox?: FaceBox | null;
-  /** 닉네임 아래 길드(이름+문양) — 미소속/생성중이면 null. page(목록·요청) 또는 searchUsers(찾기)에서 부착. */
+  /** 닉네임 아래 길드(문양+이름) — 미소속/생성중이면 null. page(목록·요청) 또는 searchUsers(찾기)에서 부착. */
   guildEmblemUrl?: string | null;
   guildName?: string | null;
   /** 마지막 접속(ISO) — 접속 상태 표시용. 기록 없으면 null. */
@@ -125,7 +125,7 @@ export async function searchUsers(
     if (l.status === 'accepted') rel.set(other, 'friend');
     else rel.set(other, l.requesterId === meId ? 'outgoing' : 'incoming');
   }
-  // 길드(이름+문양) 일괄 부착 — 찾기 결과도 닉네임 아래 길드 노출. 실패해도 진행.
+  // 길드(문양+이름) 일괄 부착 — 찾기 결과도 닉네임 아래 길드 노출. 실패해도 진행.
   const guildMap = await getGuildBriefsByUsers(ids, serverId).catch(
     () => new Map<string, { emblemUrl: string | null; name: string }>(),
   );

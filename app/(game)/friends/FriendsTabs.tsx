@@ -87,7 +87,7 @@ function Row({
             <span className="truncate text-sm font-bold">{u.nickname}</span>
             {showSeen && <LastSeen at={u.lastSeenAt ?? null} badge className="shrink-0" />}
           </div>
-          {/* 닉네임 아래 길드(이름 + 문양). 미소속/생성중이면 GuildBadge가 null → 영역 비움. */}
+          {/* 닉네임 아래 길드(문양 + 이름). 미소속/생성중이면 GuildBadge가 null → 영역 비움. */}
           <GuildBadge
             emblemUrl={u.guildEmblemUrl ?? null}
             name={u.guildName ?? null}

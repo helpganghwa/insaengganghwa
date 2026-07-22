@@ -70,7 +70,7 @@ export async function GET(req: Request, { params }: { params: Promise<{ code: st
   // 메인 수치 — 전투력 증감 우선, 없으면 강화 통계, 그것도 없으면 현재 전투력.
   // arrow는 숫자보다 작게 분리 렌더(2026-07-16 피드백 — 92px 통짜 ▲가 과대).
   const main = modeAll && life
-    ? { arrow: '', big: fmt(life.combat), color: '#fbbf24', sub: `${life.joinedDays}일째 인생강화 · 전투력` }
+    ? { arrow: '', big: fmt(life.combat), color: '#fbbf24', sub: `인생강화 ${life.joinedDays}일째 · 전투력` }
     : t.combatDelta && t.combatDelta !== 0
       ? { arrow: t.combatDelta > 0 ? '▲' : '▼', big: fmt(Math.abs(t.combatDelta)), color: t.combatDelta > 0 ? '#34d399' : '#f87171', sub: `전투력 ${t.combatDelta > 0 ? '상승' : '변동'} · 현재 ${fmt(t.combat)}` }
       : t.attempts > 0
