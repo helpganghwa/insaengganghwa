@@ -5,6 +5,7 @@ import { useRouter } from 'next/navigation';
 
 import {
   CHECKIN_CALENDAR,
+  CHECKIN_COMPLETE_BONUS_DIAMOND,
   CHECKIN_CYCLE_DAYS,
   nextCheckinDay1Indexed,
   type CheckinReward,
@@ -89,7 +90,7 @@ export function CheckinPopup({ dayProgress }: { dayProgress: number }) {
   const week = Math.ceil(day / 7); // 1~4
   const mileDay = week * 7; // 이번 주 큰 보상 칸
   const mileLabel = rewardLabel(CHECKIN_CALENDAR[mileDay - 1]!);
-  const lastLabel = rewardLabel(CHECKIN_CALENDAR[CHECKIN_CYCLE_DAYS - 1]!);
+  const bonusLabel = `💎${fmt(CHECKIN_COMPLETE_BONUS_DIAMOND)}`; // 완주 보너스(칸 보상과 별도 1회)
   const today = CHECKIN_CALENDAR[day - 1]!;
   const weekDays = Array.from({ length: 7 }, (_, i) => (week - 1) * 7 + i + 1);
   // 게이지는 "받은 만큼"(수령 전 = 어제까지) — 수령 순간 오늘 몫이 차오르는 연출.
@@ -111,7 +112,16 @@ export function CheckinPopup({ dayProgress }: { dayProgress: number }) {
         setTimeout(() => {
           showHeaderToast({
             title: `출석 ${day}일째 보상 획득!`,
-            rewards: rewardToasts(res.result.reward),
+            rewards: (() => {
+              const rows = rewardToasts(res.result.reward);
+              const bonus = res.result.completeBonusDiamond;
+              if (bonus > 0) {
+                const dia = rows.find((x) => x.icon === '💎');
+                if (dia) dia.amount += bonus;
+                else rows.push({ icon: '💎', amount: bonus });
+              }
+              return rows;
+            })(),
           });
         }, Math.max(0, 1100 - elapsed));
         setTimeout(() => {
@@ -138,33 +148,51 @@ export function CheckinPopup({ dayProgress }: { dayProgress: number }) {
           {week}주 차 — {mileDay}일째 {mileLabel}
         </p>
 
-        {/* 이번 주 7칸 — 지난 칸 ✓ / 오늘 강조(수령 시 ✓ 팝) / 남은 칸 아이콘+일차 */}
-        <div className="mt-3 grid grid-cols-7 gap-1">
+        {/* 이번 주 7칸 — 3+3+1 구성(사용자 확정): 평일 6칸 3열 2행 + 7일째 큰 보상 풀와이드 강조. */}
+        <div className="mt-3 grid grid-cols-3 gap-1.5">
           {weekDays.map((d) => {
             const r = CHECKIN_CALENDAR[d - 1]!;
             const isToday = d === day;
             const past = d < day;
             const mile = d % 7 === 0;
+            const stateCls = isToday
+              ? claimed
+                ? 'border-emerald-500 bg-emerald-950 text-emerald-300'
+                : 'border-amber-400 bg-amber-950 text-amber-200 shadow-[0_0_8px_rgba(245,158,11,0.35)]'
+              : past
+                ? 'border-zinc-800 bg-zinc-950 opacity-45'
+                : mile
+                  ? 'border-violet-500/80 bg-violet-950/40 text-violet-200 shadow-[0_0_8px_rgba(168,85,247,0.25)]'
+                  : 'border-zinc-700/60 bg-zinc-800/70 text-zinc-400';
+            const pop = isToday && claimed ? { animation: 'checkin-pop 0.8s ease' } : undefined;
+            if (mile) {
+              // 마지막 칸 — 풀와이드 큰 보상(강조): 아이콘 + "N일째 큰 보상 · 라벨"
+              return (
+                <div
+                  key={d}
+                  className={`col-span-3 flex items-center justify-center gap-2 rounded-xl border py-2 transition-all duration-500 ${stateCls}`}
+                  style={pop}
+                >
+                  <span className="text-lg leading-none">{isToday && claimed ? '✅' : rewardIcon(r, d)}</span>
+                  <span className="text-[11px] font-extrabold">
+                    {d}일째 큰 보상 · {rewardLabel(r)}
+                  </span>
+                  <span className="text-[9px] font-bold opacity-80">
+                    {past ? '✓' : isToday ? (claimed ? '완료' : '오늘') : ''}
+                  </span>
+                </div>
+              );
+            }
             return (
               <div
                 key={d}
-                className={`flex flex-col items-center gap-0.5 rounded-lg border py-1.5 transition-all duration-500 ${
-                  isToday
-                    ? claimed
-                      ? 'border-emerald-500 bg-emerald-950 text-emerald-300'
-                      : 'border-amber-400 bg-amber-950 text-amber-200 shadow-[0_0_8px_rgba(245,158,11,0.35)]'
-                    : past
-                      ? 'border-zinc-800 bg-zinc-950 opacity-45'
-                      : mile
-                        ? 'border-violet-700/70 bg-zinc-800/70 text-zinc-300'
-                        : 'border-zinc-700/60 bg-zinc-800/70 text-zinc-400'
-                }`}
-                style={isToday && claimed ? { animation: 'checkin-pop 0.8s ease' } : undefined}
+                className={`flex flex-col items-center gap-1 rounded-xl border py-2 transition-all duration-500 ${stateCls}`}
+                style={pop}
               >
-                <span className="text-[13px] leading-none">
+                <span className="text-base leading-none">
                   {isToday && claimed ? '✅' : rewardIcon(r, d)}
                 </span>
-                <span className="text-[8px] font-bold leading-none">
+                <span className="text-[10px] font-bold leading-none">
                   {past ? '✓' : isToday ? (claimed ? '완료' : '오늘') : `${d}일`}
                 </span>
               </div>
@@ -195,7 +223,7 @@ export function CheckinPopup({ dayProgress }: { dayProgress: number }) {
           <div>
             <div className="flex items-baseline justify-between text-[10px] text-zinc-400">
               <span>
-                28일 완주 보상 <b className="text-amber-300">{lastLabel}</b>
+                28일 완주 보너스 <b className="text-amber-300">{bonusLabel}</b>
               </span>
               <span className="tabular-nums">
                 {filled} / {CHECKIN_CYCLE_DAYS}일
@@ -208,7 +236,7 @@ export function CheckinPopup({ dayProgress }: { dayProgress: number }) {
               />
             </div>
           </div>
-          <p className="text-[9px] leading-snug text-zinc-500">큰 보상과 완주 보상은 각각 해당 일차의 출석 보상으로 지급돼요.</p>
+          <p className="text-[9px] leading-snug text-zinc-500">완주 보너스는 28일을 모두 채우면 그날 보상에 더해 한 번 더 지급돼요.</p>
         </div>
 
         {claimed ? (

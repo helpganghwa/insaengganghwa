@@ -467,6 +467,12 @@ export const CHECKIN_CALENDAR: readonly CheckinReward[] = [
   { kind: 'diamond', amount: 3000 }, // 28 ★
 ] as const;
 
+/**
+ * §7.2 완주 보너스 — 28번째 칸 수령(한 바퀴 완주) 시 그 칸 보상에 **더해 별도 1회** 지급.
+ * "완주 보상이 칸 보상과 중복인지" 혼동 해소(2026-07-22 사용자 확정): 28일째 = 칸 💎3,000 + 보너스 💎3,000.
+ */
+export const CHECKIN_COMPLETE_BONUS_DIAMOND = 3000;
+
 /** §7.1 7일째 마일스톤 칸(1-index)인지 — UI 강조용. */
 export function isCheckinMilestone(cycleDay1Indexed: number): boolean {
   return cycleDay1Indexed > 0 && cycleDay1Indexed % 7 === 0;

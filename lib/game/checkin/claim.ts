@@ -8,6 +8,7 @@ import { userSupplyBoxes } from '@/lib/db/schema/supply';
 import { userCheckinState, checkinClaimLogs } from '@/lib/db/schema/checkin';
 import {
   CHECKIN_CYCLE_DAYS,
+  CHECKIN_COMPLETE_BONUS_DIAMOND,
   SUPPLY_SLOTS,
   advanceCheckinDayProgress,
   checkinRewardForDay,
@@ -46,6 +47,8 @@ export type CheckinClaimResult = {
   totalClaimedCount: number;
   /** 다음 사이클 진입(28번째 수령 시 true) */
   cycleCompleted: boolean;
+  /** 완주 보너스(28번째 수령 시 칸 보상과 별도 1회) — 미완주 0. */
+  completeBonusDiamond: number;
 };
 
 /** 분배 누적기. */
@@ -108,6 +111,9 @@ export function claimCheckin(input: { userId: string; serverId: number }): Promi
     const reward = checkinRewardForDay(cycleDay);
     const acc = emptyAcc();
     applyRewardToAcc(reward, acc);
+    // 완주 보너스(BALANCE §7.2) — 28번째 칸은 칸 보상 + 별도 보너스를 같은 트랜잭션에서 지급.
+    const completeBonus = cycleDay === CHECKIN_CYCLE_DAYS ? CHECKIN_COMPLETE_BONUS_DIAMOND * TEST_REWARD_MULTIPLIER : 0;
+    acc.diamond += completeBonus;
 
     if (acc.diamond > 0) {
       await walletAdd(tx, userId, input.serverId, acc.diamond);
@@ -162,6 +168,7 @@ export function claimCheckin(input: { userId: string; serverId: number }): Promi
       reward,
       totalClaimedCount: Number(newTotal),
       cycleCompleted: cycleDay === CHECKIN_CYCLE_DAYS,
+      completeBonusDiamond: completeBonus,
     };
   });
 }
