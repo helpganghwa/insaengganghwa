@@ -367,7 +367,7 @@ describe('melee tiers (2026-07-22)', () => {
     expect(meleeTierForRank(101, n).label).toBe('101~200위');
     expect(meleeTierForRank(200, n).label).toBe('101~200위');
     // 220명 중 201등 — 상위 30/50/70%(66/110/154)가 전부 200 이하라 참가로 낙하.
-    expect(meleeTierForRank(201, n).label).toBe('참가');
+    expect(meleeTierForRank(201, n).label).toBe('그 외');
     expect(meleePointsForRank(201, n)).toBe(0);
   });
 
@@ -379,7 +379,7 @@ describe('melee tiers (2026-07-22)', () => {
     expect(meleeTierForRank(500, n).label).toBe('상위 50%');
     expect(meleeTierForRank(501, n).label).toBe('상위 70%'); // ceil(700)
     expect(meleeTierForRank(700, n).label).toBe('상위 70%');
-    expect(meleeTierForRank(701, n).label).toBe('참가');
+    expect(meleeTierForRank(701, n).label).toBe('그 외');
   });
 
   it('보상·포인트 단조 비증가 + 상자 3배수', () => {

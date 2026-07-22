@@ -544,7 +544,7 @@ export const MELEE_REWARD_TIERS: readonly MeleeTier[] = [
   { label: '상위 30%', diamond: 250, boxes: 12, points: 3, pct: 0.3 },
   { label: '상위 50%', diamond: 200, boxes: 9, points: 2, pct: 0.5 },
   { label: '상위 70%', diamond: 170, boxes: 9, points: 1, pct: 0.7 },
-  { label: '참가', diamond: 150, boxes: 6, points: 0 },
+  { label: '그 외', diamond: 150, boxes: 6, points: 0 },
 ];
 
 /** 등수(1-base) + 총 참가자 N → 구간(배타 — 스캔 순서 첫 매칭). */
