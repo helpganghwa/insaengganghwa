@@ -93,8 +93,11 @@ async function handover(serverId: number, g: GuildRow): Promise<boolean> {
     if (!leaderM || leaderM.role !== 'leader') return false;
 
     // 후계자: 활성(미접속<7일) 멤버 중 부길드장 우선 → 기여도 desc → 가입순 asc.
+    // ⚠ raw execute 행 키는 SQL 별칭 그대로(camel 자동변환 없음) — "userId" 인용 별칭 필수.
+    //   (비인용 user_id 별칭을 s.userId로 읽어 undefined → 승격 UPDATE가 UNDEFINED_VALUE로
+    //    매번 롤백되던 버그, 2026-07-22)
     const [s] = (await tx.execute(sql`
-      select m.user_id::text user_id, c.nickname
+      select m.user_id::text "userId", c.nickname
       from guild_members m
       left join characters c on c.user_id = m.user_id and c.server_id = m.server_id
       where m.guild_id = ${leaderM.guildId} and m.user_id <> ${g.leader}
