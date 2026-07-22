@@ -9,7 +9,8 @@ import { characters } from '@/lib/db/schema/server';
 import { sendPushToUsers } from '@/lib/push/send';
 import { logMemberAchievement } from '@/lib/game/guild/achievement';
 import { logWorldEvent } from '@/lib/game/world/event';
-import { bumpCountMetric } from '@/lib/game/leaderboard/incremental';
+import { bumpMeleePoints, claimMilestone } from '@/lib/game/leaderboard/incremental';
+import { meleePointsForRank } from '@/lib/game/balance';
 import { kstDateString } from '@/lib/kst';
 
 /**
@@ -113,12 +114,33 @@ async function revealOne(serverId: number, battleDate: string): Promise<{ battle
   if (!result) return null;
   const { battleId, podium, podiumStr } = result;
 
-  // 리더보드 증분(v2) — 통산 우승 +1. reveal이 조건부 전이로 정확히 1회라 증분이 정확.
-  if (result.championUserId) {
+  // 리더보드 증분(v2, 2026-07-22 개편) — 참가자 전원 포인트 적립(구간별 가변).
+  // reveal이 조건부 전이로 정확히 1회라 증분이 정확. 놓친 적립은 시간별 스냅샷이 교정.
+  {
+    const rankRows = await db
+      .select({ uid: meleeParticipants.userId, rank: meleeParticipants.finalRank })
+      .from(meleeParticipants)
+      .where(eq(meleeParticipants.battleId, battleId));
+    const n = rankRows.length;
+    const entries = rankRows
+      .filter((r) => r.rank != null)
+      .map((r) => ({ userId: r.uid, points: meleePointsForRank(Number(r.rank), n) }));
     // await — 서버리스는 응답 종료 시 미완 프라미스를 드롭할 수 있어 fire-and-forget 금지.
-    await bumpCountMetric([result.championUserId], serverId, 'melee').catch((e) =>
-      console.warn('[melee.reveal] leaderboard bump failed (cron이 교정)', e),
+    await bumpMeleePoints(entries, serverId).catch((e) =>
+      console.warn('[melee.reveal] points bump failed (cron이 교정)', e),
     );
+  }
+  // 우승 마일스톤(통산 우승 N회 — 포인트와 분리 유지). 우승 횟수를 원천에서 재계산해 클레임.
+  if (result.championUserId) {
+    try {
+      const [w] = (await db.execute(sql`
+        select count(*)::int as n from melee_battles
+        where server_id = ${serverId} and status = 'revealed' and champion_user_id = ${result.championUserId}::uuid
+      `)) as unknown as { n: number }[];
+      if (w && Number(w.n) > 0) await claimMilestone(result.championUserId, serverId, 'melee', Number(w.n));
+    } catch (e) {
+      console.warn('[melee.reveal] champion milestone failed', e);
+    }
   }
 
   // 푸시 — 참가자 전원(토글 ON만 내부 필터). 본문은 시상대 Top3(개인 순위는 우편/페이지).

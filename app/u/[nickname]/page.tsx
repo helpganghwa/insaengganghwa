@@ -282,7 +282,7 @@ async function KpiRowWithRanks({
         rank={rankBadgeStreamed(counts.raid?.rank)}
       />
       <KpiCard
-        label="대난투"
+        label="대난투 포인트"
         value={fmtCompact(counts.melee?.value ?? 0)}
         rank={rankBadgeStreamed(counts.melee?.rank)}
       />
@@ -305,7 +305,7 @@ function KpiRowFallback({
       <KpiCard label="최고" value={fmtCompact(maxEnhance)} rank="—" />
       <KpiCard label="합산" value={fmtCompact(sumEnhance)} rank="—" />
       <KpiCard label="레이드" value="—" rank="—" />
-      <KpiCard label="대난투" value="—" rank="—" />
+      <KpiCard label="대난투 포인트" value="—" rank="—" />
     </section>
   );
 }

@@ -516,28 +516,55 @@ export const MELEE_MY_EVENTS_MAX = 40;
 export type MeleeReward = { diamond: number; boxes: number };
 
 /**
- * 등수(1-base) + 총 참가자 N → 보상. 티어 배타(스캔 순서로 첫 매칭 1개만). MELEE §6.
- * 1위 💎2000+60 · 2~3위 💎1000+30 · 상위5% 💎400+15 · 상위20% 💎150+15 · 상위50% 💎100+9 · 그외 💎50+6.
- * 상자 수는 3의 배수(부위 3슬롯 균등 분배 — distributeBoxes).
+ * 대난투 구간 테이블(2026-07-22 개편) — 보상 + 랭킹 포인트의 단일 진실 원천.
+ * 설계: 1위만 특별(2위의 ~1.7배), 이후 완만한 균등 곡선(순위 스트레스 최소화 — 경쟁
+ * 동기는 포인트가 담당: 1위 20 vs 2위 10). 절대 순위 구간(1~200) 우선, 퍼센타일은
+ * 참가자 667명+부터 실효(그 전엔 절대 구간이 선매칭). 상자는 3의 배수(distributeBoxes).
+ * 랭킹 = 누적 포인트(leaderboard metric 'melee') — 우승 횟수는 통계·마일스톤으로 유지.
+ *  - maxRank: 절대 순위 상한 / pct: 퍼센타일 상한(ceil(n*pct)) / 아무것도 없으면 참가(전원).
  */
-export function meleeRewardForRank(rank: number, n: number): MeleeReward {
-  if (rank <= 1) return { diamond: 2000, boxes: 60 };
-  if (rank <= 3) return { diamond: 1000, boxes: 30 };
-  if (rank <= Math.ceil(n * 0.05)) return { diamond: 400, boxes: 15 };
-  if (rank <= Math.ceil(n * 0.2)) return { diamond: 150, boxes: 15 };
-  if (rank <= Math.ceil(n * 0.5)) return { diamond: 100, boxes: 9 };
-  return { diamond: 50, boxes: 6 };
+export type MeleeTier = {
+  label: string;
+  diamond: number;
+  boxes: number;
+  points: number;
+  maxRank?: number;
+  pct?: number;
+};
+
+export const MELEE_REWARD_TIERS: readonly MeleeTier[] = [
+  { label: '1위', diamond: 1000, boxes: 60, points: 20, maxRank: 1 },
+  { label: '2위', diamond: 600, boxes: 30, points: 10, maxRank: 2 },
+  { label: '3위', diamond: 550, boxes: 27, points: 9, maxRank: 3 },
+  { label: '4~10위', diamond: 500, boxes: 27, points: 8, maxRank: 10 },
+  { label: '11~25위', diamond: 450, boxes: 24, points: 7, maxRank: 25 },
+  { label: '26~50위', diamond: 400, boxes: 21, points: 6, maxRank: 50 },
+  { label: '51~100위', diamond: 350, boxes: 18, points: 5, maxRank: 100 },
+  { label: '101~200위', diamond: 300, boxes: 15, points: 4, maxRank: 200 },
+  { label: '상위 30%', diamond: 250, boxes: 12, points: 3, pct: 0.3 },
+  { label: '상위 50%', diamond: 200, boxes: 9, points: 2, pct: 0.5 },
+  { label: '상위 70%', diamond: 170, boxes: 9, points: 1, pct: 0.7 },
+  { label: '참가', diamond: 150, boxes: 6, points: 0 },
+];
+
+/** 등수(1-base) + 총 참가자 N → 구간(배타 — 스캔 순서 첫 매칭). */
+export function meleeTierForRank(rank: number, n: number): MeleeTier {
+  for (const t of MELEE_REWARD_TIERS) {
+    if (t.maxRank != null && rank <= t.maxRank) return t;
+    if (t.pct != null && rank <= Math.ceil(n * t.pct)) return t;
+  }
+  return MELEE_REWARD_TIERS[MELEE_REWARD_TIERS.length - 1]!;
 }
 
-/** 보상 테이블 표시용 — meleeRewardForRank와 1:1(공시). 등수 라벨 + 보상. */
-export const MELEE_REWARD_TIERS: { label: string; diamond: number; boxes: number }[] = [
-  { label: '1위', diamond: 2000, boxes: 60 },
-  { label: '2~3위', diamond: 1000, boxes: 30 },
-  { label: '상위 5%', diamond: 400, boxes: 15 },
-  { label: '상위 20%', diamond: 150, boxes: 15 },
-  { label: '상위 50%', diamond: 100, boxes: 9 },
-  { label: '그 외', diamond: 50, boxes: 6 },
-];
+export function meleeRewardForRank(rank: number, n: number): MeleeReward {
+  const t = meleeTierForRank(rank, n);
+  return { diamond: t.diamond, boxes: t.boxes };
+}
+
+/** 랭킹 포인트 — 발표 시 참가자 전원 적립(리더보드 'melee' = 누적 포인트). */
+export function meleePointsForRank(rank: number, n: number): number {
+  return meleeTierForRank(rank, n).points;
+}
 
 // ─────────────────────────────────────────────────────────────────────────────
 // §9. 배틀패스 (성장 패스 — 만료 없음)

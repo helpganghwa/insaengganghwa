@@ -11,6 +11,7 @@ import { logWorldEvent } from '@/lib/game/world/event';
 import { sendMilestoneMail } from '@/lib/game/milestone-mail';
 import { logMemberAchievement } from '@/lib/game/guild/achievement';
 import { combatPowerFromOwned } from '@/lib/game/equipment/combat-power';
+import { meleePointsCaseSql } from '@/lib/game/melee/points';
 
 /**
  * 리더보드 **증분 갱신**(v2, 2026-07-07) — 값 테이블(leaderboard_ranks)을 쓰기 시점에
@@ -164,6 +165,40 @@ export async function bumpCountMetric(userIds: string[], serverId: number, metri
   }
 }
 
+/**
+ * 대난투 포인트 적립(2026-07-22) — 발표 시 참가자 전원, 유저별 가변 포인트 +.
+ * bumpCountMetric와 동일한 락·신규삽입 recount 교정 구조. 마일스톤은 호출하지 않음 —
+ * melee 마일스톤은 '우승 횟수' 기반으로 reveal에서 별도 클레임(포인트 오발화 차단).
+ */
+export async function bumpMeleePoints(
+  entries: { userId: string; points: number }[],
+  serverId: number,
+): Promise<void> {
+  for (const { userId, points } of entries) {
+    if (points <= 0) continue;
+    try {
+      await db.transaction(async (tx) => {
+        await lockUser(tx, userId);
+        if (await isActivelyBanned(tx, userId)) return;
+        const [b] = (await tx.execute(sql`
+          insert into leaderboard_ranks (server_id, metric, user_id, value, rank)
+          values (${serverId}, 'melee', ${userId}::uuid, ${points}, 0)
+          on conflict (server_id, metric, user_id) do update
+            set value = leaderboard_ranks.value + ${points}, updated_at = now()
+          returning value, (xmax = 0) as inserted
+        `)) as unknown as { value: string; inserted: boolean }[];
+        // 신규 삽입(통산 이력 미반영) 또는 우승수→포인트 전환기 값 잔존 가능 — 원천 재계산 교정.
+        if (b?.inserted) {
+          const recounted = await recountCountMetric(tx, userId, serverId, 'melee');
+          if (recounted !== Number(b.value)) await upsertValue(tx, userId, serverId, 'melee', recounted);
+        }
+      });
+    } catch (e) {
+      console.warn('[lb.meleePoints]', userId, e);
+    }
+  }
+}
+
 /** 카운트 메트릭 원천 재계산 — 스냅샷과 동일 술어(유저 1명 스코프). */
 async function recountCountMetric(
   dbx: Dbx,
@@ -187,17 +222,18 @@ async function recountCountMetric(
       );
     return r?.n ?? 0;
   }
-  const [m] = await dbx
-    .select({ n: sql<number>`count(*)::int` })
-    .from(meleeBattles)
-    .where(
-      and(
-        eq(meleeBattles.serverId, serverId),
-        eq(meleeBattles.status, 'revealed'),
-        eq(meleeBattles.championUserId, userId),
-      ),
-    );
-  return m?.n ?? 0;
+  // melee = 누적 포인트(2026-07-22 개편) — 참가 순위×구간 포인트 합. CASE는 MELEE_REWARD_TIERS
+  // 단일 출처에서 생성(points.ts) — TS 함수·스냅샷과 결과 항상 일치.
+  const caseExpr = meleePointsCaseSql('mp.final_rank', 'pc.n');
+  const rows = (await dbx.execute(sql`
+    select coalesce(sum(${sql.raw(caseExpr)}), 0)::int as n
+    from melee_participants mp
+    join melee_battles mb on mb.id = mp.battle_id
+    join (select battle_id, count(*)::int as n from melee_participants group by battle_id) pc
+      on pc.battle_id = mp.battle_id
+    where mp.user_id = ${userId}::uuid and mb.server_id = ${serverId} and mb.status = 'revealed'
+  `)) as unknown as { n: number }[];
+  return Number(rows[0]?.n ?? 0);
 }
 
 /**

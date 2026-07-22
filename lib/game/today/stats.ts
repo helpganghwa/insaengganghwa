@@ -3,6 +3,7 @@ import 'server-only';
 import { sql } from 'drizzle-orm';
 
 import { db } from '@/lib/db/client';
+import { meleePointsCaseSql } from '@/lib/game/melee/points';
 
 /**
  * 오늘의 인생강화(0120) — 자정 스냅샷(user_daily_stats) 대비 현재값 증감 + 오늘 활동 통계.
@@ -225,6 +226,8 @@ export type LifetimeStats = {
   meleeJoined: number;
   meleeWins: number;
   meleeBest: number | null;
+  /** 대난투 누적 랭킹 포인트(2026-07-22 개편) — 리더보드 'melee'와 동일 산식. */
+  meleePoints: number;
   raidSummons: number;
   raidAttacks: number;
   raidRewards: number;
@@ -256,8 +259,12 @@ export async function getLifetimeStats(userId: string, serverId: number): Promis
     melee as (
       select count(*)::int joined,
              count(*) filter (where mp.final_rank=1)::int wins,
-             min(mp.final_rank)::int best
-      from melee_participants mp join melee_battles mb on mb.id=mp.battle_id
+             min(mp.final_rank)::int best,
+             coalesce(sum(${sql.raw(meleePointsCaseSql('mp.final_rank', 'pc.n'))}),0)::int points
+      from melee_participants mp
+      join melee_battles mb on mb.id=mp.battle_id
+      join (select battle_id, count(*)::int as n from melee_participants group by battle_id) pc
+        on pc.battle_id=mp.battle_id
       where mp.user_id=${userId}::uuid and mb.server_id=${serverId} and mb.status='revealed'
     )
     select
@@ -281,6 +288,7 @@ export async function getLifetimeStats(userId: string, serverId: number): Promis
       (select count(*)::int from user_equipment where user_id=${userId}::uuid and server_id=${serverId}) item_kinds,
       (select count(*)::int from catalog_items) catalog_total,
       (select joined from melee) melee_joined, (select wins from melee) melee_wins, (select best from melee) melee_best,
+      (select points from melee) melee_points,
       (select count(*)::int from raids where host_user_id=${userId}::uuid and server_id=${serverId}) raid_summons,
       (select count(*)::int from raid_attacks ra join raids rd on rd.id=ra.raid_id where ra.user_id=${userId}::uuid and rd.server_id=${serverId}) raid_attacks,
       (select coalesce(sum(coalesce((rr.boxes->>'weapon')::int,0) + coalesce((rr.boxes->>'armor')::int,0) + coalesce((rr.boxes->>'accessory')::int,0)),0)::int
@@ -317,6 +325,7 @@ export async function getLifetimeStats(userId: string, serverId: number): Promis
     meleeJoined: num(e.melee_joined),
     meleeWins: num(e.melee_wins),
     meleeBest: opt(e.melee_best),
+    meleePoints: num(e.melee_points),
     raidSummons: num(e.raid_summons),
     raidAttacks: num(e.raid_attacks),
     raidRewards: num(e.raid_rewards),

@@ -6,7 +6,7 @@ import { db } from '@/lib/db/client';
 import { profiles } from '@/lib/db/schema/profiles';
 import { userEquipment } from '@/lib/db/schema/equipment';
 import { raids, raidParticipants } from '@/lib/db/schema/raid';
-import { meleeBattles } from '@/lib/db/schema/melee';
+import { meleePointsCaseSql } from '@/lib/game/melee/points';
 import { codexChampions } from '@/lib/db/schema/leaderboard';
 import { userMilestones } from '@/lib/db/schema/world';
 import { milestoneOf } from '@/lib/game/milestone';
@@ -96,15 +96,22 @@ async function raidRows(serverId: number): Promise<Row[]> {
   return r.map((x) => ({ userId: x.userId, value: Number(x.value) }));
 }
 
+/** melee = 누적 포인트(2026-07-22 개편) — CASE는 MELEE_REWARD_TIERS 단일 출처(points.ts). */
 async function meleeRows(serverId: number): Promise<Row[]> {
   const r = await db
-    .select({ userId: meleeBattles.championUserId, value: sql<number>`count(*)::int` })
-    .from(meleeBattles)
-    .where(and(eq(meleeBattles.serverId, serverId), eq(meleeBattles.status, 'revealed')))
-    .groupBy(meleeBattles.championUserId);
-  return r
-    .filter((x): x is { userId: string; value: number } => x.userId != null)
-    .map((x) => ({ userId: x.userId, value: Number(x.value) }));
+    .execute(sql`
+      select mp.user_id::text as user_id,
+             coalesce(sum(${sql.raw(meleePointsCaseSql('mp.final_rank', 'pc.n'))}), 0)::int as value
+      from melee_participants mp
+      join melee_battles mb on mb.id = mp.battle_id
+      join (select battle_id, count(*)::int as n from melee_participants group by battle_id) pc
+        on pc.battle_id = mp.battle_id
+      where mb.server_id = ${serverId} and mb.status = 'revealed'
+      group by mp.user_id
+    `);
+  return (r as unknown as { user_id: string; value: number }[])
+    .filter((x) => Number(x.value) > 0)
+    .map((x) => ({ userId: x.user_id, value: Number(x.value) }));
 }
 
 /** 현재 활성 정지 계정 id 집합 — bannedAt 있고 banUntil이 없거나 아직 안 지남(ban.ts와 동일 판정). */
@@ -191,7 +198,9 @@ export async function rebuildLeaderboardSnapshot(
     counts[metric] = ranked.length;
     // 개인 기록 마일스톤(2026-07-06) — 이 지표들의 전 유저 값을 여기서 이미 계산하므로
     // 워터마크 교차를 감지해 월드·길드 로그를 남긴다(핫패스 비용 0, 최대 15분 지연 허용).
-    if (metric === 'sum' || metric === 'combat' || metric === 'raid' || metric === 'melee') {
+    // melee 제외(2026-07-22) — 값이 포인트로 바뀌어 '통산 우승 N회' 마일스톤 의미와 어긋남.
+    // 우승 마일스톤은 reveal(챔피언 확정 시점)에서 우승 횟수로 클레임한다.
+    if (metric === 'sum' || metric === 'combat' || metric === 'raid') {
       await logPersonalMilestones(serverId, metric, rows).catch((e) =>
         console.warn('[milestone]', metric, (e as Error).message),
       );
@@ -206,7 +215,7 @@ export async function rebuildLeaderboardSnapshot(
  */
 async function logPersonalMilestones(
   serverId: number,
-  metric: 'sum' | 'combat' | 'raid' | 'melee',
+  metric: 'sum' | 'combat' | 'raid',
   rows: Row[],
 ): Promise<void> {
   const eligible = rows
