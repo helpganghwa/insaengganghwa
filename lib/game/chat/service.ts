@@ -35,6 +35,9 @@ export type ChatMessageDto = {
   faceBox: { cx: number; cy: number; h: number } | null;
   guildName: string | null;
   guildEmblemUrl: string | null;
+  /** 집행관 구역명·지역(2026-07-22) — 집행관이 아니면 null. 길드명 우측에 표시. */
+  executorZone: string | null;
+  executorZoneRegion: string | null;
   /** 현재(가장 최근) 대난투 우승자 — 닉네임 앞 🏆 표시. */
   isMeleeChampion: boolean;
   /** 유효 멘션(0128) — 닉+공개코드. 표시 시 @ 제거·강조·프로필 링크. (구 string[] 호환) */
@@ -58,6 +61,8 @@ export function guildLogToChatDto(entry: GuildLogEntry): ChatMessageDto {
     faceBox: null,
     guildName: null,
     guildEmblemUrl: null,
+    executorZone: null,
+    executorZoneRegion: null,
     isMeleeChampion: false,
     mentions: null,
     sysGuild: entry,
@@ -83,6 +88,8 @@ export function sysToChatDto(entry: WorldEventEntry): ChatMessageDto {
     faceBox: null,
     guildName: null,
     guildEmblemUrl: null,
+    executorZone: null,
+    executorZoneRegion: null,
     isMeleeChampion: false,
     mentions: null,
     sys: entry,
@@ -158,7 +165,7 @@ export async function isChatEnabled(): Promise<boolean> {
 async function displayFields(
   userIds: string[],
   serverId: number,
-): Promise<Map<string, { nickname: string; publicCode: string | null; avatar: string | null; faceBox: { cx: number; cy: number; h: number } | null; guildName: string | null; guildEmblemUrl: string | null; isMeleeChampion: boolean }>> {
+): Promise<Map<string, { nickname: string; publicCode: string | null; avatar: string | null; faceBox: { cx: number; cy: number; h: number } | null; guildName: string | null; guildEmblemUrl: string | null; executorZone: string | null; executorZoneRegion: string | null; isMeleeChampion: boolean }>> {
   if (userIds.length === 0) return new Map();
   const uniq = [...new Set(userIds)];
   const [rows, guilds, champion] = await Promise.all([
@@ -174,7 +181,7 @@ async function displayFields(
       .innerJoin(profiles, eq(profiles.id, characters.userId))
       .leftJoin(userProfiles, eq(userProfiles.id, characters.activeProfileId))
       .where(and(eq(characters.serverId, serverId), inArray(characters.userId, uniq))),
-    getGuildBriefsByUsers(uniq, serverId).catch(() => new Map<string, { name: string }>()),
+    getGuildBriefsByUsers(uniq, serverId).catch(() => new Map()),
     currentMeleeChampion(serverId).catch(() => null),
   ]);
   const m = new Map();
@@ -187,6 +194,9 @@ async function displayFields(
       faceBox: parseFaceBox((r.options as Record<string, unknown> | null)?.faceBox),
       guildName: (guilds.get(r.userId) as { name?: string } | undefined)?.name ?? null,
       guildEmblemUrl: (guilds.get(r.userId) as { emblemUrl?: string | null } | undefined)?.emblemUrl ?? null,
+      executorZone: (guilds.get(r.userId) as { executorZone?: string | null } | undefined)?.executorZone ?? null,
+      executorZoneRegion:
+        (guilds.get(r.userId) as { executorZoneRegion?: string | null } | undefined)?.executorZoneRegion ?? null,
       isMeleeChampion: r.userId === champion,
     });
   }
@@ -239,6 +249,8 @@ export async function getRecentChat(
         faceBox: f?.faceBox ?? null,
         guildName: f?.guildName ?? null,
         guildEmblemUrl: f?.guildEmblemUrl ?? null,
+        executorZone: f?.executorZone ?? null,
+        executorZoneRegion: f?.executorZoneRegion ?? null,
         isMeleeChampion: f?.isMeleeChampion ?? false,
         mentions: normMentions(r.mentions),
         body: r.body,
@@ -280,6 +292,8 @@ export async function persistAndBroadcast(
     faceBox: f?.faceBox ?? null,
     guildName: f?.guildName ?? null,
     guildEmblemUrl: f?.guildEmblemUrl ?? null,
+    executorZone: f?.executorZone ?? null,
+    executorZoneRegion: f?.executorZoneRegion ?? null,
     isMeleeChampion: f?.isMeleeChampion ?? false,
     mentions: mentions.length ? mentions : null,
     body,

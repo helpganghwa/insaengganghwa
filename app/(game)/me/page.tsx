@@ -16,6 +16,7 @@ import { profileHref } from '@/lib/game/profile/href';
 
 import { BoastLauncher } from '@/components/BoastModal';
 import { TranscendSprite } from '@/components/TranscendSprite';
+import { ExecutorTag } from '@/components/ExecutorTag';
 import { rarityBorderStyle, hasRarityBorder, TranscendTag } from '@/components/RarityFrame';
 
 import { NicknameEditor } from './NicknameEditor';
@@ -50,6 +51,8 @@ export default async function ProfilePage() {
     active_profile_id: string | null;
     guild_emblem_url: string | null;
     guild_name: string | null;
+    executor_zone: string | null;
+    executor_zone_region: string | null;
     referral_count: number;
     friend_req_count: number;
     equipment: {
@@ -67,6 +70,7 @@ export default async function ProfilePage() {
           c.nickname, p.public_code, p.is_admin, c.diamond::text as diamond,
           c.nickname_changed_count, c.active_profile_id,
           g.emblem_url as guild_emblem_url, g.name as guild_name,
+          z.name as executor_zone, z.region::text as executor_zone_region,
           (select count(*)::int from referral_attributions where referrer_user_id = ${userId}::uuid) as referral_count,
           (select count(*)::int from friend_links where status = 'pending' and addressee_id = ${userId}::uuid and server_id = ${serverId}) as friend_req_count,
           coalesce((select json_agg(json_build_object(
@@ -80,6 +84,7 @@ export default async function ProfilePage() {
           left join characters c on c.user_id = p.id and c.server_id = ${serverId}
           left join guild_members gm on gm.user_id = p.id and gm.server_id = ${serverId}
           left join guilds g on g.id = gm.guild_id
+          left join zones z on z.executor_user_id = p.id and z.server_id = ${serverId}
         where p.id = ${userId}::uuid limit 1
       `) as unknown as Promise<MeRow[]>,
       liberatedItemRanks(userId, serverId),
@@ -139,24 +144,35 @@ export default async function ProfilePage() {
 
   return (
     <div className="space-y-4 px-4 py-6">
-      {/* 내 정보 카드 — 좌: 닉네임/캐릭터/전투력 · 우: 장비 3종 */}
+      {/* 내 정보 카드 — 상단 전체폭 2줄(닉네임 / 집행관·길드) + 하단 좌: 캐릭터 · 우: 장비 3종.
+          집행관 표시(2026-07-22)는 좌측 열(130px) 안에서 최장 케이스가 안 들어가 상단 전체폭(334px)으로
+          올렸다. 채팅 프로필 팝업과 같은 구성. */}
       <section className="rounded-xl border border-zinc-800 bg-gradient-to-b from-zinc-900 to-zinc-950 p-3">
+        <div className="mb-2.5 flex flex-col items-center gap-0.5">
+          <NicknameEditor
+            current={nickname}
+            changedCount={row?.nickname_changed_count ?? 0}
+            diamond={row?.diamond ?? '0'}
+            className="relative z-10 text-white text-sm font-bold"
+          />
+          {row?.executor_zone || row?.guild_name ? (
+            <div className="flex max-w-full items-center gap-1 text-[11px] text-white/70">
+              <ExecutorTag zone={row?.executor_zone} region={row?.executor_zone_region} />
+              {row?.executor_zone && row?.guild_name ? (
+                <span className="shrink-0 text-white/30">·</span>
+              ) : null}
+              <GuildBadge
+                emblemUrl={row?.guild_emblem_url ?? null}
+                name={row?.guild_name ?? null}
+                size={14}
+                className="min-w-0 text-[11px] text-white/70"
+              />
+            </div>
+          ) : null}
+        </div>
         <div className="flex items-stretch gap-2">
-          {/* 좌(4) — 머리 위 닉네임 + 캐릭터 */}
+          {/* 좌(4) — 캐릭터 */}
           <div className="flex basis-2/5 flex-col items-center gap-1">
-            <NicknameEditor
-              current={nickname}
-              changedCount={row?.nickname_changed_count ?? 0}
-              diamond={row?.diamond ?? '0'}
-              className="relative z-10 text-white text-xs font-normal"
-            />
-            <GuildBadge
-              emblemUrl={row?.guild_emblem_url ?? null}
-              name={row?.guild_name ?? null}
-              size={14}
-              pinEmblemRight
-              className="z-10 max-w-full text-[11px] text-white/70"
-            />
             {activeProfile ? (
               <Link prefetch={false}
                 href={profileHref(publicCode, serverId)}
@@ -191,7 +207,7 @@ export default async function ProfilePage() {
                     href={`/inventory?slot=${s}`}
                     className="flex flex-1 items-center gap-2 rounded-xl border border-dashed border-white/15 bg-white/[0.02] px-2 text-white/45"
                   >
-                    <span className="grid h-10 w-10 shrink-0 place-items-center rounded-lg bg-white/5 text-lg" aria-hidden>
+                    <span className="grid h-9 w-9 shrink-0 place-items-center rounded-lg bg-white/5 text-lg" aria-hidden>
                       {SLOT_EMOJI[s]}
                     </span>
                     <span className="text-[12px]">{SLOT_LABEL[s]} 장착</span>
@@ -212,7 +228,7 @@ export default async function ProfilePage() {
                       slot={s}
                       level={it.transcendLevel}
                       championRank={libRanks.get(it.catalogItemId) ?? null}
-                      size={42}
+                      size={38}
                       frameless
                     />
                   </div>
@@ -238,6 +254,8 @@ export default async function ProfilePage() {
         profileImg={activeProfile ? dirImg(activeProfile) : null}
         guildEmblemUrl={row?.guild_emblem_url ?? null}
         guildName={row?.guild_name ?? null}
+        executorZone={row?.executor_zone ?? null}
+        executorZoneRegion={row?.executor_zone_region ?? null}
         pieces={boastPieces}
       />
 
@@ -255,6 +273,8 @@ export default async function ProfilePage() {
           profileImg: activeProfile ? dirImg(activeProfile) : null,
           guildEmblemUrl: row?.guild_emblem_url ?? null,
           guildName: row?.guild_name ?? null,
+          executorZone: row?.executor_zone ?? null,
+          executorZoneRegion: row?.executor_zone_region ?? null,
           serverId,
         }}
       />

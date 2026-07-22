@@ -33,6 +33,8 @@ export function ReferralSection({
     profileImg: string | null;
     guildEmblemUrl: string | null;
     guildName: string | null;
+    executorZone: string | null;
+    executorZoneRegion: string | null;
     serverId: number;
   };
 }) {
@@ -69,6 +71,8 @@ export function ReferralSection({
         profileImg={boast.profileImg}
         guildEmblemUrl={boast.guildEmblemUrl}
         guildName={boast.guildName}
+        executorZone={boast.executorZone}
+        executorZoneRegion={boast.executorZoneRegion}
         serverId={boast.serverId}
       />
     </>

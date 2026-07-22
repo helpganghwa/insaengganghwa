@@ -32,6 +32,9 @@ export interface LayoutData {
   profileFaceBox: FaceBox | null;
   /** 헤더 우측 길드 문양 — 미소속/생성중이면 null(미표시). */
   guildEmblemUrl: string | null;
+  /** 집행관 구역명·지역 — 집행관이 아니면 null(미표시). 헤더 닉네임 줄 우측 노출(2026-07-22). */
+  executorZone: string | null;
+  executorZoneRegion: string | null;
   /** 닉네임 아래 서브라인(2026-07-21 문의 반영) — 전투력·최고강화·합산강화. 로드 실패 시 null(미표시). */
   stats: { combat: number; maxEnhance: number; sumEnhance: number } | null;
 }
@@ -46,6 +49,8 @@ const DEFAULTS: LayoutData = {
   profileSouth: null,
   profileFaceBox: null,
   guildEmblemUrl: null,
+  executorZone: null,
+  executorZoneRegion: null,
   stats: null,
 };
 
@@ -59,12 +64,15 @@ export async function loadLayoutData(userId: string, serverId: number): Promise<
     const [profileRows, mailRows, enhRows, friendReqRows, equipRows] = await Promise.all([
       pgGuard(
         (sql) => sql`
-          select c.nickname, c.nickname_changed_count, c.diamond, up.rotations, up.options as profile_options, g.emblem_url as guild_emblem_url
+          select c.nickname, c.nickname_changed_count, c.diamond, up.rotations, up.options as profile_options,
+                 g.emblem_url as guild_emblem_url,
+                 z.name as executor_zone, z.region::text as executor_zone_region
           from profiles p
           left join characters c on c.user_id = p.id and c.server_id = ${serverId}
           left join user_profiles up on up.id = c.active_profile_id
           left join guild_members gm on gm.user_id = p.id and gm.server_id = ${serverId}
           left join guilds g on g.id = gm.guild_id
+          left join zones z on z.executor_user_id = p.id and z.server_id = ${serverId}
           where p.id = ${userId}::uuid
           limit 1`,
         4000,
@@ -117,6 +125,8 @@ export async function loadLayoutData(userId: string, serverId: number): Promise<
           rotations?: unknown;
           profile_options?: unknown;
           guild_emblem_url?: string | null;
+          executor_zone?: string | null;
+          executor_zone_region?: string | null;
         }
       | undefined;
     // 캐릭터 부재(반쪽 계정) 자가복구 — 생성 성공 시 재조회로 이번 응답부터 정상 데이터.
@@ -159,6 +169,8 @@ export async function loadLayoutData(userId: string, serverId: number): Promise<
       profileSouth: (rot as Record<string, string> | null)?.south ?? null,
       profileFaceBox: faceBox,
       guildEmblemUrl: p?.guild_emblem_url ?? null,
+      executorZone: p?.executor_zone ?? null,
+      executorZoneRegion: p?.executor_zone_region ?? null,
       stats: (() => {
         const eq = equipRows as { e: number; t: number; mx: number }[];
         return {

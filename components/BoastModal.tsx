@@ -6,6 +6,7 @@ import { createPortal } from 'react-dom';
 import { TranscendSprite } from '@/components/TranscendSprite';
 import { rarityBorderStyle, hasRarityBorder, TranscendTag } from '@/components/RarityFrame';
 import { GuildBadge } from '@/components/GuildBadge';
+import { ExecutorTag } from '@/components/ExecutorTag';
 import { useResourceToast } from '@/components/ResourceToast';
 import { getEnhancingUserCount } from '@/app/(game)/me/actions';
 
@@ -46,6 +47,8 @@ export function BoastModal({
   profileImg,
   guildEmblemUrl = null,
   guildName = null,
+  executorZone = null,
+  executorZoneRegion = null,
   serverId = 1,
 }: {
   open: boolean;
@@ -58,6 +61,8 @@ export function BoastModal({
   profileImg?: string | null;
   /** 닉네임 밑 길드 문양+이름(미소속/생성중이면 미표시). */
   guildEmblemUrl?: string | null;
+  executorZone?: string | null;
+  executorZoneRegion?: string | null;
   /** 캐릭터의 서버(SERVER.md) — 1이 아니면 공유/OG 링크에 ?s= 전파. */
   serverId?: number;
   guildName?: string | null;
@@ -254,17 +259,19 @@ export function BoastModal({
         {/* 미리보기 카드 — 프로필 페이지 프로필 섹션과 동일 구성(좌 캐릭터·우 장비 3종). */}
         <div className="flex-1 overflow-y-auto bg-zinc-950 p-3">
           <section className="rounded-xl border border-zinc-800 bg-gradient-to-b from-zinc-900 to-zinc-950 p-3">
+            {/* 상단 한 줄 — OG 카드와 동일 구성(닉네임 + 문양 + 길드명 + 구역명 집행관). */}
+            <div className="mb-2 flex items-center justify-center gap-1.5 overflow-hidden">
+              <span className="shrink-0 text-[13px] font-bold text-white">{nickname}</span>
+              <GuildBadge emblemUrl={guildEmblemUrl} size={13} className="shrink-0" />
+              {guildName ? (
+                <span className="truncate text-[10px] text-white/70">{guildName}</span>
+              ) : null}
+              {guildName && executorZone ? <span className="shrink-0 text-white/30">·</span> : null}
+              <ExecutorTag zone={executorZone} region={executorZoneRegion} className="text-[10px]" />
+            </div>
             <div className="flex items-stretch gap-2">
-              {/* 좌(4) — 닉네임 + 캐릭터(머리위 닉네임은 작게) */}
+              {/* 좌(4) — 캐릭터 */}
               <div className="flex basis-2/5 flex-col items-center gap-1">
-                <span className="truncate text-xs font-normal text-white">{nickname}</span>
-                <GuildBadge
-                  emblemUrl={guildEmblemUrl}
-                  name={guildName}
-                  size={13}
-                  pinEmblemRight
-                  className="max-w-full text-[10px] text-white/70"
-                />
                 <div className="relative aspect-[3/4] h-36">
                   {profileImg ? (
                     // eslint-disable-next-line @next/next/no-img-element
@@ -416,6 +423,8 @@ export function BoastLauncher({
   guildEmblemUrl = null,
   serverId = 1,
   guildName = null,
+  executorZone = null,
+  executorZoneRegion = null,
 }: {
   nickname: string;
   /** 불변 공개 코드 — 공유/OG 링크 식별자. */
@@ -428,6 +437,8 @@ export function BoastLauncher({
   label?: string;
   guildEmblemUrl?: string | null;
   guildName?: string | null;
+  executorZone?: string | null;
+  executorZoneRegion?: string | null;
   /** 캐릭터의 서버 — 공유/OG 링크 ?s= 전파(기본 1). */
   serverId?: number;
 }) {
@@ -464,6 +475,8 @@ export function BoastLauncher({
         profileImg={profileImg ?? null}
         guildEmblemUrl={guildEmblemUrl}
         guildName={guildName}
+        executorZone={executorZone}
+        executorZoneRegion={executorZoneRegion}
         serverId={serverId}
       />
     </>

@@ -74,7 +74,9 @@ export async function GET(req: Request) {
   if (!row) return NextResponse.json({ error: 'not_found' }, { status: 404 });
 
   const rot = (row.rotations ?? {}) as Record<string, string>;
-  const g = guilds.get(uid) as { name?: string; emblemUrl?: string | null } | undefined;
+  const g = guilds.get(uid) as
+    | { name?: string; emblemUrl?: string | null; executorZone?: string | null; executorZoneRegion?: string | null }
+    | undefined;
   const combat = equip.reduce((acc, r) => acc + pieceCombatPower(r.e, r.t), 0);
   const maxEnhance = equip.reduce((acc, r) => Math.max(acc, r.mx), 0);
   const sumEnhance = equip.reduce((acc, r) => acc + r.e, 0);
@@ -87,6 +89,8 @@ export async function GET(req: Request) {
     faceBox: parseFaceBox((row.options as Record<string, unknown> | null)?.faceBox),
     guildName: g?.name ?? null,
     guildEmblemUrl: g?.emblemUrl ?? null,
+    executorZone: g?.executorZone ?? null,
+    executorZoneRegion: g?.executorZoneRegion ?? null,
     isMeleeChampion: uid === champion,
     raidKills: metrics.find((m) => m.metric === 'raid')?.value ?? 0,
     meleeWins: metrics.find((m) => m.metric === 'melee')?.value ?? 0,

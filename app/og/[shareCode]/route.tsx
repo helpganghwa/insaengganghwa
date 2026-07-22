@@ -10,6 +10,7 @@ import { catalogItems, userEquipment } from '@/lib/db/schema/equipment';
 import { getUserGuildBrief } from '@/lib/game/guild';
 import { spritePath } from '@/lib/game/equipment/sprite-manifest';
 import { transcendStyle } from '@/lib/game/equipment/transcend';
+import { REGION_COLOR } from '@/components/ExecutorTag';
 
 export const size = { width: 1200, height: 630 };
 export const contentType = 'image/png';
@@ -153,11 +154,14 @@ export async function GET(_req: Request, { params }: { params: Promise<{ shareCo
   const leftW = Math.round((innerW - gapX) * 0.4); // ≈ 432
   const rightW = innerW - gapX - leftW; // ≈ 648
   const slotGap = 16;
-  const slotH = Math.round((innerH - slotGap * 2) / 3); // ≈ 167
-  const nicknameH = 44;
-  // 길드 문양+이름 행(있으면) 높이만큼 캐릭터 박스를 줄여 1200×630 레이아웃 유지.
-  const guildRowH = guild ? 34 : 0;
-  const charBoxH = innerH - nicknameH - guildRowH - 12 - (guild ? 12 : 0);
+  // 상단 한 줄 헤더(2026-07-22) — 닉네임 + 문양 + 길드명 + 구역명 집행관을 전체폭 한 줄로.
+  // 좌측 열(432px) 안에서는 최장 케이스(닉8·길드8·구역8자)가 넘쳐서 전체폭(1104px)으로 올렸다.
+  // 아래 본문은 기존 2/5 : 3/5 유지 — 헤더가 빠진 만큼 캐릭터 박스가 오히려 커진다.
+  const headerH = 50;
+  const headerGap = 16;
+  const bodyH = innerH - headerH - headerGap;
+  const slotH = Math.round((bodyH - slotGap * 2) / 3); // ≈ 145
+  const charBoxH = bodyH;
   const charBoxW = leftW;
   // v3 풀프레임 아바타 — /me 프로필 섹션처럼 박스를 꽉 채움. 정사각 아바타를 박스 높이에 맞춰
   // (세로 풀필) 가로 중앙·하단 정렬(가로 약간 넘치면 카드 안쪽으로 자연 침범). Satori는 img
@@ -174,63 +178,55 @@ export async function GET(_req: Request, { params }: { params: Promise<{ shareCo
         width: '100%',
         height: '100%',
         display: 'flex',
+        flexDirection: 'column',
         padding: rootPad,
         // me/page 카드와 동일 — zinc-800 border 효과는 root 외곽이라 생략(카카오 카드 외곽이 곧 경계).
         background: 'linear-gradient(180deg,#18181b 0%,#09090b 100%)',
         fontFamily: 'sans-serif',
         color: '#fafafa',
-        alignItems: 'stretch',
-        gap: gapX,
       }}
     >
-      {/* 좌(2/5) — 머리 위 닉네임 + 캐릭터 (overflow visible — 무기/소품 잘림 방지) */}
+      {/* 상단 — 닉네임 + 문양 + 길드명 + 구역명 집행관을 전체폭 한 줄 중앙 정렬 */}
+      <div
+        style={{
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'center',
+          height: headerH,
+          gap: 14,
+          overflow: 'hidden',
+        }}
+      >
+        <div style={{ display: 'flex', fontSize: 40, fontWeight: 700, color: '#ffffff' }}>{nickname}</div>
+        {guild?.emblemUrl ? (
+          <img src={guild.emblemUrl} width={32} height={32} style={{ objectFit: 'contain' }} />
+        ) : null}
+        {guild?.name ? (
+          <div style={{ display: 'flex', fontSize: 26, color: 'rgba(255,255,255,0.78)' }}>{guild.name}</div>
+        ) : null}
+        {guild?.name && guild?.executorZone ? (
+          <div style={{ display: 'flex', fontSize: 26, color: 'rgba(255,255,255,0.35)' }}>·</div>
+        ) : null}
+        {guild?.executorZone ? (
+          <div style={{ display: 'flex', fontSize: 26 }}>
+            <span style={{ color: REGION_COLOR[guild.executorZoneRegion ?? ''] ?? '#a5b4fc' }}>
+              {guild.executorZone}
+            </span>
+            <span style={{ color: '#a5b4fc' }}>&nbsp;집행관</span>
+          </div>
+        ) : null}
+      </div>
+
+      {/* 본문 — 좌(2/5) 캐릭터 · 우(3/5) 장비 3종 */}
+      <div style={{ display: 'flex', alignItems: 'stretch', gap: gapX, marginTop: headerGap }}>
       <div
         style={{
           display: 'flex',
           flexDirection: 'column',
           alignItems: 'center',
           width: leftW,
-          gap: 12,
         }}
       >
-        <div
-          style={{
-            display: 'flex',
-            fontSize: 34,
-            fontWeight: 400,
-            color: '#ffffff',
-            maxWidth: leftW - 8,
-            overflow: 'hidden',
-          }}
-        >
-          {nickname}
-        </div>
-        {guild ? (
-          // 이름 중앙정렬 + 문양은 이름 오른쪽 절대배치(GuildBadge pinEmblemRight와 동일 — 문양이
-          // 이름 중심을 밀지 않게). 컨테이너 폭=이름 폭(문양은 absolute로 흐름 제외)이라 부모
-          // alignItems:center가 '이름'을 가운데 둔다. 순서: 이름 + 문양.
-          <div
-            style={{
-              position: 'relative',
-              display: 'flex',
-              alignItems: 'center',
-              maxWidth: leftW - 8,
-              height: guildRowH,
-            }}
-          >
-            <div style={{ display: 'flex', fontSize: 24, color: 'rgba(255,255,255,0.78)', overflow: 'hidden' }}>
-              {guild.name}
-            </div>
-            {guild.emblemUrl ? (
-              <img
-                src={guild.emblemUrl}
-                width={30}
-                height={30}
-                style={{ position: 'absolute', left: '100%', marginLeft: 8, objectFit: 'contain' }}
-              />
-            ) : null}
-          </div>
-        ) : null}
         <div
           style={{
             position: 'relative',
@@ -398,6 +394,7 @@ export async function GET(_req: Request, { params }: { params: Promise<{ shareCo
             </div>
           );
         })}
+      </div>
       </div>
     </div>,
     {

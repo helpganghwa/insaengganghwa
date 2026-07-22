@@ -541,6 +541,8 @@ export default async function PublicProfilePage({
             profileImg={data.charImg}
             guildEmblemUrl={data.guild?.emblemUrl ?? null}
             guildName={data.guild?.name ?? null}
+            executorZone={data.guild?.executorZone ?? null}
+            executorZoneRegion={data.guild?.executorZoneRegion ?? null}
             pieces={data.equipped.map((e) => ({
               slot: e.slot,
               code: e.code,
@@ -562,6 +564,8 @@ export default async function PublicProfilePage({
               profileImg={data.charImg}
               guildEmblemUrl={data.guild?.emblemUrl ?? null}
               guildName={data.guild?.name ?? null}
+              executorZone={data.guild?.executorZone ?? null}
+              executorZoneRegion={data.guild?.executorZoneRegion ?? null}
               pieces={data.equipped.map((e) => ({
                 slot: e.slot,
                 code: e.code,
