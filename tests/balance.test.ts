@@ -346,3 +346,54 @@ describe('배틀패스 — 구간·보상·가격', () => {
     }
   });
 });
+
+// ── 대난투 구간 테이블(2026-07-22 개편) — 경계·단조·3배수 검증 ──
+import { MELEE_REWARD_TIERS, meleeTierForRank, meleePointsForRank } from '@/lib/game/balance';
+
+describe('melee tiers (2026-07-22)', () => {
+  it('절대 순위 경계 매칭(N=220 — 퍼센타일 비활성 구간)', () => {
+    const n = 220;
+    expect(meleeTierForRank(1, n).label).toBe('1위');
+    expect(meleeTierForRank(2, n).label).toBe('2위');
+    expect(meleeTierForRank(3, n).label).toBe('3위');
+    expect(meleeTierForRank(4, n).label).toBe('4~10위');
+    expect(meleeTierForRank(10, n).label).toBe('4~10위');
+    expect(meleeTierForRank(11, n).label).toBe('11~25위');
+    expect(meleeTierForRank(25, n).label).toBe('11~25위');
+    expect(meleeTierForRank(26, n).label).toBe('26~50위');
+    expect(meleeTierForRank(50, n).label).toBe('26~50위');
+    expect(meleeTierForRank(51, n).label).toBe('51~100위');
+    expect(meleeTierForRank(100, n).label).toBe('51~100위');
+    expect(meleeTierForRank(101, n).label).toBe('101~200위');
+    expect(meleeTierForRank(200, n).label).toBe('101~200위');
+    // 220명 중 201등 — 상위 30/50/70%(66/110/154)가 전부 200 이하라 참가로 낙하.
+    expect(meleeTierForRank(201, n).label).toBe('참가');
+    expect(meleePointsForRank(201, n)).toBe(0);
+  });
+
+  it('퍼센타일 구간 실효(N=1000)', () => {
+    const n = 1000;
+    expect(meleeTierForRank(201, n).label).toBe('상위 30%'); // ceil(300)
+    expect(meleeTierForRank(300, n).label).toBe('상위 30%');
+    expect(meleeTierForRank(301, n).label).toBe('상위 50%'); // ceil(500)
+    expect(meleeTierForRank(500, n).label).toBe('상위 50%');
+    expect(meleeTierForRank(501, n).label).toBe('상위 70%'); // ceil(700)
+    expect(meleeTierForRank(700, n).label).toBe('상위 70%');
+    expect(meleeTierForRank(701, n).label).toBe('참가');
+  });
+
+  it('보상·포인트 단조 비증가 + 상자 3배수', () => {
+    let prevD = Infinity;
+    let prevB = Infinity;
+    let prevP = Infinity;
+    for (const t of MELEE_REWARD_TIERS) {
+      expect(t.diamond).toBeLessThanOrEqual(prevD);
+      expect(t.boxes).toBeLessThanOrEqual(prevB);
+      expect(t.points).toBeLessThanOrEqual(prevP);
+      expect(t.boxes % 3).toBe(0);
+      prevD = t.diamond;
+      prevB = t.boxes;
+      prevP = t.points;
+    }
+  });
+});

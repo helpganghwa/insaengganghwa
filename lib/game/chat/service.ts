@@ -102,7 +102,15 @@ export async function currentMeleeChampion(serverId: number): Promise<string | n
   const [row] = await db
     .select({ uid: meleeBattles.championUserId })
     .from(meleeBattles)
-    .where(and(eq(meleeBattles.serverId, serverId), sql`${meleeBattles.championUserId} is not null`))
+    // status='revealed' 필수(2026-07-22 제보) — run(9:00)이 champion을 먼저 기록하므로
+    // 발표(9:30) 전에 새 우승자 트로피가 채팅에 미리 노출되던 버그.
+    .where(
+      and(
+        eq(meleeBattles.serverId, serverId),
+        eq(meleeBattles.status, 'revealed'),
+        sql`${meleeBattles.championUserId} is not null`,
+      ),
+    )
     .orderBy(desc(meleeBattles.battleDate))
     .limit(1);
   const uid = row?.uid ?? null;
