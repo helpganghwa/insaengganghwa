@@ -380,9 +380,7 @@ async function AllTab({
             { l: '최저 순위', v: extras?.meleeWorst != null ? `#${extras.meleeWorst}` : '—' },
           ]}
         />
-        <p className="mt-1.5 text-[10px] text-zinc-500">
-          랭킹 포인트는 최근 성적일수록 크게 반영돼요 — 점수 가치는 14일마다 절반으로 줄어요.
-        </p>
+        <p className="mt-1.5 text-[10px] text-zinc-500">랭킹 포인트는 최근 성적일수록 크게 반영돼요.</p>
         {extras && extras.meleeRanks.length >= 2 ? (
           <div className="mt-2">
             <div className="mb-0.5 text-[9px] text-zinc-500">날짜별 순위 추이</div>
