@@ -1128,7 +1128,7 @@ export function ChatDock() {
                           ['최고 강화', `+${profile.data.maxEnhance}`],
                           ['합산 강화', `+${profile.data.sumEnhance.toLocaleString()}`],
                           ['레이드 처치', profile.data.raidKills.toLocaleString()],
-                          ['대난투 포인트', profile.data.meleeWins.toLocaleString()],
+                          ['대난투', profile.data.meleeWins.toLocaleString()],
                         ] as const
                       ).map(([label, v]) => (
                         <div key={label} className="flex items-baseline justify-between gap-2">
