@@ -61,7 +61,8 @@ export async function logWorldEvent(
     // 백그라운드 갱신이라 "티커는 최신인데 상세는 재진입해야 보이는" 불일치가 났다.
     // 이벤트는 저빈도(마일스톤 지점만)라 무효화 비용 무시 가능, limit별 엔트리 전부 동시 갱신.
     try {
-      revalidateTag('world-feed');
+      // Next 16 시그니처 — 2번째 인자 = cacheLife 프로필('max' = 구버전 즉시 만료 동작).
+      revalidateTag('world-feed', 'max');
     } catch {
       /* 요청 컨텍스트 밖(스크립트 등) — 캐시 무효화만 생략 */
     }
