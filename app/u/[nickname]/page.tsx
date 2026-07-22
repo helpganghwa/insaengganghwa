@@ -24,6 +24,7 @@ import { TranscendSprite } from '@/components/TranscendSprite';
 import { RarityFrame, rarityBorderStyle, hasRarityBorder, TranscendTag } from '@/components/RarityFrame';
 import { CharacterStage } from '@/components/CharacterStage';
 import { BoastLauncher } from '@/components/BoastModal';
+import { BackFab } from '@/components/BackNav';
 
 import { ReportButton } from './ReportButton';
 import { FriendAddButton } from './FriendAddButton';
@@ -353,6 +354,8 @@ export default async function PublicProfilePage({
     <main className="mx-auto min-h-dvh w-full max-w-[390px] bg-zinc-950 text-zinc-50">
       {/* ── 히어로: 닉네임(머리 위) + 캐릭터 풀블리드 + 그라데이션 ── */}
       <section className="relative h-[250px] overflow-hidden bg-gradient-to-b from-amber-900/30 via-zinc-900 to-zinc-950">
+        {/* GNB 없는 페이지라 뒤로가기 필수(PWA·PC 갇힘 방지) — 닉네임은 중앙이라 좌상단과 충돌 없음. */}
+        <BackFab className="absolute left-3 top-3 z-20" />
         {data.charImg ? (
           <div className="absolute inset-0 flex items-end justify-center pb-[10px] pt-[15px]">
             <CharacterStage

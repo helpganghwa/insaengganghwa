@@ -20,6 +20,7 @@ import { useResourceToast, type HeaderReward } from '@/components/ResourceToast'
 import { GuildBadge } from '@/components/GuildBadge';
 import * as haptic from '@/lib/game/haptic';
 import { sounds } from '@/lib/game/sound';
+import { BackFab } from '@/components/BackNav';
 
 import {
   attackRaidAction,
@@ -470,8 +471,10 @@ export function RaidSessionCard({ view: v, serverId }: { view: RaidView; serverI
           ) : null}
         </div>
 
-        <div className="absolute left-0 right-0 top-0 z-10 flex items-start justify-between p-3">
-          <div className="text-sm font-extrabold drop-shadow">
+        {/* 상단 3열: 뒤로가기 | 보스명·방장(중앙) | 타이머 — 뒤로가기 추가로 보스명을 중앙 이동(2026-07-22). */}
+        <div className="absolute left-0 right-0 top-0 z-10 grid grid-cols-[auto_1fr_auto] items-center gap-2 p-3">
+          <BackFab fallback="/raid" className="h-8 w-8" />
+          <div className="min-w-0 truncate text-center text-sm font-extrabold drop-shadow">
             {boss.name}
             {v.isHost ? (
               <span className="ml-1 rounded bg-amber-500 px-1 text-[9px] text-amber-950">방장</span>

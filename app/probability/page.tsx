@@ -1,5 +1,7 @@
 import type { Metadata } from 'next';
 
+import { BackBar } from '@/components/BackNav';
+
 import {
   baseSuccessRateBp,
   downRateBp,
@@ -82,6 +84,7 @@ export default async function ProbabilityPage() {
 
   return (
     <main className="mx-auto min-h-dvh w-full max-w-[390px] bg-white px-4 py-5 text-zinc-900 dark:bg-black dark:text-zinc-50">
+      <BackBar title="확률 공시" />
       <header className="mb-4">
         <h1 className="text-lg font-extrabold">확률 공시</h1>
       </header>

@@ -1,4 +1,6 @@
 import type { Metadata } from 'next';
+
+import { BackBar } from '@/components/BackNav';
 import Link from 'next/link';
 
 import { CASH, DIAMONDS, PREMIUM, FIRST_SPECIAL, type Cash } from '@/lib/game/shop/catalog';
@@ -14,6 +16,7 @@ const won = (n: number) => `₩${n.toLocaleString('ko-KR')}`;
 export default function PricingPage() {
   return (
     <div className="mx-auto min-h-dvh max-w-[390px] px-5 py-6">
+      <BackBar title="상품 안내" bleed="-mx-5 -mt-6 mb-4" />
       <header className="mb-4">
         <h1 className="text-lg font-bold">상품 안내</h1>
         <p className="mt-1 text-[12px] leading-relaxed text-zinc-500">
