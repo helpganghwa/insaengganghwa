@@ -1,7 +1,5 @@
 'use server';
 
-import { revalidatePath } from 'next/cache';
-
 import { getSessionUserId } from '@/lib/auth/session';
 import { makeErr, type ErrorResult } from '@/lib/game/action-result';
 import { rateLimited } from '@/lib/ratelimit';
@@ -33,8 +31,9 @@ export async function claimCheckinAction(): Promise<
   const __b = await actionBlock(); if (__b) return err(__b);
   try {
     const result = await claimCheckin({ userId, serverId: await getActiveServerId() });
-    revalidatePath('/checkin');
-    revalidatePath('/'); // 홈 진입 카드
+    // revalidatePath 없음(의도) — 액션 응답의 자동 RSC 갱신이 팝업 게이트(unclaimed)를 즉시
+    // 뒤집어 수령 연출(이펙트→게이지→토스트)이 도중에 언마운트됐다(2026-07-22 E2E).
+    // 갱신은 연출 종료 후 팝업이 router.refresh()로 직접 수행.
     return { status: 'success', result };
   } catch (e) {
     if (e instanceof CheckinError) return err(e.code);

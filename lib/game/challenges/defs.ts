@@ -48,7 +48,7 @@ export const CHALLENGES: ChallengeDef[] = [
   { id: 'enhance_armor', group: 'enhance', label: '방어구 강화하기', diamond: 200, go: '/enhance', guide: '강화소의 방어구 슬롯에 장비를 올려 강화를 시작하면 달성돼요.' },
   { id: 'enhance_accessory', group: 'enhance', label: '장신구 강화하기', diamond: 200, go: '/enhance', guide: '강화소의 장신구 슬롯에 장비를 올려 강화를 시작하면 달성돼요.' },
   { id: 'mail_claim', group: 'daily', label: '우편 보상 받기', diamond: 200, go: '/mail', guide: '우편함에서 우편을 수령하면 달성돼요. 어떤 우편이든 좋아요!' },
-  { id: 'checkin', group: 'daily', label: '출석 체크하기', diamond: 200, go: '/checkin', guide: '출석 캘린더에서 오늘의 보상을 받으면 달성돼요.' },
+  { id: 'checkin', group: 'daily', label: '출석 체크하기', diamond: 200, go: '/', guide: '홈에 매일 처음 들어올 때 뜨는 출석 팝업에서 보상을 받으면 달성돼요.' },
   { id: 'transcend', group: 'growth', label: '장비 초월 달성하기', diamond: 300, boxes: 15, go: '/gacha', guide: '같은 장비를 중복으로 모으면 자동으로 초월돼요 — 보급상자를 열다 보면 자연히 달성됩니다!' },
   { id: 'gem_reduce', group: 'growth', label: '다이아로 강화 시간 줄이기', diamond: 200, go: '/enhance', guide: '진행 중인 강화 카드에서 다이아로 남은 시간을 단축하면 달성돼요.' },
   { id: 'app_install', group: 'app', label: '앱으로 실행하기', diamond: 1000, boxes: 15, go: '/me/settings', guide: '홈 화면에 앱으로 설치한 뒤, 설치된 앱으로 접속하면 달성돼요. 아래 버튼으로 설치를 시작하세요.' },

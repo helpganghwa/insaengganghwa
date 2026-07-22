@@ -24,7 +24,7 @@ import { ConquestCardStatus } from './ConquestCardStatus';
 import { BattlePassBanner } from './BattlePassBanner';
 import { DailySupplyCard } from './DailySupplyCard';
 import { HomeBannerCarousel } from './HomeBannerCarousel';
-import { HubCheckinCard } from './HubCheckinCard';
+import { CheckinPopupGate } from './CheckinPopup';
 import { RankingTop3Card } from './RankingTop3Card';
 import { WorldTicker } from './WorldTicker';
 
@@ -117,6 +117,7 @@ export default async function HomePage() {
   // (game) layout이 가드하므로 정상 흐름엔 null 아님. 폴백 안전.
   let hasUnclaimedDaily = false;
   let hasUnclaimedCheckin = false;
+  let checkinDayProgress = 0;
   /** 메뉴 카드 우상단 알림 뱃지. 0이면 미노출. */
   const counts: Record<string, number> = {
     '/enhance': 0,
@@ -169,6 +170,8 @@ export default async function HomePage() {
               as daily_unclaimed,
             (select last_claimed_kst_day::text from user_checkin_state where user_id = ${userId}::uuid and server_id = ${serverId})
               as checkin_last,
+            (select day_progress from user_checkin_state where user_id = ${userId}::uuid and server_id = ${serverId})
+              as checkin_dp,
             (select count(*)::int from enhancement_jobs
                where user_id = ${userId}::uuid and server_id = ${serverId} and status = 'running' and complete_at <= now())
               as enhance_ready,
@@ -250,6 +253,7 @@ export default async function HomePage() {
       )) as unknown as Array<{
         daily_unclaimed: number;
         checkin_last: string | null;
+        checkin_dp: number | null;
         enhance_ready: number;
         supply_sum: number;
         mail_unclaimed: number;
@@ -270,6 +274,7 @@ export default async function HomePage() {
       if (row) {
         hasUnclaimedDaily = (row.daily_unclaimed ?? 0) > 0;
         hasUnclaimedCheckin = (row.checkin_last ?? null) !== kstToday;
+        checkinDayProgress = row.checkin_dp ?? 0;
         counts['/enhance'] = row.enhance_ready ?? 0;
         counts['/gacha'] = row.supply_sum ?? 0;
         counts['/mail'] = row.mail_unclaimed ?? 0;
@@ -334,6 +339,10 @@ export default async function HomePage() {
 
   return (
     <>
+      {/* 출석 자동 팝업(2026-07-22, /checkin 대체) — 튜토리얼 중엔 억제(코치마크 우선). */}
+      {userId && !tutorialActive ? (
+        <CheckinPopupGate unclaimed={hasUnclaimedCheckin} dayProgress={checkinDayProgress} />
+      ) : null}
       {worldFeed.length > 0 && <WorldTicker entries={worldFeed} />}
       <div className="flex flex-col gap-3 px-4 py-4">
       <RankingTop3Card />
@@ -395,7 +404,6 @@ export default async function HomePage() {
       })()}
       <HomeBannerCarousel>
         {hasUnclaimedDaily ? <DailySupplyCard /> : null}
-        {hasUnclaimedCheckin ? <HubCheckinCard /> : null}
         {/* 성장패스 상시 배너 — 캐러셀 마지막 슬라이드. CBT엔 일반 유저에게 숨김. */}
         {hidePaid ? null : <BattlePassBanner />}
       </HomeBannerCarousel>
