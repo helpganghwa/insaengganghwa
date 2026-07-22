@@ -91,7 +91,7 @@ function bigTotal(r: CheckinReward, day: number): number {
 function ctaLabel(r: CheckinReward, day: number): string {
   if (r.kind === 'diamond') return `💎${fmt(bigTotal(r, day))} 받기`;
   if (r.kind === 'supply') return `${SLOT_ICON[r.slot]} 보급 상자 ${r.count}개 받기`;
-  return `🎁 보급 세트 ${r.perSlot * 3}개 받기`;
+  return `🎁 보급 상자 ${r.perSlot * 3}개 받기`;
 }
 
 function rewardToasts(r: CheckinReward, bonus: number): HeaderReward[] {
@@ -133,7 +133,7 @@ export function CheckinPopup({ dayProgress }: { dayProgress: number }) {
   const mileLabel =
     mileReward.kind === 'diamond'
       ? `💎${fmt(mileReward.amount)}`
-      : `보급 세트 ${(mileReward as { perSlot: number }).perSlot * 3}개`;
+      : `보급 상자 ${(mileReward as { perSlot: number }).perSlot * 3}개`;
   const today = CHECKIN_CALENDAR[day - 1]!;
   const total = bigTotal(today, day);
   const weekDays = Array.from({ length: 7 }, (_, i) => (week - 1) * 7 + i + 1);
@@ -374,28 +374,27 @@ export function CheckinPopup({ dayProgress }: { dayProgress: number }) {
 
       <div
         ref={panelRef}
-        className="w-full max-w-[340px] overflow-hidden rounded-2xl border border-amber-800/70 bg-zinc-900 shadow-2xl shadow-black/60"
+        className="relative w-full max-w-[340px] overflow-hidden rounded-2xl border border-amber-800/70 bg-zinc-900 shadow-2xl shadow-black/60"
         onClick={(e) => e.stopPropagation()}
       >
-        {/* 헤더 — 구 출석 페이지 히어로(황실 아카데미) 배경 재활용(사용자 확정) */}
-        <div className="relative h-16 overflow-hidden border-b border-zinc-800">
-          {/* eslint-disable-next-line @next/next/no-img-element */}
-          <img
-            src={assetUrl('/sprites/checkin/academy.png')}
-            alt=""
-            aria-hidden
-            draggable={false}
-            className="absolute inset-0 h-full w-full object-cover object-center"
-            style={{ imageRendering: 'pixelated' }}
-          />
-          <div className="pointer-events-none absolute inset-0 bg-gradient-to-b from-black/45 via-black/25 to-black/55" />
-          <div className="ck-dimable relative z-10 flex h-full flex-col items-center justify-center">
-            <p className="text-pixel-outline text-sm font-extrabold text-white">출석 {day}일째</p>
-            <p className="text-pixel-outline text-[10px] font-bold text-amber-100/90">{week}주 차</p>
-          </div>
+        {/* 배경 — 황실 아카데미가 팝업 전체에 깔리고 아래로 갈수록 어두워지는 그라데이션(사용자 확정) */}
+        {/* eslint-disable-next-line @next/next/no-img-element */}
+        <img
+          src={assetUrl('/sprites/checkin/academy.png')}
+          alt=""
+          aria-hidden
+          draggable={false}
+          className="absolute inset-0 h-full w-full object-cover object-top"
+          style={{ imageRendering: 'pixelated' }}
+        />
+        <div className="pointer-events-none absolute inset-0 bg-gradient-to-b from-black/30 via-zinc-950/90 via-35% to-zinc-950/95" />
+
+        <div className="ck-dimable relative z-10 flex h-14 flex-col items-center justify-center">
+          <p className="text-pixel-outline text-sm font-extrabold text-white">출석 {day}일째</p>
+          <p className="text-pixel-outline text-[10px] font-bold text-amber-100/90">{week}주 차</p>
         </div>
 
-        <div className="p-4 pt-3.5">
+        <div className="relative z-10 p-4 pt-1.5">
           <div ref={zoneRef} className="ck-zone relative">
             {/* 출석판 — A안(일차/아이콘/수량 3단) 6+1, 지난 칸도 N일 표기 */}
             <div ref={boardRef} className="grid grid-cols-6 gap-x-1 gap-y-2">
@@ -407,10 +406,10 @@ export function CheckinPopup({ dayProgress }: { dayProgress: number }) {
                 const stateCls = isToday
                   ? 'border-amber-400 bg-amber-950 text-amber-200 shadow-[0_0_8px_rgba(245,158,11,0.3)]'
                   : past
-                    ? 'border-zinc-800 bg-zinc-950 text-zinc-500 opacity-45'
+                    ? 'border-zinc-800/80 bg-zinc-950/90 text-zinc-600'
                     : mile
-                      ? 'border-violet-800/50 bg-violet-950/20 text-zinc-300'
-                      : 'border-zinc-700/60 bg-zinc-800/70 text-zinc-400';
+                      ? 'border-violet-800/50 bg-violet-950/40 text-zinc-300'
+                      : 'border-zinc-700/60 bg-zinc-800/90 text-zinc-400';
                 const dayLabel = isToday ? '오늘' : `${d}일`;
                 const fadeCls = isToday ? '' : ' ck-fade';
                 const extras = isToday ? (
@@ -431,7 +430,7 @@ export function CheckinPopup({ dayProgress }: { dayProgress: number }) {
                     </>
                   ) : (
                     <>
-                      세트 ×<b ref={isToday ? countRef : undefined}>{r.perSlot * 3}</b>
+                      보급 상자 ×<b ref={isToday ? countRef : undefined}>{r.perSlot * 3}</b>
                     </>
                   );
                 if (mile) {
