@@ -36,6 +36,14 @@ const QUOTES = [
   '“쇠는 두드릴수록 단단해진다.”',
   '“기다림은 배신하지 않는다.”',
   '“담금질이 검을 만든다.”',
+  '“무딘 날도 갈면 빛난다.”',
+  '“모루 위에 요행은 없다.”',
+  '“명검은 하루에 벼려지지 않는다.”',
+  '“녹은 쉬는 칼에 슨다.”',
+  '“망치질은 거짓말하지 않는다.”',
+  '“불꽃은 견디는 자의 것이다.”',
+  '“불티가 모여 검이 된다.”',
+  '“포기하지 않는 자가 끝을 본다.”',
 ];
 
 /** 홈 상주 게이트 — 미수령 시 팝업 + KST 자정 롤오버 감지(타이머·탭 복귀 → refresh). */
@@ -422,7 +430,7 @@ export function CheckinPopup({ dayProgress }: { dayProgress: number }) {
                 const qNode =
                   r.kind === 'diamond' ? (
                     <>
-                      💎<b ref={isToday ? countRef : undefined}>{fmt(bigTotal(r, d))}</b>
+                      ×<b ref={isToday ? countRef : undefined}>{fmt(bigTotal(r, d))}</b>
                     </>
                   ) : r.kind === 'supply' ? (
                     <>
@@ -433,13 +441,19 @@ export function CheckinPopup({ dayProgress }: { dayProgress: number }) {
                       보급 상자 ×<b ref={isToday ? countRef : undefined}>{r.perSlot * 3}</b>
                     </>
                   );
+                const doneBadge = past ? (
+                  <span className="absolute -right-1 -top-1 flex h-3.5 w-3.5 items-center justify-center rounded-full border border-emerald-600 bg-emerald-950 text-[8px] font-extrabold text-emerald-400">
+                    ✓
+                  </span>
+                ) : null;
                 if (mile) {
                   return (
                     <div
                       key={d}
                       ref={isToday ? todayRef : undefined}
-                      className={`col-span-6 flex items-center justify-center gap-2 rounded-xl border py-2${fadeCls} ${stateCls}`}
+                      className={`relative col-span-6 flex items-center justify-center gap-2 rounded-xl border py-3${fadeCls} ${stateCls}`}
                     >
+                      {doneBadge}
                       <span className="ck-d ck-flip text-[9px] font-bold opacity-80">{dayLabel}</span>
                       <span className="ck-ic ck-flip text-[15px] leading-none">{rewardIcon(r, d)}</span>
                       <span className="ck-q ck-flip text-[11px] font-extrabold tabular-nums">{qNode}</span>
@@ -451,8 +465,9 @@ export function CheckinPopup({ dayProgress }: { dayProgress: number }) {
                   <div
                     key={d}
                     ref={isToday ? todayRef : undefined}
-                    className={`flex flex-col items-center gap-0.5 rounded-xl border py-1.5${fadeCls} ${stateCls}`}
+                    className={`relative flex flex-col items-center gap-0.5 rounded-xl border py-1.5${fadeCls} ${stateCls}`}
                   >
+                    {doneBadge}
                     <span className="ck-d ck-flip text-[9px] font-bold opacity-75">{dayLabel}</span>
                     <span className="ck-ic ck-flip text-base leading-none">{rewardIcon(r, d)}</span>
                     <span className="ck-q ck-flip text-[10px] font-extrabold tabular-nums">{qNode}</span>
