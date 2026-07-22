@@ -126,8 +126,10 @@ export function ChatDock() {
   const needInitialScrollRef = useRef(false);
   openRef.current = open;
 
-  // 튜토리얼 중엔 도크 숨김 — 코치마크·완료 모달과 시각 경합 방지. 차단 목록도 초기 로드.
-  useEffect(() => {
+  // 튜토리얼 중엔 도크 숨김 — 코치마크·완료 모달과 시각 경합 방지. 접힘 상태도 초기 복원.
+  // useLayoutEffect — useEffect는 페인트 뒤라 접어둔 유저에게 매 이동마다 펼침→접힘이
+  // 한 프레임 보였다(채팅 패널 복원 깜빡임과 동일 계열, 2026-07-22).
+  useLayoutEffect(() => {
     try {
       setHiddenByTutorial(Boolean(localStorage.getItem('tut_step')));
     } catch {

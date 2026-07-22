@@ -167,7 +167,8 @@ export function WorldMapView({
   const [selectedId, setSelectedId] = useState<number | null>(null);
   // 구역 팝업 복원(2026-07-21) — 집행관 프로필로 이동 후 뒤로가기 시 팝업 유지(채팅창 패턴).
   // 이동 직전 sessionStorage에 구역 id를 남기고, 마운트 시 1회 소비해 재오픈.
-  useEffect(() => {
+  // useLayoutEffect — 페인트 전 복원(닫힌 화면 한 프레임 깜빡임 제거, 2026-07-22).
+  useLayoutEffect(() => {
     try {
       const raw = sessionStorage.getItem('ig:worldmap-restore');
       if (raw != null) {
@@ -282,7 +283,8 @@ export function WorldMapView({
       .catch(() => {});
   };
   // 길드 팝업 복원(2026-07-21) — 길드장 프로필 이동 후 뒤로가기 시 팝업 재오픈(구역 팝업과 동일 패턴).
-  useEffect(() => {
+  // useLayoutEffect — 페인트 전 복원(구역 팝업과 동일, 2026-07-22).
+  useLayoutEffect(() => {
     try {
       const name = sessionStorage.getItem('ig:worldmap-restore-guild');
       if (name) {
