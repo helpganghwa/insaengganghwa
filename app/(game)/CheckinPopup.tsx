@@ -75,10 +75,10 @@ export function CheckinPopupGate({ unclaimed, dayProgress }: { unclaimed: boolea
   return <CheckinPopup dayProgress={dayProgress} />;
 }
 
-function rewardIcon(r: CheckinReward, day1: number): string {
+function rewardIcon(r: CheckinReward): string {
   if (r.kind === 'supply_set') return '🎁';
   if (r.kind === 'supply') return SLOT_ICON[r.slot];
-  return day1 % 7 === 0 ? '💰' : '💎';
+  return '💎';
 }
 
 /** 확장 화면 상세 보상명(사용자 확정 — 부위 명시). */
@@ -455,7 +455,7 @@ export function CheckinPopup({ dayProgress }: { dayProgress: number }) {
                     >
                       {doneBadge}
                       <span className="ck-d ck-flip text-[9px] font-bold opacity-80">{dayLabel}</span>
-                      <span className="ck-ic ck-flip text-[15px] leading-none">{rewardIcon(r, d)}</span>
+                      <span className="ck-ic ck-flip text-[15px] leading-none">{rewardIcon(r)}</span>
                       <span className="ck-q ck-flip text-[11px] font-extrabold tabular-nums">{qNode}</span>
                       {extras}
                     </div>
@@ -469,7 +469,7 @@ export function CheckinPopup({ dayProgress }: { dayProgress: number }) {
                   >
                     {doneBadge}
                     <span className="ck-d ck-flip text-[9px] font-bold opacity-75">{dayLabel}</span>
-                    <span className="ck-ic ck-flip text-base leading-none">{rewardIcon(r, d)}</span>
+                    <span className="ck-ic ck-flip text-base leading-none">{rewardIcon(r)}</span>
                     <span className="ck-q ck-flip text-[10px] font-extrabold tabular-nums">{qNode}</span>
                     {extras}
                   </div>
