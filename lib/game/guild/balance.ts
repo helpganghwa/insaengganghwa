@@ -61,10 +61,10 @@ export const GUILD_REJOIN_LOCK_HOURS = 1;
 // ── 점령전 (§5.4) ──
 /** 일일 전투 시각(KST 시). 23:00 배치 잠금·정산 → 자정(00:00) 연대기(전투창 23:00~24:00). */
 export const CONQUEST_BATTLE_KST_HOUR = 23;
-/** 일반 방어 인원 전투력 보너스(+20%). */
+/** 일반 방어 인원 전투력 보너스(+20% = ×1.2). */
 export const CONQUEST_DEFENDER_BONUS = 0.2;
-/** 집행관 전투력 배수(×2, 방어 거점 앵커). */
-export const CONQUEST_EXECUTOR_POWER_MULT = 2;
+/** 집행관 전투력 배수(×1.5, 방어 거점 앵커). 고착 개선(B안) — 기존 ×2에서 축소. */
+export const CONQUEST_EXECUTOR_POWER_MULT = 1.5;
 
 /** 배치 역할 — 공격/수비. 집행관은 배치행 없이 자동 수비(별도). */
 export type ConquestRole = 'attack' | 'defend';
