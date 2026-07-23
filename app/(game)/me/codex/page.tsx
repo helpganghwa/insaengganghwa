@@ -1,19 +1,13 @@
-import Link from 'next/link';
 import { getActiveServerId } from '@/lib/game/servers';
 import { and, eq } from 'drizzle-orm';
 
 import { getSessionUserId } from '@/lib/auth/session';
 import { db } from '@/lib/db/client';
 import { withTimeout } from '@/lib/db/with-timeout';
-import { userEquipment, type Slot } from '@/lib/db/schema/equipment';
+import { userEquipment } from '@/lib/db/schema/equipment';
 import { getActiveCatalog } from '@/lib/game/catalog';
 import { liberatedItemRanks } from '@/lib/game/codex/ranking';
-import { atlasMaskStyle } from '@/lib/game/equipment/sprite-atlas';
-import { TranscendSprite } from '@/components/TranscendSprite';
-
-const SLOT_LABEL: Record<Slot, string> = { weapon: '무기', armor: '방어구', accessory: '장신구' };
-const SLOT_EMOJI: Record<Slot, string> = { weapon: '⚔️', armor: '🛡️', accessory: '💍' };
-const SLOTS: Slot[] = ['weapon', 'armor', 'accessory'];
+import { CodexGrid, type CodexItem } from './CodexGrid';
 
 /** 도감 — GDD §5 / WIREFRAMES §7. 수집 + 최고 강화 표기. **보상 수령 없음**(전투력 보너스로 반영). */
 export default async function CodexPage() {
@@ -41,73 +35,16 @@ export default async function CodexPage() {
 
   const codexMap = new Map(codex.map((c) => [c.catalogItemId, c.max]));
 
-  return (
-    <div className="space-y-4 px-4 py-4">
-      {SLOTS.map((s) => {
-        const items = catalog.filter((c) => c.slot === s);
-        if (items.length === 0) return null;
-        return (
-          <section key={s}>
-            <h2 className="mb-2 text-xs font-semibold text-zinc-500">
-              {SLOT_EMOJI[s]} {SLOT_LABEL[s]}
-            </h2>
-            <div className="grid grid-cols-3 gap-2">
-              {items.map((c) => {
-                const got = codexMap.has(c.id);
-                if (!got) {
-                  // 미획득 — 그 장비의 실제 스프라이트를 단색 실루엣(형태만)으로. 색·디테일은
-                  // 마스크로 가려 수집 욕구 자극(도감 미발견 연출). 스프라이트 없으면 슬롯 이모지 폴백.
-                  const mask = atlasMaskStyle(c.code, 40);
-                  return (
-                    <div
-                      key={c.id}
-                      className="flex aspect-square flex-col items-center justify-center gap-0.5 rounded-xl border-2 border-dashed border-zinc-200 bg-zinc-50 p-1 text-center dark:border-zinc-800 dark:bg-zinc-900"
-                    >
-                      {mask ? (
-                        <div
-                          aria-hidden
-                          className="bg-zinc-400 dark:bg-zinc-600"
-                          style={mask}
-                        />
-                      ) : (
-                        <span className="text-2xl opacity-40" style={{ filter: 'grayscale(1)' }}>
-                          {SLOT_EMOJI[s]}
-                        </span>
-                      )}
-                      <span className="px-0.5 text-[9px] leading-tight text-zinc-500 dark:text-zinc-500">
-                        미획득
-                      </span>
-                    </div>
-                  );
-                }
-                const rank = libRanks.get(c.id) ?? null;
-                return (
-                  <Link prefetch={false}
-                    key={c.id}
-                    href={`/me/codex/${c.id}`}
-                    className="flex aspect-square flex-col items-center justify-center gap-0.5 rounded-xl border-2 border-zinc-200 bg-white p-1 text-center dark:border-zinc-800 dark:bg-zinc-950"
-                  >
-                    <TranscendSprite
-                      code={c.code}
-                      slot={c.slot}
-                      level={0}
-                      championRank={rank}
-                      size={40}
-                      frameless
-                    />
-                    <span className="px-0.5 text-[9px] leading-tight text-zinc-600 dark:text-zinc-400">
-                      {c.name}
-                    </span>
-                    <span className="text-[10px] font-semibold text-amber-600 dark:text-amber-400">
-                      +{codexMap.get(c.id)}
-                    </span>
-                  </Link>
-                );
-              })}
-            </div>
-          </section>
-        );
-      })}
-    </div>
-  );
+  // 필터·정렬은 클라(CodexGrid). 서버는 전체 카탈로그 + 획득/최고강화/해방순위만 합쳐 전달.
+  const items: CodexItem[] = catalog.map((c) => ({
+    id: c.id,
+    code: c.code,
+    name: c.name,
+    slot: c.slot,
+    got: codexMap.has(c.id),
+    max: codexMap.get(c.id) ?? null,
+    rank: libRanks.get(c.id) ?? null,
+  }));
+
+  return <CodexGrid items={items} />;
 }
