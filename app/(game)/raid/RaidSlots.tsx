@@ -68,18 +68,18 @@ const SHARE_ACTIVE: Record<ShareMode, string> = {
 const HOUR_MS = 3_600_000;
 const DURATION_OPTS = RAID_DURATION_OPTIONS_MS.map((ms) => ({ v: ms, label: `${ms / HOUR_MS}시간` }));
 
-/** 지속 시간 행 — 공개 범위 행과 동일 레이아웃의 세그먼트. */
+/** 진행 시간 행 — 공개 범위 행과 동일 레이아웃·버튼 크기의 세그먼트. */
 function DurationRow({ value, onChange }: { value: number; onChange: (v: number) => void }) {
   return (
     <div className="flex items-center justify-between gap-2 rounded-xl border border-zinc-200 px-3 py-2 dark:border-zinc-700">
-      <span className="text-[12px] font-medium">지속 시간</span>
+      <span className="text-[12px] font-medium">진행 시간</span>
       <div className="flex shrink-0 gap-0.5 rounded-lg bg-zinc-100 p-0.5 dark:bg-zinc-800">
         {DURATION_OPTS.map((o) => (
           <button
             key={o.v}
             type="button"
             onClick={() => onChange(o.v)}
-            className={`rounded-md px-2 py-0.5 text-[11px] font-bold transition ${
+            className={`min-w-[3.25rem] rounded-md px-2 py-0.5 text-center text-[11px] font-bold transition ${
               value === o.v ? 'bg-amber-500 text-white' : 'text-zinc-500'
             }`}
           >
@@ -110,7 +110,7 @@ function ShareModeRow({
             key={o.v}
             type="button"
             onClick={() => onChange(o.v)}
-            className={`rounded-md px-2 py-0.5 text-[11px] font-bold transition ${
+            className={`min-w-[3.25rem] rounded-md px-2 py-0.5 text-center text-[11px] font-bold transition ${
               value === o.v ? SHARE_ACTIVE[o.v] : 'text-zinc-500'
             }`}
           >
