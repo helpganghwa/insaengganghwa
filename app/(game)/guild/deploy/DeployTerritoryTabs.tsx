@@ -3,16 +3,21 @@
 import { useState, type ReactNode } from 'react';
 
 /**
- * 길드 점령지 상단 [배치 | 세계지도] 세그먼트 탭(2026-07-23) — 활성 emerald.
- * 배치=DeployBoard(점령전 배치·관리), 세계지도=WorldMapView(embedded: 지도 노드 구역명 +
- * 하단 점령 현황, 구역 팝업·이동·수금·전투 기록 기능은 세계지도와 동일).
- * 두 화면은 각자 렌더 트리가 무거워 조건부 렌더(전환 시 리셋 무방 — 상태 없는 열람 위주).
+ * 길드 점령지 [배치 | 세계지도] 탭(2026-07-23) — 세계지도 역사/점령 탭과 동일하게 지도 우하단에
+ * 오버레이(작은 세그먼트, 활성 amber). 배치 탭에선 점령전 시각 안내(지도 bottom-2) 위에 뜬다.
+ * 배치=DeployBoard, 세계지도=WorldMapView(embedded: 구역명 노드 + 하단 점령현황, 팝업 기능 동일).
+ * 지도는 두 화면 모두 aspect-square(폭=높이) → top을 정사각 하단 근처로 잡아 지도 안에 걸친다.
  */
 export function DeployTerritoryTabs({ deploy, worldmap }: { deploy: ReactNode; worldmap: ReactNode }) {
   const [tab, setTab] = useState<'deploy' | 'map'>('deploy');
   return (
-    <div className="flex min-h-full shrink-0 flex-col">
-      <div className="flex shrink-0 gap-1 border-b border-zinc-200 bg-white px-4 py-2 dark:border-zinc-800 dark:bg-zinc-950">
+    <div className="relative flex min-h-full shrink-0 flex-col">
+      {tab === 'deploy' ? deploy : worldmap}
+      {/* 지도 정사각 높이 = 컨테이너 폭(min(100vw, 390)). 그 하단에서 약간 위(시각 안내 위)에 배치. */}
+      <div
+        className="absolute right-2 z-40 inline-flex gap-0.5 rounded-lg bg-black/45 p-0.5 backdrop-blur-sm"
+        style={{ top: 'calc(min(100vw, 390px) - 4.9rem)' }}
+      >
         {(
           [
             ['deploy', '배치'],
@@ -24,17 +29,14 @@ export function DeployTerritoryTabs({ deploy, worldmap }: { deploy: ReactNode; w
             type="button"
             onClick={() => setTab(k)}
             aria-pressed={tab === k}
-            className={`flex-1 rounded-lg py-1.5 text-[13px] font-bold transition ${
-              tab === k
-                ? 'bg-emerald-500 text-white shadow-sm'
-                : 'bg-zinc-100 text-zinc-500 dark:bg-zinc-900 dark:text-zinc-400'
+            className={`rounded-md px-2 py-0.5 text-[11px] font-bold transition ${
+              tab === k ? 'bg-amber-500 text-white shadow-sm' : 'text-white/70'
             }`}
           >
             {label}
           </button>
         ))}
       </div>
-      <div className="flex min-h-0 flex-auto flex-col">{tab === 'deploy' ? deploy : worldmap}</div>
     </div>
   );
 }

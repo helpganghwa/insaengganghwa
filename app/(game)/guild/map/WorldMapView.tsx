@@ -496,8 +496,8 @@ export function WorldMapView({
                   type="button"
                   onClick={() => setShowConquest(k === 'conquest')}
                   aria-pressed={active}
-                  className={`rounded-md px-2.5 py-1 text-[11px] font-bold transition ${
-                    active ? 'bg-emerald-500 text-white shadow-sm' : 'text-white/70'
+                  className={`rounded-md px-2 py-0.5 text-[11px] font-bold transition ${
+                    active ? 'bg-amber-500 text-white shadow-sm' : 'text-white/70'
                   }`}
                 >
                   {label}
