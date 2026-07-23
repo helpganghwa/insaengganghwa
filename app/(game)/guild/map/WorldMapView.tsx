@@ -147,6 +147,7 @@ export function WorldMapView({
   adjacency,
   replay,
   replayYesterday,
+  embedded = false,
 }: {
   mapSrc: string;
   residenceZoneId: number | null;
@@ -158,6 +159,9 @@ export function WorldMapView({
   adjacency: { a: number; b: number }[];
   replay: ConquestReplay | null;
   replayYesterday: ConquestReplay | null;
+  /** 길드 점령지(/guild/deploy) '세계지도' 탭 임베드(2026-07-23) — 지도 노드는 구역명(역사 모드),
+   *  하단은 점령 현황 고정, 우하단 역사/점령 탭·연대기 숨김. 구역 팝업·이동·수금 등 기능은 그대로. */
+  embedded?: boolean;
 }) {
   const { showHeaderToast, showError } = useResourceToast();
   const { optimisticAdjust } = useDiamond();
@@ -235,6 +239,9 @@ export function WorldMapView({
   }, []);
   // 우하단 스위치 — ON(기본): 노드=구역명 + 하단=역사. OFF: 노드=점령 길드명 + 하단=점령현황.
   const [showConquest, setShowConquest] = useState(false);
+  // embedded(세계지도 탭)에서는 노드=구역명(역사 모드)·하단=점령 현황으로 분리 고정.
+  const nodeShowGuild = !embedded && showConquest; // 노드 라벨을 길드명으로 표시할지
+  const bottomConquest = embedded || showConquest; // 하단을 점령 현황으로 표시할지
   const [statusTab, setStatusTab] = useState<'region' | 'ranking'>('region');
   // 세금 수금 모달 — 열린 구역 + 3초 인-버튼 컨펌.
   const [collectOpen, setCollectOpen] = useState<number | null>(null);
@@ -472,30 +479,33 @@ export function WorldMapView({
           })()}
         </svg>
         {/* 우하단 탭 — 역사 / 점령 현황(활성=emerald, 길드 랭킹 탭 UI와 통일, 2026-07-23).
-            역사=노드 구역명·하단 역사, 점령 현황=노드 점령 길드명·하단 점령현황. */}
-        <div className="absolute bottom-2 right-2 z-30 inline-flex gap-0.5 rounded-lg bg-black/45 p-0.5 backdrop-blur-sm">
-          {(
-            [
-              ['history', '역사'],
-              ['conquest', '점령 현황'],
-            ] as const
-          ).map(([k, label]) => {
-            const active = (k === 'conquest') === showConquest;
-            return (
-              <button
-                key={k}
-                type="button"
-                onClick={() => setShowConquest(k === 'conquest')}
-                aria-pressed={active}
-                className={`rounded-md px-2.5 py-1 text-[11px] font-bold transition ${
-                  active ? 'bg-emerald-500 text-white shadow-sm' : 'text-white/70'
-                }`}
-              >
-                {label}
-              </button>
-            );
-          })}
-        </div>
+            역사=노드 구역명·하단 역사, 점령 현황=노드 점령 길드명·하단 점령현황.
+            embedded(세계지도 탭)에서는 노드=구역명·하단=점령현황 고정이라 이 탭을 숨긴다. */}
+        {!embedded && (
+          <div className="absolute bottom-2 right-2 z-30 inline-flex gap-0.5 rounded-lg bg-black/45 p-0.5 backdrop-blur-sm">
+            {(
+              [
+                ['history', '역사'],
+                ['conquest', '점령 현황'],
+              ] as const
+            ).map(([k, label]) => {
+              const active = (k === 'conquest') === showConquest;
+              return (
+                <button
+                  key={k}
+                  type="button"
+                  onClick={() => setShowConquest(k === 'conquest')}
+                  aria-pressed={active}
+                  className={`rounded-md px-2.5 py-1 text-[11px] font-bold transition ${
+                    active ? 'bg-emerald-500 text-white shadow-sm' : 'text-white/70'
+                  }`}
+                >
+                  {label}
+                </button>
+              );
+            })}
+          </div>
+        )}
         {zones.map((z) => {
           // 리플레이 중 소유 override — 아침(before) 상태에서 시작해 이벤트마다 승자로 전환.
           const rOwner = replayOwners ? (replayOwners[z.id] ?? null) : undefined;
@@ -574,13 +584,13 @@ export function WorldMapView({
                   </span>
                 </span>
               )}
-              {/* 노드 라벨 — ON: 구역명 / OFF: 점령 길드명(중립은 라벨 없음). 네모칸 바로 아래(p-2 보정), 클릭 통과 */}
-              {(showConquest ? z.ownerGuildName : z.name) && (
+              {/* 노드 라벨 — 구역명(역사 모드) / 점령 길드명(중립은 라벨 없음). 네모칸 바로 아래(p-2 보정), 클릭 통과 */}
+              {(nodeShowGuild ? z.ownerGuildName : z.name) && (
                 <span
                   className="pointer-events-none absolute left-1/2 top-full -mt-1.5 -translate-x-1/2 whitespace-nowrap rounded-sm bg-black/70 px-0.5 text-[5px] font-bold leading-[1.4] shadow-[0_1px_2px_rgba(0,0,0,0.75)]"
-                  style={{ color: showConquest ? '#fff' : color }} // 점령현황(길드명)은 지역색 제거 → 흰색
+                  style={{ color: nodeShowGuild ? '#fff' : color }} // 점령현황(길드명)은 지역색 제거 → 흰색
                 >
-                  {showConquest ? z.ownerGuildName : z.name}
+                  {nodeShowGuild ? z.ownerGuildName : z.name}
                 </span>
               )}
             </button>
@@ -600,7 +610,7 @@ export function WorldMapView({
           루트 intrinsic 높이에 반영되지 않아 텍스트가 루트 밖으로 넘치고, 채팅 미니바
           회피 스페이서가 본문 중간에 배치돼 하단이 가려졌다(2026-07-21 재현·확정). */}
       <section ref={chronicleRef} className="flex flex-auto flex-col bg-white px-4 pb-4 pt-3 dark:bg-zinc-950">
-        {!showConquest ? (
+        {!bottomConquest ? (
           <>
         {hasChronicle ? (
           <div className="mb-2 flex items-center justify-between gap-1.5">
