@@ -108,7 +108,8 @@ function EnhanceSlotPicker({
           router.refresh();
           return;
         }
-        router.refresh();
+        // 성공 — startEnhance의 revalidatePath('/enhance')가 SlotLane prop(실제 잡)을 갱신하고
+        // useOptimistic이 낙관 카드를 그 실제 잡으로 복귀시킨다(§11.7). 에러/전송실패만 아래 refresh 롤백.
       } catch {
         showError('강화 등록이 전송되지 않았어요. 슬롯 상태를 확인해 주세요.');
         router.refresh();
