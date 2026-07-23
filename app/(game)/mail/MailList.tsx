@@ -1,7 +1,6 @@
 'use client';
 
 import { useEffect, useMemo, useOptimistic, useState, useTransition } from 'react';
-import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 
 import type { Slot } from '@/lib/db/schema/equipment';
@@ -185,7 +184,6 @@ export function MailList({
   hasMore: boolean;
   unreadAggregate: UnreadAggregate | null;
 }) {
-  const router = useRouter();
   const [, startTransition] = useTransition();
   const [error, setError] = useState<string | null>(null);
   const [extraItems, setExtraItems] = useState<MailItem[]>([]);
@@ -193,7 +191,7 @@ export function MailList({
   // 더 보기 누른 직후 skeleton 자리 N개 표시(2026-06-02) — '불러오는 중…' 텍스트 폴백
   // 대신 실제 카드 슬롯을 점유해 layout shift 최소화.
   const [loadingSkeletons, setLoadingSkeletons] = useState(0);
-  // items prop이 바뀌면(claim 후 router.refresh) extras·hasMore 리셋 — 중복 방지.
+  // items prop이 바뀌면(claim 후 revalidate로 prop 갱신) extras·hasMore 리셋 — 중복 방지.
   useEffect(() => {
     setExtraItems([]);
     setHasMore(initialHasMore);
@@ -268,7 +266,9 @@ export function MailList({
           rewards: buildRewards(Number(target.payload.diamond ?? 0), target.payload.boxes ?? {}),
         });
       }
-      router.refresh();
+      // router.refresh() 제거(2026-07-23, §11.7) — claimMailAction의 revalidatePath('/mail')가
+      // items prop을 갱신하고, useOptimistic이 transition 완료 시 그 새 prop으로 복귀한다.
+      // (헤더 배지·다이아도 revalidatePath('/')의 layout 재렌더로 갱신.)
     });
   };
 
@@ -294,7 +294,7 @@ export function MailList({
         title: '우편 모두 받기',
         rewards: buildRewards(totals.diamond, totals.boxes),
       });
-      router.refresh();
+      // router.refresh() 제거(2026-07-23, §11.7) — claimAllMailAction revalidate로 prop 갱신.
     });
   };
 
