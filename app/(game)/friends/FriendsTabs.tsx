@@ -21,8 +21,9 @@ import type { FriendUser, FriendRelation } from '@/lib/game/friends';
 
 /**
  * 친구 — 목록 / 요청(받은·보낸) / 찾기. 선물 없음.
- * 낙관적 UI: 목록을 로컬 상태로 두고 액션 즉시 반영, 실패 시 복원. 성공 시 router.refresh()로
- * 외부 배지(바텀네비/me)만 동기화(로컬 상태가 권위라 props 재동기화 effect 불필요).
+ * 낙관적 UI: 목록을 로컬 상태로 두고 액션 즉시 반영, 실패 시 복원(로컬 상태가 권위).
+ * 외부 배지(바텀네비/me)는 서버 액션의 revalidate가 (game)/layout을 재렌더하며 갱신하므로
+ * 성공 경로 router.refresh()는 불필요(중복 GET RSC 제거, CLAUDE §11.7). 2026-07-23.
  */
 type Tab = 'list' | 'requests' | 'find';
 type SearchRow = FriendUser & { relation: FriendRelation };
@@ -117,7 +118,7 @@ export function FriendsTabs({
   outgoing: FriendUser[];
   serverId: number;
 }) {
-  const router = useRouter();
+  const router = useRouter(); // router.push(프로필 이동)용 — refresh는 §11.7로 제거됨
   const { showHeaderToast } = useResourceToast();
   const [tab, setTab] = useState<Tab>('list');
   const [, startTransition] = useTransition();
@@ -165,7 +166,6 @@ export function FriendsTabs({
           setFriends((p) => [u, ...p]);
           toast('친구가 되었습니다');
         } else toast('요청을 보냈어요');
-        router.refresh();
       } else {
         setRel(u.userId, 'none');
         setOutgoing((p) => p.filter((x) => x.userId !== u.userId));
@@ -183,7 +183,6 @@ export function FriendsTabs({
       const r = await respondAction(u.userId, 'accept');
       if (r.status === 'success') {
         toast('친구가 되었습니다');
-        router.refresh();
       } else {
         setFriends((p) => p.filter((x) => x.userId !== u.userId));
         setIncoming((p) => [u, ...p]);
@@ -199,7 +198,6 @@ export function FriendsTabs({
       const r = await respondAction(u.userId, 'decline');
       if (r.status === 'success') {
         toast('요청을 거절했어요');
-        router.refresh();
       } else {
         setIncoming((p) => [u, ...p]);
         fail(r.code);
@@ -214,7 +212,6 @@ export function FriendsTabs({
       const r = await cancelAction(u.userId);
       if (r.status === 'success') {
         toast('요청을 취소했어요');
-        router.refresh();
       } else {
         setOutgoing((p) => [u, ...p]);
         setRel(u.userId, 'outgoing');
@@ -230,7 +227,6 @@ export function FriendsTabs({
       const r = await removeFriendAction(u.userId);
       if (r.status === 'success') {
         toast('친구를 삭제했어요');
-        router.refresh();
       } else {
         setFriends((p) => [u, ...p]);
         setRel(u.userId, 'friend');
