@@ -197,6 +197,10 @@ export function RaidSessionCard({ view: v, serverId }: { view: RaidView; serverI
   // 공격 연출 — 로어 오버레이 + 쿨다운(연속 클릭 차단).
   const [attacking, setAttacking] = useState(false);
   const [attackLore, setAttackLore] = useState<string | null>(null);
+  // 보스 HP 낙관 반영(2026-07-23) — 공격 응답의 누적 데미지를 즉시 HP 바에 반영해
+  // router.refresh(페이지 전체 재렌더) 지연과 무관하게 HP가 바로 줄어들게 한다.
+  // prop이 그 값 이상으로 갱신되면(다른 유저 공격 포함) prop을 신뢰.
+  const [localTotal, setLocalTotal] = useState<number | null>(null);
   // 보상 수령 — 낙관 완료 표시(서버 확정 전 즉시 '수령 완료' UI).
   const [claimedOpt, setClaimedOpt] = useState(false);
   // 결산 보상 수령 여부 — 서버 확정 or 낙관 클릭(둘 중 하나면 완료 톤).
@@ -229,9 +233,16 @@ export function RaidSessionCard({ view: v, serverId }: { view: RaidView; serverI
 
   // ── 페이즈 게이지: 이전 페이즈가 100% 다 찬 뒤 다음 컬러로 순차 진행 ──
   // 현재 진행률 계산: 누적 임계 = phase1·2·(1.5^N − 1).
+  // 유효 누적 데미지 — 낙관값과 prop 중 큰 값(prop이 앞서면 다른 유저 공격 반영분이라 신뢰).
+  const effTotal = localTotal != null ? Math.max(localTotal, v.totalDamage) : v.totalDamage;
   const thrFloor = v.phase1Hp * 2 * (1.5 ** v.phasesCleared - 1);
   const nextHp = raidPhaseHp(v.phase1Hp, v.phasesCleared + 1);
-  const targetProg = Math.max(0, Math.min(1, (v.totalDamage - thrFloor) / nextHp));
+  const targetProg = Math.max(0, Math.min(1, (effTotal - thrFloor) / nextHp));
+
+  // prop이 낙관값을 따라잡으면(refresh 도착) override 해제 — 이후 서버 데이터 신뢰.
+  useEffect(() => {
+    if (localTotal != null && v.totalDamage >= localTotal) setLocalTotal(null);
+  }, [v.totalDamage, localTotal]);
 
   const [gPhase, setGPhase] = useState(v.phasesCleared);
   const [gPct, setGPct] = useState(targetProg * 100);
@@ -281,7 +292,7 @@ export function RaidSessionCard({ view: v, serverId }: { view: RaidView; serverI
   // 공격 공통 — 로어 오버레이 + 쿨다운(연속 차단). 데미지/HP는 서버 응답 반영.
   const runAttack = (
     action: () => Promise<
-      | { status: 'success'; damage: number; isCrit: boolean }
+      | { status: 'success'; damage: number; isCrit: boolean; totalDamage?: string }
       | { status: 'error'; message: string; code: string }
     >,
     onFail?: () => void,
@@ -315,6 +326,8 @@ export function RaidSessionCard({ view: v, serverId }: { view: RaidView; serverI
       }
       setFloatDmg({ id, val: r.damage, crit: r.isCrit });
       setTimeout(() => setFloatDmg(null), 850);
+      // 보스 HP 즉시 반영 — refresh 지연과 무관하게 바가 바로 줄어든다.
+      if (r.totalDamage != null) setLocalTotal(Number(r.totalDamage));
       router.refresh();
       // 쿨다운 — 오버레이 유지 동안 재공격 차단(연속 클릭 + refresh 깜빡임 방지).
       setTimeout(() => {
@@ -504,7 +517,7 @@ export function RaidSessionCard({ view: v, serverId }: { view: RaidView; serverI
               <span className="ml-1 text-zinc-500">돌파</span>
             </span>
             <span className="font-mono text-[10px] text-zinc-500">
-              누적 {v.totalDamage.toLocaleString()}
+              누적 {effTotal.toLocaleString()}
             </span>
           </div>
           <div className="mt-1 h-2.5 isolate overflow-hidden rounded-full bg-zinc-800">

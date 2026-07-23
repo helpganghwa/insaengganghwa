@@ -40,7 +40,7 @@ async function userTotalCP(userId: string, serverId: number): Promise<number> {
 export async function attackRaid(input: {
   userId: string;
   raidId: bigint;
-}): Promise<{ damage: number; isCrit: boolean; phasesCleared: number }> {
+}): Promise<{ damage: number; isCrit: boolean; phasesCleared: number; totalDamage: string }> {
   const { userId, raidId } = input;
 
   // 락 밖 — serverId 가벼운 사전조회(비잠금) + CP 계산(유저 장비 스캔). 게이트는 락 내 재확인.
@@ -118,7 +118,9 @@ export async function attackRaid(input: {
       diamondCost: 0n,
     });
 
-    return { damage, isCrit, phasesCleared };
+    // totalDamage(레이드 전체 누적) 동봉 — 클라가 보스 HP를 응답 즉시 반영(router.refresh
+    // 지연과 무관하게 HP 바가 정확히 줄어들게, 2026-07-23).
+    return { damage, isCrit, phasesCleared, totalDamage: String(total) };
   });
 }
 
@@ -184,7 +186,7 @@ export async function gemAttackRaid(input: {
   raidId: bigint;
   /** 클릭 의도당 클라 생성 UUID(0109) — 응답 유실 재시도의 이중 차감 방지. */
   idemKey?: string;
-}): Promise<{ damage: number; isCrit: boolean; phasesCleared: number; cost: number }> {
+}): Promise<{ damage: number; isCrit: boolean; phasesCleared: number; cost: number; totalDamage: string }> {
   const { userId, raidId, idemKey } = input;
 
   // 락 밖 — serverId 사전조회 + CP 계산(감사 S2). 게이트·결제는 락 내 재확인/수행.
@@ -241,11 +243,17 @@ export async function gemAttackRaid(input: {
         .where(and(eq(raidAttacks.idempotencyKey, idemKey), eq(raidAttacks.userId, userId)))
         .limit(1);
       if (prev) {
+        // 멱등 재시도도 현재 누적 데미지를 함께 반환(HP 바 즉시 반영 일관성).
+        const [{ total: curTotal }] = await tx
+          .select({ total: sql<string>`coalesce(sum(${raidParticipants.totalDamage}), 0)` })
+          .from(raidParticipants)
+          .where(eq(raidParticipants.raidId, raidId));
         return {
           damage: Number(prev.damage),
           isCrit: prev.isCrit,
           phasesCleared: raid.phasesCleared,
           cost: Number(prev.diamondCost),
+          totalDamage: String(curTotal),
         };
       }
     }
@@ -290,6 +298,6 @@ export async function gemAttackRaid(input: {
       idempotencyKey: idemKey ?? null,
     });
 
-    return { damage, isCrit, phasesCleared, cost };
+    return { damage, isCrit, phasesCleared, cost, totalDamage: String(total) };
   });
 }
