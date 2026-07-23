@@ -28,8 +28,10 @@ export function DeployTerritoryTabs({ deploy, worldmap }: { deploy: ReactNode; w
       // 저장만 생략
     }
   };
+  // isolate — 탭 버튼 z-40이 전역 스태킹으로 새어 채팅 미니바(z-20 fixed) 위로 떠오르던 버그 방지
+  // (WorldMapView 지도 컨테이너와 동일 처리, 2026-07-23 제보 #67).
   return (
-    <div className="relative flex min-h-full shrink-0 flex-col">
+    <div className="relative isolate flex min-h-full shrink-0 flex-col">
       {tab === 'deploy' ? deploy : worldmap}
       {/* 지도 정사각 하단 근처(홈 세계지도 역사/점령 탭과 동일 위치). 배치 탭의 시각 안내는 이 버튼 위 4px. */}
       <div
