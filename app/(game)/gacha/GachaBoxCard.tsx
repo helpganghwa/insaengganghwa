@@ -1,7 +1,6 @@
 'use client';
 
 import { useState } from 'react';
-import { useRouter } from 'next/navigation';
 
 import type { Slot } from '@/lib/db/schema/equipment';
 
@@ -34,7 +33,6 @@ export function GachaBoxCard({
   count: number;
   eager?: boolean;
 }) {
-  const router = useRouter();
   const { showError } = useResourceToast();
   const [result, setResult] = useState<Extract<OpenActionResult, { status: 'success' }> | null>(
     null,
@@ -64,8 +62,9 @@ export function GachaBoxCard({
         }
         setResult(r);
         sounds.gachaOpen(); // 상자 개봉음
-        setOptimistic(r.remaining); // 서버 권위 잔여
-        router.refresh(); // 백그라운드 동기화(로딩 게이트에 영향 없음)
+        setOptimistic(r.remaining); // 서버 권위 잔여(이 값이 잔여 카운트의 권위 — refresh 불필요)
+        // router.refresh() 제거(2026-07-23, §11.7) — openAction의 revalidatePath('/gacha','/inventory')가
+        // prop·인벤을 갱신한다. 잔여는 위 optimistic이 권위, 인벤 반영은 다음 방문 시. 중복 GET 제거.
       })
       .catch(() => {
         showError('보급 개봉에 실패했습니다. 잠시 후 다시 시도해주세요.');
