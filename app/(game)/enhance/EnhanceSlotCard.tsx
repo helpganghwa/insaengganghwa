@@ -378,7 +378,9 @@ export function EnhanceSlotCard({
         setFlashFromLevel(null);
         setFlashToLevel(null);
         endEnhanceOverlay(); // 오버레이 종료 → 활성 0이면 랭킹 토스트 노출
-        router.refresh();
+        // router.refresh() 제거(2026-07-23) — finalizeEnhance의 revalidatePath가 이미 헤더(layout)
+        // ·레벨·전투력을 응답으로 갱신하고, 게이지는 applyNextJob이 반영. 별도 GET RSC refetch는
+        // 중복이라 수령 1회당 페이지 렌더가 2→1로 줄어든다(실측 검증).
       }, 3900);
     } else {
       setFlash(oc);
@@ -400,7 +402,7 @@ export function EnhanceSlotCard({
         setFlashFromLevel(null);
         setFlashToLevel(null);
         endEnhanceOverlay(); // 오버레이 종료 → 활성 0이면 랭킹 토스트 노출
-        router.refresh();
+        // router.refresh() 제거(2026-07-23, 위 mega 분기와 동일 근거) — revalidatePath 중복 제거.
       }, 2500);
     }
   };
