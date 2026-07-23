@@ -242,7 +242,7 @@ export function FriendsTabs({
   ];
 
   return (
-    <div className="flex h-full flex-col px-4 py-4">
+    <div className="flex h-[calc(100%-var(--chat-dock-h,0px))] flex-col px-4 py-4">
       <h1 className="mb-3 text-lg font-extrabold">친구</h1>
 
       {/* 탭 */}
