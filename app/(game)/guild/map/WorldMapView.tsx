@@ -358,6 +358,12 @@ export function WorldMapView({
       const r = await getZoneBattleAction(zoneId);
       if (r.status !== 'success') return showError(guildErrMsg(r.code));
       if (!r.battleId) return showError('전투 기록이 없습니다.');
+      // 복원 키 — 전투 기록에서 뒤로가기 시 이 구역 팝업이 다시 열린다(집행관 이동과 동일).
+      try {
+        sessionStorage.setItem('ig:worldmap-restore', String(zoneId));
+      } catch {
+        // 저장 실패 시 복원만 생략
+      }
       router.push(`/guild/battle/${r.battleId}`);
     });
   };

@@ -6,6 +6,7 @@ import Link from 'next/link';
 import { josa } from 'es-hangul';
 
 import { assetUrl } from '@/lib/asset-versions';
+import { BackFab } from '@/components/BackNav';
 import { CONQUEST_HP_MULT } from '@/lib/game/guild/balance';
 import type { ConquestBattleView as View } from '@/lib/game/guild/conquest/battle-view';
 
@@ -287,32 +288,40 @@ function IntroView({
   const region = REGION[view.zoneRegion] ?? { label: view.zoneRegion, color: '#71717a' };
   return (
     <div className="relative z-10 flex h-full flex-col px-4 pt-2.5 pb-9">
-      <p className="text-[10px] font-bold text-pixel-outline" style={{ color: region.color }}>
-        {region.label} · {view.kstDay.replace(/-/g, '.')}
-      </p>
-      <h1 className="text-base font-extrabold text-white text-pixel-outline">{view.zoneName} 점령전</h1>
-      {view.winner ? (
-        <div className="mt-1 inline-flex w-fit items-center gap-1.5 rounded-full bg-black/45 px-2.5 py-0.5 ring-1 ring-amber-400/40 backdrop-blur-sm">
-          {/* 길드문양을 길드이름 오른쪽에 — '점령 {이름} [문양]' */}
-          <span className="text-[11px] font-bold text-white text-pixel-outline">
-            <span className="text-amber-300">점령</span> {view.winner.name}
-          </span>
-          {view.winner.emblemUrl ? (
-            // eslint-disable-next-line @next/next/no-img-element
-            <img
-              src={view.winner.emblemUrl}
-              alt=""
-              aria-hidden
-              className="h-4 w-4 object-contain"
-              style={{ imageRendering: 'pixelated' }}
-            />
-          ) : null}
+      {/* 상단 헤더 — 레이드 상세와 동일 구조: 좌 뒤로가기 · 중앙 지역/날짜+구역 점령전 · 우 점령 길드. */}
+      <div className="relative flex items-start justify-between gap-2">
+        <BackFab fallback="/guild/map" className="shrink-0" />
+        <div className="pointer-events-none absolute inset-x-12 top-0 flex flex-col items-center text-center">
+          <p className="text-[10px] font-bold text-pixel-outline" style={{ color: region.color }}>
+            {region.label} · {view.kstDay.replace(/-/g, '.')}
+          </p>
+          <h1 className="text-base font-extrabold leading-tight text-white text-pixel-outline">
+            {view.zoneName} 점령전
+          </h1>
         </div>
-      ) : (
-        <div className="mt-1 inline-flex w-fit rounded-full bg-black/45 px-2.5 py-0.5 text-[11px] font-semibold text-zinc-200 ring-1 ring-white/20">
-          무혈 · 승자 없음
-        </div>
-      )}
+        {view.winner ? (
+          <div className="mt-0.5 inline-flex shrink-0 items-center gap-1.5 rounded-full bg-black/45 px-2.5 py-0.5 ring-1 ring-amber-400/40 backdrop-blur-sm">
+            {/* 길드문양을 길드이름 오른쪽에 — '점령 {이름} [문양]' */}
+            <span className="text-[11px] font-bold text-white text-pixel-outline">
+              <span className="text-amber-300">점령</span> {view.winner.name}
+            </span>
+            {view.winner.emblemUrl ? (
+              // eslint-disable-next-line @next/next/no-img-element
+              <img
+                src={view.winner.emblemUrl}
+                alt=""
+                aria-hidden
+                className="h-4 w-4 object-contain"
+                style={{ imageRendering: 'pixelated' }}
+              />
+            ) : null}
+          </div>
+        ) : (
+          <div className="mt-0.5 inline-flex shrink-0 rounded-full bg-black/45 px-2.5 py-0.5 text-[11px] font-semibold text-zinc-200 ring-1 ring-white/20">
+            무혈 · 승자 없음
+          </div>
+        )}
+      </div>
       {/* 길드 대진 — 문양 + 생존/처치 */}
       <div className="mt-auto space-y-1">
         {view.guilds.slice(0, 4).map((g) => (
