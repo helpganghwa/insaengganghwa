@@ -14,10 +14,14 @@ type Tx = Parameters<Parameters<typeof db.transaction>[0]>[0];
 /**
  * 공격 인접 규칙 — 길드가 소유한 구역에 인접한 구역만 공격 가능.
  *  단, 소유 구역이 0개면 어디든 첫 상륙 가능(부트스트랩). 수비는 인접 무관(이미 소유).
+ *  중립 구역(소유 없음)은 인접 무관 공격 가능(B안 — 방치 중립화 개방).
  */
 async function assertAttackable(tx: Tx, guildId: bigint, targetZoneId: number): Promise<void> {
   const owned = await tx.select({ id: zones.id }).from(zones).where(eq(zones.ownerGuildId, guildId));
   if (owned.length === 0) return; // 영토 0개 — 첫 상륙 자유
+  // 대상이 중립 구역이면 인접 조건 면제.
+  const [tz] = await tx.select({ owner: zones.ownerGuildId }).from(zones).where(eq(zones.id, targetZoneId)).limit(1);
+  if (tz && tz.owner === null) return; // 중립 — 자유공격
   const ownedIds = owned.map((o) => o.id);
   const [adj] = await tx
     .select({ a: zoneAdjacency.zoneA })

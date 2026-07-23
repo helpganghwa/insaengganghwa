@@ -1,6 +1,6 @@
 import 'server-only';
 
-import { and, desc, eq, ilike, inArray, isNotNull, or, sql } from 'drizzle-orm';
+import { and, desc, eq, ilike, inArray, isNotNull, isNull, or, sql } from 'drizzle-orm';
 
 import { db } from '@/lib/db/client';
 import { withTimeout } from '@/lib/db/with-timeout';
@@ -372,17 +372,11 @@ export async function getZoneAdjacency(serverId: number): Promise<{ a: number; b
  */
 export async function getAttackableZoneIds(guildId: bigint): Promise<number[]> {
   const owned = await db.select({ id: zones.id }).from(zones).where(eq(zones.ownerGuildId, guildId));
+  const [g] = await db.select({ serverId: guilds.serverId }).from(guilds).where(eq(guilds.id, guildId)).limit(1);
+  const serverId = g?.serverId ?? 1;
   if (owned.length === 0) {
-    const [g] = await db
-      .select({ serverId: guilds.serverId })
-      .from(guilds)
-      .where(eq(guilds.id, guildId))
-      .limit(1);
-    const all = await db
-      .select({ id: zones.id })
-      .from(zones)
-      .where(eq(zones.serverId, g?.serverId ?? 1));
-    return all.map((z) => z.id);
+    const all = await db.select({ id: zones.id }).from(zones).where(eq(zones.serverId, serverId));
+    return all.map((z) => z.id); // 첫 상륙 자유
   }
   const ownedIds = owned.map((o) => o.id);
   const ownedSet = new Set(ownedIds);
@@ -395,6 +389,12 @@ export async function getAttackableZoneIds(guildId: bigint): Promise<number[]> {
     if (ownedSet.has(e.a)) set.add(e.b);
     if (ownedSet.has(e.b)) set.add(e.a);
   }
+  // 중립 구역(소유 없음)은 인접 무관 공격 가능(B안 — 서버 assertAttackable과 동일 규칙).
+  const neutral = await db
+    .select({ id: zones.id })
+    .from(zones)
+    .where(and(eq(zones.serverId, serverId), isNull(zones.ownerGuildId)));
+  for (const z of neutral) set.add(z.id);
   for (const id of ownedIds) set.delete(id); // 자기 소유는 공격 대상 아님
   return [...set];
 }
