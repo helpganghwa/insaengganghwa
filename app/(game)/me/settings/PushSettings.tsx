@@ -206,7 +206,7 @@ export function PushSettings(props: {
       ) : null}
       <Toggle
         label="레이드 종료"
-        hint="6시간 만료 후 보상 안내"
+        hint="레이드 만료 후 보상 안내"
         on={raid}
         disabled={togglesDisabled || pending}
         onChange={(v) => flip('raid', v)}

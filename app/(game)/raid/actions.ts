@@ -56,13 +56,14 @@ export async function openRaidAction(
   bossCode: RaidBoss,
   friendShare: RaidShareMode = 'off',
   guildShare: RaidShareMode = 'off',
+  durationMs?: number,
 ) {
   const u = await uid();
   if (!u) return err('UNAUTHENTICATED');
   if (await rateLimited(u, 'raid')) return err('RATE_LIMITED');
   const __b = await actionBlock(); if (__b) return err(__b);
   try {
-    const r = await openRaid({ userId: u, serverId: await getActiveServerId(), bossCode, friendShare, guildShare });
+    const r = await openRaid({ userId: u, serverId: await getActiveServerId(), bossCode, friendShare, guildShare, durationMs });
     rev();
     return { status: 'success' as const, raidId: r.raidId.toString(), shareCode: r.shareCode };
   } catch (e) {

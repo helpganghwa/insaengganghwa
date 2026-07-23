@@ -1,7 +1,7 @@
 /**
  * 레이드 자동 정산 cron — `expire_at <= now() AND status='active'`인 레이드 일괄 settle.
  *
- * GDD §3.5 의도: 6시간 만료 시 lazy(사용자 접속) + cron 일괄 정산. 멱등(CLAUDE §3.4).
+ * GDD §3.5 의도: 공격창 만료 시 lazy(사용자 접속) + cron 일괄 정산. 멱등(CLAUDE §3.4).
  * 사용자 미접속 시에도 정산 + 종료 푸시 보장.
  *
  * settleRaid는 status='active' AND expire_at<=now() 조건부 → 'settled' transition + raid_rewards

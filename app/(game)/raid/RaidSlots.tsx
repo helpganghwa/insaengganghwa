@@ -4,7 +4,7 @@ import Link from 'next/link';
 import { useEffect, useState, useTransition } from 'react';
 import { useRouter } from 'next/navigation';
 
-import { RAID_OPEN_COST_DIAMOND } from '@/lib/game/balance';
+import { RAID_OPEN_COST_DIAMOND, RAID_WINDOW_MS, RAID_DURATION_OPTIONS_MS } from '@/lib/game/balance';
 import { RAID_BOSSES, RAID_BOSS_CODES, type RaidBoss } from '@/lib/game/raid/bosses';
 import { BossSprite } from '@/components/BossSprite';
 import { useResourceToast } from '@/components/ResourceToast';
@@ -63,6 +63,33 @@ const SHARE_ACTIVE: Record<ShareMode, string> = {
   free: 'bg-emerald-500 text-white',
   approval: 'bg-amber-500 text-white',
 };
+
+// 공격창 길이 선택(1/3/6시간) — 공개 범위와 동일한 세그먼트 UI. 활성=amber 단색.
+const HOUR_MS = 3_600_000;
+const DURATION_OPTS = RAID_DURATION_OPTIONS_MS.map((ms) => ({ v: ms, label: `${ms / HOUR_MS}시간` }));
+
+/** 지속 시간 행 — 공개 범위 행과 동일 레이아웃의 세그먼트. */
+function DurationRow({ value, onChange }: { value: number; onChange: (v: number) => void }) {
+  return (
+    <div className="flex items-center justify-between gap-2 rounded-xl border border-zinc-200 px-3 py-2 dark:border-zinc-700">
+      <span className="text-[12px] font-medium">지속 시간</span>
+      <div className="flex shrink-0 gap-0.5 rounded-lg bg-zinc-100 p-0.5 dark:bg-zinc-800">
+        {DURATION_OPTS.map((o) => (
+          <button
+            key={o.v}
+            type="button"
+            onClick={() => onChange(o.v)}
+            className={`rounded-md px-2 py-0.5 text-[11px] font-bold transition ${
+              value === o.v ? 'bg-amber-500 text-white' : 'text-zinc-500'
+            }`}
+          >
+            {o.label}
+          </button>
+        ))}
+      </div>
+    </div>
+  );
+}
 
 /** 공개 범위 행 — 비공개/자유(즉시)/수락(요청) 세그먼트(상태별 색상 구분). */
 function ShareModeRow({
@@ -201,6 +228,7 @@ export function RaidSlots({
   const [picked, setPicked] = useState<RaidBoss | null>(null);
   const [friendShare, setFriendShare] = useState<ShareMode>('off');
   const [guildShare, setGuildShare] = useState<ShareMode>('off');
+  const [durationMs, setDurationMs] = useState<number>(RAID_WINDOW_MS); // 기본 6시간
   const [confirm, setConfirm] = useState(false); // 소환(유료) 3초 인-버튼 컨펌
   const [confirmLeft, setConfirmLeft] = useState(0);
   const exhausted = dailyUsed >= dailyCap;
@@ -224,7 +252,7 @@ export function RaidSlots({
 
   const open = (code: RaidBoss) =>
     startTransition(async () => {
-      const r = await openRaidAction(code, friendShare, guildShare);
+      const r = await openRaidAction(code, friendShare, guildShare, durationMs);
       if (r.status === 'error') {
         showError(r.message);
         return;
@@ -430,6 +458,7 @@ export function RaidSlots({
                   {RAID_BOSSES[picked].story}
                 </p>
                 <div className="mt-3 space-y-1.5">
+                  <DurationRow value={durationMs} onChange={setDurationMs} />
                   <ShareModeRow title="친구 공개" value={friendShare} onChange={setFriendShare} />
                   <ShareModeRow title="길드원 공개" value={guildShare} onChange={setGuildShare} />
                 </div>

@@ -12,6 +12,7 @@ import {
   RAID_PHASE1_HP_MAX,
   RAID_PHASE1_HP_MIN,
   RAID_WINDOW_MS,
+  RAID_DURATION_OPTIONS_MS,
 } from '@/lib/game/balance';
 import { kstDateString } from '@/lib/kst';
 import type { RaidBoss } from './bosses';
@@ -106,8 +107,14 @@ export function openRaid(input: {
   bossCode: RaidBoss;
   friendShare?: RaidShareMode;
   guildShare?: RaidShareMode;
+  /** 공격창 길이(ms) — 개설자가 선택(1/3/6시간). 목록 밖 값은 기본 6시간으로 강제. */
+  durationMs?: number;
 }): Promise<{ raidId: bigint; shareCode: string }> {
   const { userId, bossCode, friendShare = 'off', guildShare = 'off' } = input;
+  // 서버 권위 — 클라가 보낸 지속시간은 허용 목록(1/3/6h)만 신뢰, 그 외는 기본값.
+  const durationMs = (RAID_DURATION_OPTIONS_MS as readonly number[]).includes(input.durationMs ?? -1)
+    ? input.durationMs!
+    : RAID_WINDOW_MS;
 
   return db.transaction(async (tx) => {
     if ((await activeRaidCount(tx, userId)) >= RAID_MAX_CONCURRENT_PER_USER) {
@@ -130,7 +137,7 @@ export function openRaid(input: {
         bossCode,
         phase1Hp: BigInt(phase1Hp),
         shareCode: genShareCode(),
-        expireAt: new Date(now + RAID_WINDOW_MS),
+        expireAt: new Date(now + durationMs),
         status: 'active',
         friendShare,
         guildShare,
