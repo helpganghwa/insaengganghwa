@@ -15,12 +15,6 @@ import {
   transcendBonusBp,
   enhanceBasePower,
   pieceCombatPower,
-  RAID_OPEN_COST_DIAMOND,
-  RAID_MAX_PARTICIPANTS,
-  RAID_MAX_CONCURRENT_PER_USER,
-  RAID_DAILY_CAP,
-  RAID_WINDOW_MS,
-  RAID_BASE_ATTACKS,
   raidExtraAttackCost,
   RAID_PHASE1_HP_MIN,
   RAID_PHASE1_HP_MAX,
@@ -206,12 +200,6 @@ export default async function ProbabilityPage() {
       </Sec>
 
       <Sec n="5" title="레이드" id="raid">
-        <P>
-          소환 비용 {RAID_OPEN_COST_DIAMOND.toLocaleString('ko-KR')}다이아 / 인원 최대{' '}
-          {RAID_MAX_PARTICIPANTS}명(호스트 포함) / 동시 진행 1인 최대{' '}
-          {RAID_MAX_CONCURRENT_PER_USER}건 / 1일 {RAID_DAILY_CAP}건 / 공격창{' '}
-          {Math.round(RAID_WINDOW_MS / 3_600_000)}시간 / 참여자당 기본 {RAID_BASE_ATTACKS}회 공격.
-        </P>
         <P>
           페이즈 1의 보스 체력은 {RAID_PHASE1_HP_MIN.toLocaleString('ko-KR')} ~{' '}
           {RAID_PHASE1_HP_MAX.toLocaleString('ko-KR')} 사이에서 고르게 정해지고, 페이즈가 올라갈
