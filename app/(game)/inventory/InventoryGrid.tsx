@@ -49,7 +49,7 @@ export function InventoryGrid({
   const [openId, setOpenId] = useState<string | null>(null);
   const [, startTransition] = useTransition();
   // 낙관적 items — 최적조합 클릭 시 클라이언트에서 같은 알고리즘으로 시뮬레이션 후
-  // 즉시 화면 반영. 서버 응답 + router.refresh()로 prop 새로 들어오면 자동 fallback.
+  // 즉시 화면 반영. 서버 응답 후 revalidate로 prop이 새로 들어오면 자동 fallback(§11.7).
   const [displayItems, setOptimisticItems] = useOptimistic(items);
 
   // 장착 중 — 필터 무관, 항상 무기→방어구→장신구 순 노출.

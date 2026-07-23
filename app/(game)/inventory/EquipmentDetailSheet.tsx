@@ -74,14 +74,18 @@ export function EquipmentDetailSheet({
   const [nr, ng, nb] = transcendStyle(item.transcendLevel + 1).colorRgb;
   const tNextColor = `rgb(${nr},${ng},${nb})`;
 
-  // 장착/해제는 외형 전용(랭킹 불변) — 낙관 즉시 반영 후 refresh.
+  // 장착/해제는 외형 전용(랭킹 불변) — 낙관 즉시 반영. 성공은 equip/unequipAction의
+  // revalidatePath('/inventory')가 items prop을 갱신해 useOptimistic이 그 값으로 복귀(§11.7,
+  // router.refresh 불필요). 에러만 refresh로 낙관을 서버 실제 상태로 롤백(액션이 revalidate 못 함).
   const run = (fn: () => Promise<{ status: string; message?: string }>, optimistic?: () => void) =>
     startTransition(async () => {
       setError(null);
       optimistic?.();
       const r = await fn();
-      if (r.status === 'error') setError(r.message ?? '오류');
-      router.refresh();
+      if (r.status === 'error') {
+        setError(r.message ?? '오류');
+        router.refresh();
+      }
     });
 
   return (
