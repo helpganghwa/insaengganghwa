@@ -180,12 +180,18 @@ function fmtRemaining(ms: number): string {
 }
 
 export function EnhanceSlotCard({
-  activeJob,
+  activeJob: propJob,
   diamond,
 }: {
   activeJob: ActiveJob;
   diamond: string;
 }) {
+  // 자동 재등록된 다음 잡을 응답 즉시 반영하는 오버라이드(2026-07-23 Eclipse 제보 근본 수정).
+  // 서버는 강화 수령 시 새 잡을 이미 만들지만, 종전엔 router.refresh(연출 2.5초 뒤)로만 반영돼
+  // 네트워크 지연 시 완료된 옛 잡이 게이지 100%로 잔류 → 재수령이 확률 0%대 새 잡에 꽂혔다.
+  // finalize 응답의 nextJob으로 즉시 교체하고, prop이 그 잡(또는 이후)으로 갱신되면 해제한다.
+  const [jobOverride, setJobOverride] = useState<ActiveJob | null>(null);
+  const activeJob = jobOverride ?? propJob;
   const router = useRouter();
   const { showRanking, beginEnhanceOverlay, endEnhanceOverlay, showError } = useResourceToast();
   const { optimisticAdjust: adjustDiamond } = useDiamond();
@@ -215,6 +221,10 @@ export function EnhanceSlotCard({
     setOptimisticDone(false);
     setConfirm(false);
   }, [activeJob.jobId]);
+  // prop이 오버라이드한 잡(또는 그 이후)으로 갱신되면 오버라이드 해제 — 이후 서버 데이터 신뢰.
+  useEffect(() => {
+    if (jobOverride && propJob.jobId === jobOverride.jobId) setJobOverride(null);
+  }, [propJob.jobId, jobOverride]);
   // 게이지 transition 토글 — 페이지 진입(초기) + 새 잡 도착(시도 후 게이지 점프) 시
   // 첫 paint는 transition 끔(즉시 그 자리). 다음 frame부터 켜서 매초 흐름 · 보석 단축은
   // 부드럽게(700ms). 두 단계 rAF로 React commit + 브라우저 paint 후 클래스 추가.
@@ -308,6 +318,29 @@ export function EnhanceSlotCard({
   const instantCost = remainingMs > 0 ? diamondToFinishMs(remainingMs) : 0;
   const canAfford = BigInt(diamond) >= BigInt(instantCost || 0);
 
+  // 자동 재등록된 다음 잡을 즉시 반영 — 불변 필드(장비 정체성)는 현재 카드에서 유지, 변동 필드만 교체.
+  // router.refresh 도착 전이라도 게이지가 새 잡 기준(0%)으로 바로 리셋된다.
+  type NextJob = {
+    jobId: string;
+    fromLevel: number;
+    targetLevel: number;
+    baseRateBp: number;
+    startedAtIso: string;
+    completeAtIso: string;
+  };
+  const applyNextJob = (nj: NextJob | null | undefined) => {
+    if (!nj) return;
+    setJobOverride({
+      ...activeJob,
+      jobId: nj.jobId,
+      fromLevel: nj.fromLevel,
+      targetLevel: nj.targetLevel,
+      baseRateBp: nj.baseRateBp,
+      startedAtIso: nj.startedAtIso,
+      completeAtIso: nj.completeAtIso,
+    });
+  };
+
   // 결과 연출 재생 — 정상 응답·복구 조회 공용(2026-07-21 분리).
   const playResult = (oc: Outcome, fromLv: number, toLv: number, lore: (typeof LORE_SETS)[number]) => {
     beginEnhanceOverlay();
@@ -390,9 +423,10 @@ export function EnhanceSlotCard({
         // 서버 판정은 커밋됐는데 응답만 못 받는 케이스가 실재. 순수 JSON 라우트(스큐 면역)로
         // 결과를 되찾아 정상 연출을 재생하고, 못 찾으면 상태 재동기화로 강등.
         const rec = await fetch(`/api/enhance/outcome?job=${activeJob.jobId}`, { cache: 'no-store' })
-          .then((res) => (res.ok ? (res.json() as Promise<{ state: string; outcome?: string; fromLevel?: number; toLevel?: number }>) : null))
+          .then((res) => (res.ok ? (res.json() as Promise<{ state: string; outcome?: string; fromLevel?: number; toLevel?: number; nextJob?: NextJob | null }>) : null))
           .catch(() => null);
         if (rec?.state === 'done' && rec.outcome) {
+          applyNextJob(rec.nextJob); // 게이지 즉시 리셋(옛 잡 100% 잔류 방지)
           playResult(rec.outcome as Outcome, Number(rec.fromLevel), Number(rec.toLevel), lore);
           return;
         }
@@ -419,6 +453,7 @@ export function EnhanceSlotCard({
       // 강화 결과 토스트 — 누적(last-wins)만 하고, 결과 오버레이 종료 시 노출.
       // 이 슬롯 오버레이 시작 신호(begin) → 종료 setTimeout에서 end → 모든 슬롯 0이면 토스트.
       showRanking(r.ranksBefore, r.ranksAfter);
+      applyNextJob(r.nextJob); // 게이지 즉시 리셋 — router.refresh 지연과 무관하게 새 잡 반영
       playResult(r.result.outcome as Outcome, Number(r.result.fromLevel), Number(r.result.toLevel), lore);
     });
   };

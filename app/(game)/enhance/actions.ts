@@ -98,11 +98,24 @@ export async function startEnhance(userEquipmentId: string) {
  * (B) 강화 시도 — 유저 조기 시도 허용(effective rate). 결과 무관 서버 자동 재등록(실패/유지/하락도 슬롯 유지).
  * 토스트용 ranks before/after 동봉(상승/하락 모두 표시, 클라이언트가 디바운스/노출 판단).
  */
+/** 자동 재등록된 다음 잡 — 응답에 실어 클라가 router.refresh 없이 게이지를 즉시 리셋한다.
+ *  (불변 필드 code/name/slot/transcend는 같은 장비라 클라가 기존 카드에서 유지·병합.) */
+export type NextJobDto = {
+  jobId: string;
+  fromLevel: number;
+  targetLevel: number;
+  baseRateBp: number;
+  startedAtIso: string;
+  completeAtIso: string;
+};
+
 export async function finalizeEnhance(jobId: string): Promise<
   | {
       status: 'success';
       result: Omit<ResolveResult, 'jobId' | 'userEquipmentId'>;
       requeued: boolean;
+      /** 재등록 성공 시 다음 잡 정보(없으면 null — MAX 도달 등). */
+      nextJob: NextJobDto | null;
       ranksBefore: MyRanks;
       ranksAfter: MyRanks;
     }
@@ -124,9 +137,19 @@ export async function finalizeEnhance(jobId: string): Promise<
     // 생성 전에 /enhance를 재렌더해 슬롯이 빈 상태로 깜빡임(레이스, 검증됨).
     // best-effort·멱등 — MAX 레벨 도달 등으로 큐잉 실패는 흡수(슬롯 자연 해제).
     let requeued = false;
+    let nextJob: NextJobDto | null = null;
     try {
-      await queueEnhance({ userId, userEquipmentId: r.userEquipmentId });
+      const nq = await queueEnhance({ userId, userEquipmentId: r.userEquipmentId });
       requeued = true;
+      // started_at = completeAt − durationMs(queue가 now()+duration으로 stamp). 클라 게이지 기준.
+      nextJob = {
+        jobId: String(nq.jobId),
+        fromLevel: nq.fromLevel,
+        targetLevel: nq.targetLevel,
+        baseRateBp: nq.baseRateBp,
+        completeAtIso: nq.completeAt.toISOString(),
+        startedAtIso: new Date(nq.completeAt.getTime() - nq.durationMs).toISOString(),
+      };
     } catch (re) {
       if (!(re instanceof EnhanceError)) console.error('[enhance.requeue]', re);
     }
@@ -146,6 +169,7 @@ export async function finalizeEnhance(jobId: string): Promise<
         effectiveRateBp: r.effectiveRateBp,
       },
       requeued,
+      nextJob,
       ranksBefore,
       ranksAfter,
     };
