@@ -215,12 +215,15 @@ export function DeployBoard({
     return () => clearInterval(t);
   }, []);
 
-  // 전투 윈도 잠금(KST 23:00~24:00) — 라이브 시계로 판정. Date.now()는 UTC epoch라 단말 표준시 무관.
+  // 전투 윈도 잠금(KST 23:00~익일 01:00) — 라이브 시계로 판정. Date.now()는 UTC epoch라 단말 표준시 무관.
+  // 서버 isConquestLockWindow(23시 정산 + 00시 공개·소유권 이전)와 동일 공식이어야 UI/서버가 일치.
   // UX 차단일 뿐 권위는 서버(BATTLE_IN_PROGRESS). 하이드레이션 불일치 회피 위해 false로 시작 후 마운트 시 갱신.
   const [locked, setLocked] = useState(false);
   useEffect(() => {
-    const check = () =>
-      setLocked(Math.floor((Date.now() + 9 * 3_600_000) / 3_600_000) % 24 === CONQUEST_BATTLE_KST_HOUR);
+    const check = () => {
+      const h = Math.floor((Date.now() + 9 * 3_600_000) / 3_600_000) % 24;
+      setLocked(h === CONQUEST_BATTLE_KST_HOUR || h === (CONQUEST_BATTLE_KST_HOUR + 1) % 24);
+    };
     check();
     const t = setInterval(check, 15_000);
     return () => clearInterval(t);
@@ -264,7 +267,7 @@ export function DeployBoard({
             <div className="inline-block rounded-lg bg-black/60 px-2 py-1 text-[9px] font-semibold leading-[1.5] text-white/90 shadow-lg backdrop-blur-sm">
               매일 {CONQUEST_BATTLE_KST_HOUR}:00 배치 마감 · 24:00 결과 발표
               <br />
-              <span className="text-white/70">전투 시간({CONQUEST_BATTLE_KST_HOUR}:00~24:00) 등록 불가</span>
+              <span className="text-white/70">{CONQUEST_BATTLE_KST_HOUR}:00~익일 01:00 배치 등록 불가</span>
             </div>
           )}
         </div>
