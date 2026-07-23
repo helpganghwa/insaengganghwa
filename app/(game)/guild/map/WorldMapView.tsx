@@ -8,7 +8,6 @@ import { profileHref } from '@/lib/game/profile/href';
 import { useResourceToast } from '@/components/ResourceToast';
 import { useDiamond } from '@/components/DiamondContext';
 import { ModalShell } from '@/components/ModalShell';
-import { ToggleSwitch } from '@/components/ToggleSwitch';
 import { assetUrl } from '@/lib/asset-versions';
 import { GUILD_EXECUTOR_TAX_CUT, TAX_COLLECT_COOLDOWN_MIN } from '@/lib/game/guild/balance';
 
@@ -472,16 +471,31 @@ export function WorldMapView({
             );
           })()}
         </svg>
-        {/* 우하단 스위치 — ON: 구역명+역사 / OFF: 점령 길드명+점령현황. 현재 모드 라벨 동반. */}
-        <span className="absolute bottom-2 right-2 z-30 inline-flex items-center gap-1.5 rounded-full bg-black/45 px-2 py-1 backdrop-blur-sm">
-          <span className="text-[10px] font-bold text-white/90">{showConquest ? '점령 현황' : '역사'}</span>
-          <ToggleSwitch
-            on={!showConquest}
-            onToggle={() => setShowConquest((v) => !v)}
-            small
-            label="지도 표시 전환 — 켜짐: 구역명·역사 / 꺼짐: 점령 길드명·점령 현황"
-          />
-        </span>
+        {/* 우하단 탭 — 역사 / 점령 현황(활성=emerald, 길드 랭킹 탭 UI와 통일, 2026-07-23).
+            역사=노드 구역명·하단 역사, 점령 현황=노드 점령 길드명·하단 점령현황. */}
+        <div className="absolute bottom-2 right-2 z-30 inline-flex gap-0.5 rounded-lg bg-black/45 p-0.5 backdrop-blur-sm">
+          {(
+            [
+              ['history', '역사'],
+              ['conquest', '점령 현황'],
+            ] as const
+          ).map(([k, label]) => {
+            const active = (k === 'conquest') === showConquest;
+            return (
+              <button
+                key={k}
+                type="button"
+                onClick={() => setShowConquest(k === 'conquest')}
+                aria-pressed={active}
+                className={`rounded-md px-2.5 py-1 text-[11px] font-bold transition ${
+                  active ? 'bg-emerald-500 text-white shadow-sm' : 'text-white/70'
+                }`}
+              >
+                {label}
+              </button>
+            );
+          })}
+        </div>
         {zones.map((z) => {
           // 리플레이 중 소유 override — 아침(before) 상태에서 시작해 이벤트마다 승자로 전환.
           const rOwner = replayOwners ? (replayOwners[z.id] ?? null) : undefined;
