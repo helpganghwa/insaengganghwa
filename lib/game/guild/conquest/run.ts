@@ -153,6 +153,31 @@ export async function runConquest(serverId: number, battleDay: string): Promise<
  *  - battleDay = KST 어제(전투일). chronicle cron이 narrate 직전 호출.
  */
 /**
+ * 방치 구역 중립화(B안 — 고착 개선). 그 점령전(battleDay)에 **공격·수비 배치가 하나도 없고
+ * 집행관도 없는**(완전 방치) 소유 지역을 중립으로 되돌린다 → 다음 점령전부터 자유공격 개방.
+ *  - 수비0+공격O = 무혈 점령(전투로 처리) / 수비O(배치·집행관 자동방어) = 소유 유지 → 이 둘은 제외.
+ *  - 세금(tax_diamond/points)은 유지(다음 점령자에게 약탈 이전), 소유·집행관·captured_at만 해제.
+ *  - 공개(소유권 플립) 직후 호출 — 뺏긴 구역은 공격 배치가 있어 대상 아님.
+ */
+export async function neutralizeAbandonedZones(
+  serverId: number,
+  battleDay: string,
+): Promise<{ neutralized: number }> {
+  const res = (await db.execute(sql`
+    update zones set owner_guild_id = null, executor_user_id = null, captured_at = null
+    where server_id = ${serverId}
+      and owner_guild_id is not null
+      and executor_user_id is null
+      and id not in (
+        select zone_id from guild_battle_deployments
+        where server_id = ${serverId} and battle_kst_day = ${battleDay}
+      )
+    returning id
+  `)) as unknown as { id: number }[];
+  return { neutralized: res.length };
+}
+
+/**
  * 점령전 공개 직후(자정) 수비 배치 이월 — GUILD §5.8. 어제(battleDay) 수비 배치 중
  * **여전히 길드가 소유한 구역 + 아직 그 길드 소속**인 유저만 다음 전투일로 재생성(role=defend).
  * 공격 배치는 이월 안 함(전원 자동 해제). 집행관은 zones.executor로 유지(자동 ×2 방어).

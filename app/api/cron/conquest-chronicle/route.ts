@@ -14,7 +14,7 @@ import { isCronAuthorized } from '@/lib/auth/cron-auth';
 import { beatCron } from '@/lib/cron/heartbeat';
 import { db } from '@/lib/db/client';
 import { generateAndStoreChronicle } from '@/lib/game/guild';
-import { revealConquest, carryOverDefenders } from '@/lib/game/guild/conquest/run';
+import { revealConquest, carryOverDefenders, neutralizeAbandonedZones } from '@/lib/game/guild/conquest/run';
 import { openServerIds } from '@/lib/game/server-list';
 import { kstDateString } from '@/lib/kst';
 
@@ -74,8 +74,10 @@ export async function GET(req: Request) {
           // generate는 skip('already')로 끝난다 — 이 틱의 실작업은 플립·우편뿐(LLM 없음, 수초).
           // 사전 생성이 실패한 날만 여기서 백필(LLM 생성)된다.
           const rev = await revealConquest(sid, day);
-          // 공개(소유권 플립) 직후 세계 피드 캐시 즉시 무효화 — 30s TTL 대기 없이 지도/피드 반영.
-          if (rev.revealed > 0) revalidateTag('world-feed', 'max');
+          // 공개(소유권 플립) 직후, 완전 방치(공격·수비·집행관 0) 소유 구역 중립화(B안). 재실행 안전(멱등).
+          const neutral = await neutralizeAbandonedZones(sid, day).catch(() => ({ neutralized: 0 }));
+          // 공개(소유권 플립)·중립화 직후 세계 피드 캐시 즉시 무효화 — 30s TTL 대기 없이 지도/피드 반영.
+          if (rev.revealed > 0 || neutral.neutralized > 0) revalidateTag('world-feed', 'max');
           // 공개 후 수비 배치 이월(안 뺏긴 구역만, 공격은 해제) — 재실행 안전. 실패해도 공개/연대기엔 무관.
           const carry = await carryOverDefenders(sid, day).catch(() => ({ carried: 0 }));
           results.push({
@@ -83,6 +85,7 @@ export async function GET(req: Request) {
             kstDay: day,
             revealed: rev.revealed,
             mailed: rev.mailed,
+            neutralized: neutral.neutralized,
             carried: carry.carried,
             ...(await generateAndStoreChronicle(day, sid)),
           });
