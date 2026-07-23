@@ -253,10 +253,8 @@ export function DeployBoard({
           style={{ imageRendering: 'pixelated' }}
         />
         <div className="pointer-events-none absolute inset-0 bg-black/30" />
-        {/* 점령전 시각 안내 — 지도 우하단. [배치|세계지도] 탭(정사각 하단 2.2rem 위) 바로 위 4px에
-            오도록 bottom을 올렸다(2026-07-23): 탭 상단이 지도하단에서 ~2.2rem·탭높이 ~1.7rem →
-            안내 하단은 지도하단에서 2.2rem + 4px ≈ 2.45rem. */}
-        <div className="pointer-events-none absolute right-2 z-20 max-w-[58%] text-right" style={{ bottom: '2.45rem' }}>
+        {/* 점령전 시각 안내 — 지도 좌상단(우하단 탭 위에 두면 지도를 가려 좌상단으로 이동, 2026-07-23). */}
+        <div className="pointer-events-none absolute left-2 top-2 z-20 max-w-[58%] text-left">
           {locked ? (
             <div className="inline-flex items-center gap-1.5 rounded-lg border border-red-400/60 bg-red-950/85 px-2 py-1 text-[9px] font-bold text-red-100 shadow-lg backdrop-blur-sm">
               <span className="inline-block h-1.5 w-1.5 animate-pulse rounded-full bg-red-400" />
