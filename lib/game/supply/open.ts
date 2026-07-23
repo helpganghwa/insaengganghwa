@@ -186,10 +186,16 @@ export async function openSupplyBoxes(input: {
           where user_id = ${userId}::uuid and server_id = ${serverId}
             and catalog_item_id not in (${sql.join(openedIds.map((id) => sql`${id}`), sql`, `)})
         `)) as unknown as { m: number }[];
-        const prevMax = Math.max(
-          row?.m ?? 0,
-          ...opened.map((r) => r.transcendLevel - r.transcended),
-        );
+        // 이번에 연 장비의 '배치 시작 전 레벨' — 같은 장비가 한 배치에서 초월 후 재획득되면
+        // 나중 행은 transcended=0이라 (transcendLevel - 0)=개봉 후 레벨이 되어 prevMax를 자기
+        // 자신으로 부풀린다(신기록인데 침묵). catalog별 min(level-transcended)만 취해 방지.
+        const startByCat = new Map<number, number>();
+        for (const r of opened) {
+          const before = r.transcendLevel - r.transcended;
+          const cur = startByCat.get(r.catalogItemId);
+          if (cur === undefined || before < cur) startByCat.set(r.catalogItemId, before);
+        }
+        const prevMax = Math.max(row?.m ?? 0, ...startByCat.values());
         if (newMax > prevMax) {
           const [ci] = (await db.execute(
             sql`select name from catalog_items where id = ${top.catalogItemId} limit 1`,
