@@ -2,6 +2,7 @@ import Link from 'next/link';
 
 import { BUSINESS_INFO } from '@/lib/legal/content';
 import { DIAMONDS } from '@/lib/game/shop/catalog';
+import { RatingLine } from '@/components/GameRating';
 
 // 공개(로그인 전) 푸터 — PG 심사·전자상거래법 표시 요건: 약관·개인정보·환불·사업자정보·상품 노출.
 // 아직 확정 안 된 placeholder('['로 시작) 값은 표시에서 자동 숨김.
@@ -39,6 +40,9 @@ export function PublicFooter() {
           </li>
         ))}
       </ul>
+
+      {/* 게임물 등급 표시(§33) — 상시 표기. */}
+      <RatingLine className="mb-2 flex-wrap text-[10.5px] text-zinc-400" />
 
       <div className="space-y-0.5 text-zinc-400">
         <p>

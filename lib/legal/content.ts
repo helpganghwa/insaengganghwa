@@ -14,6 +14,20 @@ export const BUSINESS_INFO = {
   privacyOfficer: '서해남 (대표) · help@ganghwa.app',
 } as const;
 
+/**
+ * 게임물 등급 표시(게임산업법 §33) — GRAC 등급분류 결정 정보. 공식 심볼은 GRAC 배포 AI파일에서 추출.
+ * 표시 의무: 초기화면 3초 이상(온라인은 1시간마다 반복) + 상시(푸터·법적고지). 내용정보는 결정서 표기(해당 항목만).
+ */
+export const GAME_RATING = {
+  rating: '전체이용가',
+  ratingSymbol: '/rating/all.png', // 전체이용가 공식 심볼(초록 #44A342 ALL)
+  classificationNo: '제 GC-CC-NP-260724-001 호',
+  classifiedAt: '2026-07-24', // 심의(등급분류)일
+  authority: '게임물관리위원회',
+  /** 내용정보 — 결정서상 '유' 항목만. 인생강화=폭력성(단순 폭력 표현), 나머지 6종 없음. */
+  contentInfo: [{ label: '폭력성', icon: '/rating/violence.png' }],
+} as const;
+
 export type LegalSlug = 'terms' | 'privacy' | 'refund' | 'youth';
 
 export const LEGAL_META: Record<LegalSlug, { title: string; effectiveDate: string }> = {
