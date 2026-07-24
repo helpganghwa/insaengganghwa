@@ -20,12 +20,12 @@ export const BUSINESS_INFO = {
  */
 export const GAME_RATING = {
   rating: '전체이용가',
-  ratingSymbol: '/rating/all.png', // 전체이용가 공식 심볼(초록 #44A342 ALL)
+  ratingSymbol: '/rating/all-v2.png', // 전체이용가 공식 심볼(초록 #44A342 ALL) — v2: 외곽 투명·헤일로 제거·정규화
   classificationNo: '제 GC-CC-NP-260724-001 호',
   classifiedAt: '2026-07-24', // 심의(등급분류)일
   authority: '게임물관리위원회',
   /** 내용정보 — 결정서상 '유' 항목만. 인생강화=폭력성(단순 폭력 표현), 나머지 6종 없음. */
-  contentInfo: [{ label: '폭력성', icon: '/rating/violence.png' }],
+  contentInfo: [{ label: '폭력성', icon: '/rating/violence-v2.png' }],
 } as const;
 
 export type LegalSlug = 'terms' | 'privacy' | 'refund' | 'youth';
