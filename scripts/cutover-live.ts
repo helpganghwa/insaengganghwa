@@ -27,8 +27,8 @@ if (!target || !URL) {
 const TARGET: string = target;
 
 // FK 안전 순서(자식 → 부모). CASCADE 사용 안 함.
-// CBT 종료는 아바타 삭제가 전제 — 기념 아바타 이월(cbt-snapshot → cbt-keepsake 버킷 복사본)이
-// "원본은 사라진다"는 가정 위에 설계돼 있다. 남기면 이월 복원본과 중복된다.
+// CBT 종료 시 아바타(user_profiles)는 삭제하고 이월하지 않는다(2026-07-24 보존 철회) —
+// 유저는 컷오버 후 기본 아바타 2종으로 새 시작. cbt-snapshot도 avatars를 스냅샷하지 않는다.
 const WIPE_TABLES = [
   'enhancement_jobs', 'enhancement_logs', 'gem_time_reductions',
   'transcend_logs',

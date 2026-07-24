@@ -1,14 +1,12 @@
 /**
  * CBT 이월 스냅샷 — 실운영 컷오버(wipe) **직전** 1회 실행.
  *
- * 이월 범위(정책): 닉네임 + 아바타 전 목록(비기본) + 추천 보상. 진행도는 이월하지 않음.
+ * 이월 범위(정책): 닉네임 + 추천 보상. 아바타·진행도는 이월하지 않음
+ * (2026-07-24 아바타 보존 철회 — 컷오버 시 아바타 목록 초기화, 유저는 기본 아바타로 새 시작).
  *
  * 하는 일(캐릭터 보유 전 유저 — 빈손 유저도 닉네임 이월을 위해 전원 기록):
  *  1. 초대 보상 집계 — referral_attributions(rewarded=true) 건수 × 당시 단가(💎1,000+📦30).
- *  2. 아바타 전 목록(비기본) — 정면(south) PNG를 storage `profiles` 버킷의
- *     `cbt-keepsake/{userId}/{profileId}.png`로 복사(wipe 생존). 아바타는 정면 1방향만
- *     사용(기획 확정)이라 south만 복사하면 완전 이월. 마지막 착용은 was_active 마킹.
- *  3. cbt_carryover upsert.
+ *  2. cbt_carryover upsert(avatars=null — 아바타 미이월).
  *
  * 실행 절차(컷오버 데이): docs/CUTOVER-LIVE.md 런북 — 점검ON → 본 스크립트 --confirm →
  * cutover-live.ts → cbt-restore.ts(1서버 사전 복원) → env 전환·배포.
@@ -17,7 +15,6 @@
  * 사용: bun run --env-file=.env.local scripts/cbt-snapshot.ts [--confirm]
  */
 import postgres from 'postgres';
-import { createClient } from '@supabase/supabase-js';
 
 const INVITE_DIAMOND_PER = 1_000; // 스냅샷 시점 단가 고정(lib/game/referral/stats.ts와 동일)
 const INVITE_BOX_PER = 30;
@@ -27,18 +24,7 @@ const raw = process.env.PROD_DATABASE_URL;
 if (!raw) { console.error('PROD_DATABASE_URL 미설정'); process.exit(1); }
 const sql = postgres(raw.replace(':6543/', ':5432/'), { prepare: false, max: 1 });
 
-const SUPA_URL = process.env.NEXT_PUBLIC_SUPABASE_URL;
-const SUPA_KEY = process.env.SUPABASE_SERVICE_ROLE_KEY;
-if (!SUPA_URL || !SUPA_KEY) { console.error('SUPABASE service env 미설정'); process.exit(1); }
-const storage = createClient(SUPA_URL, SUPA_KEY, { auth: { persistSession: false } }).storage;
-
-type ProfileRow = {
-  id: string; user_id: string; rotations: Record<string, string>;
-  pixellab_character_id: string; options: Record<string, unknown>;
-  equipment_snapshot: unknown; description_prompt: string; created_at: string;
-};
-
-/** cbt_carryover.avatars 원소 — grant.ts/cbt-restore.ts와 형태 공유. */
+/** cbt_carryover.avatars 원소 — grant.ts/cbt-restore.ts와 형태 공유(현재 미이월이라 항상 null). */
 type CarryAvatar = {
   image_url: string;
   was_active: boolean;
@@ -48,27 +34,6 @@ type CarryAvatar = {
   description_prompt: string;
   created_at: string;
 };
-
-/** storage 공개 URL → 같은 버킷 내 키 추출. */
-function storageKey(url: string): string | null {
-  const m = url.match(/\/object\/public\/profiles\/(.+?)(\?|$)/);
-  return m ? m[1]! : null;
-}
-
-async function copyKeepsakeImage(userId: string, profileId: string, southUrl: string): Promise<string | null> {
-  const key = storageKey(southUrl);
-  if (!key) return null;
-  const dest = `cbt-keepsake/${userId}/${profileId}.png`;
-  if (confirm) {
-    const dl = await storage.from('profiles').download(key);
-    if (dl.error || !dl.data) { console.warn(`  ⚠ 이미지 다운로드 실패 ${profileId}: ${dl.error?.message}`); return null; }
-    const buf = Buffer.from(await dl.data.arrayBuffer());
-    const up = await storage.from('profiles').upload(dest, buf, { contentType: 'image/png', upsert: true, cacheControl: '31536000' });
-    if (up.error) { console.warn(`  ⚠ 이미지 업로드 실패 ${profileId}: ${up.error.message}`); return null; }
-  }
-  const { data } = storage.from('profiles').getPublicUrl(dest);
-  return data.publicUrl;
-}
 
 async function main() {
   console.log(`\n=== CBT 이월 스냅샷 ${confirm ? '(실행)' : '(드라이런)'} ===\n`);
@@ -92,30 +57,10 @@ async function main() {
   for (const u of users) {
     const inviteCount = inviteBy.get(u.user_id) ?? 0;
 
-    // 비기본 아바타 전부 — 기본 아바타는 실운영 캐릭터 생성이 기본 지급하므로 제외.
-    const owned = await sql<ProfileRow[]>`
-      select id, user_id, rotations, pixellab_character_id, options, equipment_snapshot,
-             description_prompt, created_at
-      from user_profiles
-      where user_id = ${u.user_id} and coalesce(options->>'isDefault','false') <> 'true'
-      order by created_at`;
-
+    // 아바타는 이월하지 않는다(2026-07-24 보존 철회) — 컷오버 시 아바타 목록을 초기화하고
+    // 유저는 기본 아바타 2종으로 새 시작한다. 초대 보상(💎/📦)만 이월. keepsake 버킷 복사·
+    // avatars 스냅샷 없음(restore는 빈 avatars면 기본 2종만 생성하므로 그대로 둔다).
     const avatars: CarryAvatar[] = [];
-    for (const p of owned) {
-      const south = p.rotations?.south;
-      if (typeof south !== 'string' || !south) { console.warn(`  ⚠ south 없음 ${p.id} — 건너뜀`); continue; }
-      const url = await copyKeepsakeImage(u.user_id, p.id, south);
-      if (!url) continue;
-      avatars.push({
-        image_url: url,
-        was_active: p.id === u.active_profile_id,
-        pixellab_character_id: p.pixellab_character_id,
-        options: p.options ?? {},
-        equipment_snapshot: p.equipment_snapshot ?? {},
-        description_prompt: p.description_prompt ?? '',
-        created_at: p.created_at,
-      });
-    }
 
     rows++;
     if (inviteCount > 0) withInvite++;
