@@ -139,6 +139,13 @@ function ChronicleText({
 // 지역 라벨·색 — 공용 메타(길드 팝업 칩과 동일 출처).
 const REGION = REGION_META;
 
+/** 남은 ms → H:MM:SS(수금 타이머 표기). 음수는 0으로. */
+function hmsFrom(ms: number): string {
+  const s = Math.max(0, Math.floor(ms / 1000));
+  return `${Math.floor(s / 3600)}:${String(Math.floor(s / 60) % 60).padStart(2, '0')}:${String(s % 60).padStart(2, '0')}`;
+}
+const TAX_COOLDOWN_MS = TAX_COLLECT_COOLDOWN_MIN * 60_000;
+
 
 export function WorldMapView({
   mapSrc,
@@ -251,6 +258,15 @@ export function WorldMapView({
   const [collectOpen, setCollectOpen] = useState<number | null>(null);
   const [collectNow, setCollectNow] = useState(0); // 모달 열 때 캡처한 시각(쿨다운 계산, 렌더 순수성)
   const [collectConfirm, setCollectConfirm] = useState(false);
+  // 팝업 세금 카드의 수금 타이머 — 초 단위 갱신(구역 팝업 열렸을 때만). 세금 안내 모달 상태도 함께.
+  const [nowMs, setNowMs] = useState(0);
+  const [rateInfoOpen, setRateInfoOpen] = useState(false);
+  useLayoutEffect(() => {
+    if (selectedId == null) return;
+    setNowMs(Date.now());
+    const id = setInterval(() => setNowMs(Date.now()), 1000);
+    return () => clearInterval(id);
+  }, [selectedId]);
   const [collectLeft, setCollectLeft] = useState(0);
   useEffect(() => {
     if (!collectConfirm) return;
@@ -905,137 +921,134 @@ export function WorldMapView({
             </div>
 
             <div className="px-4 pb-4 pt-3">
-              <dl className="space-y-1 text-[12px]">
-                <div className="flex justify-between gap-2">
-                  <dt className="text-zinc-500">소유 길드</dt>
-                  <dd className="flex min-w-0 items-center gap-1.5 font-semibold">
-                    {selected.ownerGuildName ? (
-                      <>
-                        {selected.ownerEmblemUrl && (
-                          // eslint-disable-next-line @next/next/no-img-element
-                          <img
-                            src={selected.ownerEmblemUrl}
-                            alt=""
-                            aria-hidden
-                            className="h-4 w-4 shrink-0 object-contain"
-                            style={{ imageRendering: 'pixelated' }}
-                          />
-                        )}
-                        <span className="truncate">{selected.ownerGuildName}</span>
-                      </>
+              <div className="text-[12px]">
+                {/* 소유 라인 — 문양 + 길드명 강조(B안 팝업, 2026-07-24) */}
+                <div className="flex items-center gap-2">
+                  {selected.ownerGuildName ? (
+                    <>
+                      {selected.ownerEmblemUrl && (
+                        // eslint-disable-next-line @next/next/no-img-element
+                        <img
+                          src={selected.ownerEmblemUrl}
+                          alt=""
+                          aria-hidden
+                          className="h-[19px] w-[19px] shrink-0 rounded object-contain"
+                          style={{ imageRendering: 'pixelated' }}
+                        />
+                      )}
+                      <span className="min-w-0 truncate text-[13.5px] font-extrabold">{selected.ownerGuildName}</span>
+                    </>
+                  ) : (
+                    <span className="text-[13.5px] font-bold text-zinc-400">중립</span>
+                  )}
+                </div>
+
+                {/* 집행관 · 거주 — 한 줄 */}
+                <div className="mt-1 flex items-center gap-1.5 text-[11px] text-zinc-500">
+                  {selected.executorNickname ? (
+                    selected.executorCode ? (
+                      // 프로필 이동 — 복원 키를 남겨 뒤로가기 시 이 팝업이 다시 열린다.
+                      <Link
+                        prefetch={false}
+                        href={profileHref(selected.executorCode, serverId)}
+                        onClick={() => {
+                          try {
+                            sessionStorage.setItem('ig:worldmap-restore', String(selected.id));
+                          } catch {
+                            // 저장 실패 시 복원만 생략
+                          }
+                        }}
+                        className="font-semibold text-indigo-500 dark:text-indigo-400"
+                      >
+                        {selected.executorNickname}
+                      </Link>
                     ) : (
-                      <span className="text-zinc-400">중립</span>
-                    )}
-                  </dd>
+                      <span className="font-semibold text-indigo-500 dark:text-indigo-400">{selected.executorNickname}</span>
+                    )
+                  ) : (
+                    <span>집행관 공석</span>
+                  )}
+                  <span className="text-zinc-300 dark:text-zinc-700">·</span>
+                  <span>거주 {selected.residentCount.toLocaleString('ko-KR')}명</span>
                 </div>
-                <div className="flex justify-between">
-                  <dt className="text-zinc-500">집행관</dt>
-                  <dd className="font-semibold">
-                    {selected.executorNickname ? (
-                      selected.executorCode ? (
-                        // 프로필 이동 — 복원 키를 남겨 뒤로가기 시 이 팝업이 다시 열린다.
-                        <Link
-                          prefetch={false}
-                          href={profileHref(selected.executorCode, serverId)}
-                          onClick={() => {
-                            try {
-                              sessionStorage.setItem('ig:worldmap-restore', String(selected.id));
-                            } catch {
-                              // 저장 실패 시 복원만 생략
-                            }
-                          }}
-                          className="text-indigo-500 underline decoration-dotted underline-offset-2 dark:text-indigo-400"
-                        >
-                          {selected.executorNickname}
-                        </Link>
-                      ) : (
-                        <span className="text-indigo-500 dark:text-indigo-400">{selected.executorNickname}</span>
-                      )
+
+                {/* 세금 카드 — 세율(탭 → 안내 모달) + 누적 + 수금 게이지·버튼 */}
+                <div className="mt-2 rounded-lg border border-zinc-200 bg-zinc-50 p-2.5 dark:border-zinc-800 dark:bg-zinc-900/60">
+                  <div className="flex items-center justify-between gap-2">
+                    {selected.ownerGuildId != null ? (
+                      <button
+                        type="button"
+                        onClick={() => setRateInfoOpen(true)}
+                        className="inline-flex items-center gap-1 rounded-full border border-amber-400/50 bg-amber-400/10 px-2 py-0.5 text-[11px] font-extrabold text-amber-600 active:opacity-80 dark:text-amber-400"
+                      >
+                        💰 세율 +{Math.round((selected.taxBonus - 1) * 100)}%
+                      </button>
                     ) : (
-                      <span className="text-zinc-400">공석</span>
+                      <span className="inline-flex items-center rounded-full border border-zinc-300 px-2 py-0.5 text-[11px] font-bold text-zinc-400 dark:border-zinc-700">
+                        세율 +0%
+                      </span>
                     )}
-                  </dd>
-                </div>
-                <div className="flex justify-between">
-                  <dt className="text-zinc-500">거주 인원</dt>
-                  <dd className="font-mono tabular-nums">{selected.residentCount.toLocaleString('ko-KR')}명</dd>
-                </div>
-                <div className="flex items-center justify-between gap-2">
-                  <dt className="flex items-center gap-1.5 text-zinc-500">
-                    누적 세금
-                    {/* 수금 — 그 구역 집행관 본인만(라벨 오른쪽 작은 버튼).
-                        쿨다운 중엔 비활성 + ⏳ HH:MM 타이머(2026-07-21 문의 반영). */}
-                    {myUserId != null &&
-                      selected.executorUserId === myUserId &&
-                      (() => {
-                        const end =
-                          selected.lastTaxAt != null
-                            ? selected.lastTaxAt + TAX_COLLECT_COOLDOWN_MIN * 60_000
-                            : 0;
-                        const remMs = end - Date.now();
-                        if (remMs > 0) {
-                          const h = Math.floor(remMs / 3_600_000);
-                          const m = Math.floor((remMs % 3_600_000) / 60_000);
-                          return (
-                            <button
-                              type="button"
-                              disabled
-                              className="rounded-md border border-zinc-300 bg-zinc-100 px-2 py-0.5 font-mono text-[10px] font-bold text-zinc-400 dark:border-zinc-700 dark:bg-zinc-800/60 dark:text-zinc-500"
-                            >
-                              ⏳ {h}:{String(m).padStart(2, '0')}
-                            </button>
-                          );
-                        }
-                        return (
-                          <button
-                            type="button"
-                            onClick={() => {
-                              setCollectConfirm(false);
-                              setCollectNow(Date.now());
-                              setCollectOpen(selected.id);
-                            }}
-                            className="rounded-md bg-emerald-600 px-2 py-0.5 text-[10px] font-bold text-white active:opacity-80"
-                          >
-                            수금
-                          </button>
-                        );
-                      })()}
-                  </dt>
-                  <dd className="font-mono tabular-nums">💎{selected.taxDiamond}</dd>
-                </div>
-                {/* 다음 수금 — 쿨다운 남은 시간(모두에게 표시, 2026-07-21 문의 채택안 B).
-                    소유 길드가 있을 때만(중립지는 수금 개념 없음). 시각은 절대 시각 병기. */}
-                {selected.ownerGuildId != null && (
-                  <div className="flex justify-between">
-                    <dt className="text-zinc-500">다음 수금</dt>
-                    <dd className="font-semibold">
-                      {(() => {
-                        const end =
-                          selected.lastTaxAt != null
-                            ? selected.lastTaxAt + TAX_COLLECT_COOLDOWN_MIN * 60_000
-                            : 0;
-                        const remMs = end - Date.now();
-                        if (remMs <= 0)
-                          return <span className="text-emerald-600 dark:text-emerald-400">즉시 가능</span>;
-                        const remH = Math.ceil(remMs / 3_600_000);
-                        const rem = remH >= 1 ? `${remH}시간 후` : `${Math.max(1, Math.ceil(remMs / 60_000))}분 후`;
-                        const d = new Date(end);
-                        const kst = new Intl.DateTimeFormat('ko-KR', {
-                          timeZone: 'Asia/Seoul',
-                          month: 'numeric',
-                          day: 'numeric',
-                          hour: 'numeric',
-                        }).format(d);
-                        return (
-                          <span className="text-zinc-600 dark:text-zinc-300">
-                            {rem} 가능 <span className="font-normal text-zinc-400">({kst})</span>
-                          </span>
-                        );
-                      })()}
-                    </dd>
+                    <span className="font-mono text-[15px] font-extrabold tabular-nums">💎{selected.taxDiamond}</span>
                   </div>
-                )}
-              </dl>
+
+                  {selected.ownerGuildId != null ? (
+                    (() => {
+                      const base = selected.lastTaxAt ?? selected.capturedAt;
+                      const end = base != null ? base + TAX_COOLDOWN_MS : null;
+                      const remMs = end != null ? end - nowMs : null;
+                      const ready = remMs != null && remMs <= 0;
+                      const pct =
+                        base != null ? Math.min(100, Math.max(0, ((nowMs - base) / TAX_COOLDOWN_MS) * 100)) : 100;
+                      const isMyExec = myUserId != null && selected.executorUserId === myUserId;
+                      const canCollect = isMyExec && ready && Number(selected.taxDiamond) > 0;
+                      return (
+                        <div className="mt-2 flex items-center gap-2">
+                          <div className="min-w-0 flex-1">
+                            <div className="mb-0.5 flex justify-between text-[9.5px] font-bold">
+                              <span className="text-zinc-400">수금까지</span>
+                              <span
+                                className={
+                                  ready
+                                    ? 'text-emerald-600 dark:text-emerald-400'
+                                    : 'font-mono tabular-nums text-zinc-600 dark:text-zinc-300'
+                                }
+                              >
+                                {ready ? '지금 가능' : hmsFrom(remMs ?? 0)}
+                              </span>
+                            </div>
+                            <div className="h-1 overflow-hidden rounded-full bg-zinc-200 dark:bg-zinc-800">
+                              <div
+                                className={`h-full rounded-full ${ready ? 'bg-emerald-500' : 'bg-amber-500'}`}
+                                style={{ width: `${pct}%` }}
+                              />
+                            </div>
+                          </div>
+                          {isMyExec &&
+                            (canCollect ? (
+                              <button
+                                type="button"
+                                onClick={() => {
+                                  setCollectConfirm(false);
+                                  setCollectNow(Date.now());
+                                  setCollectOpen(selected.id);
+                                }}
+                                className="shrink-0 rounded-md bg-amber-600 px-3 py-1 text-[10.5px] font-bold text-white active:opacity-80"
+                              >
+                                수금
+                              </button>
+                            ) : (
+                              <span className="shrink-0 rounded-md border border-zinc-300 bg-zinc-100 px-3 py-1 text-[10.5px] font-bold text-zinc-400 dark:border-zinc-700 dark:bg-zinc-800/60 dark:text-zinc-500">
+                                대기
+                              </span>
+                            ))}
+                        </div>
+                      );
+                    })()
+                  ) : (
+                    <div className="mt-2 text-center text-[11px] font-medium text-zinc-500">점령 후 세금을 수금하세요</div>
+                  )}
+                </div>
+              </div>
 
             {canSetResidence &&
               (selected.id === residence ? (
@@ -1069,6 +1082,72 @@ export function WorldMapView({
         </ModalShell>
       )}
 
+      {/* 세금 안내 모달(B안) — 세율 내역(구역당 1%·완전장악 25%, 권역별 개별) + 세금 쌓이는 법(접기).
+          세율 브레이크다운은 zones 배열로 클라 계산(서버 조회 불필요). */}
+      {rateInfoOpen &&
+        selected != null &&
+        selected.ownerGuildId != null &&
+        (() => {
+          const gid = selected.ownerGuildId;
+          const ownerZones = zones.filter((z) => z.ownerGuildId === gid);
+          const zoneCount = ownerZones.length;
+          const fullRegions = REGION_ORDER.filter((rg) => {
+            const total = zones.filter((z) => z.region === rg).length;
+            return total > 0 && ownerZones.filter((z) => z.region === rg).length === total;
+          });
+          const totalPct = Math.round((selected.taxBonus - 1) * 100);
+          return (
+            <ModalShell
+              onClose={() => setRateInfoOpen(false)}
+              label="세금 안내"
+              className="w-full max-w-[260px] rounded-2xl bg-white p-4 dark:bg-zinc-950"
+            >
+              <div className="flex items-center justify-between">
+                <h2 className="text-sm font-extrabold">💰 세금 안내</h2>
+                <button type="button" onClick={() => setRateInfoOpen(false)} className="text-[13px] text-zinc-400">
+                  ✕
+                </button>
+              </div>
+              <p className="mt-3 text-[10px] font-bold uppercase tracking-wide text-zinc-400">세율</p>
+              <dl className="mt-1 space-y-1 text-[12px]">
+                <div className="flex justify-between">
+                  <dt className="text-zinc-500">점령 구역 {zoneCount} × 1%</dt>
+                  <dd className="font-bold tabular-nums">+{zoneCount}%</dd>
+                </div>
+                {fullRegions.map((rg) => (
+                  <div key={rg} className="flex justify-between">
+                    <dt className="text-zinc-500">{REGION[rg].label} 완전장악</dt>
+                    <dd className="font-bold tabular-nums">+25%</dd>
+                  </div>
+                ))}
+                <div className="flex justify-between border-t border-zinc-200 pt-1.5 dark:border-zinc-800">
+                  <dt className="font-bold">세율</dt>
+                  <dd className="font-extrabold tabular-nums text-amber-600 dark:text-amber-400">+{totalPct}%</dd>
+                </div>
+              </dl>
+              <details className="mt-3 border-t border-zinc-200 pt-2 dark:border-zinc-800">
+                <summary className="cursor-pointer list-none text-[11px] font-semibold text-zinc-500">
+                  세금은 어떻게 쌓이나요?
+                </summary>
+                <div className="mt-2 text-[10.5px] leading-relaxed text-zinc-500">
+                  거주 유저가 강화에 성공하면 <b className="font-bold text-zinc-700 dark:text-zinc-300">성공한 강화 단계의 1%</b>가
+                  세금(💎)으로 적립되고, 위 세율만큼 더 쌓이게 됩니다.
+                  <div className="mt-2 rounded-lg border border-zinc-200 bg-zinc-50 p-2 text-[10px] dark:border-zinc-800 dark:bg-zinc-900">
+                    <div className="flex justify-between py-0.5">
+                      <span>예) +10,000 강화 성공</span>
+                      <span className="font-bold text-amber-600 dark:text-amber-400">기본 100💎</span>
+                    </div>
+                    <div className="flex justify-between py-0.5">
+                      <span>세율 +{totalPct}% 적용</span>
+                      <span className="font-bold text-amber-600 dark:text-amber-400">→ {Math.round(100 * selected.taxBonus)}💎</span>
+                    </div>
+                  </div>
+                </div>
+              </details>
+            </ModalShell>
+          );
+        })()}
+
       {/* 세금 수금 모달 — 길드 90% / 집행관 10%, 3초 컨펌, 쿨다운 안내 */}
       {collectOpen != null &&
         (() => {
@@ -1077,7 +1156,9 @@ export function WorldMapView({
           const tax = Number(cz.taxDiamond);
           const execCut = Math.floor(tax * GUILD_EXECUTOR_TAX_CUT);
           const guildCut = tax - execCut;
-          const cdEnd = cz.lastTaxAt != null ? cz.lastTaxAt + TAX_COLLECT_COOLDOWN_MIN * 60_000 : 0;
+          // 수금 가능 시각 — 직전 수금(lastTaxAt) 우선, 없으면 습득(capturedAt) 기준 72h(B안 첫 수금 게이트).
+          const cdBase = cz.lastTaxAt ?? cz.capturedAt;
+          const cdEnd = cdBase != null ? cdBase + TAX_COLLECT_COOLDOWN_MIN * 60_000 : 0;
           const remMs = cdEnd - collectNow;
           const onCd = remMs > 0;
           const hh = Math.floor(remMs / 3_600_000);
