@@ -900,15 +900,15 @@ export function WorldMapView({
                 style={{ backgroundImage: `url(${assetUrl(`/sprites/guild/region/${selected.region}.png`)})` }}
               />
               <div className="absolute inset-0 bg-gradient-to-t from-black/75 via-black/25 to-black/10" />
-              {/* 길드 영토 강조 — 문양을 좌상단에 크게, 헤더 상단에 걸치듯 워터마크로. DOM상 텍스트
-                  블록보다 앞이라 텍스트가 위에 그려짐(가림 없음). 중립이면 미표시. */}
+              {/* 길드 영토 강조 — 문양을 헤더 좌상단에 불투명하게 붙임(작은 배지 크기). DOM상 텍스트
+                  블록보다 앞이라 겹쳐도 텍스트가 위에 그려짐. 중립이면 미표시. */}
               {selected.ownerEmblemUrl && (
                 // eslint-disable-next-line @next/next/no-img-element
                 <img
                   src={selected.ownerEmblemUrl}
                   alt=""
                   aria-hidden
-                  className="pointer-events-none absolute -top-3 -left-2 h-24 w-24 object-contain opacity-40 drop-shadow-[0_2px_6px_rgba(0,0,0,0.7)]"
+                  className="pointer-events-none absolute top-2 left-2 h-12 w-12 object-contain drop-shadow-[0_2px_6px_rgba(0,0,0,0.7)]"
                   style={{ imageRendering: 'pixelated' }}
                 />
               )}
