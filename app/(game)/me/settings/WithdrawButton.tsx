@@ -3,6 +3,7 @@
 import { useState, useTransition } from 'react';
 
 import { withdrawAction } from './withdraw-actions';
+import { ModalShell } from '@/components/ModalShell';
 
 const ERR: Record<string, string> = {
   LEADER_MUST_TRANSFER: '길드장은 위임하거나 길드를 해산한 뒤 탈퇴할 수 있어요.',
@@ -35,14 +36,11 @@ export function WithdrawButton() {
       </button>
 
       {open && (
-        <div
-          className="fixed inset-0 z-[100] flex items-center justify-center bg-black/50 p-6"
-          onClick={() => !pending && setOpen(false)}
+        <ModalShell
+          onClose={() => !pending && setOpen(false)}
+          label="회원 탈퇴 확인"
+          className="w-full max-w-[340px] rounded-2xl bg-white p-5 text-center dark:bg-zinc-950"
         >
-          <div
-            className="w-full max-w-[340px] rounded-2xl bg-white p-5 text-center dark:bg-zinc-950"
-            onClick={(e) => e.stopPropagation()}
-          >
             <div className="text-3xl">⚠️</div>
             <h2 className="mt-2 text-base font-bold">정말 탈퇴하시겠어요?</h2>
             <p className="mt-2 text-xs leading-relaxed text-zinc-500">
@@ -72,8 +70,7 @@ export function WithdrawButton() {
                 {pending ? '처리 중…' : '탈퇴'}
               </button>
             </div>
-          </div>
-        </div>
+        </ModalShell>
       )}
     </>
   );

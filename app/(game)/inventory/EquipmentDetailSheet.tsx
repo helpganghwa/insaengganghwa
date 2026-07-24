@@ -10,6 +10,7 @@ import type { InvItem } from './InventoryGrid';
 import { equipAction, unequipAction } from './actions';
 import { startEnhance } from '@/app/(game)/enhance/actions';
 import { SwapPickerModal } from './SwapPickerModal';
+import { ModalShell } from '@/components/ModalShell';
 import { TranscendSprite } from '@/components/TranscendSprite';
 import { RarityFrame, rarityBorderStyle, hasRarityBorder } from '@/components/RarityFrame';
 import { transcendStyle } from '@/lib/game/equipment/transcend';
@@ -89,17 +90,12 @@ export function EquipmentDetailSheet({
     });
 
   return (
-    <div
-      role="dialog"
-      aria-modal="true"
-      aria-label="장비 상세"
-      className="fixed inset-0 z-40 flex items-center justify-center bg-black/70 p-4 backdrop-blur-md"
-      onClick={onClose}
+    <>
+    <ModalShell
+      onClose={onClose}
+      label="장비 상세"
+      className="max-h-[92dvh] w-full max-w-xs overflow-y-auto rounded-2xl bg-white p-3 shadow-[0_0_40px_rgba(245,158,11,0.18)] ring-1 ring-amber-700/40 dark:bg-zinc-950"
     >
-      <div
-        className="max-h-[92dvh] w-full max-w-xs overflow-y-auto rounded-2xl bg-white p-3 shadow-[0_0_40px_rgba(245,158,11,0.18)] ring-1 ring-amber-700/40 dark:bg-zinc-950"
-        onClick={(e) => e.stopPropagation()}
-      >
         {/* ── 상단: sprite + 정보(이름/슬롯/상태/전투력) ── */}
         <section className="flex items-stretch gap-3">
           <span
@@ -243,7 +239,7 @@ export function EquipmentDetailSheet({
         >
           닫기
         </button>
-      </div>
+    </ModalShell>
 
       {swapPicker ? (
         <SwapPickerModal
@@ -252,6 +248,6 @@ export function EquipmentDetailSheet({
           onClose={() => setSwapPicker(false)}
         />
       ) : null}
-    </div>
+    </>
   );
 }

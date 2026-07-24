@@ -160,7 +160,7 @@ export function TodayShareBox({
               role="dialog"
               aria-modal="true"
               aria-label="성장 자랑하기"
-              className="fixed inset-0 z-[100] flex items-center justify-center bg-black/70 p-4 backdrop-blur-md"
+              className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-4 backdrop-blur-sm"
               onClick={() => setOpen(false)}
             >
               <div

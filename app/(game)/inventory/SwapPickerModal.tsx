@@ -6,6 +6,7 @@ import { useRouter } from 'next/navigation';
 import type { Slot } from '@/lib/db/schema/equipment';
 import { TranscendSprite } from '@/components/TranscendSprite';
 import { getActiveJobsForSlot, swapEnhanceAction } from '@/app/(game)/enhance/actions';
+import { ModalShell } from '@/components/ModalShell';
 
 type ActiveJob = {
   jobId: string;
@@ -88,17 +89,11 @@ export function SwapPickerModal({
   }
 
   return (
-    <div
-      role="dialog"
-      aria-modal="true"
-      aria-label="강화 슬롯 교체"
-      className="fixed inset-0 z-[60] flex items-center justify-center bg-black/70 p-4 backdrop-blur-md"
-      onClick={onClose}
+    <ModalShell
+      onClose={onClose}
+      label="강화 슬롯 교체"
+      className="w-full max-w-xs rounded-2xl bg-zinc-950 p-4 text-zinc-100 shadow-[0_0_40px_rgba(245,158,11,0.18)] ring-1 ring-amber-700/40"
     >
-      <div
-        className="w-full max-w-xs rounded-2xl bg-zinc-950 p-4 text-zinc-100 shadow-[0_0_40px_rgba(245,158,11,0.18)] ring-1 ring-amber-700/40"
-        onClick={(e) => e.stopPropagation()}
-      >
         <div className="mb-3 flex items-baseline justify-between">
           <h2 className="text-sm font-bold">교체할 강화 선택</h2>
           <button
@@ -166,7 +161,6 @@ export function SwapPickerModal({
         >
           취소
         </button>
-      </div>
-    </div>
+    </ModalShell>
   );
 }

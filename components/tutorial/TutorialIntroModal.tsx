@@ -17,7 +17,7 @@ export function TutorialIntroModal({
       role="dialog"
       aria-modal="true"
       aria-label="튜토리얼 안내"
-      className="pointer-events-auto fixed inset-0 z-[62] flex items-center justify-center bg-black/70 p-4 backdrop-blur-md"
+      className="pointer-events-auto fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-4 backdrop-blur-sm"
     >
       <div className="w-full max-w-[340px] rounded-2xl bg-white p-5 text-center shadow-[0_0_40px_rgba(245,158,11,0.22)] ring-1 ring-amber-700/40 dark:bg-zinc-900">
         {/* eslint-disable-next-line @next/next/no-img-element */}

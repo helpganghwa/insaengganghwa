@@ -12,7 +12,7 @@ export function InstallGuideModal({
     <div
       role="dialog"
       aria-modal="true"
-      className="fixed inset-0 z-[64] flex items-center justify-center bg-black/70 p-4 backdrop-blur-md"
+      className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-4 backdrop-blur-sm"
       onClick={onClose}
     >
       <div

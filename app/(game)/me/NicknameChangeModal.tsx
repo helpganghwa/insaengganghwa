@@ -72,7 +72,7 @@ export function NicknameChangeModal({
       role="dialog"
       aria-modal="true"
       aria-label="닉네임 변경"
-      className="fixed inset-0 z-[100] flex items-center justify-center bg-black/70 p-4 backdrop-blur-md"
+      className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-4 backdrop-blur-sm"
       onClick={onClose}
     >
       <div

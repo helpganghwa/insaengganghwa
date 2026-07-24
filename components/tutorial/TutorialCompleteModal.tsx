@@ -27,7 +27,7 @@ export function TutorialCompleteModal({ onClose }: { onClose: () => void }) {
       role="dialog"
       aria-modal="true"
       aria-label="튜토리얼 완료"
-      className="fixed inset-0 z-[62] flex items-center justify-center bg-black/70 p-4 backdrop-blur-md"
+      className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-4 backdrop-blur-sm"
     >
       <div className="w-full max-w-[358px] rounded-2xl bg-white p-5 shadow-[0_0_40px_rgba(245,158,11,0.22)] ring-1 ring-amber-700/40 dark:bg-zinc-900">
         <div className="text-3xl">🎉</div>

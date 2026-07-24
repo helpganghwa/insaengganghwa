@@ -341,7 +341,7 @@ export function CheckinPopup({ dayProgress }: { dayProgress: number }) {
 
   return (
     <div
-      className="fixed inset-0 z-[80] flex items-center justify-center bg-black/65 p-5 backdrop-blur-sm"
+      className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-5 backdrop-blur-sm"
       onClick={fxOn ? closePopup : undefined} // 배경 클릭 닫기 — 수령 후에만(강제 수령 유지)
     >
       {/* 연출 전용 CSS — FLIP 그리드·키프레임(ck- 프리픽스, 팝업 스코프) */}
