@@ -265,7 +265,7 @@ export function DeployBoard({
             </div>
           ) : (
             <div className="inline-block rounded-lg bg-black/60 px-2 py-1 text-[9px] font-semibold leading-[1.5] text-white/90 shadow-lg backdrop-blur-sm">
-              매일 {CONQUEST_BATTLE_KST_HOUR}:00 배치 마감 · 24:00 결과 발표
+              {CONQUEST_BATTLE_KST_HOUR}:00 배치 마감 · 24:00 결과 발표
               <br />
               <span className="text-white/70">{CONQUEST_BATTLE_KST_HOUR}:00~익일 01:00 배치 등록 불가</span>
             </div>
