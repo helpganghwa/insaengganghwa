@@ -1050,34 +1050,36 @@ export function WorldMapView({
                 </div>
               </div>
 
-            {canSetResidence &&
-              (selected.id === residence ? (
-                // 현재 위치 — '이동' 버튼과 동일 크기(레이아웃 시프트 방지)
-                <button
-                  type="button"
-                  disabled
-                  className="mt-2.5 w-full cursor-default rounded-lg bg-amber-500/15 py-2 text-[13px] font-bold text-amber-700 dark:text-amber-300"
-                >
-                  현재 위치
-                </button>
-              ) : (
-                <button
-                  type="button"
-                  onClick={() => moveResidence(selected.id)}
-                  disabled={pending}
-                  className="mt-2.5 w-full rounded-lg bg-amber-600 py-2 text-[13px] font-bold text-white disabled:opacity-50"
-                >
-                  이동
-                </button>
-              ))}
-
+            {/* 이동·닫기 좌우 2열(flex-1) — 거주 이동 불가 시 닫기가 단독으로 꽉 참. */}
+            <div className="mt-2.5 flex gap-2">
+              {canSetResidence &&
+                (selected.id === residence ? (
+                  // 현재 위치 — '이동' 버튼과 동일 크기(레이아웃 시프트 방지)
+                  <button
+                    type="button"
+                    disabled
+                    className="flex-1 cursor-default rounded-lg bg-amber-500/15 py-2 text-[13px] font-bold text-amber-700 dark:text-amber-300"
+                  >
+                    현재 위치
+                  </button>
+                ) : (
+                  <button
+                    type="button"
+                    onClick={() => moveResidence(selected.id)}
+                    disabled={pending}
+                    className="flex-1 rounded-lg bg-amber-600 py-2 text-[13px] font-bold text-white disabled:opacity-50"
+                  >
+                    이동
+                  </button>
+                ))}
               <button
                 type="button"
                 onClick={() => setSelectedId(null)}
-                className="mt-2 w-full py-1 text-[11px] text-zinc-500"
+                className="flex-1 rounded-lg border border-zinc-300 py-2 text-[13px] font-medium text-zinc-500 dark:border-zinc-700 dark:text-zinc-400"
               >
                 닫기
               </button>
+            </div>
             </div>
         </ModalShell>
       )}
