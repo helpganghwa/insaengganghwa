@@ -68,6 +68,8 @@ export function ChronicleReplayPanel({
   const doneRef = useRef(false);
   const firedRef = useRef(new Set<string>());
   const neutralFiredRef = useRef(new Set<number>());
+  const neutralTriggeredRef = useRef(false); // 중립화 캐스케이드 1회 발동 가드
+  const neutralNamesRef = useRef(new Set((replay.neutralized ?? []).map((n) => n.zone)));
   const ownersRef = useRef<Record<number, string | null>>({ ...replay.beforeOwner });
 
   const zoneById = useRef(new Map(zones.map((z) => [z.id, z])));
@@ -392,6 +394,10 @@ export function ChronicleReplayPanel({
                 if (calm.length > 0) await runZoneEvents(calm);
                 for (const b of battles) await runZoneEvents([b]);
               }
+            } else if (!ev && !neutralTriggeredRef.current && neutralNamesRef.current.has(seg.name)) {
+              // 방치 중립화 문장의 첫 구역 마커 도달 → 문양 소멸 캐스케이드 즉시 발동(종료 대기 X).
+              neutralTriggeredRef.current = true;
+              await runNeutralizations();
             }
           }
         }
