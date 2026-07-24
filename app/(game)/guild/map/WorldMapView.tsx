@@ -996,7 +996,9 @@ export function WorldMapView({
                       const base = selected.lastTaxAt ?? selected.capturedAt;
                       const end = base != null ? base + TAX_COOLDOWN_MS : null;
                       const remMs = end != null ? end - nowMs : null;
-                      const ready = remMs != null && remMs <= 0;
+                      // base 없음(습득·수금 시각 미상 = 게이트 없음)이면 서버가 즉시 수금을 허용
+                      // (collect.ts: capturedAt/lastAt이 null이면 쿨다운 throw 안 함) → ready로 취급.
+                      const ready = remMs == null || remMs <= 0;
                       const pct =
                         base != null ? Math.min(100, Math.max(0, ((nowMs - base) / TAX_COOLDOWN_MS) * 100)) : 100;
                       const isMyExec = myUserId != null && selected.executorUserId === myUserId;
