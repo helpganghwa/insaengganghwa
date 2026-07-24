@@ -169,6 +169,8 @@ export const zones = pgTable(
     /** 집행관 수금 72h(3일) 쿨다운 기준. */
     lastTaxCollectedAt: timestamp('last_tax_collected_at', { withTimezone: true }),
     capturedAt: timestamp('captured_at', { withTimezone: true }),
+    /** 독점 세금 보너스 배율(B안) — 소유 변동 시 recalcTaxBonus로 재계산해 저장, 강화 세금 누적은 이 값만 곱함. 중립=1. */
+    taxBonus: real('tax_bonus').notNull().default(1),
   },
   (t) => [index('zone_owner_idx').on(t.ownerGuildId)],
 );

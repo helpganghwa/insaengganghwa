@@ -95,5 +95,9 @@ export const TAX_POINTS_PER_DIAMOND = 100;
 export const GUILD_EXECUTOR_TAX_CUT = 0.1;
 /** 집행관 세금 수금 쿨다운(분) — 3일(72시간). */
 export const TAX_COLLECT_COOLDOWN_MIN = 72 * 60;
+/** 독점 세금 보너스(B안) — 소유 구역 1개당 +1%, 완전장악 권역 1개당 +25%. 그 길드 세금 전체에 적용(누적 시점).
+ *  예) 왕국6(완전장악)+오크1 = 7구역 → 7% + 25% = +32%. */
+export const GUILD_ZONE_TAX_BONUS = 0.01;
+export const GUILD_FULL_REGION_TAX_BONUS = 0.25;
 /** 분배 방식. */
 export type GuildTaxDistribution = 'equal' | 'target';

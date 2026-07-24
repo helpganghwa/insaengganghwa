@@ -15,6 +15,7 @@ import { beatCron } from '@/lib/cron/heartbeat';
 import { db } from '@/lib/db/client';
 import { generateAndStoreChronicle } from '@/lib/game/guild';
 import { revealConquest, carryOverDefenders, neutralizeAbandonedZones } from '@/lib/game/guild/conquest/run';
+import { recalcTaxBonus } from '@/lib/game/guild/tax';
 import { openServerIds } from '@/lib/game/server-list';
 import { kstDateString } from '@/lib/kst';
 
@@ -76,6 +77,8 @@ export async function GET(req: Request) {
           const rev = await revealConquest(sid, day);
           // 공개(소유권 플립) 직후, 완전 방치(공격·수비·집행관 0) 소유 구역 중립화(B안). 재실행 안전(멱등).
           const neutral = await neutralizeAbandonedZones(sid, day).catch(() => ({ neutralized: 0 }));
+          // 소유 변동(점령·중립화) 반영 — 독점 세금 보너스 배율 재계산(B안, 하루 1회). 강화 누적은 저장값만 읽음.
+          await recalcTaxBonus(sid).catch((e: unknown) => console.warn('[conquest-chronicle] recalcTaxBonus', e));
           // 공개(소유권 플립)·중립화 직후 세계 피드 캐시 즉시 무효화 — 30s TTL 대기 없이 지도/피드 반영.
           if (rev.revealed > 0 || neutral.neutralized > 0) revalidateTag('world-feed', 'max');
           // 공개 후 수비 배치 이월(안 뺏긴 구역만, 공격은 해제) — 재실행 안전. 실패해도 공개/연대기엔 무관.

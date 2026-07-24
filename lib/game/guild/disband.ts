@@ -7,6 +7,7 @@ import { guilds, guildMembers, zones } from '@/lib/db/schema/guild';
 
 import { logGuildAudit } from './audit';
 import { GuildError } from './errors';
+import { recalcTaxBonus } from './tax';
 
 type Tx = Parameters<Parameters<typeof db.transaction>[0]>[0];
 
@@ -36,9 +37,11 @@ export async function neutralizeAndDeleteGuild(tx: Tx, guildId: bigint): Promise
   }
   await tx
     .update(zones)
-    .set({ ownerGuildId: null, executorUserId: null, capturedAt: null })
+    .set({ ownerGuildId: null, executorUserId: null, capturedAt: null, taxBonus: 1 })
     .where(eq(zones.ownerGuildId, guildId));
   await tx.delete(guilds).where(eq(guilds.id, guildId)); // guild_members ON DELETE CASCADE
+  // 해산으로 구역이 중립화됐으니 나머지 길드의 독점 세금 보너스(B안)도 재계산(완전장악 상태 변동 반영).
+  if (g?.serverId != null) await recalcTaxBonus(g.serverId, tx);
 }
 
 /** 길드장 자발 해산 — GUILD §1. 길드장만 가능. */
