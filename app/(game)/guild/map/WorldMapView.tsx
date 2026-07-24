@@ -946,25 +946,29 @@ export function WorldMapView({
                 {/* 집행관 · 거주 — 한 줄 */}
                 <div className="mt-1 flex items-center gap-1.5 text-[11px] text-zinc-500">
                   {selected.executorNickname ? (
-                    selected.executorCode ? (
-                      // 프로필 이동 — 복원 키를 남겨 뒤로가기 시 이 팝업이 다시 열린다.
-                      <Link
-                        prefetch={false}
-                        href={profileHref(selected.executorCode, serverId)}
-                        onClick={() => {
-                          try {
-                            sessionStorage.setItem('ig:worldmap-restore', String(selected.id));
-                          } catch {
-                            // 저장 실패 시 복원만 생략
-                          }
-                        }}
-                        className="font-semibold text-indigo-500 dark:text-indigo-400"
-                      >
-                        {selected.executorNickname}
-                      </Link>
-                    ) : (
-                      <span className="font-semibold text-indigo-500 dark:text-indigo-400">{selected.executorNickname}</span>
-                    )
+                    // '집행관 {닉네임}' — 공석과 동일하게 '집행관' 접두, 색 강조 없이(중립 zinc).
+                    <span>
+                      집행관{' '}
+                      {selected.executorCode ? (
+                        // 프로필 이동 — 복원 키를 남겨 뒤로가기 시 이 팝업이 다시 열린다.
+                        <Link
+                          prefetch={false}
+                          href={profileHref(selected.executorCode, serverId)}
+                          onClick={() => {
+                            try {
+                              sessionStorage.setItem('ig:worldmap-restore', String(selected.id));
+                            } catch {
+                              // 저장 실패 시 복원만 생략
+                            }
+                          }}
+                          className="font-semibold text-zinc-600 dark:text-zinc-300"
+                        >
+                          {selected.executorNickname}
+                        </Link>
+                      ) : (
+                        <span className="font-semibold text-zinc-600 dark:text-zinc-300">{selected.executorNickname}</span>
+                      )}
+                    </span>
                   ) : (
                     <span>집행관 공석</span>
                   )}
