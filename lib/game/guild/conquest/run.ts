@@ -4,6 +4,7 @@ import { and, eq, inArray, isNull, sql } from 'drizzle-orm';
 
 import { db } from '@/lib/db/client';
 import { zones, conquestBattles, guildMembers, guildAuditLog, guildBattleDeployments } from '@/lib/db/schema/guild';
+import { worldEvents } from '@/lib/db/schema/world';
 import { mailbox } from '@/lib/db/schema/mailbox';
 import { userEquipment } from '@/lib/db/schema/equipment';
 import { characters } from '@/lib/db/schema/server';
@@ -163,18 +164,44 @@ export async function neutralizeAbandonedZones(
   serverId: number,
   battleDay: string,
 ): Promise<{ neutralized: number }> {
-  const res = (await db.execute(sql`
-    update zones set owner_guild_id = null, executor_user_id = null, captured_at = null
-    where server_id = ${serverId}
-      and owner_guild_id is not null
-      and executor_user_id is null
-      and id not in (
-        select zone_id from guild_battle_deployments
-        where server_id = ${serverId} and battle_kst_day = ${battleDay}
-      )
-    returning id
-  `)) as unknown as { id: number }[];
-  return { neutralized: res.length };
+  return db.transaction(async (tx) => {
+    // 방치 구역(소유·집행관0·공격수비배치0) + 이전 소유 길드/구역명을 중립화 **전에** 캡처.
+    const victims = (await tx.execute(sql`
+      select z.id, z.owner_guild_id::text as owner, z.name, g.name as gname
+      from zones z join guilds g on g.id = z.owner_guild_id
+      where z.server_id = ${serverId}
+        and z.owner_guild_id is not null
+        and z.executor_user_id is null
+        and z.id not in (
+          select zone_id from guild_battle_deployments
+          where server_id = ${serverId} and battle_kst_day = ${battleDay}
+        )
+    `)) as unknown as { id: number; owner: string; name: string; gname: string }[];
+    if (victims.length === 0) return { neutralized: 0 };
+    await tx
+      .update(zones)
+      .set({ ownerGuildId: null, executorUserId: null, capturedAt: null })
+      .where(inArray(zones.id, victims.map((v) => v.id)));
+    // 역사 재료 — 이전 소유 길드별 상실 구역을 world_event로 기록(연대기 전용, 월드 피드 제외 타입).
+    // zones는 이미 null이라 이 스냅샷이 '누가 무엇을 방치로 잃었나'의 유일한 소스(chronicle이 읽음).
+    const byGuild = new Map<string, { gname: string; zones: string[] }>();
+    for (const v of victims) {
+      const e = byGuild.get(v.owner) ?? { gname: v.gname, zones: [] };
+      e.zones.push(v.name);
+      byGuild.set(v.owner, e);
+    }
+    for (const [owner, e] of byGuild) {
+      await tx.insert(worldEvents).values({
+        serverId,
+        type: 'zone_neutralized',
+        guildId: BigInt(owner),
+        // battleDay를 detail에 담는다 — 이 이벤트는 정산(D+1 00시)에 생성돼 created_at 날짜가
+        // 전투일(D)과 어긋난다. 연대기 집계는 created_at이 아니라 이 battleDay로 매칭한다.
+        detail: { guildName: e.gname, zones: e.zones, battleDay },
+      });
+    }
+    return { neutralized: victims.length };
+  });
 }
 
 /**
