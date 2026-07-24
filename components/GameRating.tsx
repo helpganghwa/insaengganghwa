@@ -26,43 +26,37 @@ export function RatingContentIcons({ className = 'h-6' }: { className?: string }
   );
 }
 
-/** 컴팩트 한 줄(푸터 등) — 심볼 소형 + 등급·내용정보·번호 텍스트. */
+/** 컴팩트(푸터 등) — [전체이용가][폭력성] 전체이용가 / 다음 줄에 기관·분류번호. */
 export function RatingLine({ className = '' }: { className?: string }) {
   return (
-    <span className={`inline-flex items-center gap-1.5 ${className}`}>
-      <RatingSymbol className="h-4" />
-      <span>
-        <b className="font-semibold text-emerald-600 dark:text-emerald-500">{R.rating}</b>
-        {' · '}내용정보 {R.contentInfo.map((c) => c.label).join('·')}
-        {' · '}
+    <div className={className}>
+      <div className="flex items-center gap-1.5">
+        <RatingSymbol className="h-6" />
+        <RatingContentIcons className="h-6" />
+        <span className="font-semibold text-emerald-600 dark:text-emerald-500">{R.rating}</span>
+      </div>
+      <div className="mt-0.5">
         {R.authority} {R.classificationNo}
-      </span>
-    </span>
+      </div>
+    </div>
   );
 }
 
-/** 상세 카드(법적고지·게임정보) — 법정 필수 정보 전부. */
+/** 법적고지 카드 — 사업자정보와 동일 스타일(테두리 섹션 + 소제목). 심플: 심볼 + 등급 / 기관·번호. */
 export function RatingCard({ className = '' }: { className?: string }) {
   return (
-    <section className={`rounded-lg border border-zinc-200 p-3 dark:border-zinc-800 ${className}`}>
-      <div className="flex items-center gap-3">
-        <RatingSymbol className="h-12" />
-        <div className="min-w-0">
-          <div className="text-sm font-bold text-emerald-600 dark:text-emerald-500">{R.rating}</div>
-          <div className="text-[11px] text-zinc-500">{R.authority}</div>
-        </div>
+    <section
+      className={`rounded-lg border border-zinc-200 p-3 text-[11px] text-zinc-500 dark:border-zinc-800 ${className}`}
+    >
+      <h2 className="mb-1.5 font-semibold text-zinc-600 dark:text-zinc-400">게임물 등급</h2>
+      <div className="flex items-center gap-1.5">
+        <RatingSymbol className="h-6" />
+        <RatingContentIcons className="h-6" />
+        <span className="font-semibold text-emerald-600 dark:text-emerald-500">{R.rating}</span>
       </div>
-      <dl className="mt-2.5 grid grid-cols-[auto_1fr] gap-x-3 gap-y-1 text-[11px] text-zinc-500">
-        <dt>등급분류번호</dt>
-        <dd className="text-zinc-700 dark:text-zinc-300">{R.classificationNo}</dd>
-        <dt>등급분류일</dt>
-        <dd className="text-zinc-700 dark:text-zinc-300">{R.classifiedAt}</dd>
-      </dl>
-      <div className="mt-2.5 flex items-center gap-2 border-t border-zinc-100 pt-2.5 text-[11px] text-zinc-500 dark:border-zinc-800/60">
-        <span>내용정보</span>
-        <RatingContentIcons className="h-7" />
-        <span className="text-zinc-700 dark:text-zinc-300">{R.contentInfo.map((c) => c.label).join(' · ')}</span>
-      </div>
+      <p className="mt-1">
+        {R.authority} {R.classificationNo}
+      </p>
     </section>
   );
 }

@@ -72,18 +72,23 @@ export function GameRatingSplash() {
   return createPortal(
     <div className="pointer-events-none fixed inset-x-0 top-0 z-[150] overflow-hidden">
       <div
-        className={`mx-auto flex h-12 max-w-[390px] items-center justify-center gap-2 border-b border-zinc-700/60 bg-zinc-950/95 px-3 shadow-[0_4px_16px_rgba(0,0,0,0.5)] backdrop-blur-sm transition-transform duration-500 ease-out ${
+        className={`mx-auto flex max-w-[390px] flex-col items-center justify-center gap-0.5 border-b border-zinc-700/60 bg-zinc-950/95 px-3 py-1.5 shadow-[0_4px_16px_rgba(0,0,0,0.5)] backdrop-blur-sm transition-transform duration-500 ease-out ${
           entered ? 'translate-y-0' : '-translate-y-full'
         }`}
       >
-        <span className="whitespace-nowrap text-[13px] font-bold text-white">게임물 등급</span>
-        <span aria-hidden className="h-3.5 w-px shrink-0 bg-zinc-600" />
-        {/* eslint-disable-next-line @next/next/no-img-element */}
-        <img src={R.ratingSymbol} alt="전체이용가" className="h-7 w-auto shrink-0" />
-        {/* eslint-disable-next-line @next/next/no-img-element */}
-        <img src={R.contentInfo[0].icon} alt="폭력성" className="h-7 w-auto shrink-0" />
-        <span className="whitespace-nowrap text-[12.5px] font-semibold text-emerald-400">
-          {R.rating}
+        <div className="flex items-center justify-center gap-2">
+          <span className="whitespace-nowrap text-[13px] font-bold text-white">게임물 등급</span>
+          <span aria-hidden className="h-3.5 w-px shrink-0 bg-zinc-600" />
+          {/* eslint-disable-next-line @next/next/no-img-element */}
+          <img src={R.ratingSymbol} alt="전체이용가" className="h-7 w-auto shrink-0" />
+          {/* eslint-disable-next-line @next/next/no-img-element */}
+          <img src={R.contentInfo[0].icon} alt="폭력성" className="h-7 w-auto shrink-0" />
+          <span className="whitespace-nowrap text-[12.5px] font-semibold text-emerald-400">
+            {R.rating}
+          </span>
+        </div>
+        <span className="whitespace-nowrap text-[9px] text-zinc-400">
+          {R.authority} {R.classificationNo}
         </span>
       </div>
     </div>,

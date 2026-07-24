@@ -58,10 +58,7 @@ export default async function LegalPage({ params }: { params: Promise<{ doc: str
 
       <MarkdownView source={LEGAL_BODY[doc]} />
 
-      <section className="mt-6">
-        <h2 className="mb-1.5 text-[13px] font-semibold text-zinc-600 dark:text-zinc-400">게임물 등급</h2>
-        <RatingCard />
-      </section>
+      <RatingCard className="mt-6" />
       <BusinessInfo />
     </div>
   );

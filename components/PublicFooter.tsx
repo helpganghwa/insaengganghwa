@@ -42,7 +42,7 @@ export function PublicFooter() {
       </ul>
 
       {/* 게임물 등급 표시(§33) — 상시 표기. */}
-      <RatingLine className="mb-2 flex-wrap text-[10.5px] text-zinc-400" />
+      <RatingLine className="mb-2 text-[10.5px] text-zinc-400" />
 
       <div className="space-y-0.5 text-zinc-400">
         <p>
