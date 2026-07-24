@@ -13,15 +13,14 @@ export function RatingSymbol({ className = 'h-10' }: { className?: string }) {
   return <img src={R.ratingSymbol} alt={R.rating} className={`${className} w-auto shrink-0`} />;
 }
 
-/** 내용정보 아이콘들 — 흰 박스(검은 도안 다크 테마 가시성). */
+/** 내용정보 아이콘들 — 공식 도안(흰 배경·검은 픽토그램·라벨 밴드 포함, 외곽 투명). 전체이용가 심볼과
+ *  동일 캔버스로 정규화돼 같은 높이면 시각 크기 일치. 별도 박스 불필요(도안 자체가 완결). */
 export function RatingContentIcons({ className = 'h-6' }: { className?: string }) {
   return (
     <span className="inline-flex items-center gap-1">
       {R.contentInfo.map((c) => (
-        <span key={c.label} className="inline-flex rounded-[3px] bg-white p-px" title={c.label}>
-          {/* eslint-disable-next-line @next/next/no-img-element */}
-          <img src={c.icon} alt={c.label} className={`${className} w-auto`} />
-        </span>
+        // eslint-disable-next-line @next/next/no-img-element
+        <img key={c.label} src={c.icon} alt={c.label} title={c.label} className={`${className} w-auto shrink-0`} />
       ))}
     </span>
   );
