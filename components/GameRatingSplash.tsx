@@ -72,7 +72,7 @@ export function GameRatingSplash() {
   return createPortal(
     <div className="pointer-events-none fixed inset-x-0 top-0 z-[150] overflow-hidden">
       <div
-        className={`mx-auto flex max-w-[390px] flex-col items-center justify-center gap-0.5 border-b border-zinc-700/60 bg-zinc-950/95 px-3 py-1.5 shadow-[0_4px_16px_rgba(0,0,0,0.5)] backdrop-blur-sm transition-transform duration-500 ease-out ${
+        className={`mx-auto flex h-12 max-w-[390px] flex-col items-center justify-center gap-0.5 border-b border-zinc-700/60 bg-zinc-950/95 px-3 shadow-[0_4px_16px_rgba(0,0,0,0.5)] backdrop-blur-sm transition-transform duration-500 ease-out ${
           entered ? 'translate-y-0' : '-translate-y-full'
         }`}
       >
