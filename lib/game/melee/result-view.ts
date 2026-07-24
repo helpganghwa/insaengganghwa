@@ -125,11 +125,8 @@ export async function buildMeleeResultView(
     rank: r.rank,
     nickname: snapNick.get(r.uid) ?? r.nickname,
     publicCode: r.code ?? null,
-    // 우승(rank 1)은 트로피 아바타(있으면) — 포디움/우승카드 표시 전용. 전투 재생은 rosterAvatars(원본).
-    avatarUrl:
-      r.rank === 1 && finale.trophyAvatar
-        ? finale.trophyAvatar
-        : (avatarOf.get(r.uid) ?? dft(r.rank)),
+    // 포디움/우승카드 아바타 = 그 회차 스냅샷(우승 당시 모습). 트로피 아바타 폐기(2026-07-24).
+    avatarUrl: avatarOf.get(r.uid) ?? dft(r.rank),
     attackSuccess: Number(r.kills),
     // 방어 성공 = 피격 중 버텨낸 횟수 — 탈락자(2·3위)는 마지막 피격 1회 제외, 1위는 전부 인정.
     defenseSuccess: Math.max(0, r.defenseCount - (r.rank > 1 ? 1 : 0)),
@@ -175,11 +172,7 @@ export async function buildMeleeResultView(
     participantCount: battle.participantCount,
     championNickname,
     // FINAL 카드 아바타 = 트로피(있으면)라 트로피 전용 박스 우선, 없으면 프로필 박스.
-    championFaceBox: finale.trophyAvatar
-      ? ((finale.trophyFaceBox as FaceBox | null) ?? null)
-      : battle.championUserId
-        ? faceBoxOf.get(battle.championUserId) ?? null
-        : null,
+    championFaceBox: battle.championUserId ? (faceBoxOf.get(battle.championUserId) ?? null) : null,
     podium,
     me: meRow
       ? {

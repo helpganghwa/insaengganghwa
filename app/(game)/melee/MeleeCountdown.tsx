@@ -82,13 +82,13 @@ export function MeleeCountdown({
     label = '난투 진행 중';
     timerMs = revealAt - now;
   } else if (now < revealAt) {
-    label = '우승자에게 우승컵 전달 중';
+    label = '결과 집계 중 · 곧 발표';
     timerMs = revealAt - now;
   } else if (now < revealAt + REVEAL_GRACE_MS) {
     label = '곧 결과가 발표됩니다';
     timerMs = now - revealAt; // 발표 대기 — 경과 카운트업
   } else {
-    label = '우승자에게 우승컵 전달이 늦어지고 있습니다';
+    label = '결과 발표가 늦어지고 있습니다';
     timerMs = now - revealAt; // 발표 지연 — 경과 카운트업
   }
 

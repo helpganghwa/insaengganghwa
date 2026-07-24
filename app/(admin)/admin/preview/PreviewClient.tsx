@@ -8,7 +8,7 @@ import { ChronicleReplayPanel } from '@/app/(game)/guild/map/ChronicleReplay';
 import { REGION_META, type Region } from '@/lib/game/guild/region-meta';
 import { assetUrl } from '@/lib/asset-versions';
 
-import { updateChronicleAction, regenTrophyAction } from './actions';
+import { updateChronicleAction } from './actions';
 
 type PreviewZone = { id: number; name: string; mapX: number; mapY: number; region: Region };
 
@@ -209,44 +209,5 @@ export function ChronicleEditor({
       </div>
       {showReplay && replay ? <ReplayPreview key={text} text={text} replay={replay} zones={zones} adjacency={adjacency} /> : null}
     </div>
-  );
-}
-
-/** 트로피 재생성 버튼 — 3초 재탭 컨펌(기존 결과물이 지워지므로). */
-export function TrophyRegenButton({ battleId }: { battleId: string }) {
-  const router = useRouter();
-  const [armed, setArmed] = useState(false);
-  const [flash, setFlash] = useState<string | null>(null);
-  const [showReplay, setShowReplay] = useState(false); // 애니메이션 미리보기 토글(0안 접힘)
-  const [pending, start] = useTransition();
-
-  const click = () => {
-    if (!armed) {
-      setArmed(true);
-      window.setTimeout(() => setArmed(false), 3000);
-      return;
-    }
-    setArmed(false);
-    start(async () => {
-      const r = await regenTrophyAction(battleId);
-      setFlash(r.status === 'success' ? '재생성 시작 — 1~5분 뒤 완료' : r.message);
-      if (r.status === 'success') router.refresh();
-    });
-  };
-
-  return (
-    <span className="flex items-center gap-2">
-      <button
-        type="button"
-        onClick={click}
-        disabled={pending}
-        className={`rounded-lg px-3 py-1.5 text-[12px] font-bold text-white disabled:opacity-40 ${
-          armed ? 'bg-red-600' : 'bg-zinc-700'
-        }`}
-      >
-        {pending ? '요청 중…' : armed ? '한 번 더 눌러 확정' : '트로피 재생성'}
-      </button>
-      {flash ? <span className="text-[11px] text-zinc-400">{flash}</span> : null}
-    </span>
   );
 }

@@ -56,10 +56,6 @@
       "schedule": "*/5 1 * * *"
     },
     {
-      "path": "/api/cron/melee-trophy",
-      "schedule": "*/3 0-2 * * *"
-    },
-    {
       "path": "/api/cron/conquest-run",
       "schedule": "*/5 14 * * *"
     },

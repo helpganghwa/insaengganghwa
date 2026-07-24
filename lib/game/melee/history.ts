@@ -45,21 +45,12 @@ export async function loadMeleeHistory(serverId: number): Promise<MeleeHistoryRo
     'melee.history.battles',
   ).catch(() => [] as { id: bigint; pc: number; champ: string | null; finale: MeleeFinale | null }[]);
 
-  // 역대 우승자는 **우승컵 트로피 아바타** 우선(2026-06-04 피드백). 신규=finale.trophyAvatar,
-  // 과거=roster[챔피언].avatar(박제 트로피). 트로피 미생성 배틀은 아래 live 아바타로 폴백.
-  const trophyOf = new Map<string, string>();
-  const trophyBoxOf = new Map<string, FaceBox | null>();
+  // 역대 우승자 아바타 = 그 회차 우승 당시 스냅샷(roster[챔피언].avatar). 트로피 아바타 폐기(2026-07-24).
+  // 스냅샷 아바타는 폴백 크롭(전용 faceBox 없음). 스냅샷 없는 옛 배틀만 아래 live 아바타로 폴백.
+  const champAvatarOf = new Map<string, string>();
   for (const b of battles) {
-    const f = b.finale;
-    const t = f?.trophyAvatar ?? f?.roster?.find((r) => r.rank === 1)?.avatar ?? null;
-    if (t) {
-      trophyOf.set(b.id.toString(), t);
-      // 재생성 트로피 이미지일 때만 트로피 전용 박스 — roster 폴백 스냅샷은 박스 없음(폴백 크롭).
-      trophyBoxOf.set(
-        b.id.toString(),
-        f?.trophyAvatar ? ((f.trophyFaceBox as FaceBox | null) ?? null) : null,
-      );
-    }
+    const t = b.finale?.roster?.find((r) => r.rank === 1)?.avatar ?? null;
+    if (t) champAvatarOf.set(b.id.toString(), t);
   }
 
   if (battles.length === 0) return [];
@@ -120,11 +111,9 @@ export async function loadMeleeHistory(serverId: number): Promise<MeleeHistoryRo
         edition: i + 1,
         championNick: snapNick ?? c?.nick ?? '챔피언',
         championCode: c?.code ?? null,
-        championAvatar: trophyOf.get(b.id.toString()) ?? c?.avatar ?? null,
-        // 트로피 표시 중이면 트로피 전용 박스, 아니면(라이브 아바타) 프로필 박스.
-        championFaceBox: trophyOf.has(b.id.toString())
-          ? (trophyBoxOf.get(b.id.toString()) ?? null)
-          : (c?.faceBox ?? null),
+        championAvatar: champAvatarOf.get(b.id.toString()) ?? c?.avatar ?? null,
+        // 스냅샷 아바타는 폴백 크롭(박스 없음), live 아바타 폴백 시에만 프로필 박스.
+        championFaceBox: champAvatarOf.has(b.id.toString()) ? null : (c?.faceBox ?? null),
         championCp: cpOf.get(b.id.toString()) ?? 0,
         participantCount: b.pc,
       } satisfies MeleeHistoryRow;
