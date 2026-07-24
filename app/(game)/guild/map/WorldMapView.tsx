@@ -1056,7 +1056,7 @@ export function WorldMapView({
                 <button
                   type="button"
                   disabled
-                  className="mt-3 w-full cursor-default rounded-lg bg-amber-500/15 py-2.5 text-sm font-bold text-amber-700 dark:text-amber-300"
+                  className="mt-2.5 w-full cursor-default rounded-lg bg-amber-500/15 py-2 text-[13px] font-bold text-amber-700 dark:text-amber-300"
                 >
                   현재 위치
                 </button>
@@ -1065,7 +1065,7 @@ export function WorldMapView({
                   type="button"
                   onClick={() => moveResidence(selected.id)}
                   disabled={pending}
-                  className="mt-3 w-full rounded-lg bg-amber-600 py-2.5 text-sm font-bold text-white disabled:opacity-50"
+                  className="mt-2.5 w-full rounded-lg bg-amber-600 py-2 text-[13px] font-bold text-white disabled:opacity-50"
                 >
                   이동
                 </button>
@@ -1074,7 +1074,7 @@ export function WorldMapView({
               <button
                 type="button"
                 onClick={() => setSelectedId(null)}
-                className="mt-3 w-full py-1.5 text-[11px] text-zinc-500"
+                className="mt-2 w-full py-1 text-[11px] text-zinc-500"
               >
                 닫기
               </button>
