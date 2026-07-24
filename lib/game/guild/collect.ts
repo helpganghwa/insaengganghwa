@@ -26,6 +26,7 @@ export function collectZoneTax(input: {
         serverId: zones.serverId,
         tax: zones.taxDiamond,
         lastAt: zones.lastTaxCollectedAt,
+        capturedAt: zones.capturedAt,
       })
       .from(zones)
       .where(eq(zones.id, input.zoneId))
@@ -38,10 +39,15 @@ export function collectZoneTax(input: {
       .from(guildMembers)
       .where(and(eq(guildMembers.userId, input.userId), eq(guildMembers.serverId, z.serverId)));
     if (!mem || mem.guildId !== z.owner) throw new GuildError('NOT_EXECUTOR');
-    if (
-      z.lastAt &&
-      Date.now() - z.lastAt.getTime() < TAX_COLLECT_COOLDOWN_MIN * 60_000
-    ) {
+    const now = Date.now();
+    const cooldownMs = TAX_COLLECT_COOLDOWN_MIN * 60_000;
+    // 첫 수금 게이트(B안) — 구역 습득(captured_at) 후 72h 지나야 첫 수금 가능. 탈취 시 captured_at이
+    // 갱신되고 last_tax_collected_at도 리셋되므로, 뺏은 길드도 72h 뒤부터 수금(리셋).
+    if (z.capturedAt && now - z.capturedAt.getTime() < cooldownMs) {
+      throw new GuildError('COLLECT_COOLDOWN');
+    }
+    // 이후 쿨다운 — 직전 수금 후 72h.
+    if (z.lastAt && now - z.lastAt.getTime() < cooldownMs) {
       throw new GuildError('COLLECT_COOLDOWN');
     }
     const tax = z.tax; // bigint
