@@ -144,7 +144,7 @@ export default async function GameLayout({ children }: { children: React.ReactNo
         <PushAutoSync />
         <KakaoSdkLoader />
         <RouteTransitionOverlay />
-        {/* 게임물 등급 표시(§33) — 진입 스플래시 3초(세션1회) + 온라인 1시간 반복(상단 배너). 포털 렌더. */}
+        {/* 게임물 등급 표시(§33) — 진입(세션1회)·온라인 1시간 반복 모두 상단 작은 배너 4초. 포털 렌더. */}
         <GameRatingSplash />
         {/* 앱 설치 권유 띠지 — 웹(비설치) 실행 시 헤더 위 전체폭 상시 노출, 닫으면 5일 뒤 재노출.
             standalone(설치됨)이면 클라에서 자동 숨김. */}
