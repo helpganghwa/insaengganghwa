@@ -386,12 +386,16 @@ export function ChatDock() {
       });
   }, [myGuild?.id]);
 
-  // 폴링 — WS 상태와 무관하게 상시 15초(2026-07-21): WS가 SUBSCRIBED여도 서버측 송신
-  // 실패 등으로 조용히 끊긴 상태를 커버(최대 15초 내 미니바·목록 복구). 열림=100, 닫힘=1.
+  // 폴링 — Realtime(WS) 백업(2026-07-21): WS가 SUBSCRIBED여도 서버측 송신 실패 등으로
+  // 조용히 끊긴 상태를 커버(미니바·목록 복구). 열림=100, 닫힘=1(lite: 1건·부속 조회 생략).
+  // 비용 최소화(2026-07-24): ① 백그라운드 탭이면 이번 주기 스킵(다시 보일 때 즉시 따라잡기)
+  //   — WS는 백그라운드에서도 수신하므로 안전. ② WS 정상+닫힘이면 60초(순수 안전망), 그 외
+  //   (열림 또는 WS 끊김)엔 15초(적극 백업). refs라 주기는 매 tick 최신값으로 재평가된다.
   useEffect(() => {
     if (enabled === false) return;
-    const t = setInterval(() => {
-      // 닫힘 상태는 lite(메시지 1건만·부속 조회 생략) — 상시 폴링의 DB 부하 최소화.
+    let timer: ReturnType<typeof setTimeout> | null = null;
+    let stopped = false;
+    const poll = () => {
       void fetchRecent(openRef.current ? 100 : 1, undefined, !openRef.current).then((ms) => {
         if (!ms) return;
         if (openRef.current)
@@ -400,8 +404,25 @@ export function ChatDock() {
         const lastUser = [...ms].reverse().find((m) => !m.sys && !m.sysGuild);
         if (lastUser) setLatest(lastUser);
       });
-    }, 15000);
-    return () => clearInterval(t);
+    };
+    const schedule = () => {
+      if (stopped) return;
+      const delay = openRef.current || !wsOkRef.current ? 15000 : 60000;
+      timer = setTimeout(() => {
+        if (!document.hidden) poll(); // 백그라운드 탭은 스킵 — visibilitychange가 복귀 시 따라잡음
+        schedule();
+      }, delay);
+    };
+    schedule();
+    const onVisible = () => {
+      if (!document.hidden) poll(); // 포그라운드 복귀 즉시 1회 따라잡기
+    };
+    document.addEventListener('visibilitychange', onVisible);
+    return () => {
+      stopped = true;
+      if (timer) clearTimeout(timer);
+      document.removeEventListener('visibilitychange', onVisible);
+    };
   }, [enabled, fetchRecent, applyNew]);
 
   // 쿨다운 카운트다운.
