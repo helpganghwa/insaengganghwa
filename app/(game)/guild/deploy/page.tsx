@@ -97,7 +97,9 @@ export default async function DeployPage() {
             executorNickname: z.executorNickname,
             executorCode: z.executorCode,
             taxDiamond: z.taxDiamond.toString(),
+            taxBonus: z.taxBonus,
             lastTaxAt: z.lastTaxCollectedAt ? z.lastTaxCollectedAt.getTime() : null,
+            capturedAt: z.capturedAt ? z.capturedAt.getTime() : null,
             residentCount: z.residentCount,
           }))}
         />

@@ -342,7 +342,9 @@ export async function getWorldmapZones(serverId: number) {
       // 집행관 프로필 링크용(2026-07-21) — 구역 팝업에서 클릭 → /u/[code] 이동.
       executorCode: profiles.publicCode,
       taxDiamond: zones.taxDiamond,
+      taxBonus: zones.taxBonus, // 독점 세금 보너스 배율(B안) — 세율 표시용
       lastTaxCollectedAt: zones.lastTaxCollectedAt,
+      capturedAt: zones.capturedAt, // 수금 타이머(습득 72h) 계산용
       // 거주 인원 — 이 구역을 거주지로 둔 유저 수(상관 서브쿼리, executor 조인과 별개 스코프).
       residentCount: sql<number>`(select count(*)::int from characters rc where rc.residence_zone_id = ${zones.id})`,
     })

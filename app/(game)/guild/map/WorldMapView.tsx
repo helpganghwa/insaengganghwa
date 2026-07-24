@@ -40,7 +40,11 @@ type Zone = {
   /** 집행관 공개코드 — 팝업에서 프로필 이동 링크(없으면 링크 미표시). */
   executorCode: string | null;
   taxDiamond: string;
+  /** 독점 세금 보너스 배율(B안) — 1 + 소유 구역 수×1% + 완전장악 권역 수×25%. 세율=(taxBonus-1). */
+  taxBonus: number;
   lastTaxAt: number | null;
+  /** 구역 습득 시각(ms) — 수금 타이머(습득 72h) 계산용. 중립이면 null. */
+  capturedAt: number | null;
   residentCount: number;
 };
 
