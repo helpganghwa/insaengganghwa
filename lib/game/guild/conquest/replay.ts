@@ -38,6 +38,8 @@ export type ConquestReplay = {
   guilds: Record<string, ReplayGuild>;
   /** 구역명 → 이벤트(연대기 마커 트리거용). */
   events: Record<string, ReplayEvent>;
+  /** 방치 중립화된 구역 — 리플레이 종료 시 소유 길드 문양이 소멸(전투 아님, 배치 안 해 방치로 상실). */
+  neutralized: { zoneId: number; zone: string; guild: string }[];
   /** 리플레이 시작 시점의 소유 상태(구역 id → 길드명 | null) — 종료 상태는 현재 DB와 일치. */
   beforeOwner: Record<number, string | null>;
 };
@@ -59,7 +61,7 @@ export async function getConquestReplay(serverId: number, forKstDay?: string): P
   }
 
   const s = await aggregateConquestDay(kstDay, serverId);
-  if (s.captures.length === 0 && s.defenses.length === 0) return null;
+  if (s.captures.length === 0 && s.defenses.length === 0 && s.neutralized.length === 0) return null;
 
   // 구역 메타 + 그날 종료 시점 소유 — **전투 이력 기반**(zone별 kstDay 이하 최신 승자).
   // 현 DB owner 기준이면 과거 날짜 리플레이(어제 탭)에 이후 날의 결과가 섞이고,
@@ -127,7 +129,21 @@ export async function getConquestReplay(serverId: number, forKstDay?: string): P
     for (const r of rivals) origins[r] = originFor(r, d.zone);
     events[d.zone] = { zoneId: z.id, zone: d.zone, type: 'defense', winner: d.owner, from: null, rivals, origins, defended: true };
   }
-  if (Object.keys(events).length === 0) return null;
+
+  // 방치 중립화 — 그날 방치로 중립이 된 구역(전투 아님). 리플레이 시작 시 소유 길드 문양을 세우고
+  // (beforeOwner), 종료 연출에서 문양을 소멸시킨다. zone명 → id 매핑 + 소유 길드 수집.
+  const neutralized: { zoneId: number; zone: string; guild: string }[] = [];
+  for (const n of s.neutralized) {
+    for (const zn of n.zones) {
+      const z = byName.get(zn);
+      if (!z) continue;
+      neutralized.push({ zoneId: z.id, zone: zn, guild: n.guildName });
+      beforeOwner[z.id] = n.guildName; // 시작 시 소유 길드 문양(→ 종료 시 소멸)
+      names.add(n.guildName);
+    }
+  }
+
+  if (Object.keys(events).length === 0 && neutralized.length === 0) return null;
 
   // 길드 문양 메타 — emblem_color/url 비정규화 미러 사용. 해산 길드는 조회 불가 → 회색 폴백.
   const guildRows = names.size
@@ -140,5 +156,5 @@ export async function getConquestReplay(serverId: number, forKstDay?: string): P
   for (const n of names) guildMeta[n] = { color: null, emblemUrl: null };
   for (const g of guildRows) guildMeta[g.name] = { color: g.color, emblemUrl: g.emblemUrl };
 
-  return { kstDay, guilds: guildMeta, events, beforeOwner };
+  return { kstDay, guilds: guildMeta, events, neutralized, beforeOwner };
 }

@@ -49,6 +49,7 @@ export function ChronicleReplayPanel({
   layer,
   zoneColor,
   onOwnerFlip,
+  onNeutralize,
   onDone,
 }: {
   text: string;
@@ -57,6 +58,7 @@ export function ChronicleReplayPanel({
   layer: HTMLDivElement | null;
   zoneColor: (name: string) => string | null;
   onOwnerFlip: (zoneId: number, guild: string) => void;
+  onNeutralize: (zoneId: number) => void;
   onDone: () => void;
 }) {
   const paras = useRef(text.split(/\n{2,}/).map((p) => parseChronicleSegments(p.trim())));
@@ -65,6 +67,7 @@ export function ChronicleReplayPanel({
   const skipRef = useRef(false);
   const doneRef = useRef(false);
   const firedRef = useRef(new Set<string>());
+  const neutralFiredRef = useRef(new Set<number>());
   const ownersRef = useRef<Record<number, string | null>>({ ...replay.beforeOwner });
 
   const zoneById = useRef(new Map(zones.map((z) => [z.id, z])));
@@ -179,6 +182,37 @@ export function ChronicleReplayPanel({
     e.style.opacity = '0';
     setTimeout(() => e.remove(), 650);
   }
+  /** 방치 중립화 연출 — 구역 위 소유 길드 문양이 탈색·수축·기울며 부서져 사라진다(전투 아님).
+   *  노드 문양은 onNeutralize로 즉시 중립 전환되고, 이 오버레이가 '무너져 내리는' 결을 얹는다. */
+  function crumbleAt(guild: string, at: { x: number; y: number }) {
+    if (!layer || skipRef.current) return;
+    const g = guildOf(guild);
+    const e = document.createElement('div');
+    e.style.cssText =
+      `position:absolute;width:17px;height:17px;margin:-8.5px 0 0 -8.5px;z-index:38;left:${at.x}%;top:${at.y}%;` +
+      'pointer-events:none;border-radius:4px;overflow:hidden;';
+    if (g.emblemUrl) {
+      const img = document.createElement('img');
+      img.src = g.emblemUrl;
+      img.alt = '';
+      img.style.cssText = 'width:100%;height:100%;object-fit:contain;image-rendering:pixelated;';
+      e.appendChild(img);
+    } else {
+      e.style.background = g.color ?? '#71717a';
+    }
+    layer.appendChild(e);
+    e.animate(
+      [
+        { opacity: 1, transform: 'scale(1) rotate(0deg) translateY(0)', filter: 'grayscale(0)' },
+        { opacity: 0.85, transform: 'scale(1.08) rotate(-4deg)', filter: 'grayscale(0.5)', offset: 0.25 },
+        { opacity: 0, transform: 'scale(0.2) rotate(-28deg) translateY(9px)', filter: 'grayscale(1)' },
+      ],
+      { duration: 720, easing: 'cubic-bezier(0.5,0,0.75,0)', fill: 'forwards' },
+    );
+    setTimeout(() => e.remove(), 740);
+    // 중립 복귀를 알리는 옅은 회색 링(약).
+    flashAt(at, '#71717a', false);
+  }
   function sparkAt(pct: { x: number; y: number }) {
     if (!layer) return;
     const s = document.createElement('div');
@@ -288,11 +322,36 @@ export function ChronicleReplayPanel({
     }
   }
 
+  /** 종료 연출 — 방치 중립화 구역의 문양을 하나씩 부수며 중립 전환(살짝 스태거 = 무너지는 캐스케이드). */
+  async function runNeutralizations() {
+    const list = replay.neutralized ?? [];
+    if (list.length === 0) return;
+    for (const n of list) {
+      if (neutralFiredRef.current.has(n.zoneId)) continue;
+      neutralFiredRef.current.add(n.zoneId);
+      const z = zoneById.current.get(n.zoneId);
+      onNeutralize(n.zoneId); // 노드 문양 즉시 중립 전환(node transition으로 페이드)
+      ownersRef.current[n.zoneId] = null;
+      if (z && !skipRef.current) {
+        crumbleAt(n.guild, { x: z.mapX, y: z.mapY });
+        await sleepUnless(90, () => skipRef.current); // 캐스케이드 간격
+      }
+    }
+    await sleepUnless(500, () => skipRef.current);
+  }
+
   function flushRemaining() {
     for (const [name, ev] of Object.entries(replay.events)) {
       if (firedRef.current.has(name)) continue;
       firedRef.current.add(name);
       applyFlip(ev);
+    }
+    // 방치 중립화 — 스킵/조기종료 시 애니 없이 즉시 중립 전환(연출은 runNeutralizations가 담당).
+    for (const n of replay.neutralized ?? []) {
+      if (neutralFiredRef.current.has(n.zoneId)) continue;
+      neutralFiredRef.current.add(n.zoneId);
+      ownersRef.current[n.zoneId] = null;
+      onNeutralize(n.zoneId);
     }
     if (layer) layer.innerHTML = '';
   }
@@ -337,6 +396,8 @@ export function ChronicleReplayPanel({
           }
         }
       }
+      if (cancelled) return;
+      await runNeutralizations(); // 종료 연출 — 방치 중립화 문양 소멸 캐스케이드
       if (cancelled) return;
       flushRemaining();
       setEnded(true);

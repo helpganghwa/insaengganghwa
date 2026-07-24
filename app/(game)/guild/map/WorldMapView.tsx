@@ -691,6 +691,7 @@ export function WorldMapView({
                 layer={replayLayer}
                 zoneColor={zoneColor}
                 onOwnerFlip={(zoneId, guild) => setReplayOwners((m) => ({ ...(m ?? {}), [zoneId]: guild }))}
+                onNeutralize={(zoneId) => setReplayOwners((m) => ({ ...(m ?? {}), [zoneId]: null }))}
                 onDone={endReplay}
               />
             ) : chronicle!.yesterday ? (
@@ -724,6 +725,7 @@ export function WorldMapView({
                   layer={replayLayer}
                   zoneColor={zoneColor}
                   onOwnerFlip={(zoneId, guild) => setReplayOwners((m) => ({ ...(m ?? {}), [zoneId]: guild }))}
+                  onNeutralize={(zoneId) => setReplayOwners((m) => ({ ...(m ?? {}), [zoneId]: null }))}
                   onDone={endReplay}
                 />
               ) : (

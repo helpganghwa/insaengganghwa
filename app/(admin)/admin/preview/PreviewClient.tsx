@@ -113,6 +113,7 @@ function ReplayPreview({
             layer={layer}
             zoneColor={zoneColor}
             onOwnerFlip={(zoneId, guild) => setOwners((m) => ({ ...m, [zoneId]: guild }))}
+            onNeutralize={(zoneId) => setOwners((m) => ({ ...m, [zoneId]: null }))}
             onDone={() => {}}
           />
         ) : (
