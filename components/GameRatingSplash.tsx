@@ -83,7 +83,7 @@ export function GameRatingSplash() {
           <img src={R.ratingSymbol} alt="전체이용가" className="h-7 w-auto shrink-0" />
           {/* eslint-disable-next-line @next/next/no-img-element */}
           <img src={R.contentInfo[0].icon} alt="폭력성" className="h-7 w-auto shrink-0" />
-          <span className="whitespace-nowrap text-[12.5px] font-semibold text-emerald-400">
+          <span className="whitespace-nowrap text-[12.5px] font-semibold text-white">
             {R.rating}
           </span>
         </div>

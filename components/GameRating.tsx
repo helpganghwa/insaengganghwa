@@ -1,4 +1,4 @@
-import { GAME_RATING } from '@/lib/legal/content';
+import { GAME_RATING, BUSINESS_INFO } from '@/lib/legal/content';
 
 const R = GAME_RATING;
 
@@ -33,7 +33,7 @@ export function RatingLine({ className = '' }: { className?: string }) {
       <div className="flex items-center gap-1.5">
         <RatingSymbol className="h-6" />
         <RatingContentIcons className="h-6" />
-        <span className="font-semibold text-emerald-600 dark:text-emerald-500">{R.rating}</span>
+        <span className="font-semibold text-zinc-700 dark:text-zinc-200">{R.rating}</span>
       </div>
       <div className="mt-0.5">
         {R.authority} {R.classificationNo}
@@ -42,21 +42,45 @@ export function RatingLine({ className = '' }: { className?: string }) {
   );
 }
 
-/** 법적고지 카드 — 사업자정보와 동일 스타일(테두리 섹션 + 소제목). 심플: 심볼 + 등급 / 기관·번호. */
+/** 법적고지 카드 — 사업자정보와 동일 스타일(테두리 섹션 + 소제목 + dl 다항목). 심볼은 등급/내용정보 값에 인라인. */
 export function RatingCard({ className = '' }: { className?: string }) {
   return (
     <section
       className={`rounded-lg border border-zinc-200 p-3 text-[11px] text-zinc-500 dark:border-zinc-800 ${className}`}
     >
-      <h2 className="mb-1.5 font-semibold text-zinc-600 dark:text-zinc-400">게임물 등급</h2>
-      <div className="flex items-center gap-1.5">
-        <RatingSymbol className="h-6" />
-        <RatingContentIcons className="h-6" />
-        <span className="font-semibold text-emerald-600 dark:text-emerald-500">{R.rating}</span>
-      </div>
-      <p className="mt-1">
-        {R.authority} {R.classificationNo}
-      </p>
+      <h2 className="mb-1.5 font-semibold text-zinc-600 dark:text-zinc-400">게임물 등급분류 정보</h2>
+      <dl className="space-y-1">
+        <div className="flex gap-2">
+          <dt className="w-24 shrink-0">게임물명</dt>
+          <dd>{BUSINESS_INFO.company}</dd>
+        </div>
+        <div className="flex gap-2">
+          <dt className="w-24 shrink-0">등급</dt>
+          <dd className="flex items-center gap-1.5">
+            <RatingSymbol className="h-6" />
+            {R.rating}
+          </dd>
+        </div>
+        <div className="flex gap-2">
+          <dt className="w-24 shrink-0">내용정보</dt>
+          <dd className="flex items-center gap-1.5">
+            <RatingContentIcons className="h-6" />
+            {R.contentInfo.map((c) => c.label).join(' · ')}
+          </dd>
+        </div>
+        <div className="flex gap-2">
+          <dt className="w-24 shrink-0">등급분류번호</dt>
+          <dd>{R.classificationNo}</dd>
+        </div>
+        <div className="flex gap-2">
+          <dt className="w-24 shrink-0">등급분류일자</dt>
+          <dd>{R.classifiedAt}</dd>
+        </div>
+        <div className="flex gap-2">
+          <dt className="w-24 shrink-0">등급분류기관</dt>
+          <dd>{R.authority}</dd>
+        </div>
+      </dl>
     </section>
   );
 }
