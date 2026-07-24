@@ -461,7 +461,8 @@ export function EnhanceSlotCard({
   };
 
   const doReduce = () => {
-    if (pending || !instantCost || !canAfford) return;
+    // 등록 확정 전(낙관적 잡)엔 보석 단축 불가 — 임시 id가 서버 BigInt로 새어 크래시하던 것 방지.
+    if (pending || !instantCost || !canAfford || activeJob.jobId.startsWith('optimistic-')) return;
     // 다이아 사용 — 취소와 동일 3s 재탭 패턴(오탭 보호). 카운트다운은 useEffect.
     if (!confirmReduce) {
       setConfirmReduce(true);
@@ -494,7 +495,8 @@ export function EnhanceSlotCard({
 
   const [optimisticCancelled, setOptimisticCancelled] = useState(false);
   const doCancel = () => {
-    if (attempting) return;
+    // 등록 확정 전(낙관적 잡)엔 취소 불가 — 임시 id가 서버 BigInt로 새는 것 방지(등록 완료 후 취소).
+    if (attempting || activeJob.jobId.startsWith('optimistic-')) return;
     if (!confirmCancel) {
       setConfirmCancel(true);
       return;

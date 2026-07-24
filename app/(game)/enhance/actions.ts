@@ -67,6 +67,16 @@ const MSG: Record<string, string> = {
 };
 
 const err = makeErr(MSG);
+
+/**
+ * 클라가 넘긴 jobId를 안전하게 bigint로 — 낙관적 잡 id('optimistic-<catalogId>')처럼
+ * 수치가 아닌 값이 `BigInt()`에 새어 SyntaxError로 크래시하던 것 방지(등록 확정 전 보석 단축·
+ * 취소 등). 수치가 아니면 null → 호출부는 JOB_NOT_FOUND로 강등(정상 잡 아님).
+ */
+function toJobId(jobId: string): bigint | null {
+  return /^\d+$/.test(jobId) ? BigInt(jobId) : null;
+}
+
 function revalidateAll() {
   revalidatePath('/');
   revalidatePath('/enhance');
@@ -130,7 +140,9 @@ export async function finalizeEnhance(jobId: string): Promise<
     const ranksBefore = await getMyRanks(userId, await getActiveServerId());
 
     // 결과 판정·저장 원자 트랜잭션(CLAUDE §3.1/§3.3/§3.4).
-    const r = await resolveEnhance({ jobId: BigInt(jobId), userId });
+    const jid = toJobId(jobId);
+    if (jid == null) return err('JOB_NOT_FOUND');
+    const r = await resolveEnhance({ jobId: jid, userId });
 
     // 결과 무관 자동 재등록(GDD §3.2 갱신 — 실패도 슬롯 유지) — **응답 내에서
     // await** 해야 함. 백그라운드(after)로 빼면 응답 후 router.refresh가 새 잡
@@ -187,7 +199,9 @@ export async function reduceTimeWithGems(jobId: string, diamonds: number) {
   if (await rateLimited(userId, 'enhance')) return err('RATE_LIMITED');
   const __b = await actionBlock(); if (__b) return err(__b);
   try {
-    const result = await reduceEnhanceTime({ userId, jobId: BigInt(jobId), diamonds });
+    const jid = toJobId(jobId);
+    if (jid == null) return err('JOB_NOT_FOUND');
+    const result = await reduceEnhanceTime({ userId, jobId: jid, diamonds });
     revalidateAll();
     return {
       status: 'success' as const,
@@ -209,7 +223,9 @@ export async function cancelEnhanceAction(jobId: string) {
   if (await rateLimited(userId, 'enhanceCancel')) return err('RATE_LIMITED');
   const __b = await actionBlock(); if (__b) return err(__b);
   try {
-    await cancelEnhance({ userId, jobId: BigInt(jobId) });
+    const jid = toJobId(jobId);
+    if (jid == null) return err('JOB_NOT_FOUND');
+    await cancelEnhance({ userId, jobId: jid });
     revalidateAll();
     return { status: 'success' as const };
   } catch (e) {
@@ -277,9 +293,11 @@ export async function swapEnhanceAction(cancelJobId: string, userEquipmentId: st
   if (await rateLimited(userId, 'enhance')) return err('RATE_LIMITED');
   const __b = await actionBlock(); if (__b) return err(__b);
   try {
+    const cid = toJobId(cancelJobId);
+    if (cid == null) return err('JOB_NOT_FOUND');
     const result = await swapEnhance({
       userId,
-      cancelJobId: BigInt(cancelJobId),
+      cancelJobId: cid,
       userEquipmentId: BigInt(userEquipmentId),
     });
     revalidateAll();
