@@ -680,15 +680,15 @@ export async function generateAndStoreChronicle(
   const digest = `[점령전 정리 — 이 귀속을 그대로 따를 것]\n` + digestSections.join('\n');
 
   // ── 연속성 맥락(참고용) — 오늘의 사실은 위 정리만 따르되, 흐름·판도는 아래를 참고해 이어 쓴다. ──
-  // 현재 영토 현황(누적 점령 결과) — '정세' 문단 근거.
+  // 현재 영토 현황(누적 점령 결과) — '정세' 문단 근거. **afterCounts(전투+방치중립화 반영)** 사용:
+  // raw summary.standings는 as-if-flipped(전투)만 반영하고 중립화를 빼지 않아, 사전생성 시점에
+  // 방치 상실 구역까지 보유로 세어 정세를 실제(공개 후)와 어긋나게 만든다(2026-07-24 계열 버그).
+  // 조각 상시 표기는 제거 유지(2026-07-16) — 변화 신호(topoLines) 있을 때만 서술 재료.
   const standLines =
-    summary.standings
-      .map((s) => {
-        const t = compCount(afterOwner, s.guild);
-        // 조각 상시 표기 제거(2026-07-16) — 매일 먹이면 변화 없어도 '아직 하나가 아니다'류
-        // 반복·부정 서술 발생. 조각은 지형 형세의 '변화 신호'가 있을 때만 서술 재료(원 의도).
-        return `· 길드 「${s.guild}」: ${s.zones}곳 보유`;
-      })
+    [...afterCounts.entries()]
+      .sort((a, b) => b[1] - a[1])
+      .slice(0, 6)
+      .map(([guild, zones]) => `· 길드 「${guild}」: ${zones}곳 보유`)
       .join('\n') || '· (보유 길드 없음)';
 
   // 어제 점령전 결과(있으면) — 전날과의 연속성.
