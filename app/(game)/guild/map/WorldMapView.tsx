@@ -999,6 +999,8 @@ export function WorldMapView({
                         className="inline-flex items-center gap-1 text-[11px] font-semibold text-amber-600 active:opacity-70 dark:text-amber-400"
                       >
                         💰 세율 +{Math.round((selected.taxBonus - 1) * 100)}%
+                        {/* 원형 ? 배지 — 탭하면 세율 안내가 열림을 알림(어포던스) */}
+                        <span aria-hidden className="grid h-3.5 w-3.5 place-items-center rounded-full border border-amber-500/55 text-[9px] font-extrabold leading-none">?</span>
                       </button>
                     ) : (
                       <span className="inline-flex items-center gap-1 text-[11px] font-medium text-zinc-400">
