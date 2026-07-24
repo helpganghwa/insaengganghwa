@@ -900,6 +900,18 @@ export function WorldMapView({
                 style={{ backgroundImage: `url(${assetUrl(`/sprites/guild/region/${selected.region}.png`)})` }}
               />
               <div className="absolute inset-0 bg-gradient-to-t from-black/75 via-black/25 to-black/10" />
+              {/* 길드 영토 강조 — 문양을 좌상단에 크게, 헤더 상단에 걸치듯 워터마크로. DOM상 텍스트
+                  블록보다 앞이라 텍스트가 위에 그려짐(가림 없음). 중립이면 미표시. */}
+              {selected.ownerEmblemUrl && (
+                // eslint-disable-next-line @next/next/no-img-element
+                <img
+                  src={selected.ownerEmblemUrl}
+                  alt=""
+                  aria-hidden
+                  className="pointer-events-none absolute -top-3 -left-2 h-24 w-24 object-contain opacity-40 drop-shadow-[0_2px_6px_rgba(0,0,0,0.7)]"
+                  style={{ imageRendering: 'pixelated' }}
+                />
+              )}
               <div className="relative flex h-full items-end justify-between gap-2 p-3">
                 <div className="min-w-0">
                   <h2 className="truncate text-base font-bold text-white drop-shadow-[0_1px_3px_rgba(0,0,0,0.95)]">
@@ -983,16 +995,16 @@ export function WorldMapView({
                       <button
                         type="button"
                         onClick={() => setRateInfoOpen(true)}
-                        className="inline-flex items-center gap-1 rounded-full border border-amber-400/50 bg-amber-400/10 px-2 py-0.5 text-[11px] font-extrabold text-amber-600 active:opacity-80 dark:text-amber-400"
+                        className="inline-flex items-center gap-1 text-[11px] font-semibold text-amber-600 active:opacity-70 dark:text-amber-400"
                       >
                         💰 세율 +{Math.round((selected.taxBonus - 1) * 100)}%
                       </button>
                     ) : (
-                      <span className="inline-flex items-center rounded-full border border-zinc-300 px-2 py-0.5 text-[11px] font-bold text-zinc-400 dark:border-zinc-700">
-                        세율 +0%
+                      <span className="inline-flex items-center gap-1 text-[11px] font-medium text-zinc-400">
+                        💰 세율 +0%
                       </span>
                     )}
-                    <span className="font-mono text-[15px] font-extrabold tabular-nums">💎{selected.taxDiamond}</span>
+                    <span className="font-mono text-[15px] font-extrabold tabular-nums">💎{Number(selected.taxDiamond).toLocaleString('ko-KR')}</span>
                   </div>
 
                   {selected.ownerGuildId != null ? (
