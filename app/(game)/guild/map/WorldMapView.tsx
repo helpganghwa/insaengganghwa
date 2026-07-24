@@ -912,7 +912,7 @@ export function WorldMapView({
                   style={{ imageRendering: 'pixelated' }}
                 />
               )}
-              <div className="relative flex h-full items-end justify-between gap-2 p-3">
+              <div className="relative flex h-full items-end gap-2 p-3">
                 <div className="min-w-0">
                   <h2 className="truncate text-base font-bold text-white drop-shadow-[0_1px_3px_rgba(0,0,0,0.95)]">
                     {selected.name}
@@ -921,15 +921,16 @@ export function WorldMapView({
                     {ZONE_LORE[selected.id]}
                   </p>
                 </div>
-                <button
-                  type="button"
-                  onClick={() => openBattle(selected.id)}
-                  disabled={pending}
-                  className="shrink-0 rounded-full bg-black/45 px-2.5 py-1 text-[11px] font-semibold text-white ring-1 ring-white/30 backdrop-blur-sm disabled:opacity-50"
-                >
-                  전투 기록
-                </button>
               </div>
+              {/* 전투 기록 — 좌상단 컴팩트 필(우상단 문양과 대각선 분리, 하단 지역명과 안 겹침). */}
+              <button
+                type="button"
+                onClick={() => openBattle(selected.id)}
+                disabled={pending}
+                className="absolute left-2 top-2 z-10 inline-flex items-center gap-0.5 rounded-full bg-black/45 px-2 py-0.5 text-[10.5px] font-semibold text-white ring-1 ring-white/25 backdrop-blur-sm disabled:opacity-50"
+              >
+                📜 전투 기록
+              </button>
             </div>
 
             <div className="px-4 pb-4 pt-3">
