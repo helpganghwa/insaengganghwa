@@ -6,6 +6,7 @@ import { and, desc, eq, lt, sql } from 'drizzle-orm';
 import { db } from '@/lib/db/client';
 import { worldChronicle } from '@/lib/db/schema/guild';
 import { kstDateString } from '@/lib/kst';
+import { REGION_META, type Region } from '@/lib/game/guild/region-meta';
 import type { ConquestFinale } from './simulate';
 
 const MODEL_ID = 'claude-sonnet-5';
@@ -88,15 +89,9 @@ function parseModelJson<T>(raw: string): T | null {
   }
 }
 
-// 지역 풀네임(줄임말 금지) — 세계지도 REGION 라벨과 일치.
-const REGION_KO: Record<string, string> = {
-  volcano: '드래곤 화산',
-  temple: '잊힌 신전',
-  swamp: '슬라임 늪',
-  orc: '오크 부락',
-  kingdom: '왕국',
-  angel: '타락 천사 부유섬',
-};
+// 지역 풀네임(줄임말 금지) — 세계지도와 **단일 출처(REGION_META)** 공유. 자체 복제 금지(드리프트 방지).
+const regionKo = (r: string): string => REGION_META[r as Region]?.label ?? r;
+const REGION_KO_VALUES = Object.values(REGION_META).map((m) => m.label);
 
 /** 그날(kstDay) 점령전 결과를 집계 — 사건 없으면 battleCount 0. */
 export async function aggregateConquestDay(kstDay: string, serverId: number): Promise<ConquestDaySummary> {
@@ -133,10 +128,10 @@ export async function aggregateConquestDay(kstDay: string, serverId: number): Pr
   for (const b of battles) {
     if (!b.winner) {
       // 무승부(승자 없음) — 소유 길드가 있으면 '소유 유지'로 방어에 준해 기록(결과 누락 방지).
-      if (b.prev_owner) defenses.push({ zone: b.zone, region: REGION_KO[b.region] ?? b.region, owner: b.prev_owner });
+      if (b.prev_owner) defenses.push({ zone: b.zone, region: regionKo(b.region), owner: b.prev_owner });
       continue;
     }
-    const region = REGION_KO[b.region] ?? b.region;
+    const region = regionKo(b.region);
     // 점령/방어는 소유권 이동으로 판정(winner ≠ 직전 소유 길드). captured_at 시각 비교는
     // 공개(reveal)가 전투 다음날 00시(KST)에 찍혀 어느 날짜 기준으로도 전투일과 어긋난다
     // (kstDateString 비교는 항상 불일치 → 전 점령이 방어로 오분류, 07-06 연대기 누락 사건).
@@ -207,7 +202,7 @@ export async function aggregateConquestDay(kstDay: string, serverId: number): Pr
     join guilds g on g.id = d.guild_id
     where d.battle_kst_day = ${kstDay} and d.server_id = ${serverId} and d.role = 'attack'
   `)) as unknown as { zone: string; region: string; guild: string }[];
-  const attacks = attackRows.map((a) => ({ zone: a.zone, region: REGION_KO[a.region] ?? a.region, guild: a.guild }));
+  const attacks = attackRows.map((a) => ({ zone: a.zone, region: regionKo(a.region), guild: a.guild }));
 
   const topSurviveE = [...survives.entries()].sort((a, b) => b[1].n - a[1].n)[0];
   const topKillE = [...kills.entries()].sort((a, b) => b[1].n - a[1].n)[0];
@@ -583,7 +578,7 @@ export async function generateAndStoreChronicle(
     const owners = new Set(ids.map((id) => beforeOwner.get(id) ?? null));
     if (owners.size !== 1) continue;
     const g = [...owners][0];
-    if (g) priorSweeps.push(`${REGION_KO[region] ?? region}=「${g}」`);
+    if (g) priorSweeps.push(`${regionKo(region)}=「${g}」`);
   }
   for (const [region, ids] of regionZoneIds) {
     const owners = new Set(ids.map((id) => afterOwner.get(id) ?? null));
@@ -595,7 +590,7 @@ export async function generateAndStoreChronicle(
         priorSweeps.length > 0
           ? ` (이미 성립한 지역 석권 있음: ${priorSweeps.join(', ')} — '대륙 최초' 아님, ${priorSweeps.length + 1}번째)`
           : ' (대륙 최초의 지역 석권)';
-      milestones.push(`· 길드 「${g}」 이(가) ${REGION_KO[region] ?? region} 전체 ${ids.length}곳을 장악${firstNote}`);
+      milestones.push(`· 길드 「${g}」 이(가) ${regionKo(region)} 전체 ${ids.length}곳을 장악${firstNote}`);
     }
   }
   // 데뷔 후보(전날 0 → 오늘 1+)의 과거 이력 조회 — '어제 상태'만 보면 영토를 전부 잃었다
@@ -769,7 +764,7 @@ export async function generateAndStoreChronicle(
       .join('');
   // 지역명과 동명인 구역(예: 잊힌 신전)의 '지역 언급' 보호 — "X 지역"은 구역이 아니라 지역이라
   // 마커 대상이 아니다(2026-07-19: '{z|잊힌 신전} 지역'으로 오마킹된 사건). 검사·백스톱 공용.
-  const REGION_NAMES = Object.values(REGION_KO);
+  const REGION_NAMES = REGION_KO_VALUES;
   const stripRegionMentions = (s: string): string =>
     REGION_NAMES.reduce((acc, r) => acc.replaceAll(`${r} 지역`, ''), s);
   // 검증 — 알려진 이름이 마커 밖(평문·「」)에 등장하면 위반. 재시도 피드백/백스톱 판단 공용.
