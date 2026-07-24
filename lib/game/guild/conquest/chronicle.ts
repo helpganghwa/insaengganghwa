@@ -236,15 +236,39 @@ export async function aggregateConquestDay(kstDay: string, serverId: number): Pr
     .map((r) => ({ guildName: r.detail?.guildName ?? '길드', zones: r.detail?.zones ?? [] }))
     .filter((d) => d.guildName);
 
-  // 방치 중립화(zone_neutralized) — detail.battleDay로 매칭(정산 시점 생성이라 created_at 날짜는
-  // 전투일과 어긋남). zones는 이미 null이라 이벤트 detail이 '누가 무엇을 방치로 잃었나'의 유일 소스.
+  // 방치 중립화 — 두 소스를 합쳐(zone 단위 dedup) '누가 무엇을 방치로 잃(을/은)나'를 정확히 잡는다.
+  //  (1) zone_neutralized 이벤트(00시 실행분): 이미 중립화 완료 — zones가 null이라 이벤트가 유일 소스.
+  //  (2) 사전생성(23시) 시점: 이벤트가 아직 없다(중립화는 00시 실행). zones에서 중립화 **예정** 구역을
+  //      직접 계산한다(소유·집행관0·그날 배치0 — neutralizeAbandonedZones와 동일 기준). victim 집합은
+  //      배치 유무로만 정해져 소유권 플립 전/후가 같으므로, 사전 계산이 00시 실제 결과와 일치한다.
+  //      (이 계산이 없으면 23시 사전생성 연대기에 방치 상실이 통째로 누락된다 — 2026-07-24 버그.)
   const neutralRows = (await db.execute(sql`
     select detail from world_events
     where server_id = ${serverId} and type = 'zone_neutralized'
       and detail->>'battleDay' = ${kstDay}
   `)) as unknown as { detail: { guildName?: string; zones?: string[] } }[];
-  const neutralized = neutralRows
-    .map((r) => ({ guildName: r.detail?.guildName ?? '길드', zones: r.detail?.zones ?? [] }))
+  const pendingNeutralRows = (await db.execute(sql`
+    select g.name as gname, z.name as zname
+    from zones z join guilds g on g.id = z.owner_guild_id
+    where z.server_id = ${serverId}
+      and z.owner_guild_id is not null
+      and z.executor_user_id is null
+      and z.id not in (
+        select zone_id from guild_battle_deployments
+        where server_id = ${serverId} and battle_kst_day = ${kstDay}
+      )
+  `)) as unknown as { gname: string; zname: string }[];
+  const neutralMap = new Map<string, Set<string>>();
+  const addNeutral = (guildName: string, zone: string) => {
+    const set = neutralMap.get(guildName) ?? new Set<string>();
+    set.add(zone);
+    neutralMap.set(guildName, set);
+  };
+  for (const r of neutralRows)
+    for (const z of r.detail?.zones ?? []) addNeutral(r.detail?.guildName ?? '길드', z);
+  for (const r of pendingNeutralRows) addNeutral(r.gname, r.zname);
+  const neutralized = [...neutralMap.entries()]
+    .map(([guildName, zset]) => ({ guildName, zones: [...zset] }))
     .filter((d) => d.zones.length > 0);
 
   return {
