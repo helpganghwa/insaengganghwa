@@ -1012,7 +1012,13 @@ export function WorldMapView({
 
                   {selected.ownerGuildId != null ? (
                     (() => {
-                      const base = selected.lastTaxAt ?? selected.capturedAt;
+                      // 서버(collect.ts)는 captured_at·last_tax 쿨다운을 **둘 다** 검사하므로, 실제
+                      // 게이트는 둘 중 더 최근(늦은) 시각이다. lastTaxAt ?? capturedAt로 하나만 보면
+                      // 재점령 직후(captured_at이 더 최근)에 '수금 가능' 오표시 → 수금 시 서버가 거부.
+                      const base =
+                        selected.capturedAt == null && selected.lastTaxAt == null
+                          ? null
+                          : Math.max(selected.capturedAt ?? 0, selected.lastTaxAt ?? 0);
                       const end = base != null ? base + TAX_COOLDOWN_MS : null;
                       const remMs = end != null ? end - nowMs : null;
                       // base 없음(습득·수금 시각 미상 = 게이트 없음)이면 서버가 즉시 수금을 허용
@@ -1180,7 +1186,11 @@ export function WorldMapView({
           const execCut = Math.floor(tax * GUILD_EXECUTOR_TAX_CUT);
           const guildCut = tax - execCut;
           // 수금 가능 시각 — 직전 수금(lastTaxAt) 우선, 없으면 습득(capturedAt) 기준 72h(B안 첫 수금 게이트).
-          const cdBase = cz.lastTaxAt ?? cz.capturedAt;
+          // 서버와 동일 — captured_at·last_tax 중 더 최근(늦은) 시각이 실제 쿨다운 기준.
+          const cdBase =
+            cz.capturedAt == null && cz.lastTaxAt == null
+              ? null
+              : Math.max(cz.capturedAt ?? 0, cz.lastTaxAt ?? 0);
           const cdEnd = cdBase != null ? cdBase + TAX_COLLECT_COOLDOWN_MIN * 60_000 : 0;
           const remMs = cdEnd - collectNow;
           const onCd = remMs > 0;
