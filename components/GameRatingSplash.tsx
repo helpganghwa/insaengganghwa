@@ -69,27 +69,32 @@ export function GameRatingSplash() {
 
   if (!mounted || !visible) return null;
 
+  // 표준 헤더 토스트(ResourceToast HeaderBar)와 동일 3층 구조 — safe-area 아래 h-12 콘텐츠로
+  // AppHeader와 정확히 겹쳐 보더가 1개로 보이게(top-0 단독이면 헤더 보더가 삐져나와 2줄로 보임).
   return createPortal(
-    <div className="pointer-events-none fixed inset-x-0 top-0 z-[150] overflow-hidden">
+    <div className="pointer-events-none fixed inset-x-0 top-0 z-[150]">
       <div
-        className={`mx-auto flex h-12 max-w-[390px] flex-col items-center justify-center gap-0.5 border-b border-zinc-700/60 bg-zinc-950/95 px-3 shadow-[0_4px_16px_rgba(0,0,0,0.5)] backdrop-blur-sm transition-transform duration-500 ease-out ${
+        className={`mx-auto max-w-[390px] border-b border-zinc-700/60 bg-zinc-950/95 shadow-[0_4px_16px_rgba(0,0,0,0.5)] backdrop-blur-sm transition-transform duration-500 ease-out ${
           entered ? 'translate-y-0' : '-translate-y-full'
         }`}
+        style={{ paddingTop: 'env(safe-area-inset-top)' }}
       >
-        <div className="flex items-center justify-center gap-2">
-          <span className="whitespace-nowrap text-[13px] font-bold text-white">게임물 등급</span>
-          <span aria-hidden className="h-3.5 w-px shrink-0 bg-zinc-600" />
-          {/* eslint-disable-next-line @next/next/no-img-element */}
-          <img src={R.ratingSymbol} alt="전체이용가" className="h-7 w-auto shrink-0" />
-          {/* eslint-disable-next-line @next/next/no-img-element */}
-          <img src={R.contentInfo[0].icon} alt="폭력성" className="h-7 w-auto shrink-0" />
-          <span className="whitespace-nowrap text-[12.5px] font-semibold text-white">
-            {R.rating}
+        <div className="flex h-12 flex-col items-center justify-center gap-0.5 px-3">
+          <div className="flex items-center justify-center gap-2">
+            <span className="whitespace-nowrap text-[13px] font-bold text-white">게임물 등급</span>
+            <span aria-hidden className="h-3.5 w-px shrink-0 bg-zinc-600" />
+            {/* eslint-disable-next-line @next/next/no-img-element */}
+            <img src={R.ratingSymbol} alt="전체이용가" className="h-6 w-auto shrink-0" />
+            {/* eslint-disable-next-line @next/next/no-img-element */}
+            <img src={R.contentInfo[0].icon} alt="폭력성" className="h-6 w-auto shrink-0" />
+            <span className="whitespace-nowrap text-[12.5px] font-semibold text-white">
+              {R.rating}
+            </span>
+          </div>
+          <span className="whitespace-nowrap text-[9px] leading-none text-zinc-400">
+            {R.authority} {R.classificationNo}
           </span>
         </div>
-        <span className="whitespace-nowrap text-[9px] text-zinc-400">
-          {R.authority} {R.classificationNo}
-        </span>
       </div>
     </div>,
     document.body,
