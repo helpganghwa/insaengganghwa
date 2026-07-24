@@ -927,9 +927,9 @@ export function WorldMapView({
                 type="button"
                 onClick={() => openBattle(selected.id)}
                 disabled={pending}
-                className="absolute left-2 top-2 z-10 inline-flex items-center gap-0.5 rounded-full bg-black/45 px-2 py-0.5 text-[10.5px] font-semibold text-white ring-1 ring-white/25 backdrop-blur-sm disabled:opacity-50"
+                className="absolute left-2 top-2 z-10 rounded-full bg-black/45 px-2 py-0.5 text-[10.5px] font-semibold text-white ring-1 ring-white/25 backdrop-blur-sm disabled:opacity-50"
               >
-                📜 전투 기록
+                전투 기록
               </button>
             </div>
 
