@@ -30,6 +30,15 @@ export const ANNOUNCEMENT_CATEGORY_CLS: Record<string, string> = {
   probability: 'bg-emerald-500/15 text-emerald-600 dark:text-emerald-400',
 };
 
+/** 공지 투표(선택) — 결과는 **관리자만** 열람(유저는 투표만), 1인 1표(변경 가능), 마감일 선택. */
+export type AnnouncementPollOption = { id: string; label: string };
+export type AnnouncementPoll = {
+  question: string;
+  options: AnnouncementPollOption[];
+  /** 마감(ISO) — 지나면 투표 불가. null/미지정이면 공지 게시 중 상시. */
+  closesAtIso?: string | null;
+};
+
 export type AnnouncementView = {
   id: string;
   category: string;
@@ -37,4 +46,6 @@ export type AnnouncementView = {
   body: string;
   pinned: boolean;
   publishedAtIso: string | null;
+  /** 투표(없으면 null). 유저에겐 집계 미노출 — 보기·마감만. */
+  poll: AnnouncementPoll | null;
 };

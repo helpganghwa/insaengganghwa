@@ -1,4 +1,19 @@
-import { bigserial, boolean, index, pgTable, text, timestamp } from 'drizzle-orm/pg-core';
+import {
+  bigint,
+  bigserial,
+  boolean,
+  index,
+  jsonb,
+  pgTable,
+  primaryKey,
+  text,
+  timestamp,
+  uuid,
+} from 'drizzle-orm/pg-core';
+
+import type { AnnouncementPoll } from '@/lib/game/announcement-shared';
+
+import { profiles } from './profiles';
 
 /**
  * §20 announcements — 전역 공지사항(게시판). 어드민 작성·발행, 유저는 홈 게시판 카드/강제 팝업으로 열람.
@@ -21,8 +36,33 @@ export const announcements = pgTable(
     published: boolean('published').notNull().default(false),
     /** 최초 발행 시각 — 노출/정렬 기준(재편집해도 유지). */
     publishedAt: timestamp('published_at', { withTimezone: true }),
+    /** 투표(선택) — {question, options[], closesAtIso?}. 결과는 관리자만, 유저는 투표만. null=투표 없음. */
+    poll: jsonb('poll').$type<AnnouncementPoll>(),
     createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
     updatedAt: timestamp('updated_at', { withTimezone: true }).notNull().defaultNow(),
   },
   (t) => [index('announcements_pub_idx').on(t.published, t.publishedAt)],
+);
+
+/**
+ * 공지 투표 — 1인 1표(PK=공지×유저, 변경=update). 결과·투표자는 **관리자만** 열람(유저 집계 미노출).
+ * ⚠ 마이그레이션(0134) 미적용 시 inert.
+ */
+export const announcementPollVotes = pgTable(
+  'announcement_poll_votes',
+  {
+    announcementId: bigint('announcement_id', { mode: 'bigint' })
+      .notNull()
+      .references(() => announcements.id, { onDelete: 'cascade' }),
+    userId: uuid('user_id')
+      .notNull()
+      .references(() => profiles.id, { onDelete: 'cascade' }),
+    optionId: text('option_id').notNull(),
+    createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
+    updatedAt: timestamp('updated_at', { withTimezone: true }).notNull().defaultNow(),
+  },
+  (t) => [
+    primaryKey({ columns: [t.announcementId, t.userId] }),
+    index('announcement_poll_votes_ann_idx').on(t.announcementId),
+  ],
 );

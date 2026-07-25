@@ -11,7 +11,7 @@ import { freeStatusFromClaims } from '@/lib/game/shop/free';
 import { kstDateString } from '@/lib/kst';
 
 import { getWorldFeed } from '@/lib/game/world/event';
-import { listPublishedAnnouncements } from '@/lib/game/announcement';
+import { listPublishedAnnouncements, getUserPollVotes } from '@/lib/game/announcement';
 import { getTutorialState } from '@/lib/game/tutorial';
 import { getChallengeStatus } from '@/lib/game/challenges/status';
 import { getTodayTicker } from '@/lib/game/today/stats';
@@ -336,6 +336,12 @@ export default async function HomePage() {
       ])
     : [[], [], { phase: 'done' as const, step: null }, null, null];
   const tutorialActive = tutState.phase !== 'done';
+  // 공지 투표 — poll 있는 공지에 한해 내 투표만 로드(집계는 유저 비노출). poll 없으면 쿼리 0.
+  const pollAnnIds = announcements.filter((a) => a.poll).map((a) => BigInt(a.id));
+  const myPollVotes =
+    userId && pollAnnIds.length > 0
+      ? await withTimeout(getUserPollVotes(userId, pollAnnIds), 1500, 'home.pollvotes').catch(() => ({}))
+      : {};
 
   return (
     <>
@@ -424,7 +430,7 @@ export default async function HomePage() {
             <Fragment key={m.href}>
               {/* 게시판 카드 — 상점 뒤·우편함 앞(index 6). */}
               {i === 6 && (
-                <AnnouncementBoard items={announcements} tint="#2b2147" holdPopup={tutorialActive} />
+                <AnnouncementBoard items={announcements} tint="#2b2147" holdPopup={tutorialActive} myVotes={myPollVotes} />
               )}
               <Link prefetch={false}
               href={m.href}

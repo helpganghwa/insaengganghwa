@@ -6,10 +6,12 @@ import { useRouter } from 'next/navigation';
 import {
   ANNOUNCEMENT_CATEGORIES,
   ANNOUNCEMENT_CATEGORY_LABEL,
+  type AnnouncementPoll,
   type AnnouncementView,
 } from '@/lib/game/announcement-shared';
+import type { PollResults } from '@/lib/game/announcement';
 
-import { saveAnnouncementAction, deleteAnnouncementAction } from './actions';
+import { saveAnnouncementAction, deleteAnnouncementAction, getPollResultsAction } from './actions';
 import { AnnouncementPreview } from './AnnouncementPreview';
 
 type Draft = {
@@ -18,9 +20,22 @@ type Draft = {
   title: string;
   body: string;
   pinned: boolean;
+  poll: AnnouncementPoll | null;
 };
 
-const EMPTY: Draft = { category: 'notice', title: '', body: '', pinned: false };
+const EMPTY: Draft = { category: 'notice', title: '', body: '', pinned: false, poll: null };
+const genId = () =>
+  typeof crypto !== 'undefined' && crypto.randomUUID
+    ? crypto.randomUUID().slice(0, 8)
+    : Math.random().toString(36).slice(2, 10);
+/** datetime-local(로컬시각) ↔ ISO 변환 — 마감일 입력용. */
+const isoToLocal = (iso?: string | null) => {
+  if (!iso) return '';
+  const d = new Date(iso);
+  const p = (n: number) => String(n).padStart(2, '0');
+  return `${d.getFullYear()}-${p(d.getMonth() + 1)}-${p(d.getDate())}T${p(d.getHours())}:${p(d.getMinutes())}`;
+};
+const localToIso = (local: string) => (local ? new Date(local).toISOString() : null);
 
 export function AnnouncementsAdmin({ items }: { items: AnnouncementView[] }) {
   const router = useRouter();
@@ -43,7 +58,45 @@ export function AnnouncementsAdmin({ items }: { items: AnnouncementView[] }) {
   };
 
   const edit = (a: AnnouncementView) =>
-    setDraft({ id: a.id, category: a.category, title: a.title, body: a.body, pinned: a.pinned });
+    setDraft({
+      id: a.id,
+      category: a.category,
+      title: a.title,
+      body: a.body,
+      pinned: a.pinned,
+      poll: a.poll,
+    });
+
+  // ── 투표 빌더 헬퍼 ──
+  const setPoll = (fn: (p: AnnouncementPoll) => AnnouncementPoll) =>
+    setDraft((d) => ({ ...d, poll: d.poll ? fn(d.poll) : d.poll }));
+  const addPoll = () =>
+    setDraft((d) => ({
+      ...d,
+      poll: d.poll ?? {
+        question: '',
+        options: [
+          { id: genId(), label: '' },
+          { id: genId(), label: '' },
+        ],
+        closesAtIso: null,
+      },
+    }));
+  const removePoll = () => setDraft((d) => ({ ...d, poll: null }));
+
+  // ── 결과 열람(관리자만) ──
+  const [results, setResults] = useState<{ id: string; data: PollResults } | null>(null);
+  const showResults = (a: AnnouncementView) => {
+    setResults(null);
+    setErr(null);
+    start(async () => {
+      const r = await getPollResultsAction(a.id);
+      if (r.status === 'success') setResults({ id: a.id, data: r.data });
+      else setErr(r.message);
+    });
+  };
+  const labelOf = (poll: AnnouncementPoll | null, optId: string) =>
+    poll?.options.find((o) => o.id === optId)?.label ?? optId;
 
   const del = (id: string) => {
     if (!confirm('이 공지를 삭제할까요?')) return;
@@ -103,6 +156,84 @@ export function AnnouncementsAdmin({ items }: { items: AnnouncementView[] }) {
           />
           상단 고정
         </label>
+
+        {/* 투표(선택) — 결과·투표자는 관리자만 열람(유저는 투표만). */}
+        <div className="rounded-lg border border-zinc-200 p-2.5 dark:border-zinc-800">
+          <div className="flex items-center justify-between">
+            <span className="text-[13px] font-semibold">🗳️ 투표{draft.poll ? '' : ' (없음)'}</span>
+            {draft.poll ? (
+              <button type="button" onClick={removePoll} className="text-[11px] font-semibold text-red-500">
+                투표 제거
+              </button>
+            ) : (
+              <button type="button" onClick={addPoll} className="text-[11px] font-semibold text-amber-600">
+                + 투표 추가
+              </button>
+            )}
+          </div>
+          {draft.poll && (
+            <div className="mt-2 space-y-2">
+              <input
+                value={draft.poll.question}
+                onChange={(e) => setPoll((p) => ({ ...p, question: e.target.value }))}
+                placeholder="투표 질문"
+                className={`${input} w-full`}
+              />
+              <div className="space-y-1.5">
+                {draft.poll.options.map((o, i, arr) => (
+                  <div key={o.id} className="flex gap-1.5">
+                    <input
+                      value={o.label}
+                      onChange={(e) =>
+                        setPoll((p) => ({
+                          ...p,
+                          options: p.options.map((x) => (x.id === o.id ? { ...x, label: e.target.value } : x)),
+                        }))
+                      }
+                      placeholder={`보기 ${i + 1}`}
+                      className={`${input} min-w-0 flex-1`}
+                    />
+                    <button
+                      type="button"
+                      onClick={() => setPoll((p) => ({ ...p, options: p.options.filter((x) => x.id !== o.id) }))}
+                      disabled={arr.length <= 2}
+                      className="shrink-0 rounded-md border border-zinc-300 px-2.5 text-[15px] text-zinc-500 disabled:opacity-40 dark:border-zinc-700"
+                    >
+                      −
+                    </button>
+                  </div>
+                ))}
+              </div>
+              <button
+                type="button"
+                onClick={() => setPoll((p) => ({ ...p, options: [...p.options, { id: genId(), label: '' }] }))}
+                className="text-[11px] font-semibold text-amber-600"
+              >
+                + 보기 추가
+              </button>
+              <label className="flex flex-wrap items-center gap-2 text-[12px] text-zinc-600 dark:text-zinc-300">
+                마감일(선택)
+                <input
+                  type="datetime-local"
+                  value={isoToLocal(draft.poll.closesAtIso)}
+                  onChange={(e) => setPoll((p) => ({ ...p, closesAtIso: localToIso(e.target.value) }))}
+                  className={`${input} text-[13px]`}
+                />
+                {draft.poll.closesAtIso && (
+                  <button
+                    type="button"
+                    onClick={() => setPoll((p) => ({ ...p, closesAtIso: null }))}
+                    className="text-[11px] text-zinc-400 underline"
+                  >
+                    마감 없앰
+                  </button>
+                )}
+              </label>
+              <p className="text-[11px] text-zinc-400">결과·투표자는 관리자만 열람합니다(유저는 투표만).</p>
+            </div>
+          )}
+        </div>
+
         {err && <p className="text-[12px] text-red-500">{err}</p>}
         <div className="flex justify-end gap-2">
           <button
@@ -140,35 +271,89 @@ export function AnnouncementsAdmin({ items }: { items: AnnouncementView[] }) {
         ) : (
           <ul className="divide-y divide-zinc-100 dark:divide-zinc-900">
             {items.map((a) => (
-              <li key={a.id} className="flex items-center gap-2 py-2">
-                <span className="shrink-0 rounded bg-zinc-100 px-1.5 py-0.5 text-[10px] font-bold text-zinc-500 dark:bg-zinc-800 dark:text-zinc-400">
-                  {ANNOUNCEMENT_CATEGORY_LABEL[a.category] ?? a.category}
-                </span>
-                <span className="min-w-0 flex-1 truncate text-[13px]">
-                  {a.pinned && <span className="mr-1 text-amber-500">📌</span>}
-                  {a.title}
-                </span>
-                <span
-                  className={`shrink-0 text-[10px] font-bold ${a.publishedAtIso ? 'text-emerald-600 dark:text-emerald-400' : 'text-zinc-400'}`}
-                >
-                  {a.publishedAtIso ? '발행' : '초안'}
-                </span>
-                <button
-                  type="button"
-                  onClick={() => edit(a)}
-                  disabled={pending}
-                  className="shrink-0 rounded-md border border-zinc-300 px-2 py-0.5 text-[11px] font-semibold text-zinc-600 disabled:opacity-50 dark:border-zinc-700 dark:text-zinc-300"
-                >
-                  수정
-                </button>
-                <button
-                  type="button"
-                  onClick={() => del(a.id)}
-                  disabled={pending}
-                  className="shrink-0 rounded-md border border-red-300 px-2 py-0.5 text-[11px] font-semibold text-red-500 disabled:opacity-50 dark:border-red-900/60"
-                >
-                  삭제
-                </button>
+              <li key={a.id} className="py-2">
+                <div className="flex items-center gap-2">
+                  <span className="shrink-0 rounded bg-zinc-100 px-1.5 py-0.5 text-[10px] font-bold text-zinc-500 dark:bg-zinc-800 dark:text-zinc-400">
+                    {ANNOUNCEMENT_CATEGORY_LABEL[a.category] ?? a.category}
+                  </span>
+                  <span className="min-w-0 flex-1 truncate text-[13px]">
+                    {a.pinned && <span className="mr-1 text-amber-500">📌</span>}
+                    {a.poll && <span className="mr-1" title="투표 있음">🗳️</span>}
+                    {a.title}
+                  </span>
+                  <span
+                    className={`shrink-0 text-[10px] font-bold ${a.publishedAtIso ? 'text-emerald-600 dark:text-emerald-400' : 'text-zinc-400'}`}
+                  >
+                    {a.publishedAtIso ? '발행' : '초안'}
+                  </span>
+                  {a.poll && (
+                    <button
+                      type="button"
+                      onClick={() => showResults(a)}
+                      disabled={pending}
+                      className="shrink-0 rounded-md border border-amber-300 px-2 py-0.5 text-[11px] font-semibold text-amber-600 disabled:opacity-50 dark:border-amber-800/60"
+                    >
+                      결과
+                    </button>
+                  )}
+                  <button
+                    type="button"
+                    onClick={() => edit(a)}
+                    disabled={pending}
+                    className="shrink-0 rounded-md border border-zinc-300 px-2 py-0.5 text-[11px] font-semibold text-zinc-600 disabled:opacity-50 dark:border-zinc-700 dark:text-zinc-300"
+                  >
+                    수정
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => del(a.id)}
+                    disabled={pending}
+                    className="shrink-0 rounded-md border border-red-300 px-2 py-0.5 text-[11px] font-semibold text-red-500 disabled:opacity-50 dark:border-red-900/60"
+                  >
+                    삭제
+                  </button>
+                </div>
+
+                {/* 투표 결과·투표자(관리자만) — '결과' 클릭 시 인라인 표시. */}
+                {results?.id === a.id && (
+                  <div className="mt-2 rounded-lg bg-zinc-50 p-2.5 text-[12px] dark:bg-zinc-900">
+                    <div className="mb-1.5 flex items-center justify-between">
+                      <span className="font-bold">투표 결과 · 총 {results.data.total}표</span>
+                      <button type="button" onClick={() => setResults(null)} className="text-[11px] text-zinc-400">
+                        닫기
+                      </button>
+                    </div>
+                    <ul className="mb-2 space-y-0.5">
+                      {a.poll?.options.map((o) => {
+                        const n = results.data.counts[o.id] ?? 0;
+                        const pct = results.data.total ? Math.round((n / results.data.total) * 100) : 0;
+                        return (
+                          <li key={o.id} className="flex items-center gap-2">
+                            <span className="min-w-0 flex-1 truncate">{o.label}</span>
+                            <span className="shrink-0 tabular-nums text-zinc-500">
+                              {n}표 · {pct}%
+                            </span>
+                          </li>
+                        );
+                      })}
+                    </ul>
+                    <div className="border-t border-zinc-200 pt-1.5 dark:border-zinc-800">
+                      <div className="mb-1 text-[11px] font-semibold text-zinc-500">투표자 ({results.data.voters.length})</div>
+                      {results.data.voters.length === 0 ? (
+                        <p className="text-[11px] text-zinc-400">아직 투표가 없습니다.</p>
+                      ) : (
+                        <ul className="max-h-40 space-y-0.5 overflow-y-auto">
+                          {results.data.voters.map((v, i) => (
+                            <li key={i} className="flex items-center gap-2 text-[11px]">
+                              <span className="min-w-0 flex-1 truncate">{v.nickname}</span>
+                              <span className="shrink-0 text-zinc-500">{labelOf(a.poll, v.optionId)}</span>
+                            </li>
+                          ))}
+                        </ul>
+                      )}
+                    </div>
+                  </div>
+                )}
               </li>
             ))}
           </ul>

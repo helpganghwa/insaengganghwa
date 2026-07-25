@@ -8,8 +8,10 @@ import { assetUrl } from '@/lib/asset-versions';
 import {
   ANNOUNCEMENT_CATEGORY_LABEL,
   ANNOUNCEMENT_CATEGORY_CLS as CAT_CLS,
+  type AnnouncementPoll,
   type AnnouncementView,
 } from '@/lib/game/announcement-shared';
+import { votePollAction } from './announcement-poll-actions';
 
 const SEEN_KEY = 'annSeenId';
 
@@ -28,8 +30,66 @@ function CatBadge({ category }: { category: string }) {
   );
 }
 
-/** 공지 상세 — 카테고리·제목·일시 + 마크다운 본문. */
-function Detail({ a }: { a: AnnouncementView }) {
+/** 공지 투표 — 유저는 **투표만**(집계·투표자는 관리자만 열람). 1인 1표, 다시 눌러 변경. */
+function Poll({
+  poll,
+  myVote,
+  onVote,
+}: {
+  poll: AnnouncementPoll;
+  myVote: string | undefined;
+  onVote: (optionId: string) => void;
+}) {
+  const closed = !!poll.closesAtIso && Date.parse(poll.closesAtIso) < Date.now();
+  return (
+    <div className="mt-4 rounded-xl border border-zinc-200 p-3 dark:border-zinc-800">
+      <div className="mb-2 flex items-start gap-1.5 text-[13px] font-bold">
+        <span aria-hidden>🗳️</span>
+        <span className="min-w-0">{poll.question}</span>
+      </div>
+      <div className="flex flex-col gap-1.5">
+        {poll.options.map((o) => {
+          const selected = myVote === o.id;
+          return (
+            <button
+              key={o.id}
+              type="button"
+              disabled={closed}
+              onClick={() => !closed && !selected && onVote(o.id)}
+              className={`flex items-center gap-2 rounded-lg border px-3 py-2 text-left text-[13px] transition disabled:opacity-60 ${
+                selected
+                  ? 'border-amber-500 bg-amber-500/10 font-bold text-amber-700 dark:text-amber-300'
+                  : 'border-zinc-200 text-zinc-700 active:bg-zinc-50 dark:border-zinc-800 dark:text-zinc-200 dark:active:bg-zinc-900'
+              }`}
+            >
+              <span aria-hidden>{selected ? '●' : '○'}</span>
+              <span className="min-w-0">{o.label}</span>
+            </button>
+          );
+        })}
+      </div>
+      <p className="mt-2 text-[10px] text-zinc-400">
+        {closed
+          ? '투표가 마감되었습니다.'
+          : myVote
+            ? '투표 완료 · 다른 항목을 눌러 변경할 수 있어요.'
+            : '한 항목을 선택해 투표하세요.'}
+        {poll.closesAtIso && !closed ? ` · 마감 ${fmtDate(poll.closesAtIso)}` : ''}
+      </p>
+    </div>
+  );
+}
+
+/** 공지 상세 — 카테고리·제목·일시 + 마크다운 본문 (+ 투표 있으면 투표). */
+function Detail({
+  a,
+  myVote,
+  onVote,
+}: {
+  a: AnnouncementView;
+  myVote: string | undefined;
+  onVote: (optionId: string) => void;
+}) {
   return (
     <div className="min-h-0 flex-1 overflow-y-auto px-4 py-3">
       <div className="flex items-center gap-2">
@@ -41,6 +101,7 @@ function Detail({ a }: { a: AnnouncementView }) {
       <div className="mt-2 text-[13px] leading-relaxed text-zinc-700 dark:text-zinc-200">
         <MarkdownView source={a.body} />
       </div>
+      {a.poll ? <Poll poll={a.poll} myVote={myVote} onVote={onVote} /> : null}
     </div>
   );
 }
@@ -54,13 +115,27 @@ export function AnnouncementBoard({
   items,
   tint,
   holdPopup = false,
+  myVotes = {},
 }: {
   items: AnnouncementView[];
   tint: string;
   /** true면 홈 강제 팝업 억제(예: 튜토리얼 진행 중 — 온보딩 우선). 카드·목록은 정상 노출. */
   holdPopup?: boolean;
+  /** 내 투표({공지id: optionId}) — 집계는 미포함(유저 비노출). */
+  myVotes?: Record<string, string>;
 }) {
   const [mounted, setMounted] = useState(false);
+  // 투표 상태(낙관적) — 서버 초기값에서 시작, 탭 시 즉시 반영 후 액션. 실패면 롤백.
+  const [votes, setVotes] = useState<Record<string, string>>(myVotes);
+  const onVote = (annId: string, optionId: string) => {
+    const prev = votes[annId];
+    setVotes((v) => ({ ...v, [annId]: optionId }));
+    votePollAction({ announcementId: annId, optionId })
+      .then((r) => {
+        if (!r.ok) setVotes((v) => ({ ...v, [annId]: prev ?? '' }));
+      })
+      .catch(() => setVotes((v) => ({ ...v, [annId]: prev ?? '' })));
+  };
   // 초기값은 클라에서 localStorage로(SSR=0). 의존 UI는 mounted 후에만 노출 → 하이드레이션 안전.
   const [seenId, setSeenId] = useState<number>(() => {
     if (typeof window === 'undefined') return 0;
@@ -157,7 +232,7 @@ export function AnnouncementBoard({
             </button>
           </div>
           {detail ? (
-            <Detail a={detail} />
+            <Detail a={detail} myVote={votes[detail.id]} onVote={(o) => onVote(detail.id, o)} />
           ) : sorted.length === 0 ? (
             <p className="px-4 py-10 text-center text-[12px] text-zinc-400">등록된 공지가 없습니다.</p>
           ) : (
@@ -192,7 +267,7 @@ export function AnnouncementBoard({
           label={latest.title}
           className="flex max-h-[80vh] w-full max-w-[340px] flex-col overflow-hidden rounded-2xl bg-white dark:bg-zinc-950"
         >
-          <Detail a={latest} />
+          <Detail a={latest} myVote={votes[latest.id]} onVote={(o) => onVote(latest.id, o)} />
           <div className="flex shrink-0 gap-2 border-t border-zinc-100 px-4 py-3 dark:border-zinc-900">
             <button
               type="button"

@@ -1,10 +1,10 @@
 import 'server-only';
 
 import { unstable_cache } from 'next/cache';
-import { desc, eq } from 'drizzle-orm';
+import { and, desc, eq, inArray, sql } from 'drizzle-orm';
 
 import { db } from '@/lib/db/client';
-import { announcements } from '@/lib/db/schema/announcement';
+import { announcements, announcementPollVotes } from '@/lib/db/schema/announcement';
 
 import type { AnnouncementView } from './announcement-shared';
 
@@ -19,6 +19,7 @@ function toView(r: typeof announcements.$inferSelect): AnnouncementView {
     body: r.body,
     pinned: r.pinned,
     publishedAtIso: r.publishedAt ? r.publishedAt.toISOString() : null,
+    poll: r.poll ?? null,
   };
 }
 
@@ -44,4 +45,75 @@ export const listPublishedAnnouncements = unstable_cache(
 export async function listAllAnnouncements(limit = 100): Promise<AnnouncementView[]> {
   const rows = await db.select().from(announcements).orderBy(desc(announcements.id)).limit(limit);
   return rows.map(toView);
+}
+
+// ───────── 공지 투표 ─────────
+
+/** 유저의 현재 투표 조회(게임 UI 하이라이트용) — {공지id: optionId}. 집계는 미포함(유저 비노출). */
+export async function getUserPollVotes(
+  userId: string,
+  announcementIds: bigint[],
+): Promise<Record<string, string>> {
+  if (announcementIds.length === 0) return {};
+  const rows = await db
+    .select({ annId: announcementPollVotes.announcementId, optionId: announcementPollVotes.optionId })
+    .from(announcementPollVotes)
+    .where(
+      and(
+        eq(announcementPollVotes.userId, userId),
+        inArray(announcementPollVotes.announcementId, announcementIds),
+      ),
+    );
+  const m: Record<string, string> = {};
+  for (const r of rows) m[r.annId.toString()] = r.optionId;
+  return m;
+}
+
+/** 투표(1인 1표, 변경 가능) — 서버 액션에서 호출. 결과는 반환하지 않는다(유저 비노출). */
+export async function castPollVote(
+  userId: string,
+  announcementId: bigint,
+  optionId: string,
+): Promise<{ ok: true } | { ok: false; reason: 'NOT_FOUND' | 'BAD_OPTION' | 'CLOSED' }> {
+  const [a] = await db
+    .select({ poll: announcements.poll, published: announcements.published })
+    .from(announcements)
+    .where(eq(announcements.id, announcementId))
+    .limit(1);
+  if (!a || !a.published || !a.poll) return { ok: false, reason: 'NOT_FOUND' };
+  if (!a.poll.options.some((o) => o.id === optionId)) return { ok: false, reason: 'BAD_OPTION' };
+  if (a.poll.closesAtIso && new Date(a.poll.closesAtIso).getTime() < Date.now())
+    return { ok: false, reason: 'CLOSED' };
+  await db
+    .insert(announcementPollVotes)
+    .values({ announcementId, userId, optionId })
+    .onConflictDoUpdate({
+      target: [announcementPollVotes.announcementId, announcementPollVotes.userId],
+      set: { optionId, updatedAt: new Date() },
+    });
+  return { ok: true };
+}
+
+export type PollResults = {
+  counts: Record<string, number>;
+  total: number;
+  /** 투표자 목록(비익명 — **관리자 전용**). nickname은 유저의 아무 캐릭터 1개. */
+  voters: { nickname: string; optionId: string; atIso: string }[];
+};
+
+/** 어드민 — 투표 집계 + 투표자 목록(비익명). 결과·투표자는 관리자만 열람. */
+export async function getPollResults(announcementId: bigint): Promise<PollResults> {
+  const rows = (await db.execute(sql`
+    select v.option_id, v.updated_at,
+           coalesce((select c.nickname from characters c where c.user_id = v.user_id limit 1), '(이름없음)') as nickname
+    from announcement_poll_votes v
+    where v.announcement_id = ${announcementId}
+    order by v.updated_at desc
+  `)) as unknown as { option_id: string; updated_at: string; nickname: string }[];
+  const counts: Record<string, number> = {};
+  const voters = rows.map((r) => {
+    counts[r.option_id] = (counts[r.option_id] ?? 0) + 1;
+    return { nickname: r.nickname, optionId: r.option_id, atIso: new Date(r.updated_at).toISOString() };
+  });
+  return { counts, total: rows.length, voters };
 }
