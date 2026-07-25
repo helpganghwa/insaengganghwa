@@ -98,10 +98,23 @@ export async function aggregateConquestDay(kstDay: string, serverId: number): Pr
   const battles = (await db.execute(sql`
     select z.name as zone, z.region::text as region,
            g.name as winner, cb.finale as finale,
-           (select g2.name from conquest_battles cb2
-              join guilds g2 on g2.id = cb2.winner_guild_id
-              where cb2.zone_id = cb.zone_id and cb2.battle_kst_day < ${kstDay}
-              order by cb2.battle_kst_day desc limit 1) as prev_owner,
+           -- 이전 소유(from) = 전투 이력의 마지막 승자. 단, 그 이후 방치 중립화(zone_neutralized)가
+           -- 더 최근이면 현재 '중립'이므로 null(무주지)로 본다. 중립화를 무시하면 이미 방치로 잃은
+           -- 구역을 '옛 소유 길드로부터 빼앗음'으로 오서술한다(2026-07-25 검수 발견).
+           (case
+              when (select max(we.detail->>'battleDay')
+                      from world_events we, jsonb_array_elements_text(we.detail->'zones') zn
+                      where we.server_id = ${serverId} and we.type = 'zone_neutralized'
+                        and zn = z.name and (we.detail->>'battleDay') < ${kstDay})
+                   >= coalesce((select max(cb4.battle_kst_day)::text from conquest_battles cb4
+                        where cb4.zone_id = cb.zone_id and cb4.battle_kst_day < ${kstDay}
+                          and cb4.winner_guild_id is not null), '')
+              then null
+              else (select g2.name from conquest_battles cb2
+                      join guilds g2 on g2.id = cb2.winner_guild_id
+                      where cb2.zone_id = cb.zone_id and cb2.battle_kst_day < ${kstDay}
+                      order by cb2.battle_kst_day desc limit 1)
+           end) as prev_owner,
            exists(select 1 from conquest_battles cb3
               where cb3.zone_id = cb.zone_id and cb3.battle_kst_day < ${kstDay}
                 and cb3.winner_guild_id is not null) as had_owner_history
