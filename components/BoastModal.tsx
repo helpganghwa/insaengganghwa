@@ -193,8 +193,9 @@ export function BoastModal({
     const v = Math.random().toString(36).slice(2, 10);
     const params = new URLSearchParams({ v, s: String(serverId) });
     const imageUrl = `${origin}/og/${encodeURIComponent(publicCode)}?${params.toString()}`;
-    // '인생강화 시작' — /s/[code]?start=1로 보내 pending_referral 쿠키를 세팅(추천 귀속) 후
-    // 앱 시작(/)으로 리다이렉트. 직접 '/'로 보내면 쿠키가 없어 추천인 리워드가 누락됨.
+    // '인생강화 시작' — /s/[code]?start=1 → /go(인앱브라우저 탈출) → 외부 브라우저에서 /s?go=1이
+    // pending_referral 쿠키 세팅(추천 귀속) 후 /login. 인앱에서 쿠키를 세팅하면 탈출 시 다른
+    // 브라우저로 안 넘어가 유실되므로, 쿠키 세팅을 탈출 후(외부 브라우저)로 미룬다.
     const startUrl = `${origin}/s/${encodeURIComponent(publicCode)}?start=1&s=${serverId}`;
     // 도전 과제(0118) — 자랑 공유 마킹(멱등, 버튼 클릭 자체로 인정). sendBeacon은 카카오 앱
     // 전환/페이지 이탈에도 전송이 보장돼 공유 로직을 건드리지 않는다(2026-07-15 — await 방식은

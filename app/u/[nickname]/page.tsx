@@ -526,8 +526,10 @@ export default async function PublicProfilePage({
 
         {/* ── CTA 분기 — 모두 동일 폭·패딩, 디자인 강조만 다름. ── */}
         {mode === 'guest' ? (
+          // 게임시작 — /go로 인앱브라우저 탈출 후, 외부 브라우저에서 /s?go=1이 추천 쿠키를 세팅한다
+          // (프로필 주인 publicCode를 추천인으로 귀속). 직접 /login이면 인앱 OAuth 실패 + 추천 유실.
           <Link prefetch={false}
-            href="/login"
+            href={`/go?next=${encodeURIComponent(`/s/${data.publicCode}?go=1&s=${serverId}`)}`}
             className="flex w-full items-center justify-center rounded-xl bg-gradient-to-r from-amber-500 to-orange-500 py-2.5 text-sm font-bold text-amber-950 shadow-lg shadow-amber-900/30 transition active:scale-[0.98]"
           >
             인생강화 시작하기

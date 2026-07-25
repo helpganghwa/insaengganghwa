@@ -57,14 +57,28 @@ export async function GET(
     }
   }
 
-  // 2) 닉네임 분기 — referral 쿠키 세팅 후 리다이렉트.
-  //    ?start=1('인생강화 시작' 버튼) → 앱 시작(/), 그 외(카드 클릭) → 공개 프로필(/u/[code]).
-  //    두 경우 모두 쿠키를 세팅하므로 가입 시 추천 귀속됨.
-  const start = req.nextUrl.searchParams.get('start') === '1';
-  // 서버 파라미터 전파(서버별 캐릭터 카드 — SERVER.md).
+  // 2) 닉네임 분기 — 세 경우:
+  //    (A) ?start=1('인생강화 시작' 진입) → **/go로 인앱브라우저 탈출**. 여기선 쿠키를 세팅하지
+  //        않는다 — 인앱에서 세팅해도 외부 브라우저(탈출 후)로 안 넘어가 추천이 유실되기 때문.
+  //        탈출 후 외부 브라우저가 /s?go=1을 다시 때려 거기서 쿠키를 세팅한다(추천 보존 핵심).
+  //    (B) ?go=1(탈출 완료·외부 브라우저 또는 일반 브라우저가 /go에서 자동 이동) → 쿠키 세팅 + /login.
+  //    (C) 그 외(카드 클릭) → 쿠키 세팅 + 공개 프로필(/u/[code]).
   const sParam = req.nextUrl.searchParams.get('s');
+  const sQuery = sParam && /^\d+$/.test(sParam) ? `&s=${sParam}` : '';
+
+  // (A) start=1 → 쿠키 없이 /go?next=/s/[code]?go=1 로. 탈출/자동이동 후 (B)가 쿠키를 세팅.
+  if (req.nextUrl.searchParams.get('start') === '1') {
+    const next = `/s/${encodeURIComponent(shareCode)}?go=1${sQuery}`;
+    return NextResponse.redirect(
+      new URL(`/go?next=${encodeURIComponent(next)}`, req.nextUrl.origin),
+      307,
+    );
+  }
+
+  // (B)/(C) — 쿠키 세팅 후 이동. go=1이면 로그인, 아니면 공개 프로필.
+  const go = req.nextUrl.searchParams.get('go') === '1';
   const sfx = sParam && /^\d+$/.test(sParam) ? `?s=${sParam}` : '';
-  const target = start ? '/' : `/u/${shareCode}${sfx}`;
+  const target = go ? '/login' : `/u/${shareCode}${sfx}`;
   const res = NextResponse.redirect(new URL(target, req.nextUrl.origin), 307);
   if (sParam && /^\d+$/.test(sParam)) {
     // 공유된 서버를 로그인 기본 선택으로.

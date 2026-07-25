@@ -20,14 +20,22 @@ export function GoClient() {
   const [env, setEnv] = useState<Env>('checking');
   const [copied, setCopied] = useState(false);
 
-  const search = params.toString();
-  const target = `https://ganghwa.app/login${search ? `?${search}` : ''}`;
+  // next = 탈출/이동할 **내부 경로**(추천 쿠키를 외부 브라우저에서 세팅하는 /s/[code]?go=1 등).
+  //  오픈리다이렉트 방지: 단일 슬래시로 시작하는 동일 출처 상대경로만 허용(//·/\ 프로토콜상대 거부).
+  //  무효/부재 시 /login(광고 유입 등 기존 동작) — next 외 나머지 쿼리(c= 등)는 보존.
+  const rawNext = params.get('next')?.trim();
+  const safeNext = rawNext && /^\/(?![/\\])/.test(rawNext) ? rawNext : null;
+  const rest = new URLSearchParams(params.toString());
+  rest.delete('next');
+  const restStr = rest.toString();
+  const path = safeNext ?? `/login${restStr ? `?${restStr}` : ''}`;
+  const target = `https://ganghwa.app${path}`;
 
   useEffect(() => {
     const ua = navigator.userAgent;
     if (!INAPP_RE.test(ua)) {
       setEnv('normal');
-      window.location.replace(`/login${search ? `?${search}` : ''}`);
+      window.location.replace(path);
       return;
     }
     if (/KAKAOTALK/i.test(ua)) {
