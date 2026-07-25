@@ -63,17 +63,28 @@ export async function getConquestReplay(serverId: number, forKstDay?: string): P
   const s = await aggregateConquestDay(kstDay, serverId);
   if (s.captures.length === 0 && s.defenses.length === 0 && s.neutralized.length === 0) return null;
 
-  // 구역 메타 + 그날 종료 시점 소유 — **전투 이력 기반**(zone별 kstDay 이하 최신 승자).
-  // 현 DB owner 기준이면 과거 날짜 리플레이(어제 탭)에 이후 날의 결과가 섞이고,
-  // 검수 시점(자정 플립 전)의 오늘 리플레이도 어긋난다(2026-07-17). 소유는 전투로만
-  // 바뀌므로(해산 중립화는 길드 삭제 → 이름 해석 null=중립으로 자연 수렴) 이력이 단일 진실.
+  // 구역 메타 + 그날 종료 시점 소유 — **전투 이력 + 방치 중립화** 기반(zone별 kstDay 이하 최신 상태변화).
+  // 현 DB owner 기준이면 과거 날짜 리플레이(어제 탭)에 이후 날의 결과가 섞이고, 검수 시점(자정
+  // 플립 전)의 오늘 리플레이도 어긋난다(2026-07-17). 그러나 전투 이력만 보면 방치로 중립이 된
+  // 구역이 옛 소유 길드로 남아, 리플레이 시작 시 이미 잃은 문양이 뜬다(2026-07-25 검수 발견) →
+  // 마지막 전투 승자와 마지막 zone_neutralized(battleDay) 중 더 최근 것으로 판정, 중립화가 최근이면 중립(null).
   const zoneRows = (await db.execute(dsql`
     select z.id, z.name, z.map_x, z.map_y,
-           (select g2.name from conquest_battles cb2
-              join guilds g2 on g2.id = cb2.winner_guild_id
-              where cb2.zone_id = z.id and cb2.server_id = z.server_id
-                and cb2.battle_kst_day <= ${kstDay}::date
-              order by cb2.battle_kst_day desc limit 1) as owner
+           (case
+              when (select max(we.detail->>'battleDay')
+                      from world_events we, jsonb_array_elements_text(we.detail->'zones') zn
+                      where we.server_id = z.server_id and we.type = 'zone_neutralized'
+                        and zn = z.name and (we.detail->>'battleDay') <= ${kstDay})
+                   >= coalesce((select max(cb3.battle_kst_day)::text from conquest_battles cb3
+                        where cb3.zone_id = z.id and cb3.server_id = z.server_id
+                          and cb3.battle_kst_day <= ${kstDay}::date and cb3.winner_guild_id is not null), '')
+              then null
+              else (select g2.name from conquest_battles cb2
+                      join guilds g2 on g2.id = cb2.winner_guild_id
+                      where cb2.zone_id = z.id and cb2.server_id = z.server_id
+                        and cb2.battle_kst_day <= ${kstDay}::date
+                      order by cb2.battle_kst_day desc limit 1)
+           end) as owner
     from zones z
     where z.server_id = ${serverId}
   `)) as unknown as { id: number; name: string; map_x: number; map_y: number; owner: string | null }[];
