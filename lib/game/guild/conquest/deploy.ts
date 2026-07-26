@@ -39,7 +39,7 @@ async function assertAttackable(tx: Tx, guildId: bigint, targetZoneId: number): 
 /**
  * 점령전 배치 — GUILD §5.8⑥. 다음 전투(KST 23:00)에 공격/수비 1곳 배치. 1인 1배치/일(unique).
  *  - 수비(defend): 자기 길드 소유 구역만. 공격(attack): 자기 길드 **비소유** 구역(중립·적).
- *  - 집행관은 자동 방어로 슬롯 점유 → 배치 불가(IS_EXECUTOR).
+ *  - 집행관이 배치하면 그 자동 방어는 **자동 해제**(자리 비움) — "1인=집행관 or 배치" 불변식 유지.
  *  - battle_kst_day는 서버가 결정(23:00 잠금 = 날짜 롤). 기존 배치는 덮어씀(upsert).
  */
 export async function deployToZone(input: {
@@ -69,14 +69,14 @@ export async function deployToZone(input: {
     if (input.role === 'attack' && owned) throw new GuildError('CANNOT_ATTACK_OWN');
     if (input.role === 'attack') await assertAttackable(tx, m.guildId, input.zoneId);
 
-    // 집행관은 배치 불가(자동 방어). **같은 서버** 어느 구역이든 집행관이면 거부(감사 G-01:
-    // serverId 누락 시 타 서버 집행관이 이 서버 배치를 오차단).
-    const [executor] = await tx
-      .select({ id: zones.id })
-      .from(zones)
-      .where(and(eq(zones.executorUserId, input.userId), eq(zones.serverId, input.serverId)))
-      .limit(1);
-    if (executor) throw new GuildError('IS_EXECUTOR');
+    // 배치 등록 = 집행관(자동 방어) 자동 해제 — 집행관이 자리를 비우고 다른 구역에 참전(2026-07-26 문의 #90).
+    // 집행관 지정이 배치를 지우는 것의 정반대라 "1인=집행관 or 배치" 불변식 유지 → 정산 이중집계 없음.
+    // **같은 서버** 스코프(감사 G-01: 타 서버 집행관 오해제 방지). 홈 구역은 집행관·배치가 모두
+    // 빠지면 그날 방치 중립화 대상이 된다(neutralizeAbandonedZones) — 다른 수비를 남기지 않으면 상실 위험.
+    await tx
+      .update(zones)
+      .set({ executorUserId: null })
+      .where(and(eq(zones.executorUserId, input.userId), eq(zones.serverId, input.serverId)));
 
     const battleKstDay = nextBattleKstDay();
     await tx
@@ -157,7 +157,7 @@ async function assertLeader(
 
 /**
  * 길드원 배치(길드장 전용) — GUILD §5.8⑥. 길드장이 길드원 1명을 공격/수비 구역에 배치.
- *  - 대상은 같은 길드원. 집행관은 자동 방어라 배치 불가(IS_EXECUTOR).
+ *  - 대상은 같은 길드원. 대상이 집행관이면 그 자동 방어는 배치와 함께 자동 해제(자리 비움).
  *  - 수비=자기 길드 소유 구역, 공격=비소유 구역. 1인 1배치(upsert), 23:00 잠금(날짜 롤).
  */
 export async function deployMember(input: {
@@ -178,13 +178,11 @@ export async function deployMember(input: {
       .limit(1);
     if (!target || target.guildId !== guildId) throw new GuildError('TARGET_NOT_IN_GUILD');
 
-    // 같은 서버 집행관이면 배치 불가(감사 G-01: serverId 스코프).
-    const [ex] = await tx
-      .select({ id: zones.id })
-      .from(zones)
-      .where(and(eq(zones.executorUserId, input.targetUserId), eq(zones.serverId, input.serverId)))
-      .limit(1);
-    if (ex) throw new GuildError('IS_EXECUTOR');
+    // 배치 등록 = 대상의 집행관(자동 방어) 자동 해제(2026-07-26 문의 #90). 같은 서버 스코프(감사 G-01).
+    await tx
+      .update(zones)
+      .set({ executorUserId: null })
+      .where(and(eq(zones.executorUserId, input.targetUserId), eq(zones.serverId, input.serverId)));
 
     const [z] = await tx
       .select({ ownerGuildId: zones.ownerGuildId, serverId: zones.serverId })

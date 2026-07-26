@@ -130,11 +130,15 @@ export function DeployBoard({
     const me = members.find((x) => x.userId === myUserId);
     if (!me) return;
     const prev = me;
-    patch(myUserId, { depZoneId: selected.id, depZoneName: selected.name, depRole: selectedRole });
+    // 배치 시 집행관(자동 방어)은 서버에서 자동 해제 → 로컬도 집행관 표시 제거(낙관적 갱신).
+    patch(myUserId, { depZoneId: selected.id, depZoneName: selected.name, depRole: selectedRole, execZoneId: null, execZoneName: null });
     start(async () => {
       const r = await deployAction(selected.id, selectedRole);
       if (r.status !== 'success') {
-        patch(myUserId, { depZoneId: prev.depZoneId, depZoneName: prev.depZoneName, depRole: prev.depRole });
+        patch(myUserId, {
+          depZoneId: prev.depZoneId, depZoneName: prev.depZoneName, depRole: prev.depRole,
+          execZoneId: prev.execZoneId, execZoneName: prev.execZoneName,
+        });
         return showError(guildErrMsg(r.code));
       }
       showHeaderToast({ title: selectedRole === 'attack' ? '공격 배치' : '수비 배치' });
@@ -495,8 +499,9 @@ export function DeployBoard({
                   ? `${m.depRole === 'attack' ? '공격' : '수비'}·${m.depZoneName}`
                   : '미배치';
               // 배치는 유저 고유 권한 — 공격/수비 버튼은 본인 행에만 노출.
+              // 집행관도 배치 가능(배치 시 자동 방어 자동 해제, 2026-07-26 문의 #90).
               const canSelfDeploy =
-                m.userId === myUserId && !locked && selected != null && !isExec && !here;
+                m.userId === myUserId && !locked && selected != null && !here;
               return (
                 <li key={m.userId} className="flex min-h-[38px] items-center gap-1">
                   <button
