@@ -40,8 +40,11 @@ async function userTotalCP(userId: string, serverId: number): Promise<number> {
 export async function attackRaid(input: {
   userId: string;
   raidId: bigint;
+  /** 테스트용 결정적 RNG 주입(미지정 시 crypto u32). 1회차=크리 판정, 2회차=데미지 분산. */
+  rng?: () => number;
 }): Promise<{ damage: number; isCrit: boolean; phasesCleared: number; totalDamage: string }> {
   const { userId, raidId } = input;
+  const rng = input.rng ?? rngU32;
 
   // 락 밖 — serverId 가벼운 사전조회(비잠금) + CP 계산(유저 장비 스캔). 게이트는 락 내 재확인.
   const [meta] = await db
@@ -85,8 +88,8 @@ export async function attackRaid(input: {
     const allowed = RAID_BASE_ATTACKS + part.extraAttacks;
     if (part.attacksUsed >= allowed) throw new RaidError('NO_ATTACKS');
 
-    const isCrit = rngU32() % 10000 < RAID_CRIT_RATE_BP;
-    const u = rngU32() / 0x1_0000_0000; // [0,1)
+    const isCrit = rng() % 10000 < RAID_CRIT_RATE_BP;
+    const u = rng() / 0x1_0000_0000; // [0,1)
     const varFactor = 1 - RAID_DAMAGE_VARIANCE + u * (2 * RAID_DAMAGE_VARIANCE);
     const damage = computeRaidDamage(totalCP, varFactor, isCrit);
 
