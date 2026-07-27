@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useState, useTransition } from 'react';
+import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 
@@ -12,15 +12,14 @@ import { assetUrl } from '@/lib/asset-versions';
 import { signInWithKakao } from '@/lib/auth/actions';
 import * as haptic from '@/lib/game/haptic';
 
-import { requestJoinRaidAction } from '../../(game)/raid/actions';
-
 /**
  * 레이드 초대 풀페이지 — 비로그인/참가전/꽉참/종료 분기.
  *  - 종료(settled/만료): '종료된 레이드입니다' + 홈으로.
  *  - 비로그인: 카카오 로그인(로그인 후 이 페이지로 복귀해 참가).
  *  - 이미 참가: '레이드 입장' → 세션.
  *  - 꽉참: 비활성.
- *  - 참가 가능: '참가하기' → join → 세션(/raid/<id>)로 이동.
+ *  - 참가 가능: '레이드 보러가기' → 상세 관전(?c=코드) — 참가 요청은 상세에서
+ *    (2026-07-27 문의 #30: 구경 후 참가 결정, 진입만으로 차감 없음).
  */
 function useRemaining(expireAtIso: string): { over: boolean; text: string } {
   const [now, setNow] = useState(() => Date.now());
@@ -61,26 +60,13 @@ export function RaidInviteLanding({
   const { over, text } = useRemaining(expireAtIso);
   const ended = status === 'settled' || over;
   const full = participantCount >= RAID_MAX_PARTICIPANTS;
-  const [pending, startTransition] = useTransition();
-  const [error, setError] = useState<string | null>(null);
-  const [requested, setRequested] = useState(false);
 
   const enter = () => router.push(`/raid/${raidId}`);
 
-  // 공유링크 참가 — 즉시 X, 개설자 수락 필요(링크 유출 대비). 호스트/기참가자는 바로 입장.
-  const handleJoin = () => {
-    if (pending || ended || full || requested) return;
+  // 관전 진입 — 참가/요청은 상세에서(진입만으로 차감·요청 없음). 호스트/기참가자는 바로 입장.
+  const view = () => {
     haptic.success();
-    setError(null);
-    startTransition(async () => {
-      const r = await requestJoinRaidAction(shareCode);
-      if (r.status === 'error') {
-        setError(r.message);
-        return;
-      }
-      if (r.state === 'joined') return enter();
-      setRequested(true); // 'requested' — 수락 대기
-    });
+    router.push(`/raid/${raidId}?c=${shareCode}&s=link`);
   };
 
   return (
@@ -129,8 +115,6 @@ export function RaidInviteLanding({
         {boss.story}
       </p>
 
-      {error ? <p className="text-center text-[12px] font-medium text-red-400">{error}</p> : null}
-
       {/* 액션 — 상태별 분기 */}
       {ended ? (
         <Link prefetch={false}
@@ -167,27 +151,19 @@ export function RaidInviteLanding({
         <div className="space-y-2">
           <button
             type="button"
-            onClick={handleJoin}
-            disabled={pending || full || requested}
+            onClick={view}
+            disabled={full}
             className={`w-full rounded-xl py-3.5 text-sm font-extrabold transition active:scale-[0.99] ${
-              pending || full || requested
+              full
                 ? 'bg-zinc-800 text-zinc-300'
                 : 'bg-gradient-to-r from-red-600 to-orange-500 text-white shadow-lg shadow-red-900/40'
             }`}
           >
-            {requested
-              ? '✅ 참가 요청됨 · 개설자 수락 대기'
-              : full
-                ? `인원이 가득 찼습니다 (최대 ${RAID_MAX_PARTICIPANTS}명)`
-                : pending
-                  ? '요청 중…'
-                  : '⚔️ 레이드 참가 요청'}
+            {full ? `인원이 가득 찼습니다 (최대 ${RAID_MAX_PARTICIPANTS}명)` : '⚔️ 레이드 보러가기'}
           </button>
-          {requested ? (
-            <p className="text-center text-[11px] text-zinc-400">
-              개설자가 수락하면 자동으로 참여됩니다. 잠시 후 다시 확인해 주세요.
-            </p>
-          ) : null}
+          <p className="text-center text-[11px] text-zinc-400">
+            전장을 둘러본 뒤 참가할 수 있어요. 구경만 해도 참여 횟수는 소모되지 않습니다.
+          </p>
         </div>
       )}
     </main>

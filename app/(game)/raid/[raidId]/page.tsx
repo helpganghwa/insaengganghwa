@@ -8,7 +8,7 @@ import { db } from '@/lib/db/client';
 import { characters } from '@/lib/db/schema/server';
 import { withTimeout, withTimeoutRetry } from '@/lib/db/with-timeout';
 import { profiles } from '@/lib/db/schema/profiles';
-import { raids, raidParticipants, raidRewards } from '@/lib/db/schema/raid';
+import { raids, raidParticipants, raidRewards, raidJoinRequests } from '@/lib/db/schema/raid';
 import { raidPhasesCleared, getPendingJoinRequests } from '@/lib/game/raid';
 import { getGuildBriefsByUsers } from '@/lib/game/guild';
 import { getBossBg, getBossSprite } from '@/lib/game/raid/boss-sprites';
@@ -17,7 +17,14 @@ import { assetUrl } from '@/lib/asset-versions';
 import { settleRaid } from '@/lib/game/raid/settle';
 import { RaidSessionCard, type RaidView } from '../RaidSessionCard';
 
-export default async function RaidDetail({ params }: { params: Promise<{ raidId: string }> }) {
+export default async function RaidDetail({
+  params,
+  searchParams,
+}: {
+  params: Promise<{ raidId: string }>;
+  /** c=공유코드(비참가 관전 게이트), s=참가 scope(friend|guild|link — 참가 버튼용). */
+  searchParams: Promise<{ c?: string; s?: string }>;
+}) {
   const userId = await getSessionUserId();
   if (!userId) return null;
   const { raidId } = await params;
@@ -35,6 +42,8 @@ export default async function RaidDetail({ params }: { params: Promise<{ raidId:
         expireAt: raids.expireAt,
         status: raids.status,
         hostUserId: raids.hostUserId,
+        friendShare: raids.friendShare,
+        guildShare: raids.guildShare,
       })
       .from(raids)
       .where(eq(raids.id, BigInt(raidId)))
@@ -110,8 +119,31 @@ export default async function RaidDetail({ params }: { params: Promise<{ raidId:
   const total = parts.reduce((s, p) => s + Number(p.totalDamage), 0);
   const me = parts.find((p) => p.userId === userId) ?? null;
 
-  // 비참가자는 세션 진입 차단 — 헤더/네비 없는 공개 풀페이지 초대 랜딩으로.
-  if (!me) redirect(`/raid-invite/${raid.shareCode}`);
+  // 비참가자 — 공유코드(?c=)가 맞으면 관전 모드 허용(참가/요청 버튼 노출, 횟수 차감 없음.
+  // 2026-07-27 문의 #30: 구경만 해도 참가·차감되던 동선 개선). 코드 불일치/부재는 기존대로
+  // 초대 랜딩으로(raidId 열거 무단 열람 방지 — shareCode가 기존 권한 토큰).
+  let join: RaidView['join'] = null;
+  if (!me) {
+    const sp = await searchParams;
+    if ((sp.c ?? '') !== raid.shareCode) redirect(`/raid-invite/${raid.shareCode}`);
+    const scope = sp.s === 'friend' || sp.s === 'guild' ? sp.s : 'link';
+    // 버튼 라벨용 예상 모드 — 서버(joinOrRequestRaid)가 재검증하므로 어긋나도 요청으로 처리될 뿐.
+    const mode =
+      (scope === 'friend' && raid.friendShare === 'free') ||
+      (scope === 'guild' && raid.guildShare === 'free')
+        ? ('free' as const)
+        : ('approval' as const);
+    const [req] = await withTimeout(
+      db
+        .select({ status: raidJoinRequests.status })
+        .from(raidJoinRequests)
+        .where(and(eq(raidJoinRequests.raidId, BigInt(raidId)), eq(raidJoinRequests.userId, userId)))
+        .limit(1),
+      3000,
+      'raid.joinReq',
+    ).catch(() => []);
+    join = { scope, mode, requested: req?.status === 'pending' };
+  }
 
   // 정산된 레이드면 내 결산 보상(미수령/수령 여부 포함) 조회.
   let myReward: RaidView['myReward'] = null;
@@ -154,6 +186,7 @@ export default async function RaidDetail({ params }: { params: Promise<{ raidId:
     totalDamage: total,
     phasesCleared: raidPhasesCleared(Number(raid.phase1Hp), total),
     isParticipant: !!me,
+    join,
     myAttacksUsed: me?.attacksUsed ?? 0,
     myExtraAttacks: me?.extraAttacks ?? 0,
     myReward,

@@ -11,7 +11,7 @@ import { useResourceToast } from '@/components/ResourceToast';
 import { getBossBg, getBossBgClass, getBossShadow } from '@/lib/game/raid/boss-sprites';
 import { assetUrl } from '@/lib/asset-versions';
 
-import { openRaidAction, joinRaidAction } from './actions';
+import { openRaidAction } from './actions';
 
 /**
  * 슬롯 셀 — 활성 레이드와 정산 대기(미수령 보상)를 한 목록에서 표현(grow 패턴).
@@ -122,17 +122,16 @@ function ShareModeRow({
   );
 }
 
-/** 친구/길드 소환 레이드 목록 섹션 — 비면 미노출. onJoin(shareCode)로 참가/요청. */
+/** 친구/길드 소환 레이드 목록 섹션 — 비면 미노출. 행 클릭 = 상세 관전 진입(참가는 상세에서 —
+ * 2026-07-27 문의 #30: 목록의 즉시 참가 버튼 제거, 구경 후 참가 결정). */
 function RaidListSection({
   title,
   raids,
-  pending,
-  onJoin,
+  scope,
 }: {
   title: string;
   raids: FriendRaid[];
-  pending: boolean;
-  onJoin: (shareCode: string) => void;
+  scope: 'friend' | 'guild';
 }) {
   if (raids.length === 0) return null;
   return (
@@ -140,13 +139,11 @@ function RaidListSection({
       <h2 className="mb-2 text-[12px] font-bold text-zinc-500">{title}</h2>
       <div className="space-y-2">
         {raids.map((f) => (
-          <button
+          <Link prefetch={false}
             key={f.raidId}
-            type="button"
-            disabled={pending}
-            onClick={() => onJoin(f.shareCode)}
+            href={`/raid/${f.raidId}?c=${f.shareCode}&s=${scope}`}
             style={{ boxShadow: getBossShadow(f.bossCode) }}
-            className={`relative flex w-full items-center gap-3 isolate overflow-hidden rounded-xl border-2 border-emerald-700/50 bg-gradient-to-r p-3 text-left text-zinc-100 transition active:scale-[0.99] disabled:opacity-60 ${getBossBgClass(f.bossCode)}`}
+            className={`relative flex w-full items-center gap-3 isolate overflow-hidden rounded-xl border-2 border-emerald-700/50 bg-gradient-to-r p-3 text-left text-zinc-100 transition active:scale-[0.99] ${getBossBgClass(f.bossCode)}`}
           >
             {getBossBg(f.bossCode) ? (
               // eslint-disable-next-line @next/next/no-img-element
@@ -179,10 +176,8 @@ function RaidListSection({
                 </span>
               </span>
             </span>
-            <span className="relative shrink-0 rounded-lg bg-emerald-500 px-2.5 py-1.5 text-[12px] font-bold text-white">
-              참가
-            </span>
-          </button>
+            <span className="relative shrink-0 text-lg text-zinc-400">›</span>
+          </Link>
         ))}
       </div>
     </section>
@@ -222,7 +217,7 @@ export function RaidSlots({
   guildRaids?: FriendRaid[];
 }) {
   const router = useRouter();
-  const { showError, showHeaderToast } = useResourceToast();
+  const { showError } = useResourceToast();
   const [pending, startTransition] = useTransition();
   const [picking, setPicking] = useState(false);
   const [picked, setPicked] = useState<RaidBoss | null>(null);
@@ -258,20 +253,6 @@ export function RaidSlots({
         return;
       }
       // 팝업은 닫지 않고 상세로 이동 — 페이지 전환 시 자연 unmount(전환 중 깜빡임 방지).
-      router.push(`/raid/${r.raidId}`);
-    });
-
-  const join = (shareCode: string, scope: 'friend' | 'guild') =>
-    startTransition(async () => {
-      const r = await joinRaidAction(shareCode, scope);
-      if (r.status === 'error') {
-        showError(r.message);
-        return;
-      }
-      if (r.state === 'requested') {
-        showHeaderToast({ title: '참가 요청을 보냈어요', detail: '개설자가 수락하면 참여됩니다' });
-        return;
-      }
       router.push(`/raid/${r.raidId}`);
     });
 
@@ -397,19 +378,9 @@ export function RaidSlots({
         )}
       </div>
 
-      {/* 친구/길드가 소환한 레이드 — 공개·활성. 자유=즉시, 수락=요청. */}
-      <RaidListSection
-        title="친구가 소환한 레이드"
-        raids={friendRaids}
-        pending={pending}
-        onJoin={(sc) => join(sc, 'friend')}
-      />
-      <RaidListSection
-        title="길드가 소환한 레이드"
-        raids={guildRaids}
-        pending={pending}
-        onJoin={(sc) => join(sc, 'guild')}
-      />
+      {/* 친구/길드가 소환한 레이드 — 공개·활성. 행 클릭 = 상세 관전(참가/요청은 상세에서). */}
+      <RaidListSection title="친구가 소환한 레이드" raids={friendRaids} scope="friend" />
+      <RaidListSection title="길드가 소환한 레이드" raids={guildRaids} scope="guild" />
 
       {picking ? (
         <div

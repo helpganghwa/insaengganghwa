@@ -27,6 +27,7 @@ import {
   gemAttackRaidAction,
   claimRaidRewardAction,
   decideJoinRequestAction,
+  joinRaidAction,
 } from './actions';
 
 export type RaidView = {
@@ -40,6 +41,8 @@ export type RaidView = {
   totalDamage: number;
   phasesCleared: number;
   isParticipant: boolean;
+  /** 비참가 관전 모드(2026-07-27 문의 #30) — 참가/요청 버튼 정보. 참가자는 null. */
+  join: { scope: 'friend' | 'guild' | 'link'; mode: 'free' | 'approval'; requested: boolean } | null;
   myAttacksUsed: number;
   myExtraAttacks: number;
   /** 정산 후에만 set. claimed=true면 수령 완료. */
@@ -190,6 +193,28 @@ export function RaidSessionCard({ view: v, serverId }: { view: RaidView; serverI
     })();
   };
   const visibleReqs = v.pendingRequests.filter((r) => !handledReqs.has(r.userId));
+  // 관전 모드 참가/요청(2026-07-27 문의 #30) — 참가 성립 시점에만 일일 횟수 차감(서버).
+  const [joining, setJoining] = useState(false);
+  const [requestedLocal, setRequestedLocal] = useState(v.join?.requested ?? false);
+  const handleJoin = () => {
+    if (joining || !v.join) return;
+    setJoining(true);
+    void (async () => {
+      const r = await joinRaidAction(v.shareCode, v.join!.scope).catch(() => null);
+      setJoining(false);
+      if (!r) return showError('연결이 불안정해요. 잠시 후 다시 시도해 주세요.');
+      if (r.status === 'error') return showError(r.message);
+      if (r.state === 'joined') {
+        haptic.success();
+        showHeaderToast({ title: '레이드에 참가했어요' });
+        router.refresh(); // isParticipant 재렌더 → 공격 버튼 전환
+      } else {
+        setRequestedLocal(true);
+        showHeaderToast({ title: '참가 요청을 보냈어요', detail: '개설자가 수락하면 참여됩니다' });
+      }
+    })();
+  };
+
   // 보석 공격 — 1탭 시 3초 컨펌(카운트+로어), 그 안에 2탭하면 실행.
   const [gemConfirm, setGemConfirm] = useState(false);
   const [gemLeft, setGemLeft] = useState(0);
@@ -579,7 +604,31 @@ export function RaidSessionCard({ view: v, serverId }: { view: RaidView; serverI
           )
         ) : (
           <div className="space-y-2">
-            {canAttack ? (
+            {!v.isParticipant ? (
+              // ── 관전 모드 — 공격 버튼 자리에 참가/요청(만료 임박·기요청은 비활성) ──
+              requestedLocal ? (
+                <div className="rounded-full bg-zinc-800 px-4 py-3 text-center text-sm font-bold text-zinc-300">
+                  ✅ 참가 요청됨 · 개설자 수락 대기
+                </div>
+              ) : over ? (
+                <div className="rounded-full bg-zinc-800 px-4 py-3 text-center text-sm text-zinc-400">
+                  ⏳ 정산 대기
+                </div>
+              ) : (
+                <button
+                  type="button"
+                  onClick={handleJoin}
+                  disabled={joining}
+                  className="w-full rounded-full bg-gradient-to-r from-emerald-600 to-teal-500 px-4 py-3.5 text-sm font-extrabold text-white shadow-lg shadow-emerald-900/40 transition active:scale-95 hover:brightness-110 disabled:opacity-60"
+                >
+                  {joining
+                    ? '처리 중…'
+                    : v.join?.mode === 'free'
+                      ? '⚔️ 레이드 참가하기'
+                      : '🙋 참가 요청 보내기'}
+                </button>
+              )
+            ) : canAttack ? (
               <div className="relative">
                 <button
                   type="button"
