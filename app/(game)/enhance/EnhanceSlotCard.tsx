@@ -235,16 +235,13 @@ export function EnhanceSlotCard({
   const [autoTarget, setAutoTarget] = useState('');
   const [autoUseCount, setAutoUseCount] = useState(false);
   const [autoCount, setAutoCount] = useState('50');
-  const [autoDownStop, setAutoDownStop] = useState(true);
+  const [autoDownStop, setAutoDownStop] = useState(false);
   // 진행 중엔 실제 강화 FX(playResult)를 재생하고, 그 위에 자동 강화 오버레이(누적 통계)를 덮는다.
   // startMs를 통계에 담아 렌더에서 소요시간을 계산(ref를 렌더에서 읽지 않도록).
   type AutoStats = { attempts: number; gems: number; ok: number; hold: number; down: number; startLv: number; curLv: number; startMs: number };
   const [autoRunning, setAutoRunning] = useState(false);
   const [autoStats, setAutoStats] = useState<AutoStats | null>(null); // 진행중 오버레이(실시간 누적)
-  const [autoResult, setAutoResult] = useState<(AutoStats & { elapsedMs: number; reason: string }) | null>(null); // 완료 오버레이
-  // 완료 오버레이 영속 — 페이지 이동/앱 종료 후 복귀 시 중지·완료 시점 오버레이를 다시 노출(확인 전까지).
-  // localStorage(앱 종료도 견딤) · 슬롯별 키 · 24h 만료(방치 결과가 카드를 영구 가리는 것 방지).
-  const autoResultKey = `iss:autoResult:${propJob.slot}`;
+  const [autoResult, setAutoResult] = useState<(AutoStats & { elapsedMs: number; reason: string }) | null>(null); // 완료 오버레이(인메모리)
   const [cancelOpen, setCancelOpen] = useState(false); // 취소(강화 해제) 확인 모달
 
   useEffect(() => {
@@ -548,10 +545,7 @@ export function EnhanceSlotCard({
     setAutoStats(null);
     setAttempting(false);
     const elapsedMs = Math.max(0, Date.now() - stats.startMs);
-    const result = { ...stats, elapsedMs, reason };
-    setAutoResult(result);
-    // 영속 — 이탈/앱 종료 후 복귀 시 이 오버레이를 복원(finishAuto는 언마운트 후에도 실행되므로 여기 기록).
-    try { localStorage.setItem(autoResultKey, JSON.stringify({ result, savedAt: Date.now() })); } catch { /* 사파리 프라이빗 등 */ }
+    setAutoResult({ ...stats, elapsedMs, reason });
     if (isError) showError(reason);
     router.refresh(); // 세션 종료 시 1회 — 권위 다이아·레벨·전투력 재동기화(스텝마다 X)
   };
@@ -620,7 +614,6 @@ export function EnhanceSlotCard({
     };
     setAutoOpen(false);
     setAutoResult(null);
-    try { localStorage.removeItem(autoResultKey); } catch { /* noop */ }
     setAutoRunning(true);
     void runAutoLoop();
   };
@@ -639,17 +632,6 @@ export function EnhanceSlotCard({
     const stop = () => { autoRunRef.current = false; };
     window.addEventListener('pagehide', stop);
     return () => { window.removeEventListener('pagehide', stop); autoRunRef.current = false; };
-  }, []);
-  // 마운트 시 저장된 완료 오버레이 복원(이탈/앱 종료 후 복귀) — 24h 이내만, 아니면 폐기.
-  useEffect(() => {
-    try {
-      const raw = localStorage.getItem(autoResultKey);
-      if (!raw) return;
-      const saved = JSON.parse(raw) as { result: AutoStats & { elapsedMs: number; reason: string }; savedAt: number };
-      if (saved?.result && Date.now() - saved.savedAt < 24 * 3600 * 1000) setAutoResult(saved.result);
-      else localStorage.removeItem(autoResultKey);
-    } catch { /* 파싱 실패 무시 */ }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
   // 자동 강화 중 화면 꺼짐(절전) 방지 — Screen Wake Lock. 지원 브라우저(iOS16.4+·Android Chrome)에서만
   // 동작(미지원은 무시). 탭이 백그라운드로 가면 OS가 락을 강제 해제하므로 visibilitychange로 재획득.
@@ -891,7 +873,7 @@ export function EnhanceSlotCard({
         {autoStats ? (
           <div className="absolute inset-0 z-40 flex flex-col items-center justify-center gap-1 bg-black/35 px-2.5 text-center">
             <span className="rounded bg-black/70 px-1.5 py-0.5 text-[12px] font-semibold text-amber-200 tabular-nums">
-              자동 강화 중 +{autoStats.curLv}
+              자동 강화 중 · <span className="font-mono text-zinc-300">{fmtDuration(Math.max(0, nowMs - autoStats.startMs))}</span>
             </span>
             <span className="rounded bg-black/70 px-1.5 py-0.5 text-[10px] text-zinc-200 tabular-nums">
               💎{autoStats.gems.toLocaleString()} · 시도 {autoStats.attempts} ·{' '}
@@ -900,8 +882,8 @@ export function EnhanceSlotCard({
               <span className="text-amber-300">실패 {autoStats.down}</span>
             </span>
             <div className="flex items-center gap-2">
-              <span className="min-w-[56px] rounded bg-black/70 px-1.5 py-0.5 text-center font-mono text-[10px] text-zinc-300 tabular-nums">
-                {fmtDuration(Math.max(0, nowMs - autoStats.startMs))}
+              <span className="rounded bg-black/70 px-1.5 py-0.5 font-mono text-[11px] font-semibold text-zinc-100 tabular-nums">
+                +{autoStats.startLv}<span className="text-zinc-500">→</span>+{autoStats.curLv}
               </span>
               <button
                 type="button"
@@ -919,7 +901,7 @@ export function EnhanceSlotCard({
         {autoResult ? (
           <div className="absolute inset-0 z-40 flex flex-col items-center justify-center gap-1 bg-black/45 px-2.5 text-center">
             <span className="rounded bg-black/70 px-1.5 py-0.5 text-[12px] font-semibold text-amber-200 tabular-nums">
-              자동 강화 완료 +{autoResult.curLv}
+              자동 강화 완료 · <span className="font-mono text-zinc-300">{fmtDuration(autoResult.elapsedMs)}</span>
             </span>
             <span className="rounded bg-black/70 px-1.5 py-0.5 text-[10px] text-zinc-200 tabular-nums">
               💎{autoResult.gems.toLocaleString()} · 시도 {autoResult.attempts} ·{' '}
@@ -928,16 +910,12 @@ export function EnhanceSlotCard({
               <span className="text-amber-300">실패 {autoResult.down}</span>
             </span>
             <div className="flex items-center gap-2">
-              <span className="min-w-[56px] rounded bg-black/70 px-1.5 py-0.5 text-center font-mono text-[10px] text-zinc-300 tabular-nums">
-                {fmtDuration(autoResult.elapsedMs)}
+              <span className="rounded bg-black/70 px-1.5 py-0.5 font-mono text-[11px] font-semibold text-zinc-100 tabular-nums">
+                +{autoResult.startLv}<span className="text-zinc-500">→</span>+{autoResult.curLv}
               </span>
               <button
                 type="button"
-                onClick={(e) => {
-                  e.stopPropagation();
-                  setAutoResult(null);
-                  try { localStorage.removeItem(autoResultKey); } catch { /* noop */ }
-                }}
+                onClick={(e) => { e.stopPropagation(); setAutoResult(null); }}
                 className="flex h-6 w-14 items-center justify-center rounded-md bg-amber-500 text-[10px] font-bold text-black active:scale-95"
               >
                 확인
