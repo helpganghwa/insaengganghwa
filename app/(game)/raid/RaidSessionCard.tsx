@@ -63,6 +63,10 @@ export type RaidView = {
 
 const MEDAL = ['🥇', '🥈', '🥉'];
 
+// 액션 슬롯 공용 크기(2026-07-27 피드백 3) — 참가/요청/공격/보석/대기 모두 h-12 고정으로
+// 상태 전환 시 레이아웃 시프트 제거. 색·타이포는 각 상태가 덧붙임.
+const ACTION_SLOT = 'flex h-12 w-full items-center justify-center rounded-full px-4 transition';
+
 // 공격 연출 로어 — 보스 5종별 커스텀. 매 공격 랜덤, 버튼 위 오버레이로 연속 클릭 차단.
 const ATTACK_LORE: Record<RaidBoss, readonly string[]> = {
   slime_king: [
@@ -160,7 +164,12 @@ export function RaidSessionCard({ view: v, serverId }: { view: RaidView; serverI
   }, [v.myExtraAttacks]);
   const allowed = RAID_BASE_ATTACKS + localExtra;
   const left = allowed - localUsed;
-  const canAttack = v.isParticipant && !settled && !over && left > 0;
+  // 관전 모드 참가/요청(문의 #30) — 낙관적 UI(피드백 4): 클릭 즉시 공격 버튼/수락 대기로
+  // 전환하고 서버 확정은 백그라운드. 실패 시 롤백 + 에러 토스트만.
+  const [optJoined, setOptJoined] = useState(false);
+  const [requestedLocal, setRequestedLocal] = useState(v.join?.requested ?? false);
+  const joined = v.isParticipant || optJoined;
+  const canAttack = joined && !settled && !over && left > 0;
 
   // 누적 보상(공시) — 현재까지 돌파한 페이즈의 결정론 드롭 합산.
   const drops = aggregatePhaseDrops(BigInt(v.raidId), v.phasesCleared);
@@ -193,24 +202,33 @@ export function RaidSessionCard({ view: v, serverId }: { view: RaidView; serverI
     })();
   };
   const visibleReqs = v.pendingRequests.filter((r) => !handledReqs.has(r.userId));
-  // 관전 모드 참가/요청(2026-07-27 문의 #30) — 참가 성립 시점에만 일일 횟수 차감(서버).
-  const [joining, setJoining] = useState(false);
-  const [requestedLocal, setRequestedLocal] = useState(v.join?.requested ?? false);
+  // 참가/요청 실행 — 낙관 전환 후 서버 확정. 중복 클릭은 ref 가드(로딩 UI 없음, 피드백 4).
+  const joiningRef = useRef(false);
   const handleJoin = () => {
-    if (joining || !v.join) return;
-    setJoining(true);
+    if (joiningRef.current || !v.join) return;
+    joiningRef.current = true;
+    haptic.success();
+    const expectFree = v.join.mode === 'free';
+    if (expectFree) setOptJoined(true);
+    else setRequestedLocal(true);
     void (async () => {
       const r = await joinRaidAction(v.shareCode, v.join!.scope).catch(() => null);
-      setJoining(false);
-      if (!r) return showError('연결이 불안정해요. 잠시 후 다시 시도해 주세요.');
-      if (r.status === 'error') return showError(r.message);
+      joiningRef.current = false;
+      if (!r || r.status === 'error') {
+        // 롤백 — 관전 상태로 복귀.
+        setOptJoined(false);
+        setRequestedLocal(v.join?.requested ?? false);
+        showError(!r ? '연결이 불안정해요. 잠시 후 다시 시도해 주세요.' : r.message);
+        return;
+      }
       if (r.state === 'joined') {
-        haptic.success();
-        showHeaderToast({ title: '레이드에 참가했어요' });
-        router.refresh(); // isParticipant 재렌더 → 공격 버튼 전환
+        setRequestedLocal(false);
+        setOptJoined(true);
+        router.refresh(); // 서버 권위 동기화(참가자 목록 등) — UI는 이미 전환됨
       } else {
+        // 예상(free)과 달리 수락형 — 요청 대기로 정정.
+        setOptJoined(false);
         setRequestedLocal(true);
-        showHeaderToast({ title: '참가 요청을 보냈어요', detail: '개설자가 수락하면 참여됩니다' });
       }
     })();
   };
@@ -604,28 +622,21 @@ export function RaidSessionCard({ view: v, serverId }: { view: RaidView; serverI
           )
         ) : (
           <div className="space-y-2">
-            {!v.isParticipant ? (
-              // ── 관전 모드 — 공격 버튼 자리에 참가/요청(만료 임박·기요청은 비활성) ──
+            {!joined ? (
+              // ── 관전 모드 — 공격 버튼 자리에 참가/요청(동일 h-12, 시프트 없음) ──
               requestedLocal ? (
-                <div className="rounded-full bg-zinc-800 px-4 py-3 text-center text-sm font-bold text-zinc-300">
-                  ✅ 참가 요청됨 · 개설자 수락 대기
+                <div className={`${ACTION_SLOT} bg-zinc-800 text-sm font-bold text-zinc-300`}>
+                  참가 요청됨 · 개설자 수락 대기
                 </div>
               ) : over ? (
-                <div className="rounded-full bg-zinc-800 px-4 py-3 text-center text-sm text-zinc-400">
-                  ⏳ 정산 대기
-                </div>
+                <div className={`${ACTION_SLOT} bg-zinc-800 text-sm text-zinc-400`}>⏳ 정산 대기</div>
               ) : (
                 <button
                   type="button"
                   onClick={handleJoin}
-                  disabled={joining}
-                  className="w-full rounded-full bg-gradient-to-r from-emerald-600 to-teal-500 px-4 py-3.5 text-sm font-extrabold text-white shadow-lg shadow-emerald-900/40 transition active:scale-95 hover:brightness-110 disabled:opacity-60"
+                  className={`${ACTION_SLOT} bg-gradient-to-r from-emerald-600 to-teal-500 text-sm font-extrabold text-white shadow-lg shadow-emerald-900/40 active:scale-95 hover:brightness-110`}
                 >
-                  {joining
-                    ? '처리 중…'
-                    : v.join?.mode === 'free'
-                      ? '⚔️ 레이드 참가하기'
-                      : '🙋 참가 요청 보내기'}
+                  {v.join?.mode === 'free' ? '⚔️ 레이드 참가하기' : '참가 요청 보내기'}
                 </button>
               )
             ) : canAttack ? (
@@ -634,7 +645,7 @@ export function RaidSessionCard({ view: v, serverId }: { view: RaidView; serverI
                   type="button"
                   onClick={handleAttack}
                   disabled={attacking}
-                  className="w-full rounded-full bg-gradient-to-r from-red-600 to-orange-500 px-4 py-3.5 text-sm font-extrabold text-white shadow-lg shadow-red-900/40 transition active:scale-95 hover:brightness-110 disabled:opacity-60"
+                  className={`${ACTION_SLOT} bg-gradient-to-r from-red-600 to-orange-500 text-sm font-extrabold text-white shadow-lg shadow-red-900/40 active:scale-95 hover:brightness-110 disabled:opacity-60`}
                 >
                   ⚔️ {boss.name} 공격!  {left}/{allowed}
                 </button>
@@ -653,7 +664,7 @@ export function RaidSessionCard({ view: v, serverId }: { view: RaidView; serverI
                   type="button"
                   onClick={handleGemAttack}
                   disabled={attacking}
-                  className={`w-full rounded-full border-2 px-4 py-3 text-xs font-bold leading-snug transition active:scale-95 disabled:opacity-60 ${
+                  className={`${ACTION_SLOT} border-2 text-xs font-bold leading-snug active:scale-95 disabled:opacity-60 ${
                     gemConfirm
                       ? 'animate-pulse-soft border-red-400 bg-red-500/20 text-red-100'
                       : 'border-amber-400 bg-amber-400/10 text-amber-300'
@@ -672,7 +683,7 @@ export function RaidSessionCard({ view: v, serverId }: { view: RaidView; serverI
                 ) : null}
               </div>
             ) : (
-              <div className="rounded-full bg-zinc-800 px-4 py-3 text-center text-sm text-zinc-400">
+              <div className={`${ACTION_SLOT} bg-zinc-800 text-sm text-zinc-400`}>
                 {over ? '⏳ 정산 대기' : '공격 불가'}
               </div>
             )}

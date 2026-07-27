@@ -5,7 +5,7 @@ import { getActiveServerId } from '@/lib/game/servers';
 import { db } from '@/lib/db/client';
 import { characters } from '@/lib/db/schema/server';
 import { withTimeout } from '@/lib/db/with-timeout';
-import { raids, raidParticipants, raidRewards, raidDailyCounts } from '@/lib/db/schema/raid';
+import { raids, raidParticipants, raidRewards, raidDailyCounts, raidJoinRequests } from '@/lib/db/schema/raid';
 import {
   RAID_BASE_ATTACKS,
   RAID_DAILY_CAP,
@@ -148,6 +148,20 @@ export default async function RaidPage() {
   // 합계가 슬롯 한도 초과 시(정산 안 한 채 새 레이드 개설 등) 모두 노출.
   const slotCount = Math.max(RAID_MAX_CONCURRENT_PER_USER, cells.length);
 
+  // 내가 보낸 참가 요청(pending) — 목록에 '요청중' 배지 표시용(2026-07-27 피드백 5).
+  const myPendingReqIds = new Set(
+    (
+      await withTimeout(
+        db
+          .select({ raidId: raidJoinRequests.raidId })
+          .from(raidJoinRequests)
+          .where(and(eq(raidJoinRequests.userId, userId), eq(raidJoinRequests.status, 'pending'))),
+        3000,
+        'raid.myReqs',
+      ).catch(() => [])
+    ).map((r) => r.raidId.toString()),
+  );
+
   // 친구가 소환한 레이드 — 친구 공개·활성·미만료, 내가 이미 참여 중인 건 제외.
   const friendIds = await withTimeout(getFriendIds(userId, serverId), 3500, 'raid.friendIds').catch(
     () => [] as string[],
@@ -194,6 +208,7 @@ export default async function RaidPage() {
         phasesCleared: r.phasesCleared,
         hostNickname: r.hostNickname,
         participantCount: r.participantCount,
+        requested: myPendingReqIds.has(r.id.toString()),
       }));
   }
 
@@ -234,6 +249,7 @@ export default async function RaidPage() {
       phasesCleared: r.phases_cleared,
       hostNickname: r.host_nickname,
       participantCount: r.participant_count,
+      requested: myPendingReqIds.has(r.id),
     }));
 
   return (

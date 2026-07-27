@@ -49,6 +49,8 @@ export type FriendRaid = {
   phasesCleared: number;
   hostNickname: string;
   participantCount: number;
+  /** 내가 보낸 참가 요청이 수락 대기 중 — 목록 '요청중' 배지(2026-07-27 피드백 5). */
+  requested: boolean;
 };
 
 type ShareMode = 'off' | 'free' | 'approval';
@@ -176,7 +178,13 @@ function RaidListSection({
                 </span>
               </span>
             </span>
-            <span className="relative shrink-0 text-lg text-zinc-400">›</span>
+            {f.requested ? (
+              <span className="relative shrink-0 rounded-full border border-amber-500/60 bg-amber-950/50 px-2 py-0.5 text-[10px] font-bold text-amber-300">
+                요청중
+              </span>
+            ) : (
+              <span className="relative shrink-0 text-lg text-zinc-400">›</span>
+            )}
           </Link>
         ))}
       </div>
