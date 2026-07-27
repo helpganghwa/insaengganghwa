@@ -137,18 +137,16 @@ export function guildLogMessage(e: GuildLogEntry): ReactNode {
 
 /**
  * 길드 활동 로그 피드 — 핵심 토큰만 색상 + 전체 타임스탬프, 최신순. 월드 로그와 동일 패턴:
- * full=true(상세 /guild/log)면 말줄임 없이 전체 줄바꿈·전건, 기본(미리보기)이면 한 줄 truncate + 스크롤.
+ * full=true(상세 /guild/log)면 말줄임 없이 전체 줄바꿈·전건, 기본(미리보기)은 한 줄 truncate.
+ * ⚠ 미리보기 내부 스크롤 금지(2026-07-27 제보) — 종전 max-h+overflow+overscroll-contain이
+ * 터치를 소비해 로그 영역에서 페이지 스크롤이 안 됐다. 미리보기는 10건 고정이라 그냥 펼친다.
  */
 export function GuildLogFeed({ entries, full = false }: { entries: GuildLogEntry[]; full?: boolean }) {
   if (entries.length === 0) {
     return <p className="px-1 py-3 text-center text-[11px] text-zinc-400">아직 활동 기록이 없습니다.</p>;
   }
   return (
-    <ul
-      className={`divide-y divide-zinc-100 dark:divide-zinc-900 ${
-        full ? '' : 'max-h-80 overflow-y-auto overscroll-contain'
-      }`}
-    >
+    <ul className="divide-y divide-zinc-100 dark:divide-zinc-900">
       {entries.map((e) => (
         <li
           key={e.id}
