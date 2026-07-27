@@ -255,7 +255,9 @@ export async function getLifetimeStats(userId: string, serverId: number): Promis
              count(*) filter (where result in ('success','mega'))::int success,
              count(*) filter (where result='hold')::int hold,
              count(*) filter (where result='down')::int down,
-             coalesce(sum(elapsed_ms),0)::bigint total_elapsed_ms
+             -- 단련 시간 = 자연 대기(elapsed) + 다이아 단축(reduced) — 화면 정의("확률을 채우며
+             -- 보낸 시간")와 일치. 자동강화(전량 단축)에서 단련 시간이 안 늘던 문제 수정(2026-07-27).
+             coalesce(sum(elapsed_ms + reduced_ms),0)::bigint total_elapsed_ms
       from enhancement_logs where user_id=${userId}::uuid and server_id=${serverId}
     ),
     melee as (
@@ -418,9 +420,10 @@ export async function getAllTabExtras(userId: string, serverId: number): Promise
              count(*) filter (where result in ('success','mega'))::int success,
              count(*) filter (where result = 'hold')::int hold,
              count(*) filter (where result = 'down')::int down,
-             coalesce(sum(elapsed_ms) filter (where result in ('success','mega')), 0)::bigint success_ms,
-             coalesce(sum(elapsed_ms) filter (where result = 'hold'), 0)::bigint hold_ms,
-             coalesce(sum(elapsed_ms) filter (where result = 'down'), 0)::bigint down_ms
+             -- 단련 시간 = elapsed + reduced(다이아 단축 포함) — 통산(getLifetimeStats)과 동일 정의.
+             coalesce(sum(elapsed_ms + reduced_ms) filter (where result in ('success','mega')), 0)::bigint success_ms,
+             coalesce(sum(elapsed_ms + reduced_ms) filter (where result = 'hold'), 0)::bigint hold_ms,
+             coalesce(sum(elapsed_ms + reduced_ms) filter (where result = 'down'), 0)::bigint down_ms
       from enhancement_logs
       where user_id = ${userId}::uuid and server_id = ${serverId}
         and created_at >= (((now() at time zone 'Asia/Seoul')::date - 30)::timestamp at time zone 'Asia/Seoul')
