@@ -31,9 +31,9 @@ export const GAME_RATING = {
 export type LegalSlug = 'terms' | 'privacy' | 'refund' | 'youth';
 
 export const LEGAL_META: Record<LegalSlug, { title: string; effectiveDate: string }> = {
-  terms: { title: '이용약관', effectiveDate: '2026년 6월 23일' },
+  terms: { title: '이용약관', effectiveDate: '2026년 8월 10일' },
   privacy: { title: '개인정보처리방침', effectiveDate: '2026년 6월 25일' },
-  refund: { title: '환불·청약철회 안내', effectiveDate: '2026년 6월 23일' },
+  refund: { title: '환불·청약철회 안내', effectiveDate: '2026년 8월 10일' },
   youth: { title: '청소년보호정책', effectiveDate: '2026년 6월 23일' },
 };
 
@@ -67,6 +67,8 @@ const TERMS = `
 2. 결제·환불·청약철회는 「전자상거래법」과 별도의 「환불·청약철회 안내」를 따릅니다.
 3. 결제 즉시 지급되거나 사용·소모된 재화는 청약철회가 제한될 수 있습니다.
 4. 미성년자가 법정대리인 동의 없이 결제한 경우 관련 법령에 따라 취소할 수 있습니다.
+5. 결제를 통해 획득한 유료 재화(다이아)의 유효기간은 획득일로부터 12개월입니다.
+6. 환불은 결제 시 사용한 것과 동일한 결제수단으로만 처리됩니다.
 
 ## 제7조 (확률 정보)
 강화·보급의 확률은 서비스 내 "확률 공시"에 표시하며, 확률을 바꿀 때는 최소 24시간 전에 공지합니다.
@@ -171,6 +173,7 @@ const REFUND = `
 
 ## 2. 환불 절차
 - 신청: help@ganghwa.app
+- 환불은 결제 시 사용하신 것과 동일한 결제수단으로만 처리되며, 현금 등 다른 수단으로는 환불되지 않습니다.
 - 환불은 결제수단·결제대행사(포트원) 정책에 따라 영업일 기준 3~7일 안에 처리됩니다.
 - 결제 오류·중복결제는 확인 후 전액 환불합니다.
 
@@ -179,6 +182,9 @@ const REFUND = `
 
 ## 4. 결제 한도
 미성년 회원에게는 관련 법령상 월 결제 한도가 적용될 수 있습니다.
+
+## 5. 유료 재화의 유효기간
+결제를 통해 획득한 유료 재화(다이아)의 유효기간은 획득일로부터 12개월입니다.
 `;
 
 const YOUTH = `
