@@ -38,13 +38,10 @@ export const profiles = pgTable('profiles', {
   /** PWA Push 카테고리 토글(GDD §3.10 v1) — 기본 ON. 토글 OFF 시 해당 카테고리 발송 skip. */
   pushEnhance: boolean('push_enhance').notNull().default(true),
   pushRaid: boolean('push_raid').notNull().default(true),
-  pushSupply: boolean('push_supply').notNull().default(true),
   /** 프로필 생성 검토 완료(완료/반려/실패) 알림 토글 (PROFILE §5.4). 기본 ON. */
   pushProfile: boolean('push_profile').notNull().default(true),
   /** 친구 초대(카카오 공유 가입 귀속) 알림 토글 — 기본 ON(2026-05-31). */
   pushReferral: boolean('push_referral').notNull().default(true),
-  /** 대난투 결과 발표 알림 토글 — 기본 ON(MELEE §7). 일일 복귀 푸시 겸함. */
-  pushMelee: boolean('push_melee').notNull().default(true),
   /** 채팅 멘션(@닉네임) 푸시(0127) — 설정 > 알림에서 끄기 가능. */
   pushChatMention: boolean('push_chat_mention').notNull().default(true),
   /** 강화 모드 — instant(즉시) | batched(30분 묶음). 기본 instant. */

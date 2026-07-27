@@ -2,7 +2,7 @@
  * SCHEMA §9. 결제 / IAP / 본인인증 (REGULATORY)
  *
  * 포트원 webhook 멱등 = portone_order_id UNIQUE(CLAUDE §3.4). 미성년 월 7만원 한도,
- * 분기 5만원 환불 보호, 환불 시 재화 자동 회수. 본인인증 결과 요약은 profiles(§1).
+ * 환불 시 재화 자동 회수. 본인인증 결과 요약은 profiles(§1).
  */
 import {
   smallint,

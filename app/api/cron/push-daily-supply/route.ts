@@ -51,13 +51,13 @@ export async function GET(req: Request) {
   }
   const kstDay = state.kst_day;
 
-  // 구독이 1건 이상 있는 유저 중 push_supply ON — 커서 이후만, id 순 결정적 페이지네이션.
+  // 구독이 1건 이상 있는 유저 전원 — 일일 보급 푸시는 상시발송(토글 없음). 커서 이후만, id 순 결정적 페이지네이션.
   const cursor = state.cursor_user_id ?? '00000000-0000-0000-0000-000000000000';
   const rows = (await db.execute(sql`
     select distinct p.id::text user_id
     from profiles p
     inner join push_subscriptions s on s.user_id = p.id
-    where p.push_supply = true and p.id > ${cursor}::uuid
+    where p.id > ${cursor}::uuid
     order by user_id
   `)) as unknown as Row[];
 

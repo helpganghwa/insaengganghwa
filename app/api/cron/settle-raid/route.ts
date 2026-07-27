@@ -63,7 +63,11 @@ export async function GET(req: Request) {
     if (Date.now() - startedAt > TIME_BUDGET_MS) break;
   }
 
-  await beatCron('settle-raid', `settled=${settled} failed=${failed}`);
+  // 전량 실패(정산 0·실패>0)면 beat 생략 → dead-man(warm)이 만성 정산실패를 감지하게 한다.
+  // 정상·부분성공·처리대상 없음(failed=0)은 beat(개별 실패는 로그로 격리, conquest류 if(ok) 정합).
+  if (!(settled === 0 && failed > 0)) {
+    await beatCron('settle-raid', `settled=${settled} failed=${failed}`);
+  }
   return Response.json({
     ok: true,
     settled,
