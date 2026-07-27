@@ -6,7 +6,7 @@ import { profileHref } from '@/lib/game/profile/href';
 
 import { useResourceToast } from '@/components/ResourceToast';
 import { GuildBadge } from '@/components/GuildBadge';
-import { LastSeen, OnlineDot } from '@/components/LastSeen';
+import { LastSeen } from '@/components/LastSeen';
 import { faceCropStyle, type FaceBox } from '@/components/faceCrop';
 import { ZoomSafeInput } from '@/components/ui/ZoomSafeField';
 
@@ -41,28 +41,22 @@ const ERR: Record<string, string> = {
 };
 
 // 헤더와 동일 — 영역(테두리/배경) 없이 스프라이트를 확대해 상반신만 노출.
-function Avatar({ src, box, seenAt }: { src: string | null; box?: FaceBox | null; seenAt?: string | null }) {
+function Avatar({ src, box }: { src: string | null; box?: FaceBox | null }) {
   return (
-    <div className="relative h-11 w-11 shrink-0">
-      <div className="absolute inset-0 overflow-hidden">
-        {src ? (
-          // eslint-disable-next-line @next/next/no-img-element
-          <img
-            src={src}
-            alt=""
-            aria-hidden
-            draggable={false}
-            className="absolute inset-0 h-full w-full"
-            style={faceCropStyle(box ?? null)}
-          />
-        ) : (
-          <span className="absolute inset-0 flex items-center justify-center text-xl">👤</span>
-        )}
-      </div>
-      {/* 접속 점 — 길드원 카드와 동일 UI(2026-07-27). seenAt 미전달(목록 탭 외)이면 미표시. */}
-      {seenAt !== undefined ? (
-        <OnlineDot at={seenAt} className="absolute bottom-0 right-0 ring-1 ring-white dark:ring-zinc-950" />
-      ) : null}
+    <div className="relative h-11 w-11 shrink-0 overflow-hidden">
+      {src ? (
+        // eslint-disable-next-line @next/next/no-img-element
+        <img
+          src={src}
+          alt=""
+          aria-hidden
+          draggable={false}
+          className="absolute inset-0 h-full w-full"
+          style={faceCropStyle(box ?? null)}
+        />
+      ) : (
+        <span className="absolute inset-0 flex items-center justify-center text-xl">👤</span>
+      )}
     </div>
   );
 }
@@ -88,7 +82,7 @@ function Row({
         onClick={onOpen}
         className="flex cursor-pointer items-center gap-3 rounded-xl border border-zinc-200 bg-white px-3 py-2.5 transition active:bg-zinc-50 dark:border-zinc-800 dark:bg-zinc-950 dark:active:bg-zinc-900"
       >
-        <Avatar src={u.profileSouth} box={u.faceBox} seenAt={showSeen ? (u.lastSeenAt ?? null) : undefined} />
+        <Avatar src={u.profileSouth} box={u.faceBox} />
         <div className="min-w-0 flex-1">
           <div className="flex min-w-0 items-baseline gap-1.5">
             <span className="truncate text-sm font-bold">{u.nickname}</span>

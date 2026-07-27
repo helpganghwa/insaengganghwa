@@ -39,28 +39,6 @@ function useSeenInfo(at: string | null, forceOnline: boolean) {
   return info;
 }
 
-/** 아바타 모서리용 접속 점 — 위치는 호출부 className(absolute 등)으로 지정. 기록 없으면 미표시. */
-export function OnlineDot({
-  at,
-  forceOnline = false,
-  className = '',
-}: {
-  at: string | null;
-  forceOnline?: boolean;
-  className?: string;
-}) {
-  const info = useSeenInfo(at, forceOnline);
-  if (!info) return null;
-  return (
-    <span
-      aria-hidden
-      className={`inline-block h-1 w-1 rounded-full ${
-        info.online ? 'bg-emerald-500' : 'bg-zinc-400 dark:bg-zinc-600'
-      } ${className}`}
-    />
-  );
-}
-
 export function LastSeen({
   at,
   forceOnline = false,

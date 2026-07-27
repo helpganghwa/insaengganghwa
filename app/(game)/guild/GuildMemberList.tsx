@@ -4,7 +4,7 @@ import { memo, useMemo, useState } from 'react';
 import { profileHref } from '@/lib/game/profile/href';
 import Link from 'next/link';
 
-import { LastSeen, OnlineDot } from '@/components/LastSeen';
+import { LastSeen } from '@/components/LastSeen';
 import { TranscendSprite } from '@/components/TranscendSprite';
 import { rarityBorderStyle, hasRarityBorder } from '@/components/RarityFrame';
 
@@ -92,26 +92,18 @@ const MemberRow = memo(function MemberRow({ m, myUserId, serverId }: { m: RichMe
         href={profileHref(m.publicCode, serverId)}
         className="flex items-center gap-2 py-1.5 active:opacity-70"
       >
-        {/* 아바타 — 우하단 접속 점(A안). 점이 모서리 밖으로 살짝 나가므로 래퍼는 overflow 허용,
-            이미지만 라운드 클립. ring은 카드 배경색으로 점 테두리 분리. */}
-        <span className="relative h-10 w-10 shrink-0">
-          <span className="block h-full w-full overflow-hidden rounded-lg">
-            {m.avatar ? (
-              // eslint-disable-next-line @next/next/no-img-element
-              <img
-                src={m.avatar}
-                alt=""
-                aria-hidden
-                className="h-full w-full object-contain"
-                style={{ imageRendering: 'pixelated' }}
-              />
-            ) : null}
-          </span>
-          <OnlineDot
-            at={m.lastSeenAt}
-            forceOnline={isMe}
-            className="absolute bottom-0 right-0 ring-1 ring-white dark:ring-zinc-950"
-          />
+        {/* 아바타 — 접속 상태는 닉네임 옆 텍스트로만(점 표시는 제거, 2026-07-27 사용자 결정). */}
+        <span className="h-10 w-10 shrink-0 overflow-hidden rounded-lg">
+          {m.avatar ? (
+            // eslint-disable-next-line @next/next/no-img-element
+            <img
+              src={m.avatar}
+              alt=""
+              aria-hidden
+              className="h-full w-full object-contain"
+              style={{ imageRendering: 'pixelated' }}
+            />
+          ) : null}
         </span>
 
         {/* 가운데: (닉네임 + 최근접속 텍스트) / (기여 · 전투) — A안(2026-07-27). */}
