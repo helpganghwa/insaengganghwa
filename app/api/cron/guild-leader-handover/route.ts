@@ -4,6 +4,7 @@
  * 멱등(leader_handover_warned_at 플래그 + 길드장 행 잠금)·서버 루프. 인증 = CRON_SECRET / x-vercel-cron.
  */
 import { isCronAuthorized } from '@/lib/auth/cron-auth';
+import { beatCron } from '@/lib/cron/heartbeat';
 import { runLeaderHandover } from '@/lib/game/guild/leader-handover';
 import { openServerIds } from '@/lib/game/server-list';
 
@@ -25,6 +26,7 @@ export async function GET(req: Request) {
       }
     }
     const ok = results.every((r) => !('error' in r));
+    if (ok) await beatCron('guild-leader-handover', JSON.stringify(results));
     return Response.json({ ok, results, kind: 'guild-leader-handover' }, { status: ok ? 200 : 500 });
   } catch (e) {
     console.error('[guild-leader-handover]', e);

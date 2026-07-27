@@ -28,6 +28,7 @@ export const CRON_MAX_GAP_MS: Record<string, number> = {
   'push-flush': 20 * MIN, // 5분
   'settle-raid': 20 * MIN, // 5분 — 레이드 정산
   'payment-recon': 40 * MIN, // 10분 — 결제 백스톱(최중요)
+  'guild-leader-handover': 26 * HOUR, // 매일 KST12시 — 잠수 길드장 위임/자동해산(2026-07-28 등재)
   'push-daily-supply': 17 * HOUR, // UTC15~23:30 창(창 밖 최대공백 ~15.5h)
   'melee-run': 25 * HOUR, // UTC0 창 — 대난투 개최
   'melee-reveal': 25 * HOUR, // UTC1 창 — 대난투 발표(보상 우편·푸시). 정지=결과 영구 미공개(감사 R5)
