@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 
 import type { Slot } from '@/lib/db/schema/equipment';
 import { TranscendSprite } from '@/components/TranscendSprite';
@@ -166,6 +166,35 @@ export function GachaResultModal({
     setOpenLoreIdx(null);
   }, [results]);
 
+  // 자동 반복 — 체크 후 '한 번 더/N회 더'를 누르면 상자 소진/중지까지 그 버튼을 대신 눌러준다.
+  // 매 회 실제 개봉이 모달에 그대로 표시(버튼을 대신 누르는 느낌). 서버 개봉(onAgain)의 완료
+  // 전이(pulling true→false)마다 다음 개봉을 예약해 동기화한다.
+  const [autoRepeat, setAutoRepeat] = useState(false);
+  const [autoActive, setAutoActive] = useState(false);
+  const [autoN, setAutoN] = useState(1);
+  const onAgainRef = useRef(onAgain);
+  onAgainRef.current = onAgain; // 최신 onAgain(매 렌더 새 함수)을 ref로 — 효과 deps churn 방지
+  const prevPulling = useRef(pulling);
+  useEffect(() => {
+    const justFinished = prevPulling.current && !pulling;
+    prevPulling.current = pulling;
+    if (!autoActive) return;
+    if (remaining < 1) { setAutoActive(false); return; } // 소진 → 정지
+    if (!justFinished) return;
+    const n = Math.min(autoN, remaining);
+    const t = setTimeout(() => onAgainRef.current(n), 450); // 다음 개봉(간격)
+    return () => clearTimeout(t);
+  }, [pulling, remaining, autoActive, autoN]);
+  const startAgain = (n: number) => {
+    if (autoRepeat) {
+      setAutoN(n);
+      setAutoActive(true);
+      onAgain(Math.min(n, remaining)); // 첫 개봉 kick(이후는 완료 전이마다 효과가 이어감)
+    } else {
+      onAgain(n);
+    }
+  };
+
   return (
     <div
       role="dialog"
@@ -232,32 +261,55 @@ export function GachaResultModal({
           남은 {slotLabel} 상자 {remaining}개
         </p>
 
-        <div className="mt-4 grid grid-cols-2 gap-2">
+        {/* 자동 반복 — 체크 후 '한 번 더/N회 더' 누르면 상자 소진/중지까지 자동으로 눌러줌. */}
+        <label className="mt-3 flex items-center justify-center gap-2 text-[11px] font-medium text-zinc-500">
+          <input
+            type="checkbox"
+            checked={autoRepeat}
+            onChange={(e) => setAutoRepeat(e.target.checked)}
+            disabled={autoActive}
+            className="h-3.5 w-3.5 accent-amber-500"
+          />
+          자동 반복
+        </label>
+
+        {autoActive ? (
           <button
             type="button"
-            disabled={pulling || remaining < 1}
-            onClick={() => onAgain(1)}
-            className="rounded-full bg-zinc-100 px-3 py-2.5 text-xs font-medium disabled:opacity-40 dark:bg-zinc-900"
+            onClick={() => setAutoActive(false)}
+            className="mt-2 w-full rounded-full bg-red-500 px-3 py-2.5 text-xs font-bold text-white"
           >
-            한 번 더
+            ■ 중지 (남은 {remaining}개)
           </button>
-          <button
-            type="button"
-            disabled={pulling || remaining < 2}
-            onClick={() => onAgain(multiN)}
-            className="rounded-full bg-gradient-to-r from-amber-500 to-orange-500 px-3 py-2.5 text-xs font-medium text-white disabled:opacity-40"
-          >
-            {multiN}회 더
-          </button>
-        </div>
+        ) : (
+          <div className="mt-2 grid grid-cols-2 gap-2">
+            <button
+              type="button"
+              disabled={pulling || remaining < 1}
+              onClick={() => startAgain(1)}
+              className="rounded-full bg-zinc-100 px-3 py-2.5 text-xs font-medium disabled:opacity-40 dark:bg-zinc-900"
+            >
+              한 번 더
+            </button>
+            <button
+              type="button"
+              disabled={pulling || remaining < 2}
+              onClick={() => startAgain(multiN)}
+              className="rounded-full bg-gradient-to-r from-amber-500 to-orange-500 px-3 py-2.5 text-xs font-medium text-white disabled:opacity-40"
+            >
+              {multiN}회 더
+            </button>
+          </div>
+        )}
         <button
           type="button"
           data-tut="gacha-confirm"
+          disabled={autoActive}
           onClick={() => {
             advanceTutorial();
             onClose();
           }}
-          className="mt-2 w-full rounded-full bg-zinc-900 px-3 py-2.5 text-xs font-medium text-white dark:bg-zinc-50 dark:text-zinc-950"
+          className="mt-2 w-full rounded-full bg-zinc-900 px-3 py-2.5 text-xs font-medium text-white disabled:opacity-40 dark:bg-zinc-50 dark:text-zinc-950"
         >
           확인
         </button>
