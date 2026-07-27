@@ -4,7 +4,7 @@ import { memo, useMemo, useState } from 'react';
 import { profileHref } from '@/lib/game/profile/href';
 import Link from 'next/link';
 
-import { LastSeen } from '@/components/LastSeen';
+import { LastSeen, OnlineDot } from '@/components/LastSeen';
 import { TranscendSprite } from '@/components/TranscendSprite';
 import { rarityBorderStyle, hasRarityBorder } from '@/components/RarityFrame';
 
@@ -55,11 +55,11 @@ function sortValue(m: RichMember, key: SortKey): number {
 
 function EquipIcon({ item }: { item: Equipped | undefined }) {
   if (!item) {
-    return <span className="h-10 w-10 shrink-0 rounded-md bg-zinc-100 dark:bg-zinc-800" />;
+    return <span className="h-[34px] w-[34px] shrink-0 rounded-md bg-zinc-100 dark:bg-zinc-800" />;
   }
   return (
     <span
-      className={`relative flex h-10 w-10 shrink-0 items-center justify-center overflow-hidden rounded-md border p-0.5 ${
+      className={`relative flex h-[34px] w-[34px] shrink-0 items-center justify-center overflow-hidden rounded-md border p-0.5 ${
         hasRarityBorder(item.transcendLevel) ? '' : 'border-zinc-300 dark:border-zinc-700'
       }`}
       style={rarityBorderStyle(item.transcendLevel)}
@@ -70,11 +70,11 @@ function EquipIcon({ item }: { item: Equipped | undefined }) {
         slot={item.slot}
         level={item.transcendLevel}
         championRank={item.championRank}
-        size={34}
+        size={28}
         frameless
       />
       {/* 강화 수치는 항상 표시(+0 포함) — 프로필 섹션과 동일. */}
-      <span className="absolute bottom-0 right-0 z-10 rounded-tl bg-black/65 px-0.5 text-[9px] font-bold leading-tight text-amber-300">
+      <span className="absolute bottom-0 right-0 z-10 rounded-tl bg-black/65 px-0.5 text-[8px] font-bold leading-tight text-amber-300">
         +{item.enhance}
       </span>
     </span>
@@ -92,40 +92,48 @@ const MemberRow = memo(function MemberRow({ m, myUserId, serverId }: { m: RichMe
         href={profileHref(m.publicCode, serverId)}
         className="flex items-center gap-2 py-1.5 active:opacity-70"
       >
-        {/* 아바타 */}
-        <span className="h-10 w-10 shrink-0 overflow-hidden rounded-lg">
-          {m.avatar ? (
-            // eslint-disable-next-line @next/next/no-img-element
-            <img
-              src={m.avatar}
-              alt=""
-              aria-hidden
-              className="h-full w-full object-contain"
-              style={{ imageRendering: 'pixelated' }}
-            />
-          ) : null}
+        {/* 아바타 — 우하단 접속 점(A안). 점이 모서리 밖으로 살짝 나가므로 래퍼는 overflow 허용,
+            이미지만 라운드 클립. ring은 카드 배경색으로 점 테두리 분리. */}
+        <span className="relative h-10 w-10 shrink-0">
+          <span className="block h-full w-full overflow-hidden rounded-lg">
+            {m.avatar ? (
+              // eslint-disable-next-line @next/next/no-img-element
+              <img
+                src={m.avatar}
+                alt=""
+                aria-hidden
+                className="h-full w-full object-contain"
+                style={{ imageRendering: 'pixelated' }}
+              />
+            ) : null}
+          </span>
+          <OnlineDot
+            at={m.lastSeenAt}
+            forceOnline={isMe}
+            className="absolute -bottom-0.5 -right-0.5 ring-2 ring-white dark:ring-zinc-950"
+          />
         </span>
 
-        {/* 가운데: (닉네임 + 최근접속) / (기여 · 전투) */}
+        {/* 가운데: (닉네임 + 최근접속 텍스트) / (기여 · 전투) — A안(2026-07-27). */}
         <div className="min-w-0 flex-1">
-          {/* 닉네임 + 최근접속(이름 바로 뒤) */}
+          {/* 닉네임 + 최근접속(작은 텍스트, pill 없음) */}
           <div className="flex items-baseline gap-1.5">
-            <span className="text-[12px] font-semibold">{m.nickname}</span>
+            <span className="truncate text-[12px] font-semibold">{m.nickname}</span>
             {isMe || m.lastSeenAt != null ? (
-              <LastSeen at={m.lastSeenAt} forceOnline={isMe} badge className="shrink-0" />
+              <LastSeen at={m.lastSeenAt} forceOnline={isMe} plain className="shrink-0 text-[10px]" />
             ) : null}
           </div>
-          {/* 기여도 · 전투력 — 줄을 2분할(grid)해 정렬. 기여도는 자릿수 축약 없이
-              누적(오늘) 전체 표기(사용자 확정 2026-07-27), 전투력만 축약(fmtNum). */}
+          {/* 기여 · 전투 — 짧은 라벨(A안). 기여는 자릿수 축약 없이 누적(오늘) 전체 표기,
+              전투만 축약(fmtNum). */}
           <div className="mt-0.5 grid grid-cols-2 gap-1 text-[11px] text-zinc-500">
             <span className="truncate">
-              기여도{' '}
+              기여{' '}
               <span className="font-semibold tabular-nums text-zinc-700 dark:text-zinc-300">
                 {m.contribution.toLocaleString('ko-KR')}({m.contributionToday.toLocaleString('ko-KR')})
               </span>
             </span>
             <span className="truncate">
-              전투력 <span className="font-semibold tabular-nums text-zinc-700 dark:text-zinc-300">{fmtNum(m.combat)}</span>
+              전투 <span className="font-semibold tabular-nums text-zinc-700 dark:text-zinc-300">{fmtNum(m.combat)}</span>
             </span>
           </div>
         </div>
