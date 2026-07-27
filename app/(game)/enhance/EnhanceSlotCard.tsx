@@ -589,7 +589,7 @@ export function EnhanceSlotCard({
     setAutoRunning(true);
     void runAutoLoop();
   };
-  // 예산 ± 조정 — 보유량으로 캡, 0 미만 방지. 스텝 100(정밀 조정), 입력창으로 큰 값 직접 타이핑.
+  // 예산 ± 조정 — 보유량으로 캡, 0 미만 방지. 스텝 1(미세 조정), 큰 값은 입력창/보유 탭으로.
   const bumpBudget = (delta: number) => {
     const bal = Number(diamond) || 0;
     const cur = parseInt(autoBudget, 10) || 0;
@@ -855,9 +855,9 @@ export function EnhanceSlotCard({
             <div className="flex shrink-0 items-center gap-1">
               <button
                 type="button"
-                onClick={() => bumpBudget(-100)}
+                onClick={() => bumpBudget(-1)}
                 className="flex h-8 w-7 items-center justify-center rounded-md border border-zinc-700 bg-black/40 text-[15px] leading-none text-zinc-300 active:scale-95"
-                aria-label="예산 100 감소"
+                aria-label="예산 1 감소"
               >
                 −
               </button>
@@ -874,9 +874,9 @@ export function EnhanceSlotCard({
               />
               <button
                 type="button"
-                onClick={() => bumpBudget(100)}
+                onClick={() => bumpBudget(1)}
                 className="flex h-8 w-7 items-center justify-center rounded-md border border-zinc-700 bg-black/40 text-[15px] leading-none text-zinc-300 active:scale-95"
-                aria-label="예산 100 증가"
+                aria-label="예산 1 증가"
               >
                 +
               </button>
