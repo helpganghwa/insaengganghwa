@@ -242,6 +242,9 @@ export function EnhanceSlotCard({
   const [autoRunning, setAutoRunning] = useState(false);
   const [autoStats, setAutoStats] = useState<AutoStats | null>(null); // 진행중 오버레이(실시간 누적)
   const [autoResult, setAutoResult] = useState<(AutoStats & { elapsedMs: number; reason: string }) | null>(null); // 완료 오버레이
+  // 완료 오버레이 영속 — 페이지 이동/앱 종료 후 복귀 시 중지·완료 시점 오버레이를 다시 노출(확인 전까지).
+  // localStorage(앱 종료도 견딤) · 슬롯별 키 · 24h 만료(방치 결과가 카드를 영구 가리는 것 방지).
+  const autoResultKey = `iss:autoResult:${propJob.slot}`;
   const [cancelOpen, setCancelOpen] = useState(false); // 취소(강화 해제) 확인 모달
 
   useEffect(() => {
@@ -545,7 +548,10 @@ export function EnhanceSlotCard({
     setAutoStats(null);
     setAttempting(false);
     const elapsedMs = Math.max(0, Date.now() - stats.startMs);
-    setAutoResult({ ...stats, elapsedMs, reason });
+    const result = { ...stats, elapsedMs, reason };
+    setAutoResult(result);
+    // 영속 — 이탈/앱 종료 후 복귀 시 이 오버레이를 복원(finishAuto는 언마운트 후에도 실행되므로 여기 기록).
+    try { localStorage.setItem(autoResultKey, JSON.stringify({ result, savedAt: Date.now() })); } catch { /* 사파리 프라이빗 등 */ }
     if (isError) showError(reason);
     router.refresh(); // 세션 종료 시 1회 — 권위 다이아·레벨·전투력 재동기화(스텝마다 X)
   };
@@ -614,6 +620,7 @@ export function EnhanceSlotCard({
     };
     setAutoOpen(false);
     setAutoResult(null);
+    try { localStorage.removeItem(autoResultKey); } catch { /* noop */ }
     setAutoRunning(true);
     void runAutoLoop();
   };
@@ -632,6 +639,17 @@ export function EnhanceSlotCard({
     const stop = () => { autoRunRef.current = false; };
     window.addEventListener('pagehide', stop);
     return () => { window.removeEventListener('pagehide', stop); autoRunRef.current = false; };
+  }, []);
+  // 마운트 시 저장된 완료 오버레이 복원(이탈/앱 종료 후 복귀) — 24h 이내만, 아니면 폐기.
+  useEffect(() => {
+    try {
+      const raw = localStorage.getItem(autoResultKey);
+      if (!raw) return;
+      const saved = JSON.parse(raw) as { result: AutoStats & { elapsedMs: number; reason: string }; savedAt: number };
+      if (saved?.result && Date.now() - saved.savedAt < 24 * 3600 * 1000) setAutoResult(saved.result);
+      else localStorage.removeItem(autoResultKey);
+    } catch { /* 파싱 실패 무시 */ }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
   // 자동 강화 중 화면 꺼짐(절전) 방지 — Screen Wake Lock. 지원 브라우저(iOS16.4+·Android Chrome)에서만
   // 동작(미지원은 무시). 탭이 백그라운드로 가면 OS가 락을 강제 해제하므로 visibilitychange로 재획득.
@@ -868,50 +886,59 @@ export function EnhanceSlotCard({
           </>
         ) : null}
 
-        {/* 자동 강화 진행 오버레이 — 강화 FX(z-≤30) 위(z-40)에 덮어 누적 통계 표시.
-            폰트/톤은 기존 강화 오버레이(amber 헤더·zinc 통계)와 통일. */}
+        {/* 자동 강화 진행 오버레이 — 강화 FX(z-≤30) 위(z-40). 배경은 옅게(FX가 비치도록),
+            텍스트만 다크 칩으로 가독 확보(기존 로어 칩과 동일 톤). */}
         {autoStats ? (
-          <div className="absolute inset-0 z-40 flex flex-col justify-center gap-0.5 bg-black/80 px-2.5 text-center backdrop-blur-[1px]">
-            <div className="text-[12px] font-semibold text-amber-200">
-              자동 강화 중 <span className="tabular-nums">+{autoStats.curLv}</span>
-            </div>
-            <div className="text-[10px] text-zinc-300 tabular-nums">
+          <div className="absolute inset-0 z-40 flex flex-col items-center justify-center gap-1 bg-black/35 px-2.5 text-center">
+            <span className="rounded bg-black/70 px-1.5 py-0.5 text-[12px] font-semibold text-amber-200 tabular-nums">
+              자동 강화 중 +{autoStats.curLv}
+            </span>
+            <span className="rounded bg-black/70 px-1.5 py-0.5 text-[10px] text-zinc-200 tabular-nums">
               💎{autoStats.gems.toLocaleString()} · 시도 {autoStats.attempts} ·{' '}
               <span className="text-emerald-300">성공 {autoStats.ok}</span>{' '}
               <span className="text-zinc-400">유지 {autoStats.hold}</span>{' '}
               <span className="text-amber-300">실패 {autoStats.down}</span>
-            </div>
-            <div className="flex items-center justify-center gap-2 text-[10px] text-zinc-400 tabular-nums">
-              <span className="font-mono">{fmtDuration(Math.max(0, nowMs - autoStats.startMs))}</span>
+            </span>
+            <div className="flex items-center gap-2">
+              <span className="min-w-[56px] rounded bg-black/70 px-1.5 py-0.5 text-center font-mono text-[10px] text-zinc-300 tabular-nums">
+                {fmtDuration(Math.max(0, nowMs - autoStats.startMs))}
+              </span>
               <button
                 type="button"
                 onClick={(e) => { e.stopPropagation(); autoRunRef.current = false; }}
-                className="rounded-md border border-red-500/70 bg-red-950/80 px-2 py-0.5 text-[10px] font-bold text-red-200 active:scale-95"
+                className="flex h-6 w-14 items-center justify-center rounded-md bg-red-500 text-[10px] font-bold text-white active:scale-95"
               >
-                ■ 중지
+                중지
               </button>
             </div>
           </div>
         ) : null}
 
-        {/* 자동 강화 결과 오버레이 — 완료 후 확인 전까지 유지. */}
+        {/* 자동 강화 결과 오버레이 — 완료/중지 후 확인 전까지 유지(복귀 시 복원). 진행 오버레이와
+            동일 레이아웃(중지/확인 버튼 크기 동일)이라 전환 시 시프트 없음. */}
         {autoResult ? (
-          <div className="absolute inset-0 z-40 flex flex-col justify-center gap-0.5 bg-black/85 px-2.5 text-center backdrop-blur-[1px]">
-            <div className="text-[12px] font-semibold text-amber-200">
-              자동 강화 완료 <span className="tabular-nums">+{autoResult.curLv}</span>
-            </div>
-            <div className="text-[10px] text-zinc-300 tabular-nums">
+          <div className="absolute inset-0 z-40 flex flex-col items-center justify-center gap-1 bg-black/45 px-2.5 text-center">
+            <span className="rounded bg-black/70 px-1.5 py-0.5 text-[12px] font-semibold text-amber-200 tabular-nums">
+              자동 강화 완료 +{autoResult.curLv}
+            </span>
+            <span className="rounded bg-black/70 px-1.5 py-0.5 text-[10px] text-zinc-200 tabular-nums">
               💎{autoResult.gems.toLocaleString()} · 시도 {autoResult.attempts} ·{' '}
               <span className="text-emerald-300">성공 {autoResult.ok}</span>{' '}
               <span className="text-zinc-400">유지 {autoResult.hold}</span>{' '}
               <span className="text-amber-300">실패 {autoResult.down}</span>
-            </div>
-            <div className="flex items-center justify-center gap-2 text-[10px] text-zinc-400 tabular-nums">
-              <span className="font-mono">총 {fmtDuration(autoResult.elapsedMs)}</span>
+            </span>
+            <div className="flex items-center gap-2">
+              <span className="min-w-[56px] rounded bg-black/70 px-1.5 py-0.5 text-center font-mono text-[10px] text-zinc-300 tabular-nums">
+                {fmtDuration(autoResult.elapsedMs)}
+              </span>
               <button
                 type="button"
-                onClick={(e) => { e.stopPropagation(); setAutoResult(null); }}
-                className="rounded-md bg-amber-500 px-2.5 py-0.5 text-[10px] font-bold text-black active:scale-95"
+                onClick={(e) => {
+                  e.stopPropagation();
+                  setAutoResult(null);
+                  try { localStorage.removeItem(autoResultKey); } catch { /* noop */ }
+                }}
+                className="flex h-6 w-14 items-center justify-center rounded-md bg-amber-500 text-[10px] font-bold text-black active:scale-95"
               >
                 확인
               </button>
@@ -962,13 +989,15 @@ export function EnhanceSlotCard({
               </button>
             </div>
           </div>
-          {/* 목표 레벨 — 선택. ± 스텝 1. */}
-          <label className="flex items-center gap-2 border-t border-zinc-800 py-2.5">
-            <input type="checkbox" checked={autoUseTarget} onChange={(e) => setAutoUseTarget(e.target.checked)} className="h-4 w-4 accent-amber-500" />
-            <div className="min-w-0 flex-1">
-              <div className="text-[12px] font-semibold text-zinc-200">목표 레벨까지</div>
-              <div className="text-[10px] text-zinc-500">선택 · 도달 시 정지</div>
-            </div>
+          {/* 목표 레벨 — 선택. 체크박스 토글은 라벨(체크박스+텍스트)까지만, 오른쪽 입력/±은 제외. */}
+          <div className="flex items-center gap-2 border-t border-zinc-800 py-2.5">
+            <label className="flex min-w-0 flex-1 items-center gap-2">
+              <input type="checkbox" checked={autoUseTarget} onChange={(e) => setAutoUseTarget(e.target.checked)} className="h-4 w-4 shrink-0 accent-amber-500" />
+              <div className="min-w-0 flex-1">
+                <div className="text-[12px] font-semibold text-zinc-200">목표 레벨까지</div>
+                <div className="text-[10px] text-zinc-500">선택 · 도달 시 정지</div>
+              </div>
+            </label>
             <div className="flex shrink-0 items-center gap-1">
               <button type="button" onClick={() => bumpTarget(-1)} disabled={!autoUseTarget} className="flex h-8 w-7 items-center justify-center rounded-md border border-zinc-700 bg-black/40 text-[15px] leading-none text-zinc-300 active:scale-95 disabled:opacity-40" aria-label="목표 레벨 1 감소">−</button>
               <ZoomSafeInput
@@ -981,14 +1010,16 @@ export function EnhanceSlotCard({
               />
               <button type="button" onClick={() => bumpTarget(1)} disabled={!autoUseTarget} className="flex h-8 w-7 items-center justify-center rounded-md border border-zinc-700 bg-black/40 text-[15px] leading-none text-zinc-300 active:scale-95 disabled:opacity-40" aria-label="목표 레벨 1 증가">+</button>
             </div>
-          </label>
-          {/* 횟수 — 선택. ± 스텝 1. */}
-          <label className="flex items-center gap-2 border-t border-zinc-800 py-2.5">
-            <input type="checkbox" checked={autoUseCount} onChange={(e) => setAutoUseCount(e.target.checked)} className="h-4 w-4 accent-amber-500" />
-            <div className="min-w-0 flex-1">
-              <div className="text-[12px] font-semibold text-zinc-200">횟수 제한</div>
-              <div className="text-[10px] text-zinc-500">선택 · N회 후 정지</div>
-            </div>
+          </div>
+          {/* 횟수 — 선택. 체크박스 토글은 라벨(체크박스+텍스트)까지만, 오른쪽 입력/±은 제외. */}
+          <div className="flex items-center gap-2 border-t border-zinc-800 py-2.5">
+            <label className="flex min-w-0 flex-1 items-center gap-2">
+              <input type="checkbox" checked={autoUseCount} onChange={(e) => setAutoUseCount(e.target.checked)} className="h-4 w-4 shrink-0 accent-amber-500" />
+              <div className="min-w-0 flex-1">
+                <div className="text-[12px] font-semibold text-zinc-200">횟수 제한</div>
+                <div className="text-[10px] text-zinc-500">선택 · N회 후 정지</div>
+              </div>
+            </label>
             <div className="flex shrink-0 items-center gap-1">
               <button type="button" onClick={() => bumpCount(-1)} disabled={!autoUseCount} className="flex h-8 w-7 items-center justify-center rounded-md border border-zinc-700 bg-black/40 text-[15px] leading-none text-zinc-300 active:scale-95 disabled:opacity-40" aria-label="횟수 1 감소">−</button>
               <ZoomSafeInput
@@ -1001,7 +1032,7 @@ export function EnhanceSlotCard({
               />
               <button type="button" onClick={() => bumpCount(1)} disabled={!autoUseCount} className="flex h-8 w-7 items-center justify-center rounded-md border border-zinc-700 bg-black/40 text-[15px] leading-none text-zinc-300 active:scale-95 disabled:opacity-40" aria-label="횟수 1 증가">+</button>
             </div>
-          </label>
+          </div>
           {/* 하락 시 정지 — 선택 */}
           <label className="flex items-center gap-2 border-t border-zinc-800 py-2.5">
             <input type="checkbox" checked={autoDownStop} onChange={(e) => setAutoDownStop(e.target.checked)} className="h-4 w-4 accent-amber-500" />
