@@ -12,11 +12,9 @@ export function WorldLogFeed({ entries, full = false }: { entries: WorldEventEnt
     return <p className="px-1 py-3 text-center text-[11px] text-zinc-400">아직 월드 소식이 없습니다.</p>;
   }
   return (
-    <ul
-      className={`divide-y divide-zinc-100 dark:divide-zinc-900 ${
-        full ? '' : 'max-h-80 overflow-y-auto overscroll-contain'
-      }`}
-    >
+    // 미리보기에도 내부 스크롤 박스 금지(길드 로그와 동일, 2026-07-27) — overscroll-contain이
+    // 터치를 소비해 페이지 스크롤을 막는다. 미리보기는 건수 제한으로 해결.
+    <ul className="divide-y divide-zinc-100 dark:divide-zinc-900">
       {entries.map((e) => (
         <li
           key={e.id}
