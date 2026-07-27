@@ -96,4 +96,18 @@ describe.skipIf(skip)('queueEnhance — DB 통합', () => {
       queueEnhance({ userId: TEST_USER_ID, userEquipmentId: equipId }),
     ).rejects.toMatchObject({ code: 'ALREADY_ENHANCING' });
   });
+
+  it('preferredLane: 두 lane이 비어도 lane 2 선호를 존중(재등록 lane 점프 방지)', async () => {
+    // 2026-07-27 자동강화 제보 회귀 — 재등록이 lane 1을 무조건 선호해 반대 lane이 비면
+    // 체인이 lane 1로 점프, 카드 위치가 뒤바뀌던 버그. preferredLane이 빈 lane이면 존중.
+    const equipId = await insertEquip(3);
+    const res = await queueEnhance({ userId: TEST_USER_ID, userEquipmentId: equipId, preferredLane: 2 });
+    createdJobId = res.jobId;
+
+    const rows = (await testDb.execute(sql`
+      select slot_lane from enhancement_jobs where id = ${res.jobId.toString()}::bigint`)) as unknown as {
+      slot_lane: number;
+    }[];
+    expect(Number(rows[0]?.slot_lane)).toBe(2);
+  });
 });

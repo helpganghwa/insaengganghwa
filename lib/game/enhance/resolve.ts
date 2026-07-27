@@ -51,6 +51,8 @@ export type ResolveResult = {
   fromLevel: number;
   toLevel: number;
   effectiveRateBp: number;
+  /** 정산된 잡의 lane(1|2) — 재등록 시 같은 lane 유지용(preferredLane). */
+  slotLane: number;
 };
 
 function rollBp(): number {
@@ -73,6 +75,7 @@ export async function resolveEnhance(input: ResolveInput): Promise<ResolveResult
     select j.user_equipment_id::text         as user_equipment_id,
            j.server_id                       as job_server_id,
            j.user_id::text                   as user_id,
+           j.slot_lane                       as slot_lane,
            j.from_level                      as from_level,
            j.base_rate_bp                    as base_rate_bp,
            j.down_rate_bp                    as down_rate_bp,
@@ -239,5 +242,13 @@ export async function resolveEnhance(input: ResolveInput): Promise<ResolveResult
     }
   }
 
-  return { jobId, userEquipmentId, outcome, fromLevel, toLevel, effectiveRateBp: effBp };
+  return {
+    jobId,
+    userEquipmentId,
+    outcome,
+    fromLevel,
+    toLevel,
+    effectiveRateBp: effBp,
+    slotLane: Number(job.slot_lane),
+  };
 }

@@ -124,7 +124,7 @@ export type NextJobDto = {
 export async function finalizeEnhance(jobId: string): Promise<
   | {
       status: 'success';
-      result: Omit<ResolveResult, 'jobId' | 'userEquipmentId'>;
+      result: Omit<ResolveResult, 'jobId' | 'userEquipmentId' | 'slotLane'>;
       requeued: boolean;
       /** 재등록 성공 시 다음 잡 정보(없으면 null — MAX 도달 등). */
       nextJob: NextJobDto | null;
@@ -154,7 +154,8 @@ export async function finalizeEnhance(jobId: string): Promise<
     let requeued = false;
     let nextJob: NextJobDto | null = null;
     try {
-      const nq = await queueEnhance({ userId, userEquipmentId: r.userEquipmentId });
+      // preferredLane — 방금 정산한 잡의 lane 유지(반대 lane이 비어도 점프 금지, 카드 위치 고정).
+      const nq = await queueEnhance({ userId, userEquipmentId: r.userEquipmentId, preferredLane: r.slotLane });
       requeued = true;
       // started_at = completeAt − durationMs(queue가 now()+duration으로 stamp). 클라 게이지 기준.
       nextJob = {
@@ -255,7 +256,8 @@ export async function autoEnhanceStepAction(
 
     let nextJob: NextJobDto | null = null;
     try {
-      const nq = await queueEnhance({ userId, userEquipmentId: r.userEquipmentId });
+      // preferredLane — 자동 체인이 반대 lane이 비어도 같은 자리 유지(카드 점프/겹침 방지).
+      const nq = await queueEnhance({ userId, userEquipmentId: r.userEquipmentId, preferredLane: r.slotLane });
       nextJob = {
         jobId: String(nq.jobId),
         fromLevel: nq.fromLevel,

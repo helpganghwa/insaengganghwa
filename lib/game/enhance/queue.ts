@@ -26,7 +26,16 @@ export class EnhanceError extends Error {
   }
 }
 
-export type QueueEnhanceInput = { userId: string; userEquipmentId: bigint };
+export type QueueEnhanceInput = {
+  userId: string;
+  userEquipmentId: bigint;
+  /**
+   * 선호 lane(1|2) — 비어 있으면 이 lane에 배정(아니면 기존 빈-lane 로직 폴백).
+   * 수령/자동/교체의 재등록이 직전 잡의 lane을 유지시켜, 반대 lane이 비었을 때
+   * 체인이 lane 1로 점프해 카드 위치가 뒤바뀌던 문제 방지(2026-07-27 자동강화 제보).
+   */
+  preferredLane?: number;
+};
 export type QueueEnhanceResult = {
   jobId: bigint;
   completeAt: Date;
@@ -50,7 +59,7 @@ export async function queueEnhanceInTx(
   tx: Tx,
   input: QueueEnhanceInput,
 ): Promise<QueueEnhanceResult> {
-  const { userId, userEquipmentId } = input;
+  const { userId, userEquipmentId, preferredLane } = input;
 
   const [equip] = await tx
     .select({
@@ -97,7 +106,12 @@ export async function queueEnhanceInTx(
       ),
     );
   const used = new Set(running.map((r) => r.slotLane));
-  const slotLane = !used.has(1) ? 1 : !used.has(2) ? 2 : 0;
+  // 선호 lane 우선(비어 있을 때만) → 폴백은 기존 빈-lane 순서. 다른 탭 레이스로 선호 lane이
+  // 선점됐으면 남은 lane으로 자연 폴백(SLOT_BUSY는 둘 다 찼을 때만).
+  const slotLane =
+    (preferredLane === 1 || preferredLane === 2) && !used.has(preferredLane)
+      ? preferredLane
+      : !used.has(1) ? 1 : !used.has(2) ? 2 : 0;
   if (slotLane === 0) throw new EnhanceError('SLOT_BUSY');
 
   const durationMs = enhanceDurationMs(fromLevel);

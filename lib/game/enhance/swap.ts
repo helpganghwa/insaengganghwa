@@ -29,10 +29,11 @@ export function swapEnhance(input: {
           eq(enhancementJobs.status, 'running'),
         ),
       )
-      .returning({ id: enhancementJobs.id });
+      .returning({ id: enhancementJobs.id, slotLane: enhancementJobs.slotLane });
     if (cancelled.length === 0) throw new EnhanceError('JOB_NOT_FOUND');
 
-    const result = await queueEnhanceInTx(tx, { userId, userEquipmentId });
+    // preferredLane — 취소한 잡의 lane에 그대로 등록(반대 lane이 비어도 카드 위치 유지).
+    const result = await queueEnhanceInTx(tx, { userId, userEquipmentId, preferredLane: cancelled[0]!.slotLane });
     // 감사 로그 — 교체로 인한 취소와 신규 잡을 한 줄에(슬롯 전멸 사건 추적용).
     console.log(`[enhance.swap] cancel=${cancelJobId} new=${result.jobId} user=${userId}`);
     return result;
