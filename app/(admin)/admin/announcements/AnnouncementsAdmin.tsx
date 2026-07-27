@@ -173,6 +173,11 @@ export function AnnouncementsAdmin({ items }: { items: AnnouncementView[] }) {
           </div>
           {draft.poll && (
             <div className="mt-2 space-y-2">
+              <p className="text-[10px] leading-relaxed text-zinc-400">
+                기본은 본문 아래 블록으로 표시됩니다. 본문에 <code className="rounded bg-zinc-100 px-1 dark:bg-zinc-800">{'{{투표1}}'}</code>
+                처럼 쓰면 그 위치에 해당 번호의 선택지 버튼이 들어갑니다(설명→투표→설명→투표 흐름).
+                마커 사용 시 질문은 표시되지 않으니 본문에 직접 적어주세요.
+              </p>
               <input
                 value={draft.poll.question}
                 onChange={(e) => setPoll((p) => ({ ...p, question: e.target.value }))}

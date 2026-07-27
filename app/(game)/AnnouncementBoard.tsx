@@ -30,7 +30,50 @@ function CatBadge({ category }: { category: string }) {
   );
 }
 
-/** 공지 투표 — 유저는 **투표만**(집계·투표자는 관리자만 열람). 1인 1표, 다시 눌러 변경. */
+/** 투표 선택지 버튼 — 하단 블록·본문 인라인 공용(동일 외형). */
+function PollOptionButton({
+  label,
+  selected,
+  closed,
+  onSelect,
+}: {
+  label: string;
+  selected: boolean;
+  closed: boolean;
+  onSelect: () => void;
+}) {
+  return (
+    <button
+      type="button"
+      disabled={closed}
+      onClick={() => !closed && !selected && onSelect()}
+      className={`flex w-full items-center gap-2 rounded-lg border px-3 py-2 text-left text-[13px] transition disabled:opacity-60 ${
+        selected
+          ? 'border-amber-500 bg-amber-500/10 font-bold text-amber-700 dark:text-amber-300'
+          : 'border-zinc-200 text-zinc-700 active:bg-zinc-50 dark:border-zinc-800 dark:text-zinc-200 dark:active:bg-zinc-900'
+      }`}
+    >
+      <span aria-hidden>{selected ? '●' : '○'}</span>
+      <span className="min-w-0">{label}</span>
+    </button>
+  );
+}
+
+/** 투표 안내 푸터 — 마감/변경 가능 문구(하단 블록·인라인 모드 공용). */
+function PollFooter({ poll, myVote, closed }: { poll: AnnouncementPoll; myVote: string | undefined; closed: boolean }) {
+  return (
+    <p className="mt-2 text-[10px] text-zinc-400">
+      {closed
+        ? '투표가 마감되었습니다.'
+        : myVote
+          ? '투표 완료 · 다른 항목을 눌러 변경할 수 있어요.'
+          : '한 항목을 선택해 투표하세요.'}
+      {poll.closesAtIso && !closed ? ` · 마감 ${fmtDate(poll.closesAtIso)}` : ''}
+    </p>
+  );
+}
+
+/** 공지 투표(하단 블록) — 유저는 **투표만**(집계·투표자는 관리자만 열람). 1인 1표, 다시 눌러 변경. */
 function Poll({
   poll,
   myVote,
@@ -48,39 +91,101 @@ function Poll({
         <span className="min-w-0">{poll.question}</span>
       </div>
       <div className="flex flex-col gap-1.5">
-        {poll.options.map((o) => {
-          const selected = myVote === o.id;
-          return (
-            <button
-              key={o.id}
-              type="button"
-              disabled={closed}
-              onClick={() => !closed && !selected && onVote(o.id)}
-              className={`flex items-center gap-2 rounded-lg border px-3 py-2 text-left text-[13px] transition disabled:opacity-60 ${
-                selected
-                  ? 'border-amber-500 bg-amber-500/10 font-bold text-amber-700 dark:text-amber-300'
-                  : 'border-zinc-200 text-zinc-700 active:bg-zinc-50 dark:border-zinc-800 dark:text-zinc-200 dark:active:bg-zinc-900'
-              }`}
-            >
-              <span aria-hidden>{selected ? '●' : '○'}</span>
-              <span className="min-w-0">{o.label}</span>
-            </button>
-          );
-        })}
+        {poll.options.map((o) => (
+          <PollOptionButton
+            key={o.id}
+            label={o.label}
+            selected={myVote === o.id}
+            closed={closed}
+            onSelect={() => onVote(o.id)}
+          />
+        ))}
       </div>
-      <p className="mt-2 text-[10px] text-zinc-400">
-        {closed
-          ? '투표가 마감되었습니다.'
-          : myVote
-            ? '투표 완료 · 다른 항목을 눌러 변경할 수 있어요.'
-            : '한 항목을 선택해 투표하세요.'}
-        {poll.closesAtIso && !closed ? ` · 마감 ${fmtDate(poll.closesAtIso)}` : ''}
-      </p>
+      <PollFooter poll={poll} myVote={myVote} closed={closed} />
     </div>
   );
 }
 
-/** 공지 상세 — 카테고리·제목·일시 + 마크다운 본문 (+ 투표 있으면 투표). */
+// 본문 인라인 투표 마커 — `{{투표1}}`(1-based 선택지 번호)를 본문에 쓰면 그 위치에 해당
+// 선택지 버튼이 렌더된다(2026-07-27 요청: 설명→1번 투표→설명→2번 투표 흐름).
+const POLL_MARKER = /\{\{투표\s*(\d+)\}\}/g;
+
+/** 본문 + 투표 렌더 — 마커 있으면 본문 사이 인라인, 없으면 기존 하단 블록. */
+function BodyWithPoll({
+  a,
+  myVote,
+  onVote,
+}: {
+  a: AnnouncementView;
+  myVote: string | undefined;
+  onVote: (optionId: string) => void;
+}) {
+  const poll = a.poll;
+  if (!poll) return <MarkdownView source={a.body} />;
+
+  // 마커 파싱 — 텍스트 조각과 선택지 번호를 순서대로.
+  const parts: (string | number)[] = [];
+  const used = new Set<number>();
+  let last = 0;
+  for (const m of a.body.matchAll(POLL_MARKER)) {
+    parts.push(a.body.slice(last, m.index));
+    const idx = Number(m[1]);
+    parts.push(idx);
+    used.add(idx);
+    last = m.index + m[0].length;
+  }
+  parts.push(a.body.slice(last));
+
+  if (used.size === 0) {
+    return (
+      <>
+        <MarkdownView source={a.body} />
+        <Poll poll={poll} myVote={myVote} onVote={onVote} />
+      </>
+    );
+  }
+
+  const closed = !!poll.closesAtIso && Date.parse(poll.closesAtIso) < Date.now();
+  // 마커에 안 쓰인 잔여 선택지는 본문 뒤에 이어 붙임(마커 실수 방지).
+  const leftovers = poll.options.filter((_, i) => !used.has(i + 1));
+  return (
+    <>
+      {parts.map((p, i) => {
+        if (typeof p === 'string') {
+          return p.trim() ? <MarkdownView key={i} source={p} /> : null;
+        }
+        const o = poll.options[p - 1];
+        if (!o) return null; // 존재하지 않는 번호 마커 — 무시
+        return (
+          <div key={i} className="my-2.5">
+            <PollOptionButton
+              label={o.label}
+              selected={myVote === o.id}
+              closed={closed}
+              onSelect={() => onVote(o.id)}
+            />
+          </div>
+        );
+      })}
+      {leftovers.length > 0 ? (
+        <div className="mt-2.5 flex flex-col gap-1.5">
+          {leftovers.map((o) => (
+            <PollOptionButton
+              key={o.id}
+              label={o.label}
+              selected={myVote === o.id}
+              closed={closed}
+              onSelect={() => onVote(o.id)}
+            />
+          ))}
+        </div>
+      ) : null}
+      <PollFooter poll={poll} myVote={myVote} closed={closed} />
+    </>
+  );
+}
+
+/** 공지 상세 — 카테고리·제목·일시 + 마크다운 본문 (+ 투표: 마커 인라인 또는 하단 블록). */
 function Detail({
   a,
   myVote,
@@ -99,9 +204,8 @@ function Detail({
       </div>
       <h2 className="mt-1.5 text-base font-bold leading-snug">{a.title}</h2>
       <div className="mt-2 text-[13px] leading-relaxed text-zinc-700 dark:text-zinc-200">
-        <MarkdownView source={a.body} />
+        <BodyWithPoll a={a} myVote={myVote} onVote={onVote} />
       </div>
-      {a.poll ? <Poll poll={a.poll} myVote={myVote} onVote={onVote} /> : null}
     </div>
   );
 }
