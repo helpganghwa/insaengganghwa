@@ -8,8 +8,12 @@
   --foreground: #171717;
 }
 
-/* 핀치줌 허용(2026-07-27, WCAG 1.4.4·CLAUDE §5.2 방침) — touch-action 제한 제거.
-   과거 더블탭/핀치 줌 비활성(touch-action: pan-x pan-y)은 접근성 위반이라 삭제. */
+/* 모바일 탭 300ms 지연 제거 + 더블탭/핀치 줌 비활성(스크롤 pan은 유지).
+   ⚠ 이 제한을 빼면 원탭 딜레이 부활 + 두 번 탭 시 화면 확대(더블탭 줌)가 되살아난다
+   (2026-07-27 실서버 핫픽스로 복구). */
+html {
+  touch-action: pan-x pan-y;
+}
 
 /* 스크롤바 전역 숨김(2026-06-01 사용자 결정). 데스크톱 Chrome/Firefox/Safari
    에서 페이지·모달·캐러셀 모두 깨끗하게. iOS Safari·PWA는 원래 overlay라 무영향.
