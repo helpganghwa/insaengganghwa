@@ -29,15 +29,19 @@ export function ModalShell({
   const panelRef = useRef<HTMLDivElement>(null);
   const [mounted, setMounted] = useState(false);
   useEffect(() => setMounted(true), []);
+  // 포커스는 마운트 직후 **1회만**. onClose를 deps에 넣으면(호출처가 매 렌더 새 클로저를 넘길 때)
+  // 부모 리렌더마다 패널로 포커스가 튀어 내부 인풋이 blur된다(강화 카드 1초 타이머 리렌더 사례).
   useEffect(() => {
-    if (!mounted) return;
-    panelRef.current?.focus();
+    if (mounted) panelRef.current?.focus();
+  }, [mounted]);
+  // Esc 닫기는 별도 효과 — onClose 최신값만 반영(포커스 재설정과 분리).
+  useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
       if (e.key === 'Escape') onClose();
     };
     document.addEventListener('keydown', onKey);
     return () => document.removeEventListener('keydown', onKey);
-  }, [mounted, onClose]);
+  }, [onClose]);
 
   if (!mounted) return null; // 포털은 클라이언트 마운트 후에만(SSR 하이드레이션 안전)
   const alignCls = align === 'bottom' ? 'items-end' : align === 'top' ? 'items-start' : 'items-center';
