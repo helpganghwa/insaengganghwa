@@ -20,6 +20,7 @@ import { ZoomSafeInput } from '@/components/ui/ZoomSafeField';
 import { finalizeEnhance, reduceTimeWithGems, cancelEnhanceAction, autoEnhanceStepAction } from './actions';
 import { completeTutorial } from '@/components/tutorial/events';
 import { useDiamond } from '@/components/DiamondContext';
+import { useHeaderStats } from '@/components/HeaderStatsContext';
 import { sounds } from '@/lib/game/sound';
 
 import { EnhanceFX, CountAnim, type FxKind } from './EnhanceFX';
@@ -216,6 +217,7 @@ export function EnhanceSlotCard({
   const router = useRouter();
   const { showRanking, beginEnhanceOverlay, endEnhanceOverlay, showError } = useResourceToast();
   const { optimisticAdjust: adjustDiamond } = useDiamond();
+  const { applyEnhanceDelta } = useHeaderStats();
   const [pending, startTransition] = useTransition();
   const [nowMs, setNowMs] = useState(0); // SSR 매칭 위해 0 → mount 후 동기화
   const [confirm, setConfirm] = useState(false);
@@ -616,6 +618,9 @@ export function EnhanceSlotCard({
         autoJobRef.current = r.nextJob ? r.nextJob.jobId : autoJobRef.current;
         applyNextJob(r.nextJob); // 게이지 즉시 새 잡으로(수동 경로와 동일)
         setAutoStats(snap()); // 진행 오버레이 실시간 갱신
+        // 헤더 전투력·최고·합산 낙관 갱신 — 서버 공식과 동일한 순수 계산(서버 왕복 0).
+        // 자동 스텝은 layout 재렌더가 없어(§11.7) 세션 끝까지 헤더가 멈춰 보이던 것 해소.
+        applyEnhanceDelta({ fromLevel: Number(r.fromLevel), toLevel: Number(r.toLevel), transcendLevel: activeJob.transcendLevel });
       }
       if (!autoRunRef.current) { setAttempting(false); break; } // 응답 도착 전 멈춤/이탈(회계는 위에서 반영됨)
       if (!r) return finishAuto(snap(), '연결이 불안정해 자동 강화를 멈췄어요.', true);

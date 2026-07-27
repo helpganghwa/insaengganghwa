@@ -5,6 +5,7 @@ import { faceCropStyle, type FaceBox } from '@/components/faceCrop';
 import { NicknameEditor } from '@/app/(game)/me/NicknameEditor';
 import { DiamondInitializer } from '@/components/DiamondContext';
 import { HeaderDiamond } from '@/components/HeaderDiamond';
+import { HeaderStatsInitializer, HeaderStatsLine } from '@/components/HeaderStatsContext';
 import { GuildBadge } from '@/components/GuildBadge';
 import { ExecutorTag } from '@/components/ExecutorTag';
 
@@ -23,6 +24,7 @@ export function AppHeaderShell({
   executorZone = null,
   executorZoneRegion = null,
   stats = null,
+  statsSlot,
   diamondSlot,
 }: {
   nickname?: string;
@@ -36,6 +38,8 @@ export function AppHeaderShell({
   executorZoneRegion?: string | null;
   /** 닉네임 아래 서브라인 — 전투력·최고강화·합산강화(2026-07-21 문의 반영). null=미표시(fallback 셸). */
   stats?: { combat: number; maxEnhance: number; sumEnhance: number } | null;
+  /** AppHeader(server)가 client HeaderStatsLine 주입 — 자동 강화 중 낙관 갱신 반영(fallback은 정적). */
+  statsSlot?: React.ReactNode;
   /** AppHeader(server)가 client HeaderDiamond를 주입 — Suspense fallback은 정적 표시. */
   diamondSlot?: React.ReactNode;
 }) {
@@ -80,19 +84,21 @@ export function AppHeaderShell({
             {/* 집행관(2026-07-22) — shrink-0이라 폭이 모자라면 닉네임이 먼저 말줄임된다. */}
             <ExecutorTag zone={executorZone} region={executorZoneRegion} className="text-[9px] font-bold" />
           </span>
-          {stats ? (
-            // 서브라인 — 라벨은 흐리게, 수치는 앰버 강조(문의 채택안 B, 2026-07-21).
-            <span className="truncate font-mono text-[9px] font-bold text-zinc-500 dark:text-zinc-400">
-              전투력{' '}
-              <b className="font-extrabold text-amber-600 dark:text-amber-300">
-                {stats.combat.toLocaleString('ko-KR')}
-              </b>
-              {' · '}최고{' '}
-              <b className="font-extrabold text-amber-600 dark:text-amber-300">+{stats.maxEnhance}</b>
-              {' · '}합산{' '}
-              <b className="font-extrabold text-amber-600 dark:text-amber-300">+{stats.sumEnhance}</b>
-            </span>
-          ) : null}
+          {/* 서브라인 — statsSlot(client, 자동 강화 낙관 갱신) 우선, 없으면 정적 렌더(fallback 셸). */}
+          {statsSlot ??
+            (stats ? (
+              // 라벨은 흐리게, 수치는 앰버 강조(문의 채택안 B, 2026-07-21).
+              <span className="truncate font-mono text-[9px] font-bold text-zinc-500 dark:text-zinc-400">
+                전투력{' '}
+                <b className="font-extrabold text-amber-600 dark:text-amber-300">
+                  {stats.combat.toLocaleString('ko-KR')}
+                </b>
+                {' · '}최고{' '}
+                <b className="font-extrabold text-amber-600 dark:text-amber-300">+{stats.maxEnhance}</b>
+                {' · '}합산{' '}
+                <b className="font-extrabold text-amber-600 dark:text-amber-300">+{stats.sumEnhance}</b>
+              </span>
+            ) : null)}
         </span>
       </div>
 
@@ -121,6 +127,7 @@ export async function AppHeader({ dataPromise }: { dataPromise: Promise<LayoutDa
   return (
     <>
       <DiamondInitializer diamond={d.diamond} />
+      <HeaderStatsInitializer stats={d.stats} />
       <AppHeaderShell
         nickname={d.nickname}
         nicknameChangedCount={d.nicknameChangedCount}
@@ -131,6 +138,7 @@ export async function AppHeader({ dataPromise }: { dataPromise: Promise<LayoutDa
         executorZone={d.executorZone}
         executorZoneRegion={d.executorZoneRegion}
         stats={d.stats}
+        statsSlot={<HeaderStatsLine />}
         diamondSlot={<HeaderDiamond />}
       />
     </>

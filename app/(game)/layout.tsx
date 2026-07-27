@@ -34,6 +34,7 @@ import { KakaoSdkLoader } from '@/components/KakaoSdkLoader';
 import { ResourceToastProvider } from '@/components/ResourceToast';
 import { VersionUpdateToast } from '@/components/VersionUpdateToast';
 import { DiamondProvider } from '@/components/DiamondContext';
+import { HeaderStatsProvider } from '@/components/HeaderStatsContext';
 import { getTutorialState } from '@/lib/game/tutorial';
 import { TutorialCoach } from '@/components/tutorial/TutorialCoach';
 import { InstallStrip } from '@/components/install/InstallStrip';
@@ -134,6 +135,7 @@ export default async function GameLayout({ children }: { children: React.ReactNo
 
   return (
     <DiamondProvider>
+    <HeaderStatsProvider>
       {/* 앱 셸 — fixed inset-0로 시각 뷰포트에 정확히 고정(안드 크롬 h-dvh+중첩스크롤
           높이 모호성 제거). 가로는 max-w-390 + mx-auto(width:auto)로 중앙 — w-full(width:100%)을
           주면 left/right-0과 over-constraint돼 좌측 정렬되므로 넣지 않는다(큰 화면 letterbox). */}
@@ -174,6 +176,7 @@ export default async function GameLayout({ children }: { children: React.ReactNo
             인트로/진행 상태 리셋 방지). 비차단(클라가 effect로 해소). */}
         <TutorialCoach statePromise={getActiveServerId().then((sid) => getTutorialState(userId, sid))} />
       </div>
+    </HeaderStatsProvider>
     </DiamondProvider>
   );
 }
