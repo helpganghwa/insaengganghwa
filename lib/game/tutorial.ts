@@ -17,6 +17,12 @@ import { enhancementJobs, enhancementLogs } from '@/lib/db/schema/enhance';
 export const TUTORIAL_INTRO = 1;
 export const TUTORIAL_ACTIVE = 2;
 export const TUTORIAL_DONE = 9;
+/**
+ * 방치 온보딩 자동 완료 임계 — 가입 후 이 기간이 지나면 INTRO/ACTIVE여도 DONE 처리한다.
+ * 강화 로그가 없어(온보딩 중도 이탈) 영원히 ACTIVE로 남아 매 세션 코치마크가 재출현하던
+ * nag를 차단(2026-07-27). 첫 세션 학습자는 절대 걸리지 않는 안전한 여유값. 필요 시 조정.
+ */
+export const TUTORIAL_MAX_ACTIVE_MS = 3 * 24 * 60 * 60 * 1000; // 3일
 
 export type TutorialStep = 'open' | 'equip' | 'enhance' | 'attempt';
 export type TutorialPhase = 'intro' | 'active' | 'done';
@@ -32,12 +38,19 @@ async function rowCount(table: PgTable, where: SQL | undefined): Promise<number>
 export async function getTutorialState(userId: string, serverId: number): Promise<TutorialState> {
   try {
     const [p] = await db
-      .select({ s: characters.tutorialStep })
+      .select({ s: characters.tutorialStep, createdAt: characters.createdAt })
       .from(characters)
       .where(and(eq(characters.userId, userId), eq(characters.serverId, serverId)));
     if (!p) return { phase: 'done', step: null };
+    if (p.s !== TUTORIAL_INTRO && p.s !== TUTORIAL_ACTIVE) return { phase: 'done', step: null };
+
+    // 오래 방치된 온보딩 자동 완료 — 강화를 안 해 계속 INTRO/ACTIVE로 남은 계정이 가입 후
+    // TUTORIAL_MAX_ACTIVE_MS를 넘기면 조용히 DONE 처리(매 세션 코치/팝업 재출현 nag 방지).
+    if (Date.now() - new Date(p.createdAt).getTime() > TUTORIAL_MAX_ACTIVE_MS) {
+      await finishTutorial(userId, serverId);
+      return { phase: 'done', step: null };
+    }
     if (p.s === TUTORIAL_INTRO) return { phase: 'intro', step: null };
-    if (p.s !== TUTORIAL_ACTIVE) return { phase: 'done', step: null };
 
     // active — localStorage가 비었을 때의 재개 단계만 파생(클라가 우선).
     const [eqC, equippedC, jobC, logC] = await Promise.all([
