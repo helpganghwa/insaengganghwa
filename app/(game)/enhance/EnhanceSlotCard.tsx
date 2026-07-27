@@ -14,6 +14,8 @@ import { RarityFrame, rarityBorderStyle, hasRarityBorder } from '@/components/Ra
 import { transcendStyle } from '@/lib/game/equipment/transcend';
 
 import { useResourceToast } from '@/components/ResourceToast';
+import { ModalShell } from '@/components/ModalShell';
+import { ZoomSafeInput } from '@/components/ui/ZoomSafeField';
 
 import { finalizeEnhance, reduceTimeWithGems, cancelEnhanceAction, autoEnhanceStepAction } from './actions';
 import { completeTutorial } from '@/components/tutorial/events';
@@ -203,8 +205,6 @@ export function EnhanceSlotCard({
   const [flashFromLevel, setFlashFromLevel] = useState<number | null>(null); // 결과 직전 레벨(보간 시작)
   const [flashToLevel, setFlashToLevel] = useState<number | null>(null); // 결과 후 새 레벨(보간 종료)
   const [optimisticDone, setOptimisticDone] = useState(false);
-  const [confirmCancel, setConfirmCancel] = useState(false);
-  const [confirmCancelLeft, setConfirmCancelLeft] = useState(0);
   const [confirmReduce, setConfirmReduce] = useState(false);
   const [confirmReduceLeft, setConfirmReduceLeft] = useState(0);
   const [flashMsg, setFlashMsg] = useState<string | null>(null); // outcome 랜덤 메시지
@@ -228,9 +228,10 @@ export function EnhanceSlotCard({
   const [autoUseCount, setAutoUseCount] = useState(false);
   const [autoCount, setAutoCount] = useState('50');
   const [autoDownStop, setAutoDownStop] = useState(true);
-  type AutoProg = { attempts: number; gems: number; ok: number; hold: number; down: number; fromLv: number; curLv: number };
-  const [autoProg, setAutoProg] = useState<AutoProg | null>(null); // 진행중 오버레이(null=미진행)
-  const [autoResult, setAutoResult] = useState<(AutoProg & { reason: string }) | null>(null); // 결과 오버레이
+  // 진행 상태 = 불리언 하나. 진행 연출은 실제 강화 FX(playResult)를 그대로 재생 —
+  // 별도 오버레이 없이 "진짜 버튼을 대신 눌러주는" 느낌(사용자 피드백 3).
+  const [autoRunning, setAutoRunning] = useState(false);
+  const [cancelOpen, setCancelOpen] = useState(false); // 취소(강화 해제) 확인 모달
 
   useEffect(() => {
     setNowMs(Date.now());
@@ -282,24 +283,7 @@ export function EnhanceSlotCard({
     // ready를 deps에 안 넣음 — 진입 시점의 ready 메시지를 카운트 동안 고정(자연).
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [confirm]);
-  // 취소·다이아 단축 — 동일 3s 재탭 패턴(카운트 라벨 노출용 useEffect).
-  useEffect(() => {
-    if (!confirmCancel) {
-      setConfirmCancelLeft(0);
-      return;
-    }
-    setConfirmCancelLeft(3);
-    const id = setInterval(() => {
-      setConfirmCancelLeft((s) => {
-        if (s <= 1) {
-          setConfirmCancel(false);
-          return 0;
-        }
-        return s - 1;
-      });
-    }, 1000);
-    return () => clearInterval(id);
-  }, [confirmCancel]);
+  // 다이아 단축 — 3s 재탭 패턴(카운트 라벨 노출용 useEffect). 취소는 코너 X + 공용 확인 모달로 분리.
   useEffect(() => {
     if (!confirmReduce) {
       setConfirmReduceLeft(0);
@@ -514,14 +498,11 @@ export function EnhanceSlotCard({
   };
 
   const [optimisticCancelled, setOptimisticCancelled] = useState(false);
+  // 실제 취소 실행 — 확인은 공용 모달(cancelOpen)에서 이미 받음. 코너 X → 모달 → 이 함수.
   const doCancel = () => {
     // 등록 확정 전(낙관적 잡)엔 취소 불가 — 임시 id가 서버 BigInt로 새는 것 방지(등록 완료 후 취소).
     if (attempting || activeJob.jobId.startsWith('optimistic-')) return;
-    if (!confirmCancel) {
-      setConfirmCancel(true);
-      return;
-    }
-    setConfirmCancel(false);
+    setCancelOpen(false);
     setOptimisticCancelled(true); // 카드 즉시 숨김 — 처리중 표시 X
     void cancelEnhanceAction(activeJob.jobId)
       .then((r) => {
@@ -542,44 +523,50 @@ export function EnhanceSlotCard({
   };
 
   // 자동 강화 — 클라 구동 루프. 매 스텝 서버 권위(autoEnhanceStepAction): 💎로 완료 단축→판정→재등록.
-  // 이탈/멈춤 = 루프 중단(서버 세션 없음, 남은 잡은 자연시간 진행). 정지조건 누적 판정.
+  // 연출은 수동 강화와 동일한 playResult(FX·로어·게이지)를 그대로 재생 — 진짜 버튼을 대신
+  // 눌러주는 느낌(사용자 피드백 3). 별도 진행/결과 오버레이 없음. 이탈/멈춤 = 루프 중단.
   const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
-  const autoReasonText = (r: string) =>
-    r === 'budget' ? '예산 소진' : r === 'insufficient' ? '다이아 부족' : '강화 종료';
-  const finishAuto = (p: AutoProg, reason: string) => {
+  const finishAuto = (reason: string, isError = false) => {
     autoRunRef.current = false;
-    setAutoProg(null);
-    setAutoResult({ ...p, reason });
-    router.refresh(); // 권위 다이아·레벨·전투력 재동기화
+    setAutoRunning(false);
+    setAttempting(false);
+    if (isError) showError(reason);
+    router.refresh(); // 세션 종료 시 1회 — 권위 다이아·레벨·전투력 재동기화(스텝마다 X)
   };
-  const runAutoLoop = async (startLv: number) => {
-    let attempts = 0, gems = 0, ok = 0, hold = 0, down = 0, curLv = startLv;
-    const snap = (): AutoProg => ({ attempts, gems, ok, hold, down, fromLv: startLv, curLv });
+  const runAutoLoop = async () => {
+    let attempts = 0;
     while (autoRunRef.current) {
+      // 수동 시도와 동일: 세트 랜덤 → 시도 오버레이 → 서버 스텝 → 결과 FX.
+      const lore = LORE_SETS[Math.floor(Math.random() * LORE_SETS.length)]!;
+      setAttempting(true);
+      setAttemptingMsg(lore.attempting);
       const r = await autoEnhanceStepAction(autoJobRef.current, autoBudgetRef.current).catch(() => null);
-      if (!autoRunRef.current) break; // 응답 도착 전 멈춤/이탈
-      if (!r) return finishAuto(snap(), '연결 오류');
-      if (r.status === 'error') return finishAuto(snap(), r.message);
-      if (r.status === 'stop') return finishAuto(snap(), autoReasonText(r.reason));
-      // status === 'ok'
-      attempts++; gems += r.gemsSpent; autoBudgetRef.current -= r.gemsSpent;
+      if (!autoRunRef.current) { setAttempting(false); break; } // 응답 도착 전 멈춤/이탈
+      if (!r) return finishAuto('연결이 불안정해 자동 강화를 멈췄어요.', true);
+      if (r.status === 'error') return finishAuto(r.message, true);
+      if (r.status === 'stop') {
+        // budget/insufficient/gone — 정상 정지(오류 아님). 마지막 잔여 잡은 자연시간 진행.
+        return finishAuto(r.reason);
+      }
+      // status === 'ok' — 서버가 이미 💎 차감·판정·재등록 완료.
+      attempts++;
+      autoBudgetRef.current -= r.gemsSpent;
       if (r.gemsSpent > 0) adjustDiamond(-BigInt(r.gemsSpent)); // 헤더 다이아 낙관 차감
-      if (r.outcome === 'success' || r.outcome === 'mega') ok++;
-      else if (r.outcome === 'hold') hold++;
-      else down++;
-      curLv = r.toLevel;
-      setAutoProg(snap());
-      applyNextJob(r.nextJob); // 카드 게이지 즉시 새 잡으로
-      if (r.nextJob) autoJobRef.current = r.nextJob.jobId;
+      autoJobRef.current = r.nextJob ? r.nextJob.jobId : autoJobRef.current;
+      applyNextJob(r.nextJob); // 게이지 즉시 새 잡으로(수동 경로와 동일)
+      // 실제 강화 연출 재생 — 재생 시간만큼 대기(멈춤은 다음 스텝 진입 시 반영).
+      playResult(r.outcome as Outcome, Number(r.fromLevel), Number(r.toLevel), lore);
+      await sleep(r.outcome === 'mega' ? 4000 : 2600);
+      if (!autoRunRef.current) break;
+      // 정지조건 판정.
       const cfg = autoCfgRef.current;
-      if (cfg.down && r.outcome === 'down') return finishAuto(snap(), '하락 발생');
-      if (cfg.target != null && r.toLevel >= cfg.target) return finishAuto(snap(), '목표 레벨 도달');
-      if (cfg.count != null && attempts >= cfg.count) return finishAuto(snap(), '횟수 도달');
-      if (!r.nextJob) return finishAuto(snap(), '최대 레벨 도달');
-      if (autoBudgetRef.current <= 0) return finishAuto(snap(), '예산 소진');
-      await sleep(280); // 페이스 + 멈춤 반응성
+      if (cfg.down && r.outcome === 'down') return finishAuto('하락 발생 — 자동 강화를 멈췄어요.');
+      if (cfg.target != null && Number(r.toLevel) >= cfg.target) return finishAuto('목표 레벨 도달');
+      if (cfg.count != null && attempts >= cfg.count) return finishAuto('설정 횟수 도달');
+      if (!r.nextJob) return finishAuto('최대 레벨 도달');
+      if (autoBudgetRef.current <= 0) return finishAuto('예산 소진');
     }
-    finishAuto(snap(), '수동 멈춤'); // 루프 탈출(멈춤/이탈)
+    finishAuto('수동 멈춤'); // 루프 탈출(멈춤/이탈)
   };
   const startAuto = () => {
     if (pending || attempting || flash || activeJob.jobId.startsWith('optimistic-')) return;
@@ -588,7 +575,7 @@ export function EnhanceSlotCard({
     let b = parseInt(autoBudget, 10) || 0;
     if (b < 1) { showError('다이아 예산을 입력하세요.'); return; }
     // 예산은 보유량을 넘지 못함(넘겨도 서버 walletTrySpend가 insufficient로 안전 정지하지만 UX상 캡).
-    // 시작 후 다른 이유로 보유가 예산 밑으로 줄어도 서버가 'insufficient' → '다이아 부족'으로 자동 종료.
+    // 시작 후 다른 이유로 보유가 예산 밑으로 줄어도 서버가 'insufficient' → 정상 정지.
     if (b > bal) b = bal;
     autoRunRef.current = true;
     autoJobRef.current = activeJob.jobId;
@@ -599,10 +586,8 @@ export function EnhanceSlotCard({
       down: autoDownStop,
     };
     setAutoOpen(false);
-    setAutoResult(null);
-    const startLv = activeJob.fromLevel;
-    setAutoProg({ attempts: 0, gems: 0, ok: 0, hold: 0, down: 0, fromLv: startLv, curLv: startLv });
-    void runAutoLoop(startLv);
+    setAutoRunning(true);
+    void runAutoLoop();
   };
   // 이탈/언마운트 = 자동 정지(루프만 중단). pagehide=탭 닫힘/이동, cleanup=SPA 언마운트.
   useEffect(() => {
@@ -611,8 +596,8 @@ export function EnhanceSlotCard({
     return () => { window.removeEventListener('pagehide', stop); autoRunRef.current = false; };
   }, []);
 
-  // 보석 단축/취소 3초 컨펌 중에는 슬롯의 다른 영역(강화 시도·반대 버튼) 클릭 불가 — 오탭/혼선 방지.
-  const otherActionConfirm = confirmReduce || confirmCancel;
+  // 보석 단축 3초 컨펌 중에는 슬롯의 다른 영역(강화 시도) 클릭 불가 — 오탭/혼선 방지.
+  const otherActionConfirm = confirmReduce;
 
   if (optimisticCancelled) {
     // 카드를 picker와 동일 외관의 placeholder로 즉시 교체 — 슬롯 2칸 유지.
@@ -633,7 +618,7 @@ export function EnhanceSlotCard({
         tabIndex={pending ? -1 : 0}
         aria-label={`강화 시도 — 현재 성공률 ${(effBp / 100).toFixed(1)}%`}
         onClick={() => {
-          if (pending || flash || otherActionConfirm || autoProg) return; // 컨펌·자동 진행 중엔 시도 영역 잠금
+          if (pending || flash || otherActionConfirm || autoRunning) return; // 컨펌·자동 진행 중엔 시도 영역 잠금
           // 확인 모드: 두 번째 탭 = 강화. 그 외(기본): 첫 탭 = 확인 진입.
           if (confirm) doAttempt();
           else setConfirm(true);
@@ -719,10 +704,9 @@ export function EnhanceSlotCard({
                 !instantCost ||
                 !canAfford ||
                 confirm ||
-                confirmCancel || // 취소 컨펌 중엔 단축 잠금
                 attempting ||
                 !!flash ||
-                !!autoProg
+                autoRunning
               }
               onClick={(e) => {
                 e.stopPropagation();
@@ -740,9 +724,10 @@ export function EnhanceSlotCard({
                   ? `💎${instantCost}`
                   : '완료'}
             </button>
+            {/* 자동 — 강조 없이 단축 버튼과 동일 UI(사용자 피드백 2). */}
             <button
               type="button"
-              disabled={pending || confirm || confirmReduce || attempting || !!flash || !!autoProg || activeJob.jobId.startsWith('optimistic-')}
+              disabled={pending || confirm || confirmReduce || attempting || !!flash || autoRunning || activeJob.jobId.startsWith('optimistic-')}
               onClick={(e) => {
                 e.stopPropagation();
                 if (activeJob.jobId.startsWith('optimistic-')) return;
@@ -750,27 +735,39 @@ export function EnhanceSlotCard({
                 setAutoBudget(String(Math.min(5000, Number(diamond) || 0))); // 기본 예산 = min(5000, 보유)
                 setAutoOpen(true);
               }}
-              className="h-6 w-[54px] rounded-md border border-amber-700/60 bg-amber-900/30 text-[9px] font-bold text-amber-200 disabled:opacity-40"
+              className="h-6 w-[54px] rounded-md border border-zinc-600 bg-zinc-800/60 text-[9px] font-bold text-zinc-200 disabled:opacity-40"
             >
-              ⚙ 자동
-            </button>
-            <button
-              type="button"
-              disabled={pending || confirm || confirmReduce || attempting || !!flash || !!autoProg}
-              onClick={(e) => {
-                e.stopPropagation();
-                doCancel();
-              }}
-              className={`h-6 w-[54px] rounded-md border text-[9px] font-bold tabular-nums disabled:opacity-40 ${
-                confirmCancel
-                  ? 'animate-pulse border-red-400 bg-red-500 text-white'
-                  : 'border-zinc-600 bg-zinc-800/60 text-zinc-200'
-              }`}
-            >
-              {confirmCancel ? `확인 ${confirmCancelLeft}s` : '취소'}
+              자동
             </button>
           </div>
         </div>
+
+        {/* 우상단 코너 — 평소엔 취소(X), 자동 진행 중엔 멈춤(■). FX·오버레이 위(z-40)라
+            항상 클릭 가능(사용자 피드백 1·자동 멈춤 접근성). */}
+        {autoRunning ? (
+          <button
+            type="button"
+            onClick={(e) => { e.stopPropagation(); autoRunRef.current = false; }}
+            className="absolute right-1.5 top-1.5 z-40 rounded-md border border-red-500/70 bg-red-950/80 px-1.5 py-0.5 text-[10px] font-bold text-red-200 backdrop-blur-sm active:scale-95"
+            aria-label="자동 강화 멈춤"
+          >
+            ■ 멈춤
+          </button>
+        ) : (
+          <button
+            type="button"
+            disabled={pending || confirm || confirmReduce || attempting || !!flash || activeJob.jobId.startsWith('optimistic-')}
+            onClick={(e) => {
+              e.stopPropagation();
+              if (activeJob.jobId.startsWith('optimistic-')) return;
+              setCancelOpen(true);
+            }}
+            className="absolute right-1.5 top-1.5 z-20 flex h-5 w-5 items-center justify-center rounded-md border border-zinc-700 bg-zinc-900/70 text-[11px] leading-none text-zinc-400 backdrop-blur-sm active:scale-95 disabled:opacity-30"
+            aria-label="강화 취소"
+          >
+            ✕
+          </button>
+        )}
 
         {confirm && !attempting && !flash ? (
           <div className="pointer-events-none absolute inset-0 z-20 flex flex-col items-center justify-center gap-1 bg-black/55 px-4 text-center backdrop-blur-[2px]">
@@ -817,126 +814,117 @@ export function EnhanceSlotCard({
           </>
         ) : null}
 
-        {/* 자동 진행중 오버레이 — 카드(92px) 가로형 컴팩트. */}
-        {autoProg ? (
-          <div className="absolute inset-0 z-30 flex items-center gap-2.5 bg-black/90 px-3 backdrop-blur-[2px]">
-            <span className="animate-spin text-lg">⚙️</span>
-            <div className="min-w-0 flex-1 text-left leading-tight">
-              <div className="text-[11px] font-bold text-amber-200">자동 강화 중 · +{autoProg.curLv}</div>
-              <div className="text-[10px] text-zinc-300 tabular-nums">
-                시도 {autoProg.attempts} · <span className="text-emerald-300">성공 {autoProg.ok}</span>/<span className="text-amber-300">하락 {autoProg.down}</span> · 💎{autoProg.gems.toLocaleString()}
-              </div>
-            </div>
-            <button
-              type="button"
-              onClick={(e) => { e.stopPropagation(); autoRunRef.current = false; }}
-              className="shrink-0 rounded-md border border-red-500/60 bg-red-900/40 px-2.5 py-1 text-[10px] font-bold text-red-200"
-            >
-              ■ 멈춤
-            </button>
-          </div>
-        ) : null}
-
-        {/* 자동 결과 오버레이 — 컴팩트. */}
-        {autoResult ? (
-          <div className="absolute inset-0 z-30 flex items-center gap-2.5 bg-black/92 px-3 backdrop-blur-[2px]">
-            <div className="min-w-0 flex-1 text-left leading-tight">
-              <div className="text-[11px] font-bold text-amber-200">✦ 자동 완료 · +{autoResult.fromLv}→+{autoResult.curLv}</div>
-              <div className="text-[10px] tabular-nums">
-                <span className="text-emerald-300">성공 {autoResult.ok}</span> · <span className="text-zinc-300">유지 {autoResult.hold}</span> · <span className="text-amber-300">하락 {autoResult.down}</span> · 💎{autoResult.gems.toLocaleString()}
-              </div>
-              <div className="text-[9px] text-zinc-500">{autoResult.reason}</div>
-            </div>
-            <button
-              type="button"
-              onClick={(e) => { e.stopPropagation(); setAutoResult(null); }}
-              className="shrink-0 rounded-md bg-amber-500 px-3 py-1 text-[10px] font-bold text-black"
-            >
-              확인
-            </button>
-          </div>
-        ) : null}
+        {/* 자동 진행 연출은 별도 오버레이 없이 실제 강화 FX(playResult)를 그대로 재생 —
+            멈춤은 우상단 코너 버튼(z-40). 완료 시 마지막 강화 결과 카드가 그대로 남는다. */}
       </div>
 
-      {/* 자동 강화 설정 모달 — 화면 중앙. */}
+      {/* 자동 강화 설정 모달 — 공용 ModalShell(사용자 피드백 4). */}
       {autoOpen ? (
-        <div
-          className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 px-6"
-          onClick={() => setAutoOpen(false)}
+        <ModalShell
+          onClose={() => setAutoOpen(false)}
+          label="자동 강화 설정"
+          className="w-full max-w-[330px] rounded-2xl border border-zinc-700 bg-zinc-900 p-4"
         >
-          <div
-            className="w-full max-w-[330px] rounded-2xl border border-zinc-700 bg-zinc-900 p-4"
-            onClick={(e) => e.stopPropagation()}
-          >
-            <h3 className="text-sm font-bold text-amber-200">⚙ 자동 강화 설정</h3>
-            <p className="mt-1 text-[11px] leading-relaxed text-zinc-400">
-              💎로 시간을 단축하며 자동 반복합니다. 예산을 다 쓰거나 선택 조건 중 하나라도 걸리면 정지합니다.
-            </p>
-            {/* 예산 — 필수. 보유량으로 캡 + 최대 버튼. */}
-            <div className="mt-3 rounded-xl border border-cyan-800 bg-cyan-950/40 px-3 py-2.5">
-              <div className="flex items-center gap-2">
-                <div className="min-w-0 flex-1">
-                  <div className="text-[12px] font-bold text-cyan-300">
-                    다이아 예산 <span className="ml-1 rounded bg-cyan-500 px-1 text-[9px] font-extrabold text-black">필수</span>
-                  </div>
-                  <div className="text-[10px] text-cyan-700">이만큼 쓰면 반드시 정지 · 보유 {(Number(diamond) || 0).toLocaleString()}💎</div>
-                </div>
-                <input
-                  value={autoBudget}
-                  onChange={(e) => {
-                    const v = e.target.value.replace(/[^0-9]/g, '');
-                    const bal = Number(diamond) || 0;
-                    setAutoBudget(v === '' ? '' : String(Math.min(parseInt(v, 10), bal))); // 보유 초과 입력 즉시 캡
-                  }}
-                  inputMode="numeric"
-                  className="w-[94px] rounded-md border border-cyan-800 bg-black/40 px-2 py-1.5 text-right font-mono text-[13px] text-cyan-200"
-                />
-                <span className="text-[11px] text-cyan-600">💎</span>
+          <h3 className="text-sm font-bold text-zinc-100">자동 강화 설정</h3>
+          <p className="mt-1 text-[11px] leading-relaxed text-zinc-400">
+            💎로 시간을 단축하며 자동 반복합니다. 예산을 다 쓰거나 선택 조건 중 하나라도 걸리면 정지합니다.
+          </p>
+          {/* 예산 — 필수. 다른 항목과 톤 통일(강조 제거)·컴팩트(사용자 피드백 6). */}
+          <div className="mt-3 flex items-center gap-2 rounded-lg border border-zinc-700 bg-black/20 px-3 py-2.5">
+            <div className="min-w-0 flex-1">
+              <div className="text-[12px] font-semibold text-zinc-200">다이아 예산</div>
+              <div className="text-[10px] text-zinc-500">
+                소진 시 정지 · 보유{' '}
+                <button
+                  type="button"
+                  onClick={() => setAutoBudget(String(Number(diamond) || 0))}
+                  className="font-mono font-semibold text-amber-300 underline decoration-dotted underline-offset-2"
+                >
+                  {(Number(diamond) || 0).toLocaleString()}💎
+                </button>
               </div>
-              <button
-                type="button"
-                onClick={() => setAutoBudget(String(Number(diamond) || 0))}
-                className="mt-2 w-full rounded-md border border-cyan-800/60 py-1 text-[10px] font-bold text-cyan-400 active:scale-[0.99]"
-              >
-                보유 전액 ({(Number(diamond) || 0).toLocaleString()}💎)
-              </button>
             </div>
-            {/* 목표 레벨 — 선택 */}
-            <label className="mt-1 flex items-center gap-2 border-t border-zinc-800 py-2.5">
-              <input type="checkbox" checked={autoUseTarget} onChange={(e) => setAutoUseTarget(e.target.checked)} className="h-4 w-4 accent-amber-500" />
-              <div className="min-w-0 flex-1">
-                <div className="text-[12px] font-semibold text-zinc-200">목표 레벨까지</div>
-                <div className="text-[10px] text-zinc-500">선택 · 도달 시 정지</div>
-              </div>
-              <input value={autoTarget} onChange={(e) => setAutoTarget(e.target.value.replace(/[^0-9]/g, ''))} inputMode="numeric" disabled={!autoUseTarget}
-                className="w-[70px] rounded-md border border-zinc-700 bg-black/40 px-2 py-1.5 text-right font-mono text-[12px] text-zinc-100 disabled:opacity-40" />
-              <span className="w-3 text-[11px] text-zinc-500">+</span>
-            </label>
-            {/* 횟수 — 선택 */}
-            <label className="flex items-center gap-2 border-t border-zinc-800 py-2.5">
-              <input type="checkbox" checked={autoUseCount} onChange={(e) => setAutoUseCount(e.target.checked)} className="h-4 w-4 accent-amber-500" />
-              <div className="min-w-0 flex-1">
-                <div className="text-[12px] font-semibold text-zinc-200">횟수 제한</div>
-                <div className="text-[10px] text-zinc-500">선택 · N회 후 정지</div>
-              </div>
-              <input value={autoCount} onChange={(e) => setAutoCount(e.target.value.replace(/[^0-9]/g, ''))} inputMode="numeric" disabled={!autoUseCount}
-                className="w-[70px] rounded-md border border-zinc-700 bg-black/40 px-2 py-1.5 text-right font-mono text-[12px] text-zinc-100 disabled:opacity-40" />
-              <span className="w-3 text-[11px] text-zinc-500">회</span>
-            </label>
-            {/* 하락 시 정지 — 선택 */}
-            <label className="flex items-center gap-2 border-t border-zinc-800 py-2.5">
-              <input type="checkbox" checked={autoDownStop} onChange={(e) => setAutoDownStop(e.target.checked)} className="h-4 w-4 accent-amber-500" />
-              <div className="min-w-0 flex-1">
-                <div className="text-[12px] font-semibold text-zinc-200">하락 시 정지</div>
-                <div className="text-[10px] text-zinc-500">선택 · 위험구간 안전장치</div>
-              </div>
-            </label>
-            <div className="mt-3 grid grid-cols-[1fr_2fr] gap-2">
-              <button type="button" onClick={() => setAutoOpen(false)} className="rounded-xl border border-zinc-700 py-2.5 text-[13px] font-bold text-zinc-400">취소</button>
-              <button type="button" onClick={startAuto} className="rounded-xl bg-amber-500 py-2.5 text-[13px] font-extrabold text-black active:scale-[0.98]">자동 시작</button>
-            </div>
+            <ZoomSafeInput
+              wrapClassName="h-8 w-[90px]"
+              value={autoBudget}
+              onChange={(e) => {
+                const v = e.target.value.replace(/[^0-9]/g, '');
+                const bal = Number(diamond) || 0;
+                setAutoBudget(v === '' ? '' : String(Math.min(parseInt(v, 10), bal))); // 보유 초과 입력 즉시 캡
+              }}
+              inputMode="numeric"
+              className="w-full rounded-md border border-zinc-700 bg-black/40 px-2 text-right font-mono text-zinc-100"
+            />
           </div>
-        </div>
+          {/* 목표 레벨 — 선택 */}
+          <label className="mt-1 flex items-center gap-2 border-t border-zinc-800 py-2.5">
+            <input type="checkbox" checked={autoUseTarget} onChange={(e) => setAutoUseTarget(e.target.checked)} className="h-4 w-4 accent-amber-500" />
+            <div className="min-w-0 flex-1">
+              <div className="text-[12px] font-semibold text-zinc-200">목표 레벨까지</div>
+              <div className="text-[10px] text-zinc-500">선택 · 도달 시 정지</div>
+            </div>
+            <span className="text-[11px] text-zinc-500">+</span>
+            <ZoomSafeInput
+              wrapClassName="h-8 w-[64px]"
+              value={autoTarget}
+              onChange={(e) => setAutoTarget(e.target.value.replace(/[^0-9]/g, ''))}
+              inputMode="numeric"
+              disabled={!autoUseTarget}
+              className="w-full rounded-md border border-zinc-700 bg-black/40 px-2 text-right font-mono text-zinc-100 disabled:opacity-40"
+            />
+          </label>
+          {/* 횟수 — 선택 */}
+          <label className="flex items-center gap-2 border-t border-zinc-800 py-2.5">
+            <input type="checkbox" checked={autoUseCount} onChange={(e) => setAutoUseCount(e.target.checked)} className="h-4 w-4 accent-amber-500" />
+            <div className="min-w-0 flex-1">
+              <div className="text-[12px] font-semibold text-zinc-200">횟수 제한</div>
+              <div className="text-[10px] text-zinc-500">선택 · N회 후 정지</div>
+            </div>
+            <ZoomSafeInput
+              wrapClassName="h-8 w-[64px]"
+              value={autoCount}
+              onChange={(e) => setAutoCount(e.target.value.replace(/[^0-9]/g, ''))}
+              inputMode="numeric"
+              disabled={!autoUseCount}
+              className="w-full rounded-md border border-zinc-700 bg-black/40 px-2 text-right font-mono text-zinc-100 disabled:opacity-40"
+            />
+            <span className="text-[11px] text-zinc-500">회</span>
+          </label>
+          {/* 하락 시 정지 — 선택 */}
+          <label className="flex items-center gap-2 border-t border-zinc-800 py-2.5">
+            <input type="checkbox" checked={autoDownStop} onChange={(e) => setAutoDownStop(e.target.checked)} className="h-4 w-4 accent-amber-500" />
+            <div className="min-w-0 flex-1">
+              <div className="text-[12px] font-semibold text-zinc-200">하락 시 정지</div>
+              <div className="text-[10px] text-zinc-500">선택 · 위험구간 안전장치</div>
+            </div>
+          </label>
+          <div className="mt-3 grid grid-cols-[1fr_2fr] gap-2">
+            <button type="button" onClick={() => setAutoOpen(false)} className="rounded-xl border border-zinc-700 py-2.5 text-[13px] font-bold text-zinc-400">취소</button>
+            <button type="button" onClick={startAuto} className="rounded-xl bg-amber-500 py-2.5 text-[13px] font-extrabold text-black active:scale-[0.98]">자동 시작</button>
+          </div>
+        </ModalShell>
+      ) : null}
+
+      {/* 강화 취소(해제) 확인 모달 — 코너 X → 이 모달 → doCancel(사용자 피드백 1). */}
+      {cancelOpen ? (
+        <ModalShell
+          onClose={() => setCancelOpen(false)}
+          label="강화 취소 확인"
+          className="w-full max-w-[300px] rounded-2xl border border-zinc-700 bg-zinc-900 p-4"
+        >
+          <h3 className="text-sm font-bold text-zinc-100">강화를 취소할까요?</h3>
+          <p className="mt-2 text-[12px] leading-relaxed text-zinc-400">
+            <span className="font-semibold text-zinc-200">{activeJob.name}</span>{' '}
+            (+{activeJob.fromLevel})의 강화를 해제합니다.
+          </p>
+          <p className="mt-1 text-[11px] leading-relaxed text-amber-300/90">
+            지금까지 쌓인 강화 시간이 초기화되며, 다시 올리면 처음부터 채워야 합니다.
+          </p>
+          <div className="mt-3 grid grid-cols-2 gap-2">
+            <button type="button" onClick={() => setCancelOpen(false)} className="rounded-xl border border-zinc-700 py-2.5 text-[13px] font-bold text-zinc-300">돌아가기</button>
+            <button type="button" onClick={doCancel} className="rounded-xl bg-red-600 py-2.5 text-[13px] font-extrabold text-white active:scale-[0.98]">강화 취소</button>
+          </div>
+        </ModalShell>
       ) : null}
     </div>
   );
