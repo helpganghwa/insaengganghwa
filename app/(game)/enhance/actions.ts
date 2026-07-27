@@ -1,6 +1,7 @@
 'use server';
 
 import { revalidatePath } from 'next/cache';
+import { after } from 'next/server';
 import { and, eq, sql } from 'drizzle-orm';
 
 import { getSessionUserId } from '@/lib/auth/session';
@@ -136,8 +137,9 @@ export async function finalizeEnhance(jobId: string): Promise<
   if (await rateLimited(userId, 'enhance')) return err('RATE_LIMITED');
   const __b = await actionBlock(); if (__b) return err(__b);
   try {
+    const serverId = await getActiveServerId(); // 쿠키 파생 — before/after 재사용(중복 호출 제거).
     // 강화 직전 — 캐시 시점 본인 3 메트릭 + 순위(토스트 before).
-    const ranksBefore = await getMyRanks(userId, await getActiveServerId());
+    const ranksBefore = await getMyRanks(userId, serverId);
 
     // 결과 판정·저장 원자 트랜잭션(CLAUDE §3.1/§3.3/§3.4).
     const jid = toJobId(jobId);
@@ -166,9 +168,10 @@ export async function finalizeEnhance(jobId: string): Promise<
       if (!(re instanceof EnhanceError)) console.error('[enhance.requeue]', re);
     }
     // 강화 직후 — 본인 새 stat 직접 fetch + 캐시 sorted bisect(토스트 after).
-    const ranksAfter = await getMyRanksAfter(userId, await getActiveServerId());
-    // 묶음 알림에서 이미 처리된 잡 제거 — best-effort. 다음 cron이 빈 묶음 발송 안 함.
-    await cleanupPushPendingJob(userId, jobId);
+    const ranksAfter = await getMyRanksAfter(userId, serverId);
+    // 묶음 알림에서 이미 처리된 잡 제거 — best-effort·응답 결과 무관이라 after()로 응답 후 실행
+    // (핫패스에서 UPDATE+DELETE 2왕복 제거, 2026-07-27). 다음 cron이 빈 묶음 발송 안 함.
+    after(() => cleanupPushPendingJob(userId, jobId));
     // 변경 데이터만 무효화(홈 '/'은 다음 방문 시 자연 갱신 — 핫패스 축소).
     revalidatePath('/enhance');
     revalidatePath('/inventory');
