@@ -156,6 +156,11 @@ export async function getConquestReplay(serverId: number, forKstDay?: string): P
 
   if (Object.keys(events).length === 0 && neutralized.length === 0) return null;
 
+  // 시작 소유 길드 전부 문양 메타에 포함(2026-07-27 제보) — 종전엔 그날 전투/중립화 관여 길드만
+  // 수집해, 조용히 지키기만 한 길드(예: 공격받지 않은 방어 배치)의 구역이 문양 없이 렌더돼
+  // '중립처럼' 보였다(대설봉/우리 사례). beforeOwner의 모든 소유 길드를 조회 대상에 추가.
+  for (const owner of Object.values(beforeOwner)) if (owner) names.add(owner);
+
   // 길드 문양 메타 — emblem_color/url 비정규화 미러 사용. 해산 길드는 조회 불가 → 회색 폴백.
   const guildRows = names.size
     ? await db
