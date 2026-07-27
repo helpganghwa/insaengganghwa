@@ -589,6 +589,12 @@ export function EnhanceSlotCard({
     setAutoRunning(true);
     void runAutoLoop();
   };
+  // 예산 ± 조정 — 보유량으로 캡, 0 미만 방지. 스텝 100(정밀 조정), 입력창으로 큰 값 직접 타이핑.
+  const bumpBudget = (delta: number) => {
+    const bal = Number(diamond) || 0;
+    const cur = parseInt(autoBudget, 10) || 0;
+    setAutoBudget(String(Math.max(0, Math.min(bal, cur + delta))));
+  };
   // 이탈/언마운트 = 자동 정지(루프만 중단). pagehide=탭 닫힘/이동, cleanup=SPA 언마운트.
   useEffect(() => {
     const stop = () => { autoRunRef.current = false; };
@@ -742,8 +748,7 @@ export function EnhanceSlotCard({
           </div>
         </div>
 
-        {/* 우상단 코너 — 평소엔 취소(X), 자동 진행 중엔 멈춤(■). FX·오버레이 위(z-40)라
-            항상 클릭 가능(사용자 피드백 1·자동 멈춤 접근성). */}
+        {/* 자동 진행 중 — 우상단 멈춤(■). FX·오버레이 위(z-40)라 항상 클릭 가능(자동 멈춤 접근성). */}
         {autoRunning ? (
           <button
             type="button"
@@ -754,6 +759,7 @@ export function EnhanceSlotCard({
             ■ 멈춤
           </button>
         ) : (
+          /* 취소(X) — 좌상단(스프라이트 위 모서리). 우측 버튼열과 겹치지 않도록 분리(사용자 피드백 1). */
           <button
             type="button"
             disabled={pending || confirm || confirmReduce || attempting || !!flash || activeJob.jobId.startsWith('optimistic-')}
@@ -762,7 +768,7 @@ export function EnhanceSlotCard({
               if (activeJob.jobId.startsWith('optimistic-')) return;
               setCancelOpen(true);
             }}
-            className="absolute right-1.5 top-1.5 z-20 flex h-5 w-5 items-center justify-center rounded-md border border-zinc-700 bg-zinc-900/70 text-[11px] leading-none text-zinc-400 backdrop-blur-sm active:scale-95 disabled:opacity-30"
+            className="absolute left-1.5 top-1.5 z-20 flex h-5 w-5 items-center justify-center rounded-md border border-zinc-700 bg-zinc-950/80 text-[11px] leading-none text-zinc-400 backdrop-blur-sm active:scale-95 disabled:opacity-30"
             aria-label="강화 취소"
           >
             ✕
@@ -826,11 +832,13 @@ export function EnhanceSlotCard({
           className="w-full max-w-[330px] rounded-2xl border border-zinc-700 bg-zinc-900 p-4"
         >
           <h3 className="text-sm font-bold text-zinc-100">자동 강화 설정</h3>
-          <p className="mt-1 text-[11px] leading-relaxed text-zinc-400">
-            💎로 시간을 단축하며 자동 반복합니다. 예산을 다 쓰거나 선택 조건 중 하나라도 걸리면 정지합니다.
+          <p className="mt-1 whitespace-pre-line text-[11px] leading-relaxed text-zinc-400">
+            {'💎로 시간을 단축하며 자동 반복합니다.\n예산을 다 쓰거나 선택 조건 중 하나라도 달성하면 정지합니다.'}
           </p>
-          {/* 예산 — 필수. 다른 항목과 톤 통일(강조 제거)·컴팩트(사용자 피드백 6). */}
-          <div className="mt-3 flex items-center gap-2 rounded-lg border border-zinc-700 bg-black/20 px-3 py-2.5">
+          {/* 예산 — 필수(체크박스 없음). 다른 항목과 동일 행 구조 · 라벨 정렬용 체크박스폭 스페이서.
+              값은 ± 버튼(스텝 100) 또는 입력창 직접 타이핑으로 조정(사용자 피드백 2). */}
+          <div className="mt-2 flex items-center gap-2 border-t border-zinc-800 py-2.5">
+            <span aria-hidden className="h-4 w-4 shrink-0" />
             <div className="min-w-0 flex-1">
               <div className="text-[12px] font-semibold text-zinc-200">다이아 예산</div>
               <div className="text-[10px] text-zinc-500">
@@ -844,20 +852,38 @@ export function EnhanceSlotCard({
                 </button>
               </div>
             </div>
-            <ZoomSafeInput
-              wrapClassName="h-8 w-[90px]"
-              value={autoBudget}
-              onChange={(e) => {
-                const v = e.target.value.replace(/[^0-9]/g, '');
-                const bal = Number(diamond) || 0;
-                setAutoBudget(v === '' ? '' : String(Math.min(parseInt(v, 10), bal))); // 보유 초과 입력 즉시 캡
-              }}
-              inputMode="numeric"
-              className="w-full rounded-md border border-zinc-700 bg-black/40 px-2 text-right font-mono text-zinc-100"
-            />
+            <div className="flex shrink-0 items-center gap-1">
+              <button
+                type="button"
+                onClick={() => bumpBudget(-100)}
+                className="flex h-8 w-7 items-center justify-center rounded-md border border-zinc-700 bg-black/40 text-[15px] leading-none text-zinc-300 active:scale-95"
+                aria-label="예산 100 감소"
+              >
+                −
+              </button>
+              <ZoomSafeInput
+                wrapClassName="h-8 w-[72px]"
+                value={autoBudget}
+                onChange={(e) => {
+                  const v = e.target.value.replace(/[^0-9]/g, '');
+                  const bal = Number(diamond) || 0;
+                  setAutoBudget(v === '' ? '' : String(Math.min(parseInt(v, 10), bal))); // 보유 초과 입력 즉시 캡
+                }}
+                inputMode="numeric"
+                className="w-full rounded-md border border-zinc-700 bg-black/40 px-2 text-right font-mono text-zinc-100"
+              />
+              <button
+                type="button"
+                onClick={() => bumpBudget(100)}
+                className="flex h-8 w-7 items-center justify-center rounded-md border border-zinc-700 bg-black/40 text-[15px] leading-none text-zinc-300 active:scale-95"
+                aria-label="예산 100 증가"
+              >
+                +
+              </button>
+            </div>
           </div>
           {/* 목표 레벨 — 선택 */}
-          <label className="mt-1 flex items-center gap-2 border-t border-zinc-800 py-2.5">
+          <label className="flex items-center gap-2 border-t border-zinc-800 py-2.5">
             <input type="checkbox" checked={autoUseTarget} onChange={(e) => setAutoUseTarget(e.target.checked)} className="h-4 w-4 accent-amber-500" />
             <div className="min-w-0 flex-1">
               <div className="text-[12px] font-semibold text-zinc-200">목표 레벨까지</div>
