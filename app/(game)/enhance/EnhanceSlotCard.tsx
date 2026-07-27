@@ -720,7 +720,7 @@ export function EnhanceSlotCard({
     return (
       <>
         <span className={CHIP}>
-          예산 <span className="text-amber-300">{s.gems.toLocaleString()}</span>/{s.budgetTotal.toLocaleString()}
+          예산 <span className="text-cyan-300">{s.gems.toLocaleString()}</span>/{s.budgetTotal.toLocaleString()}
         </span>
         <span className={CHIP}>{mid.join(' · ')}</span>
         <span className={CHIP}>
@@ -979,6 +979,7 @@ export function EnhanceSlotCard({
             <div className="flex flex-1 flex-col justify-center gap-1 px-2">
               {autoRight(autoStats)}
             </div>
+            <span className="pointer-events-none absolute bottom-1 right-2 text-[8px] text-zinc-500">탭하여 중단</span>
             {/* 탭 → 중지 재확인 */}
             {autoStopConfirm ? (
               <div className="pointer-events-none absolute inset-0 z-10 flex flex-col items-center justify-center gap-1 bg-black/72 text-center backdrop-blur-[1px]">
