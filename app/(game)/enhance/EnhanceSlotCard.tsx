@@ -206,8 +206,12 @@ export function EnhanceSlotCard({
   // 자동 재등록된 다음 잡을 응답 즉시 반영하는 오버라이드(2026-07-23 Eclipse 제보 근본 수정).
   // 서버는 강화 수령 시 새 잡을 이미 만들지만, 종전엔 router.refresh(연출 2.5초 뒤)로만 반영돼
   // 네트워크 지연 시 완료된 옛 잡이 게이지 100%로 잔류 → 재수령이 확률 0%대 새 잡에 꽂혔다.
-  // finalize 응답의 nextJob으로 즉시 교체하고, prop이 그 잡(또는 이후)으로 갱신되면 해제한다.
+  // finalize 응답의 nextJob으로 즉시 교체하고, prop이 갱신되면(=서버 권위 도착) 해제한다.
   const [jobOverride, setJobOverride] = useState<ActiveJob | null>(null);
+  // 오버라이드 설정 당시의 propJob.jobId — prop이 이 값에서 "바뀌면" 서버 데이터가 더 최신이므로 해제.
+  // (종전 propJob===override 일치 비교는 응답 유실 등으로 override가 한 단계 뒤처지면 영영 안 풀려
+  //  카드가 정산된 옛 잡에 고착 → 자동 강화 재시작이 즉시 'gone' 종료되던 버그의 원인.)
+  const overrideBaseRef = useRef<string | null>(null);
   const activeJob = jobOverride ?? propJob;
   const router = useRouter();
   const { showRanking, beginEnhanceOverlay, endEnhanceOverlay, showError } = useResourceToast();
@@ -266,9 +270,9 @@ export function EnhanceSlotCard({
     setOptimisticDone(false);
     setConfirm(false);
   }, [activeJob.jobId]);
-  // prop이 오버라이드한 잡(또는 그 이후)으로 갱신되면 오버라이드 해제 — 이후 서버 데이터 신뢰.
+  // prop이 오버라이드 설정 시점에서 바뀌면(어떤 잡으로든) 해제 — 이후 서버 데이터 신뢰.
   useEffect(() => {
-    if (jobOverride && propJob.jobId === jobOverride.jobId) setJobOverride(null);
+    if (jobOverride && propJob.jobId !== overrideBaseRef.current) setJobOverride(null);
   }, [propJob.jobId, jobOverride]);
   // 게이지 transition 토글 — 페이지 진입(초기) + 새 잡 도착(시도 후 게이지 점프) 시
   // 첫 paint는 transition 끔(즉시 그 자리). 다음 frame부터 켜서 매초 흐름 · 보석 단축은
@@ -376,6 +380,7 @@ export function EnhanceSlotCard({
   };
   const applyNextJob = (nj: NextJob | null | undefined) => {
     if (!nj) return;
+    overrideBaseRef.current = propJob.jobId; // 이 prop에서 파생된 오버라이드 — prop이 바뀌면 해제
     setJobOverride({
       ...activeJob,
       jobId: nj.jobId,
@@ -596,25 +601,30 @@ export function EnhanceSlotCard({
       setAttempting(true);
       setAttemptingMsg(lore.attempting);
       const r = await autoEnhanceStepAction(autoJobRef.current, autoBudgetRef.current).catch(() => null);
-      if (!autoRunRef.current) { setAttempting(false); break; } // 응답 도착 전 멈춤/이탈
+      // ⚠ ok 스텝은 멈춤 여부와 무관하게 항상 회계 반영 — 서버는 이미 💎 차감·판정·재등록을 끝냈다.
+      // (종전엔 응답 대기 중 멈춤 시 r을 버려 autoJob/게이지가 정산된 옛 잡에 남았고,
+      //  재시작이 그 잡으로 나가 즉시 'gone' 종료되던 버그.)
+      if (r && r.status === 'ok') {
+        attempts++;
+        gems += r.gemsSpent;
+        autoBudgetRef.current -= r.gemsSpent;
+        if (r.gemsSpent > 0) adjustDiamond(-BigInt(r.gemsSpent)); // 헤더 다이아 낙관 차감
+        if (r.outcome === 'success' || r.outcome === 'mega') ok++;
+        else if (r.outcome === 'hold') hold++;
+        else down++;
+        curLv = Number(r.toLevel);
+        autoJobRef.current = r.nextJob ? r.nextJob.jobId : autoJobRef.current;
+        applyNextJob(r.nextJob); // 게이지 즉시 새 잡으로(수동 경로와 동일)
+        setAutoStats(snap()); // 진행 오버레이 실시간 갱신
+      }
+      if (!autoRunRef.current) { setAttempting(false); break; } // 응답 도착 전 멈춤/이탈(회계는 위에서 반영됨)
       if (!r) return finishAuto(snap(), '연결이 불안정해 자동 강화를 멈췄어요.', true);
       if (r.status === 'error') return finishAuto(snap(), r.message, true);
       if (r.status === 'stop') {
         // budget/insufficient/gone — 정상 정지(오류 아님). 마지막 잔여 잡은 자연시간 진행.
         return finishAuto(snap(), autoReasonText(r.reason));
       }
-      // status === 'ok' — 서버가 이미 💎 차감·판정·재등록 완료.
-      attempts++;
-      gems += r.gemsSpent;
-      autoBudgetRef.current -= r.gemsSpent;
-      if (r.gemsSpent > 0) adjustDiamond(-BigInt(r.gemsSpent)); // 헤더 다이아 낙관 차감
-      if (r.outcome === 'success' || r.outcome === 'mega') ok++;
-      else if (r.outcome === 'hold') hold++;
-      else down++;
-      curLv = Number(r.toLevel);
-      autoJobRef.current = r.nextJob ? r.nextJob.jobId : autoJobRef.current;
-      applyNextJob(r.nextJob); // 게이지 즉시 새 잡으로(수동 경로와 동일)
-      setAutoStats(snap()); // 진행 오버레이 실시간 갱신
+      // status === 'ok' — 회계는 반영됨, 연출·정지조건 판정 진행.
       // 실제 강화 연출 재생(오버레이 아래) — 재생 시간만큼 대기(멈춤은 다음 스텝 진입 시 반영).
       playResult(r.outcome as Outcome, Number(r.fromLevel), Number(r.toLevel), lore);
       await sleep(r.outcome === 'mega' ? 4000 : 2600);
@@ -935,23 +945,27 @@ export function EnhanceSlotCard({
               if (autoStopConfirm) { autoRunRef.current = false; setAutoStopConfirm(false); }
               else setAutoStopConfirm(true);
             }}
-            className="absolute inset-0 z-40 flex cursor-pointer items-stretch bg-black/60"
+            className="absolute inset-0 z-40 flex cursor-pointer items-stretch bg-black/70"
           >
             {/* 좌: 현재 강화수치 — 결과 시 EnhanceFX 카운터(CountAnim: 자릿수 롤링·유지 흔들림·
                 결과별 글로우)와 동일 이펙트. key로 매 결과(메가 2단계 포함) 재트리거. */}
             <div className="flex flex-[0_0_42%] flex-col items-center justify-center gap-0.5 border-r border-white/10 px-1.5 text-center">
               <span className="text-[9px] font-bold text-amber-300">자동 강화 중</span>
-              {flash && flashFromLevel != null && flashToLevel != null ? (
-                <CountAnim
-                  key={`${flash}-${flashFromLevel}-${flashToLevel}`}
-                  from={flashFromLevel}
-                  to={flashToLevel}
-                  fontSize={22}
-                  className={`relative font-bold tabular-nums tracking-tight ${AUTO_NUM_CLASS[flash]}`}
-                />
-              ) : (
-                <span className="text-[22px] font-bold leading-none text-zinc-100 tabular-nums">+{autoStats.curLv}</span>
-              )}
+              {/* 높이 고정 래퍼(h-6) — CountAnim(Counter)과 일반 표기 높이가 달라 생기던 시프트 제거.
+                  text-[22px]는 hold(흔들림) 경로가 부모 크기를 상속하므로 래퍼에 지정. */}
+              <span className="flex h-6 items-center justify-center text-[22px] leading-none">
+                {flash && flashFromLevel != null && flashToLevel != null ? (
+                  <CountAnim
+                    key={`${flash}-${flashFromLevel}-${flashToLevel}`}
+                    from={flashFromLevel}
+                    to={flashToLevel}
+                    fontSize={22}
+                    className={`relative font-bold tabular-nums tracking-tight ${AUTO_NUM_CLASS[flash]}`}
+                  />
+                ) : (
+                  <span className="font-bold text-zinc-100 tabular-nums">+{autoStats.curLv}</span>
+                )}
+              </span>
               <span className="text-[8.5px] text-zinc-400 tabular-nums">
                 시작 +{autoStats.startLv} · {fmtDuration(Math.max(0, nowMs - autoStats.startMs))}
               </span>
@@ -977,11 +991,13 @@ export function EnhanceSlotCard({
             role="button"
             tabIndex={-1}
             onClick={(e) => { e.stopPropagation(); setAutoResult(null); }}
-            className="absolute inset-0 z-40 flex cursor-pointer items-stretch bg-black/60"
+            className="absolute inset-0 z-40 flex cursor-pointer items-stretch bg-black/70"
           >
             <div className="flex flex-[0_0_42%] flex-col items-center justify-center gap-0.5 border-r border-white/10 px-1.5 text-center">
               <span className="text-[9px] font-bold text-emerald-400">자동 강화 완료</span>
-              <span className="text-[22px] font-extrabold leading-none text-zinc-100 tabular-nums">+{autoResult.curLv}</span>
+              <span className="flex h-6 items-center justify-center text-[22px] leading-none">
+                <span className="font-bold text-zinc-100 tabular-nums">+{autoResult.curLv}</span>
+              </span>
               <span className="text-[8.5px] text-zinc-400 tabular-nums">
                 시작 +{autoResult.startLv} · 총 {fmtDuration(autoResult.elapsedMs)}
               </span>
@@ -1005,7 +1021,7 @@ export function EnhanceSlotCard({
               우측: 제목 + 설명. */}
           <div className="flex items-start gap-3">
             <span
-              className={`relative flex w-[92px] shrink-0 aspect-square flex-col items-center justify-center gap-0.5 isolate overflow-hidden rounded-xl border-2 bg-zinc-950 px-1 text-center ${
+              className={`relative flex h-[78px] w-[78px] shrink-0 flex-col items-center justify-center gap-0.5 isolate overflow-hidden rounded-xl border-2 bg-zinc-950 px-1 text-center ${
                 hasRarityBorder(activeJob.transcendLevel) ? '' : 'border-zinc-800'
               }`}
               style={rarityBorderStyle(activeJob.transcendLevel)}
@@ -1016,13 +1032,13 @@ export function EnhanceSlotCard({
                 slot={activeJob.slot}
                 level={activeJob.transcendLevel}
                 championRank={activeJob.championRank}
-                size={48}
+                size={38}
                 frameless
               />
-              <span className="line-clamp-1 break-keep px-0.5 text-[9px] leading-tight text-zinc-400">
+              <span className="line-clamp-1 break-keep px-0.5 text-[8px] leading-tight text-zinc-400">
                 {activeJob.name}
               </span>
-              <span className="text-[9px] font-semibold text-zinc-100 tabular-nums">
+              <span className="text-[8px] font-semibold text-zinc-100 tabular-nums">
                 +{activeJob.fromLevel}
                 <TranscendTag level={activeJob.transcendLevel} className="ml-1" />
               </span>
