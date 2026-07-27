@@ -31,7 +31,13 @@ export const ANNOUNCEMENT_CATEGORY_CLS: Record<string, string> = {
 };
 
 /** 공지 투표(선택) — 결과는 **관리자만** 열람(유저는 투표만), 1인 1표(변경 가능), 마감일 선택. */
-export type AnnouncementPollOption = { id: string; label: string };
+export type AnnouncementPollOption = {
+  id: string;
+  label: string;
+  /** 질문 그룹(1-base, 기본 1) — 같은 그룹 안에서 1인 1표. 그룹이 다르면 독립 투표
+   *  (한 공지에 여러 설문 — 2026-07-27 점령전 의견수렴). */
+  q?: number;
+};
 export type AnnouncementPoll = {
   question: string;
   options: AnnouncementPollOption[];

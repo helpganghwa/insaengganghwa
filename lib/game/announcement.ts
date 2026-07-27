@@ -49,14 +49,21 @@ export async function listAllAnnouncements(limit = 100): Promise<AnnouncementVie
 
 // ───────── 공지 투표 ─────────
 
-/** 유저의 현재 투표 조회(게임 UI 하이라이트용) — {공지id: optionId}. 집계는 미포함(유저 비노출). */
+/**
+ * 유저의 현재 투표 조회(게임 UI 하이라이트용) — {`공지id:질문no`: optionId}(0137 다중 설문).
+ * 단일 설문 공지는 질문 1 고정이라 키가 `id:1`. 집계는 미포함(유저 비노출).
+ */
 export async function getUserPollVotes(
   userId: string,
   announcementIds: bigint[],
 ): Promise<Record<string, string>> {
   if (announcementIds.length === 0) return {};
   const rows = await db
-    .select({ annId: announcementPollVotes.announcementId, optionId: announcementPollVotes.optionId })
+    .select({
+      annId: announcementPollVotes.announcementId,
+      optionId: announcementPollVotes.optionId,
+      q: announcementPollVotes.questionNo,
+    })
     .from(announcementPollVotes)
     .where(
       and(
@@ -65,11 +72,11 @@ export async function getUserPollVotes(
       ),
     );
   const m: Record<string, string> = {};
-  for (const r of rows) m[r.annId.toString()] = r.optionId;
+  for (const r of rows) m[`${r.annId.toString()}:${r.q}`] = r.optionId;
   return m;
 }
 
-/** 투표(1인 1표, 변경 가능) — 서버 액션에서 호출. 결과는 반환하지 않는다(유저 비노출). */
+/** 투표(질문 그룹당 1인 1표, 변경 가능) — 서버 액션에서 호출. 결과는 반환하지 않는다(유저 비노출). */
 export async function castPollVote(
   userId: string,
   announcementId: bigint,
@@ -81,14 +88,21 @@ export async function castPollVote(
     .where(eq(announcements.id, announcementId))
     .limit(1);
   if (!a || !a.published || !a.poll) return { ok: false, reason: 'NOT_FOUND' };
-  if (!a.poll.options.some((o) => o.id === optionId)) return { ok: false, reason: 'BAD_OPTION' };
+  const opt = a.poll.options.find((o) => o.id === optionId);
+  if (!opt) return { ok: false, reason: 'BAD_OPTION' };
   if (a.poll.closesAtIso && new Date(a.poll.closesAtIso).getTime() < Date.now())
     return { ok: false, reason: 'CLOSED' };
+  // 질문 그룹은 서버가 poll 정의에서 파생(클라 전달 안 받음 — 위조 무의미화).
+  const questionNo = opt.q ?? 1;
   await db
     .insert(announcementPollVotes)
-    .values({ announcementId, userId, optionId })
+    .values({ announcementId, userId, optionId, questionNo })
     .onConflictDoUpdate({
-      target: [announcementPollVotes.announcementId, announcementPollVotes.userId],
+      target: [
+        announcementPollVotes.announcementId,
+        announcementPollVotes.userId,
+        announcementPollVotes.questionNo,
+      ],
       set: { optionId, updatedAt: new Date() },
     });
   return { ok: true };

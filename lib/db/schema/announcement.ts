@@ -6,6 +6,7 @@ import {
   jsonb,
   pgTable,
   primaryKey,
+  smallint,
   text,
   timestamp,
   uuid,
@@ -58,11 +59,13 @@ export const announcementPollVotes = pgTable(
       .notNull()
       .references(() => profiles.id, { onDelete: 'cascade' }),
     optionId: text('option_id').notNull(),
+    /** 질문 그룹(0137) — 한 공지 다중 설문 지원. 그룹당 1인 1표(기본 1 = 기존 단일 설문). */
+    questionNo: smallint('question_no').notNull().default(1),
     createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
     updatedAt: timestamp('updated_at', { withTimezone: true }).notNull().defaultNow(),
   },
   (t) => [
-    primaryKey({ columns: [t.announcementId, t.userId] }),
+    primaryKey({ columns: [t.announcementId, t.userId, t.questionNo] }),
     index('announcement_poll_votes_ann_idx').on(t.announcementId),
   ],
 );

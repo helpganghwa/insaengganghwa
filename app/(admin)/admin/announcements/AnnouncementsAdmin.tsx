@@ -177,6 +177,7 @@ export function AnnouncementsAdmin({ items }: { items: AnnouncementView[] }) {
                 기본은 본문 아래 블록으로 표시됩니다. 본문에 <code className="rounded bg-zinc-100 px-1 dark:bg-zinc-800">{'{{투표1}}'}</code>
                 처럼 쓰면 그 위치에 해당 번호의 선택지 버튼이 들어갑니다(설명→투표→설명→투표 흐름).
                 마커 사용 시 질문은 표시되지 않으니 본문에 직접 적어주세요.
+                각 보기 왼쪽의 숫자는 <b>질문 그룹</b> — 같은 번호끼리 1인 1표(한 공지에 설문 여러 개 가능).
               </p>
               <input
                 value={draft.poll.question}
@@ -187,6 +188,21 @@ export function AnnouncementsAdmin({ items }: { items: AnnouncementView[] }) {
               <div className="space-y-1.5">
                 {draft.poll.options.map((o, i, arr) => (
                   <div key={o.id} className="flex gap-1.5">
+                    {/* 질문 그룹(0137) — 같은 번호끼리 1인 1표(한 공지 다중 설문). 기본 1. */}
+                    <input
+                      value={String(o.q ?? 1)}
+                      onChange={(e) =>
+                        setPoll((p) => ({
+                          ...p,
+                          options: p.options.map((x) =>
+                            x.id === o.id ? { ...x, q: Math.max(1, parseInt(e.target.value, 10) || 1) } : x,
+                          ),
+                        }))
+                      }
+                      inputMode="numeric"
+                      title="질문 그룹 번호 — 같은 번호끼리 1인 1표"
+                      className={`${input} w-11 shrink-0 text-center`}
+                    />
                     <input
                       value={o.label}
                       onChange={(e) =>
