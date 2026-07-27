@@ -326,10 +326,10 @@ export function RaidSessionCard({ view: v, serverId }: { view: RaidView; serverI
       }
       setFloatDmg({ id, val: r.damage, crit: r.isCrit });
       setTimeout(() => setFloatDmg(null), 850);
-      // 보스 HP 즉시 반영 — refresh 지연과 무관하게 바가 바로 줄어든다.
+      // 보스 HP 즉시 반영 — 서버 액션 revalidate의 현재-페이지 재렌더(§11.7)가 응답에 실려
+      // 권위 상태를 동기화하므로 별도 router.refresh는 중복(요청·loadLayoutData 2배)이라 제거(2026-07-27).
       if (r.totalDamage != null) setLocalTotal(Number(r.totalDamage));
-      router.refresh();
-      // 쿨다운 — 오버레이 유지 동안 재공격 차단(연속 클릭 + refresh 깜빡임 방지).
+      // 쿨다운 — 오버레이 유지 동안 재공격 차단(연속 클릭 방지).
       setTimeout(() => {
         setAttacking(false);
         setAttackLore(null);
