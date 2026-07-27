@@ -31,10 +31,10 @@ export const GAME_RATING = {
 export type LegalSlug = 'terms' | 'privacy' | 'refund' | 'youth';
 
 export const LEGAL_META: Record<LegalSlug, { title: string; effectiveDate: string }> = {
-  terms: { title: '이용약관', effectiveDate: '2026년 8월 10일' },
-  privacy: { title: '개인정보처리방침', effectiveDate: '2026년 6월 25일' },
-  refund: { title: '환불·청약철회 안내', effectiveDate: '2026년 8월 10일' },
-  youth: { title: '청소년보호정책', effectiveDate: '2026년 6월 23일' },
+  terms: { title: '이용약관', effectiveDate: '2026년 7월 27일' },
+  privacy: { title: '개인정보처리방침', effectiveDate: '2026년 7월 27일' },
+  refund: { title: '환불·청약철회 안내', effectiveDate: '2026년 7월 27일' },
+  youth: { title: '청소년보호정책', effectiveDate: '2026년 7월 27일' },
 };
 
 const TERMS = `
@@ -98,7 +98,7 @@ const TERMS = `
 이 약관은 대한민국 법을 따르며, 분쟁은 협의로 해결하되 합의되지 않으면 관할 법원에 소를 제기할 수 있습니다.
 
 ## 부칙
-시행일: 2026년 6월 23일. 사업자정보는 본 페이지 하단에 표시합니다.
+시행일: 2026년 7월 27일. 사업자정보는 본 페이지 하단에 표시합니다.
 `;
 
 const PRIVACY = `
@@ -158,7 +158,7 @@ const PRIVACY = `
 개인정보분쟁조정위원회(1833-6972) · 개인정보침해신고센터(118) · 경찰청 사이버수사국(182)에 상담·신고할 수 있습니다.
 
 ## 11. 고지
-방침이 변경되면 적용 7일 전에 공지합니다. 시행일: 2026년 6월 25일.
+방침이 변경되면 적용 7일 전에 공지합니다. 시행일: 2026년 7월 27일.
 `;
 
 const REFUND = `
