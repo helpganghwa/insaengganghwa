@@ -27,7 +27,7 @@ export default async function ShopPage({
 
   // CBT 기간 일반 유저 — 상품별 '준비 중' 토스트 대신 상점 전체를 준비 중으로 닫음(무료 수령·
   // 견습의 주머니 포함). 심사 계정은 결제 검수, 어드민은 테스트 구매를 위해 통과.
-  // 정식 출시 시 ALLOW_TEST_LOGIN 해제로 자동 개방.
+  // 정식 출시 시 PAYMENTS_OPEN=true로 개방(테스트 로그인과 무관).
   if (!isAdmin && (await shouldHidePaidContent())) return <ShopClosed />;
 
   const sp = await searchParams;

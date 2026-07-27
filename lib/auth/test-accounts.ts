@@ -1,34 +1,33 @@
 import 'server-only';
 
 /**
- * 테스트 로그인 — 카카오 단독 인증이라 개발/검수 단계에서 계정 생성이 불가한 문제 임시 해소.
+ * 심사/검수용 자격증명(ID/PW) 로그인 — 카카오 단독 인증이라 스토어·게임위 심사관이
+ * 계정 없이 로그인할 수 없는 문제 해소.
  *
- * ⚠ 실운영 전환 시 제거: env `ALLOW_TEST_LOGIN`을 끄면(미설정/!= 'true') 버튼·액션 모두 비활성.
- *   코드까지 지우려면 이 파일 + actions.ts의 signInWithTestAccount + login 페이지 test 분기 삭제.
- *
- * 동작: `/login?test=true`에서 카카오 버튼 대신 테스트 계정 버튼 노출 →
- *   admin API로 해당 email/password Supabase Auth 유저를 (없으면) 생성 → signInWithPassword.
- *   프로필·스타터·거주지는 handle_new_user / set_default_residence 트리거가 자동 생성.
+ * ✅ **상시 활성**(env 게이트 없음, 사용자 결정 2026-07-09): 출시 후에도 재심의 대응을 위해
+ *   항상 열어둔다. 로그인은 `/login?test=true` 폼 + signInWithCredentials(사전 등록
+ *   TEST_ACCOUNTS email + 비번)만 통과 — env로 켜고 끄지 않는다.
+ * ⚠ 과거 `ALLOW_TEST_LOGIN` env는 폐지(2026-07-27). 결제 개방은 아래 PAYMENTS_OPEN이 담당하며
+ *   테스트 로그인과 완전히 분리됐다.
  */
-export function isTestLoginEnabled(): boolean {
-  // 'true' 외에 '1'/'yes'/'on'도 허용 — env에 1로 넣어도 동작(흔한 실수 흡수).
-  const v = (process.env.ALLOW_TEST_LOGIN ?? '').trim().toLowerCase();
-  return v === 'true' || v === '1' || v === 'yes' || v === 'on';
-}
 
 /**
- * CBT/심사 기간 여부 = 테스트 로그인 활성. 이 기간엔 결제 콘텐츠(성장패스·상점 유료)를
- * 테스터 계정에만 노출하고 일반 카카오 유저에겐 숨김/준비중 처리한다.
- * 정식 출시 시 ALLOW_TEST_LOGIN을 끄면 자동으로 전 유저에게 결제 개방(게이팅 해제).
+ * 유료 콘텐츠(성장패스·상점 유료·챌린지 유료보상)를 일반 유저에게 숨길지 = 결제 개방 스위치.
+ * env `PAYMENTS_OPEN` — **기본 미설정 = 숨김(안전측)**, 정식 출시 시 `PAYMENTS_OPEN=true`로 전 유저 개방.
+ * ⚠ 테스트 로그인과 무관(과거 ALLOW_TEST_LOGIN 커플링 폐지). 테스터 계정은 이 값과 별개로
+ *   shouldHidePaidContent에서 항상 결제 노출(심사용).
  */
 export function isCbtPaidHidden(): boolean {
-  return isTestLoginEnabled();
+  // 'true' 외 '1'/'yes'/'on'도 개방으로 허용(흔한 env 실수 흡수). 그 외/미설정 = 숨김.
+  const v = (process.env.PAYMENTS_OPEN ?? '').trim().toLowerCase();
+  const open = v === 'true' || v === '1' || v === 'yes' || v === 'on';
+  return !open;
 }
 
 /**
  * 심사 제출용 계정(ID/PW 입력 로그인) — 포트원·게임물 등급심의에 기재하는 단일 자격증명.
- * 심사관은 카카오 없이 이 ID/PW로 로그인. env ALLOW_TEST_LOGIN=true일 때만 폼 노출.
- * 외우기 쉬운 값(CBT 테마) — 게이트가 env라 단순값으로 충분.
+ * 심사관은 카카오 없이 이 ID/PW로 로그인(폼은 `/login?test=true`에서 상시 노출).
+ * 외우기 쉬운 값(CBT 테마).
  */
 export const REVIEW_ACCOUNT_EMAIL = 'cbt@ganghwa.app';
 export const REVIEW_ACCOUNT_PASSWORD = 'cbt123456';

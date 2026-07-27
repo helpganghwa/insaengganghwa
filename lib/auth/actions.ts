@@ -104,7 +104,7 @@ async function ensureTestUser(email: string): Promise<void> {
 
 /**
  * 심사용 ID/PW 입력 로그인 — 포트원·게임위 심사관이 카카오 없이 자격증명으로 로그인.
- * `ALLOW_TEST_LOGIN=true`일 때만 동작(실운영 전환 시 env로 즉시 차단). 사전 등록된 테스트/심사
+ * **상시 활성**(env 게이트 없음 — 출시 후 재심의 지속 대응). 사전 등록된 테스트/심사
  * 계정 email만 허용하고, 비밀번호는 입력값으로 검증(signInWithPassword) — 틀리면 실패.
  */
 export async function signInWithCredentials(formData: FormData) {
