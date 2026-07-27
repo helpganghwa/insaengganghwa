@@ -26,6 +26,8 @@ export type RichMember = {
   /** 마지막 접속(ISO) — 접속 상태 표시. 없으면 null. */
   lastSeenAt: string | null;
   contribution: number;
+  /** 오늘 기여(KST) — "누적(오늘)" 표기용. */
+  contributionToday: number;
   combat: number;
   maxEnhance: number;
   totalEnhance: number;
@@ -113,10 +115,14 @@ const MemberRow = memo(function MemberRow({ m, myUserId, serverId }: { m: RichMe
               <LastSeen at={m.lastSeenAt} forceOnline={isMe} badge className="shrink-0" />
             ) : null}
           </div>
-          {/* 기여도 · 전투력 — 줄을 2분할(grid)해 정렬 */}
+          {/* 기여도 · 전투력 — 줄을 2분할(grid)해 정렬. 기여도는 자릿수 축약 없이
+              누적(오늘) 전체 표기(사용자 확정 2026-07-27), 전투력만 축약(fmtNum). */}
           <div className="mt-0.5 grid grid-cols-2 gap-1 text-[11px] text-zinc-500">
             <span className="truncate">
-              기여도 <span className="font-semibold tabular-nums text-zinc-700 dark:text-zinc-300">{fmtNum(m.contribution)}</span>
+              기여도{' '}
+              <span className="font-semibold tabular-nums text-zinc-700 dark:text-zinc-300">
+                {m.contribution.toLocaleString('ko-KR')}({m.contributionToday.toLocaleString('ko-KR')})
+              </span>
             </span>
             <span className="truncate">
               전투력 <span className="font-semibold tabular-nums text-zinc-700 dark:text-zinc-300">{fmtNum(m.combat)}</span>

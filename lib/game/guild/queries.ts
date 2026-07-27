@@ -21,7 +21,7 @@ import { combatPowerFromOwned } from '@/lib/game/equipment/combat-power';
 
 import { kstDateString } from '@/lib/kst';
 
-import { guildCapacity } from './balance';
+import { guildCapacity, GUILD_DONATION_TIERS } from './balance';
 import type { Region } from './region-meta';
 import { nextBattleKstDay, isConquestLocked } from './conquest/schedule';
 
@@ -524,6 +524,9 @@ export async function getGuildMembersRich(guildId: bigint) {
       publicCode: profiles.publicCode,
       role: guildMembers.role,
       contribution: guildMembers.contributionPoints,
+      // 오늘 기여 파생용 — 기여도는 기부가 유일한 소스라 일일 카운터×티어 XP로 정확 계산(별도 로그 불필요).
+      dailyDonationCount: guildMembers.dailyDonationCount,
+      lastDonationKstDay: guildMembers.lastDonationKstDay,
       lastSeenAt: characters.lastSeenAt,
       // 아바타는 항상 정면(south) — 8방향 미사용.
       avatar: sql<string | null>`${userProfiles.rotations} ->> 'south'`,
@@ -611,8 +614,12 @@ export async function getGuildMembersRich(guildId: bigint) {
     }
   }
 
+  const todayKst = kstDateString();
   return base.map((b) => {
     const own = owned.get(b.userId) ?? [];
+    // 오늘 기여 = 오늘 기부한 회차들의 XP 합(KST 자정 리셋). 날짜 다르면 0.
+    const donatedToday = b.lastDonationKstDay === todayKst ? b.dailyDonationCount : 0;
+    const contributionToday = GUILD_DONATION_TIERS.slice(0, donatedToday).reduce((s, t) => s + t.xp, 0);
     return {
       userId: b.userId,
       nickname: b.nickname,
@@ -621,6 +628,7 @@ export async function getGuildMembersRich(guildId: bigint) {
       avatar: b.avatar,
       lastSeenAt: b.lastSeenAt ? b.lastSeenAt.toISOString() : null,
       contribution: Number(b.contribution),
+      contributionToday,
       combat: combatPowerFromOwned(own),
       maxEnhance: own.reduce((mx, o) => Math.max(mx, o.enhanceLevel), 0),
       totalEnhance: own.reduce((s, o) => s + o.enhanceLevel, 0),
