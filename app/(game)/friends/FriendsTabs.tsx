@@ -61,7 +61,7 @@ function Avatar({ src, box, seenAt }: { src: string | null; box?: FaceBox | null
       </div>
       {/* 접속 점 — 길드원 카드와 동일 UI(2026-07-27). seenAt 미전달(목록 탭 외)이면 미표시. */}
       {seenAt !== undefined ? (
-        <OnlineDot at={seenAt} className="absolute -bottom-0.5 -right-0.5 ring-2 ring-white dark:ring-zinc-950" />
+        <OnlineDot at={seenAt} className="absolute bottom-0 right-0 ring-1 ring-white dark:ring-zinc-950" />
       ) : null}
     </div>
   );

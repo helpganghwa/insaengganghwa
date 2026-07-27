@@ -54,7 +54,7 @@ export function OnlineDot({
   return (
     <span
       aria-hidden
-      className={`inline-block h-2 w-2 rounded-full ${
+      className={`inline-block h-1 w-1 rounded-full ${
         info.online ? 'bg-emerald-500' : 'bg-zinc-400 dark:bg-zinc-600'
       } ${className}`}
     />

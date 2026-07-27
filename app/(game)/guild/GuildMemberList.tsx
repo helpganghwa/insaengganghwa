@@ -110,7 +110,7 @@ const MemberRow = memo(function MemberRow({ m, myUserId, serverId }: { m: RichMe
           <OnlineDot
             at={m.lastSeenAt}
             forceOnline={isMe}
-            className="absolute -bottom-0.5 -right-0.5 ring-2 ring-white dark:ring-zinc-950"
+            className="absolute bottom-0 right-0 ring-1 ring-white dark:ring-zinc-950"
           />
         </span>
 
