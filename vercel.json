@@ -45,7 +45,7 @@
     },
     {
       "path": "/api/cron/warm",
-      "schedule": "*/5 * * * *"
+      "schedule": "* * * * *"
     },
     {
       "path": "/api/cron/melee-run",

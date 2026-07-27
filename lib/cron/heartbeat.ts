@@ -22,7 +22,7 @@ const HOUR = 60 * MIN;
 //   last_success_at=now() 시드** — 첫 스케줄 실행 전까지 '한 번도 성공 없음' 1회성 오탐이
 //   울린다(2026-07-10 melee-reveal/conquest-chronicle 등재 때 실제 발생·시드로 해소).
 export const CRON_MAX_GAP_MS: Record<string, number> = {
-  warm: 12 * MIN, // 5분(2026-07-27 비용 절감: 매분→5분) — 워치독 본체. 주기와 동값이면 자기 오탐이라 여유 2배+.
+  warm: 5 * MIN, // 매분 — 워치독 본체
   'push-enhance-ready': 10 * MIN, // 매분
   'profile-poll': 12 * MIN, // 2분 — 아바타 발주 백스톱
   'push-flush': 20 * MIN, // 5분
