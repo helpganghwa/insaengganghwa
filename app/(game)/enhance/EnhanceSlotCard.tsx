@@ -928,7 +928,7 @@ export function EnhanceSlotCard({
               if (autoStopConfirm) { autoRunRef.current = false; setAutoStopConfirm(false); }
               else setAutoStopConfirm(true);
             }}
-            className="absolute inset-0 z-40 flex cursor-pointer items-stretch bg-black/45"
+            className="absolute inset-0 z-40 flex cursor-pointer items-stretch bg-black/60"
           >
             {/* 좌: 현재 강화수치(결과 효과) */}
             <div className="flex flex-[0_0_42%] flex-col items-center justify-center gap-0.5 border-r border-white/10 px-1.5 text-center">
@@ -966,7 +966,7 @@ export function EnhanceSlotCard({
             role="button"
             tabIndex={-1}
             onClick={(e) => { e.stopPropagation(); setAutoResult(null); }}
-            className="absolute inset-0 z-40 flex cursor-pointer items-stretch bg-black/55"
+            className="absolute inset-0 z-40 flex cursor-pointer items-stretch bg-black/60"
           >
             <div className="flex flex-[0_0_42%] flex-col items-center justify-center gap-0.5 border-r border-white/10 px-1.5 text-center">
               <span className="text-[9px] font-bold text-emerald-400">자동 강화 완료</span>
@@ -990,8 +990,39 @@ export function EnhanceSlotCard({
           label="자동 강화 설정"
           className="w-full max-w-[330px] rounded-2xl border border-zinc-700 bg-zinc-900 p-4"
         >
-          <h3 className="text-sm font-bold text-zinc-100">자동 강화 설정</h3>
-          <p className="mt-1 whitespace-pre-line text-[11px] leading-relaxed text-zinc-400">
+          {/* 헤더 — 좌측에 강화 대상 아이템(인벤토리 타일과 동일: 등급 테두리+별장식+스프라이트). */}
+          <div className="flex items-center gap-2.5">
+            <span
+              className={`relative flex h-12 w-12 shrink-0 items-center justify-center isolate overflow-hidden rounded-lg border bg-black/40 ${
+                hasRarityBorder(activeJob.transcendLevel) ? '' : 'border-zinc-700'
+              }`}
+              style={rarityBorderStyle(activeJob.transcendLevel)}
+            >
+              <RarityFrame level={activeJob.transcendLevel} />
+              <TranscendSprite
+                code={activeJob.code}
+                slot={activeJob.slot}
+                level={activeJob.transcendLevel}
+                championRank={activeJob.championRank}
+                size={44}
+                frameless
+              />
+            </span>
+            <div className="min-w-0 flex-1">
+              <h3 className="text-sm font-bold text-zinc-100">자동 강화 설정</h3>
+              <div className="flex items-center gap-1.5 text-[11px] text-zinc-300">
+                <span className="min-w-0 truncate break-keep">{activeJob.name}</span>
+                <span
+                  className="shrink-0 text-[10px] font-bold tabular-nums"
+                  style={{ color: `rgb(${transcendStyle(activeJob.transcendLevel).colorRgb.join(',')})` }}
+                >
+                  ✦{activeJob.transcendLevel}
+                </span>
+                <span className="shrink-0 font-semibold text-zinc-100 tabular-nums">+{activeJob.fromLevel}</span>
+              </div>
+            </div>
+          </div>
+          <p className="mt-2 whitespace-pre-line text-[11px] leading-relaxed text-zinc-400">
             {'💎로 시간을 단축하며 자동 반복합니다.\n예산을 다 쓰거나 선택 조건 중 하나라도 달성하면 정지합니다.'}
           </p>
           {/* 예산 — 필수(체크박스 없음). 라벨 정렬용 체크박스폭 스페이서. 값은 입력창 직접 입력 +
