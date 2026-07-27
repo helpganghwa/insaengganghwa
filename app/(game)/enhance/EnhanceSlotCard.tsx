@@ -236,12 +236,18 @@ export function EnhanceSlotCard({
   const [autoUseCount, setAutoUseCount] = useState(false);
   const [autoCount, setAutoCount] = useState('50');
   const [autoDownStop, setAutoDownStop] = useState(false);
-  // 진행 중엔 실제 강화 FX(playResult)를 재생하고, 그 위에 자동 강화 오버레이(누적 통계)를 덮는다.
-  // startMs를 통계에 담아 렌더에서 소요시간을 계산(ref를 렌더에서 읽지 않도록).
-  type AutoStats = { attempts: number; gems: number; ok: number; hold: number; down: number; startLv: number; curLv: number; startMs: number };
+  // 진행 중엔 실제 강화 FX(playResult)를 재생하고, 그 위에 자동 강화 오버레이(좌우 2단)를 덮는다.
+  // startMs·정지조건을 통계에 담아 렌더에서 계산(ref를 렌더에서 읽지 않도록).
+  type AutoStats = {
+    attempts: number; gems: number; ok: number; hold: number; down: number;
+    startLv: number; curLv: number; startMs: number;
+    budgetTotal: number; target: number | null; countLimit: number | null; downStop: boolean;
+  };
   const [autoRunning, setAutoRunning] = useState(false);
   const [autoStats, setAutoStats] = useState<AutoStats | null>(null); // 진행중 오버레이(실시간 누적)
   const [autoResult, setAutoResult] = useState<(AutoStats & { elapsedMs: number; reason: string }) | null>(null); // 완료 오버레이(인메모리)
+  const [autoStopConfirm, setAutoStopConfirm] = useState(false); // 진행 오버레이 탭 → 중지 재확인(3s)
+  const [autoStopLeft, setAutoStopLeft] = useState(0);
   const [cancelOpen, setCancelOpen] = useState(false); // 취소(강화 해제) 확인 모달
 
   useEffect(() => {
@@ -312,6 +318,24 @@ export function EnhanceSlotCard({
     }, 1000);
     return () => clearInterval(id);
   }, [confirmReduce]);
+  // 자동 진행 오버레이 탭 → 중지 재확인(3s 재탭 패턴, 강화 시도 확인과 동일).
+  useEffect(() => {
+    if (!autoStopConfirm) {
+      setAutoStopLeft(0);
+      return;
+    }
+    setAutoStopLeft(3);
+    const id = setInterval(() => {
+      setAutoStopLeft((s) => {
+        if (s <= 1) {
+          setAutoStopConfirm(false);
+          return 0;
+        }
+        return s - 1;
+      });
+    }, 1000);
+    return () => clearInterval(id);
+  }, [autoStopConfirm]);
 
   const startMs = new Date(activeJob.startedAtIso).getTime();
   const endMs = new Date(activeJob.completeAtIso).getTime();
@@ -543,6 +567,7 @@ export function EnhanceSlotCard({
     autoRunRef.current = false;
     setAutoRunning(false);
     setAutoStats(null);
+    setAutoStopConfirm(false);
     setAttempting(false);
     const elapsedMs = Math.max(0, Date.now() - stats.startMs);
     setAutoResult({ ...stats, elapsedMs, reason });
@@ -554,7 +579,9 @@ export function EnhanceSlotCard({
     const startLv = activeJob.fromLevel;
     const startMs = Date.now();
     let curLv = startLv;
-    const snap = (): AutoStats => ({ attempts, gems, ok, hold, down, startLv, curLv, startMs });
+    const cfg = autoCfgRef.current; // 세션 고정 정지조건 — 오버레이 표기 + 정지 판정 공용.
+    const budgetTotal = autoBudgetRef.current; // 루프 시작 시점 = 전체 예산(이후 차감됨).
+    const snap = (): AutoStats => ({ attempts, gems, ok, hold, down, startLv, curLv, startMs, budgetTotal, target: cfg.target, countLimit: cfg.count, downStop: cfg.down });
     setAutoStats(snap());
     while (autoRunRef.current) {
       // 수동 시도와 동일: 세트 랜덤 → 시도 오버레이 → 서버 스텝 → 결과 FX.
@@ -585,8 +612,7 @@ export function EnhanceSlotCard({
       playResult(r.outcome as Outcome, Number(r.fromLevel), Number(r.toLevel), lore);
       await sleep(r.outcome === 'mega' ? 4000 : 2600);
       if (!autoRunRef.current) break;
-      // 정지조건 판정.
-      const cfg = autoCfgRef.current;
+      // 정지조건 판정(cfg는 루프 상단에서 캡처).
       if (cfg.down && r.outcome === 'down') return finishAuto(snap(), '하락 발생으로 정지');
       if (cfg.target != null && curLv >= cfg.target) return finishAuto(snap(), '목표 레벨 도달');
       if (cfg.count != null && attempts >= cfg.count) return finishAuto(snap(), '설정 횟수 도달');
@@ -614,6 +640,7 @@ export function EnhanceSlotCard({
     };
     setAutoOpen(false);
     setAutoResult(null);
+    setAutoStopConfirm(false);
     setAutoRunning(true);
     void runAutoLoop();
   };
@@ -660,6 +687,28 @@ export function EnhanceSlotCard({
       if (lock && !lock.released) void lock.release().catch(() => {});
     };
   }, [autoRunning]);
+
+  // 자동 강화 오버레이 우측 칩(진행/결과 공용) — 각 정보 1회만: 예산=사용/총, 시도=횟수칩(제한 시)
+  // 또는 '시도'(무제한), 목표=현재/목표, 결과=성공·유지·실패(+하락정지). 켠 조건만.
+  const CHIP = 'w-max rounded border border-zinc-700 bg-black/70 px-1.5 py-px text-[9px] text-zinc-300 tabular-nums';
+  const autoRight = (s: AutoStats) => {
+    const mid: string[] = [];
+    if (s.target != null) mid.push(`목표 +${s.curLv}/${s.target}`);
+    mid.push(s.countLimit != null ? `횟수 ${s.attempts}/${s.countLimit}` : `시도 ${s.attempts}`);
+    return (
+      <>
+        <span className={CHIP}>
+          예산 <span className="text-amber-300">{s.gems.toLocaleString()}</span>/{s.budgetTotal.toLocaleString()}
+        </span>
+        <span className={CHIP}>{mid.join(' · ')}</span>
+        <span className={CHIP}>
+          <span className="text-emerald-300">성공 {s.ok}</span> <span className="text-zinc-400">유지 {s.hold}</span>{' '}
+          <span className="text-amber-300">실패 {s.down}</span>
+          {s.downStop ? <span className="text-blue-300"> · 하락정지</span> : null}
+        </span>
+      </>
+    );
+  };
 
   // 보석 단축 3초 컨펌 중에는 슬롯의 다른 영역(강화 시도) 클릭 불가 — 오탭/혼선 방지.
   const otherActionConfirm = confirmReduce;
@@ -868,59 +917,68 @@ export function EnhanceSlotCard({
           </>
         ) : null}
 
-        {/* 자동 강화 진행 오버레이 — 강화 FX(z-≤30) 위(z-40). 배경은 옅게(FX가 비치도록),
-            텍스트만 다크 칩으로 가독 확보(기존 로어 칩과 동일 톤). */}
+        {/* 자동 강화 진행 오버레이 — 좌우 2단(B안). 오버레이 탭 → 3s 중지 재확인.
+            왼쪽 +N은 강화 결과 FX(FLASH_CLASS·OUTCOME_TONE)와 동일 효과를 그대로 적용. */}
         {autoStats ? (
-          <div className="absolute inset-0 z-40 flex flex-col items-center justify-center gap-1 bg-black/35 px-2.5 text-center">
-            <span className="rounded bg-black/70 px-1.5 py-0.5 text-[12px] font-semibold text-amber-200 tabular-nums">
-              자동 강화 중 · <span className="font-mono text-zinc-300">{fmtDuration(Math.max(0, nowMs - autoStats.startMs))}</span>
-            </span>
-            <span className="rounded bg-black/70 px-1.5 py-0.5 text-[10px] text-zinc-200 tabular-nums">
-              💎{autoStats.gems.toLocaleString()} · 시도 {autoStats.attempts} ·{' '}
-              <span className="text-emerald-300">성공 {autoStats.ok}</span>{' '}
-              <span className="text-zinc-400">유지 {autoStats.hold}</span>{' '}
-              <span className="text-amber-300">실패 {autoStats.down}</span>
-            </span>
-            <div className="flex items-center gap-2">
-              <span className="rounded bg-black/70 px-1.5 py-0.5 font-mono text-[11px] font-semibold text-zinc-100 tabular-nums">
-                +{autoStats.startLv}<span className="text-zinc-500">→</span>+{autoStats.curLv}
-              </span>
-              <button
-                type="button"
-                onClick={(e) => { e.stopPropagation(); autoRunRef.current = false; }}
-                className="flex h-6 w-14 items-center justify-center rounded-md bg-red-500 text-[10px] font-bold text-white active:scale-95"
+          <div
+            role="button"
+            tabIndex={-1}
+            onClick={(e) => {
+              e.stopPropagation();
+              if (autoStopConfirm) { autoRunRef.current = false; setAutoStopConfirm(false); }
+              else setAutoStopConfirm(true);
+            }}
+            className="absolute inset-0 z-40 flex cursor-pointer items-stretch bg-black/45"
+          >
+            {/* 좌: 현재 강화수치(결과 효과) */}
+            <div className="flex flex-[0_0_42%] flex-col items-center justify-center gap-0.5 border-r border-white/10 px-1.5 text-center">
+              <span className="text-[9px] font-bold text-amber-300">자동 강화 중</span>
+              <span
+                key={flash ? `f-${flashToLevel}` : `c-${autoStats.curLv}`}
+                className={`inline-block rounded px-1 text-[22px] font-extrabold leading-none tabular-nums ${
+                  flash ? `${FLASH_CLASS[flash]} ${OUTCOME_TONE[flash]}` : 'text-zinc-100'
+                }`}
               >
-                중지
-              </button>
+                +{flash ? (flashToLevel ?? autoStats.curLv) : autoStats.curLv}
+              </span>
+              <span className="text-[8.5px] text-zinc-400 tabular-nums">
+                시작 +{autoStats.startLv} · {fmtDuration(Math.max(0, nowMs - autoStats.startMs))}
+              </span>
             </div>
+            {/* 우: 조건·결과 칩 */}
+            <div className="flex flex-1 flex-col justify-center gap-1 px-2">
+              {autoRight(autoStats)}
+            </div>
+            {/* 탭 → 중지 재확인 */}
+            {autoStopConfirm ? (
+              <div className="pointer-events-none absolute inset-0 z-10 flex flex-col items-center justify-center gap-1 bg-black/72 text-center backdrop-blur-[1px]">
+                <span className="rounded bg-black/60 px-2 py-0.5 text-[12px] font-bold text-red-200">한 번 더 탭하면 중지</span>
+                <span className="font-mono text-[10px] text-zinc-300 tabular-nums">{autoStopLeft}s 후 계속 진행</span>
+              </div>
+            ) : null}
           </div>
         ) : null}
 
-        {/* 자동 강화 결과 오버레이 — 완료/중지 후 확인 전까지 유지(복귀 시 복원). 진행 오버레이와
-            동일 레이아웃(중지/확인 버튼 크기 동일)이라 전환 시 시프트 없음. */}
+        {/* 자동 강화 결과 오버레이 — 좌우 2단(진행과 동일 레이아웃, 시프트 없음). 탭하면 닫힘.
+            헤더 '자동 강화 완료'는 초록색. */}
         {autoResult ? (
-          <div className="absolute inset-0 z-40 flex flex-col items-center justify-center gap-1 bg-black/45 px-2.5 text-center">
-            <span className="rounded bg-black/70 px-1.5 py-0.5 text-[12px] font-semibold text-amber-200 tabular-nums">
-              자동 강화 완료 · <span className="font-mono text-zinc-300">{fmtDuration(autoResult.elapsedMs)}</span>
-            </span>
-            <span className="rounded bg-black/70 px-1.5 py-0.5 text-[10px] text-zinc-200 tabular-nums">
-              💎{autoResult.gems.toLocaleString()} · 시도 {autoResult.attempts} ·{' '}
-              <span className="text-emerald-300">성공 {autoResult.ok}</span>{' '}
-              <span className="text-zinc-400">유지 {autoResult.hold}</span>{' '}
-              <span className="text-amber-300">실패 {autoResult.down}</span>
-            </span>
-            <div className="flex items-center gap-2">
-              <span className="rounded bg-black/70 px-1.5 py-0.5 font-mono text-[11px] font-semibold text-zinc-100 tabular-nums">
-                +{autoResult.startLv}<span className="text-zinc-500">→</span>+{autoResult.curLv}
+          <div
+            role="button"
+            tabIndex={-1}
+            onClick={(e) => { e.stopPropagation(); setAutoResult(null); }}
+            className="absolute inset-0 z-40 flex cursor-pointer items-stretch bg-black/55"
+          >
+            <div className="flex flex-[0_0_42%] flex-col items-center justify-center gap-0.5 border-r border-white/10 px-1.5 text-center">
+              <span className="text-[9px] font-bold text-emerald-400">자동 강화 완료</span>
+              <span className="text-[22px] font-extrabold leading-none text-zinc-100 tabular-nums">+{autoResult.curLv}</span>
+              <span className="text-[8.5px] text-zinc-400 tabular-nums">
+                시작 +{autoResult.startLv} · 총 {fmtDuration(autoResult.elapsedMs)}
               </span>
-              <button
-                type="button"
-                onClick={(e) => { e.stopPropagation(); setAutoResult(null); }}
-                className="flex h-6 w-14 items-center justify-center rounded-md bg-amber-500 text-[10px] font-bold text-black active:scale-95"
-              >
-                확인
-              </button>
             </div>
+            <div className="flex flex-1 flex-col justify-center gap-1 px-2">
+              {autoRight(autoResult)}
+            </div>
+            <span className="pointer-events-none absolute bottom-1 right-2 text-[8px] text-zinc-500">탭하여 닫기</span>
           </div>
         ) : null}
       </div>
