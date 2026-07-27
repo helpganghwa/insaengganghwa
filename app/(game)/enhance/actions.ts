@@ -22,6 +22,7 @@ import {
   type ResolveResult,
 } from '@/lib/game/enhance';
 import { getMyRanks, getMyRanksAfter, type MyRanks } from '@/lib/game/leaderboard/queries';
+import { GEM_TO_MS } from '@/lib/game/balance';
 
 /**
  * push_pending(='enhance')에서 해당 jobId를 가진 element 제거.
@@ -191,6 +192,88 @@ export async function finalizeEnhance(jobId: string): Promise<
   } catch (e) {
     if (e instanceof EnhanceError) return err(e.code);
     console.error('[enhance.resolve]', e);
+    return err('UNKNOWN');
+  }
+}
+
+/**
+ * 자동 강화 — 클라 구동 하이브리드 루프의 "한 스텝"(경제 sink 로드맵 Phase 0).
+ * 현재 잡을 💎로 완료까지 단축 → 판정 → 다음 레벨 재등록을 1회 수행하고 결과 반환.
+ * 서버 권위(💎·RNG·시간)로 reduceEnhanceTime+resolveEnhance+queueEnhance를 조합.
+ * 정지조건 중 예산은 budgetLeft로 스텝 단위 서버 가드(부족 시 미차감·stop) — 클라가 누적 판정.
+ * ⚠ 현재 = 액티브 전용(A). 세션 영속(두 탭 공유 예산·오프라인 캐치업 B2)은 후속.
+ */
+export async function autoEnhanceStepAction(
+  jobId: string,
+  budgetLeft: number,
+): Promise<
+  | { status: 'ok'; outcome: string; fromLevel: number; toLevel: number; gemsSpent: number; nextJob: NextJobDto | null }
+  | { status: 'stop'; reason: 'budget' | 'insufficient' | 'gone' }
+  | ErrorState
+> {
+  const userId = await uid();
+  if (!userId) return err('UNAUTHENTICATED');
+  const __b = await actionBlock();
+  if (__b) return err(__b);
+  const jid = toJobId(jobId);
+  if (jid == null) return { status: 'stop', reason: 'gone' };
+  try {
+    // 현재 잡 남은 시간 → 완료에 필요한 💎(1💎=1분).
+    const [job] = await db
+      .select({ completeAt: enhancementJobs.completeAt })
+      .from(enhancementJobs)
+      .where(
+        and(
+          eq(enhancementJobs.id, jid),
+          eq(enhancementJobs.userId, userId),
+          eq(enhancementJobs.status, 'running'),
+        ),
+      )
+      .limit(1);
+    if (!job) return { status: 'stop', reason: 'gone' };
+
+    const remainingMs = job.completeAt.getTime() - Date.now();
+    const gemsNeeded = remainingMs > 0 ? Math.ceil(remainingMs / GEM_TO_MS) : 0;
+    if (gemsNeeded > Math.max(0, Math.floor(budgetLeft))) return { status: 'stop', reason: 'budget' };
+
+    if (gemsNeeded > 0) {
+      try {
+        await reduceEnhanceTime({ userId, jobId: jid, diamonds: gemsNeeded });
+      } catch (e) {
+        if (e instanceof EnhanceError && e.code === 'INSUFFICIENT_DIAMOND')
+          return { status: 'stop', reason: 'insufficient' };
+        throw e;
+      }
+    }
+
+    const r = await resolveEnhance({ jobId: jid, userId });
+
+    let nextJob: NextJobDto | null = null;
+    try {
+      const nq = await queueEnhance({ userId, userEquipmentId: r.userEquipmentId });
+      nextJob = {
+        jobId: String(nq.jobId),
+        fromLevel: nq.fromLevel,
+        targetLevel: nq.targetLevel,
+        baseRateBp: nq.baseRateBp,
+        completeAtIso: nq.completeAt.toISOString(),
+        startedAtIso: new Date(nq.completeAt.getTime() - nq.durationMs).toISOString(),
+      };
+    } catch (re) {
+      if (!(re instanceof EnhanceError)) console.error('[auto.requeue]', re); // MAX 등은 정상 종료
+    }
+
+    return {
+      status: 'ok',
+      outcome: r.outcome,
+      fromLevel: r.fromLevel,
+      toLevel: r.toLevel,
+      gemsSpent: gemsNeeded,
+      nextJob,
+    };
+  } catch (e) {
+    if (e instanceof EnhanceError) return err(e.code);
+    console.error('[auto.step]', e);
     return err('UNKNOWN');
   }
 }
