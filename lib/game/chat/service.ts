@@ -305,7 +305,14 @@ export async function persistAndBroadcast(
   return dto;
 }
 
-/** 직전 내 메시지와 동일 본문인지(연속 도배 차단). */
+/** 연속 도배(같은 말 즉시 반복) 차단 구간 — 직전 동일 메시지가 이 시간 내일 때만 중복으로 본다. */
+const CHAT_DUP_WINDOW_MS = 60_000;
+
+/**
+ * 직전 내 메시지와 동일 본문인지 — **단, 최근 CHAT_DUP_WINDOW_MS 이내일 때만** 차단(연속 도배).
+ * 시간이 한참 지난 뒤 같은 말('ㅋㅋ' 등)을 다시 치는 건 도배가 아니므로 허용(2026-07-27 문의 반영:
+ * 시간 무제한 차단은 과함). rate/burst 제한은 별도(actions.ts)라 이 검사는 '즉시 반복'만 담당.
+ */
 export async function isDuplicateOfLast(
   userId: string,
   serverId: number,
@@ -316,12 +323,13 @@ export async function isDuplicateOfLast(
     ? eq(chatMessages.guildId, guildId)
     : sql`${chatMessages.guildId} is null`;
   const [last] = await db
-    .select({ body: chatMessages.body })
+    .select({ body: chatMessages.body, createdAt: chatMessages.createdAt })
     .from(chatMessages)
     .where(and(eq(chatMessages.serverId, serverId), eq(chatMessages.userId, userId), channelCond))
     .orderBy(desc(chatMessages.id))
     .limit(1);
-  return last?.body === body;
+  if (!last || last.body !== body) return false;
+  return Date.now() - last.createdAt.getTime() < CHAT_DUP_WINDOW_MS;
 }
 
 /** 신고 — 중복 무시, 3건 도달 시 자동 숨김 + hide 브로드캐스트. */
