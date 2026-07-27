@@ -29,8 +29,9 @@ interface Props {
  * 자릿수 슬롯 카운트 — motion useSpring으로 자연 회전.
  *  - from !== to: Counter value가 from→to 보간(자릿수 하나만 굴러감)
  *  - from === to (hold): 좌우 약한 흔들림(±1.5px), 숫자 변화 없음
+ * export — 자동 강화 오버레이 좌측 +N도 동일 이펙트 재사용(EnhanceSlotCard).
  */
-function CountAnim({
+export function CountAnim({
   from,
   to,
   className,

@@ -10,7 +10,7 @@ import {
 } from '@/lib/game/balance';
 import type { Slot } from '@/lib/db/schema/equipment';
 import { TranscendSprite } from '@/components/TranscendSprite';
-import { RarityFrame, rarityBorderStyle, hasRarityBorder } from '@/components/RarityFrame';
+import { RarityFrame, rarityBorderStyle, hasRarityBorder, TranscendTag } from '@/components/RarityFrame';
 import { transcendStyle } from '@/lib/game/equipment/transcend';
 
 import { useResourceToast } from '@/components/ResourceToast';
@@ -22,7 +22,7 @@ import { completeTutorial } from '@/components/tutorial/events';
 import { useDiamond } from '@/components/DiamondContext';
 import { sounds } from '@/lib/game/sound';
 
-import { EnhanceFX, type FxKind } from './EnhanceFX';
+import { EnhanceFX, CountAnim, type FxKind } from './EnhanceFX';
 
 /** §10 자랑 자동 트리거 강화 단계(GDD §6 / 사용자 확정 델타). */
 
@@ -170,6 +170,13 @@ const FLASH_CLASS: Record<Outcome, string> = {
   mega: 'animate-flash-success',
   hold: 'animate-flash-hold',
   down: 'animate-flash-down',
+};
+// 자동 강화 오버레이 좌측 +N — EnhanceFX 각 결과 카운터와 동일한 색/글로우(클래스 원문 복제).
+const AUTO_NUM_CLASS: Record<Outcome, string> = {
+  success: 'text-emerald-100 drop-shadow-[0_0_8px_rgba(52,211,153,0.9)]',
+  mega: 'text-yellow-100 drop-shadow-[0_0_10px_rgba(253,224,71,0.95)]',
+  hold: 'text-zinc-100 drop-shadow-[0_0_8px_rgba(161,161,170,0.9)]',
+  down: 'text-red-100 drop-shadow-[0_0_8px_rgba(239,68,68,0.9)]',
 };
 
 function fmtRemaining(ms: number): string {
@@ -930,17 +937,21 @@ export function EnhanceSlotCard({
             }}
             className="absolute inset-0 z-40 flex cursor-pointer items-stretch bg-black/60"
           >
-            {/* 좌: 현재 강화수치(결과 효과) */}
+            {/* 좌: 현재 강화수치 — 결과 시 EnhanceFX 카운터(CountAnim: 자릿수 롤링·유지 흔들림·
+                결과별 글로우)와 동일 이펙트. key로 매 결과(메가 2단계 포함) 재트리거. */}
             <div className="flex flex-[0_0_42%] flex-col items-center justify-center gap-0.5 border-r border-white/10 px-1.5 text-center">
               <span className="text-[9px] font-bold text-amber-300">자동 강화 중</span>
-              <span
-                key={flash ? `f-${flashToLevel}` : `c-${autoStats.curLv}`}
-                className={`inline-block rounded px-1 text-[22px] font-extrabold leading-none tabular-nums ${
-                  flash ? `${FLASH_CLASS[flash]} ${OUTCOME_TONE[flash]}` : 'text-zinc-100'
-                }`}
-              >
-                +{flash ? (flashToLevel ?? autoStats.curLv) : autoStats.curLv}
-              </span>
+              {flash && flashFromLevel != null && flashToLevel != null ? (
+                <CountAnim
+                  key={`${flash}-${flashFromLevel}-${flashToLevel}`}
+                  from={flashFromLevel}
+                  to={flashToLevel}
+                  fontSize={22}
+                  className={`relative font-bold tabular-nums tracking-tight ${AUTO_NUM_CLASS[flash]}`}
+                />
+              ) : (
+                <span className="text-[22px] font-bold leading-none text-zinc-100 tabular-nums">+{autoStats.curLv}</span>
+              )}
               <span className="text-[8.5px] text-zinc-400 tabular-nums">
                 시작 +{autoStats.startLv} · {fmtDuration(Math.max(0, nowMs - autoStats.startMs))}
               </span>
@@ -990,11 +1001,12 @@ export function EnhanceSlotCard({
           label="자동 강화 설정"
           className="w-full max-w-[330px] rounded-2xl border border-zinc-700 bg-zinc-900 p-4"
         >
-          {/* 헤더 — 좌측에 강화 대상 아이템(인벤토리 타일과 동일: 등급 테두리+별장식+스프라이트). */}
-          <div className="flex items-center gap-2.5">
+          {/* 헤더 — 좌측: 인벤토리 목록 타일 그대로(등급 테두리·별장식·스프라이트·이름·+강화 ✦초월),
+              우측: 제목 + 설명. */}
+          <div className="flex items-start gap-3">
             <span
-              className={`relative flex h-12 w-12 shrink-0 items-center justify-center isolate overflow-hidden rounded-lg border bg-black/40 ${
-                hasRarityBorder(activeJob.transcendLevel) ? '' : 'border-zinc-700'
+              className={`relative flex w-[92px] shrink-0 aspect-square flex-col items-center justify-center gap-0.5 isolate overflow-hidden rounded-xl border-2 bg-zinc-950 px-1 text-center ${
+                hasRarityBorder(activeJob.transcendLevel) ? '' : 'border-zinc-800'
               }`}
               style={rarityBorderStyle(activeJob.transcendLevel)}
             >
@@ -1004,27 +1016,24 @@ export function EnhanceSlotCard({
                 slot={activeJob.slot}
                 level={activeJob.transcendLevel}
                 championRank={activeJob.championRank}
-                size={44}
+                size={48}
                 frameless
               />
+              <span className="line-clamp-1 break-keep px-0.5 text-[9px] leading-tight text-zinc-400">
+                {activeJob.name}
+              </span>
+              <span className="text-[9px] font-semibold text-zinc-100 tabular-nums">
+                +{activeJob.fromLevel}
+                <TranscendTag level={activeJob.transcendLevel} className="ml-1" />
+              </span>
             </span>
             <div className="min-w-0 flex-1">
               <h3 className="text-sm font-bold text-zinc-100">자동 강화 설정</h3>
-              <div className="flex items-center gap-1.5 text-[11px] text-zinc-300">
-                <span className="min-w-0 truncate break-keep">{activeJob.name}</span>
-                <span
-                  className="shrink-0 text-[10px] font-bold tabular-nums"
-                  style={{ color: `rgb(${transcendStyle(activeJob.transcendLevel).colorRgb.join(',')})` }}
-                >
-                  ✦{activeJob.transcendLevel}
-                </span>
-                <span className="shrink-0 font-semibold text-zinc-100 tabular-nums">+{activeJob.fromLevel}</span>
-              </div>
+              <p className="mt-1 whitespace-pre-line text-[11px] leading-relaxed text-zinc-400">
+                {'💎로 시간을 단축하며 자동 반복합니다.\n예산을 다 쓰거나 선택 조건 중 하나라도 달성하면 정지합니다.'}
+              </p>
             </div>
           </div>
-          <p className="mt-2 whitespace-pre-line text-[11px] leading-relaxed text-zinc-400">
-            {'💎로 시간을 단축하며 자동 반복합니다.\n예산을 다 쓰거나 선택 조건 중 하나라도 달성하면 정지합니다.'}
-          </p>
           {/* 예산 — 필수(체크박스 없음). 라벨 정렬용 체크박스폭 스페이서. 값은 입력창 직접 입력 +
               오른쪽 '최대' 버튼(보유 전액). ± 버튼은 목표/횟수 항목에만(사용자 피드백 2). */}
           <div className="mt-2 flex items-center gap-2 border-t border-zinc-800 py-2.5">
