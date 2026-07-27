@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useRef, useState } from 'react';
 
 import type { Slot } from '@/lib/db/schema/equipment';
 
@@ -46,6 +46,39 @@ export function GachaBoxCard({
   const displayCount = optimistic ?? count;
 
   const multiN = displayCount >= 2 ? Math.min(10, displayCount) : 10;
+
+  // 자동 반복 — 자동 켜고 1/N회 누르면 일정 간격으로 상자 소진(또는 멈춤)까지 자동 개봉.
+  const [autoRepeat, setAutoRepeat] = useState(false);
+  const autoRunRef = useRef(false);
+  const [auto, setAuto] = useState<{ opened: number; newN: number; trN: number; done: boolean } | null>(null);
+  const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
+  const runAutoOpen = async (per: number) => {
+    if (drawing || displayCount < 1) return;
+    autoRunRef.current = true;
+    let opened = 0, newN = 0, trN = 0, remaining = displayCount;
+    setAuto({ opened, newN, trN, done: false });
+    while (autoRunRef.current && remaining >= 1) {
+      const n = Math.min(per, remaining);
+      setOptimistic(Math.max(0, remaining - n)); // 낙관 차감
+      const r = await openAction(slot, n).catch(() => null);
+      if (!autoRunRef.current) break; // 멈춤/이탈 중 응답
+      if (!r || r.status === 'error') {
+        if (r && r.status === 'error') showError(r.message);
+        setOptimistic(null);
+        break;
+      }
+      opened += n;
+      for (const it of r.results) { if (it.isNew) newN++; trN += it.transcended; }
+      remaining = r.remaining;
+      setOptimistic(r.remaining); // 서버 권위 잔여
+      setAuto({ opened, newN, trN, done: false });
+      if (remaining < 1) break;
+      await sleep(600); // 개봉 간격
+    }
+    autoRunRef.current = false;
+    sounds.gachaOpen();
+    setAuto({ opened, newN, trN, done: true }); // 완료 요약(확인까지 유지)
+  };
 
   const pull = (n: number) => {
     if (drawing || displayCount < 1) return;
@@ -102,25 +135,37 @@ export function GachaBoxCard({
             </span>
           </div>
 
-          {/* 두 버튼 grid-cols-2로 폭 동일 — multiN 라벨 가변에 따른 width 흔들림 방지. */}
-          <div className="ml-auto grid w-44 grid-cols-2 gap-1.5">
-            <button
-              type="button"
-              data-tut="open-box"
-              disabled={drawing || displayCount < 1}
-              onClick={() => pull(1)}
-              className="rounded-md bg-white/95 px-3 py-1.5 text-center text-[11px] font-semibold text-zinc-900 shadow-sm transition-transform active:scale-95 disabled:opacity-40"
-            >
-              1회 열기
-            </button>
-            <button
-              type="button"
-              disabled={drawing || displayCount < 2}
-              onClick={() => pull(multiN)}
-              className="rounded-md bg-amber-500 px-3 py-1.5 text-center text-[11px] font-semibold text-white shadow-sm transition-transform active:scale-95 disabled:opacity-40"
-            >
-              {multiN}회 열기
-            </button>
+          <div className="ml-auto w-44">
+            {/* 자동 반복 토글 — 켜면 아래 열기 버튼이 상자 소진까지 자동 반복. */}
+            <label className="mb-1.5 flex items-center justify-end gap-1.5 text-[10px] font-semibold text-white/85">
+              <span>자동 반복</span>
+              <input
+                type="checkbox"
+                checked={autoRepeat}
+                onChange={(e) => setAutoRepeat(e.target.checked)}
+                className="h-3.5 w-3.5 accent-amber-500"
+              />
+            </label>
+            {/* 두 버튼 grid-cols-2로 폭 동일 — multiN 라벨 가변에 따른 width 흔들림 방지. */}
+            <div className="grid grid-cols-2 gap-1.5">
+              <button
+                type="button"
+                data-tut="open-box"
+                disabled={drawing || !!auto || displayCount < 1}
+                onClick={() => (autoRepeat ? runAutoOpen(1) : pull(1))}
+                className="rounded-md bg-white/95 px-3 py-1.5 text-center text-[11px] font-semibold text-zinc-900 shadow-sm transition-transform active:scale-95 disabled:opacity-40"
+              >
+                1회 열기
+              </button>
+              <button
+                type="button"
+                disabled={drawing || !!auto || displayCount < 2}
+                onClick={() => (autoRepeat ? runAutoOpen(multiN) : pull(multiN))}
+                className="rounded-md bg-amber-500 px-3 py-1.5 text-center text-[11px] font-semibold text-white shadow-sm transition-transform active:scale-95 disabled:opacity-40"
+              >
+                {multiN}회 열기
+              </button>
+            </div>
           </div>
         </div>
 
@@ -131,6 +176,38 @@ export function GachaBoxCard({
             className="pointer-events-none absolute inset-0 bg-white"
             style={{ animation: 'gacha-box-flash 360ms ease-out' }}
           />
+        ) : null}
+
+        {/* 자동 개봉 진행/완료 오버레이. */}
+        {auto ? (
+          <div className="absolute inset-0 z-20 flex flex-col items-center justify-center gap-1.5 bg-black/85 px-5 text-center backdrop-blur-[2px]">
+            {!auto.done ? (
+              <>
+                <div className="animate-spin text-lg">📦</div>
+                <div className="text-[13px] font-bold text-amber-200">자동 개봉 중 · 남은 {displayCount}개</div>
+                <div className="text-[11px] text-zinc-300 tabular-nums">개봉 {auto.opened} · 신규 {auto.newN} · 초월 +{auto.trN}</div>
+                <button
+                  type="button"
+                  onClick={() => { autoRunRef.current = false; }}
+                  className="mt-1 rounded-md border border-red-500/60 bg-red-900/40 px-4 py-1.5 text-[11px] font-bold text-red-200"
+                >
+                  ■ 멈춤
+                </button>
+              </>
+            ) : (
+              <>
+                <div className="text-[13px] font-bold text-amber-200">✦ 자동 개봉 완료</div>
+                <div className="text-[11px] text-zinc-200 tabular-nums">개봉 {auto.opened} · 신규 {auto.newN} · 초월 +{auto.trN}</div>
+                <button
+                  type="button"
+                  onClick={() => setAuto(null)}
+                  className="mt-1 rounded-md bg-amber-500 px-5 py-1.5 text-[11px] font-bold text-black active:scale-95"
+                >
+                  확인
+                </button>
+              </>
+            )}
+          </div>
         ) : null}
       </div>
 
