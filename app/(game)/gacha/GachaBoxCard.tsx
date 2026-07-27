@@ -47,37 +47,38 @@ export function GachaBoxCard({
 
   const multiN = displayCount >= 2 ? Math.min(10, displayCount) : 10;
 
-  // 자동 반복 — 자동 켜고 1/N회 누르면 일정 간격으로 상자 소진(또는 멈춤)까지 자동 개봉.
+  // 자동 반복 — ⚙ 팝업에서 켠 뒤 1/N회 누르면 그 버튼이 '중지'로 바뀌고, 상자 소진/중지까지
+  // **별도 UI 없이** 자동으로 눌리는 효과(결과 모달·오버레이 없음). 다 열거나 중지 시 버튼 원복.
   const [autoRepeat, setAutoRepeat] = useState(false);
+  const [autoMenu, setAutoMenu] = useState(false); // 자동 체크 팝업(⚙)
+  const [autoRunning, setAutoRunning] = useState(false); // 진행 중(버튼→중지)
   const autoRunRef = useRef(false);
-  const [auto, setAuto] = useState<{ opened: number; newN: number; trN: number; done: boolean } | null>(null);
   const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
   const runAutoOpen = async (per: number) => {
-    if (drawing || displayCount < 1) return;
+    if (drawing || autoRunning || displayCount < 1) return;
     autoRunRef.current = true;
-    let opened = 0, newN = 0, trN = 0, remaining = displayCount;
-    setAuto({ opened, newN, trN, done: false });
+    setAutoRunning(true);
+    let remaining = displayCount;
     while (autoRunRef.current && remaining >= 1) {
       const n = Math.min(per, remaining);
+      setShake(true); // 버튼 눌리는 효과(상자 흔들림)
+      setTimeout(() => setShake(false), 280);
       setOptimistic(Math.max(0, remaining - n)); // 낙관 차감
       const r = await openAction(slot, n).catch(() => null);
-      if (!autoRunRef.current) break; // 멈춤/이탈 중 응답
+      if (!autoRunRef.current) break; // 중지/이탈 중 응답
       if (!r || r.status === 'error') {
         if (r && r.status === 'error') showError(r.message);
         setOptimistic(null);
         break;
       }
-      opened += n;
-      for (const it of r.results) { if (it.isNew) newN++; trN += it.transcended; }
       remaining = r.remaining;
       setOptimistic(r.remaining); // 서버 권위 잔여
-      setAuto({ opened, newN, trN, done: false });
       if (remaining < 1) break;
-      await sleep(600); // 개봉 간격
+      await sleep(500); // 개봉 간격
     }
     autoRunRef.current = false;
     sounds.gachaOpen();
-    setAuto({ opened, newN, trN, done: true }); // 완료 요약(확인까지 유지)
+    setAutoRunning(false); // 버튼 원복(1회/10회)
   };
 
   const pull = (n: number) => {
@@ -130,42 +131,54 @@ export function GachaBoxCard({
         <div className="relative flex flex-col justify-between gap-7 bg-gradient-to-b from-black/0 via-black/45 to-black/85 px-4 py-4">
           <div className="flex items-baseline justify-between">
             <h2 className="text-base font-bold text-white drop-shadow-sm">{label}</h2>
-            <span className="text-xs text-white/85">
-              보유 <span className="font-mono font-semibold tabular-nums">{displayCount}</span>개
-            </span>
+            <div className="flex items-center gap-2">
+              <span className="text-xs text-white/85">
+                보유 <span className="font-mono font-semibold tabular-nums">{displayCount}</span>개
+              </span>
+              <button
+                type="button"
+                aria-label="자동 반복 설정"
+                onClick={() => setAutoMenu((v) => !v)}
+                className={`rounded px-1.5 py-0.5 text-[12px] leading-none transition ${
+                  autoRepeat ? 'bg-amber-500/90 text-black' : 'bg-white/15 text-white/80'
+                }`}
+              >
+                ⚙
+              </button>
+            </div>
           </div>
 
           <div className="ml-auto w-44">
-            {/* 자동 반복 토글 — 켜면 아래 열기 버튼이 상자 소진까지 자동 반복. */}
-            <label className="mb-1.5 flex items-center justify-end gap-1.5 text-[10px] font-semibold text-white/85">
-              <span>자동 반복</span>
-              <input
-                type="checkbox"
-                checked={autoRepeat}
-                onChange={(e) => setAutoRepeat(e.target.checked)}
-                className="h-3.5 w-3.5 accent-amber-500"
-              />
-            </label>
-            {/* 두 버튼 grid-cols-2로 폭 동일 — multiN 라벨 가변에 따른 width 흔들림 방지. */}
-            <div className="grid grid-cols-2 gap-1.5">
+            {autoRunning ? (
               <button
                 type="button"
-                data-tut="open-box"
-                disabled={drawing || !!auto || displayCount < 1}
-                onClick={() => (autoRepeat ? runAutoOpen(1) : pull(1))}
-                className="rounded-md bg-white/95 px-3 py-1.5 text-center text-[11px] font-semibold text-zinc-900 shadow-sm transition-transform active:scale-95 disabled:opacity-40"
+                onClick={() => { autoRunRef.current = false; }}
+                className="w-full rounded-md bg-red-500 px-3 py-1.5 text-center text-[11px] font-bold text-white shadow-sm transition-transform active:scale-95"
               >
-                1회 열기
+                ■ 중지
               </button>
-              <button
-                type="button"
-                disabled={drawing || !!auto || displayCount < 2}
-                onClick={() => (autoRepeat ? runAutoOpen(multiN) : pull(multiN))}
-                className="rounded-md bg-amber-500 px-3 py-1.5 text-center text-[11px] font-semibold text-white shadow-sm transition-transform active:scale-95 disabled:opacity-40"
-              >
-                {multiN}회 열기
-              </button>
-            </div>
+            ) : (
+              /* 두 버튼 grid-cols-2로 폭 동일 — multiN 라벨 가변에 따른 width 흔들림 방지. */
+              <div className="grid grid-cols-2 gap-1.5">
+                <button
+                  type="button"
+                  data-tut="open-box"
+                  disabled={drawing || displayCount < 1}
+                  onClick={() => (autoRepeat ? runAutoOpen(1) : pull(1))}
+                  className="rounded-md bg-white/95 px-3 py-1.5 text-center text-[11px] font-semibold text-zinc-900 shadow-sm transition-transform active:scale-95 disabled:opacity-40"
+                >
+                  1회 열기
+                </button>
+                <button
+                  type="button"
+                  disabled={drawing || displayCount < 2}
+                  onClick={() => (autoRepeat ? runAutoOpen(multiN) : pull(multiN))}
+                  className="rounded-md bg-amber-500 px-3 py-1.5 text-center text-[11px] font-semibold text-white shadow-sm transition-transform active:scale-95 disabled:opacity-40"
+                >
+                  {multiN}회 열기
+                </button>
+              </div>
+            )}
           </div>
         </div>
 
@@ -178,36 +191,20 @@ export function GachaBoxCard({
           />
         ) : null}
 
-        {/* 자동 개봉 진행/완료 오버레이. */}
-        {auto ? (
-          <div className="absolute inset-0 z-20 flex flex-col items-center justify-center gap-1.5 bg-black/85 px-5 text-center backdrop-blur-[2px]">
-            {!auto.done ? (
-              <>
-                <div className="animate-spin text-lg">📦</div>
-                <div className="text-[13px] font-bold text-amber-200">자동 개봉 중 · 남은 {displayCount}개</div>
-                <div className="text-[11px] text-zinc-300 tabular-nums">개봉 {auto.opened} · 신규 {auto.newN} · 초월 +{auto.trN}</div>
-                <button
-                  type="button"
-                  onClick={() => { autoRunRef.current = false; }}
-                  className="mt-1 rounded-md border border-red-500/60 bg-red-900/40 px-4 py-1.5 text-[11px] font-bold text-red-200"
-                >
-                  ■ 멈춤
-                </button>
-              </>
-            ) : (
-              <>
-                <div className="text-[13px] font-bold text-amber-200">✦ 자동 개봉 완료</div>
-                <div className="text-[11px] text-zinc-200 tabular-nums">개봉 {auto.opened} · 신규 {auto.newN} · 초월 +{auto.trN}</div>
-                <button
-                  type="button"
-                  onClick={() => setAuto(null)}
-                  className="mt-1 rounded-md bg-amber-500 px-5 py-1.5 text-[11px] font-bold text-black active:scale-95"
-                >
-                  확인
-                </button>
-              </>
-            )}
-          </div>
+        {/* 자동 반복 설정 팝업(⚙) — 자동 체크는 여기서만. */}
+        {autoMenu ? (
+          <>
+            <div className="absolute inset-0 z-20" onClick={() => setAutoMenu(false)} />
+            <div className="absolute right-3 top-11 z-30 rounded-lg border border-zinc-700 bg-zinc-900/95 px-3 py-2.5 shadow-xl">
+              <label className="flex items-center gap-2 text-[12px] font-semibold text-zinc-100">
+                <input type="checkbox" checked={autoRepeat} onChange={(e) => setAutoRepeat(e.target.checked)} className="h-4 w-4 accent-amber-500" />
+                자동 반복
+              </label>
+              <div className="mt-1 max-w-[150px] text-[10px] leading-relaxed text-zinc-500">
+                켜면 열기 버튼이 상자 소진까지 자동으로 눌립니다 (버튼이 ‘중지’로 바뀜).
+              </div>
+            </div>
+          </>
         ) : null}
       </div>
 
