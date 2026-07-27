@@ -66,7 +66,7 @@ function PollFooter({ poll, voted, closed }: { poll: AnnouncementPoll; voted: bo
       {closed
         ? '투표가 마감되었습니다.'
         : voted
-          ? '반영 완료 · 다른 항목을 눌러 변경할 수 있어요.'
+          ? '투표 완료 · 언제든 다른 항목을 눌러 변경할 수 있어요.'
           : '항목을 선택하면 따로 제출 없이 바로 반영됩니다.'}
       {poll.closesAtIso && !closed ? ` · 마감 ${fmtDate(poll.closesAtIso)}` : ''}
     </p>
