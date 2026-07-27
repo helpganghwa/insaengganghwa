@@ -257,21 +257,21 @@ export function GachaResultModal({
           )}
         </div>
 
-        <p className="mt-3 text-center text-[11px] text-zinc-500">
-          남은 {slotLabel} 상자 {remaining}개
-        </p>
-
-        {/* 자동 반복 — 체크 후 '한 번 더/N회 더' 누르면 상자 소진/중지까지 자동으로 눌러줌. */}
-        <label className="mt-3 flex items-center justify-center gap-2 text-[11px] font-medium text-zinc-500">
-          <input
-            type="checkbox"
-            checked={autoRepeat}
-            onChange={(e) => setAutoRepeat(e.target.checked)}
-            disabled={autoActive}
-            className="h-3.5 w-3.5 accent-amber-500"
-          />
-          자동 반복
-        </label>
+        {/* 자동 반복 체크 + 남은 상자 한 줄 — 가운데점 구분(내부 스크롤 유발하던 별도 블록 제거). */}
+        <div className="mt-3 flex items-center justify-center gap-1.5 text-[11px] text-zinc-500">
+          <label className="flex items-center gap-1.5 font-medium">
+            <input
+              type="checkbox"
+              checked={autoRepeat}
+              onChange={(e) => setAutoRepeat(e.target.checked)}
+              disabled={autoActive}
+              className="h-3.5 w-3.5 accent-amber-500"
+            />
+            자동 반복
+          </label>
+          <span aria-hidden className="text-zinc-400 dark:text-zinc-600">·</span>
+          <span>남은 {slotLabel} 상자 {remaining}개</span>
+        </div>
 
         {autoActive ? (
           <button
@@ -279,7 +279,7 @@ export function GachaResultModal({
             onClick={() => setAutoActive(false)}
             className="mt-2 w-full rounded-full bg-red-500 px-3 py-2.5 text-xs font-bold text-white"
           >
-            ■ 중지 (남은 {remaining}개)
+            중지 ({remaining}개 남음)
           </button>
         ) : (
           <div className="mt-2 grid grid-cols-2 gap-2">
