@@ -61,12 +61,14 @@ export async function claimAllChallengesAction(): Promise<ClaimAllResult> {
 
 /**
  * 클라 신고형 달성 마킹 — 앱 실행(standalone 감지)·자랑 공유(공유 실행 시)만 허용.
- * 일회성 소액이라 위조 실익 없음(residence/avatar는 서버 액션 내부 마킹).
+ * 완료 검증은 하지 않음(설치·공유는 서버 콜백이 없어 검증 불가, 러프 인정 — 유저 결정 2026-07-27).
+ * 성공 여부를 반환해 클라가 실패 시 재시도할 수 있게 한다(설치했는데 못 받는 false-negative 방지).
  */
-export async function markClientChallengeAction(eventId: string): Promise<void> {
-  if (eventId !== 'app_install' && eventId !== 'boast_share') return;
+export async function markClientChallengeAction(eventId: string): Promise<boolean> {
+  if (eventId !== 'app_install' && eventId !== 'boast_share') return false;
   const userId = await getSessionUserId();
-  if (!userId) return;
+  if (!userId) return false;
   const serverId = await getActiveServerId();
   await markChallengeEvent(db, userId, serverId, eventId);
+  return true;
 }
