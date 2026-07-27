@@ -48,9 +48,12 @@ export async function openSupplyBoxes(input: {
   serverId: number;
   slot: Slot;
   count?: number;
+  /** 테스트용 결정적 RNG 주입(미지정 시 crypto u32). pool은 id 오름차순 고정이라 인덱스 재현 가능. */
+  rng?: () => number;
 }): Promise<OpenResult[]> {
   const { userId, serverId, slot } = input;
   const n = Math.max(1, Math.floor(input.count ?? 1));
+  const rng = input.rng ?? rngU32;
 
   const opened = await db.transaction(async (tx) => {
     const [box] = await tx
@@ -69,14 +72,15 @@ export async function openSupplyBoxes(input: {
     const pool = await tx
       .select({ id: catalogItems.id })
       .from(catalogItems)
-      .where(and(eq(catalogItems.slot, slot), eq(catalogItems.active, true)));
+      .where(and(eq(catalogItems.slot, slot), eq(catalogItems.active, true)))
+      .orderBy(catalogItems.id); // 균등분포 불변 + 순서 고정(테스트 RNG 인덱스 재현·결과 안정).
     if (pool.length === 0) throw new SupplyError('NO_CATALOG');
 
     const results: OpenResult[] = [];
 
     for (let i = 0; i < n; i++) {
       // 슬롯 내 균등 (BALANCE §4.2).
-      const catalogItemId = pool[rngU32() % pool.length]!.id;
+      const catalogItemId = pool[rng() % pool.length]!.id;
 
       const [existing] = await tx
         .select({
