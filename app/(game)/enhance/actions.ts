@@ -213,6 +213,8 @@ export async function autoEnhanceStepAction(
 > {
   const userId = await uid();
   if (!userId) return err('UNAUTHENTICATED');
+  // 다른 강화 액션과 동일 버킷(30/10s) — 정상 자동 페이스(~4/10s)엔 무영향, 직접 호출 스팸만 감속.
+  if (await rateLimited(userId, 'enhance')) return err('RATE_LIMITED');
   const __b = await actionBlock();
   if (__b) return err(__b);
   const jid = toJobId(jobId);
@@ -247,6 +249,9 @@ export async function autoEnhanceStepAction(
     }
 
     const r = await resolveEnhance({ jobId: jid, userId });
+    // 묶음 알림 대기열에서 이 잡 제거(finalize와 동일) — 오래 방치돼 '준비완료' push_pending에
+    // 적재된 잡을 자동이 정산한 경우, 30분 뒤 스테일 푸시가 나가는 것 방지. best-effort·응답 후.
+    after(() => cleanupPushPendingJob(userId, jobId));
 
     let nextJob: NextJobDto | null = null;
     try {

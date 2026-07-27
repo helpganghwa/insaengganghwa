@@ -43,6 +43,10 @@ export function GachaBoxCard({
   const [drawing, setDrawing] = useState(false);
   // 보유 카운트 — 낙관 차감/서버 잔여를 optimistic에 담고, 미설정이면 count prop(서버 새로고침값) 사용.
   const [optimistic, setOptimistic] = useState<number | null>(null);
+  // 개봉 에러 신호(증가 카운터) — 결과 모달의 자동 반복 중지용. 다른 탭/기기에서 상자를 소진
+  // (NO_BOX)했거나 레이트리밋이면 모달의 remaining이 스테일이라, 이 신호 없이는 자동 반복이
+  // 에러 토스트를 무한 반복한다(프로덕션 전 검수 2026-07-27).
+  const [errorTick, setErrorTick] = useState(0);
   const displayCount = optimistic ?? count;
 
   const multiN = displayCount >= 2 ? Math.min(10, displayCount) : 10;
@@ -58,6 +62,7 @@ export function GachaBoxCard({
         if (r.status === 'error') {
           showError(r.message);
           setOptimistic(null); // 실패 → prop으로 원복
+          setErrorTick((t) => t + 1); // 자동 반복 중지 신호
           return;
         }
         setResult(r);
@@ -69,6 +74,7 @@ export function GachaBoxCard({
       .catch(() => {
         showError('보급 개봉에 실패했습니다. 잠시 후 다시 시도해주세요.');
         setOptimistic(null);
+        setErrorTick((t) => t + 1); // 자동 반복 중지 신호
       })
       .finally(() => setDrawing(false)); // 액션 응답 즉시 로딩 해제(refresh 대기 안 함)
   };
@@ -142,6 +148,7 @@ export function GachaBoxCard({
           results={result.results}
           remaining={result.remaining}
           pulling={drawing}
+          errorTick={errorTick}
           onAgain={pull}
           onClose={() => setResult(null)}
         />

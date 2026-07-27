@@ -128,6 +128,7 @@ export function GachaResultModal({
   results,
   remaining,
   pulling,
+  errorTick,
   onAgain,
   onClose,
 }: {
@@ -136,6 +137,8 @@ export function GachaResultModal({
   results: OpenedItem[];
   remaining: number;
   pulling: boolean;
+  /** 개봉 에러 신호(증가 카운터) — 변하면 자동 반복 중지(무한 에러 재시도 방지). */
+  errorTick: number;
   onAgain: (n: number) => void;
   onClose: () => void;
 }) {
@@ -185,6 +188,11 @@ export function GachaResultModal({
     const t = setTimeout(() => onAgainRef.current(n), 450); // 다음 개봉(간격)
     return () => clearTimeout(t);
   }, [pulling, remaining, autoActive, autoN]);
+  // 개봉 에러 → 자동 반복 중지 — remaining이 스테일(마지막 성공값)이라 이 신호 없이는
+  // NO_BOX/레이트리밋 에러를 무한 재시도한다(2026-07-27 프로덕션 전 검수).
+  useEffect(() => {
+    if (errorTick > 0) setAutoActive(false);
+  }, [errorTick]);
   const startAgain = (n: number) => {
     if (autoRepeat) {
       setAutoN(n);
