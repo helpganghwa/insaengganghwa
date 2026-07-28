@@ -4,6 +4,7 @@ import { useState } from 'react';
 import Link from 'next/link';
 
 import { MELEE_REWARD_TIERS } from '@/lib/game/balance';
+import { BackFab } from '@/components/BackNav';
 import { assetUrl } from '@/lib/asset-versions';
 import { meleeFaceCropStyle } from '@/components/faceCrop';
 import type { MeleeHistoryRow } from '@/lib/game/melee/history';
@@ -150,6 +151,8 @@ export function MeleeInfo({
         style={{ imageRendering: 'pixelated' }}
       />
       <div className="pointer-events-none absolute inset-0 bg-gradient-to-b from-black/45 via-black/35 to-black/70" />
+      {/* GNB 없는 페이지 — 뒤로가기 필수(PWA·PC 갇힘 방지). 제목은 중앙이라 좌상단과 충돌 없음. */}
+      <BackFab fallback="/melee" className="absolute top-2.5 left-3 z-20" />
       <div className="relative z-10 flex h-full flex-col items-center justify-center gap-0.5">
         <h1 className="text-pixel-outline text-lg font-extrabold text-white">대난투 정보</h1>
         <p className="text-pixel-outline text-[11px] font-bold text-amber-200">

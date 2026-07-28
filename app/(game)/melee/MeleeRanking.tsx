@@ -123,12 +123,14 @@ export function useMeleeRanking({
   useEffect(() => {
     if (!enabled || loadedFor.current === mode) return;
     loadedFor.current = mode;
-    // 첫 로드는 뒤로가기 복귀일 때만, 이후 모드 왕복은 항상 캐시를 쓴다.
-    const restorable = firstLoad.current ? cameFromHistory() : true;
+    const isFirst = firstLoad.current;
     firstLoad.current = false;
+    const back = isFirst && cameFromHistory();
+    // 첫 로드는 뒤로가기 복귀일 때만 복원(새 진입은 초기 상태). 이후 탭 왕복은 보던 자리를 지켜주되,
+    // '내 주변'만은 예외 — 누를 때마다 내 등수 기준으로 다시 잡혀야 의미가 있다.
+    const useCache = isFirst ? back : mode !== 'near';
     startTransition(async () => {
-      // 복원 우선 — 돌아온 경우 네트워크 없이 목록·스크롤을 즉시 되살린다.
-      const cached = restorable ? readCache(cacheKey(battleId, mode)) : null;
+      const cached = useCache ? readCache(cacheKey(battleId, mode)) : null;
       if (cached && cached.rows.length > 0) {
         setRows(cached.rows);
         setMyRank(cached.myRank);
@@ -139,6 +141,8 @@ export function useMeleeRanking({
       if (r.status !== 'success') return;
       setRows(r.rows);
       setMyRank(r.myRank);
+      // 내 주변은 위아래로 창을 잡아 오므로 스크롤 0이면 내 행이 화면 밖이다 — 가운데로 맞춘다.
+      if (mode === 'near') pendingScroll.current = 'me';
     });
   }, [enabled, mode, battleId]);
 
