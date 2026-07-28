@@ -11,9 +11,14 @@ import { getMeleeRanking, type MeleeRankMode, type MeleeRankRow } from '@/lib/ga
 export async function meleeRankingAction(input: {
   battleId: string;
   mode: MeleeRankMode;
+  /** 아래 방향(다음 등수) 커서. */
   afterRank?: number;
+  /** 위 방향(이전 등수) 커서. */
+  beforeRank?: number;
+  /** 이 등수 주변으로 재로드(내 순위 점프). */
+  aroundRank?: number;
 }): Promise<
-  { status: 'success'; rows: MeleeRankRow[]; myRank: number | null; hasMore: boolean } | { status: 'error' }
+  { status: 'success'; rows: MeleeRankRow[]; myRank: number | null } | { status: 'error' }
 > {
   const userId = await getSessionUserId();
   if (!userId) return { status: 'error' };
@@ -25,6 +30,8 @@ export async function meleeRankingAction(input: {
       viewerUserId: userId,
       mode: input.mode,
       afterRank: input.afterRank,
+      beforeRank: input.beforeRank,
+      aroundRank: input.aroundRank,
     });
     return { status: 'success', ...r };
   } catch (e) {

@@ -1,6 +1,6 @@
 import 'server-only';
 
-import { and, asc, eq, gt, inArray, sql } from 'drizzle-orm';
+import { and, asc, desc, eq, gt, inArray, lt, sql } from 'drizzle-orm';
 
 import { db } from '@/lib/db/client';
 import { profiles } from '@/lib/db/schema/profiles';
@@ -26,14 +26,17 @@ export type MeleeRankRow = {
   attackSuccess: number;
   /** 방어 성공 = 피격 중 버텨낸 수(탈락자는 마지막 피격 제외). */
   defenseSuccess: number;
-  /** 나를 쓰러뜨린 사람(챔피언은 null). */
+  /** 나를 쓰러뜨린 사람(챔피언은 null). 프로필 링크용 공개코드 동봉. */
   killerNickname: string | null;
+  killerPublicCode: string | null;
   /** 탈락 라운드(0138 이전 회차는 null). */
   eliminatedRound: number | null;
 };
 
 export type MeleeRankMode = 'all' | 'near' | 'guild';
-export const MELEE_RANK_PAGE = 50;
+export const MELEE_RANK_PAGE = 30;
+/** 내 주변·내 순위 점프의 초기 창(위아래 각각). 화면을 채우고 양방향 스크롤 여지를 남긴다. */
+export const MELEE_RANK_WINDOW = 12;
 
 /** 아바타 정면 + faceBox — 순위 행의 얼굴 확대에 쓴다. */
 const SOUTH = sql<string | null>`${userProfiles.rotations} ->> 'south'`;
@@ -53,11 +56,13 @@ export async function getMeleeRanking(input: {
   serverId: number;
   viewerUserId: string;
   mode: MeleeRankMode;
-  /** all 모드 커서 — 이 등수 다음부터. */
+  /** 아래 방향 커서 — 이 등수 **다음**부터 오름차순. */
   afterRank?: number;
-  /** near 모드 창 크기(위아래 각각). */
-  window?: number;
-}): Promise<{ rows: MeleeRankRow[]; myRank: number | null; hasMore: boolean }> {
+  /** 위 방향 커서 — 이 등수 **이전**을 내림차순으로 집고 오름차순으로 되돌려 반환. */
+  beforeRank?: number;
+  /** 이 등수 주변 창(위아래 각각 MELEE_RANK_WINDOW). near 초기 로드·내 순위 점프용. */
+  aroundRank?: number;
+}): Promise<{ rows: MeleeRankRow[]; myRank: number | null }> {
   const { battleId, serverId, viewerUserId, mode } = input;
 
   const [meRow] = await db
@@ -70,30 +75,39 @@ export async function getMeleeRanking(input: {
   // 모드별 대상 등수 범위/필터.
   const conds = [eq(meleeParticipants.battleId, battleId)];
   let limit = MELEE_RANK_PAGE;
-  if (mode === 'near') {
-    const w = input.window ?? 4;
-    if (myRank == null) return { rows: [], myRank: null, hasMore: false };
+  let backward = false; // 위 방향 조회 — 내림차순으로 집고 오름차순으로 되돌린다.
+  const around = input.aroundRank ?? (mode === 'near' ? myRank : null);
+
+  if (input.beforeRank != null) {
+    conds.push(lt(meleeParticipants.finalRank, input.beforeRank));
+    backward = true;
+  } else if (input.afterRank != null) {
+    conds.push(gt(meleeParticipants.finalRank, input.afterRank));
+  } else if (mode === 'near' || input.aroundRank != null) {
+    if (around == null) return { rows: [], myRank };
+    const w = MELEE_RANK_WINDOW;
     conds.push(
-      sql`${meleeParticipants.finalRank} between ${Math.max(1, myRank - w)} and ${myRank + w}`,
+      sql`${meleeParticipants.finalRank} between ${Math.max(1, around - w)} and ${around + w}`,
     );
     limit = w * 2 + 1;
-  } else if (mode === 'guild') {
+  }
+
+  if (mode === 'guild') {
     // 현재 같은 길드인 참가자 — 길드 탭은 "지금 우리 길드원의 성적"을 보는 용도.
     const [mine] = await db
       .select({ guildId: guildMembers.guildId })
       .from(guildMembers)
       .where(and(eq(guildMembers.userId, viewerUserId), eq(guildMembers.serverId, serverId)))
       .limit(1);
-    if (!mine) return { rows: [], myRank, hasMore: false };
+    if (!mine) return { rows: [], myRank };
     const mates = await db
       .select({ userId: guildMembers.userId })
       .from(guildMembers)
       .where(and(eq(guildMembers.guildId, mine.guildId), eq(guildMembers.serverId, serverId)));
     const ids = mates.map((m) => m.userId);
-    if (ids.length === 0) return { rows: [], myRank, hasMore: false };
+    if (ids.length === 0) return { rows: [], myRank };
     conds.push(inArray(meleeParticipants.userId, ids));
-  } else if (input.afterRank != null) {
-    conds.push(gt(meleeParticipants.finalRank, input.afterRank));
+    limit = 200; // 길드 인원은 유계 — 한 번에 로드(무한 스크롤 대상 아님).
   }
 
   const rows = await withTimeout(
@@ -122,29 +136,29 @@ export async function getMeleeRanking(input: {
       )
       .leftJoin(userProfiles, eq(userProfiles.id, characters.activeProfileId))
       .where(and(...conds))
-      .orderBy(asc(meleeParticipants.finalRank))
-      .limit(limit + 1),
+      .orderBy(backward ? desc(meleeParticipants.finalRank) : asc(meleeParticipants.finalRank))
+      .limit(limit),
     4000,
     'melee.ranking',
   ).catch(() => []);
 
-  const hasMore = mode === 'all' && rows.length > limit;
-  const page = hasMore ? rows.slice(0, limit) : rows;
+  // 위 방향은 내림차순으로 집었으므로 표시 순서(오름차순)로 되돌린다.
+  const page = backward ? [...rows].reverse() : rows;
 
   // 나를 쓰러뜨린 사람 닉네임 — 한 번에 조회(N+1 방지).
   const killerIds = [...new Set(page.map((r) => r.killerUserId).filter((v): v is string => !!v))];
-  const killerNick = new Map<string, string>();
+  const killerNick = new Map<string, { nick: string; code: string | null }>();
   if (killerIds.length > 0) {
     const ks = await db
-      .select({ uid: characters.userId, nick: characters.nickname })
+      .select({ uid: characters.userId, nick: characters.nickname, code: profiles.publicCode })
       .from(characters)
+      .innerJoin(profiles, eq(profiles.id, characters.userId))
       .where(and(eq(characters.serverId, serverId), inArray(characters.userId, killerIds)));
-    for (const k of ks) killerNick.set(k.uid, k.nick ?? '플레이어');
+    for (const k of ks) killerNick.set(k.uid, { nick: k.nick ?? '플레이어', code: k.code });
   }
 
   return {
     myRank,
-    hasMore,
     rows: page.map((r) => ({
       rank: r.rank,
       userId: r.userId,
@@ -157,7 +171,8 @@ export async function getMeleeRanking(input: {
       attackSuccess: Number(r.kills),
       // 탈락자는 마지막 피격 1회가 탈락이므로 방어 성공에서 제외(내 전투 요약과 동일 기준).
       defenseSuccess: Math.max(0, r.defenseCount - (r.rank > 1 ? 1 : 0)),
-      killerNickname: r.killerUserId ? (killerNick.get(r.killerUserId) ?? null) : null,
+      killerNickname: r.killerUserId ? (killerNick.get(r.killerUserId)?.nick ?? null) : null,
+      killerPublicCode: r.killerUserId ? (killerNick.get(r.killerUserId)?.code ?? null) : null,
       eliminatedRound: r.eliminatedRound,
     })),
   };

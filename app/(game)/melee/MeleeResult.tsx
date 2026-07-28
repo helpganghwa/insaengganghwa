@@ -9,7 +9,12 @@ import { josa } from 'es-hangul';
 
 import { MELEE_HP_MULT } from '@/lib/game/balance';
 
-import { MeleeRanking } from './MeleeRanking';
+import {
+  MELEE_CONTROL_H,
+  MeleeRankControls,
+  MeleeRankList,
+  useMeleeRanking,
+} from './MeleeRanking';
 import { assetUrl } from '@/lib/asset-versions';
 import { meleeFaceCropStyle, type FaceBox } from '@/components/faceCrop';
 import { GuildBadge } from '@/components/GuildBadge';
@@ -681,7 +686,13 @@ export function MeleeResult({
     return t === 'log' || t === 'mine' ? t : 'rank';
   })();
   const [fight, setFight] = useState<Fight | null>(null);
+  // 전체 순위 — 컨트롤 행과 리스트가 떨어져 있어 상태를 여기서 보유(탭이 rank일 때만 로드).
   const [fightKey, setFightKey] = useState(0);
+  const ranking = useMeleeRanking({
+    battleId,
+    enabled: tab === 'rank',
+    participantCount: view.participantCount,
+  });
   const {
     podium,
     me,
@@ -970,7 +981,10 @@ export function MeleeResult({
             </button>
           ))}
         </div>
-        <div className="flex items-center justify-between gap-2 px-3 py-2">
+        {tab === 'rank' ? (
+          <MeleeRankControls state={ranking} />
+        ) : (
+        <div className={`flex ${MELEE_CONTROL_H} items-center justify-between gap-2 px-3`}>
           {/* 좌측 요약 — 내 전투 탭: 등수·공격/방어 성공(4위 이하도 한눈에, 2026-07-18). */}
           {tab === 'mine' && me ? (
             <span className="truncate text-[10px] text-zinc-400">
@@ -1002,11 +1016,12 @@ export function MeleeResult({
             </button>
           </div>
         </div>
+        )}
       </div>
 
       {/* 전체 순위 탭 — 참가자 전원(등수·전적·탈락 라운드). 로그 탭과 배타. */}
       {tab === 'rank' ? (
-        <MeleeRanking battleId={battleId} serverId={serverId} myUserId={myUserId} />
+        <MeleeRankList state={ranking} serverId={serverId} myUserId={myUserId} />
       ) : (
       <>
       {/* 로그 — 고정 헤더/컨트롤 아래 내부 스크롤(풀폭, 별도 박스 없음) */}
