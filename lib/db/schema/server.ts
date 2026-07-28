@@ -53,6 +53,10 @@ export const characters = pgTable(
     lastSeenAt: timestamp('last_seen_at', { withTimezone: true }),
     /** 활성 아바타(user_profiles.id, P6 이관) — null=기본 아이콘 폴백. FK는 0061 ALTER. */
     activeProfileId: uuid('active_profile_id'),
+    /** 장착 룬(runes.id, 0138) — PvP 속성. null=미장착(보정 0). FK 없음(앱 관리, active와 동일 패턴). */
+    equippedRuneId: bigint('equipped_rune_id', { mode: 'bigint' }),
+    /** 룬 장착/교체 시각(0138) — 교체 쿨 72h 기산(최초 장착 포함 기록, 판정은 교체 시에만). */
+    runeChangedAt: timestamp('rune_changed_at', { withTimezone: true }),
     createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
   },
   (t) => [

@@ -25,6 +25,8 @@ import { mailbox } from '@/lib/db/schema/mailbox';
 
 import { sendPushToUser } from '@/lib/push/send';
 
+import { grantRuneForProfile } from '@/lib/game/rune/grant';
+
 import { reviewProfile, type ReviewVerdict } from './ai-review';
 import { pixellabKeyByIdx, keyIdxFromOptions } from './pixellab-keys';
 import { anyBackgroundOpaque } from './bg-alpha';
@@ -300,6 +302,9 @@ async function acceptJob(
       })
       .returning({ id: userProfiles.id });
 
+    // 룬 지급(0138) — 아바타 1개당 1개, 같은 tx(멱등: source_profile unique).
+    await grantRuneForProfile(tx, { userId, serverId, profileId: profile!.id });
+
     await tx
       .update(profileGenerationJobs)
       .set({ userProfileId: profile!.id })
@@ -386,6 +391,9 @@ export async function adminGrantAvatarForJob(jobId: bigint): Promise<{ ok: boole
         descriptionPrompt: job.descriptionPrompt,
       })
       .returning({ id: userProfiles.id });
+
+    // 룬 지급(0138) — 어드민 복구 지급 경로도 동일(멱등).
+    await grantRuneForProfile(tx, { userId: job.userId, serverId: job.serverId, profileId: profile!.id });
 
     // 상태(rejected_ai 등)는 분쟁 이력 보존을 위해 유지 — 지급 사실은 adminDecision으로 기록.
     await tx

@@ -8,6 +8,7 @@ import { zones } from '@/lib/db/schema/guild';
 import { userSupplyBoxes } from '@/lib/db/schema/supply';
 import { userProfiles } from '@/lib/db/schema/avatar';
 import { profiles } from '@/lib/db/schema/profiles';
+import { grantRuneForProfile } from '@/lib/game/rune/grant';
 import { mailbox } from '@/lib/db/schema/mailbox';
 import { TEST_REWARD_MULTIPLIER } from '@/lib/game/test-mode';
 import { isCbtPaidHidden } from '@/lib/auth/test-accounts';
@@ -201,6 +202,10 @@ export async function createCharacter(input: {
         })),
       )
       .returning({ id: userProfiles.id });
+    // 룬 지급(0138) — 기본 아바타도 아바타 획득이므로 1개당 1개(신규 유저 최소 보유 보장).
+    for (const p of inserted) {
+      await grantRuneForProfile(tx, { userId: input.userId, serverId: input.serverId, profileId: p.id });
+    }
     const pick = inserted[Math.floor(Math.random() * inserted.length)];
     if (pick) {
       await tx

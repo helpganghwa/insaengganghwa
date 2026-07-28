@@ -7,6 +7,7 @@ import { cbtCarryover } from '@/lib/db/schema/cbt';
 import { characters } from '@/lib/db/schema/server';
 import { userProfiles } from '@/lib/db/schema/avatar';
 import { mailbox } from '@/lib/db/schema/mailbox';
+import { grantRuneForProfile } from '@/lib/game/rune/grant';
 
 /** cbt_carryover.avatars 원소 — cbt-snapshot.ts가 기록하는 형태. */
 type CarryAvatar = {
@@ -93,6 +94,8 @@ export async function ensureCbtCarryover(userId: string, serverId: number): Prom
           descriptionPrompt: av.description_prompt || 'CBT keepsake avatar',
         })
         .returning({ id: userProfiles.id });
+      // 룬 지급(0138) — CBT 기념 아바타 복원도 아바타 획득(멱등).
+      if (ins) await grantRuneForProfile(tx, { userId, serverId, profileId: ins.id });
       if (av.was_active && ins) activeId = ins.id;
     }
     if (avatars.length > 0) {
