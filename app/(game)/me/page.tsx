@@ -13,8 +13,6 @@ import { combatPowerFromOwned } from '@/lib/game/equipment/combat-power';
 import { liberatedItemRanks } from '@/lib/game/codex/ranking';
 import { getCatalogMap, completeCatalog } from '@/lib/game/catalog';
 import { profileHref } from '@/lib/game/profile/href';
-import { type AvatarAttr } from '@/lib/game/balance';
-import { RuneName, RuneValues } from '@/components/RuneName';
 
 import { BoastLauncher } from '@/components/BoastModal';
 import { TranscendSprite } from '@/components/TranscendSprite';
@@ -64,8 +62,6 @@ export default async function ProfilePage() {
       equippedSlot: string | null;
     }[];
     avatars: { id: string; rotations: unknown }[];
-    rune_name: string | null;
-    rune_attrs: AvatarAttr[] | null;
   };
   const _r = await withTimeout(
     Promise.all([
@@ -73,7 +69,6 @@ export default async function ProfilePage() {
         select
           c.nickname, p.public_code, p.is_admin, c.diamond::text as diamond,
           c.nickname_changed_count, c.active_profile_id,
-          r.name as rune_name, r.attrs as rune_attrs,
           g.emblem_url as guild_emblem_url, g.name as guild_name,
           z.name as executor_zone, z.region::text as executor_zone_region,
           (select count(*)::int from referral_attributions where referrer_user_id = ${userId}::uuid) as referral_count,
@@ -90,7 +85,6 @@ export default async function ProfilePage() {
           left join guild_members gm on gm.user_id = p.id and gm.server_id = ${serverId}
           left join guilds g on g.id = gm.guild_id
           left join zones z on z.executor_user_id = p.id and z.server_id = ${serverId}
-          left join runes r on r.id = c.equipped_rune_id
         where p.id = ${userId}::uuid limit 1
       `) as unknown as Promise<MeRow[]>,
       liberatedItemRanks(userId, serverId),
@@ -250,29 +244,6 @@ export default async function ProfilePage() {
                 </div>
               );
             })}
-            {/* 4번째 줄 — 적용 중 속성: 장비 행과 다른 문법(아이콘 없이 이름이 주인공,
-                은은한 앰버 틴트) but 같은 h-12(피드백 1). 탭 시 아바타 관리(속성 통합). */}
-            {row?.rune_attrs ? (
-              <Link
-                prefetch={false}
-                href="/me/profiles"
-                aria-label="적용 중인 속성"
-                className="flex h-12 flex-col justify-center rounded-xl border border-amber-500/25 bg-gradient-to-r from-amber-500/10 to-transparent px-2.5"
-              >
-                <div className="flex min-w-0">
-                  <RuneName name={row.rune_name} attrs={row.rune_attrs} className="text-[13px] leading-tight" />
-                </div>
-                <RuneValues attrs={row.rune_attrs} className="mt-0.5 text-[10px]" />
-              </Link>
-            ) : (
-              <Link
-                prefetch={false}
-                href="/me/profiles"
-                className="flex h-12 items-center justify-center rounded-xl border border-dashed border-white/15 bg-white/[0.02] px-2 text-[12px] text-white/45"
-              >
-                속성 적용
-              </Link>
-            )}
           </div>
         </div>
       </section>
