@@ -66,6 +66,7 @@
     "sharp": "^0.34.5",
     "tailwindcss": "^4",
     "typescript": "^5",
+    "upng-js": "^2.1.0",
     "vitest": "^4.1.6"
   },
   "ignoreScripts": [

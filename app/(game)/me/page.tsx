@@ -30,7 +30,6 @@ const SLOT_EMOJI: Record<Slot, string> = { weapon: '⚔️', armor: '🛡️', a
 const MENU = [
   { href: '/friends', icon: '👥', label: '친구' },
   { href: '/me/profiles', icon: '✨', label: '아바타 관리' },
-  { href: '/me/runes', icon: '🔮', label: '룬' },
   { href: '/me/codex', icon: '📖', label: '도감' },
   { href: '/leaderboard', icon: '🏆', label: '랭킹' },
   { href: '/me/settings', icon: '⚙️', label: '설정' },
@@ -202,12 +201,12 @@ export default async function ProfilePage() {
                 <span className="text-[11px]">생성</span>
               </Link>
             )}
-            {/* 장착 룬 — 이름 그라데이션이 곧 비주얼(RuneName). 탭 시 룬 보관함. */}
+            {/* 적용 중 속성 — 이름 그라데이션이 곧 비주얼(RuneName). 탭 시 아바타 관리(속성 통합). */}
             {row?.rune_attrs ? (
               <Link
                 prefetch={false}
-                href="/me/runes"
-                aria-label="장착 룬"
+                href="/me/profiles"
+                aria-label="적용 중인 속성"
                 className="flex min-w-0 max-w-full items-center gap-1"
               >
                 <span className="shrink-0 text-[10px]" aria-hidden>🔮</span>

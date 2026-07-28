@@ -31,6 +31,7 @@ export const raidBossEnum = pgEnum('raid_boss', [
   'stone_golem',
   'dragon_west',
   'fallen_angel',
+  'gold_griffin', // 0140 — 왕국 보스(속성 kingdom 담당)
 ]);
 export const raidStatusEnum = pgEnum('raid_status', ['active', 'settled']);
 

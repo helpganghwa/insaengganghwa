@@ -1,13 +1,14 @@
 /**
- * 레이드 보스 5종 — GDD §3.5. 난이도 동일, 스토리/이미지만 차이.
- * 스프라이트는 Pixellab 후속(현재 이모지 placeholder).
+ * 레이드 보스 6종 — GDD §3.5. 난이도 동일, 스토리/이미지만 차이.
+ * gold_griffin(왕국)은 2026-07-28 추가 — 아바타 속성 상성의 왕국 권역 담당.
  */
 export type RaidBoss =
   | 'slime_king'
   | 'orc_chief'
   | 'stone_golem'
   | 'dragon_west'
-  | 'fallen_angel';
+  | 'fallen_angel'
+  | 'gold_griffin';
 
 export const RAID_BOSSES: Record<
   RaidBoss,
@@ -42,6 +43,12 @@ export const RAID_BOSSES: Record<
     emoji: '😇',
     story:
       '하늘에서 가장 빛나던 날개가 가장 깊은 어둠으로 떨어졌다. 구원하려던 손을 거두고 심판의 검을 든 그 앞에서, 기도는 메아리조차 없다. 부러진 후광이 아직도 희미하게 타오른다 — 가장 높았던 자의 가장 긴 추락.',
+  },
+  gold_griffin: {
+    name: '그리핀',
+    emoji: '🦅',
+    story:
+      '왕가의 문장에서 걸어 나온 듯한 황금 짐승. 보물고를 지키던 그리핀은 왕국이 무너진 뒤에도 텅 빈 금고 위를 떠나지 않는다. 왕관을 노리는 자도, 잔해를 뒤지는 자도 그 발톱 아래에서는 같은 도둑일 뿐이다. 주인을 잃은 충성은 이제 재앙이라 불린다.',
   },
 };
 
@@ -84,6 +91,12 @@ export const RAID_SHARE_COPIES: Record<RaidBoss, RaidShareCopy[]> = {
     { title: '타락천사 토벌', body: '같이 가실래요?' },
     { title: '추락한 천사', body: '함께 멈춰주세요.' },
     { title: '심판자와의 싸움', body: '도움이 필요해요.' },
+  ],
+  gold_griffin: [
+    { title: '그리핀 레이드', body: '같이 잡으러 가요.' },
+    { title: '그리핀 토벌', body: '같이 가실래요?' },
+    { title: '왕국의 황금 그리핀', body: '함께 떨어뜨려요.' },
+    { title: '그리핀과의 싸움', body: '도움이 필요해요.' },
   ],
 };
 
