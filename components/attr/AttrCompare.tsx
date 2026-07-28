@@ -60,7 +60,8 @@ function Face({ src, size = 52 }: { src: string | null; size?: number }) {
 }
 
 /**
- * 상성 대결(V4) — 중앙 우위 링 + 양측 아바타·속성 + 기여 차트(어떤 지역이 어떤 지역에게 +N%).
+ * 상성 비교(V4) — 중앙 우위 링(양측 수치 내장) + 좌우 아바타(위 닉네임·아래 지역 속성)
+ * + 지역별 기여 차트(좌=내 지역 / 우=상대 지역).
  * 계산은 balance.attrAdvantagePct 그대로라 실제 전투와 1:1.
  */
 export function AttrCompare({
@@ -92,25 +93,27 @@ export function AttrCompare({
   // 기여 짝 — 양방향 모두, 큰 순 정렬.
   const pairs: Pair[] = AVATAR_ATTR_REGIONS.flatMap((r) => {
     const out: Pair[] = [];
+    // 내가 때리는 몫 — 내 r × 상대 prey(r)
     const my = mineVec[r] ?? 0;
     const oppTarget = oppVec[attrPrey(r)] ?? 0;
     if (my > 0 && oppTarget > 0)
       out.push({
-        from: r,
-        to: attrPrey(r),
-        fromVal: my,
-        toVal: oppTarget,
+        myRegion: r,
+        myVal: my,
+        oppRegion: attrPrey(r),
+        oppVal: oppTarget,
         gain: (my * oppTarget) / AVATAR_ATTR_TOTAL_MAX,
         mine: true,
       });
+    // 상대가 때리는 몫 — 상대 r × 내 prey(r). 좌축은 여전히 내 지역.
     const op = oppVec[r] ?? 0;
     const myTarget = mineVec[attrPrey(r)] ?? 0;
     if (op > 0 && myTarget > 0)
       out.push({
-        from: r,
-        to: attrPrey(r),
-        fromVal: op,
-        toVal: myTarget,
+        myRegion: attrPrey(r),
+        myVal: myTarget,
+        oppRegion: r,
+        oppVal: op,
         gain: (op * myTarget) / AVATAR_ATTR_TOTAL_MAX,
         mine: false,
       });
@@ -136,21 +139,23 @@ export function AttrCompare({
   return (
     <ModalShell
       onClose={onClose}
-      label="상성 대결"
+      label="상성 비교"
       className="max-h-[86dvh] w-full max-w-[320px] overflow-y-auto rounded-2xl bg-white p-4 dark:bg-zinc-950"
     >
-      <h2 className="text-[15px] font-bold">상성 대결</h2>
+      <h2 className="text-[15px] font-bold">상성 비교</h2>
 
       {opp ? (
         <>
-          <div className="mt-3 flex items-center justify-center gap-3">
-            <div className="text-center">
-              <Face src={mySouth} />
-              <p className="mt-1 font-mono text-[13px] font-black tabular-nums text-emerald-600 dark:text-emerald-400">
-                +{myAdv.toFixed(1)}%
-              </p>
+          <div className="mt-3 flex items-start justify-center gap-2">
+            <div className="min-w-0 flex-1 text-center">
+              <p className="truncate text-[11px] font-bold">{myNickname}</p>
+              <div className="mt-1 flex justify-center">
+                <Face src={mySouth} size={76} />
+              </div>
+              <AttrLine attrs={myAttrs} className="mt-1 block text-[10px] font-bold leading-[1.4]" />
             </div>
-            <div className="relative h-[96px] w-[96px] shrink-0">
+
+            <div className="relative mt-3 h-[104px] w-[104px] shrink-0">
               <svg viewBox="0 0 100 100" className="h-full w-full -rotate-90">
                 <circle
                   cx="50"
@@ -158,7 +163,7 @@ export function AttrCompare({
                   r={R}
                   fill="none"
                   stroke="#f43f5e"
-                  strokeWidth="9"
+                  strokeWidth="8"
                   opacity={total > 0 ? 1 : 0.14}
                 />
                 <circle
@@ -167,8 +172,7 @@ export function AttrCompare({
                   r={R}
                   fill="none"
                   stroke="#10b981"
-                  strokeWidth="9"
-                  strokeLinecap="round"
+                  strokeWidth="8"
                   strokeDasharray={CIRC}
                   strokeDashoffset={CIRC * (1 - myShare)}
                   opacity={total > 0 ? 1 : 0.14}
@@ -177,44 +181,44 @@ export function AttrCompare({
               <div className="absolute inset-0 flex flex-col items-center justify-center">
                 {total > 0 ? (
                   <>
-                    <span className="text-[9px] font-bold text-zinc-500">상성 우위</span>
-                    <span
-                      className={`font-mono text-[17px] font-black tabular-nums ${
-                        diff > 0
-                          ? 'text-emerald-600 dark:text-emerald-400'
-                          : diff < 0
-                            ? 'text-rose-500 dark:text-rose-400'
-                            : 'text-zinc-500'
-                      }`}
-                    >
-                      {diff > 0 ? '+' : ''}
-                      {diff.toFixed(1)}
+                    <span className="font-mono text-[14px] font-black tabular-nums text-emerald-600 dark:text-emerald-400">
+                      +{myAdv.toFixed(1)}%
                     </span>
-                    <span className="text-[9px] text-zinc-500">%p</span>
+                    <span className="my-[3px] block h-px w-7 bg-zinc-300 dark:bg-zinc-700" />
+                    <span className="font-mono text-[14px] font-black tabular-nums text-rose-500 dark:text-rose-400">
+                      +{oppAdv.toFixed(1)}%
+                    </span>
                   </>
                 ) : (
                   <span className="text-[11px] font-bold text-zinc-500">상성 없음</span>
                 )}
               </div>
             </div>
-            <div className="text-center">
-              <Face src={opp.south} />
-              <p className="mt-1 font-mono text-[13px] font-black tabular-nums text-rose-500 dark:text-rose-400">
-                +{oppAdv.toFixed(1)}%
-              </p>
+
+            <div className="min-w-0 flex-1 text-center">
+              <p className="truncate text-[11px] font-bold">{opp.nickname}</p>
+              <div className="mt-1 flex justify-center">
+                <Face src={opp.south} size={76} />
+              </div>
+              <AttrLine attrs={opp.attrs} className="mt-1 block text-[10px] font-bold leading-[1.4]" />
             </div>
           </div>
 
-          <div className="mt-3 flex flex-col gap-1 rounded-xl bg-zinc-100 px-3 py-2 dark:bg-zinc-900">
-            <p className="flex items-baseline gap-2 text-[11px]">
-              <span className="w-[58px] shrink-0 truncate font-bold text-zinc-500">{myNickname}</span>
-              <AttrLine attrs={myAttrs} className="font-bold" />
+          {total > 0 ? (
+            <p className="mt-2 text-center text-[11.5px] font-black">
+              {diff > 0 ? (
+                <span className="text-emerald-600 dark:text-emerald-400">
+                  내가 {diff.toFixed(1)}%p 유리
+                </span>
+              ) : diff < 0 ? (
+                <span className="text-rose-500 dark:text-rose-400">
+                  내가 {Math.abs(diff).toFixed(1)}%p 불리
+                </span>
+              ) : (
+                <span className="text-zinc-500">대등</span>
+              )}
             </p>
-            <p className="flex items-baseline gap-2 text-[11px]">
-              <span className="w-[58px] shrink-0 truncate font-bold text-zinc-500">{opp.nickname}</span>
-              <AttrLine attrs={opp.attrs} className="font-bold" />
-            </p>
-          </div>
+          ) : null}
 
           {pairs.length > 0 ? (
             <>

@@ -62,6 +62,9 @@ function CalcModal({ onClose }: { onClose: () => void }) {
 
       <Step n={2} title="지역끼리는 먹고 먹히는 순환입니다">
         각 지역은 <b>바로 다음 지역 하나에만</b> 강합니다. 두 칸 건너뛴 지역과는 아무 관계가 없어요.
+        <span className="mt-2 block">
+          <CycleStrip />
+        </span>
       </Step>
 
       <Step n={3} title="상대가 내 먹잇감을 가진 만큼만 세집니다">
@@ -194,33 +197,34 @@ export function AttrPopup({
           </p>
         )}
 
-        <div className="mt-3">
-          <CycleStrip />
-        </div>
 
-        {owner || myAttrs != null ? (
+        <div className="mt-3.5 grid grid-cols-2 gap-2">
+          {owner || myAttrs != null ? (
+            <button
+              type="button"
+              onClick={() => setSimOpen(true)}
+              className="rounded-xl bg-amber-600 py-2.5 text-sm font-bold text-white active:opacity-90"
+            >
+              {owner ? '상대와 비교해보기' : '나와 비교하기'}
+            </button>
+          ) : (
+            <span />
+          )}
           <button
             type="button"
-            onClick={() => setSimOpen(true)}
-            className="mt-3.5 w-full rounded-xl bg-amber-600 py-2.5 text-sm font-bold text-white active:opacity-90"
+            onClick={onClose}
+            className="rounded-xl bg-zinc-100 py-2.5 text-sm font-bold text-zinc-600 active:opacity-70 dark:bg-zinc-800 dark:text-zinc-300"
           >
-            {owner ? '상대와 비교해보기' : '나와 비교하기'}
+            닫기
           </button>
-        ) : null}
-        <div className="mt-2 flex items-center gap-3">
+        </div>
+        <div className="mt-2.5 text-center">
           <button
             type="button"
             onClick={() => setCalcOpen(true)}
             className="text-[11.5px] font-semibold text-zinc-400 underline underline-offset-2 active:opacity-70 dark:text-zinc-500"
           >
             속성 시스템 설명
-          </button>
-          <button
-            type="button"
-            onClick={onClose}
-            className="ml-auto rounded-xl bg-zinc-100 px-6 py-2 text-[13px] font-bold text-zinc-600 active:opacity-70 dark:bg-zinc-800 dark:text-zinc-300"
-          >
-            닫기
           </button>
         </div>
       </ModalShell>

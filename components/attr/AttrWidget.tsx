@@ -5,12 +5,14 @@ import { useState } from 'react';
 import { runeVectorDesc } from '@/components/RuneName';
 import { ATTR_REGION_COLOR, ATTR_REGION_KO, type AvatarAttr } from '@/lib/game/balance';
 
+import { AttrCompare } from './AttrCompare';
 import { AttrPopup } from './AttrPopup';
 
 /**
  * 속성 코너 위젯 — **텍스트만**(점 + 지역 + 수치). 52px 차트는 값이 1~3개뿐이라 늘 비어 보여
  * 폐기(2026-07-28 A6). 배경·보더 없이 얹혀 화면을 가리지 않으며, 위젯 전체가 상성 팝업 트리거.
- * 내 화면(owner)과 남의 프로필(viewer) 양쪽에서 재사용.
+ * 내 화면(owner) = 속성 상성 팝업 · 남의 프로필(viewer) = **바로 나와 비교 팝업**(2026-07-28).
+ * 비로그인 조회자는 비교할 내 속성이 없으므로 안내 팝업으로 폴백.
  */
 export function AttrWidget({
   attrs,
@@ -68,16 +70,26 @@ export function AttrWidget({
         </div>
       </button>
       {open ? (
-        <AttrPopup
-          onClose={() => setOpen(false)}
-          attrs={attrs}
-          owner={owner}
-          ownerNickname={ownerNickname}
-          ownerSouth={ownerSouth}
-          myAttrs={myAttrs ?? null}
-          myNickname={myNickname ?? '나'}
-          mySouth={mySouth ?? null}
-        />
+        !owner && myAttrs != null ? (
+          <AttrCompare
+            onClose={() => setOpen(false)}
+            myAttrs={myAttrs}
+            myNickname={myNickname ?? '나'}
+            mySouth={mySouth ?? null}
+            fixedOpponent={{ userId: '', nickname: ownerNickname, south: ownerSouth, attrs }}
+          />
+        ) : (
+          <AttrPopup
+            onClose={() => setOpen(false)}
+            attrs={attrs}
+            owner={owner}
+            ownerNickname={ownerNickname}
+            ownerSouth={ownerSouth}
+            myAttrs={myAttrs ?? null}
+            myNickname={myNickname ?? '나'}
+            mySouth={mySouth ?? null}
+          />
+        )
       ) : null}
     </>
   );
