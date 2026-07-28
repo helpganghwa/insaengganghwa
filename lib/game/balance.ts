@@ -680,18 +680,20 @@ export function bpSegmentPriceKrw(_type: BattlePassType, segmentIndex: number): 
  * §10 아바타 속성 — 아바타 생성 시 3부위(무/방/장)에 권역+표기롤을 서버 RNG로 확정(불변).
  * 재롤 = 새 아바타 생성(💎 sink). 게임산업법 §33: 아래 확률 상수는 /probability 공시와 1:1.
  *  - 권역: 6개 균등(각 1/6)
- *  - 표기 롤: 부위당 0~100 정수 균등(각 1/101)
- *  - 실제 전투력 보정 = 표기 ÷ 10 % (부위당 최대 10%, 총 표기 300 = 실제 30%)
+ *  - 표기 롤: 부위당 0~50 정수 균등(각 1/51) — 같은 권역 합산, 총 최대 150
+ *  - **표기 = 잠재 공격 보정%** (총 150 = 잠재 +150%). 실발동은 상대 노출도 가중(아래 수식).
  * 상성 사이클(2026-07-28 확정): 천사→왕국→오크→늪→화산→신전→천사 (왼쪽이 오른쪽에 강함,
  * 바로 다음에만 강하고 바로 이전에만 약함 — 그 외 무관계).
+ * 밸런스 근거(2026-07-28): 평균 매치업 기대 보정 ~6%(tiebreaker), 극단(몰빵 vs 먹잇감 몰빵)
+ * +150%는 발생 확률 ~10⁻¹⁵ — 상한을 크게 둬도 평균은 온건, 카운터픽 메타만 열림.
  */
 export const AVATAR_ATTR_REGIONS = ['angel', 'kingdom', 'orc', 'swamp', 'volcano', 'temple'] as const;
 export type AttrRegion = (typeof AVATAR_ATTR_REGIONS)[number];
 
 /** 부위당 표기 롤 상한(정수 균등 0~AVATAR_ATTR_ROLL_MAX). */
-export const AVATAR_ATTR_ROLL_MAX = 100;
-/** 표기 → 실제 % 환산 제수(표기 10배 체계). */
-export const AVATAR_ATTR_DISPLAY_DIV = 10;
+export const AVATAR_ATTR_ROLL_MAX = 50;
+/** 표기 총합 상한(3부위 × 50) — 발동 가중 분모(상대 먹잇감 노출도). */
+export const AVATAR_ATTR_TOTAL_MAX = AVATAR_ATTR_ROLL_MAX * 3;
 
 /** r이 잡아먹는(강한) 권역 — 사이클의 바로 다음 원소. */
 export function attrPrey(r: AttrRegion): AttrRegion {
@@ -724,9 +726,10 @@ export function attrDisplayVector(attrs: AvatarAttr[] | null | undefined): Parti
 }
 
 /**
- * §10 상성 공격 보정(%) — adv(나→상대) = Σ_r (내표기[r]÷10) × (상대표기[prey(r)]÷300).
- * 0~30. 교전 페어마다 양측 각자 산출해 **자기 데미지에만** ×(1+adv/100) — HP 무변
- * (대난투 다:다에서 페어별 HP 조정 불가, 2026-07-28 옵션1 확정). 미부여=0.
+ * §10 상성 공격 보정(%) — adv(나→상대) = Σ_r 내표기[r] × (상대표기[prey(r)] ÷ 150).
+ * 표기 = 잠재%라 0~150. 상대가 내 먹잇감 권역에 몰빵(150)일 때만 잠재 전부 발동(분모 150
+ * 고정 = A안: 저롤 상대는 상성 노출도 낮음). 교전 페어마다 양측 각자 산출해 **자기 데미지에만**
+ * ×(1+adv/100) — HP 무변(대난투 다:다에서 페어별 HP 조정 불가, 2026-07-28 옵션1 확정). 미부여=0.
  */
 export function attrAdvantagePct(
   mine: Partial<Record<AttrRegion, number>>,
@@ -736,8 +739,7 @@ export function attrAdvantagePct(
   for (const r of AVATAR_ATTR_REGIONS) {
     const my = mine[r] ?? 0;
     if (my <= 0) continue;
-    const preyShare = (opp[attrPrey(r)] ?? 0) / (AVATAR_ATTR_ROLL_MAX * 3);
-    adv += (my / AVATAR_ATTR_DISPLAY_DIV) * preyShare;
+    adv += my * ((opp[attrPrey(r)] ?? 0) / AVATAR_ATTR_TOTAL_MAX);
   }
   return adv;
 }
