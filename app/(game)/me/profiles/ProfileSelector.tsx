@@ -156,28 +156,32 @@ export function ProfileSelector({
             />
           ) : null}
         </div>
-        {/* 속성 — 이 아바타에 각인된 값(대표로 적용하면 그대로 전투에 반영). 높이 고정. */}
+        {/* 속성(A-3) — 권역색 점 + 기본색 텍스트(가독성 우선). 높이 고정으로 시프트 없음. */}
         <div className="mt-2 flex h-6 items-center gap-2 px-1">
-          <div className="flex min-w-0 flex-1 items-center gap-2.5 overflow-hidden">
+          <div className="flex min-w-0 flex-1 items-center gap-3 overflow-hidden">
             {selAttrs.length > 0 ? (
               selAttrs.map(([r, v]) => (
                 <span
                   key={r}
-                  className="whitespace-nowrap text-[12px] font-extrabold tabular-nums"
-                  style={{ color: ATTR_REGION_COLOR[r] }}
+                  className="flex shrink-0 items-center gap-1.5 text-[12.5px] font-semibold text-zinc-700 dark:text-zinc-200"
                 >
-                  {ATTR_REGION_KO[r]} {v}%
+                  <i
+                    className="block h-[7px] w-[7px] shrink-0 rounded-full"
+                    style={{ backgroundColor: ATTR_REGION_COLOR[r] }}
+                  />
+                  {ATTR_REGION_KO[r]}{' '}
+                  <b className="font-mono font-black tabular-nums">{v}%</b>
                 </span>
               ))
             ) : (
-              <span className="text-[12px] text-zinc-400">속성 없음</span>
+              <span className="text-[12.5px] text-zinc-400">속성 없음</span>
             )}
           </div>
           <button
             type="button"
             onClick={() => setHelpOpen(true)}
             aria-label="속성 상성 보기"
-            className="grid h-5 w-5 shrink-0 place-items-center rounded-full bg-zinc-200 text-[10px] font-black text-zinc-600 transition active:scale-90 dark:bg-zinc-800 dark:text-zinc-300"
+            className="grid h-5 w-5 shrink-0 place-items-center rounded-full bg-zinc-100 text-[10px] font-black text-zinc-500 transition active:scale-90 dark:bg-zinc-800 dark:text-zinc-400"
           >
             ?
           </button>
