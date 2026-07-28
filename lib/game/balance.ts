@@ -677,10 +677,10 @@ export function bpSegmentPriceKrw(_type: BattlePassType, segmentIndex: number): 
 // ─────────────────────────────────────────────────────────────────────────────
 
 /**
- * §10 아바타 속성 — 아바타 생성 시 3부위(무/방/장)에 권역+표기롤을 서버 RNG로 확정(불변).
+ * §10 아바타 속성 — 아바타 생성 시 3부위(무/방/장)에 지역+표기롤을 서버 RNG로 확정(불변).
  * 재롤 = 새 아바타 생성(💎 sink). 게임산업법 §33: 아래 확률 상수는 /probability 공시와 1:1.
- *  - 권역: 6개 균등(각 1/6)
- *  - 표기 롤: 부위당 0~50 정수 균등(각 1/51) — 같은 권역 합산, 총 최대 150
+ *  - 지역: 6개 균등(각 1/6)
+ *  - 표기 롤: 부위당 0~50 정수 균등(각 1/51) — 같은 지역 합산, 총 최대 150
  *  - **표기 = 잠재 공격 보정%** (총 150 = 잠재 +150%). 실발동은 상대 노출도 가중(아래 수식).
  * 상성 사이클(2026-07-28 확정): 천사→왕국→오크→늪→화산→신전→천사 (왼쪽이 오른쪽에 강함,
  * 바로 다음에만 강하고 바로 이전에만 약함 — 그 외 무관계).
@@ -695,19 +695,19 @@ export const AVATAR_ATTR_ROLL_MAX = 50;
 /** 표기 총합 상한(3부위 × 50) — 발동 가중 분모(상대 먹잇감 노출도). */
 export const AVATAR_ATTR_TOTAL_MAX = AVATAR_ATTR_ROLL_MAX * 3;
 
-/** r이 잡아먹는(강한) 권역 — 사이클의 바로 다음 원소. */
+/** r이 잡아먹는(강한) 지역 — 사이클의 바로 다음 원소. */
 export function attrPrey(r: AttrRegion): AttrRegion {
   const i = AVATAR_ATTR_REGIONS.indexOf(r);
   return AVATAR_ATTR_REGIONS[(i + 1) % AVATAR_ATTR_REGIONS.length]!;
 }
 
-/** r을 잡아먹는(r에게 강한) 권역 — 사이클의 바로 이전 원소. 상세 '약점' 표기용. */
+/** r을 잡아먹는(r에게 강한) 지역 — 사이클의 바로 이전 원소. 상세 '약점' 표기용. */
 export function attrPredator(r: AttrRegion): AttrRegion {
   const i = AVATAR_ATTR_REGIONS.indexOf(r);
   return AVATAR_ATTR_REGIONS[(i - 1 + AVATAR_ATTR_REGIONS.length) % AVATAR_ATTR_REGIONS.length]!;
 }
 
-/** 권역 한글 라벨(짧은 이름) — 룬 UI·확률 공시 공용. */
+/** 지역 한글 라벨(짧은 이름) — 룬 UI·확률 공시 공용. */
 export const ATTR_REGION_KO: Record<AttrRegion, string> = {
   angel: '천사',
   kingdom: '왕국',
@@ -717,7 +717,7 @@ export const ATTR_REGION_KO: Record<AttrRegion, string> = {
   temple: '신전',
 };
 
-/** 권역 색 — 세계지도(REGION_COLOR)와 동일 팔레트. 룬 이름 그라데이션·수치 표기 공용. */
+/** 지역 색 — 세계지도(REGION_COLOR)와 동일 팔레트. 룬 이름 그라데이션·수치 표기 공용. */
 export const ATTR_REGION_COLOR: Record<AttrRegion, string> = {
   angel: '#c084fc',
   kingdom: '#fbbf24',
@@ -730,7 +730,7 @@ export const ATTR_REGION_COLOR: Record<AttrRegion, string> = {
 export type AvatarAttr = { slot: 'weapon' | 'armor' | 'accessory'; region: AttrRegion; pct: number };
 
 /**
- * 생성 롤 — 3부위 각각 권역(1/6 균등) + 표기(0~100 균등). rng는 [0,1) 반환(기본 crypto).
+ * 생성 롤 — 3부위 각각 지역(1/6 균등) + 표기(0~100 균등). rng는 [0,1) 반환(기본 crypto).
  * ⚠ 서버 전용 호출(생성 파이프라인·백필) — 클라 롤 금지(CLAUDE §3.1).
  */
 export function rollAvatarAttrs(rng: () => number = cryptoRand): AvatarAttr[] {
@@ -744,7 +744,7 @@ function cryptoRand(): number {
   return crypto.getRandomValues(new Uint32Array(1))[0]! / 2 ** 32;
 }
 
-/** 표기 벡터(권역별 표기 합, 0~300) — attrs 3부위를 권역으로 합산. null/미지정=빈 벡터. */
+/** 표기 벡터(지역별 표기 합, 0~300) — attrs 3부위를 지역으로 합산. null/미지정=빈 벡터. */
 export function attrDisplayVector(attrs: AvatarAttr[] | null | undefined): Partial<Record<AttrRegion, number>> {
   const v: Partial<Record<AttrRegion, number>> = {};
   for (const a of attrs ?? []) v[a.region] = (v[a.region] ?? 0) + a.pct;
@@ -753,7 +753,7 @@ export function attrDisplayVector(attrs: AvatarAttr[] | null | undefined): Parti
 
 /**
  * §10 상성 공격 보정(%) — adv(나→상대) = Σ_r 내표기[r] × (상대표기[prey(r)] ÷ 150).
- * 표기 = 잠재%라 0~150. 상대가 내 먹잇감 권역에 몰빵(150)일 때만 잠재 전부 발동(분모 150
+ * 표기 = 잠재%라 0~150. 상대가 내 먹잇감 지역에 몰빵(150)일 때만 잠재 전부 발동(분모 150
  * 고정 = A안: 저롤 상대는 상성 노출도 낮음). 교전 페어마다 양측 각자 산출해 **자기 데미지에만**
  * ×(1+adv/100) — HP 무변(대난투 다:다에서 페어별 HP 조정 불가, 2026-07-28 옵션1 확정). 미부여=0.
  */

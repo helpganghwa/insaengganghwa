@@ -21,7 +21,7 @@ echarts.use([BarChart, GridComponent, SVGRenderer]);
 
 const GREEN = '#10b981';
 const RED = '#f43f5e';
-/** 상대를 그 권역 100%로 정규화해 비교 가능한 지표로(공시 §6 식 그대로). */
+/** 상대를 그 지역 100%로 정규화해 비교 가능한 지표로(공시 §6 식 그대로). */
 const NORM = 100 / AVATAR_ATTR_TOTAL_MAX;
 
 /** 유리 — prey(r)=O ⟺ r=pred(O). 불리 — 상대 O가 내 prey(O)를 사냥. */
@@ -45,7 +45,7 @@ export function synergyRows(attrs: AvatarAttr[]): SynergyRow[] {
 export const SYNERGY_ROW_H = 27;
 
 /**
- * 상성 대칭 막대(P1) — 좌=불리 / 우=유리, 권역명은 **실제 y축**(오버레이 없음).
+ * 상성 대칭 막대(P1) — 좌=불리 / 우=유리, 지역명은 **실제 y축**(오버레이 없음).
  * 수치는 막대 안(짧은 막대는 바깥)에 두어 축과 겹치지 않는다.
  */
 export function AttrSynergyChart({ rows }: { rows: SynergyRow[] }) {

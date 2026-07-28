@@ -11,8 +11,6 @@ import {
   AVATAR_ATTR_REGIONS,
   AVATAR_ATTR_ROLL_MAX,
   AVATAR_ATTR_TOTAL_MAX,
-  attrPredator,
-  attrPrey,
   type AvatarAttr,
 } from '@/lib/game/balance';
 
@@ -25,19 +23,16 @@ const AttrSynergyChart = dynamic(
   { ssr: false, loading: () => <div style={{ height: 6 * SYNERGY_ROW_H }} /> },
 );
 
-/** 상성 순환 한 줄 — 왼쪽이 오른쪽을 이긴다. 내가 가진 권역은 채워서 강조. */
-function CycleStrip({ mine }: { mine: Set<string> }) {
+/** 상성 순환 한 줄 — 왼쪽이 오른쪽을 이긴다. **시스템 안내 전용**이라 내 보유 지역은 강조하지 않는다
+ *  (강조하면 '활성/비활성'으로 오해돼 순환 자체가 안 읽힘 — 2026-07-28). */
+function CycleStrip() {
   return (
     <div className="flex flex-wrap items-center justify-center gap-x-1 gap-y-1">
       {AVATAR_ATTR_REGIONS.map((r) => (
         <span key={r} className="flex items-center gap-1">
           <span
-            className="rounded-md px-1.5 py-[3px] text-[10.5px] font-extrabold"
-            style={
-              mine.has(r)
-                ? { backgroundColor: ATTR_REGION_COLOR[r], color: '#18181b' }
-                : { color: ATTR_REGION_COLOR[r], backgroundColor: 'rgba(255,255,255,0.06)' }
-            }
+            className="rounded-md bg-zinc-100 px-1.5 py-[3px] text-[10.5px] font-extrabold dark:bg-white/[0.06]"
+            style={{ color: ATTR_REGION_COLOR[r] }}
           >
             {ATTR_REGION_KO[r]}
           </span>
@@ -60,23 +55,23 @@ function CalcModal({ onClose }: { onClose: () => void }) {
       <h2 className="text-[15px] font-bold">속성은 이렇게 작동해요</h2>
 
       <Step n={1} title="아바타마다 속성이 각인됩니다">
-        아바타를 만들면 <b>무기·방어구·장신구 세 줄</b>이 함께 새겨집니다. 각 줄은 여섯 권역 중
-        하나를 뽑고 <b>0~{AVATAR_ATTR_ROLL_MAX}%</b> 수치를 가집니다. 같은 권역이 겹치면 합산돼서
-        한 권역이 최대 {AVATAR_ATTR_TOTAL_MAX}%까지 올라갑니다. 한 번 각인되면 바뀌지 않아요.
+        아바타를 만들면 <b>무기·방어구·장신구 세 줄</b>이 함께 새겨집니다. 각 줄은 여섯 지역 중
+        하나를 뽑고 <b>0~{AVATAR_ATTR_ROLL_MAX}%</b> 수치를 가집니다. 같은 지역이 겹치면 합산돼서
+        한 지역이 최대 {AVATAR_ATTR_TOTAL_MAX}%까지 올라갑니다. 한 번 각인되면 바뀌지 않아요.
       </Step>
 
-      <Step n={2} title="권역끼리는 먹고 먹히는 순환입니다">
-        각 권역은 <b>바로 다음 권역 하나에만</b> 강합니다. 두 칸 건너뛴 권역과는 아무 관계가 없어요.
+      <Step n={2} title="지역끼리는 먹고 먹히는 순환입니다">
+        각 지역은 <b>바로 다음 지역 하나에만</b> 강합니다. 두 칸 건너뛴 지역과는 아무 관계가 없어요.
       </Step>
 
       <Step n={3} title="상대가 내 먹잇감을 가진 만큼만 세집니다">
-        내 권역이 아무리 높아도, <b>상대가 그 먹잇감 권역을 안 가졌다면 보정은 0</b>입니다. 상대가
+        내 지역이 아무리 높아도, <b>상대가 그 먹잇감 지역을 안 가졌다면 보정은 0</b>입니다. 상대가
         많이 가질수록 내 잠재력이 그만큼 발동합니다.
         <span className="mt-2 block rounded-lg bg-zinc-100 px-3 py-2 font-mono text-[11.5px] font-bold leading-relaxed dark:bg-zinc-900">
-          내 권역 수치 × (상대 먹잇감 수치 ÷ {AVATAR_ATTR_TOTAL_MAX})
+          내 지역 수치 × (상대 먹잇감 수치 ÷ {AVATAR_ATTR_TOTAL_MAX})
         </span>
         <span className="mt-1.5 block text-[11.5px] text-zinc-500">
-          권역마다 계산해 모두 더합니다 · 최대 +{AVATAR_ATTR_TOTAL_MAX}%
+          지역마다 계산해 모두 더합니다 · 최대 +{AVATAR_ATTR_TOTAL_MAX}%
         </span>
       </Step>
 
@@ -91,7 +86,7 @@ function CalcModal({ onClose }: { onClose: () => void }) {
 
       <Step n={5} title="어디에 적용되나요">
         <span className="block">· 점령전 · 대난투 — 그대로 적용</span>
-        <span className="block">· 레이드 — 절반만 적용(보스도 권역을 가집니다)</span>
+        <span className="block">· 레이드 — 절반만 적용(보스도 지역을 가집니다)</span>
         <span className="block">· 공격력만 오르고 체력은 변하지 않습니다</span>
         <span className="block">· 나와 상대가 각자 자기 보정을 받습니다</span>
         <span className="block">· 전투에는 <b>대표 아바타</b>의 속성이 적용됩니다</span>
@@ -148,7 +143,6 @@ export function AttrPopup({
   const [simOpen, setSimOpen] = useState(false);
   const vec = runeVectorDesc(attrs);
   const rows = synergyRows(attrs);
-  const mine = new Set(vec.map(([r]) => r as string));
 
   return (
     <>
@@ -177,7 +171,7 @@ export function AttrPopup({
 
         {vec.length > 0 ? (
           <>
-            <p className="mt-2 text-[11.5px] text-zinc-500">상대가 그 권역만 100%일 때 보정</p>
+            <p className="mt-2 text-[11.5px] text-zinc-500">상대의 속성이 해당 지역 100%일 때 기준</p>
             <div className="mt-1.5">
               <AttrSynergyChart rows={rows} />
             </div>
@@ -192,22 +186,6 @@ export function AttrPopup({
               </span>
             </div>
 
-            <div className="mt-2.5 flex flex-col gap-0.5 rounded-xl bg-zinc-100 px-3 py-2 dark:bg-zinc-900">
-              {vec.map(([r, v]) => (
-                <p key={r} className="text-[11.5px]">
-                  <b style={{ color: ATTR_REGION_COLOR[r] }}>
-                    {ATTR_REGION_KO[r]} {v}%
-                  </b>
-                  <span className="text-zinc-500">
-                    {' → '}
-                    <b className="text-emerald-600 dark:text-emerald-400">{ATTR_REGION_KO[attrPrey(r)]}</b>
-                    {' 강 · '}
-                    <b className="text-rose-500 dark:text-rose-400">{ATTR_REGION_KO[attrPredator(r)]}</b>
-                    {' 약'}
-                  </span>
-                </p>
-              ))}
-            </div>
           </>
         ) : (
           <p className="mt-2.5 text-[12.5px] leading-relaxed text-zinc-600 dark:text-zinc-300">
@@ -217,7 +195,7 @@ export function AttrPopup({
         )}
 
         <div className="mt-3">
-          <CycleStrip mine={mine} />
+          <CycleStrip />
         </div>
 
         {owner || myAttrs != null ? (

@@ -2,7 +2,7 @@ import type { AttrRegion, AvatarAttr } from '@/lib/game/balance';
 import { attrDisplayVector } from '@/lib/game/balance';
 
 /**
- * 룬 명명 — 지배 권역 × 등급대(총합) 톤(2026-07-28 확정 UI 스펙).
+ * 룬 명명 — 지배 지역 × 등급대(총합) 톤(2026-07-28 확정 UI 스펙).
  *  - 120+: 웅장/신화 · 70~119: 견고한 판타지 · 30~69: 평범한 유물 · 0~29: 초라함 명시
  * 어휘 풀 조합(서버 전용, 생성 시 1회 확정·불변). AI(Haiku) 명명 승격은 후속 —
  * 풀 자체를 정제해 "AI가 지은 듯한" 품질을 우선 확보.
@@ -48,7 +48,7 @@ function rand(n: number): number {
 }
 const pick = <T,>(a: readonly T[]): T => a[rand(a.length)]!;
 
-/** 지배 권역(합산 최대) — 동률이면 사이클 순서 앞. 전부 0이면 null. */
+/** 지배 지역(합산 최대) — 동률이면 사이클 순서 앞. 전부 0이면 null. */
 export function dominantRegion(attrs: AvatarAttr[]): AttrRegion | null {
   const v = attrDisplayVector(attrs);
   let best: AttrRegion | null = null;
@@ -62,7 +62,7 @@ export function dominantRegion(attrs: AvatarAttr[]): AttrRegion | null {
   return best;
 }
 
-/** 룬 이름 생성 — 지배 권역 어휘 + 총합 등급대 톤. */
+/** 룬 이름 생성 — 지배 지역 어휘 + 총합 등급대 톤. */
 export function runeNameFor(attrs: AvatarAttr[]): string {
   const dom = dominantRegion(attrs);
   const total = attrs.reduce((s, a) => s + a.pct, 0);

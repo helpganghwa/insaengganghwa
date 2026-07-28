@@ -10,14 +10,14 @@ import {
 
 /**
  * 룬 이름·수치 표기(2026-07-28 확정 UI) — 이름이 곧 비주얼:
- *  - 그라데이션 구간 폭 = 권역 수치 비중(내림차순)
+ *  - 그라데이션 구간 폭 = 지역 수치 비중(내림차순)
  *  - 채도 = 수치 크기(color-mix, 50=순색·낮을수록 회색으로 바램) → 저총합 룬은 잿빛 이름
- *  - 몰빵(단일 권역)은 순색 + 밝은 하이라이트(등급 명명 없이 시각 강도만)
+ *  - 몰빵(단일 지역)은 순색 + 밝은 하이라이트(등급 명명 없이 시각 강도만)
  */
 
 const GRAY = '#8a8a93';
 
-/** 합산 벡터 내림차순 [권역, 표기값][] — 0 제외. */
+/** 합산 벡터 내림차순 [지역, 표기값][] — 0 제외. */
 export function runeVectorDesc(attrs: AvatarAttr[]): [AttrRegion, number][] {
   return (Object.entries(attrDisplayVector(attrs)) as [AttrRegion, number][])
     .filter(([, v]) => v > 0)
@@ -67,7 +67,7 @@ export function RuneName({
   );
 }
 
-/** 권역 수치 줄 — 권역색 그대로(가독성 우선, dim 없음). 0 권역 미표시. */
+/** 지역 수치 줄 — 지역색 그대로(가독성 우선, dim 없음). 0 지역 미표시. */
 export function RuneValues({ attrs, className = '' }: { attrs: AvatarAttr[]; className?: string }) {
   const entries = runeVectorDesc(attrs);
   if (entries.length === 0) {

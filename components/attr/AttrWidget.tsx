@@ -1,6 +1,5 @@
 'use client';
 
-import dynamic from 'next/dynamic';
 import { useState } from 'react';
 
 import { runeVectorDesc } from '@/components/RuneName';
@@ -8,15 +7,10 @@ import { ATTR_REGION_COLOR, ATTR_REGION_KO, type AvatarAttr } from '@/lib/game/b
 
 import { AttrPopup } from './AttrPopup';
 
-// echarts는 무거워 초기 번들에서 제외 — 마운트 후 그려진다(자리는 미리 확보).
-const AttrMiniChart = dynamic(() => import('./AttrMiniChart').then((m) => m.AttrMiniChart), {
-  ssr: false,
-  loading: () => <div className="h-[52px] w-[52px]" />,
-});
-
 /**
- * 속성 코너 위젯 — 미니 폴라 차트 + 권역 수치. 배경·보더 없이 얹혀 화면을 가리지 않는다.
- * 위젯 전체가 상성 팝업 트리거. 내 화면(owner)과 남의 프로필(viewer) 양쪽에서 재사용.
+ * 속성 코너 위젯 — **텍스트만**(점 + 지역 + 수치). 52px 차트는 값이 1~3개뿐이라 늘 비어 보여
+ * 폐기(2026-07-28 A6). 배경·보더 없이 얹혀 화면을 가리지 않으며, 위젯 전체가 상성 팝업 트리거.
+ * 내 화면(owner)과 남의 프로필(viewer) 양쪽에서 재사용.
  */
 export function AttrWidget({
   attrs,
@@ -51,20 +45,19 @@ export function AttrWidget({
         aria-label="속성 상성 보기"
         className={`text-left transition active:scale-95 ${className}`}
       >
-        <AttrMiniChart attrs={attrs} />
-        <div className="mt-0.5 flex flex-col gap-[1px]">
+        <div className="flex flex-col gap-[1px]">
           {vec.length > 0 ? (
             vec.map(([r, v]) => (
               <span
                 key={r}
-                className="flex items-center gap-[3px] text-[9px] font-bold leading-[1.3] text-zinc-200 [text-shadow:0_1px_2px_rgba(0,0,0,0.9)]"
+                className="flex items-center gap-[4px] text-[10px] font-bold leading-[1.4] text-zinc-200 [text-shadow:0_1px_2px_rgba(0,0,0,0.9)]"
               >
                 <i
-                  className="block h-[4px] w-[4px] shrink-0 rounded-full"
+                  className="block h-[5px] w-[5px] shrink-0 rounded-full"
                   style={{ backgroundColor: ATTR_REGION_COLOR[r] }}
                 />
                 {ATTR_REGION_KO[r]}
-                <b className="ml-auto font-mono font-black tabular-nums">{v}</b>
+                <b className="ml-auto font-mono font-black tabular-nums">{v}%</b>
               </span>
             ))
           ) : (
