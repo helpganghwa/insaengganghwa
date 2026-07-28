@@ -357,9 +357,17 @@ export const RAID_DAMAGE_K = 1.0; // 추천 시작값(시뮬 조정)
  * §5.3 1회 공격 데미지 = round(총전투력 × K × varFactor × (crit?1.5:1)).
  * RNG는 호출자(서버)에서 결정해 주입 — varFactor∈[0.7,1.3], isCrit (CLAUDE §3.1).
  */
-export function computeRaidDamage(totalCP: number, varFactor: number, isCrit: boolean): number {
+export function computeRaidDamage(
+  totalCP: number,
+  varFactor: number,
+  isCrit: boolean,
+  /** §10 상성 보정(%) — 이미 레이드 계수가 적용된 값. 0이면 무보정. */
+  attrAdvPct = 0,
+): number {
   const v = Math.min(1 + RAID_DAMAGE_VARIANCE, Math.max(1 - RAID_DAMAGE_VARIANCE, varFactor));
-  return Math.round(totalCP * RAID_DAMAGE_K * v * (isCrit ? RAID_CRIT_MULT : 1));
+  return Math.round(
+    totalCP * RAID_DAMAGE_K * v * (isCrit ? RAID_CRIT_MULT : 1) * (1 + attrAdvPct / 100),
+  );
 }
 
 /**
@@ -768,6 +776,35 @@ export function attrAdvantagePct(
     adv += my * ((opp[attrPrey(r)] ?? 0) / AVATAR_ATTR_TOTAL_MAX);
   }
   return adv;
+}
+
+/**
+ * §10 레이드 상성 계수 — 보스전은 **절반만** 적용(PvP 대비 보수적, 2026-07-28 확정).
+ * 보스는 지역당 몰빵 150 상당으로 취급하므로 완몰빵 유저의 상한이 +75%가 된다.
+ */
+export const RAID_ATTR_COEF = 0.5;
+
+/** 보스 지역 매핑 — 보스 코드 → 지역(그 지역 150 몰빵으로 간주). */
+export const RAID_BOSS_REGION: Record<string, AttrRegion> = {
+  slime_king: 'swamp',
+  orc_chief: 'orc',
+  stone_golem: 'temple',
+  dragon_west: 'volcano',
+  fallen_angel: 'angel',
+  gold_griffin: 'kingdom',
+};
+
+/**
+ * §10 레이드 상성 보정(%) — 보스를 해당 지역 표기 최대(150)로 두고 산출한 뒤 ½ 계수.
+ * 보스 코드가 매핑에 없으면 0(무보정).
+ */
+export function raidAttrAdvantagePct(
+  mine: Partial<Record<AttrRegion, number>>,
+  bossCode: string,
+): number {
+  const region = RAID_BOSS_REGION[bossCode];
+  if (!region) return 0;
+  return attrAdvantagePct(mine, { [region]: AVATAR_ATTR_TOTAL_MAX }) * RAID_ATTR_COEF;
 }
 
 /**

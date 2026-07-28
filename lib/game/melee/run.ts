@@ -10,6 +10,8 @@ import { combatPowerFromOwned, type OwnedRow } from '@/lib/game/equipment/combat
 import { getGuildBriefsByUsers } from '@/lib/game/guild/badge';
 import { meleeRewardForRank, SUPPLY_SLOTS, type SupplySlot } from '@/lib/game/balance';
 
+import { loadAttrVectors } from '@/lib/game/attr/snapshot';
+
 import { simulateMelee, type MeleeParticipantInput } from './simulate';
 
 /**
@@ -90,10 +92,14 @@ export async function runMelee(serverId: number): Promise<{ ran: boolean; battle
     .where(and(eq(characters.serverId, serverId), inArray(characters.userId, ids)));
   const nickOf = new Map(nickRows.map((r) => [r.uid, r.nick]));
 
+  // 속성 스냅샷(§10) — 정산 시점 대표 아바타 기준. 없으면 보정 0.
+  const attrOf = await loadAttrVectors(serverId, ids);
+
   const participants: MeleeParticipantInput[] = withCp.map((x) => ({
     userId: x.uid,
     nickname: nickOf.get(x.uid) ?? '플레이어',
     cp: x.cp,
+    attrs: attrOf.get(x.uid),
   }));
   const cpOf = new Map(participants.map((p) => [p.userId, p.cp]));
   const n = participants.length;

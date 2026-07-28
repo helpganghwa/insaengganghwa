@@ -14,6 +14,9 @@ import {
   raidExtraAttackCost,
 } from '@/lib/game/balance';
 import { combatPowerFromOwned } from '@/lib/game/equipment/combat-power';
+import { attrDisplayVector, raidAttrAdvantagePct } from '@/lib/game/balance';
+import { characters } from '@/lib/db/schema/server';
+import { runes } from '@/lib/db/schema/rune';
 import { RaidError } from './open';
 import { raidPhasesCleared } from './drops';
 
@@ -23,6 +26,17 @@ function rngU32(): number {
 
 // CP 계산은 raid 행과 무관(유저 장비 read) → 트랜잭션/락 **밖**에서 db로 계산(감사 S2 — 락 보유 중
 // 전 장비 스캔 제거). raid 행 락 보유 시간을 인덱스 ops 몇 개로 단축.
+/** 대표 아바타 속성(§10) — 락 밖에서 조회. 없으면 빈 벡터(보정 0). */
+async function userAttrVector(userId: string, serverId: number) {
+  const [row] = await db
+    .select({ attrs: runes.attrs })
+    .from(characters)
+    .innerJoin(runes, eq(runes.sourceProfileId, characters.activeProfileId))
+    .where(and(eq(characters.userId, userId), eq(characters.serverId, serverId)))
+    .limit(1);
+  return attrDisplayVector(row?.attrs ?? []);
+}
+
 async function userTotalCP(userId: string, serverId: number): Promise<number> {
   // 보유 전체(착용 무관) → 카탈로그별 최강 1개 합산(BALANCE §3.2).
   const owned = await db
@@ -56,7 +70,10 @@ export async function attackRaid(input: {
   if (meta.status !== 'active' || meta.expireAt.getTime() <= Date.now()) {
     throw new RaidError('RAID_CLOSED');
   }
-  const totalCP = await userTotalCP(userId, meta.serverId);
+  const [totalCP, myAttrs] = await Promise.all([
+    userTotalCP(userId, meta.serverId),
+    userAttrVector(userId, meta.serverId),
+  ]);
 
   return db.transaction(async (tx) => {
     const [raid] = await tx
@@ -65,6 +82,7 @@ export async function attackRaid(input: {
         expireAt: raids.expireAt,
         phase1Hp: raids.phase1Hp,
         phasesCleared: raids.phasesCleared,
+        bossCode: raids.bossCode,
       })
       .from(raids)
       .where(eq(raids.id, raidId))
@@ -91,7 +109,9 @@ export async function attackRaid(input: {
     const isCrit = rng() % 10000 < RAID_CRIT_RATE_BP;
     const u = rng() / 0x1_0000_0000; // [0,1)
     const varFactor = 1 - RAID_DAMAGE_VARIANCE + u * (2 * RAID_DAMAGE_VARIANCE);
-    const damage = computeRaidDamage(totalCP, varFactor, isCrit);
+    // 상성(§10) — 보스를 해당 지역 몰빵으로 보고 ½ 계수 적용.
+    const attrAdv = raidAttrAdvantagePct(myAttrs, raid.bossCode);
+    const damage = computeRaidDamage(totalCP, varFactor, isCrit, attrAdv);
 
     const isExtra = part.attacksUsed >= RAID_BASE_ATTACKS;
     await tx
@@ -202,7 +222,10 @@ export async function gemAttackRaid(input: {
   if (meta.status !== 'active' || meta.expireAt.getTime() <= Date.now()) {
     throw new RaidError('RAID_CLOSED');
   }
-  const totalCP = await userTotalCP(userId, meta.serverId);
+  const [totalCP, myAttrs] = await Promise.all([
+    userTotalCP(userId, meta.serverId),
+    userAttrVector(userId, meta.serverId),
+  ]);
 
   return db.transaction(async (tx) => {
     const [raid] = await tx
@@ -212,6 +235,7 @@ export async function gemAttackRaid(input: {
         expireAt: raids.expireAt,
         phase1Hp: raids.phase1Hp,
         phasesCleared: raids.phasesCleared,
+        bossCode: raids.bossCode,
       })
       .from(raids)
       .where(eq(raids.id, raidId))
@@ -270,7 +294,9 @@ export async function gemAttackRaid(input: {
     const isCrit = rngU32() % 10000 < RAID_CRIT_RATE_BP;
     const u = rngU32() / 0x1_0000_0000;
     const varFactor = 1 - RAID_DAMAGE_VARIANCE + u * (2 * RAID_DAMAGE_VARIANCE);
-    const damage = computeRaidDamage(totalCP, varFactor, isCrit);
+    // 상성(§10) — 보스를 해당 지역 몰빵으로 보고 ½ 계수 적용.
+    const attrAdv = raidAttrAdvantagePct(myAttrs, raid.bossCode);
+    const damage = computeRaidDamage(totalCP, varFactor, isCrit, attrAdv);
 
     await tx
       .update(raidParticipants)

@@ -5,7 +5,8 @@
  *  - 타겟 생존 → 그 타겟이 다음 공격자(반격 체인)
  *  - 타겟 패배 → 등수 기록(첫 탈락 = N위, 역순) + killer 기록 → 새 랜덤 공격자
  *  - 마지막 생존자 = 1위(챔피언)
- * HP = 전투력 × MELEE_HP_MULT. 데미지 = 공격자 전투력 × U(MIN,MAX)(최소 1).
+ * HP = 전투력 × MELEE_HP_MULT. 데미지 = 공격자 전투력 × U(MIN,MAX) × (1 + 상성 보정)(최소 1).
+ * 상성(§10)은 **공격자→타겟 페어마다 공격측에만** 적용(HP 불변 — 다:다에서 페어별 HP 조정 불가).
  *
  * 리플레이: 총 라운드 ≤ MELEE_REPLAY_ROUNDS면 전체, 초과면 **마지막 그만큼**(클라이맥스).
  * 링 버퍼로 O(REPLAY) 메모리 — N무관. finale는 등장 유저 로컬 인덱스로 압축.
@@ -17,11 +18,18 @@ import {
   MELEE_REPLAY_ROUNDS,
   MELEE_MY_EVENTS_MAX,
 } from '@/lib/game/balance';
+import { attrAdvantagePct, type AttrRegion } from '@/lib/game/balance';
 import type { MeleeFinale, MeleeMyEvent } from '@/lib/db/schema/melee';
 
 import { makeRng } from './rng';
 
-export type MeleeParticipantInput = { userId: string; nickname: string; cp: number };
+export type MeleeParticipantInput = {
+  userId: string;
+  nickname: string;
+  cp: number;
+  /** 대표 아바타 속성 표기 벡터(정산 시점 스냅샷). 미지정 = 보정 0. */
+  attrs?: Partial<Record<AttrRegion, number>>;
+};
 export type MeleeRankResult = {
   userId: string;
   finalRank: number;
@@ -60,6 +68,17 @@ export function simulateMelee(
 
   const rng = makeRng(seed);
   const cp = participants.map((p) => p.cp);
+  const attrs = participants.map((p) => p.attrs ?? {});
+  // 상성 배수는 페어(공격자,타겟)마다 고정 — 라운드마다 재계산하지 않게 메모(N² 방지: lazy 캐시).
+  const advCache = new Map<number, number>();
+  const advMult = (a: number, t: number): number => {
+    const key = a * participants.length + t;
+    const hit = advCache.get(key);
+    if (hit !== undefined) return hit;
+    const m = 1 + attrAdvantagePct(attrs[a]!, attrs[t]!) / 100;
+    advCache.set(key, m);
+    return m;
+  };
   const hp = new Float64Array(n);
   for (let i = 0; i < n; i++) hp[i] = cp[i]! * MELEE_HP_MULT;
 
@@ -97,7 +116,11 @@ export function simulateMelee(
 
     const dmg = Math.max(
       1,
-      Math.round(cp[attacker]! * (MELEE_DMG_MIN + rng() * (MELEE_DMG_MAX - MELEE_DMG_MIN))),
+      Math.round(
+        cp[attacker]! *
+          (MELEE_DMG_MIN + rng() * (MELEE_DMG_MAX - MELEE_DMG_MIN)) *
+          advMult(attacker, target),
+      ),
     );
     hp[target]! -= dmg;
     const killed = hp[target]! <= 0;

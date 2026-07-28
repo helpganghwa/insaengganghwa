@@ -19,6 +19,7 @@ import {
   CONQUEST_DMG_MAX,
   CONQUEST_REPLAY_ROUNDS,
 } from '@/lib/game/guild/balance';
+import { attrAdvantagePct, type AttrRegion } from '@/lib/game/balance';
 import { makeRng } from '@/lib/game/melee/rng';
 
 export type ConquestUnit = {
@@ -29,6 +30,8 @@ export type ConquestUnit = {
   guildName: string;
   /** 역할 배수까지 적용된 유효 전투력(집행관2·수비1.2·공격1.0). */
   effCp: number;
+  /** 대표 아바타 속성 표기 벡터(정산 시점 스냅샷). 미지정 = 보정 0. */
+  attrs?: Partial<Record<AttrRegion, number>>;
 };
 
 export type ConquestRankResult = {
@@ -65,6 +68,16 @@ export type ConquestSimResult = {
 };
 
 export function simulateConquest(units: readonly ConquestUnit[], seed: string): ConquestSimResult {
+  // 상성(§10) — 공격자→타겟 페어 배수. 공격측에만 적용(HP 불변). 페어별 1회 계산 후 캐시.
+  const advCache = new Map<number, number>();
+  const advMult = (a: number, t: number): number => {
+    const key = a * units.length + t;
+    const hit = advCache.get(key);
+    if (hit !== undefined) return hit;
+    const m = 1 + attrAdvantagePct(units[a]!.attrs ?? {}, units[t]!.attrs ?? {}) / 100;
+    advCache.set(key, m);
+    return m;
+  };
   const n = units.length;
   const emptyFinale: ConquestFinale = { roster: [], events: [] };
   if (n === 0) return { winnerGuildId: null, ranks: [], finale: emptyFinale, totalRounds: 0 };
@@ -112,7 +125,11 @@ export function simulateConquest(units: readonly ConquestUnit[], seed: string): 
 
     const dmg = Math.max(
       1,
-      Math.round(units[attacker]!.effCp * (CONQUEST_DMG_MIN + rng() * (CONQUEST_DMG_MAX - CONQUEST_DMG_MIN))),
+      Math.round(
+        units[attacker]!.effCp *
+          (CONQUEST_DMG_MIN + rng() * (CONQUEST_DMG_MAX - CONQUEST_DMG_MIN)) *
+          advMult(attacker, target),
+      ),
     );
     hp[target]! -= dmg;
     const killed = hp[target]! <= 0;

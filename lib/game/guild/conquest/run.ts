@@ -11,6 +11,8 @@ import { characters } from '@/lib/db/schema/server';
 import { combatPowerFromOwned, type OwnedRow } from '@/lib/game/equipment/combat-power';
 
 import { conquestPowerMult } from '../balance';
+import { loadAttrVectors } from '@/lib/game/attr/snapshot';
+
 import { simulateConquest, type ConquestUnit } from './simulate';
 
 /**
@@ -86,6 +88,8 @@ export async function runConquest(serverId: number, battleDay: string): Promise<
     .from(characters)
     .where(and(eq(characters.serverId, serverId), inArray(characters.userId, idList)));
   const nickOf = new Map(nickRows.map((r) => [r.uid, r.nick]));
+  // 속성 스냅샷(§10) — 정산 시점 대표 아바타 기준. 없으면 보정 0.
+  const attrOf = await loadAttrVectors(serverId, idList);
 
   // 구역별 배치 묶기.
   const depsByZone = new Map<number, DepRow[]>();
@@ -111,6 +115,7 @@ export async function runConquest(serverId: number, battleDay: string): Promise<
         guildName: d.gname,
         // 하한 1 — 장비 0개(CP 0) 유닛도 hp>0으로 정상 참전(0이면 hp 0 즉사·1뎀 기현상 방지).
         effCp: Math.max(1, Math.round(cpOf(d.uid) * conquestPowerMult(d.role, false))),
+        attrs: attrOf.get(d.uid),
       });
     }
     // 집행관 자동 방어(×2) — 배치행 없이 포함(중복 방지).
@@ -121,6 +126,7 @@ export async function runConquest(serverId: number, battleDay: string): Promise<
         guildId: z.owner_guild_id,
         guildName: z.owner_name ?? '길드',
         effCp: Math.max(1, Math.round(cpOf(z.executor) * conquestPowerMult('defend', true))),
+        attrs: attrOf.get(z.executor),
       });
     }
 

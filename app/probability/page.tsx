@@ -25,6 +25,7 @@ import {
   RAID_DAMAGE_VARIANCE,
   RAID_DAMAGE_K,
   RAID_PHASE_DROP_BOXES,
+  AVATAR_ATTR_TOTAL_MAX,
 } from '@/lib/game/balance';
 import { getActiveCatalog } from '@/lib/game/catalog';
 import { CATALOG_ITEMS } from '@/lib/game/equipment/catalog';
@@ -254,7 +255,9 @@ export default async function ProbabilityPage() {
         <P>
           같은 지역 줄은 수치가 합산됩니다(한 아바타의 지역당 최대 150). 상성은{' '}
           <b>천사→왕국→오크→늪→화산→신전→천사</b> 순환으로, 각 지역은 바로 다음 지역에만 강합니다.
-          효과는 <b>대표 아바타</b>의 속성으로 유저 간 전투(점령전·대난투)와 레이드에만 적용되며,
+          효과는 <b>대표 아바타</b>의 속성으로 적용되며, 대상은 다음과 같습니다 — 점령전·대난투는
+          그대로, <b>레이드는 절반</b>만 적용(보스는 자기 지역을 {AVATAR_ATTR_TOTAL_MAX}%로 가진 것으로
+          계산). 보정은 <b>공격력에만</b> 붙고 체력은 변하지 않으며, 나와 상대가 각자 자기 보정을 받습니다.
           아바타를 많이 생성해도 상대를 이길 기대 확률이 평균적으로 높아지지는 않습니다 — 상대에
           맞춰 <b>고를 수 있는 폭</b>이 넓어질 뿐입니다.
         </P>
