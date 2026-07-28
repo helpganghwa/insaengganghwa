@@ -14,9 +14,12 @@ import { getUserGuildBrief } from '@/lib/game/guild';
 import { getEnhancingUserCount } from '@/app/(game)/me/actions';
 import { profiles } from '@/lib/db/schema/profiles';
 import { characters } from '@/lib/db/schema/server';
+import { runes } from '@/lib/db/schema/rune';
 import { userProfiles } from '@/lib/db/schema/avatar';
 import { catalogItems, userEquipment, type Slot } from '@/lib/db/schema/equipment';
 import { combatPowerFromOwned } from '@/lib/game/equipment/combat-power';
+import { type AvatarAttr } from '@/lib/game/balance';
+import { RuneName } from '@/components/RuneName';
 import { liberatedItemRanks } from '@/lib/game/codex/ranking';
 import { getMyRanks, getMyCountRanks } from '@/lib/game/leaderboard/queries';
 import { EnhanceStatsCard, EnhanceStatsFallback } from '@/components/EnhanceStatsCard';
@@ -54,6 +57,7 @@ const loadProfile = cache(async (handle: string, serverId: number) => {
       nickname: characters.nickname,
       publicCode: profiles.publicCode,
       activeProfileId: characters.activeProfileId,
+      equippedRuneId: characters.equippedRuneId,
     })
     .from(profiles)
     .innerJoin(
@@ -89,7 +93,7 @@ const loadProfile = cache(async (handle: string, serverId: number) => {
   // 이전: 5개를 한 묶음으로 3.5s 가드 → 가장 느린 쿼리(주로 ranks: unstable_cache 콜드
   // ~3s)에 도달하면 _r=null로 전부 비어버려 장비도 안 보였음(2026-06-01 수정).
   // ranks는 이 함수에서 빼고 페이지에서 <Suspense>로 stream(첫 페인트 지연 제거).
-  const [equipped, ownedAll, libMap] = await Promise.all([
+  const [equipped, ownedAll, libMap, runeRows] = await Promise.all([
     withTimeout(
       db
         .select({
@@ -138,6 +142,18 @@ const loadProfile = cache(async (handle: string, serverId: number) => {
     withTimeout(liberatedItemRanks(prof.id, serverId), 2000, 'u.liberated').catch(
       () => new Map<number, number>(),
     ),
+    // 장착 룬(있으면) — 이름·수치 공개(닉네임 아래 표기).
+    prof.equippedRuneId != null
+      ? withTimeout(
+          db
+            .select({ name: runes.name, attrs: runes.attrs })
+            .from(runes)
+            .where(eq(runes.id, prof.equippedRuneId))
+            .limit(1),
+          1500,
+          'u.rune',
+        ).catch(() => [] as { name: string | null; attrs: AvatarAttr[] }[])
+      : Promise.resolve([] as { name: string | null; attrs: AvatarAttr[] }[]),
   ]);
 
   const sumEnhance = ownedAll.reduce((a, r) => a + r.enhanceLevel, 0);
@@ -178,6 +194,7 @@ const loadProfile = cache(async (handle: string, serverId: number) => {
     sumEnhance,
     maxEnhance,
     champItems,
+    rune: runeRows[0] ?? null,
     guild: await getUserGuildBrief(prof.id, serverId),
   };
 });
@@ -410,6 +427,15 @@ export default async function PublicProfilePage({
             </div>
           )}
         </div>
+        {/* 장착 룬 — 히어로 하단 중앙(이름 그라데이션이 곧 비주얼). */}
+        {data.rune ? (
+          <div className="absolute inset-x-0 bottom-2 z-10 flex items-center justify-center gap-1 px-6">
+            <span className="shrink-0 text-[10px] drop-shadow-[0_1px_2px_rgba(0,0,0,0.8)]" aria-hidden>
+              🔮
+            </span>
+            <RuneName name={data.rune.name} attrs={data.rune.attrs} className="text-[12px]" />
+          </div>
+        ) : null}
       </section>
 
       <div className="space-y-3 px-3 pb-4">
