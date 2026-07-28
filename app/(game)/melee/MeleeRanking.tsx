@@ -11,9 +11,9 @@ import type { MeleeRankMode, MeleeRankRow } from '@/lib/game/melee/ranking';
 
 import { meleeRankingAction } from './actions';
 
+// '내 주변'은 뺐다 — 우측 '내 순위 N위' 버튼이 같은 일을 하고, 탭까지 두면 중복이다.
 const MODES: [MeleeRankMode, string][] = [
   ['all', '전체'],
-  ['near', '내 주변'],
   ['guild', '우리 길드'],
 ];
 
@@ -87,7 +87,7 @@ export function useMeleeRanking({
   const pathname = usePathname();
   const search = useSearchParams();
   const subParam = search.get('sub');
-  const mode: MeleeRankMode = subParam === 'near' || subParam === 'guild' ? subParam : 'all';
+  const mode: MeleeRankMode = subParam === 'guild' ? 'guild' : 'all';
 
   const [rows, setRows] = useState<MeleeRankRow[]>([]);
   const [myRank, setMyRank] = useState<number | null>(null);
@@ -128,9 +128,8 @@ export function useMeleeRanking({
     const isFirst = firstLoad.current;
     firstLoad.current = false;
     const back = isFirst && cameFromHistory();
-    // 첫 로드는 뒤로가기 복귀일 때만 복원(새 진입은 초기 상태). 이후 탭 왕복은 보던 자리를 지켜주되,
-    // '내 주변'만은 예외 — 누를 때마다 내 등수 기준으로 다시 잡혀야 의미가 있다.
-    const useCache = isFirst ? back : mode !== 'near';
+    // 첫 로드는 뒤로가기 복귀일 때만 복원(새 진입은 초기 상태). 이후 탭 왕복은 보던 자리를 지켜준다.
+    const useCache = isFirst ? back : true;
     startTransition(async () => {
       const cached = useCache ? readCache(cacheKey(battleId, mode)) : null;
       if (cached && cached.rows.length > 0) {
@@ -143,8 +142,6 @@ export function useMeleeRanking({
       if (r.status !== 'success') return;
       setRows(r.rows);
       setMyRank(r.myRank);
-      // 내 주변은 위아래로 창을 잡아 오므로 스크롤 0이면 내 행이 화면 밖이다 — 가운데로 맞춘다.
-      if (mode === 'near') pendingScroll.current = 'me';
     });
   }, [enabled, mode, battleId]);
 
@@ -244,7 +241,7 @@ export function useMeleeRanking({
     }
     startTransition(async () => {
       const r = await meleeRankingAction({ battleId, mode, aroundRank: myRank });
-      if (r.status !== 'success') return;
+      if (r.status !== 'success' || r.rows.length === 0) return;
       setRows(r.rows);
       pendingScroll.current = 'me';
     });
@@ -292,8 +289,7 @@ export function MeleeRankControls({ state }: { state: MeleeRankingState }) {
         <button
           type="button"
           onClick={jumpToMe}
-          disabled={mode !== 'all'}
-          className="shrink-0 rounded-lg bg-amber-600/90 px-2.5 py-1 text-[10px] font-bold text-white transition disabled:opacity-40"
+          className="shrink-0 rounded-lg bg-amber-600/90 px-2.5 py-1 text-[10px] font-bold text-white transition"
         >
           내 순위 {myRank.toLocaleString()}위
         </button>

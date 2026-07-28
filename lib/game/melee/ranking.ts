@@ -33,9 +33,9 @@ export type MeleeRankRow = {
   eliminatedRound: number | null;
 };
 
-export type MeleeRankMode = 'all' | 'near' | 'guild';
+export type MeleeRankMode = 'all' | 'guild';
 export const MELEE_RANK_PAGE = 30;
-/** 내 주변·내 순위 점프의 초기 창(위아래 각각). 화면을 채우고 양방향 스크롤 여지를 남긴다. */
+/** 내 순위 점프의 초기 창(위아래 각각). 화면을 채우고 양방향 스크롤 여지를 남긴다. */
 export const MELEE_RANK_WINDOW = 12;
 
 /** 아바타 정면 + faceBox — 순위 행의 얼굴 확대에 쓴다. */
@@ -44,8 +44,7 @@ const FACEBOX = sql<unknown>`${userProfiles.options} -> 'faceBox'`;
 
 /**
  * 대난투 전체 순위 — 등수 오름차순 keyset 페이지네이션(인덱스 melee_part_rank_idx 활용).
- *  - all   : 1위부터(또는 afterRank 이후)
- *  - near  : 내 등수 기준 앞뒤 window
+ *  - all   : 1위부터(또는 afterRank 이후). aroundRank가 오면 그 등수 앞뒤 window
  *  - guild : 내 길드원만(현재 길드 기준 — 스냅샷 길드가 아닌 "지금 같은 길드"인 사람들)
  *
  * 길드 표시값은 **회차 스냅샷**(participants.guild_name)만 쓴다 — 현재 길드로 폴백하면 과거
@@ -60,7 +59,7 @@ export async function getMeleeRanking(input: {
   afterRank?: number;
   /** 위 방향 커서 — 이 등수 **이전**을 내림차순으로 집고 오름차순으로 되돌려 반환. */
   beforeRank?: number;
-  /** 이 등수 주변 창(위아래 각각 MELEE_RANK_WINDOW). near 초기 로드·내 순위 점프용. */
+  /** 이 등수 주변 창(위아래 각각 MELEE_RANK_WINDOW). 내 순위 점프용. */
   aroundRank?: number;
 }): Promise<{ rows: MeleeRankRow[]; myRank: number | null }> {
   const { battleId, serverId, viewerUserId, mode } = input;
@@ -76,15 +75,14 @@ export async function getMeleeRanking(input: {
   const conds = [eq(meleeParticipants.battleId, battleId)];
   let limit = MELEE_RANK_PAGE;
   let backward = false; // 위 방향 조회 — 내림차순으로 집고 오름차순으로 되돌린다.
-  const around = input.aroundRank ?? (mode === 'near' ? myRank : null);
 
   if (input.beforeRank != null) {
     conds.push(lt(meleeParticipants.finalRank, input.beforeRank));
     backward = true;
   } else if (input.afterRank != null) {
     conds.push(gt(meleeParticipants.finalRank, input.afterRank));
-  } else if (mode === 'near' || input.aroundRank != null) {
-    if (around == null) return { rows: [], myRank };
+  } else if (input.aroundRank != null) {
+    const around = input.aroundRank;
     const w = MELEE_RANK_WINDOW;
     conds.push(
       sql`${meleeParticipants.finalRank} between ${Math.max(1, around - w)} and ${around + w}`,
