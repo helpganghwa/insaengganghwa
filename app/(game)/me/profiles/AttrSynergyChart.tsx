@@ -8,7 +8,6 @@ import { SVGRenderer } from 'echarts/renderers';
 
 import { runeVectorDesc } from '@/components/RuneName';
 import {
-  ATTR_REGION_COLOR,
   ATTR_REGION_KO,
   AVATAR_ATTR_REGIONS,
   AVATAR_ATTR_TOTAL_MAX,
@@ -20,100 +19,97 @@ import {
 
 echarts.use([BarChart, GridComponent, SVGRenderer]);
 
+const GREEN = '#10b981';
+const RED = '#f43f5e';
+/** 상대를 그 권역 100%로 정규화해 비교 가능한 지표로 만든다(공시 §6 식 그대로). */
+const NORM = 100 / AVATAR_ATTR_TOTAL_MAX;
+
+/** 유리 — 내가 상대 권역 O를 사냥하는 몫. prey(r)=O ⟺ r=pred(O). */
+function advantage(vec: Partial<Record<AttrRegion, number>>, opponent: AttrRegion): number {
+  return Math.round((vec[attrPredator(opponent)] ?? 0) * NORM);
+}
+/** 불리 — 상대 권역 O가 내 권역 prey(O)를 사냥하는 몫. */
+function disadvantage(vec: Partial<Record<AttrRegion, number>>, opponent: AttrRegion): number {
+  return Math.round((vec[attrPrey(opponent)] ?? 0) * NORM);
+}
+
+export type SynergyRow = { region: AttrRegion; adv: number; dis: number };
+
+/** 표시 순서(위→아래) — 순 우위 내림차순. 상단이 가장 유리한 상대. */
+export function synergyRows(attrs: AvatarAttr[]): SynergyRow[] {
+  const vec = Object.fromEntries(runeVectorDesc(attrs)) as Partial<Record<AttrRegion, number>>;
+  return AVATAR_ATTR_REGIONS.map((region) => ({
+    region,
+    adv: advantage(vec, region),
+    dis: disadvantage(vec, region),
+  })).sort((a, b) => b.adv - b.dis - (a.adv - a.dis));
+}
+
+export const SYNERGY_ROW_H = 30;
+
 /**
- * 상대 권역별 내 공격 우위(B-3) — "상대가 그 권역 100%일 때 내 보정 +N%".
- * balance §10 식 그대로: Σ 내[r] × (상대[prey(r)] / 150). 상대를 100으로 정규화해 비교 가능한 지표로.
+ * 상성 대칭 막대(X4) — 중앙 0 기준 왼쪽=불리(붉은) / 오른쪽=유리(초록).
+ * 권역 이름은 중앙에 HTML로 겹쳐 그린다(막대 양끝 수치와 충돌 없음) — 행 높이 SYNERGY_ROW_H 고정.
  */
-function advantageAgainst(attrs: AvatarAttr[], opponent: AttrRegion): number {
-  let adv = 0;
-  for (const [r, v] of runeVectorDesc(attrs)) {
-    if (attrPrey(r) === opponent) adv += v * (100 / AVATAR_ATTR_TOTAL_MAX);
-  }
-  return Math.round(adv);
-}
-/** 그 권역이 나를 노리는지(내 권역의 천적) — 불리 표시용. */
-function isThreat(attrs: AvatarAttr[], opponent: AttrRegion): boolean {
-  return runeVectorDesc(attrs).some(([r]) => attrPredator(r) === opponent);
-}
-
-/** 다크 여부 — 앱은 media 기반 다크. 차트 색은 CSS 변수를 못 쓰므로 직접 분기. */
-function isDark(): boolean {
-  return typeof window !== 'undefined' && window.matchMedia?.('(prefers-color-scheme: dark)').matches;
-}
-
-export function AttrSynergyChart({ attrs }: { attrs: AvatarAttr[] }) {
+export function AttrSynergyChart({ rows }: { rows: SynergyRow[] }) {
   const ref = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
     if (!ref.current) return;
     const chart = echarts.init(ref.current, undefined, { renderer: 'svg' });
-    const dark = isDark();
-
-    // 우위 큰 순 → 아래에서 위로 쌓이도록 역순(ECharts y축 category는 아래가 index 0).
-    const rows = AVATAR_ATTR_REGIONS.map((r) => ({
-      region: r,
-      adv: advantageAgainst(attrs, r),
-      threat: isThreat(attrs, r),
-    }))
-      .sort((a, b) => a.adv - b.adv || AVATAR_ATTR_REGIONS.indexOf(b.region) - AVATAR_ATTR_REGIONS.indexOf(a.region));
-
-    const maxAdv = Math.max(...rows.map((x) => x.adv), 10);
-    const labelColor = dark ? '#a1a1aa' : '#71717a';
-    const trackColor = dark ? 'rgba(255,255,255,0.06)' : 'rgba(0,0,0,0.05)';
+    const max = Math.max(...rows.flatMap((r) => [r.adv, r.dis]), 10);
+    // ECharts category y축은 data[0]이 아래 → 표시 순서를 뒤집어 넣는다.
+    const asc = [...rows].reverse();
 
     chart.setOption({
       animationDuration: 520,
       animationEasing: 'cubicOut',
-      grid: { left: 42, right: 46, top: 4, bottom: 4, containLabel: false },
-      xAxis: { type: 'value', max: maxAdv, show: false },
+      grid: { left: 40, right: 40, top: 4, bottom: 4 },
+      xAxis: { type: 'value', min: -max, max, show: false },
       yAxis: {
         type: 'category',
-        data: rows.map((x) => ATTR_REGION_KO[x.region]),
+        data: asc.map((r) => ATTR_REGION_KO[r.region]),
         axisLine: { show: false },
         axisTick: { show: false },
-        axisLabel: {
-          fontSize: 11.5,
-          fontWeight: 800,
-          margin: 10,
-          color: (_v: string, i: number) =>
-            rows[i]!.adv > 0 ? ATTR_REGION_COLOR[rows[i]!.region] : labelColor,
-        },
+        axisLabel: { show: false },
       },
       series: [
         {
           type: 'bar',
-          barWidth: 9,
-          // 트랙(배경) — 값이 0인 행도 자리를 보여줘 리듬이 유지된다.
-          showBackground: true,
-          backgroundStyle: { color: trackColor, borderRadius: 99 },
-          data: rows.map((x) => ({
-            value: x.adv,
-            itemStyle: {
-              borderRadius: 99,
-              color:
-                x.adv > 0
-                  ? new echarts.graphic.LinearGradient(0, 0, 1, 0, [
-                      { offset: 0, color: `${ATTR_REGION_COLOR[x.region]}66` },
-                      { offset: 1, color: ATTR_REGION_COLOR[x.region] },
-                    ])
-                  : 'transparent',
-            },
+          stack: 'x',
+          barWidth: 11,
+          data: asc.map((r) => ({
+            value: -r.dis,
+            itemStyle: { borderRadius: [99, 0, 0, 99], color: r.dis ? RED : 'transparent' },
+          })),
+          label: {
+            show: true,
+            position: 'left',
+            distance: 6,
+            fontSize: 11,
+            fontWeight: 900,
+            fontFamily: 'ui-monospace, SF Mono, Menlo, monospace',
+            color: RED,
+            formatter: (p: { value: number }) => (p.value ? `${p.value}%` : ''),
+          },
+        },
+        {
+          type: 'bar',
+          stack: 'x',
+          barWidth: 11,
+          data: asc.map((r) => ({
+            value: r.adv,
+            itemStyle: { borderRadius: [0, 99, 99, 0], color: r.adv ? GREEN : 'transparent' },
           })),
           label: {
             show: true,
             position: 'right',
-            distance: 8,
-            fontSize: 11.5,
+            distance: 6,
+            fontSize: 11,
             fontWeight: 900,
             fontFamily: 'ui-monospace, SF Mono, Menlo, monospace',
-            formatter: (p: { dataIndex: number }) => {
-              const row = rows[p.dataIndex]!;
-              return row.adv > 0 ? `+${row.adv}%` : row.threat ? '불리' : '—';
-            },
-            color: (p: { dataIndex: number }) => {
-              const row = rows[p.dataIndex]!;
-              return row.adv > 0 ? ATTR_REGION_COLOR[row.region] : row.threat ? '#f43f5e' : labelColor;
-            },
+            color: GREEN,
+            formatter: (p: { value: number }) => (p.value ? `+${p.value}%` : ''),
           },
         },
       ],
@@ -121,15 +117,11 @@ export function AttrSynergyChart({ attrs }: { attrs: AvatarAttr[] }) {
 
     const onResize = () => chart.resize();
     window.addEventListener('resize', onResize);
-    const mq = window.matchMedia?.('(prefers-color-scheme: dark)');
-    const onTheme = () => chart.dispose(); // 테마 전환 시 재마운트에 맡김(모달은 짧게 뜬다)
-    mq?.addEventListener?.('change', onTheme);
     return () => {
       window.removeEventListener('resize', onResize);
-      mq?.removeEventListener?.('change', onTheme);
       chart.dispose();
     };
-  }, [attrs]);
+  }, [rows]);
 
-  return <div ref={ref} className="h-[168px] w-full" />;
+  return <div ref={ref} style={{ width: '100%', height: rows.length * SYNERGY_ROW_H }} />;
 }

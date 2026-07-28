@@ -8,7 +8,15 @@ import { useResourceToast } from '@/components/ResourceToast';
 import { runeVectorDesc } from '@/components/RuneName';
 import { ATTR_REGION_COLOR, ATTR_REGION_KO, type AvatarAttr } from '@/lib/game/balance';
 
+import dynamic from 'next/dynamic';
+
 import { AttrHelpModal } from './AttrHelpModal';
+
+// echarts는 무거워 초기 번들에서 제외 — 마운트 후 그려진다(자리는 미리 확보).
+const AttrMiniChart = dynamic(() => import('./AttrMiniChart').then((m) => m.AttrMiniChart), {
+  ssr: false,
+  loading: () => <div className="h-[66px] w-[66px]" />,
+});
 import { setActiveProfile, deleteProfile } from './actions';
 
 type ProfileItem = {
@@ -142,6 +150,38 @@ export function ProfileSelector({
             </span>
           </button>
         ) : null}
+        {/* 속성 코너 위젯 — 미니 폴라 차트(C1) + 중앙 '?' + 하단 수치. 위젯 전체가 상성 팝업 트리거. */}
+        <button
+          type="button"
+          onClick={() => setHelpOpen(true)}
+          aria-label="속성 상성 보기"
+          className="absolute left-2 top-2 z-10 w-[78px] rounded-xl border border-white/10 bg-white/[0.05] p-1.5 text-left backdrop-blur-sm transition active:scale-95"
+        >
+          <div className="relative flex justify-center">
+            <AttrMiniChart attrs={sel.attrs} />
+            <span className="pointer-events-none absolute inset-0 grid place-items-center">
+              <span className="grid h-[19px] w-[19px] place-items-center rounded-full bg-zinc-700 text-[10px] font-black text-zinc-200 ring-[1.5px] ring-black/50">
+                ?
+              </span>
+            </span>
+          </div>
+          <div className="mt-1 flex flex-col gap-[2px]">
+            {selAttrs.length > 0 ? (
+              selAttrs.map(([r, v]) => (
+                <span key={r} className="flex items-center gap-1 text-[9.5px] font-bold leading-[1.35] text-zinc-200">
+                  <i
+                    className="block h-[5px] w-[5px] shrink-0 rounded-full"
+                    style={{ backgroundColor: ATTR_REGION_COLOR[r] }}
+                  />
+                  {ATTR_REGION_KO[r]}
+                  <b className="ml-auto font-mono font-black tabular-nums">{v}%</b>
+                </span>
+              ))
+            ) : (
+              <span className="text-center text-[9px] text-zinc-500">속성 없음</span>
+            )}
+          </div>
+        </button>
         <div className="relative mx-auto flex aspect-square w-full max-w-[256px] select-none items-center justify-center isolate overflow-hidden rounded-xl">
           {/* 발밑 타원 그림자 */}
           <div className="pointer-events-none absolute bottom-[6%] left-1/2 h-[6%] w-1/2 -translate-x-1/2 rounded-[50%] bg-black/45 blur-[6px]" />
@@ -155,36 +195,6 @@ export function ProfileSelector({
               style={{ imageRendering: 'pixelated' }}
             />
           ) : null}
-        </div>
-        {/* 속성(A-3) — 권역색 점 + 기본색 텍스트(가독성 우선). 높이 고정으로 시프트 없음. */}
-        <div className="mt-2 flex h-6 items-center gap-2 px-1">
-          <div className="flex min-w-0 flex-1 items-center gap-3 overflow-hidden">
-            {selAttrs.length > 0 ? (
-              selAttrs.map(([r, v]) => (
-                <span
-                  key={r}
-                  className="flex shrink-0 items-center gap-1.5 text-[12.5px] font-semibold text-zinc-700 dark:text-zinc-200"
-                >
-                  <i
-                    className="block h-[7px] w-[7px] shrink-0 rounded-full"
-                    style={{ backgroundColor: ATTR_REGION_COLOR[r] }}
-                  />
-                  {ATTR_REGION_KO[r]}{' '}
-                  <b className="font-mono font-black tabular-nums">{v}%</b>
-                </span>
-              ))
-            ) : (
-              <span className="text-[12.5px] text-zinc-400">속성 없음</span>
-            )}
-          </div>
-          <button
-            type="button"
-            onClick={() => setHelpOpen(true)}
-            aria-label="속성 상성 보기"
-            className="grid h-5 w-5 shrink-0 place-items-center rounded-full bg-zinc-100 text-[10px] font-black text-zinc-500 transition active:scale-90 dark:bg-zinc-800 dark:text-zinc-400"
-          >
-            ?
-          </button>
         </div>
       </div>
 

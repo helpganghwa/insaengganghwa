@@ -16,10 +16,12 @@ import {
   type AvatarAttr,
 } from '@/lib/game/balance';
 
+import { synergyRows, SYNERGY_ROW_H } from './AttrSynergyChart';
+
 // echarts는 무거워 팝업을 열 때만 로드(프로필 화면 초기 번들에서 제외).
 const AttrSynergyChart = dynamic(
   () => import('./AttrSynergyChart').then((m) => m.AttrSynergyChart),
-  { ssr: false, loading: () => <div className="h-[168px] w-full" /> },
+  { ssr: false, loading: () => <div style={{ height: 6 * SYNERGY_ROW_H }} /> },
 );
 
 /** 계산 방법 상세(2차) — 공시 §6과 1:1. 공용 팝업 스타일. */
@@ -78,6 +80,7 @@ function CalcModal({ onClose }: { onClose: () => void }) {
 export function AttrHelpModal({ onClose, attrs }: { onClose: () => void; attrs: AvatarAttr[] }) {
   const [calcOpen, setCalcOpen] = useState(false);
   const vec = runeVectorDesc(attrs);
+  const rows = synergyRows(attrs);
   return (
     <>
       <ModalShell
@@ -96,11 +99,31 @@ export function AttrHelpModal({ onClose, attrs }: { onClose: () => void; attrs: 
 
         {vec.length > 0 ? (
           <>
-            <p className="mt-2 text-[11.5px] text-zinc-500">
-              상대가 그 권역을 100% 가졌을 때 내 공격 보정
+            <p className="mt-2 text-center text-[11px] text-zinc-500">
+              상대가 그 권역을 100% 가졌을 때
             </p>
-            <AttrSynergyChart attrs={attrs} />
-            <div className="mt-1 flex flex-col gap-1 rounded-xl bg-zinc-100 px-3 py-2.5 dark:bg-zinc-900">
+            {/* 대칭 막대 + 권역 이름 중앙 오버레이(막대 양끝 수치와 충돌 없음) */}
+            <div className="relative mt-1">
+              <AttrSynergyChart rows={rows} />
+              <div className="pointer-events-none absolute inset-0 flex flex-col justify-around">
+                {rows.map((r) => (
+                  <span key={r.region} className="text-center">
+                    <span className="bg-white px-1.5 text-[10px] font-extrabold text-zinc-700 dark:bg-zinc-950 dark:text-zinc-200">
+                      {ATTR_REGION_KO[r.region]}
+                    </span>
+                  </span>
+                ))}
+              </div>
+            </div>
+            <div className="mt-1 flex justify-center gap-4 text-[10.5px] text-zinc-500">
+              <span>
+                <i className="mr-1 inline-block h-[3px] w-[9px] rounded-sm bg-rose-500 align-middle" />← 불리
+              </span>
+              <span>
+                <i className="mr-1 inline-block h-[3px] w-[9px] rounded-sm bg-emerald-500 align-middle" />유리 →
+              </span>
+            </div>
+            <div className="mt-2.5 flex flex-col gap-1 rounded-xl bg-zinc-100 px-3 py-2.5 dark:bg-zinc-900">
               {vec.map(([r, v]) => (
                 <p key={r} className="text-[12px]">
                   <b style={{ color: ATTR_REGION_COLOR[r] }}>
