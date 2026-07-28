@@ -8,6 +8,7 @@ import { meleeBattles } from '@/lib/db/schema/melee';
 import { kstDateString, kstStartOfDay } from '@/lib/kst';
 import { buildMeleeResultView } from '@/lib/game/melee/result-view';
 import { loadMeleeHistory } from '@/lib/game/melee/history';
+import { getMeleeRanking } from '@/lib/game/melee/ranking';
 
 import { MeleeCountdown } from './MeleeCountdown';
 import { MeleeResult } from './MeleeResult';
@@ -79,6 +80,21 @@ export default async function MeleePage() {
   }
 
   // ── 발표됨 — 결과 뷰(오늘/과거 공용 빌더) ──
-  const view = await buildMeleeResultView({ ...battle, serverId, battleDate }, userId);
-  return <MeleeResult view={view} serverId={serverId} battleId={String(battle.id)} myUserId={userId} />;
+  // 순위 첫 페이지를 함께 실어 보낸다 — 기본 탭이 전체 순위라, 클라에서 액션으로 받으면
+  // 진입할 때마다 왕복이 한 번 더 붙어 목록이 비어 있는 순간이 보인다.
+  const [view, initialRank] = await Promise.all([
+    buildMeleeResultView({ ...battle, serverId, battleDate }, userId),
+    getMeleeRanking({ battleId: battle.id, serverId, viewerUserId: userId, mode: 'all' }).catch(
+      () => ({ rows: [], myRank: null }),
+    ),
+  ]);
+  return (
+    <MeleeResult
+      view={view}
+      serverId={serverId}
+      battleId={String(battle.id)}
+      myUserId={userId}
+      initialRank={initialRank}
+    />
+  );
 }

@@ -2,7 +2,7 @@
 
 import { useCallback, useEffect, useLayoutEffect, useRef, useState, useTransition } from 'react';
 import Link from 'next/link';
-import { usePathname, useRouter, useSearchParams } from 'next/navigation';
+import { usePathname, useSearchParams } from 'next/navigation';
 
 import { profileHref } from '@/lib/game/profile/href';
 import { meleeFaceCropStyle } from '@/components/faceCrop';
@@ -77,20 +77,22 @@ export function useMeleeRanking({
   battleId,
   enabled,
   participantCount,
+  initial,
 }: {
   battleId: string;
   enabled: boolean;
   /** 총 참가자 수 = 최하위 등수. 아래 끝 판정에 쓴다. */
   participantCount: number;
+  /** 서버가 실어 보낸 전체 순위 첫 페이지 — 첫 진입에서 액션 왕복을 없앤다. */
+  initial: { rows: MeleeRankRow[]; myRank: number | null };
 }) {
-  const router = useRouter();
   const pathname = usePathname();
   const search = useSearchParams();
   const subParam = search.get('sub');
   const mode: MeleeRankMode = subParam === 'guild' ? 'guild' : 'all';
 
-  const [rows, setRows] = useState<MeleeRankRow[]>([]);
-  const [myRank, setMyRank] = useState<number | null>(null);
+  const [rows, setRows] = useState<MeleeRankRow[]>(initial.rows);
+  const [myRank, setMyRank] = useState<number | null>(initial.myRank);
   const [pending, startTransition] = useTransition();
 
   // 스크롤 컨테이너 — 위로 로드할 때 앵커 보정(prepend 시 화면이 튀지 않게).
@@ -108,6 +110,8 @@ export function useMeleeRanking({
   const firstLoad = useRef(true);
   /** 위쪽 이어붙이기 앵커 — 프리펜드 직전 기준 행의 위치를 잡아두고 커밋 직후 되맞춘다. */
   const anchor = useRef<{ rank: number; top: number; scrollTop: number } | null>(null);
+  /** 서버 초기 데이터가 아직 유효한지 — 첫 '전체' 로드는 이걸로 대체해 왕복을 건너뛴다. */
+  const seeded = useRef(initial.rows.length > 0);
   /** 이탈 저장 시 최신 값 참조(클로저 stale 방지) — 렌더가 아닌 효과에서 갱신한다. */
   const snapshot = useRef<{ rows: MeleeRankRow[]; myRank: number | null }>({ rows: [], myRank: null });
 
@@ -136,6 +140,11 @@ export function useMeleeRanking({
         setRows(cached.rows);
         setMyRank(cached.myRank);
         pendingScroll.current = cached.scrollTop;
+        return;
+      }
+      // 서버가 실어 보낸 첫 페이지가 곧 '전체' 초기 상태 — 그대로 두고 왕복을 생략한다.
+      if (mode === 'all' && seeded.current) {
+        seeded.current = false;
         return;
       }
       const r = await meleeRankingAction({ battleId, mode });
@@ -227,7 +236,9 @@ export function useMeleeRanking({
     if (m === 'all') q.delete('sub');
     else q.set('sub', m);
     const qs = q.toString();
-    router.replace(qs ? `${pathname}?${qs}` : pathname, { scroll: false });
+    // 네이티브 History API — Next가 pushState/replaceState를 감싸 라우터 상태만 갱신한다.
+    // router.replace를 쓰면 같은 페이지를 서버에서 다시 렌더(RSC 왕복)해 탭 전환이 굼떠진다.
+    window.history.replaceState(null, '', qs ? `${pathname}?${qs}` : pathname);
   };
 
   /** 내 순위로 — 이미 로드돼 있으면 스크롤만, 아니면 내 등수 주변으로 다시 로드 후 스크롤. */
@@ -475,6 +486,18 @@ export function MeleeRankList({
           <Row r={r} isMe={r.userId === myUserId} serverId={serverId} />
         </div>
       ))}
+      {rows.length === 0 && pending
+        ? // 첫 로드(길드 탭 등) 동안 빈 화면 대신 자리를 잡아둔다 — 높이가 같아 시프트도 없다.
+          Array.from({ length: 6 }, (_, i) => (
+            <li
+              key={i}
+              className="flex h-[56px] items-center gap-2.5 border-b border-zinc-800/70 px-3"
+            >
+              <span className="h-3 w-6 animate-pulse rounded bg-zinc-800" />
+              <span className="h-3 w-24 animate-pulse rounded bg-zinc-800/80" />
+            </li>
+          ))
+        : null}
       {rows.length === 0 && !pending ? (
         <li className="px-4 py-10 text-center text-[12px] text-zinc-500">
           {mode === 'guild' ? '같은 길드 참가자가 없습니다.' : '순위 정보가 없습니다.'}

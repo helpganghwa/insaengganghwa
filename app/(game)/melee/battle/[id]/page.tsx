@@ -6,6 +6,7 @@ import { db } from '@/lib/db/client';
 import { withTimeout } from '@/lib/db/with-timeout';
 import { meleeBattles } from '@/lib/db/schema/melee';
 import { buildMeleeResultView } from '@/lib/game/melee/result-view';
+import { getMeleeRanking } from '@/lib/game/melee/ranking';
 
 import { MeleeResult } from '../../MeleeResult';
 
@@ -40,6 +41,23 @@ export default async function MeleeBattlePage({ params }: { params: Promise<{ id
 
   if (!battle || battle.status !== 'revealed') notFound();
 
-  const view = await buildMeleeResultView(battle, userId);
-  return <MeleeResult view={view} serverId={battle.serverId} battleId={String(battle.id)} myUserId={userId} />;
+  // 순위 첫 페이지 동봉 — /melee와 동일(기본 탭이 전체 순위라 왕복 한 번을 줄인다).
+  const [view, initialRank] = await Promise.all([
+    buildMeleeResultView(battle, userId),
+    getMeleeRanking({
+      battleId: battle.id,
+      serverId: battle.serverId,
+      viewerUserId: userId,
+      mode: 'all',
+    }).catch(() => ({ rows: [], myRank: null })),
+  ]);
+  return (
+    <MeleeResult
+      view={view}
+      serverId={battle.serverId}
+      battleId={String(battle.id)}
+      myUserId={userId}
+      initialRank={initialRank}
+    />
+  );
 }

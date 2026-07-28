@@ -3,7 +3,7 @@ import { profileHref } from '@/lib/game/profile/href';
 
 import { useEffect, useState } from 'react';
 import { createPortal } from 'react-dom';
-import { usePathname, useRouter, useSearchParams } from 'next/navigation';
+import { usePathname, useSearchParams } from 'next/navigation';
 import Link from 'next/link';
 import { josa } from 'es-hangul';
 
@@ -15,6 +15,7 @@ import {
   MeleeRankList,
   useMeleeRanking,
 } from './MeleeRanking';
+import type { MeleeRankRow } from '@/lib/game/melee/ranking';
 import { assetUrl } from '@/lib/asset-versions';
 import { meleeFaceCropStyle, type FaceBox } from '@/components/faceCrop';
 import { GuildBadge } from '@/components/GuildBadge';
@@ -671,14 +672,16 @@ export function MeleeResult({
   serverId,
   battleId,
   myUserId,
+  initialRank,
 }: {
   view: MeleeResultView;
   serverId: number;
   battleId: string;
   myUserId: string;
+  /** 서버에서 함께 받아온 전체 순위 첫 페이지. */
+  initialRank: { rows: MeleeRankRow[]; myRank: number | null };
 }) {
   // 탭은 URL 쿼리로 — 프로필 상세 갔다 뒤로가기해도 보던 탭·스크롤이 복원된다(로컬 state면 초기화됨).
-  const router = useRouter();
   const pathname = usePathname();
   const search = useSearchParams();
   const tab = ((): 'rank' | 'log' | 'mine' => {
@@ -692,6 +695,7 @@ export function MeleeResult({
     battleId,
     enabled: tab === 'rank',
     participantCount: view.participantCount,
+    initial: initialRank,
   });
   const {
     podium,
@@ -908,8 +912,9 @@ export function MeleeResult({
     else q.set('tab', t);
     if (t !== 'rank') q.delete('sub');
     const qs = q.toString();
-    // push — 뒤로가기로 이전 탭에 돌아갈 수 있게(스크롤 복원은 App Router가 담당).
-    router.push(qs ? `${pathname}?${qs}` : pathname, { scroll: false });
+    // 네이티브 History API로 push — 뒤로가기로 이전 탭에 돌아갈 수 있으면서, router.push와 달리
+    // 같은 페이지의 RSC 재렌더(서버 왕복)를 유발하지 않는다. 탭 내용은 이미 클라에 다 있다.
+    window.history.pushState(null, '', qs ? `${pathname}?${qs}` : pathname);
   };
 
   return (
