@@ -63,28 +63,20 @@ export default async function ProfileSelectPage() {
           <span className="text-xs">첫 아바타 만들기</span>
         </Link>
       ) : (
-        <>
-          <ProfileSelector
-            profiles={list.map((r) => ({
-              id: r.id,
-              rotations: r.rotations as Record<string, string>,
-              isDefault: (r.options as { isDefault?: boolean } | null)?.isDefault === true,
-              attrId: r.attrId?.toString() ?? null,
-              attrName: r.attrName,
-              attrs: r.attrs ?? [],
-            }))}
-            activeProfileId={ch?.activeProfileId ?? null}
-            equippedRuneId={ch?.equippedRuneId?.toString() ?? null}
-            runeChangedAtIso={ch?.runeChangedAt?.toISOString() ?? null}
-            diamond={Number(ch?.diamond ?? 0n)}
-          />
-          <Link prefetch={false}
-            href="/me/create"
-            className="flex w-full items-center justify-center gap-2 rounded-xl bg-amber-600 px-4 py-3 text-sm font-bold text-white shadow-md transition active:scale-[0.99]"
-          >
-            <span aria-hidden>✨</span> 아바타 생성
-          </Link>
-        </>
+        <ProfileSelector
+          profiles={list.map((r) => ({
+            id: r.id,
+            rotations: r.rotations as Record<string, string>,
+            isDefault: (r.options as { isDefault?: boolean } | null)?.isDefault === true,
+            attrId: r.attrId?.toString() ?? null,
+            attrName: r.attrName,
+            attrs: r.attrs ?? [],
+          }))}
+          activeProfileId={ch?.activeProfileId ?? null}
+          equippedRuneId={ch?.equippedRuneId?.toString() ?? null}
+          runeChangedAtIso={ch?.runeChangedAt?.toISOString() ?? null}
+          diamond={Number(ch?.diamond ?? 0n)}
+        />
       )}
     </div>
   );

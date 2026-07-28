@@ -203,8 +203,9 @@ export default async function ProfilePage() {
             )}
           </div>
 
-          {/* 우(6) — 장비 3종, 좌 높이에 맞춰 stretch */}
-          <div className="flex basis-3/5 flex-col gap-1.5">
+          {/* 우(6) — 장비 3종 + 속성(4번째 줄). 행 고정 h-12(2026-07-28 피드백: 4행 압축으로
+              낮아진 행높이 복원) — 좌 캐릭터(h-44)와 stretch 커플링 해제. */}
+          <div className="flex basis-3/5 flex-col justify-center gap-1.5">
             {(['weapon', 'armor', 'accessory'] as Slot[]).map((s) => {
               const it = bySlot.get(s);
               if (!it) {
@@ -212,7 +213,7 @@ export default async function ProfilePage() {
                   <Link prefetch={false}
                     key={s}
                     href={`/inventory?slot=${s}`}
-                    className="flex flex-1 items-center gap-2 rounded-xl border border-dashed border-white/15 bg-white/[0.02] px-2 text-white/45"
+                    className="flex h-12 items-center gap-2 rounded-xl border border-dashed border-white/15 bg-white/[0.02] px-2 text-white/45"
                   >
                     <span className="grid h-9 w-9 shrink-0 place-items-center rounded-lg bg-white/5 text-lg" aria-hidden>
                       {SLOT_EMOJI[s]}
@@ -225,7 +226,7 @@ export default async function ProfilePage() {
                 <div
                   key={s}
                   style={rarityBorderStyle(it.transcendLevel)}
-                  className={`flex flex-1 items-center gap-2 rounded-xl border bg-white/5 px-2 ${
+                  className={`flex h-12 items-center gap-2 rounded-xl border bg-white/5 px-2 ${
                     hasRarityBorder(it.transcendLevel) ? '' : 'border-white/10'
                   }`}
                 >
@@ -249,34 +250,27 @@ export default async function ProfilePage() {
                 </div>
               );
             })}
-            {/* 4번째 줄 — 적용 중 속성(I안 확정): 장비와 동일 문법. 탭 시 아바타 관리(속성 통합). */}
+            {/* 4번째 줄 — 적용 중 속성: 장비 행과 다른 문법(아이콘 없이 이름이 주인공,
+                은은한 앰버 틴트) but 같은 h-12(피드백 1). 탭 시 아바타 관리(속성 통합). */}
             {row?.rune_attrs ? (
               <Link
                 prefetch={false}
                 href="/me/profiles"
                 aria-label="적용 중인 속성"
-                className="flex flex-1 items-center gap-2 rounded-xl border border-amber-500/30 bg-white/5 px-2"
+                className="flex h-12 flex-col justify-center rounded-xl border border-amber-500/25 bg-gradient-to-r from-amber-500/10 to-transparent px-2.5"
               >
-                <span className="grid h-9 w-9 shrink-0 place-items-center rounded-lg bg-white/5 text-lg" aria-hidden>
-                  🔮
-                </span>
-                <div className="min-w-0 flex-1">
-                  <div className="flex min-w-0">
-                    <RuneName name={row.rune_name} attrs={row.rune_attrs} className="text-[12px] leading-tight" />
-                  </div>
-                  <RuneValues attrs={row.rune_attrs} className="text-[10px]" />
+                <div className="flex min-w-0">
+                  <RuneName name={row.rune_name} attrs={row.rune_attrs} className="text-[13px] leading-tight" />
                 </div>
+                <RuneValues attrs={row.rune_attrs} className="mt-0.5 text-[10px]" />
               </Link>
             ) : (
               <Link
                 prefetch={false}
                 href="/me/profiles"
-                className="flex flex-1 items-center gap-2 rounded-xl border border-dashed border-white/15 bg-white/[0.02] px-2 text-white/45"
+                className="flex h-12 items-center justify-center rounded-xl border border-dashed border-white/15 bg-white/[0.02] px-2 text-[12px] text-white/45"
               >
-                <span className="grid h-9 w-9 shrink-0 place-items-center rounded-lg bg-white/5 text-lg" aria-hidden>
-                  🔮
-                </span>
-                <span className="text-[12px]">속성 적용</span>
+                속성 적용
               </Link>
             )}
           </div>

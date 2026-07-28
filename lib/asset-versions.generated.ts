@@ -38,7 +38,7 @@ export const ASSET_VERSIONS: Record<string, string> = {
   "/sprites/boss/bg/stone_golem.png": "7abdf27c",
   "/sprites/boss/bg/fallen_angel.png": "e2d5bd2b",
   "/sprites/boss/bg/slime_king.png": "639b58cf",
-  "/sprites/boss/bg/gold_griffin.png": "7e307b3d",
+  "/sprites/boss/bg/gold_griffin.png": "cc42ddf1",
   "/sprites/boss/bg/dragon_west.png": "0c8757a3",
   "/sprites/boss/gold_griffin.png": "b9fef6b2",
   "/sprites/boss/stone_golem__anim.png": "3165970c",

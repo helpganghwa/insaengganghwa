@@ -1,13 +1,14 @@
 'use client';
 
+import Link from 'next/link';
 import { useEffect, useMemo, useState, useTransition } from 'react';
 import { useRouter } from 'next/navigation';
 
 import * as haptic from '@/lib/game/haptic';
 import { useResourceToast } from '@/components/ResourceToast';
-import { ModalShell } from '@/components/ModalShell';
 import { RuneName, RuneValues, runeVectorDesc } from '@/components/RuneName';
 import {
+  ATTR_REGION_COLOR,
   ATTR_REGION_KO,
   attrPredator,
   attrPrey,
@@ -41,9 +42,9 @@ function fmtRemain(ms: number): string {
 }
 
 /**
- * 아바타 관리(I안 확정, 2026-07-28) — 2열 그리드. 카드 = 아바타(크게) + 속성 4번째 줄 개념.
- * 아바타 영역: 외형 적용/해제 토글 · 속성 영역: 속성 적용(72h 쿨 + 💎 즉시) · 우상단 삭제.
- * 속성 이름/수치 탭 → 상성 시트. 삭제 시 속성도 함께 소멸(0141 cascade) — 컨펌에 명시.
+ * 아바타 관리(2026-07-28 재설계) — **선택 = 세트 미리보기**가 중심.
+ * 상단 스티키 바(생성 상시 노출) → 미리보기 카드(아바타 크게 + 속성 이름·수치·상성 + 삭제)
+ * → 3열 썸네일(현재 지정 뱃지). 외형/속성은 각각 지정(속성 교체만 72h 쿨 + 💎 단축).
  */
 export function ProfileSelector({
   profiles,
@@ -61,7 +62,7 @@ export function ProfileSelector({
   const router = useRouter();
   const { showHeaderToast, showError } = useResourceToast();
 
-  // 낙관적 로컬 상태 — 액션 성공 즉시 반영. props 갱신 시 렌더 중 조정 패턴으로 재동기화.
+  // 낙관적 로컬 상태 — 액션 성공 즉시 반영. props 갱신 시 렌더 중 조정으로 재동기화.
   const [activeId, setActiveId] = useState(activeProfileId);
   const [eqAttrId, setEqAttrId] = useState(equippedRuneId);
   const [changedAt, setChangedAt] = useState(runeChangedAtIso ? Date.parse(runeChangedAtIso) : null);
@@ -78,23 +79,28 @@ export function ProfileSelector({
   }
 
   const [deletedIds, setDeletedIds] = useState<Set<string>>(new Set());
-  const list = profiles.filter((p) => !deletedIds.has(p.id));
+  const list = useMemo(() => profiles.filter((p) => !deletedIds.has(p.id)), [profiles, deletedIds]);
+
+  // 미리보기 선택 — 기본은 현재 외형(없으면 첫 번째).
+  const [selId, setSelId] = useState<string>(
+    () => (activeProfileId && profiles.some((p) => p.id === activeProfileId) ? activeProfileId : profiles[0]?.id) ?? '',
+  );
+  const sel = list.find((p) => p.id === selId) ?? list[0] ?? null;
 
   const [pending, startTransition] = useTransition();
-  // 삭제 2탭 컨펌(3s) — 카드별.
-  const [confirmDeleteId, setConfirmDeleteId] = useState<string | null>(null);
+  const [confirmDelete, setConfirmDelete] = useState(false);
+  const [confirmGem, setConfirmGem] = useState(false);
+  // 컨펌은 3s 후 자동 해제(오탭 보호) + 선택 변경 시 초기화.
   useEffect(() => {
-    if (!confirmDeleteId) return;
-    const t = setTimeout(() => setConfirmDeleteId(null), 3000);
+    if (!confirmDelete) return;
+    const t = setTimeout(() => setConfirmDelete(false), 3000);
     return () => clearTimeout(t);
-  }, [confirmDeleteId]);
-  // 💎 즉시 교체 2탭 컨펌(3s) — 카드별.
-  const [confirmGemId, setConfirmGemId] = useState<string | null>(null);
+  }, [confirmDelete]);
   useEffect(() => {
-    if (!confirmGemId) return;
-    const t = setTimeout(() => setConfirmGemId(null), 3000);
+    if (!confirmGem) return;
+    const t = setTimeout(() => setConfirmGem(false), 3000);
     return () => clearTimeout(t);
-  }, [confirmGemId]);
+  }, [confirmGem]);
 
   // 속성 교체 쿨 카운트다운 — 남아있을 때만 1초 틱.
   const [now, setNow] = useState(() => Date.now());
@@ -108,26 +114,34 @@ export function ProfileSelector({
   const inCooldown = remainMs > 0;
   const gemCost = inCooldown ? Math.ceil(remainMs / GEM_TO_MS) : 0;
 
-  const [sheetId, setSheetId] = useState<string | null>(null);
-  const sheet = useMemo(() => list.find((p) => p.id === sheetId) ?? null, [list, sheetId]);
+  if (!sel) return null;
+  const isLook = sel.id === activeId;
+  const isAttr = sel.attrId != null && sel.attrId === eqAttrId;
 
-  const doLook = (p: ProfileItem) => {
+  const pick = (p: ProfileItem) => {
+    if (p.id === selId) return;
+    setSelId(p.id);
+    setConfirmDelete(false);
+    setConfirmGem(false);
+  };
+
+  const doLook = () => {
     if (pending) return;
-    const isActive = p.id === activeId;
     haptic.success();
-    if (isActive) {
-      setActiveId(null); // 낙관 해제
+    if (isLook) {
+      setActiveId(null);
       void clearActiveProfile().then((r) => {
         if (r.status === 'error') {
-          setActiveId(p.id);
+          setActiveId(sel.id);
           showError(r.message);
         }
       });
     } else {
-      setActiveId(p.id); // 낙관 적용
-      void setActiveProfile(p.id).then((r) => {
+      const prev = activeId;
+      setActiveId(sel.id);
+      void setActiveProfile(sel.id).then((r) => {
         if (r.status === 'error') {
-          setActiveId(activeId);
+          setActiveId(prev);
           showError(r.message);
         } else {
           showHeaderToast({ title: '외형 아바타 변경' });
@@ -136,19 +150,18 @@ export function ProfileSelector({
     }
   };
 
-  const doAttr = (p: ProfileItem, useGems: boolean) => {
-    if (pending || p.attrId == null || p.attrId === eqAttrId) return;
-    if (useGems && confirmGemId !== p.id) {
-      setConfirmGemId(p.id); // 1탭: 컨펌 진입
+  const doAttr = () => {
+    if (pending || sel.attrId == null || isAttr) return;
+    if (inCooldown && !confirmGem) {
+      setConfirmGem(true); // 💎 소모는 2탭 확정
       return;
     }
-    setConfirmGemId(null);
+    setConfirmGem(false);
     startTransition(async () => {
-      const r = await applyAttrProfile(p.id, useGems);
+      const r = await applyAttrProfile(sel.id, inCooldown);
       if (r.status === 'success') {
-        setEqAttrId(p.attrId);
+        setEqAttrId(sel.attrId);
         setChangedAt(Date.now());
-        setSheetId(null);
         showHeaderToast({ title: '속성 적용' });
       } else if (r.status === 'cooldown') {
         showError(`교체 대기 ${fmtRemain(r.remainingMs)} 남음 · 💎 ${r.gemCost.toLocaleString()}로 즉시 교체할 수 있어요.`);
@@ -158,204 +171,208 @@ export function ProfileSelector({
     });
   };
 
-  const doDelete = (p: ProfileItem) => {
+  const doDelete = () => {
     if (pending) return;
-    if (confirmDeleteId !== p.id) {
-      setConfirmDeleteId(p.id);
+    if (!confirmDelete) {
+      setConfirmDelete(true);
       return;
     }
-    setConfirmDeleteId(null);
+    setConfirmDelete(false);
     startTransition(async () => {
-      const r = await deleteProfile(p.id);
+      const r = await deleteProfile(sel.id);
       if (r.status === 'error') return showError(r.message);
-      setDeletedIds((s) => new Set(s).add(p.id));
-      if (p.id === activeId) setActiveId(null);
-      if (p.attrId != null && p.attrId === eqAttrId) setEqAttrId(null);
+      const remaining = list.filter((p) => p.id !== sel.id);
+      setDeletedIds((s) => new Set(s).add(sel.id));
+      if (sel.id === activeId) setActiveId(null);
+      if (sel.attrId != null && sel.attrId === eqAttrId) setEqAttrId(null);
+      setSelId(remaining[0]?.id ?? '');
       router.refresh();
     });
   };
 
   return (
     <div>
-      {/* 교체 쿨 상태 — 상단 1줄 요약(쿨 없으면 숨김) */}
-      {inCooldown ? (
-        <p className="mb-3 text-center text-[11px] text-zinc-500">
-          속성 교체 대기 <span className="font-mono tabular-nums">{fmtRemain(remainMs)}</span> · 즉시 교체 💎{' '}
-          {gemCost.toLocaleString()}
-        </p>
-      ) : null}
-
-      <div className="grid grid-cols-2 gap-3">
-        {list.map((p) => {
-          const isLook = p.id === activeId;
-          const isAttr = p.attrId != null && p.attrId === eqAttrId;
-          const confirmingDel = confirmDeleteId === p.id;
-          const confirmingGem = confirmGemId === p.id;
-          return (
-            <div
-              key={p.id}
-              className={`relative flex flex-col rounded-2xl border bg-white p-2 dark:bg-zinc-950 ${
-                isAttr
-                  ? 'border-amber-400/70 dark:border-amber-500/50'
-                  : isLook
-                    ? 'border-violet-400/70 dark:border-violet-500/50'
-                    : 'border-zinc-200 dark:border-zinc-800'
-              }`}
-            >
-              {/* 삭제 — 우상단(기본 아바타 제외). 속성 동반 소멸 경고를 컨펌 라벨에 담음. */}
-              {!p.isDefault && list.length > 1 ? (
-                <button
-                  type="button"
-                  onClick={() => doDelete(p)}
-                  disabled={pending}
-                  aria-label="아바타 삭제(속성 포함)"
-                  className={`absolute right-1.5 top-1.5 z-10 rounded-full px-2 py-0.5 text-[10px] font-bold backdrop-blur-sm transition active:scale-95 disabled:opacity-50 ${
-                    confirmingDel ? 'bg-red-600 text-white' : 'bg-black/50 text-red-300'
-                  }`}
-                >
-                  {confirmingDel ? '속성도 삭제됨' : '삭제'}
-                </button>
-              ) : null}
-
-              {/* 뱃지 — 좌상단 */}
-              <div className="absolute left-1.5 top-1.5 z-10 flex gap-1">
-                {isLook ? (
-                  <span className="rounded-full bg-violet-600/90 px-1.5 py-0.5 text-[9px] font-extrabold text-white">외형</span>
-                ) : null}
-                {isAttr ? (
-                  <span className="rounded-full bg-amber-500/90 px-1.5 py-0.5 text-[9px] font-extrabold text-black">속성</span>
-                ) : null}
-              </div>
-
-              {/* 아바타 — 크게 */}
-              <div className="relative flex aspect-square w-full select-none items-end justify-center isolate overflow-hidden rounded-xl">
-                <div className="pointer-events-none absolute bottom-[5%] left-1/2 h-[6%] w-1/2 -translate-x-1/2 rounded-[50%] bg-black/40 blur-[5px]" />
-                {frontSrc(p) ? (
-                  // eslint-disable-next-line @next/next/no-img-element
-                  <img
-                    src={frontSrc(p)}
-                    alt="아바타"
-                    draggable={false}
-                    className="pointer-events-none absolute inset-0 h-full w-full object-contain object-bottom"
-                    style={{ imageRendering: 'pixelated' }}
-                  />
-                ) : null}
-              </div>
-              <button
-                type="button"
-                onClick={() => doLook(p)}
-                disabled={pending}
-                className={`mt-1.5 h-9 w-full rounded-lg text-[12px] font-bold transition active:scale-[0.98] disabled:opacity-60 ${
-                  isLook
-                    ? 'bg-zinc-100 text-zinc-500 dark:bg-zinc-800 dark:text-zinc-400'
-                    : 'bg-violet-600 text-white'
-                }`}
-              >
-                {isLook ? '아바타 해제' : '아바타 적용'}
-              </button>
-
-              {/* 속성 — 4번째 줄 개념. 이름/수치 탭 → 상성 시트. */}
-              <div className="mt-2 border-t border-zinc-100 pt-2 dark:border-zinc-900">
-                {p.attrId != null ? (
-                  <>
-                    <button
-                      type="button"
-                      onClick={() => setSheetId(p.id)}
-                      className="block w-full text-left"
-                      aria-label="속성 상세(상성)"
-                    >
-                      <div className="flex min-w-0 items-center gap-1">
-                        <span className="shrink-0 text-[10px]" aria-hidden>🔮</span>
-                        <RuneName name={p.attrName} attrs={p.attrs} className="text-[12px]" />
-                      </div>
-                      <RuneValues attrs={p.attrs} className="mt-0.5 text-[10.5px]" />
-                    </button>
-                    <button
-                      type="button"
-                      onClick={() => doAttr(p, inCooldown)}
-                      disabled={pending || isAttr || (inCooldown && diamond < gemCost)}
-                      className={`mt-1.5 h-9 w-full rounded-lg text-[12px] font-bold transition active:scale-[0.98] disabled:opacity-60 ${
-                        isAttr
-                          ? 'bg-zinc-100 text-zinc-500 dark:bg-zinc-800 dark:text-zinc-400'
-                          : confirmingGem
-                            ? 'bg-rose-600 text-white'
-                            : inCooldown
-                              ? 'bg-sky-600 text-white'
-                              : 'bg-amber-600 text-white'
-                      }`}
-                    >
-                      {isAttr
-                        ? '속성 적용 중'
-                        : inCooldown
-                          ? diamond < gemCost
-                            ? '다이아 부족'
-                            : confirmingGem
-                              ? `💎 ${gemCost.toLocaleString()} 확정`
-                              : `💎 ${gemCost.toLocaleString()} 교체`
-                          : '속성 적용'}
-                    </button>
-                  </>
-                ) : (
-                  <p className="py-2 text-center text-[10.5px] text-zinc-400">속성 없음</p>
-                )}
-              </div>
-            </div>
-          );
-        })}
+      {/* 스티키 헤더 — 생성 버튼 상시 노출(스크롤해도 사라지지 않음). */}
+      <div className="sticky top-0 z-20 -mx-4 mb-3 flex items-center gap-2 border-b border-zinc-200 bg-white/90 px-4 py-2 backdrop-blur dark:border-zinc-800 dark:bg-black/85">
+        <span className="flex-1 text-sm font-extrabold">아바타 관리</span>
+        <Link
+          prefetch={false}
+          href="/me/create"
+          className="flex items-center gap-1 rounded-full bg-amber-600 px-3.5 py-1.5 text-[12px] font-bold text-white shadow-sm transition active:scale-95"
+        >
+          <span aria-hidden>✨</span> 생성
+        </Link>
       </div>
 
-      {/* 상성 시트 */}
-      {sheet && sheet.attrId != null ? (
-        <ModalShell
-          onClose={() => setSheetId(null)}
-          label={sheet.attrName ?? '속성 상세'}
-          align="bottom"
-          className="w-full max-w-[358px] rounded-2xl bg-white p-4 shadow-xl dark:bg-zinc-900"
-        >
-          <div className="flex min-w-0">
-            <RuneName name={sheet.attrName} attrs={sheet.attrs} className="text-lg" />
+      {/* 미리보기 — 선택한 아바타 + 속성을 한 세트로. */}
+      <div className="relative rounded-2xl border border-zinc-200 bg-white p-3 dark:border-zinc-800 dark:bg-zinc-950">
+        {!sel.isDefault && list.length > 1 ? (
+          <button
+            type="button"
+            onClick={doDelete}
+            disabled={pending}
+            aria-label="선택한 아바타 삭제(속성 포함)"
+            className={`absolute right-2 top-2 z-10 rounded-full px-2.5 py-1 text-[11px] font-bold backdrop-blur-sm transition active:scale-95 disabled:opacity-50 ${
+              confirmDelete ? 'bg-red-600 text-white' : 'bg-black/50 text-red-300'
+            }`}
+          >
+            {confirmDelete ? '속성도 함께 삭제' : '삭제'}
+          </button>
+        ) : null}
+
+        <div className="flex gap-3">
+          {/* 아바타 — 크게 */}
+          <div className="relative flex h-[168px] w-[132px] shrink-0 select-none items-end justify-center isolate overflow-hidden rounded-xl">
+            <div className="pointer-events-none absolute bottom-[5%] left-1/2 h-[6%] w-1/2 -translate-x-1/2 rounded-[50%] bg-black/40 blur-[5px]" />
+            {frontSrc(sel) ? (
+              // eslint-disable-next-line @next/next/no-img-element
+              <img
+                src={frontSrc(sel)}
+                alt="아바타"
+                draggable={false}
+                className="pointer-events-none absolute inset-0 h-full w-full object-contain object-bottom"
+                style={{ imageRendering: 'pixelated' }}
+              />
+            ) : null}
           </div>
-          <RuneValues attrs={sheet.attrs} className="mt-1.5 text-[13px]" />
-          <div className="mt-3 space-y-1.5 rounded-xl bg-zinc-50 p-3 dark:bg-zinc-800/60">
-            {runeVectorDesc(sheet.attrs).map(([r]) => (
-              <p key={r} className="flex items-center gap-2 text-[12px]">
-                <span className="w-9 shrink-0 font-bold">{ATTR_REGION_KO[r]}</span>
-                <span className="text-zinc-500">
-                  강함 <b className="text-emerald-600 dark:text-emerald-400">{ATTR_REGION_KO[attrPrey(r)]}</b>
-                  {' · '}약점 <b className="text-rose-500 dark:text-rose-400">{ATTR_REGION_KO[attrPredator(r)]}</b>
+
+          {/* 속성 — 이름·수치·상성 */}
+          <div className="flex min-w-0 flex-1 flex-col justify-center">
+            <div className="flex gap-1">
+              {isLook ? (
+                <span className="rounded-full bg-violet-500/15 px-2 py-0.5 text-[10px] font-extrabold text-violet-500 dark:text-violet-300">
+                  외형
                 </span>
-              </p>
-            ))}
-            <p className="pt-0.5 text-[10px] leading-relaxed text-zinc-400">
-              상대가 내 각 권역의 &lsquo;강함&rsquo; 권역을 지니고 있으면 그만큼 내 공격이 강해집니다.
-            </p>
-          </div>
-          <div className="mt-3">
-            {sheet.attrId === eqAttrId ? (
-              <div className="flex h-11 w-full items-center justify-center rounded-full bg-zinc-100 text-sm font-bold text-zinc-400 dark:bg-zinc-800">
-                속성 적용 중
-              </div>
+              ) : null}
+              {isAttr ? (
+                <span className="rounded-full bg-amber-500/15 px-2 py-0.5 text-[10px] font-extrabold text-amber-600 dark:text-amber-400">
+                  속성 적용 중
+                </span>
+              ) : null}
+            </div>
+            {sel.attrId != null ? (
+              <>
+                <div className="mt-1 flex min-w-0">
+                  <RuneName name={sel.attrName} attrs={sel.attrs} className="text-[15px]" />
+                </div>
+                <RuneValues attrs={sel.attrs} className="mt-1 text-[12px]" />
+                <div className="mt-2 flex flex-col gap-0.5">
+                  {runeVectorDesc(sel.attrs).map(([r]) => (
+                    <p key={r} className="text-[11px] text-zinc-500">
+                      <b style={{ color: ATTR_REGION_COLOR[r] }}>{ATTR_REGION_KO[r]}</b> 강함{' '}
+                      <b className="text-emerald-600 dark:text-emerald-400">{ATTR_REGION_KO[attrPrey(r)]}</b> · 약점{' '}
+                      <b className="text-rose-500 dark:text-rose-400">{ATTR_REGION_KO[attrPredator(r)]}</b>
+                    </p>
+                  ))}
+                </div>
+              </>
             ) : (
-              <button
-                type="button"
-                disabled={pending || (inCooldown && diamond < gemCost)}
-                onClick={() => doAttr(sheet, inCooldown)}
-                className={`flex h-11 w-full items-center justify-center rounded-full text-sm font-bold text-white shadow-md transition active:scale-[0.99] disabled:opacity-60 ${
-                  confirmGemId === sheet.id ? 'bg-rose-600' : inCooldown ? 'bg-sky-600' : 'bg-amber-600'
-                }`}
-              >
-                {inCooldown
-                  ? diamond < gemCost
-                    ? `다이아 부족 (💎 ${gemCost.toLocaleString()} 필요)`
-                    : confirmGemId === sheet.id
-                      ? `한 번 더 누르면 💎 ${gemCost.toLocaleString()} 사용`
-                      : `💎 ${gemCost.toLocaleString()} 즉시 교체`
-                  : '속성 적용'}
-              </button>
+              <p className="mt-2 text-[12px] text-zinc-400">속성 없음</p>
             )}
           </div>
-        </ModalShell>
-      ) : null}
+        </div>
+
+        {/* 액션 — 외형 / 속성 */}
+        <div className="mt-3 flex gap-2">
+          <button
+            type="button"
+            onClick={doLook}
+            disabled={pending}
+            className={`h-11 flex-1 rounded-xl text-[12.5px] font-bold transition active:scale-[0.98] disabled:opacity-60 ${
+              isLook
+                ? 'bg-zinc-100 text-zinc-500 dark:bg-zinc-800 dark:text-zinc-400'
+                : 'bg-violet-600 text-white'
+            }`}
+          >
+            {isLook ? '외형 해제' : '외형으로 적용'}
+          </button>
+          <button
+            type="button"
+            onClick={doAttr}
+            disabled={pending || sel.attrId == null || isAttr || (inCooldown && diamond < gemCost)}
+            className={`h-11 flex-[1.4] rounded-xl text-[12.5px] font-bold text-white transition active:scale-[0.98] disabled:opacity-60 ${
+              isAttr
+                ? 'bg-zinc-100 !text-zinc-500 dark:bg-zinc-800 dark:!text-zinc-400'
+                : confirmGem
+                  ? 'bg-rose-600'
+                  : inCooldown
+                    ? 'bg-sky-600'
+                    : 'bg-amber-600'
+            }`}
+          >
+            {isAttr
+              ? '속성 적용 중'
+              : inCooldown
+                ? diamond < gemCost
+                  ? `💎 ${gemCost.toLocaleString()} 부족`
+                  : confirmGem
+                    ? `💎 ${gemCost.toLocaleString()} 사용 확정`
+                    : `💎 ${gemCost.toLocaleString()} 속성 교체`
+                : '속성으로 적용'}
+          </button>
+        </div>
+        {inCooldown ? (
+          <p className="mt-2 text-center text-[11px] text-zinc-500">
+            속성 교체 대기 <span className="font-mono tabular-nums">{fmtRemain(remainMs)}</span> · 대기 후 무료 교체
+          </p>
+        ) : null}
+      </div>
+
+      {/* 보유 목록 — 3열 썸네일(현재 지정 뱃지). 탭하면 미리보기 전환. */}
+      <div className="mt-3 grid grid-cols-3 gap-2">
+        {list.map((p) => {
+          const pLook = p.id === activeId;
+          const pAttr = p.attrId != null && p.attrId === eqAttrId;
+          return (
+            <button
+              key={p.id}
+              type="button"
+              onClick={() => pick(p)}
+              className={`relative flex flex-col items-center gap-1 rounded-xl border-2 bg-white p-1.5 pt-2 transition active:scale-[0.98] dark:bg-zinc-950 ${
+                p.id === sel.id
+                  ? 'border-zinc-900 dark:border-white'
+                  : 'border-zinc-200 dark:border-zinc-800'
+              }`}
+            >
+              <span className="absolute left-1 top-1 flex gap-0.5">
+                {pLook ? (
+                  <span className="rounded-full bg-violet-600 px-1.5 py-px text-[9px] font-extrabold text-white">외형</span>
+                ) : null}
+                {pAttr ? (
+                  <span className="rounded-full bg-amber-500 px-1.5 py-px text-[9px] font-extrabold text-black">속성</span>
+                ) : null}
+              </span>
+              <div className="relative flex aspect-square w-full items-end justify-center isolate overflow-hidden">
+                {/* eslint-disable-next-line @next/next/no-img-element */}
+                <img
+                  src={frontSrc(p)}
+                  alt="아바타"
+                  draggable={false}
+                  className="h-full w-full object-contain object-bottom"
+                  style={{ imageRendering: 'pixelated' }}
+                />
+              </div>
+              <div className="flex w-full min-w-0 justify-center">
+                {p.attrId != null ? (
+                  <RuneName name={p.attrName} attrs={p.attrs} className="text-[9.5px]" />
+                ) : (
+                  <span className="truncate text-[9.5px] text-zinc-400">속성 없음</span>
+                )}
+              </div>
+            </button>
+          );
+        })}
+        <Link
+          prefetch={false}
+          href="/me/create"
+          className="flex flex-col items-center justify-center gap-1 rounded-xl border-2 border-dashed border-zinc-300 py-4 text-zinc-400 transition active:scale-[0.98] dark:border-zinc-700"
+        >
+          <span className="text-xl" aria-hidden>
+            ✨
+          </span>
+          <span className="text-[10px]">생성</span>
+        </Link>
+      </div>
     </div>
   );
 }
