@@ -26,14 +26,24 @@ export type MeleeRankingState = ReturnType<typeof useMeleeRanking>;
  * 뒤로가기 복원 캐시 — 프로필 상세로 나갔다 돌아오면 컴포넌트가 재마운트돼 목록·스크롤이 초기화된다
  * (App Router 소프트 내비게이션은 클라 상태를 보존하지 않고, 내부 스크롤 컨테이너는 자동 복원 대상도 아님).
  *
- * ⚠ 캐시 키를 (전투×모드)로만 잡으면 **메뉴로 새로 들어와도** 이전 스크롤이 복원된다 — 원치 않는 동작.
- * 그래서 history 엔트리마다 고유키(mrk)를 심고 그 키로 캐시를 묶는다. 뒤로/앞으로 이동은 같은
- * 엔트리로 돌아오므로 mrk가 남아 있어 복원되고, 새 진입은 push로 새 엔트리라 mrk가 없어 초기화된다.
+ * ⚠ 단 **뒤로가기로 돌아온 경우에만** 복원한다 — 메뉴로 새로 들어왔는데 지난 스크롤이 되살아나면
+ * 엉뚱하다. 판정은 popstate 감지로 한다(뒤로/앞으로·안드로이드 하드웨어 백 모두 popstate).
+ * history.state에 표식을 심는 방식은 라우터가 state를 갈아끼우면 날아가서 쓰지 않는다.
  */
 type RankCache = { rows: MeleeRankRow[]; myRank: number | null; scrollTop: number };
 const CACHE_PREFIX = 'melee-rank:';
-const cacheKey = (histKey: string, battleId: string, mode: MeleeRankMode) =>
-  `${CACHE_PREFIX}${histKey}:${battleId}:${mode}`;
+const cacheKey = (battleId: string, mode: MeleeRankMode) =>
+  `${CACHE_PREFIX}${battleId}:${mode}`;
+
+/** 모듈 전역 — SPA가 살아 있는 동안 유지된다(라우트 이동으로 리셋되지 않음). */
+let lastPopAt = 0;
+if (typeof window !== 'undefined') {
+  window.addEventListener('popstate', () => {
+    lastPopAt = Date.now();
+  });
+}
+/** 직전 popstate 직후의 마운트 = 뒤로가기 복귀. 라우트 렌더까지의 여유를 넉넉히 둔다. */
+const cameFromHistory = () => lastPopAt > 0 && Date.now() - lastPopAt < 3000;
 
 function readCache(key: string): RankCache | null {
   try {
@@ -45,30 +55,18 @@ function readCache(key: string): RankCache | null {
 }
 function writeCache(key: string, v: RankCache) {
   try {
-    // 지난 엔트리의 캐시는 다시 쓰일 일이 없다 — 쌓이면 용량만 먹으므로 쓰기 전에 청소.
+    // 지난 회차 캐시는 다시 쓰일 일이 없다 — 쌓이면 용량만 먹으므로 쓰기 전에 청소.
+    const keep = key.slice(0, key.lastIndexOf(':') + 1);
     const stale: string[] = [];
     for (let i = 0; i < sessionStorage.length; i++) {
       const k = sessionStorage.key(i);
-      if (k?.startsWith(CACHE_PREFIX) && !k.startsWith(key.slice(0, key.lastIndexOf(':') + 1))) {
-        stale.push(k);
-      }
+      if (k?.startsWith(CACHE_PREFIX) && !k.startsWith(keep)) stale.push(k);
     }
     for (const k of stale) sessionStorage.removeItem(k);
     sessionStorage.setItem(key, JSON.stringify(v));
   } catch {
     /* 용량 초과 등 — 복원만 포기 */
   }
-}
-
-/** history 엔트리 고유키 — 없으면(=새 진입) 새로 심는다. */
-function stampHistoryKey(): { key: string; existed: boolean } {
-  const state = (window.history.state ?? {}) as Record<string, unknown>;
-  const found = state.mrk;
-  if (typeof found === 'string') return { key: found, existed: true };
-  const key = `${Date.now().toString(36)}${Math.random().toString(36).slice(2, 8)}`;
-  // Next 라우터가 쓰는 내부 state를 보존해야 하므로 병합 replace.
-  window.history.replaceState({ ...state, mrk: key }, '');
-  return { key, existed: false };
 }
 
 /**
@@ -88,7 +86,6 @@ export function useMeleeRanking({
   const router = useRouter();
   const pathname = usePathname();
   const search = useSearchParams();
-  const searchKey = search.toString();
   const subParam = search.get('sub');
   const mode: MeleeRankMode = subParam === 'near' || subParam === 'guild' ? subParam : 'all';
 
@@ -102,23 +99,19 @@ export function useMeleeRanking({
   const loadingRef = useRef(false);
   /** rows가 그려진 뒤 처리할 스크롤 — 'me'면 내 행으로, 숫자면 그 위치로. */
   const pendingScroll = useRef<number | 'me' | null>(null);
-  /** 현재 history 엔트리 키 + 이번 마운트가 "돌아온 것"인지. */
-  const histKey = useRef<string | null>(null);
-  const canRestore = useRef(false);
+  /**
+   * 현재 스크롤 위치 — 스크롤할 때마다 기록한다. 언마운트 정리 시점엔 React가 이미 ref를
+   * 떼어내(scrollRef.current === null) DOM에서 읽으면 0이 저장되기 때문(스크롤 복원 실패 원인).
+   */
+  const scrollTopRef = useRef(0);
+  /** 이번 마운트가 뒤로가기 복귀인지 — 첫 로드에서만 판정하고 이후엔 항상 복원 허용. */
+  const firstLoad = useRef(true);
   /** 이탈 저장 시 최신 값 참조(클로저 stale 방지) — 렌더가 아닌 효과에서 갱신한다. */
   const snapshot = useRef<{ rows: MeleeRankRow[]; myRank: number | null }>({ rows: [], myRank: null });
 
   useEffect(() => {
     snapshot.current = { rows, myRank };
   }, [rows, myRank]);
-
-  // 엔트리 키 관리 — 마운트 시점의 존재 여부가 곧 "뒤로가기로 돌아왔는가"다.
-  // 탭/서브탭 이동(push·replace)은 Next가 state를 갈아끼우므로 쿼리가 바뀔 때마다 다시 심는다.
-  useEffect(() => {
-    const { key, existed } = stampHistoryKey();
-    if (histKey.current === null) canRestore.current = existed; // 최초 마운트에서만 판정
-    histKey.current = key;
-  }, [searchKey]);
 
   const first = rows[0]?.rank ?? null;
   const last = rows[rows.length - 1]?.rank ?? null;
@@ -130,13 +123,12 @@ export function useMeleeRanking({
   useEffect(() => {
     if (!enabled || loadedFor.current === mode) return;
     loadedFor.current = mode;
-    const restorable = canRestore.current;
-    // 한 번 로드한 뒤부터는 같은 엔트리 안의 모드 왕복도 캐시로 되살린다.
-    canRestore.current = true;
+    // 첫 로드는 뒤로가기 복귀일 때만, 이후 모드 왕복은 항상 캐시를 쓴다.
+    const restorable = firstLoad.current ? cameFromHistory() : true;
+    firstLoad.current = false;
     startTransition(async () => {
-      const key = histKey.current ? cacheKey(histKey.current, battleId, mode) : null;
       // 복원 우선 — 돌아온 경우 네트워크 없이 목록·스크롤을 즉시 되살린다.
-      const cached = restorable && key ? readCache(key) : null;
+      const cached = restorable ? readCache(cacheKey(battleId, mode)) : null;
       if (cached && cached.rows.length > 0) {
         setRows(cached.rows);
         setMyRank(cached.myRank);
@@ -160,6 +152,7 @@ export function useMeleeRanking({
         document.getElementById('melee-rank-me')?.scrollIntoView({ block: 'center' });
       } else if (scrollRef.current) {
         scrollRef.current.scrollTop = want;
+        scrollTopRef.current = want;
       }
     });
   }, [rows]);
@@ -169,11 +162,12 @@ export function useMeleeRanking({
     if (!enabled) return;
     const save = () => {
       const snap = snapshot.current;
-      if (snap.rows.length === 0 || !histKey.current) return;
-      writeCache(cacheKey(histKey.current, battleId, mode), {
+      if (snap.rows.length === 0) return;
+      writeCache(cacheKey(battleId, mode), {
         rows: snap.rows,
         myRank: snap.myRank,
-        scrollTop: scrollRef.current?.scrollTop ?? 0,
+        // ref는 언마운트 시 이미 null일 수 있어 스크롤 중 기록해 둔 값을 쓴다.
+        scrollTop: scrollRef.current?.scrollTop ?? scrollTopRef.current,
       });
     };
     window.addEventListener('pagehide', save);
@@ -236,7 +230,23 @@ export function useMeleeRanking({
     });
   };
 
-  return { mode, selectMode, rows, myRank, pending, loadMore, jumpToMe, scrollRef, hasUp, hasDown };
+  const onScroll = useCallback((e: React.UIEvent<HTMLUListElement>) => {
+    scrollTopRef.current = e.currentTarget.scrollTop;
+  }, []);
+
+  return {
+    mode,
+    selectMode,
+    rows,
+    myRank,
+    pending,
+    loadMore,
+    jumpToMe,
+    scrollRef,
+    onScroll,
+    hasUp,
+    hasDown,
+  };
 }
 
 /** 컨트롤 행 — 전투 탭의 속도/전체재생 자리를 대체(모드 탭 + 내 순위 점프). */
@@ -352,21 +362,21 @@ function Row({ r, isMe, serverId }: { r: MeleeRankRow; isMe: boolean; serverId: 
           <div className="truncate text-[9.5px] text-zinc-400 drop-shadow-[0_1px_2px_rgba(0,0,0,0.9)]">
             공격 <b className="font-mono font-black text-zinc-200">{r.attackSuccess}</b> · 방어{' '}
             <b className="font-mono font-black text-zinc-200">{r.defenseSuccess}</b>
-            {/* 탈락 정보 — 라운드와 패배 상대를 한 문장으로(별도 우측 칸 없음). */}
+            {/* 탈락 정보 — 라운드와 패배 상대를 한 문장으로(별도 우측 칸 없음).
+                구분점은 블록 앞에 한 번만 — 0138 이전 회차처럼 라운드가 없어도 점이 빠지지 않게. */}
+            {r.eliminatedRound != null || gold || r.killerNickname ? ' · ' : null}
             {r.eliminatedRound != null ? (
               <>
-                {' · '}
                 <b className="font-mono font-black text-zinc-300">
                   {r.eliminatedRound.toLocaleString()}
                 </b>
-                <span className="text-zinc-500"> ROUND</span>
+                <span className="text-zinc-500"> ROUND </span>
               </>
             ) : null}
             {gold ? (
-              <span className="font-bold text-amber-300"> · 최후 생존</span>
+              <span className="font-bold text-amber-300">최후 생존</span>
             ) : r.killerNickname ? (
               <>
-                {' '}
                 {r.killerPublicCode ? (
                   <Link
                     prefetch={false}
@@ -429,12 +439,16 @@ export function MeleeRankList({
   serverId: number;
   myUserId: string;
 }) {
-  const { rows, pending, loadMore, mode, scrollRef, hasUp, hasDown } = state;
+  const { rows, pending, loadMore, mode, scrollRef, onScroll, hasUp, hasDown } = state;
   const up = useCallback(() => loadMore('up'), [loadMore]);
   const down = useCallback(() => loadMore('down'), [loadMore]);
 
   return (
-    <ul ref={scrollRef} className="min-h-0 flex-1 overflow-y-auto overscroll-contain">
+    <ul
+      ref={scrollRef}
+      onScroll={onScroll}
+      className="min-h-0 flex-1 overflow-y-auto overscroll-contain"
+    >
       {hasUp ? <Sentinel onHit={up} rootRef={scrollRef} label="위쪽 순위 불러오는 중…" /> : null}
       {rows.map((r) => (
         <div key={r.userId} id={r.userId === myUserId ? 'melee-rank-me' : undefined}>
