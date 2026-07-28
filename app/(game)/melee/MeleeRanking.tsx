@@ -7,6 +7,7 @@ import { usePathname, useSearchParams } from 'next/navigation';
 import { profileHref } from '@/lib/game/profile/href';
 import { meleeFaceCropStyle } from '@/components/faceCrop';
 import { GuildBadge } from '@/components/GuildBadge';
+import { SpriteLoading } from '@/components/SpriteLoading';
 import type { MeleeRankMode, MeleeRankRow } from '@/lib/game/melee/ranking';
 
 import { meleeRankingAction } from './actions';
@@ -486,9 +487,11 @@ export function MeleeRankList({
           <Row r={r} isMe={r.userId === myUserId} serverId={serverId} />
         </div>
       ))}
-      {/* 첫 로드(길드 탭 등) — 앱 공통 표기와 동일한 문구/스타일. */}
+      {/* 첫 로드(길드 탭 등) — 화면 이동과 같은 스프라이트 로딩으로 통일. */}
       {rows.length === 0 && pending ? (
-        <li className="py-6 text-center text-xs text-zinc-500">불러오는 중…</li>
+        <li>
+          <SpriteLoading className="py-8" />
+        </li>
       ) : null}
       {rows.length === 0 && !pending ? (
         <li className="px-4 py-10 text-center text-[12px] text-zinc-500">
