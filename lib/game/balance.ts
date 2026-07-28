@@ -671,3 +671,73 @@ export function bpSegmentPriceKrw(_type: BattlePassType, segmentIndex: number): 
   const c = Math.max(0, Math.floor(segmentIndex));
   return Math.min(9900 + c * 10000, BP_SEGMENT_PRICE_CAP_KRW);
 }
+
+// ─────────────────────────────────────────────────────────────────────────────
+// §10. 아바타 속성 (PvP 상성 — 점령전·대난투 전용, 레이드 무영향)
+// ─────────────────────────────────────────────────────────────────────────────
+
+/**
+ * §10 아바타 속성 — 아바타 생성 시 3부위(무/방/장)에 권역+표기롤을 서버 RNG로 확정(불변).
+ * 재롤 = 새 아바타 생성(💎 sink). 게임산업법 §33: 아래 확률 상수는 /probability 공시와 1:1.
+ *  - 권역: 6개 균등(각 1/6)
+ *  - 표기 롤: 부위당 0~100 정수 균등(각 1/101)
+ *  - 실제 전투력 보정 = 표기 ÷ 10 % (부위당 최대 10%, 총 표기 300 = 실제 30%)
+ * 상성 사이클(2026-07-28 확정): 천사→왕국→오크→늪→화산→신전→천사 (왼쪽이 오른쪽에 강함,
+ * 바로 다음에만 강하고 바로 이전에만 약함 — 그 외 무관계).
+ */
+export const AVATAR_ATTR_REGIONS = ['angel', 'kingdom', 'orc', 'swamp', 'volcano', 'temple'] as const;
+export type AttrRegion = (typeof AVATAR_ATTR_REGIONS)[number];
+
+/** 부위당 표기 롤 상한(정수 균등 0~AVATAR_ATTR_ROLL_MAX). */
+export const AVATAR_ATTR_ROLL_MAX = 100;
+/** 표기 → 실제 % 환산 제수(표기 10배 체계). */
+export const AVATAR_ATTR_DISPLAY_DIV = 10;
+
+/** r이 잡아먹는(강한) 권역 — 사이클의 바로 다음 원소. */
+export function attrPrey(r: AttrRegion): AttrRegion {
+  const i = AVATAR_ATTR_REGIONS.indexOf(r);
+  return AVATAR_ATTR_REGIONS[(i + 1) % AVATAR_ATTR_REGIONS.length]!;
+}
+
+export type AvatarAttr = { slot: 'weapon' | 'armor' | 'accessory'; region: AttrRegion; pct: number };
+
+/**
+ * 생성 롤 — 3부위 각각 권역(1/6 균등) + 표기(0~100 균등). rng는 [0,1) 반환(기본 crypto).
+ * ⚠ 서버 전용 호출(생성 파이프라인·백필) — 클라 롤 금지(CLAUDE §3.1).
+ */
+export function rollAvatarAttrs(rng: () => number = cryptoRand): AvatarAttr[] {
+  return (['weapon', 'armor', 'accessory'] as const).map((slot) => ({
+    slot,
+    region: AVATAR_ATTR_REGIONS[Math.floor(rng() * AVATAR_ATTR_REGIONS.length)]!,
+    pct: Math.floor(rng() * (AVATAR_ATTR_ROLL_MAX + 1)),
+  }));
+}
+function cryptoRand(): number {
+  return crypto.getRandomValues(new Uint32Array(1))[0]! / 2 ** 32;
+}
+
+/** 표기 벡터(권역별 표기 합, 0~300) — attrs 3부위를 권역으로 합산. null/미지정=빈 벡터. */
+export function attrDisplayVector(attrs: AvatarAttr[] | null | undefined): Partial<Record<AttrRegion, number>> {
+  const v: Partial<Record<AttrRegion, number>> = {};
+  for (const a of attrs ?? []) v[a.region] = (v[a.region] ?? 0) + a.pct;
+  return v;
+}
+
+/**
+ * §10 상성 공격 보정(%) — adv(나→상대) = Σ_r (내표기[r]÷10) × (상대표기[prey(r)]÷300).
+ * 0~30. 교전 페어마다 양측 각자 산출해 **자기 데미지에만** ×(1+adv/100) — HP 무변
+ * (대난투 다:다에서 페어별 HP 조정 불가, 2026-07-28 옵션1 확정). 미부여=0.
+ */
+export function attrAdvantagePct(
+  mine: Partial<Record<AttrRegion, number>>,
+  opp: Partial<Record<AttrRegion, number>>,
+): number {
+  let adv = 0;
+  for (const r of AVATAR_ATTR_REGIONS) {
+    const my = mine[r] ?? 0;
+    if (my <= 0) continue;
+    const preyShare = (opp[attrPrey(r)] ?? 0) / (AVATAR_ATTR_ROLL_MAX * 3);
+    adv += (my / AVATAR_ATTR_DISPLAY_DIV) * preyShare;
+  }
+  return adv;
+}
