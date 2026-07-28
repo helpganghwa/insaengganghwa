@@ -7,7 +7,7 @@ import { usePathname, useSearchParams } from 'next/navigation';
 import { profileHref } from '@/lib/game/profile/href';
 import { meleeFaceCropStyle } from '@/components/faceCrop';
 import { GuildBadge } from '@/components/GuildBadge';
-import { SpriteLoading } from '@/components/SpriteLoading';
+import { SpriteLoadingOverlay } from '@/components/SpriteLoading';
 import type { MeleeRankMode, MeleeRankRow } from '@/lib/game/melee/ranking';
 
 import { meleeRankingAction } from './actions';
@@ -94,6 +94,8 @@ export function useMeleeRanking({
 
   const [rows, setRows] = useState<MeleeRankRow[]>(initial.rows);
   const [myRank, setMyRank] = useState<number | null>(initial.myRank);
+  /** 목록 전체를 갈아끼우는 조회 중(탭 전환·내 순위 점프). 이어붙이기는 해당 없음. */
+  const [reloading, setReloading] = useState(false);
   const [pending, startTransition] = useTransition();
 
   // 스크롤 컨테이너 — 위로 로드할 때 앵커 보정(prepend 시 화면이 튀지 않게).
@@ -148,7 +150,10 @@ export function useMeleeRanking({
         seeded.current = false;
         return;
       }
+      // 여기부터는 실제 조회 — 이전 탭의 목록을 남겨두지 않고 로딩 표시로 덮는다.
+      setReloading(true);
       const r = await meleeRankingAction({ battleId, mode });
+      setReloading(false);
       if (r.status !== 'success') return;
       setRows(r.rows);
       setMyRank(r.myRank);
@@ -252,7 +257,9 @@ export function useMeleeRanking({
       return;
     }
     startTransition(async () => {
+      setReloading(true);
       const r = await meleeRankingAction({ battleId, mode, aroundRank: myRank });
+      setReloading(false);
       if (r.status !== 'success' || r.rows.length === 0) return;
       setRows(r.rows);
       pendingScroll.current = 'me';
@@ -269,6 +276,7 @@ export function useMeleeRanking({
     rows,
     myRank,
     pending,
+    reloading,
     loadMore,
     jumpToMe,
     scrollRef,
@@ -467,42 +475,47 @@ export function MeleeRankList({
   serverId: number;
   myUserId: string;
 }) {
-  const { rows, pending, loadMore, mode, scrollRef, onScroll, hasUp, hasDown } = state;
+  const { rows, reloading, loadMore, mode, scrollRef, onScroll, hasUp, hasDown } = state;
   const up = useCallback(() => loadMore('up'), [loadMore]);
   const down = useCallback(() => loadMore('down'), [loadMore]);
 
   return (
-    <ul
-      ref={scrollRef}
-      onScroll={onScroll}
-      className="min-h-0 flex-1 overflow-y-auto overscroll-contain"
-    >
-      {hasUp ? <Sentinel onHit={up} rootRef={scrollRef} label="위쪽 순위 불러오는 중…" /> : null}
-      {rows.map((r) => (
-        <div
-          key={r.userId}
-          data-rank={r.rank}
-          id={r.userId === myUserId ? 'melee-rank-me' : undefined}
-        >
-          <Row r={r} isMe={r.userId === myUserId} serverId={serverId} />
-        </div>
-      ))}
-      {/* 첫 로드(길드 탭 등) — 화면 이동과 같은 스프라이트 로딩으로 통일. */}
-      {rows.length === 0 && pending ? (
-        <li>
-          <SpriteLoading className="py-8" />
-        </li>
-      ) : null}
-      {rows.length === 0 && !pending ? (
-        <li className="px-4 py-10 text-center text-[12px] text-zinc-500">
-          {mode === 'guild' ? '같은 길드 참가자가 없습니다.' : '순위 정보가 없습니다.'}
-        </li>
-      ) : null}
-      {hasDown ? (
-        <Sentinel onHit={down} rootRef={scrollRef} label="아래쪽 순위 불러오는 중…" />
-      ) : rows.length > 0 ? (
-        <li className="py-4 text-center text-[10.5px] text-zinc-600">마지막 순위입니다</li>
-      ) : null}
-    </ul>
+    <>
+      {/* 목록 교체 중 — 화면 이동과 같은 중앙 로딩. 다 받아온 뒤 한 번에 그린다
+          (이전 탭 목록을 남겨두거나 부분 렌더하지 않음). */}
+      {reloading ? <SpriteLoadingOverlay /> : null}
+      <ul
+        ref={scrollRef}
+        onScroll={onScroll}
+        className="min-h-0 flex-1 overflow-y-auto overscroll-contain"
+      >
+        {reloading ? null : (
+          <>
+            {hasUp ? (
+              <Sentinel onHit={up} rootRef={scrollRef} label="위쪽 순위 불러오는 중…" />
+            ) : null}
+            {rows.map((r) => (
+              <div
+                key={r.userId}
+                data-rank={r.rank}
+                id={r.userId === myUserId ? 'melee-rank-me' : undefined}
+              >
+                <Row r={r} isMe={r.userId === myUserId} serverId={serverId} />
+              </div>
+            ))}
+            {rows.length === 0 ? (
+              <li className="px-4 py-10 text-center text-[12px] text-zinc-500">
+                {mode === 'guild' ? '같은 길드 참가자가 없습니다.' : '순위 정보가 없습니다.'}
+              </li>
+            ) : null}
+            {hasDown ? (
+              <Sentinel onHit={down} rootRef={scrollRef} label="아래쪽 순위 불러오는 중…" />
+            ) : rows.length > 0 ? (
+              <li className="py-4 text-center text-[10.5px] text-zinc-600">마지막 순위입니다</li>
+            ) : null}
+          </>
+        )}
+      </ul>
+    </>
   );
 }
