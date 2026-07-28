@@ -11,6 +11,7 @@ import { PROFILE_GENERATION_DIAMOND, profileGenPrice } from '@/lib/game/balance'
 import { getMyProfileQueueInfo, hasGeneratedCustomAvatar } from '@/lib/game/profile/queue';
 
 import { CreateProfileForm } from './CreateProfileForm';
+import { attrRegionOfItemKey } from '@/lib/game/attr/item-region';
 
 export default async function CreateProfilePage() {
   const userId = await getSessionUserId();
@@ -58,14 +59,22 @@ export default async function CreateProfilePage() {
   const bySlot = new Map(equipped.map((e) => [e.slot, e]));
   const equippedSlots = (['weapon', 'armor', 'accessory'] as Slot[]).map((s) => {
     const it = bySlot.get(s);
-    return it ? { slot: s, code: it.code, name: it.name, transcendLevel: it.transcendLevel } : { slot: s, code: null, name: null, transcendLevel: 0 };
+    return it
+      ? {
+          slot: s,
+          code: it.code,
+          name: it.name,
+          transcendLevel: it.transcendLevel,
+          attrRegion: attrRegionOfItemKey(it.code),
+        }
+      : { slot: s, code: null, name: null, transcendLevel: 0, attrRegion: null };
   });
 
   return (
     <div className="space-y-4 px-4 py-6">
       <p className="text-xs leading-relaxed text-zinc-500">
-        성별을 고르면 현재 장착한 장비 3종의 컨셉을 녹여 캐릭터를 생성해요. 생성 후 자동 검토를
-        거쳐 통과하면 아바타 목록에 추가돼요.
+        성별을 고르면 현재 장착한 장비 3종의 컨셉을 녹여 캐릭터를 생성해요. 장비의 지역은 아바타
+        속성으로 각인됩니다. 생성 후 자동 검토를 거쳐 통과하면 아바타 목록에 추가돼요.
       </p>
 
       <CreateProfileForm

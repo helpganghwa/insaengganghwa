@@ -741,12 +741,23 @@ export type AvatarAttr = { slot: 'weapon' | 'armor' | 'accessory'; region: AttrR
  * 생성 롤 — 3부위 각각 지역(1/6 균등) + 표기(0~100 균등). rng는 [0,1) 반환(기본 crypto).
  * ⚠ 서버 전용 호출(생성 파이프라인·백필) — 클라 롤 금지(CLAUDE §3.1).
  */
-export function rollAvatarAttrs(rng: () => number = cryptoRand): AvatarAttr[] {
-  return (['weapon', 'armor', 'accessory'] as const).map((slot) => ({
-    slot,
-    region: AVATAR_ATTR_REGIONS[Math.floor(rng() * AVATAR_ATTR_REGIONS.length)]!,
-    pct: Math.floor(rng() * (AVATAR_ATTR_ROLL_MAX + 1)),
-  }));
+/**
+ * §10 속성 각인 — **지역은 아이템이 정하고, 수치만 뽑는다**(2026-07-28 확정).
+ * 아바타 생성 시 착용 중이던 무기·방어구·장신구 각각의 지역을 그대로 쓰고,
+ * 각 줄의 수치만 0~{@link AVATAR_ATTR_ROLL_MAX} 균등 추첨. 지역이 없는 아이템('일반')은
+ * 그 줄이 생기지 않는다(해당 부위 기여 0). 같은 지역이 겹치면 합산(지역당 최대 150).
+ */
+export function rollAvatarAttrs(
+  itemRegions: Partial<Record<AvatarAttr['slot'], AttrRegion | null>>,
+  rng: () => number = cryptoRand,
+): AvatarAttr[] {
+  const out: AvatarAttr[] = [];
+  for (const slot of ['weapon', 'armor', 'accessory'] as const) {
+    const region = itemRegions[slot];
+    if (!region) continue; // 지역 없는 아이템('일반')·미착용 → 각인 없음
+    out.push({ slot, region, pct: Math.floor(rng() * (AVATAR_ATTR_ROLL_MAX + 1)) });
+  }
+  return out;
 }
 function cryptoRand(): number {
   return crypto.getRandomValues(new Uint32Array(1))[0]! / 2 ** 32;

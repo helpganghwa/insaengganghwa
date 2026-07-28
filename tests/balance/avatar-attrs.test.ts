@@ -33,10 +33,12 @@ describe('avatar attrs — 생성 롤', () => {
     expect(AVATAR_ATTR_TOTAL_MAX).toBe(150);
   });
 
-  it('3부위(무/방/장) · 권역 유효 · 표기 0~50 정수', () => {
+  it('지역은 아이템이 정하고 수치만 롤(0~50 정수)', () => {
+    const items = { weapon: 'kingdom', armor: 'volcano', accessory: 'temple' } as const;
     for (let i = 0; i < 200; i++) {
-      const attrs = rollAvatarAttrs();
+      const attrs = rollAvatarAttrs(items);
       expect(attrs.map((a) => a.slot)).toEqual(['weapon', 'armor', 'accessory']);
+      expect(attrs.map((a) => a.region)).toEqual(['kingdom', 'volcano', 'temple']);
       for (const a of attrs) {
         expect(AVATAR_ATTR_REGIONS).toContain(a.region);
         expect(Number.isInteger(a.pct)).toBe(true);
@@ -46,11 +48,21 @@ describe('avatar attrs — 생성 롤', () => {
     }
   });
 
-  it('rng 경계 — 0은 최소, 1-ε는 최대(권역 마지막·표기 50)', () => {
-    const lo = rollAvatarAttrs(() => 0);
+  it('지역 없는 아이템(일반)·미착용 부위는 각인되지 않는다', () => {
+    const attrs = rollAvatarAttrs({ weapon: 'orc', armor: null, accessory: undefined });
+    expect(attrs).toHaveLength(1);
+    expect(attrs[0]!.slot).toBe('weapon');
+    expect(attrs[0]!.region).toBe('orc');
+
+    expect(rollAvatarAttrs({})).toHaveLength(0);
+  });
+
+  it('rng 경계 — 0은 0%, 1-ε는 50%(지역은 그대로)', () => {
+    const items = { weapon: 'angel', armor: 'angel', accessory: 'angel' } as const;
+    const lo = rollAvatarAttrs(items, () => 0);
     expect(lo.every((a) => a.region === 'angel' && a.pct === 0)).toBe(true);
-    const hi = rollAvatarAttrs(() => 0.999999);
-    expect(hi.every((a) => a.region === 'temple' && a.pct === AVATAR_ATTR_ROLL_MAX)).toBe(true);
+    const hi = rollAvatarAttrs(items, () => 0.999999);
+    expect(hi.every((a) => a.region === 'angel' && a.pct === AVATAR_ATTR_ROLL_MAX)).toBe(true);
   });
 });
 

@@ -56,9 +56,9 @@ export function AttrGuideModal({ onClose }: { onClose: () => void }) {
       <h2 className="text-[15px] font-bold">속성이란?</h2>
 
       <Step n={1} title="아바타마다 속성이 각인됩니다">
-        아바타를 만들면 <b>무기·방어구·장신구 세 줄</b>이 함께 새겨집니다. 각 줄은 여섯 지역 중
-        하나를 뽑고 <b>0~{AVATAR_ATTR_ROLL_MAX}%</b> 수치를 가집니다. 같은 지역이 겹치면 합산돼서 한
-        지역이 최대 {AVATAR_ATTR_TOTAL_MAX}%까지 올라갑니다. 한 번 각인되면 바뀌지 않아요.
+        아바타를 만들면 <b>무기·방어구·장신구의 지역 속성</b>에 따라 <b>0~{AVATAR_ATTR_ROLL_MAX}%</b>
+        의 수치를 가집니다. 같은 지역이 겹치면 합산돼서 한 지역이 최대 {AVATAR_ATTR_TOTAL_MAX}%까지
+        올라갑니다. 한 번 각인되면 바뀌지 않아요.
       </Step>
 
       <Step n={2} title="지역끼리는 상성을 가집니다">

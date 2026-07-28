@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest';
 
 import {
+  AVATAR_ATTR_REGIONS,
   AVATAR_ATTR_TOTAL_MAX,
   RAID_ATTR_COEF,
   RAID_BOSS_REGION,
@@ -10,6 +11,11 @@ import {
 } from '@/lib/game/balance';
 import { simulateMelee } from '@/lib/game/melee/simulate';
 import { simulateConquest } from '@/lib/game/guild/conquest/simulate';
+import { CATALOG_ITEMS } from '@/lib/game/equipment/catalog';
+import {
+  attrRegionOfCatalogRegion,
+  attrRegionOfItemKey,
+} from '@/lib/game/attr/item-region';
 
 describe('§10 전투 반영 — 레이드 상성', () => {
   it('보스 6종 전부 지역이 매핑돼 있다', () => {
@@ -114,5 +120,24 @@ describe('§10 전투 반영 — 대난투/점령전 시뮬', () => {
   it('상성 공식과 시뮬 배수가 같은 값을 쓴다', () => {
     // 천사 150 vs 왕국 150 → +150%.
     expect(attrAdvantagePct({ angel: 150 }, { kingdom: 150 })).toBeCloseTo(150, 6);
+  });
+});
+
+describe('§10 아이템 지역 → 속성 지역 매핑', () => {
+  it('카탈로그 전 아이템이 매핑되거나 명시적 none(일반)이다', () => {
+    for (const it of CATALOG_ITEMS) {
+      const r = attrRegionOfItemKey(it.key);
+      if (r === null) expect(it.region).toBe('일반');
+      else expect(AVATAR_ATTR_REGIONS).toContain(r);
+    }
+  });
+
+  it('세계관 세부 지역이 6지역으로 흡수된다', () => {
+    expect(attrRegionOfCatalogRegion('서쪽 화산')).toBe('volcano');
+    expect(attrRegionOfCatalogRegion('고대 룬 산맥')).toBe('temple');
+    expect(attrRegionOfCatalogRegion('타락천사')).toBe('angel');
+    expect(attrRegionOfCatalogRegion('오크 부락')).toBe('orc');
+    expect(attrRegionOfCatalogRegion('일반')).toBeNull();
+    expect(attrRegionOfItemKey('없는키')).toBeNull();
   });
 });

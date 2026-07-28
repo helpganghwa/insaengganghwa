@@ -26,6 +26,7 @@ import {
   RAID_DAMAGE_K,
   RAID_PHASE_DROP_BOXES,
   AVATAR_ATTR_TOTAL_MAX,
+  AVATAR_ATTR_ROLL_MAX,
 } from '@/lib/game/balance';
 import { getActiveCatalog } from '@/lib/game/catalog';
 import { CATALOG_ITEMS } from '@/lib/game/equipment/catalog';
@@ -238,18 +239,20 @@ export default async function ProbabilityPage() {
 
       <Sec n="6" title="아바타 속성" id="rune">
         <P>
-          아바타를 생성하면 <b>속성</b>이 함께 각인됩니다. 속성은 무기·방어구·장신구 세 줄로
-          이루어지며, 각 줄은 <b>지역</b>(여섯 지역 중 하나)과 <b>수치</b>(0~50)를 가집니다.
-          한 번 각인된 속성은 바뀌지 않으며, 아바타를 삭제하면 속성도 함께 사라집니다.
+          아바타를 생성하면 <b>속성</b>이 함께 각인됩니다. <b>지역은 무작위가 아니라 생성 시점에
+          장착한 장비가 정합니다</b> — 무기·방어구·장신구 각각의 지역이 그대로 그 부위의 속성 지역이
+          되고, <b>수치만 0~{AVATAR_ATTR_ROLL_MAX}% 사이에서 무작위</b>로 뽑힙니다. 지역이 없는
+          장비는 그 부위가 각인되지 않습니다. 한 번 각인된 속성은 바뀌지 않으며, 아바타를 삭제하면
+          속성도 함께 사라집니다.
         </P>
         <Table head={['항목', '확률']}>
           <tr className="border-t border-zinc-100 dark:border-zinc-900">
-            <Td>줄의 지역 (천사·왕국·오크·늪·화산·신전)</Td>
-            <Td>각 1/6 (약 16.7%)</Td>
+            <Td>줄의 지역</Td>
+            <Td>장착 장비로 확정 (무작위 아님)</Td>
           </tr>
           <tr className="border-t border-zinc-100 dark:border-zinc-900">
-            <Td>줄의 수치 (0~50 정수)</Td>
-            <Td>각 1/51 (약 1.96%) — 균등</Td>
+            <Td>줄의 수치 (0~{AVATAR_ATTR_ROLL_MAX} 정수)</Td>
+            <Td>각 1/{AVATAR_ATTR_ROLL_MAX + 1} (약 {(100 / (AVATAR_ATTR_ROLL_MAX + 1)).toFixed(2)}%) — 균등</Td>
           </tr>
         </Table>
         <P>

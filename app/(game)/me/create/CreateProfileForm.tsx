@@ -4,6 +4,12 @@ import { useEffect, useState, useTransition } from 'react';
 import { useRouter } from 'next/navigation';
 
 import { TranscendSprite } from '@/components/TranscendSprite';
+import {
+  ATTR_REGION_COLOR,
+  ATTR_REGION_KO,
+  AVATAR_ATTR_ROLL_MAX,
+  type AttrRegion,
+} from '@/lib/game/balance';
 import { useDiamond } from '@/components/DiamondContext';
 import { useResourceToast } from '@/components/ResourceToast';
 import * as haptic from '@/lib/game/haptic';
@@ -19,6 +25,8 @@ type EquippedSlot = {
   code: string | null;
   name: string | null;
   transcendLevel: number;
+  /** 이 장비가 각인할 속성 지역(§10). null = 지역 없는 장비라 그 부위는 각인되지 않음. */
+  attrRegion: AttrRegion | null;
 };
 
 const SLOT_LABEL: Record<Slot, string> = { weapon: '무기', armor: '방어구', accessory: '장신구' };
@@ -214,6 +222,15 @@ export function CreateProfileForm({
                 <span className="line-clamp-2 break-keep px-0.5 text-[10px] leading-tight text-zinc-600 dark:text-zinc-400">
                   {it.name}
                 </span>
+                {/* 각인될 지역(§10) — 지역 없는 장비는 그 부위가 비어 함정이 되지 않게 미리 알린다. */}
+                <span
+                  className="text-[9.5px] font-extrabold"
+                  style={{ color: it.attrRegion ? ATTR_REGION_COLOR[it.attrRegion] : undefined }}
+                >
+                  {it.attrRegion ? ATTR_REGION_KO[it.attrRegion] : (
+                    <span className="text-zinc-400">속성 없음</span>
+                  )}
+                </span>
               </div>
             ) : (
               <a
@@ -235,6 +252,13 @@ export function CreateProfileForm({
             장비를 모두 장착해야 생성할 수 있어요.
           </p>
         )}
+        <p className="mt-2 text-[11px] leading-relaxed text-zinc-500">
+          장비의 지역이 아바타 속성으로 각인됩니다(수치는 부위마다 0~
+          {AVATAR_ATTR_ROLL_MAX}% 무작위).
+          {equipped.some((e) => e.code && !e.attrRegion)
+            ? ' 지역이 없는 장비는 그 부위가 각인되지 않아요.'
+            : ''}
+        </p>
       </section>
 
       {/* 가격·잔액 */}
