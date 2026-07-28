@@ -9,7 +9,8 @@
 import { config } from 'dotenv';
 import postgres from 'postgres';
 
-import { rollAvatarAttrs } from '../lib/game/balance';
+import { rollAvatarAttrs, type AvatarAttr } from '../lib/game/balance';
+import { runeNameFor } from '../lib/game/rune/name';
 
 config({ path: '.env.local' });
 const envName = process.argv[2] ?? 'DATABASE_URL';
@@ -30,12 +31,20 @@ console.log(`미지급 아바타 ${rows.length}건`);
 
 let done = 0;
 for (const p of rows) {
+  const attrs = rollAvatarAttrs();
   await sql`
-    insert into runes (user_id, server_id, attrs, source_profile_id)
-    values (${p.user_id}, ${p.server_id}, ${sql.json(rollAvatarAttrs() as unknown as never)}, ${p.id})
+    insert into runes (user_id, server_id, attrs, name, source_profile_id)
+    values (${p.user_id}, ${p.server_id}, ${sql.json(attrs as unknown as never)}, ${runeNameFor(attrs)}, ${p.id})
     on conflict (source_profile_id) do nothing`;
   done++;
   if (done % 100 === 0) console.log(`${done}/${rows.length}`);
 }
-console.log(`[backfill-runes] 완료 ${done}건`);
+console.log(`[backfill-runes] 지급 완료 ${done}건`);
+
+// 이름 백필(0139) — 0139 이전에 지급된 무명 룬에 attrs 기반 명명(멱등: name null만).
+const unnamed = await sql`select id, attrs from runes where name is null`;
+for (const r of unnamed) {
+  await sql`update runes set name = ${runeNameFor(r.attrs as AvatarAttr[])} where id = ${r.id} and name is null`;
+}
+console.log(`[backfill-runes] 이름 백필 ${unnamed.length}건`);
 await sql.end();

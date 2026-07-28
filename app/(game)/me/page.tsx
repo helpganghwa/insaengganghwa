@@ -13,6 +13,8 @@ import { combatPowerFromOwned } from '@/lib/game/equipment/combat-power';
 import { liberatedItemRanks } from '@/lib/game/codex/ranking';
 import { getCatalogMap, completeCatalog } from '@/lib/game/catalog';
 import { profileHref } from '@/lib/game/profile/href';
+import { type AvatarAttr } from '@/lib/game/balance';
+import { RuneName } from '@/components/RuneName';
 
 import { BoastLauncher } from '@/components/BoastModal';
 import { TranscendSprite } from '@/components/TranscendSprite';
@@ -28,6 +30,7 @@ const SLOT_EMOJI: Record<Slot, string> = { weapon: '⚔️', armor: '🛡️', a
 const MENU = [
   { href: '/friends', icon: '👥', label: '친구' },
   { href: '/me/profiles', icon: '✨', label: '아바타 관리' },
+  { href: '/me/runes', icon: '🔮', label: '룬' },
   { href: '/me/codex', icon: '📖', label: '도감' },
   { href: '/leaderboard', icon: '🏆', label: '랭킹' },
   { href: '/me/settings', icon: '⚙️', label: '설정' },
@@ -62,6 +65,8 @@ export default async function ProfilePage() {
       equippedSlot: string | null;
     }[];
     avatars: { id: string; rotations: unknown }[];
+    rune_name: string | null;
+    rune_attrs: AvatarAttr[] | null;
   };
   const _r = await withTimeout(
     Promise.all([
@@ -69,6 +74,7 @@ export default async function ProfilePage() {
         select
           c.nickname, p.public_code, p.is_admin, c.diamond::text as diamond,
           c.nickname_changed_count, c.active_profile_id,
+          r.name as rune_name, r.attrs as rune_attrs,
           g.emblem_url as guild_emblem_url, g.name as guild_name,
           z.name as executor_zone, z.region::text as executor_zone_region,
           (select count(*)::int from referral_attributions where referrer_user_id = ${userId}::uuid) as referral_count,
@@ -85,6 +91,7 @@ export default async function ProfilePage() {
           left join guild_members gm on gm.user_id = p.id and gm.server_id = ${serverId}
           left join guilds g on g.id = gm.guild_id
           left join zones z on z.executor_user_id = p.id and z.server_id = ${serverId}
+          left join runes r on r.id = c.equipped_rune_id
         where p.id = ${userId}::uuid limit 1
       `) as unknown as Promise<MeRow[]>,
       liberatedItemRanks(userId, serverId),
@@ -195,6 +202,18 @@ export default async function ProfilePage() {
                 <span className="text-[11px]">생성</span>
               </Link>
             )}
+            {/* 장착 룬 — 이름 그라데이션이 곧 비주얼(RuneName). 탭 시 룬 보관함. */}
+            {row?.rune_attrs ? (
+              <Link
+                prefetch={false}
+                href="/me/runes"
+                aria-label="장착 룬"
+                className="flex min-w-0 max-w-full items-center gap-1"
+              >
+                <span className="shrink-0 text-[10px]" aria-hidden>🔮</span>
+                <RuneName name={row.rune_name} attrs={row.rune_attrs} className="text-[12px]" />
+              </Link>
+            ) : null}
           </div>
 
           {/* 우(6) — 장비 3종, 좌 높이에 맞춰 stretch */}

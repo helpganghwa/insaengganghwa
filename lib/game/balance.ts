@@ -701,6 +701,32 @@ export function attrPrey(r: AttrRegion): AttrRegion {
   return AVATAR_ATTR_REGIONS[(i + 1) % AVATAR_ATTR_REGIONS.length]!;
 }
 
+/** r을 잡아먹는(r에게 강한) 권역 — 사이클의 바로 이전 원소. 상세 '약점' 표기용. */
+export function attrPredator(r: AttrRegion): AttrRegion {
+  const i = AVATAR_ATTR_REGIONS.indexOf(r);
+  return AVATAR_ATTR_REGIONS[(i - 1 + AVATAR_ATTR_REGIONS.length) % AVATAR_ATTR_REGIONS.length]!;
+}
+
+/** 권역 한글 라벨(짧은 이름) — 룬 UI·확률 공시 공용. */
+export const ATTR_REGION_KO: Record<AttrRegion, string> = {
+  angel: '천사',
+  kingdom: '왕국',
+  orc: '오크',
+  swamp: '늪',
+  volcano: '화산',
+  temple: '신전',
+};
+
+/** 권역 색 — 세계지도(REGION_COLOR)와 동일 팔레트. 룬 이름 그라데이션·수치 표기 공용. */
+export const ATTR_REGION_COLOR: Record<AttrRegion, string> = {
+  angel: '#c084fc',
+  kingdom: '#fbbf24',
+  orc: '#f97316',
+  swamp: '#22c55e',
+  volcano: '#ef4444',
+  temple: '#60a5fa',
+};
+
 export type AvatarAttr = { slot: 'weapon' | 'armor' | 'accessory'; region: AttrRegion; pct: number };
 
 /**
@@ -743,3 +769,6 @@ export function attrAdvantagePct(
   }
   return adv;
 }
+
+/** §10 룬 교체 쿨타임 — 72시간(최초 장착 무쿨, 잔여분 💎 단축 1💎=1분 표준). */
+export const RUNE_SWAP_COOLDOWN_MS = 72 * 3600_000;

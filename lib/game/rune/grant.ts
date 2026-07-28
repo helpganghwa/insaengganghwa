@@ -3,6 +3,7 @@ import 'server-only';
 import { db } from '@/lib/db/client';
 import { runes } from '@/lib/db/schema/rune';
 import { rollAvatarAttrs } from '@/lib/game/balance';
+import { runeNameFor } from './name';
 
 // drizzle 트랜잭션 핸들 — 아바타 생성 tx 안에서 함께 지급(부분 실패 없음, §3.3).
 type Tx = Parameters<Parameters<typeof db.transaction>[0]>[0];
@@ -15,12 +16,14 @@ export async function grantRuneForProfile(
   tx: Tx,
   input: { userId: string; serverId: number; profileId: string },
 ): Promise<void> {
+  const attrs = rollAvatarAttrs();
   await tx
     .insert(runes)
     .values({
       userId: input.userId,
       serverId: input.serverId,
-      attrs: rollAvatarAttrs(),
+      attrs,
+      name: runeNameFor(attrs),
       sourceProfileId: input.profileId,
     })
     .onConflictDoNothing();

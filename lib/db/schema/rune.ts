@@ -4,6 +4,7 @@ import {
   jsonb,
   pgTable,
   smallint,
+  text,
   timestamp,
   uniqueIndex,
   uuid,
@@ -30,6 +31,8 @@ export const runes = pgTable(
     serverId: smallint('server_id').notNull().default(1),
     /** 속성 3줄 [{slot,region,pct}] — balance §10 rollAvatarAttrs 산출값 그대로. */
     attrs: jsonb('attrs').$type<AvatarAttr[]>().notNull(),
+    /** 이름(0139) — 생성 시 명명(지배 권역×등급대 톤). null=미명명(클라 폴백 표시). */
+    name: text('name'),
     /** 출처 아바타(user_profiles.id) — 지급 멱등키(unique) 겸 참고. 아바타 삭제와 무관(FK 없음). */
     sourceProfileId: uuid('source_profile_id'),
     createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
