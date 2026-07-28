@@ -17,7 +17,7 @@ import { synergyRows, SYNERGY_ROW_H } from './AttrSynergyChart';
 // echarts는 무거워 팝업을 열 때만 로드(프로필 화면 초기 번들에서 제외).
 const AttrSynergyChart = dynamic(
   () => import('./AttrSynergyChart').then((m) => m.AttrSynergyChart),
-  { ssr: false, loading: () => <div style={{ height: 6 * SYNERGY_ROW_H }} /> },
+  { ssr: false, loading: () => <div className="h-full w-full" /> },
 );
 
 /** 1차 팝업 — 상성 차트 + 순환 + 요약 · 대결/계산 방법으로 연결. owner=내 속성 / else 남의 속성. */
@@ -66,17 +66,17 @@ export function AttrPopup({
         {vec.length > 0 ? (
           <>
             <p className="mt-2 text-[11.5px] text-zinc-500">상대의 속성이 해당 지역 100%일 때 기준</p>
-            <div className="mt-1.5">
+            <div className="mt-1.5" style={{ height: rows.length * SYNERGY_ROW_H }}>
               <AttrSynergyChart rows={rows} />
             </div>
             <div className="mt-1 flex justify-center gap-4 text-[10.5px] text-zinc-500">
               <span>
                 <i className="mr-1 inline-block h-[3px] w-[9px] rounded-sm bg-emerald-500 align-middle" />
-                ← 내 공격 ↑
+                내 공격 ↑
               </span>
               <span>
                 <i className="mr-1 inline-block h-[3px] w-[9px] rounded-sm bg-rose-500 align-middle" />
-                받는 피해 ↑ →
+                받는 피해 ↑
               </span>
             </div>
 

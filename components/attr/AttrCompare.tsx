@@ -17,11 +17,13 @@ import {
 
 import type { OpponentResult } from './actions';
 import { AttrGuideButton, AttrGuideModal } from './AttrGuideModal';
+import { AttrRingChart } from './AttrRingChart';
 import { PAIR_ROW_H, type Pair } from './AttrPairChart';
 
+// 지연 로드 시프트 방지 — 자리는 부모가 pairs.length × PAIR_ROW_H로 예약하고 차트는 채우기만 한다.
 const AttrPairChart = dynamic(() => import('./AttrPairChart').then((m) => m.AttrPairChart), {
   ssr: false,
-  loading: () => <div style={{ height: PAIR_ROW_H }} />,
+  loading: () => <div className="h-full w-full" />,
 });
 
 /** 지역 속성 — 점 + 지역 + %를 줄바꿈으로. **3줄 높이 고정**(1~3줄 편차로 인한 시프트 방지). */
@@ -124,9 +126,6 @@ export function AttrCompare({
 
   // 우위 링 — 초록 비중 = 내 몫. 둘 다 0이면 흐린 링 + '상성 없음'.
   const total = myAdv + oppAdv;
-  const R = 42;
-  const CIRC = 2 * Math.PI * R;
-  const myShare = total > 0 ? myAdv / total : 0.5;
 
   return (
     <ModalShell
@@ -150,41 +149,17 @@ export function AttrCompare({
               <AttrLines attrs={myAttrs} />
             </div>
 
-            <div className="mt-5 shrink-0">
+            <div className="mt-5 flex shrink-0 flex-col items-center">
               <div className="relative h-[86px] w-[86px]">
-                <svg viewBox="0 0 100 100" className="h-full w-full -rotate-90">
-                  <circle
-                    cx="50"
-                    cy="50"
-                    r={R}
-                    fill="none"
-                    className="attr-ring-track"
-                    stroke="#f43f5e"
-                    strokeWidth="8"
-                    opacity={total > 0 ? 1 : 0.14}
-                  />
-                  <circle
-                    cx="50"
-                    cy="50"
-                    r={R}
-                    fill="none"
-                    stroke="#10b981"
-                    strokeWidth="8"
-                    className="attr-ring-arc"
-                    strokeDasharray={CIRC}
-                    strokeDashoffset={CIRC * (1 - myShare)}
-                    opacity={total > 0 ? 1 : 0.14}
-                    style={{ ['--ring-circ' as string]: `${CIRC}` }}
-                  />
-                </svg>
-                <div className="absolute inset-0 flex flex-col items-center justify-center">
+                <AttrRingChart myAdv={myAdv} oppAdv={oppAdv} />
+                <div className="pointer-events-none absolute inset-0 flex flex-col items-center justify-center">
                   {total > 0 ? (
                     <>
                       <span className="text-[8.5px] font-bold text-zinc-500">
                         {diff > 0 ? '유리' : diff < 0 ? '불리' : '대등'}
                       </span>
                       <span
-                        className={`font-mono text-[17px] font-black tabular-nums ${
+                        className={`font-mono text-[16px] font-black tabular-nums ${
                           diff > 0
                             ? 'text-emerald-600 dark:text-emerald-400'
                             : diff < 0
@@ -206,7 +181,6 @@ export function AttrCompare({
                   )}
                 </div>
               </div>
-              {/* 양측 보정 라벨 */}
               <div className="mt-1.5 flex items-center justify-center gap-2 font-mono text-[11px] font-black tabular-nums">
                 <span className="text-emerald-600 dark:text-emerald-400">+{myAdv.toFixed(1)}%</span>
                 <span className="text-zinc-300 dark:text-zinc-700">|</span>
@@ -227,17 +201,17 @@ export function AttrCompare({
           {pairs.length > 0 ? (
             <>
               <p className="mt-3 text-[10.5px] text-zinc-500">지역별 상성 기여</p>
-              <div className="mt-1">
+              <div className="mt-1" style={{ height: pairs.length * PAIR_ROW_H }}>
                 <AttrPairChart pairs={pairs} />
               </div>
               <div className="mt-1 flex justify-center gap-4 text-[10px] text-zinc-500">
                 <span>
                   <i className="mr-1 inline-block h-[3px] w-[9px] rounded-sm bg-emerald-500 align-middle" />
-                  ← 내 공격
+                  내 공격
                 </span>
                 <span>
                   <i className="mr-1 inline-block h-[3px] w-[9px] rounded-sm bg-rose-500 align-middle" />
-                  상대 공격 →
+                  상대 공격
                 </span>
               </div>
             </>

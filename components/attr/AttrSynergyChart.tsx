@@ -126,5 +126,6 @@ export function AttrSynergyChart({ rows }: { rows: SynergyRow[] }) {
     };
   }, [rows]);
 
-  return <div ref={ref} style={{ width: '100%', height: rows.length * SYNERGY_ROW_H }} />;
+  // 높이는 부모가 예약(지연 로드 시프트 방지) — 차트는 100%로 채운다.
+  return <div ref={ref} className="h-full w-full" />;
 }
