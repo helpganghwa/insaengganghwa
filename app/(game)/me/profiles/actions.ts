@@ -161,7 +161,7 @@ export async function deleteProfile(profileId: string): Promise<ActionState> {
 }
 
 /**
- * 이 아바타의 속성을 전투 적용(0141) — 캐릭터당 1개. 최초 적용 무쿨, 교체는 72h 쿨
+ * 이 아바타의 속성을 전투 적용(0141) — 캐릭터당 1개. 최초 적용 무쿨, 교체는 24h 쿨
  * (잔여분 1💎=1분 정산 후 즉시 교체). 쿨 판정은 rune_changed_at 기준 — 적용 중이던
  * 아바타를 삭제해도(equipped null) 쿨은 유지되어 삭제로 우회할 수 없다.
  */

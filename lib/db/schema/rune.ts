@@ -21,7 +21,7 @@ import { userProfiles } from './avatar';
  * 속성 적용 아바타는 별도 선택 가능(characters.active_profile_id / equipped_rune_id).
  * 속성 3줄(무/방/장)은 생성 시 서버 RNG로 확정·**불변**(§10 확률 공시 1:1). 줄 단위 조합 금지
  * (조합 허용 시 몰빵 조립이 가능해져 자연 희귀도·수집 경제 붕괴).
- * 적용 교체 쿨 72h + 다이아 단축(잔여분 1💎=1분).
+ * 적용 교체 쿨 24h + 다이아 단축(잔여분 1💎=1분).
  */
 export const runes = pgTable(
   'runes',
