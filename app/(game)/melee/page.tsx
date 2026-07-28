@@ -80,5 +80,5 @@ export default async function MeleePage() {
 
   // ── 발표됨 — 결과 뷰(오늘/과거 공용 빌더) ──
   const view = await buildMeleeResultView({ ...battle, serverId, battleDate }, userId);
-  return <MeleeResult view={view} serverId={serverId} />;
+  return <MeleeResult view={view} serverId={serverId} battleId={String(battle.id)} myUserId={userId} />;
 }

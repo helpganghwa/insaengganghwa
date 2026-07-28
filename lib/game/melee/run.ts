@@ -132,6 +132,12 @@ export async function runMelee(serverId: number): Promise<{ ran: boolean; battle
     }
   }
 
+  // 길드 스냅샷(0138) — **전 참가자분**. finale.roster는 마지막 윈도 등장자만이라 순위표(하위권)엔
+  // 부족하다. 현재 길드로 폴백하면 과거 회차가 오염되므로 회차 시점 값을 참가자 행에 박제한다.
+  const guildAll = await getGuildBriefsByUsers(ids, serverId).catch(
+    () => new Map<string, { emblemUrl: string | null; name: string }>(),
+  );
+
   // 배틀 행 + 참가자 행을 **단일 트랜잭션**으로(감사 B1). battle만 커밋되고 participants 적재 전
   // 중단되면, 멱등가드(선조회)가 0명 배틀을 영구화 → reveal의 insert…select가 0행 → 전원 보상
   // 우편 영구 유실. 두 적재를 원자화해 부분실패 시 롤백·재시도가 둘 다 재수행. race는 onConflict로 skip.
@@ -167,6 +173,9 @@ export async function runMelee(serverId: number): Promise<{ ran: boolean; battle
         rewardDiamond: BigInt(reward.diamond),
         rewardBoxes: distributeBoxes(reward.boxes),
         myEvents: r.events,
+        eliminatedRound: r.eliminatedRound,
+        guildName: guildAll.get(r.userId)?.name ?? null,
+        guildEmblemUrl: guildAll.get(r.userId)?.emblemUrl ?? null,
         attackCount: r.attackCount,
         defenseCount: r.defenseCount,
       };

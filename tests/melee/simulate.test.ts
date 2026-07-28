@@ -80,11 +80,25 @@ describe('simulateMelee', () => {
     const one = simulateMelee(roster(1, () => 5000), 's');
     expect(one.championUserId).toBe('u0');
     expect(one.ranks).toEqual([
-      { userId: 'u0', finalRank: 1, killerUserId: null, events: [], attackCount: 0, defenseCount: 0 },
+      {
+        userId: 'u0',
+        finalRank: 1,
+        killerUserId: null,
+        events: [],
+        attackCount: 0,
+        defenseCount: 0,
+        eliminatedRound: 0, // 단독 참가 — 전투 자체가 없음
+      },
     ]);
 
     const two = simulateMelee(roster(2, (i) => 1000 * (i + 1)), 's');
     expect(two.ranks.map((r) => r.finalRank).sort()).toEqual([1, 2]);
+    // 탈락 라운드(0138) — 패자는 실제 라운드, 챔피언은 총 라운드.
+    const loser = two.ranks.find((r) => r.finalRank === 2)!;
+    const champ = two.ranks.find((r) => r.finalRank === 1)!;
+    expect(loser.eliminatedRound).toBeGreaterThan(0);
+    expect(loser.eliminatedRound).toBeLessThanOrEqual(two.totalRounds);
+    expect(champ.eliminatedRound).toBe(two.totalRounds);
   });
 
   it('내 전투 미니로그 — 첫 탈락 포함 전원이 본인 이벤트 보유', () => {

@@ -118,6 +118,11 @@ export const meleeParticipants = pgTable(
     attackCount: integer('attack_count').notNull().default(0),
     /** 총 방어 횟수(내가 타겟이었던 라운드). */
     defenseCount: integer('defense_count').notNull().default(0),
+    /** 탈락한 라운드(0138) — 챔피언은 총 라운드. 0138 이전 회차는 null. */
+    eliminatedRound: integer('eliminated_round'),
+    /** 그 시점 소속 길드 스냅샷(0138) — 전 참가자분. finale.roster는 윈도 등장자만이라 별도 저장. */
+    guildName: text('guild_name'),
+    guildEmblemUrl: text('guild_emblem_url'),
   },
   (t) => [
     primaryKey({ columns: [t.battleId, t.userId] }),

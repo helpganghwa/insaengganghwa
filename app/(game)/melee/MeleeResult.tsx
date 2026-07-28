@@ -3,10 +3,13 @@ import { profileHref } from '@/lib/game/profile/href';
 
 import { useEffect, useState } from 'react';
 import { createPortal } from 'react-dom';
+import { usePathname, useRouter, useSearchParams } from 'next/navigation';
 import Link from 'next/link';
 import { josa } from 'es-hangul';
 
 import { MELEE_HP_MULT } from '@/lib/game/balance';
+
+import { MeleeRanking } from './MeleeRanking';
 import { assetUrl } from '@/lib/asset-versions';
 import { meleeFaceCropStyle, type FaceBox } from '@/components/faceCrop';
 import { GuildBadge } from '@/components/GuildBadge';
@@ -658,8 +661,25 @@ function FinalCard({
   );
 }
 
-export function MeleeResult({ view, serverId }: { view: MeleeResultView; serverId: number }) {
-  const [tab, setTab] = useState<'log' | 'mine'>('log');
+export function MeleeResult({
+  view,
+  serverId,
+  battleId,
+  myUserId,
+}: {
+  view: MeleeResultView;
+  serverId: number;
+  battleId: string;
+  myUserId: string;
+}) {
+  // 탭은 URL 쿼리로 — 프로필 상세 갔다 뒤로가기해도 보던 탭·스크롤이 복원된다(로컬 state면 초기화됨).
+  const router = useRouter();
+  const pathname = usePathname();
+  const search = useSearchParams();
+  const tab = ((): 'rank' | 'log' | 'mine' => {
+    const t = search.get('tab');
+    return t === 'log' || t === 'mine' ? t : 'rank';
+  })();
   const [fight, setFight] = useState<Fight | null>(null);
   const [fightKey, setFightKey] = useState(0);
   const {
@@ -869,10 +889,16 @@ export function MeleeResult({ view, serverId }: { view: MeleeResultView; serverI
     setAutoplay({ list, idx: 0 });
     play(list[0]!);
   };
-  const selectTab = (t: 'log' | 'mine') => {
-    setTab(t);
+  const selectTab = (t: 'rank' | 'log' | 'mine') => {
     stopPlay();
     setFight(null);
+    const q = new URLSearchParams(search.toString());
+    if (t === 'rank') q.delete('tab');
+    else q.set('tab', t);
+    if (t !== 'rank') q.delete('sub');
+    const qs = q.toString();
+    // push — 뒤로가기로 이전 탭에 돌아갈 수 있게(스크롤 복원은 App Router가 담당).
+    router.push(qs ? `${pathname}?${qs}` : pathname, { scroll: false });
   };
 
   return (
@@ -927,6 +953,7 @@ export function MeleeResult({ view, serverId }: { view: MeleeResultView; serverI
         <div className="flex gap-1 px-3 pt-2.5">
           {(
             [
+              ['rank', '전체 순위'],
               ['log', '전체 전투'],
               ['mine', '내 전투'],
             ] as const
@@ -977,6 +1004,11 @@ export function MeleeResult({ view, serverId }: { view: MeleeResultView; serverI
         </div>
       </div>
 
+      {/* 전체 순위 탭 — 참가자 전원(등수·전적·탈락 라운드). 로그 탭과 배타. */}
+      {tab === 'rank' ? (
+        <MeleeRanking battleId={battleId} serverId={serverId} myUserId={myUserId} />
+      ) : (
+      <>
       {/* 로그 — 고정 헤더/컨트롤 아래 내부 스크롤(풀폭, 별도 박스 없음) */}
       <div className="min-h-0 flex-1 overflow-y-auto overscroll-contain">
         {displayRows.length === 0 ? (
@@ -1014,6 +1046,8 @@ export function MeleeResult({ view, serverId }: { view: MeleeResultView; serverI
           </ul>
         )}
       </div>
+      </>
+      )}
     </div>
   );
 }
