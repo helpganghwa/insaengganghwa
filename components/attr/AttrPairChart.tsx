@@ -46,6 +46,8 @@ export function AttrPairChart({ pairs }: { pairs: Pair[] }) {
     chart.setOption({
       animationDuration: 480,
       animationEasing: 'cubicOut',
+      // 행마다 살짝 늦게 자라 순차 등장(정지 화면처럼 보이지 않게).
+      animationDelay: (idx: number) => idx * 55,
       grid: { left: 70, right: 70, top: 3, bottom: 3 },
       xAxis: { type: 'value', min: -max, max, show: false },
       yAxis: [

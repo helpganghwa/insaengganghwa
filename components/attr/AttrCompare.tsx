@@ -153,6 +153,7 @@ export function AttrCompare({
                     cy="50"
                     r={R}
                     fill="none"
+                    className="attr-ring-track"
                     stroke="#f43f5e"
                     strokeWidth="8"
                     opacity={total > 0 ? 1 : 0.14}
@@ -164,9 +165,11 @@ export function AttrCompare({
                     fill="none"
                     stroke="#10b981"
                     strokeWidth="8"
+                    className="attr-ring-arc"
                     strokeDasharray={CIRC}
                     strokeDashoffset={CIRC * (1 - myShare)}
                     opacity={total > 0 ? 1 : 0.14}
+                    style={{ ['--ring-circ' as string]: `${CIRC}` }}
                   />
                 </svg>
                 <div className="absolute inset-0 flex flex-col items-center justify-center">

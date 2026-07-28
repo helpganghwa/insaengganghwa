@@ -284,6 +284,21 @@ html {
   100% { transform: translateY(-100%); }
 }
 
+/* 상성 비교 우위 링 — 초록 호가 0에서 목표까지 그려짐. --ring-circ = 전체 둘레(빈 상태).
+   ECharts 막대(cubicOut 480~500ms)와 결을 맞춘 620ms. */
+@keyframes attr-ring-draw {
+  from { stroke-dashoffset: var(--ring-circ); }
+}
+@keyframes attr-ring-track {
+  from { opacity: 0.25; }
+}
+.attr-ring-arc  { animation: attr-ring-draw 620ms cubic-bezier(0.22, 1, 0.36, 1) both; }
+.attr-ring-track { animation: attr-ring-track 620ms ease-out both; }
+@media (prefers-reduced-motion: reduce) {
+  .attr-ring-arc,
+  .attr-ring-track { animation: none; }
+}
+
 /* 일괄 초월 확정 버튼 — 배경색만 펄스(텍스트는 안정). */
 @keyframes confirm-bg-pulse {
   0%, 100% { opacity: 0; }
