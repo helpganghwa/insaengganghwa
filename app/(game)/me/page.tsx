@@ -14,7 +14,7 @@ import { liberatedItemRanks } from '@/lib/game/codex/ranking';
 import { getCatalogMap, completeCatalog } from '@/lib/game/catalog';
 import { profileHref } from '@/lib/game/profile/href';
 import { type AvatarAttr } from '@/lib/game/balance';
-import { RuneName } from '@/components/RuneName';
+import { RuneName, RuneValues } from '@/components/RuneName';
 
 import { BoastLauncher } from '@/components/BoastModal';
 import { TranscendSprite } from '@/components/TranscendSprite';
@@ -201,18 +201,6 @@ export default async function ProfilePage() {
                 <span className="text-[11px]">생성</span>
               </Link>
             )}
-            {/* 적용 중 속성 — 이름 그라데이션이 곧 비주얼(RuneName). 탭 시 아바타 관리(속성 통합). */}
-            {row?.rune_attrs ? (
-              <Link
-                prefetch={false}
-                href="/me/profiles"
-                aria-label="적용 중인 속성"
-                className="flex min-w-0 max-w-full items-center gap-1"
-              >
-                <span className="shrink-0 text-[10px]" aria-hidden>🔮</span>
-                <RuneName name={row.rune_name} attrs={row.rune_attrs} className="text-[12px]" />
-              </Link>
-            ) : null}
           </div>
 
           {/* 우(6) — 장비 3종, 좌 높이에 맞춰 stretch */}
@@ -261,6 +249,36 @@ export default async function ProfilePage() {
                 </div>
               );
             })}
+            {/* 4번째 줄 — 적용 중 속성(I안 확정): 장비와 동일 문법. 탭 시 아바타 관리(속성 통합). */}
+            {row?.rune_attrs ? (
+              <Link
+                prefetch={false}
+                href="/me/profiles"
+                aria-label="적용 중인 속성"
+                className="flex flex-1 items-center gap-2 rounded-xl border border-amber-500/30 bg-white/5 px-2"
+              >
+                <span className="grid h-9 w-9 shrink-0 place-items-center rounded-lg bg-white/5 text-lg" aria-hidden>
+                  🔮
+                </span>
+                <div className="min-w-0 flex-1">
+                  <div className="flex min-w-0">
+                    <RuneName name={row.rune_name} attrs={row.rune_attrs} className="text-[12px] leading-tight" />
+                  </div>
+                  <RuneValues attrs={row.rune_attrs} className="text-[10px]" />
+                </div>
+              </Link>
+            ) : (
+              <Link
+                prefetch={false}
+                href="/me/profiles"
+                className="flex flex-1 items-center gap-2 rounded-xl border border-dashed border-white/15 bg-white/[0.02] px-2 text-white/45"
+              >
+                <span className="grid h-9 w-9 shrink-0 place-items-center rounded-lg bg-white/5 text-lg" aria-hidden>
+                  🔮
+                </span>
+                <span className="text-[12px]">속성 적용</span>
+              </Link>
+            )}
           </div>
         </div>
       </section>

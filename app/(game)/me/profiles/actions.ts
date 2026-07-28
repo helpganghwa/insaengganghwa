@@ -68,6 +68,25 @@ export async function setActiveProfile(profileId: string): Promise<ActionState> 
   return { status: 'ok' };
 }
 
+/** 대표(외형) 해제 — 아바타 없음 상태 허용(I안 그리드: 적용/해제 토글). */
+export async function clearActiveProfile(): Promise<ActionState> {
+  const userId = await getSessionUserId();
+  if (!userId) return { status: 'error', message: '로그인이 필요합니다.' };
+  if (await rateLimited(userId, 'profileEdit'))
+    return { status: 'error', message: '잠시 후 다시 시도해 주세요.' };
+  const __b = await actionBlock();
+  if (__b) return { status: 'error', message: __b === 'BANNED' ? '이용이 제한된 계정입니다.' : '서버 점검 중입니다.' };
+
+  const serverId = await getActiveServerId();
+  await db
+    .update(characters)
+    .set({ activeProfileId: null })
+    .where(and(eq(characters.userId, userId), eq(characters.serverId, serverId)));
+  revalidatePath('/me');
+  revalidatePath('/me/profiles');
+  return { status: 'ok' };
+}
+
 /** 프로필 삭제(본인). 대표였으면 대표 해제. (hidden 처리는 운영자 전용, 여긴 hard delete) */
 export async function deleteProfile(profileId: string): Promise<ActionState> {
   const userId = await getSessionUserId();

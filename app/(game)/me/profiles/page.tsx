@@ -7,6 +7,7 @@ import { characters } from '@/lib/db/schema/server';
 import { getActiveServerId } from '@/lib/game/servers';
 import { withTimeout } from '@/lib/db/with-timeout';
 import { userProfiles } from '@/lib/db/schema/avatar';
+import { runes } from '@/lib/db/schema/rune';
 
 import { ProfileSelector } from './ProfileSelector';
 
@@ -16,27 +17,38 @@ export default async function ProfileSelectPage() {
   if (!userId) return null;
 
   // 콜드 DB 커넥션 hang 시 페이지 무한 대기 방지 — 실패 시 빈 결과로 degrade(2026-05-29).
+  // 속성(0141)은 아바타 종속 1:1 — left join으로 아바타별 이름/수치 동봉.
   const _r = await withTimeout(
     Promise.all([
-    db
-      .select({
-        id: userProfiles.id,
-        rotations: userProfiles.rotations,
-      })
-      .from(userProfiles)
-      .where(and(eq(userProfiles.userId, userId), eq(userProfiles.serverId, serverId)))
-      .orderBy(desc(userProfiles.createdAt)),
-    db
-      .select({ activeProfileId: characters.activeProfileId })
-      .from(characters)
-      .where(and(eq(characters.userId, userId), eq(characters.serverId, serverId)))
-      .limit(1),
+      db
+        .select({
+          id: userProfiles.id,
+          rotations: userProfiles.rotations,
+          options: userProfiles.options,
+          attrId: runes.id,
+          attrName: runes.name,
+          attrs: runes.attrs,
+        })
+        .from(userProfiles)
+        .leftJoin(runes, eq(runes.sourceProfileId, userProfiles.id))
+        .where(and(eq(userProfiles.userId, userId), eq(userProfiles.serverId, serverId)))
+        .orderBy(desc(userProfiles.createdAt)),
+      db
+        .select({
+          activeProfileId: characters.activeProfileId,
+          equippedRuneId: characters.equippedRuneId,
+          runeChangedAt: characters.runeChangedAt,
+          diamond: characters.diamond,
+        })
+        .from(characters)
+        .where(and(eq(characters.userId, userId), eq(characters.serverId, serverId)))
+        .limit(1),
     ]),
     3500,
     'me.profiles.page',
   ).catch(() => null);
   const list = _r?.[0] ?? [];
-  const p = _r?.[1] ?? [];
+  const ch = _r?.[1]?.[0];
 
   return (
     <div className="space-y-4 px-4 py-6">
@@ -56,8 +68,15 @@ export default async function ProfileSelectPage() {
             profiles={list.map((r) => ({
               id: r.id,
               rotations: r.rotations as Record<string, string>,
+              isDefault: (r.options as { isDefault?: boolean } | null)?.isDefault === true,
+              attrId: r.attrId?.toString() ?? null,
+              attrName: r.attrName,
+              attrs: r.attrs ?? [],
             }))}
-            activeProfileId={p[0]?.activeProfileId ?? null}
+            activeProfileId={ch?.activeProfileId ?? null}
+            equippedRuneId={ch?.equippedRuneId?.toString() ?? null}
+            runeChangedAtIso={ch?.runeChangedAt?.toISOString() ?? null}
+            diamond={Number(ch?.diamond ?? 0n)}
           />
           <Link prefetch={false}
             href="/me/create"
