@@ -86,7 +86,7 @@ export function AttrSynergyChart({ rows }: { rows: SynergyRow[] }) {
                   position: inside(r.dis) ? 'insideLeft' : 'left',
                   distance: 5,
                   color: inside(r.dis) ? '#fff' : RED,
-                  formatter: `${r.dis}`,
+                  formatter: `${r.dis}%`,
                 }
               : { show: false },
           })),
@@ -105,7 +105,7 @@ export function AttrSynergyChart({ rows }: { rows: SynergyRow[] }) {
                   position: inside(r.adv) ? 'insideRight' : 'right',
                   distance: 5,
                   color: inside(r.adv) ? '#fff' : GREEN,
-                  formatter: `${r.adv}`,
+                  formatter: `${r.adv}%`,
                 }
               : { show: false },
           })),

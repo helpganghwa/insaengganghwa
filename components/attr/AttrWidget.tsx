@@ -84,10 +84,6 @@ export function AttrWidget({
             attrs={attrs}
             owner={owner}
             ownerNickname={ownerNickname}
-            ownerSouth={ownerSouth}
-            myAttrs={myAttrs ?? null}
-            myNickname={myNickname ?? '나'}
-            mySouth={mySouth ?? null}
           />
         )
       ) : null}

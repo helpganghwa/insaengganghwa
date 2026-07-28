@@ -24,8 +24,8 @@ export type Pair = {
 export const PAIR_ROW_H = 28;
 
 /**
- * 지역별 상성 기여 — 좌축=내 지역/수치, 우축=상대 지역/수치, 가운데 막대=기여 %.
- * 초록=내 공격 / 붉은=상대 공격. 라벨은 전부 ECharts 축이 담당(오버레이 없음).
+ * 지역별 상성 기여 — 내 속성 상성 차트(P1)와 같은 대칭 막대. 좌축=내 지역/수치,
+ * 우축=상대 지역/수치, 가운데 0을 기준으로 **오른쪽=내 공격(초록) / 왼쪽=상대 공격(붉은)**.
  */
 export function AttrPairChart({ pairs }: { pairs: Pair[] }) {
   const ref = useRef<HTMLDivElement>(null);
@@ -35,7 +35,7 @@ export function AttrPairChart({ pairs }: { pairs: Pair[] }) {
     const chart = echarts.init(ref.current, undefined, { renderer: 'svg' });
     const asc = [...pairs].reverse(); // category y축은 data[0]이 아래
     const max = Math.max(...pairs.map((p) => p.gain), 5);
-    const inside = (v: number) => v >= max * 0.3;
+    const inside = (v: number) => v >= max * 0.34;
 
     const axisBase = {
       type: 'category' as const,
@@ -46,12 +46,12 @@ export function AttrPairChart({ pairs }: { pairs: Pair[] }) {
     chart.setOption({
       animationDuration: 480,
       animationEasing: 'cubicOut',
-      grid: { left: 66, right: 66, top: 3, bottom: 3 },
-      xAxis: { type: 'value', max, show: false },
+      grid: { left: 70, right: 70, top: 3, bottom: 3 },
+      xAxis: { type: 'value', min: -max, max, show: false },
       yAxis: [
         {
           ...axisBase,
-          data: asc.map((p) => `${ATTR_REGION_KO[p.myRegion]} ${p.myVal}`),
+          data: asc.map((p) => `${ATTR_REGION_KO[p.myRegion]} ${p.myVal}%`),
           axisLabel: {
             fontSize: 10,
             fontWeight: 800,
@@ -62,7 +62,7 @@ export function AttrPairChart({ pairs }: { pairs: Pair[] }) {
         {
           ...axisBase,
           position: 'right',
-          data: asc.map((p) => `${ATTR_REGION_KO[p.oppRegion]} ${p.oppVal}`),
+          data: asc.map((p) => `${ATTR_REGION_KO[p.oppRegion]} ${p.oppVal}%`),
           axisLabel: {
             fontSize: 10,
             fontWeight: 800,
@@ -74,19 +74,39 @@ export function AttrPairChart({ pairs }: { pairs: Pair[] }) {
       series: [
         {
           type: 'bar',
+          stack: 'x',
           barWidth: 11,
-          showBackground: true,
-          backgroundStyle: { color: 'rgba(255,255,255,0.06)' },
           data: asc.map((p) => ({
-            value: p.gain,
-            itemStyle: { color: p.mine ? '#10b981' : '#f43f5e' },
-            label: {
-              show: true,
-              position: inside(p.gain) ? 'insideRight' : 'right',
-              distance: 5,
-              color: inside(p.gain) ? '#fff' : p.mine ? '#10b981' : '#f43f5e',
-              formatter: `+${p.gain.toFixed(1)}%`,
-            },
+            value: p.mine ? 0 : -p.gain,
+            itemStyle: { color: p.mine ? 'transparent' : '#f43f5e' },
+            label: p.mine
+              ? { show: false }
+              : {
+                  show: true,
+                  position: inside(p.gain) ? 'insideLeft' : 'left',
+                  distance: 5,
+                  color: inside(p.gain) ? '#fff' : '#f43f5e',
+                  formatter: `${p.gain.toFixed(1)}%`,
+                },
+          })),
+          label: { fontSize: 9.5, fontWeight: 900, fontFamily: 'ui-monospace, Menlo, monospace' },
+        },
+        {
+          type: 'bar',
+          stack: 'x',
+          barWidth: 11,
+          data: asc.map((p) => ({
+            value: p.mine ? p.gain : 0,
+            itemStyle: { color: p.mine ? '#10b981' : 'transparent' },
+            label: p.mine
+              ? {
+                  show: true,
+                  position: inside(p.gain) ? 'insideRight' : 'right',
+                  distance: 5,
+                  color: inside(p.gain) ? '#fff' : '#10b981',
+                  formatter: `${p.gain.toFixed(1)}%`,
+                }
+              : { show: false },
           })),
           label: { fontSize: 9.5, fontWeight: 900, fontFamily: 'ui-monospace, Menlo, monospace' },
         },

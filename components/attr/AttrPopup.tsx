@@ -14,7 +14,6 @@ import {
   type AvatarAttr,
 } from '@/lib/game/balance';
 
-import { AttrCompare } from './AttrCompare';
 import { synergyRows, SYNERGY_ROW_H } from './AttrSynergyChart';
 
 // echarts는 무거워 팝업을 열 때만 로드(프로필 화면 초기 번들에서 제외).
@@ -128,22 +127,13 @@ export function AttrPopup({
   attrs,
   owner,
   ownerNickname,
-  ownerSouth,
-  myAttrs,
-  myNickname,
-  mySouth,
 }: {
   onClose: () => void;
   attrs: AvatarAttr[];
   owner: boolean;
   ownerNickname: string;
-  ownerSouth: string | null;
-  myAttrs: AvatarAttr[] | null;
-  myNickname: string;
-  mySouth: string | null;
 }) {
   const [calcOpen, setCalcOpen] = useState(false);
-  const [simOpen, setSimOpen] = useState(false);
   const vec = runeVectorDesc(attrs);
   const rows = synergyRows(attrs);
 
@@ -198,26 +188,13 @@ export function AttrPopup({
         )}
 
 
-        <div className="mt-3.5 grid grid-cols-2 gap-2">
-          {owner || myAttrs != null ? (
-            <button
-              type="button"
-              onClick={() => setSimOpen(true)}
-              className="rounded-xl bg-amber-600 py-2.5 text-sm font-bold text-white active:opacity-90"
-            >
-              {owner ? '상대와 비교해보기' : '나와 비교하기'}
-            </button>
-          ) : (
-            <span />
-          )}
-          <button
-            type="button"
-            onClick={onClose}
-            className="rounded-xl bg-zinc-100 py-2.5 text-sm font-bold text-zinc-600 active:opacity-70 dark:bg-zinc-800 dark:text-zinc-300"
-          >
-            닫기
-          </button>
-        </div>
+        <button
+          type="button"
+          onClick={onClose}
+          className="mt-3.5 w-full rounded-xl bg-zinc-100 py-2.5 text-sm font-bold text-zinc-600 active:opacity-70 dark:bg-zinc-800 dark:text-zinc-300"
+        >
+          닫기
+        </button>
         <div className="mt-2.5 text-center">
           <button
             type="button"
@@ -229,18 +206,6 @@ export function AttrPopup({
         </div>
       </ModalShell>
       {calcOpen ? <CalcModal onClose={() => setCalcOpen(false)} /> : null}
-      {simOpen ? (
-        <AttrCompare
-          onClose={() => setSimOpen(false)}
-          // 남의 프로필에서는 좌=나 / 우=그 사람으로 고정 세팅해 검색 없이 바로 결과.
-          myAttrs={owner ? attrs : (myAttrs ?? [])}
-          myNickname={owner ? myNickname : myNickname}
-          mySouth={owner ? mySouth : mySouth}
-          fixedOpponent={
-            owner ? null : { userId: '', nickname: ownerNickname, south: ownerSouth, attrs }
-          }
-        />
-      ) : null}
     </>
   );
 }
