@@ -31,7 +31,7 @@ export default async function ProfileSelectPage() {
       .where(and(eq(userProfiles.userId, userId), eq(userProfiles.serverId, serverId)))
       .orderBy(desc(userProfiles.createdAt)),
     db
-      .select({ activeProfileId: characters.activeProfileId })
+      .select({ activeProfileId: characters.activeProfileId, nickname: characters.nickname })
       .from(characters)
       .where(and(eq(characters.userId, userId), eq(characters.serverId, serverId)))
       .limit(1),
@@ -63,6 +63,7 @@ export default async function ProfileSelectPage() {
               attrs: r.attrs ?? [],
             }))}
             activeProfileId={p[0]?.activeProfileId ?? null}
+            myNickname={p[0]?.nickname ?? '나'}
           />
           <Link prefetch={false}
             href="/me/create"

@@ -15,7 +15,7 @@ import { AttrHelpModal } from './AttrHelpModal';
 // echarts는 무거워 초기 번들에서 제외 — 마운트 후 그려진다(자리는 미리 확보).
 const AttrMiniChart = dynamic(() => import('./AttrMiniChart').then((m) => m.AttrMiniChart), {
   ssr: false,
-  loading: () => <div className="h-[66px] w-[66px]" />,
+  loading: () => <div className="h-[52px] w-[52px]" />,
 });
 import { setActiveProfile, deleteProfile } from './actions';
 
@@ -34,9 +34,11 @@ function frontSrc(p: ProfileItem): string {
 export function ProfileSelector({
   profiles,
   activeProfileId,
+  myNickname,
 }: {
   profiles: ProfileItem[];
   activeProfileId: string | null;
+  myNickname: string;
 }) {
   const router = useRouter();
   const { showHeaderToast, showError } = useResourceToast();
@@ -150,35 +152,33 @@ export function ProfileSelector({
             </span>
           </button>
         ) : null}
-        {/* 속성 코너 위젯 — 미니 폴라 차트(C1) + 중앙 '?' + 하단 수치. 위젯 전체가 상성 팝업 트리거. */}
+        {/* 속성 코너 위젯 — 배경·보더 없이 최소 크기로 얹는다(화면 가림 최소). 위젯 전체가 팝업 트리거. */}
         <button
           type="button"
           onClick={() => setHelpOpen(true)}
           aria-label="속성 상성 보기"
-          className="absolute left-2 top-2 z-10 w-[78px] rounded-xl border border-white/10 bg-white/[0.05] p-1.5 text-left backdrop-blur-sm transition active:scale-95"
+          className="absolute left-2.5 top-2.5 z-10 text-left transition active:scale-95"
         >
-          <div className="relative flex justify-center">
-            <AttrMiniChart attrs={sel.attrs} />
-            <span className="pointer-events-none absolute inset-0 grid place-items-center">
-              <span className="grid h-[19px] w-[19px] place-items-center rounded-full bg-zinc-700 text-[10px] font-black text-zinc-200 ring-[1.5px] ring-black/50">
-                ?
-              </span>
-            </span>
-          </div>
-          <div className="mt-1 flex flex-col gap-[2px]">
+          <AttrMiniChart attrs={sel.attrs} />
+          <div className="mt-0.5 flex flex-col gap-[1px]">
             {selAttrs.length > 0 ? (
               selAttrs.map(([r, v]) => (
-                <span key={r} className="flex items-center gap-1 text-[9.5px] font-bold leading-[1.35] text-zinc-200">
+                <span
+                  key={r}
+                  className="flex items-center gap-[3px] text-[9px] font-bold leading-[1.3] text-zinc-200 [text-shadow:0_1px_2px_rgba(0,0,0,0.9)]"
+                >
                   <i
-                    className="block h-[5px] w-[5px] shrink-0 rounded-full"
+                    className="block h-[4px] w-[4px] shrink-0 rounded-full"
                     style={{ backgroundColor: ATTR_REGION_COLOR[r] }}
                   />
                   {ATTR_REGION_KO[r]}
-                  <b className="ml-auto font-mono font-black tabular-nums">{v}%</b>
+                  <b className="ml-auto font-mono font-black tabular-nums">{v}</b>
                 </span>
               ))
             ) : (
-              <span className="text-center text-[9px] text-zinc-500">속성 없음</span>
+              <span className="text-[8.5px] text-zinc-400 [text-shadow:0_1px_2px_rgba(0,0,0,0.9)]">
+                속성 없음
+              </span>
             )}
           </div>
         </button>
@@ -237,7 +237,14 @@ export function ProfileSelector({
         {!dirty ? '현재 대표 아바타' : '이 아바타로 적용'}
       </button>
 
-      {helpOpen ? <AttrHelpModal onClose={() => setHelpOpen(false)} attrs={sel.attrs} /> : null}
+      {helpOpen ? (
+        <AttrHelpModal
+          onClose={() => setHelpOpen(false)}
+          attrs={sel.attrs}
+          myNickname={myNickname}
+          mySouth={frontSrc(sel) || null}
+        />
+      ) : null}
     </div>
   );
 }

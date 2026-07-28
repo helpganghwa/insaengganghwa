@@ -1,217 +1,293 @@
 // 클라이언트 전용 — 'use client' 미부착(ProfileSelector 클라 그래프에 포함).
-import { useMemo, useState } from 'react';
+import { useMemo, useState, useTransition } from 'react';
 
 import { ModalShell } from '@/components/ModalShell';
+import { runeVectorDesc } from '@/components/RuneName';
 import {
   ATTR_REGION_COLOR,
   ATTR_REGION_KO,
-  AVATAR_ATTR_REGIONS,
-  AVATAR_ATTR_ROLL_MAX,
   AVATAR_ATTR_TOTAL_MAX,
   attrAdvantagePct,
   attrDisplayVector,
   attrPrey,
+  AVATAR_ATTR_REGIONS,
   type AttrRegion,
   type AvatarAttr,
 } from '@/lib/game/balance';
 
-const SLOTS = [
-  { key: 'weapon', label: '무기' },
-  { key: 'armor', label: '방어구' },
-  { key: 'accessory', label: '장신구' },
-] as const;
+import { searchOpponentAction, type OpponentResult } from './actions';
 
-type Line = { region: AttrRegion; pct: number };
+/** 아바타 + 속성 한 칸 — 좌(나) / 우(상대) 공용. */
+function Side({
+  label,
+  nickname,
+  south,
+  attrs,
+  accent,
+}: {
+  label: string;
+  nickname: string;
+  south: string | null;
+  attrs: AvatarAttr[];
+  accent: string;
+}) {
+  const vec = runeVectorDesc(attrs);
+  return (
+    <div className="flex-1">
+      <p className="text-[9.5px] font-black tracking-wide" style={{ color: accent }}>
+        {label}
+      </p>
+      <div className="mt-1 flex h-[86px] items-end justify-center overflow-hidden rounded-xl bg-zinc-100 dark:bg-zinc-900">
+        {south ? (
+          // eslint-disable-next-line @next/next/no-img-element
+          <img
+            src={south}
+            alt=""
+            draggable={false}
+            className="h-full w-full object-contain object-bottom"
+            style={{ imageRendering: 'pixelated' }}
+          />
+        ) : (
+          <span className="pb-6 text-[11px] text-zinc-400">?</span>
+        )}
+      </div>
+      <p className="mt-1 truncate text-center text-[11px] font-bold">{nickname}</p>
+      <div className="mt-0.5 flex flex-col items-center gap-[1px]">
+        {vec.length > 0 ? (
+          vec.map(([r, v]) => (
+            <span
+              key={r}
+              className="text-[10px] font-extrabold tabular-nums"
+              style={{ color: ATTR_REGION_COLOR[r] }}
+            >
+              {ATTR_REGION_KO[r]} {v}%
+            </span>
+          ))
+        ) : (
+          <span className="text-[10px] text-zinc-400">속성 없음</span>
+        )}
+      </div>
+    </div>
+  );
+}
 
 /**
- * 상성 시뮬레이터 — 상대 속성을 실제 각인 구조(3줄 × 권역 × 0~50)대로 입력해
- * 양쪽 공격 보정을 즉시 계산. 수식은 balance.attrAdvantagePct 그대로라 실제 전투와 1:1.
+ * 상성 대결 — 좌: 내 아바타 / 우: 검색해 고른 상대. 하단에 양측 보정과 우열.
+ * 계산은 balance.attrAdvantagePct 그대로라 실제 전투와 1:1.
  */
-export function AttrSimModal({ onClose, attrs }: { onClose: () => void; attrs: AvatarAttr[] }) {
-  const [lines, setLines] = useState<Line[]>([
-    { region: 'kingdom', pct: 30 },
-    { region: 'temple', pct: 20 },
-    { region: 'orc', pct: 0 },
-  ]);
+export function AttrSimModal({
+  onClose,
+  attrs,
+  myNickname,
+  mySouth,
+}: {
+  onClose: () => void;
+  attrs: AvatarAttr[];
+  myNickname: string;
+  mySouth: string | null;
+}) {
+  const [q, setQ] = useState('');
+  const [results, setResults] = useState<OpponentResult[] | null>(null);
+  const [opp, setOpp] = useState<OpponentResult | null>(null);
+  const [err, setErr] = useState<string | null>(null);
+  const [pending, startTransition] = useTransition();
 
   const mineVec = useMemo(() => attrDisplayVector(attrs), [attrs]);
-  const oppVec = useMemo(() => {
-    const v: Partial<Record<AttrRegion, number>> = {};
-    for (const l of lines) if (l.pct > 0) v[l.region] = (v[l.region] ?? 0) + l.pct;
-    return v;
-  }, [lines]);
-
+  const oppVec = useMemo(() => attrDisplayVector(opp?.attrs ?? []), [opp]);
   const myAdv = attrAdvantagePct(mineVec, oppVec);
   const oppAdv = attrAdvantagePct(oppVec, mineVec);
   const diff = myAdv - oppAdv;
 
-  // 기여 내역 — 어떤 짝이 몇 %를 만들었는지(이해를 돕는 핵심).
   const parts = AVATAR_ATTR_REGIONS.flatMap((r) => {
     const my = mineVec[r] ?? 0;
     const op = oppVec[attrPrey(r)] ?? 0;
     if (my <= 0 || op <= 0) return [];
-    return [{ r, prey: attrPrey(r), my, op, gain: (my * op) / AVATAR_ATTR_TOTAL_MAX }];
+    return [{ r, prey: attrPrey(r) as AttrRegion, my, op, gain: (my * op) / AVATAR_ATTR_TOTAL_MAX }];
   });
 
-  const setLine = (i: number, patch: Partial<Line>) =>
-    setLines((ls) => ls.map((l, k) => (k === i ? { ...l, ...patch } : l)));
-
-  const oppEntries = Object.entries(oppVec)
-    .filter(([, v]) => (v ?? 0) > 0)
-    .sort((a, b) => (b[1] ?? 0) - (a[1] ?? 0)) as [AttrRegion, number][];
+  const search = () => {
+    if (pending) return;
+    setErr(null);
+    startTransition(async () => {
+      const r = await searchOpponentAction(q);
+      if (r.status === 'error') {
+        setErr(r.message);
+        return;
+      }
+      setResults(r.results);
+    });
+  };
 
   return (
     <ModalShell
       onClose={onClose}
-      label="상성 시뮬레이션"
+      label="상성 대결"
       className="max-h-[86dvh] w-full max-w-[320px] overflow-y-auto rounded-2xl bg-white p-4 dark:bg-zinc-950"
     >
-      <h2 className="text-[15px] font-bold">상성 시뮬레이션</h2>
-      <p className="mt-1.5 text-[12px] leading-relaxed text-zinc-500">
-        상대 아바타의 속성을 넣어보면 실제 전투에서 적용될 보정을 미리 볼 수 있어요.
-      </p>
+      <h2 className="text-[15px] font-bold">상성 대결</h2>
 
-      {/* 결과 — 항상 상단에 고정 노출 */}
-      <div className="mt-3 grid grid-cols-2 gap-2">
-        <div className="rounded-xl bg-emerald-500/10 px-3 py-2.5 text-center">
-          <p className="text-[10px] font-bold text-emerald-600 dark:text-emerald-400">내 공격</p>
-          <p className="font-mono text-[19px] font-black tabular-nums text-emerald-600 dark:text-emerald-400">
-            +{myAdv.toFixed(1)}%
-          </p>
-        </div>
-        <div className="rounded-xl bg-rose-500/10 px-3 py-2.5 text-center">
-          <p className="text-[10px] font-bold text-rose-500 dark:text-rose-400">상대 공격</p>
-          <p className="font-mono text-[19px] font-black tabular-nums text-rose-500 dark:text-rose-400">
-            +{oppAdv.toFixed(1)}%
-          </p>
-        </div>
-      </div>
-      <p className="mt-1.5 text-center text-[11.5px] font-bold">
-        {Math.abs(diff) < 0.05 ? (
-          <span className="text-zinc-500">서로 대등합니다</span>
-        ) : diff > 0 ? (
-          <span className="text-emerald-600 dark:text-emerald-400">
-            내가 {diff.toFixed(1)}%p 유리
-          </span>
+      {/* 좌: 나 / 우: 상대 */}
+      <div className="mt-3 flex items-start gap-2">
+        <Side label="나" nickname={myNickname} south={mySouth} attrs={attrs} accent="#a1a1aa" />
+        <span className="mt-[38px] shrink-0 text-[11px] font-black text-zinc-400">VS</span>
+        {opp ? (
+          <Side
+            label="상대"
+            nickname={opp.nickname}
+            south={opp.south}
+            attrs={opp.attrs}
+            accent="#a1a1aa"
+          />
         ) : (
-          <span className="text-rose-500 dark:text-rose-400">
-            내가 {Math.abs(diff).toFixed(1)}%p 불리
-          </span>
-        )}
-      </p>
-
-      {/* 상대 속성 입력 — 실제 각인 구조 그대로 3줄 */}
-      <h3 className="mt-4 text-[10px] font-black uppercase tracking-[0.08em] text-zinc-400">
-        상대 속성
-      </h3>
-      <div className="mt-2 flex flex-col gap-2.5">
-        {SLOTS.map((s, i) => {
-          const line = lines[i]!;
-          return (
-            <div key={s.key}>
-              <div className="flex items-center gap-1.5">
-                <span className="w-9 shrink-0 text-[11px] font-bold text-zinc-500">{s.label}</span>
-                <div className="flex flex-1 gap-[3px]">
-                  {AVATAR_ATTR_REGIONS.map((r) => {
-                    const on = line.region === r;
-                    return (
-                      <button
-                        key={r}
-                        type="button"
-                        onClick={() => setLine(i, { region: r })}
-                        className={`flex-1 rounded-md py-1 text-[9.5px] font-extrabold transition ${
-                          on ? 'text-zinc-950' : 'text-zinc-400 dark:text-zinc-500'
-                        }`}
-                        style={{
-                          backgroundColor: on ? ATTR_REGION_COLOR[r] : 'rgba(255,255,255,0.06)',
-                        }}
-                      >
-                        {ATTR_REGION_KO[r]}
-                      </button>
-                    );
-                  })}
-                </div>
-              </div>
-              <div className="mt-1 flex items-center gap-2 pl-[42px]">
-                <input
-                  type="range"
-                  min={0}
-                  max={AVATAR_ATTR_ROLL_MAX}
-                  value={line.pct}
-                  onChange={(e) => setLine(i, { pct: Number(e.target.value) })}
-                  aria-label={`${s.label} 수치`}
-                  className="h-1 flex-1 cursor-pointer appearance-none rounded-full bg-zinc-200 accent-zinc-900 dark:bg-zinc-800 dark:accent-white"
-                  style={{ accentColor: ATTR_REGION_COLOR[line.region] }}
-                />
-                <span className="w-9 shrink-0 text-right font-mono text-[11.5px] font-black tabular-nums">
-                  {line.pct}%
-                </span>
-              </div>
+          <div className="flex-1">
+            <p className="text-[9.5px] font-black tracking-wide text-zinc-400">상대</p>
+            <div className="mt-1 flex h-[86px] items-center justify-center rounded-xl border border-dashed border-zinc-300 text-[10.5px] text-zinc-400 dark:border-zinc-700">
+              검색해서 선택
             </div>
-          );
-        })}
+          </div>
+        )}
       </div>
 
-      <div className="mt-2 flex items-center gap-2">
-        <span className="flex-1 text-[10.5px] text-zinc-500">
-          상대 합계{' '}
-          <b className="font-mono tabular-nums">
-            {oppEntries.reduce((s, [, v]) => s + v, 0)}%
-          </b>
-          {oppEntries.length > 0 ? (
-            <>
-              {' · '}
-              {oppEntries.map(([r, v]) => (
-                <span key={r} style={{ color: ATTR_REGION_COLOR[r] }}>
-                  {ATTR_REGION_KO[r]} {v}%{' '}
-                </span>
-              ))}
-            </>
-          ) : null}
-        </span>
-        <button
-          type="button"
-          onClick={() => setLines(lines.map((l) => ({ ...l, pct: 0 })))}
-          className="shrink-0 text-[10.5px] font-semibold text-zinc-400 underline underline-offset-2 active:opacity-70"
-        >
-          초기화
-        </button>
-      </div>
-
-      {/* 계산 과정 — 왜 그 숫자가 나왔는지 */}
-      <h3 className="mt-4 text-[10px] font-black uppercase tracking-[0.08em] text-zinc-400">
-        내 공격 보정이 나온 과정
-      </h3>
-      {parts.length > 0 ? (
-        <div className="mt-2 flex flex-col gap-1.5 rounded-xl bg-zinc-100 px-3 py-2.5 dark:bg-zinc-900">
-          {parts.map((p) => (
-            <p key={p.r} className="font-mono text-[11px] tabular-nums leading-relaxed">
-              <span style={{ color: ATTR_REGION_COLOR[p.r] }}>
-                내 {ATTR_REGION_KO[p.r]} {p.my}
+      {/* 결과 */}
+      {opp ? (
+        <>
+          <div className="mt-3 grid grid-cols-2 gap-2">
+            <div className="rounded-xl bg-emerald-500/10 py-2 text-center">
+              <p className="text-[9.5px] font-bold text-emerald-600 dark:text-emerald-400">내 공격</p>
+              <p className="font-mono text-[18px] font-black tabular-nums text-emerald-600 dark:text-emerald-400">
+                +{myAdv.toFixed(1)}%
+              </p>
+            </div>
+            <div className="rounded-xl bg-rose-500/10 py-2 text-center">
+              <p className="text-[9.5px] font-bold text-rose-500 dark:text-rose-400">상대 공격</p>
+              <p className="font-mono text-[18px] font-black tabular-nums text-rose-500 dark:text-rose-400">
+                +{oppAdv.toFixed(1)}%
+              </p>
+            </div>
+          </div>
+          <p className="mt-1.5 text-center text-[12px] font-black">
+            {Math.abs(diff) < 0.05 ? (
+              <span className="text-zinc-500">대등</span>
+            ) : diff > 0 ? (
+              <span className="text-emerald-600 dark:text-emerald-400">
+                내가 {diff.toFixed(1)}%p 유리
               </span>
-              <span className="text-zinc-400"> × </span>
-              <span style={{ color: ATTR_REGION_COLOR[p.prey] }}>
-                상대 {ATTR_REGION_KO[p.prey]} {p.op}
+            ) : (
+              <span className="text-rose-500 dark:text-rose-400">
+                내가 {Math.abs(diff).toFixed(1)}%p 불리
               </span>
-              <span className="text-zinc-400"> ÷ {AVATAR_ATTR_TOTAL_MAX} = </span>
-              <b className="text-emerald-600 dark:text-emerald-400">+{p.gain.toFixed(1)}%</b>
-            </p>
-          ))}
-          <p className="mt-0.5 border-t border-zinc-200 pt-1.5 font-mono text-[11.5px] font-black tabular-nums dark:border-zinc-800">
-            합계 <span className="text-emerald-600 dark:text-emerald-400">+{myAdv.toFixed(1)}%</span>
+            )}
           </p>
-        </div>
+
+          {parts.length > 0 ? (
+            <div className="mt-2.5 flex flex-col gap-1 rounded-xl bg-zinc-100 px-3 py-2 dark:bg-zinc-900">
+              {parts.map((p) => (
+                <p key={p.r} className="font-mono text-[10.5px] tabular-nums">
+                  <span style={{ color: ATTR_REGION_COLOR[p.r] }}>{ATTR_REGION_KO[p.r]} {p.my}</span>
+                  <span className="text-zinc-400"> × </span>
+                  <span style={{ color: ATTR_REGION_COLOR[p.prey] }}>
+                    {ATTR_REGION_KO[p.prey]} {p.op}
+                  </span>
+                  <span className="text-zinc-400"> ÷ {AVATAR_ATTR_TOTAL_MAX} = </span>
+                  <b className="text-emerald-600 dark:text-emerald-400">+{p.gain.toFixed(1)}%</b>
+                </p>
+              ))}
+            </div>
+          ) : (
+            <p className="mt-2.5 rounded-xl bg-zinc-100 px-3 py-2 text-[11px] text-zinc-500 dark:bg-zinc-900">
+              상대가 내 먹잇감 권역을 갖고 있지 않아 보정 0.
+            </p>
+          )}
+
+          <button
+            type="button"
+            onClick={() => {
+              setOpp(null);
+              setResults(null);
+              setQ('');
+            }}
+            className="mt-2.5 w-full rounded-xl bg-zinc-100 py-2 text-[12px] font-bold text-zinc-600 active:opacity-70 dark:bg-zinc-800 dark:text-zinc-300"
+          >
+            다른 상대 검색
+          </button>
+        </>
       ) : (
-        <p className="mt-2 rounded-xl bg-zinc-100 px-3 py-2.5 text-[11.5px] leading-relaxed text-zinc-500 dark:bg-zinc-900">
-          상대가 <b>내가 강한 권역</b>을 갖고 있지 않아 보정이 0입니다. 상대 권역을 내 권역의 먹잇감
-          쪽으로 바꿔보세요.
-        </p>
+        <>
+          <div className="mt-3 flex gap-1.5">
+            <input
+              value={q}
+              onChange={(e) => setQ(e.target.value)}
+              onKeyDown={(e) => {
+                if (e.key === 'Enter') search();
+              }}
+              placeholder="닉네임 또는 코드"
+              maxLength={30}
+              className="min-w-0 flex-1 rounded-xl bg-zinc-100 px-3 py-2 text-[13px] outline-none placeholder:text-zinc-400 dark:bg-zinc-900"
+            />
+            <button
+              type="button"
+              onClick={search}
+              disabled={pending || !q.trim()}
+              className="shrink-0 rounded-xl bg-amber-600 px-4 text-[13px] font-bold text-white active:opacity-90 disabled:opacity-50"
+            >
+              검색
+            </button>
+          </div>
+          {err ? <p className="mt-2 text-[11px] font-bold text-rose-500">{err}</p> : null}
+          {results != null ? (
+            results.length === 0 ? (
+              <p className="mt-3 text-center text-[11.5px] text-zinc-500">결과가 없습니다.</p>
+            ) : (
+              <ul className="mt-2 flex flex-col gap-1">
+                {results.map((r) => {
+                  const vec = runeVectorDesc(r.attrs);
+                  return (
+                    <li key={r.userId}>
+                      <button
+                        type="button"
+                        onClick={() => setOpp(r)}
+                        className="flex w-full items-center gap-2 rounded-xl bg-zinc-100 p-1.5 text-left active:opacity-70 dark:bg-zinc-900"
+                      >
+                        <span className="h-9 w-9 shrink-0 overflow-hidden rounded-lg bg-zinc-200 dark:bg-zinc-800">
+                          {r.south ? (
+                            // eslint-disable-next-line @next/next/no-img-element
+                            <img
+                              src={r.south}
+                              alt=""
+                              className="h-full w-full object-contain object-bottom"
+                              style={{ imageRendering: 'pixelated' }}
+                            />
+                          ) : null}
+                        </span>
+                        <span className="min-w-0 flex-1">
+                          <span className="block truncate text-[12px] font-bold">{r.nickname}</span>
+                          <span className="block truncate text-[10px] font-bold">
+                            {vec.length > 0 ? (
+                              vec.map(([k, v], i) => (
+                                <span key={k} style={{ color: ATTR_REGION_COLOR[k] }}>
+                                  {i > 0 ? ' · ' : ''}
+                                  {ATTR_REGION_KO[k]} {v}%
+                                </span>
+                              ))
+                            ) : (
+                              <span className="text-zinc-400">속성 없음</span>
+                            )}
+                          </span>
+                        </span>
+                      </button>
+                    </li>
+                  );
+                })}
+              </ul>
+            )
+          ) : null}
+        </>
       )}
 
       <button
         type="button"
         onClick={onClose}
-        className="mt-4 w-full rounded-xl bg-zinc-100 py-2.5 text-sm font-bold text-zinc-600 active:opacity-70 dark:bg-zinc-800 dark:text-zinc-300"
+        className="mt-3 w-full rounded-xl bg-zinc-100 py-2.5 text-sm font-bold text-zinc-600 active:opacity-70 dark:bg-zinc-800 dark:text-zinc-300"
       >
         닫기
       </button>

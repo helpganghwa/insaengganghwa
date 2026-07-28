@@ -125,7 +125,17 @@ function Step({ n, title, children }: { n: number; title: string; children: Reac
 }
 
 /** 1차 팝업 — 상성 차트 + 순환 + 요약 · 시뮬레이션/계산 방법으로 연결. */
-export function AttrHelpModal({ onClose, attrs }: { onClose: () => void; attrs: AvatarAttr[] }) {
+export function AttrHelpModal({
+  onClose,
+  attrs,
+  myNickname,
+  mySouth,
+}: {
+  onClose: () => void;
+  attrs: AvatarAttr[];
+  myNickname: string;
+  mySouth: string | null;
+}) {
   const [calcOpen, setCalcOpen] = useState(false);
   const [simOpen, setSimOpen] = useState(false);
   const vec = runeVectorDesc(attrs);
@@ -157,27 +167,14 @@ export function AttrHelpModal({ onClose, attrs }: { onClose: () => void; attrs: 
 
         {vec.length > 0 ? (
           <>
-            <p className="mt-2.5 text-[12px] leading-relaxed text-zinc-600 dark:text-zinc-300">
-              상대가 어떤 권역을 가졌느냐에 따라 <b>공격력 보정</b>이 붙습니다. 아래는 상대가 그
-              권역만 <b>100%</b> 가졌다고 가정했을 때의 보정입니다.
-            </p>
-
-            <div className="relative mt-2.5">
+            <p className="mt-2 text-[11.5px] text-zinc-500">상대가 그 권역만 100%일 때 보정</p>
+            <div className="mt-1.5">
               <AttrSynergyChart rows={rows} />
-              <div className="pointer-events-none absolute inset-0 flex flex-col justify-around">
-                {rows.map((r) => (
-                  <span key={r.region} className="text-center">
-                    <span className="bg-white px-1.5 text-[10px] font-extrabold text-zinc-700 dark:bg-zinc-950 dark:text-zinc-200">
-                      {ATTR_REGION_KO[r.region]}
-                    </span>
-                  </span>
-                ))}
-              </div>
             </div>
             <div className="mt-1 flex justify-center gap-4 text-[10.5px] text-zinc-500">
               <span>
                 <i className="mr-1 inline-block h-[3px] w-[9px] rounded-sm bg-rose-500 align-middle" />
-                내가 받는 피해 ↑
+                받는 피해 ↑
               </span>
               <span>
                 <i className="mr-1 inline-block h-[3px] w-[9px] rounded-sm bg-emerald-500 align-middle" />
@@ -185,17 +182,18 @@ export function AttrHelpModal({ onClose, attrs }: { onClose: () => void; attrs: 
               </span>
             </div>
 
-            <div className="mt-3 flex flex-col gap-1 rounded-xl bg-zinc-100 px-3 py-2.5 dark:bg-zinc-900">
+            <div className="mt-2.5 flex flex-col gap-0.5 rounded-xl bg-zinc-100 px-3 py-2 dark:bg-zinc-900">
               {vec.map(([r, v]) => (
-                <p key={r} className="text-[12px]">
+                <p key={r} className="text-[11.5px]">
                   <b style={{ color: ATTR_REGION_COLOR[r] }}>
                     {ATTR_REGION_KO[r]} {v}%
-                  </b>{' '}
+                  </b>
                   <span className="text-zinc-500">
-                    → <b className="text-emerald-600 dark:text-emerald-400">{ATTR_REGION_KO[attrPrey(r)]}</b>
-                    에 강함 ·{' '}
+                    {' → '}
+                    <b className="text-emerald-600 dark:text-emerald-400">{ATTR_REGION_KO[attrPrey(r)]}</b>
+                    {' 강 · '}
                     <b className="text-rose-500 dark:text-rose-400">{ATTR_REGION_KO[attrPredator(r)]}</b>
-                    에 약함
+                    {' 약'}
                   </span>
                 </p>
               ))}
@@ -208,20 +206,16 @@ export function AttrHelpModal({ onClose, attrs }: { onClose: () => void; attrs: 
           </p>
         )}
 
-        <h3 className="mt-4 text-[10px] font-black uppercase tracking-[0.08em] text-zinc-400">
-          상성 순환
-        </h3>
-        <p className="mt-1.5 text-[11.5px] text-zinc-500">왼쪽 권역이 바로 오른쪽 권역을 이깁니다.</p>
-        <div className="mt-2">
+        <div className="mt-3">
           <CycleStrip mine={mine} />
         </div>
 
         <button
           type="button"
           onClick={() => setSimOpen(true)}
-          className="mt-4 w-full rounded-xl bg-amber-600 py-2.5 text-sm font-bold text-white active:opacity-90"
+          className="mt-3.5 w-full rounded-xl bg-amber-600 py-2.5 text-sm font-bold text-white active:opacity-90"
         >
-          상대 속성 넣고 계산해보기
+          상대와 비교해보기
         </button>
         <div className="mt-2 flex items-center gap-3">
           <button
@@ -241,7 +235,14 @@ export function AttrHelpModal({ onClose, attrs }: { onClose: () => void; attrs: 
         </div>
       </ModalShell>
       {calcOpen ? <CalcModal onClose={() => setCalcOpen(false)} /> : null}
-      {simOpen ? <AttrSimModal onClose={() => setSimOpen(false)} attrs={attrs} /> : null}
+      {simOpen ? (
+        <AttrSimModal
+          onClose={() => setSimOpen(false)}
+          attrs={attrs}
+          myNickname={myNickname}
+          mySouth={mySouth}
+        />
+      ) : null}
     </>
   );
 }

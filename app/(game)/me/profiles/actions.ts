@@ -2,7 +2,7 @@
 
 import { markChallengeEvent } from '@/lib/game/challenges/events';
 import { revalidatePath } from 'next/cache';
-import { and, count, desc, eq, ne } from 'drizzle-orm';
+import { and, count, desc, eq, ilike, ne, or, sql } from 'drizzle-orm';
 
 import { getSessionUserId } from '@/lib/auth/session';
 import { actionBlock } from '@/lib/game/action-gate';
@@ -11,12 +11,22 @@ import { db } from '@/lib/db/client';
 import { characters } from '@/lib/db/schema/server';
 import { getActiveServerId } from '@/lib/game/servers';
 import { userProfiles } from '@/lib/db/schema/avatar';
+import { runes } from '@/lib/db/schema/rune';
+import { profiles } from '@/lib/db/schema/profiles';
+import type { AvatarAttr } from '@/lib/game/balance';
 
 /**
  * PROFILE §8.2 — 프로필 선택화면 액션. 모두 본인 소유 프로필만 대상.
  * 아바타는 정면(south) 고정 — 방향 회전 없음(대표 선택/삭제만).
  */
 type ActionState = { status: 'ok' } | { status: 'error'; message: string };
+
+export type OpponentResult = {
+  userId: string;
+  nickname: string;
+  south: string | null;
+  attrs: AvatarAttr[];
+};
 
 /** 본인 소유 프로필인지 확인 — 아니면 null. serverId 지정 시 그 서버 자산인지도 검증. */
 async function ownedProfileId(
@@ -123,4 +133,61 @@ export async function deleteProfile(profileId: string): Promise<ActionState> {
   revalidatePath('/me');
   revalidatePath('/me/profiles');
   return { status: 'ok' };
+}
+
+/**
+ * 상성 시뮬레이터용 상대 검색 — 닉네임(부분)·공개코드(정확). 대표 아바타 이미지 + 속성 동봉.
+ * ⚠ 상대 속성 공개: 대표 아바타 = 속성이라 아바타가 이미 공개인 이상 사실상 파생 정보이며,
+ * 시뮬레이션의 전제(상대를 알아야 대비 가능)를 위해 노출한다(2026-07-28 사용자 확정).
+ */
+export async function searchOpponentAction(qRaw: string): Promise<
+  | { status: 'success'; results: OpponentResult[] }
+  | { status: 'error'; message: string }
+> {
+  const userId = await getSessionUserId();
+  if (!userId) return { status: 'error', message: '로그인이 필요합니다.' };
+  if (await rateLimited(userId, 'profileEdit'))
+    return { status: 'error', message: '잠시 후 다시 시도해 주세요.' };
+
+  const q = qRaw.trim().slice(0, 30);
+  if (!q) return { status: 'success', results: [] };
+  // LIKE 와일드카드 리터럴화 — '%' 단독 검색으로 풀스캔 유발 방지(friends.searchUsers와 동일).
+  const safe = q.replace(/[\\%_]/g, '\\$&');
+  const serverId = await getActiveServerId();
+
+  try {
+    const rows = await db
+      .select({
+        userId: profiles.id,
+        nickname: characters.nickname,
+        south: sql<string | null>`${userProfiles.rotations} ->> 'south'`,
+        attrs: runes.attrs,
+      })
+      .from(profiles)
+      .innerJoin(
+        characters,
+        and(eq(characters.userId, profiles.id), eq(characters.serverId, serverId)),
+      )
+      .leftJoin(userProfiles, eq(userProfiles.id, characters.activeProfileId))
+      .leftJoin(runes, eq(runes.sourceProfileId, characters.activeProfileId))
+      .where(
+        and(
+          ne(profiles.id, userId),
+          or(ilike(characters.nickname, `%${safe}%`), eq(profiles.publicCode, q)),
+        ),
+      )
+      .limit(12);
+    return {
+      status: 'success',
+      results: rows.map((r) => ({
+        userId: r.userId,
+        nickname: r.nickname ?? '플레이어',
+        south: r.south,
+        attrs: r.attrs ?? [],
+      })),
+    };
+  } catch (e) {
+    console.error('[attr.searchOpponent]', e);
+    return { status: 'error', message: '검색에 실패했습니다.' };
+  }
 }

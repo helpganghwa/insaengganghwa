@@ -17,10 +17,10 @@ import {
 echarts.use([BarChart, PolarComponent, SVGRenderer]);
 
 /**
- * 코너 미니 차트(C1) — 권역 방향 방사형 막대. 라벨 없이 색·길이만으로 "어느 쪽으로 치우친
- * 아바타"인지 전달(정확한 수치는 아래 텍스트가 담당). 중앙은 `?` 배지가 덮으므로 안쪽 반경을 비운다.
+ * 코너 미니 차트 — 권역 방향 방사형 막대. 배경·보더 없이 아바타 위에 얹히므로 최대한 작게
+ * (정확한 수치는 아래 텍스트가 담당) — 화면을 가리지 않는 것이 최우선.
  */
-export function AttrMiniChart({ attrs, size = 66 }: { attrs: AvatarAttr[]; size?: number }) {
+export function AttrMiniChart({ attrs, size = 52 }: { attrs: AvatarAttr[]; size?: number }) {
   const ref = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
@@ -31,7 +31,7 @@ export function AttrMiniChart({ attrs, size = 66 }: { attrs: AvatarAttr[]; size?
     chart.setOption({
       animationDuration: 420,
       animationEasing: 'cubicOut',
-      polar: { center: ['50%', '50%'], radius: ['34%', '94%'] },
+      polar: { center: ['50%', '50%'], radius: ['22%', '96%'] },
       angleAxis: {
         type: 'category',
         data: AVATAR_ATTR_REGIONS,
@@ -56,7 +56,7 @@ export function AttrMiniChart({ attrs, size = 66 }: { attrs: AvatarAttr[]; size?
           barWidth: '62%',
           roundCap: true,
           showBackground: true,
-          backgroundStyle: { color: 'rgba(255,255,255,0.07)' },
+          backgroundStyle: { color: 'rgba(255,255,255,0.1)' },
           data: AVATAR_ATTR_REGIONS.map((r) => ({
             value: vec[r] ?? 0,
             itemStyle: { color: ATTR_REGION_COLOR[r], opacity: vec[r] ? 1 : 0 },

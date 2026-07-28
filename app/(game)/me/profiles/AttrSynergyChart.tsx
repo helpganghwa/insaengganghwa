@@ -21,21 +21,18 @@ echarts.use([BarChart, GridComponent, SVGRenderer]);
 
 const GREEN = '#10b981';
 const RED = '#f43f5e';
-/** 상대를 그 권역 100%로 정규화해 비교 가능한 지표로 만든다(공시 §6 식 그대로). */
+/** 상대를 그 권역 100%로 정규화해 비교 가능한 지표로(공시 §6 식 그대로). */
 const NORM = 100 / AVATAR_ATTR_TOTAL_MAX;
 
-/** 유리 — 내가 상대 권역 O를 사냥하는 몫. prey(r)=O ⟺ r=pred(O). */
-function advantage(vec: Partial<Record<AttrRegion, number>>, opponent: AttrRegion): number {
-  return Math.round((vec[attrPredator(opponent)] ?? 0) * NORM);
-}
-/** 불리 — 상대 권역 O가 내 권역 prey(O)를 사냥하는 몫. */
-function disadvantage(vec: Partial<Record<AttrRegion, number>>, opponent: AttrRegion): number {
-  return Math.round((vec[attrPrey(opponent)] ?? 0) * NORM);
-}
+/** 유리 — prey(r)=O ⟺ r=pred(O). 불리 — 상대 O가 내 prey(O)를 사냥. */
+const advantage = (v: Partial<Record<AttrRegion, number>>, o: AttrRegion) =>
+  Math.round((v[attrPredator(o)] ?? 0) * NORM);
+const disadvantage = (v: Partial<Record<AttrRegion, number>>, o: AttrRegion) =>
+  Math.round((v[attrPrey(o)] ?? 0) * NORM);
 
 export type SynergyRow = { region: AttrRegion; adv: number; dis: number };
 
-/** 표시 순서(위→아래) — 순 우위 내림차순. 상단이 가장 유리한 상대. */
+/** 표시 순서(위→아래) — 순 우위 내림차순. */
 export function synergyRows(attrs: AvatarAttr[]): SynergyRow[] {
   const vec = Object.fromEntries(runeVectorDesc(attrs)) as Partial<Record<AttrRegion, number>>;
   return AVATAR_ATTR_REGIONS.map((region) => ({
@@ -45,11 +42,11 @@ export function synergyRows(attrs: AvatarAttr[]): SynergyRow[] {
   })).sort((a, b) => b.adv - b.dis - (a.adv - a.dis));
 }
 
-export const SYNERGY_ROW_H = 30;
+export const SYNERGY_ROW_H = 27;
 
 /**
- * 상성 대칭 막대(X4) — 중앙 0 기준 왼쪽=불리(붉은) / 오른쪽=유리(초록).
- * 권역 이름은 중앙에 HTML로 겹쳐 그린다(막대 양끝 수치와 충돌 없음) — 행 높이 SYNERGY_ROW_H 고정.
+ * 상성 대칭 막대(P1) — 좌=불리 / 우=유리, 권역명은 **실제 y축**(오버레이 없음).
+ * 수치는 막대 안(짧은 막대는 바깥)에 두어 축과 겹치지 않는다.
  */
 export function AttrSynergyChart({ rows }: { rows: SynergyRow[] }) {
   const ref = useRef<HTMLDivElement>(null);
@@ -58,59 +55,61 @@ export function AttrSynergyChart({ rows }: { rows: SynergyRow[] }) {
     if (!ref.current) return;
     const chart = echarts.init(ref.current, undefined, { renderer: 'svg' });
     const max = Math.max(...rows.flatMap((r) => [r.adv, r.dis]), 10);
-    // ECharts category y축은 data[0]이 아래 → 표시 순서를 뒤집어 넣는다.
-    const asc = [...rows].reverse();
+    const asc = [...rows].reverse(); // ECharts category y축은 data[0]이 아래
+
+    // 막대가 짧으면 안쪽 라벨이 잘리므로 바깥으로 뺀다(전체 폭의 22% 기준).
+    const inside = (v: number) => v >= max * 0.22;
 
     chart.setOption({
-      animationDuration: 520,
+      animationDuration: 500,
       animationEasing: 'cubicOut',
-      grid: { left: 40, right: 40, top: 4, bottom: 4 },
+      grid: { left: 34, right: 10, top: 2, bottom: 2 },
       xAxis: { type: 'value', min: -max, max, show: false },
       yAxis: {
         type: 'category',
         data: asc.map((r) => ATTR_REGION_KO[r.region]),
         axisLine: { show: false },
         axisTick: { show: false },
-        axisLabel: { show: false },
+        axisLabel: { color: '#d4d4d8', fontSize: 11, fontWeight: 800, margin: 8 },
       },
       series: [
         {
           type: 'bar',
           stack: 'x',
-          barWidth: 11,
+          barWidth: 12,
           data: asc.map((r) => ({
             value: -r.dis,
             itemStyle: { borderRadius: [99, 0, 0, 99], color: r.dis ? RED : 'transparent' },
+            label: r.dis
+              ? {
+                  show: true,
+                  position: inside(r.dis) ? 'insideLeft' : 'left',
+                  distance: 5,
+                  color: inside(r.dis) ? '#fff' : RED,
+                  formatter: `${r.dis}`,
+                }
+              : { show: false },
           })),
-          label: {
-            show: true,
-            position: 'left',
-            distance: 6,
-            fontSize: 11,
-            fontWeight: 900,
-            fontFamily: 'ui-monospace, SF Mono, Menlo, monospace',
-            color: RED,
-            formatter: (p: { value: number }) => (p.value ? `${p.value}%` : ''),
-          },
+          label: { fontSize: 10, fontWeight: 900, fontFamily: 'ui-monospace, Menlo, monospace' },
         },
         {
           type: 'bar',
           stack: 'x',
-          barWidth: 11,
+          barWidth: 12,
           data: asc.map((r) => ({
             value: r.adv,
             itemStyle: { borderRadius: [0, 99, 99, 0], color: r.adv ? GREEN : 'transparent' },
+            label: r.adv
+              ? {
+                  show: true,
+                  position: inside(r.adv) ? 'insideRight' : 'right',
+                  distance: 5,
+                  color: inside(r.adv) ? '#fff' : GREEN,
+                  formatter: `${r.adv}`,
+                }
+              : { show: false },
           })),
-          label: {
-            show: true,
-            position: 'right',
-            distance: 6,
-            fontSize: 11,
-            fontWeight: 900,
-            fontFamily: 'ui-monospace, SF Mono, Menlo, monospace',
-            color: GREEN,
-            formatter: (p: { value: number }) => (p.value ? `+${p.value}%` : ''),
-          },
+          label: { fontSize: 10, fontWeight: 900, fontFamily: 'ui-monospace, Menlo, monospace' },
         },
       ],
     });
