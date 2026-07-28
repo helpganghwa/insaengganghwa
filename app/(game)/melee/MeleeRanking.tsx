@@ -1,6 +1,6 @@
 'use client';
 
-import { useCallback, useEffect, useRef, useState, useTransition } from 'react';
+import { useCallback, useEffect, useLayoutEffect, useRef, useState, useTransition } from 'react';
 import Link from 'next/link';
 import { usePathname, useRouter, useSearchParams } from 'next/navigation';
 
@@ -106,6 +106,8 @@ export function useMeleeRanking({
   const scrollTopRef = useRef(0);
   /** 이번 마운트가 뒤로가기 복귀인지 — 첫 로드에서만 판정하고 이후엔 항상 복원 허용. */
   const firstLoad = useRef(true);
+  /** 위쪽 이어붙이기 앵커 — 프리펜드 직전 기준 행의 위치를 잡아두고 커밋 직후 되맞춘다. */
+  const anchor = useRef<{ rank: number; top: number; scrollTop: number } | null>(null);
   /** 이탈 저장 시 최신 값 참조(클로저 stale 방지) — 렌더가 아닌 효과에서 갱신한다. */
   const snapshot = useRef<{ rows: MeleeRankRow[]; myRank: number | null }>({ rows: [], myRank: null });
 
@@ -145,6 +147,19 @@ export function useMeleeRanking({
       if (mode === 'near') pendingScroll.current = 'me';
     });
   }, [enabled, mode, battleId]);
+
+  // 위쪽 프리펜드 보정 — **페인트 전**에 되맞춘다. rAF로 미루면 새 행이 위에 끼워진 화면이 한 번
+  // 그려진 뒤 보정돼, 아래로 밀렸다가 되돌아오는 튐이 보인다.
+  useLayoutEffect(() => {
+    const a = anchor.current;
+    const el = scrollRef.current;
+    if (!a || !el) return;
+    anchor.current = null;
+    const node = el.querySelector<HTMLElement>(`[data-rank="${a.rank}"]`);
+    if (!node) return;
+    el.scrollTop = a.scrollTop + (node.offsetTop - a.top);
+    scrollTopRef.current = el.scrollTop;
+  }, [rows]);
 
   // 예약된 스크롤 — rows가 그려진 다음 프레임에 적용(높이 확정 후).
   useEffect(() => {
@@ -187,8 +202,6 @@ export function useMeleeRanking({
       if (loadingRef.current) return;
       if (dir === 'up' ? !hasUp : !hasDown) return;
       loadingRef.current = true;
-      const el = scrollRef.current;
-      const prevH = el?.scrollHeight ?? 0;
       startTransition(async () => {
         const r = await meleeRankingAction({
           battleId,
@@ -197,13 +210,16 @@ export function useMeleeRanking({
         });
         loadingRef.current = false;
         if (r.status !== 'success' || r.rows.length === 0) return;
-        setRows((prev) => (dir === 'up' ? [...r.rows, ...prev] : [...prev, ...r.rows]));
-        if (dir === 'up' && el) {
-          // 레이아웃 반영 후 보정 — 늘어난 만큼 내려 현재 보던 행을 제자리에 둔다.
-          requestAnimationFrame(() => {
-            el.scrollTop += el.scrollHeight - prevH;
-          });
+        const el = scrollRef.current;
+        if (dir === 'up' && el && first != null) {
+          // 커밋 직전(=아직 옛 DOM)에 기준 행의 현재 위치를 잡아둔다. 높이 차분 대신 실제 행을
+          // 앵커로 쓰는 이유: 위쪽 센티넬이 사라지는 등 다른 높이 변화가 섞여도 어긋나지 않는다.
+          const node = el.querySelector<HTMLElement>(`[data-rank="${first}"]`);
+          anchor.current = node
+            ? { rank: first, top: node.offsetTop, scrollTop: el.scrollTop }
+            : null;
         }
+        setRows((prev) => (dir === 'up' ? [...r.rows, ...prev] : [...prev, ...r.rows]));
       });
     },
     [battleId, mode, first, last, hasUp, hasDown],
@@ -455,7 +471,11 @@ export function MeleeRankList({
     >
       {hasUp ? <Sentinel onHit={up} rootRef={scrollRef} label="위쪽 순위 불러오는 중…" /> : null}
       {rows.map((r) => (
-        <div key={r.userId} id={r.userId === myUserId ? 'melee-rank-me' : undefined}>
+        <div
+          key={r.userId}
+          data-rank={r.rank}
+          id={r.userId === myUserId ? 'melee-rank-me' : undefined}
+        >
           <Row r={r} isMe={r.userId === myUserId} serverId={serverId} />
         </div>
       ))}
