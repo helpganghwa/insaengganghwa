@@ -5,18 +5,10 @@ import { useRouter } from 'next/navigation';
 
 import * as haptic from '@/lib/game/haptic';
 import { useResourceToast } from '@/components/ResourceToast';
-import { runeVectorDesc } from '@/components/RuneName';
-import { ATTR_REGION_COLOR, ATTR_REGION_KO, type AvatarAttr } from '@/lib/game/balance';
+import { type AvatarAttr } from '@/lib/game/balance';
 
-import dynamic from 'next/dynamic';
+import { AttrWidget } from '@/components/attr/AttrWidget';
 
-import { AttrHelpModal } from './AttrHelpModal';
-
-// echarts는 무거워 초기 번들에서 제외 — 마운트 후 그려진다(자리는 미리 확보).
-const AttrMiniChart = dynamic(() => import('./AttrMiniChart').then((m) => m.AttrMiniChart), {
-  ssr: false,
-  loading: () => <div className="h-[52px] w-[52px]" />,
-});
 import { setActiveProfile, deleteProfile } from './actions';
 
 type ProfileItem = {
@@ -52,10 +44,8 @@ export function ProfileSelector({
 
   const [selectedId, setSelectedId] = useState<string>(initId);
   const sel = list.find((p) => p.id === selectedId) ?? list[0]!;
-  const selAttrs = runeVectorDesc(sel.attrs);
   const [pending, startTransition] = useTransition();
   const [confirmDelete, setConfirmDelete] = useState(false);
-  const [helpOpen, setHelpOpen] = useState(false);
   const [confirmDeleteLeft, setConfirmDeleteLeft] = useState(0); // 3s 재탭 컨펌 카운트다운
 
   // 삭제 — 강화 취소와 동일 3s 재탭 패턴(오탭 보호). 만료 시 자동 해제.
@@ -152,36 +142,16 @@ export function ProfileSelector({
             </span>
           </button>
         ) : null}
-        {/* 속성 코너 위젯 — 배경·보더 없이 최소 크기로 얹는다(화면 가림 최소). 위젯 전체가 팝업 트리거. */}
-        <button
-          type="button"
-          onClick={() => setHelpOpen(true)}
-          aria-label="속성 상성 보기"
-          className="absolute left-2.5 top-2.5 z-10 text-left transition active:scale-95"
-        >
-          <AttrMiniChart attrs={sel.attrs} />
-          <div className="mt-0.5 flex flex-col gap-[1px]">
-            {selAttrs.length > 0 ? (
-              selAttrs.map(([r, v]) => (
-                <span
-                  key={r}
-                  className="flex items-center gap-[3px] text-[9px] font-bold leading-[1.3] text-zinc-200 [text-shadow:0_1px_2px_rgba(0,0,0,0.9)]"
-                >
-                  <i
-                    className="block h-[4px] w-[4px] shrink-0 rounded-full"
-                    style={{ backgroundColor: ATTR_REGION_COLOR[r] }}
-                  />
-                  {ATTR_REGION_KO[r]}
-                  <b className="ml-auto font-mono font-black tabular-nums">{v}</b>
-                </span>
-              ))
-            ) : (
-              <span className="text-[8.5px] text-zinc-400 [text-shadow:0_1px_2px_rgba(0,0,0,0.9)]">
-                속성 없음
-              </span>
-            )}
-          </div>
-        </button>
+        {/* 속성 코너 위젯 — 공용(내 화면·남의 프로필 공유). 탭하면 상성 팝업. */}
+        <AttrWidget
+          attrs={sel.attrs}
+          owner
+          ownerNickname={myNickname}
+          ownerSouth={frontSrc(sel) || null}
+          myNickname={myNickname}
+          mySouth={frontSrc(sel) || null}
+          className="absolute left-2.5 top-2.5 z-10"
+        />
         <div className="relative mx-auto flex aspect-square w-full max-w-[256px] select-none items-center justify-center isolate overflow-hidden rounded-xl">
           {/* 발밑 타원 그림자 */}
           <div className="pointer-events-none absolute bottom-[6%] left-1/2 h-[6%] w-1/2 -translate-x-1/2 rounded-[50%] bg-black/45 blur-[6px]" />
@@ -237,14 +207,6 @@ export function ProfileSelector({
         {!dirty ? '현재 대표 아바타' : '이 아바타로 적용'}
       </button>
 
-      {helpOpen ? (
-        <AttrHelpModal
-          onClose={() => setHelpOpen(false)}
-          attrs={sel.attrs}
-          myNickname={myNickname}
-          mySouth={frontSrc(sel) || null}
-        />
-      ) : null}
     </div>
   );
 }

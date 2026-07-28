@@ -3,7 +3,7 @@ import { DEFAULT_SERVER_ID } from '@/lib/game/servers';
 import Link from 'next/link';
 import { notFound } from 'next/navigation';
 import type { Metadata } from 'next';
-import { and, eq, inArray, isNotNull } from 'drizzle-orm';
+import { and, eq, inArray, isNotNull, sql } from 'drizzle-orm';
 
 import { db } from '@/lib/db/client';
 import { withTimeout } from '@/lib/db/with-timeout';
@@ -25,6 +25,9 @@ import { RarityFrame, rarityBorderStyle, hasRarityBorder, TranscendTag } from '@
 import { CharacterStage } from '@/components/CharacterStage';
 import { BoastLauncher } from '@/components/BoastModal';
 import { BackFab } from '@/components/BackNav';
+import { AttrWidget } from '@/components/attr/AttrWidget';
+import { runes } from '@/lib/db/schema/rune';
+import type { AvatarAttr } from '@/lib/game/balance';
 
 import { ReportButton } from './ReportButton';
 import { FriendAddButton } from './FriendAddButton';
@@ -89,7 +92,7 @@ const loadProfile = cache(async (handle: string, serverId: number) => {
   // 이전: 5개를 한 묶음으로 3.5s 가드 → 가장 느린 쿼리(주로 ranks: unstable_cache 콜드
   // ~3s)에 도달하면 _r=null로 전부 비어버려 장비도 안 보였음(2026-06-01 수정).
   // ranks는 이 함수에서 빼고 페이지에서 <Suspense>로 stream(첫 페인트 지연 제거).
-  const [equipped, ownedAll, libMap] = await Promise.all([
+  const [equipped, ownedAll, libMap, attrRows] = await Promise.all([
     withTimeout(
       db
         .select({
@@ -138,6 +141,18 @@ const loadProfile = cache(async (handle: string, serverId: number) => {
     withTimeout(liberatedItemRanks(prof.id, serverId), 2000, 'u.liberated').catch(
       () => new Map<number, number>(),
     ),
+    // 대표 아바타의 속성(0141: 아바타 1:1 종속) — 없으면 빈 배열.
+    prof.activeProfileId
+      ? withTimeout(
+          db
+            .select({ attrs: runes.attrs })
+            .from(runes)
+            .where(eq(runes.sourceProfileId, prof.activeProfileId))
+            .limit(1),
+          1500,
+          'u.attrs',
+        ).catch(() => [] as { attrs: AvatarAttr[] }[])
+      : Promise.resolve([] as { attrs: AvatarAttr[] }[]),
   ]);
 
   const sumEnhance = ownedAll.reduce((a, r) => a + r.enhanceLevel, 0);
@@ -178,6 +193,7 @@ const loadProfile = cache(async (handle: string, serverId: number) => {
     sumEnhance,
     maxEnhance,
     champItems,
+    attrs: attrRows[0]?.attrs ?? [],
     guild: await getUserGuildBrief(prof.id, serverId),
   };
 });
@@ -352,10 +368,35 @@ export default async function PublicProfilePage({
   // 친구 관계 — 로그인+타인일 때만. sendRequestAction과 동일 서버(조회자 활성 서버) 기준으로
   // 계산해 버튼 상태와 실제 요청이 어긋나지 않게 한다(친구는 서버별). 실패 시 'none' 폴백.
   let friendRelation: FriendRelation = 'none';
+  let myAttrs: AvatarAttr[] | null = null;
+  let myNickname = '나';
+  let mySouth: string | null = null;
   if (mode === 'other') {
-    friendRelation = await getFriendRelation(viewerId!, await getActiveServerId(), data.ownerId).catch(
+    const vsId = await getActiveServerId();
+    friendRelation = await getFriendRelation(viewerId!, vsId, data.ownerId).catch(
       () => 'none' as const,
     );
+    // '나와 비교'용 조회자 대표 아바타 + 속성(1왕복). 실패해도 비교 버튼만 숨김.
+    const mine = await withTimeout(
+      db
+        .select({
+          nickname: characters.nickname,
+          south: sql<string | null>`${userProfiles.rotations} ->> 'south'`,
+          attrs: runes.attrs,
+        })
+        .from(characters)
+        .leftJoin(userProfiles, eq(userProfiles.id, characters.activeProfileId))
+        .leftJoin(runes, eq(runes.sourceProfileId, characters.activeProfileId))
+        .where(and(eq(characters.userId, viewerId!), eq(characters.serverId, vsId)))
+        .limit(1),
+      1500,
+      'u.myAttrs',
+    ).catch(() => []);
+    if (mine[0]) {
+      myAttrs = mine[0].attrs ?? [];
+      myNickname = mine[0].nickname ?? '나';
+      mySouth = mine[0].south;
+    }
   }
 
   return (
@@ -364,6 +405,17 @@ export default async function PublicProfilePage({
       <section className="relative h-[250px] overflow-hidden bg-gradient-to-b from-amber-900/30 via-zinc-900 to-zinc-950">
         {/* GNB 없는 페이지라 뒤로가기 필수(PWA·PC 갇힘 방지) — 닉네임은 중앙이라 좌상단과 충돌 없음. */}
         <BackFab className="absolute left-3 top-3 z-20" />
+        {/* 속성 위젯 — 아바타 관리와 동일 컴포넌트. 탭하면 상성 팝업(타인이면 '나와 비교'). */}
+        <AttrWidget
+          attrs={data.attrs}
+          owner={mode === 'self'}
+          ownerNickname={data.nickname ?? '플레이어'}
+          ownerSouth={data.charImg}
+          myAttrs={myAttrs}
+          myNickname={myNickname}
+          mySouth={mySouth}
+          className="absolute right-3 top-3 z-20"
+        />
         {data.charImg ? (
           <div className="absolute inset-0 flex items-end justify-center pb-[10px] pt-[15px]">
             <CharacterStage

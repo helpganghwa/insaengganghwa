@@ -75,20 +75,24 @@ function Side({
  * 상성 대결 — 좌: 내 아바타 / 우: 검색해 고른 상대. 하단에 양측 보정과 우열.
  * 계산은 balance.attrAdvantagePct 그대로라 실제 전투와 1:1.
  */
-export function AttrSimModal({
+export function AttrCompare({
   onClose,
-  attrs,
+  myAttrs,
   myNickname,
   mySouth,
+  fixedOpponent = null,
 }: {
   onClose: () => void;
-  attrs: AvatarAttr[];
+  myAttrs: AvatarAttr[];
   myNickname: string;
   mySouth: string | null;
+  /** 남의 프로필에서 열면 상대가 고정(검색 단계 없음). */
+  fixedOpponent?: OpponentResult | null;
 }) {
+  const attrs = myAttrs;
   const [q, setQ] = useState('');
   const [results, setResults] = useState<OpponentResult[] | null>(null);
-  const [opp, setOpp] = useState<OpponentResult | null>(null);
+  const [opp, setOpp] = useState<OpponentResult | null>(fixedOpponent);
   const [err, setErr] = useState<string | null>(null);
   const [pending, startTransition] = useTransition();
 
@@ -199,17 +203,19 @@ export function AttrSimModal({
             </p>
           )}
 
-          <button
-            type="button"
-            onClick={() => {
-              setOpp(null);
-              setResults(null);
-              setQ('');
-            }}
-            className="mt-2.5 w-full rounded-xl bg-zinc-100 py-2 text-[12px] font-bold text-zinc-600 active:opacity-70 dark:bg-zinc-800 dark:text-zinc-300"
-          >
-            다른 상대 검색
-          </button>
+          {fixedOpponent == null ? (
+            <button
+              type="button"
+              onClick={() => {
+                setOpp(null);
+                setResults(null);
+                setQ('');
+              }}
+              className="mt-2.5 w-full rounded-xl bg-zinc-100 py-2 text-[12px] font-bold text-zinc-600 active:opacity-70 dark:bg-zinc-800 dark:text-zinc-300"
+            >
+              다른 상대 검색
+            </button>
+          ) : null}
         </>
       ) : (
         <>

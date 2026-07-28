@@ -16,7 +16,7 @@ import {
   type AvatarAttr,
 } from '@/lib/game/balance';
 
-import { AttrSimModal } from './AttrSimModal';
+import { AttrCompare } from './AttrCompare';
 import { synergyRows, SYNERGY_ROW_H } from './AttrSynergyChart';
 
 // echarts는 무거워 팝업을 열 때만 로드(프로필 화면 초기 번들에서 제외).
@@ -124,15 +124,23 @@ function Step({ n, title, children }: { n: number; title: string; children: Reac
   );
 }
 
-/** 1차 팝업 — 상성 차트 + 순환 + 요약 · 시뮬레이션/계산 방법으로 연결. */
-export function AttrHelpModal({
+/** 1차 팝업 — 상성 차트 + 순환 + 요약 · 대결/계산 방법으로 연결. owner=내 속성 / else 남의 속성. */
+export function AttrPopup({
   onClose,
   attrs,
+  owner,
+  ownerNickname,
+  ownerSouth,
+  myAttrs,
   myNickname,
   mySouth,
 }: {
   onClose: () => void;
   attrs: AvatarAttr[];
+  owner: boolean;
+  ownerNickname: string;
+  ownerSouth: string | null;
+  myAttrs: AvatarAttr[] | null;
   myNickname: string;
   mySouth: string | null;
 }) {
@@ -150,7 +158,9 @@ export function AttrHelpModal({
         className="max-h-[86dvh] w-full max-w-[320px] overflow-y-auto rounded-2xl bg-white p-4 dark:bg-zinc-950"
       >
         <div className="flex items-baseline gap-2">
-          <h2 className="flex-1 text-[15px] font-bold">내 속성</h2>
+          <h2 className="min-w-0 flex-1 truncate text-[15px] font-bold">
+            {owner ? '내 속성' : `${ownerNickname} 속성`}
+          </h2>
           <span className="shrink-0 text-[11.5px] font-bold">
             {vec.length > 0 ? (
               vec.map(([r, v], i) => (
@@ -210,13 +220,15 @@ export function AttrHelpModal({
           <CycleStrip mine={mine} />
         </div>
 
-        <button
-          type="button"
-          onClick={() => setSimOpen(true)}
-          className="mt-3.5 w-full rounded-xl bg-amber-600 py-2.5 text-sm font-bold text-white active:opacity-90"
-        >
-          상대와 비교해보기
-        </button>
+        {owner || myAttrs != null ? (
+          <button
+            type="button"
+            onClick={() => setSimOpen(true)}
+            className="mt-3.5 w-full rounded-xl bg-amber-600 py-2.5 text-sm font-bold text-white active:opacity-90"
+          >
+            {owner ? '상대와 비교해보기' : '나와 비교하기'}
+          </button>
+        ) : null}
         <div className="mt-2 flex items-center gap-3">
           <button
             type="button"
@@ -236,11 +248,15 @@ export function AttrHelpModal({
       </ModalShell>
       {calcOpen ? <CalcModal onClose={() => setCalcOpen(false)} /> : null}
       {simOpen ? (
-        <AttrSimModal
+        <AttrCompare
           onClose={() => setSimOpen(false)}
-          attrs={attrs}
-          myNickname={myNickname}
-          mySouth={mySouth}
+          // 남의 프로필에서는 좌=나 / 우=그 사람으로 고정 세팅해 검색 없이 바로 결과.
+          myAttrs={owner ? attrs : (myAttrs ?? [])}
+          myNickname={owner ? myNickname : myNickname}
+          mySouth={owner ? mySouth : mySouth}
+          fixedOpponent={
+            owner ? null : { userId: '', nickname: ownerNickname, south: ownerSouth, attrs }
+          }
         />
       ) : null}
     </>
