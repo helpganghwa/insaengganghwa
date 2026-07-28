@@ -486,18 +486,10 @@ export function MeleeRankList({
           <Row r={r} isMe={r.userId === myUserId} serverId={serverId} />
         </div>
       ))}
-      {rows.length === 0 && pending
-        ? // 첫 로드(길드 탭 등) 동안 빈 화면 대신 자리를 잡아둔다 — 높이가 같아 시프트도 없다.
-          Array.from({ length: 6 }, (_, i) => (
-            <li
-              key={i}
-              className="flex h-[56px] items-center gap-2.5 border-b border-zinc-800/70 px-3"
-            >
-              <span className="h-3 w-6 animate-pulse rounded bg-zinc-800" />
-              <span className="h-3 w-24 animate-pulse rounded bg-zinc-800/80" />
-            </li>
-          ))
-        : null}
+      {/* 첫 로드(길드 탭 등) — 앱 공통 표기와 동일한 문구/스타일. */}
+      {rows.length === 0 && pending ? (
+        <li className="py-6 text-center text-xs text-zinc-500">불러오는 중…</li>
+      ) : null}
       {rows.length === 0 && !pending ? (
         <li className="px-4 py-10 text-center text-[12px] text-zinc-500">
           {mode === 'guild' ? '같은 길드 참가자가 없습니다.' : '순위 정보가 없습니다.'}
