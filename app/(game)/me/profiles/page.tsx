@@ -17,38 +17,30 @@ export default async function ProfileSelectPage() {
   if (!userId) return null;
 
   // 콜드 DB 커넥션 hang 시 페이지 무한 대기 방지 — 실패 시 빈 결과로 degrade(2026-05-29).
-  // 속성(0141)은 아바타 종속 1:1 — left join으로 아바타별 이름/수치 동봉.
   const _r = await withTimeout(
     Promise.all([
-      db
-        .select({
-          id: userProfiles.id,
-          rotations: userProfiles.rotations,
-          options: userProfiles.options,
-          attrId: runes.id,
-          attrName: runes.name,
-          attrs: runes.attrs,
-        })
-        .from(userProfiles)
-        .leftJoin(runes, eq(runes.sourceProfileId, userProfiles.id))
-        .where(and(eq(userProfiles.userId, userId), eq(userProfiles.serverId, serverId)))
-        .orderBy(desc(userProfiles.createdAt)),
-      db
-        .select({
-          activeProfileId: characters.activeProfileId,
-          equippedRuneId: characters.equippedRuneId,
-          runeChangedAt: characters.runeChangedAt,
-          diamond: characters.diamond,
-        })
-        .from(characters)
-        .where(and(eq(characters.userId, userId), eq(characters.serverId, serverId)))
-        .limit(1),
+    db
+      .select({
+        id: userProfiles.id,
+        rotations: userProfiles.rotations,
+        attrs: runes.attrs,
+      })
+      .from(userProfiles)
+      // 속성은 아바타 1:1 종속(0141) — 목록과 함께 한 번에.
+      .leftJoin(runes, eq(runes.sourceProfileId, userProfiles.id))
+      .where(and(eq(userProfiles.userId, userId), eq(userProfiles.serverId, serverId)))
+      .orderBy(desc(userProfiles.createdAt)),
+    db
+      .select({ activeProfileId: characters.activeProfileId })
+      .from(characters)
+      .where(and(eq(characters.userId, userId), eq(characters.serverId, serverId)))
+      .limit(1),
     ]),
     3500,
     'me.profiles.page',
   ).catch(() => null);
   const list = _r?.[0] ?? [];
-  const ch = _r?.[1]?.[0];
+  const p = _r?.[1] ?? [];
 
   return (
     <div className="space-y-4 px-4 py-6">
@@ -63,20 +55,22 @@ export default async function ProfileSelectPage() {
           <span className="text-xs">첫 아바타 만들기</span>
         </Link>
       ) : (
-        <ProfileSelector
-          profiles={list.map((r) => ({
-            id: r.id,
-            rotations: r.rotations as Record<string, string>,
-            isDefault: (r.options as { isDefault?: boolean } | null)?.isDefault === true,
-            attrId: r.attrId?.toString() ?? null,
-            attrName: r.attrName,
-            attrs: r.attrs ?? [],
-          }))}
-          activeProfileId={ch?.activeProfileId ?? null}
-          equippedRuneId={ch?.equippedRuneId?.toString() ?? null}
-          runeChangedAtIso={ch?.runeChangedAt?.toISOString() ?? null}
-          diamond={Number(ch?.diamond ?? 0n)}
-        />
+        <>
+          <ProfileSelector
+            profiles={list.map((r) => ({
+              id: r.id,
+              rotations: r.rotations as Record<string, string>,
+              attrs: r.attrs ?? [],
+            }))}
+            activeProfileId={p[0]?.activeProfileId ?? null}
+          />
+          <Link prefetch={false}
+            href="/me/create"
+            className="flex w-full items-center justify-center gap-2 rounded-xl bg-amber-600 px-4 py-3 text-sm font-bold text-white shadow-md transition active:scale-[0.99]"
+          >
+            <span aria-hidden>✨</span> 아바타 생성
+          </Link>
+        </>
       )}
     </div>
   );
