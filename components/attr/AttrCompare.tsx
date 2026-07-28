@@ -1,6 +1,6 @@
 // 클라이언트 전용 — 'use client' 미부착(부모 클라 그래프에 포함).
 import dynamic from 'next/dynamic';
-import { useMemo } from 'react';
+import { useMemo, useState } from 'react';
 
 import { ModalShell } from '@/components/ModalShell';
 import { runeVectorDesc } from '@/components/RuneName';
@@ -16,6 +16,7 @@ import {
 } from '@/lib/game/balance';
 
 import type { OpponentResult } from './actions';
+import { AttrGuideButton, AttrGuideModal } from './AttrGuideModal';
 import { PAIR_ROW_H, type Pair } from './AttrPairChart';
 
 const AttrPairChart = dynamic(() => import('./AttrPairChart').then((m) => m.AttrPairChart), {
@@ -83,6 +84,7 @@ export function AttrCompare({
   fixedOpponent: OpponentResult;
 }) {
   const opp = fixedOpponent;
+  const [guideOpen, setGuideOpen] = useState(false);
 
   const mineVec = useMemo(() => attrDisplayVector(myAttrs), [myAttrs]);
   const oppVec = useMemo(() => attrDisplayVector(opp?.attrs ?? []), [opp]);
@@ -132,21 +134,24 @@ export function AttrCompare({
       label="상성 비교"
       className="max-h-[86dvh] w-full max-w-[320px] overflow-y-auto rounded-2xl bg-white p-4 dark:bg-zinc-950"
     >
-      <h2 className="text-[15px] font-bold">상성 비교</h2>
+      <div className="flex items-center gap-1.5">
+        <h2 className="text-[15px] font-bold">상성 비교</h2>
+        <AttrGuideButton onClick={() => setGuideOpen(true)} />
+      </div>
 
       {opp ? (
         <>
-          <div className="mt-3 flex items-start justify-center gap-2">
+          <div className="mt-3 flex items-start justify-center gap-1">
             <div className="min-w-0 flex-1 text-center">
               <p className="truncate text-[11px] font-bold">{myNickname}</p>
               <div className="mt-1 flex justify-center">
-                <Face src={mySouth} size={76} />
+                <Face src={mySouth} size={92} />
               </div>
               <AttrLines attrs={myAttrs} />
             </div>
 
-            <div className="mt-4 shrink-0">
-              <div className="relative h-[100px] w-[100px]">
+            <div className="mt-5 shrink-0">
+              <div className="relative h-[86px] w-[86px]">
                 <svg viewBox="0 0 100 100" className="h-full w-full -rotate-90">
                   <circle
                     cx="50"
@@ -212,7 +217,7 @@ export function AttrCompare({
             <div className="min-w-0 flex-1 text-center">
               <p className="truncate text-[11px] font-bold">{opp.nickname}</p>
               <div className="mt-1 flex justify-center">
-                <Face src={opp.south} size={76} />
+                <Face src={opp.south} size={92} />
               </div>
               <AttrLines attrs={opp.attrs} />
             </div>
@@ -228,11 +233,11 @@ export function AttrCompare({
               <div className="mt-1 flex justify-center gap-4 text-[10px] text-zinc-500">
                 <span>
                   <i className="mr-1 inline-block h-[3px] w-[9px] rounded-sm bg-emerald-500 align-middle" />
-                  내 공격
+                  ← 내 공격
                 </span>
                 <span>
                   <i className="mr-1 inline-block h-[3px] w-[9px] rounded-sm bg-rose-500 align-middle" />
-                  상대 공격
+                  상대 공격 →
                 </span>
               </div>
             </>
@@ -252,6 +257,7 @@ export function AttrCompare({
       >
         닫기
       </button>
+      {guideOpen ? <AttrGuideModal onClose={() => setGuideOpen(false)} /> : null}
     </ModalShell>
   );
 }

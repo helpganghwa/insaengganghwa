@@ -25,7 +25,7 @@ export const PAIR_ROW_H = 28;
 
 /**
  * 지역별 상성 기여 — 내 속성 상성 차트(P1)와 같은 대칭 막대. 좌축=내 지역/수치,
- * 우축=상대 지역/수치, 가운데 0을 기준으로 **오른쪽=내 공격(초록) / 왼쪽=상대 공격(붉은)**.
+ * 우축=상대 지역/수치, 가운데 0을 기준으로 **왼쪽=내 공격(초록) / 오른쪽=상대 공격(붉은)**.
  */
 export function AttrPairChart({ pairs }: { pairs: Pair[] }) {
   const ref = useRef<HTMLDivElement>(null);
@@ -78,18 +78,22 @@ export function AttrPairChart({ pairs }: { pairs: Pair[] }) {
           type: 'bar',
           stack: 'x',
           barWidth: 11,
+          // 왼쪽 = 내 공격(초록)
           data: asc.map((p) => ({
-            value: p.mine ? 0 : -p.gain,
-            itemStyle: { color: p.mine ? 'transparent' : '#f43f5e' },
+            value: p.mine ? -p.gain : 0,
+            itemStyle: {
+              borderRadius: [99, 0, 0, 99],
+              color: p.mine ? '#10b981' : 'transparent',
+            },
             label: p.mine
-              ? { show: false }
-              : {
+              ? {
                   show: true,
                   position: inside(p.gain) ? 'insideLeft' : 'left',
                   distance: 5,
-                  color: inside(p.gain) ? '#fff' : '#f43f5e',
+                  color: inside(p.gain) ? '#fff' : '#10b981',
                   formatter: `${p.gain.toFixed(1)}%`,
-                },
+                }
+              : { show: false },
           })),
           label: { fontSize: 9.5, fontWeight: 900, fontFamily: 'ui-monospace, Menlo, monospace' },
         },
@@ -97,18 +101,22 @@ export function AttrPairChart({ pairs }: { pairs: Pair[] }) {
           type: 'bar',
           stack: 'x',
           barWidth: 11,
+          // 오른쪽 = 상대 공격(붉은)
           data: asc.map((p) => ({
-            value: p.mine ? p.gain : 0,
-            itemStyle: { color: p.mine ? '#10b981' : 'transparent' },
+            value: p.mine ? 0 : p.gain,
+            itemStyle: {
+              borderRadius: [0, 99, 99, 0],
+              color: p.mine ? 'transparent' : '#f43f5e',
+            },
             label: p.mine
-              ? {
+              ? { show: false }
+              : {
                   show: true,
                   position: inside(p.gain) ? 'insideRight' : 'right',
                   distance: 5,
-                  color: inside(p.gain) ? '#fff' : '#10b981',
+                  color: inside(p.gain) ? '#fff' : '#f43f5e',
                   formatter: `${p.gain.toFixed(1)}%`,
-                }
-              : { show: false },
+                },
           })),
           label: { fontSize: 9.5, fontWeight: 900, fontFamily: 'ui-monospace, Menlo, monospace' },
         },

@@ -45,7 +45,7 @@ export function synergyRows(attrs: AvatarAttr[]): SynergyRow[] {
 export const SYNERGY_ROW_H = 27;
 
 /**
- * 상성 대칭 막대(P1) — 좌=불리 / 우=유리, 지역명은 **실제 y축**(오버레이 없음).
+ * 상성 대칭 막대(P1) — **좌=유리(초록) / 우=불리(붉은)**, 지역명은 실제 y축(오버레이 없음).
  * 수치는 막대 안(짧은 막대는 바깥)에 두어 축과 겹치지 않는다.
  */
 export function AttrSynergyChart({ rows }: { rows: SynergyRow[] }) {
@@ -76,38 +76,40 @@ export function AttrSynergyChart({ rows }: { rows: SynergyRow[] }) {
       },
       series: [
         {
+          // 왼쪽 = 내가 유리(초록)
           type: 'bar',
           stack: 'x',
           barWidth: 12,
           data: asc.map((r) => ({
-            value: -r.dis,
-            itemStyle: { borderRadius: [99, 0, 0, 99], color: r.dis ? RED : 'transparent' },
-            label: r.dis
+            value: -r.adv,
+            itemStyle: { borderRadius: [99, 0, 0, 99], color: r.adv ? GREEN : 'transparent' },
+            label: r.adv
               ? {
                   show: true,
-                  position: inside(r.dis) ? 'insideLeft' : 'left',
+                  position: inside(r.adv) ? 'insideLeft' : 'left',
                   distance: 5,
-                  color: inside(r.dis) ? '#fff' : RED,
-                  formatter: `${r.dis}%`,
+                  color: inside(r.adv) ? '#fff' : GREEN,
+                  formatter: `${r.adv}%`,
                 }
               : { show: false },
           })),
           label: { fontSize: 10, fontWeight: 900, fontFamily: 'ui-monospace, Menlo, monospace' },
         },
         {
+          // 오른쪽 = 내가 불리(붉은)
           type: 'bar',
           stack: 'x',
           barWidth: 12,
           data: asc.map((r) => ({
-            value: r.adv,
-            itemStyle: { borderRadius: [0, 99, 99, 0], color: r.adv ? GREEN : 'transparent' },
-            label: r.adv
+            value: r.dis,
+            itemStyle: { borderRadius: [0, 99, 99, 0], color: r.dis ? RED : 'transparent' },
+            label: r.dis
               ? {
                   show: true,
-                  position: inside(r.adv) ? 'insideRight' : 'right',
+                  position: inside(r.dis) ? 'insideRight' : 'right',
                   distance: 5,
-                  color: inside(r.adv) ? '#fff' : GREEN,
-                  formatter: `${r.adv}%`,
+                  color: inside(r.dis) ? '#fff' : RED,
+                  formatter: `${r.dis}%`,
                 }
               : { show: false },
           })),
