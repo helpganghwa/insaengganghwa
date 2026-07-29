@@ -111,6 +111,17 @@ export function EquipmentDetailSheet({
               {SLOT_LABEL[item.slot]}
               {item.equipped ? ' · 장착 중' : ''}
             </span>
+            <br />
+            <span className="text-zinc-500">전투력 </span>
+            <span className="font-bold tabular-nums text-zinc-600 dark:text-zinc-300">
+              {cp.toLocaleString('ko-KR')}
+            </span>
+            {item.busy ? (
+              <>
+                <span className="mx-1 text-zinc-400">·</span>
+                <span className="font-bold text-amber-600 dark:text-amber-400">강화 진행 중</span>
+              </>
+            ) : null}
           </>
         }
         maxBodyClass="max-h-[62vh]"
@@ -120,9 +131,10 @@ export function EquipmentDetailSheet({
           </ModalButton>
         }
       >
-        <section className="flex items-stretch gap-3">
+        {/* 수치는 제목·부제가 담당 — 컨텐츠는 장비 자체를 크게 보여준다. */}
+        <section className="flex justify-center">
           <span
-            className={`relative flex h-[76px] w-[76px] shrink-0 items-center justify-center isolate overflow-hidden rounded-xl border-2 ${
+            className={`relative flex h-[124px] w-[124px] items-center justify-center isolate overflow-hidden rounded-2xl border-2 ${
               hasRarityBorder(item.transcendLevel) ? '' : 'border-zinc-200 dark:border-zinc-800'
             }`}
             style={rarityBorderStyle(item.transcendLevel)}
@@ -133,29 +145,15 @@ export function EquipmentDetailSheet({
               slot={item.slot}
               level={item.transcendLevel}
               championRank={item.championRank}
-              size={64}
+              size={108}
               frameless
             />
           </span>
-          <div className="flex min-w-0 flex-1 flex-col justify-between py-0.5">
-            {/* 이름·부위·강화/초월 수치는 팝업 제목·부제가 담당 — 여기서 반복하지 않는다. */}
-            <div className="min-w-0">
-              {item.busy ? (
-                <span className="text-[10px] font-bold text-amber-600 dark:text-amber-400">
-                  강화 진행 중
-                </span>
-              ) : null}
-            </div>
-            <div className="text-[11px] tabular-nums">
-              <span className="text-zinc-500">전투력 </span>
-              <span className="font-semibold">{cp.toLocaleString('ko-KR')}</span>
-            </div>
-          </div>
         </section>
 
         {/* 초월 진행 — 게이지·등급 표기를 현재 초월 등급 색상톤으로. */}
         <section
-          className="mt-2.5 rounded-lg border px-2.5 py-2"
+          className="mt-3 rounded-lg border px-2.5 py-2"
           style={{ borderColor: `rgba(${tr},${tg},${tb},0.4)`, backgroundColor: `rgba(${tr},${tg},${tb},0.08)` }}
         >
           <div className="mb-1 flex items-baseline justify-between text-[10px]">
