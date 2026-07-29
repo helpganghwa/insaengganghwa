@@ -1030,15 +1030,10 @@ export function WorldMapView({
                   // 맞닿지 않은 구역도 버튼은 남긴다 — 사라지면 왜 못 가는지 알 수 없다.
                   // 비활성 모양이되 클릭은 받아서 사유를 토스트로 알린다(disabled면 클릭이 죽는다).
                   adjacentIds && !adjacentIds.has(selected.id) ? (
-                    <button
-                      type="button"
-                      onClick={() =>
-                        showError('맞닿은 구역으로만 이동할 수 있습니다.')
-                      }
-                      className="flex-1 cursor-default rounded-lg bg-zinc-200 py-2 text-[13px] font-bold text-zinc-400 dark:bg-zinc-800 dark:text-zinc-500"
-                    >
-                      이동
-                    </button>
+                    // 사유는 아래 고정 문구가 설명한다 — 지도를 보는 중에 헤더 토스트는 놓치기 쉽다.
+                    <span className="flex-1 cursor-default rounded-lg bg-zinc-200 py-2 text-center text-[13px] font-bold text-zinc-400 dark:bg-zinc-800 dark:text-zinc-500">
+                      이동 불가
+                    </span>
                   ) : remainMs > 0 ? (
                     <button
                       type="button"
@@ -1256,6 +1251,21 @@ export function WorldMapView({
                     <div className="mt-2 text-center text-[11px] font-medium text-zinc-500">점령 후 세금을 수금하세요</div>
                   )}
                 </div>
+
+                {/* 이동 불가 사유 — 지도를 보는 중이라 헤더 토스트는 놓친다. 팝업 안에 남긴다. */}
+                {canSetResidence && selected.id !== residence && adjacentIds && !adjacentIds.has(selected.id) ? (
+                  <p className="mt-2.5 rounded-lg bg-amber-500/10 px-2.5 py-2 text-[11px] leading-snug font-medium text-amber-700 dark:text-amber-300">
+                    맞닿은 구역으로만 이동할 수 있습니다. 가려면{' '}
+                    {homeZoneName ? (
+                      <b className="font-bold" style={homeZoneColor ? { color: homeZoneColor } : undefined}>
+                        {homeZoneName}
+                      </b>
+                    ) : (
+                      '현재 구역'
+                    )}
+                    에서 한 칸씩 옮겨가세요.
+                  </p>
+                ) : null}
               </div>
             </div>
           </ModalLayout>

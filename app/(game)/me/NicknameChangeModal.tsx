@@ -1,7 +1,7 @@
 'use client';
 
 import { useEffect, useState, useTransition } from 'react';
-import { createPortal } from 'react-dom';
+import { ModalShell } from '@/components/ModalShell';
 import { useRouter } from 'next/navigation';
 
 import { NICKNAME_CHANGE_COST_DIAMOND } from '@/lib/game/balance';
@@ -67,18 +67,13 @@ export function NicknameChangeModal({
   };
 
   // body로 portal — 설정 Section의 isolate(stacking context) 밖으로 빼내 헤더/하단바(z-30) 위에 표시.
-  return createPortal(
-    <div
-      role="dialog"
-      aria-modal="true"
-      aria-label="닉네임 변경"
-      className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-4 backdrop-blur-sm"
-      onClick={onClose}
+  return (
+    <ModalShell
+      onClose={onClose}
+      label="닉네임 변경"
+      className="w-full max-w-xs rounded-2xl bg-white p-4 shadow-[0_0_40px_rgba(245,158,11,0.18)] ring-1 ring-amber-700/40 dark:bg-zinc-950"
     >
-      <div
-        className="w-full max-w-xs rounded-2xl bg-white p-4 shadow-[0_0_40px_rgba(245,158,11,0.18)] ring-1 ring-amber-700/40 dark:bg-zinc-950"
-        onClick={(e) => e.stopPropagation()}
-      >
+      <div>
         <h2 className="text-sm font-bold">닉네임 변경</h2>
         <p className="mt-1 text-[11px] text-zinc-500">
           {isFree ? (
@@ -139,7 +134,6 @@ export function NicknameChangeModal({
           </button>
         </div>
       </div>
-    </div>,
-    document.body,
+    </ModalShell>
   );
 }

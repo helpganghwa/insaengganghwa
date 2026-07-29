@@ -324,29 +324,36 @@ export function AnnouncementBoard({
 
       {/* 목록 모달 — 상세 진입/뒤로 */}
       {listOpen && (
-        <ModalShell
-          onClose={closeList}
-          label="게시판"
-          className="flex max-h-[80vh] w-full max-w-[360px] flex-col overflow-hidden rounded-2xl bg-white dark:bg-zinc-950"
-        >
-          <div className="flex shrink-0 items-center gap-2 border-b border-zinc-100 px-4 py-2.5 dark:border-zinc-900">
-            {detail ? (
-              <button type="button" onClick={() => setDetail(null)} className="text-[13px] font-semibold text-zinc-500">
-                ‹ 목록
-              </button>
-            ) : (
-              <h2 className="text-sm font-bold">게시판</h2>
-            )}
-            <button type="button" onClick={closeList} className="ml-auto text-[13px] text-zinc-400">
-              닫기
-            </button>
-          </div>
+        <ModalShell onClose={closeList} label="게시판">
+          <ModalLayout
+            title={detail ? detail.title : '공지사항'}
+            subtitle={
+              detail ? (
+                <button
+                  type="button"
+                  onClick={() => setDetail(null)}
+                  className="font-semibold text-zinc-500 dark:text-zinc-400"
+                >
+                  ‹ 목록으로
+                </button>
+              ) : (
+                `${sorted.length}건`
+              )
+            }
+            maxBodyClass="max-h-[58vh]"
+            bodyPad={detail ? 'md' : 'sm'}
+            footer={
+              <ModalButton tone="ghost" onClick={closeList}>
+                닫기
+              </ModalButton>
+            }
+          >
           {detail ? (
             <Detail a={detail} voteFor={voteForOf(detail.id)} onVote={(o, q) => onVote(detail.id, o, q)} />
           ) : sorted.length === 0 ? (
             <p className="px-4 py-10 text-center text-[12px] text-zinc-400">등록된 공지가 없습니다.</p>
           ) : (
-            <ul className="min-h-0 flex-1 divide-y divide-zinc-100 overflow-y-auto dark:divide-zinc-900">
+            <ul className="divide-y divide-zinc-100 dark:divide-zinc-900">
               {sorted.map((a) => (
                 <li key={a.id}>
                   <button
@@ -367,6 +374,7 @@ export function AnnouncementBoard({
               ))}
             </ul>
           )}
+          </ModalLayout>
         </ModalShell>
       )}
 

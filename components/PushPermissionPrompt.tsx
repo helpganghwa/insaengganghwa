@@ -1,6 +1,7 @@
 'use client';
 
 import { useEffect, useState } from 'react';
+import { ModalShell } from '@/components/ModalShell';
 
 import {
   checkPushSupport,
@@ -98,16 +99,12 @@ export function PushPermissionPrompt({
   if (step === 'closed') return null;
 
   return (
-    <div
-      role="dialog"
-      aria-modal="true"
-      className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-4 backdrop-blur-sm"
-      onClick={dismiss}
+    <ModalShell
+      onClose={dismiss}
+      label="알림 권한 안내"
+      className="w-full max-w-[358px] rounded-2xl bg-white p-5 shadow-[0_0_40px_rgba(245,158,11,0.18)] ring-1 ring-amber-700/40 dark:bg-zinc-900"
     >
-      <div
-        className="w-full max-w-[358px] rounded-2xl bg-white p-5 shadow-[0_0_40px_rgba(245,158,11,0.18)] ring-1 ring-amber-700/40 dark:bg-zinc-900"
-        onClick={(e) => e.stopPropagation()}
-      >
+      <div>
         {step === 'pitch' ? (
           <PitchView
             pending={pending}
@@ -125,7 +122,7 @@ export function PushPermissionPrompt({
         {step === 'success' ? <SuccessView onClose={dismiss} /> : null}
         {step === 'error' ? <ErrorView onClose={dismiss} /> : null}
       </div>
-    </div>
+    </ModalShell>
   );
 }
 

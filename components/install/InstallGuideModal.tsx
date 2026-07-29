@@ -1,5 +1,7 @@
 'use client';
 
+import { ModalShell } from '@/components/ModalShell';
+
 /** iOS / 안드로이드 수동 설치 안내 모달 — 띠지·설정 버튼 공용. */
 export function InstallGuideModal({
   platform,
@@ -9,16 +11,12 @@ export function InstallGuideModal({
   onClose: () => void;
 }) {
   return (
-    <div
-      role="dialog"
-      aria-modal="true"
-      className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-4 backdrop-blur-sm"
-      onClick={onClose}
+    <ModalShell
+      onClose={onClose}
+      label="앱 설치 안내"
+      className="m-4 max-w-sm rounded-xl bg-white p-4 text-sm shadow-[0_0_40px_rgba(245,158,11,0.18)] ring-1 ring-amber-700/40 dark:bg-zinc-950"
     >
-      <div
-        className="m-4 max-w-sm rounded-xl bg-white p-4 text-sm shadow-[0_0_40px_rgba(245,158,11,0.18)] ring-1 ring-amber-700/40 dark:bg-zinc-950"
-        onClick={(e) => e.stopPropagation()}
-      >
+      <div>
         {platform === 'android' ? (
           <>
             <h3 className="mb-2 text-base font-semibold">홈 화면에 추가 (Android)</h3>
@@ -66,6 +64,6 @@ export function InstallGuideModal({
           확인
         </button>
       </div>
-    </div>
+    </ModalShell>
   );
 }
