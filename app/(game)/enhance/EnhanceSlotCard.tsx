@@ -889,10 +889,14 @@ export function EnhanceSlotCard({
             if (activeJob.jobId.startsWith('optimistic-')) return;
             setCancelOpen(true);
           }}
-          className="absolute left-1.5 top-1.5 z-20 flex h-5 w-5 items-center justify-center rounded-md border border-zinc-700 bg-zinc-950/80 text-[11px] leading-none text-zinc-400 backdrop-blur-sm active:scale-95 disabled:opacity-30"
+          // 보이는 크기는 20px 그대로 두고 투명 패딩으로 히트영역만 32px로 넓힌다
+          // (left-0 top-0 + p-1.5 = 기존 left-1.5 top-1.5와 같은 자리, 2026-07-29 요청).
+          className="absolute left-0 top-0 z-20 p-1.5 disabled:opacity-30"
           aria-label="강화 취소"
         >
-          ✕
+          <span className="flex h-5 w-5 items-center justify-center rounded-md border border-zinc-700 bg-zinc-950/80 text-[11px] leading-none text-zinc-400 backdrop-blur-sm active:scale-95">
+            ✕
+          </span>
         </button>
 
         {confirm && !attempting && !flash ? (
