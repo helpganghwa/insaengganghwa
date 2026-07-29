@@ -101,7 +101,9 @@ export function EquipmentDetailSheet({
             {item.transcendLevel > 0 ? (
               <>
                 <span className="mx-1 text-zinc-400">·</span>
-                <span className="font-bold text-violet-500">✦{item.transcendLevel}</span>
+                <span className="font-bold" style={{ color: tColor }}>
+                  ✦{item.transcendLevel}
+                </span>
               </>
             ) : null}
             <span className="mx-1 text-zinc-400">·</span>
@@ -136,24 +138,13 @@ export function EquipmentDetailSheet({
             />
           </span>
           <div className="flex min-w-0 flex-1 flex-col justify-between py-0.5">
+            {/* 이름·부위·강화/초월 수치는 팝업 제목·부제가 담당 — 여기서 반복하지 않는다. */}
             <div className="min-w-0">
-              <div className="flex items-center gap-1 text-[10px] text-zinc-500">
-                <span>{SLOT_LABEL[item.slot]}</span>
-                {item.equipped ? (
-                  <span className="text-emerald-600 dark:text-emerald-400">· 장착</span>
-                ) : null}
-                {item.busy ? (
-                  <span className="text-amber-600 dark:text-amber-400">· 강화중</span>
-                ) : null}
-              </div>
-              <div className="mt-0.5 break-keep text-sm font-semibold leading-tight">
-                {item.name}
-              </div>
-              {/* 이름 아래줄 — 강화수치 + 초월수치 함께 표기. */}
-              <div className="mt-0.5 flex items-center gap-1.5 text-[12px] font-bold tabular-nums">
-                <span className="text-amber-600 dark:text-amber-400">+{item.enhanceLevel}</span>
-                <span style={{ color: tColor }}>✦{item.transcendLevel}</span>
-              </div>
+              {item.busy ? (
+                <span className="text-[10px] font-bold text-amber-600 dark:text-amber-400">
+                  강화 진행 중
+                </span>
+              ) : null}
             </div>
             <div className="text-[11px] tabular-nums">
               <span className="text-zinc-500">전투력 </span>

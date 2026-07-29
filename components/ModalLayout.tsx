@@ -35,7 +35,9 @@ export function ModalLayout({
   bare?: boolean;
 }) {
   return (
-    <div className="flex w-full max-w-[320px] flex-col gap-2.5">
+    // 셸 패널은 폭을 지정하지 않으므로 여기서 못 박는다 — w-full만 두면 flex 안에서
+    // 내용 길이에 따라 폭이 줄어 팝업마다 넓이가 달라진다(2026-07-29 제보).
+    <div className="flex w-[320px] max-w-full flex-col gap-2.5">
       {title || subtitle || icon ? (
         <div className="px-1 text-center">
           {icon ? <div className="text-[26px] leading-none">{icon}</div> : null}
@@ -52,7 +54,7 @@ export function ModalLayout({
         className={
           bare
             ? `overflow-hidden rounded-2xl ${maxBodyClass ?? ''}`
-            : `rounded-2xl bg-white ${bodyPad === 'sm' ? 'p-1.5' : 'p-4'} dark:bg-zinc-900 ${
+            : `rounded-2xl bg-white ${bodyPad === 'sm' ? 'p-2' : 'p-5'} dark:bg-zinc-900 ${
                 maxBodyClass ? `${maxBodyClass} overflow-y-auto` : ''
               }`
         }

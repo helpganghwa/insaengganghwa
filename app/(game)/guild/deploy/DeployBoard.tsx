@@ -61,47 +61,52 @@ const fmt = (n: number) =>
 
 /**
  * 지도 핀 — 노드 위에 떠 있는 물방울 마커. 왼쪽=내 위치(앰버), 오른쪽=선택(하늘색).
- *  · 둘 다 **항상 마운트**하고 표시만 토글한다 — 붙였다 뗐다 하면 CSS 애니메이션이 재시작해
- *    구역마다 위아래 움직임의 위상이 어긋난다(2026-07-29 제보).
- *  · 애니메이션은 감싼 컨테이너 한 곳에만 걸어 두 핀이 항상 같은 박자로 움직인다.
+ *
+ * 좌표를 flex 정렬에 맡기면 보이는 핀 개수에 따라 중심이 흔들린다(2026-07-29 반복 제보).
+ * 그래서 **너비 0인 앵커**를 노드 정중앙에 두고 핀을 절대배치로 매단다 —
+ * 하나면 정확히 가운데, 둘이면 좌우 대칭. 어떤 조합이든 중심은 항상 노드 중앙이다.
+ * 애니메이션은 앵커에만 걸어 두 핀이 같은 박자로 움직인다(앵커는 늘 마운트 상태).
  */
 function MapPins({ home, selected }: { home: boolean; selected: boolean }) {
+  const both = home && selected;
   return (
     <span
       aria-hidden
-      className="pointer-events-none absolute bottom-full left-1/2 -mb-1 flex -translate-x-1/2 animate-marker-bob gap-[3px]"
-      style={{ opacity: home || selected ? 1 : 0 }}
+      className="pointer-events-none absolute bottom-full left-1/2 -mb-1 block h-[11px] w-0 animate-marker-bob"
     >
-      <Pin show={home} from="#fcd34d" to="#f59e0b" glow="rgba(245,158,11,0.65)" glowHi="rgba(251,191,36,0.95)" />
-      <Pin show={selected} from="#7dd3fc" to="#0284c7" glow="rgba(2,132,199,0.65)" glowHi="rgba(56,189,248,0.95)" />
+      {home ? <Pin dx={both ? -7 : 0} from="#fcd34d" to="#f59e0b" glow="245,158,11" hi="251,191,36" /> : null}
+      {selected ? <Pin dx={both ? 7 : 0} from="#7dd3fc" to="#0284c7" glow="2,132,199" hi="56,189,248" /> : null}
     </span>
   );
 }
 
 function Pin({
-  show,
+  dx,
   from,
   to,
   glow,
-  glowHi,
+  hi,
 }: {
-  show: boolean;
+  /** 앵커 기준 좌우 오프셋(px) — 둘 다 뜰 때만 벌린다. */
+  dx: number;
   from: string;
   to: string;
   glow: string;
-  glowHi: string;
+  hi: string;
 }) {
   return (
-    // display:none — 언마운트가 아니라 숨김. 남은 핀 하나는 컨테이너가 다시 중앙에 맞춘다.
-    <span className="block" style={{ display: show ? 'block' : 'none' }}>
+    <span
+      className="absolute top-0 block h-[11px] w-[11px]"
+      style={{ left: dx, transform: 'translateX(-50%)' }}
+    >
       <span
-        className="relative block h-[11px] w-[11px] animate-marker-pin-glow border-[1.5px] border-white"
+        className="relative block h-full w-full animate-marker-pin-glow border-[1.5px] border-white"
         style={{
           background: `linear-gradient(135deg, ${from}, ${to})`,
           borderRadius: '50% 50% 50% 0',
           transform: 'rotate(-45deg)',
-          ['--pin-glow' as string]: glow,
-          ['--pin-glow-hi' as string]: glowHi,
+          ['--pin-glow' as string]: `rgba(${glow},0.65)`,
+          ['--pin-glow-hi' as string]: `rgba(${hi},0.95)`,
         }}
       >
         <span className="absolute left-1/2 top-1/2 h-[3.5px] w-[3.5px] -translate-x-1/2 -translate-y-1/2 rounded-full bg-white" />
@@ -325,7 +330,17 @@ export function DeployBoard({
     const snapshot = members;
     setMembers((prev) =>
       prev.map((x) => {
-        if (x.execZoneId === selectedId) return { ...x, execZoneId: null, execZoneName: null }; // 기존 집행관 해제
+        // 기존 집행관은 자동 방어만 잃고 **일반 수비로 복원**된다(서버 restoreAsDefender).
+        // 화면에서 '미배치'로 그리면 수비가 사라진 것처럼 보인다(2026-07-29 제보).
+        if (x.execZoneId === selectedId)
+          return {
+            ...x,
+            execZoneId: null,
+            execZoneName: null,
+            depZoneId: selectedId,
+            depZoneName: selected.name,
+            depRole: 'defend' as const,
+          };
         if (x.userId === m.userId)
           return { ...x, execZoneId: selectedId, execZoneName: selected.name, depZoneId: null, depZoneName: null, depRole: null };
         return x;
@@ -344,7 +359,21 @@ export function DeployBoard({
   const clearExec = () => {
     if (selectedId == null) return;
     const snapshot = members;
-    setMembers((prev) => prev.map((x) => (x.execZoneId === selectedId ? { ...x, execZoneId: null, execZoneName: null } : x)));
+    setMembers((prev) =>
+      prev.map((x) =>
+        x.execZoneId === selectedId
+          ? {
+              ...x,
+              execZoneId: null,
+              execZoneName: null,
+              // 해제도 같은 규칙 — 자동 방어만 풀리고 일반 수비로 남는다.
+              depZoneId: selectedId,
+              depZoneName: selected?.name ?? null,
+              depRole: 'defend' as const,
+            }
+          : x,
+      ),
+    );
     start(async () => {
       const r = await clearExecutorAction(selectedId);
       if (r.status !== 'success') {

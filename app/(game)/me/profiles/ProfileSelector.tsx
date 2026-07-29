@@ -163,7 +163,6 @@ export function ProfileSelector({
           label="아바타 삭제 확인"
         >
           <ModalLayout
-            icon="🗑️"
             title="이 아바타를 삭제할까요?"
             subtitle={<span className="font-bold text-red-500">복구 불가</span>}
             footer={
@@ -178,7 +177,7 @@ export function ProfileSelector({
             }
           >
             <p className="text-center text-[12.5px] leading-relaxed text-zinc-500 dark:text-zinc-400">
-              생성에 사용한 다이아는 돌려받을 수 없고, 같은 아바타를 다시 만들 수도 없습니다.
+              생성에 사용한 다이아는 돌려받을 수 없고, 똑같은 아바타를 다시 만들 수 없습니다.
             </p>
           </ModalLayout>
         </ModalShell>

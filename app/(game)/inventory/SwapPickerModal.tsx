@@ -13,12 +13,21 @@ type ActiveJob = {
   jobId: string;
   userEquipmentId: string;
   completeAtIso: string;
+  startedAtIso: string;
   enhanceLevel: number;
   transcendLevel: number;
   code: string;
   name: string;
   slot: Slot;
 };
+
+/** 진행한 시간 — 교체 시 버려지는 값이라 남은 시간보다 이쪽이 판단에 쓰인다. */
+function elapsedLabel(startedIso: string, nowMs: number): string {
+  const ms = Math.max(0, nowMs - Date.parse(startedIso));
+  const h = Math.floor(ms / 3_600_000);
+  const m = Math.floor((ms % 3_600_000) / 60_000);
+  return h > 0 ? `${h}시간 ${m}분` : `${m}분`;
+}
 
 function remainingLabel(iso: string, nowMs: number): string {
   const ms = new Date(iso).getTime() - nowMs;
@@ -91,6 +100,9 @@ export function SwapPickerModal({
     });
   }
 
+  // 목록이 오기 전에 열면 높이가 튄다 — 데이터가 준비된 뒤에 그린다(에러는 보여줘야 함).
+  if (jobs === null && !error) return null;
+
   return (
     <ModalShell
       onClose={() => (swapAsk ? setSwapAsk(null) : onClose())}
@@ -100,10 +112,12 @@ export function SwapPickerModal({
       <ModalLayout
         title={swapAsk ? '이 강화를 취소할까요?' : '교체할 강화 선택'}
         subtitle={
-          <>
-            슬롯이 모두 사용 중 ·{' '}
-            <span className="font-bold text-amber-600 dark:text-amber-400">선택 시 진행 취소</span>
-          </>
+          swapAsk ? null : (
+            <>
+              슬롯이 모두 사용 중 ·{' '}
+              <span className="font-bold text-amber-600 dark:text-amber-400">선택 시 진행 취소</span>
+            </>
+          )
         }
         bodyPad="sm"
         footer={
@@ -130,9 +144,7 @@ export function SwapPickerModal({
           </p>
         ) : null}
 
-        {jobs === null ? (
-          <p className="py-6 text-center text-xs text-zinc-500">불러오는 중…</p>
-        ) : jobs.length === 0 ? (
+        {jobs === null || jobs.length === 0 ? (
           <p className="py-6 text-center text-xs text-zinc-500">교체 가능한 강화가 없습니다.</p>
         ) : swapAsk ? (
           // 선택 즉시 취소되던 것을 한 단계 확인으로 감싼다 — 쌓인 강화 시간이 사라지는 동작이라
@@ -143,7 +155,7 @@ export function SwapPickerModal({
               {swapAsk.enhanceLevel} 강화를 취소하고 새 장비를 등록합니다.
             </p>
             <p className="mt-2 text-[11.5px] font-bold text-amber-600 dark:text-amber-300/90">
-              쌓인 시간 {remainingLabel(swapAsk.completeAtIso, nowMs)}이 사라집니다.
+              쌓인 시간 {elapsedLabel(swapAsk.startedAtIso, nowMs)}이 사라집니다.
             </p>
           </div>
         ) : (
@@ -171,7 +183,7 @@ export function SwapPickerModal({
                     </div>
                   </div>
                   <div className="shrink-0 text-right font-mono text-[10px] text-amber-300">
-                    ⏳ {remainingLabel(j.completeAtIso, nowMs)}
+                    ⏳ {elapsedLabel(j.startedAtIso, nowMs)} 진행
                   </div>
                 </button>
               </li>
