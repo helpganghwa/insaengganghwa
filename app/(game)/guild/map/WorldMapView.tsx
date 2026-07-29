@@ -18,6 +18,7 @@ import {
 
 import {
   setResidenceAction,
+  speedUpResidenceAction,
   getZoneBattleAction,
   collectTaxAction,
   getGuildSummaryByNameAction,
@@ -483,6 +484,25 @@ export function WorldMapView({
     });
   };
 
+  /** 쿨타임 보석 단축 — 대기시간만 없앤다(이동은 별도 클릭). */
+  const speedUpOnly = () => {
+    const cost = residenceSpeedUpCost(remainMs);
+    setMoveAsk(null);
+    setMoveConfirm(false);
+    const prevReady = readyAt;
+    setReadyAt(null); // 낙관적 — 실패 시 되돌린다
+    optimisticAdjust(-BigInt(cost));
+    start(async () => {
+      const r = await speedUpResidenceAction();
+      if (r.status !== 'success') {
+        setReadyAt(prevReady);
+        optimisticAdjust(BigInt(cost));
+        return showError(guildErrMsg(r.code));
+      }
+      showHeaderToast({ title: `이동 대기시간 단축 −${cost.toLocaleString('ko-KR')}💎` });
+    });
+  };
+
   /** 이동 버튼 — 상황에 따라 바로 이동하거나 확인 팝업을 연다. */
   const askMove = (zoneId: number) => {
     if (moveLock) return setMoveAsk({ kind: 'release', zoneId });
@@ -558,8 +578,8 @@ export function WorldMapView({
                     x2={e.x2}
                     y2={e.y2}
                     stroke="#000000"
-                    strokeOpacity={isWalk(e) ? 0.32 : 0.12}
-                    strokeWidth={isSel(e) ? 1.2 : isWalk(e) ? 0.85 : 0.6}
+                    strokeOpacity={isWalk(e) ? 0.42 : 0.26}
+                    strokeWidth={isSel(e) ? 1.2 : isWalk(e) ? 1 : 0.75}
                     strokeLinecap="round"
                   />
                 ))}
@@ -573,9 +593,9 @@ export function WorldMapView({
                       y1={e.y1}
                       x2={e.x2}
                       y2={e.y2}
-                      stroke={isWalk(e) ? '#fcd34d' : '#9ca3af'}
-                      strokeOpacity={isWalk(e) ? 0.55 : 0.18}
-                      strokeWidth={0.5}
+                      stroke={isWalk(e) ? '#fde047' : '#cbd5e1'}
+                      strokeOpacity={isWalk(e) ? 0.95 : 0.45}
+                      strokeWidth={isWalk(e) ? 0.72 : 0.5}
                       strokeLinecap="round"
                     />
                   ))}
@@ -1188,17 +1208,28 @@ export function WorldMapView({
                   </button>
                 ) : (
                   // 이동 가능 여부는 사유별로 다르게 보여준다 — 왜 못 가는지 모르면 버그로 읽힌다.
-                  // 맞닿지 않은 구역은 버튼 자체를 숨긴다(닫기가 폭을 다 쓴다).
-                  // 배치·집행관으로 묶여 있어도 버튼은 살려두고, 누르면 해제 경고 팝업을 띄운다.
-                  adjacentIds && !adjacentIds.has(selected.id) ? null : remainMs > 0 ? (
+                  // 맞닿지 않은 구역도 버튼은 남긴다 — 사라지면 왜 못 가는지 알 수 없다.
+                  // 비활성 모양이되 클릭은 받아서 사유를 토스트로 알린다(disabled면 클릭이 죽는다).
+                  adjacentIds && !adjacentIds.has(selected.id) ? (
+                    <button
+                      type="button"
+                      onClick={() =>
+                        showError('맞닿은 구역으로만 이동할 수 있습니다.')
+                      }
+                      className="flex-1 cursor-default rounded-lg bg-zinc-200 py-2 text-[13px] font-bold text-zinc-400 dark:bg-zinc-800 dark:text-zinc-500"
+                    >
+                      이동
+                    </button>
+                  ) : remainMs > 0 ? (
                     <button
                       type="button"
                       onClick={() => askMove(selected.id)}
                       disabled={pending}
-                      className="flex-1 rounded-lg bg-sky-600 py-2 text-[12px] font-bold text-white disabled:opacity-50"
+                      className="flex-1 rounded-lg bg-sky-600 py-1.5 text-[11px] leading-[1.35] font-bold text-white disabled:opacity-50"
                     >
-                      {fmtRemain(remainMs)} 후 또는 💎
-                      {residenceSpeedUpCost(remainMs).toLocaleString('ko-KR')}
+                      {fmtRemain(remainMs)} 후
+                      <br />
+                      또는 💎{residenceSpeedUpCost(remainMs).toLocaleString('ko-KR')}
                     </button>
                   ) : (
                     <button
@@ -1343,7 +1374,7 @@ export function WorldMapView({
                     onClick={() => {
                       // 강화 보석 단축과 동일한 3초 인-버튼 재확인 — 오탭 결제 방지.
                       if (moveConfirm) {
-                        moveResidence(moveAsk.zoneId, { paySpeedUp: true });
+                        speedUpOnly();
                       } else {
                         setMoveLeft(3);
                         setMoveConfirm(true);
@@ -1362,7 +1393,7 @@ export function WorldMapView({
                       />
                     )}
                     <span className="relative">
-                      이동 💎{residenceSpeedUpCost(remainMs).toLocaleString('ko-KR')}
+                      단축 💎{residenceSpeedUpCost(remainMs).toLocaleString('ko-KR')}
                       {moveConfirm ? ` ${moveLeft}s` : ''}
                     </span>
                   </button>

@@ -199,6 +199,34 @@ export async function setResidence(
   });
 }
 
+/**
+ * 이동 쿨타임 보석 단축 — 남은 시간 1분당 1💎(올림)을 받고 대기시간만 없앤다(이동은 하지 않는다).
+ * 강화 시간 단축과 같은 모양: 비용은 결제 시점의 남은 시간으로 산정한다.
+ */
+export async function speedUpResidenceMove(
+  userId: string,
+  serverId: number,
+): Promise<{ spent: number }> {
+  return db.transaction(async (tx) => {
+    const [me] = await tx
+      .select({ readyAt: characters.residenceReadyAt })
+      .from(characters)
+      .where(and(eq(characters.userId, userId), eq(characters.serverId, serverId)))
+      .for('update');
+    if (!me) throw new GuildError('FORBIDDEN');
+    const remain = me.readyAt ? me.readyAt.getTime() - Date.now() : 0;
+    if (remain <= 0) return { spent: 0 }; // 이미 가능 — 결제 없이 성공 처리
+    const spent = residenceSpeedUpCost(remain);
+    const paid = await walletTrySpend(tx, userId, serverId, BigInt(spent));
+    if (!paid) throw new GuildError('INSUFFICIENT_DIAMOND');
+    await tx
+      .update(characters)
+      .set({ residenceReadyAt: null })
+      .where(and(eq(characters.userId, userId), eq(characters.serverId, serverId)));
+    return { spent };
+  });
+}
+
 /** 배치·집행관 지정용 거주 검증 — 트랜잭션 내 호출. 그 구역 거주자가 아니면 throw. */
 export async function assertResident(
   tx: Tx,
