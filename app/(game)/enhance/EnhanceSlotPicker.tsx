@@ -11,6 +11,7 @@ import { RarityFrame, rarityBorderStyle, hasRarityBorder, TranscendTag } from '@
 
 import { useResourceToast } from '@/components/ResourceToast';
 import { ModalShell } from '@/components/ModalShell';
+import { ModalLayout, ModalButton } from '@/components/ModalLayout';
 
 import { startEnhance } from './actions';
 
@@ -119,14 +120,12 @@ function EnhanceSlotPicker({
   };
 
   return (
-    <ModalShell
-      onClose={onClose}
-      label={`${SLOT_LABEL[slot]} 강화 등록`}
-      className="max-h-[82dvh] w-full max-w-xs overflow-y-auto rounded-2xl bg-white p-3 shadow-[0_0_40px_rgba(245,158,11,0.18)] ring-1 ring-amber-700/40 dark:bg-zinc-950"
-    >
-        <header className="mb-2 flex items-center justify-between">
-          <h2 className="text-sm font-semibold">{SLOT_LABEL[slot]} 강화 등록</h2>
-          <div className="flex items-center gap-2">
+    <ModalShell onClose={onClose} label={`${SLOT_LABEL[slot]} 강화 등록`}>
+      <ModalLayout
+        title={`${SLOT_LABEL[slot]} 강화 등록`}
+        subtitle={
+          <span className="inline-flex items-center gap-1.5">
+            탭하면 빈 슬롯에 자동 등록
             {/* 정렬 셀렉트 — 인벤토리와 동일 스타일(커스텀 ▼, iOS 색상·크롬 위치 이슈 회피). */}
             <span className="relative inline-flex items-center">
               <select
@@ -143,19 +142,15 @@ function EnhanceSlotPicker({
                 ▼
               </span>
             </span>
-            <button
-              type="button"
-              onClick={onClose}
-              className="text-base leading-none text-zinc-400 hover:text-zinc-700 dark:hover:text-zinc-300"
-              aria-label="닫기"
-            >
-              ×
-            </button>
-          </div>
-        </header>
-        <p className="mb-2 text-[10px] text-zinc-500">
-          탭하면 빈 슬롯에 자동 등록됩니다 (잠금/강화중 제외).
-        </p>
+          </span>
+        }
+        maxBodyClass="max-h-[62vh]"
+        footer={
+          <ModalButton tone="ghost" onClick={onClose}>
+            닫기
+          </ModalButton>
+        }
+      >
 
         {error ? (
           <p className="mb-2 rounded bg-red-50 px-2 py-1 text-[10px] text-red-700 dark:bg-red-950/60 dark:text-red-300">
@@ -209,6 +204,7 @@ function EnhanceSlotPicker({
             ))}
           </div>
         )}
+      </ModalLayout>
     </ModalShell>
   );
 }

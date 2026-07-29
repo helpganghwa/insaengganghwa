@@ -11,6 +11,7 @@ import { equipAction, unequipAction } from './actions';
 import { startEnhance } from '@/app/(game)/enhance/actions';
 import { SwapPickerModal } from './SwapPickerModal';
 import { ModalShell } from '@/components/ModalShell';
+import { ModalLayout, ModalButton } from '@/components/ModalLayout';
 import { TranscendSprite } from '@/components/TranscendSprite';
 import { RarityFrame, rarityBorderStyle, hasRarityBorder } from '@/components/RarityFrame';
 import { transcendStyle } from '@/lib/game/equipment/transcend';
@@ -91,12 +92,32 @@ export function EquipmentDetailSheet({
 
   return (
     <>
-    <ModalShell
-      onClose={onClose}
-      label="장비 상세"
-      className="max-h-[92dvh] w-full max-w-xs overflow-y-auto rounded-2xl bg-white p-3 shadow-[0_0_40px_rgba(245,158,11,0.18)] ring-1 ring-amber-700/40 dark:bg-zinc-950"
-    >
-        {/* ── 상단: sprite + 정보(이름/슬롯/상태/전투력) ── */}
+    <ModalShell onClose={onClose} label="장비 상세">
+      <ModalLayout
+        title={item.name}
+        subtitle={
+          <>
+            <span className="font-bold text-amber-600 dark:text-amber-400">+{item.enhanceLevel}</span>
+            {item.transcendLevel > 0 ? (
+              <>
+                <span className="mx-1 text-zinc-400">·</span>
+                <span className="font-bold text-violet-500">✦{item.transcendLevel}</span>
+              </>
+            ) : null}
+            <span className="mx-1 text-zinc-400">·</span>
+            <span className="font-bold text-zinc-600 dark:text-zinc-300">
+              {SLOT_LABEL[item.slot]}
+              {item.equipped ? ' · 장착 중' : ''}
+            </span>
+          </>
+        }
+        maxBodyClass="max-h-[62vh]"
+        footer={
+          <ModalButton tone="ghost" onClick={onClose}>
+            닫기
+          </ModalButton>
+        }
+      >
         <section className="flex items-stretch gap-3">
           <span
             className={`relative flex h-[76px] w-[76px] shrink-0 items-center justify-center isolate overflow-hidden rounded-xl border-2 ${
@@ -232,13 +253,7 @@ export function EquipmentDetailSheet({
           </button>
         </div>
 
-        <button
-          type="button"
-          onClick={onClose}
-          className="mt-2.5 w-full py-1.5 text-[11px] text-zinc-500"
-        >
-          닫기
-        </button>
+      </ModalLayout>
     </ModalShell>
 
       {swapPicker ? (
