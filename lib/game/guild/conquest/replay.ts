@@ -98,8 +98,24 @@ export async function getConquestReplay(serverId: number, forKstDay?: string): P
     if (z) beforeOwner[z.id] = c.from;
   }
 
+  // 방치 중립화 — 그날 방치로 중립이 된 구역(전투 아님). 리플레이 시작 시 소유 길드 문양을 세우고
+  // (beforeOwner), 종료 연출에서 문양을 소멸시킨다. zone명 → id 매핑 + 소유 길드 수집.
+  // ⚠ 반드시 origins 산출(originFor)보다 **먼저** — 위 zoneRows는 중립화가 최근이면 owner를 null로
+  // 주므로, 여기서 복원하기 전에 originFor를 돌리면 그 구역이 '남의 땅'으로 보여 출발지를 못 찾는다
+  // (2026-07-30 제보: FIRST가 감시 망루를 보유했는데 약탈자 야영지 진군이 지도 밖에서 시작).
+  const neutralized: { zoneId: number; zone: string; guild: string }[] = [];
+  for (const n of s.neutralized) {
+    for (const zn of n.zones) {
+      const z = byName.get(zn);
+      if (!z) continue;
+      neutralized.push({ zoneId: z.id, zone: zn, guild: n.guildName });
+      beforeOwner[z.id] = n.guildName; // 시작 시 소유 길드 문양(→ 종료 시 소멸)
+    }
+  }
+
   // 길드별 공격 대상(경합 rival 산출)과 관련 길드 수집.
   const names = new Set<string>();
+  for (const n of neutralized) names.add(n.guild);
   for (const c of s.captures) {
     names.add(c.winner);
     if (c.from) names.add(c.from);
@@ -139,19 +155,6 @@ export async function getConquestReplay(serverId: number, forKstDay?: string): P
     const origins: Record<string, number | null> = {};
     for (const r of rivals) origins[r] = originFor(r, d.zone);
     events[d.zone] = { zoneId: z.id, zone: d.zone, type: 'defense', winner: d.owner, from: null, rivals, origins, defended: true };
-  }
-
-  // 방치 중립화 — 그날 방치로 중립이 된 구역(전투 아님). 리플레이 시작 시 소유 길드 문양을 세우고
-  // (beforeOwner), 종료 연출에서 문양을 소멸시킨다. zone명 → id 매핑 + 소유 길드 수집.
-  const neutralized: { zoneId: number; zone: string; guild: string }[] = [];
-  for (const n of s.neutralized) {
-    for (const zn of n.zones) {
-      const z = byName.get(zn);
-      if (!z) continue;
-      neutralized.push({ zoneId: z.id, zone: zn, guild: n.guildName });
-      beforeOwner[z.id] = n.guildName; // 시작 시 소유 길드 문양(→ 종료 시 소멸)
-      names.add(n.guildName);
-    }
   }
 
   if (Object.keys(events).length === 0 && neutralized.length === 0) return null;
