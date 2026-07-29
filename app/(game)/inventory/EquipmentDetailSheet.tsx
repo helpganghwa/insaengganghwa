@@ -111,7 +111,7 @@ export function EquipmentDetailSheet({
               {SLOT_LABEL[item.slot]}
               {item.equipped ? ' · 장착 중' : ''}
             </span>
-            <br />
+            <span className="mx-1 text-zinc-400">·</span>
             <span className="text-zinc-500">전투력 </span>
             <span className="font-bold tabular-nums text-zinc-600 dark:text-zinc-300">
               {cp.toLocaleString('ko-KR')}
@@ -127,7 +127,8 @@ export function EquipmentDetailSheet({
         maxBodyClass="max-h-[62vh]"
         footer={
           // 스프라이트 버튼은 그대로 유지 — 텍스트 버튼으로 바꾸면 게임 톤이 깨진다.
-          <div className="grid w-full grid-cols-[1fr_1fr_auto] gap-1.5">
+          <div className="flex w-full flex-col gap-2">
+            <div className="grid grid-cols-2 gap-1.5">
           {/* 강화 — SLOT_BUSY 시 SwapPickerModal 열어 교체. */}
           <button
             type="button"
@@ -176,10 +177,11 @@ export function EquipmentDetailSheet({
           >
             <BtnBg src={assetUrl('/sprites/ui/btn-equip.png')} label={item.equipped ? '해제' : '장착'} />
           </button>
+            </div>
             <button
               type="button"
               onClick={onClose}
-              className="rounded-xl border border-zinc-300 px-3 text-[12px] font-bold text-zinc-500 dark:border-zinc-700 dark:text-zinc-400"
+              className="w-full rounded-xl border border-zinc-300 py-2.5 text-[13px] font-bold text-zinc-500 dark:border-zinc-700 dark:text-zinc-400"
             >
               닫기
             </button>

@@ -175,7 +175,7 @@ export function TutorialCoach({ statePromise }: { statePromise: Promise<Tutorial
     let alive = true;
     const measure = () => {
       if (!alive) return;
-      if (Date.now() - navAtRef.current < 300) {
+      if (Date.now() - navAtRef.current < 120) {
         setRect(null);
         setCopy('');
         return;
@@ -201,13 +201,19 @@ export function TutorialCoach({ statePromise }: { statePromise: Promise<Tutorial
       setRect(null);
       setCopy('');
     };
-    measure();
-    const id = window.setInterval(measure, 180);
+    // 매 프레임 측정 — 180ms 폴링은 팝업이 뜬 뒤 최대 한 박자 늦게 구멍이 따라와
+    // 하이라이트가 늦게 나타나 보였다(2026-07-29 제보). 대상 1개의 rect 계산이라 비용은 무시할 수준.
+    let raf = 0;
+    const loop = () => {
+      measure();
+      raf = window.requestAnimationFrame(loop);
+    };
+    loop();
     window.addEventListener('scroll', measure, true);
     window.addEventListener('resize', measure);
     return () => {
       alive = false;
-      window.clearInterval(id);
+      window.cancelAnimationFrame(raf);
       window.removeEventListener('scroll', measure, true);
       window.removeEventListener('resize', measure);
     };

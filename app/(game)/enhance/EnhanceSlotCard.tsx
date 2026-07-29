@@ -1034,10 +1034,19 @@ export function EnhanceSlotCard({
               <>
                 <span className="font-bold text-zinc-600 dark:text-zinc-300">{activeJob.name}</span>{' '}
                 <span className="font-bold text-amber-500">+{activeJob.fromLevel}</span>
-                <span className="mx-1 text-zinc-400">·</span>보유{' '}
-                <span className="font-mono font-bold text-sky-500">
-                  {(Number(diamond) || 0).toLocaleString()}💎
-                </span>
+                {activeJob.transcendLevel > 0 ? (
+                  <>
+                    <span className="mx-1 text-zinc-400">·</span>
+                    <span
+                      className="font-bold"
+                      style={{
+                        color: `rgb(${transcendStyle(activeJob.transcendLevel).colorRgb.join(',')})`,
+                      }}
+                    >
+                      ✦{activeJob.transcendLevel}
+                    </span>
+                  </>
+                ) : null}
                 <br />
                 💎로 시간을 단축하며 자동 반복 · 예산 소진이나 조건 달성 시 정지
               </>
