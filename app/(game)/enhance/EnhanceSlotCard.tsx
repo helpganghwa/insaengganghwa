@@ -1021,11 +1021,26 @@ export function EnhanceSlotCard({
       {autoOpen ? (
         <ModalShell
           onClose={() => setAutoOpen(false)}
+          onSubmit={startAuto}
           label="자동 강화 설정"
-          className="w-full max-w-[330px] rounded-2xl border border-zinc-700 bg-zinc-900 p-4"
         >
-          {/* 헤더 — 좌측: 인벤토리 목록 타일 그대로(등급 테두리·별장식·스프라이트·이름·+강화 ✦초월),
-              우측: 제목 + 설명. */}
+          <ModalLayout
+            title="자동 강화 설정"
+            subtitle={
+              <>
+                <span className="font-bold text-zinc-600 dark:text-zinc-300">{activeJob.name}</span>{' '}
+                <span className="font-bold text-amber-500">+{activeJob.fromLevel}</span>
+                <span className="mx-1 text-zinc-400">·</span>보유{' '}
+                <span className="font-mono font-bold text-sky-500">
+                  {(Number(diamond) || 0).toLocaleString()}💎
+                </span>
+              </>
+            }
+            maxBodyClass="max-h-[58vh]"
+            footer={<><button type="button" onClick={() => setAutoOpen(false)} className="rounded-xl border border-zinc-700 py-2.5 text-[13px] font-bold text-zinc-400">취소</button>
+            <button type="button" onClick={startAuto} className="rounded-xl bg-amber-500 py-2.5 text-[13px] font-extrabold text-black active:scale-[0.98]">자동 시작</button>
+          </>}
+          >
           <div className="flex items-start gap-3">
             <span
               className={`relative flex h-[78px] w-[78px] shrink-0 flex-col items-center justify-center gap-0.5 isolate overflow-hidden rounded-xl border-2 bg-zinc-950 px-1 text-center ${
@@ -1050,16 +1065,16 @@ export function EnhanceSlotCard({
                 <TranscendTag level={activeJob.transcendLevel} className="ml-1" />
               </span>
             </span>
+            {/* 제목·장비명은 팝업 헤더가 담당 — 여기선 동작 설명만. */}
             <div className="min-w-0 flex-1">
-              <h3 className="text-sm font-bold text-zinc-100">자동 강화 설정</h3>
-              <p className="mt-1 whitespace-pre-line text-[11px] leading-relaxed text-zinc-400">
+              <p className="whitespace-pre-line text-[11px] leading-relaxed text-zinc-500 dark:text-zinc-400">
                 {'💎로 시간을 단축하며 자동 반복합니다.\n예산을 다 쓰거나 선택 조건 중 하나라도 달성하면 정지합니다.'}
               </p>
             </div>
           </div>
           {/* 예산 — 필수(체크박스 없음). 라벨 정렬용 체크박스폭 스페이서. 값은 입력창 직접 입력 +
               오른쪽 '최대' 버튼(보유 전액). ± 버튼은 목표/횟수 항목에만(사용자 피드백 2). */}
-          <div className="mt-2 flex items-center gap-2 border-t border-zinc-800 py-2.5">
+          <div className="mt-3 flex items-center gap-2 border-t border-zinc-200 py-2.5 dark:border-zinc-800">
             <span aria-hidden className="h-4 w-4 shrink-0" />
             <div className="min-w-0 flex-1">
               <div className="text-[12px] font-semibold text-zinc-200">다이아 예산</div>
@@ -1144,10 +1159,7 @@ export function EnhanceSlotCard({
           <p className="mt-2 rounded-lg border border-zinc-800 bg-black/20 px-2.5 py-2 text-[10px] leading-relaxed text-zinc-500">
             화면을 벗어나거나 앱을 종료하면 자동 강화가 멈춥니다. 진행 중엔 화면이 꺼지지 않도록 유지됩니다.
           </p>
-          <div className="mt-3 grid grid-cols-[1fr_2fr] gap-2">
-            <button type="button" onClick={() => setAutoOpen(false)} className="rounded-xl border border-zinc-700 py-2.5 text-[13px] font-bold text-zinc-400">취소</button>
-            <button type="button" onClick={startAuto} className="rounded-xl bg-amber-500 py-2.5 text-[13px] font-extrabold text-black active:scale-[0.98]">자동 시작</button>
-          </div>
+          </ModalLayout>
         </ModalShell>
       ) : null}
 

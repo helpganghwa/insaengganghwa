@@ -892,7 +892,6 @@ export function GuildSettings({
       {genNotice && (
         <ModalShell onClose={() => setGenNotice(null)} label={genNotice.title}>
           <ModalLayout
-            icon="🛡️"
             title={genNotice.title}
             footer={
               <ModalButton tone="neutral" onClick={() => setGenNotice(null)}>

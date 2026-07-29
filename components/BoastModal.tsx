@@ -1,7 +1,7 @@
 'use client';
 
+import { ModalShell } from '@/components/ModalShell';
 import { useEffect, useMemo, useState } from 'react';
-import { createPortal } from 'react-dom';
 
 import { TranscendSprite } from '@/components/TranscendSprite';
 import { rarityBorderStyle, hasRarityBorder, TranscendTag } from '@/components/RarityFrame';
@@ -239,18 +239,12 @@ export function BoastModal({
     <img src="/kakao/kakao_symbol.png" alt="" aria-hidden className="h-4 w-auto" />
   );
 
-  return createPortal(
-    <div
-      role="dialog"
-      aria-modal="true"
-      aria-label="자랑하기"
-      className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-4 backdrop-blur-sm"
-      onClick={onClose}
+  return (
+    <ModalShell
+      onClose={onClose}
+      label="자랑하기"
+      className="flex max-h-[calc(100dvh-2rem)] w-full max-w-sm flex-col isolate overflow-hidden rounded-2xl bg-zinc-950 shadow-[0_0_40px_rgba(245,158,11,0.18)] ring-1 ring-amber-700/40"
     >
-      <div
-        className="flex max-h-[calc(100dvh-2rem)] w-full max-w-sm flex-col isolate overflow-hidden rounded-2xl bg-zinc-950 shadow-[0_0_40px_rgba(245,158,11,0.18)] ring-1 ring-amber-700/40"
-        onClick={(e) => e.stopPropagation()}
-      >
         {/* 카톡 헤더 — 카카오 노란 톤 */}
         <div className="flex items-center gap-1.5 bg-[#FEE500] px-3 py-2 text-[11px] font-bold text-[#191919]">
           <span className="text-[#191919]">{kakaoIcon}</span>
@@ -406,9 +400,7 @@ export function BoastModal({
             닫기
           </button>
         </div>
-      </div>
-    </div>,
-    document.body,
+    </ModalShell>
   );
 }
 

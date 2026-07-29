@@ -2,6 +2,7 @@
 
 import Link from 'next/link';
 import { useEffect, useState, useTransition } from 'react';
+import { ModalShell } from '@/components/ModalShell';
 import { useRouter } from 'next/navigation';
 
 import { RAID_OPEN_COST_DIAMOND, RAID_WINDOW_MS, RAID_DURATION_OPTIONS_MS } from '@/lib/game/balance';
@@ -391,16 +392,13 @@ export function RaidSlots({
       <RaidListSection title="길드가 소환한 레이드" raids={guildRaids} scope="guild" />
 
       {picking ? (
-        <div
-          role="dialog"
-          aria-modal="true"
-          className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-4 backdrop-blur-sm"
-          onClick={() => !pending && (setPicking(false), setPicked(null), setConfirm(false))}
+        // 공용 셸로 — Esc·포커스 확보. 연출은 그대로 두고 껍데기만 교체(2026-07-29 점검).
+        <ModalShell
+          onClose={() => !pending && (setPicking(false), setPicked(null), setConfirm(false))}
+          label="레이드 보스 선택"
+          className="w-full max-w-xs rounded-2xl border-2 border-amber-300 bg-white p-4 shadow-[0_0_40px_rgba(245,158,11,0.18)] dark:border-amber-800 dark:bg-zinc-950"
         >
-          <div
-            className="w-full max-w-xs rounded-2xl border-2 border-amber-300 bg-white p-4 shadow-[0_0_40px_rgba(245,158,11,0.18)] dark:border-amber-800 dark:bg-zinc-950"
-            onClick={(e) => e.stopPropagation()}
-          >
+          <div>
             {!picked ? (
               <>
                 <h3 className="text-center text-sm font-bold">보스 선택</h3>
@@ -489,7 +487,7 @@ export function RaidSlots({
               </>
             )}
           </div>
-        </div>
+        </ModalShell>
       ) : null}
     </>
   );

@@ -1,5 +1,6 @@
 'use client';
 
+import { ModalShell } from '@/components/ModalShell';
 import { useEffect, useMemo, useState } from 'react';
 import { createPortal } from 'react-dom';
 
@@ -155,18 +156,13 @@ export function TodayShareBox({
       </div>
 
       {open
-        ? createPortal(
-            <div
-              role="dialog"
-              aria-modal="true"
-              aria-label="성장 자랑하기"
-              className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-4 backdrop-blur-sm"
-              onClick={() => setOpen(false)}
+        ? (
+            <ModalShell
+              onClose={() => setOpen(false)}
+              label="성장 자랑하기"
+              className="w-full max-w-sm overflow-hidden rounded-2xl bg-zinc-950 ring-1 ring-amber-700/40"
             >
-              <div
-                className="w-full max-w-sm overflow-hidden rounded-2xl bg-zinc-950 ring-1 ring-amber-700/40"
-                onClick={(e) => e.stopPropagation()}
-              >
+              <div>
                 <div className="bg-[#FEE500] px-3 py-2 text-[11px] font-bold text-[#191919]">
                   카카오톡 공유 미리보기
                 </div>
@@ -214,8 +210,7 @@ export function TodayShareBox({
                   </button>
                 </div>
               </div>
-            </div>,
-            document.body,
+            </ModalShell>
           )
         : null}
     </>

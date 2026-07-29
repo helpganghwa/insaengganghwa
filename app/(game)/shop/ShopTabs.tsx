@@ -806,7 +806,6 @@ export function ShopTabs({
       {payNotice ? (
         <ModalShell onClose={() => setPayNotice(null)} label={payNotice.title}>
           <ModalLayout
-            icon="💳"
             title={payNotice.title}
             footer={
               <>

@@ -1,5 +1,6 @@
 'use client';
 
+import { ModalShell } from '@/components/ModalShell';
 import { useEffect, useRef, useState } from 'react';
 
 import type { Slot } from '@/lib/db/schema/equipment';
@@ -204,16 +205,13 @@ export function GachaResultModal({
   };
 
   return (
-    <div
-      role="dialog"
-      aria-modal="true"
-      aria-label="보급 결과"
-      className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-4 backdrop-blur-sm"
+    // 등장 연출(gacha-result-in)은 패널에 그대로 두고 껍데기만 공용 셸로(2026-07-29 점검).
+    <ModalShell
+      onClose={onClose}
+      label="보급 결과"
+      className="max-h-[88dvh] w-full max-w-[360px] overflow-y-auto rounded-2xl bg-white p-4 shadow-[0_0_40px_rgba(245,158,11,0.18)] ring-1 ring-amber-700/40 dark:bg-zinc-950"
     >
-      <div
-        className="max-h-[88dvh] w-full max-w-[360px] overflow-y-auto rounded-2xl bg-white p-4 shadow-[0_0_40px_rgba(245,158,11,0.18)] ring-1 ring-amber-700/40 dark:bg-zinc-950"
-        style={{ animation: 'gacha-result-in 220ms ease-out' }}
-      >
+      <div style={{ animation: 'gacha-result-in 220ms ease-out' }}>
         <div key={resultKey} style={{ animation: 'gacha-result-swap 240ms ease-out' }}>
           {single ? (
             <div className="flex flex-col items-center text-center">
@@ -322,6 +320,6 @@ export function GachaResultModal({
           확인
         </button>
       </div>
-    </div>
+    </ModalShell>
   );
 }
