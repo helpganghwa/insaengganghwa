@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from 'react';
 import { ModalShell } from '@/components/ModalShell';
-import { ModalLayout } from '@/components/ModalLayout';
+import { ModalLayout, ModalButton } from '@/components/ModalLayout';
 
 import {
   checkPushSupport,
@@ -99,84 +99,81 @@ export function PushPermissionPrompt({
 
   if (step === 'closed') return null;
 
+  const allow = async () => {
+    setPending(true);
+    const ok = await subscribeAndRegister();
+    setPending(false);
+    setStep(ok ? 'success' : 'error');
+  };
+
+  // 단계마다 제목·부제·푸터가 다르다 — 본문 컴포넌트는 설명만 담당한다.
+  const HEAD: Record<Exclude<Step, 'closed'>, { title: string; sub: string }> = {
+    pitch: { title: '강화 결과를 알려드릴까요?', sub: '30분 단위로 묶어서 보내요' },
+    'ios-guide': { title: 'iPhone에서는 한 단계 더 필요해요', sub: '홈 화면에 추가하면 받을 수 있어요' },
+    success: { title: '알림 설정 완료', sub: '설정에서 언제든 끌 수 있어요' },
+    error: { title: '알림 설정에 실패했어요', sub: '설정에서 다시 시도할 수 있어요' },
+  };
+  const head = HEAD[step];
+
   return (
-    <ModalShell onClose={dismiss} label="알림 권한 안내">
+    <ModalShell
+      onClose={dismiss}
+      onSubmit={step === 'pitch' ? (pending ? undefined : allow) : dismiss}
+      label="알림 권한 안내"
+    >
       <ModalLayout
-        icon="🔔"
-        title="강화 결과를 알려드릴까요?"
+        title={head.title}
         subtitle={
-          <span className="font-bold text-amber-600 dark:text-amber-400">30분 단위로 묶어서</span>
+          <span className="font-bold text-amber-600 dark:text-amber-400">{head.sub}</span>
+        }
+        footer={
+          step === 'pitch' ? (
+            <>
+              <ModalButton tone="ghost" onClick={dismiss} disabled={pending}>
+                나중에
+              </ModalButton>
+              <ModalButton tone="success" onClick={allow} disabled={pending}>
+                {pending ? '설정 중…' : '알림 받기'}
+              </ModalButton>
+            </>
+          ) : step === 'success' ? (
+            <ModalButton tone="success" onClick={dismiss}>
+              확인
+            </ModalButton>
+          ) : (
+            <ModalButton tone="ghost" onClick={dismiss}>
+              {step === 'ios-guide' ? '알겠어요' : '닫기'}
+            </ModalButton>
+          )
         }
       >
-      <div>
-        {step === 'pitch' ? (
-          <PitchView
-            pending={pending}
-            onAllow={async () => {
-              setPending(true);
-              const ok = await subscribeAndRegister();
-              setPending(false);
-              if (ok) setStep('success');
-              else setStep('error');
-            }}
-            onLater={dismiss}
-          />
-        ) : null}
-        {step === 'ios-guide' ? <IosGuideView onClose={dismiss} /> : null}
-        {step === 'success' ? <SuccessView onClose={dismiss} /> : null}
-        {step === 'error' ? <ErrorView onClose={dismiss} /> : null}
-      </div>
+        {step === 'pitch' ? <PitchView /> : null}
+        {step === 'ios-guide' ? <IosGuideView /> : null}
+        {step === 'success' ? <SuccessView /> : null}
+        {step === 'error' ? <ErrorView /> : null}
       </ModalLayout>
     </ModalShell>
   );
 }
 
-function PitchView({
-  pending,
-  onAllow,
-  onLater,
-}: {
-  pending: boolean;
-  onAllow: () => void;
-  onLater: () => void;
-}) {
+function PitchView() {
   return (
     <>
-      <p className="text-[12px] leading-relaxed text-zinc-600 dark:text-zinc-300">
-        강화가 끝나면 푸시 알림으로 알려드려요. 30분 단위로 묶어서 보내니 알림이
-        너무 자주 오지 않아요. 일일 보급·레이드 정산도 함께 알림 받습니다.
+      <p className="text-[12.5px] leading-relaxed text-zinc-600 dark:text-zinc-300">
+        강화가 끝나면 푸시 알림으로 알려드려요. 30분 단위로 묶어서 보내니 알림이 너무 자주 오지
+        않아요. 일일 보급·레이드 정산도 함께 알림 받습니다.
       </p>
-      <p className="mt-2 text-[10px] text-zinc-400">
+      <p className="mt-2 text-[10.5px] text-zinc-400">
         설정 → 알림에서 카테고리별로 끌 수 있어요.
       </p>
-      <div className="mt-4 flex gap-2">
-        <button
-          type="button"
-          onClick={onLater}
-          disabled={pending}
-          className="flex-1 rounded-xl border border-zinc-200 px-3 py-2.5 text-[13px] font-medium text-zinc-600 disabled:opacity-50 dark:border-zinc-700 dark:text-zinc-300"
-        >
-          나중에
-        </button>
-        <button
-          type="button"
-          onClick={onAllow}
-          disabled={pending}
-          className="flex-1 rounded-xl bg-emerald-600 px-3 py-2.5 text-[13px] font-bold text-white disabled:opacity-50"
-        >
-          {pending ? '설정 중…' : '알림 받기'}
-        </button>
-      </div>
     </>
   );
 }
 
-function IosGuideView({ onClose }: { onClose: () => void }) {
+function IosGuideView() {
   return (
     <>
-      <div className="mb-2 text-3xl">📱</div>
-      <h2 className="text-base font-bold">iPhone에서는 한 단계 더 필요해요</h2>
-      <p className="mt-2 text-[12px] leading-relaxed text-zinc-600 dark:text-zinc-300">
+      <p className="text-[12.5px] leading-relaxed text-zinc-600 dark:text-zinc-300">
         iOS Safari는 홈 화면에 추가한 앱에서만 푸시 알림을 받을 수 있어요.
       </p>
       <ol className="mt-3 space-y-1.5 text-[12px] text-zinc-700 dark:text-zinc-200">
@@ -185,53 +182,23 @@ function IosGuideView({ onClose }: { onClose: () => void }) {
         <li>3. 홈 화면의 인생강화 아이콘으로 다시 접속</li>
         <li>4. 알림 권한 요청에 동의</li>
       </ol>
-      <button
-        type="button"
-        onClick={onClose}
-        className="mt-4 w-full rounded-xl border border-zinc-200 px-3 py-2.5 text-[13px] font-medium text-zinc-600 dark:border-zinc-700 dark:text-zinc-300"
-      >
-        알겠어요
-      </button>
     </>
   );
 }
 
-function SuccessView({ onClose }: { onClose: () => void }) {
+function SuccessView() {
   return (
-    <>
-      <div className="mb-2 text-3xl">✅</div>
-      <h2 className="text-base font-bold">알림 설정 완료</h2>
-      <p className="mt-2 text-[12px] leading-relaxed text-zinc-600 dark:text-zinc-300">
-        강화 결과·레이드 정산·일일 보급 알림을 받을 수 있어요. 언제든 설정에서 끌 수
-        있습니다.
-      </p>
-      <button
-        type="button"
-        onClick={onClose}
-        className="mt-4 w-full rounded-xl bg-emerald-600 px-3 py-2.5 text-[13px] font-bold text-white"
-      >
-        확인
-      </button>
-    </>
+    <p className="text-[12.5px] leading-relaxed text-zinc-600 dark:text-zinc-300">
+      강화 결과·레이드 정산·일일 보급 알림을 받을 수 있어요.
+    </p>
   );
 }
 
-function ErrorView({ onClose }: { onClose: () => void }) {
+function ErrorView() {
   return (
-    <>
-      <div className="mb-2 text-3xl">⚠️</div>
-      <h2 className="text-base font-bold">알림 설정에 실패했어요</h2>
-      <p className="mt-2 text-[12px] leading-relaxed text-zinc-600 dark:text-zinc-300">
-        브라우저 알림이 차단되어 있거나 일시 오류가 발생했습니다. 설정에서 다시
-        시도할 수 있어요.
-      </p>
-      <button
-        type="button"
-        onClick={onClose}
-        className="mt-4 w-full rounded-xl border border-zinc-200 px-3 py-2.5 text-[13px] font-medium text-zinc-600 dark:border-zinc-700 dark:text-zinc-300"
-      >
-        닫기
-      </button>
-    </>
+    <p className="text-[12.5px] leading-relaxed text-zinc-600 dark:text-zinc-300">
+      브라우저 알림이 차단되어 있거나 일시 오류가 발생했습니다. 브라우저 설정에서 알림을 허용한 뒤
+      다시 시도해 주세요.
+    </p>
   );
 }
