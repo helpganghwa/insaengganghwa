@@ -253,14 +253,14 @@ export function BoastModal({
         maxBodyClass="max-h-[62vh] overflow-y-auto isolate bg-zinc-950 ring-1 ring-amber-700/40"
         footer={
           <>
-            <ModalButton tone="ghost" onClick={onClose}>
-              닫기
+            <ModalButton tone="ghost" onClick={doCopyLink}>
+              🔗 링크 복사
             </ModalButton>
             <button
               type="button"
               onClick={doShareKakao}
               disabled={!hasKakao}
-              style={{ flex: 2 }}
+              style={{ flex: 1 }}
               className="flex items-center justify-center gap-2 rounded-xl bg-[#FEE500] py-2.5 text-[13px] font-bold text-[#191919] disabled:opacity-50"
             >
               {kakaoIcon}
@@ -392,16 +392,6 @@ export function BoastModal({
           ) : null}
         </div>
 
-        {/* 링크 복사는 보조 동작 — 컨텐츠 하단에 둔다(주 동작인 카톡 공유만 푸터). */}
-        <div className="bg-zinc-950 px-3 pb-3">
-          <button
-            type="button"
-            onClick={doCopyLink}
-            className="flex w-full items-center justify-center gap-2 rounded-xl border border-zinc-700 bg-zinc-900 py-2.5 text-sm font-bold text-zinc-200 active:scale-[0.99]"
-          >
-            🔗 링크 복사
-          </button>
-        </div>
       </ModalLayout>
     </ModalShell>
   );

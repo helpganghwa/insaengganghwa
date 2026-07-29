@@ -169,9 +169,20 @@ export function TodayShareBox({
                 bare
                 maxBodyClass="max-h-[58vh] overflow-y-auto bg-zinc-950 ring-1 ring-amber-700/40"
                 footer={
-                  <ModalButton tone="ghost" onClick={() => setOpen(false)}>
-                    닫기
-                  </ModalButton>
+                  <>
+                    <ModalButton tone="ghost" onClick={doCopy}>
+                      🔗 링크 복사
+                    </ModalButton>
+                    <button
+                      type="button"
+                      onClick={doShare}
+                      disabled={!kakaoReady}
+                      style={{ flex: 1 }}
+                      className="flex items-center justify-center gap-2 rounded-xl bg-[#FEE500] py-2.5 text-[13px] font-bold text-[#191919] disabled:opacity-50"
+                    >
+                      {kakaoReady ? '💬 카카오톡 공유' : '준비 중…'}
+                    </button>
+                  </>
                 }
               >
               <div>
@@ -197,23 +208,6 @@ export function TodayShareBox({
                     <div className="text-[13px] font-semibold text-zinc-100">{nickname} - {mode === 'all' ? '나의 인생강화' : '오늘도 강화는 인생이다'}</div>
                     <div className="text-[11px] text-zinc-400">{statsLine}</div>
                   </div>
-                </div>
-                <div className="space-y-2 border-t border-zinc-900 p-3">
-                  <button
-                    type="button"
-                    onClick={doShare}
-                    disabled={!kakaoReady}
-                    className="w-full rounded-xl bg-[#FEE500] py-3 text-sm font-bold text-[#191919] disabled:opacity-50"
-                  >
-                    {kakaoReady ? '💬 카카오톡 공유' : '카카오톡 준비 중…'}
-                  </button>
-                  <button
-                    type="button"
-                    onClick={doCopy}
-                    className="w-full rounded-xl border border-zinc-700 bg-zinc-900 py-2.5 text-sm font-bold text-zinc-200"
-                  >
-                    🔗 링크 복사
-                  </button>
                 </div>
               </div>
               </ModalLayout>

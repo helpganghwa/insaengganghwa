@@ -219,7 +219,7 @@ export function GachaResultModal({
             </span>
           )
         }
-        maxBodyClass="max-h-[56vh]"
+        maxBodyClass="max-h-[62vh]"
         footer={
           <button
             type="button"
@@ -253,8 +253,8 @@ export function GachaResultModal({
             </div>
           ) : (
             <>
-              <p className="text-sm font-medium">{results.length}회 열기</p>
-              <div className="mt-3 grid grid-cols-3 gap-2">
+              {/* 5열 2줄 — 3열이면 4줄이 되어 팝업에 스크롤이 생긴다(2026-07-29 제보). */}
+              <div className="grid grid-cols-5 gap-1.5">
                 {sortedResults.map((r, i) => (
                   <ResultCard
                     key={i}
@@ -271,7 +271,7 @@ export function GachaResultModal({
                     × border-2, border-box)의 투명 정사각으로 4줄 높이 고정 — 카드 클론은 래퍼 안에서
                     내용물 폭으로 줄어들어 행 높이가 어긋났음(잔여 이동 원인). */}
                 {Array.from({ length: Math.max(0, 10 - sortedResults.length) }, (_, i) => (
-                  <div key={`ph-${i}`} aria-hidden className="invisible aspect-square w-full rounded-xl border-2" />
+                  <div key={`ph-${i}`} aria-hidden className="invisible aspect-square w-full rounded-lg border-2" />
                 ))}
               </div>
               {openLoreIdx !== null && sortedResults[openLoreIdx]?.loreTeaser ? (
@@ -318,7 +318,7 @@ export function GachaResultModal({
               type="button"
               disabled={pulling || remaining < 1}
               onClick={() => startAgain(1)}
-              className="rounded-full bg-zinc-100 px-3 py-2.5 text-xs font-medium disabled:opacity-40 dark:bg-zinc-900"
+              className="rounded-full border border-zinc-300 bg-white px-3 py-2.5 text-xs font-bold text-zinc-700 disabled:opacity-40 dark:border-zinc-600 dark:bg-zinc-800 dark:text-zinc-100"
             >
               한 번 더
             </button>
@@ -332,6 +332,21 @@ export function GachaResultModal({
             </button>
           </div>
         )}
+
+        {/* 확인 — 튜토리얼 스포트라이트 대상(data-tut)이라 컨텐츠 안에 둔다.
+            푸터(카드 밖 어두운 배경)로 빼면 코치가 구멍을 잡지 못한다(2026-07-29 제보). */}
+        <button
+          type="button"
+          data-tut="gacha-confirm"
+          disabled={autoActive}
+          onClick={() => {
+            advanceTutorial();
+            onClose();
+          }}
+          className="mt-3 w-full rounded-xl bg-zinc-900 py-2.5 text-[13px] font-bold text-white disabled:opacity-40 dark:bg-zinc-50 dark:text-zinc-900"
+        >
+          확인
+        </button>
       </div>
       </ModalLayout>
     </ModalShell>

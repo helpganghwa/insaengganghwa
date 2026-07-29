@@ -132,8 +132,16 @@ export function SupportModal({
         <ModalShell onClose={close} label="고객센터 문의">
           <ModalLayout
             title="고객센터 문의"
-            subtitle="답변은 우편으로 보내드립니다"
-            maxBodyClass="max-h-[56vh]"
+            subtitle={
+              <>
+                <span className="font-bold text-zinc-600 dark:text-zinc-300">{nickname}</span>{' '}
+                <span className="tabular-nums text-zinc-400">(#{publicCode})</span>
+                <span className="mx-1 text-zinc-400">·</span>
+                {serverName}
+                <br />
+                유형을 고르고 내용을 작성해 주세요.
+              </>
+            }
             footer={
               <ModalButton tone="ghost" onClick={close}>
                 닫기
@@ -160,14 +168,8 @@ export function SupportModal({
                   </div>
                 ) : (
                   <>
-                    <p className="text-[11px] leading-relaxed text-zinc-500">
-                      {nickname}{' '}
-                      <span className="tabular-nums text-zinc-400">(#{publicCode})</span> ·{' '}
-                      {serverName} · 유형을 고르고 내용을 작성해 주세요.
-                    </p>
-
                     {/* 유형 선택 */}
-                    <div className="mt-2.5 grid grid-cols-2 gap-1.5">
+                    <div className="grid grid-cols-2 gap-1.5">
                       {INQUIRY_TYPES.map((t) => {
                         const on = type === t.id;
                         return (

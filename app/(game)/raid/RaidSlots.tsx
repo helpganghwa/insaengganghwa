@@ -465,7 +465,7 @@ export function RaidSlots({
                       setPicked(null);
                       setConfirm(false);
                     }}
-                    className="w-full py-1.5 text-[11px] text-zinc-500"
+                    className="w-full rounded-xl border border-zinc-300 py-2 text-[11px] font-bold text-zinc-500 dark:border-zinc-600 dark:text-zinc-400"
                   >
                     다른 보스
                   </button>
