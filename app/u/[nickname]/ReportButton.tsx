@@ -3,6 +3,7 @@
 import { useState, useTransition } from 'react';
 
 import { ModalShell } from '@/components/ModalShell';
+import { ModalLayout, ModalButton } from '@/components/ModalLayout';
 import { ZoomSafeTextarea } from '@/components/ui/ZoomSafeField';
 
 import { reportProfile } from './actions';
@@ -63,25 +64,33 @@ export function ReportButton({ profileId }: { profileId: string }) {
 
       {open && (
         // 손으로 만든 시트였다 — role/aria·Esc·포커스가 없어 공용 셸로 옮긴다(2026-07-29 점검).
-        <ModalShell
-          onClose={() => !pending && setOpen(false)}
-          label="프로필 신고"
-          className="w-full max-w-[340px] rounded-2xl bg-white p-4 text-left dark:bg-zinc-950"
-        >
+        <ModalShell onClose={() => !pending && setOpen(false)} label="프로필 신고">
+          <ModalLayout
+            title={done ? '신고가 접수되었습니다' : '프로필 신고'}
+            subtitle={done ? '검토 후 조치됩니다' : '사유를 골라주세요'}
+            maxBodyClass="max-h-[52vh]"
+            footer={
+              done ? (
+                <ModalButton tone="neutral" onClick={() => setOpen(false)}>
+                  닫기
+                </ModalButton>
+              ) : (
+                <>
+                  <ModalButton tone="ghost" onClick={() => setOpen(false)} disabled={pending}>
+                    취소
+                  </ModalButton>
+                  <ModalButton tone="danger" onClick={submit} disabled={pending || !reason}>
+                    신고하기
+                  </ModalButton>
+                </>
+              )
+            }
+          >
           <div>
             {done ? (
-              <div className="py-6 text-center">
-                <div className="text-2xl">✅</div>
-                <p className="mt-2 text-sm font-semibold">신고가 접수되었습니다</p>
-                <p className="mt-1 text-xs text-zinc-500">검토 후 조치됩니다. 감사합니다.</p>
-                <button
-                  type="button"
-                  onClick={() => setOpen(false)}
-                  className="mt-4 w-full rounded-xl bg-zinc-200 py-3 text-sm font-medium dark:bg-zinc-800"
-                >
-                  닫기
-                </button>
-              </div>
+              <p className="py-2 text-center text-[12.5px] text-zinc-500 dark:text-zinc-400">
+                접수된 내용은 운영자가 확인 후 조치합니다. 감사합니다.
+              </p>
             ) : (
               <>
                 <div className="mb-3 text-sm font-bold">프로필 신고</div>
@@ -117,31 +126,10 @@ export function ReportButton({ profileId }: { profileId: string }) {
                     {err}
                   </p>
                 )}
-                <div className="mt-3 flex gap-2">
-                  <button
-                    type="button"
-                    onClick={() => setOpen(false)}
-                    disabled={pending}
-                    className="flex-1 rounded-xl border border-zinc-200 py-3 text-sm dark:border-zinc-800"
-                  >
-                    취소
-                  </button>
-                  <button
-                    type="button"
-                    onClick={submit}
-                    disabled={pending || !reason}
-                    className={`flex-1 rounded-xl py-3 text-sm font-semibold ${
-                      pending || !reason
-                        ? 'bg-zinc-200 text-zinc-400 dark:bg-zinc-800 dark:text-zinc-600'
-                        : 'bg-red-600 text-white'
-                    }`}
-                  >
-                    신고하기
-                  </button>
-                </div>
               </>
             )}
           </div>
+          </ModalLayout>
         </ModalShell>
       )}
     </>

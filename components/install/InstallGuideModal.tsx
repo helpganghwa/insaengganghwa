@@ -1,6 +1,7 @@
 'use client';
 
 import { ModalShell } from '@/components/ModalShell';
+import { ModalLayout, ModalButton } from '@/components/ModalLayout';
 
 /** iOS / 안드로이드 수동 설치 안내 모달 — 띠지·설정 버튼 공용. */
 export function InstallGuideModal({
@@ -11,15 +12,20 @@ export function InstallGuideModal({
   onClose: () => void;
 }) {
   return (
-    <ModalShell
-      onClose={onClose}
-      label="앱 설치 안내"
-      className="m-4 max-w-sm rounded-xl bg-white p-4 text-sm shadow-[0_0_40px_rgba(245,158,11,0.18)] ring-1 ring-amber-700/40 dark:bg-zinc-950"
-    >
+    <ModalShell onClose={onClose} onSubmit={onClose} label="앱 설치 안내">
+      <ModalLayout
+        title={platform === 'android' ? '홈 화면에 추가' : '홈 화면에 추가'}
+        subtitle={platform === 'android' ? 'Android · Chrome' : 'iOS · Safari'}
+        maxBodyClass="max-h-[56vh]"
+        footer={
+          <ModalButton tone="contrast" onClick={onClose}>
+            확인
+          </ModalButton>
+        }
+      >
       <div>
         {platform === 'android' ? (
           <>
-            <h3 className="mb-2 text-base font-semibold">홈 화면에 추가 (Android)</h3>
             <ol className="space-y-2 text-[13px] leading-relaxed text-zinc-700 dark:text-zinc-300">
               <li>
                 1. Chrome 우측 상단 <strong>⋮ 메뉴</strong> 탭
@@ -56,14 +62,8 @@ export function InstallGuideModal({
             </p>
           </>
         )}
-        <button
-          type="button"
-          onClick={onClose}
-          className="mt-4 w-full rounded-lg bg-zinc-900 py-2.5 text-sm font-medium text-white dark:bg-zinc-100 dark:text-zinc-900"
-        >
-          확인
-        </button>
       </div>
+      </ModalLayout>
     </ModalShell>
   );
 }

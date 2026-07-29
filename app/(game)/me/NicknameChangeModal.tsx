@@ -2,6 +2,7 @@
 
 import { useEffect, useState, useTransition } from 'react';
 import { ModalShell } from '@/components/ModalShell';
+import { ModalLayout, ModalButton } from '@/components/ModalLayout';
 import { useRouter } from 'next/navigation';
 
 import { NICKNAME_CHANGE_COST_DIAMOND } from '@/lib/game/balance';
@@ -68,23 +69,34 @@ export function NicknameChangeModal({
 
   // body로 portal — 설정 Section의 isolate(stacking context) 밖으로 빼내 헤더/하단바(z-30) 위에 표시.
   return (
-    <ModalShell
-      onClose={onClose}
-      label="닉네임 변경"
-      className="w-full max-w-xs rounded-2xl bg-white p-4 shadow-[0_0_40px_rgba(245,158,11,0.18)] ring-1 ring-amber-700/40 dark:bg-zinc-950"
-    >
-      <div>
-        <h2 className="text-sm font-bold">닉네임 변경</h2>
-        <p className="mt-1 text-[11px] text-zinc-500">
-          {isFree ? (
-            <>최초 변경은 <span className="font-semibold text-emerald-600">무료</span>입니다.</>
+    <ModalShell onClose={onClose} onSubmit={() => canSubmit && submit()} label="닉네임 변경">
+      <ModalLayout
+        title="닉네임 변경"
+        subtitle={
+          isFree ? (
+            <span className="font-bold text-emerald-600 dark:text-emerald-400">최초 변경 무료</span>
           ) : (
             <>
-              💎 <span className="font-semibold tabular-nums">{NICKNAME_CHANGE_COST_DIAMOND.toLocaleString('ko-KR')}</span> 차감 · 보유{' '}
+              <span className="font-mono font-bold text-sky-500">
+                💎 {NICKNAME_CHANGE_COST_DIAMOND.toLocaleString('ko-KR')}
+              </span>
+              <span className="mx-1 text-zinc-400">·</span>보유{' '}
               <span className="tabular-nums">{Number(diamond).toLocaleString('ko-KR')}</span>
             </>
-          )}
-        </p>
+          )
+        }
+        footer={
+          <>
+            <ModalButton tone="ghost" onClick={onClose} disabled={pending}>
+              취소
+            </ModalButton>
+            <ModalButton tone="contrast" onClick={submit} disabled={!canSubmit}>
+              {pending ? '변경 중…' : isFree ? '변경(무료)' : `💎 ${NICKNAME_CHANGE_COST_DIAMOND.toLocaleString('ko-KR')} 변경`}
+            </ModalButton>
+          </>
+        }
+      >
+      <div>
 
         {/* IME composition 중 자모 분리(ㄱ·ㅏ)를 onChange에서 strip하지 않음 — 한글 입력 보존. */}
         {/* 검증은 변경확인(submit) 시 validateNickname()이 수행. */}
@@ -115,25 +127,8 @@ export function NicknameChangeModal({
           </p>
         ) : null}
 
-        <div className="mt-3 flex gap-2">
-          <button
-            type="button"
-            onClick={onClose}
-            disabled={pending}
-            className="flex-1 rounded-md border border-zinc-300 px-3 py-2 text-xs font-semibold text-zinc-700 disabled:opacity-50 dark:border-zinc-700 dark:text-zinc-300"
-          >
-            취소
-          </button>
-          <button
-            type="button"
-            onClick={submit}
-            disabled={!canSubmit}
-            className="flex-1 rounded-md bg-zinc-900 px-3 py-2 text-xs font-semibold text-white disabled:opacity-40 dark:bg-zinc-50 dark:text-zinc-950"
-          >
-            {pending ? '변경 중…' : isFree ? '변경(무료)' : `💎 ${NICKNAME_CHANGE_COST_DIAMOND.toLocaleString('ko-KR')} 변경`}
-          </button>
-        </div>
       </div>
+      </ModalLayout>
     </ModalShell>
   );
 }

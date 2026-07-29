@@ -2,6 +2,7 @@
 
 import { useRef, useState, useTransition } from 'react';
 import { ModalShell } from '@/components/ModalShell';
+import { ModalLayout, ModalButton } from '@/components/ModalLayout';
 
 import { useResourceToast } from '@/components/ResourceToast';
 import { INQUIRY_TYPES, BODY_MAX, type InquiryType } from '@/lib/game/support/types';
@@ -128,23 +129,18 @@ export function SupportModal({
 
       {open ? (
         // 직접 포털을 그리던 것을 공용 셸로 — Esc·포커스·aria를 얻는다(2026-07-29 점검).
-        <ModalShell
-          onClose={close}
-          label="고객센터 문의"
-          className="w-full max-w-[360px] rounded-2xl border border-zinc-200 bg-white p-4 shadow-xl dark:border-zinc-800 dark:bg-zinc-950"
-        >
+        <ModalShell onClose={close} label="고객센터 문의">
+          <ModalLayout
+            title="고객센터 문의"
+            subtitle="답변은 우편으로 보내드립니다"
+            maxBodyClass="max-h-[56vh]"
+            footer={
+              <ModalButton tone="ghost" onClick={close}>
+                닫기
+              </ModalButton>
+            }
+          >
               <div>
-                <div className="mb-1 flex items-center justify-between">
-                  <h3 className="text-base font-bold">고객센터 문의</h3>
-                  <button
-                    type="button"
-                    onClick={close}
-                    aria-label="닫기"
-                    className="text-zinc-400 hover:text-zinc-600"
-                  >
-                    ✕
-                  </button>
-                </div>
 
                 {done ? (
                   <div className="py-4 text-center">
@@ -260,6 +256,7 @@ export function SupportModal({
                   </>
                 )}
               </div>
+          </ModalLayout>
         </ModalShell>
       ) : null}
     </>

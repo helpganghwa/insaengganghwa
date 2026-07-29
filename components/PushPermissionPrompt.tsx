@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from 'react';
 import { ModalShell } from '@/components/ModalShell';
+import { ModalLayout } from '@/components/ModalLayout';
 
 import {
   checkPushSupport,
@@ -99,11 +100,14 @@ export function PushPermissionPrompt({
   if (step === 'closed') return null;
 
   return (
-    <ModalShell
-      onClose={dismiss}
-      label="알림 권한 안내"
-      className="w-full max-w-[358px] rounded-2xl bg-white p-5 shadow-[0_0_40px_rgba(245,158,11,0.18)] ring-1 ring-amber-700/40 dark:bg-zinc-900"
-    >
+    <ModalShell onClose={dismiss} label="알림 권한 안내">
+      <ModalLayout
+        icon="🔔"
+        title="강화 결과를 알려드릴까요?"
+        subtitle={
+          <span className="font-bold text-amber-600 dark:text-amber-400">30분 단위로 묶어서</span>
+        }
+      >
       <div>
         {step === 'pitch' ? (
           <PitchView
@@ -122,6 +126,7 @@ export function PushPermissionPrompt({
         {step === 'success' ? <SuccessView onClose={dismiss} /> : null}
         {step === 'error' ? <ErrorView onClose={dismiss} /> : null}
       </div>
+      </ModalLayout>
     </ModalShell>
   );
 }
@@ -137,9 +142,7 @@ function PitchView({
 }) {
   return (
     <>
-      <div className="mb-2 text-3xl">🔔</div>
-      <h2 className="text-base font-bold">강화 결과를 알려드릴까요?</h2>
-      <p className="mt-2 text-[12px] leading-relaxed text-zinc-600 dark:text-zinc-300">
+      <p className="text-[12px] leading-relaxed text-zinc-600 dark:text-zinc-300">
         강화가 끝나면 푸시 알림으로 알려드려요. 30분 단위로 묶어서 보내니 알림이
         너무 자주 오지 않아요. 일일 보급·레이드 정산도 함께 알림 받습니다.
       </p>

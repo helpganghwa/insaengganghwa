@@ -1,6 +1,7 @@
 'use client';
 
 import { ModalShell } from '@/components/ModalShell';
+import { ModalLayout, ModalButton } from '@/components/ModalLayout';
 import { useEffect, useMemo, useState } from 'react';
 
 import { TranscendSprite } from '@/components/TranscendSprite';
@@ -240,17 +241,34 @@ export function BoastModal({
   );
 
   return (
-    <ModalShell
-      onClose={onClose}
-      label="자랑하기"
-      className="flex max-h-[calc(100dvh-2rem)] w-full max-w-sm flex-col isolate overflow-hidden rounded-2xl bg-zinc-950 shadow-[0_0_40px_rgba(245,158,11,0.18)] ring-1 ring-amber-700/40"
-    >
-        {/* 카톡 헤더 — 카카오 노란 톤 */}
-        <div className="flex items-center gap-1.5 bg-[#FEE500] px-3 py-2 text-[11px] font-bold text-[#191919]">
-          <span className="text-[#191919]">{kakaoIcon}</span>
-          카카오톡 공유 미리보기
-        </div>
-
+    <ModalShell onClose={onClose} label="자랑하기">
+      <ModalLayout
+        title="자랑하기"
+        subtitle={
+          <span className="font-bold text-amber-600 dark:text-amber-400">
+            카카오톡 공유 미리보기
+          </span>
+        }
+        bare
+        maxBodyClass="max-h-[62vh] overflow-y-auto isolate bg-zinc-950 ring-1 ring-amber-700/40"
+        footer={
+          <>
+            <ModalButton tone="ghost" onClick={onClose}>
+              닫기
+            </ModalButton>
+            <button
+              type="button"
+              onClick={doShareKakao}
+              disabled={!hasKakao}
+              style={{ flex: 2 }}
+              className="flex items-center justify-center gap-2 rounded-xl bg-[#FEE500] py-2.5 text-[13px] font-bold text-[#191919] disabled:opacity-50"
+            >
+              {kakaoIcon}
+              {hasKakao ? '카카오톡 공유' : '준비 중…'}
+            </button>
+          </>
+        }
+      >
         {/* 미리보기 카드 — 프로필 페이지 프로필 섹션과 동일 구성(좌 캐릭터·우 장비 3종). */}
         <div className="flex-1 overflow-y-auto bg-zinc-950 p-3">
           <section className="rounded-xl border border-zinc-800 bg-gradient-to-b from-zinc-900 to-zinc-950 p-3">
@@ -374,17 +392,8 @@ export function BoastModal({
           ) : null}
         </div>
 
-        {/* 버튼 영역 — 스크롤 영역(위) 바깥, 모달 하단 고정. */}
-        <div className="shrink-0 space-y-2 border-t border-zinc-900 bg-zinc-950 p-3">
-          <button
-            type="button"
-            onClick={doShareKakao}
-            disabled={!hasKakao}
-            className="flex w-full items-center justify-center gap-2 rounded-xl bg-[#FEE500] py-3 text-sm font-bold text-[#191919] disabled:opacity-50"
-          >
-            {kakaoIcon}
-            {hasKakao ? '카카오톡 공유' : '카카오톡 준비 중…'}
-          </button>
+        {/* 링크 복사는 보조 동작 — 컨텐츠 하단에 둔다(주 동작인 카톡 공유만 푸터). */}
+        <div className="bg-zinc-950 px-3 pb-3">
           <button
             type="button"
             onClick={doCopyLink}
@@ -392,14 +401,8 @@ export function BoastModal({
           >
             🔗 링크 복사
           </button>
-          <button
-            type="button"
-            onClick={onClose}
-            className="w-full py-1.5 text-xs text-zinc-400"
-          >
-            닫기
-          </button>
         </div>
+      </ModalLayout>
     </ModalShell>
   );
 }
