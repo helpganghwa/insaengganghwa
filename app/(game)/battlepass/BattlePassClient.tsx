@@ -384,13 +384,15 @@ export function BattlePassClient({
         setError(
           r.code === 'ALREADY_PURCHASED'
             ? '이미 구매한 구간입니다.'
-            : r.code === 'MINOR_LIMIT'
-              ? '미성년 월 구매한도를 초과했습니다.'
-              : r.code === 'NETWORK'
-                ? r.reason === 'verify'
-                  ? '결제 확인이 지연되고 있어요 — 지급은 잠시 후 자동 반영됩니다.'
-                  : '요청이 전송되지 않았어요. 연결을 확인해 주세요.'
-                : '결제에 실패했습니다.',
+            : r.code === 'PAY_CLOSED'
+              ? '아직 결제가 열리지 않았습니다.'
+              : r.code === 'MINOR_LIMIT'
+                ? '미성년 월 구매한도를 초과했습니다.'
+                : r.code === 'NETWORK'
+                  ? r.reason === 'verify'
+                    ? '결제 확인이 지연되고 있어요 — 지급은 잠시 후 자동 반영됩니다.'
+                    : '요청이 전송되지 않았어요. 연결을 확인해 주세요.'
+                  : '결제에 실패했습니다.',
         );
       }
     })();

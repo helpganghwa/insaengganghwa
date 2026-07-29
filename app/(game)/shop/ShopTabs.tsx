@@ -114,6 +114,7 @@ function commonErrTitle(code: string | undefined): string | null {
   if (code === 'RATE_LIMITED') return '요청이 너무 빠릅니다. 잠시 후 다시 시도해 주세요.';
   if (code === 'MAINTENANCE') return '서버 점검 중입니다. 잠시 후 다시 시도해 주세요.';
   if (code === 'BANNED') return '이용이 제한된 계정입니다.';
+  if (code === 'PAY_CLOSED') return '아직 결제가 열리지 않았습니다.';
   if (code === 'NETWORK') return '요청이 전송되지 않았어요. 연결을 확인해 주세요.';
   return null;
 }

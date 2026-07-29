@@ -3,6 +3,7 @@
 import { revalidatePath } from 'next/cache';
 
 import { getSessionUserId, shouldHidePaidContent } from '@/lib/auth/session';
+import { getAdminStatus } from '@/lib/auth/require-admin';
 import { getActiveServerId } from '@/lib/game/servers';
 import { rateLimited } from '@/lib/ratelimit';
 import { actionBlock } from '@/lib/game/action-gate';
@@ -38,7 +39,13 @@ export async function createOrderAction(productId: string) {
   if (await rateLimited(u, 'shop')) return { status: 'error', code: 'RATE_LIMITED' } as const;
   const __b = await actionBlock(); if (__b) return { status: 'error', code: __b } as const;
   // CBT 기간 결제 차단(서버 권위) — UI 숨김 우회 방지. 테스터·정식 출시 시엔 통과.
-  if (await shouldHidePaidContent()) return { status: 'error', code: 'CONFIG' } as const;
+  // 어드민은 통과 — 상점 UI가 어드민에게만 열려 있고(shop/page.tsx), 출시 전 실결제 검수 경로가
+  // 이것뿐이다(어드민 즉시구매 폐지). 코드는 CONFIG가 아니라 PAY_CLOSED —
+  // 채널 미설정과 CBT 차단은 원인이 달라 같은 안내를 쓰면 진단이 통째로 어긋난다.
+  if (await shouldHidePaidContent()) {
+    const { isAdmin } = await getAdminStatus();
+    if (!isAdmin) return { status: 'error', code: 'PAY_CLOSED' } as const;
+  }
   try {
     const o = await createOrder(u, await getActiveServerId(), productId);
     return { status: 'success', order: o } as const;

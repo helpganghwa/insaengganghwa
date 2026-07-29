@@ -1,4 +1,5 @@
 import { getSessionUserId, shouldHidePaidContent } from '@/lib/auth/session';
+import { getAdminStatus } from '@/lib/auth/require-admin';
 import { getActiveServerId } from '@/lib/game/servers';
 import { withTimeout } from '@/lib/db/with-timeout';
 import { getBattlePassView } from '@/lib/game/battlepass';
@@ -20,7 +21,9 @@ export default async function BattlePassPage({
   if (!userId) return null;
 
   // CBT 기간엔 일반 유저에게 성장패스 미노출 — 딥링크 직접 진입 시 준비중 안내.
-  if (await shouldHidePaidContent()) {
+  // 어드민만 예외 — 상점과 동일 기준으로, 출시 전 성장패스 실결제도 검수해야 한다.
+  const { isAdmin } = await getAdminStatus();
+  if (!isAdmin && (await shouldHidePaidContent())) {
     return (
       <div className="flex min-h-[60vh] flex-col items-center justify-center px-6 text-center">
         <div className="text-3xl">🚧</div>
