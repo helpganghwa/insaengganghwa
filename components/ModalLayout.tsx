@@ -1,5 +1,7 @@
 'use client';
 
+import { useLayoutEffect, useRef, useState } from 'react';
+
 /**
  * 팝업 내부 레이아웃 — 헤더 · 컨텐츠 · 푸터 3단(사이는 투명 여백).
  *
@@ -34,12 +36,52 @@ export function ModalLayout({
   bodyPad?: 'sm' | 'md';
   bare?: boolean;
 }) {
+  const rootRef = useRef<HTMLDivElement>(null);
+  const headRef = useRef<HTMLDivElement>(null);
+  const footRef = useRef<HTMLDivElement>(null);
+  const [offsetY, setOffsetY] = useState(0);
+
+  /**
+   * 세로 위치 보정 — 셸은 팝업 **전체 높이** 기준으로 가운데를 맞춘다. 헤더(제목+부제 55~70px)가
+   * 푸터(버튼 한 줄 44px)보다 커서, 정작 눈이 머무는 컨텐츠는 화면 중심보다 아래로 내려간다
+   * (내려가는 양 = (헤더−푸터)/2). 팝업마다 헤더 높이가 달라 위치도 흔들린다(2026-07-29 제보).
+   *
+   * ① 균형 보정: 컨텐츠 중심을 화면 중심에 맞춘다.
+   * ② 시각 보정: 거기서 조금 더 올린다 — 시각적 중심은 기하학적 중심보다 위에 있다.
+   * 화면을 거의 채우는 팝업은 보정하면 잘리므로 건드리지 않는다.
+   */
+  useLayoutEffect(() => {
+    const measure = () => {
+      const total = rootRef.current?.offsetHeight ?? 0;
+      const vh = window.innerHeight;
+      if (total === 0 || total > vh * 0.86) {
+        setOffsetY(0);
+        return;
+      }
+      const balance = ((footRef.current?.offsetHeight ?? 0) - (headRef.current?.offsetHeight ?? 0)) / 2;
+      const optical = Math.min(20, vh * 0.03);
+      setOffsetY(Math.round(balance - optical));
+    };
+    measure();
+    const ro = new ResizeObserver(measure);
+    if (rootRef.current) ro.observe(rootRef.current);
+    window.addEventListener('resize', measure);
+    return () => {
+      ro.disconnect();
+      window.removeEventListener('resize', measure);
+    };
+  }, []);
+
   return (
     // 셸 패널은 폭을 지정하지 않으므로 여기서 못 박는다 — w-full만 두면 flex 안에서
     // 내용 길이에 따라 폭이 줄어 팝업마다 넓이가 달라진다(2026-07-29 제보).
-    <div className="flex w-[320px] max-w-full flex-col gap-2.5">
+    <div
+      ref={rootRef}
+      className="flex w-[320px] max-w-full flex-col gap-2.5"
+      style={{ transform: `translateY(${offsetY}px)` }}
+    >
       {title || subtitle || icon ? (
-        <div className="px-1 text-center">
+        <div ref={headRef} className="px-1 text-center">
           {icon ? <div className="text-[26px] leading-none">{icon}</div> : null}
           {title ? (
             <h2 className={`text-[15px] font-extrabold ${icon ? 'mt-1' : ''}`}>{title}</h2>
@@ -62,7 +104,11 @@ export function ModalLayout({
         {children}
       </div>
 
-      {footer ? <div className="flex gap-2">{footer}</div> : null}
+      {footer ? (
+        <div ref={footRef} className="flex gap-2">
+          {footer}
+        </div>
+      ) : null}
     </div>
   );
 }
