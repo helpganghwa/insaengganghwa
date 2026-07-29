@@ -401,7 +401,8 @@ function Row({ r, isMe, serverId }: { r: MeleeRankRow; isMe: boolean; serverId: 
             {/* 탈락 정보 — 라운드와 패배 상대를 한 문장으로(별도 우측 칸 없음).
                 구분점은 블록 앞에 한 번만 — 0138 이전 회차처럼 라운드가 없어도 점이 빠지지 않게. */}
             {r.eliminatedRound != null || gold || r.killerNickname ? ' · ' : null}
-            {r.eliminatedRound != null ? (
+            {/* 챔피언은 라운드 생략 — 끝까지 남은 사람이라 탈락 라운드가 의미 없다. */}
+            {!gold && r.eliminatedRound != null ? (
               <>
                 <b className="font-mono font-black text-zinc-300">
                   {r.eliminatedRound.toLocaleString()}
