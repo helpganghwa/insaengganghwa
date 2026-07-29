@@ -781,7 +781,11 @@ export function ShopTabs({
 
       {/* 본인인증 필요 — 청소년보호(결제 전 본인인증). */}
       {identityPrompt ? (
-        <ModalShell onClose={() => setIdentityPrompt(false)} label="본인인증 필요">
+        <ModalShell
+          onClose={() => setIdentityPrompt(false)}
+          onSubmit={() => !identityBusy && startIdentity()}
+          label="본인인증 필요"
+        >
           <ModalLayout
             title="본인인증이 필요합니다"
             subtitle={<span className="font-bold text-amber-600 dark:text-amber-400">유료 결제 전 1회</span>}

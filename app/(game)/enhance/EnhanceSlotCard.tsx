@@ -1153,7 +1153,7 @@ export function EnhanceSlotCard({
 
       {/* 강화 취소(해제) 확인 모달 — 코너 X → 이 모달 → doCancel(사용자 피드백 1). */}
       {cancelOpen ? (
-        <ModalShell onClose={() => setCancelOpen(false)} label="강화 취소 확인">
+        <ModalShell onClose={() => setCancelOpen(false)} onSubmit={doCancel} label="강화 취소 확인">
           <ModalLayout
             title="강화를 취소할까요?"
             subtitle={

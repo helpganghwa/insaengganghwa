@@ -37,7 +37,11 @@ export function WithdrawButton() {
       </button>
 
       {open && (
-        <ModalShell onClose={() => !pending && setOpen(false)} label="회원 탈퇴 확인">
+        <ModalShell
+          onClose={() => !pending && setOpen(false)}
+          onSubmit={() => !pending && confirm()}
+          label="회원 탈퇴 확인"
+        >
           <ModalLayout
             icon="⚠️"
             title="정말 탈퇴하시겠어요?"

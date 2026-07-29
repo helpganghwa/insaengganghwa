@@ -346,6 +346,7 @@ export function GuildHome({
           return (
             <ModalShell
               onClose={() => setLeaveOpen(false)}
+              onSubmit={mustTransfer ? undefined : () => !pending && leave()}
               label={mustTransfer ? '길드장 위임 필요' : '길드 탈퇴'}
             >
               <ModalLayout

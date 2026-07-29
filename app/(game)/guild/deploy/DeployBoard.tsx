@@ -722,6 +722,14 @@ export function DeployBoard({
             setPlan(null);
             setPlanConfirm(false);
           }}
+          onSubmit={() => {
+            // 손 동작과 같은 순서 — 유료면 첫 Enter가 3초 재확인 무장, 두 번째가 확정.
+            if (plan.gem === 0 || planConfirm) runPlan();
+            else {
+              setPlanLeft(3);
+              setPlanConfirm(true);
+            }
+          }}
         >
           <ModalLayout
             title={`${plan.zoneName} ${plan.role === 'attack' ? '공격' : '수비'} 배치`}

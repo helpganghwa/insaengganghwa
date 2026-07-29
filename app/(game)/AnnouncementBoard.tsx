@@ -3,6 +3,7 @@
 import { useEffect, useState } from 'react';
 
 import { ModalShell } from '@/components/ModalShell';
+import { ModalLayout, ModalButton } from '@/components/ModalLayout';
 import { MarkdownView } from '@/components/MarkdownView';
 import { assetUrl } from '@/lib/asset-versions';
 import {
@@ -371,31 +372,30 @@ export function AnnouncementBoard({
 
       {/* 홈 강제 팝업 — 새 글 있으면 진입 시 1회. '다시 보지 않기'로 읽음 처리. */}
       {gateOpen && latest && (
-        <ModalShell
-          onClose={() => setGateDismissed(true)}
-          label={latest.title}
-          className="flex max-h-[80vh] w-full max-w-[340px] flex-col overflow-hidden rounded-2xl bg-white dark:bg-zinc-950"
-        >
+        <ModalShell onClose={() => setGateDismissed(true)} label={latest.title}>
+          <ModalLayout
+            title={latest.title}
+            subtitle={<span className="font-bold text-amber-600 dark:text-amber-400">새 공지</span>}
+            maxBodyClass="max-h-[60vh]"
+            footer={
+              <>
+                <ModalButton tone="ghost" onClick={() => setGateDismissed(true)}>
+                  닫기
+                </ModalButton>
+                <ModalButton
+                  tone="contrast"
+                  onClick={() => {
+                    markSeen();
+                    setGateDismissed(true);
+                  }}
+                >
+                  다시 보지 않기
+                </ModalButton>
+              </>
+            }
+          >
           <Detail a={latest} voteFor={voteForOf(latest.id)} onVote={(o, q) => onVote(latest.id, o, q)} />
-          <div className="flex shrink-0 gap-2 border-t border-zinc-100 px-4 py-3 dark:border-zinc-900">
-            <button
-              type="button"
-              onClick={() => setGateDismissed(true)}
-              className="flex-1 rounded-lg border border-zinc-300 py-2 text-[13px] font-semibold text-zinc-600 dark:border-zinc-700 dark:text-zinc-300"
-            >
-              닫기
-            </button>
-            <button
-              type="button"
-              onClick={() => {
-                markSeen();
-                setGateDismissed(true);
-              }}
-              className="flex-1 rounded-lg bg-zinc-800 py-2 text-[13px] font-bold text-white dark:bg-zinc-200 dark:text-zinc-900"
-            >
-              다시 보지 않기
-            </button>
-          </div>
+          </ModalLayout>
         </ModalShell>
       )}
     </>

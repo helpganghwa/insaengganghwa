@@ -1346,6 +1346,14 @@ export function WorldMapView({
             setMoveAsk(null);
             setMoveConfirm(false);
           }}
+          onSubmit={() => {
+            if (moveAsk.kind === 'release') return moveResidence(moveAsk.zoneId, { release: true });
+            if (moveConfirm) speedUpOnly();
+            else {
+              setMoveLeft(3);
+              setMoveConfirm(true);
+            }
+          }}
         >
           {moveAsk.kind === 'release' ? (
             <ModalLayout
@@ -1473,7 +1481,18 @@ export function WorldMapView({
             setCollectConfirm(false);
           };
           return (
-            <ModalShell onClose={close} label={`${cz.name} 세금 수금`}>
+            <ModalShell
+              onClose={close}
+              onSubmit={() => {
+                if (onCd || pending || tax <= 0) return;
+                if (collectConfirm) collect(cz.id);
+                else {
+                  setCollectLeft(3);
+                  setCollectConfirm(true);
+                }
+              }}
+              label={`${cz.name} 세금 수금`}
+            >
               <ModalLayout
                 title="세금 수금"
                 subtitle={

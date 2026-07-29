@@ -848,50 +848,62 @@ export function GuildSettings({
             setGenOpen(false);
             setGenConfirm(false);
           }}
+          onSubmit={() => !pending && armGenerate()}
           label="새 문양 생성"
-          className="max-h-[85vh] w-full max-w-[340px] overflow-y-auto rounded-2xl bg-white p-4 dark:bg-zinc-950"
         >
-            <div className="flex items-baseline justify-between">
-              <h2 className="text-sm font-bold">새 문양 생성</h2>
-              <button
-                type="button"
-                onClick={() => {
-                  setGenOpen(false);
-                  setGenConfirm(false);
-                }}
-                className="text-xs text-zinc-500"
-              >
-                닫기
-              </button>
-            </div>
-            <div className="mt-3">
-              <EmblemPicker value={emblem} onChange={setEmblem} disabled={pending} />
-            </div>
-            <button
-              type="button"
-              onClick={armGenerate}
-              disabled={pending}
-              className={`relative isolate mt-3 w-full overflow-hidden rounded-lg py-2.5 text-sm font-bold text-white transition-colors disabled:opacity-50 ${
-                genConfirm ? 'bg-amber-700' : 'bg-amber-600'
-              }`}
-            >
-              {genConfirm ? (
-                <span
-                  aria-hidden
-                  className="absolute inset-0 bg-amber-500"
-                  style={{ animation: 'confirm-bg-pulse 1.2s ease-in-out infinite' }}
-                />
-              ) : null}
-              <span className="relative">
-                {(() => {
-                  const price =
-                    emblemList.length === 0
-                      ? '무료'
-                      : `💎${GUILD_EMBLEM_REROLL_COST_DIAMOND.toLocaleString('ko-KR')}`;
-                  return genConfirm ? `생성하기 ${price} ${genConfirmLeft}s` : `생성하기 ${price}`;
-                })()}
-              </span>
-            </button>
+          <ModalLayout
+            title="새 문양 생성"
+            subtitle={
+              <>
+                보관 {emblemList.length} / {MAX_GUILD_EMBLEMS}
+                <span className="mx-1 text-zinc-400">·</span>
+                <span className="font-bold text-amber-600 dark:text-amber-400">
+                  {emblemList.length === 0
+                    ? '첫 생성 무료'
+                    : `💎${GUILD_EMBLEM_REROLL_COST_DIAMOND.toLocaleString('ko-KR')}`}
+                </span>
+              </>
+            }
+            maxBodyClass="max-h-[58vh]"
+            footer={
+              <>
+                <ModalButton tone="ghost" onClick={() => {
+            setGenOpen(false);
+            setGenConfirm(false);
+          }}>
+                  닫기
+                </ModalButton>
+                <button
+                  type="button"
+                  onClick={armGenerate}
+                  disabled={pending}
+                  style={{ flex: 2 }}
+                  className={`relative isolate overflow-hidden rounded-xl py-2.5 text-[13px] font-bold text-white transition-colors disabled:opacity-50 ${
+                    genConfirm ? 'bg-amber-700' : 'bg-amber-600'
+                  }`}
+                >
+                  {genConfirm ? (
+                    <span
+                      aria-hidden
+                      className="absolute inset-0 bg-amber-500"
+                      style={{ animation: 'confirm-bg-pulse 1.2s ease-in-out infinite' }}
+                    />
+                  ) : null}
+                  <span className="relative">
+                    {(() => {
+                      const price =
+                        emblemList.length === 0
+                          ? '무료'
+                          : `💎${GUILD_EMBLEM_REROLL_COST_DIAMOND.toLocaleString('ko-KR')}`;
+                      return genConfirm ? `생성 ${price} ${genConfirmLeft}s` : `생성 ${price}`;
+                    })()}
+                  </span>
+                </button>
+              </>
+            }
+          >
+            <EmblemPicker value={emblem} onChange={setEmblem} disabled={pending} />
+          </ModalLayout>
         </ModalShell>
       )}
 
@@ -978,7 +990,15 @@ export function GuildSettings({
 
       {/* 확인 팝업 — 위임·추방·해산(alert 대체) */}
       {confirmModal && (
-        <ModalShell onClose={() => setConfirmModal(null)} label={confirmModal.title}>
+        <ModalShell
+          onClose={() => setConfirmModal(null)}
+          onSubmit={() => {
+            const fn = confirmModal.onConfirm;
+            setConfirmModal(null);
+            fn();
+          }}
+          label={confirmModal.title}
+        >
           <ModalLayout
             title={confirmModal.title}
             footer={

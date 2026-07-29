@@ -12,12 +12,18 @@ import { createPortal } from 'react-dom';
  */
 export function ModalShell({
   onClose,
+  onSubmit,
   label,
   className = '',
   align = 'center',
   children,
 }: {
   onClose: () => void;
+  /**
+   * Enter로 실행할 주 동작(PC 전용 편의) — 닫기는 Esc, 확정은 Enter.
+   * 3초 재확인이 걸린 버튼이면 첫 Enter가 무장, 두 번째가 확정으로 손 동작과 같아진다.
+   */
+  onSubmit?: () => void;
   /** 스크린리더용 라벨(모달 제목 텍스트). */
   label: string;
   /** 패널 className — 크기·스크롤·패딩·배경 등. */
@@ -34,14 +40,25 @@ export function ModalShell({
   useEffect(() => {
     if (mounted) panelRef.current?.focus();
   }, [mounted]);
-  // Esc 닫기는 별도 효과 — onClose 최신값만 반영(포커스 재설정과 분리).
+  // Esc 닫기 / Enter 확정 — onClose·onSubmit 최신값만 반영(포커스 재설정과 분리).
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
-      if (e.key === 'Escape') onClose();
+      if (e.key === 'Escape') {
+        onClose();
+        return;
+      }
+      if (e.key !== 'Enter' || !onSubmit) return;
+      // 한글 조합 중의 Enter는 글자 확정이지 제출이 아니다.
+      if (e.isComposing) return;
+      const tag = (e.target as HTMLElement | null)?.tagName;
+      // 버튼·링크는 Enter가 이미 클릭이고, 여러 줄 입력은 줄바꿈이 우선이다.
+      if (tag === 'BUTTON' || tag === 'A' || tag === 'TEXTAREA' || tag === 'SELECT') return;
+      e.preventDefault();
+      onSubmit();
     };
     document.addEventListener('keydown', onKey);
     return () => document.removeEventListener('keydown', onKey);
-  }, [onClose]);
+  }, [onClose, onSubmit]);
 
   if (!mounted) return null; // 포털은 클라이언트 마운트 후에만(SSR 하이드레이션 안전)
   const alignCls = align === 'bottom' ? 'items-end' : align === 'top' ? 'items-start' : 'items-center';
