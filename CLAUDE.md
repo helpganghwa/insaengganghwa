@@ -292,6 +292,18 @@ gemTimeReductions.conversionRate = currentRate  // 변경되어도 이 작업은
 
 `.env.example`로 빈 값 템플릿 유지. **실제 시크릿은 절대 커밋 안 함**. 키 목록은 `.env.example` 참조.
 
+### ⚠ Vercel `env add`는 Production/Preview에서 기본이 **sensitive**
+sensitive 변수는 **런타임에만 주입되고 빌드 단계에는 들어오지 않는다**. 그래서 `NEXT_PUBLIC_*`을
+CLI로 넣으면 빌드 시 인라인이 `undefined`가 되어 값이 통째로 비는 사고가 난다(2026-07-29 결제
+연동에서 실제 발생 — 결제 채널 키를 넣었는데 서버가 계속 `CONFIG`를 던졌다).
+
+- **서버에서만 읽는 값**(`PORTONE_API_SECRET`, `PORTONE_CHANNEL_KEY` 등)은 sensitive로 두어도 된다 —
+  함수 안에서 런타임에 읽으므로 정상 동작하고, 대시보드·API에 노출되지 않아 더 안전하다.
+- **빌드에 인라인돼야 하는 값**(`NEXT_PUBLIC_*`)은 `--no-sensitive`로 넣어야 한다.
+- 포트원 키는 클라가 직접 읽지 않고 서버가 내려주므로(`checkout.ts` → `createOrder`),
+  `PORTONE_*`(비공개) 쪽을 채우는 것이 정석이다. `NEXT_PUBLIC_*`은 폴백일 뿐이다.
+- env를 바꾸면 **재배포해야 반영된다**(기존 배포는 예전 값을 그대로 쓴다).
+
 ---
 
 ## 8. Git 워크플로 / 환경 분기
