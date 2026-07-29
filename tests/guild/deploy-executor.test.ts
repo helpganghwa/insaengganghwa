@@ -20,6 +20,8 @@ describe.skipIf(skip)('deployToZone — 집행관 자동 해제 회귀', () => {
   let zoneId: number | null = null;
   let savedZone: { owner: string | null; executor: string | null; cap: string | null } | null = null;
   let savedMembership: { guildId: string; role: string } | null = null;
+  /** 원래 거주 구역 — 배치가 거주를 요구하게 되어(0139) 테스트에서 옮겼다가 되돌린다. */
+  let savedResidence: number | null = null;
 
   beforeAll(async () => {
     // 1) 기존 멤버십 저장 후 제거(guild_members PK=user_id,server_id — 1유저 1길드).
@@ -50,6 +52,17 @@ describe.skipIf(skip)('deployToZone — 집행관 자동 해제 회귀', () => {
     await testDb.execute(sql`
       update zones set owner_guild_id=${guildId.toString()}::bigint, executor_user_id=${TEST_USER_ID}::uuid
       where id=${zoneId}`);
+
+    // 이동·거주 필수(0139) — 배치하려면 그 구역 거주자여야 한다. 원래 값은 afterAll에서 복원.
+    const c = (await testDb.execute(sql`
+      select residence_zone_id::text rz from characters
+      where user_id=${TEST_USER_ID}::uuid and server_id=${SERVER_ID}`)) as unknown as {
+      rz: string | null;
+    }[];
+    savedResidence = c[0]?.rz != null ? Number(c[0].rz) : null;
+    await testDb.execute(sql`
+      update characters set residence_zone_id=${zoneId}
+      where user_id=${TEST_USER_ID}::uuid and server_id=${SERVER_ID}`);
   });
 
   afterAll(async () => {
@@ -64,6 +77,11 @@ describe.skipIf(skip)('deployToZone — 집행관 자동 해제 회귀', () => {
           where id=${zoneId}`);
       } catch {}
     }
+    try {
+      await testDb.execute(sql`
+        update characters set residence_zone_id=${savedResidence}
+        where user_id=${TEST_USER_ID}::uuid and server_id=${SERVER_ID}`);
+    } catch {}
     try { await testDb.execute(sql`delete from guild_members where user_id=${TEST_USER_ID}::uuid and server_id=${SERVER_ID}`); } catch {}
     if (guildId != null) { try { await testDb.execute(sql`delete from guilds where id=${guildId.toString()}::bigint`); } catch {} }
     if (savedMembership) {

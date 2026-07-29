@@ -832,7 +832,7 @@ export function DeployBoard({
             }
           >
             <p className="text-center text-[12.5px] text-zinc-500 dark:text-zinc-400">
-              다이아를 사용해 남은 대기시간을 없앱니다. 단축 후 배치를 한 번 더 눌러주세요.
+              다이아를 사용해 남은 대기시간을 없앱니다.
             </p>
             <div className="mt-3 rounded-xl bg-zinc-100 py-3 text-center dark:bg-zinc-800">
               <p className="font-mono text-[20px] font-black text-sky-500">
