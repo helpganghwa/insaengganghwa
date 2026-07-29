@@ -1,7 +1,7 @@
 'use client';
 
 import { useRef, useState, useTransition } from 'react';
-import { createPortal } from 'react-dom';
+import { ModalShell } from '@/components/ModalShell';
 
 import { useResourceToast } from '@/components/ResourceToast';
 import { INQUIRY_TYPES, BODY_MAX, type InquiryType } from '@/lib/game/support/types';
@@ -126,16 +126,14 @@ export function SupportModal({
         <span className="text-sm">고객센터 문의</span>
       </button>
 
-      {open
-        ? createPortal(
-            <div
-              className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-4 backdrop-blur-sm"
-              onClick={close}
-            >
-              <div
-                className="w-full max-w-[360px] rounded-2xl border border-zinc-200 bg-white p-4 shadow-xl dark:border-zinc-800 dark:bg-zinc-950"
-                onClick={(e) => e.stopPropagation()}
-              >
+      {open ? (
+        // 직접 포털을 그리던 것을 공용 셸로 — Esc·포커스·aria를 얻는다(2026-07-29 점검).
+        <ModalShell
+          onClose={close}
+          label="고객센터 문의"
+          className="w-full max-w-[360px] rounded-2xl border border-zinc-200 bg-white p-4 shadow-xl dark:border-zinc-800 dark:bg-zinc-950"
+        >
+              <div>
                 <div className="mb-1 flex items-center justify-between">
                   <h3 className="text-base font-bold">고객센터 문의</h3>
                   <button
@@ -262,10 +260,8 @@ export function SupportModal({
                   </>
                 )}
               </div>
-            </div>,
-            document.body,
-          )
-        : null}
+        </ModalShell>
+      ) : null}
     </>
   );
 }

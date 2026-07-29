@@ -1,6 +1,8 @@
 'use client';
 
 import { useState, useTransition } from 'react';
+
+import { ModalShell } from '@/components/ModalShell';
 import { ZoomSafeTextarea } from '@/components/ui/ZoomSafeField';
 
 import { reportProfile } from './actions';
@@ -60,14 +62,13 @@ export function ReportButton({ profileId }: { profileId: string }) {
       </button>
 
       {open && (
-        <div
-          className="fixed inset-0 z-50 flex items-end justify-center bg-black/50 p-0 sm:items-center"
-          onClick={() => !pending && setOpen(false)}
+        // 손으로 만든 시트였다 — role/aria·Esc·포커스가 없어 공용 셸로 옮긴다(2026-07-29 점검).
+        <ModalShell
+          onClose={() => !pending && setOpen(false)}
+          label="프로필 신고"
+          className="w-full max-w-[340px] rounded-2xl bg-white p-4 text-left dark:bg-zinc-950"
         >
-          <div
-            className="w-full max-w-[390px] rounded-t-2xl bg-white p-4 text-left dark:bg-zinc-950 sm:rounded-2xl"
-            onClick={(e) => e.stopPropagation()}
-          >
+          <div>
             {done ? (
               <div className="py-6 text-center">
                 <div className="text-2xl">✅</div>
@@ -141,7 +142,7 @@ export function ReportButton({ profileId }: { profileId: string }) {
               </>
             )}
           </div>
-        </div>
+        </ModalShell>
       )}
     </>
   );

@@ -1,6 +1,7 @@
 'use client';
 
 import { useCallback, useEffect, useLayoutEffect, useRef, useState } from 'react';
+import { ModalShell } from '@/components/ModalShell';
 import Link from 'next/link';
 import { usePathname, useRouter } from 'next/navigation';
 
@@ -1109,17 +1110,12 @@ export function ChatDock() {
 
       {/* 미니 프로필 팝업 */}
       {profile ? (
-        <div
-          role="dialog"
-          aria-modal="true"
-          aria-label="유저 정보"
-          className="fixed inset-0 z-40 flex items-center justify-center bg-black/60 p-6 backdrop-blur-sm"
-          onClick={() => setProfile(null)}
+        <ModalShell
+          onClose={() => setProfile(null)}
+          label="유저 정보"
+          className="w-full max-w-[340px] overflow-hidden rounded-2xl bg-white dark:bg-zinc-900"
         >
-          <div
-            className="w-full max-w-[340px] overflow-hidden rounded-2xl bg-white dark:bg-zinc-900"
-            onClick={(e) => e.stopPropagation()}
-          >
+          <div>
             {
               /* 자랑 카드식 2분할 — 왼쪽 전신 아바타(크게) / 오른쪽 정보+액션 */
               <div className="bg-gradient-to-br from-amber-50 via-white to-zinc-50 p-4 dark:from-amber-500/[0.09] dark:via-zinc-900 dark:to-zinc-900">
@@ -1269,22 +1265,17 @@ export function ChatDock() {
               </div>
             }
           </div>
-        </div>
+        </ModalShell>
       ) : null}
 
       {/* 차단 목록 팝업 — 차단 유저는 메시지가 숨어 프로필 진입이 불가하므로 여기서 해제 */}
       {showBlockList ? (
-        <div
-          role="dialog"
-          aria-modal="true"
-          aria-label="차단 목록"
-          className="fixed inset-0 z-40 flex items-center justify-center bg-black/60 p-6 backdrop-blur-sm"
-          onClick={() => setShowBlockList(false)}
+        <ModalShell
+          onClose={() => setShowBlockList(false)}
+          label="차단 목록"
+          className="w-full max-w-[280px] rounded-2xl bg-white p-4 dark:bg-zinc-900"
         >
-          <div
-            className="w-full max-w-[280px] rounded-2xl bg-white p-4 dark:bg-zinc-900"
-            onClick={(e) => e.stopPropagation()}
-          >
+          <div>
             <h3 className="text-[13px] font-bold">차단 목록</h3>
             {blocked.size === 0 ? (
               <p className="py-6 text-center text-[12px] text-zinc-400">차단한 유저가 없어요.</p>
@@ -1315,22 +1306,18 @@ export function ChatDock() {
               닫기
             </button>
           </div>
-        </div>
+        </ModalShell>
       ) : null}
 
       {/* 신고 확인 팝업 */}
       {reportTarget ? (
-        <div
-          role="dialog"
-          aria-modal="true"
-          aria-label="메시지 신고"
-          className="fixed inset-0 z-40 flex items-center justify-center bg-black/60 p-6 backdrop-blur-sm"
-          onClick={() => setReportTarget(null)}
+        // 공용 셸로 — Esc·포커스 이동을 얻는다(2026-07-29 점검).
+        <ModalShell
+          onClose={() => setReportTarget(null)}
+          label="메시지 신고"
+          className="w-full max-w-[280px] rounded-2xl bg-white p-4 dark:bg-zinc-900"
         >
-          <div
-            className="w-full max-w-[280px] rounded-2xl bg-white p-4 dark:bg-zinc-900"
-            onClick={(e) => e.stopPropagation()}
-          >
+          <div>
             <h3 className="text-[13px] font-bold">이 메시지를 신고할까요?</h3>
             <p className="mt-2 rounded-lg bg-zinc-50 px-3 py-2 text-[12px] text-zinc-600 dark:bg-zinc-800/60 dark:text-zinc-300">
               <b>{reportTarget.nickname}</b> · {reportTarget.body.slice(0, 60)}
@@ -1368,7 +1355,7 @@ export function ChatDock() {
               </button>
             </div>
           </div>
-        </div>
+        </ModalShell>
       ) : null}
     </>
   );

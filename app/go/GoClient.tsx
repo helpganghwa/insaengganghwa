@@ -53,13 +53,17 @@ export function GoClient() {
   const openKakaoExternal = () => {
     window.location.href = `kakaotalk://web/openExternal?url=${encodeURIComponent(target)}`;
   };
+  const [manualOpen, setManualOpen] = useState(false);
+
   const copyUrl = async () => {
     try {
       await navigator.clipboard.writeText(target);
       setCopied(true);
       setTimeout(() => setCopied(false), 2000);
     } catch {
-      window.prompt('아래 주소를 길게 눌러 복사하세요', target);
+      // window.prompt는 카카오톡·인스타 인앱 브라우저에서 막히는 경우가 있다 —
+      // 하필 이 폴백이 필요한 환경이 그쪽이라, 직접 그린 주소 시트를 띄운다(2026-07-29 점검).
+      setManualOpen(true);
     }
   };
 
@@ -163,6 +167,37 @@ export function GoClient() {
           기다릴수록 성공 확률이 오르는 방치형 강화 RPG
         </p>
       </div>
+
+      {/* 복사 실패 폴백 — 주소를 직접 선택할 수 있게 띄운다(인앱 브라우저에서 prompt가 막힘). */}
+      {manualOpen && (
+        <div
+          className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 p-5"
+          onClick={() => setManualOpen(false)}
+        >
+          <div
+            role="dialog"
+            aria-modal="true"
+            aria-label="주소 직접 복사"
+            className="w-full max-w-[320px] rounded-2xl bg-zinc-900 p-4 text-zinc-100"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <p className="text-center text-[14px] font-bold">아래 주소를 길게 눌러 복사하세요</p>
+            <input
+              readOnly
+              value={target}
+              onFocus={(e) => e.currentTarget.select()}
+              className="mt-3 w-full rounded-lg border border-zinc-700 bg-zinc-950 px-3 py-2.5 text-center text-[12px] text-zinc-200"
+            />
+            <button
+              type="button"
+              onClick={() => setManualOpen(false)}
+              className="mt-3 w-full rounded-xl bg-zinc-700 py-2.5 text-[13px] font-bold text-zinc-100"
+            >
+              닫기
+            </button>
+          </div>
+        </div>
+      )}
     </main>
   );
 }
