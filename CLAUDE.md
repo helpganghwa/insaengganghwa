@@ -292,17 +292,18 @@ gemTimeReductions.conversionRate = currentRate  // 변경되어도 이 작업은
 
 `.env.example`로 빈 값 템플릿 유지. **실제 시크릿은 절대 커밋 안 함**. 키 목록은 `.env.example` 참조.
 
-### ⚠ Vercel `env add`는 Production/Preview에서 기본이 **sensitive**
-sensitive 변수는 **런타임에만 주입되고 빌드 단계에는 들어오지 않는다**. 그래서 `NEXT_PUBLIC_*`을
-CLI로 넣으면 빌드 시 인라인이 `undefined`가 되어 값이 통째로 비는 사고가 난다(2026-07-29 결제
-연동에서 실제 발생 — 결제 채널 키를 넣었는데 서버가 계속 `CONFIG`를 던졌다).
+### ⚠ `NEXT_PUBLIC_*`은 빌드에 박히고, 서버 변수는 런타임에 읽힌다
+`NEXT_PUBLIC_*`은 Next.js가 **빌드 시점에 문자열로 치환**한다(서버 코드에서도 마찬가지). env를
+추가·수정해도 **그 이후 새로 빌드한 배포부터** 값이 들어간다 — 기존 배포는 예전 값(또는 `undefined`)을
+그대로 쓴다. 2026-07-29 결제 연동에서 채널 키를 넣고도 서버가 계속 `CONFIG`를 던진 사고의 원인이다.
 
-- **서버에서만 읽는 값**(`PORTONE_API_SECRET`, `PORTONE_CHANNEL_KEY` 등)은 sensitive로 두어도 된다 —
-  함수 안에서 런타임에 읽으므로 정상 동작하고, 대시보드·API에 노출되지 않아 더 안전하다.
-- **빌드에 인라인돼야 하는 값**(`NEXT_PUBLIC_*`)은 `--no-sensitive`로 넣어야 한다.
-- 포트원 키는 클라가 직접 읽지 않고 서버가 내려주므로(`checkout.ts` → `createOrder`),
-  `PORTONE_*`(비공개) 쪽을 채우는 것이 정석이다. `NEXT_PUBLIC_*`은 폴백일 뿐이다.
-- env를 바꾸면 **재배포해야 반영된다**(기존 배포는 예전 값을 그대로 쓴다).
+- **키는 서버 전용 이름**(`PORTONE_STORE_ID`, `PORTONE_CHANNEL_KEY`, `PORTONE_API_SECRET` …)으로 넣는다.
+  서버 변수는 함수 안에서 런타임에 읽으므로 빌드 시점과 무관하고, 브라우저 번들에도 안 실린다.
+- 포트원 키는 클라가 직접 읽지 않고 서버가 내려준다(`checkout.ts` → `createOrder`).
+  `NEXT_PUBLIC_PORTONE_*`은 폴백일 뿐이라 없어도 동작한다.
+- `NEXT_PUBLIC_*`이 꼭 필요하면 **env를 먼저 넣고 그 다음에 재배포**한다(순서 반대면 빈 값이 박힌다).
+- Vercel의 `sensitive` 타입(`vercel env add --sensitive`)은 값이 대시보드·API에서 조회 불가가 되는
+  플래그다. 서버 전용 시크릿엔 써도 되지만, `NEXT_PUBLIC_*`엔 쓰면 안 된다.
 
 ---
 
