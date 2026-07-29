@@ -1,9 +1,11 @@
 'use client';
 
-import { useEffect, useState, useTransition } from 'react';
+import { useState, useTransition } from 'react';
 import { useRouter } from 'next/navigation';
 
 import * as haptic from '@/lib/game/haptic';
+import { ModalShell } from '@/components/ModalShell';
+import { ModalLayout, ModalButton } from '@/components/ModalLayout';
 import { useResourceToast } from '@/components/ResourceToast';
 import { setActiveProfile, deleteProfile } from './actions';
 
@@ -37,33 +39,14 @@ export function ProfileSelector({
   const [selectedId, setSelectedId] = useState<string>(initId);
   const sel = list.find((p) => p.id === selectedId) ?? list[0]!;
   const [pending, startTransition] = useTransition();
-  const [confirmDelete, setConfirmDelete] = useState(false);
-  const [confirmDeleteLeft, setConfirmDeleteLeft] = useState(0); // 3s 재탭 컨펌 카운트다운
-
-  // 삭제 — 강화 취소와 동일 3s 재탭 패턴(오탭 보호). 만료 시 자동 해제.
-  useEffect(() => {
-    if (!confirmDelete) {
-      setConfirmDeleteLeft(0);
-      return;
-    }
-    setConfirmDeleteLeft(3);
-    const id = setInterval(() => {
-      setConfirmDeleteLeft((s) => {
-        if (s <= 1) {
-          setConfirmDelete(false);
-          return 0;
-        }
-        return s - 1;
-      });
-    }, 1000);
-    return () => clearInterval(id);
-  }, [confirmDelete]);
+  // 삭제 확인 — 유료로 만든 자산을 지우는 동작이라 11px 알약의 3초 재탭으로는 보호가 약하다.
+  // 무엇이 사라지는지 문장으로 읽히는 모달로 승격(2026-07-29 UI 점검).
+  const [deleteAsk, setDeleteAsk] = useState(false);
 
   // 캐릭터 선택 → 로컬 미리보기만(서버 반영은 "적용" 버튼).
   const selectChar = (p: ProfileItem) => {
     if (p.id === selectedId) return;
     setSelectedId(p.id);
-    setConfirmDelete(false);
   };
 
   // 적용 → 선택 캐릭터를 대표로 커밋(방향은 정면 고정 — 회전 미사용).
@@ -85,11 +68,7 @@ export function ProfileSelector({
 
   const doDelete = () => {
     if (pending) return;
-    if (!confirmDelete) {
-      setConfirmDelete(true); // 1탭: 3s 컨펌 진입
-      return;
-    }
-    setConfirmDelete(false);
+    setDeleteAsk(false);
     startTransition(async () => {
       const r = await deleteProfile(selectedId);
       if (r.status === 'error') return showError(r.message);
@@ -101,7 +80,6 @@ export function ProfileSelector({
       }
       setDeletedIds((s) => new Set(s).add(selectedId));
       setSelectedId(remaining[0]!.id);
-      setConfirmDelete(false);
       router.refresh();
     });
   };
@@ -114,24 +92,12 @@ export function ProfileSelector({
         {list.length > 1 ? (
           <button
             type="button"
-            onClick={doDelete}
+            onClick={() => setDeleteAsk(true)}
             disabled={pending}
             aria-label="선택한 아바타 삭제"
-            className={`absolute right-2 top-2 z-10 isolate overflow-hidden rounded-full px-2.5 py-1 text-[11px] font-bold backdrop-blur-sm transition active:scale-95 disabled:opacity-50 ${
-              confirmDelete ? 'bg-red-600 text-white' : 'bg-black/55 text-red-300'
-            }`}
+            className="absolute right-2 top-2 z-10 rounded-full bg-black/55 px-2.5 py-1 text-[11px] font-bold text-red-300 backdrop-blur-sm transition active:scale-95 disabled:opacity-50"
           >
-            {/* 배경만 펄스(텍스트 안정) — 일괄 초월 확인버튼 패턴. */}
-            {confirmDelete ? (
-              <span
-                aria-hidden
-                className="absolute inset-0 bg-red-500"
-                style={{ animation: 'confirm-bg-pulse 1.2s ease-in-out infinite' }}
-              />
-            ) : null}
-            <span className="relative">
-              {confirmDelete ? `삭제 ${confirmDeleteLeft}s` : '삭제'}
-            </span>
+            삭제
           </button>
         ) : null}
         <div className="relative mx-auto flex aspect-square w-full max-w-[256px] select-none items-center justify-center isolate overflow-hidden rounded-xl">
@@ -188,6 +154,35 @@ export function ProfileSelector({
       >
         {!dirty ? '현재 대표 아바타' : '이 아바타로 적용'}
       </button>
+
+      {/* 아바타 삭제 확인 — 다이아를 쓰고 10분 걸려 만든 자산이라 되돌릴 수 없음을 명시한다. */}
+      {deleteAsk && (
+        <ModalShell
+          onClose={() => setDeleteAsk(false)}
+          onSubmit={doDelete}
+          label="아바타 삭제 확인"
+        >
+          <ModalLayout
+            icon="🗑️"
+            title="이 아바타를 삭제할까요?"
+            subtitle={<span className="font-bold text-red-500">복구 불가</span>}
+            footer={
+              <>
+                <ModalButton tone="ghost" onClick={() => setDeleteAsk(false)} disabled={pending}>
+                  취소
+                </ModalButton>
+                <ModalButton tone="danger" onClick={doDelete} disabled={pending}>
+                  삭제
+                </ModalButton>
+              </>
+            }
+          >
+            <p className="text-center text-[12.5px] leading-relaxed text-zinc-500 dark:text-zinc-400">
+              생성에 사용한 다이아는 돌려받을 수 없고, 같은 아바타를 다시 만들 수도 없습니다.
+            </p>
+          </ModalLayout>
+        </ModalShell>
+      )}
     </div>
   );
 }

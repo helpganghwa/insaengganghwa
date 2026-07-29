@@ -48,6 +48,8 @@ export function SwapPickerModal({
   const [jobs, setJobs] = useState<ActiveJob[] | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [pending, startTransition] = useTransition();
+  /** 교체 확인 대상 — 고르는 즉시 취소하지 않고 한 번 되묻는다. */
+  const [swapAsk, setSwapAsk] = useState<ActiveJob | null>(null);
   const [nowMs, setNowMs] = useState(0);
 
   useEffect(() => {
@@ -90,9 +92,13 @@ export function SwapPickerModal({
   }
 
   return (
-    <ModalShell onClose={onClose} label="강화 슬롯 교체">
+    <ModalShell
+      onClose={() => (swapAsk ? setSwapAsk(null) : onClose())}
+      onSubmit={swapAsk ? () => pick(swapAsk.jobId) : undefined}
+      label="강화 슬롯 교체"
+    >
       <ModalLayout
-        title="교체할 강화 선택"
+        title={swapAsk ? '이 강화를 취소할까요?' : '교체할 강화 선택'}
         subtitle={
           <>
             슬롯이 모두 사용 중 ·{' '}
@@ -101,9 +107,20 @@ export function SwapPickerModal({
         }
         bodyPad="sm"
         footer={
-          <ModalButton tone="ghost" onClick={onClose}>
-            취소
-          </ModalButton>
+          swapAsk ? (
+            <>
+              <ModalButton tone="ghost" onClick={() => setSwapAsk(null)} disabled={pending}>
+                뒤로
+              </ModalButton>
+              <ModalButton tone="danger" onClick={() => pick(swapAsk.jobId)} disabled={pending}>
+                취소하고 교체
+              </ModalButton>
+            </>
+          ) : (
+            <ModalButton tone="ghost" onClick={onClose}>
+              취소
+            </ModalButton>
+          )
         }
       >
 
@@ -117,6 +134,18 @@ export function SwapPickerModal({
           <p className="py-6 text-center text-xs text-zinc-500">불러오는 중…</p>
         ) : jobs.length === 0 ? (
           <p className="py-6 text-center text-xs text-zinc-500">교체 가능한 강화가 없습니다.</p>
+        ) : swapAsk ? (
+          // 선택 즉시 취소되던 것을 한 단계 확인으로 감싼다 — 쌓인 강화 시간이 사라지는 동작이라
+          // 같은 파괴를 막고 있는 강화 취소 팝업과 보호 수준을 맞춘다(2026-07-29 점검).
+          <div className="text-center">
+            <p className="text-[12.5px] leading-relaxed text-zinc-500 dark:text-zinc-400">
+              <b className="font-bold text-zinc-700 dark:text-zinc-200">{swapAsk.name}</b> +
+              {swapAsk.enhanceLevel} 강화를 취소하고 새 장비를 등록합니다.
+            </p>
+            <p className="mt-2 text-[11.5px] font-bold text-amber-600 dark:text-amber-300/90">
+              쌓인 시간 {remainingLabel(swapAsk.completeAtIso, nowMs)}이 사라집니다.
+            </p>
+          </div>
         ) : (
           <ul className="space-y-1.5">
             {jobs.map((j) => (
@@ -124,7 +153,7 @@ export function SwapPickerModal({
                 <button
                   type="button"
                   disabled={pending}
-                  onClick={() => pick(j.jobId)}
+                  onClick={() => setSwapAsk(j)}
                   className="grid w-full cursor-pointer grid-cols-[auto_1fr_auto] items-center gap-2 rounded-lg bg-white/5 px-3 py-2 text-left text-[11px] hover:bg-white/10 disabled:opacity-50"
                 >
                   <TranscendSprite

@@ -4,6 +4,8 @@ import { useState, useTransition } from 'react';
 import { useRouter } from 'next/navigation';
 import { profileHref } from '@/lib/game/profile/href';
 
+import { ModalShell } from '@/components/ModalShell';
+import { ModalLayout, ModalButton } from '@/components/ModalLayout';
 import { useResourceToast } from '@/components/ResourceToast';
 import { GuildBadge } from '@/components/GuildBadge';
 import { LastSeen } from '@/components/LastSeen';
@@ -221,7 +223,11 @@ export function FriendsTabs({
     });
   };
 
+  /** 친구 삭제 — 앱에서 유일하게 확인 없이 지워지던 동작이라 확인 팝업을 거친다(2026-07-29 점검). */
+  const [unfriendAsk, setUnfriendAsk] = useState<FriendUser | null>(null);
+
   const unfriend = (u: FriendUser) => {
+    setUnfriendAsk(null);
     setFriends((p) => p.filter((x) => x.userId !== u.userId));
     setRel(u.userId, 'none');
     startTransition(async () => {
@@ -285,7 +291,7 @@ export function FriendsTabs({
                     <button
                       type="button"
                       disabled={searching}
-                      onClick={() => unfriend(u)}
+                      onClick={() => setUnfriendAsk(u)}
                       className={`${btn} bg-zinc-100 text-zinc-500 dark:bg-zinc-800`}
                     >
                       삭제
@@ -427,6 +433,38 @@ export function FriendsTabs({
           </div>
         ) : null}
       </div>
+
+      {/* 친구 삭제 확인 — 되돌리려면 상대가 다시 수락해야 한다. */}
+      {unfriendAsk && (
+        <ModalShell
+          onClose={() => setUnfriendAsk(null)}
+          onSubmit={() => unfriend(unfriendAsk)}
+          label="친구 삭제 확인"
+        >
+          <ModalLayout
+            title="친구를 삭제할까요?"
+            subtitle={
+              <span className="font-bold text-zinc-600 dark:text-zinc-300">
+                {unfriendAsk.nickname}
+              </span>
+            }
+            footer={
+              <>
+                <ModalButton tone="ghost" onClick={() => setUnfriendAsk(null)}>
+                  취소
+                </ModalButton>
+                <ModalButton tone="danger" onClick={() => unfriend(unfriendAsk)}>
+                  삭제
+                </ModalButton>
+              </>
+            }
+          >
+            <p className="text-center text-[12.5px] leading-relaxed text-zinc-500 dark:text-zinc-400">
+              다시 친구가 되려면 상대가 요청을 수락해야 합니다.
+            </p>
+          </ModalLayout>
+        </ModalShell>
+      )}
     </div>
   );
 }
