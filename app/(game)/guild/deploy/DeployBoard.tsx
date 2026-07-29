@@ -58,32 +58,33 @@ const DEFEND_MULT = 1 + CONQUEST_DEFENDER_BONUS; // 수비 ×1.2
 const fmt = (n: number) =>
   new Intl.NumberFormat('ko-KR', { notation: 'compact', maximumFractionDigits: 1 }).format(n);
 
-/** 지도 핀 — 노드 위에 떠 있는 물방울 마커. 색으로 역할을 구분한다(내 위치/선택). */
-function MapPin({
-  from,
-  to,
-  glow,
-  glowHi,
-  hidden,
-}: {
-  from: string;
-  to: string;
-  /** 글로우 색(핀 색과 같은 계열로 — 선택 핀이 앰버로 빛나던 문제). */
-  glow: string;
-  glowHi: string;
-  /** display:none — 언마운트하지 않는다(재마운트하면 bob 위상이 어긋난다). */
-  hidden: boolean;
-}) {
+/**
+ * 지도 핀 — 노드 위에 떠 있는 물방울 마커.
+ *  · 노드당 **항상 하나**만 그린다. 두 개를 나란히 놓으면 개수에 따라 중심이 흔들린다.
+ *    내 위치이면서 선택된 구역은 파란 핀에 앰버 테두리로 두 상태를 함께 나타낸다.
+ *  · 항상 마운트해두고 색·표시만 바꾼다 — 붙였다 뗐다 하면 CSS 애니메이션이 재시작해
+ *    구역마다 위아래 움직임의 위상이 어긋난다(2026-07-29 제보).
+ */
+function MapPin({ home, selected }: { home: boolean; selected: boolean }) {
+  const blue = selected;
   return (
-    <span className="block" style={{ display: hidden ? 'none' : 'block' }}>
+    <span
+      aria-hidden
+      className="pointer-events-none absolute bottom-full left-1/2 -mb-1 -translate-x-1/2 animate-marker-bob"
+      style={{ opacity: home || selected ? 1 : 0 }}
+    >
       <span
-        className="relative block h-[11px] w-[11px] animate-marker-pin-glow border-[1.5px] border-white"
+        className="relative block h-[11px] w-[11px] animate-marker-pin-glow border-[1.5px]"
         style={{
-          background: `linear-gradient(135deg, ${from}, ${to})`,
+          background: blue
+            ? 'linear-gradient(135deg, #7dd3fc, #0284c7)'
+            : 'linear-gradient(135deg, #fcd34d, #f59e0b)',
+          // 내 위치이면서 선택 = 파란 핀 + 앰버 테두리(둘 다 표시하되 중심은 하나).
+          borderColor: blue && home ? '#fbbf24' : '#ffffff',
           borderRadius: '50% 50% 50% 0',
           transform: 'rotate(-45deg)',
-          ['--pin-glow' as string]: glow,
-          ['--pin-glow-hi' as string]: glowHi,
+          ['--pin-glow' as string]: blue ? 'rgba(2,132,199,0.65)' : 'rgba(245,158,11,0.65)',
+          ['--pin-glow-hi' as string]: blue ? 'rgba(56,189,248,0.95)' : 'rgba(251,191,36,0.95)',
         }}
       >
         <span className="absolute left-1/2 top-1/2 h-[3.5px] w-[3.5px] -translate-x-1/2 -translate-y-1/2 rounded-full bg-white" />
@@ -381,11 +382,18 @@ export function DeployBoard({
         const za = zoneById.get(a);
         const zb = zoneById.get(b);
         if (!za || !zb) return null;
-        return { a, b, x1: za.mapX, y1: za.mapY, x2: zb.mapX, y2: zb.mapY, active: usable(a) && usable(b) };
+        // 3단계 — ① 내가 이동할 수 있는 길(거주지에 맞닿음) ② 길드 관련(우리 소유·공격 가능끼리) ③ 그 외.
+        // 세계지도와 같은 색 규칙을 쓰되, 길드 관련은 중간 밝기로 둬 이동 가능 길이 먼저 읽히게 한다.
+        const tier = homeZoneId != null && (a === homeZoneId || b === homeZoneId)
+          ? 'walk'
+          : usable(a) && usable(b)
+            ? 'guild'
+            : 'dim';
+        return { a, b, x1: za.mapX, y1: za.mapY, x2: zb.mapX, y2: zb.mapY, tier };
       })
       .filter((e): e is NonNullable<typeof e> => e != null);
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [adjacency, zoneById, ownedIds, attackable]);
+  }, [adjacency, zoneById, ownedIds, attackable, homeZoneId]);
 
   return (
     <div className="flex min-h-full shrink-0 flex-col">
@@ -426,8 +434,8 @@ export function DeployBoard({
               x2={e.x2}
               y2={e.y2}
               stroke="#000000"
-              strokeOpacity={e.active ? 0.32 : 0.14}
-              strokeWidth={e.active ? 0.85 : 0.6}
+              strokeOpacity={e.tier === 'walk' ? 0.42 : e.tier === 'guild' ? 0.32 : 0.22}
+              strokeWidth={e.tier === 'walk' ? 1 : e.tier === 'guild' ? 0.85 : 0.7}
               strokeLinecap="round"
             />
           ))}
@@ -438,9 +446,9 @@ export function DeployBoard({
               y1={e.y1}
               x2={e.x2}
               y2={e.y2}
-              stroke={e.active ? '#fcd34d' : '#9ca3af'}
-              strokeOpacity={e.active ? 0.55 : 0.22}
-              strokeWidth={0.5}
+              stroke={e.tier === 'walk' ? '#fde047' : e.tier === 'guild' ? '#fcd34d' : '#cbd5e1'}
+              strokeOpacity={e.tier === 'walk' ? 0.95 : e.tier === 'guild' ? 0.55 : 0.4}
+              strokeWidth={e.tier === 'walk' ? 0.72 : 0.5}
               strokeLinecap="round"
             />
           ))}
@@ -494,30 +502,7 @@ export function DeployBoard({
                   {showPower ? `전투력 ${fmt(dep.power)}` : `${dep.count}명`}
                 </span>
               )}
-              {/* 핀 — 내 위치(앰버 고정) / 선택(하늘색).
-                  ⚠ 조건부 렌더로 붙였다 뗐다 하면 CSS 애니메이션이 그때부터 다시 시작해
-                  구역마다 위아래 움직임의 위상이 어긋난다. 그래서 **모든 구역에 항상 마운트**해
-                  두고 표시만 토글한다 — 전 구역이 같은 커밋에서 시작하므로 항상 같은 박자다. */}
-              <span
-                aria-hidden
-                className="pointer-events-none absolute bottom-full left-1/2 -mb-1 flex -translate-x-1/2 animate-marker-bob gap-[2px]"
-                style={{ opacity: isHome || isSel ? 1 : 0 }}
-              >
-                <MapPin
-                  from="#fcd34d"
-                  to="#f59e0b"
-                  glow="rgba(245,158,11,0.65)"
-                  glowHi="rgba(251,191,36,0.95)"
-                  hidden={!isHome}
-                />
-                <MapPin
-                  from="#7dd3fc"
-                  to="#0284c7"
-                  glow="rgba(2,132,199,0.65)"
-                  glowHi="rgba(56,189,248,0.95)"
-                  hidden={!isSel}
-                />
-              </span>
+              <MapPin home={isHome} selected={isSel} />
             </button>
           );
         })}
@@ -532,6 +517,9 @@ export function DeployBoard({
           <span className="inline-flex items-center gap-1">
             <i className="h-2 w-2 rounded-full" style={{ background: '#f59e0b' }} /> 내 위치
             <i className="ml-1 h-2 w-2 rounded-full" style={{ background: '#0284c7' }} /> 선택
+          </span>
+          <span className="inline-flex items-center gap-1">
+            <i className="h-[2px] w-3 rounded-full" style={{ background: '#fde047' }} /> 이동 가능
           </span>
         </div>
       </div>

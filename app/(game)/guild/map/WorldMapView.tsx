@@ -437,7 +437,9 @@ export function WorldMapView({
 
   const selected = zones.find((z) => z.id === selectedId) ?? null;
   /** 지금 살고 있는 구역 이름 — 해제 경고에서 "어디의" 배치인지 밝힌다. */
-  const homeZoneName = zones.find((z) => z.id === residence)?.name ?? null;
+  const homeZone = zones.find((z) => z.id === residence) ?? null;
+  const homeZoneName = homeZone?.name ?? null;
+  const homeZoneColor = homeZone ? REGION[homeZone.region].color : null;
 
   const openBattle = (zoneId: number) => {
     start(async () => {
@@ -1341,7 +1343,9 @@ export function WorldMapView({
                 <h3 className="text-center text-[15px] font-extrabold">거주지를 옮기시겠습니까?</h3>
                 <p className="mt-2 text-center text-[12px] leading-relaxed text-zinc-500 dark:text-zinc-400">
                   이동하면{' '}
-                  <b className="font-bold text-zinc-700 dark:text-zinc-200">{homeZoneName ?? '현재 구역'}</b>
+                  <b className="font-bold" style={homeZoneColor ? { color: homeZoneColor } : undefined}>
+                    {homeZoneName ?? '현재 구역'}
+                  </b>
                   의 <b className="font-bold text-amber-600 dark:text-amber-300">{moveLock?.label}</b>
                   {moveLock?.kind === 'executor' ? '이' : ' 배치가'} 해제됩니다.
                 </p>
