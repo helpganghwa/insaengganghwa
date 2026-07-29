@@ -47,6 +47,24 @@ const DEFEND_MULT = 1 + CONQUEST_DEFENDER_BONUS; // 수비 ×1.2
 const fmt = (n: number) =>
   new Intl.NumberFormat('ko-KR', { notation: 'compact', maximumFractionDigits: 1 }).format(n);
 
+/** 지도 핀 — 노드 위에 떠 있는 물방울 마커. 색으로 역할을 구분한다(내 위치/선택). */
+function MapPin({ from, to }: { from: string; to: string }) {
+  return (
+    <span className="block animate-marker-bob">
+      <span
+        className="relative block h-[11px] w-[11px] animate-marker-pin-glow border-[1.5px] border-white"
+        style={{
+          background: `linear-gradient(135deg, ${from}, ${to})`,
+          borderRadius: '50% 50% 50% 0',
+          transform: 'rotate(-45deg)',
+        }}
+      >
+        <span className="absolute left-1/2 top-1/2 h-[3.5px] w-[3.5px] -translate-x-1/2 -translate-y-1/2 rounded-full bg-white" />
+      </span>
+    </span>
+  );
+}
+
 export function DeployBoard({
   isLeader,
   myUserId,
@@ -72,7 +90,8 @@ export function DeployBoard({
   const router = useRouter();
   const { showHeaderToast, showError } = useResourceToast();
   const [members, setMembers] = useState(initialMembers);
-  const [selectedId, setSelectedId] = useState<number | null>(null);
+  // 초기 선택 = 내 거주지 — 배치는 거주 구역에서만 가능하므로 첫 화면이 곧 내 자리다.
+  const [selectedId, setSelectedId] = useState<number | null>(residenceZoneId);
   const [pending, start] = useTransition();
 
   const zoneById = useMemo(() => new Map(zones.map((z) => [z.id, z])), [zones]);
@@ -309,7 +328,8 @@ export function DeployBoard({
         {zones.map((z) => {
           const mine = z.ownerGuildId === myGuildId;
           const canAttack = !mine && attackable.has(z.id);
-          const isUsable = mine || canAttack;
+          const isHome = z.id === residenceZoneId;
+          const isUsable = mine || canAttack || isHome; // 내 거주지는 항상 선택 가능
           const isSel = z.id === selectedId;
           const owned = z.ownerGuildId != null;
           const ring = mine ? '#10b981' : canAttack ? '#ef4444' : '#71717a';
@@ -354,21 +374,11 @@ export function DeployBoard({
                   {showPower ? `전투력 ${fmt(dep.power)}` : `${dep.count}명`}
                 </span>
               )}
-              {/* 선택 마크 — 세계지도 '내 위치'처럼 떠 있는 핀 */}
-              {isSel && (
-                <span className="pointer-events-none absolute bottom-full left-1/2 -mb-1 -translate-x-1/2">
-                  <span className="block animate-marker-bob">
-                    <span
-                      className="relative block h-[11px] w-[11px] border-[1.5px] border-white animate-marker-pin-glow"
-                      style={{
-                        background: 'linear-gradient(135deg, #fcd34d, #f59e0b)',
-                        borderRadius: '50% 50% 50% 0',
-                        transform: 'rotate(-45deg)',
-                      }}
-                    >
-                      <span className="absolute left-1/2 top-1/2 h-[3.5px] w-[3.5px] -translate-x-1/2 -translate-y-1/2 rounded-full bg-white" />
-                    </span>
-                  </span>
+              {/* 핀 — 내 위치(앰버)는 항상 고정, 선택(하늘색)은 별도. 같은 구역이면 나란히 뜬다. */}
+              {(isHome || isSel) && (
+                <span className="pointer-events-none absolute bottom-full left-1/2 -mb-1 flex -translate-x-1/2 gap-[2px]">
+                  {isHome && <MapPin from="#fcd34d" to="#f59e0b" />}
+                  {isSel && <MapPin from="#7dd3fc" to="#0284c7" />}
                 </span>
               )}
             </button>
@@ -381,6 +391,10 @@ export function DeployBoard({
           </span>
           <span className="inline-flex items-center gap-1">
             <i className="h-2 w-2 rounded-sm" style={{ outline: '1.5px solid #ef4444' }} /> 공격 가능
+          </span>
+          <span className="inline-flex items-center gap-1">
+            <i className="h-2 w-2 rounded-full" style={{ background: '#f59e0b' }} /> 내 위치
+            <i className="ml-1 h-2 w-2 rounded-full" style={{ background: '#0284c7' }} /> 선택
           </span>
         </div>
       </div>

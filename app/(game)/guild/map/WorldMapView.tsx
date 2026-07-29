@@ -21,7 +21,6 @@ import {
   getZoneBattleAction,
   collectTaxAction,
   getGuildSummaryByNameAction,
-  speedUpResidenceAction,
 } from '../actions';
 import { guildErrMsg } from '../errors-msg';
 
@@ -180,8 +179,8 @@ export function WorldMapView({
     zoneId: number | null;
     /** 다음 이동 가능 시각(ISO). null=즉시 가능. */
     readyAtIso: string | null;
-    /** 시간 외 이동 잠금 사유 — 배치/집행관. */
-    lock: 'deploy' | 'executor' | null;
+    /** 지금 구역에 묶어두는 역할 — 이동하면 해제된다(팝업 경고 문구에 쓴다). */
+    lock: { kind: 'executor' | 'deploy'; label: '집행관' | '공격' | '수비' } | null;
   } | null;
   canSetResidence: boolean;
   myUserId: string | null;
@@ -211,8 +210,24 @@ export function WorldMapView({
     const id = setInterval(() => setNow(Date.now()), 1000);
     return () => clearInterval(id);
   }, [readyAt]);
-  const [speedUpOpen, setSpeedUpOpen] = useState(false);
-  const moveLock = residenceProp?.lock ?? null;
+  // 이동 확인 팝업 — 'release'=배치/집행관 해제 경고, 'gem'=쿨타임 보석 지불. 값=대상 구역 id.
+  const [moveAsk, setMoveAsk] = useState<{ kind: 'release' | 'gem'; zoneId: number } | null>(null);
+  const [moveConfirm, setMoveConfirm] = useState(false); // 보석 지불 3초 인-버튼 컨펌
+  const [moveLeft, setMoveLeft] = useState(0);
+  useEffect(() => {
+    if (!moveConfirm) return;
+    const id = setInterval(() => {
+      setMoveLeft((v) => {
+        if (v <= 1) {
+          setMoveConfirm(false);
+          return 0;
+        }
+        return v - 1;
+      });
+    }, 1000);
+    return () => clearInterval(id);
+  }, [moveConfirm]);
+  const [moveLock, setMoveLock] = useState(residenceProp?.lock ?? null);
   // 인접 판정 — 이동 가능한 구역 집합(현재 거주지와 맞닿은 곳). 거주 미설정이면 어디든 정착 가능.
   const adjacentIds = useMemo(() => {
     if (residence == null) return null;
@@ -259,7 +274,10 @@ export function WorldMapView({
   };
   const endReplay = () => {
     setReplayingTab(null);
-    setReplayOwners(null); // 라이브 소유로 복귀(오늘=최종 상태와 동일, 어제=현재로 점프)
+    // 라이브 소유로 복귀(오늘=최종 상태와 동일, 어제=현재로 점프).
+    // ⚠ 이후 도착하는 늦은 플립은 무시해야 한다 — null에서 맵을 되살리면 그 구역만 담긴
+    //   override가 생겨 나머지 구역이 전부 중립으로 렌더된다(문양 소실, 2026-07-29 제보).
+    setReplayOwners(null);
   };
   const replayActive = replayingTab !== null;
   // 재생 중에는 지도를 상단에 고정(sticky)하고 본문 스크롤을 항상 최하단으로 따라가게 한다
@@ -435,34 +453,45 @@ export function WorldMapView({
 
   // 거주 이동 — 낙관적(즉시 반영, 서버 백그라운드). router.refresh를 transition 안에서
   // 호출하면 refresh 동안 pending이 묶여 다음 이동이 막혔음 → 제거해 연속 이동 가능.
-  const moveResidence = (zoneId: number) => {
+  /**
+   * 거주 이동. 배치/집행관 해제(release)와 쿨타임 보석 지불(paySpeedUp)은 팝업에서 확인한 뒤
+   * 서버 한 트랜잭션으로 함께 처리한다 — 해제만 되고 이동은 실패하거나, 보석만 빠지는 경우가 없다.
+   */
+  const moveResidence = (zoneId: number, opts: { release?: boolean; paySpeedUp?: boolean } = {}) => {
+    const cost = opts.paySpeedUp ? residenceSpeedUpCost(remainMs) : 0;
     const prev = residence;
-    setResidence(zoneId); // 낙관적
-    // 쿨타임도 낙관적으로 시작 — 서버가 거절하면 아래에서 되돌린다.
     const prevReady = readyAt;
+    const prevLock = moveLock;
+    setMoveAsk(null);
+    setMoveConfirm(false);
+    setResidence(zoneId); // 낙관적
     setReadyAt(Date.now() + RESIDENCE_MOVE_COOLDOWN_MIN * 60_000);
-    showHeaderToast({ title: '거주지 이동 완료' });
+    if (opts.release) setMoveLock(null);
+    if (cost > 0) optimisticAdjust(-BigInt(cost));
     start(async () => {
-      const r = await setResidenceAction(zoneId);
+      const r = await setResidenceAction(zoneId, opts);
       if (r.status !== 'success') {
         setResidence(prev);
         setReadyAt(prevReady);
-        showError(guildErrMsg(r.code));
+        setMoveLock(prevLock);
+        if (cost > 0) optimisticAdjust(BigInt(cost));
+        return showError(guildErrMsg(r.code));
       }
+      showHeaderToast({
+        title: r.released ? `거주지 이동 완료 · ${r.released} 해제` : '거주지 이동 완료',
+      });
     });
   };
 
-  /** 쿨타임 보석 단축 — 남은 1분당 1💎(올림). 성공 시 즉시 이동 가능. */
-  const speedUpMove = () => {
-    const cost = residenceSpeedUpCost(remainMs);
-    setSpeedUpOpen(false);
-    start(async () => {
-      const r = await speedUpResidenceAction();
-      if (r.status !== 'success') return showError(guildErrMsg(r.code));
-      setReadyAt(null);
-      optimisticAdjust(-BigInt(r.spent));
-      showHeaderToast({ title: `이동 대기시간 해제 −${cost.toLocaleString('ko-KR')}💎` });
-    });
+  /** 이동 버튼 — 상황에 따라 바로 이동하거나 확인 팝업을 연다. */
+  const askMove = (zoneId: number) => {
+    if (moveLock) return setMoveAsk({ kind: 'release', zoneId });
+    if (remainMs > 0) {
+      setMoveLeft(3);
+      setMoveConfirm(false);
+      return setMoveAsk({ kind: 'gem', zoneId });
+    }
+    moveResidence(zoneId);
   };
 
   // 집행관 세금 수금 — 그 구역 집행관 본인만(72h 쿨다운, 집행관 10%·길드 풀 90%).
@@ -514,6 +543,10 @@ export function WorldMapView({
           {(() => {
             const isSel = (e: { a: number; b: number }) =>
               selectedId != null && (e.a === selectedId || e.b === selectedId);
+            // 이동 가능한 길 — 내 거주지에 맞닿은 간선만 또렷하게(점령지 배치 화면과 같은 방식).
+            // 거주지가 없으면(최초 정착 전) 전부 또렷.
+            const isWalk = (e: { a: number; b: number }) =>
+              residence == null || e.a === residence || e.b === residence;
             return (
               <>
                 {/* 1) 어두운 외곽 — 가독성(중간 강도) */}
@@ -525,8 +558,8 @@ export function WorldMapView({
                     x2={e.x2}
                     y2={e.y2}
                     stroke="#000000"
-                    strokeOpacity={0.32}
-                    strokeWidth={isSel(e) ? 1.2 : 0.85}
+                    strokeOpacity={isWalk(e) ? 0.32 : 0.12}
+                    strokeWidth={isSel(e) ? 1.2 : isWalk(e) ? 0.85 : 0.6}
                     strokeLinecap="round"
                   />
                 ))}
@@ -540,8 +573,8 @@ export function WorldMapView({
                       y1={e.y1}
                       x2={e.x2}
                       y2={e.y2}
-                      stroke="#fcd34d"
-                      strokeOpacity={0.5}
+                      stroke={isWalk(e) ? '#fcd34d' : '#9ca3af'}
+                      strokeOpacity={isWalk(e) ? 0.55 : 0.18}
                       strokeWidth={0.5}
                       strokeLinecap="round"
                     />
@@ -752,8 +785,8 @@ export function WorldMapView({
                 zones={zones.map((z) => ({ id: z.id, name: z.name, mapX: z.mapX, mapY: z.mapY }))}
                 layer={replayLayer}
                 zoneColor={zoneColor}
-                onOwnerFlip={(zoneId, guild) => setReplayOwners((m) => ({ ...(m ?? {}), [zoneId]: guild }))}
-                onNeutralize={(zoneId) => setReplayOwners((m) => ({ ...(m ?? {}), [zoneId]: null }))}
+                onOwnerFlip={(zoneId, guild) => setReplayOwners((m) => (m ? { ...m, [zoneId]: guild } : m))}
+                onNeutralize={(zoneId) => setReplayOwners((m) => (m ? { ...m, [zoneId]: null } : m))}
                 onDone={endReplay}
               />
             ) : chronicle!.yesterday ? (
@@ -786,8 +819,8 @@ export function WorldMapView({
                   zones={zones.map((z) => ({ id: z.id, name: z.name, mapX: z.mapX, mapY: z.mapY }))}
                   layer={replayLayer}
                   zoneColor={zoneColor}
-                  onOwnerFlip={(zoneId, guild) => setReplayOwners((m) => ({ ...(m ?? {}), [zoneId]: guild }))}
-                  onNeutralize={(zoneId) => setReplayOwners((m) => ({ ...(m ?? {}), [zoneId]: null }))}
+                  onOwnerFlip={(zoneId, guild) => setReplayOwners((m) => (m ? { ...m, [zoneId]: guild } : m))}
+                  onNeutralize={(zoneId) => setReplayOwners((m) => (m ? { ...m, [zoneId]: null } : m))}
                   onDone={endReplay}
                 />
               ) : (
@@ -1155,49 +1188,28 @@ export function WorldMapView({
                   </button>
                 ) : (
                   // 이동 가능 여부는 사유별로 다르게 보여준다 — 왜 못 가는지 모르면 버그로 읽힌다.
-                  (() => {
-                    const blocked = moveLock
-                      ? moveLock === 'executor'
-                        ? '집행관 — 이동 불가'
-                        : '배치 중 — 이동 불가'
-                      : adjacentIds && !adjacentIds.has(selected.id)
-                        ? '맞닿은 구역만 이동'
-                        : null;
-                    if (blocked) {
-                      return (
-                        <button
-                          type="button"
-                          disabled
-                          className="flex-1 cursor-default rounded-lg bg-zinc-200 py-2 text-[12px] font-bold text-zinc-500 dark:bg-zinc-800 dark:text-zinc-500"
-                        >
-                          {blocked}
-                        </button>
-                      );
-                    }
-                    // 쿨타임 중 — 남은 시간을 버튼에 띄우고, 누르면 보석 단축 확인.
-                    if (remainMs > 0) {
-                      return (
-                        <button
-                          type="button"
-                          onClick={() => setSpeedUpOpen(true)}
-                          disabled={pending}
-                          className="flex-1 rounded-lg bg-sky-600 py-2 text-[12px] font-bold text-white disabled:opacity-50"
-                        >
-                          {fmtRemain(remainMs)} 후 이동 · 단축
-                        </button>
-                      );
-                    }
-                    return (
-                      <button
-                        type="button"
-                        onClick={() => moveResidence(selected.id)}
-                        disabled={pending}
-                        className="flex-1 rounded-lg bg-amber-600 py-2 text-[13px] font-bold text-white disabled:opacity-50"
-                      >
-                        이동
-                      </button>
-                    );
-                  })()
+                  // 맞닿지 않은 구역은 버튼 자체를 숨긴다(닫기가 폭을 다 쓴다).
+                  // 배치·집행관으로 묶여 있어도 버튼은 살려두고, 누르면 해제 경고 팝업을 띄운다.
+                  adjacentIds && !adjacentIds.has(selected.id) ? null : remainMs > 0 ? (
+                    <button
+                      type="button"
+                      onClick={() => askMove(selected.id)}
+                      disabled={pending}
+                      className="flex-1 rounded-lg bg-sky-600 py-2 text-[12px] font-bold text-white disabled:opacity-50"
+                    >
+                      {fmtRemain(remainMs)} 후 또는 💎
+                      {residenceSpeedUpCost(remainMs).toLocaleString('ko-KR')}
+                    </button>
+                  ) : (
+                    <button
+                      type="button"
+                      onClick={() => askMove(selected.id)}
+                      disabled={pending}
+                      className="flex-1 rounded-lg bg-amber-600 py-2 text-[13px] font-bold text-white disabled:opacity-50"
+                    >
+                      이동
+                    </button>
+                  )
                 ))}
               <button
                 type="button"
@@ -1277,38 +1289,96 @@ export function WorldMapView({
           );
         })()}
 
-      {/* 이동 대기시간 단축 모달 — 남은 1분당 1💎(올림), 전액 결제로 즉시 해제. */}
-      {speedUpOpen && (
-        <ModalShell label="이동 대기시간 단축" onClose={() => setSpeedUpOpen(false)}>
+      {/* 이동 확인 팝업 — ① 배치·집행관 해제 경고 ② 쿨타임 보석 지불(3초 인-버튼 컨펌). */}
+      {moveAsk && (
+        <ModalShell
+          label={moveAsk.kind === 'release' ? '거주지 이동' : '이동 대기시간 단축'}
+          onClose={() => {
+            setMoveAsk(null);
+            setMoveConfirm(false);
+          }}
+        >
           <div className="p-4">
-            <h3 className="text-center text-[15px] font-extrabold">이동 대기시간 단축</h3>
-            <p className="mt-2 text-center text-[12px] text-zinc-500 dark:text-zinc-400">
-              남은 <b className="font-bold text-zinc-700 dark:text-zinc-200">{fmtRemain(remainMs)}</b>을
-              보석으로 없애고 바로 이동할 수 있습니다.
-            </p>
-            <div className="mt-3 rounded-xl bg-zinc-100 py-3 text-center dark:bg-zinc-900">
-              <p className="font-mono text-[20px] font-black text-sky-500">
-                {residenceSpeedUpCost(remainMs).toLocaleString('ko-KR')}💎
-              </p>
-              <p className="mt-0.5 text-[10px] text-zinc-500">남은 1분당 1💎</p>
-            </div>
-            <div className="mt-3 flex gap-2">
-              <button
-                type="button"
-                onClick={speedUpMove}
-                disabled={pending}
-                className="flex-1 rounded-lg bg-sky-600 py-2 text-[13px] font-bold text-white disabled:opacity-50"
-              >
-                단축
-              </button>
-              <button
-                type="button"
-                onClick={() => setSpeedUpOpen(false)}
-                className="flex-1 rounded-lg border border-zinc-300 py-2 text-[13px] font-medium text-zinc-500 dark:border-zinc-700 dark:text-zinc-400"
-              >
-                취소
-              </button>
-            </div>
+            {moveAsk.kind === 'release' ? (
+              <>
+                <h3 className="text-center text-[15px] font-extrabold">거주지를 옮기시겠습니까?</h3>
+                <p className="mt-2 text-center text-[12px] leading-relaxed text-zinc-500 dark:text-zinc-400">
+                  이동하면 현재 구역의{' '}
+                  <b className="font-bold text-amber-600 dark:text-amber-300">{moveLock?.label}</b>
+                  {moveLock?.kind === 'executor' ? '이' : ' 배치가'} 해제됩니다.
+                </p>
+                <div className="mt-3 flex gap-2">
+                  <button
+                    type="button"
+                    onClick={() => moveResidence(moveAsk.zoneId, { release: true })}
+                    disabled={pending}
+                    className="flex-1 rounded-lg bg-amber-600 py-2 text-[13px] font-bold text-white disabled:opacity-50"
+                  >
+                    이동
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setMoveAsk(null)}
+                    className="flex-1 rounded-lg border border-zinc-300 py-2 text-[13px] font-medium text-zinc-500 dark:border-zinc-700 dark:text-zinc-400"
+                  >
+                    취소
+                  </button>
+                </div>
+              </>
+            ) : (
+              <>
+                <h3 className="text-center text-[15px] font-extrabold">이동 대기시간 단축</h3>
+                <p className="mt-2 text-center text-[12px] text-zinc-500 dark:text-zinc-400">
+                  남은 <b className="font-bold text-zinc-700 dark:text-zinc-200">{fmtRemain(remainMs)}</b>을
+                  다이아를 사용해서 단축합니다.
+                </p>
+                <div className="mt-3 rounded-xl bg-zinc-100 py-3 text-center dark:bg-zinc-900">
+                  <p className="font-mono text-[20px] font-black text-sky-500">
+                    {residenceSpeedUpCost(remainMs).toLocaleString('ko-KR')}💎
+                  </p>
+                </div>
+                <div className="mt-3 flex gap-2">
+                  <button
+                    type="button"
+                    onClick={() => {
+                      // 강화 보석 단축과 동일한 3초 인-버튼 재확인 — 오탭 결제 방지.
+                      if (moveConfirm) {
+                        moveResidence(moveAsk.zoneId, { paySpeedUp: true });
+                      } else {
+                        setMoveLeft(3);
+                        setMoveConfirm(true);
+                      }
+                    }}
+                    disabled={pending}
+                    className={`relative isolate flex-1 overflow-hidden rounded-lg py-2 text-[13px] font-bold text-white transition-colors disabled:opacity-50 ${
+                      moveConfirm ? 'bg-sky-700' : 'bg-sky-600'
+                    }`}
+                  >
+                    {moveConfirm && (
+                      <span
+                        aria-hidden
+                        className="absolute inset-0 bg-sky-500"
+                        style={{ animation: 'confirm-bg-pulse 1.2s ease-in-out infinite' }}
+                      />
+                    )}
+                    <span className="relative">
+                      이동 💎{residenceSpeedUpCost(remainMs).toLocaleString('ko-KR')}
+                      {moveConfirm ? ` ${moveLeft}s` : ''}
+                    </span>
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setMoveAsk(null);
+                      setMoveConfirm(false);
+                    }}
+                    className="flex-1 rounded-lg border border-zinc-300 py-2 text-[13px] font-medium text-zinc-500 dark:border-zinc-700 dark:text-zinc-400"
+                  >
+                    취소
+                  </button>
+                </div>
+              </>
+            )}
           </div>
         </ModalShell>
       )}
