@@ -65,7 +65,7 @@ function ResultCard({
 
   const st = transcendStyle(shown);
   const grade = `rgb(${st.colorRgb.join(',')})`;
-  const spriteSize = big ? 76 : 48;
+  const spriteSize = big ? 76 : 40;
 
   return (
     <button
@@ -79,7 +79,7 @@ function ResultCard({
     >
       <RarityFrame level={shown} />
       {r.isNew ? (
-        <span className="absolute left-1.5 top-1.5 z-30 rounded bg-emerald-500 px-1 text-[8px] font-bold text-white">
+        <span className="absolute left-1 top-1 z-30 rounded bg-emerald-500 px-1 text-[7.5px] font-bold text-white">
           NEW
         </span>
       ) : null}
@@ -105,14 +105,14 @@ function ResultCard({
       </span>
       <span
         className={`line-clamp-2 break-keep px-0.5 leading-tight text-zinc-600 dark:text-zinc-400 ${
-          big ? 'text-[13px] font-medium' : 'min-h-[2.5em] text-[9px]'
+          big ? 'text-[13px] font-medium' : 'min-h-[2.4em] text-[8.5px] leading-[1.2]'
         }`}
       >
         {r.name}
       </span>
       <span
         key={`p${stepKey}`}
-        className={`font-semibold tabular-nums ${big ? 'text-[13px]' : 'text-[9px]'}`}
+        className={`font-semibold tabular-nums ${big ? 'text-[13px]' : 'text-[9.5px]'}`}
         style={{
           color: grade,
           animation: stepKey > 0 ? 'gacha-transcend-tick 360ms ease-out' : undefined,
@@ -221,19 +221,52 @@ export function GachaResultModal({
         }
         maxBodyClass="max-h-[62vh]"
         footer={
-          <button
-            type="button"
-            data-tut="gacha-confirm"
-            disabled={autoActive}
-            onClick={() => {
-              advanceTutorial();
-              onClose();
-            }}
-            style={{ flex: 1 }}
-            className="rounded-xl bg-zinc-900 py-2.5 text-[13px] font-bold text-white disabled:opacity-40 dark:bg-zinc-50 dark:text-zinc-950"
-          >
-            확인
-          </button>
+          <>
+            {autoActive ? (
+              <button
+                type="button"
+                onClick={() => setAutoActive(false)}
+                style={{ flex: 1 }}
+                className="rounded-xl bg-red-500 py-2.5 text-[13px] font-bold text-white"
+              >
+                중지 ({remaining}개)
+              </button>
+            ) : (
+              <>
+                <button
+                  type="button"
+                  disabled={pulling || remaining < 1}
+                  onClick={() => startAgain(1)}
+                  style={{ flex: 1 }}
+                  className="rounded-xl border border-zinc-300 bg-white py-2.5 text-[12.5px] font-bold text-zinc-700 disabled:opacity-40 dark:border-zinc-600 dark:bg-zinc-800 dark:text-zinc-100"
+                >
+                  1회 더
+                </button>
+                <button
+                  type="button"
+                  disabled={pulling || remaining < 2}
+                  onClick={() => startAgain(multiN)}
+                  style={{ flex: 1 }}
+                  className="rounded-xl bg-gradient-to-r from-amber-500 to-orange-500 py-2.5 text-[12.5px] font-bold text-white disabled:opacity-40"
+                >
+                  {multiN}회 더
+                </button>
+              </>
+            )}
+            <button
+              type="button"
+              data-tut="gacha-confirm"
+              disabled={autoActive}
+              onClick={() => {
+                advanceTutorial();
+                onClose();
+              }}
+              style={{ flex: 1 }}
+              className="rounded-xl bg-zinc-900 py-2.5 text-[12.5px] font-bold text-white disabled:opacity-40 dark:bg-zinc-50 dark:text-zinc-900"
+            >
+              확인
+            </button>
+          </>
         }
       >
       <div style={{ animation: 'gacha-result-in 220ms ease-out' }}>

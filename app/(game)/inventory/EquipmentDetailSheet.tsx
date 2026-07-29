@@ -11,7 +11,7 @@ import { equipAction, unequipAction } from './actions';
 import { startEnhance } from '@/app/(game)/enhance/actions';
 import { SwapPickerModal } from './SwapPickerModal';
 import { ModalShell } from '@/components/ModalShell';
-import { ModalLayout, ModalButton } from '@/components/ModalLayout';
+import { ModalLayout } from '@/components/ModalLayout';
 import { TranscendSprite } from '@/components/TranscendSprite';
 import { RarityFrame, rarityBorderStyle, hasRarityBorder } from '@/components/RarityFrame';
 import { transcendStyle } from '@/lib/game/equipment/transcend';
@@ -126,9 +126,64 @@ export function EquipmentDetailSheet({
         }
         maxBodyClass="max-h-[62vh]"
         footer={
-          <ModalButton tone="ghost" onClick={onClose}>
-            닫기
-          </ModalButton>
+          // 스프라이트 버튼은 그대로 유지 — 텍스트 버튼으로 바꾸면 게임 톤이 깨진다.
+          <div className="grid w-full grid-cols-[1fr_1fr_auto] gap-1.5">
+          {/* 강화 — SLOT_BUSY 시 SwapPickerModal 열어 교체. */}
+          <button
+            type="button"
+            data-tut="enhance-btn"
+            disabled={!canEnhance}
+            onClick={() => {
+              if (pending || !canEnhance) return;
+              setError(null);
+              startTransition(async () => {
+                const r = await startEnhance(item.id);
+                if (r.status === 'error') {
+                  if (r.code === 'SLOT_BUSY') {
+                    setSwapPicker(true);
+                    return;
+                  }
+                  setError(r.message);
+                  return;
+                }
+                onOptimisticStartEnhance?.(item.id);
+                advanceTutorial();
+                onClose();
+                router.push('/enhance');
+              });
+            }}
+            className={BTN}
+          >
+            <BtnBg src={assetUrl('/sprites/ui/btn-enhance.png')} label="강화" />
+          </button>
+          {/* 장착/해제 */}
+          <button
+            type="button"
+            data-tut={item.equipped ? undefined : 'equip-btn'}
+            onClick={() => {
+              const equipping = !item.equipped;
+              run(
+                () => (equipping ? equipAction(item.id) : unequipAction(item.id)),
+                () => onOptimisticEquip?.(item.id),
+              );
+              // 장착 직후 시트 닫기 — 인벤토리로 복귀해 다음 흐름(강화) 자연 진행.
+              if (equipping) {
+                advanceTutorial();
+                onClose();
+              }
+            }}
+            className={BTN}
+          >
+            <BtnBg src={assetUrl('/sprites/ui/btn-equip.png')} label={item.equipped ? '해제' : '장착'} />
+          </button>
+            <button
+              type="button"
+              onClick={onClose}
+              className="rounded-xl border border-zinc-300 px-3 text-[12px] font-bold text-zinc-500 dark:border-zinc-700 dark:text-zinc-400"
+            >
+              닫기
+            </button>
+          </div>
         }
       >
         {/* 수치는 제목·부제가 담당 — 컨텐츠는 장비 자체를 크게 보여준다. */}
@@ -191,56 +246,6 @@ export function EquipmentDetailSheet({
         ) : null}
 
         {/* ── 액션: 강화 / 장착 (이야기 아래, 초월은 자동, 분해·잠금 폐기) ── */}
-        <div className="mt-2.5 grid grid-cols-2 gap-1.5">
-          {/* 강화 — SLOT_BUSY 시 SwapPickerModal 열어 교체. */}
-          <button
-            type="button"
-            data-tut="enhance-btn"
-            disabled={!canEnhance}
-            onClick={() => {
-              if (pending || !canEnhance) return;
-              setError(null);
-              startTransition(async () => {
-                const r = await startEnhance(item.id);
-                if (r.status === 'error') {
-                  if (r.code === 'SLOT_BUSY') {
-                    setSwapPicker(true);
-                    return;
-                  }
-                  setError(r.message);
-                  return;
-                }
-                onOptimisticStartEnhance?.(item.id);
-                advanceTutorial();
-                onClose();
-                router.push('/enhance');
-              });
-            }}
-            className={BTN}
-          >
-            <BtnBg src={assetUrl('/sprites/ui/btn-enhance.png')} label="강화" />
-          </button>
-          {/* 장착/해제 */}
-          <button
-            type="button"
-            data-tut={item.equipped ? undefined : 'equip-btn'}
-            onClick={() => {
-              const equipping = !item.equipped;
-              run(
-                () => (equipping ? equipAction(item.id) : unequipAction(item.id)),
-                () => onOptimisticEquip?.(item.id),
-              );
-              // 장착 직후 시트 닫기 — 인벤토리로 복귀해 다음 흐름(강화) 자연 진행.
-              if (equipping) {
-                advanceTutorial();
-                onClose();
-              }
-            }}
-            className={BTN}
-          >
-            <BtnBg src={assetUrl('/sprites/ui/btn-equip.png')} label={item.equipped ? '해제' : '장착'} />
-          </button>
-        </div>
 
       </ModalLayout>
     </ModalShell>

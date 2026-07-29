@@ -10,7 +10,7 @@ import {
 } from '@/lib/game/balance';
 import type { Slot } from '@/lib/db/schema/equipment';
 import { TranscendSprite } from '@/components/TranscendSprite';
-import { RarityFrame, rarityBorderStyle, hasRarityBorder, TranscendTag } from '@/components/RarityFrame';
+import { RarityFrame, rarityBorderStyle, hasRarityBorder } from '@/components/RarityFrame';
 import { transcendStyle } from '@/lib/game/equipment/transcend';
 
 import { useResourceToast } from '@/components/ResourceToast';
@@ -1038,47 +1038,35 @@ export function EnhanceSlotCard({
                 <span className="font-mono font-bold text-sky-500">
                   {(Number(diamond) || 0).toLocaleString()}💎
                 </span>
+                <br />
+                💎로 시간을 단축하며 자동 반복 · 예산 소진이나 조건 달성 시 정지
               </>
             }
             maxBodyClass="max-h-[58vh]"
-            footer={<><button type="button" onClick={() => setAutoOpen(false)} className="rounded-xl border border-zinc-700 py-2.5 text-[13px] font-bold text-zinc-400">취소</button>
-            <button type="button" onClick={startAuto} className="rounded-xl bg-amber-500 py-2.5 text-[13px] font-extrabold text-black active:scale-[0.98]">자동 시작</button>
-          </>}
+            footer={
+              <>
+                <button
+                  type="button"
+                  onClick={() => setAutoOpen(false)}
+                  style={{ flex: 1 }}
+                  className="rounded-xl border border-zinc-300 py-2.5 text-[13px] font-bold text-zinc-500 dark:border-zinc-700 dark:text-zinc-400"
+                >
+                  취소
+                </button>
+                <button
+                  type="button"
+                  onClick={startAuto}
+                  style={{ flex: 2 }}
+                  className="rounded-xl bg-amber-500 py-2.5 text-[13px] font-extrabold text-black active:scale-[0.98]"
+                >
+                  자동 시작
+                </button>
+              </>
+            }
           >
-          <div className="flex items-start gap-3">
-            <span
-              className={`relative flex h-[78px] w-[78px] shrink-0 flex-col items-center justify-center gap-0.5 isolate overflow-hidden rounded-xl border-2 bg-zinc-950 px-1 text-center ${
-                hasRarityBorder(activeJob.transcendLevel) ? '' : 'border-zinc-800'
-              }`}
-              style={rarityBorderStyle(activeJob.transcendLevel)}
-            >
-              <RarityFrame level={activeJob.transcendLevel} />
-              <TranscendSprite
-                code={activeJob.code}
-                slot={activeJob.slot}
-                level={activeJob.transcendLevel}
-                championRank={activeJob.championRank}
-                size={38}
-                frameless
-              />
-              <span className="line-clamp-1 break-keep px-0.5 text-[8px] leading-tight text-zinc-400">
-                {activeJob.name}
-              </span>
-              <span className="text-[8px] font-semibold text-zinc-100 tabular-nums">
-                +{activeJob.fromLevel}
-                <TranscendTag level={activeJob.transcendLevel} className="ml-1" />
-              </span>
-            </span>
-            {/* 제목·장비명은 팝업 헤더가 담당 — 여기선 동작 설명만. */}
-            <div className="min-w-0 flex-1">
-              <p className="whitespace-pre-line text-[11px] leading-relaxed text-zinc-500 dark:text-zinc-400">
-                {'💎로 시간을 단축하며 자동 반복합니다.\n예산을 다 쓰거나 선택 조건 중 하나라도 달성하면 정지합니다.'}
-              </p>
-            </div>
-          </div>
           {/* 예산 — 필수(체크박스 없음). 라벨 정렬용 체크박스폭 스페이서. 값은 입력창 직접 입력 +
               오른쪽 '최대' 버튼(보유 전액). ± 버튼은 목표/횟수 항목에만(사용자 피드백 2). */}
-          <div className="mt-3 flex items-center gap-2 border-t border-zinc-200 py-2.5 dark:border-zinc-800">
+          <div className="flex items-center gap-2 py-2.5">
             <span aria-hidden className="h-4 w-4 shrink-0" />
             <div className="min-w-0 flex-1">
               <div className="text-[12px] font-semibold text-zinc-200">다이아 예산</div>
