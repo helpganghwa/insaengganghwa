@@ -140,13 +140,17 @@ for (const u of authRows) {
     insert into auth.users (
       id, instance_id, aud, role, email, encrypted_password, email_confirmed_at,
       created_at, updated_at, raw_app_meta_data, raw_user_meta_data,
-      is_super_admin, is_sso_user, is_anonymous
+      is_super_admin, is_sso_user, is_anonymous,
+      -- ⚠ GoTrue는 이 토큰 컬럼들을 non-null 문자열로 읽는다. NULL로 두면 로그인이
+      -- 500 'Database error querying schema'로 실패한다(빈 문자열이어야 한다).
+      confirmation_token, recovery_token, email_change_token_new, email_change
     ) values (
       ${u.id}, '00000000-0000-0000-0000-000000000000', 'authenticated', 'authenticated',
       ${`u${seq}@staging.invalid`}, ${passwordHash}, now(),
       ${u.created_at}, ${u.updated_at ?? u.created_at},
       '{"provider":"email","providers":["email"]}'::jsonb, '{}'::jsonb,
-      false, false, false
+      false, false, false,
+      '', '', '', ''
     ) on conflict (id) do nothing`;
 }
 console.log(`   auth.users ${seq}행`);
