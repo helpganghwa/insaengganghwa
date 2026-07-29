@@ -1,6 +1,7 @@
 'use client';
 
 import { useEffect, useRef, useState, useTransition } from 'react';
+import { createPortal } from 'react-dom';
 import { usePathname } from 'next/navigation';
 
 import type { TutorialStep, TutorialState } from '@/lib/game/tutorial';
@@ -289,8 +290,11 @@ export function TutorialCoach({ statePromise }: { statePromise: Promise<Tutorial
     tip = { top: above ? spot.top - 10 : below, left, above };
   }
 
-  return (
-    <div className="pointer-events-none fixed inset-0 z-[61]">
+  // ⚠ body 포털 — 팝업(ModalShell)이 body로 포털돼 나가면서 앱 셸 안에 있던 코치가
+  // 그 아래로 가려졌다(2026-07-29 제보: 가챠 결과 팝업에서 스포트라이트 미동작).
+  // 같은 최상위 레이어에서 z-index로 비교되도록 코치도 포털로 올린다.
+  return createPortal(
+    <div className="pointer-events-none fixed inset-0 z-[120]">
       {spot ? (
         <>
           {/* 딤은 터치/스크롤 통과(pointer-events-none). 구멍 밖 클릭만 캡처 차단. */}
@@ -356,6 +360,7 @@ export function TutorialCoach({ statePromise }: { statePromise: Promise<Tutorial
           <p className="text-[13px] font-bold leading-snug break-keep">{copy}</p>
         </div>
       </div>
-    </div>
+    </div>,
+    document.body,
   );
 }

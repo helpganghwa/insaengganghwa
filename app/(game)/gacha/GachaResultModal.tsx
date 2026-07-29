@@ -253,8 +253,8 @@ export function GachaResultModal({
             </div>
           ) : (
             <>
-              {/* 5열 2줄 — 3열이면 4줄이 되어 팝업에 스크롤이 생긴다(2026-07-29 제보). */}
-              <div className="grid grid-cols-5 gap-1.5">
+              {/* 4열 — 10칸이면 3줄. 5열은 카드가 좁아 이름·수치가 잘렸다(2026-07-29 피드백). */}
+              <div className="grid grid-cols-4 gap-1.5">
                 {sortedResults.map((r, i) => (
                   <ResultCard
                     key={i}
@@ -303,50 +303,6 @@ export function GachaResultModal({
           <span aria-hidden className="text-zinc-400 dark:text-zinc-600">·</span>
           <span>남은 {slotLabel} 상자 {remaining}개</span>
         </div>
-
-        {autoActive ? (
-          <button
-            type="button"
-            onClick={() => setAutoActive(false)}
-            className="mt-2 w-full rounded-full bg-red-500 px-3 py-2.5 text-xs font-bold text-white"
-          >
-            중지 ({remaining}개 남음)
-          </button>
-        ) : (
-          <div className="mt-2 grid grid-cols-2 gap-2">
-            <button
-              type="button"
-              disabled={pulling || remaining < 1}
-              onClick={() => startAgain(1)}
-              className="rounded-full border border-zinc-300 bg-white px-3 py-2.5 text-xs font-bold text-zinc-700 disabled:opacity-40 dark:border-zinc-600 dark:bg-zinc-800 dark:text-zinc-100"
-            >
-              한 번 더
-            </button>
-            <button
-              type="button"
-              disabled={pulling || remaining < 2}
-              onClick={() => startAgain(multiN)}
-              className="rounded-full bg-gradient-to-r from-amber-500 to-orange-500 px-3 py-2.5 text-xs font-medium text-white disabled:opacity-40"
-            >
-              {multiN}회 더
-            </button>
-          </div>
-        )}
-
-        {/* 확인 — 튜토리얼 스포트라이트 대상(data-tut)이라 컨텐츠 안에 둔다.
-            푸터(카드 밖 어두운 배경)로 빼면 코치가 구멍을 잡지 못한다(2026-07-29 제보). */}
-        <button
-          type="button"
-          data-tut="gacha-confirm"
-          disabled={autoActive}
-          onClick={() => {
-            advanceTutorial();
-            onClose();
-          }}
-          className="mt-3 w-full rounded-xl bg-zinc-900 py-2.5 text-[13px] font-bold text-white disabled:opacity-40 dark:bg-zinc-50 dark:text-zinc-900"
-        >
-          확인
-        </button>
       </div>
       </ModalLayout>
     </ModalShell>

@@ -131,41 +131,45 @@ export function SupportModal({
         // 직접 포털을 그리던 것을 공용 셸로 — Esc·포커스·aria를 얻는다(2026-07-29 점검).
         <ModalShell onClose={close} label="고객센터 문의">
           <ModalLayout
-            title="고객센터 문의"
+            title={done ? '문의가 접수되었어요' : '고객센터 문의'}
             subtitle={
-              <>
+              done ? (
+                '우편함으로 답변을 보내드립니다'
+              ) : (
+                <>
                 <span className="font-bold text-zinc-600 dark:text-zinc-300">{nickname}</span>{' '}
                 <span className="tabular-nums text-zinc-400">(#{publicCode})</span>
                 <span className="mx-1 text-zinc-400">·</span>
                 {serverName}
                 <br />
-                유형을 고르고 내용을 작성해 주세요.
-              </>
+                  유형을 고르고 내용을 작성해 주세요.
+                </>
+              )
             }
             footer={
-              <ModalButton tone="ghost" onClick={close}>
-                닫기
-              </ModalButton>
+              done ? (
+                <ModalButton tone="neutral" onClick={close}>
+                  확인
+                </ModalButton>
+              ) : (
+                <>
+                  <ModalButton tone="ghost" onClick={close} disabled={pending}>
+                    취소
+                  </ModalButton>
+                  <ModalButton tone="primary" onClick={submit} disabled={pending || !canSubmit}>
+                    {pending ? '접수 중…' : '문의 접수'}
+                  </ModalButton>
+                </>
+              )
             }
           >
               <div>
 
                 {done ? (
-                  <div className="py-4 text-center">
-                    <div className="text-3xl">📨</div>
-                    <p className="mt-2 text-sm font-semibold">문의가 접수되었어요</p>
-                    <p className="mt-1 text-[12px] leading-relaxed text-zinc-500">
-                      담당자가 확인 후 <b>우편함</b>으로 답변을 보내드릴게요. 답변이 도착하면 앱
-                      알림으로 알려드립니다.
-                    </p>
-                    <button
-                      type="button"
-                      onClick={close}
-                      className="mt-4 w-full rounded-lg bg-zinc-900 py-2.5 text-sm font-bold text-white active:opacity-90 dark:bg-zinc-100 dark:text-zinc-900"
-                    >
-                      확인
-                    </button>
-                  </div>
+                  <p className="py-2 text-center text-[12.5px] leading-relaxed text-zinc-500 dark:text-zinc-400">
+                    담당자가 확인 후 <b className="text-zinc-700 dark:text-zinc-200">우편함</b>으로
+                    답변을 보내드릴게요. 답변이 도착하면 앱 알림으로 알려드립니다.
+                  </p>
                 ) : (
                   <>
                     {/* 유형 선택 */}
@@ -247,14 +251,6 @@ export function SupportModal({
                       />
                     </div>
 
-                    <button
-                      type="button"
-                      onClick={submit}
-                      disabled={!canSubmit}
-                      className="mt-2 w-full rounded-lg bg-amber-600 py-2.5 text-sm font-bold text-white active:opacity-90 disabled:opacity-40"
-                    >
-                      {pending ? '접수 중…' : '문의 접수'}
-                    </button>
                   </>
                 )}
               </div>

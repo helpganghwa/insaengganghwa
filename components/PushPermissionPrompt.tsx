@@ -177,10 +177,10 @@ function IosGuideView() {
         iOS Safari는 홈 화면에 추가한 앱에서만 푸시 알림을 받을 수 있어요.
       </p>
       <ol className="mt-3 space-y-1.5 text-[12px] text-zinc-700 dark:text-zinc-200">
-        <li>1. Safari 하단 공유 버튼 탭 (↑ 화살표 아이콘)</li>
-        <li>2. “홈 화면에 추가” 선택</li>
-        <li>3. 홈 화면의 인생강화 아이콘으로 다시 접속</li>
-        <li>4. 알림 권한 요청에 동의</li>
+        <li>1. 화면 하단 오른쪽 <b>⋯</b> 버튼 탭</li>
+        <li>2. <b>공유</b> 선택</li>
+        <li>3. 목록을 아래로 내려 <b>홈 화면에 추가</b> 선택</li>
+        <li>4. 홈 화면의 인생강화 아이콘으로 접속 후 알림 권한 동의</li>
       </ol>
     </>
   );

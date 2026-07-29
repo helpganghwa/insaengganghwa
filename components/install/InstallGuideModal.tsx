@@ -14,7 +14,7 @@ export function InstallGuideModal({
   return (
     <ModalShell onClose={onClose} onSubmit={onClose} label="앱 설치 안내">
       <ModalLayout
-        title={platform === 'android' ? '홈 화면에 추가' : '홈 화면에 추가'}
+        title="홈 화면에 추가"
         subtitle={platform === 'android' ? 'Android · Chrome' : 'iOS · Safari'}
         maxBodyClass="max-h-[56vh]"
         footer={
@@ -44,16 +44,15 @@ export function InstallGuideModal({
           </>
         ) : (
           <>
-            <h3 className="mb-2 text-base font-semibold">iOS 홈 화면 추가</h3>
             <ol className="space-y-2 text-[13px] leading-relaxed text-zinc-700 dark:text-zinc-300">
               <li>
-                1. Safari 하단의 <strong>공유 버튼</strong> <span className="font-mono">⎙</span> 탭
+                1. 화면 하단 오른쪽 <strong>⋯</strong> 버튼 탭
               </li>
               <li>
-                2. 메뉴에서 <strong>“홈 화면에 추가”</strong> 선택
+                2. <strong>공유</strong> 선택
               </li>
               <li>
-                3. 이름 확인 후 우상단 <strong>추가</strong> 탭
+                3. 목록을 아래로 내려 <strong>“홈 화면에 추가”</strong> 선택
               </li>
               <li>4. 홈 화면에서 인생강화 아이콘으로 실행</li>
             </ol>
