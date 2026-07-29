@@ -1,76 +1,20 @@
 import 'server-only';
 
+/**
+ * 상점 조회 헬퍼 — 구매 현황·프리미엄 잔여일수·첫 결제 특가 여부.
+ * ⚠ 어드민 테스트 즉시구매(devPurchase)는 폐지했다(2026-07-29) — 어드민도 본인인증·실결제를
+ * 거쳐야 출시 전에 실제 흐름의 문제를 발견할 수 있다. 지급 경로는 실결제(payment) 하나뿐이다.
+ */
+
 import { and, eq } from 'drizzle-orm';
 
 import { db } from '@/lib/db/client';
 import { iapOrders } from '@/lib/db/schema/payment';
 import { shopPurchases } from '@/lib/db/schema/shop';
 
-import { FIRST_SPECIAL, shopGrant, productPeriod } from './catalog';
+import { FIRST_SPECIAL, productPeriod } from './catalog';
 import { periodKey } from './period';
-import { applyProductGrant } from './grant';
 
-/**
- * 어드민 테스트 즉시 구매 — 결제 백엔드(포트원) 연동 전, 현금 상품을 결제 없이 바로 지급.
- * 호출자(action)에서 requireAdmin 가드 필수. 일일/주간/월간 상품은 그 기간 1회만(주기 멱등).
- * 지급 자체는 실결제와 동일한 applyProductGrant(단일 진실 원천) — dev는 결제 검증만 생략.
- */
-export class ShopBuyError extends Error {
-  constructor(public code: 'ALREADY_PURCHASED' | 'UNKNOWN_PRODUCT') {
-    super(code);
-    this.name = 'ShopBuyError';
-  }
-}
-
-export async function devPurchase(
-  userId: string,
-  serverId: number,
-  productId: string,
-): Promise<{ diamond: number; boxes: number }> {
-  const g = shopGrant(productId);
-  if (!g) throw new ShopBuyError('UNKNOWN_PRODUCT');
-  const period = productPeriod(productId);
-
-  // 인생 특가 — 주기 없는 서버별 1회 상품. 실결제는 iap_orders로 차단되지만 dev 지급은
-  // 결제 기록을 안 남기므로 shop_purchases 'once' 마킹으로 중복 차단(구매 판정도 이 행을 인정).
-  const onceKey = productId === FIRST_SPECIAL.id ? 'once' : null;
-
-  await db.transaction(async (tx) => {
-    const cur = onceKey ?? (period ? periodKey(period) : null);
-    if (cur) {
-      // 1회 제한 — row 잠금 후 현재 키와 비교(이미 구매면 차단). 실결제는 createOrder가 사전체크.
-      await tx
-        .insert(shopPurchases)
-        .values({ userId, serverId, productId, periodKey: '' })
-        .onConflictDoNothing();
-      const [row] = await tx
-        .select({ periodKey: shopPurchases.periodKey })
-        .from(shopPurchases)
-        .where(
-          and(
-            eq(shopPurchases.userId, userId),
-            eq(shopPurchases.serverId, serverId),
-            eq(shopPurchases.productId, productId),
-          ),
-        )
-        .for('update');
-      if (row?.periodKey === cur) throw new ShopBuyError('ALREADY_PURCHASED');
-    }
-    // 지급 + 주기 마킹 — 실결제(completePurchase)와 동일 경로.
-    await applyProductGrant(tx, userId, serverId, productId);
-    // applyProductGrant는 주기 상품만 마킹 — 'once' 상품은 여기서 직접 마킹.
-    if (onceKey)
-      await tx
-        .insert(shopPurchases)
-        .values({ userId, serverId, productId, periodKey: onceKey })
-        .onConflictDoUpdate({
-          target: [shopPurchases.userId, shopPurchases.serverId, shopPurchases.productId],
-          set: { periodKey: onceKey, updatedAt: new Date() },
-        });
-  });
-
-  return g;
-}
 
 /**
  * 성장 프리미엄 잔여일수 — KST 달력 일수 기준(구매 시각 무관, 자정 지나면 1일 차감).

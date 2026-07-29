@@ -14,7 +14,7 @@ import * as PortOne from '@portone/browser-sdk/v2';
 
 import { verifyIdentityAction } from '../me/settings/identity-actions';
 
-import { claimFreeAction, devPurchaseAction, buyBoxAction, verifyPurchaseAction } from './actions';
+import { claimFreeAction, buyBoxAction, verifyPurchaseAction } from './actions';
 import { Swiper, SwiperSlide } from 'swiper/react';
 import { Pagination } from 'swiper/modules';
 
@@ -428,9 +428,11 @@ export function ShopTabs({
 
   const soon = () => showHeaderToast({ title: '준비 중입니다' });
   const isLimited = (id: string) => id === FIRST_SPECIAL.id || productPeriod(id) !== null;
-  // 결제 설정이 되어 있으면 전 유저 실결제, 아니면 어드민 테스트 즉시구매만 판매 가능.
+  // 판매 노출: CBT 중엔 어드민에게만(일반 유저는 '준비 중').
+  // 구매 동작: **어드민도 실결제**를 탄다 — 본인인증·PG 승인까지 같은 경로로 검증해야
+  // 출시 전에 실제 흐름의 문제를 발견할 수 있다(2026-07-29, 테스트 즉시구매 폐지).
   const canSell = payEnabled || isAdmin;
-  const buy = (id: string) => (payEnabled ? onPay(id) : onBuy(id));
+  const buy = (id: string) => (payEnabled || isAdmin ? onPay(id) : soon());
 
   // 구매 확인 무장(3초) — 같은 상품을 그 안에 다시 탭하면 확정.
   const armConfirm = (id: string) => {
@@ -463,43 +465,6 @@ export function ShopTabs({
   };
 
   // 어드민: 결제 단계 없이 테스트 즉시 구매(바로 지급). 일반 유저: '준비 중' 토스트.
-  const onBuy = (productId: string) => {
-    if (!isAdmin) {
-      soon();
-      return;
-    }
-    const limited = isLimited(productId);
-    if (limited && purchased.has(productId)) {
-      showHeaderToast({ title: '이미 구매완료한 상품입니다' });
-      return;
-    }
-    if (limited && productId !== PREMIUM.id) setPurchased((p) => new Set(p).add(productId)); // 낙관적 흑백
-    if (productId === PREMIUM.id) setPremiumDays(PREMIUM.daily.days); // 낙관적 잔여일수
-    startTransition(async () => {
-      const r = await devPurchaseAction(productId);
-      if (r.status === 'success') {
-        if (r.diamond) optimisticAdjust(BigInt(r.diamond));
-        const rewards: HeaderReward[] = [];
-        if (r.diamond) rewards.push({ icon: '💎', amount: r.diamond });
-        if (r.boxes) rewards.push({ icon: '', amount: r.boxes });
-        showHeaderToast({ title: '테스트 구매', rewards });
-      } else if (r.code === 'ALREADY_PURCHASED') {
-        setPurchased((p) => new Set(p).add(productId));
-        showHeaderToast({ title: '이미 구매완료한 상품입니다' });
-      } else {
-        if (limited)
-          setPurchased((p) => {
-            const n = new Set(p);
-            n.delete(productId);
-            return n;
-          }); // 복원
-        showHeaderToast({ title: '구매 실패' });
-      }
-    });
-  };
-
-  // 실결제(포트원) — 전 유저. 주문 생성 → 결제창 → 서버 검증·지급. 지급 권위는 서버(웹훅+verify).
-  //  모바일은 결제창에서 /shop으로 페이지 복귀(아래 useEffect가 검증) → 이 ok 분기는 PC 팝업 경로.
   const onPay = (productId: string) => {
     if (paying) return;
     const limited = isLimited(productId);
@@ -534,11 +499,13 @@ export function ShopTabs({
       } else {
         const title =
           commonErrTitle(r.code) ??
-          (r.code === 'MINOR_LIMIT'
-            ? '미성년 월 구매한도를 초과했습니다'
-            : r.code === 'ALREADY_PURCHASED'
-              ? '이미 구매완료한 상품입니다'
-              : '결제에 실패했습니다');
+          (r.code === 'CONFIG'
+            ? '결제 채널이 아직 설정되지 않았습니다'
+            : r.code === 'MINOR_LIMIT'
+              ? '미성년 월 구매한도를 초과했습니다'
+              : r.code === 'ALREADY_PURCHASED'
+                ? '이미 구매완료한 상품입니다'
+                : '결제에 실패했습니다');
         if (r.code === 'ALREADY_PURCHASED') setPurchased((p) => new Set(p).add(productId));
         if (r.code === 'AMOUNT_MISMATCH') {
           setPayNotice({
