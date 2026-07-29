@@ -4,6 +4,7 @@ import { useRouter } from 'next/navigation';
 import { useEffect, useMemo, useState, useTransition } from 'react';
 
 import { ModalShell } from '@/components/ModalShell';
+import { ModalLayout, ModalButton } from '@/components/ModalLayout';
 import { useResourceToast } from '@/components/ResourceToast';
 import { useDiamond } from '@/components/DiamondContext';
 import {
@@ -59,32 +60,48 @@ const fmt = (n: number) =>
   new Intl.NumberFormat('ko-KR', { notation: 'compact', maximumFractionDigits: 1 }).format(n);
 
 /**
- * 지도 핀 — 노드 위에 떠 있는 물방울 마커.
- *  · 노드당 **항상 하나**만 그린다. 두 개를 나란히 놓으면 개수에 따라 중심이 흔들린다.
- *    내 위치이면서 선택된 구역은 파란 핀에 앰버 테두리로 두 상태를 함께 나타낸다.
- *  · 항상 마운트해두고 색·표시만 바꾼다 — 붙였다 뗐다 하면 CSS 애니메이션이 재시작해
+ * 지도 핀 — 노드 위에 떠 있는 물방울 마커. 왼쪽=내 위치(앰버), 오른쪽=선택(하늘색).
+ *  · 둘 다 **항상 마운트**하고 표시만 토글한다 — 붙였다 뗐다 하면 CSS 애니메이션이 재시작해
  *    구역마다 위아래 움직임의 위상이 어긋난다(2026-07-29 제보).
+ *  · 애니메이션은 감싼 컨테이너 한 곳에만 걸어 두 핀이 항상 같은 박자로 움직인다.
  */
-function MapPin({ home, selected }: { home: boolean; selected: boolean }) {
-  const blue = selected;
+function MapPins({ home, selected }: { home: boolean; selected: boolean }) {
   return (
     <span
       aria-hidden
-      className="pointer-events-none absolute bottom-full left-1/2 -mb-1 -translate-x-1/2 animate-marker-bob"
+      className="pointer-events-none absolute bottom-full left-1/2 -mb-1 flex -translate-x-1/2 animate-marker-bob gap-[3px]"
       style={{ opacity: home || selected ? 1 : 0 }}
     >
+      <Pin show={home} from="#fcd34d" to="#f59e0b" glow="rgba(245,158,11,0.65)" glowHi="rgba(251,191,36,0.95)" />
+      <Pin show={selected} from="#7dd3fc" to="#0284c7" glow="rgba(2,132,199,0.65)" glowHi="rgba(56,189,248,0.95)" />
+    </span>
+  );
+}
+
+function Pin({
+  show,
+  from,
+  to,
+  glow,
+  glowHi,
+}: {
+  show: boolean;
+  from: string;
+  to: string;
+  glow: string;
+  glowHi: string;
+}) {
+  return (
+    // display:none — 언마운트가 아니라 숨김. 남은 핀 하나는 컨테이너가 다시 중앙에 맞춘다.
+    <span className="block" style={{ display: show ? 'block' : 'none' }}>
       <span
-        className="relative block h-[11px] w-[11px] animate-marker-pin-glow border-[1.5px]"
+        className="relative block h-[11px] w-[11px] animate-marker-pin-glow border-[1.5px] border-white"
         style={{
-          background: blue
-            ? 'linear-gradient(135deg, #7dd3fc, #0284c7)'
-            : 'linear-gradient(135deg, #fcd34d, #f59e0b)',
-          // 내 위치이면서 선택 = 파란 핀 + 앰버 테두리(둘 다 표시하되 중심은 하나).
-          borderColor: blue && home ? '#fbbf24' : '#ffffff',
+          background: `linear-gradient(135deg, ${from}, ${to})`,
           borderRadius: '50% 50% 50% 0',
           transform: 'rotate(-45deg)',
-          ['--pin-glow' as string]: blue ? 'rgba(2,132,199,0.65)' : 'rgba(245,158,11,0.65)',
-          ['--pin-glow-hi' as string]: blue ? 'rgba(56,189,248,0.95)' : 'rgba(251,191,36,0.95)',
+          ['--pin-glow' as string]: glow,
+          ['--pin-glow-hi' as string]: glowHi,
         }}
       >
         <span className="absolute left-1/2 top-1/2 h-[3.5px] w-[3.5px] -translate-x-1/2 -translate-y-1/2 rounded-full bg-white" />
@@ -502,7 +519,7 @@ export function DeployBoard({
                   {showPower ? `전투력 ${fmt(dep.power)}` : `${dep.count}명`}
                 </span>
               )}
-              <MapPin home={isHome} selected={isSel} />
+              <MapPins home={isHome} selected={isSel} />
             </button>
           );
         })}
@@ -517,9 +534,6 @@ export function DeployBoard({
           <span className="inline-flex items-center gap-1">
             <i className="h-2 w-2 rounded-full" style={{ background: '#f59e0b' }} /> 내 위치
             <i className="ml-1 h-2 w-2 rounded-full" style={{ background: '#0284c7' }} /> 선택
-          </span>
-          <span className="inline-flex items-center gap-1">
-            <i className="h-[2px] w-3 rounded-full" style={{ background: '#fde047' }} /> 이동 가능
           </span>
         </div>
       </div>
@@ -709,11 +723,62 @@ export function DeployBoard({
             setPlanConfirm(false);
           }}
         >
-          <div className="p-4">
-            <h3 className="text-center text-[15px] font-extrabold">
-              {plan.zoneName} {plan.role === 'attack' ? '공격' : '수비'} 배치
-            </h3>
-            <ul className="mt-3 space-y-1.5 rounded-xl bg-zinc-100 px-3 py-2.5 text-[12px] dark:bg-zinc-900">
+          <ModalLayout
+            title={`${plan.zoneName} ${plan.role === 'attack' ? '공격' : '수비'} 배치`}
+            subtitle={
+              <>
+                {plan.move ? <span className="font-bold text-amber-500">거주지 이동 포함</span> : null}
+                {plan.move && plan.gem > 0 ? <span className="mx-1 text-zinc-400">·</span> : null}
+                {plan.gem > 0 ? (
+                  <span className="font-mono font-bold text-sky-500">
+                    {plan.gem.toLocaleString('ko-KR')}💎
+                  </span>
+                ) : null}
+                {!plan.move && plan.gem === 0 ? '추가 비용 없음' : null}
+              </>
+            }
+            footer={
+              <>
+                <button
+                  type="button"
+                  onClick={() => {
+                    // 보석이 나가는 경우에만 3초 재확인 — 무료 배치까지 막으면 성가시다.
+                    if (plan.gem === 0 || planConfirm) runPlan();
+                    else {
+                      setPlanLeft(3);
+                      setPlanConfirm(true);
+                    }
+                  }}
+                  disabled={pending}
+                  className={`relative isolate flex-1 overflow-hidden rounded-xl py-2.5 text-[13px] font-bold text-white transition-colors disabled:opacity-50 ${
+                    plan.role === 'attack' ? 'bg-red-600' : 'bg-sky-600'
+                  }`}
+                >
+                  {planConfirm && (
+                    <span
+                      aria-hidden
+                      className="absolute inset-0 bg-white/25"
+                      style={{ animation: 'confirm-bg-pulse 1.2s ease-in-out infinite' }}
+                    />
+                  )}
+                  <span className="relative">
+                    {plan.gem > 0 ? `배치 💎${plan.gem.toLocaleString('ko-KR')}` : '배치'}
+                    {planConfirm ? ` ${planLeft}s` : ''}
+                  </span>
+                </button>
+                <ModalButton
+                  tone="ghost"
+                  onClick={() => {
+                    setPlan(null);
+                    setPlanConfirm(false);
+                  }}
+                >
+                  취소
+                </ModalButton>
+              </>
+            }
+          >
+            <ul className="space-y-1.5 text-[12px]">
               {plan.release && (
                 <li className="flex gap-1.5">
                   <span className="text-zinc-400">·</span>
@@ -734,8 +799,10 @@ export function DeployBoard({
                 <li className="flex gap-1.5">
                   <span className="text-zinc-400">·</span>
                   <span className="text-zinc-600 dark:text-zinc-300">
-                    이동 대기시간 <b className="font-bold text-zinc-700 dark:text-zinc-200">{fmtRemain(moveRemainMs)}</b>을{' '}
-                    <b className="font-mono font-bold text-sky-500">{plan.gem.toLocaleString('ko-KR')}💎</b>로 단축합니다.
+                    이동 대기시간{' '}
+                    <b className="font-bold text-zinc-700 dark:text-zinc-200">{fmtRemain(moveRemainMs)}</b>을{' '}
+                    <b className="font-mono font-bold text-sky-500">{plan.gem.toLocaleString('ko-KR')}💎</b>로
+                    단축합니다.
                   </span>
                 </li>
               )}
@@ -749,46 +816,7 @@ export function DeployBoard({
                 </span>
               </li>
             </ul>
-            <div className="mt-3 flex gap-2">
-              <button
-                type="button"
-                onClick={() => {
-                  // 보석이 나가는 경우에만 3초 재확인 — 무료 배치까지 막으면 성가시다.
-                  if (plan.gem === 0 || planConfirm) runPlan();
-                  else {
-                    setPlanLeft(3);
-                    setPlanConfirm(true);
-                  }
-                }}
-                disabled={pending}
-                className={`relative isolate flex-1 overflow-hidden rounded-lg py-2 text-[13px] font-bold text-white transition-colors disabled:opacity-50 ${
-                  plan.role === 'attack' ? 'bg-red-600' : 'bg-sky-600'
-                }`}
-              >
-                {planConfirm && (
-                  <span
-                    aria-hidden
-                    className="absolute inset-0 bg-white/25"
-                    style={{ animation: 'confirm-bg-pulse 1.2s ease-in-out infinite' }}
-                  />
-                )}
-                <span className="relative">
-                  {plan.gem > 0 ? `배치 💎${plan.gem.toLocaleString('ko-KR')}` : '배치'}
-                  {planConfirm ? ` ${planLeft}s` : ''}
-                </span>
-              </button>
-              <button
-                type="button"
-                onClick={() => {
-                  setPlan(null);
-                  setPlanConfirm(false);
-                }}
-                className="flex-1 rounded-lg border border-zinc-300 py-2 text-[13px] font-medium text-zinc-500 dark:border-zinc-700 dark:text-zinc-400"
-              >
-                취소
-              </button>
-            </div>
-          </div>
+          </ModalLayout>
         </ModalShell>
       )}
 

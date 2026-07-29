@@ -14,6 +14,7 @@ import {
 } from '@/lib/game/guild/balance';
 
 import { ModalShell } from '@/components/ModalShell';
+import { ModalLayout, ModalButton } from '@/components/ModalLayout';
 
 import { assetUrl } from '@/lib/asset-versions';
 import type { GuildLogEntry } from '@/lib/game/guild/activity-log';
@@ -346,10 +347,39 @@ export function GuildHome({
             <ModalShell
               onClose={() => setLeaveOpen(false)}
               label={mustTransfer ? '길드장 위임 필요' : '길드 탈퇴'}
-              className="w-full max-w-[300px] rounded-2xl bg-white p-5 dark:bg-zinc-950"
             >
-                <h2 className="text-base font-bold">{mustTransfer ? '길드장 위임 필요' : '길드 탈퇴'}</h2>
-                <p className="mt-1.5 text-[13px] leading-relaxed text-zinc-500 dark:text-zinc-400">
+              <ModalLayout
+                title={mustTransfer ? '길드장 위임 필요' : leaderDisband ? '길드 해산' : '길드 탈퇴'}
+                subtitle={
+                  mustTransfer ? null : (
+                    <span className="font-bold text-red-500">
+                      {GUILD_REJOIN_LOCK_HOURS}시간 재가입 불가
+                    </span>
+                  )
+                }
+                footer={
+                  <>
+                    <ModalButton tone="neutral" onClick={() => setLeaveOpen(false)}>
+                      {mustTransfer ? '닫기' : '취소'}
+                    </ModalButton>
+                    {mustTransfer ? (
+                      <Link
+                        prefetch={false}
+                        href="/guild/settings"
+                        onClick={() => setLeaveOpen(false)}
+                        className="flex-1 rounded-xl bg-amber-600 py-2.5 text-center text-[13px] font-bold text-white active:opacity-90"
+                      >
+                        길드장 위임
+                      </Link>
+                    ) : (
+                      <ModalButton tone="danger" onClick={leave} disabled={pending}>
+                        {leaderDisband ? '해산' : '탈퇴'}
+                      </ModalButton>
+                    )}
+                  </>
+                }
+              >
+                <p className="text-[13px] leading-relaxed text-zinc-500 dark:text-zinc-400">
                   {mustTransfer ? (
                     <>
                       길드장은 바로 탈퇴할 수 없어요.
@@ -370,33 +400,7 @@ export function GuildHome({
                     </>
                   )}
                 </p>
-                <div className="mt-4 flex gap-2">
-                  <button
-                    type="button"
-                    onClick={() => setLeaveOpen(false)}
-                    className="flex-1 rounded-lg bg-zinc-100 py-2.5 text-sm font-bold text-zinc-700 active:opacity-70 dark:bg-zinc-800 dark:text-zinc-200"
-                  >
-                    {mustTransfer ? '닫기' : '취소'}
-                  </button>
-                  {mustTransfer ? (
-                    <Link prefetch={false}
-                      href="/guild/settings"
-                      onClick={() => setLeaveOpen(false)}
-                      className="flex-1 rounded-lg bg-amber-600 py-2.5 text-center text-sm font-bold text-white active:opacity-90"
-                    >
-                      길드장 위임
-                    </Link>
-                  ) : (
-                    <button
-                      type="button"
-                      onClick={leave}
-                      disabled={pending}
-                      className="flex-1 rounded-lg bg-red-600 py-2.5 text-sm font-bold text-white active:opacity-90 disabled:opacity-50"
-                    >
-                      {leaderDisband ? '해산' : '탈퇴'}
-                    </button>
-                  )}
-                </div>
+              </ModalLayout>
             </ModalShell>
           );
         })()}

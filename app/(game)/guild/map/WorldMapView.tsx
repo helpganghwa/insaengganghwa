@@ -8,6 +8,7 @@ import { profileHref } from '@/lib/game/profile/href';
 import { useResourceToast } from '@/components/ResourceToast';
 import { useDiamond } from '@/components/DiamondContext';
 import { ModalShell } from '@/components/ModalShell';
+import { ModalLayout, ModalButton } from '@/components/ModalLayout';
 import { assetUrl } from '@/lib/asset-versions';
 import {
   GUILD_EXECUTOR_TAX_CUT,
@@ -1337,49 +1338,55 @@ export function WorldMapView({
             setMoveConfirm(false);
           }}
         >
-          <div className="p-4">
-            {moveAsk.kind === 'release' ? (
-              <>
-                <h3 className="text-center text-[15px] font-extrabold">거주지를 옮기시겠습니까?</h3>
-                <p className="mt-2 text-center text-[12px] leading-relaxed text-zinc-500 dark:text-zinc-400">
-                  이동하면{' '}
-                  <b className="font-bold" style={homeZoneColor ? { color: homeZoneColor } : undefined}>
+          {moveAsk.kind === 'release' ? (
+            <ModalLayout
+              title="거주지를 옮기시겠습니까?"
+              subtitle={
+                <>
+                  <span className="font-bold" style={homeZoneColor ? { color: homeZoneColor } : undefined}>
                     {homeZoneName ?? '현재 구역'}
-                  </b>
-                  의 <b className="font-bold text-amber-600 dark:text-amber-300">{moveLock?.label}</b>
-                  {moveLock?.kind === 'executor' ? '이' : ' 배치가'} 해제됩니다.
-                </p>
-                <div className="mt-3 flex gap-2">
-                  <button
-                    type="button"
+                  </span>
+                  <span className="mx-1 text-zinc-400">→</span>
+                  <span className="font-bold" style={{ color: REGION[selected!.region].color }}>
+                    {selected!.name}
+                  </span>
+                </>
+              }
+              footer={
+                <>
+                  <ModalButton
+                    tone="primary"
                     onClick={() => moveResidence(moveAsk.zoneId, { release: true })}
                     disabled={pending}
-                    className="flex-1 rounded-lg bg-amber-600 py-2 text-[13px] font-bold text-white disabled:opacity-50"
                   >
                     이동
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => setMoveAsk(null)}
-                    className="flex-1 rounded-lg border border-zinc-300 py-2 text-[13px] font-medium text-zinc-500 dark:border-zinc-700 dark:text-zinc-400"
-                  >
+                  </ModalButton>
+                  <ModalButton tone="ghost" onClick={() => setMoveAsk(null)}>
                     취소
-                  </button>
-                </div>
-              </>
-            ) : (
-              <>
-                <h3 className="text-center text-[15px] font-extrabold">이동 대기시간 단축</h3>
-                <p className="mt-2 text-center text-[12px] text-zinc-500 dark:text-zinc-400">
-                  남은 <b className="font-bold text-zinc-700 dark:text-zinc-200">{fmtRemain(remainMs)}</b>을
-                  다이아를 사용해서 단축합니다.
-                </p>
-                <div className="mt-3 rounded-xl bg-zinc-100 py-3 text-center dark:bg-zinc-900">
-                  <p className="font-mono text-[20px] font-black text-sky-500">
-                    {residenceSpeedUpCost(remainMs).toLocaleString('ko-KR')}💎
-                  </p>
-                </div>
-                <div className="mt-3 flex gap-2">
+                  </ModalButton>
+                </>
+              }
+            >
+              <p className="text-center text-[12.5px] leading-relaxed text-zinc-500 dark:text-zinc-400">
+                이동하면{' '}
+                <b className="font-bold" style={homeZoneColor ? { color: homeZoneColor } : undefined}>
+                  {homeZoneName ?? '현재 구역'}
+                </b>
+                의 <b className="font-bold text-amber-600 dark:text-amber-300">{moveLock?.label}</b>
+                {moveLock?.kind === 'executor' ? '이' : ' 배치가'} 해제됩니다.
+              </p>
+            </ModalLayout>
+          ) : (
+            <ModalLayout
+              title="이동 대기시간 단축"
+              subtitle={
+                <>
+                  남은{' '}
+                  <b className="font-bold text-zinc-600 dark:text-zinc-300">{fmtRemain(remainMs)}</b>
+                </>
+              }
+              footer={
+                <>
                   <button
                     type="button"
                     onClick={() => {
@@ -1392,7 +1399,7 @@ export function WorldMapView({
                       }
                     }}
                     disabled={pending}
-                    className={`relative isolate flex-1 overflow-hidden rounded-lg py-2 text-[13px] font-bold text-white transition-colors disabled:opacity-50 ${
+                    className={`relative isolate flex-1 overflow-hidden rounded-xl py-2.5 text-[13px] font-bold text-white transition-colors disabled:opacity-50 ${
                       moveConfirm ? 'bg-sky-700' : 'bg-sky-600'
                     }`}
                   >
@@ -1408,20 +1415,28 @@ export function WorldMapView({
                       {moveConfirm ? ` ${moveLeft}s` : ''}
                     </span>
                   </button>
-                  <button
-                    type="button"
+                  <ModalButton
+                    tone="ghost"
                     onClick={() => {
                       setMoveAsk(null);
                       setMoveConfirm(false);
                     }}
-                    className="flex-1 rounded-lg border border-zinc-300 py-2 text-[13px] font-medium text-zinc-500 dark:border-zinc-700 dark:text-zinc-400"
                   >
                     취소
-                  </button>
-                </div>
-              </>
-            )}
-          </div>
+                  </ModalButton>
+                </>
+              }
+            >
+              <p className="text-center text-[12.5px] text-zinc-500 dark:text-zinc-400">
+                다이아를 사용해 남은 대기시간을 없앱니다.
+              </p>
+              <div className="mt-3 rounded-xl bg-zinc-100 py-3 text-center dark:bg-zinc-800">
+                <p className="font-mono text-[20px] font-black text-sky-500">
+                  {residenceSpeedUpCost(remainMs).toLocaleString('ko-KR')}💎
+                </p>
+              </div>
+            </ModalLayout>
+          )}
         </ModalShell>
       )}
 

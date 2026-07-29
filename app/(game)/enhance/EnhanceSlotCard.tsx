@@ -15,6 +15,7 @@ import { transcendStyle } from '@/lib/game/equipment/transcend';
 
 import { useResourceToast } from '@/components/ResourceToast';
 import { ModalShell } from '@/components/ModalShell';
+import { ModalLayout, ModalButton } from '@/components/ModalLayout';
 import { ZoomSafeInput } from '@/components/ui/ZoomSafeField';
 
 import { finalizeEnhance, reduceTimeWithGems, cancelEnhanceAction, autoEnhanceStepAction } from './actions';
@@ -1152,23 +1153,33 @@ export function EnhanceSlotCard({
 
       {/* 강화 취소(해제) 확인 모달 — 코너 X → 이 모달 → doCancel(사용자 피드백 1). */}
       {cancelOpen ? (
-        <ModalShell
-          onClose={() => setCancelOpen(false)}
-          label="강화 취소 확인"
-          className="w-full max-w-[300px] rounded-2xl border border-zinc-700 bg-zinc-900 p-4"
-        >
-          <h3 className="text-sm font-bold text-zinc-100">강화를 취소할까요?</h3>
-          <p className="mt-2 text-[12px] leading-relaxed text-zinc-400">
-            <span className="font-semibold text-zinc-200">{activeJob.name}</span>{' '}
-            (+{activeJob.fromLevel})의 강화를 해제합니다.
-          </p>
-          <p className="mt-1 text-[11px] leading-relaxed text-amber-300/90">
-            지금까지 쌓인 강화 시간이 초기화됩니다.
-          </p>
-          <div className="mt-3 grid grid-cols-2 gap-2">
-            <button type="button" onClick={() => setCancelOpen(false)} className="rounded-xl border border-zinc-700 py-2.5 text-[13px] font-bold text-zinc-300">돌아가기</button>
-            <button type="button" onClick={doCancel} className="rounded-xl bg-red-600 py-2.5 text-[13px] font-extrabold text-white active:scale-[0.98]">강화 취소</button>
-          </div>
+        <ModalShell onClose={() => setCancelOpen(false)} label="강화 취소 확인">
+          <ModalLayout
+            title="강화를 취소할까요?"
+            subtitle={
+              <>
+                <span className="font-bold text-zinc-600 dark:text-zinc-300">{activeJob.name}</span>{' '}
+                <span className="font-bold text-amber-500">+{activeJob.fromLevel}</span>
+              </>
+            }
+            footer={
+              <>
+                <ModalButton tone="ghost" onClick={() => setCancelOpen(false)}>
+                  돌아가기
+                </ModalButton>
+                <ModalButton tone="danger" onClick={doCancel}>
+                  강화 취소
+                </ModalButton>
+              </>
+            }
+          >
+            <p className="text-[12.5px] leading-relaxed text-zinc-500 dark:text-zinc-400">
+              진행 중인 강화를 해제합니다.
+            </p>
+            <p className="mt-1.5 text-[11.5px] leading-relaxed text-amber-600 dark:text-amber-300/90">
+              지금까지 쌓인 강화 시간이 초기화됩니다.
+            </p>
+          </ModalLayout>
         </ModalShell>
       ) : null}
     </div>

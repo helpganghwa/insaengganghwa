@@ -9,6 +9,7 @@ import { useResourceToast, type HeaderReward } from '@/components/ResourceToast'
 import { useDiamond } from '@/components/DiamondContext';
 import { PublicFooter } from '@/components/PublicFooter';
 import { ModalShell } from '@/components/ModalShell';
+import { ModalLayout, ModalButton } from '@/components/ModalLayout';
 import * as PortOne from '@portone/browser-sdk/v2';
 
 import { verifyIdentityAction } from '../me/settings/identity-actions';
@@ -780,37 +781,29 @@ export function ShopTabs({
 
       {/* 본인인증 필요 — 청소년보호(결제 전 본인인증). */}
       {identityPrompt ? (
-        <ModalShell
-          onClose={() => setIdentityPrompt(false)}
-          label="본인인증 필요"
-          className="w-full max-w-[300px] rounded-2xl bg-white p-5 dark:bg-zinc-950"
-        >
-          <h2 className="text-base font-bold">본인인증이 필요합니다</h2>
-          <p className="mt-1.5 text-[13px] leading-relaxed text-zinc-500 dark:text-zinc-400">
-            청소년 보호를 위해 유료 결제 전 본인인증이 필요합니다. 설정에서 본인인증을 완료한 뒤 다시
-            시도해 주세요.
-          </p>
-          <div className="mt-4 flex gap-2">
-            <button
-              type="button"
-              onClick={() => setIdentityPrompt(false)}
-              disabled={identityBusy}
-              className="flex-1 rounded-lg bg-zinc-100 py-2.5 text-sm font-bold text-zinc-700 active:opacity-70 disabled:opacity-50 dark:bg-zinc-800 dark:text-zinc-200"
-            >
-              취소
-            </button>
-            <button
-              type="button"
-              onClick={startIdentity}
-              disabled={identityBusy}
-              className="flex-1 rounded-lg bg-zinc-900 py-2.5 text-sm font-bold text-white active:opacity-90 disabled:opacity-50 dark:bg-zinc-100 dark:text-zinc-900"
-            >
-              {identityBusy ? '진행 중…' : '본인인증 하기'}
-            </button>
-          </div>
-          {identityErr ? (
-            <p className="mt-2 text-center text-[12px] text-red-500">{identityErr}</p>
-          ) : null}
+        <ModalShell onClose={() => setIdentityPrompt(false)} label="본인인증 필요">
+          <ModalLayout
+            title="본인인증이 필요합니다"
+            subtitle={<span className="font-bold text-amber-600 dark:text-amber-400">유료 결제 전 1회</span>}
+            footer={
+              <>
+                <ModalButton tone="neutral" onClick={() => setIdentityPrompt(false)} disabled={identityBusy}>
+                  취소
+                </ModalButton>
+                <ModalButton tone="contrast" onClick={startIdentity} disabled={identityBusy}>
+                  {identityBusy ? '진행 중…' : '본인인증 하기'}
+                </ModalButton>
+              </>
+            }
+          >
+            <p className="text-[13px] leading-relaxed text-zinc-500 dark:text-zinc-400">
+              청소년 보호를 위해 유료 결제 전 본인인증이 필요합니다. 설정에서 본인인증을 완료한 뒤
+              다시 시도해 주세요.
+            </p>
+            {identityErr ? (
+              <p className="mt-2 text-center text-[12px] text-red-500">{identityErr}</p>
+            ) : null}
+          </ModalLayout>
         </ModalShell>
       ) : null}
     </div>

@@ -4,6 +4,7 @@ import { useMemo, useState, useTransition } from 'react';
 import Link from 'next/link';
 
 import { ModalShell } from '@/components/ModalShell';
+import { ModalLayout, ModalButton } from '@/components/ModalLayout';
 import { useResourceToast } from '@/components/ResourceToast';
 import { useDiamond } from '@/components/DiamondContext';
 import { InstallAppButton } from '@/app/(game)/me/settings/InstallAppButton';
@@ -240,43 +241,41 @@ export function ChallengesClient({
 
       {/* ── 가이드 팝업 — 달성 방법 + 상황 맞는 하단 버튼 ── */}
       {guideFor ? (
-        <ModalShell
-          onClose={() => setGuideFor(null)}
-          label={`${guideFor.label} 가이드`}
-          className="w-full max-w-[320px] rounded-2xl bg-white p-4 dark:bg-zinc-950"
-        >
-          <div className="flex items-center gap-2">
-            <span className="text-xl">{CHALLENGE_GROUPS.find((g) => g.id === guideFor.group)?.icon}</span>
-            <h2 className="min-w-0 flex-1 text-[15px] font-bold">{guideFor.label}</h2>
-            <span className="shrink-0 text-[12px] font-bold tabular-nums text-amber-600 dark:text-amber-400">
-              💎 {guideFor.diamond.toLocaleString('ko-KR')}
-              {guideFor.boxes ? ` + 📦 ${guideFor.boxes}` : ''}
-            </span>
-          </div>
-          <p className="mt-2.5 text-[13px] leading-relaxed text-zinc-600 dark:text-zinc-300">
-            {guideFor.guide}
-          </p>
-          <div className="mt-4">
-            {guideFor.id === 'app_install' ? (
-              <div className="isolate overflow-hidden rounded-xl border border-zinc-200 dark:border-zinc-700">
-                <InstallAppButton />
-              </div>
-            ) : (
-              <Link prefetch={false}
-                href={guideFor.go}
-                className="block w-full rounded-xl bg-amber-600 py-2.5 text-center text-sm font-bold text-white active:opacity-90"
-              >
-                바로가기
-              </Link>
-            )}
-          </div>
-          <button
-            type="button"
-            onClick={() => setGuideFor(null)}
-            className="mt-2 w-full rounded-xl bg-zinc-100 py-2.5 text-sm font-bold text-zinc-600 active:opacity-70 dark:bg-zinc-800 dark:text-zinc-300"
+        <ModalShell onClose={() => setGuideFor(null)} label={`${guideFor.label} 가이드`}>
+          <ModalLayout
+            icon={CHALLENGE_GROUPS.find((g) => g.id === guideFor.group)?.icon}
+            title={guideFor.label}
+            subtitle={
+              <span className="font-bold tabular-nums text-amber-600 dark:text-amber-400">
+                💎 {guideFor.diamond.toLocaleString('ko-KR')}
+                {guideFor.boxes ? ` + 📦 ${guideFor.boxes}` : ''}
+              </span>
+            }
+            footer={
+              guideFor.id === 'app_install' ? (
+                <div className="isolate flex-1 overflow-hidden rounded-xl border border-zinc-200 dark:border-zinc-700">
+                  <InstallAppButton />
+                </div>
+              ) : (
+                <>
+                  <ModalButton tone="neutral" onClick={() => setGuideFor(null)}>
+                    닫기
+                  </ModalButton>
+                  <Link
+                    prefetch={false}
+                    href={guideFor.go}
+                    className="flex-1 rounded-xl bg-amber-600 py-2.5 text-center text-[13px] font-bold text-white active:opacity-90"
+                  >
+                    바로가기
+                  </Link>
+                </>
+              )
+            }
           >
-            닫기
-          </button>
+            <p className="text-[13px] leading-relaxed text-zinc-600 dark:text-zinc-300">
+              {guideFor.guide}
+            </p>
+          </ModalLayout>
         </ModalShell>
       ) : null}
     </div>

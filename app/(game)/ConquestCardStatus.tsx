@@ -8,7 +8,7 @@ export const chronicleReadKey = (serverId: number) => `ig:chron-read:s${serverId
 /**
  * 세계지도 카드 문구 — 점령전(매일 KST 23:00) 상태.
  *  - 진행 중(23시대): '점령전 진행중'
- *  - 새 연대기 미열람: '새로운 역사가 쓰였다' 티저(강조색) — 발표 직후 바로 카운트다운으로
+ *  - 새 연대기 미열람 + 헤드라인 있음: 헤드라인 티저(강조색). 헤드라인이 없으면 카운트다운
  *    돌아가면 밋밋하다는 피드백(2026-07-20). 세계지도 방문 시 열람 처리(ChronicleReadMark).
  *  - 그 외: '다음 점령전까지 N시간 M분' 라이브 카운트다운(1초 갱신).
  * targetMs는 서버가 계산한 다음 23:00의 UTC epoch(ms) — 마운트 후 클라 클럭으로 계산(하이드레이션 안전).
@@ -55,7 +55,9 @@ export function ConquestCardStatus({
   }, [inProgress, unread]);
 
   if (inProgress) return <>점령전 진행중</>;
-  if (unread)
+  // 헤드라인이 없으면 티저를 띄우지 않는다 — '새로운 역사가 쓰였다'는 알맹이가 없어
+  // 카운트다운(다음 점령전까지)이 더 쓸모 있다(2026-07-29 피드백).
+  if (unread && chronicleHeadline)
     return (
       // 부모 div의 truncate(말줄임) 대신 좌우 왕복 마퀴(2026-07-21) — 넘칠 때만 애니메이션.
       <span ref={wrapRef} className="block overflow-hidden whitespace-nowrap">
@@ -71,7 +73,7 @@ export function ConquestCardStatus({
               : undefined
           }
         >
-          {chronicleHeadline || '새로운 역사가 쓰였다'}
+          {chronicleHeadline}
         </span>
       </span>
     );

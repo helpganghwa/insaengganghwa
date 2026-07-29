@@ -8,6 +8,7 @@ import { DistributeBoard } from '../distribute/DistributeBoard';
 import { useResourceToast } from '@/components/ResourceToast';
 import { useDiamond } from '@/components/DiamondContext';
 import { ModalShell } from '@/components/ModalShell';
+import { ModalLayout, ModalButton } from '@/components/ModalLayout';
 import {
   GUILD_REJOIN_LOCK_HOURS,
   GUILD_EMBLEM_REROLL_COST_DIAMOND,
@@ -901,104 +902,107 @@ export function GuildSettings({
           const rowCls =
             'w-full rounded-lg px-3 py-2.5 text-left text-[13px] font-semibold transition active:bg-zinc-100 dark:active:bg-zinc-800';
           return (
-            <ModalShell
-              onClose={() => setActionMember(null)}
-              label={`${m.nickname} 관리`}
-              className="w-full max-w-[320px] rounded-2xl bg-white p-3 dark:bg-zinc-950"
-            >
-              <div className="flex items-center gap-1.5 px-2 pb-2 pt-1">
-                <span className="truncate text-sm font-bold">{m.nickname}</span>
-                {m.role === 'vice' && (
-                  <span className="shrink-0 rounded-full bg-sky-500/15 px-1.5 py-0 text-[9px] font-bold text-sky-700 dark:text-sky-300">
-                    부길드장
-                  </span>
-                )}
-              </div>
-              <div className="space-y-0.5">
-                {isLeader &&
-                  (m.role === 'vice' ? (
-                    <button
-                      type="button"
-                      className={`${rowCls} text-zinc-700 dark:text-zinc-200`}
-                      onClick={() => {
-                        setVice(m.userId, false);
-                        setActionMember(null);
-                      }}
-                    >
-                      부길드장 해제
-                    </button>
+            <ModalShell onClose={() => setActionMember(null)} label={`${m.nickname} 관리`}>
+              <ModalLayout
+                title={m.nickname}
+                subtitle={
+                  m.role === 'vice' ? (
+                    <span className="rounded-full bg-sky-500/15 px-1.5 py-0.5 font-bold text-sky-700 dark:text-sky-300">
+                      부길드장
+                    </span>
                   ) : (
+                    '길드원'
+                  )
+                }
+                bodyPad="sm"
+                footer={
+                  <ModalButton tone="ghost" onClick={() => setActionMember(null)}>
+                    닫기
+                  </ModalButton>
+                }
+              >
+                <div className="space-y-0.5">
+                  {isLeader &&
+                    (m.role === 'vice' ? (
+                      <button
+                        type="button"
+                        className={`${rowCls} text-zinc-700 dark:text-zinc-200`}
+                        onClick={() => {
+                          setVice(m.userId, false);
+                          setActionMember(null);
+                        }}
+                      >
+                        부길드장 해제
+                      </button>
+                    ) : (
+                      <button
+                        type="button"
+                        className={`${rowCls} text-sky-600 dark:text-sky-400`}
+                        onClick={() => {
+                          setVice(m.userId, true);
+                          setActionMember(null);
+                        }}
+                      >
+                        부길드장 임명
+                      </button>
+                    ))}
+                  {isLeader && (
                     <button
                       type="button"
-                      className={`${rowCls} text-sky-600 dark:text-sky-400`}
+                      className={`${rowCls} text-amber-600 dark:text-amber-400`}
                       onClick={() => {
-                        setVice(m.userId, true);
                         setActionMember(null);
+                        transfer(m.userId, m.nickname);
                       }}
                     >
-                      부길드장 임명
+                      길드장 위임
                     </button>
-                  ))}
-                {isLeader && (
-                  <button
-                    type="button"
-                    className={`${rowCls} text-amber-600 dark:text-amber-400`}
-                    onClick={() => {
-                      setActionMember(null);
-                      transfer(m.userId, m.nickname);
-                    }}
-                  >
-                    길드장 위임
-                  </button>
-                )}
-                {(isLeader || m.role === 'member') && (
-                  <button
-                    type="button"
-                    className={`${rowCls} text-red-600 dark:text-red-400`}
-                    onClick={() => {
-                      setActionMember(null);
-                      kick(m.userId, m.nickname);
-                    }}
-                  >
-                    추방
-                  </button>
-                )}
-              </div>
+                  )}
+                  {(isLeader || m.role === 'member') && (
+                    <button
+                      type="button"
+                      className={`${rowCls} text-red-600 dark:text-red-400`}
+                      onClick={() => {
+                        setActionMember(null);
+                        kick(m.userId, m.nickname);
+                      }}
+                    >
+                      추방
+                    </button>
+                  )}
+                </div>
+              </ModalLayout>
             </ModalShell>
           );
         })()}
 
       {/* 확인 팝업 — 위임·추방·해산(alert 대체) */}
       {confirmModal && (
-        <ModalShell
-          onClose={() => setConfirmModal(null)}
-          label={confirmModal.title}
-          className="w-full max-w-[320px] rounded-2xl bg-white p-4 dark:bg-zinc-950"
-        >
-            <h2 className="text-sm font-bold">{confirmModal.title}</h2>
-            <p className="mt-2 whitespace-pre-line text-[13px] leading-relaxed text-zinc-600 dark:text-zinc-300">
+        <ModalShell onClose={() => setConfirmModal(null)} label={confirmModal.title}>
+          <ModalLayout
+            title={confirmModal.title}
+            footer={
+              <>
+                <ModalButton tone="ghost" onClick={() => setConfirmModal(null)}>
+                  취소
+                </ModalButton>
+                <ModalButton
+                  tone="danger"
+                  onClick={() => {
+                    const fn = confirmModal.onConfirm;
+                    setConfirmModal(null);
+                    fn();
+                  }}
+                >
+                  {confirmModal.confirmLabel}
+                </ModalButton>
+              </>
+            }
+          >
+            <p className="whitespace-pre-line text-[13px] leading-relaxed text-zinc-600 dark:text-zinc-300">
               {confirmModal.message}
             </p>
-            <div className="mt-4 flex gap-2">
-              <button
-                type="button"
-                onClick={() => setConfirmModal(null)}
-                className="flex-1 rounded-lg border border-zinc-300 py-2 text-sm font-semibold text-zinc-600 dark:border-zinc-700 dark:text-zinc-300"
-              >
-                취소
-              </button>
-              <button
-                type="button"
-                onClick={() => {
-                  const fn = confirmModal.onConfirm;
-                  setConfirmModal(null);
-                  fn();
-                }}
-                className="flex-1 rounded-lg bg-red-600 py-2 text-sm font-bold text-white"
-              >
-                {confirmModal.confirmLabel}
-              </button>
-            </div>
+          </ModalLayout>
         </ModalShell>
       )}
     </div>

@@ -7,6 +7,7 @@ import type { Slot } from '@/lib/db/schema/equipment';
 import { TranscendSprite } from '@/components/TranscendSprite';
 import { getActiveJobsForSlot, swapEnhanceAction } from '@/app/(game)/enhance/actions';
 import { ModalShell } from '@/components/ModalShell';
+import { ModalLayout, ModalButton } from '@/components/ModalLayout';
 
 type ActiveJob = {
   jobId: string;
@@ -89,26 +90,22 @@ export function SwapPickerModal({
   }
 
   return (
-    <ModalShell
-      onClose={onClose}
-      label="강화 슬롯 교체"
-      className="w-full max-w-xs rounded-2xl bg-zinc-950 p-4 text-zinc-100 shadow-[0_0_40px_rgba(245,158,11,0.18)] ring-1 ring-amber-700/40"
-    >
-        <div className="mb-3 flex items-baseline justify-between">
-          <h2 className="text-sm font-bold">교체할 강화 선택</h2>
-          <button
-            type="button"
-            onClick={onClose}
-            className="text-sm text-zinc-400 hover:text-zinc-200"
-            aria-label="닫기"
-          >
-            ✕
-          </button>
-        </div>
-        <p className="mb-2 text-[11px] leading-snug text-zinc-400">
-          같은 슬롯의 강화 슬롯이 모두 사용 중이에요. 교체할 강화를 선택하면 진행 중인 강화를
-          취소하고 새 장비를 등록합니다.
-        </p>
+    <ModalShell onClose={onClose} label="강화 슬롯 교체">
+      <ModalLayout
+        title="교체할 강화 선택"
+        subtitle={
+          <>
+            슬롯이 모두 사용 중 ·{' '}
+            <span className="font-bold text-amber-600 dark:text-amber-400">선택 시 진행 취소</span>
+          </>
+        }
+        bodyPad="sm"
+        footer={
+          <ModalButton tone="ghost" onClick={onClose}>
+            취소
+          </ModalButton>
+        }
+      >
 
         {error ? (
           <p className="mb-2 rounded bg-red-50 px-2 py-1 text-[10px] text-red-700 dark:bg-red-950/60 dark:text-red-300">
@@ -121,7 +118,7 @@ export function SwapPickerModal({
         ) : jobs.length === 0 ? (
           <p className="py-6 text-center text-xs text-zinc-500">교체 가능한 강화가 없습니다.</p>
         ) : (
-          <ul className="max-h-[40vh] space-y-1.5 overflow-y-auto">
+          <ul className="space-y-1.5">
             {jobs.map((j) => (
               <li key={j.jobId}>
                 <button
@@ -152,15 +149,7 @@ export function SwapPickerModal({
             ))}
           </ul>
         )}
-
-        <button
-          type="button"
-          onClick={onClose}
-          disabled={pending}
-          className="mt-3 w-full rounded-xl border border-zinc-700 py-2 text-xs text-zinc-200 disabled:opacity-50"
-        >
-          취소
-        </button>
+      </ModalLayout>
     </ModalShell>
   );
 }

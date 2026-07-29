@@ -4,6 +4,7 @@ import { useState, useTransition } from 'react';
 
 import { withdrawAction } from './withdraw-actions';
 import { ModalShell } from '@/components/ModalShell';
+import { ModalLayout, ModalButton } from '@/components/ModalLayout';
 
 const ERR: Record<string, string> = {
   LEADER_MUST_TRANSFER: '길드장은 위임하거나 길드를 해산한 뒤 탈퇴할 수 있어요.',
@@ -36,40 +37,32 @@ export function WithdrawButton() {
       </button>
 
       {open && (
-        <ModalShell
-          onClose={() => !pending && setOpen(false)}
-          label="회원 탈퇴 확인"
-          className="w-full max-w-[340px] rounded-2xl bg-white p-5 text-center dark:bg-zinc-950"
-        >
-            <div className="text-3xl">⚠️</div>
-            <h2 className="mt-2 text-base font-bold">정말 탈퇴하시겠어요?</h2>
-            <p className="mt-2 text-xs leading-relaxed text-zinc-500">
-              캐릭터·아이템·강화·보급 등 모든 게임 데이터가 즉시 삭제되며 복구할 수 없어요.
-              결제 내역은 법령에 따라 보존됩니다.
+        <ModalShell onClose={() => !pending && setOpen(false)} label="회원 탈퇴 확인">
+          <ModalLayout
+            icon="⚠️"
+            title="정말 탈퇴하시겠어요?"
+            subtitle={<span className="font-bold text-red-500">복구 불가</span>}
+            footer={
+              <>
+                <ModalButton tone="ghost" onClick={() => setOpen(false)} disabled={pending}>
+                  취소
+                </ModalButton>
+                <ModalButton tone="danger" onClick={confirm} disabled={pending}>
+                  {pending ? '처리 중…' : '탈퇴'}
+                </ModalButton>
+              </>
+            }
+          >
+            <p className="text-center text-xs leading-relaxed text-zinc-500 dark:text-zinc-400">
+              캐릭터·아이템·강화·보급 등 모든 게임 데이터가 즉시 삭제되며 복구할 수 없어요. 결제
+              내역은 법령에 따라 보존됩니다.
             </p>
             {err && (
-              <p className="mt-3 rounded-lg bg-red-50 px-2 py-1.5 text-xs text-red-600 dark:bg-red-950/40 dark:text-red-300">
+              <p className="mt-3 rounded-lg bg-red-50 px-2 py-1.5 text-center text-xs text-red-600 dark:bg-red-950/40 dark:text-red-300">
                 {err}
               </p>
             )}
-            <div className="mt-4 flex gap-2">
-              <button
-                type="button"
-                onClick={() => setOpen(false)}
-                disabled={pending}
-                className="flex-1 rounded-xl border border-zinc-200 py-2.5 text-sm font-medium dark:border-zinc-800"
-              >
-                취소
-              </button>
-              <button
-                type="button"
-                onClick={confirm}
-                disabled={pending}
-                className="flex-1 rounded-xl bg-red-600 py-2.5 text-sm font-bold text-white disabled:opacity-50"
-              >
-                {pending ? '처리 중…' : '탈퇴'}
-              </button>
-            </div>
+          </ModalLayout>
         </ModalShell>
       )}
     </>
