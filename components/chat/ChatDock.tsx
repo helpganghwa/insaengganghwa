@@ -2,6 +2,7 @@
 
 import { useCallback, useEffect, useLayoutEffect, useRef, useState } from 'react';
 import { ModalShell } from '@/components/ModalShell';
+import { ModalLayout, ModalButton } from '@/components/ModalLayout';
 import Link from 'next/link';
 import { usePathname, useRouter } from 'next/navigation';
 
@@ -1270,17 +1271,21 @@ export function ChatDock() {
 
       {/* 차단 목록 팝업 — 차단 유저는 메시지가 숨어 프로필 진입이 불가하므로 여기서 해제 */}
       {showBlockList ? (
-        <ModalShell
-          onClose={() => setShowBlockList(false)}
-          label="차단 목록"
-          className="w-full max-w-[280px] rounded-2xl bg-white p-4 dark:bg-zinc-900"
-        >
-          <div>
-            <h3 className="text-[13px] font-bold">차단 목록</h3>
+        <ModalShell onClose={() => setShowBlockList(false)} label="차단 목록">
+          <ModalLayout
+            title="차단 목록"
+            subtitle={`${blocked.size}명`}
+            maxBodyClass="max-h-[42vh]"
+            footer={
+              <ModalButton tone="ghost" onClick={() => setShowBlockList(false)}>
+                닫기
+              </ModalButton>
+            }
+          >
             {blocked.size === 0 ? (
-              <p className="py-6 text-center text-[12px] text-zinc-400">차단한 유저가 없어요.</p>
+              <p className="py-4 text-center text-[12px] text-zinc-400">차단한 유저가 없어요.</p>
             ) : (
-              <ul className="mt-2 max-h-[240px] space-y-1 overflow-y-auto">
+              <ul className="space-y-1">
                 {[...blocked].map(([id, nickname]) => (
                   <li
                     key={id}
@@ -1298,14 +1303,7 @@ export function ChatDock() {
                 ))}
               </ul>
             )}
-            <button
-              type="button"
-              onClick={() => setShowBlockList(false)}
-              className="mt-3 w-full rounded-lg bg-zinc-100 py-2 text-[12px] font-bold text-zinc-500 dark:bg-zinc-800 dark:text-zinc-400"
-            >
-              닫기
-            </button>
-          </div>
+          </ModalLayout>
         </ModalShell>
       ) : null}
 
@@ -1314,47 +1312,46 @@ export function ChatDock() {
         // 공용 셸로 — Esc·포커스 이동을 얻는다(2026-07-29 점검).
         <ModalShell
           onClose={() => setReportTarget(null)}
+          onSubmit={confirmReport}
           label="메시지 신고"
-          className="w-full max-w-[280px] rounded-2xl bg-white p-4 dark:bg-zinc-900"
         >
-          <div>
-            <h3 className="text-[13px] font-bold">이 메시지를 신고할까요?</h3>
-            <p className="mt-2 rounded-lg bg-zinc-50 px-3 py-2 text-[12px] text-zinc-600 dark:bg-zinc-800/60 dark:text-zinc-300">
-              <b>{reportTarget.nickname}</b> · {reportTarget.body.slice(0, 60)}
+          <ModalLayout
+            title="이 메시지를 신고할까요?"
+            subtitle={
+              <span className="font-bold text-zinc-600 dark:text-zinc-300">
+                {reportTarget.nickname}
+              </span>
+            }
+            footer={
+              <>
+                <ModalButton tone="ghost" onClick={() => setReportTarget(null)}>
+                  취소
+                </ModalButton>
+                <ModalButton
+                  tone="neutral"
+                  onClick={() => {
+                    const m = reportTarget;
+                    if (!m) return;
+                    toggleBlock(m.userId, m.nickname);
+                    setReportTarget(null);
+                    flashError('차단했어요. 차단 목록에서 해제할 수 있어요.');
+                  }}
+                >
+                  차단
+                </ModalButton>
+                <ModalButton tone="danger" onClick={confirmReport}>
+                  신고
+                </ModalButton>
+              </>
+            }
+          >
+            <p className="rounded-lg bg-zinc-100 px-3 py-2 text-[12px] text-zinc-600 dark:bg-zinc-800 dark:text-zinc-300">
+              {reportTarget.body.slice(0, 60)}
             </p>
             <p className="mt-2 text-[10.5px] leading-relaxed text-zinc-400">
               신고가 누적되면 메시지가 자동으로 숨겨집니다.
             </p>
-            <div className="mt-3 grid grid-cols-3 gap-1.5">
-              <button
-                type="button"
-                onClick={() => setReportTarget(null)}
-                className="rounded-lg bg-zinc-100 py-2 text-[12px] font-bold text-zinc-500 dark:bg-zinc-800 dark:text-zinc-400"
-              >
-                취소
-              </button>
-              <button
-                type="button"
-                onClick={() => {
-                  const m = reportTarget;
-                  if (!m) return;
-                  toggleBlock(m.userId, m.nickname);
-                  setReportTarget(null);
-                  flashError('차단했어요. 차단 목록에서 해제할 수 있어요.');
-                }}
-                className="rounded-lg bg-zinc-100 py-2 text-[12px] font-bold text-zinc-600 dark:bg-zinc-800 dark:text-zinc-300"
-              >
-                차단
-              </button>
-              <button
-                type="button"
-                onClick={confirmReport}
-                className="rounded-lg bg-red-500 py-2 text-[12px] font-bold text-white"
-              >
-                신고
-              </button>
-            </div>
-          </div>
+          </ModalLayout>
         </ModalShell>
       ) : null}
     </>

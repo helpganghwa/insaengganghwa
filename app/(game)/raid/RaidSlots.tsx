@@ -3,6 +3,7 @@
 import Link from 'next/link';
 import { useEffect, useState, useTransition } from 'react';
 import { ModalShell } from '@/components/ModalShell';
+import { ModalLayout, ModalButton } from '@/components/ModalLayout';
 import { useRouter } from 'next/navigation';
 
 import { RAID_OPEN_COST_DIAMOND, RAID_WINDOW_MS, RAID_DURATION_OPTIONS_MS } from '@/lib/game/balance';
@@ -395,52 +396,37 @@ export function RaidSlots({
         // 공용 셸로 — Esc·포커스 확보. 연출은 그대로 두고 껍데기만 교체(2026-07-29 점검).
         <ModalShell
           onClose={() => !pending && (setPicking(false), setPicked(null), setConfirm(false))}
+          onSubmit={
+            picked
+              ? () => {
+                  if (pending) return;
+                  if (!confirm) {
+                    setConfirm(true);
+                    setConfirmLeft(3);
+                    return;
+                  }
+                  setConfirm(false);
+                  open(picked);
+                }
+              : undefined
+          }
           label="레이드 보스 선택"
-          className="w-full max-w-xs rounded-2xl border-2 border-amber-300 bg-white p-4 shadow-[0_0_40px_rgba(245,158,11,0.18)] dark:border-amber-800 dark:bg-zinc-950"
         >
-          <div>
-            {!picked ? (
-              <>
-                <h3 className="text-center text-sm font-bold">보스 선택</h3>
-                <div className="mt-3 grid grid-cols-3 gap-1.5">
-                  {RAID_BOSS_CODES.map((c) => (
-                    <button
-                      key={c}
-                      type="button"
-                      onClick={() => setPicked(c)}
-                      className="flex flex-col items-center gap-1 rounded-lg border border-zinc-300 p-2 text-[10px] dark:border-zinc-700"
-                    >
-                      <BossSprite code={c} size={48} />
-                      {RAID_BOSSES[c].name}
-                    </button>
-                  ))}
-                </div>
-                <button
-                  type="button"
-                  onClick={() => setPicking(false)}
-                  className="mt-3 w-full py-1.5 text-[11px] text-zinc-500"
-                >
-                  닫기
-                </button>
-              </>
-            ) : (
-              <>
-                <div className="flex justify-center">
-                  <BossSprite code={picked} size={96} />
-                </div>
-                <h3 className="mt-1 text-center text-base font-bold">
-                  {RAID_BOSSES[picked].name}
-                </h3>
-                <p className="mt-2 rounded-xl bg-amber-50/60 p-3 text-[11px] leading-relaxed break-keep text-zinc-600 dark:bg-amber-950/20 dark:text-zinc-300">
-                  {RAID_BOSSES[picked].story}
-                </p>
-                <div className="mt-3 space-y-1.5">
-                  <DurationRow value={durationMs} onChange={setDurationMs} />
-                  <ShareModeRow title="친구 공개" value={friendShare} onChange={setFriendShare} />
-                  <ShareModeRow title="길드원 공개" value={guildShare} onChange={setGuildShare} />
-                </div>
-                <div className="mt-2 space-y-1.5">
-                  <button
+          <ModalLayout
+            title={picked ? RAID_BOSSES[picked].name : '보스 선택'}
+            subtitle={
+              picked ? (
+                <span className="font-mono font-bold text-sky-500">
+                  💎 {RAID_OPEN_COST_DIAMOND.toLocaleString()}
+                </span>
+              ) : (
+                `${RAID_BOSS_CODES.length}종`
+              )
+            }
+            maxBodyClass="max-h-[52vh]"
+            footer={
+              picked ? (
+                <><button
                     type="button"
                     disabled={pending}
                     onClick={() => {
@@ -483,10 +469,44 @@ export function RaidSlots({
                   >
                     다른 보스
                   </button>
+                </>
+              ) : (
+                <ModalButton tone="ghost" onClick={() => setPicking(false)}>
+                  닫기
+                </ModalButton>
+              )
+            }
+          >
+            {!picked ? (
+                <div className="grid grid-cols-3 gap-1.5">
+                  {RAID_BOSS_CODES.map((c) => (
+                    <button
+                      key={c}
+                      type="button"
+                      onClick={() => setPicked(c)}
+                      className="flex flex-col items-center gap-1 rounded-lg border border-zinc-300 p-2 text-[10px] dark:border-zinc-700"
+                    >
+                      <BossSprite code={c} size={48} />
+                      {RAID_BOSSES[c].name}
+                    </button>
+                  ))}
+                </div>
+            ) : (
+              <>
+                <div className="flex justify-center">
+                  <BossSprite code={picked} size={96} />
+                </div>
+                <p className="mt-2 rounded-xl bg-amber-50/60 p-3 text-[11px] leading-relaxed break-keep text-zinc-600 dark:bg-amber-950/20 dark:text-zinc-300">
+                  {RAID_BOSSES[picked].story}
+                </p>
+                <div className="mt-3 space-y-1.5">
+                  <DurationRow value={durationMs} onChange={setDurationMs} />
+                  <ShareModeRow title="친구 공개" value={friendShare} onChange={setFriendShare} />
+                  <ShareModeRow title="길드원 공개" value={guildShare} onChange={setGuildShare} />
                 </div>
               </>
             )}
-          </div>
+          </ModalLayout>
         </ModalShell>
       ) : null}
     </>

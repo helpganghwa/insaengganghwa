@@ -134,7 +134,7 @@ export function EquipmentDetailSheet({
         {/* 수치는 제목·부제가 담당 — 컨텐츠는 장비 자체를 크게 보여준다. */}
         <section className="flex justify-center">
           <span
-            className={`relative flex h-[124px] w-[124px] items-center justify-center isolate overflow-hidden rounded-2xl border-2 ${
+            className={`relative flex h-[76px] w-[76px] items-center justify-center isolate overflow-hidden rounded-xl border-2 ${
               hasRarityBorder(item.transcendLevel) ? '' : 'border-zinc-200 dark:border-zinc-800'
             }`}
             style={rarityBorderStyle(item.transcendLevel)}
@@ -145,7 +145,7 @@ export function EquipmentDetailSheet({
               slot={item.slot}
               level={item.transcendLevel}
               championRank={item.championRank}
-              size={108}
+              size={64}
               frameless
             />
           </span>
