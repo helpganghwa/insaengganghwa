@@ -436,6 +436,8 @@ export function WorldMapView({
   const [pending, start] = useTransition();
 
   const selected = zones.find((z) => z.id === selectedId) ?? null;
+  /** 지금 살고 있는 구역 이름 — 해제 경고에서 "어디의" 배치인지 밝힌다. */
+  const homeZoneName = zones.find((z) => z.id === residence)?.name ?? null;
 
   const openBattle = (zoneId: number) => {
     start(async () => {
@@ -485,7 +487,7 @@ export function WorldMapView({
   };
 
   /** 쿨타임 보석 단축 — 대기시간만 없앤다(이동은 별도 클릭). */
-  const speedUpOnly = (nextZoneId: number) => {
+  const speedUpOnly = () => {
     const cost = residenceSpeedUpCost(remainMs);
     setMoveAsk(null);
     setMoveConfirm(false);
@@ -500,9 +502,7 @@ export function WorldMapView({
         return showError(guildErrMsg(r.code));
       }
       showHeaderToast({ title: `이동 대기시간 단축 −${cost.toLocaleString('ko-KR')}💎` });
-      // 단축은 이동을 위한 관문이므로 흐름을 끊지 않고 다음 단계로 이어준다.
-      if (moveLock) setMoveAsk({ kind: 'release', zoneId: nextZoneId });
-      else moveResidence(nextZoneId);
+      // 단축은 여기까지 — 이동은 버튼을 한 번 더 눌러 확인한다(오탭으로 옮겨지지 않게).
     });
   };
 
@@ -1340,8 +1340,9 @@ export function WorldMapView({
               <>
                 <h3 className="text-center text-[15px] font-extrabold">거주지를 옮기시겠습니까?</h3>
                 <p className="mt-2 text-center text-[12px] leading-relaxed text-zinc-500 dark:text-zinc-400">
-                  이동하면 현재 구역의{' '}
-                  <b className="font-bold text-amber-600 dark:text-amber-300">{moveLock?.label}</b>
+                  이동하면{' '}
+                  <b className="font-bold text-zinc-700 dark:text-zinc-200">{homeZoneName ?? '현재 구역'}</b>
+                  의 <b className="font-bold text-amber-600 dark:text-amber-300">{moveLock?.label}</b>
                   {moveLock?.kind === 'executor' ? '이' : ' 배치가'} 해제됩니다.
                 </p>
                 <div className="mt-3 flex gap-2">
@@ -1380,7 +1381,7 @@ export function WorldMapView({
                     onClick={() => {
                       // 강화 보석 단축과 동일한 3초 인-버튼 재확인 — 오탭 결제 방지.
                       if (moveConfirm) {
-                        speedUpOnly(moveAsk.zoneId);
+                        speedUpOnly();
                       } else {
                         setMoveLeft(3);
                         setMoveConfirm(true);

@@ -59,15 +59,31 @@ const fmt = (n: number) =>
   new Intl.NumberFormat('ko-KR', { notation: 'compact', maximumFractionDigits: 1 }).format(n);
 
 /** 지도 핀 — 노드 위에 떠 있는 물방울 마커. 색으로 역할을 구분한다(내 위치/선택). */
-function MapPin({ from, to }: { from: string; to: string }) {
+function MapPin({
+  from,
+  to,
+  glow,
+  glowHi,
+  hidden,
+}: {
+  from: string;
+  to: string;
+  /** 글로우 색(핀 색과 같은 계열로 — 선택 핀이 앰버로 빛나던 문제). */
+  glow: string;
+  glowHi: string;
+  /** display:none — 언마운트하지 않는다(재마운트하면 bob 위상이 어긋난다). */
+  hidden: boolean;
+}) {
   return (
-    <span className="block">
+    <span className="block" style={{ display: hidden ? 'none' : 'block' }}>
       <span
         className="relative block h-[11px] w-[11px] animate-marker-pin-glow border-[1.5px] border-white"
         style={{
           background: `linear-gradient(135deg, ${from}, ${to})`,
           borderRadius: '50% 50% 50% 0',
           transform: 'rotate(-45deg)',
+          ['--pin-glow' as string]: glow,
+          ['--pin-glow-hi' as string]: glowHi,
         }}
       >
         <span className="absolute left-1/2 top-1/2 h-[3.5px] w-[3.5px] -translate-x-1/2 -translate-y-1/2 rounded-full bg-white" />
@@ -478,15 +494,30 @@ export function DeployBoard({
                   {showPower ? `전투력 ${fmt(dep.power)}` : `${dep.count}명`}
                 </span>
               )}
-              {/* 핀 — 내 위치(앰버)는 항상 고정, 선택(하늘색)은 별도. 같은 구역이면 나란히 뜬다. */}
-              {(isHome || isSel) && (
-                /* 두 핀을 같은 컨테이너에서 한 번만 애니메이션한다 — 핀마다 걸면 마운트
-                   시점이 달라 위아래 움직임의 위상이 어긋난다(2026-07-29 제보). */
-                <span className="pointer-events-none absolute bottom-full left-1/2 -mb-1 flex -translate-x-1/2 animate-marker-bob gap-[2px]">
-                  {isHome && <MapPin from="#fcd34d" to="#f59e0b" />}
-                  {isSel && <MapPin from="#7dd3fc" to="#0284c7" />}
-                </span>
-              )}
+              {/* 핀 — 내 위치(앰버 고정) / 선택(하늘색).
+                  ⚠ 조건부 렌더로 붙였다 뗐다 하면 CSS 애니메이션이 그때부터 다시 시작해
+                  구역마다 위아래 움직임의 위상이 어긋난다. 그래서 **모든 구역에 항상 마운트**해
+                  두고 표시만 토글한다 — 전 구역이 같은 커밋에서 시작하므로 항상 같은 박자다. */}
+              <span
+                aria-hidden
+                className="pointer-events-none absolute bottom-full left-1/2 -mb-1 flex -translate-x-1/2 animate-marker-bob gap-[2px]"
+                style={{ opacity: isHome || isSel ? 1 : 0 }}
+              >
+                <MapPin
+                  from="#fcd34d"
+                  to="#f59e0b"
+                  glow="rgba(245,158,11,0.65)"
+                  glowHi="rgba(251,191,36,0.95)"
+                  hidden={!isHome}
+                />
+                <MapPin
+                  from="#7dd3fc"
+                  to="#0284c7"
+                  glow="rgba(2,132,199,0.65)"
+                  glowHi="rgba(56,189,248,0.95)"
+                  hidden={!isSel}
+                />
+              </span>
             </button>
           );
         })}

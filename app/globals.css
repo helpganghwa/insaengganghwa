@@ -91,9 +91,10 @@ html {
     50% { transform: translateY(-2.5px); }
   }
   /* 내 위치 핀 글로우 펄스(transform은 인라인 rotate 유지 — box-shadow만 애니메이트) */
+  /* 핀 글로우 — 색은 --pin-glow/--pin-glow-hi로 주입(기본 앰버). 선택 핀은 파란 계열로 덮어쓴다. */
   @keyframes marker-pin-glow {
-    0%, 100% { box-shadow: 0 0 3px 0 rgba(245,158,11,0.65), 0 1px 2px rgba(0,0,0,0.55); }
-    50% { box-shadow: 0 0 8px 2px rgba(251,191,36,0.95), 0 1px 2px rgba(0,0,0,0.55); }
+    0%, 100% { box-shadow: 0 0 3px 0 var(--pin-glow, rgba(245,158,11,0.65)), 0 1px 2px rgba(0,0,0,0.55); }
+    50% { box-shadow: 0 0 8px 2px var(--pin-glow-hi, rgba(251,191,36,0.95)), 0 1px 2px rgba(0,0,0,0.55); }
   }
 
   @keyframes flash-success {
