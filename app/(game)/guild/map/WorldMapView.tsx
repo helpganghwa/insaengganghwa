@@ -230,7 +230,7 @@ export function WorldMapView({
     return () => clearInterval(id);
   }, [moveConfirm]);
   const [moveLock, setMoveLock] = useState(residenceProp?.lock ?? null);
-  // 인접 판정 — 이동 가능한 구역 집합(현재 거주지와 맞닿은 곳). 거주 미설정이면 어디든 정착 가능.
+  // 인접 판정 — 이동 가능한 구역 집합(현재 거주지와 인접한 곳). 거주 미설정이면 어디든 정착 가능.
   const adjacentIds = useMemo(() => {
     if (residence == null) return null;
     const set = new Set<number>();
@@ -572,7 +572,7 @@ export function WorldMapView({
           {(() => {
             const isSel = (e: { a: number; b: number }) =>
               selectedId != null && (e.a === selectedId || e.b === selectedId);
-            // 이동 가능한 길 — 내 거주지에 맞닿은 간선만 또렷하게(점령지 배치 화면과 같은 방식).
+            // 이동 가능한 길 — 내 거주지에 인접한 간선만 또렷하게(점령지 배치 화면과 같은 방식).
             // 거주지가 없으면(최초 정착 전) 전부 또렷.
             const isWalk = (e: { a: number; b: number }) =>
               residence == null || e.a === residence || e.b === residence;
@@ -1027,7 +1027,7 @@ export function WorldMapView({
                   </button>
                 ) : (
                   // 이동 가능 여부는 사유별로 다르게 보여준다 — 왜 못 가는지 모르면 버그로 읽힌다.
-                  // 맞닿지 않은 구역도 버튼은 남긴다 — 사라지면 왜 못 가는지 알 수 없다.
+                  // 인접하지 않은 구역도 버튼은 남긴다 — 사라지면 왜 못 가는지 알 수 없다.
                   // 비활성 모양이되 클릭은 받아서 사유를 토스트로 알린다(disabled면 클릭이 죽는다).
                   adjacentIds && !adjacentIds.has(selected.id) ? (
                     // 사유는 아래 고정 문구가 설명한다 — 지도를 보는 중에 헤더 토스트는 놓치기 쉽다.
@@ -1255,7 +1255,7 @@ export function WorldMapView({
                 {/* 이동 불가 사유 — 지도를 보는 중이라 헤더 토스트는 놓친다. 팝업 안에 남긴다. */}
                 {canSetResidence && selected.id !== residence && adjacentIds && !adjacentIds.has(selected.id) ? (
                   <p className="mt-2.5 rounded-lg bg-amber-500/10 px-2.5 py-2 text-[11px] leading-snug font-medium text-amber-700 dark:text-amber-300">
-                    맞닿은 구역으로만 이동할 수 있습니다. 가려면{' '}
+                    인접한 구역으로만 이동할 수 있습니다. 가려면{' '}
                     {homeZoneName ? (
                       <b className="font-bold" style={homeZoneColor ? { color: homeZoneColor } : undefined}>
                         {homeZoneName}

@@ -84,14 +84,14 @@ function ResultCard({
         </span>
       ) : null}
       {r.count && r.count > 1 ? (
-        <span className="absolute right-1.5 top-1.5 z-30 rounded bg-zinc-900/80 px-1 text-[9px] font-bold text-white">
+        <span className="absolute right-1 top-1 z-30 rounded bg-zinc-900/80 px-[3px] text-[8px] font-bold leading-[1.5] text-white">
           ×{r.count}
         </span>
       ) : null}
       {/* 떨림은 스프라이트에만 — 단계 직전 부르르 (빛 효과 없음) */}
       <span
         key={`t${tremKey}`}
-        className="relative z-10 flex"
+        className="relative z-10 -mb-0.5 flex"
         style={tremKey > 0 ? { animation: 'gacha-transcend-tremble 440ms ease-in-out' } : undefined}
       >
         <TranscendSprite
@@ -105,7 +105,7 @@ function ResultCard({
       </span>
       <span
         className={`line-clamp-2 break-keep px-0.5 leading-tight text-zinc-600 dark:text-zinc-400 ${
-          big ? 'text-[13px] font-medium' : 'min-h-[2.3em] text-[8.5px] leading-[1.15]'
+          big ? 'text-[13px] font-medium' : 'text-[8.5px] leading-[1.1]'
         }`}
       >
         {r.name}

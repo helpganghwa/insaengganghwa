@@ -15,6 +15,7 @@ import {
 } from '@/lib/game/guild/balance';
 
 import {
+  speedUpResidenceAction,
   deployAction,
   cancelDeployAction,
   clearMemberDeploymentAction,
@@ -148,7 +149,7 @@ export function DeployBoard({
   // 초기 선택 = 내 거주지 — 배치는 거주 구역에서만 가능하므로 첫 화면이 곧 내 자리다.
   const [selectedId, setSelectedId] = useState<number | null>(residence?.zoneId ?? null);
   const homeZoneId = residence?.zoneId ?? null;
-  // 이동 가능 구역 — 거주지와 맞닿은 곳. 거주 미설정이면 어디든 정착 가능.
+  // 이동 가능 구역 — 거주지와 인접한 곳. 거주 미설정이면 어디든 정착 가능.
   const adjacentToHome = useMemo(() => {
     if (homeZoneId == null) return null;
     const set = new Set<number>();
@@ -159,8 +160,12 @@ export function DeployBoard({
     return set;
   }, [adjacency, homeZoneId]);
   const [nowMs, setNowMs] = useState(0);
+  /** 이동 대기시간 단축 팝업 — 세계지도 이동과 같은 순서(단축 먼저, 배치는 다시 누르기). */
+  const [speedUpAsk, setSpeedUpAsk] = useState(false);
+  /** 단축 성공 후 남은 시간을 즉시 0으로 — 서버 갱신을 기다리지 않는다. */
+  const [readyCleared, setReadyCleared] = useState(false);
   const readyAt = residence?.readyAtIso ? Date.parse(residence.readyAtIso) : null;
-  const moveRemainMs = readyAt && nowMs ? Math.max(0, readyAt - nowMs) : 0;
+  const moveRemainMs = readyCleared ? 0 : readyAt && nowMs ? Math.max(0, readyAt - nowMs) : 0;
   useEffect(() => {
     if (!readyAt) return;
     setNowMs(Date.now());
@@ -258,7 +263,7 @@ export function DeployBoard({
     if (!me) return;
     const needsMove = selected.id !== homeZoneId;
     if (needsMove && adjacentToHome && !adjacentToHome.has(selected.id)) {
-      return showError('맞닿은 구역으로만 이동할 수 있습니다. 한 칸씩 옮겨가세요.');
+      return showError('인접한 구역으로만 이동할 수 있습니다. 한 칸씩 옮겨가세요.');
     }
     const release = me.execZoneId
       ? `${me.execZoneName} 집행관`
@@ -278,6 +283,26 @@ export function DeployBoard({
     });
   };
 
+  /** 이동 대기시간 단축 — 대기시간만 없앤다(배치는 다시 누른다, 세계지도와 동일). */
+  const doSpeedUp = () => {
+    if (!plan) return;
+    const cost = plan.gem;
+    setSpeedUpAsk(false);
+    setPlanConfirm(false);
+    setReadyCleared(true); // 낙관 — 실패 시 되돌린다
+    optimisticAdjust(-BigInt(cost));
+    start(async () => {
+      const r = await speedUpResidenceAction();
+      if (r.status !== 'success') {
+        setReadyCleared(false);
+        optimisticAdjust(BigInt(cost));
+        return showError(guildErrMsg(r.code));
+      }
+      setPlan((p) => (p ? { ...p, gem: 0 } : p));
+      showHeaderToast({ title: `이동 대기시간 단축 −${cost.toLocaleString('ko-KR')}💎` });
+    });
+  };
+
   /** 확인된 계획 실행 — 이동·해제·배치가 서버 한 트랜잭션에서 처리된다. */
   const runPlan = () => {
     if (!plan) return;
@@ -291,10 +316,7 @@ export function DeployBoard({
     patch(myUserId, { depZoneId: p.zoneId, depZoneName: p.zoneName, depRole: p.role, execZoneId: null, execZoneName: null });
     if (p.gem > 0) optimisticAdjust(-BigInt(p.gem));
     start(async () => {
-      const r = await deployAction(p.zoneId, p.role, {
-        move: p.move,
-        paySpeedUp: p.gem > 0,
-      });
+      const r = await deployAction(p.zoneId, p.role, { move: p.move });
       if (r.status !== 'success') {
         patch(myUserId, {
           depZoneId: prev.depZoneId, depZoneName: prev.depZoneName, depRole: prev.depRole,
@@ -428,7 +450,7 @@ export function DeployBoard({
         const za = zoneById.get(a);
         const zb = zoneById.get(b);
         if (!za || !zb) return null;
-        // 3단계 — ① 내가 이동할 수 있는 길(거주지에 맞닿음) ② 길드 관련(우리 소유·공격 가능끼리) ③ 그 외.
+        // 3단계 — ① 내가 이동할 수 있는 길(거주지에 인접) ② 길드 관련(우리 소유·공격 가능끼리) ③ 그 외.
         // 세계지도와 같은 색 규칙을 쓰되, 길드 관련은 중간 밝기로 둬 이동 가능 길이 먼저 읽히게 한다.
         const tier = homeZoneId != null && (a === homeZoneId || b === homeZoneId)
           ? 'walk'
@@ -590,7 +612,7 @@ export function DeployBoard({
               {selected.id !== homeZoneId && (
                 <p className="mt-1.5 rounded-md bg-amber-500/10 px-1.5 py-1 text-[9.5px] leading-snug font-medium text-amber-700 dark:text-amber-300">
                   {adjacentToHome && !adjacentToHome.has(selected.id)
-                    ? '맞닿은 구역이 아니라 이동할 수 없습니다.'
+                    ? '인접한 구역이 아니라 이동할 수 없습니다.'
                     : '배치하면 거주지도 이 구역으로 옮겨집니다.'}
                 </p>
               )}
@@ -743,6 +765,84 @@ export function DeployBoard({
       </div>
 
 
+      {/* 이동 대기시간 단축 — 배치 전에 먼저 통과해야 하는 관문(세계지도 이동과 동일 순서). */}
+      {speedUpAsk && plan && (
+        <ModalShell
+          onClose={() => {
+            setSpeedUpAsk(false);
+            setPlanConfirm(false);
+          }}
+          onSubmit={() => {
+            if (planConfirm) doSpeedUp();
+            else {
+              setPlanLeft(3);
+              setPlanConfirm(true);
+            }
+          }}
+          label="이동 대기시간 단축"
+        >
+          <ModalLayout
+            title="이동 대기시간 단축"
+            subtitle={
+              <>
+                남은{' '}
+                <b className="font-bold text-zinc-600 dark:text-zinc-300">
+                  {fmtRemain(moveRemainMs)}
+                </b>
+              </>
+            }
+            footer={
+              <>
+                <button
+                  type="button"
+                  onClick={() => {
+                    if (planConfirm) doSpeedUp();
+                    else {
+                      setPlanLeft(3);
+                      setPlanConfirm(true);
+                    }
+                  }}
+                  disabled={pending}
+                  className={`relative isolate flex-1 overflow-hidden rounded-xl py-2.5 text-[13px] font-bold text-white transition-colors disabled:opacity-50 ${
+                    planConfirm ? 'bg-sky-700' : 'bg-sky-600'
+                  }`}
+                >
+                  {planConfirm && (
+                    <span
+                      aria-hidden
+                      className="absolute inset-0 bg-sky-500"
+                      style={{ animation: 'confirm-bg-pulse 1.2s ease-in-out infinite' }}
+                    />
+                  )}
+                  <span className="relative">
+                    단축 💎{plan.gem.toLocaleString('ko-KR')}
+                    {planConfirm ? ` ${planLeft}s` : ''}
+                  </span>
+                </button>
+                <ModalButton
+                  tone="ghost"
+                  onClick={() => {
+                    setSpeedUpAsk(false);
+                    setPlanConfirm(false);
+                  }}
+                >
+                  취소
+                </ModalButton>
+              </>
+            }
+          >
+            <p className="text-center text-[12.5px] text-zinc-500 dark:text-zinc-400">
+              다이아를 사용해 남은 대기시간을 없앱니다. 단축 후 배치를 한 번 더 눌러주세요.
+            </p>
+            <div className="mt-3 rounded-xl bg-zinc-100 py-3 text-center dark:bg-zinc-800">
+              <p className="font-mono text-[20px] font-black text-sky-500">
+                {plan.gem.toLocaleString('ko-KR')}💎
+              </p>
+            </div>
+          </ModalLayout>
+        </ModalShell>
+      )}
+
       {/* 배치 확인 — 이동·해제·배치를 한 화면에 모아 보여주고 한 번에 실행한다. */}
       {plan && (
         <ModalShell
@@ -776,33 +876,32 @@ export function DeployBoard({
             }
             footer={
               <>
-                <button
-                  type="button"
-                  onClick={() => {
-                    // 보석이 나가는 경우에만 3초 재확인 — 무료 배치까지 막으면 성가시다.
-                    if (plan.gem === 0 || planConfirm) runPlan();
-                    else {
-                      setPlanLeft(3);
-                      setPlanConfirm(true);
-                    }
-                  }}
-                  disabled={pending}
-                  className={`relative isolate flex-1 overflow-hidden rounded-xl py-2.5 text-[13px] font-bold text-white transition-colors disabled:opacity-50 ${
-                    plan.role === 'attack' ? 'bg-red-600' : 'bg-sky-600'
-                  }`}
-                >
-                  {planConfirm && (
-                    <span
-                      aria-hidden
-                      className="absolute inset-0 bg-white/25"
-                      style={{ animation: 'confirm-bg-pulse 1.2s ease-in-out infinite' }}
-                    />
-                  )}
-                  <span className="relative">
-                    {plan.gem > 0 ? `배치 💎${plan.gem.toLocaleString('ko-KR')}` : '배치'}
-                    {planConfirm ? ` ${planLeft}s` : ''}
-                  </span>
-                </button>
+                {plan.gem > 0 ? (
+                  // 이동 대기시간이 남았다 — 세계지도와 같은 순서로 단축 팝업을 먼저 띄운다.
+                  <button
+                    type="button"
+                    onClick={() => setSpeedUpAsk(true)}
+                    disabled={pending}
+                    style={{ flex: 1 }}
+                    className="rounded-xl bg-sky-600 py-1.5 text-[11px] leading-[1.35] font-bold text-white disabled:opacity-50"
+                  >
+                    {fmtRemain(moveRemainMs)} 후 배치
+                    <br />
+                    또는 💎{plan.gem.toLocaleString('ko-KR')}
+                  </button>
+                ) : (
+                  <button
+                    type="button"
+                    onClick={runPlan}
+                    disabled={pending}
+                    style={{ flex: 1 }}
+                    className={`rounded-xl py-2.5 text-[13px] font-bold text-white disabled:opacity-50 ${
+                      plan.role === 'attack' ? 'bg-red-600' : 'bg-sky-600'
+                    }`}
+                  >
+                    배치
+                  </button>
+                )}
                 <ModalButton
                   tone="ghost"
                   onClick={() => {
