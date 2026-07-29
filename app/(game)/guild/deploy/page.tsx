@@ -45,7 +45,7 @@ export default async function DeployPage() {
         <DeployBoard
           isLeader={isLeader}
           myUserId={userId}
-          residenceZoneId={residence?.zoneId ?? null}
+          residence={residence}
           myGuildId={membership.guildId.toString()}
           mapSrc={mapSrc}
           attackableZoneIds={attackable}

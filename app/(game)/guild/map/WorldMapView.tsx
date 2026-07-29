@@ -485,7 +485,7 @@ export function WorldMapView({
   };
 
   /** 쿨타임 보석 단축 — 대기시간만 없앤다(이동은 별도 클릭). */
-  const speedUpOnly = () => {
+  const speedUpOnly = (nextZoneId: number) => {
     const cost = residenceSpeedUpCost(remainMs);
     setMoveAsk(null);
     setMoveConfirm(false);
@@ -500,17 +500,23 @@ export function WorldMapView({
         return showError(guildErrMsg(r.code));
       }
       showHeaderToast({ title: `이동 대기시간 단축 −${cost.toLocaleString('ko-KR')}💎` });
+      // 단축은 이동을 위한 관문이므로 흐름을 끊지 않고 다음 단계로 이어준다.
+      if (moveLock) setMoveAsk({ kind: 'release', zoneId: nextZoneId });
+      else moveResidence(nextZoneId);
     });
   };
 
-  /** 이동 버튼 — 상황에 따라 바로 이동하거나 확인 팝업을 연다. */
+  /**
+   * 이동 버튼 — 남은 관문을 순서대로 통과시킨다: ① 쿨타임(단축) → ② 배치·집행관 해제 확인 → ③ 이동.
+   * 시간이 먼저인 이유: 대기시간이 남아 있으면 해제 여부를 물어봐야 소용이 없다.
+   */
   const askMove = (zoneId: number) => {
-    if (moveLock) return setMoveAsk({ kind: 'release', zoneId });
     if (remainMs > 0) {
       setMoveLeft(3);
       setMoveConfirm(false);
       return setMoveAsk({ kind: 'gem', zoneId });
     }
+    if (moveLock) return setMoveAsk({ kind: 'release', zoneId });
     moveResidence(zoneId);
   };
 
@@ -619,15 +625,15 @@ export function WorldMapView({
             );
           })()}
         </svg>
-        {/* 우하단 탭 — 역사 / 점령 현황(활성=emerald, 길드 랭킹 탭 UI와 통일, 2026-07-23).
-            역사=노드 구역명·하단 역사, 점령 현황=노드 점령 길드명·하단 점령현황.
+        {/* 우하단 탭 — 세계지도 / 점령현황(활성=emerald, 길드 랭킹 탭 UI와 통일, 2026-07-23).
+            세계지도=노드 구역명·하단 역사, 점령현황=노드 점령 길드명·하단 점령 현황.
             embedded(세계지도 탭)에서는 노드=구역명·하단=점령현황 고정이라 이 탭을 숨긴다. */}
         {!embedded && (
           <div className="absolute bottom-2 right-2 z-30 inline-flex gap-0.5 rounded-lg bg-black/45 p-0.5 backdrop-blur-sm">
             {(
               [
-                ['history', '역사'],
-                ['conquest', '점령 현황'],
+                ['history', '세계지도'],
+                ['conquest', '점령현황'],
               ] as const
             ).map(([k, label]) => {
               const active = (k === 'conquest') === showConquest;
@@ -1374,7 +1380,7 @@ export function WorldMapView({
                     onClick={() => {
                       // 강화 보석 단축과 동일한 3초 인-버튼 재확인 — 오탭 결제 방지.
                       if (moveConfirm) {
-                        speedUpOnly();
+                        speedUpOnly(moveAsk.zoneId);
                       } else {
                         setMoveLeft(3);
                         setMoveConfirm(true);

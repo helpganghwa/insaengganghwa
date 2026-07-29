@@ -5,10 +5,12 @@ import { useEffect, useMemo, useState, useTransition } from 'react';
 
 import { ModalShell } from '@/components/ModalShell';
 import { useResourceToast } from '@/components/ResourceToast';
+import { useDiamond } from '@/components/DiamondContext';
 import {
   CONQUEST_DEFENDER_BONUS,
   CONQUEST_EXECUTOR_POWER_MULT,
   CONQUEST_BATTLE_KST_HOUR,
+  residenceSpeedUpCost,
 } from '@/lib/game/guild/balance';
 
 import {
@@ -22,6 +24,15 @@ import { guildErrMsg } from '../errors-msg';
 
 type Region = 'volcano' | 'temple' | 'swamp' | 'orc' | 'kingdom' | 'angel';
 type DeployRole = 'attack' | 'defend';
+type ConquestRole = DeployRole;
+
+/** 남은 ms → '5시간 12분' — 팝업 안내용(초는 생략). */
+function fmtRemain(ms: number): string {
+  const total = Math.max(0, Math.ceil(ms / 60_000));
+  const h = Math.floor(total / 60);
+  const m = total % 60;
+  return h > 0 ? `${h}시간 ${m}분` : `${m}분`;
+}
 type Member = {
   userId: string;
   nickname: string;
@@ -50,7 +61,7 @@ const fmt = (n: number) =>
 /** 지도 핀 — 노드 위에 떠 있는 물방울 마커. 색으로 역할을 구분한다(내 위치/선택). */
 function MapPin({ from, to }: { from: string; to: string }) {
   return (
-    <span className="block animate-marker-bob">
+    <span className="block">
       <span
         className="relative block h-[11px] w-[11px] animate-marker-pin-glow border-[1.5px] border-white"
         style={{
@@ -68,7 +79,7 @@ function MapPin({ from, to }: { from: string; to: string }) {
 export function DeployBoard({
   isLeader,
   myUserId,
-  residenceZoneId,
+  residence,
   myGuildId,
   mapSrc,
   attackableZoneIds,
@@ -78,8 +89,12 @@ export function DeployBoard({
 }: {
   isLeader: boolean;
   myUserId: string;
-  /** 내 거주 구역(0139) — 배치는 거주 구역에서만 가능. null=미설정. */
-  residenceZoneId: number | null;
+  /** 내 거주 상태(0139) — 배치는 거주 구역에서만 가능. 이동이 필요하면 배치와 한 번에 처리한다. */
+  residence: {
+    zoneId: number | null;
+    readyAtIso: string | null;
+    lock: { kind: 'executor' | 'deploy'; label: '집행관' | '공격' | '수비' } | null;
+  } | null;
   myGuildId: string;
   mapSrc: string;
   attackableZoneIds: number[];
@@ -89,9 +104,57 @@ export function DeployBoard({
 }) {
   const router = useRouter();
   const { showHeaderToast, showError } = useResourceToast();
+  const { optimisticAdjust } = useDiamond();
   const [members, setMembers] = useState(initialMembers);
   // 초기 선택 = 내 거주지 — 배치는 거주 구역에서만 가능하므로 첫 화면이 곧 내 자리다.
-  const [selectedId, setSelectedId] = useState<number | null>(residenceZoneId);
+  const [selectedId, setSelectedId] = useState<number | null>(residence?.zoneId ?? null);
+  const homeZoneId = residence?.zoneId ?? null;
+  // 이동 가능 구역 — 거주지와 맞닿은 곳. 거주 미설정이면 어디든 정착 가능.
+  const adjacentToHome = useMemo(() => {
+    if (homeZoneId == null) return null;
+    const set = new Set<number>();
+    for (const { a, b } of adjacency) {
+      if (a === homeZoneId) set.add(b);
+      else if (b === homeZoneId) set.add(a);
+    }
+    return set;
+  }, [adjacency, homeZoneId]);
+  const [nowMs, setNowMs] = useState(0);
+  const readyAt = residence?.readyAtIso ? Date.parse(residence.readyAtIso) : null;
+  const moveRemainMs = readyAt && nowMs ? Math.max(0, readyAt - nowMs) : 0;
+  useEffect(() => {
+    if (!readyAt) return;
+    setNowMs(Date.now());
+    const id = setInterval(() => setNowMs(Date.now()), 1000);
+    return () => clearInterval(id);
+  }, [readyAt]);
+  /** 배치 확인 팝업 — 이동·해제·배치를 한 번에 안내하고 한 번에 실행한다. */
+  const [plan, setPlan] = useState<{
+    zoneId: number;
+    zoneName: string;
+    role: ConquestRole;
+    /** 거주지 이동이 필요한가(필요하면 이동+배치를 함께 요청). */
+    move: boolean;
+    /** 이동 쿨타임 보석 비용(0이면 무료). */
+    gem: number;
+    /** 이번 실행으로 풀리는 기존 역할 설명(없으면 null). */
+    release: string | null;
+  } | null>(null);
+  const [planConfirm, setPlanConfirm] = useState(false);
+  const [planLeft, setPlanLeft] = useState(0);
+  useEffect(() => {
+    if (!planConfirm) return;
+    const id = setInterval(() => {
+      setPlanLeft((v) => {
+        if (v <= 1) {
+          setPlanConfirm(false);
+          return 0;
+        }
+        return v - 1;
+      });
+    }, 1000);
+    return () => clearInterval(id);
+  }, [planConfirm]);
   const [pending, start] = useTransition();
 
   const zoneById = useMemo(() => new Map(zones.map((z) => [z.id, z])), [zones]);
@@ -146,24 +209,65 @@ export function DeployBoard({
     [members, myUserId],
   );
 
-  // 자가 배치 — 배치는 유저 고유 권한(임원도 남을 배치 불가). 선택 구역에 본인을 공격/수비 등록.
-  const selfDeploy = () => {
+  /**
+   * 배치 버튼 — 바로 실행하지 않고 "무슨 일이 일어나는지"를 한 팝업에 모은다.
+   * 거주지 이동·기존 배치 해제·새 배치가 각각 다른 화면에 흩어져 있던 것을 한 번에 처리한다.
+   */
+  const askDeploy = () => {
     if (!selected || !selectedRole) return;
     const me = members.find((x) => x.userId === myUserId);
     if (!me) return;
+    const needsMove = selected.id !== homeZoneId;
+    if (needsMove && adjacentToHome && !adjacentToHome.has(selected.id)) {
+      return showError('맞닿은 구역으로만 이동할 수 있습니다. 한 칸씩 옮겨가세요.');
+    }
+    const release = me.execZoneId
+      ? `${me.execZoneName} 집행관`
+      : me.depZoneId
+        ? `${me.depZoneName} ${me.depRole === 'attack' ? '공격' : '수비'} 배치`
+        : null;
+    const gem = needsMove ? residenceSpeedUpCost(moveRemainMs) : 0;
+    setPlanLeft(3);
+    setPlanConfirm(false);
+    setPlan({
+      zoneId: selected.id,
+      zoneName: selected.name,
+      role: selectedRole,
+      move: needsMove,
+      gem,
+      release,
+    });
+  };
+
+  /** 확인된 계획 실행 — 이동·해제·배치가 서버 한 트랜잭션에서 처리된다. */
+  const runPlan = () => {
+    if (!plan) return;
+    const me = members.find((x) => x.userId === myUserId);
+    if (!me) return;
     const prev = me;
+    const p = plan;
+    setPlan(null);
+    setPlanConfirm(false);
     // 배치 시 집행관(자동 방어)은 서버에서 자동 해제 → 로컬도 집행관 표시 제거(낙관적 갱신).
-    patch(myUserId, { depZoneId: selected.id, depZoneName: selected.name, depRole: selectedRole, execZoneId: null, execZoneName: null });
+    patch(myUserId, { depZoneId: p.zoneId, depZoneName: p.zoneName, depRole: p.role, execZoneId: null, execZoneName: null });
+    if (p.gem > 0) optimisticAdjust(-BigInt(p.gem));
     start(async () => {
-      const r = await deployAction(selected.id, selectedRole);
+      const r = await deployAction(p.zoneId, p.role, {
+        move: p.move,
+        paySpeedUp: p.gem > 0,
+      });
       if (r.status !== 'success') {
         patch(myUserId, {
           depZoneId: prev.depZoneId, depZoneName: prev.depZoneName, depRole: prev.depRole,
           execZoneId: prev.execZoneId, execZoneName: prev.execZoneName,
         });
+        if (p.gem > 0) optimisticAdjust(BigInt(p.gem));
         return showError(guildErrMsg(r.code));
       }
-      showHeaderToast({ title: selectedRole === 'attack' ? '공격 배치' : '수비 배치' });
+      showHeaderToast({
+        title: `${p.role === 'attack' ? '공격' : '수비'} 배치${p.move ? ' · 거주지 이동' : ''}`,
+      });
+      router.refresh(); // 거주지·쿨타임은 서버 상태 — 다음 판단이 어긋나지 않게 동기화
     });
   };
 
@@ -328,7 +432,7 @@ export function DeployBoard({
         {zones.map((z) => {
           const mine = z.ownerGuildId === myGuildId;
           const canAttack = !mine && attackable.has(z.id);
-          const isHome = z.id === residenceZoneId;
+          const isHome = z.id === homeZoneId;
           const isUsable = mine || canAttack || isHome; // 내 거주지는 항상 선택 가능
           const isSel = z.id === selectedId;
           const owned = z.ownerGuildId != null;
@@ -376,7 +480,9 @@ export function DeployBoard({
               )}
               {/* 핀 — 내 위치(앰버)는 항상 고정, 선택(하늘색)은 별도. 같은 구역이면 나란히 뜬다. */}
               {(isHome || isSel) && (
-                <span className="pointer-events-none absolute bottom-full left-1/2 -mb-1 flex -translate-x-1/2 gap-[2px]">
+                /* 두 핀을 같은 컨테이너에서 한 번만 애니메이션한다 — 핀마다 걸면 마운트
+                   시점이 달라 위아래 움직임의 위상이 어긋난다(2026-07-29 제보). */
+                <span className="pointer-events-none absolute bottom-full left-1/2 -mb-1 flex -translate-x-1/2 animate-marker-bob gap-[2px]">
                   {isHome && <MapPin from="#fcd34d" to="#f59e0b" />}
                   {isSel && <MapPin from="#7dd3fc" to="#0284c7" />}
                 </span>
@@ -418,10 +524,12 @@ export function DeployBoard({
               <p className="mt-0.5 text-[10px] text-zinc-500">
                 총 전투력 <span className="font-mono font-bold text-zinc-700 dark:text-zinc-200">{fmt(totalPower)}</span>
               </p>
-              {/* 거주 안내(0139) — 버튼이 그냥 사라지면 이유를 알 수 없어 배치 불가 사유를 명시. */}
-              {selected.id !== residenceZoneId && (
+              {/* 거주 안내(0139) — 배치 시 거주지도 함께 옮겨진다는 것을 미리 알린다. */}
+              {selected.id !== homeZoneId && (
                 <p className="mt-1.5 rounded-md bg-amber-500/10 px-1.5 py-1 text-[9.5px] leading-snug font-medium text-amber-700 dark:text-amber-300">
-                  이 구역에 거주해야 배치할 수 있습니다. 세계지도에서 이동하세요.
+                  {adjacentToHome && !adjacentToHome.has(selected.id)
+                    ? '맞닿은 구역이 아니라 이동할 수 없습니다.'
+                    : '배치하면 거주지도 이 구역으로 옮겨집니다.'}
                 </p>
               )}
 
@@ -523,13 +631,8 @@ export function DeployBoard({
                   : '미배치';
               // 배치는 유저 고유 권한 — 공격/수비 버튼은 본인 행에만 노출.
               // 집행관도 배치 가능(배치 시 자동 방어 자동 해제, 2026-07-26 문의 #90).
-              // 이동·거주 필수(0139) — 내가 사는 구역에서만 배치할 수 있다.
-              const canSelfDeploy =
-                m.userId === myUserId &&
-                !locked &&
-                selected != null &&
-                !here &&
-                selected.id === residenceZoneId;
+              // 버튼은 항상 노출한다 — 눌러야 무엇이 필요한지(이동·해제) 알 수 있다.
+              const canSelfDeploy = m.userId === myUserId && !locked && selected != null && !here;
               return (
                 <li key={m.userId} className="flex min-h-[38px] items-center gap-1">
                   <button
@@ -561,7 +664,7 @@ export function DeployBoard({
                   ) : canSelfDeploy ? (
                     <button
                       type="button"
-                      onClick={selfDeploy}
+                      onClick={askDeploy}
                       disabled={pending}
                       className={`shrink-0 rounded-md px-1.5 py-0.5 text-[10px] font-bold text-white disabled:opacity-50 ${
                         isDefend ? 'bg-sky-600' : 'bg-red-600'
@@ -576,6 +679,99 @@ export function DeployBoard({
           </ul>
         </section>
       </div>
+
+
+      {/* 배치 확인 — 이동·해제·배치를 한 화면에 모아 보여주고 한 번에 실행한다. */}
+      {plan && (
+        <ModalShell
+          label="배치 확인"
+          onClose={() => {
+            setPlan(null);
+            setPlanConfirm(false);
+          }}
+        >
+          <div className="p-4">
+            <h3 className="text-center text-[15px] font-extrabold">
+              {plan.zoneName} {plan.role === 'attack' ? '공격' : '수비'} 배치
+            </h3>
+            <ul className="mt-3 space-y-1.5 rounded-xl bg-zinc-100 px-3 py-2.5 text-[12px] dark:bg-zinc-900">
+              {plan.release && (
+                <li className="flex gap-1.5">
+                  <span className="text-zinc-400">·</span>
+                  <span className="text-zinc-600 dark:text-zinc-300">
+                    <b className="font-bold text-red-500">{plan.release}</b>가 해제됩니다.
+                  </span>
+                </li>
+              )}
+              {plan.move && (
+                <li className="flex gap-1.5">
+                  <span className="text-zinc-400">·</span>
+                  <span className="text-zinc-600 dark:text-zinc-300">
+                    거주지가 <b className="font-bold text-amber-500">{plan.zoneName}</b>으로 이동합니다.
+                  </span>
+                </li>
+              )}
+              {plan.gem > 0 && (
+                <li className="flex gap-1.5">
+                  <span className="text-zinc-400">·</span>
+                  <span className="text-zinc-600 dark:text-zinc-300">
+                    이동 대기시간 <b className="font-bold text-zinc-700 dark:text-zinc-200">{fmtRemain(moveRemainMs)}</b>을{' '}
+                    <b className="font-mono font-bold text-sky-500">{plan.gem.toLocaleString('ko-KR')}💎</b>로 단축합니다.
+                  </span>
+                </li>
+              )}
+              <li className="flex gap-1.5">
+                <span className="text-zinc-400">·</span>
+                <span className="text-zinc-600 dark:text-zinc-300">
+                  <b className={`font-bold ${plan.role === 'attack' ? 'text-red-500' : 'text-sky-500'}`}>
+                    {plan.role === 'attack' ? '공격' : '수비'}
+                  </b>
+                  로 배치됩니다.
+                </span>
+              </li>
+            </ul>
+            <div className="mt-3 flex gap-2">
+              <button
+                type="button"
+                onClick={() => {
+                  // 보석이 나가는 경우에만 3초 재확인 — 무료 배치까지 막으면 성가시다.
+                  if (plan.gem === 0 || planConfirm) runPlan();
+                  else {
+                    setPlanLeft(3);
+                    setPlanConfirm(true);
+                  }
+                }}
+                disabled={pending}
+                className={`relative isolate flex-1 overflow-hidden rounded-lg py-2 text-[13px] font-bold text-white transition-colors disabled:opacity-50 ${
+                  plan.role === 'attack' ? 'bg-red-600' : 'bg-sky-600'
+                }`}
+              >
+                {planConfirm && (
+                  <span
+                    aria-hidden
+                    className="absolute inset-0 bg-white/25"
+                    style={{ animation: 'confirm-bg-pulse 1.2s ease-in-out infinite' }}
+                  />
+                )}
+                <span className="relative">
+                  {plan.gem > 0 ? `배치 💎${plan.gem.toLocaleString('ko-KR')}` : '배치'}
+                  {planConfirm ? ` ${planLeft}s` : ''}
+                </span>
+              </button>
+              <button
+                type="button"
+                onClick={() => {
+                  setPlan(null);
+                  setPlanConfirm(false);
+                }}
+                className="flex-1 rounded-lg border border-zinc-300 py-2 text-[13px] font-medium text-zinc-500 dark:border-zinc-700 dark:text-zinc-400"
+              >
+                취소
+              </button>
+            </div>
+          </div>
+        </ModalShell>
+      )}
 
     </div>
   );

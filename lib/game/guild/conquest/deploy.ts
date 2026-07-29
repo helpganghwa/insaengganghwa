@@ -7,7 +7,7 @@ import { guildMembers, zones, guildBattleDeployments, zoneAdjacency } from '@/li
 
 import type { ConquestRole } from '../balance';
 import { GuildError } from '../errors';
-import { assertResident } from '../residence';
+import { assertResident, setResidenceTx } from '../residence';
 import { nextBattleKstDay, isConquestLocked } from './schedule';
 
 type Tx = Parameters<Parameters<typeof db.transaction>[0]>[0];
@@ -49,9 +49,24 @@ export async function deployToZone(input: {
   serverId: number;
   zoneId: number;
   role: ConquestRole;
-}): Promise<{ battleKstDay: string }> {
+  /** 거주 구역이 아니면 함께 이동한다(기존 배치·집행관은 해제). UI에서 확인받은 경우만. */
+  move?: boolean;
+  /** 이동 쿨타임이 남았으면 보석으로 지불. */
+  paySpeedUp?: boolean;
+}): Promise<{ battleKstDay: string; spent: number; released: '집행관' | '공격' | '수비' | null }> {
   if (isConquestLocked()) throw new GuildError('BATTLE_IN_PROGRESS'); // 정산·공개 윈도(23:00~01:00) 잠금
   return db.transaction(async (tx) => {
+    // 이동+배치를 한 트랜잭션에 — 이동만 되고 배치가 실패해 쿨타임·보석만 날리는 경우를 없앤다.
+    let moved: { spent: number; released: '집행관' | '공격' | '수비' | null } = {
+      spent: 0,
+      released: null,
+    };
+    if (input.move) {
+      moved = await setResidenceTx(tx, input.userId, input.serverId, input.zoneId, {
+        release: true,
+        paySpeedUp: input.paySpeedUp,
+      });
+    }
     const [m] = await tx
       .select({ guildId: guildMembers.guildId })
       .from(guildMembers)
@@ -103,7 +118,7 @@ export async function deployToZone(input: {
         set: { guildId: m.guildId, zoneId: input.zoneId, role: input.role, createdAt: sql`now()` },
       });
 
-    return { battleKstDay };
+    return { battleKstDay, ...moved };
   });
 }
 

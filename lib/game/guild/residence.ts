@@ -102,18 +102,32 @@ async function isAdjacent(tx: Tx, a: number, b: number): Promise<boolean> {
  * 검사·결제·이동을 한 트랜잭션에 두고 캐릭터 행을 잠근다 — 연타로 쿨타임을 건너뛰거나
  * 보석만 빠져나가는 경우가 없다.
  */
+export type SetResidenceOpts = {
+  /** 배치·집행관을 해제하고 이동(유저가 팝업에서 확인한 경우). */
+  release?: boolean;
+  /** 남은 쿨타임을 보석으로 지불하고 즉시 이동. */
+  paySpeedUp?: boolean;
+};
+export type SetResidenceResult = { spent: number; released: '집행관' | '공격' | '수비' | null };
+
 export async function setResidence(
   userId: string,
   serverId: number,
   zoneId: number,
-  opts: {
-    /** 배치·집행관을 해제하고 이동(유저가 팝업에서 확인한 경우). */
-    release?: boolean;
-    /** 남은 쿨타임을 보석으로 지불하고 즉시 이동. */
-    paySpeedUp?: boolean;
-  } = {},
-): Promise<{ spent: number; released: '집행관' | '공격' | '수비' | null }> {
-  return db.transaction(async (tx) => {
+  opts: SetResidenceOpts = {},
+): Promise<SetResidenceResult> {
+  return db.transaction((tx) => setResidenceTx(tx, userId, serverId, zoneId, opts));
+}
+
+/** 위 로직의 트랜잭션 주입형 — 배치와 한 트랜잭션으로 묶을 때 쓴다(이동+배치 원자화). */
+export async function setResidenceTx(
+  tx: Tx,
+  userId: string,
+  serverId: number,
+  zoneId: number,
+  opts: SetResidenceOpts = {},
+): Promise<SetResidenceResult> {
+  {
     const [me] = await tx
       .select({ zoneId: characters.residenceZoneId, readyAt: characters.residenceReadyAt })
       .from(characters)
@@ -196,7 +210,7 @@ export async function setResidence(
     // 도전 과제(0118) — 기본 배정과 다른 구역으로 '이동'했을 때만 마킹.
     if (before != null) await markChallengeEvent(tx, userId, serverId, 'residence_move');
     return { spent, released };
-  });
+  }
 }
 
 /**

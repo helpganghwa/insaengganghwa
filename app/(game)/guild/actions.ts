@@ -422,16 +422,26 @@ export async function distributeTaxManualAction(amounts: { userId: string; amoun
 
 // ── 점령전 (§5.8) ──
 
-export async function deployAction(zoneId: number, role: ConquestRole) {
+export async function deployAction(
+  zoneId: number,
+  role: ConquestRole,
+  opts: { move?: boolean; paySpeedUp?: boolean } = {},
+) {
   const u = await getSessionUserId();
   if (!u) return unauth;
   if (await rateLimited(u, 'guild')) return { status: 'error', code: 'RATE_LIMITED' } as const;
   const __b = await actionBlock(); if (__b) return { status: 'error', code: __b } as const;
   try {
-    const r = await deployToZone({ userId: u, serverId: await getActiveServerId(), zoneId, role });
+    const r = await deployToZone({
+      userId: u,
+      serverId: await getActiveServerId(),
+      zoneId,
+      role,
+      ...opts,
+    });
     revalidatePath('/guild/map');
     revalidatePath('/guild');
-    return { status: 'success', battleKstDay: r.battleKstDay } as const;
+    return { status: 'success', ...r } as const;
   } catch (e) {
     return fail(e, 'deploy');
   }
