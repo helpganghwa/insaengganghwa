@@ -65,7 +65,7 @@ function ResultCard({
 
   const st = transcendStyle(shown);
   const grade = `rgb(${st.colorRgb.join(',')})`;
-  const spriteSize = big ? 76 : 48;
+  const spriteSize = big ? 76 : 44;
 
   return (
     <button
@@ -73,13 +73,13 @@ function ResultCard({
       onClick={onClick}
       title={r.name}
       style={{ ...rarityBorderStyle(shown), transition: 'border-color 400ms ease-out' }}
-      className={`relative flex aspect-square flex-col items-center justify-center gap-0.5 isolate overflow-hidden rounded-xl border-2 bg-white px-1 text-center dark:bg-zinc-950 ${
-        big ? 'w-full' : ''
+      className={`relative flex aspect-square flex-col items-center justify-center isolate overflow-hidden rounded-xl border-2 bg-white px-0.5 text-center dark:bg-zinc-950 ${
+        big ? 'w-full gap-0.5' : 'gap-0'
       } ${hasRarityBorder(shown) ? '' : 'border-zinc-200 dark:border-zinc-800'}`}
     >
       <RarityFrame level={shown} />
       {r.isNew ? (
-        <span className="absolute left-1.5 top-1.5 z-30 rounded bg-emerald-500 px-1 text-[8px] font-bold text-white">
+        <span className="absolute left-1 top-1 z-30 rounded bg-emerald-500 px-[3px] text-[7.5px] font-bold leading-[1.5] text-white">
           NEW
         </span>
       ) : null}
@@ -105,7 +105,7 @@ function ResultCard({
       </span>
       <span
         className={`line-clamp-2 break-keep px-0.5 leading-tight text-zinc-600 dark:text-zinc-400 ${
-          big ? 'text-[13px] font-medium' : 'min-h-[2.5em] text-[9px]'
+          big ? 'text-[13px] font-medium' : 'min-h-[2.3em] text-[8.5px] leading-[1.15]'
         }`}
       >
         {r.name}
@@ -287,7 +287,7 @@ export function GachaResultModal({
           ) : (
             <>
               {/* 3열 — 4열은 정보를 담기에 좁다(2026-07-29 피드백). 컨텐츠만 스크롤되므로 줄 수는 무관. */}
-              <div className="grid grid-cols-3 gap-2">
+              <div className="grid grid-cols-3 gap-1.5">
                 {sortedResults.map((r, i) => (
                   <ResultCard
                     key={i}

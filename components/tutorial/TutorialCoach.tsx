@@ -26,7 +26,8 @@ const STEP_TARGETS: Record<TutorialStep, Candidate[]> = {
     { sel: '[data-tut="goto-gacha"]', copy: '먼저 보급소에서 첫 장비를 얻어볼게요. 여길 눌러 들어가요!' },
   ],
   equip: [
-    { sel: '[data-tut="gacha-confirm"]', copy: '장비를 획득했어요! 🎉 ‘확인’을 눌러 마무리해요.' },
+    // gacha-confirm은 넣지 않는다 — 확인을 눌러 equip으로 넘어온 직후에도 팝업이 닫히는
+    // 동안 남아 있어 하이라이트가 한 단계 씹힌 채 머문다(2026-07-29 제보).
     { sel: '[data-tut="equip-btn"]', copy: '이 장비를 ‘장착’해서 바로 착용해볼게요!' },
     {
       sel: '[data-tut="inv-item"]',
@@ -143,6 +144,9 @@ export function TutorialCoach({ statePromise }: { statePromise: Promise<Tutorial
       // active일 때만 전진/기록 — DONE 유저의 매 장착/보급 이벤트가 tut_step을 다시 써서
       // 같은 브라우저의 다른 계정(ACTIVE)에 오염된 단계가 재개되는 것 방지.
       if (!(started || phase === 'active')) return;
+      // 전진 직후 잠깐은 구멍을 그리지 않는다 — 이전 화면의 요소가 아직 남아 있어
+      // 다음 단계 후보와 겹치면 하이라이트가 한 단계 씹힌 채 머문다(2026-07-29 제보).
+      navAtRef.current = Date.now();
       setLocalStep((cur) => {
         const i = idxOf(cur ?? 'open');
         const next = i >= 0 && i < STEP_ORDER.length - 1 ? STEP_ORDER[i + 1] : cur ?? 'open';
@@ -175,7 +179,8 @@ export function TutorialCoach({ statePromise }: { statePromise: Promise<Tutorial
     let alive = true;
     const measure = () => {
       if (!alive) return;
-      if (Date.now() - navAtRef.current < 120) {
+      if (Date.now() - navAtRef.current < 260) {
+        // 딤은 유지하고 구멍만 지운다 — null로 만들면 오버레이가 사라져 배경이 번쩍인다.
         setRect(null);
         setCopy('');
         return;
@@ -273,7 +278,8 @@ export function TutorialCoach({ statePromise }: { statePromise: Promise<Tutorial
   }
 
   if (!effective) return null;
-  if (!copy) return null; // 정착 윈도·초기 프레임 — 잘못된 문구 깜빡임 방지
+  // copy가 비어도(정착 윈도·타겟 탐색 중) 딤은 계속 그린다 — 오버레이가 사라졌다 나타나면
+  // 화면이 밝아졌다 어두워져 전환이 튄다(2026-07-29 제보). 구멍·툴팁만 생략.
 
   const vw = window.innerWidth;
   const vh = window.innerHeight;
@@ -323,10 +329,11 @@ export function TutorialCoach({ statePromise }: { statePromise: Promise<Tutorial
           />
         </>
       ) : (
-        <div className="absolute inset-0 bg-black/45" />
+        <div className="absolute inset-0" style={{ background: DIM }} />
       )}
 
-      {/* 말풍선 */}
+      {/* 말풍선 — 타겟을 찾기 전(정착 윈도)엔 감춘다. 딤만 유지해 배경이 튀지 않게. */}
+      {copy ? (
       <div
         data-tut-ui
         className="pointer-events-auto absolute"
@@ -366,6 +373,7 @@ export function TutorialCoach({ statePromise }: { statePromise: Promise<Tutorial
           <p className="text-[13px] font-bold leading-snug break-keep">{copy}</p>
         </div>
       </div>
+      ) : null}
     </div>,
     document.body,
   );
