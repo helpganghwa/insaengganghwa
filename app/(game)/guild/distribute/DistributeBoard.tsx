@@ -7,6 +7,8 @@ import { useResourceToast } from '@/components/ResourceToast';
 import { useDiamond } from '@/components/DiamondContext';
 
 import { distributeTaxManualAction } from '../actions';
+import { ModalShell } from '@/components/ModalShell';
+import { ModalLayout, ModalButton } from '@/components/ModalLayout';
 import { guildErrMsg } from '../errors-msg';
 import { ZoomSafeInput } from '@/components/ui/ZoomSafeField';
 
@@ -58,8 +60,12 @@ export function DistributeBoard({
 
   const clearAll = () => setAmounts({});
 
+  /** 확인 팝업 — 되돌릴 수 없는 공용 풀 이동이라 수령인·금액을 다시 보여준 뒤 실행한다. */
+  const [payAsk, setPayAsk] = useState(false);
+
   const pay = () => {
     if (!canPay) return;
+    setPayAsk(false);
     const payload = parsed.filter((x) => x.amt > 0).map((x) => ({ userId: x.m.userId, amount: x.amt }));
     const mine = payload.find((p) => p.userId === myUserId)?.amount ?? 0;
     start(async () => {
@@ -156,13 +162,68 @@ export function DistributeBoard({
         </div>
         <button
           type="button"
-          onClick={pay}
+          onClick={() => setPayAsk(true)}
           disabled={!canPay}
           className="mt-2 w-full rounded-lg bg-amber-600 py-2.5 text-sm font-bold text-white disabled:opacity-40"
         >
           {over ? '세금을 초과했습니다' : `지급${total > 0 ? ` (${total.toLocaleString('ko-KR')}💎)` : ''}`}
         </button>
       </div>
+
+      {/* 지급 확인 — 길드 공용 풀이 한 번에 빠져나간다. 수령인·금액을 그대로 되읽어준다. */}
+      {payAsk && (
+        <ModalShell onClose={() => setPayAsk(false)} onSubmit={pay} label="세금 분배 확인">
+          <ModalLayout
+            title="세금을 분배할까요?"
+            subtitle={
+              <>
+                <span className="font-bold text-zinc-600 dark:text-zinc-300">
+                  {parsed.filter((x) => x.amt > 0).length}명
+                </span>
+                <span className="mx-1 text-zinc-400">·</span>
+                <span className="font-mono font-bold text-amber-600 dark:text-amber-400">
+                  총 {total.toLocaleString('ko-KR')}💎
+                </span>
+              </>
+            }
+            maxBodyClass="max-h-[46vh]"
+            footer={
+              <>
+                <ModalButton tone="ghost" onClick={() => setPayAsk(false)} disabled={pending}>
+                  취소
+                </ModalButton>
+                <ModalButton tone="primary" onClick={pay} disabled={pending}>
+                  지급
+                </ModalButton>
+              </>
+            }
+          >
+            <ul className="space-y-1">
+              {parsed
+                .filter((x) => x.amt > 0)
+                .map((x) => (
+                  <li
+                    key={x.m.userId}
+                    className="flex items-center justify-between gap-2 text-[12.5px]"
+                  >
+                    <span className="truncate text-zinc-600 dark:text-zinc-300">
+                      {x.m.nickname}
+                      {x.m.userId === myUserId ? (
+                        <span className="ml-1 text-[10px] font-bold text-amber-500">나</span>
+                      ) : null}
+                    </span>
+                    <span className="shrink-0 font-mono font-bold tabular-nums">
+                      {x.amt.toLocaleString('ko-KR')}💎
+                    </span>
+                  </li>
+                ))}
+            </ul>
+            <p className="mt-3 border-t border-zinc-200 pt-2 text-[11px] text-zinc-500 dark:border-zinc-700">
+              지급 후 남는 세금 {remaining.toLocaleString('ko-KR')}💎 · 되돌릴 수 없습니다.
+            </p>
+          </ModalLayout>
+        </ModalShell>
+      )}
     </section>
   );
 }

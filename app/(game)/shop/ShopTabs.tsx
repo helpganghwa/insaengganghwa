@@ -399,19 +399,32 @@ export function ShopTabs({
           router.refresh(); // 다이아·상자·프리미엄 등 서버 권위 상태 동기화.
           showHeaderToast({ title: '구매 완료' });
         } else if (v.code === 'NETWORK') {
-          showHeaderToast({ title: '결제 확인 지연 — 지급은 잠시 후 자동 반영됩니다' });
-        } else {
-          showHeaderToast({
-            title:
-              commonErrTitle(v.code) ??
-              (v.code === 'AMOUNT_MISMATCH' ? '결제 금액 오류 — 문의 바랍니다' : '결제 확인 실패'),
+          // 돈은 나갔는데 결과가 안 보이는 상황 — 사라지는 토스트로 알리면 놓치고 문의로 온다.
+          setPayNotice({
+            title: '결제 확인이 지연되고 있어요',
+            body: '결제는 정상 접수됐고 지급은 잠시 후 자동으로 반영됩니다. 10분이 지나도 반영되지 않으면 고객센터로 문의해 주세요.',
           });
+        } else if (v.code === 'AMOUNT_MISMATCH') {
+          setPayNotice({
+            title: '결제 금액이 맞지 않아요',
+            body: '결제는 접수됐지만 금액이 확인되지 않아 지급이 보류됐습니다. 고객센터로 문의해 주시면 확인 후 처리해 드립니다.',
+            support: true,
+          });
+        } else {
+          showHeaderToast({ title: commonErrTitle(v.code) ?? '결제 확인 실패' });
         }
       })();
     }
     // 마운트 1회만 — returnPaymentId/Code는 초기 URL 파생값.
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
+
+  /** 결제 관련 안내 — 재화가 걸린 메시지는 사라지지 않는 팝업으로 남긴다. */
+  const [payNotice, setPayNotice] = useState<{
+    title: string;
+    body: string;
+    support?: boolean;
+  } | null>(null);
 
   const soon = () => showHeaderToast({ title: '준비 중입니다' });
   const isLimited = (id: string) => id === FIRST_SPECIAL.id || productPeriod(id) !== null;
@@ -511,7 +524,10 @@ export function ShopTabs({
         // 사용자 취소 — 조용히 무시.
       } else if (r.reason === 'verify' && r.code === 'NETWORK') {
         // 결제창은 닫혔는데 확인 요청만 전송 실패 — 지급 권위는 웹훅이라 곧 반영됨(미결제 오해 방지).
-        showHeaderToast({ title: '결제 확인이 지연되고 있어요', detail: '잠시 후 자동 반영됩니다' });
+        setPayNotice({
+          title: '결제 확인이 지연되고 있어요',
+          body: '결제는 정상 접수됐고 지급은 잠시 후 자동으로 반영됩니다. 10분이 지나도 반영되지 않으면 고객센터로 문의해 주세요.',
+        });
       } else if (r.code === 'IDENTITY_REQUIRED') {
         // 청소년보호 — 결제 전 본인인증 필수. 본인인증 유도 모달 노출.
         setIdentityPrompt(true);
@@ -522,11 +538,17 @@ export function ShopTabs({
             ? '미성년 월 구매한도를 초과했습니다'
             : r.code === 'ALREADY_PURCHASED'
               ? '이미 구매완료한 상품입니다'
-              : r.code === 'AMOUNT_MISMATCH'
-                ? '결제 금액 오류 — 고객센터로 문의해 주세요'
-                : '결제에 실패했습니다');
+              : '결제에 실패했습니다');
         if (r.code === 'ALREADY_PURCHASED') setPurchased((p) => new Set(p).add(productId));
-        showHeaderToast({ title });
+        if (r.code === 'AMOUNT_MISMATCH') {
+          setPayNotice({
+            title: '결제 금액이 맞지 않아요',
+            body: '결제는 접수됐지만 금액이 확인되지 않아 지급이 보류됐습니다. 고객센터로 문의해 주시면 확인 후 처리해 드립니다.',
+            support: true,
+          });
+        } else {
+          showHeaderToast({ title });
+        }
       }
     })();
   };
@@ -780,6 +802,37 @@ export function ShopTabs({
       </div>
 
       {/* 본인인증 필요 — 청소년보호(결제 전 본인인증). */}
+      {/* 결제 안내 — 재화가 걸린 지연·오류는 다시 읽을 수 있어야 한다(토스트는 2.6초 후 사라짐). */}
+      {payNotice ? (
+        <ModalShell onClose={() => setPayNotice(null)} label={payNotice.title}>
+          <ModalLayout
+            icon="💳"
+            title={payNotice.title}
+            footer={
+              <>
+                <ModalButton tone="neutral" onClick={() => setPayNotice(null)}>
+                  확인
+                </ModalButton>
+                {payNotice.support ? (
+                  <Link
+                    prefetch={false}
+                    href="/me/settings"
+                    onClick={() => setPayNotice(null)}
+                    className="flex-1 rounded-xl bg-zinc-900 py-2.5 text-center text-[13px] font-bold text-white dark:bg-zinc-100 dark:text-zinc-900"
+                  >
+                    고객센터
+                  </Link>
+                ) : null}
+              </>
+            }
+          >
+            <p className="text-[12.5px] leading-relaxed text-zinc-500 dark:text-zinc-400">
+              {payNotice.body}
+            </p>
+          </ModalLayout>
+        </ModalShell>
+      ) : null}
+
       {identityPrompt ? (
         <ModalShell
           onClose={() => setIdentityPrompt(false)}

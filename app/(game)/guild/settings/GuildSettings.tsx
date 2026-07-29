@@ -88,7 +88,10 @@ export function GuildSettings({
   // 문양 사용/삭제 3초 인-버튼 컨펌(만료 자동 해제) — { action, id } + 남은 초.
   const [armed, setArmed] = useState<{ action: 'use' | 'del'; id: string } | null>(null);
   const [armedLeft, setArmedLeft] = useState(0);
-  const [genConfirm, setGenConfirm] = useState(false); // 생성 3초 인-버튼 컨펌
+  const [genConfirm, setGenConfirm] = useState(false);
+  /** 문양 생성 관련 안내(지연·환불) — 재화가 걸려 다시 읽을 수 있어야 한다. */
+  /** 문양 생성 관련 안내(지연·환불) — 재화가 걸려 다시 읽을 수 있어야 한다. */
+  const [genNotice, setGenNotice] = useState<{ title: string; body: string } | null>(null);
   const [genConfirmLeft, setGenConfirmLeft] = useState(0);
 
   // 생성 버튼 3초 컨펌(만료 자동 해제) — 남은 초 표기.
@@ -263,7 +266,15 @@ export function GuildSettings({
   const doTransfer = (userId: string) =>
     start(async () => {
       const r = await transferLeadershipAction(userId);
-      if (r.status !== 'success') return showError(guildErrMsg(r.code));
+      if (r.status !== 'success') {
+        if (r.code === 'EMBLEM_GEN_FAILED') {
+          return setGenNotice({
+            title: '문양 생성에 실패했어요',
+            body: '생성이 혼잡해 실패했습니다. 차감된 다이아는 우편으로 환불해 드렸으니 확인 후 잠시 뒤 다시 시도해 주세요.',
+          });
+        }
+        return showError(guildErrMsg(r.code));
+      }
       showHeaderToast({ title: '길드장 위임 완료' });
       router.replace('/guild'); // 위임 후 임원 아님 — 길드 홈으로
     });
@@ -297,7 +308,15 @@ export function GuildSettings({
   const saveNotice = () =>
     start(async () => {
       const r = await setGuildNoticeAction(notice.trim());
-      if (r.status !== 'success') return showError(guildErrMsg(r.code));
+      if (r.status !== 'success') {
+        if (r.code === 'EMBLEM_GEN_FAILED') {
+          return setGenNotice({
+            title: '문양 생성에 실패했어요',
+            body: '생성이 혼잡해 실패했습니다. 차감된 다이아는 우편으로 환불해 드렸으니 확인 후 잠시 뒤 다시 시도해 주세요.',
+          });
+        }
+        return showError(guildErrMsg(r.code));
+      }
       showHeaderToast({ title: '공지 저장 완료' });
       router.refresh();
     });
@@ -308,7 +327,15 @@ export function GuildSettings({
   const saveIntro = () =>
     start(async () => {
       const r = await setGuildIntroAction(intro.trim());
-      if (r.status !== 'success') return showError(guildErrMsg(r.code));
+      if (r.status !== 'success') {
+        if (r.code === 'EMBLEM_GEN_FAILED') {
+          return setGenNotice({
+            title: '문양 생성에 실패했어요',
+            body: '생성이 혼잡해 실패했습니다. 차감된 다이아는 우편으로 환불해 드렸으니 확인 후 잠시 뒤 다시 시도해 주세요.',
+          });
+        }
+        return showError(guildErrMsg(r.code));
+      }
       showHeaderToast({ title: '소개 저장 완료' });
       router.refresh();
     });
@@ -319,7 +346,15 @@ export function GuildSettings({
   const saveOpenchat = () =>
     start(async () => {
       const r = await setGuildOpenchatAction(openchat.trim());
-      if (r.status !== 'success') return showError(guildErrMsg(r.code));
+      if (r.status !== 'success') {
+        if (r.code === 'EMBLEM_GEN_FAILED') {
+          return setGenNotice({
+            title: '문양 생성에 실패했어요',
+            body: '생성이 혼잡해 실패했습니다. 차감된 다이아는 우편으로 환불해 드렸으니 확인 후 잠시 뒤 다시 시도해 주세요.',
+          });
+        }
+        return showError(guildErrMsg(r.code));
+      }
       showHeaderToast({ title: openchat.trim() ? '오픈채팅 링크 저장' : '오픈채팅 링크 제거' });
       router.refresh();
     });
@@ -397,7 +432,11 @@ export function GuildSettings({
       } else {
         // null(네트워크/타임아웃): 서버가 아직 생성 중일 수 있어 실패로 단정하지 않되, 조용히
         // 스피너만 남기지 말고 안내(결과는 문양함·우편으로 통지, 실패 시 다이아 자동 환불). 플래그 유지.
-        showHeaderToast({ title: '생성이 지연되고 있어요 — 결과는 문양함이나 우편으로 알려드려요' });
+        // 다이아가 걸린 안내라 사라지는 토스트 대신 남는 팝업으로(2026-07-29 점검).
+        setGenNotice({
+          title: '생성이 지연되고 있어요',
+          body: '문양 생성이 계속 진행 중입니다. 완료되면 문양함에 추가되고, 실패하면 차감된 다이아를 우편으로 환불해 드립니다.',
+        });
       }
     }
     router.refresh(); // 성공/불명확 모두 실제 상태 반영.
@@ -446,7 +485,15 @@ export function GuildSettings({
   const doDisband = () =>
     start(async () => {
       const r = await disbandGuildAction();
-      if (r.status !== 'success') return showError(guildErrMsg(r.code));
+      if (r.status !== 'success') {
+        if (r.code === 'EMBLEM_GEN_FAILED') {
+          return setGenNotice({
+            title: '문양 생성에 실패했어요',
+            body: '생성이 혼잡해 실패했습니다. 차감된 다이아는 우편으로 환불해 드렸으니 확인 후 잠시 뒤 다시 시도해 주세요.',
+          });
+        }
+        return showError(guildErrMsg(r.code));
+      }
       showHeaderToast({ title: '길드 해산됨' });
       router.replace('/guild');
     });
@@ -839,6 +886,25 @@ export function GuildSettings({
         <p className="px-1 text-center text-[11px] text-zinc-400">
           세금·문양·해산은 길드장만 관리할 수 있어요.
         </p>
+      )}
+
+      {/* 재화가 걸린 안내(생성 지연·환불) — 사라지지 않는 팝업. */}
+      {genNotice && (
+        <ModalShell onClose={() => setGenNotice(null)} label={genNotice.title}>
+          <ModalLayout
+            icon="🛡️"
+            title={genNotice.title}
+            footer={
+              <ModalButton tone="neutral" onClick={() => setGenNotice(null)}>
+                확인
+              </ModalButton>
+            }
+          >
+            <p className="text-[12.5px] leading-relaxed text-zinc-500 dark:text-zinc-400">
+              {genNotice.body}
+            </p>
+          </ModalLayout>
+        </ModalShell>
       )}
 
       {/* 새 문양 생성 모달 — 중앙 모달 */}
