@@ -6,6 +6,7 @@ import { db } from '@/lib/db/client';
 import { guildMembers, zones, guildBattleDeployments } from '@/lib/db/schema/guild';
 
 import { GuildError } from '../errors';
+import { assertResident } from '../residence';
 import { nextBattleKstDay, isConquestLocked } from './schedule';
 
 /** actor가 zone 소유 길드의 **길드장**인지 검증하고 소유 길드 id 반환.
@@ -38,7 +39,7 @@ export async function assertLeaderOfZoneOwner(
 
 /**
  * 집행관 지정 — GUILD §5.8⑦. 소유 길드 길드장이 길드원 1명을 그 구역 집행관으로.
- *  - 대상은 같은 길드원이어야 하고, 이미 다른 구역 집행관이면 거부(1유저 1집행관).
+ *  - 대상은 같은 길드원 + **그 구역 거주자**여야 하고, 이미 다른 구역 집행관이면 거부(1유저 1집행관).
  *  - 집행관은 자동 방어로 슬롯 점유 → 대상의 다음 전투 배치는 제거.
  */
 export async function setZoneExecutor(input: {
@@ -65,6 +66,9 @@ export async function setZoneExecutor(input: {
       .where(and(eq(guildMembers.userId, input.targetUserId), eq(guildMembers.guildId, guildId)))
       .limit(1);
     if (!target) throw new GuildError('TARGET_NOT_IN_GUILD');
+    // 이동·거주 필수(0139) — 집행관은 그 구역 상주 방어자다. UI는 수비 배치자만 후보로 보여줘
+    // 자연히 통과하지만, 액션 직접 호출로 비거주자를 세우는 우회를 서버에서 막는다.
+    await assertResident(tx, input.targetUserId, serverId, input.zoneId);
 
     // 1유저 1집행관 — **같은 서버** 다른 구역 집행관이면 거부(감사 G-01: serverId 누락 시 타 서버
     // 집행관까지 잡아 정상 크로스서버 유저를 오차단). 먼저 해제 필요.

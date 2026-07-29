@@ -49,6 +49,8 @@ export const characters = pgTable(
     tutorialStep: integer('tutorial_step').notNull().default(0),
     /** 거주 구역(세금 귀속, GUILD §5.5) — null=미설정. */
     residenceZoneId: integer('residence_zone_id'),
+    /** 다음 거주 이동 가능 시각(0139) — null/과거면 즉시 이동 가능. 보석 단축이 이 값을 앞당긴다. */
+    residenceReadyAt: timestamp('residence_ready_at', { withTimezone: true }),
     /** 마지막 활동(캐릭터별) — 친구 표시·길드장 7일 자동위임 판정. */
     lastSeenAt: timestamp('last_seen_at', { withTimezone: true }),
     /** 활성 아바타(user_profiles.id, P6 이관) — null=기본 아이콘 폴백. FK는 0061 ALTER. */

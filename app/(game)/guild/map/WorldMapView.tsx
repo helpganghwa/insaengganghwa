@@ -9,13 +9,19 @@ import { useResourceToast } from '@/components/ResourceToast';
 import { useDiamond } from '@/components/DiamondContext';
 import { ModalShell } from '@/components/ModalShell';
 import { assetUrl } from '@/lib/asset-versions';
-import { GUILD_EXECUTOR_TAX_CUT, TAX_COLLECT_COOLDOWN_MIN } from '@/lib/game/guild/balance';
+import {
+  GUILD_EXECUTOR_TAX_CUT,
+  RESIDENCE_MOVE_COOLDOWN_MIN,
+  TAX_COLLECT_COOLDOWN_MIN,
+  residenceSpeedUpCost,
+} from '@/lib/game/guild/balance';
 
 import {
   setResidenceAction,
   getZoneBattleAction,
   collectTaxAction,
   getGuildSummaryByNameAction,
+  speedUpResidenceAction,
 } from '../actions';
 import { guildErrMsg } from '../errors-msg';
 
@@ -146,10 +152,18 @@ function hmsFrom(ms: number): string {
 }
 const TAX_COOLDOWN_MS = TAX_COLLECT_COOLDOWN_MIN * 60_000;
 
+/** 남은 ms → '5시간 12분' / '12분' — 버튼 안에 들어가는 짧은 표기(초는 생략). */
+function fmtRemain(ms: number): string {
+  const total = Math.max(0, Math.ceil(ms / 60_000));
+  const h = Math.floor(total / 60);
+  const m = total % 60;
+  return h > 0 ? `${h}시간 ${m}분` : `${m}분`;
+}
+
 
 export function WorldMapView({
   mapSrc,
-  residenceZoneId,
+  residence: residenceProp,
   canSetResidence,
   myUserId,
   serverId,
@@ -161,7 +175,14 @@ export function WorldMapView({
   embedded = false,
 }: {
   mapSrc: string;
-  residenceZoneId: number | null;
+  /** 거주 상태(구역·쿨타임·잠금). 비로그인/조회 실패 시 null. */
+  residence: {
+    zoneId: number | null;
+    /** 다음 이동 가능 시각(ISO). null=즉시 가능. */
+    readyAtIso: string | null;
+    /** 시간 외 이동 잠금 사유 — 배치/집행관. */
+    lock: 'deploy' | 'executor' | null;
+  } | null;
   canSetResidence: boolean;
   myUserId: string | null;
   serverId: number;
@@ -177,7 +198,31 @@ export function WorldMapView({
   const { showHeaderToast, showError } = useResourceToast();
   const { optimisticAdjust } = useDiamond();
   const router = useRouter();
-  const [residence, setResidence] = useState<number | null>(residenceZoneId);
+  const [residence, setResidence] = useState<number | null>(residenceProp?.zoneId ?? null);
+  // 이동 쿨타임 — 서버가 준 ready 시각을 클라에서 1초 틱으로 카운트다운(보석 단축 시 즉시 해제).
+  const [readyAt, setReadyAt] = useState<number | null>(
+    residenceProp?.readyAtIso ? Date.parse(residenceProp.readyAtIso) : null,
+  );
+  const [now, setNow] = useState(() => Date.now());
+  const remainMs = readyAt ? Math.max(0, readyAt - now) : 0;
+  useEffect(() => {
+    if (!readyAt) return;
+    setNow(Date.now()); // 이동 직후 남은 시간이 한 박자 늦게 뜨지 않도록 즉시 1회
+    const id = setInterval(() => setNow(Date.now()), 1000);
+    return () => clearInterval(id);
+  }, [readyAt]);
+  const [speedUpOpen, setSpeedUpOpen] = useState(false);
+  const moveLock = residenceProp?.lock ?? null;
+  // 인접 판정 — 이동 가능한 구역 집합(현재 거주지와 맞닿은 곳). 거주 미설정이면 어디든 정착 가능.
+  const adjacentIds = useMemo(() => {
+    if (residence == null) return null;
+    const set = new Set<number>();
+    for (const { a, b } of adjacency) {
+      if (a === residence) set.add(b);
+      else if (b === residence) set.add(a);
+    }
+    return set;
+  }, [adjacency, residence]);
   const [selectedId, setSelectedId] = useState<number | null>(null);
   // 구역 팝업 복원(2026-07-21) — 집행관 프로필로 이동 후 뒤로가기 시 팝업 유지(채팅창 패턴).
   // 이동 직전 sessionStorage에 구역 id를 남기고, 마운트 시 1회 소비해 재오픈.
@@ -393,13 +438,30 @@ export function WorldMapView({
   const moveResidence = (zoneId: number) => {
     const prev = residence;
     setResidence(zoneId); // 낙관적
+    // 쿨타임도 낙관적으로 시작 — 서버가 거절하면 아래에서 되돌린다.
+    const prevReady = readyAt;
+    setReadyAt(Date.now() + RESIDENCE_MOVE_COOLDOWN_MIN * 60_000);
     showHeaderToast({ title: '거주지 이동 완료' });
     start(async () => {
       const r = await setResidenceAction(zoneId);
       if (r.status !== 'success') {
         setResidence(prev);
+        setReadyAt(prevReady);
         showError(guildErrMsg(r.code));
       }
+    });
+  };
+
+  /** 쿨타임 보석 단축 — 남은 1분당 1💎(올림). 성공 시 즉시 이동 가능. */
+  const speedUpMove = () => {
+    const cost = residenceSpeedUpCost(remainMs);
+    setSpeedUpOpen(false);
+    start(async () => {
+      const r = await speedUpResidenceAction();
+      if (r.status !== 'success') return showError(guildErrMsg(r.code));
+      setReadyAt(null);
+      optimisticAdjust(-BigInt(r.spent));
+      showHeaderToast({ title: `이동 대기시간 해제 −${cost.toLocaleString('ko-KR')}💎` });
     });
   };
 
@@ -1092,14 +1154,50 @@ export function WorldMapView({
                     현재 위치
                   </button>
                 ) : (
-                  <button
-                    type="button"
-                    onClick={() => moveResidence(selected.id)}
-                    disabled={pending}
-                    className="flex-1 rounded-lg bg-amber-600 py-2 text-[13px] font-bold text-white disabled:opacity-50"
-                  >
-                    이동
-                  </button>
+                  // 이동 가능 여부는 사유별로 다르게 보여준다 — 왜 못 가는지 모르면 버그로 읽힌다.
+                  (() => {
+                    const blocked = moveLock
+                      ? moveLock === 'executor'
+                        ? '집행관 — 이동 불가'
+                        : '배치 중 — 이동 불가'
+                      : adjacentIds && !adjacentIds.has(selected.id)
+                        ? '맞닿은 구역만 이동'
+                        : null;
+                    if (blocked) {
+                      return (
+                        <button
+                          type="button"
+                          disabled
+                          className="flex-1 cursor-default rounded-lg bg-zinc-200 py-2 text-[12px] font-bold text-zinc-500 dark:bg-zinc-800 dark:text-zinc-500"
+                        >
+                          {blocked}
+                        </button>
+                      );
+                    }
+                    // 쿨타임 중 — 남은 시간을 버튼에 띄우고, 누르면 보석 단축 확인.
+                    if (remainMs > 0) {
+                      return (
+                        <button
+                          type="button"
+                          onClick={() => setSpeedUpOpen(true)}
+                          disabled={pending}
+                          className="flex-1 rounded-lg bg-sky-600 py-2 text-[12px] font-bold text-white disabled:opacity-50"
+                        >
+                          {fmtRemain(remainMs)} 후 이동 · 단축
+                        </button>
+                      );
+                    }
+                    return (
+                      <button
+                        type="button"
+                        onClick={() => moveResidence(selected.id)}
+                        disabled={pending}
+                        className="flex-1 rounded-lg bg-amber-600 py-2 text-[13px] font-bold text-white disabled:opacity-50"
+                      >
+                        이동
+                      </button>
+                    );
+                  })()
                 ))}
               <button
                 type="button"
@@ -1178,6 +1276,42 @@ export function WorldMapView({
             </ModalShell>
           );
         })()}
+
+      {/* 이동 대기시간 단축 모달 — 남은 1분당 1💎(올림), 전액 결제로 즉시 해제. */}
+      {speedUpOpen && (
+        <ModalShell label="이동 대기시간 단축" onClose={() => setSpeedUpOpen(false)}>
+          <div className="p-4">
+            <h3 className="text-center text-[15px] font-extrabold">이동 대기시간 단축</h3>
+            <p className="mt-2 text-center text-[12px] text-zinc-500 dark:text-zinc-400">
+              남은 <b className="font-bold text-zinc-700 dark:text-zinc-200">{fmtRemain(remainMs)}</b>을
+              보석으로 없애고 바로 이동할 수 있습니다.
+            </p>
+            <div className="mt-3 rounded-xl bg-zinc-100 py-3 text-center dark:bg-zinc-900">
+              <p className="font-mono text-[20px] font-black text-sky-500">
+                {residenceSpeedUpCost(remainMs).toLocaleString('ko-KR')}💎
+              </p>
+              <p className="mt-0.5 text-[10px] text-zinc-500">남은 1분당 1💎</p>
+            </div>
+            <div className="mt-3 flex gap-2">
+              <button
+                type="button"
+                onClick={speedUpMove}
+                disabled={pending}
+                className="flex-1 rounded-lg bg-sky-600 py-2 text-[13px] font-bold text-white disabled:opacity-50"
+              >
+                단축
+              </button>
+              <button
+                type="button"
+                onClick={() => setSpeedUpOpen(false)}
+                className="flex-1 rounded-lg border border-zinc-300 py-2 text-[13px] font-medium text-zinc-500 dark:border-zinc-700 dark:text-zinc-400"
+              >
+                취소
+              </button>
+            </div>
+          </div>
+        </ModalShell>
+      )}
 
       {/* 세금 수금 모달 — 길드 90% / 집행관 10%, 3초 컨펌, 쿨다운 안내 */}
       {collectOpen != null &&

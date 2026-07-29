@@ -7,6 +7,7 @@ import { guildMembers, zones, guildBattleDeployments, zoneAdjacency } from '@/li
 
 import type { ConquestRole } from '../balance';
 import { GuildError } from '../errors';
+import { assertResident } from '../residence';
 import { nextBattleKstDay, isConquestLocked } from './schedule';
 
 type Tx = Parameters<Parameters<typeof db.transaction>[0]>[0];
@@ -38,6 +39,7 @@ async function assertAttackable(tx: Tx, guildId: bigint, targetZoneId: number): 
 
 /**
  * 점령전 배치 — GUILD §5.8⑥. 다음 전투(KST 23:00)에 공격/수비 1곳 배치. 1인 1배치/일(unique).
+ *  - 배치하려면 **그 구역 거주자**여야 한다(0139 이동·거주 필수).
  *  - 수비(defend): 자기 길드 소유 구역만. 공격(attack): 자기 길드 **비소유** 구역(중립·적).
  *  - 집행관이 배치하면 그 자동 방어는 **자동 해제**(자리 비움) — "1인=집행관 or 배치" 불변식 유지.
  *  - battle_kst_day는 서버가 결정(23:00 잠금 = 날짜 롤). 기존 배치는 덮어씀(upsert).
@@ -63,6 +65,9 @@ export async function deployToZone(input: {
       .where(eq(zones.id, input.zoneId))
       .limit(1);
     if (!z || z.serverId !== input.serverId) throw new GuildError('ZONE_NOT_FOUND'); // 타 서버 존 차단
+
+    // 이동·거주 필수(0139) — 공격이든 수비든 그 구역에 살아야 배치할 수 있다.
+    await assertResident(tx, input.userId, input.serverId, input.zoneId);
 
     const owned = z.ownerGuildId === m.guildId;
     if (input.role === 'defend' && !owned) throw new GuildError('ZONE_NOT_OWNED');
@@ -157,7 +162,7 @@ async function assertLeader(
 
 /**
  * 길드원 배치(길드장 전용) — GUILD §5.8⑥. 길드장이 길드원 1명을 공격/수비 구역에 배치.
- *  - 대상은 같은 길드원. 대상이 집행관이면 그 자동 방어는 배치와 함께 자동 해제(자리 비움).
+ *  - 대상은 같은 길드원이면서 **그 구역 거주자**여야 한다. 대상이 집행관이면 그 자동 방어는 배치와 함께 자동 해제(자리 비움).
  *  - 수비=자기 길드 소유 구역, 공격=비소유 구역. 1인 1배치(upsert), 23:00 잠금(날짜 롤).
  */
 export async function deployMember(input: {
@@ -177,6 +182,8 @@ export async function deployMember(input: {
       .where(and(eq(guildMembers.userId, input.targetUserId), eq(guildMembers.serverId, input.serverId)))
       .limit(1);
     if (!target || target.guildId !== guildId) throw new GuildError('TARGET_NOT_IN_GUILD');
+    // 이동·거주 필수(0139) — 길드장이 대신 배치해도 거주 규칙은 같다(우회 차단).
+    await assertResident(tx, input.targetUserId, input.serverId, input.zoneId);
 
     // 배치 등록 = 대상의 집행관(자동 방어) 자동 해제(2026-07-26 문의 #90). 같은 서버 스코프(감사 G-01).
     await tx

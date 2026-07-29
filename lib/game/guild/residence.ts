@@ -1,15 +1,27 @@
 import 'server-only';
 
-import { and, eq, sql } from 'drizzle-orm';
+import { and, eq, or, sql } from 'drizzle-orm';
 
 import { db } from '@/lib/db/client';
 import { markChallengeEvent } from '@/lib/game/challenges/events';
 import { characters } from '@/lib/db/schema/server';
-import { zones } from '@/lib/db/schema/guild';
+import { zones, zoneAdjacency, guildBattleDeployments } from '@/lib/db/schema/guild';
+import { walletTrySpend } from '@/lib/game/wallet';
 
+import { RESIDENCE_MOVE_COOLDOWN_MIN, residenceSpeedUpCost } from './balance';
+import { nextBattleKstDay } from './conquest/schedule';
 import { GuildError } from './errors';
 
 type Tx = Parameters<Parameters<typeof db.transaction>[0]>[0];
+
+/** 거주 상태 — 이동 가능 여부 판정에 필요한 값 일체(UI가 그대로 쓴다). */
+export type ResidenceState = {
+  zoneId: number | null;
+  /** 다음 이동 가능 시각(ISO). null=즉시 가능. */
+  readyAtIso: string | null;
+  /** 이동을 막고 있는 사유 — 시간 외 잠금. */
+  lock: 'deploy' | 'executor' | null;
+};
 
 /** 거주 구역 조회(미배정이면 null). */
 export async function getResidence(userId: string, serverId: number): Promise<number | null> {
@@ -21,23 +33,168 @@ export async function getResidence(userId: string, serverId: number): Promise<nu
   return p?.zoneId ?? null;
 }
 
-/** 거주 구역 변경 — GUILD §5.5. 이동 자유(쿨다운 없음). 존재하는 구역만. */
-export async function setResidence(userId: string, serverId: number, zoneId: number): Promise<void> {
-  const before = await getResidence(userId, serverId);
-  const [z] = await db
-    .select({ id: zones.id })
-    .from(zones)
-    .where(and(eq(zones.id, zoneId), eq(zones.serverId, serverId)))
+/**
+ * 거주 상태 — 구역·쿨타임·잠금을 한 번에. 지도 화면이 이동 버튼 상태를 그리는 데 쓴다.
+ * 쿼리 3개를 병렬로 묶어 요청당 왕복을 늘리지 않는다.
+ */
+export async function getResidenceState(userId: string, serverId: number): Promise<ResidenceState> {
+  const [me, dep, exe] = await Promise.all([
+    db
+      .select({ zoneId: characters.residenceZoneId, readyAt: characters.residenceReadyAt })
+      .from(characters)
+      .where(and(eq(characters.userId, userId), eq(characters.serverId, serverId)))
+      .limit(1),
+    db
+      .select({ zoneId: guildBattleDeployments.zoneId })
+      .from(guildBattleDeployments)
+      .where(
+        and(
+          eq(guildBattleDeployments.userId, userId),
+          eq(guildBattleDeployments.serverId, serverId),
+          eq(guildBattleDeployments.battleKstDay, nextBattleKstDay()),
+        ),
+      )
+      .limit(1),
+    db
+      .select({ id: zones.id })
+      .from(zones)
+      .where(and(eq(zones.executorUserId, userId), eq(zones.serverId, serverId)))
+      .limit(1),
+  ]);
+  const readyAt = me[0]?.readyAt ?? null;
+  return {
+    zoneId: me[0]?.zoneId ?? null,
+    readyAtIso: readyAt && readyAt.getTime() > Date.now() ? readyAt.toISOString() : null,
+    lock: exe.length > 0 ? 'executor' : dep.length > 0 ? 'deploy' : null,
+  };
+}
+
+/** 두 구역이 맞닿아 있는지(무방향 — 어느 쪽 컬럼에 있든 인정). */
+async function isAdjacent(tx: Tx, a: number, b: number): Promise<boolean> {
+  const [row] = await tx
+    .select({ x: zoneAdjacency.zoneA })
+    .from(zoneAdjacency)
+    .where(
+      or(
+        and(eq(zoneAdjacency.zoneA, a), eq(zoneAdjacency.zoneB, b)),
+        and(eq(zoneAdjacency.zoneA, b), eq(zoneAdjacency.zoneB, a)),
+      ),
+    )
     .limit(1);
-  if (!z) throw new GuildError('ZONE_NOT_FOUND');
-  await db
-    .update(characters)
-    .set({ residenceZoneId: zoneId })
-    .where(and(eq(characters.userId, userId), eq(characters.serverId, serverId)));
-  // 도전 과제(0118) — 기본 배정과 다른 구역으로 '이동'했을 때만 마킹.
-  if (before != null && before !== zoneId) {
-    await markChallengeEvent(db, userId, serverId, 'residence_move');
-  }
+  return !!row;
+}
+
+/**
+ * 거주 구역 변경 — GUILD §5.5(0139 개편).
+ *  ① 다음 전투 배치가 있거나 집행관이면 이동 불가(그 구역에 묶임)
+ *  ② 인접 구역으로만 (최초 배정 상태에서는 인접 무관 — 아직 살던 곳이 없다)
+ *  ③ 이동 후 6시간 쿨타임. 보석으로 단축 가능(speedUpResidenceMove)
+ * 검사와 갱신을 한 트랜잭션에 두고 캐릭터 행을 잠가 연타로 쿨타임을 건너뛰지 못하게 한다.
+ */
+export async function setResidence(userId: string, serverId: number, zoneId: number): Promise<void> {
+  await db.transaction(async (tx) => {
+    const [me] = await tx
+      .select({ zoneId: characters.residenceZoneId, readyAt: characters.residenceReadyAt })
+      .from(characters)
+      .where(and(eq(characters.userId, userId), eq(characters.serverId, serverId)))
+      .for('update');
+    if (!me) throw new GuildError('FORBIDDEN');
+    const before = me.zoneId;
+    if (before === zoneId) return; // 같은 구역 — 쿨타임 소모 없이 무시
+
+    const [z] = await tx
+      .select({ id: zones.id })
+      .from(zones)
+      .where(and(eq(zones.id, zoneId), eq(zones.serverId, serverId)))
+      .limit(1);
+    if (!z) throw new GuildError('ZONE_NOT_FOUND');
+
+    // ① 구역에 묶여 있는지 — 집행관을 먼저 본다(해제 주체가 길드장이라 안내가 다르다).
+    const [exe] = await tx
+      .select({ id: zones.id })
+      .from(zones)
+      .where(and(eq(zones.executorUserId, userId), eq(zones.serverId, serverId)))
+      .limit(1);
+    if (exe) throw new GuildError('RESIDENCE_LOCKED_EXECUTOR');
+    const [dep] = await tx
+      .select({ id: guildBattleDeployments.id })
+      .from(guildBattleDeployments)
+      .where(
+        and(
+          eq(guildBattleDeployments.userId, userId),
+          eq(guildBattleDeployments.serverId, serverId),
+          eq(guildBattleDeployments.battleKstDay, nextBattleKstDay()),
+        ),
+      )
+      .limit(1);
+    if (dep) throw new GuildError('RESIDENCE_LOCKED_DEPLOY');
+
+    // ② 인접 — 살던 곳이 있을 때만. 최초 배정(before=null)은 어디든 정착 가능.
+    if (before != null && !(await isAdjacent(tx, before, zoneId))) {
+      throw new GuildError('RESIDENCE_NOT_ADJACENT');
+    }
+
+    // ③ 쿨타임
+    if (me.readyAt && me.readyAt.getTime() > Date.now()) throw new GuildError('RESIDENCE_COOLDOWN');
+
+    await tx
+      .update(characters)
+      .set({
+        residenceZoneId: zoneId,
+        // 최초 정착은 이동이 아니므로 쿨타임을 걸지 않는다.
+        residenceReadyAt:
+          before == null
+            ? null
+            : sql`now() + ${`${RESIDENCE_MOVE_COOLDOWN_MIN} minutes`}::interval`,
+      })
+      .where(and(eq(characters.userId, userId), eq(characters.serverId, serverId)));
+
+    // 도전 과제(0118) — 기본 배정과 다른 구역으로 '이동'했을 때만 마킹.
+    if (before != null) await markChallengeEvent(tx, userId, serverId, 'residence_move');
+  });
+}
+
+/**
+ * 이동 쿨타임 보석 단축 — 남은 시간 1분당 1💎(올림), 전액 결제로 즉시 해제.
+ * 강화 시간 단축과 같은 모양: 비용 산정 시점의 남은 시간으로 계산하고 ready_at을 현재로 당긴다.
+ */
+export async function speedUpResidenceMove(
+  userId: string,
+  serverId: number,
+): Promise<{ spent: number }> {
+  return db.transaction(async (tx) => {
+    const [me] = await tx
+      .select({ readyAt: characters.residenceReadyAt })
+      .from(characters)
+      .where(and(eq(characters.userId, userId), eq(characters.serverId, serverId)))
+      .for('update');
+    if (!me) throw new GuildError('FORBIDDEN');
+    const remain = me.readyAt ? me.readyAt.getTime() - Date.now() : 0;
+    if (remain <= 0) return { spent: 0 }; // 이미 가능 — 결제 없이 성공 처리
+    const cost = residenceSpeedUpCost(remain);
+    const paid = await walletTrySpend(tx, userId, serverId, BigInt(cost));
+    if (!paid) throw new GuildError('INSUFFICIENT_DIAMOND');
+    await tx
+      .update(characters)
+      .set({ residenceReadyAt: null })
+      .where(and(eq(characters.userId, userId), eq(characters.serverId, serverId)));
+    return { spent: cost };
+  });
+}
+
+/** 배치·집행관 지정용 거주 검증 — 트랜잭션 내 호출. 그 구역 거주자가 아니면 throw. */
+export async function assertResident(
+  tx: Tx,
+  userId: string,
+  serverId: number,
+  zoneId: number,
+): Promise<void> {
+  const [me] = await tx
+    .select({ zoneId: characters.residenceZoneId })
+    .from(characters)
+    .where(and(eq(characters.userId, userId), eq(characters.serverId, serverId)))
+    .limit(1);
+  if (me?.zoneId !== zoneId) throw new GuildError('NOT_RESIDENT');
 }
 
 /**

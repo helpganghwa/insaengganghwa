@@ -50,6 +50,7 @@ const fmt = (n: number) =>
 export function DeployBoard({
   isLeader,
   myUserId,
+  residenceZoneId,
   myGuildId,
   mapSrc,
   attackableZoneIds,
@@ -59,6 +60,8 @@ export function DeployBoard({
 }: {
   isLeader: boolean;
   myUserId: string;
+  /** 내 거주 구역(0139) — 배치는 거주 구역에서만 가능. null=미설정. */
+  residenceZoneId: number | null;
   myGuildId: string;
   mapSrc: string;
   attackableZoneIds: number[];
@@ -401,6 +404,12 @@ export function DeployBoard({
               <p className="mt-0.5 text-[10px] text-zinc-500">
                 총 전투력 <span className="font-mono font-bold text-zinc-700 dark:text-zinc-200">{fmt(totalPower)}</span>
               </p>
+              {/* 거주 안내(0139) — 버튼이 그냥 사라지면 이유를 알 수 없어 배치 불가 사유를 명시. */}
+              {selected.id !== residenceZoneId && (
+                <p className="mt-1.5 rounded-md bg-amber-500/10 px-1.5 py-1 text-[9.5px] leading-snug font-medium text-amber-700 dark:text-amber-300">
+                  이 구역에 거주해야 배치할 수 있습니다. 세계지도에서 이동하세요.
+                </p>
+              )}
 
               {execHere.length === 0 && deployedHere.length === 0 ? (
                 <p className="mt-2 text-[11px] text-zinc-400">배치된 길드원이 없습니다.</p>
@@ -500,8 +509,13 @@ export function DeployBoard({
                   : '미배치';
               // 배치는 유저 고유 권한 — 공격/수비 버튼은 본인 행에만 노출.
               // 집행관도 배치 가능(배치 시 자동 방어 자동 해제, 2026-07-26 문의 #90).
+              // 이동·거주 필수(0139) — 내가 사는 구역에서만 배치할 수 있다.
               const canSelfDeploy =
-                m.userId === myUserId && !locked && selected != null && !here;
+                m.userId === myUserId &&
+                !locked &&
+                selected != null &&
+                !here &&
+                selected.id === residenceZoneId;
               return (
                 <li key={m.userId} className="flex min-h-[38px] items-center gap-1">
                   <button

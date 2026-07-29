@@ -19,6 +19,7 @@ import {
   disbandGuild,
   donateToGuild,
   setResidence,
+  speedUpResidenceMove,
   collectZoneTax,
   distributeGuildTax,
   distributeGuildTaxManual,
@@ -349,6 +350,21 @@ export async function setResidenceAction(zoneId: number) {
     return { status: 'success' } as const;
   } catch (e) {
     return fail(e, 'residence');
+  }
+}
+
+/** 거주 이동 쿨타임 보석 단축 — 남은 1분당 1💎. 성공 시 즉시 이동 가능. */
+export async function speedUpResidenceAction() {
+  const u = await getSessionUserId();
+  if (!u) return unauth;
+  if (await rateLimited(u, 'guild')) return { status: 'error', code: 'RATE_LIMITED' } as const;
+  const __b = await actionBlock(); if (__b) return { status: 'error', code: __b } as const;
+  try {
+    const r = await speedUpResidenceMove(u, await getActiveServerId());
+    revalidatePath('/guild');
+    return { status: 'success', spent: r.spent } as const;
+  } catch (e) {
+    return fail(e, 'residence.speedup');
   }
 }
 

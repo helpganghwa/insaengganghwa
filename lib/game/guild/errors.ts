@@ -16,6 +16,11 @@ export type GuildErrorCode =
   | 'TARGET_NOT_IN_GUILD' // 대상이 같은 길드원이 아님
   | 'INVALID_TARGET' // 자기 자신/길드장 대상 등 불가
   | 'ZONE_NOT_FOUND' // 구역 없음(거주 변경 등)
+  | 'NOT_RESIDENT' // 배치·집행관 지정 — 그 구역 거주자가 아님(0139 이동·거주 필수)
+  | 'RESIDENCE_NOT_ADJACENT' // 거주 이동 — 현재 거주 구역과 맞닿지 않은 구역
+  | 'RESIDENCE_COOLDOWN' // 거주 이동 — 6시간 쿨타임 미경과(보석 단축 가능)
+  | 'RESIDENCE_LOCKED_DEPLOY' // 거주 이동 — 다음 전투에 배치되어 구역에 묶임(배치 취소 필요)
+  | 'RESIDENCE_LOCKED_EXECUTOR' // 거주 이동 — 집행관이라 구역에 묶임(길드장 해제 필요)
   | 'NOT_EXECUTOR' // 집행관 아님(세금 수금)
   | 'COLLECT_COOLDOWN' // 수금 쿨다운 미경과
   | 'NOTHING_TO_COLLECT' // 수금할 💎 없음

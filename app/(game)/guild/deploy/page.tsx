@@ -9,7 +9,7 @@ import {
   getAttackableZoneIds,
   getZoneAdjacency,
   getWorldmapZones,
-  getResidence,
+  getResidenceState,
 } from '@/lib/game/guild';
 import { DeployBoard } from './DeployBoard';
 import { WorldMapView } from '../map/WorldMapView';
@@ -36,7 +36,7 @@ export default async function DeployPage() {
     getAttackableZoneIds(membership.guildId),
     getZoneAdjacency(serverId),
     getWorldmapZones(serverId).catch(() => []),
-    getResidence(userId, serverId).catch(() => null),
+    getResidenceState(userId, serverId).catch(() => null),
   ]);
 
   return (
@@ -45,6 +45,7 @@ export default async function DeployPage() {
         <DeployBoard
           isLeader={isLeader}
           myUserId={userId}
+          residenceZoneId={residence?.zoneId ?? null}
           myGuildId={membership.guildId.toString()}
           mapSrc={mapSrc}
           attackableZoneIds={attackable}
@@ -75,7 +76,7 @@ export default async function DeployPage() {
         <WorldMapView
           embedded
           mapSrc={mapSrc}
-          residenceZoneId={residence}
+          residence={residence}
           canSetResidence
           myUserId={userId}
           serverId={serverId}

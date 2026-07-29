@@ -1,7 +1,7 @@
 import { assetUrl } from '@/lib/asset-versions';
 import { getActiveServerId } from '@/lib/game/servers';
 import { getSessionUserId } from '@/lib/auth/session';
-import { getWorldmapZones, getResidence, getChronicle, getZoneAdjacency, getConquestReplay } from '@/lib/game/guild';
+import { getWorldmapZones, getResidenceState, getChronicle, getZoneAdjacency, getConquestReplay } from '@/lib/game/guild';
 
 import { ChronicleReadMark } from './ChronicleReadMark';
 import { WorldMapView } from './WorldMapView';
@@ -15,9 +15,11 @@ export default async function WorldMapPage() {
   // 모든 쿼리를 .catch로 방어 — 풀러 클라 커넥션 포화(EMAXCONN) 등 일시 DB 실패에도 페이지가
   // 통째로 크래시되지 않고 degrade(빈 맵·거주지 미표시). getResidence 미방어로 전체 렌더가
   // 터지던 문제 방지(2026-07-13, digest 3878315197).
-  const [zones, residenceZoneId, chronicle, replay, adjacency] = await Promise.all([
+  const [zones, residence, chronicle, replay, adjacency] = await Promise.all([
     getWorldmapZones(serverId).catch(() => []),
-    userId ? getResidence(userId, serverId).catch(() => null) : Promise.resolve(null),
+    userId
+      ? getResidenceState(userId, serverId).catch(() => null)
+      : Promise.resolve(null),
     getChronicle(serverId).catch(() => null),
     getConquestReplay(serverId).catch(() => null),
     getZoneAdjacency(serverId).catch(() => []),
@@ -33,7 +35,7 @@ export default async function WorldMapPage() {
     <ChronicleReadMark serverId={serverId} day={chronicle?.todayDay ?? null} />
     <WorldMapView
       mapSrc={assetUrl('/sprites/guild/worldmap.png')}
-      residenceZoneId={residenceZoneId}
+      residence={residence}
       canSetResidence={userId != null}
       myUserId={userId}
       serverId={serverId}
