@@ -3,6 +3,7 @@
 import { useState } from 'react';
 
 import { ModalShell } from '@/components/ModalShell';
+import { ModalLayout, ModalButton } from '@/components/ModalLayout';
 import { REGION_META, type Region } from '@/lib/game/guild/region-meta';
 
 export type GuildRow = {
@@ -162,47 +163,52 @@ export function GuildList({
 
       {/* 길드 정보·소개 팝업 */}
       {selected && (
-        <ModalShell
-          onClose={() => setSelected(null)}
-          label={`${selected.name} 길드 정보`}
-          className="w-full max-w-[320px] rounded-2xl bg-white p-4 dark:bg-zinc-950"
-        >
-          <div className="flex items-center gap-3">
-            <div className="flex h-12 w-12 shrink-0 items-center justify-center overflow-hidden rounded-xl">
-              {selected.emblemUrl ? (
+        <ModalShell onClose={() => setSelected(null)} label={`${selected.name} 길드 정보`}>
+          <ModalLayout
+            icon={
+              selected.emblemUrl ? (
                 // eslint-disable-next-line @next/next/no-img-element
                 <img
                   src={selected.emblemUrl}
                   alt=""
                   aria-hidden
-                  className="h-full w-full object-contain"
+                  className="mx-auto h-11 w-11 object-contain"
                   style={{ imageRendering: 'pixelated' }}
                 />
               ) : (
-                <span className="text-2xl">🛡️</span>
-              )}
-            </div>
-            <div className="min-w-0">
-              <div className="flex items-center gap-1.5">
-                <h2 className="truncate text-base font-bold">{selected.name}</h2>
+                '🛡️'
+              )
+            }
+            title={
+              <span className="inline-flex items-center gap-1.5">
+                {selected.name}
                 <JoinPolicyBadge policy={selected.joinPolicy} />
                 {selected.hasOpenchat ? <KakaoOpenchatBadge /> : null}
-              </div>
-              <p className="mt-0.5 text-[11px] text-zinc-500">
+              </span>
+            }
+            subtitle={
+              <>
                 Lv.{selected.level} · {selected.memberCount}명 · 전투력{' '}
-                <span className="font-bold text-amber-600 dark:text-amber-400">{fmtNum(selected.combat)}</span>
-              </p>
-              {selected.leaderNickname ? (
-                <p className="mt-0.5 truncate text-[11px] text-zinc-500">
-                  <span className="text-zinc-400">길드장</span>{' '}
-                  <span className="font-medium text-zinc-600 dark:text-zinc-300">
-                    {selected.leaderNickname}
-                  </span>
-                </p>
-              ) : null}
-            </div>
-          </div>
-          <div className="mt-3 border-t border-zinc-100 pt-3 dark:border-zinc-900">
+                <span className="font-bold text-amber-600 dark:text-amber-400">
+                  {fmtNum(selected.combat)}
+                </span>
+                {selected.leaderNickname ? (
+                  <>
+                    <span className="mx-1 text-zinc-400">·</span>길드장{' '}
+                    <span className="font-medium text-zinc-600 dark:text-zinc-300">
+                      {selected.leaderNickname}
+                    </span>
+                  </>
+                ) : null}
+              </>
+            }
+            footer={
+              <ModalButton tone="neutral" onClick={() => setSelected(null)}>
+                닫기
+              </ModalButton>
+            }
+          >
+          <div>
             <p className="text-[11px] font-bold text-zinc-400">점령 구역 ({selected.zones.length})</p>
             {selected.zones.length > 0 ? (
               <div className="mt-1.5 flex flex-wrap gap-1">
@@ -225,13 +231,7 @@ export function GuildList({
               {selected.intro?.trim() ? selected.intro : '등록된 소개가 없습니다.'}
             </p>
           </div>
-          <button
-            type="button"
-            onClick={() => setSelected(null)}
-            className="mt-4 w-full rounded-lg bg-zinc-100 py-2.5 text-sm font-bold text-zinc-700 active:opacity-70 dark:bg-zinc-800 dark:text-zinc-200"
-          >
-            닫기
-          </button>
+          </ModalLayout>
         </ModalShell>
       )}
     </>

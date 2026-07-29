@@ -1011,11 +1011,66 @@ export function WorldMapView({
 
       {/* 구역 상세 모달 */}
       {selected && (
-        <ModalShell
-          onClose={() => setSelectedId(null)}
-          label={`${selected.name} 구역 정보`}
-          className="max-h-[85vh] w-full max-w-[340px] overflow-y-auto rounded-2xl bg-white dark:bg-zinc-950"
-        >
+        <ModalShell onClose={() => setSelectedId(null)} label={`${selected.name} 구역 정보`}>
+          <ModalLayout
+            bare
+            maxBodyClass="max-h-[68vh] overflow-y-auto bg-white dark:bg-zinc-900"
+            footer={<>{canSetResidence &&
+                (selected.id === residence ? (
+                  // 현재 위치 — '이동' 버튼과 동일 크기(레이아웃 시프트 방지)
+                  <button
+                    type="button"
+                    disabled
+                    className="flex-1 cursor-default rounded-lg bg-amber-500/15 py-2 text-[13px] font-bold text-amber-700 dark:text-amber-300"
+                  >
+                    현재 위치
+                  </button>
+                ) : (
+                  // 이동 가능 여부는 사유별로 다르게 보여준다 — 왜 못 가는지 모르면 버그로 읽힌다.
+                  // 맞닿지 않은 구역도 버튼은 남긴다 — 사라지면 왜 못 가는지 알 수 없다.
+                  // 비활성 모양이되 클릭은 받아서 사유를 토스트로 알린다(disabled면 클릭이 죽는다).
+                  adjacentIds && !adjacentIds.has(selected.id) ? (
+                    <button
+                      type="button"
+                      onClick={() =>
+                        showError('맞닿은 구역으로만 이동할 수 있습니다.')
+                      }
+                      className="flex-1 cursor-default rounded-lg bg-zinc-200 py-2 text-[13px] font-bold text-zinc-400 dark:bg-zinc-800 dark:text-zinc-500"
+                    >
+                      이동
+                    </button>
+                  ) : remainMs > 0 ? (
+                    <button
+                      type="button"
+                      onClick={() => askMove(selected.id)}
+                      disabled={pending}
+                      className="flex-1 rounded-lg bg-sky-600 py-1.5 text-[11px] leading-[1.35] font-bold text-white disabled:opacity-50"
+                    >
+                      {fmtRemain(remainMs)} 후
+                      <br />
+                      또는 💎{residenceSpeedUpCost(remainMs).toLocaleString('ko-KR')}
+                    </button>
+                  ) : (
+                    <button
+                      type="button"
+                      onClick={() => askMove(selected.id)}
+                      disabled={pending}
+                      className="flex-1 rounded-lg bg-amber-600 py-2 text-[13px] font-bold text-white disabled:opacity-50"
+                    >
+                      이동
+                    </button>
+                  )
+                ))}
+              <button
+                type="button"
+                onClick={() => setSelectedId(null)}
+                className="flex-1 rounded-lg border border-zinc-300 py-2 text-[13px] font-medium text-zinc-500 dark:border-zinc-700 dark:text-zinc-400"
+              >
+                닫기
+              </button>
+              </>
+            }
+          >
             {/* 헤더 — 지역(6종) 배경 + 지역이름 + 전투보기 */}
             <div
               className="relative h-20 w-full"
@@ -1202,64 +1257,8 @@ export function WorldMapView({
                   )}
                 </div>
               </div>
-
-            {/* 이동·닫기 좌우 2열(flex-1) — 거주 이동 불가 시 닫기가 단독으로 꽉 참. */}
-            <div className="mt-2.5 flex gap-2">
-              {canSetResidence &&
-                (selected.id === residence ? (
-                  // 현재 위치 — '이동' 버튼과 동일 크기(레이아웃 시프트 방지)
-                  <button
-                    type="button"
-                    disabled
-                    className="flex-1 cursor-default rounded-lg bg-amber-500/15 py-2 text-[13px] font-bold text-amber-700 dark:text-amber-300"
-                  >
-                    현재 위치
-                  </button>
-                ) : (
-                  // 이동 가능 여부는 사유별로 다르게 보여준다 — 왜 못 가는지 모르면 버그로 읽힌다.
-                  // 맞닿지 않은 구역도 버튼은 남긴다 — 사라지면 왜 못 가는지 알 수 없다.
-                  // 비활성 모양이되 클릭은 받아서 사유를 토스트로 알린다(disabled면 클릭이 죽는다).
-                  adjacentIds && !adjacentIds.has(selected.id) ? (
-                    <button
-                      type="button"
-                      onClick={() =>
-                        showError('맞닿은 구역으로만 이동할 수 있습니다.')
-                      }
-                      className="flex-1 cursor-default rounded-lg bg-zinc-200 py-2 text-[13px] font-bold text-zinc-400 dark:bg-zinc-800 dark:text-zinc-500"
-                    >
-                      이동
-                    </button>
-                  ) : remainMs > 0 ? (
-                    <button
-                      type="button"
-                      onClick={() => askMove(selected.id)}
-                      disabled={pending}
-                      className="flex-1 rounded-lg bg-sky-600 py-1.5 text-[11px] leading-[1.35] font-bold text-white disabled:opacity-50"
-                    >
-                      {fmtRemain(remainMs)} 후
-                      <br />
-                      또는 💎{residenceSpeedUpCost(remainMs).toLocaleString('ko-KR')}
-                    </button>
-                  ) : (
-                    <button
-                      type="button"
-                      onClick={() => askMove(selected.id)}
-                      disabled={pending}
-                      className="flex-1 rounded-lg bg-amber-600 py-2 text-[13px] font-bold text-white disabled:opacity-50"
-                    >
-                      이동
-                    </button>
-                  )
-                ))}
-              <button
-                type="button"
-                onClick={() => setSelectedId(null)}
-                className="flex-1 rounded-lg border border-zinc-300 py-2 text-[13px] font-medium text-zinc-500 dark:border-zinc-700 dark:text-zinc-400"
-              >
-                닫기
-              </button>
             </div>
-            </div>
+          </ModalLayout>
         </ModalShell>
       )}
 
@@ -1278,18 +1277,27 @@ export function WorldMapView({
           });
           const totalPct = Math.round((selected.taxBonus - 1) * 100);
           return (
-            <ModalShell
-              onClose={() => setRateInfoOpen(false)}
-              label="세금 안내"
-              className="w-full max-w-[260px] rounded-2xl bg-white p-4 dark:bg-zinc-950"
-            >
-              <div className="flex items-center justify-between">
-                <h2 className="text-sm font-extrabold">💰 세금 안내</h2>
-                <button type="button" onClick={() => setRateInfoOpen(false)} className="text-[13px] text-zinc-400">
-                  ✕
-                </button>
-              </div>
-              <p className="mt-3 text-[10px] font-bold uppercase tracking-wide text-zinc-400">세율</p>
+            <ModalShell onClose={() => setRateInfoOpen(false)} label="세금 안내">
+              <ModalLayout
+                title="💰 세금 안내"
+                subtitle={
+                  <>
+                    <span className="font-bold" style={{ color: REGION[selected.region].color }}>
+                      {selected.name}
+                    </span>
+                    <span className="mx-1 text-zinc-400">·</span>
+                    <span className="font-bold text-amber-600 dark:text-amber-400">
+                      세율 +{totalPct}%
+                    </span>
+                  </>
+                }
+                footer={
+                  <ModalButton tone="ghost" onClick={() => setRateInfoOpen(false)}>
+                    닫기
+                  </ModalButton>
+                }
+              >
+              <p className="text-[10px] font-bold uppercase tracking-wide text-zinc-400">세율</p>
               <dl className="mt-1 space-y-1 text-[12px]">
                 <div className="flex justify-between">
                   <dt className="text-zinc-500">점령 구역 {zoneCount} × 1%</dt>
@@ -1325,6 +1333,7 @@ export function WorldMapView({
                   </div>
                 </div>
               </details>
+              </ModalLayout>
             </ModalShell>
           );
         })()}
@@ -1464,91 +1473,106 @@ export function WorldMapView({
             setCollectConfirm(false);
           };
           return (
-            <ModalShell
-              onClose={close}
-              label={`${cz.name} 세금 수금`}
-              className="w-full max-w-[260px] rounded-2xl bg-white p-4 dark:bg-zinc-950"
-            >
-                <h2 className="text-sm font-bold">{cz.name} 세금 수금</h2>
-                <div className="mt-3 grid grid-cols-2 gap-2 text-center">
-                  <div className="rounded-lg bg-zinc-100 py-2 dark:bg-zinc-900">
+            <ModalShell onClose={close} label={`${cz.name} 세금 수금`}>
+              <ModalLayout
+                title="세금 수금"
+                subtitle={
+                  <>
+                    <span className="font-bold" style={{ color: REGION[cz.region].color }}>
+                      {cz.name}
+                    </span>
+                    <span className="mx-1 text-zinc-400">·</span>
+                    <span className="font-mono font-bold text-amber-600 dark:text-amber-400">
+                      총 {tax.toLocaleString('ko-KR')}💎
+                    </span>
+                  </>
+                }
+                footer={
+                  <>
+                    <ModalButton tone="ghost" onClick={close}>
+                      닫기
+                    </ModalButton>
+                    {onCd ? (
+                      <ModalButton tone="neutral" disabled>
+                        {hh > 0 ? `${hh}시간 ` : ''}
+                        {mm}분 후
+                      </ModalButton>
+                    ) : (
+                      <button
+                        type="button"
+                        onClick={() => {
+                          if (collectConfirm) {
+                            collect(cz.id);
+                          } else {
+                            setCollectLeft(3);
+                            setCollectConfirm(true);
+                          }
+                        }}
+                        disabled={pending || tax <= 0}
+                        className={`relative isolate flex-1 overflow-hidden rounded-xl py-2.5 text-[13px] font-bold text-white transition-colors disabled:opacity-50 ${
+                          collectConfirm ? 'bg-emerald-700' : 'bg-emerald-600'
+                        }`}
+                      >
+                        {collectConfirm && (
+                          <span
+                            aria-hidden
+                            className="absolute inset-0 bg-emerald-500"
+                            style={{ animation: 'confirm-bg-pulse 1.2s ease-in-out infinite' }}
+                          />
+                        )}
+                        <span className="relative">
+                          {collectConfirm ? `수금 ${collectLeft}s` : '수금'}
+                        </span>
+                      </button>
+                    )}
+                  </>
+                }
+              >
+                <div className="grid grid-cols-2 gap-2 text-center">
+                  <div className="rounded-lg bg-zinc-100 py-2 dark:bg-zinc-800">
                     <p className="text-[10px] text-zinc-400">길드 90%</p>
                     <p className="font-mono text-[13px] font-bold text-emerald-600 dark:text-emerald-400">
                       💎 {guildCut.toLocaleString('ko-KR')}
                     </p>
                   </div>
-                  <div className="rounded-lg bg-zinc-100 py-2 dark:bg-zinc-900">
+                  <div className="rounded-lg bg-zinc-100 py-2 dark:bg-zinc-800">
                     <p className="text-[10px] text-zinc-400">집행관 10%</p>
                     <p className="font-mono text-[13px] font-bold text-indigo-500 dark:text-indigo-400">
                       💎 {execCut.toLocaleString('ko-KR')}
                     </p>
                   </div>
                 </div>
-
-                {onCd ? (
-                  <p className="mt-3 rounded-lg bg-zinc-100 py-2 text-center text-[12px] font-semibold text-zinc-500 dark:bg-zinc-900">
-                    {hh > 0 ? `${hh}시간 ` : ''}{mm}분 후 수금 가능
-                  </p>
-                ) : (
-                  <button
-                    type="button"
-                    onClick={() => {
-                      if (collectConfirm) {
-                        collect(cz.id);
-                      } else {
-                        setCollectLeft(3);
-                        setCollectConfirm(true);
-                      }
-                    }}
-                    disabled={pending || tax <= 0}
-                    className={`relative isolate mt-3 w-full overflow-hidden rounded-lg py-2 text-sm font-bold text-white transition-colors disabled:opacity-50 ${
-                      collectConfirm ? 'bg-emerald-700' : 'bg-emerald-600'
-                    }`}
-                  >
-                    {collectConfirm && (
-                      <span
-                        aria-hidden
-                        className="absolute inset-0 bg-emerald-500"
-                        style={{ animation: 'confirm-bg-pulse 1.2s ease-in-out infinite' }}
-                      />
-                    )}
-                    <span className="relative">{collectConfirm ? `수금 ${collectLeft}s` : '수금'}</span>
-                  </button>
-                )}
-                <button type="button" onClick={close} className="mt-1.5 w-full py-1 text-[11px] text-zinc-500">
-                  닫기
-                </button>
+                <p className="mt-2.5 text-center text-[10.5px] text-zinc-400">
+                  수금 후 {Math.round(TAX_COLLECT_COOLDOWN_MIN / 60)}시간 동안 다시 수금할 수 없습니다.
+                </p>
+              </ModalLayout>
             </ModalShell>
           );
         })()}
 
       {/* 길드 상세 팝업 — 연대기 길드명 클릭 시(이름으로 요약 조회) */}
       {guildPopup && (
-        <ModalShell
-          onClose={() => setGuildPopup(null)}
-          label={`${guildPopup.name} 길드 정보`}
-          className="w-full max-w-[320px] rounded-2xl bg-white p-4 dark:bg-zinc-950"
-        >
-          <div className="flex items-center gap-3">
-            <div className="flex h-12 w-12 shrink-0 items-center justify-center overflow-hidden rounded-xl">
-              {guildPopup.emblemUrl ? (
+        <ModalShell onClose={() => setGuildPopup(null)} label={`${guildPopup.name} 길드 정보`}>
+          <ModalLayout
+            icon={
+              guildPopup.emblemUrl ? (
                 // eslint-disable-next-line @next/next/no-img-element
                 <img
                   src={guildPopup.emblemUrl}
                   alt=""
                   aria-hidden
-                  className="h-full w-full object-contain"
+                  className="mx-auto h-11 w-11 object-contain"
                   style={{ imageRendering: 'pixelated' }}
                 />
               ) : (
-                <span className="text-2xl">🛡️</span>
-              )}
-            </div>
-            <div className="min-w-0">
-              <div className="flex items-center gap-1.5">
-                <h2 className="truncate text-base font-bold">{guildPopup.name}</h2>
+                '🛡️'
+              )
+            }
+            title={
+              <span className="inline-flex items-center gap-1.5">
+                {guildPopup.name}
                 <span
-                  className={`shrink-0 rounded px-1.5 py-0.5 text-[10px] font-bold ${
+                  className={`rounded px-1.5 py-0.5 text-[10px] font-bold ${
                     guildPopup.joinPolicy === 'open'
                       ? 'bg-emerald-100 text-emerald-700 dark:bg-emerald-500/15 dark:text-emerald-300'
                       : 'bg-amber-100 text-amber-700 dark:bg-amber-500/15 dark:text-amber-300'
@@ -1556,40 +1580,48 @@ export function WorldMapView({
                 >
                   {guildPopup.joinPolicy === 'open' ? '자유' : '승인'}
                 </span>
-              </div>
-              <p className="mt-0.5 text-[11px] text-zinc-500">
+              </span>
+            }
+            subtitle={
+              <>
                 Lv.{guildPopup.level} · {guildPopup.memberCount}명 · 전투력{' '}
                 <span className="font-bold text-amber-600 dark:text-amber-400">
                   {guildPopup.combat.toLocaleString('ko-KR')}
                 </span>
-              </p>
-              {guildPopup.leaderNickname ? (
-                <p className="mt-0.5 truncate text-[11px] text-zinc-500">
-                  길드장{' '}
-                  {guildPopup.leaderCode ? (
-                    // 프로필 이동 — 복원 키(길드명)를 남겨 뒤로가기 시 이 팝업이 다시 열린다.
-                    <Link
-                      prefetch={false}
-                      href={profileHref(guildPopup.leaderCode, serverId)}
-                      onClick={() => {
-                        try {
-                          sessionStorage.setItem('ig:worldmap-restore-guild', guildPopup.name);
-                        } catch {
-                          // 저장 실패 시 복원만 생략
-                        }
-                      }}
-                      className="font-semibold text-indigo-500 underline decoration-dotted underline-offset-2 dark:text-indigo-400"
-                    >
-                      {guildPopup.leaderNickname}
-                    </Link>
-                  ) : (
-                    <span className="font-semibold">{guildPopup.leaderNickname}</span>
-                  )}
-                </p>
-              ) : null}
-            </div>
-          </div>
-          <div className="mt-3 border-t border-zinc-100 pt-3 dark:border-zinc-900">
+                {guildPopup.leaderNickname ? (
+                  <>
+                    <span className="mx-1 text-zinc-400">·</span>길드장{' '}
+                    {guildPopup.leaderCode ? (
+                      <Link
+                        prefetch={false}
+                        href={profileHref(guildPopup.leaderCode, serverId)}
+                        onClick={() => {
+                          try {
+                            sessionStorage.setItem('ig:worldmap-restore-guild', guildPopup.name);
+                          } catch {
+                            // 저장 실패 시 복원만 생략
+                          }
+                        }}
+                        className="font-semibold text-indigo-500 underline decoration-dotted"
+                      >
+                        {guildPopup.leaderNickname}
+                      </Link>
+                    ) : (
+                      <span className="font-semibold text-zinc-600 dark:text-zinc-300">
+                        {guildPopup.leaderNickname}
+                      </span>
+                    )}
+                  </>
+                ) : null}
+              </>
+            }
+            footer={
+              <ModalButton tone="neutral" onClick={() => setGuildPopup(null)}>
+                닫기
+              </ModalButton>
+            }
+          >
+          <div>
             <p className="text-[11px] font-bold text-zinc-400">점령 구역 ({guildPopup.zones.length})</p>
             {guildPopup.zones.length > 0 ? (
               <div className="mt-1.5 flex flex-wrap gap-1">
@@ -1612,13 +1644,7 @@ export function WorldMapView({
               {guildPopup.intro?.trim() ? guildPopup.intro : '등록된 소개가 없습니다.'}
             </p>
           </div>
-          <button
-            type="button"
-            onClick={() => setGuildPopup(null)}
-            className="mt-4 w-full rounded-lg bg-zinc-100 py-2.5 text-sm font-bold text-zinc-700 active:opacity-70 dark:bg-zinc-800 dark:text-zinc-200"
-          >
-            닫기
-          </button>
+          </ModalLayout>
         </ModalShell>
       )}
     </div>

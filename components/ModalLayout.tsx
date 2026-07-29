@@ -22,7 +22,8 @@ export function ModalLayout({
   /** 카드 배경 없이 컨텐츠를 그대로 두고 싶을 때(이미지 헤더 등 자체 배경을 가진 경우). */
   bare = false,
 }: {
-  title: React.ReactNode;
+  /** 생략 가능 — 이미지 헤더가 제목 역할을 하는 팝업(구역 정보)에서는 넣지 않는다. */
+  title?: React.ReactNode;
   /** 제목 아래 한 줄 — 대상·수치·상태를 라벨로 덧붙인다. */
   subtitle?: React.ReactNode;
   /** 제목 위 큰 아이콘(경고 등). */
@@ -35,13 +36,17 @@ export function ModalLayout({
 }) {
   return (
     <div className="flex w-full max-w-[320px] flex-col gap-2.5">
-      <div className="px-1 text-center">
-        {icon ? <div className="text-[26px] leading-none">{icon}</div> : null}
-        <h2 className={`text-[15px] font-extrabold ${icon ? 'mt-1' : ''}`}>{title}</h2>
-        {subtitle ? (
-          <p className="mt-1 text-[11.5px] text-zinc-500 dark:text-zinc-400">{subtitle}</p>
-        ) : null}
-      </div>
+      {title || subtitle || icon ? (
+        <div className="px-1 text-center">
+          {icon ? <div className="text-[26px] leading-none">{icon}</div> : null}
+          {title ? (
+            <h2 className={`text-[15px] font-extrabold ${icon ? 'mt-1' : ''}`}>{title}</h2>
+          ) : null}
+          {subtitle ? (
+            <p className="mt-1 text-[11.5px] text-zinc-500 dark:text-zinc-400">{subtitle}</p>
+          ) : null}
+        </div>
+      ) : null}
 
       <div
         className={
