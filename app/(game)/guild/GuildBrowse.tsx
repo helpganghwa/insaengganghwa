@@ -142,23 +142,24 @@ export function GuildBrowse({
         )}
       </div>
 
-      {/* 길드 만들기 — 목록 끝의 행(FAB 대체). 비용을 같이 보여줘 누르기 전에 판단이 선다. */}
-      <Link
-        prefetch={false}
-        href="/guild/create"
-        className="mt-3 flex items-center gap-2 rounded-xl border border-dashed border-amber-400/70 px-3 py-3 active:opacity-70 dark:border-amber-500/40"
-      >
-        <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-amber-500/15 text-lg leading-none text-amber-600 dark:text-amber-400">
-          +
-        </span>
-        <span className="min-w-0 flex-1">
-          <span className="block text-[13px] font-bold">직접 길드 만들기</span>
-          <span className="block text-[11px] text-zinc-500">
-            내가 길드장이 됩니다 · {GUILD_CREATE_COST_DIAMOND.toLocaleString('ko-KR')}💎
-          </span>
-        </span>
-        <span className="shrink-0 text-zinc-300 dark:text-zinc-600">›</span>
-      </Link>
+      {/* 길드 만들기 FAB — 목록 끝에 두니 찾기 어려웠다(2026-07-30). 비용은 라벨에 붙여
+          누르기 전에 판단이 서게 한다.
+          z-10 — 채팅 패널(z-20 fixed, DOM 후순위)이 열리면 FAB를 덮도록. */}
+      <div className="pointer-events-none fixed inset-x-0 bottom-0 z-10 mx-auto max-w-[390px]">
+        {/* 채팅 미니바(--chat-dock-h) 위로 회피 — 미니바와 FAB가 겹치던 문제(2026-07-20). */}
+        <div className="flex justify-end px-4 pb-[calc(env(safe-area-inset-bottom)+72px+var(--chat-dock-h,0px))]">
+          <Link
+            prefetch={false}
+            href="/guild/create"
+            className="pointer-events-auto flex items-center gap-1.5 rounded-full bg-amber-600 py-3 pl-4 pr-5 text-sm font-bold text-white shadow-lg shadow-amber-900/30 active:scale-95"
+          >
+            <span className="text-lg leading-none">+</span> 길드 생성
+            <span className="text-[11px] font-semibold text-amber-100">
+              {GUILD_CREATE_COST_DIAMOND.toLocaleString('ko-KR')}💎
+            </span>
+          </Link>
+        </div>
+      </div>
     </div>
   );
 }

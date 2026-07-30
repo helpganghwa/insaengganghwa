@@ -68,7 +68,9 @@ export function GuildInfoModal({ guild, onClose }: { guild: GuildRow; onClose: (
           </ModalButton>
         }
       >
-        <div>
+        {/* 소개가 먼저 — 가입을 고민하는 사람은 이 길드가 어떤 곳인지부터 읽는다. */}
+        <GuildIntroBlock intro={guild.intro} />
+        <div className="mt-3 border-t border-zinc-100 pt-3 dark:border-zinc-900">
           <p className="text-[11px] font-bold text-zinc-400">점령 구역 ({guild.zones.length})</p>
           {guild.zones.length > 0 ? (
             <div className="mt-1.5 flex flex-wrap gap-1">
@@ -84,9 +86,6 @@ export function GuildInfoModal({ guild, onClose }: { guild: GuildRow; onClose: (
           ) : (
             <p className="mt-1 text-[12px] text-zinc-400">점령 중인 구역이 없습니다.</p>
           )}
-        </div>
-        <div className="mt-3 border-t border-zinc-100 pt-3 dark:border-zinc-900">
-          <GuildIntroBlock intro={guild.intro} />
         </div>
       </ModalLayout>
     </ModalShell>

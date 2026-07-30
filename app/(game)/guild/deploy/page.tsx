@@ -15,6 +15,7 @@ import { hasGuildPerm } from '@/lib/game/guild/permissions';
 import { DeployBoard } from './DeployBoard';
 import { WorldMapView } from '../map/WorldMapView';
 import { DeployTerritoryTabs } from './DeployTerritoryTabs';
+import { ScrollTopOnMount } from '@/components/ScrollTopOnMount';
 
 export const dynamic = 'force-dynamic';
 
@@ -43,7 +44,10 @@ export default async function DeployPage() {
   ]);
 
   return (
-    <DeployTerritoryTabs
+    <>
+      {/* 지도가 곧 첫 화면 — 앞 화면 스크롤을 물고 들어오면 지도 위쪽이 잘린다. */}
+      <ScrollTopOnMount />
+      <DeployTerritoryTabs
       deploy={
         <DeployBoard
           canDeploy={canDeploy}
@@ -109,6 +113,7 @@ export default async function DeployPage() {
           }))}
         />
       }
-    />
+      />
+    </>
   );
 }

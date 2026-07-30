@@ -16,6 +16,7 @@ import {
 
 import {
   speedUpResidenceAction,
+  setResidenceAction,
   deployAction,
   cancelDeployAction,
   clearMemberDeploymentAction,
@@ -244,7 +245,8 @@ export function DeployBoard({
   const [plan, setPlan] = useState<{
     zoneId: number;
     zoneName: string;
-    role: ConquestRole;
+    /** null = 배치 없이 **이동만**(2026-07-30) — 배치 전에 자리부터 옮기고 싶을 때. */
+    role: ConquestRole | null;
     /** 거주지 이동이 필요한가(필요하면 이동+배치를 함께 요청). */
     move: boolean;
     /** 이동 쿨타임 보석 비용(0이면 무료). */
@@ -370,6 +372,34 @@ export function DeployBoard({
     });
   };
 
+  /**
+   * 이동만 — 배치는 하지 않고 거주지만 옮긴다. 종전엔 배치를 눌러야 이동이 따라왔는데,
+   * 공격/수비를 정하기 전에 자리부터 옮기고 싶은 경우가 있다(2026-07-30 사용자 요청).
+   */
+  const askMove = () => {
+    if (!selected || selected.id === homeZoneId) return;
+    const me = members.find((x) => x.userId === myUserId);
+    if (!me) return;
+    if (adjacentToHome && !adjacentToHome.has(selected.id)) {
+      return showError('인접한 구역으로만 이동할 수 있습니다. 한 칸씩 옮겨가세요.');
+    }
+    const release = me.execZoneId
+      ? `${me.execZoneName} 집행관`
+      : me.depZoneId
+        ? `${me.depZoneName} ${me.depRole === 'attack' ? '공격' : '수비'} 배치`
+        : null;
+    setPlanLeft(3);
+    setPlanConfirm(false);
+    setPlan({
+      zoneId: selected.id,
+      zoneName: selected.name,
+      role: null,
+      move: true,
+      gem: residenceSpeedUpCost(moveRemainMs),
+      release,
+    });
+  };
+
   /** 이동 대기시간 단축 — 대기시간만 없앤다(배치는 다시 누른다, 세계지도와 동일). */
   const doSpeedUp = () => {
     if (!plan) return;
@@ -400,10 +430,30 @@ export function DeployBoard({
     setPlan(null);
     setPlanConfirm(false);
     // 배치 시 집행관(자동 방어)은 서버에서 자동 해제 → 로컬도 집행관 표시 제거(낙관적 갱신).
-    patch(myUserId, { depZoneId: p.zoneId, depZoneName: p.zoneName, depRole: p.role, execZoneId: null, execZoneName: null });
+    if (p.role != null)
+      patch(myUserId, { depZoneId: p.zoneId, depZoneName: p.zoneName, depRole: p.role, execZoneId: null, execZoneName: null });
     if (p.gem > 0) optimisticAdjust(-BigInt(p.gem));
+    if (p.role == null) {
+      // 이동만 — 기존 배치/집행관은 서버가 해제한다(release).
+      patch(myUserId, { depZoneId: null, depZoneName: null, depRole: null, execZoneId: null, execZoneName: null });
+      start(async () => {
+        const r = await setResidenceAction(p.zoneId, { release: p.release != null });
+        if (r.status !== 'success') {
+          patch(myUserId, {
+            depZoneId: prev.depZoneId, depZoneName: prev.depZoneName, depRole: prev.depRole,
+            execZoneId: prev.execZoneId, execZoneName: prev.execZoneName,
+          });
+          if (p.gem > 0) optimisticAdjust(BigInt(p.gem));
+          return showError(guildErrMsg(r.code));
+        }
+        showHeaderToast({ title: `${p.zoneName}(으)로 거주지 이동` });
+        router.refresh();
+      });
+      return;
+    }
+    const role = p.role;
     start(async () => {
-      const r = await deployAction(p.zoneId, p.role, { move: p.move });
+      const r = await deployAction(p.zoneId, role, { move: p.move });
       if (r.status !== 'success') {
         patch(myUserId, {
           depZoneId: prev.depZoneId, depZoneName: prev.depZoneName, depRole: prev.depRole,
@@ -413,7 +463,7 @@ export function DeployBoard({
         return showError(guildErrMsg(r.code));
       }
       showHeaderToast({
-        title: `${p.role === 'attack' ? '공격' : '수비'} 배치${p.move ? ' · 거주지 이동' : ''}`,
+        title: `${role === 'attack' ? '공격' : '수비'} 배치${p.move ? ' · 거주지 이동' : ''}`,
       });
       router.refresh(); // 거주지·쿨타임은 서버 상태 — 다음 판단이 어긋나지 않게 동기화
     });
@@ -680,11 +730,12 @@ export function DeployBoard({
           종전 좌우 2단은 칸당 170px라 닉네임·전투력·버튼이 눌려 있었다. 길드원 전체
           배치 현황은 시트를 좁히지 않도록 팝업으로 뺀다(2026-07-30 사용자 결정). */}
       <div className="flex-1 p-3">
-        {/* 요약 바 — 우리 전력이 어디에 쏠렸는지 + 배치 현황 팝업 진입. */}
+        {/* 요약 띠 — 시트 좌우 여백을 넘어 화면을 꽉 채우고, 안쪽 패딩만 콘텐츠와 맞춘다.
+            카드보다 띠가 "구역 하나"를 다루는 아래 내용과 층위가 달라 보인다(2026-07-30). */}
         <button
           type="button"
           onClick={() => setStatusOpen(true)}
-          className="flex w-full items-center gap-2 rounded-xl border border-zinc-200 px-3 py-2 text-left active:opacity-70 dark:border-zinc-800"
+          className="-mx-3 -mt-3 flex w-[calc(100%+1.5rem)] items-center gap-2 border-b border-zinc-200 bg-zinc-50 px-3 py-2 text-left active:opacity-70 dark:border-zinc-800 dark:bg-zinc-900/50"
         >
           <span className="flex-1 text-[11px] tabular-nums">
             <span className="font-semibold text-red-500">공격 {attackCount}</span>
@@ -729,18 +780,34 @@ export function DeployBoard({
               </p>
             )}
 
-            {/* 내 배치 — 배치는 본인만 한다. */}
-            {!locked && !meHere && (
-              <button
-                type="button"
-                onClick={askDeploy}
-                disabled={pending}
-                className={`mt-2 w-full rounded-lg py-2 text-[13px] font-bold text-white disabled:opacity-50 ${
-                  isDefend ? 'bg-sky-600' : 'bg-red-600'
-                }`}
-              >
-                여기 {isDefend ? '수비' : '공격'}하기
-              </button>
+            {/* 내 액션 — 배치는 본인만 한다. 이동은 배치와 별개로도 필요하다(2026-07-30). */}
+            {!locked && (!meHere || selected.id !== homeZoneId) && (
+              <div className="mt-2 grid grid-cols-2 gap-1.5">
+                {!meHere ? (
+                  <button
+                    type="button"
+                    onClick={askDeploy}
+                    disabled={pending}
+                    className={`rounded-lg py-2 text-[13px] font-bold text-white disabled:opacity-50 ${
+                      isDefend ? 'bg-sky-600' : 'bg-red-600'
+                    } ${selected.id === homeZoneId ? 'col-span-2' : ''}`}
+                  >
+                    {isDefend ? '수비배치' : '공격배치'}
+                  </button>
+                ) : null}
+                {selected.id !== homeZoneId ? (
+                  <button
+                    type="button"
+                    onClick={askMove}
+                    disabled={pending}
+                    className={`rounded-lg border border-amber-500/60 py-2 text-[13px] font-bold text-amber-600 disabled:opacity-50 dark:text-amber-400 ${
+                      meHere ? 'col-span-2' : ''
+                    }`}
+                  >
+                    이동
+                  </button>
+                ) : null}
+              </div>
             )}
 
             {execHere.length === 0 && deployedHere.length === 0 ? (
@@ -829,9 +896,15 @@ export function DeployBoard({
               ))}
             </div>
             {/* 높이 고정 — 필터마다 인원이 달라 팝업이 늘었다 줄었다 하면 손가락 위치가 어긋난다. */}
-            <ul className="mt-2 h-[46vh] divide-y divide-zinc-100 overflow-y-auto dark:divide-zinc-900">
+            <ul
+              className={`mt-2 h-[46vh] overflow-y-auto ${
+                statusList.length === 0
+                  ? 'flex items-center justify-center'
+                  : 'divide-y divide-zinc-100 dark:divide-zinc-900'
+              }`}
+            >
               {statusList.length === 0 ? (
-                <li className="py-6 text-center text-[11px] text-zinc-400">해당하는 길드원이 없습니다.</li>
+                <li className="text-center text-[11px] text-zinc-400">해당하는 길드원이 없습니다.</li>
               ) : (
                 statusList.map((m) => {
                   const isExec = m.execZoneId != null;
@@ -988,7 +1061,11 @@ export function DeployBoard({
           }}
         >
           <ModalLayout
-            title={`${plan.zoneName} ${plan.role === 'attack' ? '공격' : '수비'} 배치`}
+            title={
+              plan.role == null
+                ? `${plan.zoneName}(으)로 이동`
+                : `${plan.zoneName} ${plan.role === 'attack' ? '공격' : '수비'} 배치`
+            }
             subtitle={
               <>
                 {plan.move ? <span className="font-bold text-amber-500">거주지 이동 포함</span> : null}
@@ -1012,7 +1089,7 @@ export function DeployBoard({
                     style={{ flex: 1 }}
                     className="rounded-xl bg-sky-600 py-1.5 text-[11px] leading-[1.35] font-bold text-white disabled:opacity-50"
                   >
-                    {fmtRemain(moveRemainMs)} 후 배치
+                    {fmtRemain(moveRemainMs)} 후 {plan.role == null ? '이동' : '배치'}
                     <br />
                     또는 💎{plan.gem.toLocaleString('ko-KR')}
                   </button>
@@ -1023,10 +1100,10 @@ export function DeployBoard({
                     disabled={pending}
                     style={{ flex: 1 }}
                     className={`rounded-xl py-2.5 text-[13px] font-bold text-white disabled:opacity-50 ${
-                      plan.role === 'attack' ? 'bg-red-600' : 'bg-sky-600'
+                      plan.role === 'attack' ? 'bg-red-600' : plan.role === 'defend' ? 'bg-sky-600' : 'bg-amber-600'
                     }`}
                   >
-                    배치
+                    {plan.role == null ? '이동' : '배치'}
                   </button>
                 )}
                 <ModalButton

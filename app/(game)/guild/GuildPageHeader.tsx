@@ -29,16 +29,16 @@ export function GuildPageHeader({
 }) {
   return (
     <div className="flex items-center gap-1.5 px-0.5">
-      <BackButton fallback={fallback} className="h-8 w-8 text-xl" />
+      <BackButton fallback={fallback} className="h-7 w-7 pb-0 text-lg" />
       {icon ? (
-        <div className="flex h-7 w-7 shrink-0 items-center justify-center overflow-hidden rounded-lg bg-zinc-100 dark:bg-zinc-900">
+        <div className="flex h-6 w-6 shrink-0 items-center justify-center overflow-hidden rounded-md bg-zinc-100 dark:bg-zinc-900">
           {icon}
         </div>
       ) : null}
       <div className="flex min-w-0 flex-1 items-baseline gap-1.5">
-        <h1 className="shrink-0 text-[15px] font-extrabold leading-tight">{title}</h1>
+        <h1 className="shrink-0 text-[14.5px] font-extrabold leading-none">{title}</h1>
         {kicker ? (
-          <p className="min-w-0 truncate text-[10.5px] font-medium text-zinc-400">{kicker}</p>
+          <p className="min-w-0 truncate text-[10px] font-medium leading-none text-zinc-400">{kicker}</p>
         ) : null}
       </div>
       {right ? <div className="shrink-0">{right}</div> : null}
