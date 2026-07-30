@@ -4,6 +4,7 @@ import { and, desc, eq, sql } from 'drizzle-orm';
 
 import { db } from '@/lib/db/client';
 import { iapOrders, monthlyPurchaseLimits, identityVerifications } from '@/lib/db/schema/payment';
+import { isReviewerAccount } from '@/lib/auth/session';
 import { characters } from '@/lib/db/schema/server';
 import { profiles } from '@/lib/db/schema/profiles';
 import { shopPurchases } from '@/lib/db/schema/shop';
@@ -204,8 +205,12 @@ export async function createOrder(
   const kstMonth = kstMonthString();
   const { verified, isMinor, monthlyKrw } = await minorStatus(userId, kstMonth);
   // 청소년보호 — 결제 전 본인인증 필수. 미인증이면 결제 차단(설정에서 본인인증 유도).
-  if (!verified) throw new PurchaseError('IDENTITY_REQUIRED');
-  if (isMinor && monthlyKrw + krw > MINOR_MONTHLY_LIMIT_KRW) {
+  // 심사(cbt) 계정은 인증 완료로 간주(2026-07-31) — 카드사 심사 담당자가 결제 테스트를
+  // 해야 하는데 본인인증(실명 PASS)을 시킬 수 없다는 회신. 성인 취급(월 한도 미적용).
+  // 실유저 경로는 그대로다 — 심사 계정 5개(ID/PW 로그인)만 이 분기를 탄다.
+  const reviewer = await isReviewerAccount();
+  if (!verified && !reviewer) throw new PurchaseError('IDENTITY_REQUIRED');
+  if (!reviewer && isMinor && monthlyKrw + krw > MINOR_MONTHLY_LIMIT_KRW) {
     throw new PurchaseError('MINOR_LIMIT');
   }
 
