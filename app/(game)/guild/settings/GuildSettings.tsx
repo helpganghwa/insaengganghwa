@@ -281,20 +281,6 @@ export function GuildSettings({
       </div>
       </div>
 
-      {/* 부길드장 안내 — 안 보이는 타일이 있는 이유. */}
-      {!isLeader ? (
-        <p className="px-1 text-center text-[11px] leading-relaxed text-zinc-400">
-          길드 해산은 길드장만 할 수 있어요.
-          {!can.taxDistribute || !can.emblem ? (
-            <>
-              <br />
-              {!can.taxDistribute && !can.emblem ? '세금·문양' : !can.taxDistribute ? '세금' : '문양'}은
-              길드장이 권한을 열어주면 관리할 수 있어요.
-            </>
-          ) : null}
-        </p>
-      ) : null}
-
       {/* 해산 — 타일이 아니라 맨 아래 작은 텍스트 버튼(오탭 방지). */}
       {isLeader ? (
         <div className="pb-2 pt-4 text-center">

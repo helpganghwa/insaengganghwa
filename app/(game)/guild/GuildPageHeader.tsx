@@ -29,7 +29,7 @@ export function GuildPageHeader({
 }) {
   return (
     <div className="flex items-center gap-1.5 px-0.5">
-      <BackButton fallback={fallback} className="h-7 w-7 pb-0 text-lg" />
+      <BackButton fallback={fallback} compact />
       {icon ? (
         <div className="flex h-6 w-6 shrink-0 items-center justify-center overflow-hidden rounded-md bg-zinc-100 dark:bg-zinc-900">
           {icon}

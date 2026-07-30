@@ -31,15 +31,37 @@ export function BackFab({ fallback = '/', className = '' }: { fallback?: string;
   );
 }
 
-/** 아이콘 단독 뒤로가기 — 제목 줄에 다른 요소(문양 등)가 이미 있을 때. */
-export function BackButton({ fallback = '/', className = '' }: { fallback?: string; className?: string }) {
+/**
+ * 아이콘 단독 뒤로가기 — 제목 줄에 다른 요소(문양 등)가 이미 있을 때.
+ *
+ * ⚠ 크기는 **compact 프로퍼티로만** 바꾼다. className에 h-7 같은 걸 넘겨도 소용없다 —
+ * Tailwind 유틸은 클래스 속성의 순서가 아니라 **생성된 CSS의 순서**로 이기고, .h-9가
+ * .h-7보다 뒤에 있어 항상 h-9가 남는다(2026-07-30, 헤더가 안 줄던 원인).
+ *
+ * compact는 시각 크기만 24px로 줄이고, 터치 영역은 가상 요소로 넓혀 44px 가까이 유지한다
+ * — 줄인 만큼 누르기 어려워지면 안 되니까.
+ */
+export function BackButton({
+  fallback = '/',
+  compact = false,
+  className = '',
+}: {
+  fallback?: string;
+  /** 한 줄 헤더용 축소 크기(24px). 레이아웃 높이를 이 버튼이 정하지 않게 한다. */
+  compact?: boolean;
+  className?: string;
+}) {
   const goBack = useGoBack(fallback);
   return (
     <button
       type="button"
       onClick={goBack}
       aria-label="뒤로가기"
-      className={`-ml-1.5 flex h-9 w-9 shrink-0 items-center justify-center rounded-lg pb-0.5 text-2xl font-bold leading-none text-zinc-400 active:bg-zinc-100 dark:active:bg-zinc-800 ${className}`}
+      className={
+        compact
+          ? `relative -ml-1 flex h-6 w-5 shrink-0 items-center justify-center text-[22px] font-bold leading-none text-zinc-400 after:absolute after:-inset-2.5 after:content-[''] ${className}`
+          : `-ml-1.5 flex h-9 w-9 shrink-0 items-center justify-center rounded-lg pb-0.5 text-2xl font-bold leading-none text-zinc-400 active:bg-zinc-100 dark:active:bg-zinc-800 ${className}`
+      }
     >
       ‹
     </button>
