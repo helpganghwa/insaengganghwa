@@ -4,6 +4,7 @@ import { useState, useTransition } from 'react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 
+import { BackButton } from '@/components/BackNav';
 import { useResourceToast } from '@/components/ResourceToast';
 import { ModalShell } from '@/components/ModalShell';
 import { ModalLayout, ModalButton } from '@/components/ModalLayout';
@@ -158,8 +159,9 @@ export function GuildSettings({
 
   return (
     <div className="space-y-3 px-3 py-3">
-      {/* 헤더 — 문양 + 이름 + 관리 컨텍스트 */}
-      <div className="flex items-center gap-2.5 px-0.5">
+      {/* 헤더 — ‹ + 문양 + 이름. 별도 뒤로가기 띠를 두지 않는다(세로 공간 절약). */}
+      <div className="flex items-center gap-2 px-0.5">
+        <BackButton fallback="/guild" />
         <div className="flex h-10 w-10 shrink-0 items-center justify-center overflow-hidden rounded-xl bg-zinc-100 dark:bg-zinc-900">
           {view.emblemUrl ? (
             // eslint-disable-next-line @next/next/no-img-element
@@ -180,26 +182,44 @@ export function GuildSettings({
       </div>
 
       {/* 요약 — 타일이 담지 못하는 것만(레벨 진행 · 점령전 수금 상태). */}
-      <section className="rounded-xl border border-zinc-200 bg-white p-3 dark:border-zinc-800 dark:bg-zinc-950">
-        <div className="flex items-baseline justify-between gap-2">
-          <span className="text-[12px] font-bold">Lv.{view.level}</span>
-          <span className="text-[10px] tabular-nums text-zinc-400">
-            다음 레벨까지 {Math.max(0, 100 - xpPct)}%
+      <section className="rounded-xl border border-zinc-200 bg-white px-3 py-2 dark:border-zinc-800 dark:bg-zinc-950">
+        {/* 레벨 + XP바를 한 줄로 — 요약은 최대한 얇게(타일에 자리를 넘긴다). */}
+        <div className="flex items-center gap-2">
+          <span className="shrink-0 text-[11px] font-bold">Lv.{view.level}</span>
+          <div className="h-1 flex-1 overflow-hidden rounded-full bg-zinc-200 dark:bg-zinc-800">
+            <div
+              className="h-full rounded-full bg-gradient-to-r from-amber-600 to-amber-400"
+              style={{ width: `${xpPct}%` }}
+            />
+          </div>
+          <span className="shrink-0 text-[9.5px] tabular-nums text-zinc-400">{xpPct}%</span>
+        </div>
+        {/* 점령전 상태 — 카드 대신 구분점 한 줄. */}
+        <p className="mt-1.5 flex flex-wrap items-baseline gap-x-2 text-[10.5px] text-zinc-500">
+          <span>
+            구역{' '}
+            <b className="tabular-nums text-zinc-700 dark:text-zinc-200">{view.zoneCount}</b>
           </span>
-        </div>
-        <div className="mt-1.5 h-1.5 w-full overflow-hidden rounded-full bg-zinc-200 dark:bg-zinc-800">
-          <div
-            className="h-full rounded-full bg-gradient-to-r from-amber-600 to-amber-400"
-            style={{ width: `${xpPct}%` }}
-          />
-        </div>
-        <div className="mt-2.5 grid grid-cols-3 gap-1.5">
-          <Kpi k="보유 구역" v={view.zoneCount.toLocaleString('ko-KR')} />
-          <Kpi k="수금 가능" v={`${view.collectableZones}곳`} accent={view.collectableZones > 0} />
-          <Kpi k="수금 대기" v={`${view.waitingZones}곳`} />
-        </div>
+          <span className="text-zinc-300 dark:text-zinc-700">·</span>
+          <span>
+            수금 가능{' '}
+            <b
+              className={`tabular-nums ${
+                view.collectableZones > 0
+                  ? 'text-amber-600 dark:text-amber-400'
+                  : 'text-zinc-700 dark:text-zinc-200'
+              }`}
+            >
+              {view.collectableZones}
+            </b>
+          </span>
+          <span className="text-zinc-300 dark:text-zinc-700">·</span>
+          <span>
+            대기 <b className="tabular-nums text-zinc-700 dark:text-zinc-200">{view.waitingZones}</b>
+          </span>
+        </p>
         {view.noExecutorTotal > 0 ? (
-          <p className="mt-2 text-[10.5px] leading-relaxed text-zinc-500">
+          <p className="mt-0.5 text-[10.5px] leading-relaxed text-zinc-500">
             집행관 미지정 {view.noExecutorTotal}곳 —{' '}
             {view.noExecutorZones.map((z, i) => (
               <span key={z.name}>
@@ -222,7 +242,7 @@ export function GuildSettings({
             key={t.key}
             href={t.href}
             style={{ backgroundColor: t.tint }}
-            className="relative flex aspect-[50/17] isolate overflow-hidden rounded-2xl border border-zinc-800 transition active:scale-[0.98]"
+            className="relative flex aspect-[25/13] isolate overflow-hidden rounded-2xl border border-zinc-800 transition active:scale-[0.98]"
           >
             {/* eslint-disable-next-line @next/next/no-img-element */}
             <img
@@ -241,11 +261,11 @@ export function GuildSettings({
                 {t.badge > 99 ? '99+' : t.badge}
               </span>
             ) : null}
-            <div className="absolute inset-x-0 bottom-0 bg-gradient-to-t from-black/85 via-black/55 to-transparent px-3 pb-1.5 pt-5">
-              <div className="text-sm font-bold leading-tight text-white drop-shadow-sm">
+            <div className="absolute inset-x-0 bottom-0 bg-gradient-to-t from-black/85 via-black/55 to-transparent px-3 pb-2 pt-6">
+              <div className="text-[15px] font-extrabold leading-tight text-white drop-shadow-sm">
                 {t.label}
               </div>
-              <div className="text-[10px] font-semibold leading-tight tabular-nums text-white/70">
+              <div className="text-[11px] font-semibold leading-tight tabular-nums text-white/75">
                 {t.desc}
               </div>
             </div>
@@ -317,17 +337,3 @@ export function GuildSettings({
   );
 }
 
-function Kpi({ k, v, accent = false }: { k: string; v: string; accent?: boolean }) {
-  return (
-    <div className="rounded-lg bg-zinc-100 px-2 py-1.5 dark:bg-zinc-900">
-      <p className="text-[9px] font-bold text-zinc-400">{k}</p>
-      <p
-        className={`text-[13px] font-extrabold tabular-nums ${
-          accent ? 'text-amber-600 dark:text-amber-400' : ''
-        }`}
-      >
-        {v}
-      </p>
-    </div>
-  );
-}

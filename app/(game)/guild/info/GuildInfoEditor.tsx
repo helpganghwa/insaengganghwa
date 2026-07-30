@@ -3,7 +3,7 @@
 import { useState, useTransition } from 'react';
 import { useRouter } from 'next/navigation';
 
-import { BackBar } from '@/components/BackNav';
+import { BackTitle } from '@/components/BackNav';
 import { useResourceToast } from '@/components/ResourceToast';
 import { ZoomSafeInput, ZoomSafeTextarea } from '@/components/ui/ZoomSafeField';
 import { GUILD_INTRO_MAX_LEN, GUILD_NOTICE_MAX_LEN } from '@/lib/game/guild/balance';
@@ -84,15 +84,13 @@ export function GuildInfoEditor({
   };
 
   return (
-    <div className="px-4 py-5 pb-24">
-      <BackBar title={`${guildName} · 길드 정보`} />
-
-      <div className="px-0.5">
-        <p className="text-[10px] font-semibold tracking-wide text-zinc-400">
-          공지 · 소개 · 오픈채팅
-        </p>
-        <h1 className="text-base font-extrabold leading-tight">길드 정보</h1>
-      </div>
+    <div className="px-4 py-5 pb-32">
+      <BackTitle
+        fallback="/guild/settings"
+        className="px-0.5"
+        kicker={`${guildName} · 공지 · 소개 · 오픈채팅`}
+        title="길드 정보"
+      />
 
       {/* 공지 — 길드 홈에 노출 */}
       <section className="mt-3 rounded-xl border border-zinc-200 bg-white p-3 dark:border-zinc-800 dark:bg-zinc-950">
@@ -167,9 +165,14 @@ export function GuildInfoEditor({
         {!can.openchat && <NoPerm what="오픈채팅 설정" />}
       </section>
 
-      {/* 하단 고정 저장바 — 스크롤해도 붙어 있어 미저장 상태를 놓치지 않는다. */}
+      {/* 하단 고정 저장바 — 스크롤해도 붙어 있어 미저장 상태를 놓치지 않는다.
+          ⚠ 하단 GNB가 `sticky bottom-0 z-30`이라 같은 z·같은 bottom이면 가려진다(2026-07-30 제보).
+          GNB 높이(h-14=3.5rem) + 안전영역만큼 띄우고 z를 한 단계 올린다. */}
       {dirtyFields.length > 0 && (
-        <div className="fixed inset-x-0 bottom-0 z-30 border-t border-amber-500/40 bg-white/95 px-4 py-2.5 backdrop-blur dark:bg-black/90">
+        <div
+          className="fixed inset-x-0 z-40 border-t border-amber-500/40 bg-white/95 px-4 py-2.5 backdrop-blur dark:bg-black/90"
+          style={{ bottom: 'calc(3.5rem + env(safe-area-inset-bottom))' }}
+        >
           <div className="mx-auto flex max-w-[430px] items-center justify-between gap-2">
             <span className="text-[12px] font-bold text-amber-600 dark:text-amber-400">
               변경한 항목 {dirtyFields.length}개

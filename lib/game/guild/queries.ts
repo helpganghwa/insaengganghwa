@@ -826,6 +826,44 @@ export async function getGuildMembersRich(guildId: bigint) {
 }
 
 /** 길드원 목록 — 기여도 내림차순(무임승차 판단·표시용). */
+/**
+ * 세금 분배용 길드원(2026-07-30) — 누적 기여 + **오늘 기부액**.
+ *
+ * 분배 판단의 실제 기준이 "오늘 기부했는가"인데(문의 #91) 종전 화면에는 그 값이 없어
+ * 구성원 화면과 왕복해야 했다. 오늘 기여는 기부가 유일한 소스라 일일 카운터 × 티어 XP로
+ * 정확히 복원된다(별도 로그 불필요) — getGuildMembersRich와 같은 방식.
+ */
+export async function getDistributeMembers(guildId: bigint) {
+  const rows = await db
+    .select({
+      userId: guildMembers.userId,
+      role: guildMembers.role,
+      nickname: characters.nickname,
+      contribution: guildMembers.contributionPoints,
+      dailyDonationCount: guildMembers.dailyDonationCount,
+      lastDonationKstDay: guildMembers.lastDonationKstDay,
+    })
+    .from(guildMembers)
+    .innerJoin(
+      characters,
+      and(eq(characters.userId, guildMembers.userId), eq(characters.serverId, guildMembers.serverId)),
+    )
+    .where(eq(guildMembers.guildId, guildId))
+    .orderBy(desc(guildMembers.contributionPoints));
+
+  const todayKst = kstDateString();
+  return rows.map((r) => {
+    const donatedToday = r.lastDonationKstDay === todayKst ? r.dailyDonationCount : 0;
+    return {
+      userId: r.userId,
+      nickname: r.nickname ?? '플레이어',
+      role: r.role,
+      contribution: Number(r.contribution),
+      todayDonation: GUILD_DONATION_TIERS.slice(0, donatedToday).reduce((n, t) => n + t.xp, 0),
+    };
+  });
+}
+
 export async function getGuildMembers(guildId: bigint) {
   return db
     .select({

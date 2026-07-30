@@ -10,7 +10,7 @@ import { ModalShell } from '@/components/ModalShell';
 import { ModalLayout, ModalButton } from '@/components/ModalLayout';
 import { useResourceToast } from '@/components/ResourceToast';
 import { ZoomSafeInput } from '@/components/ui/ZoomSafeField';
-import { GUILD_MAX_VICE } from '@/lib/game/guild/balance';
+import { GUILD_MAX_VICE, GUILD_REJOIN_LOCK_HOURS } from '@/lib/game/guild/balance';
 import { GUILD_PERM_ORDER, permKeys } from '@/lib/game/guild/permissions';
 
 import { setViceAction, kickMemberAction, transferLeadershipAction } from './actions';
@@ -223,8 +223,8 @@ export function GuildMemberList({
 
   const askPromote = (m: RichMember) =>
     setConfirm({
-      title: `${m.nickname}님을 부길드장으로?`,
-      body: `공지·소개·오픈채팅 권한이 먼저 열리고, 나머지는 권한 화면에서 하나씩 켤 수 있습니다. 부길드장은 최대 ${GUILD_MAX_VICE}명입니다.`,
+      title: `${m.nickname}님을 부길드장으로 임명`,
+      body: `부길드장 임명은 최대 ${GUILD_MAX_VICE}명이며 부길드장 권한은 권한 화면에서 설정가능합니다.`,
       label: '임명',
       tone: 'info',
       run: () => run(() => setViceAction(m.userId, true), '부길드장 임명'),
@@ -232,8 +232,8 @@ export function GuildMemberList({
 
   const askDemote = (m: RichMember) =>
     setConfirm({
-      title: `${m.nickname}님의 부길드장을 해제할까요?`,
-      body: '지금 열려 있는 권한도 함께 사라집니다. 다시 임명하면 기본 권한부터 시작합니다.',
+      title: `${m.nickname}님을 부길드장에서 해제`,
+      body: '부여한 권한도 함께 사라집니다. 다시 임명하면 권한을 재설정 해야합니다.',
       label: '해제',
       tone: 'primary',
       run: () => run(() => setViceAction(m.userId, false), '부길드장 해제'),
@@ -250,8 +250,8 @@ export function GuildMemberList({
 
   const askKick = (m: RichMember) =>
     setConfirm({
-      title: `${m.nickname}님을 내보낼까요?`,
-      body: '되돌릴 수 없습니다. 내보낸 길드원은 한동안 다시 가입할 수 없습니다.',
+      title: `${m.nickname}님을 길드에서 내보냅니다`,
+      body: `되돌릴 수 없습니다. 내보낸 길드원은 ${GUILD_REJOIN_LOCK_HOURS}시간동안 다시 가입 할 수 없습니다.`,
       label: '내보내기',
       tone: 'danger',
       run: () => run(() => kickMemberAction(m.userId), '길드에서 내보냈습니다'),
@@ -376,7 +376,7 @@ export function GuildMemberList({
                   onClick={() => setSheet(null)}
                   className="block rounded-lg px-3 py-2.5 text-left text-[13px] font-semibold text-sky-600 active:bg-zinc-100 dark:text-sky-400 dark:active:bg-zinc-800"
                 >
-                  권한 설정 ›
+                  권한 설정
                 </Link>
               ) : null}
               {isLeader ? (

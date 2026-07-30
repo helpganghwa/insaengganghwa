@@ -2,11 +2,11 @@ import { redirect } from 'next/navigation';
 import { getActiveServerId } from '@/lib/game/servers';
 
 import { getSessionUserId } from '@/lib/auth/session';
-import { getGuild, getGuildMembers } from '@/lib/game/guild';
+import { getGuild, getDistributeMembers } from '@/lib/game/guild';
 import { getGuildPermState } from '@/lib/game/guild/perm-guard';
 import { hasGuildPerm } from '@/lib/game/guild/permissions';
 
-import { BackBar } from '@/components/BackNav';
+import { BackTitle } from '@/components/BackNav';
 
 import { DistributeBoard } from './DistributeBoard';
 
@@ -27,17 +27,22 @@ export default async function DistributePage() {
 
   const [guild, members] = await Promise.all([
     getGuild(membership.guildId),
-    getGuildMembers(membership.guildId),
+    getDistributeMembers(membership.guildId),
   ]);
   if (!guild) redirect('/guild');
 
   return (
     <div className="px-4 py-4">
-      <BackBar title={`${guild.name} · 세금 분배`} />
+      <BackTitle
+        fallback="/guild/settings"
+        className="px-0.5"
+        kicker={guild.name}
+        title="세금 분배"
+      />
       <DistributeBoard
         myUserId={userId}
         pool={guild.taxPoolDiamond.toString()}
-        members={members.map((m) => ({ userId: m.userId, nickname: m.nickname, role: m.role }))}
+        members={members}
       />
     </div>
   );

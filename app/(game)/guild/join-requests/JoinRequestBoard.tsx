@@ -5,7 +5,7 @@ import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 
 import { profileHref } from '@/lib/game/profile/href';
-import { BackBar } from '@/components/BackNav';
+import { BackTitle } from '@/components/BackNav';
 import { LastSeen } from '@/components/LastSeen';
 import { ModalShell } from '@/components/ModalShell';
 import { ModalLayout, ModalButton } from '@/components/ModalLayout';
@@ -117,14 +117,12 @@ export function JoinRequestBoard({
 
   return (
     <div className="px-4 py-5">
-      <BackBar title={`${guildName} · 가입 신청`} />
-
-      <div className="px-0.5">
-        <p className="text-[10px] font-semibold tracking-wide text-zinc-400">
-          {policy === 'approval' ? `대기 ${rows.length}건` : '자유 가입'}
-        </p>
-        <h1 className="text-base font-extrabold leading-tight">가입 신청</h1>
-      </div>
+      <BackTitle
+        fallback="/guild/settings"
+        className="px-0.5"
+        kicker={policy === 'approval' ? `${guildName} · 대기 ${rows.length}건` : `${guildName} · 자유 가입`}
+        title="가입 신청"
+      />
 
       {/* 가입 방식 + 정원 */}
       <section className="mt-3 rounded-xl border border-zinc-200 bg-white p-3 dark:border-zinc-800 dark:bg-zinc-950">

@@ -31,6 +31,62 @@ export function BackFab({ fallback = '/', className = '' }: { fallback?: string;
   );
 }
 
+/** 아이콘 단독 뒤로가기 — 제목 줄에 다른 요소(문양 등)가 이미 있을 때. */
+export function BackButton({ fallback = '/', className = '' }: { fallback?: string; className?: string }) {
+  const goBack = useGoBack(fallback);
+  return (
+    <button
+      type="button"
+      onClick={goBack}
+      aria-label="뒤로가기"
+      className={`-ml-1.5 flex h-9 w-9 shrink-0 items-center justify-center rounded-lg pb-0.5 text-2xl font-bold leading-none text-zinc-400 active:bg-zinc-100 dark:active:bg-zinc-800 ${className}`}
+    >
+      ‹
+    </button>
+  );
+}
+
+/**
+ * C안 — **제목 줄 인라인 뒤로가기**(2026-07-30). 별도 띠를 두지 않고 화면 제목 왼쪽에 ‹ 를 붙인다.
+ * 띠는 세로 공간을 먹고 제목과 두 줄이 되어, 상세 화면이 많은 영역(길드)에서 낭비가 크다.
+ *
+ * kicker = 제목 위 작은 컨텍스트 한 줄(선택). right = 제목 줄 오른쪽 슬롯(카운트·액션).
+ */
+export function BackTitle({
+  title,
+  kicker,
+  right,
+  fallback = '/',
+  className = '',
+}: {
+  title: React.ReactNode;
+  kicker?: React.ReactNode;
+  right?: React.ReactNode;
+  fallback?: string;
+  className?: string;
+}) {
+  const goBack = useGoBack(fallback);
+  return (
+    <div className={`flex items-center gap-1.5 ${className}`}>
+      <button
+        type="button"
+        onClick={goBack}
+        aria-label="뒤로가기"
+        className="-ml-1.5 flex h-9 w-9 shrink-0 items-center justify-center rounded-lg pb-0.5 text-2xl font-bold leading-none text-zinc-400 active:bg-zinc-100 dark:active:bg-zinc-800"
+      >
+        ‹
+      </button>
+      <div className="min-w-0 flex-1">
+        {kicker ? (
+          <p className="text-[10px] font-semibold tracking-wide text-zinc-400">{kicker}</p>
+        ) : null}
+        <h1 className="truncate text-base font-extrabold leading-tight">{title}</h1>
+      </div>
+      {right ? <div className="shrink-0">{right}</div> : null}
+    </div>
+  );
+}
+
 /**
  * B안 — 슬림 스티키 바(문서형: 확률 공시·약관·상품 안내).
  * bleed: 부모 패딩(px/py)을 상쇄해 화면 가장자리까지 확장 — 페이지별 패딩에 맞춰 전달.

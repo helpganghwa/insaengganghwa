@@ -3,7 +3,7 @@
 import { useEffect, useState, useTransition } from 'react';
 import { useRouter } from 'next/navigation';
 
-import { BackBar } from '@/components/BackNav';
+import { BackButton } from '@/components/BackNav';
 import { ModalShell } from '@/components/ModalShell';
 import { ModalLayout, ModalButton } from '@/components/ModalLayout';
 import { useResourceToast } from '@/components/ResourceToast';
@@ -203,7 +203,13 @@ export function EmblemBoard({
 
   return (
     <div className="px-4 py-5">
-      <BackBar title={`${guildName} · 문양`} />
+      <div className="mb-3 flex items-center gap-2 px-0.5">
+        <BackButton fallback="/guild/settings" />
+        <div className="min-w-0">
+          <p className="text-[10px] font-semibold tracking-wide text-zinc-400">{guildName}</p>
+          <h1 className="truncate text-base font-extrabold leading-tight">문양</h1>
+        </div>
+      </div>
 
       {/* 사용 중 문양 — 이 화면의 첫 질문("지금 어느 문양이지")에 바로 답한다. */}
       <section className="flex items-center gap-3 rounded-xl border border-amber-500/40 bg-amber-50/50 p-3 dark:border-amber-500/30 dark:bg-amber-500/[0.06]">
@@ -304,8 +310,8 @@ export function EmblemBoard({
       </div>
 
       <p className="mt-2.5 px-0.5 text-[11px] leading-relaxed text-zinc-500">
-        빈 칸을 눌러 새 문양을 만듭니다. 같은 키워드를 골라도 매번 다르게 나오고, 만드는 데 수십 초
-        걸립니다. 실패하면 차감된 다이아를 우편으로 환불해 드립니다.
+        빈 칸을 눌러 새 문양을 만듭니다. 같은 키워드를 골라도 매번 새로운 문양이 생성되며 생성에
+        몇 분의 시간이 소요됩니다.
       </p>
 
       {/* 보관 문양 시트 — 사용/삭제. 마지막 1개는 삭제할 수 없다(현재 규칙 유지). */}
