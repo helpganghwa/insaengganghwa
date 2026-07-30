@@ -15,7 +15,6 @@ import { hasGuildPerm } from '@/lib/game/guild/permissions';
 import { DeployBoard } from './DeployBoard';
 import { WorldMapView } from '../map/WorldMapView';
 import { DeployTerritoryTabs } from './DeployTerritoryTabs';
-import { GuildPageHeader } from '../GuildPageHeader';
 
 export const dynamic = 'force-dynamic';
 
@@ -43,17 +42,8 @@ export default async function DeployPage() {
     getResidenceState(userId, serverId).catch(() => null),
   ]);
 
-  const ownedCount = board.zones.filter(
-    (z) => z.ownerGuildId?.toString() === membership.guildId.toString(),
-  ).length;
-
   return (
-    <>
-      {/* 지도는 전폭이라 헤더만 좌우 여백을 갖는다 — 뒤로가기 자리는 다른 길드 화면과 동일. */}
-      <div className="px-4 pb-2 pt-4">
-        <GuildPageHeader fallback="/guild" kicker={`우리 점령지 ${ownedCount}곳`} title="점령지" />
-      </div>
-      <DeployTerritoryTabs
+    <DeployTerritoryTabs
       deploy={
         <DeployBoard
           canDeploy={canDeploy}
@@ -119,7 +109,6 @@ export default async function DeployPage() {
           }))}
         />
       }
-      />
-    </>
+    />
   );
 }

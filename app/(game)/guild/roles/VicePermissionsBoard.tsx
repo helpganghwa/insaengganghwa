@@ -106,7 +106,7 @@ export function VicePermissionsBoard({
       {target && (
         <GuildPageHeader
           fallback="/guild/settings"
-          kicker={`부길드장 권한 · ${countOf(target.userId)} / ${GUILD_PERM_ORDER.length} 허용`}
+          kicker={`${countOf(target.userId)} / ${GUILD_PERM_ORDER.length} 허용`}
           title={target.nickname}
           icon={
             target.avatar ? (

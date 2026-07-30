@@ -6,6 +6,8 @@ import Link from 'next/link';
 
 import { profileHref } from '@/lib/game/profile/href';
 import { LastSeen } from '@/components/LastSeen';
+import { TranscendSprite } from '@/components/TranscendSprite';
+import { rarityBorderStyle, hasRarityBorder } from '@/components/RarityFrame';
 import { ModalShell } from '@/components/ModalShell';
 import { ModalLayout, ModalButton } from '@/components/ModalLayout';
 import { useResourceToast } from '@/components/ResourceToast';
@@ -44,6 +46,8 @@ export type RichMember = {
   equipped: Equipped[];
 };
 
+const SLOT_ORDER: Slot[] = ['weapon', 'armor', 'accessory'];
+
 type SortKey = 'combat' | 'contribution' | 'lastSeen';
 const SORTS: { key: SortKey; label: string }[] = [
   { key: 'contribution', label: '기여도' },
@@ -63,9 +67,42 @@ function sortValue(m: RichMember, key: SortKey): number {
 }
 
 /**
+ * 장비 칸 — 빈 슬롯도 자리를 지켜 3칸이 항상 같은 폭이다(행마다 흔들리지 않게).
+ * 크기는 30px — 권한 배지·관리 버튼이 함께 들어가는 폭에 맞춘 값(종전 34px).
+ */
+function EquipIcon({ item }: { item: Equipped | undefined }) {
+  if (!item) {
+    return <span className="h-[30px] w-[30px] shrink-0 rounded-md bg-zinc-100 dark:bg-zinc-800" />;
+  }
+  return (
+    <span
+      className={`relative flex h-[30px] w-[30px] shrink-0 items-center justify-center overflow-hidden rounded-md border p-0.5 ${
+        hasRarityBorder(item.transcendLevel) ? '' : 'border-zinc-300 dark:border-zinc-700'
+      }`}
+      style={rarityBorderStyle(item.transcendLevel)}
+    >
+      {/* 등급 테두리는 CSS border(초월 컬러), 해방(1~3위)이면 후광 연출. */}
+      <TranscendSprite
+        code={item.code}
+        slot={item.slot}
+        level={item.transcendLevel}
+        championRank={item.championRank}
+        size={25}
+        frameless
+      />
+      <span className="absolute bottom-0 right-0 z-10 rounded-tl bg-black/65 px-0.5 text-[7.5px] font-bold leading-tight text-amber-300">
+        +{item.enhance}
+      </span>
+    </span>
+  );
+}
+
+/**
  * 길드원 행 — 본문은 프로필 링크, 관리(⋯)는 링크 밖 별도 버튼(중첩 금지).
- * 장비 3종 아이콘은 뺐다(2026-07-30) — 권한 배지와 ⋯ 가 들어가면 폭이 안 나온다.
- * 장비는 행을 눌러 프로필 상세에서 본다.
+ *
+ * 장비 3종을 되살렸다(2026-07-30) — 길드원 목록의 원래 목적이 "누가 뭘 끼고 있나"다.
+ * 권한 배지·관리 버튼과 같이 들어가야 하므로 아이콘을 30px로 줄이고 간격을 좁혔다.
+ * memo — 정렬 탭 전환 시 그룹 배열만 재정렬되므로 스프라이트 캔버스 재드로우를 막는다.
  */
 const MemberRow = memo(function MemberRow({
   m,
@@ -79,17 +116,18 @@ const MemberRow = memo(function MemberRow({
   /** 관리 가능하면 시트를 열 콜백, 아니면 undefined(버튼 미노출). */
   onManage?: (m: RichMember) => void;
 }) {
+  const bySlot = new Map(m.equipped.map((e) => [e.slot, e]));
   const isMe = m.userId === myUserId;
   const permCount = m.role === 'vice' ? permKeys(m.permissions).length : 0;
   return (
-    <li className="flex items-center gap-1">
+    <li className="flex items-center gap-1.5">
       <Link
         prefetch={false}
         href={profileHref(m.publicCode, serverId)}
-        className="flex min-w-0 flex-1 items-center gap-2 py-1.5 active:opacity-70"
+        className="flex min-w-0 flex-1 items-center gap-1.5 py-1.5 active:opacity-70"
       >
         {/* 아바타 — 접속 상태는 닉네임 옆 텍스트로만(점 표시는 제거, 2026-07-27 사용자 결정). */}
-        <span className="h-10 w-10 shrink-0 overflow-hidden rounded-lg bg-zinc-100 dark:bg-zinc-900">
+        <span className="h-9 w-9 shrink-0 overflow-hidden rounded-lg bg-zinc-100 dark:bg-zinc-900">
           {m.avatar ? (
             // eslint-disable-next-line @next/next/no-img-element
             <img
@@ -103,36 +141,40 @@ const MemberRow = memo(function MemberRow({
         </span>
 
         <div className="min-w-0 flex-1">
-          <div className="flex items-baseline gap-1.5">
+          <div className="flex items-baseline gap-1">
             <span className="truncate text-[12.5px] font-semibold">{m.nickname}</span>
             {isMe ? (
-              <span className="shrink-0 rounded-full bg-amber-500/15 px-1.5 py-0 text-[9px] font-bold text-amber-600 dark:text-amber-400">
+              <span className="shrink-0 rounded-full bg-amber-500/15 px-1 py-0 text-[9px] font-bold text-amber-600 dark:text-amber-400">
                 나
               </span>
             ) : null}
             {m.role === 'vice' ? (
-              <span className="shrink-0 rounded-full bg-sky-500/15 px-1.5 py-0 text-[9px] font-bold tabular-nums text-sky-700 dark:text-sky-300">
-                권한 {permCount}/{GUILD_PERM_ORDER.length}
+              <span className="shrink-0 rounded-full bg-sky-500/15 px-1 py-0 text-[9px] font-bold tabular-nums text-sky-700 dark:text-sky-300">
+                {permCount}/{GUILD_PERM_ORDER.length}
               </span>
             ) : null}
             {isMe || m.lastSeenAt != null ? (
-              <LastSeen at={m.lastSeenAt} forceOnline={isMe} plain className="ml-auto shrink-0 text-[10px]" />
+              <LastSeen at={m.lastSeenAt} forceOnline={isMe} plain className="ml-auto shrink-0 text-[9.5px]" />
             ) : null}
           </div>
-          <div className="mt-0.5 flex gap-2.5 text-[11px] text-zinc-500">
-            <span className="truncate">
-              기여{' '}
-              <span className="font-semibold tabular-nums text-zinc-700 dark:text-zinc-300">
-                {m.contribution.toLocaleString('ko-KR')}({m.contributionToday.toLocaleString('ko-KR')})
-              </span>
+          <div className="mt-0.5 truncate text-[10.5px] text-zinc-500">
+            기여{' '}
+            <span className="font-semibold tabular-nums text-zinc-700 dark:text-zinc-300">
+              {m.contribution.toLocaleString('ko-KR')}({m.contributionToday.toLocaleString('ko-KR')})
             </span>
-            <span className="shrink-0">
-              전투{' '}
-              <span className="font-semibold tabular-nums text-zinc-700 dark:text-zinc-300">
-                {fmtNum(m.combat)}
-              </span>
+            <span className="mx-1 text-zinc-300 dark:text-zinc-700">·</span>
+            전투{' '}
+            <span className="font-semibold tabular-nums text-zinc-700 dark:text-zinc-300">
+              {fmtNum(m.combat)}
             </span>
           </div>
+        </div>
+
+        {/* 장비 3종 — 이 화면에서 곧바로 비교할 수 있게 행 오른쪽에 고정. */}
+        <div className="flex shrink-0 gap-0.5">
+          {SLOT_ORDER.map((slot) => (
+            <EquipIcon key={slot} item={bySlot.get(slot)} />
+          ))}
         </div>
       </Link>
 
@@ -141,7 +183,7 @@ const MemberRow = memo(function MemberRow({
           type="button"
           onClick={() => onManage(m)}
           aria-label={`${m.nickname} 관리`}
-          className="shrink-0 rounded-lg px-2 py-1.5 text-lg leading-none text-zinc-400 active:bg-zinc-100 dark:active:bg-zinc-800"
+          className="shrink-0 rounded-lg px-1 py-1.5 text-base leading-none text-zinc-400 active:bg-zinc-100 dark:active:bg-zinc-800"
         >
           ⋯
         </button>

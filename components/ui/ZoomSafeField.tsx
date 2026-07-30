@@ -1,5 +1,6 @@
 'use client';
 
+import { useLayoutEffect, useRef } from 'react';
 import type {
   InputHTMLAttributes,
   Ref,
@@ -21,6 +22,13 @@ const FIELD_STYLE = {
   height: `${((100 / SCALE) * 1).toFixed(3)}%`,
   transform: `scale(${SCALE})`,
   transformOrigin: '0 0',
+} as const;
+
+/** autoResize용 — 높이는 layout effect가 직접 정하므로 여기서 고정하지 않는다. */
+const AUTO_FIELD_STYLE = {
+  width: FIELD_STYLE.width,
+  transform: FIELD_STYLE.transform,
+  transformOrigin: FIELD_STYLE.transformOrigin,
 } as const;
 
 export function ZoomSafeInput({
@@ -47,19 +55,48 @@ export function ZoomSafeInput({
 export function ZoomSafeTextarea({
   wrapClassName,
   className,
+  autoResize,
+  minHeight = 36,
   ref,
   ...props
 }: TextareaHTMLAttributes<HTMLTextAreaElement> & {
   wrapClassName: string;
+  /**
+   * 내용에 맞춰 높이가 늘어난다. 이때 wrapClassName에 높이 클래스를 주지 말 것 —
+   * 높이는 내용이 정한다(래퍼가 크기를 정하는 기본 규약의 예외).
+   */
+  autoResize?: boolean;
+  /** autoResize일 때의 최소 표시 높이(px, 축소 후 기준). */
+  minHeight?: number;
   ref?: Ref<HTMLTextAreaElement>;
 }) {
+  const innerRef = useRef<HTMLTextAreaElement | null>(null);
+  const wrapRef = useRef<HTMLSpanElement | null>(null);
+
+  // 필드는 1/scale 크기로 그린 뒤 축소되므로, scrollHeight(축소 전)에 scale을 곱해야
+  // 래퍼(=실제 레이아웃 크기)가 맞는다. 렌더 결과를 읽어 DOM에 반영하는 동기화라 layout effect.
+  useLayoutEffect(() => {
+    if (!autoResize) return;
+    const el = innerRef.current;
+    const wrap = wrapRef.current;
+    if (!el || !wrap) return;
+    el.style.height = 'auto';
+    const raw = Math.max(el.scrollHeight, minHeight / SCALE);
+    el.style.height = `${raw}px`;
+    wrap.style.height = `${raw * SCALE}px`;
+  }, [autoResize, minHeight, props.value]);
+
   return (
-    <span className={`relative block ${wrapClassName}`}>
+    <span ref={wrapRef} className={`relative block ${wrapClassName}`}>
       <textarea
-        ref={ref}
+        ref={(node) => {
+          innerRef.current = node;
+          if (typeof ref === 'function') ref(node);
+          else if (ref) ref.current = node;
+        }}
         {...props}
         className={`absolute left-0 top-0 resize-none text-[16px] ${className ?? ''}`}
-        style={FIELD_STYLE}
+        style={autoResize ? AUTO_FIELD_STYLE : FIELD_STYLE}
       />
     </span>
   );

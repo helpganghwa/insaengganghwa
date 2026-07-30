@@ -116,6 +116,61 @@ function Pin({
   );
 }
 
+/** 배치된 길드원 한 줄 — 이름·역할·전투력·액션이 모두 한 행에 들어간다(2줄 → 1줄). */
+function DeployedRow({
+  nickname,
+  roleLabel,
+  roleClass,
+  power,
+  isMe,
+  actions,
+}: {
+  nickname: string;
+  roleLabel: string;
+  roleClass: string;
+  power: string;
+  isMe: boolean;
+  actions: React.ReactNode;
+}) {
+  return (
+    <li className="flex items-center gap-1.5 py-1.5">
+      <span className={`shrink-0 text-[10px] font-bold ${roleClass}`}>{roleLabel}</span>
+      <span className="min-w-0 flex-1 truncate text-[12.5px] font-semibold">
+        {nickname}
+        {isMe ? <span className="ml-1 text-[9px] font-bold text-amber-500">나</span> : null}
+      </span>
+      <span className="shrink-0 font-mono text-[10px] tabular-nums text-zinc-400">{power}</span>
+      {actions}
+    </li>
+  );
+}
+
+/** 행 액션 — 해제·집행관. 터치 영역은 유지하고 시각 크기만 줄인다. */
+function RowAction({
+  onClick,
+  disabled,
+  tone,
+  children,
+}: {
+  onClick: () => void;
+  disabled?: boolean;
+  tone: 'danger' | 'exec';
+  children: React.ReactNode;
+}) {
+  return (
+    <button
+      type="button"
+      onClick={onClick}
+      disabled={disabled}
+      className={`shrink-0 rounded-md px-1.5 py-1 text-[10.5px] font-bold disabled:opacity-50 ${
+        tone === 'danger' ? 'text-red-500' : 'text-indigo-500'
+      }`}
+    >
+      {children}
+    </button>
+  );
+}
+
 /** 배치 현황 팝업 필터 — '미배치'가 실제로 쓰는 것(누가 아직 안 했나). */
 const STATUS_FILTERS = [
   { key: 'all', label: '전체' },
@@ -645,127 +700,95 @@ export function DeployBoard({
         </button>
 
         {selected ? (
-          <section className="mt-2.5">
-            <div className="flex items-baseline gap-1.5">
+          <section className="mt-2">
+            {/* 구역 한 줄 — 이름·역할·인원·전투력을 한 줄에 모은다(종전 3줄). */}
+            <div className="flex items-center gap-1.5">
+              <span
+                className={`h-4 w-1 shrink-0 rounded-full ${isDefend ? 'bg-sky-500' : 'bg-red-500'}`}
+              />
               <h3 className="truncate text-[14px] font-extrabold">{selected.name}</h3>
               <span
-                className={`shrink-0 rounded-full px-1.5 py-0 text-[9px] font-bold ${
-                  isDefend
-                    ? 'bg-sky-500/15 text-sky-600 dark:text-sky-400'
-                    : 'bg-red-500/15 text-red-600 dark:text-red-400'
+                className={`shrink-0 text-[10px] font-bold ${
+                  isDefend ? 'text-sky-600 dark:text-sky-400' : 'text-red-600 dark:text-red-400'
                 }`}
               >
                 {isDefend ? '수비' : '공격'}
               </span>
-              <span className="ml-auto shrink-0 text-[10px] text-zinc-500">
-                총 전투력{' '}
-                <span className="font-mono font-bold text-zinc-700 dark:text-zinc-200">
-                  {fmt(totalPower)}
-                </span>
+              <span className="ml-auto shrink-0 text-[11px] tabular-nums text-zinc-500">
+                {execHere.length + deployedHere.length}명 ·{' '}
+                <span className="font-bold text-zinc-700 dark:text-zinc-200">{fmt(totalPower)}</span>
               </span>
             </div>
 
             {/* 거주 안내(0139) — 배치 시 거주지도 함께 옮겨진다는 것을 미리 알린다. */}
             {selected.id !== homeZoneId && (
-              <p className="mt-1.5 rounded-md bg-amber-500/10 px-2 py-1 text-[10px] font-medium leading-snug text-amber-700 dark:text-amber-300">
+              <p className="mt-1.5 text-[10px] font-medium leading-snug text-amber-600 dark:text-amber-400">
                 {adjacentToHome && !adjacentToHome.has(selected.id)
                   ? '인접한 구역이 아니라 이동할 수 없습니다.'
                   : '배치하면 거주지도 이 구역으로 옮겨집니다.'}
               </p>
             )}
 
-            {/* 내 배치 — 배치는 본인만 한다. 시트 폭이 넉넉하니 큰 버튼 하나로. */}
+            {/* 내 배치 — 배치는 본인만 한다. */}
             {!locked && !meHere && (
               <button
                 type="button"
                 onClick={askDeploy}
                 disabled={pending}
-                className={`mt-2.5 w-full rounded-xl py-2.5 text-[13px] font-bold text-white disabled:opacity-50 ${
+                className={`mt-2 w-full rounded-lg py-2 text-[13px] font-bold text-white disabled:opacity-50 ${
                   isDefend ? 'bg-sky-600' : 'bg-red-600'
                 }`}
               >
                 여기 {isDefend ? '수비' : '공격'}하기
               </button>
             )}
-            {meHere && (
-              <p className="mt-2.5 rounded-xl bg-emerald-500/10 py-2 text-center text-[12px] font-bold text-emerald-600 dark:text-emerald-400">
-                이 구역에 배치되어 있습니다
-              </p>
-            )}
 
-            <p className="mt-3 text-[11px] font-bold text-zinc-400">
-              배치된 길드원 ({execHere.length + deployedHere.length})
-            </p>
             {execHere.length === 0 && deployedHere.length === 0 ? (
-              <p className="mt-1.5 text-[11px] text-zinc-400">아직 아무도 배치되지 않았습니다.</p>
+              <p className="mt-2.5 text-[11px] text-zinc-400">아직 아무도 배치되지 않았습니다.</p>
             ) : (
-              <ul className="mt-1.5 divide-y divide-zinc-100 dark:divide-zinc-900">
+              <ul className="mt-2 divide-y divide-zinc-100 dark:divide-zinc-900">
                 {execHere.map((m) => (
-                  <li key={m.userId} className="flex items-center gap-2 py-1.5">
-                    <span className="min-w-0 flex-1">
-                      <span className="block truncate text-[12.5px] font-semibold">{m.nickname}</span>
-                      <span className="text-[10px] font-medium text-indigo-500">집행관</span>
-                    </span>
-                    <span className="shrink-0 font-mono text-[10px] text-zinc-400">
-                      {fmt(Math.round(m.combat * CONQUEST_EXECUTOR_POWER_MULT))}
-                    </span>
-                    {canExecutor && !locked && (
-                      <button
-                        type="button"
-                        onClick={clearExec}
-                        disabled={pending}
-                        className="shrink-0 rounded-md px-2 py-1 text-[11px] font-bold text-red-500 disabled:opacity-50"
-                      >
-                        해제
-                      </button>
-                    )}
-                  </li>
+                  <DeployedRow
+                    key={m.userId}
+                    nickname={m.nickname}
+                    roleLabel="집행관"
+                    roleClass="text-indigo-500"
+                    power={fmt(Math.round(m.combat * CONQUEST_EXECUTOR_POWER_MULT))}
+                    isMe={m.userId === myUserId}
+                    actions={
+                      canExecutor && !locked ? (
+                        <RowAction onClick={clearExec} disabled={pending} tone="danger">
+                          해제
+                        </RowAction>
+                      ) : null
+                    }
+                  />
                 ))}
                 {deployedHere.map((m) => (
-                  <li key={m.userId} className="flex items-center gap-2 py-1.5">
-                    <span className="min-w-0 flex-1">
-                      <span className="flex items-center gap-1">
-                        <span className="truncate text-[12.5px] font-semibold">{m.nickname}</span>
-                        {m.userId === myUserId ? (
-                          <span className="shrink-0 rounded-full bg-amber-500/15 px-1.5 text-[9px] font-bold text-amber-600 dark:text-amber-400">
-                            나
-                          </span>
-                        ) : null}
-                      </span>
-                      <span
-                        className={`text-[10px] font-medium ${isDefend ? 'text-sky-500' : 'text-red-500'}`}
-                      >
-                        {isDefend ? '수비' : '공격'}
-                      </span>
-                    </span>
-                    <span className="shrink-0 font-mono text-[10px] text-zinc-400">
-                      {fmt(Math.round(m.combat * (isDefend ? DEFEND_MULT : 1)))}
-                    </span>
-                    {!locked && (canDeploy || m.userId === myUserId) && (
-                      <span className="flex shrink-0 items-center gap-0.5">
-                        {/* 집행관 지정 — executor 권한(0142) */}
-                        {isDefend && canExecutor && (
-                          <button
-                            type="button"
-                            onClick={() => setExec(m)}
-                            disabled={pending}
-                            className="rounded-md px-2 py-1 text-[11px] font-bold text-indigo-500 disabled:opacity-50"
-                          >
-                            집행관
-                          </button>
-                        )}
-                        {/* 본인은 자기 배치 취소, 임원(deploy 권한)은 남의 배치도 해제 */}
-                        <button
-                          type="button"
-                          onClick={() => remove(m)}
-                          disabled={pending}
-                          className="rounded-md px-2 py-1 text-[11px] font-bold text-red-500 disabled:opacity-50"
-                        >
-                          해제
-                        </button>
-                      </span>
-                    )}
-                  </li>
+                  <DeployedRow
+                    key={m.userId}
+                    nickname={m.nickname}
+                    roleLabel={isDefend ? '수비' : '공격'}
+                    roleClass={isDefend ? 'text-sky-500' : 'text-red-500'}
+                    power={fmt(Math.round(m.combat * (isDefend ? DEFEND_MULT : 1)))}
+                    isMe={m.userId === myUserId}
+                    actions={
+                      !locked && (canDeploy || m.userId === myUserId) ? (
+                        <>
+                          {/* 집행관 지정 — executor 권한(0142) */}
+                          {isDefend && canExecutor && (
+                            <RowAction onClick={() => setExec(m)} disabled={pending} tone="exec">
+                              집행관
+                            </RowAction>
+                          )}
+                          {/* 본인은 자기 배치 취소, 임원(deploy 권한)은 남의 배치도 해제 */}
+                          <RowAction onClick={() => remove(m)} disabled={pending} tone="danger">
+                            해제
+                          </RowAction>
+                        </>
+                      ) : null
+                    }
+                  />
                 ))}
               </ul>
             )}
@@ -805,7 +828,8 @@ export function DeployBoard({
                 </button>
               ))}
             </div>
-            <ul className="mt-2 max-h-[46vh] divide-y divide-zinc-100 overflow-y-auto dark:divide-zinc-900">
+            {/* 높이 고정 — 필터마다 인원이 달라 팝업이 늘었다 줄었다 하면 손가락 위치가 어긋난다. */}
+            <ul className="mt-2 h-[46vh] divide-y divide-zinc-100 overflow-y-auto dark:divide-zinc-900">
               {statusList.length === 0 ? (
                 <li className="py-6 text-center text-[11px] text-zinc-400">해당하는 길드원이 없습니다.</li>
               ) : (

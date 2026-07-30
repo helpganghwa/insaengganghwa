@@ -169,11 +169,6 @@ function RankRow({
       <div className="min-w-0 flex-1">
         <div className="flex items-center gap-1.5">
           <span className="truncate text-[13px] font-bold">{g.name}</span>
-          {mine ? (
-            <span className="shrink-0 rounded-full bg-amber-500/20 px-1.5 text-[9px] font-bold text-amber-700 dark:text-amber-300">
-              우리
-            </span>
-          ) : null}
           <JoinPolicyBadge policy={g.joinPolicy} />
         </div>
         <div className="mt-0.5 truncate text-[10.5px] text-zinc-500">

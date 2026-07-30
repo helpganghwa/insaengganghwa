@@ -51,6 +51,15 @@ export function GuildInfoModal({ guild, onClose }: { guild: GuildRow; onClose: (
             <span className="font-bold text-amber-600 dark:text-amber-400">
               {fmtNum(guild.combat)}
             </span>
+            {guild.leaderNickname ? (
+              <>
+                <br />
+                <span className="text-zinc-400">길드장</span>{' '}
+                <span className="font-medium text-zinc-600 dark:text-zinc-300">
+                  {guild.leaderNickname}
+                </span>
+              </>
+            ) : null}
           </>
         }
         footer={
@@ -59,16 +68,6 @@ export function GuildInfoModal({ guild, onClose }: { guild: GuildRow; onClose: (
           </ModalButton>
         }
       >
-        {/* 길드장 — 가입 판단의 핵심(승인·운영을 할 사람이 누구인가). */}
-        {guild.leaderNickname ? (
-          <div className="mb-3 truncate rounded-lg bg-zinc-50 px-2.5 py-2 text-[12px] dark:bg-zinc-900">
-            <span className="text-zinc-400">길드장</span>{' '}
-            <span className="font-semibold text-zinc-700 dark:text-zinc-200">
-              {guild.leaderNickname}
-            </span>
-          </div>
-        ) : null}
-
         <div>
           <p className="text-[11px] font-bold text-zinc-400">점령 구역 ({guild.zones.length})</p>
           {guild.zones.length > 0 ? (

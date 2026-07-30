@@ -10,7 +10,6 @@ import { GUILD_INTRO_MAX_LEN, GUILD_NOTICE_MAX_LEN } from '@/lib/game/guild/bala
 import { GuildPageHeader } from '../GuildPageHeader';
 import { setGuildNoticeAction, setGuildIntroAction, setGuildOpenchatAction } from '../actions';
 import { guildErrMsg } from '../errors-msg';
-import { GuildIntroBlock, GuildNoticeBlock, GuildOpenchatButton } from '../GuildInfoBlocks';
 
 const OPENCHAT_MAX_LEN = 80;
 
@@ -21,8 +20,8 @@ type Field = 'notice' | 'intro' | 'openchat';
  *
  *  - 저장 버튼을 하나로 모은다(종전 6개: [비우기][저장] × 3). [비우기]는 없애고
  *    "필드를 비우고 저장"으로 통일 — 오픈채팅 안내가 이미 그 방식이었다.
- *  - 미리보기는 실제 화면과 **같은 컴포넌트**(GuildInfoBlocks)를 쓴다. 따로 그리면
- *    실제 렌더가 바뀔 때 어긋나므로 표시 방법을 한 곳에만 둔다.
+ *  - 미리보기는 두지 않는다(2026-07-30 사용자 결정) — 입력창이 내용만큼 늘어나
+ *    쓰는 그대로 보이므로 같은 내용을 두 번 그릴 이유가 없다.
  *  - 세 값의 권한이 각각 따로다 — 권한 없는 필드는 읽기 전용이고 저장 집계에서도 뺀다.
  */
 export function GuildInfoEditor({
@@ -87,7 +86,7 @@ export function GuildInfoEditor({
     <div className="px-4 py-4 pb-32">
       <GuildPageHeader
         fallback="/guild/settings"
-        kicker={`${guildName} · 공지 · 소개 · 오픈채팅`}
+        kicker={guildName}
         title="길드 정보"
       />
 
@@ -104,16 +103,11 @@ export function GuildInfoEditor({
           onChange={(e) => setDraft((d) => ({ ...d, notice: e.target.value.slice(0, GUILD_NOTICE_MAX_LEN) }))}
           placeholder="길드원에게 보일 공지를 입력하세요"
           readOnly={!can.notice}
-          wrapClassName="mt-1.5 h-[64px] w-full"
+          autoResize
+          minHeight={64}
+          wrapClassName="mt-1.5 w-full"
           className="rounded-lg border border-zinc-200 bg-zinc-50 px-2.5 py-2 outline-none focus:border-zinc-400 disabled:opacity-60 dark:border-zinc-700 dark:bg-zinc-900 dark:focus:border-zinc-500"
         />
-        <Preview label="길드 홈에 이렇게 보입니다">
-          {draft.notice.trim() ? (
-            <GuildNoticeBlock notice={draft.notice} />
-          ) : (
-            <p className="text-[11px] text-zinc-400">공지가 없으면 홈에 표시되지 않습니다.</p>
-          )}
-        </Preview>
         {!can.notice && <NoPerm what="공지" />}
       </section>
 
@@ -130,12 +124,11 @@ export function GuildInfoEditor({
           onChange={(e) => setDraft((d) => ({ ...d, intro: e.target.value.slice(0, GUILD_INTRO_MAX_LEN) }))}
           placeholder="가입을 고민하는 사람에게 보일 한 줄"
           readOnly={!can.intro}
-          wrapClassName="mt-1.5 h-[54px] w-full"
+          autoResize
+          minHeight={54}
+          wrapClassName="mt-1.5 w-full"
           className="rounded-lg border border-zinc-200 bg-zinc-50 px-2.5 py-2 outline-none focus:border-zinc-400 disabled:opacity-60 dark:border-zinc-700 dark:bg-zinc-900 dark:focus:border-zinc-500"
         />
-        <Preview label="길드 목록·랭킹 팝업에 이렇게 보입니다">
-          <GuildIntroBlock intro={draft.intro} />
-        </Preview>
         {!can.intro && <NoPerm what="소개" />}
       </section>
 
@@ -154,13 +147,7 @@ export function GuildInfoEditor({
           wrapClassName="mt-1.5 h-9 w-full"
           className="rounded-lg border border-zinc-200 bg-zinc-50 px-2.5 outline-none focus:border-zinc-400 disabled:opacity-60 dark:border-zinc-700 dark:bg-zinc-900 dark:focus:border-zinc-500"
         />
-        <Preview label="길드 홈에 입장 버튼이 생깁니다">
-          {draft.openchat.trim() ? (
-            <GuildOpenchatButton url={draft.openchat} asLink={false} />
-          ) : (
-            <p className="text-[11px] text-zinc-400">비우고 저장하면 버튼이 사라집니다.</p>
-          )}
-        </Preview>
+        <p className="mt-1.5 text-[10.5px] text-zinc-400">비우고 저장하면 입장 버튼이 사라집니다.</p>
         {!can.openchat && <NoPerm what="오픈채팅 설정" />}
       </section>
 
@@ -202,16 +189,6 @@ export function GuildInfoEditor({
 }
 
 const LABEL: Record<Field, string> = { notice: '공지', intro: '소개', openchat: '오픈채팅' };
-
-/** 미리보기 껍데기 — 안쪽은 실제 표시 컴포넌트가 그린다. */
-function Preview({ label, children }: { label: string; children: React.ReactNode }) {
-  return (
-    <div className="mt-2 rounded-r-lg border-l-2 border-amber-500/50 bg-amber-50/50 py-1.5 pl-2.5 pr-1.5 dark:bg-amber-500/[0.06]">
-      <p className="mb-1 text-[9.5px] font-bold tracking-wide text-zinc-400">{label}</p>
-      {children}
-    </div>
-  );
-}
 
 function NoPerm({ what }: { what: string }) {
   return (

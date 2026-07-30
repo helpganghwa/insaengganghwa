@@ -66,7 +66,7 @@ export default async function GuildRankingPage() {
     <div className="px-4 py-4">
       <GuildPageHeader
         fallback="/guild"
-        kicker={`서버 전체 · ${board.total}개 길드`}
+        kicker={`전체 ${board.total}개 길드`}
         title="길드 랭킹"
       />
       <div className="mt-3">
