@@ -11,7 +11,6 @@ import { useDiamond } from '@/components/DiamondContext';
 import { ModalShell } from '@/components/ModalShell';
 import { ModalLayout, ModalButton } from '@/components/ModalLayout';
 import {
-  GUILD_REJOIN_LOCK_HOURS,
   GUILD_EMBLEM_REROLL_COST_DIAMOND,
   GUILD_INTRO_MAX_LEN,
   GUILD_NOTICE_MAX_LEN,
@@ -30,9 +29,6 @@ import {
   approveJoinAction,
   rejectJoinAction,
   disbandGuildAction,
-  setViceAction,
-  kickMemberAction,
-  transferLeadershipAction,
 } from '../actions';
 import { EmblemPicker, DEFAULT_EMBLEM } from '../EmblemPicker';
 import { guildErrMsg } from '../errors-msg';
@@ -237,68 +233,7 @@ export function GuildSettings({
     onConfirm: () => void;
   } | null>(null);
 
-  // 구성원 액션 시트 — 행에 색버튼 나열 대신 ⋯로 모아 정리(컴팩트·모던·통일).
-  const [actionMember, setActionMember] = useState<MemberLite | null>(null);
-
-  const setVice = (userId: string, makeVice: boolean) => {
-    const prev = memberList;
-    setMemberList((l) =>
-      l.map((m) => (m.userId === userId ? { ...m, role: makeVice ? 'vice' : 'member' } : m)),
-    );
-    start(async () => {
-      const r = await setViceAction(userId, makeVice);
-      if (r.status !== 'success') {
-        setMemberList(prev);
-        return showError(guildErrMsg(r.code));
-      }
-      showHeaderToast({ title: makeVice ? '부길드장 임명' : '부길드장 해제' });
-    });
-  };
-
-  const doKick = (userId: string) => {
-    const prev = memberList;
-    setMemberList((l) => l.filter((m) => m.userId !== userId)); // 낙관적 제거
-    start(async () => {
-      const r = await kickMemberAction(userId);
-      if (r.status !== 'success') {
-        setMemberList(prev);
-        return showError(guildErrMsg(r.code));
-      }
-      showHeaderToast({ title: '추방 완료' });
-    });
-  };
-  const kick = (userId: string, nickname: string) =>
-    setConfirmModal({
-      title: '구성원 추방',
-      message: `${nickname}님을 추방할까요?\n${GUILD_REJOIN_LOCK_HOURS}시간 동안 다시 가입할 수 없습니다.`,
-      confirmLabel: '추방',
-      onConfirm: () => doKick(userId),
-    });
-
-  const doTransfer = (userId: string) =>
-    start(async () => {
-      const r = await transferLeadershipAction(userId);
-      if (r.status !== 'success') {
-        if (r.code === 'EMBLEM_GEN_FAILED') {
-          return setGenNotice({
-            title: '문양 생성에 실패했어요',
-            body: '생성이 혼잡해 실패했습니다. 차감된 다이아는 우편으로 환불해 드렸으니 확인 후 잠시 뒤 다시 시도해 주세요.',
-          });
-        }
-        return showError(guildErrMsg(r.code));
-      }
-      showHeaderToast({ title: '길드장 위임 완료' });
-      router.replace('/guild'); // 위임 후 임원 아님 — 길드 홈으로
-    });
-  const transfer = (userId: string, nickname: string) =>
-    setConfirmModal({
-      title: '길드장 위임',
-      message: `${nickname}님에게 길드장을 위임할까요?\n되돌릴 수 없습니다.`,
-      confirmLabel: '위임',
-      onConfirm: () => doTransfer(userId),
-    });
-
-  const manageable = memberList.filter((m) => m.userId !== myUserId && m.role !== 'leader');
+  // 구성원 관리(임명·해제·위임·추방)는 길드원 화면(/guild/members)으로 이전(2026-07-30).
   // 부길드장 수 — 권한 화면 진입 카드 노출 판단(0명이면 설정할 대상이 없다).
   const vicesCount = memberList.filter((m) => m.role === 'vice').length;
 
@@ -713,42 +648,23 @@ export function GuildSettings({
         </Link>
       )}
 
-      {/* 구성원 관리 */}
+      {/* 구성원 관리는 길드원 화면으로 통합(2026-07-30) — 같은 명단이 두 화면에 있어
+          누구를 임명할지 판단하려면 오가야 했다. 여기서는 진입만 남긴다. */}
       {tab === 'members' && (
-      <section className="rounded-xl border border-zinc-200 bg-white p-3 dark:border-zinc-800 dark:bg-zinc-950">
-        <h3 className="text-sm font-bold">구성원 관리</h3>
-        {manageable.length === 0 ? (
-          <p className="mt-3 text-[12px] text-zinc-400">관리할 구성원이 없습니다.</p>
-        ) : (
-          <ul className="mt-2 space-y-1.5">
-            {manageable.map((m) => (
-              <li key={m.userId} className="flex items-center justify-between gap-2">
-                <div className="flex min-w-0 items-center gap-1.5">
-                  <span className="truncate text-[13px] font-semibold">{m.nickname}</span>
-                  {m.role === 'vice' && (
-                    <span className="shrink-0 rounded-full bg-sky-500/15 px-1.5 py-0 text-[9px] font-bold text-sky-700 dark:text-sky-300">
-                      부길드장
-                    </span>
-                  )}
-                </div>
-                {/* 액션은 ⋯ 시트로 모음 — 행은 닉네임+역할만, 색버튼 나열 제거(컴팩트·모던).
-                    부길드장은 일반 멤버만 관리 가능하므로 그 외엔 버튼 숨김. */}
-                {(isLeader || m.role === 'member') && (
-                  <button
-                    type="button"
-                    onClick={() => setActionMember(m)}
-                    disabled={pending}
-                    aria-label={`${m.nickname} 관리`}
-                    className="shrink-0 rounded-lg px-2 py-1 text-lg leading-none text-zinc-400 active:bg-zinc-100 disabled:opacity-50 dark:active:bg-zinc-800"
-                  >
-                    ⋯
-                  </button>
-                )}
-              </li>
-            ))}
-          </ul>
-        )}
-      </section>
+        <Link
+          prefetch={false}
+          href="/guild/members"
+          className="flex items-center gap-2.5 rounded-xl border border-zinc-200 bg-white p-3 active:opacity-70 dark:border-zinc-800 dark:bg-zinc-950"
+        >
+          <span className="text-base">👥</span>
+          <span className="min-w-0 flex-1">
+            <span className="block text-[13px] font-bold">구성원 관리</span>
+            <span className="block text-[11px] text-zinc-500">
+              임명 · 위임 · 내보내기는 길드원 화면에서 합니다
+            </span>
+          </span>
+          <span className="shrink-0 text-[13px] text-zinc-400">›</span>
+        </Link>
       )}
 
       {/* 가입 방식 + 신청 — 구성원 탭에 통합. **길드장 전용**(2026-07-10 권한 조정 —
@@ -1052,85 +968,6 @@ export function GuildSettings({
       )}
 
       {/* 구성원 액션 시트 — ⋯에서 열림. 액션을 행으로 정렬, 위험(추방)은 빨강. */}
-      {actionMember &&
-        (() => {
-          const m = actionMember;
-          const rowCls =
-            'w-full rounded-lg px-3 py-2.5 text-left text-[13px] font-semibold transition active:bg-zinc-100 dark:active:bg-zinc-800';
-          return (
-            <ModalShell onClose={() => setActionMember(null)} label={`${m.nickname} 관리`}>
-              <ModalLayout
-                title={m.nickname}
-                subtitle={
-                  m.role === 'vice' ? (
-                    <span className="rounded-full bg-sky-500/15 px-1.5 py-0.5 font-bold text-sky-700 dark:text-sky-300">
-                      부길드장
-                    </span>
-                  ) : (
-                    '길드원'
-                  )
-                }
-                bodyPad="sm"
-                footer={
-                  <ModalButton tone="ghost" onClick={() => setActionMember(null)}>
-                    닫기
-                  </ModalButton>
-                }
-              >
-                <div className="space-y-0.5">
-                  {isLeader &&
-                    (m.role === 'vice' ? (
-                      <button
-                        type="button"
-                        className={`${rowCls} text-zinc-700 dark:text-zinc-200`}
-                        onClick={() => {
-                          setVice(m.userId, false);
-                          setActionMember(null);
-                        }}
-                      >
-                        부길드장 해제
-                      </button>
-                    ) : (
-                      <button
-                        type="button"
-                        className={`${rowCls} text-sky-600 dark:text-sky-400`}
-                        onClick={() => {
-                          setVice(m.userId, true);
-                          setActionMember(null);
-                        }}
-                      >
-                        부길드장 임명
-                      </button>
-                    ))}
-                  {isLeader && (
-                    <button
-                      type="button"
-                      className={`${rowCls} text-amber-600 dark:text-amber-400`}
-                      onClick={() => {
-                        setActionMember(null);
-                        transfer(m.userId, m.nickname);
-                      }}
-                    >
-                      길드장 위임
-                    </button>
-                  )}
-                  {(isLeader || m.role === 'member') && (
-                    <button
-                      type="button"
-                      className={`${rowCls} text-red-600 dark:text-red-400`}
-                      onClick={() => {
-                        setActionMember(null);
-                        kick(m.userId, m.nickname);
-                      }}
-                    >
-                      추방
-                    </button>
-                  )}
-                </div>
-              </ModalLayout>
-            </ModalShell>
-          );
-        })()}
 
       {/* 확인 팝업 — 위임·추방·해산(alert 대체) */}
       {confirmModal && (

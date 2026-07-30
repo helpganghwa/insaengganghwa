@@ -587,6 +587,8 @@ export async function getGuildMembersRich(guildId: bigint) {
       nickname: characters.nickname,
       publicCode: profiles.publicCode,
       role: guildMembers.role,
+      /** 부길드장 권한 비트마스크(0142) — 목록에서 '권한 N/9' 배지로 보여준다. */
+      permissions: guildMembers.permissions,
       contribution: guildMembers.contributionPoints,
       // 오늘 기여 파생용 — 기여도는 기부가 유일한 소스라 일일 카운터×티어 XP로 정확 계산(별도 로그 불필요).
       dailyDonationCount: guildMembers.dailyDonationCount,
@@ -689,6 +691,7 @@ export async function getGuildMembersRich(guildId: bigint) {
       nickname: b.nickname,
       publicCode: b.publicCode,
       role: b.role,
+      permissions: b.permissions,
       avatar: b.avatar,
       lastSeenAt: b.lastSeenAt ? b.lastSeenAt.toISOString() : null,
       contribution: Number(b.contribution),
