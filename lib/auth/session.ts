@@ -33,6 +33,15 @@ export async function isReviewerAccount(): Promise<boolean> {
  * 이 유저에게 결제 콘텐츠(성장패스·상점 유료)를 숨겨야 하는가.
  * CBT 기간(isCbtPaidHidden) && 테스터 계정이 아님 → true. 정식 출시(플래그 off) 시 항상 false.
  */
+/** 세션 이메일(JWT 클레임, 로컬 검증) — ID/PW 계정만 존재. 카카오 유저는 null(이메일 동의항목 미수집). */
+export async function getSessionEmail(): Promise<string | null> {
+  const supabase = await createSupabaseServerClient();
+  const { data, error } = await supabase.auth.getClaims();
+  if (error) return null;
+  const email = String((data?.claims as { email?: string } | undefined)?.email ?? '').trim();
+  return email || null;
+}
+
 export async function shouldHidePaidContent(): Promise<boolean> {
   if (!isCbtPaidHidden()) return false;
   return !(await isReviewerAccount());

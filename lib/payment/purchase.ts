@@ -4,7 +4,7 @@ import { and, desc, eq, sql } from 'drizzle-orm';
 
 import { db } from '@/lib/db/client';
 import { iapOrders, monthlyPurchaseLimits, identityVerifications } from '@/lib/db/schema/payment';
-import { isReviewerAccount } from '@/lib/auth/session';
+import { getSessionEmail, isReviewerAccount } from '@/lib/auth/session';
 import { characters } from '@/lib/db/schema/server';
 import { profiles } from '@/lib/db/schema/profiles';
 import { shopPurchases } from '@/lib/db/schema/shop';
@@ -113,6 +113,12 @@ export type CreatedOrder = {
   channelKey: string;
   /** 구매자 이름 — 이니시스 V2 일반결제 필수(customer.fullName). 닉네임 사용. */
   customerName: string;
+  /**
+   * 구매자 이메일 — 이니시스 V2 일반결제 필수(customer.email, 2026-07-31 결제창 BadRequest).
+   * 카카오 유저 = 카카오 계정 이메일(매출전표 수신처 — 영수증 의무 갈음), 심사(cbt) 계정 =
+   * help@ganghwa.app(가상 계정이라 수신함 없음). 이메일 동의 거부 유저(극소수)만 help@ 폴백.
+   */
+  customerEmail: string;
 };
 
 /**
@@ -224,6 +230,7 @@ export async function createOrder(
     .limit(1);
   const baseName = ch?.nickname?.trim() || '구매자';
   const customerName = ch?.code ? `${baseName}(${ch.code})` : baseName;
+  const customerEmail = reviewer ? 'help@ganghwa.app' : ((await getSessionEmail()) ?? 'help@ganghwa.app');
 
   const paymentId = `payment-${crypto.randomUUID()}`;
   await db.insert(iapOrders).values({
@@ -243,6 +250,7 @@ export async function createOrder(
     storeId: cfg.storeId,
     channelKey: cfg.channelKey,
     customerName,
+    customerEmail,
   };
 }
 
