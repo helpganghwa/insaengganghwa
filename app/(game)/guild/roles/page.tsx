@@ -12,11 +12,9 @@ export const dynamic = 'force-dynamic';
 /**
  * 부길드장 권한 — 길드장이 부길드장 개인별로 아홉 가지를 켜고 끈다(0142).
  *
- * 접근:
- *  - 길드장 : 편집
- *  - 부길드장 : **자기 권한만 읽기 전용** — "내가 무엇을 할 수 있는지 모른다"는 문의(#107)에
- *    대한 답이다. 남의 권한은 보이지 않는다.
- *  - 일반 길드원 : 길드 홈으로
+ * 접근은 **길드장 전속**이다(2026-07-30 사용자 결정) — 권한은 길드장만 관리하고 조회한다.
+ * 종전엔 부길드장이 자기 권한을 읽기 전용으로 볼 수 있었으나(문의 #107 대응) 그 경로를 닫았다.
+ * 부길드장·길드원 모두 길드 홈으로 돌린다.
  */
 export default async function GuildRolesPage({
   searchParams,
@@ -34,17 +32,14 @@ export default async function GuildRolesPage({
     'guild.roles.membership',
   );
   if (!membership) redirect('/guild');
-  if (membership.role === 'member') redirect('/guild');
+  if (membership.role !== 'leader') redirect('/guild');
 
-  const isLeader = membership.role === 'leader';
-  const [guild, allVices] = await Promise.all([
+  const [guild, vices] = await Promise.all([
     withTimeout(getGuild(membership.guildId), DB_GUARD_MS, 'guild.roles.guild'),
     withTimeout(getGuildVices(membership.guildId), DB_GUARD_MS, 'guild.roles.vices'),
   ]);
 
-  // 부길드장 자신은 **자기 한 줄만** 읽기 전용으로 — 남의 권한은 보이지 않는다.
-  const visible = isLeader ? allVices : allVices.filter((v) => v.userId === userId);
-  const rows = visible.map((v) => ({
+  const rows = vices.map((v) => ({
     userId: v.userId,
     nickname: v.nickname ?? '플레이어',
     permissions: v.permissions,
@@ -58,7 +53,6 @@ export default async function GuildRolesPage({
   return (
     <VicePermissionsBoard
       guildName={guild?.name ?? '길드'}
-      editable={isLeader}
       vices={rows}
       initialSelected={initialSelected}
     />

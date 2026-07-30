@@ -28,16 +28,13 @@ type Vice = { userId: string; nickname: string; permissions: number; avatar: str
  *  - 토글은 **즉시 적용**(저장 버튼 없음). 낙관적 반영 후 실패하면 되돌린다.
  *  - 되돌릴 수 없거나 재화가 나가는 권한(GUILD_PERM_CONFIRM)은 **켤 때만** 확인받는다.
  *    끄는 방향은 권한을 좁히는 쪽이라 막지 않는다.
- *  - editable=false는 부길드장이 자기 권한을 확인하는 읽기 전용 모드.
  */
 export function VicePermissionsBoard({
   guildName,
-  editable,
   vices,
   initialSelected = null,
 }: {
   guildName: string;
-  editable: boolean;
   vices: Vice[];
   /** 진입 시 열어둘 대상(?u=) — 길드원 화면 ⋯에서 특정 인물로 들어올 때. */
   initialSelected?: string | null;
@@ -75,7 +72,7 @@ export function VicePermissionsBoard({
   };
 
   const toggle = (key: GuildPermKey) => {
-    if (!editable || !target || pending) return;
+    if (!target || pending) return;
     const on = (targetPerms & GUILD_PERM[key]) !== 0;
     if (!on && GUILD_PERM_CONFIRM.includes(key)) {
       setConfirm({ userId: target.userId, key });
@@ -130,7 +127,7 @@ export function VicePermissionsBoard({
         <div className="mb-1 flex items-center justify-between gap-2">
           <h2 className="text-sm font-bold">허용된 권한</h2>
           <span className="text-[10px] text-zinc-500">
-            {editable ? '변경시 즉시 적용' : '길드장이 정합니다'}
+            변경시 즉시 적용
           </span>
         </div>
         <ul>
@@ -151,7 +148,7 @@ export function VicePermissionsBoard({
                   aria-checked={on}
                   aria-label={`${meta.label} ${on ? '허용됨' : '차단됨'}`}
                   onClick={() => toggle(key)}
-                  disabled={!editable || pending}
+                  disabled={pending}
                   className={`relative h-6 w-11 shrink-0 rounded-full transition disabled:opacity-60 ${
                     on ? 'bg-sky-500' : 'bg-zinc-300 dark:bg-zinc-700'
                   }`}
@@ -173,7 +170,7 @@ export function VicePermissionsBoard({
       </p>
 
       {/* 다른 부길드장으로 전환 — 목록을 아래에 두는 이유는 진입 시 대개 특정 인물을 고치러 오기 때문. */}
-      {editable && vices.length > 1 && (
+      {vices.length > 1 && (
         <section className="mt-4">
           <h2 className="mb-1.5 px-0.5 text-[11px] font-bold tracking-wide text-zinc-400">
             부길드장 {vices.length} / {GUILD_MAX_VICE}

@@ -16,6 +16,7 @@ export function ModalShell({
   label,
   className = '',
   align = 'center',
+  stacked = false,
   children,
 }: {
   onClose: () => void;
@@ -30,6 +31,11 @@ export function ModalShell({
   className?: string;
   /** 패널 정렬 — 중앙(기본) | 하단 시트 | 상단. */
   align?: 'center' | 'bottom' | 'top';
+  /**
+   * 다른 모달 **위에** 겹쳐 뜨는 경우(주로 확인 팝업). 아래 모달이 이미 배경을 어둡게·
+   * 흐리게 하고 있으므로 여기서 또 깔면 두 겹이 되어 과하게 어두워진다. 살짝만 덧댄다.
+   */
+  stacked?: boolean;
   children: React.ReactNode;
 }) {
   const panelRef = useRef<HTMLDivElement>(null);
@@ -64,7 +70,9 @@ export function ModalShell({
   const alignCls = align === 'bottom' ? 'items-end' : align === 'top' ? 'items-start' : 'items-center';
   return createPortal(
     <div
-      className={`fixed inset-0 z-50 flex justify-center ${alignCls} bg-black/60 p-4 backdrop-blur-sm`}
+      className={`fixed inset-0 z-50 flex justify-center ${alignCls} p-4 ${
+        stacked ? 'bg-black/25' : 'bg-black/60 backdrop-blur-sm'
+      }`}
       onClick={onClose}
     >
       <div

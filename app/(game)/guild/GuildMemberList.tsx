@@ -108,11 +108,14 @@ const MemberRow = memo(function MemberRow({
   m,
   myUserId,
   serverId,
+  showPerm,
   onManage,
 }: {
   m: RichMember;
   myUserId: string;
   serverId: number;
+  /** 권한 N/9 배지 노출 — 권한은 길드장만 관리·조회한다(2026-07-30 사용자 결정). */
+  showPerm: boolean;
   /** 관리 가능하면 시트를 열 콜백, 아니면 undefined(버튼 미노출). */
   onManage?: (m: RichMember) => void;
 }) {
@@ -148,7 +151,7 @@ const MemberRow = memo(function MemberRow({
                 나
               </span>
             ) : null}
-            {m.role === 'vice' ? (
+            {showPerm && m.role === 'vice' ? (
               <span className="shrink-0 rounded-full bg-sky-500/15 px-1 py-0 text-[9px] font-bold tabular-nums text-sky-700 dark:text-sky-300">
                 {permCount}/{GUILD_PERM_ORDER.length}
               </span>
@@ -263,6 +266,14 @@ export function GuildMemberList({
     });
   };
 
+  /** 확인 실행 — 겹쳐 있던 시트·임명 목록까지 함께 닫는다(취소는 아래 팝업으로 되돌아간다). */
+  const closeAllAndRun = (fn: () => void) => {
+    setConfirm(null);
+    setSheet(null);
+    setPromoteOpen(false);
+    fn();
+  };
+
   const askPromote = (m: RichMember) =>
     setConfirm({
       title: `${m.nickname}님을 부길드장으로 임명`,
@@ -369,6 +380,7 @@ export function GuildMemberList({
                   m={m}
                   myUserId={myUserId}
                   serverId={serverId}
+                  showPerm={isLeader}
                   onManage={manageableBy(m) ? setSheet : undefined}
                 />
               ))}
@@ -396,7 +408,8 @@ export function GuildMemberList({
             subtitle={
               sheet.role === 'vice' ? (
                 <span className="font-bold text-sky-600 dark:text-sky-400">
-                  부길드장 · 권한 {permKeys(sheet.permissions).length} / {GUILD_PERM_ORDER.length}
+                  부길드장
+                  {isLeader ? ` · 권한 ${permKeys(sheet.permissions).length} / ${GUILD_PERM_ORDER.length}` : ''}
                 </span>
               ) : (
                 '길드원'
@@ -425,10 +438,10 @@ export function GuildMemberList({
                   type="button"
                   className="w-full rounded-lg px-3 py-2.5 text-left text-[13px] font-semibold text-zinc-700 active:bg-zinc-100 dark:text-zinc-200 dark:active:bg-zinc-800"
                   onClick={() => {
-                    const m = sheet;
-                    setSheet(null);
-                    if (m.role === 'vice') askDemote(m);
-                    else askPromote(m);
+                    // 시트를 닫지 않는다 — 닫았다 열면 배경이 한 번 밝아졌다 어두워진다.
+                    // 확인 팝업이 위에 겹치고, 취소하면 시트로 자연히 돌아온다(2026-07-30).
+                    if (sheet.role === 'vice') askDemote(sheet);
+                    else askPromote(sheet);
                   }}
                 >
                   {sheet.role === 'vice' ? '부길드장 해제' : '부길드장 임명'}
@@ -438,11 +451,7 @@ export function GuildMemberList({
                 <button
                   type="button"
                   className="w-full rounded-lg px-3 py-2.5 text-left text-[13px] font-semibold text-amber-600 active:bg-zinc-100 dark:text-amber-400 dark:active:bg-zinc-800"
-                  onClick={() => {
-                    const m = sheet;
-                    setSheet(null);
-                    askTransfer(m);
-                  }}
+                  onClick={() => askTransfer(sheet)}
                 >
                   길드장 위임
                 </button>
@@ -451,11 +460,7 @@ export function GuildMemberList({
                 <button
                   type="button"
                   className="w-full rounded-lg px-3 py-2.5 text-left text-[13px] font-semibold text-red-600 active:bg-zinc-100 dark:text-red-400 dark:active:bg-zinc-800"
-                  onClick={() => {
-                    const m = sheet;
-                    setSheet(null);
-                    askKick(m);
-                  }}
+                  onClick={() => askKick(sheet)}
                 >
                   길드에서 내보내기
                 </button>
@@ -493,10 +498,7 @@ export function GuildMemberList({
                     <li key={m.userId}>
                       <button
                         type="button"
-                        onClick={() => {
-                          setPromoteOpen(false);
-                          askPromote(m);
-                        }}
+                        onClick={() => askPromote(m)}
                         className="flex w-full items-center gap-2 rounded-lg px-2 py-2 text-left active:bg-zinc-100 dark:active:bg-zinc-800"
                       >
                         <span className="min-w-0 flex-1 truncate text-[13px] font-semibold">
@@ -517,12 +519,9 @@ export function GuildMemberList({
       {/* 되돌릴 수 없는 동작 확인 — 임명·해제·위임·내보내기 공용. */}
       {confirm ? (
         <ModalShell
+          stacked
           onClose={() => setConfirm(null)}
-          onSubmit={() => {
-            const c = confirm;
-            setConfirm(null);
-            c.run();
-          }}
+          onSubmit={() => closeAllAndRun(confirm.run)}
           label={confirm.title}
         >
           <ModalLayout
@@ -534,11 +533,7 @@ export function GuildMemberList({
                 </ModalButton>
                 <ModalButton
                   tone={confirm.tone}
-                  onClick={() => {
-                    const c = confirm;
-                    setConfirm(null);
-                    c.run();
-                  }}
+                  onClick={() => closeAllAndRun(confirm.run)}
                   disabled={pending}
                 >
                   {confirm.label}
