@@ -3,6 +3,7 @@
 import { useState } from 'react';
 
 import { ModalShell } from '@/components/ModalShell';
+import { GuildIntroBlock } from './GuildInfoBlocks';
 import { ModalLayout, ModalButton } from '@/components/ModalLayout';
 import { REGION_META, type Region } from '@/lib/game/guild/region-meta';
 
@@ -226,10 +227,7 @@ export function GuildList({
             )}
           </div>
           <div className="mt-3 border-t border-zinc-100 pt-3 dark:border-zinc-900">
-            <p className="text-[11px] font-bold text-zinc-400">길드 소개</p>
-            <p className="mt-1 whitespace-pre-wrap break-words text-[13px] leading-relaxed text-zinc-600 dark:text-zinc-300">
-              {selected.intro?.trim() ? selected.intro : '등록된 소개가 없습니다.'}
-            </p>
+            <GuildIntroBlock intro={selected.intro} />
           </div>
           </ModalLayout>
         </ModalShell>

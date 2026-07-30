@@ -21,8 +21,13 @@ import { combatPowerFromOwned } from '@/lib/game/equipment/combat-power';
 
 import { kstDateString } from '@/lib/kst';
 
-import { guildCapacity, GUILD_DONATION_TIERS, GUILD_JOIN_REQUEST_TTL_DAYS } from './balance';
-import type { Region } from './region-meta';
+import {
+  guildCapacity,
+  GUILD_DONATION_TIERS,
+  GUILD_JOIN_REQUEST_TTL_DAYS,
+  TAX_COLLECT_COOLDOWN_MIN,
+} from './balance';
+import { REGION_META, type Region } from './region-meta';
 import { nextBattleKstDay, isConquestLocked } from './conquest/schedule';
 
 type DeployBoardMember = {
@@ -50,6 +55,44 @@ export async function getMyMembership(userId: string, serverId: number) {
     .where(and(eq(guildMembers.userId, userId), eq(guildMembers.serverId, serverId)))
     .limit(1);
   return m ?? null;
+}
+
+/**
+ * 길드 관리 허브 요약(2026-07-30) — 타일이 담지 못하는 점령전 수금 상태.
+ *
+ * 수금 조건은 구역마다 다르다(collect.ts): 집행관 존재 · 습득 후 72h · 직전 수금 후 72h · 세금 > 0.
+ * 그래서 "다음 수금 시각" 하나로는 못 말하고, **지금 걷을 수 있는 곳이 몇 곳인지**를 센다.
+ * 집행관이 없는 구역은 수금 자체가 불가라 이름까지 돌려준다(어디인지가 바로 필요한 정보).
+ */
+export async function getGuildHubStatus(guildId: bigint, serverId: number) {
+  const cooldownMin = TAX_COLLECT_COOLDOWN_MIN;
+  const rows = (await db.execute(sql`
+    select z.name, z.region::text as region,
+           z.executor_user_id is null as no_executor,
+           (z.executor_user_id is not null
+             and z.tax_diamond > 0
+             and (z.captured_at is null or z.captured_at <= now() - (${cooldownMin} || ' minutes')::interval)
+             and (z.last_tax_collected_at is null
+                  or z.last_tax_collected_at <= now() - (${cooldownMin} || ' minutes')::interval)
+           ) as collectable
+      from zones z
+     where z.server_id = ${serverId} and z.owner_guild_id = ${guildId}
+     order by z.id
+  `)) as unknown as { name: string; region: string; no_executor: boolean; collectable: boolean }[];
+
+  const noExec = rows.filter((r) => r.no_executor);
+  return {
+    zoneCount: rows.length,
+    collectableZones: rows.filter((r) => r.collectable).length,
+    // 수금 가능도 아니고 집행관도 있는 구역 = 쿨타임 중이거나 걷을 세금이 없는 곳.
+    waitingZones: rows.filter((r) => !r.collectable && !r.no_executor).length,
+    noExecutorTotal: noExec.length,
+    // 앞 2곳만 이름으로 — 그 이상은 화면에서 '외 N곳'으로 접는다.
+    noExecutorZones: noExec.slice(0, 2).map((r) => ({
+      name: r.name,
+      color: REGION_META[r.region as Region]?.color ?? '#a1a1aa',
+    })),
+  };
 }
 
 /**
@@ -121,6 +164,84 @@ export async function getJoinRequests(guildId: bigint) {
       ),
     )
     .orderBy(guildJoinRequests.createdAt);
+}
+
+/**
+ * 가입 신청 목록 + 판단 근거(2026-07-30) — 전용 화면(/guild/join-requests)용.
+ *
+ * 승인 여부를 정하는 데 필요한 것만 붙인다 — 전투력 / 최고·합산 강화 / 최근 접속.
+ * 최고만 보면 한 장비만 키운 사람과 두루 키운 사람이 구분되지 않아 합산을 함께 준다.
+ * 만료 임박 판단은 화면이 createdAt으로 계산한다(서버 시각 왕복 없이).
+ */
+export async function getJoinRequestsRich(guildId: bigint, serverId: number) {
+  const base = await db
+    .select({
+      userId: guildJoinRequests.userId,
+      nickname: characters.nickname,
+      publicCode: profiles.publicCode,
+      createdAt: guildJoinRequests.createdAt,
+      lastSeenAt: characters.lastSeenAt,
+      avatar: sql<string | null>`${userProfiles.rotations} ->> 'south'`,
+    })
+    .from(guildJoinRequests)
+    .innerJoin(profiles, eq(profiles.id, guildJoinRequests.userId))
+    .innerJoin(
+      characters,
+      and(
+        eq(characters.userId, guildJoinRequests.userId),
+        eq(characters.serverId, guildJoinRequests.serverId),
+      ),
+    )
+    .leftJoin(userProfiles, eq(userProfiles.id, characters.activeProfileId))
+    .where(
+      and(
+        eq(guildJoinRequests.guildId, guildId),
+        gt(guildJoinRequests.createdAt, joinRequestCutoff()),
+      ),
+    )
+    .orderBy(guildJoinRequests.createdAt); // 오래된 신청 먼저 — 만료가 가까운 순
+  if (base.length === 0) return [];
+
+  const ids = base.map((b) => b.userId);
+  const eqRows = await db
+    .select({
+      uid: userEquipment.userId,
+      cid: userEquipment.catalogItemId,
+      el: userEquipment.enhanceLevel,
+      tl: userEquipment.transcendLevel,
+    })
+    .from(userEquipment)
+    .where(and(eq(userEquipment.serverId, serverId), inArray(userEquipment.userId, ids)));
+
+  const owned = new Map<string, { catalogItemId: number; enhanceLevel: number; transcendLevel: number }[]>();
+  for (const r of eqRows) {
+    (owned.get(r.uid) ?? owned.set(r.uid, []).get(r.uid)!).push({
+      catalogItemId: r.cid,
+      enhanceLevel: r.el,
+      transcendLevel: r.tl,
+    });
+  }
+
+  // 만료까지 남은 일수는 **서버에서** 센다 — 클라 렌더 중 Date.now()를 부르면 하이드레이션
+  // 불일치·purity 위반이 된다. 일 단위 값이라 요청 시점 계산으로 충분하다(force-dynamic).
+  const now = Date.now();
+  const ttlMs = GUILD_JOIN_REQUEST_TTL_DAYS * 24 * 60 * 60 * 1000;
+  return base.map((b) => {
+    const own = owned.get(b.userId) ?? [];
+    const leftMs = ttlMs - (now - b.createdAt.getTime());
+    return {
+      userId: b.userId,
+      nickname: b.nickname ?? '플레이어',
+      publicCode: b.publicCode,
+      /** 만료까지 남은 일수(올림, 최소 0) — 화면은 이 값만 쓴다. */
+      expiresInDays: Math.max(0, Math.ceil(leftMs / (24 * 60 * 60 * 1000))),
+      lastSeenAt: b.lastSeenAt ? b.lastSeenAt.toISOString() : null,
+      avatar: b.avatar,
+      combat: combatPowerFromOwned(own),
+      maxEnhance: own.reduce((mx, o) => Math.max(mx, o.enhanceLevel), 0),
+      totalEnhance: own.reduce((n, o) => n + o.enhanceLevel, 0),
+    };
+  });
 }
 
 /** 내 가입 신청(있으면 신청 길드 id) — 미가입 첫화면 '신청됨' 표시. 만료분은 없는 것으로 본다. */

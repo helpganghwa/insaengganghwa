@@ -23,13 +23,14 @@ import { donateAction, leaveGuildAction } from './actions';
 import { guildErrMsg } from './errors-msg';
 import { type RichMember } from './GuildMemberList';
 import { GuildLogFeed } from './GuildLogFeed';
+import { GuildNoticeBlock, GuildOpenchatButton } from './GuildInfoBlocks';
 
 // 길드 홈 메뉴 그리드(홈 패턴) — 각 타일 클릭 시 상세로 이동. 길드 관리는 임원만 노출.
 // 배경 스프라이트: /sprites/guild-menu/{key}.png (없으면 tint 단색으로 graceful).
 const GUILD_MENU = [
   { key: 'members', href: '/guild/members', label: '길드원', desc: '멤버 명단·전투력', tint: '#1c2238', officerOnly: false },
   { key: 'deploy', href: '/guild/deploy', label: '점령지', desc: '점령지 배치·관리', tint: '#2a2012', officerOnly: false },
-  { key: 'settings', href: '/guild/settings', label: '길드 관리', desc: '공지·가입·임원', tint: '#3a1419', officerOnly: true },
+  { key: 'settings', href: '/guild/settings', label: '길드 관리', desc: '가입·권한·세금·문양', tint: '#3a1419', officerOnly: true },
   { key: 'ranking', href: '/guild/ranking', label: '길드 랭킹', desc: '서버 길드 순위', tint: '#143a2a', officerOnly: false },
 ] as const;
 
@@ -202,30 +203,14 @@ export function GuildHome({
             </p>
           </div>
           {/* 오픈채팅 — 설정 시 상단 정보에 그대로 노출(외부 링크). 나머지 메뉴는 하단 그리드로 이동. */}
-          {guild.openchatUrl && (
-            <a
-              href={guild.openchatUrl}
-              target="_blank"
-              rel="noopener noreferrer"
-              className="flex w-[82px] shrink-0 items-center justify-center gap-1 rounded-md bg-[#FEE500] px-1.5 py-1.5 text-[10px] font-bold text-black/85 active:opacity-70"
-            >
-              {/* eslint-disable-next-line @next/next/no-img-element */}
-              <img src="/kakao/kakao_symbol.png" alt="" aria-hidden className="h-3 w-auto" />
-              오픈채팅
-            </a>
-          )}
+          <GuildOpenchatButton url={guild.openchatUrl} />
         </div>
 
-        {guild.notice && (
-          <div className="mt-2 flex items-start gap-2 rounded-lg bg-amber-50 px-3 py-2 dark:bg-amber-500/10">
-            <span className="shrink-0 rounded bg-amber-500/15 px-1.5 py-0.5 text-[10px] font-bold text-amber-700 dark:text-amber-300">
-              공지
-            </span>
-            <p className="min-w-0 flex-1 whitespace-pre-wrap break-words text-[12px] leading-relaxed text-zinc-700 dark:text-zinc-200">
-              {guild.notice}
-            </p>
+        {guild.notice ? (
+          <div className="mt-2">
+            <GuildNoticeBlock notice={guild.notice} />
           </div>
-        )}
+        ) : null}
 
         {/* 길드 경험치바 */}
         <div className="mt-2.5 border-t border-zinc-200 pt-2.5 dark:border-zinc-800">
