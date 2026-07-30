@@ -277,10 +277,17 @@ export async function rebuildCodexChampionsForItem(serverId: number, catalogItem
           )
       ) t
       where rn <= 3
+      on conflict (server_id, catalog_item_id, rank) do update set user_id = excluded.user_id
     `);
   });
 }
 
+/**
+ * upsert인 이유(2026-07-31): 시간별 rebuild(전체 delete+insert)와 강화 정산의 per-item
+ * 재계산(rebuildCodexChampionsForItem)이 서로 다른 트랜잭션으로 끼어들면 insert가 중복 키
+ * (23505)로 죽어 그 시간의 백스톱이 통째로 스킵됐다(07-06·07-27 실사고). 충돌 시 마지막
+ * 쓰기가 이기고, 드리프트는 다음 시간별 rebuild가 교정한다.
+ */
 export async function rebuildCodexChampions(serverId: number): Promise<void> {
   await db.transaction(async (tx) => {
     await tx.delete(codexChampions).where(eq(codexChampions.serverId, serverId));
@@ -302,6 +309,7 @@ export async function rebuildCodexChampions(serverId: number): Promise<void> {
           )
       ) t
       where rn <= 3
+      on conflict (server_id, catalog_item_id, rank) do update set user_id = excluded.user_id
     `);
   });
 }
