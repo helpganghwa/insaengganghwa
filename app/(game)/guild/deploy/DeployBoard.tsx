@@ -963,6 +963,7 @@ export function DeployBoard({
       {/* 이동 대기시간 단축 — 배치 전에 먼저 통과해야 하는 관문(세계지도 이동과 동일 순서). */}
       {speedUpAsk && plan && (
         <ModalShell
+          stacked
           onClose={() => {
             setSpeedUpAsk(false);
             setPlanConfirm(false);
@@ -1042,6 +1043,7 @@ export function DeployBoard({
       {plan && (
         <ModalShell
           label="배치 확인"
+          receded={speedUpAsk}
           onClose={() => {
             setPlan(null);
             setPlanConfirm(false);

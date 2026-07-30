@@ -17,6 +17,7 @@ export function ModalShell({
   className = '',
   align = 'center',
   stacked = false,
+  receded = false,
   children,
 }: {
   onClose: () => void;
@@ -36,6 +37,12 @@ export function ModalShell({
    * 흐리게 하고 있으므로 여기서 또 깔면 두 겹이 되어 과하게 어두워진다. 살짝만 덧댄다.
    */
   stacked?: boolean;
+  /**
+   * 위에 다른 모달이 겹친 동안 **뒤로 물러난** 상태. 축소·반투명으로 내려앉아 위 팝업과
+   * 층위가 분리돼 보인다(두 패널이 같은 무게로 겹쳐 보이던 문제, 2026-07-30).
+   * 물러난 동안은 조작 불가 — 위 팝업이 닫히면 원래대로 돌아온다.
+   */
+  receded?: boolean;
   children: React.ReactNode;
 }) {
   const panelRef = useRef<HTMLDivElement>(null);
@@ -80,8 +87,11 @@ export function ModalShell({
         role="dialog"
         aria-modal="true"
         aria-label={label}
+        aria-hidden={receded || undefined}
         tabIndex={-1}
-        className={`outline-none ${className}`}
+        className={`outline-none transition-[transform,opacity,filter] duration-150 ${
+          receded ? 'pointer-events-none scale-[0.94] opacity-35 blur-[1px]' : ''
+        } ${className}`}
         onClick={(e) => e.stopPropagation()}
       >
         {children}

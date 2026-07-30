@@ -402,7 +402,11 @@ export function GuildMemberList({
 
       {/* 관리 시트 — 공용 팝업(프로젝트 전체 규칙). */}
       {sheet ? (
-        <ModalShell onClose={() => setSheet(null)} label={`${sheet.nickname} 관리`}>
+        <ModalShell
+          onClose={() => setSheet(null)}
+          receded={confirm != null}
+          label={`${sheet.nickname} 관리`}
+        >
           <ModalLayout
             title={sheet.nickname}
             subtitle={
@@ -472,7 +476,11 @@ export function GuildMemberList({
 
       {/* 임명 대상 고르기 — 길드원만 대상. 검색 없이도 정렬(기여도순)로 충분한 규모. */}
       {promoteOpen ? (
-        <ModalShell onClose={() => setPromoteOpen(false)} label="부길드장 임명">
+        <ModalShell
+          onClose={() => setPromoteOpen(false)}
+          receded={confirm != null}
+          label="부길드장 임명"
+        >
           <ModalLayout
             title="부길드장 임명"
             subtitle={

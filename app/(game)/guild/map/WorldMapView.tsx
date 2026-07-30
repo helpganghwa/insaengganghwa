@@ -1029,9 +1029,13 @@ export function WorldMapView({
         )}
       </section>
 
-      {/* 구역 상세 모달 */}
+      {/* 구역 상세 모달 — 이동 확인이 겹치면 뒤로 물러난다. */}
       {selected && (
-        <ModalShell onClose={() => setSelectedId(null)} label={`${selected.name} 구역 정보`}>
+        <ModalShell
+          onClose={() => setSelectedId(null)}
+          receded={moveAsk != null}
+          label={`${selected.name} 구역 정보`}
+        >
           <ModalLayout
             bare
             maxBodyClass="max-h-[68vh] overflow-y-auto bg-white dark:bg-zinc-900"
@@ -1371,6 +1375,7 @@ export function WorldMapView({
       {/* 이동 확인 팝업 — ① 배치·집행관 해제 경고 ② 쿨타임 보석 지불(3초 인-버튼 컨펌). */}
       {moveAsk && (
         <ModalShell
+          stacked
           label={moveAsk.kind === 'release' ? '거주지 이동' : '이동 대기시간 단축'}
           onClose={() => {
             setMoveAsk(null);
