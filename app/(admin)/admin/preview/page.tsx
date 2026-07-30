@@ -12,6 +12,8 @@ import { ChronicleEditor } from './PreviewClient';
  *  · 점령전 연대기: 23:05 생성 → 자정 공개. 검수 창 23:05~24:00(공개 후 수정도 즉시 반영).
  */
 export const dynamic = 'force-dynamic';
+// 재생성 액션이 LLM 2회(초안+재검수)를 호출한다 — 기본 예산이면 도중에 끊긴다.
+export const maxDuration = 120;
 
 // 항목별 최근 2개만 — 검수 대상은 항상 최신분(2026-07-15), 과거분은 스크롤 노이즈.
 async function loadData() {
@@ -74,7 +76,10 @@ export default async function AdminPreviewPage() {
                     <span className="rounded bg-zinc-800 px-1.5 py-0.5 text-[10px] text-zinc-400">공개됨</span>
                   )}
                 </div>
+                {/* key에 본문 포함(2026-07-30) — 재생성 후 refresh로 내려온 새 텍스트가
+                    편집 중이던 로컬 상태에 덮이지 않고 리마운트로 반영되게. */}
                 <ChronicleEditor
+                  key={`${c.serverId}:${c.kstDay}:${c.todayText.length}:${c.headline.length}`}
                   serverId={c.serverId}
                   kstDay={c.kstDay}
                   headline={c.headline}

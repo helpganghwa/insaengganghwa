@@ -8,7 +8,7 @@ import { ChronicleReplayPanel } from '@/app/(game)/guild/map/ChronicleReplay';
 import { REGION_META, type Region } from '@/lib/game/guild/region-meta';
 import { assetUrl } from '@/lib/asset-versions';
 
-import { updateChronicleAction } from './actions';
+import { updateChronicleAction, regenerateChronicleAction } from './actions';
 
 type PreviewZone = { id: number; name: string; mapX: number; mapY: number; region: Region };
 
@@ -157,6 +157,7 @@ export function ChronicleEditor({
   const [text, setText] = useState(initialText);
   const [flash, setFlash] = useState<string | null>(null);
   const [showReplay, setShowReplay] = useState(false); // 애니메이션 미리보기 토글(0안 접힘)
+  const [regenAsk, setRegenAsk] = useState(false); // 재생성 확인(편집 내용을 덮어쓰므로 원클릭 금지)
   const [pending, start] = useTransition();
   const dirty = headline !== initialHeadline || text !== initialText;
 
@@ -164,6 +165,20 @@ export function ChronicleEditor({
     start(async () => {
       const r = await updateChronicleAction({ serverId, kstDay, headline, todayText: text });
       setFlash(r.status === 'success' ? '저장됨' : r.message);
+      if (r.status === 'success') router.refresh();
+    });
+  };
+
+  /**
+   * 재생성 — 같은 사실표로 주사위를 다시 굴린다(LLM 2회, 40초 안팎). 성공하면 서버가 새
+   * 텍스트를 저장하고, refresh로 내려온 새 initial 값이 key 리마운트로 편집칸에 반영된다.
+   * 실패 시 서버가 기존 행을 복원하므로 화면·DB 모두 원래대로다.
+   */
+  const regenerate = () => {
+    setRegenAsk(false);
+    start(async () => {
+      const r = await regenerateChronicleAction({ serverId, kstDay });
+      setFlash(r.status === 'success' ? '재생성됨' : r.message);
       if (r.status === 'success') router.refresh();
     });
   };
@@ -207,6 +222,39 @@ export function ChronicleEditor({
             {showReplay ? '미리보기 닫기' : '애니메이션 미리보기'}
           </button>
         ) : null}
+        {/* 재생성 — 현재 텍스트(수정분 포함)를 새 생성으로 덮어쓴다. 2단계 확인 + 진행 표시. */}
+        <span className="ml-auto flex items-center gap-2">
+          {regenAsk ? (
+            <>
+              <span className="text-[11px] text-red-300">지금 텍스트를 버리고 다시 생성합니다</span>
+              <button
+                type="button"
+                onClick={regenerate}
+                disabled={pending}
+                className="rounded-lg bg-red-600 px-3 py-2 text-sm font-bold text-white disabled:opacity-40"
+              >
+                재생성 실행
+              </button>
+              <button
+                type="button"
+                onClick={() => setRegenAsk(false)}
+                disabled={pending}
+                className="rounded-lg border border-zinc-700 px-3 py-2 text-sm font-bold text-zinc-300"
+              >
+                취소
+              </button>
+            </>
+          ) : (
+            <button
+              type="button"
+              onClick={() => setRegenAsk(true)}
+              disabled={pending}
+              className="rounded-lg border border-red-500/50 px-3 py-2 text-sm font-bold text-red-400 disabled:opacity-40"
+            >
+              {pending && flash === null && !dirty ? '재생성 중… (40초 안팎)' : '재생성'}
+            </button>
+          )}
+        </span>
       </div>
       {showReplay && replay ? <ReplayPreview key={text} text={text} replay={replay} zones={zones} adjacency={adjacency} /> : null}
     </div>

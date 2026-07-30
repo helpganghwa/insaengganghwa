@@ -6,6 +6,7 @@ import { and, eq } from 'drizzle-orm';
 import { requireAdmin } from '@/lib/auth/require-admin';
 import { db } from '@/lib/db/client';
 import { guilds, worldChronicle, zones } from '@/lib/db/schema/guild';
+import { generateAndStoreChronicle } from '@/lib/game/guild';
 
 type Result = { status: 'success' } | { status: 'error'; message: string };
 
@@ -66,3 +67,44 @@ export async function updateChronicleAction(input: {
   }
 }
 
+/**
+ * 연대기 재생성(2026-07-30) — 생성 결과가 이상하면 검수 창에서 주사위를 다시 굴린다.
+ * 삭제 후 생성이 실패하면 자정 공개가 비어버리므로, 기존 행을 백업해 두고 실패 시 복원한다.
+ * LLM 2회 호출(초안+재검수)이라 40초 안팎 걸린다 — 버튼 쪽에서 진행 표시 필수.
+ */
+export async function regenerateChronicleAction(input: {
+  serverId: number;
+  kstDay: string; // 'YYYY-MM-DD'
+}): Promise<Result> {
+  try {
+    await requireAdmin();
+    const [backup] = await db
+      .select()
+      .from(worldChronicle)
+      .where(
+        and(eq(worldChronicle.serverId, input.serverId), eq(worldChronicle.kstDay, input.kstDay)),
+      )
+      .limit(1);
+    if (!backup) return { status: 'error', message: '해당 일자 연대기가 없습니다.' };
+    await db
+      .delete(worldChronicle)
+      .where(
+        and(eq(worldChronicle.serverId, input.serverId), eq(worldChronicle.kstDay, input.kstDay)),
+      );
+    try {
+      const r = await generateAndStoreChronicle(input.kstDay, input.serverId);
+      if (!r.created) throw new Error(r.reason ?? 'not-created');
+    } catch (e) {
+      // 복원 — 재생성 실패가 연대기 소실이 되면 안 된다.
+      await db.insert(worldChronicle).values(backup).onConflictDoNothing();
+      console.error('[admin.preview] chronicle regen', (e as Error).message);
+      return { status: 'error', message: '재생성에 실패해 기존 내용을 유지했습니다.' };
+    }
+    revalidatePath('/admin/preview');
+    revalidatePath('/guild/map');
+    return { status: 'success' };
+  } catch (e) {
+    console.error('[admin.preview] chronicle regen', (e as Error).message);
+    return { status: 'error', message: '재생성 중 오류가 발생했습니다.' };
+  }
+}
