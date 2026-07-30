@@ -160,7 +160,10 @@ export async function getMyDeployment(
   return d ? { zoneId: d.zoneId, role: d.role as ConquestRole, battleKstDay } : null;
 }
 
-/** 남 배치/해제 권한 검증 — deploy 권한(길드장 · 허용된 부길드장, 0142). 본인 배치는 무관. */
+/**
+ * 남의 배치 해제 권한 검증 — deploy 권한(길드장 · 허용된 부길드장, 0142).
+ * 본인 배치·해제(deployToZone·cancel)는 이 검사와 무관하다 — 배치는 본인 고유 권한이다.
+ */
 async function assertLeader(
   tx: Parameters<Parameters<typeof db.transaction>[0]>[0],
   userId: string,

@@ -128,7 +128,7 @@ export function DeployBoard({
   members: initialMembers,
   zones,
 }: {
-  /** 남 배치 해제 가능(deploy 권한, 0142). 본인 배치·해제는 무관. */
+  /** 남의 배치를 **해제**할 수 있는가(deploy 권한, 0142). 배치는 본인만 하므로 무관. */
   canDeploy: boolean;
   /** 집행관 지정·해제 가능(executor 권한, 0142). */
   canExecutor: boolean;

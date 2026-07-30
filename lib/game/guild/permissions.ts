@@ -21,7 +21,11 @@ export const GUILD_PERM = {
   kick: 1 << 4,
   /** 점령전 집행관 지정·해제(세금 수금 권한이 함께 간다) */
   executor: 1 << 5,
-  /** 길드원 점령전 배치(공격·수비) */
+  /**
+   * 다른 길드원의 점령전 배치 **해제**.
+   * ⚠ 배치 자체는 본인만 한다 — 남을 배치하는 UI 경로는 없다(deployMember는 휴면 서버 함수).
+   * 그래서 이 권한이 실제로 여는 것은 해제뿐이다(2026-07-30 확인).
+   */
   deploy: 1 << 6,
   /** 세금 분배 */
   taxDistribute: 1 << 7,
@@ -51,7 +55,7 @@ export const GUILD_PERM_META: Record<GuildPermKey, { label: string; desc?: strin
   openchat: { label: '오픈채팅 설정' },
   joinReview: { label: '가입 관리', desc: '신청 승인 · 거절 · 가입 방식' },
   executor: { label: '집행관 지정', desc: '세금 수금 권한이 함께 갑니다' },
-  deploy: { label: '길드원 배치', desc: '공격 · 수비' },
+  deploy: { label: '길드원 배치 해제', desc: '남의 공격 · 수비를 물림(배치는 본인만)' },
   kick: { label: '길드원 추방', desc: '되돌릴 수 없습니다' },
   taxDistribute: { label: '세금 분배', desc: '다이아가 나갑니다' },
   emblem: { label: '문양 생성 · 변경', desc: '생성마다 다이아 소모' },

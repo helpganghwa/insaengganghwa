@@ -179,8 +179,11 @@ export function GuildSettings({
         }
       />
 
+      {/* 요약(하단 플랫) + 그 밑에 바로 붙는 깃발 — 길드 홈과 같은 한 묶음(2026-07-30).
+          space-y가 사이를 벌리지 않도록 둘을 한 div에 넣는다. */}
+      <div>
       {/* 요약 — 타일이 담지 못하는 것만(레벨 진행 · 점령전 수금 상태). */}
-      <section className="rounded-xl border border-zinc-200 bg-white px-3 py-2 dark:border-zinc-800 dark:bg-zinc-950">
+      <section className="rounded-t-xl border border-zinc-200 bg-white px-3 py-2 dark:border-zinc-800 dark:bg-zinc-950">
         {/* 레벨 + XP바를 한 줄로 — 요약은 최대한 얇게(타일에 자리를 넘긴다). */}
         <div className="flex items-center gap-2">
           <span className="shrink-0 text-[11px] font-bold">Lv.{view.level}</span>
@@ -234,8 +237,9 @@ export function GuildSettings({
 
       {/* 타일 — 길드 홈의 **제비꼬리 깃발**과 같은 언어(2026-07-30 사용자 결정).
           6칸이 3열 × 2행으로 딱 맞고, 4열(62px)보다 칸이 넓어 수치·배지가 들어간다.
+          윗줄은 요약 카드 바닥에 매달리고(gap 없음) 아랫줄만 떠 있게 행 간격을 준다.
           배경 미생성이면 tint 단색으로 우아하게 폴백. */}
-      <div className="grid grid-cols-3 gap-2">
+      <div className="grid grid-cols-3 gap-x-2 gap-y-2.5">
         {tiles.map((t) => (
           <Link
             prefetch={false}
@@ -274,6 +278,7 @@ export function GuildSettings({
             </div>
           </Link>
         ))}
+      </div>
       </div>
 
       {/* 부길드장 안내 — 안 보이는 타일이 있는 이유. */}
