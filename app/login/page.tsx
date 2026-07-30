@@ -74,8 +74,34 @@ export default async function LoginPage({
         ) : null}
 
         {/* 카카오 로그인 — 공식 가이드 준수(#FEE500 / 라벨 "카카오 로그인" / 심볼·텍스트 #000(85%) / radius 12px, 심볼 미변형).
-            심사용(?test=true)에선 카카오 버튼을 숨기고 아래 ID/PW 폼만 노출(심사관 동선 단순화). */}
-        {reviewLogin ? null : (
+            심사용(?test=true)은 같은 자리에 ID/PW 폼 — 폼이 페이지 하단에 있어 심사관이
+            스크롤로 찾아야 했다(2026-07-31 피드백). */}
+        {reviewLogin ? (
+          <form action={signInWithCredentials} className="w-full space-y-2 text-left">
+            <ZoomSafeInput
+              type="email"
+              name="email"
+              autoComplete="username"
+              placeholder="아이디(이메일)"
+              wrapClassName="h-[38px] w-full"
+              className="rounded-xl border border-zinc-300 bg-white px-3 dark:border-zinc-700 dark:bg-zinc-900"
+            />
+            <ZoomSafeInput
+              type="password"
+              name="password"
+              autoComplete="current-password"
+              placeholder="비밀번호"
+              wrapClassName="h-[38px] w-full"
+              className="rounded-xl border border-zinc-300 bg-white px-3 dark:border-zinc-700 dark:bg-zinc-900"
+            />
+            <button
+              type="submit"
+              className="block w-full rounded-xl bg-zinc-800 py-3 text-sm font-bold text-white transition active:scale-[0.99] hover:bg-zinc-700 dark:bg-zinc-200 dark:text-zinc-900 dark:hover:bg-white"
+            >
+              로그인
+            </button>
+          </form>
+        ) : (
           <form action={signInWithKakao} className="w-full">
             <button
               type="submit"
@@ -101,6 +127,15 @@ export default async function LoginPage({
           </Link>
           에 동의하는 것으로 간주됩니다.
         </p>
+
+        {/* 로그인 실패 안내 — 버튼·폼 바로 아래(하단에 있으면 실패 사유를 못 보고 재시도한다). */}
+        {error ? (
+          error === 'cancelled' ? (
+            <p className="text-sm text-zinc-500 dark:text-zinc-400">로그인이 취소되었어요. 다시 시도해 주세요.</p>
+          ) : (
+            <p className="text-sm text-red-600 dark:text-red-400">{loginErrorMessage(error)}</p>
+          )
+        ) : null}
 
         {/* 소셜 증명 — 로그인 버튼 아래, 프로필 페이지와 동일 통계 카드(공유 컴포넌트) */}
         <div className="mt-5 w-full">
@@ -136,41 +171,6 @@ export default async function LoginPage({
           </div>
         </section>
 
-        {/* 심사용 ID/PW 로그인 — 포트원·게임위 심사관이 카카오 없이 로그인. env로만 노출/차단. */}
-        {reviewLogin ? (
-          <form action={signInWithCredentials} className="w-full space-y-2 text-left">
-            <ZoomSafeInput
-              type="email"
-              name="email"
-              autoComplete="username"
-              placeholder="아이디(이메일)"
-              wrapClassName="h-[38px] w-full"
-              className="rounded-xl border border-zinc-300 bg-white px-3 dark:border-zinc-700 dark:bg-zinc-900"
-            />
-            <ZoomSafeInput
-              type="password"
-              name="password"
-              autoComplete="current-password"
-              placeholder="비밀번호"
-              wrapClassName="h-[38px] w-full"
-              className="rounded-xl border border-zinc-300 bg-white px-3 dark:border-zinc-700 dark:bg-zinc-900"
-            />
-            <button
-              type="submit"
-              className="block w-full rounded-xl bg-zinc-800 py-3 text-sm font-bold text-white transition active:scale-[0.99] hover:bg-zinc-700 dark:bg-zinc-200 dark:text-zinc-900 dark:hover:bg-white"
-            >
-              로그인
-            </button>
-          </form>
-        ) : null}
-
-        {error ? (
-          error === 'cancelled' ? (
-            <p className="text-sm text-zinc-500 dark:text-zinc-400">로그인이 취소되었어요. 다시 시도해 주세요.</p>
-          ) : (
-            <p className="text-sm text-red-600 dark:text-red-400">{loginErrorMessage(error)}</p>
-          )
-        ) : null}
         {/* 서브듀드 — CBT 기간 데이터 초기화 사전 고지(작게·저대비, 문구는 원문 유지). 정식 오픈(env off) 시 자동 미노출. */}
         {isCbtPaidHidden() ? (
           <div className="mt-4 w-full rounded-lg border border-white/10 bg-white/[0.03] px-3 py-2.5 text-left text-[11px] leading-relaxed text-zinc-500">
