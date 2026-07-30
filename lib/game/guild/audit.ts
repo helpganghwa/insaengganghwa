@@ -16,6 +16,7 @@ export type GuildAuditAction =
   | 'unset_vice'
   | 'disband'
   | 'set_join_policy'
+  | 'set_perm' // 부길드장 권한 변경(0142) — detail { before, after } 비트마스크
   | 'auto_handover'
   | 'notice_edit'
   // 활동 피드 — 가입/탈퇴/레벨업/세금수금/세금분배/점령·상실.

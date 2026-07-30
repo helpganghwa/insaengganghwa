@@ -10,6 +10,7 @@
  *  - claim 경로(claim.ts)는 이미 `gt(expiresAt, now())` 가드라 만료 우편은 수령 불가.
  *    이 cron은 누적 데이터 정리(인박스/색인 성능)용. lazy 만료 + cron 정리 = M5 v1.
  *  - mail_claim_logs는 `onDelete: 'set null'`로 mailId 보존(분배 감사 흔적 유지).
+ *  - 정리 작업을 여기에 모은다 — world_events 90일 · 월드 채팅 · 길드 가입 신청 만료.
  *  - 일일 보급의 `daily_supply_grants(user_id, kst_day)`는 다음 KST 자정에 자연 갱신.
  *    여기서는 건드리지 않음(과거 그랜트는 통계용으로 보존).
  *
@@ -26,6 +27,7 @@ import { sql } from 'drizzle-orm';
 import { isCronAuthorized } from '@/lib/auth/cron-auth';
 import { db } from '@/lib/db/client';
 import { cleanupChat } from '@/lib/game/chat/service';
+import { GUILD_JOIN_REQUEST_TTL_DAYS } from '@/lib/game/guild/balance';
 
 export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
@@ -78,5 +80,21 @@ export async function GET(req: Request) {
   // 월드 채팅 보존 정리(0125) — 7일 초과 또는 서버당 최근 1,000개 초과분.
   const chatDeleted = await cleanupChat().catch(() => 0);
 
-  return Response.json({ ok: true, kind: 'mail-expire', deleted, eventsDeleted, chatDeleted });
+  // 길드 가입 신청 만료(2026-07-30) — GUILD_JOIN_REQUEST_TTL_DAYS 초과분 삭제.
+  // 조회 측(getJoinRequests)이 이미 시각으로 걸러 즉시 정확하고, 이 삭제는 누적 정리다.
+  const joinReqRows = (await db.execute(sql`
+    delete from guild_join_requests
+    where created_at < now() - (${GUILD_JOIN_REQUEST_TTL_DAYS} || ' days')::interval
+    returning user_id
+  `)) as unknown as { user_id: string }[];
+  const joinRequestsExpired = joinReqRows.length;
+
+  return Response.json({
+    ok: true,
+    kind: 'mail-expire',
+    deleted,
+    eventsDeleted,
+    chatDeleted,
+    joinRequestsExpired,
+  });
 }

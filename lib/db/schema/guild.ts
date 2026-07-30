@@ -103,6 +103,12 @@ export const guildMembers = pgTable(
       .notNull()
       .references(() => guilds.id, { onDelete: 'cascade' }),
     role: guildRoleEnum('role').notNull().default('member'),
+    /**
+     * 부길드장 권한 비트마스크(0142) — 길드장이 개인별로 설정. 비트 정의는
+     * lib/game/guild/permissions.ts(GUILD_PERM). 길드장은 항상 전권이라 이 값을 보지 않고,
+     * 일반 길드원은 0. 부길드장 해제 시 0으로 초기화한다.
+     */
+    permissions: integer('permissions').notNull().default(0),
     contributionPoints: bigint('contribution_points', { mode: 'bigint' }).notNull().default(sql`0`),
     /** 일 3회 기부 카운터(KST 자정 리셋). */
     dailyDonationCount: integer('daily_donation_count').notNull().default(0),

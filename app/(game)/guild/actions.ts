@@ -38,9 +38,11 @@ import {
   setActiveEmblem,
   deleteEmblem,
   setViceRole,
+  setVicePermissions,
   kickMember,
   transferLeadership,
 } from '@/lib/game/guild';
+import { notifyJoinDecision, notifyJoinRequest } from '@/lib/game/guild/notify';
 import type { GuildTaxDistribution, ConquestRole, GuildJoinPolicy } from '@/lib/game/guild/balance';
 import {
   isValidEmblemSelection,
@@ -152,6 +154,17 @@ export async function joinGuildAction(guildId: string) {
   const __b = await actionBlock(); if (__b) return { status: 'error', code: __b } as const;
   try {
     const r = await requestOrJoinGuild({ userId: u, guildId: BigInt(guildId) });
+    // 승인제 신청이면 처리할 수 있는 사람(길드장 + joinReview 권한 부길드장)에게 알린다.
+    // 커밋 후 best-effort — 발송 실패가 신청을 되돌리지 않는다.
+    if (!r.joined) {
+      after(async () => {
+        await notifyJoinRequest({
+          guildId: r.guildId,
+          serverId: r.serverId,
+          applicantUserId: u,
+        }).catch(() => undefined);
+      });
+    }
     revalidatePath('/guild');
     return { status: 'success', joined: r.joined } as const;
   } catch (e) {
@@ -165,7 +178,18 @@ export async function approveJoinAction(requestUserId: string) {
   if (await rateLimited(u, 'guild')) return { status: 'error', code: 'RATE_LIMITED' } as const;
   const __b = await actionBlock(); if (__b) return { status: 'error', code: __b } as const;
   try {
-    await approveJoinRequest({ actorUserId: u, serverId: await getActiveServerId(), requestUserId });
+    const r = await approveJoinRequest({
+      actorUserId: u,
+      serverId: await getActiveServerId(),
+      requestUserId,
+    });
+    after(async () => {
+      await notifyJoinDecision({
+        userId: requestUserId,
+        guildId: r.guildId,
+        approved: true,
+      }).catch(() => undefined);
+    });
     revalidatePath('/guild');
     return { status: 'success' } as const;
   } catch (e) {
@@ -179,7 +203,18 @@ export async function rejectJoinAction(requestUserId: string) {
   if (await rateLimited(u, 'guild')) return { status: 'error', code: 'RATE_LIMITED' } as const;
   const __b = await actionBlock(); if (__b) return { status: 'error', code: __b } as const;
   try {
-    await rejectJoinRequest({ actorUserId: u, serverId: await getActiveServerId(), requestUserId });
+    const r = await rejectJoinRequest({
+      actorUserId: u,
+      serverId: await getActiveServerId(),
+      requestUserId,
+    });
+    after(async () => {
+      await notifyJoinDecision({
+        userId: requestUserId,
+        guildId: r.guildId,
+        approved: false,
+      }).catch(() => undefined);
+    });
     revalidatePath('/guild');
     return { status: 'success' } as const;
   } catch (e) {
@@ -531,6 +566,30 @@ export async function getZoneBattleAction(zoneId: number) {
     return { status: 'success', battleId: id != null ? id.toString() : null } as const;
   } catch (e) {
     return fail(e, 'zoneBattle');
+  }
+}
+
+/**
+ * 부길드장 권한 설정 — **길드장 전속**(0142). 대상은 같은 길드의 부길드장.
+ * 비트마스크는 서버에서 sanitize하므로 클라가 알 수 없는 비트를 보내도 버려진다.
+ */
+export async function setVicePermissionsAction(targetUserId: string, permissions: number) {
+  const u = await getSessionUserId();
+  if (!u) return unauth;
+  if (await rateLimited(u, 'guild')) return { status: 'error', code: 'RATE_LIMITED' } as const;
+  const __b = await actionBlock(); if (__b) return { status: 'error', code: __b } as const;
+  try {
+    await setVicePermissions({
+      leaderUserId: u,
+      serverId: await getActiveServerId(),
+      targetUserId,
+      permissions,
+    });
+    revalidatePath('/guild/settings');
+    revalidatePath('/guild');
+    return { status: 'success' } as const;
+  } catch (e) {
+    return fail(e, 'setVicePermissions');
   }
 }
 

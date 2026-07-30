@@ -33,6 +33,7 @@ export type GuildErrorCode =
   | 'BATTLE_IN_PROGRESS' // 점령전 진행 중(KST 23:00~24:00) — 배치/집행관 변경 잠금
   | 'TARGET_ALREADY_EXECUTOR' // 대상이 이미 다른 구역 집행관
   | 'NOT_OFFICER' // 길드장/부길드장 아님(집행관 지정·가입 승인)
+  | 'NO_PERMISSION' // 길드 소속이지만 그 권한이 없음(0142 — 부길드장 권한 개인별)
   | 'NO_JOIN_REQUEST' // 승인/거절 대상 가입 신청 없음
   | 'VICE_LIMIT' // 부길드장 임명 상한(5명) 초과
   | 'EMBLEM_INVALID' // 문양 선택 위반(모양/톤/메인 키워드 필수 + 서브 선택 = 키워드 1~2)

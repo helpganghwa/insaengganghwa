@@ -13,6 +13,8 @@ import { pixellabKeyByIdx, pickPixellabKeyIdx } from '@/lib/game/profile/pixella
 
 import { GUILD_EMBLEM_REROLL_COST_DIAMOND, MAX_GUILD_EMBLEMS } from './balance';
 import { GuildError } from './errors';
+import { getGuildPermState } from './perm-guard';
+import { hasGuildPerm } from './permissions';
 import {
   buildEmblemPrompt,
   mainColor,
@@ -330,13 +332,9 @@ export async function getGuildEmblems(
 
 /** 길드장 + 길드 id 확인(공통 가드). */
 async function requireLeaderGuild(userId: string, serverId: number): Promise<bigint> {
-  const [m] = await db
-    .select({ guildId: guildMembers.guildId, role: guildMembers.role })
-    .from(guildMembers)
-    .where(and(eq(guildMembers.userId, userId), eq(guildMembers.serverId, serverId)))
-    .limit(1);
+  const m = await getGuildPermState(userId, serverId);
   if (!m) throw new GuildError('NOT_IN_GUILD');
-  if (m.role !== 'leader') throw new GuildError('NOT_LEADER');
+  if (!hasGuildPerm(m.role, m.permissions, 'emblem')) throw new GuildError('NO_PERMISSION');
   return m.guildId;
 }
 

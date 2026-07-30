@@ -40,7 +40,20 @@ export type PushPayload = {
   body: string;
   url?: string;
   tag?: string;
-  category: 'enhance' | 'raid' | 'supply' | 'profile' | 'referral' | 'melee' | 'chat_mention' | 'admin';
+  /**
+   * guild = 길드 운영 알림(가입 신청 접수 · 승인/거절, 2026-07-30). 토글 컬럼 없음 = 상시 발송 —
+   * 신청을 처리할 수 있는 사람에게만 보내고 건수도 적어 소음이 되지 않는다.
+   */
+  category:
+    | 'enhance'
+    | 'raid'
+    | 'supply'
+    | 'profile'
+    | 'referral'
+    | 'melee'
+    | 'chat_mention'
+    | 'guild'
+    | 'admin';
   /**
    * 같은 tag 알림 교체 시 재알림(소리/진동) 여부. 기본 true — 미지정 시 SW가
    * 무음 교체해 "알림이 안 온다"고 느껴지던 문제 방지(2026-06-01). tag가 항상
@@ -52,7 +65,7 @@ export type PushPayload = {
 export type SendResult = { ok: number; gone: number; failed: number };
 
 /**
- * 카테고리별 토글 컬럼 매핑. supply(일일 보급)·melee(대난투)는 상시 발송이라 미포함 —
+ * 카테고리별 토글 컬럼 매핑. supply(일일 보급)·melee(대난투)·guild(길드 운영)는 상시 발송이라 미포함 —
  * 토글 컬럼이 없는 카테고리는 게이팅 없이 항상 발송(설정에서도 제외, 2026-06-04).
  */
 const TOGGLE_COLUMN: Partial<Record<PushPayload['category'], PgColumn>> = {

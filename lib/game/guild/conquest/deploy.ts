@@ -7,6 +7,7 @@ import { guildMembers, zones, guildBattleDeployments, zoneAdjacency } from '@/li
 
 import type { ConquestRole } from '../balance';
 import { GuildError } from '../errors';
+import { assertGuildPerm } from '../perm-guard';
 import { assertResident, setResidenceTx } from '../residence';
 import { nextBattleKstDay, isConquestLocked } from './schedule';
 
@@ -165,18 +166,12 @@ async function assertLeader(
   userId: string,
   serverId: number,
 ): Promise<bigint> {
-  const [m] = await tx
-    .select({ guildId: guildMembers.guildId, role: guildMembers.role })
-    .from(guildMembers)
-    .where(and(eq(guildMembers.userId, userId), eq(guildMembers.serverId, serverId)))
-    .limit(1);
-  if (!m) throw new GuildError('NOT_IN_GUILD');
-  if (m.role !== 'leader') throw new GuildError('NOT_LEADER');
-  return m.guildId;
+  const { guildId } = await assertGuildPerm(tx, userId, serverId, 'deploy');
+  return guildId;
 }
 
 /**
- * 길드원 배치(길드장 전용) — GUILD §5.8⑥. 길드장이 길드원 1명을 공격/수비 구역에 배치.
+ * 길드원 배치 — GUILD §5.8⑥. deploy 권한자가 길드원 1명을 공격/수비 구역에 배치.
  *  - 대상은 같은 길드원이면서 **그 구역 거주자**여야 한다. 대상이 집행관이면 그 자동 방어는 배치와 함께 자동 해제(자리 비움).
  *  - 수비=자기 길드 소유 구역, 공격=비소유 구역. 1인 1배치(upsert), 23:00 잠금(날짜 롤).
  */

@@ -1,6 +1,6 @@
 import 'server-only';
 
-import { and, desc, eq, ilike, inArray, isNotNull, isNull, or, sql } from 'drizzle-orm';
+import { and, desc, eq, gt, ilike, inArray, isNotNull, isNull, or, sql } from 'drizzle-orm';
 
 import { db } from '@/lib/db/client';
 import { withTimeout } from '@/lib/db/with-timeout';
@@ -21,7 +21,7 @@ import { combatPowerFromOwned } from '@/lib/game/equipment/combat-power';
 
 import { kstDateString } from '@/lib/kst';
 
-import { guildCapacity, GUILD_DONATION_TIERS } from './balance';
+import { guildCapacity, GUILD_DONATION_TIERS, GUILD_JOIN_REQUEST_TTL_DAYS } from './balance';
 import type { Region } from './region-meta';
 import { nextBattleKstDay, isConquestLocked } from './conquest/schedule';
 
@@ -63,7 +63,16 @@ export async function getGuild(guildId: bigint) {
   return { ...g, memberCount: cnt?.n ?? 0, capacity: guildCapacity(g.level) };
 }
 
-/** 길드 가입 신청 목록(승인제) — 임원 UI용. 신청자 닉·신청시각. */
+/** 가입 신청 만료 기준 시각 — 이보다 오래된 신청은 없는 것으로 본다. */
+function joinRequestCutoff(): Date {
+  return new Date(Date.now() - GUILD_JOIN_REQUEST_TTL_DAYS * 24 * 60 * 60 * 1000);
+}
+
+/**
+ * 길드 가입 신청 목록(승인제) — 임원 UI용. 신청자 닉·신청시각.
+ * GUILD_JOIN_REQUEST_TTL_DAYS(7일)이 지난 신청은 제외한다 — 방치된 신청이 영구 대기하며
+ * 목록을 더럽히지 않게. 만료 행 삭제는 크론이 맡고, 조회는 시각 기준으로 즉시 정확하다.
+ */
 export async function getJoinRequests(guildId: bigint) {
   return db
     .select({
@@ -79,16 +88,27 @@ export async function getJoinRequests(guildId: bigint) {
         eq(characters.serverId, guildJoinRequests.serverId),
       ),
     )
-    .where(eq(guildJoinRequests.guildId, guildId))
+    .where(
+      and(
+        eq(guildJoinRequests.guildId, guildId),
+        gt(guildJoinRequests.createdAt, joinRequestCutoff()),
+      ),
+    )
     .orderBy(guildJoinRequests.createdAt);
 }
 
-/** 내 가입 신청(있으면 신청 길드 id) — 미가입 첫화면 '신청됨' 표시. */
+/** 내 가입 신청(있으면 신청 길드 id) — 미가입 첫화면 '신청됨' 표시. 만료분은 없는 것으로 본다. */
 export async function getMyJoinRequest(userId: string, serverId: number): Promise<bigint | null> {
   const [r] = await db
     .select({ guildId: guildJoinRequests.guildId })
     .from(guildJoinRequests)
-    .where(and(eq(guildJoinRequests.userId, userId), eq(guildJoinRequests.serverId, serverId)))
+    .where(
+      and(
+        eq(guildJoinRequests.userId, userId),
+        eq(guildJoinRequests.serverId, serverId),
+        gt(guildJoinRequests.createdAt, joinRequestCutoff()),
+      ),
+    )
     .limit(1);
   return r?.guildId ?? null;
 }

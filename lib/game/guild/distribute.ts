@@ -10,6 +10,7 @@ import { characters } from '@/lib/db/schema/server';
 import type { GuildTaxDistribution } from './balance';
 import { logGuildAudit } from './audit';
 import { GuildError } from './errors';
+import { assertGuildPerm } from './perm-guard';
 
 type Tx = Parameters<Parameters<typeof db.transaction>[0]>[0];
 
@@ -60,13 +61,7 @@ export function distributeGuildTax(input: {
   targetUserId?: string;
 }): Promise<{ total: bigint; perMember: bigint | null }> {
   return db.transaction(async (tx) => {
-    const [leader] = await tx
-      .select({ guildId: guildMembers.guildId, role: guildMembers.role })
-      .from(guildMembers)
-      .where(and(eq(guildMembers.userId, input.leaderUserId), eq(guildMembers.serverId, input.serverId)))
-      .for('update');
-    if (!leader) throw new GuildError('NOT_IN_GUILD');
-    if (leader.role !== 'leader') throw new GuildError('NOT_LEADER');
+    const leader = await assertGuildPerm(tx, input.leaderUserId, input.serverId, 'taxDistribute');
 
     const gid = leader.guildId;
     const [g] = await tx
@@ -164,13 +159,7 @@ export function distributeGuildTaxManual(input: {
   amounts: { userId: string; amount: number }[];
 }): Promise<{ total: bigint }> {
   return db.transaction(async (tx) => {
-    const [leader] = await tx
-      .select({ guildId: guildMembers.guildId, role: guildMembers.role })
-      .from(guildMembers)
-      .where(and(eq(guildMembers.userId, input.leaderUserId), eq(guildMembers.serverId, input.serverId)))
-      .for('update');
-    if (!leader) throw new GuildError('NOT_IN_GUILD');
-    if (leader.role !== 'leader') throw new GuildError('NOT_LEADER');
+    const leader = await assertGuildPerm(tx, input.leaderUserId, input.serverId, 'taxDistribute');
     const gid = leader.guildId;
 
     // 거대 배열 루프 비용 방어(감사 LOW) — 정원보다 큰 입력은 잘라냄. 양수·정수만, 같은 유저 합산.

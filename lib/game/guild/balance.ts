@@ -54,9 +54,12 @@ export const GUILD_MAX_VICE = 5;
 /** 길드장 미접속 자동 위임(일). 경고 알림은 WARN_DAYS차. */
 export const GUILD_LEADER_HANDOVER_DAYS = 7;
 export const GUILD_LEADER_HANDOVER_WARN_DAYS = 5;
-/** 탈퇴 후 재가입 잠금(시간). ⚠ CBT 동안 1시간(2026-07-15 — 길드 이동 실험 장려),
- *  정식 오픈 시 24로 복원(CUTOVER-LIVE.md 체크리스트). */
-export const GUILD_REJOIN_LOCK_HOURS = 1;
+/** 탈퇴 후 재가입 잠금(시간). CBT 동안 1시간으로 완화했다가 2026-07-30 원래 값 24로 복원
+ *  (길드 안정성 — 점령전 직전 이적으로 판을 흔드는 것을 막는다). */
+export const GUILD_REJOIN_LOCK_HOURS = 24;
+
+/** 가입 신청 유효기간(일) — 지나면 목록에서 사라진다. 방치된 신청이 영구 대기하지 않게. */
+export const GUILD_JOIN_REQUEST_TTL_DAYS = 7;
 
 // ── 점령전 (§5.4) ──
 /** 일일 전투 시각(KST 시). 23:00 배치 잠금·정산 → 자정(00:00) 연대기(전투창 23:00~24:00). */

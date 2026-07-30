@@ -35,6 +35,7 @@ const MAP: Record<string, string> = {
   BATTLE_IN_PROGRESS: '점령전 진행 중에는 배치를 변경할 수 없습니다. 점령전 종료 후 한 시간 뒤부터 변경 가능합니다.',
   TARGET_ALREADY_EXECUTOR: '이미 다른 구역의 집행관입니다.',
   NOT_OFFICER: '길드장·부길드장만 할 수 있습니다.',
+  NO_PERMISSION: '이 작업에 대한 권한이 없습니다. 길드장에게 문의해 주세요.',
   FORBIDDEN: '권한이 없습니다.',
   NO_JOIN_REQUEST: '처리할 가입 신청이 없습니다.',
   VICE_LIMIT: '부길드장은 최대 5명까지 임명할 수 있습니다.',

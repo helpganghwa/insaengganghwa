@@ -6,11 +6,15 @@ import { db } from '@/lib/db/client';
 import { guildMembers, zones, guildBattleDeployments } from '@/lib/db/schema/guild';
 
 import { GuildError } from '../errors';
+import { hasGuildPerm } from '../permissions';
 import { assertResident } from '../residence';
 import { nextBattleKstDay, isConquestLocked } from './schedule';
 
-/** actor가 zone 소유 길드의 **길드장**인지 검증하고 소유 길드 id 반환.
- *  집행관 지정/해제는 길드장 전속(2026-07-10 권한 조정 — 세금 수금권 부여라 자산급 액션). */
+/**
+ * actor가 zone 소유 길드에서 executor 권한을 갖는지 검증하고 소유 길드 id 반환.
+ * 집행관 지정은 세금 수금권을 함께 주는 자산급 액션이라 2026-07-10에 길드장 전속으로 올렸으나,
+ * 개인별 권한(0142)으로 되돌린다 — 기본은 꺼져 있고 길드장이 켜 줘야 한다(문의 #106·#107).
+ */
 export async function assertLeaderOfZoneOwner(
   tx: Parameters<Parameters<typeof db.transaction>[0]>[0],
   actorUserId: string,
@@ -28,17 +32,22 @@ export async function assertLeaderOfZoneOwner(
   if (z.ownerGuildId == null) throw new GuildError('FORBIDDEN');
 
   const [m] = await tx
-    .select({ guildId: guildMembers.guildId, role: guildMembers.role })
+    .select({
+      guildId: guildMembers.guildId,
+      role: guildMembers.role,
+      permissions: guildMembers.permissions,
+    })
     .from(guildMembers)
     .where(and(eq(guildMembers.userId, actorUserId), eq(guildMembers.guildId, z.ownerGuildId)))
     .limit(1);
   if (!m) throw new GuildError('FORBIDDEN'); // 자기 길드 소유 구역 아님
-  if (m.role !== 'leader') throw new GuildError('NOT_LEADER');
+  // 멤버십을 (user, guild)로 앵커했으므로 권한 가드를 다시 조회하지 않고 여기서 직접 판정한다.
+  if (!hasGuildPerm(m.role, m.permissions, 'executor')) throw new GuildError('NO_PERMISSION');
   return { guildId: m.guildId, serverId: z.serverId, zoneName: z.name };
 }
 
 /**
- * 집행관 지정 — GUILD §5.8⑦. 소유 길드 길드장이 길드원 1명을 그 구역 집행관으로.
+ * 집행관 지정 — GUILD §5.8⑦. executor 권한자가 길드원 1명을 그 구역 집행관으로.
  *  - 대상은 같은 길드원 + **그 구역 거주자**여야 하고, 이미 다른 구역 집행관이면 거부(1유저 1집행관).
  *  - 집행관은 자동 방어로 슬롯 점유 → 대상의 다음 전투 배치는 제거.
  */
