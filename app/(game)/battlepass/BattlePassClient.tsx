@@ -544,7 +544,7 @@ export function BattlePassClient({
         >
           <ModalLayout
             title="본인인증이 필요합니다"
-            subtitle={<span className="font-bold text-amber-600 dark:text-amber-400">계정당 최초 1회만</span>}
+            subtitle={<span className="font-bold text-amber-600 dark:text-amber-400">계정당 최초 1회</span>}
             footer={
               <>
                 <ModalButton tone="neutral" onClick={() => setIdentityPrompt(false)} disabled={identityBusy}>
@@ -557,8 +557,7 @@ export function BattlePassClient({
             }
           >
             <p className="text-[13px] leading-relaxed text-zinc-500 dark:text-zinc-400">
-              청소년 보호를 위해 첫 결제 전 한 번만 본인인증이 필요합니다. 한 번 인증하면 이후
-              결제에서는 다시 요구하지 않아요.
+              청소년 보호를 위해 최초 결제 시 본인인증이 필요합니다.
             </p>
             {identityErr ? (
               <p className="mt-2 text-center text-[12px] text-red-500">{identityErr}</p>
