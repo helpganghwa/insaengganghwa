@@ -117,7 +117,8 @@ export function GuildSettings({
       label: '부길드장 권한',
       desc: `${view.viceCount} / ${GUILD_MAX_VICE}`,
       tint: '#101f2e',
-      show: isLeader || myRole === 'vice',
+      // 설정은 길드장 전속이라 부길드장에게는 아예 보이지 않는다(2026-07-30 사용자 결정).
+      show: isLeader,
     },
     {
       key: 'info',
@@ -158,7 +159,7 @@ export function GuildSettings({
     });
 
   return (
-    <div className="space-y-3 px-4 py-4">
+    <div className="space-y-3 px-4 pb-4 pt-3">
       <GuildPageHeader
         fallback="/guild"
         kicker={view.name}

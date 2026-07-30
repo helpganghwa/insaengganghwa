@@ -711,6 +711,21 @@ export function DeployBoard({
             </button>
           );
         })}
+        {/* 배치 현황 — 지도 하단 중앙(좌하단 범례와 우하단 탭 사이가 비어 있다, 2026-07-30).
+            시트를 차지하지 않으면서 우리 전력 분포를 항상 보여준다. */}
+        <button
+          type="button"
+          onClick={() => setStatusOpen(true)}
+          className="absolute bottom-2 left-1/2 z-20 -translate-x-1/2 whitespace-nowrap rounded-full bg-black/60 px-2.5 py-1 text-[9.5px] font-bold tabular-nums text-white shadow-lg backdrop-blur-sm active:opacity-70"
+        >
+          <span className="text-red-400">{attackCount}</span>
+          <span className="mx-0.5 text-white/40">·</span>
+          <span className="text-sky-400">{defendCount}</span>
+          <span className="mx-0.5 text-white/40">·</span>
+          <span className={idleCount > 0 ? 'text-amber-300' : 'text-white/50'}>{idleCount}</span>
+          <span className="ml-1 font-semibold text-white/70">배치 현황</span>
+        </button>
+
         {/* 범례(좌하단) */}
         <div className="pointer-events-none absolute bottom-2 left-2 z-20 flex flex-col gap-1 rounded-lg bg-black/55 px-2 py-1.5 text-[9px] font-semibold text-white backdrop-blur-sm">
           <span className="inline-flex items-center gap-1">
@@ -730,28 +745,8 @@ export function DeployBoard({
           종전 좌우 2단은 칸당 170px라 닉네임·전투력·버튼이 눌려 있었다. 길드원 전체
           배치 현황은 시트를 좁히지 않도록 팝업으로 뺀다(2026-07-30 사용자 결정). */}
       <div className="flex-1 p-3">
-        {/* 요약 띠 — 시트 좌우 여백을 넘어 화면을 꽉 채우고, 안쪽 패딩만 콘텐츠와 맞춘다.
-            카드보다 띠가 "구역 하나"를 다루는 아래 내용과 층위가 달라 보인다(2026-07-30). */}
-        <button
-          type="button"
-          onClick={() => setStatusOpen(true)}
-          className="-mx-3 -mt-3 flex w-[calc(100%+1.5rem)] items-center gap-2 border-b border-zinc-200 bg-zinc-50 px-3 py-2 text-left active:opacity-70 dark:border-zinc-800 dark:bg-zinc-900/50"
-        >
-          <span className="flex-1 text-[11px] tabular-nums">
-            <span className="font-semibold text-red-500">공격 {attackCount}</span>
-            <span className="mx-1.5 text-zinc-300 dark:text-zinc-700">·</span>
-            <span className="font-semibold text-sky-500">수비 {defendCount}</span>
-            <span className="mx-1.5 text-zinc-300 dark:text-zinc-700">·</span>
-            <span className={idleCount > 0 ? 'font-semibold text-amber-600 dark:text-amber-400' : 'text-zinc-400'}>
-              미배치 {idleCount}
-            </span>
-          </span>
-          <span className="shrink-0 text-[11px] font-bold text-zinc-500">배치 현황</span>
-          <span className="shrink-0 text-zinc-300 dark:text-zinc-600">›</span>
-        </button>
-
         {selected ? (
-          <section className="mt-2">
+          <section>
             {/* 구역 한 줄 — 이름·역할·인원·전투력을 한 줄에 모은다(종전 3줄). */}
             <div className="flex items-center gap-1.5">
               <span

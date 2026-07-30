@@ -116,7 +116,7 @@ export function JoinRequestBoard({
   };
 
   return (
-    <div className="px-4 py-4">
+    <div className="px-4 pb-4 pt-3">
       <GuildPageHeader
         fallback="/guild/settings"
         kicker={policy === 'approval' ? `${guildName} · 대기 ${rows.length}건` : `${guildName} · 자유 가입`}

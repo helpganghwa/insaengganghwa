@@ -31,7 +31,7 @@ export default async function DistributePage() {
   if (!guild) redirect('/guild');
 
   return (
-    <div className="px-4 py-4">
+    <div className="px-4 pb-4 pt-3">
       <GuildPageHeader fallback="/guild/settings" kicker={guild.name} title="세금 분배" />
       <DistributeBoard
         myUserId={userId}

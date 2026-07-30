@@ -66,7 +66,7 @@ export function GuildBrowse({
   };
 
   return (
-    <div className="px-4 py-4 pb-28">
+    <div className="px-4 pb-4 pt-3 pb-28">
       {/* GNB 루트라 뒤로가기가 없다 — 다른 길드 화면(GuildPageHeader)과 같은 자리·크기만 맞춘다. */}
       <div className="px-0.5">
         <p className="text-[10px] font-semibold tracking-wide text-zinc-400">

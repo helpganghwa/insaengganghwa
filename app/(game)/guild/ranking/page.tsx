@@ -63,7 +63,7 @@ export default async function GuildRankingPage() {
   } satisfies Record<RankSort, GuildRow[]>;
 
   return (
-    <div className="px-4 py-4">
+    <div className="px-4 pb-4 pt-3">
       <GuildPageHeader
         fallback="/guild"
         kicker={`전체 ${board.total}개 길드`}

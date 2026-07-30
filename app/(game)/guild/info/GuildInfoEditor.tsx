@@ -83,7 +83,7 @@ export function GuildInfoEditor({
   };
 
   return (
-    <div className="px-4 py-4 pb-32">
+    <div className="px-4 pb-4 pt-3">
       <GuildPageHeader
         fallback="/guild/settings"
         kicker={guildName}
@@ -151,37 +151,31 @@ export function GuildInfoEditor({
         {!can.openchat && <NoPerm what="오픈채팅 설정" />}
       </section>
 
-      {/* 하단 고정 저장바 — 스크롤해도 붙어 있어 미저장 상태를 놓치지 않는다.
-          ⚠ 하단 GNB가 `sticky bottom-0 z-30`이라 같은 z·같은 bottom이면 가려진다(2026-07-30 제보).
-          GNB 높이(h-14=3.5rem) + 안전영역만큼 띄우고 z를 한 단계 올린다. */}
+      {/* 저장바 — 페이지 흐름의 맨 아래(2026-07-30). 화면에 고정하면 채팅 미니바·GNB와
+          자리를 다투고 결국 무언가를 가린다. 내용이 짧아 스크롤 없이 닿는다. */}
       {dirtyFields.length > 0 && (
-        <div
-          className="fixed inset-x-0 z-40 border-t border-amber-500/40 bg-white/95 px-4 py-2.5 backdrop-blur dark:bg-black/90"
-          style={{ bottom: 'calc(3.5rem + env(safe-area-inset-bottom))' }}
-        >
-          <div className="mx-auto flex max-w-[430px] items-center justify-between gap-2">
-            <span className="text-[12px] font-bold text-amber-600 dark:text-amber-400">
-              변경한 항목 {dirtyFields.length}개
-            </span>
-            <span className="flex gap-1.5">
-              <button
-                type="button"
-                onClick={revert}
-                disabled={pending}
-                className="rounded-lg px-3 py-1.5 text-[12px] font-semibold text-zinc-500 disabled:opacity-50"
-              >
-                되돌리기
-              </button>
-              <button
-                type="button"
-                onClick={save}
-                disabled={pending}
-                className="rounded-lg bg-amber-600 px-4 py-1.5 text-[12px] font-bold text-white disabled:opacity-50"
-              >
-                저장
-              </button>
-            </span>
-          </div>
+        <div className="mt-3 flex items-center justify-between gap-2 rounded-xl border border-amber-500/40 bg-amber-50/60 px-3 py-2.5 dark:bg-amber-500/[0.07]">
+          <span className="text-[12px] font-bold text-amber-600 dark:text-amber-400">
+            변경한 항목 {dirtyFields.length}개
+          </span>
+          <span className="flex gap-1.5">
+            <button
+              type="button"
+              onClick={revert}
+              disabled={pending}
+              className="rounded-lg px-3 py-1.5 text-[12px] font-semibold text-zinc-500 disabled:opacity-50"
+            >
+              되돌리기
+            </button>
+            <button
+              type="button"
+              onClick={save}
+              disabled={pending}
+              className="rounded-lg bg-amber-600 px-4 py-1.5 text-[12px] font-bold text-white disabled:opacity-50"
+            >
+              저장
+            </button>
+          </span>
         </div>
       )}
     </div>
