@@ -158,13 +158,5 @@ export function setVicePermissions(input: {
       .where(
         and(eq(guildMembers.userId, input.targetUserId), eq(guildMembers.serverId, input.serverId)),
       );
-    await logGuildAudit(tx, {
-      serverId: input.serverId,
-      guildId: leader.guildId,
-      actorUserId: input.leaderUserId,
-      action: 'set_perm',
-      targetUserId: input.targetUserId,
-      detail: { before: target.permissions, after: next },
-    });
   });
 }

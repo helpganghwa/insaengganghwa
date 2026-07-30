@@ -28,7 +28,6 @@ function toRow(g: Awaited<ReturnType<typeof getGuildRankingBoard>>['myRow'] & ob
     hasOpenchat: g.hasOpenchat,
     zones: g.zones,
     leaderNickname: g.leaderNickname,
-    leaderLastSeenAt: g.leaderLastSeenAt,
   };
 }
 

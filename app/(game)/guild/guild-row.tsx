@@ -23,8 +23,6 @@ export type GuildRow = {
   zones: { name: string; region: Region }[];
   /** 길드장 닉네임 — 카드 셋째 줄·팝업 헤더 노출(가입 의사결정 정보, 2026-07-13). */
   leaderNickname: string | null;
-  /** 길드장 마지막 접속(ISO) — 길드가 살아 있는지의 신호(2026-07-30). */
-  leaderLastSeenAt: string | null;
 };
 
 /** 컴팩트 수치(예: 53,000 → 5.3만). */

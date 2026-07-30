@@ -346,18 +346,6 @@ const leaderNicknameSql = sql<string | null>`(
 )`;
 
 /**
- * 길드장 마지막 접속 — 목록 카드의 활동 신호(2026-07-30 사용자 결정).
- * 길드 단위 '오늘 활동 N건' 대신 **길드장이 살아 있는지**를 보여준다. 가입을 고민하는
- * 사람에게는 길드장이 승인·운영을 할 사람인지가 실질 판단 기준이다.
- */
-const leaderLastSeenSql = sql<Date | null>`(
-  select c.last_seen_at from guild_members gm
-  join characters c on c.user_id = gm.user_id and c.server_id = gm.server_id
-  where gm.guild_id = ${guilds.id} and gm.role = 'leader'
-  limit 1
-)`;
-
-/**
  * 랭킹 base 계산 — 서버 전체 길드 + 멤버 stats(전투력·인원) + 점령 zones를 한 번에 산출(정렬 전).
  * 정렬 comparator는 이 결과에 in-memory로 적용하므로, 여러 지표 정렬을 원해도 DB 비용은 1회.
  */
@@ -374,7 +362,6 @@ async function buildGuildRankingBase(serverId: number) {
       // URL 원문은 비길드원에 미전송(보안) — 배지용 boolean만. 링크는 GuildHome(길드원)에서만.
       hasOpenchat: sql<boolean>`(${guilds.openchatUrl} is not null)`,
       leaderNickname: leaderNicknameSql,
-      leaderLastSeenAt: leaderLastSeenSql,
     })
     .from(guilds)
     .where(eq(guilds.serverId, serverId));
@@ -387,8 +374,6 @@ async function buildGuildRankingBase(serverId: number) {
     const s = stats.get(r.id.toString());
     return {
       ...r,
-      // 클라 컴포넌트로 넘어가므로 Date를 여기서 ISO 문자열로 고정한다(직렬화 경계 일원화).
-      leaderLastSeenAt: r.leaderLastSeenAt ? r.leaderLastSeenAt.toISOString() : null,
       memberCount: s?.memberCount ?? 0,
       combat: s?.combat ?? 0,
       zones: zoneChips.get(r.id.toString()) ?? [],
@@ -451,7 +436,6 @@ export async function searchGuilds(serverId: number, q: string) {
     // URL 원문은 비길드원에 미전송(보안) — 배지용 boolean만.
     hasOpenchat: sql<boolean>`(${guilds.openchatUrl} is not null)`,
     leaderNickname: leaderNicknameSql,
-    leaderLastSeenAt: leaderLastSeenSql,
   } as const;
   const rows = term
     ? await db
@@ -474,8 +458,6 @@ export async function searchGuilds(serverId: number, q: string) {
     const s = stats.get(r.id.toString());
     return {
       ...r,
-      // 클라 컴포넌트로 넘어가므로 Date를 여기서 ISO 문자열로 고정한다(직렬화 경계 일원화).
-      leaderLastSeenAt: r.leaderLastSeenAt ? r.leaderLastSeenAt.toISOString() : null,
       memberCount: s?.memberCount ?? 0,
       combat: s?.combat ?? 0,
       zones: zoneChips.get(r.id.toString()) ?? [],

@@ -2,7 +2,6 @@
 
 import { ModalShell } from '@/components/ModalShell';
 import { ModalLayout, ModalButton } from '@/components/ModalLayout';
-import { LastSeen } from '@/components/LastSeen';
 import { REGION_META } from '@/lib/game/guild/region-meta';
 import { guildCapacity } from '@/lib/game/guild/balance';
 
@@ -60,18 +59,13 @@ export function GuildInfoModal({ guild, onClose }: { guild: GuildRow; onClose: (
           </ModalButton>
         }
       >
-        {/* 길드장 — 가입 판단의 핵심(승인·운영을 할 사람이 살아 있는가). */}
+        {/* 길드장 — 가입 판단의 핵심(승인·운영을 할 사람이 누구인가). */}
         {guild.leaderNickname ? (
-          <div className="mb-3 flex items-center justify-between gap-2 rounded-lg bg-zinc-50 px-2.5 py-2 dark:bg-zinc-900">
-            <span className="min-w-0 truncate text-[12px]">
-              <span className="text-zinc-400">길드장</span>{' '}
-              <span className="font-semibold text-zinc-700 dark:text-zinc-200">
-                {guild.leaderNickname}
-              </span>
+          <div className="mb-3 truncate rounded-lg bg-zinc-50 px-2.5 py-2 text-[12px] dark:bg-zinc-900">
+            <span className="text-zinc-400">길드장</span>{' '}
+            <span className="font-semibold text-zinc-700 dark:text-zinc-200">
+              {guild.leaderNickname}
             </span>
-            {guild.leaderLastSeenAt ? (
-              <LastSeen at={guild.leaderLastSeenAt} plain className="shrink-0 text-[11px]" />
-            ) : null}
           </div>
         ) : null}
 

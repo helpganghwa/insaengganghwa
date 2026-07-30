@@ -2,7 +2,6 @@
 
 import { useState } from 'react';
 
-import { LastSeen } from '@/components/LastSeen';
 import { guildCapacity } from '@/lib/game/guild/balance';
 
 import { GuildInfoModal } from './GuildInfoModal';
@@ -23,8 +22,8 @@ export type { GuildRow };
  * B-1 확정안(2026-07-30) — 가입을 **누르기 전에** 판단이 서야 한다:
  *  - 정원을 `N/cap명`으로 항상 보여주고, 찼으면 가입 버튼을 잠근다.
  *    종전엔 정원이 안 보여 신청 후 GUILD_FULL로 거절당했다.
- *  - 셋째 줄은 길드장 + 마지막 접속. 길드 단위 '오늘 활동 N건'보다,
- *    승인·운영을 할 사람이 살아 있는지가 실질 판단 기준이다(사용자 결정).
+ *  - 셋째 줄은 길드장. 길드 단위 '오늘 활동 N건'보다 승인·운영을 할 사람이
+ *    누구인지가 실질 판단 기준이다(사용자 결정).
  */
 export function GuildList({
   guilds,
@@ -80,18 +79,11 @@ export function GuildList({
                     {full ? ' · 정원 참' : g.zones.length > 0 ? ` · 점령 ${g.zones.length}` : ''}
                   </div>
                   {g.leaderNickname ? (
-                    <div className="flex items-baseline gap-1 text-[11px] text-zinc-500">
-                      <span className="text-zinc-400">길드장</span>
-                      <span className="truncate font-medium text-zinc-600 dark:text-zinc-300">
+                    <div className="truncate text-[11px] text-zinc-500">
+                      <span className="text-zinc-400">길드장</span>{' '}
+                      <span className="font-medium text-zinc-600 dark:text-zinc-300">
                         {g.leaderNickname}
                       </span>
-                      {g.leaderLastSeenAt ? (
-                        <LastSeen
-                          at={g.leaderLastSeenAt}
-                          plain
-                          className="shrink-0 text-[10px] text-zinc-400"
-                        />
-                      ) : null}
                     </div>
                   ) : null}
                 </div>
