@@ -28,8 +28,9 @@ export const maxDuration = 60;
 
 const ORPHAN_PENDING_LIMIT = 50;
 const REFUND_SCAN_LIMIT = 50;
-// 이탈 pending 종결 기준 — PG 결제창 유효기간을 넉넉히 덮는 24h(가상계좌 입금 지연 흡수).
-const PENDING_EXPIRE_MS = 24 * 60 * 60 * 1000;
+// 이탈 pending 종결 기준 — 카드 단독 구성(가상계좌 미사용)이라 결제창 세션은 길어야 수십 분.
+// 6h면 충분히 보수적이면서 어드민 결제내역에 죽은 '대기'가 하루 종일 쌓이지 않는다(2026-07-31).
+const PENDING_EXPIRE_MS = 6 * 60 * 60 * 1000;
 
 export async function GET(req: Request) {
   if (!isCronAuthorized(req)) return new Response('forbidden', { status: 403 });

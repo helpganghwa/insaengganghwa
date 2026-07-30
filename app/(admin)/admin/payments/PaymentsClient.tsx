@@ -32,7 +32,13 @@ export type OrderRow = {
 };
 
 const won = (n: number) => `₩${n.toLocaleString('ko-KR')}`;
-const fmt = (iso: string) => iso.slice(0, 16).replace('T', ' ');
+// KST 'YYYY-MM-DD HH:mm' — ISO(UTC)를 그대로 자르면 9시간 어긋난다(2026-07-31 제보).
+// 수동 오프셋 계산이라 서버/클라 동일(하이드레이션 안전, GuildLogFeed와 같은 패턴).
+const fmt = (iso: string) => {
+  const d = new Date(Date.parse(iso) + 9 * 3600 * 1000);
+  const p = (n: number) => String(n).padStart(2, '0');
+  return `${d.getUTCFullYear()}-${p(d.getUTCMonth() + 1)}-${p(d.getUTCDate())} ${p(d.getUTCHours())}:${p(d.getUTCMinutes())}`;
+};
 
 const STATUS_BADGE: Record<OrderRow['status'], { label: string; cls: string }> = {
   paid: { label: '결제완료', cls: 'bg-emerald-900/50 text-emerald-300 border-emerald-700/50' },
