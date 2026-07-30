@@ -28,8 +28,10 @@ export async function runCheckout(productId: string, redirectUrl: string): Promi
     totalAmount: amountKrw,
     currency: 'CURRENCY_KRW',
     payMethod: 'CARD',
-    // 이니시스 V2 일반결제는 구매자 이름·이메일 필수(이메일 누락 시 결제창 BadRequest, 2026-07-31).
-    customer: { fullName: customerName, email: customerEmail },
+    // 이니시스 V2 일반결제는 구매자 이름·이메일·휴대폰이 전부 필수(누락 시 결제창 BadRequest,
+    // 2026-07-31 카드사 심사 테스트에서 순차 확인). 유저 전화번호는 수집하지 않으므로(본인인증
+    // 전) 사업자 연락처를 고정 전달 — 결제 진행에는 지장 없고, 본인인증 도입 후 재검토.
+    customer: { fullName: customerName, email: customerEmail, phoneNumber: '07045716987' },
     redirectUrl, // 모바일: 결제 후 이 URL로 복귀(complete 페이지가 검증). PC 팝업은 미사용.
   });
 
