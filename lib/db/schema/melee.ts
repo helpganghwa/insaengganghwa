@@ -123,6 +123,11 @@ export const meleeParticipants = pgTable(
     /** 그 시점 소속 길드 스냅샷(0138) — 전 참가자분. finale.roster는 윈도 등장자만이라 별도 저장. */
     guildName: text('guild_name'),
     guildEmblemUrl: text('guild_emblem_url'),
+    /** 그 시점 닉네임 스냅샷(0140). 개명해도 과거 회차 순위표는 당시 닉으로 고정. */
+    nickname: text('nickname'),
+    /** 그 시점 아바타 정면 URL + 얼굴박스 스냅샷(0140) — 반드시 **쌍**으로 쓴다(박스만 최신이면 크롭 어긋남). */
+    avatar: text('avatar'),
+    faceBox: jsonb('face_box'),
   },
   (t) => [
     primaryKey({ columns: [t.battleId, t.userId] }),

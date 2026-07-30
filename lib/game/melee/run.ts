@@ -138,6 +138,25 @@ export async function runMelee(serverId: number): Promise<{ ran: boolean; battle
     () => new Map<string, { emblemUrl: string | null; name: string }>(),
   );
 
+  // 아바타·얼굴박스 스냅샷(0140) — 길드와 같은 이유로 **전 참가자분**. 순위표가 실시간 아바타를
+  // 읽으면 아바타를 바꾼 유저의 과거 회차가 현재 모습으로 바뀐다(전투 재생은 스냅샷이라 어긋남).
+  // rotations/options 통째로 받지 않고 필요한 두 값만 뽑는다(참가자 수천 명 규모).
+  const avAll = new Map<string, { avatar: string | null; faceBox: unknown }>();
+  for (let i = 0; i < ids.length; i += 1000) {
+    const chunk = ids.slice(i, i + 1000);
+    const rows = await db
+      .select({
+        uid: characters.userId,
+        avatar: sql<string | null>`${userProfiles.rotations} ->> 'south'`,
+        faceBox: sql<unknown>`${userProfiles.options} -> 'faceBox'`,
+      })
+      .from(characters)
+      .innerJoin(userProfiles, eq(userProfiles.id, characters.activeProfileId))
+      .where(and(eq(characters.serverId, serverId), inArray(characters.userId, chunk)))
+      .catch(() => []);
+    for (const r of rows) avAll.set(r.uid, { avatar: r.avatar, faceBox: r.faceBox ?? null });
+  }
+
   // 배틀 행 + 참가자 행을 **단일 트랜잭션**으로(감사 B1). battle만 커밋되고 participants 적재 전
   // 중단되면, 멱등가드(선조회)가 0명 배틀을 영구화 → reveal의 insert…select가 0행 → 전원 보상
   // 우편 영구 유실. 두 적재를 원자화해 부분실패 시 롤백·재시도가 둘 다 재수행. race는 onConflict로 skip.
@@ -176,6 +195,9 @@ export async function runMelee(serverId: number): Promise<{ ran: boolean; battle
         eliminatedRound: r.eliminatedRound,
         guildName: guildAll.get(r.userId)?.name ?? null,
         guildEmblemUrl: guildAll.get(r.userId)?.emblemUrl ?? null,
+        nickname: nickOf.get(r.userId) ?? null,
+        avatar: avAll.get(r.userId)?.avatar ?? null,
+        faceBox: avAll.get(r.userId)?.faceBox ?? null,
         attackCount: r.attackCount,
         defenseCount: r.defenseCount,
       };

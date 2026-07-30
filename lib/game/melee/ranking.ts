@@ -47,8 +47,9 @@ const FACEBOX = sql<unknown>`${userProfiles.options} -> 'faceBox'`;
  *  - all   : 1위부터(또는 afterRank 이후). aroundRank가 오면 그 등수 앞뒤 window
  *  - guild : 내 길드원만(현재 길드 기준 — 스냅샷 길드가 아닌 "지금 같은 길드"인 사람들)
  *
- * 길드 표시값은 **회차 스냅샷**(participants.guild_name)만 쓴다 — 현재 길드로 폴백하면 과거
- * 회차에 지금 길드가 새어 들어간다(finale.roster 규칙과 동일).
+ * 표시값은 전부 **회차 스냅샷**(participants)이다 — 닉·아바타·길드. 현재 값으로 폴백하면 개명·
+ * 아바타 변경·길드 이동이 과거 회차에 새어 들어가, 같은 화면의 전투 재생(finale.roster 스냅샷)과
+ * 어긋난다. 스냅샷이 없는 옛 회차(0138/0140 이전)만 실시간 값으로 폴백한다.
  */
 export async function getMeleeRanking(input: {
   battleId: bigint;
@@ -113,8 +114,11 @@ export async function getMeleeRanking(input: {
       .select({
         rank: meleeParticipants.finalRank,
         userId: meleeParticipants.userId,
-        nickname: characters.nickname,
+        nickname: meleeParticipants.nickname,
+        liveNickname: characters.nickname,
         code: profiles.publicCode,
+        snapAvatar: meleeParticipants.avatar,
+        snapFaceBox: meleeParticipants.faceBox,
         avatar: SOUTH,
         faceBoxRaw: FACEBOX,
         guildName: meleeParticipants.guildName,
@@ -128,7 +132,8 @@ export async function getMeleeRanking(input: {
       })
       .from(meleeParticipants)
       .innerJoin(profiles, eq(profiles.id, meleeParticipants.userId))
-      .innerJoin(
+      // characters는 폴백용이라 leftJoin — 스냅샷이 있으면 서버 이동으로 캐릭터가 없어도 순위에 남는다.
+      .leftJoin(
         characters,
         and(eq(characters.userId, meleeParticipants.userId), eq(characters.serverId, serverId)),
       )
@@ -143,35 +148,56 @@ export async function getMeleeRanking(input: {
   // 위 방향은 내림차순으로 집었으므로 표시 순서(오름차순)로 되돌린다.
   const page = backward ? [...rows].reverse() : rows;
 
-  // 나를 쓰러뜨린 사람 닉네임 — 한 번에 조회(N+1 방지).
+  // 나를 쓰러뜨린 사람 닉네임 — 한 번에 조회(N+1 방지). 같은 회차 참가자라 스냅샷 닉이 있고,
+  // 없으면(옛 회차) 실시간 닉으로 폴백. 상대 이름도 순위 행과 같은 기준이어야 어긋나지 않는다.
   const killerIds = [...new Set(page.map((r) => r.killerUserId).filter((v): v is string => !!v))];
   const killerNick = new Map<string, { nick: string; code: string | null }>();
   if (killerIds.length > 0) {
     const ks = await db
-      .select({ uid: characters.userId, nick: characters.nickname, code: profiles.publicCode })
-      .from(characters)
-      .innerJoin(profiles, eq(profiles.id, characters.userId))
-      .where(and(eq(characters.serverId, serverId), inArray(characters.userId, killerIds)));
-    for (const k of ks) killerNick.set(k.uid, { nick: k.nick ?? '플레이어', code: k.code });
+      .select({
+        uid: meleeParticipants.userId,
+        snapNick: meleeParticipants.nickname,
+        liveNick: characters.nickname,
+        code: profiles.publicCode,
+      })
+      .from(meleeParticipants)
+      .innerJoin(profiles, eq(profiles.id, meleeParticipants.userId))
+      .leftJoin(
+        characters,
+        and(eq(characters.userId, meleeParticipants.userId), eq(characters.serverId, serverId)),
+      )
+      .where(
+        and(
+          eq(meleeParticipants.battleId, battleId),
+          inArray(meleeParticipants.userId, killerIds),
+        ),
+      );
+    for (const k of ks) {
+      killerNick.set(k.uid, { nick: k.snapNick ?? k.liveNick ?? '플레이어', code: k.code });
+    }
   }
 
   return {
     myRank,
-    rows: page.map((r) => ({
-      rank: r.rank,
-      userId: r.userId,
-      nickname: r.nickname ?? '플레이어',
-      publicCode: r.code,
-      avatar: r.avatar,
-      faceBox: parseFaceBox(r.faceBoxRaw),
-      guildName: r.guildName,
-      guildEmblemUrl: r.guildEmblemUrl,
-      attackSuccess: Number(r.kills),
-      // 탈락자는 마지막 피격 1회가 탈락이므로 방어 성공에서 제외(내 전투 요약과 동일 기준).
-      defenseSuccess: Math.max(0, r.defenseCount - (r.rank > 1 ? 1 : 0)),
-      killerNickname: r.killerUserId ? (killerNick.get(r.killerUserId)?.nick ?? null) : null,
-      killerPublicCode: r.killerUserId ? (killerNick.get(r.killerUserId)?.code ?? null) : null,
-      eliminatedRound: r.eliminatedRound,
-    })),
+    rows: page.map((r) => {
+      // 아바타와 얼굴박스는 **쌍**으로 고른다 — 스냅샷 아바타에 현재 박스를 씌우면 크롭이 어긋난다.
+      const snap = r.snapAvatar != null;
+      return {
+        rank: r.rank,
+        userId: r.userId,
+        nickname: r.nickname ?? r.liveNickname ?? '플레이어',
+        publicCode: r.code,
+        avatar: snap ? r.snapAvatar : r.avatar,
+        faceBox: parseFaceBox(snap ? r.snapFaceBox : r.faceBoxRaw),
+        guildName: r.guildName,
+        guildEmblemUrl: r.guildEmblemUrl,
+        attackSuccess: Number(r.kills),
+        // 탈락자는 마지막 피격 1회가 탈락이므로 방어 성공에서 제외(내 전투 요약과 동일 기준).
+        defenseSuccess: Math.max(0, r.defenseCount - (r.rank > 1 ? 1 : 0)),
+        killerNickname: r.killerUserId ? (killerNick.get(r.killerUserId)?.nick ?? null) : null,
+        killerPublicCode: r.killerUserId ? (killerNick.get(r.killerUserId)?.code ?? null) : null,
+        eliminatedRound: r.eliminatedRound,
+      };
+    }),
   };
 }
