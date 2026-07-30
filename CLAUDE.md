@@ -314,7 +314,7 @@ gemTimeReductions.conversionRate = currentRate  // 변경되어도 이 작업은
 | 브랜치 | 역할 | 환경 | 도메인 |
 |--------|------|------|--------|
 | `dev` | 로컬 작업 기본 (feature 통합 전) | 로컬 (`bun dev`) | localhost:5174 |
-| `master-dev` | 통합·스테이징 — Vercel 자동 배포(검증용) | Vercel preview | `insaengganghwa-git-master-dev-…vercel.app` (Vercel 배정 URL) |
+| `master-dev` | 통합·스테이징 — Vercel 자동 배포(검증용) | Vercel preview | **insaengganghwa-git-master-dev-insaengganghwa.vercel.app** |
 | `master` | **프로덕션** (Vercel Production Branch) | Vercel production | **ganghwa.app** |
 
 ### 규칙
@@ -325,6 +325,8 @@ gemTimeReductions.conversionRate = currentRate  // 변경되어도 이 작업은
 
 ### Vercel 연결
 - **Production Branch = `master`** (대시보드 → Settings → Build and Deployment / Environments) → `ganghwa.app` 자동 매핑.
+- **배포 확인 주소** — 스테이징 `https://insaengganghwa-git-master-dev-insaengganghwa.vercel.app/api/health`, 프로덕션 `https://ganghwa.app/api/health`. 응답 `dpl` 값이 바뀌면 새 빌드가 반영된 것.
+  ⚠ 팀 슬러그는 **`insaengganghwa`**다(`helpganghwas-projects` 아님). 조합을 틀리면 `DEPLOYMENT_NOT_FOUND`가 떠서 **빌드 실패와 구분되지 않는다** — push 성공만 보고 배포됐다고 판단하지 말 것(2026-07-30).
 - `master-dev`·기타 = preview(자동 URL). `master-dev` 안정 URL = 스테이징.
 - 환경변수: Vercel Production/Preview 분리 입력, 로컬 `.env.local`과 별개.
 - **git committer 이메일 필수**: 프로젝트 `gitForkProtection` 활성 상태 — push되는 HEAD 커밋의 committer가 GitHub 사용자와 연결되지 않으면 Vercel이 빌드를 `BLOCKED`(빌드 로그 0줄) 처리한다. repo 소유 GitHub User `helpganghwa`(id 296071338)의 noreply 이메일 `296071338+helpganghwa@users.noreply.github.com` 사용(검증 불필요·항상 연결). 신규 클론 시 `git config user.email` 동일 설정.
