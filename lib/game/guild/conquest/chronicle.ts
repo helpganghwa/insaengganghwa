@@ -867,7 +867,7 @@ export async function generateAndStoreChronicle(
   // 현존하지 않는 길드(해산)는 id 0 — '이 이름은 이미 사라진 길드'를 못 박는 센티널이다.
   // 2필드로 남기면 나중에 같은 이름의 길드가 생겼을 때 옛 기록이 그쪽으로 링크된다.
   const enrichGuildMarkers = (s: string): string =>
-    s.replace(/\{g\|([^}|]+)\}/g, (mm, n: string) => {
+    s.replace(/\{g\|([^}|]+)\}/g, (_mm, n: string) => {
       const name = n.trim();
       return `{g|${name}|${guildRefByName.get(name)?.id ?? 0}}`;
     });
@@ -1001,15 +1001,11 @@ export async function generateAndStoreChronicle(
     console.warn(`[chronicle] 재검수 실패 — 초안 유지: ${(e as Error).message}`);
   }
 
-  // 길드 표시값 스냅샷(0141) — 본문·헤드라인이 실제로 가리킨 길드 id만 담는다(그날 무관한 길드
-  // 전체를 박아두면 해산·문양변경 이력이 엉뚱한 날에 남는다).
-  const usedIds = new Set<number>();
-  for (const m of `${today}\n${headline}`.matchAll(/\{g\|[^}|]+\|(\d+)\}/g)) {
-    usedIds.add(Number(m[1]));
-  }
-  const guildRefs: ChronicleGuildRef[] = [...guildRefByName.values()].filter((r) =>
-    usedIds.has(r.id),
-  );
+  // 길드 표시값 스냅샷(0141) — 그 서버에 **그 시점 존재한 길드 전부**를 담는다.
+  // 본문에 등장한 길드만 담으면 리플레이가 문양을 못 찾는다: 리플레이는 본문과 무관하게 그날
+  // 시작 시점의 모든 구역 소유 길드 문양을 세우고(조용히 지킨 길드 포함), 이름으로 실시간 조회
+  // 폴백을 타면 동명 재창설 시 문양이 새 길드로 바뀐다. 길드 수만큼이라 크기도 유계다.
+  const guildRefs: ChronicleGuildRef[] = [...guildRefByName.values()];
 
   await db
     .insert(worldChronicle)
