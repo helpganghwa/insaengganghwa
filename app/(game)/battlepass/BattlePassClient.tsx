@@ -377,6 +377,9 @@ export function BattlePassClient({
         showHeaderToast({ title: '성장패스 구매 완료' });
       } else if (r.reason === 'cancel') {
         // 사용자 취소 — 조용히.
+      } else if (r.reason === 'window') {
+        // 결제창 실패 — PG 사유 그대로(침묵하면 무반응으로 보인다, 2026-07-31).
+        setError(`결제에 실패했어요 — ${r.message}`);
       } else if (r.code === 'IDENTITY_REQUIRED') {
         // 청소년보호 — 결제 전 본인인증 필수. 본인인증 유도 모달 노출.
         setIdentityPrompt(true);

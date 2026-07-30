@@ -9,7 +9,9 @@ import { createOrderAction, verifyPurchaseAction } from './actions';
  */
 export type CheckoutResult =
   | { ok: true; already: boolean }
-  | { ok: false; reason: 'cancel' | 'create' | 'verify'; code?: string };
+  | { ok: false; reason: 'cancel' | 'create' | 'verify'; code?: string }
+  /** 결제창이 실패로 닫힘(카드 거절·한도·심사 전 미승인 등) — 사유를 유저에게 보여줘야 한다. */
+  | { ok: false; reason: 'window'; message: string };
 
 export async function runCheckout(productId: string, redirectUrl: string): Promise<CheckoutResult> {
   // 단계별 전송실패 매핑(2026-07-07 전수감사) — 호출부 일괄 catch가 전부 'create/NETWORK'
@@ -37,7 +39,13 @@ export async function runCheckout(productId: string, redirectUrl: string): Promi
   });
 
   // 모바일 리다이렉트면 위에서 페이지가 이동해 여기 도달 안 함. 도달(팝업)했는데 code 있으면 취소/실패.
-  if (resp?.code != null) return { ok: false, reason: 'cancel', code: resp.message ?? resp.code };
+  if (resp?.code != null) {
+    // 유저 취소는 조용히, 그 외(카드 거절·심사 전 미승인 등)는 사유 노출 — 전부 '취소'로
+    // 묶어 침묵하면 실패가 무반응이 된다(2026-07-31 카드사 심사 테스트 제보).
+    const msg = resp.message ?? resp.code;
+    if (/취소|cancel/i.test(msg)) return { ok: false, reason: 'cancel', code: msg };
+    return { ok: false, reason: 'window', message: msg };
+  }
 
   const v = await verifyPurchaseAction(paymentId).catch(() => null);
   // verify 전송실패 — 결제는 이미 성사됐을 수 있음(지급 권위는 웹훅). 'verify'로 구분해

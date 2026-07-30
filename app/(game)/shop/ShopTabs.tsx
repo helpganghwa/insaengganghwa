@@ -488,6 +488,9 @@ export function ShopTabs({
         showHeaderToast({ title: '구매 완료' });
       } else if (r.reason === 'cancel') {
         // 사용자 취소 — 조용히 무시.
+      } else if (r.reason === 'window') {
+        // 결제창 실패(카드 거절·심사 전 미승인 등) — PG가 준 사유를 그대로 보여준다.
+        setPayNotice({ title: '결제에 실패했어요', body: r.message });
       } else if (r.reason === 'verify' && r.code === 'NETWORK') {
         // 결제창은 닫혔는데 확인 요청만 전송 실패 — 지급 권위는 웹훅이라 곧 반영됨(미결제 오해 방지).
         setPayNotice({
