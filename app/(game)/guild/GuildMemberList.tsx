@@ -372,7 +372,7 @@ export function GuildMemberList({
               {sheet.role === 'vice' && isLeader ? (
                 <Link
                   prefetch={false}
-                  href="/guild/roles"
+                  href={`/guild/roles?u=${sheet.userId}`}
                   onClick={() => setSheet(null)}
                   className="block rounded-lg px-3 py-2.5 text-left text-[13px] font-semibold text-sky-600 active:bg-zinc-100 dark:text-sky-400 dark:active:bg-zinc-800"
                 >

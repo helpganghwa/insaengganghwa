@@ -34,10 +34,13 @@ export function VicePermissionsBoard({
   guildName,
   editable,
   vices,
+  initialSelected = null,
 }: {
   guildName: string;
   editable: boolean;
   vices: Vice[];
+  /** 진입 시 열어둘 대상(?u=) — 길드원 화면 ⋯에서 특정 인물로 들어올 때. */
+  initialSelected?: string | null;
 }) {
   const router = useRouter();
   // 성공 토스트는 쓰지 않는다 — 토글이 즉시 움직이는 것이 곧 피드백이다. 실패만 알린다.
@@ -47,7 +50,7 @@ export function VicePermissionsBoard({
   const [perms, setPerms] = useState<Record<string, number>>(() =>
     Object.fromEntries(vices.map((v) => [v.userId, v.permissions])),
   );
-  const [selected, setSelected] = useState<string | null>(vices[0]?.userId ?? null);
+  const [selected, setSelected] = useState<string | null>(initialSelected ?? vices[0]?.userId ?? null);
   const [confirm, setConfirm] = useState<{ userId: string; key: GuildPermKey } | null>(null);
 
   const target = vices.find((v) => v.userId === selected) ?? null;

@@ -160,7 +160,7 @@ export async function getMyDeployment(
   return d ? { zoneId: d.zoneId, role: d.role as ConquestRole, battleKstDay } : null;
 }
 
-/** actor가 길드장인지 검증하고 길드 id 반환 — 남 배치/해제는 **길드장 전속**(2026-07-10 권한 조정). */
+/** 남 배치/해제 권한 검증 — deploy 권한(길드장 · 허용된 부길드장, 0142). 본인 배치는 무관. */
 async function assertLeader(
   tx: Parameters<Parameters<typeof db.transaction>[0]>[0],
   userId: string,

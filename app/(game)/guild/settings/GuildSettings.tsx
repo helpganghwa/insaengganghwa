@@ -41,6 +41,7 @@ export type GuildHubView = {
   viceCount: number;
   emblemCount: number;
   taxPool: string;
+  joinPolicy: 'open' | 'approval';
   joinRequestCount: number;
   /** 보유 구역 수. */
   zoneCount: number;
@@ -94,7 +95,7 @@ export function GuildSettings({
       art: 'join',
       href: '/guild/join-requests',
       label: '가입 신청',
-      desc: '승인제 · 가입 방식',
+      desc: view.joinPolicy === 'approval' ? '승인제' : '자유 가입',
       tint: '#2a1a08',
       badge: view.joinRequestCount,
       show: can.joinReview,

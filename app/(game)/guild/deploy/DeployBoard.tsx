@@ -117,7 +117,8 @@ function Pin({
 }
 
 export function DeployBoard({
-  isLeader,
+  canDeploy,
+  canExecutor,
   myUserId,
   residence,
   myGuildId,
@@ -127,7 +128,10 @@ export function DeployBoard({
   members: initialMembers,
   zones,
 }: {
-  isLeader: boolean;
+  /** 남 배치 해제 가능(deploy 권한, 0142). 본인 배치·해제는 무관. */
+  canDeploy: boolean;
+  /** 집행관 지정·해제 가능(executor 권한, 0142). */
+  canExecutor: boolean;
   myUserId: string;
   /** 내 거주 상태(0139) — 배치는 거주 구역에서만 가능. 이동이 필요하면 배치와 한 번에 처리한다. */
   residence: {
@@ -632,7 +636,7 @@ export function DeployBoard({
                         </span>
                         <span className="text-[9px] font-medium text-indigo-500">집행관</span>
                       </div>
-                      {isLeader && !locked && (
+                      {canExecutor && !locked && (
                         <button
                           type="button"
                           onClick={clearExec}
@@ -657,10 +661,10 @@ export function DeployBoard({
                           {isDefend ? '수비' : '공격'}
                         </span>
                       </div>
-                      {!locked && (isLeader || m.userId === myUserId) && (
+                      {!locked && (canDeploy || m.userId === myUserId) && (
                         <div className="flex shrink-0 items-center gap-0.5">
-                          {/* 집행관 지정은 임원 권한 */}
-                          {isDefend && isLeader && (
+                          {/* 집행관 지정 — executor 권한(0142) */}
+                          {isDefend && canExecutor && (
                             <button
                               type="button"
                               onClick={() => setExec(m)}

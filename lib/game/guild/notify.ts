@@ -52,7 +52,7 @@ export async function notifyJoinRequest(input: {
     {
       title: '길드 가입 신청',
       body: `${nickname}님이 가입을 신청했습니다.`,
-      url: '/guild/settings',
+      url: '/guild/join-requests',
       // 신청이 연달아 오면 최신 1건으로 합친다 — 목록에서 한 번에 처리하면 되므로.
       tag: 'guild-join-request',
       category: 'guild',

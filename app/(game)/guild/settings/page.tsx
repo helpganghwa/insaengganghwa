@@ -71,6 +71,7 @@ export default async function GuildSettingsPage() {
         viceCount: vices.length,
         emblemCount: emblems.length,
         taxPool: guild.taxPoolDiamond.toString(),
+        joinPolicy: guild.joinPolicy === 'approval' ? 'approval' : 'open',
         joinRequestCount: guild.joinPolicy === 'approval' ? requests.length : 0,
         ...hub,
       }}

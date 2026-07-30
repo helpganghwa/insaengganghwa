@@ -4,8 +4,6 @@ import { getSessionUserId } from '@/lib/auth/session';
 import { getActiveServerId } from '@/lib/game/servers';
 import { withTimeout } from '@/lib/db/with-timeout';
 import { getGuildVices, getMyMembership, getGuild } from '@/lib/game/guild';
-import { getGuildPermState } from '@/lib/game/guild/perm-guard';
-
 import { VicePermissionsBoard } from './VicePermissionsBoard';
 
 const DB_GUARD_MS = 4000;
@@ -20,7 +18,11 @@ export const dynamic = 'force-dynamic';
  *    대한 답이다. 남의 권한은 보이지 않는다.
  *  - 일반 길드원 : 길드 홈으로
  */
-export default async function GuildRolesPage() {
+export default async function GuildRolesPage({
+  searchParams,
+}: {
+  searchParams: Promise<{ u?: string }>;
+}) {
   const userId = await getSessionUserId();
   const serverId = await getActiveServerId();
   if (!userId) {
@@ -35,36 +37,30 @@ export default async function GuildRolesPage() {
   if (membership.role === 'member') redirect('/guild');
 
   const isLeader = membership.role === 'leader';
-  const [guild, vices, mine] = await Promise.all([
+  const [guild, allVices] = await Promise.all([
     withTimeout(getGuild(membership.guildId), DB_GUARD_MS, 'guild.roles.guild'),
-    isLeader
-      ? withTimeout(getGuildVices(membership.guildId), DB_GUARD_MS, 'guild.roles.vices')
-      : Promise.resolve([]),
-    isLeader ? Promise.resolve(null) : getGuildPermState(userId, serverId),
+    withTimeout(getGuildVices(membership.guildId), DB_GUARD_MS, 'guild.roles.vices'),
   ]);
 
-  // 부길드장 자신 — 자기 한 줄만 넘겨 읽기 전용으로 렌더.
-  const rows = isLeader
-    ? vices.map((v) => ({
-        userId: v.userId,
-        nickname: v.nickname ?? '플레이어',
-        permissions: v.permissions,
-        avatar: v.avatar,
-      }))
-    : [
-        {
-          userId,
-          nickname: '나',
-          permissions: mine?.permissions ?? 0,
-          avatar: null as string | null,
-        },
-      ];
+  // 부길드장 자신은 **자기 한 줄만** 읽기 전용으로 — 남의 권한은 보이지 않는다.
+  const visible = isLeader ? allVices : allVices.filter((v) => v.userId === userId);
+  const rows = visible.map((v) => ({
+    userId: v.userId,
+    nickname: v.nickname ?? '플레이어',
+    permissions: v.permissions,
+    avatar: v.avatar,
+  }));
+
+  // 길드원 화면 ⋯ → '권한 설정'으로 들어올 때 그 사람을 바로 연다(?u=userId).
+  const sp = await searchParams;
+  const initialSelected = rows.some((r) => r.userId === sp.u) ? sp.u! : null;
 
   return (
     <VicePermissionsBoard
       guildName={guild?.name ?? '길드'}
       editable={isLeader}
       vices={rows}
+      initialSelected={initialSelected}
     />
   );
 }
