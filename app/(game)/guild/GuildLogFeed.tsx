@@ -7,6 +7,7 @@ import type { GuildLogEntry } from '@/lib/game/guild/activity-log';
 import { profileHref } from '@/lib/game/profile/href';
 import { milestoneLabel } from '@/lib/game/milestone';
 import { transcendStyle } from '@/lib/game/equipment/transcend';
+import { permKeys } from '@/lib/game/guild/permissions';
 
 // 강조 색 — '중요 포인트' 토큰에만, 업적은 월드 피드와 동일 배색(2026-07-15 사용자 확정):
 // 강화·기록=레드 · 1위/랭킹=오렌지 · 대난투=앰버. 운영 사건은 수금/지급=스카이 ·
@@ -93,6 +94,15 @@ export function guildLogMessage(e: GuildLogEntry): ReactNode {
       return <>{actor}님이 {target}님을 {hl('부길드장', C.indigo)}으로 임명했습니다</>;
     case 'unset_vice':
       return <>{actor}님이 {target}님의 부길드장을 해제했습니다</>;
+    case 'set_perm': {
+      // 라벨이 없어 원문 'set_perm'이 그대로 노출되던 문제(2026-07-30 제보).
+      const n = permKeys((e.detail?.after as number) ?? 0).length;
+      return (
+        <>
+          {actor}님이 {target}님의 {hl(`권한 ${n}개`, C.indigo)}를 설정했습니다
+        </>
+      );
+    }
     case 'set_join_policy':
       return <>{actor}님이 가입 방식을 변경했습니다</>;
     case 'notice_edit':

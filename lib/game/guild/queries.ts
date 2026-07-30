@@ -346,6 +346,18 @@ const leaderNicknameSql = sql<string | null>`(
 )`;
 
 /**
+ * 길드장 마지막 접속 — 목록 카드의 활동 신호(2026-07-30 사용자 결정).
+ * 길드 단위 '오늘 활동 N건' 대신 **길드장이 살아 있는지**를 보여준다. 가입을 고민하는
+ * 사람에게는 길드장이 승인·운영을 할 사람인지가 실질 판단 기준이다.
+ */
+const leaderLastSeenSql = sql<Date | null>`(
+  select c.last_seen_at from guild_members gm
+  join characters c on c.user_id = gm.user_id and c.server_id = gm.server_id
+  where gm.guild_id = ${guilds.id} and gm.role = 'leader'
+  limit 1
+)`;
+
+/**
  * 랭킹 base 계산 — 서버 전체 길드 + 멤버 stats(전투력·인원) + 점령 zones를 한 번에 산출(정렬 전).
  * 정렬 comparator는 이 결과에 in-memory로 적용하므로, 여러 지표 정렬을 원해도 DB 비용은 1회.
  */
@@ -362,6 +374,7 @@ async function buildGuildRankingBase(serverId: number) {
       // URL 원문은 비길드원에 미전송(보안) — 배지용 boolean만. 링크는 GuildHome(길드원)에서만.
       hasOpenchat: sql<boolean>`(${guilds.openchatUrl} is not null)`,
       leaderNickname: leaderNicknameSql,
+      leaderLastSeenAt: leaderLastSeenSql,
     })
     .from(guilds)
     .where(eq(guilds.serverId, serverId));
@@ -374,6 +387,8 @@ async function buildGuildRankingBase(serverId: number) {
     const s = stats.get(r.id.toString());
     return {
       ...r,
+      // 클라 컴포넌트로 넘어가므로 Date를 여기서 ISO 문자열로 고정한다(직렬화 경계 일원화).
+      leaderLastSeenAt: r.leaderLastSeenAt ? r.leaderLastSeenAt.toISOString() : null,
       memberCount: s?.memberCount ?? 0,
       combat: s?.combat ?? 0,
       zones: zoneChips.get(r.id.toString()) ?? [],
@@ -387,14 +402,36 @@ export async function getGuildRanking(serverId: number, limit = 50, sort: GuildR
 }
 
 /**
- * 지표별 랭킹 3종(레벨/전투력/점령지)을 DB 1회 비용으로 반환 — 무소속 browse 랭킹 탭의
- * 클라 필터 전환용. 각 리스트는 해당 지표 기준 진짜 top-N(클라 재정렬과 달리 상위권 누락 없음).
- * ⚠ 정렬은 배열을 변형하므로 지표마다 base 사본([...base])을 정렬한다.
+ * 랭킹 화면(R-1) 데이터 — DB 1회로 **3지표 순위를 서버에서 확정**해서 내려준다.
+ *
+ * 정렬을 클라에 맡기면 top-N만 받은 클라가 그 안에서만 재정렬해 **전 서버 순위가 아니게 된다**
+ * (2026-07-30 사용자 지적). 그렇다고 지표마다 서버 왕복을 하면 전환이 느리다. 그래서
+ * 전 길드를 한 번 읽어 지표별로 정렬한 뒤 top-N과 순위를 함께 내려보낸다 —
+ * 클라는 왕복 없이 탭만 바꾸고, 순위는 항상 전 서버 기준이다.
+ *
+ * myRank는 top-N 밖이어도 진짜 순위를 준다(내 길드 고정 카드용).
  */
-export async function getGuildRankingsMulti(serverId: number, limit = 50) {
+export async function getGuildRankingBoard(
+  serverId: number,
+  myGuildId: bigint | null,
+  limit = 50,
+) {
   const base = await buildGuildRankingBase(serverId);
-  const bySort = (sort: GuildRankSort) => [...base].sort(RANKING_COMPARATORS[sort]).slice(0, limit);
-  return { level: bySort('level'), combat: bySort('combat'), zones: bySort('zones') };
+  const key = myGuildId?.toString() ?? null;
+  const lists = {} as Record<GuildRankSort, typeof base>;
+  const myRank = {} as Record<GuildRankSort, number | null>;
+  for (const sort of ['level', 'combat', 'zones'] as GuildRankSort[]) {
+    const sorted = [...base].sort(RANKING_COMPARATORS[sort]);
+    lists[sort] = sorted.slice(0, limit);
+    const i = key ? sorted.findIndex((g) => g.id.toString() === key) : -1;
+    myRank[sort] = i >= 0 ? i + 1 : null;
+  }
+  return {
+    lists,
+    myRank,
+    total: base.length,
+    myRow: key ? (base.find((g) => g.id.toString() === key) ?? null) : null,
+  };
 }
 
 /** 길드 검색(이름 부분일치) — 가입 브라우즈용. combat(전투력 합) 포함.
@@ -414,6 +451,7 @@ export async function searchGuilds(serverId: number, q: string) {
     // URL 원문은 비길드원에 미전송(보안) — 배지용 boolean만.
     hasOpenchat: sql<boolean>`(${guilds.openchatUrl} is not null)`,
     leaderNickname: leaderNicknameSql,
+    leaderLastSeenAt: leaderLastSeenSql,
   } as const;
   const rows = term
     ? await db
@@ -436,6 +474,8 @@ export async function searchGuilds(serverId: number, q: string) {
     const s = stats.get(r.id.toString());
     return {
       ...r,
+      // 클라 컴포넌트로 넘어가므로 Date를 여기서 ISO 문자열로 고정한다(직렬화 경계 일원화).
+      leaderLastSeenAt: r.leaderLastSeenAt ? r.leaderLastSeenAt.toISOString() : null,
       memberCount: s?.memberCount ?? 0,
       combat: s?.combat ?? 0,
       zones: zoneChips.get(r.id.toString()) ?? [],

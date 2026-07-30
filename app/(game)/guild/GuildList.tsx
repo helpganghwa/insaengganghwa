@@ -2,88 +2,38 @@
 
 import { useState } from 'react';
 
-import { ModalShell } from '@/components/ModalShell';
-import { GuildIntroBlock } from './GuildInfoBlocks';
-import { ModalLayout, ModalButton } from '@/components/ModalLayout';
-import { REGION_META, type Region } from '@/lib/game/guild/region-meta';
+import { LastSeen } from '@/components/LastSeen';
+import { guildCapacity } from '@/lib/game/guild/balance';
 
-export type GuildRow = {
-  id: string;
-  name: string;
-  level: number;
-  memberCount: number;
-  emblemUrl: string | null;
-  emblemColor: string | null;
-  combat: number;
-  intro: string | null;
-  /** 가입 방식 — 'open'(자유) | 'approval'(승인). */
-  joinPolicy: string;
-  /** 카카오 오픈채팅 설정 여부(배지용). URL 원문은 비길드원에 미전송(보안) — GuildHome에서만. */
-  hasOpenchat: boolean;
-  /** 점령 구역 목록(없으면 빈 배열). 카드 배지 수 + 팝업 칩(지역색). */
-  zones: { name: string; region: Region }[];
-  /** 길드장 닉네임 — 카드 셋째 줄·팝업 헤더 노출(가입 의사결정 정보, 2026-07-13). */
-  leaderNickname: string | null;
-};
+import { GuildInfoModal } from './GuildInfoModal';
+import {
+  EmblemThumb,
+  JoinPolicyBadge,
+  KakaoOpenchatBadge,
+  fmtNum,
+  type GuildRow,
+} from './guild-row';
 
-/** 컴팩트 수치(예: 53,000 → 5.3만). */
-function fmtNum(n: number): string {
-  return new Intl.NumberFormat('ko-KR', { notation: 'compact', maximumFractionDigits: 1 }).format(n);
-}
+export { EmblemThumb };
+export type { GuildRow };
 
-/** 가입 방식 배지 — 자유(초록)=신청 즉시 가입 / 승인(주황)=길드장 승인 필요. */
-function JoinPolicyBadge({ policy }: { policy: string }) {
-  const open = policy === 'open';
-  return (
-    <span
-      className={`shrink-0 rounded px-1.5 py-0.5 text-[10px] font-bold leading-none ${
-        open
-          ? 'bg-emerald-100 text-emerald-700 dark:bg-emerald-500/15 dark:text-emerald-300'
-          : 'bg-amber-100 text-amber-700 dark:bg-amber-500/15 dark:text-amber-300'
-      }`}
-    >
-      {open ? '자유' : '승인'}
-    </span>
-  );
-}
-
-/** 카카오 오픈채팅 배지 — openchatUrl 설정 길드만. 외부 소통 채널 보유 표시(비클릭 인디케이터). */
-function KakaoOpenchatBadge() {
-  return (
-    <span
-      className="flex shrink-0 items-center rounded-[3px] bg-[#FEE500] px-1 py-[3px] leading-none"
-      title="카카오톡 오픈채팅 운영 길드"
-      aria-label="카카오톡 오픈채팅 운영 길드"
-    >
-      {/* 자유/승인 배지와 높이 동일(14px) — 아이콘 8px(h-2) + 상하 3px 패딩. */}
-      {/* eslint-disable-next-line @next/next/no-img-element */}
-      <img src="/kakao/kakao_symbol.png" alt="" aria-hidden className="h-2 w-auto" />
-    </span>
-  );
-}
-
-export function EmblemThumb({ url }: { url: string | null }) {
-  return (
-    <div className="flex h-9 w-9 shrink-0 items-center justify-center overflow-hidden rounded-lg">
-      {url ? (
-        // eslint-disable-next-line @next/next/no-img-element
-        <img src={url} alt="" aria-hidden className="h-full w-full object-contain" style={{ imageRendering: 'pixelated' }} />
-      ) : null}
-    </div>
-  );
-}
-
-/** 길드 행 리스트 — 랭킹/검색/홈 랭킹탭 공용. onJoin 있으면 가입/신청 버튼 노출. */
+/**
+ * 길드 행 리스트 — 목록/검색 공용(랭킹은 GuildRankingBoard가 따로 그린다).
+ *
+ * B-1 확정안(2026-07-30) — 가입을 **누르기 전에** 판단이 서야 한다:
+ *  - 정원을 `N/cap명`으로 항상 보여주고, 찼으면 가입 버튼을 잠근다.
+ *    종전엔 정원이 안 보여 신청 후 GUILD_FULL로 거절당했다.
+ *  - 셋째 줄은 길드장 + 마지막 접속. 길드 단위 '오늘 활동 N건'보다,
+ *    승인·운영을 할 사람이 살아 있는지가 실질 판단 기준이다(사용자 결정).
+ */
 export function GuildList({
   guilds,
-  showRank,
   onJoin,
   pending,
   myRequestGuildId,
   emptyText,
 }: {
   guilds: GuildRow[];
-  showRank?: boolean;
   onJoin?: (id: string) => void;
   pending?: boolean;
   myRequestGuildId?: string | null;
@@ -100,138 +50,109 @@ export function GuildList({
   }
   return (
     <>
-    <ul className="space-y-2">
-      {guilds.map((g, i) => (
-        <li
-          key={g.id}
-          className="flex items-center gap-2.5 rounded-lg border border-zinc-200 px-3 py-2 dark:border-zinc-800"
-        >
-          {showRank && (
-            <span className="w-5 shrink-0 text-center text-xs font-bold tabular-nums text-zinc-400">
-              {i + 1}
-            </span>
-          )}
-          {/* 정보 영역 클릭 → 길드 정보·소개 팝업(가입 버튼은 형제라 별개 동작) */}
-          <button
-            type="button"
-            onClick={() => setSelected(g)}
-            className="flex min-w-0 flex-1 items-center gap-2.5 text-left active:opacity-70"
-          >
-            <EmblemThumb url={g.emblemUrl} />
-            <div className="min-w-0 flex-1">
-              <div className="flex items-center gap-1.5">
-                <span className="truncate text-sm font-semibold">{g.name}</span>
-                <JoinPolicyBadge policy={g.joinPolicy} />
-                {g.hasOpenchat ? <KakaoOpenchatBadge /> : null}
-              </div>
-              <div className="text-[11px] text-zinc-500">
-                Lv.{g.level} · {g.memberCount}명
-                {g.zones.length > 0 ? ` · 점령 ${g.zones.length}` : ''}
-              </div>
-              {g.leaderNickname ? (
-                <div className="truncate text-[11px] text-zinc-500">
-                  <span className="text-zinc-400">길드장</span>{' '}
-                  <span className="font-medium text-zinc-600 dark:text-zinc-300">{g.leaderNickname}</span>
-                </div>
-              ) : null}
-            </div>
-            {/* 전투력(길드원 전투력 합) */}
-            <div className="shrink-0 text-right">
-              <div className="text-[9px] leading-none text-zinc-400">전투력</div>
-              <div className="mt-0.5 text-[13px] font-bold tabular-nums text-amber-600 dark:text-amber-400">
-                {fmtNum(g.combat)}
-              </div>
-            </div>
-          </button>
-          {onJoin &&
-            (g.id === myRequestGuildId ? (
-              <span className="shrink-0 rounded-full bg-zinc-100 px-3 py-1.5 text-[11px] font-bold text-zinc-400 dark:bg-zinc-800">
-                신청됨
-              </span>
-            ) : (
+      <ul className="space-y-2">
+        {guilds.map((g) => {
+          const cap = guildCapacity(g.level);
+          const full = g.memberCount >= cap;
+          return (
+            <li
+              key={g.id}
+              className="flex items-center gap-2.5 rounded-lg border border-zinc-200 px-3 py-2 dark:border-zinc-800"
+            >
+              {/* 정보 영역 클릭 → 길드 정보·소개 팝업(가입 버튼은 형제라 별개 동작) */}
               <button
                 type="button"
-                onClick={() => onJoin(g.id)}
-                disabled={pending}
-                className="shrink-0 rounded-full bg-amber-600 px-3 py-1.5 text-[11px] font-bold text-white disabled:opacity-50"
+                onClick={() => setSelected(g)}
+                className="flex min-w-0 flex-1 items-center gap-2.5 text-left active:opacity-70"
               >
-                가입
-              </button>
-            ))}
-        </li>
-      ))}
-    </ul>
-
-      {/* 길드 정보·소개 팝업 */}
-      {selected && (
-        <ModalShell onClose={() => setSelected(null)} label={`${selected.name} 길드 정보`}>
-          <ModalLayout
-            icon={
-              selected.emblemUrl ? (
-                // eslint-disable-next-line @next/next/no-img-element
-                <img
-                  src={selected.emblemUrl}
-                  alt=""
-                  aria-hidden
-                  className="mx-auto h-11 w-11 object-contain"
-                  style={{ imageRendering: 'pixelated' }}
-                />
-              ) : (
-                '🛡️'
-              )
-            }
-            title={
-              <span className="inline-flex items-center gap-1.5">
-                {selected.name}
-                <JoinPolicyBadge policy={selected.joinPolicy} />
-                {selected.hasOpenchat ? <KakaoOpenchatBadge /> : null}
-              </span>
-            }
-            subtitle={
-              <>
-                Lv.{selected.level} · {selected.memberCount}명 · 전투력{' '}
-                <span className="font-bold text-amber-600 dark:text-amber-400">
-                  {fmtNum(selected.combat)}
-                </span>
-                {selected.leaderNickname ? (
-                  <>
-                    <span className="mx-1 text-zinc-400">·</span>길드장{' '}
-                    <span className="font-medium text-zinc-600 dark:text-zinc-300">
-                      {selected.leaderNickname}
+                <EmblemThumb url={g.emblemUrl} />
+                <div className="min-w-0 flex-1">
+                  <div className="flex items-center gap-1.5">
+                    <span className="truncate text-sm font-semibold">{g.name}</span>
+                    <JoinPolicyBadge policy={g.joinPolicy} />
+                    {g.hasOpenchat ? <KakaoOpenchatBadge /> : null}
+                  </div>
+                  <div className="text-[11px] text-zinc-500">
+                    Lv.{g.level} ·{' '}
+                    <span className={full ? 'font-bold text-zinc-400' : undefined}>
+                      {g.memberCount}/{cap}명
                     </span>
-                  </>
-                ) : null}
-              </>
-            }
-            footer={
-              <ModalButton tone="neutral" onClick={() => setSelected(null)}>
-                닫기
-              </ModalButton>
-            }
-          >
-          <div>
-            <p className="text-[11px] font-bold text-zinc-400">점령 구역 ({selected.zones.length})</p>
-            {selected.zones.length > 0 ? (
-              <div className="mt-1.5 flex flex-wrap gap-1">
-                {selected.zones.map((z) => (
-                  <span
-                    key={z.name}
-                    className={`rounded-md px-2 py-0.5 text-[11px] font-medium ${REGION_META[z.region].chip}`}
-                  >
-                    {z.name}
-                  </span>
-                ))}
-              </div>
-            ) : (
-              <p className="mt-1 text-[12px] text-zinc-400">점령 중인 구역이 없습니다.</p>
-            )}
-          </div>
-          <div className="mt-3 border-t border-zinc-100 pt-3 dark:border-zinc-900">
-            <GuildIntroBlock intro={selected.intro} />
-          </div>
-          </ModalLayout>
-        </ModalShell>
-      )}
+                    {full ? ' · 정원 참' : g.zones.length > 0 ? ` · 점령 ${g.zones.length}` : ''}
+                  </div>
+                  {g.leaderNickname ? (
+                    <div className="flex items-baseline gap-1 text-[11px] text-zinc-500">
+                      <span className="text-zinc-400">길드장</span>
+                      <span className="truncate font-medium text-zinc-600 dark:text-zinc-300">
+                        {g.leaderNickname}
+                      </span>
+                      {g.leaderLastSeenAt ? (
+                        <LastSeen
+                          at={g.leaderLastSeenAt}
+                          plain
+                          className="shrink-0 text-[10px] text-zinc-400"
+                        />
+                      ) : null}
+                    </div>
+                  ) : null}
+                </div>
+                {/* 전투력(길드원 전투력 합) */}
+                <div className="shrink-0 text-right">
+                  <div className="text-[9px] leading-none text-zinc-400">전투력</div>
+                  <div className="mt-0.5 text-[13px] font-bold tabular-nums text-amber-600 dark:text-amber-400">
+                    {fmtNum(g.combat)}
+                  </div>
+                </div>
+              </button>
+              {onJoin ? <JoinCell guild={g} full={full} onJoin={onJoin} pending={pending} myRequestGuildId={myRequestGuildId} /> : null}
+            </li>
+          );
+        })}
+      </ul>
+
+      {selected && <GuildInfoModal guild={selected} onClose={() => setSelected(null)} />}
     </>
+  );
+}
+
+/** 가입 셀 — 신청됨 / 정원 참(잠금) / 가입·신청. 정원 참은 눌러도 실패하므로 미리 막는다. */
+function JoinCell({
+  guild,
+  full,
+  onJoin,
+  pending,
+  myRequestGuildId,
+}: {
+  guild: GuildRow;
+  full: boolean;
+  onJoin: (id: string) => void;
+  pending?: boolean;
+  myRequestGuildId?: string | null;
+}) {
+  if (guild.id === myRequestGuildId) {
+    return (
+      <span className="shrink-0 rounded-full bg-zinc-100 px-3 py-1.5 text-[11px] font-bold text-zinc-400 dark:bg-zinc-800">
+        신청됨
+      </span>
+    );
+  }
+  if (full) {
+    return (
+      <span
+        className="shrink-0 rounded-full bg-zinc-100 px-3 py-1.5 text-[11px] font-bold text-zinc-400 dark:bg-zinc-800"
+        title="정원이 찼습니다"
+      >
+        정원
+      </span>
+    );
+  }
+  return (
+    <button
+      type="button"
+      onClick={() => onJoin(guild.id)}
+      disabled={pending}
+      className="shrink-0 rounded-full bg-amber-600 px-3 py-1.5 text-[11px] font-bold text-white disabled:opacity-50"
+    >
+      {guild.joinPolicy === 'open' ? '가입' : '신청'}
+    </button>
   );
 }

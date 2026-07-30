@@ -144,7 +144,6 @@ export function VicePermissionsBoard({
               >
                 <div className="min-w-0 flex-1">
                   <p className="text-[13px] font-semibold">{meta.label}</p>
-                  {meta.desc && <p className="text-[10.5px] text-zinc-500">{meta.desc}</p>}
                 </div>
                 <button
                   type="button"

@@ -5,7 +5,7 @@ import {
   getMyMembership,
   getGuild,
   getGuildMembersRich,
-  getGuildRankingsMulti,
+  getGuildRankingBoard,
   getGuildActivityLog,
   getGuildHubStatus,
   getJoinRequests,
@@ -26,8 +26,9 @@ export const dynamic = 'force-dynamic';
 
 /** 미가입 첫화면 — 랭킹/찾기 탭 + 생성 FAB. */
 async function browseView(userId: string, serverId: number) {
-  const [rankings, defaults, myRequest] = await Promise.all([
-    withTimeout(getGuildRankingsMulti(serverId), DB_GUARD_MS, 'guild.browse.ranking'),
+  const [board, defaults, myRequest] = await Promise.all([
+    // 무소속이라 내 길드는 없다(myGuildId=null) — 지표별 top-N과 총 길드 수만 쓴다.
+    withTimeout(getGuildRankingBoard(serverId, null), DB_GUARD_MS, 'guild.browse.ranking'),
     withTimeout(searchGuilds(serverId, ''), DB_GUARD_MS, 'guild.browse.random').catch(() => []),
     withTimeout(getMyJoinRequest(userId, serverId), DB_GUARD_MS, 'guild.browse.req'),
   ]);
@@ -44,6 +45,7 @@ async function browseView(userId: string, serverId: number) {
     hasOpenchat: boolean;
     zones: { name: string; region: Region }[];
     leaderNickname: string | null;
+    leaderLastSeenAt: string | null;
   }) => ({
     id: g.id.toString(),
     name: g.name,
@@ -57,15 +59,17 @@ async function browseView(userId: string, serverId: number) {
     hasOpenchat: g.hasOpenchat,
     zones: g.zones,
     leaderNickname: g.leaderNickname,
+    leaderLastSeenAt: g.leaderLastSeenAt,
   });
   return (
     <GuildBrowse
       myRequestGuildId={myRequest?.toString() ?? null}
       rankings={{
-        level: rankings.level.map(toRow),
-        combat: rankings.combat.map(toRow),
-        zones: rankings.zones.map(toRow),
+        level: board.lists.level.map(toRow),
+        combat: board.lists.combat.map(toRow),
+        zones: board.lists.zones.map(toRow),
       }}
+      totalGuilds={board.total}
       defaultGuilds={defaults.map(toRow)}
     />
   );
@@ -95,7 +99,9 @@ export default async function GuildPage() {
     withTimeout(getGuildHubStatus(membership.guildId, serverId), DB_GUARD_MS, 'guild.hubStatus').catch(
       () => null,
     ),
-    withTimeout(getGuildRankingsMulti(serverId), DB_GUARD_MS, 'guild.ranks').catch(() => null),
+    withTimeout(getGuildRankingBoard(serverId, membership.guildId), DB_GUARD_MS, 'guild.ranks').catch(
+      () => null,
+    ),
     isOfficerHere
       ? withTimeout(getJoinRequests(membership.guildId), DB_GUARD_MS, 'guild.reqs').catch(() => [])
       : Promise.resolve([]),
@@ -131,11 +137,9 @@ export default async function GuildPage() {
         log={log}
         menuStats={{
           zoneCount: hub?.zoneCount ?? 0,
-          powerRank:
-            (ranks?.combat.findIndex((g) => g.id.toString() === membership.guildId.toString()) ??
-              -1) >= 0
-              ? ranks!.combat.findIndex((g) => g.id.toString() === membership.guildId.toString()) + 1
-              : null,
+          // 서버가 전 길드 기준으로 계산한 진짜 순위 — 종전 top-50 findIndex는
+          // 50위 밖 길드에 순위를 못 붙였다(2026-07-30).
+          powerRank: ranks?.myRank.combat ?? null,
           joinRequestCount: guild.joinPolicy === 'approval' ? requests.length : 0,
         }}
         myRole={membership.role}
