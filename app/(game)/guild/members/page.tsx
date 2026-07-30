@@ -3,10 +3,11 @@ import { redirect } from 'next/navigation';
 import { getSessionUserId } from '@/lib/auth/session';
 import { getActiveServerId } from '@/lib/game/servers';
 import { withTimeout } from '@/lib/db/with-timeout';
-import { getGuildMembersRich } from '@/lib/game/guild';
+import { getGuild, getGuildMembersRich } from '@/lib/game/guild';
 import { getGuildPermState } from '@/lib/game/guild/perm-guard';
 import { hasGuildPerm } from '@/lib/game/guild/permissions';
 
+import { GuildPageHeader } from '../GuildPageHeader';
 import { GuildMemberList } from '../GuildMemberList';
 
 const DB_GUARD_MS = 4000;
@@ -28,10 +29,18 @@ export default async function GuildMembersPage() {
   );
   if (!membership) redirect('/guild');
 
-  const members = await withTimeout(getGuildMembersRich(membership.guildId), DB_GUARD_MS, 'guild.members.list');
+  const [members, guild] = await Promise.all([
+    withTimeout(getGuildMembersRich(membership.guildId), DB_GUARD_MS, 'guild.members.list'),
+    withTimeout(getGuild(membership.guildId), DB_GUARD_MS, 'guild.members.guild'),
+  ]);
 
   return (
     <div className="px-4 py-4">
+      <GuildPageHeader
+        fallback="/guild"
+        kicker={`${guild?.name ?? '길드'} · ${members.length}명`}
+        title="길드원"
+      />
       <GuildMemberList
         members={members}
         myUserId={userId}

@@ -28,11 +28,21 @@ import { GuildNoticeBlock, GuildOpenchatButton } from './GuildInfoBlocks';
 // 길드 홈 메뉴 그리드(홈 패턴) — 각 타일 클릭 시 상세로 이동. 길드 관리는 임원만 노출.
 // 배경 스프라이트: /sprites/guild-menu/{key}.png (없으면 tint 단색으로 graceful).
 const GUILD_MENU = [
-  { key: 'members', href: '/guild/members', label: '길드원', desc: '멤버 명단·전투력', tint: '#1c2238', officerOnly: false },
-  { key: 'deploy', href: '/guild/deploy', label: '점령지', desc: '점령지 배치·관리', tint: '#2a2012', officerOnly: false },
-  { key: 'settings', href: '/guild/settings', label: '길드 관리', desc: '가입·권한·세금·문양', tint: '#3a1419', officerOnly: true },
-  { key: 'ranking', href: '/guild/ranking', label: '길드 랭킹', desc: '서버 길드 순위', tint: '#143a2a', officerOnly: false },
+  { key: 'members', href: '/guild/members', label: '길드원', tint: '#1c2238', officerOnly: false },
+  { key: 'deploy', href: '/guild/deploy', label: '점령지', tint: '#2a2012', officerOnly: false },
+  { key: 'settings', href: '/guild/settings', label: '길드 관리', tint: '#3a1419', officerOnly: true },
+  { key: 'ranking', href: '/guild/ranking', label: '길드 랭킹', tint: '#143a2a', officerOnly: false },
 ] as const;
+
+/** 깃발 아래 작은 수치 — 들어가 보지 않고도 상태를 알게 한다(2026-07-30). */
+export type GuildMenuStats = {
+  /** 보유 구역 수. */
+  zoneCount: number;
+  /** 전투력 랭킹(1부터). 순위 밖이면 null. */
+  powerRank: number | null;
+  /** 처리 대기 가입 신청 — 임원에게만 배지로. 0이면 미표시. */
+  joinRequestCount: number;
+};
 
 type GuildRole = 'leader' | 'vice' | 'member';
 type GuildView = {
@@ -54,12 +64,15 @@ export function GuildHome({
   myRole,
   usedToday,
   leaderHandover,
+  menuStats,
 }: {
   guild: GuildView;
   members: RichMember[];
   log: GuildLogEntry[];
   myRole: GuildRole;
   usedToday: number;
+  /** 깃발 수치·배지 — 서버가 계산해 넘긴다. */
+  menuStats: GuildMenuStats;
   /** 길드장 위임 위험 — inactiveDays(서버 계산)>=warnDays면 배너. null=접속 기록 없음. */
   leaderHandover: { inactiveDays: number | null; warnDays: number; handoverDays: number };
 }) {
@@ -84,6 +97,14 @@ export function GuildHome({
   const isOfficer = myRole === 'leader' || myRole === 'vice';
   // 권한별 표시 타일(길드 관리=임원만). 전부 가로 꽉 찬 와이드 배너로 세로 나열.
   const visibleMenu = GUILD_MENU.filter((m) => !m.officerOnly || isOfficer);
+  /** 깃발 아래 한 줄 — 수치가 없는 항목은 빈 문자열(줄만 비운다). */
+  const menuDesc = (key: string): string => {
+    if (key === 'members') return `${guild.memberCount} / ${guild.capacity}`;
+    if (key === 'deploy') return `${menuStats.zoneCount}곳 보유`;
+    if (key === 'ranking') return menuStats.powerRank ? `전투력 ${menuStats.powerRank}위` : '순위 밖';
+    if (key === 'settings') return '가입 · 권한 · 세금';
+    return '';
+  };
   const effectiveUsed = usedToday + optDonations;
   const nextTier =
     effectiveUsed < GUILD_DONATIONS_PER_DAY ? (GUILD_DONATION_TIERS[effectiveUsed] ?? null) : null;
@@ -292,9 +313,21 @@ export function GuildHome({
               className="absolute inset-0 h-full w-full object-cover"
               style={{ imageRendering: 'pixelated' }}
             />
-            <div className="relative z-10 bg-gradient-to-t from-black/90 via-black/55 to-transparent px-0.5 pb-[20%] pt-6 text-center">
+            {/* 임원만 보는 대기 배지 — 가입 신청이 쌓여도 모르던 문제(2026-07-30). */}
+            {m.key === 'settings' && menuStats.joinRequestCount > 0 ? (
+              <span
+                aria-label={`가입 신청 ${menuStats.joinRequestCount}건`}
+                className="absolute right-0.5 top-0.5 z-20 inline-flex min-w-[16px] items-center justify-center rounded-full bg-red-600 px-1 text-[9px] font-bold leading-[1.6] tabular-nums text-white ring-2 ring-zinc-900/60"
+              >
+                {menuStats.joinRequestCount > 99 ? '99+' : menuStats.joinRequestCount}
+              </span>
+            ) : null}
+            <div className="relative z-10 bg-gradient-to-t from-black/90 via-black/55 to-transparent px-0.5 pb-[18%] pt-6 text-center">
               <div className="break-keep text-[13px] font-extrabold leading-tight tracking-tight text-white drop-shadow-[0_1px_3px_rgba(0,0,0,0.95)]">
                 {m.label}
+              </div>
+              <div className="mt-0.5 break-keep text-[9px] font-semibold leading-tight tabular-nums text-white/75 drop-shadow-[0_1px_2px_rgba(0,0,0,0.95)]">
+                {menuDesc(m.key)}
               </div>
             </div>
           </Link>

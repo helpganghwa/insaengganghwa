@@ -38,9 +38,6 @@ const MODES: { key: Mode; label: string }[] = [
   { key: 'manual', label: '직접' },
 ];
 
-/** 비중 바 색 — 큰 몫부터 진하게. */
-const BAR = ['#f59e0b', '#d97706', '#b45309', '#92400e', '#78350f', '#3f2a10'];
-
 /**
  * 세금 분배(T1-a 확정안) — 방식을 고르면 금액이 채워지고, 목록에서 **바로 숫자 입력**.
  *
@@ -173,22 +170,6 @@ export function DistributeBoard({
           </button>
         ))}
       </div>
-
-      {/* 비중 바 — 누가 얼마나 받는지 읽지 않고 본다. */}
-      {total > 0 ? (
-        <div className="mt-2.5 flex h-1.5 overflow-hidden rounded-full bg-zinc-200 dark:bg-zinc-800">
-          {members
-            .filter((m) => amtOf(m.userId) > 0)
-            .sort((a, b) => amtOf(b.userId) - amtOf(a.userId))
-            .slice(0, 6)
-            .map((m, i) => (
-              <span
-                key={m.userId}
-                style={{ width: `${(amtOf(m.userId) / total) * 100}%`, backgroundColor: BAR[i] }}
-              />
-            ))}
-        </div>
-      ) : null}
 
       {/* 분배 목록 — 금액을 그 자리에서 입력. */}
       <ul className="mt-2 rounded-xl border border-zinc-200 bg-white px-3 dark:border-zinc-800 dark:bg-zinc-950">

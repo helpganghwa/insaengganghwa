@@ -3,7 +3,6 @@
 import { useEffect, useState, useTransition } from 'react';
 import { useRouter } from 'next/navigation';
 
-import { BackButton } from '@/components/BackNav';
 import { ModalShell } from '@/components/ModalShell';
 import { ModalLayout, ModalButton } from '@/components/ModalLayout';
 import { useResourceToast } from '@/components/ResourceToast';
@@ -14,6 +13,7 @@ import {
 } from '@/lib/game/guild/balance';
 import type { EmblemSelection } from '@/lib/game/guild/emblem-vocab';
 
+import { GuildPageHeader } from '../GuildPageHeader';
 import { setActiveEmblemAction, deleteEmblemAction } from '../actions';
 import { EmblemPicker, DEFAULT_EMBLEM } from '../EmblemPicker';
 import { guildErrMsg } from '../errors-msg';
@@ -71,7 +71,6 @@ export function EmblemBoard({
   const priceText = isFirst
     ? '무료'
     : `💎${GUILD_EMBLEM_REROLL_COST_DIAMOND.toLocaleString('ko-KR')}`;
-  const active = list.find((e) => e.isActive) ?? null;
 
   // 생성 중이면 1초마다 라이브 클럭 갱신(경과 시간 표시).
   useEffect(() => {
@@ -202,42 +201,19 @@ export function EmblemBoard({
   };
 
   return (
-    <div className="px-4 py-5">
-      <div className="mb-3 flex items-center gap-2 px-0.5">
-        <BackButton fallback="/guild/settings" />
-        <div className="min-w-0">
-          <p className="text-[10px] font-semibold tracking-wide text-zinc-400">{guildName}</p>
-          <h1 className="truncate text-base font-extrabold leading-tight">문양</h1>
-        </div>
-      </div>
+    <div className="px-4 py-4">
+      <GuildPageHeader
+        fallback="/guild/settings"
+        kicker={guildName}
+        title="문양"
+        right={
+          <span className="text-[11px] tabular-nums text-zinc-500">
+            {list.length} / {MAX_GUILD_EMBLEMS}
+          </span>
+        }
+      />
 
-      {/* 사용 중 문양 — 이 화면의 첫 질문("지금 어느 문양이지")에 바로 답한다. */}
-      <section className="flex items-center gap-3 rounded-xl border border-amber-500/40 bg-amber-50/50 p-3 dark:border-amber-500/30 dark:bg-amber-500/[0.06]">
-        <div
-          className="flex h-16 w-16 shrink-0 items-center justify-center overflow-hidden rounded-2xl border-2 border-amber-500 bg-zinc-100 dark:bg-zinc-900"
-          style={active?.emblemColor ? { backgroundColor: `${active.emblemColor}22` } : undefined}
-        >
-          {active?.emblemUrl ? (
-            // eslint-disable-next-line @next/next/no-img-element
-            <img
-              src={active.emblemUrl}
-              alt=""
-              aria-hidden
-              className="h-full w-full object-contain"
-              style={{ imageRendering: 'pixelated' }}
-            />
-          ) : (
-            <span className="text-2xl">🛡️</span>
-          )}
-        </div>
-        <div className="min-w-0">
-          <p className="text-[10px] font-bold tracking-wide text-amber-600 dark:text-amber-400">
-            사용 중
-          </p>
-          <h1 className="truncate text-base font-extrabold leading-tight">{guildName}</h1>
-        </div>
-      </section>
-
+      {/* 보관함 — 사용 중 히어로는 제거(2026-07-30 사용자 결정). 칸의 '사용 중' 배지로 충분하다. */}
       <div className="mt-3 flex items-baseline justify-between px-0.5">
         <h2 className="text-sm font-bold">보관함</h2>
         <span className="text-[11px] tabular-nums text-zinc-500">

@@ -6,8 +6,7 @@ import { getGuild, getDistributeMembers } from '@/lib/game/guild';
 import { getGuildPermState } from '@/lib/game/guild/perm-guard';
 import { hasGuildPerm } from '@/lib/game/guild/permissions';
 
-import { BackTitle } from '@/components/BackNav';
-
+import { GuildPageHeader } from '../GuildPageHeader';
 import { DistributeBoard } from './DistributeBoard';
 
 export const dynamic = 'force-dynamic';
@@ -33,12 +32,7 @@ export default async function DistributePage() {
 
   return (
     <div className="px-4 py-4">
-      <BackTitle
-        fallback="/guild/settings"
-        className="px-0.5"
-        kicker={guild.name}
-        title="세금 분배"
-      />
+      <GuildPageHeader fallback="/guild/settings" kicker={guild.name} title="세금 분배" />
       <DistributeBoard
         myUserId={userId}
         pool={guild.taxPoolDiamond.toString()}

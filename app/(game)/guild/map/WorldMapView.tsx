@@ -270,6 +270,9 @@ export function WorldMapView({
   const [replayingTab, setReplayingTab] = useState<'today' | 'yesterday' | null>(null);
   const [replayOwners, setReplayOwners] = useState<Record<number, string | null> | null>(null);
   const [replayLayer, setReplayLayer] = useState<HTMLDivElement | null>(null);
+  // 우하단 스위치 — ON(기본): 노드=구역명 + 하단=역사. OFF: 노드=점령 길드명 + 하단=점령현황.
+  // ⚠ startReplay가 이 setter를 쓰므로 **그보다 위에서** 선언한다(TDZ 경고 해소, 2026-07-30).
+  const [showConquest, setShowConquest] = useState(false);
   const canReplay = !!replay && !!chronicle?.today;
   const canReplayYesterday = !!replayYesterday && !!chronicle?.yesterday;
   const startReplay = (tab: 'today' | 'yesterday' = 'today') => {
@@ -319,8 +322,6 @@ export function WorldMapView({
     return () => clearTimeout(t);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
-  // 우하단 스위치 — ON(기본): 노드=구역명 + 하단=역사. OFF: 노드=점령 길드명 + 하단=점령현황.
-  const [showConquest, setShowConquest] = useState(false);
   // embedded(세계지도 탭)에서는 노드=구역명(역사 모드)·하단=점령 현황으로 분리 고정.
   const nodeShowGuild = !embedded && showConquest; // 노드 라벨을 길드명으로 표시할지
   const bottomConquest = embedded || showConquest; // 하단을 점령 현황으로 표시할지

@@ -7,6 +7,8 @@ import {
   getGuildMembersRich,
   getGuildRankingsMulti,
   getGuildActivityLog,
+  getGuildHubStatus,
+  getJoinRequests,
   getMyJoinRequest,
   searchGuilds,
 } from '@/lib/game/guild';
@@ -81,13 +83,22 @@ export default async function GuildPage() {
 
   if (!membership) return browseView(userId, serverId);
 
-  const [guild, members, log] = await Promise.all([
+  const isOfficerHere = membership.role === 'leader' || membership.role === 'vice';
+  const [guild, members, log, hub, ranks, requests] = await Promise.all([
     withTimeoutRetry(() => getGuild(membership.guildId), DB_GUARD_MS, 'guild.guild'),
     withTimeoutRetry(() => getGuildMembersRich(membership.guildId), DB_GUARD_MS, 'guild.members'),
     // 홈은 미리보기 10건만(전체는 /guild/log 상세에서 100건). 월드 로그와 동일 패턴.
     withTimeout(getGuildActivityLog(membership.guildId, serverId, 10), DB_GUARD_MS, 'guild.log').catch(
       () => [],
     ),
+    // 깃발 수치 — 보유 구역·전투력 순위·대기 신청(임원만). 실패해도 홈은 떠야 하므로 전부 폴백.
+    withTimeout(getGuildHubStatus(membership.guildId, serverId), DB_GUARD_MS, 'guild.hubStatus').catch(
+      () => null,
+    ),
+    withTimeout(getGuildRankingsMulti(serverId), DB_GUARD_MS, 'guild.ranks').catch(() => null),
+    isOfficerHere
+      ? withTimeout(getJoinRequests(membership.guildId), DB_GUARD_MS, 'guild.reqs').catch(() => [])
+      : Promise.resolve([]),
   ]);
 
   if (!guild) {
@@ -118,6 +129,15 @@ export default async function GuildPage() {
         }}
         members={members}
         log={log}
+        menuStats={{
+          zoneCount: hub?.zoneCount ?? 0,
+          powerRank:
+            (ranks?.combat.findIndex((g) => g.id.toString() === membership.guildId.toString()) ??
+              -1) >= 0
+              ? ranks!.combat.findIndex((g) => g.id.toString() === membership.guildId.toString()) + 1
+              : null,
+          joinRequestCount: guild.joinPolicy === 'approval' ? requests.length : 0,
+        }}
         myRole={membership.role}
         usedToday={usedToday}
         leaderHandover={{

@@ -3,11 +3,11 @@
 import { useState, useTransition } from 'react';
 import { useRouter } from 'next/navigation';
 
-import { BackTitle } from '@/components/BackNav';
 import { useResourceToast } from '@/components/ResourceToast';
 import { ZoomSafeInput, ZoomSafeTextarea } from '@/components/ui/ZoomSafeField';
 import { GUILD_INTRO_MAX_LEN, GUILD_NOTICE_MAX_LEN } from '@/lib/game/guild/balance';
 
+import { GuildPageHeader } from '../GuildPageHeader';
 import { setGuildNoticeAction, setGuildIntroAction, setGuildOpenchatAction } from '../actions';
 import { guildErrMsg } from '../errors-msg';
 import { GuildIntroBlock, GuildNoticeBlock, GuildOpenchatButton } from '../GuildInfoBlocks';
@@ -84,10 +84,9 @@ export function GuildInfoEditor({
   };
 
   return (
-    <div className="px-4 py-5 pb-32">
-      <BackTitle
+    <div className="px-4 py-4 pb-32">
+      <GuildPageHeader
         fallback="/guild/settings"
-        className="px-0.5"
         kicker={`${guildName} · 공지 · 소개 · 오픈채팅`}
         title="길드 정보"
       />

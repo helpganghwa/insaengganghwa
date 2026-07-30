@@ -258,11 +258,10 @@ export function GuildMemberList({
     });
 
   return (
-    <section className="rounded-xl border border-zinc-200 bg-white p-3 dark:border-zinc-800 dark:bg-zinc-950">
+    <section className="mt-3 rounded-xl border border-zinc-200 bg-white p-3 dark:border-zinc-800 dark:bg-zinc-950">
+      {/* 제목은 페이지 헤더가 맡는다 — 여기선 정렬만(중복 제거, 2026-07-30). */}
       <div className="flex items-center justify-between gap-2">
-        <h3 className="text-sm font-bold">
-          길드원 <span className="tabular-nums text-zinc-500">({members.length})</span>
-        </h3>
+        <span className="text-[11px] font-bold text-zinc-400">정렬</span>
         <div className="flex gap-1 rounded-lg bg-zinc-100 p-0.5 dark:bg-zinc-900">
           {SORTS.map((s) => (
             <button

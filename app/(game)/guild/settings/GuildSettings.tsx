@@ -4,13 +4,13 @@ import { useState, useTransition } from 'react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 
-import { BackButton } from '@/components/BackNav';
 import { useResourceToast } from '@/components/ResourceToast';
 import { ModalShell } from '@/components/ModalShell';
 import { ModalLayout, ModalButton } from '@/components/ModalLayout';
 import { assetUrl } from '@/lib/asset-versions';
 import { GUILD_MAX_VICE, MAX_GUILD_EMBLEMS, guildXpToNext } from '@/lib/game/guild/balance';
 
+import { GuildPageHeader } from '../GuildPageHeader';
 import { disbandGuildAction } from '../actions';
 import { guildErrMsg } from '../errors-msg';
 
@@ -158,28 +158,26 @@ export function GuildSettings({
     });
 
   return (
-    <div className="space-y-3 px-3 py-3">
-      {/* 헤더 — ‹ + 문양 + 이름. 별도 뒤로가기 띠를 두지 않는다(세로 공간 절약). */}
-      <div className="flex items-center gap-2 px-0.5">
-        <BackButton fallback="/guild" />
-        <div className="flex h-10 w-10 shrink-0 items-center justify-center overflow-hidden rounded-xl bg-zinc-100 dark:bg-zinc-900">
-          {view.emblemUrl ? (
+    <div className="space-y-3 px-4 py-4">
+      <GuildPageHeader
+        fallback="/guild"
+        kicker={view.name}
+        title="길드 관리"
+        icon={
+          view.emblemUrl ? (
             // eslint-disable-next-line @next/next/no-img-element
             <img
               src={view.emblemUrl}
-              alt="길드 문양"
+              alt=""
+              aria-hidden
               className="h-full w-full object-contain"
               style={{ imageRendering: 'pixelated' }}
             />
           ) : (
-            <span className="text-xl">🛡️</span>
-          )}
-        </div>
-        <div className="min-w-0">
-          <p className="text-[10px] font-semibold tracking-wide text-zinc-400">길드 관리</p>
-          <h1 className="truncate text-base font-extrabold leading-tight">{view.name}</h1>
-        </div>
-      </div>
+            <span className="text-lg">🛡️</span>
+          )
+        }
+      />
 
       {/* 요약 — 타일이 담지 못하는 것만(레벨 진행 · 점령전 수금 상태). */}
       <section className="rounded-xl border border-zinc-200 bg-white px-3 py-2 dark:border-zinc-800 dark:bg-zinc-950">
@@ -234,15 +232,20 @@ export function GuildSettings({
         ) : null}
       </section>
 
-      {/* 타일 — 홈 메뉴와 같은 규격. 배경 미생성이면 tint 단색으로 우아하게 폴백. */}
-      <div className="grid grid-cols-2 gap-2.5">
+      {/* 타일 — 길드 홈의 **제비꼬리 깃발**과 같은 언어(2026-07-30 사용자 결정).
+          6칸이 3열 × 2행으로 딱 맞고, 4열(62px)보다 칸이 넓어 수치·배지가 들어간다.
+          배경 미생성이면 tint 단색으로 우아하게 폴백. */}
+      <div className="grid grid-cols-3 gap-2">
         {tiles.map((t) => (
           <Link
             prefetch={false}
             key={t.key}
             href={t.href}
-            style={{ backgroundColor: t.tint }}
-            className="relative flex aspect-[25/13] isolate overflow-hidden rounded-2xl border border-zinc-800 transition active:scale-[0.98]"
+            style={{
+              backgroundColor: t.tint,
+              clipPath: 'polygon(0 0, 100% 0, 100% 86%, 50% 100%, 0 86%)',
+            }}
+            className="relative flex aspect-[5/7] isolate flex-col justify-end overflow-hidden transition active:scale-[0.97]"
           >
             {/* eslint-disable-next-line @next/next/no-img-element */}
             <img
@@ -256,16 +259,16 @@ export function GuildSettings({
             {t.badge && t.badge > 0 ? (
               <span
                 aria-label={`대기 ${t.badge}건`}
-                className="absolute right-1.5 top-1.5 z-10 inline-flex min-w-[20px] items-center justify-center rounded-full bg-red-600 px-1.5 py-0.5 text-[10px] font-bold tabular-nums text-white shadow ring-2 ring-zinc-900/50"
+                className="absolute right-1 top-1 z-20 inline-flex min-w-[18px] items-center justify-center rounded-full bg-red-600 px-1 py-0.5 text-[9.5px] font-bold tabular-nums text-white shadow ring-2 ring-zinc-900/50"
               >
                 {t.badge > 99 ? '99+' : t.badge}
               </span>
             ) : null}
-            <div className="absolute inset-x-0 bottom-0 bg-gradient-to-t from-black/85 via-black/55 to-transparent px-3 pb-2 pt-6">
-              <div className="text-[15px] font-extrabold leading-tight text-white drop-shadow-sm">
+            <div className="relative z-10 bg-gradient-to-t from-black/90 via-black/55 to-transparent px-1 pb-[17%] pt-6 text-center">
+              <div className="break-keep text-[12px] font-extrabold leading-tight tracking-tight text-white drop-shadow-[0_1px_3px_rgba(0,0,0,0.95)]">
                 {t.label}
               </div>
-              <div className="text-[11px] font-semibold leading-tight tabular-nums text-white/75">
+              <div className="mt-0.5 break-keep text-[9.5px] font-semibold leading-tight tabular-nums text-white/75 drop-shadow-[0_1px_2px_rgba(0,0,0,0.95)]">
                 {t.desc}
               </div>
             </div>

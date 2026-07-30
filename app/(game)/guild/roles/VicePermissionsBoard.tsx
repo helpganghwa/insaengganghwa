@@ -3,7 +3,6 @@
 import { useState, useTransition } from 'react';
 import { useRouter } from 'next/navigation';
 
-import { BackButton } from '@/components/BackNav';
 import { ModalShell } from '@/components/ModalShell';
 import { ModalLayout, ModalButton } from '@/components/ModalLayout';
 import { useResourceToast } from '@/components/ResourceToast';
@@ -17,6 +16,7 @@ import {
   type GuildPermKey,
 } from '@/lib/game/guild/permissions';
 
+import { GuildPageHeader } from '../GuildPageHeader';
 import { setVicePermissionsAction } from '../actions';
 import { guildErrMsg } from '../errors-msg';
 
@@ -86,15 +86,9 @@ export function VicePermissionsBoard({
 
   if (vices.length === 0) {
     return (
-      <div className="px-4 py-5">
-        <div className="mb-3 flex items-center gap-2 px-0.5">
-          <BackButton fallback="/guild/settings" />
-          <div className="min-w-0">
-            <p className="text-[10px] font-semibold tracking-wide text-zinc-400">{guildName}</p>
-            <h1 className="truncate text-base font-extrabold leading-tight">부길드장 권한</h1>
-          </div>
-        </div>
-        <div className="rounded-xl border border-zinc-200 bg-white p-6 text-center dark:border-zinc-800 dark:bg-zinc-950">
+      <div className="px-4 py-4">
+        <GuildPageHeader fallback="/guild/settings" kicker={guildName} title="부길드장 권한" />
+        <div className="mt-3 rounded-xl border border-zinc-200 bg-white p-6 text-center dark:border-zinc-800 dark:bg-zinc-950">
           <p className="text-[13px] font-bold">부길드장이 없습니다</p>
           <p className="mt-1.5 text-[12px] leading-relaxed text-zinc-500">
             길드원 화면에서 부길드장을 임명하면 여기서 권한을 정할 수 있습니다.
@@ -107,13 +101,15 @@ export function VicePermissionsBoard({
   }
 
   return (
-    <div className="px-4 py-5">
+    <div className="px-4 py-4">
       {/* 대상 — 헤더가 "누구의 권한인가"를 항상 말한다(개인별이라 혼동이 치명적). */}
       {target && (
-        <div className="flex items-center gap-2 px-0.5">
-          <BackButton fallback="/guild/settings" />
-          <div className="flex h-9 w-9 shrink-0 items-center justify-center overflow-hidden rounded-xl bg-zinc-100 dark:bg-zinc-900">
-            {target.avatar ? (
+        <GuildPageHeader
+          fallback="/guild/settings"
+          kicker={`부길드장 권한 · ${countOf(target.userId)} / ${GUILD_PERM_ORDER.length} 허용`}
+          title={target.nickname}
+          icon={
+            target.avatar ? (
               // eslint-disable-next-line @next/next/no-img-element
               <img
                 src={assetUrl(target.avatar)}
@@ -124,15 +120,9 @@ export function VicePermissionsBoard({
               />
             ) : (
               <span className="text-base">🛠</span>
-            )}
-          </div>
-          <div className="min-w-0">
-            <p className="text-[10px] font-semibold tracking-wide text-sky-600 dark:text-sky-400">
-              부길드장 권한 · {countOf(target.userId)} / {GUILD_PERM_ORDER.length} 허용
-            </p>
-            <h1 className="truncate text-base font-extrabold leading-tight">{target.nickname}</h1>
-          </div>
-        </div>
+            )
+          }
+        />
       )}
 
       {/* 토글 아홉 개 */}

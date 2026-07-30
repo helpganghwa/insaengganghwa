@@ -5,13 +5,13 @@ import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 
 import { profileHref } from '@/lib/game/profile/href';
-import { BackTitle } from '@/components/BackNav';
 import { LastSeen } from '@/components/LastSeen';
 import { ModalShell } from '@/components/ModalShell';
 import { ModalLayout, ModalButton } from '@/components/ModalLayout';
 import { useResourceToast } from '@/components/ResourceToast';
 import { GUILD_JOIN_REQUEST_TTL_DAYS, type GuildJoinPolicy } from '@/lib/game/guild/balance';
 
+import { GuildPageHeader } from '../GuildPageHeader';
 import { approveJoinAction, rejectJoinAction, setJoinPolicyAction } from '../actions';
 import { guildErrMsg } from '../errors-msg';
 
@@ -116,10 +116,9 @@ export function JoinRequestBoard({
   };
 
   return (
-    <div className="px-4 py-5">
-      <BackTitle
+    <div className="px-4 py-4">
+      <GuildPageHeader
         fallback="/guild/settings"
-        className="px-0.5"
         kicker={policy === 'approval' ? `${guildName} · 대기 ${rows.length}건` : `${guildName} · 자유 가입`}
         title="가입 신청"
       />
