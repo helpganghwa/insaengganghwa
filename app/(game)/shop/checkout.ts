@@ -19,7 +19,8 @@ export async function runCheckout(productId: string, redirectUrl: string): Promi
   if (!r) return { ok: false, reason: 'create', code: 'NETWORK' };
   if (r.status !== 'success') return { ok: false, reason: 'create', code: r.code };
 
-  const { paymentId, orderName, amountKrw, storeId, channelKey, customerName, customerEmail } = r.order;
+  const { paymentId, orderName, amountKrw, storeId, channelKey, customerName, customerEmail, customerPhone } =
+    r.order;
   const resp = await PortOne.requestPayment({
     storeId,
     channelKey,
@@ -29,9 +30,9 @@ export async function runCheckout(productId: string, redirectUrl: string): Promi
     currency: 'CURRENCY_KRW',
     payMethod: 'CARD',
     // 이니시스 V2 일반결제는 구매자 이름·이메일·휴대폰이 전부 필수(누락 시 결제창 BadRequest,
-    // 2026-07-31 카드사 심사 테스트에서 순차 확인). 유저 전화번호는 수집하지 않으므로(본인인증
-    // 전) 사업자 연락처를 고정 전달 — 결제 진행에는 지장 없고, 본인인증 도입 후 재검토.
-    customer: { fullName: customerName, email: customerEmail, phoneNumber: '07045716987' },
+    // 2026-07-31 카드사 심사 테스트에서 순차 확인). 휴대폰은 본인인증 번호(0143) 우선,
+    // 미인증·심사 계정은 사업자 연락처 — 값은 서버(createOrder)가 정한다.
+    customer: { fullName: customerName, email: customerEmail, phoneNumber: customerPhone },
     redirectUrl, // 모바일: 결제 후 이 URL로 복귀(complete 페이지가 검증). PC 팝업은 미사용.
   });
 

@@ -118,6 +118,8 @@ export async function withdrawAccount(userId: string): Promise<void> {
         birthYearHash: null,
         isAdult: false,
         identityVerifiedAt: null,
+        verifiedPhone: null, // 0143 — 법정 보존 항목 아님, 탈퇴 시 지체 없이 파기
+
       })
       .where(eq(profiles.id, userId));
 

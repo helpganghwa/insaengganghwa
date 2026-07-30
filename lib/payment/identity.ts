@@ -22,7 +22,11 @@ function apiSecret(): string {
   return s;
 }
 
-type IdentityResult = { status: 'READY' | 'VERIFIED' | 'FAILED'; birthDate?: string };
+type IdentityResult = {
+  status: 'READY' | 'VERIFIED' | 'FAILED';
+  birthDate?: string;
+  phoneNumber?: string;
+};
 
 /** 본인인증 단건 조회 — status + 인증된 생년월일(YYYY-MM-DD)만 추출. */
 async function getPortoneIdentity(identityVerificationId: string): Promise<IdentityResult> {
@@ -40,9 +44,13 @@ async function getPortoneIdentity(identityVerificationId: string): Promise<Ident
   }
   const data = (await res.json()) as {
     status: IdentityResult['status'];
-    verifiedCustomer?: { birthDate?: string };
+    verifiedCustomer?: { birthDate?: string; phoneNumber?: string };
   };
-  return { status: data.status, birthDate: data.verifiedCustomer?.birthDate };
+  return {
+    status: data.status,
+    birthDate: data.verifiedCustomer?.birthDate,
+    phoneNumber: data.verifiedCustomer?.phoneNumber,
+  };
 }
 
 /** 생년월일(YYYY-MM-DD 또는 YYYYMMDD) → 만나이 기준 성년(만 19세 이상) 여부 + 출생연도. */
@@ -84,6 +92,10 @@ export async function verifyAndStoreIdentity(
   }
   const { isAdult, birthYear } = assessBirth(idv.birthDate);
   const birthYearHash = createHash('sha256').update(birthYear).digest('hex');
+  // 검증된 휴대폰(0143) — 결제 customer.phoneNumber용(이니시스 필수 필드). 통신사 인증을
+  // 거친 번호라 입력값보다 신뢰 가능. 숫자만 저장, 없거나 이상하면 null(결제는 사업자 번호 폴백).
+  const phoneDigits = (idv.phoneNumber ?? '').replace(/\D/g, '');
+  const verifiedPhone = phoneDigits.length >= 10 && phoneDigits.length <= 12 ? phoneDigits : null;
 
   try {
     await db.transaction(async (tx) => {
@@ -99,7 +111,7 @@ export async function verifyAndStoreIdentity(
       });
       await tx
         .update(profiles)
-        .set({ isAdult, identityVerifiedAt: sql`now()`, birthYearHash })
+        .set({ isAdult, identityVerifiedAt: sql`now()`, birthYearHash, verifiedPhone })
         .where(eq(profiles.id, userId));
     });
   } catch (e) {

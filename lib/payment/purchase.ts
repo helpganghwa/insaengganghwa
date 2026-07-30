@@ -77,6 +77,9 @@ export function portoneConfig(): { storeId: string; channelKey: string } | null 
   return { storeId, channelKey };
 }
 
+/** 사업자 연락처(숫자만) — 구매자 휴대폰 폴백. lib/legal/content BUSINESS_INFO.contact와 동일 번호. */
+const BIZ_PHONE = '07045716987';
+
 /** 계정의 본인인증 여부·미성년 여부 + 이번 달(KST) 누적 결제액. 미인증(행 없음)은 미성년으로 취급(방어). */
 async function minorStatus(
   userId: string,
@@ -119,6 +122,8 @@ export type CreatedOrder = {
    * help@ganghwa.app(가상 계정이라 수신함 없음). 이메일 동의 거부 유저(극소수)만 help@ 폴백.
    */
   customerEmail: string;
+  /** 구매자 휴대폰(숫자만) — 이니시스 V2 필수. 본인인증 번호(0143) 우선, 없으면 사업자 연락처. */
+  customerPhone: string;
 };
 
 /**
@@ -223,7 +228,11 @@ export async function createOrder(
   // 구매자 이름 — 이니시스 V2 일반결제 필수. 닉네임 + 고유코드(포트원 콘솔에서 유저 식별용).
   //  예: "대장장이1043(A1B2C3)". 닉네임 없으면 '구매자' 폴백.
   const [ch] = await db
-    .select({ nickname: characters.nickname, code: profiles.publicCode })
+    .select({
+      nickname: characters.nickname,
+      code: profiles.publicCode,
+      verifiedPhone: profiles.verifiedPhone,
+    })
     .from(characters)
     .innerJoin(profiles, eq(profiles.id, characters.userId))
     .where(and(eq(characters.userId, userId), eq(characters.serverId, serverId)))
@@ -231,8 +240,13 @@ export async function createOrder(
   const baseName = ch?.nickname?.trim() || '구매자';
   const customerName = ch?.code ? `${baseName}(${ch.code})` : baseName;
   const customerEmail = reviewer ? 'help@ganghwa.app' : ((await getSessionEmail()) ?? 'help@ganghwa.app');
+  // 본인인증 번호(0143) 우선 — 미인증·심사 계정은 사업자 연락처(카드 승인에 대조되지 않음,
+  // PG발 연락이 회사로 오는 것은 1인 운영 CS 일원화로 수용).
+  const customerPhone = (!reviewer && ch?.verifiedPhone) || BIZ_PHONE;
 
-  const paymentId = `payment-${crypto.randomUUID()}`;
+  // 이니시스 oid 길이 제한 1~40 — 'payment-'+uuid(44자)는 결제창에서 거부된다
+  // (2026-07-31 카드사 심사 테스트 INIStdPay Dev.Error). 'p-'+uuid = 38자.
+  const paymentId = `p-${crypto.randomUUID()}`;
   await db.insert(iapOrders).values({
     serverId,
     userId,
@@ -251,6 +265,7 @@ export async function createOrder(
     channelKey: cfg.channelKey,
     customerName,
     customerEmail,
+    customerPhone,
   };
 }
 
