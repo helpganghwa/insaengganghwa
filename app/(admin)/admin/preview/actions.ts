@@ -5,9 +5,29 @@ import { and, eq } from 'drizzle-orm';
 
 import { requireAdmin } from '@/lib/auth/require-admin';
 import { db } from '@/lib/db/client';
-import { worldChronicle } from '@/lib/db/schema/guild';
+import { guilds, worldChronicle, zones } from '@/lib/db/schema/guild';
 
 type Result = { status: 'success' } | { status: 'error'; message: string };
+
+/**
+ * 어드민이 손으로 넣거나 고친 2필드 마커에 불변 id 부착(0141) — 생성 경로(enrichMarkers)와 동일
+ * 규칙. 없으면 이름 기반 레거시로 저장돼, 막아둔 동명 재사용 오귀속이 수정 경로로 되살아난다.
+ * 길드는 현존 매핑 실패 시 0(해산 센티널), 구역은 매핑 실패 시 그대로(표시 전용).
+ */
+async function attachMarkerIds(serverId: number, s: string): Promise<string> {
+  const [guildRows, zoneRows] = await Promise.all([
+    db.select({ id: guilds.id, name: guilds.name }).from(guilds).where(eq(guilds.serverId, serverId)),
+    db.select({ id: zones.id, name: zones.name }).from(zones).where(eq(zones.serverId, serverId)),
+  ]);
+  const gid = new Map(guildRows.map((g) => [g.name, Number(g.id)]));
+  const zid = new Map(zoneRows.map((z) => [z.name, z.id]));
+  return s
+    .replace(/\{g\|([^}|]+)\}/g, (_m, n: string) => `{g|${n.trim()}|${gid.get(n.trim()) ?? 0}}`)
+    .replace(/\{z\|([^}|]+)\}/g, (m, n: string) => {
+      const id = zid.get(n.trim());
+      return id != null ? `{z|${n.trim()}|${id}}` : m;
+    });
+}
 
 /**
  * 연대기 수정 — 자정 공개 전 검수 창(23:05~24:00)에서 헤드라인/본문 교정.
@@ -21,8 +41,8 @@ export async function updateChronicleAction(input: {
 }): Promise<Result> {
   try {
     await requireAdmin();
-    const headline = input.headline.trim().slice(0, 200);
-    const todayText = input.todayText.trim().slice(0, 4000);
+    const headline = await attachMarkerIds(input.serverId, input.headline.trim().slice(0, 200));
+    const todayText = await attachMarkerIds(input.serverId, input.todayText.trim().slice(0, 4000));
     // 헤드라인은 빈 값이 정상(큰 사건 없는 날 = '') — 빈 헤드라인 날에 본문 수정 저장이
     // 항상 거부되던 버그(07-17 검수 수정 미반영 사건). 본문만 필수.
     if (!todayText) return { status: 'error', message: '본문을 입력하세요.' };
