@@ -5,6 +5,7 @@ import { useRouter } from 'next/navigation';
 
 import * as haptic from '@/lib/game/haptic';
 import { ModalShell } from '@/components/ModalShell';
+import { DragScrollRow } from '@/components/ui/DragScrollRow';
 import { ModalLayout, ModalButton } from '@/components/ModalLayout';
 import { useResourceToast } from '@/components/ResourceToast';
 import { setActiveProfile, deleteProfile } from './actions';
@@ -116,8 +117,9 @@ export function ProfileSelector({
         </div>
       </div>
 
-      {/* 보유 목록 — 탭하면 미리보기(적용 버튼으로 확정) */}
-      <div className="flex gap-2 overflow-x-auto pb-1">
+      {/* 보유 목록 — 탭하면 미리보기(적용 버튼으로 확정).
+          DragScrollRow — PC에서 드래그·휠로도 넘겨진다(문의: 키보드 화살표가 유일했음). */}
+      <DragScrollRow className="flex gap-2 pb-1">
         {list.map((p) => (
           <button
             key={p.id}
@@ -139,7 +141,7 @@ export function ProfileSelector({
             />
           </button>
         ))}
-      </div>
+      </DragScrollRow>
 
       {/* 적용 — 선택 캐릭터를 대표 프로필로 커밋 */}
       <button
