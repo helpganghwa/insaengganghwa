@@ -20,7 +20,9 @@ const COMMON =
   'high detail, fully filled solid background, edge-to-edge composition, ' +
   'no transparent areas, no empty space';
 
-// 길드원(members)은 마음에 들어 유지 — 3종만 길드원과 통일된 고딕 실내 결로 재생성.
+// 길드원(members)은 마음에 들어 유지 — 나머지는 길드원과 통일된 고딕 실내 결로 생성.
+// 인자를 주면 그 키만 생성한다(기존 자산 무단 재생성 방지):
+//   bun run scripts/gen-guild-menu.ts join roles tax emblem
 const MENUS: { name: string; prompt: string }[] = [
   {
     name: 'deploy',
@@ -43,7 +45,44 @@ const MENUS: { name: string; prompt: string }[] = [
       'tall arched stone walls, heraldic banners, stained glass windows, shafts of golden light, ' +
       'deep emerald-gold tone, ' + COMMON,
   },
+  // ── 길드 관리 허브 타일(2026-07-30) — 홈 메뉴 카드와 같은 규격. members·settings는 재사용. ──
+  {
+    name: 'join',
+    prompt:
+      'a grand gothic guild hall entrance interior, a heavy open oaken door with an applicant ' +
+      'register book on a carved lectern, quill and inkwell, heraldic banners on tall arched ' +
+      'stone walls, stained glass, warm torchlight, deep amber tone, ' + COMMON,
+  },
+  {
+    name: 'roles',
+    prompt:
+      'a grand gothic chamber interior, a ring of ornate brass keys hanging beside a wax seal ' +
+      'stamp and an open oath ledger on a stone pedestal, heraldic banners on tall arched stone ' +
+      'walls, stained glass, cool blue torchlight, deep indigo-blue tone, ' + COMMON,
+  },
+  {
+    name: 'tax',
+    prompt:
+      'a grand gothic treasury vault interior, stacked gold coins and cut gemstones spilling ' +
+      'from iron-bound chests, a brass weighing scale, heraldic banners on tall arched stone ' +
+      'walls, stained glass, warm golden light, deep gold-brown tone, ' + COMMON,
+  },
+  {
+    name: 'emblem',
+    prompt:
+      'a grand gothic heraldry workshop interior, a blank shield on a workbench with paint pots, ' +
+      'brushes and metal stencils, finished emblem banners hanging on tall arched stone walls, ' +
+      'stained glass, warm candlelight, deep emerald tone, ' + COMMON,
+  },
 ];
+
+// 인자 필터 — 없으면 전체(기존 동작 유지).
+const only = new Set(process.argv.slice(2));
+const TARGETS = only.size > 0 ? MENUS.filter((m) => only.has(m.name)) : MENUS;
+if (only.size > 0 && TARGETS.length !== only.size) {
+  console.error(`알 수 없는 키: ${[...only].filter((k) => !MENUS.some((m) => m.name === k)).join(', ')}`);
+  process.exit(1);
+}
 
 async function gen(name: string, prompt: string): Promise<'ok' | 'fail'> {
   const file = join(OUT, `${name}.png`);
@@ -93,11 +132,11 @@ async function gen(name: string, prompt: string): Promise<'ok' | 'fail'> {
 
 let ok = 0;
 let fail = 0;
-for (const m of MENUS) {
+for (const m of TARGETS) {
   const r = await gen(m.name, m.prompt);
   if (r === 'ok') ok++;
   else fail++;
   await new Promise((r) => setTimeout(r, 800));
 }
-console.log(`[guild-menu] ok ${ok} · fail ${fail} / ${MENUS.length}`);
+console.log(`[guild-menu] ok ${ok} · fail ${fail} / ${TARGETS.length}`);
 process.exit(fail > 0 ? 1 : 0);
