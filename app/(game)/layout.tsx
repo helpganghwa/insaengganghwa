@@ -40,6 +40,11 @@ import { TutorialCoach } from '@/components/tutorial/TutorialCoach';
 import { InstallStrip } from '@/components/install/InstallStrip';
 import { kstDateString } from '@/lib/kst';
 
+// 걸린 렌더의 상한(2026-07-31) — 풀 포화 시 postgres.js가 쿼리를 **기한 없이 큐에 세워**
+// 페이지 스트림이 안 끝나고 300s에 강제 종료되던 것(7일 128건)을 60s로 단축. 근본 원인
+// (풀러 포화)의 완충일 뿐이며, 해소는 Supabase Pool Size 상향 + 핫패스 쿼리 통합이 맡는다.
+export const maxDuration = 60;
+
 // 일일 보급(보급·CBT이월)의 유저·서버·KST일 단위 성공 마크 — 매 페이지 로드마다 나가던
 // 응답 후 쓰기를 하루 1회(인스턴스당)로 줄인다(자정 herd 완화). 에러 없이 끝난 경우에만
 // 마크(부분 실패는 다음 로드에서 재시도). 멱등이라 인스턴스 교체로 재실행돼도 안전.

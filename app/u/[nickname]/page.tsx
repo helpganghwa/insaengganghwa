@@ -29,6 +29,11 @@ import { BackFab } from '@/components/BackNav';
 import { ReportButton } from './ReportButton';
 import { FriendAddButton } from './FriendAddButton';
 
+// 걸린 렌더의 상한(2026-07-31) — 풀 포화 시 postgres.js가 쿼리를 **기한 없이 큐에 세워**
+// 페이지 스트림이 안 끝나고 300s에 강제 종료되던 것(7일 128건)을 60s로 단축. 근본 원인
+// (풀러 포화)의 완충일 뿐이며, 해소는 Supabase Pool Size 상향 + 핫패스 쿼리 통합이 맡는다.
+export const maxDuration = 60;
+
 const SLOT_LABEL: Record<Slot, string> = { weapon: '무기', armor: '방어구', accessory: '장신구' };
 
 // 집행관 구역 지역색(세계지도 REGION과 동일). 미매칭이면 인디고 폴백.

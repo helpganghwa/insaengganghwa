@@ -13,6 +13,11 @@ import { EnhanceStatsCard, EnhanceStatsFallback } from '@/components/EnhanceStat
 import { ServerPicker } from './ServerPicker';
 import { ZoomSafeInput } from '@/components/ui/ZoomSafeField';
 
+// 걸린 렌더의 상한(2026-07-31) — 풀 포화 시 postgres.js가 쿼리를 **기한 없이 큐에 세워**
+// 페이지 스트림이 안 끝나고 300s에 강제 종료되던 것(7일 128건)을 60s로 단축. 근본 원인
+// (풀러 포화)의 완충일 뿐이며, 해소는 Supabase Pool Size 상향 + 핫패스 쿼리 통합이 맡는다.
+export const maxDuration = 60;
+
 /**
  * 로그인 에러 표시 문구 — 내부 코드(oauth_failed 등)를 유저 친화 한글로 매핑. actions.ts가
  * 이미 한글 메시지를 넘긴 경우(한글 포함)는 그대로 노출하고, 매핑에 없는 미지의 코드는
