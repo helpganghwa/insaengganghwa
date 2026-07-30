@@ -1,5 +1,7 @@
 'use client';
 
+import { ZoomSafeSelect } from '@/components/ui/ZoomSafeField';
+
 import {
   EMBLEM_SHAPES,
   EMBLEM_TONES,
@@ -14,8 +16,10 @@ import {
  *  모양(텍스트·1택) · 컬러(메인/서브 각 1택) · 키워드(메인 1 + 서브 0~1).
  *  생성 시 선택값을 AI가 받아 최적 프롬프트로 변환(생성 전 미리보기 없음).
  */
+// 래퍼가 실제 크기를 정한다(ZoomSafe 규약) — 필드 자체는 py로 높이를 못 늘린다.
+const KW_SELECT_WRAP = 'h-9 w-full';
 const KW_SELECT_CLS =
-  'w-full rounded-lg border border-zinc-200 bg-zinc-50 px-2.5 py-2 text-[13px] outline-none focus:border-zinc-400 dark:border-zinc-700 dark:bg-zinc-900 dark:focus:border-zinc-500';
+  'w-full rounded-lg border border-zinc-200 bg-zinc-50 pl-2.5 pr-7 outline-none focus:border-zinc-400 dark:border-zinc-700 dark:bg-zinc-900 dark:focus:border-zinc-500';
 function ColorRow({
   label,
   selectedId,
@@ -133,7 +137,7 @@ export function EmblemPicker({
       <div className="grid grid-cols-2 gap-2">
         <div>
           <p className="mb-1 text-[11px] font-semibold text-zinc-500">메인 키워드</p>
-          <select
+          <ZoomSafeSelect
             value={value.mainKeywordId}
             onChange={(e) => {
               const nextMain = e.target.value;
@@ -141,21 +145,23 @@ export function EmblemPicker({
               const ok = subKeywordsFor(nextMain).some((k) => k.id === value.subKeywordId);
               onChange({ ...value, mainKeywordId: nextMain, subKeywordId: ok ? value.subKeywordId : null });
             }}
+            wrapClassName={KW_SELECT_WRAP}
             className={KW_SELECT_CLS}
           >
             {mainOptions}
-          </select>
+          </ZoomSafeSelect>
         </div>
         <div>
           <p className="mb-1 text-[11px] font-semibold text-zinc-500">서브 키워드</p>
-          <select
+          <ZoomSafeSelect
             value={value.subKeywordId ?? ''}
             onChange={(e) => onChange({ ...value, subKeywordId: e.target.value || null })}
+            wrapClassName={KW_SELECT_WRAP}
             className={KW_SELECT_CLS}
           >
             <option value="">없음</option>
             {subOptions}
-          </select>
+          </ZoomSafeSelect>
         </div>
       </div>
       {value.subKeywordId && (

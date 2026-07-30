@@ -1,6 +1,11 @@
 'use client';
 
-import type { InputHTMLAttributes, Ref, TextareaHTMLAttributes } from 'react';
+import type {
+  InputHTMLAttributes,
+  Ref,
+  SelectHTMLAttributes,
+  TextareaHTMLAttributes,
+} from 'react';
 
 /**
  * iOS 포커스 자동 확대 방지 필드 — iOS Safari는 포커스된 input/textarea의 font-size가
@@ -56,6 +61,47 @@ export function ZoomSafeTextarea({
         className={`absolute left-0 top-0 resize-none text-[16px] ${className ?? ''}`}
         style={FIELD_STYLE}
       />
+    </span>
+  );
+}
+
+/**
+ * select도 같은 확대 대상이다 — iOS는 input/textarea뿐 아니라 **select**도 포커스 시
+ * font-size가 16px 미만이면 화면을 확대한다(2026-07-30 전수 점검에서 발견).
+ * 방식은 위와 동일(16px + scale)이고, 네이티브 화살표를 지운 자리에 ▼를 직접 그리는
+ * 기존 패턴을 유지하려고 화살표는 래퍼가 그린다.
+ */
+export function ZoomSafeSelect({
+  wrapClassName,
+  className,
+  children,
+  arrow = true,
+  ref,
+  ...props
+}: SelectHTMLAttributes<HTMLSelectElement> & {
+  wrapClassName: string;
+  /** 우측 ▼ 표시(네이티브 화살표는 appearance-none으로 지운다). */
+  arrow?: boolean;
+  ref?: Ref<HTMLSelectElement>;
+}) {
+  return (
+    <span className={`relative block ${wrapClassName}`}>
+      <select
+        ref={ref}
+        {...props}
+        className={`absolute left-0 top-0 appearance-none text-[16px] ${className ?? ''}`}
+        style={FIELD_STYLE}
+      >
+        {children}
+      </select>
+      {arrow ? (
+        <span
+          aria-hidden
+          className="pointer-events-none absolute right-2.5 top-1/2 -translate-y-1/2 text-[9px] text-zinc-400 dark:text-zinc-500"
+        >
+          ▼
+        </span>
+      ) : null}
     </span>
   );
 }

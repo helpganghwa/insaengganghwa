@@ -6,6 +6,7 @@ import Link from 'next/link';
 import { atlasMaskStyle } from '@/lib/game/equipment/sprite-atlas';
 import { TranscendSprite } from '@/components/TranscendSprite';
 import type { Slot } from '@/lib/db/schema/equipment';
+import { ZoomSafeSelect } from '@/components/ui/ZoomSafeField';
 
 const SLOT_EMOJI: Record<Slot, string> = { weapon: '⚔️', armor: '🛡️', accessory: '💍' };
 type SlotFilter = 'all' | Slot;
@@ -63,20 +64,16 @@ export function CodexGrid({ items }: { items: CodexItem[] }) {
           ))}
         </div>
         {/* 정렬 — 인벤토리와 동일 컴팩트 셀렉트(네이티브 화살표 제거 후 ▼ 직접). */}
-        <span className="relative inline-flex items-center">
-          <select
-            value={sortBy}
-            onChange={(e) => setSortBy(e.target.value as SortBy)}
-            aria-label="정렬 기준"
-            className="appearance-none rounded-full border border-zinc-300 bg-transparent py-1.5 pl-3 pr-7 text-xs text-zinc-600 dark:border-zinc-700 dark:bg-zinc-950 dark:text-zinc-400"
-          >
-            <option value="enhance">강화순</option>
-            <option value="name">이름순</option>
-          </select>
-          <span aria-hidden className="pointer-events-none absolute right-2.5 text-[9px] text-zinc-400 dark:text-zinc-500">
-            ▼
-          </span>
-        </span>
+        <ZoomSafeSelect
+          value={sortBy}
+          onChange={(e) => setSortBy(e.target.value as SortBy)}
+          aria-label="정렬 기준"
+          wrapClassName="h-[30px] w-[92px] shrink-0"
+          className="rounded-full border border-zinc-300 bg-transparent pl-3 pr-7 text-zinc-600 dark:border-zinc-700 dark:bg-zinc-950 dark:text-zinc-400"
+        >
+          <option value="enhance">강화순</option>
+          <option value="name">이름순</option>
+        </ZoomSafeSelect>
       </div>
 
       <div className="grid grid-cols-3 gap-2">

@@ -1,5 +1,7 @@
 'use client';
 
+import { ZoomSafeInput } from '@/components/ui/ZoomSafeField';
+
 import { useEffect, useState } from 'react';
 import { useSearchParams } from 'next/navigation';
 
@@ -182,11 +184,13 @@ export function GoClient() {
             onClick={(e) => e.stopPropagation()}
           >
             <p className="text-center text-[14px] font-bold">아래 주소를 길게 눌러 복사하세요</p>
-            <input
+            {/* readOnly라도 포커스는 잡히고 select()까지 하므로 iOS가 확대한다 — ZoomSafe 필수. */}
+            <ZoomSafeInput
               readOnly
               value={target}
               onFocus={(e) => e.currentTarget.select()}
-              className="mt-3 w-full rounded-lg border border-zinc-700 bg-zinc-950 px-3 py-2.5 text-center text-[12px] text-zinc-200"
+              wrapClassName="mt-3 h-10 w-full"
+              className="rounded-lg border border-zinc-700 bg-zinc-950 px-3 text-center text-zinc-200"
             />
             <button
               type="button"

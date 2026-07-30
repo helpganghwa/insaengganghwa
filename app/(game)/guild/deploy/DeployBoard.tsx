@@ -116,6 +116,15 @@ function Pin({
   );
 }
 
+/** 배치 현황 팝업 필터 — '미배치'가 실제로 쓰는 것(누가 아직 안 했나). */
+const STATUS_FILTERS = [
+  { key: 'all', label: '전체' },
+  { key: 'attack', label: '공격' },
+  { key: 'defend', label: '수비' },
+  { key: 'idle', label: '미배치' },
+] as const;
+type StatusFilter = (typeof STATUS_FILTERS)[number]['key'];
+
 export function DeployBoard({
   canDeploy,
   canExecutor,
@@ -248,14 +257,33 @@ export function DeployBoard({
   const patch = (userId: string, p: Partial<Member>) =>
     setMembers((prev) => prev.map((m) => (m.userId === userId ? { ...m, ...p } : m)));
 
-  // 길드원 목록 — 본인을 항상 맨 위로(나머지 순서 유지). 배치는 본인 몫이라 접근성 우선.
-  const sortedMembers = useMemo(
-    () => [
+  // 배치 현황 팝업 — 길드원 전체를 시트 밖으로 뺀 자리(D-1).
+  const [statusOpen, setStatusOpen] = useState(false);
+  const [statusFilter, setStatusFilter] = useState<StatusFilter>('all');
+
+  /** 내가 이 구역에 이미 배치되어 있는가 — 배치 버튼 대신 '배치되어 있습니다'를 보인다. */
+  const meHere = useMemo(
+    () =>
+      selectedId != null &&
+      members.some(
+        (m) => m.userId === myUserId && (m.depZoneId === selectedId || m.execZoneId === selectedId),
+      ),
+    [members, myUserId, selectedId],
+  );
+
+  // 현황 목록 — 본인을 항상 맨 위로(나머지 순서 유지). 필터는 '누가 아직 안 했나'가 핵심.
+  const statusList = useMemo(() => {
+    const ordered = [
       ...members.filter((m) => m.userId === myUserId),
       ...members.filter((m) => m.userId !== myUserId),
-    ],
-    [members, myUserId],
-  );
+    ];
+    if (statusFilter === 'all') return ordered;
+    if (statusFilter === 'idle')
+      return ordered.filter((m) => m.depZoneId == null && m.execZoneId == null);
+    if (statusFilter === 'attack') return ordered.filter((m) => m.depRole === 'attack');
+    // 수비 = 수비 배치 + 집행관(집행관은 수비 전력이다).
+    return ordered.filter((m) => m.depRole === 'defend' || m.execZoneId != null);
+  }, [members, myUserId, statusFilter]);
 
   /**
    * 배치 버튼 — 바로 실행하지 않고 "무슨 일이 일어나는지"를 한 팝업에 모은다.
@@ -593,181 +621,252 @@ export function DeployBoard({
         </div>
       </div>
 
-      {/* 하단 — 좌: 선택 구역 / 우: 길드원 전체 */}
-      <div className="grid flex-1 grid-cols-2 divide-x divide-zinc-200 dark:divide-zinc-800">
-        {/* 좌: 선택 구역 배치 */}
-        <section className="min-w-0 p-3">
-          {selected ? (
-            <>
-              <div className="flex items-baseline gap-1.5">
-                <h3 className="truncate text-[13px] font-bold">{selected.name}</h3>
-                <span
-                  className={`shrink-0 rounded-full px-1.5 py-0 text-[9px] font-bold ${
-                    isDefend ? 'bg-sky-500/15 text-sky-600 dark:text-sky-400' : 'bg-red-500/15 text-red-600 dark:text-red-400'
-                  }`}
-                >
-                  {isDefend ? '수비' : '공격'}
-                </span>
-              </div>
-              <p className="mt-0.5 text-[10px] text-zinc-500">
-                총 전투력 <span className="font-mono font-bold text-zinc-700 dark:text-zinc-200">{fmt(totalPower)}</span>
-              </p>
-              {/* 거주 안내(0139) — 배치 시 거주지도 함께 옮겨진다는 것을 미리 알린다. */}
-              {selected.id !== homeZoneId && (
-                <p className="mt-1.5 rounded-md bg-amber-500/10 px-1.5 py-1 text-[9.5px] leading-snug font-medium text-amber-700 dark:text-amber-300">
-                  {adjacentToHome && !adjacentToHome.has(selected.id)
-                    ? '인접한 구역이 아니라 이동할 수 없습니다.'
-                    : '배치하면 거주지도 이 구역으로 옮겨집니다.'}
-                </p>
-              )}
+      {/* 하단 시트(D-1) — 지도가 주인공이고 아래는 **선택한 구역 하나**만 다룬다.
+          종전 좌우 2단은 칸당 170px라 닉네임·전투력·버튼이 눌려 있었다. 길드원 전체
+          배치 현황은 시트를 좁히지 않도록 팝업으로 뺀다(2026-07-30 사용자 결정). */}
+      <div className="flex-1 p-3">
+        {/* 요약 바 — 우리 전력이 어디에 쏠렸는지 + 배치 현황 팝업 진입. */}
+        <button
+          type="button"
+          onClick={() => setStatusOpen(true)}
+          className="flex w-full items-center gap-2 rounded-xl border border-zinc-200 px-3 py-2 text-left active:opacity-70 dark:border-zinc-800"
+        >
+          <span className="flex-1 text-[11px] tabular-nums">
+            <span className="font-semibold text-red-500">공격 {attackCount}</span>
+            <span className="mx-1.5 text-zinc-300 dark:text-zinc-700">·</span>
+            <span className="font-semibold text-sky-500">수비 {defendCount}</span>
+            <span className="mx-1.5 text-zinc-300 dark:text-zinc-700">·</span>
+            <span className={idleCount > 0 ? 'font-semibold text-amber-600 dark:text-amber-400' : 'text-zinc-400'}>
+              미배치 {idleCount}
+            </span>
+          </span>
+          <span className="shrink-0 text-[11px] font-bold text-zinc-500">배치 현황</span>
+          <span className="shrink-0 text-zinc-300 dark:text-zinc-600">›</span>
+        </button>
 
-              {execHere.length === 0 && deployedHere.length === 0 ? (
-                <p className="mt-2 text-[11px] text-zinc-400">배치된 길드원이 없습니다.</p>
-              ) : (
-                <ul className="mt-2 space-y-1">
-                  {execHere.map((m) => (
-                    <li key={m.userId} className="flex min-h-[38px] items-center justify-between gap-1">
-                      <div className="flex min-w-0 flex-1 flex-col">
-                        <span className="flex w-full items-center gap-1">
-                          <span className="truncate text-[12px] font-semibold">{m.nickname}</span>
-                          <span className="shrink-0 font-mono text-[9px] text-zinc-400">
-                            {fmt(Math.round(m.combat * CONQUEST_EXECUTOR_POWER_MULT))}
+        {selected ? (
+          <section className="mt-2.5">
+            <div className="flex items-baseline gap-1.5">
+              <h3 className="truncate text-[14px] font-extrabold">{selected.name}</h3>
+              <span
+                className={`shrink-0 rounded-full px-1.5 py-0 text-[9px] font-bold ${
+                  isDefend
+                    ? 'bg-sky-500/15 text-sky-600 dark:text-sky-400'
+                    : 'bg-red-500/15 text-red-600 dark:text-red-400'
+                }`}
+              >
+                {isDefend ? '수비' : '공격'}
+              </span>
+              <span className="ml-auto shrink-0 text-[10px] text-zinc-500">
+                총 전투력{' '}
+                <span className="font-mono font-bold text-zinc-700 dark:text-zinc-200">
+                  {fmt(totalPower)}
+                </span>
+              </span>
+            </div>
+
+            {/* 거주 안내(0139) — 배치 시 거주지도 함께 옮겨진다는 것을 미리 알린다. */}
+            {selected.id !== homeZoneId && (
+              <p className="mt-1.5 rounded-md bg-amber-500/10 px-2 py-1 text-[10px] font-medium leading-snug text-amber-700 dark:text-amber-300">
+                {adjacentToHome && !adjacentToHome.has(selected.id)
+                  ? '인접한 구역이 아니라 이동할 수 없습니다.'
+                  : '배치하면 거주지도 이 구역으로 옮겨집니다.'}
+              </p>
+            )}
+
+            {/* 내 배치 — 배치는 본인만 한다. 시트 폭이 넉넉하니 큰 버튼 하나로. */}
+            {!locked && !meHere && (
+              <button
+                type="button"
+                onClick={askDeploy}
+                disabled={pending}
+                className={`mt-2.5 w-full rounded-xl py-2.5 text-[13px] font-bold text-white disabled:opacity-50 ${
+                  isDefend ? 'bg-sky-600' : 'bg-red-600'
+                }`}
+              >
+                여기 {isDefend ? '수비' : '공격'}하기
+              </button>
+            )}
+            {meHere && (
+              <p className="mt-2.5 rounded-xl bg-emerald-500/10 py-2 text-center text-[12px] font-bold text-emerald-600 dark:text-emerald-400">
+                이 구역에 배치되어 있습니다
+              </p>
+            )}
+
+            <p className="mt-3 text-[11px] font-bold text-zinc-400">
+              배치된 길드원 ({execHere.length + deployedHere.length})
+            </p>
+            {execHere.length === 0 && deployedHere.length === 0 ? (
+              <p className="mt-1.5 text-[11px] text-zinc-400">아직 아무도 배치되지 않았습니다.</p>
+            ) : (
+              <ul className="mt-1.5 divide-y divide-zinc-100 dark:divide-zinc-900">
+                {execHere.map((m) => (
+                  <li key={m.userId} className="flex items-center gap-2 py-1.5">
+                    <span className="min-w-0 flex-1">
+                      <span className="block truncate text-[12.5px] font-semibold">{m.nickname}</span>
+                      <span className="text-[10px] font-medium text-indigo-500">집행관</span>
+                    </span>
+                    <span className="shrink-0 font-mono text-[10px] text-zinc-400">
+                      {fmt(Math.round(m.combat * CONQUEST_EXECUTOR_POWER_MULT))}
+                    </span>
+                    {canExecutor && !locked && (
+                      <button
+                        type="button"
+                        onClick={clearExec}
+                        disabled={pending}
+                        className="shrink-0 rounded-md px-2 py-1 text-[11px] font-bold text-red-500 disabled:opacity-50"
+                      >
+                        해제
+                      </button>
+                    )}
+                  </li>
+                ))}
+                {deployedHere.map((m) => (
+                  <li key={m.userId} className="flex items-center gap-2 py-1.5">
+                    <span className="min-w-0 flex-1">
+                      <span className="flex items-center gap-1">
+                        <span className="truncate text-[12.5px] font-semibold">{m.nickname}</span>
+                        {m.userId === myUserId ? (
+                          <span className="shrink-0 rounded-full bg-amber-500/15 px-1.5 text-[9px] font-bold text-amber-600 dark:text-amber-400">
+                            나
                           </span>
-                        </span>
-                        <span className="text-[9px] font-medium text-indigo-500">집행관</span>
-                      </div>
-                      {canExecutor && !locked && (
+                        ) : null}
+                      </span>
+                      <span
+                        className={`text-[10px] font-medium ${isDefend ? 'text-sky-500' : 'text-red-500'}`}
+                      >
+                        {isDefend ? '수비' : '공격'}
+                      </span>
+                    </span>
+                    <span className="shrink-0 font-mono text-[10px] text-zinc-400">
+                      {fmt(Math.round(m.combat * (isDefend ? DEFEND_MULT : 1)))}
+                    </span>
+                    {!locked && (canDeploy || m.userId === myUserId) && (
+                      <span className="flex shrink-0 items-center gap-0.5">
+                        {/* 집행관 지정 — executor 권한(0142) */}
+                        {isDefend && canExecutor && (
+                          <button
+                            type="button"
+                            onClick={() => setExec(m)}
+                            disabled={pending}
+                            className="rounded-md px-2 py-1 text-[11px] font-bold text-indigo-500 disabled:opacity-50"
+                          >
+                            집행관
+                          </button>
+                        )}
+                        {/* 본인은 자기 배치 취소, 임원(deploy 권한)은 남의 배치도 해제 */}
                         <button
                           type="button"
-                          onClick={clearExec}
+                          onClick={() => remove(m)}
                           disabled={pending}
-                          className="shrink-0 rounded-md px-1.5 py-0.5 text-[10px] font-bold text-red-500 disabled:opacity-50"
+                          className="rounded-md px-2 py-1 text-[11px] font-bold text-red-500 disabled:opacity-50"
                         >
                           해제
                         </button>
-                      )}
-                    </li>
-                  ))}
-                  {deployedHere.map((m) => (
-                    <li key={m.userId} className="flex min-h-[38px] items-center justify-between gap-1">
-                      <div className="flex min-w-0 flex-1 flex-col">
-                        <span className="flex w-full items-center gap-1">
-                          <span className="truncate text-[12px] font-semibold">{m.nickname}</span>
-                          <span className="shrink-0 font-mono text-[9px] text-zinc-400">
-                            {fmt(Math.round(m.combat * (isDefend ? DEFEND_MULT : 1)))}
-                          </span>
-                        </span>
-                        <span className={`text-[9px] font-medium ${isDefend ? 'text-sky-500' : 'text-red-500'}`}>
-                          {isDefend ? '수비' : '공격'}
-                        </span>
-                      </div>
-                      {!locked && (canDeploy || m.userId === myUserId) && (
-                        <div className="flex shrink-0 items-center gap-0.5">
-                          {/* 집행관 지정 — executor 권한(0142) */}
-                          {isDefend && canExecutor && (
-                            <button
-                              type="button"
-                              onClick={() => setExec(m)}
-                              disabled={pending}
-                              className="rounded-md px-1.5 py-0.5 text-[10px] font-bold text-indigo-500 disabled:opacity-50"
-                            >
-                              집행관
-                            </button>
-                          )}
-                          {/* 해제는 본인 또는 임원 */}
-                          <button
-                            type="button"
-                            onClick={() => remove(m)}
-                            disabled={pending}
-                            className="rounded-md px-1.5 py-0.5 text-[10px] font-bold text-red-500 disabled:opacity-50"
-                          >
-                            해제
-                          </button>
-                        </div>
-                      )}
-                    </li>
-                  ))}
-                </ul>
-              )}
-            </>
-          ) : (
-            <p className="text-[11px] leading-relaxed text-zinc-400">
-              지도에서 우리 점령지(수비) 또는 공격 가능 구역을 선택하세요.
-            </p>
-          )}
-        </section>
-
-        {/* 우: 길드원 전체 */}
-        <section className="min-w-0 p-3">
-          <div className="flex items-baseline gap-1.5">
-            <h3 className="text-[13px] font-bold">길드원 ({members.length})</h3>
-          </div>
-          <p className="mt-0.5 text-[10px] text-zinc-500">
-            <span className="font-semibold text-red-500">공 {attackCount}</span> ·{' '}
-            <span className="font-semibold text-sky-500">수 {defendCount}</span> ·{' '}
-            <span className="text-zinc-400">대기 {idleCount}</span>
+                      </span>
+                    )}
+                  </li>
+                ))}
+              </ul>
+            )}
+          </section>
+        ) : (
+          <p className="mt-3 text-center text-[11px] leading-relaxed text-zinc-400">
+            지도에서 우리 점령지(수비) 또는 공격 가능 구역을 선택하세요.
           </p>
-          <ul className="mt-2 space-y-1">
-            {sortedMembers.map((m) => {
-              const isExec = m.execZoneId != null;
-              const here = selectedId != null && m.depZoneId === selectedId;
-              const deployedZoneId = m.depZoneId ?? m.execZoneId; // 클릭 시 이동할 구역
-              const status = isExec
-                ? `집행관·${m.execZoneName}`
-                : m.depRole
-                  ? `${m.depRole === 'attack' ? '공격' : '수비'}·${m.depZoneName}`
-                  : '미배치';
-              // 배치는 유저 고유 권한 — 공격/수비 버튼은 본인 행에만 노출.
-              // 집행관도 배치 가능(배치 시 자동 방어 자동 해제, 2026-07-26 문의 #90).
-              // 버튼은 항상 노출한다 — 눌러야 무엇이 필요한지(이동·해제) 알 수 있다.
-              const canSelfDeploy = m.userId === myUserId && !locked && selected != null && !here;
-              return (
-                <li key={m.userId} className="flex min-h-[38px] items-center gap-1">
-                  <button
-                    type="button"
-                    onClick={() => deployedZoneId != null && setSelectedId(deployedZoneId)}
-                    disabled={deployedZoneId == null}
-                    className="flex min-w-0 flex-1 flex-col items-start text-left disabled:cursor-default"
-                  >
-                    <span className="flex w-full items-center gap-1">
-                      <span className="truncate text-[12px] font-semibold">{m.nickname}</span>
-                      <span className="shrink-0 font-mono text-[9px] text-zinc-400">{fmt(m.combat)}</span>
-                    </span>
-                    <span
-                      className={`truncate text-[9px] font-medium ${
-                        isExec
-                          ? 'text-indigo-500'
-                          : m.depRole === 'attack'
-                            ? 'text-red-500'
-                            : m.depRole === 'defend'
-                              ? 'text-sky-500'
-                              : 'text-zinc-400'
-                      }`}
-                    >
-                      {status}
-                    </span>
-                  </button>
-                  {here ? (
-                    <span className="shrink-0 text-[9px] font-bold text-emerald-500">배치됨</span>
-                  ) : canSelfDeploy ? (
-                    <button
-                      type="button"
-                      onClick={askDeploy}
-                      disabled={pending}
-                      className={`shrink-0 rounded-md px-1.5 py-0.5 text-[10px] font-bold text-white disabled:opacity-50 ${
-                        isDefend ? 'bg-sky-600' : 'bg-red-600'
-                      }`}
-                    >
-                      {isDefend ? '수비' : '공격'}
-                    </button>
-                  ) : null}
-                </li>
-              );
-            })}
-          </ul>
-        </section>
+        )}
       </div>
 
+      {/* 배치 현황 팝업 — 누가 어디에 있고 누가 비어 있는지. 행을 누르면 그 구역으로 간다. */}
+      {statusOpen && (
+        <ModalShell onClose={() => setStatusOpen(false)} label="길드원 배치 현황">
+          <ModalLayout
+            title="배치 현황"
+            subtitle={`길드원 ${members.length}명 · 공격 ${attackCount} · 수비 ${defendCount} · 미배치 ${idleCount}`}
+            footer={
+              <ModalButton tone="neutral" onClick={() => setStatusOpen(false)}>
+                닫기
+              </ModalButton>
+            }
+          >
+            <div className="flex gap-1">
+              {STATUS_FILTERS.map((f) => (
+                <button
+                  key={f.key}
+                  type="button"
+                  onClick={() => setStatusFilter(f.key)}
+                  className={`flex-1 rounded-lg py-1.5 text-[11px] font-bold transition ${
+                    statusFilter === f.key
+                      ? 'bg-zinc-900 text-white dark:bg-zinc-100 dark:text-zinc-900'
+                      : 'bg-zinc-100 text-zinc-500 dark:bg-zinc-900'
+                  }`}
+                >
+                  {f.label}
+                </button>
+              ))}
+            </div>
+            <ul className="mt-2 max-h-[46vh] divide-y divide-zinc-100 overflow-y-auto dark:divide-zinc-900">
+              {statusList.length === 0 ? (
+                <li className="py-6 text-center text-[11px] text-zinc-400">해당하는 길드원이 없습니다.</li>
+              ) : (
+                statusList.map((m) => {
+                  const isExec = m.execZoneId != null;
+                  const zoneId = m.depZoneId ?? m.execZoneId;
+                  const zoneName = isExec ? m.execZoneName : m.depZoneName;
+                  return (
+                    <li key={m.userId}>
+                      <button
+                        type="button"
+                        disabled={zoneId == null}
+                        onClick={() => {
+                          if (zoneId == null) return;
+                          setSelectedId(zoneId);
+                          setStatusOpen(false);
+                        }}
+                        className="flex w-full items-center gap-2 py-2 text-left disabled:cursor-default"
+                      >
+                        <span className="min-w-0 flex-1">
+                          <span className="flex items-center gap-1">
+                            <span className="truncate text-[12.5px] font-semibold">{m.nickname}</span>
+                            {m.userId === myUserId ? (
+                              <span className="shrink-0 rounded-full bg-amber-500/15 px-1.5 text-[9px] font-bold text-amber-600 dark:text-amber-400">
+                                나
+                              </span>
+                            ) : null}
+                          </span>
+                          <span
+                            className={`block truncate text-[10px] font-medium ${
+                              isExec
+                                ? 'text-indigo-500'
+                                : m.depRole === 'attack'
+                                  ? 'text-red-500'
+                                  : m.depRole === 'defend'
+                                    ? 'text-sky-500'
+                                    : 'text-zinc-400'
+                            }`}
+                          >
+                            {isExec
+                              ? `집행관 · ${zoneName}`
+                              : m.depRole
+                                ? `${m.depRole === 'attack' ? '공격' : '수비'} · ${zoneName}`
+                                : '미배치'}
+                          </span>
+                        </span>
+                        <span className="shrink-0 font-mono text-[10px] text-zinc-400">
+                          {fmt(m.combat)}
+                        </span>
+                        {zoneId != null ? (
+                          <span className="shrink-0 text-zinc-300 dark:text-zinc-600">›</span>
+                        ) : null}
+                      </button>
+                    </li>
+                  );
+                })
+              )}
+            </ul>
+          </ModalLayout>
+        </ModalShell>
+      )}
 
       {/* 이동 대기시간 단축 — 배치 전에 먼저 통과해야 하는 관문(세계지도 이동과 동일 순서). */}
       {speedUpAsk && plan && (

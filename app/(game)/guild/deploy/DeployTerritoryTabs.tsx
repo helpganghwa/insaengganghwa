@@ -35,31 +35,35 @@ export function DeployTerritoryTabs({ deploy, worldmap }: { deploy: ReactNode; w
   // isolate — 탭 버튼 z-40이 전역 스태킹으로 새어 채팅 미니바(z-20 fixed) 위로 떠오르던 버그 방지
   // (WorldMapView 지도 컨테이너와 동일 처리, 2026-07-23 제보 #67).
   return (
-    <div className="relative isolate flex min-h-full shrink-0 flex-col">
-      {tab === 'deploy' ? deploy : worldmap}
-      {/* 지도 정사각 하단 근처(홈 세계지도 역사/점령 탭과 동일 위치). 배치 탭의 시각 안내는 이 버튼 위 4px. */}
-      <div
-        className="absolute right-2 z-40 inline-flex gap-0.5 rounded-lg bg-black/45 p-0.5 backdrop-blur-sm"
-        style={{ top: 'calc(min(100vw, 390px) - 2.2rem)' }}
-      >
-        {(
-          [
-            ['deploy', '배치'],
-            ['map', '세계지도'],
-          ] as const
-        ).map(([k, label]) => (
-          <button
-            key={k}
-            type="button"
-            onClick={() => changeTab(k)}
-            aria-pressed={tab === k}
-            className={`rounded-md px-2 py-0.5 text-[11px] font-bold transition ${
-              tab === k ? 'bg-amber-500 text-white shadow-sm' : 'text-white/70'
-            }`}
-          >
-            {label}
-          </button>
-        ))}
+    // 탭 버튼 top 계산이 **지도 시작점** 기준이 되도록 지도를 감싸는 relative를 따로 둔다.
+    // 종전엔 바깥 컨테이너 기준이라 위에 헤더가 붙으면 버튼이 지도 밖으로 밀렸다(2026-07-30).
+    <div className="isolate flex min-h-full shrink-0 flex-col">
+      <div className="relative flex min-h-full flex-col">
+        {tab === 'deploy' ? deploy : worldmap}
+        {/* 지도 정사각 하단 근처(홈 세계지도 역사/점령 탭과 동일 위치). 배치 탭의 시각 안내는 이 버튼 위 4px. */}
+        <div
+          className="absolute right-2 z-40 inline-flex gap-0.5 rounded-lg bg-black/45 p-0.5 backdrop-blur-sm"
+          style={{ top: 'calc(min(100vw, 390px) - 2.2rem)' }}
+        >
+          {(
+            [
+              ['deploy', '배치'],
+              ['map', '세계지도'],
+            ] as const
+          ).map(([k, label]) => (
+            <button
+              key={k}
+              type="button"
+              onClick={() => changeTab(k)}
+              aria-pressed={tab === k}
+              className={`rounded-md px-2 py-0.5 text-[11px] font-bold transition ${
+                tab === k ? 'bg-amber-500 text-white shadow-sm' : 'text-white/70'
+              }`}
+            >
+              {label}
+            </button>
+          ))}
+        </div>
       </div>
     </div>
   );

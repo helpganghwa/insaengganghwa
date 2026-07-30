@@ -14,6 +14,7 @@ import { ModalShell } from '@/components/ModalShell';
 import { ModalLayout, ModalButton } from '@/components/ModalLayout';
 
 import { startEnhance } from './actions';
+import { ZoomSafeSelect } from '@/components/ui/ZoomSafeField';
 
 const SLOT_LABEL: Record<Slot, string> = { weapon: '무기', armor: '방어구', accessory: '장신구' };
 
@@ -127,21 +128,17 @@ function EnhanceSlotPicker({
           <span className="inline-flex items-center gap-1.5">
             탭하면 빈 슬롯에 자동 등록
             {/* 정렬 셀렉트 — 인벤토리와 동일 스타일(커스텀 ▼, iOS 색상·크롬 위치 이슈 회피). */}
-            <span className="relative inline-flex items-center">
-              <select
-                value={sortBy}
-                onChange={(e) => setSortBy(e.target.value as typeof sortBy)}
-                aria-label="정렬 기준"
-                className="appearance-none rounded-full border border-zinc-300 bg-transparent py-1 pl-2.5 pr-6 text-[11px] text-zinc-600 dark:border-zinc-700 dark:bg-zinc-950 dark:text-zinc-400"
-              >
-                <option value="enhance">강화순</option>
-                <option value="transcend">초월순</option>
-                <option value="name">이름순</option>
-              </select>
-              <span aria-hidden className="pointer-events-none absolute right-2 text-[8px] text-zinc-400 dark:text-zinc-500">
-                ▼
-              </span>
-            </span>
+            <ZoomSafeSelect
+              value={sortBy}
+              onChange={(e) => setSortBy(e.target.value as typeof sortBy)}
+              aria-label="정렬 기준"
+              wrapClassName="inline-block h-[26px] w-[84px] shrink-0 align-middle"
+              className="rounded-full border border-zinc-300 bg-transparent pl-2.5 pr-6 text-zinc-600 dark:border-zinc-700 dark:bg-zinc-950 dark:text-zinc-400"
+            >
+              <option value="enhance">강화순</option>
+              <option value="transcend">초월순</option>
+              <option value="name">이름순</option>
+            </ZoomSafeSelect>
           </span>
         }
         maxBodyClass="max-h-[62vh]"
