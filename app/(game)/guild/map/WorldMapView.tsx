@@ -28,7 +28,7 @@ import { guildErrMsg } from '../errors-msg';
 
 import { ZONE_LORE } from '@/lib/game/guild/zone-lore';
 import { REGION_META, REGION_ORDER, type Region } from '@/lib/game/guild/region-meta';
-import { CHRONICLE_TOKEN_RE, fixLeadingJosa } from './chronicle-tokens';
+import { CHRONICLE_TOKEN_RE, displayName, fixLeadingJosa } from './chronicle-tokens';
 import { ChronicleReplayPanel } from './ChronicleReplay';
 import type { ConquestReplay } from '@/lib/game/guild/conquest/replay';
 
@@ -65,12 +65,15 @@ type Zone = {
 function ChronicleText({
   text,
   zoneColor,
+  zoneNameById,
   onGuild,
   onZone,
   serverId,
 }: {
   text: string;
   zoneColor: (name: string) => string | null;
+  /** 구역 id → 현재 이름. 개명된 구역을 옛 기록에서도 지도와 같은 이름으로 보여준다(0141). */
+  zoneNameById: Map<number, string>;
   onGuild: (name: string, guildId?: number) => void;
   onZone: (name: string) => void;
   serverId: number;
@@ -82,8 +85,8 @@ function ChronicleText({
   for (const m of text.matchAll(CHRONICLE_TOKEN_RE)) {
     const mIndex = m.index ?? 0;
     if (mIndex > last) out.push(<span key={key++}>{text.slice(last, mIndex)}</span>);
-    const type = m[1];
-    const name = m[2];
+    const type = m[1] as 'g' | 'u' | 'z';
+    const name = displayName(type, m[2]!, m[3], { zoneName: (id) => zoneNameById.get(id) });
     if (type === 'g') {
       // 길드 — 회청(슬레이트). 클릭 시 길드 상세 팝업.
       // 3필드 마커({g|이름|길드id})의 id는 불변 — 해산 후 같은 이름으로 만들어진 다른 길드가
@@ -365,6 +368,12 @@ export function WorldMapView({
   const zoneIdByName = useMemo(() => {
     const m = new Map<string, number>();
     for (const z of zones) m.set(z.name, z.id);
+    return m;
+  }, [zones]);
+  // 구역 id → 현재 이름 — 연대기 마커의 구역 표시명 해소(개명 구역이 지도와 어긋나지 않게).
+  const zoneNameById = useMemo(() => {
+    const m = new Map<number, string>();
+    for (const z of zones) m.set(z.id, z.name);
     return m;
   }, [zones]);
   const openZoneByName = (name: string) => {
@@ -836,6 +845,7 @@ export function WorldMapView({
                       serverId={serverId}
                       text={para.trim()}
                       zoneColor={zoneColor}
+                      zoneNameById={zoneNameById}
                       onGuild={openGuild}
                       onZone={openZoneByName}
                     />
@@ -870,6 +880,7 @@ export function WorldMapView({
                       serverId={serverId}
                       text={para.trim()}
                       zoneColor={zoneColor}
+                      zoneNameById={zoneNameById}
                       onGuild={openGuild}
                       onZone={openZoneByName}
                     />
@@ -898,6 +909,7 @@ export function WorldMapView({
                       serverId={serverId}
                       text={e.headline}
                       zoneColor={zoneColor}
+                      zoneNameById={zoneNameById}
                       onGuild={openGuild}
                       onZone={openZoneByName}
                     />

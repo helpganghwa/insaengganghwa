@@ -6,7 +6,7 @@
  *  2) {g|이름|id} — id 누락(2필드 잔존) / 해산 센티널(0) / 현존 id의 현재 이름과 표기 불일치
  *  3) {u|닉|코드} — 코드 없는 2필드 / 존재하지 않는 publicCode(탈퇴)
  *  4) guild_refs  — 미채움 / 그날 등장 길드 미포함(리플레이가 실시간 폴백으로 떨어짐)
- *  5) 마커 밖 평문에 남은 구역·길드 이름(마킹 누락)
+ *  5) 마커 밖 평문에 남은 구역명(참고 — 비유 표현이면 오탐)
  *
  * 사용: bun run scripts/audit-chronicle.ts [PROD_DATABASE_URL]
  */
@@ -24,6 +24,7 @@ const zoneRows = (await sql`select id, server_id, name from zones`) as unknown a
   server_id: number;
   name: string;
 }[];
+const zoneNameById = new Map<number, string>(zoneRows.map((z) => [Number(z.id), z.name]));
 const zoneByServer = new Map<number, Set<string>>();
 for (const z of zoneRows) {
   if (!zoneByServer.has(z.server_id)) zoneByServer.set(z.server_id, new Set());
@@ -66,7 +67,19 @@ for (const r of rows) {
   for (const m of text.matchAll(TOKEN)) {
     const [, kind, name, third] = m as unknown as [string, string, string, string | undefined];
     if (kind === 'z') {
-      if (!zones.has(name)) issues.push({ day: r.d, kind: 'zone-missing', detail: name });
+      if (third === undefined) {
+        issues.push({ day: r.d, kind: 'zone-no-id', detail: name });
+      } else {
+        const zid = Number(third);
+        const cur = zoneNameById.get(zid);
+        if (!Number.isInteger(zid) || cur === undefined) {
+          issues.push({ day: r.d, kind: 'zone-id-gone', detail: `${name}|${third}` });
+        }
+        // 표기 != 현재 이름은 정상(개명 — 렌더가 현재 이름으로 해소한다).
+      }
+      if (third === undefined && !zones.has(name)) {
+        issues.push({ day: r.d, kind: 'zone-missing', detail: name });
+      }
     } else if (kind === 'g') {
       if (third === undefined) {
         issues.push({ day: r.d, kind: 'guild-no-id', detail: name });
@@ -101,7 +114,7 @@ for (const r of rows) {
   const plain = text.split(/\{[guz]\|[^}]+\}/g).join('');
   for (const zn of zones) {
     if (zn.length >= 2 && plain.includes(zn)) {
-      issues.push({ day: r.d, kind: 'zone-unmarked', detail: zn });
+      issues.push({ day: r.d, kind: 'zone-unmarked(참고)', detail: zn });
     }
   }
 }

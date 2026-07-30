@@ -871,7 +871,16 @@ export async function generateAndStoreChronicle(
       const name = n.trim();
       return `{g|${name}|${guildRefByName.get(name)?.id ?? 0}}`;
     });
-  const enrichMarkers = (s: string) => enrichGuildMarkers(enrichUserMarkers(s));
+  // {z|이름} → {z|이름|구역id}(0141) — 구역은 '장소'라 개명(0135 '잊힌 신전'→'설원 신전')되면 옛
+  // 기록의 이름이 지도와 어긋나고, 리플레이 연출 트리거(구역명 매칭)도 함께 끊긴다. id를 달아
+  // 표시는 현재 이름으로 해소하고 트리거는 id로 건다. 미해결(삭제된 구역)은 이름만 남긴다.
+  const enrichZoneMarkers = (s: string): string =>
+    s.replace(/\{z\|([^}|]+)\}/g, (mm, n: string) => {
+      const name = n.trim();
+      const id = idByName.get(name);
+      return id != null ? `{z|${name}|${id}}` : mm;
+    });
+  const enrichMarkers = (s: string) => enrichZoneMarkers(enrichGuildMarkers(enrichUserMarkers(s)));
 
   const baseContent =
     `${kstDay} 점령전 기록.\n\n${digest}\n\n${context}\n\n` +

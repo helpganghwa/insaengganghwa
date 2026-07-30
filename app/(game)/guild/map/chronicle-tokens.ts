@@ -42,16 +42,27 @@ export type ChronicleSegment =
   | { kind: 'text'; text: string }
   | { kind: 'g' | 'u' | 'z'; text: string; name: string; code?: string };
 
+/**
+ * 구역 표시명 해소 — 구역은 '장소'라서, 개명되면 과거 기록도 **현재 이름**으로 보여야 지도와
+ * 어긋나지 않는다(0135 '잊힌 신전'→'설원 신전'). 길드·인물은 반대다(그날 이름이 정답).
+ * 반환값이 undefined면 토큰에 적힌 이름을 그대로 쓴다. 조사 보정도 해소된 이름 기준으로 한다.
+ */
+export type ChronicleResolve = { zoneName?: (zoneId: number) => string | undefined };
+
 /** 마커 텍스트 → 세그먼트 배열(조사 보정 포함) — 정적/타이핑 렌더 공용 파서. */
-export function parseChronicleSegments(text: string): ChronicleSegment[] {
+export function parseChronicleSegments(
+  text: string,
+  resolve?: ChronicleResolve,
+): ChronicleSegment[] {
   const out: ChronicleSegment[] = [];
   let last = 0;
   for (const m of text.matchAll(CHRONICLE_TOKEN_RE)) {
     const mIndex = m.index ?? 0;
     if (mIndex > last) out.push({ kind: 'text', text: text.slice(last, mIndex) });
     const kind = m[1] as 'g' | 'u' | 'z';
-    const name = m[2]!;
-    out.push({ kind, text: name, name, code: m[3] });
+    const code = m[3];
+    const name = displayName(kind, m[2]!, code, resolve);
+    out.push({ kind, text: name, name, code });
     last = mIndex + m[0].length;
     const fixed = fixLeadingJosa(name, text.slice(last));
     if (fixed) {
@@ -61,4 +72,17 @@ export function parseChronicleSegments(text: string): ChronicleSegment[] {
   }
   if (last < text.length) out.push({ kind: 'text', text: text.slice(last) });
   return out;
+}
+
+/** 토큰의 표시 이름 — 구역만 현재 이름으로 해소(위 ChronicleResolve 주석의 이유). */
+export function displayName(
+  kind: 'g' | 'u' | 'z',
+  raw: string,
+  code: string | undefined,
+  resolve?: ChronicleResolve,
+): string {
+  if (kind !== 'z' || !code || !resolve?.zoneName) return raw;
+  const id = Number(code);
+  if (!Number.isInteger(id)) return raw;
+  return resolve.zoneName(id) ?? raw;
 }

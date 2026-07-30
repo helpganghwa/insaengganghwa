@@ -61,39 +61,54 @@ export function ChronicleReplayPanel({
   onNeutralize: (zoneId: number) => void;
   onDone: () => void;
 }) {
-  const paras = useRef(text.split(/\n{2,}/).map((p) => parseChronicleSegments(p.trim())));
+  // 구역 표시명은 **현재 이름**으로 해소 — 개명된 구역이 지도와 어긋나지 않게(0141).
+  const zoneNameById = useRef(new Map(zones.map((z) => [z.id, z.name])));
+  const zoneIdByName = useRef(new Map(zones.map((z) => [z.name, z.id])));
+  const paras = useRef(
+    text
+      .split(/\n{2,}/)
+      .map((p) =>
+        parseChronicleSegments(p.trim(), { zoneName: (id) => zoneNameById.current.get(id) }),
+      ),
+  );
+  /** 세그먼트 → 구역 id. 토큰 id 우선, 없으면(레거시 2필드) 표시명으로 역인덱스. */
+  const zoneIdOf = (seg: ChronicleSegment): number | null => {
+    if (seg.kind !== 'z') return null;
+    const fromToken = seg.code ? Number(seg.code) : NaN;
+    if (Number.isInteger(fromToken) && zoneNameById.current.has(fromToken)) return fromToken;
+    return zoneIdByName.current.get(seg.name) ?? null;
+  };
   const [pos, setPos] = useState<{ p: number; s: number; c: number }>({ p: 0, s: 0, c: 0 });
   const [ended, setEnded] = useState(false);
   const skipRef = useRef(false);
   const doneRef = useRef(false);
-  const firedRef = useRef(new Set<string>());
+  const firedRef = useRef(new Set<number>());
   const neutralFiredRef = useRef(new Set<number>());
   const neutralTriggeredRef = useRef(false); // 중립화 캐스케이드 1회 발동 가드
-  const neutralNamesRef = useRef(new Set((replay.neutralized ?? []).map((n) => n.zone)));
+  const neutralIdsRef = useRef(new Set((replay.neutralized ?? []).map((n) => n.zoneId)));
   const ownersRef = useRef<Record<number, string | null>>({ ...replay.beforeOwner });
 
   const zoneById = useRef(new Map(zones.map((z) => [z.id, z])));
 
   // ── 연속 나열 그룹 사전 계산 — 각 z세그(p,s) → groupKey, 그룹 마지막 z에서 일괄 실행 ──
-  const groups = useRef<Map<string, { zones: string[]; lastKey: string }>>(new Map());
+  const groups = useRef<Map<string, { zoneIds: number[]; lastKey: string }>>(new Map());
   useEffect(() => {
-    const g = new Map<string, { zones: string[]; lastKey: string }>();
+    const g = new Map<string, { zoneIds: number[]; lastKey: string }>();
     for (let p = 0; p < paras.current.length; p++) {
       const segs = paras.current[p]!;
-      let cur: { keys: string[]; zones: string[] } | null = null;
+      let cur: { keys: string[]; zoneIds: number[] } | null = null;
       const flush = () => {
         if (!cur) return;
-        const groupId = cur.keys[0]!;
-        for (const k of cur.keys) g.set(k, { zones: cur.zones, lastKey: cur.keys[cur.keys.length - 1]! });
-        void groupId;
+        for (const k of cur.keys) g.set(k, { zoneIds: cur.zoneIds, lastKey: cur.keys[cur.keys.length - 1]! });
         cur = null;
       };
       for (let s = 0; s < segs.length; s++) {
         const seg = segs[s]!;
-        if (seg.kind === 'z' && replay.events[seg.name]) {
+        const zid = zoneIdOf(seg);
+        if (zid != null && replay.events[zid]) {
           const key = `${p}:${s}`;
-          if (cur) { cur.keys.push(key); cur.zones.push(seg.name); }
-          else cur = { keys: [key], zones: [seg.name] };
+          if (cur) { cur.keys.push(key); cur.zoneIds.push(zid); }
+          else cur = { keys: [key], zoneIds: [zid] };
         } else if (seg.kind === 'text' && cur && LIST_GLUE_RE.test(seg.text)) {
           // 나열 접속 — 그룹 유지
         } else {
@@ -343,9 +358,9 @@ export function ChronicleReplayPanel({
   }
 
   function flushRemaining() {
-    for (const [name, ev] of Object.entries(replay.events)) {
-      if (firedRef.current.has(name)) continue;
-      firedRef.current.add(name);
+    for (const ev of Object.values(replay.events)) {
+      if (firedRef.current.has(ev.zoneId)) continue;
+      firedRef.current.add(ev.zoneId);
       applyFlip(ev);
     }
     // 방치 중립화 — 스킵/조기종료 시 애니 없이 즉시 중립 전환(연출은 runNeutralizations가 담당).
@@ -377,16 +392,17 @@ export function ChronicleReplayPanel({
             }
           }
           if (seg.kind === 'z') {
-            const ev = replay.events[seg.name];
-            if (ev && !firedRef.current.has(seg.name)) {
+            const zid = zoneIdOf(seg);
+            const ev = zid != null ? replay.events[zid] : undefined;
+            if (ev && zid != null && !firedRef.current.has(zid)) {
               const key = `${p}:${s}`;
               const grp = groups.current.get(key);
               if (grp && grp.lastKey !== key) {
                 // 그룹 중간 구역 — 마지막 구역명에서 일괄 발표
               } else {
-                const names = grp ? grp.zones.filter((n) => !firedRef.current.has(n)) : [seg.name];
-                for (const n of names) firedRef.current.add(n);
-                const evList = names.map((n) => replay.events[n]!).filter(Boolean);
+                const ids = grp ? grp.zoneIds.filter((n) => !firedRef.current.has(n)) : [zid];
+                for (const n of ids) firedRef.current.add(n);
+                const evList = ids.map((n) => replay.events[n]!).filter(Boolean);
                 // 교전(경합/수비전) 구역은 일괄 발표에서 분리 — 무혈 점령들을 동시에 발표한 뒤
                 // 전투는 한 곳씩 단독 재생해 격돌이 묻히지 않게 한다(2026-07-17 성문 피드백).
                 const calm = evList.filter((e) => !hasClash(e));
@@ -394,7 +410,7 @@ export function ChronicleReplayPanel({
                 if (calm.length > 0) await runZoneEvents(calm);
                 for (const b of battles) await runZoneEvents([b]);
               }
-            } else if (!ev && !neutralTriggeredRef.current && neutralNamesRef.current.has(seg.name)) {
+            } else if (!ev && !neutralTriggeredRef.current && zid != null && neutralIdsRef.current.has(zid)) {
               // 방치 중립화 문장의 첫 구역 마커 도달 → 문양 소멸 캐스케이드 즉시 발동(종료 대기 X).
               neutralTriggeredRef.current = true;
               await runNeutralizations();

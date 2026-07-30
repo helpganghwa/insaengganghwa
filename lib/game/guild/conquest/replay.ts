@@ -41,7 +41,7 @@ export type ReplayEvent = {
 export type ConquestReplay = {
   kstDay: string;
   guilds: Record<string, ReplayGuild>;
-  /** 구역명 → 이벤트(연대기 마커 트리거용). */
+  /** **구역 id** → 이벤트(연대기 마커 트리거용). 구역명을 키로 쓰면 개명 시 트리거가 끊긴다(0141). */
   events: Record<string, ReplayEvent>;
   /** 방치 중립화된 구역 — 리플레이 종료 시 소유 길드 문양이 소멸(전투 아님, 배치 안 해 방치로 상실). */
   neutralized: { zoneId: number; zone: string; guild: string }[];
@@ -150,16 +150,16 @@ export async function getConquestReplay(serverId: number, forKstDay?: string): P
     const rivals = rivalsFor(c.zone, c.winner);
     const origins: Record<string, number | null> = { [c.winner]: originFor(c.winner, c.zone) };
     for (const r of rivals) origins[r] = originFor(r, c.zone);
-    events[c.zone] = { zoneId: z.id, zone: c.zone, type: 'capture', winner: c.winner, from: c.from, rivals, origins, defended: c.defenders > 0 };
+    events[z.id] = { zoneId: z.id, zone: c.zone, type: 'capture', winner: c.winner, from: c.from, rivals, origins, defended: c.defenders > 0 };
   }
   for (const d of s.defenses) {
     const z = byName.get(d.zone);
-    if (!z || events[d.zone]) continue;
+    if (!z || events[z.id]) continue;
     const rivals = rivalsFor(d.zone, d.owner);
     if (rivals.length === 0) continue; // 공격 없던 방어(무승부 보정 등)는 연출 생략
     const origins: Record<string, number | null> = {};
     for (const r of rivals) origins[r] = originFor(r, d.zone);
-    events[d.zone] = { zoneId: z.id, zone: d.zone, type: 'defense', winner: d.owner, from: null, rivals, origins, defended: true };
+    events[z.id] = { zoneId: z.id, zone: d.zone, type: 'defense', winner: d.owner, from: null, rivals, origins, defended: true };
   }
 
   if (Object.keys(events).length === 0 && neutralized.length === 0) return null;
