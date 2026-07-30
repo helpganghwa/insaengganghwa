@@ -52,6 +52,32 @@ export async function getMyMembership(userId: string, serverId: number) {
   return m ?? null;
 }
 
+/**
+ * 부길드장 목록 + 각자 권한(0142) — 권한 화면(/guild/roles) 전용.
+ * 임명 순서(joinedAt)가 아니라 **닉네임순**으로 정렬한다 — 목록에서 사람을 찾는 화면이라
+ * 순서가 안정적이어야 한다(임명 시각은 화면에 쓰지 않는다).
+ */
+export async function getGuildVices(guildId: bigint) {
+  return db
+    .select({
+      userId: guildMembers.userId,
+      nickname: characters.nickname,
+      permissions: guildMembers.permissions,
+      avatar: sql<string | null>`${userProfiles.rotations} ->> 'south'`,
+    })
+    .from(guildMembers)
+    .innerJoin(
+      characters,
+      and(
+        eq(characters.userId, guildMembers.userId),
+        eq(characters.serverId, guildMembers.serverId),
+      ),
+    )
+    .leftJoin(userProfiles, eq(userProfiles.id, characters.activeProfileId))
+    .where(and(eq(guildMembers.guildId, guildId), eq(guildMembers.role, 'vice')))
+    .orderBy(characters.nickname);
+}
+
 /** 길드 기본 정보 + 현재 인원/수용. */
 export async function getGuild(guildId: bigint) {
   const [g] = await db.select().from(guilds).where(eq(guilds.id, guildId)).limit(1);

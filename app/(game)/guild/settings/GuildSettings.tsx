@@ -2,6 +2,7 @@
 
 import { useEffect, useState, useTransition } from 'react';
 import { useRouter } from 'next/navigation';
+import Link from 'next/link';
 
 import { DistributeBoard } from '../distribute/DistributeBoard';
 
@@ -69,6 +70,7 @@ export function GuildSettings({
   members,
   myUserId,
   myRole,
+  can,
 }: {
   guild: SettingsView;
   emblems: EmblemItem[];
@@ -76,6 +78,16 @@ export function GuildSettings({
   members: MemberLite[];
   myUserId: string;
   myRole: Role;
+  /** 권한 게이팅(0142) — 역할이 아니라 권한으로 탭·버튼을 연다. 길드장은 전부 true. */
+  can: {
+    notice: boolean;
+    intro: boolean;
+    openchat: boolean;
+    joinReview: boolean;
+    kick: boolean;
+    taxDistribute: boolean;
+    emblem: boolean;
+  };
 }) {
   const router = useRouter();
   const { showHeaderToast, showError } = useResourceToast();
@@ -287,6 +299,8 @@ export function GuildSettings({
     });
 
   const manageable = memberList.filter((m) => m.userId !== myUserId && m.role !== 'leader');
+  // 부길드장 수 — 권한 화면 진입 카드 노출 판단(0명이면 설정할 대상이 없다).
+  const vicesCount = memberList.filter((m) => m.role === 'vice').length;
 
   const changePolicy = (next: GuildJoinPolicy) => {
     if (next === policy) return;
@@ -534,7 +548,8 @@ export function GuildSettings({
           [
             ['settings', '길드 정보'],
             ['members', '구성원'],
-            ...(isLeader ? [['tax', '세금'] as const, ['emblem', '문양'] as const] : []),
+            ...(can.taxDistribute ? [['tax', '세금'] as const] : []),
+            ...(can.emblem ? [['emblem', '문양'] as const] : []),
           ] as [typeof tab, string][]
         ).map(([k, label]) => (
           <button
@@ -548,7 +563,7 @@ export function GuildSettings({
             }`}
           >
             {label}
-            {k === 'members' && isLeader && policy === 'approval' && requests.length > 0 ? (
+            {k === 'members' && can.joinReview && policy === 'approval' && requests.length > 0 ? (
               <span className="absolute right-1 top-0.5 rounded-full bg-amber-600 px-1 text-[9px] font-bold leading-tight text-white">
                 {requests.length}
               </span>
@@ -583,11 +598,22 @@ export function GuildSettings({
                 비우기
               </button>
             )}
-            <button type="button" onClick={saveNotice} disabled={pending || !noticeDirty} className={BTN.primary}>
+            <button
+              type="button"
+              onClick={saveNotice}
+              disabled={pending || !noticeDirty || !can.notice}
+              className={BTN.primary}
+            >
               저장
             </button>
           </div>
         </div>
+
+        {!can.notice && (
+          <p className="text-[10.5px] text-zinc-400">
+            공지 수정 권한이 없습니다 — 길드장이 열어주면 저장할 수 있어요.
+          </p>
+        )}
 
         {/* 소개(공개) — 랭킹/검색 목록 팝업에 노출 */}
         <div className="border-t border-zinc-100 pt-3 dark:border-zinc-900">
@@ -610,11 +636,22 @@ export function GuildSettings({
                 비우기
               </button>
             )}
-            <button type="button" onClick={saveIntro} disabled={pending || !introDirty} className={BTN.primary}>
+            <button
+              type="button"
+              onClick={saveIntro}
+              disabled={pending || !introDirty || !can.intro}
+              className={BTN.primary}
+            >
               저장
             </button>
           </div>
         </div>
+
+        {!can.intro && (
+          <p className="text-[10.5px] text-zinc-400">
+            소개 수정 권한이 없습니다 — 길드장이 열어주면 저장할 수 있어요.
+          </p>
+        )}
 
         {/* 카카오 오픈채팅 — 길드 홈에 입장 버튼 노출 */}
         <div className="border-t border-zinc-100 pt-3 dark:border-zinc-900">
@@ -631,18 +668,49 @@ export function GuildSettings({
           <p className="mt-1 text-[10px] text-zinc-400">
             등록하면 길드 홈에 입장 버튼이 보입니다. 비우고 저장하면 제거됩니다.
           </p>
+          {!can.openchat && (
+            <p className="mt-1 text-[10.5px] text-zinc-400">
+              오픈채팅 설정 권한이 없습니다 — 길드장이 열어주면 저장할 수 있어요.
+            </p>
+          )}
           <div className="mt-2 flex justify-end gap-1.5">
             {openchat.length > 0 && (
               <button type="button" onClick={() => setOpenchat('')} disabled={pending} className={BTN.ghost}>
                 비우기
               </button>
             )}
-            <button type="button" onClick={saveOpenchat} disabled={pending || !openchatDirty} className={BTN.primary}>
+            <button
+              type="button"
+              onClick={saveOpenchat}
+              disabled={pending || !openchatDirty || !can.openchat}
+              className={BTN.primary}
+            >
               저장
             </button>
           </div>
         </div>
       </section>
+      )}
+
+      {/* 부길드장 권한(0142) — 개인별 설정은 전용 화면. 관리 허브가 생기면 타일로 옮긴다.
+          부길드장에게도 노출한다(읽기 전용으로 자기 권한 확인 — 문의 #107). */}
+      {tab === 'members' && vicesCount > 0 && (
+        <Link
+          prefetch={false}
+          href="/guild/roles"
+          className="flex items-center gap-2.5 rounded-xl border border-sky-500/30 bg-sky-50/40 p-3 active:opacity-70 dark:border-sky-500/25 dark:bg-sky-950/15"
+        >
+          <span className="text-base">🔑</span>
+          <span className="min-w-0 flex-1">
+            <span className="block text-[13px] font-bold">부길드장 권한</span>
+            <span className="block text-[11px] text-zinc-500">
+              {isLeader
+                ? `부길드장 ${vicesCount}명에게 허용할 작업을 개인별로 정합니다`
+                : '내가 할 수 있는 작업을 확인합니다'}
+            </span>
+          </span>
+          <span className="shrink-0 text-[13px] text-zinc-400">›</span>
+        </Link>
       )}
 
       {/* 구성원 관리 */}
@@ -685,7 +753,7 @@ export function GuildSettings({
 
       {/* 가입 방식 + 신청 — 구성원 탭에 통합. **길드장 전용**(2026-07-10 권한 조정 —
           서버 액션도 NOT_LEADER 게이트라 UI 숨김은 혼란 방지용). */}
-      {tab === 'members' && isLeader && (
+      {tab === 'members' && can.joinReview && (
       <section className="rounded-xl border border-zinc-200 bg-white p-3 dark:border-zinc-800 dark:bg-zinc-950">
         <div className="flex items-center justify-between gap-2">
           <h3 className="text-sm font-bold">가입 방식</h3>
@@ -741,12 +809,12 @@ export function GuildSettings({
       )}
 
       {/* 세금 (길드장) — 분배 상세를 탭 안에 바로 노출(별도 페이지 이동 없이). */}
-      {tab === 'tax' && isLeader && (
+      {tab === 'tax' && can.taxDistribute && (
         <DistributeBoard myUserId={myUserId} pool={taxPool} members={members} />
       )}
 
       {/* 길드 문양 보관함 (길드장) — 별도 '문양' 탭. 최대 5개 보관, 1개 선택 사용. */}
-      {tab === 'emblem' && isLeader && (
+      {tab === 'emblem' && can.emblem && (
         <section className="rounded-xl border border-zinc-200 bg-white p-3 dark:border-zinc-800 dark:bg-zinc-950">
           <h3 className="mb-2 text-sm font-bold">길드 문양</h3>
           {/* 항상 5칸 고정 — 채워진 칸은 아래 [사용]/[삭제], 빈칸은 클릭해 생성(💎비용 표시). */}
@@ -881,10 +949,21 @@ export function GuildSettings({
         </section>
       )}
 
-      {/* 부길드장 안내 — 길드장 전용 항목(세금·문양·해산)이 안 보이는 이유 명시. */}
+      {/* 부길드장 안내 — 안 보이는 탭이 있는 이유를 명시(0142: 권한은 길드장이 개인별로 정한다). */}
       {tab === 'settings' && !isLeader && (
-        <p className="px-1 text-center text-[11px] text-zinc-400">
-          세금·문양·해산은 길드장만 관리할 수 있어요.
+        <p className="px-1 text-center text-[11px] leading-relaxed text-zinc-400">
+          길드 해산은 길드장만 할 수 있어요.
+          {!can.taxDistribute || !can.emblem ? (
+            <>
+              <br />
+              {!can.taxDistribute && !can.emblem
+                ? '세금·문양'
+                : !can.taxDistribute
+                  ? '세금'
+                  : '문양'}
+              은 길드장이 권한을 열어주면 관리할 수 있어요.
+            </>
+          ) : null}
         </p>
       )}
 
