@@ -1,9 +1,9 @@
 import 'server-only';
 
-import { inArray, sql as dsql } from 'drizzle-orm';
+import { and, eq, inArray, sql as dsql } from 'drizzle-orm';
 
 import { db } from '@/lib/db/client';
-import { guilds } from '@/lib/db/schema/guild';
+import { guilds, worldChronicle } from '@/lib/db/schema/guild';
 
 import { aggregateConquestDay } from './chronicle';
 
@@ -14,7 +14,12 @@ import { aggregateConquestDay } from './chronicle';
  * 데이터는 전부 서버 계산(집계·이전 소유 복원·출발지 산출) — 클라는 재생만.
  */
 
-export type ReplayGuild = { color: string | null; emblemUrl: string | null };
+export type ReplayGuild = {
+  /** 불변 길드 id — 그날 연대기 스냅샷(guild_refs) 기준. 스냅샷·현존 모두 없으면 null(해산). */
+  guildId: number | null;
+  color: string | null;
+  emblemUrl: string | null;
+};
 
 export type ReplayEvent = {
   zoneId: number;
@@ -164,16 +169,39 @@ export async function getConquestReplay(serverId: number, forKstDay?: string): P
   // '중립처럼' 보였다(대설봉/우리 사례). beforeOwner의 모든 소유 길드를 조회 대상에 추가.
   for (const owner of Object.values(beforeOwner)) if (owner) names.add(owner);
 
-  // 길드 문양 메타 — emblem_color/url 비정규화 미러 사용. 해산 길드는 조회 불가 → 회색 폴백.
-  const guildRows = names.size
-    ? await db
-        .select({ name: guilds.name, color: guilds.emblemColor, emblemUrl: guilds.emblemUrl })
-        .from(guilds)
-        .where(inArray(guilds.name, [...names]))
-    : [];
+  // 길드 문양 메타 — **그날 연대기 스냅샷(guild_refs, 0141) 우선**.
+  // 이름으로 실시간 조회하면, 해산한 길드 이름을 다시 만든 동명의 다른 길드 문양이 옛 역사에
+  // 붙는다(길드 해산은 하드 DELETE고 이름 예약이 없다). 스냅샷이 없는 옛 기록일만 실시간 폴백
+  // (그마저도 해산 길드는 조회 불가 → 회색).
   const guildMeta: Record<string, ReplayGuild> = {};
-  for (const n of names) guildMeta[n] = { color: null, emblemUrl: null };
-  for (const g of guildRows) guildMeta[g.name] = { color: g.color, emblemUrl: g.emblemUrl };
+  for (const n of names) guildMeta[n] = { guildId: null, color: null, emblemUrl: null };
+
+  const [chron] = await db
+    .select({ refs: worldChronicle.guildRefs })
+    .from(worldChronicle)
+    .where(and(eq(worldChronicle.serverId, serverId), eq(worldChronicle.kstDay, kstDay)))
+    .limit(1);
+  for (const r of chron?.refs ?? []) {
+    if (names.has(r.name)) {
+      guildMeta[r.name] = { guildId: r.id, color: r.color, emblemUrl: r.emblemUrl };
+    }
+  }
+
+  const missing = [...names].filter((n) => guildMeta[n]?.guildId == null);
+  if (missing.length > 0) {
+    const guildRows = await db
+      .select({
+        id: guilds.id,
+        name: guilds.name,
+        color: guilds.emblemColor,
+        emblemUrl: guilds.emblemUrl,
+      })
+      .from(guilds)
+      .where(and(eq(guilds.serverId, serverId), inArray(guilds.name, missing)));
+    for (const g of guildRows) {
+      guildMeta[g.name] = { guildId: Number(g.id), color: g.color, emblemUrl: g.emblemUrl };
+    }
+  }
 
   return { kstDay, guilds: guildMeta, events, neutralized, beforeOwner };
 }

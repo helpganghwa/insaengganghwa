@@ -276,8 +276,17 @@ export async function searchGuilds(serverId: number, q: string) {
   });
 }
 
-/** 길드 1건 요약(이름 정확일치) — 세계지도 연대기에서 길드명 클릭 팝업용. 없으면 null. */
-export async function getGuildSummaryByName(serverId: number, name: string) {
+/**
+ * 길드 1건 요약 — 세계지도 연대기에서 길드명 클릭 팝업용. 없으면 null.
+ *
+ * guildId가 오면 **id로만** 찾는다(0141) — 연대기 마커의 3번째 필드가 그것이다. 이름으로 찾으면
+ * 해산한 길드 이름을 다시 만든 **동명의 다른 길드**가 열려 옛 역사가 오귀속된다. 해산했으면
+ * null(팝업 미오픈)이 정확한 동작이다. 이름 조회는 id 없는 레거시 마커의 폴백일 뿐이다.
+ */
+export async function getGuildSummaryRef(
+  serverId: number,
+  ref: { guildId?: number | null; name: string },
+) {
   const [g] = await db
     .select({
       id: guilds.id,
@@ -289,7 +298,14 @@ export async function getGuildSummaryByName(serverId: number, name: string) {
       leaderUserId: guilds.leaderUserId,
     })
     .from(guilds)
-    .where(and(eq(guilds.serverId, serverId), eq(guilds.name, name)))
+    .where(
+      and(
+        eq(guilds.serverId, serverId),
+        ref.guildId != null
+          ? eq(guilds.id, BigInt(ref.guildId))
+          : eq(guilds.name, ref.name),
+      ),
+    )
     .limit(1);
   if (!g) return null;
   const [stats, zoneRows, [leader]] = await Promise.all([
@@ -310,6 +326,8 @@ export async function getGuildSummaryByName(serverId: number, name: string) {
   ]);
   const s = stats.get(g.id.toString());
   return {
+    /** 팝업 복원(뒤로가기)에서 이름 대신 이 id로 다시 열어 동명 오귀속을 막는다. */
+    guildId: Number(g.id),
     name: g.name,
     level: g.level,
     emblemUrl: g.emblemUrl,

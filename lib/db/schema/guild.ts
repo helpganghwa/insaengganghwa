@@ -261,9 +261,23 @@ export const guildTaxDistributions = pgTable(
 );
 
 /**
+ * 그 기록일 시점의 길드 표시값 스냅샷(0141) — 문양·색·이름을 id에 묶어 박제한다.
+ * 해산한 길드 이름을 다른 길드가 다시 만들 수 있으므로, 이름으로 실시간 조회하면 옛 역사에
+ * 새 길드의 문양이 붙는다. melee_participants.guild_name/guild_emblem_url와 같은 규칙.
+ */
+export type ChronicleGuildRef = {
+  id: number;
+  name: string;
+  color: string | null;
+  emblemUrl: string | null;
+};
+
+/**
  * 0046/0047 세계 연대기(AI) — 큰 사건 있는 날만 1행(점령전 발표 KST 자정(00:00)).
  * today_text='오늘'(긴 사관 스토리), headline='전체' 리스트용 그날 핵심 사건 한 줄.
- * 본문은 종류별 마커로 강조 렌더: {g|길드}·{u|인물}·{r|지역}(지역색).
+ * 본문은 종류별 마커로 강조 렌더: {g|길드|길드id}·{u|인물|공개코드}·{z|구역}.
+ * 길드·인물 마커의 3번째 필드는 **불변 식별자** — 이름·닉이 재사용돼도 옛 기록이 다른 대상을
+ * 가리키지 않게 한다(0141).
  */
 export const worldChronicle = pgTable(
   'world_chronicle',
@@ -275,6 +289,8 @@ export const worldChronicle = pgTable(
     headline: text('headline').notNull(),
     /** AI 재검수 수정 내역(0119) — [{kind:'fact'|'style', before, after, reason}]. 무수정이면 []. */
     reviewNotes: jsonb('review_notes'),
+    /** 그날 등장 길드의 표시값 스냅샷(0141). ChronicleGuildRef[]. 0141 이전 행은 null. */
+    guildRefs: jsonb('guild_refs').$type<ChronicleGuildRef[]>(),
     createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
   },
   (t) => [primaryKey({ columns: [t.serverId, t.kstDay] })],

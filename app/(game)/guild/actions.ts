@@ -33,7 +33,7 @@ import {
   setGuildIntro,
   setGuildOpenchat,
   getZoneLatestBattleId,
-  getGuildSummaryByName,
+  getGuildSummaryRef,
   generateAndStoreEmblem,
   setActiveEmblem,
   deleteEmblem,
@@ -534,12 +534,15 @@ export async function getZoneBattleAction(zoneId: number) {
   }
 }
 
-/** 길드 요약(이름) — 세계지도 연대기 길드명 클릭 팝업용. 없으면 guild=null. */
-export async function getGuildSummaryByNameAction(name: string) {
+/**
+ * 길드 요약 — 세계지도 연대기 길드명 클릭 팝업용. 없으면 guild=null.
+ * guildId는 연대기 마커의 3번째 필드(불변) — 있으면 그것으로만 찾는다(동명 재사용 오귀속 차단).
+ */
+export async function getGuildSummaryAction(name: string, guildId?: number) {
   const u = await getSessionUserId();
   if (!u) return unauth;
   try {
-    const guild = await getGuildSummaryByName(await getActiveServerId(), name);
+    const guild = await getGuildSummaryRef(await getActiveServerId(), { guildId, name });
     return { status: 'success', guild } as const;
   } catch (e) {
     return fail(e, 'guildSummary');

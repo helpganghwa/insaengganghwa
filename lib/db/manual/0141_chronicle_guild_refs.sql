@@ -1,0 +1,12 @@
+-- 0141. 연대기 길드 정체성 스냅샷
+--
+-- 연대기는 길드를 **이름 텍스트로만** 들고 있었다({g|이름} 토큰, 이 표에 guild id 컬럼 없음).
+-- 길드 해산은 하드 DELETE이고 이름 예약·쿨타임이 없어 같은 이름을 누구나 다시 만들 수 있으므로,
+-- 해산한 길드의 역사·문양·이름 클릭 팝업이 **동명의 다른 길드**에게 넘어간다.
+--
+-- 유저 토큰은 이미 {u|닉|공개코드}로 불변 식별자를 들고 있다(닉변 대응). 길드도 같은 모양으로
+-- {g|이름|길드id}를 쓰고, 문양·색은 그날 시점 값을 guild_refs에 박제한다(대난투
+-- melee_participants.guild_name/guild_emblem_url와 동일한 스냅샷 규칙).
+--
+-- guild_refs = [{ id, name, color, emblemUrl }] — 그 기록일에 등장/존재한 길드의 표시값.
+alter table world_chronicle add column if not exists guild_refs jsonb;

@@ -4,7 +4,7 @@ import Anthropic from '@anthropic-ai/sdk';
 import { and, desc, eq, lt, sql } from 'drizzle-orm';
 
 import { db } from '@/lib/db/client';
-import { worldChronicle } from '@/lib/db/schema/guild';
+import { worldChronicle, type ChronicleGuildRef } from '@/lib/db/schema/guild';
 import { kstDateString } from '@/lib/kst';
 import { REGION_META, type Region } from '@/lib/game/guild/region-meta';
 import type { ConquestFinale } from './simulate';
@@ -771,9 +771,21 @@ export async function generateAndStoreChronicle(
   // 위반 감지·교정·강제 마킹을 전부 비껴가 평문 노출된다(2026-07-10 '1ST' 사건 — 모델이
   // 지난 역사 서술에서 마커를 빼먹음). 서버 전체 길드·구역 이름을 집합에 추가해 커버.
   const allGuildRows = (await db.execute(
-    sql`select name from guilds where server_id = ${serverId}`,
-  )) as unknown as { name: string }[];
+    sql`select id, name, emblem_color, emblem_url from guilds where server_id = ${serverId}`,
+  )) as unknown as {
+    id: string | number;
+    name: string;
+    emblem_color: string | null;
+    emblem_url: string | null;
+  }[];
   for (const g of allGuildRows) guildNames.add(g.name);
+  // 길드 정체성 스냅샷(0141) — 이름은 해산 후 재사용될 수 있어 표시값을 id에 묶어 박제한다.
+  const guildRefByName = new Map<string, ChronicleGuildRef>(
+    allGuildRows.map((g) => [
+      g.name,
+      { id: Number(g.id), name: g.name, color: g.emblem_color, emblemUrl: g.emblem_url },
+    ]),
+  );
   for (const z of zoneRows) zoneNames.add(z.name);
   const userNames = new Set<string>(summary.feats.map((f) => f.nickname));
 
@@ -850,6 +862,16 @@ export async function generateAndStoreChronicle(
       const code = codeByNick.get(n.trim());
       return code ? `{u|${n.trim()}|${code}}` : mm;
     });
+  // {g|이름} → {g|이름|길드id}(0141) — 유저 마커와 같은 이유. 이름은 해산 후 재사용될 수 있어
+  // 이름만으로는 옛 기록이 동명의 다른 길드를 가리킨다. 3필드는 재적용해도 무해(정규식이 비껴감).
+  // 현존하지 않는 길드(해산)는 id 0 — '이 이름은 이미 사라진 길드'를 못 박는 센티널이다.
+  // 2필드로 남기면 나중에 같은 이름의 길드가 생겼을 때 옛 기록이 그쪽으로 링크된다.
+  const enrichGuildMarkers = (s: string): string =>
+    s.replace(/\{g\|([^}|]+)\}/g, (mm, n: string) => {
+      const name = n.trim();
+      return `{g|${name}|${guildRefByName.get(name)?.id ?? 0}}`;
+    });
+  const enrichMarkers = (s: string) => enrichGuildMarkers(enrichUserMarkers(s));
 
   const baseContent =
     `${kstDay} 점령전 기록.\n\n${digest}\n\n${context}\n\n` +
@@ -913,8 +935,8 @@ export async function generateAndStoreChronicle(
       if (viol.length > 0) {
         console.warn(`[chronicle] 마커 위반 잔존(재시도 소진) — enforce 백스톱 적용: ${viol.join(', ')}`);
       }
-      today = enrichUserMarkers(enforceMarkers(candT));
-      headline = enrichUserMarkers(enforceMarkers(candH));
+      today = enrichMarkers(enforceMarkers(candT));
+      headline = enrichMarkers(enforceMarkers(candH));
       break;
     }
     console.warn(`[chronicle] 마커 위반 ${viol.length}건 → 재생성(attempt ${attempt + 1}): ${viol.join(', ')}`);
@@ -960,9 +982,9 @@ export async function generateAndStoreChronicle(
       changes?: ChronicleReviewNote[];
     }>(raw);
     if (parsed) {
-      const revT = enrichUserMarkers(enforceMarkers(correctMarkers(fixBraces((parsed.today ?? '').trim()))));
+      const revT = enrichMarkers(enforceMarkers(correctMarkers(fixBraces((parsed.today ?? '').trim()))));
       const revH = bigChange
-        ? enrichUserMarkers(enforceMarkers(correctMarkers(fixBraces((parsed.headline ?? '').trim()))))
+        ? enrichMarkers(enforceMarkers(correctMarkers(fixBraces((parsed.headline ?? '').trim()))))
         : '';
       const viol = [...findViolations(revT), ...(bigChange ? findViolations(revH) : [])];
       if (revT && viol.length === 0 && (!bigChange || revH)) {
@@ -979,10 +1001,20 @@ export async function generateAndStoreChronicle(
     console.warn(`[chronicle] 재검수 실패 — 초안 유지: ${(e as Error).message}`);
   }
 
+  // 길드 표시값 스냅샷(0141) — 본문·헤드라인이 실제로 가리킨 길드 id만 담는다(그날 무관한 길드
+  // 전체를 박아두면 해산·문양변경 이력이 엉뚱한 날에 남는다).
+  const usedIds = new Set<number>();
+  for (const m of `${today}\n${headline}`.matchAll(/\{g\|[^}|]+\|(\d+)\}/g)) {
+    usedIds.add(Number(m[1]));
+  }
+  const guildRefs: ChronicleGuildRef[] = [...guildRefByName.values()].filter((r) =>
+    usedIds.has(r.id),
+  );
+
   await db
     .insert(worldChronicle)
     .values({
-      serverId, kstDay, todayText: today, headline, reviewNotes })
+      serverId, kstDay, todayText: today, headline, reviewNotes, guildRefs })
     .onConflictDoNothing({ target: [worldChronicle.serverId, worldChronicle.kstDay] });
   return { created: true };
 }

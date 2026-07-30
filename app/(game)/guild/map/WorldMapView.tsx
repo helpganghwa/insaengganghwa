@@ -22,7 +22,7 @@ import {
   speedUpResidenceAction,
   getZoneBattleAction,
   collectTaxAction,
-  getGuildSummaryByNameAction,
+  getGuildSummaryAction,
 } from '../actions';
 import { guildErrMsg } from '../errors-msg';
 
@@ -71,7 +71,7 @@ function ChronicleText({
 }: {
   text: string;
   zoneColor: (name: string) => string | null;
-  onGuild: (name: string) => void;
+  onGuild: (name: string, guildId?: number) => void;
   onZone: (name: string) => void;
   serverId: number;
 }) {
@@ -86,11 +86,14 @@ function ChronicleText({
     const name = m[2];
     if (type === 'g') {
       // 길드 — 회청(슬레이트). 클릭 시 길드 상세 팝업.
+      // 3필드 마커({g|이름|길드id})의 id는 불변 — 해산 후 같은 이름으로 만들어진 다른 길드가
+      // 옛 역사에서 열리지 않게 한다(0141). 2필드 레거시는 이름 폴백.
+      const gid = m[3] ? Number(m[3]) : undefined;
       out.push(
         <button
           key={key++}
           type="button"
-          onClick={() => onGuild(name)}
+          onClick={() => onGuild(name, Number.isFinite(gid) ? gid : undefined)}
           className="align-baseline font-semibold text-slate-600 active:opacity-60 dark:text-slate-400"
         >
           {name}
@@ -368,8 +371,9 @@ export function WorldMapView({
     const id = zoneIdByName.get(name);
     if (id != null) setSelectedId(id);
   };
-  // 연대기 길드명 클릭 → 길드 상세 팝업(이름으로 요약 조회).
+  // 연대기 길드명 클릭 → 길드 상세 팝업. 마커의 불변 길드id로 조회(0141) — 이름 폴백은 레거시 마커용.
   type GuildPopup = {
+    guildId: number;
     name: string;
     level: number;
     memberCount: number;
@@ -382,8 +386,8 @@ export function WorldMapView({
     zones: { name: string; region: Region }[];
   };
   const [guildPopup, setGuildPopup] = useState<GuildPopup | null>(null);
-  const openGuildByName = (name: string) => {
-    getGuildSummaryByNameAction(name)
+  const openGuild = (name: string, guildId?: number) => {
+    getGuildSummaryAction(name, guildId)
       .then((r) => {
         if (r.status === 'success' && r.guild) setGuildPopup(r.guild);
       })
@@ -393,10 +397,13 @@ export function WorldMapView({
   // useLayoutEffect — 페인트 전 복원(구역 팝업과 동일, 2026-07-22).
   useLayoutEffect(() => {
     try {
-      const name = sessionStorage.getItem('ig:worldmap-restore-guild');
-      if (name) {
+      const saved = sessionStorage.getItem('ig:worldmap-restore-guild');
+      if (saved) {
         sessionStorage.removeItem('ig:worldmap-restore-guild');
-        openGuildByName(name);
+        // 'id|이름' 형태 — id로 복원해야 동명 재사용에도 같은 길드가 열린다.
+        const bar = saved.indexOf('|');
+        const gid = bar > 0 ? Number(saved.slice(0, bar)) : NaN;
+        openGuild(bar > 0 ? saved.slice(bar + 1) : saved, Number.isFinite(gid) ? gid : undefined);
       }
     } catch {
       // sessionStorage 불가 — 복원만 생략
@@ -829,7 +836,7 @@ export function WorldMapView({
                       serverId={serverId}
                       text={para.trim()}
                       zoneColor={zoneColor}
-                      onGuild={openGuildByName}
+                      onGuild={openGuild}
                       onZone={openZoneByName}
                     />
                   </p>
@@ -863,7 +870,7 @@ export function WorldMapView({
                       serverId={serverId}
                       text={para.trim()}
                       zoneColor={zoneColor}
-                      onGuild={openGuildByName}
+                      onGuild={openGuild}
                       onZone={openZoneByName}
                     />
                   </p>
@@ -891,7 +898,7 @@ export function WorldMapView({
                       serverId={serverId}
                       text={e.headline}
                       zoneColor={zoneColor}
-                      onGuild={openGuildByName}
+                      onGuild={openGuild}
                       onZone={openZoneByName}
                     />
                   </span>
@@ -1626,7 +1633,10 @@ export function WorldMapView({
                         href={profileHref(guildPopup.leaderCode, serverId)}
                         onClick={() => {
                           try {
-                            sessionStorage.setItem('ig:worldmap-restore-guild', guildPopup.name);
+                            sessionStorage.setItem(
+                              'ig:worldmap-restore-guild',
+                              `${guildPopup.guildId}|${guildPopup.name}`,
+                            );
                           } catch {
                             // 저장 실패 시 복원만 생략
                           }
