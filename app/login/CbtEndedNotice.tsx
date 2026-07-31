@@ -84,41 +84,48 @@ export function CbtEndedNotice({ compact = false }: { compact?: boolean }) {
     );
   }
   return (
-    <div className="w-full">
-      {/* 풀블리드 히어로 — 이미지 위 하단 오버레이(감사 + 카운트다운). */}
+    <div className="relative w-full overflow-hidden">
+      {/* 배경 — 콘텐츠 뒤 전면(2026-07-31 피드백: 이미지 상단이 빈 채 스크롤만 길어지던 구조
+          → 배경화 + 콘텐츠를 위에서부터). 높이는 콘텐츠가 정하고 이미지는 cover로 채운다. */}
       <div
-        className="relative flex aspect-[768/1376] w-full flex-col justify-end bg-cover bg-top"
+        aria-hidden
+        className="absolute inset-0 bg-cover bg-top"
         style={{
-          // 이미지 없으면 아래 그라데이션이 폴백 — url이 앞이라 파일이 생기면 자동 교체.
           backgroundImage:
             "url('/cbt-ended.webp'), radial-gradient(110% 70% at 50% 20%, #46331c 0%, #2a1d0e 50%, #17110c 100%)",
-          imageRendering: 'pixelated', // 픽셀아트 원본(768w) 확대 시 블러 방지
+          imageRendering: 'pixelated',
         }}
-      >
-        <div className="bg-gradient-to-t from-[#17110c] from-45% via-[#17110c]/75 to-transparent px-6 pb-2 pt-24 text-center">
-          <p className="text-[11px] font-extrabold tracking-[0.25em] text-amber-400/85">
-            SEE YOU SOON
-          </p>
-          <h2 className="mt-2 text-[22px] font-extrabold leading-snug text-zinc-50">
-            다음 대륙에서 만나요
-          </h2>
-          <p className="mt-2 text-[12px] leading-relaxed text-zinc-400">
-            비공개 테스트가 끝났습니다. 함께해 주셔서 감사합니다.
-          </p>
-          <p className="mt-5 text-[12px] font-bold text-zinc-300">
-            정식 오픈 <span className="text-amber-300">{OPEN_LABEL}</span>
-          </p>
-          <div className="mt-2">
-            <Countdown />
-          </div>
-        </div>
-      </div>
+      />
+      {/* 가독 스크림 + 하단 페이드(푸터 배경 #17110c로 자연 연결) */}
+      <div aria-hidden className="absolute inset-0 bg-[#17110c]/40" />
+      <div
+        aria-hidden
+        className="absolute inset-x-0 bottom-0 h-28 bg-gradient-to-b from-transparent to-[#17110c]"
+      />
 
-      {/* 결산 — 표가 아니라 이야기(L-2). 숫자만 앰버 강조, 수치는 종료 시점 고정(위 STAT 주석).
-          "기록 위에서 시작" 같은 승계 암시 문구는 쓰지 않는다 — 데이터는 초기화된다. */}
-      <div className="px-6 pt-5">
-        <p className="text-center text-[13.5px] leading-loose text-zinc-300">
-          CBT 한 달 동안 <b className="font-extrabold text-amber-300">{STAT.smiths}</b>의 대장장이가
+      <div className="relative z-10 px-6 pb-10 pt-9 text-center">
+        <p className="text-[11px] font-extrabold tracking-[0.25em] text-amber-400/85">
+          SEE YOU SOON
+        </p>
+        <h2 className="mt-2 text-[22px] font-extrabold leading-snug text-zinc-50 drop-shadow-[0_1px_4px_rgba(0,0,0,0.9)]">
+          다음 대륙에서 만나요
+        </h2>
+        <p className="mt-2 text-[12px] leading-relaxed text-zinc-300 drop-shadow-[0_1px_3px_rgba(0,0,0,0.9)]">
+          비공개 테스트가 끝났습니다. 함께해 주셔서 감사합니다.
+        </p>
+
+        <p className="mt-6 text-[12px] font-bold text-zinc-200 drop-shadow-[0_1px_3px_rgba(0,0,0,0.9)]">
+          정식 오픈 <span className="text-amber-300">{OPEN_LABEL}</span>
+        </p>
+        <div className="mt-2">
+          <Countdown />
+        </div>
+
+        {/* 결산 — 표가 아니라 이야기(L-2). 숫자만 앰버 강조, 수치는 종료 시점 고정(위 STAT 주석).
+            "기록 위에서 시작" 같은 승계 암시 문구는 쓰지 않는다 — 데이터는 초기화된다. */}
+        <p className="mt-7 text-[13.5px] leading-loose text-zinc-200 drop-shadow-[0_1px_3px_rgba(0,0,0,0.9)]">
+          CBT 한 달 동안 <b className="font-extrabold text-amber-300">{STAT.smiths}</b>의
+          대장장이가
           <br />
           망치를 <b className="font-extrabold text-amber-300">{STAT.hammered}</b> 내리쳤고,
           <br />
