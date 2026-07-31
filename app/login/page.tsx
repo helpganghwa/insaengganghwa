@@ -185,6 +185,7 @@ export default async function LoginPage({
 
         {/* 게임 소개 — 검색·AI 크롤러가 읽는 유일한 공개 설명(SEO 검수 A1, 2026-07-15).
             스크롤 아래 배치라 로그인 전환 동선 무영향. h1은 사이트 전체에서 이 페이지가 대문. */}
+        {cbtEnded && !reviewLogin ? null : (
         <section className="mt-6 w-full text-left">
           <h1 className="text-[13.5px] font-extrabold leading-snug text-zinc-100">
             인생강화 — 기다릴수록 강해지는 방치형 강화 RPG
@@ -209,6 +210,7 @@ export default async function LoginPage({
             ))}
           </div>
         </section>
+        )}
 
         {/* 서브듀드 — CBT 기간 데이터 초기화 사전 고지(작게·저대비, 문구는 원문 유지). 정식 오픈(env off) 시 자동 미노출. */}
         {isCbtPaidHidden() && !cbtEnded ? (
