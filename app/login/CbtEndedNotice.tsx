@@ -24,9 +24,12 @@ const OPEN_LABEL = '8월 10일 오전 11시';
  */
 const STAT = {
   smiths: '256명',
-  hammered: '408,234번',
+  boxes: '738,304개',
+  hammered: '408,395번',
+  sparks: '256,690번', // 성공(success+mega)
+  tempered: '151,705번', // 담금질 = 유지 137,438 + 하락 14,267
   peak: '+488',
-  battles: '143번',
+  flags: '143번',
 } as const;
 
 function diffParts(target: number, now: number) {
@@ -121,18 +124,30 @@ export function CbtEndedNotice({ compact = false }: { compact?: boolean }) {
           <Countdown />
         </div>
 
-        {/* 결산 — 표가 아니라 이야기(L-2). 숫자만 앰버 강조, 수치는 종료 시점 고정(위 STAT 주석).
-            "기록 위에서 시작" 같은 승계 암시 문구는 쓰지 않는다 — 데이터는 초기화된다. */}
-        <p className="mt-7 text-[13.5px] leading-loose text-zinc-200 drop-shadow-[0_1px_3px_rgba(0,0,0,0.9)]">
-          CBT 한 달 동안 <b className="font-extrabold text-amber-300">{STAT.smiths}</b>의
-          대장장이가
+        {/* 결산 — 하루의 서사(V2) + 담금질 은유(V3) + 저마다의 시간(V8) 혼합(2026-07-31 확정).
+            숫자는 문장 안에 자연스럽게. "기록 위에서 시작" 같은 승계 암시 문구는 쓰지 않는다
+            — 데이터는 초기화된다. 수치는 컷오버 데이 최종 갱신(위 STAT 주석). */}
+        <p className="mt-7 text-[13px] leading-loose text-zinc-200 drop-shadow-[0_1px_3px_rgba(0,0,0,0.9)]">
+          아침이면 <b className="font-extrabold text-amber-300">{STAT.boxes}</b>의 보급상자가
+          열렸고,
           <br />
-          망치를 <b className="font-extrabold text-amber-300">{STAT.hammered}</b> 내리쳤고,
+          낮이면 망치 소리가 <b className="font-extrabold text-amber-300">{STAT.hammered}</b>{' '}
+          울렸습니다.
           <br />
-          누군가는 <b className="font-extrabold text-amber-300">{STAT.peak}</b>까지 올랐으며,
+          <b className="font-extrabold text-amber-300">{STAT.sparks}</b>은 불꽃이 됐고{' '}
+          <b className="font-extrabold text-amber-300">{STAT.tempered}</b>은 담금질이 됐으며,
           <br />
-          대륙에선 <b className="font-extrabold text-amber-300">{STAT.battles}</b>의 점령전이
-          벌어졌습니다.
+          누군가는 <b className="font-extrabold text-amber-300">{STAT.peak}</b>까지 올랐습니다.
+          <br />
+          밤이면 대륙 어딘가에서 깃발이{' '}
+          <b className="font-extrabold text-amber-300">{STAT.flags}</b> 바뀌었습니다.
+          <br />
+          그렇게 <b className="font-extrabold text-amber-300">{STAT.smiths}</b>의 대장장이가
+          저마다의 시간으로
+          <br />한 달의 대륙을 데웠습니다.
+          <br />
+          이제 잠시 불을 끄고, <b className="font-extrabold text-amber-300">8월 10일</b>에 다시
+          만나요.
         </p>
 
         {/* 오픈 알림(0145) — 종료 화면 트래픽을 오픈일 복귀로 전환하는 유일한 접점. */}
