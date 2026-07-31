@@ -83,11 +83,13 @@ export function OpenAlertSection() {
         </p>
       ) : (
         <>
+          {/* 고스트 필 — 채움 앰버는 카운트다운보다 시선을 끌어 위계를 깼다(2026-07-31 피드백).
+              외곽선+반투명 텍스트로 낮추되, 종료 화면의 유일한 행동이라 찾기는 쉽게 유지. */}
           <button
             type="button"
             onClick={subscribe}
             disabled={state === 'pending'}
-            className="inline-flex items-center gap-1.5 rounded-full bg-amber-600 px-5 py-2 text-[12.5px] font-bold text-white transition active:scale-95 disabled:opacity-60"
+            className="inline-flex items-center gap-1 rounded-full border border-amber-500/40 bg-black/25 px-4 py-1.5 text-[11.5px] font-semibold text-amber-300/90 backdrop-blur-[2px] transition active:scale-95 disabled:opacity-60"
           >
             {state === 'pending' ? '신청 중…' : '🔔 오픈 알림 받기'}
           </button>
