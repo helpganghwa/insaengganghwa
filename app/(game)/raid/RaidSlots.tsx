@@ -287,7 +287,7 @@ export function RaidSlots({
   return (
     <>
       <PageHeader title="레이드" fallback="/" />
-      <div className="h-2" />
+      <div className="h-3" aria-hidden />
       <p className="mb-2 text-center text-[11px] text-zinc-500">
         오늘 레이드{' '}
         <span className={`font-mono font-semibold ${exhausted ? 'text-red-500' : ''}`}>

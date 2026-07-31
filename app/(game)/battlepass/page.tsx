@@ -28,7 +28,7 @@ export default async function BattlePassPage({
     return (
       <>
         {/* 차단 화면에도 뒤로가기가 필요하다 — 딥링크로 들어오면 안내만 보고 갇힌다. */}
-        <div className="px-4 py-4">
+        <div className="px-4 pb-3 pt-3">
           <PageHeader title="성장패스" fallback="/" />
         </div>
         <div className="flex min-h-[50vh] flex-col items-center justify-center px-6 text-center">

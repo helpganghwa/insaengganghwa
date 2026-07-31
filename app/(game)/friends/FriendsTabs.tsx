@@ -233,9 +233,9 @@ export function FriendsTabs({
   ];
 
   return (
-    <div className="flex h-[calc(100%-var(--chat-dock-h,0px))] flex-col px-4 py-4">
+    <div className="flex h-[calc(100%-var(--chat-dock-h,0px))] flex-col px-4 pb-4 pt-3">
       <PageHeader title="친구" fallback="/me" />
-      <div className="h-3" />
+      <div className="h-3" aria-hidden />
 
       <Tabs className="mb-3" items={TABS} value={tab} onChange={setTab} />
 

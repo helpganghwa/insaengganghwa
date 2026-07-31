@@ -326,7 +326,7 @@ export function MailList({
     }`;
 
   return (
-    <div className="space-y-3 px-4 py-4">
+    <div className="space-y-3 px-4 pb-4 pt-3">
       <PageHeader
         title="우편함"
         fallback="/me"

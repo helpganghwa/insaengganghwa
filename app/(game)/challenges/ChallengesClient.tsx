@@ -144,7 +144,7 @@ export function ChallengesClient({
   };
 
   return (
-    <div className="px-4 py-4 pb-24">
+    <div className="px-4 pb-24 pt-3">
       {/* ── 헤더 + 전체 진행 ── */}
       <PageHeader
         title="도전 과제"
@@ -155,7 +155,7 @@ export function ChallengesClient({
           </span>
         }
       />
-      <div className="mt-2 h-2 overflow-hidden rounded-full bg-zinc-100 dark:bg-zinc-800">
+      <div className="mt-3 h-2 overflow-hidden rounded-full bg-zinc-100 dark:bg-zinc-800">
         <div
           className="h-full rounded-full bg-gradient-to-r from-amber-400 to-orange-500 transition-all duration-500"
           style={{ width: `${progress}%` }}

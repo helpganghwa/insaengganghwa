@@ -63,8 +63,11 @@ export default async function CreateProfilePage() {
   });
 
   return (
-    <div className="space-y-4 px-4 py-6">
-      <PageHeader title="아바타 생성" fallback="/me/profiles" />
+    <>
+      <div className="px-4 pb-3 pt-3">
+        <PageHeader title="아바타 생성" fallback="/me/profiles" />
+      </div>
+      <div className="space-y-4 px-4 pb-6">
       <p className="text-xs leading-relaxed text-zinc-500">
         성별을 고르면 현재 장착한 장비 3종의 컨셉을 녹여 캐릭터를 생성해요. 생성 후 자동 검토를
         거쳐 통과하면 아바타 목록에 추가돼요.
@@ -79,6 +82,7 @@ export default async function CreateProfilePage() {
         equipped={equippedSlots}
         queue={queueInfo}
       />
-    </div>
+      </div>
+    </>
   );
 }

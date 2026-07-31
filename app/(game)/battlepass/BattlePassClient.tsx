@@ -7,7 +7,7 @@ import { useRouter } from 'next/navigation';
 import type { BattlePassView, BattlePassSegmentView } from '@/lib/game/battlepass';
 import type { BattlePassType } from '@/lib/game/balance';
 import { assetUrl } from '@/lib/asset-versions';
-import { BackFab } from '@/components/BackNav';
+import { PageHeader } from '@/components/ui/PageHeader';
 import { useResourceToast } from '@/components/ResourceToast';
 import { useDiamond } from '@/components/DiamondContext';
 import { PublicFooter } from '@/components/PublicFooter';
@@ -480,6 +480,10 @@ export function BattlePassClient({
 
   return (
     <div className="flex h-full flex-col">
+      {/* 배너 위에 겹치면 아트를 가리고 제목이 밀린다 — 배너 바깥으로(2026-07-31). */}
+      <div className="shrink-0 px-4 pb-2 pt-3">
+        <PageHeader title="성장패스" fallback="/" />
+      </div>
       {/* ── 고정 상단(스크롤·오버스크롤 안 함) ── */}
       <div className="shrink-0 border-b border-zinc-200 dark:border-zinc-800">
         <div className="relative h-16 overflow-hidden">
@@ -492,11 +496,9 @@ export function BattlePassClient({
             style={{ imageRendering: 'pixelated' }}
           />
           <div className="pointer-events-none absolute inset-0 bg-gradient-to-r from-black/65 via-black/35 to-black/65" />
-          {/* 이미지 배너가 상단을 덮으므로 인라인 헤더 대신 BackFab — 다만 제목이 왼쪽에
-              붙어 있어 겹치지 않게 같은 행에 나란히 둔다(2026-07-31). */}
-          <div className="relative z-10 flex h-full items-center gap-1.5 px-3">
-            <BackFab fallback="/" className="h-8 w-8 shrink-0 text-lg" />
-            <h1 className="text-base font-extrabold text-white text-pixel-outline">성장패스</h1>
+          {/* 배너 안에는 제목만 — 뒤로가기는 위 헤더가 갖는다. */}
+          <div className="relative z-10 flex h-full items-center px-4">
+            <p className="text-base font-extrabold text-white text-pixel-outline">성장패스</p>
           </div>
         </div>
         {error ? (

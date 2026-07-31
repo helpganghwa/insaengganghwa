@@ -33,6 +33,12 @@ export function PageHeader({
   right?: React.ReactNode;
   fallback: string;
 }) {
+  /**
+   * ⚠ 여백은 이 컴포넌트가 갖지 않는다 — 호출부 컨테이너가 **`px-4 pb-4 pt-3` + 헤더 아래
+   * `mb-3`** 규약을 지킨다(길드 10곳이 쓰던 규약). 헤더에 패딩을 넣으면 이미 pt-3을 주고
+   * 있는 길드 화면이 두 배가 된다. 규약을 어기면 화면마다 헤더 높이가 달라 보인다
+   * (2026-07-31 실기기 확인: py-1~py-6이 섞여 상단 여백이 제각각이었다).
+   */
   return (
     <div className="flex items-center gap-1.5 px-0.5">
       <BackButton fallback={fallback} compact />

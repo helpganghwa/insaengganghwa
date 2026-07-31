@@ -106,39 +106,35 @@ export default async function TodayPage({ searchParams }: { searchParams: Promis
   const isAll = tab === 'all';
 
   return (
-    <div id="today-page" className="flex flex-col gap-2.5 px-4 py-4 pb-24">
-      <div className="flex items-center justify-between">
-        <div className="flex items-baseline gap-2">
-          <PageHeader
-            title={isAll ? '나의 인생강화' : '오늘의 인생강화'}
-            fallback="/"
-          />
-          <span className="text-[10px] tabular-nums text-zinc-500">
-            {isAll && joinedLabel ? `${joinedLabel} ~ ${dateLabel}` : dateLabel}
-          </span>
-        </div>
-        {/* 오늘/전체 세그먼트 — 타이틀 옆 컴팩트 배치 */}
-        <div data-capture-exclude className="flex overflow-hidden rounded-lg border border-zinc-200 text-[11px] font-bold dark:border-zinc-800">
-          {(
-            [
-              { id: 'today', label: '오늘', href: '/today' },
-              { id: 'all', label: '전체', href: '/today?p=all' },
-            ] as const
-          ).map((t) => (
-            <Link prefetch={false}
-              key={t.id}
-              href={t.href}
-              className={`px-3 py-1 ${
-                tab === t.id
-                  ? 'bg-amber-500 text-white dark:bg-amber-600'
-                  : 'text-zinc-500 dark:text-zinc-400'
-              }`}
-            >
-              {t.label}
-            </Link>
-          ))}
-        </div>
-      </div>
+    <div id="today-page" className="flex flex-col gap-2.5 px-4 pb-24 pt-3">
+      {/* 제목·날짜·오늘전체 세그먼트를 헤더 한 줄로 — 슬롯(kicker·right)이 원래 이 배치를 위한 것. */}
+      <PageHeader
+        title={isAll ? '나의 인생강화' : '오늘의 인생강화'}
+        kicker={isAll && joinedLabel ? `${joinedLabel} ~ ${dateLabel}` : dateLabel}
+        fallback="/"
+        right={
+          <div data-capture-exclude className="flex overflow-hidden rounded-lg border border-zinc-200 text-[11px] font-bold dark:border-zinc-800">
+            {(
+              [
+                { id: 'today', label: '오늘', href: '/today' },
+                { id: 'all', label: '전체', href: '/today?p=all' },
+              ] as const
+            ).map((t) => (
+              <Link prefetch={false}
+                key={t.id}
+                href={t.href}
+                className={`px-3 py-1 ${
+                  tab === t.id
+                    ? 'bg-amber-500 text-white dark:bg-amber-600'
+                    : 'text-zinc-500 dark:text-zinc-400'
+                }`}
+              >
+                {t.label}
+              </Link>
+            ))}
+          </div>
+        }
+      />
 
       {tab === 'today' ? (
         <TodayTab userId={userId} serverId={serverId} nickname={me?.nickname ?? ''} publicCode={me?.publicCode ?? ''} />

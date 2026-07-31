@@ -43,7 +43,7 @@ export default async function GachaPage() {
   const countBySlot = new Map(rows.map((r) => [r.slot, Number(r.count)]));
 
   return (
-    <div className="space-y-3 px-4 py-4">
+    <div className="space-y-3 px-4 pb-4 pt-3">
       <PageHeader title="보급소" fallback="/" />
       {BOXES.map((b, i) => (
         <GachaBoxCard

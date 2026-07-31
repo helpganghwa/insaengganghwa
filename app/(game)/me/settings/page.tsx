@@ -65,8 +65,11 @@ export default async function SettingsPage() {
   const verified = p?.verifiedAt != null;
 
   return (
-    <div className="space-y-4 px-4 py-4">
-      <PageHeader title="설정" fallback="/me" />
+    <>
+      <div className="px-4 pb-3 pt-3">
+        <PageHeader title="설정" fallback="/me" />
+      </div>
+      <div className="space-y-4 px-4 pb-4">
       <Section title="알림 / 사운드">
         <LocalToggle storageKey="ig:sound" label="효과음" />
         <Divider />
@@ -167,7 +170,8 @@ export default async function SettingsPage() {
       </form>
 
       <WithdrawButton />
-    </div>
+      </div>
+    </>
   );
 }
 

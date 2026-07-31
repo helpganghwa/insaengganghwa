@@ -67,8 +67,11 @@ export function LeaderboardBoard({
   const { top, mine } = payloads[metric];
 
   return (
-    <div className="space-y-4 px-4 py-4">
-      <PageHeader title="랭킹" fallback="/me" />
+    <>
+      <div className="px-4 pb-3 pt-3">
+        <PageHeader title="랭킹" fallback="/me" />
+      </div>
+      <div className="space-y-4 px-4 pb-4">
       <LeaderboardTabs active={metric} onChange={setMetric} />
 
       <section className="flex items-center justify-between gap-2 rounded-xl border border-amber-300 bg-amber-50 px-3 py-2 dark:border-amber-700 dark:bg-amber-950/50">
@@ -256,6 +259,7 @@ export function LeaderboardBoard({
           )}
         </>
       )}
-    </div>
+      </div>
+    </>
   );
 }

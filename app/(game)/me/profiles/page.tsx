@@ -40,8 +40,11 @@ export default async function ProfileSelectPage() {
   const p = _r?.[1] ?? [];
 
   return (
-    <div className="space-y-4 px-4 py-6">
-      <PageHeader title="아바타 관리" fallback="/me" />
+    <>
+      <div className="px-4 pb-3 pt-3">
+        <PageHeader title="아바타 관리" fallback="/me" />
+      </div>
+      <div className="space-y-4 px-4 pb-6">
       {list.length === 0 ? (
         <Link prefetch={false}
           href="/me/create"
@@ -69,6 +72,7 @@ export default async function ProfileSelectPage() {
           </Link>
         </>
       )}
-    </div>
+      </div>
+    </>
   );
 }

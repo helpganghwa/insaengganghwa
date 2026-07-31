@@ -19,8 +19,8 @@ export default async function WorldPage() {
 
   // 풀와이드 — 카드/사이드 패딩 없이 화면 폭 전체. 타이틀 없음.
   return (
-    <div className="py-1">
-      <div className="px-4 pb-1">
+    <div className="pb-1">
+      <div className="px-4 pb-3 pt-3">
         <PageHeader title="월드 로그" fallback="/" />
       </div>
       <WorldLogFeed entries={feed} full />

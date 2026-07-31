@@ -56,8 +56,12 @@ export default async function CodexItemPage({
   const lore = loreByCode(item.code);
 
   return (
-    <div className="space-y-4 px-4 py-4">
-      <PageHeader title={item.name} kicker="도감" fallback="/me/codex" />
+    <>
+      <div className="px-4 pb-3 pt-3">
+        {/* 본문 최상단에 아이템명이 크게 있으므로 헤더는 '도감'만 — 이름이 두 번 나오지 않게. */}
+        <PageHeader title="도감" fallback="/me/codex" />
+      </div>
+      <div className="space-y-4 px-4 pb-4">
       <header className="flex items-center gap-2">
         <h1 className="text-lg font-semibold">{item.name}</h1>
         <span className="ml-auto text-xs text-zinc-500">{SLOT_LABEL[item.slot]}</span>
@@ -133,6 +137,7 @@ export default async function CodexItemPage({
           </ul>
         )}
       </section>
-    </div>
+      </div>
+    </>
   );
 }

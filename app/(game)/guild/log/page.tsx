@@ -36,9 +36,10 @@ export default async function GuildLogPage() {
 
   // 풀와이드 — 카드/사이드 패딩 없이 화면 폭 전체. 타이틀 없음(월드 로그와 동일).
   return (
-    <div className="py-1">
-      <div className="px-4 pb-1">
-        <PageHeader title="활동 기록" fallback="/guild" />
+    <div className="pb-1">
+      <div className="px-4 pb-3 pt-3">
+        {/* 길드 홈의 '길드 로그' 섹션에서 전체 보기로 들어온다 — 이름을 맞춘다. */}
+        <PageHeader title="길드 로그" fallback="/guild" />
       </div>
       <GuildLogFeed entries={feed} full />
     </div>

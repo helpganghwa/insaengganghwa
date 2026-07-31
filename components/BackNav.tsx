@@ -59,7 +59,9 @@ export function BackButton({
       aria-label="뒤로가기"
       className={
         compact
-          ? `relative -ml-1 flex h-6 w-5 shrink-0 items-center justify-center text-[22px] font-bold leading-none text-zinc-400 after:absolute after:-inset-2.5 after:content-[''] ${className}`
+          ? // pb-0.5 = 글리프 광학 보정. '‹'는 라인박스 기준으론 가운데지만 한글은 디센더가 없어
+            // 광학 중심이 더 위라, 보정이 없으면 제목보다 낮아 보인다(BackFab·기본 변형과 동일 처리).
+            `relative -ml-1 flex h-6 w-5 shrink-0 items-center justify-center pb-0.5 text-[22px] font-bold leading-none text-zinc-400 after:absolute after:-inset-2.5 after:content-[''] ${className}`
           : `-ml-1.5 flex h-9 w-9 shrink-0 items-center justify-center rounded-lg pb-0.5 text-2xl font-bold leading-none text-zinc-400 active:bg-zinc-100 dark:active:bg-zinc-800 ${className}`
       }
     >

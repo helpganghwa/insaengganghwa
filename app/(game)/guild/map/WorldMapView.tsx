@@ -6,7 +6,7 @@ import { useEffect, useLayoutEffect, useMemo, useRef, useState, useTransition } 
 
 import { profileHref } from '@/lib/game/profile/href';
 import { useResourceToast } from '@/components/ResourceToast';
-import { BackFab } from '@/components/BackNav';
+import { PageHeader } from '@/components/ui/PageHeader';
 import { useDiamond } from '@/components/DiamondContext';
 import { ModalShell } from '@/components/ModalShell';
 import { ModalLayout, ModalButton } from '@/components/ModalLayout';
@@ -560,6 +560,10 @@ export function WorldMapView({
     // shrink-0 필수 — 명시적 min-h-full은 flex 자동 최소치(min-content)를 대체해, main의
     // 수축이 루트를 콘텐츠보다 작게 줄이고 본문이 박스 밖으로 넘친다(채팅바 가림 원인).
     <div className="flex min-h-full shrink-0 flex-col">
+      {/* 지도 위에 겹치면 지역명 라벨을 가린다 — 지도 바깥으로(2026-07-31 실기기 확인). */}
+      <div className="shrink-0 px-4 pb-2 pt-3">
+        <PageHeader title="세계지도" fallback="/guild" />
+      </div>
       {/* 지도 + 네모 노드 오버레이 — 풀폭 플러시(좌우 여백·모서리 제거). */}
       {/* isolate — 내부 노드 zIndex(선택 30 등)가 전역 스태킹으로 새어 채팅 패널(z-20 fixed)
           위로 떠오르던 오버랩 버그 방지(2026-07-21 제보). */}
@@ -570,9 +574,6 @@ export function WorldMapView({
           replayActive ? 'sticky top-0 z-10' : ''
         }`}
       >
-        {/* 지도가 상단을 덮는 화면이라 인라인 헤더 대신 지도 위 BackFab(2026-07-31).
-            좌상단은 비어 있다 — '전투 기록' 버튼은 구역 팝업 안이라 겹치지 않는다. */}
-        <BackFab fallback="/guild" className="absolute left-3 top-3 z-30" />
         {/* 리플레이 오버레이(2026-07-16) — 문장 진군·격돌·플래시 전용 레이어(ChronicleReplay가 직접 관리). */}
         <div ref={setReplayLayer} aria-hidden className="pointer-events-none absolute inset-0 z-40" />
         {/* eslint-disable-next-line @next/next/no-img-element */}

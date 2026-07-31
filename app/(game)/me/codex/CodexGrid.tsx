@@ -52,8 +52,9 @@ export function CodexGrid({ items }: { items: CodexItem[] }) {
       : 'rounded-full border border-zinc-300 px-3 py-1.5 text-zinc-600 dark:border-zinc-700 dark:text-zinc-400';
 
   return (
-    <div className="px-4 py-4">
+    <div className="px-4 pb-4 pt-3">
       <PageHeader title="도감" fallback="/me" />
+      <div className="h-3" />
       <div className="mb-3 flex flex-wrap items-center justify-between gap-2 text-xs">
         <div className="flex gap-1.5">
           <button type="button" className={fb(filter === 'all')} onClick={() => setFilter('all')}>
