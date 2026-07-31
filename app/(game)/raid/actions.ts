@@ -272,6 +272,7 @@ export async function inviteToRaidAction(raidId: string, inviteeUserId: string) 
         serverId,
         raidId,
         bossCode: r.bossCode,
+        shareCode: r.shareCode,
       }).catch(() => undefined);
     });
     return { status: 'success' as const, nickname: r.nickname };

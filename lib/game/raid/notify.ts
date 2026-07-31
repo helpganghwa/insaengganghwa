@@ -20,6 +20,7 @@ export async function notifyRaidInvite(input: {
   serverId: number;
   raidId: string;
   bossCode: string;
+  shareCode: string;
 }): Promise<void> {
   const [host] = await db
     .select({ nickname: characters.nickname })
@@ -34,7 +35,10 @@ export async function notifyRaidInvite(input: {
   await sendPushToUser(input.inviteeUserId, {
     title: '레이드 초대',
     body: `${hostName}님이 ${bossName} 레이드에 초대했습니다.`,
-    url: `/raid/${input.raidId}`,
+    // 공유코드·경로를 반드시 실어 보낸다. 초대받은 사람은 아직 참가자가 아니라
+    // 상세 페이지가 ?c= 없는 진입을 초대 랜딩으로 되돌리고, 거기서 들어가면 scope가
+    // 'link'(=승인 대기)로 떨어져 초대가 요청으로 강등된다. s=invite여야 즉시 참여다.
+    url: `/raid/${input.raidId}?c=${input.shareCode}&s=invite`,
     // 같은 레이드 초대가 겹치면 최신 1건만 — 초대는 레이드당 1회지만 재발송 방어.
     tag: `raid-invite-${input.raidId}`,
     category: 'raid',

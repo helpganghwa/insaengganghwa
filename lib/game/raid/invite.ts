@@ -170,7 +170,7 @@ export async function inviteToRaid(input: {
   serverId: number;
   raidId: bigint;
   inviteeUserId: string;
-}): Promise<{ ok: true; nickname: string; bossCode: string }> {
+}): Promise<{ ok: true; nickname: string; bossCode: string; shareCode: string }> {
   const { hostUserId, serverId, raidId, inviteeUserId } = input;
   if (hostUserId === inviteeUserId) throw new RaidError('INVALID_TARGET');
 
@@ -182,6 +182,7 @@ export async function inviteToRaid(input: {
       status: raids.status,
       expireAt: raids.expireAt,
       bossCode: raids.bossCode,
+      shareCode: raids.shareCode,
     })
     .from(raids)
     .where(eq(raids.id, raidId))
@@ -212,7 +213,12 @@ export async function inviteToRaid(input: {
     // 23505 = 중복 초대. 이미 보낸 것이므로 성공으로 흡수(멱등) — 화면은 '초대함'을 보인다.
     if ((e as { code?: string }).code !== '23505') throw e;
   }
-  return { ok: true, nickname: target.nickname, bossCode: raid.bossCode };
+  return {
+    ok: true,
+    nickname: target.nickname,
+    bossCode: raid.bossCode,
+    shareCode: raid.shareCode,
+  };
 }
 
 export type ReceivedInvite = {
