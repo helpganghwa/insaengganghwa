@@ -5,17 +5,21 @@ import { useEffect, useState } from 'react';
 /**
  * 로컬 환경설정 토글 — 브라우저 localStorage에만 저장(기기별).
  * 효과음은 재생 시점마다 localStorage를 읽으므로 라이브 제어가 불필요(저장만 하면 됨).
+ * 배경음처럼 상시 재생 중인 대상은 eventName으로 커스텀 이벤트를 쏘아 즉시 반영한다
+ * (storage 이벤트는 같은 탭에선 발화하지 않는다).
  */
 export function LocalToggle({
   storageKey,
   label,
   hint,
   defaultOn = true,
+  eventName,
 }: {
   storageKey: string;
   label: string;
   hint?: string;
   defaultOn?: boolean;
+  eventName?: string;
 }) {
   const [on, setOn] = useState(defaultOn);
   // 최초 페인트엔 transition을 끄고(rAF 후 활성) localStorage 값 적용 시 모션이 안 보이게.
@@ -32,6 +36,7 @@ export function LocalToggle({
     const next = !on;
     setOn(next);
     localStorage.setItem(storageKey, next ? '1' : '0');
+    if (eventName) window.dispatchEvent(new Event(eventName));
   };
 
   return (

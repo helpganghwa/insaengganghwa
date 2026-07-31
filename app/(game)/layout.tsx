@@ -26,6 +26,7 @@ import { AppInstallMark } from '@/components/AppInstallMark';
 import { BottomNavAsync } from '@/components/BottomNavAsync';
 import { SpritePreloader } from '@/components/SpritePreloader';
 import { SfxUnlock } from '@/components/audio/SfxUnlock';
+import { BgmPlayer } from '@/components/audio/BgmPlayer';
 import { PresenceHeartbeat } from '@/components/PresenceHeartbeat';
 import { PushAutoSync } from '@/components/PushAutoSync';
 import { RouteTransitionOverlay } from '@/components/RouteTransitionOverlay';
@@ -155,6 +156,8 @@ export default async function GameLayout({ children }: { children: React.ReactNo
       <div className="fixed inset-0 mx-auto flex max-w-[390px] flex-col shadow-sm">
         <SpritePreloader />
         <SfxUnlock />
+        {/* 배경음 — 설정('ig:bgm') 기본 OFF라 켠 기기에서만 소리가 난다. */}
+        <BgmPlayer track="forge-dawn" />
         <PresenceHeartbeat />
         <PushAutoSync />
         <KakaoSdkLoader />

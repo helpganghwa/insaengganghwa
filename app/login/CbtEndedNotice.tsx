@@ -2,6 +2,8 @@
 
 import { useEffect, useState } from 'react';
 
+import { BgmPlayer } from '@/components/audio/BgmPlayer';
+
 import { OpenAlertSection } from './OpenAlertSection';
 
 /**
@@ -94,6 +96,8 @@ export function CbtEndedNotice({ compact = false }: { compact?: boolean }) {
   }
   return (
     <div className="relative flex w-full flex-1 flex-col overflow-hidden">
+      {/* 배경음 — 연출용 강제 재생(설정 무관). 자동재생이 막히면 첫 터치에서 시작. */}
+      <BgmPlayer track="forge-dawn" force />
       {/* 배경 — 콘텐츠 뒤 전면(2026-07-31 피드백: 이미지 상단이 빈 채 스크롤만 길어지던 구조
           → 배경화 + 콘텐츠를 위에서부터). 높이는 콘텐츠가 정하고 이미지는 cover로 채운다. */}
       <div
