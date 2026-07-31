@@ -80,10 +80,14 @@ export async function attributeReferralFromShare(
     if (createdMs < clickedAtMs - SIGNUP_SKEW_MS) return null; // 기존 유저 — 보상 없음.
 
     // 신규 가입자 nickname — 알림·우편함 메시지에 표시.
+    // 추천인과 같은 규칙 — 다중 서버 캐릭터가 있으면 마지막 활성 서버 닉을 우선(표시용).
+    // 정렬이 없으면 어느 서버 닉이 뽑힐지 비결정적이라 우편·알림 표기가 흔들린다.
     const [newUser] = await tx
       .select({ nickname: characters.nickname })
       .from(characters)
+      .innerJoin(profiles, eq(profiles.id, characters.userId))
       .where(eq(characters.userId, newUserId))
+      .orderBy(sql`(${characters.serverId} = ${profiles.lastServerId}) desc`)
       .limit(1);
     const newUserNickname = newUser?.nickname ?? '친구';
 
