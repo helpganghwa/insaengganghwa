@@ -1,7 +1,17 @@
 # CBT 종료 → 실운영 전환 런북
 
-> CBT를 닫고 정식 오픈으로 전환하는 컷오버 데이 절차. 스크립트는 `scripts/cutover-live.ts`
+> CBT를 닫고 정식 오픈으로 전환하는 절차. 스크립트는 `scripts/cutover-live.ts`
 > (CBT 시작 컷오버였던 `cutover-v3.ts`와 별개 — 카탈로그 재시드 없음, 아바타 삭제 확정).
+>
+> **2단계 플로우(2026-07-31 확정)** — 종료일과 출시일 사이에 테스트 기간(약 9일)이 있다:
+>
+> | 단계 | 시점 | 하는 일 |
+> |---|---|---|
+> | **1단계 종료·동결** | CBT 종료일 밤 | 크론 정지 → 결산 수치 갱신·배포 → §2 스냅샷 → pg_dump → §3 wipe(1차) → `system_mode='cbt_ended'` → 크론 재개. **§3.5 복원은 하지 않는다** |
+> | 테스트 기간 | 종료~출시 전 | cbt_ended 상태 — 어드민·심사 계정만 접속. 카드사 심사 대응·결제 E2E·기능 점검. 테스트 흔적은 2차 wipe가 지우므로 자유롭게 |
+> | **2단계 출시** | 출시 전날 밤~당일 아침 | 크론 정지 → wipe(2차, **`--keep-payments`** — 테스트 실결제 보존) → §3.5 복원(캐릭터+보상 지급) → §4 env·§4.5 완화값·§5 확률공시·§6 서버명 → 오픈 시각에 `system_mode='live'` → 크론 재개 → 오픈 공지 + `open-push-broadcast` |
+>
+> 복원(보상 지급)을 출시 직전으로 미루는 이유: ① 테스트 기간의 어드민·심사 흔적(캐릭터·랭킹·우편)이 오픈 월드에 남지 않는다 ② 보상 우편이 오픈 순간 '방금 도착'으로 신선하다 ③ 1차 복원분을 2차 wipe가 지워 보상이 증발하는 사고 자체가 불가능해진다. 같은 이유로 lazy 지급(grant.ts)은 cbt_ended 동안 자동 차단된다.
 
 ---
 
@@ -57,8 +67,12 @@ bun run --env-file=.env.local scripts/cbt-snapshot.ts --confirm  # 기록 + keep
 
 ```bash
 bun run scripts/cutover-live.ts --db=prod            # 드라이런 — 삭제 행 수 확인
-bun run scripts/cutover-live.ts --db=prod --confirm  # 단일 트랜잭션 실행
+bun run scripts/cutover-live.ts --db=prod --confirm  # 1차(종료일) — 결제 테이블 포함 전체
+bun run scripts/cutover-live.ts --db=prod --keep-payments --confirm  # 2차(출시 직전) — 결제·본인인증 5종 보존
 ```
+
+> 2차는 반드시 `--keep-payments` — 테스트 기간에 심사 실결제(paid/refunded)가 생겼다면
+> 전자상거래법 5년 보존 의무 대상이라 지우면 안 된다. 1차는 §2의 실결제 부재 확인이 선행.
 
 내장 가드: 이월 스냅샷 선행 / maintenance ON / 보존 테이블 오염 / 카탈로그 비어있음 — 하나라도 걸리면 중단.
 
@@ -69,7 +83,7 @@ catalog_items(현행 60종 유지) · probability_snapshots · system_mode · an
 > ⚠ **profiles는 어떤 경우에도 wipe 금지** — `cbt_carryover`가 CASCADE FK로 매달려 있어 이월
 > 원장이 전손되고, `handle_new_user` 트리거는 auth.users INSERT에만 발화해 계정이 재생성되지 않는다.
 
-## 3.5. CBT 유저 사전 복원 (wipe 직후, 오픈 전)
+## 3.5. CBT 유저 사전 복원 (2단계 — 2차 wipe 직후, 오픈 직전)
 
 ```bash
 bun run --env-file=.env.local scripts/cbt-restore.ts --db=prod            # 드라이런

@@ -15,6 +15,12 @@ const arg = (k: string) => process.argv.find((a) => a.startsWith(`--${k}=`))?.sp
 const has = (k: string) => process.argv.includes(`--${k}`);
 const target = arg('db'); // staging | prod
 const confirm = has('confirm');
+// 2차 wipe(출시 직전) 전용 — 테스트 기간의 심사 실결제가 존재하므로 결제·본인인증
+// 법정 보존 5종(전자상거래법 5년)을 삭제 목록에서 제외한다(2026-07-31 2단계 플로우).
+const keepPayments = has('keep-payments');
+const PAYMENT_TABLES = new Set([
+  'payment_alerts', 'monthly_purchase_limits', 'iap_refunds', 'iap_orders', 'identity_verifications',
+]);
 
 const URL =
   target === 'prod' ? process.env.PROD_DATABASE_URL
@@ -124,7 +130,11 @@ async function main() {
 
   console.log('\n--confirm 감지 → 트랜잭션 실행...');
   await sql.begin(async (tx) => {
-    for (const t of WIPE_TABLES) {
+    const effectiveTables = keepPayments
+      ? WIPE_TABLES.filter((t) => !PAYMENT_TABLES.has(t))
+      : WIPE_TABLES;
+    if (keepPayments) console.log(`--keep-payments: 결제·본인인증 ${PAYMENT_TABLES.size}종 보존`);
+    for (const t of effectiveTables) {
       await tx.unsafe(`delete from ${t}`);
     }
     // zones 점령상태 리셋(행 구조는 유지)

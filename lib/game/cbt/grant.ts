@@ -3,6 +3,7 @@ import 'server-only';
 import { and, eq, isNull, sql } from 'drizzle-orm';
 
 import { db } from '@/lib/db/client';
+import { getMaintenanceState } from '@/lib/game/system-mode';
 import { cbtCarryover } from '@/lib/db/schema/cbt';
 import { characters } from '@/lib/db/schema/server';
 import { mailbox } from '@/lib/db/schema/mailbox';
@@ -19,6 +20,12 @@ import { mailbox } from '@/lib/db/schema/mailbox';
  * 조건부 update(granted_at null → now)가 선행돼 동시 요청에도 정확히 1회만 지급(멱등).
  */
 export async function ensureCbtCarryover(userId: string, serverId: number): Promise<boolean> {
+  // CBT 종료~출시 사이(cbt_ended)엔 지급하지 않는다(2026-07-31 2단계 플로우) — 이 기간에
+  // 접속하는 건 어드민·심사 계정뿐인데, 여기서 지급하면 granted_at이 소진돼 출시 직전
+  // 2차 wipe 후 재복원(cbt-restore)에서 스킵되고, 받은 우편은 wipe로 사라져 보상이 증발한다.
+  const maint = await getMaintenanceState().catch(() => null);
+  if (maint?.active && maint.mode === 'cbt_ended') return false;
+
   // 빠른 경로 — 미지급 행 없으면 종료(부분 인덱스 스캔, 대부분의 요청).
   const [row] = await db
     .select()
