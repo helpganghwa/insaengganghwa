@@ -154,7 +154,7 @@ function useCountdown(expireAtIso: string): { text: string; over: boolean; urgen
 
 export function RaidSessionCard({ view: v, serverId }: { view: RaidView; serverId: number }) {
   const router = useRouter();
-  const { showResource, showError, showHeaderToast } = useResourceToast();
+  const { showError, showHeaderToast } = useResourceToast();
   const { text: countdown, over, urgent } = useCountdown(v.expireAtIso);
 
   const boss = RAID_BOSSES[v.bossCode];
@@ -498,7 +498,7 @@ export function RaidSessionCard({ view: v, serverId }: { view: RaidView; serverI
     // 폴백 — SDK 미로드/init 시 링크 복사.
     if (typeof navigator !== 'undefined' && navigator.clipboard) {
       void navigator.clipboard.writeText(url);
-      showResource('🔗', '초대 링크 복사');
+      showHeaderToast({ icon: '🔗', title: '초대 링크 복사' });
     }
   };
 

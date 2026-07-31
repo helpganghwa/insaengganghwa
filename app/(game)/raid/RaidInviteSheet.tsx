@@ -5,6 +5,7 @@ import { useEffect, useState, useTransition } from 'react';
 import { ModalShell } from '@/components/ModalShell';
 import { ModalLayout, ModalButton } from '@/components/ModalLayout';
 import { LastSeen } from '@/components/LastSeen';
+import { GuildBadge } from '@/components/GuildBadge';
 import { useResourceToast } from '@/components/ResourceToast';
 import { Avatar } from '@/app/(game)/friends/Avatar';
 import { fmtNum } from '@/app/(game)/guild/guild-row';
@@ -33,7 +34,7 @@ export function RaidInviteSheet({
   /** 보조 수단 — 게임 안 친구가 없는 유저의 유일한 초대 경로라 유지한다. */
   onKakaoShare: () => void;
 }) {
-  const { showError, showResource } = useResourceToast();
+  const { showError, showHeaderToast } = useResourceToast();
   const [tab, setTab] = useState<Tab>('friend');
   const [data, setData] = useState<{ friends: InviteCandidate[]; guildMates: InviteCandidate[] } | null>(
     null,
@@ -89,7 +90,7 @@ export function RaidInviteSheet({
         showError(r?.message ?? '초대에 실패했어요. 잠시 후 다시 시도해 주세요.');
         return;
       }
-      showResource('⚔️', `${r.nickname}님 초대`);
+      showHeaderToast({ icon: '⚔️', title: `${r.nickname}님 초대`, detail: '알림을 보냈어요' });
     });
   };
 
@@ -197,11 +198,20 @@ export function RaidInviteSheet({
                           {c.totalEnhance.toLocaleString('ko-KR')}
                         </b>
                       </span>
-                      {c.guildName ? (
-                        <span className="block truncate text-[10px] text-zinc-400">
-                          {c.guildName}
-                        </span>
-                      ) : null}
+                      {/* 길드 줄은 소속 여부와 무관하게 항상 자리를 차지한다 — 미소속 행만
+                          한 줄 낮아지면 목록이 들쭉날쭉해 손가락 위치가 어긋난다. */}
+                      <span className="mt-0.5 flex h-[14px] items-center text-[10px] text-zinc-400">
+                        {c.guildName ? (
+                          <GuildBadge
+                            emblemUrl={c.guildEmblemUrl}
+                            name={c.guildName}
+                            size={12}
+                            className="min-w-0"
+                          />
+                        ) : (
+                          <span className="text-zinc-300 dark:text-zinc-600">무소속</span>
+                        )}
+                      </span>
                     </span>
                     {c.joined ? (
                       <span className="shrink-0 rounded-full bg-zinc-100 px-2.5 py-1 text-[11px] font-bold text-zinc-400 dark:bg-zinc-800">

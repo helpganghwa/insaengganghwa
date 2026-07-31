@@ -34,8 +34,9 @@ export type InviteCandidate = FriendUser & {
   /** 최고 강화 · 합산 강화 — 길드원 목록과 같은 지표 세트. */
   maxEnhance: number;
   totalEnhance: number;
-  /** 길드명(미소속이면 null) — 통합 목록에서 소속을 한눈에. */
+  /** 길드 문양·이름(미소속이면 null) — 통합 목록에서 소속을 한눈에. */
   guildName: string | null;
+  guildEmblemUrl: string | null;
 };
 
 /**
@@ -141,14 +142,20 @@ async function candidatesOnServer(
       .from(userEquipment)
       .where(and(eq(userEquipment.serverId, serverId), inArray(userEquipment.userId, allIds))),
     db
-      .select({ userId: guildMembers.userId, guildName: guilds.name })
+      .select({
+        userId: guildMembers.userId,
+        guildName: guilds.name,
+        guildEmblemUrl: guilds.emblemUrl,
+      })
       .from(guildMembers)
       .innerJoin(guilds, eq(guilds.id, guildMembers.guildId))
       .where(and(eq(guildMembers.serverId, serverId), inArray(guildMembers.userId, allIds))),
   ]);
   const joinedSet = new Set(joined.map((r) => r.userId));
   const invitedSet = new Set(invited.map((r) => r.userId));
-  const guildByUser = new Map(guildRows.map((r) => [r.userId, r.guildName]));
+  const guildByUser = new Map(
+    guildRows.map((r) => [r.userId, { name: r.guildName, emblemUrl: r.guildEmblemUrl }]),
+  );
   const owned = new Map<string, { catalogItemId: number; enhanceLevel: number; transcendLevel: number }[]>();
   for (const r of eqRows) {
     (owned.get(r.uid) ?? owned.set(r.uid, []).get(r.uid)!).push({
@@ -169,7 +176,8 @@ async function candidatesOnServer(
           combat: combatPowerFromOwned(own),
           maxEnhance: own.reduce((mx, o) => Math.max(mx, o.enhanceLevel), 0),
           totalEnhance: own.reduce((n, o) => n + o.enhanceLevel, 0),
-          guildName: guildByUser.get(p.userId) ?? null,
+          guildName: guildByUser.get(p.userId)?.name ?? null,
+          guildEmblemUrl: guildByUser.get(p.userId)?.emblemUrl ?? null,
         } satisfies InviteCandidate,
       ];
     }),

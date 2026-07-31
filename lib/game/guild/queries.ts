@@ -579,10 +579,8 @@ export async function getZoneAdjacency(serverId: number): Promise<{ a: number; b
  * 길드가 공격 가능한 구역 id 목록 — 소유 구역에 인접한 비소유 구역.
  *  소유 구역이 0개면 모든 구역 공격 가능(첫 상륙 자유). 배치 UI 필터용(서버 검증과 동일 규칙).
  */
-export async function getAttackableZoneIds(guildId: bigint): Promise<number[]> {
+export async function getAttackableZoneIds(guildId: bigint, serverId: number): Promise<number[]> {
   const owned = await db.select({ id: zones.id }).from(zones).where(eq(zones.ownerGuildId, guildId));
-  const [g] = await db.select({ serverId: guilds.serverId }).from(guilds).where(eq(guilds.id, guildId)).limit(1);
-  const serverId = g?.serverId ?? 1;
   if (owned.length === 0) {
     const all = await db.select({ id: zones.id }).from(zones).where(eq(zones.serverId, serverId));
     return all.map((z) => z.id); // 첫 상륙 자유
@@ -645,13 +643,10 @@ export async function getConquestBattleById(id: bigint) {
 }
 
 /** 점령전 배치 보드(임원 배치/전원 조회) — 길드원별 현재 배치·집행관 + 구역 목록(픽커). */
-export async function getDeployBoard(guildId: bigint) {
+export async function getDeployBoard(guildId: bigint, gServerId: number) {
   // 잠금 시간(23:00~23:59)엔 다음 전투(빈 보드) 대신 진행 중(오늘) 전투 배치를 그대로 노출.
   // 클라(DeployBoard)는 이미 자체 시계로 '진행 중·읽기전용'을 표시 → 여기선 데이터만 맞춤.
   const battleKstDay = isConquestLocked() ? kstDateString() : nextBattleKstDay();
-  // 길드의 서버 — 존 목록·전투력 스코프 기준(길드는 서버에 묶임).
-  const [g] = await db.select({ serverId: guilds.serverId }).from(guilds).where(eq(guilds.id, guildId)).limit(1);
-  const gServerId = g?.serverId ?? 1;
   const members = (await db.execute(sql`
     select gm.user_id::text uid, c.nickname, gm.role::text mrole,
            d.zone_id dep_zone_id, dz.name dep_zone_name, d.role::text dep_role,

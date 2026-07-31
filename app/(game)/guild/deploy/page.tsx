@@ -36,8 +36,8 @@ export default async function DeployPage() {
   // 연대기·리플레이는 불필요(embedded → null). getWorldmapZones는 executor·tax·resident 포함.
   const mapSrc = assetUrl('/sprites/guild/worldmap.png');
   const [board, attackable, adjacency, wmZones, residence] = await Promise.all([
-    getDeployBoard(membership.guildId),
-    getAttackableZoneIds(membership.guildId),
+    getDeployBoard(membership.guildId, serverId),
+    getAttackableZoneIds(membership.guildId, serverId),
     getZoneAdjacency(serverId),
     getWorldmapZones(serverId).catch(() => []),
     getResidenceState(userId, serverId).catch(() => null),
