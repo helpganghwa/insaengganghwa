@@ -10,6 +10,7 @@
 import { sql } from 'drizzle-orm';
 
 import { isCronAuthorized } from '@/lib/auth/cron-auth';
+import { getMaintenanceState } from '@/lib/game/system-mode';
 import { db } from '@/lib/db/client';
 import { sendPushToUsers } from '@/lib/push/send';
 import { beatCron } from '@/lib/cron/heartbeat';
@@ -27,6 +28,13 @@ type Row = { user_id: string };
 
 export async function GET(req: Request) {
   if (!isCronAuthorized(req)) return new Response('forbidden', { status: 403 });
+  // CBT 종료~출시 사이(cbt_ended)엔 정지(2026-07-31 2단계 플로우) — 유저는 접속이 막혀 있는데
+  // 이 크론이 돌면 잠긴 유저에게 푸시가 가거나(보급) 심사·어드민 캐릭터끼리 유령 진행이 쌓인다.
+  // 출시일 아침 크론을 켜둔 채 11:00 live 전환만 하면 되도록, 게이트를 크론 안에 둔다.
+  const mode = await getMaintenanceState().catch(() => null);
+  if (mode?.active && mode.mode === 'cbt_ended') {
+    return Response.json({ ok: true, skipped: 'cbt_ended' });
+  }
 
   // 재개형 멱등 게이트 — kst_day 행을 claim하고, completed_at이 찍히기 전까지는
   // 30분 fallback cron이 cursor_user_id부터 이어서 발송한다(타임아웃 중단 시 영구 부분발송 방지).
