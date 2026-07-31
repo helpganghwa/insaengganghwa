@@ -58,7 +58,6 @@ export default async function MeleeBattlePage({ params }: { params: Promise<{ id
       battleId={String(battle.id)}
       myUserId={userId}
       initialRank={initialRank}
-      backFallback="/melee"
     />
   );
 }

@@ -31,7 +31,15 @@ export function PageHeader({
   kicker?: React.ReactNode;
   icon?: React.ReactNode;
   right?: React.ReactNode;
-  fallback: string;
+  /**
+   * 히스토리가 없을 때만 쓰는 목적지(딥링크·푸시·새로고침). 의미상 상위 화면을 준다 —
+   * 전부 '/'로 두면 푸시로 들어온 유저가 홈으로 튕긴다.
+   *
+   * **생략하면 뒤로가기를 렌더하지 않고 제목만 남는다.** 세로 한 칸이 아까운 피드형 화면
+   * (월드 로그·길드 로그)이 이쪽이다 — 진입 경로가 홈·길드홈 하나뿐이라 하단 탭으로
+   * 충분하다는 판단(2026-07-31 사용자 결정).
+   */
+  fallback?: string;
 }) {
   /**
    * ⚠ 여백은 이 컴포넌트가 갖지 않는다 — 호출부 컨테이너가 **`px-4 pb-4 pt-3` + 헤더 아래
@@ -41,7 +49,7 @@ export function PageHeader({
    */
   return (
     <div className="flex items-center gap-1.5 px-0.5">
-      <BackButton fallback={fallback} compact />
+      {fallback ? <BackButton fallback={fallback} compact /> : null}
       {icon ? (
         <div className="flex h-6 w-6 shrink-0 items-center justify-center overflow-hidden rounded-md bg-zinc-100 dark:bg-zinc-900">
           {icon}

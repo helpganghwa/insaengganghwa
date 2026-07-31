@@ -21,7 +21,7 @@ export default async function WorldPage() {
   return (
     <div className="pb-1">
       <div className="px-4 pb-3 pt-3">
-        <PageHeader title="월드 로그" fallback="/" />
+        <PageHeader title="월드 로그" />
       </div>
       <WorldLogFeed entries={feed} full />
     </div>

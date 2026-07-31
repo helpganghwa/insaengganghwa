@@ -20,7 +20,6 @@ import { assetUrl } from '@/lib/asset-versions';
 import { meleeFaceCropStyle, type FaceBox } from '@/components/faceCrop';
 import { GuildBadge } from '@/components/GuildBadge';
 import { sounds } from '@/lib/game/sound';
-import { PageHeader } from '@/components/ui/PageHeader';
 import { Tabs } from '@/components/ui/Tabs';
 import type { MeleeFinale, MeleeMyEvent } from '@/lib/db/schema/melee';
 
@@ -675,14 +674,11 @@ export function MeleeResult({
   battleId,
   myUserId,
   initialRank,
-  backFallback = '/',
 }: {
   view: MeleeResultView;
   serverId: number;
   battleId: string;
   myUserId: string;
-  /** 히스토리 없이 들어온 경우의 목적지 — 대난투 홈은 '/', 전투 상세는 '/melee'. */
-  backFallback?: string;
   /** 서버에서 함께 받아온 전체 순위 첫 페이지. */
   initialRank: { rows: MeleeRankRow[]; myRank: number | null };
 }) {
@@ -922,15 +918,8 @@ export function MeleeResult({
     window.history.pushState(null, '', qs ? `${pathname}?${qs}` : pathname);
   };
 
-  const title = backFallback === '/melee' ? `제 ${view.edition}회 대난투` : '대난투';
-
   return (
     <div className="flex h-[calc(100%-var(--chat-dock-h,0px))] flex-col">
-      {/* 무대 위에 겹치면 '생존 N'·'#2 닉네임' 같은 기존 표시를 가린다(2026-07-31 실기기 확인).
-          이미지 바깥 얇은 줄로 뺀다 — 무대 디자인을 건드리지 않는다. */}
-      <div className="shrink-0 px-4 pb-2 pt-3">
-        <PageHeader title={title} fallback={backFallback} />
-      </div>
       {/* 무대 — 헤더처럼 고정(스크롤·오버스크롤 영향 없음) */}
       <div className="relative h-60 shrink-0 overflow-hidden border-b border-amber-900/50">
         {/* eslint-disable-next-line @next/next/no-img-element */}

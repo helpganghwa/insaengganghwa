@@ -39,7 +39,7 @@ export default async function GuildLogPage() {
     <div className="pb-1">
       <div className="px-4 pb-3 pt-3">
         {/* 길드 홈의 '길드 로그' 섹션에서 전체 보기로 들어온다 — 이름을 맞춘다. */}
-        <PageHeader title="길드 로그" fallback="/guild" />
+        <PageHeader title="길드 로그" />
       </div>
       <GuildLogFeed entries={feed} full />
     </div>
