@@ -61,6 +61,17 @@ const WIPE_TABLES = [
   'client_errors', 'admin_actions',
   'support_inquiries', // CBT 문의 — 실운영 첫날 오탐 배지 방지
   'push_pending', 'daily_supply_broadcasts',
+  // 누락분 보강(2026-07-31 전수 대조 — 80개 테이블 vs WIPE/PROTECTED 차집합):
+  //  · 채팅 3종: CBT 대화·차단·신고가 오픈 월드에 그대로 남았다(chat_messages 256행 확인).
+  //  · 도전과제 2종: 진행/보상 이력 — 유저 데이터.
+  //  · guild_emblem_escrows: 문양 생성 에스크로(다이아 보류분) — 길드 wipe 후 고아가 된다.
+  //  · admin_scheduled_mails: CBT용 예약 우편이 오픈 후 발송되는 사고 방지.
+  //  · user_daily_stats: 일자별 개인 집계.
+  'chat_reports', 'chat_blocks', 'chat_messages',
+  'challenge_claims', 'challenge_events',
+  'guild_emblem_escrows',
+  'admin_scheduled_mails',
+  'user_daily_stats',
   'characters', // active_profile_id → user_profiles 참조라 아바타 3종보다 먼저
   'profile_reports', 'profile_generation_jobs', 'user_profiles',
 ];

@@ -29,19 +29,25 @@
 | 6 | GCRB 자체등급분류 | ⬜ 선행만, 본착수 전 |
 | 7 | 결제 안전망(자동 테스트·실패 알림) | ⬜ |
 | 8 | 콜드스타트 플레이북 | ⬜ |
-| 9 | 라이트 구독(MRR) | ⬜ |
-| 10 | 테스트 로그인 제거 | ⬜ 심사 통과 후 |
+| 9 | ~~라이트 구독(MRR)~~ | ❌ 폐기(2026-07-31) — 성장 프리미엄이 대체 |
+| 10 | ~~테스트 로그인 제거~~ | ❌ 폐기 — **현행 영구 유지**(재심의 상시 대응, 2026-07-31 재확정) |
 | 11 | Supabase Compute Small → Medium 업그레이드 | ⬜ 출시 2~3일 전 새벽 |
 
 > 상세 분석은 `docs/PROJECT-REVIEW-2026-06-24.md` 참조.
 >
-> **#10 테스트 로그인 제거**: 카카오 단독 인증이라 스토어 심사용으로 `ALLOW_TEST_LOGIN`
+> **#10 폐기 사유(2026-07-31 재확정)**: 심사 로그인(`/login?test=true` + cbt 계정)은 스토어·게임위
+> 재심의에 상시 필요하므로 **제거하지 않고 경로·자격증명 그대로 영구 유지**한다. 아래 원문은
+> 폐기된 제거 계획의 기록이다.
+>
+> ~~**#10 테스트 로그인 제거**: 카카오 단독 인증이라 스토어 심사용으로 `ALLOW_TEST_LOGIN`
 > env 게이트 + 하드코딩 계정(`lib/auth/test-accounts.ts`)을 둠. 프로덕션 미설정이라 현재
 > 비활성이나, **심사 통과 직후** ① Vercel prod env에서 `ALLOW_TEST_LOGIN` 제거 확인 ②
 > `lib/auth/test-accounts.ts` 삭제 + `lib/auth/actions.ts`의 `signInWithTestAccount`/
 > `signInWithCredentials` + `app/login/page.tsx` test 분기 제거 ③ prod Supabase Auth에
 > 테스트 계정(`cbt@`, `*.insaeng.test`) 생성 여부 점검·삭제. 비밀번호가 소스에 있으므로
-> 레포 기밀이 유일 방어선 — 미루지 말 것(감사 P-A8).
+> 레포 기밀이 유일 방어선 — 미루지 말 것(감사 P-A8).~~
+>
+> **출시 전 잔여 작업의 실행 목록은 `docs/LAUNCH-PLAN-2026-08.md` §8이 정본.**
 
 > **#11 Compute 업그레이드**: 동접 500 예상 대비. CBT 동접 ~50에서도 23시대(점령전 크론
 > 스택 + 유저 피크)에 Small(1 vCPU)이 CPU 포화로 CONNECT_TIMEOUT·페이지 행을 냈다
