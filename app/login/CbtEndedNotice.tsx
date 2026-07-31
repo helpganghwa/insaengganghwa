@@ -127,6 +127,38 @@ export function CbtEndedNotice({ compact = false }: { compact?: boolean }) {
           벌어졌습니다.
         </p>
 
+        {/* 명예의 전당 — 실측 1위들(2026-07-31 채굴). 닉네임 노출은 랭킹과 동일 공개 범위.
+            수치·이름은 컷오버 데이 최종 갱신 대상(위 STAT과 함께). */}
+        <div className="mt-6">
+          <p className="text-center text-[10px] font-extrabold tracking-[0.22em] text-amber-400/70">
+            CBT 명예의 전당
+          </p>
+          <div className="mt-2.5 space-y-1.5 text-center text-[12px] leading-relaxed text-zinc-400">
+            <p>
+              아바타를 <b className="font-bold text-zinc-200">96개</b>나 만든{' '}
+              <b className="font-bold text-amber-300">SEB</b>
+            </p>
+            <p>
+              망치를 <b className="font-bold text-zinc-200">13,171번</b> 두드린{' '}
+              <b className="font-bold text-amber-300">Eclipse</b>
+            </p>
+            <p>
+              가장 높은 곳(<b className="font-bold text-zinc-200">+488</b>)에 오른{' '}
+              <b className="font-bold text-amber-300">미르</b>
+            </p>
+            <p>
+              상자 <b className="font-bold text-zinc-200">19,804개</b>를 열고 대난투{' '}
+              <b className="font-bold text-zinc-200">9번</b> 우승한{' '}
+              <b className="font-bold text-amber-300">LEGEND</b>
+            </p>
+            <p>
+              친구 <b className="font-bold text-zinc-200">10명</b>을 데려오고 문의{' '}
+              <b className="font-bold text-zinc-200">29건</b>을 보내준{' '}
+              <b className="font-bold text-amber-300">여왕</b>
+            </p>
+          </div>
+        </div>
+
         {/* 오픈 알림(0145) — 종료 화면 트래픽을 오픈일 복귀로 전환하는 유일한 접점. */}
         <OpenAlertSection />
       </div>
