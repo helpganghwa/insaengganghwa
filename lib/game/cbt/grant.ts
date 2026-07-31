@@ -5,18 +5,8 @@ import { and, eq, isNull, sql } from 'drizzle-orm';
 import { db } from '@/lib/db/client';
 import { cbtCarryover } from '@/lib/db/schema/cbt';
 import { characters } from '@/lib/db/schema/server';
-import { userProfiles } from '@/lib/db/schema/avatar';
 import { mailbox } from '@/lib/db/schema/mailbox';
 
-/** cbt_carryover.avatars 원소 — cbt-snapshot.ts가 기록하는 형태. */
-type CarryAvatar = {
-  image_url: string;
-  was_active: boolean;
-  pixellab_character_id: string;
-  options: Record<string, unknown>;
-  equipment_snapshot: unknown;
-  description_prompt: string;
-};
 
 /**
  * CBT 이월 lazy 지급 **백스톱** — (game) layout에서 after()로 호출(일일 보급과 동일 패턴).
@@ -25,7 +15,7 @@ type CarryAvatar = {
  * granted_at 마킹)이라 대부분의 유저에게 이 함수는 빠른 no-op다. 사전 복원이 건너뛴 행
  * (닉네임 유실 등)만 여기서 지급된다:
  *  1. 초대 이월 보상 — "CBT 감사 보상" 우편(💎·📦 첨부, 수령형).
- *  2. 아바타 전 목록 복원(정면 1방향) + 마지막 착용을 active로 + 안내 우편.
+ *  2. 감사 보상 우편(합산강화 비례 💎, 0144).
  * 조건부 update(granted_at null → now)가 선행돼 동시 요청에도 정확히 1회만 지급(멱등).
  */
 export async function ensureCbtCarryover(userId: string, serverId: number): Promise<boolean> {
@@ -75,43 +65,19 @@ export async function ensureCbtCarryover(userId: string, serverId: number): Prom
       });
     }
 
-    // 2. 아바타 전 목록 복원 — 정면(south) 1방향(기획 확정), 마지막 착용은 active 승계.
-    const avatars = (row.avatars ?? []) as CarryAvatar[];
-    let activeId: string | null = null;
-    for (const av of avatars) {
-      if (!av?.image_url) continue;
-      const [ins] = await tx
-        .insert(userProfiles)
-        .values({
-          userId,
-          serverId,
-          rotations: { south: av.image_url },
-          activeDirection: 'south',
-          pixellabCharacterId: av.pixellab_character_id || 'cbt-keepsake',
-          options: { ...(av.options ?? {}), cbtKeepsake: true },
-          equipmentSnapshot: av.equipment_snapshot ?? {},
-          descriptionPrompt: av.description_prompt || 'CBT keepsake avatar',
-        })
-        .returning({ id: userProfiles.id });
-      if (av.was_active && ins) activeId = ins.id;
-    }
-    if (avatars.length > 0) {
-      if (activeId) {
-        await tx
-          .update(characters)
-          .set({ activeProfileId: activeId })
-          .where(and(eq(characters.userId, userId), eq(characters.serverId, serverId)));
-      }
+    // 2. 감사 보상(0144) — 합산강화 비례 다이아(전원). 스냅샷 시점 확정값을 그대로 지급.
+    if (row.thanksDiamond > 0) {
       await tx.insert(mailbox).values({
         userId,
         serverId,
-        type: 'admin',
-        title: 'CBT 기념 선물이 도착했어요',
+        type: 'reward',
+        title: 'CBT 참여 감사 보상',
         body:
-          `${row.nickname ? row.nickname + '님, ' : ''}CBT에서 함께했던 아바타 ${avatars.length}개를 돌려드립니다.\n` +
-          `내 정보 → 아바타 목록에서 확인하세요. 다시 만나서 반가워요!`,
+          `비공개 테스트를 함께해 주셔서 감사합니다.\n` +
+          `CBT에서 쌓으신 합산 강화 ${row.totalEnhance.toLocaleString('ko-KR')}만큼의 다이아를 기본 보상과 함께 담았습니다.\n` +
+          `정식 서버에서 다시 한번, 강화는 인생이다!`,
         senderLabel: '시스템',
-        payload: {},
+        payload: { diamond: row.thanksDiamond },
       });
     }
 

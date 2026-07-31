@@ -24,6 +24,9 @@ export const systemModeValueEnum = pgEnum('system_mode_value', [
   'read_only',
   'maintenance',
   'emergency_stop',
+  // CBT 종료(0144) — 종료~정식 오픈 사이. maintenance와 달리 admin·심사(cbt) 계정은
+  // 통과한다(카드사 심사 결제 테스트 지속). 일반 유저는 로그아웃 + 로그인 화면 종료 안내.
+  'cbt_ended',
 ]);
 
 /** §10.1 probability_snapshots — 확률/수치 공시 전문 영구 기록. */

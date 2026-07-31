@@ -15,7 +15,7 @@ import { systemMode } from '@/lib/db/schema/ops';
  * **결제 지급/환불처럼 '이미 일어난 일' 마무리 경로엔 쓰지 말 것**(막으면 paid-not-granted).
  * fail-open: 행 부재/조회 실패 시 live. 캐시 20s — 전환 전파 최대 20s.
  */
-export type SystemModeValue = 'live' | 'read_only' | 'maintenance' | 'emergency_stop';
+export type SystemModeValue = 'live' | 'read_only' | 'maintenance' | 'emergency_stop' | 'cbt_ended';
 
 export type MaintenanceState = {
   mode: SystemModeValue;

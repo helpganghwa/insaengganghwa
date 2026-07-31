@@ -1,6 +1,7 @@
 import 'server-only';
 
-import { getSessionUserId } from '@/lib/auth/session';
+import { getSessionUserId, isReviewerAccount } from '@/lib/auth/session';
+import { getAdminStatus } from '@/lib/auth/require-admin';
 import { getBanState } from '@/lib/game/account/ban';
 import { getMaintenanceState } from '@/lib/game/system-mode';
 
@@ -35,6 +36,14 @@ export async function actionBlock(): Promise<'BANNED' | 'MAINTENANCE' | null> {
     if (banned) return 'BANNED';
   }
   const maint = await getMaintenanceState().catch(() => null);
-  if (maint?.active) return 'MAINTENANCE';
+  if (maint?.active) {
+    // CBT 종료 모드(0144) — 카드사 심사가 진행 중이라 심사(cbt) 계정과 어드민은 액션을
+    // 계속 쓸 수 있어야 한다(결제 테스트). 일반 유저만 차단. 점검(maintenance)은 전원 차단 유지.
+    if (maint.mode === 'cbt_ended') {
+      const { isAdmin } = await getAdminStatus().catch(() => ({ isAdmin: false }));
+      if (isAdmin || (await isReviewerAccount().catch(() => false))) return null;
+    }
+    return 'MAINTENANCE';
+  }
   return null;
 }

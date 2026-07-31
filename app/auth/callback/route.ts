@@ -11,6 +11,8 @@ import {
   latestOpenServerId,
 } from '@/lib/game/server-select';
 import { attributeReferralFromShare } from '@/lib/game/referral/redeem';
+import { getMaintenanceState } from '@/lib/game/system-mode';
+import { getAdminStatus } from '@/lib/auth/require-admin';
 import {
   PENDING_REFERRAL_COOKIE,
   PENDING_REFERRAL_AT_COOKIE,
@@ -47,6 +49,19 @@ export async function GET(request: NextRequest) {
     }
     if (!error) {
       const userId = data.session?.user.id;
+      // CBT 종료 모드(0144) — 카카오 로그인은 어드민만 통과(사용자 결정 2026-07-31).
+      // 일반 유저가 이 창에서 로그인하면 캐릭터 자동생성이 wipe 전 데이터 위에 얹히므로
+      // 세션을 즉시 끊고 로그인 화면(종료 안내)으로 돌려보낸다. 심사 계정은 ID/PW 경로라 무관.
+      if (userId) {
+        const maint = await getMaintenanceState().catch(() => null);
+        if (maint?.active && maint.mode === 'cbt_ended') {
+          const { isAdmin } = await getAdminStatus().catch(() => ({ isAdmin: false }));
+          if (!isAdmin) {
+            await supabase.auth.signOut().catch(() => undefined);
+            return NextResponse.redirect(`${origin}/login?reason=cbt_ended`);
+          }
+        }
+      }
       // 카카오 픽셀 전환 파라미터 — 신규 가입=회원가입(signup), 그 외=로그인(login).
       // 클라 로더(KakaoPixel)가 이 파라미터를 보고 completeRegistration/login을 1회 발화한다.
       // 신규 판정은 추천인 보상과 동일 신호(createdAt이 윈도 이내 = 방금 가입). 실패해도 로그인은 진행.

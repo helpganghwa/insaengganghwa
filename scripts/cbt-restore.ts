@@ -51,20 +51,12 @@ const rotationsFor = (g: 'male' | 'female') =>
     ),
   );
 
-type CarryAvatar = {
-  image_url: string;
-  was_active: boolean;
-  pixellab_character_id: string;
-  options: Record<string, unknown>;
-  equipment_snapshot: unknown;
-  description_prompt: string;
-  created_at: string;
-};
 
 type CarryRow = {
   user_id: string; nickname: string | null;
   invite_count: number; invite_diamond: number; invite_boxes: number;
-  avatars: CarryAvatar[] | null;
+  total_enhance: number;
+  thanks_diamond: number;
 };
 
 async function main() {
@@ -74,7 +66,7 @@ async function main() {
   if (!srv) { console.error(`중단: 서버 ${serverId} 없음`); process.exit(1); }
 
   const rows = await sql<CarryRow[]>`
-    select user_id, nickname, invite_count, invite_diamond, invite_boxes, avatars
+    select user_id, nickname, invite_count, invite_diamond, invite_boxes, total_enhance, thanks_diamond
     from cbt_carryover where granted_at is null order by snapshot_at`;
   if (rows.length === 0) { console.log('미지급 이월 행 없음 — 종료.'); await sql.end(); return; }
 
@@ -85,15 +77,14 @@ async function main() {
       select 1 from characters where user_id = ${r.user_id} and server_id = ${serverId}`;
     if (dup) { console.warn(`  ⚠ ${r.nickname} 캐릭터 이미 존재 — 건너뜀`); skipped++; continue; }
 
-    const avatars = r.avatars ?? [];
     console.log(
-      `  ${r.nickname.padEnd(12)} 아바타 ${avatars.length}개` +
+      `  ${r.nickname.padEnd(12)} 감사 💎${r.thanks_diamond}` +
       (r.invite_count > 0 ? ` · 초대 ${r.invite_count}건(💎${r.invite_diamond} 📦${r.invite_boxes})` : ''),
     );
     if (!confirm) continue;
 
     try {
-      await restoreOne(r, avatars);
+      await restoreOne(r);
       created++;
     } catch (e) {
       if (e instanceof Error && e.message.startsWith('ALREADY_GRANTED')) {
@@ -110,7 +101,7 @@ async function main() {
   await sql.end();
 }
 
-async function restoreOne(r: CarryRow, avatars: CarryAvatar[]): Promise<void> {
+async function restoreOne(r: CarryRow): Promise<void> {
   await sql.begin(async (tx) => {
       // 0. 지급권 클레임 먼저(멱등의 직접 방어) — lazy 지급(grant.ts)과 동시 실행돼도
       //    granted_at 조건부 전이는 한쪽만 성공한다. 0행이면 이미 지급됨 → 전체 중단.
@@ -146,25 +137,23 @@ async function restoreOne(r: CarryRow, avatars: CarryAvatar[]): Promise<void> {
           returning id`;
         defaultIds.push(ins!.id as string);
       }
-      let activeId: string | null = null;
-      for (const av of avatars) {
-        const [ins] = await tx`
-          insert into user_profiles (user_id, server_id, rotations, active_direction,
-                                     pixellab_character_id, options, equipment_snapshot, description_prompt)
-          values (${r.user_id}, ${serverId}, ${tx.json({ south: av.image_url })}, 'south',
-                  ${av.pixellab_character_id || 'cbt-keepsake'},
-                  ${tx.json({ ...(av.options ?? {}), cbtKeepsake: true })},
-                  ${tx.json((av.equipment_snapshot ?? {}) as never)},
-                  ${av.description_prompt || 'CBT keepsake avatar'})
-          returning id`;
-        if (av.was_active) activeId = ins!.id as string;
-      }
-      const pick = activeId ?? defaultIds[Math.floor(Math.random() * defaultIds.length)]!;
+      // 아바타 이월 없음(기획 삭제, 2026-07-31 확정) — 기본 2종 중 랜덤 착용으로 새 시작.
+      const pick = defaultIds[Math.floor(Math.random() * defaultIds.length)]!;
       await tx`
         update characters set active_profile_id = ${pick}
         where user_id = ${r.user_id} and server_id = ${serverId}`;
 
-      // 3. 우편 — 초대 이월(있으면) + 복귀 환영. 만료 90일.
+      // 3. 우편 — 감사 보상(전원) + 초대 이월(있으면) + 복귀 환영. 만료 90일.
+      if (r.thanks_diamond > 0) {
+        await tx`
+          insert into mailbox (user_id, server_id, type, title, body, sender_label, payload, expires_at)
+          values (${r.user_id}, ${serverId}, 'reward', 'CBT 참여 감사 보상', ${
+            `비공개 테스트를 함께해 주셔서 감사합니다.\n` +
+            `CBT에서 쌓으신 합산 강화 ${r.total_enhance.toLocaleString('ko-KR')}만큼의 다이아를 기본 보상과 함께 담았습니다.\n` +
+            `정식 서버에서 다시 한번, 강화는 인생이다!`
+          }, '시스템',
+                  ${tx.json({ diamond: r.thanks_diamond })}, ${sql.unsafe(MAIL_EXPIRE)})`;
+      }
       if (r.invite_count > 0 && (r.invite_diamond > 0 || r.invite_boxes > 0)) {
         const perSlot = Math.floor(r.invite_boxes / 3);
         await tx`
@@ -182,7 +171,7 @@ async function restoreOne(r: CarryRow, avatars: CarryAvatar[]): Promise<void> {
         insert into mailbox (user_id, server_id, type, title, body, sender_label, payload, expires_at)
         values (${r.user_id}, ${serverId}, 'admin', '정식 오픈을 환영합니다', ${
           `${r.nickname}님, 다시 만나서 반가워요!\n` +
-          `CBT의 닉네임과 아바타${avatars.length > 0 ? ` ${avatars.length}개` : ''}를 그대로 옮겨 두었습니다.\n` +
+          `쓰시던 닉네임 그대로 준비해 두었습니다.\n` +
           `새로워진 세계에서 다시 한번, 강화는 인생이다!`
         }, '시스템', ${tx.json({})}, ${sql.unsafe(MAIL_EXPIRE)})`;
 

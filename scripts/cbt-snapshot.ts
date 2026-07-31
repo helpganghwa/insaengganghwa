@@ -24,16 +24,10 @@ const raw = process.env.PROD_DATABASE_URL;
 if (!raw) { console.error('PROD_DATABASE_URL 미설정'); process.exit(1); }
 const sql = postgres(raw.replace(':6543/', ':5432/'), { prepare: false, max: 1 });
 
-/** cbt_carryover.avatars 원소 — grant.ts/cbt-restore.ts와 형태 공유(현재 미이월이라 항상 null). */
-type CarryAvatar = {
-  image_url: string;
-  was_active: boolean;
-  pixellab_character_id: string;
-  options: Record<string, unknown>;
-  equipment_snapshot: unknown;
-  description_prompt: string;
-  created_at: string;
-};
+
+// 감사 보상 수식(2026-07-31 결정) — 기본 + 합산강화 비례. 금액 조정은 이 두 상수만.
+const THANKS_BASE_DIAMOND = 1000;
+const THANKS_PER_ENHANCE = 1;
 
 async function main() {
   console.log(`\n=== CBT 이월 스냅샷 ${confirm ? '(실행)' : '(드라이런)'} ===\n`);
@@ -53,41 +47,47 @@ async function main() {
     where rewarded = true group by referrer_user_id`;
   const inviteBy = new Map(invites.map((r) => [r.referrer_user_id, Number(r.n)]));
 
-  let rows = 0, withInvite = 0, avatarTotal = 0;
+  // 합산강화(전 서버 장비 enhance_level 합) — 감사 보상 산정 기반(0144, 2026-07-31 결정).
+  const enh = await sql<{ user_id: string; total: number }[]>`
+    select user_id, coalesce(sum(enhance_level), 0)::int as total
+    from user_equipment group by user_id`;
+  const enhBy = new Map(enh.map((r) => [r.user_id, Number(r.total)]));
+
+  let rows = 0, withInvite = 0, thanksTotal = 0;
   for (const u of users) {
     const inviteCount = inviteBy.get(u.user_id) ?? 0;
-
-    // 아바타는 이월하지 않는다(2026-07-24 보존 철회) — 컷오버 시 아바타 목록을 초기화하고
-    // 유저는 기본 아바타 2종으로 새 시작한다. 초대 보상(💎/📦)만 이월. keepsake 버킷 복사·
-    // avatars 스냅샷 없음(restore는 빈 avatars면 기본 2종만 생성하므로 그대로 둔다).
-    const avatars: CarryAvatar[] = [];
+    // 감사 보상(0144) — CBT에서 쌓은 합산강화만큼 다이아. 기본 지급을 더해 라이트 테스터도
+    // 빈손이 아니게 한다(중앙값 47 — 비례만으로는 감사가 안 된다). 수식 상수는 파일 상단.
+    const totalEnhance = enhBy.get(u.user_id) ?? 0;
+    const thanksDiamond = THANKS_BASE_DIAMOND + totalEnhance * THANKS_PER_ENHANCE;
 
     rows++;
     if (inviteCount > 0) withInvite++;
-    avatarTotal += avatars.length;
+    thanksTotal += thanksDiamond;
     console.log(
       `  ${u.nickname.padEnd(12)} 초대 ${String(inviteCount).padStart(2)}건` +
       ` → 💎${inviteCount * INVITE_DIAMOND_PER} 📦${inviteCount * INVITE_BOX_PER}` +
-      ` · 아바타 ${avatars.length}개${avatars.some((a) => a.was_active) ? '(착용 포함)' : ''}`,
+      ` · 합산강화 ${String(totalEnhance).padStart(5)} → 감사 💎${thanksDiamond}`,
     );
 
     if (confirm) {
       await sql`
-        insert into cbt_carryover (user_id, nickname, invite_count, invite_diamond, invite_boxes, avatars)
+        insert into cbt_carryover (user_id, nickname, invite_count, invite_diamond, invite_boxes, total_enhance, thanks_diamond)
         values (${u.user_id}, ${u.nickname}, ${inviteCount},
                 ${inviteCount * INVITE_DIAMOND_PER}, ${inviteCount * INVITE_BOX_PER},
-                ${avatars.length > 0 ? sql.json(avatars as never) : null})
+                ${totalEnhance}, ${thanksDiamond})
         on conflict (user_id) do update set
           nickname = excluded.nickname,
           invite_count = excluded.invite_count,
           invite_diamond = excluded.invite_diamond,
           invite_boxes = excluded.invite_boxes,
-          avatars = excluded.avatars,
+          total_enhance = excluded.total_enhance,
+          thanks_diamond = excluded.thanks_diamond,
           snapshot_at = now()`;
     }
   }
 
-  console.log(`\n대상 ${rows}명 (초대보상 ${withInvite} · 아바타 총 ${avatarTotal}개)`);
+  console.log(`\n대상 ${rows}명 (초대보상 ${withInvite} · 감사 다이아 총 ${thanksTotal.toLocaleString('ko-KR')})`);
   if (!confirm) console.log('드라이런 종료 — 실제 기록은 --confirm.');
   await sql.end();
 }

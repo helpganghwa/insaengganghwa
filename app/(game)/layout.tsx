@@ -3,7 +3,7 @@ import { cookies } from 'next/headers';
 import { redirect } from 'next/navigation';
 import { after } from 'next/server';
 
-import { getSessionUserId } from '@/lib/auth/session';
+import { getSessionUserId, isReviewerAccount } from '@/lib/auth/session';
 import { getAdminStatus } from '@/lib/auth/require-admin';
 import { getMaintenanceState } from '@/lib/game/system-mode';
 import { getBanState } from '@/lib/game/account/ban';
@@ -75,8 +75,16 @@ export default async function GameLayout({ children }: { children: React.ReactNo
   //  캐시(20s)라 대부분 DB 미접촉. 행 부재/조회 지연은 fail-open(점검 아님)으로 콜드스타트 안전.
   const maint = await withTimeout(getMaintenanceState(), 1500, 'layout.maint').catch(() => null);
   if (maint?.active) {
-    const { isAdmin } = await getAdminStatus();
-    if (!isAdmin) return <MaintenanceScreen state={maint} />;
+    if (maint.mode === 'cbt_ended') {
+      // CBT 종료(0144) — 일반 유저는 세션을 끊고 로그인 화면(종료 안내)으로. 어드민과
+      // 심사(cbt) 계정은 통과한다(카드사 심사 결제 테스트가 이 기간에도 진행 중).
+      // RSC 렌더 중엔 쿠키를 못 지우므로 전용 라우트에서 signOut 후 /login으로 보낸다.
+      const { isAdmin } = await getAdminStatus();
+      if (!isAdmin && !(await isReviewerAccount())) redirect('/auth/signout?reason=cbt_ended');
+    } else {
+      const { isAdmin } = await getAdminStatus();
+      if (!isAdmin) return <MaintenanceScreen state={maint} />;
+    }
   }
 
   // 계정 정지 게이트 — banned면 게임 대신 정지화면(사유·기간 노출). 조회 실패는 fail-open(통과).

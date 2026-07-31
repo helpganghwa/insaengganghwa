@@ -7,6 +7,8 @@ import { PublicFooter } from '@/components/PublicFooter';
 import { signInWithKakao, signInWithCredentials } from '@/lib/auth/actions';
 import { getSessionUserId } from '@/lib/auth/session';
 import { isCbtPaidHidden } from '@/lib/auth/test-accounts';
+import { getMaintenanceState } from '@/lib/game/system-mode';
+import { CbtEndedNotice } from './CbtEndedNotice';
 import { listServersPublic, latestOpenServerId } from '@/lib/game/server-select';
 import { Suspense } from 'react';
 import { EnhanceStatsCard, EnhanceStatsFallback } from '@/components/EnhanceStatsCard';
@@ -58,6 +60,10 @@ export default async function LoginPage({
   // 심사용 ID/PW 로그인 — ?test=true면 상시 노출(env 게이트 없음, 출시 후 재심의 지속 대응).
   // 원클릭 버튼(비번 우회)은 폐지 — 링크가 유출돼도 아이디/비밀번호를 알아야만 로그인 가능.
   const reviewLogin = test === 'true';
+  // CBT 종료 모드(0144) — 일반 화면은 로그인 수단 없이 종료 안내·카운트다운만.
+  // ?test=true는 ID/PW(심사) + 카카오(어드민 전용 — 콜백에서 검증)를 함께 노출.
+  const maint = await getMaintenanceState().catch(() => null);
+  const cbtEnded = maint?.active === true && maint.mode === 'cbt_ended';
 
   return (
     <div className="mx-auto flex min-h-dvh w-full max-w-[390px] flex-col bg-[#17110c] text-zinc-200">
@@ -72,16 +78,36 @@ export default async function LoginPage({
 
       <main className="flex w-full flex-1 flex-col items-center px-6 pb-3 pt-4 text-center">
         {/* 서버 선택 — 로그인 버튼 위(위치 유지), 영역·크기만 축소(컴팩트). 기본 서버가 쿠키에 선점돼 안 눌러도 정상 로그인. */}
-        {showServers ? (
+        {showServers && !(cbtEnded && !reviewLogin) ? (
           <div className="mb-4 w-full">
             <ServerPicker servers={servers} defaultSrv={defaultSrv} recommendedId={recommendedId} />
+          </div>
+        ) : null}
+
+        {/* CBT 종료(0144) — 일반 화면은 로그인 수단 대신 종료 안내 + 카운트다운. */}
+        {cbtEnded && !reviewLogin ? <CbtEndedNotice /> : null}
+        {cbtEnded && reviewLogin ? (
+          <div className="mb-3 w-full space-y-2">
+            <CbtEndedNotice compact />
+            {/* 어드민용 카카오 — 콜백이 어드민 외 세션을 즉시 끊는다(auth/callback 0144 게이트). */}
+            <form action={signInWithKakao} className="w-full">
+              <button
+                type="submit"
+                aria-label="카카오 로그인(관리자)"
+                className="flex w-full items-center justify-center gap-2 rounded-[12px] bg-[#FEE500] py-3 transition active:scale-[0.99] hover:brightness-95"
+              >
+                {/* eslint-disable-next-line @next/next/no-img-element */}
+                <img src="/kakao/kakao_symbol.png" alt="" aria-hidden className="h-[18px] w-auto" />
+                <span className="text-[15px] font-bold text-black/85">카카오 로그인 (관리자)</span>
+              </button>
+            </form>
           </div>
         ) : null}
 
         {/* 카카오 로그인 — 공식 가이드 준수(#FEE500 / 라벨 "카카오 로그인" / 심볼·텍스트 #000(85%) / radius 12px, 심볼 미변형).
             심사용(?test=true)은 같은 자리에 ID/PW 폼 — 폼이 페이지 하단에 있어 심사관이
             스크롤로 찾아야 했다(2026-07-31 피드백). */}
-        {reviewLogin ? (
+        {cbtEnded && !reviewLogin ? null : reviewLogin ? (
           <form action={signInWithCredentials} className="w-full space-y-2 text-left">
             <ZoomSafeInput
               type="email"
@@ -120,7 +146,8 @@ export default async function LoginPage({
           </form>
         )}
 
-        {/* 약관 동의 고지 — 로그인 버튼 바로 아래(동의 시점과 근접, 2026-07-15 위치 이동). */}
+        {/* 약관 동의 고지 — 로그인 버튼 바로 아래(동의 시점과 근접). 종료 일반 화면(수단 없음)엔 미노출. */}
+        {cbtEnded && !reviewLogin ? null : (
         <p className="mt-2.5 text-[11px] leading-relaxed text-zinc-500">
           로그인 시{' '}
           <Link prefetch={false} href="/legal/terms" className="underline">
@@ -132,6 +159,7 @@ export default async function LoginPage({
           </Link>
           에 동의하는 것으로 간주됩니다.
         </p>
+        )}
 
         {/* 로그인 실패 안내 — 버튼·폼 바로 아래(하단에 있으면 실패 사유를 못 보고 재시도한다). */}
         {error ? (
@@ -177,7 +205,7 @@ export default async function LoginPage({
         </section>
 
         {/* 서브듀드 — CBT 기간 데이터 초기화 사전 고지(작게·저대비, 문구는 원문 유지). 정식 오픈(env off) 시 자동 미노출. */}
-        {isCbtPaidHidden() ? (
+        {isCbtPaidHidden() && !cbtEnded ? (
           <div className="mt-4 w-full rounded-lg border border-white/10 bg-white/[0.03] px-3 py-2.5 text-left text-[11px] leading-relaxed text-zinc-500">
             <p className="font-semibold text-zinc-400">비공개 테스트(CBT) 안내</p>
             <p className="mt-1">
