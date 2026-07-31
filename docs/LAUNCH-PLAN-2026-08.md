@@ -89,6 +89,7 @@ select count(*) from conquest_battles where winner_guild_id is not null;  -- fla
 | 7 | env·값 정리 | `TEST_MODE` 삭제(배율 ×1) · `PAYMENTS_OPEN=true`(카드사 심사 완료 시에만) · `GUILD_REJOIN_LOCK_HOURS` 1→24 커밋 · 재배포 |
 | 8 | 확률 공시 | `bun run scripts/record-probability-snapshot.ts --note="정식 오픈" --confirm` |
 | 9 | 서버명 | `update servers set name='1서버' where id=1;` |
+| 9.5 | **공지 정리** | `/admin/announcements` — **CBT 기간 공지 8건은 wipe 대상이 아니라 그대로 남는다.** 신규 유저에게 보일 필요 없는 것(CBT 종료 안내·테스트 공지 등)을 삭제/비활성하고, 오픈 공지만 남긴다. 삭제 시 `announcement_poll_votes`(93행, CBT 투표)도 CASCADE로 함께 정리됨 |
 | 10 | **오픈 (11:00)** | `update system_mode set mode='live' ... ;` → 오픈 공지 게시 |
 | 11 | 오픈 푸시 | `bun run scripts/open-push-broadcast.ts --db=prod` 드라이런 → `--confirm` (전 구독: CBT 유저 + 종료 화면 익명 신청자) |
 | 12 | 검증 | 런북 §7 표 + 첫 유입 모니터링(에러·풀 지연) |
@@ -177,11 +178,20 @@ select count(*) from conquest_battles where winner_guild_id is not null;  -- fla
 
 **검증**: 스테이징에서 67개 전 테이블을 단일 트랜잭션으로 delete 후 롤백 — FK 순서 정상 확인.
 
-**의도적 보존(어드민 화면에 남는 것)**:
-- `announcements`(8건) — CBT 공지. 오픈 전 어드민에서 수동 정리 판단
-- `probability_snapshots`(2건) — 게임산업법 §33 영구 기록, 삭제 불가
-- `push_subscriptions` — 오픈 알림 대상
-- `cron_heartbeats` — 인프라 상태
+### 의도적 보존 전수 목록 (wipe 대상이 아닌 13종)
 
-**2차 wipe 시 추가 보존**: 결제·본인인증 5종(`--keep-payments`)
+| 구분 | 테이블(현재 행) | 보존 이유 |
+|---|---|---|
+| **구조·필수** | `profiles`(270) | 계정 원본. 지우면 `cbt_carryover`가 CASCADE 전손 + `handle_new_user`는 auth.users INSERT에만 발화해 재생성 불가 |
+| | `catalog_items`(106) | 장비 카탈로그 — 비면 `NO_CATALOG` 소프트락 |
+| | `servers`(1)·`zones`(50)·`zone_adjacency`(65) | 월드 구조. 점령 상태만 리셋, 구역·인접 그래프 유지 |
+| | `system_mode`(1) | 컷오버를 제어하는 스위치 자신 |
+| | `schema_migrations`(144) | 마이그레이션 원장 |
+| **법정 보존** | `probability_snapshots`(2) | 게임산업법 §33 확률 공시 영구 기록 — 삭제 금지 |
+| | (2차) 결제·본인인증 5종 | 전자상거래법 5년 — `--keep-payments` |
+| **이월·운영** | `cbt_carryover`(0→스냅샷이 채움) | 이월 원장 — wipe를 건너 살아남는 것이 존재 이유 |
+| | `push_subscriptions`(53) | 오픈 알림 대상(CBT 유저 + 종료 화면 익명 신청자) |
+| | `cron_heartbeats`(12) | 인프라 상태(유저 데이터 아님) |
+| **⚠ 수동 정리 대상** | `announcements`(8) | CBT 공지가 오픈 후에도 공지함에 남는다. wipe에 넣지 않는 이유는 오픈 공지를 미리 작성해둘 수 있어야 하고 남길 공지 판단이 필요하기 때문 — **§4-9.5에서 수동 정리** |
+| | `announcement_poll_votes`(93) | 공지 투표. 위 공지 삭제 시 CASCADE로 함께 정리 |
 
