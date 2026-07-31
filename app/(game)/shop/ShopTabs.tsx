@@ -10,6 +10,7 @@ import { useDiamond } from '@/components/DiamondContext';
 import { PublicFooter } from '@/components/PublicFooter';
 import { ModalShell } from '@/components/ModalShell';
 import { ModalLayout, ModalButton } from '@/components/ModalLayout';
+import { Tabs } from '@/components/ui/Tabs';
 import * as PortOne from '@portone/browser-sdk/v2';
 
 import { verifyIdentityAction } from '../me/settings/identity-actions';
@@ -654,26 +655,13 @@ export function ShopTabs({
           </Link>
         </p>
 
-        {/* 탭 */}
-        <div className="mb-3 flex gap-1 rounded-xl bg-zinc-100 p-1 dark:bg-zinc-900">
-          {TABS.map((t) => (
-            <button
-              key={t.key}
-              type="button"
-              onClick={() => setTab(t.key)}
-              className={`relative flex-1 rounded-lg py-1.5 text-[12px] font-bold transition ${
-                tab === t.key
-                  ? 'bg-white text-zinc-900 shadow-sm dark:bg-zinc-700 dark:text-white'
-                  : 'text-zinc-500'
-              }`}
-            >
-              {t.label}
-              {free[t.free] ? (
-                <span className="absolute right-1.5 top-1 h-1.5 w-1.5 rounded-full bg-red-500" />
-              ) : null}
-            </button>
-          ))}
-        </div>
+        {/* 탭 — 받을 무료 보상이 있는 탭에 점 표시. */}
+        <Tabs
+          className="mb-3"
+          items={TABS.map((t) => ({ key: t.key, label: t.label, dot: !!free[t.free] }))}
+          value={tab}
+          onChange={setTab}
+        />
 
         {/* 탭 내용 */}
         {tab !== 'charge' ? (

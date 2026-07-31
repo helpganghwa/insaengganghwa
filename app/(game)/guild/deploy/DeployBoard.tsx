@@ -23,6 +23,8 @@ import {
   setExecutorAction,
   clearExecutorAction,
 } from '../actions';
+import { Tabs } from '@/components/ui/Tabs';
+
 import { guildErrMsg } from '../errors-msg';
 
 type Region = 'volcano' | 'temple' | 'swamp' | 'orc' | 'kingdom' | 'angel';
@@ -874,22 +876,12 @@ export function DeployBoard({
               </ModalButton>
             }
           >
-            <div className="flex gap-1">
-              {STATUS_FILTERS.map((f) => (
-                <button
-                  key={f.key}
-                  type="button"
-                  onClick={() => setStatusFilter(f.key)}
-                  className={`flex-1 rounded-lg py-1.5 text-[11px] font-bold transition ${
-                    statusFilter === f.key
-                      ? 'bg-zinc-900 text-white dark:bg-zinc-100 dark:text-zinc-900'
-                      : 'bg-zinc-100 text-zinc-500 dark:bg-zinc-900'
-                  }`}
-                >
-                  {f.label}
-                </button>
-              ))}
-            </div>
+            <Tabs
+              size="sm"
+              value={statusFilter}
+              onChange={setStatusFilter}
+              items={STATUS_FILTERS.map((f) => ({ key: f.key, label: f.label }))}
+            />
             {/* 높이 고정 — 필터마다 인원이 달라 팝업이 늘었다 줄었다 하면 손가락 위치가 어긋난다. */}
             <ul
               className={`mt-2 h-[46vh] overflow-y-auto ${

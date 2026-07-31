@@ -7,6 +7,7 @@ import { josa } from 'es-hangul';
 
 import { assetUrl } from '@/lib/asset-versions';
 import { BackFab } from '@/components/BackNav';
+import { Tabs } from '@/components/ui/Tabs';
 import { CONQUEST_HP_MULT } from '@/lib/game/guild/balance';
 import type { ConquestBattleView as View } from '@/lib/game/guild/conquest/battle-view';
 
@@ -587,24 +588,15 @@ export function ConquestBattleView({ view, serverId }: { view: View; serverId: n
 
       {/* 필터·컨트롤 — 고정 */}
       <div className="shrink-0 border-b border-zinc-800 bg-zinc-950">
-        <div className="flex gap-1 px-3 pt-2.5">
-          {(
-            [
-              ['all', '전체 전투'],
-              ['guild', '우리 길드'],
-            ] as const
-          ).map(([t, label]) => (
-            <button
-              key={t}
-              type="button"
-              onClick={() => selectTab(t)}
-              className={`flex-1 rounded-lg py-1.5 text-xs font-bold transition ${
-                tab === t ? 'bg-amber-600 text-white' : 'bg-zinc-900 text-zinc-400'
-              }`}
-            >
-              {label}
-            </button>
-          ))}
+        <div className="px-3 pt-2.5">
+          <Tabs
+            value={tab}
+            onChange={selectTab}
+            items={[
+              { key: 'all' as const, label: '전체 전투' },
+              { key: 'guild' as const, label: '우리 길드' },
+            ]}
+          />
         </div>
         <div className="flex items-center justify-between gap-2 px-3 py-2">
           <span className="truncate text-[10px] text-zinc-500">

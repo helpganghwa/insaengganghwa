@@ -1,5 +1,6 @@
 'use client';
 
+import { Tabs } from '@/components/ui/Tabs';
 import type { LeaderboardMetric } from '@/lib/game/leaderboard/queries';
 
 const TABS: { key: LeaderboardMetric; label: string }[] = [
@@ -22,23 +23,6 @@ export function LeaderboardTabs({
   active: LeaderboardMetric;
   onChange: (m: LeaderboardMetric) => void;
 }) {
-  return (
-    <div className="grid grid-cols-5 gap-1 rounded-full bg-zinc-100 p-1 dark:bg-zinc-900">
-      {TABS.map((t) => (
-        <button
-          key={t.key}
-          type="button"
-          onClick={() => onChange(t.key)}
-          aria-pressed={active === t.key}
-          className={
-            active === t.key
-              ? 'truncate rounded-full bg-white px-1.5 py-1.5 text-center text-[11px] font-semibold text-zinc-900 shadow-sm transition dark:bg-zinc-950 dark:text-zinc-50'
-              : 'truncate rounded-full px-1.5 py-1.5 text-center text-[11px] text-zinc-500 transition'
-          }
-        >
-          {t.label}
-        </button>
-      ))}
-    </div>
-  );
+  // 5개라 라벨이 길다 — 공용 탭은 truncate + flex-1이라 균등 분할·말줄임이 그대로 적용된다.
+  return <Tabs items={TABS} value={active} onChange={onChange} />;
 }

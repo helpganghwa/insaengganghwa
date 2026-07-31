@@ -6,6 +6,7 @@ import { ModalShell } from '@/components/ModalShell';
 import { ModalLayout, ModalButton } from '@/components/ModalLayout';
 import { LastSeen } from '@/components/LastSeen';
 import { GuildBadge } from '@/components/GuildBadge';
+import { Tabs } from '@/components/ui/Tabs';
 import { useResourceToast } from '@/components/ResourceToast';
 import { Avatar } from '@/app/(game)/friends/Avatar';
 import { fmtNum } from '@/app/(game)/guild/guild-row';
@@ -126,28 +127,15 @@ export function RaidInviteSheet({
           </>
         }
       >
-        <div className="flex gap-1 rounded-lg bg-zinc-100 p-0.5 dark:bg-zinc-900">
-          {(
-            [
-              ['friend', '친구', data?.friends.length],
-              ['guild', '길드원', data?.guildMates.length],
-            ] as const
-          ).map(([k, label, n]) => (
-            <button
-              key={k}
-              type="button"
-              onClick={() => setTab(k)}
-              className={`flex-1 rounded-md py-1.5 text-[12px] font-bold transition ${
-                tab === k
-                  ? 'bg-white text-zinc-900 shadow-sm dark:bg-zinc-950 dark:text-zinc-50'
-                  : 'text-zinc-500'
-              }`}
-            >
-              {label}
-              {n != null ? <span className="ml-1 tabular-nums">{n}</span> : null}
-            </button>
-          ))}
-        </div>
+        <Tabs
+          size="sm"
+          value={tab}
+          onChange={setTab}
+          items={[
+            { key: 'friend' as const, label: '친구', count: data?.friends.length },
+            { key: 'guild' as const, label: '길드원', count: data?.guildMates.length },
+          ]}
+        />
 
         {/* 높이 고정 — 탭마다 인원이 달라 팝업이 늘었다 줄었다 하면 손가락 위치가 어긋난다. */}
         <div className="mt-2 h-[44vh] overflow-y-auto">

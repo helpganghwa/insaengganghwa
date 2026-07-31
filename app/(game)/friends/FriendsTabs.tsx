@@ -9,9 +9,9 @@ import { ModalLayout, ModalButton } from '@/components/ModalLayout';
 import { useResourceToast } from '@/components/ResourceToast';
 import { GuildBadge } from '@/components/GuildBadge';
 import { LastSeen } from '@/components/LastSeen';
-import { faceCropStyle, type FaceBox } from '@/components/faceCrop';
 import { Avatar } from './Avatar';
 import { ZoomSafeInput } from '@/components/ui/ZoomSafeField';
+import { Tabs, type TabItem } from '@/components/ui/Tabs';
 
 import {
   searchAction,
@@ -224,9 +224,10 @@ export function FriendsTabs({
     });
   };
 
-  const TABS: { key: Tab; label: string; dot?: number }[] = [
-    { key: 'list', label: `목록 ${friends.length}` },
-    { key: 'requests', label: '요청', dot: incoming.length },
+  // 목록 개수는 정보성(회색 숫자), 받은 요청은 주목 대상(붉은 배지) — 성격을 구분해 표기한다.
+  const TABS: TabItem<Tab>[] = [
+    { key: 'list', label: '목록', count: friends.length },
+    { key: 'requests', label: '요청', badge: incoming.length },
     { key: 'find', label: '찾기' },
   ];
 
@@ -234,28 +235,7 @@ export function FriendsTabs({
     <div className="flex h-[calc(100%-var(--chat-dock-h,0px))] flex-col px-4 py-4">
       <h1 className="mb-3 text-lg font-extrabold">친구</h1>
 
-      {/* 탭 */}
-      <div className="mb-3 flex gap-1 rounded-xl bg-zinc-100 p-1 dark:bg-zinc-900">
-        {TABS.map((t) => (
-          <button
-            key={t.key}
-            type="button"
-            onClick={() => setTab(t.key)}
-            className={`relative flex-1 rounded-lg py-1.5 text-[12px] font-bold transition ${
-              tab === t.key
-                ? 'bg-white text-zinc-900 shadow-sm dark:bg-zinc-700 dark:text-white'
-                : 'text-zinc-500'
-            }`}
-          >
-            {t.label}
-            {t.dot ? (
-              <span className="absolute right-1.5 top-1 inline-flex min-w-[16px] items-center justify-center rounded-full bg-red-600 px-1 text-[9px] font-bold text-white tabular-nums">
-                {t.dot}
-              </span>
-            ) : null}
-          </button>
-        ))}
-      </div>
+      <Tabs className="mb-3" items={TABS} value={tab} onChange={setTab} />
 
       <div className="min-h-0 flex-1 overflow-y-auto overscroll-contain">
         {tab === 'list' ? (

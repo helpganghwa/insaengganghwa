@@ -20,6 +20,7 @@ import { assetUrl } from '@/lib/asset-versions';
 import { meleeFaceCropStyle, type FaceBox } from '@/components/faceCrop';
 import { GuildBadge } from '@/components/GuildBadge';
 import { sounds } from '@/lib/game/sound';
+import { Tabs } from '@/components/ui/Tabs';
 import type { MeleeFinale, MeleeMyEvent } from '@/lib/db/schema/melee';
 
 export type MeleeResultView = {
@@ -966,25 +967,16 @@ export function MeleeResult({
 
       {/* 필터·컨트롤 — 헤더/무대처럼 고정(shrink-0, 오버스크롤 영향 없음) */}
       <div className="shrink-0 border-b border-zinc-800 bg-zinc-950">
-        <div className="flex gap-1 px-3 pt-2.5">
-          {(
-            [
-              ['rank', '전체 순위'],
-              ['log', '전체 전투'],
-              ['mine', '내 전투'],
-            ] as const
-          ).map(([t, label]) => (
-            <button
-              key={t}
-              type="button"
-              onClick={() => selectTab(t)}
-              className={`flex-1 rounded-lg py-1.5 text-xs font-bold transition ${
-                tab === t ? 'bg-amber-600 text-white' : 'bg-zinc-900 text-zinc-400'
-              }`}
-            >
-              {label}
-            </button>
-          ))}
+        <div className="px-3 pt-2.5">
+          <Tabs
+            value={tab}
+            onChange={selectTab}
+            items={[
+              { key: 'rank' as const, label: '전체 순위' },
+              { key: 'log' as const, label: '전체 전투' },
+              { key: 'mine' as const, label: '내 전투' },
+            ]}
+          />
         </div>
         {tab === 'rank' ? (
           <MeleeRankControls state={ranking} />

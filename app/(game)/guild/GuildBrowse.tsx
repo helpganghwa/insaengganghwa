@@ -10,6 +10,8 @@ import { GUILD_CREATE_COST_DIAMOND } from '@/lib/game/guild/balance';
 
 import { searchGuildsAction, joinGuildAction } from './actions';
 import { guildErrMsg } from './errors-msg';
+import { Tabs } from '@/components/ui/Tabs';
+
 import { GuildList } from './GuildList';
 import { GuildRankingBoard, type RankSort } from './GuildRankingBoard';
 import type { GuildRow } from './guild-row';
@@ -75,22 +77,7 @@ export function GuildBrowse({
         <h1 className="text-base font-extrabold leading-tight">길드 찾기</h1>
       </div>
 
-      <div className="mt-3 flex gap-1 rounded-xl bg-zinc-100 p-1 dark:bg-zinc-900">
-        {TABS.map((t) => (
-          <button
-            key={t.key}
-            type="button"
-            onClick={() => setTab(t.key)}
-            className={`flex-1 rounded-lg py-2 text-[13px] font-bold transition ${
-              tab === t.key
-                ? 'bg-white text-zinc-900 shadow-sm dark:bg-zinc-950 dark:text-zinc-50'
-                : 'text-zinc-500'
-            }`}
-          >
-            {t.label}
-          </button>
-        ))}
-      </div>
+      <Tabs className="mt-3" items={TABS} value={tab} onChange={setTab} />
 
       <div className="mt-3">
         {tab === 'recommend' ? (

@@ -7,6 +7,7 @@ import { MELEE_REWARD_TIERS } from '@/lib/game/balance';
 import { BackFab } from '@/components/BackNav';
 import { assetUrl } from '@/lib/asset-versions';
 import { meleeFaceCropStyle } from '@/components/faceCrop';
+import { Tabs } from '@/components/ui/Tabs';
 import type { MeleeHistoryRow } from '@/lib/game/melee/history';
 
 export type { MeleeHistoryRow };
@@ -28,25 +29,15 @@ export function MeleeInfo({
 
   // 필터(탭) — standalone에서는 고정 영역, 임베드에서는 본문 위.
   const tabBar = (
-    <div className="mx-4 flex gap-1 rounded-xl border border-zinc-800 p-1">
-      {(
-        [
-          ['reward', '보상 테이블'],
-          ['history', '역대 우승자'],
-        ] as const
-      ).map(([t, label]) => (
-        <button
-          key={t}
-          type="button"
-          onClick={() => setTab(t)}
-          className={`flex-1 rounded-lg py-1.5 text-xs font-bold transition ${
-            tab === t ? 'bg-amber-600 text-white' : 'text-zinc-400'
-          }`}
-        >
-          {label}
-        </button>
-      ))}
-    </div>
+    <Tabs
+      className="mx-4"
+      value={tab}
+      onChange={setTab}
+      items={[
+        { key: 'reward' as const, label: '보상 테이블' },
+        { key: 'history' as const, label: '역대 우승자' },
+      ]}
+    />
   );
 
   const body = (
