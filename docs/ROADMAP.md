@@ -31,6 +31,7 @@
 | 8 | 콜드스타트 플레이북 | ⬜ |
 | 9 | 라이트 구독(MRR) | ⬜ |
 | 10 | 테스트 로그인 제거 | ⬜ 심사 통과 후 |
+| 11 | Supabase Compute Small → Medium 업그레이드 | ⬜ 출시 2~3일 전 새벽 |
 
 > 상세 분석은 `docs/PROJECT-REVIEW-2026-06-24.md` 참조.
 >
@@ -41,6 +42,13 @@
 > `signInWithCredentials` + `app/login/page.tsx` test 분기 제거 ③ prod Supabase Auth에
 > 테스트 계정(`cbt@`, `*.insaeng.test`) 생성 여부 점검·삭제. 비밀번호가 소스에 있으므로
 > 레포 기밀이 유일 방어선 — 미루지 말 것(감사 P-A8).
+
+> **#11 Compute 업그레이드**: 동접 500 예상 대비. CBT 동접 ~50에서도 23시대(점령전 크론
+> 스택 + 유저 피크)에 Small(1 vCPU)이 CPU 포화로 CONNECT_TIMEOUT·페이지 행을 냈다
+> (2026-07-31 조사 — Pool Size 35·Max clients 400은 이미 충분, 병목은 컴퓨트).
+> 업그레이드는 **재시작을 동반**(수 분 다운타임)하므로 유저가 적은 새벽에, 출시 당일이
+> 아니라 2~3일 전에 실행한다. 경로: Supabase 콘솔 → Settings → Compute and Disk.
+> 전환 후: Pool Size 40~50 재조정 검토 + 23시대 창에서 CONNECT_TIMEOUT 재발 여부로 검증.
 
 ## 3. 마일스톤
 
