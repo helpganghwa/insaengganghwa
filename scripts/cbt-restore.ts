@@ -149,7 +149,7 @@ async function restoreOne(r: CarryRow): Promise<void> {
           insert into mailbox (user_id, server_id, type, title, body, sender_label, payload, expires_at)
           values (${r.user_id}, ${serverId}, 'reward', 'CBT 참여 감사 보상', ${
             `비공개 테스트를 함께해 주셔서 감사합니다.\n` +
-            `CBT에서 쌓으신 합산 강화 ${r.total_enhance.toLocaleString('ko-KR')}만큼의 다이아를 기본 보상과 함께 담았습니다.\n` +
+            `CBT에서 쌓아 올리신 합산 강화 ${r.total_enhance.toLocaleString('ko-KR')}의 기록을 담아 감사 다이아를 보내드립니다.\n` +
             `정식 서버에서 다시 한번, 강화는 인생이다!`
           }, '시스템',
                   ${tx.json({ diamond: r.thanks_diamond })}, ${sql.unsafe(MAIL_EXPIRE)})`;
@@ -172,7 +172,7 @@ async function restoreOne(r: CarryRow): Promise<void> {
         values (${r.user_id}, ${serverId}, 'admin', '정식 오픈을 환영합니다', ${
           `${r.nickname}님, 다시 만나서 반가워요!\n` +
           `쓰시던 닉네임 그대로 준비해 두었습니다.\n` +
-          `새로워진 세계에서 다시 한번, 강화는 인생이다!`
+          `새로워진 대륙에서 좋은 강화가 함께하기를!`
         }, '시스템', ${tx.json({})}, ${sql.unsafe(MAIL_EXPIRE)})`;
 
       // 4. 계정 포인터 — 마지막 서버·탈퇴 마킹 해제. (지급 완료 마킹은 0에서 선클레임.)

@@ -25,9 +25,10 @@ if (!raw) { console.error('PROD_DATABASE_URL 미설정'); process.exit(1); }
 const sql = postgres(raw.replace(':6543/', ':5432/'), { prepare: false, max: 1 });
 
 
-// 감사 보상 수식(2026-07-31 결정) — 기본 + 합산강화 비례. 금액 조정은 이 두 상수만.
-const THANKS_BASE_DIAMOND = 1000;
-const THANKS_PER_ENHANCE = 1;
+// 감사 보상 수식(2026-07-31 확정, 가'안) — 기본 500 + 합산강화 × 0.5(내림).
+// 총 지급 ≈ 24.8만💎(현행 분포 기준 — 초안 1,000+×1은 49.6만으로 과다 판단).
+const THANKS_BASE_DIAMOND = 500;
+const THANKS_PER_ENHANCE = 0.5;
 
 async function main() {
   console.log(`\n=== CBT 이월 스냅샷 ${confirm ? '(실행)' : '(드라이런)'} ===\n`);
@@ -59,7 +60,7 @@ async function main() {
     // 감사 보상(0144) — CBT에서 쌓은 합산강화만큼 다이아. 기본 지급을 더해 라이트 테스터도
     // 빈손이 아니게 한다(중앙값 47 — 비례만으로는 감사가 안 된다). 수식 상수는 파일 상단.
     const totalEnhance = enhBy.get(u.user_id) ?? 0;
-    const thanksDiamond = THANKS_BASE_DIAMOND + totalEnhance * THANKS_PER_ENHANCE;
+    const thanksDiamond = THANKS_BASE_DIAMOND + Math.floor(totalEnhance * THANKS_PER_ENHANCE);
 
     rows++;
     if (inviteCount > 0) withInvite++;
