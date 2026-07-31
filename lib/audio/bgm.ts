@@ -22,8 +22,9 @@ export type BgmTrack = 'forge-dawn';
 
 const FILE_BASE = '/audio/bgm';
 const FILE_EXTS = ['m4a', 'webm', 'mp3'] as const;
-const FILE_GAIN = 0.35; // 파일 트랙 기준 음량(배경) — 효과음(0.85)보다 한참 낮게.
-const FADE_IN_S = 2.5;
+const FILE_GAIN = 0.24; // 파일 트랙 기준 음량(배경) — 효과음(0.85)보다 한참 낮게.
+// 페이드인은 짧게 — 곡에 의도된 도입부가 있어 길게 물리면 앞부분이 먹힌다(2026-07-31 청취).
+const FADE_IN_S = 0.6;
 const FADE_OUT_S = 0.8;
 
 export function bgmEnabled(): boolean {
