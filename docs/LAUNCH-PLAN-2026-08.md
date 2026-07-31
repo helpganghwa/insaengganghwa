@@ -1,0 +1,116 @@
+# 정식 출시 작전 계획 — 2026년 8월
+
+> CBT 종료(8/1 새벽)부터 정식 오픈(8/10 11:00)까지의 **확정 일정·명령·안전 로직**.
+> 일반 절차의 상세(가드·검증 표)는 `docs/CUTOVER-LIVE.md`(런북)가 정본이고,
+> 이 문서는 그 런북을 이번 출시의 실제 날짜와 확정값으로 인스턴스화한 실행 계획이다.
+
+---
+
+## 0. 확정 파라미터
+
+| 항목 | 값 |
+|---|---|
+| CBT 종료 | **8/1(금) 00:30경** — 공지는 "8월 1일 새벽"으로만(정각 약속 금지) |
+| 정식 오픈 | **8/10(월) 11:00 KST** — `app/login/CbtEndedNotice.tsx OPEN_AT_ISO` 카운트다운과 일치 |
+| 오픈 유보 | 카드사 심사 등 외부 절차 지연 시 연기 가능 — 공지에 유보 문구 고지됨. 연기 시 `OPEN_AT_ISO`·공지 갱신 |
+| 감사 보상 | **기본 1,000💎 + 합산강화 × 0.5(내림)** — `scripts/cbt-snapshot.ts` 상수. 총 ≈ 36.9만💎/241명 |
+| 이월 범위 | 닉네임(캐릭터 사전 생성) + 감사 보상 + 초대 보상. **아바타·진행도 이월 없음** |
+| 유저 약속(공지 게시됨) | 데이터 초기화·닉네임 유지·보상은 오픈 때 우편·초대 실적 재지급·오픈 알림 |
+
+## 1. 상태 기계 — 한 장 요약
+
+```
+live ──(1단계)──▶ maintenance ──wipe──▶ cbt_ended ──(2단계)──▶ maintenance ──wipe+restore──▶ cbt_ended ──8/10 11:00──▶ live
+```
+
+| 모드 | 일반 유저 | 어드민 | 심사(cbt) 계정 | 자동으로 잠기는 것 |
+|---|---|---|---|---|
+| `maintenance` | 차단(점검 화면) | 화면만(액션 차단) | 차단 | 전 유저 변이 액션 |
+| `cbt_ended` | **로그아웃 + 종료 화면**(카운트다운·오픈 알림) | 정상 플레이 | 정상 플레이(결제 포함) | ① lazy 이월 지급(`grant.ts`) ② `push-daily-supply` ③ `melee-run`·`melee-reveal` ④ 카카오 로그인(어드민 외 콜백 차단) |
+| `live` | 정상 | 정상 | 정상 | 없음 — 게이트 전부 자동 해제 |
+
+게이트가 **코드 안**에 있으므로 크론은 전 기간 켜둔 채 운영한다(wipe 창 제외).
+모드 전환만이 스위치다 — 오픈 순간 별도 크론 작업이 없다.
+
+## 2. 1단계 — CBT 종료·동결 (8/1 00:30경)
+
+사전: 종료 공지 게시 + 오늘의 보급 푸시 발송(완료 여부 확인).
+
+```bash
+set -a && source .env.local && set +a
+```
+
+| # | 작업 | 명령/방법 |
+|---|---|---|
+| 1 | 결산 수치 최종 조회 | 아래 §2.1 SQL → `CbtEndedNotice.tsx STAT` 7종 갱신 → 커밋 → **배포**(마지막 코드 배포) |
+| 2 | 크론 정지 | Vercel 대시보드 → 프로젝트 → Settings → **Cron Jobs → Disable** (시크릿 회전은 재배포 타이밍 문제로 금지) |
+| 3 | 점검 ON | `/admin/maintenance` 에서 `maintenance` 전환 (스크립트 가드 요구 + wipe 중 동시 쓰기 차단) |
+| 4 | 실결제 부재 확인 | `select count(*) from iap_orders where status in ('paid','refunded');` → 0 확인(0 아니면 런북 §2) |
+| 5 | 이월 스냅샷 | `bun run --env-file=.env.local scripts/cbt-snapshot.ts` 드라이런 확인 → `--confirm` |
+| 6 | 전체 백업 | `/opt/homebrew/opt/libpq/bin/pg_dump "${PROD_DATABASE_URL/6543/5432}" --no-owner -Fc -f ~/cbt-final-$(date +%Y%m%d).dump` (세션 풀러 :5432 — 트랜잭션 풀러로는 불가) |
+| 7 | 1차 wipe | `bun run scripts/cutover-live.ts --db=prod` 드라이런 → `--confirm` (결제 테이블 **포함** 전체) |
+| 8 | 종료 모드 | `update system_mode set mode='cbt_ended', scheduled_from=null, scheduled_until=null, note='CBT 종료', updated_at=now() where key='global';` |
+| 9 | 크론 재개 | Vercel Cron Jobs → Enable |
+| 10 | 검증 | ganghwa.app/login = 종료 화면 · `?test=true` 로그인 가능 · 일반 카카오 차단 확인 |
+
+**복원(cbt-restore)은 실행하지 않는다** — 2단계 몫.
+
+### 2.1 결산 수치 조회 SQL (STAT 7종)
+
+```sql
+select count(*) from characters;                                  -- smiths
+select count(*) from supply_open_logs;                            -- boxes
+select count(*),                                                  -- hammered
+       sum(case when result in ('success','mega') then 1 else 0 end),  -- sparks
+       sum(case when result='hold' then 1 else 0 end)
+         + sum(case when result='down' then 1 else 0 end)         -- tempered(유지+하락)
+from enhancement_logs;
+select max(max_enhance_level) from user_equipment;                -- peak
+select count(*) from conquest_battles where winner_guild_id is not null;  -- flags
+```
+
+## 3. 테스트 기간 (8/1 ~ 8/9)
+
+- 어드민·심사 계정으로 자유 테스트 — **흔적은 2차 wipe가 전부 지운다**(캐릭터·우편·랭킹·아바타).
+- 카드사 심사 대응: 승인 회신 오면 결제 E2E(결제→지급→콘솔 취소→회수) 완주. 실결제 기록은 2차에서 보존됨.
+- 8/7~8 새벽: **Supabase Compute Small→Medium** (ROADMAP §2 #11 — 재시작 동반).
+- 오픈 연기 판단: 카드사 심사 ETA 회신 기준. 연기 시 `OPEN_AT_ISO` 수정·배포 + 공지 갱신.
+
+## 4. 2단계 — 출시 (8/9(일) 밤 → 8/10(월) 11:00)
+
+| # | 작업 | 명령/방법 |
+|---|---|---|
+| 1 | 크론 정지 | Vercel Cron Jobs → Disable |
+| 2 | 점검 ON | cbt_ended → `maintenance` (가드 통과 + 어드민·심사 동시 쓰기 차단 — cbt_ended는 이 둘을 막지 않는다) |
+| 3 | 2차 wipe | `bun run scripts/cutover-live.ts --db=prod --keep-payments --confirm` — **플래그 필수**(테스트 실결제·본인인증 5종 = 전자상거래법 5년 보존) |
+| 4 | 복원·보상 지급 | `bun run --env-file=.env.local scripts/cbt-restore.ts --db=prod` 드라이런 → `--confirm` (캐릭터 241 + 우편 3종: 특별 보상·초대 이월·환영) |
+| 5 | 종료 모드 복원 | `update system_mode set mode='cbt_ended' ... ;` (오픈 전까지 종료 화면 유지) |
+| 6 | 크론 재개 | Enable — 8/10 아침 대난투(09:00)·보급 푸시는 cbt_ended 게이트가 자동 skip |
+| 7 | env·값 정리 | `TEST_MODE` 삭제(배율 ×1) · `PAYMENTS_OPEN=true`(카드사 심사 완료 시에만) · `GUILD_REJOIN_LOCK_HOURS` 1→24 커밋 · 재배포 |
+| 8 | 확률 공시 | `bun run scripts/record-probability-snapshot.ts --note="정식 오픈" --confirm` |
+| 9 | 서버명 | `update servers set name='1서버' where id=1;` |
+| 10 | **오픈 (11:00)** | `update system_mode set mode='live' ... ;` → 오픈 공지 게시 |
+| 11 | 오픈 푸시 | `bun run scripts/open-push-broadcast.ts --db=prod` 드라이런 → `--confirm` (전 구독: CBT 유저 + 종료 화면 익명 신청자) |
+| 12 | 검증 | 런북 §7 표 + 첫 유입 모니터링(에러·풀 지연) |
+
+## 5. 왜 이 구조인가 (로직 근거)
+
+1. **복원을 출시 직전으로 미루는 이유** — 테스트 흔적이 오픈 월드에 남지 않고, 보상 우편이 오픈 순간 도착하며, 1차 복원분이 2차 wipe로 증발하는 사고가 구조적으로 불가능.
+2. **lazy 지급 차단(cbt_ended)** — 어드민·심사 접속이 `granted_at`을 소진하면 2차 복원에서 스킵돼 보상이 증발한다. 게이트가 이 경로를 봉쇄.
+3. **`--keep-payments`** — 2차 시점엔 심사 실결제(paid/refunded)가 존재. `iap_orders`·`iap_refunds`·`identity_verifications`·`monthly_purchase_limits`·`payment_alerts` 5종 보존.
+4. **크론 게이트 3종** — 잠긴 유저에게 보급 푸시가 가거나(대상이 profiles×push_subscriptions — 접속 가능 여부와 무관 발송) 유령 대난투가 쌓이는 것을 코드에서 차단. 덕분에 크론 재개 타이밍을 오픈 시각과 맞출 필요가 없다.
+5. **wipe 창의 maintenance** — 스크립트 가드 요구이자, cbt_ended가 막지 않는 어드민·심사의 동시 쓰기(복원 시 PK 충돌 위험)를 차단.
+6. **결산 수치는 상수 고정** — wipe 후엔 원본이 사라지므로 스냅샷일 수밖에 없고, 로그인 화면에 DB 왕복을 더하지 않는다.
+
+## 6. 롤백
+
+- **1차 wipe 사고**: `~/cbt-final-*.dump`에서 복원 — `/opt/homebrew/opt/libpq/bin/pg_restore --clean --if-exists --no-owner -d "${PROD_DATABASE_URL/6543/5432}" ~/cbt-final-YYYYMMDD.dump` (점검 ON 상태에서).
+- **2차 wipe 사고**: 이월 원장(`cbt_carryover`)과 결제 기록은 보존돼 있으므로 재-wipe 후 재복원으로 수렴. 복원 실패 유저는 오픈 후 lazy 지급(live 모드라 자동 재개)이 백스톱.
+- **오픈 연기**: `system_mode='cbt_ended'` 유지 + `OPEN_AT_ISO` 수정·배포 + 공지 갱신이 전부 — 다른 되돌림 없음.
+
+## 7. 도구·전제 확인 (2026-07-31 검증 완료)
+
+- `pg_dump`/`pg_restore` 18.4: `/opt/homebrew/opt/libpq/bin/` (brew libpq)
+- 프로덕션 세션 풀러 URL = `PROD_DATABASE_URL`의 포트 `6543→5432` 치환
+- 크론 정지는 **대시보드 Disable만** 사용 — CRON_SECRET 회전은 env가 배포에 박히는 구조라 회전~재배포 사이 동작이 불명확
+- 심사 로그인(`/login?test=true`)·심사 결제(본인인증 면제)는 전 기간 유지
