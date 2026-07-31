@@ -592,7 +592,7 @@ export function RaidSessionCard({ view: v, serverId }: { view: RaidView; serverI
         {settled ? (
           v.myReward == null ? (
             <div className="rounded-xl border border-zinc-700 p-3 text-center text-xs text-zinc-400">
-              참여 보상이 없습니다 (공격 0회).
+              참여 보상이 없어요 (공격 0회).
             </div>
           ) : (
             <div

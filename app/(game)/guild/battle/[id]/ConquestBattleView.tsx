@@ -638,7 +638,7 @@ export function ConquestBattleView({ view, serverId }: { view: View; serverId: n
           <div className="px-4 py-10 text-center text-[12px] text-zinc-500">
             {tab === 'guild' && myGuildId == null
               ? '길드에 가입하면 우리 길드 전투가 표시됩니다.'
-              : '전투 기록이 없습니다.'}
+              : '전투 기록이 없어요.'}
           </div>
         ) : (
           <ul>

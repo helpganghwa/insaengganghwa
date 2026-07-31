@@ -145,7 +145,7 @@ export function SwapPickerModal({
         ) : null}
 
         {jobs === null || jobs.length === 0 ? (
-          <p className="py-6 text-center text-xs text-zinc-500">교체 가능한 강화가 없습니다.</p>
+          <p className="py-6 text-center text-xs text-zinc-500">교체 가능한 강화가 없어요.</p>
         ) : swapAsk ? (
           // 선택 즉시 취소되던 것을 한 단계 확인으로 감싼다 — 쌓인 강화 시간이 사라지는 동작이라
           // 같은 파괴를 막고 있는 강화 취소 팝업과 보호 수준을 맞춘다(2026-07-29 점검).

@@ -463,7 +463,7 @@ export function WorldMapView({
     start(async () => {
       const r = await getZoneBattleAction(zoneId);
       if (r.status !== 'success') return showError(guildErrMsg(r.code));
-      if (!r.battleId) return showError('전투 기록이 없습니다.');
+      if (!r.battleId) return showError('전투 기록이 없어요.');
       // 복원 키 — 전투 기록에서 뒤로가기 시 이 구역 팝업이 다시 열린다(집행관 이동과 동일).
       try {
         sessionStorage.setItem('ig:worldmap-restore', String(zoneId));
@@ -854,7 +854,7 @@ export function WorldMapView({
                 ))}
               </div>
             ) : (
-              <p className="text-[13px] leading-relaxed text-zinc-400">이전 기록이 없습니다.</p>
+              <p className="text-[13px] leading-relaxed text-zinc-400">이전 기록이 없어요.</p>
             )
           ) : chronicleTab === 'today' ? (
             chronicle!.today ? (
@@ -891,7 +891,7 @@ export function WorldMapView({
               )
             ) : (
               <p className="text-[13px] leading-relaxed text-zinc-400">
-                오늘은 기록된 역사가 없습니다. [전체]에서 지난 기록을 확인하세요.
+                오늘은 기록된 역사가 없어요. [전체]에서 지난 기록을 확인해 보세요.
               </p>
             )
           ) : chronicle!.list.length === 0 ? (
@@ -996,7 +996,7 @@ export function WorldMapView({
               </div>
             ) : guildRanking.length === 0 ? (
               <p className="text-[13px] leading-relaxed text-zinc-400">
-                아직 구역을 점령한 길드가 없습니다.
+                아직 구역을 점령한 길드가 없어요.
               </p>
             ) : (
               <ul className="flex flex-col divide-y divide-zinc-100 dark:divide-zinc-900">
@@ -1692,13 +1692,13 @@ export function WorldMapView({
                 ))}
               </div>
             ) : (
-              <p className="mt-1 text-[12px] text-zinc-500">점령한 구역이 없습니다.</p>
+              <p className="mt-1 text-[12px] text-zinc-500">점령한 구역이 없어요.</p>
             )}
           </div>
           <div className="mt-3 border-t border-zinc-100 pt-3 dark:border-zinc-900">
             <p className="text-[11px] font-bold text-zinc-400">길드 소개</p>
             <p className="mt-1 whitespace-pre-wrap break-words text-[13px] leading-relaxed text-zinc-600 dark:text-zinc-300">
-              {guildPopup.intro?.trim() ? guildPopup.intro : '등록된 소개가 없습니다.'}
+              {guildPopup.intro?.trim() ? guildPopup.intro : '등록된 소개가 없어요.'}
             </p>
           </div>
           </ModalLayout>

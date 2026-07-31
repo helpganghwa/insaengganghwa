@@ -165,19 +165,76 @@ async function rankByValue(
 const safeRankByValue = (m: LeaderboardMetric, sid: number, uid: string, v: number) =>
   withTimeout(rankByValue(m, sid, uid, v), TIMEOUT_MS, `leaderboard.after.${m}`).catch(() => null);
 
-/** Top + 내 순위 — 스냅샷 2쿼리(Top-N 인덱스 + PK 단일행). */
-export async function getLeaderboardPayload(
-  metric: LeaderboardMetric,
+export const LEADERBOARD_METRICS: LeaderboardMetric[] = ['max', 'sum', 'combat', 'raid', 'melee'];
+
+/**
+ * 5개 지표를 한 번에 — 랭킹 화면의 탭 전환을 무왕복으로 만들기 위한 페이로드.
+ *
+ * 지표별로 따로 부르면 (Top + 내값 + 내순위) × 5 + 프로필 = 20왕복이 된다. 여기서는
+ * Top만 지표별로 남기고(각각 인덱스 limit 스캔이라 저렴) **내 순위 5종을 1쿼리로**,
+ * **프로필·길드 batch도 5지표 합집합 1회로** 접어 7왕복으로 끝낸다 — 지표 1개만 읽던
+ * 기존(4왕복)에 비해 소폭 늘지만, 탭을 누를 때마다 발생하던 페이지 전체 재요청
+ * (layout 재렌더 포함)이 사라진다(2026-07-31).
+ */
+export async function getLeaderboardAllPayload(
   serverId: number,
   userId: string,
-): Promise<{ top: LeaderboardEntry[]; mine: MyRankSnap }> {
-  const [topRows, mine] = await Promise.all([
-    safeTop(metric, serverId, TOP),
-    safeMyRank(metric, serverId, userId),
+): Promise<Record<LeaderboardMetric, { top: LeaderboardEntry[]; mine: MyRankSnap }>> {
+  const [tops, mineAll] = await Promise.all([
+    Promise.all(LEADERBOARD_METRICS.map((m) => safeTop(m, serverId, TOP))),
+    safeMyRanksAll(serverId, userId),
   ]);
-  const top = await attachProfiles(serverId, topRows);
-  return { top, mine: mine ? { rank: mine.rank, value: mine.value } : null };
+
+  // 프로필·길드는 5지표 합집합에 대해 1회만 — 지표 간 인물이 겹쳐 중복 조회가 크다.
+  const seen = new Map<string, LeaderboardEntry>();
+  for (const list of tops) for (const e of list) if (!seen.has(e.userId)) seen.set(e.userId, e);
+  const decorated = await attachProfiles(serverId, [...seen.values()]);
+  const byUser = new Map(decorated.map((e) => [e.userId, e]));
+
+  const out = {} as Record<LeaderboardMetric, { top: LeaderboardEntry[]; mine: MyRankSnap }>;
+  LEADERBOARD_METRICS.forEach((m, i) => {
+    out[m] = {
+      // 순위·값은 지표별 원본을 유지하고 표시 정보만 덧입힌다(합집합 항목은 지표마다 rank가 다르다).
+      top: tops[i].map((e) => {
+        const d = byUser.get(e.userId);
+        return d
+          ? { ...e, profileImg: d.profileImg, guildEmblemUrl: d.guildEmblemUrl, guildName: d.guildName }
+          : e;
+      }),
+      mine: mineAll[m],
+    };
+  });
+  return out;
 }
+
+/** 내 순위 5지표 — 값(내 행)과 순위(값 초과 개수+1)를 지표별 1행으로 한 번에. */
+async function myRanksAll(
+  serverId: number,
+  userId: string,
+): Promise<Record<LeaderboardMetric, MyRankSnap>> {
+  const rows = (await db.execute(sql`
+    select me.metric::text as metric,
+           me.value as value,
+           (select count(*) from leaderboard_ranks o
+             where o.server_id = ${serverId} and o.metric = me.metric and o.value > me.value)::int as ahead
+    from leaderboard_ranks me
+    where me.server_id = ${serverId} and me.user_id = ${userId}::uuid
+  `)) as unknown as { metric: string; value: string | number; ahead: number }[];
+
+  const out = {} as Record<LeaderboardMetric, MyRankSnap>;
+  for (const m of LEADERBOARD_METRICS) out[m] = null; // 기록 없는 지표는 null 유지
+  for (const r of rows) {
+    if (!LEADERBOARD_METRICS.includes(r.metric as LeaderboardMetric)) continue;
+    out[r.metric as LeaderboardMetric] = { value: Number(r.value), rank: (r.ahead ?? 0) + 1 };
+  }
+  return out;
+}
+const safeMyRanksAll = (sid: number, uid: string) =>
+  withTimeout(myRanksAll(sid, uid), TIMEOUT_MS, 'leaderboard.mineAll').catch(() => {
+    const out = {} as Record<LeaderboardMetric, MyRankSnap>;
+    for (const m of LEADERBOARD_METRICS) out[m] = null;
+    return out;
+  });
 
 /** 홈 카드 등 — userId 무관 Top N. */
 export async function getRankingTop(

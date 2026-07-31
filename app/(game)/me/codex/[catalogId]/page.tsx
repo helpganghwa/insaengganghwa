@@ -79,7 +79,7 @@ export default async function CodexItemPage({
         </div>
         {top.length === 0 ? (
           <div className="px-4 py-10 text-center text-sm text-zinc-500">
-            아직 이 장비를 강화한 유저가 없습니다.
+            아직 이 장비를 강화한 유저가 없어요.
           </div>
         ) : (
           <ul>

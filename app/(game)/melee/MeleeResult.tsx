@@ -1033,7 +1033,7 @@ export function MeleeResult({
       <div className="min-h-0 flex-1 overflow-y-auto overscroll-contain">
         {displayRows.length === 0 ? (
           <div className="px-4 py-10 text-center text-[12px] text-zinc-500">
-            {tab === 'mine' && !me ? '참가 시 내 전투가 표시됩니다.' : '전투 기록이 없습니다.'}
+            {tab === 'mine' && !me ? '참가하면 내 전투가 표시돼요.' : '전투 기록이 없어요.'}
           </div>
         ) : (
           <ul>

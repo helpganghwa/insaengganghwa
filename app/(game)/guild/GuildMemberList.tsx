@@ -344,7 +344,7 @@ export function GuildMemberList({
 
       {q.trim() && matchedCount === 0 ? (
         <p className="mt-3 text-center text-[12px] text-zinc-400">
-          ‘{q.trim()}’과 일치하는 길드원이 없습니다.
+          ‘{q.trim()}’과 일치하는 길드원이 없어요.
         </p>
       ) : null}
 
@@ -497,7 +497,7 @@ export function GuildMemberList({
             }
           >
             {groups.find((g) => g.key === 'member')!.rows.length === 0 ? (
-              <p className="py-4 text-center text-[12px] text-zinc-400">임명할 길드원이 없습니다.</p>
+              <p className="py-4 text-center text-[12px] text-zinc-400">임명할 길드원이 없어요.</p>
             ) : (
               <ul className="space-y-0.5">
                 {groups

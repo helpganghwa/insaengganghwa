@@ -361,7 +361,7 @@ export function MailList({
       {displayItems.length === 0 ? (
         <div className="rounded-lg border border-dashed border-zinc-300 px-4 py-10 text-center dark:border-zinc-700">
           <p className="text-xs text-zinc-500">
-            {tab === 'unread' ? '미수령 우편이 없습니다.' : '수령 완료한 우편이 없습니다.'}
+            {tab === 'unread' ? '미수령 우편이 없어요.' : '수령 완료한 우편이 없어요.'}
           </p>
         </div>
       ) : (

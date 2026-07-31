@@ -351,7 +351,7 @@ export function AnnouncementBoard({
           {detail ? (
             <Detail a={detail} voteFor={voteForOf(detail.id)} onVote={(o, q) => onVote(detail.id, o, q)} />
           ) : sorted.length === 0 ? (
-            <p className="px-4 py-10 text-center text-[12px] text-zinc-400">등록된 공지가 없습니다.</p>
+            <p className="px-4 py-10 text-center text-[12px] text-zinc-400">등록된 공지가 없어요.</p>
           ) : (
             <ul className="divide-y divide-zinc-100 dark:divide-zinc-900">
               {sorted.map((a) => (

@@ -56,7 +56,7 @@ export function GuildIntroBlock({ intro }: { intro: string | null }) {
     <div>
       <p className="text-[11px] font-bold text-zinc-400">길드 소개</p>
       <p className="mt-1 whitespace-pre-wrap break-words text-[13px] leading-relaxed text-zinc-600 dark:text-zinc-300">
-        {intro?.trim() ? intro : '등록된 소개가 없습니다.'}
+        {intro?.trim() ? intro : '등록된 소개가 없어요.'}
       </p>
     </div>
   );

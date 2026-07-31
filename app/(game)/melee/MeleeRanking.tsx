@@ -506,7 +506,7 @@ export function MeleeRankList({
             ))}
             {rows.length === 0 ? (
               <li className="px-4 py-10 text-center text-[12px] text-zinc-500">
-                {mode === 'guild' ? '같은 길드 참가자가 없습니다.' : '순위 정보가 없습니다.'}
+                {mode === 'guild' ? '같은 길드 참가자가 없어요.' : '순위 정보가 없어요.'}
               </li>
             ) : null}
             {hasDown ? (

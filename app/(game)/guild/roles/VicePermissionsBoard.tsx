@@ -86,7 +86,7 @@ export function VicePermissionsBoard({
       <div className="px-4 pb-4 pt-3">
         <GuildPageHeader fallback="/guild/settings" kicker={guildName} title="부길드장 권한" />
         <div className="mt-3 rounded-xl border border-zinc-200 bg-white p-6 text-center dark:border-zinc-800 dark:bg-zinc-950">
-          <p className="text-[13px] font-bold">부길드장이 없습니다</p>
+          <p className="text-[13px] font-bold">부길드장이 없어요</p>
           <p className="mt-1.5 text-[12px] leading-relaxed text-zinc-500">
             길드원 화면에서 부길드장을 임명하면 여기서 권한을 정할 수 있습니다.
             <br />

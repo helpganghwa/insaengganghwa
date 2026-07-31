@@ -86,7 +86,7 @@ export function GuildRankingBoard({
 
       {rows.length === 0 ? (
         <p className="mt-3 rounded-lg border border-dashed border-zinc-300 px-3 py-6 text-center text-xs text-zinc-500 dark:border-zinc-700">
-          {emptyText ?? '아직 결성된 길드가 없습니다.'}
+          {emptyText ?? '아직 결성된 길드가 없어요.'}
         </p>
       ) : (
         <ul className="mt-2.5 space-y-1.5">

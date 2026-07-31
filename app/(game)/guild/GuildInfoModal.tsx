@@ -84,7 +84,7 @@ export function GuildInfoModal({ guild, onClose }: { guild: GuildRow; onClose: (
               ))}
             </div>
           ) : (
-            <p className="mt-1 text-[12px] text-zinc-400">점령 중인 구역이 없습니다.</p>
+            <p className="mt-1 text-[12px] text-zinc-400">점령 중인 구역이 없어요.</p>
           )}
         </div>
       </ModalLayout>

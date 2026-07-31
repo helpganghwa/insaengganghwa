@@ -77,7 +77,7 @@ export function MeleeInfo({
         </div>
       ) : history.length === 0 ? (
         <div className="mx-4 rounded-xl border border-zinc-800 px-3 py-10 text-center text-[12px] text-zinc-500">
-          아직 발표된 대난투가 없습니다.
+          아직 발표된 대난투가 없어요.
         </div>
       ) : (
         /* 로그처럼 풀폭(엣지-투-엣지, 별도 박스 없음) */

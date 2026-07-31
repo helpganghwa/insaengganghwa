@@ -43,7 +43,7 @@ export function GuildList({
   if (guilds.length === 0) {
     return (
       <p className="rounded-lg border border-dashed border-zinc-300 px-3 py-6 text-center text-xs text-zinc-500 dark:border-zinc-700">
-        {emptyText ?? '길드가 없습니다.'}
+        {emptyText ?? '길드가 없어요.'}
       </p>
     );
   }

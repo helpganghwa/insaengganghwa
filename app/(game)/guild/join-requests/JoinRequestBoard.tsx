@@ -169,7 +169,7 @@ export function JoinRequestBoard({
         </p>
       ) : rows.length === 0 ? (
         <p className="mt-4 rounded-xl border border-zinc-200 bg-white px-3 py-6 text-center text-[12px] text-zinc-500 dark:border-zinc-800 dark:bg-zinc-950">
-          대기 중인 신청이 없습니다.
+          대기 중인 신청이 없어요.
         </p>
       ) : (
         <ul className="mt-3 rounded-xl border border-zinc-200 bg-white px-3 dark:border-zinc-800 dark:bg-zinc-950">

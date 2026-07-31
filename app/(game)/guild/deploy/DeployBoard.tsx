@@ -899,7 +899,7 @@ export function DeployBoard({
               }`}
             >
               {statusList.length === 0 ? (
-                <li className="text-center text-[11px] text-zinc-400">해당하는 길드원이 없습니다.</li>
+                <li className="text-center text-[11px] text-zinc-400">해당하는 길드원이 없어요.</li>
               ) : (
                 statusList.map((m) => {
                   const isExec = m.execZoneId != null;

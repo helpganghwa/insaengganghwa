@@ -9,7 +9,7 @@ import { worldEventMessage, fmtWorldTime } from './world-message';
  */
 export function WorldLogFeed({ entries, full = false }: { entries: WorldEventEntry[]; full?: boolean }) {
   if (entries.length === 0) {
-    return <p className="px-1 py-3 text-center text-[11px] text-zinc-400">아직 월드 소식이 없습니다.</p>;
+    return <p className="px-1 py-3 text-center text-[11px] text-zinc-400">아직 월드 소식이 없어요.</p>;
   }
   return (
     // 미리보기에도 내부 스크롤 박스 금지(길드 로그와 동일, 2026-07-27) — overscroll-contain이

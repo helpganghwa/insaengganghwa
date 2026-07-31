@@ -143,7 +143,7 @@ export function guildLogMessage(e: GuildLogEntry): ReactNode {
  */
 export function GuildLogFeed({ entries, full = false }: { entries: GuildLogEntry[]; full?: boolean }) {
   if (entries.length === 0) {
-    return <p className="px-1 py-3 text-center text-[11px] text-zinc-400">아직 활동 기록이 없습니다.</p>;
+    return <p className="px-1 py-3 text-center text-[11px] text-zinc-400">아직 활동 기록이 없어요.</p>;
   }
   return (
     <ul className="divide-y divide-zinc-100 dark:divide-zinc-900">

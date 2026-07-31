@@ -70,7 +70,7 @@ export function GuildBrowse({
       {/* GNB 루트라 뒤로가기가 없다 — 다른 길드 화면(GuildPageHeader)과 같은 자리·크기만 맞춘다. */}
       <div className="px-0.5">
         <p className="text-[10px] font-semibold tracking-wide text-zinc-400">
-          아직 소속 길드가 없습니다 · 전체 {totalGuilds}개
+          아직 소속 길드가 없어요 · 전체 {totalGuilds}개
         </p>
         <h1 className="text-base font-extrabold leading-tight">길드 찾기</h1>
       </div>
@@ -99,7 +99,7 @@ export function GuildBrowse({
             onJoin={join}
             pending={pending}
             myRequestGuildId={myRequestGuildId}
-            emptyText="아직 결성된 길드가 없습니다. 첫 길드를 만들어보세요!"
+            emptyText="아직 결성된 길드가 없어요. 첫 길드를 만들어보세요!"
           />
         ) : tab === 'ranking' ? (
           <GuildRankingBoard
@@ -107,7 +107,7 @@ export function GuildBrowse({
             onJoin={join}
             pending={pending}
             myRequestGuildId={myRequestGuildId}
-            emptyText="아직 결성된 길드가 없습니다. 첫 길드를 만들어보세요!"
+            emptyText="아직 결성된 길드가 없어요. 첫 길드를 만들어보세요!"
           />
         ) : (
           <>
@@ -135,7 +135,7 @@ export function GuildBrowse({
                 onJoin={join}
                 pending={pending}
                 myRequestGuildId={myRequestGuildId}
-                emptyText={results === null ? '길드 이름을 검색해 보세요.' : '검색 결과가 없습니다.'}
+                emptyText={results === null ? '길드 이름을 검색해 보세요.' : '검색 결과가 없어요.'}
               />
             </div>
           </>
