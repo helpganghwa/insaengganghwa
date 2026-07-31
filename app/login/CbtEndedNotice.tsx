@@ -24,14 +24,15 @@ const OPEN_LABEL = '8월 10일 오전 11시';
  * 라이브 집계를 쓰지 않는 이유: wipe 후엔 원본이 사라져 어차피 스냅샷이어야 하고,
  * 로그인 화면에 DB 왕복을 더할 이유도 없다. ⚠ 컷오버 데이(모드 켜기 직전) 최종 수치로 갱신.
  */
+// CBT 종료 시점(2026-08-01 00:00 KST) 프로덕션 실측 — 동결 직전 마지막 갱신.
 const STAT = {
   smiths: '256명',
-  boxes: '738,304개',
-  hammered: '408,395번',
-  sparks: '256,690번', // 성공(success+mega)
-  tempered: '151,705번', // 담금질 = 유지 137,438 + 하락 14,267
-  peak: '+488',
-  flags: '143번',
+  boxes: '832,901개',
+  hammered: '431,370번',
+  sparks: '266,468번', // 성공(success+mega)
+  tempered: '164,902번', // 담금질 = 유지 + 하락
+  peak: '+558',
+  flags: '148번',
 } as const;
 
 function diffParts(target: number, now: number) {
