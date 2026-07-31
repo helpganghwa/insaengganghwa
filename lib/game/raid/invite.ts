@@ -39,11 +39,46 @@ export type InviteCandidate = FriendUser & {
 };
 
 /**
+ * 개설자 검증 + 레이드가 속한 서버 확정.
+ *
+ * 서버는 **레이드의 server_id가 진실 원천**이다(raid_invites에는 서버 컬럼이 없다).
+ * 유저의 '현재 활성 서버'를 쓰면 서버를 전환한 상태나 다른 서버 레이드로 직접 진입한
+ * 경우에 엉뚱한 서버의 친구·길드원이 후보로 뜨고, 초대해도 상대는 그 서버에 캐릭터가
+ * 없어 NO_CHARACTER_ON_SERVER로 못 들어오는 헛초대가 된다(2026-07-31 점검).
+ */
+async function loadHostRaid(hostUserId: string, raidId: bigint) {
+  const [raid] = await db
+    .select({
+      id: raids.id,
+      hostUserId: raids.hostUserId,
+      serverId: raids.serverId,
+      status: raids.status,
+      expireAt: raids.expireAt,
+      bossCode: raids.bossCode,
+      shareCode: raids.shareCode,
+    })
+    .from(raids)
+    .where(eq(raids.id, raidId))
+    .limit(1);
+  if (!raid) throw new RaidError('RAID_NOT_FOUND');
+  if (raid.hostUserId !== hostUserId) throw new RaidError('NOT_HOST');
+  return raid;
+}
+
+/**
  * 초대 후보 목록 — 친구 탭 / 길드원 탭.
  * 자기 자신과 이미 참여한 사람도 반환하되 `joined`로 표시한다(목록에서 지우면
  * "왜 안 보이지?"가 되므로 상태로 보여준다). 자신은 호출부에서 제외.
  */
 export async function getInviteCandidates(
+  hostUserId: string,
+  raidId: bigint,
+): Promise<{ friends: InviteCandidate[]; guildMates: InviteCandidate[] }> {
+  const { serverId } = await loadHostRaid(hostUserId, raidId);
+  return candidatesOnServer(hostUserId, serverId, raidId);
+}
+
+async function candidatesOnServer(
   hostUserId: string,
   serverId: number,
   raidId: bigint,
@@ -167,34 +202,26 @@ export async function getInviteCandidates(
  */
 export async function inviteToRaid(input: {
   hostUserId: string;
-  serverId: number;
   raidId: bigint;
   inviteeUserId: string;
-}): Promise<{ ok: true; nickname: string; bossCode: string; shareCode: string }> {
-  const { hostUserId, serverId, raidId, inviteeUserId } = input;
+}): Promise<{
+  ok: true;
+  nickname: string;
+  bossCode: string;
+  shareCode: string;
+  serverId: number;
+}> {
+  const { hostUserId, raidId, inviteeUserId } = input;
   if (hostUserId === inviteeUserId) throw new RaidError('INVALID_TARGET');
 
-  const [raid] = await db
-    .select({
-      id: raids.id,
-      hostUserId: raids.hostUserId,
-      serverId: raids.serverId,
-      status: raids.status,
-      expireAt: raids.expireAt,
-      bossCode: raids.bossCode,
-      shareCode: raids.shareCode,
-    })
-    .from(raids)
-    .where(eq(raids.id, raidId))
-    .limit(1);
-  if (!raid) throw new RaidError('RAID_NOT_FOUND');
-  if (raid.hostUserId !== hostUserId) throw new RaidError('NOT_HOST');
+  const raid = await loadHostRaid(hostUserId, raidId);
   if (raid.status !== 'active' || raid.expireAt.getTime() <= Date.now()) {
     throw new RaidError('RAID_CLOSED');
   }
 
   // 관계 검증 — 친구이거나 같은 길드원이어야 한다(서버 권위, 클라 목록 신뢰 금지).
-  const { friends, guildMates } = await getInviteCandidates(hostUserId, serverId, raidId);
+  // 기준 서버는 레이드의 것(loadHostRaid 주석 참조).
+  const { friends, guildMates } = await candidatesOnServer(hostUserId, raid.serverId, raidId);
   const target =
     friends.find((c) => c.userId === inviteeUserId) ??
     guildMates.find((c) => c.userId === inviteeUserId);
@@ -218,6 +245,7 @@ export async function inviteToRaid(input: {
     nickname: target.nickname,
     bossCode: raid.bossCode,
     shareCode: raid.shareCode,
+    serverId: raid.serverId,
   };
 }
 

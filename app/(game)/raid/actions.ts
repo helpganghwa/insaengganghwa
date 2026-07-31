@@ -237,8 +237,8 @@ export async function getRaidInviteCandidatesAction(raidId: string) {
   const u = await uid();
   if (!u) return err('UNAUTHENTICATED');
   try {
-    const serverId = await getActiveServerId();
-    const r = await getInviteCandidates(u, serverId, BigInt(raidId));
+    // 서버는 레이드가 정한다(활성 서버 아님) — invite.ts loadHostRaid 주석 참조.
+    const r = await getInviteCandidates(u, BigInt(raidId));
     return { status: 'success' as const, friends: r.friends, guildMates: r.guildMates };
   } catch (e) {
     if (e instanceof RaidError) return err(e.code);
@@ -257,10 +257,8 @@ export async function inviteToRaidAction(raidId: string, inviteeUserId: string) 
   if (await rateLimited(u, 'raid')) return err('RATE_LIMITED');
   const __b = await actionBlock(); if (__b) return err(__b);
   try {
-    const serverId = await getActiveServerId();
     const r = await inviteToRaid({
       hostUserId: u,
-      serverId,
       raidId: BigInt(raidId),
       inviteeUserId,
     });
@@ -269,7 +267,8 @@ export async function inviteToRaidAction(raidId: string, inviteeUserId: string) 
       await notifyRaidInvite({
         inviteeUserId,
         hostUserId: u,
-        serverId,
+        // 호스트 닉네임도 레이드 서버 기준으로 읽어야 한다(서버마다 캐릭터가 다르다).
+        serverId: r.serverId,
         raidId,
         bossCode: r.bossCode,
         shareCode: r.shareCode,
