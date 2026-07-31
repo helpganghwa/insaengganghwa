@@ -179,6 +179,36 @@ select count(*) from conquest_battles where winner_guild_id is not null;  -- fla
 
 **검증**: 스테이징에서 67개 전 테이블을 단일 트랜잭션으로 delete 후 롤백 — FK 순서 정상 확인.
 
+### 8.6.5 FK 인덱스 점검 (2026-08-01 완료 · 재발 방지 규칙)
+
+Postgres는 FK 자식 컬럼에 인덱스를 **자동 생성하지 않는다.** 없으면 부모를 지울 때마다
+자식 테이블을 통째로 순차 스캔한다 — CBT 컷오버에서 45만 행 삭제가 20분을 넘겨도 끝나지
+않은 원인이었다(`gem_time_reductions.job_id`, 0147). 이후 FK 102개를 전수 점검해 12개를
+보강했다(0148).
+
+**앞으로 지킬 것**: FK를 새로 추가할 때 `on delete cascade|set null`이면 자식 컬럼 인덱스를
+같은 마이그레이션에 넣는다. 부모가 운영상 삭제되지 않는 참조(`server_id`→servers,
+`catalog_item_id`→catalog_items)는 예외 — 인덱스는 쓰기 비용만 늘린다.
+
+**점검 쿼리**(FK 중 인덱스가 없고 부모 삭제형인 것):
+```sql
+select src.relname child, string_agg(att.attname,',' order by u.ord) cols, c.confdeltype del
+from pg_constraint c
+join pg_class src on src.oid=c.conrelid
+join pg_namespace ns on ns.oid=src.relnamespace and ns.nspname='public'
+join unnest(c.conkey) with ordinality u(attnum,ord) on true
+join pg_attribute att on att.attrelid=src.oid and att.attnum=u.attnum
+where c.contype='f' and c.confdeltype in ('c','n','d')
+  and not exists (select 1 from pg_index i where i.indrelid=src.oid
+    and (select array_agg(k order by n) from unnest(i.indkey::smallint[]) with ordinality t(k,n)
+         where n <= array_length(c.conkey,1))
+        = (select array_agg(k order by n) from unnest(c.conkey) with ordinality t2(k,n)))
+group by src.relname, c.conname, c.confdeltype;
+```
+
+미보강 8개는 의도적 제외다 — 신고·차단·투표·본인인증처럼 상한이 낮게 유지되거나(스캔이
+저렴), zones처럼 부모가 삭제되지 않는 것들이다.
+
 ### 8.7 Cron 정본 목록 (재활성 검증용 · vercel.json 기준 20개)
 
 컷오버에서 Disable → Enable을 오가므로, **켜진 뒤 이 표와 하나씩 대조**한다.
