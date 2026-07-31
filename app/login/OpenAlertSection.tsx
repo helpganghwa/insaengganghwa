@@ -76,7 +76,7 @@ export function OpenAlertSection() {
   };
 
   return (
-    <div className="mt-5 text-center">
+    <div className="text-center">
       {state === 'done' ? (
         <p className="text-[12px] leading-relaxed text-amber-300/90">
           오픈 알림 신청 완료 — 문이 열리는 순간 알려드릴게요.

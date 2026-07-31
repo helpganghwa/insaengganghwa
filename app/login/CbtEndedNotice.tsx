@@ -54,8 +54,14 @@ function Countdown() {
   const target = Date.parse(OPEN_AT_ISO);
   const p = now == null ? null : diffParts(target, now);
   const cell = (v: number | null, label: string) => (
-    <div className="flex-1 rounded-xl bg-white/[0.07] py-2.5 backdrop-blur-[2px]">
-      <div className="font-mono text-[22px] font-black leading-tight tabular-nums text-amber-300">
+    <div
+      className="flex-1 rounded-xl border border-amber-500/35 bg-[#17110c]/70 py-3 backdrop-blur-[2px]"
+      style={{ boxShadow: '0 0 18px rgba(240,171,60,0.12)' }}
+    >
+      <div
+        className="font-mono text-[24px] font-black leading-tight tabular-nums text-amber-300"
+        style={{ textShadow: '0 0 14px rgba(252,211,77,0.45)' }}
+      >
         {v == null ? '--' : String(v).padStart(2, '0')}
       </div>
       <div className="mt-0.5 text-[10px] font-semibold text-zinc-400">{label}</div>
@@ -87,7 +93,7 @@ export function CbtEndedNotice({ compact = false }: { compact?: boolean }) {
     );
   }
   return (
-    <div className="relative w-full overflow-hidden">
+    <div className="relative flex w-full flex-1 flex-col overflow-hidden">
       {/* 배경 — 콘텐츠 뒤 전면(2026-07-31 피드백: 이미지 상단이 빈 채 스크롤만 길어지던 구조
           → 배경화 + 콘텐츠를 위에서부터). 높이는 콘텐츠가 정하고 이미지는 cover로 채운다. */}
       <div
@@ -106,7 +112,7 @@ export function CbtEndedNotice({ compact = false }: { compact?: boolean }) {
         className="absolute inset-x-0 bottom-0 h-28 bg-gradient-to-b from-transparent to-[#17110c]"
       />
 
-      <div className="relative z-10 px-6 pb-10 pt-9 text-center">
+      <div className="relative z-10 flex flex-1 flex-col px-6 pb-9 pt-14 text-center">
         <p className="text-[11px] font-extrabold tracking-[0.25em] text-amber-400/85">
           SEE YOU SOON
         </p>
@@ -117,41 +123,53 @@ export function CbtEndedNotice({ compact = false }: { compact?: boolean }) {
           비공개 테스트가 끝났습니다. 함께해 주셔서 감사합니다.
         </p>
 
-        <p className="mt-6 text-[12px] font-bold text-zinc-200 drop-shadow-[0_1px_3px_rgba(0,0,0,0.9)]">
+        <p className="mt-7 text-[13px] font-bold text-zinc-100 drop-shadow-[0_1px_3px_rgba(0,0,0,0.9)]">
           정식 오픈 <span className="text-amber-300">{OPEN_LABEL}</span>
         </p>
         <div className="mt-2">
           <Countdown />
         </div>
 
-        {/* 결산 — 하루의 서사(V2) + 담금질 은유(V3) + 저마다의 시간(V8) 혼합(2026-07-31 확정).
-            숫자는 문장 안에 자연스럽게. "기록 위에서 시작" 같은 승계 암시 문구는 쓰지 않는다
-            — 데이터는 초기화된다. 수치는 컷오버 데이 최종 갱신(위 STAT 주석). */}
-        <p className="mt-7 text-[13px] leading-loose text-zinc-200 drop-shadow-[0_1px_3px_rgba(0,0,0,0.9)]">
-          아침이면 <b className="font-extrabold text-amber-300">{STAT.boxes}</b>의 보급상자가
-          열렸고,
-          <br />
-          낮이면 망치 소리가 <b className="font-extrabold text-amber-300">{STAT.hammered}</b>{' '}
-          울렸습니다.
-          <br />
-          <b className="font-extrabold text-amber-300">{STAT.sparks}</b>은 불꽃이 됐고{' '}
-          <b className="font-extrabold text-amber-300">{STAT.tempered}</b>은 담금질이 됐으며,
-          <br />
-          누군가는 <b className="font-extrabold text-amber-300">{STAT.peak}</b>까지 올랐습니다.
-          <br />
-          밤이면 대륙 어딘가에서 깃발이{' '}
-          <b className="font-extrabold text-amber-300">{STAT.flags}</b> 바뀌었습니다.
-          <br />
-          그렇게 <b className="font-extrabold text-amber-300">{STAT.smiths}</b>의 대장장이가
-          저마다의 시간으로
-          <br />한 달의 대륙을 데웠습니다.
-          <br />
-          이제 잠시 불을 끄고, <b className="font-extrabold text-amber-300">8월 10일</b>에 다시
-          만나요.
-        </p>
+        {/* 결산 — 하루의 서사+담금질+저마다의 시간(확정 문구). E-1 위계: 기조는 회색,
+            앰버 강조는 셋만(두드림·정점·인원) — 서사가 카운트다운보다 무거우면 안 된다.
+            줄은 의미 단위로 <span block> 분할해 390 폭에서 중간 줄바꿈이 생기지 않게 한다. */}
+        <div className="mt-8 space-y-0.5 text-[12px] leading-[1.85] text-zinc-400 drop-shadow-[0_1px_3px_rgba(0,0,0,0.9)]">
+          <span className="block break-keep">
+            아침이면 <b className="font-bold text-zinc-200">{STAT.boxes}</b>의 보급상자가 열렸고,
+          </span>
+          <span className="block break-keep">
+            낮이면 망치 소리가 <b className="font-extrabold text-amber-300">{STAT.hammered}</b>{' '}
+            울렸습니다.
+          </span>
+          <span className="block break-keep">
+            <b className="font-bold text-zinc-200">{STAT.sparks}</b>은 불꽃이 됐고
+          </span>
+          <span className="block break-keep">
+            <b className="font-bold text-zinc-200">{STAT.tempered}</b>은 담금질이 됐으며,
+          </span>
+          <span className="block break-keep">
+            누군가는 <b className="font-extrabold text-amber-300">{STAT.peak}</b>까지 올랐습니다.
+          </span>
+          <span className="block break-keep">
+            밤이면 대륙 어딘가에서 깃발이 <b className="font-bold text-zinc-200">{STAT.flags}</b>{' '}
+            바뀌었습니다.
+          </span>
+          <span className="mt-2 block break-keep">
+            그렇게 <b className="font-extrabold text-amber-300">{STAT.smiths}</b>의 대장장이가
+            저마다의 시간으로
+          </span>
+          <span className="block break-keep">한 달의 대륙을 데웠습니다.</span>
+          <span className="mt-2 block break-keep">
+            이제 잠시 불을 끄고, <b className="font-bold text-zinc-200">8월 10일</b>에 다시
+            만나요.
+          </span>
+        </div>
 
-        {/* 오픈 알림(0145) — 종료 화면 트래픽을 오픈일 복귀로 전환하는 유일한 접점. */}
-        <OpenAlertSection />
+        {/* 오픈 알림(0145) — 종료 화면 트래픽을 오픈일 복귀로 전환하는 유일한 접점.
+            mt-auto — 남는 높이를 서사와 버튼 사이가 아니라 위 요소들이 나눠 갖게 바닥 정착. */}
+        <div className="mt-auto pt-7">
+          <OpenAlertSection />
+        </div>
       </div>
     </div>
   );

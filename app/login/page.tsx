@@ -78,9 +78,12 @@ export default async function LoginPage({
         />
       )}
 
-      {/* CBT 종료(0144, C안+결산) — 풀블리드 히어로 포함이라 main 밖에서 렌더. */}
-      {cbtEnded && !reviewLogin ? <CbtEndedNotice /> : null}
-
+      {/* CBT 종료(0144, E-1) — main을 통째로 대체한다. main을 남기면 flex-1 잔여 높이가
+          빈 검정으로 남아 "하단 공백"이 된다(2026-07-31 피드백) — 종료 섹션이 flex-1을
+          이어받아 그 공간을 배경 이미지로 채운다. */}
+      {cbtEnded && !reviewLogin ? (
+        <CbtEndedNotice />
+      ) : (
       <main className="flex w-full flex-1 flex-col items-center px-6 pb-3 pt-4 text-center">
         {/* 서버 선택 — 로그인 버튼 위(위치 유지), 영역·크기만 축소(컴팩트). 기본 서버가 쿠키에 선점돼 안 눌러도 정상 로그인. */}
         {showServers && !(cbtEnded && !reviewLogin) ? (
@@ -223,6 +226,7 @@ export default async function LoginPage({
           </div>
         ) : null}
       </main>
+      )}
       <PublicFooter />
     </div>
   );
