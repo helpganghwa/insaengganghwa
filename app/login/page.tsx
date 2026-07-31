@@ -69,12 +69,17 @@ export default async function LoginPage({
     <div className="mx-auto flex min-h-dvh w-full max-w-[390px] flex-col bg-[#17110c] text-zinc-200">
       {/* 풀블리드 히어로 — 타이틀'인생강화'·부제'강화는 인생이다' 포함(생성 배경). 하단이 #17110c로
           페이드(베이킹)돼 아래 콘텐츠와 seamless. 파일 없으면 다크 플레이스홀더. */}
-      <div
-        role="img"
-        aria-label="인생강화 — 강화는 인생이다"
-        className="aspect-[1344/768] w-full bg-[#17110c] bg-cover bg-top"
-        style={{ backgroundImage: 'url(/login-hero.webp)' }}
-      />
+      {cbtEnded && !reviewLogin ? null : (
+        <div
+          role="img"
+          aria-label="인생강화 — 강화는 인생이다"
+          className="aspect-[1344/768] w-full bg-[#17110c] bg-cover bg-top"
+          style={{ backgroundImage: 'url(/login-hero.webp)' }}
+        />
+      )}
+
+      {/* CBT 종료(0144, C안+결산) — 풀블리드 히어로 포함이라 main 밖에서 렌더. */}
+      {cbtEnded && !reviewLogin ? <CbtEndedNotice /> : null}
 
       <main className="flex w-full flex-1 flex-col items-center px-6 pb-3 pt-4 text-center">
         {/* 서버 선택 — 로그인 버튼 위(위치 유지), 영역·크기만 축소(컴팩트). 기본 서버가 쿠키에 선점돼 안 눌러도 정상 로그인. */}
@@ -84,8 +89,6 @@ export default async function LoginPage({
           </div>
         ) : null}
 
-        {/* CBT 종료(0144) — 일반 화면은 로그인 수단 대신 종료 안내 + 카운트다운. */}
-        {cbtEnded && !reviewLogin ? <CbtEndedNotice /> : null}
         {cbtEnded && reviewLogin ? (
           <div className="mb-3 w-full space-y-2">
             <CbtEndedNotice compact />
@@ -170,12 +173,15 @@ export default async function LoginPage({
           )
         ) : null}
 
-        {/* 소셜 증명 — 로그인 버튼 아래, 프로필 페이지와 동일 통계 카드(공유 컴포넌트) */}
-        <div className="mt-5 w-full">
-          <Suspense fallback={<EnhanceStatsFallback />}>
-            <EnhanceStatsCard />
-          </Suspense>
-        </div>
+        {/* 소셜 증명 — 로그인 버튼 아래, 프로필 페이지와 동일 통계 카드(공유 컴포넌트).
+            종료 화면에선 결산 명판이 같은 역할이라 숨김(라이브 집계 중복 + wipe 후 0으로 보임). */}
+        {cbtEnded && !reviewLogin ? null : (
+          <div className="mt-5 w-full">
+            <Suspense fallback={<EnhanceStatsFallback />}>
+              <EnhanceStatsCard />
+            </Suspense>
+          </div>
+        )}
 
         {/* 게임 소개 — 검색·AI 크롤러가 읽는 유일한 공개 설명(SEO 검수 A1, 2026-07-15).
             스크롤 아래 배치라 로그인 전환 동선 무영향. h1은 사이트 전체에서 이 페이지가 대문. */}

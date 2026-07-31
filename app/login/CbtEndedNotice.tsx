@@ -3,14 +3,29 @@
 import { useEffect, useState } from 'react';
 
 /**
- * CBT 종료 안내(0144) — system_mode 'cbt_ended' 동안 로그인 화면에 노출.
- * 감사 인사 + 정식 오픈 카운트다운 + 이월 안내. 로그인 수단은 렌더하지 않는다
- * (일반 유저는 오픈까지 입장 불가 — 어드민·심사는 ?test=true 경로).
+ * CBT 종료 화면(0144, C안+결산 — 2026-07-31 확정) — system_mode 'cbt_ended' 동안 로그인
+ * 화면을 대체. 세로 풀블리드 일러스트(오버레이: 감사 인사 + 카운트다운) 아래 CBT 실측
+ * 결산 명판. 로그인 수단은 렌더하지 않는다(어드민·심사는 ?test=true 경로).
+ *
+ * 히어로 이미지: public/cbt-ended.webp (나노바나나 생성, 864×1536, 하단 #17110c 페이드).
+ * 파일이 없으면 그라데이션 폴백이 그대로 보인다(CSS 배경 레이어 — 깨진 이미지 없음).
  */
 
 /** 정식 오픈 시각(KST) — 카운트다운 목표. 오픈 일정이 바뀌면 여기만 고친다. */
-export const OPEN_AT_ISO = '2026-08-10T10:00:00+09:00';
-const OPEN_LABEL = '8월 10일 오전 10시';
+export const OPEN_AT_ISO = '2026-08-10T11:00:00+09:00';
+const OPEN_LABEL = '8월 10일 오전 11시';
+
+/**
+ * CBT 결산(프로덕션 실측) — 종료 시점 값으로 고정한다. 라이브 집계를 쓰지 않는 이유:
+ * wipe 후엔 원본이 사라져 어차피 스냅샷이어야 하고, 로그인 화면에 DB 왕복을 더할 이유도
+ * 없다. ⚠ 컷오버 데이(모드 켜기 직전)에 최종 수치로 갱신할 것.
+ */
+const LEDGER = [
+  { k: '함께한 대장장이', v: '256', unit: '명' },
+  { k: '두드린 강화', v: '408,234', unit: '번' },
+  { k: '가장 높이 오른 강화', v: '+488', unit: '' },
+  { k: '벌어진 점령전', v: '143', unit: '전' },
+] as const;
 
 function diffParts(target: number, now: number) {
   const ms = Math.max(0, target - now);
@@ -34,11 +49,11 @@ function Countdown() {
   const target = Date.parse(OPEN_AT_ISO);
   const p = now == null ? null : diffParts(target, now);
   const cell = (v: number | null, label: string) => (
-    <div className="flex-1 rounded-xl bg-white/[0.06] py-3">
-      <div className="font-mono text-2xl font-black tabular-nums text-amber-300">
+    <div className="flex-1 rounded-xl bg-white/[0.07] py-2.5 backdrop-blur-[2px]">
+      <div className="font-mono text-[22px] font-black leading-tight tabular-nums text-amber-300">
         {v == null ? '--' : String(v).padStart(2, '0')}
       </div>
-      <div className="mt-0.5 text-[10px] font-semibold text-zinc-500">{label}</div>
+      <div className="mt-0.5 text-[10px] font-semibold text-zinc-400">{label}</div>
     </div>
   );
   if (p?.done) {
@@ -67,31 +82,55 @@ export function CbtEndedNotice({ compact = false }: { compact?: boolean }) {
     );
   }
   return (
-    <div className="w-full text-center">
-      <p className="text-[11px] font-bold tracking-[0.2em] text-amber-400/80">CBT CLOSED</p>
-      <h2 className="mt-2 text-xl font-extrabold leading-snug text-zinc-100">
-        비공개 테스트가 끝났습니다
-      </h2>
-      <p className="mt-3 text-[13px] leading-relaxed text-zinc-400">
-        한 달 동안 대륙을 함께 두드려 주신 모든 테스터분들께 감사드립니다.
-        <br />
-        보내주신 문의와 제보 하나하나가 게임을 단단하게 만들었습니다.
-      </p>
-
-      <div className="mt-6">
-        <p className="mb-2 text-[12px] font-bold text-zinc-300">
-          정식 오픈 <span className="text-amber-300">{OPEN_LABEL}</span>
-        </p>
-        <Countdown />
+    <div className="w-full">
+      {/* 풀블리드 히어로 — 이미지 위 하단 오버레이(감사 + 카운트다운). */}
+      <div
+        className="relative flex aspect-[864/1536] w-full flex-col justify-end bg-cover bg-top"
+        style={{
+          // 이미지 없으면 아래 그라데이션이 폴백 — url이 앞이라 파일이 생기면 자동 교체.
+          backgroundImage:
+            "url('/cbt-ended.webp'), radial-gradient(110% 70% at 50% 20%, #46331c 0%, #2a1d0e 50%, #17110c 100%)",
+        }}
+      >
+        <div className="bg-gradient-to-t from-[#17110c] from-45% via-[#17110c]/75 to-transparent px-6 pb-2 pt-24 text-center">
+          <p className="text-[11px] font-extrabold tracking-[0.25em] text-amber-400/85">
+            SEE YOU SOON
+          </p>
+          <h2 className="mt-2 text-[22px] font-extrabold leading-snug text-zinc-50">
+            다음 대륙에서 만나요
+          </h2>
+          <p className="mt-2 text-[12px] leading-relaxed text-zinc-400">
+            비공개 테스트가 끝났습니다. 함께해 주셔서 감사합니다.
+          </p>
+          <p className="mt-5 text-[12px] font-bold text-zinc-300">
+            정식 오픈 <span className="text-amber-300">{OPEN_LABEL}</span>
+          </p>
+          <div className="mt-2">
+            <Countdown />
+          </div>
+        </div>
       </div>
 
-      <div className="mt-6 rounded-xl border border-white/10 bg-white/[0.03] px-4 py-3 text-left text-[12px] leading-relaxed text-zinc-400">
-        <p className="font-semibold text-zinc-300">정식 오픈 때 이렇게 시작합니다</p>
-        <ul className="mt-1.5 list-disc space-y-1 pl-4">
-          <li>게임 데이터는 초기화되고, 쓰시던 닉네임은 그대로 유지됩니다.</li>
-          <li>CBT 참여 감사 보상이 우편으로 도착해 있습니다.</li>
-          <li>친구 초대 보상은 초대 실적만큼 다시 지급됩니다.</li>
-        </ul>
+      {/* 결산 명판 — 이 CBT에만 존재하는 기록. 수치는 종료 시점 고정(위 LEDGER 주석). */}
+      <div className="px-6 pt-5">
+        <div className="overflow-hidden rounded-2xl border border-amber-500/25 text-left">
+          <p className="bg-amber-500/10 px-4 py-2 text-[10.5px] font-extrabold tracking-[0.14em] text-amber-300">
+            CBT 결산 — 2026.7
+          </p>
+          {LEDGER.map((r) => (
+            <div
+              key={r.k}
+              className="flex items-baseline justify-between border-t border-white/[0.06] px-4 py-2.5"
+            >
+              <span className="text-[12px] text-zinc-400">{r.k}</span>
+              <span className="font-mono text-[15px] font-extrabold tabular-nums text-zinc-100">
+                <span className="text-amber-300">{r.v}</span>
+                {r.unit}
+              </span>
+            </div>
+          ))}
+        </div>
+
       </div>
     </div>
   );
