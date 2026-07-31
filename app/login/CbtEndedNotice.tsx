@@ -9,7 +9,7 @@ import { OpenAlertSection } from './OpenAlertSection';
  * 화면을 대체. 세로 풀블리드 일러스트(오버레이: 감사 인사 + 카운트다운) 아래 CBT 실측
  * 결산 명판. 로그인 수단은 렌더하지 않는다(어드민·심사는 ?test=true 경로).
  *
- * 히어로 이미지: public/cbt-ended.webp (나노바나나 생성, 864×1536, 하단 #17110c 페이드).
+ * 히어로 이미지: public/cbt-ended.webp (나노바나나 생성 768×1376 픽셀아트 — 새벽의 대장간).
  * 파일이 없으면 그라데이션 폴백이 그대로 보인다(CSS 배경 레이어 — 깨진 이미지 없음).
  */
 
@@ -87,11 +87,12 @@ export function CbtEndedNotice({ compact = false }: { compact?: boolean }) {
     <div className="w-full">
       {/* 풀블리드 히어로 — 이미지 위 하단 오버레이(감사 + 카운트다운). */}
       <div
-        className="relative flex aspect-[864/1536] w-full flex-col justify-end bg-cover bg-top"
+        className="relative flex aspect-[768/1376] w-full flex-col justify-end bg-cover bg-top"
         style={{
           // 이미지 없으면 아래 그라데이션이 폴백 — url이 앞이라 파일이 생기면 자동 교체.
           backgroundImage:
             "url('/cbt-ended.webp'), radial-gradient(110% 70% at 50% 20%, #46331c 0%, #2a1d0e 50%, #17110c 100%)",
+          imageRendering: 'pixelated', // 픽셀아트 원본(768w) 확대 시 블러 방지
         }}
       >
         <div className="bg-gradient-to-t from-[#17110c] from-45% via-[#17110c]/75 to-transparent px-6 pb-2 pt-24 text-center">
@@ -126,38 +127,6 @@ export function CbtEndedNotice({ compact = false }: { compact?: boolean }) {
           대륙에선 <b className="font-extrabold text-amber-300">{STAT.battles}</b>의 점령전이
           벌어졌습니다.
         </p>
-
-        {/* 명예의 전당 — 실측 1위들(2026-07-31 채굴). 닉네임 노출은 랭킹과 동일 공개 범위.
-            수치·이름은 컷오버 데이 최종 갱신 대상(위 STAT과 함께). */}
-        <div className="mt-6">
-          <p className="text-center text-[10px] font-extrabold tracking-[0.22em] text-amber-400/70">
-            CBT 명예의 전당
-          </p>
-          <div className="mt-2.5 space-y-1.5 text-center text-[12px] leading-relaxed text-zinc-400">
-            <p>
-              아바타를 <b className="font-bold text-zinc-200">96개</b>나 만든{' '}
-              <b className="font-bold text-amber-300">SEB</b>
-            </p>
-            <p>
-              망치를 <b className="font-bold text-zinc-200">13,171번</b> 두드린{' '}
-              <b className="font-bold text-amber-300">Eclipse</b>
-            </p>
-            <p>
-              가장 높은 곳(<b className="font-bold text-zinc-200">+488</b>)에 오른{' '}
-              <b className="font-bold text-amber-300">미르</b>
-            </p>
-            <p>
-              상자 <b className="font-bold text-zinc-200">19,804개</b>를 열고 대난투{' '}
-              <b className="font-bold text-zinc-200">9번</b> 우승한{' '}
-              <b className="font-bold text-amber-300">LEGEND</b>
-            </p>
-            <p>
-              친구 <b className="font-bold text-zinc-200">10명</b>을 데려오고 문의{' '}
-              <b className="font-bold text-zinc-200">29건</b>을 보내준{' '}
-              <b className="font-bold text-amber-300">여왕</b>
-            </p>
-          </div>
-        </div>
 
         {/* 오픈 알림(0145) — 종료 화면 트래픽을 오픈일 복귀로 전환하는 유일한 접점. */}
         <OpenAlertSection />
