@@ -25,9 +25,10 @@ if (!raw) { console.error('PROD_DATABASE_URL 미설정'); process.exit(1); }
 const sql = postgres(raw.replace(':6543/', ':5432/'), { prepare: false, max: 1 });
 
 
-// 감사 보상 수식(2026-07-31 확정, 가'안) — 기본 500 + 합산강화 × 0.5(내림).
-// 총 지급 ≈ 24.8만💎(현행 분포 기준 — 초안 1,000+×1은 49.6만으로 과다 판단).
-const THANKS_BASE_DIAMOND = 500;
+// 감사 보상 수식(2026-07-31 확정) — 기본 1,000 + 합산강화 × 0.5(내림).
+// 총 지급 ≈ 36.9만💎(현행 분포 기준). 초안 1,000+×1(49.6만)은 과다 판단으로 계수만 반감,
+// 기본은 1,000 유지(사용자 결정 — 라이트 테스터 최소 보장).
+const THANKS_BASE_DIAMOND = 1000;
 const THANKS_PER_ENHANCE = 0.5;
 
 async function main() {
