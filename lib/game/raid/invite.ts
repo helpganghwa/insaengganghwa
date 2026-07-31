@@ -226,8 +226,11 @@ export type ReceivedInvite = {
 };
 
 /**
- * 받은 초대 — 레이드 화면 하단 '초대받은 레이드' 섹션(B-2).
- * 만료·종료된 레이드와 이미 참여한 것은 제외 — 목록 필터가 곧 만료 처리다(우편 만료 로직 불필요).
+ * 받은 초대 — 레이드 목록의 '참여 가능한 레이드' 섹션(B-2).
+ *
+ * 만료·종료·이미 참여·**만석(10/10)** 은 제외한다 — 목록 필터가 곧 만료 처리다
+ * (우편 만료 로직 불필요). 만석 제외 이유: 레이드에는 자발적 탈퇴가 없어 한 번 차면
+ * 자리가 다시 나지 않으므로, 남겨두면 눌러서 RAID_FULL을 만나는 헛걸음이 된다.
  */
 export async function getReceivedInvites(
   userId: string,
@@ -257,6 +260,7 @@ export async function getReceivedInvites(
         eq(raids.serverId, serverId),
         eq(raids.status, 'active'),
         gt(raids.expireAt, now),
+        sql`(select count(*) from raid_participants rp where rp.raid_id = ${raids.id}) < ${RAID_MAX_PARTICIPANTS}`,
         // 이미 참여했으면 제외 — 참여 후엔 일반 레이드 목록에 뜬다.
         notInArray(
           raids.id,

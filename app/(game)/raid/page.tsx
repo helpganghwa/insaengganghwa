@@ -10,6 +10,7 @@ import {
   RAID_BASE_ATTACKS,
   RAID_DAILY_CAP,
   RAID_MAX_CONCURRENT_PER_USER,
+  RAID_MAX_PARTICIPANTS,
 } from '@/lib/game/balance';
 import { getFriendIds } from '@/lib/game/friends';
 import { kstDateString } from '@/lib/kst';
@@ -194,6 +195,9 @@ export default async function RaidPage() {
             eq(raids.status, 'active'),
             ne(raids.friendShare, 'off'),
             gt(raids.expireAt, sql`now()`),
+            // 만석(10/10) 제외 — 레이드는 자발적 탈퇴가 없어 자리가 다시 나지 않는다.
+            // 남겨두면 눌러서 RAID_FULL을 만나는 헛걸음이 된다(2026-07-31).
+            sql`(select count(*) from raid_participants rp where rp.raid_id = ${raids.id}) < ${RAID_MAX_PARTICIPANTS}`,
             inArray(raids.hostUserId, friendIds),
           ),
         )
@@ -231,6 +235,7 @@ export default async function RaidPage() {
         join guild_members mg on mg.guild_id = hg.guild_id and mg.user_id = ${userId}::uuid and mg.server_id = ${serverId}
         join characters hc on hc.user_id = r.host_user_id and hc.server_id = r.server_id
         where r.server_id = ${serverId} and r.status = 'active' and r.guild_share <> 'off' and r.expire_at > now()
+          and (select count(*) from raid_participants rp2 where rp2.raid_id = r.id) < ${RAID_MAX_PARTICIPANTS}
         limit 20
       `),
       3500,
