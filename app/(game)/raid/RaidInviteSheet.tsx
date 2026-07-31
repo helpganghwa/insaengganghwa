@@ -90,7 +90,7 @@ export function RaidInviteSheet({
         showError(r?.message ?? '초대에 실패했어요. 잠시 후 다시 시도해 주세요.');
         return;
       }
-      showHeaderToast({ icon: '⚔️', title: `${r.nickname}님 초대`, detail: '알림을 보냈어요' });
+      showHeaderToast({ title: `${r.nickname}님 초대`, detail: '알림을 보냈어요' });
     });
   };
 

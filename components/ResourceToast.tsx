@@ -5,15 +5,6 @@ import { createPortal } from 'react-dom';
 
 import type { MyRanks } from '@/lib/game/leaderboard/queries';
 
-type ResourceToast = {
-  id: number;
-  kind: 'resource';
-  icon: string;
-  label: string;
-  /** 미지정 = 수치 표기 없이 label만(성공 스타일). */
-  delta?: number;
-};
-
 type RankingToast = {
   id: number;
   kind: 'ranking';
@@ -35,10 +26,9 @@ type HeaderToast = {
   tone?: 'error';
 };
 
-type ToastEntry = ResourceToast | RankingToast | HeaderToast;
+type ToastEntry = RankingToast | HeaderToast;
 
 type ToastContextValue = {
-  showResource: (icon: string, label: string, delta?: number) => void;
   showError: (message: string) => void;
   /**
    * 랭킹 변동 토스트. 기본(강화): 누적(last-wins) 후 모든 강화 오버레이 종료 시 한 번 노출.
@@ -63,7 +53,6 @@ export function useResourceToast(): ToastContextValue {
   const ctx = useContext(ToastContext);
   if (!ctx)
     return {
-      showResource: () => {},
       showError: () => {},
       showRanking: () => {},
       beginEnhanceOverlay: () => {},
@@ -101,15 +90,6 @@ export function ResourceToastProvider({ children }: { children: React.ReactNode 
   const dismiss = useCallback((id: number) => {
     setToasts((prev) => prev.filter((t) => t.id !== id));
   }, []);
-
-  const showResource = useCallback(
-    (icon: string, label: string, delta?: number) => {
-      const id = ++counterRef.current;
-      setToasts((prev) => [...prev, { id, kind: 'resource', icon, label, delta }]);
-      setTimeout(() => dismiss(id), 2400);
-    },
-    [dismiss],
-  );
 
   // 에러 — 공용 헤더 바(showHeaderToast와 동일 컴포넌트)를 에러 톤(적색)으로 노출.
   const showError = useCallback((message: string) => {
@@ -203,15 +183,13 @@ export function ResourceToastProvider({ children }: { children: React.ReactNode 
     if (overlayCountRef.current === 0) releaseRanking();
   }, [releaseRanking]);
 
-  // 헤더 슬라이드 바(랭킹/공용 헤더)와 중앙 상단 토스트(자원/에러) 위치 분리.
+  // 헤더 슬라이드 바 — 랭킹(자체 fixed 컨테이너)과 공용 헤더 토스트.
   const rankingToasts = toasts.filter((t): t is RankingToast => t.kind === 'ranking');
   const headerToasts = toasts.filter((t): t is HeaderToast => t.kind === 'header');
-  const otherToasts = toasts.filter((t): t is ResourceToast => t.kind === 'resource');
 
   return (
     <ToastContext.Provider
       value={{
-        showResource,
         showError,
         showRanking,
         beginEnhanceOverlay,
@@ -233,16 +211,6 @@ export function ResourceToastProvider({ children }: { children: React.ReactNode 
             {headerToasts.map((t) => (
               <HeaderBar key={t.id} entry={t} onDismiss={dismissHeader} />
             ))}
-            {/* 자원/에러 토스트 — 중앙 상단(기존 위치). */}
-            <div
-              className="pointer-events-none fixed left-1/2 z-[150] flex -translate-x-1/2 flex-col items-center gap-2"
-              style={{ top: 'calc(env(safe-area-inset-top) + 4rem)' }}
-              aria-live="polite"
-            >
-              {otherToasts.map((t) => (
-                <ResourceItem key={t.id} entry={t} />
-              ))}
-            </div>
           </>,
           document.body,
         )}
@@ -420,25 +388,4 @@ function HeaderBar({ entry, onDismiss }: { entry: HeaderToast; onDismiss: (id: n
   );
 }
 
-function ResourceItem({ entry }: { entry: ResourceToast }) {
-  const positive = entry.delta === undefined || entry.delta > 0;
-  return (
-    <div
-      className={`pointer-events-none flex items-center gap-2 rounded-full px-4 py-1.5 text-sm font-medium shadow-lg ${
-        positive
-          ? 'bg-emerald-500 text-white dark:bg-emerald-600/90'
-          : 'bg-zinc-900 text-zinc-100 dark:bg-zinc-100 dark:text-zinc-900'
-      }`}
-      style={{ animation: 'toast-pop 0.3s ease-out, toast-fall 1.6s ease-in 0.6s forwards' }}
-    >
-      <span aria-hidden>{entry.icon}</span>
-      <span>
-        {entry.delta !== undefined && entry.delta !== 0
-          ? `${entry.delta > 0 ? '+' : ''}${entry.delta} `
-          : ''}
-        {entry.label}
-      </span>
-    </div>
-  );
-}
 

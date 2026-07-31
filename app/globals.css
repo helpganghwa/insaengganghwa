@@ -265,16 +265,6 @@ html {
 .fx-char-down-1  { background-image: url('/fx/char-down.png'); }
 .fx-char-down-2  { background-image: url('/fx/char-down-2.png'); }
 
-/* 리소스 토스트 — 위로 솟구쳤다 떨어지는 짧은 알림(ResourceToast.tsx). */
-@keyframes toast-pop {
-  0% { opacity: 0; transform: translateY(-12px) scale(0.9); }
-  100% { opacity: 1; transform: translateY(0) scale(1); }
-}
-@keyframes toast-fall {
-  0% { opacity: 1; transform: translateY(0); }
-  100% { opacity: 0; transform: translateY(8px); }
-}
-
 /* 대난투 결승 WINNER 토스트 — 위에서 내려옴 / 사라질 때 위로(오버슈트 없음, 같은 속도). */
 @keyframes winner-drop {
   0% { transform: translateY(-100%); }
