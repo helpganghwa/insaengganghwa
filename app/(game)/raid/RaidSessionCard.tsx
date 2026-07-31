@@ -17,6 +17,7 @@ import { BossSprite } from '@/components/BossSprite';
 import { getBossBg, getBossBgClass } from '@/lib/game/raid/boss-sprites';
 import { assetUrl } from '@/lib/asset-versions';
 import { useResourceToast, type HeaderReward } from '@/components/ResourceToast';
+import { RaidInviteSheet } from './RaidInviteSheet';
 import { GuildBadge } from '@/components/GuildBadge';
 import * as haptic from '@/lib/game/haptic';
 import { sounds } from '@/lib/game/sound';
@@ -42,7 +43,12 @@ export type RaidView = {
   phasesCleared: number;
   isParticipant: boolean;
   /** 비참가 관전 모드(2026-07-27 문의 #30) — 참가/요청 버튼 정보. 참가자는 null. */
-  join: { scope: 'friend' | 'guild' | 'link'; mode: 'free' | 'approval'; requested: boolean } | null;
+  /** 참가 경로 — invite(0146)는 지목 초대로 승인 없이 즉시 참여한다. */
+  join: {
+    scope: 'friend' | 'guild' | 'link' | 'invite';
+    mode: 'free' | 'approval';
+    requested: boolean;
+  } | null;
   myAttacksUsed: number;
   myExtraAttacks: number;
   /** 정산 후에만 set. claimed=true면 수령 완료. */
@@ -448,7 +454,15 @@ export function RaidSessionCard({ view: v, serverId }: { view: RaidView; serverI
     })();
   };
 
+  // 지목 초대 시트(0146) — '동료 초대'는 시트를 열고, 카톡 공유는 시트 안 보조 버튼이 된다.
+  const [inviteOpen, setInviteOpen] = useState(false);
   const handleInvite = () => {
+    haptic.tap();
+    setInviteOpen(true);
+  };
+
+  /** 카카오톡 공유(보조) — 게임 안 친구가 없는 유저의 유일한 초대 수단이라 유지한다. */
+  const handleKakaoShare = () => {
     haptic.tap();
     const origin = window.location.origin;
     const url = `${origin}/s/${v.shareCode}`;
@@ -800,6 +814,15 @@ export function RaidSessionCard({ view: v, serverId }: { view: RaidView; serverI
           </ul>
         </div>
       </div>
+
+      {inviteOpen ? (
+        <RaidInviteSheet
+          raidId={v.raidId.toString()}
+          participants={v.participants.length}
+          onClose={() => setInviteOpen(false)}
+          onKakaoShare={handleKakaoShare}
+        />
+      ) : null}
     </section>
   );
 }

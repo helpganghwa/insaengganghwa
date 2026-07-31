@@ -1,0 +1,188 @@
+'use client';
+
+import { useEffect, useState, useTransition } from 'react';
+
+import { ModalShell } from '@/components/ModalShell';
+import { ModalLayout, ModalButton } from '@/components/ModalLayout';
+import { LastSeen } from '@/components/LastSeen';
+import { useResourceToast } from '@/components/ResourceToast';
+import { Avatar } from '@/app/(game)/friends/Avatar';
+import type { InviteCandidate } from '@/lib/game/raid/invite';
+
+import { getRaidInviteCandidatesAction, inviteToRaidAction } from './actions';
+
+type Tab = 'friend' | 'guild';
+
+/**
+ * 레이드 지목 초대 시트(A-1, 0146) — 친구/길드원 탭에서 한 명씩 초대.
+ *
+ * 초대는 곧 참여 허가라 상대는 수락 없이 들어온다. 인원 상한은 두지 않는다 —
+ * 남은 자리가 1석이어도 여럿에게 보내 선착순으로 채우는 운용을 허용한다(정책 확정).
+ * 중복 초대는 서버 유니크가 막고, 화면은 '초대함'으로 표시한다.
+ */
+export function RaidInviteSheet({
+  raidId,
+  participants,
+  onClose,
+  onKakaoShare,
+}: {
+  raidId: string;
+  participants: number;
+  onClose: () => void;
+  /** 보조 수단 — 게임 안 친구가 없는 유저의 유일한 초대 경로라 유지한다. */
+  onKakaoShare: () => void;
+}) {
+  const { showError, showResource } = useResourceToast();
+  const [tab, setTab] = useState<Tab>('friend');
+  const [data, setData] = useState<{ friends: InviteCandidate[]; guildMates: InviteCandidate[] } | null>(
+    null,
+  );
+  const [failed, setFailed] = useState(false);
+  const [invited, setInvited] = useState<Set<string>>(new Set());
+  const [pending, start] = useTransition();
+
+  useEffect(() => {
+    let alive = true;
+    void (async () => {
+      const r = await getRaidInviteCandidatesAction(raidId).catch(() => null);
+      if (!alive) return;
+      if (!r || r.status !== 'success') {
+        setFailed(true);
+        return;
+      }
+      setData({ friends: r.friends, guildMates: r.guildMates });
+      // 서버가 준 기존 초대 상태를 로컬 집합의 출발점으로.
+      setInvited(
+        new Set(
+          [...r.friends, ...r.guildMates].filter((c) => c.invited).map((c) => c.userId),
+        ),
+      );
+    })();
+    return () => {
+      alive = false;
+    };
+  }, [raidId]);
+
+  const invite = (c: InviteCandidate) => {
+    if (pending || invited.has(c.userId) || c.joined) return;
+    // 낙관 표시 — 실패하면 되돌린다(초대는 멱등이라 재시도도 안전).
+    setInvited((prev) => new Set(prev).add(c.userId));
+    start(async () => {
+      const r = await inviteToRaidAction(raidId, c.userId).catch(() => null);
+      if (!r || r.status !== 'success') {
+        setInvited((prev) => {
+          const next = new Set(prev);
+          next.delete(c.userId);
+          return next;
+        });
+        showError(r?.message ?? '초대에 실패했어요. 잠시 후 다시 시도해 주세요.');
+        return;
+      }
+      showResource('', `${r.nickname}님을 초대했어요`);
+    });
+  };
+
+  const list = tab === 'friend' ? (data?.friends ?? []) : (data?.guildMates ?? []);
+
+  return (
+    <ModalShell onClose={onClose} label="동료 초대">
+      <ModalLayout
+        title="동료 초대"
+        subtitle={
+          <>
+            현재 <b className="font-bold text-amber-500">{participants}</b> / 10명 · 초대하면 상대에게
+            알림이 갑니다
+          </>
+        }
+        bodyPad="sm"
+        footer={
+          <>
+            <ModalButton tone="ghost" onClick={onClose}>
+              닫기
+            </ModalButton>
+            <ModalButton tone="neutral" onClick={onKakaoShare}>
+              카카오톡 공유
+            </ModalButton>
+          </>
+        }
+      >
+        <div className="flex gap-1 rounded-lg bg-zinc-100 p-0.5 dark:bg-zinc-900">
+          {(
+            [
+              ['friend', '친구', data?.friends.length],
+              ['guild', '길드원', data?.guildMates.length],
+            ] as const
+          ).map(([k, label, n]) => (
+            <button
+              key={k}
+              type="button"
+              onClick={() => setTab(k)}
+              className={`flex-1 rounded-md py-1.5 text-[12px] font-bold transition ${
+                tab === k
+                  ? 'bg-white text-zinc-900 shadow-sm dark:bg-zinc-950 dark:text-zinc-50'
+                  : 'text-zinc-500'
+              }`}
+            >
+              {label}
+              {n != null ? <span className="ml-1 tabular-nums">{n}</span> : null}
+            </button>
+          ))}
+        </div>
+
+        {/* 높이 고정 — 탭마다 인원이 달라 팝업이 늘었다 줄었다 하면 손가락 위치가 어긋난다. */}
+        <div className="mt-2 h-[44vh] overflow-y-auto">
+          {failed ? (
+            <p className="flex h-full items-center justify-center text-center text-[12px] text-zinc-400">
+              목록을 불러오지 못했어요.
+            </p>
+          ) : data == null ? (
+            <p className="flex h-full items-center justify-center text-center text-[12px] text-zinc-400">
+              불러오는 중…
+            </p>
+          ) : list.length === 0 ? (
+            <p className="flex h-full items-center justify-center text-center text-[12px] leading-relaxed text-zinc-400">
+              {tab === 'friend'
+                ? '아직 친구가 없어요.\n카카오톡 공유로 불러보세요.'
+                : '길드에 소속되어 있지 않거나\n다른 길드원이 없어요.'}
+            </p>
+          ) : (
+            <ul className="divide-y divide-zinc-100 dark:divide-zinc-900">
+              {list.map((c) => {
+                const done = c.joined || invited.has(c.userId);
+                return (
+                  <li key={c.userId} className="flex items-center gap-2 py-1.5">
+                    <Avatar src={c.profileSouth} box={c.faceBox ?? null} size="h-9 w-9" />
+                    <span className="min-w-0 flex-1">
+                      <span className="block truncate text-[12.5px] font-semibold">
+                        {c.nickname}
+                      </span>
+                      <LastSeen at={c.lastSeenAt ?? null} plain className="text-[10px] text-zinc-400" />
+                    </span>
+                    {c.joined ? (
+                      <span className="shrink-0 rounded-full bg-zinc-100 px-2.5 py-1 text-[11px] font-bold text-zinc-400 dark:bg-zinc-800">
+                        참여 중
+                      </span>
+                    ) : invited.has(c.userId) ? (
+                      <span className="shrink-0 rounded-full bg-zinc-100 px-2.5 py-1 text-[11px] font-bold text-zinc-400 dark:bg-zinc-800">
+                        초대함
+                      </span>
+                    ) : (
+                      <button
+                        type="button"
+                        onClick={() => invite(c)}
+                        disabled={pending || done}
+                        className="shrink-0 rounded-full bg-amber-600 px-3 py-1 text-[11px] font-bold text-white disabled:opacity-50"
+                      >
+                        초대
+                      </button>
+                    )}
+                  </li>
+                );
+              })}
+            </ul>
+          )}
+        </div>
+      </ModalLayout>
+    </ModalShell>
+  );
+}

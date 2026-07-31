@@ -15,6 +15,8 @@ import { getFriendIds } from '@/lib/game/friends';
 import { kstDateString } from '@/lib/kst';
 import type { RaidBoss } from '@/lib/game/raid/bosses';
 
+import { getReceivedInvites } from '@/lib/game/raid/invite';
+
 import { RaidSlots, type RaidSlotCell, type FriendRaid } from './RaidSlots';
 
 export default async function RaidPage() {
@@ -252,6 +254,24 @@ export default async function RaidPage() {
       requested: myPendingReqIds.has(r.id),
     }));
 
+  // 받은 지목 초대(0146) — 실패해도 목록은 떠야 하므로 폴백.
+  const invited = await withTimeout(
+    getReceivedInvites(userId, serverId),
+    2000,
+    'raid.invites',
+  ).catch(() => []);
+  const invitedRaids: FriendRaid[] = invited.map((i) => ({
+    raidId: i.raidId,
+    shareCode: i.shareCode,
+    bossCode: i.bossCode as RaidBoss,
+    // 남은 시간은 서버 계산값(remainMs)을 절대시각으로 환산 — 카운트다운 컴포넌트가 ISO를 받는다.
+    expireAtIso: new Date(Date.now() + i.remainMs).toISOString(),
+    phasesCleared: 0,
+    hostNickname: i.inviterNickname,
+    participantCount: i.participants,
+    requested: false,
+  }));
+
   return (
     <div className="px-4 py-4">
       <RaidSlots
@@ -259,6 +279,7 @@ export default async function RaidPage() {
         slots={slotCount}
         dailyUsed={dailyRow[0]?.c ?? 0}
         dailyCap={RAID_DAILY_CAP}
+        invitedRaids={invitedRaids}
         friendRaids={friendRaids}
         guildRaids={guildRaids}
       />

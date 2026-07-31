@@ -22,7 +22,7 @@ export default async function RaidDetail({
   searchParams,
 }: {
   params: Promise<{ raidId: string }>;
-  /** c=공유코드(비참가 관전 게이트), s=참가 scope(friend|guild|link — 참가 버튼용). */
+  /** c=공유코드(비참가 관전 게이트), s=참가 scope(friend|guild|invite|link — 참가 버튼용). */
   searchParams: Promise<{ c?: string; s?: string }>;
 }) {
   const userId = await getSessionUserId();
@@ -126,9 +126,12 @@ export default async function RaidDetail({
   if (!me) {
     const sp = await searchParams;
     if ((sp.c ?? '') !== raid.shareCode) redirect(`/raid-invite/${raid.shareCode}`);
-    const scope = sp.s === 'friend' || sp.s === 'guild' ? sp.s : 'link';
+    const scope =
+      sp.s === 'friend' || sp.s === 'guild' || sp.s === 'invite' ? sp.s : 'link';
     // 버튼 라벨용 예상 모드 — 서버(joinOrRequestRaid)가 재검증하므로 어긋나도 요청으로 처리될 뿐.
+    // invite(0146)는 초대 기록이 있으면 즉시 참여라 'free'로 본다(기록 없으면 서버가 요청 처리).
     const mode =
+      scope === 'invite' ||
       (scope === 'friend' && raid.friendShare === 'free') ||
       (scope === 'guild' && raid.guildShare === 'free')
         ? ('free' as const)

@@ -161,3 +161,34 @@ export const raidDailyCounts = pgTable(
 export type Raid = typeof raids.$inferSelect;
 export type RaidParticipant = typeof raidParticipants.$inferSelect;
 export type RaidReward = typeof raidRewards.$inferSelect;
+
+/**
+ * 0146 레이드 지목 초대 — 개설자가 친구·길드원을 지목해 부른다.
+ *
+ * 초대는 **참여 허가**다(수락 승인 없음) — 초대 자체가 개설자의 의사 표시라
+ * 종전 링크 경로의 초대→요청→수락 왕복 2회를 1회로 줄인다.
+ * 초대 인원에 상한이 없는 이유: 남은 자리가 1석이어도 여럿에게 보내 선착순으로
+ * 채우는 운용을 허용한다. 정원 판정은 실제 참여 시 joinRaid(RAID_FULL)가 한다.
+ */
+export const raidInvites = pgTable(
+  'raid_invites',
+  {
+    id: bigserial('id', { mode: 'bigint' }).primaryKey(),
+    raidId: bigint('raid_id', { mode: 'bigint' })
+      .notNull()
+      .references(() => raids.id, { onDelete: 'cascade' }),
+    /** 초대한 사람(개설자) — 목록 표시용. */
+    inviterUserId: uuid('inviter_user_id')
+      .notNull()
+      .references(() => profiles.id, { onDelete: 'cascade' }),
+    inviteeUserId: uuid('invitee_user_id')
+      .notNull()
+      .references(() => profiles.id, { onDelete: 'cascade' }),
+    createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
+  },
+  (t) => [
+    // 중복 초대 차단 — 초대 팝업의 '초대함' 표시 근거.
+    uniqueIndex('raid_invite_uq').on(t.raidId, t.inviteeUserId),
+    index('raid_invite_invitee_idx').on(t.inviteeUserId, t.createdAt),
+  ],
+);

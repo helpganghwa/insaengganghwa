@@ -1,6 +1,7 @@
 'use server';
 
 import { revalidatePath } from 'next/cache';
+import { after } from 'next/server';
 
 import { getSessionUserId } from '@/lib/auth/session';
 import { makeErr } from '@/lib/game/action-result';
@@ -22,6 +23,8 @@ import {
   type RaidShareMode,
   type JoinScope,
 } from '@/lib/game/raid';
+import { getInviteCandidates, inviteToRaid } from '@/lib/game/raid/invite';
+import { notifyRaidInvite } from '@/lib/game/raid/notify';
 import { RAID_OPEN_COST_DIAMOND } from '@/lib/game/balance';
 
 const MSG: Record<string, string> = {
@@ -224,6 +227,56 @@ export async function settleRaidAction(raidId: string) {
     return { status: 'success' as const, ...r };
   } catch (e) {
     console.error('[raid.settle]', e);
+    return err('UNKNOWN');
+  }
+}
+
+/** 초대 후보(친구·길드원) 조회 — 개설자만. 초대 시트를 열 때 1회 호출. */
+export async function getRaidInviteCandidatesAction(raidId: string) {
+  const u = await uid();
+  if (!u) return err('UNAUTHENTICATED');
+  try {
+    const serverId = await getActiveServerId();
+    const r = await getInviteCandidates(u, serverId, BigInt(raidId));
+    return { status: 'success' as const, friends: r.friends, guildMates: r.guildMates };
+  } catch (e) {
+    if (e instanceof RaidError) return err(e.code);
+    console.error('[raid.inviteCandidates]', e);
+    return err('UNKNOWN');
+  }
+}
+
+/**
+ * 지목 초대(0146) — 개설자가 친구·길드원 1명을 초대. 관계·권한은 서버가 검증한다.
+ * 초대 자체가 참여 허가라 수락 절차가 없고, 정원 판정은 상대가 참여할 때 이뤄진다.
+ */
+export async function inviteToRaidAction(raidId: string, inviteeUserId: string) {
+  const u = await uid();
+  if (!u) return err('UNAUTHENTICATED');
+  if (await rateLimited(u, 'raid')) return err('RATE_LIMITED');
+  const __b = await actionBlock(); if (__b) return err(__b);
+  try {
+    const serverId = await getActiveServerId();
+    const r = await inviteToRaid({
+      hostUserId: u,
+      serverId,
+      raidId: BigInt(raidId),
+      inviteeUserId,
+    });
+    // 푸시는 응답을 붙잡지 않는다(best-effort) — 실패해도 초대는 유효(인앱 섹션에 남는다).
+    after(async () => {
+      await notifyRaidInvite({
+        inviteeUserId,
+        hostUserId: u,
+        serverId,
+        raidId,
+        bossCode: r.bossCode,
+      }).catch(() => undefined);
+    });
+    return { status: 'success' as const, nickname: r.nickname };
+  } catch (e) {
+    if (e instanceof RaidError) return err(e.code);
+    console.error('[raid.invite]', e);
     return err('UNKNOWN');
   }
 }

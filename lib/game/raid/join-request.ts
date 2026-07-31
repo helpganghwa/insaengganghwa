@@ -4,17 +4,18 @@ import { and, eq, sql } from 'drizzle-orm';
 
 import { db } from '@/lib/db/client';
 import { characters } from '@/lib/db/schema/server';
-import { raids, raidParticipants, raidJoinRequests } from '@/lib/db/schema/raid';
+import { raids, raidParticipants, raidJoinRequests, raidInvites } from '@/lib/db/schema/raid';
 import { profiles } from '@/lib/db/schema/profiles';
 import { RAID_MAX_PARTICIPANTS, RAID_MAX_CONCURRENT_PER_USER } from '@/lib/game/balance';
 import { RaidError, activeRaidCount, bumpDailyOrThrow } from './open';
 import { joinRaid } from './join';
 
 export type JoinRequestState = 'joined' | 'requested';
-export type JoinScope = 'friend' | 'guild' | 'link';
+export type JoinScope = 'friend' | 'guild' | 'link' | 'invite';
 
 /**
  * 목록/링크 참가 통합 — 경로(scope)와 라이드의 공개 모드에 따라 즉시 참가 or 요청.
+ *  - invite: 지목 초대(0146) — 초대 기록이 있으면 **즉시 참여**(초대가 곧 허가). 없으면 link로 강등.
  *  - link: 항상 요청(수락 필요). 친구/길드: 해당 scope의 share 모드가 'free'면 즉시, 'approval'이면 요청.
  */
 export async function joinOrRequestRaid(input: {
@@ -23,6 +24,21 @@ export async function joinOrRequestRaid(input: {
   scope: JoinScope;
 }): Promise<{ raidId: bigint; state: JoinRequestState }> {
   const { userId, shareCode, scope } = input;
+  // 지목 초대(0146) — 초대 기록이 있으면 승인 없이 즉시 참여. 초대 자체가 개설자의 허가라
+  // 재승인은 모순이다. 기록이 없으면(위조 링크) 일반 링크 경로로 강등해 요청으로 처리.
+  if (scope === 'invite') {
+    const [inv] = await db
+      .select({ id: raidInvites.id })
+      .from(raidInvites)
+      .innerJoin(raids, eq(raids.id, raidInvites.raidId))
+      .where(and(eq(raids.shareCode, shareCode), eq(raidInvites.inviteeUserId, userId)))
+      .limit(1);
+    if (inv) {
+      const r = await joinRaid({ userId, shareCode });
+      return { raidId: r.raidId, state: 'joined' };
+    }
+    return requestJoinRaid({ userId, shareCode });
+  }
   if (scope === 'link') return requestJoinRaid({ userId, shareCode });
 
   const [raid] = await db

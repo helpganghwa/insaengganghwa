@@ -29,6 +29,7 @@ export type RaidErrorCode =
   | 'RAID_FULL'
   | 'ALREADY_JOINED'
   | 'NO_CHARACTER_ON_SERVER' // 크로스서버 참가 차단(풀 아이솔레이션 — 감사 R4)
+  | 'INVALID_TARGET' // 초대 대상이 친구·길드원이 아님(또는 자기 자신, 0146)
   | 'NOT_PARTICIPANT'
   | 'NO_ATTACKS'
   | 'NOT_SETTLEABLE'

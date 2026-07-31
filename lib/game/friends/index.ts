@@ -43,7 +43,8 @@ export interface FriendUser {
 const SOUTH = sql<string | null>`${userProfiles.rotations} ->> 'south'`;
 const FACEBOX = sql<unknown>`${userProfiles.options} -> 'faceBox'`;
 
-async function profilesByIds(ids: string[], serverId: number): Promise<FriendUser[]> {
+/** id 목록 → 표시용 프로필(닉·아바타·faceBox·접속). 레이드 초대 후보 등에서 재사용. */
+export async function profilesByIds(ids: string[], serverId: number): Promise<FriendUser[]> {
   if (ids.length === 0) return [];
   const rows = await db
     .select({

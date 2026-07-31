@@ -10,6 +10,7 @@ import { useResourceToast } from '@/components/ResourceToast';
 import { GuildBadge } from '@/components/GuildBadge';
 import { LastSeen } from '@/components/LastSeen';
 import { faceCropStyle, type FaceBox } from '@/components/faceCrop';
+import { Avatar } from './Avatar';
 import { ZoomSafeInput } from '@/components/ui/ZoomSafeField';
 
 import {
@@ -43,25 +44,6 @@ const ERR: Record<string, string> = {
 };
 
 // 헤더와 동일 — 영역(테두리/배경) 없이 스프라이트를 확대해 상반신만 노출.
-function Avatar({ src, box }: { src: string | null; box?: FaceBox | null }) {
-  return (
-    <div className="relative h-11 w-11 shrink-0 overflow-hidden">
-      {src ? (
-        // eslint-disable-next-line @next/next/no-img-element
-        <img
-          src={src}
-          alt=""
-          aria-hidden
-          draggable={false}
-          className="absolute inset-0 h-full w-full"
-          style={faceCropStyle(box ?? null)}
-        />
-      ) : (
-        <span className="absolute inset-0 flex items-center justify-center text-xl">👤</span>
-      )}
-    </div>
-  );
-}
 
 // 카드 클릭 → 프로필 상세(/u/code). 우측 버튼은 전파 차단.
 // showSeen: 접속 상태 배지 노출(목록 탭만 — 요청/찾기는 미노출).

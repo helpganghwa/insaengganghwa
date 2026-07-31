@@ -132,10 +132,14 @@ function RaidListSection({
   title,
   raids,
   scope,
+  accent = false,
 }: {
   title: string;
   raids: FriendRaid[];
-  scope: 'friend' | 'guild';
+  /** 링크 쿼리로 전달되는 참가 경로. 'invite'(0146)는 지목 초대 — 승인 없이 바로 참여한다. */
+  scope: 'friend' | 'guild' | 'invite';
+  /** 강조 테두리(초대 섹션) — 받은 초대는 눈에 띄어야 한다. */
+  accent?: boolean;
 }) {
   if (raids.length === 0) return null;
   return (
@@ -147,7 +151,9 @@ function RaidListSection({
             key={f.raidId}
             href={`/raid/${f.raidId}?c=${f.shareCode}&s=${scope}`}
             style={{ boxShadow: getBossShadow(f.bossCode) }}
-            className={`relative flex w-full items-center gap-3 isolate overflow-hidden rounded-xl border-2 border-emerald-700/50 bg-gradient-to-r p-3 text-left text-zinc-100 transition active:scale-[0.99] ${getBossBgClass(f.bossCode)}`}
+            className={`relative flex w-full items-center gap-3 isolate overflow-hidden rounded-xl border-2 bg-gradient-to-r p-3 text-left text-zinc-100 transition active:scale-[0.99] ${
+              accent ? 'border-amber-500/70' : 'border-emerald-700/50'
+            } ${getBossBgClass(f.bossCode)}`}
           >
             {getBossBg(f.bossCode) ? (
               // eslint-disable-next-line @next/next/no-img-element
@@ -166,8 +172,10 @@ function RaidListSection({
             <span className="relative min-w-0 flex-1">
               <span className="block truncate text-sm font-bold drop-shadow">
                 {RAID_BOSSES[f.bossCode].name}
-                <span className="ml-1 text-[11px] font-medium text-emerald-300">
-                  {f.hostNickname}
+                <span
+                  className={`ml-1 text-[11px] font-medium ${accent ? 'text-amber-300' : 'text-emerald-300'}`}
+                >
+                  {accent ? `${f.hostNickname}님의 초대` : f.hostNickname}
                 </span>
               </span>
               <span className="mt-0.5 flex flex-wrap gap-x-2 text-[10px] text-zinc-300">
@@ -217,6 +225,7 @@ export function RaidSlots({
   dailyUsed,
   dailyCap,
   friendRaids = [],
+  invitedRaids = [],
   guildRaids = [],
 }: {
   cells: RaidSlotCell[];
@@ -225,6 +234,8 @@ export function RaidSlots({
   dailyCap: number;
   friendRaids?: FriendRaid[];
   guildRaids?: FriendRaid[];
+  /** 받은 지목 초대(0146) — 목록 맨 위, 승인 없이 바로 참여 가능. */
+  invitedRaids?: FriendRaid[];
 }) {
   const router = useRouter();
   const { showError } = useResourceToast();
@@ -387,6 +398,10 @@ export function RaidSlots({
           ),
         )}
       </div>
+
+      {/* 받은 초대(0146) — 지목 초대라 승인 없이 바로 참여한다. 만료·참여분은 서버가 걸러
+          보내므로 목록 필터가 곧 만료 처리다(우편 만료 로직 불필요). */}
+      <RaidListSection title="초대받은 레이드" raids={invitedRaids} scope="invite" accent />
 
       {/* 친구/길드가 소환한 레이드 — 공개·활성. 행 클릭 = 상세 관전(참가/요청은 상세에서). */}
       <RaidListSection title="친구가 소환한 레이드" raids={friendRaids} scope="friend" />
