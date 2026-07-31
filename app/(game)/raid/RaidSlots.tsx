@@ -53,6 +53,10 @@ export type FriendRaid = {
   participantCount: number;
   /** 내가 보낸 참가 요청이 수락 대기 중 — 목록 '요청중' 배지(2026-07-27 피드백 5). */
   requested: boolean;
+  /** 참여 경로 — 통합 목록의 관계 배지 + 링크 scope(0146). */
+  via: 'invite' | 'friend' | 'guild';
+  /** 승인 없이 즉시 참여 가능한가(초대는 항상 true) — 배지·정렬 근거. */
+  free: boolean;
 };
 
 type ShareMode = 'off' | 'free' | 'approval';
@@ -127,20 +131,12 @@ function ShareModeRow({
 }
 
 /** 친구/길드 소환 레이드 목록 섹션 — 비면 미노출. 행 클릭 = 상세 관전 진입(참가는 상세에서 —
- * 2026-07-27 문의 #30: 목록의 즉시 참가 버튼 제거, 구경 후 참가 결정). */
-function RaidListSection({
-  title,
-  raids,
-  scope,
-  accent = false,
-}: {
-  title: string;
-  raids: FriendRaid[];
-  /** 링크 쿼리로 전달되는 참가 경로. 'invite'(0146)는 지목 초대 — 승인 없이 바로 참여한다. */
-  scope: 'friend' | 'guild' | 'invite';
-  /** 강조 테두리(초대 섹션) — 받은 초대는 눈에 띄어야 한다. */
-  accent?: boolean;
-}) {
+ * 2026-07-27 문의 #30: 목록의 즉시 참가 버튼 제거, 구경 후 참가 결정).
+ *
+ * 통합 목록(2026-07-31) — 초대·친구·길드를 한 섹션에 모으고 관계는 배지로 구분한다.
+ * 섹션을 나누면 친구이자 길드원인 개설자의 레이드가 중복 노출되고, 우선순위를 고정하면
+ * 더 유리한 참가 경로(자유 참여)를 버리게 된다. 경로 선택은 page가 이미 끝냈다. */
+function RaidListSection({ title, raids }: { title: string; raids: FriendRaid[] }) {
   if (raids.length === 0) return null;
   return (
     <section className="mt-5">
@@ -149,10 +145,10 @@ function RaidListSection({
         {raids.map((f) => (
           <Link prefetch={false}
             key={f.raidId}
-            href={`/raid/${f.raidId}?c=${f.shareCode}&s=${scope}`}
+            href={`/raid/${f.raidId}?c=${f.shareCode}&s=${f.via}`}
             style={{ boxShadow: getBossShadow(f.bossCode) }}
             className={`relative flex w-full items-center gap-3 isolate overflow-hidden rounded-xl border-2 bg-gradient-to-r p-3 text-left text-zinc-100 transition active:scale-[0.99] ${
-              accent ? 'border-amber-500/70' : 'border-emerald-700/50'
+              f.via === 'invite' ? 'border-amber-500/70' : 'border-emerald-700/50'
             } ${getBossBgClass(f.bossCode)}`}
           >
             {getBossBg(f.bossCode) ? (
@@ -173,9 +169,23 @@ function RaidListSection({
               <span className="block truncate text-sm font-bold drop-shadow">
                 {RAID_BOSSES[f.bossCode].name}
                 <span
-                  className={`ml-1 text-[11px] font-medium ${accent ? 'text-amber-300' : 'text-emerald-300'}`}
+                  className={`ml-1 text-[11px] font-medium ${
+                    f.via === 'invite' ? 'text-amber-300' : 'text-emerald-300'
+                  }`}
                 >
-                  {accent ? `${f.hostNickname}님의 초대` : f.hostNickname}
+                  {f.hostNickname}
+                </span>
+                {/* 관계 배지 — 통합 목록에서 누가 왜 보이는지(초대/친구/길드)를 대신 말한다. */}
+                <span
+                  className={`ml-1.5 rounded px-1 py-px align-middle text-[9px] font-extrabold ${
+                    f.via === 'invite'
+                      ? 'bg-amber-500/25 text-amber-200'
+                      : f.via === 'friend'
+                        ? 'bg-emerald-500/20 text-emerald-200'
+                        : 'bg-sky-500/20 text-sky-200'
+                  }`}
+                >
+                  {f.via === 'invite' ? '초대' : f.via === 'friend' ? '친구' : '길드'}
                 </span>
               </span>
               <span className="mt-0.5 flex flex-wrap gap-x-2 text-[10px] text-zinc-300">
@@ -224,18 +234,14 @@ export function RaidSlots({
   slots,
   dailyUsed,
   dailyCap,
-  friendRaids = [],
-  invitedRaids = [],
-  guildRaids = [],
+  openRaids = [],
 }: {
   cells: RaidSlotCell[];
   slots: number;
   dailyUsed: number;
   dailyCap: number;
-  friendRaids?: FriendRaid[];
-  guildRaids?: FriendRaid[];
-  /** 받은 지목 초대(0146) — 목록 맨 위, 승인 없이 바로 참여 가능. */
-  invitedRaids?: FriendRaid[];
+  /** 참여 가능한 레이드 통합 목록(초대·친구·길드) — page가 중복 제거·경로 선택을 마친 결과. */
+  openRaids?: FriendRaid[];
 }) {
   const router = useRouter();
   const { showError } = useResourceToast();
@@ -399,13 +405,9 @@ export function RaidSlots({
         )}
       </div>
 
-      {/* 받은 초대(0146) — 지목 초대라 승인 없이 바로 참여한다. 만료·참여분은 서버가 걸러
-          보내므로 목록 필터가 곧 만료 처리다(우편 만료 로직 불필요). */}
-      <RaidListSection title="초대받은 레이드" raids={invitedRaids} scope="invite" accent />
-
-      {/* 친구/길드가 소환한 레이드 — 공개·활성. 행 클릭 = 상세 관전(참가/요청은 상세에서). */}
-      <RaidListSection title="친구가 소환한 레이드" raids={friendRaids} scope="friend" />
-      <RaidListSection title="길드가 소환한 레이드" raids={guildRaids} scope="guild" />
+      {/* 참여 가능한 레이드 — 초대·친구·길드 통합(중복 제거·유리한 경로 선택은 page에서).
+          행 클릭 = 상세 관전(참가/요청은 상세에서). */}
+      <RaidListSection title="참여 가능한 레이드" raids={openRaids} />
 
       {picking ? (
         // 공용 셸로 — Esc·포커스 확보. 연출은 그대로 두고 껍데기만 교체(2026-07-29 점검).

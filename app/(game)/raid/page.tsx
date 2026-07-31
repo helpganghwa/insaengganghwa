@@ -180,6 +180,7 @@ export default async function RaidPage() {
           expireAt: raids.expireAt,
           phasesCleared: raids.phasesCleared,
           hostNickname: characters.nickname,
+          friendShare: raids.friendShare,
           participantCount: sql<number>`(select count(*) from raid_participants rp where rp.raid_id = ${raids.id})::int`,
         })
         .from(raids)
@@ -211,6 +212,8 @@ export default async function RaidPage() {
         hostNickname: r.hostNickname,
         participantCount: r.participantCount,
         requested: myPendingReqIds.has(r.id.toString()),
+        via: 'friend' as const,
+        free: r.friendShare === 'free',
       }));
   }
 
@@ -221,7 +224,7 @@ export default async function RaidPage() {
       db.execute(sql`
         select r.id::text as id, r.boss_code as boss_code, r.share_code as share_code,
                r.expire_at as expire_at, r.phases_cleared as phases_cleared,
-               hc.nickname as host_nickname,
+               hc.nickname as host_nickname, r.guild_share as guild_share,
                (select count(*) from raid_participants rp where rp.raid_id = r.id)::int as participant_count
         from raids r
         join guild_members hg on hg.user_id = r.host_user_id and hg.server_id = r.server_id
@@ -239,6 +242,7 @@ export default async function RaidPage() {
       expire_at: Date;
       phases_cleared: number;
       host_nickname: string;
+      guild_share: string;
       participant_count: number;
     }[]
   )
@@ -252,6 +256,8 @@ export default async function RaidPage() {
       hostNickname: r.host_nickname,
       participantCount: r.participant_count,
       requested: myPendingReqIds.has(r.id),
+      via: 'guild' as const,
+      free: r.guild_share === 'free',
     }));
 
   // 받은 지목 초대(0146) — 실패해도 목록은 떠야 하므로 폴백.
@@ -269,8 +275,28 @@ export default async function RaidPage() {
     phasesCleared: 0,
     hostNickname: i.inviterNickname,
     participantCount: i.participants,
-    requested: false,
+    requested: myPendingReqIds.has(i.raidId),
+    via: 'invite' as const,
+    free: true, // 초대는 항상 즉시 참여
   }));
+
+  /**
+   * 참여 가능한 레이드 — 초대·친구·길드를 **한 목록으로 통합**(2026-07-31 결정).
+   *
+   * 섹션을 나누면 같은 레이드가 여러 섹션에 중복으로 뜨고(친구이자 길드원인 개설자),
+   * 더 나쁘게는 우선순위 고정이 **더 유리한 경로를 버린다**(친구=승인·길드=자유인데
+   * 친구 섹션에 배치되면 승인 대기가 된다). 통합 후 같은 레이드는 1회만 노출하고,
+   * 경로는 초대 > 즉시참여(free) > 승인 순으로 **유리한 쪽을 자동 선택**한다.
+   */
+  const rank = (r: FriendRaid) => (r.via === 'invite' ? 0 : r.free ? 1 : 2);
+  const openRaids: FriendRaid[] = [];
+  const bestByRaid = new Map<string, FriendRaid>();
+  for (const r of [...invitedRaids, ...friendRaids, ...guildRaids]) {
+    const prev = bestByRaid.get(r.raidId);
+    if (!prev || rank(r) < rank(prev)) bestByRaid.set(r.raidId, r);
+  }
+  // 노출 순서 — 초대 먼저, 그다음 즉시참여, 그다음 승인 필요.
+  for (const r of [...bestByRaid.values()].sort((a, b) => rank(a) - rank(b))) openRaids.push(r);
 
   return (
     <div className="px-4 py-4">
@@ -279,9 +305,7 @@ export default async function RaidPage() {
         slots={slotCount}
         dailyUsed={dailyRow[0]?.c ?? 0}
         dailyCap={RAID_DAILY_CAP}
-        invitedRaids={invitedRaids}
-        friendRaids={friendRaids}
-        guildRaids={guildRaids}
+        openRaids={openRaids}
       />
     </div>
   );

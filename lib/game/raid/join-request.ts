@@ -35,6 +35,18 @@ export async function joinOrRequestRaid(input: {
       .limit(1);
     if (inv) {
       const r = await joinRaid({ userId, shareCode });
+      // 승인 대기 중이던 요청 정리 — 초대로 이미 들어왔으므로 개설자 화면에 남아 있으면
+      // "이미 참여한 사람의 요청"이 되어 혼란스럽다(수락해도 멱등이라 무해하지만 노이즈).
+      await db
+        .update(raidJoinRequests)
+        .set({ status: 'approved', decidedAt: new Date() })
+        .where(
+          and(
+            eq(raidJoinRequests.raidId, r.raidId),
+            eq(raidJoinRequests.userId, userId),
+            eq(raidJoinRequests.status, 'pending'),
+          ),
+        );
       return { raidId: r.raidId, state: 'joined' };
     }
     return requestJoinRaid({ userId, shareCode });

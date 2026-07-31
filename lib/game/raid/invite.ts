@@ -8,6 +8,7 @@ import { characters } from '@/lib/db/schema/server';
 import { friendLinks } from '@/lib/db/schema/friends';
 import { guildMembers } from '@/lib/db/schema/guild';
 import { profilesByIds, type FriendUser } from '@/lib/game/friends';
+import { RAID_MAX_PARTICIPANTS } from '@/lib/game/balance';
 import { RaidError } from './open';
 
 /**
@@ -114,7 +115,11 @@ export async function getInviteCandidates(
 
 /**
  * 초대 발송 — 개설자만, 대상은 친구·길드원만. 중복은 유니크 인덱스가 막는다.
- * 정원이 이미 찼으면 초대 자체를 막는다(빈자리 0에 초대는 무의미).
+ *
+ * 정원(10)이 찼으면 초대를 막는다 — 레이드에는 자발적 탈퇴가 없어 한 번 차면 자리가
+ * 다시 나지 않으므로, 빈자리 0에 보내는 초대는 상대가 절대 못 들어오는 헛초대가 된다
+ * (2026-07-31 검토). 자리가 남아 있는 한 인원 상한은 없다 — 1석에 여럿 초대해
+ * 선착순으로 채우는 운용은 그대로 허용된다.
  */
 export async function inviteToRaid(input: {
   hostUserId: string;
@@ -150,6 +155,12 @@ export async function inviteToRaid(input: {
     guildMates.find((c) => c.userId === inviteeUserId);
   if (!target) throw new RaidError('INVALID_TARGET');
   if (target.joined) throw new RaidError('ALREADY_JOINED');
+
+  const [{ n }] = await db
+    .select({ n: sql<number>`count(*)::int` })
+    .from(raidParticipants)
+    .where(eq(raidParticipants.raidId, raidId));
+  if (n >= RAID_MAX_PARTICIPANTS) throw new RaidError('RAID_FULL');
 
   try {
     await db.insert(raidInvites).values({ raidId, inviterUserId: hostUserId, inviteeUserId });

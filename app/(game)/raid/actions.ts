@@ -40,6 +40,7 @@ const MSG: Record<string, string> = {
   NOT_PARTICIPANT: '참여자가 아닙니다.',
   NOT_HOST: '개설자만 처리할 수 있습니다.',
   REQUEST_NOT_FOUND: '참가 요청을 찾을 수 없습니다.',
+  INVALID_TARGET: '초대할 수 없는 대상입니다 (친구·길드원만 초대 가능).',
   NO_ATTACKS: '공격 횟수를 모두 사용했습니다 (추가 공격 구매 가능).',
   REWARD_ALREADY_CLAIMED: '이미 보상을 받았습니다.',
   UNAUTHENTICATED: '로그인이 필요합니다.',
