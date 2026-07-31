@@ -7,6 +7,7 @@ import { ModalLayout, ModalButton } from '@/components/ModalLayout';
 import { LastSeen } from '@/components/LastSeen';
 import { useResourceToast } from '@/components/ResourceToast';
 import { Avatar } from '@/app/(game)/friends/Avatar';
+import { fmtNum } from '@/app/(game)/guild/guild-row';
 import type { InviteCandidate } from '@/lib/game/raid/invite';
 
 import { getRaidInviteCandidatesAction, inviteToRaidAction } from './actions';
@@ -39,7 +40,10 @@ export function RaidInviteSheet({
   );
   const [failed, setFailed] = useState(false);
   const [invited, setInvited] = useState<Set<string>>(new Set());
-  const [pending, start] = useTransition();
+  // 전역 pending으로 목록 전체를 잠그면 여러 명을 연달아 초대할 수 없다(선착순 운용에
+  // 필요한 동작). 진행 중인 대상만 개별로 잠근다.
+  const [sending, setSending] = useState<Set<string>>(new Set());
+  const [, start] = useTransition();
 
   useEffect(() => {
     let alive = true;
@@ -64,11 +68,18 @@ export function RaidInviteSheet({
   }, [raidId]);
 
   const invite = (c: InviteCandidate) => {
-    if (pending || invited.has(c.userId) || c.joined) return;
-    // 낙관 표시 — 실패하면 되돌린다(초대는 멱등이라 재시도도 안전).
+    if (sending.has(c.userId) || invited.has(c.userId) || c.joined) return;
+    // 낙관 갱신 — 버튼을 누른 즉시 '초대함'으로 바꾸고, 실패하면 되돌린다.
+    // 초대는 서버에서 멱등(23505 흡수)이라 되돌린 뒤 재시도해도 안전하다.
     setInvited((prev) => new Set(prev).add(c.userId));
+    setSending((prev) => new Set(prev).add(c.userId));
     start(async () => {
       const r = await inviteToRaidAction(raidId, c.userId).catch(() => null);
+      setSending((prev) => {
+        const next = new Set(prev);
+        next.delete(c.userId);
+        return next;
+      });
       if (!r || r.status !== 'success') {
         setInvited((prev) => {
           const next = new Set(prev);
@@ -78,7 +89,7 @@ export function RaidInviteSheet({
         showError(r?.message ?? '초대에 실패했어요. 잠시 후 다시 시도해 주세요.');
         return;
       }
-      showResource('', `${r.nickname}님을 초대했어요`);
+      showResource('⚔️', `${r.nickname}님 초대`);
     });
   };
 
@@ -100,9 +111,17 @@ export function RaidInviteSheet({
             <ModalButton tone="ghost" onClick={onClose}>
               닫기
             </ModalButton>
-            <ModalButton tone="neutral" onClick={onKakaoShare}>
-              카카오톡 공유
-            </ModalButton>
+            {/* 카카오톡 초대 — 공식 가이드(#FEE500 / 심볼 미변형 / 텍스트 #000 85%). */}
+            <button
+              type="button"
+              onClick={onKakaoShare}
+              style={{ flex: 1 }}
+              className="flex items-center justify-center gap-1.5 rounded-xl bg-[#FEE500] py-2.5 transition active:scale-[0.99] hover:brightness-95"
+            >
+              {/* eslint-disable-next-line @next/next/no-img-element */}
+              <img src="/kakao/kakao_symbol.png" alt="" aria-hidden className="h-[15px] w-auto" />
+              <span className="text-[13px] font-bold text-black/85">카카오톡 초대</span>
+            </button>
           </>
         }
       >
@@ -151,12 +170,38 @@ export function RaidInviteSheet({
                 const done = c.joined || invited.has(c.userId);
                 return (
                   <li key={c.userId} className="flex items-center gap-2 py-1.5">
-                    <Avatar src={c.profileSouth} box={c.faceBox ?? null} size="h-9 w-9" />
+                    <Avatar src={c.profileSouth} box={c.faceBox ?? null} size="h-10 w-10" />
                     <span className="min-w-0 flex-1">
-                      <span className="block truncate text-[12.5px] font-semibold">
-                        {c.nickname}
+                      <span className="flex items-baseline gap-1.5">
+                        <span className="truncate text-[12.5px] font-semibold">{c.nickname}</span>
+                        <LastSeen
+                          at={c.lastSeenAt ?? null}
+                          plain
+                          className="ml-auto shrink-0 text-[9.5px] text-zinc-400"
+                        />
                       </span>
-                      <LastSeen at={c.lastSeenAt ?? null} plain className="text-[10px] text-zinc-400" />
+                      {/* 누구를 부를지 판단하는 지표 — 길드원 목록과 같은 세트(전투·최고·합산). */}
+                      <span className="mt-0.5 block truncate text-[10.5px] text-zinc-500">
+                        전투{' '}
+                        <b className="font-semibold tabular-nums text-zinc-700 dark:text-zinc-300">
+                          {fmtNum(c.combat)}
+                        </b>
+                        <span className="mx-1 text-zinc-300 dark:text-zinc-700">·</span>
+                        최고{' '}
+                        <b className="font-semibold tabular-nums text-zinc-700 dark:text-zinc-300">
+                          +{c.maxEnhance}
+                        </b>
+                        <span className="mx-1 text-zinc-300 dark:text-zinc-700">·</span>
+                        합산{' '}
+                        <b className="font-semibold tabular-nums text-zinc-700 dark:text-zinc-300">
+                          {c.totalEnhance.toLocaleString('ko-KR')}
+                        </b>
+                      </span>
+                      {c.guildName ? (
+                        <span className="block truncate text-[10px] text-zinc-400">
+                          {c.guildName}
+                        </span>
+                      ) : null}
                     </span>
                     {c.joined ? (
                       <span className="shrink-0 rounded-full bg-zinc-100 px-2.5 py-1 text-[11px] font-bold text-zinc-400 dark:bg-zinc-800">
@@ -170,7 +215,7 @@ export function RaidInviteSheet({
                       <button
                         type="button"
                         onClick={() => invite(c)}
-                        disabled={pending || done}
+                        disabled={done || sending.has(c.userId)}
                         className="shrink-0 rounded-full bg-amber-600 px-3 py-1 text-[11px] font-bold text-white disabled:opacity-50"
                       >
                         초대

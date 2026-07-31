@@ -6,7 +6,9 @@ import { db } from '@/lib/db/client';
 import { raids, raidInvites, raidParticipants } from '@/lib/db/schema/raid';
 import { characters } from '@/lib/db/schema/server';
 import { friendLinks } from '@/lib/db/schema/friends';
-import { guildMembers } from '@/lib/db/schema/guild';
+import { guildMembers, guilds } from '@/lib/db/schema/guild';
+import { userEquipment } from '@/lib/db/schema/equipment';
+import { combatPowerFromOwned } from '@/lib/game/equipment/combat-power';
 import { profilesByIds, type FriendUser } from '@/lib/game/friends';
 import { RAID_MAX_PARTICIPANTS } from '@/lib/game/balance';
 import { RaidError } from './open';
@@ -27,6 +29,13 @@ export type InviteCandidate = FriendUser & {
   joined: boolean;
   /** 이미 초대했는가(중복 차단 — '초대함' 표시). */
   invited: boolean;
+  /** 전투력(BALANCE §3) — 누구를 부를지 판단하는 1차 지표. */
+  combat: number;
+  /** 최고 강화 · 합산 강화 — 길드원 목록과 같은 지표 세트. */
+  maxEnhance: number;
+  totalEnhance: number;
+  /** 길드명(미소속이면 null) — 통합 목록에서 소속을 한눈에. */
+  guildName: string | null;
 };
 
 /**
@@ -76,8 +85,8 @@ export async function getInviteCandidates(
   const allIds = [...new Set([...friendIds, ...guildIds])];
   if (allIds.length === 0) return { friends: [], guildMates: [] };
 
-  // 프로필·참여·초대 상태를 한 번에.
-  const [people, joined, invited] = await Promise.all([
+  // 프로필·참여·초대·전투지표·길드를 한 번에(요청당 왕복 최소화 — CLAUDE §11.4).
+  const [people, joined, invited, eqRows, guildRows] = await Promise.all([
     profilesByIds(allIds, serverId),
     db
       .select({ userId: raidParticipants.userId })
@@ -87,14 +96,48 @@ export async function getInviteCandidates(
       .select({ userId: raidInvites.inviteeUserId })
       .from(raidInvites)
       .where(eq(raidInvites.raidId, raidId)),
+    db
+      .select({
+        uid: userEquipment.userId,
+        cid: userEquipment.catalogItemId,
+        el: userEquipment.enhanceLevel,
+        tl: userEquipment.transcendLevel,
+      })
+      .from(userEquipment)
+      .where(and(eq(userEquipment.serverId, serverId), inArray(userEquipment.userId, allIds))),
+    db
+      .select({ userId: guildMembers.userId, guildName: guilds.name })
+      .from(guildMembers)
+      .innerJoin(guilds, eq(guilds.id, guildMembers.guildId))
+      .where(and(eq(guildMembers.serverId, serverId), inArray(guildMembers.userId, allIds))),
   ]);
   const joinedSet = new Set(joined.map((r) => r.userId));
   const invitedSet = new Set(invited.map((r) => r.userId));
+  const guildByUser = new Map(guildRows.map((r) => [r.userId, r.guildName]));
+  const owned = new Map<string, { catalogItemId: number; enhanceLevel: number; transcendLevel: number }[]>();
+  for (const r of eqRows) {
+    (owned.get(r.uid) ?? owned.set(r.uid, []).get(r.uid)!).push({
+      catalogItemId: r.cid,
+      enhanceLevel: r.el,
+      transcendLevel: r.tl,
+    });
+  }
   const byId = new Map(
-    people.map((p) => [
-      p.userId,
-      { ...p, joined: joinedSet.has(p.userId), invited: invitedSet.has(p.userId) } satisfies InviteCandidate,
-    ]),
+    people.map((p) => {
+      const own = owned.get(p.userId) ?? [];
+      return [
+        p.userId,
+        {
+          ...p,
+          joined: joinedSet.has(p.userId),
+          invited: invitedSet.has(p.userId),
+          combat: combatPowerFromOwned(own),
+          maxEnhance: own.reduce((mx, o) => Math.max(mx, o.enhanceLevel), 0),
+          totalEnhance: own.reduce((n, o) => n + o.enhanceLevel, 0),
+          guildName: guildByUser.get(p.userId) ?? null,
+        } satisfies InviteCandidate,
+      ];
+    }),
   );
 
   // 정렬 — 접속 최신순(기록 없으면 뒤). 초대 가능한 사람이 위로 오도록 joined는 뒤로.
@@ -106,7 +149,8 @@ export async function getInviteCandidates(
         (a, b) =>
           Number(a.joined) - Number(b.joined) ||
           (b.lastSeenAt ? Date.parse(b.lastSeenAt) : 0) -
-            (a.lastSeenAt ? Date.parse(a.lastSeenAt) : 0),
+            (a.lastSeenAt ? Date.parse(a.lastSeenAt) : 0) ||
+          b.combat - a.combat,
       );
 
   // 길드원 탭에서는 친구와 겹치는 사람을 빼지 않는다 — 두 탭 모두에서 찾을 수 있어야 한다.

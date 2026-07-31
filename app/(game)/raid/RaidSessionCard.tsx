@@ -230,11 +230,13 @@ export function RaidSessionCard({ view: v, serverId }: { view: RaidView; serverI
       if (r.state === 'joined') {
         setRequestedLocal(false);
         setOptJoined(true);
+        showHeaderToast({ title: '레이드 참여' });
         router.refresh(); // 서버 권위 동기화(참가자 목록 등) — UI는 이미 전환됨
       } else {
         // 예상(free)과 달리 수락형 — 요청 대기로 정정.
         setOptJoined(false);
         setRequestedLocal(true);
+        showHeaderToast({ title: '참가 요청 전송' });
       }
     })();
   };
@@ -496,7 +498,7 @@ export function RaidSessionCard({ view: v, serverId }: { view: RaidView; serverI
     // 폴백 — SDK 미로드/init 시 링크 복사.
     if (typeof navigator !== 'undefined' && navigator.clipboard) {
       void navigator.clipboard.writeText(url);
-      showResource('', '초대 링크를 복사했어요');
+      showResource('🔗', '초대 링크 복사');
     }
   };
 
