@@ -69,13 +69,7 @@ export default async function SettingsPage() {
         <LocalToggle storageKey="ig:sound" label="효과음" />
         <Divider />
         {/* 배경음 — 기본 OFF(강제 노출 피로 방지). 켜면 게임 화면에서 즉시 재생(ig:bgm-change). */}
-        <LocalToggle
-          storageKey="ig:bgm"
-          label="배경음악"
-          hint="잔잔한 배경음을 재생해요"
-          defaultOn={false}
-          eventName="ig:bgm-change"
-        />
+        <LocalToggle storageKey="ig:bgm" label="배경음" defaultOn={false} eventName="ig:bgm-change" />
         <Divider />
         <PushSettings
           initialEnhance={p?.pushEnhance ?? true}
