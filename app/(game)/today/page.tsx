@@ -2,6 +2,7 @@ import Link from 'next/link';
 import { eq, and } from 'drizzle-orm';
 
 import { getSessionUserId } from '@/lib/auth/session';
+import { PageHeader } from '@/components/ui/PageHeader';
 import { getActiveServerId } from '@/lib/game/servers';
 import { withTimeout } from '@/lib/db/with-timeout';
 import { db } from '@/lib/db/client';
@@ -108,7 +109,10 @@ export default async function TodayPage({ searchParams }: { searchParams: Promis
     <div id="today-page" className="flex flex-col gap-2.5 px-4 py-4 pb-24">
       <div className="flex items-center justify-between">
         <div className="flex items-baseline gap-2">
-          <h1 className="text-[17px] font-extrabold">{isAll ? '나의 인생강화' : '오늘의 인생강화'}</h1>
+          <PageHeader
+            title={isAll ? '나의 인생강화' : '오늘의 인생강화'}
+            fallback="/"
+          />
           <span className="text-[10px] tabular-nums text-zinc-500">
             {isAll && joinedLabel ? `${joinedLabel} ~ ${dateLabel}` : dateLabel}
           </span>

@@ -1,4 +1,5 @@
 'use client';
+import { PageHeader } from '@/components/ui/PageHeader';
 
 import { useEffect, useRef, useState, useTransition } from 'react';
 import { useRouter } from 'next/navigation';
@@ -72,7 +73,7 @@ export function CreateGuildForm() {
 
   return (
     <div className="space-y-3 px-4 py-4">
-      <h1 className="text-base font-bold">길드 생성</h1>
+      <PageHeader title="길드 생성" fallback="/guild" />
 
       {/* 길드 이름 */}
       <section className="rounded-xl border border-zinc-200 bg-white p-4 dark:border-zinc-800 dark:bg-zinc-950">

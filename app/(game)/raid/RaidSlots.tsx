@@ -10,6 +10,7 @@ import { RAID_OPEN_COST_DIAMOND, RAID_WINDOW_MS, RAID_DURATION_OPTIONS_MS } from
 import { RAID_BOSSES, RAID_BOSS_CODES, type RaidBoss } from '@/lib/game/raid/bosses';
 import { BossSprite } from '@/components/BossSprite';
 import { useResourceToast } from '@/components/ResourceToast';
+import { PageHeader } from '@/components/ui/PageHeader';
 import { getBossBg, getBossBgClass, getBossShadow } from '@/lib/game/raid/boss-sprites';
 import { assetUrl } from '@/lib/asset-versions';
 
@@ -285,6 +286,8 @@ export function RaidSlots({
 
   return (
     <>
+      <PageHeader title="레이드" fallback="/" />
+      <div className="h-2" />
       <p className="mb-2 text-center text-[11px] text-zinc-500">
         오늘 레이드{' '}
         <span className={`font-mono font-semibold ${exhausted ? 'text-red-500' : ''}`}>

@@ -12,6 +12,7 @@ import { characters } from '@/lib/db/schema/server';
 import { signOut } from '@/lib/auth/actions';
 
 import { LocalToggle } from './SettingsControls';
+import { PageHeader } from '@/components/ui/PageHeader';
 import { NicknameRow } from './NicknameRow';
 import { CodeRow } from './CodeRow';
 import { InstallAppButton } from './InstallAppButton';
@@ -65,6 +66,7 @@ export default async function SettingsPage() {
 
   return (
     <div className="space-y-4 px-4 py-4">
+      <PageHeader title="설정" fallback="/me" />
       <Section title="알림 / 사운드">
         <LocalToggle storageKey="ig:sound" label="효과음" />
         <Divider />

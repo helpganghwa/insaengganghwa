@@ -20,6 +20,7 @@ import { assetUrl } from '@/lib/asset-versions';
 import { meleeFaceCropStyle, type FaceBox } from '@/components/faceCrop';
 import { GuildBadge } from '@/components/GuildBadge';
 import { sounds } from '@/lib/game/sound';
+import { BackFab } from '@/components/BackNav';
 import { Tabs } from '@/components/ui/Tabs';
 import type { MeleeFinale, MeleeMyEvent } from '@/lib/db/schema/melee';
 
@@ -674,11 +675,14 @@ export function MeleeResult({
   battleId,
   myUserId,
   initialRank,
+  backFallback = '/',
 }: {
   view: MeleeResultView;
   serverId: number;
   battleId: string;
   myUserId: string;
+  /** 히스토리 없이 들어온 경우의 목적지 — 대난투 홈은 '/', 전투 상세는 '/melee'. */
+  backFallback?: string;
   /** 서버에서 함께 받아온 전체 순위 첫 페이지. */
   initialRank: { rows: MeleeRankRow[]; myRank: number | null };
 }) {
@@ -922,6 +926,9 @@ export function MeleeResult({
     <div className="flex h-[calc(100%-var(--chat-dock-h,0px))] flex-col">
       {/* 무대 — 헤더처럼 고정(스크롤·오버스크롤 영향 없음) */}
       <div className="relative h-60 shrink-0 overflow-hidden border-b border-amber-900/50">
+        {/* 무대를 가진 컴포넌트가 자기 무대에 뒤로가기를 둔다 — MeleeInfo는 배너가 꺼진 채
+            임베드되므로(showBanner=false) 여기서 넣어도 중복되지 않는다(2026-07-31). */}
+        <BackFab fallback={backFallback} className="absolute left-3 top-2.5 z-20" />
         {/* eslint-disable-next-line @next/next/no-img-element */}
         <img
           src={assetUrl('/sprites/hub/melee.png')}

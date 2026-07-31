@@ -6,6 +6,7 @@ import { useEffect, useLayoutEffect, useMemo, useRef, useState, useTransition } 
 
 import { profileHref } from '@/lib/game/profile/href';
 import { useResourceToast } from '@/components/ResourceToast';
+import { BackFab } from '@/components/BackNav';
 import { useDiamond } from '@/components/DiamondContext';
 import { ModalShell } from '@/components/ModalShell';
 import { ModalLayout, ModalButton } from '@/components/ModalLayout';
@@ -569,6 +570,9 @@ export function WorldMapView({
           replayActive ? 'sticky top-0 z-10' : ''
         }`}
       >
+        {/* 지도가 상단을 덮는 화면이라 인라인 헤더 대신 지도 위 BackFab(2026-07-31).
+            좌상단은 비어 있다 — '전투 기록' 버튼은 구역 팝업 안이라 겹치지 않는다. */}
+        <BackFab fallback="/guild" className="absolute left-3 top-3 z-30" />
         {/* 리플레이 오버레이(2026-07-16) — 문장 진군·격돌·플래시 전용 레이어(ChronicleReplay가 직접 관리). */}
         <div ref={setReplayLayer} aria-hidden className="pointer-events-none absolute inset-0 z-40" />
         {/* eslint-disable-next-line @next/next/no-img-element */}

@@ -6,6 +6,7 @@ import Link from 'next/link';
 import type { Slot } from '@/lib/db/schema/equipment';
 import { useDiamond } from '@/components/DiamondContext';
 import { useResourceToast, type HeaderReward } from '@/components/ResourceToast';
+import { PageHeader } from '@/components/ui/PageHeader';
 import {
   claimMailAction,
   claimAllMailAction,
@@ -326,6 +327,15 @@ export function MailList({
 
   return (
     <div className="space-y-3 px-4 py-4">
+      <PageHeader
+        title="우편함"
+        fallback="/me"
+        right={
+          unreadCount != null && unreadCount > 0 ? (
+            <span className="text-[11px] font-bold text-amber-500">미수령 {unreadCount}</span>
+          ) : null
+        }
+      />
       <div className="flex gap-1 rounded-full bg-zinc-100 p-1 text-center dark:bg-zinc-900">
         <Link prefetch={false} href="/mail" className={tabCls(tab === 'unread')}>
           미수령{unreadCount != null && unreadCount > 0 ? ` (${unreadCount})` : ''}

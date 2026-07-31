@@ -1,6 +1,7 @@
 import { and, count, eq, isNotNull } from 'drizzle-orm';
 
 import { getSessionUserId } from '@/lib/auth/session';
+import { PageHeader } from '@/components/ui/PageHeader';
 import { getActiveServerId } from '@/lib/game/servers';
 import { getWalletDiamond } from '@/lib/game/wallet';
 import { db } from '@/lib/db/client';
@@ -63,6 +64,7 @@ export default async function CreateProfilePage() {
 
   return (
     <div className="space-y-4 px-4 py-6">
+      <PageHeader title="아바타 생성" fallback="/me/profiles" />
       <p className="text-xs leading-relaxed text-zinc-500">
         성별을 고르면 현재 장착한 장비 3종의 컨셉을 녹여 캐릭터를 생성해요. 생성 후 자동 검토를
         거쳐 통과하면 아바타 목록에 추가돼요.

@@ -1,4 +1,5 @@
 'use client';
+import { PageHeader } from '@/components/ui/PageHeader';
 
 import { useMemo, useState } from 'react';
 import Link from 'next/link';
@@ -52,6 +53,7 @@ export function CodexGrid({ items }: { items: CodexItem[] }) {
 
   return (
     <div className="px-4 py-4">
+      <PageHeader title="도감" fallback="/me" />
       <div className="mb-3 flex flex-wrap items-center justify-between gap-2 text-xs">
         <div className="flex gap-1.5">
           <button type="button" className={fb(filter === 'all')} onClick={() => setFilter('all')}>

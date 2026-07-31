@@ -12,6 +12,7 @@ import type {
 } from '@/lib/game/leaderboard/queries';
 
 import { LeaderboardTabs } from './LeaderboardTabs';
+import { PageHeader } from '@/components/ui/PageHeader';
 
 const LABEL: Record<LeaderboardMetric, string> = {
   max: '최고 강화',
@@ -67,6 +68,7 @@ export function LeaderboardBoard({
 
   return (
     <div className="space-y-4 px-4 py-4">
+      <PageHeader title="랭킹" fallback="/me" />
       <LeaderboardTabs active={metric} onChange={setMetric} />
 
       <section className="flex items-center justify-between gap-2 rounded-xl border border-amber-300 bg-amber-50 px-3 py-2 dark:border-amber-700 dark:bg-amber-950/50">

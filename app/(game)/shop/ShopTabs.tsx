@@ -11,6 +11,7 @@ import { PublicFooter } from '@/components/PublicFooter';
 import { ModalShell } from '@/components/ModalShell';
 import { ModalLayout, ModalButton } from '@/components/ModalLayout';
 import { Tabs } from '@/components/ui/Tabs';
+import { PageHeader } from '@/components/ui/PageHeader';
 import * as PortOne from '@portone/browser-sdk/v2';
 
 import { verifyIdentityAction } from '../me/settings/identity-actions';
@@ -591,6 +592,7 @@ export function ShopTabs({
       <div className="flex min-h-0 flex-1 flex-col overflow-y-auto overscroll-contain">
         {/* 컨텐츠 영역 — flex-1 유지(짧아도 footer를 하단으로 밀어냄). 컨텐츠와 footer 모두 함께 스크롤. */}
         <div className="flex-1 px-3 py-3">
+        <PageHeader title="상점" fallback="/" />
         {/* 상단 배너 캐러셀(홈 배너 패턴) — 첫결제 특가(서버별 1회, 미구매 시) 우선 노출 +
             성장 프리미엄. 구매 완료(firstSpecialDone) 시 특가 슬라이드가 사라져 프리미엄 단독. */}
         <ul className="mb-3">

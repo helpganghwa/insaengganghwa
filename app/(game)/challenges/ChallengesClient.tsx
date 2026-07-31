@@ -6,6 +6,7 @@ import Link from 'next/link';
 import { ModalShell } from '@/components/ModalShell';
 import { ModalLayout, ModalButton } from '@/components/ModalLayout';
 import { useResourceToast } from '@/components/ResourceToast';
+import { PageHeader } from '@/components/ui/PageHeader';
 import { useDiamond } from '@/components/DiamondContext';
 import { InstallAppButton } from '@/app/(game)/me/settings/InstallAppButton';
 import {
@@ -145,12 +146,15 @@ export function ChallengesClient({
   return (
     <div className="px-4 py-4 pb-24">
       {/* ── 헤더 + 전체 진행 ── */}
-      <div className="flex items-baseline justify-between">
-        <h1 className="text-lg font-extrabold">🏆 도전 과제</h1>
-        <span className="text-[12px] tabular-nums text-zinc-500">
-          {claimedCount}/{list.length}
-        </span>
-      </div>
+      <PageHeader
+        title="도전 과제"
+        fallback="/me"
+        right={
+          <span className="text-[12px] tabular-nums text-zinc-500">
+            {claimedCount}/{list.length}
+          </span>
+        }
+      />
       <div className="mt-2 h-2 overflow-hidden rounded-full bg-zinc-100 dark:bg-zinc-800">
         <div
           className="h-full rounded-full bg-gradient-to-r from-amber-400 to-orange-500 transition-all duration-500"

@@ -4,6 +4,7 @@ import { notFound } from 'next/navigation';
 import { eq } from 'drizzle-orm';
 
 import { getSessionUserId } from '@/lib/auth/session';
+import { PageHeader } from '@/components/ui/PageHeader';
 import { db } from '@/lib/db/client';
 import { withTimeout } from '@/lib/db/with-timeout';
 import { catalogItems, type Slot } from '@/lib/db/schema/equipment';
@@ -56,6 +57,7 @@ export default async function CodexItemPage({
 
   return (
     <div className="space-y-4 px-4 py-4">
+      <PageHeader title={item.name} kicker="도감" fallback="/me/codex" />
       <header className="flex items-center gap-2">
         <h1 className="text-lg font-semibold">{item.name}</h1>
         <span className="ml-auto text-xs text-zinc-500">{SLOT_LABEL[item.slot]}</span>

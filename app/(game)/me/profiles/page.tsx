@@ -2,6 +2,7 @@ import Link from 'next/link';
 import { and, desc, eq } from 'drizzle-orm';
 
 import { getSessionUserId } from '@/lib/auth/session';
+import { PageHeader } from '@/components/ui/PageHeader';
 import { db } from '@/lib/db/client';
 import { characters } from '@/lib/db/schema/server';
 import { getActiveServerId } from '@/lib/game/servers';
@@ -40,6 +41,7 @@ export default async function ProfileSelectPage() {
 
   return (
     <div className="space-y-4 px-4 py-6">
+      <PageHeader title="아바타 관리" fallback="/me" />
       {list.length === 0 ? (
         <Link prefetch={false}
           href="/me/create"

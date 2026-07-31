@@ -7,6 +7,7 @@ import { assetUrl } from '@/lib/asset-versions';
 import type { MeleeHistoryRow } from '@/lib/game/melee/history';
 
 import { MeleeInfo } from './MeleeInfo';
+import { BackFab } from '@/components/BackNav';
 
 /**
  * 대난투 발표 전 화면 — MELEE §8.
@@ -96,6 +97,8 @@ export function MeleeCountdown({
     <div className="flex h-[calc(100%-var(--chat-dock-h,0px))] flex-col">
       {/* 무대 — 결과 화면과 동일 크기(h-60 고정). melee.png + 정보·남은시간 오버레이. */}
       <div className="relative h-60 shrink-0 overflow-hidden border-b border-amber-900/50">
+        {/* 발표 전 화면도 무대를 가지므로 여기에 뒤로가기를 둔다(MeleeResult와 같은 규칙). */}
+        <BackFab fallback="/" className="absolute left-3 top-2.5 z-20" />
         {/* eslint-disable-next-line @next/next/no-img-element */}
         <img
           src={assetUrl('/sprites/hub/melee.png')}

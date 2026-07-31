@@ -12,6 +12,7 @@ import { LastSeen } from '@/components/LastSeen';
 import { Avatar } from './Avatar';
 import { ZoomSafeInput } from '@/components/ui/ZoomSafeField';
 import { Tabs, type TabItem } from '@/components/ui/Tabs';
+import { PageHeader } from '@/components/ui/PageHeader';
 
 import {
   searchAction,
@@ -233,7 +234,8 @@ export function FriendsTabs({
 
   return (
     <div className="flex h-[calc(100%-var(--chat-dock-h,0px))] flex-col px-4 py-4">
-      <h1 className="mb-3 text-lg font-extrabold">친구</h1>
+      <PageHeader title="친구" fallback="/me" />
+      <div className="h-3" />
 
       <Tabs className="mb-3" items={TABS} value={tab} onChange={setTab} />
 

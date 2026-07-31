@@ -1,4 +1,5 @@
 import { getSessionUserId } from '@/lib/auth/session';
+import { PageHeader } from '@/components/ui/PageHeader';
 import { getActiveServerId } from '@/lib/game/servers';
 import { withTimeout } from '@/lib/db/with-timeout';
 import { getMyMembership, getGuildActivityLog } from '@/lib/game/guild';
@@ -36,6 +37,9 @@ export default async function GuildLogPage() {
   // 풀와이드 — 카드/사이드 패딩 없이 화면 폭 전체. 타이틀 없음(월드 로그와 동일).
   return (
     <div className="py-1">
+      <div className="px-4 pb-1">
+        <PageHeader title="활동 기록" fallback="/guild" />
+      </div>
       <GuildLogFeed entries={feed} full />
     </div>
   );

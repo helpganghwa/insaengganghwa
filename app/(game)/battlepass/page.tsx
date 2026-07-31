@@ -1,6 +1,7 @@
 import { getSessionUserId, shouldHidePaidContent } from '@/lib/auth/session';
 import { getAdminStatus } from '@/lib/auth/require-admin';
 import { getActiveServerId } from '@/lib/game/servers';
+import { PageHeader } from '@/components/ui/PageHeader';
 import { withTimeout } from '@/lib/db/with-timeout';
 import { getBattlePassView } from '@/lib/game/battlepass';
 import { portoneConfig } from '@/lib/payment/purchase';
@@ -25,11 +26,17 @@ export default async function BattlePassPage({
   const { isAdmin } = await getAdminStatus();
   if (!isAdmin && (await shouldHidePaidContent())) {
     return (
-      <div className="flex min-h-[60vh] flex-col items-center justify-center px-6 text-center">
-        <div className="text-3xl">🚧</div>
-        <h1 className="mt-2 text-base font-bold">준비 중입니다</h1>
-        <p className="mt-1 text-sm text-zinc-500">성장패스는 곧 만나보실 수 있어요.</p>
-      </div>
+      <>
+        {/* 차단 화면에도 뒤로가기가 필요하다 — 딥링크로 들어오면 안내만 보고 갇힌다. */}
+        <div className="px-4 py-4">
+          <PageHeader title="성장패스" fallback="/" />
+        </div>
+        <div className="flex min-h-[50vh] flex-col items-center justify-center px-6 text-center">
+          <div className="text-3xl">🚧</div>
+          <p className="mt-2 text-base font-bold">준비 중입니다</p>
+          <p className="mt-1 text-sm text-zinc-500">성장패스는 곧 만나보실 수 있어요.</p>
+        </div>
+      </>
     );
   }
 

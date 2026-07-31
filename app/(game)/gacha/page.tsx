@@ -4,6 +4,7 @@ import { getActiveServerId } from '@/lib/game/servers';
 import { preload } from 'react-dom';
 
 import { getSessionUserId } from '@/lib/auth/session';
+import { PageHeader } from '@/components/ui/PageHeader';
 import { db } from '@/lib/db/client';
 import { withTimeout } from '@/lib/db/with-timeout';
 import { userSupplyBoxes } from '@/lib/db/schema/supply';
@@ -43,6 +44,7 @@ export default async function GachaPage() {
 
   return (
     <div className="space-y-3 px-4 py-4">
+      <PageHeader title="보급소" fallback="/" />
       {BOXES.map((b, i) => (
         <GachaBoxCard
           key={b.slot}

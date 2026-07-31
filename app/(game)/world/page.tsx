@@ -1,4 +1,5 @@
 import { getSessionUserId } from '@/lib/auth/session';
+import { PageHeader } from '@/components/ui/PageHeader';
 import { getActiveServerId } from '@/lib/game/servers';
 import { withTimeout } from '@/lib/db/with-timeout';
 import { getWorldFeed } from '@/lib/game/world/event';
@@ -19,6 +20,9 @@ export default async function WorldPage() {
   // 풀와이드 — 카드/사이드 패딩 없이 화면 폭 전체. 타이틀 없음.
   return (
     <div className="py-1">
+      <div className="px-4 pb-1">
+        <PageHeader title="월드 로그" fallback="/" />
+      </div>
       <WorldLogFeed entries={feed} full />
     </div>
   );
