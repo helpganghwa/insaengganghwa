@@ -117,7 +117,7 @@ export function CbtEndedNotice({ compact = false }: { compact?: boolean }) {
           "기록 위에서 시작" 같은 승계 암시 문구는 쓰지 않는다 — 데이터는 초기화된다. */}
       <div className="px-6 pt-5">
         <p className="text-center text-[13.5px] leading-loose text-zinc-300">
-          한 달 동안 <b className="font-extrabold text-amber-300">{STAT.smiths}</b>의 대장장이가
+          CBT 한 달 동안 <b className="font-extrabold text-amber-300">{STAT.smiths}</b>의 대장장이가
           <br />
           망치를 <b className="font-extrabold text-amber-300">{STAT.hammered}</b> 내리쳤고,
           <br />
