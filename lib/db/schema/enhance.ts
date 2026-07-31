@@ -106,20 +106,27 @@ export const enhancementLogs = pgTable('enhancement_logs', {
 });
 
 /** §3.3 gem_time_reductions — 보석 단축 이력(인플레이션·어뷰징 추적, GDD §8). */
-export const gemTimeReductions = pgTable('gem_time_reductions', {
-  id: bigserial('id', { mode: 'bigint' }).primaryKey(),
-  /** 소속 서버(SERVER.md P3b). */
-  serverId: smallint('server_id').notNull().default(1),
-  jobId: bigint('job_id', { mode: 'bigint' })
-    .notNull()
-    .references(() => enhancementJobs.id, { onDelete: 'cascade' }),
-  userId: uuid('user_id').notNull(),
-  gemsSpent: bigint('gems_spent', { mode: 'bigint' }).notNull(),
-  reducedMs: bigint('reduced_ms', { mode: 'bigint' }).notNull(),
-  /** 등록 시점 환산률 스냅샷 — 다이아당 ms (BALANCE §6.2, 1다이아=60000ms). */
-  conversionMsPerDiamond: bigint('conversion_ms_per_diamond', { mode: 'bigint' }).notNull(),
-  createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
-});
+export const gemTimeReductions = pgTable(
+  'gem_time_reductions',
+  {
+    id: bigserial('id', { mode: 'bigint' }).primaryKey(),
+    /** 소속 서버(SERVER.md P3b). */
+    serverId: smallint('server_id').notNull().default(1),
+    jobId: bigint('job_id', { mode: 'bigint' })
+      .notNull()
+      .references(() => enhancementJobs.id, { onDelete: 'cascade' }),
+    userId: uuid('user_id').notNull(),
+    gemsSpent: bigint('gems_spent', { mode: 'bigint' }).notNull(),
+    reducedMs: bigint('reduced_ms', { mode: 'bigint' }).notNull(),
+    /** 등록 시점 환산률 스냅샷 — 다이아당 ms (BALANCE §6.2, 1다이아=60000ms). */
+    conversionMsPerDiamond: bigint('conversion_ms_per_diamond', { mode: 'bigint' }).notNull(),
+    createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
+  },
+  // ⚠ FK 인덱스는 자동 생성되지 않는다. 없으면 부모(enhancement_jobs) 삭제마다 이 테이블을
+  // 통째로 순차 스캔한다 — 2026-08-01 컷오버에서 45만 행 삭제가 20분을 넘겨도 끝나지 않은
+  // 원인이었다(0147). 탈퇴·잡 정리 등 평시 경로도 같은 길을 탄다.
+  (t) => [index('gem_time_reductions_job_id_idx').on(t.jobId)],
+);
 
 export type EnhancementJob = typeof enhancementJobs.$inferSelect;
 export type EnhancementLog = typeof enhancementLogs.$inferSelect;

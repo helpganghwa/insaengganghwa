@@ -36,7 +36,10 @@ const TARGET: string = target;
 // CBT 종료 시 아바타(user_profiles)는 삭제하고 이월하지 않는다(2026-07-24 보존 철회) —
 // 유저는 컷오버 후 기본 아바타 2종으로 새 시작. cbt-snapshot도 avatars를 스냅샷하지 않는다.
 const WIPE_TABLES = [
-  'enhancement_jobs', 'enhancement_logs', 'gem_time_reductions',
+  // gem_time_reductions가 enhancement_jobs보다 **먼저** 와야 한다 — 부모를 먼저 지우면
+  // CASCADE가 35만 행을 한 건씩 걷어내며 statement_timeout을 넘긴다(2026-08-01 실측).
+  // 자식을 벌크로 먼저 비우면 뒤이은 부모 삭제에 걷어낼 것이 남지 않는다.
+  'gem_time_reductions', 'enhancement_jobs', 'enhancement_logs',
   'transcend_logs',
   'supply_open_logs', 'user_supply_boxes',
   'user_equipment',
@@ -141,6 +144,10 @@ async function main() {
 
   console.log('\n--confirm 감지 → 트랜잭션 실행...');
   await sql.begin(async (tx) => {
+    // Supabase 기본 statement_timeout(2min)으로는 대량 CASCADE 삭제가 중간에 잘린다 —
+    // enhancement_jobs(45만) 삭제가 gem_time_reductions(35만)를 행 단위로 걷어내며 넘겼다
+    // (2026-08-01 컷오버 1차 시도, 트랜잭션이라 전부 롤백). 이 트랜잭션에만 해제한다.
+    await tx.unsafe(`set local statement_timeout = 0`);
     const effectiveTables = keepPayments
       ? WIPE_TABLES.filter((t) => !PAYMENT_TABLES.has(t))
       : WIPE_TABLES;
