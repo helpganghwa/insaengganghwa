@@ -18,16 +18,16 @@ export const OPEN_AT_ISO = '2026-08-10T11:00:00+09:00';
 const OPEN_LABEL = '8월 10일 오전 11시';
 
 /**
- * CBT 결산(프로덕션 실측) — 종료 시점 값으로 고정한다. 라이브 집계를 쓰지 않는 이유:
- * wipe 후엔 원본이 사라져 어차피 스냅샷이어야 하고, 로그인 화면에 DB 왕복을 더할 이유도
- * 없다. ⚠ 컷오버 데이(모드 켜기 직전)에 최종 수치로 갱신할 것.
+ * CBT 결산(프로덕션 실측, L-2 문장형 — 2026-07-31 확정) — 종료 시점 값으로 고정한다.
+ * 라이브 집계를 쓰지 않는 이유: wipe 후엔 원본이 사라져 어차피 스냅샷이어야 하고,
+ * 로그인 화면에 DB 왕복을 더할 이유도 없다. ⚠ 컷오버 데이(모드 켜기 직전) 최종 수치로 갱신.
  */
-const LEDGER = [
-  { k: '함께한 대장장이', v: '256', unit: '명' },
-  { k: '두드린 강화', v: '408,234', unit: '번' },
-  { k: '가장 높이 오른 강화', v: '+488', unit: '' },
-  { k: '벌어진 점령전', v: '143', unit: '전' },
-] as const;
+const STAT = {
+  smiths: '256명',
+  hammered: '408,234번',
+  peak: '+488',
+  battles: '143번',
+} as const;
 
 function diffParts(target: number, now: number) {
   const ms = Math.max(0, target - now);
@@ -113,25 +113,19 @@ export function CbtEndedNotice({ compact = false }: { compact?: boolean }) {
         </div>
       </div>
 
-      {/* 결산 명판 — 이 CBT에만 존재하는 기록. 수치는 종료 시점 고정(위 LEDGER 주석). */}
+      {/* 결산 — 표가 아니라 이야기(L-2). 숫자만 앰버 강조, 수치는 종료 시점 고정(위 STAT 주석).
+          "기록 위에서 시작" 같은 승계 암시 문구는 쓰지 않는다 — 데이터는 초기화된다. */}
       <div className="px-6 pt-5">
-        <div className="overflow-hidden rounded-2xl border border-amber-500/25 text-left">
-          <p className="bg-amber-500/10 px-4 py-2 text-[10.5px] font-extrabold tracking-[0.14em] text-amber-300">
-            CBT 결산 — 2026.7
-          </p>
-          {LEDGER.map((r) => (
-            <div
-              key={r.k}
-              className="flex items-baseline justify-between border-t border-white/[0.06] px-4 py-2.5"
-            >
-              <span className="text-[12px] text-zinc-400">{r.k}</span>
-              <span className="font-mono text-[15px] font-extrabold tabular-nums text-zinc-100">
-                <span className="text-amber-300">{r.v}</span>
-                {r.unit}
-              </span>
-            </div>
-          ))}
-        </div>
+        <p className="text-center text-[13.5px] leading-loose text-zinc-300">
+          한 달 동안 <b className="font-extrabold text-amber-300">{STAT.smiths}</b>의 대장장이가
+          <br />
+          망치를 <b className="font-extrabold text-amber-300">{STAT.hammered}</b> 내리쳤고,
+          <br />
+          누군가는 <b className="font-extrabold text-amber-300">{STAT.peak}</b>까지 올랐으며,
+          <br />
+          대륙에선 <b className="font-extrabold text-amber-300">{STAT.battles}</b>의 점령전이
+          벌어졌습니다.
+        </p>
 
         {/* 오픈 알림(0145) — 종료 화면 트래픽을 오픈일 복귀로 전환하는 유일한 접점. */}
         <OpenAlertSection />

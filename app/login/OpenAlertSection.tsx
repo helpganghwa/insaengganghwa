@@ -76,38 +76,28 @@ export function OpenAlertSection() {
   };
 
   return (
-    <div className="mt-4 rounded-2xl border border-amber-500/25 bg-amber-500/[0.06] px-4 py-4 text-center">
+    <div className="mt-5 text-center">
       {state === 'done' ? (
-        <>
-          <p className="text-[13px] font-bold text-amber-300">오픈 알림 신청 완료</p>
-          <p className="mt-1 text-[11.5px] leading-relaxed text-zinc-400">
-            문이 열리는 순간, 이 기기로 알려드릴게요.
-          </p>
-        </>
+        <p className="text-[12px] leading-relaxed text-amber-300/90">
+          오픈 알림 신청 완료 — 문이 열리는 순간 알려드릴게요.
+        </p>
       ) : (
         <>
-          <p className="text-[13px] font-bold text-zinc-200">오픈을 놓치지 마세요</p>
-          <p className="mt-1 text-[11.5px] leading-relaxed text-zinc-400">
-            알림을 켜두면 정식 오픈 소식을 이 기기로 보내드려요.
-          </p>
           <button
             type="button"
             onClick={subscribe}
             disabled={state === 'pending'}
-            className="mt-3 w-full rounded-xl bg-amber-600 py-3 text-[13.5px] font-bold text-white transition active:scale-[0.99] disabled:opacity-60"
+            className="inline-flex items-center gap-1.5 rounded-full bg-amber-600 px-5 py-2 text-[12.5px] font-bold text-white transition active:scale-95 disabled:opacity-60"
           >
             {state === 'pending' ? '신청 중…' : '🔔 오픈 알림 받기'}
           </button>
-          {state === 'denied' ? (
-            <p className="mt-2 text-[10.5px] leading-relaxed text-zinc-500">
-              알림이 차단되어 있어요 — 브라우저 설정에서 알림을 허용한 뒤 다시 눌러 주세요.
-            </p>
-          ) : null}
-          {state === 'unsupported' ? (
-            <p className="mt-2 text-[10.5px] leading-relaxed text-zinc-500">
-              이 브라우저는 알림을 지원하지 않아요. 앱 설치 후 이용해 주세요.
-            </p>
-          ) : null}
+          <p className="mt-1.5 text-[10.5px] leading-relaxed text-zinc-500">
+            {state === 'denied'
+              ? '알림이 차단되어 있어요 — 브라우저 설정에서 허용 후 다시 눌러 주세요.'
+              : state === 'unsupported'
+                ? '이 브라우저는 알림을 지원하지 않아요. 앱 설치 후 이용해 주세요.'
+                : '알림을 켜두면 오픈 소식을 이 기기로 보내드려요.'}
+          </p>
         </>
       )}
       {iosGuide ? <InstallGuideModal platform="ios" onClose={() => setIosGuide(false)} /> : null}
