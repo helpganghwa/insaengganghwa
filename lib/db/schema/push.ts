@@ -38,9 +38,9 @@ export const pushSubscriptions = pgTable(
   'push_subscriptions',
   {
     id: bigserial('id', { mode: 'bigint' }).primaryKey(),
-    userId: uuid('user_id')
-      .notNull()
-      .references(() => profiles.id, { onDelete: 'cascade' }),
+    /** null = 익명 구독(0145) — CBT 종료 화면 '오픈 알림 받기'(로그아웃 상태). 같은 기기가
+     *  로그인하면 registerPushSubscriptionAction upsert가 endpoint 충돌로 user_id를 채운다. */
+    userId: uuid('user_id').references(() => profiles.id, { onDelete: 'cascade' }),
     /** PushSubscription.endpoint — 푸시 서비스 라우팅 URL(FCM/APNS). */
     endpoint: text('endpoint').notNull().unique(),
     /** PushSubscription.keys.p256dh (ECDH public key, base64url). */

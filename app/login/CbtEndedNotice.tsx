@@ -2,6 +2,8 @@
 
 import { useEffect, useState } from 'react';
 
+import { OpenAlertSection } from './OpenAlertSection';
+
 /**
  * CBT 종료 화면(0144, C안+결산 — 2026-07-31 확정) — system_mode 'cbt_ended' 동안 로그인
  * 화면을 대체. 세로 풀블리드 일러스트(오버레이: 감사 인사 + 카운트다운) 아래 CBT 실측
@@ -131,6 +133,8 @@ export function CbtEndedNotice({ compact = false }: { compact?: boolean }) {
           ))}
         </div>
 
+        {/* 오픈 알림(0145) — 종료 화면 트래픽을 오픈일 복귀로 전환하는 유일한 접점. */}
+        <OpenAlertSection />
       </div>
     </div>
   );
