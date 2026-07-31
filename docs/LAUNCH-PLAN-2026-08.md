@@ -50,7 +50,7 @@ set -a && source .env.local && set +a
 | 6 | 전체 백업 | `/opt/homebrew/opt/libpq/bin/pg_dump "${PROD_DATABASE_URL/6543/5432}" --no-owner -Fc -f ~/cbt-final-$(date +%Y%m%d).dump` (세션 풀러 :5432 — 트랜잭션 풀러로는 불가) |
 | 7 | 1차 wipe | `bun run scripts/cutover-live.ts --db=prod` 드라이런 → `--confirm` (결제 테이블 **포함** 전체) |
 | 8 | 종료 모드 | `update system_mode set mode='cbt_ended', scheduled_from=null, scheduled_until=null, note='CBT 종료', updated_at=now() where key='global';` |
-| 9 | 크론 재개 | Vercel Cron Jobs → Enable |
+| 9 | 크론 재개 | Vercel Cron Jobs → Enable → **§8.7 표와 20개 대조**(일부만 켜진 상태가 가장 늦게 발견된다) |
 | 10 | 검증 | ganghwa.app/login = 종료 화면 · `?test=true` 로그인 가능 · 일반 카카오 차단 확인 |
 
 **복원(cbt-restore)은 실행하지 않는다** — 2단계 몫.
@@ -85,7 +85,7 @@ select count(*) from conquest_battles where winner_guild_id is not null;  -- fla
 | 3 | 2차 wipe | `bun run scripts/cutover-live.ts --db=prod --keep-payments --confirm` — **플래그 필수**(테스트 실결제·본인인증 5종 = 전자상거래법 5년 보존) |
 | 4 | 복원·보상 지급 | `bun run --env-file=.env.local scripts/cbt-restore.ts --db=prod` 드라이런 → `--confirm` (캐릭터 241 + 우편 3종: 특별 보상·초대 이월·환영) |
 | 5 | 종료 모드 복원 | `update system_mode set mode='cbt_ended' ... ;` (오픈 전까지 종료 화면 유지) |
-| 6 | 크론 재개 | Enable — 8/10 아침 대난투(09:00)·보급 푸시는 cbt_ended 게이트가 자동 skip |
+| 6 | 크론 재개 | Enable → **§8.7 표와 20개 대조**. 8/10 아침 대난투(09:00)·보급 푸시는 cbt_ended 게이트가 자동 skip |
 | 7 | env·값 정리 | `TEST_MODE` 삭제(배율 ×1) · `PAYMENTS_OPEN=true`(카드사 심사 완료 시에만) · `GUILD_REJOIN_LOCK_HOURS` 1→24 커밋 · 재배포 |
 | 8 | 확률 공시 | `bun run scripts/record-probability-snapshot.ts --note="정식 오픈" --confirm` |
 | 9 | 서버명 | `update servers set name='1서버' where id=1;` |
@@ -128,6 +128,7 @@ select count(*) from conquest_battles where winner_guild_id is not null;  -- fla
 | B2 | **Supabase Compute Small → Medium** | 8/7~8 새벽(재시작 동반). 동접 500 대비 — ROADMAP §2 #11 |
 | B3 | **외부 uptime 모니터 배선** | `https://ganghwa.app/api/health/deep` 1~5분 GET, 비200/도달불가 알림(UptimeRobot 등). 런북 §7.5 — 미실행 상태 |
 | B4 | **아이템 14종 추가(106 → 120)** | 스프라이트(Pixellab)·로어·세트 배치까지. 현재 무기 32·방어 38·장신구 36 |
+| B5 | **Vercel Cron Jobs 재활성 확인** | 컷오버마다 대시보드에서 **수동으로** 껐다 켜는 토글이라 잊기 쉽다(코드·env에 흔적이 남지 않아 리뷰로도 안 잡힌다). 꺼진 채 오픈하면 강화 완료 푸시·레이드 정산·대난투·점령전·랭킹 스냅샷이 **전부 멈춘 채로 서비스가 돌아간다**. 오픈 직후 §8.7 표와 대조해 20개 전부 Enabled인지 눈으로 확인 |
 
 ### 8.2 중요 (오픈 품질)
 
@@ -177,6 +178,34 @@ select count(*) from conquest_battles where winner_guild_id is not null;  -- fla
 | `user_daily_stats` | 일자별 개인 집계 승계 |
 
 **검증**: 스테이징에서 67개 전 테이블을 단일 트랜잭션으로 delete 후 롤백 — FK 순서 정상 확인.
+
+### 8.7 Cron 정본 목록 (재활성 검증용 · vercel.json 기준 20개)
+
+컷오버에서 Disable → Enable을 오가므로, **켜진 뒤 이 표와 하나씩 대조**한다.
+개수만 세지 말고 경로까지 볼 것 — 일부만 켜진 상태가 가장 발견이 늦다.
+
+| 스케줄(UTC) | 경로 | 멈추면 생기는 일 |
+|---|---|---|
+| `* * * * *` | `/api/cron/push-enhance-ready` | 강화 완료 푸시가 안 나감 |
+| `* * * * *` | `/api/cron/warm` | 콜드스타트 증가(체감 지연) |
+| `*/5 * * * *` | `/api/cron/settle-raid` | 레이드가 정산되지 않아 보상 미지급 |
+| `*/5 * * * *` | `/api/cron/push-flush` | 묶음 푸시 전송 정지 |
+| `*/10 * * * *` | `/api/cron/payment-recon` | 결제 대사 정지(지급 누락 감지 불가) |
+| `1-59/2 * * * *` | `/api/cron/profile-poll` | 아바타 생성이 완료 처리되지 않음 |
+| `2-57/5 * * * *` | `/api/cron/scheduled-mail` | 예약 우편 미발송 |
+| `3-53/10 * * * *` | `/api/cron/guild-emblem-retry` | 실패한 문양 재생성 안 됨 |
+| `7,22,37,52 * * * *` | `/api/cron/rank-leader` | 랭킹 1위 티커 정지 |
+| `11 * * * *` | `/api/cron/leaderboard-snapshot` | 랭킹 스냅샷 갱신 정지 |
+| `*/5 0 * * *` | `/api/cron/melee-run` | 대난투 미진행 |
+| `*/5 1 * * *` | `/api/cron/melee-reveal` | 대난투 결과 미발표 |
+| `*/5 14 * * *` | `/api/cron/conquest-run` | 점령전 미진행 |
+| `0-55/5 15 * * *` | `/api/cron/conquest-chronicle` | 연대기 미생성 |
+| `1 15 * * *` | `/api/cron/daily-stats` | 일일 통계 누락 |
+| `40 15 * * *` | `/api/cron/guild-rank-achv` | 길드 랭킹 업적 미지급 |
+| `5,35 15-23 * * *` | `/api/cron/push-daily-supply` | 일일 보급 푸시 안 나감 |
+| `0 18 * * *` | `/api/cron/mail-expire` | 만료 우편 정리 안 됨 |
+| `30 19 * * *` | `/api/cron/nickname-reclaim` | 탈퇴 닉네임 회수 안 됨 |
+| `0 3 * * *` | `/api/cron/guild-leader-handover` | 장기 미접속 길드장 위임 안 됨 |
 
 ### 의도적 보존 전수 목록 (wipe 대상이 아닌 13종)
 
