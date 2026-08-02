@@ -7,6 +7,8 @@ import { TranscendSprite } from '@/components/TranscendSprite';
 import { useDiamond } from '@/components/DiamondContext';
 import { useResourceToast } from '@/components/ResourceToast';
 import * as haptic from '@/lib/game/haptic';
+import { ModalShell } from '@/components/ModalShell';
+import { ModalLayout, ModalButton } from '@/components/ModalLayout';
 import { formatCompactKR } from '@/lib/ui/format-number';
 import { PROFILE_MAX } from '@/lib/game/balance';
 import type { Slot } from '@/lib/db/schema/equipment';
@@ -55,30 +57,13 @@ export function CreateProfileForm({
   const { optimisticAdjust: adjustDiamond } = useDiamond();
   const { showHeaderToast, showError } = useResourceToast();
   const [gender, setGender] = useState<'female' | 'male'>('female');
+  /** 생성 확인 팝업 — 종전엔 3초 재탭 컨펌이라 안내를 넣을 자리가 없었다(2026-08-02). */
   const [confirm, setConfirm] = useState(false);
-  const [confirmLeft, setConfirmLeft] = useState(0); // 3s 재탭 컨펌 카운트다운
   const [submitted, setSubmitted] = useState(false); // 낙관: 제출 직후 ⏳ 즉시 표시
   const [nowMs, setNowMs] = useState<number | null>(null); // 진행시간용 라이브 클럭(마운트 후 세팅 — 하이드레이션 안전)
   const [pending, startTransition] = useTransition();
 
   // 생성 — 강화 취소와 동일 3s 재탭 컨펌(오탭 보호). 만료 시 자동 해제.
-  useEffect(() => {
-    if (!confirm) {
-      setConfirmLeft(0);
-      return;
-    }
-    setConfirmLeft(3);
-    const id = setInterval(() => {
-      setConfirmLeft((s) => {
-        if (s <= 1) {
-          setConfirm(false);
-          return 0;
-        }
-        return s - 1;
-      });
-    }, 1000);
-    return () => clearInterval(id);
-  }, [confirm]);
 
   // 생성 진행/대기 중이면 1초마다 라이브 클럭 갱신(경과 시간 표시용).
   useEffect(() => {
@@ -109,10 +94,11 @@ export function CreateProfileForm({
       showError(`프로필은 최대 ${PROFILE_MAX}개까지 보유할 수 있어요`);
       return;
     }
-    if (!confirm) {
-      setConfirm(true);
-      return;
-    }
+    setConfirm(true);
+  };
+
+  /** 팝업에서 확정 — 실제 생성 요청. */
+  const runCreate = () => {
     setConfirm(false);
     // 낙관 업데이트: 헤더 다이아 즉시 차감 + ⏳ 처리중 카드 즉시 노출. 실패 시 롤백.
     haptic.success();
@@ -263,47 +249,66 @@ export function CreateProfileForm({
         </span>
       </div>
 
-      {/* 결제 직전 안내 — 상단 설명은 '자동 검토'만 알려줄 뿐, 검토에서 걸렸을 때 다이아가
-          어떻게 되는지는 말하지 않았다. 실제로는 전액 환불(우편 안내)이라 미리 알리면
-          "돈만 날렸다"는 오해가 생기지 않는다(2026-08-02). */}
-      <p className="px-1 text-[11px] leading-relaxed text-zinc-500">
-        검토에서 통과하지 못하면 <b className="font-semibold text-zinc-400">다이아는 전액 환불</b>되고
-        우편으로 알려드려요. 생성에는 보통 1~2분이 걸립니다.
-      </p>
-
       {/* 생성 버튼 */}
       <button
         type="button"
         onClick={onClick}
         disabled={disabled}
-        className={`relative w-full isolate overflow-hidden rounded-xl py-3.5 text-sm font-bold transition-colors ${
+        className={`w-full rounded-xl py-3.5 text-sm font-bold transition-colors ${
           disabled
             ? 'bg-zinc-200 text-zinc-400 dark:bg-zinc-800 dark:text-zinc-600'
-            : confirm
-              ? 'bg-violet-700 text-white'
-              : 'bg-violet-600 text-white'
+            : 'bg-violet-600 text-white'
         }`}
       >
-        {/* 배경만 펄스(텍스트 안정) — 일괄 초월 확인버튼 패턴. */}
-        {confirm ? (
-          <span
-            aria-hidden
-            className="absolute inset-0 bg-violet-500"
-            style={{ animation: 'confirm-bg-pulse 1.2s ease-in-out infinite' }}
-          />
-        ) : null}
-        <span className="relative">
-          {pending
-            ? '요청 중…'
-            : !allEquipped
-              ? '장비 3종 장착 필요'
-              : !enough
-                ? '다이아 부족'
-                : confirm
-                  ? `한 번 더 누르면 💎 ${price.toLocaleString('ko-KR')} 차감 (${confirmLeft}s)`
-                  : '아바타 생성'}
-        </span>
+        {pending
+          ? '요청 중…'
+          : !allEquipped
+            ? '장비 3종 장착 필요'
+            : !enough
+              ? '다이아 부족'
+              : '아바타 생성'}
       </button>
+
+      {/* 확인 팝업 — 차감·소요시간·환불 조건을 한자리에서 알리고 확정받는다. */}
+      {confirm ? (
+        <ModalShell onClose={() => setConfirm(false)} label="아바타 생성 확인">
+          <ModalLayout
+            title="아바타를 생성할까요?"
+            subtitle={`💎 ${price.toLocaleString('ko-KR')}이 차감됩니다`}
+            footer={
+              <>
+                <ModalButton tone="ghost" onClick={() => setConfirm(false)}>
+                  취소
+                </ModalButton>
+                <ModalButton tone="primary" onClick={runCreate}>
+                  생성하기
+                </ModalButton>
+              </>
+            }
+          >
+            <ul className="space-y-2 text-[12.5px] leading-relaxed text-zinc-600 dark:text-zinc-300">
+              <li className="flex gap-2">
+                <span aria-hidden className="text-zinc-400">·</span>
+                <span>
+                  생성에는 <b className="font-semibold">10분 내외</b>가 걸려요. 그동안 다른 화면을
+                  이용하셔도 됩니다.
+                </span>
+              </li>
+              <li className="flex gap-2">
+                <span aria-hidden className="text-zinc-400">·</span>
+                <span>
+                  완성되면 자동 검토를 거칩니다. 통과하지 못하면{' '}
+                  <b className="font-semibold">다이아는 전액 환불</b>되고 우편으로 알려드려요.
+                </span>
+              </li>
+              <li className="flex gap-2">
+                <span aria-hidden className="text-zinc-400">·</span>
+                <span>현재 장착한 장비 3종의 컨셉이 반영됩니다.</span>
+              </li>
+            </ul>
+          </ModalLayout>
+        </ModalShell>
+      ) : null}
     </div>
   );
 }

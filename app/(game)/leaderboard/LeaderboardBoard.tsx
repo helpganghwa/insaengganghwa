@@ -75,22 +75,24 @@ export function LeaderboardBoard({
         <PageHeader
           title="랭킹"
           fallback="/me"
-          kicker={LABEL[metric]}
-          right={
-            <div className="flex items-center gap-1.5">
-              <span className="font-mono text-[12.5px] font-bold text-amber-500 tabular-nums">
-                {mine ? `#${mine.rank.toLocaleString('ko-KR')}` : '—'}
-              </span>
+          kicker={
+            <span className="inline-flex items-baseline gap-1">
+              {LABEL[metric]}
               <button
                 type="button"
                 onClick={() => setInfoOpen((v) => !v)}
                 aria-label="산정 기준"
                 aria-expanded={infoOpen}
-                className="flex h-5 w-5 items-center justify-center rounded-full border border-zinc-300 text-[10px] font-bold leading-none text-zinc-400 dark:border-zinc-700"
+                className="relative inline-flex h-[13px] w-[13px] translate-y-px items-center justify-center rounded-full border border-zinc-400 text-[9px] font-bold leading-none text-zinc-400 after:absolute after:-inset-2 after:content-[''] dark:border-zinc-600"
               >
                 i
               </button>
-            </div>
+            </span>
+          }
+          right={
+            <span className="font-mono text-[12.5px] font-bold tabular-nums text-amber-500">
+              {mine ? `#${mine.rank.toLocaleString('ko-KR')} · ${fmt(mine.value)}` : '기록 없음'}
+            </span>
           }
         />
         {infoOpen ? (
