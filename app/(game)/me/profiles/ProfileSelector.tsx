@@ -131,6 +131,14 @@ export function ProfileSelector({
                 : 'border-zinc-200 dark:border-zinc-800'
             }`}
           >
+            {/* 대표 배지 — 선택 테두리(보라)만으로는 '지금 보는 것'과 '대표로 쓰는 것'이
+                구분되지 않는다. 하단 버튼은 결과만 알려줄 뿐 어느 썸네일인지는 말하지
+                않았다(2026-08-02). */}
+            {p.id === activeProfileId ? (
+              <span className="absolute left-0 top-0 z-10 rounded-br-md bg-amber-500 px-1 py-px text-[8px] font-bold leading-tight text-white">
+                대표
+              </span>
+            ) : null}
             {/* eslint-disable-next-line @next/next/no-img-element */}
             <img
               src={frontSrc(p)}

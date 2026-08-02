@@ -64,26 +64,43 @@ export function LeaderboardBoard({
   userId: string;
 }) {
   const [metric, setMetric] = useState<LeaderboardMetric>(initial);
+  const [infoOpen, setInfoOpen] = useState(false);
   const { top, mine } = payloads[metric];
 
   return (
     <>
       <div className="px-4 pb-3 pt-3">
-        <PageHeader title="랭킹" fallback="/me" />
+        {/* 내 순위는 헤더 우측 한 곳에서만 — 종전엔 상단 카드와 목록 하이라이트로 두 번 나오면서
+            세로 90px을 썼다. 산정 기준은 상시 두 줄을 먹던 캡션 대신 ⓘ로 접었다(2026-08-02). */}
+        <PageHeader
+          title="랭킹"
+          fallback="/me"
+          kicker={LABEL[metric]}
+          right={
+            <div className="flex items-center gap-1.5">
+              <span className="font-mono text-[12.5px] font-bold text-amber-500 tabular-nums">
+                {mine ? `#${mine.rank.toLocaleString('ko-KR')}` : '—'}
+              </span>
+              <button
+                type="button"
+                onClick={() => setInfoOpen((v) => !v)}
+                aria-label="산정 기준"
+                aria-expanded={infoOpen}
+                className="flex h-5 w-5 items-center justify-center rounded-full border border-zinc-300 text-[10px] font-bold leading-none text-zinc-400 dark:border-zinc-700"
+              >
+                i
+              </button>
+            </div>
+          }
+        />
+        {infoOpen ? (
+          <p className="mt-2 rounded-lg bg-zinc-100 px-3 py-2 text-[11px] leading-relaxed text-zinc-500 dark:bg-zinc-900">
+            {CRITERIA[metric]}
+          </p>
+        ) : null}
       </div>
       <div className="space-y-4 px-4 pb-4">
       <LeaderboardTabs active={metric} onChange={setMetric} />
-
-      <section className="flex items-center justify-between gap-2 rounded-xl border border-amber-300 bg-amber-50 px-3 py-2 dark:border-amber-700 dark:bg-amber-950/50">
-        <span className="text-xs text-amber-700 dark:text-amber-300">내 {LABEL[metric]} 순위</span>
-        <span className="font-mono text-sm font-bold text-amber-900 dark:text-amber-100">
-          {mine
-            ? `#${mine.rank.toLocaleString('ko-KR')} · ${fmt(mine.value)}`
-            : '기록을 쌓으면 집계돼요'}
-        </span>
-      </section>
-      {/* space-y-4(16px)를 -mt로 좁혀 카드에 종속된 캡션으로 보이게(6px 간격). */}
-      <p className="-mt-2.5 px-1 text-[10px] leading-relaxed text-zinc-500">{CRITERIA[metric]}</p>
 
       {top.length === 0 ? (
         <section className="rounded-xl border border-zinc-800 bg-zinc-900 px-4 py-10 text-center text-sm text-zinc-400">
@@ -257,6 +274,21 @@ export function LeaderboardBoard({
               </ul>
             </section>
           )}
+
+          {/* 내 순위 고정 줄 — Top 100 밖이면 목록에 내가 없어 "몇 등인지"를 알 수 없다.
+              스크롤과 무관하게 바닥에 붙여 항상 보이게 한다. 목록 안에 있으면 하이라이트가
+              이미 있으므로 중복을 피해 내보내지 않는다(2026-08-02). */}
+          {mine && !top.some((e) => e.userId === userId) ? (
+            <section className="sticky bottom-2 z-10 flex items-center gap-2.5 rounded-xl border border-amber-500/60 bg-zinc-950/95 px-3 py-2.5 shadow-lg shadow-black/50 backdrop-blur">
+              <span className="w-7 shrink-0 text-center font-mono text-sm font-bold text-amber-300 tabular-nums">
+                #{mine.rank}
+              </span>
+              <span className="min-w-0 flex-1 truncate text-sm font-medium text-white">나</span>
+              <span className="font-mono text-sm font-bold text-amber-200 tabular-nums">
+                {fmt(mine.value)}
+              </span>
+            </section>
+          ) : null}
         </>
       )}
       </div>

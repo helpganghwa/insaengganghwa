@@ -110,6 +110,16 @@ const CASH_ART: Record<string, { bg: string; char: string }> = {
 };
 
 const won = (n: number) => `₩${n.toLocaleString('ko-KR')}`;
+/**
+ * 다이아 충전 이득 배지 — 팩마다 천원당 다이아가 달라(200~235💎) 큰 팩이 유리한데,
+ * 화면엔 총량과 가격만 있어 비교하려면 암산해야 했다. 최소 팩 기준 초과분만 표시한다
+ * (동률이면 배지 없음). 2026-08-02.
+ */
+function diaBonus(total: number, krw: number): string | null {
+  const base = DIAMONDS[0]!;
+  const pct = Math.round((total / krw / (base.total / base.krw) - 1) * 100);
+  return pct >= 5 ? `+${pct}%` : null;
+}
 const dia = (n: number) => `💎${n.toLocaleString('ko-KR')}`;
 /** 공용 에러코드 → 안내(레이트리밋·점검·정지·전송실패). 해당 없으면 null → 호출부 폴백 사용. */
 function commonErrTitle(code: string | undefined): string | null {
@@ -134,6 +144,7 @@ function BannerCard({
   desc,
   detail,
   price,
+  bonus,
   grayscale,
   confirming,
   tall,
@@ -148,6 +159,8 @@ function BannerCard({
   desc: string;
   detail: string;
   price?: string;
+  /** 가격 대비 이득(예: '+18%') — 있을 때만 제목 옆 배지. */
+  bonus?: string | null;
   grayscale?: boolean;
   confirming?: boolean;
   tall?: boolean;
@@ -199,9 +212,14 @@ function BannerCard({
             {/* 심플 — 제목 + (있으면) 설명 한 줄 */}
             <div className="relative z-10 flex h-full flex-col justify-center px-3.5">
               <div
-                className={`text-[14px] font-extrabold ${titleColor} text-pixel-outline drop-shadow-[0_1px_2px_rgba(0,0,0,0.9)]`}
+                className={`flex items-center gap-1.5 text-[14px] font-extrabold ${titleColor} text-pixel-outline drop-shadow-[0_1px_2px_rgba(0,0,0,0.9)]`}
               >
                 {title}
+                {bonus ? (
+                  <span className="rounded bg-emerald-500 px-1 py-px text-[9px] font-extrabold leading-tight text-white drop-shadow-none">
+                    {bonus}
+                  </span>
+                ) : null}
               </div>
               {desc ? (
                 <div className="mt-0.5 truncate text-[10px] font-medium text-white/80 drop-shadow-[0_1px_2px_rgba(0,0,0,0.9)]">
@@ -749,6 +767,7 @@ export function ShopTabs({
                 title={dia(d.total)}
                 desc={DIAMOND_DESC[d.id] ?? ''}
                 detail=""
+                bonus={diaBonus(d.total, d.krw)}
                 price={won(d.krw)}
                 confirming={confirm === d.id}
                 onClick={() => tapPaid(d.id, canSell, () => buy(d.id))}

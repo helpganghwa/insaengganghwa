@@ -263,6 +263,14 @@ export function CreateProfileForm({
         </span>
       </div>
 
+      {/* 결제 직전 안내 — 상단 설명은 '자동 검토'만 알려줄 뿐, 검토에서 걸렸을 때 다이아가
+          어떻게 되는지는 말하지 않았다. 실제로는 전액 환불(우편 안내)이라 미리 알리면
+          "돈만 날렸다"는 오해가 생기지 않는다(2026-08-02). */}
+      <p className="px-1 text-[11px] leading-relaxed text-zinc-500">
+        검토에서 통과하지 못하면 <b className="font-semibold text-zinc-400">다이아는 전액 환불</b>되고
+        우편으로 알려드려요. 생성에는 보통 1~2분이 걸립니다.
+      </p>
+
       {/* 생성 버튼 */}
       <button
         type="button"

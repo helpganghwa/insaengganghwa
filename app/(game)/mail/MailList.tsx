@@ -348,10 +348,12 @@ export function MailList({
       {tab === 'unread' && totalCount > 0 ? (
         // 컴팩트 1행 — 좌 라벨 + 우 합계 preview. 즉시 실행(컨펌 없음).
         // 옵티미스틱: 클릭 시 displayItems가 즉시 [] → 버튼 자체가 사라짐.
+        // sticky — 미수령이 쌓이면 목록이 길어져 스크롤 중 버튼이 화면 밖으로 나간다.
+        // 우편함에서 가장 잦은 동작이라 스크롤과 무관하게 손이 닿는 자리에 둔다(2026-08-02).
         <button
           type="button"
           onClick={claimAll}
-          className="flex w-full items-center justify-between gap-2 rounded-lg border border-amber-500/50 bg-amber-500/10 px-3 py-2.5 text-amber-700 hover:bg-amber-500/20 dark:text-amber-300"
+          className="sticky top-1 z-10 flex w-full items-center justify-between gap-2 rounded-lg border border-amber-500/50 bg-amber-500/95 px-3 py-2.5 text-amber-950 shadow-md shadow-black/20 backdrop-blur hover:brightness-105 dark:bg-amber-600/95 dark:text-amber-50"
         >
           <span className="text-xs font-bold">모두 받기 ({totalCount}건)</span>
           {totalParts.length > 0 ? (
@@ -378,7 +380,12 @@ export function MailList({
         <ul className="space-y-2">
           {displayItems.map((m) => {
             const expMs = new Date(m.expiresAtIso).getTime();
-            const expSoon = tab === 'unread' && expMs - nowMs < 24 * 3_600_000;
+            // 만료 경고 — 종전엔 24시간 이내에만 글자색이 붉어졌다. 작은 회색 메타행의 색
+            // 변화라 놓치기 쉽고, 하루 전엔 이미 늦다. 3일 전부터 배지로 알린다(2026-08-02).
+            const expLeftMs = expMs - nowMs;
+            const expSoon = tab === 'unread' && expLeftMs < 24 * 3_600_000;
+            const expWarn = tab === 'unread' && expLeftMs < 3 * 86_400_000;
+            const expDays = Math.max(0, Math.ceil(expLeftMs / 86_400_000));
             const meta = TYPE_META[m.type] ?? DEFAULT_TYPE_META;
             const showPayload = hasPayload(m.payload);
             return (
@@ -429,6 +436,17 @@ export function MailList({
                         <span className={expSoon ? 'text-red-600 dark:text-red-400' : ''}>
                           {tab === 'unread' ? fmtRemaining(expMs, nowMs) : '수령 완료'}
                         </span>
+                        {expWarn ? (
+                          <span
+                            className={`shrink-0 rounded px-1 py-px text-[9px] font-bold ${
+                              expSoon
+                                ? 'bg-red-600 text-white'
+                                : 'bg-amber-500/20 text-amber-700 dark:text-amber-300'
+                            }`}
+                          >
+                            {expSoon ? '오늘 만료' : `D-${expDays}`}
+                          </span>
+                        ) : null}
                       </div>
                       <div className="mt-0.5 text-sm font-semibold">{m.title}</div>
                       {m.body ? (

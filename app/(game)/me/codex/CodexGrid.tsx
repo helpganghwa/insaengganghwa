@@ -31,11 +31,15 @@ export type CodexItem = {
  * 기본 정렬 = 강화순(내 장비 중 가장 강화된 것을 위로 — 건의 취지). 미획득은 항상 뒤로.
  */
 export function CodexGrid({ items }: { items: CodexItem[] }) {
-  const [filter, setFilter] = useState<SlotFilter>('all');
+  const [filter, setFilter] = useState<SlotFilter | 'missing'>('all');
   const [sortBy, setSortBy] = useState<SortBy>('enhance');
 
   const shown = useMemo(() => {
-    const list = items.filter((i) => (filter === 'all' ? true : i.slot === filter));
+    // 'missing' — 아직 못 모은 것만. 강화순 정렬이라 미획득이 항상 뒤로 밀려 끝까지
+    // 스크롤해야 보이던 것을 한 번에 가른다(2026-08-02).
+    const list = items.filter((i) =>
+      filter === 'all' ? true : filter === 'missing' ? !i.got : i.slot === filter,
+    );
     const sorted = [...list];
     if (sortBy === 'enhance') {
       // 강화순 — 획득(max) 내림차순, 미획득(null→-1)은 뒤로, 동순위는 이름.
@@ -45,6 +49,8 @@ export function CodexGrid({ items }: { items: CodexItem[] }) {
     }
     return sorted;
   }, [items, filter, sortBy]);
+
+  const missing = useMemo(() => items.filter((i) => !i.got).length, [items]);
 
   const fb = (active: boolean) =>
     active
@@ -65,6 +71,15 @@ export function CodexGrid({ items }: { items: CodexItem[] }) {
               {SLOT_EMOJI[s]}
             </button>
           ))}
+          {missing > 0 ? (
+            <button
+              type="button"
+              className={fb(filter === 'missing')}
+              onClick={() => setFilter('missing')}
+            >
+              미획득 {missing}
+            </button>
+          ) : null}
         </div>
         {/* 정렬 — 인벤토리와 동일 컴팩트 셀렉트(네이티브 화살표 제거 후 ▼ 직접). */}
         <ZoomSafeSelect

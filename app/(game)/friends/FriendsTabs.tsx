@@ -61,27 +61,27 @@ function Row({
 }) {
   return (
     <li>
+      {/* 한 줄 밀도 — 종전엔 닉네임과 길드를 2줄로 써 한 화면에 6명뿐이었다. 길드를 같은 줄로
+          옮기고 접속 표시를 우측으로 보내 10명이 들어온다(2026-08-02). */}
       <div
         role="button"
         tabIndex={0}
         onClick={onOpen}
-        className="flex cursor-pointer items-center gap-3 rounded-xl border border-zinc-200 bg-white px-3 py-2.5 transition active:bg-zinc-50 dark:border-zinc-800 dark:bg-zinc-950 dark:active:bg-zinc-900"
+        className="flex cursor-pointer items-center gap-2.5 rounded-xl border border-zinc-200 bg-white px-2.5 py-1.5 transition active:bg-zinc-50 dark:border-zinc-800 dark:bg-zinc-950 dark:active:bg-zinc-900"
       >
-        <Avatar src={u.profileSouth} box={u.faceBox} />
-        <div className="min-w-0 flex-1">
-          <div className="flex min-w-0 items-baseline gap-1.5">
-            <span className="truncate text-sm font-bold">{u.nickname}</span>
-            {/* 접속 표시 — 길드원 카드와 동일한 plain 텍스트(2026-07-27, pill 제거). */}
-            {showSeen && <LastSeen at={u.lastSeenAt ?? null} plain className="shrink-0 text-[10px]" />}
-          </div>
-          {/* 닉네임 아래 길드(문양 + 이름). 미소속/생성중이면 GuildBadge가 null → 영역 비움. */}
+        <Avatar src={u.profileSouth} box={u.faceBox} size="h-9 w-9" />
+        <span className="flex min-w-0 flex-1 items-baseline gap-1.5">
+          <span className="truncate text-[13px] font-bold">{u.nickname}</span>
           <GuildBadge
             emblemUrl={u.guildEmblemUrl ?? null}
             name={u.guildName ?? null}
-            size={13}
-            className="mt-0.5 max-w-full text-[11px] font-medium text-zinc-500 dark:text-zinc-400"
+            size={11}
+            className="min-w-0 text-[10px] font-medium text-zinc-400"
           />
-        </div>
+        </span>
+        {showSeen && (
+          <LastSeen at={u.lastSeenAt ?? null} plain className="shrink-0 text-[10px] text-zinc-400" />
+        )}
         <div className="flex shrink-0 items-center gap-1.5" onClick={(e) => e.stopPropagation()}>
           {right}
         </div>
@@ -117,6 +117,17 @@ export function FriendsTabs({
   const [friends, setFriends] = useState(initFriends);
   const [incoming, setIncoming] = useState(initIncoming);
   const [outgoing, setOutgoing] = useState(initOutgoing);
+
+  // 접속 최신순 — 친구의 주 용도가 레이드 초대·같이 하기라 '지금 있는 사람'이 위에 와야 한다.
+  // 기록이 없으면 뒤로(2026-08-02).
+  const sortedFriends = [...friends].sort(
+    (a, b) =>
+      (b.lastSeenAt ? Date.parse(b.lastSeenAt) : 0) - (a.lastSeenAt ? Date.parse(a.lastSeenAt) : 0),
+  );
+  /** 최근 5분 내 활동 = 접속 중(헤더 표시용). */
+  const onlineCount = friends.filter(
+    (u) => u.lastSeenAt && Date.now() - Date.parse(u.lastSeenAt) < 5 * 60_000,
+  ).length;
 
   const toast = (t: string) => showHeaderToast({ title: t });
   const fail = (code?: string) => toast(ERR[code ?? 'UNKNOWN'] ?? ERR.UNKNOWN);
@@ -234,7 +245,11 @@ export function FriendsTabs({
 
   return (
     <div className="flex h-[calc(100%-var(--chat-dock-h,0px))] flex-col px-4 pb-4 pt-3">
-      <PageHeader title="친구" fallback="/me" />
+      <PageHeader
+        title="친구"
+        fallback="/me"
+        kicker={onlineCount > 0 ? `접속 중 ${onlineCount}명` : undefined}
+      />
       <div className="h-3" aria-hidden />
 
       <Tabs className="mb-3" items={TABS} value={tab} onChange={setTab} />
@@ -244,8 +259,8 @@ export function FriendsTabs({
           friends.length === 0 ? (
             <Empty text="아직 친구가 없어요. '찾기'에서 추가해보세요." />
           ) : (
-            <ul className="space-y-2">
-              {friends.map((u) => (
+            <ul className="space-y-1.5">
+              {sortedFriends.map((u) => (
                 <Row
                   key={u.userId}
                   u={u}

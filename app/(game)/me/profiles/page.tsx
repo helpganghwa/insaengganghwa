@@ -3,6 +3,7 @@ import { and, desc, eq } from 'drizzle-orm';
 
 import { getSessionUserId } from '@/lib/auth/session';
 import { PageHeader } from '@/components/ui/PageHeader';
+import { PROFILE_MAX } from '@/lib/game/balance';
 import { db } from '@/lib/db/client';
 import { characters } from '@/lib/db/schema/server';
 import { getActiveServerId } from '@/lib/game/servers';
@@ -42,7 +43,7 @@ export default async function ProfileSelectPage() {
   return (
     <>
       <div className="px-4 pb-3 pt-3">
-        <PageHeader title="아바타 관리" fallback="/me" />
+        <PageHeader title="아바타 관리" fallback="/me" kicker={`${list.length} / ${PROFILE_MAX}`} />
       </div>
       <div className="space-y-4 px-4 pb-6">
       {list.length === 0 ? (
