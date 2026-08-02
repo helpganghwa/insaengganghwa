@@ -1,7 +1,6 @@
 'use client';
 
 import { useEffect, useState, useTransition } from 'react';
-import { InstallAppButton } from './InstallAppButton';
 
 import {
   checkPushSupport,
@@ -126,30 +125,19 @@ export function PushSettings(props: {
   if (supportKind === null || (supportKind === 'supported' && !subChecked)) {
     return <p className="px-3 py-2.5 text-[11px] text-zinc-500">불러오는 중…</p>;
   }
-  // 막다른 문장으로 끝내지 않는다 — 푸시는 복귀 경로라, 못 켜는 유저에게도 다음 행동을
-  // 알려줘야 한다. 다만 원인에 따라 해법이 다르다(2026-08-02).
   if (supportKind === 'unsupported') {
     return (
-      <div className="px-3 py-2.5 text-[11px] leading-relaxed text-zinc-500">
+      <p className="px-3 py-2.5 text-[11px] text-zinc-500">
         이 브라우저는 푸시 알림을 지원하지 않아요.
-        <br />
-        Chrome·Safari 같은 기본 브라우저로 열면 알림을 받을 수 있어요.
-        {/* 인앱 브라우저(카카오·인스타 등)가 대부분이라 '외부로 열기'가 실제 해법이 된다. */}
-      </div>
+      </p>
     );
   }
   if (supportKind === 'ios-needs-install') {
     return (
-      <div className="px-3 pb-1 pt-2.5">
-        <p className="text-[11px] leading-relaxed text-zinc-500">
-          iPhone은 홈 화면에 추가해야 알림을 받을 수 있어요.
-          <br />
-          아래 버튼을 눌러 추가한 뒤, 홈 아이콘으로 다시 들어와 주세요.
-        </p>
-        {/* 설치 버튼은 종전에 맨 아래 '앱 정보' 섹션에만 있어 이 안내와 연결되지 않았다. */}
-        <div className="-mx-3">
-          <InstallAppButton />
-        </div>
+      <div className="px-3 py-2.5 text-[11px] leading-relaxed text-zinc-500">
+        iPhone Safari는 홈 화면에 추가한 PWA에서만 푸시를 받을 수 있어요.
+        <br />
+        Safari 공유 → “홈 화면에 추가” 후 홈 아이콘으로 다시 들어와 주세요.
       </div>
     );
   }

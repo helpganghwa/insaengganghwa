@@ -290,8 +290,8 @@ export function CreateProfileForm({
               <li className="flex gap-2">
                 <span aria-hidden className="text-zinc-400">·</span>
                 <span>
-                  생성에는 <b className="font-semibold">10분 내외</b>가 걸려요. 그동안 다른 화면을
-                  이용하셔도 됩니다.
+                  생성에는 <b className="font-semibold">10분 내외</b>가 걸려요. 그동안 화면을
+                  벗어나도 됩니다.
                 </span>
               </li>
               <li className="flex gap-2">
