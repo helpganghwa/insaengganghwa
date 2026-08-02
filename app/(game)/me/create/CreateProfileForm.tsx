@@ -63,8 +63,6 @@ export function CreateProfileForm({
   const [nowMs, setNowMs] = useState<number | null>(null); // 진행시간용 라이브 클럭(마운트 후 세팅 — 하이드레이션 안전)
   const [pending, startTransition] = useTransition();
 
-  // 생성 — 강화 취소와 동일 3s 재탭 컨펌(오탭 보호). 만료 시 자동 해제.
-
   // 생성 진행/대기 중이면 1초마다 라이브 클럭 갱신(경과 시간 표시용).
   useEffect(() => {
     if (queue === null && !submitted) return;
@@ -99,6 +97,7 @@ export function CreateProfileForm({
 
   /** 팝업에서 확정 — 실제 생성 요청. */
   const runCreate = () => {
+    if (pending || submitted) return; // 연타 보호 — 이중 제출·이중 낙관 차감 방지
     setConfirm(false);
     // 낙관 업데이트: 헤더 다이아 즉시 차감 + ⏳ 처리중 카드 즉시 노출. 실패 시 롤백.
     haptic.success();

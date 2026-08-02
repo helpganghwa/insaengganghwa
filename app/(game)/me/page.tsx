@@ -82,8 +82,9 @@ export default async function ProfilePage() {
           (select count(*)::int from friend_links
             where status = 'accepted' and server_id = ${serverId}
               and (requester_id = ${userId}::uuid or addressee_id = ${userId}::uuid)) as friend_count,
-          (select count(distinct catalog_item_id)::int from user_equipment
-            where user_id = ${userId}::uuid and server_id = ${serverId}) as codex_got,
+          (select count(distinct ue.catalog_item_id)::int from user_equipment ue
+            join catalog_items ci on ci.id = ue.catalog_item_id and ci.active
+            where ue.user_id = ${userId}::uuid and ue.server_id = ${serverId}) as codex_got,
           (select count(*)::int from catalog_items where active) as codex_total,
           coalesce((select json_agg(json_build_object(
               'catalogItemId', catalog_item_id, 'enhanceLevel', enhance_level,

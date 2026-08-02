@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useTransition } from 'react';
+import { useEffect, useState, useTransition } from 'react';
 import { useRouter } from 'next/navigation';
 import { profileHref } from '@/lib/game/profile/href';
 
@@ -124,10 +124,16 @@ export function FriendsTabs({
     (a, b) =>
       (b.lastSeenAt ? Date.parse(b.lastSeenAt) : 0) - (a.lastSeenAt ? Date.parse(a.lastSeenAt) : 0),
   );
-  /** 최근 5분 내 활동 = 접속 중(헤더 표시용). */
-  const onlineCount = friends.filter(
-    (u) => u.lastSeenAt && Date.now() - Date.parse(u.lastSeenAt) < 5 * 60_000,
-  ).length;
+  /** 최근 5분 내 활동 = 접속 중(헤더 표시용). 렌더 중 Date.now()는 하이드레이션 불일치
+      위험이 있어(경계에 걸친 친구가 있으면 SSR과 클라 텍스트가 갈린다) 마운트 후 계산한다. */
+  const [nowTick, setNowTick] = useState<number | null>(null);
+  useEffect(() => setNowTick(Date.now()), []);
+  const onlineCount =
+    nowTick == null
+      ? 0
+      : friends.filter(
+          (u) => u.lastSeenAt && nowTick - Date.parse(u.lastSeenAt) < 5 * 60_000,
+        ).length;
 
   const toast = (t: string) => showHeaderToast({ title: t });
   const fail = (code?: string) => toast(ERR[code ?? 'UNKNOWN'] ?? ERR.UNKNOWN);
