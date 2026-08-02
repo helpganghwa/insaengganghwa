@@ -11,6 +11,7 @@ import { GuildBadge } from '@/components/GuildBadge';
 import { hasGeneratedCustomAvatar } from '@/lib/game/profile/queue';
 import { combatPowerFromOwned } from '@/lib/game/equipment/combat-power';
 import { liberatedItemRanks } from '@/lib/game/codex/ranking';
+import { PROFILE_MAX } from '@/lib/game/balance';
 import { getCatalogMap, completeCatalog } from '@/lib/game/catalog';
 import { profileHref } from '@/lib/game/profile/href';
 
@@ -55,6 +56,9 @@ export default async function ProfilePage() {
     executor_zone_region: string | null;
     referral_count: number;
     friend_req_count: number;
+    friend_count: number;
+    codex_got: number;
+    codex_total: number;
     equipment: {
       catalogItemId: number;
       enhanceLevel: number;
@@ -73,6 +77,14 @@ export default async function ProfilePage() {
           z.name as executor_zone, z.region::text as executor_zone_region,
           (select count(*)::int from referral_attributions where referrer_user_id = ${userId}::uuid) as referral_count,
           (select count(*)::int from friend_links where status = 'pending' and addressee_id = ${userId}::uuid and server_id = ${serverId}) as friend_req_count,
+          -- 메뉴 우측 상태값(2026-08-02) — 프로필은 허브라 '어디로 갈지'를 여기서 정한다.
+          -- 이미 도는 단일 쿼리에 서브쿼리로 얹어 왕복은 늘리지 않는다(CLAUDE §11.4).
+          (select count(*)::int from friend_links
+            where status = 'accepted' and server_id = ${serverId}
+              and (requester_id = ${userId}::uuid or addressee_id = ${userId}::uuid)) as friend_count,
+          (select count(distinct catalog_item_id)::int from user_equipment
+            where user_id = ${userId}::uuid and server_id = ${serverId}) as codex_got,
+          (select count(*)::int from catalog_items where active) as codex_total,
           coalesce((select json_agg(json_build_object(
               'catalogItemId', catalog_item_id, 'enhanceLevel', enhance_level,
               'transcendLevel', transcend_level, 'equippedSlot', equipped_slot))
@@ -111,6 +123,21 @@ export default async function ProfilePage() {
     totalBoxEarned: refN * INVITE_BOX_PER_REFERRAL,
   };
   const friendReqCount = row?.friend_req_count ?? 0;
+  const friendCount = row?.friend_count ?? 0;
+  const codexGot = row?.codex_got ?? 0;
+  const codexTotal = row?.codex_total ?? 0;
+  /**
+   * 메뉴 우측 상태값 — 프로필은 허브라 '어디로 갈지'를 여기서 정한다. 라벨만 있으면 매번
+   * 들어가 봐야 알 수 있었다(2026-08-02). 랭킹은 지표가 5종이라 한 값으로 못 줄여 제외.
+   */
+  const MENU_STATUS: Record<string, string | null> = {
+    '/friends': friendCount > 0 ? `${friendCount}명` : null,
+    '/me/profiles': `${myProfiles.length} / ${PROFILE_MAX}`,
+    '/me/codex': codexTotal > 0 ? `${codexGot} / ${codexTotal}` : null,
+    '/leaderboard': null,
+    '/me/settings': null,
+  };
+
   const isAdmin = row?.is_admin ?? false;
   await completeCatalog(catMap, equippedRaw.map((e) => e.catalogItemId));
 
@@ -306,6 +333,13 @@ export default async function ProfilePage() {
                 </span>
               ) : null}
             </span>
+            {/* 우측 상태 — 들어가지 않고도 알 수 있게. 아바타 보유수는 이미 조회한 avatars에서
+                파생하고, 나머지는 같은 쿼리의 서브쿼리다(2026-08-02). */}
+            {MENU_STATUS[m.href] ? (
+              <span className="shrink-0 font-mono text-[11.5px] tabular-nums text-zinc-400">
+                {MENU_STATUS[m.href]}
+              </span>
+            ) : null}
           </Link>
         ))}
         {isAdmin ? (
