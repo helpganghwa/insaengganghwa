@@ -1,7 +1,7 @@
 import Link from 'next/link';
 import { and, eq } from 'drizzle-orm';
 
-import { getSessionUserId } from '@/lib/auth/session';
+import { getSessionUserId, isReviewerAccount } from '@/lib/auth/session';
 import { isCbtPaidHidden } from '@/lib/auth/test-accounts';
 import { getActiveServerId } from '@/lib/game/servers';
 import { countServers, listServersForUser } from '@/lib/game/server-select';
@@ -62,7 +62,9 @@ export default async function SettingsPage() {
     'settings.profile',
   ).catch(() => []);
   const [p] = pRows;
-  const verified = p?.verifiedAt != null;
+  // 심사(cbt) 계정은 실명 PASS 인증을 시킬 수 없어 항상 인증 완료로 표시한다(결제 게이트도
+  // 동일하게 통과 — purchase.ts createOrder). 실유저 표시는 그대로 profiles 값을 따른다.
+  const verified = p?.verifiedAt != null || (await isReviewerAccount().catch(() => false));
 
   return (
     <>
