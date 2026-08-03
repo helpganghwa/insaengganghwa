@@ -5,6 +5,7 @@ import { useEffect, useState } from 'react';
 import { BgmPlayer } from '@/components/audio/BgmPlayer';
 
 import { OpenAlertSection } from './OpenAlertSection';
+import { OpenDateChangeModal } from './OpenDateChangeModal';
 
 /**
  * CBT 종료 화면(0144, C안+결산 — 2026-07-31 확정) — system_mode 'cbt_ended' 동안 로그인
@@ -16,8 +17,8 @@ import { OpenAlertSection } from './OpenAlertSection';
  */
 
 /** 정식 오픈 시각(KST) — 카운트다운 목표. 오픈 일정이 바뀌면 여기만 고친다. */
-export const OPEN_AT_ISO = '2026-08-10T11:00:00+09:00';
-const OPEN_LABEL = '8월 10일 오전 11시';
+export const OPEN_AT_ISO = '2026-08-17T11:00:00+09:00';
+const OPEN_LABEL = '8월 17일 오전 11시';
 
 /**
  * CBT 결산(프로덕션 실측, L-2 문장형 — 2026-07-31 확정) — 종료 시점 값으로 고정한다.
@@ -165,7 +166,7 @@ export function CbtEndedNotice({ compact = false }: { compact?: boolean }) {
           </span>
           <span className="block break-keep">한 달의 대륙을 데웠습니다.</span>
           <span className="mt-2 block break-keep">
-            이제 잠시 불을 끄고, <b className="font-bold text-zinc-200">8월 10일</b>에 다시
+            이제 잠시 불을 끄고, <b className="font-bold text-zinc-200">8월 17일</b>에 다시
             만나요.
           </span>
         </div>
@@ -176,6 +177,8 @@ export function CbtEndedNotice({ compact = false }: { compact?: boolean }) {
           <OpenAlertSection />
         </div>
       </div>
+      {/* 오픈일 변경(8/10 → 8/17) — 본문은 날짜만 바뀌므로 변경 사실은 이 팝업이 알린다. 기기별 1회. */}
+      <OpenDateChangeModal />
     </div>
   );
 }
