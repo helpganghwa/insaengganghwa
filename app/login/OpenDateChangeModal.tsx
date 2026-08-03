@@ -52,7 +52,7 @@ export function OpenDateChangeModal() {
         maxBodyClass="max-h-[52vh] overflow-y-auto"
         footer={
           <ModalButton tone="primary" grow={2} onClick={close}>
-            알겠어요
+            확인
           </ModalButton>
         }
       >
@@ -68,14 +68,9 @@ export function OpenDateChangeModal() {
             심사가 그때까지 마무리되지 않더라도{' '}
             <b className="font-bold text-zinc-200">8월 24일에는 상점만 닫은 채 문을 열겠습니다.</b>{' '}
             더 미루는 일은 없습니다. 게임은 그대로 즐기실 수 있고, 상점은 준비되는 대로 바로
-            열어드리겠습니다.
+            열겠습니다.
           </p>
-          <p className="break-keep">
-            비공개 테스트에 함께해 주신 분들의{' '}
-            <b className="font-bold text-zinc-200">이월 보상은 그대로 기다리고 있습니다.</b> 오픈일에
-            접속하시면 바로 받으실 수 있습니다.
-          </p>
-          <p className="break-keep text-zinc-400">기다려 주셔서 고맙습니다.</p>
+          <p className="break-keep text-zinc-400">다시 한번 죄송합니다.</p>
         </div>
       </ModalLayout>
     </ModalShell>
