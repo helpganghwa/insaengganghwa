@@ -17,7 +17,8 @@ import { ITEMS_V2, buildArt, type ItemV2 } from './items-v2';
 config({ path: '.env.local' });
 config({ path: '.env', override: false });
 
-const KEY = process.env.PIXELLAB_API_KEY_2;
+// GEN_KEY=1 → 첫 번째 키(PIXELLAB_API_KEY), 기본은 두 번째 키.
+const KEY = process.env.GEN_KEY === '1' ? process.env.PIXELLAB_API_KEY : process.env.PIXELLAB_API_KEY_2;
 const ROOT = process.cwd();
 const spriteFile = (it: ItemV2) => join(ROOT, 'public', 'sprites', it.slot, `${it.key}.png`);
 const spriteRel = (it: ItemV2) => `sprites/${it.slot}/${it.key}.png`;
@@ -281,7 +282,7 @@ async function main(): Promise<void> {
     return;
   }
   if (!KEY) {
-    console.error('PIXELLAB_API_KEY_2 필요 — .env.local에 두 번째 키를 넣어줘.');
+    console.error('Pixellab 키 필요 — .env.local의 PIXELLAB_API_KEY(GEN_KEY=1) 또는 PIXELLAB_API_KEY_2.');
     process.exit(1);
   }
   // key-모드: 숫자/html이 아닌 인자는 생성할 key 목록으로 취급(특정 아이템만 생성/테스트).
@@ -296,7 +297,7 @@ async function main(): Promise<void> {
     batch = pending.slice(0, n);
   }
   const CONC = Math.max(1, Number(process.env.GEN_CONC ?? 3)); // 동시 생성 수(429 백오프로 보호)
-  console.log(`[gen-items] key2 객체 생성 ${batch.length}개(미생성 ${pending.length}/${ITEMS_V2.length}). 동시 ${CONC}개+429백오프.`);
+  console.log(`[gen-items] ${process.env.GEN_KEY === '1' ? 'key1' : 'key2'} 객체 생성 ${batch.length}개(미생성 ${pending.length}/${ITEMS_V2.length}). 동시 ${CONC}개+429백오프.`);
   let ok = 0, fail = 0, idx = 0;
   const worker = async () => {
     while (idx < batch.length) {
