@@ -57,18 +57,16 @@ export function OpenDateChangeModal() {
         }
       >
         <div className="space-y-3 text-left text-[13px] leading-[1.85] text-zinc-300">
-          <p className="break-keep">안녕하세요, 인생강화입니다.</p>
           <p className="break-keep">
             8월 10일로 안내드렸던 정식 오픈이{' '}
             <b className="font-bold text-amber-300">8월 24일 오전 11시</b>로 미뤄졌습니다. 결제
-            심사가 예정보다 길어지고 있어 부득이하게 일정을 조정하게 되었습니다. 먼저 말씀드린
-            날짜를 지키지 못해 죄송합니다.
+            심사가 예정보다 길어지고 있어 부득이하게 일정을 조정하게 되었습니다.
           </p>
           <p className="break-keep">
             심사가 그때까지 마무리되지 않더라도{' '}
-            <b className="font-bold text-zinc-200">8월 24일에는 상점만 닫은 채 문을 열겠습니다.</b>
+            <b className="font-bold text-zinc-200">8월 24일에는 오픈하도록 하겠습니다.</b>
           </p>
-          <p className="break-keep text-zinc-400">다시 한번 죄송합니다.</p>
+          <p className="break-keep text-zinc-400">말씀드린 날짜를 지키지 못해 죄송합니다.</p>
         </div>
       </ModalLayout>
     </ModalShell>
