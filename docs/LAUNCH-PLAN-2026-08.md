@@ -1,6 +1,6 @@
 # 정식 출시 작전 계획 — 2026년 8월
 
-> CBT 종료(8/1 새벽)부터 정식 오픈(8/17 11:00)까지의 **확정 일정·명령·안전 로직**.
+> CBT 종료(8/1 새벽)부터 정식 오픈(8/24 11:00)까지의 **확정 일정·명령·안전 로직**.
 > 일반 절차의 상세(가드·검증 표)는 `docs/CUTOVER-LIVE.md`(런북)가 정본이고,
 > 이 문서는 그 런북을 이번 출시의 실제 날짜와 확정값으로 인스턴스화한 실행 계획이다.
 
@@ -11,7 +11,7 @@
 | 항목 | 값 |
 |---|---|
 | CBT 종료 | **8/1(금) 00:30경** — 공지는 "8월 1일 새벽"으로만(정각 약속 금지) |
-| 정식 오픈 | **8/17(월) 11:00 KST** — `app/login/CbtEndedNotice.tsx OPEN_AT_ISO` 카운트다운과 일치 |
+| 정식 오픈 | **8/24(월) 11:00 KST** — `app/login/CbtEndedNotice.tsx OPEN_AT_ISO` 카운트다운과 일치 |
 | 오픈 유보 | 카드사 심사 등 외부 절차 지연 시 연기 가능 — 공지에 유보 문구 고지됨. 연기 시 `OPEN_AT_ISO`·공지 갱신 |
 | 감사 보상 | **기본 1,000💎 + 합산강화 × 0.5(내림)** — `scripts/cbt-snapshot.ts` 상수. 총 ≈ 36.9만💎/241명 |
 | 이월 범위 | 닉네임(캐릭터 사전 생성) + 감사 보상 + 초대 보상. **아바타·진행도 이월 없음** |
@@ -20,7 +20,7 @@
 ## 1. 상태 기계 — 한 장 요약
 
 ```
-live ──(1단계)──▶ maintenance ──wipe──▶ cbt_ended ──(2단계)──▶ maintenance ──wipe+restore──▶ cbt_ended ──8/17 11:00──▶ live
+live ──(1단계)──▶ maintenance ──wipe──▶ cbt_ended ──(2단계)──▶ maintenance ──wipe+restore──▶ cbt_ended ──8/24 11:00──▶ live
 ```
 
 | 모드 | 일반 유저 | 어드민 | 심사(cbt) 계정 | 자동으로 잠기는 것 |
@@ -69,14 +69,14 @@ select max(max_enhance_level) from user_equipment;                -- peak
 select count(*) from conquest_battles where winner_guild_id is not null;  -- flags
 ```
 
-## 3. 테스트 기간 (8/1 ~ 8/16)
+## 3. 테스트 기간 (8/1 ~ 8/23)
 
 - 어드민·심사 계정으로 자유 테스트 — **흔적은 2차 wipe가 전부 지운다**(캐릭터·우편·랭킹·아바타).
 - 카드사 심사 대응: 승인 회신 오면 결제 E2E(결제→지급→콘솔 취소→회수) 완주. 실결제 기록은 2차에서 보존됨.
 - 8/7~8 새벽: **Supabase Compute Small→Medium** (ROADMAP §2 #11 — 재시작 동반).
 - 오픈 연기 판단: 카드사 심사 ETA 회신 기준. 연기 시 `OPEN_AT_ISO` 수정·배포 + 공지 갱신.
 
-## 4. 2단계 — 출시 (8/16(일) 밤 → 8/17(월) 11:00)
+## 4. 2단계 — 출시 (8/23(일) 밤 → 8/24(월) 11:00)
 
 | # | 작업 | 명령/방법 |
 |---|---|---|
@@ -85,7 +85,7 @@ select count(*) from conquest_battles where winner_guild_id is not null;  -- fla
 | 3 | 2차 wipe | `bun run scripts/cutover-live.ts --db=prod --keep-payments --confirm` — **플래그 필수**(테스트 실결제·본인인증 5종 = 전자상거래법 5년 보존) |
 | 4 | 복원·보상 지급 | `bun run --env-file=.env.local scripts/cbt-restore.ts --db=prod` 드라이런 → `--confirm` (캐릭터 241 + 우편 3종: 특별 보상·초대 이월·환영) |
 | 5 | 종료 모드 복원 | `update system_mode set mode='cbt_ended' ... ;` (오픈 전까지 종료 화면 유지) |
-| 6 | 크론 재개 | Enable → **§8.7 표와 20개 대조**. 8/17 아침 대난투(09:00)·보급 푸시는 cbt_ended 게이트가 자동 skip |
+| 6 | 크론 재개 | Enable → **§8.7 표와 20개 대조**. 8/24 아침 대난투(09:00)·보급 푸시는 cbt_ended 게이트가 자동 skip |
 | 7 | env·값 정리 | `TEST_MODE` 삭제(배율 ×1) · `PAYMENTS_OPEN=true`(카드사 심사 완료 시에만) · `GUILD_REJOIN_LOCK_HOURS` 1→24 커밋 · 재배포 |
 | 8 | 확률 공시 | `bun run scripts/record-probability-snapshot.ts --note="정식 오픈" --confirm` |
 | 9 | 서버명 | `update servers set name='1서버' where id=1;` |
@@ -116,7 +116,7 @@ select count(*) from conquest_battles where winner_guild_id is not null;  -- fla
 - 크론 정지는 **대시보드 Disable만** 사용 — CRON_SECRET 회전은 env가 배포에 박히는 구조라 회전~재배포 사이 동작이 불명확
 - 심사 로그인(`/login?test=true`)·심사 결제(본인인증 면제)는 전 기간 유지
 
-## 8. 출시 전 잔여 작업 (8/1 ~ 8/16)
+## 8. 출시 전 잔여 작업 (8/1 ~ 8/23)
 
 > CBT 종료 후 오픈까지 처리할 일. **차단**은 미완 시 오픈을 미뤄야 하는 것, **중요**는 오픈 품질에 직결, **선택**은 오픈 후로 미룰 수 있는 것.
 
