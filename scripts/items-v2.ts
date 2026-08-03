@@ -415,7 +415,7 @@ export const V4_POOL30: ItemV2[] = [
     wornDesc: 'two small bandage patches crossed on the cheek', lore: '' },
   { key: 'general_shoulder_cat', slot: 'accessory', nameKo: '어깨에 앉은 고양이', region: '일반', tone: '희망',
     concept: '어깨에 앉은 삼색 고양이',
-    art: 'a small calico cat sitting on the shoulder — soft white orange and black fur with green eyes and a tiny red collar bell, tail curled, warm and charming, isolated object on a plain background, no text',
+    art: 'a small calico cat curled up sitting — soft white orange and black fur with green eyes and a tiny red collar bell, tail curled around its paws, warm and charming, exactly one cat and nothing else, no person, no buildings, no architecture, no scenery, isolated object on a plain background, no text',
     wornDesc: 'a small calico cat sitting on the shoulder', lore: '' },
   { key: 'general_crystal_orb', slot: 'accessory', nameKo: '손 위에 뜬 구슬', region: '일반', tone: '수수께끼',
     concept: '손 위에 떠 있는 수정 구슬',
