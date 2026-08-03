@@ -19,7 +19,7 @@ type ShopTab = (typeof SHOP_TABS)[number];
 export default async function ShopPage({
   searchParams,
 }: {
-  searchParams: Promise<{ tab?: string; paymentId?: string; code?: string }>;
+  searchParams: Promise<{ tab?: string; paymentId?: string; code?: string; message?: string }>;
 }) {
   const { userId, isAdmin } = await getAdminStatus();
   if (!userId) return null;
@@ -62,6 +62,7 @@ export default async function ShopPage({
       initialTab={initialTab}
       returnPaymentId={sp.paymentId ?? null}
       returnCode={sp.code ?? null}
+      returnMessage={sp.message ?? null}
       identityStoreId={process.env.PORTONE_STORE_ID || process.env.NEXT_PUBLIC_PORTONE_STORE_ID}
       identityChannelKey={
         process.env.PORTONE_IDENTITY_CHANNEL_KEY ||

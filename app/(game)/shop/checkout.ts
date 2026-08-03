@@ -13,6 +13,17 @@ export type CheckoutResult =
   /** 결제창이 실패로 닫힘(카드 거절·한도·심사 전 미승인 등) — 사유를 유저에게 보여줘야 한다. */
   | { ok: false; reason: 'window'; message: string };
 
+/**
+ * 결제 실패 안내 문구 — 모바일 복귀(리다이렉트) 시 포트원이 붙여 주는 사유를 그대로 보여준다.
+ * PC(팝업)는 resp.message를 바로 노출하는데 모바일만 일반 문구로 덮이면 원인을 알 수 없다
+ * (2026-08-03 '승인되지 않은 가맹점'이 모바일에서만 가려진 사례). URL 유래 문자열이라 길이를 자른다.
+ */
+export function payFailTitle(pgMessage?: string | null): string {
+  const m = pgMessage?.trim();
+  if (!m) return '결제가 완료되지 않았습니다';
+  return m.length > 60 ? `${m.slice(0, 60)}…` : m;
+}
+
 export async function runCheckout(productId: string, redirectUrl: string): Promise<CheckoutResult> {
   // 단계별 전송실패 매핑(2026-07-07 전수감사) — 호출부 일괄 catch가 전부 'create/NETWORK'
   // ("요청이 전송되지 않았어요")로 표기하면, 결제 완료 후 verify 전송만 실패한 경우(지급은

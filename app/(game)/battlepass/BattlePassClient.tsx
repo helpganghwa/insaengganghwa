@@ -13,7 +13,7 @@ import { PublicFooter } from '@/components/PublicFooter';
 import { ModalShell } from '@/components/ModalShell';
 import { ModalLayout, ModalButton } from '@/components/ModalLayout';
 import * as PortOne from '@portone/browser-sdk/v2';
-import { runCheckout } from '@/app/(game)/shop/checkout';
+import { payFailTitle, runCheckout } from '@/app/(game)/shop/checkout';
 import { verifyPurchaseAction } from '@/app/(game)/shop/actions';
 
 import { verifyIdentityAction } from '../me/settings/identity-actions';
@@ -237,6 +237,7 @@ export function BattlePassClient({
   payEnabled,
   returnPaymentId = null,
   returnCode = null,
+  returnMessage = null,
   identityStoreId,
   identityChannelKey,
 }: {
@@ -247,6 +248,8 @@ export function BattlePassClient({
   /** 모바일 결제 복귀 — 포트원이 /battlepass?paymentId=…(&code=…)로 리다이렉트. 화면 내 검증. */
   returnPaymentId?: string | null;
   returnCode?: string | null;
+  /** 실패 시 포트원이 붙여 주는 사유(예: '승인되지 않은 가맹점'). 없으면 일반 문구. */
+  returnMessage?: string | null;
   /** 본인인증(KG이니시스 통합인증) — 성장패스 내에서 바로 인증 진행(설정 이동 없이). */
   identityStoreId?: string;
   identityChannelKey?: string;
@@ -338,7 +341,7 @@ export function BattlePassClient({
     if (returnCode) {
       if (returnCode !== 'PAY_CANCEL' && returnCode !== 'PAY_PROCESS_CANCELED') {
         // eslint-disable-next-line react-hooks/set-state-in-effect
-        setError('결제가 완료되지 않았습니다.');
+        setError(payFailTitle(returnMessage));
       }
       return;
     }

@@ -15,7 +15,7 @@ import { BattlePassClient } from './BattlePassClient';
 export default async function BattlePassPage({
   searchParams,
 }: {
-  searchParams: Promise<{ paymentId?: string; code?: string }>;
+  searchParams: Promise<{ paymentId?: string; code?: string; message?: string }>;
 }) {
   const userId = await getSessionUserId();
   const serverId = await getActiveServerId();
@@ -66,6 +66,7 @@ export default async function BattlePassPage({
       payEnabled={portoneConfig() !== null}
       returnPaymentId={sp.paymentId ?? null}
       returnCode={sp.code ?? null}
+      returnMessage={sp.message ?? null}
       identityStoreId={process.env.PORTONE_STORE_ID || process.env.NEXT_PUBLIC_PORTONE_STORE_ID}
       identityChannelKey={
         process.env.PORTONE_IDENTITY_CHANNEL_KEY ||

@@ -23,7 +23,7 @@ import { Pagination } from 'swiper/modules';
 import 'swiper/css';
 import 'swiper/css/pagination';
 
-import { runCheckout } from './checkout';
+import { payFailTitle, runCheckout } from './checkout';
 import type { FreeSlot } from '@/lib/game/shop/free';
 import { FIRST_SPECIAL, BOX, CASH, PREMIUM, DIAMONDS, productPeriod } from '@/lib/game/shop/catalog';
 
@@ -281,6 +281,7 @@ export function ShopTabs({
   initialTab = 'daily',
   returnPaymentId = null,
   returnCode = null,
+  returnMessage = null,
   identityStoreId,
   identityChannelKey,
 }: {
@@ -296,6 +297,8 @@ export function ShopTabs({
   /** 모바일 결제 복귀 — 포트원이 /shop?paymentId=…(&code=…)로 리다이렉트. 화면 내에서 검증 처리. */
   returnPaymentId?: string | null;
   returnCode?: string | null;
+  /** 실패 시 포트원이 함께 붙여 주는 사유(예: '승인되지 않은 가맹점'). 없으면 일반 문구. */
+  returnMessage?: string | null;
   /** 본인인증(KG이니시스 통합인증) — 상점 내에서 바로 인증 진행(설정 이동 없이). */
   identityStoreId?: string;
   identityChannelKey?: string;
@@ -403,9 +406,10 @@ export function ShopTabs({
     returnHandled.current = true;
     window.history.replaceState(null, '', '/shop'); // 쿼리 정리(결제 파라미터 제거)
     if (returnCode) {
-      // 실패/취소 — 취소는 조용히, 그 외만 안내.
+      // 실패/취소 — 취소는 조용히, 그 외만 안내. PG 사유(returnMessage)가 오면 그대로 보여준다
+      // (예: '승인되지 않은 가맹점'). 일반 문구로 덮으면 PC와 달리 모바일만 원인을 알 수 없다.
       if (returnCode !== 'PAY_CANCEL' && returnCode !== 'PAY_PROCESS_CANCELED') {
-        showHeaderToast({ title: '결제가 완료되지 않았습니다' });
+        showHeaderToast({ title: payFailTitle(returnMessage) });
       }
       return;
     }
