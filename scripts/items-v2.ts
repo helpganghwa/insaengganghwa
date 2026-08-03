@@ -290,7 +290,15 @@ export const V4_ITEMS: ItemV2[] = [
   // ── 라이브 카탈로그에서 제외 확정(catalog-v4 편성 시 삭제):
   //    frostwarden_coat(설원 파수꾼의 외투) · angel_risen_mantle(부러진 적 있는 날개)
   //    · angel_duskwing_armor(저무는 해의 날개) → 방어구 38-3+5 = 40
-  // ── 장신구 2/4 — 후보 생성 중 ──
+  // ── 장신구 4/4 확정 ──
+  { key: 'volcano_ashglass_goggles', slot: 'accessory', nameKo: '재를 막는 눈', region: '화산', tone: '영웅담',
+    concept: '그을린 황동 고글',
+    art: 'a pair of soot-stained brass goggles — smoked amber glass lenses in a scorched brass frame with a worn leather strap, worn pushed up on the forehead, industrious and rugged, isolated object on a plain background, no text',
+    wornDesc: 'soot-stained brass goggles with amber lenses on the forehead', lore: '', keeper: true },
+  { key: 'general_wing_hairclip', slot: 'accessory', nameKo: '머리에 앉은 깃', region: '일반', tone: '아름다운',
+    concept: '흰 깃 머리핀',
+    art: 'a white feather hair clip — two soft white plumes on a small pearl-set silver clip, worn at the side of the head, light and elegant, isolated object on a plain background, no text',
+    wornDesc: 'a white feather hair clip at the side of the head', lore: '', keeper: true },
   
   
   
