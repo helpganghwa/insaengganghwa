@@ -4,6 +4,7 @@ import { and, desc, eq, sql } from 'drizzle-orm';
 
 import { db } from '@/lib/db/client';
 import { iapOrders, monthlyPurchaseLimits, identityVerifications } from '@/lib/db/schema/payment';
+import { isReviewerUserId } from '@/lib/auth/reviewer-ids';
 import { getSessionEmail, isReviewerAccount } from '@/lib/auth/session';
 import { characters } from '@/lib/db/schema/server';
 import { profiles } from '@/lib/db/schema/profiles';
@@ -350,7 +351,13 @@ export async function completePurchase(
       })
       .returning({ total: monthlyPurchaseLimits.totalKrw });
     if (Number(monthly?.total ?? 0n) > MINOR_MONTHLY_LIMIT_KRW) {
-      const { isMinor } = await minorStatus(order.userId, kstMonth);
+      // 심사(cbt) 계정은 본인인증을 면제하므로(createOrder:222) 여기서도 미성년 판정에서 빼
+      // 대칭을 맞춘다 — 안 그러면 누적 7만원 초과 시 지급 없이 자동 환불된다. 웹훅엔 세션이
+      // 없어 isReviewerAccount()를 못 쓰므로 user_id로 판별한다.
+      const reviewer = await isReviewerUserId(order.userId);
+      const { isMinor } = reviewer
+        ? { isMinor: false }
+        : await minorStatus(order.userId, kstMonth);
       if (isMinor) {
         minorExceeded = true;
         // 지급 없이 paid — 회수 스킵 마커(0108). 없으면 환불 회수가 과거 다른 주문의
