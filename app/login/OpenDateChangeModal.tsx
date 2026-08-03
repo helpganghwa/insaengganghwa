@@ -48,27 +48,34 @@ export function OpenDateChangeModal() {
       className="w-[320px] max-w-[calc(100vw-32px)]"
     >
       <ModalLayout
-        title="오픈일을 8월 24일로 미룹니다"
+        title="오픈일이 8월 24일로 미뤄졌습니다"
+        maxBodyClass="max-h-[52vh] overflow-y-auto"
         footer={
           <ModalButton tone="primary" grow={2} onClick={close}>
             알겠어요
           </ModalButton>
         }
       >
-        <div className="space-y-3 text-[13px] leading-[1.8] text-zinc-300">
+        <div className="space-y-3 text-left text-[13px] leading-[1.85] text-zinc-300">
+          <p className="break-keep">안녕하세요, 인생강화입니다.</p>
           <p className="break-keep">
-            8월 10일로 안내드렸던 정식 오픈을{' '}
-            <b className="font-bold text-amber-300">8월 24일 오전 11시</b>로 미룹니다. 결제 심사가
-            예정보다 길어지고 있습니다. 기다리게 해서 죄송합니다.
+            8월 10일로 안내드렸던 정식 오픈이{' '}
+            <b className="font-bold text-amber-300">8월 24일 오전 11시</b>로 미뤄졌습니다. 결제
+            심사가 예정보다 길어지고 있어 부득이하게 일정을 조정하게 되었습니다. 먼저 말씀드린
+            날짜를 지키지 못해 죄송합니다.
           </p>
           <p className="break-keep">
-            심사가 그때까지 끝나지 않더라도{' '}
-            <b className="font-bold text-zinc-200">상점만 닫고 문을 엽니다.</b> 더 미루는 일은
-            없습니다.
+            심사가 그때까지 마무리되지 않더라도{' '}
+            <b className="font-bold text-zinc-200">8월 24일에는 상점만 닫은 채 문을 열겠습니다.</b>{' '}
+            더 미루는 일은 없습니다. 게임은 그대로 즐기실 수 있고, 상점은 준비되는 대로 바로
+            열어드리겠습니다.
           </p>
-          <p className="break-keep text-zinc-400">
-            게임은 그대로 즐기실 수 있고, 상점은 준비되는 대로 바로 열겠습니다.
+          <p className="break-keep">
+            비공개 테스트에 함께해 주신 분들의{' '}
+            <b className="font-bold text-zinc-200">이월 보상은 그대로 기다리고 있습니다.</b> 오픈일에
+            접속하시면 바로 받으실 수 있습니다.
           </p>
+          <p className="break-keep text-zinc-400">기다려 주셔서 고맙습니다.</p>
         </div>
       </ModalLayout>
     </ModalShell>
