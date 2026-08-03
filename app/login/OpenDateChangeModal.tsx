@@ -66,9 +66,7 @@ export function OpenDateChangeModal() {
           </p>
           <p className="break-keep">
             심사가 그때까지 마무리되지 않더라도{' '}
-            <b className="font-bold text-zinc-200">8월 24일에는 상점만 닫은 채 문을 열겠습니다.</b>{' '}
-            더 미루는 일은 없습니다. 게임은 그대로 즐기실 수 있고, 상점은 준비되는 대로 바로
-            열겠습니다.
+            <b className="font-bold text-zinc-200">8월 24일에는 상점만 닫은 채 문을 열겠습니다.</b>
           </p>
           <p className="break-keep text-zinc-400">다시 한번 죄송합니다.</p>
         </div>
