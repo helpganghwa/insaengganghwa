@@ -239,7 +239,7 @@ export const V4_ITEMS: ItemV2[] = [
     wornDesc: 'two crossed wing-shaped blades, one white-gold and one jet-black', lore: '', keeper: true },
   { key: 'fallen_grace_greatbow', slot: 'weapon', nameKo: '반쯤 남은 은총', region: '타락천사', tone: '전설',
     concept: '한쪽은 금빛·한쪽은 흑빛인 대궁',
-    art: 'a fallen grace greatbow — a tall bow whose upper limb is radiant white-gold with light feathers and whose lower limb is charred jet-black with dark feathers, a taut glowing string, dramatic and divided, clearly a longbow weapon, no text, large, diagonal',
+    art: 'a magnificent fallen grace greatbow — a tall elegant bow with a deep recurve, its upper limb sculpted as a radiant white-gold angel wing with layered luminous feathers, its lower limb as a charred jet-black wing with ragged dark feathers, an ornate gilded center grip with fine filigree and a single pale gem, a taut string of pale light, a few loose feathers drifting, majestic and tragic, no halo, no ring, clearly a longbow weapon, no text, large, diagonal',
     wornDesc: 'a tall bow with one radiant gold limb and one charred black limb', lore: '', keeper: true },
   // ── 장신구 2/4 확정 ──
   {
@@ -415,7 +415,7 @@ export const V4_POOL30: ItemV2[] = [
     wornDesc: 'an ornate golden censer flail trailing black smoke', lore: '' },
   { key: 'fallen_grace_greatbow', slot: 'weapon', nameKo: '반쯤 남은 은총', region: '타락천사', tone: '전설',
     concept: '한쪽은 금빛·한쪽은 흑빛인 대궁',
-    art: 'a fallen grace greatbow — a tall bow whose upper limb is radiant white-gold with light feathers and whose lower limb is charred jet-black with dark feathers, a taut glowing string, dramatic and divided, clearly a longbow weapon, no text, large, diagonal',
+    art: 'a magnificent fallen grace greatbow — a tall elegant bow with a deep recurve, its upper limb sculpted as a radiant white-gold angel wing with layered luminous feathers, its lower limb as a charred jet-black wing with ragged dark feathers, an ornate gilded center grip with fine filigree and a single pale gem, a taut string of pale light, a few loose feathers drifting, majestic and tragic, no halo, no ring, clearly a longbow weapon, no text, large, diagonal',
     wornDesc: 'a tall bow with one radiant gold limb and one charred black limb', lore: '' },
   { key: 'orc_scrapiron_cleaver', slot: 'weapon', nameKo: '주워 모은 쇠', region: '오크 부락', tone: '영웅담',
     concept: '고철을 덧대 만든 거대 대도',
