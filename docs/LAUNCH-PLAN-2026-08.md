@@ -91,7 +91,7 @@ select count(*) from conquest_battles where winner_guild_id is not null;  -- fla
 | 9 | 서버명 | `update servers set name='1서버' where id=1;` |
 | 9.5 | **공지 정리** | `/admin/announcements` — **CBT 기간 공지 8건은 wipe 대상이 아니라 그대로 남는다.** 신규 유저에게 보일 필요 없는 것(CBT 종료 안내·테스트 공지 등)을 삭제/비활성하고, 오픈 공지만 남긴다. 삭제 시 `announcement_poll_votes`(93행, CBT 투표)도 CASCADE로 함께 정리됨 |
 | 10 | **오픈 (11:00)** | `update system_mode set mode='live' ... ;` → 오픈 공지 게시 |
-| 11 | 오픈 푸시 | `bun run scripts/open-push-broadcast.ts --db=prod` 드라이런 → `--confirm` (전 구독: CBT 유저 + 종료 화면 익명 신청자) |
+| 11 | 오픈 푸시 | **로컬 스크립트 불가** — VAPID 키가 Vercel sensitive env라 로컬에서 서명할 수 없다. 어드민 화면/라우트 등 서버(Vercel) 실행 경로로만 발송한다 |
 | 12 | 검증 | 런북 §7 표 + 첫 유입 모니터링(에러·풀 지연) |
 
 ## 5. 왜 이 구조인가 (로직 근거)
@@ -137,7 +137,7 @@ select count(*) from conquest_battles where winner_guild_id is not null;  -- fla
 | I1 | **콜드스타트 플레이북** | 유저 0명 월드를 채우는 게임 내 장치(첫 길드 유도·초대 보상 강화 등). ROADMAP §2 #8 — 5회째 이월된 항목 |
 | I2 | **위키 갱신** | CBT 중 대규모 변경(길드 전면 개편·권한 위임·점령전 B안·채팅) 반영. 신규 유저의 유일한 안내서 |
 | I3 | **SEO·랜딩 점검** | 게임 소개 h1은 `live` 복귀 시 자동 노출되나 **오픈 후 실제 렌더 확인 필수**. OG 이미지·메타 점검 |
-| I4 | **오픈 푸시 브로드캐스트 리허설** | `scripts/open-push-broadcast.ts --db=staging --confirm`으로 1회 검증(문구·도달) |
+| I4 | **오픈 푸시 발송 경로 마련** | VAPID가 sensitive env라 로컬 스크립트로는 발송 불가(2026-08-03 확인). 서버에서 도는 어드민 발송 수단을 오픈 전까지 준비 |
 | I5 | **Upstash 레이트리밋 플랜 점검** | CBT에서 무료 50만 커맨드 도달 경험 — 초과 시 리밋 전면 fail-open. 콘솔 사용량 확인 후 유료 전환 판단 |
 | I6 | **Realtime 동시연결 쿼터** | Pro 500 동시연결 = 동접 500과 정확히 겹침. 상향 또는 '패널 열림에만 구독' 전환 검토 |
 | I7 | **업데이트 노트 작성** | 직접 작성(수기) |

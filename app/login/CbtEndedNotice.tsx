@@ -4,7 +4,6 @@ import { useEffect, useState } from 'react';
 
 import { BgmPlayer } from '@/components/audio/BgmPlayer';
 
-import { OpenAlertSection } from './OpenAlertSection';
 import { OpenDateChangeModal } from './OpenDateChangeModal';
 
 /**
@@ -169,12 +168,6 @@ export function CbtEndedNotice({ compact = false }: { compact?: boolean }) {
             이제 잠시 불을 끄고, <b className="font-bold text-zinc-200">8월 24일</b>에 다시
             만나요.
           </span>
-        </div>
-
-        {/* 오픈 알림(0145) — 종료 화면 트래픽을 오픈일 복귀로 전환하는 유일한 접점.
-            mt-auto — 남는 높이를 서사와 버튼 사이가 아니라 위 요소들이 나눠 갖게 바닥 정착. */}
-        <div className="mt-auto pt-7">
-          <OpenAlertSection />
         </div>
       </div>
       {/* 오픈일 변경(8/10 → 8/24) — 본문은 날짜만 바뀌므로 변경 사실은 이 팝업이 알린다. 기기별 1회. */}

@@ -97,36 +97,3 @@ export async function setPushEnhanceModeAction(input: {
   );
   return { ok: true };
 }
-
-/**
- * 익명 구독 등록(0145) — CBT 종료 화면 '오픈 알림 받기'. 로그아웃 상태라 user_id 없이
- * 저장한다. 같은 endpoint가 이미 유저에 묶여 있으면 **user_id를 보존**하고 키만 갱신
- * (익명 등록이 기존 유저 연결을 끊으면 안 된다). 인증 없음 — endpoint UNIQUE가 스팸 상한.
- */
-export async function registerOpenAlertSubscriptionAction(input: {
-  endpoint: string;
-  p256dh: string;
-  auth: string;
-  userAgent?: string;
-}): Promise<{ ok: boolean }> {
-  if (!input.endpoint.startsWith('https://') || input.endpoint.length > 1000) return { ok: false };
-  await db
-    .insert(pushSubscriptions)
-    .values({
-      userId: null,
-      endpoint: input.endpoint,
-      p256dh: input.p256dh,
-      auth: input.auth,
-      userAgent: input.userAgent ?? null,
-    })
-    .onConflictDoUpdate({
-      target: pushSubscriptions.endpoint,
-      set: {
-        p256dh: input.p256dh,
-        auth: input.auth,
-        userAgent: input.userAgent ?? null,
-        updatedAt: sql`now()`,
-      },
-    });
-  return { ok: true };
-}
