@@ -194,3 +194,22 @@
 - grin_in_glass_pendant — 변하는 건 늘 보는 쪽
 - last_call_tavern_token — 안 갚인 외상패, 문 닫는 날 목에
 - knotted_memory_cord — 풀면 뜻도 사라지는 매듭
+
+## V4 확장 17종 (2026-08-04) — 120종 편성분
+- general_twin_flintlocks — 두 자루의 총성이 달라 겹치면 한 발로 들림
+- general_spiral_lance — 빗나간 자리에 남는 나선 자국
+- general_starfield_blade — 기울일 때마다 달라지는, 하늘에 없는 별자리
+- general_kintsugi_katana — 치수·무게 기록(금이 쇠보다 가벼움)
+- fallen_half_blade — 빛과 밤, 두 이름이 같은 검을 가리킨 명명 유래
+- temple_icicle_longbow — 얼음 갈라지는 소리에 짐승이 먼저 멈춤
+- fallen_pinion_twinblades — 흰 날은 용서를 빌게 하고 검은 날은 신전을 불태우게 함
+- fallen_grace_greatbow — 시위가 없고 겨눈 방향으로 깃이 한 장씩 빠져나감
+- kingdom_lionguard_plate — 판금·망토는 만든 이가 있고 사자만 무명
+- kingdom_herald_tabard — 해마다 실을 뽑아 다시 놓아 왕관 자리가 커짐
+- swamp_bogwitch_rags — 계절마다 자라는 것이 달라 겨울에만 옷다워짐
+- fallen_gilded_ruin_plate — 벗겨질수록 가벼워져 금을 다 잃는 날 최선이 됨
+- general_beastmaster_hide — 씻지 말라는 산행 수칙
+- general_star_eyepatch — 덮은 쪽이 어두울수록 남은 눈이 밝아짐
+- general_imp_wings — 펼친 폭 기록마다 숫자가 다름
+- volcano_ashglass_goggles — 기스가 많을수록 비싼 값 매김
+- general_wing_hairclip — 세공은 집게에 들였는데 사는 사람은 깃만 봄
