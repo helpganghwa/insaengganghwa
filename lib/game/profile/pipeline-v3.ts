@@ -7,7 +7,7 @@ import { and, eq, inArray, lt, sql } from 'drizzle-orm';
 
 import { db } from '@/lib/db/client';
 import { profileGenerationJobs } from '@/lib/db/schema/avatar';
-import { CATALOG_ITEMS } from '@/lib/game/equipment/catalog';
+import { CATALOG_ALL } from '@/lib/game/equipment/catalog';
 import { PROFILE_GEN_PER_KEY } from '@/lib/game/balance';
 
 import { composeV3Description } from './compose-v3';
@@ -16,7 +16,7 @@ import { markFailedAndRefund } from './pipeline';
 import { pixellabKeyByIdx, pixellabKeyCount, profileGenConcurrency } from './pixellab-keys';
 import type { ProfileGender } from './refs';
 
-const WORN_BY_KEY = new Map(CATALOG_ITEMS.map((c) => [c.key, c.wornDesc ?? c.art]));
+const WORN_BY_KEY = new Map(CATALOG_ALL.map((c) => [c.key, c.wornDesc ?? c.art]));
 const wornOf = (key: string | undefined): string => (key ? (WORN_BY_KEY.get(key) ?? key) : '');
 
 const PIXELLAB_BASE = 'https://api.pixellab.ai/v2';

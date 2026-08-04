@@ -71,9 +71,20 @@ export interface CatalogItem {
   wornDescMale?: string;
 }
 
-// 카탈로그 단일 source — 3차 60종(catalog-v3.ts) + 2차 선정 46종(catalog-v2live.ts) = 106종.
-// (구 108종 catalog-next.ts는 원본 데이터 보존용 — 라이브 채용분은 catalog-v2live로 발췌.)
+// 카탈로그 단일 source — 3차 60종 + 2차 선정 46종 + 4차 확장 17종 − 방어구 3종 = 120종
+// (슬롯당 40종). (구 108종 catalog-next.ts는 원본 데이터 보존용 — 라이브 채용분은 catalog-v2live로 발췌.)
 import { CATALOG_V3 } from './catalog-v3';
 import { CATALOG_V2_LIVE } from './catalog-v2live';
+import { CATALOG_V4 } from './catalog-v4';
 
-export const CATALOG_ITEMS: CatalogItem[] = [...CATALOG_V3, ...CATALOG_V2_LIVE];
+/** 4차 편성에서 뺀 방어구 3종 — 신규 5종을 넣으며 슬롯을 40으로 맞췄다. */
+const RETIRED = new Set(['frostwarden_coat', 'angel_risen_mantle', 'angel_duskwing_armor']);
+
+/**
+ * 과거 편성분까지 포함한 전량. 편성에서 빠져도 **이미 보유한 유저의 장비는 남아 있으므로**
+ * 스프라이트·표시명 조회는 이 목록을 봐야 한다(빼면 보유 장비의 그림·이름이 사라진다).
+ */
+export const CATALOG_ALL: CatalogItem[] = [...CATALOG_V3, ...CATALOG_V2_LIVE, ...CATALOG_V4];
+
+/** 현재 편성 120종(슬롯당 40) — 시드·드랍·확률공시의 기준. */
+export const CATALOG_ITEMS: CatalogItem[] = CATALOG_ALL.filter((it) => !RETIRED.has(it.key));

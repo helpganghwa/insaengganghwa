@@ -99,5 +99,5 @@ export const ASSET_VERSIONS: Record<string, string> = {
   "/og/raid/dragon_west.png": "bde7ad86",
   "/og/og-3.png": "f9e55cce",
   "/og/og-2.png": "cf937c31",
-  "/sprites/atlas.webp": "1118a204"
+  "/sprites/atlas.webp": "715ad0b6"
 };

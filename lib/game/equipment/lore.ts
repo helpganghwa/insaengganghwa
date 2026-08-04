@@ -1,13 +1,13 @@
-import { CATALOG_ITEMS } from './catalog';
+import { CATALOG_ALL } from './catalog';
 
 /**
  * 아이템 로어 조회 — catalog `code`(=key) → 한국어 로어 전문.
  * 게임 핵심: 아이템 차이 = 외관·도감·로어뿐(GDD §3.1).
  *
- * ⚠ **서버 전용으로만 import** 할 것. CATALOG_ITEMS는 150종×긴 lore/art 문자열로
+ * ⚠ **서버 전용으로만 import** 할 것. CATALOG_ALL은 전량×긴 lore/art 문자열로
  *   크다 — 클라이언트 컴포넌트에서 import하면 번들 비대. 클라엔 문자열만 prop 전달.
  */
-const LORE = new Map(CATALOG_ITEMS.map((c) => [c.key, c.lore] as const));
+const LORE = new Map(CATALOG_ALL.map((c) => [c.key, c.lore] as const));
 
 export function loreByCode(code: string): string | null {
   return LORE.get(code) ?? null;

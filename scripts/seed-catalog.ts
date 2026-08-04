@@ -1,10 +1,11 @@
-// 카탈로그 시드 — CATALOG_ITEMS(150) → catalog_items.
+// 카탈로그 시드 — CATALOG_ITEMS → catalog_items.
 // 실행: bun run scripts/seed-catalog.ts
 // 멱등 — code(unique) 기반 upsert. code = catalog.key, name = nameKo, slot.
 // 등급/성능/스프라이트경로 컬럼 없음(GDD §3.1) — 스프라이트는 code로 매핑(sprite-manifest).
 
 import { config } from 'dotenv';
 import postgres from 'postgres';
+import { and, eq, notInArray } from 'drizzle-orm';
 import { drizzle } from 'drizzle-orm/postgres-js';
 
 import * as schema from '../lib/db/schema';
@@ -36,6 +37,16 @@ async function main() {
       });
     n++;
   }
+  // 편성에서 빠진 코드는 지우지 않고 비활성화한다 — 이미 보유한 유저의 장비가 메타 조인을
+  // 잃지 않으면서 보급 드랍에서만 제외된다(lib/game/catalog.ts는 active=true만 뽑는다).
+  const codes = CATALOG_ITEMS.map((c) => c.key);
+  const retired = await db
+    .update(schema.catalogItems)
+    .set({ active: false })
+    .where(and(eq(schema.catalogItems.active, true), notInArray(schema.catalogItems.code, codes)))
+    .returning({ code: schema.catalogItems.code });
+  if (retired.length) console.log(`[catalog] 비활성 전환 ${retired.length}개:`, retired.map((r) => r.code).join(', '));
+
   const bySlot = CATALOG_ITEMS.reduce<Record<string, number>>((a, c) => {
     a[c.slot] = (a[c.slot] ?? 0) + 1;
     return a;

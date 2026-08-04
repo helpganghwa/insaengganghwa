@@ -1,5 +1,5 @@
-// Sprite atlas 빌드 — 150 PNG → 1 WebP atlas + JSON 좌표맵.
-// 150 = 15×10 grid · cell 128px · atlas 1920×1280 (GDD §6 sprite 표준 = 128).
+// Sprite atlas 빌드 — 카탈로그 전량 PNG → 1 WebP atlas + JSON 좌표맵.
+// 12×12 grid · cell 256px(+gutter 8) — SPRITE_MANIFEST(CATALOG_ALL) 기준.
 // 실행: bun run scripts/build-sprite-atlas.ts
 // 결과: public/sprites/atlas.webp + public/sprites/atlas.json
 //
@@ -18,7 +18,7 @@ const CELL = 256; // 3차 소스가 256 네이티브 — 셀도 256으로(다운
 const GUTTER = 8;
 const STRIDE = CELL + GUTTER;
 const COLS = 12;
-const ROWS = 10; // 120셀(현재 106종 + 여유) — 목표 120종까지 수용.
+const ROWS = 12; // 144셀 — 현재 123종(편성 120 + 편성에서 뺐지만 보유자가 남은 3종) + 여유.
 
 const PUB = join(process.cwd(), 'public');
 const OUT_WEBP = join(PUB, 'sprites', 'atlas.webp');

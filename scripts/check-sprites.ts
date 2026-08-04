@@ -10,18 +10,18 @@
 
 import { existsSync } from 'node:fs';
 
-import { CATALOG_ITEMS } from '../lib/game/equipment/catalog';
+import { CATALOG_ALL } from '../lib/game/equipment/catalog';
 import { SPRITE_MANIFEST } from '../lib/game/equipment/sprite-manifest';
 import atlas from '../public/sprites/atlas.json' with { type: 'json' };
 
-const catalogKeys = new Set(CATALOG_ITEMS.map((c) => c.key));
+const catalogKeys = new Set(CATALOG_ALL.map((c) => c.key));
 const manifestKeys = new Set(Object.keys(SPRITE_MANIFEST));
 const atlasKeys = new Set(Object.keys((atlas as { items: Record<string, unknown> }).items));
 
 const issues: string[] = [];
 
 // 파일 존재 + manifest 경로 일치
-for (const c of CATALOG_ITEMS) {
+for (const c of CATALOG_ALL) {
   const path = `public/sprites/${c.slot}/${c.key}.png`;
   if (!existsSync(path)) issues.push(`sprite 파일 없음: ${path}`);
   const m = SPRITE_MANIFEST[c.key];

@@ -17,7 +17,7 @@ import Anthropic from '@anthropic-ai/sdk';
 import { readFileSync } from 'node:fs';
 import { join } from 'node:path';
 
-import { CATALOG_ITEMS } from '@/lib/game/equipment/catalog';
+import { CATALOG_ALL } from '@/lib/game/equipment/catalog';
 import { spritePath } from '@/lib/game/equipment/sprite-manifest';
 import type { ProfileGender } from './refs';
 import type { Appearance } from './appearance-v3';
@@ -88,7 +88,7 @@ function resolveItem(
   male: boolean,
 ): ResolvedItem | null {
   if (key) {
-    const it = CATALOG_ITEMS.find((c) => c.key === key);
+    const it = CATALOG_ALL.find((c) => c.key === key);
     if (it) {
       let b64: string | null = null;
       try {
