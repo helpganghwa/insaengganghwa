@@ -5,7 +5,9 @@
   },
   "_fixFloorNote": "후처리 강도: 1=정렬만(매 프레임 원본과 비교해 위치보정, 기본), 0=정렬+본체완전고정. 예외만 등재.",
   "fixFloorDefault": 1,
-  "fixFloor": {},
+  "fixFloor": {
+    "general_wing_hairclip": 0
+  },
   "itemsKo": {
     "seed-kingdom_ribbon_rapier": "가는 레이피어는 완전히 멈춘 채, 늘어진 푸른 리본이 물결치며 나부끼고 칼날을 따라 은청색 광휘가 맥동한다",
     "seed-kingdom_court_twin_sabers": "교차한 쌍검은 완전히 얼어붙은 듯 고정되고, 오직 손잡이 보석만 밝고 또렷이 빛나며 맥동한다 (왼쪽 선명한 푸른·오른쪽 선명한 붉은, 검은 움직임 없음)",
@@ -147,21 +149,36 @@
     "a-frost-kite-shield-82": "the frost shield holds steady as its crystal surface sparkles and the snowflake boss glows, a cold aura pulsing",
     "a-round-glasses-245": "the round glasses rest still while light glints across the lenses and a faint golden sheen travels along the frames",
     "general_twin_flintlocks": "the crossed pair of flintlock pistols stays completely still and rigid; only the ruby set in each grip brightens and dims, and a faint gold sheen travels along the engraved scrollwork — no barrel movement",
-    "general_spiral_lance": "the black lance is completely fixed and motionless; only a warm gold glow travels up the spiral fluting from the grip toward the point, again and again — the lance does not sway, rotate or shift",
+    "general_spiral_lance": "the lance keeps its exact colours in every frame — the shaft stays black and the fluting stays gold, and it must never turn pale, white, silver or grey; the lance does not move or tilt at all; only the gold spiral fluting brightens into a rich glowing gold and dims back down, over and over",
     "general_starfield_blade": "the longsword stays perfectly still; inside the midnight-blue blade tiny stars twinkle and the gold constellation lines brighten and fade, the star pommel pulsing softly — no blade movement",
     "general_kintsugi_katana": "the black katana is rigid and motionless; only the branching gold veins along the blade glow brighter and dimmer like slow lightning, faint warm light leaking from the seams",
-    "fallen_half_blade": "the split greatsword hovers completely still; the white-gold half radiates a soft holy glow while the black half smoulders darker, and loose dark feathers drift slowly downward past the blade",
-    "temple_icicle_longbow": "the silver longbow stays completely fixed; only the clustered icicles glint and a pale blue frost mist breathes along the limbs, tiny ice crystals sparkling — no bow movement",
-    "fallen_pinion_twinblades": "the crossed wing-shaped twin blades stay completely still and rigid; the white-gold blade brightens with a warm radiance while the jet-black blade darkens, alternating slowly — no blade movement",
-    "fallen_grace_greatbow": "the winged bow stays completely still; the golden upper feathers shimmer with light while the charred lower feathers smoulder, and a few loose feathers drift free and fade — the bow does not sway",
+    "fallen_half_blade": "the blade stays completely still and keeps its exact colours — never turning pale, grey or blue; only the wings at the hilt move, the white wing slowly spreading open and folding back while the black wing moves in the opposite rhythm, a calm unhurried motion",
+    "temple_icicle_longbow": "the white ribbon tied at the grip flutters and streams to one side like a banner in a light wind — it keeps its flat ribbon shape the whole time and never becomes smoke, mist or a writhing coil; a few small sparkles twinkle on the icicles",
+    "fallen_pinion_twinblades": "the crossed twin blades stay perfectly still; a few small clearly shaped white feathers fall slowly downward from the white-gold blade and a few small black feathers fall slowly downward from the black blade — they must look like feathers, not white blobs, smoke or sparks",
+    "fallen_grace_greatbow": "feathers drift on a soft wind around the winged bow",
     "kingdom_lionguard_plate": "the plate armor stands completely still and rigid; only the deep blue cape ripples gently as if in a slow breeze and the golden lion on the breastplate gleams brighter and dimmer",
     "kingdom_herald_tabard": "the tabard stands completely still; only the gold-fringed hem sways gently and the gold-embroidered crown on the chest glints with a travelling shine — no body movement",
     "swamp_bogwitch_rags": "the ragged green dress stays completely still; only the torn hems stir faintly and the tiny fireflies clinging to the cloth blink on and off, drifting a little around the skirt",
-    "fallen_gilded_ruin_plate": "the ruined armor stands completely still and rigid; faint gold light pulses in the cracks where the gilding flaked away, and the tattered dark mantle stirs slowly at its frayed edges",
-    "general_beastmaster_hide": "the layered hide outfit stands completely still; only the thick fur collar and the fur trim at the boots ruffle gently as if in a light wind — no body movement",
+    "fallen_gilded_ruin_plate": "the armor plating stays completely still and rigid; only the dark tattered mantle over the shoulders and the ragged cloth hanging at the waist sway slowly and clearly, as if in a steady draft",
+    "general_beastmaster_hide": "the leather armor stays in place; the thick fur trim at the collar and the boot tops ruffles, and the hanging leather strips and cords sway clearly from side to side as if in a steady breeze",
     "general_star_eyepatch": "the black leather eyepatch stays completely fixed and motionless; only the small gold star stud sparkles and flares softly, its light glinting across the leather",
     "general_imp_wings": "the small bat wings stay in place; the membranes flex and the wings give one slow flap before settling, the gold claws at the tips catching light",
     "volcano_ashglass_goggles": "the brass goggles stay completely still and rigid; only a warm amber light moves slowly across the tinted lenses like a reflected flame, faint heat shimmer above the frame",
-    "general_wing_hairclip": "the silver hair clip stays completely fixed; only the two white feathers sway and turn gently as if brushed by a soft breeze, a faint silver sheen along the filigree"
-  }
+    "general_wing_hairclip": "the silver hair clip stays completely fixed; the two white feathers bend and settle slowly and naturally as if in a gentle continuous breeze, smooth unhurried motion with no jitter or snapping"
+  },
+  "_fixAmpNote": "움직임 세기 배율(1=원본). \"동작은 맞는데 과하다\"를 재생성 없이 낮춘다.",
+  "fixAmp": {},
+  "fixLockBody": {},
+  "fixLock": {
+    "general_wing_hairclip": [
+      0,
+      0,
+      255,
+      102
+    ]
+  },
+  "_stripFloorNote": "발밑에 그려지는 1px 지면선을 원본 프레임에서 제거(아이템은 배경 없이 떠 있는 형태로 쓴다).",
+  "stripFloor": [
+    "general_beastmaster_hide"
+  ]
 }

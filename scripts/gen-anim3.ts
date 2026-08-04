@@ -10,6 +10,7 @@ import { readFileSync, writeFileSync, mkdirSync, existsSync } from 'node:fs';
 import { join } from 'node:path';
 import sharp from 'sharp';
 import { fixOne } from './fix-anim';
+import { stripFloorLine } from './strip-floor-line';
 
 // 애니는 **객체를 만든 계정**에서만 요청할 수 있다. V4 17종은 key1/key2에 나뉘어 있어
 // obj-map-v4.json의 키 라벨로 아이템마다 토큰을 고른다(레거시 seed-* 는 key2 고정).
@@ -41,8 +42,12 @@ function tokenFor(pid: string): string {
 }
 const A = JSON.parse(readFileSync(join(ROOT, 'scripts/anim3-prompts.json'), 'utf8')) as {
   items: Record<string, string>; fixFloorDefault?: number; fixFloor?: Record<string, number>;
+  fixAmp?: Record<string, number>; fixLock?: Record<string, number[]>; fixLockBody?: Record<string, boolean>; stripFloor?: string[];
 };
 const floorFor = (pid: string) => A.fixFloor?.[pid] ?? A.fixFloorDefault ?? 0;
+const ampFor = (pid: string) => A.fixAmp?.[pid] ?? 1;
+const lockFor = (pid: string) => A.fixLock?.[pid] ?? [];
+const lockBodyFor = (pid: string) => A.fixLockBody?.[pid] ?? false;
 
 const arg = process.argv[2] ?? '3';
 let targets: string[];
@@ -116,7 +121,9 @@ async function pollJob(jobId: string, TOK: string): Promise<{ width: number; hei
         : await sharp(raw).png().toBuffer(); // 혹시 PNG로 올 경우 대비
       writeFileSync(join(dir, `${fi}.png`), png); fi++;
     }
-    await fixOne(pid, true, floorFor(pid)); // 정렬+(per-item floor) 후처리 → 스트립 webp 작성
+    if (A.stripFloor?.includes(pid)) for (let i = 0; i < fi; i++) await stripFloorLine(join(dir, `${i}.png`));
+    await fixOne(pid, true, floorFor(pid), ampFor(pid), lockFor(pid), lockBodyFor(pid)); // 정렬+(per-item floor/amp) 후처리 → 스트립 webp 작성
+
     manifest.items[pid] = { frames: fi };
     writeFileSync(manifestP, JSON.stringify(manifest));
     ok++; process.stderr.write(`✓ ${pid} (${++done}/${targets.length})\n`);
