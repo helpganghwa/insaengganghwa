@@ -21,7 +21,7 @@ export const CATALOG_V3: CatalogItem[] = [
     "region": "왕국",
     "lore": "넓은 은빛 칼날 둘이 X자로 맞물린다. 한 자루의 손잡이엔 푸른 보석, 다른 자루엔 붉은 보석—같은 장인이 같은 날 빚은 한 쌍이다. 둘을 함께 들면 푸름과 붉음이 손안에서 엇갈려 돈다. 한 손엔 새벽, 한 손엔 노을을 쥔 셈이다.",
     "art": "a pair of slim curved court sabers crossed in an X with golden tasseled hilts",
-    "wornDesc": "a matched pair of straight silver sabers, gold scrollwork guards, one blue gem and one red gem"
+    "wornDesc": "a matched pair of straight silver sabers with gold scrollwork guards, identical except the gems — a blue gem in the left-hand saber and a red gem in the right-hand saber"
   },
   {
     "key": "kingdom_winged_coronation_sword",
@@ -192,7 +192,7 @@ export const CATALOG_V3: CatalogItem[] = [
     "region": "일반",
     "lore": "손잡이 끝이 거대한 열쇠 고리로 휘말리고, 칼몸엔 금빛 무늬가 자물쇠 문양처럼 새겨졌다. 원래는 어느 큰 문을 잠그던 열쇠였는데, 누군가 그것을 두드려 검으로 폈다. 고리를 돌리면 칼날 홈이 딸깍, 아직도 열쇠처럼 돈다. 이 검이 베지 못하는 건 없다. 다만, 아직 열지 못한 문이 하나 남아 있다.",
     "art": "an oversized skeleton-key forged into a greatsword — a vault-warden's curious key-blade, ornate and grand",
-    "wornDesc": "oversized silver greatsword shaped as a key, blue runes on the blade, gold key-teeth crossguard, looped key-bow pommel"
+    "wornDesc": "oversized silver greatsword with a long straight blade, blue runes on the blade, a gold crossguard shaped like key-teeth, and a looped key-bow pommel"
   },
   {
     "key": "angel_radiant_gown",
@@ -480,7 +480,7 @@ export const CATALOG_V3: CatalogItem[] = [
     "region": "왕국",
     "lore": "상아빛 반가면. 얼굴 위쪽을 가리고, 금빛 세공이 눈가를 따라 덩굴처럼 뻗는다. 한쪽엔 검은 술. 가면무도회에선 자정이 되면 다들 가면을 벗는다. 그런데 이 가면을 쓴 손님만은 끝까지 얼굴을 보인 적이 없다. 그러고는 다음 무도회 같은 자리에, 또 앉아 있었다.",
     "art": "a phantom's ornate half-mask of white porcelain and gold filigree — elegant, mysterious and iconic",
-    "wornDesc": "small white porcelain half-mask, gold scroll filigree, a black tassel on a gold chain at one side"
+    "wornDesc": "small white porcelain half-mask covering the upper right half of the face, gold scroll filigree, a black tassel on a gold chain at one side"
   },
   {
     "key": "valkyrie_winged_circlet",
