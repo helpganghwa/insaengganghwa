@@ -1,0 +1,70 @@
+{
+  "general_twin_flintlocks": {
+    "key": "key2",
+    "objectId": "ac96d9ae-9110-4cac-883d-2b959f609435"
+  },
+  "general_spiral_lance": {
+    "key": "key2",
+    "objectId": "2d1e04b9-2cfe-48dc-9e9c-ad5a6b75b729"
+  },
+  "general_starfield_blade": {
+    "key": "key2",
+    "objectId": "790653f7-2133-45e0-9aba-3db26e61cddb"
+  },
+  "general_kintsugi_katana": {
+    "key": "key2",
+    "objectId": "f34d26a7-d95b-4102-be87-85742345a8b0"
+  },
+  "fallen_half_blade": {
+    "key": "key2",
+    "objectId": "0ce980a2-95a2-44cc-8d0a-4c005a2dd7b2"
+  },
+  "temple_icicle_longbow": {
+    "key": "key1",
+    "objectId": "472c93c2-234f-4821-90a3-241c0c46e26b"
+  },
+  "fallen_pinion_twinblades": {
+    "key": "key1",
+    "objectId": "3f968fb1-ef66-4407-849c-d979ffcf6429"
+  },
+  "fallen_grace_greatbow": {
+    "key": "key1",
+    "objectId": "02cabea0-bd04-4737-922e-ed3e85d0e772"
+  },
+  "general_star_eyepatch": {
+    "key": "key2",
+    "objectId": "2f934b69-9118-483b-94de-8cc3096a3a74"
+  },
+  "general_imp_wings": {
+    "key": "key2",
+    "objectId": "0945b057-2c29-4c36-939a-6c837071eb6a"
+  },
+  "kingdom_lionguard_plate": {
+    "key": "key1",
+    "objectId": "1b4e163f-bc56-4e7a-99df-6feb6feb55b1"
+  },
+  "kingdom_herald_tabard": {
+    "key": "key1",
+    "objectId": "b544f79e-ccf5-453c-bd4f-3fcde65bda3a"
+  },
+  "swamp_bogwitch_rags": {
+    "key": "key1",
+    "objectId": "db10dfbd-3057-4ecc-9fcf-9c861dede559"
+  },
+  "fallen_gilded_ruin_plate": {
+    "key": "key1",
+    "objectId": "c9cb6234-a88a-49ee-8284-978bdf108a08"
+  },
+  "general_beastmaster_hide": {
+    "key": "key1",
+    "objectId": "ca6e1c6f-ac0a-426f-a4a8-bdfde282c97d"
+  },
+  "volcano_ashglass_goggles": {
+    "key": "key1",
+    "objectId": "92d33087-3394-444d-ac30-21b671fc8451"
+  },
+  "general_wing_hairclip": {
+    "key": "key1",
+    "objectId": "c24a26ce-aa93-4130-a0c3-51fd2ce610af"
+  }
+}

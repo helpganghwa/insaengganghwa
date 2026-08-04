@@ -7,7 +7,7 @@
 //   bun run scripts/gen-items.ts html       # 생성 없이 리뷰 HTML만 갱신
 //
 // 동시성 낮게(순차) + 429 지수 백오프. 유료 — 호출 전 사용자 확인.
-import { existsSync, mkdirSync, writeFileSync } from 'node:fs';
+import { existsSync, mkdirSync, readFileSync, writeFileSync } from 'node:fs';
 import { join } from 'node:path';
 
 import { config } from 'dotenv';
@@ -48,6 +48,19 @@ function pickUrl(v: unknown): string | null {
   return null;
 }
 
+/** 생성한 객체 id를 scripts/obj-map-v4.json에 누적 기록(키 라벨 포함). */
+function rememberObject(itemKey: string, objectId: string): void {
+  const p = join(ROOT, 'scripts/obj-map-v4.json');
+  let m: Record<string, { key: string; objectId: string }> = {};
+  try {
+    if (existsSync(p)) m = JSON.parse(readFileSync(p, 'utf8'));
+  } catch {
+    m = {};
+  }
+  m[itemKey] = { key: process.env.GEN_KEY === '1' ? 'key1' : 'key2', objectId };
+  writeFileSync(p, JSON.stringify(m, null, 2) + '\n');
+}
+
 type GenResult = { r: 'ok' | 'skip' | 'fail'; usage?: unknown };
 
 async function genOne(it: ItemV2): Promise<GenResult> {
@@ -77,6 +90,9 @@ async function genOne(it: ItemV2): Promise<GenResult> {
     const j = (await res.json()) as { object_id?: string; usage?: unknown };
     objectId = j.object_id ?? '';
     usage = j.usage;
+    // 애니 생성은 객체를 만든 **같은 키**로만 가능하다 — id와 키 라벨을 즉시 남긴다
+    // (2026-08-04: 기록이 없어 17종을 목록 조회로 사후 복구해야 했다).
+    if (objectId) rememberObject(it.key, objectId);
     break;
   }
   if (!objectId) return { r: 'fail', usage };
