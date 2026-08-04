@@ -126,7 +126,7 @@ select count(*) from conquest_battles where winner_guild_id is not null;  -- fla
 |---|---|---|
 | B1 | **결제 E2E 완주** | 카드사 심사 승인 → 실결제 → 지급 확인 → 콘솔 취소 → 회수 확인. 미완 시 `PAYMENTS_OPEN` 미설정으로 상점만 숨기고 오픈하는 백업 플랜 가능 |
 | B2 | **Supabase Compute Small → Medium** | 8/7~8 새벽(재시작 동반). 동접 500 대비 — ROADMAP §2 #11 |
-| B3 | **외부 uptime 모니터 배선** | `https://ganghwa.app/api/health/deep` 1~5분 GET, 비200/도달불가 알림(UptimeRobot 등). 런북 §7.5 — 미실행 상태 |
+| B3 | **외부 uptime 모니터 배선** | ✅ 완료 — `https://ganghwa.app/api/health/deep` 주기 GET·알림 연동 확인(2026-08-04) |
 | B4 | **아이템 14종 추가(106 → 120)** | 스프라이트(Pixellab)·로어·세트 배치까지. 현재 무기 32·방어 38·장신구 36 |
 | B5 | **Vercel Cron Jobs 재활성 확인** | 컷오버마다 대시보드에서 **수동으로** 껐다 켜는 토글이라 잊기 쉽다(코드·env에 흔적이 남지 않아 리뷰로도 안 잡힌다). 꺼진 채 오픈하면 강화 완료 푸시·레이드 정산·대난투·점령전·랭킹 스냅샷이 **전부 멈춘 채로 서비스가 돌아간다**. 오픈 직후 §8.7 표와 대조해 20개 전부 Enabled인지 눈으로 확인 |
 
