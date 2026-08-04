@@ -227,7 +227,7 @@ export const V4_ITEMS: ItemV2[] = [
     tone: '전설',
     concept: '세로로 갈라진 반빛·반흑 대검 — 검은 깃털',
     art: 'a half-fallen greatsword — a blade split lengthwise, one half radiant white-gold and the other jet-black with falling dark feathers, a wing-shaped guard half gold half black, dramatic and tragic, clearly a greatsword weapon, large, diagonal',
-    wornDesc: 'a greatsword split lengthwise into a radiant white-gold half and a jet-black half, a wing-shaped guard gold on one side and black on the other, dark feathers drifting from it',
+    wornDesc: 'a greatsword whose blade is divided by one sharp straight line running down its full length — the entire left half radiant white-gold, the entire right half solid jet-black, each half a single flat color; a wing-shaped guard with a gold wing on the left and a black wing on the right; a few small black feathers floating in the air beside the blade',
     lore: '검신이 세로로 갈라져 한쪽은 백금빛, 다른 쪽은 칠흑이다. 가드의 날개도 한쪽만 금이고 아래로 검은 깃이 떨어진다. 이름은 나중에 붙었다. 처음 본 이는 빛이라 불렀고 다음 이는 밤이라 불렀는데, 둘은 같은 검을 말하고 있었다.',
     keeper: true,
   },
