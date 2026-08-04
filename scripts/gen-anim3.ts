@@ -11,8 +11,11 @@ import { join } from 'node:path';
 import sharp from 'sharp';
 import { fixOne } from './fix-anim';
 
-const TOK = process.env.PIXELLAB_API_KEY_2;
-if (!TOK) { console.error('PIXELLAB_API_KEY_2 필요'); process.exit(1); }
+// 애니는 **객체를 만든 계정**에서만 요청할 수 있다. V4 17종은 key1/key2에 나뉘어 있어
+// obj-map-v4.json의 키 라벨로 아이템마다 토큰을 고른다(레거시 seed-* 는 key2 고정).
+const TOK1 = process.env.PIXELLAB_API_KEY;
+const TOK2 = process.env.PIXELLAB_API_KEY_2;
+if (!TOK2) { console.error('PIXELLAB_API_KEY_2 필요'); process.exit(1); }
 const PIX = 'https://api.pixellab.ai/v2';
 const ROOT = process.cwd();
 const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
@@ -21,6 +24,21 @@ const FRAME_COUNT = 8; // v3 256px 최대: 8 (+1 참조프레임 → 9프레임)
 const CONC = 5; // 동시 생성 수
 
 const map = JSON.parse(readFileSync(join(ROOT, 'scripts/obj-map.json'), 'utf8')) as Record<string, string>;
+// V4 확장분 — { key: 'key1'|'key2', objectId }. 레거시 맵과 합쳐 하나의 대상 목록으로 다룬다.
+const v4Path = join(ROOT, 'scripts/obj-map-v4.json');
+const v4 = existsSync(v4Path)
+  ? (JSON.parse(readFileSync(v4Path, 'utf8')) as Record<string, { key: string; objectId: string }>)
+  : {};
+for (const [k, v] of Object.entries(v4)) map[k] = v.objectId;
+/** 이 아이템의 객체를 만든 계정 토큰. */
+function tokenFor(pid: string): string {
+  const label = v4[pid]?.key;
+  if (label === 'key1') {
+    if (!TOK1) throw new Error('PIXELLAB_API_KEY(key1) 필요 — ' + pid + ' 은 key1 객체다');
+    return TOK1;
+  }
+  return TOK2!;
+}
 const A = JSON.parse(readFileSync(join(ROOT, 'scripts/anim3-prompts.json'), 'utf8')) as {
   items: Record<string, string>; fixFloorDefault?: number; fixFloor?: Record<string, number>;
 };
@@ -41,7 +59,7 @@ const manifest: { cell: number; items: Record<string, { frames: number }> } = ex
 
 let VERBOSE = true;
 
-async function postAnim(oid: string, action: string): Promise<string | null> {
+async function postAnim(oid: string, action: string, TOK: string): Promise<string | null> {
   const body = { animation_description: action, mode: 'v3', frame_count: FRAME_COUNT };
   for (let a = 0; a < 5; a++) {
     let r: Response; try {
@@ -59,7 +77,7 @@ async function postAnim(oid: string, action: string): Promise<string | null> {
   return null;
 }
 
-async function pollJob(jobId: string): Promise<{ width: number; height: number; base64: string }[] | null> {
+async function pollJob(jobId: string, TOK: string): Promise<{ width: number; height: number; base64: string }[] | null> {
   for (let i = 0; i < 120; i++) {
     await sleep(3000);
     let r: Response; try { r = await fetch(`${PIX}/background-jobs/${jobId}`, { headers: { authorization: `Bearer ${TOK}` } }); } catch { continue; }
@@ -83,9 +101,10 @@ async function pollJob(jobId: string): Promise<{ width: number; height: number; 
     if (!oid || !action) { fail.push(`${pid}(맵/액션없음)`); return; }
     // resume: 이미 raw+매니페스트 있으면 건너뜀(재생성 토큰 절약)
     if (!force && manifest.items[pid] && existsSync(join(framesDir, pid, '0.png'))) { ok++; process.stderr.write(`· skip ${pid} (${++done}/${targets.length})\n`); return; }
-    const jobId = await postAnim(oid, action);
+    const TOK = tokenFor(pid);
+    const jobId = await postAnim(oid, action, TOK);
     if (!jobId) { fail.push(`${pid}(POST)`); return; }
-    const images = await pollJob(jobId);
+    const images = await pollJob(jobId, TOK);
     if (!images || !images.length) { fail.push(`${pid}(폴링)`); return; }
     const dir = join(framesDir, pid); mkdirSync(dir, { recursive: true });
     let fi = 0;

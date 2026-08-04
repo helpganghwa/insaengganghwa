@@ -3,7 +3,7 @@
 // 사용: bun run scripts/fix-anim.ts <pool_id...> [--floor=0] [--inplace]
 // 입력: public/sprites/pool/<id>.png, public/sprites/anim3-raw/<id>/<i>.png
 // 출력: inplace→ public/sprites/anim3/<id>.webp / 아니면 /tmp/<id>_fix.webp
-import { writeFileSync, readdirSync } from 'node:fs';
+import { writeFileSync, readdirSync, existsSync } from 'node:fs';
 import { join } from 'node:path';
 import sharp from 'sharp';
 
@@ -48,8 +48,22 @@ function shift(fr: Buffer, sx: number, sy: number): Buffer {
   return out;
 }
 
+/**
+ * 원본 스프라이트 경로 — 레거시 seed 배치는 sprites/pool/<id>.png 한곳이지만,
+ * V4 확장분은 슬롯별(sprites/<slot>/<key>.png)에 있다. 있는 쪽을 쓴다.
+ */
+function basePath(pid: string): string {
+  const pool = join(ROOT, 'public/sprites/pool', `${pid}.png`);
+  if (existsSync(pool)) return pool;
+  for (const slot of ['weapon', 'armor', 'accessory']) {
+    const p = join(ROOT, 'public/sprites', slot, `${pid}.png`);
+    if (existsSync(p)) return p;
+  }
+  throw new Error(`원본 스프라이트 없음: ${pid}`);
+}
+
 export async function fixOne(pid: string, inplace = INPLACE, floor = FLOOR): Promise<string> {
-  const base = await rawOf(join(ROOT, 'public/sprites/pool', `${pid}.png`));
+  const base = await rawOf(basePath(pid));
   const dir = join(ROOT, 'public/sprites/anim3-raw', pid);
   const files = readdirSync(dir).filter((f) => /^\d+\.png$/.test(f)).sort((a, b) => parseInt(a) - parseInt(b));
   const frames = await Promise.all(files.map((f) => rawOf(join(dir, f))));
